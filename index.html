@@ -1250,10 +1250,13 @@ html&gt;body{padding:0}&lt;/style&gt;
 
     #zefirok-maltipoo-runner .shop-modes button {
       min-height: 0;
+      height: clamp(46px, 10.5vw, 58px);
       padding: 0;
       border: 0;
       background: transparent;
       box-shadow: none;
+      overflow: hidden;
+      border-radius: 999px;
       transition: transform 0.16s ease, filter 0.16s ease, opacity 0.16s ease;
     }
 
@@ -1269,7 +1272,8 @@ html&gt;body{padding:0}&lt;/style&gt;
     #zefirok-maltipoo-runner .shop-modes img {
       display: block;
       width: 100%;
-      height: auto;
+      height: 100%;
+      object-fit: fill;
     }
 
     #zefirok-maltipoo-runner .shop-panel[hidden] {
@@ -1749,7 +1753,7 @@ html&gt;body{padding:0}&lt;/style&gt;
         &lt;div class=&quot;overlay&quot; data-overlay&gt;
           &lt;div class=&quot;modal&quot;&gt;
             &lt;div class=&quot;badge&quot;&gt;&lt;img data-current-dog-portrait alt=&quot;&quot;&gt;&lt;/div&gt;
-            &lt;strong&gt;Мальтипу готов к забегу&lt;/strong&gt;
+            &lt;strong&gt;Зефи готов к забегу&lt;/strong&gt;
             &lt;div class=&quot;rule&quot;&gt;&lt;/div&gt;
             &lt;span&gt;Тапни по витрине, чтобы стартовать. Собирай зефир и кофе, перепрыгивай пуфики.&lt;/span&gt;
           &lt;/div&gt;
