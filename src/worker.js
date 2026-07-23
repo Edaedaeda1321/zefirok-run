@@ -18,9 +18,9 @@ const REWARD_LIMIT_RESET_AT_SECONDS = 1784805300; // 23.07.2026 11:15 UTC
 
 // НАСТРОЙКИ ВЕРСИИ И РАЗДЕЛА «ОБНОВЛЕНИЕ» В БОТЕ.
 // Меняйте эти значения при каждом новом релизе игры.
-const GAME_VERSION = "0.2 Beta";
+const GAME_VERSION = "0.2.2 Beta";
 const GAME_UPDATE_DATE = "23 июля 2026";
-const GAME_UPDATE_TITLE = "Сезонный рейтинг";
+const GAME_UPDATE_TITLE = "Исправление сезонного рейтинга";
 
 // Что произошло с прогрессом в этом релизе:
 // "reset" — крупное обновление с обнулением прогресса;
@@ -29,13 +29,13 @@ const GAME_UPDATE_PROGRESS_MODE = "keep";
 const GAME_UPDATE_RESET_REASON = "Прогресс в этом обновлении сохраняется.";
 
 const GAME_UPDATE_NOTES = Object.freeze([
-  "Добавлен серверный рейтинг по лучшему результату забега.",
-  "Первый сладкий сезон можно выпустить заранее: до старта отображаются Зефи, дата и надпись «Уже скоро».",
-  "Дата начала и завершения сезона задаётся вручную и считается по серверному времени.",
-  "После завершения сезона первое место получает 50 кофе.",
-  "Добавлены сезонный рейтинг, рейтинг за всё время и личное место игрока.",
-  "Система выборочного сброса позволяет отдельно сохранять валюты, уровни, скины, покупки и настройки.",
-  "В Telegram-боте появились разделы «Рейтинг» и «Новости»; картинка новости необязательна."
+  "Исправлено мгновенное отображение места после зачтённого забега.",
+  "Обе вкладки рейтинга загружаются заранее и переключаются без старых данных.",
+  "Карточка рейтинга и раскрытое окно получили закреплённые изображения без скачков.",
+  "На экране забега используется единое название «Очки».",
+  "Награда первого сезона отображается чашками кофе.",
+  "Интерфейс награды готов к будущим сезонным скинам и предметам.",
+  "В новости Telegram-бота добавлено изображение рейтингового сезона."
 ]);
 
 
@@ -46,8 +46,12 @@ const GAME_UPDATE_NOTES = Object.freeze([
 const DEFAULT_SEASON_ID = "sweet-season-1";
 const DEFAULT_SEASON_TITLE = "Первый сладкий сезон";
 const DEFAULT_SEASON_START_AT = "2026-07-23T15:40:00+03:00";
-const DEFAULT_SEASON_END_AT = "2026-08-10T15:40:00+03:00";
+const DEFAULT_SEASON_END_AT = "2026-08-23T15:40:00+03:00";
 const DEFAULT_SEASON_REWARD_COFFEE = 50;
+const DEFAULT_SEASON_REWARD_TYPE = "coffee"; // coffee | skin | item | currency
+const DEFAULT_SEASON_REWARD_TITLE = "50 кофе";
+const DEFAULT_SEASON_REWARD_IMAGE_URL = ""; // HTTPS-картинка для скина или предмета
+const DEFAULT_SEASON_REWARD_ITEM_ID = "";
 const DEFAULT_SEASON_REWARD_CLAIM_DAYS = 30;
 const DEFAULT_LEADERBOARD_TOP_LIMIT = 50;
 const DEFAULT_LEADERBOARD_MIN_RUN_SECONDS = 12;
@@ -74,9 +78,9 @@ const DEFAULT_SEASON_RESET_PLAN = Object.freeze({
 
 // Новость может быть с картинкой или без неё. Для картинки задайте
 // BOT_NEWS_IMAGE_URL в Cloudflare либо замените пустую строку ниже на HTTPS URL.
-const DEFAULT_BOT_NEWS_IMAGE_URL = "";
-const BOT_NEWS_TITLE = "Первый сладкий сезон уже близко";
-const BOT_NEWS_TEXT = "Мы готовим серверный рейтинг, награду за первое место и честный сезон по лучшему результату забега. До старта в игре будет отображаться точная дата и обратный отсчёт.";
+const DEFAULT_BOT_NEWS_IMAGE_URL = `${DEFAULT_GAME_URL}assets/rating/season-news.png?v=0.2.2`;
+const BOT_NEWS_TITLE = "Рейтинговый сезон уже в игре";
+const BOT_NEWS_TEXT = "В Сладком Забеге открыт рейтинговый сезон. Завершайте забеги, улучшайте лучший результат и поднимайтесь в таблице лидеров. Награда за первое место в первом сезоне — 50 кофе.";
 // =============================================================
 
 const BOT_COMMANDS = Object.freeze([
@@ -337,12 +341,21 @@ function configuredSeason(env) {
   const startsAt = parseConfiguredDate(env.LEADERBOARD_SEASON_START_AT || DEFAULT_SEASON_START_AT, "дата старта сезона");
   const endsAt = parseConfiguredDate(env.LEADERBOARD_SEASON_END_AT || DEFAULT_SEASON_END_AT, "дата завершения сезона");
   if (endsAt <= startsAt) throw new ApiError(500, "Дата завершения сезона должна быть позже даты старта.");
+  const rewardType = String(env.LEADERBOARD_REWARD_TYPE || DEFAULT_SEASON_REWARD_TYPE).trim() || DEFAULT_SEASON_REWARD_TYPE;
+  const rewardAmount = positiveInt(env.LEADERBOARD_REWARD_AMOUNT || env.LEADERBOARD_REWARD_COFFEE, DEFAULT_SEASON_REWARD_COFFEE);
+  const rewardTitle = String(env.LEADERBOARD_REWARD_TITLE || (rewardType === "coffee" ? `${rewardAmount} кофе` : DEFAULT_SEASON_REWARD_TITLE)).trim();
+  const rewardImageUrl = String(env.LEADERBOARD_REWARD_IMAGE_URL || DEFAULT_SEASON_REWARD_IMAGE_URL).trim();
+  const rewardItemId = String(env.LEADERBOARD_REWARD_ITEM_ID || DEFAULT_SEASON_REWARD_ITEM_ID).trim();
   return {
     id,
     title,
     startsAt,
     endsAt,
-    rewardCoffee: positiveInt(env.LEADERBOARD_REWARD_COFFEE, DEFAULT_SEASON_REWARD_COFFEE),
+    rewardType,
+    rewardAmount,
+    rewardTitle,
+    rewardImageUrl,
+    rewardItemId,
     rewardClaimDays: positiveInt(env.LEADERBOARD_REWARD_CLAIM_DAYS, DEFAULT_SEASON_REWARD_CLAIM_DAYS),
     resetPlan: DEFAULT_SEASON_RESET_PLAN
   };
@@ -361,7 +374,7 @@ async function ensureSeason(env, now = Math.floor(Date.now() / 1000)) {
     `INSERT INTO leaderboard_seasons (
       id, title, starts_at, ends_at, status, reward_type, reward_amount,
       reward_claim_days, reset_plan_json, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, 'scheduled', 'coffee', ?, ?, ?, ?, ?)
+    ) VALUES (?, ?, ?, ?, 'scheduled', ?, ?, ?, ?, ?, ?)
     ON CONFLICT(id) DO UPDATE SET
       title = excluded.title,
       starts_at = excluded.starts_at,
@@ -376,7 +389,8 @@ async function ensureSeason(env, now = Math.floor(Date.now() / 1000)) {
     config.title,
     config.startsAt,
     config.endsAt,
-    config.rewardCoffee,
+    config.rewardType,
+    config.rewardAmount,
     config.rewardClaimDays,
     JSON.stringify(config.resetPlan),
     now,
@@ -414,15 +428,26 @@ async function finalizeSeason(env, season, now = Math.floor(Date.now() / 1000)) 
   ).bind(season.id).first();
 
   if (winner) {
-    const rewardId = `${season.id}:${winner.telegram_id}:1:coffee`;
+    const config = configuredSeason(env);
+    const rewardType = String(season.reward_type || config.rewardType || "coffee");
+    const rewardId = `${season.id}:${winner.telegram_id}:1:${rewardType}`;
     const claimDays = positiveInt(season.reward_claim_days, DEFAULT_SEASON_REWARD_CLAIM_DAYS);
     const expiresAt = Math.max(now, Number(season.ends_at || now)) + claimDays * 24 * 60 * 60;
     await env.DB.prepare(
       `INSERT OR IGNORE INTO leaderboard_rewards (
         id, season_id, telegram_id, place, reward_type, reward_amount,
-        status, created_at, expires_at
-      ) VALUES (?, ?, ?, 1, 'coffee', ?, 'pending', ?, ?)`
-    ).bind(rewardId, season.id, String(winner.telegram_id), Number(season.reward_amount || 0), now, expiresAt).run();
+        reward_item_id, status, created_at, expires_at
+      ) VALUES (?, ?, ?, 1, ?, ?, ?, 'pending', ?, ?)`
+    ).bind(
+      rewardId,
+      season.id,
+      String(winner.telegram_id),
+      rewardType,
+      Number(season.reward_amount || config.rewardAmount || 0),
+      config.rewardItemId,
+      now,
+      expiresAt
+    ).run();
   }
 
   await env.DB.prepare(
@@ -554,14 +579,14 @@ async function claimLeaderboardReward(request, env) {
       throw new ApiError(410, "Срок получения награды истёк.");
     }
     if (String(reward.status) === "claimed") {
-      return jsonResponse({ ok: true, claimed: false, alreadyClaimed: true, reward: rewardToClient(reward) });
+      return jsonResponse({ ok: true, claimed: false, alreadyClaimed: true, reward: rewardToClient(reward, configuredSeason(env)) });
     }
     const result = await env.DB.prepare(
       `UPDATE leaderboard_rewards SET status = 'claimed', claimed_at = ? WHERE id = ? AND status = 'pending'`
     ).bind(now, reward.id).run();
     if (Number(result.meta?.changes || 0) !== 1) throw new ApiError(409, "Награда уже была обработана.");
     const updated = await env.DB.prepare(`SELECT * FROM leaderboard_rewards WHERE id = ?`).bind(reward.id).first();
-    return jsonResponse({ ok: true, claimed: true, reward: rewardToClient(updated) });
+    return jsonResponse({ ok: true, claimed: true, reward: rewardToClient(updated, configuredSeason(env)) });
   } catch (error) {
     if (error instanceof ApiError) return jsonResponse({ ok: false, error: error.message }, error.status);
     console.error("claimLeaderboardReward failed", error);
@@ -607,6 +632,13 @@ async function buildLeaderboardPayload(env, season, telegramId, mode = "season")
   ).bind(telegramId, season.id).first();
   const firstScore = top.length ? top[0].score : 0;
   const serverTime = Date.now();
+  const rewardConfig = configuredSeason(env);
+  const rewardType = String(season.reward_type || rewardConfig.rewardType || "coffee");
+  const rewardAmount = Number(season.reward_amount || rewardConfig.rewardAmount || 0);
+  const rewardTitle = rewardType === rewardConfig.rewardType
+    ? rewardConfig.rewardTitle
+    : rewardType === "coffee" ? `${rewardAmount} кофе` : "Сезонная награда";
+  const rewardImageUrl = rewardType === rewardConfig.rewardType ? rewardConfig.rewardImageUrl : "";
   let resetPlan = null;
   try { resetPlan = JSON.parse(String(season.reset_plan_json || "null")); } catch {}
   return {
@@ -619,14 +651,20 @@ async function buildLeaderboardPayload(env, season, telegramId, mode = "season")
       status: String(season.status),
       startsAt: Number(season.starts_at || 0) * 1000,
       endsAt: Number(season.ends_at || 0) * 1000,
-      reward: { type: String(season.reward_type || "coffee"), amount: Number(season.reward_amount || 0), title: `${Number(season.reward_amount || 0)} кофе` },
+      reward: {
+        type: rewardType,
+        amount: rewardAmount,
+        title: rewardTitle,
+        imageUrl: rewardImageUrl,
+        itemId: rewardConfig.rewardItemId
+      },
       resetPlan: resetPlan ? { ...resetPlan, applyAt: Number(season.ends_at || 0) * 1000 } : null
     },
     top,
     me: myEntry,
     firstScore,
     gapToFirst: myEntry ? Math.max(0, firstScore - myEntry.score) : firstScore,
-    reward: reward ? rewardToClient(reward) : null
+    reward: reward ? rewardToClient(reward, rewardConfig) : null
   };
 }
 
@@ -643,14 +681,19 @@ function leaderboardRowToClient(row, place) {
   };
 }
 
-function rewardToClient(row) {
+function rewardToClient(row, config = null) {
+  const type = String(row.reward_type || "coffee");
+  const amount = Number(row.reward_amount || 0);
+  const matchesConfig = config && type === String(config.rewardType || "") && String(row.season_id || "") === String(config.id || "");
   return {
     id: String(row.id || ""),
     seasonId: String(row.season_id || ""),
     place: Number(row.place || 0),
-    type: String(row.reward_type || "coffee"),
-    amount: Number(row.reward_amount || 0),
-    itemId: String(row.reward_item_id || ""),
+    type,
+    amount,
+    title: matchesConfig ? config.rewardTitle : type === "coffee" ? `${amount} кофе` : "Сезонная награда",
+    imageUrl: matchesConfig ? config.rewardImageUrl : "",
+    itemId: String(row.reward_item_id || config?.rewardItemId || ""),
     status: String(row.status || "pending"),
     createdAt: Number(row.created_at || 0) * 1000,
     claimedAt: Number(row.claimed_at || 0) * 1000,
