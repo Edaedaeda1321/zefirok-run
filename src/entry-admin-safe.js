@@ -128,7 +128,7 @@ function requireDatabase(env) {
 }
 
 function requireBotToken(env) {
-  if (!env.BOT_TOKEN) throw new ApiError(503, "BOT_TOKEN не настроен.");
+  if (!env.TELEGRAM_BOT_TOKEN) throw new ApiError(503, "TELEGRAM_BOT_TOKEN не настроен.");
 }
 
 async function readJson(request) {
@@ -152,7 +152,7 @@ async function validateTelegramInitData(initData, env) {
     .map(([key, value]) => `${key}=${value}`)
     .join("\n");
   const encoder = new TextEncoder();
-  const secretKey = await hmacSha256(encoder.encode("WebAppData"), encoder.encode(env.BOT_TOKEN));
+  const secretKey = await hmacSha256(encoder.encode("WebAppData"), encoder.encode(env.TELEGRAM_BOT_TOKEN));
   const expectedHash = bytesToHex(await hmacSha256(secretKey, encoder.encode(dataCheckString)));
   if (!timingSafeEqual(expectedHash.toLowerCase(), receivedHash.toLowerCase())) {
     throw new ApiError(401, "Telegram-подпись не прошла проверку.");

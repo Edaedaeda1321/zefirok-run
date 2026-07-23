@@ -34,7 +34,7 @@ const REWARD_LIMIT_RESET_AT_SECONDS = 1784805300; // 23.07.2026 11:15 UTC
 
 // НАСТРОЙКИ ВЕРСИИ И РАЗДЕЛА «ОБНОВЛЕНИЕ» В БОТЕ.
 // Меняйте эти значения при каждом новом релизе игры.
-const GAME_VERSION = "0.2.3 Beta";
+const GAME_VERSION = "0.2.4 Beta";
 const GAME_UPDATE_DATE = "23 июля 2026";
 const GAME_UPDATE_TITLE = "Админ-рейтинг и глобальные начисления";
 
