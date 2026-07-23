@@ -18,24 +18,66 @@ const REWARD_LIMIT_RESET_AT_SECONDS = 1784805300; // 23.07.2026 11:15 UTC
 
 // НАСТРОЙКИ ВЕРСИИ И РАЗДЕЛА «ОБНОВЛЕНИЕ» В БОТЕ.
 // Меняйте эти значения при каждом новом релизе игры.
-const GAME_VERSION = "0.1.1 Beta";
+const GAME_VERSION = "0.2 Beta";
 const GAME_UPDATE_DATE = "23 июля 2026";
-const GAME_UPDATE_TITLE = "Исправление лимита покупок";
+const GAME_UPDATE_TITLE = "Сезонный рейтинг";
 
 // Что произошло с прогрессом в этом релизе:
 // "reset" — крупное обновление с обнулением прогресса;
 // "keep" — обычное обновление с сохранением прогресса.
-const GAME_UPDATE_PROGRESS_MODE = "reset";
-const GAME_UPDATE_RESET_REASON = "Исправлена несовместимость локального сброса аккаунта с серверным лимитом покупок. Для корректного перехода на новую систему игровой прогресс сброшен.";
+const GAME_UPDATE_PROGRESS_MODE = "keep";
+const GAME_UPDATE_RESET_REASON = "Прогресс в этом обновлении сохраняется.";
 
 const GAME_UPDATE_NOTES = Object.freeze([
-  "Исправлена ситуация, когда в админ-панели отображалось 0 покупок, а сервер всё ещё блокировал новую награду.",
-  "Лимит покупок теперь синхронизируется с сервером и показывает настоящий таймер.",
-  "При серверном ограничении окно сразу показывает оставшееся время вместо сообщения без таймера.",
-  "Покупки до выпуска 0.1.1 Beta больше не занимают новые лимитные слоты.",
-  "Уже выданные серверные коды сохраняют статус и срок действия.",
-  "Игровые валюты, рекорд, XP, уровень и локальная статистика сброшены."
+  "Добавлен серверный рейтинг по лучшему результату забега.",
+  "Первый сладкий сезон можно выпустить заранее: до старта отображаются Зефи, дата и надпись «Уже скоро».",
+  "Дата начала и завершения сезона задаётся вручную и считается по серверному времени.",
+  "После завершения сезона первое место получает 50 кофе.",
+  "Добавлены сезонный рейтинг, рейтинг за всё время и личное место игрока.",
+  "Система выборочного сброса позволяет отдельно сохранять валюты, уровни, скины, покупки и настройки.",
+  "В Telegram-боте появились разделы «Рейтинг» и «Новости»; картинка новости необязательна."
 ]);
+
+
+// =============================================================
+// НАСТРОЙКИ СЕЗОННОГО РЕЙТИНГА.
+// Даты можно менять вручную. Они не обязаны совпадать с первым числом месяца.
+// Значения Cloudflare env с такими же именами имеют приоритет над константами.
+const DEFAULT_SEASON_ID = "sweet-season-1";
+const DEFAULT_SEASON_TITLE = "Первый сладкий сезон";
+const DEFAULT_SEASON_START_AT = "2026-07-23T15:40:00+03:00";
+const DEFAULT_SEASON_END_AT = "2026-08-10T15:40:00+03:00";
+const DEFAULT_SEASON_REWARD_COFFEE = 50;
+const DEFAULT_SEASON_REWARD_CLAIM_DAYS = 30;
+const DEFAULT_LEADERBOARD_TOP_LIMIT = 50;
+const DEFAULT_LEADERBOARD_MIN_RUN_SECONDS = 12;
+const DEFAULT_LEADERBOARD_MIN_SCORE = 150;
+
+// Что сбрасывать ПОСЛЕ завершения текущего сезона.
+// Для первого сезона сбрасывается только сам сезонный рейтинг: новый season_id
+// автоматически создаёт чистую таблицу, а игровой прогресс остаётся нетронутым.
+// В будущих сезонах меняйте true/false и обязательно задавайте новый id.
+const DEFAULT_SEASON_RESET_PLAN = Object.freeze({
+  id: "sweet-season-1-end-reset",
+  reset: {
+    seasonalRating: true,
+    currencies: false,
+    xp: false,
+    personalRecord: false,
+    statistics: false,
+    ownedSkins: false,
+    equippedSkin: false,
+    purchases: false,
+    settings: false
+  }
+});
+
+// Новость может быть с картинкой или без неё. Для картинки задайте
+// BOT_NEWS_IMAGE_URL в Cloudflare либо замените пустую строку ниже на HTTPS URL.
+const DEFAULT_BOT_NEWS_IMAGE_URL = "";
+const BOT_NEWS_TITLE = "Первый сладкий сезон уже близко";
+const BOT_NEWS_TEXT = "Мы готовим серверный рейтинг, награду за первое место и честный сезон по лучшему результату забега. До старта в игре будет отображаться точная дата и обратный отсчёт.";
+// =============================================================
 
 const BOT_COMMANDS = Object.freeze([
   { command: "start", description: "Открыть главное меню" },
@@ -43,6 +85,8 @@ const BOT_COMMANDS = Object.freeze([
   { command: "story", description: "Сюжет игры" },
   { command: "faq", description: "Частые вопросы" },
   { command: "rewards", description: "Как получить награду" },
+  { command: "rating", description: "Рейтинг сезона" },
+  { command: "news", description: "Новости игры" },
   { command: "update", description: "Обновление и версия игры" },
   { command: "help", description: "Как проверить код" },
   { command: "whoami", description: "Показать мой Telegram ID" },
@@ -68,6 +112,18 @@ export default {
 
       if (url.pathname === "/api/rewards/mine" && request.method === "POST") {
         return await listMyRewards(request, env);
+      }
+
+      if (url.pathname === "/api/leaderboard/state" && request.method === "POST") {
+        return await leaderboardState(request, env);
+      }
+
+      if (url.pathname === "/api/leaderboard/submit" && request.method === "POST") {
+        return await submitLeaderboardRun(request, env);
+      }
+
+      if (url.pathname === "/api/leaderboard/claim" && request.method === "POST") {
+        return await claimLeaderboardReward(request, env);
       }
 
       if (url.pathname === "/api/bot/setup-webhook" && request.method === "POST") {
@@ -274,6 +330,334 @@ async function getRewardLimitStatus(env, ownerId, now = Math.floor(Date.now() / 
   };
 }
 
+
+function configuredSeason(env) {
+  const id = String(env.LEADERBOARD_SEASON_ID || DEFAULT_SEASON_ID).trim() || DEFAULT_SEASON_ID;
+  const title = String(env.LEADERBOARD_SEASON_TITLE || DEFAULT_SEASON_TITLE).trim() || DEFAULT_SEASON_TITLE;
+  const startsAt = parseConfiguredDate(env.LEADERBOARD_SEASON_START_AT || DEFAULT_SEASON_START_AT, "дата старта сезона");
+  const endsAt = parseConfiguredDate(env.LEADERBOARD_SEASON_END_AT || DEFAULT_SEASON_END_AT, "дата завершения сезона");
+  if (endsAt <= startsAt) throw new ApiError(500, "Дата завершения сезона должна быть позже даты старта.");
+  return {
+    id,
+    title,
+    startsAt,
+    endsAt,
+    rewardCoffee: positiveInt(env.LEADERBOARD_REWARD_COFFEE, DEFAULT_SEASON_REWARD_COFFEE),
+    rewardClaimDays: positiveInt(env.LEADERBOARD_REWARD_CLAIM_DAYS, DEFAULT_SEASON_REWARD_CLAIM_DAYS),
+    resetPlan: DEFAULT_SEASON_RESET_PLAN
+  };
+}
+
+function parseConfiguredDate(value, label) {
+  const timestamp = Date.parse(String(value || ""));
+  if (!Number.isFinite(timestamp)) throw new ApiError(500, `Некорректная ${label}.`);
+  return Math.floor(timestamp / 1000);
+}
+
+async function ensureSeason(env, now = Math.floor(Date.now() / 1000)) {
+  requireDatabase(env);
+  const config = configuredSeason(env);
+  await env.DB.prepare(
+    `INSERT INTO leaderboard_seasons (
+      id, title, starts_at, ends_at, status, reward_type, reward_amount,
+      reward_claim_days, reset_plan_json, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, 'scheduled', 'coffee', ?, ?, ?, ?, ?)
+    ON CONFLICT(id) DO UPDATE SET
+      title = excluded.title,
+      starts_at = excluded.starts_at,
+      ends_at = excluded.ends_at,
+      reward_type = excluded.reward_type,
+      reward_amount = excluded.reward_amount,
+      reward_claim_days = excluded.reward_claim_days,
+      reset_plan_json = excluded.reset_plan_json,
+      updated_at = excluded.updated_at`
+  ).bind(
+    config.id,
+    config.title,
+    config.startsAt,
+    config.endsAt,
+    config.rewardCoffee,
+    config.rewardClaimDays,
+    JSON.stringify(config.resetPlan),
+    now,
+    now
+  ).run();
+
+  let row = await env.DB.prepare(`SELECT * FROM leaderboard_seasons WHERE id = ? LIMIT 1`).bind(config.id).first();
+  if (!row) throw new ApiError(500, "Не удалось подготовить сезон рейтинга.");
+
+  const storedStatus = String(row.status || "scheduled");
+  if (storedStatus !== "cancelled" && storedStatus !== "ended") {
+    const nextStatus = now < Number(row.starts_at) ? "scheduled" : now < Number(row.ends_at) ? "active" : "ended";
+    if (nextStatus === "ended") {
+      await finalizeSeason(env, row, now);
+    } else if (nextStatus !== storedStatus) {
+      await env.DB.prepare(`UPDATE leaderboard_seasons SET status = ?, updated_at = ? WHERE id = ?`)
+        .bind(nextStatus, now, config.id).run();
+    }
+    row = await env.DB.prepare(`SELECT * FROM leaderboard_seasons WHERE id = ? LIMIT 1`).bind(config.id).first();
+  } else if (storedStatus === "ended" && !row.finalized_at) {
+    await finalizeSeason(env, row, now);
+    row = await env.DB.prepare(`SELECT * FROM leaderboard_seasons WHERE id = ? LIMIT 1`).bind(config.id).first();
+  }
+  return row;
+}
+
+async function finalizeSeason(env, season, now = Math.floor(Date.now() / 1000)) {
+  if (!season || season.finalized_at) return;
+  const winner = await env.DB.prepare(
+    `SELECT telegram_id, display_name, best_score
+     FROM leaderboard_entries
+     WHERE season_id = ? AND hidden = 0
+     ORDER BY best_score DESC, achieved_at ASC, telegram_id ASC
+     LIMIT 1`
+  ).bind(season.id).first();
+
+  if (winner) {
+    const rewardId = `${season.id}:${winner.telegram_id}:1:coffee`;
+    const claimDays = positiveInt(season.reward_claim_days, DEFAULT_SEASON_REWARD_CLAIM_DAYS);
+    const expiresAt = Math.max(now, Number(season.ends_at || now)) + claimDays * 24 * 60 * 60;
+    await env.DB.prepare(
+      `INSERT OR IGNORE INTO leaderboard_rewards (
+        id, season_id, telegram_id, place, reward_type, reward_amount,
+        status, created_at, expires_at
+      ) VALUES (?, ?, ?, 1, 'coffee', ?, 'pending', ?, ?)`
+    ).bind(rewardId, season.id, String(winner.telegram_id), Number(season.reward_amount || 0), now, expiresAt).run();
+  }
+
+  await env.DB.prepare(
+    `UPDATE leaderboard_seasons
+     SET status = 'ended', finalized_at = COALESCE(finalized_at, ?), updated_at = ?
+     WHERE id = ?`
+  ).bind(now, now, season.id).run();
+}
+
+async function leaderboardState(request, env) {
+  try {
+    requireDatabase(env);
+    requireBotToken(env);
+    const body = await readJson(request);
+    const auth = await validateTelegramInitData(String(body.initData || ""), env);
+    const mode = String(body.mode || "season") === "all_time" ? "all_time" : "season";
+    const season = await ensureSeason(env);
+    return jsonResponse(await buildLeaderboardPayload(env, season, String(auth.user.id), mode));
+  } catch (error) {
+    if (error instanceof ApiError) return jsonResponse({ ok: false, error: error.message }, error.status);
+    console.error("leaderboardState failed", error);
+    return jsonResponse({ ok: false, error: "Не удалось загрузить рейтинг." }, 500);
+  }
+}
+
+async function submitLeaderboardRun(request, env) {
+  try {
+    requireDatabase(env);
+    requireBotToken(env);
+    const body = await readJson(request);
+    const auth = await validateTelegramInitData(String(body.initData || ""), env);
+    const season = await ensureSeason(env);
+    if (String(season.status) !== "active") {
+      throw new ApiError(409, String(season.status) === "scheduled" ? "Сезон ещё не начался." : "Сезон уже завершён.");
+    }
+
+    const runId = String(body.runId || "").trim();
+    if (!/^[A-Za-z0-9_-]{12,96}$/.test(runId)) throw new ApiError(400, "Некорректный идентификатор забега.");
+    const score = Math.floor(Number(body.score || 0));
+    const durationMs = Math.floor(Number(body.durationMs || 0));
+    const level = Math.max(1, Math.floor(Number(body.level || 1)));
+    const minSeconds = positiveInt(env.LEADERBOARD_MIN_RUN_SECONDS, DEFAULT_LEADERBOARD_MIN_RUN_SECONDS);
+    const minScore = positiveInt(env.LEADERBOARD_MIN_SCORE, DEFAULT_LEADERBOARD_MIN_SCORE);
+    const durationSeconds = durationMs / 1000;
+    if (!Number.isFinite(score) || score < minScore || !Number.isFinite(durationSeconds) || durationSeconds < minSeconds) {
+      throw new ApiError(400, `В рейтинг попадают забеги от ${minSeconds} секунд и ${minScore} очков.`);
+    }
+    const generousMaxScore = Math.floor(durationSeconds * 90 + 6000);
+    if (score > generousMaxScore) throw new ApiError(400, "Результат не прошёл серверную проверку.");
+
+    const now = Math.floor(Date.now() / 1000);
+    const telegramId = String(auth.user.id);
+    const displayName = telegramDisplayName(auth.user).slice(0, 120);
+    const username = String(auth.user.username || "").slice(0, 64);
+    const photoUrl = String(auth.user.photo_url || "").slice(0, 500);
+
+    try {
+      await env.DB.prepare(
+        `INSERT INTO leaderboard_runs (
+          run_id, season_id, telegram_id, score, duration_ms, accepted, created_at
+        ) VALUES (?, ?, ?, ?, ?, 1, ?)`
+      ).bind(runId, season.id, telegramId, score, durationMs, now).run();
+    } catch (error) {
+      if (!String(error?.message || error).toLowerCase().includes("unique")) throw error;
+      return jsonResponse(await buildLeaderboardPayload(env, season, telegramId, "season"));
+    }
+
+    await env.DB.prepare(
+      `INSERT INTO leaderboard_entries (
+        season_id, telegram_id, display_name, username, photo_url,
+        best_score, level, achieved_at, updated_at, hidden
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
+      ON CONFLICT(season_id, telegram_id) DO UPDATE SET
+        display_name = excluded.display_name,
+        username = excluded.username,
+        photo_url = excluded.photo_url,
+        level = excluded.level,
+        best_score = CASE WHEN excluded.best_score > leaderboard_entries.best_score THEN excluded.best_score ELSE leaderboard_entries.best_score END,
+        achieved_at = CASE WHEN excluded.best_score > leaderboard_entries.best_score THEN excluded.achieved_at ELSE leaderboard_entries.achieved_at END,
+        updated_at = excluded.updated_at`
+    ).bind(season.id, telegramId, displayName, username, photoUrl, score, level, now, now).run();
+
+    await env.DB.prepare(
+      `INSERT INTO leaderboard_all_time (
+        telegram_id, display_name, username, photo_url,
+        best_score, level, achieved_at, updated_at, hidden
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)
+      ON CONFLICT(telegram_id) DO UPDATE SET
+        display_name = excluded.display_name,
+        username = excluded.username,
+        photo_url = excluded.photo_url,
+        level = excluded.level,
+        best_score = CASE WHEN excluded.best_score > leaderboard_all_time.best_score THEN excluded.best_score ELSE leaderboard_all_time.best_score END,
+        achieved_at = CASE WHEN excluded.best_score > leaderboard_all_time.best_score THEN excluded.achieved_at ELSE leaderboard_all_time.achieved_at END,
+        updated_at = excluded.updated_at`
+    ).bind(telegramId, displayName, username, photoUrl, score, level, now, now).run();
+
+    return jsonResponse(await buildLeaderboardPayload(env, season, telegramId, "season"));
+  } catch (error) {
+    if (error instanceof ApiError) return jsonResponse({ ok: false, error: error.message }, error.status);
+    console.error("submitLeaderboardRun failed", error);
+    return jsonResponse({ ok: false, error: "Не удалось отправить результат в рейтинг." }, 500);
+  }
+}
+
+async function claimLeaderboardReward(request, env) {
+  try {
+    requireDatabase(env);
+    requireBotToken(env);
+    const body = await readJson(request);
+    const auth = await validateTelegramInitData(String(body.initData || ""), env);
+    await ensureSeason(env);
+    const telegramId = String(auth.user.id);
+    const requestedRewardId = String(body.rewardId || "").trim();
+    const reward = requestedRewardId
+      ? await env.DB.prepare(
+          `SELECT * FROM leaderboard_rewards WHERE id = ? AND telegram_id = ? LIMIT 1`
+        ).bind(requestedRewardId, telegramId).first()
+      : await env.DB.prepare(
+          `SELECT * FROM leaderboard_rewards
+           WHERE telegram_id = ? AND status IN ('pending', 'claimed')
+           ORDER BY CASE status WHEN 'pending' THEN 0 ELSE 1 END, created_at DESC LIMIT 1`
+        ).bind(telegramId).first();
+    if (!reward) throw new ApiError(404, "Для этого аккаунта нет сезонной награды.");
+    const now = Math.floor(Date.now() / 1000);
+    if (String(reward.status) === "cancelled") throw new ApiError(409, "Награда отменена.");
+    if (Number(reward.expires_at || 0) <= now && String(reward.status) !== "claimed") {
+      await env.DB.prepare(`UPDATE leaderboard_rewards SET status = 'expired' WHERE id = ?`).bind(reward.id).run();
+      throw new ApiError(410, "Срок получения награды истёк.");
+    }
+    if (String(reward.status) === "claimed") {
+      return jsonResponse({ ok: true, claimed: false, alreadyClaimed: true, reward: rewardToClient(reward) });
+    }
+    const result = await env.DB.prepare(
+      `UPDATE leaderboard_rewards SET status = 'claimed', claimed_at = ? WHERE id = ? AND status = 'pending'`
+    ).bind(now, reward.id).run();
+    if (Number(result.meta?.changes || 0) !== 1) throw new ApiError(409, "Награда уже была обработана.");
+    const updated = await env.DB.prepare(`SELECT * FROM leaderboard_rewards WHERE id = ?`).bind(reward.id).first();
+    return jsonResponse({ ok: true, claimed: true, reward: rewardToClient(updated) });
+  } catch (error) {
+    if (error instanceof ApiError) return jsonResponse({ ok: false, error: error.message }, error.status);
+    console.error("claimLeaderboardReward failed", error);
+    return jsonResponse({ ok: false, error: "Не удалось получить сезонную награду." }, 500);
+  }
+}
+
+async function buildLeaderboardPayload(env, season, telegramId, mode = "season") {
+  const topLimit = Math.min(100, positiveInt(env.LEADERBOARD_TOP_LIMIT, DEFAULT_LEADERBOARD_TOP_LIMIT));
+  const table = mode === "all_time" ? "leaderboard_all_time" : "leaderboard_entries";
+  const where = mode === "all_time" ? "hidden = 0" : "season_id = ? AND hidden = 0";
+  const query = `SELECT telegram_id, display_name, username, photo_url, best_score, level, achieved_at
+                 FROM ${table} WHERE ${where}
+                 ORDER BY best_score DESC, achieved_at ASC, telegram_id ASC LIMIT ?`;
+  const topResult = mode === "all_time"
+    ? await env.DB.prepare(query).bind(topLimit).all()
+    : await env.DB.prepare(query).bind(season.id, topLimit).all();
+  const top = (topResult.results || []).map((row, index) => leaderboardRowToClient(row, index + 1));
+
+  const me = mode === "all_time"
+    ? await env.DB.prepare(`SELECT * FROM leaderboard_all_time WHERE telegram_id = ? LIMIT 1`).bind(telegramId).first()
+    : await env.DB.prepare(`SELECT * FROM leaderboard_entries WHERE season_id = ? AND telegram_id = ? LIMIT 1`).bind(season.id, telegramId).first();
+  let myEntry = null;
+  if (me && !Number(me.hidden || 0)) {
+    const rankQuery = mode === "all_time"
+      ? `SELECT COUNT(*) + 1 AS place FROM leaderboard_all_time
+         WHERE hidden = 0 AND (best_score > ? OR (best_score = ? AND achieved_at < ?))`
+      : `SELECT COUNT(*) + 1 AS place FROM leaderboard_entries
+         WHERE season_id = ? AND hidden = 0 AND (best_score > ? OR (best_score = ? AND achieved_at < ?))`;
+    const rank = mode === "all_time"
+      ? await env.DB.prepare(rankQuery).bind(me.best_score, me.best_score, me.achieved_at).first()
+      : await env.DB.prepare(rankQuery).bind(season.id, me.best_score, me.best_score, me.achieved_at).first();
+    myEntry = leaderboardRowToClient(me, Number(rank?.place || 0));
+  }
+
+  const reward = await env.DB.prepare(
+    `SELECT * FROM leaderboard_rewards
+     WHERE telegram_id = ? AND status IN ('pending', 'claimed')
+     ORDER BY CASE WHEN season_id = ? THEN 0 ELSE 1 END,
+              CASE status WHEN 'pending' THEN 0 ELSE 1 END,
+              created_at DESC
+     LIMIT 1`
+  ).bind(telegramId, season.id).first();
+  const firstScore = top.length ? top[0].score : 0;
+  const serverTime = Date.now();
+  let resetPlan = null;
+  try { resetPlan = JSON.parse(String(season.reset_plan_json || "null")); } catch {}
+  return {
+    ok: true,
+    mode,
+    serverTime,
+    season: {
+      id: String(season.id),
+      title: String(season.title),
+      status: String(season.status),
+      startsAt: Number(season.starts_at || 0) * 1000,
+      endsAt: Number(season.ends_at || 0) * 1000,
+      reward: { type: String(season.reward_type || "coffee"), amount: Number(season.reward_amount || 0), title: `${Number(season.reward_amount || 0)} кофе` },
+      resetPlan: resetPlan ? { ...resetPlan, applyAt: Number(season.ends_at || 0) * 1000 } : null
+    },
+    top,
+    me: myEntry,
+    firstScore,
+    gapToFirst: myEntry ? Math.max(0, firstScore - myEntry.score) : firstScore,
+    reward: reward ? rewardToClient(reward) : null
+  };
+}
+
+function leaderboardRowToClient(row, place) {
+  return {
+    place: Number(place || 0),
+    telegramId: String(row.telegram_id || ""),
+    name: String(row.display_name || "Гость кафе"),
+    username: String(row.username || ""),
+    photoUrl: String(row.photo_url || ""),
+    score: Number(row.best_score || 0),
+    level: Number(row.level || 1),
+    achievedAt: Number(row.achieved_at || 0) * 1000
+  };
+}
+
+function rewardToClient(row) {
+  return {
+    id: String(row.id || ""),
+    seasonId: String(row.season_id || ""),
+    place: Number(row.place || 0),
+    type: String(row.reward_type || "coffee"),
+    amount: Number(row.reward_amount || 0),
+    itemId: String(row.reward_item_id || ""),
+    status: String(row.status || "pending"),
+    createdAt: Number(row.created_at || 0) * 1000,
+    claimedAt: Number(row.claimed_at || 0) * 1000,
+    expiresAt: Number(row.expires_at || 0) * 1000
+  };
+}
+
 async function setupWebhook(request, env) {
   try {
     requireBotToken(env);
@@ -368,6 +752,16 @@ async function handleTelegramUpdate(update, env) {
     return;
   }
 
+  if (/^\/(?:rating|top)(?:@\w+)?$/i.test(text)) {
+    await sendBotRating(env, chatId, user);
+    return;
+  }
+
+  if (/^\/news(?:@\w+)?$/i.test(text)) {
+    await sendBotNews(env, chatId);
+    return;
+  }
+
   if (/^\/(?:update|version)(?:@\w+)?$/i.test(text)) {
     await sendTelegramMessage(env, chatId, botUpdateText(), sectionMenuMarkup(env));
     return;
@@ -410,7 +804,7 @@ function configuredGameUrl(env) {
 }
 
 function botMainMenuText() {
-  return `<b>Зефирок — помощник кафе</b>\n\nТекущая версия игры: <b>${escapeHtml(GAME_VERSION)}</b>\n\nЗдесь можно открыть игру, узнать историю Зефи, прочитать ответы на частые вопросы, посмотреть последнее обновление и проверить код награды.\n\nЧтобы проверить подарок, просто отправьте код из раздела «Мои покупки» одним сообщением.`;
+  return `<b>Зефирок — помощник кафе</b>\n\nТекущая версия игры: <b>${escapeHtml(GAME_VERSION)}</b>\n\nЗдесь можно открыть игру, посмотреть сезонный рейтинг и новости, узнать историю Зефи, прочитать ответы на частые вопросы и проверить код награды.\n\nЧтобы проверить подарок, просто отправьте код из раздела «Мои покупки» одним сообщением.`;
 }
 
 function botGameText() {
@@ -472,12 +866,71 @@ function botFaqText() {
 <b>Как заранее понять, будет ли обнуление?</b>
 Откройте раздел «Обновление» в этом боте. Там указаны версия, тип обновления и статус прогресса. При сбросе игра также покажет обязательное информационное окно.
 
+<b>Как работает рейтинг?</b>
+В таблицу попадает лучший результат одного зачтённого забега за текущий сезон. Дата старта и сброса задаётся разработчиками и отображается в игре.
+
+<b>Что сбрасывается после сезона?</b>
+Обычный сезон сбрасывает только сезонное место. Валюты, уровень, скины, покупки и настройки меняются только тогда, когда это отдельно указано в плане обновления.
+
+<b>Какая награда за первое место?</b>
+В первом сезоне победитель сможет забрать 50 кофе. В будущих сезонах наградой может стать уникальный скин.
+
 <b>Где посмотреть версию и изменения?</b>
 Нажмите «Обновление» в главном меню бота или отправьте команду /update.`;
 }
 
 function botRewardsText() {
   return `<b>Как получить награду</b>\n\n1. Соберите валюту в игре.\n2. Купите подарок во вкладке «Магазин».\n3. Откройте «Мои покупки» и нажмите на код, чтобы скопировать его.\n4. Покажите код сотруднику кафе или отправьте его в этот бот.\n5. После выдачи сотрудник спишет код, и повторно использовать его будет нельзя.\n\nКод действует 24 часа. Лимит — не больше двух наград за 24 часа.`;
+}
+
+
+async function sendBotRating(env, chatId, user) {
+  try {
+    const season = await ensureSeason(env);
+    const payload = await buildLeaderboardPayload(env, season, String(user.id), "season");
+    const status = payload.season.status;
+    const start = formatUtcDate(Math.floor(payload.season.startsAt / 1000));
+    const end = formatUtcDate(Math.floor(payload.season.endsAt / 1000));
+    if (status === "scheduled") {
+      await sendTelegramMessage(env, chatId,
+        `<b>🏆 ${escapeHtml(payload.season.title)}</b>\n\n<b>Уже скоро!</b>\nСтарт: <b>${escapeHtml(start)}</b>\n\nГлавная награда: <b>${payload.season.reward.amount} кофе</b>\n\nВ рейтинг попадёт лучший результат одного забега.`,
+        sectionMenuMarkup(env)
+      );
+      return;
+    }
+    const lines = payload.top.slice(0, 10).map((entry) => `${entry.place}. ${escapeHtml(entry.name)} — <b>${entry.score.toLocaleString("ru-RU")}</b>`);
+    const me = payload.me
+      ? `\n\nВаше место: <b>${payload.me.place}</b>\nВаш результат: <b>${payload.me.score.toLocaleString("ru-RU")}</b>`
+      : "\n\nЗавершите подходящий забег в игре, чтобы попасть в таблицу.";
+    const statusLine = status === "active" ? `Сброс рейтинга: <b>${escapeHtml(end)}</b>` : `<b>Сезон завершён</b>`;
+    await sendTelegramMessage(env, chatId,
+      `<b>🏆 ${escapeHtml(payload.season.title)}</b>\n\n${statusLine}\nНаграда за 1 место: <b>${payload.season.reward.amount} кофе</b>\n\n${lines.length ? lines.join("\n") : "Пока нет результатов."}${me}`,
+      sectionMenuMarkup(env)
+    );
+  } catch (error) {
+    console.error("sendBotRating failed", error);
+    await sendTelegramMessage(env, chatId, "Рейтинг временно недоступен. Попробуйте позже.", sectionMenuMarkup(env));
+  }
+}
+
+async function sendBotNews(env, chatId) {
+  const text = `<b>📰 ${escapeHtml(BOT_NEWS_TITLE)}</b>\n\n${escapeHtml(BOT_NEWS_TEXT)}\n\nВерсия: <b>${escapeHtml(GAME_VERSION)}</b>`;
+  const imageUrl = String(env.BOT_NEWS_IMAGE_URL || DEFAULT_BOT_NEWS_IMAGE_URL).trim();
+  if (imageUrl) {
+    try {
+      await telegramApi(env, "sendPhoto", {
+        chat_id: chatId,
+        photo: imageUrl,
+        caption: text,
+        parse_mode: "HTML",
+        reply_markup: sectionMenuMarkup(env)
+      });
+      return;
+    } catch (error) {
+      console.error("News image failed; falling back to text", error);
+    }
+  }
+  await sendTelegramMessage(env, chatId, text, sectionMenuMarkup(env));
 }
 
 function botUpdateText() {
@@ -503,6 +956,7 @@ function mainMenuMarkup(env) {
         { text: "📖 Сюжет", callback_data: "menu:story" },
         { text: "❓ FAQ", callback_data: "menu:faq" }
       ],
+      [{ text: "🏆 Рейтинг", callback_data: "menu:rating" }, { text: "📰 Новости", callback_data: "menu:news" }],
       [{ text: `🆕 Обновление · ${GAME_VERSION}`, callback_data: "menu:update" }],
       [{ text: "🎁 Как получить награду", callback_data: "menu:rewards" }]
     ]
@@ -528,7 +982,7 @@ function sectionMenuMarkup(env) {
 }
 
 async function handleMenuCallback(query, env) {
-  const match = String(query.data || "").match(/^menu:(home|story|faq|rewards|update)$/);
+  const match = String(query.data || "").match(/^menu:(home|story|faq|rewards|rating|news|update)$/);
   if (!match) return false;
   const message = query.message;
   if (!message?.chat?.id) {
@@ -537,6 +991,16 @@ async function handleMenuCallback(query, env) {
   }
 
   const section = match[1];
+  if (section === "rating") {
+    await answerCallback(env, query.id, "Рейтинг открыт");
+    await sendBotRating(env, message.chat.id, query.from);
+    return true;
+  }
+  if (section === "news") {
+    await answerCallback(env, query.id, "Новости открыты");
+    await sendBotNews(env, message.chat.id);
+    return true;
+  }
   const text = section === "story"
     ? botStoryText()
     : section === "faq"
