@@ -37,7 +37,7 @@ const REWARD_LIMIT_RESET_AT_SECONDS = 1784805300; // 23.07.2026 11:15 UTC
 
 // НАСТРОЙКИ ВЕРСИИ И РАЗДЕЛА «ОБНОВЛЕНИЕ» В БОТЕ.
 // Меняйте эти значения при каждом новом релизе игры.
-const GAME_VERSION = "0.3.7 Beta";
+const GAME_VERSION = "0.3.9 Beta";
 const GAME_UPDATE_DATE = "24 июля 2026";
 const GAME_UPDATE_TITLE = "Тестовый сезон и новые рамки рейтинга";
 
@@ -95,7 +95,7 @@ const DEFAULT_SEASON_RESET_PLAN = Object.freeze({
 
 // Новость может быть с картинкой или без неё. Для картинки задайте
 // BOT_NEWS_IMAGE_URL в Cloudflare либо замените пустую строку ниже на HTTPS URL.
-const DEFAULT_BOT_NEWS_IMAGE_URL = `${DEFAULT_GAME_URL}assets/rating/season-news.png?v=0.3.7`;
+const DEFAULT_BOT_NEWS_IMAGE_URL = `${DEFAULT_GAME_URL}assets/rating/season-news.png?v=0.3.9`;
 const BOT_NEWS_TITLE = "Тестовый сезон завершится 25 июля";
 const BOT_NEWS_TEXT = "Первый тестовый сезон Сладкого Забега завершится 25 июля 2026 года в 15:40 МСК. Успейте проверить рейтинг, итоговые места и выдачу награды за первое место.";
 // =============================================================
