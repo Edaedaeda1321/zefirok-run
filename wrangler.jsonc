@@ -1,13 +1,32 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "zefirok-run",
-  "compatibility_date": "2026-07-19",
+  "main": "src/worker.js",
+  "compatibility_date": "2026-07-23",
+
   "observability": {
     "enabled": true
   },
+
   "assets": {
-    "directory": "."
+    "directory": ".",
+    "binding": "ASSETS",
+    "run_worker_first": [
+      "/api/*",
+      "/telegram/*"
+    ]
   },
+
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "zefirok-rewards",
+      "database_id": "5b92319d-9868-4e20-8677-4a140390255d",
+      "migrations_dir": "migrations",
+      "remote": true
+    }
+  ],
+
   "compatibility_flags": [
     "nodejs_compat"
   ]
