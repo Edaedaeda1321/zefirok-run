@@ -1,0 +1,8 @@
+.git
+.github
+src
+migrations
+wrangler.jsonc
+README.md
+*.zip
+.DS_Store

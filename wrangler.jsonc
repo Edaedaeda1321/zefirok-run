@@ -3,11 +3,9 @@
   "name": "zefirok-run",
   "main": "src/entry-admin-safe.js",
   "compatibility_date": "2026-07-23",
-
   "observability": {
     "enabled": true
   },
-
   "assets": {
     "directory": ".",
     "binding": "ASSETS",
@@ -18,7 +16,6 @@
       "/index.html"
     ]
   },
-
   "d1_databases": [
     {
       "binding": "DB",
@@ -28,7 +25,6 @@
       "remote": true
     }
   ],
-
   "compatibility_flags": [
     "nodejs_compat"
   ]

@@ -4,6 +4,22 @@ const PRODUCTS = Object.freeze({
   cappuccino: { id: "cappuccino", title: "Капучино", prefix: "CP" }
 });
 
+const DEFAULT_SHOP_PRODUCTS = Object.freeze({
+  zefir: Object.freeze({ points: 40000, treats: 350, coffee: 0 }),
+  americano: Object.freeze({ points: 65000, treats: 0, coffee: 350 }),
+  cappuccino: Object.freeze({ points: 75000, treats: 0, coffee: 450 })
+});
+
+const SHOP_SCHEMA_SQL = `CREATE TABLE IF NOT EXISTS shop_prices (
+  product_id TEXT PRIMARY KEY,
+  points INTEGER NOT NULL DEFAULT 0 CHECK(points >= 0),
+  treats INTEGER NOT NULL DEFAULT 0 CHECK(treats >= 0),
+  coffee INTEGER NOT NULL DEFAULT 0 CHECK(coffee >= 0),
+  version INTEGER NOT NULL DEFAULT 1 CHECK(version >= 1),
+  updated_at INTEGER NOT NULL,
+  updated_by TEXT NOT NULL DEFAULT ''
+)`;
+
 const encoder = new TextEncoder();
 const CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 const DEFAULT_REWARD_TTL_SECONDS = 24 * 60 * 60;
@@ -18,9 +34,9 @@ const REWARD_LIMIT_RESET_AT_SECONDS = 1784805300; // 23.07.2026 11:15 UTC
 
 // НАСТРОЙКИ ВЕРСИИ И РАЗДЕЛА «ОБНОВЛЕНИЕ» В БОТЕ.
 // Меняйте эти значения при каждом новом релизе игры.
-const GAME_VERSION = "0.2.2 Beta";
+const GAME_VERSION = "0.2.3 Beta";
 const GAME_UPDATE_DATE = "23 июля 2026";
-const GAME_UPDATE_TITLE = "Исправление сезонного рейтинга";
+const GAME_UPDATE_TITLE = "Админ-рейтинг и глобальные начисления";
 
 // Что произошло с прогрессом в этом релизе:
 // "reset" — крупное обновление с обнулением прогресса;
@@ -29,13 +45,12 @@ const GAME_UPDATE_PROGRESS_MODE = "keep";
 const GAME_UPDATE_RESET_REASON = "Прогресс в этом обновлении сохраняется.";
 
 const GAME_UPDATE_NOTES = Object.freeze([
-  "Исправлено мгновенное отображение места после зачтённого забега.",
-  "Обе вкладки рейтинга загружаются заранее и переключаются без старых данных.",
-  "Карточка рейтинга и раскрытое окно получили закреплённые изображения без скачков.",
-  "На экране забега используется единое название «Очки».",
-  "Награда первого сезона отображается чашками кофе.",
-  "Интерфейс награды готов к будущим сезонным скинам и предметам.",
-  "В новости Telegram-бота добавлено изображение рейтингового сезона."
+  "Исправлен HTTP 404 при изменении рейтинга из админ-панели.",
+  "Административные маршруты перенесены в основной Worker без цепочки entrypoint-файлов.",
+  "Добавлено точное изменение рейтинга текущего сезона и рейтинга за всё время.",
+  "Добавлена серверная синхронизация начисленных очков, рекорда, зефира, кофе и XP.",
+  "Глобальные цены магазина обслуживаются тем же основным Worker.",
+  "Добавлен проверочный маршрут /api/admin/health."
 ]);
 
 
@@ -110,6 +125,35 @@ export default {
         return jsonResponse({ ok: true, service: "zefirok-rewards" });
       }
 
+      if (url.pathname === "/api/admin/health" && request.method === "GET") {
+        return jsonResponse({
+          ok: true,
+          service: "zefirok-admin",
+          version: GAME_VERSION,
+          routes: [
+            "/api/admin/profile/sync",
+            "/api/admin/leaderboard/set",
+            "/api/admin/shop/prices"
+          ]
+        });
+      }
+
+      if (url.pathname === "/api/shop/config" && request.method === "GET") {
+        return await getShopConfig(env);
+      }
+
+      if (url.pathname === "/api/admin/shop/prices" && request.method === "POST") {
+        return await updateShopPrices(request, env);
+      }
+
+      if (url.pathname === "/api/admin/profile/sync" && request.method === "POST") {
+        return await syncAdminProfile(request, env);
+      }
+
+      if (url.pathname === "/api/admin/leaderboard/set" && request.method === "POST") {
+        return await setAdminLeaderboardScore(request, env);
+      }
+
       if (url.pathname === "/api/rewards/create" && request.method === "POST") {
         return await createReward(request, env);
       }
@@ -177,6 +221,279 @@ class ApiError extends Error {
     this.status = status;
     this.details = details;
   }
+}
+
+async function getShopConfig(env) {
+  try {
+    requireDatabase(env);
+    await ensureShopSchema(env);
+    return jsonResponse({
+      ok: true,
+      products: await readShopPrices(env),
+      defaults: DEFAULT_SHOP_PRODUCTS,
+      source: "d1"
+    });
+  } catch (error) {
+    console.error("getShopConfig failed", error);
+    return jsonResponse({
+      ok: true,
+      products: cloneDefaultShopProducts(),
+      defaults: DEFAULT_SHOP_PRODUCTS,
+      source: "fallback"
+    });
+  }
+}
+
+async function updateShopPrices(request, env) {
+  try {
+    requireDatabase(env);
+    requireBotToken(env);
+    const body = await readJson(request);
+    const auth = await validateTelegramInitData(String(body.initData || ""), env);
+    requireAdminUser(auth.user, env);
+    const products = normalizeShopProducts(body.products);
+    await ensureShopSchema(env);
+    const now = Math.floor(Date.now() / 1000);
+    const updatedBy = String(auth.user.id);
+    await env.DB.batch(Object.entries(products).map(([productId, price]) => env.DB.prepare(
+      `INSERT INTO shop_prices (
+        product_id, points, treats, coffee, version, updated_at, updated_by
+      ) VALUES (?, ?, ?, ?, 1, ?, ?)
+      ON CONFLICT(product_id) DO UPDATE SET
+        points = excluded.points,
+        treats = excluded.treats,
+        coffee = excluded.coffee,
+        version = shop_prices.version + 1,
+        updated_at = excluded.updated_at,
+        updated_by = excluded.updated_by`
+    ).bind(productId, price.points, price.treats, price.coffee, now, updatedBy)));
+    return jsonResponse({ ok: true, products: await readShopPrices(env), updatedAt: now * 1000 });
+  } catch (error) {
+    if (error instanceof ApiError) return jsonResponse({ ok: false, error: error.message }, error.status);
+    console.error("updateShopPrices failed", error);
+    return jsonResponse({ ok: false, error: "Не удалось сохранить глобальные цены." }, 500);
+  }
+}
+
+async function ensureShopSchema(env) {
+  await env.DB.prepare(SHOP_SCHEMA_SQL).run();
+  const now = Math.floor(Date.now() / 1000);
+  await env.DB.batch(Object.entries(DEFAULT_SHOP_PRODUCTS).map(([productId, price]) => env.DB.prepare(
+    `INSERT OR IGNORE INTO shop_prices (
+      product_id, points, treats, coffee, version, updated_at, updated_by
+    ) VALUES (?, ?, ?, ?, 1, ?, 'system')`
+  ).bind(productId, price.points, price.treats, price.coffee, now)));
+}
+
+async function readShopPrices(env) {
+  const result = await env.DB.prepare(
+    `SELECT product_id, points, treats, coffee FROM shop_prices ORDER BY product_id ASC`
+  ).all();
+  const products = cloneDefaultShopProducts();
+  for (const row of result.results || []) {
+    if (!products[row.product_id]) continue;
+    products[row.product_id] = {
+      points: safeAdminNumber(row.points),
+      treats: safeAdminNumber(row.treats),
+      coffee: safeAdminNumber(row.coffee)
+    };
+  }
+  return products;
+}
+
+function cloneDefaultShopProducts() {
+  return Object.fromEntries(Object.entries(DEFAULT_SHOP_PRODUCTS).map(([id, price]) => [id, { ...price }]));
+}
+
+function normalizeShopProducts(input) {
+  if (!input || typeof input !== "object" || Array.isArray(input)) {
+    throw new ApiError(400, "Некорректный список цен.");
+  }
+  const products = {};
+  for (const productId of Object.keys(DEFAULT_SHOP_PRODUCTS)) {
+    const price = input[productId];
+    if (!price || typeof price !== "object" || Array.isArray(price)) {
+      throw new ApiError(400, `Не указаны цены товара ${productId}.`);
+    }
+    products[productId] = {
+      points: validateAdminNumber(price.points),
+      treats: validateAdminNumber(price.treats),
+      coffee: validateAdminNumber(price.coffee)
+    };
+  }
+  return products;
+}
+
+async function syncAdminProfile(request, env) {
+  try {
+    requireDatabase(env);
+    requireBotToken(env);
+    const body = await readJson(request);
+    const auth = await validateTelegramInitData(String(body.initData || ""), env);
+    requireAdminUser(auth.user, env);
+    const telegramId = String(auth.user.id);
+    const current = normalizeAdminProfile(body.current || {});
+    const now = Math.floor(Date.now() / 1000);
+
+    await env.DB.prepare(
+      `INSERT OR IGNORE INTO admin_profile_state (
+        telegram_id, wallet, best_score, treats, coffee, profile_xp,
+        revision, created_at, updated_at, updated_by
+      ) VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?, ?)`
+    ).bind(
+      telegramId,
+      current.wallet,
+      current.best,
+      current.treats,
+      current.coffee,
+      current.profileXp,
+      now,
+      now,
+      telegramId
+    ).run();
+
+    if (String(body.mode || "read") === "write") {
+      const next = normalizeAdminProfile(body.next || current);
+      await env.DB.prepare(
+        `UPDATE admin_profile_state SET
+          wallet = MAX(wallet, ?),
+          best_score = MAX(best_score, ?),
+          treats = MAX(treats, ?),
+          coffee = MAX(coffee, ?),
+          profile_xp = MAX(profile_xp, ?),
+          revision = revision + 1,
+          updated_at = ?,
+          updated_by = ?
+         WHERE telegram_id = ?`
+      ).bind(
+        next.wallet,
+        next.best,
+        next.treats,
+        next.coffee,
+        next.profileXp,
+        now,
+        telegramId,
+        telegramId
+      ).run();
+    }
+
+    const row = await env.DB.prepare(
+      `SELECT wallet, best_score, treats, coffee, profile_xp, revision, updated_at
+       FROM admin_profile_state WHERE telegram_id = ? LIMIT 1`
+    ).bind(telegramId).first();
+
+    return jsonResponse({
+      ok: true,
+      profile: {
+        wallet: safeAdminNumber(row?.wallet),
+        best: safeAdminNumber(row?.best_score),
+        treats: safeAdminNumber(row?.treats),
+        coffee: safeAdminNumber(row?.coffee),
+        profileXp: safeAdminNumber(row?.profile_xp),
+        revision: safeAdminNumber(row?.revision),
+        updatedAt: safeAdminNumber(row?.updated_at) * 1000
+      }
+    });
+  } catch (error) {
+    if (error instanceof ApiError) return jsonResponse({ ok: false, error: error.message }, error.status);
+    console.error("syncAdminProfile failed", error);
+    return jsonResponse({ ok: false, error: "Не удалось синхронизировать глобальные начисления." }, 500);
+  }
+}
+
+async function setAdminLeaderboardScore(request, env) {
+  try {
+    requireDatabase(env);
+    requireBotToken(env);
+    const body = await readJson(request);
+    const auth = await validateTelegramInitData(String(body.initData || ""), env);
+    requireAdminUser(auth.user, env);
+    const score = validateAdminNumber(body.score);
+    const level = Math.max(1, Math.min(50, Math.floor(Number(body.level || 1)) || 1));
+    const now = Math.floor(Date.now() / 1000);
+    const telegramId = String(auth.user.id);
+    const displayName = telegramDisplayName(auth.user).slice(0, 120);
+    const username = String(auth.user.username || "").slice(0, 64);
+    const photoUrl = String(auth.user.photo_url || "").slice(0, 500);
+    const season = await ensureSeason(env, now);
+
+    await env.DB.prepare(
+      `INSERT INTO leaderboard_entries (
+        season_id, telegram_id, display_name, username, photo_url,
+        best_score, level, achieved_at, updated_at, hidden
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
+      ON CONFLICT(season_id, telegram_id) DO UPDATE SET
+        display_name = excluded.display_name,
+        username = excluded.username,
+        photo_url = excluded.photo_url,
+        best_score = excluded.best_score,
+        level = excluded.level,
+        achieved_at = excluded.achieved_at,
+        updated_at = excluded.updated_at,
+        hidden = 0`
+    ).bind(season.id, telegramId, displayName, username, photoUrl, score, level, now, now).run();
+
+    await env.DB.prepare(
+      `INSERT INTO leaderboard_all_time (
+        telegram_id, display_name, username, photo_url,
+        best_score, level, achieved_at, updated_at, hidden
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)
+      ON CONFLICT(telegram_id) DO UPDATE SET
+        display_name = excluded.display_name,
+        username = excluded.username,
+        photo_url = excluded.photo_url,
+        best_score = excluded.best_score,
+        level = excluded.level,
+        achieved_at = excluded.achieved_at,
+        updated_at = excluded.updated_at,
+        hidden = 0`
+    ).bind(telegramId, displayName, username, photoUrl, score, level, now, now).run();
+
+    return jsonResponse({
+      ok: true,
+      score,
+      seasonId: String(season.id),
+      season: await buildLeaderboardPayload(env, season, telegramId, "season"),
+      allTime: await buildLeaderboardPayload(env, season, telegramId, "all_time")
+    });
+  } catch (error) {
+    if (error instanceof ApiError) return jsonResponse({ ok: false, error: error.message }, error.status);
+    console.error("setAdminLeaderboardScore failed", error);
+    return jsonResponse({ ok: false, error: "Не удалось изменить серверный рейтинг." }, 500);
+  }
+}
+
+function normalizeAdminProfile(value) {
+  const source = value && typeof value === "object" ? value : {};
+  return {
+    wallet: validateAdminNumber(source.wallet),
+    best: validateAdminNumber(source.best),
+    treats: validateAdminNumber(source.treats),
+    coffee: validateAdminNumber(source.coffee),
+    profileXp: validateAdminNumber(source.profileXp)
+  };
+}
+
+function validateAdminNumber(value) {
+  const number = Number(value);
+  if (!Number.isFinite(number) || number < 0 || number > 999999999) {
+    throw new ApiError(400, "Значение должно быть целым числом от 0 до 999 999 999.");
+  }
+  return Math.floor(number);
+}
+
+function safeAdminNumber(value) {
+  const number = Number(value);
+  return Number.isFinite(number) ? Math.max(0, Math.min(999999999, Math.floor(number))) : 0;
+}
+
+function requireAdminUser(user, env) {
+  const allowedIds = String(env.SHOP_ADMIN_TELEGRAM_IDS || env.ADMIN_TELEGRAM_IDS || "")
+    .split(/[\s,;]+/)
+    .map((value) => value.trim())
+    .filter(Boolean);
+  if (!allowedIds.length) throw new ApiError(503, "В Cloudflare не настроен SHOP_ADMIN_TELEGRAM_IDS.");
+  if (!allowedIds.includes(String(user?.id || ""))) throw new ApiError(403, "Нет доступа к административным операциям.");
 }
 
 async function createReward(request, env) {
