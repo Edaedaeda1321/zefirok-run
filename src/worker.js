@@ -12,25 +12,29 @@ const DEFAULT_LIMIT_MAX = 2;
 const DEFAULT_INIT_DATA_MAX_AGE_SECONDS = 24 * 60 * 60;
 const DEFAULT_GAME_URL = "https://zefirok-run.patokad6.workers.dev/";
 
+// Покупки, созданные раньше этой точки, сохраняют свои коды и статусы,
+// но больше не занимают лимитные слоты после глобального сброса 0.1.1 Beta.
+const REWARD_LIMIT_RESET_AT_SECONDS = 1784805300; // 23.07.2026 11:15 UTC
+
 // НАСТРОЙКИ ВЕРСИИ И РАЗДЕЛА «ОБНОВЛЕНИЕ» В БОТЕ.
 // Меняйте эти значения при каждом новом релизе игры.
-const GAME_VERSION = "0.1 Beta";
+const GAME_VERSION = "0.1.1 Beta";
 const GAME_UPDATE_DATE = "23 июля 2026";
-const GAME_UPDATE_TITLE = "Большое обновление";
+const GAME_UPDATE_TITLE = "Исправление лимита покупок";
 
 // Что произошло с прогрессом в этом релизе:
 // "reset" — крупное обновление с обнулением прогресса;
 // "keep" — обычное обновление с сохранением прогресса.
 const GAME_UPDATE_PROGRESS_MODE = "reset";
-const GAME_UPDATE_RESET_REASON = "Мы переработали экономику, уровни, XP и систему наград, поэтому старые сохранения были несовместимы с новым балансом.";
+const GAME_UPDATE_RESET_REASON = "Исправлена несовместимость локального сброса аккаунта с серверным лимитом покупок. Для корректного перехода на новую систему игровой прогресс сброшен.";
 
 const GAME_UPDATE_NOTES = Object.freeze([
-  "Полностью обновлены профиль, уровни и система XP.",
-  "Добавлены звуковые эффекты и отдельная фоновая музыка.",
-  "Появилась серверная проверка и однократное списание наград через Telegram-бота.",
-  "Добавлена защита прогресса и антифарм опыта за слишком короткие забеги.",
-  "Улучшены магазин, обучение, карточки покупок и интерфейс игры.",
-  "Исправлены ошибки со звуками, музыкой, обучением и отображением профиля."
+  "Исправлена ситуация, когда в админ-панели отображалось 0 покупок, а сервер всё ещё блокировал новую награду.",
+  "Лимит покупок теперь синхронизируется с сервером и показывает настоящий таймер.",
+  "При серверном ограничении окно сразу показывает оставшееся время вместо сообщения без таймера.",
+  "Покупки до выпуска 0.1.1 Beta больше не занимают новые лимитные слоты.",
+  "Уже выданные серверные коды сохраняют статус и срок действия.",
+  "Игровые валюты, рекорд, XP, уровень и локальная статистика сброшены."
 ]);
 
 const BOT_COMMANDS = Object.freeze([
@@ -135,27 +139,15 @@ async function createReward(request, env) {
        FROM reward_codes WHERE request_id = ? AND owner_telegram_id = ? LIMIT 1`
     ).bind(requestId, ownerId).first();
 
-    if (existing) return jsonResponse({ ok: true, reward: rewardRowToClient(existing), repeated: true });
-
     const now = Math.floor(Date.now() / 1000);
-    const limitWindow = positiveInt(env.REWARD_LIMIT_WINDOW_SECONDS, DEFAULT_LIMIT_WINDOW_SECONDS);
-    const limitMax = positiveInt(env.REWARD_LIMIT_MAX, DEFAULT_LIMIT_MAX);
-    const threshold = now - limitWindow;
+    if (existing) {
+      const limitStatus = await getRewardLimitStatus(env, ownerId, now);
+      return jsonResponse({ ok: true, reward: rewardRowToClient(existing), limitStatus, repeated: true });
+    }
 
-    const countRow = await env.DB.prepare(
-      `SELECT COUNT(*) AS total, MIN(created_at) AS earliest
-       FROM reward_codes
-       WHERE owner_telegram_id = ? AND created_at > ? AND status <> 'cancelled'`
-    ).bind(ownerId, threshold).first();
-
-    const used = Number(countRow?.total || 0);
-    if (used >= limitMax) {
-      const nextAt = Number(countRow?.earliest || now) + limitWindow;
-      throw new ApiError(429, `Лимит наград: не больше ${limitMax} за 24 часа.`, {
-        used,
-        limit: limitMax,
-        nextAvailableAt: nextAt * 1000
-      });
+    const limitStatus = await getRewardLimitStatus(env, ownerId, now);
+    if (limitStatus.used >= limitStatus.limit) {
+      throw new ApiError(429, `Лимит наград: не больше ${limitStatus.limit} за 24 часа.`, limitStatus);
     }
 
     const ttl = positiveInt(env.REWARD_TTL_SECONDS, DEFAULT_REWARD_TTL_SECONDS);
@@ -193,6 +185,7 @@ async function createReward(request, env) {
 
     if (!insertedCode) throw new ApiError(503, "Не удалось создать уникальный код. Повторите покупку.");
 
+    const updatedLimitStatus = await getRewardLimitStatus(env, ownerId, now);
     return jsonResponse({
       ok: true,
       reward: {
@@ -202,7 +195,8 @@ async function createReward(request, env) {
         issuedAt: now * 1000,
         expiresAt: expiresAt * 1000,
         status: "active"
-      }
+      },
+      limitStatus: updatedLimitStatus
     });
   } catch (error) {
     if (error instanceof ApiError) {
@@ -233,15 +227,51 @@ async function listMyRewards(request, env) {
        ORDER BY created_at DESC LIMIT 20`
     ).bind(ownerId).all();
 
+    const limitStatus = await getRewardLimitStatus(env, ownerId, now);
     return jsonResponse({
       ok: true,
-      rewards: (result.results || []).map(rewardRowToClient)
+      rewards: (result.results || []).map(rewardRowToClient),
+      limitStatus
     });
   } catch (error) {
     if (error instanceof ApiError) return jsonResponse({ ok: false, error: error.message }, error.status);
     console.error("listMyRewards failed", error);
     return jsonResponse({ ok: false, error: "Не удалось обновить покупки." }, 500);
   }
+}
+
+async function getRewardLimitStatus(env, ownerId, now = Math.floor(Date.now() / 1000)) {
+  const limitWindow = positiveInt(env.REWARD_LIMIT_WINDOW_SECONDS, DEFAULT_LIMIT_WINDOW_SECONDS);
+  const limit = positiveInt(env.REWARD_LIMIT_MAX, DEFAULT_LIMIT_MAX);
+  const configuredResetAt = positiveInt(env.REWARD_LIMIT_RESET_AT_SECONDS, REWARD_LIMIT_RESET_AT_SECONDS);
+  const threshold = Math.max(now - limitWindow, configuredResetAt);
+
+  const result = await env.DB.prepare(
+    `SELECT created_at
+     FROM reward_codes
+     WHERE owner_telegram_id = ? AND created_at > ? AND status <> 'cancelled'
+     ORDER BY created_at ASC`
+  ).bind(ownerId, threshold).all();
+
+  const purchaseSeconds = (result.results || [])
+    .map((row) => Number(row?.created_at || 0))
+    .filter((value) => Number.isFinite(value) && value > threshold && value <= now + 300)
+    .sort((left, right) => left - right);
+
+  const used = purchaseSeconds.length;
+  const reached = used >= limit;
+  const nextAvailableAtSeconds = reached ? purchaseSeconds[0] + limitWindow : 0;
+
+  return {
+    used,
+    limit,
+    reached,
+    nextAvailableAt: nextAvailableAtSeconds * 1000,
+    remainingMs: reached ? Math.max(0, nextAvailableAtSeconds - now) * 1000 : 0,
+    purchaseTimestamps: purchaseSeconds.map((value) => value * 1000),
+    windowSeconds: limitWindow,
+    resetAt: configuredResetAt * 1000
+  };
 }
 
 async function setupWebhook(request, env) {
