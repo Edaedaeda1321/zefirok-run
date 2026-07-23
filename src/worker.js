@@ -37,9 +37,9 @@ const REWARD_LIMIT_RESET_AT_SECONDS = 1784805300; // 23.07.2026 11:15 UTC
 
 // НАСТРОЙКИ ВЕРСИИ И РАЗДЕЛА «ОБНОВЛЕНИЕ» В БОТЕ.
 // Меняйте эти значения при каждом новом релизе игры.
-const GAME_VERSION = "0.3.4 Beta";
-const GAME_UPDATE_DATE = "23 июля 2026";
-const GAME_UPDATE_TITLE = "Команда и новости стали удобнее";
+const GAME_VERSION = "0.3.5 Beta";
+const GAME_UPDATE_DATE = "24 июля 2026";
+const GAME_UPDATE_TITLE = "Тестовый сезон и новые рамки рейтинга";
 
 // Что произошло с прогрессом в этом релизе:
 // "reset" — крупное обновление с обнулением прогресса;
@@ -48,10 +48,10 @@ const GAME_UPDATE_PROGRESS_MODE = "keep";
 const GAME_UPDATE_RESET_REASON = "Прогресс в этом обновлении сохраняется.";
 
 const GAME_UPDATE_NOTES = Object.freeze([
-  "В боте появилась система ролей и разрешений для команды.",
-  "Сотрудников можно добавлять и отключать по Telegram ID.",
-  "Новости игры теперь можно публиковать прямо из бота.",
-  "Раздел поддержки и форма обращения сохранены.",
+  "Первый тестовый сезон завершится 25 июля 2026 года в 15:40 МСК.",
+  "Карточки рейтинга получили новые золотые и бордовые рамки.",
+  "Награда теперь всегда находится внутри отдельного окна.",
+  "В профиле и полном рейтинге награда отображается одинаково крупно.",
   "Прогресс игроков не изменён."
 ]);
 
@@ -63,7 +63,7 @@ const GAME_UPDATE_NOTES = Object.freeze([
 const DEFAULT_SEASON_ID = "sweet-season-1";
 const DEFAULT_SEASON_TITLE = "Первый сладкий сезон";
 const DEFAULT_SEASON_START_AT = "2026-07-23T15:40:00+03:00";
-const DEFAULT_SEASON_END_AT = "2026-08-23T15:40:00+03:00";
+const DEFAULT_SEASON_END_AT = "2026-07-25T15:40:00+03:00";
 const DEFAULT_SEASON_REWARD_COFFEE = 50;
 const DEFAULT_SEASON_REWARD_TYPE = "coffee"; // coffee | skin | item | currency
 const DEFAULT_SEASON_REWARD_TITLE = "50 кофе";
@@ -95,9 +95,9 @@ const DEFAULT_SEASON_RESET_PLAN = Object.freeze({
 
 // Новость может быть с картинкой или без неё. Для картинки задайте
 // BOT_NEWS_IMAGE_URL в Cloudflare либо замените пустую строку ниже на HTTPS URL.
-const DEFAULT_BOT_NEWS_IMAGE_URL = `${DEFAULT_GAME_URL}assets/rating/season-news.png?v=0.3.4`;
-const BOT_NEWS_TITLE = "Рейтинговый сезон уже в игре";
-const BOT_NEWS_TEXT = "В Сладком Забеге открыт рейтинговый сезон. Завершайте забеги, улучшайте лучший результат и поднимайтесь в таблице лидеров. Награда за первое место в первом сезоне — 50 кофе.";
+const DEFAULT_BOT_NEWS_IMAGE_URL = `${DEFAULT_GAME_URL}assets/rating/season-news.png?v=0.3.5`;
+const BOT_NEWS_TITLE = "Тестовый сезон завершится 25 июля";
+const BOT_NEWS_TEXT = "Первый тестовый сезон Сладкого Забега завершится 25 июля 2026 года в 15:40 МСК. Успейте проверить рейтинг, итоговые места и выдачу награды за первое место.";
 // =============================================================
 
 const BOT_COMMANDS = Object.freeze([
