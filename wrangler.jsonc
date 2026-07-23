@@ -1,7 +1,7 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "zefirok-run",
-  "main": "src/worker.js",
+  "main": "src/entry.js",
   "compatibility_date": "2026-07-23",
 
   "observability": {
@@ -13,7 +13,9 @@
     "binding": "ASSETS",
     "run_worker_first": [
       "/api/*",
-      "/telegram/*"
+      "/telegram/*",
+      "/",
+      "/index.html"
     ]
   },
 
