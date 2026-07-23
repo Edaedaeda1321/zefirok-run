@@ -26,6 +26,9 @@ const DEFAULT_REWARD_TTL_SECONDS = 24 * 60 * 60;
 const DEFAULT_LIMIT_WINDOW_SECONDS = 24 * 60 * 60;
 const DEFAULT_LIMIT_MAX = 2;
 const DEFAULT_INIT_DATA_MAX_AGE_SECONDS = 24 * 60 * 60;
+const STAFF_SESSION_TTL_SECONDS = 30 * 60;
+const SUPPORT_USERNAME = "ve4n0_em";
+const SUPPORT_URL = `https://t.me/${SUPPORT_USERNAME}`;
 const DEFAULT_GAME_URL = "https://zefirok-run.patokad6.workers.dev/";
 
 // Покупки, созданные раньше этой точки, сохраняют свои коды и статусы,
@@ -34,9 +37,9 @@ const REWARD_LIMIT_RESET_AT_SECONDS = 1784805300; // 23.07.2026 11:15 UTC
 
 // НАСТРОЙКИ ВЕРСИИ И РАЗДЕЛА «ОБНОВЛЕНИЕ» В БОТЕ.
 // Меняйте эти значения при каждом новом релизе игры.
-const GAME_VERSION = "0.2.6 Beta";
+const GAME_VERSION = "0.3.1 Beta";
 const GAME_UPDATE_DATE = "23 июля 2026";
-const GAME_UPDATE_TITLE = "Админ-рейтинг и глобальные начисления";
+const GAME_UPDATE_TITLE = "Команда и новости стали удобнее";
 
 // Что произошло с прогрессом в этом релизе:
 // "reset" — крупное обновление с обнулением прогресса;
@@ -45,12 +48,11 @@ const GAME_UPDATE_PROGRESS_MODE = "keep";
 const GAME_UPDATE_RESET_REASON = "Прогресс в этом обновлении сохраняется.";
 
 const GAME_UPDATE_NOTES = Object.freeze([
-  "Исправлен HTTP 404 при изменении рейтинга из админ-панели.",
-  "Административные маршруты перенесены в основной Worker без цепочки entrypoint-файлов.",
-  "Добавлено точное изменение рейтинга текущего сезона и рейтинга за всё время.",
-  "Добавлена серверная синхронизация начисленных очков, рекорда, зефира, кофе и XP.",
-  "Глобальные цены магазина обслуживаются тем же основным Worker.",
-  "Добавлен проверочный маршрут /api/admin/health."
+  "В боте появилась система ролей и разрешений для команды.",
+  "Сотрудников можно добавлять и отключать по Telegram ID.",
+  "Новости игры теперь можно публиковать прямо из бота.",
+  "Раздел поддержки и форма обращения сохранены.",
+  "Прогресс игроков не изменён."
 ]);
 
 
@@ -93,7 +95,7 @@ const DEFAULT_SEASON_RESET_PLAN = Object.freeze({
 
 // Новость может быть с картинкой или без неё. Для картинки задайте
 // BOT_NEWS_IMAGE_URL в Cloudflare либо замените пустую строку ниже на HTTPS URL.
-const DEFAULT_BOT_NEWS_IMAGE_URL = `${DEFAULT_GAME_URL}assets/rating/season-news.png?v=0.2.2`;
+const DEFAULT_BOT_NEWS_IMAGE_URL = `${DEFAULT_GAME_URL}assets/rating/season-news.png?v=0.3.1`;
 const BOT_NEWS_TITLE = "Рейтинговый сезон уже в игре";
 const BOT_NEWS_TEXT = "В Сладком Забеге открыт рейтинговый сезон. Завершайте забеги, улучшайте лучший результат и поднимайтесь в таблице лидеров. Награда за первое место в первом сезоне — 50 кофе.";
 // =============================================================
@@ -107,9 +109,12 @@ const BOT_COMMANDS = Object.freeze([
   { command: "rating", description: "Рейтинг сезона" },
   { command: "news", description: "Новости игры" },
   { command: "update", description: "Обновление и версия игры" },
+  { command: "support", description: "Поддержка игры" },
   { command: "help", description: "Как проверить код" },
   { command: "whoami", description: "Показать мой Telegram ID" },
-  { command: "staff", description: "Подключить сотрудника по коду" }
+  { command: "staff", description: "Войти в рабочую сессию" },
+  { command: "team", description: "Команда и разрешения" },
+  { command: "publish", description: "Опубликовать новость" }
 ]);
 
 export default {
@@ -330,7 +335,8 @@ async function syncAdminProfile(request, env) {
     requireBotToken(env);
     const body = await readJson(request);
     const auth = await validateTelegramInitData(String(body.initData || ""), env);
-    requireAdminUser(auth.user, env);
+    const mode = String(body.mode || "read");
+    if (mode === "write") requireAdminUser(auth.user, env);
     const telegramId = String(auth.user.id);
     const current = normalizeAdminProfile(body.current || {});
     const now = Math.floor(Date.now() / 1000);
@@ -352,7 +358,7 @@ async function syncAdminProfile(request, env) {
       telegramId
     ).run();
 
-    if (String(body.mode || "read") === "write") {
+    if (mode === "write") {
       const next = normalizeAdminProfile(body.next || current);
       await env.DB.prepare(
         `UPDATE admin_profile_state SET
@@ -378,18 +384,27 @@ async function syncAdminProfile(request, env) {
     }
 
     const row = await env.DB.prepare(
-      `SELECT wallet, best_score, treats, coffee, profile_xp, revision, updated_at
+      `SELECT wallet, best_score, treats, coffee, profile_xp, revision, updated_at, wallet_override
        FROM admin_profile_state WHERE telegram_id = ? LIMIT 1`
     ).bind(telegramId).first();
+
+    const authoritativeWallet = row?.wallet_override != null;
+    const walletValue = authoritativeWallet ? safeAdminNumber(row.wallet_override) : safeAdminNumber(row?.wallet);
+    if (authoritativeWallet) {
+      await env.DB.prepare(
+        `UPDATE admin_profile_state SET wallet = ?, wallet_override = NULL WHERE telegram_id = ?`
+      ).bind(walletValue, telegramId).run();
+    }
 
     return jsonResponse({
       ok: true,
       profile: {
-        wallet: safeAdminNumber(row?.wallet),
+        wallet: walletValue,
         best: safeAdminNumber(row?.best_score),
         treats: safeAdminNumber(row?.treats),
         coffee: safeAdminNumber(row?.coffee),
         profileXp: safeAdminNumber(row?.profile_xp),
+        authoritativeWallet,
         revision: safeAdminNumber(row?.revision),
         updatedAt: safeAdminNumber(row?.updated_at) * 1000
       }
@@ -1086,6 +1101,53 @@ async function handleTelegramUpdate(update, env) {
     return;
   }
 
+  if (/^\/team(?:@\w+)?$/i.test(text)) {
+    await showTeamManagement(chatId, user, env);
+    return;
+  }
+
+  const teamAddMatch = text.match(/^\/team_add(?:@\w+)?\s+(\d{4,20})(?:\s+(employee|manager|admin))?$/i);
+  if (teamAddMatch) {
+    await addTeamMember(chatId, user, teamAddMatch[1], teamAddMatch[2] || "employee", env);
+    return;
+  }
+
+  const teamRemoveMatch = text.match(/^\/team_remove(?:@\w+)?\s+(\d{4,20})$/i);
+  if (teamRemoveMatch) {
+    await removeTeamMember(chatId, user, teamRemoveMatch[1], env);
+    return;
+  }
+
+  const teamRoleMatch = text.match(/^\/team_role(?:@\w+)?\s+(\d{4,20})\s+(employee|manager|admin)$/i);
+  if (teamRoleMatch) {
+    await setTeamRole(chatId, user, teamRoleMatch[1], teamRoleMatch[2], env);
+    return;
+  }
+
+  const permitMatch = text.match(/^\/permit(?:@\w+)?\s+(\d{4,20})\s+(redeem|points|products|news|staff)\s+(on|off)$/i);
+  if (permitMatch) {
+    await setTeamPermission(chatId, user, permitMatch[1], permitMatch[2], permitMatch[3] === "on", env);
+    return;
+  }
+
+  const pointsMatch = text.match(/^\/points(?:@\w+)?\s+(\d{4,20})\s+(add|remove|set)\s+(\d{1,9})$/i);
+  if (pointsMatch) {
+    await adjustPlayerPoints(chatId, user, pointsMatch[1], pointsMatch[2], Number(pointsMatch[3]), env);
+    return;
+  }
+
+  const publishMatch = text.match(/^\/publish(?:@\w+)?\s+([\s\S]+)$/i);
+  if (publishMatch) {
+    await publishBotNews(chatId, user, publishMatch[1], env);
+    return;
+  }
+
+  const staffControlMatch = text.match(/^\/staff(off|on)(?:@\w+)?\s+(\d{4,20})$/i);
+  if (staffControlMatch) {
+    await setStaffAccountState(chatId, user, staffControlMatch[2], staffControlMatch[1].toLowerCase() === "on", env);
+    return;
+  }
+
   const staffMatch = text.match(/^\/staff(?:@\w+)?(?:\s+(.+))?$/i);
   if (staffMatch) {
     await registerStaff(chatId, user, String(staffMatch[1] || "").trim(), env);
@@ -1124,6 +1186,11 @@ async function handleTelegramUpdate(update, env) {
 
   if (/^\/(?:update|version)(?:@\w+)?$/i.test(text)) {
     await sendTelegramMessage(env, chatId, botUpdateText(), sectionMenuMarkup(env));
+    return;
+  }
+
+  if (/^\/support(?:@\w+)?$/i.test(text)) {
+    await sendTelegramMessage(env, chatId, botSupportText(user), supportMenuMarkup(env));
     return;
   }
 
@@ -1274,8 +1341,16 @@ async function sendBotRating(env, chatId, user) {
 }
 
 async function sendBotNews(env, chatId) {
-  const text = `<b>📰 ${escapeHtml(BOT_NEWS_TITLE)}</b>\n\n${escapeHtml(BOT_NEWS_TEXT)}\n\nВерсия: <b>${escapeHtml(GAME_VERSION)}</b>`;
-  const imageUrl = String(env.BOT_NEWS_IMAGE_URL || DEFAULT_BOT_NEWS_IMAGE_URL).trim();
+  let news = null;
+  try { news = await latestBotNews(env); } catch (error) { console.error("Latest bot news failed", error); }
+  const title = String(news?.title || BOT_NEWS_TITLE);
+  const body = String(news?.body || BOT_NEWS_TEXT);
+  const text = `<b>📰 ${escapeHtml(title)}</b>
+
+${escapeHtml(body)}
+
+Версия: <b>${escapeHtml(GAME_VERSION)}</b>`;
+  const imageUrl = String(news?.image_url || env.BOT_NEWS_IMAGE_URL || DEFAULT_BOT_NEWS_IMAGE_URL).trim();
   if (imageUrl) {
     try {
       await telegramApi(env, "sendPhoto", {
@@ -1308,6 +1383,42 @@ function botHelpText() {
   return `<b>Проверка кода</b>\n\nОтправьте код из игры одним сообщением, например:\n<code>CP-ABCD-EFGH</code>\n\nБот покажет, действителен ли код, истёк ли его срок или подарок уже был выдан.`;
 }
 
+function botSupportText(user = null) {
+  const telegramId = user?.id ? String(user.id) : "укажите ваш Telegram ID";
+  const username = user?.username ? `@${user.username}` : "не указан";
+  const template = [
+    "Тип обращения: баг / предложение",
+    "Где возникло: игра / бот / магазин / профиль / рейтинг",
+    `Версия игры: ${GAME_VERSION}`,
+    `Ваш Telegram ID: ${telegramId}`,
+    `Ваш username: ${username}`,
+    "Что произошло или что предлагаете:",
+    "",
+    "Как повторить проблему по шагам:",
+    "1. ",
+    "2. ",
+    "3. ",
+    "",
+    "Что ожидали увидеть:",
+    "",
+    "Устройство и версия ОС:",
+    "",
+    "Скриншот или видео: приложено / нет"
+  ].join("\n");
+
+  return `<b>🛟 Поддержка игры</b>\n\nПо багам и предложениям пишите разработчику: <a href="${SUPPORT_URL}">@${SUPPORT_USERNAME}</a>.\n\nСкопируйте форму ниже, заполните пустые строки и отправьте одним сообщением:\n\n<pre>${escapeHtml(template)}</pre>`;
+}
+
+function supportMenuMarkup(env) {
+  return {
+    inline_keyboard: [
+      [{ text: "💬 Написать разработчику", url: SUPPORT_URL }],
+      [{ text: "🎮 Открыть игру", url: configuredGameUrl(env) }],
+      [{ text: "← Главное меню", callback_data: "menu:home" }]
+    ]
+  };
+}
+
 function mainMenuMarkup(env) {
   return {
     inline_keyboard: [
@@ -1318,7 +1429,8 @@ function mainMenuMarkup(env) {
       ],
       [{ text: "🏆 Рейтинг", callback_data: "menu:rating" }, { text: "📰 Новости", callback_data: "menu:news" }],
       [{ text: `🆕 Обновление · ${GAME_VERSION}`, callback_data: "menu:update" }],
-      [{ text: "🎁 Как получить награду", callback_data: "menu:rewards" }]
+      [{ text: "🎁 Как получить награду", callback_data: "menu:rewards" }],
+      [{ text: "🛟 Поддержка игры", callback_data: "menu:support" }]
     ]
   };
 }
@@ -1336,13 +1448,14 @@ function sectionMenuMarkup(env) {
   return {
     inline_keyboard: [
       [{ text: "🎮 Открыть игру", url: configuredGameUrl(env) }],
+      [{ text: "🛟 Поддержка", callback_data: "menu:support" }],
       [{ text: "← Главное меню", callback_data: "menu:home" }]
     ]
   };
 }
 
 async function handleMenuCallback(query, env) {
-  const match = String(query.data || "").match(/^menu:(home|story|faq|rewards|rating|news|update)$/);
+  const match = String(query.data || "").match(/^menu:(home|story|faq|rewards|rating|news|update|support)$/);
   if (!match) return false;
   const message = query.message;
   if (!message?.chat?.id) {
@@ -1369,8 +1482,20 @@ async function handleMenuCallback(query, env) {
         ? botRewardsText()
         : section === "update"
           ? botUpdateText()
-          : botMainMenuText();
-  const replyMarkup = section === "home" ? mainMenuMarkup(env) : sectionMenuMarkup(env);
+          : section === "support"
+            ? botSupportText(query.from)
+            : botMainMenuText();
+  const replyMarkup = section === "home"
+    ? mainMenuMarkup(env)
+    : section === "support"
+      ? supportMenuMarkup(env)
+      : sectionMenuMarkup(env);
+
+  if (Array.isArray(message.photo) && message.photo.length > 0) {
+    await answerCallback(env, query.id, section === "home" ? "Главное меню" : "Раздел открыт");
+    await sendTelegramMessage(env, message.chat.id, text, replyMarkup);
+    return true;
+  }
 
   await answerCallback(env, query.id, section === "home" ? "Главное меню" : "Раздел открыт");
   await telegramApi(env, "editMessageText", {
@@ -1384,26 +1509,319 @@ async function handleMenuCallback(query, env) {
   return true;
 }
 
-async function registerStaff(chatId, user, suppliedCode, env) {
-  const expected = String(env.STAFF_SETUP_CODE || "").trim();
-  if (!expected) {
-    await sendTelegramMessage(env, chatId, "Подключение сотрудников ещё не настроено.");
+const TEAM_ROLE_PRESETS = Object.freeze({
+  employee: Object.freeze({ redeem: 1, points: 0, products: 0, news: 0, staff: 0 }),
+  manager: Object.freeze({ redeem: 1, points: 1, products: 1, news: 0, staff: 0 }),
+  admin: Object.freeze({ redeem: 1, points: 1, products: 1, news: 1, staff: 1 })
+});
+
+const TEAM_PERMISSION_COLUMNS = Object.freeze({
+  redeem: "can_redeem_rewards",
+  points: "can_adjust_points",
+  products: "can_manage_products",
+  news: "can_publish_news",
+  staff: "can_manage_staff"
+});
+
+function normalizeTeamRole(value) {
+  const role = String(value || "employee").toLowerCase();
+  return Object.prototype.hasOwnProperty.call(TEAM_ROLE_PRESETS, role) ? role : "employee";
+}
+
+function teamRoleLabel(role) {
+  return normalizeTeamRole(role) === "admin" ? "Администратор" : normalizeTeamRole(role) === "manager" ? "Менеджер" : "Сотрудник";
+}
+
+function permissionLabel(permission) {
+  return ({ redeem: "выдача товаров", points: "изменение очков", products: "управление товарами", news: "публикация новостей", staff: "управление командой" })[permission] || permission;
+}
+
+async function getTeamAccess(user, env) {
+  if (isBotAdminUser(user, env)) {
+    return { authorized: true, owner: true, role: "owner", permissions: { redeem: true, points: true, products: true, news: true, staff: true } };
+  }
+  const row = await env.DB.prepare(
+    `SELECT telegram_id, display_name, active, role, session_expires_at,
+            can_redeem_rewards, can_adjust_points, can_manage_products,
+            can_publish_news, can_manage_staff
+     FROM staff_users WHERE telegram_id = ? LIMIT 1`
+  ).bind(String(user?.id || user || "")).first();
+  if (!row || Number(row.active || 0) !== 1) return { authorized: false, owner: false, reason: "not_staff", permissions: {} };
+  const now = Math.floor(Date.now() / 1000);
+  const expiresAt = Number(row.session_expires_at || 0);
+  const activeSession = Number.isFinite(expiresAt) && expiresAt > now;
+  return {
+    authorized: activeSession,
+    owner: false,
+    reason: activeSession ? "active" : "expired",
+    role: normalizeTeamRole(row.role),
+    expiresAt,
+    permissions: {
+      redeem: Number(row.can_redeem_rewards || 0) === 1,
+      points: Number(row.can_adjust_points || 0) === 1,
+      products: Number(row.can_manage_products || 0) === 1,
+      news: Number(row.can_publish_news || 0) === 1,
+      staff: Number(row.can_manage_staff || 0) === 1
+    }
+  };
+}
+
+async function requireTeamPermission(chatId, user, permission, env) {
+  const access = await getTeamAccess(user, env);
+  if (!access.authorized) {
+    await sendTelegramMessage(env, chatId, access.reason === "expired"
+      ? "Рабочая сессия истекла. Выполните <code>/staff</code> и повторите действие."
+      : "У вас нет активного доступа к команде.");
+    return null;
+  }
+  if (!access.owner && !access.permissions?.[permission]) {
+    await sendTelegramMessage(env, chatId, `Недостаточно прав: требуется разрешение «${escapeHtml(permissionLabel(permission))}».`);
+    return null;
+  }
+  return access;
+}
+
+async function showTeamManagement(chatId, user, env) {
+  const access = await requireTeamPermission(chatId, user, "staff", env);
+  if (!access) return;
+  const result = await env.DB.prepare(
+    `SELECT telegram_id, display_name, role, active, session_expires_at,
+            can_redeem_rewards, can_adjust_points, can_manage_products,
+            can_publish_news, can_manage_staff
+     FROM staff_users ORDER BY active DESC, role DESC, display_name ASC LIMIT 50`
+  ).all();
+  const rows = Array.isArray(result.results) ? result.results : [];
+  const now = Math.floor(Date.now() / 1000);
+  const list = rows.length ? rows.map((row) => {
+    const permissions = [
+      Number(row.can_redeem_rewards) ? "товары" : null,
+      Number(row.can_adjust_points) ? "очки" : null,
+      Number(row.can_manage_products) ? "каталог" : null,
+      Number(row.can_publish_news) ? "новости" : null,
+      Number(row.can_manage_staff) ? "команда" : null
+    ].filter(Boolean).join(", ") || "нет разрешений";
+    const session = Number(row.session_expires_at || 0) > now ? "сессия активна" : "нужен вход";
+    return `• <code>${escapeHtml(String(row.telegram_id))}</code> — ${escapeHtml(row.display_name || "Без имени")}\n  ${escapeHtml(teamRoleLabel(row.role))} · ${Number(row.active) ? session : "отключён"}\n  Права: ${escapeHtml(permissions)}`;
+  }).join("\n\n") : "Сотрудники пока не добавлены.";
+  await sendTelegramMessage(env, chatId, `<b>Команда и разрешения</b>\n\n${list}\n\n<b>Команды владельца</b>\n<code>/team_add ID employee</code>\n<code>/team_role ID manager</code>\n<code>/permit ID news on</code>\n<code>/team_remove ID</code>\n\nРазрешения: redeem, points, products, news, staff.`);
+}
+
+async function addTeamMember(chatId, requester, telegramId, roleValue, env) {
+  const access = await requireTeamPermission(chatId, requester, "staff", env);
+  if (!access) return;
+  const role = normalizeTeamRole(roleValue);
+  const preset = TEAM_ROLE_PRESETS[role];
+  const now = Math.floor(Date.now() / 1000);
+  await env.DB.prepare(
+    `INSERT INTO staff_users (
+       telegram_id, display_name, added_at, active, session_expires_at, role,
+       can_redeem_rewards, can_adjust_points, can_manage_products,
+       can_publish_news, can_manage_staff, invited_by, updated_at
+     ) VALUES (?, ?, ?, 1, 0, ?, ?, ?, ?, ?, ?, ?, ?)
+     ON CONFLICT(telegram_id) DO UPDATE SET
+       active = 1, role = excluded.role,
+       can_redeem_rewards = excluded.can_redeem_rewards,
+       can_adjust_points = excluded.can_adjust_points,
+       can_manage_products = excluded.can_manage_products,
+       can_publish_news = excluded.can_publish_news,
+       can_manage_staff = excluded.can_manage_staff,
+       invited_by = excluded.invited_by, updated_at = excluded.updated_at,
+       session_expires_at = 0`
+  ).bind(String(telegramId), `Telegram ${telegramId}`, now, role,
+    preset.redeem, preset.points, preset.products, preset.news, preset.staff,
+    String(requester.id), now).run();
+  await sendTelegramMessage(env, chatId, `Пользователь <code>${escapeHtml(String(telegramId))}</code> добавлен как <b>${escapeHtml(teamRoleLabel(role))}</b>.\n\nОн должен открыть бота и выполнить <code>/staff</code>.`);
+}
+
+async function removeTeamMember(chatId, requester, telegramId, env) {
+  const access = await requireTeamPermission(chatId, requester, "staff", env);
+  if (!access) return;
+  await env.DB.prepare(`UPDATE staff_users SET active = 0, session_expires_at = 0, updated_at = ? WHERE telegram_id = ?`)
+    .bind(Math.floor(Date.now() / 1000), String(telegramId)).run();
+  await sendTelegramMessage(env, chatId, `Доступ пользователя <code>${escapeHtml(String(telegramId))}</code> отключён. Текущая сессия завершена.`);
+}
+
+async function setTeamRole(chatId, requester, telegramId, roleValue, env) {
+  const access = await requireTeamPermission(chatId, requester, "staff", env);
+  if (!access) return;
+  const role = normalizeTeamRole(roleValue);
+  const preset = TEAM_ROLE_PRESETS[role];
+  const result = await env.DB.prepare(
+    `UPDATE staff_users SET role = ?, can_redeem_rewards = ?, can_adjust_points = ?,
+       can_manage_products = ?, can_publish_news = ?, can_manage_staff = ?,
+       session_expires_at = 0, updated_at = ? WHERE telegram_id = ?`
+  ).bind(role, preset.redeem, preset.points, preset.products, preset.news, preset.staff,
+    Math.floor(Date.now() / 1000), String(telegramId)).run();
+  if (Number(result.meta?.changes || 0) < 1) {
+    await sendTelegramMessage(env, chatId, "Сотрудник не найден. Сначала используйте /team_add.");
     return;
   }
-  if (!timingSafeEqualString(expected, suppliedCode)) {
-    await sendTelegramMessage(env, chatId, "Неверный код сотрудника.");
+  await sendTelegramMessage(env, chatId, `Роль пользователя <code>${escapeHtml(String(telegramId))}</code> изменена на <b>${escapeHtml(teamRoleLabel(role))}</b>. Для продолжения ему нужно снова выполнить /staff.`);
+}
+
+async function setTeamPermission(chatId, requester, telegramId, permission, enabled, env) {
+  const access = await requireTeamPermission(chatId, requester, "staff", env);
+  if (!access) return;
+  const column = TEAM_PERMISSION_COLUMNS[permission];
+  if (!column) return;
+  const result = await env.DB.prepare(
+    `UPDATE staff_users SET ${column} = ?, session_expires_at = 0, updated_at = ? WHERE telegram_id = ?`
+  ).bind(enabled ? 1 : 0, Math.floor(Date.now() / 1000), String(telegramId)).run();
+  if (Number(result.meta?.changes || 0) < 1) {
+    await sendTelegramMessage(env, chatId, "Сотрудник не найден.");
+    return;
+  }
+  await sendTelegramMessage(env, chatId, `Разрешение «${escapeHtml(permissionLabel(permission))}» для <code>${escapeHtml(String(telegramId))}</code> ${enabled ? "включено" : "отключено"}. Сотруднику нужно снова выполнить /staff.`);
+}
+
+async function adjustPlayerPoints(chatId, requester, telegramId, mode, amountValue, env) {
+  const access = await requireTeamPermission(chatId, requester, "points", env);
+  if (!access) return;
+  const amount = Math.max(0, Math.floor(Number(amountValue) || 0));
+  const now = Math.floor(Date.now() / 1000);
+  await env.DB.prepare(
+    `INSERT OR IGNORE INTO admin_profile_state (
+      telegram_id, wallet, best_score, treats, coffee, profile_xp,
+      revision, created_at, updated_at, updated_by, wallet_override
+    ) VALUES (?, 0, 0, 0, 0, 0, 1, ?, ?, ?, 0)`
+  ).bind(String(telegramId), now, now, String(requester.id)).run();
+  const row = await env.DB.prepare(`SELECT wallet, wallet_override FROM admin_profile_state WHERE telegram_id = ? LIMIT 1`)
+    .bind(String(telegramId)).first();
+  const current = row?.wallet_override == null ? Number(row?.wallet || 0) : Number(row.wallet_override || 0);
+  const next = mode === "set" ? amount : mode === "remove" ? Math.max(0, current - amount) : current + amount;
+  await env.DB.prepare(
+    `UPDATE admin_profile_state SET wallet = ?, wallet_override = ?, revision = revision + 1,
+       updated_at = ?, updated_by = ? WHERE telegram_id = ?`
+  ).bind(next, next, now, String(requester.id), String(telegramId)).run();
+  await sendTelegramMessage(env, chatId, `Очки пользователя <code>${escapeHtml(String(telegramId))}</code> установлены: <b>${next}</b>. Значение применится при следующем открытии или синхронизации игры.`);
+}
+
+async function publishBotNews(chatId, requester, rawPayload, env) {
+  const access = await requireTeamPermission(chatId, requester, "news", env);
+  if (!access) return;
+  const parts = String(rawPayload || "").split("|").map((part) => part.trim());
+  const title = String(parts.shift() || "").slice(0, 120);
+  const body = String(parts.shift() || "").slice(0, 3000);
+  const imageUrl = String(parts.shift() || "").slice(0, 1000);
+  if (!title || !body) {
+    await sendTelegramMessage(env, chatId, `<b>Формат публикации</b>\n\n<code>/publish Заголовок | Текст новости | https://ссылка-на-картинку</code>\n\nСсылка на картинку необязательна.`);
+    return;
+  }
+  const now = Math.floor(Date.now() / 1000);
+  await env.DB.prepare(`UPDATE bot_news SET status = 'archived' WHERE status = 'published'`).run();
+  await env.DB.prepare(
+    `INSERT INTO bot_news (title, body, image_url, status, created_at, published_at, created_by, created_by_name)
+     VALUES (?, ?, ?, 'published', ?, ?, ?, ?)`
+  ).bind(title, body, imageUrl || null, now, now, String(requester.id), telegramDisplayName(requester)).run();
+  await sendTelegramMessage(env, chatId, `Новость опубликована. Она уже доступна в разделе «Новости».\n\n<b>${escapeHtml(title)}</b>\n${escapeHtml(body)}`);
+}
+
+async function latestBotNews(env) {
+  return env.DB.prepare(
+    `SELECT title, body, image_url, published_at FROM bot_news
+     WHERE status = 'published' ORDER BY published_at DESC, id DESC LIMIT 1`
+  ).first();
+}
+
+function isBotAdminUser(user, env) {
+  const allowedIds = String(env.SHOP_ADMIN_TELEGRAM_IDS || env.ADMIN_TELEGRAM_IDS || "")
+    .split(/[\s,;]+/)
+    .map((value) => value.trim())
+    .filter(Boolean);
+  return allowedIds.includes(String(user?.id || ""));
+}
+
+async function setStaffAccountState(chatId, requester, targetTelegramId, enabled, env) {
+  if (!isBotAdminUser(requester, env)) {
+    await sendTelegramMessage(env, chatId, "Нет доступа к управлению сотрудниками.");
+    return;
+  }
+
+  const result = await env.DB.prepare(
+    `UPDATE staff_users
+     SET active = ?, session_expires_at = 0
+     WHERE telegram_id = ?`
+  ).bind(enabled ? 1 : 0, String(targetTelegramId)).run();
+
+  if (Number(result.meta?.changes || 0) < 1) {
+    await sendTelegramMessage(env, chatId,
+      `Сотрудник с Telegram ID <code>${escapeHtml(String(targetTelegramId))}</code> не найден.`
+    );
+    return;
+  }
+
+  await sendTelegramMessage(env, chatId,
+    enabled
+      ? `Учётная запись <code>${escapeHtml(String(targetTelegramId))}</code> включена. Сотруднику нужно снова выполнить <code>/staff КОД</code>.`
+      : `Учётная запись <code>${escapeHtml(String(targetTelegramId))}</code> отключена. Текущая сессия завершена, повторный вход запрещён.`
+  );
+}
+
+async function registerStaff(chatId, user, suppliedCode, env) {
+  const expected = String(env.STAFF_SETUP_CODE || "").trim();
+  const existingStaff = await env.DB.prepare(
+    `SELECT active, role FROM staff_users WHERE telegram_id = ? LIMIT 1`
+  ).bind(String(user.id)).first();
+
+  const invited = existingStaff && Number(existingStaff.active || 0) === 1;
+  const owner = isBotAdminUser(user, env);
+  const legacyCodeAccepted = Boolean(expected && suppliedCode && timingSafeEqualString(expected, suppliedCode));
+
+  if (!invited && !owner && !legacyCodeAccepted) {
+    await sendTelegramMessage(env, chatId,
+      `<b>Доступ не выдан</b>
+
+Попросите владельца добавить ваш Telegram ID командой:
+<code>/team_add ${escapeHtml(String(user.id))} employee</code>
+
+Ваш ID: <code>${escapeHtml(String(user.id))}</code>`
+    );
+    return;
+  }
+
+  if (existingStaff && Number(existingStaff.active || 0) !== 1) {
+    await sendTelegramMessage(env, chatId, "Учётная запись сотрудника отключена. Обратитесь к владельцу проекта.");
     return;
   }
 
   const now = Math.floor(Date.now() / 1000);
-  await env.DB.prepare(
-    `INSERT INTO staff_users (telegram_id, display_name, added_at, active)
-     VALUES (?, ?, ?, 1)
-     ON CONFLICT(telegram_id) DO UPDATE SET display_name = excluded.display_name, active = 1`
-  ).bind(String(user.id), telegramDisplayName(user), now).run();
+  const sessionExpiresAt = now + STAFF_SESSION_TTL_SECONDS;
+  if (owner && !existingStaff) {
+    const preset = TEAM_ROLE_PRESETS.admin;
+    await env.DB.prepare(
+      `INSERT INTO staff_users (
+        telegram_id, display_name, added_at, active, session_expires_at, role,
+        can_redeem_rewards, can_adjust_points, can_manage_products,
+        can_publish_news, can_manage_staff, invited_by, updated_at
+      ) VALUES (?, ?, ?, 1, ?, 'admin', ?, ?, ?, ?, ?, ?, ?)`
+    ).bind(String(user.id), telegramDisplayName(user), now, sessionExpiresAt,
+      preset.redeem, preset.points, preset.products, preset.news, preset.staff,
+      String(user.id), now).run();
+  } else if (!existingStaff && legacyCodeAccepted) {
+    const preset = TEAM_ROLE_PRESETS.employee;
+    await env.DB.prepare(
+      `INSERT INTO staff_users (
+        telegram_id, display_name, added_at, active, session_expires_at, role,
+        can_redeem_rewards, can_adjust_points, can_manage_products,
+        can_publish_news, can_manage_staff, invited_by, updated_at
+      ) VALUES (?, ?, ?, 1, ?, 'employee', ?, ?, ?, ?, ?, '', ?)`
+    ).bind(String(user.id), telegramDisplayName(user), now, sessionExpiresAt,
+      preset.redeem, preset.points, preset.products, preset.news, preset.staff, now).run();
+  } else {
+    await env.DB.prepare(
+      `UPDATE staff_users SET display_name = ?, session_expires_at = ?, updated_at = ? WHERE telegram_id = ?`
+    ).bind(telegramDisplayName(user), sessionExpiresAt, now, String(user.id)).run();
+  }
 
+  const access = await getTeamAccess(user, env);
+  const enabled = Object.entries(access.permissions || {}).filter(([, value]) => value).map(([key]) => permissionLabel(key)).join(", ");
   await sendTelegramMessage(env, chatId,
-    `<b>Доступ сотрудника подключён</b>\n\nТеперь отправьте код гостя. После проверки появится кнопка «Выдать подарок и списать».`
+    `<b>Рабочая сессия открыта на 30 минут</b>
+
+Роль: <b>${escapeHtml(owner ? "Владелец" : teamRoleLabel(access.role))}</b>
+Разрешения: ${escapeHtml(enabled || "нет")}.
+
+Через 30 минут снова выполните <code>/staff</code>.`
   );
 }
 
@@ -1421,8 +1839,14 @@ async function showRewardInBot(chatId, viewer, rawCode, env) {
     return;
   }
 
-  const staff = await isStaff(viewer.id, env);
-  const view = rewardBotView(reward, staff);
+  const staffSession = await getStaffSession(viewer.id, env);
+  if (!staffSession.authorized && staffSession.reason === "expired") {
+    await sendTelegramMessage(env, chatId,
+      "Сессия сотрудника истекла. Войдите снова командой <code>/staff КОД</code>, затем повторно отправьте код гостя."
+    );
+    return;
+  }
+  const view = rewardBotView(reward, staffSession.authorized && Boolean(staffSession.permissions?.redeem));
   await sendTelegramMessage(env, chatId, view.text, view.replyMarkup);
 }
 
@@ -1435,8 +1859,16 @@ async function handleCallbackQuery(query, env) {
 
   if (await handleMenuCallback(query, env)) return;
 
-  if (!(await isStaff(user.id, env))) {
-    await answerCallback(env, query.id, "Доступно только сотрудникам кафе.", true);
+  const staffSession = await getStaffSession(user.id, env);
+  if (!staffSession.authorized) {
+    const sessionMessage = staffSession.reason === "expired"
+      ? "Сессия сотрудника истекла. Выполните /staff."
+      : "Доступно только участникам команды. Владелец должен добавить ваш Telegram ID.";
+    await answerCallback(env, query.id, sessionMessage, true);
+    return;
+  }
+  if (!staffSession.permissions?.redeem) {
+    await answerCallback(env, query.id, "У вас нет разрешения на выдачу товаров.", true);
     return;
   }
 
@@ -1552,11 +1984,19 @@ async function getRewardByCompact(compact, env) {
   ).bind(compactCode(compact)).first();
 }
 
+async function getStaffSession(telegramId, env) {
+  const access = await getTeamAccess({ id: telegramId }, env);
+  return {
+    authorized: Boolean(access.authorized),
+    reason: access.reason || (access.authorized ? "active" : "not_staff"),
+    expiresAt: Number(access.expiresAt || 0),
+    role: access.role || "employee",
+    permissions: access.permissions || {}
+  };
+}
+
 async function isStaff(telegramId, env) {
-  const row = await env.DB.prepare(
-    `SELECT telegram_id FROM staff_users WHERE telegram_id = ? AND active = 1 LIMIT 1`
-  ).bind(String(telegramId)).first();
-  return Boolean(row);
+  return (await getStaffSession(telegramId, env)).authorized;
 }
 
 async function syncBotCommands(env) {
