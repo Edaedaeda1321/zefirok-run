@@ -1,7 +1,7 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "zefirok-run",
-  "main": "src/entry.js",
+  "main": "src/entry-admin.js",
   "compatibility_date": "2026-07-23",
 
   "observability": {
