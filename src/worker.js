@@ -37,7 +37,7 @@ const REWARD_LIMIT_RESET_AT_SECONDS = 1784805300; // 23.07.2026 11:15 UTC
 
 // НАСТРОЙКИ ВЕРСИИ И РАЗДЕЛА «ОБНОВЛЕНИЕ» В БОТЕ.
 // Меняйте эти значения при каждом новом релизе игры.
-const GAME_VERSION = "0.3.2 Beta";
+const GAME_VERSION = "0.3.3 Beta";
 const GAME_UPDATE_DATE = "23 июля 2026";
 const GAME_UPDATE_TITLE = "Команда и новости стали удобнее";
 
@@ -95,7 +95,7 @@ const DEFAULT_SEASON_RESET_PLAN = Object.freeze({
 
 // Новость может быть с картинкой или без неё. Для картинки задайте
 // BOT_NEWS_IMAGE_URL в Cloudflare либо замените пустую строку ниже на HTTPS URL.
-const DEFAULT_BOT_NEWS_IMAGE_URL = `${DEFAULT_GAME_URL}assets/rating/season-news.png?v=0.3.2`;
+const DEFAULT_BOT_NEWS_IMAGE_URL = `${DEFAULT_GAME_URL}assets/rating/season-news.png?v=0.3.3`;
 const BOT_NEWS_TITLE = "Рейтинговый сезон уже в игре";
 const BOT_NEWS_TEXT = "В Сладком Забеге открыт рейтинговый сезон. Завершайте забеги, улучшайте лучший результат и поднимайтесь в таблице лидеров. Награда за первое место в первом сезоне — 50 кофе.";
 // =============================================================
