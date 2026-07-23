@@ -41,7 +41,7 @@
         current: snapshotProgress(progress)
       });
       if (!payload?.ok || !payload.profile) return;
-      const changed = applyServerProfile(progress, payload.profile);
+      const changed = applyServerMinimums(progress, payload.profile);
       if (!changed) return;
       progress.updatedAt = Date.now();
       await persistProgress(progress);
@@ -74,12 +74,16 @@
       return;
     }
 
-    const progressButton = event.target?.closest?.(
-      "[data-admin-value-action], [data-admin-profile-action], [data-admin-zero-all]"
-    );
-    if (!progressButton) return;
+    const progressButton = event.target?.closest?.("[data-admin-value-action], [data-admin-profile-action]");
+    if (!progressButton || !isGlobalIncreaseAction(progressButton)) return;
     window.clearTimeout(writeTimer);
     writeTimer = window.setTimeout(pushLocalProgressToServer, 500);
+  }
+
+  function isGlobalIncreaseAction(button) {
+    const valueAction = String(button.dataset.adminValueAction || "");
+    const profileAction = String(button.dataset.adminProfileAction || "");
+    return valueAction === "add" || profileAction === "add-xp" || profileAction === "add-level";
   }
 
   async function pushLocalProgressToServer() {
@@ -93,9 +97,9 @@
         current: snapshotProgress(progress),
         next: snapshotProgress(progress)
       });
-      setAdminMessage(attachedDocument, "Значения сохранены глобально для вашего Telegram-профиля.");
+      setAdminMessage(attachedDocument, "Начисление сохранено глобально для вашего Telegram-профиля.");
     } catch (error) {
-      setAdminMessage(attachedDocument, error?.message || "Не удалось сохранить глобальные значения.", true);
+      setAdminMessage(attachedDocument, error?.message || "Не удалось сохранить глобальное начисление.", true);
     }
   }
 
@@ -107,8 +111,9 @@
     section.className = "admin-section";
     section.dataset.adminGlobalRatingSection = "";
     section.innerHTML = `
-      <h3>Серверный рейтинг</h3>
-      <div class="admin-global-note"><strong>Глобально.</strong> Значение сразу меняет ваш результат в текущем сезоне и во вкладке «За всё время».</div>
+      <h3>Глобальные начисления и рейтинг</h3>
+      <div class="admin-global-note"><strong>Начисления:</strong> используйте кнопки «+ Добавить», «+ XP» и «+ N уровней» выше. Они сохраняются для вашего Telegram-профиля и подтягиваются на другом устройстве. Уменьшение и обнуление остаются локальными.</div>
+      <div class="admin-global-note"><strong>Рейтинг:</strong> значение ниже точно заменяет ваш результат в текущем сезоне и во вкладке «За всё время».</div>
       <div class="admin-value-row">
         <span>Очки рейтинга</span>
         <input class="admin-input" data-admin-global-rating-value inputmode="numeric" min="0" step="1" type="number" value="0">
@@ -160,11 +165,13 @@
     };
   }
 
-  function applyServerProfile(progress, profile) {
+  function applyServerMinimums(progress, profile) {
     let changed = false;
     for (const field of ["wallet", "best", "treats", "coffee", "profileXp"]) {
-      const next = sanitizeNumber(profile[field]);
-      if (sanitizeNumber(progress[field]) === next) continue;
+      const localValue = sanitizeNumber(progress[field]);
+      const serverMinimum = sanitizeNumber(profile[field]);
+      const next = Math.max(localValue, serverMinimum);
+      if (localValue === next) continue;
       progress[field] = next;
       changed = true;
     }
