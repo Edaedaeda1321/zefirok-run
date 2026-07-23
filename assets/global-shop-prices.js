@@ -111,13 +111,13 @@
     for (const [productId, price] of Object.entries(products)) {
       const buyButton = gameDocument.querySelector(`[data-buy="${productId}"]`);
       if (buyButton) {
-        buyButton.dataset.cost = String(price.points);
+        setDatasetValue(buyButton, "cost", price.points);
         if (productId === "zefir") {
-          buyButton.dataset.treatCost = String(price.treats);
-          delete buyButton.dataset.coffeeCost;
+          setDatasetValue(buyButton, "treatCost", price.treats);
+          if ("coffeeCost" in buyButton.dataset) delete buyButton.dataset.coffeeCost;
         } else {
-          buyButton.dataset.coffeeCost = String(price.coffee);
-          delete buyButton.dataset.treatCost;
+          setDatasetValue(buyButton, "coffeeCost", price.coffee);
+          if ("treatCost" in buyButton.dataset) delete buyButton.dataset.treatCost;
         }
       }
 
@@ -134,12 +134,23 @@
     fillAdminInputs(gameDocument, products);
   }
 
+  function setDatasetValue(element, key, value) {
+    const next = String(value);
+    if (element.dataset[key] !== next) element.dataset[key] = next;
+  }
+
   function setPillText(pill, text) {
+    const current = [...pill.childNodes]
+      .filter((node) => node.nodeType === Node.TEXT_NODE)
+      .map((node) => node.textContent || "")
+      .join("")
+      .trim();
+    if (current === text) return;
     const image = pill.querySelector("img");
     for (const node of [...pill.childNodes]) {
       if (node !== image) node.remove();
     }
-    pill.append(document.createTextNode(text));
+    pill.append(pill.ownerDocument.createTextNode(text));
   }
 
   function fillAdminInputs(gameDocument, products) {
@@ -148,7 +159,8 @@
       if (!card) continue;
       for (const field of ["points", "treats", "coffee"]) {
         const input = card.querySelector(`[data-admin-price-field="${field}"]`);
-        if (input && document.activeElement !== input) input.value = String(price[field] || 0);
+        const next = String(price[field] || 0);
+        if (input && gameDocument.activeElement !== input && input.value !== next) input.value = next;
       }
     }
   }
