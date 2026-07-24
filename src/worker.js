@@ -30,6 +30,55 @@ const DEFAULT_SKIN_PRICES = Object.freeze({
   angel: Object.freeze({ points: 4800000, treats: 1250, coffee: 1250 })
 });
 
+// Уровневые кейсы. Шансы указаны на один слот награды.
+const LEVEL_CASE_SCHEDULE = Object.freeze({
+  3: "small",
+  5: "sweet",
+  10: "gold",
+  15: "sweet",
+  20: "gold",
+  25: "sweet",
+  30: "gold",
+  35: "sweet",
+  40: "gold",
+  45: "sweet",
+  50: "gold"
+});
+
+const LEVEL_CASE_CONFIG = Object.freeze({
+  small: Object.freeze({ id: "small", title: "Маленький кейс", slots: 1 }),
+  sweet: Object.freeze({ id: "sweet", title: "Сладкий кейс", slots: 2 }),
+  gold: Object.freeze({ id: "gold", title: "Золотой кейс", slots: 3 })
+});
+
+const CASE_AVATARS = Object.freeze({
+  fox: Object.freeze({ id: "fox", title: "Лисёнок" }),
+  corgi: Object.freeze({ id: "corgi", title: "Корги" }),
+  bunny: Object.freeze({ id: "bunny", title: "Зайка" }),
+  hedgehog: Object.freeze({ id: "hedgehog", title: "Ёжик" }),
+  koala: Object.freeze({ id: "koala", title: "Коала" }),
+  penguin: Object.freeze({ id: "penguin", title: "Пингвин" }),
+  cat: Object.freeze({ id: "cat", title: "Котёнок" }),
+  bear: Object.freeze({ id: "bear", title: "Мишка" })
+});
+
+const CASE_FRAMES = Object.freeze({
+  strawberry: Object.freeze({ id: "strawberry", title: "Клубничная рамка" }),
+  coffee: Object.freeze({ id: "coffee", title: "Кофейная рамка" }),
+  mint: Object.freeze({ id: "mint", title: "Мятная рамка" }),
+  gold: Object.freeze({ id: "gold", title: "Золотая рамка" })
+});
+
+const CASE_TRAILS = Object.freeze({
+  marshmallow: Object.freeze({ id: "marshmallow", title: "Зефирный след" }),
+  coffee: Object.freeze({ id: "coffee", title: "Кофейный след" }),
+  strawberry: Object.freeze({ id: "strawberry", title: "Клубничный след" }),
+  gold: Object.freeze({ id: "gold", title: "Золотой след" })
+});
+
+const CASE_BOOSTER_TYPES = Object.freeze(["points", "treats", "coffee"]);
+const CASE_DUPLICATE_COMPENSATION = Object.freeze({ avatar: 500, frame: 1500, trail: 5000 });
+
 const SHOP_SCHEMA_SQL = `CREATE TABLE IF NOT EXISTS shop_prices (
   product_id TEXT PRIMARY KEY,
   points INTEGER NOT NULL DEFAULT 0 CHECK(points >= 0),
@@ -67,9 +116,9 @@ const REWARD_LIMIT_RESET_AT_SECONDS = 1784805300; // 23.07.2026 11:15 UTC
 
 // НАСТРОЙКИ ВЕРСИИ И РАЗДЕЛА «ОБНОВЛЕНИЕ» В БОТЕ.
 // Меняйте эти значения при каждом новом релизе игры.
-const GAME_VERSION = "4.0.8 OPEN BETA";
+const GAME_VERSION = "4.0.11 OPEN BETA";
 const GAME_UPDATE_DATE = "24 июля 2026";
-const GAME_UPDATE_TITLE = "Бонус Морячка и быстрые аватарки рейтинга";
+const GAME_UPDATE_TITLE = "Кейсы за уровни и коллекция наград";
 
 // Что произошло с прогрессом в этом релизе:
 // "reset" — крупное обновление с обнулением прогресса;
@@ -78,11 +127,11 @@ const GAME_UPDATE_PROGRESS_MODE = "keep";
 const GAME_UPDATE_RESET_REASON = "Прогресс в этом обновлении сохраняется.";
 
 const GAME_UPDATE_NOTES = Object.freeze([
-  "Морячок теперь добавляет 5 кофе после забега вместо бонусных очков.",
-  "Бонусные очки остаются только у дорогих образов — Принцессы и Ангелка.",
-  "Локальные аватарки рейтинга загружаются заранее и отображаются без пустого ожидания.",
-  "Telegram-аватарки начинают загружаться сразу после получения данных рейтинга.",
-  "Бонусы скинов не увеличивают счёт забега, личный рекорд или место в рейтинге.",
+  "Добавлены Маленькие, Сладкие и Золотые кейсы за уровни профиля.",
+  "Награды кейсов рассчитываются на сервере и выдаются один раз за каждый уровень.",
+  "В кейсах могут выпасть очки, зефир, кофе, временные усилители, аватарки, рамки и следы.",
+  "Усилители удваивают выбранную награду на два завершённых забега и не влияют на рекорд или рейтинг.",
+  "Косметику можно выбрать в профиле; выбранные аватарка и рамка отображаются в рейтинге.",
   "Сезон завершится 7 августа 2026 года в 12:00 МСК."
 ]);
 
@@ -174,7 +223,9 @@ export default {
             "/api/admin/profile/sync",
             "/api/admin/leaderboard/set",
             "/api/admin/shop/prices",
-            "/api/admin/skins/prices"
+            "/api/admin/skins/prices",
+            "/api/cases/state",
+            "/api/cases/open"
           ]
         });
       }
@@ -185,6 +236,26 @@ export default {
 
       if (url.pathname === "/api/skins/config" && request.method === "GET") {
         return await getSkinConfig(env);
+      }
+
+      if (url.pathname === "/api/cases/state" && request.method === "POST") {
+        return await getLevelCaseState(request, env);
+      }
+
+      if (url.pathname === "/api/cases/open" && request.method === "POST") {
+        return await openLevelCase(request, env);
+      }
+
+      if (url.pathname === "/api/cases/activate" && request.method === "POST") {
+        return await activateCaseBooster(request, env);
+      }
+
+      if (url.pathname === "/api/cases/equip" && request.method === "POST") {
+        return await equipCaseCosmetic(request, env);
+      }
+
+      if (url.pathname === "/api/cases/consume-run" && request.method === "POST") {
+        return await consumeCaseBoosterRun(request, env);
       }
 
       if (url.pathname === "/api/admin/shop/prices" && request.method === "POST") {
@@ -628,39 +699,45 @@ async function setAdminLeaderboardScore(request, env) {
     const displayName = telegramDisplayName(auth.user).slice(0, 120);
     const username = String(auth.user.username || "").slice(0, 64);
     const photoUrl = String(auth.user.photo_url || "").slice(0, 500);
+    const caseAvatarId = normalizeCaseCosmeticId("avatar", body.caseAvatarId);
+    const caseFrameId = normalizeCaseCosmeticId("frame", body.caseFrameId);
     const season = await ensureSeason(env, now);
 
     await env.DB.prepare(
       `INSERT INTO leaderboard_entries (
         season_id, telegram_id, display_name, username, photo_url,
-        best_score, level, achieved_at, updated_at, hidden
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
+        best_score, level, achieved_at, updated_at, hidden, case_avatar_id, case_frame_id
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?)
       ON CONFLICT(season_id, telegram_id) DO UPDATE SET
         display_name = excluded.display_name,
         username = excluded.username,
         photo_url = excluded.photo_url,
+        case_avatar_id = excluded.case_avatar_id,
+        case_frame_id = excluded.case_frame_id,
         best_score = excluded.best_score,
         level = excluded.level,
         achieved_at = excluded.achieved_at,
         updated_at = excluded.updated_at,
         hidden = 0`
-    ).bind(season.id, telegramId, displayName, username, photoUrl, score, level, now, now).run();
+    ).bind(season.id, telegramId, displayName, username, photoUrl, score, level, now, now, caseAvatarId, caseFrameId).run();
 
     await env.DB.prepare(
       `INSERT INTO leaderboard_all_time (
         telegram_id, display_name, username, photo_url,
-        best_score, level, achieved_at, updated_at, hidden
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)
+        best_score, level, achieved_at, updated_at, hidden, case_avatar_id, case_frame_id
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?)
       ON CONFLICT(telegram_id) DO UPDATE SET
         display_name = excluded.display_name,
         username = excluded.username,
         photo_url = excluded.photo_url,
+        case_avatar_id = excluded.case_avatar_id,
+        case_frame_id = excluded.case_frame_id,
         best_score = excluded.best_score,
         level = excluded.level,
         achieved_at = excluded.achieved_at,
         updated_at = excluded.updated_at,
         hidden = 0`
-    ).bind(telegramId, displayName, username, photoUrl, score, level, now, now).run();
+    ).bind(telegramId, displayName, username, photoUrl, score, level, now, now, caseAvatarId, caseFrameId).run();
 
     return jsonResponse({
       ok: true,
@@ -987,6 +1064,479 @@ async function finalizeSeason(env, season, now = Math.floor(Date.now() / 1000)) 
   ).bind(now, now, season.id).run();
 }
 
+
+function normalizeCaseCosmeticId(kind, value) {
+  const id = String(value || "").trim();
+  if (!id) return "";
+  if (kind === "avatar") return CASE_AVATARS[id] ? id : "";
+  if (kind === "frame") return CASE_FRAMES[id] ? id : "";
+  if (kind === "trail") return CASE_TRAILS[id] ? id : "";
+  return "";
+}
+
+function caseParseOwned(raw, catalog) {
+  let values = [];
+  try { values = JSON.parse(String(raw || "[]")); } catch {}
+  return Array.from(new Set((Array.isArray(values) ? values : [])
+    .map((value) => String(value || ""))
+    .filter((value) => Boolean(catalog[value]))));
+}
+
+function caseProfileLevel(totalXpValue) {
+  let xp = safeAdminNumber(totalXpValue);
+  let level = 1;
+  while (level < 50) {
+    const needed = 20 + (level - 1) * 10;
+    if (xp < needed) break;
+    xp -= needed;
+    level += 1;
+  }
+  return level;
+}
+
+function caseSecureFloat() {
+  const values = new Uint32Array(1);
+  crypto.getRandomValues(values);
+  return values[0] / 4294967296;
+}
+
+function caseRandomInt(minValue, maxValue) {
+  const min = Math.ceil(Number(minValue) || 0);
+  const max = Math.floor(Number(maxValue) || min);
+  return min + Math.floor(caseSecureFloat() * Math.max(1, max - min + 1));
+}
+
+function caseRandomChoice(values) {
+  const list = Array.isArray(values) ? values : [];
+  return list.length ? list[Math.floor(caseSecureFloat() * list.length)] : null;
+}
+
+function caseWeightedKind(caseType) {
+  const tables = {
+    small: [
+      ["treats", 40], ["coffee", 40], ["points", 16], ["booster", 4]
+    ],
+    sweet: [
+      ["treats", 30], ["coffee", 30], ["points", 20], ["booster", 12],
+      ["avatar", 5], ["frame", 2], ["trail", 1]
+    ],
+    gold: [
+      ["treats", 25], ["coffee", 25], ["points", 22], ["booster", 15],
+      ["avatar", 7], ["frame", 4], ["trail", 2]
+    ]
+  };
+  const table = tables[caseType] || tables.small;
+  let roll = caseSecureFloat() * 100;
+  for (const [kind, weight] of table) {
+    roll -= weight;
+    if (roll < 0) return kind;
+  }
+  return table[table.length - 1][0];
+}
+
+function caseCurrencyRange(caseType, kind) {
+  if (caseType === "gold") {
+    if (kind === "points") return [2500, 5000];
+    return [40, 70];
+  }
+  if (caseType === "sweet") {
+    if (kind === "points") return [1000, 2500];
+    return [20, 40];
+  }
+  if (kind === "points") return [500, 1000];
+  return [10, 20];
+}
+
+function caseStateFromRow(row) {
+  const activeType = CASE_BOOSTER_TYPES.includes(String(row?.active_booster_type || ""))
+    ? String(row.active_booster_type)
+    : "";
+  const activeRuns = activeType ? Math.max(0, Math.min(2, safeAdminNumber(row?.active_booster_runs))) : 0;
+  const ownedAvatars = caseParseOwned(row?.owned_avatars_json, CASE_AVATARS);
+  const ownedFrames = caseParseOwned(row?.owned_frames_json, CASE_FRAMES);
+  const ownedTrails = caseParseOwned(row?.owned_trails_json, CASE_TRAILS);
+  const activeAvatarId = ownedAvatars.includes(String(row?.active_avatar_id || "")) ? String(row.active_avatar_id) : "";
+  const activeFrameId = ownedFrames.includes(String(row?.active_frame_id || "")) ? String(row.active_frame_id) : "";
+  const activeTrailId = ownedTrails.includes(String(row?.active_trail_id || "")) ? String(row.active_trail_id) : "";
+  return {
+    boosters: {
+      points: safeAdminNumber(row?.boosters_points),
+      treats: safeAdminNumber(row?.boosters_treats),
+      coffee: safeAdminNumber(row?.boosters_coffee)
+    },
+    activeBooster: { type: activeType, runsLeft: activeRuns },
+    ownedAvatars,
+    activeAvatarId,
+    ownedFrames,
+    activeFrameId,
+    ownedTrails,
+    activeTrailId,
+    revision: safeAdminNumber(row?.revision),
+    updatedAt: safeAdminNumber(row?.updated_at) * 1000
+  };
+}
+
+function caseStateUpdateStatement(env, telegramId, caseState, now) {
+  return env.DB.prepare(
+    `UPDATE case_player_state SET
+      boosters_points = ?, boosters_treats = ?, boosters_coffee = ?,
+      active_booster_type = ?, active_booster_runs = ?,
+      owned_avatars_json = ?, active_avatar_id = ?,
+      owned_frames_json = ?, active_frame_id = ?,
+      owned_trails_json = ?, active_trail_id = ?,
+      revision = revision + 1, updated_at = ?
+     WHERE telegram_id = ?`
+  ).bind(
+    safeAdminNumber(caseState.boosters.points),
+    safeAdminNumber(caseState.boosters.treats),
+    safeAdminNumber(caseState.boosters.coffee),
+    String(caseState.activeBooster.type || ""),
+    safeAdminNumber(caseState.activeBooster.runsLeft),
+    JSON.stringify(caseState.ownedAvatars),
+    String(caseState.activeAvatarId || ""),
+    JSON.stringify(caseState.ownedFrames),
+    String(caseState.activeFrameId || ""),
+    JSON.stringify(caseState.ownedTrails),
+    String(caseState.activeTrailId || ""),
+    now,
+    telegramId
+  );
+}
+
+async function ensureCasePlayerState(env, telegramId, currentProfile) {
+  const now = Math.floor(Date.now() / 1000);
+  const current = normalizeAdminProfile(currentProfile || {});
+  await env.DB.batch([
+    env.DB.prepare(
+      `INSERT OR IGNORE INTO admin_profile_state (
+        telegram_id, wallet, best_score, treats, coffee, profile_xp,
+        revision, created_at, updated_at, updated_by
+      ) VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?, ?)`
+    ).bind(telegramId, current.wallet, current.best, current.treats, current.coffee, current.profileXp, now, now, telegramId),
+    env.DB.prepare(
+      `INSERT OR IGNORE INTO case_player_state (
+        telegram_id, created_at, updated_at
+      ) VALUES (?, ?, ?)`
+    ).bind(telegramId, now, now)
+  ]);
+  const profile = await env.DB.prepare(
+    `SELECT wallet, best_score, treats, coffee, profile_xp, revision, updated_at
+     FROM admin_profile_state WHERE telegram_id = ? LIMIT 1`
+  ).bind(telegramId).first();
+  const row = await env.DB.prepare(
+    `SELECT * FROM case_player_state WHERE telegram_id = ? LIMIT 1`
+  ).bind(telegramId).first();
+  return { now, profile, row, state: caseStateFromRow(row) };
+}
+
+async function buildCasePayload(env, telegramId, currentProfile, extra = {}) {
+  const ensured = await ensureCasePlayerState(env, telegramId, currentProfile);
+  const openingsResult = await env.DB.prepare(
+    `SELECT level, case_type, rewards_json, opened_at
+     FROM level_case_openings WHERE telegram_id = ? ORDER BY level ASC`
+  ).bind(telegramId).all();
+  const openedCases = (openingsResult.results || []).map((row) => {
+    let rewards = [];
+    try { rewards = JSON.parse(String(row.rewards_json || "[]")); } catch {}
+    return {
+      level: Number(row.level || 0),
+      caseType: String(row.case_type || "small"),
+      rewards: Array.isArray(rewards) ? rewards : [],
+      openedAt: Number(row.opened_at || 0) * 1000
+    };
+  });
+  const openedLevels = openedCases.map((entry) => entry.level);
+  const current = normalizeAdminProfile(currentProfile || {});
+  const playerLevel = caseProfileLevel(Math.max(current.profileXp, safeAdminNumber(ensured.profile?.profile_xp)));
+  const eligibleCases = Object.entries(LEVEL_CASE_SCHEDULE)
+    .map(([level, caseType]) => ({
+      level: Number(level),
+      caseType,
+      title: LEVEL_CASE_CONFIG[caseType]?.title || "Кейс"
+    }))
+    .filter((entry) => entry.level <= playerLevel && !openedLevels.includes(entry.level));
+  return {
+    ok: true,
+    profileLevel: playerLevel,
+    schedule: Object.entries(LEVEL_CASE_SCHEDULE).map(([level, caseType]) => ({
+      level: Number(level),
+      caseType,
+      title: LEVEL_CASE_CONFIG[caseType]?.title || "Кейс"
+    })),
+    eligibleCases,
+    openedLevels,
+    openedCases,
+    caseState: ensured.state,
+    profile: {
+      wallet: safeAdminNumber(ensured.profile?.wallet),
+      best: safeAdminNumber(ensured.profile?.best_score),
+      treats: safeAdminNumber(ensured.profile?.treats),
+      coffee: safeAdminNumber(ensured.profile?.coffee),
+      profileXp: safeAdminNumber(ensured.profile?.profile_xp)
+    },
+    ...extra
+  };
+}
+
+function rollLevelCase(caseType, sourceState) {
+  const config = LEVEL_CASE_CONFIG[caseType] || LEVEL_CASE_CONFIG.small;
+  const state = JSON.parse(JSON.stringify(sourceState));
+  const rewards = [];
+  const selectedCosmetics = new Set();
+  let points = 0;
+  let treats = 0;
+  let coffee = 0;
+
+  const addCosmetic = (kind, catalog, ownedKey, compensation) => {
+    const available = Object.keys(catalog).filter((id) => !selectedCosmetics.has(`${kind}:${id}`));
+    const id = caseRandomChoice(available.length ? available : Object.keys(catalog));
+    if (!id) return;
+    selectedCosmetics.add(`${kind}:${id}`);
+    const item = catalog[id];
+    const owned = state[ownedKey].includes(id);
+    if (owned) {
+      points += compensation;
+      rewards.push({
+        kind,
+        id,
+        title: item.title,
+        duplicate: true,
+        compensationPoints: compensation
+      });
+    } else {
+      state[ownedKey].push(id);
+      rewards.push({ kind, id, title: item.title, duplicate: false });
+    }
+  };
+
+  for (let slot = 0; slot < config.slots; slot += 1) {
+    const kind = caseWeightedKind(caseType);
+    if (kind === "points" || kind === "treats" || kind === "coffee") {
+      const [min, max] = caseCurrencyRange(caseType, kind);
+      const amount = caseRandomInt(min, max);
+      if (kind === "points") points += amount;
+      if (kind === "treats") treats += amount;
+      if (kind === "coffee") coffee += amount;
+      rewards.push({ kind, amount });
+      continue;
+    }
+    if (kind === "booster") {
+      const boosterType = caseRandomChoice(CASE_BOOSTER_TYPES) || "points";
+      state.boosters[boosterType] = safeAdminNumber(state.boosters[boosterType] + 1);
+      rewards.push({ kind: "booster", boosterType, amount: 1, runs: 2 });
+      continue;
+    }
+    if (kind === "avatar") {
+      addCosmetic("avatar", CASE_AVATARS, "ownedAvatars", CASE_DUPLICATE_COMPENSATION.avatar);
+      continue;
+    }
+    if (kind === "frame") {
+      addCosmetic("frame", CASE_FRAMES, "ownedFrames", CASE_DUPLICATE_COMPENSATION.frame);
+      continue;
+    }
+    if (kind === "trail") {
+      addCosmetic("trail", CASE_TRAILS, "ownedTrails", CASE_DUPLICATE_COMPENSATION.trail);
+    }
+  }
+
+  return { rewards, state, points, treats, coffee };
+}
+
+async function getLevelCaseState(request, env) {
+  try {
+    requireDatabase(env);
+    requireBotToken(env);
+    const body = await readJson(request);
+    const auth = await validateTelegramInitData(String(body.initData || ""), env);
+    return jsonResponse(await buildCasePayload(env, String(auth.user.id), body.current || {}));
+  } catch (error) {
+    if (error instanceof ApiError) return jsonResponse({ ok: false, error: error.message }, error.status);
+    console.error("getLevelCaseState failed", error);
+    return jsonResponse({ ok: false, error: "Не удалось загрузить кейсы. Проверьте миграцию 0010." }, 500);
+  }
+}
+
+async function openLevelCase(request, env) {
+  try {
+    requireDatabase(env);
+    requireBotToken(env);
+    const body = await readJson(request);
+    const auth = await validateTelegramInitData(String(body.initData || ""), env);
+    const telegramId = String(auth.user.id);
+    const requestedLevel = Math.floor(Number(body.level || 0));
+    const caseType = LEVEL_CASE_SCHEDULE[requestedLevel];
+    if (!caseType) throw new ApiError(400, "На этом уровне кейс не выдаётся.");
+    const current = normalizeAdminProfile(body.current || {});
+    const ensured = await ensureCasePlayerState(env, telegramId, current);
+    const playerLevel = caseProfileLevel(Math.max(current.profileXp, safeAdminNumber(ensured.profile?.profile_xp)));
+    if (playerLevel < requestedLevel) throw new ApiError(403, `Кейс откроется на ${requestedLevel} уровне.`);
+    const existing = await env.DB.prepare(
+      `SELECT level FROM level_case_openings WHERE telegram_id = ? AND level = ? LIMIT 1`
+    ).bind(telegramId, requestedLevel).first();
+    if (existing) throw new ApiError(409, "Этот кейс уже открыт.");
+
+    const rolled = rollLevelCase(caseType, ensured.state);
+    const baseProfile = {
+      wallet: Math.max(current.wallet, safeAdminNumber(ensured.profile?.wallet)),
+      best: Math.max(current.best, safeAdminNumber(ensured.profile?.best_score)),
+      treats: Math.max(current.treats, safeAdminNumber(ensured.profile?.treats)),
+      coffee: Math.max(current.coffee, safeAdminNumber(ensured.profile?.coffee)),
+      profileXp: Math.max(current.profileXp, safeAdminNumber(ensured.profile?.profile_xp))
+    };
+    const now = Math.floor(Date.now() / 1000);
+    try {
+      await env.DB.batch([
+        env.DB.prepare(
+          `INSERT INTO level_case_openings (telegram_id, level, case_type, rewards_json, opened_at)
+           VALUES (?, ?, ?, ?, ?)`
+        ).bind(telegramId, requestedLevel, caseType, JSON.stringify(rolled.rewards), now),
+        env.DB.prepare(
+          `UPDATE admin_profile_state SET
+            wallet = ?, best_score = ?, treats = ?, coffee = ?, profile_xp = ?,
+            revision = revision + 1, updated_at = ?, updated_by = ?
+           WHERE telegram_id = ?`
+        ).bind(
+          safeAdminNumber(baseProfile.wallet + rolled.points),
+          baseProfile.best,
+          safeAdminNumber(baseProfile.treats + rolled.treats),
+          safeAdminNumber(baseProfile.coffee + rolled.coffee),
+          baseProfile.profileXp,
+          now,
+          `case:${requestedLevel}`,
+          telegramId
+        ),
+        caseStateUpdateStatement(env, telegramId, rolled.state, now)
+      ]);
+    } catch (error) {
+      if (String(error?.message || error).toLowerCase().includes("unique")) {
+        throw new ApiError(409, "Этот кейс уже открыт.");
+      }
+      throw error;
+    }
+    return jsonResponse(await buildCasePayload(env, telegramId, body.current || {}, {
+      opened: {
+        level: requestedLevel,
+        caseType,
+        title: LEVEL_CASE_CONFIG[caseType]?.title || "Кейс",
+        rewards: rolled.rewards
+      }
+    }));
+  } catch (error) {
+    if (error instanceof ApiError) return jsonResponse({ ok: false, error: error.message }, error.status);
+    console.error("openLevelCase failed", error);
+    return jsonResponse({ ok: false, error: "Не удалось открыть кейс. Проверьте миграцию 0010." }, 500);
+  }
+}
+
+async function activateCaseBooster(request, env) {
+  try {
+    requireDatabase(env);
+    requireBotToken(env);
+    const body = await readJson(request);
+    const auth = await validateTelegramInitData(String(body.initData || ""), env);
+    const telegramId = String(auth.user.id);
+    const boosterType = String(body.boosterType || "");
+    if (!CASE_BOOSTER_TYPES.includes(boosterType)) throw new ApiError(400, "Неизвестный усилитель.");
+    const ensured = await ensureCasePlayerState(env, telegramId, body.current || {});
+    const state = ensured.state;
+    if (state.activeBooster.type && state.activeBooster.runsLeft > 0) {
+      throw new ApiError(409, "Сначала завершите забеги с уже активным усилителем.");
+    }
+    if (safeAdminNumber(state.boosters[boosterType]) <= 0) throw new ApiError(409, "Такого усилителя нет в коллекции.");
+    state.boosters[boosterType] = safeAdminNumber(state.boosters[boosterType] - 1);
+    state.activeBooster = { type: boosterType, runsLeft: 2 };
+    await caseStateUpdateStatement(env, telegramId, state, Math.floor(Date.now() / 1000)).run();
+    return jsonResponse(await buildCasePayload(env, telegramId, body.current || {}));
+  } catch (error) {
+    if (error instanceof ApiError) return jsonResponse({ ok: false, error: error.message }, error.status);
+    console.error("activateCaseBooster failed", error);
+    return jsonResponse({ ok: false, error: "Не удалось активировать усилитель." }, 500);
+  }
+}
+
+async function equipCaseCosmetic(request, env) {
+  try {
+    requireDatabase(env);
+    requireBotToken(env);
+    const body = await readJson(request);
+    const auth = await validateTelegramInitData(String(body.initData || ""), env);
+    const telegramId = String(auth.user.id);
+    const kind = String(body.kind || "");
+    const requestedId = String(body.id || "").trim();
+    if (!["avatar", "frame", "trail"].includes(kind)) throw new ApiError(400, "Неизвестный вид косметики.");
+    const id = requestedId ? normalizeCaseCosmeticId(kind, requestedId) : "";
+    if (requestedId && !id) throw new ApiError(400, "Неизвестный косметический предмет.");
+    const ensured = await ensureCasePlayerState(env, telegramId, body.current || {});
+    const state = ensured.state;
+    if (kind === "avatar") {
+      if (id && !state.ownedAvatars.includes(id)) throw new ApiError(403, "Эта аватарка ещё не получена.");
+      state.activeAvatarId = id;
+    } else if (kind === "frame") {
+      if (id && !state.ownedFrames.includes(id)) throw new ApiError(403, "Эта рамка ещё не получена.");
+      state.activeFrameId = id;
+    } else {
+      if (id && !state.ownedTrails.includes(id)) throw new ApiError(403, "Этот след ещё не получен.");
+      state.activeTrailId = id;
+    }
+    const now = Math.floor(Date.now() / 1000);
+    await env.DB.batch([
+      caseStateUpdateStatement(env, telegramId, state, now),
+      env.DB.prepare(
+        `UPDATE leaderboard_entries SET case_avatar_id = ?, case_frame_id = ?, updated_at = ?
+         WHERE telegram_id = ?`
+      ).bind(state.activeAvatarId, state.activeFrameId, now, telegramId),
+      env.DB.prepare(
+        `UPDATE leaderboard_all_time SET case_avatar_id = ?, case_frame_id = ?, updated_at = ?
+         WHERE telegram_id = ?`
+      ).bind(state.activeAvatarId, state.activeFrameId, now, telegramId)
+    ]);
+    return jsonResponse(await buildCasePayload(env, telegramId, body.current || {}));
+  } catch (error) {
+    if (error instanceof ApiError) return jsonResponse({ ok: false, error: error.message }, error.status);
+    console.error("equipCaseCosmetic failed", error);
+    return jsonResponse({ ok: false, error: "Не удалось выбрать косметический предмет." }, 500);
+  }
+}
+
+async function consumeCaseBoosterRun(request, env) {
+  try {
+    requireDatabase(env);
+    requireBotToken(env);
+    const body = await readJson(request);
+    const auth = await validateTelegramInitData(String(body.initData || ""), env);
+    const telegramId = String(auth.user.id);
+    const runId = String(body.runId || "").trim();
+    if (!/^[A-Za-z0-9_-]{12,96}$/.test(runId)) throw new ApiError(400, "Некорректный идентификатор забега.");
+    const ensured = await ensureCasePlayerState(env, telegramId, body.current || {});
+    const existing = await env.DB.prepare(
+      `SELECT run_id FROM case_booster_run_consumptions WHERE run_id = ? LIMIT 1`
+    ).bind(runId).first();
+    if (!existing) {
+      const state = ensured.state;
+      const consumedType = state.activeBooster.type && state.activeBooster.runsLeft > 0
+        ? state.activeBooster.type
+        : "";
+      if (consumedType) {
+        state.activeBooster.runsLeft = Math.max(0, state.activeBooster.runsLeft - 1);
+        if (state.activeBooster.runsLeft <= 0) state.activeBooster = { type: "", runsLeft: 0 };
+      }
+      const now = Math.floor(Date.now() / 1000);
+      await env.DB.batch([
+        env.DB.prepare(
+          `INSERT INTO case_booster_run_consumptions (run_id, telegram_id, booster_type, consumed_at)
+           VALUES (?, ?, ?, ?)`
+        ).bind(runId, telegramId, consumedType, now),
+        caseStateUpdateStatement(env, telegramId, state, now)
+      ]);
+    }
+    return jsonResponse(await buildCasePayload(env, telegramId, body.current || {}));
+  } catch (error) {
+    if (error instanceof ApiError) return jsonResponse({ ok: false, error: error.message }, error.status);
+    console.error("consumeCaseBoosterRun failed", error);
+    return jsonResponse({ ok: false, error: "Не удалось сохранить использование усилителя." }, 500);
+  }
+}
+
 async function leaderboardState(request, env) {
   try {
     requireDatabase(env);
@@ -1033,6 +1583,8 @@ async function submitLeaderboardRun(request, env) {
     const displayName = telegramDisplayName(auth.user).slice(0, 120);
     const username = String(auth.user.username || "").slice(0, 64);
     const photoUrl = String(auth.user.photo_url || "").slice(0, 500);
+    const caseAvatarId = normalizeCaseCosmeticId("avatar", body.caseAvatarId);
+    const caseFrameId = normalizeCaseCosmeticId("frame", body.caseFrameId);
 
     try {
       await env.DB.prepare(
@@ -1048,32 +1600,36 @@ async function submitLeaderboardRun(request, env) {
     await env.DB.prepare(
       `INSERT INTO leaderboard_entries (
         season_id, telegram_id, display_name, username, photo_url,
-        best_score, level, achieved_at, updated_at, hidden
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
+        best_score, level, achieved_at, updated_at, hidden, case_avatar_id, case_frame_id
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?)
       ON CONFLICT(season_id, telegram_id) DO UPDATE SET
         display_name = excluded.display_name,
         username = excluded.username,
         photo_url = excluded.photo_url,
+        case_avatar_id = excluded.case_avatar_id,
+        case_frame_id = excluded.case_frame_id,
         level = excluded.level,
         best_score = CASE WHEN excluded.best_score > leaderboard_entries.best_score THEN excluded.best_score ELSE leaderboard_entries.best_score END,
         achieved_at = CASE WHEN excluded.best_score > leaderboard_entries.best_score THEN excluded.achieved_at ELSE leaderboard_entries.achieved_at END,
         updated_at = excluded.updated_at`
-    ).bind(season.id, telegramId, displayName, username, photoUrl, score, level, now, now).run();
+    ).bind(season.id, telegramId, displayName, username, photoUrl, score, level, now, now, caseAvatarId, caseFrameId).run();
 
     await env.DB.prepare(
       `INSERT INTO leaderboard_all_time (
         telegram_id, display_name, username, photo_url,
-        best_score, level, achieved_at, updated_at, hidden
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)
+        best_score, level, achieved_at, updated_at, hidden, case_avatar_id, case_frame_id
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?)
       ON CONFLICT(telegram_id) DO UPDATE SET
         display_name = excluded.display_name,
         username = excluded.username,
         photo_url = excluded.photo_url,
+        case_avatar_id = excluded.case_avatar_id,
+        case_frame_id = excluded.case_frame_id,
         level = excluded.level,
         best_score = CASE WHEN excluded.best_score > leaderboard_all_time.best_score THEN excluded.best_score ELSE leaderboard_all_time.best_score END,
         achieved_at = CASE WHEN excluded.best_score > leaderboard_all_time.best_score THEN excluded.achieved_at ELSE leaderboard_all_time.achieved_at END,
         updated_at = excluded.updated_at`
-    ).bind(telegramId, displayName, username, photoUrl, score, level, now, now).run();
+    ).bind(telegramId, displayName, username, photoUrl, score, level, now, now, caseAvatarId, caseFrameId).run();
 
     return jsonResponse(await buildLeaderboardPayload(env, season, telegramId, "season"));
   } catch (error) {
@@ -1128,7 +1684,8 @@ async function buildLeaderboardPayload(env, season, telegramId, mode = "season")
   const topLimit = Math.min(100, positiveInt(env.LEADERBOARD_TOP_LIMIT, DEFAULT_LEADERBOARD_TOP_LIMIT));
   const table = mode === "all_time" ? "leaderboard_all_time" : "leaderboard_entries";
   const where = mode === "all_time" ? "hidden = 0" : "season_id = ? AND hidden = 0";
-  const query = `SELECT telegram_id, display_name, username, photo_url, best_score, level, achieved_at
+  const query = `SELECT telegram_id, display_name, username, photo_url, best_score, level, achieved_at,
+                        case_avatar_id, case_frame_id
                  FROM ${table} WHERE ${where}
                  ORDER BY best_score DESC, achieved_at ASC, telegram_id ASC LIMIT ?`;
   const topResult = mode === "all_time"
@@ -1205,6 +1762,8 @@ function leaderboardRowToClient(row, place) {
     name: String(row.display_name || "Гость кафе"),
     username: String(row.username || ""),
     photoUrl: String(row.photo_url || ""),
+    caseAvatarId: normalizeCaseCosmeticId("avatar", row.case_avatar_id),
+    caseFrameId: normalizeCaseCosmeticId("frame", row.case_frame_id),
     score: Number(row.best_score || 0),
     level: Number(row.level || 1),
     achievedAt: Number(row.achieved_at || 0) * 1000
