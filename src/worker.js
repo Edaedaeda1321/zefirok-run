@@ -94,7 +94,7 @@ const GAME_UPDATE_NOTES = Object.freeze([
 const DEFAULT_SEASON_ID = "sweet-season-1";
 const DEFAULT_SEASON_TITLE = "Первый сладкий сезон";
 const DEFAULT_SEASON_START_AT = "2026-07-23T15:40:00+03:00";
-const DEFAULT_SEASON_END_AT = "2026-07-25T15:40:00+03:00";
+const DEFAULT_SEASON_END_AT = "2026-08-07T12:00:00+03:00";
 const DEFAULT_SEASON_REWARD_COFFEE = 50;
 const DEFAULT_SEASON_REWARD_TYPE = "coffee"; // coffee | skin | item | currency
 const DEFAULT_SEASON_REWARD_TITLE = "50 кофе";
@@ -127,8 +127,8 @@ const DEFAULT_SEASON_RESET_PLAN = Object.freeze({
 // Новость может быть с картинкой или без неё. Для картинки задайте
 // BOT_NEWS_IMAGE_URL в Cloudflare либо замените пустую строку ниже на HTTPS URL.
 const DEFAULT_BOT_NEWS_IMAGE_URL = `${DEFAULT_GAME_URL}assets/rating/season-news.png?v=4.0-open-beta`;
-const BOT_NEWS_TITLE = "Тестовый сезон завершится 25 июля";
-const BOT_NEWS_TEXT = "Первый тестовый сезон Сладкого Забега завершится 25 июля 2026 года в 15:40 МСК. Успейте проверить рейтинг, итоговые места и выдачу награды за первое место.";
+const BOT_NEWS_TITLE = "Тестовый сезон завершится 7 августа";
+const BOT_NEWS_TEXT = "Первый тестовый сезон Сладкого Забега продлён до 7 августа 2026 года, 12:00 МСК. Успейте проверить рейтинг, итоговые места и выдачу награды за первое место.";
 // =============================================================
 
 const BOT_COMMANDS = Object.freeze([
