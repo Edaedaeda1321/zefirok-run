@@ -46,14 +46,16 @@ const LEVEL_CASE_CONFIG = Object.freeze({
 });
 
 const CASE_AVATARS = Object.freeze({
-  fox: Object.freeze({ id: "fox", title: "Лисёнок" }),
-  corgi: Object.freeze({ id: "corgi", title: "Корги" }),
-  bunny: Object.freeze({ id: "bunny", title: "Зайка" }),
-  hedgehog: Object.freeze({ id: "hedgehog", title: "Ёжик" }),
-  koala: Object.freeze({ id: "koala", title: "Коала" }),
-  penguin: Object.freeze({ id: "penguin", title: "Пингвин" }),
-  cat: Object.freeze({ id: "cat", title: "Котёнок" }),
-  bear: Object.freeze({ id: "bear", title: "Мишка" })
+  royal: Object.freeze({ id: "royal", title: "Королевская" }),
+  winter_cocoa: Object.freeze({ id: "winter_cocoa", title: "Зимнее какао" }),
+  birthday_gift: Object.freeze({ id: "birthday_gift", title: "Праздничный подарок" }),
+  sweet_dreams: Object.freeze({ id: "sweet_dreams", title: "Сладкие сны" }),
+  sakura: Object.freeze({ id: "sakura", title: "Сакура" }),
+  champion: Object.freeze({ id: "champion", title: "Чемпион" }),
+  strawberry_cake: Object.freeze({ id: "strawberry_cake", title: "Клубничный десерт" }),
+  marshmallow_cloud: Object.freeze({ id: "marshmallow_cloud", title: "Зефирное облако" }),
+  coffee_barista: Object.freeze({ id: "coffee_barista", title: "Кофейный бариста" }),
+  pink_hearts: Object.freeze({ id: "pink_hearts", title: "Розовые сердечки" })
 });
 
 const CASE_FRAMES = Object.freeze({
@@ -110,9 +112,9 @@ const REWARD_LIMIT_RESET_AT_SECONDS = 1784805300; // 23.07.2026 11:15 UTC
 
 // НАСТРОЙКИ ВЕРСИИ И РАЗДЕЛА «ОБНОВЛЕНИЕ» В БОТЕ.
 // Меняйте эти значения при каждом новом релизе игры.
-const GAME_VERSION = "4.0.13 OPEN BETA";
+const GAME_VERSION = "4.0.14 OPEN BETA";
 const GAME_UPDATE_DATE = "24 июля 2026";
-const GAME_UPDATE_TITLE = "Премиальные кейсы и одна награда";
+const GAME_UPDATE_TITLE = "Новые аватарки и кейсы без подложки";
 
 // Что произошло с прогрессом в этом релизе:
 // "reset" — крупное обновление с обнулением прогресса;
@@ -121,10 +123,10 @@ const GAME_UPDATE_PROGRESS_MODE = "keep";
 const GAME_UPDATE_RESET_REASON = "Прогресс в этом обновлении сохраняется.";
 
 const GAME_UPDATE_NOTES = Object.freeze([
-  "Все кейсы получили новые премиальные изображения в закрытом и открытом состоянии.",
-  "Маленький, Сладкий и Золотой кейсы теперь дают ровно одну награду.",
-  "При открытии запускается одна рулетка с изображениями настоящих игровых наград вместо эмоджи.",
-  "Шансы и состав наград каждого типа кейса сохранены.",
+  "В кейсы добавлены 10 новых коллекционных аватарок.",
+  "Стандартные аватарки продолжают использоваться для обычного отображения игроков в рейтинге.",
+  "У изображений закрытых и открытых кейсов убрана внешняя белая подложка.",
+  "Каждый кейс по-прежнему даёт одну награду за одну прокрутку.",
   "Сезон завершится 7 августа 2026 года в 12:00 МСК."
 ]);
 
