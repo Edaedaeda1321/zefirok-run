@@ -10,8 +10,38 @@ const DEFAULT_SHOP_PRODUCTS = Object.freeze({
   cappuccino: Object.freeze({ points: 75000, treats: 0, coffee: 450 })
 });
 
+const SKINS = Object.freeze({
+  default: Object.freeze({ id: "default", title: "Стандартный" }),
+  barista: Object.freeze({ id: "barista", title: "Бариста" }),
+  strawberry: Object.freeze({ id: "strawberry", title: "Клубничка" }),
+  bee: Object.freeze({ id: "bee", title: "Пчёлка" }),
+  sailor: Object.freeze({ id: "sailor", title: "Морячок" }),
+  princess: Object.freeze({ id: "princess", title: "Принцесса" }),
+  angel: Object.freeze({ id: "angel", title: "Ангелок" })
+});
+
+const DEFAULT_SKIN_PRICES = Object.freeze({
+  default: Object.freeze({ points: 0, treats: 0, coffee: 0 }),
+  barista: Object.freeze({ points: 150000, treats: 0, coffee: 700 }),
+  strawberry: Object.freeze({ points: 300000, treats: 700, coffee: 0 }),
+  bee: Object.freeze({ points: 600000, treats: 900, coffee: 0 }),
+  sailor: Object.freeze({ points: 1200000, treats: 0, coffee: 900 }),
+  princess: Object.freeze({ points: 2400000, treats: 1100, coffee: 1100 }),
+  angel: Object.freeze({ points: 4800000, treats: 1250, coffee: 1250 })
+});
+
 const SHOP_SCHEMA_SQL = `CREATE TABLE IF NOT EXISTS shop_prices (
   product_id TEXT PRIMARY KEY,
+  points INTEGER NOT NULL DEFAULT 0 CHECK(points >= 0),
+  treats INTEGER NOT NULL DEFAULT 0 CHECK(treats >= 0),
+  coffee INTEGER NOT NULL DEFAULT 0 CHECK(coffee >= 0),
+  version INTEGER NOT NULL DEFAULT 1 CHECK(version >= 1),
+  updated_at INTEGER NOT NULL,
+  updated_by TEXT NOT NULL DEFAULT ''
+)`;
+
+const SKIN_PRICE_SCHEMA_SQL = `CREATE TABLE IF NOT EXISTS skin_prices (
+  skin_id TEXT PRIMARY KEY,
   points INTEGER NOT NULL DEFAULT 0 CHECK(points >= 0),
   treats INTEGER NOT NULL DEFAULT 0 CHECK(treats >= 0),
   coffee INTEGER NOT NULL DEFAULT 0 CHECK(coffee >= 0),
@@ -139,7 +169,8 @@ export default {
           routes: [
             "/api/admin/profile/sync",
             "/api/admin/leaderboard/set",
-            "/api/admin/shop/prices"
+            "/api/admin/shop/prices",
+            "/api/admin/skins/prices"
           ]
         });
       }
@@ -148,8 +179,16 @@ export default {
         return await getShopConfig(env);
       }
 
+      if (url.pathname === "/api/skins/config" && request.method === "GET") {
+        return await getSkinConfig(env);
+      }
+
       if (url.pathname === "/api/admin/shop/prices" && request.method === "POST") {
         return await updateShopPrices(request, env);
+      }
+
+      if (url.pathname === "/api/admin/skins/prices" && request.method === "POST") {
+        return await updateSkinPrices(request, env);
       }
 
       if (url.pathname === "/api/admin/profile/sync" && request.method === "POST") {
@@ -328,6 +367,107 @@ function normalizeShopProducts(input) {
     };
   }
   return products;
+}
+
+async function getSkinConfig(env) {
+  try {
+    requireDatabase(env);
+    await ensureSkinPriceSchema(env);
+    return jsonResponse({
+      ok: true,
+      skins: await readSkinPrices(env),
+      defaults: DEFAULT_SKIN_PRICES,
+      source: "d1"
+    });
+  } catch (error) {
+    console.error("getSkinConfig failed", error);
+    return jsonResponse({
+      ok: true,
+      skins: cloneDefaultSkinPrices(),
+      defaults: DEFAULT_SKIN_PRICES,
+      source: "fallback"
+    });
+  }
+}
+
+async function updateSkinPrices(request, env) {
+  try {
+    requireDatabase(env);
+    requireBotToken(env);
+    const body = await readJson(request);
+    const auth = await validateTelegramInitData(String(body.initData || ""), env);
+    requireAdminUser(auth.user, env);
+    const skins = normalizeSkinPrices(body.skins);
+    await ensureSkinPriceSchema(env);
+    const now = Math.floor(Date.now() / 1000);
+    const updatedBy = String(auth.user.id);
+    await env.DB.batch(Object.entries(skins).map(([skinId, price]) => env.DB.prepare(
+      `INSERT INTO skin_prices (
+        skin_id, points, treats, coffee, version, updated_at, updated_by
+      ) VALUES (?, ?, ?, ?, 1, ?, ?)
+      ON CONFLICT(skin_id) DO UPDATE SET
+        points = excluded.points,
+        treats = excluded.treats,
+        coffee = excluded.coffee,
+        version = skin_prices.version + 1,
+        updated_at = excluded.updated_at,
+        updated_by = excluded.updated_by`
+    ).bind(skinId, price.points, price.treats, price.coffee, now, updatedBy)));
+    return jsonResponse({ ok: true, skins: await readSkinPrices(env), updatedAt: now * 1000 });
+  } catch (error) {
+    if (error instanceof ApiError) return jsonResponse({ ok: false, error: error.message }, error.status);
+    console.error("updateSkinPrices failed", error);
+    return jsonResponse({ ok: false, error: "Не удалось сохранить глобальные цены скинов." }, 500);
+  }
+}
+
+async function ensureSkinPriceSchema(env) {
+  await env.DB.prepare(SKIN_PRICE_SCHEMA_SQL).run();
+  const now = Math.floor(Date.now() / 1000);
+  await env.DB.batch(Object.entries(DEFAULT_SKIN_PRICES).map(([skinId, price]) => env.DB.prepare(
+    `INSERT OR IGNORE INTO skin_prices (
+      skin_id, points, treats, coffee, version, updated_at, updated_by
+    ) VALUES (?, ?, ?, ?, 1, ?, 'system')`
+  ).bind(skinId, price.points, price.treats, price.coffee, now)));
+}
+
+async function readSkinPrices(env) {
+  const result = await env.DB.prepare(
+    `SELECT skin_id, points, treats, coffee FROM skin_prices ORDER BY skin_id ASC`
+  ).all();
+  const skins = cloneDefaultSkinPrices();
+  for (const row of result.results || []) {
+    if (!skins[row.skin_id]) continue;
+    skins[row.skin_id] = {
+      points: safeAdminNumber(row.points),
+      treats: safeAdminNumber(row.treats),
+      coffee: safeAdminNumber(row.coffee)
+    };
+  }
+  return skins;
+}
+
+function cloneDefaultSkinPrices() {
+  return Object.fromEntries(Object.entries(DEFAULT_SKIN_PRICES).map(([id, price]) => [id, { ...price }]));
+}
+
+function normalizeSkinPrices(input) {
+  if (!input || typeof input !== "object" || Array.isArray(input)) {
+    throw new ApiError(400, "Некорректный список цен скинов.");
+  }
+  const skins = {};
+  for (const skinId of Object.keys(DEFAULT_SKIN_PRICES)) {
+    const price = input[skinId];
+    if (!price || typeof price !== "object" || Array.isArray(price)) {
+      throw new ApiError(400, `Не указаны цены скина ${SKINS[skinId]?.title || skinId}.`);
+    }
+    skins[skinId] = {
+      points: validateAdminNumber(price.points),
+      treats: validateAdminNumber(price.treats),
+      coffee: validateAdminNumber(price.coffee)
+    };
+  }
+  return skins;
 }
 
 async function syncAdminProfile(request, env) {
