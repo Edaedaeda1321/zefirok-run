@@ -67,7 +67,7 @@ const REWARD_LIMIT_RESET_AT_SECONDS = 1784805300; // 23.07.2026 11:15 UTC
 
 // НАСТРОЙКИ ВЕРСИИ И РАЗДЕЛА «ОБНОВЛЕНИЕ» В БОТЕ.
 // Меняйте эти значения при каждом новом релизе игры.
-const GAME_VERSION = "4.0.6 OPEN BETA";
+const GAME_VERSION = "4.0.8 OPEN BETA";
 const GAME_UPDATE_DATE = "24 июля 2026";
 const GAME_UPDATE_TITLE = "Бонус Морячка и быстрые аватарки рейтинга";
 
@@ -144,6 +144,8 @@ const BOT_COMMANDS = Object.freeze([
   { command: "help", description: "Как проверить код" },
   { command: "whoami", description: "Показать мой Telegram ID" },
   { command: "staff", description: "Войти в рабочую сессию" },
+  { command: "help_staff", description: "Команды сотрудника" },
+  { command: "staff_me", description: "Моя роль и статистика" },
   { command: "team", description: "Команда и разрешения" },
   { command: "publish", description: "Опубликовать новость" }
 ]);
@@ -548,28 +550,57 @@ async function syncAdminProfile(request, env) {
       ).run();
     }
 
-    const row = await env.DB.prepare(
-      `SELECT wallet, best_score, treats, coffee, profile_xp, revision, updated_at, wallet_override
+    let row = await env.DB.prepare(
+      `SELECT wallet, best_score, treats, coffee, profile_xp, revision, updated_at,
+              wallet_override, pending_wallet, pending_treats, pending_coffee
        FROM admin_profile_state WHERE telegram_id = ? LIMIT 1`
     ).bind(telegramId).first();
 
-    const authoritativeWallet = row?.wallet_override != null;
-    const walletValue = authoritativeWallet ? safeAdminNumber(row.wallet_override) : safeAdminNumber(row?.wallet);
-    if (authoritativeWallet) {
+    const pendingWallet = safeAdminNumber(row?.pending_wallet);
+    const pendingTreats = safeAdminNumber(row?.pending_treats);
+    const pendingCoffee = safeAdminNumber(row?.pending_coffee);
+    const hasWalletOverride = row?.wallet_override != null;
+    const authoritativeWallet = hasWalletOverride || pendingWallet > 0;
+    const authoritativeTreats = pendingTreats > 0;
+    const authoritativeCoffee = pendingCoffee > 0;
+
+    const walletBase = hasWalletOverride
+      ? safeAdminNumber(row.wallet_override)
+      : Math.max(current.wallet, safeAdminNumber(row?.wallet));
+    const walletValue = safeAdminNumber(walletBase + pendingWallet);
+    const treatsValue = safeAdminNumber(Math.max(current.treats, safeAdminNumber(row?.treats)) + pendingTreats);
+    const coffeeValue = safeAdminNumber(Math.max(current.coffee, safeAdminNumber(row?.coffee)) + pendingCoffee);
+
+    if (hasWalletOverride || pendingWallet > 0 || pendingTreats > 0 || pendingCoffee > 0) {
       await env.DB.prepare(
-        `UPDATE admin_profile_state SET wallet = ?, wallet_override = NULL WHERE telegram_id = ?`
-      ).bind(walletValue, telegramId).run();
+        `UPDATE admin_profile_state SET
+          wallet = ?, treats = ?, coffee = ?,
+          wallet_override = NULL,
+          pending_wallet = 0, pending_treats = 0, pending_coffee = 0,
+          revision = revision + 1,
+          updated_at = ?, updated_by = ?
+         WHERE telegram_id = ?`
+      ).bind(walletValue, treatsValue, coffeeValue, now, telegramId, telegramId).run();
+      row = await env.DB.prepare(
+        `SELECT wallet, best_score, treats, coffee, profile_xp, revision, updated_at
+         FROM admin_profile_state WHERE telegram_id = ? LIMIT 1`
+      ).bind(telegramId).first();
     }
 
     return jsonResponse({
       ok: true,
       profile: {
-        wallet: walletValue,
+        wallet: hasWalletOverride || pendingWallet > 0 ? walletValue : safeAdminNumber(row?.wallet),
         best: safeAdminNumber(row?.best_score),
-        treats: safeAdminNumber(row?.treats),
-        coffee: safeAdminNumber(row?.coffee),
+        treats: authoritativeTreats ? treatsValue : safeAdminNumber(row?.treats),
+        coffee: authoritativeCoffee ? coffeeValue : safeAdminNumber(row?.coffee),
         profileXp: safeAdminNumber(row?.profile_xp),
         authoritativeWallet,
+        authoritativeFields: {
+          wallet: authoritativeWallet,
+          treats: authoritativeTreats,
+          coffee: authoritativeCoffee
+        },
         revision: safeAdminNumber(row?.revision),
         updatedAt: safeAdminNumber(row?.updated_at) * 1000
       }
@@ -1266,12 +1297,91 @@ async function handleTelegramUpdate(update, env) {
     return;
   }
 
+  if (/^\/help_staff(?:@\w+)?$/i.test(text)) {
+    await showStaffHelp(chatId, user, env);
+    return;
+  }
+
+  if (/^\/staff_me(?:@\w+)?$/i.test(text)) {
+    await showStaffProfile(chatId, user, env);
+    return;
+  }
+
+  if (/^\/staff_list(?:@\w+)?$/i.test(text)) {
+    await showTeamManagement(chatId, user, env);
+    return;
+  }
+
+  const rankMatch = text.match(/^\/rang_staff_(kassir|povar|administrator)(?:@\w+)?\s+(\d{4,20})$/i);
+  if (rankMatch) {
+    const role = rankMatch[1].toLowerCase() === "kassir"
+      ? "cashier"
+      : rankMatch[1].toLowerCase() === "povar"
+        ? "cook"
+        : "administrator";
+    await setTeamRole(chatId, user, rankMatch[2], role, env);
+    return;
+  }
+
+  const checkCodeMatch = text.match(/^\/check_code(?:@\w+)?\s+(.+)$/i);
+  if (checkCodeMatch) {
+    await showRewardInBot(chatId, user, checkCodeMatch[1], env, { viewOnly: true });
+    return;
+  }
+
+  const redeemCodeMatch = text.match(/^\/redeem(?:@\w+)?\s+(.+)$/i);
+  if (redeemCodeMatch) {
+    await showRewardInBot(chatId, user, redeemCodeMatch[1], env, { forceRedeem: true });
+    return;
+  }
+
+  if (/^\/pending_orders(?:@\w+)?$/i.test(text)) {
+    await showPendingOrders(chatId, user, env);
+    return;
+  }
+
+  if (/^\/my_redemptions(?:@\w+)?$/i.test(text)) {
+    await showMyRedemptions(chatId, user, env);
+    return;
+  }
+
+  if (/^\/redemptions_today(?:@\w+)?$/i.test(text)) {
+    await showRedemptionsToday(chatId, user, env);
+    return;
+  }
+
+  const playerMatch = text.match(/^\/player(?:@\w+)?\s+(\d{4,20})$/i);
+  if (playerMatch) {
+    await showPlayerProfile(chatId, user, playerMatch[1], env);
+    return;
+  }
+
+  const currencyAddMatch = text.match(/^\/add_(zefir|coffee|points)(?:@\w+)?\s+(\d{1,9})\s+(\d{4,20})(?:\s+([\s\S]+))?$/i);
+  if (currencyAddMatch) {
+    await addPlayerCurrency(chatId, user, currencyAddMatch[1].toLowerCase(), Number(currencyAddMatch[2]), currencyAddMatch[3], String(currencyAddMatch[4] || "Компенсация").trim(), env);
+    return;
+  }
+
+  const staffLogMatch = text.match(/^\/staff_log(?:@\w+)?(?:\s+(\d{1,2}))?$/i);
+  if (staffLogMatch) {
+    await showStaffAuditLog(chatId, user, Number(staffLogMatch[1] || 10), env);
+    return;
+  }
+
+  const staffEnableMatch = text.match(/^\/staff_(enable|disable|remove)(?:@\w+)?\s+(\d{4,20})$/i);
+  if (staffEnableMatch) {
+    const action = staffEnableMatch[1].toLowerCase();
+    if (action === "enable") await setStaffEnabled(chatId, user, staffEnableMatch[2], true, env);
+    else await removeTeamMember(chatId, user, staffEnableMatch[2], env);
+    return;
+  }
+
   if (/^\/team(?:@\w+)?$/i.test(text)) {
     await showTeamManagement(chatId, user, env);
     return;
   }
 
-  const teamAddMatch = text.match(/^\/team_add(?:@\w+)?\s+(\d{4,20})(?:\s+(employee|manager|admin))?$/i);
+  const teamAddMatch = text.match(/^\/team_add(?:@\w+)?\s+(\d{4,20})(?:\s+(employee|manager|admin|cashier|cook|administrator|kassir|povar))?$/i);
   if (teamAddMatch) {
     await addTeamMember(chatId, user, teamAddMatch[1], teamAddMatch[2] || "employee", env);
     return;
@@ -1283,7 +1393,7 @@ async function handleTelegramUpdate(update, env) {
     return;
   }
 
-  const teamRoleMatch = text.match(/^\/team_role(?:@\w+)?\s+(\d{4,20})\s+(employee|manager|admin)$/i);
+  const teamRoleMatch = text.match(/^\/team_role(?:@\w+)?\s+(\d{4,20})\s+(employee|manager|admin|cashier|cook|administrator|kassir|povar)$/i);
   if (teamRoleMatch) {
     await setTeamRole(chatId, user, teamRoleMatch[1], teamRoleMatch[2], env);
     return;
@@ -1675,9 +1785,20 @@ async function handleMenuCallback(query, env) {
 }
 
 const TEAM_ROLE_PRESETS = Object.freeze({
-  employee: Object.freeze({ redeem: 1, points: 0, products: 0, news: 0, staff: 0 }),
-  manager: Object.freeze({ redeem: 1, points: 1, products: 1, news: 0, staff: 0 }),
-  admin: Object.freeze({ redeem: 1, points: 1, products: 1, news: 1, staff: 1 })
+  cashier: Object.freeze({ redeem: 1, points: 0, products: 0, news: 0, staff: 0 }),
+  cook: Object.freeze({ redeem: 0, points: 0, products: 0, news: 0, staff: 0 }),
+  administrator: Object.freeze({ redeem: 1, points: 1, products: 1, news: 1, staff: 1 })
+});
+
+const TEAM_ROLE_ALIASES = Object.freeze({
+  cashier: "cashier",
+  kassir: "cashier",
+  employee: "cashier",
+  cook: "cook",
+  povar: "cook",
+  manager: "administrator",
+  admin: "administrator",
+  administrator: "administrator"
 });
 
 const TEAM_PERMISSION_COLUMNS = Object.freeze({
@@ -1689,21 +1810,32 @@ const TEAM_PERMISSION_COLUMNS = Object.freeze({
 });
 
 function normalizeTeamRole(value) {
-  const role = String(value || "employee").toLowerCase();
-  return Object.prototype.hasOwnProperty.call(TEAM_ROLE_PRESETS, role) ? role : "employee";
+  const role = String(value || "cashier").toLowerCase();
+  return TEAM_ROLE_ALIASES[role] || "cashier";
 }
 
 function teamRoleLabel(role) {
-  return normalizeTeamRole(role) === "admin" ? "Администратор" : normalizeTeamRole(role) === "manager" ? "Менеджер" : "Сотрудник";
+  const normalized = normalizeTeamRole(role);
+  if (normalized === "administrator") return "Администратор";
+  if (normalized === "cook") return "Повар";
+  return "Кассир";
 }
 
 function permissionLabel(permission) {
-  return ({ redeem: "выдача товаров", points: "изменение очков", products: "управление товарами", news: "публикация новостей", staff: "управление командой" })[permission] || permission;
+  return ({
+    view: "просмотр заказов",
+    redeem: "выдача товаров",
+    points: "изменение баланса игроков",
+    products: "управление товарами",
+    news: "публикация новостей",
+    staff: "управление командой",
+    log: "просмотр журнала"
+  })[permission] || permission;
 }
 
 async function getTeamAccess(user, env) {
   if (isBotAdminUser(user, env)) {
-    return { authorized: true, owner: true, role: "owner", permissions: { redeem: true, points: true, products: true, news: true, staff: true } };
+    return { authorized: true, owner: true, role: "owner", permissions: { view: true, redeem: true, points: true, products: true, news: true, staff: true, log: true } };
   }
   const row = await env.DB.prepare(
     `SELECT telegram_id, display_name, active, role, session_expires_at,
@@ -1722,11 +1854,13 @@ async function getTeamAccess(user, env) {
     role: normalizeTeamRole(row.role),
     expiresAt,
     permissions: {
+      view: true,
       redeem: Number(row.can_redeem_rewards || 0) === 1,
       points: Number(row.can_adjust_points || 0) === 1,
       products: Number(row.can_manage_products || 0) === 1,
       news: Number(row.can_publish_news || 0) === 1,
-      staff: Number(row.can_manage_staff || 0) === 1
+      staff: Number(row.can_manage_staff || 0) === 1,
+      log: Number(row.can_manage_staff || 0) === 1
     }
   };
 }
@@ -1759,22 +1893,40 @@ async function showTeamManagement(chatId, user, env) {
   const now = Math.floor(Date.now() / 1000);
   const list = rows.length ? rows.map((row) => {
     const permissions = [
-      Number(row.can_redeem_rewards) ? "товары" : null,
-      Number(row.can_adjust_points) ? "очки" : null,
+      "просмотр",
+      Number(row.can_redeem_rewards) ? "выдача" : null,
+      Number(row.can_adjust_points) ? "баланс" : null,
       Number(row.can_manage_products) ? "каталог" : null,
       Number(row.can_publish_news) ? "новости" : null,
       Number(row.can_manage_staff) ? "команда" : null
-    ].filter(Boolean).join(", ") || "нет разрешений";
+    ].filter(Boolean).join(", ");
     const session = Number(row.session_expires_at || 0) > now ? "сессия активна" : "нужен вход";
     return `• <code>${escapeHtml(String(row.telegram_id))}</code> — ${escapeHtml(row.display_name || "Без имени")}\n  ${escapeHtml(teamRoleLabel(row.role))} · ${Number(row.active) ? session : "отключён"}\n  Права: ${escapeHtml(permissions)}`;
   }).join("\n\n") : "Сотрудники пока не добавлены.";
-  await sendTelegramMessage(env, chatId, `<b>Команда и разрешения</b>\n\n${list}\n\n<b>Команды владельца</b>\n<code>/team_add ID employee</code>\n<code>/team_role ID manager</code>\n<code>/permit ID news on</code>\n<code>/team_remove ID</code>\n\nРазрешения: redeem, points, products, news, staff.`);
+  const adminHint = access.owner
+    ? `<b>Назначение ролей</b>\n<code>/rang_staff_kassir ID</code>\n<code>/rang_staff_povar ID</code>\n<code>/rang_staff_administrator ID</code>`
+    : `<b>Назначение ролей</b>\n<code>/rang_staff_kassir ID</code>\n<code>/rang_staff_povar ID</code>`;
+  await sendTelegramMessage(env, chatId, `<b>Команда и разрешения</b>\n\n${list}\n\n${adminHint}\n\n<code>/staff_disable ID</code> — отключить сотрудника\n<code>/staff_enable ID</code> — включить сотрудника\n<code>/help_staff</code> — все доступные команды.`);
+}
+
+function canAssignTeamRole(access, role) {
+  if (access?.owner) return true;
+  return normalizeTeamRole(role) !== "administrator";
+}
+
+async function targetTeamMember(env, telegramId) {
+  return env.DB.prepare(`SELECT telegram_id, role, active FROM staff_users WHERE telegram_id = ? LIMIT 1`)
+    .bind(String(telegramId)).first();
 }
 
 async function addTeamMember(chatId, requester, telegramId, roleValue, env) {
   const access = await requireTeamPermission(chatId, requester, "staff", env);
   if (!access) return;
   const role = normalizeTeamRole(roleValue);
+  if (!canAssignTeamRole(access, role)) {
+    await sendTelegramMessage(env, chatId, "Назначить роль администратора может только владелец.");
+    return;
+  }
   const preset = TEAM_ROLE_PRESETS[role];
   const now = Math.floor(Date.now() / 1000);
   await env.DB.prepare(
@@ -1795,14 +1947,25 @@ async function addTeamMember(chatId, requester, telegramId, roleValue, env) {
   ).bind(String(telegramId), `Telegram ${telegramId}`, now, role,
     preset.redeem, preset.points, preset.products, preset.news, preset.staff,
     String(requester.id), now).run();
+  await logStaffAction(env, requester, access, "staff_add", String(telegramId), "staff", null, null, { role });
   await sendTelegramMessage(env, chatId, `Пользователь <code>${escapeHtml(String(telegramId))}</code> добавлен как <b>${escapeHtml(teamRoleLabel(role))}</b>.\n\nОн должен открыть бота и выполнить <code>/staff</code>.`);
 }
 
 async function removeTeamMember(chatId, requester, telegramId, env) {
   const access = await requireTeamPermission(chatId, requester, "staff", env);
   if (!access) return;
+  const target = await targetTeamMember(env, telegramId);
+  if (!target) {
+    await sendTelegramMessage(env, chatId, "Сотрудник не найден.");
+    return;
+  }
+  if (!access.owner && normalizeTeamRole(target.role) === "administrator") {
+    await sendTelegramMessage(env, chatId, "Отключить администратора может только владелец.");
+    return;
+  }
   await env.DB.prepare(`UPDATE staff_users SET active = 0, session_expires_at = 0, updated_at = ? WHERE telegram_id = ?`)
     .bind(Math.floor(Date.now() / 1000), String(telegramId)).run();
+  await logStaffAction(env, requester, access, "staff_disable", String(telegramId), "staff", Number(target.active || 0), 0, null);
   await sendTelegramMessage(env, chatId, `Доступ пользователя <code>${escapeHtml(String(telegramId))}</code> отключён. Текущая сессия завершена.`);
 }
 
@@ -1810,6 +1973,15 @@ async function setTeamRole(chatId, requester, telegramId, roleValue, env) {
   const access = await requireTeamPermission(chatId, requester, "staff", env);
   if (!access) return;
   const role = normalizeTeamRole(roleValue);
+  if (!canAssignTeamRole(access, role)) {
+    await sendTelegramMessage(env, chatId, "Назначить роль администратора может только владелец.");
+    return;
+  }
+  const target = await targetTeamMember(env, telegramId);
+  if (target && !access.owner && normalizeTeamRole(target.role) === "administrator") {
+    await sendTelegramMessage(env, chatId, "Изменить роль администратора может только владелец.");
+    return;
+  }
   const preset = TEAM_ROLE_PRESETS[role];
   const result = await env.DB.prepare(
     `UPDATE staff_users SET role = ?, can_redeem_rewards = ?, can_adjust_points = ?,
@@ -1818,15 +1990,20 @@ async function setTeamRole(chatId, requester, telegramId, roleValue, env) {
   ).bind(role, preset.redeem, preset.points, preset.products, preset.news, preset.staff,
     Math.floor(Date.now() / 1000), String(telegramId)).run();
   if (Number(result.meta?.changes || 0) < 1) {
-    await sendTelegramMessage(env, chatId, "Сотрудник не найден. Сначала используйте /team_add.");
+    await addTeamMember(chatId, requester, telegramId, role, env);
     return;
   }
-  await sendTelegramMessage(env, chatId, `Роль пользователя <code>${escapeHtml(String(telegramId))}</code> изменена на <b>${escapeHtml(teamRoleLabel(role))}</b>. Для продолжения ему нужно снова выполнить /staff.`);
+  await logStaffAction(env, requester, access, "staff_role", String(telegramId), "staff", null, null, { role });
+  await sendTelegramMessage(env, chatId, `Роль пользователя <code>${escapeHtml(String(telegramId))}</code> изменена на <b>${escapeHtml(teamRoleLabel(role))}</b>. Для продолжения ему нужно снова выполнить <code>/staff</code>.`);
 }
 
 async function setTeamPermission(chatId, requester, telegramId, permission, enabled, env) {
   const access = await requireTeamPermission(chatId, requester, "staff", env);
   if (!access) return;
+  if (!access.owner) {
+    await sendTelegramMessage(env, chatId, "Точечно менять разрешения может только владелец. Администратор назначает роли Кассир или Повар.");
+    return;
+  }
   const column = TEAM_PERMISSION_COLUMNS[permission];
   if (!column) return;
   const result = await env.DB.prepare(
@@ -1836,7 +2013,336 @@ async function setTeamPermission(chatId, requester, telegramId, permission, enab
     await sendTelegramMessage(env, chatId, "Сотрудник не найден.");
     return;
   }
+  await logStaffAction(env, requester, access, "staff_permission", String(telegramId), "staff", null, enabled ? 1 : 0, { permission });
   await sendTelegramMessage(env, chatId, `Разрешение «${escapeHtml(permissionLabel(permission))}» для <code>${escapeHtml(String(telegramId))}</code> ${enabled ? "включено" : "отключено"}. Сотруднику нужно снова выполнить /staff.`);
+}
+
+async function logStaffAction(env, requester, access, action, targetTelegramId = null, targetType = null, oldValue = null, newValue = null, details = null) {
+  try {
+    const now = Math.floor(Date.now() / 1000);
+    const role = access?.owner ? "owner" : normalizeTeamRole(access?.role);
+    await env.DB.prepare(
+      `INSERT INTO staff_action_log (
+         actor_telegram_id, actor_name, actor_role, action,
+         target_telegram_id, target_type, old_value, new_value,
+         details_json, created_at, success
+       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)`
+    ).bind(
+      String(requester?.id || ""),
+      telegramDisplayName(requester),
+      role,
+      String(action || "unknown"),
+      targetTelegramId == null ? null : String(targetTelegramId),
+      targetType == null ? null : String(targetType),
+      oldValue == null ? null : Math.floor(Number(oldValue) || 0),
+      newValue == null ? null : Math.floor(Number(newValue) || 0),
+      details == null ? null : JSON.stringify(details).slice(0, 2000),
+      now
+    ).run();
+  } catch (error) {
+    console.error("staff audit log failed", error);
+  }
+}
+
+function staffRoleTitle(access) {
+  return access?.owner ? "Владелец" : teamRoleLabel(access?.role);
+}
+
+async function showStaffHelp(chatId, user, env) {
+  const access = await getTeamAccess(user, env);
+  if (!access.authorized) {
+    await sendTelegramMessage(env, chatId, access.reason === "expired"
+      ? `Рабочая сессия истекла. Снова выполните <code>/staff</code>.\n\nВаш Telegram ID: <code>${escapeHtml(String(user.id))}</code>`
+      : `У вас нет доступа сотрудника. Передайте владельцу ваш Telegram ID: <code>${escapeHtml(String(user.id))}</code>`);
+    return;
+  }
+
+  const lines = [
+    `<b>Команды: ${escapeHtml(staffRoleTitle(access))}</b>`,
+    "",
+    `<code>/staff_me</code> — моя роль, сессия и статистика`,
+    `<code>/check_code КОД</code> — проверить заказ без списания`,
+    `<code>/pending_orders</code> — активные заказы`
+  ];
+
+  if (access.permissions?.redeem) {
+    lines.push(
+      `<code>/redeem КОД</code> — открыть подтверждение выдачи`,
+      `<code>/my_redemptions</code> — мои последние выдачи`,
+      `<code>/redemptions_today</code> — сколько выдано сегодня`
+    );
+  }
+
+  if (access.permissions?.points) {
+    lines.push(
+      "",
+      "<b>Игроки и компенсации</b>",
+      `<code>/player TELEGRAM_ID</code> — баланс игрока`,
+      `<code>/add_zefir СУММА TELEGRAM_ID ПРИЧИНА</code>`,
+      `<code>/add_coffee СУММА TELEGRAM_ID ПРИЧИНА</code>`,
+      `<code>/add_points СУММА TELEGRAM_ID ПРИЧИНА</code>`
+    );
+  }
+
+  if (access.permissions?.staff) {
+    lines.push(
+      "",
+      "<b>Команда</b>",
+      `<code>/staff_list</code> — сотрудники и роли`,
+      `<code>/rang_staff_kassir TELEGRAM_ID</code>`,
+      `<code>/rang_staff_povar TELEGRAM_ID</code>`,
+      `<code>/staff_disable TELEGRAM_ID</code>`,
+      `<code>/staff_enable TELEGRAM_ID</code>`,
+      `<code>/staff_log 10</code> — последние действия`
+    );
+    if (access.owner) lines.push(`<code>/rang_staff_administrator TELEGRAM_ID</code>`);
+  }
+
+  lines.push("", "Команды показываются только в соответствии с вашей ролью.");
+  await sendTelegramMessage(env, chatId, lines.join("\n"));
+}
+
+async function showStaffProfile(chatId, user, env) {
+  const access = await getTeamAccess(user, env);
+  if (!access.authorized) {
+    await sendTelegramMessage(env, chatId, access.reason === "expired"
+      ? "Рабочая сессия истекла. Выполните <code>/staff</code>."
+      : "У вас нет активной роли сотрудника.");
+    return;
+  }
+  const todayStart = moscowDayStartUnix();
+  const stats = await env.DB.prepare(
+    `SELECT COUNT(*) AS count FROM reward_codes
+     WHERE redeemed_by = ? AND status = 'used' AND redeemed_at >= ?`
+  ).bind(String(user.id), todayStart).first();
+  const expires = access.owner ? "не ограничена" : formatUtcDate(access.expiresAt);
+  const permissions = Object.entries(access.permissions || {})
+    .filter(([key, enabled]) => enabled && !["view", "log"].includes(key))
+    .map(([key]) => permissionLabel(key))
+    .join(", ") || "только просмотр";
+  await sendTelegramMessage(env, chatId,
+    `<b>Профиль сотрудника</b>\n\nИмя: <b>${escapeHtml(telegramDisplayName(user))}</b>\nTelegram ID: <code>${escapeHtml(String(user.id))}</code>\nРоль: <b>${escapeHtml(staffRoleTitle(access))}</b>\nСессия до: <b>${escapeHtml(expires)}</b>\nВыдано сегодня: <b>${Number(stats?.count || 0)}</b>\nПрава: ${escapeHtml(permissions)}\n\n<code>/help_staff</code> — доступные команды.`
+  );
+}
+
+async function showPendingOrders(chatId, user, env) {
+  const access = await requireTeamPermission(chatId, user, "view", env);
+  if (!access) return;
+  const now = Math.floor(Date.now() / 1000);
+  await env.DB.prepare(
+    `UPDATE reward_codes SET status = 'expired'
+     WHERE status = 'active' AND expires_at <= ?`
+  ).bind(now).run();
+  const result = await env.DB.prepare(
+    `SELECT code, product_name, owner_name, created_at, expires_at
+     FROM reward_codes
+     WHERE status = 'active' AND expires_at > ?
+     ORDER BY created_at ASC LIMIT 10`
+  ).bind(now).all();
+  const rows = Array.isArray(result.results) ? result.results : [];
+  if (!rows.length) {
+    await sendTelegramMessage(env, chatId, "Сейчас нет активных заказов, ожидающих выдачи.");
+    return;
+  }
+  const list = rows.map((row, index) =>
+    `${index + 1}. <b>${escapeHtml(row.product_name)}</b>\nКод: <code>${escapeHtml(row.code)}</code>\nГость: ${escapeHtml(row.owner_name || "Гость")}\nДо: ${escapeHtml(formatUtcDate(row.expires_at))}`
+  ).join("\n\n");
+  await sendTelegramMessage(env, chatId, `<b>Заказы, ожидающие выдачи</b>\n\n${list}`);
+}
+
+async function showMyRedemptions(chatId, user, env) {
+  const access = await requireTeamPermission(chatId, user, "redeem", env);
+  if (!access) return;
+  const result = await env.DB.prepare(
+    `SELECT code, product_name, owner_name, redeemed_at
+     FROM reward_codes
+     WHERE status = 'used' AND redeemed_by = ?
+     ORDER BY redeemed_at DESC LIMIT 10`
+  ).bind(String(user.id)).all();
+  const rows = Array.isArray(result.results) ? result.results : [];
+  if (!rows.length) {
+    await sendTelegramMessage(env, chatId, "У вас пока нет списанных заказов.");
+    return;
+  }
+  const list = rows.map((row, index) =>
+    `${index + 1}. <b>${escapeHtml(row.product_name)}</b> · <code>${escapeHtml(row.code)}</code>\n${escapeHtml(row.owner_name || "Гость")} · ${escapeHtml(formatUtcDate(row.redeemed_at))}`
+  ).join("\n\n");
+  await sendTelegramMessage(env, chatId, `<b>Мои последние выдачи</b>\n\n${list}`);
+}
+
+function moscowDayStartUnix(nowMs = Date.now()) {
+  const shifted = new Date(nowMs + 3 * 60 * 60 * 1000);
+  const utcMidnight = Date.UTC(shifted.getUTCFullYear(), shifted.getUTCMonth(), shifted.getUTCDate());
+  return Math.floor((utcMidnight - 3 * 60 * 60 * 1000) / 1000);
+}
+
+async function showRedemptionsToday(chatId, user, env) {
+  const access = await requireTeamPermission(chatId, user, "redeem", env);
+  if (!access) return;
+  const start = moscowDayStartUnix();
+  const result = await env.DB.prepare(
+    `SELECT product_name, COUNT(*) AS count
+     FROM reward_codes
+     WHERE status = 'used' AND redeemed_by = ? AND redeemed_at >= ?
+     GROUP BY product_name ORDER BY count DESC, product_name ASC`
+  ).bind(String(user.id), start).all();
+  const rows = Array.isArray(result.results) ? result.results : [];
+  const total = rows.reduce((sum, row) => sum + Number(row.count || 0), 0);
+  const details = rows.length
+    ? rows.map((row) => `• ${escapeHtml(row.product_name)}: <b>${Number(row.count || 0)}</b>`).join("\n")
+    : "Сегодня выдач ещё не было.";
+  await sendTelegramMessage(env, chatId, `<b>Выдачи за сегодня</b>\n\nВсего: <b>${total}</b>\n\n${details}`);
+}
+
+async function showPlayerProfile(chatId, user, telegramId, env) {
+  const access = await requireTeamPermission(chatId, user, "points", env);
+  if (!access) return;
+  const row = await env.DB.prepare(
+    `SELECT telegram_id, wallet, best_score, treats, coffee, profile_xp,
+            pending_wallet, pending_treats, pending_coffee,
+            revision, updated_at
+     FROM admin_profile_state WHERE telegram_id = ? LIMIT 1`
+  ).bind(String(telegramId)).first();
+  if (!row) {
+    await sendTelegramMessage(env, chatId, `Игрок <code>${escapeHtml(String(telegramId))}</code> ещё не синхронизировал профиль. Попросите его один раз открыть игру.`);
+    return;
+  }
+  const pendingLines = [
+    Number(row.pending_wallet || 0) > 0 ? `+${Number(row.pending_wallet).toLocaleString("ru-RU")} очков` : null,
+    Number(row.pending_treats || 0) > 0 ? `+${Number(row.pending_treats).toLocaleString("ru-RU")} зефира` : null,
+    Number(row.pending_coffee || 0) > 0 ? `+${Number(row.pending_coffee).toLocaleString("ru-RU")} кофе` : null
+  ].filter(Boolean);
+  const pendingText = pendingLines.length ? pendingLines.join(", ") : "нет";
+  await sendTelegramMessage(env, chatId,
+    `<b>Профиль игрока</b>
+
+Telegram ID: <code>${escapeHtml(String(telegramId))}</code>
+Последний серверный баланс:
+Очки в кошельке: <b>${Number(row.wallet || 0).toLocaleString("ru-RU")}</b>
+Зефир: <b>${Number(row.treats || 0).toLocaleString("ru-RU")}</b>
+Кофе: <b>${Number(row.coffee || 0).toLocaleString("ru-RU")}</b>
+Ожидает начисления: <b>${escapeHtml(pendingText)}</b>
+Личный рекорд: <b>${Number(row.best_score || 0).toLocaleString("ru-RU")}</b>
+XP: <b>${Number(row.profile_xp || 0).toLocaleString("ru-RU")}</b>
+Обновлено: ${escapeHtml(formatUtcDate(row.updated_at))}`
+  );
+}
+
+function compensationLimit(access, currency) {
+  if (access?.owner) return 999999999;
+  return currency === "points" ? 10000 : 100;
+}
+
+async function addPlayerCurrency(chatId, user, currency, amountValue, telegramId, reasonValue, env) {
+  const access = await requireTeamPermission(chatId, user, "points", env);
+  if (!access) return;
+  const amount = Math.floor(Number(amountValue) || 0);
+  const limit = compensationLimit(access, currency);
+  if (amount < 1 || amount > limit) {
+    await sendTelegramMessage(env, chatId, `Недопустимая сумма. Для вашей роли максимум за одну операцию: <b>${limit.toLocaleString("ru-RU")}</b>.`);
+    return;
+  }
+  const pendingFieldMap = { zefir: "pending_treats", coffee: "pending_coffee", points: "pending_wallet" };
+  const labelMap = { zefir: "зефира", coffee: "кофе", points: "очков" };
+  const pendingField = pendingFieldMap[currency];
+  if (!pendingField) return;
+  const row = await env.DB.prepare(
+    `SELECT pending_wallet, pending_treats, pending_coffee
+     FROM admin_profile_state WHERE telegram_id = ? LIMIT 1`
+  ).bind(String(telegramId)).first();
+  if (!row) {
+    await sendTelegramMessage(env, chatId, `Игрок <code>${escapeHtml(String(telegramId))}</code> ещё не синхронизировал профиль. Попросите его открыть игру, затем повторите начисление.`);
+    return;
+  }
+  const queuedBefore = safeAdminNumber(row[pendingField]);
+  const queuedAfter = safeAdminNumber(queuedBefore + amount);
+  const now = Math.floor(Date.now() / 1000);
+  await env.DB.prepare(
+    `UPDATE admin_profile_state SET ${pendingField} = ?, revision = revision + 1,
+     updated_at = ?, updated_by = ? WHERE telegram_id = ?`
+  ).bind(queuedAfter, now, String(user.id), String(telegramId)).run();
+  const reason = String(reasonValue || "Компенсация").slice(0, 300);
+  await logStaffAction(env, user, access, `add_${currency}`, String(telegramId), currency, queuedBefore, queuedAfter, {
+    amount,
+    reason,
+    status: "queued"
+  });
+  await sendTelegramMessage(env, chatId,
+    `<b>Компенсация поставлена в очередь</b>
+
+Игрок: <code>${escapeHtml(String(telegramId))}</code>
+Будет добавлено: <b>+${amount.toLocaleString("ru-RU")} ${escapeHtml(labelMap[currency])}</b>
+Всего ожидает начисления: <b>${queuedAfter.toLocaleString("ru-RU")}</b>
+Причина: ${escapeHtml(reason)}
+
+Сумма добавится к актуальному балансу игрока при следующем открытии или синхронизации игры.`
+  );
+}
+
+function staffActionLabel(action) {
+  return ({
+    redeem_reward: "выдача товара",
+    add_zefir: "начисление зефира",
+    add_coffee: "начисление кофе",
+    add_points: "начисление очков",
+    staff_add: "добавление сотрудника",
+    staff_role: "изменение роли",
+    staff_disable: "отключение сотрудника",
+    staff_enable: "включение сотрудника",
+    staff_permission: "изменение разрешения",
+    points_legacy: "изменение очков",
+    publish_news: "публикация новости"
+  })[action] || action;
+}
+
+async function showStaffAuditLog(chatId, user, limitValue, env) {
+  const access = await requireTeamPermission(chatId, user, "log", env);
+  if (!access) return;
+  const limit = Math.max(1, Math.min(20, Math.floor(Number(limitValue) || 10)));
+  const result = await env.DB.prepare(
+    `SELECT actor_name, actor_telegram_id, actor_role, action,
+            target_telegram_id, target_type, old_value, new_value,
+            details_json, created_at
+     FROM staff_action_log ORDER BY id DESC LIMIT ?`
+  ).bind(limit).all();
+  const rows = Array.isArray(result.results) ? result.results : [];
+  if (!rows.length) {
+    await sendTelegramMessage(env, chatId, "Журнал действий пока пуст.");
+    return;
+  }
+  const list = rows.map((row, index) => {
+    let details = null;
+    try { details = row.details_json ? JSON.parse(row.details_json) : null; } catch {}
+    const valueLine = row.old_value == null && row.new_value == null
+      ? ""
+      : `\nЗначение: ${Number(row.old_value || 0).toLocaleString("ru-RU")} → ${Number(row.new_value || 0).toLocaleString("ru-RU")}`;
+    const reasonLine = details?.reason ? `\nПричина: ${escapeHtml(details.reason)}` : "";
+    const targetLine = row.target_telegram_id ? `\nЦель: <code>${escapeHtml(String(row.target_telegram_id))}</code>` : "";
+    return `${index + 1}. <b>${escapeHtml(staffActionLabel(row.action))}</b>\n${escapeHtml(row.actor_name || row.actor_telegram_id)} · ${escapeHtml(row.actor_role)}${targetLine}${valueLine}${reasonLine}\n${escapeHtml(formatUtcDate(row.created_at))}`;
+  }).join("\n\n");
+  await sendTelegramMessage(env, chatId, `<b>Журнал действий сотрудников</b>\n\n${list}`);
+}
+
+async function setStaffEnabled(chatId, requester, telegramId, enabled, env) {
+  const access = await requireTeamPermission(chatId, requester, "staff", env);
+  if (!access) return;
+  const target = await targetTeamMember(env, telegramId);
+  if (!target) {
+    await sendTelegramMessage(env, chatId, "Сотрудник не найден.");
+    return;
+  }
+  if (!access.owner && normalizeTeamRole(target.role) === "administrator") {
+    await sendTelegramMessage(env, chatId, "Изменить состояние администратора может только владелец.");
+    return;
+  }
+  const now = Math.floor(Date.now() / 1000);
+  await env.DB.prepare(
+    `UPDATE staff_users SET active = ?, session_expires_at = 0, updated_at = ? WHERE telegram_id = ?`
+  ).bind(enabled ? 1 : 0, now, String(telegramId)).run();
+  await logStaffAction(env, requester, access, enabled ? "staff_enable" : "staff_disable", String(telegramId), "staff", Number(target.active || 0), enabled ? 1 : 0, null);
+  await sendTelegramMessage(env, chatId, enabled
+    ? `Сотрудник <code>${escapeHtml(String(telegramId))}</code> включён. Ему нужно снова выполнить <code>/staff</code>.`
+    : `Сотрудник <code>${escapeHtml(String(telegramId))}</code> отключён.`);
 }
 
 async function adjustPlayerPoints(chatId, requester, telegramId, mode, amountValue, env) {
@@ -1858,6 +2364,7 @@ async function adjustPlayerPoints(chatId, requester, telegramId, mode, amountVal
     `UPDATE admin_profile_state SET wallet = ?, wallet_override = ?, revision = revision + 1,
        updated_at = ?, updated_by = ? WHERE telegram_id = ?`
   ).bind(next, next, now, String(requester.id), String(telegramId)).run();
+  await logStaffAction(env, requester, access, "points_legacy", String(telegramId), "points", current, next, { mode, amount });
   await sendTelegramMessage(env, chatId, `Очки пользователя <code>${escapeHtml(String(telegramId))}</code> установлены: <b>${next}</b>. Значение применится при следующем открытии или синхронизации игры.`);
 }
 
@@ -1878,6 +2385,7 @@ async function publishBotNews(chatId, requester, rawPayload, env) {
     `INSERT INTO bot_news (title, body, image_url, status, created_at, published_at, created_by, created_by_name)
      VALUES (?, ?, ?, 'published', ?, ?, ?, ?)`
   ).bind(title, body, imageUrl || null, now, now, String(requester.id), telegramDisplayName(requester)).run();
+  await logStaffAction(env, requester, access, "publish_news", null, "news", null, null, { title });
   await sendTelegramMessage(env, chatId, `Новость опубликована. Она уже доступна в разделе «Новости».\n\n<b>${escapeHtml(title)}</b>\n${escapeHtml(body)}`);
 }
 
@@ -1937,7 +2445,7 @@ async function registerStaff(chatId, user, suppliedCode, env) {
       `<b>Доступ не выдан</b>
 
 Попросите владельца добавить ваш Telegram ID командой:
-<code>/team_add ${escapeHtml(String(user.id))} employee</code>
+<code>/rang_staff_kassir ${escapeHtml(String(user.id))}</code>
 
 Ваш ID: <code>${escapeHtml(String(user.id))}</code>`
     );
@@ -1952,24 +2460,24 @@ async function registerStaff(chatId, user, suppliedCode, env) {
   const now = Math.floor(Date.now() / 1000);
   const sessionExpiresAt = now + STAFF_SESSION_TTL_SECONDS;
   if (owner && !existingStaff) {
-    const preset = TEAM_ROLE_PRESETS.admin;
+    const preset = TEAM_ROLE_PRESETS.administrator;
     await env.DB.prepare(
       `INSERT INTO staff_users (
         telegram_id, display_name, added_at, active, session_expires_at, role,
         can_redeem_rewards, can_adjust_points, can_manage_products,
         can_publish_news, can_manage_staff, invited_by, updated_at
-      ) VALUES (?, ?, ?, 1, ?, 'admin', ?, ?, ?, ?, ?, ?, ?)`
+      ) VALUES (?, ?, ?, 1, ?, 'administrator', ?, ?, ?, ?, ?, ?, ?)`
     ).bind(String(user.id), telegramDisplayName(user), now, sessionExpiresAt,
       preset.redeem, preset.points, preset.products, preset.news, preset.staff,
       String(user.id), now).run();
   } else if (!existingStaff && legacyCodeAccepted) {
-    const preset = TEAM_ROLE_PRESETS.employee;
+    const preset = TEAM_ROLE_PRESETS.cashier;
     await env.DB.prepare(
       `INSERT INTO staff_users (
         telegram_id, display_name, added_at, active, session_expires_at, role,
         can_redeem_rewards, can_adjust_points, can_manage_products,
         can_publish_news, can_manage_staff, invited_by, updated_at
-      ) VALUES (?, ?, ?, 1, ?, 'employee', ?, ?, ?, ?, ?, '', ?)`
+      ) VALUES (?, ?, ?, 1, ?, 'cashier', ?, ?, ?, ?, ?, '', ?)`
     ).bind(String(user.id), telegramDisplayName(user), now, sessionExpiresAt,
       preset.redeem, preset.points, preset.products, preset.news, preset.staff, now).run();
   } else {
@@ -1990,7 +2498,7 @@ async function registerStaff(chatId, user, suppliedCode, env) {
   );
 }
 
-async function showRewardInBot(chatId, viewer, rawCode, env) {
+async function showRewardInBot(chatId, viewer, rawCode, env, options = {}) {
   const compact = compactCode(rawCode);
   const now = Math.floor(Date.now() / 1000);
   await env.DB.prepare(
@@ -2005,13 +2513,26 @@ async function showRewardInBot(chatId, viewer, rawCode, env) {
   }
 
   const staffSession = await getStaffSession(viewer.id, env);
-  if (!staffSession.authorized && staffSession.reason === "expired") {
+  const staffCommand = Boolean(options.viewOnly || options.forceRedeem);
+  if (staffCommand && !staffSession.authorized) {
+    await sendTelegramMessage(env, chatId, staffSession.reason === "expired"
+      ? "Сессия сотрудника истекла. Выполните <code>/staff</code>, затем повторите команду."
+      : "Эта команда доступна только сотрудникам.");
+    return;
+  }
+  if (options.forceRedeem && !staffSession.permissions?.redeem) {
+    await sendTelegramMessage(env, chatId, "Ваша роль позволяет только просматривать заказ, но не списывать его.");
+    return;
+  }
+  if (!staffCommand && !staffSession.authorized && staffSession.reason === "expired") {
     await sendTelegramMessage(env, chatId,
-      "Сессия сотрудника истекла. Войдите снова командой <code>/staff КОД</code>, затем повторно отправьте код гостя."
+      "Сессия сотрудника истекла. Войдите снова командой <code>/staff</code>, затем повторно отправьте код гостя."
     );
     return;
   }
-  const view = rewardBotView(reward, staffSession.authorized && Boolean(staffSession.permissions?.redeem));
+  const staffView = Boolean(staffSession.authorized);
+  const canRedeem = staffView && Boolean(staffSession.permissions?.redeem) && !options.viewOnly;
+  const view = rewardBotView(reward, staffView, canRedeem);
   await sendTelegramMessage(env, chatId, view.text, view.replyMarkup);
 }
 
@@ -2077,8 +2598,13 @@ async function handleCallbackQuery(query, env) {
 
     const reward = await getRewardByCompact(confirm[1], env);
     if (Number(result.meta?.changes || 0) === 1 && reward) {
+      const access = await getTeamAccess(user, env);
+      await logStaffAction(env, user, access, "redeem_reward", String(reward.owner_telegram_id || ""), "reward", null, null, {
+        code: reward.code,
+        product: reward.product_name
+      });
       await answerCallback(env, query.id, "Подарок списан.");
-      await editRewardMessage(env, message, reward, true);
+      await editRewardMessage(env, message, reward, true, false);
       return;
     }
 
@@ -2098,8 +2624,8 @@ async function handleCallbackQuery(query, env) {
   await answerCallback(env, query.id, "Неизвестное действие.");
 }
 
-async function editRewardMessage(env, message, reward, staff) {
-  const view = rewardBotView(reward, staff);
+async function editRewardMessage(env, message, reward, staff, canRedeem = staff) {
+  const view = rewardBotView(reward, staff, canRedeem);
   await telegramApi(env, "editMessageText", {
     chat_id: message.chat.id,
     message_id: message.message_id,
@@ -2109,7 +2635,7 @@ async function editRewardMessage(env, message, reward, staff) {
   });
 }
 
-function rewardBotView(reward, staff) {
+function rewardBotView(reward, staff, canRedeem = staff) {
   const status = effectiveRewardStatus(reward);
   const code = escapeHtml(reward.code);
   const product = escapeHtml(reward.product_name);
@@ -2135,7 +2661,7 @@ function rewardBotView(reward, staff) {
   const text = `✅ <b>Код действителен</b>\n\nНаграда: <b>${product}</b>\nКод: <code>${code}</code>${ownerLine}\nДействует до: ${formatUtcDate(reward.expires_at)}${staff ? "" : "\n\nПокажите это сообщение сотруднику кафе."}`;
   return {
     text,
-    replyMarkup: staff ? {
+    replyMarkup: canRedeem ? {
       inline_keyboard: [[{ text: "Выдать подарок и списать", callback_data: `redeem:${reward.code_compact}` }]]
     } : null
   };
@@ -2155,7 +2681,7 @@ async function getStaffSession(telegramId, env) {
     authorized: Boolean(access.authorized),
     reason: access.reason || (access.authorized ? "active" : "not_staff"),
     expiresAt: Number(access.expiresAt || 0),
-    role: access.role || "employee",
+    role: access.role || "cashier",
     permissions: access.permissions || {}
   };
 }
