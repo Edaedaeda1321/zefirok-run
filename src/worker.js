@@ -31,19 +31,13 @@ const DEFAULT_SKIN_PRICES = Object.freeze({
 });
 
 // Уровневые кейсы. Шансы указаны на один слот награды.
-const LEVEL_CASE_SCHEDULE = Object.freeze({
-  3: "small",
-  5: "sweet",
-  10: "gold",
-  15: "sweet",
-  20: "gold",
-  25: "sweet",
-  30: "gold",
-  35: "sweet",
-  40: "gold",
-  45: "sweet",
-  50: "gold"
-});
+const LEVEL_CASE_SCHEDULE = Object.freeze(Object.fromEntries(
+  Array.from({ length: 49 }, (_, index) => {
+    const level = index + 2;
+    const caseType = level % 10 === 0 ? "gold" : level % 5 === 0 ? "sweet" : "small";
+    return [level, caseType];
+  })
+));
 
 const LEVEL_CASE_CONFIG = Object.freeze({
   small: Object.freeze({ id: "small", title: "Маленький кейс", slots: 1 }),
@@ -116,9 +110,9 @@ const REWARD_LIMIT_RESET_AT_SECONDS = 1784805300; // 23.07.2026 11:15 UTC
 
 // НАСТРОЙКИ ВЕРСИИ И РАЗДЕЛА «ОБНОВЛЕНИЕ» В БОТЕ.
 // Меняйте эти значения при каждом новом релизе игры.
-const GAME_VERSION = "4.0.11 OPEN BETA";
+const GAME_VERSION = "4.0.12 OPEN BETA";
 const GAME_UPDATE_DATE = "24 июля 2026";
-const GAME_UPDATE_TITLE = "Кейсы за уровни и коллекция наград";
+const GAME_UPDATE_TITLE = "Кейсы за каждый уровень и компенсации";
 
 // Что произошло с прогрессом в этом релизе:
 // "reset" — крупное обновление с обнулением прогресса;
@@ -127,11 +121,11 @@ const GAME_UPDATE_PROGRESS_MODE = "keep";
 const GAME_UPDATE_RESET_REASON = "Прогресс в этом обновлении сохраняется.";
 
 const GAME_UPDATE_NOTES = Object.freeze([
-  "Добавлены Маленькие, Сладкие и Золотые кейсы за уровни профиля.",
-  "Награды кейсов рассчитываются на сервере и выдаются один раз за каждый уровень.",
-  "В кейсах могут выпасть очки, зефир, кофе, временные усилители, аватарки, рамки и следы.",
-  "Усилители удваивают выбранную награду на два завершённых забега и не влияют на рекорд или рейтинг.",
-  "Косметику можно выбрать в профиле; выбранные аватарка и рамка отображаются в рейтинге.",
+  "Кейс теперь выдаётся за каждый новый уровень начиная со второго.",
+  "Игроки, которые уже прокачались, получат доступ ко всем ранее пройденным уровневым кейсам.",
+  "Добавлены подарочные кейсы и выдача рамок через админ-панель и Telegram-бота.",
+  "Открытие кейса сопровождается анимацией рулетки с последовательным показом наград.",
+  "В рейтинг возвращены заметные подложки под очками призовых мест.",
   "Сезон завершится 7 августа 2026 года в 12:00 МСК."
 ]);
 
@@ -197,6 +191,8 @@ const BOT_COMMANDS = Object.freeze([
   { command: "staff_me", description: "Моя роль и статистика" },
   { command: "member_staff", description: "Все сотрудники и роли" },
   { command: "members", description: "Все игроки и Telegram ID" },
+  { command: "add_keys", description: "Выдать кейс игроку" },
+  { command: "add_frame", description: "Выдать рамку игроку" },
   { command: "team", description: "Команда и разрешения" },
   { command: "publish", description: "Опубликовать новость" }
 ]);
@@ -224,8 +220,10 @@ export default {
             "/api/admin/leaderboard/set",
             "/api/admin/shop/prices",
             "/api/admin/skins/prices",
+            "/api/admin/cases/grant",
             "/api/cases/state",
-            "/api/cases/open"
+            "/api/cases/open",
+            "/api/cases/open-granted"
           ]
         });
       }
@@ -246,6 +244,10 @@ export default {
         return await openLevelCase(request, env);
       }
 
+      if (url.pathname === "/api/cases/open-granted" && request.method === "POST") {
+        return await openGrantedCase(request, env);
+      }
+
       if (url.pathname === "/api/cases/activate" && request.method === "POST") {
         return await activateCaseBooster(request, env);
       }
@@ -264,6 +266,10 @@ export default {
 
       if (url.pathname === "/api/admin/skins/prices" && request.method === "POST") {
         return await updateSkinPrices(request, env);
+      }
+
+      if (url.pathname === "/api/admin/cases/grant" && request.method === "POST") {
+        return await grantAdminCaseOrFrame(request, env);
       }
 
       if (url.pathname === "/api/admin/profile/sync" && request.method === "POST") {
@@ -1065,6 +1071,48 @@ async function finalizeSeason(env, season, now = Math.floor(Date.now() / 1000)) 
 }
 
 
+function normalizeCaseType(value) {
+  const raw = String(value || "").trim().toLowerCase();
+  const aliases = {
+    small: "small", mini: "small", little: "small", "маленький": "small", "малый": "small",
+    sweet: "sweet", "сладкий": "sweet", "средний": "sweet",
+    gold: "gold", golden: "gold", "золотой": "gold"
+  };
+  return aliases[raw] || "";
+}
+
+function caseGrantId(prefix = "grant") {
+  try { return `${prefix}_${crypto.randomUUID().replace(/-/g, "")}`; }
+  catch { return `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 16)}`; }
+}
+
+async function createGrantedCases(env, telegramId, caseTypeValue, quantityValue, grantedBy, reasonValue) {
+  const caseType = normalizeCaseType(caseTypeValue);
+  if (!caseType) throw new ApiError(400, "Неизвестный тип кейса.");
+  const quantity = Math.max(1, Math.min(20, Math.floor(Number(quantityValue) || 1)));
+  const now = Math.floor(Date.now() / 1000);
+  const reason = String(reasonValue || "Компенсация").trim().slice(0, 300);
+  const statements = Array.from({ length: quantity }, () => env.DB.prepare(
+    `INSERT INTO granted_cases (
+       id, telegram_id, case_type, status, granted_by, reason, created_at
+     ) VALUES (?, ?, ?, 'pending', ?, ?, ?)`
+  ).bind(caseGrantId("case"), String(telegramId), caseType, String(grantedBy || "system"), reason, now));
+  await env.DB.batch(statements);
+  return { caseType, quantity, reason };
+}
+
+async function grantFrameToPlayer(env, telegramId, frameIdValue, grantedBy) {
+  const frameId = normalizeCaseCosmeticId("frame", frameIdValue);
+  if (!frameId) throw new ApiError(400, "Неизвестная рамка.");
+  const ensured = await ensureCasePlayerState(env, String(telegramId), {});
+  const state = ensured.state;
+  const alreadyOwned = state.ownedFrames.includes(frameId);
+  if (!alreadyOwned) state.ownedFrames.push(frameId);
+  const now = Math.floor(Date.now() / 1000);
+  await caseStateUpdateStatement(env, String(telegramId), state, now).run();
+  return { frameId, alreadyOwned, title: CASE_FRAMES[frameId]?.title || frameId, grantedBy: String(grantedBy || "system") };
+}
+
 function normalizeCaseCosmeticId(kind, value) {
   const id = String(value || "").trim();
   if (!id) return "";
@@ -1231,10 +1279,16 @@ async function ensureCasePlayerState(env, telegramId, currentProfile) {
 
 async function buildCasePayload(env, telegramId, currentProfile, extra = {}) {
   const ensured = await ensureCasePlayerState(env, telegramId, currentProfile);
-  const openingsResult = await env.DB.prepare(
-    `SELECT level, case_type, rewards_json, opened_at
-     FROM level_case_openings WHERE telegram_id = ? ORDER BY level ASC`
-  ).bind(telegramId).all();
+  const [openingsResult, giftedResult] = await Promise.all([
+    env.DB.prepare(
+      `SELECT level, case_type, rewards_json, opened_at
+       FROM level_case_openings WHERE telegram_id = ? ORDER BY level ASC`
+    ).bind(telegramId).all(),
+    env.DB.prepare(
+      `SELECT case_type, COUNT(*) AS count FROM granted_cases
+       WHERE telegram_id = ? AND status = 'pending' GROUP BY case_type`
+    ).bind(telegramId).all()
+  ]);
   const openedCases = (openingsResult.results || []).map((row) => {
     let rewards = [];
     try { rewards = JSON.parse(String(row.rewards_json || "[]")); } catch {}
@@ -1246,6 +1300,11 @@ async function buildCasePayload(env, telegramId, currentProfile, extra = {}) {
     };
   });
   const openedLevels = openedCases.map((entry) => entry.level);
+  const giftedCases = { small: 0, sweet: 0, gold: 0 };
+  for (const row of giftedResult.results || []) {
+    const type = normalizeCaseType(row.case_type);
+    if (type) giftedCases[type] = safeAdminNumber(row.count);
+  }
   const current = normalizeAdminProfile(currentProfile || {});
   const playerLevel = caseProfileLevel(Math.max(current.profileXp, safeAdminNumber(ensured.profile?.profile_xp)));
   const eligibleCases = Object.entries(LEVEL_CASE_SCHEDULE)
@@ -1266,6 +1325,7 @@ async function buildCasePayload(env, telegramId, currentProfile, extra = {}) {
     eligibleCases,
     openedLevels,
     openedCases,
+    giftedCases,
     caseState: ensured.state,
     profile: {
       wallet: safeAdminNumber(ensured.profile?.wallet),
@@ -1425,6 +1485,101 @@ async function openLevelCase(request, env) {
     if (error instanceof ApiError) return jsonResponse({ ok: false, error: error.message }, error.status);
     console.error("openLevelCase failed", error);
     return jsonResponse({ ok: false, error: "Не удалось открыть кейс. Проверьте миграцию 0010." }, 500);
+  }
+}
+
+async function openGrantedCase(request, env) {
+  let claimedId = "";
+  try {
+    requireDatabase(env);
+    requireBotToken(env);
+    const body = await readJson(request);
+    const auth = await validateTelegramInitData(String(body.initData || ""), env);
+    const telegramId = String(auth.user.id);
+    const caseType = normalizeCaseType(body.caseType);
+    if (!caseType) throw new ApiError(400, "Неизвестный тип кейса.");
+    const current = normalizeAdminProfile(body.current || {});
+    const ensured = await ensureCasePlayerState(env, telegramId, current);
+    const gift = await env.DB.prepare(
+      `SELECT id FROM granted_cases WHERE telegram_id = ? AND case_type = ? AND status = 'pending'
+       ORDER BY created_at ASC, id ASC LIMIT 1`
+    ).bind(telegramId, caseType).first();
+    if (!gift?.id) throw new ApiError(409, "Подарочных кейсов этого типа нет.");
+    claimedId = String(gift.id);
+    const claim = await env.DB.prepare(
+      `UPDATE granted_cases SET status = 'opening' WHERE id = ? AND telegram_id = ? AND status = 'pending'`
+    ).bind(claimedId, telegramId).run();
+    if (Number(claim?.meta?.changes || 0) < 1) throw new ApiError(409, "Этот кейс уже открывается.");
+
+    const rolled = rollLevelCase(caseType, ensured.state);
+    const baseProfile = {
+      wallet: Math.max(current.wallet, safeAdminNumber(ensured.profile?.wallet)),
+      best: Math.max(current.best, safeAdminNumber(ensured.profile?.best_score)),
+      treats: Math.max(current.treats, safeAdminNumber(ensured.profile?.treats)),
+      coffee: Math.max(current.coffee, safeAdminNumber(ensured.profile?.coffee)),
+      profileXp: Math.max(current.profileXp, safeAdminNumber(ensured.profile?.profile_xp))
+    };
+    const now = Math.floor(Date.now() / 1000);
+    await env.DB.batch([
+      env.DB.prepare(
+        `UPDATE admin_profile_state SET
+          wallet = ?, best_score = ?, treats = ?, coffee = ?, profile_xp = ?,
+          revision = revision + 1, updated_at = ?, updated_by = ?
+         WHERE telegram_id = ?`
+      ).bind(
+        safeAdminNumber(baseProfile.wallet + rolled.points), baseProfile.best,
+        safeAdminNumber(baseProfile.treats + rolled.treats), safeAdminNumber(baseProfile.coffee + rolled.coffee),
+        baseProfile.profileXp, now, `gift-case:${caseType}`, telegramId
+      ),
+      caseStateUpdateStatement(env, telegramId, rolled.state, now),
+      env.DB.prepare(
+        `UPDATE granted_cases SET status = 'opened', rewards_json = ?, opened_at = ?
+         WHERE id = ? AND telegram_id = ? AND status = 'opening'`
+      ).bind(JSON.stringify(rolled.rewards), now, claimedId, telegramId)
+    ]);
+    return jsonResponse(await buildCasePayload(env, telegramId, body.current || {}, {
+      opened: {
+        grantId: claimedId,
+        source: "gift",
+        caseType,
+        title: LEVEL_CASE_CONFIG[caseType]?.title || "Кейс",
+        rewards: rolled.rewards
+      }
+    }));
+  } catch (error) {
+    if (claimedId) {
+      try { await env.DB.prepare(`UPDATE granted_cases SET status = 'pending' WHERE id = ? AND status = 'opening'`).bind(claimedId).run(); } catch {}
+    }
+    if (error instanceof ApiError) return jsonResponse({ ok: false, error: error.message }, error.status);
+    console.error("openGrantedCase failed", error);
+    return jsonResponse({ ok: false, error: "Не удалось открыть подарочный кейс. Проверьте миграцию 0011." }, 500);
+  }
+}
+
+async function grantAdminCaseOrFrame(request, env) {
+  try {
+    requireDatabase(env);
+    requireBotToken(env);
+    const body = await readJson(request);
+    const auth = await validateTelegramInitData(String(body.initData || ""), env);
+    requireAdminUser(auth.user, env);
+    const targetTelegramId = String(body.targetTelegramId || auth.user.id || "").trim();
+    if (!/^\d{4,20}$/.test(targetTelegramId)) throw new ApiError(400, "Некорректный Telegram ID игрока.");
+    const grantKind = String(body.grantKind || "case").trim().toLowerCase();
+    const reason = String(body.reason || "Компенсация из админ-панели").trim().slice(0, 300);
+    if (grantKind === "case") {
+      const result = await createGrantedCases(env, targetTelegramId, body.caseType, body.quantity, String(auth.user.id), reason);
+      return jsonResponse({ ok: true, grantKind, targetTelegramId, ...result });
+    }
+    if (grantKind === "frame") {
+      const result = await grantFrameToPlayer(env, targetTelegramId, body.frameId, String(auth.user.id));
+      return jsonResponse({ ok: true, grantKind, targetTelegramId, reason, ...result });
+    }
+    throw new ApiError(400, "Неизвестный вид компенсации.");
+  } catch (error) {
+    if (error instanceof ApiError) return jsonResponse({ ok: false, error: error.message }, error.status);
+    console.error("grantAdminCaseOrFrame failed", error);
+    return jsonResponse({ ok: false, error: "Не удалось выдать компенсацию. Проверьте миграцию 0011." }, 500);
   }
 }
 
@@ -1930,6 +2085,25 @@ async function handleTelegramUpdate(update, env) {
   const currencyAddMatch = text.match(/^\/add_(zefir|coffee|points)(?:@\w+)?\s+(\d{1,9})\s+(\d{4,20})(?:\s+([\s\S]+))?$/i);
   if (currencyAddMatch) {
     await addPlayerCurrency(chatId, user, currencyAddMatch[1].toLowerCase(), Number(currencyAddMatch[2]), currencyAddMatch[3], String(currencyAddMatch[4] || "Компенсация").trim(), env);
+    return;
+  }
+
+  const addKeysWithCountMatch = text.match(/^\/add_keys(?:@\w+)?\s+(small|sweet|gold|маленький|малый|сладкий|золотой)\s+(\d{1,2})\s+(\d{4,20})(?:\s+([\s\S]+))?$/i);
+  const addKeysSingleMatch = text.match(/^\/add_keys(?:@\w+)?\s+(small|sweet|gold|маленький|малый|сладкий|золотой)\s+(\d{4,20})(?:\s+([\s\S]+))?$/i);
+  if (addKeysWithCountMatch || addKeysSingleMatch) {
+    const match = addKeysWithCountMatch || addKeysSingleMatch;
+    const hasCount = Boolean(addKeysWithCountMatch);
+    await addPlayerCases(
+      chatId, user, match[1], hasCount ? Number(match[2]) : 1,
+      hasCount ? match[3] : match[2],
+      String(hasCount ? match[4] || "Компенсация" : match[3] || "Компенсация").trim(), env
+    );
+    return;
+  }
+
+  const addFrameMatch = text.match(/^\/add_frame(?:@\w+)?\s+(strawberry|coffee|mint|gold|клубничная|кофейная|мятная|золотая)\s+(\d{4,20})(?:\s+([\s\S]+))?$/i);
+  if (addFrameMatch) {
+    await addPlayerFrame(chatId, user, addFrameMatch[1], addFrameMatch[2], String(addFrameMatch[3] || "Компенсация").trim(), env);
     return;
   }
 
@@ -2783,7 +2957,9 @@ async function showStaffHelp(chatId, user, env) {
       `<code>/player TELEGRAM_ID</code> — баланс игрока`,
       `<code>/add_zefir СУММА TELEGRAM_ID ПРИЧИНА</code>`,
       `<code>/add_coffee СУММА TELEGRAM_ID ПРИЧИНА</code>`,
-      `<code>/add_points СУММА TELEGRAM_ID ПРИЧИНА</code>`
+      `<code>/add_points СУММА TELEGRAM_ID ПРИЧИНА</code>`,
+      `<code>/add_keys ТИП КОЛИЧЕСТВО TELEGRAM_ID ПРИЧИНА</code>`,
+      `<code>/add_frame РАМКА TELEGRAM_ID ПРИЧИНА</code>`
     );
   }
 
@@ -2984,12 +3160,69 @@ async function addPlayerCurrency(chatId, user, currency, amountValue, telegramId
   );
 }
 
+function normalizeFrameAlias(value) {
+  const raw = String(value || "").trim().toLowerCase();
+  return ({ strawberry: "strawberry", "клубничная": "strawberry", coffee: "coffee", "кофейная": "coffee", mint: "mint", "мятная": "mint", gold: "gold", "золотая": "gold" })[raw] || "";
+}
+
+async function addPlayerCases(chatId, user, caseTypeValue, quantityValue, telegramId, reasonValue, env) {
+  const access = await requireTeamPermission(chatId, user, "points", env);
+  if (!access) return;
+  const quantity = Math.max(1, Math.floor(Number(quantityValue) || 1));
+  const max = access.owner ? 20 : 5;
+  if (quantity > max) {
+    await sendTelegramMessage(env, chatId, `Для вашей роли максимум за одну операцию: <b>${max}</b> кейсов.`);
+    return;
+  }
+  const caseType = normalizeCaseType(caseTypeValue);
+  if (!caseType) {
+    await sendTelegramMessage(env, chatId, "Неизвестный тип кейса. Доступно: <code>small</code>, <code>sweet</code>, <code>gold</code>.");
+    return;
+  }
+  const result = await createGrantedCases(env, String(telegramId), caseType, quantity, String(user.id), reasonValue);
+  await logStaffAction(env, user, access, "add_keys", String(telegramId), "case", 0, result.quantity, { caseType, quantity: result.quantity, reason: result.reason });
+  await sendTelegramMessage(env, chatId,
+    `<b>Кейсы выданы</b>
+
+Игрок: <code>${escapeHtml(String(telegramId))}</code>
+Тип: <b>${escapeHtml(LEVEL_CASE_CONFIG[caseType]?.title || caseType)}</b>
+Количество: <b>${result.quantity}</b>
+Причина: ${escapeHtml(result.reason)}
+
+Они появятся в разделе кейсов после следующей синхронизации игры.`
+  );
+}
+
+async function addPlayerFrame(chatId, user, frameValue, telegramId, reasonValue, env) {
+  const access = await requireTeamPermission(chatId, user, "points", env);
+  if (!access) return;
+  const frameId = normalizeFrameAlias(frameValue);
+  if (!frameId) {
+    await sendTelegramMessage(env, chatId, "Неизвестная рамка. Доступно: <code>strawberry</code>, <code>coffee</code>, <code>mint</code>, <code>gold</code>.");
+    return;
+  }
+  const result = await grantFrameToPlayer(env, String(telegramId), frameId, String(user.id));
+  const reason = String(reasonValue || "Компенсация").slice(0, 300);
+  await logStaffAction(env, user, access, "add_frame", String(telegramId), "frame", result.alreadyOwned ? 1 : 0, 1, { frameId, reason, alreadyOwned: result.alreadyOwned });
+  await sendTelegramMessage(env, chatId,
+    `<b>${result.alreadyOwned ? "Рамка уже была у игрока" : "Рамка выдана"}</b>
+
+Игрок: <code>${escapeHtml(String(telegramId))}</code>
+Рамка: <b>${escapeHtml(result.title)}</b>
+Причина: ${escapeHtml(reason)}
+
+Рамка появится в коллекции после следующей синхронизации игры.`
+  );
+}
+
 function staffActionLabel(action) {
   return ({
     redeem_reward: "выдача товара",
     add_zefir: "начисление зефира",
     add_coffee: "начисление кофе",
     add_points: "начисление очков",
+    add_keys: "выдача кейсов",
+    add_frame: "выдача рамки",
     staff_add: "добавление сотрудника",
     staff_role: "изменение роли",
     staff_disable: "отключение сотрудника",
