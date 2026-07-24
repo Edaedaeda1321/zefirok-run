@@ -59,20 +59,23 @@ const CASE_AVATARS = Object.freeze({
 });
 
 const CASE_FRAMES = Object.freeze({
-  strawberry: Object.freeze({ id: "strawberry", title: "Клубничная рамка", rarity: "rare", weight: 30 }),
-  coffee: Object.freeze({ id: "coffee", title: "Кофейная рамка", rarity: "rare", weight: 30 }),
-  marshmallow: Object.freeze({ id: "marshmallow", title: "Зефирная рамка", rarity: "superrare", weight: 16 }),
-  flower: Object.freeze({ id: "flower", title: "Цветочная рамка", rarity: "epic", weight: 12 }),
-  gold: Object.freeze({ id: "gold", title: "Золотая рамка", rarity: "mythic", weight: 8 }),
-  elite: Object.freeze({ id: "elite", title: "Элитная рамка", rarity: "legendary", weight: 4 })
+  heart: Object.freeze({ id: "heart", title: "Рамка Сердечки", rarity: "common", weight: 32 }),
+  marshmallow: Object.freeze({ id: "marshmallow", title: "Зефирная рамка", rarity: "rare", weight: 16 }),
+  coffee: Object.freeze({ id: "coffee", title: "Кофейная рамка", rarity: "rare", weight: 16 }),
+  strawberry: Object.freeze({ id: "strawberry", title: "Клубничная рамка", rarity: "superrare", weight: 14 }),
+  winter: Object.freeze({ id: "winter", title: "Зимняя рамка", rarity: "epic", weight: 5 }),
+  sleep: Object.freeze({ id: "sleep", title: "Рамка Сладкие сны", rarity: "epic", weight: 5 }),
+  lovers: Object.freeze({ id: "lovers", title: "Рамка Влюблённые", rarity: "epic", weight: 5 }),
+  elite: Object.freeze({ id: "elite", title: "Элитная рамка", rarity: "mythic", weight: 5 }),
+  princess: Object.freeze({ id: "princess", title: "Рамка Принцесса", rarity: "legendary", weight: 2 })
 });
 
 const CASE_TRAILS = Object.freeze({
-  strawberry: Object.freeze({ id: "strawberry", title: "Любовный след" }),
-  gold: Object.freeze({ id: "gold", title: "Звёздный след" }),
-  marshmallow: Object.freeze({ id: "marshmallow", title: "Зефирный след" }),
-  coffee: Object.freeze({ id: "coffee", title: "Кофейный след" }),
-  marshmallow_splash: Object.freeze({ id: "marshmallow_splash", title: "Зефирный всплеск" })
+  marshmallow: Object.freeze({ id: "marshmallow", title: "Зефирный след", rarity: "common", weight: 45 }),
+  coffee: Object.freeze({ id: "coffee", title: "Кофейный след", rarity: "rare", weight: 25 }),
+  marshmallow_splash: Object.freeze({ id: "marshmallow_splash", title: "Зефирный всплеск", rarity: "superrare", weight: 15 }),
+  strawberry: Object.freeze({ id: "strawberry", title: "Любовный след", rarity: "epic", weight: 10 }),
+  gold: Object.freeze({ id: "gold", title: "Звёздный след", rarity: "mythic", weight: 5 })
 });
 
 const CASE_BOOSTER_TYPES = Object.freeze(["points", "treats", "coffee"]);
@@ -1118,10 +1121,11 @@ async function grantFrameToPlayer(env, telegramId, frameIdValue, grantedBy) {
   return { frameId, alreadyOwned, title: CASE_FRAMES[frameId]?.title || frameId, grantedBy: String(grantedBy || "system") };
 }
 
+const CASE_FRAME_ALIASES = Object.freeze({ mint: "lovers", flower: "lovers", gold: "princess" });
 function normalizeCaseCosmeticId(kind, value) {
   let id = String(value || "").trim();
   if (!id) return "";
-  if (kind === "frame" && id === "mint") id = "flower";
+  if (kind === "frame" && CASE_FRAME_ALIASES[id]) id = CASE_FRAME_ALIASES[id];
   if (kind === "avatar") return CASE_AVATARS[id] ? id : "";
   if (kind === "frame") return CASE_FRAMES[id] ? id : "";
   if (kind === "trail") return CASE_TRAILS[id] ? id : "";
