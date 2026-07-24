@@ -146,6 +146,8 @@ const BOT_COMMANDS = Object.freeze([
   { command: "staff", description: "Войти в рабочую сессию" },
   { command: "help_staff", description: "Команды сотрудника" },
   { command: "staff_me", description: "Моя роль и статистика" },
+  { command: "member_staff", description: "Все сотрудники и роли" },
+  { command: "members", description: "Все игроки и Telegram ID" },
   { command: "team", description: "Команда и разрешения" },
   { command: "publish", description: "Опубликовать новость" }
 ]);
@@ -1312,6 +1314,16 @@ async function handleTelegramUpdate(update, env) {
     return;
   }
 
+  if (/^\/member_staff(?:@\w+)?$/i.test(text)) {
+    await showStaffMembers(chatId, user, env);
+    return;
+  }
+
+  if (/^\/members(?:@\w+)?$/i.test(text)) {
+    await showPlayerMembers(chatId, user, env);
+    return;
+  }
+
   const rankMatch = text.match(/^\/rang_staff_(kassir|povar|administrator)(?:@\w+)?\s+(\d{4,20})$/i);
   if (rankMatch) {
     const role = rankMatch[1].toLowerCase() === "kassir"
@@ -1880,6 +1892,138 @@ async function requireTeamPermission(chatId, user, permission, env) {
   return access;
 }
 
+async function sendTelegramListChunks(env, chatId, title, entries, emptyText = "Список пуст.") {
+  const safeEntries = Array.isArray(entries) ? entries.filter(Boolean) : [];
+  if (!safeEntries.length) {
+    await sendTelegramMessage(env, chatId, `<b>${escapeHtml(title)}</b>\n\n${escapeHtml(emptyText)}`);
+    return;
+  }
+
+  const maxBodyLength = 3300;
+  const chunks = [];
+  let current = "";
+  for (const entry of safeEntries) {
+    const next = current ? `${current}\n\n${entry}` : entry;
+    if (next.length > maxBodyLength && current) {
+      chunks.push(current);
+      current = entry;
+    } else {
+      current = next;
+    }
+  }
+  if (current) chunks.push(current);
+
+  for (let index = 0; index < chunks.length; index += 1) {
+    const page = chunks.length > 1 ? ` · ${index + 1}/${chunks.length}` : "";
+    await sendTelegramMessage(env, chatId, `<b>${escapeHtml(title)}${page}</b>\n\n${chunks[index]}`);
+  }
+}
+
+async function showStaffMembers(chatId, user, env) {
+  const access = await requireTeamPermission(chatId, user, "staff", env);
+  if (!access) return;
+
+  const result = await env.DB.prepare(
+    `SELECT telegram_id, display_name, role, active, session_expires_at
+     FROM staff_users
+     ORDER BY active DESC,
+              CASE role WHEN 'administrator' THEN 1 WHEN 'cashier' THEN 2 WHEN 'cook' THEN 3 ELSE 4 END,
+              display_name ASC,
+              telegram_id ASC`
+  ).all();
+  const rows = Array.isArray(result.results) ? result.results : [];
+  const now = Math.floor(Date.now() / 1000);
+  const entries = rows.map((row, index) => {
+    const active = Number(row.active || 0) === 1;
+    const sessionActive = Number(row.session_expires_at || 0) > now;
+    const status = active ? (sessionActive ? "активен · сессия открыта" : "активен · требуется /staff") : "отключён";
+    return `${index + 1}. <b>${escapeHtml(row.display_name || "Без имени")}</b>\nРоль: ${escapeHtml(teamRoleLabel(row.role))}\nTelegram ID: <code>${escapeHtml(String(row.telegram_id || ""))}</code>\nСтатус: ${escapeHtml(status)}`;
+  });
+
+  await logStaffAction(env, user, access, "view_staff_members", null, "staff", null, null, { count: rows.length });
+  await sendTelegramListChunks(env, chatId, `Сотрудники: ${rows.length}`, entries, "Сотрудники пока не добавлены.");
+}
+
+async function showPlayerMembers(chatId, user, env) {
+  const access = await requireTeamPermission(chatId, user, "points", env);
+  if (!access) return;
+
+  const [profilesResult, ratingResult] = await Promise.all([
+    env.DB.prepare(
+      `SELECT telegram_id, wallet, best_score, treats, coffee, profile_xp, updated_at
+       FROM admin_profile_state
+       ORDER BY updated_at DESC`
+    ).all(),
+    env.DB.prepare(
+      `SELECT telegram_id, display_name, username, best_score, level, updated_at
+       FROM leaderboard_all_time
+       ORDER BY updated_at DESC`
+    ).all()
+  ]);
+
+  const players = new Map();
+  for (const row of Array.isArray(profilesResult.results) ? profilesResult.results : []) {
+    const telegramId = String(row.telegram_id || "").trim();
+    if (!telegramId) continue;
+    players.set(telegramId, {
+      telegramId,
+      displayName: "",
+      username: "",
+      bestScore: Number(row.best_score || 0),
+      level: profileLevelFromXp(Number(row.profile_xp || 0)),
+      updatedAt: Number(row.updated_at || 0)
+    });
+  }
+
+  for (const row of Array.isArray(ratingResult.results) ? ratingResult.results : []) {
+    const telegramId = String(row.telegram_id || "").trim();
+    if (!telegramId) continue;
+    const current = players.get(telegramId) || {
+      telegramId,
+      displayName: "",
+      username: "",
+      bestScore: 0,
+      level: 1,
+      updatedAt: 0
+    };
+    current.displayName = String(row.display_name || current.displayName || "").trim();
+    current.username = String(row.username || current.username || "").trim().replace(/^@/, "");
+    current.bestScore = Math.max(Number(current.bestScore || 0), Number(row.best_score || 0));
+    current.level = Math.max(Number(current.level || 1), Number(row.level || 1));
+    current.updatedAt = Math.max(Number(current.updatedAt || 0), Number(row.updated_at || 0));
+    players.set(telegramId, current);
+  }
+
+  const rows = [...players.values()].sort((left, right) => {
+    const recent = Number(right.updatedAt || 0) - Number(left.updatedAt || 0);
+    if (recent) return recent;
+    return String(left.displayName || left.telegramId).localeCompare(String(right.displayName || right.telegramId), "ru");
+  });
+
+  const entries = rows.map((row, index) => {
+    const name = row.displayName || "Игрок без имени";
+    const username = row.username ? ` · @${escapeHtml(row.username)}` : "";
+    const activity = row.updatedAt ? formatUtcDate(row.updatedAt) : "нет данных";
+    return `${index + 1}. <b>${escapeHtml(name)}</b>${username}\nTelegram ID: <code>${escapeHtml(row.telegramId)}</code>\nРекорд: ${Math.max(0, Math.floor(Number(row.bestScore || 0)))} · Уровень: ${Math.max(1, Math.floor(Number(row.level || 1)))}\nПоследняя активность: ${escapeHtml(activity)}`;
+  });
+
+  await logStaffAction(env, user, access, "view_player_members", null, "player", null, null, { count: rows.length });
+  await sendTelegramListChunks(env, chatId, `Игроки: ${rows.length}`, entries, "Игроки ещё не синхронизировали профили.");
+}
+
+function profileLevelFromXp(profileXp) {
+  const xp = Math.max(0, Math.floor(Number(profileXp || 0)));
+  let level = 1;
+  let remaining = xp;
+  while (level < 50) {
+    const needed = 20 + (level - 1) * 10;
+    if (remaining < needed) break;
+    remaining -= needed;
+    level += 1;
+  }
+  return level;
+}
+
 async function showTeamManagement(chatId, user, env) {
   const access = await requireTeamPermission(chatId, user, "staff", env);
   if (!access) return;
@@ -2088,7 +2232,9 @@ async function showStaffHelp(chatId, user, env) {
     lines.push(
       "",
       "<b>Команда</b>",
-      `<code>/staff_list</code> — сотрудники и роли`,
+      `<code>/staff_list</code> — управление сотрудниками`,
+      `<code>/member_staff</code> — все сотрудники и роли`,
+      `<code>/members</code> — все игроки и Telegram ID`,
       `<code>/rang_staff_kassir TELEGRAM_ID</code>`,
       `<code>/rang_staff_povar TELEGRAM_ID</code>`,
       `<code>/staff_disable TELEGRAM_ID</code>`,
@@ -2290,6 +2436,8 @@ function staffActionLabel(action) {
     staff_disable: "отключение сотрудника",
     staff_enable: "включение сотрудника",
     staff_permission: "изменение разрешения",
+    view_staff_members: "просмотр списка сотрудников",
+    view_player_members: "просмотр списка игроков",
     points_legacy: "изменение очков",
     publish_news: "публикация новости"
   })[action] || action;
