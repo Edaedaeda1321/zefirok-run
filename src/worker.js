@@ -46,23 +46,25 @@ const LEVEL_CASE_CONFIG = Object.freeze({
 });
 
 const CASE_AVATARS = Object.freeze({
-  royal: Object.freeze({ id: "royal", title: "Королевская" }),
-  winter_cocoa: Object.freeze({ id: "winter_cocoa", title: "Зимнее какао" }),
-  birthday_gift: Object.freeze({ id: "birthday_gift", title: "Праздничный подарок" }),
-  sweet_dreams: Object.freeze({ id: "sweet_dreams", title: "Сладкие сны" }),
-  sakura: Object.freeze({ id: "sakura", title: "Сакура" }),
-  champion: Object.freeze({ id: "champion", title: "Чемпион" }),
-  strawberry_cake: Object.freeze({ id: "strawberry_cake", title: "Клубничный десерт" }),
-  marshmallow_cloud: Object.freeze({ id: "marshmallow_cloud", title: "Зефирное облако" }),
-  coffee_barista: Object.freeze({ id: "coffee_barista", title: "Кофейный бариста" }),
-  pink_hearts: Object.freeze({ id: "pink_hearts", title: "Розовые сердечки" })
+  royal: Object.freeze({ id: "royal", title: "Королевская", rarity: "legendary", weight: 2 }),
+  champion: Object.freeze({ id: "champion", title: "Чемпион", rarity: "mythic", weight: 3 }),
+  winter_cocoa: Object.freeze({ id: "winter_cocoa", title: "Зимнее какао", rarity: "common", weight: 30 }),
+  birthday_gift: Object.freeze({ id: "birthday_gift", title: "Праздничный подарок", rarity: "rare", weight: 20 }),
+  sweet_dreams: Object.freeze({ id: "sweet_dreams", title: "Сладкие сны", rarity: "superrare", weight: 9 }),
+  strawberry_cake: Object.freeze({ id: "strawberry_cake", title: "Клубничный десерт", rarity: "superrare", weight: 9 }),
+  coffee_barista: Object.freeze({ id: "coffee_barista", title: "Кофейный бариста", rarity: "superrare", weight: 9 }),
+  marshmallow_cloud: Object.freeze({ id: "marshmallow_cloud", title: "Зефирное облако", rarity: "epic", weight: 6 }),
+  pink_hearts: Object.freeze({ id: "pink_hearts", title: "Розовые сердечки", rarity: "epic", weight: 6 }),
+  sakura: Object.freeze({ id: "sakura", title: "Сакура", rarity: "epic", weight: 6 })
 });
 
 const CASE_FRAMES = Object.freeze({
-  strawberry: Object.freeze({ id: "strawberry", title: "Клубничная рамка" }),
-  coffee: Object.freeze({ id: "coffee", title: "Кофейная рамка" }),
-  mint: Object.freeze({ id: "mint", title: "Мятная рамка" }),
-  gold: Object.freeze({ id: "gold", title: "Золотая рамка" })
+  strawberry: Object.freeze({ id: "strawberry", title: "Клубничная рамка", rarity: "rare", weight: 30 }),
+  coffee: Object.freeze({ id: "coffee", title: "Кофейная рамка", rarity: "rare", weight: 30 }),
+  marshmallow: Object.freeze({ id: "marshmallow", title: "Зефирная рамка", rarity: "superrare", weight: 16 }),
+  flower: Object.freeze({ id: "flower", title: "Цветочная рамка", rarity: "epic", weight: 12 }),
+  gold: Object.freeze({ id: "gold", title: "Золотая рамка", rarity: "mythic", weight: 8 }),
+  elite: Object.freeze({ id: "elite", title: "Элитная рамка", rarity: "legendary", weight: 4 })
 });
 
 const CASE_TRAILS = Object.freeze({
@@ -113,9 +115,9 @@ const REWARD_LIMIT_RESET_AT_SECONDS = 1784805300; // 23.07.2026 11:15 UTC
 
 // НАСТРОЙКИ ВЕРСИИ И РАЗДЕЛА «ОБНОВЛЕНИЕ» В БОТЕ.
 // Меняйте эти значения при каждом новом релизе игры.
-const GAME_VERSION = "4.0.16 OPEN BETA";
-const GAME_UPDATE_DATE = "24 июля 2026";
-const GAME_UPDATE_TITLE = "Кейсы и склад подарков";
+const GAME_VERSION = "5.0 OPEN BETA";
+const GAME_UPDATE_DATE = "25 июля 2026";
+const GAME_UPDATE_TITLE = "Коллекция, рейтинг и плавность";
 
 // Что произошло с прогрессом в этом релизе:
 // "reset" — крупное обновление с обнулением прогресса;
@@ -124,10 +126,11 @@ const GAME_UPDATE_PROGRESS_MODE = "keep";
 const GAME_UPDATE_RESET_REASON = "Прогресс в этом обновлении сохраняется.";
 
 const GAME_UPDATE_NOTES = Object.freeze([
-  "Рулетка открывается одним непрерывным движением и больше не запускается повторно перед показом награды.",
-  "Добавлены новые изображения Обычного, Серебряного и Золотого кейсов.",
-  "Уровневые кейсы убраны из профиля и остаются в списке уровней.",
-  "В профиле сохранены склад подарков, усилители, рамки, аватарки и следы.",
+  "Добавлены шесть новых коллекционных рамок с редкостями от редкой до легендарной.",
+  "Настроены разные шансы выпадения аватарок и рамок в соответствии с их редкостью.",
+  "Выбранные аватарка и рамка синхронизируются с сезонным и общим рейтингом.",
+  "Исправлена прямоугольная подложка вокруг счёта игроков на пьедестале.",
+  "Оптимизирован игровой цикл и плавное переключение кадров бега без изменения физики.",
   "Сезон завершится 7 августа 2026 года в 12:00 МСК."
 ]);
 
@@ -1116,20 +1119,21 @@ async function grantFrameToPlayer(env, telegramId, frameIdValue, grantedBy) {
 }
 
 function normalizeCaseCosmeticId(kind, value) {
-  const id = String(value || "").trim();
+  let id = String(value || "").trim();
   if (!id) return "";
+  if (kind === "frame" && id === "mint") id = "flower";
   if (kind === "avatar") return CASE_AVATARS[id] ? id : "";
   if (kind === "frame") return CASE_FRAMES[id] ? id : "";
   if (kind === "trail") return CASE_TRAILS[id] ? id : "";
   return "";
 }
 
-function caseParseOwned(raw, catalog) {
+function caseParseOwned(raw, kind, catalog) {
   let values = [];
   try { values = JSON.parse(String(raw || "[]")); } catch {}
   return Array.from(new Set((Array.isArray(values) ? values : [])
-    .map((value) => String(value || ""))
-    .filter((value) => Boolean(catalog[value]))));
+    .map((value) => normalizeCaseCosmeticId(kind, value))
+    .filter((value) => Boolean(value && catalog[value]))));
 }
 
 function caseProfileLevel(totalXpValue) {
@@ -1159,6 +1163,19 @@ function caseRandomInt(minValue, maxValue) {
 function caseRandomChoice(values) {
   const list = Array.isArray(values) ? values : [];
   return list.length ? list[Math.floor(caseSecureFloat() * list.length)] : null;
+}
+
+function caseWeightedCatalogChoice(catalog, excluded = new Set()) {
+  const entries = Object.entries(catalog || {}).filter(([id]) => !excluded.has(id));
+  const pool = entries.length ? entries : Object.entries(catalog || {});
+  const total = pool.reduce((sum, [, item]) => sum + Math.max(0, Number(item?.weight || 1)), 0);
+  if (!pool.length || total <= 0) return null;
+  let roll = caseSecureFloat() * total;
+  for (const [id, item] of pool) {
+    roll -= Math.max(0, Number(item?.weight || 1));
+    if (roll < 0) return id;
+  }
+  return pool[pool.length - 1][0];
 }
 
 function caseWeightedKind(caseType) {
@@ -1202,12 +1219,15 @@ function caseStateFromRow(row) {
     ? String(row.active_booster_type)
     : "";
   const activeRuns = activeType ? Math.max(0, Math.min(2, safeAdminNumber(row?.active_booster_runs))) : 0;
-  const ownedAvatars = caseParseOwned(row?.owned_avatars_json, CASE_AVATARS);
-  const ownedFrames = caseParseOwned(row?.owned_frames_json, CASE_FRAMES);
-  const ownedTrails = caseParseOwned(row?.owned_trails_json, CASE_TRAILS);
-  const activeAvatarId = ownedAvatars.includes(String(row?.active_avatar_id || "")) ? String(row.active_avatar_id) : "";
-  const activeFrameId = ownedFrames.includes(String(row?.active_frame_id || "")) ? String(row.active_frame_id) : "";
-  const activeTrailId = ownedTrails.includes(String(row?.active_trail_id || "")) ? String(row.active_trail_id) : "";
+  const ownedAvatars = caseParseOwned(row?.owned_avatars_json, "avatar", CASE_AVATARS);
+  const ownedFrames = caseParseOwned(row?.owned_frames_json, "frame", CASE_FRAMES);
+  const ownedTrails = caseParseOwned(row?.owned_trails_json, "trail", CASE_TRAILS);
+  const activeAvatarCandidate = normalizeCaseCosmeticId("avatar", row?.active_avatar_id);
+  const activeFrameCandidate = normalizeCaseCosmeticId("frame", row?.active_frame_id);
+  const activeTrailCandidate = normalizeCaseCosmeticId("trail", row?.active_trail_id);
+  const activeAvatarId = ownedAvatars.includes(activeAvatarCandidate) ? activeAvatarCandidate : "";
+  const activeFrameId = ownedFrames.includes(activeFrameCandidate) ? activeFrameCandidate : "";
+  const activeTrailId = ownedTrails.includes(activeTrailCandidate) ? activeTrailCandidate : "";
   return {
     boosters: {
       points: safeAdminNumber(row?.boosters_points),
@@ -1350,8 +1370,8 @@ function rollLevelCase(caseType, sourceState) {
   let coffee = 0;
 
   const addCosmetic = (kind, catalog, ownedKey, compensation) => {
-    const available = Object.keys(catalog).filter((id) => !selectedCosmetics.has(`${kind}:${id}`));
-    const id = caseRandomChoice(available.length ? available : Object.keys(catalog));
+    const excluded = new Set([...selectedCosmetics].filter((value) => value.startsWith(`${kind}:`)).map((value) => value.slice(kind.length + 1)));
+    const id = caseWeightedCatalogChoice(catalog, excluded);
     if (!id) return;
     selectedCosmetics.add(`${kind}:${id}`);
     const item = catalog[id];
@@ -2103,7 +2123,7 @@ async function handleTelegramUpdate(update, env) {
     return;
   }
 
-  const addFrameMatch = text.match(/^\/add_frame(?:@\w+)?\s+(strawberry|coffee|mint|gold|клубничная|кофейная|мятная|золотая)\s+(\d{4,20})(?:\s+([\s\S]+))?$/i);
+  const addFrameMatch = text.match(/^\/add_frame(?:@\w+)?\s+(strawberry|coffee|marshmallow|flower|gold|elite|mint|клубничная|кофейная|зефирная|цветочная|золотая|элитная|легендарная)\s+(\d{4,20})(?:\s+([\s\S]+))?$/i);
   if (addFrameMatch) {
     await addPlayerFrame(chatId, user, addFrameMatch[1], addFrameMatch[2], String(addFrameMatch[3] || "Компенсация").trim(), env);
     return;
@@ -3164,7 +3184,7 @@ async function addPlayerCurrency(chatId, user, currency, amountValue, telegramId
 
 function normalizeFrameAlias(value) {
   const raw = String(value || "").trim().toLowerCase();
-  return ({ strawberry: "strawberry", "клубничная": "strawberry", coffee: "coffee", "кофейная": "coffee", mint: "mint", "мятная": "mint", gold: "gold", "золотая": "gold" })[raw] || "";
+  return ({ strawberry: "strawberry", "клубничная": "strawberry", coffee: "coffee", "кофейная": "coffee", marshmallow: "marshmallow", "зефирная": "marshmallow", flower: "flower", mint: "flower", "цветочная": "flower", "мятная": "flower", gold: "gold", "золотая": "gold", elite: "elite", "элитная": "elite", "легендарная": "elite" })[raw] || "";
 }
 
 async function addPlayerCases(chatId, user, caseTypeValue, quantityValue, telegramId, reasonValue, env) {
@@ -3200,7 +3220,7 @@ async function addPlayerFrame(chatId, user, frameValue, telegramId, reasonValue,
   if (!access) return;
   const frameId = normalizeFrameAlias(frameValue);
   if (!frameId) {
-    await sendTelegramMessage(env, chatId, "Неизвестная рамка. Доступно: <code>strawberry</code>, <code>coffee</code>, <code>mint</code>, <code>gold</code>.");
+    await sendTelegramMessage(env, chatId, "Неизвестная рамка. Доступно: <code>strawberry</code>, <code>coffee</code>, <code>marshmallow</code>, <code>flower</code>, <code>gold</code>, <code>elite</code>.");
     return;
   }
   const result = await grantFrameToPlayer(env, String(telegramId), frameId, String(user.id));
