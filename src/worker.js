@@ -66,10 +66,11 @@ const CASE_FRAMES = Object.freeze({
 });
 
 const CASE_TRAILS = Object.freeze({
+  strawberry: Object.freeze({ id: "strawberry", title: "Любовный след" }),
+  gold: Object.freeze({ id: "gold", title: "Звёздный след" }),
   marshmallow: Object.freeze({ id: "marshmallow", title: "Зефирный след" }),
   coffee: Object.freeze({ id: "coffee", title: "Кофейный след" }),
-  strawberry: Object.freeze({ id: "strawberry", title: "Клубничный след" }),
-  gold: Object.freeze({ id: "gold", title: "Золотой след" })
+  marshmallow_splash: Object.freeze({ id: "marshmallow_splash", title: "Зефирный всплеск" })
 });
 
 const CASE_BOOSTER_TYPES = Object.freeze(["points", "treats", "coffee"]);
@@ -112,9 +113,9 @@ const REWARD_LIMIT_RESET_AT_SECONDS = 1784805300; // 23.07.2026 11:15 UTC
 
 // НАСТРОЙКИ ВЕРСИИ И РАЗДЕЛА «ОБНОВЛЕНИЕ» В БОТЕ.
 // Меняйте эти значения при каждом новом релизе игры.
-const GAME_VERSION = "4.0.14 OPEN BETA";
+const GAME_VERSION = "4.0.15 OPEN BETA";
 const GAME_UPDATE_DATE = "24 июля 2026";
-const GAME_UPDATE_TITLE = "Новые аватарки и кейсы без подложки";
+const GAME_UPDATE_TITLE = "Рулетка, усилители и следы";
 
 // Что произошло с прогрессом в этом релизе:
 // "reset" — крупное обновление с обнулением прогресса;
