@@ -477,7 +477,7 @@ async function syncAdminProfile(request, env) {
     const body = await readJson(request);
     const auth = await validateTelegramInitData(String(body.initData || ""), env);
     const mode = String(body.mode || "read");
-    if (mode === "write") requireAdminUser(auth.user, env);
+    if (mode === "write" || mode === "set") requireAdminUser(auth.user, env);
     const telegramId = String(auth.user.id);
     const current = normalizeAdminProfile(body.current || {});
     const now = Math.floor(Date.now() / 1000);
@@ -508,6 +508,30 @@ async function syncAdminProfile(request, env) {
           treats = MAX(treats, ?),
           coffee = MAX(coffee, ?),
           profile_xp = MAX(profile_xp, ?),
+          revision = revision + 1,
+          updated_at = ?,
+          updated_by = ?
+         WHERE telegram_id = ?`
+      ).bind(
+        next.wallet,
+        next.best,
+        next.treats,
+        next.coffee,
+        next.profileXp,
+        now,
+        telegramId,
+        telegramId
+      ).run();
+    } else if (mode === "set") {
+      const next = normalizeAdminProfile(body.next || current);
+      await env.DB.prepare(
+        `UPDATE admin_profile_state SET
+          wallet = ?,
+          best_score = ?,
+          treats = ?,
+          coffee = ?,
+          profile_xp = ?,
+          wallet_override = NULL,
           revision = revision + 1,
           updated_at = ?,
           updated_by = ?
