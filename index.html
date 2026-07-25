@@ -11778,8 +11778,10 @@ html&gt;body{padding:0}
         const title = normalizedId ? (catalog[normalizedId]?.title || &quot;Награда&quot;) : &quot;Стандартное оформление&quot;;
 
         if (button) button.disabled = true;
-        state[stateKey] = normalizedId;
-        saveProgress();
+        antiCheatWithTrustedChange(&quot;equip-case-cosmetic&quot;, () =&gt; {
+          state[stateKey] = normalizedId;
+          saveProgress();
+        });
         renderProfile();
         renderCaseHub();
 
@@ -11793,8 +11795,10 @@ html&gt;body{padding:0}
           }
           showProfileToast(`Выбрано: ${title}.`, &quot;success&quot;);
         } catch (error) {
-          state[stateKey] = previousId;
-          saveProgress();
+          antiCheatWithTrustedChange(&quot;equip-case-cosmetic-rollback&quot;, () =&gt; {
+            state[stateKey] = previousId;
+            saveProgress();
+          });
           showProfileToast(error?.message || &quot;Не удалось выбрать награду.&quot;, &quot;warning&quot;);
         } finally {
           renderProfile();
@@ -15690,6 +15694,22 @@ html&gt;body{padding:0}
     min-height:61px!important;
     font-size:clamp(20px,5.2vw,27px)!important;
   }
+}
+&lt;/style&gt;
+
+&lt;style id=&quot;zefirok-5-0-4-podium-background-and-cosmetic-integrity-fix&quot;&gt;
+/* Полностью сбрасывает старую цветную заливку под PNG-подложками рейтинга. */
+#zefirok-maltipoo-runner .leaderboard-v4-podium-card[data-place=&quot;1&quot;] .leaderboard-v4-ribbon{
+  background:transparent url(&#x27;/assets/rating/v7/podlozka_gold.png&#x27;) center center / contain no-repeat!important;
+  background-color:transparent!important;
+}
+#zefirok-maltipoo-runner .leaderboard-v4-podium-card[data-place=&quot;2&quot;] .leaderboard-v4-ribbon{
+  background:transparent url(&#x27;/assets/rating/v7/serebryannay.png&#x27;) center center / contain no-repeat!important;
+  background-color:transparent!important;
+}
+#zefirok-maltipoo-runner .leaderboard-v4-podium-card[data-place=&quot;3&quot;] .leaderboard-v4-ribbon{
+  background:transparent url(&#x27;/assets/rating/v7/bronze_podl.png&#x27;) center center / contain no-repeat!important;
+  background-color:transparent!important;
 }
 &lt;/style&gt;
 &lt;/body&gt;
