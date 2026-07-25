@@ -5084,9 +5084,6 @@ html&gt;body{padding:0}
 #zefirok-maltipoo-runner .profile-avatar-wrap.case-frame-coffee::after,#zefirok-maltipoo-runner .leaderboard-avatar-frame.case-frame-coffee::after{background-image:url(&#x27;/assets/rating/frames/coffee.png&#x27;)}
 #zefirok-maltipoo-runner .profile-avatar-wrap.case-frame-mint::after,#zefirok-maltipoo-runner .leaderboard-avatar-frame.case-frame-mint::after{background-image:url(&#x27;/assets/rating/frames/mint.png&#x27;)}
 #zefirok-maltipoo-runner .profile-avatar-wrap.case-frame-gold::after,#zefirok-maltipoo-runner .leaderboard-avatar-frame.case-frame-gold::after{background-image:url(&#x27;/assets/rating/frames/gold.png&#x27;)}
-#zefirok-maltipoo-runner .leaderboard-v4-podium-card[data-place=&quot;1&quot;] .leaderboard-v4-ribbon{background-color:#f5c94d!important;background-image:url(&#x27;/assets/rating/v7/podlozka_gold.png&#x27;),linear-gradient(180deg,#ffe994,#d9a32a)!important}
-#zefirok-maltipoo-runner .leaderboard-v4-podium-card[data-place=&quot;2&quot;] .leaderboard-v4-ribbon{background-color:#dfe6ef!important;background-image:url(&#x27;/assets/rating/v7/serebryannay.png&#x27;),linear-gradient(180deg,#f8fbff,#abb8c8)!important}
-#zefirok-maltipoo-runner .leaderboard-v4-podium-card[data-place=&quot;3&quot;] .leaderboard-v4-ribbon{background-color:#dfa15f!important;background-image:url(&#x27;/assets/rating/v7/bronze_podl.png&#x27;),linear-gradient(180deg,#ffd2a0,#bd6e2d)!important}
 #zefirok-maltipoo-runner .case-result-head.is-opening .case-chest{animation:case-chest-shake .48s ease-in-out infinite alternate}
 #zefirok-maltipoo-runner .case-roulette-list{display:grid;gap:12px;margin-top:8px}
 #zefirok-maltipoo-runner .case-roulette-row{display:grid;gap:7px}
@@ -8607,7 +8604,7 @@ html&gt;body{padding:0}
         return null;
       }
       preloadGameplayDogSprites();
-      const RUN_FRAME_SEQUENCE = Object.freeze([&quot;run1&quot;, &quot;run2&quot;, &quot;run4&quot;, &quot;run2&quot;]);
+      const RUN_FRAME_SEQUENCE = Object.freeze([&quot;run1&quot;, &quot;run2&quot;, &quot;run1&quot;, &quot;run2&quot;]);
       const RUN_CYCLE_FPS_MIN = 9;
       const RUN_CYCLE_FPS_MAX = 13;
       const RUN_SPEED_REFERENCE_MIN = 165;
@@ -9078,6 +9075,14 @@ html&gt;body{padding:0}
           ].join(&quot;,&quot;);
           for (const element of root.querySelectorAll(selectors)) fitNumericElement(element);
         });
+      }
+
+      let lastNumericFitAt = 0;
+      function maybeFitNumericUI(force = false) {
+        const now = performance.now();
+        if (!force &amp;&amp; now - lastNumericFitAt &lt; 180) return;
+        lastNumericFitAt = now;
+        fitNumericUI();
       }
       // ЦЕНЫ ТОВАРОВ: в будущем меняйте только числа в этом блоке.
       // points — очки, treats — зефир, coffee — чашки кофе.
@@ -10513,7 +10518,7 @@ html&gt;body{padding:0}
           dog.y = ground.y - dog.h;
           draw();
         }
-        fitNumericUI();
+        maybeFitNumericUI(true);
       }
 
       function reset(preserveButtonVisual = false, preservePauseVisual = false) {
@@ -10782,10 +10787,11 @@ html&gt;body{padding:0}
           button.disabled = false;
           button.classList.toggle(&quot;is-unaffordable&quot;, !affordable);
         }
-        updateShopPreview();
+        const shopScreen = root.querySelector(&#x27;[data-screen=&quot;shop&quot;]&#x27;);
+        if (shopScreen &amp;&amp; !shopScreen.hidden) updateShopPreview();
         const profileScreen = root.querySelector(&#x27;[data-screen=&quot;profile&quot;]&#x27;);
         if (profileScreen &amp;&amp; !profileScreen.hidden) renderProfile();
-        fitNumericUI();
+        maybeFitNumericUI();
       }
 
       function sanitizeProgressNumber(value) {
@@ -10969,11 +10975,20 @@ html&gt;body{padding:0}
             return &quot;Обнаружено добавление усилителя вне кейса.&quot;;
           }
         }
-        if (antiCheatStableStringify(candidate.activeCaseBooster) !== antiCheatStableStringify(previous.activeCaseBooster)
-            || String(candidate.caseActiveAvatar || &quot;&quot;) !== String(previous.caseActiveAvatar || &quot;&quot;)
-            || String(candidate.caseActiveFrame || &quot;&quot;) !== String(previous.caseActiveFrame || &quot;&quot;)
-            || String(candidate.caseActiveTrail || &quot;&quot;) !== String(previous.caseActiveTrail || &quot;&quot;)) {
-          return &quot;Обнаружено изменение наград кейсов вне профиля.&quot;;
+        if (antiCheatStableStringify(candidate.activeCaseBooster) !== antiCheatStableStringify(previous.activeCaseBooster)) {
+          return &quot;Обнаружено изменение активного усилителя вне кейса.&quot;;
+        }
+        const equippedCaseCosmetics = [
+          [&quot;caseActiveAvatar&quot;, &quot;caseOwnedAvatars&quot;, &quot;аватарки&quot;],
+          [&quot;caseActiveFrame&quot;, &quot;caseOwnedFrames&quot;, &quot;рамки&quot;],
+          [&quot;caseActiveTrail&quot;, &quot;caseOwnedTrails&quot;, &quot;следа&quot;]
+        ];
+        for (const [activeField, ownedField, label] of equippedCaseCosmetics) {
+          const activeId = String(candidate[activeField] || &quot;&quot;);
+          const ownedIds = new Set((Array.isArray(candidate[ownedField]) ? candidate[ownedField] : []).map(String));
+          if (activeId &amp;&amp; !ownedIds.has(activeId)) {
+            return `Обнаружена установка недоступной ${label}.`;
+          }
         }
 
         const currentPrices = candidate.adminPrices &amp;&amp; typeof candidate.adminPrices === &quot;object&quot; ? candidate.adminPrices : {};
@@ -13275,13 +13290,20 @@ html&gt;body{padding:0}
       }
 
       function podiumCard(entry, place) {
-        if (!entry) return `&lt;div class=&quot;leaderboard-v4-podium-card&quot; data-place=&quot;${place}&quot;&gt;&lt;span class=&quot;leaderboard-v4-medal&quot;&gt;${place}&lt;/span&gt;${leaderboardAvatarMarkup({ telegramId: `empty-${place}`, name: &quot;Свободно&quot; }, false, true)}&lt;strong class=&quot;leaderboard-v4-podium-name&quot;&gt;Свободно&lt;/strong&gt;&lt;span class=&quot;leaderboard-v4-ribbon&quot;&gt;—&lt;/span&gt;&lt;/div&gt;`;
+        const ribbonAsset = place === 1
+          ? &quot;/assets/rating/v7/podlozka_gold.png&quot;
+          : place === 2
+            ? &quot;/assets/rating/v7/serebryannay.png&quot;
+            : &quot;/assets/rating/v7/bronze_podl.png&quot;;
+        const ribbonValue = entry ? formatter.format(entry.score) : &quot;—&quot;;
+        const ribbonMarkup = `&lt;span class=&quot;leaderboard-v4-ribbon&quot;&gt;&lt;img class=&quot;leaderboard-v4-ribbon-art&quot; src=&quot;${ribbonAsset}&quot; alt=&quot;&quot;&gt;&lt;span class=&quot;leaderboard-v4-ribbon-value&quot;&gt;${ribbonValue}&lt;/span&gt;&lt;/span&gt;`;
+        if (!entry) return `&lt;div class=&quot;leaderboard-v4-podium-card&quot; data-place=&quot;${place}&quot;&gt;&lt;span class=&quot;leaderboard-v4-medal&quot;&gt;${place}&lt;/span&gt;${leaderboardAvatarMarkup({ telegramId: `empty-${place}`, name: &quot;Свободно&quot; }, false, true)}&lt;strong class=&quot;leaderboard-v4-podium-name&quot;&gt;Свободно&lt;/strong&gt;${ribbonMarkup}&lt;/div&gt;`;
         const isMe = String(entry.telegramId || &quot;&quot;) === String(telegramProfile?.id || &quot;&quot;);
         return `&lt;div class=&quot;leaderboard-v4-podium-card${place === 1 ? &quot; is-first&quot; : &quot;&quot;}${isMe ? &quot; is-me&quot; : &quot;&quot;}&quot; data-place=&quot;${place}&quot;&gt;
           &lt;span class=&quot;leaderboard-v4-medal&quot;&gt;${place}&lt;/span&gt;${isMe ? `&lt;span class=&quot;leaderboard-v4-you&quot;&gt;ВЫ&lt;/span&gt;` : &quot;&quot;}
           ${leaderboardAvatarMarkup(entry, false, true)}
           &lt;strong class=&quot;leaderboard-v4-podium-name&quot;&gt;${leaderboardEscape(entry.name)}&lt;/strong&gt;
-          &lt;span class=&quot;leaderboard-v4-ribbon&quot;&gt;${formatter.format(entry.score)}&lt;/span&gt;
+          ${ribbonMarkup}
         &lt;/div&gt;`;
       }
 
@@ -15711,6 +15733,79 @@ html&gt;body{padding:0}
   background:transparent url(&#x27;/assets/rating/v7/bronze_podl.png&#x27;) center center / contain no-repeat!important;
   background-color:transparent!important;
 }
+&lt;/style&gt;
+
+&lt;style id=&quot;zefirok-5-0-5-podium-img-and-cosmetic-switch-fix&quot;&gt;
+#zefirok-maltipoo-runner .leaderboard-v4-podium-card .leaderboard-v4-ribbon{
+  background:none!important;
+  background-image:none!important;
+  background-color:transparent!important;
+  box-shadow:none!important;
+  isolation:isolate!important;
+}
+#zefirok-maltipoo-runner .leaderboard-v4-ribbon-art{
+  position:absolute!important;
+  inset:0!important;
+  z-index:0!important;
+  display:block!important;
+  width:100%!important;
+  height:100%!important;
+  max-width:none!important;
+  max-height:none!important;
+  object-fit:contain!important;
+  object-position:center!important;
+  border:0!important;
+  border-radius:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+  filter:none!important;
+  pointer-events:none!important;
+  user-select:none!important;
+  -webkit-user-drag:none!important;
+}
+#zefirok-maltipoo-runner .leaderboard-v4-ribbon-value{
+  position:relative!important;
+  z-index:1!important;
+  display:block!important;
+  min-width:0!important;
+  background:transparent!important;
+}
+&lt;/style&gt;
+
+&lt;style id=&quot;leaderboard-v8-podium-ribbon-fix&quot;&gt;
+  #zefirok-maltipoo-runner .leaderboard-v4-ribbon {
+    left: 2px !important;
+    right: 2px !important;
+    bottom: 8px !important;
+    min-height: 0 !important;
+    height: 46px !important;
+    aspect-ratio: auto !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 0 18px 1px !important;
+    background-position: center center !important;
+    background-repeat: no-repeat !important;
+    background-size: 100% 100% !important;
+    font-size: clamp(14px, 3.8vw, 20px) !important;
+    line-height: 1 !important;
+    letter-spacing: -0.04em !important;
+    text-align: center !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+  }
+  #zefirok-maltipoo-runner .leaderboard-v4-podium-card[data-place=&quot;1&quot;] .leaderboard-v4-ribbon {
+    left: -2px !important;
+    right: -2px !important;
+    height: 52px !important;
+    padding: 0 22px 1px !important;
+    font-size: clamp(16px, 4.1vw, 22px) !important;
+  }
+  #zefirok-maltipoo-runner .leaderboard-v4-podium-card[data-place=&quot;2&quot;] .leaderboard-v4-ribbon,
+  #zefirok-maltipoo-runner .leaderboard-v4-podium-card[data-place=&quot;3&quot;] .leaderboard-v4-ribbon {
+    height: 44px !important;
+    padding: 0 16px 1px !important;
+  }
 &lt;/style&gt;
 &lt;/body&gt;
 &lt;/html&gt;" title="Сладкий Забег"></iframe>
