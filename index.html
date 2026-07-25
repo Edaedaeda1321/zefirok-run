@@ -92,7 +92,11 @@
     const localProgress = readLocal();
     const cloudProgress = await readCloud();
     const selected = chooseNewest(localProgress, cloudProgress);
-    if (!selected || !targetWindow) return;
+    if (!targetWindow) return;
+    if (!selected) {
+      targetWindow.postMessage({ type: "zefirok-progress-empty" }, "*");
+      return;
+    }
     const serialized = JSON.stringify(selected);
     latestSerialized = serialized;
     writeLocal(serialized);
@@ -8552,13 +8556,13 @@ html&gt;body{padding:0}
         });
       }
       const GAMEPLAY_SKIN_SPRITES = Object.freeze({
-        default: Object.freeze({ stand: &quot;/assets/skins/gameplay/default/stand.png&quot;, run: &quot;/assets/skins/gameplay/default/run.png&quot;, run1: &quot;/assets/skins/gameplay/default/run1.png&quot;, run2: &quot;/assets/skins/gameplay/default/run2.png&quot;, run3: &quot;/assets/skins/gameplay/default/run3.png&quot;, run4: &quot;/assets/skins/gameplay/default/run4.png&quot;, jump: &quot;/assets/skins/gameplay/default/jump.png&quot; }),
-        barista: Object.freeze({ stand: &quot;/assets/skins/gameplay/barista/stand.png&quot;, run: &quot;/assets/skins/gameplay/barista/run.png&quot;, run1: &quot;/assets/skins/gameplay/barista/run1.png&quot;, run2: &quot;/assets/skins/gameplay/barista/run2.png&quot;, run3: &quot;/assets/skins/gameplay/barista/run3.png&quot;, run4: &quot;/assets/skins/gameplay/barista/run4.png&quot;, jump: &quot;/assets/skins/gameplay/barista/jump.png&quot; }),
-        strawberry: Object.freeze({ stand: &quot;/assets/skins/gameplay/strawberry/stand.png&quot;, run: &quot;/assets/skins/gameplay/strawberry/run.png&quot;, run1: &quot;/assets/skins/gameplay/strawberry/run1.png&quot;, run2: &quot;/assets/skins/gameplay/strawberry/run2.png&quot;, run3: &quot;/assets/skins/gameplay/strawberry/run3.png&quot;, run4: &quot;/assets/skins/gameplay/strawberry/run4.png&quot;, jump: &quot;/assets/skins/gameplay/strawberry/jump.png&quot; }),
-        bee: Object.freeze({ stand: &quot;/assets/skins/gameplay/bee/stand.png&quot;, run: &quot;/assets/skins/gameplay/bee/run.png&quot;, run1: &quot;/assets/skins/gameplay/bee/run1.png&quot;, run2: &quot;/assets/skins/gameplay/bee/run2.png&quot;, run3: &quot;/assets/skins/gameplay/bee/run3.png&quot;, run4: &quot;/assets/skins/gameplay/bee/run4.png&quot;, jump: &quot;/assets/skins/gameplay/bee/jump.png&quot; }),
-        sailor: Object.freeze({ stand: &quot;/assets/skins/gameplay/sailor/stand.png&quot;, run: &quot;/assets/skins/gameplay/sailor/run.png&quot;, run1: &quot;/assets/skins/gameplay/sailor/run1.png&quot;, run2: &quot;/assets/skins/gameplay/sailor/run2.png&quot;, run3: &quot;/assets/skins/gameplay/sailor/run3.png&quot;, run4: &quot;/assets/skins/gameplay/sailor/run4.png&quot;, jump: &quot;/assets/skins/gameplay/sailor/jump.png&quot; }),
-        princess: Object.freeze({ stand: &quot;/assets/skins/gameplay/princess/stand.png&quot;, run: &quot;/assets/skins/gameplay/princess/run.png&quot;, run1: &quot;/assets/skins/gameplay/princess/run1.png&quot;, run2: &quot;/assets/skins/gameplay/princess/run2.png&quot;, run3: &quot;/assets/skins/gameplay/princess/run3.png&quot;, run4: &quot;/assets/skins/gameplay/princess/run4.png&quot;, jump: &quot;/assets/skins/gameplay/princess/jump.png&quot; }),
-        angel: Object.freeze({ stand: &quot;/assets/skins/gameplay/angel/stand.png&quot;, run: &quot;/assets/skins/gameplay/angel/run.png&quot;, run1: &quot;/assets/skins/gameplay/angel/run1.png&quot;, run2: &quot;/assets/skins/gameplay/angel/run2.png&quot;, run3: &quot;/assets/skins/gameplay/angel/run3.png&quot;, run4: &quot;/assets/skins/gameplay/angel/run4.png&quot;, jump: &quot;/assets/skins/gameplay/angel/jump.png&quot; })
+        default: Object.freeze({ stand: &quot;/assets/skins/gameplay/default/stand.png&quot;, run1: &quot;/assets/skins/gameplay/default/run1.png&quot;, run2: &quot;/assets/skins/gameplay/default/run2.png&quot;, run3: &quot;/assets/skins/gameplay/default/run3.png&quot;, run4: &quot;/assets/skins/gameplay/default/run4.png&quot;, jump: &quot;/assets/skins/gameplay/default/jump.png&quot; }),
+        barista: Object.freeze({ stand: &quot;/assets/skins/gameplay/barista/stand.png&quot;, run1: &quot;/assets/skins/gameplay/barista/run1.png&quot;, run2: &quot;/assets/skins/gameplay/barista/run2.png&quot;, run3: &quot;/assets/skins/gameplay/barista/run3.png&quot;, run4: &quot;/assets/skins/gameplay/barista/run4.png&quot;, jump: &quot;/assets/skins/gameplay/barista/jump.png&quot; }),
+        strawberry: Object.freeze({ stand: &quot;/assets/skins/gameplay/strawberry/stand.png&quot;, run1: &quot;/assets/skins/gameplay/strawberry/run1.png&quot;, run2: &quot;/assets/skins/gameplay/strawberry/run2.png&quot;, run3: &quot;/assets/skins/gameplay/strawberry/run3.png&quot;, run4: &quot;/assets/skins/gameplay/strawberry/run4.png&quot;, jump: &quot;/assets/skins/gameplay/strawberry/jump.png&quot; }),
+        bee: Object.freeze({ stand: &quot;/assets/skins/gameplay/bee/stand.png&quot;, run1: &quot;/assets/skins/gameplay/bee/run1.png&quot;, run2: &quot;/assets/skins/gameplay/bee/run2.png&quot;, run3: &quot;/assets/skins/gameplay/bee/run3.png&quot;, run4: &quot;/assets/skins/gameplay/bee/run4.png&quot;, jump: &quot;/assets/skins/gameplay/bee/jump.png&quot; }),
+        sailor: Object.freeze({ stand: &quot;/assets/skins/gameplay/sailor/stand.png&quot;, run1: &quot;/assets/skins/gameplay/sailor/run1.png&quot;, run2: &quot;/assets/skins/gameplay/sailor/run2.png&quot;, run3: &quot;/assets/skins/gameplay/sailor/run3.png&quot;, run4: &quot;/assets/skins/gameplay/sailor/run4.png&quot;, jump: &quot;/assets/skins/gameplay/sailor/jump.png&quot; }),
+        princess: Object.freeze({ stand: &quot;/assets/skins/gameplay/princess/stand.png&quot;, run1: &quot;/assets/skins/gameplay/princess/run1.png&quot;, run2: &quot;/assets/skins/gameplay/princess/run2.png&quot;, run3: &quot;/assets/skins/gameplay/princess/run3.png&quot;, run4: &quot;/assets/skins/gameplay/princess/run4.png&quot;, jump: &quot;/assets/skins/gameplay/princess/jump.png&quot; }),
+        angel: Object.freeze({ stand: &quot;/assets/skins/gameplay/angel/stand.png&quot;, run1: &quot;/assets/skins/gameplay/angel/run1.png&quot;, run2: &quot;/assets/skins/gameplay/angel/run2.png&quot;, run3: &quot;/assets/skins/gameplay/angel/run3.png&quot;, run4: &quot;/assets/skins/gameplay/angel/run4.png&quot;, jump: &quot;/assets/skins/gameplay/angel/jump.png&quot; })
       });
       const gameplayDogAssets = {};
       function queueGameplayDogSprite(skinId, stateName, src) {
@@ -9345,6 +9349,7 @@ html&gt;body{padding:0}
       let tutorialAutoTimer = 0;
       let tutorialOpenedAutomatically = false;
       let tutorialMode = &quot;main&quot;;
+      let progressBridgeSettled = false;
 
       const tutorialSteps = [
         {
@@ -10507,7 +10512,7 @@ html&gt;body{padding:0}
 
       function resize() {
         const rect = canvas.getBoundingClientRect();
-        const scale = window.devicePixelRatio || 1;
+        const scale = Math.min(2, Math.max(1, Number(window.devicePixelRatio) || 1));
         canvas.width = Math.max(320, Math.floor(rect.width * scale));
         canvas.height = Math.max(270, Math.floor(rect.height * scale));
         ctx.setTransform(scale, 0, 0, scale, 0, 0);
@@ -10764,51 +10769,57 @@ html&gt;body{padding:0}
         updateHud();
       }
 
-      const hudTextCache = new WeakMap();
-      function setHudText(element, value) {
+      let lastRunningHudPaintAt = 0;
+      const runningHudCache = { score: &quot;&quot;, best: &quot;&quot;, treats: &quot;&quot;, coffee: &quot;&quot; };
+
+      function setHudText(element, value, cacheKey = &quot;&quot;) {
         if (!element) return;
-        const text = String(value);
-        if (hudTextCache.get(element) === text) return;
-        hudTextCache.set(element, text);
-        element.textContent = text;
+        if (cacheKey &amp;&amp; runningHudCache[cacheKey] === value) return;
+        if (element.textContent !== value) element.textContent = value;
+        if (cacheKey) runningHudCache[cacheKey] = value;
       }
 
-      function updateHud() {
-        setHudText(scoreEl, formatter.format(Math.floor(state.score)));
-        setHudText(bestEl, formatter.format(Math.floor(state.best)));
-        setHudText(treatsEl, formatter.format(state.treats + state.runTreats));
-        setHudText(coffeeEl, formatter.format(state.coffee + state.runCoffee));
-        setHudText(walletEl, formatter.format(Math.floor(state.wallet)));
-        setHudText(marshmallowsEl, formatter.format(state.treats));
-        setHudText(coffeeWalletEl, formatter.format(state.coffee));
-        setHudText(skinsWalletEl, formatter.format(Math.floor(state.wallet)));
-        setHudText(skinsTreatsEl, formatter.format(state.treats));
-        setHudText(skinsCoffeeEl, formatter.format(state.coffee));
+      function updateHud(force = false) {
+        const hudNow = performance.now();
+        if (state.running &amp;&amp; !force &amp;&amp; hudNow - lastRunningHudPaintAt &lt; 80) return;
+        if (state.running) lastRunningHudPaintAt = hudNow;
 
-        const shopScreen = root.querySelector(&#x27;[data-screen=&quot;shop&quot;]&#x27;);
-        const shopVisible = Boolean(shopScreen &amp;&amp; !shopScreen.hidden);
-        if (shopVisible) {
-          for (const button of buyButtons) {
-            const id = button.dataset.buy;
-            const product = shopProducts[id] || {};
-            const cost = Number(product.points || 0);
-            const treatCost = Number(product.treats || 0);
-            const coffeeCost = Number(product.coffee || 0);
-            for (const ownedEl of root.querySelectorAll(`[data-owned=&quot;${id}&quot;]`)) {
-              setHudText(ownedEl, formatter.format(state.inventory[id] || 0));
-            }
-            const affordable = state.wallet &gt;= cost &amp;&amp; state.treats &gt;= treatCost &amp;&amp; state.coffee &gt;= coffeeCost;
-            button.disabled = false;
-            button.classList.toggle(&quot;is-unaffordable&quot;, !affordable);
-          }
-          updateShopPreview();
+        const scoreText = formatter.format(Math.floor(state.score));
+        const bestText = formatter.format(Math.floor(state.best));
+        const treatsText = formatter.format(state.treats + state.runTreats);
+        const coffeeText = formatter.format(state.coffee + state.runCoffee);
+        setHudText(scoreEl, scoreText, &quot;score&quot;);
+        setHudText(bestEl, bestText, &quot;best&quot;);
+        setHudText(treatsEl, treatsText, &quot;treats&quot;);
+        setHudText(coffeeEl, coffeeText, &quot;coffee&quot;);
+
+        // During the run only the four HUD counters are needed. Shop/profile
+        // queries and font measurements were causing periodic mobile frame drops.
+        if (state.running) return;
+
+        if (walletEl) walletEl.textContent = formatter.format(Math.floor(state.wallet));
+        if (marshmallowsEl) marshmallowsEl.textContent = formatter.format(state.treats);
+        if (coffeeWalletEl) coffeeWalletEl.textContent = formatter.format(state.coffee);
+        if (skinsWalletEl) skinsWalletEl.textContent = formatter.format(Math.floor(state.wallet));
+        if (skinsTreatsEl) skinsTreatsEl.textContent = formatter.format(state.treats);
+        if (skinsCoffeeEl) skinsCoffeeEl.textContent = formatter.format(state.coffee);
+        for (const button of buyButtons) {
+          const id = button.dataset.buy;
+          const product = shopProducts[id] || {};
+          const cost = Number(product.points || 0);
+          const treatCost = Number(product.treats || 0);
+          const coffeeCost = Number(product.coffee || 0);
+          const ownedEls = [...root.querySelectorAll(`[data-owned=&quot;${id}&quot;]`)];
+          for (const ownedEl of ownedEls) ownedEl.textContent = formatter.format(state.inventory[id] || 0);
+          const affordable = state.wallet &gt;= cost &amp;&amp; state.treats &gt;= treatCost &amp;&amp; state.coffee &gt;= coffeeCost;
+          button.disabled = false;
+          button.classList.toggle(&quot;is-unaffordable&quot;, !affordable);
         }
-
+        const shopScreen = root.querySelector(&#x27;[data-screen=&quot;shop&quot;]&#x27;);
+        if (shopScreen &amp;&amp; !shopScreen.hidden) updateShopPreview();
         const profileScreen = root.querySelector(&#x27;[data-screen=&quot;profile&quot;]&#x27;);
-        const profileVisible = Boolean(profileScreen &amp;&amp; !profileScreen.hidden);
-        if (profileVisible) renderProfile();
-
-        if (!state.running || shopVisible || profileVisible) maybeFitNumericUI();
+        if (profileScreen &amp;&amp; !profileScreen.hidden) renderProfile();
+        maybeFitNumericUI();
       }
 
       function sanitizeProgressNumber(value) {
@@ -11364,8 +11375,18 @@ html&gt;body{padding:0}
           }
           return;
         }
+        if (message.type === &quot;zefirok-progress-empty&quot;) {
+          progressBridgeSettled = true;
+          if (pendingReleaseNotice) scheduleReleaseNotice(180);
+          else scheduleTutorialAutoOpen(450);
+          return;
+        }
         if (message.type !== &quot;zefirok-progress-data&quot;) return;
-        if (!applySavedProgress(message.payload)) return;
+        progressBridgeSettled = true;
+        if (!applySavedProgress(message.payload)) {
+          if (!pendingReleaseNotice) scheduleTutorialAutoOpen(450);
+          return;
+        }
         const currentSnapshot = buildProgressSnapshot();
         try {
           const currentSerialized = JSON.stringify(currentSnapshot);
@@ -14350,8 +14371,10 @@ html&gt;body{padding:0}
         ctx.beginPath();
         ctx.ellipse(x + dog.w * 0.52, ground.y + 4, shadowWidth, shadowHeight, 0, 0, Math.PI * 2);
         ctx.fill();
+        const runClock = Math.max(0, Number(state.runAnimationClock || 0));
+        const currentIndex = Math.floor(runClock) % RUN_FRAME_SEQUENCE.length;
         const currentSprite = runningOnGround
-          ? resolvedGameplayDogSpriteEntry(currentDogSkin.id, &quot;run&quot;)
+          ? resolvedGameplayDogSpriteEntry(currentDogSkin.id, RUN_FRAME_SEQUENCE[currentIndex])
           : resolvedGameplayDogSpriteEntry();
         if (currentSprite?.img) {
           const centerX = x + dog.w * 0.5;
@@ -15071,8 +15094,13 @@ html&gt;body{padding:0}
         const boundary = leaderboardData.season.status === &quot;scheduled&quot; ? leaderboardData.season.startsAt : leaderboardData.season.endsAt;
         if (Number(boundary || 0) &lt;= Number(leaderboardData.serverTime || 0)) void refreshLeaderboard(true, leaderboardMode);
       }, 1000);
-      if (pendingReleaseNotice) scheduleReleaseNotice();
-      else scheduleTutorialAutoOpen();
+      if (pendingReleaseNotice) {
+        scheduleReleaseNotice();
+      } else {
+        window.setTimeout(() =&gt; {
+          if (!progressBridgeSettled) scheduleTutorialAutoOpen(0);
+        }, 6000);
+      }
       window.setInterval(() =&gt; {
         const warehouseScreen = root.querySelector(&#x27;[data-screen=&quot;warehouse&quot;]&#x27;);
         if (warehouseScreen &amp;&amp; !warehouseScreen.hidden) {
@@ -15823,74 +15851,59 @@ html&gt;body{padding:0}
   }
 &lt;/style&gt;
 
-&lt;style id=&quot;leaderboard-v9-centered-wide-ribbons&quot;&gt;
-  #zefirok-maltipoo-runner .leaderboard-v4-podium-card {
-    overflow: visible !important;
-  }
-  #zefirok-maltipoo-runner .leaderboard-v4-podium-card .leaderboard-v4-ribbon,
-  #zefirok-maltipoo-runner .leaderboard-v4-podium-card.is-first .leaderboard-v4-ribbon {
-    left: 50% !important;
-    right: auto !important;
-    bottom: 7px !important;
-    width: 118% !important;
+&lt;style id=&quot;leaderboard-v10-centered-plates&quot;&gt;
+  #zefirok-maltipoo-runner .leaderboard-v4-podium-card .leaderboard-v4-ribbon {
+    left: -14px !important;
+    right: -14px !important;
+    bottom: 8px !important;
+    width: auto !important;
     max-width: none !important;
     min-width: 0 !important;
-    height: 50px !important;
-    min-height: 50px !important;
+    height: 44px !important;
+    min-height: 44px !important;
+    aspect-ratio: auto !important;
+    transform: none !important;
     margin: 0 !important;
-    padding: 0 25px 1px !important;
-    transform: translateX(-50%) !important;
     box-sizing: border-box !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
-    overflow: visible !important;
-    font-size: clamp(16px, 4.1vw, 23px) !important;
+    padding: 0 25px 1px !important;
+    overflow: hidden !important;
+    background-position: center !important;
+    background-size: 100% 100% !important;
+    background-repeat: no-repeat !important;
+    font-size: clamp(14px, 3.7vw, 20px) !important;
     line-height: 1 !important;
     letter-spacing: -0.035em !important;
     text-align: center !important;
     white-space: nowrap !important;
   }
   #zefirok-maltipoo-runner .leaderboard-v4-podium-card.is-first .leaderboard-v4-ribbon {
-    height: 53px !important;
-    min-height: 53px !important;
-    font-size: clamp(18px, 4.5vw, 25px) !important;
-  }
-  #zefirok-maltipoo-runner .leaderboard-v4-ribbon-art {
-    position: absolute !important;
-    inset: 0 !important;
-    width: 100% !important;
-    height: 100% !important;
-    object-fit: fill !important;
-    object-position: center !important;
-  }
-  #zefirok-maltipoo-runner .leaderboard-v4-ribbon-value {
-    position: relative !important;
-    z-index: 2 !important;
-    display: block !important;
-    width: 100% !important;
-    max-width: calc(100% - 46px) !important;
-    margin: 0 auto !important;
-    padding: 0 !important;
-    overflow: hidden !important;
-    text-align: center !important;
-    text-overflow: clip !important;
-    white-space: nowrap !important;
-    transform: translateY(-1px) !important;
+    left: -16px !important;
+    right: -16px !important;
+    bottom: 8px !important;
+    height: 48px !important;
+    min-height: 48px !important;
+    padding: 0 29px 1px !important;
+    font-size: clamp(16px, 4vw, 22px) !important;
   }
   @media (max-width: 390px) {
-    #zefirok-maltipoo-runner .leaderboard-v4-podium-card .leaderboard-v4-ribbon,
-    #zefirok-maltipoo-runner .leaderboard-v4-podium-card.is-first .leaderboard-v4-ribbon {
-      width: 121% !important;
-      height: 47px !important;
-      min-height: 47px !important;
-      padding-inline: 23px !important;
-      font-size: clamp(15px, 4.45vw, 20px) !important;
+    #zefirok-maltipoo-runner .leaderboard-v4-podium-card .leaderboard-v4-ribbon {
+      left: -11px !important;
+      right: -11px !important;
+      height: 42px !important;
+      min-height: 42px !important;
+      padding-inline: 21px !important;
+      font-size: 14px !important;
     }
     #zefirok-maltipoo-runner .leaderboard-v4-podium-card.is-first .leaderboard-v4-ribbon {
-      height: 50px !important;
-      min-height: 50px !important;
-      font-size: clamp(17px, 4.8vw, 22px) !important;
+      left: -13px !important;
+      right: -13px !important;
+      height: 46px !important;
+      min-height: 46px !important;
+      padding-inline: 25px !important;
+      font-size: 16px !important;
     }
   }
 &lt;/style&gt;
