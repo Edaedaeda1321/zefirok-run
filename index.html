@@ -2541,6 +2541,132 @@ html&gt;body{padding:0}
   }
 &lt;/style&gt;
 
+&lt;style id=&quot;case-tutorial-styles&quot;&gt;
+  #zefirok-maltipoo-runner .tutorial-case-row {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    width: 100%;
+  }
+  #zefirok-maltipoo-runner .tutorial-case-card {
+    min-width: 0;
+    padding: 8px 5px 7px;
+    border: 1px solid rgba(188, 105, 134, .2);
+    border-radius: 16px;
+    background: rgba(255, 255, 255, .78);
+    display: grid;
+    justify-items: center;
+    gap: 3px;
+    color: #743b51;
+    text-align: center;
+    font-size: 10px;
+    font-weight: 900;
+  }
+  #zefirok-maltipoo-runner .tutorial-case-card img {
+    width: 68px;
+    height: 58px;
+    max-width: 100%;
+    object-fit: contain;
+    filter: drop-shadow(0 6px 7px rgba(104, 53, 68, .12));
+  }
+  #zefirok-maltipoo-runner .tutorial-case-card small {
+    color: #a8798b;
+    font-size: 8px;
+    font-weight: 800;
+  }
+  #zefirok-maltipoo-runner .tutorial-case-source-list {
+    display: grid;
+    gap: 7px;
+    width: 100%;
+  }
+  #zefirok-maltipoo-runner .tutorial-case-source {
+    display: grid;
+    grid-template-columns: 34px minmax(0, 1fr);
+    align-items: center;
+    gap: 9px;
+    padding: 8px 10px;
+    border: 1px solid rgba(188, 105, 134, .16);
+    border-radius: 14px;
+    background: rgba(255, 255, 255, .72);
+    text-align: left;
+  }
+  #zefirok-maltipoo-runner .tutorial-case-source b {
+    display: grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 12px;
+    background: linear-gradient(180deg, #fff7ef, #ffe8d8);
+    font-size: 18px;
+  }
+  #zefirok-maltipoo-runner .tutorial-case-source strong {
+    display: block;
+    color: #71384e;
+    font-size: 11px;
+    font-weight: 950;
+  }
+  #zefirok-maltipoo-runner .tutorial-case-source span {
+    display: block;
+    margin-top: 2px;
+    color: #9d7484;
+    font-size: 9px;
+    line-height: 1.25;
+    font-weight: 750;
+  }
+  #zefirok-maltipoo-runner .tutorial-case-rewards {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 7px;
+    width: 100%;
+  }
+  #zefirok-maltipoo-runner .tutorial-case-reward {
+    min-width: 0;
+    padding: 7px 4px 6px;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, .78);
+    display: grid;
+    justify-items: center;
+    gap: 3px;
+    color: #754056;
+    font-size: 8px;
+    line-height: 1.1;
+    font-weight: 900;
+    text-align: center;
+  }
+  #zefirok-maltipoo-runner .tutorial-case-reward img {
+    width: 46px;
+    height: 46px;
+    object-fit: contain;
+  }
+  #zefirok-maltipoo-runner .tutorial-case-path {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    width: 100%;
+    color: #81495f;
+    font-size: 11px;
+    font-weight: 950;
+  }
+  #zefirok-maltipoo-runner .tutorial-case-path span {
+    padding: 8px 10px;
+    border-radius: 13px;
+    background: rgba(255, 255, 255, .82);
+    border: 1px solid rgba(188, 105, 134, .16);
+  }
+  #zefirok-maltipoo-runner .tutorial-case-path i {
+    color: #d7799c;
+    font-style: normal;
+    font-size: 17px;
+  }
+  @media (max-width: 390px) {
+    #zefirok-maltipoo-runner .tutorial-case-card img { width: 58px; height: 50px; }
+    #zefirok-maltipoo-runner .tutorial-case-rewards { gap: 5px; }
+    #zefirok-maltipoo-runner .tutorial-case-reward img { width: 40px; height: 40px; }
+    #zefirok-maltipoo-runner .tutorial-case-path { gap: 4px; font-size: 10px; }
+    #zefirok-maltipoo-runner .tutorial-case-path span { padding: 7px 7px; }
+  }
+&lt;/style&gt;
 
 &lt;style id=&quot;purchase-limit-and-obstacle-tutorial&quot;&gt;
   #zefirok-maltipoo-runner .tutorial-obstacle-row {
@@ -5048,7 +5174,7 @@ html&gt;body{padding:0}
 #zefirok-maltipoo-runner .case-layer{position:fixed;inset:0;z-index:100000;display:grid;place-items:center;padding:18px;background:rgba(58,35,26,.58);backdrop-filter:blur(5px)}
 #zefirok-maltipoo-runner .case-layer[hidden]{display:none!important}
 #zefirok-maltipoo-runner .case-dialog{position:relative;width:min(390px,100%);max-height:min(720px,88vh);overflow:auto;border-radius:26px;padding:24px 18px 20px;background:linear-gradient(#fffdf8,#fff2e8);box-shadow:0 24px 65px rgba(49,29,20,.35);text-align:center}
-#zefirok-maltipoo-runner .case-dialog-close{position:absolute;right:12px;top:10px;border:0;background:#fff;border-radius:50%;width:34px;height:34px;font-size:22px;color:#835d48;box-shadow:0 4px 12px rgba(80,50,35,.12)}
+#zefirok-maltipoo-runner .case-dialog-close{position:absolute;right:12px;top:10px;display:flex;align-items:center;justify-content:center;border:1px solid rgba(220,183,201,.78);background:linear-gradient(180deg,#fff,#fde6ef);border-radius:14px;width:44px;height:44px;font-size:28px;line-height:1;color:#8a4662;box-shadow:0 6px 12px rgba(130,66,92,.12)}
 #zefirok-maltipoo-runner .case-result-head{display:grid;justify-items:center;gap:8px;margin-bottom:14px}.case-result-head h2{margin:0;color:#603e2d;font-size:22px}.case-result-head p{margin:0;color:#98715d;font-size:12px}
 #zefirok-maltipoo-runner .case-result-list{display:grid;gap:9px;text-align:left}
 #zefirok-maltipoo-runner .case-result-item{padding:12px 13px;border-radius:15px;background:#fff;display:flex;gap:10px;align-items:center;color:#704b37;box-shadow:0 6px 16px rgba(97,58,39,.08)}
@@ -5205,9 +5331,11 @@ html&gt;body{padding:0}
 
 #zefirok-maltipoo-runner .profile-avatar-wrap[class*=&quot;case-frame-&quot;],
 #zefirok-maltipoo-runner .leaderboard-avatar-frame[class*=&quot;case-frame-&quot;]{overflow:visible!important;box-shadow:none!important}
-#zefirok-maltipoo-runner .profile-avatar-wrap[class*=&quot;case-frame-&quot;]::after,
+#zefirok-maltipoo-runner .profile-avatar-wrap[class*=&quot;case-frame-&quot;]::after{
+  content:&quot;&quot;;position:absolute;inset:-8%;z-index:5;pointer-events:none;background-position:center;background-size:contain;background-repeat:no-repeat;filter:drop-shadow(0 3px 5px rgba(85,50,38,.16));
+}
 #zefirok-maltipoo-runner .leaderboard-avatar-frame[class*=&quot;case-frame-&quot;]::after{
-  content:&quot;&quot;;position:absolute;inset:-25%;z-index:5;pointer-events:none;background-position:center;background-size:contain;background-repeat:no-repeat;filter:drop-shadow(0 3px 5px rgba(85,50,38,.16));
+  content:&quot;&quot;;position:absolute;inset:-12%;z-index:5;pointer-events:none;background-position:center;background-size:contain;background-repeat:no-repeat;filter:drop-shadow(0 3px 5px rgba(85,50,38,.16));
 }
 #zefirok-maltipoo-runner .profile-avatar-wrap.case-frame-heart::after,#zefirok-maltipoo-runner .leaderboard-avatar-frame.case-frame-heart::after{background-image:url(&#x27;/assets/rating/frames/profile/ramka_profile_sedce.png&#x27;)}
 #zefirok-maltipoo-runner .profile-avatar-wrap.case-frame-marshmallow::after,#zefirok-maltipoo-runner .leaderboard-avatar-frame.case-frame-marshmallow::after{background-image:url(&#x27;/assets/rating/frames/profile/ramka_profile_zefir.png&#x27;)}
@@ -5218,6 +5346,11 @@ html&gt;body{padding:0}
 #zefirok-maltipoo-runner .profile-avatar-wrap.case-frame-lovers::after,#zefirok-maltipoo-runner .leaderboard-avatar-frame.case-frame-lovers::after{background-image:url(&#x27;/assets/rating/frames/profile/ramka_profile_lovers.png&#x27;)}
 #zefirok-maltipoo-runner .profile-avatar-wrap.case-frame-elite::after,#zefirok-maltipoo-runner .leaderboard-avatar-frame.case-frame-elite::after{background-image:url(&#x27;/assets/rating/frames/profile/ramka_profile_elita.png&#x27;)}
 #zefirok-maltipoo-runner .profile-avatar-wrap.case-frame-princess::after,#zefirok-maltipoo-runner .leaderboard-avatar-frame.case-frame-princess::after{background-image:url(&#x27;/assets/rating/frames/profile/ramka_profile_princess.png&#x27;)}
+#zefirok-maltipoo-runner .profile-avatar-wrap.case-frame-legendary_frame_1::after,#zefirok-maltipoo-runner .leaderboard-avatar-frame.case-frame-legendary_frame_1::after{background-image:url(&#x27;/assets/rating/frames/profile/legendary_ramka_1.png&#x27;)}
+#zefirok-maltipoo-runner .profile-avatar-wrap.case-frame-legendary_frame_2::after,#zefirok-maltipoo-runner .leaderboard-avatar-frame.case-frame-legendary_frame_2::after{background-image:url(&#x27;/assets/rating/frames/profile/legendary_ramka_2.png&#x27;)}
+#zefirok-maltipoo-runner .profile-avatar-wrap.case-frame-legendary_frame_3::after,#zefirok-maltipoo-runner .leaderboard-avatar-frame.case-frame-legendary_frame_3::after{background-image:url(&#x27;/assets/rating/frames/profile/legendary_ramka_3.png&#x27;)}
+#zefirok-maltipoo-runner .profile-avatar-wrap.case-frame-legendary_frame_4::after,#zefirok-maltipoo-runner .leaderboard-avatar-frame.case-frame-legendary_frame_4::after{background-image:url(&#x27;/assets/rating/frames/profile/legendary_ramka_4.png&#x27;)}
+#zefirok-maltipoo-runner .profile-avatar-wrap.case-frame-legendary_frame_5::after,#zefirok-maltipoo-runner .leaderboard-avatar-frame.case-frame-legendary_frame_5::after{background-image:url(&#x27;/assets/rating/frames/profile/legendary_ramka_5.png&#x27;)}
 #zefirok-maltipoo-runner .case-frame-preview{width:52px!important;height:52px!important;border:0!important;background:transparent!important;box-shadow:none!important;overflow:visible!important}
 #zefirok-maltipoo-runner .case-frame-preview&gt;img{width:58px!important;height:58px!important;object-fit:contain!important;border-radius:0!important}
 #zefirok-maltipoo-runner .case-rarity{display:block;margin-top:-2px;font-size:8px;font-weight:950;line-height:1.1}
@@ -5237,6 +5370,20 @@ html&gt;body{padding:0}
 @keyframes case-final-effect-glow{from{filter:brightness(1.02) saturate(1.02) drop-shadow(0 0 12px rgba(255,214,145,.24));opacity:.88}to{filter:brightness(1.24) saturate(1.16) drop-shadow(0 0 22px rgba(255,214,145,.46));opacity:1}}
 #zefirok-maltipoo-runner .release-image-wrap{aspect-ratio:4/5;max-height:min(58dvh,470px);padding:6px}
 #zefirok-maltipoo-runner .release-image{object-fit:contain;object-position:center;background:transparent}
+&lt;/style&gt;
+
+&lt;style id=&quot;shop-case-cards-v020&quot;&gt;
+  #zefirok-maltipoo-runner .shop-card--case .shop-card-main &gt; img {
+    height: 88px;
+    cursor: pointer;
+    filter: drop-shadow(0 8px 12px rgba(112, 72, 82, .18));
+  }
+  #zefirok-maltipoo-runner .shop-card--case .shop-price {
+    gap: 4px 7px;
+  }
+  #zefirok-maltipoo-runner .shop-card--case .price-pill {
+    font-size: clamp(11px, 2.05vw, 13px);
+  }
 &lt;/style&gt;
 &lt;/head&gt;
 &lt;body&gt;
@@ -7780,6 +7927,50 @@ html&gt;body{padding:0}
 &lt;/button&gt;
 &lt;button data-buy=&quot;cappuccino&quot; data-coffee-cost=&quot;450&quot; data-cost=&quot;75000&quot; type=&quot;button&quot;&gt;Купить&lt;/button&gt;
 &lt;/article&gt;
+&lt;article class=&quot;shop-card shop-card--case&quot; data-shop-card=&quot;case-small&quot;&gt;
+&lt;button class=&quot;shop-card-main&quot; data-shop-select=&quot;case-small&quot; type=&quot;button&quot;&gt;
+&lt;img alt=&quot;Обычный кейс&quot; data-shop-case-type=&quot;small&quot; src=&quot;/assets/cases/standart_closed.png&quot;/&gt;
+&lt;span&gt;
+&lt;strong&gt;Обычный кейс&lt;/strong&gt;
+&lt;span&gt;Одна случайная награда. Нажмите на кейс, чтобы посмотреть содержимое и шансы.&lt;/span&gt;
+&lt;span class=&quot;shop-price&quot;&gt;&lt;span class=&quot;price-pill&quot;&gt;&lt;img alt=&quot;&quot; data-shop-img=&quot;shopStar&quot;/&gt;10 000 очков&lt;/span&gt;&lt;span class=&quot;price-pill alt&quot;&gt;&lt;img alt=&quot;&quot; data-shop-img=&quot;iconTreatPanel&quot;/&gt;100 зефира&lt;/span&gt;&lt;span class=&quot;price-pill alt&quot;&gt;&lt;img alt=&quot;&quot; data-shop-img=&quot;shopCoffee&quot;/&gt;100 кофе&lt;/span&gt;&lt;/span&gt;
+&lt;/span&gt;
+&lt;/button&gt;
+&lt;button data-buy=&quot;case-small&quot; data-coffee-cost=&quot;100&quot; data-cost=&quot;10000&quot; data-treat-cost=&quot;100&quot; type=&quot;button&quot;&gt;Купить&lt;/button&gt;
+&lt;/article&gt;
+&lt;article class=&quot;shop-card shop-card--case&quot; data-shop-card=&quot;case-sweet&quot;&gt;
+&lt;button class=&quot;shop-card-main&quot; data-shop-select=&quot;case-sweet&quot; type=&quot;button&quot;&gt;
+&lt;img alt=&quot;Серебряный кейс&quot; data-shop-case-type=&quot;sweet&quot; src=&quot;/assets/cases/Bronze_close.png&quot;/&gt;
+&lt;span&gt;
+&lt;strong&gt;Серебряный кейс&lt;/strong&gt;
+&lt;span&gt;Одна случайная награда с улучшенными шансами. Нажмите на кейс для просмотра.&lt;/span&gt;
+&lt;span class=&quot;shop-price&quot;&gt;&lt;span class=&quot;price-pill&quot;&gt;&lt;img alt=&quot;&quot; data-shop-img=&quot;shopStar&quot;/&gt;10 000 очков&lt;/span&gt;&lt;span class=&quot;price-pill alt&quot;&gt;&lt;img alt=&quot;&quot; data-shop-img=&quot;iconTreatPanel&quot;/&gt;100 зефира&lt;/span&gt;&lt;span class=&quot;price-pill alt&quot;&gt;&lt;img alt=&quot;&quot; data-shop-img=&quot;shopCoffee&quot;/&gt;100 кофе&lt;/span&gt;&lt;/span&gt;
+&lt;/span&gt;
+&lt;/button&gt;
+&lt;button data-buy=&quot;case-sweet&quot; data-coffee-cost=&quot;100&quot; data-cost=&quot;10000&quot; data-treat-cost=&quot;100&quot; type=&quot;button&quot;&gt;Купить&lt;/button&gt;
+&lt;/article&gt;
+&lt;article class=&quot;shop-card shop-card--case&quot; data-shop-card=&quot;case-gold&quot;&gt;
+&lt;button class=&quot;shop-card-main&quot; data-shop-select=&quot;case-gold&quot; type=&quot;button&quot;&gt;
+&lt;img alt=&quot;Золотой кейс&quot; data-shop-case-type=&quot;gold&quot; src=&quot;/assets/cases/gold_closed.png&quot;/&gt;
+&lt;span&gt;
+&lt;strong&gt;Золотой кейс&lt;/strong&gt;
+&lt;span&gt;Одна случайная награда с лучшими шансами. Нажмите на кейс для просмотра.&lt;/span&gt;
+&lt;span class=&quot;shop-price&quot;&gt;&lt;span class=&quot;price-pill&quot;&gt;&lt;img alt=&quot;&quot; data-shop-img=&quot;shopStar&quot;/&gt;10 000 очков&lt;/span&gt;&lt;span class=&quot;price-pill alt&quot;&gt;&lt;img alt=&quot;&quot; data-shop-img=&quot;iconTreatPanel&quot;/&gt;100 зефира&lt;/span&gt;&lt;span class=&quot;price-pill alt&quot;&gt;&lt;img alt=&quot;&quot; data-shop-img=&quot;shopCoffee&quot;/&gt;100 кофе&lt;/span&gt;&lt;/span&gt;
+&lt;/span&gt;
+&lt;/button&gt;
+&lt;button data-buy=&quot;case-gold&quot; data-coffee-cost=&quot;100&quot; data-cost=&quot;10000&quot; data-treat-cost=&quot;100&quot; type=&quot;button&quot;&gt;Купить&lt;/button&gt;
+&lt;/article&gt;
+&lt;article class=&quot;shop-card shop-card--case&quot; data-shop-card=&quot;case-legendary&quot;&gt;
+&lt;button class=&quot;shop-card-main&quot; data-shop-select=&quot;case-legendary&quot; type=&quot;button&quot;&gt;
+&lt;img alt=&quot;Легендарный кейс&quot; data-shop-case-type=&quot;legendary&quot; src=&quot;/assets/cases/legendary_closed.png&quot;/&gt;
+&lt;span&gt;
+&lt;strong&gt;Легендарный кейс&lt;/strong&gt;
+&lt;span&gt;Премиальный кейс: скины, аватарки, рамки, следы и крупная игровая валюта.&lt;/span&gt;
+&lt;span class=&quot;shop-price&quot;&gt;&lt;span class=&quot;price-pill&quot;&gt;&lt;img alt=&quot;&quot; data-shop-img=&quot;shopStar&quot;/&gt;600 000 очков&lt;/span&gt;&lt;span class=&quot;price-pill alt&quot;&gt;&lt;img alt=&quot;&quot; data-shop-img=&quot;iconTreatPanel&quot;/&gt;600 зефира&lt;/span&gt;&lt;span class=&quot;price-pill alt&quot;&gt;&lt;img alt=&quot;&quot; data-shop-img=&quot;shopCoffee&quot;/&gt;600 кофе&lt;/span&gt;&lt;/span&gt;
+&lt;/span&gt;
+&lt;/button&gt;
+&lt;button data-buy=&quot;case-legendary&quot; data-coffee-cost=&quot;600&quot; data-cost=&quot;600000&quot; data-treat-cost=&quot;600&quot; type=&quot;button&quot;&gt;Купить&lt;/button&gt;
+&lt;/article&gt;
 &lt;/div&gt;
 &lt;div class=&quot;shop-preview&quot;&gt;
 &lt;div class=&quot;conversion&quot;&gt;
@@ -7791,6 +7982,10 @@ html&gt;body{padding:0}
 &lt;span class=&quot;cost-line&quot;&gt;
 &lt;img alt=&quot;&quot; data-preview-resource-icon=&quot;&quot; data-shop-img=&quot;iconTreatPanel&quot;/&gt;
 &lt;span&gt;&lt;strong data-preview-treats=&quot;&quot;&gt;350&lt;/strong&gt; &lt;span data-preview-resource-label=&quot;&quot;&gt;зефира&lt;/span&gt;&lt;/span&gt;
+&lt;/span&gt;
+&lt;span class=&quot;cost-line&quot; data-preview-extra-resource-row hidden&gt;
+&lt;img alt=&quot;&quot; data-preview-extra-resource-icon data-shop-img=&quot;shopCoffee&quot;/&gt;
+&lt;span&gt;&lt;strong data-preview-extra-resource-value&gt;0&lt;/strong&gt; &lt;span data-preview-extra-resource-label&gt;чашек кофе&lt;/span&gt;&lt;/span&gt;
 &lt;/span&gt;
 &lt;/div&gt;
 &lt;span aria-hidden=&quot;true&quot;&gt;=&lt;/span&gt;
@@ -7909,7 +8104,7 @@ html&gt;body{padding:0}
       &lt;button class=&quot;case-refresh-button&quot; data-case-refresh type=&quot;button&quot;&gt;Обновить&lt;/button&gt;
     &lt;/div&gt;
     &lt;div class=&quot;case-gifted-wrap&quot; data-case-gifted-wrap&gt;
-      &lt;div class=&quot;case-subsection-title&quot;&gt;&lt;strong&gt;Склад подарков&lt;/strong&gt;&lt;span&gt;Здесь хранятся кейсы, выданные в подарок или как компенсация&lt;/span&gt;&lt;/div&gt;
+      &lt;div class=&quot;case-subsection-title&quot;&gt;&lt;strong&gt;Склад кейсов&lt;/strong&gt;&lt;span&gt;Здесь хранятся кейсы за уровни, подарки и компенсации&lt;/span&gt;&lt;/div&gt;
       &lt;div class=&quot;case-gifted-list&quot; data-case-gifted-list&gt;&lt;/div&gt;
     &lt;/div&gt;
     &lt;div class=&quot;case-subsection&quot;&gt;
@@ -7966,6 +8161,8 @@ html&gt;body{padding:0}
     &lt;/div&gt;
     &lt;div class=&quot;profile-actions profile-actions--level&quot;&gt;
       &lt;button class=&quot;profile-action profile-action--primary&quot; data-profile-tutorial type=&quot;button&quot;&gt;Пройти всё обучение&lt;/button&gt;
+      &lt;button class=&quot;profile-action&quot; data-profile-case-tutorial type=&quot;button&quot;&gt;Как работают кейсы&lt;/button&gt;
+      &lt;button class=&quot;profile-action&quot; data-profile-rating-tutorial type=&quot;button&quot;&gt;Как попасть в рейтинг&lt;/button&gt;
       &lt;button class=&quot;profile-action&quot; data-profile-level-tutorial type=&quot;button&quot;&gt;Как работает профиль и XP&lt;/button&gt;
       &lt;button class=&quot;profile-action&quot; data-profile-refresh type=&quot;button&quot;&gt;Обновить данные Telegram&lt;/button&gt;
     &lt;/div&gt;
@@ -8002,7 +8199,7 @@ html&gt;body{padding:0}
     &lt;div class=&quot;profile-section-head&quot;&gt;&lt;h3 id=&quot;profile-help-title&quot;&gt;Полезно знать&lt;/h3&gt;&lt;/div&gt;
     &lt;p class=&quot;profile-help-copy&quot;&gt;Метка «Telegram-профиль» означает, что имя и данные получены из Telegram. Если Telegram не передал фотографию, игра покажет Зефи — это не ошибка. XP начисляется за успешные покупки и только за зачтённые забеги, которые прошли антифарм-порог по времени и счёту.&lt;/p&gt;
   &lt;/section&gt;
-  &lt;div class=&quot;profile-version-row&quot;&gt;&lt;span&gt;Версия игры&lt;/span&gt;&lt;strong data-profile-game-version&gt;4.0 OPEN BETA&lt;/strong&gt;&lt;/div&gt;
+  &lt;div class=&quot;profile-version-row&quot;&gt;&lt;span&gt;Версия игры&lt;/span&gt;&lt;strong data-profile-game-version&gt;5.1 OPEN BETA&lt;/strong&gt;&lt;/div&gt;
   &lt;div aria-live=&quot;polite&quot; class=&quot;profile-toast&quot; data-profile-toast hidden&gt;&lt;/div&gt;
 &lt;/div&gt;
 &lt;/section&gt;
@@ -8156,6 +8353,10 @@ html&gt;body{padding:0}
       const previewTreatsEl = root.querySelector(&quot;[data-preview-treats]&quot;);
       const previewResourceIconEl = root.querySelector(&quot;[data-preview-resource-icon]&quot;);
       const previewResourceLabelEl = root.querySelector(&quot;[data-preview-resource-label]&quot;);
+      const previewExtraResourceRowEl = root.querySelector(&quot;[data-preview-extra-resource-row]&quot;);
+      const previewExtraResourceIconEl = root.querySelector(&quot;[data-preview-extra-resource-icon]&quot;);
+      const previewExtraResourceValueEl = root.querySelector(&quot;[data-preview-extra-resource-value]&quot;);
+      const previewExtraResourceLabelEl = root.querySelector(&quot;[data-preview-extra-resource-label]&quot;);
       const previewOwnedEl = root.querySelector(&quot;[data-preview-owned]&quot;);
       const previewImageEl = root.querySelector(&quot;[data-preview-image]&quot;);
       const previewHeroEl = root.querySelector(&quot;[data-preview-hero]&quot;);
@@ -8204,6 +8405,8 @@ html&gt;body{padding:0}
       const profileCompletedPurchasesEl = root.querySelector(&quot;[data-profile-completed-purchases]&quot;);
       const profilePurchasesEl = root.querySelector(&quot;[data-profile-purchases]&quot;);
       const profileTutorialButton = root.querySelector(&quot;[data-profile-tutorial]&quot;);
+      const profileCaseTutorialButton = root.querySelector(&quot;[data-profile-case-tutorial]&quot;);
+      const profileRatingTutorialButton = root.querySelector(&quot;[data-profile-rating-tutorial]&quot;);
       const profileLevelTutorialButton = root.querySelector(&quot;[data-profile-level-tutorial]&quot;);
       const profileRefreshButton = root.querySelector(&quot;[data-profile-refresh]&quot;);
       const profileTabImage = root.querySelector(&quot;[data-profile-tab-image]&quot;);
@@ -8269,17 +8472,21 @@ html&gt;body{padding:0}
       //
       // Заголовок, текст и кнопку ниже можно свободно редактировать.
       // Переносы строк внутри UPDATE_NOTICE_TEXT сохраняются.
-      const GAME_VERSION = &quot;5.0.1 OPEN BETA&quot;;
+      const GAME_VERSION = &quot;5.1 OPEN BETA&quot;;
       const ECONOMY_RESET_KEY = &quot;economy-reset-0.1.1-beta-purchase-limit-fix-2026-07-23&quot;;
-      const UPDATE_NOTICE_KEY = &quot;update-5.0.1-open-beta-cases-news-2026-07-25&quot;;
+      const UPDATE_NOTICE_KEY = &quot;update-5.1-open-beta-case-rating-fixes-2026-07-26&quot;;
       const UPDATE_NOTICE_ENABLED = true;
-      const UPDATE_NOTICE_TITLE = &quot;Кейсы уже в игре!&quot;;
-      const UPDATE_NOTICE_TEXT = `За уровни теперь можно получать Обычные, Серебряные и Золотые кейсы.
+      const UPDATE_NOTICE_TITLE = &quot;Обновление 5.1 OPEN BETA&quot;;
+      const UPDATE_NOTICE_TEXT = `В Сладком Забеге появился Легендарный кейс со скинами, аватарками, рамками, следами и крупными наградами.
 
-Внутри каждого кейса выпадает одна случайная награда: очки, зефир, кофе, усилитель ×2 на два забега или коллекционное оформление — аватарка, рамка либо след за собачкой.
+Теперь в окне кейса видно, сколько открытий осталось до гаранта. Шансы наград упорядочены от большего к меньшему, а каждое 50-е открытие гарантирует косметику не ниже эпической редкости.
 
-Открывайте кейсы, собирайте коллекцию и выбирайте полученные награды в профиле. Подарочные и компенсационные кейсы хранятся на складе.`;
-      const UPDATE_NOTICE_BUTTON = &quot;Отлично&quot;;
+Мы также улучшили баланс скинов, отображение магазина и исправили прокрутку карточек призовых мест в рейтинге.
+
+Системные улучшения и оптимизация.`;
+      const UPDATE_NOTICE_BUTTON = &quot;Продолжить&quot;;
+      const CASE_TUTORIAL_KEY = &quot;cases-tutorial-1-2026-07-25&quot;;
+      const RATING_TUTORIAL_KEY = &quot;rating-tutorial-1-2026-07-25&quot;;
 
       // =============================================================
       // КЛИЕНТСКАЯ ЗАЩИТА ПРОГРЕССА
@@ -8346,45 +8553,49 @@ html&gt;body{padding:0}
         },
         barista: {
           id: &quot;barista&quot;, title: &quot;Бариста&quot;, image: &quot;/assets/skins/shop/barista.png&quot;,
-          points: 150000, treats: 0, coffee: 700,
-          bonus: Object.freeze({ points: 0, treats: 0, coffee: 3 }),
-          bonusLabel: &quot;На 3 кофе больше&quot;,
-          description: &quot;Если в забеге собран кофе, после финиша добавляет ещё 3.&quot;
+          points: 100000, treats: 0, coffee: 400,
+          bonus: Object.freeze({ points: 0, treats: 0, coffee: 5 }),
+          bonusLabel: &quot;+5 кофе за полноценный забег&quot;,
+          description: &quot;Начисляет 5 кофе после забега от 12 секунд и 150 очков.&quot;
         },
         strawberry: {
           id: &quot;strawberry&quot;, title: &quot;Клубничка&quot;, image: &quot;/assets/skins/shop/strawberry.png&quot;,
-          points: 300000, treats: 700, coffee: 0,
-          bonus: Object.freeze({ points: 0, treats: 3, coffee: 0 }),
-          bonusLabel: &quot;На 3 зефира больше&quot;,
-          description: &quot;Если в забеге собран зефир, после финиша добавляет ещё 3.&quot;
+          points: 180000, treats: 400, coffee: 0,
+          bonus: Object.freeze({ points: 0, treats: 5, coffee: 0 }),
+          bonusLabel: &quot;+5 зефира за полноценный забег&quot;,
+          description: &quot;Начисляет 5 зефира после забега от 12 секунд и 150 очков.&quot;
         },
         bee: {
           id: &quot;bee&quot;, title: &quot;Пчёлка&quot;, image: &quot;/assets/skins/shop/bee.png&quot;,
-          points: 600000, treats: 900, coffee: 0,
-          bonus: Object.freeze({ points: 0, treats: 5, coffee: 0 }),
-          bonusLabel: &quot;На 5 зефира больше&quot;,
-          description: &quot;Если в забеге собран зефир, после финиша добавляет ещё 5.&quot;
+          points: 350000, treats: 650, coffee: 0,
+          bonus: Object.freeze({ points: 0, treats: 8, coffee: 0 }),
+          bonusCase: Object.freeze({ caseType: &quot;small&quot;, title: &quot;Обычный кейс&quot; }),
+          bonusLabel: &quot;+8 зефира за полноценный забег&quot;,
+          description: &quot;Начисляет 8 зефира после забега от 12 секунд и 150 очков. При покупке — Обычный кейс.&quot;
         },
         sailor: {
           id: &quot;sailor&quot;, title: &quot;Морячок&quot;, image: &quot;/assets/skins/shop/sailor.png&quot;,
-          points: 1200000, treats: 0, coffee: 900,
-          bonus: Object.freeze({ points: 0, treats: 0, coffee: 5 }),
-          bonusLabel: &quot;На 5 кофе больше&quot;,
-          description: &quot;Если в забеге собран кофе, после финиша добавляет ещё 5.&quot;
+          points: 650000, treats: 0, coffee: 650,
+          bonus: Object.freeze({ points: 0, treats: 0, coffee: 8 }),
+          bonusCase: Object.freeze({ caseType: &quot;sweet&quot;, title: &quot;Серебряный кейс&quot; }),
+          bonusLabel: &quot;+8 кофе за полноценный забег&quot;,
+          description: &quot;Начисляет 8 кофе после забега от 12 секунд и 150 очков. При покупке — Серебряный кейс.&quot;
         },
         princess: {
           id: &quot;princess&quot;, title: &quot;Принцесса&quot;, image: &quot;/assets/skins/shop/princess.png&quot;,
-          points: 2400000, treats: 1100, coffee: 1100,
-          bonus: Object.freeze({ points: 60, treats: 6, coffee: 6 }),
-          bonusLabel: &quot;+60 очков, +6 зефира и +6 кофе&quot;,
-          description: &quot;Добавляет фиксированный бонус к каждой собранной награде после забега.&quot;
+          points: 1300000, treats: 850, coffee: 850,
+          bonus: Object.freeze({ points: 120, treats: 10, coffee: 10 }),
+          bonusCase: Object.freeze({ caseType: &quot;gold&quot;, title: &quot;Золотой кейс&quot; }),
+          bonusLabel: &quot;+120 очков, +10 зефира и +10 кофе&quot;,
+          description: &quot;Бонус за каждый полноценный забег. При покупке — Золотой кейс.&quot;
         },
         angel: {
           id: &quot;angel&quot;, title: &quot;Ангелок&quot;, image: &quot;/assets/skins/shop/angel.png&quot;,
-          points: 4800000, treats: 1250, coffee: 1250,
-          bonus: Object.freeze({ points: 70, treats: 7, coffee: 7 }),
-          bonusLabel: &quot;+70 очков, +7 зефира и +7 кофе&quot;,
-          description: &quot;Максимальный фиксированный бонус к каждой собранной награде после забега.&quot;
+          points: 2400000, treats: 1000, coffee: 1000,
+          bonus: Object.freeze({ points: 200, treats: 12, coffee: 12 }),
+          bonusCase: Object.freeze({ caseType: &quot;legendary&quot;, title: &quot;Легендарный кейс&quot; }),
+          bonusLabel: &quot;+200 очков, +12 зефира и +12 кофе&quot;,
+          description: &quot;Максимальный бонус за полноценный забег. При покупке — Легендарный кейс.&quot;
         }
       };
       const defaultSkinPrices = Object.freeze(Object.fromEntries(
@@ -8424,14 +8635,16 @@ html&gt;body{padding:0}
         return dogSkinRunPortraits[currentDogSkin.id] || defaultDogRunPortraitSrc();
       }
       const skinPortraitPreloadCache = new Map();
-      function preloadSkinPortraitImages() {
-        for (const src of Object.values(dogSkinRunPortraits)) {
-          if (!src || skinPortraitPreloadCache.has(src)) continue;
-          const img = new Image();
-          img.decoding = &quot;async&quot;;
-          img.src = src;
-          skinPortraitPreloadCache.set(src, img);
-        }
+      function ensureSkinPortraitImage(src = currentDogRunPortraitSrc()) {
+        const normalizedSrc = String(src || &quot;&quot;);
+        if (!normalizedSrc) return null;
+        const cached = skinPortraitPreloadCache.get(normalizedSrc);
+        if (cached) return cached;
+        const img = new Image();
+        img.decoding = &quot;async&quot;;
+        img.src = normalizedSrc;
+        skinPortraitPreloadCache.set(normalizedSrc, img);
+        return img;
       }
       function applyDogRunPortrait(img, requestedSrc = currentDogRunPortraitSrc()) {
         if (!img) return;
@@ -8467,11 +8680,13 @@ html&gt;body{padding:0}
         return `&lt;img class=&quot;leaderboard-modal-hero&quot; src=&quot;${LEADERBOARD_MODAL_IMAGE}&quot; alt=&quot;Зефи с кубком рейтинга&quot;&gt;`;
       }
       function leaderboardRewardMarkup(reward) {
-        const amount = Number(reward?.amount || 0);
-        const type = String(reward?.type || &quot;coffee&quot;);
-        const amountLabel = type === &quot;coffee&quot;
-          ? `${amount} кофе`
-          : String(reward?.title || &quot;Сезонная награда&quot;);
+        const amount = Math.max(1, Number(reward?.amount || 1));
+        const type = String(reward?.type || &quot;coffee&quot;).toLowerCase();
+        const fallbackTitle = type === &quot;coffee&quot; ? `${amount} кофе`
+          : type === &quot;points&quot; ? `${amount} очков`
+            : type === &quot;treats&quot; || type === &quot;marshmallow&quot; ? `${amount} зефира`
+              : &quot;Сезонная награда&quot;;
+        const amountLabel = String(reward?.title || fallbackTitle);
         const fallbackCoffee = assetSources.shopCoffee || assetSources.iconCoffee || &quot;&quot;;
         let visual = &quot;&quot;;
         if (type === &quot;coffee&quot; &amp;&amp; fallbackCoffee) {
@@ -8479,11 +8694,12 @@ html&gt;body{padding:0}
           visual = `&lt;span class=&quot;leaderboard-reward-visual leaderboard-reward-cups&quot; aria-hidden=&quot;true&quot;&gt;&lt;img src=&quot;${src}&quot; alt=&quot;&quot;&gt;&lt;img src=&quot;${src}&quot; alt=&quot;&quot;&gt;&lt;img src=&quot;${src}&quot; alt=&quot;&quot;&gt;&lt;/span&gt;`;
         } else {
           const icon = String(reward?.imageUrl || &quot;&quot;);
+          const iconClass = type === &quot;case&quot; ? &quot;leaderboard-reward-icon leaderboard-reward-icon--case&quot; : &quot;leaderboard-reward-icon&quot;;
           visual = icon
-            ? `&lt;span class=&quot;leaderboard-reward-visual&quot;&gt;&lt;img class=&quot;leaderboard-reward-icon&quot; src=&quot;${leaderboardEscape(icon)}&quot; alt=&quot;&quot;&gt;&lt;/span&gt;`
+            ? `&lt;span class=&quot;leaderboard-reward-visual&quot;&gt;&lt;img class=&quot;${iconClass}&quot; src=&quot;${leaderboardEscape(icon)}&quot; alt=&quot;${leaderboardEscape(amountLabel)}&quot;&gt;&lt;/span&gt;`
             : `&lt;span class=&quot;leaderboard-reward-visual&quot; aria-hidden=&quot;true&quot;&gt;🎁&lt;/span&gt;`;
         }
-        return `&lt;span class=&quot;leaderboard-reward-line&quot;&gt;${visual}&lt;strong class=&quot;leaderboard-reward-amount leaderboard-reward-amount--fixed&quot;&gt;${leaderboardEscape(amountLabel)}&lt;/strong&gt;&lt;/span&gt;`;
+        return `&lt;span class=&quot;leaderboard-reward-line&quot; data-reward-type=&quot;${leaderboardEscape(type)}&quot;&gt;${visual}&lt;strong class=&quot;leaderboard-reward-amount leaderboard-reward-amount--fixed&quot;&gt;${leaderboardEscape(amountLabel)}&lt;/strong&gt;&lt;/span&gt;`;
       }
       function syncDogPortraits(scope = root) {
         const src = currentDogRunPortraitSrc() || defaultDogRunPortraitSrc();
@@ -8512,6 +8728,7 @@ html&gt;body{padding:0}
         const requested = String(skinId || &quot;default&quot;);
         const previousSkinId = currentDogSkin.id;
         currentDogSkin.id = SKIN_CATALOG[requested] &amp;&amp; skinIsOwned(requested) ? requested : &quot;default&quot;;
+        ensureSkinPortraitImage(currentDogRunPortraitSrc());
         syncDogPortraits();
         syncDogAvatar();
         if (persist &amp;&amp; currentDogSkin.id !== previousSkinId &amp;&amp; currentDogSkin.id !== &quot;default&quot;) {
@@ -8520,6 +8737,7 @@ html&gt;body{padding:0}
         if (persist) {
           saveProgress();
           renderSkinsShop();
+          void pushPlayerAppearanceSnapshot();
           if (!state.running) requestAnimationFrame(draw);
         }
       }
@@ -8529,24 +8747,33 @@ html&gt;body{padding:0}
         if (assetSources[key]) img.src = assetSources[key];
       }
       setShopCloseActive(false);
-      preloadSkinPortraitImages();
+      ensureSkinPortraitImage(currentDogRunPortraitSrc());
       syncDogPortraits();
       syncDogAvatar();
-      const skinPreviewPreloadCache = new Map();
-      function preloadSkinPreviewImages() {
-        for (const skin of Object.values(SKIN_CATALOG)) {
-          if (!skin.image || skinPreviewPreloadCache.has(skin.image)) continue;
-          const img = new Image();
-          img.decoding = &quot;async&quot;;
-          img.src = skin.image;
-          skinPreviewPreloadCache.set(skin.image, img);
-        }
-      }
-      preloadSkinPreviewImages();
       let gameplayStateReady = false;
       const assets = {};
-      for (const [name, src] of Object.entries(assetSources)) {
+      // Загружаем в canvas только изображения, которые действительно рисуются в забеге.
+      // Остальные UI-изображения остаются в assetSources и загружаются своими &lt;img&gt;
+      // только тогда, когда соответствующий экран реально используется.
+      const GAMEPLAY_CANVAS_ASSET_KEYS = Object.freeze([
+        &quot;avatar&quot;,
+        &quot;cafeBackground&quot;,
+        &quot;roadStrip&quot;,
+        &quot;stool&quot;,
+        &quot;flowersTall&quot;,
+        &quot;itemShadow&quot;,
+        &quot;pouf&quot;,
+        &quot;tablePink&quot;,
+        &quot;pillowObstacle&quot;,
+        &quot;vaseObstacle&quot;,
+        &quot;marshmallow&quot;,
+        &quot;coffeePickup&quot;
+      ]);
+      for (const name of GAMEPLAY_CANVAS_ASSET_KEYS) {
+        const src = assetSources[name];
+        if (!src) continue;
         assets[name] = new Image();
+        assets[name].decoding = &quot;async&quot;;
         assets[name].src = src;
         assets[name].addEventListener(&quot;load&quot;, () =&gt; {
           if (gameplayStateReady &amp;&amp; !state.running) draw();
@@ -8562,6 +8789,9 @@ html&gt;body{padding:0}
         angel: Object.freeze({ stand: &quot;/assets/skins/gameplay/angel/stand.png&quot;, run1: &quot;/assets/skins/gameplay/angel/run1.png&quot;, run2: &quot;/assets/skins/gameplay/angel/run2.png&quot;, run3: &quot;/assets/skins/gameplay/angel/run3.png&quot;, run4: &quot;/assets/skins/gameplay/angel/run4.png&quot;, jump: &quot;/assets/skins/gameplay/angel/jump.png&quot; })
       });
       const gameplayDogAssets = {};
+      // В забеге реально используются только эти четыре состояния.
+      // run3/run4 остаются в файлах проекта, но не декодируются браузером без необходимости.
+      const GAMEPLAY_DOG_REQUIRED_STATES = Object.freeze([&quot;stand&quot;, &quot;run1&quot;, &quot;run2&quot;, &quot;jump&quot;]);
       function queueGameplayDogSprite(skinId, stateName, src) {
         if (!gameplayDogAssets[skinId]) gameplayDogAssets[skinId] = {};
         const img = new Image();
@@ -8588,8 +8818,9 @@ html&gt;body{padding:0}
         if (gameplayDogSpriteRequests.has(normalizedSkinId)) return;
         gameplayDogSpriteRequests.add(normalizedSkinId);
         const states = GAMEPLAY_SKIN_SPRITES[normalizedSkinId] || GAMEPLAY_SKIN_SPRITES.default;
-        for (const [stateName, src] of Object.entries(states)) {
-          queueGameplayDogSprite(normalizedSkinId, stateName, src);
+        for (const stateName of GAMEPLAY_DOG_REQUIRED_STATES) {
+          const src = states[stateName];
+          if (src) queueGameplayDogSprite(normalizedSkinId, stateName, src);
         }
       }
       function preloadGameplayDogSprites() {
@@ -8657,13 +8888,16 @@ html&gt;body{padding:0}
         },
         tutorialCompleted: false,
         profileTutorialCompleted: false,
+        caseTutorialSeenKey: &quot;&quot;,
+        ratingTutorialSeenKey: &quot;&quot;,
         soundEnabled: true,
         musicEnabled: true,
         appliedResetPlanIds: [],
         appliedSeasonRewardIds: [],
         ownedSkins: [&quot;default&quot;],
         caseOpenedLevels: [],
-        caseGiftedCases: { small: 0, sweet: 0, gold: 0 },
+        caseGiftedCases: { small: 0, sweet: 0, gold: 0, legendary: 0 },
+        caseLegendaryPityCounter: 0,
         caseBoosters: { points: 0, treats: 0, coffee: 0 },
         activeCaseBooster: { type: &quot;&quot;, runsLeft: 0 },
         caseOwnedAvatars: [],
@@ -9092,6 +9326,7 @@ html&gt;body{padding:0}
       // points — очки, treats — зефир, coffee — чашки кофе.
       const shopProducts = {
         zefir: {
+          enabled: true,
           title: &quot;Фирменный зефир&quot;,
           description: &quot;Самый воздушный зефир для гостей кафе «Зефирок».&quot;,
           points: 40000,
@@ -9099,6 +9334,7 @@ html&gt;body{padding:0}
           image: &quot;shopMarshmallowAssortment&quot;
         },
         americano: {
+          enabled: true,
           title: &quot;Американо&quot;,
           description: &quot;Бодрящий кофе с насыщенным вкусом для отличного настроения.&quot;,
           points: 65000,
@@ -9106,13 +9342,69 @@ html&gt;body{padding:0}
           image: &quot;shopAmericano&quot;
         },
         cappuccino: {
+          enabled: true,
           title: &quot;Капучино&quot;,
           description: &quot;Нежный кофе с воздушной молочной пенкой и мягким сливочным вкусом.&quot;,
           points: 75000,
           coffee: 450,
           image: &quot;shopCappuccino&quot;
+        },
+        &quot;case-small&quot;: {
+          enabled: true,
+          title: &quot;Обычный кейс&quot;,
+          description: &quot;Одна случайная награда. Кейс сразу попадёт в профиль, в раздел «Склад кейсов».&quot;,
+          points: 10000,
+          treats: 100,
+          coffee: 100,
+          image: &quot;caseSmallClosed&quot;,
+          kind: &quot;case&quot;,
+          caseType: &quot;small&quot;,
+          fixedPrice: true
+        },
+        &quot;case-sweet&quot;: {
+          enabled: true,
+          title: &quot;Серебряный кейс&quot;,
+          description: &quot;Одна случайная награда с улучшенными шансами. Кейс сразу попадёт на склад.&quot;,
+          points: 10000,
+          treats: 100,
+          coffee: 100,
+          image: &quot;caseSweetClosed&quot;,
+          kind: &quot;case&quot;,
+          caseType: &quot;sweet&quot;,
+          fixedPrice: true
+        },
+        &quot;case-gold&quot;: {
+          enabled: true,
+          title: &quot;Золотой кейс&quot;,
+          description: &quot;Одна случайная награда с лучшими шансами. Кейс сразу попадёт на склад.&quot;,
+          points: 10000,
+          treats: 100,
+          coffee: 100,
+          image: &quot;caseGoldClosed&quot;,
+          kind: &quot;case&quot;,
+          caseType: &quot;gold&quot;,
+          fixedPrice: true
+        },
+        &quot;case-legendary&quot;: {
+          enabled: true,
+          title: &quot;Легендарный кейс&quot;,
+          description: &quot;Премиальный кейс: косметика, крупная игровая валюта и сверхредкий шанс получить настоящий зефир или кофе.&quot;,
+          points: 600000,
+          treats: 600,
+          coffee: 600,
+          image: &quot;caseLegendaryClosed&quot;,
+          kind: &quot;case&quot;,
+          caseType: &quot;legendary&quot;,
+          fixedPrice: true
         }
       };
+
+      function shopProductOwnedCount(id, product = shopProducts[id]) {
+        if (product?.kind === &quot;case&quot;) {
+          return sanitizeAdminNumber(state.caseGiftedCases?.[product.caseType] || 0);
+        }
+        return sanitizeAdminNumber(state.inventory?.[id] || 0);
+      }
 
 
       // =============================================================
@@ -9148,6 +9440,7 @@ html&gt;body{padding:0}
       const CASE_API_STATE_PATH = &quot;/api/cases/state&quot;;
       const CASE_API_OPEN_PATH = &quot;/api/cases/open&quot;;
       const CASE_API_OPEN_GRANTED_PATH = &quot;/api/cases/open-granted&quot;;
+      const CASE_API_PURCHASE_PATH = &quot;/api/cases/purchase&quot;;
       const CASE_API_ACTIVATE_PATH = &quot;/api/cases/activate&quot;;
       const CASE_API_EQUIP_PATH = &quot;/api/cases/equip&quot;;
       const CASE_API_CONSUME_RUN_PATH = &quot;/api/cases/consume-run&quot;;
@@ -9158,12 +9451,16 @@ html&gt;body{padding:0}
       const ADMIN_SKIN_PRICES_PATH = &quot;/api/admin/skins/prices&quot;;
       const ADMIN_CASE_GRANT_PATH = &quot;/api/admin/cases/grant&quot;;
       const SKIN_CONFIG_PATH = &quot;/api/skins/config&quot;;
+      const SKIN_BONUS_CASE_PATH = &quot;/api/skins/bonus-case&quot;;
+      const SKIN_PURCHASE_PATH = &quot;/api/skins/purchase&quot;;
       const LEADERBOARD_WAITING_IMAGE = &quot;/assets/rating/season-waiting-card.png&quot;;
       const LEADERBOARD_MODAL_IMAGE = &quot;/assets/rating/season-rating-modal.png&quot;;
       const LEADERBOARD_PENDING_RUN_KEY = &quot;zefirok-pending-leaderboard-run-v1&quot;;
       const LEADERBOARD_REFRESH_INTERVAL_MS = 30000;
       let leaderboardData = null;
       let leaderboardMode = &quot;season&quot;;
+      let skinBonusCaseSyncInFlight = false;
+      let skinBonusCaseSessionDone = false;
       const leaderboardCache = { season: null, all_time: null };
       const leaderboardRequestSerial = { season: 0, all_time: 0 };
       const leaderboardRefreshInFlight = { season: false, all_time: false };
@@ -9185,7 +9482,7 @@ html&gt;body{padding:0}
         return {
           level,
           caseType,
-          title: caseType === &quot;gold&quot; ? &quot;Золотой кейс&quot; : caseType === &quot;sweet&quot; ? &quot;Серебряный кейс&quot; : &quot;Обычный кейс&quot;,
+          title: caseType === &quot;legendary&quot; ? &quot;Легендарный кейс&quot; : caseType === &quot;gold&quot; ? &quot;Золотой кейс&quot; : caseType === &quot;sweet&quot; ? &quot;Серебряный кейс&quot; : &quot;Обычный кейс&quot;,
           slots: 1
         };
       }));
@@ -9201,6 +9498,10 @@ html&gt;body{padding:0}
         gold: Object.freeze({
           closed: &quot;/assets/cases/gold_closed.png&quot;,
           open: &quot;/assets/cases/gold_open.png&quot;
+        }),
+        legendary: Object.freeze({
+          closed: &quot;/assets/cases/legendary_closed.png&quot;,
+          open: &quot;/assets/cases/legendary_open.png&quot;
         })
       });
       for (const caseImages of Object.values(CASE_IMAGE_CATALOG)) {
@@ -9210,8 +9511,17 @@ html&gt;body{padding:0}
           preload.src = src;
         }
       }
+      assetSources.caseSmallClosed = CASE_IMAGE_CATALOG.small.closed;
+      assetSources.caseSweetClosed = CASE_IMAGE_CATALOG.sweet.closed;
+      assetSources.caseGoldClosed = CASE_IMAGE_CATALOG.gold.closed;
+      assetSources.caseLegendaryClosed = CASE_IMAGE_CATALOG.legendary.closed;
       const CASE_AVATAR_CATALOG = Object.freeze({
         royal: { title: &quot;Королевская&quot;, rarity: &quot;Легендарная&quot;, rarityClass: &quot;legendary&quot;, src: &quot;/assets/cases/avatars/AE100D7E-3441-428C-B67F-C7A46B23F712.PNG&quot; },
+        legendary_avatar_1: { title: &quot;Королевское Сердце&quot;, rarity: &quot;Легендарная&quot;, rarityClass: &quot;legendary&quot;, legendaryOnly: true, isNew: true, src: &quot;/assets/cases/avatars/legendary_avatarka_1.png&quot; },
+        legendary_avatar_2: { title: &quot;Лунная Принцесса&quot;, rarity: &quot;Легендарная&quot;, rarityClass: &quot;legendary&quot;, legendaryOnly: true, isNew: true, src: &quot;/assets/cases/avatars/legendary_avatarka_2.png&quot; },
+        legendary_avatar_3: { title: &quot;Клубничная Королева&quot;, rarity: &quot;Легендарная&quot;, rarityClass: &quot;legendary&quot;, legendaryOnly: true, isNew: true, src: &quot;/assets/cases/avatars/legendary_avatarka_3.png&quot; },
+        legendary_avatar_4: { title: &quot;Кофейная Герцогиня&quot;, rarity: &quot;Легендарная&quot;, rarityClass: &quot;legendary&quot;, legendaryOnly: true, isNew: true, src: &quot;/assets/cases/avatars/legendary_avatarka_4.png&quot; },
+        legendary_avatar_5: { title: &quot;Золотая Любимица&quot;, rarity: &quot;Легендарная&quot;, rarityClass: &quot;legendary&quot;, legendaryOnly: true, isNew: true, src: &quot;/assets/cases/avatars/legendary_avatarka_5.png&quot; },
         champion: { title: &quot;Чемпион&quot;, rarity: &quot;Мифическая&quot;, rarityClass: &quot;mythic&quot;, src: &quot;/assets/cases/avatars/E8A3AFDB-BCAC-4623-BB8B-C7C429799061.PNG&quot; },
         winter_cocoa: { title: &quot;Зимнее какао&quot;, rarity: &quot;Обычная&quot;, rarityClass: &quot;common&quot;, src: &quot;/assets/cases/avatars/9FEC3750-A0ED-4053-8D12-EABF7798D914.PNG&quot; },
         birthday_gift: { title: &quot;Праздничный подарок&quot;, rarity: &quot;Редкая&quot;, rarityClass: &quot;rare&quot;, src: &quot;/assets/cases/avatars/64D37092-96E1-48BC-9BC5-BCBE99E15E02.PNG&quot; },
@@ -9231,15 +9541,60 @@ html&gt;body{padding:0}
         sleep: { title: &quot;Сладкие сны&quot;, rarity: &quot;Эпическая&quot;, rarityClass: &quot;epic&quot;, src: &quot;/assets/rating/frames/profile/ramka_profile_sleep.png&quot; },
         lovers: { title: &quot;Влюблённые&quot;, rarity: &quot;Эпическая&quot;, rarityClass: &quot;epic&quot;, src: &quot;/assets/rating/frames/profile/ramka_profile_lovers.png&quot; },
         elite: { title: &quot;Элитная&quot;, rarity: &quot;Мифическая&quot;, rarityClass: &quot;mythic&quot;, src: &quot;/assets/rating/frames/profile/ramka_profile_elita.png&quot; },
-        princess: { title: &quot;Принцесса&quot;, rarity: &quot;Легендарная&quot;, rarityClass: &quot;legendary&quot;, src: &quot;/assets/rating/frames/profile/ramka_profile_princess.png&quot; }
+        princess: { title: &quot;Принцесса&quot;, rarity: &quot;Легендарная&quot;, rarityClass: &quot;legendary&quot;, src: &quot;/assets/rating/frames/profile/ramka_profile_princess.png&quot; },
+        legendary_frame_1: { title: &quot;Корона Сердец&quot;, rarity: &quot;Легендарная&quot;, rarityClass: &quot;legendary&quot;, legendaryOnly: true, isNew: true, src: &quot;/assets/rating/frames/profile/legendary_ramka_1.png&quot; },
+        legendary_frame_2: { title: &quot;Лунное Сияние&quot;, rarity: &quot;Легендарная&quot;, rarityClass: &quot;legendary&quot;, legendaryOnly: true, isNew: true, src: &quot;/assets/rating/frames/profile/legendary_ramka_2.png&quot; },
+        legendary_frame_3: { title: &quot;Клубничный Дворец&quot;, rarity: &quot;Легендарная&quot;, rarityClass: &quot;legendary&quot;, legendaryOnly: true, isNew: true, src: &quot;/assets/rating/frames/profile/legendary_ramka_3.png&quot; },
+        legendary_frame_4: { title: &quot;Королевское Кафе&quot;, rarity: &quot;Легендарная&quot;, rarityClass: &quot;legendary&quot;, legendaryOnly: true, isNew: true, src: &quot;/assets/rating/frames/profile/legendary_ramka_4.png&quot; },
+        legendary_frame_5: { title: &quot;Золотой Бант&quot;, rarity: &quot;Легендарная&quot;, rarityClass: &quot;legendary&quot;, legendaryOnly: true, isNew: true, src: &quot;/assets/rating/frames/profile/legendary_ramka_5.png&quot; }
       });
       const CASE_TRAIL_CATALOG = Object.freeze({
         marshmallow: { title: &quot;Зефирный&quot;, rarity: &quot;Обычный&quot;, rarityClass: &quot;common&quot;, src: &quot;/assets/cases/trails/BBFD9E7E-393D-4B0A-B990-CC93BFCFB505.PNG&quot; },
         coffee: { title: &quot;Кофейный&quot;, rarity: &quot;Редкий&quot;, rarityClass: &quot;rare&quot;, src: &quot;/assets/cases/trails/244230CD-1043-4087-A5AC-E5BEBF949C22.PNG&quot; },
         marshmallow_splash: { title: &quot;Зефирный всплеск&quot;, rarity: &quot;Очень редкий&quot;, rarityClass: &quot;superrare&quot;, src: &quot;/assets/cases/trails/7F194357-28F3-4CC0-BD09-D4937777E361.PNG&quot; },
         strawberry: { title: &quot;Любовный&quot;, rarity: &quot;Эпический&quot;, rarityClass: &quot;epic&quot;, src: &quot;/assets/cases/trails/6A8C47A2-F099-40A9-8270-A676725538D8.PNG&quot; },
-        gold: { title: &quot;Звёздный&quot;, rarity: &quot;Мифический&quot;, rarityClass: &quot;mythic&quot;, src: &quot;/assets/cases/trails/1C180321-0C98-48DD-9B43-0F6E5D3B61EA.PNG&quot; }
+        gold: { title: &quot;Звёздный&quot;, rarity: &quot;Мифический&quot;, rarityClass: &quot;mythic&quot;, src: &quot;/assets/cases/trails/1C180321-0C98-48DD-9B43-0F6E5D3B61EA.PNG&quot; },
+        legendary_trail_1: { title: &quot;Крылатое Сияние&quot;, rarity: &quot;Легендарный&quot;, rarityClass: &quot;legendary&quot;, legendaryOnly: true, isNew: true, src: &quot;/assets/cases/trails/legendary_trail_1.png&quot; },
+        legendary_trail_2: { title: &quot;Облачные Лапки&quot;, rarity: &quot;Легендарный&quot;, rarityClass: &quot;legendary&quot;, legendaryOnly: true, isNew: true, src: &quot;/assets/cases/trails/legendary_trail_2.png&quot; },
+        legendary_trail_3: { title: &quot;Золотой Кофейный След&quot;, rarity: &quot;Легендарный&quot;, rarityClass: &quot;legendary&quot;, legendaryOnly: true, isNew: true, src: &quot;/assets/cases/trails/legendary_trail_3.png&quot; },
+        legendary_trail_4: { title: &quot;Клубничные Лапки&quot;, rarity: &quot;Легендарный&quot;, rarityClass: &quot;legendary&quot;, legendaryOnly: true, isNew: true, src: &quot;/assets/cases/trails/legendary_trail_4.png&quot; },
+        legendary_trail_5: { title: &quot;Королевские Лапки&quot;, rarity: &quot;Легендарный&quot;, rarityClass: &quot;legendary&quot;, legendaryOnly: true, isNew: true, src: &quot;/assets/cases/trails/legendary_trail_5.png?v=45&quot; }
       });
+      const CASE_SKIN_CATALOG = Object.freeze({
+        barista: { title: &quot;Бариста&quot;, rarity: &quot;Редкий&quot;, rarityClass: &quot;rare&quot;, src: dogSkinRunPortraits.barista },
+        strawberry: { title: &quot;Клубничка&quot;, rarity: &quot;Редкий&quot;, rarityClass: &quot;rare&quot;, src: dogSkinRunPortraits.strawberry },
+        bee: { title: &quot;Пчёлка&quot;, rarity: &quot;Очень редкий&quot;, rarityClass: &quot;superrare&quot;, src: dogSkinRunPortraits.bee },
+        sailor: { title: &quot;Морячок&quot;, rarity: &quot;Эпический&quot;, rarityClass: &quot;epic&quot;, src: dogSkinRunPortraits.sailor },
+        princess: { title: &quot;Принцесса&quot;, rarity: &quot;Мифическая&quot;, rarityClass: &quot;mythic&quot;, src: dogSkinRunPortraits.princess },
+        angel: { title: &quot;Ангелок&quot;, rarity: &quot;Легендарный&quot;, rarityClass: &quot;legendary&quot;, src: dogSkinRunPortraits.angel }
+      });
+      const CASE_PHYSICAL_REWARD_CATALOG = Object.freeze({
+        zefir: { title: &quot;Фирменный зефир&quot;, imageKey: &quot;shopMarshmallowAssortment&quot;, chance: 0.015 },
+        americano: { title: &quot;Американо&quot;, imageKey: &quot;shopAmericano&quot;, chance: 0.015 },
+        cappuccino: { title: &quot;Капучино&quot;, imageKey: &quot;shopCappuccino&quot;, chance: 0.015 }
+      });
+      const CASE_PHYSICAL_TOTAL_CHANCE = 0.045;
+      let CASE_LIVEOPS = { cases: {}, content: {}, version: 0 };
+      let CASE_LEGENDARY_GUARANTEE = 50;
+      const CASE_REWARD_CHANCES = Object.freeze({
+        small: Object.freeze({ treats: 40.5, coffee: 40.5, points: 16.5, booster: 2.5, skin: 0, avatar: 0, frame: 0, trail: 0, physical: 0 }),
+        sweet: Object.freeze({ treats: 30, coffee: 30, points: 23.5, booster: 12, skin: 0, avatar: 3, frame: 1, trail: 0.5, physical: 0 }),
+        gold: Object.freeze({ treats: 25, coffee: 25, points: 26, booster: 15, skin: 0, avatar: 5, frame: 3, trail: 1, physical: 0 }),
+        legendary: Object.freeze({ treats: 25, coffee: 25, points: 39.955, booster: 0, skin: 0.5, avatar: 2, frame: 3, trail: 4.5, physical: CASE_PHYSICAL_TOTAL_CHANCE })
+      });
+      const CASE_REWARD_RANGES = Object.freeze({
+        small: Object.freeze({ treats: [10, 20], coffee: [10, 20], points: [500, 1000] }),
+        sweet: Object.freeze({ treats: [20, 40], coffee: [20, 40], points: [1000, 2500] }),
+        gold: Object.freeze({ treats: [40, 70], coffee: [40, 70], points: [2500, 5000] }),
+        legendary: Object.freeze({ treats: [250, 1200], coffee: [250, 1200], points: [35000, 150000] })
+      });
+      const CASE_COSMETIC_WEIGHTS = Object.freeze({
+        avatar: Object.freeze({ royal: 2, legendary_avatar_1: 2, legendary_avatar_2: 2, legendary_avatar_3: 2, legendary_avatar_4: 2, legendary_avatar_5: 2, champion: 3, winter_cocoa: 30, birthday_gift: 20, sweet_dreams: 9, strawberry_cake: 9, coffee_barista: 9, marshmallow_cloud: 6, pink_hearts: 6, sakura: 6 }),
+        skin: Object.freeze({ barista: 26, strawberry: 24, bee: 20, sailor: 14, princess: 10, angel: 6 }),
+        frame: Object.freeze({ heart: 32, marshmallow: 16, coffee: 16, strawberry: 14, winter: 5, sleep: 5, lovers: 5, elite: 5, princess: 2, legendary_frame_1: 2, legendary_frame_2: 2, legendary_frame_3: 2, legendary_frame_4: 2, legendary_frame_5: 2 }),
+        trail: Object.freeze({ marshmallow: 45, coffee: 25, marshmallow_splash: 15, strawberry: 10, gold: 5, legendary_trail_1: 2, legendary_trail_2: 2, legendary_trail_3: 2, legendary_trail_4: 2, legendary_trail_5: 2 })
+      });
+      const CASE_DUPLICATE_POINTS = Object.freeze({ skin: 150000, avatar: 500, frame: 1500, trail: 5000 });
       const CASE_TRAIL_IMAGES = Object.create(null);
       for (const [trailId, trailItem] of Object.entries(CASE_TRAIL_CATALOG)) {
         const image = new Image();
@@ -9464,8 +9819,90 @@ html&gt;body{padding:0}
         }
       ];
 
+      const caseTutorialSteps = [
+        {
+          title: &quot;Кейсы уже в игре!&quot;,
+          description: &quot;В кейсе находится одна случайная награда. Чем ценнее кейс, тем выше шанс получить редкое оформление или крупную награду.&quot;,
+          extra: &quot;В игре есть Обычные, Серебряные и Золотые кейсы. Все полученные кейсы сохраняются в профиле.&quot;,
+          visual: () =&gt; `
+            &lt;div class=&quot;tutorial-case-row&quot;&gt;
+              &lt;span class=&quot;tutorial-case-card&quot;&gt;&lt;img src=&quot;${CASE_IMAGE_CATALOG.small.closed}&quot; alt=&quot;&quot;&gt;&lt;strong&gt;Обычный&lt;/strong&gt;&lt;small&gt;награда за уровни&lt;/small&gt;&lt;/span&gt;
+              &lt;span class=&quot;tutorial-case-card&quot;&gt;&lt;img src=&quot;${CASE_IMAGE_CATALOG.sweet.closed}&quot; alt=&quot;&quot;&gt;&lt;strong&gt;Серебряный&lt;/strong&gt;&lt;small&gt;ценнее обычного&lt;/small&gt;&lt;/span&gt;
+              &lt;span class=&quot;tutorial-case-card&quot;&gt;&lt;img src=&quot;${CASE_IMAGE_CATALOG.gold.closed}&quot; alt=&quot;&quot;&gt;&lt;strong&gt;Золотой&lt;/strong&gt;&lt;small&gt;самый редкий&lt;/small&gt;&lt;/span&gt;
+            &lt;/div&gt;`
+        },
+        {
+          title: &quot;Как получать кейсы&quot;,
+          description: &quot;Главный способ — повышать уровень профиля. Кейсы также могут приходить как подарки или компенсации от команды игры.&quot;,
+          extra: &quot;В будущем кейсы, возможно, появятся и в магазине. Если это произойдёт, мы отдельно сообщим об этом в новостях.&quot;,
+          visual: () =&gt; `
+            &lt;div class=&quot;tutorial-case-source-list&quot;&gt;
+              &lt;span class=&quot;tutorial-case-source&quot;&gt;&lt;b&gt;⬆&lt;/b&gt;&lt;span&gt;&lt;strong&gt;Повышай уровень&lt;/strong&gt;&lt;span&gt;За уровни выдаются Обычные, Серебряные и Золотые кейсы.&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
+              &lt;span class=&quot;tutorial-case-source&quot;&gt;&lt;b&gt;🎁&lt;/b&gt;&lt;span&gt;&lt;strong&gt;Подарки и компенсации&lt;/strong&gt;&lt;span&gt;Команда может начислить кейс прямо на твой склад.&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
+              &lt;span class=&quot;tutorial-case-source&quot;&gt;&lt;b&gt;🛍&lt;/b&gt;&lt;span&gt;&lt;strong&gt;Магазин — возможно позже&lt;/strong&gt;&lt;span&gt;Продажа кейсов пока не гарантирована.&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
+            &lt;/div&gt;`
+        },
+        {
+          title: &quot;Что может выпасть&quot;,
+          description: &quot;Рулетка выбирает одну награду: очки, зефир, кофе, усилитель ×2 или коллекционное оформление.&quot;,
+          extra: &quot;Аватарки, рамки и следы остаются в коллекции навсегда. Усилитель ×2 действует на два завершённых забега.&quot;,
+          visual: () =&gt; `
+            &lt;div class=&quot;tutorial-case-rewards&quot;&gt;
+              &lt;span class=&quot;tutorial-case-reward&quot;&gt;&lt;img src=&quot;${CASE_AVATAR_CATALOG.royal.src}&quot; alt=&quot;&quot;&gt;&lt;strong&gt;Аватарка&lt;/strong&gt;&lt;/span&gt;
+              &lt;span class=&quot;tutorial-case-reward&quot;&gt;&lt;img src=&quot;${CASE_FRAME_CATALOG.princess.src}&quot; alt=&quot;&quot;&gt;&lt;strong&gt;Рамка&lt;/strong&gt;&lt;/span&gt;
+              &lt;span class=&quot;tutorial-case-reward&quot;&gt;&lt;img src=&quot;${CASE_TRAIL_CATALOG.gold.src}&quot; alt=&quot;&quot;&gt;&lt;strong&gt;След&lt;/strong&gt;&lt;/span&gt;
+              &lt;span class=&quot;tutorial-case-reward&quot;&gt;&lt;img src=&quot;${CASE_BOOSTER_CATALOG.points.src}&quot; alt=&quot;&quot;&gt;&lt;strong&gt;Усилитель&lt;/strong&gt;&lt;/span&gt;
+            &lt;/div&gt;`
+        },
+        {
+          title: &quot;Где открыть кейс&quot;,
+          description: &quot;Открой профиль и найди раздел «Подарки и коллекция». Все неоткрытые кейсы лежат в блоке «Склад кейсов».&quot;,
+          extra: &quot;Нажми «Открыть», дождись остановки рулетки и забери награду. Полученное оформление можно сразу выбрать ниже, в разделе «Коллекция».&quot;,
+          visual: () =&gt; `
+            &lt;div class=&quot;tutorial-case-path&quot;&gt;
+              &lt;span&gt;Профиль&lt;/span&gt;&lt;i&gt;›&lt;/i&gt;&lt;span&gt;Склад кейсов&lt;/span&gt;&lt;i&gt;›&lt;/i&gt;&lt;span&gt;Открыть&lt;/span&gt;
+            &lt;/div&gt;`
+        }
+      ];
+
+      const ratingTutorialSteps = [
+        {
+          title: &quot;Как попасть в рейтинг&quot;,
+          description: &quot;Запускай мини-игру только внутри Telegram через системную кнопку «ИГРАТЬ». При обычном открытии сайта Telegram может не передать профиль, и результат не попадёт в таблицу сразу.&quot;,
+          extra: &quot;Перед забегом убедись, что в профиле отображается твой Telegram-профиль, а не гостевой режим.&quot;,
+          visual: () =&gt; `
+            &lt;div class=&quot;tutorial-case-source-list&quot;&gt;
+              &lt;span class=&quot;tutorial-case-source&quot;&gt;&lt;b&gt;▶&lt;/b&gt;&lt;span&gt;&lt;strong&gt;Кнопка «ИГРАТЬ»&lt;/strong&gt;&lt;span&gt;Открывает игру с Telegram-авторизацией.&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
+              &lt;span class=&quot;tutorial-case-source&quot;&gt;&lt;b&gt;👤&lt;/b&gt;&lt;span&gt;&lt;strong&gt;Telegram-профиль&lt;/strong&gt;&lt;span&gt;Имя и результат привязываются к твоему аккаунту.&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
+            &lt;/div&gt;`
+        },
+        {
+          title: &quot;Выполни условия забега&quot;,
+          description: &quot;Чтобы результат был принят, продержись не менее 12 секунд и набери не менее 150 очков.&quot;,
+          extra: &quot;Слишком короткие забеги не отправляются в рейтинг. После завершения подходящего забега результат отправится автоматически.&quot;,
+          visual: () =&gt; `
+            &lt;div class=&quot;tutorial-xp-row&quot;&gt;
+              &lt;span&gt;&lt;strong&gt;12 секунд&lt;/strong&gt;минимальная длительность&lt;/span&gt;
+              &lt;span&gt;&lt;strong&gt;150 очков&lt;/strong&gt;минимальный результат&lt;/span&gt;
+              &lt;span&gt;&lt;strong&gt;Автоматически&lt;/strong&gt;отправка после забега&lt;/span&gt;
+            &lt;/div&gt;`
+        },
+        {
+          title: &quot;Сохраняется лучший результат&quot;,
+          description: &quot;В рейтинг записывается твой лучший результат. Новый забег заменит его только тогда, когда ты наберёшь больше очков.&quot;,
+          extra: &quot;В окне рейтинга можно переключаться между текущим сезоном и общим рейтингом. Если интернет временно пропал, игра попробует отправить сохранённый результат при следующем запуске через Telegram.&quot;,
+          visual: () =&gt; `
+            &lt;div class=&quot;tutorial-case-path&quot;&gt;
+              &lt;span&gt;Забег&lt;/span&gt;&lt;i&gt;›&lt;/i&gt;&lt;span&gt;Проверка&lt;/span&gt;&lt;i&gt;›&lt;/i&gt;&lt;span&gt;Лучший результат&lt;/span&gt;
+            &lt;/div&gt;`
+        }
+      ];
+
       function activeTutorialSteps() {
-        return tutorialMode === &quot;profile&quot; ? profileTutorialSteps : tutorialSteps;
+        if (tutorialMode === &quot;profile&quot;) return profileTutorialSteps;
+        if (tutorialMode === &quot;cases&quot;) return caseTutorialSteps;
+        if (tutorialMode === &quot;rating&quot;) return ratingTutorialSteps;
+        return tutorialSteps;
       }
 
       function renderTutorial() {
@@ -9486,7 +9923,7 @@ html&gt;body{padding:0}
           &lt;/div&gt;
           &lt;div class=&quot;tutorial-actions&quot;&gt;
             &lt;button class=&quot;tutorial-button&quot; data-tutorial-back type=&quot;button&quot; ${tutorialStepIndex === 0 ? &quot;disabled&quot; : &quot;&quot;}&gt;Назад&lt;/button&gt;
-            &lt;button class=&quot;tutorial-button tutorial-button--primary&quot; data-tutorial-next type=&quot;button&quot;&gt;${isLast ? (tutorialMode === &quot;profile&quot; ? &quot;Понятно&quot; : &quot;Начать забег&quot;) : &quot;Дальше&quot;}&lt;/button&gt;
+            &lt;button class=&quot;tutorial-button tutorial-button--primary&quot; data-tutorial-next type=&quot;button&quot;&gt;${isLast ? (tutorialMode === &quot;main&quot; ? &quot;Начать забег&quot; : tutorialMode === &quot;rating&quot; ? &quot;Открыть рейтинг&quot; : &quot;Понятно&quot;) : &quot;Дальше&quot;}&lt;/button&gt;
           &lt;/div&gt;`;
       }
 
@@ -9599,6 +10036,16 @@ html&gt;body{padding:0}
         openTutorialMode(automatic, startIndex);
       }
 
+      function openCaseTutorial(automatic = false, startIndex = 0) {
+        tutorialMode = &quot;cases&quot;;
+        openTutorialMode(automatic, startIndex);
+      }
+
+      function openRatingTutorial(automatic = false, startIndex = 0) {
+        tutorialMode = &quot;rating&quot;;
+        openTutorialMode(automatic, startIndex);
+      }
+
       function openTutorialMode(automatic = false, startIndex = 0) {
         if (!tutorialLayer || !tutorialContent || getAdminSecurity().locked) return;
         if (releaseLayer &amp;&amp; !releaseLayer.hidden) return;
@@ -9618,13 +10065,16 @@ html&gt;body{padding:0}
         if (!tutorialLayer) return;
         if (markCompleted) {
           if (tutorialMode === &quot;profile&quot;) state.profileTutorialCompleted = true;
+          else if (tutorialMode === &quot;cases&quot;) state.caseTutorialSeenKey = CASE_TUTORIAL_KEY;
+          else if (tutorialMode === &quot;rating&quot;) state.ratingTutorialSeenKey = RATING_TUTORIAL_KEY;
           else state.tutorialCompleted = true;
           saveProgress();
         }
         tutorialLayer.hidden = true;
         tutorialLayer.setAttribute(&quot;aria-hidden&quot;, &quot;true&quot;);
         tutorialOpenedAutomatically = false;
-        if (tutorialMode === &quot;profile&quot;) root.querySelector(&#x27;[data-tab=&quot;profile&quot;]&#x27;)?.focus();
+        if (tutorialMode === &quot;rating&quot;) leaderboardOpenButton?.focus();
+        else if (tutorialMode === &quot;profile&quot; || tutorialMode === &quot;cases&quot;) root.querySelector(&#x27;[data-tab=&quot;profile&quot;]&#x27;)?.focus();
         else tutorialOpenButton?.focus();
       }
 
@@ -9634,6 +10084,20 @@ html&gt;body{padding:0}
           saveProgress();
           closeTutorial(false);
           renderProfile();
+          return;
+        }
+        if (tutorialMode === &quot;cases&quot;) {
+          state.caseTutorialSeenKey = CASE_TUTORIAL_KEY;
+          saveProgress();
+          closeTutorial(false);
+          renderProfile();
+          return;
+        }
+        if (tutorialMode === &quot;rating&quot;) {
+          state.ratingTutorialSeenKey = RATING_TUTORIAL_KEY;
+          saveProgress();
+          closeTutorial(false);
+          openLeaderboard();
           return;
         }
         state.tutorialCompleted = true;
@@ -9654,12 +10118,16 @@ html&gt;body{padding:0}
 
       function scheduleProfileTutorialAutoOpen(delay = 300) {
         window.clearTimeout(profileTutorialAutoTimer);
-        if (state.profileTutorialCompleted || getAdminSecurity().locked || pendingReleaseNotice || (releaseLayer &amp;&amp; !releaseLayer.hidden)) return;
+        const caseTutorialPending = String(state.caseTutorialSeenKey || &quot;&quot;) !== CASE_TUTORIAL_KEY;
+        if ((!caseTutorialPending &amp;&amp; state.profileTutorialCompleted) || getAdminSecurity().locked || pendingReleaseNotice || (releaseLayer &amp;&amp; !releaseLayer.hidden)) return;
         profileTutorialAutoTimer = window.setTimeout(() =&gt; {
           const profileScreen = root.querySelector(&#x27;[data-screen=&quot;profile&quot;]&#x27;);
-          if (!state.profileTutorialCompleted &amp;&amp; profileScreen &amp;&amp; !profileScreen.hidden &amp;&amp; (!adminLayer || adminLayer.hidden)) {
-            openProfileTutorial(true);
+          if (!profileScreen || profileScreen.hidden || (adminLayer &amp;&amp; !adminLayer.hidden)) return;
+          if (String(state.caseTutorialSeenKey || &quot;&quot;) !== CASE_TUTORIAL_KEY) {
+            openCaseTutorial(true);
+            return;
           }
+          if (!state.profileTutorialCompleted) openProfileTutorial(true);
         }, delay);
       }
 
@@ -9678,13 +10146,16 @@ html&gt;body{padding:0}
       // =============================================================
 
       const defaultShopPrices = Object.fromEntries(
-        Object.entries(shopProducts).map(([id, product]) =&gt; [id, {
-          points: Number(product.points || 0),
-          treats: Number(product.treats || 0),
-          coffee: Number(product.coffee || 0)
-        }])
+        Object.entries(shopProducts)
+          .filter(([, product]) =&gt; !product.fixedPrice)
+          .map(([id, product]) =&gt; [id, {
+            points: Number(product.points || 0),
+            treats: Number(product.treats || 0),
+            coffee: Number(product.coffee || 0)
+          }])
       );
       let remoteShopPrices = {};
+      let remoteShopAssortment = {};
 
       let adminAuthenticated = false; // Не сохраняется: после перезагрузки всегда false.
       let adminAvatarTapCount = 0;
@@ -9721,6 +10192,32 @@ html&gt;body{padding:0}
           product.treats = sanitizeAdminNumber(override.treats ?? serverPrice.treats ?? defaults.treats);
           product.coffee = sanitizeAdminNumber(override.coffee ?? serverPrice.coffee ?? defaults.coffee);
         }
+        syncShopPricesFromProducts();
+        updateHud();
+      }
+
+      function applyShopAssortment() {
+        const remote = remoteShopAssortment &amp;&amp; typeof remoteShopAssortment === &quot;object&quot; ? remoteShopAssortment : {};
+        let firstEnabledId = &quot;&quot;;
+        for (const [id, product] of Object.entries(shopProducts)) {
+          const entry = remote[id] &amp;&amp; typeof remote[id] === &quot;object&quot; ? remote[id] : null;
+          if (entry) {
+            product.enabled = entry.enabled !== false &amp;&amp; Number(entry.enabled ?? 1) !== 0;
+            product.points = sanitizeAdminNumber(entry.points ?? product.points);
+            product.treats = sanitizeAdminNumber(entry.treats ?? product.treats);
+            product.coffee = sanitizeAdminNumber(entry.coffee ?? product.coffee);
+          } else {
+            product.enabled = product.enabled !== false;
+          }
+          if (product.enabled &amp;&amp; !firstEnabledId) firstEnabledId = id;
+          const card = root.querySelector(`[data-shop-card=&quot;${id}&quot;]`);
+          if (card) {
+            card.hidden = !product.enabled;
+            card.setAttribute(&quot;aria-hidden&quot;, product.enabled ? &quot;false&quot; : &quot;true&quot;);
+          }
+        }
+        if (!shopProducts[selectedProductId]?.enabled &amp;&amp; firstEnabledId) selectedProductId = firstEnabledId;
+        for (const card of shopCards) card.classList.toggle(&quot;is-active&quot;, !card.hidden &amp;&amp; card.dataset.shopCard === selectedProductId);
         syncShopPricesFromProducts();
         updateHud();
       }
@@ -9813,7 +10310,7 @@ html&gt;body{padding:0}
       }
 
       function adminPriceCardsMarkup() {
-        return Object.entries(shopProducts).map(([id, product]) =&gt; `
+        return Object.entries(shopProducts).filter(([, product]) =&gt; !product.fixedPrice).map(([id, product]) =&gt; `
           &lt;div class=&quot;admin-price-card&quot; data-admin-price-card=&quot;${id}&quot;&gt;
             &lt;strong&gt;${escapePurchaseText(product.title)}&lt;/strong&gt;
             &lt;div class=&quot;admin-price-fields&quot;&gt;
@@ -9971,7 +10468,7 @@ html&gt;body{padding:0}
           &lt;div class=&quot;admin-case-grant-card&quot;&gt;
             &lt;strong&gt;Выдать кейсы&lt;/strong&gt;
             &lt;select class=&quot;admin-input&quot; data-admin-grant-case-type&gt;
-              &lt;option value=&quot;small&quot;&gt;Обычный кейс&lt;/option&gt;&lt;option value=&quot;sweet&quot;&gt;Серебряный кейс&lt;/option&gt;&lt;option value=&quot;gold&quot;&gt;Золотой кейс&lt;/option&gt;
+              &lt;option value=&quot;small&quot;&gt;Обычный кейс&lt;/option&gt;&lt;option value=&quot;sweet&quot;&gt;Серебряный кейс&lt;/option&gt;&lt;option value=&quot;gold&quot;&gt;Золотой кейс&lt;/option&gt;&lt;option value=&quot;legendary&quot;&gt;Легендарный кейс&lt;/option&gt;
             &lt;/select&gt;
             &lt;input class=&quot;admin-input&quot; data-admin-grant-case-count inputmode=&quot;numeric&quot; min=&quot;1&quot; max=&quot;20&quot; step=&quot;1&quot; type=&quot;number&quot; value=&quot;1&quot;&gt;
             &lt;button class=&quot;admin-button admin-button--primary&quot; data-admin-grant-cases type=&quot;button&quot;&gt;Выдать кейсы&lt;/button&gt;
@@ -10160,6 +10657,8 @@ html&gt;body{padding:0}
         state.adminPrices = {};
         state.tutorialCompleted = false;
         state.profileTutorialCompleted = false;
+        state.caseTutorialSeenKey = &quot;&quot;;
+        state.ratingTutorialSeenKey = &quot;&quot;;
         state.speed = 210;
         state.visualDistance = 0;
         state.spawn = 0;
@@ -10303,8 +10802,10 @@ html&gt;body{padding:0}
         try {
           const data = await adminApiRequest(ADMIN_SHOP_PRICES_PATH, { products: nextPrices });
           remoteShopPrices = data.products || nextPrices;
+          remoteShopAssortment = data.assortment || remoteShopAssortment;
           state.adminPrices = {};
           applyAdminPrices();
+          applyShopAssortment();
           saveProgress();
           renderAdminDashboard(&quot;Глобальные цены сохранены для всех игроков.&quot;);
         } catch (error) {
@@ -10318,8 +10819,10 @@ html&gt;body{padding:0}
         try {
           const data = await adminApiRequest(ADMIN_SHOP_PRICES_PATH, { products: defaultShopPrices });
           remoteShopPrices = data.products || defaultShopPrices;
+          remoteShopAssortment = data.assortment || remoteShopAssortment;
           state.adminPrices = {};
           applyAdminPrices();
+          applyShopAssortment();
           saveProgress();
           renderAdminDashboard(&quot;Стандартные цены сохранены глобально.&quot;);
         } catch (error) {
@@ -10475,11 +10978,15 @@ html&gt;body{padding:0}
               if (textNode) textNode.nodeValue = `${formatter.format(points)} очков`;
             }
             if (pills[1]) {
-              const resourceText = coffee
-                ? `${formatter.format(coffee)} чашек кофе`
-                : `${formatter.format(treats)} зефира`;
+              const resourceText = treats &gt; 0
+                ? `${formatter.format(treats)} зефира`
+                : `${formatter.format(coffee)} чашек кофе`;
               const textNode = [...pills[1].childNodes].find((node) =&gt; node.nodeType === Node.TEXT_NODE);
               if (textNode) textNode.nodeValue = resourceText;
+            }
+            if (pills[2]) {
+              const textNode = [...pills[2].childNodes].find((node) =&gt; node.nodeType === Node.TEXT_NODE);
+              if (textNode) textNode.nodeValue = `${formatter.format(coffee)} кофе`;
             }
           }
         }
@@ -10545,6 +11052,10 @@ html&gt;body{padding:0}
         state.obstacles = [];
         state.pickups = [];
         state.crumbs = [];
+        lastRunningHudPaintAt = 0;
+        runningHudText.score = &quot;&quot;;
+        runningHudText.treats = &quot;&quot;;
+        runningHudText.coffee = &quot;&quot;;
         dog.y = ground.y - dog.h;
         dog.vy = 0;
         dog.grounded = true;
@@ -10554,6 +11065,7 @@ html&gt;body{padding:0}
         playGameSound(&quot;startRun&quot;);
         if (!preservePauseVisual) setPauseButtonVisual(false);
         if (!preserveButtonVisual) setStartButtonVisual(&quot;restart&quot;, false);
+        updateRunningHud(state.last, true);
         scheduleGameLoop();
       }
 
@@ -10612,7 +11124,7 @@ html&gt;body{padding:0}
           const earned = Math.floor(state.score);
           const earnedTreats = state.runTreats;
           const earnedCoffee = state.runCoffee;
-          const credited = skinRunRewards(earned, earnedTreats, earnedCoffee);
+          const credited = skinRunRewards(earned, earnedTreats, earnedCoffee, state.time);
           const previousBest = Number(state.best || 0);
           const previousLevel = profileLevelState(state.profileXp).level;
           const isNewRecord = state.score &gt; previousBest &amp;&amp; earned &gt; 0;
@@ -10642,6 +11154,7 @@ html&gt;body{padding:0}
           saveProgress();
           void submitLeaderboardRun(earned, state.time);
           void flushPendingCaseBoosterRuns();
+          if (reachedNewLevel) void loadCaseState(true);
           const finishLines = [
             `+${credited.points} очков · +${credited.treats} зефира · +${credited.coffee} кофе`,
             runXpEarned &gt; 0 ? `+${runXpEarned} XP профиля` : &quot;XP профиля не начислен&quot;,
@@ -10682,6 +11195,7 @@ html&gt;body{padding:0}
         const dt = Math.min(0.033, (now - state.last) / 1000);
         state.last = now;
         update(dt);
+        updateRunningHud(now);
         draw();
         scheduleGameLoop();
       }
@@ -10765,14 +11279,14 @@ html&gt;body{padding:0}
             puff(item.x + item.size / 2, item.y + item.size / 2, 10);
           }
         }
-        updateHud();
       }
 
+      const RUNNING_HUD_INTERVAL_MS = 100;
       let lastRunningHudPaintAt = 0;
       const runningHudText = { score: &quot;&quot;, treats: &quot;&quot;, coffee: &quot;&quot; };
 
-      function updateRunningHud(now = performance.now()) {
-        if (now - lastRunningHudPaintAt &lt; 80) return;
+      function updateRunningHud(now = performance.now(), force = false) {
+        if (!force &amp;&amp; now - lastRunningHudPaintAt &lt; RUNNING_HUD_INTERVAL_MS) return;
         lastRunningHudPaintAt = now;
         const scoreText = formatter.format(Math.floor(state.score));
         const treatsText = formatter.format(state.treats + state.runTreats);
@@ -10793,7 +11307,7 @@ html&gt;body{padding:0}
 
       function updateHud() {
         if (state.running) {
-          updateRunningHud();
+          updateRunningHud(performance.now(), true);
           return;
         }
         scoreEl.textContent = formatter.format(Math.floor(state.score));
@@ -10813,10 +11327,11 @@ html&gt;body{padding:0}
           const treatCost = Number(product.treats || 0);
           const coffeeCost = Number(product.coffee || 0);
           const ownedEls = [...root.querySelectorAll(`[data-owned=&quot;${id}&quot;]`)];
-          for (const ownedEl of ownedEls) ownedEl.textContent = formatter.format(state.inventory[id] || 0);
-          const affordable = state.wallet &gt;= cost &amp;&amp; state.treats &gt;= treatCost &amp;&amp; state.coffee &gt;= coffeeCost;
-          button.disabled = false;
-          button.classList.toggle(&quot;is-unaffordable&quot;, !affordable);
+          for (const ownedEl of ownedEls) ownedEl.textContent = formatter.format(shopProductOwnedCount(id, product));
+          const enabled = product.enabled !== false;
+          const affordable = enabled &amp;&amp; state.wallet &gt;= cost &amp;&amp; state.treats &gt;= treatCost &amp;&amp; state.coffee &gt;= coffeeCost;
+          button.disabled = !enabled;
+          button.classList.toggle(&quot;is-unaffordable&quot;, enabled &amp;&amp; !affordable);
         }
         const shopScreen = root.querySelector(&#x27;[data-screen=&quot;shop&quot;]&#x27;);
         if (shopScreen &amp;&amp; !shopScreen.hidden) updateShopPreview();
@@ -11149,6 +11664,8 @@ html&gt;body{padding:0}
           },
           tutorialCompleted: Boolean(state.tutorialCompleted),
           profileTutorialCompleted: Boolean(state.profileTutorialCompleted),
+          caseTutorialSeenKey: String(state.caseTutorialSeenKey || &quot;&quot;),
+          ratingTutorialSeenKey: String(state.ratingTutorialSeenKey || &quot;&quot;),
           soundEnabled: Boolean(state.soundEnabled),
           musicEnabled: Boolean(state.musicEnabled),
           appliedResetPlanIds: Array.isArray(state.appliedResetPlanIds) ? state.appliedResetPlanIds.slice(-50) : [],
@@ -11187,6 +11704,8 @@ html&gt;body{padding:0}
           : { failedAttempts: 0, locked: false };
         const savedTutorialCompleted = Boolean(saved.tutorialCompleted);
         const savedProfileTutorialCompleted = Boolean(saved.profileTutorialCompleted);
+        const savedCaseTutorialSeenKey = typeof saved.caseTutorialSeenKey === &quot;string&quot; ? saved.caseTutorialSeenKey : &quot;&quot;;
+        const savedRatingTutorialSeenKey = typeof saved.ratingTutorialSeenKey === &quot;string&quot; ? saved.ratingTutorialSeenKey : &quot;&quot;;
         const savedSoundEnabled = saved.soundEnabled !== false;
         const savedMusicEnabled = saved.musicEnabled !== false;
 
@@ -11196,6 +11715,8 @@ html&gt;body{padding:0}
           getAdminSecurity();
           state.tutorialCompleted = savedTutorialCompleted;
           state.profileTutorialCompleted = savedProfileTutorialCompleted;
+          state.caseTutorialSeenKey = savedCaseTutorialSeenKey;
+          state.ratingTutorialSeenKey = savedRatingTutorialSeenKey;
           state.soundEnabled = savedSoundEnabled;
           state.musicEnabled = savedMusicEnabled;
           state.appliedResetPlanIds = Array.isArray(saved.appliedResetPlanIds) ? saved.appliedResetPlanIds.map(String).slice(-50) : [];
@@ -11234,6 +11755,8 @@ html&gt;body{padding:0}
         getAdminSecurity();
         state.tutorialCompleted = savedTutorialCompleted;
         state.profileTutorialCompleted = savedProfileTutorialCompleted;
+        state.caseTutorialSeenKey = savedCaseTutorialSeenKey;
+        state.ratingTutorialSeenKey = savedRatingTutorialSeenKey;
         state.soundEnabled = savedSoundEnabled;
         state.musicEnabled = savedMusicEnabled;
         state.appliedResetPlanIds = Array.isArray(saved.appliedResetPlanIds) ? saved.appliedResetPlanIds.map(String).slice(-50) : [];
@@ -11359,6 +11882,7 @@ html&gt;body{padding:0}
           void (async () =&gt; {
             await flushPendingCaseBoosterRuns();
             await loadCaseState(true);
+            await syncOwnedSkinBonusCases({ notify: true });
           })();
           void (async () =&gt; {
             await retryPendingLeaderboardRun();
@@ -11406,6 +11930,7 @@ html&gt;body{padding:0}
         } else {
           scheduleTutorialAutoOpen(450);
         }
+        if (telegramProfile?.initData) void syncOwnedSkinBonusCases({ notify: true, force: true });
         if (!state.running) requestAnimationFrame(draw);
       });
 
@@ -11447,7 +11972,7 @@ html&gt;body{padding:0}
         const reward = caseScheduleForLevel(levelValue);
         if (!reward) return &quot;&quot;;
         const opened = normalizeCaseNumberList(openedLevels).includes(reward.level);
-        return `&lt;span class=&quot;level-guide-case is-${reward.caseType}${opened ? &quot; is-opened&quot; : &quot;&quot;}&quot; title=&quot;${escapePurchaseText(reward.title)}${opened ? &quot; · получен&quot; : &quot;&quot;}&quot;&gt;&lt;img class=&quot;case-mini-image&quot; src=&quot;${escapePurchaseText(caseImageSource(reward.caseType, false))}&quot; alt=&quot;${escapePurchaseText(reward.title)}&quot;&gt;&lt;/span&gt;`;
+        return `&lt;button class=&quot;level-guide-case is-${reward.caseType}${opened ? &quot; is-opened&quot; : &quot;&quot;}&quot; data-case-info-type=&quot;${escapePurchaseText(reward.caseType)}&quot; type=&quot;button&quot; title=&quot;${escapePurchaseText(reward.title)} · награды и шансы&quot;&gt;&lt;img class=&quot;case-mini-image&quot; src=&quot;${escapePurchaseText(caseImageSource(reward.caseType, false))}&quot; alt=&quot;&quot;&gt;&lt;span&gt;Награды и шансы&lt;/span&gt;&lt;/button&gt;`;
       }
 
       function profileLevelGuideMarkup() {
@@ -11653,8 +12178,15 @@ html&gt;body{padding:0}
         return {
           small: sanitizeProgressNumber(source.small),
           sweet: sanitizeProgressNumber(source.sweet),
-          gold: sanitizeProgressNumber(source.gold)
+          gold: sanitizeProgressNumber(source.gold),
+          legendary: sanitizeProgressNumber(source.legendary)
         };
+      }
+
+      function availableLevelCases() {
+        const currentLevel = profileLevelState(state.profileXp).level;
+        const openedLevels = new Set(normalizeCaseNumberList(state.caseOpenedLevels));
+        return LEVEL_CASE_SCHEDULE.filter((entry) =&gt; entry.level &lt;= currentLevel &amp;&amp; !openedLevels.has(entry.level));
       }
 
       function normalizeCaseBoosters(value) {
@@ -11701,7 +12233,15 @@ html&gt;body{padding:0}
       }
 
       function caseCurrentSnapshot() {
-        return { wallet: state.wallet, best: state.best, treats: state.treats, coffee: state.coffee, profileXp: state.profileXp };
+        return {
+          wallet: state.wallet,
+          best: state.best,
+          treats: state.treats,
+          coffee: state.coffee,
+          profileXp: state.profileXp,
+          ownedSkins: normalizeOwnedSkins(state.ownedSkins),
+          activeSkin: currentDogSkin.id || &quot;default&quot;
+        };
       }
 
       async function caseApiRequest(path, payload = {}) {
@@ -11718,11 +12258,16 @@ html&gt;body{padding:0}
       }
 
       function applyServerCasePayload(data, openedRewards = null) {
+        if (data?.liveops) applyCaseLiveOpsConfig(data.liveops);
         if (!data?.caseState) return;
         antiCheatWithTrustedChange(&quot;case-server-sync&quot;, () =&gt; {
           const server = data.caseState;
           state.caseOpenedLevels = normalizeCaseNumberList(data.openedLevels);
           state.caseGiftedCases = normalizeGiftedCases(data.giftedCases);
+          CASE_LEGENDARY_GUARANTEE = Math.max(0, Math.min(50, Math.floor(Number(server.legendaryGuaranteedEvery ?? CASE_LIVEOPS?.cases?.legendary?.guaranteeCount ?? 50))));
+          state.caseLegendaryPityCounter = CASE_LEGENDARY_GUARANTEE &gt; 0
+            ? Math.max(0, Math.min(CASE_LEGENDARY_GUARANTEE - 1, Math.floor(Number(server.legendaryPityCounter || 0))))
+            : 0;
           state.caseBoosters = normalizeCaseBoosters(server.boosters);
           state.activeCaseBooster = normalizeActiveCaseBooster(server.activeBooster);
           state.caseOwnedAvatars = normalizeCaseOwned(&quot;avatar&quot;, server.ownedAvatars);
@@ -11731,14 +12276,50 @@ html&gt;body{padding:0}
           state.caseActiveFrame = state.caseOwnedFrames.includes(normalizeCaseCosmetic(&quot;frame&quot;, server.activeFrameId)) ? normalizeCaseCosmetic(&quot;frame&quot;, server.activeFrameId) : &quot;&quot;;
           state.caseOwnedTrails = normalizeCaseOwned(&quot;trail&quot;, server.ownedTrails);
           state.caseActiveTrail = state.caseOwnedTrails.includes(normalizeCaseCosmetic(&quot;trail&quot;, server.activeTrailId)) ? normalizeCaseCosmetic(&quot;trail&quot;, server.activeTrailId) : &quot;&quot;;
+          let physicalRewardAdded = false;
+          for (const reward of Array.isArray(openedRewards) ? openedRewards : []) {
+            if (reward?.kind === &quot;skin&quot; &amp;&amp; reward.id &amp;&amp; !reward.duplicate &amp;&amp; SKIN_CATALOG[String(reward.id)]) {
+              state.ownedSkins = normalizeOwnedSkins([...(state.ownedSkins || []), String(reward.id)]);
+            }
+            if (reward?.kind === &quot;physical&quot; &amp;&amp; reward.code) {
+              const product = shopProducts[String(reward.productId || &quot;&quot;)] || {};
+              const localCodes = Array.isArray(state.redemptionCodes) ? [...state.redemptionCodes] : [];
+              const code = String(reward.code);
+              const existing = localCodes.find((entry) =&gt; String(entry?.code || &quot;&quot;) === code);
+              const next = {
+                code,
+                productId: String(reward.productId || &quot;&quot;),
+                title: String(reward.productName || product.title || &quot;Физическая награда&quot;),
+                image: product.image || &quot;shopMarshmallowAssortment&quot;,
+                issuedAt: Number(reward.issuedAt || Date.now()),
+                expiresAt: Number(reward.expiresAt || 0),
+                status: String(reward.status || &quot;active&quot;),
+                redeemedAt: 0,
+                serverVerified: true
+              };
+              if (existing) Object.assign(existing, next);
+              else localCodes.push(next);
+              localCodes.sort((left, right) =&gt; Number(left?.issuedAt || 0) - Number(right?.issuedAt || 0));
+              state.redemptionCodes = localCodes.slice(-20);
+              physicalRewardAdded = true;
+            }
+          }
           if (data.profile &amp;&amp; typeof data.profile === &quot;object&quot;) {
-            state.wallet = Math.max(sanitizeProgressNumber(state.wallet), sanitizeProgressNumber(data.profile.wallet));
+            const authoritativeProfile = data.authoritativeProfile === true;
+            state.wallet = authoritativeProfile
+              ? sanitizeProgressNumber(data.profile.wallet)
+              : Math.max(sanitizeProgressNumber(state.wallet), sanitizeProgressNumber(data.profile.wallet));
             state.best = Math.max(sanitizeProgressNumber(state.best), sanitizeProgressNumber(data.profile.best));
-            state.treats = Math.max(sanitizeProgressNumber(state.treats), sanitizeProgressNumber(data.profile.treats));
-            state.coffee = Math.max(sanitizeProgressNumber(state.coffee), sanitizeProgressNumber(data.profile.coffee));
+            state.treats = authoritativeProfile
+              ? sanitizeProgressNumber(data.profile.treats)
+              : Math.max(sanitizeProgressNumber(state.treats), sanitizeProgressNumber(data.profile.treats));
+            state.coffee = authoritativeProfile
+              ? sanitizeProgressNumber(data.profile.coffee)
+              : Math.max(sanitizeProgressNumber(state.coffee), sanitizeProgressNumber(data.profile.coffee));
             state.profileXp = Math.max(sanitizeProgressNumber(state.profileXp), sanitizeProgressNumber(data.profile.profileXp));
           }
           saveProgress(); updateHud(); renderProfile(); renderCaseHub(); renderActiveRunBooster();
+          if (physicalRewardAdded) renderWarehouse();
         });
       }
 
@@ -11763,14 +12344,19 @@ html&gt;body{padding:0}
       }
 
       async function openLevelCaseClient(level, button) {
+        const normalizedLevel = Math.floor(Number(level || 0));
+        const levelCase = LEVEL_CASE_SCHEDULE.find((entry) =&gt; entry.level === normalizedLevel);
         if (button) { button.disabled = true; button.textContent = &quot;Открываем…&quot;; }
+        if (levelCase) showCaseOpeningPreview(levelCase.caseType);
         try {
-          const data = await caseApiRequest(CASE_API_OPEN_PATH, { level: Math.floor(Number(level || 0)) });
+          const data = await caseApiRequest(CASE_API_OPEN_PATH, { level: normalizedLevel });
           const rewards = Array.isArray(data.opened?.rewards) ? data.opened.rewards : [];
           applyServerCasePayload(data, rewards);
           showCaseResult(data.opened);
           playGameSound(&quot;purchaseReward&quot;);
         } catch (error) {
+          caseRouletteBusy = false;
+          if (caseLayer) { caseLayer.hidden = true; caseLayer.setAttribute(&quot;aria-hidden&quot;, &quot;true&quot;); }
           showProfileToast(error?.message || &quot;Не удалось открыть кейс.&quot;, &quot;warning&quot;);
           await loadCaseState(true);
         } finally { renderCaseHub(); }
@@ -11779,11 +12365,9 @@ html&gt;body{padding:0}
       function showCaseOpeningPreview(caseType) {
         if (!caseLayer || !caseContentEl) return;
         const type = Object.prototype.hasOwnProperty.call(CASE_IMAGE_CATALOG, String(caseType || &quot;&quot;)) ? String(caseType) : &quot;small&quot;;
-        const title = type === &quot;gold&quot; ? &quot;Золотой кейс&quot; : type === &quot;sweet&quot; ? &quot;Серебряный кейс&quot; : &quot;Обычный кейс&quot;;
-        const pool = caseRoulettePool();
-        const previewCards = Array.from({ length: 18 }, (_, index) =&gt; caseRouletteCard(pool[index % pool.length])).join(&quot;&quot;);
+        const title = type === &quot;legendary&quot; ? &quot;Легендарный кейс&quot; : type === &quot;gold&quot; ? &quot;Золотой кейс&quot; : type === &quot;sweet&quot; ? &quot;Серебряный кейс&quot; : &quot;Обычный кейс&quot;;
         caseRouletteBusy = true;
-        caseContentEl.innerHTML = `&lt;div class=&quot;case-result-head is-opening&quot;&gt;${caseImageMarkup(type, true, &quot;case-chest-image--roulette&quot;)}&lt;h2 id=&quot;case-dialog-title&quot;&gt;Открываем ${escapePurchaseText(title)}&lt;/h2&gt;&lt;p&gt;Получаем награду…&lt;/p&gt;&lt;/div&gt;&lt;div class=&quot;case-roulette-list&quot;&gt;&lt;div class=&quot;case-roulette-row is-spinning&quot;&gt;&lt;div class=&quot;case-roulette-window&quot;&gt;&lt;div class=&quot;case-roulette-pointer&quot; aria-hidden=&quot;true&quot;&gt;&lt;/div&gt;&lt;div class=&quot;case-roulette-track case-roulette-track--preview&quot;&gt;${previewCards}&lt;/div&gt;&lt;/div&gt;&lt;div class=&quot;case-opening-status&quot;&gt;&lt;span&gt;&lt;/span&gt;Рулетка готовится&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;&lt;button class=&quot;case-result-done&quot; type=&quot;button&quot; disabled&gt;Подождите…&lt;/button&gt;`;
+        caseContentEl.innerHTML = `&lt;div class=&quot;case-result-head is-opening&quot;&gt;${caseImageMarkup(type, true, &quot;case-chest-image--roulette&quot;)}&lt;h2 id=&quot;case-dialog-title&quot;&gt;Открываем ${escapePurchaseText(title)}&lt;/h2&gt;&lt;p&gt;Получаем награду…&lt;/p&gt;&lt;/div&gt;&lt;div class=&quot;case-opening-wait&quot;&gt;&lt;span class=&quot;case-opening-spinner&quot; aria-hidden=&quot;true&quot;&gt;&lt;/span&gt;&lt;strong&gt;Подготавливаем рулетку&lt;/strong&gt;&lt;small&gt;Она запустится сразу после получения награды&lt;/small&gt;&lt;/div&gt;&lt;button class=&quot;case-result-done&quot; type=&quot;button&quot; disabled&gt;Подождите…&lt;/button&gt;`;
         caseLayer.hidden = false;
         caseLayer.setAttribute(&quot;aria-hidden&quot;, &quot;false&quot;);
       }
@@ -11948,6 +12532,11 @@ html&gt;body{padding:0}
         return CASE_TRAIL_CATALOG[String(id || &quot;&quot;)]?.src || caseFirstAsset(&quot;shopSparkles&quot;, &quot;shopHeart&quot;);
       }
 
+      function casePhysicalRewardImage(productId) {
+        const item = CASE_PHYSICAL_REWARD_CATALOG[String(productId || &quot;&quot;)];
+        return item?.imageKey ? (assetSources[item.imageKey] || caseFirstAsset(&quot;shopSparkles&quot;, &quot;shopHeart&quot;)) : caseFirstAsset(&quot;shopSparkles&quot;, &quot;shopHeart&quot;);
+      }
+
       function caseRewardView(reward) {
         if (!reward || typeof reward !== &quot;object&quot;) return { src: caseFirstAsset(&quot;shopSparkles&quot;, &quot;shopHeart&quot;), title: &quot;Награда&quot;, detail: &quot;&quot;, badge: &quot;&quot;, rarityClass: &quot;common&quot;, kind: &quot;generic&quot; };
         if (reward.kind === &quot;points&quot;) return { src: caseResourceImage(&quot;points&quot;), title: `${formatter.format(reward.amount)} очков`, detail: &quot;в кошелёк&quot;, badge: &quot;&quot;, rarityClass: &quot;common&quot;, kind: &quot;resource&quot; };
@@ -11961,29 +12550,53 @@ html&gt;body{padding:0}
           rarityClass: &quot;superrare&quot;,
           kind: &quot;booster&quot;
         };
-        const catalog = reward.kind === &quot;avatar&quot; ? CASE_AVATAR_CATALOG : reward.kind === &quot;frame&quot; ? CASE_FRAME_CATALOG : CASE_TRAIL_CATALOG;
-        const item = catalog[reward.id];
-        const src = reward.kind === &quot;avatar&quot;
-          ? (item?.src || CASE_AVATAR_CATALOG.royal.src)
-          : reward.kind === &quot;frame&quot;
-            ? (item?.src || CASE_FRAME_CATALOG.strawberry.src)
-            : caseTrailRewardImage(reward.id);
+        if (reward.kind === &quot;physical&quot;) {
+          const physical = CASE_PHYSICAL_REWARD_CATALOG[String(reward.productId || &quot;&quot;)];
+          return {
+            src: casePhysicalRewardImage(reward.productId),
+            title: physical?.title || reward.productName || &quot;Физическая награда&quot;,
+            detail: reward.code ? `Код ${reward.code} добавлен в «Мои покупки»` : &quot;Код добавлен в «Мои покупки»&quot;,
+            badge: &quot;Физическая награда&quot;,
+            rarityClass: &quot;legendary&quot;,
+            kind: &quot;physical&quot;
+          };
+        }
+        const catalog = reward.kind === &quot;skin&quot; ? CASE_SKIN_CATALOG : reward.kind === &quot;avatar&quot; ? CASE_AVATAR_CATALOG : reward.kind === &quot;frame&quot; ? CASE_FRAME_CATALOG : CASE_TRAIL_CATALOG;
+        const item = caseLiveOpsItem(reward.kind, reward.id, catalog[reward.id]);
+        const src = reward.kind === &quot;skin&quot;
+          ? (item?.src || dogSkinRunPortraits.default)
+          : reward.kind === &quot;avatar&quot;
+            ? (item?.src || CASE_AVATAR_CATALOG.royal.src)
+            : reward.kind === &quot;frame&quot;
+              ? (item?.src || CASE_FRAME_CATALOG.strawberry.src)
+              : caseTrailRewardImage(reward.id);
+        const rarityLabel = item?.rarity ? `${item.rarity} · ` : &quot;&quot;;
+        const guaranteeLabel = reward.guaranteed ? &quot;гарант · &quot; : &quot;&quot;;
         return {
           src,
           title: item?.title || reward.title || &quot;Косметика&quot;,
           detail: reward.duplicate
-            ? `${item?.rarity ? `${item.rarity} · ` : &quot;&quot;}повтор · +${formatter.format(reward.compensationPoints || 0)} очков`
-            : `${item?.rarity ? `${item.rarity} · ` : &quot;&quot;}добавлено в коллекцию`,
+            ? `${guaranteeLabel}${rarityLabel}повтор · +${formatter.format(reward.compensationPoints || 0)} очков`
+            : `${guaranteeLabel}${rarityLabel}добавлено в коллекцию`,
           badge: item?.rarity || &quot;&quot;,
           rarityClass: item?.rarityClass || &quot;common&quot;,
           kind: reward.kind || &quot;generic&quot;
         };
       }
 
-      function caseRoulettePool() {
-        const avatars = Object.values(CASE_AVATAR_CATALOG);
-        const frames = Object.values(CASE_FRAME_CATALOG);
-        const trails = Object.values(CASE_TRAIL_CATALOG);
+      function caseRoulettePool(caseType = &quot;small&quot;) {
+        const isLegendary = caseType === &quot;legendary&quot;;
+        const filterCatalog = (kind, catalog) =&gt; {
+          const owned = isLegendary ? caseOwnedCosmeticIds(kind) : new Set();
+          return Object.entries(catalog)
+            .map(([id, item]) =&gt; [id, caseLiveOpsItem(kind, id, item)])
+            .filter(([id, item]) =&gt; item.enabled !== false &amp;&amp; (isLegendary || !item?.legendaryOnly) &amp;&amp; (!isLegendary || !owned.has(id)))
+            .map(([, item]) =&gt; item);
+        };
+        const avatars = filterCatalog(&quot;avatar&quot;, CASE_AVATAR_CATALOG);
+        const frames = filterCatalog(&quot;frame&quot;, CASE_FRAME_CATALOG);
+        const trails = filterCatalog(&quot;trail&quot;, CASE_TRAIL_CATALOG);
+        const skins = filterCatalog(&quot;skin&quot;, CASE_SKIN_CATALOG);
         return [
           { src: caseResourceImage(&quot;points&quot;), title: &quot;Очки&quot;, badge: &quot;&quot;, kind: &quot;resource&quot; },
           { src: caseResourceImage(&quot;treats&quot;), title: &quot;Зефир&quot;, badge: &quot;&quot;, kind: &quot;resource&quot; },
@@ -11991,9 +12604,11 @@ html&gt;body{padding:0}
           { src: CASE_BOOSTER_CATALOG.points.src, title: CASE_BOOSTER_CATALOG.points.title, badge: &quot;&quot;, kind: &quot;booster&quot; },
           { src: CASE_BOOSTER_CATALOG.treats.src, title: CASE_BOOSTER_CATALOG.treats.title, badge: &quot;&quot;, kind: &quot;booster&quot; },
           { src: CASE_BOOSTER_CATALOG.coffee.src, title: CASE_BOOSTER_CATALOG.coffee.title, badge: &quot;&quot;, kind: &quot;booster&quot; },
+          ...skins.map((item) =&gt; ({ src: item.src, title: &quot;Скин&quot;, badge: &quot;&quot;, kind: &quot;skin&quot; })),
           ...avatars.slice(0, 5).map((item) =&gt; ({ src: item.src, title: &quot;Аватарка&quot;, badge: &quot;&quot;, kind: &quot;avatar&quot; })),
           ...frames.map((item) =&gt; ({ src: item.src, title: &quot;Рамка&quot;, badge: &quot;&quot;, kind: &quot;frame&quot; })),
-          ...trails.map((item) =&gt; ({ src: item.src, title: &quot;След&quot;, badge: &quot;&quot;, kind: &quot;trail&quot; }))
+          ...trails.map((item) =&gt; ({ src: item.src, title: &quot;След&quot;, badge: &quot;&quot;, kind: &quot;trail&quot; })),
+          ...(caseType === &quot;legendary&quot; ? Object.entries(CASE_PHYSICAL_REWARD_CATALOG).map(([id, item]) =&gt; ({ src: casePhysicalRewardImage(id), title: item.title, badge: &quot;Физическая&quot;, kind: &quot;physical&quot; })) : [])
         ];
       }
 
@@ -12001,6 +12616,214 @@ html&gt;body{padding:0}
         const className = [&quot;case-reward-art&quot;, view?.kind ? `is-${view.kind}` : &quot;is-generic&quot;, extraClass].filter(Boolean).join(&quot; &quot;);
         const badge = view?.badge ? `&lt;em&gt;${escapePurchaseText(view.badge)}&lt;/em&gt;` : &quot;&quot;;
         return `&lt;span class=&quot;${escapePurchaseText(className)}&quot;&gt;&lt;img src=&quot;${escapePurchaseText(view?.src || caseFirstAsset(&quot;shopSparkles&quot;, &quot;shopHeart&quot;))}&quot; alt=&quot;&quot;&gt;${badge}&lt;/span&gt;`;
+      }
+
+      function caseChanceLabel(value) {
+        const chance = Math.max(0, Number(value) || 0);
+        const scaledThousand = Math.round(chance * 1000);
+        const digits = chance &gt; 0 &amp;&amp; chance &lt; .1 ? 3 : scaledThousand % 10 ? 3 : chance &gt; 0 &amp;&amp; chance &lt; 1 ? 2 : chance % 1 ? 1 : 0;
+        return `${chance.toLocaleString(&quot;ru-RU&quot;, { minimumFractionDigits: digits, maximumFractionDigits: 3 })}%`;
+      }
+
+      function caseOwnedCosmeticIds(kind) {
+        if (kind === &quot;skin&quot;) return new Set(normalizeOwnedSkins(state.ownedSkins));
+        if (kind === &quot;avatar&quot;) return new Set(normalizeCaseOwned(&quot;avatar&quot;, state.caseOwnedAvatars));
+        if (kind === &quot;frame&quot;) return new Set(normalizeCaseOwned(&quot;frame&quot;, state.caseOwnedFrames));
+        if (kind === &quot;trail&quot;) return new Set(normalizeCaseOwned(&quot;trail&quot;, state.caseOwnedTrails));
+        return new Set();
+      }
+
+      function caseLegendaryCategoryHasUnowned(kind, catalog) {
+        const owned = caseOwnedCosmeticIds(kind);
+        return Object.keys(catalog || {}).some((id) =&gt; !owned.has(id));
+      }
+
+      function applyCaseLiveOpsConfig(rawConfig) {
+        if (!rawConfig || typeof rawConfig !== &quot;object&quot;) return;
+        CASE_LIVEOPS = {
+          cases: rawConfig.cases &amp;&amp; typeof rawConfig.cases === &quot;object&quot; ? rawConfig.cases : {},
+          content: rawConfig.content &amp;&amp; typeof rawConfig.content === &quot;object&quot; ? rawConfig.content : {},
+          version: Number(rawConfig.version || 1)
+        };
+        CASE_LEGENDARY_GUARANTEE = Math.max(0, Math.min(50, Math.floor(Number(CASE_LIVEOPS?.cases?.legendary?.guaranteeCount ?? 50))));
+      }
+
+      function caseLiveOpsRarityLabel(rarityClass, fallback = &quot;&quot;) {
+        return ({ common: &quot;Обычная&quot;, rare: &quot;Редкая&quot;, superrare: &quot;Супер-редкая&quot;, epic: &quot;Эпическая&quot;, mythic: &quot;Мифическая&quot;, legendary: &quot;Легендарная&quot; })[String(rarityClass || &quot;&quot;)] || fallback;
+      }
+
+      function caseLiveOpsItem(kind, id, item) {
+        const override = CASE_LIVEOPS?.content?.[kind]?.[id];
+        if (!override) return { ...(item || {}), enabled: true, weight: Number(CASE_COSMETIC_WEIGHTS?.[kind]?.[id] || 0) };
+        const rarityClass = String(override.rarity || item?.rarityClass || &quot;common&quot;);
+        return {
+          ...(item || {}),
+          title: String(override.title || item?.title || id),
+          rarityClass,
+          rarity: caseLiveOpsRarityLabel(rarityClass, item?.rarity || &quot;&quot;),
+          weight: Math.max(0, Number(override.weight ?? CASE_COSMETIC_WEIGHTS?.[kind]?.[id] ?? 0)),
+          enabled: override.enabled !== false,
+          isNew: override.isNew == null ? Boolean(item?.isNew) : Boolean(override.isNew),
+          legendaryOnly: override.legendaryOnly == null ? Boolean(item?.legendaryOnly) : Boolean(override.legendaryOnly),
+          src: String(override.imageUrl || item?.src || &quot;&quot;)
+        };
+      }
+
+      function caseLiveOpsCatalog(kind, catalog, includeDisabledOwned = false) {
+        const owned = includeDisabledOwned ? caseOwnedCosmeticIds(kind) : new Set();
+        return Object.fromEntries(Object.entries(catalog || {}).map(([id, item]) =&gt; [id, caseLiveOpsItem(kind, id, item)]).filter(([id, item]) =&gt; item.enabled !== false || owned.has(id)));
+      }
+
+      function caseEffectiveRewardChances(caseType) {
+        const type = Object.prototype.hasOwnProperty.call(CASE_REWARD_CHANCES, String(caseType || &quot;&quot;)) ? String(caseType) : &quot;small&quot;;
+        const configured = CASE_LIVEOPS?.cases?.[type]?.chances;
+        const chances = { ...CASE_REWARD_CHANCES[type], ...(configured &amp;&amp; typeof configured === &quot;object&quot; ? configured : {}) };
+        const cosmeticCatalogs = {
+          skin: caseLiveOpsCatalog(&quot;skin&quot;, CASE_SKIN_CATALOG),
+          avatar: caseLiveOpsCatalog(&quot;avatar&quot;, CASE_AVATAR_CATALOG),
+          frame: caseLiveOpsCatalog(&quot;frame&quot;, CASE_FRAME_CATALOG),
+          trail: caseLiveOpsCatalog(&quot;trail&quot;, CASE_TRAIL_CATALOG)
+        };
+        let transferredToPoints = 0;
+        for (const [kind, catalog] of Object.entries(cosmeticCatalogs)) {
+          const hasAvailable = type === &quot;legendary&quot;
+            ? caseLegendaryCategoryHasUnowned(kind, catalog)
+            : Object.values(catalog).some((item) =&gt; !item?.legendaryOnly);
+          if (hasAvailable) continue;
+          transferredToPoints += Math.max(0, Number(chances[kind]) || 0);
+          chances[kind] = 0;
+        }
+        chances.points = Math.max(0, Number(chances.points) || 0) + transferredToPoints;
+        return chances;
+      }
+
+      function caseTypeInfo(caseType) {
+        const type = Object.prototype.hasOwnProperty.call(CASE_REWARD_CHANCES, String(caseType || &quot;&quot;)) ? String(caseType) : &quot;small&quot;;
+        const live = CASE_LIVEOPS?.cases?.[type] || {};
+        return {
+          type,
+          title: String(live.title || (type === &quot;legendary&quot; ? &quot;Легендарный кейс&quot; : type === &quot;gold&quot; ? &quot;Золотой кейс&quot; : type === &quot;sweet&quot; ? &quot;Серебряный кейс&quot; : &quot;Обычный кейс&quot;)),
+          enabled: live.enabled !== false,
+          guaranteeCount: Math.max(0, Number(live.guaranteeCount ?? (type === &quot;legendary&quot; ? 50 : 0))),
+          chances: caseEffectiveRewardChances(type),
+          ranges: { ...CASE_REWARD_RANGES[type], ...(live.ranges &amp;&amp; typeof live.ranges === &quot;object&quot; ? live.ranges : {}) }
+        };
+      }
+
+      function caseChanceCategoryRow(label, chance, src) {
+        const safeChance = Math.max(0, Number(chance) || 0);
+        return `&lt;div class=&quot;case-info-category-row&quot;&gt;&lt;img src=&quot;${escapePurchaseText(src)}&quot; alt=&quot;&quot;&gt;&lt;span&gt;&lt;strong&gt;${escapePurchaseText(label)}&lt;/strong&gt;&lt;i&gt;&lt;b style=&quot;width:${Math.max(2, Math.min(100, safeChance))}%&quot;&gt;&lt;/b&gt;&lt;/i&gt;&lt;/span&gt;&lt;em&gt;${caseChanceLabel(safeChance)}&lt;/em&gt;&lt;/div&gt;`;
+      }
+
+      function caseInfoSimpleReward(label, detail, chance, src) {
+        return `&lt;div class=&quot;case-info-simple-reward&quot;&gt;&lt;img src=&quot;${escapePurchaseText(src)}&quot; alt=&quot;&quot;&gt;&lt;span&gt;&lt;strong&gt;${escapePurchaseText(label)}&lt;/strong&gt;&lt;small&gt;${escapePurchaseText(detail)}&lt;/small&gt;&lt;/span&gt;&lt;em&gt;${caseChanceLabel(chance)}&lt;/em&gt;&lt;/div&gt;`;
+      }
+
+      function caseInfoCosmeticItem(kind, id, item, categoryChance, eligibleIds = null, owned = false) {
+        const weights = CASE_COSMETIC_WEIGHTS[kind] || {};
+        const effectiveCatalog = kind === &quot;skin&quot; ? CASE_SKIN_CATALOG : kind === &quot;avatar&quot; ? CASE_AVATAR_CATALOG : kind === &quot;frame&quot; ? CASE_FRAME_CATALOG : CASE_TRAIL_CATALOG;
+        const weight = Math.max(0, Number(caseLiveOpsItem(kind, id, effectiveCatalog[id])?.weight ?? weights[id]) || 0);
+        const totalWeight = Object.entries(effectiveCatalog)
+          .map(([candidateId, candidate]) =&gt; [candidateId, caseLiveOpsItem(kind, candidateId, candidate)])
+          .filter(([candidateId, candidate]) =&gt; candidate.enabled !== false &amp;&amp; (!eligibleIds || eligibleIds.has(candidateId)))
+          .reduce((sum, [, candidate]) =&gt; sum + Math.max(0, Number(candidate.weight) || 0), 0);
+        const itemChance = owned || totalWeight &lt;= 0
+          ? 0
+          : Math.max(0, Number(categoryChance) || 0) * weight / totalWeight;
+        const className = item?.rarityClass || &quot;common&quot;;
+        const newBadge = item?.isNew ? `&lt;b class=&quot;case-new-badge&quot;&gt;NEW&lt;/b&gt;` : &quot;&quot;;
+        const ownedLabel = owned ? `&lt;small class=&quot;case-owned-label&quot;&gt;Получено · больше не выпадает&lt;/small&gt;` : &quot;&quot;;
+        return `&lt;div class=&quot;case-info-cosmetic-item${owned ? &quot; is-owned&quot; : &quot;&quot;}&quot;&gt;&lt;span class=&quot;case-info-cosmetic-art is-${escapePurchaseText(kind)}&quot;&gt;&lt;img src=&quot;${escapePurchaseText(item?.src || caseFirstAsset(&quot;shopSparkles&quot;, &quot;shopHeart&quot;))}&quot; alt=&quot;&quot;&gt;&lt;/span&gt;&lt;span&gt;&lt;span class=&quot;case-cosmetic-title-row&quot;&gt;&lt;strong&gt;${escapePurchaseText(item?.title || &quot;Награда&quot;)}&lt;/strong&gt;${newBadge}&lt;/span&gt;&lt;small class=&quot;case-rarity is-${escapePurchaseText(className)}&quot;&gt;${escapePurchaseText(item?.rarity || &quot;&quot;)}&lt;/small&gt;${ownedLabel}&lt;/span&gt;&lt;em&gt;${caseChanceLabel(itemChance)}&lt;/em&gt;&lt;/div&gt;`;
+      }
+
+      function caseInfoCosmeticSection(title, kind, catalog, categoryChance, caseType = &quot;small&quot;) {
+        const chance = Math.max(0, Number(categoryChance) || 0);
+        if (chance &lt;= 0 &amp;&amp; caseType !== &quot;legendary&quot;) return &quot;&quot;;
+        const rarityOrder = Object.freeze({ common: 0, rare: 1, superrare: 2, epic: 3, mythic: 4, legendary: 5 });
+        const ownedIds = caseType === &quot;legendary&quot; ? caseOwnedCosmeticIds(kind) : new Set();
+        const items = Object.entries(catalog)
+          .map(([id, item]) =&gt; [id, caseLiveOpsItem(kind, id, item)])
+          .filter(([, item]) =&gt; item.enabled !== false &amp;&amp; (caseType === &quot;legendary&quot; || !item?.legendaryOnly))
+          .sort(([firstId, first], [secondId, second]) =&gt; {
+            const firstOwned = ownedIds.has(firstId) ? 0 : 1;
+            const secondOwned = ownedIds.has(secondId) ? 0 : 1;
+            if (firstOwned !== secondOwned) return firstOwned - secondOwned;
+            const firstNew = first?.isNew ? 1 : 0;
+            const secondNew = second?.isNew ? 1 : 0;
+            if (firstNew !== secondNew) return firstNew - secondNew;
+            const firstOrder = rarityOrder[String(first?.rarityClass || &quot;common&quot;)] ?? 99;
+            const secondOrder = rarityOrder[String(second?.rarityClass || &quot;common&quot;)] ?? 99;
+            if (firstOrder !== secondOrder) return firstOrder - secondOrder;
+            return String(first?.title || &quot;&quot;).localeCompare(String(second?.title || &quot;&quot;), &quot;ru&quot;);
+          });
+        const eligibleIds = new Set(items.filter(([id]) =&gt; !ownedIds.has(id)).map(([id]) =&gt; id));
+        const allOwned = caseType === &quot;legendary&quot; &amp;&amp; items.length &gt; 0 &amp;&amp; eligibleIds.size === 0;
+        const subtitle = allOwned ? &quot;Все получено · шанс перенесён в очки&quot; : caseType === &quot;legendary&quot; ? &quot;Полученные предметы исключены из выпадения&quot; : &quot;Общий шанс категории&quot;;
+        return `&lt;section class=&quot;case-info-section${allOwned ? &quot; is-complete&quot; : &quot;&quot;}&quot;&gt;&lt;div class=&quot;case-info-section-title&quot;&gt;&lt;span&gt;&lt;strong&gt;${escapePurchaseText(title)}&lt;/strong&gt;&lt;small&gt;${escapePurchaseText(subtitle)}&lt;/small&gt;&lt;/span&gt;&lt;em&gt;${caseChanceLabel(chance)}&lt;/em&gt;&lt;/div&gt;&lt;div class=&quot;case-info-cosmetic-list&quot;&gt;${items.map(([id, item]) =&gt; caseInfoCosmeticItem(kind, id, item, chance, eligibleIds, ownedIds.has(id))).join(&quot;&quot;)}&lt;/div&gt;&lt;/section&gt;`;
+      }
+
+      function showCaseRewardsInfo(caseType) {
+        if (!caseLayer || !caseContentEl) return;
+        const info = caseTypeInfo(caseType);
+        const chances = info.chances;
+        const ranges = info.ranges;
+        const boosterEachChance = chances.booster / 3;
+        const sortChanceEntries = (entries, chanceIndex = 1) =&gt; info.type === &quot;legendary&quot;
+          ? entries.slice().sort((first, second) =&gt; Number(second[chanceIndex] || 0) - Number(first[chanceIndex] || 0))
+          : entries;
+        const categoryEntries = sortChanceEntries([
+          [&quot;Зефир&quot;, chances.treats, caseResourceImage(&quot;treats&quot;)],
+          [&quot;Кофе&quot;, chances.coffee, caseResourceImage(&quot;coffee&quot;)],
+          [&quot;Очки&quot;, chances.points, caseResourceImage(&quot;points&quot;)],
+          [&quot;Усилитель ×2&quot;, chances.booster, CASE_BOOSTER_CATALOG.points.src],
+          [&quot;Скин&quot;, chances.skin, dogSkinRunPortraits.angel],
+          [&quot;Аватарка&quot;, chances.avatar, CASE_AVATAR_CATALOG.winter_cocoa.src],
+          [&quot;Рамка&quot;, chances.frame, CASE_FRAME_CATALOG.heart.src],
+          [&quot;След&quot;, chances.trail, CASE_TRAIL_CATALOG.marshmallow.src],
+          [&quot;Физическая награда&quot;, chances.physical, casePhysicalRewardImage(&quot;zefir&quot;)]
+        ].filter((entry) =&gt; Number(entry[1]) &gt; 0));
+        const categories = categoryEntries
+          .map((entry) =&gt; caseChanceCategoryRow(entry[0], entry[1], entry[2]))
+          .join(&quot;&quot;);
+        const simpleRewardEntries = sortChanceEntries([
+          [chances.treats, caseInfoSimpleReward(&quot;Зефир&quot;, `${formatter.format(ranges.treats[0])}–${formatter.format(ranges.treats[1])} за открытие`, chances.treats, caseResourceImage(&quot;treats&quot;))],
+          [chances.coffee, caseInfoSimpleReward(&quot;Кофе&quot;, `${formatter.format(ranges.coffee[0])}–${formatter.format(ranges.coffee[1])} за открытие`, chances.coffee, caseResourceImage(&quot;coffee&quot;))],
+          [chances.points, caseInfoSimpleReward(&quot;Очки&quot;, `${formatter.format(ranges.points[0])}–${formatter.format(ranges.points[1])} в кошелёк`, chances.points, caseResourceImage(&quot;points&quot;))],
+          ...Object.entries(CASE_BOOSTER_CATALOG)
+            .filter(() =&gt; boosterEachChance &gt; 0)
+            .map(([type, item]) =&gt; [boosterEachChance, caseInfoSimpleReward(item.title, &quot;Работает 2 забега&quot;, boosterEachChance, item.src)])
+        ].filter((entry) =&gt; Number(entry[0]) &gt; 0), 0);
+        const simpleRewards = simpleRewardEntries.map((entry) =&gt; entry[1]).join(&quot;&quot;);
+        const physicalRewards = info.type === &quot;legendary&quot;
+          ? Object.entries(CASE_PHYSICAL_REWARD_CATALOG)
+            .map(([id, item]) =&gt; caseInfoSimpleReward(item.title, &quot;Проверяемый код в разделе «Мои покупки»&quot;, chances.physical / Math.max(1, Object.keys(CASE_PHYSICAL_REWARD_CATALOG).length), casePhysicalRewardImage(id)))
+            .join(&quot;&quot;)
+          : &quot;&quot;;
+        const physicalSection = physicalRewards
+          ? `&lt;section class=&quot;case-info-section&quot;&gt;&lt;div class=&quot;case-info-section-title&quot;&gt;&lt;span&gt;&lt;strong&gt;Физические награды&lt;/strong&gt;&lt;small&gt;Реальный десерт или кофе в кафе&lt;/small&gt;&lt;/span&gt;&lt;em&gt;${caseChanceLabel(chances.physical)}&lt;/em&gt;&lt;/div&gt;&lt;div class=&quot;case-info-simple-list&quot;&gt;${physicalRewards}&lt;/div&gt;&lt;/section&gt;`
+          : &quot;&quot;;
+        const cosmeticSections = [
+          caseInfoCosmeticSection(&quot;Скины&quot;, &quot;skin&quot;, CASE_SKIN_CATALOG, chances.skin, info.type),
+          caseInfoCosmeticSection(&quot;Аватарки&quot;, &quot;avatar&quot;, CASE_AVATAR_CATALOG, chances.avatar, info.type),
+          caseInfoCosmeticSection(&quot;Рамки профиля&quot;, &quot;frame&quot;, CASE_FRAME_CATALOG, chances.frame, info.type),
+          caseInfoCosmeticSection(&quot;Следы в забеге&quot;, &quot;trail&quot;, CASE_TRAIL_CATALOG, chances.trail, info.type)
+        ].join(&quot;&quot;);
+        const guaranteeCount = Math.max(0, Math.min(50, Math.floor(Number(info.guaranteeCount ?? CASE_LEGENDARY_GUARANTEE ?? 50))));
+        const pityCounter = guaranteeCount &gt; 0 ? Math.max(0, Math.min(guaranteeCount - 1, Math.floor(Number(state.caseLegendaryPityCounter || 0)))) : 0;
+        const guaranteeRemaining = guaranteeCount &gt; 0 ? guaranteeCount - pityCounter : 0;
+        const guaranteeProgress = info.type === &quot;legendary&quot; &amp;&amp; guaranteeCount &gt; 0
+          ? `&lt;div class=&quot;case-guarantee-progress&quot;&gt;&lt;span&gt;&lt;small&gt;До гаранта&lt;/small&gt;&lt;strong&gt;${formatter.format(guaranteeRemaining)} из ${formatter.format(guaranteeCount)}&lt;/strong&gt;&lt;/span&gt;&lt;i&gt;&lt;b style=&quot;width:${Math.max(2, Math.min(100, pityCounter / guaranteeCount * 100))}%&quot;&gt;&lt;/b&gt;&lt;/i&gt;&lt;/div&gt;`
+          : &quot;&quot;;
+        const note = info.type === &quot;legendary&quot;
+          ? guaranteeCount &gt; 0
+            ? `&lt;strong&gt;Гарант каждые ${formatter.format(guaranteeCount)} открытий&lt;/strong&gt;&lt;span&gt;Каждое ${formatter.format(guaranteeCount)}-е открытие Легендарного кейса гарантирует неполученную косметику не ниже эпической редкости, пока такая косметика остаётся в коллекции. Уже полученные скины, аватарки, рамки и следы больше не выпадают: они зачёркнуты и имеют шанс 0%. Если категория собрана полностью, её шанс автоматически переходит в очки. Физическая награда выдаётся проверяемым кодом в разделе «Мои покупки» и зависит от наличия товара.&lt;/span&gt;`
+            : `&lt;strong&gt;Гарант отключён&lt;/strong&gt;&lt;span&gt;Полученные предметы всё равно исключаются из Легендарного кейса, а шанс полностью собранной категории переходит в очки.&lt;/span&gt;`
+          : `&lt;strong&gt;Повтор косметики не пропадает&lt;/strong&gt;&lt;span&gt;За повтор аватарки начисляется ${formatter.format(CASE_DUPLICATE_POINTS.avatar)} очков, рамки — ${formatter.format(CASE_DUPLICATE_POINTS.frame)}, следа — ${formatter.format(CASE_DUPLICATE_POINTS.trail)}.&lt;/span&gt;`;
+        caseRouletteBusy = false;
+        caseContentEl.innerHTML = `&lt;div class=&quot;case-info-head&quot;&gt;${caseImageMarkup(info.type, false, &quot;case-info-chest&quot;)}&lt;span&gt;&lt;small&gt;Содержимое кейса&lt;/small&gt;&lt;h2 id=&quot;case-dialog-title&quot;&gt;${escapePurchaseText(info.title)}&lt;/h2&gt;&lt;p&gt;При открытии выпадает одна гарантированная награда.&lt;/p&gt;&lt;/span&gt;&lt;/div&gt;${guaranteeProgress}&lt;section class=&quot;case-info-section&quot;&gt;&lt;div class=&quot;case-info-section-title&quot;&gt;&lt;span&gt;&lt;strong&gt;Шансы по категориям&lt;/strong&gt;&lt;small&gt;Вероятность за одно открытие&lt;/small&gt;&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;case-info-category-list&quot;&gt;${categories}&lt;/div&gt;&lt;/section&gt;&lt;section class=&quot;case-info-section&quot;&gt;&lt;div class=&quot;case-info-section-title&quot;&gt;&lt;span&gt;&lt;strong&gt;Ресурсы и усилители&lt;/strong&gt;&lt;small&gt;Точное количество и шанс&lt;/small&gt;&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;case-info-simple-list&quot;&gt;${simpleRewards}&lt;/div&gt;&lt;/section&gt;${physicalSection}${cosmeticSections}&lt;div class=&quot;case-info-note&quot;&gt;${note}&lt;/div&gt;&lt;button class=&quot;case-result-done&quot; data-case-close type=&quot;button&quot;&gt;Понятно&lt;/button&gt;`;
+        caseLayer.hidden = false;
+        caseLayer.setAttribute(&quot;aria-hidden&quot;, &quot;false&quot;);
+        caseLayer.querySelector(&quot;.case-dialog&quot;)?.scrollTo({ top: 0, behavior: &quot;auto&quot; });
       }
 
       function caseFinalRewardMarkup(view) {
@@ -12022,7 +12845,7 @@ html&gt;body{padding:0}
         const sequenceLength = 40;
         const rows = rewards.map((reward, rewardIndex) =&gt; {
           const target = caseRewardView(reward);
-          const pool = caseRoulettePool();
+          const pool = caseRoulettePool(opened.caseType || &quot;small&quot;);
           const sequence = Array.from({ length: sequenceLength }, (_, index) =&gt; {
             if (index === winningIndex) return target;
             return pool[(rewardIndex * 4 + index * 5 + Math.floor(index / 3)) % pool.length];
@@ -12115,13 +12938,16 @@ html&gt;body{padding:0}
 
       function renderCaseHub() {
         const gifted = normalizeGiftedCases(state.caseGiftedCases);
-        const giftedTotal = gifted.small + gifted.sweet + gifted.gold;
+        const giftedTotal = gifted.small + gifted.sweet + gifted.gold + gifted.legendary;
+        const levelCases = availableLevelCases();
         if (caseGiftedWrapEl) caseGiftedWrapEl.hidden = false;
         if (caseGiftedListEl) {
-          const cards = [
-            [&quot;small&quot;,&quot;Обычный кейс&quot;], [&quot;sweet&quot;,&quot;Серебряный кейс&quot;], [&quot;gold&quot;,&quot;Золотой кейс&quot;]
-          ].filter(([type]) =&gt; gifted[type] &gt; 0).map(([type,title]) =&gt; `&lt;article class=&quot;gifted-case-card is-${type}&quot;&gt;${caseImageMarkup(type, false)}&lt;span&gt;&lt;strong&gt;${title}&lt;/strong&gt;&lt;small&gt;В запасе: ${formatter.format(gifted[type])} · 1 награда&lt;/small&gt;&lt;/span&gt;&lt;button data-open-gifted-case=&quot;${type}&quot; type=&quot;button&quot;&gt;Открыть&lt;/button&gt;&lt;/article&gt;`).join(&quot;&quot;);
-          caseGiftedListEl.innerHTML = cards || `&lt;div class=&quot;case-empty-warehouse&quot;&gt;&lt;strong&gt;Склад пока пуст&lt;/strong&gt;&lt;span&gt;Подарочные и компенсационные кейсы появятся здесь.&lt;/span&gt;&lt;/div&gt;`;
+          const levelCards = levelCases.map((entry) =&gt; `&lt;article class=&quot;gifted-case-card is-${entry.caseType}&quot;&gt;&lt;button class=&quot;case-card-info-trigger&quot; data-case-info-type=&quot;${entry.caseType}&quot; type=&quot;button&quot; aria-label=&quot;Награды и шансы: ${escapePurchaseText(entry.title)}&quot;&gt;${caseImageMarkup(entry.caseType, false)}&lt;/button&gt;&lt;span&gt;&lt;strong&gt;${escapePurchaseText(entry.title)}&lt;/strong&gt;&lt;small&gt;Награда за ${formatter.format(entry.level)} уровень · нажми на кейс, чтобы увидеть награды&lt;/small&gt;&lt;/span&gt;&lt;button data-open-level-case=&quot;${entry.level}&quot; type=&quot;button&quot;&gt;Открыть&lt;/button&gt;&lt;/article&gt;`).join(&quot;&quot;);
+          const giftedCards = [
+            [&quot;small&quot;,&quot;Обычный кейс&quot;], [&quot;sweet&quot;,&quot;Серебряный кейс&quot;], [&quot;gold&quot;,&quot;Золотой кейс&quot;], [&quot;legendary&quot;,&quot;Легендарный кейс&quot;]
+          ].filter(([type]) =&gt; gifted[type] &gt; 0).map(([type,title]) =&gt; `&lt;article class=&quot;gifted-case-card is-${type}&quot;&gt;&lt;button class=&quot;case-card-info-trigger&quot; data-case-info-type=&quot;${type}&quot; type=&quot;button&quot; aria-label=&quot;Награды и шансы: ${title}&quot;&gt;${caseImageMarkup(type, false)}&lt;/button&gt;&lt;span&gt;&lt;strong&gt;${title}&lt;/strong&gt;&lt;small&gt;Подарочный · в запасе: ${formatter.format(gifted[type])} · нажми на кейс для просмотра&lt;/small&gt;&lt;/span&gt;&lt;button data-open-gifted-case=&quot;${type}&quot; type=&quot;button&quot;&gt;Открыть&lt;/button&gt;&lt;/article&gt;`).join(&quot;&quot;);
+          const cards = levelCards + giftedCards;
+          caseGiftedListEl.innerHTML = cards || `&lt;div class=&quot;case-empty-warehouse&quot;&gt;&lt;strong&gt;Склад пока пуст&lt;/strong&gt;&lt;span&gt;Кейсы появятся здесь после получения уровня, подарка или компенсации.&lt;/span&gt;&lt;/div&gt;`;
         }
         const active = normalizeActiveCaseBooster(state.activeCaseBooster);
         if (caseBoostersListEl) caseBoostersListEl.innerHTML = Object.entries(CASE_BOOSTER_CATALOG).map(([type,item]) =&gt; {
@@ -12140,18 +12966,37 @@ html&gt;body{padding:0}
         const normalizedActive = normalizeCaseCosmetic(kind, activeId);
         const noneActive = !normalizedActive;
         const noneMarkup = `&lt;button class=&quot;case-cosmetic${noneActive?&quot; is-active&quot;:&quot;&quot;}&quot; data-equip-case-kind=&quot;${kind}&quot; data-equip-case-id=&quot;&quot; type=&quot;button&quot;&gt;&lt;span style=&quot;font-size:26px&quot;&gt;○&lt;/span&gt;&lt;span&gt;Без ${kind===&quot;trail&quot;?&quot;следа&quot;:&quot;оформления&quot;}&lt;/span&gt;&lt;/button&gt;`;
-        container.innerHTML = noneMarkup + Object.entries(catalog).map(([id,item]) =&gt; {
+        const rarityOrder = Object.freeze({ common: 0, rare: 1, superrare: 2, epic: 3, mythic: 4, legendary: 5 });
+        const sortedCatalogEntries = Object.entries(catalog)
+          .map(([id, item]) =&gt; [id, caseLiveOpsItem(kind, id, item)])
+          .filter(([id, item]) =&gt; item.enabled !== false || owned.has(id))
+          .sort((first, second) =&gt; {
+          const firstItem = first[1] || {};
+          const secondItem = second[1] || {};
+          const firstOwned = owned.has(first[0]) ? 0 : 1;
+          const secondOwned = owned.has(second[0]) ? 0 : 1;
+          if (firstOwned !== secondOwned) return firstOwned - secondOwned;
+          const firstNew = firstItem.isNew ? 1 : 0;
+          const secondNew = secondItem.isNew ? 1 : 0;
+          if (firstNew !== secondNew) return firstNew - secondNew;
+          const firstRarity = rarityOrder[String(firstItem.rarityClass || &quot;common&quot;)] ?? 99;
+          const secondRarity = rarityOrder[String(secondItem.rarityClass || &quot;common&quot;)] ?? 99;
+          if (firstRarity !== secondRarity) return firstRarity - secondRarity;
+          return String(firstItem.title || first[0]).localeCompare(String(secondItem.title || second[0]), &quot;ru&quot;);
+        });
+        container.innerHTML = noneMarkup + sortedCatalogEntries.map(([id,item]) =&gt; {
           const unlocked = owned.has(id); const active = normalizedActive === id;
           let visual = &quot;&quot;;
           if (kind === &quot;avatar&quot;) visual = `&lt;img src=&quot;${item.src}&quot; alt=&quot;&quot;&gt;`;
           if (kind === &quot;frame&quot;) visual = `&lt;span class=&quot;case-frame-preview frame-${id}&quot;&gt;&lt;img src=&quot;${item.src}&quot; alt=&quot;&quot;&gt;&lt;/span&gt;`;
           if (kind === &quot;trail&quot;) visual = `&lt;img class=&quot;case-trail-preview&quot; src=&quot;${escapePurchaseText(item.src)}&quot; alt=&quot;&quot;&gt;`;
           const rarity = item.rarity ? `&lt;small class=&quot;case-rarity is-${escapePurchaseText(item.rarityClass || &quot;common&quot;)}&quot;&gt;${escapePurchaseText(item.rarity)}&lt;/small&gt;` : &quot;&quot;;
-          return `&lt;button class=&quot;case-cosmetic${active?&quot; is-active&quot;:&quot;&quot;}${unlocked?&quot;&quot;:&quot; is-locked&quot;}&quot; data-equip-case-kind=&quot;${kind}&quot; data-equip-case-id=&quot;${id}&quot; type=&quot;button&quot; ${unlocked?&quot;&quot;:&quot;disabled&quot;}&gt;${visual}&lt;span&gt;${escapePurchaseText(item.title)}&lt;/span&gt;${rarity}&lt;/button&gt;`;
+          const newBadge = item?.isNew ? `&lt;b class=&quot;case-new-badge case-new-badge--collection&quot;&gt;NEW&lt;/b&gt;` : &quot;&quot;;
+          return `&lt;button class=&quot;case-cosmetic${active?&quot; is-active&quot;:&quot;&quot;}${unlocked?&quot;&quot;:&quot; is-locked&quot;}${item?.isNew?&quot; is-new&quot;:&quot;&quot;}&quot; data-equip-case-kind=&quot;${kind}&quot; data-equip-case-id=&quot;${id}&quot; type=&quot;button&quot; ${unlocked?&quot;&quot;:&quot;disabled&quot;}&gt;${newBadge}${visual}&lt;span&gt;${escapePurchaseText(item.title)}&lt;/span&gt;${rarity}&lt;/button&gt;`;
         }).join(&quot;&quot;);
         const collectionGroup = container.closest(&quot;[data-case-collection]&quot;);
         const collectionCount = collectionGroup?.querySelector(`[data-case-collection-count=&quot;${kind}&quot;]`);
-        if (collectionCount) collectionCount.textContent = `${owned.size} / ${Object.keys(catalog).length}`;
+        if (collectionCount) collectionCount.textContent = `${owned.size} / ${sortedCatalogEntries.length}`;
       }
 
       function requestTelegramProfile() {
@@ -12183,7 +13028,7 @@ html&gt;body{padding:0}
         return SKIN_CATALOG[currentDogSkin.id] || SKIN_CATALOG.default;
       }
 
-      function skinRunRewards(points, treats, coffee) {
+      function skinRunRewards(points, treats, coffee, durationSeconds = 0) {
         const skin = activeSkinConfig();
         const bonus = skin.bonus || SKIN_CATALOG.default.bonus;
         const rawPoints = Math.max(0, Math.floor(Number(points) || 0));
@@ -12194,7 +13039,10 @@ html&gt;body{padding:0}
         const boostedPoints = boosterType === &quot;points&quot; ? rawPoints * 2 : rawPoints;
         const boostedTreats = boosterType === &quot;treats&quot; ? rawTreats * 2 : rawTreats;
         const boostedCoffee = boosterType === &quot;coffee&quot; ? rawCoffee * 2 : rawCoffee;
-        const addFixedBonus = (value, original, extra) =&gt; original &gt; 0 ? value + Math.max(0, Math.floor(Number(extra) || 0)) : 0;
+        const skinBonusEligible = profileRunQualifiesForXp(durationSeconds, rawPoints);
+        const skinPointBonus = skinBonusEligible ? Math.max(0, Math.floor(Number(bonus.points) || 0)) : 0;
+        const skinTreatBonus = skinBonusEligible ? Math.max(0, Math.floor(Number(bonus.treats) || 0)) : 0;
+        const skinCoffeeBonus = skinBonusEligible ? Math.max(0, Math.floor(Number(bonus.coffee) || 0)) : 0;
         return {
           skin,
           boosterType,
@@ -12205,17 +13053,21 @@ html&gt;body{padding:0}
           boostedPoints,
           boostedTreats,
           boostedCoffee,
+          skinBonusEligible,
           boosterPointBonus: boostedPoints - rawPoints,
           boosterTreatBonus: boostedTreats - rawTreats,
           boosterCoffeeBonus: boostedCoffee - rawCoffee,
-          points: addFixedBonus(boostedPoints, rawPoints, bonus.points),
-          treats: addFixedBonus(boostedTreats, rawTreats, bonus.treats),
-          coffee: addFixedBonus(boostedCoffee, rawCoffee, bonus.coffee)
+          points: boostedPoints + skinPointBonus,
+          treats: boostedTreats + skinTreatBonus,
+          coffee: boostedCoffee + skinCoffeeBonus
         };
       }
 
       function skinRunBonusText(credited) {
         if (!credited || credited.skin?.id === &quot;default&quot;) return &quot;&quot;;
+        if (!credited.skinBonusEligible) {
+          return `Бонус «${credited.skin.title}» не начислен: нужен забег от ${PROFILE_XP_MIN_RUN_SECONDS} секунд и ${PROFILE_XP_MIN_RUN_SCORE} очков`;
+        }
         const parts = [];
         const pointBonus = Math.max(0, Number(credited.points || 0) - Number(credited.boostedPoints || credited.rawPoints || 0));
         const treatBonus = Math.max(0, Number(credited.treats || 0) - Number(credited.boostedTreats || credited.rawTreats || 0));
@@ -12301,6 +13153,7 @@ html&gt;body{padding:0}
           &lt;img class=&quot;purchase-product-image&quot; alt=&quot;${escapePurchaseText(skin.title)}&quot; src=&quot;${escapePurchaseText(skin.image)}&quot;&gt;
           &lt;h2 id=&quot;purchase-dialog-title&quot;&gt;${escapePurchaseText(skin.title)}&lt;/h2&gt;
           &lt;p&gt;Подтвердите покупку образа. Купленный скин останется на аккаунте навсегда и сразу будет надет.&lt;/p&gt;
+          ${skin.bonusCase ? `&lt;div class=&quot;purchase-warning&quot;&gt;&lt;strong&gt;Подарок при покупке&lt;/strong&gt;&lt;span&gt;${escapePurchaseText(skin.bonusCase.title)} сразу появится в профиле, на складе кейсов.&lt;/span&gt;&lt;/div&gt;` : &quot;&quot;}
           &lt;div class=&quot;purchase-costs&quot;&gt;${purchaseCostRowsMarkup(purchase)}&lt;/div&gt;
           &lt;div class=&quot;purchase-warning&quot;&gt;
             &lt;strong&gt;Не занимает лимит наград&lt;/strong&gt;
@@ -12321,12 +13174,57 @@ html&gt;body{padding:0}
           &lt;img class=&quot;purchase-product-image&quot; alt=&quot;${escapePurchaseText(skin.title)}&quot; src=&quot;${escapePurchaseText(skin.image)}&quot;&gt;
           &lt;h2 id=&quot;purchase-dialog-title&quot;&gt;${escapePurchaseText(skin.title)}&lt;/h2&gt;
           &lt;p&gt;Образ добавлен на аккаунт навсегда и уже надет. Он появится в следующем забеге без перезагрузки страницы.&lt;/p&gt;
-          &lt;div class=&quot;purchase-warning&quot;&gt;&lt;strong&gt;Бонус активирован&lt;/strong&gt;&lt;span&gt;${escapePurchaseText(skin.bonusLabel)} после завершения забега. Счёт, рекорд и рейтинг не увеличиваются.&lt;/span&gt;&lt;/div&gt;
+          &lt;div class=&quot;purchase-warning&quot;&gt;&lt;strong&gt;Бонус активирован&lt;/strong&gt;&lt;span&gt;${escapePurchaseText(skin.bonusLabel)} после полноценного забега от ${PROFILE_XP_MIN_RUN_SECONDS} секунд и ${PROFILE_XP_MIN_RUN_SCORE} очков. Бонусные очки идут только в кошелёк — счёт, рекорд и рейтинг не увеличиваются.&lt;/span&gt;&lt;/div&gt;
+          ${skin.bonusCase ? `&lt;div class=&quot;purchase-warning&quot;&gt;&lt;strong&gt;Кейс в подарок&lt;/strong&gt;&lt;span&gt;${escapePurchaseText(skin.bonusCase.title)} будет добавлен на склад кейсов.&lt;/span&gt;&lt;/div&gt;` : &quot;&quot;}
           &lt;button class=&quot;purchase-action purchase-action--done&quot; data-purchase-close type=&quot;button&quot;&gt;Отлично&lt;/button&gt;
         `, &quot;[data-purchase-close]&quot;);
       }
 
-      function confirmPendingSkinPurchase() {
+      async function claimOwnedSkinBonusCase(skinId, notify = true) {
+        const skin = SKIN_CATALOG[String(skinId || &quot;&quot;)];
+        if (!skin?.bonusCase || !skinIsOwned(skin.id) || !telegramProfile?.initData) return false;
+        const data = await caseApiRequest(SKIN_BONUS_CASE_PATH, {
+          skinId: skin.id,
+          ownedSkins: normalizeOwnedSkins(state.ownedSkins)
+        });
+        applyServerCasePayload(data);
+        if (data?.bonusCase?.granted &amp;&amp; notify) {
+          showProfileToast(`За образ «${skin.title}» выдан ${skin.bonusCase.title}.`, &quot;success&quot;);
+        }
+        return Boolean(data?.bonusCase?.granted);
+      }
+
+      async function syncOwnedSkinBonusCases({ notify = true, force = false } = {}) {
+        if (!telegramProfile?.initData || skinBonusCaseSyncInFlight || (skinBonusCaseSessionDone &amp;&amp; !force)) return false;
+        const eligible = normalizeOwnedSkins(state.ownedSkins).filter((skinId) =&gt; SKIN_CATALOG[skinId]?.bonusCase);
+        if (!eligible.length) {
+          skinBonusCaseSessionDone = true;
+          return false;
+        }
+        skinBonusCaseSyncInFlight = true;
+        let grantedAny = false;
+        let completed = true;
+        try {
+          for (const skinId of eligible) {
+            try {
+              grantedAny = (await claimOwnedSkinBonusCase(skinId, notify)) || grantedAny;
+            } catch (error) {
+              completed = false;
+              console.warn(&quot;Skin bonus case sync failed&quot;, skinId, error);
+            }
+          }
+          if (grantedAny) {
+            renderCaseHub();
+            renderProfile();
+          }
+          if (completed) skinBonusCaseSessionDone = true;
+          return grantedAny;
+        } finally {
+          skinBonusCaseSyncInFlight = false;
+        }
+      }
+
+      async function confirmPendingSkinPurchase() {
         const purchase = pendingPurchase;
         if (!purchase || purchase.kind !== &quot;skin&quot;) return;
         const skin = purchase.skin;
@@ -12345,9 +13243,18 @@ html&gt;body{padding:0}
         const cancelButton = purchaseLayer?.querySelector(&quot;[data-purchase-cancel]&quot;);
         if (confirmButton) {
           confirmButton.disabled = true;
-          confirmButton.textContent = &quot;Покупаем…&quot;;
+          confirmButton.textContent = &quot;Проверяем остаток…&quot;;
         }
         if (cancelButton) cancelButton.disabled = true;
+        try {
+          await caseApiRequest(SKIN_PURCHASE_PATH, { skinId: skin.id });
+        } catch (error) {
+          const message = error?.message || &quot;Не удалось подтвердить покупку скина.&quot;;
+          setSkinsMessage(message, &quot;warning&quot;);
+          showPurchaseNotice(&quot;Скин не куплен&quot;, message);
+          void loadRemoteSkinPrices();
+          return;
+        }
         antiCheatWithTrustedChange(&quot;buy-skin&quot;, () =&gt; {
           state.wallet -= skin.points;
           state.treats -= skin.treats;
@@ -12358,6 +13265,8 @@ html&gt;body{padding:0}
           updateHud();
           renderSkinsShop();
         });
+        void syncOwnedSkinBonusCases({ notify: true, force: true });
+        void pushPlayerAppearanceSnapshot();
         playGameSound(&quot;unlockSkin&quot;);
         setSkinsMessage(`Образ «${skin.title}» куплен навсегда и сразу надет.`, &quot;success&quot;);
         showSkinPurchaseSuccess(purchase);
@@ -12373,6 +13282,7 @@ html&gt;body{padding:0}
             renderSkinsShop();
             updateHud();
           });
+          void pushPlayerAppearanceSnapshot();
           setSkinsMessage(`Образ «${skin.title}» надет. Бонус: ${skin.bonusLabel}.`, &quot;success&quot;);
           return;
         }
@@ -12405,6 +13315,7 @@ html&gt;body{padding:0}
         for (const screen of screens) screen.hidden = screen.dataset.screen !== name;
         if (name === &quot;shop&quot;) {
           setShopCloseActive(false);
+          void loadRemoteShopPrices();
           const skinsPanel = root.querySelector(&#x27;[data-shop-panel=&quot;skins&quot;]&#x27;);
           if (skinsPanel &amp;&amp; !skinsPanel.hidden) renderSkinsShop();
         }
@@ -12857,12 +13768,6 @@ html&gt;body{padding:0}
         &quot;/assets/rating/avatars/avatar-husky.png&quot;
       ]);
       const leaderboardRemoteAvatarState = new Map();
-      const leaderboardFallbackAvatarPreload = LEADERBOARD_FALLBACK_AVATARS.map((src) =&gt; {
-        const image = new Image();
-        image.decoding = &quot;async&quot;;
-        image.src = src;
-        return image;
-      });
 
       function leaderboardFallbackAvatar(entry) {
         const key = String(entry?.telegramId || entry?.name || &quot;zefirok-player&quot;);
@@ -13015,8 +13920,24 @@ html&gt;body{padding:0}
           best: sanitizeAdminNumber(state.best),
           treats: sanitizeAdminNumber(state.treats),
           coffee: sanitizeAdminNumber(state.coffee),
-          profileXp: sanitizeAdminNumber(state.profileXp)
+          profileXp: sanitizeAdminNumber(state.profileXp),
+          ownedSkins: normalizeOwnedSkins(state.ownedSkins),
+          activeSkin: currentDogSkin.id || &quot;default&quot;
         };
+      }
+
+      async function pushPlayerAppearanceSnapshot() {
+        if (!telegramProfile?.initData) return false;
+        try {
+          await adminApiRequest(ADMIN_PROFILE_SYNC_PATH, {
+            mode: &quot;read&quot;,
+            current: adminProfileSnapshot()
+          });
+          return true;
+        } catch (error) {
+          if (error?.status !== 403) console.warn(&quot;Player appearance sync failed&quot;, error);
+          return false;
+        }
       }
 
       async function loadRemoteShopPrices() {
@@ -13029,8 +13950,10 @@ html&gt;body{padding:0}
           const data = await response.json().catch(() =&gt; null);
           if (!response.ok || !data?.ok || !data.products) return false;
           remoteShopPrices = data.products;
+          remoteShopAssortment = data.assortment &amp;&amp; typeof data.assortment === &quot;object&quot; ? data.assortment : {};
           state.adminPrices = {};
           applyAdminPrices();
+          applyShopAssortment();
           saveProgress();
           return true;
         } catch (error) {
@@ -13187,6 +14110,8 @@ html&gt;body{padding:0}
             state.musicEnabled = true;
             state.tutorialCompleted = false;
             state.profileTutorialCompleted = false;
+            state.caseTutorialSeenKey = &quot;&quot;;
+            state.ratingTutorialSeenKey = &quot;&quot;;
           }
           state.appliedResetPlanIds = [...applied, id].slice(-50);
           saveProgress();
@@ -13213,7 +14138,7 @@ html&gt;body{padding:0}
           }
         }
         if (!initData) {
-          renderLeaderboardUnavailable(&quot;Откройте игру через Telegram-бота, чтобы участвовать в рейтинге.&quot;);
+          renderLeaderboardUnavailable(&quot;Откройте игру системной кнопкой «ИГРАТЬ» в Telegram, чтобы участвовать в рейтинге.&quot;);
           return null;
         }
         const now = Date.now();
@@ -13404,7 +14329,7 @@ html&gt;body{padding:0}
             : `Сезон завершён ${leaderboardDate(season.endsAt)}`;
         const reward = data.reward;
         const rewardMarkup = reward
-          ? `&lt;div class=&quot;leaderboard-v4-reward-card&quot;&gt;${leaderboardRewardMarkup({ type: reward.type, amount: reward.amount, title: reward.title, imageUrl: reward.imageUrl })}&lt;span&gt;${reward.place} место · ${leaderboardEscape(reward.title || `${reward.amount} кофе`)}&lt;/span&gt;${reward.status === &quot;pending&quot; ? `&lt;button class=&quot;leaderboard-claim&quot; data-leaderboard-claim type=&quot;button&quot;&gt;Забрать награду&lt;/button&gt;` : &quot;&quot;}&lt;/div&gt;`
+          ? `&lt;div class=&quot;leaderboard-v4-reward-card&quot;&gt;&lt;div class=&quot;leaderboard-v4-season-reward leaderboard-v4-claimed-reward-frame&quot;&gt;${leaderboardRewardMarkup({ type: reward.type, amount: reward.amount, title: reward.title, imageUrl: reward.imageUrl })}&lt;/div&gt;&lt;span&gt;${reward.place} место · ${leaderboardEscape(reward.title || `${reward.amount} кофе`)}&lt;/span&gt;${reward.status === &quot;pending&quot; ? `&lt;button class=&quot;leaderboard-claim&quot; data-leaderboard-claim type=&quot;button&quot;&gt;Забрать награду&lt;/button&gt;` : &quot;&quot;}&lt;/div&gt;`
           : &quot;&quot;;
         const meMarkup = data.me
           ? `&lt;div class=&quot;leaderboard-v4-me-card&quot;&gt;&lt;strong&gt;Ваше место: ${data.me.place}&lt;/strong&gt;&lt;span&gt;Лучший результат: ${formatter.format(data.me.score)}${data.gapToFirst &gt; 0 ? ` · до первого места ${formatter.format(data.gapToFirst)}` : &quot; · вы на первом месте!&quot;}&lt;/span&gt;&lt;/div&gt;`
@@ -13433,6 +14358,14 @@ html&gt;body{padding:0}
           refreshLeaderboard(false, &quot;season&quot;, true),
           prefetchLeaderboard(&quot;all_time&quot;, false)
         ]);
+      }
+
+      function requestOpenLeaderboard() {
+        if (String(state.ratingTutorialSeenKey || &quot;&quot;) !== RATING_TUTORIAL_KEY) {
+          openRatingTutorial(false);
+          return;
+        }
+        openLeaderboard();
       }
 
       function closeLeaderboard() {
@@ -13471,7 +14404,10 @@ html&gt;body{padding:0}
         }
         savePendingLeaderboardRun(run);
         const initData = String(telegramProfile?.initData || &quot;&quot;);
-        if (!initData) return false;
+        if (!initData) {
+          showProfileToast(&quot;Забег сохранён. Чтобы попасть в рейтинг, откройте игру системной кнопкой «ИГРАТЬ» в Telegram.&quot;, &quot;warning&quot;, 5200);
+          return false;
+        }
         try {
           const loaded = await leaderboardApiRequest(LEADERBOARD_API_SUBMIT_PATH, { initData, ...run });
           loaded._loadedAt = Date.now();
@@ -13500,7 +14436,7 @@ html&gt;body{padding:0}
 
       async function claimLeaderboardReward() {
         const initData = String(telegramProfile?.initData || &quot;&quot;);
-        if (!initData) return showProfileToast(&quot;Откройте игру через Telegram-бота.&quot;, &quot;warning&quot;);
+        if (!initData) return showProfileToast(&quot;Откройте игру системной кнопкой «ИГРАТЬ» в Telegram.&quot;, &quot;warning&quot;);
         try {
           const result = await leaderboardApiRequest(LEADERBOARD_API_CLAIM_PATH, {
             initData,
@@ -13508,13 +14444,14 @@ html&gt;body{padding:0}
           });
           const reward = result.reward;
           if (result.claimed &amp;&amp; reward?.id &amp;&amp; !state.appliedSeasonRewardIds.includes(String(reward.id))) {
+            const rewardType = String(reward.type || &quot;coffee&quot;).toLowerCase();
+            const isCaseReward = rewardType === &quot;case&quot;;
             antiCheatWithTrustedChange(&quot;season-reward&quot;, () =&gt; {
               const amount = Math.max(0, Math.floor(Number(reward.amount || 0)));
-              const type = String(reward.type || &quot;coffee&quot;);
-              if (type === &quot;coffee&quot;) state.coffee += amount;
-              if (type === &quot;points&quot; || type === &quot;currency&quot;) state.wallet += amount;
-              if (type === &quot;marshmallow&quot;) state.treats += amount;
-              if (type === &quot;skin&quot; &amp;&amp; reward.itemId) {
+              if (rewardType === &quot;coffee&quot;) state.coffee += amount;
+              if (rewardType === &quot;points&quot; || rewardType === &quot;currency&quot;) state.wallet += amount;
+              if (rewardType === &quot;marshmallow&quot; || rewardType === &quot;treats&quot;) state.treats += amount;
+              if (rewardType === &quot;skin&quot; &amp;&amp; reward.itemId) {
                 const skinId = String(reward.itemId);
                 state.ownedSkins = Array.from(new Set([...(state.ownedSkins || [&quot;default&quot;]), skinId]));
               }
@@ -13524,7 +14461,8 @@ html&gt;body{padding:0}
               renderProfile();
               renderSkinsShop();
             });
-            playGameSound(reward.type === &quot;skin&quot; ? &quot;unlockSkin&quot; : &quot;purchaseReward&quot;);
+            if (isCaseReward) await loadCaseState(true);
+            playGameSound(rewardType === &quot;skin&quot; ? &quot;unlockSkin&quot; : &quot;purchaseReward&quot;);
             showProfileToast(`Награда получена: ${reward.title || `${reward.amount} кофе`}`, &quot;success&quot;, 4200);
           } else if (result.alreadyClaimed) {
             showProfileToast(&quot;Эта награда уже была получена.&quot;, &quot;warning&quot;);
@@ -13724,26 +14662,42 @@ html&gt;body{padding:0}
 
       function showPurchaseConfirmation(purchase, missing = []) {
         const productImage = assetSources[purchase.product.image] || &quot;&quot;;
+        const isCasePurchase = purchase.product.kind === &quot;case&quot;;
         const missingMarkup = missing.length &gt; 0
           ? `&lt;div class=&quot;purchase-balance-warning&quot;&gt;Не хватает: ${escapePurchaseText(missing.join(&quot; и &quot;))}.&lt;/div&gt;`
           : &quot;&quot;;
         const disabledAttribute = missing.length &gt; 0 ? &#x27; disabled aria-disabled=&quot;true&quot;&#x27; : &quot;&quot;;
+        const warningMarkup = isCasePurchase
+          ? `&lt;div class=&quot;purchase-warning&quot;&gt;&lt;strong&gt;Кейс появится сразу&lt;/strong&gt;&lt;span&gt;После покупки он будет добавлен в профиль, в раздел «Склад кейсов».&lt;/span&gt;&lt;/div&gt;`
+          : `&lt;div class=&quot;purchase-warning&quot;&gt;&lt;strong&gt;Код действует 24 часа&lt;/strong&gt;&lt;span&gt;После подтверждения вы получите одноразовый код для этой покупки.&lt;/span&gt;&lt;/div&gt;`;
         openPurchaseLayer(`
           &lt;span class=&quot;purchase-kicker&quot;&gt;Подтверждение покупки&lt;/span&gt;
           &lt;img class=&quot;purchase-product-image&quot; alt=&quot;${escapePurchaseText(purchase.product.title)}&quot; src=&quot;${productImage}&quot;&gt;
           &lt;h2 id=&quot;purchase-dialog-title&quot;&gt;${escapePurchaseText(purchase.product.title)}&lt;/h2&gt;
           &lt;p&gt;Подтвердите списание наград с вашего игрового баланса.&lt;/p&gt;
           &lt;div class=&quot;purchase-costs&quot;&gt;${purchaseCostRowsMarkup(purchase)}&lt;/div&gt;
-          &lt;div class=&quot;purchase-warning&quot;&gt;
-            &lt;strong&gt;Код действует 24 часа&lt;/strong&gt;
-            &lt;span&gt;После подтверждения вы получите одноразовый код для этой покупки.&lt;/span&gt;
-          &lt;/div&gt;
+          ${warningMarkup}
           ${missingMarkup}
           &lt;div class=&quot;purchase-actions&quot;&gt;
             &lt;button class=&quot;purchase-action&quot; data-purchase-cancel type=&quot;button&quot;&gt;Отмена&lt;/button&gt;
             &lt;button class=&quot;purchase-action purchase-action--confirm&quot; data-purchase-confirm type=&quot;button&quot;${disabledAttribute}&gt;Да, списать&lt;/button&gt;
           &lt;/div&gt;
         `, missing.length &gt; 0 ? &quot;[data-purchase-cancel]&quot; : &quot;[data-purchase-confirm]&quot;);
+      }
+
+      function showCaseShopPurchaseSuccess(purchase) {
+        const productImage = assetSources[purchase.product.image] || &quot;&quot;;
+        openPurchaseLayer(`
+          &lt;span class=&quot;purchase-kicker&quot;&gt;Покупка выполнена&lt;/span&gt;
+          &lt;img class=&quot;purchase-product-image&quot; alt=&quot;${escapePurchaseText(purchase.product.title)}&quot; src=&quot;${productImage}&quot;&gt;
+          &lt;h2 id=&quot;purchase-dialog-title&quot;&gt;${escapePurchaseText(purchase.product.title)}&lt;/h2&gt;
+          &lt;p&gt;Кейс добавлен в профиль и уже находится в разделе «Склад кейсов».&lt;/p&gt;
+          &lt;div class=&quot;purchase-warning&quot;&gt;&lt;strong&gt;Можно открыть в любое время&lt;/strong&gt;&lt;span&gt;Нажмите на изображение кейса в профиле, чтобы ещё раз посмотреть награды и шансы.&lt;/span&gt;&lt;/div&gt;
+          &lt;div class=&quot;purchase-actions&quot;&gt;
+            &lt;button class=&quot;purchase-action&quot; data-case-info-type=&quot;${escapePurchaseText(purchase.product.caseType || &quot;small&quot;)}&quot; type=&quot;button&quot;&gt;Награды и шансы&lt;/button&gt;
+            &lt;button class=&quot;purchase-action purchase-action--done&quot; data-purchase-close type=&quot;button&quot;&gt;Готово&lt;/button&gt;
+          &lt;/div&gt;
+        `, &quot;[data-purchase-close]&quot;);
       }
 
       function showPurchaseSuccess(purchase, code, expiresAt) {
@@ -13768,7 +14722,7 @@ html&gt;body{padding:0}
       function currentPurchaseFromButton(button) {
         const id = button.dataset.buy;
         const product = shopProducts[id];
-        if (!product) return null;
+        if (!product || product.enabled === false) return null;
         return {
           id,
           product,
@@ -13791,10 +14745,12 @@ html&gt;body{padding:0}
       function buyItem(button) {
         const purchase = currentPurchaseFromButton(button);
         if (!purchase) return;
-        const limitStatus = getPurchaseLimitStatus();
-        if (limitStatus.reached) {
-          showPurchaseLimitWarning(limitStatus);
-          return;
+        if (purchase.product.kind !== &quot;case&quot;) {
+          const limitStatus = getPurchaseLimitStatus();
+          if (limitStatus.reached) {
+            showPurchaseLimitWarning(limitStatus);
+            return;
+          }
         }
         const missing = purchaseMissingItems(purchase);
         pendingPurchase = purchase;
@@ -13802,11 +14758,48 @@ html&gt;body{padding:0}
         showPurchaseConfirmation(purchase, missing);
       }
 
+      async function confirmPendingCasePurchase(purchase) {
+        const missing = purchaseMissingItems(purchase);
+        if (missing.length &gt; 0) {
+          shopMessageEl.textContent = `Не хватает ${missing.join(&quot; и &quot;)}.`;
+          showPurchaseConfirmation(purchase, missing);
+          return;
+        }
+        const confirmButton = purchaseLayer?.querySelector(&quot;[data-purchase-confirm]&quot;);
+        const cancelButton = purchaseLayer?.querySelector(&quot;[data-purchase-cancel]&quot;);
+        if (confirmButton) {
+          confirmButton.disabled = true;
+          confirmButton.textContent = &quot;Добавляем кейс…&quot;;
+        }
+        if (cancelButton) cancelButton.disabled = true;
+        purchase.requestId = purchase.requestId || makeRewardRequestId();
+        try {
+          const data = await caseApiRequest(CASE_API_PURCHASE_PATH, {
+            caseType: purchase.product.caseType,
+            requestId: purchase.requestId
+          });
+          applyServerCasePayload(data);
+          shopMessageEl.textContent = `${purchase.product.title} добавлен в склад кейсов.`;
+          updateHud();
+          renderProfile();
+          renderCaseHub();
+          showCaseShopPurchaseSuccess(purchase);
+          playGameSound(&quot;purchaseReward&quot;);
+        } catch (error) {
+          showPurchaseNotice(&quot;Кейс не куплен&quot;, error?.message || &quot;Не удалось добавить кейс на склад.&quot;);
+          await loadCaseState(true);
+        }
+      }
+
       async function confirmPendingPurchase() {
         const purchase = pendingPurchase;
         if (!purchase) return;
         if (purchase.kind === &quot;skin&quot;) {
           confirmPendingSkinPurchase();
+          return;
+        }
+        if (purchase.product.kind === &quot;case&quot;) {
+          await confirmPendingCasePurchase(purchase);
           return;
         }
         const limitStatus = getPurchaseLimitStatus();
@@ -13889,7 +14882,7 @@ html&gt;body{padding:0}
       }
 
       function selectProduct(id) {
-        if (!shopProducts[id]) return;
+        if (!shopProducts[id] || shopProducts[id].enabled === false) return;
         selectedProductId = id;
         for (const card of shopCards) card.classList.toggle(&quot;is-active&quot;, card.dataset.shopCard === id);
         updateShopPreview();
@@ -13900,16 +14893,21 @@ html&gt;body{padding:0}
         if (!product) return;
         const treatCost = Number(product.treats || 0);
         const coffeeCost = Number(product.coffee || 0);
-        const resourceCost = coffeeCost || treatCost;
-        const resourceIcon = coffeeCost ? &quot;shopCoffee&quot; : &quot;shopMarshmallow&quot;;
-        const resourceLabel = coffeeCost ? &quot;чашек кофе&quot; : &quot;зефира&quot;;
+        const hasBothResources = treatCost &gt; 0 &amp;&amp; coffeeCost &gt; 0;
+        const resourceCost = hasBothResources ? treatCost : (coffeeCost || treatCost);
+        const resourceIcon = hasBothResources ? &quot;shopMarshmallow&quot; : (coffeeCost ? &quot;shopCoffee&quot; : &quot;shopMarshmallow&quot;);
+        const resourceLabel = hasBothResources ? &quot;зефира&quot; : (coffeeCost ? &quot;чашек кофе&quot; : &quot;зефира&quot;);
         if (previewTitleEl) previewTitleEl.textContent = product.title;
         if (previewDescriptionEl) previewDescriptionEl.textContent = product.description;
         if (previewPointsEl) previewPointsEl.textContent = formatter.format(product.points);
         if (previewTreatsEl) previewTreatsEl.textContent = formatter.format(resourceCost);
         if (previewResourceLabelEl) previewResourceLabelEl.textContent = resourceLabel;
         if (previewResourceIconEl &amp;&amp; assetSources[resourceIcon]) previewResourceIconEl.src = assetSources[resourceIcon];
-        if (previewOwnedEl) previewOwnedEl.textContent = formatter.format(state.inventory[selectedProductId] || 0);
+        if (previewExtraResourceRowEl) previewExtraResourceRowEl.hidden = !hasBothResources;
+        if (previewExtraResourceValueEl) previewExtraResourceValueEl.textContent = formatter.format(coffeeCost);
+        if (previewExtraResourceLabelEl) previewExtraResourceLabelEl.textContent = &quot;чашек кофе&quot;;
+        if (previewExtraResourceIconEl &amp;&amp; assetSources.shopCoffee) previewExtraResourceIconEl.src = assetSources.shopCoffee;
+        if (previewOwnedEl) previewOwnedEl.textContent = formatter.format(shopProductOwnedCount(selectedProductId, product));
         if (previewImageEl &amp;&amp; assetSources[product.image]) previewImageEl.src = assetSources[product.image];
         if (previewHeroEl &amp;&amp; assetSources[product.image]) previewHeroEl.src = assetSources[product.image];
         if (previewCostImageEl &amp;&amp; assetSources[product.image]) previewCostImageEl.src = assetSources[product.image];
@@ -13919,10 +14917,11 @@ html&gt;body{padding:0}
           previewBuyBtn.dataset.cost = String(product.points);
           previewBuyBtn.dataset.treatCost = String(treatCost);
           previewBuyBtn.dataset.coffeeCost = String(coffeeCost);
-          const affordable = state.wallet &gt;= product.points &amp;&amp; state.treats &gt;= treatCost &amp;&amp; state.coffee &gt;= coffeeCost;
-          previewBuyBtn.textContent = &quot;Купить&quot;;
-          previewBuyBtn.disabled = false;
-          previewBuyBtn.classList.toggle(&quot;is-unaffordable&quot;, !affordable);
+          const enabled = product.enabled !== false;
+          const affordable = enabled &amp;&amp; state.wallet &gt;= product.points &amp;&amp; state.treats &gt;= treatCost &amp;&amp; state.coffee &gt;= coffeeCost;
+          previewBuyBtn.textContent = enabled ? &quot;Купить&quot; : &quot;Нет в ассортименте&quot;;
+          previewBuyBtn.disabled = !enabled;
+          previewBuyBtn.classList.toggle(&quot;is-unaffordable&quot;, enabled &amp;&amp; !affordable);
         }
         fitNumericUI();
       }
@@ -14379,8 +15378,11 @@ html&gt;body{padding:0}
           drawContain(currentSprite.img, -dog.w * 0.5, -dog.h * 0.60, dog.w, dog.h, 1, &quot;bottom&quot;);
           ctx.restore();
         } else {
-          const frame = dog.grounded ? (Math.floor(state.time * 9) % 2 === 0 ? &quot;dogRun1&quot; : &quot;dogRun2&quot;) : &quot;dogJump&quot;;
-          if (isReady(frame)) drawAsset(frame, x, y, dog.w, dog.h);
+          const fallbackState = dog.grounded ? &quot;stand&quot; : &quot;jump&quot;;
+          const fallbackSprite = resolvedGameplayDogSpriteEntry(currentDogSkin.id, fallbackState);
+          const portraitImage = ensureSkinPortraitImage(currentDogRunPortraitSrc()) || ensureSkinPortraitImage(defaultDogRunPortraitSrc());
+          const fallbackImage = fallbackSprite?.img || (portraitImage?.complete &amp;&amp; portraitImage.naturalWidth &gt; 0 ? portraitImage : null);
+          if (fallbackImage) drawContain(fallbackImage, x, y, dog.w, dog.h, 1, &quot;bottom&quot;);
           else drawMaltipoo(x, y, dog.w / 105);
         }
         ctx.restore();
@@ -14822,7 +15824,7 @@ html&gt;body{padding:0}
       }
 
 
-      if (leaderboardOpenButton) leaderboardOpenButton.addEventListener(&quot;click&quot;, openLeaderboard);
+      if (leaderboardOpenButton) leaderboardOpenButton.addEventListener(&quot;click&quot;, requestOpenLeaderboard);
       if (leaderboardCloseButton) leaderboardCloseButton.addEventListener(&quot;click&quot;, closeLeaderboard);
       if (leaderboardLayer) {
         leaderboardLayer.addEventListener(&quot;click&quot;, (event) =&gt; {
@@ -14847,10 +15849,28 @@ html&gt;body{padding:0}
       }
       if (leaderboardSummaryEl) {
         leaderboardSummaryEl.addEventListener(&quot;click&quot;, (event) =&gt; {
-          if (event.target instanceof Element &amp;&amp; event.target.closest(&quot;[data-leaderboard-open]&quot;)) openLeaderboard();
+          if (event.target instanceof Element &amp;&amp; event.target.closest(&quot;[data-leaderboard-open]&quot;)) requestOpenLeaderboard();
         });
       }
 
+
+      root.addEventListener(&quot;click&quot;, (event) =&gt; {
+        const target = event.target instanceof Element ? event.target : null;
+        if (!target || target.closest(&quot;[data-open-level-case], [data-open-gifted-case]&quot;)) return;
+        const trigger = target.closest(&quot;[data-case-info-type], [data-shop-case-type], [data-case-type]&quot;);
+        if (!trigger) return;
+        const caseType = trigger.dataset.caseInfoType || trigger.dataset.shopCaseType || trigger.dataset.caseType || &quot;small&quot;;
+        event.preventDefault();
+        if (purchaseLayer &amp;&amp; !purchaseLayer.hidden) closePurchaseLayer();
+        if (caseType === &quot;legendary&quot; &amp;&amp; telegramProfile?.initData) {
+          void (async () =&gt; {
+            await loadCaseState(true);
+            showCaseRewardsInfo(caseType);
+          })();
+          return;
+        }
+        showCaseRewardsInfo(caseType);
+      });
 
       if (caseRefreshButton) caseRefreshButton.addEventListener(&quot;click&quot;, () =&gt; void loadCaseState(true));
       if (levelCasesListEl) levelCasesListEl.addEventListener(&quot;click&quot;, (event) =&gt; {
@@ -14858,8 +15878,14 @@ html&gt;body{padding:0}
         if (button &amp;&amp; !button.disabled) void openLevelCaseClient(button.dataset.openLevelCase, button);
       });
       if (caseGiftedListEl) caseGiftedListEl.addEventListener(&quot;click&quot;, (event) =&gt; {
-        const button = event.target instanceof Element ? event.target.closest(&quot;[data-open-gifted-case]&quot;) : null;
-        if (button &amp;&amp; !button.disabled) void openGiftedCaseClient(button.dataset.openGiftedCase, button);
+        const target = event.target instanceof Element ? event.target : null;
+        const levelButton = target?.closest(&quot;[data-open-level-case]&quot;);
+        if (levelButton &amp;&amp; !levelButton.disabled) {
+          void openLevelCaseClient(levelButton.dataset.openLevelCase, levelButton);
+          return;
+        }
+        const giftedButton = target?.closest(&quot;[data-open-gifted-case]&quot;);
+        if (giftedButton &amp;&amp; !giftedButton.disabled) void openGiftedCaseClient(giftedButton.dataset.openGiftedCase, giftedButton);
       });
       if (caseBoostersListEl) caseBoostersListEl.addEventListener(&quot;click&quot;, (event) =&gt; {
         const button = event.target instanceof Element ? event.target.closest(&quot;[data-activate-case-booster]&quot;) : null;
@@ -14883,6 +15909,12 @@ html&gt;body{padding:0}
 
       if (profileTutorialButton) {
         profileTutorialButton.addEventListener(&quot;click&quot;, () =&gt; openTutorial(false));
+      }
+      if (profileCaseTutorialButton) {
+        profileCaseTutorialButton.addEventListener(&quot;click&quot;, () =&gt; openCaseTutorial(false));
+      }
+      if (profileRatingTutorialButton) {
+        profileRatingTutorialButton.addEventListener(&quot;click&quot;, () =&gt; openRatingTutorial(false));
       }
       if (profileLevelTutorialButton) {
         profileLevelTutorialButton.addEventListener(&quot;click&quot;, () =&gt; openProfileTutorial(false));
@@ -14930,7 +15962,9 @@ html&gt;body{padding:0}
           const target = event.target instanceof Element ? event.target : null;
           if (!target) return;
           if (target.closest(&quot;[data-tutorial-skip]&quot;)) {
+            const continueToRating = tutorialMode === &quot;rating&quot;;
             closeTutorial(true);
+            if (continueToRating) openLeaderboard();
             return;
           }
           if (target.closest(&quot;[data-tutorial-back]&quot;)) {
@@ -15599,6 +16633,21 @@ html&gt;body{padding:0}
 }
 #zefirok-maltipoo-runner .leaderboard-reward-copy { display:none !important; }
 @media (max-width:390px){#zefirok-maltipoo-runner .leaderboard-reward-amount--fixed{font-size:10px !important;bottom:6% !important;}}
+/* 0.55: every dynamic rating reward image is clipped inside the artwork frame. */
+#zefirok-maltipoo-runner .leaderboard-reward-visual {
+  box-sizing:border-box !important; overflow:hidden !important; isolation:isolate !important; contain:layout paint !important;
+}
+#zefirok-maltipoo-runner .leaderboard-reward-icon {
+  display:block !important; object-fit:contain !important; object-position:center !important; margin:auto !important;
+}
+#zefirok-maltipoo-runner .leaderboard-v4-reward-wrap .leaderboard-reward-icon--case,
+#zefirok-maltipoo-runner .leaderboard-v4-season-reward .leaderboard-reward-icon--case {
+  width:66% !important; height:82% !important; max-width:66% !important; max-height:82% !important; border-radius:0 !important;
+}
+#zefirok-maltipoo-runner .leaderboard-v4-claimed-reward-frame {
+  width:100% !important; margin:0 !important;
+}
+#zefirok-maltipoo-runner .leaderboard-v4-reward-card &gt; .leaderboard-reward-line { display:none !important; }
 
 /* 0.3.13: profile rank badge is bound to live level state. */
 #zefirok-maltipoo-runner .leaderboard-v4-podium-card .leaderboard-v4-ribbon {
@@ -15659,11 +16708,11 @@ html&gt;body{padding:0}
 #zefirok-maltipoo-runner .case-reward-art.is-frame img{border-radius:0!important;background:transparent!important;filter:none!important;clip-path:inset(1px);transform:scale(.96)}
 #zefirok-maltipoo-runner .case-final-reward-visual .case-reward-art--result{background:transparent!important;box-shadow:none!important}
 
-/* Gift-case roulette appears immediately while the server confirms the reward. */
-#zefirok-maltipoo-runner .case-roulette-track--preview{animation:case-preview-roulette 1.15s linear infinite;transform:translate3d(-90px,0,0)}
-#zefirok-maltipoo-runner .case-opening-status{min-height:42px;padding:8px 12px;border-radius:13px;background:#fff;display:flex;align-items:center;justify-content:center;gap:8px;color:#855b47;font-size:11px;font-weight:850}
-#zefirok-maltipoo-runner .case-opening-status&gt;span{width:14px;height:14px;border:2px solid #f4bfd1;border-top-color:#d9638f;border-radius:50%;animation:case-opening-spinner .7s linear infinite}
-@keyframes case-preview-roulette{from{transform:translate3d(-90px,0,0)}to{transform:translate3d(-270px,0,0)}}
+/* A static waiting state prevents a fake roulette from flashing before the real result animation. */
+#zefirok-maltipoo-runner .case-opening-wait{min-height:82px;padding:16px 14px;border-radius:17px;background:linear-gradient(180deg,#fff,#fff8f2);box-shadow:inset 0 0 0 2px rgba(226,162,185,.28),0 7px 16px rgba(93,55,39,.08);display:grid;justify-items:center;align-content:center;gap:5px;color:#855b47;text-align:center}
+#zefirok-maltipoo-runner .case-opening-wait strong{font-size:13px;font-weight:900;color:#6c4130}
+#zefirok-maltipoo-runner .case-opening-wait small{font-size:10px;font-weight:750;color:#a37d69}
+#zefirok-maltipoo-runner .case-opening-spinner{width:18px;height:18px;border:3px solid #f4bfd1;border-top-color:#d9638f;border-radius:50%;animation:case-opening-spinner .7s linear infinite}
 @keyframes case-opening-spinner{to{transform:rotate(360deg)}}
 
 /* Final top-three score plaques: larger, uncropped and without the old colored rectangle. */
@@ -15803,18 +16852,18 @@ html&gt;body{padding:0}
 }
 &lt;/style&gt;
 
-&lt;style id=&quot;leaderboard-v11-cropped-centered-plates&quot;&gt;
+&lt;style id=&quot;leaderboard-v15-balanced-plates&quot;&gt;
   #zefirok-maltipoo-runner .leaderboard-v4-podium-card .leaderboard-v4-ribbon {
     left: 50% !important;
     right: auto !important;
-    bottom: 6px !important;
-    width: 140% !important;
-    max-width: 218px !important;
-    min-width: 122px !important;
-    height: 48px !important;
-    min-height: 48px !important;
+    bottom: 5px !important;
+    width: 106% !important;
+    max-width: 168px !important;
+    min-width: 108px !important;
+    height: 60px !important;
+    min-height: 60px !important;
     margin: 0 !important;
-    padding: 0 25px 1px !important;
+    padding: 0 26px 1px !important;
     transform: translateX(-50%) !important;
     box-sizing: border-box !important;
     display: flex !important;
@@ -15823,19 +16872,38 @@ html&gt;body{padding:0}
     overflow: visible !important;
     background: transparent !important;
     box-shadow: none !important;
-    font-size: clamp(15px, 4vw, 22px) !important;
+    font-size: clamp(17px, 4vw, 23px) !important;
     line-height: 1 !important;
-    letter-spacing: -0.035em !important;
+    letter-spacing: -0.03em !important;
     text-align: center !important;
     white-space: nowrap !important;
   }
   #zefirok-maltipoo-runner .leaderboard-v4-podium-card.is-first .leaderboard-v4-ribbon {
-    width: 146% !important;
-    max-width: 232px !important;
-    height: 52px !important;
-    min-height: 52px !important;
-    padding-inline: 29px !important;
-    font-size: clamp(17px, 4.35vw, 24px) !important;
+    width: 114% !important;
+    max-width: 184px !important;
+    height: 60px !important;
+    min-height: 60px !important;
+    padding-inline: 28px !important;
+    bottom: 5px !important;
+    font-size: clamp(17px, 4vw, 23px) !important;
+  }
+  #zefirok-maltipoo-runner .leaderboard-v4-podium-card[data-place=&quot;2&quot;] .leaderboard-v4-ribbon {
+    width: 106% !important;
+    max-width: 168px !important;
+    height: 60px !important;
+    min-height: 60px !important;
+    padding-inline: 26px !important;
+    bottom: 5px !important;
+    font-size: clamp(17px, 4vw, 23px) !important;
+  }
+  #zefirok-maltipoo-runner .leaderboard-v4-podium-card[data-place=&quot;3&quot;] .leaderboard-v4-ribbon {
+    width: 108% !important;
+    max-width: 172px !important;
+    height: 60px !important;
+    min-height: 60px !important;
+    padding-inline: 26px !important;
+    bottom: 5px !important;
+    font-size: clamp(17px, 4vw, 23px) !important;
   }
   #zefirok-maltipoo-runner .leaderboard-v4-ribbon-art {
     position: absolute !important;
@@ -15858,21 +16926,193 @@ html&gt;body{padding:0}
   }
   @media (max-width: 390px) {
     #zefirok-maltipoo-runner .leaderboard-v4-podium-card .leaderboard-v4-ribbon {
-      width: 144% !important;
-      min-width: 116px !important;
-      height: 46px !important;
-      min-height: 46px !important;
+      width: 110% !important;
+      max-width: 160px !important;
+      min-width: 104px !important;
+      height: 56px !important;
+      min-height: 56px !important;
       padding-inline: 22px !important;
-      font-size: 15px !important;
-    }
-    #zefirok-maltipoo-runner .leaderboard-v4-podium-card.is-first .leaderboard-v4-ribbon {
-      width: 150% !important;
-      height: 50px !important;
-      min-height: 50px !important;
-      padding-inline: 26px !important;
       font-size: 17px !important;
     }
+    #zefirok-maltipoo-runner .leaderboard-v4-podium-card.is-first .leaderboard-v4-ribbon {
+      width: 118% !important;
+      max-width: 176px !important;
+      height: 56px !important;
+      min-height: 56px !important;
+      padding-inline: 25px !important;
+      font-size: 17px !important;
+    }
+    #zefirok-maltipoo-runner .leaderboard-v4-podium-card[data-place=&quot;2&quot;] .leaderboard-v4-ribbon {
+      width: 110% !important;
+      max-width: 160px !important;
+      height: 56px !important;
+      min-height: 56px !important;
+      padding-inline: 22px !important;
+    }
+    #zefirok-maltipoo-runner .leaderboard-v4-podium-card[data-place=&quot;3&quot;] .leaderboard-v4-ribbon {
+      width: 112% !important;
+      max-width: 164px !important;
+      height: 56px !important;
+      min-height: 56px !important;
+      padding-inline: 22px !important;
+      bottom: 5px !important;
+    }
   }
+&lt;/style&gt;
+
+&lt;style id=&quot;zefirok-v018-case-rewards-info&quot;&gt;
+#zefirok-maltipoo-runner .level-guide-case{
+  border:0;
+  font:inherit;
+  cursor:pointer;
+  transition:transform .16s ease,box-shadow .16s ease;
+}
+#zefirok-maltipoo-runner .level-guide-case:active{transform:scale(.97)}
+#zefirok-maltipoo-runner .level-guide-case span{font-size:10px;font-weight:900;color:inherit}
+#zefirok-maltipoo-runner .gifted-case-card&gt;button.case-card-info-trigger{
+  width:70px;
+  min-height:70px;
+  padding:0;
+  border:0;
+  border-radius:13px;
+  background:transparent;
+  box-shadow:none;
+  display:grid;
+  place-items:center;
+  cursor:pointer;
+}
+#zefirok-maltipoo-runner .gifted-case-card&gt;button.case-card-info-trigger:active{transform:scale(.96)}
+#zefirok-maltipoo-runner .case-info-head{
+  display:grid;
+  grid-template-columns:104px minmax(0,1fr);
+  align-items:center;
+  gap:12px;
+  padding:2px 30px 14px 0;
+  text-align:left;
+}
+#zefirok-maltipoo-runner .case-info-head .case-info-chest{width:104px;height:104px;object-fit:contain}
+#zefirok-maltipoo-runner .case-info-head&gt;span{display:grid;gap:4px}
+#zefirok-maltipoo-runner .case-info-head small{font-size:10px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:#c16d8a}
+#zefirok-maltipoo-runner .case-info-head h2{margin:0;color:#5e3b2a;font-size:22px;line-height:1.05}
+#zefirok-maltipoo-runner .case-info-head p{margin:0;color:#916f5f;font-size:11px;line-height:1.4}
+#zefirok-maltipoo-runner .case-info-section{display:grid;gap:9px;margin-top:10px;padding:12px;border-radius:17px;background:rgba(255,255,255,.78);box-shadow:0 7px 18px rgba(93,55,39,.07);text-align:left}
+#zefirok-maltipoo-runner .case-info-section-title{display:flex;align-items:center;justify-content:space-between;gap:10px}
+#zefirok-maltipoo-runner .case-info-section-title&gt;span{display:grid;gap:2px}
+#zefirok-maltipoo-runner .case-info-section-title strong{font-size:13px;color:#603e2d}
+#zefirok-maltipoo-runner .case-info-section-title small{font-size:9px;color:#9b7867}
+#zefirok-maltipoo-runner .case-info-section-title&gt;em{font-style:normal;font-size:12px;font-weight:950;color:#bf5e81}
+#zefirok-maltipoo-runner .case-info-category-list,#zefirok-maltipoo-runner .case-info-simple-list,#zefirok-maltipoo-runner .case-info-cosmetic-list{display:grid;gap:7px}
+#zefirok-maltipoo-runner .case-info-category-row,#zefirok-maltipoo-runner .case-info-simple-reward,#zefirok-maltipoo-runner .case-info-cosmetic-item{display:grid;grid-template-columns:42px minmax(0,1fr) auto;align-items:center;gap:9px;min-height:52px;padding:7px 8px;border-radius:13px;background:#fff;color:#684532}
+#zefirok-maltipoo-runner .case-info-category-row&gt;img,#zefirok-maltipoo-runner .case-info-simple-reward&gt;img{width:38px;height:38px;object-fit:contain}
+#zefirok-maltipoo-runner .case-info-category-row&gt;span,#zefirok-maltipoo-runner .case-info-simple-reward&gt;span,#zefirok-maltipoo-runner .case-info-cosmetic-item&gt;span:nth-child(2){display:grid;gap:3px;min-width:0}
+#zefirok-maltipoo-runner .case-info-category-row strong,#zefirok-maltipoo-runner .case-info-simple-reward strong,#zefirok-maltipoo-runner .case-info-cosmetic-item strong{font-size:11px;line-height:1.2;color:#62402e}
+#zefirok-maltipoo-runner .case-info-simple-reward small{font-size:9px;color:#9b7867}
+#zefirok-maltipoo-runner .case-info-category-row em,#zefirok-maltipoo-runner .case-info-simple-reward em,#zefirok-maltipoo-runner .case-info-cosmetic-item em{font-style:normal;font-size:11px;font-weight:950;color:#bd5f81;white-space:nowrap}
+#zefirok-maltipoo-runner .case-info-category-row i{display:block;height:6px;border-radius:99px;background:#f4e8e2;overflow:hidden}
+#zefirok-maltipoo-runner .case-info-category-row i b{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#ed97b3,#db6e96)}
+#zefirok-maltipoo-runner .case-info-cosmetic-art{width:42px;height:42px;display:grid;place-items:center;position:relative}
+#zefirok-maltipoo-runner .case-info-cosmetic-art img{width:42px;height:42px;object-fit:contain;border-radius:11px}
+#zefirok-maltipoo-runner .case-info-cosmetic-art.is-frame img{width:48px;height:48px;border-radius:0}
+#zefirok-maltipoo-runner .case-info-cosmetic-art.is-trail img{width:52px;height:32px;border-radius:0}
+#zefirok-maltipoo-runner .case-info-cosmetic-item .case-rarity{margin:0;font-size:8px}
+#zefirok-maltipoo-runner .case-info-note{display:grid;gap:4px;margin-top:10px;padding:11px 13px;border-radius:15px;background:#fff4d7;text-align:left;color:#73513c}
+#zefirok-maltipoo-runner .case-info-note strong{font-size:11px}
+#zefirok-maltipoo-runner .case-info-note span{font-size:9px;line-height:1.45;color:#92715f}
+@media(max-width:390px){
+  #zefirok-maltipoo-runner .case-info-head{grid-template-columns:86px minmax(0,1fr)}
+  #zefirok-maltipoo-runner .case-info-head .case-info-chest{width:86px;height:86px}
+  #zefirok-maltipoo-runner .case-info-head h2{font-size:19px}
+  #zefirok-maltipoo-runner .gifted-case-card&gt;button.case-card-info-trigger{width:58px;min-height:58px}
+}
+&lt;/style&gt;
+
+&lt;script id=&quot;zefirok-v019-runtime-asset-audit&quot; type=&quot;application/json&quot;&gt;{&quot;scope&quot;:&quot;runtime-load-only&quot;,&quot;gameplayLogicChanged&quot;:false,&quot;removedEagerLoads&quot;:[&quot;unusedEmbeddedCanvasAssets&quot;,&quot;allSkinShopPreviews&quot;,&quot;allSkinPortraitsExceptCurrent&quot;,&quot;allLeaderboardFallbackAvatars&quot;]}&lt;/script&gt;
+
+&lt;style id=&quot;zefirok-v024-scroll-and-assortment-fix&quot;&gt;
+  /* iOS/Telegram WebView: avoid a nested 430px scroller and one very tall clipped layer. */
+  #zefirok-maltipoo-runner {
+    overflow-x: hidden !important;
+  }
+  #zefirok-maltipoo-runner .phone {
+    overflow: visible !important;
+  }
+  #zefirok-maltipoo-runner .shop-list {
+    max-height: none !important;
+    overflow: visible !important;
+    padding-right: 0 !important;
+  }
+  #zefirok-maltipoo-runner [data-screen=&quot;profile&quot;],
+  #zefirok-maltipoo-runner .profile-shell,
+  #zefirok-maltipoo-runner [data-screen=&quot;shop&quot;] {
+    overflow-x: hidden !important;
+    contain: none !important;
+  }
+  #zefirok-maltipoo-runner .shop-card[hidden] {
+    display: none !important;
+  }
+&lt;/style&gt;
+
+&lt;style id=&quot;zefirok-v031-case-guarantee-and-rating-scroll-fix&quot;&gt;
+#zefirok-maltipoo-runner .case-guarantee-progress{
+  display:grid;
+  gap:8px;
+  margin:2px 0 10px;
+  padding:12px 14px;
+  border:1px solid rgba(221,166,66,.42);
+  border-radius:17px;
+  background:linear-gradient(135deg,#fff9df,#fff3f7);
+  box-shadow:0 7px 18px rgba(112,72,31,.08);
+  text-align:left;
+}
+#zefirok-maltipoo-runner .case-guarantee-progress&gt;span{display:flex;align-items:end;justify-content:space-between;gap:12px}
+#zefirok-maltipoo-runner .case-guarantee-progress small{color:#a36f30;font-size:10px;font-weight:900;letter-spacing:.05em;text-transform:uppercase}
+#zefirok-maltipoo-runner .case-guarantee-progress strong{color:#8b4f19;font-size:16px;font-weight:950;font-variant-numeric:tabular-nums;white-space:nowrap}
+#zefirok-maltipoo-runner .case-guarantee-progress&gt;i{display:block;height:8px;overflow:hidden;border-radius:999px;background:rgba(196,139,61,.16)}
+#zefirok-maltipoo-runner .case-guarantee-progress&gt;i&gt;b{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#ef9ab8,#e3ad42)}
+
+/* iOS Telegram WebView could detach the absolute score plaques of places 2 and 3
+   from their cards while scrolling. Every podium card now owns one composited layer. */
+#zefirok-maltipoo-runner .leaderboard-v4-podium{isolation:isolate!important;-webkit-transform:translateZ(0)!important;transform:translateZ(0)!important}
+#zefirok-maltipoo-runner .leaderboard-v4-podium-card{
+  position:relative!important;
+  isolation:isolate!important;
+  -webkit-backface-visibility:hidden!important;
+  backface-visibility:hidden!important;
+  will-change:transform!important;
+}
+#zefirok-maltipoo-runner .leaderboard-v4-podium-card:not(.is-first){
+  -webkit-transform:translate3d(0,0,0)!important;
+  transform:translate3d(0,0,0)!important;
+}
+#zefirok-maltipoo-runner .leaderboard-v4-podium-card.is-first{
+  -webkit-transform:translate3d(0,-11px,0)!important;
+  transform:translate3d(0,-11px,0)!important;
+}
+#zefirok-maltipoo-runner .leaderboard-v4-podium-card .leaderboard-v4-ribbon{
+  -webkit-transform:translate3d(-50%,0,0)!important;
+  transform:translate3d(-50%,0,0)!important;
+  -webkit-backface-visibility:hidden!important;
+  backface-visibility:hidden!important;
+}
+&lt;/style&gt;
+
+&lt;style id=&quot;zefirok-v046-owned-new-cosmetics&quot;&gt;
+#zefirok-maltipoo-runner .case-info-cosmetic-item{position:relative;overflow:hidden}
+#zefirok-maltipoo-runner .case-cosmetic-title-row{display:flex;align-items:center;gap:5px;min-width:0}
+#zefirok-maltipoo-runner .case-cosmetic-title-row strong{min-width:0}
+#zefirok-maltipoo-runner .case-new-badge{display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;padding:2px 5px;border-radius:999px;background:linear-gradient(135deg,#ff6e9d,#e5a12d);color:#fff!important;font-size:7px!important;font-weight:950!important;line-height:1;letter-spacing:.06em;text-decoration:none!important;box-shadow:0 2px 6px rgba(201,91,117,.24)}
+#zefirok-maltipoo-runner .case-info-cosmetic-item.is-owned{background:#f5f0ed;opacity:.62}
+#zefirok-maltipoo-runner .case-info-cosmetic-item.is-owned .case-cosmetic-title-row strong{text-decoration:line-through;text-decoration-thickness:2px;text-decoration-color:#9e7d6d}
+#zefirok-maltipoo-runner .case-info-cosmetic-item.is-owned .case-info-cosmetic-art{filter:grayscale(.75)}
+#zefirok-maltipoo-runner .case-info-cosmetic-item.is-owned .case-info-cosmetic-art::after{content:&quot;✓&quot;;position:absolute;right:-2px;bottom:-2px;width:19px;height:19px;border-radius:50%;display:grid;place-items:center;background:#8c766b;color:#fff;font-size:11px;font-weight:950;box-shadow:0 2px 5px rgba(75,55,45,.22)}
+#zefirok-maltipoo-runner .case-info-cosmetic-art{position:relative}
+#zefirok-maltipoo-runner .case-owned-label{font-size:8px!important;font-weight:850;color:#8e776c!important;line-height:1.15}
+#zefirok-maltipoo-runner .case-info-section.is-complete{background:rgba(245,240,237,.86)}
+#zefirok-maltipoo-runner .case-cosmetic{position:relative}
+#zefirok-maltipoo-runner .case-new-badge--collection{position:absolute;right:4px;top:4px;z-index:4;padding:3px 5px;font-size:7px!important}
+#zefirok-maltipoo-runner .case-cosmetic.is-locked{opacity:1!important;filter:none!important}
+#zefirok-maltipoo-runner .case-cosmetic.is-locked&gt;*:not(.case-new-badge){opacity:.38;filter:grayscale(1)}
+#zefirok-maltipoo-runner .case-cosmetic.is-locked .case-new-badge{opacity:1!important;filter:none!important}
 &lt;/style&gt;
 &lt;/body&gt;
 &lt;/html&gt;" title="Сладкий Забег"></iframe>

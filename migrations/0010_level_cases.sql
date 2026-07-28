@@ -1,4 +1,6 @@
 -- 4.0.11: уровневые кейсы, временные усилители и косметика профиля.
+-- Поля case_avatar_id и case_frame_id в таблицах рейтинга уже присутствуют
+-- в рабочей базе, поэтому повторные ALTER TABLE не выполняются.
 
 CREATE TABLE IF NOT EXISTS case_player_state (
   telegram_id TEXT PRIMARY KEY,
@@ -39,8 +41,3 @@ CREATE TABLE IF NOT EXISTS case_booster_run_consumptions (
 
 CREATE INDEX IF NOT EXISTS idx_case_booster_runs_player
 ON case_booster_run_consumptions(telegram_id, consumed_at DESC);
-
-ALTER TABLE leaderboard_entries ADD COLUMN case_avatar_id TEXT NOT NULL DEFAULT '';
-ALTER TABLE leaderboard_entries ADD COLUMN case_frame_id TEXT NOT NULL DEFAULT '';
-ALTER TABLE leaderboard_all_time ADD COLUMN case_avatar_id TEXT NOT NULL DEFAULT '';
-ALTER TABLE leaderboard_all_time ADD COLUMN case_frame_id TEXT NOT NULL DEFAULT '';

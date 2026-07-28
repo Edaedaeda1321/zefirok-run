@@ -1,10 +1,6 @@
 -- 4.0.8: роли сотрудников и журнал действий Telegram-бота.
-
--- Очередь безопасных компенсаций. Значения добавляются к актуальному балансу
--- из Telegram Mini App при следующей синхронизации, а не заменяют его.
-ALTER TABLE admin_profile_state ADD COLUMN pending_wallet INTEGER NOT NULL DEFAULT 0;
-ALTER TABLE admin_profile_state ADD COLUMN pending_treats INTEGER NOT NULL DEFAULT 0;
-ALTER TABLE admin_profile_state ADD COLUMN pending_coffee INTEGER NOT NULL DEFAULT 0;
+-- В рабочей базе pending_wallet, pending_treats и pending_coffee уже созданы
+-- предыдущей серверной версией, поэтому повторные ALTER TABLE здесь не выполняются.
 
 -- Перевод старых названий ролей на новые без потери существующих прав.
 UPDATE staff_users SET role = 'cashier' WHERE role IN ('employee', 'cashier', 'kassir');
