@@ -128,6 +128,13 @@ const CASE_SKINS = Object.freeze({
   angel: Object.freeze({ id: "angel", title: "Ангелок", rarity: "legendary", weight: 6 })
 });
 
+const CASE_MUSIC_TRACKS = Object.freeze({
+  cafe_run: Object.freeze({ id: "cafe_run", title: "Зефирное кафе", rarity: "common", weight: 0, defaultOwned: true }),
+  legendary_cafe_run: Object.freeze({ id: "legendary_cafe_run", title: "Легендарный забег", rarity: "legendary", weight: 1, legendaryOnly: true, isNew: true }),
+  legendary_marshmallow_dash_1: Object.freeze({ id: "legendary_marshmallow_dash_1", title: "Зефирный рывок I", rarity: "legendary", weight: 1, legendaryOnly: true, isNew: true }),
+  legendary_marshmallow_dash_2: Object.freeze({ id: "legendary_marshmallow_dash_2", title: "Зефирный рывок II", rarity: "legendary", weight: 1, legendaryOnly: true, isNew: true })
+});
+
 const CASE_PHYSICAL_REWARDS = Object.freeze({
   zefir: Object.freeze({ id: "zefir", title: PRODUCTS.zefir.title, chance: 0.015 }),
   americano: Object.freeze({ id: "americano", title: PRODUCTS.americano.title, chance: 0.015 }),
@@ -136,7 +143,7 @@ const CASE_PHYSICAL_REWARDS = Object.freeze({
 const CASE_PHYSICAL_TOTAL_CHANCE = 0.045;
 
 const CASE_BOOSTER_TYPES = Object.freeze(["points", "treats", "coffee"]);
-const CASE_DUPLICATE_COMPENSATION = Object.freeze({ skin: 150000, avatar: 500, frame: 1500, trail: 5000 });
+const CASE_DUPLICATE_COMPENSATION = Object.freeze({ skin: 150000, avatar: 500, frame: 1500, trail: 5000, music: 150000 });
 const CASE_RARITY_ORDER = Object.freeze({ common: 0, rare: 1, superrare: 2, epic: 3, mythic: 4, legendary: 5 });
 
 const SHOP_SCHEMA_SQL = `CREATE TABLE IF NOT EXISTS shop_prices (
@@ -278,6 +285,33 @@ const BOT_SYSTEM_STATE_SCHEMA_SQL = `CREATE TABLE IF NOT EXISTS bot_system_state
   updated_at INTEGER NOT NULL
 )`;
 
+const ADMIN_OPERATIONAL_ISSUES_SCHEMA_SQL = `CREATE TABLE IF NOT EXISTS admin_operational_issues (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  fingerprint TEXT NOT NULL UNIQUE,
+  issue_type TEXT NOT NULL,
+  severity TEXT NOT NULL DEFAULT 'warning' CHECK(severity IN ('info','warning','high','critical')),
+  title TEXT NOT NULL,
+  details_json TEXT NOT NULL DEFAULT '{}',
+  source_type TEXT NOT NULL DEFAULT 'system',
+  source_id TEXT NOT NULL DEFAULT '',
+  status TEXT NOT NULL DEFAULT 'open' CHECK(status IN ('open','acknowledged','snoozed','resolved')),
+  assigned_to TEXT NOT NULL DEFAULT '',
+  assigned_to_name TEXT NOT NULL DEFAULT '',
+  first_seen_at INTEGER NOT NULL,
+  last_seen_at INTEGER NOT NULL,
+  snoozed_until INTEGER NOT NULL DEFAULT 0,
+  resolved_at INTEGER NOT NULL DEFAULT 0,
+  resolved_by TEXT NOT NULL DEFAULT '',
+  resolved_by_name TEXT NOT NULL DEFAULT '',
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL
+)`;
+
+const TELEGRAM_CLEAN_CHAT_STATE_PREFIX = "telegram_clean_chat:";
+const TELEGRAM_CLEAN_CHAT_TRACK_LIMIT = 100;
+const PLAYER_PROMO_INPUT_STATE_PREFIX = "player_promo_input:";
+const PLAYER_PROMO_INPUT_TTL_SECONDS = 10 * 60;
+
 const BOT_BROADCAST_BATCH_SIZE = 40;
 const BOT_BROADCAST_LEASE_SECONDS = 120;
 const BOT_BROADCAST_DELAY_MS = 45;
@@ -297,7 +331,7 @@ const STAFF_SESSION_TTL_SECONDS = 30 * 60;
 const SUPPORT_USERNAME = "ve4n0_em";
 const SUPPORT_URL = `https://t.me/${SUPPORT_USERNAME}`;
 const DEFAULT_GAME_URL = "https://zefirok-run.patokad6.workers.dev/";
-const WORKER_BUILD = "0.55";
+const WORKER_BUILD = "0.79.1";
 
 // Покупки, созданные раньше этой точки, сохраняют свои коды и статусы,
 // но больше не занимают лимитные слоты после глобального сброса 0.1.1 Beta.
@@ -382,66 +416,144 @@ const BOT_NEWS_TEXT = "В игре появился Легендарный ке�
 const BOT_NEWS_PUBLISHED_AT = Math.floor(Date.parse("2026-07-26T01:00:00+03:00") / 1000);
 // =============================================================
 
-const BOT_COMMANDS = Object.freeze([
+const PLAYER_BOT_COMMANDS = Object.freeze([
   { command: "start", description: "Открыть главное меню" },
   { command: "game", description: "Как запустить игру" },
+  { command: "rating", description: "Рейтинг сезона" },
+  { command: "tasks", description: "Задания и награды" },
+  { command: "polls", description: "Опросы игроков" },
+  { command: "news", description: "Новости игры" },
+  { command: "promo", description: "Активировать промокод" },
+  { command: "rewards", description: "Как получить награду" },
   { command: "story", description: "Сюжет игры" },
   { command: "faq", description: "Частые вопросы" },
-  { command: "rewards", description: "Как получить награду" },
-  { command: "rating", description: "Рейтинг сезона" },
-  { command: "news", description: "Новости игры" },
   { command: "update", description: "Обновление и версия игры" },
   { command: "support", description: "Поддержка игры" },
   { command: "help", description: "Как проверить код" },
-  { command: "whoami", description: "Показать мой Telegram ID" },
-  { command: "staff", description: "Войти в рабочую сессию" },
-  { command: "help_staff", description: "Команды сотрудника" },
-  { command: "adminpanel_kmd", description: "Все команды админ-панели" },
+  { command: "whoami", description: "Показать мой Telegram ID" }
+]);
+
+const STAFF_LOGIN_BOT_COMMANDS = Object.freeze([
+  ...PLAYER_BOT_COMMANDS,
+  { command: "staff", description: "Войти в рабочую сессию" }
+]);
+
+const STAFF_COMMON_BOT_COMMANDS = Object.freeze([
   { command: "adminpanel", description: "Открыть админ-панель" },
+  { command: "clean_chat", description: "Очистить рабочий чат" },
+  { command: "help_staff", description: "Доступные команды" },
+  { command: "training", description: "Обучение сотрудника" },
+  { command: "staff_me", description: "Моя роль и права" },
+  { command: "status", description: "Состояние игры и бота" },
+  { command: "search", description: "Универсальный поиск" },
+  { command: "problems", description: "Центр проблем" },
   { command: "bot_version", description: "Проверить версию Worker" },
-  { command: "staff_me", description: "Моя роль и статистика" },
-  { command: "player", description: "Карточка игрока" },
+  { command: "ticket", description: "Создать обращение" },
+  { command: "tickets", description: "Список обращений" },
+  { command: "notifications", description: "Мои уведомления" },
+  { command: "cancel", description: "Отменить текущее действие" }
+]);
+
+const OWNER_CANONICAL_BOT_COMMANDS = Object.freeze([
+  { command: "sync_commands", description: "Обновить меню команд" },
   { command: "players", description: "Список игроков" },
+  { command: "player", description: "Карточка игрока" },
+  { command: "player_history", description: "История игрока" },
+  { command: "grant", description: "Безопасно выдать награду" },
+  { command: "redeem", description: "Погасить физический код" },
+  { command: "undo_redeem", description: "Отменить ошибочное списание" },
+  { command: "stock", description: "Остатки физических наград" },
   { command: "block", description: "Заблокировать игрока" },
   { command: "unblock", description: "Разблокировать игрока" },
   { command: "banned", description: "Список заблокированных" },
-  { command: "note", description: "Добавить заметку игроку" },
-  { command: "notes", description: "Заметки игрока" },
   { command: "economy", description: "Экономика игры" },
   { command: "segments", description: "Сегменты игроков" },
   { command: "campaign", description: "Массовая кампания" },
   { command: "campaigns", description: "Кампании и статусы" },
   { command: "fraud", description: "Антифрод и аномалии" },
+  { command: "season", description: "Управление рейтингом" },
+  { command: "events", description: "Планировщик событий" },
+  { command: "event_new", description: "Создать событие" },
   { command: "content", description: "Управление косметикой" },
   { command: "cases_admin", description: "Настройки кейсов" },
-  { command: "config_history", description: "История настроек" },
   { command: "shop_admin", description: "Управление магазином" },
-  { command: "location", description: "Точка и смена сотрудника" },
-  { command: "grant", description: "Выдать награду игроку" },
-  { command: "redeem", description: "Проверить и выдать физическую награду" },
-  { command: "undo_redeem", description: "Отменить ошибочное списание" },
-  { command: "stock", description: "Остатки физических наград" },
-  { command: "season", description: "Управление рейтингом" },
+  { command: "shop_list", description: "Ассортимент магазина" },
+  { command: "shop_price", description: "Изменить цену товара" },
+  { command: "shop_show", description: "Вернуть товар в магазин" },
+  { command: "shop_hide", description: "Скрыть товар" },
+  { command: "shop_stock", description: "Изменить остаток" },
+  { command: "drafts", description: "Черновики изменений" },
+  { command: "check_game", description: "Проверка целостности" },
+  { command: "reward_queue", description: "Недоставленные награды" },
+  { command: "compensations", description: "Шаблоны компенсаций" },
+  { command: "compensate", description: "Выдать компенсацию" },
+  { command: "maintenance", description: "Технические работы" },
+  { command: "testers", description: "Тестовые аккаунты" },
+  { command: "promocodes", description: "Управление промокодами" },
+  { command: "permissions", description: "Права сотрудников" },
+  { command: "employee_add", description: "Добавить сотрудника" },
+  { command: "employee_role", description: "Изменить роль сотрудника" },
+  { command: "employee_disable", description: "Отключить сотрудника" },
+  { command: "employee_enable", description: "Включить сотрудника" },
+  { command: "approvals", description: "Опасные действия" },
+  { command: "snapshots", description: "Снимки и откат" },
+  { command: "config_history", description: "История настроек" },
+  { command: "content_stats", description: "Аналитика контента" },
   { command: "audit", description: "Журнал действий" },
-  { command: "ticket", description: "Создать обращение" },
-  { command: "tickets", description: "Список обращений" },
-  { command: "status", description: "Состояние игры и бота" },
-  { command: "daily_report", description: "Сводка за текущий день" },
-  { command: "cancel", description: "Отменить текущее действие" },
-  { command: "member_staff", description: "Все сотрудники и роли" },
-  { command: "set_name", description: "Имя сотрудника в списке" },
-  { command: "post", description: "Рассылка владельца пользователям" },
-  { command: "members", description: "Все игроки и Telegram ID" },
-  { command: "add_keys", description: "Выдать кейс игроку" },
-  { command: "add_frame", description: "Выдать рамку игроку" },
-  { command: "addprodyct", description: "Добавить товар в магазин" },
-  { command: "deletedprodyct", description: "Убрать товар из магазина" },
-  { command: "price", description: "Изменить цену товара" },
-  { command: "setlimit", description: "Установить остаток товара" },
-  { command: "towar", description: "Показать ассортимент магазина" },
-  { command: "team", description: "Команда и разрешения" },
-  { command: "publish", description: "Опубликовать новость" }
+  { command: "daily_report", description: "Сводка за день" },
+  { command: "search", description: "Универсальный поиск" },
+  { command: "problems", description: "Центр проблем" },
+  { command: "limits", description: "Лимиты сотрудников" },
+  { command: "features", description: "Флаги функций" },
+  { command: "case_simulator", description: "Симулятор кейсов" },
+  { command: "publish_center", description: "Центр публикации" },
+  { command: "automations", description: "Автоматические цепочки" },
+  { command: "ops_center", description: "Центр управления" },
+  { command: "player_reset", description: "Сброс прогресса игроков" },
+  { command: "polls_admin", description: "Управление опросами" },
+  { command: "retention", description: "Удержание игроков" },
+  { command: "settings_history", description: "История каждой настройки" },
+  { command: "performance", description: "Скорость админ-панели" },
+  { command: "releases", description: "Планировщик релизов" },
+  { command: "stock_forecast", description: "Прогноз физических остатков" }
 ]);
+
+const LEGACY_OWNER_COMMAND_REPLACEMENTS = Object.freeze({
+  members: "/players",
+  add_keys: "/grant",
+  add_frame: "/grant",
+  add_zefir: "/grant",
+  add_coffee: "/grant",
+  add_points: "/grant",
+  points: "/grant",
+  post: "/campaign",
+  publish: "/campaign",
+  addprodyct: "/shop_admin",
+  deletedprodyct: "/shop_admin",
+  price: "/shop_admin",
+  setlimit: "/shop_admin",
+  towar: "/shop_admin",
+  team: "/permissions",
+  team_add: "/permissions",
+  team_remove: "/permissions",
+  team_role: "/permissions",
+  permit: "/permissions",
+  member_staff: "/permissions",
+  set_name: "/permissions",
+  rang_staff_kassir: "/permissions",
+  rang_staff_povar: "/permissions",
+  rang_staff_administrator: "/permissions",
+  staff_enable: "/permissions",
+  staff_disable: "/permissions",
+  staff_remove: "/permissions",
+  staffon: "/permissions",
+  staffoff: "/permissions"
+});
+
+const LEGACY_SHOP_DIRECT_COMMANDS = Object.freeze(new Set([
+  "addprodyct", "deletedprodyct", "price", "setlimit"
+]));
+
 
 export default {
   async fetch(request, env, ctx) {
@@ -452,6 +564,25 @@ export default {
     }
 
     try {
+      if (url.pathname === "/staff-qr.html" && request.method === "GET") {
+        if (env.ASSETS) return env.ASSETS.fetch(request);
+        return new Response("Not found", { status: 404 });
+      }
+      if (url.pathname === "/api/staff/rewards/lookup" && request.method === "POST") {
+        return await staffQrLookup(request, env);
+      }
+      if (url.pathname === "/api/staff/rewards/redeem" && request.method === "POST") {
+        return await staffQrRedeem(request, env);
+      }
+
+      const maintenanceResponse = await enforceMaintenanceForRequest(request, url, env);
+      if (maintenanceResponse) return maintenanceResponse;
+
+      if (url.pathname === "/api/features" && request.method === "GET") {
+        const telegramId = String(url.searchParams.get("telegram_id") || "");
+        return jsonResponse({ ok: true, flags: await publicFeatureFlags(env, telegramId) });
+      }
+
       if (url.pathname === "/api/health" && request.method === "GET") {
         return jsonResponse({ ok: true, service: "zefirok-rewards", workerBuild: WORKER_BUILD, gameVersion: GAME_VERSION });
       }
@@ -492,6 +623,7 @@ export default {
         return await claimSkinPurchaseCaseBonus(request, env);
       }
       if (url.pathname === "/api/skins/purchase" && request.method === "POST") {
+        const gate = await enforceFeatureFlagForRequest(request, env, "shop"); if (gate) return gate;
         return await purchaseSkinWithStock(request, env);
       }
 
@@ -500,18 +632,23 @@ export default {
       }
 
       if (url.pathname === "/api/cases/open" && request.method === "POST") {
+        const gate = await enforceFeatureFlagForRequest(request, env, "cases"); if (gate) return gate;
         return await openLevelCase(request, env);
       }
 
       if (url.pathname === "/api/cases/open-granted" && request.method === "POST") {
+        const gate = await enforceFeatureFlagForRequest(request, env, "cases"); if (gate) return gate;
         return await openGrantedCase(request, env);
       }
 
       if (url.pathname === "/api/cases/purchase" && request.method === "POST") {
+        const shopGate = await enforceFeatureFlagForRequest(request, env, "shop"); if (shopGate) return shopGate;
+        const caseGate = await enforceFeatureFlagForRequest(request, env, "cases"); if (caseGate) return caseGate;
         return await purchaseCaseFromShop(request, env);
       }
 
       if (url.pathname === "/api/cases/activate" && request.method === "POST") {
+        const gate = await enforceFeatureFlagForRequest(request, env, "cases"); if (gate) return gate;
         return await activateCaseBooster(request, env);
       }
 
@@ -544,6 +681,8 @@ export default {
       }
 
       if (url.pathname === "/api/rewards/create" && request.method === "POST") {
+        const shopGate = await enforceFeatureFlagForRequest(request, env, "shop"); if (shopGate) return shopGate;
+        const physicalGate = await enforceFeatureFlagForRequest(request, env, "physical_rewards"); if (physicalGate) return physicalGate;
         return await createReward(request, env);
       }
 
@@ -556,11 +695,28 @@ export default {
       }
 
       if (url.pathname === "/api/leaderboard/submit" && request.method === "POST") {
+        const gate = await enforceFeatureFlagForRequest(request, env, "rating"); if (gate) return gate;
         return await submitLeaderboardRun(request, env);
       }
 
       if (url.pathname === "/api/leaderboard/claim" && request.method === "POST") {
+        const gate = await enforceFeatureFlagForRequest(request, env, "rating"); if (gate) return gate;
         return await claimLeaderboardReward(request, env);
+      }
+
+      if (url.pathname === "/api/promocodes/redeem" && request.method === "POST") {
+        const gate = await enforceFeatureFlagForRequest(request, env, "promocodes"); if (gate) return gate;
+        return await redeemPromoCodeApi(request, env);
+      }
+
+      if (url.pathname === "/api/polls/game/next" && request.method === "POST") {
+        return await getV74GamePoll(request, env);
+      }
+      if (url.pathname === "/api/polls/game/vote" && request.method === "POST") {
+        return await voteV74GamePoll(request, env);
+      }
+      if (url.pathname === "/api/polls/game/snooze" && request.method === "POST") {
+        return await snoozeV74GamePoll(request, env);
       }
 
       if (url.pathname === "/api/bot/setup-webhook" && request.method === "POST") {
@@ -629,7 +785,21 @@ ${escapeHtml(String(error?.message || error).slice(0, 500))}`); } catch {}
 
 ${escapeHtml(String(error?.message || error).slice(0, 500))}`); } catch {}
       });
-    ctx.waitUntil(Promise.allSettled([webhookTask, leaderboardTask, broadcastTask, operationsTask]));
+    const v78Task = processV78Cron(env)
+      .catch(async (error) => {
+        console.error("Scheduled v0.78 maintenance failed", error);
+        try { await notifySubscribedStaff(env, "bot_errors", `🔴 <b>Ошибка обучения или сбросов</b>
+
+${escapeHtml(String(error?.message || error).slice(0, 500))}`); } catch {}
+      });
+    const securityCenterTask = processOperationsSecurityCron(env)
+      .catch(async (error) => {
+        console.error("Scheduled operations security center failed", error);
+        try { await notifySubscribedStaff(env, "bot_errors", `🔴 <b>Ошибка безопасного центра</b>
+
+${escapeHtml(String(error?.message || error).slice(0, 500))}`); } catch {}
+      });
+    ctx.waitUntil(Promise.allSettled([webhookTask, leaderboardTask, broadcastTask, operationsTask, securityCenterTask, v78Task]));
   }
 };
 
@@ -1014,6 +1184,8 @@ async function purchaseSkinWithStock(request, env) {
       consumptionId: `skin:${telegramId}:${skinId}`,
       telegramId
     });
+    await recordPlayerTimeline(env, telegramId, "skin_purchase", `купил скин «${SKINS[skinId]?.title || skinId}»`, { skinId, stock }, `skin_purchase_${skinId}`, auth.user);
+    await recordContentAnalyticsEvent(env, telegramId, "skin", skinId, "acquired", "shop", `skin:${telegramId}:${skinId}`);
     return jsonResponse({ ok: true, skinId, stock });
   } catch (error) {
     if (error instanceof ApiError) return jsonResponse({ ok: false, error: error.message, details: error.details }, error.status);
@@ -1138,6 +1310,7 @@ async function syncAdminProfile(request, env) {
   try {
     requireDatabase(env);
     requireBotToken(env);
+    await ensureV78Schema(env);
     const body = await readJson(request);
     const auth = await validateTelegramInitData(String(body.initData || ""), env);
     const mode = String(body.mode || "read");
@@ -1145,6 +1318,17 @@ async function syncAdminProfile(request, env) {
     const telegramId = String(auth.user.id);
     const current = normalizeAdminProfile(body.current || {});
     const now = Math.floor(Date.now() / 1000);
+    const appliedResetIds = Array.isArray(body.current?.appliedResetPlanIds)
+      ? [...new Set(body.current.appliedResetPlanIds.map((value) => String(value || "").trim()).filter((value) => /^reset_[A-Za-z0-9_-]{6,120}$/.test(value)))].slice(-50)
+      : [];
+    if (appliedResetIds.length) {
+      await env.DB.batch(appliedResetIds.map((resetId) => env.DB.prepare(
+        `INSERT OR IGNORE INTO player_reset_acknowledgements(reset_id,telegram_id,applied_at)
+         SELECT d.reset_id,?,? FROM player_reset_directives d
+         WHERE d.reset_id=? AND d.active=1 AND ((d.scope='one' AND d.target_telegram_id=?) OR (d.scope='all' AND EXISTS(SELECT 1 FROM admin_profile_state p WHERE p.telegram_id=? AND p.created_at<=d.created_at)))`
+      ).bind(telegramId, now, resetId, telegramId, telegramId)));
+    }
+    const activeResetPlan = await latestPlayerResetDirective(env, telegramId);
 
     await env.DB.prepare(
       `INSERT OR IGNORE INTO admin_profile_state (
@@ -1165,11 +1349,27 @@ async function syncAdminProfile(request, env) {
 
     // Снимок коллекции и активного скина обновляется при каждой синхронизации профиля.
     // Старые клиенты, которые не передают эти поля, существующий снимок не перезаписывают.
+    const hasSkinSnapshot = Array.isArray(body.current?.ownedSkins) && !Boolean(activeResetPlan?.reset?.ownedSkins);
+    let previousActiveSkin = "";
+    if (hasSkinSnapshot) {
+      try {
+        const previousSkinRow = await env.DB.prepare(`SELECT active_skin_id FROM case_player_state WHERE telegram_id=? LIMIT 1`).bind(telegramId).first();
+        previousActiveSkin = String(previousSkinRow?.active_skin_id || "default");
+      } catch {}
+    }
+    const syncedOwnedSkins = hasSkinSnapshot ? normalizeCurrentOwnedSkins(body.current.ownedSkins) : undefined;
+    const syncedActiveSkin = hasSkinSnapshot ? normalizeCurrentActiveSkin(body.current?.activeSkin, syncedOwnedSkins) : "";
     await ensureCasePlayerState(env, telegramId, {
       ...current,
-      ownedSkins: Array.isArray(body.current?.ownedSkins) ? body.current.ownedSkins : undefined,
-      activeSkin: String(body.current?.activeSkin || "")
+      ownedSkins: syncedOwnedSkins,
+      activeSkin: syncedActiveSkin
     });
+    if (hasSkinSnapshot && previousActiveSkin && previousActiveSkin !== syncedActiveSkin) {
+      const skinTitle = SKINS[syncedActiveSkin]?.title || (syncedActiveSkin === "default" ? "Стандартный" : syncedActiveSkin);
+      const eventId = `skin_equip_${now}_${syncedActiveSkin}`;
+      await recordPlayerTimeline(env, telegramId, "skin_equip", `установил скин «${skinTitle}»`, { previousSkin: previousActiveSkin, skinId: syncedActiveSkin }, eventId, auth.user, now);
+      if (syncedActiveSkin && syncedActiveSkin !== "default") await recordContentAnalyticsEvent(env, telegramId, "skin", syncedActiveSkin, "equipped", "profile", eventId);
+    }
 
     if (mode === "write") {
       const next = normalizeAdminProfile(body.next || current);
@@ -1204,6 +1404,10 @@ async function syncAdminProfile(request, env) {
           coffee = ?,
           profile_xp = ?,
           wallet_override = NULL,
+          treats_override = NULL,
+          coffee_override = NULL,
+          best_score_override = NULL,
+          profile_xp_override = NULL,
           revision = revision + 1,
           updated_at = ?,
           updated_by = ?
@@ -1222,35 +1426,59 @@ async function syncAdminProfile(request, env) {
 
     let row = await env.DB.prepare(
       `SELECT wallet, best_score, treats, coffee, profile_xp, revision, updated_at,
-              wallet_override, pending_wallet, pending_treats, pending_coffee
+              wallet_override, treats_override, coffee_override,
+              best_score_override, profile_xp_override,
+              pending_wallet, pending_treats, pending_coffee
        FROM admin_profile_state WHERE telegram_id = ? LIMIT 1`
     ).bind(telegramId).first();
 
     const pendingWallet = safeAdminNumber(row?.pending_wallet);
     const pendingTreats = safeAdminNumber(row?.pending_treats);
     const pendingCoffee = safeAdminNumber(row?.pending_coffee);
-    const hasWalletOverride = row?.wallet_override != null;
-    const authoritativeWallet = hasWalletOverride || pendingWallet > 0;
-    const authoritativeTreats = pendingTreats > 0;
-    const authoritativeCoffee = pendingCoffee > 0;
+    const walletOverride = row?.wallet_override == null ? null : safeAdminNumber(row.wallet_override);
+    const treatsOverride = row?.treats_override == null ? null : safeAdminNumber(row.treats_override);
+    const coffeeOverride = row?.coffee_override == null ? null : safeAdminNumber(row.coffee_override);
+    const bestOverride = row?.best_score_override == null ? null : safeAdminNumber(row.best_score_override);
+    const xpOverride = row?.profile_xp_override == null ? null : safeAdminNumber(row.profile_xp_override);
 
-    const walletBase = hasWalletOverride
-      ? safeAdminNumber(row.wallet_override)
-      : Math.max(current.wallet, safeAdminNumber(row?.wallet));
+    const walletBase = walletOverride !== null ? walletOverride : Math.max(current.wallet, safeAdminNumber(row?.wallet));
+    const treatsBase = treatsOverride !== null ? treatsOverride : Math.max(current.treats, safeAdminNumber(row?.treats));
+    const coffeeBase = coffeeOverride !== null ? coffeeOverride : Math.max(current.coffee, safeAdminNumber(row?.coffee));
     const walletValue = safeAdminNumber(walletBase + pendingWallet);
-    const treatsValue = safeAdminNumber(Math.max(current.treats, safeAdminNumber(row?.treats)) + pendingTreats);
-    const coffeeValue = safeAdminNumber(Math.max(current.coffee, safeAdminNumber(row?.coffee)) + pendingCoffee);
+    const treatsValue = safeAdminNumber(treatsBase + pendingTreats);
+    const coffeeValue = safeAdminNumber(coffeeBase + pendingCoffee);
+    const bestValue = bestOverride !== null ? bestOverride : Math.max(current.best, safeAdminNumber(row?.best_score));
+    const xpValue = xpOverride !== null ? xpOverride : Math.max(current.profileXp, safeAdminNumber(row?.profile_xp));
 
-    if (hasWalletOverride || pendingWallet > 0 || pendingTreats > 0 || pendingCoffee > 0) {
+    const nextWalletOverride = walletOverride !== null
+      ? ((pendingWallet === 0 && current.wallet === walletValue) ? null : walletValue)
+      : null;
+    const nextTreatsOverride = treatsOverride !== null
+      ? ((pendingTreats === 0 && current.treats === treatsValue) ? null : treatsValue)
+      : null;
+    const nextCoffeeOverride = coffeeOverride !== null
+      ? ((pendingCoffee === 0 && current.coffee === coffeeValue) ? null : coffeeValue)
+      : null;
+    const nextBestOverride = bestOverride !== null && current.best === bestValue ? null : bestOverride;
+    const nextXpOverride = xpOverride !== null && current.profileXp === xpValue ? null : xpOverride;
+
+    const hasAuthoritativeUpdate = walletOverride !== null || treatsOverride !== null || coffeeOverride !== null ||
+      bestOverride !== null || xpOverride !== null || pendingWallet > 0 || pendingTreats > 0 || pendingCoffee > 0;
+    if (hasAuthoritativeUpdate) {
       await env.DB.prepare(
         `UPDATE admin_profile_state SET
-          wallet = ?, treats = ?, coffee = ?,
-          wallet_override = NULL,
+          wallet = ?, best_score = ?, treats = ?, coffee = ?, profile_xp = ?,
+          wallet_override = ?, treats_override = ?, coffee_override = ?,
+          best_score_override = ?, profile_xp_override = ?,
           pending_wallet = 0, pending_treats = 0, pending_coffee = 0,
-          revision = revision + 1,
-          updated_at = ?, updated_by = ?
+          revision = revision + 1, updated_at = ?, updated_by = ?
          WHERE telegram_id = ?`
-      ).bind(walletValue, treatsValue, coffeeValue, now, telegramId, telegramId).run();
+      ).bind(
+        walletValue, bestValue, treatsValue, coffeeValue, xpValue,
+        nextWalletOverride, nextTreatsOverride, nextCoffeeOverride,
+        nextBestOverride, nextXpOverride,
+        now, telegramId, telegramId
+      ).run();
       row = await env.DB.prepare(
         `SELECT wallet, best_score, treats, coffee, profile_xp, revision, updated_at
          FROM admin_profile_state WHERE telegram_id = ? LIMIT 1`
@@ -1259,17 +1487,20 @@ async function syncAdminProfile(request, env) {
 
     return jsonResponse({
       ok: true,
+      resetPlan: activeResetPlan,
       profile: {
-        wallet: hasWalletOverride || pendingWallet > 0 ? walletValue : safeAdminNumber(row?.wallet),
-        best: safeAdminNumber(row?.best_score),
-        treats: authoritativeTreats ? treatsValue : safeAdminNumber(row?.treats),
-        coffee: authoritativeCoffee ? coffeeValue : safeAdminNumber(row?.coffee),
-        profileXp: safeAdminNumber(row?.profile_xp),
-        authoritativeWallet,
+        wallet: walletOverride !== null || pendingWallet > 0 ? walletValue : safeAdminNumber(row?.wallet),
+        best: bestOverride !== null ? bestValue : safeAdminNumber(row?.best_score),
+        treats: treatsOverride !== null || pendingTreats > 0 ? treatsValue : safeAdminNumber(row?.treats),
+        coffee: coffeeOverride !== null || pendingCoffee > 0 ? coffeeValue : safeAdminNumber(row?.coffee),
+        profileXp: xpOverride !== null ? xpValue : safeAdminNumber(row?.profile_xp),
+        authoritativeWallet: walletOverride !== null || pendingWallet > 0,
         authoritativeFields: {
-          wallet: authoritativeWallet,
-          treats: authoritativeTreats,
-          coffee: authoritativeCoffee
+          wallet: walletOverride !== null || pendingWallet > 0,
+          best: bestOverride !== null,
+          treats: treatsOverride !== null || pendingTreats > 0,
+          coffee: coffeeOverride !== null || pendingCoffee > 0,
+          profileXp: xpOverride !== null
         },
         revision: safeAdminNumber(row?.revision),
         updatedAt: safeAdminNumber(row?.updated_at) * 1000
@@ -1293,6 +1524,8 @@ async function setAdminLeaderboardScore(request, env) {
     const level = Math.max(1, Math.min(50, Math.floor(Number(body.level || 1)) || 1));
     const now = Math.floor(Date.now() / 1000);
     const telegramId = String(auth.user.id);
+    const testerRow = await getTesterAccountSafe(telegramId, env);
+    const ratingHidden = Number(testerRow?.exclude_from_rating || 0) === 1 ? 1 : 0;
     const displayName = telegramDisplayName(auth.user).slice(0, 120);
     const username = String(auth.user.username || "").slice(0, 64);
     const photoUrl = String(auth.user.photo_url || "").slice(0, 500);
@@ -1304,7 +1537,7 @@ async function setAdminLeaderboardScore(request, env) {
       `INSERT INTO leaderboard_entries (
         season_id, telegram_id, display_name, username, photo_url,
         best_score, level, achieved_at, updated_at, hidden, case_avatar_id, case_frame_id
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(season_id, telegram_id) DO UPDATE SET
         display_name = excluded.display_name,
         username = excluded.username,
@@ -1315,14 +1548,14 @@ async function setAdminLeaderboardScore(request, env) {
         level = excluded.level,
         achieved_at = excluded.achieved_at,
         updated_at = excluded.updated_at,
-        hidden = 0`
-    ).bind(season.id, telegramId, displayName, username, photoUrl, score, level, now, now, caseAvatarId, caseFrameId).run();
+        hidden = excluded.hidden`
+    ).bind(season.id, telegramId, displayName, username, photoUrl, score, level, now, now, ratingHidden, caseAvatarId, caseFrameId).run();
 
     await env.DB.prepare(
       `INSERT INTO leaderboard_all_time (
         telegram_id, display_name, username, photo_url,
         best_score, level, achieved_at, updated_at, hidden, case_avatar_id, case_frame_id
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(telegram_id) DO UPDATE SET
         display_name = excluded.display_name,
         username = excluded.username,
@@ -1333,9 +1566,10 @@ async function setAdminLeaderboardScore(request, env) {
         level = excluded.level,
         achieved_at = excluded.achieved_at,
         updated_at = excluded.updated_at,
-        hidden = 0`
-    ).bind(telegramId, displayName, username, photoUrl, score, level, now, now, caseAvatarId, caseFrameId).run();
+        hidden = excluded.hidden`
+    ).bind(telegramId, displayName, username, photoUrl, score, level, now, now, ratingHidden, caseAvatarId, caseFrameId).run();
 
+    await recordPlayerTimeline(env, telegramId, "rating_admin", `администратор установил результат ${score.toLocaleString("ru-RU")}`, { score, level, excludedFromRating: Boolean(ratingHidden) }, `admin_rating_${now}`, auth.user, now);
     return jsonResponse({
       ok: true,
       score,
@@ -1464,6 +1698,7 @@ async function createReward(request, env) {
     }
 
     const updatedLimitStatus = await getRewardLimitStatus(env, ownerId, now);
+    await recordPlayerTimeline(env, ownerId, "physical_purchase", `купил ${product.title}`, { productId: product.id, code: insertedCode }, `reward_${requestId}`, auth.user, now);
     return jsonResponse({
       ok: true,
       reward: {
@@ -1646,6 +1881,28 @@ function parseConfiguredDate(value, label) {
 
 async function ensureSeason(env, now = Math.floor(Date.now() / 1000)) {
   requireDatabase(env);
+
+  // Опубликованный сезон из центра управления имеет приоритет над константами Worker.
+  // Это позволяет запускать и завершать события по Cron без нового деплоя.
+  let managedSeason = await env.DB.prepare(
+    `SELECT * FROM leaderboard_seasons
+     WHERE manual_override = 1 AND finalized_at IS NULL AND status IN ('active','scheduled')
+     ORDER BY CASE status WHEN 'active' THEN 0 ELSE 1 END, starts_at ASC
+     LIMIT 1`
+  ).first();
+  if (managedSeason) {
+    const managedStatus = String(managedSeason.status || 'scheduled');
+    const nextStatus = now < Number(managedSeason.starts_at) ? 'scheduled' : now < Number(managedSeason.ends_at) ? 'active' : 'ended';
+    if (nextStatus === 'ended') {
+      await finalizeSeason(env, managedSeason, now);
+    } else if (nextStatus !== managedStatus) {
+      await env.DB.prepare(`UPDATE leaderboard_seasons SET status = ?, updated_at = ? WHERE id = ?`)
+        .bind(nextStatus, now, managedSeason.id).run();
+    }
+    managedSeason = await env.DB.prepare(`SELECT * FROM leaderboard_seasons WHERE id = ? LIMIT 1`).bind(managedSeason.id).first();
+    return managedSeason;
+  }
+
   const config = configuredSeason(env);
   await env.DB.prepare(
     `INSERT INTO leaderboard_seasons (
@@ -1850,20 +2107,25 @@ function leaderboardClaimNotificationText({ season, winner, reward, success, rea
   return lines.join("\n");
 }
 
-async function leaderboardStaffRecipientIds(env) {
-  const recipients = new Set(botAdminTelegramIds(env));
-  const rows = await env.DB.prepare(
-    `SELECT telegram_id, role FROM staff_users WHERE active = 1`
-  ).all();
-  for (const row of rows.results || []) {
-    if (normalizeTeamRole(row.role) === "administrator") recipients.add(String(row.telegram_id || ""));
-  }
-  return [...recipients].filter(Boolean);
+function notificationCategoryForEventKey(eventKey) {
+  const key = String(eventKey || "");
+  if (key.startsWith("low-stock:")) return "low_stock";
+  if (key.startsWith("support-ticket-created:")) return "new_tickets";
+  if (key.startsWith("ops-alert:") || key.startsWith("ops-recovered:")) return "bot_errors";
+  if (key.startsWith("fraud:")) return "suspicious_runs";
+  if (key.startsWith("campaign:")) return "mass_grants";
+  if (key.startsWith("player-block:") || key.startsWith("player-unblock:")) return "player_blocks";
+  if (key.startsWith("physical-reward:")) return "physical_reward";
+  return "rating_finished";
+}
+
+async function leaderboardStaffRecipientIds(env, category = "rating_finished") {
+  return staffNotificationRecipientIds(env, category);
 }
 
 async function queueLeaderboardStaffNotification(env, eventKey, messageHtml) {
   try {
-    const recipients = await leaderboardStaffRecipientIds(env);
+    const recipients = await leaderboardStaffRecipientIds(env, notificationCategoryForEventKey(eventKey));
     if (!recipients.length) return { queued: 0, sent: 0 };
     const now = Math.floor(Date.now() / 1000);
     await env.DB.batch(recipients.map((telegramId) => env.DB.prepare(
@@ -2043,15 +2305,18 @@ function normalizeCaseCosmeticId(kind, value) {
   if (kind === "avatar") return CASE_AVATARS[id] ? id : "";
   if (kind === "frame") return CASE_FRAMES[id] ? id : "";
   if (kind === "trail") return CASE_TRAILS[id] ? id : "";
+  if (kind === "music") return CASE_MUSIC_TRACKS[id] ? id : "";
   return "";
 }
 
 function caseParseOwned(raw, kind, catalog) {
   let values = [];
   try { values = JSON.parse(String(raw || "[]")); } catch {}
-  return Array.from(new Set((Array.isArray(values) ? values : [])
+  const normalized = Array.from(new Set((Array.isArray(values) ? values : [])
     .map((value) => normalizeCaseCosmeticId(kind, value))
     .filter((value) => Boolean(value && catalog[value]))));
+  if (kind === "music" && !normalized.includes("cafe_run")) normalized.unshift("cafe_run");
+  return normalized;
 }
 
 function caseProfileLevel(totalXpValue) {
@@ -2115,21 +2380,23 @@ function caseWeightedKind(caseType, state = null, liveops = null, catalogs = nul
     avatar: runtimeCaseCatalog("avatar", CASE_AVATARS, liveops),
     frame: runtimeCaseCatalog("frame", CASE_FRAMES, liveops),
     trail: runtimeCaseCatalog("trail", CASE_TRAILS, liveops),
-    skin: runtimeCaseCatalog("skin", CASE_SKINS, liveops)
+    skin: runtimeCaseCatalog("skin", CASE_SKINS, liveops),
+    music: CASE_MUSIC_TRACKS
   };
   const ownedMap = {
     avatar: state?.ownedAvatars,
     frame: state?.ownedFrames,
     trail: state?.ownedTrails,
-    skin: state?.ownedSkins
+    skin: state?.ownedSkins,
+    music: state?.ownedMusicTracks
   };
-  const categoryOrder = ["points", "treats", "coffee", "booster", "avatar", "frame", "trail", "skin", "physical"];
+  const categoryOrder = ["points", "treats", "coffee", "booster", "avatar", "frame", "trail", "skin", "music", "physical"];
   let pointsWeight = Math.max(0, Number(chances.points || 0));
   const table = [];
   for (const kind of categoryOrder) {
     let weight = Math.max(0, Number(chances[kind] || 0));
     if (!weight || kind === "points") continue;
-    if (["avatar", "frame", "trail", "skin"].includes(kind)) {
+    if (["avatar", "frame", "trail", "skin", "music"].includes(kind)) {
       const catalog = runtimeCatalogs[kind] || {};
       const predicate = (item) => caseType === "legendary" || !item?.legendaryOnly;
       const available = caseType === "legendary"
@@ -2174,6 +2441,7 @@ function caseStateFromRow(row) {
   const ownedAvatars = caseParseOwned(row?.owned_avatars_json, "avatar", CASE_AVATARS);
   const ownedFrames = caseParseOwned(row?.owned_frames_json, "frame", CASE_FRAMES);
   const ownedTrails = caseParseOwned(row?.owned_trails_json, "trail", CASE_TRAILS);
+  const ownedMusicTracks = caseParseOwned(row?.owned_music_json, "music", CASE_MUSIC_TRACKS);
   let ownedSkinsRaw = [];
   try { ownedSkinsRaw = JSON.parse(String(row?.owned_skins_json || "[]")); } catch {}
   const ownedSkins = normalizeCurrentOwnedSkins(ownedSkinsRaw);
@@ -2181,9 +2449,11 @@ function caseStateFromRow(row) {
   const activeAvatarCandidate = normalizeCaseCosmeticId("avatar", row?.active_avatar_id);
   const activeFrameCandidate = normalizeCaseCosmeticId("frame", row?.active_frame_id);
   const activeTrailCandidate = normalizeCaseCosmeticId("trail", row?.active_trail_id);
+  const activeMusicCandidate = normalizeCaseCosmeticId("music", row?.active_music_id) || "cafe_run";
   const activeAvatarId = ownedAvatars.includes(activeAvatarCandidate) ? activeAvatarCandidate : "";
   const activeFrameId = ownedFrames.includes(activeFrameCandidate) ? activeFrameCandidate : "";
   const activeTrailId = ownedTrails.includes(activeTrailCandidate) ? activeTrailCandidate : "";
+  const activeMusicTrackId = ownedMusicTracks.includes(activeMusicCandidate) ? activeMusicCandidate : "cafe_run";
   return {
     boosters: {
       points: safeAdminNumber(row?.boosters_points),
@@ -2197,6 +2467,8 @@ function caseStateFromRow(row) {
     activeFrameId,
     ownedTrails,
     activeTrailId,
+    ownedMusicTracks,
+    activeMusicTrackId,
     ownedSkins,
     activeSkinId,
     legendaryPityCounter: safeAdminNumber(row?.legendary_pity_counter),
@@ -2214,6 +2486,7 @@ function caseStateUpdateStatement(env, telegramId, caseState, now) {
       owned_avatars_json = ?, active_avatar_id = ?,
       owned_frames_json = ?, active_frame_id = ?,
       owned_trails_json = ?, active_trail_id = ?,
+      owned_music_json = ?, active_music_id = ?,
       owned_skins_json = ?, active_skin_id = ?,
       legendary_pity_counter = ?,
       revision = revision + 1, updated_at = ?
@@ -2230,6 +2503,10 @@ function caseStateUpdateStatement(env, telegramId, caseState, now) {
     String(caseState.activeFrameId || ""),
     JSON.stringify(caseState.ownedTrails),
     String(caseState.activeTrailId || ""),
+    JSON.stringify(caseParseOwned(JSON.stringify(caseState.ownedMusicTracks), "music", CASE_MUSIC_TRACKS)),
+    caseParseOwned(JSON.stringify(caseState.ownedMusicTracks), "music", CASE_MUSIC_TRACKS).includes(normalizeCaseCosmeticId("music", caseState.activeMusicTrackId))
+      ? normalizeCaseCosmeticId("music", caseState.activeMusicTrackId)
+      : "cafe_run",
     JSON.stringify(normalizeCurrentOwnedSkins(caseState.ownedSkins)),
     normalizeCurrentActiveSkin(caseState.activeSkinId, normalizeCurrentOwnedSkins(caseState.ownedSkins)),
     Math.max(0, Math.min(49, safeAdminNumber(caseState.legendaryPityCounter))),
@@ -2284,6 +2561,8 @@ function normalizeCurrentActiveSkin(value, ownedSkins = []) {
 }
 
 async function buildCasePayload(env, telegramId, currentProfile, extra = {}) {
+  try { await processPlayerRewardDeliveryQueue(env, telegramId, 10); }
+  catch (error) { console.error("player reward queue refresh failed", error); }
   const ensured = await ensureCasePlayerState(env, telegramId, currentProfile);
   const liveops = await readLiveOpsConfig(env);
   const [openingsResult, giftedResult] = await Promise.all([
@@ -2357,7 +2636,8 @@ function rollLevelCase(caseType, sourceState, currentOwnedSkins = [], liveops = 
     avatar: runtimeCaseCatalog("avatar", CASE_AVATARS, liveops),
     frame: runtimeCaseCatalog("frame", CASE_FRAMES, liveops),
     trail: runtimeCaseCatalog("trail", CASE_TRAILS, liveops),
-    skin: runtimeCaseCatalog("skin", CASE_SKINS, liveops)
+    skin: runtimeCaseCatalog("skin", CASE_SKINS, liveops),
+    music: CASE_MUSIC_TRACKS
   };
   const guaranteeCount = caseType === "legendary"
     ? Math.max(0, Math.min(50, Math.floor(Number(caseConfig?.guaranteeCount ?? 50))))
@@ -2366,6 +2646,10 @@ function rollLevelCase(caseType, sourceState, currentOwnedSkins = [], liveops = 
   const state = JSON.parse(JSON.stringify(sourceState));
   state.ownedSkins = normalizeCurrentOwnedSkins(currentOwnedSkins);
   state.activeSkinId = normalizeCurrentActiveSkin(state.activeSkinId, state.ownedSkins);
+  state.ownedMusicTracks = caseParseOwned(JSON.stringify(state.ownedMusicTracks), "music", CASE_MUSIC_TRACKS);
+  state.activeMusicTrackId = state.ownedMusicTracks.includes(normalizeCaseCosmeticId("music", state.activeMusicTrackId))
+    ? normalizeCaseCosmeticId("music", state.activeMusicTrackId)
+    : "cafe_run";
   state.legendaryPityCounter = Math.max(0, Math.min(pityMax, safeAdminNumber(state.legendaryPityCounter)));
   state.legendaryGuaranteedEvery = guaranteeCount;
   const rewards = [];
@@ -2410,7 +2694,8 @@ function rollLevelCase(caseType, sourceState, currentOwnedSkins = [], liveops = 
       ["skin", 5, catalogs.skin, "ownedSkins"],
       ["avatar", 10, catalogs.avatar, "ownedAvatars"],
       ["frame", 15, catalogs.frame, "ownedFrames"],
-      ["trail", 20, catalogs.trail, "ownedTrails"]
+      ["trail", 20, catalogs.trail, "ownedTrails"],
+      ["music", 8, catalogs.music, "ownedMusicTracks"]
     ];
     const rarityPredicate = caseRarityAtLeast("epic");
     const categoriesWithUnowned = guaranteedCategories.filter(([, , catalog, ownedKey]) => {
@@ -2464,7 +2749,8 @@ function rollLevelCase(caseType, sourceState, currentOwnedSkins = [], liveops = 
       avatar: [catalogs.avatar, "ownedAvatars"],
       frame: [catalogs.frame, "ownedFrames"],
       trail: [catalogs.trail, "ownedTrails"],
-      skin: [catalogs.skin, "ownedSkins"]
+      skin: [catalogs.skin, "ownedSkins"],
+      music: [catalogs.music, "ownedMusicTracks"]
     };
     if (mapping[kind]) {
       const [catalog, ownedKey] = mapping[kind];
@@ -2688,6 +2974,8 @@ async function openLevelCase(request, env) {
       }
       throw error;
     }
+    await recordCaseRewardsAnalytics(env, telegramId, rolled.rewards, "level_case", `level_${requestedLevel}`, now);
+    await recordPlayerTimeline(env, telegramId, "case_open", `открыл ${LEVEL_CASE_CONFIG[caseType]?.title || caseType} за уровень ${requestedLevel}`, { caseType, level: requestedLevel, rewards: rolled.rewards }, `level_case_${requestedLevel}`, auth.user, now);
     return jsonResponse(await buildCasePayload(env, telegramId, body.current || {}, {
       opened: {
         level: requestedLevel,
@@ -2809,6 +3097,7 @@ async function purchaseCaseFromShop(request, env) {
       throw error;
     }
 
+    await recordPlayerTimeline(env, telegramId, "case_purchase", `купил ${product.title}`, { caseType, cost: { points: product.points, treats: product.treats, coffee: product.coffee } }, `case_purchase_${requestId}`, auth.user, now);
     return jsonResponse(await buildCasePayload(env, telegramId, nextProfile, {
       authoritativeProfile: true,
       purchase: {
@@ -2888,6 +3177,8 @@ async function openGrantedCase(request, env) {
       ).bind(JSON.stringify(rolled.rewards), now, claimedId, telegramId),
       ...physicalRewards.statements
     ]);
+    await recordCaseRewardsAnalytics(env, telegramId, rolled.rewards, "granted_case", claimedId, now);
+    await recordPlayerTimeline(env, telegramId, "case_open", `открыл ${LEVEL_CASE_CONFIG[caseType]?.title || caseType}`, { caseType, grantId: claimedId, rewards: rolled.rewards }, `grant_case_${claimedId}`, auth.user, now);
     return jsonResponse(await buildCasePayload(env, telegramId, body.current || {}, {
       opened: {
         grantId: claimedId,
@@ -2920,7 +3211,10 @@ async function grantAdminCaseOrFrame(request, env) {
     const grantKind = String(body.grantKind || "case").trim().toLowerCase();
     const reason = String(body.reason || "Компенсация из админ-панели").trim().slice(0, 300);
     if (grantKind === "case") {
-      const result = await createGrantedCases(env, targetTelegramId, body.caseType, body.quantity, String(auth.user.id), reason);
+      const normalizedType = normalizeCaseType(body.caseType);
+      if (normalizedType === "legendary") throw new ApiError(409, "Выдайте Легендарный кейс через Telegram-бота: требуется подтверждение второго администратора.");
+      const result = await createGrantedCases(env, targetTelegramId, normalizedType, body.quantity, String(auth.user.id), reason);
+      await recordPlayerTimeline(env, targetTelegramId, "staff_grant", `сотрудник выдал ${result.quantity} ${LEVEL_CASE_CONFIG[normalizedType]?.title || normalizedType}`, { caseType: normalizedType, quantity: result.quantity, reason }, `api_case_${Date.now()}`, auth.user);
       return jsonResponse({ ok: true, grantKind, targetTelegramId, ...result });
     }
     if (grantKind === "frame") {
@@ -2970,7 +3264,7 @@ async function equipCaseCosmetic(request, env) {
     const telegramId = String(auth.user.id);
     const kind = String(body.kind || "");
     const requestedId = String(body.id || "").trim();
-    if (!["avatar", "frame", "trail"].includes(kind)) throw new ApiError(400, "Неизвестный вид косметики.");
+    if (!["avatar", "frame", "trail", "music"].includes(kind)) throw new ApiError(400, "Неизвестный вид оформления.");
     const id = requestedId ? normalizeCaseCosmeticId(kind, requestedId) : "";
     if (requestedId && !id) throw new ApiError(400, "Неизвестный косметический предмет.");
     const ensured = await ensureCasePlayerState(env, telegramId, body.current || {});
@@ -2981,9 +3275,13 @@ async function equipCaseCosmetic(request, env) {
     } else if (kind === "frame") {
       if (id && !state.ownedFrames.includes(id)) throw new ApiError(403, "Эта рамка ещё не получена.");
       state.activeFrameId = id;
-    } else {
+    } else if (kind === "trail") {
       if (id && !state.ownedTrails.includes(id)) throw new ApiError(403, "Этот след ещё не получен.");
       state.activeTrailId = id;
+    } else {
+      const musicId = id || "cafe_run";
+      if (!state.ownedMusicTracks.includes(musicId)) throw new ApiError(403, "Эта мелодия ещё не получена.");
+      state.activeMusicTrackId = musicId;
     }
     const now = Math.floor(Date.now() / 1000);
     await env.DB.batch([
@@ -2997,6 +3295,13 @@ async function equipCaseCosmetic(request, env) {
          WHERE telegram_id = ?`
       ).bind(state.activeAvatarId, state.activeFrameId, now, telegramId)
     ]);
+    const catalog = ({ avatar: CASE_AVATARS, frame: CASE_FRAMES, trail: CASE_TRAILS, music: CASE_MUSIC_TRACKS })[kind] || {};
+    const effectiveId = kind === "music" ? (id || "cafe_run") : id;
+    const title = effectiveId ? (catalog[effectiveId]?.title || effectiveId) : "без оформления";
+    const noun = kind === "frame" ? "рамку" : kind === "avatar" ? "аватарку" : kind === "trail" ? "след" : "мелодию";
+    const action = kind === "music" ? "выбрал" : effectiveId ? "установил" : "снял";
+    await recordPlayerTimeline(env, telegramId, "cosmetic_equip", `${action} ${noun} «${title}»`, { kind, id: effectiveId }, `equip_${kind}_${now}`, auth.user, now);
+    if (effectiveId) await recordContentAnalyticsEvent(env, telegramId, kind, effectiveId, "equipped", "profile", `equip:${now}`);
     return jsonResponse(await buildCasePayload(env, telegramId, body.current || {}));
   } catch (error) {
     if (error instanceof ApiError) return jsonResponse({ ok: false, error: error.message }, error.status);
@@ -3087,6 +3392,8 @@ async function submitLeaderboardRun(request, env) {
 
     const now = Math.floor(Date.now() / 1000);
     const telegramId = String(auth.user.id);
+    const testerRow = await getTesterAccountSafe(telegramId, env);
+    const ratingHidden = Number(testerRow?.exclude_from_rating || 0) === 1 ? 1 : 0;
     const displayName = telegramDisplayName(auth.user).slice(0, 120);
     const username = String(auth.user.username || "").slice(0, 64);
     const photoUrl = String(auth.user.photo_url || "").slice(0, 500);
@@ -3122,7 +3429,7 @@ async function submitLeaderboardRun(request, env) {
       `INSERT INTO leaderboard_entries (
         season_id, telegram_id, display_name, username, photo_url,
         best_score, level, achieved_at, updated_at, hidden, case_avatar_id, case_frame_id
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(season_id, telegram_id) DO UPDATE SET
         display_name = excluded.display_name,
         username = excluded.username,
@@ -3132,14 +3439,15 @@ async function submitLeaderboardRun(request, env) {
         level = excluded.level,
         best_score = CASE WHEN excluded.best_score > leaderboard_entries.best_score THEN excluded.best_score ELSE leaderboard_entries.best_score END,
         achieved_at = CASE WHEN excluded.best_score > leaderboard_entries.best_score THEN excluded.achieved_at ELSE leaderboard_entries.achieved_at END,
+        hidden = excluded.hidden,
         updated_at = excluded.updated_at`
-    ).bind(season.id, telegramId, displayName, username, photoUrl, score, level, achievedAt, now, caseAvatarId, caseFrameId).run();
+    ).bind(season.id, telegramId, displayName, username, photoUrl, score, level, achievedAt, now, ratingHidden, caseAvatarId, caseFrameId).run();
 
     await env.DB.prepare(
       `INSERT INTO leaderboard_all_time (
         telegram_id, display_name, username, photo_url,
         best_score, level, achieved_at, updated_at, hidden, case_avatar_id, case_frame_id
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(telegram_id) DO UPDATE SET
         display_name = excluded.display_name,
         username = excluded.username,
@@ -3149,9 +3457,11 @@ async function submitLeaderboardRun(request, env) {
         level = excluded.level,
         best_score = CASE WHEN excluded.best_score > leaderboard_all_time.best_score THEN excluded.best_score ELSE leaderboard_all_time.best_score END,
         achieved_at = CASE WHEN excluded.best_score > leaderboard_all_time.best_score THEN excluded.achieved_at ELSE leaderboard_all_time.achieved_at END,
+        hidden = excluded.hidden,
         updated_at = excluded.updated_at`
-    ).bind(telegramId, displayName, username, photoUrl, score, level, achievedAt, now, caseAvatarId, caseFrameId).run();
+    ).bind(telegramId, displayName, username, photoUrl, score, level, achievedAt, now, ratingHidden, caseAvatarId, caseFrameId).run();
 
+    await recordPlayerTimeline(env, telegramId, "run", `завершил забег с результатом ${score.toLocaleString("ru-RU")}`, { runId, score, durationMs, level, accepted: true, excludedFromRating: Boolean(ratingHidden) }, `run_${runId}`, auth.user, achievedAt);
     return jsonResponse(await buildLeaderboardPayload(env, season, telegramId, "season"));
   } catch (error) {
     if (error instanceof ApiError) return jsonResponse({ ok: false, error: error.message }, error.status);
@@ -3508,7 +3818,7 @@ async function handleTelegramUpdate(update, env, runtime = {}) {
   requireBotToken(env);
 
   if (update.callback_query) {
-    await handleCallbackQuery(update.callback_query, env);
+    await handleCallbackQuery(update.callback_query, env, runtime);
     return;
   }
 
@@ -3517,6 +3827,23 @@ async function handleTelegramUpdate(update, env, runtime = {}) {
   const text = String(message.text || "").trim();
   const chatId = message.chat.id;
   const user = message.from;
+  const cleanStaffChat = await isCleanStaffPrivateChat(env, chatId);
+  if (cleanStaffChat && message.message_id) {
+    await deleteTelegramMessageBestEffort(env, chatId, message.message_id);
+  }
+
+  if (/^\/clean_chat(?:@\w+)?$/i.test(text)) {
+    const access = await getTeamAccess(user, env);
+    if (!access.authorized) {
+      await sendTelegramMessage(env, chatId, access.reason === "expired"
+        ? "Сессия истекла. Выполните <code>/staff</code>."
+        : "Доступно только сотрудникам.");
+      return;
+    }
+    await purgeTelegramPrivateChat(env, chatId, message.message_id, TELEGRAM_CLEAN_CHAT_TRACK_LIMIT);
+    await showAdminMainMenu(chatId, user, env);
+    return;
+  }
 
   if (/^\/cancel(?:@\w+)?$/i.test(text)) {
     await clearStaffWorkflow(user.id, env);
@@ -3533,12 +3860,22 @@ async function handleTelegramUpdate(update, env, runtime = {}) {
     return;
   }
 
+  if (await handleLegacyOwnerCommand(text, chatId, user, env)) return;
+
   if (/^\/(?:help_staff|adminpanel_kmd)(?:@\w+)?$/i.test(text)) {
     await showAdminPanelCommands(chatId, user, env);
     return;
   }
 
+  if (/^\/training(?:@\w+)?$/i.test(text)) {
+    await showStaffTraining(chatId, user, env);
+    return;
+  }
+
   if (/^\/(?:adminpanel|admin|panel)(?:@\w+)?$/i.test(text)) {
+    if (cleanStaffChat) {
+      await purgeTelegramPrivateChat(env, chatId, message.message_id, TELEGRAM_CLEAN_CHAT_TRACK_LIMIT);
+    }
     await showAdminMainMenu(chatId, user, env);
     return;
   }
@@ -3550,6 +3887,101 @@ async function handleTelegramUpdate(update, env, runtime = {}) {
     return;
   }
 
+  if (/^\/sync_commands(?:@\w+)?$/i.test(text)) {
+    if (!isBotAdminUser(user, env)) {
+      await sendTelegramMessage(env, chatId, "Обновлять меню команд может только владелец.");
+      return;
+    }
+    const access = await getTeamAccess(user, env);
+    const result = await syncBotCommands(env);
+    await logStaffAction(env, user, access, "sync_bot_commands", null, "bot", null, null, {
+      chats: result.chats.length,
+      errors: result.errors
+    });
+    await sendTelegramMessage(env, chatId,
+      `<b>Меню команд обновлено</b>\n\nИгровое меню: <b>обновлено</b>\nИндивидуальные меню: <b>${result.chats.length}</b>\nОшибок: <b>${result.errors.length}</b>${result.errors.length ? `\n\n<code>${escapeHtml(result.errors.slice(0, 5).join("\n"))}</code>` : ""}`
+    );
+    return;
+  }
+
+  if (/^\/automations(?:@\w+)?$/i.test(text)) { await showV67AutomationDashboard(chatId, user, env); return; }
+  if (/^\/(?:ops_center|operations_center)(?:@\w+)?$/i.test(text)) { await showV77OperationsHub(chatId, user, env); return; }
+  if (/^\/player_reset(?:@\w+)?$/i.test(text)) { await showPlayerResetDashboard(chatId, user, env); return; }
+  if (/^\/polls_admin(?:@\w+)?$/i.test(text)) { await showV74PollAdminDashboard(chatId, user, env); return; }
+  if (/^\/retention(?:@\w+)?$/i.test(text)) { await showV67RetentionAnalytics(chatId, user, env); return; }
+  if (/^\/settings_history(?:@\w+)?$/i.test(text)) { await showV67SettingsHistory(chatId, user, env); return; }
+  if (/^\/performance(?:@\w+)?$/i.test(text)) { await showV67PerformanceCenter(chatId, user, env); return; }
+  if (/^\/releases(?:@\w+)?$/i.test(text)) { await showV67ReleaseDashboard(chatId, user, env); return; }
+  if (/^\/stock_forecast(?:@\w+)?$/i.test(text)) { await showV67StockForecast(chatId, user, env); return; }
+
+  if (await handleOperationsSecurityCommand(text, chatId, user, env)) return;
+
+  if (/^\/events(?:@\w+)?$/i.test(text)) {
+    await showSafeEventsDashboard(chatId, user, env);
+    return;
+  }
+
+  if (/^\/event_new(?:@\w+)?$/i.test(text)) {
+    await startSafeEventWorkflow(chatId, user, env);
+    return;
+  }
+
+  const eventShopMatch = text.match(/^\/event_shop(?:@\w+)?\s+([A-Za-z0-9_-]+)\s+([A-Za-z0-9_-]+)\s+(\d+)\s+(\d+)\s+(\d+)$/i);
+  if (eventShopMatch) {
+    await patchSafeEventShop(chatId, user, eventShopMatch[1], eventShopMatch[2], Number(eventShopMatch[3]), Number(eventShopMatch[4]), Number(eventShopMatch[5]), env);
+    return;
+  }
+
+  const eventDiscountMatch = text.match(/^\/event_discount(?:@\w+)?\s+([A-Za-z0-9_-]+)\s+([A-Za-z0-9_-]+)\s+(\d+)$/i);
+  if (eventDiscountMatch) {
+    await patchSafeEventDiscount(chatId, user, eventDiscountMatch[1], eventDiscountMatch[2], Number(eventDiscountMatch[3]), env);
+    return;
+  }
+
+  const eventBroadcastMatch = text.match(/^\/event_broadcast(?:@\w+)?\s+([A-Za-z0-9_-]+)\s+(start|end)\s+([\s\S]+)$/i);
+  if (eventBroadcastMatch) {
+    await patchSafeEventBroadcast(chatId, user, eventBroadcastMatch[1], eventBroadcastMatch[2].toLowerCase(), eventBroadcastMatch[3], env);
+    return;
+  }
+
+  const eventImageMatch = text.match(/^\/event_image(?:@\w+)?\s+([A-Za-z0-9_-]+)\s+([^\s]+)$/i);
+  if (eventImageMatch) {
+    await patchSafeEventImage(chatId, user, eventImageMatch[1], eventImageMatch[2], env);
+    return;
+  }
+
+  if (/^\/drafts(?:@\w+)?$/i.test(text)) {
+    await showSafeDraftsDashboard(chatId, user, env);
+    return;
+  }
+
+  if (/^\/check_game(?:@\w+)?$/i.test(text)) {
+    await runAndShowGameIntegrityCheck(chatId, user, env);
+    return;
+  }
+
+  if (/^\/reward_queue(?:@\w+)?$/i.test(text)) {
+    await showRewardQueueDashboard(chatId, user, env);
+    return;
+  }
+
+  if (/^\/compensations(?:@\w+)?$/i.test(text)) {
+    await showCompensationTemplates(chatId, user, env);
+    return;
+  }
+
+  const compensateMatch = text.match(/^\/compensate(?:@\w+)?(?:\s+(.+))?$/i);
+  if (compensateMatch) {
+    await startCompensationWorkflow(chatId, user, String(compensateMatch[1] || ''), env);
+    return;
+  }
+
+  const compTemplateMatch = text.match(/^\/comp_template(?:@\w+)?\s+([\s\S]+)$/i);
+  if (compTemplateMatch) {
+    await setCompensationTemplate(chatId, user, compTemplateMatch[1], env);
+    return;
+  }
+
   if (/^\/staff_me(?:@\w+)?$/i.test(text)) {
     await showStaffProfile(chatId, user, env);
     return;
@@ -3557,6 +3989,24 @@ async function handleTelegramUpdate(update, env, runtime = {}) {
 
   if (/^\/staff_list(?:@\w+)?$/i.test(text)) {
     await showTeamManagement(chatId, user, env);
+    return;
+  }
+
+  const employeeAddMatch = text.match(/^\/employee_add(?:@\w+)?\s+(\d{4,20})(?:\s+(cashier|cook|administrator|kassir|povar|admin))?$/i);
+  if (employeeAddMatch) {
+    await addTeamMember(chatId, user, employeeAddMatch[1], employeeAddMatch[2] || "cashier", env);
+    return;
+  }
+
+  const employeeRoleMatch = text.match(/^\/employee_role(?:@\w+)?\s+(\d{4,20})\s+(cashier|cook|administrator|kassir|povar|admin)$/i);
+  if (employeeRoleMatch) {
+    await setTeamRole(chatId, user, employeeRoleMatch[1], employeeRoleMatch[2], env);
+    return;
+  }
+
+  const employeeStateMatch = text.match(/^\/employee_(enable|disable)(?:@\w+)?\s+(\d{4,20})$/i);
+  if (employeeStateMatch) {
+    await setStaffEnabled(chatId, user, employeeStateMatch[2], employeeStateMatch[1].toLowerCase() === "enable", env);
     return;
   }
 
@@ -3650,7 +4100,7 @@ async function handleTelegramUpdate(update, env, runtime = {}) {
     return;
   }
 
-  const caseChanceMatch = text.match(/^\/case_chance(?:@\w+)?\s+(small|sweet|gold|legendary)\s+(points|treats|coffee|booster|skin|avatar|frame|trail|physical)\s+([0-9]+(?:[.,][0-9]+)?)$/i);
+  const caseChanceMatch = text.match(/^\/case_chance(?:@\w+)?\s+(small|sweet|gold|legendary)\s+(points|treats|coffee|booster|skin|avatar|frame|trail|music|physical)\s+([0-9]+(?:[.,][0-9]+)?)$/i);
   if (caseChanceMatch) {
     await setCaseChance(chatId, user, caseChanceMatch[1].toLowerCase(), caseChanceMatch[2].toLowerCase(), Number(caseChanceMatch[3].replace(',', '.')), env);
     return;
@@ -3669,6 +4119,35 @@ async function handleTelegramUpdate(update, env, runtime = {}) {
 
   if (/^\/shop_admin(?:@\w+)?$/i.test(text)) {
     await showShopAdminDashboard(chatId, user, env);
+    return;
+  }
+
+  if (/^\/shop_list(?:@\w+)?$/i.test(text)) {
+    await showShopProductsFromBot(chatId, user, env);
+    return;
+  }
+
+  const shopPriceMatch = text.match(/^\/shop_price(?:@\w+)?(?:\s+([\s\S]+))?$/i);
+  if (shopPriceMatch) {
+    await updateShopProductPriceFromBot(chatId, user, shopPriceMatch[1] || "", env);
+    return;
+  }
+
+  const shopShowMatch = text.match(/^\/shop_show(?:@\w+)?(?:\s+([\s\S]+))?$/i);
+  if (shopShowMatch) {
+    await addShopProductFromBot(chatId, user, shopShowMatch[1] || "", env);
+    return;
+  }
+
+  const shopHideMatch = text.match(/^\/shop_hide(?:@\w+)?(?:\s+([\s\S]+))?$/i);
+  if (shopHideMatch) {
+    await deleteShopProductFromBot(chatId, user, shopHideMatch[1] || "", env);
+    return;
+  }
+
+  const shopStockMatch = text.match(/^\/shop_stock(?:@\w+)?(?:\s+([\s\S]+))?$/i);
+  if (shopStockMatch) {
+    await setShopStockLimitFromBot(chatId, user, shopStockMatch[1] || "", env);
     return;
   }
 
@@ -3739,7 +4218,7 @@ async function handleTelegramUpdate(update, env, runtime = {}) {
 или
 <code>/player @username</code>
 
-Telegram ID можно найти командой <code>/members</code>.`);
+Telegram ID можно найти командой <code>/players</code>.`);
     return;
   }
 
@@ -3794,6 +4273,19 @@ Telegram ID можно найти командой <code>/members</code>.`);
 
   if (/^\/status(?:@\w+)?$/i.test(text)) {
     await showOperationsStatus(chatId, user, env);
+    return;
+  }
+
+  const searchMatch = text.match(/^\/search(?:@\w+)?(?:\s+([\s\S]+))?$/i);
+  if (searchMatch) {
+    const queryText = String(searchMatch[1] || "").trim();
+    if (queryText) await executeUniversalAdminSearch(chatId, user, queryText, env);
+    else await startUniversalAdminSearch(chatId, user, env);
+    return;
+  }
+
+  if (/^\/problems(?:@\w+)?$/i.test(text)) {
+    await showOperationalProblemsDashboard(chatId, user, env, false);
     return;
   }
 
@@ -3948,6 +4440,16 @@ Telegram ID можно найти командой <code>/members</code>.`);
     return;
   }
 
+  if (/^\/tasks(?:@\w+)?$/i.test(text)) {
+    await showPlayerTasks(chatId, user, env);
+    return;
+  }
+
+  if (/^\/polls(?:@\w+)?$/i.test(text)) {
+    await showV74PlayerPolls(chatId, user, env);
+    return;
+  }
+
   if (/^\/news(?:@\w+)?$/i.test(text)) {
     await sendBotNews(env, chatId);
     return;
@@ -3981,14 +4483,31 @@ Telegram ID можно найти командой <code>/members</code>.`);
       await showRewardInBot(chatId, user, rewardPayload[1], env);
       return;
     }
-    try { await syncBotCommands(env); } catch (error) { console.error("Bot command sync failed", error); }
+    try { await syncBotCommandMenuForTelegramId(env, user.id); } catch (error) { console.error("Bot command menu sync failed", error); }
+    try { await processPlayerRewardDeliveryQueue(env, String(user.id), 10); } catch (error) { console.error("Player pending reward refresh failed", error); }
     await sendTelegramMessage(env, chatId, botMainMenuText(), mainMenuMarkup(env));
     return;
   }
 
+  if (text && !text.startsWith("/") && await consumePlayerPromoInput(user.id, chatId, env)) {
+    const code = normalizedPromoCode(text);
+    if (code.length < 4) {
+      await promptPlayerPromoCode(chatId, user, env, "Код слишком короткий. Проверьте его и попробуйте ещё раз.");
+      return;
+    }
+    await redeemPromoCodeForTelegram(chatId, user, code, env);
+    return;
+  }
+
   if (text.startsWith("/")) {
-    await sendTelegramMessage(env, chatId,
-      `<b>Команда не распознана</b>\n\nПроверьте написание. Админ-панель: <code>/adminpanel_kmd</code>\nСписок игроков: <code>/players</code>\nКарточка игрока: <code>/player TELEGRAM_ID</code>\nВерсия Worker: <code>/bot_version</code>`
+    const access = await getTeamAccess(user, env);
+    await sendTelegramMessage(env, chatId, access.authorized
+      ? `<b>Команда не распознана</b>
+
+Откройте <code>/adminpanel</code> или <code>/help_staff</code>. В меню показываются только команды, доступные вашей роли.`
+      : `<b>Команда не распознана</b>
+
+Откройте <code>/start</code> и выберите нужный раздел в меню.`
     );
     return;
   }
@@ -4011,8 +4530,20 @@ function configuredGameUrl(env) {
   return DEFAULT_GAME_URL;
 }
 
+function configuredStaffQrUrl(env) {
+  try {
+    const url = new URL(configuredGameUrl(env));
+    url.pathname = "/staff-qr.html";
+    url.search = "";
+    url.hash = "";
+    return url.toString();
+  } catch {
+    return `${DEFAULT_GAME_URL.replace(/\/$/, "")}/staff-qr.html`;
+  }
+}
+
 function botMainMenuText() {
-  return `<b>Зефирок — помощник кафе</b>\n\nТекущая версия игры: <b>${escapeHtml(GAME_VERSION)}</b>\n\nЗапускайте игру только системной кнопкой <b>«ИГРАТЬ»</b> в профиле бота — так Telegram передаст данные игрока для рейтинга и сохранений.\n\nЗдесь можно посмотреть сезонный рейтинг и новости, узнать историю Зефи, прочитать ответы на частые вопросы и проверить код награды.\n\nЧтобы проверить подарок, просто отправьте код из раздела «Мои покупки» одним сообщением.`;
+  return `<b>Зефирок — помощник кафе</b>\n\nТекущая версия игры: <b>${escapeHtml(GAME_VERSION)}</b>\n\nЗапускайте игру только системной кнопкой <b>«ИГРАТЬ»</b> в профиле бота — так Telegram передаст данные игрока для рейтинга и сохранений.\n\nЗдесь можно посмотреть задания, опросы и награды, сезонный рейтинг и новости, узнать историю Зефи, прочитать ответы на частые вопросы и проверить код награды.\n\nЧтобы проверить подарок, просто отправьте код из раздела «Мои покупки» одним сообщением.`;
 }
 
 function botGameText() {
@@ -4207,8 +4738,10 @@ function mainMenuMarkup(env) {
         { text: "📖 Сюжет", callback_data: "menu:story" },
         { text: "❓ FAQ", callback_data: "menu:faq" }
       ],
+      [{ text: "📋 Задания", callback_data: "menu:tasks" }, { text: "🗳 Опросы", callback_data: "menu:polls" }],
       [{ text: "🏆 Рейтинг", callback_data: "menu:rating" }, { text: "📰 Новости", callback_data: "menu:news" }],
       [{ text: `🆕 Обновление · ${GAME_VERSION}`, callback_data: "menu:update" }],
+      [{ text: "🎟 Ввести промокод", callback_data: "menu:promo" }],
       [{ text: "🎁 Как получить награду", callback_data: "menu:rewards" }],
       [{ text: "🛟 Поддержка игры", callback_data: "menu:support" }]
     ]
@@ -4233,7 +4766,7 @@ function sectionMenuMarkup(env) {
 }
 
 async function handleMenuCallback(query, env) {
-  const match = String(query.data || "").match(/^menu:(home|story|faq|rewards|rating|news|update|support)$/);
+  const match = String(query.data || "").match(/^menu:(home|story|faq|rewards|rating|tasks|polls|news|update|support|promo)$/);
   if (!match) return false;
   const message = query.message;
   if (!message?.chat?.id) {
@@ -4250,6 +4783,21 @@ async function handleMenuCallback(query, env) {
   if (section === "news") {
     await answerCallback(env, query.id, "Новости открыты");
     await sendBotNews(env, message.chat.id);
+    return true;
+  }
+  if (section === "tasks") {
+    await answerCallback(env, query.id, "Задания открыты");
+    await showPlayerTasks(message.chat.id, query.from, env);
+    return true;
+  }
+  if (section === "polls") {
+    await answerCallback(env, query.id, "Опросы открыты");
+    await showV74PlayerPolls(message.chat.id, query.from, env);
+    return true;
+  }
+  if (section === "promo") {
+    await answerCallback(env, query.id, "Введите промокод");
+    await promptPlayerPromoCode(message.chat.id, query.from, env);
     return true;
   }
   const text = section === "story"
@@ -4272,6 +4820,230 @@ async function handleMenuCallback(query, env) {
   await answerCallback(env, query.id, section === "home" ? "Главное меню" : "Раздел открыт");
   await sendTelegramMessage(env, message.chat.id, text, replyMarkup);
   return true;
+}
+
+
+const V71_TASK_MODES = Object.freeze({
+  one_time: "одноразовое",
+  daily: "ежедневное",
+  event: "событийное"
+});
+
+function v71TaskModeLabel(value) {
+  return V71_TASK_MODES[String(value || "one_time")] || V71_TASK_MODES.one_time;
+}
+
+const V76_PURCHASE_TRIGGER_TYPES = Object.freeze(["shop_purchases", "skin_purchases", "physical_purchases", "case_purchases"]);
+
+function v76IsPurchaseTrigger(triggerType) {
+  return V76_PURCHASE_TRIGGER_TYPES.includes(String(triggerType || ""));
+}
+
+function v76IsCustomCountTrigger(triggerType) {
+  return String(triggerType || "") === "accepted_runs" || v76IsPurchaseTrigger(triggerType);
+}
+
+function v76PurchaseFilterSql(triggerType, alias = "s") {
+  const prefix = `${alias}.`;
+  if (triggerType === "skin_purchases") return `${prefix}category='skins'`;
+  if (triggerType === "case_purchases") return `${prefix}category='prize' AND ${prefix}product_id LIKE 'case-%'`;
+  if (triggerType === "physical_purchases") return `${prefix}category='prize' AND ${prefix}consumption_id LIKE 'reward:%'`;
+  if (triggerType === "shop_purchases") return `(${prefix}category='skins' OR ${prefix}product_id LIKE 'case-%' OR ${prefix}consumption_id LIKE 'reward:%')`;
+  return "0=1";
+}
+
+function v76RuPlural(value, one, few, many) {
+  const number = Math.abs(Math.trunc(Number(value) || 0));
+  const mod100 = number % 100;
+  const mod10 = number % 10;
+  if (mod100 >= 11 && mod100 <= 14) return many;
+  if (mod10 === 1) return one;
+  if (mod10 >= 2 && mod10 <= 4) return few;
+  return many;
+}
+
+function v76AutomationTriggerOptions(triggerType) {
+  if (triggerType === "new_player_delay") return [["10 минут",600],["1 час",3600],["24 часа",86400]];
+  if (triggerType === "inactive_days") return [["1 день",1],["3 дня",3],["7 дней",7],["14 дней",14]];
+  if (triggerType === "accepted_runs") return [["3 забега",3],["5 забегов",5],["10 забегов",10],["25 забегов",25],["50 забегов",50],["100 забегов",100]];
+  if (triggerType === "shop_purchases") return [["1 покупка",1],["3 покупки",3],["5 покупок",5],["10 покупок",10]];
+  if (triggerType === "skin_purchases") return [["1 образ",1],["2 образа",2],["3 образа",3],["5 образов",5]];
+  if (triggerType === "physical_purchases") return [["1 награда",1],["2 награды",2],["3 награды",3],["5 наград",5]];
+  if (triggerType === "case_purchases") return [["1 кейс",1],["3 кейса",3],["5 кейсов",5],["10 кейсов",10]];
+  if (triggerType === "total_score") return [["5 000",5000],["10 000",10000],["25 000",25000],["50 000",50000]];
+  if (triggerType === "opened_cases") return [["1 кейс",1],["3 кейса",3],["5 кейсов",5],["10 кейсов",10]];
+  if (triggerType === "best_score") return [["1 000",1000],["2 500",2500],["5 000",5000],["10 000",10000]];
+  if (triggerType === "promo_activations") return [["1 промокод",1],["2 промокода",2],["3 промокода",3],["5 промокодов",5]];
+  if (triggerType === "level_reached") return [["5 уровень",5],["10 уровень",10],["20 уровень",20],["30 уровень",30]];
+  return [["6 часов",21600],["12 часов",43200],["24 часа",86400],["48 часов",172800]];
+}
+
+function v71TaskTriggerSupported(triggerType) {
+  return new Set(["new_player_delay", "accepted_runs", "total_score", "opened_cases", "best_score", "promo_activations", "level_reached", ...V76_PURCHASE_TRIGGER_TYPES]).has(String(triggerType || ""));
+}
+
+function v71TaskCycle(row, now = Math.floor(Date.now() / 1000)) {
+  const mode = String(row.task_mode || "one_time");
+  if (mode === "daily") {
+    const shifted = new Date((now + 3 * 3600) * 1000).toISOString().slice(0, 10);
+    return { cycleKey: `day:${shifted}`, startsAt: Math.floor((now + 3 * 3600) / V67_DAY) * V67_DAY - 3 * 3600, endsAt: now };
+  }
+  if (mode === "event") {
+    const startsAt = Math.max(0, Number(row.task_starts_at || 0));
+    return { cycleKey: `event:${startsAt || row.chain_key}`, startsAt, endsAt: now };
+  }
+  return { cycleKey: "once", startsAt: 0, endsAt: now };
+}
+
+async function v71TaskProgress(env, row, telegramId, now = Math.floor(Date.now() / 1000)) {
+  const target = Math.max(1, Number(row.trigger_value || 1));
+  const cycle = v71TaskCycle(row, now);
+  const start = Math.max(0, Number(cycle.startsAt || 0));
+  let value = 0;
+  if (row.trigger_type === "accepted_runs") {
+    const result = await env.DB.prepare(`SELECT COUNT(*) AS value FROM leaderboard_runs WHERE telegram_id=? AND accepted=1 AND created_at>=? AND created_at<=?`).bind(String(telegramId),start,now).first();
+    value = Number(result?.value || 0);
+  } else if (row.trigger_type === "total_score") {
+    const result = await env.DB.prepare(`SELECT COALESCE(SUM(score),0) AS value FROM leaderboard_runs WHERE telegram_id=? AND accepted=1 AND created_at>=? AND created_at<=?`).bind(String(telegramId),start,now).first();
+    value = Number(result?.value || 0);
+  } else if (row.trigger_type === "opened_cases") {
+    const result = await env.DB.prepare(`SELECT ((SELECT COUNT(*) FROM level_case_openings WHERE telegram_id=? AND opened_at>=? AND opened_at<=?)+(SELECT COUNT(*) FROM granted_cases WHERE telegram_id=? AND status='opened' AND opened_at>=? AND opened_at<=?)) AS value`).bind(String(telegramId),start,now,String(telegramId),start,now).first();
+    value = Number(result?.value || 0);
+  } else if (row.trigger_type === "best_score") {
+    const result = await env.DB.prepare(`SELECT best_score AS value FROM admin_profile_state WHERE telegram_id=? LIMIT 1`).bind(String(telegramId)).first();
+    value = Number(result?.value || 0);
+  } else if (row.trigger_type === "promo_activations") {
+    await ensureV57OperationsSchema(env);
+    const result = await env.DB.prepare(`SELECT COUNT(*) AS value FROM promo_redemptions WHERE telegram_id=? AND status<>'failed' AND created_at>=? AND created_at<=?`).bind(String(telegramId),start,now).first();
+    value = Number(result?.value || 0);
+  } else if (row.trigger_type === "level_reached") {
+    const result = await env.DB.prepare(`SELECT profile_xp FROM admin_profile_state WHERE telegram_id=? LIMIT 1`).bind(String(telegramId)).first();
+    value = caseProfileLevel(Number(result?.profile_xp || 0));
+  } else if (row.trigger_type === "new_player_delay") {
+    const result = await env.DB.prepare(`SELECT created_at FROM admin_profile_state WHERE telegram_id=? LIMIT 1`).bind(String(telegramId)).first();
+    value = result?.created_at ? Math.max(0, now - Number(result.created_at)) : 0;
+  } else if (v76IsPurchaseTrigger(row.trigger_type)) {
+    const result = await env.DB.prepare(`SELECT COUNT(*) AS value FROM shop_stock_consumptions s WHERE s.telegram_id=? AND s.created_at>=? AND s.created_at<=? AND ${v76PurchaseFilterSql(row.trigger_type, "s")}`).bind(String(telegramId),start,now).first();
+    value = Number(result?.value || 0);
+  }
+  return { value: Math.max(0, value), target, completed: value >= target, ...cycle };
+}
+
+function v71TaskProgressText(row, progress) {
+  if (row.trigger_type === "new_player_delay") {
+    const left = Math.max(0, progress.target - progress.value);
+    return progress.completed ? "условие выполнено" : `осталось примерно ${Math.max(1, Math.ceil(left / 60))} мин.`;
+  }
+  return `${Math.min(progress.value, progress.target).toLocaleString("ru-RU")} / ${progress.target.toLocaleString("ru-RU")}`;
+}
+
+async function showPlayerTasks(chatId, user, env) {
+  await ensureV67Schema(env);
+  const now = Math.floor(Date.now() / 1000);
+  const profile = await env.DB.prepare(`SELECT telegram_id FROM admin_profile_state WHERE telegram_id=? LIMIT 1`).bind(String(user.id)).first();
+  if (!profile) {
+    await sendTelegramMessage(env, chatId, `<b>📋 Задания</b>\n\nСначала один раз откройте игру, чтобы создать игровой профиль. После этого задания и прогресс появятся здесь.`, sectionMenuMarkup(env));
+    return;
+  }
+  const rows = (await env.DB.prepare(`SELECT * FROM automation_chains WHERE enabled=1 AND COALESCE(show_as_task,0)=1 AND action_type='reward' AND (task_starts_at=0 OR task_starts_at<=?) AND (task_ends_at=0 OR task_ends_at>?) ORDER BY task_sort ASC, updated_at DESC LIMIT 10`).bind(now,now).all()).results || [];
+  await ensureV77Schema(env);
+  const seriesCount = await env.DB.prepare(`SELECT COUNT(*) AS count FROM task_series WHERE enabled=1 AND (starts_at=0 OR starts_at<=?) AND (ends_at=0 OR ends_at>?)`).bind(now,now).first();
+  if (!rows.length && !Number(seriesCount?.count || 0)) {
+    await sendTelegramMessage(env, chatId, `<b>📋 Задания</b>\n\nСейчас активных заданий нет. Новые задания появятся здесь после публикации администратором.`, { inline_keyboard: [[{ text: "🔄 Обновить", callback_data: "tasks_refresh" }], [{ text: "← Главное меню", callback_data: "menu:home" }]] });
+    return;
+  }
+  const lines = [];
+  const buttons = [];
+  for (const row of rows) {
+    if (!v71TaskTriggerSupported(row.trigger_type)) continue;
+    const progress = await v71TaskProgress(env, row, String(user.id), now);
+    await v77TrackTaskExposure(env, row, String(user.id), progress, now);
+    const claimKey = `${row.chain_key}:${user.id}:${progress.cycleKey}`;
+    const claim = await env.DB.prepare(`SELECT status FROM player_task_claims WHERE claim_key=? LIMIT 1`).bind(claimKey).first();
+    let alreadyCompleted = claim?.status === "claimed";
+    if (!alreadyCompleted && String(row.task_mode || "one_time") === "one_time") {
+      const execution = await env.DB.prepare(`SELECT 1 AS done FROM automation_chain_executions WHERE chain_key=? AND telegram_id=? AND status='completed' LIMIT 1`).bind(row.chain_key,String(user.id)).first();
+      alreadyCompleted = Boolean(execution?.done);
+    }
+    const reward = safeJson(row.action_json, {});
+    const status = alreadyCompleted ? "✅ Получено" : progress.completed ? "🎁 Награда готова" : "⏳ В процессе";
+    const description = String(row.task_description || row.description || v67AutomationTriggerLabel(row.trigger_type,row.trigger_value)).slice(0,180);
+    lines.push(`<b>${escapeHtml(row.title)}</b>\n${escapeHtml(description)}\nПрогресс: <b>${escapeHtml(v71TaskProgressText(row,progress))}</b>\nНаграда: <b>${escapeHtml(safeRewardDescription(reward))}</b>\n${status}`);
+    if (!alreadyCompleted && progress.completed) buttons.push([{ text: `🎁 Получить · ${String(row.title).slice(0,28)}`, callback_data: `task_claim:${row.chain_key}` }]);
+  }
+  await v77AppendPlayerSeries(env, String(user.id), lines, buttons, now);
+  buttons.push([{ text: "🔄 Обновить", callback_data: "tasks_refresh" }, { text: "← Главное меню", callback_data: "menu:home" }]);
+  await sendTelegramMessage(env, chatId, `<b>📋 Задания</b>\n\n${lines.join("\n\n") || "Нет доступных заданий."}\n\nПрогресс обновляется по данным сервера.`, { inline_keyboard: buttons });
+}
+
+async function claimPlayerTask(query, chainKey, env) {
+  const chatId = query.message?.chat?.id;
+  await ensureV67Schema(env);
+  const now = Math.floor(Date.now() / 1000);
+  const row = await env.DB.prepare(`SELECT * FROM automation_chains WHERE chain_key=? AND enabled=1 AND COALESCE(show_as_task,0)=1 AND action_type='reward' LIMIT 1`).bind(String(chainKey)).first();
+  if (!row || !v71TaskTriggerSupported(row.trigger_type)) {
+    await answerCallback(env, query.id, "Задание уже недоступно.", true);
+    return;
+  }
+  const progress = await v71TaskProgress(env, row, String(query.from.id), now);
+  if (!progress.completed) {
+    await answerCallback(env, query.id, "Задание ещё не выполнено.", true);
+    await showPlayerTasks(chatId, query.from, env);
+    return;
+  }
+  if (String(row.task_mode || "one_time") === "one_time") {
+    const execution = await env.DB.prepare(`SELECT 1 AS done FROM automation_chain_executions WHERE chain_key=? AND telegram_id=? AND status='completed' LIMIT 1`).bind(row.chain_key,String(query.from.id)).first();
+    if (execution?.done) {
+      await answerCallback(env, query.id, "Эта награда уже была получена.", true);
+      await showPlayerTasks(chatId, query.from, env);
+      return;
+    }
+  }
+  const claimKey = `${row.chain_key}:${query.from.id}:${progress.cycleKey}`;
+  const reward = safeJson(row.action_json, {});
+  await env.DB.prepare(`INSERT OR IGNORE INTO player_task_claims(claim_key,chain_key,telegram_id,cycle_key,status,queue_id,reward_json,created_at,updated_at,claimed_at) VALUES(?,?,?,?, 'pending',0,?,?,?,0)`).bind(claimKey,row.chain_key,String(query.from.id),progress.cycleKey,JSON.stringify(reward),now,now).run();
+  let claim = await env.DB.prepare(`SELECT * FROM player_task_claims WHERE claim_key=? LIMIT 1`).bind(claimKey).first();
+  if (claim?.status === "claimed") {
+    await answerCallback(env, query.id, "Награда уже получена.", true);
+    await showPlayerTasks(chatId, query.from, env);
+    return;
+  }
+  let queueId = Number(claim?.queue_id || 0);
+  if (!queueId) {
+    queueId = await enqueueRewardDelivery(env,String(query.from.id),"task",claimKey,reward,String(reward.reason || row.title),"");
+    if (!queueId) {
+      const existing = await env.DB.prepare(`SELECT id FROM reward_delivery_queue WHERE source_type='task' AND source_id=? AND telegram_id=? AND reward_kind=? AND reward_id=? LIMIT 1`).bind(claimKey,String(query.from.id),String(reward.kind||""),String(reward.id||"")).first();
+      queueId = Number(existing?.id || 0);
+    }
+    await env.DB.prepare(`UPDATE player_task_claims SET queue_id=?,updated_at=? WHERE claim_key=?`).bind(queueId,now,claimKey).run();
+  }
+  await processRewardDeliveryQueue(env,10);
+  const queue = queueId ? await env.DB.prepare(`SELECT status,last_error FROM reward_delivery_queue WHERE id=? LIMIT 1`).bind(queueId).first() : null;
+  if (queue?.status === "delivered") {
+    await env.DB.prepare(`UPDATE player_task_claims SET status='claimed',claimed_at=?,updated_at=? WHERE claim_key=?`).bind(now,now,claimKey).run();
+    await answerCallback(env, query.id, "Награда получена!");
+  } else {
+    await env.DB.prepare(`UPDATE player_task_claims SET status='pending',updated_at=? WHERE claim_key=?`).bind(now,claimKey).run();
+    await answerCallback(env, query.id, queue?.last_error ? "Награда в очереди доставки. Попробуйте обновить позже." : "Награда обрабатывается.", true);
+  }
+  await showPlayerTasks(chatId, query.from, env);
+}
+
+async function handlePlayerTaskCallback(query, env) {
+  const data = String(query.data || "");
+  const chatId = query.message?.chat?.id;
+  if (!chatId) return false;
+  if (data === "tasks_refresh") {
+    await answerCallback(env, query.id, "Задания обновлены.");
+    await showPlayerTasks(chatId, query.from, env);
+    return true;
+  }
+  const claim = data.match(/^task_claim:([A-Za-z0-9_-]+)$/);
+  if (claim) {
+    await claimPlayerTask(query, claim[1], env);
+    return true;
+  }
+  return false;
 }
 
 const TEAM_ROLE_PRESETS = Object.freeze({
@@ -4319,13 +5091,31 @@ function permissionLabel(permission) {
     products: "управление товарами",
     news: "публикация новостей",
     staff: "управление командой",
-    log: "просмотр журнала"
+    log: "просмотр журнала",
+    viewPlayers: "просмотр игроков",
+    grantRewards: "выдача обычных наград",
+    grantLegendaryCases: "выдача Легендарных кейсов",
+    blockPlayers: "блокировка игроков",
+    unblockPlayers: "разблокировка игроков",
+    redeemPhysical: "погашение физических кодов",
+    manageSeasons: "изменение сезонов",
+    manageCases: "изменение кейсов",
+    manageShop: "изменение магазина",
+    massBroadcasts: "массовые рассылки",
+    viewEconomy: "просмотр экономики",
+    rollbackSettings: "откат настроек",
+    manageMaintenance: "технические работы",
+    manageTesters: "тестовые аккаунты",
+    managePromocodes: "промокоды",
+    viewContentAnalytics: "аналитика контента",
+    approveDangerous: "подтверждение опасных действий"
   })[permission] || permission;
 }
 
 async function getTeamAccess(user, env) {
+  const ownerPermissions = completeSecurityPermissions(true);
   if (isBotAdminUser(user, env)) {
-    return { authorized: true, owner: true, role: "owner", permissions: { view: true, redeem: true, points: true, products: true, news: true, staff: true, log: true } };
+    return { authorized: true, owner: true, role: "owner", permissions: { view: true, redeem: true, points: true, products: true, news: true, staff: true, log: true, ...ownerPermissions } };
   }
   const row = await env.DB.prepare(
     `SELECT telegram_id, display_name, active, role, session_expires_at,
@@ -4337,24 +5127,36 @@ async function getTeamAccess(user, env) {
   const now = Math.floor(Date.now() / 1000);
   const expiresAt = Number(row.session_expires_at || 0);
   const activeSession = Number.isFinite(expiresAt) && expiresAt > now;
+  const role = normalizeTeamRole(row.role);
+  const legacy = {
+    view: true,
+    redeem: Number(row.can_redeem_rewards || 0) === 1,
+    points: Number(row.can_adjust_points || 0) === 1,
+    products: Number(row.can_manage_products || 0) === 1,
+    news: Number(row.can_publish_news || 0) === 1,
+    staff: Number(row.can_manage_staff || 0) === 1,
+    log: Number(row.can_manage_staff || 0) === 1
+  };
+  let security = securityPermissionPreset(role, legacy);
+  try {
+    await ensureOperationsSecuritySchema(env);
+    const override = await env.DB.prepare(`SELECT * FROM staff_permission_overrides WHERE telegram_id = ? LIMIT 1`).bind(String(row.telegram_id)).first();
+    if (override) security = securityPermissionsFromRow(override, security);
+  } catch (error) {
+    console.error("granular permissions fallback", error);
+  }
+  // Кассир и повар не получают доступ к спискам, карточкам и истории игроков,
+  // даже если в базе остался старый точечный override.
+  if (role === "cashier" || role === "cook") security.viewPlayers = false;
   return {
     authorized: activeSession,
     owner: false,
     reason: activeSession ? "active" : "expired",
-    role: normalizeTeamRole(row.role),
+    role,
     expiresAt,
-    permissions: {
-      view: true,
-      redeem: Number(row.can_redeem_rewards || 0) === 1,
-      points: Number(row.can_adjust_points || 0) === 1,
-      products: Number(row.can_manage_products || 0) === 1,
-      news: Number(row.can_publish_news || 0) === 1,
-      staff: Number(row.can_manage_staff || 0) === 1,
-      log: Number(row.can_manage_staff || 0) === 1
-    }
+    permissions: { ...legacy, ...security }
   };
 }
-
 async function requireTeamPermission(chatId, user, permission, env) {
   const access = await getTeamAccess(user, env);
   if (!access.authorized) {
@@ -4542,18 +5344,18 @@ function botStockLimitHelp() {
   return `<b>Формат лимита остатков</b>
 
 ` +
-    `<code>/setlimit skins 1</code> — общий остаток на любые скины
+    `<code>/shop_stock skins 1</code> — общий остаток на любые скины
 ` +
-    `<code>/setlimit skins angel 3</code> — остаток конкретного скина
+    `<code>/shop_stock skins angel 3</code> — остаток конкретного скина
 ` +
-    `<code>/setlimit prize 50</code> — общий остаток раздела «Награды»
+    `<code>/shop_stock prize 50</code> — общий остаток раздела «Награды»
 ` +
-    `<code>/setlimit prize zefir 25</code> — остаток конкретного товара
+    `<code>/shop_stock prize zefir 25</code> — остаток конкретного товара
 ` +
-    `<code>/setlimit prize case legendary 10</code> — остаток конкретного кейса
+    `<code>/shop_stock prize case legendary 10</code> — остаток конкретного кейса
 
 ` +
-    `Повторная команда полностью обновляет остаток. Чтобы снять лимит: <code>/setlimit skins off</code>.`;
+    `Повторная команда полностью обновляет остаток. Чтобы снять лимит: <code>/shop_stock skins off</code>.`;
 }
 
 async function setShopStockLimitFromBot(chatId, user, rawPayload, env) {
@@ -4565,6 +5367,7 @@ async function setShopStockLimitFromBot(chatId, user, rawPayload, env) {
     return;
   }
   await ensureShopStockSchema(env);
+  await createConfigSnapshot(env, "pre_shop_change", `Перед изменением остатка: ${parsed.title}`, user).catch((error) => console.error("pre stock snapshot failed", error));
   const scopeKey = shopStockScopeKey(parsed.category, parsed.productId);
   const now = Math.floor(Date.now() / 1000);
   if (parsed.remove) {
@@ -4598,28 +5401,32 @@ async function setShopStockLimitFromBot(chatId, user, rawPayload, env) {
 }
 
 async function requireCatalogAdministrator(chatId, user, env) {
-  const access = await getTeamAccess(user, env);
-  if (!access.authorized) {
-    await sendTelegramMessage(env, chatId, access.reason === "expired"
-      ? "Рабочая сессия истекла. Выполните <code>/staff</code> и повторите действие."
-      : "У вас нет активного доступа к команде.");
-    return null;
-  }
-  if (!access.owner && normalizeTeamRole(access.role) !== "administrator") {
-    await sendTelegramMessage(env, chatId, "Эта команда доступна только администратору или владельцу.");
-    return null;
-  }
-  return access;
+  return requireSecurityPermission(chatId, user, "manageShop", env);
 }
 
 function botShopCommandHelp(command = "add") {
   if (command === "delete") {
-    return `<b>Формат удаления</b>\n\n<code>/deletedprodyct zefir</code>\n<code>/deletedprodyct case gold</code>`;
+    return `<b>Формат скрытия товара</b>
+
+<code>/shop_hide zefir</code>
+<code>/shop_hide case gold</code>`;
   }
   if (command === "price") {
-    return `<b>Формат изменения цены</b>\n\n<code>/price zefir очки 40000 зефир 350</code>\n<code>/price americano кофе 350</code>\n<code>/price case gold очки 10000 зефир 100 кофе 100</code>\n\nМожно указать одну, две или три валюты. Неуказанные валюты будут равны нулю. Команда меняет только цену и не добавляет удалённый товар обратно в магазин.`;
+    return `<b>Формат изменения цены</b>
+
+<code>/shop_price zefir очки 40000 зефир 350</code>
+<code>/shop_price americano кофе 350</code>
+<code>/shop_price case gold очки 10000 зефир 100 кофе 100</code>
+
+Можно указать одну, две или три валюты. Неуказанные валюты будут равны нулю. Команда меняет только цену и не возвращает скрытый товар в магазин.`;
   }
-  return `<b>Формат добавления</b>\n\n<code>/addprodyct zefir очки 40000 зефир 350</code>\n<code>/addprodyct americano кофе 350</code>\n<code>/addprodyct case gold очки 10000 зефир 100 кофе 100</code>\n\nМожно указать одну, две или три валюты. Неуказанные валюты будут равны нулю.`;
+  return `<b>Формат возврата товара</b>
+
+<code>/shop_show zefir очки 40000 зефир 350</code>
+<code>/shop_show americano кофе 350</code>
+<code>/shop_show case gold очки 10000 зефир 100 кофе 100</code>
+
+Можно указать одну, две или три валюты. Перед изменением создаётся снимок.`;
 }
 
 async function addShopProductFromBot(chatId, user, rawPayload, env) {
@@ -4632,6 +5439,7 @@ async function addShopProductFromBot(chatId, user, rawPayload, env) {
     return;
   }
   await ensureShopAssortmentSchema(env);
+  await createConfigSnapshot(env, "pre_shop_change", `Перед добавлением товара: ${botShopProductTitle(parsedProduct.id)}`, user).catch((error) => console.error("pre add product snapshot failed", error));
   const now = Math.floor(Date.now() / 1000);
   const actorId = String(user.id);
   const statements = [env.DB.prepare(
@@ -4690,6 +5498,7 @@ async function updateShopProductPriceFromBot(chatId, user, rawPayload, env) {
     return;
   }
 
+  await createConfigSnapshot(env, "pre_shop_change", `Перед изменением цены: ${botShopProductTitle(parsedProduct.id)}`, user).catch((error) => console.error("pre price snapshot failed", error));
   const now = Math.floor(Date.now() / 1000);
   const actorId = String(user.id);
   const statements = [env.DB.prepare(
@@ -4775,6 +5584,7 @@ async function deleteShopProductFromBot(chatId, user, rawPayload, env) {
     await sendTelegramMessage(env, chatId, `Товар <b>${escapeHtml(botShopProductTitle(parsedProduct.id))}</b> уже убран из ассортимента.`);
     return;
   }
+  await createConfigSnapshot(env, "pre_shop_change", `Перед удалением товара: ${botShopProductTitle(parsedProduct.id)}`, user).catch((error) => console.error("pre delete product snapshot failed", error));
   const now = Math.floor(Date.now() / 1000);
   await env.DB.prepare(
     `INSERT INTO shop_assortment (product_id, enabled, points, treats, coffee, updated_at, updated_by)
@@ -4795,7 +5605,7 @@ async function deleteShopProductFromBot(chatId, user, rawPayload, env) {
   await sendTelegramMessage(env, chatId,
     `🗑 <b>${escapeHtml(botShopProductTitle(parsedProduct.id))}</b> убран из ассортимента.
 
-Статус: <b>скрыт</b>. Проверить весь список: <code>/towar</code>.
+Статус: <b>скрыт</b>. Проверить весь список: <code>/shop_list</code>.
 Старые покупки и уже полученные кейсы не изменены.`
   );
 }
@@ -4823,7 +5633,13 @@ async function sendTelegramListChunks(env, chatId, title, entries, emptyText = "
 
   for (let index = 0; index < chunks.length; index += 1) {
     const page = chunks.length > 1 ? ` · ${index + 1}/${chunks.length}` : "";
-    await sendTelegramMessage(env, chatId, `<b>${escapeHtml(title)}${page}</b>\n\n${chunks[index]}`);
+    await sendTelegramMessage(
+      env,
+      chatId,
+      `<b>${escapeHtml(title)}${page}</b>\n\n${chunks[index]}`,
+      null,
+      { cleanMode: index === 0 ? "replace" : "append" }
+    );
   }
 }
 
@@ -4937,7 +5753,7 @@ Telegram ID: <code>${escapeHtml(String(row.telegram_id || ""))}</code>
 }
 
 async function showPlayerMembers(chatId, user, env) {
-  const access = await requireTeamPermission(chatId, user, "points", env);
+  const access = await requireSecurityPermission(chatId, user, "viewPlayers", env);
   if (!access) return;
 
   const [profilesResult, ratingResult] = await Promise.all([
@@ -5032,24 +5848,27 @@ async function showTeamManagement(chatId, user, env) {
   const rows = Array.isArray(result.results) ? result.results : [];
   rows.sort((first, second) => Number(isBotAdminTelegramId(second.telegram_id, env)) - Number(isBotAdminTelegramId(first.telegram_id, env)));
   const now = Math.floor(Date.now() / 1000);
+  const activeCount = rows.filter((row) => Number(row.active || 0) === 1).length;
   const list = rows.length ? rows.map((row) => {
-    const permissions = [
-      "просмотр",
-      Number(row.can_redeem_rewards) ? "выдача" : null,
-      Number(row.can_adjust_points) ? "баланс" : null,
-      Number(row.can_manage_products) ? "каталог" : null,
-      Number(row.can_publish_news) ? "новости" : null,
-      Number(row.can_manage_staff) ? "команда" : null
-    ].filter(Boolean).join(", ");
-    const session = Number(row.session_expires_at || 0) > now ? "сессия активна" : "нужен вход";
-    return `• <code>${escapeHtml(String(row.telegram_id))}</code> — ${escapeHtml(staffListDisplayName(row))}
-  ${escapeHtml(staffListRoleLabel(row, env))} · ${Number(row.active) ? session : "отключён"}
-  Права: ${escapeHtml(permissions)}`;
+    const session = Number(row.session_expires_at || 0) > now ? "сессия открыта" : "нужен вход /staff";
+    const status = Number(row.active || 0) === 1 ? session : "доступ отключён";
+    return `• <b>${escapeHtml(staffListDisplayName(row))}</b> · <code>${escapeHtml(String(row.telegram_id))}</code>\n  ${escapeHtml(staffListRoleLabel(row, env))} · ${escapeHtml(status)}`;
   }).join("\n\n") : "Сотрудники пока не добавлены.";
-  const adminHint = access.owner
-    ? `<b>Назначение ролей</b>\n<code>/rang_staff_kassir ID</code>\n<code>/rang_staff_povar ID</code>\n<code>/rang_staff_administrator ID</code>`
-    : `<b>Назначение ролей</b>\n<code>/rang_staff_kassir ID</code>\n<code>/rang_staff_povar ID</code>`;
-  await sendTelegramMessage(env, chatId, `<b>Команда и разрешения</b>\n\n${list}\n\n${adminHint}\n\n<code>/staff_disable ID</code> — отключить сотрудника\n<code>/staff_enable ID</code> — включить сотрудника\n<code>/help_staff</code> — все доступные команды.`);
+
+  const buttons = [[{ text: "➕ Создать сотрудника", callback_data: "adm_staff_create" }]];
+  for (let index = 0; index < Math.min(rows.length, 20); index += 2) {
+    buttons.push(rows.slice(index, index + 2).map((row) => ({
+      text: `${Number(row.active || 0) === 1 ? "🟢" : "⚫"} ${String(staffListDisplayName(row)).slice(0, 22)}`,
+      callback_data: `adm_staff_card:${row.telegram_id}`
+    })));
+  }
+  buttons.push([{ text: "🔄 Обновить", callback_data: "adm_team" }, { text: "⬅️ Админ-панель", callback_data: "adm_home" }]);
+
+  await sendTelegramMessage(env, chatId,
+    `<b>👥 Сотрудники</b>\n\nВсего: <b>${rows.length}</b> · активных: <b>${activeCount}</b>\n\n${list}\n\nНажмите «Создать сотрудника», затем отправьте его Telegram ID или @username. Роль и доступ выбираются кнопками.`,
+    { inline_keyboard: buttons },
+    { adminBack: false }
+  );
 }
 
 function canAssignTeamRole(access, role) {
@@ -5060,6 +5879,284 @@ function canAssignTeamRole(access, role) {
 async function targetTeamMember(env, telegramId) {
   return env.DB.prepare(`SELECT telegram_id, role, active FROM staff_users WHERE telegram_id = ? LIMIT 1`)
     .bind(String(telegramId)).first();
+}
+
+
+function staffRolePresetSummary(roleValue) {
+  const role = normalizeTeamRole(roleValue);
+  if (role === "administrator") return "Полный доступ к управлению игрой, игроками, заказами и сотрудниками. Опасные действия всё равно записываются в аудит.";
+  if (role === "cook") return "Рабочий доступ без просмотра игроков и истории заказов. Управление настройками и выдача физических наград недоступны.";
+  return "Проверка и погашение QR-кодов физических наград без просмотра игроков и истории заказов.";
+}
+
+async function staffInviteProfile(telegramId, env) {
+  let row = null;
+  try {
+    row = await env.DB.prepare(
+      `SELECT display_name, username FROM bot_subscribers WHERE telegram_id = ? ORDER BY last_started_at DESC LIMIT 1`
+    ).bind(String(telegramId)).first();
+  } catch {}
+  return {
+    displayName: String(row?.display_name || `Telegram ${telegramId}`).trim() || `Telegram ${telegramId}`,
+    username: String(row?.username || "").trim()
+  };
+}
+
+async function startStaffCreateWorkflow(query, env) {
+  const chatId = query.message?.chat?.id;
+  if (!chatId) return;
+  const access = await requireTeamPermission(chatId, query.from, "staff", env);
+  if (!access) return;
+  await setStaffWorkflow(query.from.id, chatId, "staff_create", "target", {}, env);
+  await answerCallback(env, query.id, "Создаём сотрудника.");
+  await sendTelegramMessage(env, chatId,
+    `<b>➕ Новый сотрудник</b>\n\nОтправьте одним сообщением:\n• Telegram ID сотрудника;\n• или его точный @username;\n• или контакт из Telegram.\n\nСотрудник должен хотя бы один раз открыть этого бота, чтобы поиск по @username сработал.\n\nОтмена: <code>/cancel</code>`,
+    { inline_keyboard: [[{ text: "❌ Отменить", callback_data: "adm_staff_cancel" }]] }
+  );
+}
+
+async function handleStaffCreateWorkflowMessage(message, workflow, env) {
+  if (workflow.step !== "target") {
+    await sendTelegramMessage(env, message.chat.id, "Выберите роль кнопкой в предыдущем сообщении или отмените создание командой <code>/cancel</code>.");
+    return true;
+  }
+  const access = await requireTeamPermission(message.chat.id, message.from, "staff", env);
+  if (!access) return true;
+  const contactId = String(message.contact?.user_id || message.forward_origin?.sender_user?.id || message.forward_from?.id || "").trim();
+  const raw = contactId || String(message.text || "").trim();
+  const targetId = /^\d{4,20}$/.test(raw) ? raw : await resolvePlayerTelegramId(raw, env);
+  if (!targetId) {
+    await sendTelegramMessage(env, message.chat.id, "Не удалось определить Telegram ID. Отправьте числовой ID, точный @username или контакт сотрудника.");
+    return true;
+  }
+  if (isBotAdminTelegramId(targetId, env)) {
+    await clearStaffWorkflow(message.from.id, env);
+    await sendTelegramMessage(env, message.chat.id, "Владелец уже имеет полный доступ и не нуждается в отдельной записи сотрудника.");
+    return true;
+  }
+  const existing = await env.DB.prepare(`SELECT telegram_id, active FROM staff_users WHERE telegram_id = ? LIMIT 1`).bind(targetId).first();
+  if (existing && Number(existing.active || 0) === 1) {
+    await clearStaffWorkflow(message.from.id, env);
+    await sendTelegramMessage(env, message.chat.id, "Этот пользователь уже является активным сотрудником.");
+    await showStaffMemberCard(message.chat.id, message.from, targetId, env);
+    return true;
+  }
+  const profile = await staffInviteProfile(targetId, env);
+  await updateStaffWorkflow(message.from.id, {
+    step: "role",
+    data: { targetId, displayName: profile.displayName, username: profile.username, reactivating: Boolean(existing) }
+  }, env);
+  await showStaffCreateRoleStep(message.chat.id, message.from, targetId, profile, Boolean(existing), access, env);
+  return true;
+}
+
+async function showStaffCreateRoleStep(chatId, user, targetId, profile, reactivating, access, env) {
+  const rows = [
+    [{ text: "☕ Кассир", callback_data: "adm_staff_create_role:cashier" }, { text: "👨‍🍳 Повар", callback_data: "adm_staff_create_role:cook" }]
+  ];
+  if (access.owner) rows.push([{ text: "🛡 Администратор", callback_data: "adm_staff_create_role:administrator" }]);
+  rows.push([{ text: "❌ Отменить", callback_data: "adm_staff_cancel" }]);
+  const username = profile.username ? ` · @${escapeHtml(profile.username)}` : "";
+  await sendTelegramMessage(env, chatId,
+    `<b>${reactivating ? "♻️ Возврат сотрудника" : "➕ Новый сотрудник"}</b>\n\nПользователь: <b>${escapeHtml(profile.displayName)}</b>${username}\nTelegram ID: <code>${escapeHtml(targetId)}</code>\n\nВыберите роль. Позже точные права можно изменить в карточке сотрудника.`,
+    { inline_keyboard: rows }
+  );
+}
+
+async function selectStaffCreateRole(query, roleValue, env) {
+  const chatId = query.message?.chat?.id;
+  if (!chatId) return;
+  const access = await requireTeamPermission(chatId, query.from, "staff", env);
+  if (!access) return;
+  const workflow = await getStaffWorkflow(query.from.id, env);
+  if (!workflow || workflow.flow_type !== "staff_create" || !workflow.data?.targetId) {
+    await answerCallback(env, query.id, "Создание сотрудника уже завершено или истекло.", true);
+    return;
+  }
+  const role = normalizeTeamRole(roleValue);
+  if (!canAssignTeamRole(access, role)) {
+    await answerCallback(env, query.id, "Назначить администратора может только владелец.", true);
+    return;
+  }
+  await updateStaffWorkflow(query.from.id, { step: "confirm", data: { role } }, env);
+  await answerCallback(env, query.id, "Роль выбрана.");
+  const data = { ...workflow.data, role };
+  await sendTelegramMessage(env, chatId,
+    `<b>✅ Проверьте сотрудника</b>\n\nИмя: <b>${escapeHtml(data.displayName || `Telegram ${data.targetId}`)}</b>\nTelegram ID: <code>${escapeHtml(String(data.targetId))}</code>\nРоль: <b>${escapeHtml(teamRoleLabel(role))}</b>\n\n${escapeHtml(staffRolePresetSummary(role))}\n\nПосле создания сотруднику нужно открыть бота и выполнить <code>/staff</code>.`,
+    { inline_keyboard: [
+      [{ text: data.reactivating ? "♻️ Включить сотрудника" : "✅ Создать сотрудника", callback_data: "adm_staff_create_confirm" }],
+      [{ text: "⬅️ Изменить роль", callback_data: "adm_staff_create_back" }, { text: "❌ Отменить", callback_data: "adm_staff_cancel" }]
+    ] }
+  );
+}
+
+async function confirmStaffCreate(query, env) {
+  const chatId = query.message?.chat?.id;
+  if (!chatId) return;
+  const access = await requireTeamPermission(chatId, query.from, "staff", env);
+  if (!access) return;
+  const workflow = await getStaffWorkflow(query.from.id, env);
+  const data = workflow?.flow_type === "staff_create" ? workflow.data || {} : {};
+  const targetId = String(data.targetId || "");
+  const role = normalizeTeamRole(data.role);
+  if (!/^\d{4,20}$/.test(targetId) || workflow?.step !== "confirm") {
+    await answerCallback(env, query.id, "Данные создания устарели. Начните заново.", true);
+    return;
+  }
+  if (!canAssignTeamRole(access, role)) {
+    await answerCallback(env, query.id, "Назначить администратора может только владелец.", true);
+    return;
+  }
+  const preset = TEAM_ROLE_PRESETS[role];
+  const now = Math.floor(Date.now() / 1000);
+  const previous = await env.DB.prepare(`SELECT role, active FROM staff_users WHERE telegram_id = ? LIMIT 1`).bind(targetId).first();
+  await env.DB.prepare(
+    `INSERT INTO staff_users (
+       telegram_id, display_name, added_at, active, session_expires_at, role,
+       can_redeem_rewards, can_adjust_points, can_manage_products,
+       can_publish_news, can_manage_staff, invited_by, updated_at
+     ) VALUES (?, ?, ?, 1, 0, ?, ?, ?, ?, ?, ?, ?, ?)
+     ON CONFLICT(telegram_id) DO UPDATE SET
+       display_name = excluded.display_name,
+       active = 1, role = excluded.role,
+       can_redeem_rewards = excluded.can_redeem_rewards,
+       can_adjust_points = excluded.can_adjust_points,
+       can_manage_products = excluded.can_manage_products,
+       can_publish_news = excluded.can_publish_news,
+       can_manage_staff = excluded.can_manage_staff,
+       invited_by = excluded.invited_by, updated_at = excluded.updated_at,
+       session_expires_at = 0`
+  ).bind(targetId, String(data.displayName || `Telegram ${targetId}`).slice(0, 120), now, role,
+    preset.redeem, preset.points, preset.products, preset.news, preset.staff,
+    String(query.from.id), now).run();
+  try {
+    await ensureOperationsSecuritySchema(env);
+    await env.DB.prepare(`DELETE FROM staff_permission_overrides WHERE telegram_id = ?`).bind(targetId).run();
+  } catch {}
+  await resetStaffTrainingRecord(env, targetId, role, String(query.from.id));
+  await logStaffAction(env, query.from, access, previous ? "staff_reactivate" : "staff_add", targetId, "staff", previous?.role || null, role, { role, via: "button_wizard" });
+  await refreshBotCommandMenuSilently(env, targetId);
+  await clearStaffWorkflow(query.from.id, env);
+  await answerCallback(env, query.id, previous ? "Сотрудник включён." : "Сотрудник создан.");
+  await sendTelegramMessage(env, chatId,
+    `<b>✅ Сотрудник ${previous ? "включён" : "создан"}</b>\n\n${escapeHtml(String(data.displayName || `Telegram ${targetId}`))}\nTelegram ID: <code>${escapeHtml(targetId)}</code>\nРоль: <b>${escapeHtml(teamRoleLabel(role))}</b>\n\nПопросите сотрудника открыть бота и выполнить <code>/staff</code>. После входа его имя и меню команд обновятся автоматически.`,
+    { inline_keyboard: [[{ text: "👤 Открыть сотрудника", callback_data: `adm_staff_card:${targetId}` }], [{ text: "👥 Все сотрудники", callback_data: "adm_team" }]] }
+  );
+}
+
+async function cancelStaffCreate(query, env) {
+  const chatId = query.message?.chat?.id;
+  await clearStaffWorkflow(query.from.id, env);
+  await answerCallback(env, query.id, "Создание отменено.");
+  if (chatId) await showTeamManagement(chatId, query.from, env);
+}
+
+async function showStaffMemberCard(chatId, user, telegramId, env) {
+  const access = await requireTeamPermission(chatId, user, "staff", env);
+  if (!access) return;
+  await ensureStaffCustomNamesSchema(env);
+  const row = await env.DB.prepare(
+    `SELECT s.*, COALESCE(n.custom_name, '') AS custom_name
+     FROM staff_users s LEFT JOIN staff_custom_names n ON n.telegram_id = s.telegram_id
+     WHERE s.telegram_id = ? LIMIT 1`
+  ).bind(String(telegramId)).first();
+  if (!row) {
+    await sendTelegramMessage(env, chatId, "Сотрудник не найден.");
+    return;
+  }
+  const now = Math.floor(Date.now() / 1000);
+  const active = Number(row.active || 0) === 1;
+  const sessionActive = Number(row.session_expires_at || 0) > now;
+  const training = await getStaffTrainingStatus(env, String(row.telegram_id), row.role);
+  const buttons = [
+    [{ text: "🎭 Изменить роль", callback_data: `adm_staff_role_menu:${row.telegram_id}` }]
+  ];
+  if (access.owner) buttons.push([{ text: "🔐 Точные права", callback_data: `adm_staff_permissions:${row.telegram_id}` }]);
+  buttons.push([{ text: "🎓 Сбросить обучение", callback_data: `v78_training_reset:${row.telegram_id}` }]);
+  buttons.push([{ text: active ? "⛔ Отключить доступ" : "✅ Включить доступ", callback_data: `adm_staff_toggle:${row.telegram_id}:${active ? "off" : "on"}` }]);
+  buttons.push([{ text: "⬅️ Сотрудники", callback_data: "adm_team" }]);
+  await sendTelegramMessage(env, chatId,
+    `<b>👤 Сотрудник</b>\n\nИмя: <b>${escapeHtml(staffListDisplayName(row))}</b>\nTelegram ID: <code>${escapeHtml(String(row.telegram_id))}</code>\nРоль: <b>${escapeHtml(staffListRoleLabel(row, env))}</b>\nДоступ: <b>${active ? "включён" : "отключён"}</b>\nСессия: <b>${sessionActive ? `активна до ${escapeHtml(formatUtcDate(row.session_expires_at))}` : "не открыта"}</b>
+Обучение: <b>${escapeHtml(staffTrainingStatusLabel(training))}</b>
+
+${escapeHtml(staffRolePresetSummary(row.role))}`,
+    { inline_keyboard: buttons }
+  );
+}
+
+async function showStaffRoleMenu(query, telegramId, env) {
+  const chatId = query.message?.chat?.id;
+  if (!chatId) return;
+  const access = await requireTeamPermission(chatId, query.from, "staff", env);
+  if (!access) return;
+  const target = await targetTeamMember(env, telegramId);
+  if (!target) {
+    await answerCallback(env, query.id, "Сотрудник не найден.", true);
+    return;
+  }
+  const rows = [[
+    { text: "☕ Кассир", callback_data: `adm_staff_set_role:${telegramId}:cashier` },
+    { text: "👨‍🍳 Повар", callback_data: `adm_staff_set_role:${telegramId}:cook` }
+  ]];
+  if (access.owner) rows.push([{ text: "🛡 Администратор", callback_data: `adm_staff_set_role:${telegramId}:administrator` }]);
+  rows.push([{ text: "⬅️ К сотруднику", callback_data: `adm_staff_card:${telegramId}` }]);
+  await answerCallback(env, query.id, "Выберите новую роль.");
+  await sendTelegramMessage(env, chatId, `<b>Изменение роли</b>\n\nСотрудник: <code>${escapeHtml(String(telegramId))}</code>\nТекущая роль: <b>${escapeHtml(teamRoleLabel(target.role))}</b>`, { inline_keyboard: rows });
+}
+
+async function setStaffRoleFromButton(query, telegramId, roleValue, env) {
+  const chatId = query.message?.chat?.id;
+  if (!chatId) return;
+  const access = await requireTeamPermission(chatId, query.from, "staff", env);
+  if (!access) return;
+  const role = normalizeTeamRole(roleValue);
+  if (!canAssignTeamRole(access, role)) {
+    await answerCallback(env, query.id, "Назначить администратора может только владелец.", true);
+    return;
+  }
+  const target = await targetTeamMember(env, telegramId);
+  if (!target) {
+    await answerCallback(env, query.id, "Сотрудник не найден.", true);
+    return;
+  }
+  if (!access.owner && normalizeTeamRole(target.role) === "administrator") {
+    await answerCallback(env, query.id, "Изменить администратора может только владелец.", true);
+    return;
+  }
+  const preset = TEAM_ROLE_PRESETS[role];
+  await env.DB.prepare(
+    `UPDATE staff_users SET role=?,can_redeem_rewards=?,can_adjust_points=?,can_manage_products=?,can_publish_news=?,can_manage_staff=?,session_expires_at=0,updated_at=? WHERE telegram_id=?`
+  ).bind(role,preset.redeem,preset.points,preset.products,preset.news,preset.staff,Math.floor(Date.now()/1000),String(telegramId)).run();
+  try {
+    await ensureOperationsSecuritySchema(env);
+    await env.DB.prepare(`DELETE FROM staff_permission_overrides WHERE telegram_id=?`).bind(String(telegramId)).run();
+  } catch {}
+  await resetStaffTrainingRecord(env, telegramId, role, String(query.from.id));
+  await logStaffAction(env,query.from,access,"staff_role",String(telegramId),"staff",target.role,role,{via:"buttons"});
+  await refreshBotCommandMenuSilently(env,telegramId);
+  await answerCallback(env,query.id,"Роль изменена.");
+  await showStaffMemberCard(chatId,query.from,telegramId,env);
+}
+
+async function toggleStaffFromButton(query, telegramId, enabled, env) {
+  const chatId = query.message?.chat?.id;
+  if (!chatId) return;
+  const access = await requireTeamPermission(chatId, query.from, "staff", env);
+  if (!access) return;
+  const target = await targetTeamMember(env, telegramId);
+  if (!target) {
+    await answerCallback(env, query.id, "Сотрудник не найден.", true);
+    return;
+  }
+  if (!access.owner && normalizeTeamRole(target.role) === "administrator") {
+    await answerCallback(env, query.id, "Управлять доступом администратора может только владелец.", true);
+    return;
+  }
+  await env.DB.prepare(`UPDATE staff_users SET active=?,session_expires_at=0,updated_at=? WHERE telegram_id=?`).bind(enabled?1:0,Math.floor(Date.now()/1000),String(telegramId)).run();
+  await logStaffAction(env,query.from,access,enabled?"staff_enable":"staff_disable",String(telegramId),"staff",Number(target.active||0),enabled?1:0,{via:"buttons"});
+  await refreshBotCommandMenuSilently(env,telegramId);
+  await answerCallback(env,query.id,enabled?"Доступ включён.":"Доступ отключён.");
+  await showStaffMemberCard(chatId,query.from,telegramId,env);
 }
 
 async function addTeamMember(chatId, requester, telegramId, roleValue, env) {
@@ -5090,6 +6187,7 @@ async function addTeamMember(chatId, requester, telegramId, roleValue, env) {
   ).bind(String(telegramId), `Telegram ${telegramId}`, now, role,
     preset.redeem, preset.points, preset.products, preset.news, preset.staff,
     String(requester.id), now).run();
+  await resetStaffTrainingRecord(env, telegramId, role, String(requester.id));
   await logStaffAction(env, requester, access, "staff_add", String(telegramId), "staff", null, null, { role });
   await sendTelegramMessage(env, chatId, `Пользователь <code>${escapeHtml(String(telegramId))}</code> добавлен как <b>${escapeHtml(teamRoleLabel(role))}</b>.\n\nОн должен открыть бота и выполнить <code>/staff</code>.`);
 }
@@ -5109,6 +6207,7 @@ async function removeTeamMember(chatId, requester, telegramId, env) {
   await env.DB.prepare(`UPDATE staff_users SET active = 0, session_expires_at = 0, updated_at = ? WHERE telegram_id = ?`)
     .bind(Math.floor(Date.now() / 1000), String(telegramId)).run();
   await logStaffAction(env, requester, access, "staff_disable", String(telegramId), "staff", Number(target.active || 0), 0, null);
+  await refreshBotCommandMenuSilently(env, telegramId);
   await sendTelegramMessage(env, chatId, `Доступ пользователя <code>${escapeHtml(String(telegramId))}</code> отключён. Текущая сессия завершена.`);
 }
 
@@ -5136,7 +6235,9 @@ async function setTeamRole(chatId, requester, telegramId, roleValue, env) {
     await addTeamMember(chatId, requester, telegramId, role, env);
     return;
   }
+  await resetStaffTrainingRecord(env, telegramId, role, String(requester.id));
   await logStaffAction(env, requester, access, "staff_role", String(telegramId), "staff", null, null, { role });
+  await refreshBotCommandMenuSilently(env, telegramId);
   await sendTelegramMessage(env, chatId, `Роль пользователя <code>${escapeHtml(String(telegramId))}</code> изменена на <b>${escapeHtml(teamRoleLabel(role))}</b>. Для продолжения ему нужно снова выполнить <code>/staff</code>.`);
 }
 
@@ -5157,6 +6258,7 @@ async function setTeamPermission(chatId, requester, telegramId, permission, enab
     return;
   }
   await logStaffAction(env, requester, access, "staff_permission", String(telegramId), "staff", null, enabled ? 1 : 0, { permission });
+  await refreshBotCommandMenuSilently(env, telegramId);
   await sendTelegramMessage(env, chatId, `Разрешение «${escapeHtml(permissionLabel(permission))}» для <code>${escapeHtml(String(telegramId))}</code> ${enabled ? "включено" : "отключено"}. Сотруднику нужно снова выполнить /staff.`);
 }
 
@@ -5205,60 +6307,158 @@ async function showAdminPanelCommands(chatId, user, env) {
   }
 
   const entries = [
-    `<b>Основное</b>\n<code>/staff_me</code> — моя роль, права и статистика\n<code>/adminpanel</code> — кнопочная админ-панель\n<code>/adminpanel_kmd</code> — полный справочник команд\n<code>/bot_version</code> — проверить версию Worker\n<code>/status</code> — состояние игры, бота, Cron и рейтинга\n<code>/cancel</code> — отменить текущее действие\n<code>/whoami</code> — мой Telegram ID`,
+    `<b>Основное</b>\n<code>/training</code> — пройти или повторить обучение\n<code>/staff_me</code> — моя роль, права и статистика\n<code>/adminpanel</code> — кнопочная админ-панель и очистка старых сообщений\n<code>/clean_chat</code> — очистить рабочий чат вручную\n<code>/adminpanel_kmd</code> — полный справочник команд\n<code>/bot_version</code> — проверить версию Worker\n<code>/status</code> — состояние игры, бота, Cron и рейтинга\n<code>/search</code> — универсальный поиск\n<code>/problems</code> — центр проблем\n<code>/cancel</code> — отменить текущее действие\n<code>/whoami</code> — мой Telegram ID`,
     `<b>Обращения</b>\n<code>/ticket</code> — создать обращение через кнопки\n<code>/tickets</code> — открытые обращения\n<code>/tickets mine</code> — мои обращения\n<code>/ticket_info НОМЕР</code> — открыть карточку обращения`,
-    `<b>Проверка заказов</b>\n<code>/check_code КОД</code> — проверить код без списания\n<code>/pending_orders</code> — активные заказы`
+    `<b>Проверка конкретного заказа</b>
+<code>/check_code КОД</code> — проверить предъявленный код без списания`
   ];
 
-  if (access.permissions?.redeem) {
-    entries.push(`<b>Выдача физических наград</b>\n<code>/redeem</code> — пошаговая проверка кода\n<code>/redeem КОД</code> — сразу открыть подтверждение\n<code>/my_redemptions</code> — мои последние выдачи\n<code>/redemptions_today</code> — сколько выдано сегодня
-<code>/stock</code> — остатки физических наград${access.owner ? `\n<code>/undo_redeem КОД</code> — отменить ошибочное списание в течение 5 минут` : ""}`);
+  if (canViewOrderHistory(access)) {
+    entries.push(`<b>Списки и история заказов</b>
+<code>/pending_orders</code> — активные заказы
+<code>/my_redemptions</code> — последние выдачи
+<code>/redemptions_today</code> — выдачи за сегодня`);
   }
 
-  if (access.permissions?.points) {
-    entries.push(
-      `<b>Карточка игрока</b>\n<code>/player TELEGRAM_ID</code>\n<code>/player @username</code>\nПоказывает баланс, прогресс, рейтинг, коллекцию, кейсы, бустер, покупки и физические награды. Владелец и администратор могут изменить имя, заблокировать или разблокировать игрока кнопками в карточке.`,
-      `<b>Выдача наград</b>\n<code>/grant</code> — пошаговая выдача валюты, кейса, аватарки, рамки, следа или скина с подтверждением и причиной\n\nПрямые команды:\n<code>/add_zefir СУММА TELEGRAM_ID ПРИЧИНА</code>\n<code>/add_coffee СУММА TELEGRAM_ID ПРИЧИНА</code>\n<code>/add_points СУММА TELEGRAM_ID ПРИЧИНА</code>\n<code>/add_keys ТИП КОЛИЧЕСТВО TELEGRAM_ID ПРИЧИНА</code>`,
-      `<b>Рейтинг</b>\n<code>/season</code> — карточка сезона, топ-10, продление, изменение награды и досрочное завершение`
-    );
+  if (access.permissions?.redeemPhysical || access.permissions?.redeem) {
+    entries.push(`<b>Выдача физических наград</b>
+<code>/redeem</code> — пошаговая проверка кода
+<code>/redeem КОД</code> — сразу открыть подтверждение
+<code>/stock</code> — остатки физических наград${access.owner ? `
+<code>/undo_redeem КОД</code> — отменить ошибочное списание в течение 5 минут` : ""}`);
   }
 
-  if (access.owner || normalizeTeamRole(access.role) === "administrator" || access.permissions?.products) {
-    entries.push(`<b>Магазин и остатки</b>\n<code>/stock</code> — остатки физических наград и выдачи за сегодня\n<code>/towar</code> — ассортимент, цены и все лимиты\n<code>/addprodyct ТОВАР ЦЕНА</code> — добавить или вернуть товар\n<code>/deletedprodyct ТОВАР</code> — скрыть товар\n<code>/price ТОВАР ЦЕНА</code> — изменить цену\n<code>/setlimit КАТЕГОРИЯ [ТОВАР] КОЛИЧЕСТВО</code>\nПримеры: <code>/setlimit skins 1</code>, <code>/setlimit prize case legendary 10</code>`);
+  if (access.permissions?.viewPlayers) {
+    entries.push(`<b>Карточка игрока</b>
+<code>/player TELEGRAM_ID</code>
+<code>/player @username</code>
+Показывает баланс, прогресс, рейтинг, коллекцию, кейсы, бустер, покупки и физические награды. Доступные кнопки зависят от точных прав сотрудника.`);
   }
 
-  if (access.owner || normalizeTeamRole(access.role) === "administrator") {
-    entries.push(
-      `<b>LiveOps и экономика</b>
-<code>/economy</code> — экономика и основные показатели
+  if (access.permissions?.grantRewards || access.permissions?.grantLegendaryCases) {
+    entries.push(`<b>Выдача наград</b>
+<code>/grant</code> — единый безопасный мастер выдачи валюты, кейса, аватарки, рамки, следа или скина. Он проверяет права, запрашивает причину, требует второе подтверждение для опасных наград и записывает операцию в журнал.`);
+  }
+
+  if (access.permissions?.manageSeasons) {
+    entries.push(`<b>Рейтинг</b>
+<code>/season</code> — карточка сезона, топ-10, продление, изменение награды и досрочное завершение`);
+  }
+
+  if (access.permissions?.manageShop) {
+    entries.push(`<b>Магазин и остатки</b>
+<code>/shop_admin</code> — центр управления магазином
+<code>/shop_list</code> — ассортимент, цены и лимиты
+<code>/shop_price ТОВАР ЦЕНА</code> — изменить цену
+<code>/shop_show ТОВАР ЦЕНА</code> — вернуть товар
+<code>/shop_hide ТОВАР</code> — скрыть товар
+<code>/shop_stock ...</code> — изменить остаток
+<code>/stock</code> — остатки физических наград
+
+Перед изменением создаётся снимок, действие записывается в аудит. Старые команды скрыты и доступны только владельцу как аварийные.`);
+  }
+
+  const canUse = (permission) => Boolean(access.owner || access.permissions?.[permission]);
+
+  if (canUse("viewEconomy")) {
+    entries.push(`<b>Экономика и контроль</b>
+<code>/economy</code> — основные показатели экономики
 <code>/segments</code> — сегменты игроков
-<code>/campaign</code> — массовая выдача с подтверждением
-<code>/campaigns</code> — статусы кампаний
-<code>/fraud</code> — очередь подозрительных событий`,
-      `<b>Контент и кейсы без деплоя</b>
+<code>/fraud</code> — подозрительные результаты и аномалии
+<code>/check_game</code> — проверка целостности игры`);
+  }
+
+  if (canUse("massBroadcasts")) {
+    entries.push(`<b>Кампании</b>
+<code>/campaign</code> — подготовить массовую выдачу или рассылку с подтверждением
+<code>/campaigns</code> — статусы и история кампаний`);
+  }
+
+  if (canUse("manageCases")) {
+    entries.push(`<b>Безопасное тестирование кейсов</b>
+<code>/case_simulator</code> — виртуальные открытия без изменения экономики
+<code>/publish_center</code> — единый список неопубликованных изменений`);
+    entries.push(`<b>Контент и кейсы без деплоя</b>
 <code>/content</code> — включение предметов и метки NEW
 <code>/content_weight KIND ITEM_ID ВЕС</code> — внутренний вес
 <code>/cases_admin</code> — конструктор кейсов
-<code>/case_chance CASE CATEGORY VALUE</code> — изменить шанс; сумма должна быть 100%
-<code>/case_guarantee CASE COUNT</code> — гарант, максимум 50
-<code>/config_history</code> — история и откат настроек`
-    );
+<code>/case_chance CASE CATEGORY VALUE</code> — создать черновик шансов
+<code>/case_guarantee CASE COUNT</code> — создать черновик гаранта
+<code>/drafts</code> — проверить и опубликовать изменения
+<code>/check_game</code> — проверка перед публикацией`);
   }
 
-  if (access.permissions?.news) {
-    entries.push(`<b>Новости</b>\n<code>/publish ЗАГОЛОВОК | ТЕКСТ | URL_КАРТИНКИ</code> — опубликовать новость`);
+  if (canUse("manageSeasons")) {
+    entries.push(`<b>Сезоны и события</b>
+<code>/season</code> — управление текущим сезоном
+<code>/events</code> — расписание событий
+<code>/event_new</code> — мастер нового события
+<code>/drafts</code> — черновики наград и настроек
+<code>/check_game</code> — проверка перед запуском`);
   }
 
-  if (access.permissions?.staff) {
-    entries.push(
-      `<b>Команда и контроль</b>\n<code>/team</code> или <code>/staff_list</code> — управление сотрудниками\n<code>/member_staff</code> — сотрудники и роли\n<code>/set_name TELEGRAM_ID ИМЯ</code> — имя в списке\n<code>/players</code> или <code>/members</code> — игроки и Telegram ID\n<code>/audit</code> — последние действия\n<code>/audit today</code> — действия за сегодня\n<code>/audit rewards</code> — только награды\n<code>/audit TELEGRAM_ID</code> — действия по игроку\n<code>/tickets all</code> — все обращения\n<code>/daily_report</code> — сводка за текущий день`,
-      `<b>Роли и доступ</b>\n<code>/rang_staff_kassir TELEGRAM_ID</code>\n<code>/rang_staff_povar TELEGRAM_ID</code>\n<code>/staff_enable TELEGRAM_ID</code>\n<code>/staff_disable TELEGRAM_ID</code>\n<code>/team_add TELEGRAM_ID РОЛЬ</code>\n<code>/team_role TELEGRAM_ID РОЛЬ</code>\n<code>/team_remove TELEGRAM_ID</code>`
-    );
-    if (access.owner) {
-      entries.push(`<b>Только владелец</b>\n<code>/rang_staff_administrator TELEGRAM_ID</code>\n<code>/permit TELEGRAM_ID redeem|points|products|news|staff on|off</code>\n<code>/post ТЕКСТ</code> — рассылка всем пользователям`);
-    }
-  } else if (access.owner) {
-    entries.push(`<b>Только владелец</b>\n<code>/post ТЕКСТ</code> — рассылка всем пользователям`);
+  if (canUse("grantRewards") || canUse("grantLegendaryCases")) {
+    entries.push(`<b>Доставка и компенсации</b>
+<code>/reward_queue</code> — недоставленные награды
+<code>/compensations</code> — шаблоны компенсаций
+<code>/compensate TELEGRAM_ID</code> — безопасная компенсация через очередь`);
+  }
+
+  if (canUse("manageMaintenance") || canUse("manageCases") || canUse("managePromocodes")) entries.push(`<b>Флаги функций</b>
+<code>/features</code> — выключение, тестеры и постепенный запуск серверных функций`);
+  if (canUse("manageMaintenance")) entries.push(`<b>Технические работы</b>
+<code>/maintenance</code> — включить или ограничить отдельные функции игры`);
+  if (canUse("manageTesters")) entries.push(`<b>Тестирование</b>
+<code>/testers</code> — тестовые аккаунты и тестовая экономика`);
+  if (canUse("managePromocodes")) entries.push(`<b>Промокоды</b>
+<code>/promocodes</code> — создание, отключение и статистика кодов`);
+  if (canUse("rollbackSettings")) entries.push(`<b>Снимки и откат</b>
+<code>/snapshots</code> — резервные снимки настроек
+<code>/config_history</code> — история изменений и безопасный откат`);
+  if (canUse("viewContentAnalytics")) entries.push(`<b>Аналитика контента</b>
+<code>/content_stats</code> — владельцы, использование, выпадения и дубликаты косметики`);
+  if (canUse("approveDangerous")) entries.push(`<b>Второе подтверждение</b>
+<code>/approvals</code> — запросы на опасные действия`);
+
+  entries.push(`<b>Операционный центр 0.65</b>
+Меню команд формируется по вашей роли. Недоступные разделы скрыты, но сервер всё равно повторно проверяет каждое разрешение.`);
+
+
+
+  if (access.owner) {
+    entries.push(`<b>Меню Telegram</b>
+<code>/sync_commands</code> — заново назначить игровое меню и индивидуальные меню всех сотрудников после деплоя или изменения ролей.`);
+  }
+
+  if (canUse("approveDangerous")) {
+    entries.push(`<b>Сброс прогресса игроков</b>\n<code>/player_reset</code> — выбрать одного игрока или всех, параметры и причину сброса.`);
+    entries.push(`<b>Лимиты сотрудников</b>
+<code>/limits</code> — суточные лимиты и максимумы одной операции
+<code>/limit TELEGRAM_ID МЕТРИКА ЗНАЧЕНИЕ</code> — точная настройка лимита`);
+    entries.push(`<b>Права и подтверждения</b>
+<code>/permissions</code> — сотрудники, роли и точные разрешения
+<code>/approvals</code> — запросы на опасные действия`);
+  }
+
+  if (access.permissions?.staff || access.owner) {
+    entries.push(`<b>Сотрудники</b>
+<code>/employee_add ID РОЛЬ</code> — добавить сотрудника
+<code>/employee_role ID РОЛЬ</code> — изменить роль
+<code>/employee_disable ID</code> — отключить доступ
+<code>/employee_enable ID</code> — включить доступ`);
+  }
+
+  if (access.permissions?.staff || access.permissions?.log || access.owner) {
+    entries.push(`<b>Контроль действий</b>
+<code>/audit</code> — последние действия
+<code>/audit today</code> — действия за сегодня
+<code>/audit rewards</code> — только награды
+<code>/audit TELEGRAM_ID</code> — действия по игроку
+<code>/tickets all</code> — все обращения
+<code>/daily_report</code> — сводка за текущий день`);
+
+    entries.push(`<b>Безопасность команд</b>
+Меню Telegram формируется отдельно для игрока, сотрудника и владельца. Сотрудник видит только разрешённые ему разделы. Старые ручные команды скрыты; их вызов владельцем безопасно перенаправляется в новую панель и записывается в аудит.`);
   }
 
   await logStaffAction(env, user, access, "view_admin_command_panel", null, "staff", null, null, { sections: entries.length });
@@ -5273,23 +6473,50 @@ async function showStaffProfile(chatId, user, env) {
       : "У вас нет активной роли сотрудника.");
     return;
   }
-  const todayStart = moscowDayStartUnix();
-  const stats = await env.DB.prepare(
-    `SELECT COUNT(*) AS count FROM reward_codes
-     WHERE redeemed_by = ? AND status = 'used' AND redeemed_at >= ?`
-  ).bind(String(user.id), todayStart).first();
+  let redeemedTodayLine = "";
+  if (canViewOrderHistory(access)) {
+    const todayStart = moscowDayStartUnix();
+    const stats = await env.DB.prepare(
+      `SELECT COUNT(*) AS count FROM reward_codes
+       WHERE redeemed_by = ? AND status = 'used' AND redeemed_at >= ?`
+    ).bind(String(user.id), todayStart).first();
+    redeemedTodayLine = `
+Выдано сегодня: <b>${Number(stats?.count || 0)}</b>`;
+  }
   const expires = access.owner ? "не ограничена" : formatUtcDate(access.expiresAt);
   const permissions = Object.entries(access.permissions || {})
     .filter(([key, enabled]) => enabled && !["view", "log"].includes(key))
     .map(([key]) => permissionLabel(key))
     .join(", ") || "только просмотр";
+  const training = access.owner ? { status: "completed", completed_at: 0 } : await getStaffTrainingStatus(env, String(user.id), access.role);
   await sendTelegramMessage(env, chatId,
-    `<b>Профиль сотрудника</b>\n\nИмя: <b>${escapeHtml(telegramDisplayName(user))}</b>\nTelegram ID: <code>${escapeHtml(String(user.id))}</code>\nРоль: <b>${escapeHtml(staffRoleTitle(access))}</b>\nСессия до: <b>${escapeHtml(expires)}</b>\nВыдано сегодня: <b>${Number(stats?.count || 0)}</b>\nПрава: ${escapeHtml(permissions)}\n\n<code>/help_staff</code> — доступные команды.`
+    `<b>Профиль сотрудника</b>\n\nИмя: <b>${escapeHtml(telegramDisplayName(user))}</b>\nTelegram ID: <code>${escapeHtml(String(user.id))}</code>\nРоль: <b>${escapeHtml(staffRoleTitle(access))}</b>
+Сессия до: <b>${escapeHtml(expires)}</b>${redeemedTodayLine}
+Обучение: <b>${escapeHtml(access.owner ? "не требуется" : staffTrainingStatusLabel(training))}</b>\nПрава: ${escapeHtml(permissions)}\n\n<code>/training</code> — обучение сотрудника.\n<code>/help_staff</code> — доступные команды.`
   );
 }
 
+function canViewOrderHistory(access) {
+  return Boolean(access?.owner || normalizeTeamRole(access?.role) === "administrator");
+}
+
+async function requireOrderHistoryAccess(chatId, user, env) {
+  const access = await getTeamAccess(user, env);
+  if (!access.authorized) {
+    await sendTelegramMessage(env, chatId, access.reason === "expired"
+      ? "Рабочая сессия истекла. Выполните <code>/staff</code>."
+      : "Доступно только сотрудникам.");
+    return null;
+  }
+  if (!canViewOrderHistory(access)) {
+    await sendTelegramMessage(env, chatId, "История и списки заказов доступны только владельцу и администратору. Кассир может проверить или погасить конкретный QR-код.");
+    return null;
+  }
+  return access;
+}
+
 async function showPendingOrders(chatId, user, env) {
-  const access = await requireTeamPermission(chatId, user, "view", env);
+  const access = await requireOrderHistoryAccess(chatId, user, env);
   if (!access) return;
   const now = Math.floor(Date.now() / 1000);
   await env.DB.prepare(
@@ -5314,7 +6541,7 @@ async function showPendingOrders(chatId, user, env) {
 }
 
 async function showMyRedemptions(chatId, user, env) {
-  const access = await requireTeamPermission(chatId, user, "redeem", env);
+  const access = await requireOrderHistoryAccess(chatId, user, env);
   if (!access) return;
   const result = await env.DB.prepare(
     `SELECT code, product_name, owner_name, redeemed_at
@@ -5340,7 +6567,7 @@ function moscowDayStartUnix(nowMs = Date.now()) {
 }
 
 async function showRedemptionsToday(chatId, user, env) {
-  const access = await requireTeamPermission(chatId, user, "redeem", env);
+  const access = await requireOrderHistoryAccess(chatId, user, env);
   if (!access) return;
   const start = moscowDayStartUnix();
   const result = await env.DB.prepare(
@@ -5407,7 +6634,7 @@ function playerActiveCosmeticTitle(id, catalog, emptyText = "не выбрано
 }
 
 async function showPlayerProfile(chatId, user, telegramId, env) {
-  const access = await requireTeamPermission(chatId, user, "points", env);
+  const access = await requireSecurityPermission(chatId, user, "viewPlayers", env);
   if (!access) return;
   const playerId = String(telegramId);
   const profile = await env.DB.prepare(
@@ -5557,7 +6784,8 @@ async function showPlayerProfile(chatId, user, telegramId, env) {
     `Скины: <b>${ownedSkins.length}/${Object.keys(SKINS).length}</b> · надет: <b>${escapeHtml(activeSkinTitle)}</b>\n${escapeHtml(playerCatalogNames(ownedSkins, SKINS))}\n` +
     `Аватарки: <b>${caseState.ownedAvatars.length}/${Object.keys(CASE_AVATARS).length}</b> · активная: <b>${escapeHtml(playerActiveCosmeticTitle(caseState.activeAvatarId, CASE_AVATARS))}</b>\n${escapeHtml(playerCatalogNames(caseState.ownedAvatars, CASE_AVATARS))}\n` +
     `Рамки: <b>${caseState.ownedFrames.length}/${Object.keys(CASE_FRAMES).length}</b> · активная: <b>${escapeHtml(playerActiveCosmeticTitle(caseState.activeFrameId, CASE_FRAMES))}</b>\n${escapeHtml(playerCatalogNames(caseState.ownedFrames, CASE_FRAMES))}\n` +
-    `Следы: <b>${caseState.ownedTrails.length}/${Object.keys(CASE_TRAILS).length}</b> · активный: <b>${escapeHtml(playerActiveCosmeticTitle(caseState.activeTrailId, CASE_TRAILS))}</b>\n${escapeHtml(playerCatalogNames(caseState.ownedTrails, CASE_TRAILS))}\n\n` +
+    `Следы: <b>${caseState.ownedTrails.length}/${Object.keys(CASE_TRAILS).length}</b> · активный: <b>${escapeHtml(playerActiveCosmeticTitle(caseState.activeTrailId, CASE_TRAILS))}</b>\n${escapeHtml(playerCatalogNames(caseState.ownedTrails, CASE_TRAILS))}\n` +
+    `Музыка: <b>${caseState.ownedMusicTracks.length}/${Object.keys(CASE_MUSIC_TRACKS).length}</b> · играет: <b>${escapeHtml(playerActiveCosmeticTitle(caseState.activeMusicTrackId, CASE_MUSIC_TRACKS))}</b>\n${escapeHtml(playerCatalogNames(caseState.ownedMusicTracks, CASE_MUSIC_TRACKS))}\n\n` +
     `<b>Кейсы и усилители</b>\n` +
     `Обычные: <b>${pendingCaseCounts.small}</b> · Серебряные: <b>${pendingCaseCounts.sweet}</b> · Золотые: <b>${pendingCaseCounts.gold}</b> · Легендарные: <b>${pendingCaseCounts.legendary}</b>\n` +
     `Активный бустер: <b>${escapeHtml(boosterLabel)}</b>\n` +
@@ -5572,24 +6800,23 @@ async function showPlayerProfile(chatId, user, telegramId, env) {
     ownedAvatars: caseState.ownedAvatars.length,
     ownedFrames: caseState.ownedFrames.length,
     ownedTrails: caseState.ownedTrails.length,
+    ownedMusicTracks: caseState.ownedMusicTracks.length,
     customName: playerControl.customName,
     blocked: playerControl.blocked
   });
-  const primaryPlayerActions = [
-    { text: "🎁 Выдать награду", callback_data: `player_grant:${playerId}` },
-    { text: `📝 Заметки (${Number(notesCountRow?.count || 0)})`, callback_data: `player_notes:${playerId}` }
-  ];
-  if (access.owner || access.permissions?.log) {
-    primaryPlayerActions.push({ text: "📋 История", callback_data: `player_audit:${playerId}` });
-  }
+  const primaryPlayerActions = [];
+  if (access.owner || access.permissions?.grantRewards || access.permissions?.grantLegendaryCases) primaryPlayerActions.push({ text: "🎁 Выдать награду", callback_data: `player_grant:${playerId}` });
+  primaryPlayerActions.push({ text: `📝 Заметки (${Number(notesCountRow?.count || 0)})`, callback_data: `player_notes:${playerId}` });
+  if (access.owner || access.permissions?.viewPlayers) primaryPlayerActions.push({ text: "🕓 История игрока", callback_data: `player_audit:${playerId}` });
   const playerActions = [primaryPlayerActions];
-  if (canManagePlayerControls(access)) {
-    playerActions.push([
-      { text: "✏️ Изменить имя", callback_data: `player_name:${playerId}` },
-      playerControl.blocked
-        ? { text: "✅ Разблокировать", callback_data: `player_unblock:${playerId}` }
-        : { text: "⛔ Заблокировать", callback_data: `player_block:${playerId}` }
-    ]);
+  if (canManagePlayerControls(access)) playerActions.push([{ text: "✏️ Изменить имя", callback_data: `player_name:${playerId}` }]);
+  if (access.owner || (normalizeTeamRole(access.role) === "administrator" && access.permissions?.approveDangerous)) {
+    playerActions.push([{ text: "♻️ Сбросить прогресс", callback_data: `v78_reset_target:${playerId}` }]);
+  }
+  if (playerControl.blocked && (access.owner || access.permissions?.unblockPlayers)) {
+    playerActions.push([{ text: "✅ Разблокировать", callback_data: `player_unblock:${playerId}` }]);
+  } else if (!playerControl.blocked && (access.owner || access.permissions?.blockPlayers)) {
+    playerActions.push([{ text: "⛔ Заблокировать", callback_data: `player_block:${playerId}` }]);
   }
   playerActions.push(
     [
@@ -5606,9 +6833,16 @@ function compensationLimit(access, currency) {
 }
 
 async function addPlayerCurrency(chatId, user, currency, amountValue, telegramId, reasonValue, env) {
-  const access = await requireTeamPermission(chatId, user, "points", env);
+  const access = await requireSecurityPermission(chatId, user, "grantRewards", env);
   if (!access) return;
   const amount = Math.floor(Number(amountValue) || 0);
+  if (currency === "points") {
+    const usageCheck = await checkStaffUsageLimit(env, user, access, "points_daily", amount, "points_per_player");
+    if (!usageCheck.ok) {
+      await sendTelegramMessage(env, chatId, `⛔ ${escapeHtml(usageCheck.text)}`);
+      return;
+    }
+  }
   const limit = compensationLimit(access, currency);
   if (amount < 1 || amount > limit) {
     await sendTelegramMessage(env, chatId, `Недопустимая сумма. Для вашей роли максимум за одну операцию: <b>${limit.toLocaleString("ru-RU")}</b>.`);
@@ -5639,6 +6873,8 @@ async function addPlayerCurrency(chatId, user, currency, amountValue, telegramId
     reason,
     status: "queued"
   });
+  await recordPlayerTimeline(env, telegramId, "staff_grant", `сотрудник выдал ${amount.toLocaleString("ru-RU")} ${labelMap[currency]}`, { currency, amount, reason, status: "queued" }, `staff_${currency}_${Date.now()}`, user);
+  if (currency === "points") await recordStaffUsage(env, user.id, "points_daily", amount);
   await sendTelegramMessage(env, chatId,
     `<b>Компенсация поставлена в очередь</b>
 
@@ -5657,21 +6893,34 @@ function normalizeFrameAlias(value) {
 }
 
 async function addPlayerCases(chatId, user, caseTypeValue, quantityValue, telegramId, reasonValue, env) {
-  const access = await requireTeamPermission(chatId, user, "points", env);
+  const caseType = normalizeCaseType(caseTypeValue);
+  const access = await requireSecurityPermission(chatId, user, caseType === "legendary" ? "grantLegendaryCases" : "grantRewards", env);
   if (!access) return;
   const quantity = Math.max(1, Math.floor(Number(quantityValue) || 1));
+  const usageMetric = caseType === "legendary" ? "legendary_daily" : "cases_daily";
+  const usageCheck = await checkStaffUsageLimit(env, user, access, usageMetric, quantity);
+  if (!usageCheck.ok) {
+    await sendTelegramMessage(env, chatId, `⛔ ${escapeHtml(usageCheck.text)}`);
+    return;
+  }
   const max = access.owner ? 20 : 5;
   if (quantity > max) {
     await sendTelegramMessage(env, chatId, `Для вашей роли максимум за одну операцию: <b>${max}</b> кейсов.`);
     return;
   }
-  const caseType = normalizeCaseType(caseTypeValue);
   if (!caseType) {
     await sendTelegramMessage(env, chatId, "Неизвестный тип кейса. Доступно: <code>small</code>, <code>sweet</code>, <code>gold</code>, <code>legendary</code>.");
     return;
   }
+  if (caseType === "legendary") {
+    const approvalId = await requestDangerousAction(env, user, "legendary_grant", `Выдать ${quantity} Легендарный кейс игроку ${telegramId}`, { telegramId: String(telegramId), quantity, reason: String(reasonValue || "Компенсация"), chatId: String(chatId) });
+    await sendTelegramMessage(env, chatId, `⚠️ Выдача Легендарного кейса требует подтверждения второго администратора. Запрос <b>#${approvalId}</b> создан.\n\n<code>/approve ${approvalId}</code>`);
+    return;
+  }
   const result = await createGrantedCases(env, String(telegramId), caseType, quantity, String(user.id), reasonValue);
   await logStaffAction(env, user, access, "add_keys", String(telegramId), "case", 0, result.quantity, { caseType, quantity: result.quantity, reason: result.reason });
+  await recordPlayerTimeline(env, telegramId, "staff_grant", `сотрудник выдал ${result.quantity} ${LEVEL_CASE_CONFIG[caseType]?.title || caseType}`, { caseType, quantity: result.quantity, reason: result.reason }, `staff_case_${Date.now()}`, user);
+  await recordStaffUsage(env, user.id, "cases_daily", result.quantity);
   await sendTelegramMessage(env, chatId,
     `<b>Кейсы выданы</b>
 
@@ -5685,7 +6934,7 @@ async function addPlayerCases(chatId, user, caseTypeValue, quantityValue, telegr
 }
 
 async function addPlayerFrame(chatId, user, frameValue, telegramId, reasonValue, env) {
-  const access = await requireTeamPermission(chatId, user, "points", env);
+  const access = await requireSecurityPermission(chatId, user, "grantRewards", env);
   if (!access) return;
   const frameId = normalizeFrameAlias(frameValue);
   if (!frameId) {
@@ -5695,6 +6944,9 @@ async function addPlayerFrame(chatId, user, frameValue, telegramId, reasonValue,
   const result = await grantFrameToPlayer(env, String(telegramId), frameId, String(user.id));
   const reason = String(reasonValue || "Компенсация").slice(0, 300);
   await logStaffAction(env, user, access, "add_frame", String(telegramId), "frame", result.alreadyOwned ? 1 : 0, 1, { frameId, reason, alreadyOwned: result.alreadyOwned });
+  const frameGrantEventId = `staff_frame_${Date.now()}`;
+  await recordPlayerTimeline(env, telegramId, "staff_grant", `сотрудник выдал рамку «${result.title}»`, { frameId, reason, alreadyOwned: result.alreadyOwned }, frameGrantEventId, user);
+  await recordContentAnalyticsEvent(env, telegramId, "frame", frameId, result.alreadyOwned ? "duplicate" : "acquired", "staff", frameGrantEventId);
   await sendTelegramMessage(env, chatId,
     `<b>${result.alreadyOwned ? "Рамка уже была у игрока" : "Рамка выдана"}</b>
 
@@ -5737,6 +6989,8 @@ function staffActionLabel(action) {
     staff_disable: "отключение сотрудника",
     staff_enable: "включение сотрудника",
     staff_permission: "изменение разрешения",
+    staff_limit_change: "изменение лимита сотрудника",
+    staff_limit_preset: "профиль лимитов сотрудника",
     view_staff_members: "просмотр списка сотрудников",
     view_player_members: "просмотр списка игроков",
     points_legacy: "изменение очков",
@@ -5789,13 +7043,14 @@ async function setStaffEnabled(chatId, requester, telegramId, enabled, env) {
     `UPDATE staff_users SET active = ?, session_expires_at = 0, updated_at = ? WHERE telegram_id = ?`
   ).bind(enabled ? 1 : 0, now, String(telegramId)).run();
   await logStaffAction(env, requester, access, enabled ? "staff_enable" : "staff_disable", String(telegramId), "staff", Number(target.active || 0), enabled ? 1 : 0, null);
+  await refreshBotCommandMenuSilently(env, telegramId);
   await sendTelegramMessage(env, chatId, enabled
     ? `Сотрудник <code>${escapeHtml(String(telegramId))}</code> включён. Ему нужно снова выполнить <code>/staff</code>.`
     : `Сотрудник <code>${escapeHtml(String(telegramId))}</code> отключён.`);
 }
 
 async function adjustPlayerPoints(chatId, requester, telegramId, mode, amountValue, env) {
-  const access = await requireTeamPermission(chatId, requester, "points", env);
+  const access = await requireSecurityPermission(chatId, requester, "grantRewards", env);
   if (!access) return;
   const amount = Math.max(0, Math.floor(Number(amountValue) || 0));
   const now = Math.floor(Date.now() / 1000);
@@ -5879,6 +7134,7 @@ async function setStaffAccountState(chatId, requester, targetTelegramId, enabled
     return;
   }
 
+  await refreshBotCommandMenuSilently(env, targetTelegramId);
   await sendTelegramMessage(env, chatId,
     enabled
       ? `Учётная запись <code>${escapeHtml(String(targetTelegramId))}</code> включена. Сотруднику нужно снова выполнить <code>/staff КОД</code>.`
@@ -5901,7 +7157,7 @@ async function registerStaff(chatId, user, suppliedCode, env) {
       `<b>Доступ не выдан</b>
 
 Попросите владельца добавить ваш Telegram ID командой:
-<code>/rang_staff_kassir ${escapeHtml(String(user.id))}</code>
+<code>/employee_add ${escapeHtml(String(user.id))} cashier</code>
 
 Ваш ID: <code>${escapeHtml(String(user.id))}</code>`
     );
@@ -5943,6 +7199,7 @@ async function registerStaff(chatId, user, suppliedCode, env) {
   }
 
   const access = await getTeamAccess(user, env);
+  await refreshBotCommandMenuSilently(env, user.id);
   const enabled = Object.entries(access.permissions || {}).filter(([, value]) => value).map(([key]) => permissionLabel(key)).join(", ");
   await sendTelegramMessage(env, chatId,
     `<b>Рабочая сессия открыта на 30 минут</b>
@@ -5952,6 +7209,10 @@ async function registerStaff(chatId, user, suppliedCode, env) {
 
 Через 30 минут снова выполните <code>/staff</code>.`
   );
+  if (!owner) {
+    const training = await getStaffTrainingStatus(env, String(user.id), access.role);
+    if (training.status !== "completed") await showStaffTraining(chatId, user, env, { compact: true });
+  }
 }
 
 async function showRewardInBot(chatId, viewer, rawCode, env, options = {}) {
@@ -5976,7 +7237,7 @@ async function showRewardInBot(chatId, viewer, rawCode, env, options = {}) {
       : "Эта команда доступна только сотрудникам.");
     return;
   }
-  if (options.forceRedeem && !staffSession.permissions?.redeem) {
+  if (options.forceRedeem && !(staffSession.permissions?.redeemPhysical || staffSession.permissions?.redeem)) {
     await sendTelegramMessage(env, chatId, "Ваша роль позволяет только просматривать заказ, но не списывать его.");
     return;
   }
@@ -5987,7 +7248,7 @@ async function showRewardInBot(chatId, viewer, rawCode, env, options = {}) {
     return;
   }
   const staffView = Boolean(staffSession.authorized);
-  const canRedeem = staffView && Boolean(staffSession.permissions?.redeem) && !options.viewOnly;
+  const canRedeem = staffView && Boolean(staffSession.permissions?.redeemPhysical || staffSession.permissions?.redeem) && !options.viewOnly;
   const view = rewardBotView(reward, staffView, canRedeem);
   await sendTelegramMessage(env, chatId, view.text, view.replyMarkup);
 }
@@ -6006,22 +7267,64 @@ async function deleteCallbackSourceMessage(query, env) {
   }
 }
 
-async function handleCallbackQuery(query, env) {
+function runWorkerBackground(runtime, task, label = "background task") {
+  const promise = Promise.resolve(task).catch((error) => {
+    console.error(`${label} failed`, error);
+  });
+  if (runtime?.ctx?.waitUntil) {
+    runtime.ctx.waitUntil(promise);
+    return true;
+  }
+  return false;
+}
+
+async function handleCallbackQuery(query, env, runtime = {}) {
+  // Do not delete the message that contains the pressed inline button.
+  // Admin navigation reuses or replaces that message itself. Deleting it here
+  // caused Telegram to briefly reveal the old /start screen between panels.
+  const startedAt = Date.now();
+  let success = true;
+  let errorText = "";
   try {
-    return await handleCallbackQueryAction(query, env);
+    return await handleCallbackQueryAction(query, env, runtime);
+  } catch (error) {
+    success = false;
+    errorText = String(error?.message || error);
+    throw error;
   } finally {
-    await deleteCallbackSourceMessage(query, env);
+    const data = String(query?.data || "");
+    if (/^(adm_|ops_|safe_|v5[7-9]_|v6[0-9]_|v67_|v74_|v77_|v78_|grant_|ticket_|season_|stock_|status_|player_)/.test(data)) {
+      await recordV67PerformanceSample(env, data, Date.now() - startedAt, success, errorText);
+    }
   }
 }
 
-async function handleCallbackQueryAction(query, env) {
+async function handleCallbackQueryAction(query, env, runtime = {}) {
   const data = String(query.data || "");
   const user = query.from;
   const message = query.message;
   const chatId = message?.chat?.id;
   if (!chatId || !user?.id) return;
 
+  if (data === "admin_clean_chat") {
+    const access = await getTeamAccess(user, env);
+    if (!access.authorized) {
+      await answerCallback(env, query.id, access.reason === "expired" ? "Сессия истекла. Выполните /staff." : "Доступно только сотрудникам.", true);
+      return;
+    }
+    await answerCallback(env, query.id, "Рабочий чат очищен.");
+    await purgeTelegramPrivateChat(env, chatId, message?.message_id, TELEGRAM_CLEAN_CHAT_TRACK_LIMIT);
+    await showAdminMainMenu(chatId, user, env);
+    return;
+  }
+
   if (await handleMenuCallback(query, env)) return;
+  if (await handlePlayerTaskCallback(query, env)) return;
+  if (await handleV78Callback(query, env)) return;
+  if (await handleV77Callback(query, env)) return;
+  if (await handleV74PollCallback(query, env, runtime)) return;
+  if (await handleOperationsSecurityCallback(query, env, runtime)) return;
+  if (await handleV67Callback(query, env)) return;
 
   const playerRefresh = data.match(/^player_refresh:(\d{4,20})$/);
   if (playerRefresh) {
@@ -6035,7 +7338,7 @@ async function handleCallbackQueryAction(query, env) {
     return;
   }
 
-  if (await handleLiveOpsAdminCallback(query, env)) return;
+  if (await handleLiveOpsAdminCallback(query, env, runtime)) return;
   if (await handleStaffOperationsCallback(query, env)) return;
 
   const staffSession = await getStaffSession(user.id, env);
@@ -6046,8 +7349,8 @@ async function handleCallbackQueryAction(query, env) {
     await answerCallback(env, query.id, sessionMessage, true);
     return;
   }
-  if (!staffSession.permissions?.redeem) {
-    await answerCallback(env, query.id, "У вас нет разрешения на выдачу товаров.", true);
+  if (!(staffSession.permissions?.redeemPhysical || staffSession.permissions?.redeem)) {
+    await answerCallback(env, query.id, "У вас нет разрешения на погашение физических кодов.", true);
     return;
   }
 
@@ -6099,6 +7402,12 @@ async function handleCallbackQueryAction(query, env) {
         location: String(workContext?.location_name || env.CAFE_LOCATION_NAME || "Основное кафе"),
         shift: String(workContext?.shift_name || "")
       });
+      await recordPlayerTimeline(env, reward.owner_telegram_id, "physical_redeem", `получил физическую награду «${reward.product_name}»`, { code: reward.code, employee: telegramDisplayName(user) }, `physical_redeem_${reward.code_compact}`, user, now);
+      await notifySubscribedStaff(env, "physical_reward", `🎁 <b>Физическая награда выдана</b>
+
+${escapeHtml(reward.product_name)}
+Игрок: <code>${escapeHtml(String(reward.owner_telegram_id || ""))}</code>
+Сотрудник: ${escapeHtml(telegramDisplayName(user))}`);
       await answerCallback(env, query.id, "Подарок списан.");
       await editRewardMessage(env, message, reward, true, false);
       return;
@@ -6165,6 +7474,122 @@ async function getRewardByCompact(compact, env) {
   ).bind(compactCode(compact)).first();
 }
 
+
+function extractRewardCodeFromQr(rawValue) {
+  const raw = String(rawValue || "").trim();
+  if (!raw) return "";
+  try {
+    const parsed = new URL(raw);
+    const start = String(parsed.searchParams.get("start") || "");
+    const startMatch = start.match(/^reward[_-](.+)$/i);
+    if (startMatch) return compactCode(startMatch[1]);
+  } catch {}
+  const tagged = raw.match(/(?:^|[?&#:/=_\s-])reward[_:\s-]*([A-Z0-9-]{8,32})(?:$|[?&#/\s])/i)
+    || raw.match(/^ZEFIROK\s*:\s*REWARD\s*:\s*([A-Z0-9-]{8,32})$/i);
+  if (tagged) return compactCode(tagged[1]);
+  if (!/^https?:\/\//i.test(raw) && /^[A-Z0-9\s-]{8,32}$/i.test(raw)) {
+    const compact = compactCode(raw);
+    if (compact.length >= 8 && compact.length <= 20) return compact;
+  }
+  return "";
+}
+
+async function requireStaffQrAccess(initData, env) {
+  const auth = await validateTelegramInitData(String(initData || ""), env);
+  const access = await getTeamAccess(auth.user, env);
+  if (!access.authorized) {
+    throw new ApiError(403, access.reason === "expired"
+      ? "Рабочая сессия истекла. Вернитесь в бот, выполните /staff и откройте сканер снова."
+      : "Доступ к сканеру есть только у сотрудников.");
+  }
+  if (!access.owner && !access.permissions?.redeemPhysical && !access.permissions?.redeem) {
+    throw new ApiError(403, "У вашей роли нет права выдавать физические награды.");
+  }
+  return { auth, access };
+}
+
+function rewardToStaffQrClient(reward) {
+  if (!reward) return null;
+  return {
+    code: String(reward.code || ""),
+    compact: String(reward.code_compact || ""),
+    productId: String(reward.product_id || ""),
+    productName: String(reward.product_name || "Физическая награда"),
+    ownerTelegramId: String(reward.owner_telegram_id || ""),
+    ownerName: String(reward.owner_name || "Гость"),
+    status: effectiveRewardStatus(reward),
+    createdAt: Number(reward.created_at || 0),
+    expiresAt: Number(reward.expires_at || 0),
+    redeemedAt: Number(reward.redeemed_at || 0),
+    redeemedByName: String(reward.redeemed_by_name || "")
+  };
+}
+
+async function staffQrLookup(request, env) {
+  try {
+    const body = await readJson(request);
+    await requireStaffQrAccess(body?.initData, env);
+    const compact = extractRewardCodeFromQr(body?.code);
+    if (!compact) throw new ApiError(400, "QR-код не похож на код награды.");
+    const now = Math.floor(Date.now() / 1000);
+    await env.DB.prepare(
+      `UPDATE reward_codes SET status = 'expired'
+       WHERE code_compact = ? AND status = 'active' AND expires_at <= ?`
+    ).bind(compact, now).run();
+    const reward = await getRewardByCompact(compact, env);
+    if (!reward) throw new ApiError(404, "Код награды не найден.");
+    return jsonResponse({ ok: true, reward: rewardToStaffQrClient(reward) });
+  } catch (error) {
+    if (error instanceof ApiError) return jsonResponse({ ok: false, error: error.message }, error.status);
+    console.error("staffQrLookup failed", error);
+    return jsonResponse({ ok: false, error: "Не удалось проверить QR-код." }, 500);
+  }
+}
+
+async function staffQrRedeem(request, env) {
+  try {
+    const body = await readJson(request);
+    const { auth, access } = await requireStaffQrAccess(body?.initData, env);
+    const compact = extractRewardCodeFromQr(body?.code);
+    if (!compact) throw new ApiError(400, "QR-код не похож на код награды.");
+    const now = Math.floor(Date.now() / 1000);
+    const result = await env.DB.prepare(
+      `UPDATE reward_codes
+       SET status = 'used', redeemed_at = ?, redeemed_by = ?, redeemed_by_name = ?
+       WHERE code_compact = ? AND status = 'active' AND expires_at > ?`
+    ).bind(now, String(auth.user.id), telegramDisplayName(auth.user), compact, now).run();
+    const reward = await getRewardByCompact(compact, env);
+    if (Number(result?.meta?.changes || 0) !== 1 || !reward) {
+      if (!reward) throw new ApiError(404, "Код награды не найден.");
+      throw new ApiError(409, effectiveRewardStatus(reward) === "used"
+        ? "Эта награда уже была выдана."
+        : "Код истёк или больше не активен.");
+    }
+    await recordRedemptionWorkContext(env, reward, auth.user);
+    const workContext = await env.DB.prepare(
+      `SELECT location_name, shift_name FROM staff_work_context WHERE telegram_id = ? LIMIT 1`
+    ).bind(String(auth.user.id)).first();
+    await logStaffAction(env, auth.user, access, "redeem_reward_qr", String(reward.owner_telegram_id || ""), "reward", null, null, {
+      code: reward.code,
+      product: reward.product_name,
+      source: "staff_qr_scanner",
+      location: String(workContext?.location_name || env.CAFE_LOCATION_NAME || "Основное кафе"),
+      shift: String(workContext?.shift_name || "")
+    });
+    await recordPlayerTimeline(env, reward.owner_telegram_id, "physical_redeem", `получил физическую награду «${reward.product_name}»`, {
+      code: reward.code,
+      employee: telegramDisplayName(auth.user),
+      source: "qr"
+    }, `physical_redeem_${reward.code_compact}`, auth.user, now);
+    await notifySubscribedStaff(env, "physical_reward", `🎁 <b>Физическая награда выдана по QR</b>\n\n${escapeHtml(reward.product_name)}\nИгрок: <code>${escapeHtml(String(reward.owner_telegram_id || ""))}</code>\nСотрудник: ${escapeHtml(telegramDisplayName(auth.user))}`);
+    return jsonResponse({ ok: true, reward: rewardToStaffQrClient(reward) });
+  } catch (error) {
+    if (error instanceof ApiError) return jsonResponse({ ok: false, error: error.message }, error.status);
+    console.error("staffQrRedeem failed", error);
+    return jsonResponse({ ok: false, error: "Не удалось списать награду." }, 500);
+  }
+}
+
 async function getStaffSession(telegramId, env) {
   const access = await getTeamAccess({ id: telegramId }, env);
   return {
@@ -6220,10 +7645,8 @@ async function registerBotSubscriber(message, env) {
 }
 
 async function createBotBroadcast(chatId, user, rawText, env, runtime = {}) {
-  if (!isBotAdminUser(user, env)) {
-    await sendTelegramMessage(env, chatId, "Команда <code>/post</code> доступна только владельцу.");
-    return;
-  }
+  const access = await requireSecurityPermission(chatId, user, "massBroadcasts", env);
+  if (!access) return;
 
   const messageText = String(rawText || "").trim();
   if (!messageText) {
@@ -6715,7 +8138,7 @@ function grantCatalogMarkup(kind) {
 }
 
 async function startGrantWorkflow(chatId, user, env) {
-  const access = await requireTeamPermission(chatId, user, "points", env);
+  const access = await requireAnySecurityPermission(chatId, user, ["grantRewards", "grantLegendaryCases"], env);
   if (!access) return;
   await clearStaffWorkflow(user.id, env);
   await sendTelegramMessage(env, chatId,
@@ -6726,10 +8149,11 @@ async function startGrantWorkflow(chatId, user, env) {
 
 async function beginGrantSelection(query, kind, rewardId, env) {
   const chatId = query.message?.chat?.id;
-  const access = await requireTeamPermission(chatId, query.from, "points", env);
+  const normalizedRewardId = String(rewardId || "");
+  const requiredPermission = kind === "case" && normalizedRewardId === "legendary" ? "grantLegendaryCases" : "grantRewards";
+  const access = await requireSecurityPermission(chatId, query.from, requiredPermission, env);
   if (!access) return;
   const needsAmount = ["points", "zefir", "coffee", "case"].includes(kind);
-  const normalizedRewardId = kind === "case" ? String(rewardId || "") : String(rewardId || "");
   if (kind === "case" && !LEVEL_CASE_CONFIG[normalizedRewardId]) {
     await answerCallback(env, query.id, "Неизвестный кейс.", true);
     return;
@@ -6794,7 +8218,7 @@ function grantAmountLimit(access, kind) {
 async function handleGrantWorkflowMessage(message, workflow, env) {
   const chatId = message.chat.id;
   const user = message.from;
-  const access = await requireTeamPermission(chatId, user, "points", env);
+  const access = await requireSecurityPermission(chatId, user, "grantRewards", env);
   if (!access) return true;
   const text = String(message.text || "").trim();
   const data = workflow.data || {};
@@ -6802,7 +8226,7 @@ async function handleGrantWorkflowMessage(message, workflow, env) {
   if (workflow.step === "target") {
     const targetId = await resolvePlayerTelegramId(text, env);
     if (!targetId || !(await playerProfileExists(targetId, env))) {
-      await sendTelegramMessage(env, chatId, "Игрок не найден. Отправьте Telegram ID из <code>/members</code> или точный @username.");
+      await sendTelegramMessage(env, chatId, "Игрок не найден. Отправьте Telegram ID из <code>/players</code> или точный @username.");
       return true;
     }
     const playerName = await playerDisplayNameById(targetId, env);
@@ -6876,7 +8300,8 @@ async function grantCosmeticToPlayer(env, telegramId, kind, rewardId) {
 async function executeGrantWorkflow(query, env) {
   const chatId = query.message?.chat?.id;
   const user = query.from;
-  const access = await requireTeamPermission(chatId, user, "points", env);
+  const permission = query && (await getStaffWorkflow(user.id, env))?.data?.rewardId === "legendary" ? "grantLegendaryCases" : "grantRewards";
+  const access = await requireSecurityPermission(chatId, user, permission, env);
   if (!access) return;
   const workflow = await getStaffWorkflow(user.id, env);
   if (!workflow || workflow.flow_type !== "grant" || workflow.step !== "confirm") {
@@ -6889,6 +8314,26 @@ async function executeGrantWorkflow(query, env) {
     return;
   }
   const amount = Math.max(1, Math.floor(Number(data.amount || 1)));
+  if (data.kind === "points") {
+    const usageCheck = await checkStaffUsageLimit(env, user, access, "points_daily", amount, "points_per_player");
+    if (!usageCheck.ok) { await answerCallback(env, query.id, usageCheck.text, true); return; }
+  }
+  if (data.kind === "case") {
+    const usageMetric = String(data.rewardId) === "legendary" ? "legendary_daily" : "cases_daily";
+    const usageCheck = await checkStaffUsageLimit(env, user, access, usageMetric, amount);
+    if (!usageCheck.ok) { await answerCallback(env, query.id, usageCheck.text, true); return; }
+  }
+  if (data.kind === "case" && String(data.rewardId) === "legendary") {
+    const approvalId = await requestDangerousAction(env, user, "legendary_grant", `Выдать ${amount} Легендарный кейс игроку ${data.targetId}`, {
+      telegramId: String(data.targetId), quantity: amount, reason: String(data.reason), chatId: String(chatId)
+    });
+    await clearStaffWorkflow(user.id, env);
+    await answerCallback(env, query.id, "Создан запрос второго подтверждения.");
+    await sendTelegramMessage(env, chatId, `⚠️ Выдача Легендарного кейса не выполнена сразу. Запрос <b>#${approvalId}</b> ожидает второго администратора.
+
+<code>/approve ${approvalId}</code>`);
+    return;
+  }
   let resultText = "";
   let action = "grant_reward";
   let details = { kind: data.kind, rewardId: data.rewardId || "", amount, reason: data.reason };
@@ -6923,7 +8368,14 @@ async function executeGrantWorkflow(query, env) {
       : "Предмет добавлен в коллекцию игрока.";
   }
 
+  if (data.kind === "points") await recordStaffUsage(env, user.id, "points_daily", amount);
+  if (data.kind === "case") await recordStaffUsage(env, user.id, "cases_daily", amount);
   await logStaffAction(env, user, access, action, String(data.targetId), data.kind, null, amount, details);
+  const grantEventId = `grant_workflow_${Date.now()}`;
+  await recordPlayerTimeline(env, data.targetId, "staff_grant", `сотрудник выдал «${data.title}»${amount > 1 ? ` ×${amount}` : ""}`, details, grantEventId, user);
+  if (["avatar", "frame", "trail", "skin"].includes(data.kind)) {
+    await recordContentAnalyticsEvent(env, data.targetId, data.kind, String(data.rewardId), details.alreadyOwned ? "duplicate" : "acquired", "staff", grantEventId);
+  }
   await clearStaffWorkflow(user.id, env);
   await answerCallback(env, query.id, "Награда обработана.");
   await sendTelegramMessage(env, chatId,
@@ -6936,7 +8388,7 @@ async function executeGrantWorkflow(query, env) {
 }
 
 async function startRedeemWorkflow(chatId, user, env) {
-  const access = await requireTeamPermission(chatId, user, "redeem", env);
+  const access = await requireSecurityPermission(chatId, user, "redeemPhysical", env);
   if (!access) return;
   await setStaffWorkflow(user.id, chatId, "redeem", "code", {}, env);
   await sendTelegramMessage(env, chatId,
@@ -6947,7 +8399,7 @@ async function startRedeemWorkflow(chatId, user, env) {
 async function handleRedeemWorkflowMessage(message, workflow, env) {
   const chatId = message.chat.id;
   const user = message.from;
-  const access = await requireTeamPermission(chatId, user, "redeem", env);
+  const access = await requireSecurityPermission(chatId, user, "redeemPhysical", env);
   if (!access) return true;
   const code = compactCode(message.text || "");
   if (code.length < 8 || code.length > 20) {
@@ -6960,7 +8412,7 @@ async function handleRedeemWorkflowMessage(message, workflow, env) {
 }
 
 async function undoRewardRedemption(chatId, user, rawCode, env) {
-  const access = await requireTeamPermission(chatId, user, "redeem", env);
+  const access = await requireSecurityPermission(chatId, user, "redeemPhysical", env);
   if (!access) return;
   if (!access.owner) {
     await sendTelegramMessage(env, chatId, "Отмена списания доступна только владельцу.");
@@ -7006,7 +8458,7 @@ async function showStockDashboard(chatId, user, env) {
     await sendTelegramMessage(env, chatId, access.reason === "expired" ? "Сессия истекла. Выполните <code>/staff</code>." : "Доступно только сотрудникам.");
     return;
   }
-  if (!access.owner && !access.permissions?.products && !access.permissions?.redeem) {
+  if (!access.owner && !access.permissions?.manageShop && !access.permissions?.redeemPhysical && !access.permissions?.products && !access.permissions?.redeem) {
     await sendTelegramMessage(env, chatId, "У вашей роли нет доступа к остаткам наград.");
     return;
   }
@@ -7045,10 +8497,10 @@ async function showStockDashboard(chatId, user, env) {
     `<b>📦 Остатки наград</b>\n\n${lines.join("\n\n")}` +
     (otherLines.length ? `\n\n<b>Другие ограниченные позиции</b>\n${otherLines.join("\n")}` : "") +
     `\n\nПорог предупреждения: <b>${BOT_LOW_STOCK_THRESHOLD}</b>.`,
-    { inline_keyboard: [[
-      { text: "🔄 Обновить", callback_data: "stock_refresh" },
-      { text: "📚 Команды", callback_data: "adminpanel_commands" }
-    ]] }
+    { inline_keyboard: [
+      [{ text: "📷 Сканировать QR", web_app: { url: configuredStaffQrUrl(env) } }, { text: "⌨️ Ввести код", callback_data: "adm_redeem_manual" }],
+      [{ text: "🔄 Обновить", callback_data: "stock_refresh" }, { text: "⬅️ Админ-панель", callback_data: "adm_home" }]
+    ] }
   );
 }
 
@@ -7057,7 +8509,7 @@ function seasonStatusLabel(status) {
 }
 
 function canManageSeason(access) {
-  return Boolean(access?.owner || access?.role === "administrator" || access?.permissions?.staff);
+  return Boolean(access?.owner || access?.permissions?.manageSeasons);
 }
 
 function canManagePlayerControls(access) {
@@ -7080,7 +8532,7 @@ async function requirePlayerControlAccess(chatId, user, env) {
 }
 
 async function showSeasonAdminDashboard(chatId, user, env) {
-  const access = await requireTeamPermission(chatId, user, "points", env);
+  const access = await requireSecurityPermission(chatId, user, "manageSeasons", env);
   if (!access) return;
   const season = await ensureSeason(env);
   const [countRow, topResult, rewardRow] = await Promise.all([
@@ -7134,7 +8586,7 @@ async function showSeasonAdminDashboard(chatId, user, env) {
 }
 
 async function showSeasonTop10(chatId, user, env) {
-  const access = await requireTeamPermission(chatId, user, "points", env);
+  const access = await requireSecurityPermission(chatId, user, "manageSeasons", env);
   if (!access) return;
   const season = await ensureSeason(env);
   const result = await env.DB.prepare(
@@ -7150,9 +8602,8 @@ async function showSeasonTop10(chatId, user, env) {
 
 async function extendSeason(query, days, env) {
   const chatId = query.message?.chat?.id;
-  const access = await requireTeamPermission(chatId, query.from, "staff", env);
+  const access = await requireSecurityPermission(chatId, query.from, "manageSeasons", env);
   if (!access) return;
-  if (!canManageSeason(access)) return;
   const season = await ensureSeason(env);
   if (season.finalized_at || String(season.status) === "ended") {
     await answerCallback(env, query.id, "Завершённый сезон нельзя продлить.", true);
@@ -7218,8 +8669,8 @@ async function startSeasonRewardWorkflow(query, env) {
 
 async function beginSeasonRewardAmountWorkflow(query, rewardTypeValue, itemIdValue, env) {
   const chatId = query.message?.chat?.id;
-  const access = await requireTeamPermission(chatId, query.from, "staff", env);
-  if (!access || !canManageSeason(access)) return;
+  const access = await requireSecurityPermission(chatId, query.from, "manageSeasons", env);
+  if (!access) return;
   const season = await ensureSeason(env);
   if (season.finalized_at) {
     await answerCallback(env, query.id, "Награду завершённого сезона менять нельзя.", true);
@@ -7284,8 +8735,8 @@ function parseSeasonRewardInput(textValue, workflow) {
 async function handleSeasonRewardWorkflowMessage(message, workflow, env) {
   const chatId = message.chat.id;
   const user = message.from;
-  const access = await requireTeamPermission(chatId, user, "staff", env);
-  if (!access || !canManageSeason(access)) return true;
+  const access = await requireSecurityPermission(chatId, user, "manageSeasons", env);
+  if (!access) return true;
   const parsed = parseSeasonRewardInput(message.text, workflow);
   if (!parsed || !parsed.type || (parsed.type === "case" && !parsed.itemId)) {
     await sendTelegramMessage(env, chatId,
@@ -7310,38 +8761,35 @@ async function handleSeasonRewardWorkflowMessage(message, workflow, env) {
     await sendTelegramMessage(env, chatId, "Сезон уже завершён или не найден.");
     return true;
   }
-  await env.DB.prepare(
-    `UPDATE leaderboard_seasons SET reward_type = ?, reward_amount = ?, reward_title = ?,
-     reward_image_url = ?, reward_item_id = ?, manual_override = 1, updated_at = ?
-     WHERE id = ? AND finalized_at IS NULL`
-  ).bind(
-    presentation.type,
-    presentation.amount,
-    presentation.title,
-    presentation.imageUrl,
-    presentation.itemId,
-    now,
-    seasonId
-  ).run();
-  await logStaffAction(env, user, access, "season_reward_change", null, "season", Number(season.reward_amount || 0), presentation.amount, {
+  const draftId = await createSafeDraft(env, user, "season_reward", seasonId, `Награда сезона · ${season.title}`, {
+    reward_type: String(season.reward_type || "points"),
+    reward_amount: Number(season.reward_amount || 0),
+    reward_title: String(season.reward_title || ""),
+    reward_image_url: String(season.reward_image_url || ""),
+    reward_item_id: String(season.reward_item_id || "")
+  }, {
+    reward_type: presentation.type,
+    reward_amount: presentation.amount,
+    reward_title: presentation.title,
+    reward_image_url: presentation.imageUrl,
+    reward_item_id: presentation.itemId
+  });
+  await logStaffAction(env, user, access, "season_reward_draft", null, "season", Number(season.reward_amount || 0), presentation.amount, {
     seasonId,
+    draftId,
     oldType: season.reward_type,
     newType: presentation.type,
-    itemId: presentation.itemId,
-    title: presentation.title,
-    imageUrl: presentation.imageUrl
+    itemId: presentation.itemId
   });
   await clearStaffWorkflow(user.id, env);
-  await sendTelegramMessage(env, chatId,
-    `<b>Награда сезона изменена</b>\n\nНовая награда: <b>${escapeHtml(presentation.title)}</b>\nТип: <code>${escapeHtml(presentation.type)}</code>${presentation.itemId ? `\nПредмет: <code>${escapeHtml(presentation.itemId)}</code>` : ""}\nКартинка: подставлена автоматически.`
-  );
+  await sendSafeDraftPreview(chatId, user, draftId, env);
   return true;
 }
 
 async function finishSeasonEarly(query, env) {
   const chatId = query.message?.chat?.id;
-  const access = await requireTeamPermission(chatId, query.from, "staff", env);
-  if (!access || !canManageSeason(access)) return;
+  const access = await requireSecurityPermission(chatId, query.from, "manageSeasons", env);
+  if (!access) return;
   const season = await ensureSeason(env);
   if (season.finalized_at || String(season.status) === "ended") {
     await answerCallback(env, query.id, "Сезон уже завершён.", true);
@@ -7688,6 +9136,582 @@ function moscowDateKey(nowMs = Date.now()) {
   return `${parts.year}-${String(parts.month).padStart(2, "0")}-${String(parts.day).padStart(2, "0")}`;
 }
 
+
+let observabilitySchemaPromise = null;
+async function ensureObservabilitySchema(env) {
+  if (!observabilitySchemaPromise) {
+    observabilitySchemaPromise = env.DB.batch([
+      env.DB.prepare(ADMIN_OPERATIONAL_ISSUES_SCHEMA_SQL),
+      env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_admin_operational_issues_status ON admin_operational_issues(status, severity, updated_at DESC)`),
+      env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_admin_operational_issues_source ON admin_operational_issues(source_type, source_id, updated_at DESC)`)
+    ]).catch((error) => {
+      observabilitySchemaPromise = null;
+      throw error;
+    });
+  }
+  await observabilitySchemaPromise;
+}
+
+function operationalSeverityIcon(severity) {
+  return severity === "critical" ? "🔴" : severity === "high" ? "🟠" : severity === "warning" ? "🟡" : "🔵";
+}
+
+function operationalSeverityLabel(severity) {
+  return severity === "critical" ? "Критично" : severity === "high" ? "Высокий" : severity === "warning" ? "Предупреждение" : "Информация";
+}
+
+function operationalIssueStatusLabel(status, snoozedUntil = 0) {
+  if (status === "acknowledged") return "Принято в работу";
+  if (status === "snoozed") return snoozedUntil > 0 ? `Отложено до ${formatUtcDate(snoozedUntil)}` : "Отложено";
+  if (status === "resolved") return "Решено";
+  return "Открыто";
+}
+
+async function upsertOperationalIssue(env, issue, now) {
+  const fingerprint = String(issue.fingerprint || "").slice(0, 180);
+  if (!fingerprint) return null;
+  const existing = await env.DB.prepare(`SELECT * FROM admin_operational_issues WHERE fingerprint = ? LIMIT 1`).bind(fingerprint).first();
+  const detailsJson = JSON.stringify(issue.details || {});
+  if (!existing) {
+    const result = await env.DB.prepare(
+      `INSERT INTO admin_operational_issues
+       (fingerprint, issue_type, severity, title, details_json, source_type, source_id, status,
+        first_seen_at, last_seen_at, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, 'open', ?, ?, ?, ?)`
+    ).bind(
+      fingerprint, String(issue.issueType || "system"), String(issue.severity || "warning"),
+      String(issue.title || "Проблема").slice(0, 180), detailsJson,
+      String(issue.sourceType || "system"), String(issue.sourceId || ""), now, now, now, now
+    ).run();
+    const id = Number(result.meta?.last_row_id || 0);
+    if (["high", "critical"].includes(String(issue.severity || ""))) {
+      try {
+        await notifySubscribedStaff(env, "bot_errors", `${operationalSeverityIcon(issue.severity)} <b>${escapeHtml(issue.title)}</b>\n\nОткройте раздел «Проблемы» в админ-панели.`);
+      } catch (error) {
+        console.error("Operational issue notification failed", error);
+      }
+    }
+    return { id, created: true };
+  }
+  let nextStatus = String(existing.status || "open");
+  const snoozedUntil = Number(existing.snoozed_until || 0);
+  if ((nextStatus === "resolved" || nextStatus === "snoozed") && snoozedUntil <= now) nextStatus = "open";
+  await env.DB.prepare(
+    `UPDATE admin_operational_issues
+     SET issue_type = ?, severity = ?, title = ?, details_json = ?, source_type = ?, source_id = ?,
+         status = ?, last_seen_at = ?, resolved_at = CASE WHEN ? = 'resolved' THEN resolved_at ELSE 0 END,
+         updated_at = ?
+     WHERE id = ?`
+  ).bind(
+    String(issue.issueType || "system"), String(issue.severity || "warning"),
+    String(issue.title || "Проблема").slice(0, 180), detailsJson,
+    String(issue.sourceType || "system"), String(issue.sourceId || ""), nextStatus, now, nextStatus, now, Number(existing.id)
+  ).run();
+  return { id: Number(existing.id), created: false, reopened: nextStatus === "open" && String(existing.status) !== "open" };
+}
+
+const OPERATIONAL_PROBLEMS_SYNC_TTL_SECONDS = 90;
+let operationalProblemsSyncMemory = { updatedAt: 0, promise: null };
+
+async function operationalProblemsSyncAge(env) {
+  const now = Math.floor(Date.now()/1000);
+  if (operationalProblemsSyncMemory.updatedAt) return Math.max(0,now-operationalProblemsSyncMemory.updatedAt);
+  const state = await getSystemState(env,"ops:problems:last_sync");
+  operationalProblemsSyncMemory.updatedAt = Number(state?.value || state?.updatedAt || 0);
+  return operationalProblemsSyncMemory.updatedAt ? Math.max(0,now-operationalProblemsSyncMemory.updatedAt) : 999999;
+}
+
+async function ensureOperationalProblemsFresh(env, options = {}) {
+  const force = Boolean(options.force);
+  const age = await operationalProblemsSyncAge(env);
+  if (!force && age < OPERATIONAL_PROBLEMS_SYNC_TTL_SECONDS) return { skipped:true,age };
+  if (operationalProblemsSyncMemory.promise) return operationalProblemsSyncMemory.promise;
+  operationalProblemsSyncMemory.promise = (async()=>{
+    const issues = await syncOperationalProblems(env, options);
+    const now = Math.floor(Date.now()/1000);
+    operationalProblemsSyncMemory.updatedAt = now;
+    await setSystemState(env,"ops:problems:last_sync",String(now));
+    return { skipped:false,issues };
+  })().finally(()=>{operationalProblemsSyncMemory.promise=null;});
+  return operationalProblemsSyncMemory.promise;
+}
+
+async function syncOperationalProblems(env, options = {}) {
+  await ensureStaffOperationsSchema(env);
+  await ensureSafeControlCenterSchema(env);
+  await ensureLiveOpsAdminSchema(env);
+  await ensureOperationsSecuritySchema(env);
+  await ensureObservabilitySchema(env);
+  const now = Math.floor(Date.now() / 1000);
+  const issues = [];
+  const add = (issue) => issues.push(issue);
+
+  if (options.checkCron !== false) {
+    const heartbeat = await getSystemState(env, "cron:last_success");
+    const cronAge = heartbeat?.updatedAt ? now - heartbeat.updatedAt : 0;
+    if (!heartbeat || cronAge > 300) {
+      add({
+        fingerprint: "cron:stale", issueType: "cron", severity: cronAge > 900 || !heartbeat ? "critical" : "high",
+        title: !heartbeat ? "Cron ещё не подтверждал успешный запуск" : `Cron не завершался ${Math.max(1, Math.floor(cronAge / 60))} мин.`,
+        details: { lastSuccessAt: heartbeat?.updatedAt || 0, ageSeconds: cronAge }, sourceType: "cron", sourceId: "staff_operations"
+      });
+    }
+  }
+
+  if (options.checkWebhook !== false) {
+    try {
+      const info = await telegramApi(env, "getWebhookInfo", {});
+      const expected = expectedTelegramWebhookUrl(env);
+      const actual = String(info?.url || "");
+      if (!actual || actual !== expected || info?.last_error_message) {
+        add({
+          fingerprint: "telegram:webhook", issueType: "webhook", severity: info?.last_error_message ? "high" : "warning",
+          title: info?.last_error_message ? "Telegram webhook сообщает об ошибке" : "Telegram webhook настроен неверно",
+          details: { expected, actual, pending: Number(info?.pending_update_count || 0), error: String(info?.last_error_message || "") },
+          sourceType: "telegram", sourceId: "webhook"
+        });
+      }
+    } catch (error) {
+      add({
+        fingerprint: "telegram:webhook", issueType: "webhook", severity: "high", title: "Не удалось проверить Telegram webhook",
+        details: { error: String(error?.message || error).slice(0, 300) }, sourceType: "telegram", sourceId: "webhook"
+      });
+    }
+  }
+
+  try {
+    const queue = await env.DB.prepare(
+      `SELECT
+         SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) AS failed_count,
+         SUM(CASE WHEN status IN ('pending','delivering') AND created_at <= ? THEN 1 ELSE 0 END) AS overdue_count,
+         MIN(CASE WHEN status IN ('pending','delivering') THEN created_at ELSE NULL END) AS oldest_at
+       FROM reward_delivery_queue`
+    ).bind(now - 15 * 60).first();
+    const failed = Number(queue?.failed_count || 0);
+    const overdue = Number(queue?.overdue_count || 0);
+    if (failed || overdue) {
+      add({
+        fingerprint: "rewards:delivery_queue", issueType: "reward_queue", severity: failed ? "critical" : "high",
+        title: failed ? `Ошибок выдачи наград: ${failed}` : `Наград ожидают более 15 минут: ${overdue}`,
+        details: { failed, overdue, oldestAt: Number(queue?.oldest_at || 0) }, sourceType: "reward_queue", sourceId: "delivery"
+      });
+    }
+  } catch (error) {
+    add({ fingerprint: "rewards:delivery_queue_check", issueType: "reward_queue", severity: "warning", title: "Не удалось проверить очередь наград", details: { error: String(error?.message || error).slice(0, 300) }, sourceType: "reward_queue", sourceId: "check" });
+  }
+
+  try {
+    const stockRows = await readShopStockRows(env);
+    for (const productId of ["zefir", "americano", "cappuccino"]) {
+      const availability = shopStockAvailabilityFromRows(stockRows, "prize", productId);
+      if (availability.limited && availability.remaining <= BOT_LOW_STOCK_THRESHOLD) {
+        add({
+          fingerprint: `stock:${productId}`, issueType: "stock", severity: availability.remaining <= 0 ? "critical" : "warning",
+          title: availability.remaining <= 0 ? `${PRODUCTS[productId]?.title || productId} закончился` : `${PRODUCTS[productId]?.title || productId}: осталось ${availability.remaining}`,
+          details: { productId, remaining: availability.remaining }, sourceType: "shop_stock", sourceId: productId
+        });
+      }
+    }
+  } catch (error) {
+    add({ fingerprint: "stock:check", issueType: "stock", severity: "warning", title: "Не удалось проверить физические остатки", details: { error: String(error?.message || error).slice(0, 300) }, sourceType: "shop_stock", sourceId: "check" });
+  }
+
+  try {
+    const season = await ensureSeason(env);
+    const rewardType = String(season?.reward_type || "");
+    const rewardAmount = Number(season?.reward_amount || 0);
+    const rewardItemId = String(season?.reward_item_id || "");
+    if (!rewardType || (rewardAmount <= 0 && !rewardItemId)) {
+      add({
+        fingerprint: `season:${season?.id || "current"}:reward`, issueType: "season", severity: "critical",
+        title: "У текущего сезона не настроена награда", details: { seasonId: season?.id || "", title: season?.title || "", rewardType, rewardAmount, rewardItemId },
+        sourceType: "season", sourceId: String(season?.id || "current")
+      });
+    }
+    const endsAt = Number(season?.ends_at || 0);
+    if (String(season?.status) === "active" && endsAt > now && endsAt - now <= 2 * 3600) {
+      add({
+        fingerprint: `season:${season.id}:ending`, issueType: "season", severity: "warning",
+        title: `Сезон завершится менее чем через ${Math.max(1, Math.ceil((endsAt - now) / 60))} мин.`,
+        details: { seasonId: season.id, endsAt }, sourceType: "season", sourceId: String(season.id)
+      });
+    }
+  } catch (error) {
+    add({ fingerprint: "season:check", issueType: "season", severity: "high", title: "Не удалось проверить текущий сезон", details: { error: String(error?.message || error).slice(0, 300) }, sourceType: "season", sourceId: "current" });
+  }
+
+  try {
+    const integrity = await env.DB.prepare(`SELECT status, result_json, created_at FROM integrity_check_runs ORDER BY id DESC LIMIT 1`).first();
+    if (!integrity) {
+      add({ fingerprint: "integrity:missing", issueType: "integrity", severity: "warning", title: "Проверка целостности ещё не запускалась", details: {}, sourceType: "integrity", sourceId: "latest" });
+    } else if (!/^(?:ok|passed|success)$/i.test(String(integrity.status || ""))) {
+      const report = safeJson(integrity.result_json, {});
+      const failedChecks = Array.isArray(report?.checks)
+        ? report.checks
+            .filter((item) => String(item?.level || "") === "error")
+            .map((item) => String(item?.text || "").slice(0, 220))
+            .filter((text) => !isNonCriticalIntegrityDiagnostic(text))
+            .slice(0, 8)
+        : [];
+      // Старые сборки могли записать успешную проверку изображения как error,
+      // а превышение диагностического subrequest-лимита — как критическую ошибку.
+      // Такие записи не должны держать центр проблем в красном состоянии.
+      if (failedChecks.length > 0) {
+        add({
+          fingerprint: "integrity:failed", issueType: "integrity", severity: "high",
+          title: "Последняя проверка целостности завершилась с проблемами",
+          details: {
+            status: integrity.status,
+            createdAt: Number(integrity.created_at || 0),
+            errors: failedChecks.length,
+            warnings: Number(report?.warnings || 0),
+            failedChecks
+          },
+          sourceType: "integrity", sourceId: "latest"
+        });
+      }
+    }
+  } catch {}
+
+  try {
+    const oldTickets = await env.DB.prepare(`SELECT COUNT(*) AS count, MIN(created_at) AS oldest_at FROM support_tickets WHERE status IN ('new','working') AND created_at <= ?`).bind(now - 24 * 3600).first();
+    if (Number(oldTickets?.count || 0) > 0) {
+      add({ fingerprint: "tickets:old", issueType: "tickets", severity: "warning", title: `Обращений без решения более суток: ${Number(oldTickets.count)}`, details: { count: Number(oldTickets.count), oldestAt: Number(oldTickets.oldest_at || 0) }, sourceType: "tickets", sourceId: "old" });
+    }
+  } catch {}
+
+  try {
+    const fraud = await env.DB.prepare(`SELECT COUNT(*) AS count FROM fraud_alerts WHERE status IN ('open','reviewing') AND severity IN ('critical','high')`).first();
+    if (Number(fraud?.count || 0) > 0) {
+      add({ fingerprint: "fraud:high", issueType: "fraud", severity: "high", title: `Подозрительных результатов высокого приоритета: ${Number(fraud.count)}`, details: { count: Number(fraud.count) }, sourceType: "fraud", sourceId: "high" });
+    }
+  } catch {}
+
+  try {
+    const failedBroadcasts = await env.DB.prepare(`SELECT COUNT(*) AS count FROM bot_broadcast_deliveries WHERE status = 'failed' AND attempted_at >= ?`).bind(now - 3600).first();
+    if (Number(failedBroadcasts?.count || 0) > 0) {
+      add({ fingerprint: "broadcast:failed_hour", issueType: "broadcast", severity: "warning", title: `Ошибок рассылки за час: ${Number(failedBroadcasts.count)}`, details: { count: Number(failedBroadcasts.count) }, sourceType: "broadcast", sourceId: "last_hour" });
+    }
+  } catch {}
+
+  try {
+    const promos = (await env.DB.prepare(`SELECT code, redemption_count, max_redemptions FROM promo_codes WHERE enabled = 1 AND max_redemptions > 0 AND redemption_count * 100 >= max_redemptions * 90 ORDER BY redemption_count * 1.0 / max_redemptions DESC LIMIT 5`).all()).results || [];
+    for (const promo of promos) {
+      add({ fingerprint: `promo:${promo.code}:limit`, issueType: "promo", severity: Number(promo.redemption_count) >= Number(promo.max_redemptions) ? "high" : "warning", title: `Промокод ${promo.code} использован на ${Math.min(100, Math.floor(Number(promo.redemption_count) * 100 / Math.max(1, Number(promo.max_redemptions))))}%`, details: { code: promo.code, used: Number(promo.redemption_count), limit: Number(promo.max_redemptions) }, sourceType: "promo", sourceId: String(promo.code) });
+    }
+  } catch {}
+
+  const seen = new Set();
+  for (const issue of issues) {
+    seen.add(String(issue.fingerprint));
+    await upsertOperationalIssue(env, issue, now);
+  }
+  const activeRows = (await env.DB.prepare(`SELECT id, fingerprint FROM admin_operational_issues WHERE status != 'resolved'`).all()).results || [];
+  for (const row of activeRows) {
+    if (seen.has(String(row.fingerprint))) continue;
+    await env.DB.prepare(`UPDATE admin_operational_issues SET status = 'resolved', resolved_at = ?, resolved_by = 'system', resolved_by_name = 'Система', snoozed_until = 0, updated_at = ? WHERE id = ?`).bind(now, now, Number(row.id)).run();
+  }
+  return issues;
+}
+
+async function buildAdminOverview(env, options = {}) {
+  if (options.syncProblems !== false) await syncOperationalProblems(env, { checkWebhook: true });
+  const startAt = moscowDayStartUnix();
+  const now = Math.floor(Date.now() / 1000);
+  const [activePlayers, newPlayers, runs, casesLevel, casesGranted, shopOps, queue, tickets, issues, errors, season, heartbeat] = await Promise.all([
+    env.DB.prepare(`SELECT COUNT(DISTINCT telegram_id) AS count FROM leaderboard_runs WHERE created_at >= ?`).bind(startAt).first(),
+    env.DB.prepare(`SELECT COUNT(*) AS count FROM admin_profile_state WHERE created_at >= ?`).bind(startAt).first(),
+    env.DB.prepare(`SELECT COUNT(*) AS total, SUM(CASE WHEN accepted = 1 THEN 1 ELSE 0 END) AS accepted FROM leaderboard_runs WHERE created_at >= ?`).bind(startAt).first(),
+    env.DB.prepare(`SELECT COUNT(*) AS count FROM level_case_openings WHERE opened_at >= ?`).bind(startAt).first(),
+    env.DB.prepare(`SELECT COUNT(*) AS count FROM granted_cases WHERE opened_at >= ?`).bind(startAt).first(),
+    env.DB.prepare(`SELECT COUNT(*) AS count FROM shop_stock_consumptions WHERE created_at >= ?`).bind(startAt).first(),
+    env.DB.prepare(`SELECT SUM(CASE WHEN status IN ('pending','delivering') THEN 1 ELSE 0 END) AS pending, SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) AS failed FROM reward_delivery_queue`).first(),
+    env.DB.prepare(`SELECT COUNT(*) AS count FROM support_tickets WHERE status IN ('new','working')`).first(),
+    env.DB.prepare(`SELECT COUNT(*) AS count, SUM(CASE WHEN severity IN ('critical','high') THEN 1 ELSE 0 END) AS urgent FROM admin_operational_issues WHERE status != 'resolved' AND (status != 'snoozed' OR snoozed_until <= ?)`).bind(now).first(),
+    env.DB.prepare(`SELECT COUNT(*) AS count FROM staff_action_log WHERE success = 0 AND created_at >= ?`).bind(now - 3600).first(),
+    ensureSeason(env),
+    getSystemState(env, "cron:last_success")
+  ]);
+  const cronAge = heartbeat?.updatedAt ? now - heartbeat.updatedAt : 0;
+  const urgent = Number(issues?.urgent || 0);
+  const issueCount = Number(issues?.count || 0);
+  const healthIcon = urgent > 0 ? "🔴" : issueCount > 0 ? "🟡" : "🟢";
+  return {
+    healthIcon,
+    issueCount,
+    urgent,
+    cronText: !heartbeat ? "нет данных" : cronAge <= 180 ? `${cronAge} сек. назад` : `${Math.max(1, Math.floor(cronAge / 60))} мин. назад`,
+    seasonTitle: String(season?.title || "не настроен"),
+    seasonStatus: seasonStatusLabel(season?.status || "scheduled"),
+    activePlayers: Number(activePlayers?.count || 0),
+    newPlayers: Number(newPlayers?.count || 0),
+    runs: Number(runs?.total || 0),
+    acceptedRuns: Number(runs?.accepted || 0),
+    cases: Number(casesLevel?.count || 0) + Number(casesGranted?.count || 0),
+    shopOps: Number(shopOps?.count || 0),
+    queuePending: Number(queue?.pending || 0),
+    queueFailed: Number(queue?.failed || 0),
+    tickets: Number(tickets?.count || 0),
+    errors: Number(errors?.count || 0)
+  };
+}
+
+function operationalIssueActionButton(row) {
+  const source = String(row?.source_type || "");
+  if (source === "reward_queue") return { text: "📬 Открыть очередь", callback_data: "safe_queue" };
+  if (source === "shop_stock") return { text: "📦 Открыть остатки", callback_data: "stock_refresh" };
+  if (source === "tickets") return { text: "🎫 Открыть обращения", callback_data: "tickets_open" };
+  if (source === "fraud") return { text: "🛡 Открыть антифрод", callback_data: "adm_fraud" };
+  if (source === "integrity") return { text: "🔎 Проверить игру", callback_data: "safe_check" };
+  if (source === "promo") return { text: "🎟 Открыть промокоды", callback_data: "v57_promos" };
+  if (source === "season") return { text: "🏆 Открыть рейтинг", callback_data: "season_refresh" };
+  if (source === "broadcast") return { text: "📣 Открыть кампании", callback_data: "adm_campaigns" };
+  return { text: "🩺 Открыть систему", callback_data: "status_refresh" };
+}
+
+function operationalIssueDetailsText(row) {
+  const details = parseJsonObject(row?.details_json, {});
+  const lines = [];
+  for (const [key, value] of Object.entries(details)) {
+    if (value == null || value === "" || value === 0 || (Array.isArray(value) && value.length === 0)) continue;
+    const label = ({ lastSuccessAt: "Последний успех", ageSeconds: "Возраст, сек.", expected: "Ожидаемый URL", actual: "Текущий URL", pending: "Очередь Telegram", error: "Ошибка", failed: "Ошибок", errors: "Критических ошибок", warnings: "Предупреждений", failedChecks: "Что не прошло проверку", createdAt: "Проверка выполнена", overdue: "Просрочено", oldestAt: "Самая старая запись", remaining: "Осталось", productId: "Товар", seasonId: "Сезон", endsAt: "Завершение", count: "Количество", code: "Код", used: "Использовано", limit: "Лимит" })[key] || key;
+    if (Array.isArray(value)) {
+      lines.push(`• <b>${escapeHtml(label)}</b>:`);
+      for (const item of value.slice(0, 8)) lines.push(`  — ${escapeHtml(String(item))}`);
+      continue;
+    }
+    const formatted = /At$/.test(key) && Number(value) > 1000000000 ? formatUtcDate(Number(value)) : String(value);
+    lines.push(`• ${escapeHtml(label)}: <b>${escapeHtml(formatted)}</b>`);
+  }
+  return lines.length ? lines.join("\n") : "Подробности отсутствуют.";
+}
+
+async function showOperationalProblemsDashboard(chatId, user, env, resolved = false, runtime = {}) {
+  const access = await requireTeamPermission(chatId, user, "staff", env);
+  if (!access) return;
+  await ensureObservabilitySchema(env);
+  let refreshing = false;
+  if (!resolved) {
+    const age = await operationalProblemsSyncAge(env);
+    if (age >= OPERATIONAL_PROBLEMS_SYNC_TTL_SECONDS) {
+      const refreshTask = ensureOperationalProblemsFresh(env,{checkWebhook:true});
+      if (runWorkerBackground(runtime,refreshTask,"operational problems refresh")) refreshing = true;
+      else await refreshTask;
+    }
+  }
+  const now = Math.floor(Date.now() / 1000);
+  const where = resolved ? `status = 'resolved'` : `status != 'resolved' AND (status != 'snoozed' OR snoozed_until <= ${now})`;
+  const rows = (await env.DB.prepare(
+    `SELECT * FROM admin_operational_issues WHERE ${where}
+     ORDER BY CASE severity WHEN 'critical' THEN 1 WHEN 'high' THEN 2 WHEN 'warning' THEN 3 ELSE 4 END, updated_at DESC LIMIT 30`
+  ).all()).results || [];
+  const critical = rows.filter((row) => row.severity === "critical").length;
+  const high = rows.filter((row) => row.severity === "high").length;
+  const warning = rows.filter((row) => row.severity === "warning").length;
+  const header = resolved
+    ? `<b>✅ Решённые проблемы</b>\n\nПоследние решённые записи: <b>${rows.length}</b>`
+    : `<b>🚨 Центр проблем</b>\n\nКритичных: <b>${critical}</b> · высоких: <b>${high}</b> · предупреждений: <b>${warning}</b>`;
+  const keyboard = rows.slice(0, 15).map((row) => [{ text: `${operationalSeverityIcon(row.severity)} #${row.id} ${String(row.title || "Проблема").slice(0, 40)}`, callback_data: `ops_issue:${row.id}` }]);
+  keyboard.push([{ text: "🔄 Обновить", callback_data: resolved ? "ops_problems_resolved" : "ops_problems" }, { text: resolved ? "🚨 Открытые" : "✅ Решённые", callback_data: resolved ? "ops_problems" : "ops_problems_resolved" }]);
+  const refreshNote = refreshing ? "\n\n<i>Свежая проверка системы выполняется в фоне. Повторное обновление покажет новые данные.</i>" : "";
+  await sendTelegramMessage(env, chatId, `${header}\n\n${rows.length ? "Выберите проблему для подробностей." : resolved ? "Решённых проблем пока нет." : "✅ Активных проблем не обнаружено."}${refreshNote}`, { inline_keyboard: keyboard });
+}
+
+async function showOperationalIssueDetails(chatId, user, issueId, env) {
+  const access = await requireTeamPermission(chatId, user, "staff", env);
+  if (!access) return;
+  await ensureObservabilitySchema(env);
+  const row = await env.DB.prepare(`SELECT * FROM admin_operational_issues WHERE id = ? LIMIT 1`).bind(Number(issueId)).first();
+  if (!row) {
+    await sendTelegramMessage(env, chatId, "Проблема не найдена или уже удалена.");
+    return;
+  }
+  const keyboard = [];
+  if (row.status !== "resolved") {
+    keyboard.push([
+      { text: "👀 Принять", callback_data: `ops_issue_ack:${row.id}` },
+      { text: "🙋 Назначить мне", callback_data: `ops_issue_assign:${row.id}` }
+    ]);
+    keyboard.push([
+      { text: "⏰ Отложить на час", callback_data: `ops_issue_snooze:${row.id}` },
+      { text: "✅ Решено", callback_data: `ops_issue_resolve:${row.id}` }
+    ]);
+  }
+  keyboard.push([operationalIssueActionButton(row)]);
+  keyboard.push([{ text: "⬅️ К проблемам", callback_data: row.status === "resolved" ? "ops_problems_resolved" : "ops_problems" }]);
+  await sendTelegramMessage(env, chatId,
+    `${operationalSeverityIcon(row.severity)} <b>${escapeHtml(row.title)}</b>\n\n` +
+    `Приоритет: <b>${escapeHtml(operationalSeverityLabel(row.severity))}</b>\n` +
+    `Статус: <b>${escapeHtml(operationalIssueStatusLabel(row.status, Number(row.snoozed_until || 0)))}</b>\n` +
+    `Источник: <code>${escapeHtml(String(row.source_type || "system"))}:${escapeHtml(String(row.source_id || ""))}</code>\n` +
+    `Обнаружено: <b>${escapeHtml(formatUtcDate(row.first_seen_at))}</b>\n` +
+    `Последнее подтверждение: <b>${escapeHtml(formatUtcDate(row.last_seen_at))}</b>\n` +
+    `${row.assigned_to_name ? `Ответственный: <b>${escapeHtml(row.assigned_to_name)}</b>\n` : ""}\n` +
+    `<b>Подробности</b>\n${operationalIssueDetailsText(row)}`,
+    { inline_keyboard: keyboard }
+  );
+}
+
+async function updateOperationalIssue(query, issueId, action, env) {
+  const chatId = query.message?.chat?.id;
+  const access = await requireTeamPermission(chatId, query.from, "staff", env);
+  if (!access) return;
+  await ensureObservabilitySchema(env);
+  const row = await env.DB.prepare(`SELECT * FROM admin_operational_issues WHERE id = ? LIMIT 1`).bind(Number(issueId)).first();
+  if (!row) {
+    await answerCallback(env, query.id, "Проблема не найдена.", true);
+    return;
+  }
+  const now = Math.floor(Date.now() / 1000);
+  if (action === "ack") {
+    await env.DB.prepare(`UPDATE admin_operational_issues SET status = 'acknowledged', assigned_to = CASE WHEN assigned_to = '' THEN ? ELSE assigned_to END, assigned_to_name = CASE WHEN assigned_to_name = '' THEN ? ELSE assigned_to_name END, updated_at = ? WHERE id = ?`).bind(String(query.from.id), telegramDisplayName(query.from), now, Number(issueId)).run();
+  } else if (action === "assign") {
+    await env.DB.prepare(`UPDATE admin_operational_issues SET status = CASE WHEN status = 'open' THEN 'acknowledged' ELSE status END, assigned_to = ?, assigned_to_name = ?, updated_at = ? WHERE id = ?`).bind(String(query.from.id), telegramDisplayName(query.from), now, Number(issueId)).run();
+  } else if (action === "snooze") {
+    await env.DB.prepare(`UPDATE admin_operational_issues SET status = 'snoozed', snoozed_until = ?, assigned_to = ?, assigned_to_name = ?, updated_at = ? WHERE id = ?`).bind(now + 3600, String(query.from.id), telegramDisplayName(query.from), now, Number(issueId)).run();
+  } else if (action === "resolve") {
+    await env.DB.prepare(`UPDATE admin_operational_issues SET status = 'resolved', resolved_at = ?, resolved_by = ?, resolved_by_name = ?, snoozed_until = ?, updated_at = ? WHERE id = ?`).bind(now, String(query.from.id), telegramDisplayName(query.from), now + 3600, now, Number(issueId)).run();
+  }
+  await logStaffAction(env, query.from, access, `operational_issue_${action}`, null, "operational_issue", Number(row.id), Number(row.id), { title: row.title, sourceType: row.source_type, sourceId: row.source_id });
+  await answerCallback(env, query.id, action === "resolve" ? "Проблема отмечена решённой." : action === "snooze" ? "Проблема отложена на час." : action === "assign" ? "Проблема назначена вам." : "Проблема принята в работу.");
+  await showOperationalIssueDetails(chatId, query.from, Number(issueId), env);
+}
+
+async function startUniversalAdminSearch(chatId, user, env) {
+  const access = await requireTeamPermission(chatId, user, "staff", env);
+  if (!access) return;
+  await setStaffWorkflow(user.id, chatId, "universal_search", "input", {}, env);
+  const serviceRole = !access.owner && ["cashier", "cook"].includes(normalizeTeamRole(access.role));
+  const prompt = serviceRole
+    ? `<b>🔎 Поиск активного заказа</b>
+
+Отправьте полный код физической награды. Поиск по игрокам, именам и истории заказов для вашей роли отключён.`
+    : `<b>🔎 Универсальный поиск</b>
+
+Отправьте одним сообщением:
+` +
+      `• Telegram ID или <code>@username</code>;
+• физический код награды;
+• промокод;
+• номер обращения;
+• ID события;
+• название скина, рамки, следа или аватарки.
+
+Поиск не изменяет данные.`;
+  await sendTelegramMessage(env, chatId, prompt, { inline_keyboard: [[{ text: "Отмена", callback_data: "ops_cancel" }]] });
+}
+
+async function executeUniversalAdminSearch(chatId, user, rawQuery, env) {
+  const access = await requireTeamPermission(chatId, user, "staff", env);
+  if (!access) return;
+  await ensureSafeControlCenterSchema(env);
+  await ensureOperationsSecuritySchema(env);
+  const query = String(rawQuery || "").trim().slice(0, 100);
+  if (query.length < 2) {
+    await sendTelegramMessage(env, chatId, "Введите минимум два символа для поиска.");
+    return;
+  }
+  const lower = query.toLowerCase();
+  const like = `%${lower.replace(/[%_]/g, "")}%`;
+  const digits = query.replace(/\D/g, "");
+  const telegramIdLike = digits.length >= 4 ? `%${digits}%` : "__NO_MATCH__";
+  const results = [];
+  const seen = new Set();
+  const add = (result) => {
+    const key = `${result.type}:${result.id}`;
+    if (seen.has(key) || results.length >= 20) return;
+    seen.add(key);
+    results.push(result);
+  };
+
+  if (access.owner || access.permissions?.viewPlayers) {
+    const resolved = await resolvePlayerTelegramId(query, env);
+    if (resolved && await playerProfileExists(resolved, env)) add({ type: "player", id: resolved, title: await playerDisplayNameById(resolved, env), subtitle: `Telegram ID ${resolved}` });
+    const players = (await env.DB.prepare(
+      `SELECT telegram_id, display_name, username, best_score FROM leaderboard_all_time
+       WHERE LOWER(display_name) LIKE ? OR LOWER(username) LIKE ? OR telegram_id LIKE ?
+       ORDER BY updated_at DESC LIMIT 8`
+    ).bind(like, like, telegramIdLike).all()).results || [];
+    for (const row of players) add({ type: "player", id: String(row.telegram_id), title: String(row.display_name || (row.username ? `@${row.username}` : `Игрок ${row.telegram_id}`)), subtitle: `Рекорд ${Number(row.best_score || 0)}` });
+  }
+
+  if (access.owner || access.permissions?.redeemPhysical) {
+    const compact = compactCode(query);
+    const elevatedOrderAccess = canViewOrderHistory(access);
+    const rewards = elevatedOrderAccess
+      ? (await env.DB.prepare(
+          `SELECT code, code_compact, product_name, owner_name, status FROM reward_codes
+           WHERE code_compact = ? OR LOWER(code) LIKE ? OR LOWER(request_id) LIKE ? OR LOWER(owner_name) LIKE ?
+           ORDER BY created_at DESC LIMIT 6`
+        ).bind(compact, like, like, like).all()).results || []
+      : compact.length >= 4
+        ? (await env.DB.prepare(
+            `SELECT code, code_compact, product_name, owner_name, status FROM reward_codes
+             WHERE code_compact = ? AND status = 'active' LIMIT 1`
+          ).bind(compact).all()).results || []
+        : [];
+    for (const row of rewards) add({ type: "reward", id: String(row.code_compact), title: String(row.product_name || row.code), subtitle: `${row.code} · ${row.status} · ${row.owner_name || "без имени"}` });
+  }
+
+  if (access.owner || access.permissions?.managePromocodes) {
+    const promos = (await env.DB.prepare(`SELECT code, title, enabled, redemption_count, max_redemptions FROM promo_codes WHERE LOWER(code) LIKE ? OR LOWER(title) LIKE ? ORDER BY updated_at DESC LIMIT 6`).bind(like, like).all()).results || [];
+    for (const row of promos) add({ type: "promo", id: String(row.code), title: String(row.title || row.code), subtitle: `${row.code} · ${Number(row.enabled) ? "включён" : "выключен"} · ${Number(row.redemption_count || 0)}/${Number(row.max_redemptions || 0) || "∞"}` });
+  }
+
+  if (access.owner || access.permissions?.manageSeasons) {
+    const events = (await env.DB.prepare(`SELECT event_id, title, status, starts_at, ends_at FROM liveops_events WHERE LOWER(event_id) LIKE ? OR LOWER(title) LIKE ? ORDER BY updated_at DESC LIMIT 6`).bind(like, like).all()).results || [];
+    for (const row of events) add({ type: "event", id: String(row.event_id), title: String(row.title || row.event_id), subtitle: `${row.status} · ${formatUtcDate(row.starts_at)} — ${formatUtcDate(row.ends_at)}` });
+  }
+
+  const ticketId = Number(query.replace(/^#/, ""));
+  if (Number.isInteger(ticketId) && ticketId > 0) {
+    const ticket = await env.DB.prepare(`SELECT id, category, status, player_name, player_telegram_id FROM support_tickets WHERE id = ? LIMIT 1`).bind(ticketId).first();
+    if (ticket) add({ type: "ticket", id: String(ticket.id), title: `Обращение #${ticket.id}`, subtitle: `${ticket.category} · ${ticket.status} · ${ticket.player_name || ticket.player_telegram_id || "без игрока"}` });
+  }
+
+  if (access.owner || access.permissions?.manageCases || access.permissions?.viewContentAnalytics) {
+    const catalogs = [
+      ["skin", SKINS], ["avatar", CASE_AVATARS], ["frame", CASE_FRAMES], ["trail", CASE_TRAILS]
+    ];
+    for (const [kind, catalog] of catalogs) {
+      for (const [id, item] of Object.entries(catalog || {})) {
+        if (String(id).toLowerCase().includes(lower) || String(item?.title || "").toLowerCase().includes(lower)) {
+          add({ type: "content", id: `${kind}:${id}`, title: String(item?.title || id), subtitle: `${kind} · ${item?.rarity || "common"}` });
+        }
+      }
+    }
+  }
+
+  await clearStaffWorkflow(user.id, env);
+  if (!results.length) {
+    await sendTelegramMessage(env, chatId, `<b>🔎 Поиск</b>\n\nПо запросу <code>${escapeHtml(query)}</code> ничего не найдено.`, { inline_keyboard: [[{ text: "🔎 Новый поиск", callback_data: "ops_search" }]] });
+    return;
+  }
+  const typeIcon = { player: "👤", reward: "☕", promo: "🎟", event: "🗓", ticket: "🎫", content: "🎨" };
+  const lines = results.map((row, index) => `${index + 1}. ${typeIcon[row.type] || "•"} <b>${escapeHtml(row.title)}</b>\n${escapeHtml(row.subtitle || row.id)}`).join("\n\n");
+  const keyboard = results.slice(0, 15).map((row) => {
+    if (row.type === "player") return [{ text: `👤 ${String(row.title).slice(0, 32)}`, callback_data: `player_refresh:${row.id}` }];
+    if (row.type === "reward") return [{ text: `☕ ${String(row.title).slice(0, 32)}`, callback_data: `ops_search_reward:${row.id}` }];
+    if (row.type === "promo") return [{ text: `🎟 ${row.id}`, callback_data: `v57_promo_stats:${row.id}` }];
+    if (row.type === "ticket") return [{ text: `🎫 Обращение #${row.id}`, callback_data: `ticket_view:${row.id}` }];
+    if (row.type === "event") return [{ text: `🗓 ${String(row.title).slice(0, 32)}`, callback_data: "safe_events" }];
+    return [{ text: `🎨 ${String(row.title).slice(0, 32)}`, callback_data: "v57_content" }];
+  });
+  keyboard.push([{ text: "🔎 Новый поиск", callback_data: "ops_search" }, { text: "🚨 Проблемы", callback_data: "ops_problems" }]);
+  await logStaffAction(env, user, access, "universal_search", null, "search", null, null, { query, results: results.length });
+  await sendTelegramMessage(env, chatId, `<b>🔎 Результаты поиска</b>\n\nЗапрос: <code>${escapeHtml(query)}</code>\nНайдено: <b>${results.length}</b>\n\n${lines}`, { inline_keyboard: keyboard });
+}
+
+async function handleUniversalAdminSearchMessage(message, workflow, env) {
+  const query = String(message.text || "").trim();
+  if (!query || query.startsWith("/")) {
+    await sendTelegramMessage(env, message.chat.id, "Отправьте поисковый запрос обычным сообщением или отмените действие командой <code>/cancel</code>.");
+    return true;
+  }
+  await executeUniversalAdminSearch(message.chat.id, message.from, query, env);
+  return true;
+}
+
 async function showOperationsStatus(chatId, user, env) {
   const access = await getTeamAccess(user, env);
   if (!access.authorized) {
@@ -7740,6 +9764,7 @@ async function showOperationsStatus(chatId, user, env) {
     `Остатки: <b>${escapeHtml(stockText)}</b>`,
     { inline_keyboard: [[
       { text: "🔄 Обновить", callback_data: "status_refresh" },
+      { text: "🚨 Проблемы", callback_data: "ops_problems" },
       { text: "📦 Остатки", callback_data: "stock_refresh" }
     ]] }
   );
@@ -7778,7 +9803,7 @@ async function checkLowStockAlerts(env) {
     const status = availability.remaining <= 0 ? "Товар закончился." : `Осталось ${availability.remaining} шт.`;
     await queueLeaderboardStaffNotification(env,
       `low-stock:${productId}:${alertLevel}:${Math.floor(Date.now() / 1000)}`,
-      `⚠️ <b>${alertLevel === "empty" ? "Товар закончился" : "Низкий остаток"}</b>\n\nТовар: <b>${escapeHtml(title)}</b>\n${escapeHtml(status)}\n\nПополните остаток командой <code>/setlimit prize ${escapeHtml(productId)} КОЛИЧЕСТВО</code>.`
+      `⚠️ <b>${alertLevel === "empty" ? "Товар закончился" : "Низкий остаток"}</b>\n\nТовар: <b>${escapeHtml(title)}</b>\n${escapeHtml(status)}\n\nПополните остаток командой <code>/shop_stock prize ${escapeHtml(productId)} КОЛИЧЕСТВО</code>.`
     );
     await setSystemState(env, stateKey, alertLevel);
   }
@@ -7941,9 +9966,13 @@ async function handlePlayerNameWorkflowMessage(message, workflow, env) {
 
 async function beginPlayerBlockWorkflow(query, telegramId, env) {
   const chatId = query.message?.chat?.id;
-  const access = await requirePlayerControlAccess(chatId, query.from, env);
+  const access = await requireSecurityPermission(chatId, query.from, "blockPlayers", env);
   if (!access) {
     await answerCallback(env, query.id, "Только владелец или администратор.", true);
+    return;
+  }
+  if (!access.owner && !access.permissions?.blockPlayers) {
+    await answerCallback(env, query.id, "Нет права блокировать игроков.", true);
     return;
   }
   if (!(await playerProfileExists(telegramId, env))) {
@@ -7977,9 +10006,10 @@ async function beginPlayerBlockWorkflow(query, telegramId, env) {
 
 async function handlePlayerBlockWorkflowMessage(message, workflow, env) {
   const chatId = message.chat.id;
-  const access = await requirePlayerControlAccess(chatId, message.from, env);
+  const access = await requireSecurityPermission(chatId, message.from, "blockPlayers", env);
   if (!access) {
     await clearStaffWorkflow(message.from.id, env);
+    if (access) await sendTelegramMessage(env, chatId, "Нет права блокировать игроков.");
     return true;
   }
   if (workflow.step !== "reason") {
@@ -8020,9 +10050,13 @@ async function handlePlayerBlockWorkflowMessage(message, workflow, env) {
 
 async function confirmPlayerBlock(query, telegramId, env) {
   const chatId = query.message?.chat?.id;
-  const access = await requirePlayerControlAccess(chatId, query.from, env);
+  const access = await requireSecurityPermission(chatId, query.from, "blockPlayers", env);
   if (!access) {
     await answerCallback(env, query.id, "Только владелец или администратор.", true);
+    return;
+  }
+  if (!access.owner && !access.permissions?.blockPlayers) {
+    await answerCallback(env, query.id, "Нет права блокировать игроков.", true);
     return;
   }
   const workflow = await getStaffWorkflow(query.from.id, env);
@@ -8062,6 +10096,7 @@ async function confirmPlayerBlock(query, telegramId, env) {
   await notifyPlayerModeration(env, targetId,
     `⛔ <b>Доступ к игре ограничен</b>\n\nСрок: <b>${escapeHtml(banDurationLabel(after.blockType, after.blockedUntil))}</b>\nПричина: <b>${escapeHtml(after.blockReason)}</b>\n\nПо вопросам обратитесь в поддержку игры.`
   );
+  await notifySubscribedStaff(env, "player_blocks", `⛔ <b>Игрок заблокирован</b>\n\nИгрок: <code>${escapeHtml(targetId)}</code>\nСрок: ${escapeHtml(banDurationLabel(after.blockType, after.blockedUntil))}\nПричина: ${escapeHtml(after.blockReason)}\nСотрудник: ${escapeHtml(telegramDisplayName(query.from))}`);
   await clearStaffWorkflow(query.from.id, env);
   await answerCallback(env, query.id, "Игрок заблокирован.");
   await sendTelegramMessage(env, chatId,
@@ -8072,9 +10107,13 @@ async function confirmPlayerBlock(query, telegramId, env) {
 
 async function beginPlayerUnblockWorkflow(query, telegramId, env) {
   const chatId = query.message?.chat?.id;
-  const access = await requirePlayerControlAccess(chatId, query.from, env);
+  const access = await requireSecurityPermission(chatId, query.from, "unblockPlayers", env);
   if (!access) {
     await answerCallback(env, query.id, "Только владелец или администратор.", true);
+    return;
+  }
+  if (!access.owner && !access.permissions?.unblockPlayers) {
+    await answerCallback(env, query.id, "Нет права разблокировать игроков.", true);
     return;
   }
   const control = await getPlayerAdminControl(telegramId, env);
@@ -8104,9 +10143,13 @@ async function beginPlayerUnblockWorkflow(query, telegramId, env) {
 
 async function confirmPlayerUnblock(query, telegramId, env) {
   const chatId = query.message?.chat?.id;
-  const access = await requirePlayerControlAccess(chatId, query.from, env);
+  const access = await requireSecurityPermission(chatId, query.from, "unblockPlayers", env);
   if (!access) {
     await answerCallback(env, query.id, "Только владелец или администратор.", true);
+    return;
+  }
+  if (!access.owner && !access.permissions?.unblockPlayers) {
+    await answerCallback(env, query.id, "Нет права разблокировать игроков.", true);
     return;
   }
   const workflow = await getStaffWorkflow(query.from.id, env);
@@ -8139,6 +10182,7 @@ async function confirmPlayerUnblock(query, telegramId, env) {
     previousBlockedUntil: before.blockedUntil
   });
   await notifyPlayerModeration(env, targetId, "✅ <b>Доступ к игре восстановлен</b>\n\nВы снова можете пользоваться игрой и участвовать в рейтинге.");
+  await notifySubscribedStaff(env, "player_blocks", `✅ <b>Игрок разблокирован</b>\n\nИгрок: <code>${escapeHtml(targetId)}</code>\nСотрудник: ${escapeHtml(telegramDisplayName(query.from))}`);
   await clearStaffWorkflow(query.from.id, env);
   await answerCallback(env, query.id, "Игрок разблокирован.");
   await sendTelegramMessage(env, chatId, `✅ Игрок <code>${escapeHtml(targetId)}</code> разблокирован и снова может пользоваться игрой.`);
@@ -8153,14 +10197,21 @@ async function processStaffOperationsCron(env) {
   await env.DB.prepare(`DELETE FROM bot_staff_workflows WHERE expires_at <= ?`).bind(now).run();
   await expireAllTemporaryPlayerBans(env);
   await processPendingAdminCampaign(env);
-  const lastFraudScan = Number(await getSystemState(env, "fraud:last_scan") || 0);
+  await processSafeControlCenterCron(env);
+  await processV67Cron(env);
+  await processV74PollCron(env);
+  await processV77Cron(env);
+  const fraudScanState = await getSystemState(env, "fraud:last_scan");
+  const lastFraudScan = Number(fraudScanState?.value || 0);
   if (!lastFraudScan || now - lastFraudScan >= 3600) {
     await scanFraudAlerts(env);
     await setSystemState(env, "fraud:last_scan", String(now));
   }
   await checkLowStockAlerts(env);
+  try { await syncOperationalProblems(env, { checkWebhook: true, checkCron: false }); } catch (error) { console.error("Operational problems sync failed", error); }
   await maybeSendDailyStaffReport(env);
   await setSystemState(env, "cron:last_success", String(now));
+  try { const overview = await buildAdminOverview(env, { syncProblems: false }); await writeCachedAdminOverview(env, overview); } catch (error) { console.error("Admin overview cache refresh failed", error); }
 }
 
 async function handleActiveStaffWorkflowMessage(message, env) {
@@ -8175,11 +10226,24 @@ async function handleActiveStaffWorkflowMessage(message, env) {
   if (workflow.flow_type === "redeem") return handleRedeemWorkflowMessage(message, workflow, env);
   if (workflow.flow_type === "ticket") return handleTicketWorkflowMessage(message, workflow, env);
   if (workflow.flow_type === "season_reward") return handleSeasonRewardWorkflowMessage(message, workflow, env);
+  if (workflow.flow_type === "safe_event") return handleSafeEventWorkflowMessage(message, workflow, env);
+  if (workflow.flow_type === "compensation") return handleCompensationWorkflowMessage(message, workflow, env);
   if (workflow.flow_type === "player_name") return handlePlayerNameWorkflowMessage(message, workflow, env);
   if (workflow.flow_type === "player_block_select") return handleBlockSelectMessage(message, workflow, env);
   if (workflow.flow_type === "player_unblock_select") return handleUnblockSelectMessage(message, workflow, env);
   if (workflow.flow_type === "player_block") return handlePlayerBlockWorkflowMessage(message, workflow, env);
   if (workflow.flow_type === "campaign") return handleCampaignWorkflowMessage(message, workflow, env);
+  if (workflow.flow_type === "promo_create") return handlePromoCodeWorkflowMessage(message, workflow, env);
+  if (workflow.flow_type === "universal_search") return handleUniversalAdminSearchMessage(message, workflow, env);
+  if (workflow.flow_type === "automation_create") return handleV67AutomationCreateMessage(message, workflow, env);
+  if (workflow.flow_type === "automation_edit") return handleV74AutomationEditMessage(message, workflow, env);
+  if (workflow.flow_type === "poll_create") return handleV74PollCreateMessage(message, workflow, env);
+  if (workflow.flow_type === "poll_response_comment") return handleV75PollResponseMessage(message, workflow, env);
+  if (workflow.flow_type === "v77_diag" || workflow.flow_type === "v77_series_create") return handleV77WorkflowMessage(message, workflow, env);
+  if (workflow.flow_type === "player_reset") return handlePlayerResetWorkflowMessage(message, workflow, env);
+  if (workflow.flow_type === "shop_price_edit") return handleShopPriceEditWorkflowMessage(message, workflow, env);
+  if (workflow.flow_type === "release_plan") return handleV67ReleaseWorkflowMessage(message, workflow, env);
+  if (workflow.flow_type === "staff_create") return handleStaffCreateWorkflowMessage(message, workflow, env);
   return false;
 }
 
@@ -8187,6 +10251,70 @@ async function handleStaffOperationsCallback(query, env) {
   const data = String(query.data || "");
   const chatId = query.message?.chat?.id;
   if (!chatId) return false;
+
+
+  if (data === "adm_team") {
+    await answerCallback(env, query.id, "Сотрудники обновлены.");
+    await showTeamManagement(chatId, query.from, env);
+    return true;
+  }
+  if (data === "adm_staff_create") {
+    await startStaffCreateWorkflow(query, env);
+    return true;
+  }
+  if (data === "adm_staff_cancel") {
+    await cancelStaffCreate(query, env);
+    return true;
+  }
+  if (data === "adm_staff_create_back") {
+    const access = await requireTeamPermission(chatId, query.from, "staff", env);
+    if (!access) return true;
+    const workflow = await getStaffWorkflow(query.from.id, env);
+    if (!workflow || workflow.flow_type !== "staff_create" || !workflow.data?.targetId) {
+      await answerCallback(env, query.id, "Создание уже завершено или истекло.", true);
+      return true;
+    }
+    await updateStaffWorkflow(query.from.id, { step: "role", data: { role: "" } }, env);
+    await answerCallback(env, query.id, "Выберите роль заново.");
+    await showStaffCreateRoleStep(chatId, query.from, String(workflow.data.targetId), { displayName: workflow.data.displayName, username: workflow.data.username }, Boolean(workflow.data.reactivating), access, env);
+    return true;
+  }
+  const createRole = data.match(/^adm_staff_create_role:(cashier|cook|administrator)$/);
+  if (createRole) {
+    await selectStaffCreateRole(query, createRole[1], env);
+    return true;
+  }
+  if (data === "adm_staff_create_confirm") {
+    await confirmStaffCreate(query, env);
+    return true;
+  }
+  const staffCard = data.match(/^adm_staff_card:(\d{4,20})$/);
+  if (staffCard) {
+    await answerCallback(env, query.id, "Открываю сотрудника.");
+    await showStaffMemberCard(chatId, query.from, staffCard[1], env);
+    return true;
+  }
+  const staffRoleMenu = data.match(/^adm_staff_role_menu:(\d{4,20})$/);
+  if (staffRoleMenu) {
+    await showStaffRoleMenu(query, staffRoleMenu[1], env);
+    return true;
+  }
+  const staffSetRole = data.match(/^adm_staff_set_role:(\d{4,20}):(cashier|cook|administrator)$/);
+  if (staffSetRole) {
+    await setStaffRoleFromButton(query, staffSetRole[1], staffSetRole[2], env);
+    return true;
+  }
+  const staffToggle = data.match(/^adm_staff_toggle:(\d{4,20}):(on|off)$/);
+  if (staffToggle) {
+    await toggleStaffFromButton(query, staffToggle[1], staffToggle[2] === "on", env);
+    return true;
+  }
+  const staffPermissions = data.match(/^adm_staff_permissions:(\d{4,20})$/);
+  if (staffPermissions) {
+    await answerCallback(env, query.id, "Открываю точные права.");
+    await showGranularPermissions(chatId, query.from, staffPermissions[1], env);
+    return true;
+  }
 
   const playerNameEdit = data.match(/^player_name:(\d{4,20})$/);
   if (playerNameEdit) {
@@ -8215,7 +10343,7 @@ async function handleStaffOperationsCallback(query, env) {
   }
   const playerGrant = data.match(/^player_grant:(\d{4,20})$/);
   if (playerGrant) {
-    const access = await requireTeamPermission(chatId, query.from, "points", env);
+    const access = await requireAnySecurityPermission(chatId, query.from, ["grantRewards", "grantLegendaryCases"], env);
     if (!access) { await answerCallback(env, query.id, "Недостаточно прав.", true); return true; }
     if (!(await playerProfileExists(playerGrant[1], env))) {
       await answerCallback(env, query.id, "Игрок не найден.", true);
@@ -8236,8 +10364,8 @@ async function handleStaffOperationsCallback(query, env) {
   }
   const playerAudit = data.match(/^player_audit:(\d{4,20})$/);
   if (playerAudit) {
-    await answerCallback(env, query.id, "Открываю историю.");
-    await showAdvancedAuditLog(chatId, query.from, playerAudit[1], env);
+    await answerCallback(env, query.id, "Открываю полную историю.");
+    await showPlayerTimeline(chatId, query.from, playerAudit[1], env);
     return true;
   }
   if (data === "daily_report_refresh") {
@@ -8253,7 +10381,7 @@ async function handleStaffOperationsCallback(query, env) {
     return true;
   }
   if (data === "grant_home") {
-    const access = await requireTeamPermission(chatId, query.from, "points", env);
+    const access = await requireAnySecurityPermission(chatId, query.from, ["grantRewards", "grantLegendaryCases"], env);
     if (!access) return true;
     await clearStaffWorkflow(query.from.id, env);
     await answerCallback(env, query.id, "Выберите награду.");
@@ -8262,7 +10390,9 @@ async function handleStaffOperationsCallback(query, env) {
   }
   const grantCatalog = data.match(/^grant_catalog:(case|avatar|frame|trail|skin)$/);
   if (grantCatalog) {
-    const access = await requireTeamPermission(chatId, query.from, "points", env);
+    const access = grantCatalog[1] === "case"
+      ? await requireAnySecurityPermission(chatId, query.from, ["grantRewards", "grantLegendaryCases"], env)
+      : await requireSecurityPermission(chatId, query.from, "grantRewards", env);
     if (!access) return true;
     await answerCallback(env, query.id, "Выберите предмет.");
     await sendTelegramMessage(env, chatId, `<b>${escapeHtml(({ case: "Кейсы", avatar: "Аватарки", frame: "Рамки", trail: "Следы", skin: "Скины" })[grantCatalog[1]])}</b>`, grantCatalogMarkup(grantCatalog[1]));
@@ -8367,10 +10497,10 @@ const LIVEOPS_CAMPAIGN_LEASE_SECONDS = 120;
 const LIVEOPS_RARITIES = Object.freeze(["common", "rare", "superrare", "epic", "mythic", "legendary"]);
 const LIVEOPS_CASE_IDS = Object.freeze(["small", "sweet", "gold", "legendary"]);
 const LIVEOPS_CASE_DEFAULTS = Object.freeze({
-  small: Object.freeze({ enabled: true, title: "Обычный кейс", guaranteeCount: 0, chances: { treats: 40.5, coffee: 40.5, points: 16.5, booster: 2.5, skin: 0, avatar: 0, frame: 0, trail: 0, physical: 0 }, ranges: { treats: [10, 20], coffee: [10, 20], points: [500, 1000] } }),
-  sweet: Object.freeze({ enabled: true, title: "Серебряный кейс", guaranteeCount: 0, chances: { treats: 30, coffee: 30, points: 23.5, booster: 12, skin: 0, avatar: 3, frame: 1, trail: 0.5, physical: 0 }, ranges: { treats: [20, 40], coffee: [20, 40], points: [1000, 2500] } }),
-  gold: Object.freeze({ enabled: true, title: "Золотой кейс", guaranteeCount: 0, chances: { treats: 25, coffee: 25, points: 26, booster: 15, skin: 0, avatar: 5, frame: 3, trail: 1, physical: 0 }, ranges: { treats: [40, 70], coffee: [40, 70], points: [2500, 5000] } }),
-  legendary: Object.freeze({ enabled: true, title: "Легендарный кейс", guaranteeCount: 50, chances: { treats: 25, coffee: 25, points: 39.955, booster: 0, skin: 0.5, avatar: 2, frame: 3, trail: 4.5, physical: 0.045 }, ranges: { treats: [250, 1200], coffee: [250, 1200], points: [35000, 150000] } })
+  small: Object.freeze({ enabled: true, title: "Обычный кейс", guaranteeCount: 0, chances: { treats: 40.5, coffee: 40.5, points: 16.5, booster: 2.5, skin: 0, avatar: 0, frame: 0, trail: 0, music: 0, physical: 0 }, ranges: { treats: [10, 20], coffee: [10, 20], points: [500, 1000] } }),
+  sweet: Object.freeze({ enabled: true, title: "Серебряный кейс", guaranteeCount: 0, chances: { treats: 30, coffee: 30, points: 23.5, booster: 12, skin: 0, avatar: 3, frame: 1, trail: 0.5, music: 0, physical: 0 }, ranges: { treats: [20, 40], coffee: [20, 40], points: [1000, 2500] } }),
+  gold: Object.freeze({ enabled: true, title: "Золотой кейс", guaranteeCount: 0, chances: { treats: 25, coffee: 25, points: 26, booster: 15, skin: 0, avatar: 5, frame: 3, trail: 1, music: 0, physical: 0 }, ranges: { treats: [40, 70], coffee: [40, 70], points: [2500, 5000] } }),
+  legendary: Object.freeze({ enabled: true, title: "Легендарный кейс", guaranteeCount: 50, chances: { treats: 25, coffee: 25, points: 39.455, booster: 0, skin: 0.5, avatar: 2, frame: 3, trail: 4.5, music: 0.5, physical: 0.045 }, ranges: { treats: [250, 1200], coffee: [250, 1200], points: [35000, 150000] } })
 });
 
 const LIVEOPS_CONTENT_IMAGES = Object.freeze({
@@ -8380,9 +10510,27 @@ const LIVEOPS_CONTENT_IMAGES = Object.freeze({
     legendary_avatar_2: "/assets/cases/avatars/legendary_avatarka_2.png",
     legendary_avatar_3: "/assets/cases/avatars/legendary_avatarka_3.png",
     legendary_avatar_4: "/assets/cases/avatars/legendary_avatarka_4.png",
-    legendary_avatar_5: "/assets/cases/avatars/legendary_avatarka_5.png"
+    legendary_avatar_5: "/assets/cases/avatars/legendary_avatarka_5.png",
+    champion: "/assets/cases/avatars/E8A3AFDB-BCAC-4623-BB8B-C7C429799061.PNG",
+    winter_cocoa: "/assets/cases/avatars/9FEC3750-A0ED-4053-8D12-EABF7798D914.PNG",
+    birthday_gift: "/assets/cases/avatars/64D37092-96E1-48BC-9BC5-BCBE99E15E02.PNG",
+    sweet_dreams: "/assets/cases/avatars/478DBDFA-BE30-4EF5-904E-59F205056E62.PNG",
+    strawberry_cake: "/assets/cases/avatars/1454DD0F-5B8E-4931-99CD-E249D9066526.PNG",
+    coffee_barista: "/assets/cases/avatars/42185960-59F9-4C06-8665-94B0A7621034.PNG",
+    marshmallow_cloud: "/assets/cases/avatars/A34D0D9F-4BF6-4618-8E2B-3D4833CED067.PNG",
+    pink_hearts: "/assets/cases/avatars/E74178F8-3156-4301-8559-D818D85404DA.PNG",
+    sakura: "/assets/cases/avatars/F1680265-2EC6-4028-9FED-E26997442675.PNG"
   }),
   frame: Object.freeze({
+    heart: "/assets/rating/frames/profile/ramka_profile_sedce.png",
+    marshmallow: "/assets/rating/frames/profile/ramka_profile_zefir.png",
+    coffee: "/assets/rating/frames/profile/ramka_profile_coffie.png",
+    strawberry: "/assets/rating/frames/profile/ramka_profile_klybnika.png",
+    winter: "/assets/rating/frames/profile/ramka_profile_zima.png",
+    sleep: "/assets/rating/frames/profile/ramka_profile_sleep.png",
+    lovers: "/assets/rating/frames/profile/ramka_profile_lovers.png",
+    elite: "/assets/rating/frames/profile/ramka_profile_elita.png",
+    princess: "/assets/rating/frames/profile/ramka_profile_princess.png",
     legendary_frame_1: "/assets/rating/frames/profile/legendary_ramka_1.png",
     legendary_frame_2: "/assets/rating/frames/profile/legendary_ramka_2.png",
     legendary_frame_3: "/assets/rating/frames/profile/legendary_ramka_3.png",
@@ -8390,13 +10538,25 @@ const LIVEOPS_CONTENT_IMAGES = Object.freeze({
     legendary_frame_5: "/assets/rating/frames/profile/legendary_ramka_5.png"
   }),
   trail: Object.freeze({
+    marshmallow: "/assets/cases/trails/BBFD9E7E-393D-4B0A-B990-CC93BFCFB505.PNG",
+    coffee: "/assets/cases/trails/244230CD-1043-4087-A5AC-E5BEBF949C22.PNG",
+    marshmallow_splash: "/assets/cases/trails/7F194357-28F3-4CC0-BD09-D4937777E361.PNG",
+    strawberry: "/assets/cases/trails/6A8C47A2-F099-40A9-8270-A676725538D8.PNG",
+    gold: "/assets/cases/trails/1C180321-0C98-48DD-9B43-0F6E5D3B61EA.PNG",
     legendary_trail_1: "/assets/cases/trails/legendary_trail_1.png",
     legendary_trail_2: "/assets/cases/trails/legendary_trail_2.png",
     legendary_trail_3: "/assets/cases/trails/legendary_trail_3.png",
     legendary_trail_4: "/assets/cases/trails/legendary_trail_4.png",
     legendary_trail_5: "/assets/cases/trails/legendary_trail_5.png?v=45"
   }),
-  skin: Object.freeze({})
+  skin: Object.freeze({
+    barista: "/assets/skins/avatars/barista.png",
+    strawberry: "/assets/skins/avatars/strawberry.png",
+    bee: "/assets/skins/avatars/bee.png",
+    sailor: "/assets/skins/avatars/sailor.png",
+    princess: "/assets/skins/avatars/princess.png",
+    angel: "/assets/skins/avatars/angel.png"
+  })
 });
 
 let liveOpsAdminSchemaPromise = null;
@@ -8424,10 +10584,15 @@ async function ensureLiveOpsAdminSchema(env) {
       const contentStatements = [];
       for (const [kind, catalog] of Object.entries({ avatar: CASE_AVATARS, frame: CASE_FRAMES, trail: CASE_TRAILS, skin: CASE_SKINS })) {
         for (const [itemId, item] of Object.entries(catalog)) {
+          const imageUrl = String(LIVEOPS_CONTENT_IMAGES[kind]?.[itemId] || "");
           contentStatements.push(env.DB.prepare(
             `INSERT OR IGNORE INTO liveops_content_items (item_kind, item_id, title, rarity, weight, enabled, is_new, legendary_only, image_url, updated_at, updated_by)
              VALUES (?, ?, ?, ?, ?, 1, ?, ?, ?, ?, 'system')`
-          ).bind(kind, itemId, String(item.title || itemId), String(item.rarity || "common"), Math.max(0, Number(item.weight || 1)), item.isNew ? 1 : 0, item.legendaryOnly ? 1 : 0, String(LIVEOPS_CONTENT_IMAGES[kind]?.[itemId] || ""), now));
+          ).bind(kind, itemId, String(item.title || itemId), String(item.rarity || "common"), Math.max(0, Number(item.weight || 1)), item.isNew ? 1 : 0, item.legendaryOnly ? 1 : 0, imageUrl, now));
+          if (imageUrl) contentStatements.push(env.DB.prepare(
+            `UPDATE liveops_content_items SET image_url = ?, updated_at = ?, updated_by = 'asset-backfill-v0.56'
+             WHERE item_kind = ? AND item_id = ? AND image_url = ''`
+          ).bind(imageUrl, now, kind, itemId));
         }
       }
       if (contentStatements.length) await env.DB.batch(contentStatements);
@@ -8450,7 +10615,12 @@ async function ensureLiveOpsAdminSchema(env) {
 function liveOpsCaseConfigFromRow(row) {
   const caseId = String(row?.case_id || "");
   const fallback = LIVEOPS_CASE_DEFAULTS[caseId] || LIVEOPS_CASE_DEFAULTS.small;
-  const chances = { ...fallback.chances, ...parseJsonObject(row?.chances_json, {}) };
+  const storedChances = parseJsonObject(row?.chances_json, {});
+  const chances = { ...fallback.chances, ...storedChances };
+  if (caseId === "legendary" && !Object.prototype.hasOwnProperty.call(storedChances, "music")) {
+    chances.music = 0.5;
+    chances.points = Math.max(0, Number(chances.points || 0) - 0.5);
+  }
   const ranges = { ...fallback.ranges, ...parseJsonObject(row?.ranges_json, {}) };
   return {
     id: caseId,
@@ -8521,33 +10691,150 @@ async function logLiveOpsConfigChange(env, user, entityType, entityId, action, o
   ).bind(entityType, entityId, action, JSON.stringify(oldValue || {}), JSON.stringify(newValue || {}), String(reason || "").slice(0, 300), String(user?.id || ""), telegramDisplayName(user), now).run();
 }
 
-function adminMainMenuMarkup(access) {
-  const rows = [
-    [{ text: "👤 Игроки", callback_data: "adm_players" }, { text: "🛡 Модерация", callback_data: "adm_moderation" }],
-    [{ text: "🎁 Награды", callback_data: "grant_home" }, { text: "☕ Физические товары", callback_data: "adm_physical" }],
-    [{ text: "📦 Контент", callback_data: "adm_content" }, { text: "🎲 Кейсы", callback_data: "adm_cases" }],
-    [{ text: "🛒 Магазин", callback_data: "adm_shop" }, { text: "📊 Экономика", callback_data: "adm_economy" }],
-    [{ text: "🎯 Сегменты", callback_data: "adm_segments" }, { text: "📣 Кампании", callback_data: "adm_campaigns" }],
-    [{ text: "🚨 Антифрод", callback_data: "adm_fraud" }, { text: "🧾 История настроек", callback_data: "adm_config_history" }],
-    [{ text: "🏆 Рейтинг", callback_data: "season_refresh" }, { text: "🎫 Обращения", callback_data: "tickets_open" }],
-    [{ text: "🩺 Система", callback_data: "status_refresh" }, { text: "📚 Все команды", callback_data: "adminpanel_commands" }]
-  ];
-  if (!access.owner && normalizeTeamRole(access.role) !== "administrator") {
-    return { inline_keyboard: rows.filter((_, index) => ![2, 3, 4, 5].includes(index)) };
-  }
+function adminMainMenuMarkup(access, overview = {}, env = {}) {
+  const can = (...permissions) => Boolean(access?.owner || permissions.some((permission) => access?.permissions?.[permission]));
+  const rows = [];
+  const addRow = (...buttons) => {
+    const visible = buttons.filter(Boolean);
+    if (visible.length) rows.push(visible);
+  };
+
+  addRow(
+    { text: "🔄 Обновить", callback_data: "adm_home_refresh" },
+    { text: `🚨 Проблемы${Number(overview?.issueCount || 0) ? ` · ${Number(overview.issueCount)}` : ""}`, callback_data: "ops_problems" },
+    { text: "🔎 Поиск", callback_data: "ops_search" }
+  );
+  addRow(
+    can("viewPlayers") && { text: "👤 Игроки", callback_data: "adm_players" },
+    can("viewPlayers") && { text: "🕓 История игрока", callback_data: "v57_history_help" }
+  );
+  addRow(
+    can("blockPlayers", "unblockPlayers") && { text: "🛡 Модерация", callback_data: "adm_moderation" },
+    can("staff", "approveDangerous") && { text: "👥 Сотрудники", callback_data: "adm_team" }
+  );
+  addRow(
+    { text: "🎓 Обучение", callback_data: "v78_training" },
+    can("approveDangerous") && { text: "♻️ Сброс игроков", callback_data: "v78_reset_home" }
+  );
+  addRow(
+    can("approveDangerous") && { text: "🔐 Точные права", callback_data: "v57_permissions" }
+  );
+  addRow(
+    can("grantRewards", "grantLegendaryCases") && { text: "🎁 Награды", callback_data: "grant_home" },
+    can("redeemPhysical") && { text: "☕ Физические товары", callback_data: "adm_physical" }
+  );
+  addRow(
+    can("redeemPhysical") && { text: "📷 Сканировать QR", web_app: { url: configuredStaffQrUrl(env) } },
+    can("redeemPhysical") && { text: "⌨️ Ввести код", callback_data: "adm_redeem_manual" }
+  );
+  addRow(
+    can("manageCases") && { text: "📦 Контент", callback_data: "adm_content" },
+    can("viewContentAnalytics") && { text: "📈 Аналитика контента", callback_data: "v57_content" }
+  );
+  addRow(
+    can("manageCases") && { text: "🎲 Кейсы", callback_data: "adm_cases" },
+    can("manageShop") && { text: "🛒 Магазин", callback_data: "adm_shop" }
+  );
+  addRow(
+    can("viewEconomy") && { text: "📊 Экономика", callback_data: "adm_economy" },
+    can("viewEconomy") && { text: "🎯 Сегменты", callback_data: "adm_segments" }
+  );
+  addRow(
+    can("massBroadcasts", "grantRewards", "manageSeasons") && { text: "🤖 Автоматизации", callback_data: "v67_automations" },
+    can("viewEconomy") && { text: "📊 Удержание", callback_data: "v67_retention" }
+  );
+  addRow(
+    (access?.owner || normalizeTeamRole(access?.role) === "administrator") && { text: "🧭 Центр управления", callback_data: "v77_home" }
+  );
+  addRow(
+    (access?.owner || normalizeTeamRole(access?.role) === "administrator") && { text: "🗳 Опросы", callback_data: "v74_polls_admin" }
+  );
+  addRow(
+    can("massBroadcasts") && { text: "📣 Кампании", callback_data: "adm_campaigns" },
+    can("managePromocodes") && { text: "🎟 Промокоды", callback_data: "v57_promos" }
+  );
+  addRow(
+    can("manageTesters") && { text: "🧪 Тестеры", callback_data: "v57_testers" },
+    can("manageMaintenance") && { text: "🛠 Техработы", callback_data: "v57_maintenance" }
+  );
+  addRow(
+    { text: "🔔 Уведомления", callback_data: "v57_notifications" },
+    can("approveDangerous") && { text: "✅ Подтверждения", callback_data: "v57_approvals" }
+  );
+  addRow(
+    can("rollbackSettings") && { text: "💾 Снимки", callback_data: "v57_snapshots" },
+    can("rollbackSettings") && { text: "🧾 История настроек", callback_data: "v67_settings_history" }
+  );
+  addRow(
+    can("manageSeasons") && { text: "🗓 События", callback_data: "safe_events" },
+    can("manageCases", "manageSeasons") && { text: "📝 Черновики", callback_data: "safe_drafts" }
+  );
+  addRow(
+    can("grantRewards") && { text: "📬 Очередь наград", callback_data: "safe_queue" },
+    can("grantRewards") && { text: "🧰 Компенсации", callback_data: "safe_comp" }
+  );
+  addRow(
+    can("viewEconomy") && { text: "🔎 Проверить игру", callback_data: "safe_check" },
+    can("manageSeasons") && { text: "🏆 Рейтинг", callback_data: "season_refresh" }
+  );
+  addRow(
+    can("approveDangerous") && { text: "📏 Лимиты", callback_data: "v65_limits" },
+    can("manageMaintenance", "manageCases", "managePromocodes") && { text: "🚩 Функции", callback_data: "v65_features" }
+  );
+  addRow(
+    can("manageCases") && { text: "🧪 Симулятор кейсов", callback_data: "v65_case_sim" },
+    can("manageCases", "manageSeasons") && { text: "🚀 Публикация", callback_data: "v65_publish" }
+  );
+  addRow(
+    can("viewEconomy") && { text: "⚡ Скорость", callback_data: "v67_performance" },
+    can("manageSeasons", "manageMaintenance") && { text: "🚀 План релиза", callback_data: "v67_releases" }
+  );
+  addRow(
+    can("manageShop", "redeemPhysical", "viewEconomy") && { text: "📦 Прогноз остатков", callback_data: "v67_stock_forecast" }
+  );
+  addRow(
+    { text: "🎫 Обращения", callback_data: "tickets_open" },
+    can("viewEconomy") && { text: "🩺 Система", callback_data: "status_refresh" }
+  );
+  addRow(
+    { text: "📚 Все команды", callback_data: "adminpanel_commands" },
+    { text: "🧹 Очистить чат", callback_data: "admin_clean_chat" }
+  );
   return { inline_keyboard: rows };
 }
-
-async function showAdminMainMenu(chatId, user, env) {
+async function showAdminMainMenu(chatId, user, env, options = {}) {
   const access = await getTeamAccess(user, env);
   if (!access.authorized) {
     await sendTelegramMessage(env, chatId, access.reason === "expired" ? "Сессия истекла. Выполните <code>/staff</code>." : "Доступно только сотрудникам.");
     return;
   }
-  await sendTelegramMessage(env, chatId,
-    `<b>⚙️ Админ-панель</b>\n\nСотрудник: <b>${escapeHtml(telegramDisplayName(user))}</b>\nРоль: <b>${escapeHtml(staffRoleTitle(access))}</b>\nWorker: <b>v${escapeHtml(WORKER_BUILD)}</b>\n\nВыберите раздел. Критические действия требуют подтверждения и записываются в журнал.`,
-    adminMainMenuMarkup(access)
-  );
+  let overview = null;
+  try { overview = await getAdminOverviewFast(env, Boolean(options.forceRefresh)); } catch (error) { console.error("Admin overview failed", error); }
+  const summary = overview
+    ? `\n\n<b>${overview.healthIcon} Состояние игры</b>\n` +
+      `Cron: <b>${escapeHtml(overview.cronText)}</b>\n` +
+      `Сезон: <b>${escapeHtml(overview.seasonTitle)}</b> · ${escapeHtml(overview.seasonStatus)}\n` +
+      `Проблемы: <b>${overview.issueCount}</b>${overview.urgent ? ` · срочных ${overview.urgent}` : ""}\n` +
+      `Очередь наград: <b>${overview.queuePending}</b>${overview.queueFailed ? ` · ошибок ${overview.queueFailed}` : ""}\n\n` +
+      `<b>Сегодня</b>\nИгроков: <b>${overview.activePlayers}</b> · новых ${overview.newPlayers}\n` +
+      `Забегов: <b>${overview.runs}</b> · зачтено ${overview.acceptedRuns}\n` +
+      `Кейсов: <b>${overview.cases}</b> · операций магазина ${overview.shopOps}\n` +
+      `Обращений открыто: <b>${overview.tickets}</b> · ошибок за час ${overview.errors}` +
+      `${overview.cacheAgeSeconds > 5 ? `\n<i>Сводка: ${Math.max(1, Math.floor(overview.cacheAgeSeconds / 60))} мин. назад</i>` : ""}`
+    : `\n\n🟡 Быстрая сводка временно недоступна. Остальные разделы работают.`;
+  const panelText = `<b>⚙️ Админ-панель</b>\n\nСотрудник: <b>${escapeHtml(telegramDisplayName(user))}</b>\nРоль: <b>${escapeHtml(staffRoleTitle(access))}</b>\nWorker: <b>v${escapeHtml(WORKER_BUILD)}</b>${summary}\n\nВыберите раздел. Критические действия требуют подтверждения и записываются в журнал.`;
+  const panelMarkup = adminMainMenuMarkup(access, overview || {}, env);
+  const editMessageId = Math.floor(Number(options.editMessageId) || 0);
+  if (editMessageId > 0) {
+    try {
+      await telegramApi(env, "editMessageText", { chat_id: chatId, message_id: editMessageId, text: panelText, parse_mode: "HTML", disable_web_page_preview: true, reply_markup: panelMarkup });
+      return;
+    } catch (error) {
+      if (/message is not modified/i.test(String(error?.description || error?.message || ""))) return;
+      console.error("Admin panel edit fallback", error);
+    }
+  }
+  await sendTelegramMessage(env, chatId, panelText, panelMarkup, { adminBack: false });
 }
 
 function banDurationLabel(blockType, blockedUntil) {
@@ -8598,14 +10885,14 @@ async function expireAllTemporaryPlayerBans(env) {
 }
 
 async function startBlockCommand(chatId, user, env) {
-  const access = await requirePlayerControlAccess(chatId, user, env);
+  const access = await requireSecurityPermission(chatId, user, "blockPlayers", env);
   if (!access) return;
   await setStaffWorkflow(user.id, chatId, "player_block_select", "target", {}, env);
   await sendTelegramMessage(env, chatId, `<b>Серьёзная блокировка</b>\n\nОтправьте Telegram ID или точный @username игрока. Код подтверждения вводить не нужно: далее будут выбор срока, причина и кнопка финального подтверждения.\n\nОтмена: <code>/cancel</code>`);
 }
 
 async function startUnblockCommand(chatId, user, env) {
-  const access = await requirePlayerControlAccess(chatId, user, env);
+  const access = await requireSecurityPermission(chatId, user, "unblockPlayers", env);
   if (!access) return;
   await setStaffWorkflow(user.id, chatId, "player_unblock_select", "target", {}, env);
   await sendTelegramMessage(env, chatId, `<b>Разблокировка игрока</b>\n\nОтправьте Telegram ID или точный @username игрока.\n\nОтмена: <code>/cancel</code>`);
@@ -8660,7 +10947,7 @@ async function handleUnblockSelectMessage(message, workflow, env) {
 }
 
 async function chooseBanDuration(query, telegramId, durationKey, env) {
-  const access = await requirePlayerControlAccess(query.message?.chat?.id, query.from, env);
+  const access = await requireSecurityPermission(query.message?.chat?.id, query.from, "blockPlayers", env);
   if (!access) return;
   const workflow = await getStaffWorkflow(query.from.id, env);
   if (!workflow || workflow.flow_type !== "player_block" || String(workflow.data?.targetId || "") !== String(telegramId)) {
@@ -8683,7 +10970,7 @@ async function chooseBanDuration(query, telegramId, durationKey, env) {
 }
 
 async function showBannedPlayers(chatId, user, env) {
-  const access = await requirePlayerControlAccess(chatId, user, env);
+  const access = await requireSecurityPermission(chatId, user, "viewPlayers", env);
   if (!access) return;
   await expireAllTemporaryPlayerBans(env);
   const result = await env.DB.prepare(
@@ -8751,7 +11038,7 @@ async function showPlayerNotes(chatId, user, rawTarget, env) {
 }
 
 async function showEconomyDashboard(chatId, user, env) {
-  const access = await requireTeamPermission(chatId, user, "points", env);
+  const access = await requireSecurityPermission(chatId, user, "viewEconomy", env);
   if (!access) return;
   const now = Math.floor(Date.now() / 1000);
   const day = moscowDayStartUnix();
@@ -8812,7 +11099,7 @@ async function segmentPlayerIds(env, key, limit = 10000) {
 }
 
 async function showSegmentsDashboard(chatId, user, env) {
-  const access = await requireTeamPermission(chatId, user, "points", env);
+  const access = await requireSecurityPermission(chatId, user, "viewEconomy", env);
   if (!access) return;
   const rows = [];
   for (const [key, title] of Object.entries(PLAYER_SEGMENTS)) {
@@ -8829,7 +11116,7 @@ async function showSegmentsDashboard(chatId, user, env) {
 }
 
 async function showSegmentPlayers(chatId, user, key, env) {
-  const access = await requireTeamPermission(chatId, user, "points", env);
+  const access = await requireSecurityPermission(chatId, user, "viewEconomy", env);
   if (!access) return;
   const ids = await segmentPlayerIds(env, key, 10000);
   const lines = [];
@@ -8849,7 +11136,7 @@ function campaignRewardTitle(kind, rewardId = "", amount = 1) {
 }
 
 async function startCampaignWorkflow(chatId, user, env, presetSegment = "") {
-  const access = await requirePlayerControlAccess(chatId, user, env);
+  const access = await requireSecurityPermission(chatId, user, "massBroadcasts", env);
   if (!access) return;
   await setStaffWorkflow(user.id, chatId, "campaign", presetSegment ? "reward" : "segment", presetSegment ? { segmentKey: presetSegment } : {}, env);
   if (presetSegment) {
@@ -8872,7 +11159,7 @@ function campaignRewardMarkup() {
 
 async function handleCampaignWorkflowMessage(message, workflow, env) {
   const chatId = message.chat.id;
-  const access = await requirePlayerControlAccess(chatId, message.from, env);
+  const access = await requireSecurityPermission(chatId, message.from, "massBroadcasts", env);
   if (!access) return true;
   if (workflow.step === "amount") {
     const amount = Math.floor(Number(String(message.text || "").replace(/\s/g, "")));
@@ -8893,9 +11180,21 @@ async function handleCampaignWorkflowMessage(message, workflow, env) {
     }
     await updateStaffWorkflow(message.from.id, { step: "confirm", data: { reason } }, env);
     const updated = await getStaffWorkflow(message.from.id, env);
-    const ids = await segmentPlayerIds(env, updated.data.segmentKey, 10000);
+    const dryRun = await buildCampaignDryRun(env, updated.data);
     await sendTelegramMessage(env, chatId,
-      `<b>Подтвердите массовую кампанию</b>\n\nСегмент: <b>${escapeHtml(PLAYER_SEGMENTS[updated.data.segmentKey] || updated.data.segmentKey)}</b>\nПолучателей: <b>${ids.length.toLocaleString("ru-RU")}</b>\nНаграда: <b>${escapeHtml(campaignRewardTitle(updated.data.rewardKind, updated.data.rewardId, updated.data.amount))}</b>\nПричина: <b>${escapeHtml(reason)}</b>\n\nКампания будет обработана очередью Cron и записана в журнал.`,
+      `<b>🧪 Сухой расчёт массовой кампании</b>
+
+Сегмент: <b>${escapeHtml(PLAYER_SEGMENTS[updated.data.segmentKey] || updated.data.segmentKey)}</b>
+Найдено: <b>${dryRun.uniqueCount.toLocaleString("ru-RU")}</b>
+Исключено тестеров: <b>${dryRun.testersExcluded}</b>
+Исключено заблокированных: <b>${dryRun.blockedExcluded}</b>
+Будет затронуто: <b>${dryRun.eligibleIds.length.toLocaleString("ru-RU")}</b>
+Награда: <b>${escapeHtml(campaignRewardTitle(updated.data.rewardKind, updated.data.rewardId, updated.data.amount))}</b>
+Всего единиц награды: <b>${dryRun.totalUnits.toLocaleString("ru-RU")}</b>${dryRun.estimatedPhysical ? `
+Ожидаемо физических наград из кейсов: <b>≈${dryRun.estimatedPhysical.toLocaleString("ru-RU", { maximumFractionDigits: 1 })}</b>` : ""}
+Причина: <b>${escapeHtml(reason)}</b>
+
+Ничего ещё не выдано. После подтверждения кампания будет обработана очередью Cron.`,
       { inline_keyboard: [[{ text: "✅ Запустить", callback_data: "campaign_confirm" }, { text: "Отмена", callback_data: "ops_cancel" }]] }
     );
     return true;
@@ -8906,7 +11205,7 @@ async function handleCampaignWorkflowMessage(message, workflow, env) {
 
 async function createCampaignFromWorkflow(query, env) {
   const chatId = query.message?.chat?.id;
-  const access = await requirePlayerControlAccess(chatId, query.from, env);
+  const access = await requireSecurityPermission(chatId, query.from, "massBroadcasts", env);
   if (!access) return;
   const workflow = await getStaffWorkflow(query.from.id, env);
   if (!workflow || workflow.flow_type !== "campaign" || workflow.step !== "confirm") {
@@ -8914,7 +11213,13 @@ async function createCampaignFromWorkflow(query, env) {
     return;
   }
   const data = workflow.data || {};
-  const ids = await segmentPlayerIds(env, data.segmentKey, 10000);
+  const usageCheck = await checkStaffUsageLimit(env, query.from, access, "campaigns_daily", 1);
+  if (!usageCheck.ok) {
+    await answerCallback(env, query.id, usageCheck.text, true);
+    return;
+  }
+  const dryRun = await buildCampaignDryRun(env, data);
+  const ids = dryRun.eligibleIds;
   if (!ids.length) {
     await answerCallback(env, query.id, "В сегменте нет игроков.", true);
     return;
@@ -8928,7 +11233,8 @@ async function createCampaignFromWorkflow(query, env) {
   ).bind(campaignId, `${PLAYER_SEGMENTS[data.segmentKey] || data.segmentKey}: ${campaignRewardTitle(data.rewardKind, data.rewardId, data.amount)}`, data.segmentKey, data.rewardKind, String(data.rewardId || ""), Number(data.amount || 1), data.reason, String(query.from.id), telegramDisplayName(query.from), String(chatId), ids.length, now, now).run();
   const statements = ids.map((id) => env.DB.prepare(`INSERT OR IGNORE INTO admin_campaign_recipients (campaign_id, telegram_id) VALUES (?, ?)`).bind(campaignId, id));
   for (let index = 0; index < statements.length; index += 80) await env.DB.batch(statements.slice(index, index + 80));
-  await logStaffAction(env, query.from, access, "campaign_create", null, "campaign", null, ids.length, { campaignId, ...data });
+  await logStaffAction(env, query.from, access, "campaign_create", null, "campaign", null, ids.length, { campaignId, ...data, dryRun: { testersExcluded: dryRun.testersExcluded, blockedExcluded: dryRun.blockedExcluded } });
+  await recordStaffUsage(env, query.from.id, "campaigns_daily", 1);
   await clearStaffWorkflow(query.from.id, env);
   await answerCallback(env, query.id, "Кампания запущена.");
   await sendTelegramMessage(env, chatId, `<b>📣 Кампания создана</b>\n\nID: <code>${escapeHtml(campaignId)}</code>\nПолучателей: <b>${ids.length.toLocaleString("ru-RU")}</b>\nСтатус: ожидает Cron.`, { inline_keyboard: [[{ text: "📋 Кампании", callback_data: "adm_campaigns" }, { text: "⬅️ Админ-панель", callback_data: "adm_home" }]] });
@@ -8975,13 +11281,15 @@ async function processPendingAdminCampaign(env) {
   await env.DB.prepare(`UPDATE admin_campaigns SET status = ?, processed_count = ?, failed_count = ?, completed_at = ?, updated_at = ?, lease_token = '', lease_until = 0 WHERE campaign_id = ? AND lease_token = ?`)
     .bind(completed ? "completed" : "running", Number(counts?.processed || 0), Number(counts?.failed || 0), completed ? finish : 0, finish, job.campaign_id, leaseToken).run();
   if (completed) {
-    try { await sendTelegramMessage(env, job.report_chat_id, `<b>📣 Кампания завершена</b>\n\n${escapeHtml(job.title)}\nУспешно: <b>${Number(counts?.processed || 0)}</b>\nОшибок: <b>${Number(counts?.failed || 0)}</b>`); } catch {}
+    const report = `<b>📣 Кампания завершена</b>\n\n${escapeHtml(job.title)}\nУспешно: <b>${Number(counts?.processed || 0)}</b>\nОшибок: <b>${Number(counts?.failed || 0)}</b>`;
+    try { await sendTelegramMessage(env, job.report_chat_id, report); } catch {}
+    await notifySubscribedStaff(env, "mass_grants", report);
   }
   return { processed: true, completed };
 }
 
 async function showCampaignsDashboard(chatId, user, env) {
-  const access = await requirePlayerControlAccess(chatId, user, env);
+  const access = await requireSecurityPermission(chatId, user, "massBroadcasts", env);
   if (!access) return;
   await ensureLiveOpsAdminSchema(env);
   const result = await env.DB.prepare(`SELECT * FROM admin_campaigns ORDER BY created_at DESC LIMIT 15`).all();
@@ -9001,10 +11309,14 @@ async function scanFraudAlerts(env) {
     const severity = Number(row.score || 0) >= 250000 ? "critical" : Number(row.score || 0) >= 100000 ? "high" : row.accepted && Number(row.duration_ms || 0) < 12000 ? "high" : "medium";
     const alertType = row.rejection_reason ? "rejected_run" : Number(row.score || 0) >= 100000 ? "extreme_score" : "too_fast_run";
     const fingerprint = `run:${row.run_id}:${alertType}`;
-    await env.DB.prepare(
+    const alertTitle = alertType === "extreme_score" ? "Аномально высокий результат" : alertType === "too_fast_run" ? "Зачтён слишком быстрый забег" : "Отклонённый забег";
+    const insertedAlert = await env.DB.prepare(
       `INSERT OR IGNORE INTO fraud_alerts (telegram_id, alert_type, severity, title, details_json, status, fingerprint, created_at, updated_at)
        VALUES (?, ?, ?, ?, ?, 'open', ?, ?, ?)`
-    ).bind(String(row.telegram_id), alertType, severity, alertType === "extreme_score" ? "Аномально высокий результат" : alertType === "too_fast_run" ? "Зачтён слишком быстрый забег" : "Отклонённый забег", JSON.stringify({ runId: row.run_id, score: row.score, durationMs: row.duration_ms, accepted: row.accepted, rejectionReason: row.rejection_reason }), fingerprint, row.created_at || now, now).run();
+    ).bind(String(row.telegram_id), alertType, severity, alertTitle, JSON.stringify({ runId: row.run_id, score: row.score, durationMs: row.duration_ms, accepted: row.accepted, rejectionReason: row.rejection_reason }), fingerprint, row.created_at || now, now).run();
+    if (Number(insertedAlert.meta?.changes || 0) > 0) {
+      await notifySubscribedStaff(env, "suspicious_runs", `🚨 <b>${escapeHtml(alertTitle)}</b>\n\nИгрок: <code>${escapeHtml(String(row.telegram_id))}</code>\nСчёт: <b>${Number(row.score || 0).toLocaleString("ru-RU")}</b>\nЗабег: <code>${escapeHtml(String(row.run_id))}</code>`);
+    }
   }
   const repeatedCodes = await env.DB.prepare(`SELECT owner_telegram_id AS telegram_id, COUNT(*) AS count FROM reward_codes WHERE created_at >= ? GROUP BY owner_telegram_id HAVING COUNT(*) >= 15 LIMIT 100`).bind(since).all();
   for (const row of repeatedCodes.results || []) {
@@ -9015,7 +11327,7 @@ async function scanFraudAlerts(env) {
 }
 
 async function showFraudDashboard(chatId, user, env) {
-  const access = await requirePlayerControlAccess(chatId, user, env);
+  const access = await requireSecurityPermission(chatId, user, "viewEconomy", env);
   if (!access) return;
   await scanFraudAlerts(env);
   const result = await env.DB.prepare(`SELECT * FROM fraud_alerts WHERE status IN ('open','reviewing') ORDER BY CASE severity WHEN 'critical' THEN 1 WHEN 'high' THEN 2 WHEN 'medium' THEN 3 ELSE 4 END, created_at DESC LIMIT 20`).all();
@@ -9027,7 +11339,7 @@ async function showFraudDashboard(chatId, user, env) {
 }
 
 async function showFraudAlert(chatId, user, alertId, env) {
-  const access = await requirePlayerControlAccess(chatId, user, env);
+  const access = await requireSecurityPermission(chatId, user, "viewEconomy", env);
   if (!access) return;
   const row = await env.DB.prepare(`SELECT * FROM fraud_alerts WHERE id = ? LIMIT 1`).bind(Number(alertId)).first();
   if (!row) {
@@ -9046,7 +11358,7 @@ async function showFraudAlert(chatId, user, alertId, env) {
 }
 
 async function updateFraudStatus(query, alertId, status, env) {
-  const access = await requirePlayerControlAccess(query.message?.chat?.id, query.from, env);
+  const access = await requireSecurityPermission(query.message?.chat?.id, query.from, "viewEconomy", env);
   if (!access) return;
   if (!["resolved", "dismissed", "reviewing"].includes(status)) return;
   await env.DB.prepare(`UPDATE fraud_alerts SET status = ?, assigned_to = ?, updated_at = ? WHERE id = ?`).bind(status, String(query.from.id), Math.floor(Date.now() / 1000), Number(alertId)).run();
@@ -9060,7 +11372,7 @@ function liveOpsKindLabel(kind) {
 }
 
 async function showContentDashboard(chatId, user, env) {
-  const access = await requirePlayerControlAccess(chatId, user, env);
+  const access = await requireSecurityPermission(chatId, user, "manageCases", env);
   if (!access) return;
   const config = await readLiveOpsConfig(env);
   const lines = Object.entries(config.content).map(([kind, items]) => {
@@ -9077,7 +11389,7 @@ async function showContentDashboard(chatId, user, env) {
 }
 
 async function showContentKind(chatId, user, kind, env) {
-  const access = await requirePlayerControlAccess(chatId, user, env);
+  const access = await requireSecurityPermission(chatId, user, "manageCases", env);
   if (!access) return;
   const config = await readLiveOpsConfig(env);
   const items = Object.entries(config.content[kind] || {}).sort(([, a], [, b]) => String(a.title).localeCompare(String(b.title), "ru"));
@@ -9090,7 +11402,7 @@ async function showContentKind(chatId, user, kind, env) {
 }
 
 async function toggleContentItem(query, kind, itemId, field, env) {
-  const access = await requirePlayerControlAccess(query.message?.chat?.id, query.from, env);
+  const access = await requireSecurityPermission(query.message?.chat?.id, query.from, "manageCases", env);
   if (!access) return;
   await ensureLiveOpsAdminSchema(env);
   const row = await env.DB.prepare(`SELECT * FROM liveops_content_items WHERE item_kind = ? AND item_id = ? LIMIT 1`).bind(kind, itemId).first();
@@ -9109,7 +11421,7 @@ async function toggleContentItem(query, kind, itemId, field, env) {
 }
 
 async function setContentWeight(chatId, user, kind, itemId, rawWeight, env) {
-  const access = await requirePlayerControlAccess(chatId, user, env);
+  const access = await requireSecurityPermission(chatId, user, "manageCases", env);
   if (!access) return;
   const weight = Number(rawWeight);
   if (!LIVEOPS_RARITIES || !["avatar", "frame", "trail", "skin"].includes(kind) || !Number.isFinite(weight) || weight < 0 || weight > 10000) {
@@ -9126,7 +11438,7 @@ async function setContentWeight(chatId, user, kind, itemId, rawWeight, env) {
 }
 
 async function showCasesAdminDashboard(chatId, user, env) {
-  const access = await requirePlayerControlAccess(chatId, user, env);
+  const access = await requireSecurityPermission(chatId, user, "manageCases", env);
   if (!access) return;
   const config = await readLiveOpsConfig(env);
   const lines = LIVEOPS_CASE_IDS.map((caseId) => {
@@ -9145,7 +11457,7 @@ async function showCasesAdminDashboard(chatId, user, env) {
 }
 
 async function showCaseAdminDetails(chatId, user, caseId, env) {
-  const access = await requirePlayerControlAccess(chatId, user, env);
+  const access = await requireSecurityPermission(chatId, user, "manageCases", env);
   if (!access) return;
   const config = await readLiveOpsConfig(env);
   const item = config.cases[caseId];
@@ -9159,22 +11471,21 @@ async function showCaseAdminDetails(chatId, user, caseId, env) {
 }
 
 async function toggleCaseEnabled(query, caseId, env) {
-  const access = await requirePlayerControlAccess(query.message?.chat?.id, query.from, env);
+  const access = await requireSecurityPermission(query.message?.chat?.id, query.from, "manageCases", env);
   if (!access) return;
+  await ensureLiveOpsAdminSchema(env);
   const old = await env.DB.prepare(`SELECT * FROM liveops_case_configs WHERE case_id = ? LIMIT 1`).bind(caseId).first();
   if (!old) { await answerCallback(env, query.id, "Кейс не найден.", true); return; }
-  await env.DB.prepare(`UPDATE liveops_case_configs SET enabled = CASE enabled WHEN 1 THEN 0 ELSE 1 END, updated_at = ?, updated_by = ? WHERE case_id = ?`).bind(Math.floor(Date.now() / 1000), String(query.from.id), caseId).run();
-  const next = await env.DB.prepare(`SELECT * FROM liveops_case_configs WHERE case_id = ? LIMIT 1`).bind(caseId).first();
-  await logLiveOpsConfigChange(env, query.from, "case", caseId, "toggle_enabled", old, next, "Изменение доступности кейса");
-  await answerCallback(env, query.id, "Статус кейса изменён.");
-  await showCaseAdminDetails(query.message.chat.id, query.from, caseId, env);
+  const current = liveOpsCaseConfigFromRow(old);
+  await answerCallback(env, query.id, "Создаю безопасный черновик.");
+  await stageCaseConfigDraft(query.message.chat.id, query.from, caseId, { enabled: !current.enabled }, `Доступность кейса · ${current.title}`, env);
 }
 
 async function setCaseChance(chatId, user, caseId, category, rawValue, env) {
-  const access = await requirePlayerControlAccess(chatId, user, env);
+  const access = await requireSecurityPermission(chatId, user, "manageCases", env);
   if (!access) return;
   if (!LIVEOPS_CASE_IDS.includes(caseId)) { await sendTelegramMessage(env, chatId, "Неизвестный кейс."); return; }
-  const allowed = ["points", "treats", "coffee", "booster", "skin", "avatar", "frame", "trail", "physical"];
+  const allowed = ["points", "treats", "coffee", "booster", "skin", "avatar", "frame", "trail", "music", "physical"];
   if (!allowed.includes(category)) { await sendTelegramMessage(env, chatId, `Категория: ${allowed.map((value) => `<code>${value}</code>`).join(", ")}.`); return; }
   const value = Number(String(rawValue).replace(",", "."));
   if (!Number.isFinite(value) || value < 0 || value > 100) { await sendTelegramMessage(env, chatId, "Шанс должен быть от 0 до 100."); return; }
@@ -9200,30 +11511,22 @@ async function setCaseChance(chatId, user, caseId, category, rawValue, env) {
     await sendTelegramMessage(env, chatId, `Изменение не сохранено: сумма станет <b>${total.toFixed(3)}%</b>, а должна быть ровно 100%. Для прямого изменения points сначала скорректируйте другую категорию.`);
     return;
   }
-  await env.DB.prepare(`UPDATE liveops_case_configs SET chances_json = ?, updated_at = ?, updated_by = ? WHERE case_id = ?`).bind(JSON.stringify(chances), Math.floor(Date.now() / 1000), String(user.id), caseId).run();
-  const next = { ...old, chances_json: JSON.stringify(chances) };
-  await logLiveOpsConfigChange(env, user, "case", caseId, "chance", old, next, `Категория ${category}`);
-  await logStaffAction(env, user, access, "case_chance_update", null, "case", null, null, { caseId, category, previous, value, points: chances.points });
-  await sendTelegramMessage(env, chatId,
-    `✅ Шанс <code>${escapeHtml(category)}</code> в кейсе <b>${escapeHtml(config.title)}</b> установлен на <b>${value}%</b>.` +
-    (adjustedPoints ? `\nШанс <code>points</code> автоматически изменён до <b>${Number(chances.points).toLocaleString("ru-RU", { maximumFractionDigits: 6 })}%</b>, поэтому сумма осталась 100%.` : "")
-  );
+  await logStaffAction(env, user, access, "case_chance_draft", null, "case", null, null, { caseId, category, previous, value, points: chances.points });
+  await stageCaseConfigDraft(chatId, user, caseId, { chances_json: chances }, `Шансы кейса · ${config.title}`, env);
+  if (adjustedPoints) await sendTelegramMessage(env, chatId, `ℹ️ Для сохранения суммы 100% шанс <code>points</code> в черновике автоматически изменён до <b>${Number(chances.points).toLocaleString("ru-RU", { maximumFractionDigits: 6 })}%</b>.`);
 }
 
 async function setCaseGuarantee(chatId, user, caseId, rawCount, env) {
-  const access = await requirePlayerControlAccess(chatId, user, env);
+  const access = await requireSecurityPermission(chatId, user, "manageCases", env);
   if (!access) return;
   const count = Math.floor(Number(rawCount));
   if (!LIVEOPS_CASE_IDS.includes(caseId) || !Number.isFinite(count) || count < 0 || count > 50) { await sendTelegramMessage(env, chatId, "Формат: <code>/case_guarantee CASE COUNT</code>. 0 отключает гарант, максимум 50."); return; }
-  const old = await env.DB.prepare(`SELECT * FROM liveops_case_configs WHERE case_id = ? LIMIT 1`).bind(caseId).first();
-  await env.DB.prepare(`UPDATE liveops_case_configs SET guarantee_count = ?, updated_at = ?, updated_by = ? WHERE case_id = ?`).bind(count, Math.floor(Date.now() / 1000), String(user.id), caseId).run();
-  const next = { ...old, guarantee_count: count };
-  await logLiveOpsConfigChange(env, user, "case", caseId, "guarantee", old, next, "Изменение гаранта");
-  await sendTelegramMessage(env, chatId, `✅ Гарант кейса <code>${escapeHtml(caseId)}</code>: <b>${count || "выключен"}</b>.`);
+  await logStaffAction(env, user, access, "case_guarantee_draft", null, "case", null, count, { caseId });
+  await stageCaseConfigDraft(chatId, user, caseId, { guarantee_count: count }, `Гарант кейса · ${caseId}`, env);
 }
 
 async function showCaseSimulation(chatId, user, caseId, env) {
-  const access = await requirePlayerControlAccess(chatId, user, env);
+  const access = await requireSecurityPermission(chatId, user, "manageCases", env);
   if (!access) return;
   const config = await readLiveOpsConfig(env);
   const item = config.cases[caseId];
@@ -9234,7 +11537,7 @@ async function showCaseSimulation(chatId, user, caseId, env) {
 }
 
 async function showConfigHistory(chatId, user, env) {
-  const access = await requirePlayerControlAccess(chatId, user, env);
+  const access = await requireSecurityPermission(chatId, user, "rollbackSettings", env);
   if (!access) return;
   await ensureLiveOpsAdminSchema(env);
   const result = await env.DB.prepare(`SELECT * FROM liveops_config_history ORDER BY created_at DESC, id DESC LIMIT 20`).all();
@@ -9245,40 +11548,377 @@ async function showConfigHistory(chatId, user, env) {
   await sendTelegramMessage(env, chatId, `<b>🧾 История настроек</b>\n\n${lines.join("\n\n") || "Изменений пока нет."}\n\nОткат создаёт новую запись истории и не удаляет старую.`, { inline_keyboard: buttons });
 }
 
-async function rollbackConfigChange(query, historyId, env) {
-  const access = await requirePlayerControlAccess(query.message?.chat?.id, query.from, env);
-  if (!access || !access.owner) {
-    await answerCallback(env, query.id, "Откат доступен только владельцу.", true);
-    return;
-  }
+async function restoreConfigHistoryById(historyId, user, env) {
+  await ensureLiveOpsAdminSchema(env);
   const row = await env.DB.prepare(`SELECT * FROM liveops_config_history WHERE id = ? LIMIT 1`).bind(Number(historyId)).first();
-  if (!row) { await answerCallback(env, query.id, "Запись не найдена.", true); return; }
+  if (!row) throw new Error("Запись истории не найдена");
+  if (!["content", "case"].includes(String(row.entity_type))) throw new Error("Для этого типа откат пока не поддерживается");
+  await createConfigSnapshot(env, "pre_rollback", `Перед откатом записи #${row.id}`, user);
   const oldValue = parseJsonObject(row.old_json, {});
+  const now = Math.floor(Date.now() / 1000);
   if (row.entity_type === "content") {
     const [kind, itemId] = String(row.entity_id).split(":");
     await env.DB.prepare(`UPDATE liveops_content_items SET title = ?, rarity = ?, weight = ?, enabled = ?, is_new = ?, legendary_only = ?, image_url = ?, updated_at = ?, updated_by = ? WHERE item_kind = ? AND item_id = ?`)
-      .bind(String(oldValue.title || itemId), String(oldValue.rarity || "common"), Number(oldValue.weight || 0), Number(oldValue.enabled || 0), Number(oldValue.is_new || 0), Number(oldValue.legendary_only || 0), String(oldValue.image_url || ""), Math.floor(Date.now() / 1000), String(query.from.id), kind, itemId).run();
-  } else if (row.entity_type === "case") {
-    await env.DB.prepare(`UPDATE liveops_case_configs SET enabled = ?, title = ?, guarantee_count = ?, chances_json = ?, ranges_json = ?, updated_at = ?, updated_by = ? WHERE case_id = ?`)
-      .bind(Number(oldValue.enabled || 0), String(oldValue.title || row.entity_id), Number(oldValue.guarantee_count || 0), String(oldValue.chances_json || "{}"), String(oldValue.ranges_json || "{}"), Math.floor(Date.now() / 1000), String(query.from.id), row.entity_id).run();
+      .bind(String(oldValue.title || itemId), String(oldValue.rarity || "common"), Number(oldValue.weight || 0), Number(oldValue.enabled || 0), Number(oldValue.is_new || 0), Number(oldValue.legendary_only || 0), String(oldValue.image_url || ""), now, String(user.id), kind, itemId).run();
   } else {
-    await answerCallback(env, query.id, "Для этого типа откат пока не поддерживается.", true);
-    return;
+    await env.DB.prepare(`UPDATE liveops_case_configs SET enabled = ?, title = ?, guarantee_count = ?, chances_json = ?, ranges_json = ?, updated_at = ?, updated_by = ? WHERE case_id = ?`)
+      .bind(Number(oldValue.enabled || 0), String(oldValue.title || row.entity_id), Number(oldValue.guarantee_count || 0), String(oldValue.chances_json || "{}"), String(oldValue.ranges_json || "{}"), now, String(user.id), row.entity_id).run();
   }
-  await logLiveOpsConfigChange(env, query.from, row.entity_type, row.entity_id, "rollback", parseJsonObject(row.new_json, {}), oldValue, `Откат записи #${row.id}`);
-  await answerCallback(env, query.id, "Настройка откатана.");
-  await showConfigHistory(query.message.chat.id, query.from, env);
+  await logLiveOpsConfigChange(env, user, row.entity_type, row.entity_id, "rollback", parseJsonObject(row.new_json, {}), oldValue, `Откат записи #${row.id}`);
+  await notifySubscribedStaff(env, "case_changes", `♻️ <b>Выполнен откат настройки</b>
+
+Запись: <b>#${row.id}</b>
+Тип: ${escapeHtml(row.entity_type)}
+Объект: <code>${escapeHtml(row.entity_id)}</code>
+Сотрудник: ${escapeHtml(telegramDisplayName(user))}`);
+  return row;
 }
 
-async function showShopAdminDashboard(chatId, user, env) {
-  const access = await requirePlayerControlAccess(chatId, user, env);
+async function rollbackConfigChange(query, historyId, env) {
+  const chatId = query.message?.chat?.id;
+  const access = await requireSecurityPermission(chatId, query.from, "rollbackSettings", env);
+  if (!access) {
+    await answerCallback(env, query.id, "Нет права откатывать настройки.", true);
+    return;
+  }
+  const row = await env.DB.prepare(`SELECT id,entity_type,entity_id FROM liveops_config_history WHERE id = ? LIMIT 1`).bind(Number(historyId)).first();
+  if (!row) { await answerCallback(env, query.id, "Запись не найдена.", true); return; }
+  if (!["content", "case"].includes(String(row.entity_type))) { await answerCallback(env, query.id, "Для этого типа откат пока не поддерживается.", true); return; }
+  const approvalId = await requestDangerousAction(env, query.from, "config_history_rollback", `Откатить настройку #${row.id} (${row.entity_type}:${row.entity_id})`, { historyId: Number(row.id), chatId: String(chatId) });
+  await answerCallback(env, query.id, "Создан запрос второго подтверждения.");
+  await sendTelegramMessage(env, chatId, `⚠️ Откат настройки требует подтверждения второго администратора. Запрос <b>#${approvalId}</b> создан.
+
+<code>/approve ${approvalId}</code>`);
+}
+
+function shopAdminProductListButtonText(productId, product) {
+  const title = botShopProductTitle(productId);
+  const price = botShopPriceText(product);
+  return `${title} · ${price}`.slice(0, 60);
+}
+
+async function showShopPriceEditList(chatId, user, env) {
+  const access = await requireSecurityPermission(chatId, user, "manageShop", env);
   if (!access) return;
   await ensureShopAssortmentSchema(env);
   const assortment = await readShopAssortment(env);
-  const lines = Object.entries(assortment).map(([id, item]) => `${item.enabled ? "🟢" : "⚫"} <b>${escapeHtml(SHOP_ASSORTMENT_PRODUCTS[id]?.title || id)}</b> · ${Number(item.points || 0).toLocaleString("ru-RU")} очк. · ${Number(item.treats || 0)} зеф. · ${Number(item.coffee || 0)} кофе`);
+  const productIds = Object.keys(SHOP_ASSORTMENT_PRODUCTS);
+  const keyboard = productIds.map((productId) => [{
+    text: `${assortment[productId]?.enabled ? "🟢" : "⚫"} ${shopAdminProductListButtonText(productId, assortment[productId])}`.slice(0, 64),
+    callback_data: `shop_price_pick:${productId}`
+  }]);
+  keyboard.push([{ text: "⬅️ Магазин", callback_data: "adm_shop" }]);
   await sendTelegramMessage(env, chatId,
-    `<b>🛒 Управление магазином</b>\n\n${lines.join("\n")}\n\nИзменить цену: <code>/price ТОВАР ЦЕНА</code>\nСкрыть: <code>/deletedprodyct ТОВАР</code>\nВернуть: <code>/addprodyct ТОВАР ЦЕНА</code>\nОстаток: <code>/setlimit ...</code>`,
-    { inline_keyboard: [[{ text: "📦 Остатки", callback_data: "stock_refresh" }, { text: "🧾 Ассортимент", callback_data: "shop_assortment_refresh" }], [{ text: "⬅️ Админ-панель", callback_data: "adm_home" }]] }
+    `<b>💰 Изменить стоимость товара</b>\n\nВыберите товар. Цена меняется и у активных, и у скрытых товаров. Скрытый товар останется скрытым.`,
+    { inline_keyboard: keyboard }
+  );
+}
+
+async function startShopPriceEditWorkflow(query, productId, env) {
+  const chatId = query.message?.chat?.id;
+  if (!chatId) return;
+  const access = await requireSecurityPermission(chatId, query.from, "manageShop", env);
+  if (!access) {
+    await answerCallback(env, query.id, "Нет права изменять цены.", true);
+    return;
+  }
+  if (!SHOP_ASSORTMENT_PRODUCTS[productId]) {
+    await answerCallback(env, query.id, "Товар не найден.", true);
+    return;
+  }
+  await ensureShopAssortmentSchema(env);
+  const current = await readShopAssortmentProduct(env, productId);
+  if (!current) {
+    await answerCallback(env, query.id, "Товар не найден.", true);
+    return;
+  }
+  await setStaffWorkflow(query.from.id, chatId, "shop_price_edit", "input", { productId }, env);
+  await answerCallback(env, query.id, "Введите новую цену.");
+  await sendTelegramMessage(env, chatId,
+    `<b>💰 Новая цена</b>\n\n` +
+    `Товар: <b>${escapeHtml(botShopProductTitle(productId))}</b>\n` +
+    `Статус: <b>${current.enabled ? "показан" : "скрыт"}</b>\n` +
+    `Текущая цена: <b>${escapeHtml(botShopPriceText(current))}</b>\n\n` +
+    `Отправьте новую цену одним сообщением. Примеры:\n` +
+    `<code>очки 40000 зефир 350</code>\n` +
+    `<code>кофе 350</code>\n` +
+    `<code>10000 100 100</code> — очки, зефир, кофе\n\n` +
+    `Неуказанные валюты станут равны нулю. Для отмены отправьте <code>/cancel</code>.`
+  );
+}
+
+async function handleShopPriceEditWorkflowMessage(message, workflow, env) {
+  const chatId = message.chat.id;
+  const access = await getTeamAccess(message.from, env);
+  if (!access.authorized || !(access.owner || access.permissions?.manageShop)) {
+    await clearStaffWorkflow(message.from.id, env);
+    await sendTelegramMessage(env, chatId, "Доступ к изменению цен больше не активен.");
+    return true;
+  }
+  if (workflow.step !== "input") {
+    await sendTelegramMessage(env, chatId, "Подтвердите или отмените изменение кнопками в предыдущем сообщении.");
+    return true;
+  }
+  const productId = String(workflow.data?.productId || "");
+  if (!SHOP_ASSORTMENT_PRODUCTS[productId]) {
+    await clearStaffWorkflow(message.from.id, env);
+    await sendTelegramMessage(env, chatId, "Товар больше не найден. Начните изменение цены заново.");
+    return true;
+  }
+  const tokens = String(message.text || "").trim().split(/\s+/).filter(Boolean);
+  const price = parseBotShopPrices(tokens);
+  if (!price) {
+    await sendTelegramMessage(env, chatId,
+      `Не удалось распознать цену. Отправьте, например:\n` +
+      `<code>очки 40000 зефир 350</code>\n` +
+      `<code>кофе 350</code>\n` +
+      `<code>10000 100 100</code>`
+    );
+    return true;
+  }
+  await ensureShopAssortmentSchema(env);
+  const current = await readShopAssortmentProduct(env, productId);
+  if (!current) {
+    await clearStaffWorkflow(message.from.id, env);
+    await sendTelegramMessage(env, chatId, "Товар больше не найден.");
+    return true;
+  }
+  await setStaffWorkflow(message.from.id, chatId, "shop_price_edit", "confirm", { productId, price }, env);
+  await sendTelegramMessage(env, chatId,
+    `<b>Подтвердите изменение цены</b>\n\n` +
+    `Товар: <b>${escapeHtml(botShopProductTitle(productId))}</b>\n` +
+    `Было: <b>${escapeHtml(botShopPriceText(current))}</b>\n` +
+    `Станет: <b>${escapeHtml(botShopPriceText(price))}</b>\n` +
+    `Статус товара: <b>${current.enabled ? "показан" : "скрыт"}</b>`,
+    { inline_keyboard: [
+      [{ text: "✅ Сохранить цену", callback_data: "shop_price_confirm" }],
+      [{ text: "❌ Отменить", callback_data: "shop_price_cancel" }]
+    ] }
+  );
+  return true;
+}
+
+async function confirmShopPriceEdit(query, env) {
+  const chatId = query.message?.chat?.id;
+  if (!chatId) return;
+  const access = await requireSecurityPermission(chatId, query.from, "manageShop", env);
+  if (!access) {
+    await answerCallback(env, query.id, "Нет права изменять цены.", true);
+    return;
+  }
+  const workflow = await getStaffWorkflow(query.from.id, env);
+  if (!workflow || workflow.flow_type !== "shop_price_edit" || workflow.step !== "confirm") {
+    await answerCallback(env, query.id, "Изменение цены устарело. Начните заново.", true);
+    return;
+  }
+  const productId = String(workflow.data?.productId || "");
+  const price = workflow.data?.price || null;
+  if (!SHOP_ASSORTMENT_PRODUCTS[productId] || !price || !Number.isSafeInteger(Number(price.points)) || !Number.isSafeInteger(Number(price.treats)) || !Number.isSafeInteger(Number(price.coffee)) || Number(price.points) + Number(price.treats) + Number(price.coffee) <= 0) {
+    await clearStaffWorkflow(query.from.id, env);
+    await answerCallback(env, query.id, "Данные цены повреждены. Начните заново.", true);
+    return;
+  }
+  await ensureShopAssortmentSchema(env);
+  const current = await readShopAssortmentProduct(env, productId);
+  if (!current) {
+    await clearStaffWorkflow(query.from.id, env);
+    await answerCallback(env, query.id, "Товар не найден.", true);
+    return;
+  }
+  await createConfigSnapshot(env, "pre_shop_change", `Перед изменением цены: ${botShopProductTitle(productId)}`, query.from)
+    .catch((error) => console.error("pre panel price snapshot failed", error));
+  const normalizedPrice = {
+    points: Math.max(0, Math.floor(Number(price.points) || 0)),
+    treats: Math.max(0, Math.floor(Number(price.treats) || 0)),
+    coffee: Math.max(0, Math.floor(Number(price.coffee) || 0))
+  };
+  const now = Math.floor(Date.now() / 1000);
+  const actorId = String(query.from.id);
+  const statements = [env.DB.prepare(
+    `UPDATE shop_assortment SET points=?, treats=?, coffee=?, updated_at=?, updated_by=? WHERE product_id=?`
+  ).bind(normalizedPrice.points, normalizedPrice.treats, normalizedPrice.coffee, now, actorId, productId)];
+  if (DEFAULT_SHOP_PRODUCTS[productId]) {
+    statements.push(env.DB.prepare(
+      `INSERT INTO shop_prices (product_id,points,treats,coffee,version,updated_at,updated_by)
+       VALUES (?,?,?,?,1,?,?)
+       ON CONFLICT(product_id) DO UPDATE SET
+         points=excluded.points,
+         treats=excluded.treats,
+         coffee=excluded.coffee,
+         version=shop_prices.version+1,
+         updated_at=excluded.updated_at,
+         updated_by=excluded.updated_by`
+    ).bind(productId, normalizedPrice.points, normalizedPrice.treats, normalizedPrice.coffee, now, actorId));
+  }
+  await env.DB.batch(statements);
+  const verified = await readShopAssortmentProduct(env, productId);
+  if (!verified || Number(verified.points) !== normalizedPrice.points || Number(verified.treats) !== normalizedPrice.treats || Number(verified.coffee) !== normalizedPrice.coffee) {
+    await answerCallback(env, query.id, "Не удалось проверить сохранение цены.", true);
+    return;
+  }
+  await logStaffAction(env, query.from, access, "shop_product_price_update", null, "product", null, null, {
+    productId,
+    source: "admin_panel",
+    previousPrice: { points: current.points, treats: current.treats, coffee: current.coffee },
+    price: normalizedPrice,
+    enabled: current.enabled
+  });
+  await clearStaffWorkflow(query.from.id, env);
+  await answerCallback(env, query.id, "Цена сохранена.");
+  await sendTelegramMessage(env, chatId,
+    `✅ Цена товара <b>${escapeHtml(botShopProductTitle(productId))}</b> изменена.\n\n` +
+    `Новая цена: <b>${escapeHtml(botShopPriceText(normalizedPrice))}</b>\n` +
+    `${current.enabled ? "Товар уже виден игрокам." : "Товар остаётся скрытым; новая цена применится после возвращения в магазин."}`,
+    { inline_keyboard: [[{ text: "⬅️ Магазин", callback_data: "adm_shop" }]] }
+  );
+}
+
+async function cancelShopPriceEdit(query, env) {
+  const chatId = query.message?.chat?.id;
+  if (!chatId) return;
+  await clearStaffWorkflow(query.from.id, env);
+  await answerCallback(env, query.id, "Изменение отменено.");
+  await showShopAdminDashboard(chatId, query.from, env);
+}
+
+async function showShopProductToggleList(chatId, user, mode, env) {
+  const access = await requireSecurityPermission(chatId, user, "manageShop", env);
+  if (!access) return;
+  await ensureShopAssortmentSchema(env);
+  const assortment = await readShopAssortment(env);
+  const targetEnabled = mode === "add";
+  const productIds = Object.keys(SHOP_ASSORTMENT_PRODUCTS).filter((productId) => {
+    const enabled = assortment[productId]?.enabled !== false;
+    return targetEnabled ? !enabled : enabled;
+  });
+  const title = targetEnabled ? "➕ Добавить товар в магазин" : "➖ Убрать товар из магазина";
+  const emptyText = targetEnabled
+    ? "Все доступные товары уже показаны игрокам."
+    : "В магазине сейчас нет активных товаров.";
+  const keyboard = productIds.map((productId) => [{
+    text: shopAdminProductListButtonText(productId, assortment[productId]),
+    callback_data: `shop_toggle_preview:${mode}:${productId}`
+  }]);
+  keyboard.push([{ text: "⬅️ Магазин", callback_data: "adm_shop" }]);
+  await sendTelegramMessage(env, chatId,
+    `<b>${title}</b>
+
+${productIds.length ? "Выберите товар. После этого бот покажет цену и попросит подтверждение." : emptyText}`,
+    { inline_keyboard: keyboard }
+  );
+}
+
+async function showShopProductTogglePreview(chatId, user, mode, productId, env) {
+  const access = await requireSecurityPermission(chatId, user, "manageShop", env);
+  if (!access) return;
+  if (!SHOP_ASSORTMENT_PRODUCTS[productId]) {
+    await sendTelegramMessage(env, chatId, "Товар не найден.");
+    return;
+  }
+  await ensureShopAssortmentSchema(env);
+  const product = await readShopAssortmentProduct(env, productId);
+  const targetEnabled = mode === "add";
+  const alreadyInTargetState = Boolean(product?.enabled) === targetEnabled;
+  const actionTitle = targetEnabled ? "Вернуть товар в магазин" : "Убрать товар из магазина";
+  const confirmText = targetEnabled ? "✅ Добавить в магазин" : "🗑 Убрать из магазина";
+  const note = targetEnabled
+    ? "Товар появится у игроков с сохранённой ценой."
+    : "Товар исчезнет из магазина. Уже купленные награды и коды останутся действительными.";
+  const keyboard = alreadyInTargetState
+    ? [[{ text: "⬅️ К списку", callback_data: `shop_toggle_list:${mode}` }]]
+    : [[{ text: confirmText, callback_data: `shop_toggle_confirm:${mode}:${productId}` }], [{ text: "⬅️ К списку", callback_data: `shop_toggle_list:${mode}` }]];
+  await sendTelegramMessage(env, chatId,
+    `<b>${escapeHtml(actionTitle)}</b>
+
+` +
+    `Товар: <b>${escapeHtml(botShopProductTitle(productId))}</b>
+` +
+    `Текущий статус: <b>${product?.enabled ? "показан" : "скрыт"}</b>
+` +
+    `Цена: <b>${escapeHtml(botShopPriceText(product))}</b>
+
+` +
+    `${alreadyInTargetState ? "Действие уже выполнено." : escapeHtml(note)}`,
+    { inline_keyboard: keyboard }
+  );
+}
+
+async function applyShopProductToggleFromPanel(query, mode, productId, env) {
+  const chatId = query.message?.chat?.id;
+  if (!chatId) return;
+  const access = await requireSecurityPermission(chatId, query.from, "manageShop", env);
+  if (!access) {
+    await answerCallback(env, query.id, "Нет права управлять магазином.", true);
+    return;
+  }
+  if (!SHOP_ASSORTMENT_PRODUCTS[productId]) {
+    await answerCallback(env, query.id, "Товар не найден.", true);
+    return;
+  }
+  const targetEnabled = mode === "add";
+  await ensureShopAssortmentSchema(env);
+  const current = await readShopAssortmentProduct(env, productId);
+  if (!current) {
+    await answerCallback(env, query.id, "Товар не найден.", true);
+    return;
+  }
+  if (Boolean(current.enabled) === targetEnabled) {
+    await answerCallback(env, query.id, targetEnabled ? "Товар уже добавлен." : "Товар уже скрыт.");
+    await showShopAdminDashboard(chatId, query.from, env);
+    return;
+  }
+  const actionWord = targetEnabled ? "добавлением" : "удалением";
+  await createConfigSnapshot(env, "pre_shop_change", `Перед ${actionWord} товара: ${botShopProductTitle(productId)}`, query.from)
+    .catch((error) => console.error("pre shop toggle snapshot failed", error));
+  const now = Math.floor(Date.now() / 1000);
+  await env.DB.prepare(
+    `INSERT INTO shop_assortment (product_id, enabled, points, treats, coffee, updated_at, updated_by)
+     VALUES (?, ?, ?, ?, ?, ?, ?)
+     ON CONFLICT(product_id) DO UPDATE SET
+       enabled = excluded.enabled,
+       updated_at = excluded.updated_at,
+       updated_by = excluded.updated_by`
+  ).bind(productId, targetEnabled ? 1 : 0, current.points, current.treats, current.coffee, now, String(query.from.id)).run();
+  const verified = await readShopAssortmentProduct(env, productId);
+  if (!verified || Boolean(verified.enabled) !== targetEnabled) {
+    await answerCallback(env, query.id, "Не удалось сохранить изменение.", true);
+    return;
+  }
+  await logStaffAction(env, query.from, access, targetEnabled ? "shop_product_enable" : "shop_product_disable", null, "product", current.enabled ? 1 : 0, targetEnabled ? 1 : 0, {
+    productId,
+    source: "admin_panel",
+    price: { points: current.points, treats: current.treats, coffee: current.coffee }
+  });
+  await answerCallback(env, query.id, targetEnabled ? "Товар добавлен в магазин." : "Товар убран из магазина.");
+  await showShopAdminDashboard(chatId, query.from, env);
+}
+
+async function showShopAdminDashboard(chatId, user, env) {
+  const access = await requireSecurityPermission(chatId, user, "manageShop", env);
+  if (!access) return;
+  await ensureShopAssortmentSchema(env);
+  const assortment = await readShopAssortment(env);
+  const entries = Object.entries(assortment);
+  const enabledCount = entries.filter(([, item]) => item.enabled).length;
+  const hiddenCount = entries.length - enabledCount;
+  const lines = entries.map(([id, item]) => `${item.enabled ? "🟢" : "⚫"} <b>${escapeHtml(SHOP_ASSORTMENT_PRODUCTS[id]?.title || id)}</b> · ${escapeHtml(botShopPriceText(item))}`);
+  await sendTelegramMessage(env, chatId,
+    `<b>🛒 Управление магазином</b>
+
+` +
+    `В магазине: <b>${enabledCount}</b> · скрыто: <b>${hiddenCount}</b>
+
+` +
+    `${lines.join("\n")}
+
+` +
+    `Теперь товар можно добавлять и убирать кнопками. Команды сохранены как запасной способ. Перед изменением создаётся снимок, действие записывается в аудит.`,
+    { inline_keyboard: [
+      [{ text: "➕ Добавить товар", callback_data: "shop_toggle_list:add" }, { text: "➖ Убрать товар", callback_data: "shop_toggle_list:remove" }],
+      [{ text: "💰 Изменить цену", callback_data: "shop_price_list" }],
+      [{ text: "🧾 Ассортимент", callback_data: "shop_assortment_refresh" }, { text: "📦 Остатки", callback_data: "stock_refresh" }],
+      [{ text: "⬅️ Админ-панель", callback_data: "adm_home" }]
+    ] }
   );
 }
 
@@ -9306,11 +11946,13 @@ async function recordRedemptionWorkContext(env, reward, user) {
     .bind(String(reward.code || ""), String(user.id), telegramDisplayName(user), String(context?.location_name || "Основное кафе"), String(context?.shift_name || ""), Math.floor(Date.now() / 1000)).run();
 }
 
-async function handleLiveOpsAdminCallback(query, env) {
+async function handleLiveOpsAdminCallback(query, env, runtime = {}) {
   const data = String(query.data || "");
   const chatId = query.message?.chat?.id;
   if (!chatId) return false;
-  if (data === "adm_home") { await answerCallback(env, query.id, "Админ-панель."); await showAdminMainMenu(chatId, query.from, env); return true; }
+  if (await handleSafeControlCenterCallback(query, env, runtime)) return true;
+  if (data === "adm_home") { await answerCallback(env, query.id, "Админ-панель."); await showAdminMainMenu(chatId, query.from, env, { forceRefresh: false, editMessageId: query.message?.message_id }); return true; }
+  if (data === "adm_home_refresh") { await answerCallback(env, query.id, "Обновляю сводку."); await showAdminMainMenu(chatId, query.from, env, { forceRefresh: true, editMessageId: query.message?.message_id }); return true; }
   if (data === "adm_players") { await answerCallback(env, query.id, "Список игроков."); await showPlayerMembers(chatId, query.from, env); return true; }
   if (data === "adm_moderation") { await answerCallback(env, query.id, "Модерация."); await showBannedPlayers(chatId, query.from, env); return true; }
   if (data === "ban_start") { await answerCallback(env, query.id, "Отправьте игрока."); await startBlockCommand(chatId, query.from, env); return true; }
@@ -9322,7 +11964,7 @@ async function handleLiveOpsAdminCallback(query, env) {
   const segmentView = data.match(/^segment_view:([a-z0-9_]+)$/); if (segmentView) { await answerCallback(env, query.id, "Открываю сегмент."); await showSegmentPlayers(chatId, query.from, segmentView[1], env); return true; }
   if (data === "campaign_start") { await answerCallback(env, query.id, "Новая кампания."); await startCampaignWorkflow(chatId, query.from, env); return true; }
   const campaignSegment = data.match(/^campaign_segment:([a-z0-9_]+)$/); if (campaignSegment) {
-    const access = await requirePlayerControlAccess(chatId, query.from, env); if (!access) return true;
+    const access = await requireSecurityPermission(chatId, query.from, "massBroadcasts", env); if (!access) return true;
     const current = await getStaffWorkflow(query.from.id, env);
     if (!current || current.flow_type !== "campaign") await setStaffWorkflow(query.from.id, chatId, "campaign", "reward", { segmentKey: campaignSegment[1] }, env);
     else await updateStaffWorkflow(query.from.id, { step: "reward", data: { segmentKey: campaignSegment[1] } }, env);
@@ -9350,30 +11992,1568 @@ async function handleLiveOpsAdminCallback(query, env) {
   const rollback = data.match(/^cfg_rollback:(\d+)$/); if (rollback) { await rollbackConfigChange(query, Number(rollback[1]), env); return true; }
   if (data === "adm_shop") { await answerCallback(env, query.id, "Магазин."); await showShopAdminDashboard(chatId, query.from, env); return true; }
   if (data === "shop_assortment_refresh") { await answerCallback(env, query.id, "Ассортимент обновлён."); await showShopProductsFromBot(chatId, query.from, env); return true; }
+  const shopToggleList = data.match(/^shop_toggle_list:(add|remove)$/); if (shopToggleList) { await answerCallback(env, query.id, "Выберите товар."); await showShopProductToggleList(chatId, query.from, shopToggleList[1], env); return true; }
+  const shopTogglePreview = data.match(/^shop_toggle_preview:(add|remove):([A-Za-z0-9_-]+)$/); if (shopTogglePreview) { await answerCallback(env, query.id, "Открываю товар."); await showShopProductTogglePreview(chatId, query.from, shopTogglePreview[1], shopTogglePreview[2], env); return true; }
+  const shopToggleConfirm = data.match(/^shop_toggle_confirm:(add|remove):([A-Za-z0-9_-]+)$/); if (shopToggleConfirm) { await applyShopProductToggleFromPanel(query, shopToggleConfirm[1], shopToggleConfirm[2], env); return true; }
+  if (data === "shop_price_list") { await answerCallback(env, query.id, "Выберите товар."); await showShopPriceEditList(chatId, query.from, env); return true; }
+  const shopPricePick = data.match(/^shop_price_pick:([A-Za-z0-9_-]+)$/); if (shopPricePick) { await startShopPriceEditWorkflow(query, shopPricePick[1], env); return true; }
+  if (data === "shop_price_confirm") { await confirmShopPriceEdit(query, env); return true; }
+  if (data === "shop_price_cancel") { await cancelShopPriceEdit(query, env); return true; }
   if (data === "adm_physical") { await answerCallback(env, query.id, "Физические награды."); await showStockDashboard(chatId, query.from, env); return true; }
+  if (data === "adm_redeem_manual") { await answerCallback(env, query.id, "Введите код награды."); await startRedeemWorkflow(chatId, query.from, env); return true; }
   return false;
 }
 
 // =============================================================
-// END LIVEOPS ADMIN CENTER v0.55
+// SAFE CONTROL CENTER v0.56
+// Планировщик, черновики, предпросмотр, диагностика, очередь наград
+// и единые шаблоны компенсаций.
 // =============================================================
 
-async function syncBotCommands(env) {
-  return telegramApi(env, "setMyCommands", { commands: BOT_COMMANDS });
+let safeControlCenterSchemaPromise = null;
+async function ensureSafeControlCenterSchema(env) {
+  if (!safeControlCenterSchemaPromise) {
+    safeControlCenterSchemaPromise = (async () => {
+      await env.DB.batch([
+        env.DB.prepare(`CREATE TABLE IF NOT EXISTS liveops_drafts (
+          id INTEGER PRIMARY KEY AUTOINCREMENT, entity_type TEXT NOT NULL, entity_id TEXT NOT NULL,
+          title TEXT NOT NULL DEFAULT '', base_json TEXT NOT NULL DEFAULT '{}', draft_json TEXT NOT NULL DEFAULT '{}',
+          status TEXT NOT NULL DEFAULT 'draft', validation_json TEXT NOT NULL DEFAULT '{}', created_by TEXT NOT NULL,
+          created_by_name TEXT NOT NULL DEFAULT '', created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL,
+          published_at INTEGER NOT NULL DEFAULT 0, published_by TEXT NOT NULL DEFAULT '', error_text TEXT NOT NULL DEFAULT '')`),
+        env.DB.prepare(`CREATE TABLE IF NOT EXISTS liveops_events (
+          event_id TEXT PRIMARY KEY, title TEXT NOT NULL, starts_at INTEGER NOT NULL, ends_at INTEGER NOT NULL,
+          status TEXT NOT NULL DEFAULT 'draft', draft_json TEXT NOT NULL DEFAULT '{}', published_json TEXT NOT NULL DEFAULT '{}',
+          runtime_snapshot_json TEXT NOT NULL DEFAULT '{}', created_by TEXT NOT NULL, created_by_name TEXT NOT NULL DEFAULT '',
+          created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL, published_at INTEGER NOT NULL DEFAULT 0,
+          started_at INTEGER NOT NULL DEFAULT 0, completed_at INTEGER NOT NULL DEFAULT 0,
+          start_notified INTEGER NOT NULL DEFAULT 0, end_notified INTEGER NOT NULL DEFAULT 0,
+          last_error TEXT NOT NULL DEFAULT '', lease_token TEXT NOT NULL DEFAULT '', lease_until INTEGER NOT NULL DEFAULT 0)`),
+        env.DB.prepare(`CREATE TABLE IF NOT EXISTS reward_delivery_queue (
+          id INTEGER PRIMARY KEY AUTOINCREMENT, telegram_id TEXT NOT NULL, source_type TEXT NOT NULL,
+          source_id TEXT NOT NULL DEFAULT '', reward_kind TEXT NOT NULL, reward_id TEXT NOT NULL DEFAULT '',
+          amount INTEGER NOT NULL DEFAULT 1, reason TEXT NOT NULL DEFAULT '', payload_json TEXT NOT NULL DEFAULT '{}',
+          status TEXT NOT NULL DEFAULT 'pending', attempts INTEGER NOT NULL DEFAULT 0, last_error TEXT NOT NULL DEFAULT '',
+          available_at INTEGER NOT NULL, created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL,
+          delivered_at INTEGER NOT NULL DEFAULT 0, claimed_at INTEGER NOT NULL DEFAULT 0, notify_after INTEGER NOT NULL DEFAULT 0,
+          report_chat_id TEXT NOT NULL DEFAULT '', lease_token TEXT NOT NULL DEFAULT '', lease_until INTEGER NOT NULL DEFAULT 0,
+          UNIQUE(source_type, source_id, telegram_id, reward_kind, reward_id))`),
+        env.DB.prepare(`CREATE TABLE IF NOT EXISTS compensation_templates (
+          template_id TEXT PRIMARY KEY, title TEXT NOT NULL, description TEXT NOT NULL DEFAULT '',
+          rewards_json TEXT NOT NULL DEFAULT '[]', enabled INTEGER NOT NULL DEFAULT 1,
+          owner_editable INTEGER NOT NULL DEFAULT 1, created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL,
+          updated_by TEXT NOT NULL DEFAULT '')`),
+        env.DB.prepare(`CREATE TABLE IF NOT EXISTS integrity_check_runs (
+          id INTEGER PRIMARY KEY AUTOINCREMENT, status TEXT NOT NULL, result_json TEXT NOT NULL DEFAULT '{}',
+          created_by TEXT NOT NULL DEFAULT '', created_at INTEGER NOT NULL)`),
+        env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_liveops_drafts_status ON liveops_drafts(status, updated_at DESC, id DESC)`),
+        env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_liveops_events_schedule ON liveops_events(status, starts_at, ends_at, lease_until)`),
+        env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_reward_delivery_queue_pending ON reward_delivery_queue(status, available_at, lease_until, created_at)`),
+        env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_reward_delivery_queue_player ON reward_delivery_queue(telegram_id, status, created_at DESC)`)
+      ]);
+      const now = Math.floor(Date.now() / 1000);
+      const defaults = [
+        ["small", "Маленькая компенсация", "500 очков", [{ kind: "points", amount: 500 }]],
+        ["medium", "Средняя компенсация", "1 000 очков и Обычный кейс", [{ kind: "points", amount: 1000 }, { kind: "case", id: "small", amount: 1 }]],
+        ["large", "Большая компенсация", "2 500 очков и Золотой кейс", [{ kind: "points", amount: 2500 }, { kind: "case", id: "gold", amount: 1 }]],
+        ["rating_failure", "Сбой рейтинга", "Легендарный кейс", [{ kind: "case", id: "legendary", amount: 1 }]],
+        ["physical_error", "Ошибка физической награды", "Восстановление кода после проверки", [{ kind: "physical_restore", amount: 1 }]]
+      ];
+      await env.DB.batch(defaults.map(([id, title, description, rewards]) => env.DB.prepare(
+        `INSERT OR IGNORE INTO compensation_templates
+         (template_id,title,description,rewards_json,enabled,owner_editable,created_at,updated_at,updated_by)
+         VALUES (?,?,?,?,1,1,?,?, 'system')`
+      ).bind(id, title, description, JSON.stringify(rewards), now, now)));
+    })().catch((error) => {
+      safeControlCenterSchemaPromise = null;
+      throw error;
+    });
+  }
+  await safeControlCenterSchemaPromise;
 }
 
-async function sendTelegramMessage(env, chatId, text, replyMarkup = null) {
+function safeJson(value, fallback = {}) {
+  try {
+    const parsed = typeof value === "string" ? JSON.parse(value) : value;
+    return parsed && typeof parsed === "object" ? parsed : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function safeEventId() {
+  return `evt_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`;
+}
+
+function parseMoscowDateTime(value) {
+  const text = String(value || "").trim();
+  let match = text.match(/^(\d{1,2})[.\/-](\d{1,2})[.\/-](\d{4})\s+(\d{1,2}):(\d{2})$/);
+  if (match) {
+    const [, day, month, year, hour, minute] = match.map(Number);
+    const timestamp = Date.UTC(year, month - 1, day, hour - 3, minute, 0) / 1000;
+    const check = new Date(timestamp * 1000 + 3 * 3600 * 1000);
+    if (check.getUTCFullYear() === year && check.getUTCMonth() === month - 1 && check.getUTCDate() === day && check.getUTCHours() === hour && check.getUTCMinutes() === minute) return Math.floor(timestamp);
+    return 0;
+  }
+  match = text.match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::\d{2})?(?:\+03:00|Z)?$/);
+  if (match) {
+    const [, year, month, day, hour, minute] = match.map(Number);
+    return Math.floor(Date.UTC(year, month - 1, day, hour - 3, minute, 0) / 1000);
+  }
+  return 0;
+}
+
+function parseSafeReward(value, allowNone = false) {
+  const text = String(value || "").trim();
+  if (allowNone && /^(none|нет|без награды)$/i.test(text)) return { kind: "none", id: "", amount: 0, title: "Без награды" };
+  const match = text.match(/^(points|очки|zefir|зефир|treats|coffee|кофе|case|кейс)\s+(?:(small|sweet|gold|legendary|обычный|серебряный|золотой|легендарный)\s+)?(\d{1,9})(?:\s*\|\s*(.{1,120}))?$/i);
+  if (!match) return null;
+  const rawKind = match[1].toLowerCase();
+  const kind = /points|очки/.test(rawKind) ? "points" : /zefir|зефир|treats/.test(rawKind) ? "zefir" : /coffee|кофе/.test(rawKind) ? "coffee" : "case";
+  const id = kind === "case" ? normalizeCaseType(match[2]) : "";
+  const amount = Math.floor(Number(match[3]) || 0);
+  if (amount < 1 || (kind === "case" && (!id || amount > 20))) return null;
+  const title = String(match[4] || grantRewardTitle(kind, id)).trim();
+  return { kind, id, amount, title };
+}
+
+function safeRewardDescription(reward) {
+  if (!reward || reward.kind === "none") return "Без награды";
+  if (reward.kind === "case") return `${reward.amount} × ${LEVEL_CASE_CONFIG[reward.id]?.title || reward.id}`;
+  const suffix = reward.kind === "points" ? "очков" : reward.kind === "zefir" ? "зефира" : reward.kind === "coffee" ? "кофе" : reward.kind;
+  return `${Number(reward.amount || 1).toLocaleString("ru-RU")} ${suffix}`;
+}
+
+async function createSafeDraft(env, user, entityType, entityId, title, baseValue, draftValue) {
+  await ensureSafeControlCenterSchema(env);
+  const now = Math.floor(Date.now() / 1000);
+  const result = await env.DB.prepare(
+    `INSERT INTO liveops_drafts
+     (entity_type,entity_id,title,base_json,draft_json,status,validation_json,created_by,created_by_name,created_at,updated_at)
+     VALUES (?,?,?,?,?,'draft','{}',?,?,?,?)`
+  ).bind(String(entityType), String(entityId), String(title || "Изменение").slice(0, 160), JSON.stringify(baseValue || {}), JSON.stringify(draftValue || {}), String(user?.id || ""), telegramDisplayName(user), now, now).run();
+  return Number(result.meta?.last_row_id || 0);
+}
+
+function safeDraftDiffText(row) {
+  const base = safeJson(row.base_json, {});
+  const draft = safeJson(row.draft_json, {});
+  const keys = Array.from(new Set([...Object.keys(base), ...Object.keys(draft)]));
+  const lines = [];
+  for (const key of keys) {
+    const before = typeof base[key] === "object" ? JSON.stringify(base[key]) : String(base[key] ?? "—");
+    const after = typeof draft[key] === "object" ? JSON.stringify(draft[key]) : String(draft[key] ?? "—");
+    if (before !== after) lines.push(`• <code>${escapeHtml(key)}</code>: ${escapeHtml(before)} → <b>${escapeHtml(after)}</b>`);
+  }
+  return lines.length ? lines.join("\n") : "Изменений не найдено.";
+}
+
+async function validateSafeDraftRow(row, env) {
+  const value = safeJson(row.draft_json, {});
+  const checks = [];
+  if (row.entity_type === "season_reward") {
+    const type = normalizeLeaderboardRewardType(value.reward_type);
+    const amount = Math.floor(Number(value.reward_amount || 0));
+    checks.push({ ok: Boolean(type && amount > 0), text: "Тип и количество награды" });
+    if (type === "case") checks.push({ ok: Boolean(normalizeCaseType(value.reward_item_id)), text: "Кейс существует" });
+    checks.push({ ok: Boolean(String(value.reward_image_url || "")), text: "Изображение указано" });
+  } else if (row.entity_type === "case") {
+    const total = Object.values(safeJson(value.chances_json || value.chances, {})).reduce((sum, item) => sum + Number(item || 0), 0);
+    checks.push({ ok: Math.abs(total - 100) <= 0.0005, text: `Сумма шансов: ${total.toFixed(3)}%` });
+    checks.push({ ok: Number(value.guarantee_count || 0) >= 0 && Number(value.guarantee_count || 0) <= 50, text: "Гарант от 0 до 50" });
+  } else if (row.entity_type === "event") {
+    checks.push({ ok: Number(value.startsAt || 0) > 0, text: "Дата старта" });
+    checks.push({ ok: Number(value.endsAt || 0) > Number(value.startsAt || 0), text: "Дата завершения позже старта" });
+    checks.push({ ok: Boolean(value.winnerReward && value.winnerReward.kind !== "none"), text: "Награда победителя" });
+    if (value.winnerReward?.imageUrl) checks.push({ ok: await assetExistsForIntegrity(env, value.winnerReward.imageUrl), text: "Изображение награды доступно" });
+  } else {
+    checks.push({ ok: true, text: "Структура данных" });
+  }
+  return { ok: checks.every((item) => item.ok), checks };
+}
+
+async function sendSafeDraftPreview(chatId, user, draftId, env) {
+  const access = await requireAnySecurityPermission(chatId, user, ["manageCases", "manageSeasons"], env);
+  if (!access) return;
+  await ensureSafeControlCenterSchema(env);
+  const row = await env.DB.prepare(`SELECT * FROM liveops_drafts WHERE id = ? LIMIT 1`).bind(Number(draftId)).first();
+  if (!row) {
+    await sendTelegramMessage(env, chatId, "Черновик не найден.");
+    return;
+  }
+  const validation = await validateSafeDraftRow(row, env);
+  await env.DB.prepare(`UPDATE liveops_drafts SET validation_json = ?, updated_at = ? WHERE id = ?`).bind(JSON.stringify(validation), Math.floor(Date.now() / 1000), row.id).run();
+  const checks = validation.checks.map((item) => `${item.ok ? "✅" : "❌"} ${escapeHtml(item.text)}`).join("\n");
+  const keyboard = [];
+  if (row.status === "draft") keyboard.push([{ text: "👁 Глазами игрока", callback_data: `safe_preview:${row.id}` }]);
+  if (row.status === "draft" && validation.ok) keyboard.push([{ text: "✅ Опубликовать", callback_data: `safe_publish:${row.id}` }, { text: "🗑 Отменить", callback_data: `safe_discard:${row.id}` }]);
+  keyboard.push([{ text: "⬅️ Черновики", callback_data: "safe_drafts" }]);
+  await sendTelegramMessage(env, chatId,
+    `<b>📝 Черновик #${row.id}</b>\n\n${escapeHtml(row.title)}\nТип: <code>${escapeHtml(row.entity_type)}</code>\nСтатус: <b>${escapeHtml(row.status)}</b>\n\n<b>Что изменится</b>\n${safeDraftDiffText(row)}\n\n<b>Проверка перед публикацией</b>\n${checks}\n\nИгроки продолжают видеть опубликованную версию, пока вы не нажмёте «Опубликовать».`,
+    { inline_keyboard: keyboard }
+  );
+}
+
+async function showSafeDraftsDashboard(chatId, user, env) {
+  const access = await requireAnySecurityPermission(chatId, user, ["manageCases", "manageSeasons"], env);
+  if (!access) return;
+  await ensureSafeControlCenterSchema(env);
+  const result = await env.DB.prepare(`SELECT * FROM liveops_drafts WHERE status = 'draft' ORDER BY updated_at DESC, id DESC LIMIT 20`).all();
+  const rows = result.results || [];
+  const lines = rows.map((row) => `• <b>#${row.id} ${escapeHtml(row.title)}</b>\n  ${escapeHtml(row.entity_type)} · ${escapeHtml(formatUtcDate(row.updated_at))}`);
+  const buttons = rows.map((row) => [{ text: `📝 #${row.id} ${String(row.title).slice(0, 28)}`, callback_data: `safe_draft:${row.id}` }]);
+  buttons.push([{ text: "⬅️ Админ-панель", callback_data: "adm_home" }]);
+  await sendTelegramMessage(env, chatId, `<b>📝 Черновики изменений</b>\n\n${lines.join("\n\n") || "Нет неопубликованных изменений."}`, { inline_keyboard: buttons });
+}
+
+async function publishSafeDraft(query, draftId, env) {
+  const chatId = query.message?.chat?.id;
+  const access = await requireAnySecurityPermission(chatId, query.from, ["manageCases", "manageSeasons"], env);
+  if (!access) return;
+  await ensureSafeControlCenterSchema(env);
+  const row = await env.DB.prepare(`SELECT * FROM liveops_drafts WHERE id = ? AND status = 'draft' LIMIT 1`).bind(Number(draftId)).first();
+  if (!row) return answerCallback(env, query.id, "Черновик уже обработан или не найден.", true);
+  const validation = await validateSafeDraftRow(row, env);
+  if (!validation.ok) return answerCallback(env, query.id, "Публикация заблокирована: проверка не пройдена.", true);
+  const value = safeJson(row.draft_json, {});
+  const base = safeJson(row.base_json, {});
+  const now = Math.floor(Date.now() / 1000);
+  await createConfigSnapshot(env, "pre_publish", `Перед публикацией черновика #${row.id}: ${row.title}`, query.from);
+  const claim = await env.DB.prepare(`UPDATE liveops_drafts SET status='publishing',updated_at=? WHERE id=? AND status='draft'`).bind(now,row.id).run();
+  if (Number(claim.meta?.changes || 0) < 1) return answerCallback(env, query.id, "Черновик уже публикуется или обработан.", true);
+  try {
+    if (row.entity_type === "season_reward") {
+      const current = await env.DB.prepare(`SELECT reward_type,reward_amount,reward_title,reward_image_url,reward_item_id FROM leaderboard_seasons WHERE id=? AND finalized_at IS NULL LIMIT 1`).bind(row.entity_id).first();
+      if (!current) throw new Error("Сезон завершён или не найден");
+      const currentSnapshot = { reward_type:String(current.reward_type||""), reward_amount:Number(current.reward_amount||0), reward_title:String(current.reward_title||""), reward_image_url:String(current.reward_image_url||""), reward_item_id:String(current.reward_item_id||"") };
+      if (JSON.stringify(currentSnapshot) !== JSON.stringify(base)) throw new Error("Опубликованная награда изменилась после создания черновика. Создайте новый черновик.");
+    } else if (row.entity_type === "case") {
+      const currentRow = await env.DB.prepare(`SELECT * FROM liveops_case_configs WHERE case_id=? LIMIT 1`).bind(row.entity_id).first();
+      if (!currentRow) throw new Error("Кейс не найден");
+      const current = liveOpsCaseConfigFromRow(currentRow);
+      const currentSnapshot = { enabled:current.enabled, title:current.title, guarantee_count:current.guaranteeCount, chances_json:current.chances, ranges_json:current.ranges };
+      if (JSON.stringify(currentSnapshot) !== JSON.stringify(base)) throw new Error("Настройки кейса изменились после создания черновика. Создайте новый черновик.");
+    }
+    if (row.entity_type === "season_reward") {
+      await env.DB.prepare(`UPDATE leaderboard_seasons SET reward_type = ?, reward_amount = ?, reward_title = ?, reward_image_url = ?, reward_item_id = ?, manual_override = 1, updated_at = ? WHERE id = ? AND finalized_at IS NULL`)
+        .bind(value.reward_type, Number(value.reward_amount || 0), String(value.reward_title || ""), String(value.reward_image_url || ""), String(value.reward_item_id || ""), now, row.entity_id).run();
+    } else if (row.entity_type === "case") {
+      await env.DB.prepare(`UPDATE liveops_case_configs SET enabled = ?, title = ?, guarantee_count = ?, chances_json = ?, ranges_json = ?, updated_at = ?, updated_by = ? WHERE case_id = ?`)
+        .bind(value.enabled ? 1 : 0, String(value.title || row.entity_id), Number(value.guarantee_count || 0), JSON.stringify(value.chances_json || value.chances || {}), JSON.stringify(value.ranges_json || value.ranges || {}), now, String(query.from.id), row.entity_id).run();
+    } else if (row.entity_type === "content") {
+      await env.DB.prepare(`UPDATE liveops_content_items SET enabled = ?, is_new = ?, weight = ?, title = ?, rarity = ?, image_url = ?, updated_at = ?, updated_by = ? WHERE item_kind || ':' || item_id = ?`)
+        .bind(value.enabled ? 1 : 0, value.is_new ? 1 : 0, Number(value.weight || 0), String(value.title || ""), String(value.rarity || "common"), String(value.image_url || ""), now, String(query.from.id), row.entity_id).run();
+    } else {
+      throw new Error("Этот тип черновика пока нельзя опубликовать автоматически.");
+    }
+    await env.DB.prepare(`UPDATE liveops_drafts SET status = 'published', published_at = ?, published_by = ?, updated_at = ?, error_text = '' WHERE id = ?`).bind(now, String(query.from.id), now, row.id).run();
+    await logLiveOpsConfigChange(env, query.from, row.entity_type, row.entity_id, "publish_draft", safeJson(row.base_json, {}), value, `Черновик #${row.id}`);
+    if (row.entity_type === "case" || row.entity_type === "content") await notifySubscribedStaff(env, "case_changes", `🎲 <b>Опубликованы изменения ${escapeHtml(row.entity_type)}</b>\n\n${escapeHtml(row.title)}\nСотрудник: ${escapeHtml(telegramDisplayName(query.from))}`);
+    await answerCallback(env, query.id, "Изменения опубликованы.");
+    await sendTelegramMessage(env, chatId, `✅ <b>Черновик #${row.id} опубликован</b>\n\n${escapeHtml(row.title)}\nИгроки теперь получают новую конфигурацию.`);
+  } catch (error) {
+    await env.DB.prepare(`UPDATE liveops_drafts SET status = 'failed', error_text = ?, updated_at = ? WHERE id = ?`).bind(String(error?.message || error).slice(0, 500), now, row.id).run();
+    await answerCallback(env, query.id, "Ошибка публикации.", true);
+    await sendTelegramMessage(env, chatId, `❌ Публикация не выполнена: ${escapeHtml(String(error?.message || error))}`);
+  }
+}
+
+async function showSafePlayerPreview(chatId, user, draftId, env) {
+  const access = await requireAnySecurityPermission(chatId, user, ["manageCases", "manageSeasons"], env);
+  if (!access) return;
+  const row = await env.DB.prepare(`SELECT * FROM liveops_drafts WHERE id = ? LIMIT 1`).bind(Number(draftId)).first();
+  if (!row) return sendTelegramMessage(env, chatId, "Черновик не найден.");
+  const value = safeJson(row.draft_json, {});
+  if (row.entity_type === "season_reward") {
+    const presentation = leaderboardRewardPresentation(value.reward_type, value.reward_amount, value.reward_item_id, value.reward_title, value.reward_image_url);
+    await sendTelegramMessage(env, chatId,
+      `<b>👁 Предпросмотр глазами игрока</b>\n\n🏆 <b>Награда за 1 место</b>\n┌──────────────────┐\n│ ${escapeHtml(presentation.title)}\n│ Количество: ${Number(presentation.amount || 1).toLocaleString("ru-RU")}\n│ Кнопка: «Получить награду»\n└──────────────────┘\n\nЭкран победителя: «Поздравляем! Вы заняли 1 место».\nИзображение: ${presentation.imageUrl ? `<code>${escapeHtml(presentation.imageUrl)}</code>` : "❌ не задано"}`,
+      { inline_keyboard: [[{ text: "⬅️ К черновику", callback_data: `safe_draft:${row.id}` }]] }
+    );
+    return;
+  }
+  if (row.entity_type === "case") {
+    const chances = value.chances_json || value.chances || {};
+    const liveops = await readLiveOpsConfig(env);
+    const newItems = Object.entries(liveops.content || {}).flatMap(([kind, items]) => Object.entries(items).filter(([, item]) => item.enabled && item.isNew).map(([id, item]) => `${kind}:${id} — ${item.title}`));
+    const chanceLines = Object.entries(chances).sort((a, b) => Number(b[1]) - Number(a[1])).map(([kind, chance]) => `• ${escapeHtml(kind)}: <b>${Number(chance).toLocaleString("ru-RU", { maximumFractionDigits: 6 })}%</b>`);
+    await sendTelegramMessage(env, chatId,
+      `<b>👁 Предпросмотр кейса</b>\n\nНазвание: <b>${escapeHtml(value.title || row.entity_id)}</b>\nДоступен: <b>${value.enabled ? "да" : "нет"}</b>\nГарант: <b>${Number(value.guarantee_count || 0) || "выключен"}</b>\n\n<b>Шансы</b>\n${chanceLines.join("\n")}\n\n<b>Метки NEW</b>\n${newItems.slice(0, 20).map((item) => escapeHtml(item)).join("\n") || "Нет активных NEW-предметов."}\n\nУже полученные предметы будут заменены компенсацией по текущим правилам игры.`,
+      { inline_keyboard: [[{ text: "⬅️ К черновику", callback_data: `safe_draft:${row.id}` }]] }
+    );
+    return;
+  }
+  await sendTelegramMessage(env, chatId, `<b>👁 Предпросмотр</b>\n\n${safeDraftDiffText(row)}`, { inline_keyboard: [[{ text: "⬅️ К черновику", callback_data: `safe_draft:${row.id}` }]] });
+}
+
+async function stageCaseConfigDraft(chatId, user, caseId, patch, title, env) {
+  const access = await requireSecurityPermission(chatId, user, "manageCases", env);
+  if (!access) return 0;
+  await ensureLiveOpsAdminSchema(env);
+  const row = await env.DB.prepare(`SELECT * FROM liveops_case_configs WHERE case_id = ? LIMIT 1`).bind(caseId).first();
+  if (!row) throw new Error("Кейс не найден.");
+  const current = liveOpsCaseConfigFromRow(row);
+  const next = {
+    enabled: patch.enabled == null ? current.enabled : Boolean(patch.enabled),
+    title: String(patch.title ?? current.title),
+    guarantee_count: patch.guarantee_count == null ? current.guaranteeCount : Number(patch.guarantee_count),
+    chances_json: patch.chances_json || current.chances,
+    ranges_json: patch.ranges_json || current.ranges
+  };
+  const draftId = await createSafeDraft(env, user, "case", caseId, title || `Кейс · ${current.title}`, {
+    enabled: current.enabled,
+    title: current.title,
+    guarantee_count: current.guaranteeCount,
+    chances_json: current.chances,
+    ranges_json: current.ranges
+  }, next);
+  await sendSafeDraftPreview(chatId, user, draftId, env);
+  return draftId;
+}
+
+async function showSafeEventsDashboard(chatId, user, env) {
+  const access = await requireSecurityPermission(chatId, user, "manageSeasons", env);
+  if (!access) return;
+  await ensureSafeControlCenterSchema(env);
+  const result = await env.DB.prepare(`SELECT * FROM liveops_events ORDER BY starts_at DESC LIMIT 20`).all();
+  const rows = result.results || [];
+  const lines = rows.map((row) => `• <b>${escapeHtml(row.title)}</b> · <code>${escapeHtml(row.event_id)}</code>\n  ${escapeHtml(row.status)} · ${escapeHtml(formatUtcDate(row.starts_at))} → ${escapeHtml(formatUtcDate(row.ends_at))}`);
+  const buttons = rows.slice(0, 12).map((row) => [{ text: `${row.status === "active" ? "🟢" : row.status === "scheduled" ? "🕒" : row.status === "draft" ? "📝" : "⚪"} ${String(row.title).slice(0, 28)}`, callback_data: `safe_event:${row.event_id}` }]);
+  buttons.push([{ text: "➕ Новое событие", callback_data: "safe_event_new" }, { text: "⬅️ Админ-панель", callback_data: "adm_home" }]);
+  await sendTelegramMessage(env, chatId,
+    `<b>🗓 Планировщик событий</b>\n\n${lines.join("\n\n") || "Событий пока нет."}\n\nБот проверяет расписание каждую минуту и сам включает сезон, товары, скидки, рассылки и подарки.`,
+    { inline_keyboard: buttons }
+  );
+}
+
+async function startSafeEventWorkflow(chatId, user, env) {
+  const access = await requireSecurityPermission(chatId, user, "manageSeasons", env);
+  if (!access) return;
+  await ensureSafeControlCenterSchema(env);
+  await setStaffWorkflow(user.id, chatId, "safe_event", "title", {}, env);
+  await sendTelegramMessage(env, chatId, `<b>Новое событие</b>\n\nШаг 1 из 6. Отправьте название события, например: <code>Летний забег</code>.\n\nОтмена: <code>/cancel</code>`);
+}
+
+async function handleSafeEventWorkflowMessage(message, workflow, env) {
+  const chatId = message.chat.id;
+  const user = message.from;
+  const access = await requireSecurityPermission(chatId, user, "manageSeasons", env);
+  if (!access) return true;
+  const text = String(message.text || "").trim();
+  const data = workflow.data || {};
+  if (workflow.step === "title") {
+    if (text.length < 3 || text.length > 100) return sendTelegramMessage(env, chatId, "Название должно содержать от 3 до 100 символов."), true;
+    await updateStaffWorkflow(user.id, { step: "start", data: { title: text } }, env);
+    await sendTelegramMessage(env, chatId, "<b>Шаг 2 из 6</b>\n\nВведите начало по Москве: <code>01.08.2026 10:00</code>.");
+    return true;
+  }
+  if (workflow.step === "start") {
+    const startsAt = parseMoscowDateTime(text);
+    if (!startsAt) return sendTelegramMessage(env, chatId, "Дата не распознана. Формат: <code>ДД.ММ.ГГГГ ЧЧ:ММ</code>."), true;
+    await updateStaffWorkflow(user.id, { step: "end", data: { startsAt } }, env);
+    await sendTelegramMessage(env, chatId, "<b>Шаг 3 из 6</b>\n\nВведите завершение по Москве: <code>14.08.2026 22:00</code>.");
+    return true;
+  }
+  if (workflow.step === "end") {
+    const endsAt = parseMoscowDateTime(text);
+    if (!endsAt || endsAt <= Number(data.startsAt || 0)) return sendTelegramMessage(env, chatId, "Завершение должно быть позже начала."), true;
+    await updateStaffWorkflow(user.id, { step: "winner", data: { endsAt } }, env);
+    await sendTelegramMessage(env, chatId, "<b>Шаг 4 из 6</b>\n\nНаграда за первое место. Примеры:\n<code>case legendary 1</code>\n<code>points 3000</code>\n<code>coffee 50 | 50 кофе</code>");
+    return true;
+  }
+  if (workflow.step === "winner") {
+    const winnerReward = parseSafeReward(text, false);
+    if (!winnerReward) return sendTelegramMessage(env, chatId, "Награда не распознана. Пример: <code>case legendary 1</code>."), true;
+    await updateStaffWorkflow(user.id, { step: "participant", data: { winnerReward } }, env);
+    await sendTelegramMessage(env, chatId, "<b>Шаг 5 из 6</b>\n\nПодарок участникам. Пример: <code>case sweet 1</code>.\nБез подарка: <code>нет</code>.");
+    return true;
+  }
+  if (workflow.step === "participant") {
+    const participantReward = parseSafeReward(text, true);
+    if (!participantReward) return sendTelegramMessage(env, chatId, "Подарок не распознан. Пример: <code>case sweet 1</code> или <code>нет</code>."), true;
+    await updateStaffWorkflow(user.id, { step: "image", data: { participantReward } }, env);
+    await sendTelegramMessage(env, chatId, "<b>Шаг 6 из 6</b>\n\nОтправьте HTTPS-ссылку или путь к изображению награды.\nАвтоматическая картинка по типу награды: <code>авто</code>.");
+    return true;
+  }
+  if (workflow.step === "image") {
+    const rawImage = text.trim();
+    const imageUrl = /^(авто|auto|нет|none)$/i.test(rawImage) ? "" : rawImage;
+    if (imageUrl && !/^(https:\/\/|\/assets\/)/i.test(imageUrl)) return sendTelegramMessage(env, chatId, "Укажите HTTPS-ссылку, путь <code>/assets/...</code> или <code>авто</code>."), true;
+    const now = Math.floor(Date.now() / 1000);
+    const eventId = safeEventId();
+    const winnerReward = { ...(data.winnerReward || {}), imageUrl };
+    const payload = {
+      title: data.title,
+      startsAt: Number(data.startsAt),
+      endsAt: Number(data.endsAt),
+      winnerReward,
+      participantReward: data.participantReward,
+      shop: { products: {}, discounts: {} },
+      broadcasts: {
+        start: `🏁 Событие «${data.title}» началось! Участвуйте в рейтинге до ${formatUtcDate(Number(data.endsAt))}.`,
+        end: `🏆 Событие «${data.title}» завершено. Проверьте результаты и награды.`
+      }
+    };
+    await env.DB.prepare(`INSERT INTO liveops_events (event_id,title,starts_at,ends_at,status,draft_json,published_json,runtime_snapshot_json,created_by,created_by_name,created_at,updated_at) VALUES (?,?,?,?,'draft',?,'{}','{}',?,?,?,?)`)
+      .bind(eventId, data.title, Number(data.startsAt), Number(data.endsAt), JSON.stringify(payload), String(user.id), telegramDisplayName(user), now, now).run();
+    await clearStaffWorkflow(user.id, env);
+    await showSafeEventDetails(chatId, user, eventId, env);
+    return true;
+  }
+  return true;
+}
+
+async function showSafeEventDetails(chatId, user, eventId, env) {
+  const access = await requireSecurityPermission(chatId, user, "manageSeasons", env);
+  if (!access) return;
+  await ensureSafeControlCenterSchema(env);
+  const row = await env.DB.prepare(`SELECT * FROM liveops_events WHERE event_id = ? LIMIT 1`).bind(eventId).first();
+  if (!row) return sendTelegramMessage(env, chatId, "Событие не найдено.");
+  const payload = safeJson(row.status === "draft" ? row.draft_json : row.published_json, {});
+  const products = Object.entries(payload.shop?.products || {}).map(([id, item]) => `• ${id}: ${item.points} очк. / ${item.treats} зеф. / ${item.coffee} кофе`);
+  const discounts = Object.entries(payload.shop?.discounts || {}).map(([id, percent]) => `• ${id}: −${percent}%`);
+  const buttons = [[{ text: "👁 Предпросмотр", callback_data: `safe_event_preview:${row.event_id}` }]];
+  if (row.status === "draft") buttons.push([{ text: "✅ Опубликовать", callback_data: `safe_event_publish:${row.event_id}` }, { text: "🗑 Отменить", callback_data: `safe_event_cancel:${row.event_id}` }]);
+  if (["scheduled", "active"].includes(row.status)) buttons.push([{ text: "⛔ Отменить событие", callback_data: `safe_event_cancel:${row.event_id}` }]);
+  buttons.push([{ text: "⬅️ События", callback_data: "safe_events" }]);
+  await sendTelegramMessage(env, chatId,
+    `<b>🗓 ${escapeHtml(row.title)}</b>\n\nID: <code>${escapeHtml(row.event_id)}</code>\nСтатус: <b>${escapeHtml(row.status)}</b>\nНачало: <b>${escapeHtml(formatUtcDate(row.starts_at))}</b>\nЗавершение: <b>${escapeHtml(formatUtcDate(row.ends_at))}</b>\n\nПервое место: <b>${escapeHtml(safeRewardDescription(payload.winnerReward))}</b>\nИзображение: ${payload.winnerReward?.imageUrl ? `<code>${escapeHtml(payload.winnerReward.imageUrl)}</code>` : "автоматическое"}\nУчастникам: <b>${escapeHtml(safeRewardDescription(payload.participantReward))}</b>\n\n<b>Временные товары</b>\n${products.join("\n") || "Не настроены."}\n\n<b>Скидки</b>\n${discounts.join("\n") || "Не настроены."}\n\nКоманды расширения:\n<code>/event_shop ${escapeHtml(row.event_id)} PRODUCT POINTS TREATS COFFEE</code>\n<code>/event_discount ${escapeHtml(row.event_id)} PRODUCT PERCENT</code>\n<code>/event_image ${escapeHtml(row.event_id)} URL_ИЛИ_АВТО</code>\n<code>/event_broadcast ${escapeHtml(row.event_id)} start ТЕКСТ</code>`,
+    { inline_keyboard: buttons }
+  );
+}
+
+async function patchSafeEventPayload(chatId, user, eventId, mutate, env) {
+  const access = await requireSecurityPermission(chatId, user, "manageSeasons", env);
+  if (!access) return;
+  await ensureSafeControlCenterSchema(env);
+  const row = await env.DB.prepare(`SELECT * FROM liveops_events WHERE event_id = ? AND status = 'draft' LIMIT 1`).bind(eventId).first();
+  if (!row) return sendTelegramMessage(env, chatId, "Можно менять только неопубликованный черновик события.");
+  const payload = safeJson(row.draft_json, {});
+  mutate(payload);
+  await env.DB.prepare(`UPDATE liveops_events SET draft_json = ?, updated_at = ? WHERE event_id = ?`).bind(JSON.stringify(payload), Math.floor(Date.now() / 1000), eventId).run();
+  await showSafeEventDetails(chatId, user, eventId, env);
+}
+
+async function patchSafeEventShop(chatId, user, eventId, productId, points, treats, coffee, env) {
+  if (!SHOP_ASSORTMENT_PRODUCTS[productId]) return sendTelegramMessage(env, chatId, "Неизвестный товар.");
+  return patchSafeEventPayload(chatId, user, eventId, (payload) => {
+    payload.shop ||= { products: {}, discounts: {} };
+    payload.shop.products ||= {};
+    payload.shop.products[productId] = { points: Math.max(0, Number(points)), treats: Math.max(0, Number(treats)), coffee: Math.max(0, Number(coffee)), enabled: true };
+  }, env);
+}
+
+async function patchSafeEventDiscount(chatId, user, eventId, productId, percent, env) {
+  if (!SHOP_ASSORTMENT_PRODUCTS[productId]) return sendTelegramMessage(env, chatId, "Неизвестный товар.");
+  const discount = Math.max(1, Math.min(90, Number(percent || 0)));
+  return patchSafeEventPayload(chatId, user, eventId, (payload) => {
+    payload.shop ||= { products: {}, discounts: {} };
+    payload.shop.discounts ||= {};
+    payload.shop.discounts[productId] = discount;
+  }, env);
+}
+
+async function patchSafeEventBroadcast(chatId, user, eventId, phase, text, env) {
+  return patchSafeEventPayload(chatId, user, eventId, (payload) => {
+    payload.broadcasts ||= {};
+    payload.broadcasts[phase] = String(text || "").slice(0, 3500);
+  }, env);
+}
+
+async function patchSafeEventImage(chatId, user, eventId, rawImage, env) {
+  const value = String(rawImage || "").trim();
+  const imageUrl = /^(авто|auto|нет|none)$/i.test(value) ? "" : value;
+  if (imageUrl && !/^(https:\/\/|\/assets\/)/i.test(imageUrl)) return sendTelegramMessage(env, chatId, "Укажите HTTPS-ссылку, путь <code>/assets/...</code> или <code>авто</code>.");
+  return patchSafeEventPayload(chatId, user, eventId, (payload) => {
+    payload.winnerReward ||= {};
+    payload.winnerReward.imageUrl = imageUrl;
+  }, env);
+}
+
+async function previewSafeEvent(chatId, user, eventId, env) {
+  const access = await requireSecurityPermission(chatId, user, "manageSeasons", env);
+  if (!access) return;
+  const row = await env.DB.prepare(`SELECT * FROM liveops_events WHERE event_id = ? LIMIT 1`).bind(eventId).first();
+  if (!row) return sendTelegramMessage(env, chatId, "Событие не найдено.");
+  const payload = safeJson(row.status === "draft" ? row.draft_json : row.published_json, {});
+  await sendTelegramMessage(env, chatId,
+    `<b>👁 Как событие увидит игрок</b>\n\n🏁 <b>${escapeHtml(row.title)}</b>\n${escapeHtml(formatUtcDate(row.starts_at))} — ${escapeHtml(formatUtcDate(row.ends_at))}\n\n🏆 Первое место: <b>${escapeHtml(safeRewardDescription(payload.winnerReward))}</b>\n🖼 Изображение: ${payload.winnerReward?.imageUrl ? `<code>${escapeHtml(payload.winnerReward.imageUrl)}</code>` : "автоматическое"}\n🎁 Участникам: <b>${escapeHtml(safeRewardDescription(payload.participantReward))}</b>\n\nСообщение о старте:\n${escapeHtml(payload.broadcasts?.start || "не задано")}\n\nСообщение о завершении:\n${escapeHtml(payload.broadcasts?.end || "не задано")}`,
+    { inline_keyboard: [[{ text: "⬅️ К событию", callback_data: `safe_event:${row.event_id}` }]] }
+  );
+}
+
+async function publishSafeEvent(query, eventId, env) {
+  const chatId = query.message?.chat?.id;
+  const access = await requireSecurityPermission(chatId, query.from, "manageSeasons", env);
+  if (!access) return;
+  const row = await env.DB.prepare(`SELECT * FROM liveops_events WHERE event_id = ? AND status = 'draft' LIMIT 1`).bind(eventId).first();
+  if (!row) return answerCallback(env, query.id, "Событие не найдено или уже опубликовано.", true);
+  const payload = safeJson(row.draft_json, {});
+  const fakeDraft = { entity_type: "event", draft_json: JSON.stringify(payload) };
+  const validation = await validateSafeDraftRow(fakeDraft, env);
+  if (!validation.ok) return answerCallback(env, query.id, "Событие не прошло проверку.", true);
+  const overlap = await env.DB.prepare(`SELECT event_id,title FROM liveops_events WHERE event_id <> ? AND status IN ('scheduled','active') AND starts_at < ? AND ends_at > ? LIMIT 1`).bind(eventId, row.ends_at, row.starts_at).first();
+  if (overlap) return answerCallback(env, query.id, `Пересекается с событием «${overlap.title}».`, true);
+  const now = Math.floor(Date.now() / 1000);
+  await env.DB.prepare(`UPDATE liveops_events SET status = 'scheduled', published_json = draft_json, published_at = ?, updated_at = ?, last_error = '' WHERE event_id = ?`).bind(now, now, eventId).run();
+  await answerCallback(env, query.id, "Событие опубликовано и поставлено в расписание.");
+  await showSafeEventDetails(chatId, query.from, eventId, env);
+}
+
+async function cancelSafeEvent(query, eventId, env) {
+  const chatId = query.message?.chat?.id;
+  const access = await requireSecurityPermission(chatId, query.from, "manageSeasons", env);
+  if (!access) return;
+  const row = await env.DB.prepare(`SELECT * FROM liveops_events WHERE event_id = ? LIMIT 1`).bind(eventId).first();
+  if (!row) return answerCallback(env, query.id, "Событие не найдено.", true);
+  if (row.status === "active") await finishSafeEvent(row, env, true);
+  await env.DB.prepare(`UPDATE liveops_events SET status = 'cancelled', updated_at = ?, completed_at = CASE WHEN completed_at = 0 THEN ? ELSE completed_at END WHERE event_id = ?`).bind(Math.floor(Date.now() / 1000), Math.floor(Date.now() / 1000), eventId).run();
+  await answerCallback(env, query.id, "Событие отменено.");
+  await showSafeEventsDashboard(chatId, query.from, env);
+}
+
+async function queueSystemBroadcast(env, text, reportChatId = "", dedupeKey = "") {
+  const messageText = String(text || "").trim();
+  if (!messageText) return null;
+  await ensureBotBroadcastSchema(env);
+  const totalRow = await env.DB.prepare(`SELECT COUNT(*) AS total FROM bot_subscribers WHERE active = 1`).first();
+  const total = Number(totalRow?.total || 0);
+  if (!total) return null;
+  const now = Math.floor(Date.now() / 1000);
+  const normalizedKey = String(dedupeKey || "").trim().replace(/[^A-Za-z0-9_-]/g, "_").slice(0, 96);
+  const id = normalizedKey ? `system_${normalizedKey}` : caseGrantId("event_post");
+  await env.DB.batch([
+    env.DB.prepare(`INSERT OR IGNORE INTO bot_broadcasts (broadcast_id,message_text,created_by,report_chat_id,created_at,status,total_count,sent_count,failed_count,updated_at,completed_at,completion_notified,lease_token,lease_until) VALUES (?,?, 'system', ?, ?, 'pending', ?,0,0,?,0,0,'',0)`).bind(id, messageText, String(reportChatId || ""), now, total, now),
+    env.DB.prepare(`INSERT OR IGNORE INTO bot_broadcast_deliveries (broadcast_id,subscriber_id,telegram_id,status,attempts,error_text,attempted_at) SELECT ?,id,telegram_id,'pending',0,'',0 FROM bot_subscribers WHERE active = 1`).bind(id)
+  ]);
+  return id;
+}
+
+async function restoreSafeEventShop(row, env, reason = "event_restore") {
+  const snapshot = safeJson(row?.runtime_snapshot_json, {});
+  if (!snapshot.shop) return;
+  await ensureShopAssortmentSchema(env);
+  const now = Math.floor(Date.now() / 1000);
+  for (const [productId, item] of Object.entries(snapshot.shop)) {
+    await env.DB.prepare(`UPDATE shop_assortment SET enabled=?,points=?,treats=?,coffee=?,updated_at=?,updated_by=? WHERE product_id=?`)
+      .bind(item.enabled ? 1 : 0, Number(item.points || 0), Number(item.treats || 0), Number(item.coffee || 0), now, `${reason}:${row.event_id}`, productId).run();
+  }
+}
+
+async function startSafeEvent(row, env) {
+  const payload = safeJson(row.published_json, {});
+  const now = Math.floor(Date.now() / 1000);
+  await ensureShopAssortmentSchema(env);
+  const savedSnapshot = safeJson(row.runtime_snapshot_json, {});
+  const currentShop = savedSnapshot.shop || await readShopAssortment(env);
+  const snapshot = savedSnapshot.shop ? savedSnapshot : { shop: currentShop };
+  if (!savedSnapshot.shop) {
+    await env.DB.prepare(`UPDATE liveops_events SET runtime_snapshot_json = ?, updated_at = ? WHERE event_id = ?`)
+      .bind(JSON.stringify(snapshot), now, row.event_id).run();
+  }
+  const productChanges = payload.shop?.products || {};
+  const discounts = payload.shop?.discounts || {};
+  for (const [productId, current] of Object.entries(currentShop)) {
+    const override = productChanges[productId] || {};
+    const discount = Math.max(0, Math.min(90, Number(discounts[productId] || 0)));
+    const base = { ...current, ...override };
+    const factor = (100 - discount) / 100;
+    await env.DB.prepare(`UPDATE shop_assortment SET enabled = ?, points = ?, treats = ?, coffee = ?, updated_at = ?, updated_by = ? WHERE product_id = ?`)
+      .bind(base.enabled === false ? 0 : 1, Math.floor(Number(base.points || 0) * factor), Math.floor(Number(base.treats || 0) * factor), Math.floor(Number(base.coffee || 0) * factor), now, `event:${row.event_id}`, productId).run();
+  }
+  const winner = payload.winnerReward || { kind: "case", id: "legendary", amount: 1 };
+  const presentation = leaderboardRewardPresentation(winner.kind === "zefir" ? "treats" : winner.kind, winner.amount, winner.id, winner.title, winner.imageUrl || "");
+  const seasonId = `event_${row.event_id}`;
+  await env.DB.prepare(`INSERT INTO leaderboard_seasons (id,title,starts_at,ends_at,status,reward_type,reward_amount,reward_claim_days,reset_plan_json,close_reason,created_at,updated_at,finalized_at,manual_override,reward_title,reward_image_url,reward_item_id) VALUES (?,?,?,?,'active',?, ?,30,?,'',?,?,NULL,1,?,?,?) ON CONFLICT(id) DO UPDATE SET title=excluded.title,starts_at=excluded.starts_at,ends_at=excluded.ends_at,status='active',reward_type=excluded.reward_type,reward_amount=excluded.reward_amount,reward_title=excluded.reward_title,reward_image_url=excluded.reward_image_url,reward_item_id=excluded.reward_item_id,manual_override=1,updated_at=excluded.updated_at`)
+    .bind(seasonId, row.title, row.starts_at, row.ends_at, presentation.type, presentation.amount, JSON.stringify(DEFAULT_SEASON_RESET_PLAN), now, now, presentation.title, presentation.imageUrl, presentation.itemId).run();
+  await env.DB.prepare(`UPDATE liveops_events SET status='active',runtime_snapshot_json=?,started_at=CASE WHEN started_at=0 THEN ? ELSE started_at END,updated_at=?,start_notified=0,last_error='',lease_token='',lease_until=0 WHERE event_id=?`).bind(JSON.stringify(snapshot), now, now, row.event_id).run();
+  await queueSystemBroadcast(env, payload.broadcasts?.start || `🏁 Событие «${row.title}» началось!`, "", `event_${row.event_id}_start`);
+  await env.DB.prepare(`UPDATE liveops_events SET start_notified=1,updated_at=? WHERE event_id=?`).bind(now,row.event_id).run();
+}
+
+async function enqueueRewardDelivery(env, telegramId, sourceType, sourceId, reward, reason, reportChatId = "") {
+  await ensureSafeControlCenterSchema(env);
+  if (!reward || reward.kind === "none") return 0;
+  const now = Math.floor(Date.now() / 1000);
+  const result = await env.DB.prepare(`INSERT OR IGNORE INTO reward_delivery_queue (telegram_id,source_type,source_id,reward_kind,reward_id,amount,reason,payload_json,status,attempts,last_error,available_at,created_at,updated_at,notify_after,report_chat_id,lease_token,lease_until) VALUES (?,?,?,?,?,?,?,'{}','pending',0,'',?,?,?, ?,?,'',0)`)
+    .bind(String(telegramId), String(sourceType), String(sourceId), String(reward.kind), String(reward.id || ""), Math.max(1, Number(reward.amount || 1)), String(reason || "").slice(0, 300), now, now, now, now + 900, String(reportChatId || "")).run();
+  return Number(result.meta?.last_row_id || 0);
+}
+
+async function finishSafeEvent(row, env, cancelled = false) {
+  const payload = safeJson(row.published_json, {});
+  const snapshot = safeJson(row.runtime_snapshot_json, {});
+  const now = Math.floor(Date.now() / 1000);
+  await restoreSafeEventShop(row, env, "event_restore");
+  const seasonId = `event_${row.event_id}`;
+  const season = await env.DB.prepare(`SELECT * FROM leaderboard_seasons WHERE id = ? LIMIT 1`).bind(seasonId).first();
+  if (season && !season.finalized_at) {
+    await env.DB.prepare(`UPDATE leaderboard_seasons SET ends_at=?,status='ended',updated_at=? WHERE id=?`).bind(now, now, seasonId).run();
+    const updated = await env.DB.prepare(`SELECT * FROM leaderboard_seasons WHERE id=? LIMIT 1`).bind(seasonId).first();
+    await finalizeSeason(env, updated, now);
+  }
+  if (!cancelled && payload.participantReward?.kind && payload.participantReward.kind !== "none") {
+    const participants = await env.DB.prepare(`SELECT telegram_id FROM leaderboard_entries WHERE season_id = ? AND hidden = 0`).bind(seasonId).all();
+    for (const participant of participants.results || []) {
+      await enqueueRewardDelivery(env, participant.telegram_id, "event_participant", row.event_id, payload.participantReward, `Участие в событии «${row.title}»`);
+    }
+  }
+  await env.DB.prepare(`UPDATE liveops_events SET status=?,completed_at=CASE WHEN completed_at=0 THEN ? ELSE completed_at END,updated_at=?,end_notified=0,last_error='',lease_token='',lease_until=0 WHERE event_id=?`).bind(cancelled ? "cancelled" : "completed", now, now, row.event_id).run();
+  await queueSystemBroadcast(env, cancelled ? `⛔ Событие «${row.title}» отменено.` : (payload.broadcasts?.end || `🏆 Событие «${row.title}» завершено.`), "", `event_${row.event_id}_${cancelled ? "cancel" : "end"}`);
+  await env.DB.prepare(`UPDATE liveops_events SET end_notified=1,updated_at=? WHERE event_id=?`).bind(now,row.event_id).run();
+}
+
+async function deliverQueuedReward(env, row) {
+  const amount = Math.max(1, Math.floor(Number(row.amount || 1)));
+  const telegramId = String(row.telegram_id);
+  let cosmeticDuplicate = false;
+  if (["points", "zefir", "coffee"].includes(row.reward_kind)) {
+    const field = ({ points: "pending_wallet", zefir: "pending_treats", coffee: "pending_coffee" })[row.reward_kind];
+    const result = await env.DB.prepare(`UPDATE admin_profile_state SET ${field} = ${field} + ?, revision = revision + 1, updated_at = ?, updated_by = ? WHERE telegram_id = ?`).bind(amount, Math.floor(Date.now() / 1000), `queue:${row.id}`, telegramId).run();
+    if (Number(result.meta?.changes || 0) < 1) throw new Error("Профиль игрока не найден");
+  } else if (row.reward_kind === "case") {
+    await createGrantedCases(env, telegramId, row.reward_id, amount, `queue:${row.id}`, row.reason);
+    const verification = await env.DB.prepare(`SELECT COUNT(*) AS count FROM granted_cases WHERE telegram_id=? AND granted_by=? AND status='pending'`).bind(telegramId,`queue:${row.id}`).first();
+    if (Number(verification?.count || 0) < amount) throw new Error("Кейс не появился в профиле после записи");
+  } else if (["avatar", "frame", "trail", "skin"].includes(row.reward_kind)) {
+    const cosmetic = await grantCosmeticToPlayer(env, telegramId, row.reward_kind, row.reward_id);
+    cosmeticDuplicate = Boolean(cosmetic?.alreadyOwned);
+  } else if (row.reward_kind === "physical_restore") {
+    throw new Error("Требуется ручная проверка и восстановление физического кода");
+  } else {
+    throw new Error("Неизвестный тип награды");
+  }
+  const rewardDescription = safeRewardDescription({ kind: row.reward_kind, id: row.reward_id, amount });
+  await recordPlayerTimeline(env, telegramId, "reward_delivery", cosmeticDuplicate ? `получил дубликат: ${rewardDescription}` : `получил ${rewardDescription}`, { queueId: row.id, sourceType: row.source_type, sourceId: row.source_id, reason: row.reason, duplicate: cosmeticDuplicate }, `queue_${row.id}`, null);
+  if (["avatar", "frame", "trail", "skin"].includes(row.reward_kind)) await recordContentAnalyticsEvent(env, telegramId, row.reward_kind, row.reward_id, cosmeticDuplicate ? "duplicate" : "acquired", row.source_type, row.source_id);
+  try {
+    const subscriber = await env.DB.prepare(`SELECT chat_id FROM bot_subscribers WHERE telegram_id=? AND active=1 LIMIT 1`).bind(telegramId).first();
+    if (subscriber?.chat_id) await sendTelegramMessage(env, subscriber.chat_id, `<b>🎁 Награда доставлена</b>\n\n${escapeHtml(safeRewardDescription({ kind: row.reward_kind, id: row.reward_id, amount }))}\nПричина: ${escapeHtml(row.reason || "Системная выдача")}\n\nНаграда уже записана в профиль. Откройте игру или обновите раздел с кейсами.`, { inline_keyboard: [[{ text: "🎮 Открыть игру", web_app: { url: configuredGameUrl(env) } }], [{ text: "📋 Задания", callback_data: "menu:tasks" }]] });
+  } catch {}
+}
+
+async function processRewardDeliveryQueue(env, limit = 25) {
+  await ensureSafeControlCenterSchema(env);
+  const now = Math.floor(Date.now() / 1000);
+  const rows = await env.DB.prepare(`SELECT * FROM reward_delivery_queue WHERE status IN ('pending','failed') AND available_at <= ? AND attempts < 5 AND (lease_until=0 OR lease_until < ?) ORDER BY created_at ASC LIMIT ?`).bind(now, now, limit).all();
+  for (const row of rows.results || []) {
+    const token = caseGrantId("reward_lock");
+    const lock = await env.DB.prepare(`UPDATE reward_delivery_queue SET status='delivering',lease_token=?,lease_until=?,updated_at=? WHERE id=? AND status IN ('pending','failed') AND (lease_until=0 OR lease_until < ?)`)
+      .bind(token, now + 60, now, row.id, now).run();
+    if (Number(lock.meta?.changes || 0) < 1) continue;
+    try {
+      await deliverQueuedReward(env, row);
+      await env.DB.prepare(`UPDATE reward_delivery_queue SET status='delivered',attempts=attempts+1,last_error='',delivered_at=?,updated_at=?,lease_token='',lease_until=0 WHERE id=? AND lease_token=?`).bind(now, now, row.id, token).run();
+    } catch (error) {
+      await env.DB.prepare(`UPDATE reward_delivery_queue SET status='failed',attempts=attempts+1,last_error=?,updated_at=?,lease_token='',lease_until=0,available_at=? WHERE id=? AND lease_token=?`).bind(String(error?.message || error).slice(0, 500), now, now + 300, row.id, token).run();
+    }
+  }
+}
+
+async function processPlayerRewardDeliveryQueue(env, telegramId, limit = 10) {
+  await ensureSafeControlCenterSchema(env);
+  const now = Math.floor(Date.now() / 1000);
+  const rows = await env.DB.prepare(`SELECT * FROM reward_delivery_queue WHERE telegram_id=? AND status IN ('pending','failed') AND available_at<=? AND attempts<5 AND (lease_until=0 OR lease_until<?) ORDER BY created_at ASC LIMIT ?`).bind(String(telegramId),now,now,Math.max(1,Math.min(25,Number(limit)||10))).all();
+  for (const row of rows.results || []) {
+    const token = caseGrantId("reward_player_lock");
+    const lock = await env.DB.prepare(`UPDATE reward_delivery_queue SET status='delivering',lease_token=?,lease_until=?,updated_at=? WHERE id=? AND status IN ('pending','failed') AND (lease_until=0 OR lease_until<?)`).bind(token,now+60,now,row.id,now).run();
+    if (Number(lock.meta?.changes || 0) < 1) continue;
+    try {
+      await deliverQueuedReward(env,row);
+      await env.DB.prepare(`UPDATE reward_delivery_queue SET status='delivered',attempts=attempts+1,last_error='',delivered_at=?,updated_at=?,lease_token='',lease_until=0 WHERE id=? AND lease_token=?`).bind(now,now,row.id,token).run();
+    } catch (error) {
+      await env.DB.prepare(`UPDATE reward_delivery_queue SET status='failed',attempts=attempts+1,last_error=?,updated_at=?,lease_token='',lease_until=0,available_at=? WHERE id=? AND lease_token=?`).bind(String(error?.message||error).slice(0,500),now,now+300,row.id,token).run();
+    }
+  }
+}
+
+async function showRewardQueueDashboard(chatId, user, env) {
+  const access = await requireSecurityPermission(chatId, user, "grantRewards", env);
+  if (!access) return;
+  await ensureSafeControlCenterSchema(env);
+  const [queueResult, staleCases, leaderboardPending, physicalPending] = await Promise.all([
+    env.DB.prepare(`SELECT * FROM reward_delivery_queue WHERE status IN ('pending','failed','delivering') ORDER BY CASE status WHEN 'failed' THEN 0 ELSE 1 END, created_at ASC LIMIT 30`).all(),
+    env.DB.prepare(`SELECT id,telegram_id,case_type,created_at FROM granted_cases WHERE status='opening' AND created_at < ? LIMIT 10`).bind(Math.floor(Date.now()/1000)-900).all(),
+    env.DB.prepare(`SELECT COUNT(*) AS count FROM leaderboard_rewards WHERE status='pending'`).first(),
+    env.DB.prepare(`SELECT COUNT(*) AS count FROM reward_codes WHERE status='active' AND expires_at > ?`).bind(Math.floor(Date.now()/1000)).first()
+  ]);
+  const rows = queueResult.results || [];
+  const lines = rows.map((row) => `${row.status === "failed" ? "❌" : row.status === "delivering" ? "🔄" : "⏳"} <b>#${row.id} ${escapeHtml(safeRewardDescription({ kind: row.reward_kind, id: row.reward_id, amount: row.amount }))}</b>\n  Игрок: <code>${escapeHtml(row.telegram_id)}</code> · попыток ${row.attempts}${row.last_error ? `\n  ${escapeHtml(row.last_error)}` : ""}`);
+  const buttons = rows.slice(0, 12).flatMap((row) => [
+    [{ text: `🔁 #${row.id}`, callback_data: `safe_queue_retry:${row.id}` }, { text: "👤 Игрок", callback_data: `player_refresh:${row.telegram_id}` }],
+    [{ text: "🎁 Компенсация", callback_data: `safe_queue_comp:${row.id}` }, { text: "✖️ Отменить", callback_data: `safe_queue_cancel:${row.id}` }]
+  ]);
+  buttons.push([{ text: "🔄 Обновить", callback_data: "safe_queue" }, { text: "🧰 Компенсация", callback_data: "safe_comp" }]);
+  buttons.push([{ text: "⬅️ Админ-панель", callback_data: "adm_home" }]);
+  await sendTelegramMessage(env, chatId,
+    `<b>📬 Центр недоставленных наград</b>\n\n${lines.join("\n\n") || "Системная очередь пуста."}\n\nОжидают получения в рейтинге: <b>${Number(leaderboardPending?.count || 0)}</b>\nАктивные физические коды: <b>${Number(physicalPending?.count || 0)}</b>\nЗависшие открытия кейсов: <b>${(staleCases.results || []).length}</b>`,
+    { inline_keyboard: buttons }
+  );
+}
+
+async function retryQueuedReward(query, id, env) {
+  const access = await requireSecurityPermission(query.message?.chat?.id, query.from, "grantRewards", env);
+  if (!access) return;
+  await env.DB.prepare(`UPDATE reward_delivery_queue SET status='pending',attempts=0,available_at=?,lease_token='',lease_until=0,last_error='',notify_after=?,updated_at=? WHERE id=? AND status IN ('failed','delivering','pending')`).bind(Math.floor(Date.now()/1000), Math.floor(Date.now()/1000)+900, Math.floor(Date.now()/1000), Number(id)).run();
+  await answerCallback(env, query.id, "Награда поставлена на повторную выдачу.");
+  await showRewardQueueDashboard(query.message.chat.id, query.from, env);
+}
+
+async function cancelQueuedReward(query, id, env) {
+  const access = await requireSecurityPermission(query.message?.chat?.id, query.from, "grantRewards", env);
+  if (!access) return;
+  await env.DB.prepare(`UPDATE reward_delivery_queue SET status='cancelled',updated_at=?,lease_token='',lease_until=0 WHERE id=? AND status NOT IN ('delivered','claimed','cancelled')`).bind(Math.floor(Date.now()/1000), Number(id)).run();
+  await answerCallback(env, query.id, "Награда отменена.");
+  await showRewardQueueDashboard(query.message.chat.id, query.from, env);
+}
+
+async function showCompensationTemplates(chatId, user, env) {
+  const access = await requireSecurityPermission(chatId, user, "grantRewards", env);
+  if (!access) return;
+  await ensureSafeControlCenterSchema(env);
+  const result = await env.DB.prepare(`SELECT * FROM compensation_templates WHERE enabled=1 ORDER BY template_id`).all();
+  const rows = result.results || [];
+  const lines = rows.map((row) => `• <b>${escapeHtml(row.title)}</b> · <code>${escapeHtml(row.template_id)}</code>\n  ${escapeHtml(row.description)}`);
+  await sendTelegramMessage(env, chatId,
+    `<b>🧰 Готовые компенсации</b>\n\n${lines.join("\n\n")}\n\nНачать выдачу: <code>/compensate TELEGRAM_ID</code>\n\nВладелец может изменить шаблон:\n<code>/comp_template ID | НАЗВАНИЕ | JSON_НАГРАД</code>`,
+    { inline_keyboard: [[{ text: "➕ Выдать компенсацию", callback_data: "safe_comp_start" }], [{ text: "⬅️ Админ-панель", callback_data: "adm_home" }]] }
+  );
+}
+
+async function startCompensationWorkflow(chatId, user, targetRaw, env) {
+  const access = await requireSecurityPermission(chatId, user, "grantRewards", env);
+  if (!access) return;
+  await ensureSafeControlCenterSchema(env);
+  const targetId = targetRaw ? await resolvePlayerTelegramId(String(targetRaw).trim(), env) : "";
+  if (targetRaw && !targetId) return sendTelegramMessage(env, chatId, "Игрок не найден.");
+  await setStaffWorkflow(user.id, chatId, "compensation", targetId ? "template" : "target", targetId ? { targetId, playerName: await playerDisplayNameById(targetId, env) } : {}, env);
+  if (!targetId) return sendTelegramMessage(env, chatId, "<b>Компенсация</b>\n\nОтправьте Telegram ID или @username игрока.");
+  await sendCompensationTemplateButtons(chatId, targetId, env);
+}
+
+async function sendCompensationTemplateButtons(chatId, targetId, env) {
+  const result = await env.DB.prepare(`SELECT template_id,title FROM compensation_templates WHERE enabled=1 ORDER BY template_id`).all();
+  const buttons = (result.results || []).map((row) => [{ text: row.title.slice(0, 45), callback_data: `safe_comp_pick:${row.template_id}` }]);
+  buttons.push([{ text: "Отмена", callback_data: "ops_cancel" }]);
+  await sendTelegramMessage(env, chatId, `<b>Выберите шаблон</b>\n\nИгрок: <code>${escapeHtml(targetId)}</code>`, { inline_keyboard: buttons });
+}
+
+async function handleCompensationWorkflowMessage(message, workflow, env) {
+  const chatId = message.chat.id;
+  const user = message.from;
+  const access = await requireSecurityPermission(chatId, user, "grantRewards", env);
+  if (!access) return true;
+  if (workflow.step === "target") {
+    const targetId = await resolvePlayerTelegramId(String(message.text || "").trim(), env);
+    if (!targetId) return sendTelegramMessage(env, chatId, "Игрок не найден."), true;
+    await updateStaffWorkflow(user.id, { step: "template", data: { targetId, playerName: await playerDisplayNameById(targetId, env) } }, env);
+    await sendCompensationTemplateButtons(chatId, targetId, env);
+    return true;
+  }
+  if (workflow.step === "reason") {
+    const reason = String(message.text || "").trim().slice(0, 300);
+    if (reason.length < 3) return sendTelegramMessage(env, chatId, "Укажите причину минимум из 3 символов."), true;
+    const updated = await updateStaffWorkflow(user.id, { step: "confirm", data: { reason } }, env);
+    const template = await env.DB.prepare(`SELECT * FROM compensation_templates WHERE template_id=? LIMIT 1`).bind(updated.data.templateId).first();
+    await sendTelegramMessage(env, chatId,
+      `<b>Подтвердите компенсацию</b>\n\nИгрок: <b>${escapeHtml(updated.data.playerName || updated.data.targetId)}</b> · <code>${escapeHtml(updated.data.targetId)}</code>\nНабор: <b>${escapeHtml(template?.title || updated.data.templateId)}</b>\nПричина: ${escapeHtml(reason)}\n\nНаграды попадут в безопасную очередь доставки.`,
+      { inline_keyboard: [[{ text: "✅ Выдать", callback_data: "safe_comp_confirm" }, { text: "Отмена", callback_data: "ops_cancel" }]] }
+    );
+    return true;
+  }
+  await sendTelegramMessage(env, chatId, "Используйте кнопки под предыдущим сообщением или /cancel.");
+  return true;
+}
+
+async function chooseCompensationTemplate(query, templateId, env) {
+  const access = await requireSecurityPermission(query.message?.chat?.id, query.from, "grantRewards", env);
+  if (!access) return;
+  const workflow = await getStaffWorkflow(query.from.id, env);
+  if (!workflow || workflow.flow_type !== "compensation" || workflow.step !== "template") return answerCallback(env, query.id, "Сценарий устарел.", true);
+  const template = await env.DB.prepare(`SELECT * FROM compensation_templates WHERE template_id=? AND enabled=1 LIMIT 1`).bind(templateId).first();
+  if (!template) return answerCallback(env, query.id, "Шаблон не найден.", true);
+  await updateStaffWorkflow(query.from.id, { step: "reason", data: { templateId } }, env);
+  await answerCallback(env, query.id, "Шаблон выбран.");
+  await sendTelegramMessage(env, query.message.chat.id, `<b>${escapeHtml(template.title)}</b>\n${escapeHtml(template.description)}\n\nУкажите причину компенсации одним сообщением.`);
+}
+
+async function compensationUsageSummary(rewards) {
+  const summary = { points: 0, cases: 0, legendary: 0 };
+  for (const reward of Array.isArray(rewards) ? rewards : []) {
+    const amount = Math.max(1, Math.floor(Number(reward?.amount || 1)));
+    if (String(reward?.kind) === "points") summary.points += amount;
+    if (String(reward?.kind) === "case" && String(reward?.id) === "legendary") summary.legendary += amount;
+    else if (String(reward?.kind) === "case") summary.cases += amount;
+  }
+  return summary;
+}
+
+async function checkCompensationUsageLimits(env, user, access, rewards) {
+  const summary = await compensationUsageSummary(rewards);
+  if (summary.legendary > 0 && !access?.owner && !access?.permissions?.grantLegendaryCases) {
+    return { ok:false, text:"Нет права выдавать Легендарные кейсы через компенсации.", summary };
+  }
+  if (summary.points > 0) {
+    const check = await checkStaffUsageLimit(env, user, access, "points_daily", summary.points, "points_per_player");
+    if (!check.ok) return { ...check, summary };
+  }
+  if (summary.cases > 0) {
+    const check = await checkStaffUsageLimit(env, user, access, "cases_daily", summary.cases);
+    if (!check.ok) return { ...check, summary };
+  }
+  if (summary.legendary > 0) {
+    const check = await checkStaffUsageLimit(env, user, access, "legendary_daily", summary.legendary);
+    if (!check.ok) return { ...check, summary };
+  }
+  return { ok:true, summary };
+}
+
+async function recordCompensationUsage(env, telegramId, summary) {
+  if (summary.points > 0) await recordStaffUsage(env, telegramId, "points_daily", summary.points);
+  if (summary.cases > 0) await recordStaffUsage(env, telegramId, "cases_daily", summary.cases);
+  if (summary.legendary > 0) await recordStaffUsage(env, telegramId, "legendary_daily", summary.legendary);
+}
+
+async function confirmCompensation(query, env) {
+  const chatId = query.message?.chat?.id;
+  const access = await requireSecurityPermission(chatId, query.from, "grantRewards", env);
+  if (!access) return;
+  const workflow = await getStaffWorkflow(query.from.id, env);
+  if (!workflow || workflow.flow_type !== "compensation" || workflow.step !== "confirm") return answerCallback(env, query.id, "Сценарий устарел.", true);
+  const data = workflow.data || {};
+  const template = await env.DB.prepare(`SELECT * FROM compensation_templates WHERE template_id=? AND enabled=1 LIMIT 1`).bind(data.templateId).first();
+  if (!template) return answerCallback(env, query.id, "Шаблон не найден.", true);
+  const rewards = safeJson(template.rewards_json, []);
+  const limitCheck = await checkCompensationUsageLimits(env, query.from, access, rewards);
+  if (!limitCheck.ok) return answerCallback(env, query.id, limitCheck.text, true);
+
+  if (limitCheck.summary.legendary > 0) {
+    const approvalId = await requestDangerousAction(env, query.from, "compensation_template", `Компенсация «${template.title}» игроку ${data.targetId}`, {
+      targetId: String(data.targetId), templateId: String(data.templateId), templateTitle: String(template.title), rewards,
+      reason: String(data.reason || "Компенсация"), reportChatId: String(chatId)
+    });
+    await clearStaffWorkflow(query.from.id, env);
+    await answerCallback(env, query.id, "Создан запрос второго подтверждения.");
+    await sendTelegramMessage(env, chatId, `⚠️ Компенсация содержит Легендарный кейс и не выдана сразу. Запрос <b>#${approvalId}</b> ожидает второго администратора.\n\n<code>/approve ${approvalId}</code>`);
+    return;
+  }
+
+  const sourceId = `comp_${Date.now().toString(36)}_${query.from.id}`;
+  let queued = 0;
+  for (let index = 0; index < rewards.length; index += 1) {
+    const reward = rewards[index];
+    queued += await enqueueRewardDelivery(env, data.targetId, "compensation", `${sourceId}_${index}`, reward, data.reason, chatId) ? 1 : 0;
+  }
+  if (queued > 0) await recordCompensationUsage(env, query.from.id, limitCheck.summary);
+  await logStaffAction(env, query.from, access, "compensation_template", data.targetId, "reward", null, queued, { templateId: data.templateId, reason: data.reason, sourceId, usage: limitCheck.summary });
+  await clearStaffWorkflow(query.from.id, env);
+  await answerCallback(env, query.id, "Компенсация поставлена в очередь.");
+  await sendTelegramMessage(env, chatId, `✅ <b>Компенсация создана</b>\n\nИгрок: <code>${escapeHtml(data.targetId)}</code>\nШаблон: <b>${escapeHtml(template.title)}</b>\nПозиций в очереди: <b>${queued}</b>`);
+}
+
+async function setCompensationTemplate(chatId, user, raw, env) {
+  const access = await getTeamAccess(user, env);
+  if (!access?.owner) return sendTelegramMessage(env, chatId, "Изменять шаблоны может только владелец.");
+  const parts = String(raw || "").split("|").map((item) => item.trim());
+  if (parts.length < 3) return sendTelegramMessage(env, chatId, "Формат: <code>/comp_template ID | НАЗВАНИЕ | JSON_НАГРАД</code>");
+  const id = parts[0].replace(/[^a-z0-9_-]/gi, "").slice(0, 40);
+  let rewards;
+  try { rewards = JSON.parse(parts.slice(2).join("|")); } catch { return sendTelegramMessage(env, chatId, "JSON наград не распознан."); }
+  if (!id || !Array.isArray(rewards) || !rewards.length) return sendTelegramMessage(env, chatId, "ID и список наград обязательны.");
+  await ensureSafeControlCenterSchema(env);
+  const now = Math.floor(Date.now()/1000);
+  await env.DB.prepare(`INSERT INTO compensation_templates (template_id,title,description,rewards_json,enabled,owner_editable,created_at,updated_at,updated_by) VALUES (?,?,?, ?,1,1,?,?,?) ON CONFLICT(template_id) DO UPDATE SET title=excluded.title,description=excluded.description,rewards_json=excluded.rewards_json,enabled=1,updated_at=excluded.updated_at,updated_by=excluded.updated_by`)
+    .bind(id, parts[1].slice(0,100), parts[1].slice(0,200), JSON.stringify(rewards), now, now, String(user.id)).run();
+  await sendTelegramMessage(env, chatId, `✅ Шаблон <code>${escapeHtml(id)}</code> сохранён.`);
+}
+
+function isWorkerSubrequestLimitError(error) {
+  return /too many subrequests|subrequest limit/i.test(String(error?.message || error || ""));
+}
+
+function isNonCriticalIntegrityDiagnostic(text) {
+  const value = String(text || "").trim();
+  if (!value) return false;
+  if (/не найдено|некоррект/i.test(value)) return false;
+  if (/too many subrequests|лимит(?:а)? диагностических запросов|subrequest limit/i.test(value)) return true;
+  return /(?:изображение|путь|ссылка).*(?:найдено|настроено|корректн)/i.test(value);
+}
+
+async function assetExistsForIntegrity(env, path) {
+  const url = String(path || "").trim();
+  if (!url) return false;
+  if (/^data:/i.test(url)) return true;
+
+  // Проверка целостности не должна выполнять отдельный HTTP-запрос для каждого
+  // изображения. При большом каталоге это исчерпывало лимит subrequests одного
+  // запуска Worker и мешало проверить Telegram webhook. Здесь проверяется сама
+  // ссылка/путь; наличие локальных файлов контролируется пакетом деплоя.
+  const cleanPath = url.split(/[?#]/, 1)[0];
+  if (/^\/?assets\//i.test(cleanPath)) {
+    return !cleanPath.includes("..") && /\.(?:png|jpe?g|webp|gif|svg|avif|ogg|mp3|wav)$/i.test(cleanPath);
+  }
+
+  if (/^https?:\/\//i.test(url)) {
+    try {
+      const parsed = new URL(url);
+      return /^(?:https?:)$/.test(parsed.protocol) && Boolean(parsed.hostname);
+    } catch {
+      return false;
+    }
+  }
+  return false;
+}
+
+async function performGameIntegrityCheck(env) {
+  await Promise.all([ensureSafeControlCenterSchema(env),ensureLiveOpsAdminSchema(env)]);
+  const checks = [];
+  let errors = 0;
+  let warnings = 0;
+  const push = (level, text) => { if(level==="error")errors+=1;if(level==="warning")warnings+=1;checks.push({level,text}); };
+  const now = Math.floor(Date.now()/1000);
+  const webhookPromise = (async()=>{
+    try{
+      const info=await telegramApi(env,"getWebhookInfo",{});const expected=expectedTelegramWebhookUrl(env);
+      return String(info?.url||"")===expected?{level:"ok",text:"Telegram webhook работает"}:{level:"error",text:"Telegram webhook настроен на другой URL"};
+    }catch(error){return isWorkerSubrequestLimitError(error)?{level:"warning",text:"Telegram webhook не удалось проверить из-за лимита диагностических запросов Worker"}:{level:"error",text:`Telegram webhook: ${String(error?.message||error)}`};}
+  })();
+  const seasonPromise=ensureSeason(env);
+  const liveopsPromise=readLiveOpsConfig(env);
+  const stockPromise=env.DB.prepare(`SELECT scope_key,remaining,configured_limit FROM shop_stock_limits WHERE configured_limit > 0 ORDER BY remaining ASC LIMIT 20`).all();
+  const cronPromise=getSystemState(env,"cron:last_success");
+  const overlapPromise=env.DB.prepare(`SELECT a.event_id AS first_id,b.event_id AS second_id FROM liveops_events a JOIN liveops_events b ON a.event_id < b.event_id AND a.status IN ('scheduled','active') AND b.status IN ('scheduled','active') AND a.starts_at < b.ends_at AND a.ends_at > b.starts_at LIMIT 1`).first();
+  const failedQueuePromise=env.DB.prepare(`SELECT COUNT(*) AS count FROM reward_delivery_queue WHERE status='failed'`).first();
+
+  let season=null;
+  try{
+    season=await seasonPromise;push("ok",`Рейтинг настроен: ${season.title}`);
+    const presentation=leaderboardRewardPresentation(season.reward_type,season.reward_amount,season.reward_item_id,season.reward_title,season.reward_image_url);
+    push(presentation.type&&presentation.amount>0?"ok":"error",presentation.type&&presentation.amount>0?`Награда существует: ${presentation.title}`:"Сезон без корректной награды");
+    if(presentation.imageUrl){const ok=await assetExistsForIntegrity(env,presentation.imageUrl);push(ok?"ok":"error",ok?`Изображение награды настроено: ${presentation.imageUrl}`:`Изображение награды не найдено или путь некорректен: ${presentation.imageUrl}`);}else push("warning","У награды сезона не указано изображение");
+  }catch(error){push("error",`Рейтинг: ${String(error?.message||error)}`);}
+
+  let liveops={cases:{},content:{}};
+  try{liveops=await liveopsPromise;}catch(error){push("error",`LiveOps: ${String(error?.message||error)}`);}
+  for(const caseId of LIVEOPS_CASE_IDS){
+    const item=liveops.cases?.[caseId]||{title:caseId,chances:{},guaranteeCount:0};const caseImage=LEADERBOARD_REWARD_ASSETS.case?.[caseId]||"";const imageOk=Boolean(caseImage)&&await assetExistsForIntegrity(env,caseImage);
+    push(imageOk?"ok":"error",imageOk?`${item.title}: изображение кейса настроено`:`${item.title}: изображение кейса не найдено или путь некорректен`);
+    const total=Object.values(item.chances||{}).reduce((sum,value)=>sum+Number(value||0),0);push(Math.abs(total-100)<=0.0005?"ok":"error",`${item.title}: сумма шансов ${total.toFixed(3)}%`);push(item.guaranteeCount>=0&&item.guaranteeCount<=50?"ok":"error",`${item.title}: гарант ${item.guaranteeCount||"выключен"}`);
+  }
+  for(const [kind,items] of Object.entries(liveops.content||{}))for(const [id,item] of Object.entries(items||{})){
+    const baseCatalog=kind==="avatar"?CASE_AVATARS:kind==="frame"?CASE_FRAMES:kind==="trail"?CASE_TRAILS:CASE_SKINS;
+    if(!item.enabled){const runtime=runtimeCaseCatalog(kind,baseCatalog,liveops);push(!runtime[id]?"ok":"error",`${kind}:${id} отключён и не выпадает`);continue;}
+    if(item.weight<=0)push("warning",`${kind}:${id} включён, но имеет нулевой вес`);
+    const image=item.imageUrl||LIVEOPS_CONTENT_IMAGES[kind]?.[id]||"";if(image){const ok=await assetExistsForIntegrity(env,image);push(ok?"ok":"error",ok?`${kind}:${id} — путь изображения настроен`:`${kind}:${id} — изображение не найдено или путь некорректен: ${image}`);}else push("warning",`${kind}:${id} — путь к изображению не зарегистрирован в LiveOps`);
+  }
+  try{const stock=await stockPromise;for(const row of stock.results||[]){if(Number(row.remaining||0)<=0)push("error",`${row.scope_key}: физический/лимитированный товар закончился`);else if(Number(row.remaining||0)<=BOT_LOW_STOCK_THRESHOLD)push("warning",`${row.scope_key}: осталось ${row.remaining}`);}}catch(error){push("warning",`Остатки не проверены: ${String(error?.message||error)}`);}
+  const webhookDiagnostic=await webhookPromise;push(webhookDiagnostic.level,webhookDiagnostic.text);
+  const cronState=await cronPromise;const cronTimestamp=Number(cronState?.value||cronState?.updatedAt||0);const cronAge=cronTimestamp>0?Math.max(0,now-cronTimestamp):0;push(cronTimestamp>0&&cronAge<=180?"ok":"error",cronTimestamp>0?`Cron запускался ${cronAge} сек. назад`:"Cron ещё не отмечал успешный запуск");
+  const overlap=await overlapPromise;if(overlap)push("error",`События ${overlap.first_id} и ${overlap.second_id} пересекаются`);else push("ok","Расписание событий не пересекается");
+  const failedQueue=await failedQueuePromise;if(Number(failedQueue?.count||0))push("warning",`В очереди ${failedQueue.count} неудачных доставок`);else push("ok","Нет неудачных доставок наград");
+  return {ok:errors===0,errors,warnings,checks,createdAt:now};
+}
+
+async function refreshIntegrityOperationalIssue(env,result){
+  await ensureObservabilitySchema(env);const now=Math.floor(Date.now()/1000);
+  if(result.ok){
+    await env.DB.prepare(`UPDATE admin_operational_issues SET status='resolved',resolved_at=?,resolved_by='system',resolved_by_name='Система',updated_at=? WHERE fingerprint IN ('integrity:failed','integrity:missing') AND status<>'resolved'`).bind(now,now).run();
+    return;
+  }
+  const failedChecks=(result.checks||[]).filter((item)=>item.level==="error").map((item)=>String(item.text||"").slice(0,220)).filter((value)=>!isNonCriticalIntegrityDiagnostic(value)).slice(0,8);
+  if(!failedChecks.length)return;
+  await upsertOperationalIssue(env,{fingerprint:"integrity:failed",issueType:"integrity",severity:"high",title:"Последняя проверка целостности завершилась с проблемами",details:{status:"failed",createdAt:result.createdAt,errors:failedChecks.length,warnings:Number(result.warnings||0),failedChecks},sourceType:"integrity",sourceId:"latest"},now);
+}
+
+async function runAndShowGameIntegrityCheck(chatId, user, env, options = {}) {
+  const access = await requireSecurityPermission(chatId, user, "viewEconomy", env);
+  if (!access) return;
+  if (options.announce !== false) await sendTelegramMessage(env, chatId, "🔎 Проверяю конфигурацию игры, награды, изображения, webhook и Cron…");
+  const result = await performGameIntegrityCheck(env);
+  await env.DB.prepare(`INSERT INTO integrity_check_runs (status,result_json,created_by,created_at) VALUES (?,?,?,?)`).bind(result.ok ? "ok" : "failed", JSON.stringify(result), String(user.id), result.createdAt).run();
+  await refreshIntegrityOperationalIssue(env, result);
+  const visibleLines = [];
+  let visibleLength = 0;
+  for (const item of result.checks) {
+    const line = `${item.level === "ok" ? "✅" : item.level === "warning" ? "⚠️" : "❌"} ${escapeHtml(item.text)}`;
+    if (visibleLength + line.length > 3100) break;
+    visibleLines.push(line);
+    visibleLength += line.length + 1;
+  }
+  const omitted = Math.max(0, result.checks.length - visibleLines.length);
+  const visible = `${visibleLines.join("\n")}${omitted ? `\n…ещё ${omitted} проверок сохранены в журнале` : ""}`;
+  await sendTelegramMessage(env, chatId,
+    `<b>${result.ok ? "✅ Проверка завершена" : "❌ Найдены критические проблемы"}</b>\n\n${visible}\n\nОшибок: <b>${result.errors}</b> · предупреждений: <b>${result.warnings}</b>`,
+    { inline_keyboard: [[{ text: "🔄 Проверить снова", callback_data: "safe_check" }, { text: "📬 Очередь наград", callback_data: "safe_queue" }], [{ text: "⬅️ Админ-панель", callback_data: "adm_home" }]] }
+  );
+}
+
+async function processSafeEvents(env) {
+  await ensureSafeControlCenterSchema(env);
+  const now = Math.floor(Date.now()/1000);
+  const starts = await env.DB.prepare(`SELECT * FROM liveops_events WHERE status='scheduled' AND starts_at <= ? AND (lease_until=0 OR lease_until < ?) ORDER BY starts_at ASC LIMIT 5`).bind(now,now).all();
+  for (const row of starts.results || []) {
+    const token = caseGrantId("event_start_lock");
+    const lock = await env.DB.prepare(`UPDATE liveops_events SET lease_token=?,lease_until=?,updated_at=? WHERE event_id=? AND status='scheduled' AND (lease_until=0 OR lease_until < ?)`).bind(token,now+120,now,row.event_id,now).run();
+    if (Number(lock.meta?.changes || 0) < 1) continue;
+    try {
+      const fresh=await env.DB.prepare(`SELECT * FROM liveops_events WHERE event_id=? LIMIT 1`).bind(row.event_id).first();
+      await startSafeEvent(fresh, env);
+    } catch (error) {
+      let message = String(error?.message || error);
+      try {
+        const failedRow = await env.DB.prepare(`SELECT * FROM liveops_events WHERE event_id=? LIMIT 1`).bind(row.event_id).first();
+        await restoreSafeEventShop(failedRow || row, env, "event_rollback");
+      } catch (restoreError) {
+        message += `; откат магазина: ${String(restoreError?.message || restoreError)}`;
+      }
+      await env.DB.prepare(`UPDATE liveops_events SET status='failed',last_error=?,updated_at=?,lease_token='',lease_until=0 WHERE event_id=? AND lease_token=?`).bind(message.slice(0,500),now,row.event_id,token).run();
+    }
+  }
+  const ends = await env.DB.prepare(`SELECT * FROM liveops_events WHERE status='active' AND ends_at <= ? AND (lease_until=0 OR lease_until < ?) ORDER BY ends_at ASC LIMIT 5`).bind(now,now).all();
+  for (const row of ends.results || []) {
+    const token = caseGrantId("event_end_lock");
+    const lock = await env.DB.prepare(`UPDATE liveops_events SET lease_token=?,lease_until=?,updated_at=? WHERE event_id=? AND status='active' AND (lease_until=0 OR lease_until < ?)`).bind(token,now+180,now,row.event_id,now).run();
+    if (Number(lock.meta?.changes || 0) < 1) continue;
+    try {
+      const fresh=await env.DB.prepare(`SELECT * FROM liveops_events WHERE event_id=? LIMIT 1`).bind(row.event_id).first();
+      await finishSafeEvent(fresh, env, false);
+    } catch (error) {
+      await env.DB.prepare(`UPDATE liveops_events SET last_error=?,updated_at=?,lease_token='',lease_until=0 WHERE event_id=? AND lease_token=?`).bind(String(error?.message || error).slice(0,500),now,row.event_id,token).run();
+    }
+  }
+  const missedStarts = await env.DB.prepare(`SELECT * FROM liveops_events WHERE status='active' AND start_notified=0 LIMIT 5`).all();
+  for (const row of missedStarts.results || []) {
+    try {
+      const payload=safeJson(row.published_json,{});
+      await queueSystemBroadcast(env,payload.broadcasts?.start || `🏁 Событие «${row.title}» началось!`,"",`event_${row.event_id}_start`);
+      await env.DB.prepare(`UPDATE liveops_events SET start_notified=1,updated_at=? WHERE event_id=?`).bind(now,row.event_id).run();
+    } catch {}
+  }
+  const missedEnds = await env.DB.prepare(`SELECT * FROM liveops_events WHERE status IN ('completed','cancelled') AND end_notified=0 LIMIT 5`).all();
+  for (const row of missedEnds.results || []) {
+    try {
+      const payload=safeJson(row.published_json,{});
+      const text=row.status==='cancelled' ? `⛔ Событие «${row.title}» отменено.` : (payload.broadcasts?.end || `🏆 Событие «${row.title}» завершено.`);
+      await queueSystemBroadcast(env,text,"",`event_${row.event_id}_${row.status === "cancelled" ? "cancel" : "end"}`);
+      await env.DB.prepare(`UPDATE liveops_events SET end_notified=1,updated_at=? WHERE event_id=?`).bind(now,row.event_id).run();
+    } catch {}
+  }
+}
+
+async function notifyStaleRewardQueue(env) {
+  const now = Math.floor(Date.now()/1000);
+  const rows = await env.DB.prepare(`SELECT * FROM reward_delivery_queue WHERE status IN ('pending','failed') AND notify_after > 0 AND notify_after <= ? AND report_chat_id <> '' LIMIT 20`).bind(now).all();
+  for (const row of rows.results || []) {
+    try {
+      await sendTelegramMessage(env, row.report_chat_id, `⚠️ <b>Награда не доставлена более 15 минут</b>\n\nОчередь #${row.id}\nИгрок: <code>${escapeHtml(row.telegram_id)}</code>\nНаграда: <b>${escapeHtml(safeRewardDescription({kind:row.reward_kind,id:row.reward_id,amount:row.amount}))}</b>${row.last_error ? `\nОшибка: ${escapeHtml(row.last_error)}` : ""}`);
+      await env.DB.prepare(`UPDATE reward_delivery_queue SET notify_after=0,updated_at=? WHERE id=?`).bind(now,row.id).run();
+    } catch {}
+  }
+}
+
+async function processSafeControlCenterCron(env) {
+  await ensureSafeControlCenterSchema(env);
+  await processSafeEvents(env);
+  await processRewardDeliveryQueue(env, 25);
+  await notifyStaleRewardQueue(env);
+}
+
+async function handleSafeControlCenterCallback(query, env, runtime = {}) {
+  const data = String(query.data || "");
+  const chatId = query.message?.chat?.id;
+  if (!chatId) return false;
+  if (data === "safe_events") { await answerCallback(env, query.id, "События обновлены."); await showSafeEventsDashboard(chatId, query.from, env); return true; }
+  if (data === "safe_event_new") { await answerCallback(env, query.id, "Создаём событие."); await startSafeEventWorkflow(chatId, query.from, env); return true; }
+  const event = data.match(/^safe_event:([A-Za-z0-9_-]+)$/); if (event) { await answerCallback(env, query.id, "Открываю событие."); await showSafeEventDetails(chatId, query.from, event[1], env); return true; }
+  const eventPreview = data.match(/^safe_event_preview:([A-Za-z0-9_-]+)$/); if (eventPreview) { await answerCallback(env, query.id, "Предпросмотр готов."); await previewSafeEvent(chatId, query.from, eventPreview[1], env); return true; }
+  const eventPublish = data.match(/^safe_event_publish:([A-Za-z0-9_-]+)$/); if (eventPublish) { await publishSafeEvent(query, eventPublish[1], env); return true; }
+  const eventCancel = data.match(/^safe_event_cancel:([A-Za-z0-9_-]+)$/); if (eventCancel) { await cancelSafeEvent(query, eventCancel[1], env); return true; }
+  if (data === "safe_drafts") { await answerCallback(env, query.id, "Черновики обновлены."); await showSafeDraftsDashboard(chatId, query.from, env); return true; }
+  const draft = data.match(/^safe_draft:(\d+)$/); if (draft) { await answerCallback(env, query.id, "Открываю черновик."); await sendSafeDraftPreview(chatId, query.from, Number(draft[1]), env); return true; }
+  const preview = data.match(/^safe_preview:(\d+)$/); if (preview) { await answerCallback(env, query.id, "Предпросмотр готов."); await showSafePlayerPreview(chatId, query.from, Number(preview[1]), env); return true; }
+  const publish = data.match(/^safe_publish:(\d+)$/); if (publish) { await publishSafeDraft(query, Number(publish[1]), env); return true; }
+  const discard = data.match(/^safe_discard:(\d+)$/); if (discard) { const access=await requireAnySecurityPermission(chatId,query.from,["manageCases","manageSeasons"],env); if(!access)return true; await env.DB.prepare(`UPDATE liveops_drafts SET status='discarded',updated_at=? WHERE id=? AND status='draft'`).bind(Math.floor(Date.now()/1000),Number(discard[1])).run(); await answerCallback(env,query.id,"Черновик отменён."); await showSafeDraftsDashboard(chatId,query.from,env); return true; }
+  if (data === "safe_check") { await answerCallback(env, query.id, "Запускаю проверку."); await runAndShowGameIntegrityCheck(chatId, query.from, env, { announce:false }); return true; }
+  if (data === "safe_queue") { await answerCallback(env, query.id, "Очередь обновлена."); await showRewardQueueDashboard(chatId, query.from, env); return true; }
+  const retry = data.match(/^safe_queue_retry:(\d+)$/); if (retry) { await retryQueuedReward(query, Number(retry[1]), env); return true; }
+  const cancel = data.match(/^safe_queue_cancel:(\d+)$/); if (cancel) { await cancelQueuedReward(query, Number(cancel[1]), env); return true; }
+  const queueComp = data.match(/^safe_queue_comp:(\d+)$/); if (queueComp) { const row=await env.DB.prepare(`SELECT telegram_id FROM reward_delivery_queue WHERE id=? LIMIT 1`).bind(Number(queueComp[1])).first(); if(!row){await answerCallback(env,query.id,"Запись не найдена.",true);return true;} await answerCallback(env,query.id,"Выберите компенсацию."); await startCompensationWorkflow(chatId,query.from,String(row.telegram_id),env); return true; }
+  if (data === "safe_comp") { await answerCallback(env, query.id, "Шаблоны компенсаций."); await showCompensationTemplates(chatId, query.from, env); return true; }
+  if (data === "safe_comp_start") { await answerCallback(env, query.id, "Выберите игрока."); await startCompensationWorkflow(chatId, query.from, "", env); return true; }
+  const compPick = data.match(/^safe_comp_pick:([A-Za-z0-9_-]+)$/); if (compPick) { await chooseCompensationTemplate(query, compPick[1], env); return true; }
+  if (data === "safe_comp_confirm") { await confirmCompensation(query, env); return true; }
+  return false;
+}
+
+// =============================================================
+// END LIVEOPS ADMIN CENTER v0.56
+// =============================================================
+
+function uniqueBotCommands(commands) {
+  const seen = new Set();
+  const result = [];
+  for (const item of commands || []) {
+    const command = String(item?.command || "").trim().toLowerCase();
+    const description = String(item?.description || "").trim().slice(0, 256);
+    if (!/^[a-z0-9_]{1,32}$/.test(command) || !description || seen.has(command)) continue;
+    seen.add(command);
+    result.push({ command, description });
+  }
+  return result.slice(0, 100);
+}
+
+function botCommandsForAccess(access) {
+  if (!access?.authorized) return STAFF_LOGIN_BOT_COMMANDS;
+  const commands = [...PLAYER_BOT_COMMANDS, ...STAFF_COMMON_BOT_COMMANDS];
+  const add = (...items) => commands.push(...items);
+  if (access.owner) return uniqueBotCommands([...commands, ...OWNER_CANONICAL_BOT_COMMANDS]);
+
+  const permissions = access.permissions || {};
+  if (permissions.viewPlayers) add(
+    { command: "players", description: "Список игроков" },
+    { command: "player", description: "Карточка игрока" },
+    { command: "player_history", description: "История игрока" }
+  );
+  if (permissions.grantRewards || permissions.grantLegendaryCases) add(
+    { command: "grant", description: "Безопасно выдать награду" },
+    { command: "reward_queue", description: "Недоставленные награды" },
+    { command: "compensations", description: "Шаблоны компенсаций" },
+    { command: "compensate", description: "Выдать компенсацию" }
+  );
+  if (permissions.redeemPhysical || permissions.redeem) add(
+    { command: "redeem", description: "Погасить физический код" },
+    { command: "stock", description: "Остатки физических наград" }
+  );
+  if (permissions.blockPlayers) add({ command: "block", description: "Заблокировать игрока" });
+  if (permissions.unblockPlayers) add({ command: "unblock", description: "Разблокировать игрока" });
+  if (permissions.blockPlayers || permissions.unblockPlayers || permissions.viewPlayers) add({ command: "banned", description: "Список заблокированных" });
+  if (permissions.viewEconomy) add(
+    { command: "economy", description: "Экономика игры" },
+    { command: "segments", description: "Сегменты игроков" },
+    { command: "fraud", description: "Антифрод и аномалии" }
+  );
+  if (permissions.massBroadcasts) add(
+    { command: "campaign", description: "Массовая кампания" },
+    { command: "campaigns", description: "Кампании и статусы" }
+  );
+  if (permissions.manageSeasons) add(
+    { command: "season", description: "Управление рейтингом" },
+    { command: "events", description: "Планировщик событий" },
+    { command: "event_new", description: "Создать событие" },
+    { command: "drafts", description: "Черновики изменений" },
+    { command: "check_game", description: "Проверка целостности" }
+  );
+  if (permissions.manageCases) add(
+    { command: "content", description: "Управление косметикой" },
+    { command: "cases_admin", description: "Настройки кейсов" },
+    { command: "drafts", description: "Черновики изменений" },
+    { command: "check_game", description: "Проверка целостности" }
+  );
+  if (permissions.manageShop) add(
+    { command: "shop_admin", description: "Управление магазином" },
+    { command: "shop_list", description: "Ассортимент магазина" },
+    { command: "shop_price", description: "Изменить цену товара" },
+    { command: "shop_show", description: "Вернуть товар в магазин" },
+    { command: "shop_hide", description: "Скрыть товар" },
+    { command: "shop_stock", description: "Изменить остаток" },
+    { command: "stock", description: "Остатки физических наград" }
+  );
+  if (permissions.manageMaintenance) add({ command: "maintenance", description: "Технические работы" });
+  if (permissions.manageMaintenance || permissions.manageCases || permissions.managePromocodes) add({ command: "features", description: "Флаги функций" });
+  if (permissions.manageTesters) add({ command: "testers", description: "Тестовые аккаунты" });
+  if (permissions.managePromocodes) add({ command: "promocodes", description: "Управление промокодами" });
+  if (permissions.manageCases) add({ command: "case_simulator", description: "Симулятор кейсов" });
+  if (permissions.manageCases || permissions.manageSeasons) add({ command: "publish_center", description: "Центр публикации" });
+  if (permissions.rollbackSettings) add(
+    { command: "snapshots", description: "Снимки и откат" },
+    { command: "config_history", description: "История настроек" }
+  );
+  if (permissions.viewContentAnalytics) add({ command: "content_stats", description: "Аналитика контента" });
+  if (permissions.approveDangerous) add(
+    { command: "approvals", description: "Опасные действия" },
+    { command: "permissions", description: "Права сотрудников" },
+    { command: "limits", description: "Лимиты сотрудников" },
+    { command: "player_reset", description: "Сброс прогресса игрока" }
+  );
+  if (permissions.staff) add(
+    { command: "employee_add", description: "Добавить сотрудника" },
+    { command: "employee_role", description: "Изменить роль сотрудника" },
+    { command: "employee_disable", description: "Отключить сотрудника" },
+    { command: "employee_enable", description: "Включить сотрудника" }
+  );
+  if (permissions.staff || permissions.log) add(
+    { command: "audit", description: "Журнал действий" },
+    { command: "daily_report", description: "Сводка за день" }
+  );
+  if (normalizeTeamRole(access.role) === "administrator") add(
+    { command: "polls_admin", description: "Управление опросами" },
+    { command: "ops_center", description: "Центр управления" }
+  );
+  return uniqueBotCommands(commands);
+}
+
+async function setBotCommandsForChat(env, telegramId, commands) {
+  return telegramApi(env, "setMyCommands", {
+    commands: uniqueBotCommands(commands),
+    scope: { type: "chat", chat_id: String(telegramId) }
+  });
+}
+
+async function syncBotCommandMenuForTelegramId(env, telegramId) {
+  const id = String(telegramId || "").trim();
+  if (!id) return { skipped: true };
+  if (isBotAdminTelegramId(id, env)) {
+    return setBotCommandsForChat(env, id, botCommandsForAccess({ authorized: true, owner: true, permissions: completeSecurityPermissions(true) }));
+  }
+  let row = null;
+  try {
+    row = await env.DB.prepare(`SELECT telegram_id,active,session_expires_at FROM staff_users WHERE telegram_id=? LIMIT 1`).bind(id).first();
+  } catch (error) {
+    console.error("staff command menu lookup failed", error);
+  }
+  if (!row || Number(row.active || 0) !== 1) return setBotCommandsForChat(env, id, PLAYER_BOT_COMMANDS);
+  const access = await getTeamAccess({ id }, env);
+  return setBotCommandsForChat(env, id, access.authorized ? botCommandsForAccess(access) : STAFF_LOGIN_BOT_COMMANDS);
+}
+
+async function syncBotCommands(env) {
+  const result = { default: null, chats: [], errors: [] };
+  result.default = await telegramApi(env, "setMyCommands", {
+    commands: uniqueBotCommands(PLAYER_BOT_COMMANDS),
+    scope: { type: "default" }
+  });
+  const ids = new Set(botAdminTelegramIds(env));
+  try {
+    const rows = await env.DB.prepare(`SELECT telegram_id FROM staff_users`).all();
+    for (const row of rows.results || []) if (row?.telegram_id) ids.add(String(row.telegram_id));
+  } catch (error) {
+    result.errors.push(`staff list: ${String(error?.message || error)}`);
+  }
+  for (const id of ids) {
+    try {
+      await syncBotCommandMenuForTelegramId(env, id);
+      result.chats.push(id);
+    } catch (error) {
+      result.errors.push(`${id}: ${String(error?.message || error)}`);
+    }
+  }
+  return result;
+}
+
+async function refreshBotCommandMenuSilently(env, telegramId) {
+  try {
+    await syncBotCommandMenuForTelegramId(env, telegramId);
+  } catch (error) {
+    console.error("bot command menu refresh failed", telegramId, error);
+  }
+}
+
+function telegramCommandName(text) {
+  const match = String(text || "").trim().match(/^\/([A-Za-z0-9_]{1,32})(?:@\w+)?(?:\s|$)/);
+  return match ? match[1].toLowerCase() : "";
+}
+
+async function handleLegacyOwnerCommand(text, chatId, user, env) {
+  const name = telegramCommandName(text);
+  const replacement = LEGACY_OWNER_COMMAND_REPLACEMENTS[name];
+  if (!replacement) return false;
+  if (!isBotAdminUser(user, env)) {
+    await sendTelegramMessage(env, chatId, `<b>Старая ручная команда отключена</b>\n\nИспользуйте безопасный раздел <code>${escapeHtml(replacement)}</code>. Он проверяет права, подтверждения и записывает действие в журнал.`);
+    return true;
+  }
+  const access = await getTeamAccess(user, env);
+  await logStaffAction(env, user, access, "legacy_command_use", null, "command", null, null, {
+    command: name,
+    replacement,
+    original: String(text || "").slice(0, 500)
+  });
+
+  if (LEGACY_SHOP_DIRECT_COMMANDS.has(name)) {
+    const payload = String(text || "").replace(/^\/[A-Za-z0-9_]+(?:@\w+)?\s*/i, "").trim();
+    await sendTelegramMessage(env, chatId, `<b>⚠️ Использована аварийная команда владельца</b>\n\nОна скрыта из меню, но сохранена для экстренной работы. Перед изменением будет создан снимок, права и действие записываются в аудит. Новая команда: <code>${escapeHtml(name === "price" ? "/shop_price" : name === "addprodyct" ? "/shop_show" : name === "deletedprodyct" ? "/shop_hide" : "/shop_stock")}</code>.`);
+    if (name === "price") await updateShopProductPriceFromBot(chatId, user, payload, env);
+    else if (name === "addprodyct") await addShopProductFromBot(chatId, user, payload, env);
+    else if (name === "deletedprodyct") await deleteShopProductFromBot(chatId, user, payload, env);
+    else await setShopStockLimitFromBot(chatId, user, payload, env);
+    return true;
+  }
+
+  await sendTelegramMessage(env, chatId, `<b>⚠️ Аварийная команда перенаправлена</b>\n\n<code>/${escapeHtml(name)}</code> больше не выполняет опасное действие напрямую. Открываю <code>${escapeHtml(replacement)}</code>; параметры старой команды не применены.`);
+  if (replacement === "/grant") await startGrantWorkflow(chatId, user, env);
+  else if (replacement === "/campaign") await startCampaignWorkflow(chatId, user, env);
+  else if (replacement === "/shop_admin") await showShopAdminDashboard(chatId, user, env);
+  else if (replacement === "/permissions") await showGranularPermissions(chatId, user, "", env);
+  else if (replacement === "/players") await showPlayerMembers(chatId, user, env);
+  return true;
+}
+
+function playerPromoInputStateKey(userId) {
+  return `${PLAYER_PROMO_INPUT_STATE_PREFIX}${String(userId)}`;
+}
+
+async function beginPlayerPromoInput(userId, chatId, env) {
+  await ensureStaffOperationsSchema(env);
+  const now = Math.floor(Date.now() / 1000);
+  await env.DB.prepare(
+    `INSERT INTO bot_system_state (state_key, state_value, updated_at)
+     VALUES (?, ?, ?)
+     ON CONFLICT(state_key) DO UPDATE SET
+       state_value = excluded.state_value,
+       updated_at = excluded.updated_at`
+  ).bind(
+    playerPromoInputStateKey(userId),
+    JSON.stringify({ chatId: String(chatId), expiresAt: now + PLAYER_PROMO_INPUT_TTL_SECONDS }),
+    now
+  ).run();
+}
+
+async function consumePlayerPromoInput(userId, chatId, env) {
+  await ensureStaffOperationsSchema(env);
+  const key = playerPromoInputStateKey(userId);
+  const row = await env.DB.prepare(
+    `SELECT state_value FROM bot_system_state WHERE state_key = ? LIMIT 1`
+  ).bind(key).first();
+  if (!row?.state_value) return false;
+  await env.DB.prepare(`DELETE FROM bot_system_state WHERE state_key = ?`).bind(key).run();
+  try {
+    const state = JSON.parse(String(row.state_value || "{}"));
+    const now = Math.floor(Date.now() / 1000);
+    return String(state?.chatId || "") === String(chatId)
+      && Number(state?.expiresAt || 0) > now;
+  } catch {
+    return false;
+  }
+}
+
+function promoCodeInputReplyMarkup() {
+  return {
+    force_reply: true,
+    selective: true,
+    input_field_placeholder: "Например: SUMMER2026"
+  };
+}
+
+async function promptPlayerPromoCode(chatId, user, env, message = "") {
+  await beginPlayerPromoInput(user.id, chatId, env);
+  const prefix = message ? `${escapeHtml(message)}\n\n` : "";
+  await sendTelegramMessage(env, chatId,
+    `${prefix}<b>🎟 Введите промокод</b>\n\nОтправьте код одним сообщением. Регистр букв не важен.\n\nПример: <code>SUMMER2026</code>`,
+    promoCodeInputReplyMarkup(),
+    { cleanChat: false }
+  );
+}
+
+function telegramCleanChatStateKey(chatId) {
+  return `${TELEGRAM_CLEAN_CHAT_STATE_PREFIX}${String(chatId)}`;
+}
+
+function normalizeTelegramMessageIds(values) {
+  return [...new Set((Array.isArray(values) ? values : [])
+    .map((value) => Math.floor(Number(value) || 0))
+    .filter((value) => value > 0))]
+    .slice(-TELEGRAM_CLEAN_CHAT_TRACK_LIMIT);
+}
+
+async function isCleanStaffPrivateChat(env, chatId) {
+  const numericChatId = Number(chatId);
+  if (!Number.isFinite(numericChatId) || numericChatId <= 0) return false;
+  if (isBotAdminTelegramId(chatId, env)) return true;
+  try {
+    const row = await env.DB.prepare(
+      `SELECT active FROM staff_users WHERE telegram_id = ? LIMIT 1`
+    ).bind(String(chatId)).first();
+    return Number(row?.active || 0) === 1;
+  } catch (error) {
+    console.warn("Clean staff chat lookup failed", String(error?.message || error));
+    return false;
+  }
+}
+
+async function readTrackedTelegramMessages(env, chatId) {
+  try {
+    await ensureStaffOperationsSchema(env);
+    const row = await env.DB.prepare(
+      `SELECT state_value FROM bot_system_state WHERE state_key = ? LIMIT 1`
+    ).bind(telegramCleanChatStateKey(chatId)).first();
+    if (!row?.state_value) return [];
+    const parsed = JSON.parse(String(row.state_value || "[]"));
+    const values = Array.isArray(parsed) ? parsed : parsed?.messageIds;
+    return normalizeTelegramMessageIds(values);
+  } catch (error) {
+    console.warn("Read clean chat state failed", String(error?.message || error));
+    return [];
+  }
+}
+
+async function writeTrackedTelegramMessages(env, chatId, messageIds) {
+  try {
+    await ensureStaffOperationsSchema(env);
+    const now = Math.floor(Date.now() / 1000);
+    const normalized = normalizeTelegramMessageIds(messageIds);
+    if (!normalized.length) {
+      await env.DB.prepare(`DELETE FROM bot_system_state WHERE state_key = ?`)
+        .bind(telegramCleanChatStateKey(chatId)).run();
+      return;
+    }
+    await env.DB.prepare(
+      `INSERT INTO bot_system_state (state_key, state_value, updated_at)
+       VALUES (?, ?, ?)
+       ON CONFLICT(state_key) DO UPDATE SET
+         state_value = excluded.state_value,
+         updated_at = excluded.updated_at`
+    ).bind(
+      telegramCleanChatStateKey(chatId),
+      JSON.stringify({ messageIds: normalized }),
+      now
+    ).run();
+  } catch (error) {
+    console.warn("Write clean chat state failed", String(error?.message || error));
+  }
+}
+
+async function deleteTelegramMessageBestEffort(env, chatId, messageId) {
+  const normalizedId = Math.floor(Number(messageId) || 0);
+  if (!chatId || normalizedId <= 0) return false;
+  try {
+    await telegramApi(env, "deleteMessage", { chat_id: chatId, message_id: normalizedId });
+    return true;
+  } catch (error) {
+    const description = String(error?.description || error?.message || "");
+    if (!/message to delete not found|message can.t be deleted|message identifier is not specified/i.test(description)) {
+      console.warn("Telegram message cleanup failed", description);
+    }
+    return false;
+  }
+}
+
+async function deleteTelegramMessagesBestEffort(env, chatId, messageIds) {
+  const normalized = normalizeTelegramMessageIds(messageIds);
+  if (!chatId || !normalized.length) return;
+  if (normalized.length === 1) {
+    await deleteTelegramMessageBestEffort(env, chatId, normalized[0]);
+    return;
+  }
+  try {
+    await telegramApi(env, "deleteMessages", { chat_id: chatId, message_ids: normalized.slice(-100) });
+  } catch (error) {
+    const description = String(error?.description || error?.message || "");
+    console.warn("Telegram batch cleanup fallback", description);
+    for (const messageId of normalized) {
+      await deleteTelegramMessageBestEffort(env, chatId, messageId);
+    }
+  }
+}
+
+async function purgeTelegramPrivateChat(env, chatId, anchorMessageId, limit = TELEGRAM_CLEAN_CHAT_TRACK_LIMIT) {
+  const numericChatId = Number(chatId);
+  const anchor = Math.floor(Number(anchorMessageId) || 0);
+  if (!Number.isFinite(numericChatId) || numericChatId <= 0 || anchor <= 0) return false;
+  const safeLimit = Math.max(1, Math.min(100, Math.floor(Number(limit) || TELEGRAM_CLEAN_CHAT_TRACK_LIMIT)));
+  const first = Math.max(1, anchor - safeLimit + 1);
+  const ids = Array.from({ length: anchor - first + 1 }, (_, index) => first + index);
+  await deleteTelegramMessagesBestEffort(env, chatId, ids);
+  await writeTrackedTelegramMessages(env, chatId, []);
+  return true;
+}
+
+function adminPanelBackButton() {
+  return { text: "⬅️ Назад в админ-панель", callback_data: "adm_home" };
+}
+
+function addAdminPanelBackButton(replyMarkup) {
+  const backButton = adminPanelBackButton();
+  if (!replyMarkup) return { inline_keyboard: [[backButton]] };
+
+  // Telegram permits only one reply_markup type per message. ForceReply and
+  // ordinary reply keyboards stay unchanged; inline keyboards can safely
+  // receive the common navigation row.
+  if (!Array.isArray(replyMarkup.inline_keyboard)) return replyMarkup;
+
+  const alreadyHasBack = replyMarkup.inline_keyboard.some((row) =>
+    Array.isArray(row) && row.some((button) => String(button?.callback_data || "") === "adm_home")
+  );
+  if (alreadyHasBack) return replyMarkup;
+
+  return {
+    ...replyMarkup,
+    inline_keyboard: [...replyMarkup.inline_keyboard, [backButton]]
+  };
+}
+
+function canEditTrackedTelegramPayload(payload) {
+  const markup = payload?.reply_markup;
+  // editMessageText supports only an inline keyboard. ForceReply and ordinary
+  // reply keyboards must still be sent as a new message.
+  return !markup || Array.isArray(markup.inline_keyboard);
+}
+
+async function sendTelegramPayload(env, chatId, payload, options = {}) {
+  const cleanMode = String(options?.cleanMode || "replace");
+  const cleanChat = options?.cleanChat !== false && await isCleanStaffPrivateChat(env, chatId);
+  if (cleanChat && options?.adminBack !== false) {
+    payload = { ...payload, reply_markup: addAdminPanelBackButton(payload?.reply_markup) };
+  }
+  const previous = cleanChat ? await readTrackedTelegramMessages(env, chatId) : [];
+
+  // Fast path for the staff panel: edit the current bot message instead of
+  // sending a new one and then deleting the old one. This removes the visual
+  // flash of the /start screen and saves Telegram API calls on every click.
+  if (
+    cleanChat &&
+    cleanMode === "replace" &&
+    options?.preferEdit !== false &&
+    previous.length === 1 &&
+    canEditTrackedTelegramPayload(payload)
+  ) {
+    const messageId = Math.floor(Number(previous[0]) || 0);
+    if (messageId > 0) {
+      try {
+        const edited = await telegramApi(env, "editMessageText", {
+          ...payload,
+          chat_id: chatId,
+          message_id: messageId
+        });
+        return edited === true ? { message_id: messageId } : edited;
+      } catch (error) {
+        const description = String(error?.description || error?.message || "");
+        if (/message is not modified/i.test(description)) return { message_id: messageId };
+        if (!/message to edit not found|message can.t be edited|message identifier is not specified/i.test(description)) {
+          console.warn("Telegram fast edit fallback", description);
+        }
+      }
+    }
+  }
+
+  const result = await telegramApi(env, "sendMessage", payload);
+  if (!cleanChat) return result;
+
+  const messageId = Math.floor(Number(result?.message_id) || 0);
+  if (cleanMode === "append") {
+    await writeTrackedTelegramMessages(env, chatId, [...previous, messageId]);
+    return result;
+  }
+
+  await deleteTelegramMessagesBestEffort(
+    env,
+    chatId,
+    previous.filter((value) => value !== messageId)
+  );
+  await writeTrackedTelegramMessages(env, chatId, messageId > 0 ? [messageId] : []);
+  return result;
+}
+
+async function sendTelegramMessage(env, chatId, text, replyMarkup = null, options = {}) {
   const payload = { chat_id: chatId, text, parse_mode: "HTML", disable_web_page_preview: true };
   if (replyMarkup) payload.reply_markup = replyMarkup;
-  return telegramApi(env, "sendMessage", payload);
+  return sendTelegramPayload(env, chatId, payload, options);
 }
 
-async function sendTelegramPlainMessage(env, chatId, text) {
-  return telegramApi(env, "sendMessage", {
+async function sendTelegramPlainMessage(env, chatId, text, options = {}) {
+  return sendTelegramPayload(env, chatId, {
     chat_id: chatId,
     text: String(text || ""),
     disable_web_page_preview: true
-  });
+  }, options);
 }
 
 async function answerCallback(env, callbackQueryId, text, showAlert = false) {
@@ -9531,3 +13711,4780 @@ function requireDatabase(env) {
 function requireBotToken(env) {
   if (!env.TELEGRAM_BOT_TOKEN) throw new ApiError(500, "Токен Telegram-бота не настроен.");
 }
+
+// =============================================================
+// OPERATIONS SECURITY CENTER v0.57
+// =============================================================
+const SECURITY_PERMISSION_KEYS = Object.freeze([
+  "viewPlayers", "grantRewards", "grantLegendaryCases", "blockPlayers", "unblockPlayers",
+  "redeemPhysical", "manageSeasons", "manageCases", "manageShop", "massBroadcasts",
+  "viewEconomy", "rollbackSettings", "manageMaintenance", "manageTesters",
+  "managePromocodes", "viewContentAnalytics", "approveDangerous"
+]);
+const SECURITY_PERMISSION_COLUMNS = Object.freeze({
+  viewPlayers: "view_players",
+  grantRewards: "grant_rewards",
+  grantLegendaryCases: "grant_legendary_cases",
+  blockPlayers: "block_players",
+  unblockPlayers: "unblock_players",
+  redeemPhysical: "redeem_physical",
+  manageSeasons: "manage_seasons",
+  manageCases: "manage_cases",
+  manageShop: "manage_shop",
+  massBroadcasts: "mass_broadcasts",
+  viewEconomy: "view_economy",
+  rollbackSettings: "rollback_settings",
+  manageMaintenance: "manage_maintenance",
+  manageTesters: "manage_testers",
+  managePromocodes: "manage_promocodes",
+  viewContentAnalytics: "view_content_analytics",
+  approveDangerous: "approve_dangerous"
+});
+const NOTIFICATION_KEYS = Object.freeze([
+  "rating_finished", "physical_reward", "low_stock", "bot_errors", "new_tickets",
+  "suspicious_runs", "mass_grants", "case_changes", "player_blocks"
+]);
+const NOTIFICATION_LABELS = Object.freeze({
+  rating_finished: "завершение рейтинга",
+  physical_reward: "физические награды",
+  low_stock: "низкие остатки",
+  bot_errors: "ошибки бота",
+  new_tickets: "новые обращения",
+  suspicious_runs: "подозрительные результаты",
+  mass_grants: "массовые выдачи",
+  case_changes: "изменения кейсов",
+  player_blocks: "блокировки игроков"
+});
+let operationsSecuritySchemaPromise = null;
+
+async function ensureOperationsSecuritySchema(env) {
+  if (!operationsSecuritySchemaPromise) {
+    operationsSecuritySchemaPromise = env.DB.batch([
+      env.DB.prepare(`CREATE TABLE IF NOT EXISTS player_timeline_events (id INTEGER PRIMARY KEY AUTOINCREMENT,telegram_id TEXT NOT NULL,event_type TEXT NOT NULL,title TEXT NOT NULL,details_json TEXT NOT NULL DEFAULT '{}',source_id TEXT NOT NULL DEFAULT '',actor_telegram_id TEXT NOT NULL DEFAULT '',actor_name TEXT NOT NULL DEFAULT '',created_at INTEGER NOT NULL,UNIQUE(telegram_id,event_type,source_id))`),
+      env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_player_timeline_recent ON player_timeline_events(telegram_id,created_at DESC,id DESC)`),
+      env.DB.prepare(`CREATE TABLE IF NOT EXISTS staff_permission_overrides (telegram_id TEXT PRIMARY KEY,view_players INTEGER NOT NULL DEFAULT 1,grant_rewards INTEGER NOT NULL DEFAULT 0,grant_legendary_cases INTEGER NOT NULL DEFAULT 0,block_players INTEGER NOT NULL DEFAULT 0,unblock_players INTEGER NOT NULL DEFAULT 0,redeem_physical INTEGER NOT NULL DEFAULT 0,manage_seasons INTEGER NOT NULL DEFAULT 0,manage_cases INTEGER NOT NULL DEFAULT 0,manage_shop INTEGER NOT NULL DEFAULT 0,mass_broadcasts INTEGER NOT NULL DEFAULT 0,view_economy INTEGER NOT NULL DEFAULT 0,rollback_settings INTEGER NOT NULL DEFAULT 0,manage_maintenance INTEGER NOT NULL DEFAULT 0,manage_testers INTEGER NOT NULL DEFAULT 0,manage_promocodes INTEGER NOT NULL DEFAULT 0,view_content_analytics INTEGER NOT NULL DEFAULT 0,approve_dangerous INTEGER NOT NULL DEFAULT 0,updated_at INTEGER NOT NULL,updated_by TEXT NOT NULL DEFAULT '')`),
+      env.DB.prepare(`CREATE TABLE IF NOT EXISTS dangerous_action_approvals (id INTEGER PRIMARY KEY AUTOINCREMENT,action_type TEXT NOT NULL,title TEXT NOT NULL,payload_json TEXT NOT NULL DEFAULT '{}',requested_by TEXT NOT NULL,requested_by_name TEXT NOT NULL DEFAULT '',status TEXT NOT NULL DEFAULT 'pending',required_approvals INTEGER NOT NULL DEFAULT 1,approvals_json TEXT NOT NULL DEFAULT '[]',expires_at INTEGER NOT NULL,created_at INTEGER NOT NULL,updated_at INTEGER NOT NULL,executed_at INTEGER NOT NULL DEFAULT 0,error_text TEXT NOT NULL DEFAULT '')`),
+      env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_dangerous_approvals_pending ON dangerous_action_approvals(status,expires_at,created_at DESC)`),
+      env.DB.prepare(`CREATE TABLE IF NOT EXISTS maintenance_settings (id INTEGER PRIMARY KEY,full_closed INTEGER NOT NULL DEFAULT 0,rating_disabled INTEGER NOT NULL DEFAULT 0,purchases_disabled INTEGER NOT NULL DEFAULT 0,cases_disabled INTEGER NOT NULL DEFAULT 0,physical_rewards_disabled INTEGER NOT NULL DEFAULT 0,testers_only INTEGER NOT NULL DEFAULT 0,message TEXT NOT NULL DEFAULT 'В игре проходят технические работы. Прогресс сохранён. Попробуйте снова через несколько минут.',updated_at INTEGER NOT NULL,updated_by TEXT NOT NULL DEFAULT '')`),
+      env.DB.prepare(`INSERT OR IGNORE INTO maintenance_settings(id,updated_at,updated_by) VALUES(1,unixepoch(),'runtime')`),
+      env.DB.prepare(`CREATE TABLE IF NOT EXISTS tester_accounts (telegram_id TEXT PRIMARY KEY,test_balance_enabled INTEGER NOT NULL DEFAULT 0,unlock_all_skins INTEGER NOT NULL DEFAULT 0,unlock_all_cases INTEGER NOT NULL DEFAULT 0,accelerated_guarantee INTEGER NOT NULL DEFAULT 0,exclude_from_rating INTEGER NOT NULL DEFAULT 1,note TEXT NOT NULL DEFAULT '',created_at INTEGER NOT NULL,updated_at INTEGER NOT NULL,updated_by TEXT NOT NULL DEFAULT '')`),
+      env.DB.prepare(`CREATE TABLE IF NOT EXISTS promo_codes (code TEXT PRIMARY KEY,title TEXT NOT NULL DEFAULT '',reward_json TEXT NOT NULL DEFAULT '[]',max_redemptions INTEGER NOT NULL DEFAULT 0,per_player_limit INTEGER NOT NULL DEFAULT 1,redemption_count INTEGER NOT NULL DEFAULT 0,starts_at INTEGER NOT NULL DEFAULT 0,expires_at INTEGER NOT NULL DEFAULT 0,enabled INTEGER NOT NULL DEFAULT 1,created_by TEXT NOT NULL,created_by_name TEXT NOT NULL DEFAULT '',created_at INTEGER NOT NULL,updated_at INTEGER NOT NULL)`),
+      env.DB.prepare(`CREATE TABLE IF NOT EXISTS promo_redemptions (id INTEGER PRIMARY KEY AUTOINCREMENT,code TEXT NOT NULL,telegram_id TEXT NOT NULL,reward_json TEXT NOT NULL DEFAULT '[]',status TEXT NOT NULL DEFAULT 'queued',created_at INTEGER NOT NULL,updated_at INTEGER NOT NULL,UNIQUE(code,telegram_id))`),
+      env.DB.prepare(`CREATE TABLE IF NOT EXISTS staff_notification_preferences (telegram_id TEXT PRIMARY KEY,rating_finished INTEGER NOT NULL DEFAULT 1,physical_reward INTEGER NOT NULL DEFAULT 1,low_stock INTEGER NOT NULL DEFAULT 1,bot_errors INTEGER NOT NULL DEFAULT 1,new_tickets INTEGER NOT NULL DEFAULT 1,suspicious_runs INTEGER NOT NULL DEFAULT 1,mass_grants INTEGER NOT NULL DEFAULT 1,case_changes INTEGER NOT NULL DEFAULT 1,player_blocks INTEGER NOT NULL DEFAULT 1,updated_at INTEGER NOT NULL)`),
+      env.DB.prepare(`CREATE TABLE IF NOT EXISTS config_snapshots (snapshot_id TEXT PRIMARY KEY,snapshot_type TEXT NOT NULL DEFAULT 'manual',title TEXT NOT NULL,data_json TEXT NOT NULL,created_by TEXT NOT NULL,created_by_name TEXT NOT NULL DEFAULT '',created_at INTEGER NOT NULL,restored_at INTEGER NOT NULL DEFAULT 0,restored_by TEXT NOT NULL DEFAULT '',restore_status TEXT NOT NULL DEFAULT '')`),
+      env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_config_snapshots_recent ON config_snapshots(created_at DESC)`),
+      env.DB.prepare(`CREATE TABLE IF NOT EXISTS content_analytics_events (id INTEGER PRIMARY KEY AUTOINCREMENT,telegram_id TEXT NOT NULL,item_kind TEXT NOT NULL,item_id TEXT NOT NULL,event_type TEXT NOT NULL,source_type TEXT NOT NULL DEFAULT '',source_id TEXT NOT NULL DEFAULT '',created_at INTEGER NOT NULL,UNIQUE(telegram_id,item_kind,item_id,event_type,source_type,source_id))`),
+      env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_content_analytics_item ON content_analytics_events(item_kind,item_id,event_type,created_at DESC)`),
+      env.DB.prepare(`CREATE TABLE IF NOT EXISTS staff_action_limits (telegram_id TEXT PRIMARY KEY,points_per_player INTEGER NOT NULL DEFAULT 10000,points_daily INTEGER NOT NULL DEFAULT 100000,cases_daily INTEGER NOT NULL DEFAULT 20,legendary_daily INTEGER NOT NULL DEFAULT 2,campaigns_daily INTEGER NOT NULL DEFAULT 2,updated_at INTEGER NOT NULL,updated_by TEXT NOT NULL DEFAULT '')`),
+      env.DB.prepare(`CREATE TABLE IF NOT EXISTS staff_action_usage (telegram_id TEXT NOT NULL,day_key TEXT NOT NULL,metric TEXT NOT NULL,amount INTEGER NOT NULL DEFAULT 0,updated_at INTEGER NOT NULL,PRIMARY KEY(telegram_id,day_key,metric))`),
+      env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_staff_action_usage_day ON staff_action_usage(day_key,metric,amount DESC)`),
+      env.DB.prepare(`CREATE TABLE IF NOT EXISTS live_feature_flags (flag_key TEXT PRIMARY KEY,title TEXT NOT NULL,description TEXT NOT NULL DEFAULT '',mode TEXT NOT NULL DEFAULT 'all',rollout_percent INTEGER NOT NULL DEFAULT 100,updated_at INTEGER NOT NULL,updated_by TEXT NOT NULL DEFAULT '')`),
+      env.DB.prepare(`CREATE TABLE IF NOT EXISTS admin_publication_batches (id INTEGER PRIMARY KEY AUTOINCREMENT,title TEXT NOT NULL,status TEXT NOT NULL DEFAULT 'draft',draft_ids_json TEXT NOT NULL DEFAULT '[]',validation_json TEXT NOT NULL DEFAULT '{}',created_by TEXT NOT NULL,created_by_name TEXT NOT NULL DEFAULT '',created_at INTEGER NOT NULL,updated_at INTEGER NOT NULL,published_at INTEGER NOT NULL DEFAULT 0,published_by TEXT NOT NULL DEFAULT '',error_text TEXT NOT NULL DEFAULT '')`),
+      env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_admin_publication_batches_status ON admin_publication_batches(status,updated_at DESC)`),
+      env.DB.prepare(`INSERT OR IGNORE INTO live_feature_flags(flag_key,title,description,mode,rollout_percent,updated_at,updated_by) VALUES ('cases','Кейсы','Открытие, покупка и активация кейсов','all',100,unixepoch(),'runtime')`),
+      env.DB.prepare(`INSERT OR IGNORE INTO live_feature_flags(flag_key,title,description,mode,rollout_percent,updated_at,updated_by) VALUES ('rating','Рейтинг','Отправка результатов и получение сезонной награды','all',100,unixepoch(),'runtime')`),
+      env.DB.prepare(`INSERT OR IGNORE INTO live_feature_flags(flag_key,title,description,mode,rollout_percent,updated_at,updated_by) VALUES ('shop','Покупки','Покупки скинов и кейсов','all',100,unixepoch(),'runtime')`),
+      env.DB.prepare(`INSERT OR IGNORE INTO live_feature_flags(flag_key,title,description,mode,rollout_percent,updated_at,updated_by) VALUES ('promocodes','Промокоды','Активация промокодов игроками','all',100,unixepoch(),'runtime')`),
+      env.DB.prepare(`INSERT OR IGNORE INTO live_feature_flags(flag_key,title,description,mode,rollout_percent,updated_at,updated_by) VALUES ('physical_rewards','Физические награды','Создание и выдача физических наград','all',100,unixepoch(),'runtime')`)
+    ]).catch((error) => {
+      operationsSecuritySchemaPromise = null;
+      throw error;
+    });
+  }
+  await operationsSecuritySchemaPromise;
+}
+
+function completeSecurityPermissions(value) {
+  return Object.fromEntries(SECURITY_PERMISSION_KEYS.map((key) => [key, Boolean(value)]));
+}
+
+function securityPermissionPreset(role, legacy = {}) {
+  const admin = normalizeTeamRole(role) === "administrator";
+  const cashier = normalizeTeamRole(role) === "cashier";
+  return {
+    viewPlayers: admin,
+    grantRewards: admin || Boolean(legacy.points),
+    grantLegendaryCases: admin,
+    blockPlayers: admin,
+    unblockPlayers: admin,
+    redeemPhysical: admin || cashier || Boolean(legacy.redeem),
+    manageSeasons: admin,
+    manageCases: admin,
+    manageShop: admin || Boolean(legacy.products),
+    massBroadcasts: admin || Boolean(legacy.news),
+    viewEconomy: admin || Boolean(legacy.products),
+    rollbackSettings: admin,
+    manageMaintenance: admin,
+    manageTesters: admin,
+    managePromocodes: admin,
+    viewContentAnalytics: admin || Boolean(legacy.products),
+    approveDangerous: admin
+  };
+}
+
+function securityPermissionsFromRow(row, fallback = {}) {
+  const result = { ...fallback };
+  for (const [key, column] of Object.entries(SECURITY_PERMISSION_COLUMNS)) {
+    if (row && Object.prototype.hasOwnProperty.call(row, column) && row[column] !== null && row[column] !== undefined) {
+      result[key] = Number(row[column] || 0) === 1;
+    }
+  }
+  return result;
+}
+
+async function requireSecurityPermission(chatId, user, permission, env) {
+  const access = await getTeamAccess(user, env);
+  if (!access.authorized) {
+    await sendTelegramMessage(env, chatId, access.reason === "expired" ? "Сессия истекла. Выполните <code>/staff</code>." : "Доступно только сотрудникам.");
+    return null;
+  }
+  if (!access.owner && !access.permissions?.[permission]) {
+    await sendTelegramMessage(env, chatId, `Недостаточно прав: требуется «${escapeHtml(permissionLabel(permission))}».`);
+    return null;
+  }
+  return access;
+}
+
+async function requireAnySecurityPermission(chatId, user, permissions, env) {
+  const access = await getTeamAccess(user, env);
+  if (!access.authorized) {
+    await sendTelegramMessage(env, chatId, access.reason === "expired" ? "Сессия истекла. Выполните <code>/staff</code>." : "Доступно только сотрудникам.");
+    return null;
+  }
+  const required = Array.isArray(permissions) ? permissions : [permissions];
+  if (!access.owner && !required.some((permission) => access.permissions?.[permission])) {
+    await sendTelegramMessage(env, chatId, `Недостаточно прав: требуется одно из разрешений — ${required.map((permission) => `«${escapeHtml(permissionLabel(permission))}»`).join(", ")}.`);
+    return null;
+  }
+  return access;
+}
+
+function normalizedPromoCode(value) {
+  return String(value || "").trim().toUpperCase().replace(/[^A-Z0-9_-]/g, "").slice(0, 32);
+}
+
+async function handleOperationsSecurityCommand(text, chatId, user, env) {
+  if (/^\/limits(?:@\w+)?$/i.test(text)) { await showStaffLimitsDashboard(chatId, user, env); return true; }
+  const limitSet = text.match(/^\/limit(?:@\w+)?\s+(\d{4,20})\s+([a-z_]+)\s+(\d+)$/i);
+  if (limitSet) { await setStaffLimitFromCommand(chatId, user, limitSet[1], limitSet[2], limitSet[3], env); return true; }
+  if (/^\/features(?:@\w+)?$/i.test(text)) { await showFeatureFlagsDashboard(chatId, user, env); return true; }
+  if (/^\/case_simulator(?:@\w+)?$/i.test(text)) { await showCaseSimulatorDashboard(chatId, user, env); return true; }
+  if (/^\/publish_center(?:@\w+)?$/i.test(text)) { await showPublicationCenter(chatId, user, env); return true; }
+  const history = text.match(/^\/player_history(?:@\w+)?(?:\s+(\d{4,20}))?(?:\s+(\d{1,2}))?$/i);
+  if (history) {
+    if (!history[1]) await sendTelegramMessage(env, chatId, "Формат: <code>/player_history TELEGRAM_ID [СТРАНИЦА]</code>");
+    else await showPlayerTimeline(chatId, user, history[1], env, Number(history[2] || 1));
+    return true;
+  }
+  const permissions = text.match(/^\/(?:permissions|rights)(?:@\w+)?(?:\s+(\d{4,20}))?$/i);
+  if (permissions) {
+    await showGranularPermissions(chatId, user, permissions[1] || "", env);
+    return true;
+  }
+  const permissionSet = text.match(/^\/permission(?:@\w+)?\s+(\d{4,20})\s+([a-z_]+)\s+(on|off)$/i);
+  if (permissionSet) {
+    await setGranularPermission(chatId, user, permissionSet[1], permissionSet[2], permissionSet[3] === "on", env);
+    return true;
+  }
+  if (/^\/approvals(?:@\w+)?$/i.test(text)) {
+    await showDangerousApprovals(chatId, user, env);
+    return true;
+  }
+  const approval = text.match(/^\/(approve|reject)(?:@\w+)?\s+(\d+)$/i);
+  if (approval) {
+    await processDangerousApproval(chatId, user, Number(approval[2]), approval[1].toLowerCase(), env);
+    return true;
+  }
+  const maintenance = text.match(/^\/maintenance(?:@\w+)?(?:\s+([a-z_]+))?(?:\s+(on|off))?(?:\s+([\s\S]+))?$/i);
+  if (maintenance) {
+    if (!maintenance[1]) await showMaintenanceDashboard(chatId, user, env);
+    else await changeMaintenanceMode(chatId, user, maintenance[1].toLowerCase(), maintenance[2] || "", maintenance[3] || "", env);
+    return true;
+  }
+  if (/^\/testers(?:@\w+)?$/i.test(text)) {
+    await showTestersDashboard(chatId, user, env);
+    return true;
+  }
+  const testerAction = text.match(/^\/tester_(add|remove|balance|unlock|cases|guarantee|reset)(?:@\w+)?\s+(\d{4,20})(?:\s+([\s\S]+))?$/i);
+  if (testerAction) {
+    await manageTesterAccount(chatId, user, testerAction[1].toLowerCase(), testerAction[2], testerAction[3] || "", env);
+    return true;
+  }
+  const testerExclude = text.match(/^\/tester_exclude(?:@\w+)?\s+(\d{4,20})\s+(on|off)$/i);
+  if (testerExclude) {
+    await setTesterRatingExclusion(chatId, user, testerExclude[1], testerExclude[2] === "on", env);
+    return true;
+  }
+  if (/^\/promocodes(?:@\w+)?$/i.test(text)) {
+    await showPromoCodesDashboard(chatId, user, env);
+    return true;
+  }
+  if (/^\/promo_new(?:@\w+)?$/i.test(text)) {
+    await startPromoCodeWorkflow(chatId, user, env);
+    return true;
+  }
+  const promoNew = text.match(/^\/promo_new(?:@\w+)?\s+([\s\S]+)$/i);
+  if (promoNew) {
+    await createPromoCodeFromCommand(chatId, user, promoNew[1], env);
+    return true;
+  }
+  const promoSwitch = text.match(/^\/promo_(on|off|stats)(?:@\w+)?\s+([A-Za-z0-9_-]+)$/i);
+  if (promoSwitch) {
+    if (promoSwitch[1].toLowerCase() === "stats") await showPromoCodeStats(chatId, user, promoSwitch[2], env);
+    else await setPromoCodeEnabled(chatId, user, promoSwitch[2], promoSwitch[1].toLowerCase() === "on", env);
+    return true;
+  }
+  if (/^\/promo(?:@\w+)?$/i.test(text)) {
+    await promptPlayerPromoCode(chatId, user, env);
+    return true;
+  }
+  const promoRedeem = text.match(/^\/promo(?:@\w+)?\s+([A-Za-z0-9_-]+)$/i);
+  if (promoRedeem) {
+    await redeemPromoCodeForTelegram(chatId, user, promoRedeem[1], env);
+    return true;
+  }
+  if (/^\/notifications(?:@\w+)?$/i.test(text)) {
+    await showNotificationPreferences(chatId, user, env);
+    return true;
+  }
+  const notifySet = text.match(/^\/notify(?:@\w+)?\s+([a-z_]+)\s+(on|off)$/i);
+  if (notifySet) {
+    await setNotificationPreference(chatId, user, notifySet[1], notifySet[2] === "on", env);
+    return true;
+  }
+  if (/^\/snapshots(?:@\w+)?$/i.test(text)) {
+    await showSnapshotsDashboard(chatId, user, env);
+    return true;
+  }
+  const snapshotCreate = text.match(/^\/snapshot_create(?:@\w+)?(?:\s+([\s\S]+))?$/i);
+  if (snapshotCreate) {
+    await createManualSnapshot(chatId, user, snapshotCreate[1] || "", env);
+    return true;
+  }
+  const snapshotRestore = text.match(/^\/snapshot_restore(?:@\w+)?\s+([A-Za-z0-9_-]+)$/i);
+  if (snapshotRestore) {
+    await requestSnapshotRestore(chatId, user, snapshotRestore[1], env);
+    return true;
+  }
+  const contentStats = text.match(/^\/content_stats(?:@\w+)?(?:\s+(avatar|frame|trail|skin))?(?:\s+([A-Za-z0-9_-]+))?$/i);
+  if (contentStats) {
+    await showContentAnalytics(chatId, user, contentStats[1] || "", contentStats[2] || "", env);
+    return true;
+  }
+  return false;
+}
+
+async function recordPlayerTimeline(env, telegramId, eventType, title, details = {}, sourceId = "", actor = null, createdAt = Math.floor(Date.now() / 1000)) {
+  try {
+    await ensureOperationsSecuritySchema(env);
+    const normalizedSource = String(sourceId || `${eventType}_${createdAt}_${Math.random().toString(36).slice(2, 8)}`).slice(0, 180);
+    await env.DB.prepare(
+      `INSERT OR IGNORE INTO player_timeline_events
+       (telegram_id,event_type,title,details_json,source_id,actor_telegram_id,actor_name,created_at)
+       VALUES (?,?,?,?,?,?,?,?)`
+    ).bind(
+      String(telegramId), String(eventType), String(title).slice(0, 300), JSON.stringify(details || {}),
+      normalizedSource, String(actor?.id || ""), actor ? telegramDisplayName(actor) : "", Number(createdAt || 0)
+    ).run();
+  } catch (error) {
+    console.error("timeline record failed", error);
+  }
+}
+
+function timelineRewardTitle(reward) {
+  if (!reward || typeof reward !== "object") return "неизвестная награда";
+  if (["avatar", "frame", "trail", "skin"].includes(String(reward.kind))) {
+    const catalog = ({ avatar: CASE_AVATARS, frame: CASE_FRAMES, trail: CASE_TRAILS, skin: SKINS })[reward.kind] || {};
+    const title = reward.title || catalog[String(reward.id)]?.title || reward.id || "предмет";
+    return reward.duplicate ? `дубликат «${title}»` : `получил ${reward.kind === "frame" ? "рамку" : reward.kind === "skin" ? "скин" : reward.kind === "avatar" ? "аватарку" : "след"} «${title}»`;
+  }
+  if (reward.kind === "points") return `получил ${Number(reward.amount || 0).toLocaleString("ru-RU")} очков`;
+  if (reward.kind === "treats" || reward.kind === "zefir") return `получил ${Number(reward.amount || 0).toLocaleString("ru-RU")} зефира`;
+  if (reward.kind === "coffee") return `получил ${Number(reward.amount || 0).toLocaleString("ru-RU")} кофе`;
+  if (reward.kind === "booster") return `получил усилитель ×2 (${reward.boosterType || "награда"})`;
+  if (reward.kind === "physical") return `получил физическую награду «${reward.productName || reward.productId || "товар"}»`;
+  if (reward.kind === "case") return `получил кейс «${LEVEL_CASE_CONFIG[String(reward.id)]?.title || reward.id || "кейс"}»`;
+  return `получил награду ${reward.kind || ""}`.trim();
+}
+
+function timelineEntry(at, text, type = "event", details = {}) {
+  return { at: Number(at || 0), text: String(text || ""), type, details };
+}
+
+async function showPlayerTimeline(chatId, user, telegramId, env, pageValue = 1) {
+  const access = await requireSecurityPermission(chatId, user, "viewPlayers", env);
+  if (!access) return;
+  const playerId = String(telegramId || "").trim();
+  if (!/^\d{4,20}$/.test(playerId)) {
+    await sendTelegramMessage(env, chatId, "Формат: <code>/player_history TELEGRAM_ID [СТРАНИЦА]</code>");
+    return;
+  }
+  await ensureOperationsSecuritySchema(env);
+  const page = Math.max(1, Math.min(20, Math.floor(Number(pageValue) || 1)));
+  const pageSize = 50;
+  const scanLimit = Math.min(1000, Math.max(150, page * pageSize + 150));
+  const queries = await Promise.all([
+    env.DB.prepare(`SELECT event_type,title,details_json,source_id,actor_name,created_at FROM player_timeline_events WHERE telegram_id=? ORDER BY created_at DESC LIMIT ?`).bind(playerId,scanLimit).all(),
+    env.DB.prepare(`SELECT run_id,score,duration_ms,accepted,rejection_reason,created_at FROM leaderboard_runs WHERE telegram_id=? ORDER BY created_at DESC LIMIT ?`).bind(playerId,scanLimit).all(),
+    env.DB.prepare(`SELECT level,case_type,rewards_json,opened_at FROM level_case_openings WHERE telegram_id=? ORDER BY opened_at DESC LIMIT ?`).bind(playerId,scanLimit).all(),
+    env.DB.prepare(`SELECT id,case_type,status,granted_by,reason,rewards_json,created_at,opened_at FROM granted_cases WHERE telegram_id=? ORDER BY created_at DESC LIMIT ?`).bind(playerId,scanLimit).all(),
+    env.DB.prepare(`SELECT code,product_name,status,created_at,redeemed_at,redeemed_by_name FROM reward_codes WHERE owner_telegram_id=? ORDER BY created_at DESC LIMIT ?`).bind(playerId,scanLimit).all(),
+    env.DB.prepare(`SELECT product_id,category,created_at FROM shop_stock_consumptions WHERE telegram_id=? ORDER BY created_at DESC LIMIT ?`).bind(playerId,scanLimit).all(),
+    env.DB.prepare(`SELECT action,details_json,actor_name,old_value,new_value,created_at FROM staff_action_log WHERE target_telegram_id=? ORDER BY created_at DESC LIMIT ?`).bind(playerId,scanLimit).all(),
+    env.DB.prepare(`SELECT code,reward_json,status,created_at FROM promo_redemptions WHERE telegram_id=? ORDER BY created_at DESC LIMIT ?`).bind(playerId,scanLimit).all(),
+    env.DB.prepare(`SELECT action,block_type,reason,blocked_until,actor_name,created_at FROM player_moderation_history WHERE telegram_id=? ORDER BY created_at DESC LIMIT ?`).bind(playerId,scanLimit).all()
+  ]);
+  const events = [];
+  const derivedTimelineTypes = new Set(["run", "case_open", "physical_purchase", "physical_redeem", "skin_purchase", "staff_grant", "promo"]);
+  for (const row of queries[0].results || []) {
+    if (derivedTimelineTypes.has(String(row.event_type || ""))) continue;
+    events.push(timelineEntry(row.created_at, row.title, row.event_type, safeJson(row.details_json, {})));
+  }
+  for (const row of queries[1].results || []) {
+    events.push(timelineEntry(row.created_at, `${Number(row.accepted || 0) === 1 ? "завершил" : "отправил отклонённый"} забег с результатом ${Number(row.score || 0).toLocaleString("ru-RU")} · ${(Number(row.duration_ms || 0) / 1000).toFixed(1)} сек.`, "run"));
+  }
+  for (const row of queries[2].results || []) {
+    const caseTitle = LEVEL_CASE_CONFIG[String(row.case_type)]?.title || row.case_type;
+    events.push(timelineEntry(row.opened_at, `открыл ${caseTitle} за уровень ${Number(row.level || 0)}`, "case_open"));
+    for (const reward of safeJson(row.rewards_json, [])) events.push(timelineEntry(row.opened_at, timelineRewardTitle(reward), reward.duplicate ? "duplicate" : "reward"));
+  }
+  for (const row of queries[3].results || []) {
+    const caseTitle = LEVEL_CASE_CONFIG[String(row.case_type)]?.title || row.case_type;
+    events.push(timelineEntry(row.created_at, `получил ${caseTitle}${row.reason ? ` · ${row.reason}` : ""}`, "case_grant"));
+    if (row.opened_at) {
+      events.push(timelineEntry(row.opened_at, `открыл ${caseTitle}`, "case_open"));
+      for (const reward of safeJson(row.rewards_json, [])) events.push(timelineEntry(row.opened_at, timelineRewardTitle(reward), reward.duplicate ? "duplicate" : "reward"));
+    }
+  }
+  for (const row of queries[4].results || []) {
+    events.push(timelineEntry(row.created_at, `купил ${row.product_name || "физическую награду"} · код ${row.code}`, "physical_purchase"));
+    if (row.redeemed_at) events.push(timelineEntry(row.redeemed_at, `получил физическую награду «${row.product_name || "товар"}»${row.redeemed_by_name ? ` · сотрудник ${row.redeemed_by_name}` : ""}`, "physical_redeem"));
+  }
+  for (const row of queries[5].results || []) {
+    if (row.category !== "skins") continue;
+    const title = `купил скин «${SKINS[String(row.product_id)]?.title || row.product_id}»`;
+    events.push(timelineEntry(row.created_at, title, "purchase"));
+  }
+  for (const row of queries[6].results || []) {
+    if (["redeem_reward", "player_block", "player_unblock"].includes(String(row.action || "")) || String(row.action || "").startsWith("tester_")) continue;
+    const details = safeJson(row.details_json, {});
+    const labels = {
+      add_points: `сотрудник выдал ${Number(details.amount || row.new_value || 0).toLocaleString("ru-RU")} очков`,
+      add_zefir: `сотрудник выдал ${Number(details.amount || row.new_value || 0).toLocaleString("ru-RU")} зефира`,
+      add_coffee: `сотрудник выдал ${Number(details.amount || row.new_value || 0).toLocaleString("ru-RU")} кофе`,
+      add_keys: `сотрудник выдал ${Number(details.quantity || row.new_value || 1)} кейс(а) ${details.caseType || ""}`,
+      add_frame: `сотрудник выдал рамку ${details.frameId || ""}`,
+      grant_skin: `сотрудник выдал скин ${details.rewardId || ""}`,
+      grant_avatar: `сотрудник выдал аватарку ${details.rewardId || ""}`,
+      grant_trail: `сотрудник выдал след ${details.rewardId || ""}`,
+      redeem_reward: `сотрудник погасил физический код ${details.code || ""}`,
+      player_name_change: `изменено административное имя игрока`,
+      player_block: `игрок заблокирован`,
+      player_unblock: `игрок разблокирован`
+    };
+    events.push(timelineEntry(row.created_at, `${labels[row.action] || staffActionLabel(row.action)}${row.actor_name ? ` · ${row.actor_name}` : ""}`, "staff_action", details));
+  }
+  for (const row of queries[7].results || []) {
+    events.push(timelineEntry(row.created_at, `активировал промокод ${row.code} · ${safeJson(row.reward_json, []).map(safeRewardDescription).join(", ")}`, "promo"));
+  }
+  for (const row of queries[8].results || []) {
+    const text = row.action === "block" ? `игрок заблокирован ${banDurationLabel(row.block_type, row.blocked_until)} · ${row.reason || "без причины"}` : row.action === "unblock" || row.action === "expire" ? `игрок разблокирован · ${row.reason || ""}` : `изменена модерация · ${row.reason || ""}`;
+    events.push(timelineEntry(row.created_at, `${text}${row.actor_name ? ` · ${row.actor_name}` : ""}`, "moderation"));
+  }
+  const dedup = new Map();
+  for (const event of events) {
+    const key = `${event.at}:${event.type}:${event.text}`;
+    if (!dedup.has(key)) dedup.set(key, event);
+  }
+  const sorted = [...dedup.values()].filter((entry) => entry.at > 0).sort((a, b) => b.at - a.at);
+  const offset = (page - 1) * pageSize;
+  const pageEvents = sorted.slice(offset, offset + pageSize);
+  const lines = pageEvents.map((entry) => `• <b>${escapeHtml(formatUtcDate(entry.at))}</b> — ${escapeHtml(entry.text)}`);
+  await logStaffAction(env, user, access, "view_player_timeline", playerId, "player", null, null, { events: pageEvents.length, page });
+  await sendTelegramListChunks(env, chatId, `История игрока ${playerId} · страница ${page}`, lines, page === 1 ? "История пока пуста." : "На этой странице событий нет.");
+  const navigation = [];
+  if (page > 1) navigation.push({ text: "⬅️ Предыдущая", callback_data: `v57_history:${playerId}:${page - 1}` });
+  if (sorted.length > offset + pageSize) navigation.push({ text: "Следующая ➡️", callback_data: `v57_history:${playerId}:${page + 1}` });
+  if (navigation.length) await sendTelegramMessage(env, chatId, `Страница <b>${page}</b> · показано событий: <b>${pageEvents.length}</b>`, { inline_keyboard: [navigation] });
+}
+
+function permissionCommandKey(value) {
+  const raw = String(value || "").trim().toLowerCase();
+  const aliases = {
+    view_players: "viewPlayers", grant_rewards: "grantRewards", grant_legendary: "grantLegendaryCases", grant_legendary_cases: "grantLegendaryCases",
+    block: "blockPlayers", block_players: "blockPlayers", unblock: "unblockPlayers", unblock_players: "unblockPlayers",
+    redeem: "redeemPhysical", redeem_physical: "redeemPhysical", seasons: "manageSeasons", manage_seasons: "manageSeasons",
+    cases: "manageCases", manage_cases: "manageCases", shop: "manageShop", manage_shop: "manageShop",
+    broadcasts: "massBroadcasts", mass_broadcasts: "massBroadcasts", economy: "viewEconomy", view_economy: "viewEconomy",
+    rollback: "rollbackSettings", rollback_settings: "rollbackSettings", maintenance: "manageMaintenance", manage_maintenance: "manageMaintenance",
+    testers: "manageTesters", manage_testers: "manageTesters", promocodes: "managePromocodes", manage_promocodes: "managePromocodes",
+    analytics: "viewContentAnalytics", view_content_analytics: "viewContentAnalytics", approve: "approveDangerous", approve_dangerous: "approveDangerous"
+  };
+  return aliases[raw] || (SECURITY_PERMISSION_KEYS.includes(value) ? value : "");
+}
+
+async function showGranularPermissions(chatId, user, targetTelegramId, env) {
+  const access = await requireSecurityPermission(chatId, user, "approveDangerous", env);
+  if (!access) return;
+  await ensureOperationsSecuritySchema(env);
+  if (!targetTelegramId) {
+    const rows = await env.DB.prepare(`SELECT s.telegram_id,s.display_name,s.role,s.active,s.can_redeem_rewards,s.can_adjust_points,s.can_manage_products,s.can_publish_news,p.* FROM staff_users s LEFT JOIN staff_permission_overrides p ON p.telegram_id=s.telegram_id ORDER BY s.active DESC,s.role,s.display_name`).all();
+    const lines = (rows.results || []).map((row) => {
+      const preset = securityPermissionsFromRow(row, securityPermissionPreset(row.role, { redeem: row.can_redeem_rewards, points: row.can_adjust_points, products: row.can_manage_products, news: row.can_publish_news }));
+      if (["cashier", "cook"].includes(normalizeTeamRole(row.role))) preset.viewPlayers = false;
+      const enabled = SECURITY_PERMISSION_KEYS.filter((key) => preset[key]).length;
+      return `• <code>${escapeHtml(String(row.telegram_id))}</code> — <b>${escapeHtml(row.display_name || "Без имени")}</b> · ${escapeHtml(teamRoleLabel(row.role))} · прав ${enabled}/${SECURITY_PERMISSION_KEYS.length}`;
+    });
+    await sendTelegramListChunks(env, chatId, "Точные права сотрудников", lines, "Сотрудников нет.");
+    await sendTelegramMessage(env, chatId, `Просмотр сотрудника: <code>/permissions TELEGRAM_ID</code>\nИзменение: <code>/permission TELEGRAM_ID KEY on|off</code>`);
+    return;
+  }
+  const row = await env.DB.prepare(`SELECT s.*,p.* FROM staff_users s LEFT JOIN staff_permission_overrides p ON p.telegram_id=s.telegram_id WHERE s.telegram_id=? LIMIT 1`).bind(String(targetTelegramId)).first();
+  if (!row) return sendTelegramMessage(env, chatId, "Сотрудник не найден.");
+  const perms = securityPermissionsFromRow(row, securityPermissionPreset(row.role, { redeem: row.can_redeem_rewards, points: row.can_adjust_points, products: row.can_manage_products, news: row.can_publish_news }));
+  const restrictedPlayerAccess = ["cashier", "cook"].includes(normalizeTeamRole(row.role));
+  if (restrictedPlayerAccess) perms.viewPlayers = false;
+  const lines = SECURITY_PERMISSION_KEYS.map((key) => `${perms[key] ? "✅" : "❌"} <code>${escapeHtml(key)}</code> — ${escapeHtml(permissionLabel(key))}${key === "viewPlayers" && restrictedPlayerAccess ? " · недоступно для этой роли" : ""}`);
+  await sendTelegramMessage(env, chatId, `<b>Права сотрудника</b>\n\n${escapeHtml(row.display_name || "Без имени")} · <code>${escapeHtml(String(row.telegram_id))}</code>\nРоль: <b>${escapeHtml(teamRoleLabel(row.role))}</b>\n\n${lines.join("\n")}\n\nКоманда: <code>/permission ${escapeHtml(String(row.telegram_id))} KEY on|off</code>`);
+}
+
+async function setGranularPermission(chatId, user, telegramId, rawKey, enabled, env) {
+  const access = await getTeamAccess(user, env);
+  if (!access.authorized || !access.owner) return sendTelegramMessage(env, chatId, "Точные права может менять только владелец.");
+  const key = permissionCommandKey(rawKey);
+  if (!key) return sendTelegramMessage(env, chatId, `Неизвестное право. Доступно: ${SECURITY_PERMISSION_KEYS.map((item) => `<code>${item}</code>`).join(", ")}`);
+  await ensureOperationsSecuritySchema(env);
+  const staff = await env.DB.prepare(`SELECT role,can_redeem_rewards,can_adjust_points,can_manage_products,can_publish_news FROM staff_users WHERE telegram_id=? LIMIT 1`).bind(String(telegramId)).first();
+  if (!staff) return sendTelegramMessage(env, chatId, "Сотрудник не найден.");
+  if (key === "viewPlayers" && enabled && ["cashier", "cook"].includes(normalizeTeamRole(staff.role))) {
+    return sendTelegramMessage(env, chatId, "Просмотр игроков нельзя включить кассиру или повару. Сначала назначьте роль администратора.");
+  }
+  const preset = securityPermissionPreset(staff.role, { redeem: staff.can_redeem_rewards, points: staff.can_adjust_points, products: staff.can_manage_products, news: staff.can_publish_news });
+  const existing = await env.DB.prepare(`SELECT * FROM staff_permission_overrides WHERE telegram_id=? LIMIT 1`).bind(String(telegramId)).first();
+  const current = securityPermissionsFromRow(existing, preset);
+  const previousValue = Boolean(current[key]);
+  current[key] = Boolean(enabled);
+  const now = Math.floor(Date.now() / 1000);
+  const columns = Object.values(SECURITY_PERMISSION_COLUMNS);
+  const values = SECURITY_PERMISSION_KEYS.map((item) => current[item] ? 1 : 0);
+  await env.DB.prepare(
+    `INSERT INTO staff_permission_overrides(telegram_id,${columns.join(",")},updated_at,updated_by)
+     VALUES(?,${columns.map(() => "?").join(",")},?,?)
+     ON CONFLICT(telegram_id) DO UPDATE SET ${columns.map((column) => `${column}=excluded.${column}`).join(",")},updated_at=excluded.updated_at,updated_by=excluded.updated_by`
+  ).bind(String(telegramId), ...values, now, String(user.id)).run();
+  await logStaffAction(env, user, access, "staff_granular_permission", String(telegramId), "staff", previousValue ? 1 : 0, enabled ? 1 : 0, { permission: key });
+  await refreshBotCommandMenuSilently(env, telegramId);
+  await sendTelegramMessage(env, chatId, `Право «${escapeHtml(permissionLabel(key))}» для <code>${escapeHtml(String(telegramId))}</code> ${enabled ? "включено" : "отключено"}. Меню команд обновлено.`);
+}
+
+async function getMaintenanceSettings(env) {
+  await ensureOperationsSecuritySchema(env);
+  const row = await env.DB.prepare(`SELECT * FROM maintenance_settings WHERE id=1 LIMIT 1`).first();
+  return {
+    fullClosed: Number(row?.full_closed || 0) === 1,
+    ratingDisabled: Number(row?.rating_disabled || 0) === 1,
+    purchasesDisabled: Number(row?.purchases_disabled || 0) === 1,
+    casesDisabled: Number(row?.cases_disabled || 0) === 1,
+    physicalRewardsDisabled: Number(row?.physical_rewards_disabled || 0) === 1,
+    testersOnly: Number(row?.testers_only || 0) === 1,
+    message: String(row?.message || "В игре проходят технические работы. Прогресс сохранён. Попробуйте снова через несколько минут."),
+    updatedAt: Number(row?.updated_at || 0),
+    updatedBy: String(row?.updated_by || "")
+  };
+}
+
+async function requestTelegramId(request, env) {
+  try {
+    if (!["POST", "PUT", "PATCH"].includes(String(request.method || "GET").toUpperCase())) return "";
+    const body = await request.clone().json();
+    if (body?.initData) {
+      const auth = await validateTelegramInitData(String(body.initData), env);
+      return String(auth?.user?.id || "");
+    }
+    return String(body?.telegramId || body?.telegram_id || body?.targetTelegramId || body?.user?.id || "");
+  } catch {
+    return "";
+  }
+}
+
+async function isTesterAccount(telegramId, env) {
+  if (!telegramId) return false;
+  await ensureOperationsSecuritySchema(env);
+  const row = await env.DB.prepare(`SELECT telegram_id FROM tester_accounts WHERE telegram_id=? LIMIT 1`).bind(String(telegramId)).first();
+  return Boolean(row);
+}
+
+function maintenanceHtml(message) {
+  return `<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Сладкий Забег — технические работы</title><style>html,body{margin:0;min-height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#fff5f5;color:#4e3a42}body{display:grid;place-items:center;padding:24px;box-sizing:border-box}.card{max-width:430px;padding:28px;border:1px solid #efd0d9;border-radius:28px;background:#fff;box-shadow:0 18px 50px rgba(91,54,68,.13);text-align:center}.icon{font-size:54px}h1{font-size:25px;margin:12px 0}p{font-size:16px;line-height:1.5;color:#786870;margin:0}</style></head><body><div class="card"><div class="icon">🛠</div><h1>Технические работы</h1><p>${escapeHtml(message)}</p></div></body></html>`;
+}
+
+async function enforceMaintenanceForRequest(request, url, env) {
+  const path = String(url.pathname || "");
+  if (path === "/api/health" || path.startsWith("/api/admin/") || path.startsWith("/api/bot/") || path === "/telegram/webhook") return null;
+  let settings;
+  try { settings = await getMaintenanceSettings(env); } catch { return null; }
+  if (!settings.fullClosed && !settings.ratingDisabled && !settings.purchasesDisabled && !settings.casesDisabled && !settings.physicalRewardsDisabled && !settings.testersOnly) return null;
+  const staticEntry = request.method === "GET" && (path === "/" || path === "/index.html");
+  if (settings.fullClosed && staticEntry) return new Response(maintenanceHtml(settings.message), { status: 503, headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" } });
+  if (!path.startsWith("/api/")) return null;
+  const telegramId = await requestTelegramId(request, env);
+  const tester = await isTesterAccount(telegramId, env);
+  if (settings.testersOnly && !tester) return jsonResponse({ ok: false, maintenance: true, mode: "testers_only", error: settings.message }, 503);
+  if (settings.fullClosed && !tester) return jsonResponse({ ok: false, maintenance: true, mode: "full", error: settings.message }, 503);
+  if (settings.ratingDisabled && path.startsWith("/api/leaderboard/")) return jsonResponse({ ok: false, maintenance: true, mode: "rating", error: settings.message }, 503);
+  if (settings.purchasesDisabled && ["/api/rewards/create", "/api/skins/purchase", "/api/skins/bonus-case", "/api/cases/purchase"].includes(path)) return jsonResponse({ ok: false, maintenance: true, mode: "purchases", error: settings.message }, 503);
+  if (settings.casesDisabled && ["/api/cases/open", "/api/cases/open-granted", "/api/cases/purchase", "/api/cases/activate"].includes(path)) return jsonResponse({ ok: false, maintenance: true, mode: "cases", error: settings.message }, 503);
+  if (settings.physicalRewardsDisabled && path === "/api/rewards/create") return jsonResponse({ ok: false, maintenance: true, mode: "physical", error: settings.message }, 503);
+  return null;
+}
+
+function maintenanceKeyboard(settings) {
+  const button = (label, key, value) => ({ text: `${value ? "✅" : "⬜"} ${label}`, callback_data: `v57_maint:${key}:${value ? "off" : "on"}` });
+  return { inline_keyboard: [
+    [button("Полностью закрыть", "full", settings.fullClosed), button("Только тестеры", "testers", settings.testersOnly)],
+    [button("Рейтинг", "rating", settings.ratingDisabled), button("Покупки", "purchases", settings.purchasesDisabled)],
+    [button("Кейсы", "cases", settings.casesDisabled), button("Физ. награды", "physical", settings.physicalRewardsDisabled)],
+    [{ text: "🔄 Обновить", callback_data: "v57_maintenance" }, { text: "⬅️ Панель", callback_data: "adm_home" }]
+  ] };
+}
+
+async function showMaintenanceDashboard(chatId, user, env) {
+  const access = await requireSecurityPermission(chatId, user, "manageMaintenance", env);
+  if (!access) return;
+  const settings = await getMaintenanceSettings(env);
+  await sendTelegramMessage(env, chatId,
+    `<b>🛠 Режим технических работ</b>\n\n` +
+    `${settings.fullClosed ? "🔴" : "🟢"} Игра целиком: <b>${settings.fullClosed ? "закрыта" : "доступна"}</b>\n` +
+    `${settings.testersOnly ? "🟡" : "⚪"} Только тестеры: <b>${settings.testersOnly ? "да" : "нет"}</b>\n` +
+    `Рейтинг: <b>${settings.ratingDisabled ? "отключён" : "работает"}</b>\n` +
+    `Покупки: <b>${settings.purchasesDisabled ? "отключены" : "работают"}</b>\n` +
+    `Кейсы: <b>${settings.casesDisabled ? "отключены" : "работают"}</b>\n` +
+    `Физические награды: <b>${settings.physicalRewardsDisabled ? "отключены" : "работают"}</b>\n\n` +
+    `Сообщение игрокам:\n<i>${escapeHtml(settings.message)}</i>\n\n` +
+    `Команда текста: <code>/maintenance message НОВЫЙ ТЕКСТ</code>`,
+    maintenanceKeyboard(settings)
+  );
+}
+
+async function changeMaintenanceMode(chatId, user, mode, onOff, message, env, runtime = {}) {
+  const access = await requireSecurityPermission(chatId, user, "manageMaintenance", env);
+  if (!access) return;
+  await ensureOperationsSecuritySchema(env);
+  if (mode === "status") return showMaintenanceDashboard(chatId, user, env);
+  if (mode === "message") {
+    const text = String([onOff, message].filter(Boolean).join(" ")).trim().slice(0, 500);
+    if (text.length < 10) return sendTelegramMessage(env, chatId, "Сообщение должно содержать не менее 10 символов.");
+    const beforeSettings = await getMaintenanceSettings(env);
+    await env.DB.prepare(`UPDATE maintenance_settings SET message=?,updated_at=?,updated_by=? WHERE id=1`).bind(text, Math.floor(Date.now()/1000), String(user.id)).run();
+    await recordV67SettingChange(env,user,"maintenance","message","change",{message:beforeSettings.message},{message:text});
+    await sendTelegramMessage(env, chatId, "Сообщение технических работ обновлено.");
+    return showMaintenanceDashboard(chatId, user, env);
+  }
+  if (mode === "off") {
+    const beforeSettings = await getMaintenanceSettings(env);
+    await env.DB.prepare(`UPDATE maintenance_settings SET full_closed=0,rating_disabled=0,purchases_disabled=0,cases_disabled=0,physical_rewards_disabled=0,testers_only=0,updated_at=?,updated_by=? WHERE id=1`).bind(Math.floor(Date.now()/1000),String(user.id)).run();
+    await Promise.all([
+      recordV67SettingChange(env,user,"maintenance","all","disable_all",beforeSettings,{fullClosed:false,ratingDisabled:false,purchasesDisabled:false,casesDisabled:false,physicalRewardsDisabled:false,testersOnly:false,message:beforeSettings.message}),
+      logStaffAction(env,user,access,"maintenance_disable_all",null,"system",1,0,{})
+    ]);
+    const notifyTask=notifySubscribedStaff(env,"bot_errors",`🟢 <b>Технические ограничения сняты</b>\n\nСотрудник: ${escapeHtml(telegramDisplayName(user))}`);
+    if(!runWorkerBackground(runtime,notifyTask,"maintenance notification"))await notifyTask;
+    return showMaintenanceDashboard(chatId,user,env);
+  }
+  const map = { full: "full_closed", rating: "rating_disabled", purchases: "purchases_disabled", cases: "cases_disabled", physical: "physical_rewards_disabled", testers: "testers_only" };
+  const column = map[mode];
+  if (!column || !["on","off"].includes(String(onOff).toLowerCase())) return sendTelegramMessage(env,chatId,"Формат: <code>/maintenance full|rating|purchases|cases|physical|testers on|off</code>");
+  const enabled = String(onOff).toLowerCase() === "on";
+  if (mode === "full" && enabled && !access.owner) {
+    const approvalId = await requestDangerousAction(env,user,"maintenance_full","Полностью закрыть игру",{ enabled:true, chatId:String(chatId) });
+    await sendTelegramMessage(env,chatId,`⚠️ Полное закрытие требует подтверждения второго администратора. Запрос <b>#${approvalId}</b> создан.\n\nПодтверждение: <code>/approve ${approvalId}</code>`);
+    return;
+  }
+  const beforeSettings = await getMaintenanceSettings(env);
+  await env.DB.prepare(`UPDATE maintenance_settings SET ${column}=?,updated_at=?,updated_by=? WHERE id=1`).bind(enabled?1:0,Math.floor(Date.now()/1000),String(user.id)).run();
+  await Promise.all([
+    logStaffAction(env,user,access,"maintenance_change",null,"system",enabled?0:1,enabled?1:0,{mode,ownerDirect:Boolean(access.owner && mode === "full")}),
+    recordV67SettingChange(env,user,"maintenance",mode,"change",beforeSettings,{...beforeSettings,[({full:"fullClosed",rating:"ratingDisabled",purchases:"purchasesDisabled",cases:"casesDisabled",physical:"physicalRewardsDisabled",testers:"testersOnly"})[mode]]:enabled})
+  ]);
+  const notifyTask=notifySubscribedStaff(env,"bot_errors",`${enabled?"🟠":"🟢"} <b>Изменён режим технических работ</b>\n\n${escapeHtml(mode)}: <b>${enabled?"включён":"выключен"}</b>\nСотрудник: ${escapeHtml(telegramDisplayName(user))}`);
+  if(!runWorkerBackground(runtime,notifyTask,"maintenance notification"))await notifyTask;
+  await showMaintenanceDashboard(chatId,user,env);
+}
+
+async function requestDangerousAction(env, user, actionType, title, payload) {
+  await ensureOperationsSecuritySchema(env);
+  const now = Math.floor(Date.now()/1000);
+  const result = await env.DB.prepare(`INSERT INTO dangerous_action_approvals(action_type,title,payload_json,requested_by,requested_by_name,status,required_approvals,approvals_json,expires_at,created_at,updated_at,executed_at,error_text) VALUES(?,?,?,?,?,'pending',1,'[]',?,?,?,0,'')`)
+    .bind(String(actionType),String(title).slice(0,300),JSON.stringify(payload||{}),String(user.id),telegramDisplayName(user),now+3600,now,now).run();
+  const id = Number(result.meta?.last_row_id || 0);
+  await notifySubscribedStaff(env,"bot_errors",`⚠️ <b>Требуется второе подтверждение</b>\n\nЗапрос: <b>#${id}</b>\nДействие: ${escapeHtml(title)}\nАвтор: ${escapeHtml(telegramDisplayName(user))}\n\n<code>/approve ${id}</code> или <code>/reject ${id}</code>`);
+  return id;
+}
+
+async function showDangerousApprovals(chatId,user,env) {
+  const access = await requireSecurityPermission(chatId,user,"approveDangerous",env);
+  if (!access) return;
+  await ensureOperationsSecuritySchema(env);
+  const now=Math.floor(Date.now()/1000);
+  await env.DB.prepare(`UPDATE dangerous_action_approvals SET status='expired',updated_at=? WHERE status='pending' AND expires_at<=?`).bind(now,now).run();
+  const result=await env.DB.prepare(`SELECT * FROM dangerous_action_approvals WHERE status='pending' ORDER BY created_at ASC LIMIT 30`).all();
+  const rows=result.results||[];
+  const lines=rows.map(row=>`• <b>#${row.id} ${escapeHtml(row.title)}</b>\n  Автор: ${escapeHtml(row.requested_by_name||row.requested_by)} · до ${escapeHtml(formatUtcDate(row.expires_at))}`);
+  const buttons=rows.map(row=>[{text:`✅ #${row.id}`,callback_data:`v57_approve:${row.id}`},{text:"❌",callback_data:`v57_reject:${row.id}`}]);
+  buttons.push([{text:"⬅️ Панель",callback_data:"adm_home"}]);
+  await sendTelegramMessage(env,chatId,`<b>✅ Подтверждения опасных действий</b>\n\n${lines.join("\n\n")||"Нет ожидающих подтверждений."}`,{inline_keyboard:buttons});
+}
+
+async function processDangerousApproval(chatId,user,id,decision,env) {
+  const access=await requireSecurityPermission(chatId,user,"approveDangerous",env);
+  if(!access)return;
+  await ensureOperationsSecuritySchema(env);
+  const row=await env.DB.prepare(`SELECT * FROM dangerous_action_approvals WHERE id=? LIMIT 1`).bind(Number(id)).first();
+  if(!row)return sendTelegramMessage(env,chatId,"Запрос не найден.");
+  if(row.status!=="pending")return sendTelegramMessage(env,chatId,`Запрос уже имеет статус <b>${escapeHtml(row.status)}</b>.`);
+  const now=Math.floor(Date.now()/1000);
+  if(Number(row.expires_at||0)<=now){await env.DB.prepare(`UPDATE dangerous_action_approvals SET status='expired',updated_at=? WHERE id=?`).bind(now,row.id).run();return sendTelegramMessage(env,chatId,"Срок подтверждения истёк.");}
+  if(decision!=="reject" && String(row.requested_by)===String(user.id) && String(env.ALLOW_OWNER_SELF_APPROVAL||"")!=="1") return sendTelegramMessage(env,chatId,"Автор запроса не может подтвердить собственное опасное действие. Нужен второй администратор.");
+  if(decision==="reject"){
+    const rejected = await env.DB.prepare(`UPDATE dangerous_action_approvals SET status='rejected',approvals_json=?,updated_at=? WHERE id=? AND status='pending'`).bind(JSON.stringify([{id:String(user.id),name:telegramDisplayName(user),decision:"reject",at:now}]),now,row.id).run();
+    if (Number(rejected.meta?.changes || 0) < 1) return sendTelegramMessage(env,chatId,"Запрос уже обработан другим администратором.");
+    await logStaffAction(env,user,access,"dangerous_action_reject",String(row.requested_by),"approval",null,row.id,{actionType:row.action_type});
+    return sendTelegramMessage(env,chatId,`Запрос #${row.id} отклонён.`);
+  }
+  const approvals=safeJson(row.approvals_json,[]);
+  if(approvals.some(item=>String(item.id)===String(user.id)))return sendTelegramMessage(env,chatId,"Вы уже подтвердили этот запрос.");
+  approvals.push({id:String(user.id),name:telegramDisplayName(user),decision:"approve",at:now});
+  const claimed = await env.DB.prepare(`UPDATE dangerous_action_approvals SET approvals_json=?,status='approved',updated_at=? WHERE id=? AND status='pending'`).bind(JSON.stringify(approvals),now,row.id).run();
+  if (Number(claimed.meta?.changes || 0) < 1) return sendTelegramMessage(env,chatId,"Запрос уже был принят другим администратором. Обновите список подтверждений.");
+  try{
+    await executeDangerousAction(row,env,user);
+    await env.DB.prepare(`UPDATE dangerous_action_approvals SET status='executed',executed_at=?,updated_at=?,error_text='' WHERE id=?`).bind(now,now,row.id).run();
+    await logStaffAction(env,user,access,"dangerous_action_execute",String(row.requested_by),"approval",null,row.id,{actionType:row.action_type});
+    await sendTelegramMessage(env,chatId,`✅ Запрос #${row.id} подтверждён и выполнен: ${escapeHtml(row.title)}`);
+  }catch(error){
+    await env.DB.prepare(`UPDATE dangerous_action_approvals SET status='failed',updated_at=?,error_text=? WHERE id=?`).bind(now,String(error?.message||error).slice(0,500),row.id).run();
+    await sendTelegramMessage(env,chatId,`❌ Не удалось выполнить запрос #${row.id}: ${escapeHtml(String(error?.message||error))}`);
+  }
+}
+
+async function executeDangerousAction(row,env,approver) {
+  const payload=safeJson(row.payload_json,{});
+  if(row.action_type==="maintenance_full"){
+    const beforeSettings=await getMaintenanceSettings(env);
+    await env.DB.prepare(`UPDATE maintenance_settings SET full_closed=?,updated_at=?,updated_by=? WHERE id=1`).bind(payload.enabled?1:0,Math.floor(Date.now()/1000),String(approver.id)).run();
+    await recordV67SettingChange(env,approver,"maintenance","full","approved_change",{enabled:beforeSettings.fullClosed},{enabled:Boolean(payload.enabled)});
+    return;
+  }
+  if(row.action_type==="snapshot_restore"){
+    await restoreSnapshotById(String(payload.snapshotId),approver,env);
+    return;
+  }
+  if(row.action_type==="config_history_rollback"){
+    await restoreConfigHistoryById(Number(payload.historyId),approver,env);
+    return;
+  }
+  if(row.action_type==="legendary_grant"){
+    const quantity=Math.max(1,Number(payload.quantity||1));
+    await createGrantedCases(env,String(payload.telegramId),"legendary",quantity,String(approver.id),String(payload.reason||"Подтверждённая выдача"));
+    await recordStaffUsage(env,String(row.requested_by),"legendary_daily",quantity);
+    await recordPlayerTimeline(env,payload.telegramId,"staff_grant",`сотрудник выдал ${quantity} Легендарный кейс`,payload,`approval_${row.id}`,approver);
+    return;
+  }
+  if(row.action_type==="compensation_template"){
+    const rewards=Array.isArray(payload.rewards)?payload.rewards:[];
+    const sourceId=`comp_approval_${row.id}`;
+    let queued=0;
+    for(let index=0;index<rewards.length;index+=1){
+      queued += await enqueueRewardDelivery(env,String(payload.targetId),"compensation",`${sourceId}_${index}`,rewards[index],String(payload.reason||"Компенсация"),String(payload.reportChatId||"")) ? 1 : 0;
+    }
+    const usage=await compensationUsageSummary(rewards);
+    if(queued>0) await recordCompensationUsage(env,String(row.requested_by),usage);
+    await recordPlayerTimeline(env,String(payload.targetId),"staff_grant",`сотрудник выдал компенсацию «${String(payload.templateTitle||payload.templateId||"Компенсация")}»`,{templateId:payload.templateId,rewards,reason:payload.reason,queued},`approval_${row.id}`,approver);
+    if(payload.reportChatId) await sendTelegramMessage(env,String(payload.reportChatId),`✅ <b>Компенсация подтверждена</b>\n\nИгрок: <code>${escapeHtml(String(payload.targetId))}</code>\nШаблон: <b>${escapeHtml(String(payload.templateTitle||payload.templateId||"Компенсация"))}</b>\nПозиций в очереди: <b>${queued}</b>`);
+    return;
+  }
+  throw new Error("Неизвестный тип опасного действия");
+}
+
+async function showTestersDashboard(chatId,user,env){
+  const access=await requireSecurityPermission(chatId,user,"manageTesters",env); if(!access)return;
+  await ensureOperationsSecuritySchema(env);
+  const rows=(await env.DB.prepare(`SELECT * FROM tester_accounts ORDER BY updated_at DESC LIMIT 100`).all()).results||[];
+  const lines=rows.map(row=>`• <code>${escapeHtml(String(row.telegram_id))}</code>\n  баланс ${Number(row.test_balance_enabled)?"✅":"—"} · все скины ${Number(row.unlock_all_skins)?"✅":"—"} · кейсы ${Number(row.unlock_all_cases)?"✅":"—"} · гарант ${Number(row.accelerated_guarantee)?"✅":"—"} · вне рейтинга ${Number(row.exclude_from_rating)?"✅":"❌"}${row.note?`\n  ${escapeHtml(row.note)}`:""}`);
+  await sendTelegramListChunks(env,chatId,"Тестовые аккаунты",lines,"Тестеров пока нет.");
+  await sendTelegramMessage(env,chatId,`Команды:\n<code>/tester_add ID заметка</code>\n<code>/tester_balance ID</code>\n<code>/tester_unlock ID</code>\n<code>/tester_cases ID</code>\n<code>/tester_guarantee ID</code>\n<code>/tester_exclude ID on|off</code>\n<code>/tester_reset ID</code>\n<code>/tester_remove ID</code>`);
+}
+
+async function ensureTesterExists(telegramId,user,note,env){
+  await ensureOperationsSecuritySchema(env); const now=Math.floor(Date.now()/1000);
+  await env.DB.prepare(`INSERT INTO tester_accounts(telegram_id,note,created_at,updated_at,updated_by) VALUES(?,?,?,?,?) ON CONFLICT(telegram_id) DO UPDATE SET note=CASE WHEN excluded.note<>'' THEN excluded.note ELSE tester_accounts.note END,updated_at=excluded.updated_at,updated_by=excluded.updated_by`).bind(String(telegramId),String(note||"").slice(0,300),now,now,String(user.id)).run();
+}
+
+async function manageTesterAccount(chatId,user,action,telegramId,note,env){
+  const access=await requireSecurityPermission(chatId,user,"manageTesters",env); if(!access)return;
+  await ensureSafeControlCenterSchema(env);
+  const id=String(telegramId);
+  if(action==="add"){
+    await ensureTesterExists(id,user,note,env);
+    await env.DB.prepare(`UPDATE leaderboard_entries SET hidden=1 WHERE telegram_id=?`).bind(id).run();
+    await env.DB.prepare(`UPDATE leaderboard_all_time SET hidden=1 WHERE telegram_id=?`).bind(id).run();
+    await recordPlayerTimeline(env,id,"tester","добавлен в тестовую группу",{note:String(note||"")},`tester_add_${Date.now()}`,user);
+    await logStaffAction(env,user,access,"tester_add",id,"tester",0,1,{note});
+    return sendTelegramMessage(env,chatId,`Игрок <code>${escapeHtml(id)}</code> добавлен в тестовую группу. Результаты скрыты из основного рейтинга.`);
+  }
+  if(action==="remove"){
+    const control = await env.DB.prepare(`SELECT blocked FROM player_admin_controls WHERE telegram_id=? LIMIT 1`).bind(id).first().catch(() => null);
+    const hidden = Number(control?.blocked || 0) === 1 ? 1 : 0;
+    await env.DB.prepare(`DELETE FROM tester_accounts WHERE telegram_id=?`).bind(id).run();
+    await env.DB.prepare(`UPDATE leaderboard_entries SET hidden=? WHERE telegram_id=?`).bind(hidden,id).run();
+    await env.DB.prepare(`UPDATE leaderboard_all_time SET hidden=? WHERE telegram_id=?`).bind(hidden,id).run();
+    await recordPlayerTimeline(env,id,"tester","удалён из тестовой группы",{ratingHidden:Boolean(hidden)},`tester_remove_${Date.now()}`,user);
+    await logStaffAction(env,user,access,"tester_remove",id,"tester",1,0,{ratingHidden:Boolean(hidden)});
+    return sendTelegramMessage(env,chatId,"Игрок удалён из тестовой группы. Существующие тестовые награды не удалялись автоматически.");
+  }
+  await ensureTesterExists(id,user,note,env);
+  const now=Math.floor(Date.now()/1000);
+  if(action==="balance"){
+    await env.DB.prepare(`INSERT OR IGNORE INTO admin_profile_state(telegram_id,wallet,best_score,treats,coffee,profile_xp,revision,created_at,updated_at,updated_by) VALUES(?,0,0,0,0,0,1,?,?,?)`).bind(id,now,now,String(user.id)).run();
+    await env.DB.prepare(`UPDATE admin_profile_state SET wallet=10000000,treats=5000,coffee=5000,pending_wallet=0,pending_treats=0,pending_coffee=0,revision=revision+1,updated_at=?,updated_by=? WHERE telegram_id=?`).bind(now,String(user.id),id).run();
+    await env.DB.prepare(`UPDATE tester_accounts SET test_balance_enabled=1,updated_at=?,updated_by=? WHERE telegram_id=?`).bind(now,String(user.id),id).run();
+    await recordPlayerTimeline(env,id,"tester","выдан тестовый баланс",{wallet:10000000,treats:5000,coffee:5000},`tester_balance_${now}`,user,now);
+    await logStaffAction(env,user,access,"tester_balance",id,"tester",0,10000000,{treats:5000,coffee:5000});
+    return sendTelegramMessage(env,chatId,"Тестовый баланс установлен: 10 000 000 очков, 5 000 зефира и 5 000 кофе.");
+  }
+  if(action==="unlock"){
+    const ensured=await ensureCasePlayerState(env,id,{}); const state=ensured.state;
+    state.ownedSkins=[...new Set(Object.keys(SKINS).filter(key=>key!=="default"))];
+    state.ownedAvatars=[...new Set(Object.keys(CASE_AVATARS))];
+    state.ownedFrames=[...new Set(Object.keys(CASE_FRAMES))];
+    state.ownedTrails=[...new Set(Object.keys(CASE_TRAILS))];
+    state.ownedMusicTracks=[...new Set(Object.keys(CASE_MUSIC_TRACKS))];
+    state.activeMusicTrackId="cafe_run";
+    await caseStateUpdateStatement(env,id,state,now).run();
+    await env.DB.prepare(`UPDATE tester_accounts SET unlock_all_skins=1,updated_at=?,updated_by=? WHERE telegram_id=?`).bind(now,String(user.id),id).run();
+    await recordPlayerTimeline(env,id,"tester","открыта вся тестовая коллекция",{},`tester_unlock_${now}`,user,now);
+    await logStaffAction(env,user,access,"tester_unlock",id,"tester",0,1,{});
+    return sendTelegramMessage(env,chatId,"Все скины, аватарки, рамки, следы и мелодии открыты для тестового аккаунта.");
+  }
+  if(action==="cases"){
+    for(const caseType of ["small","sweet","gold","legendary"]) await createGrantedCases(env,id,caseType,5,String(user.id),"Тестовый набор кейсов");
+    await env.DB.prepare(`UPDATE tester_accounts SET unlock_all_cases=1,updated_at=?,updated_by=? WHERE telegram_id=?`).bind(now,String(user.id),id).run();
+    await recordPlayerTimeline(env,id,"tester","выдан тестовый набор кейсов",{perType:5},`tester_cases_${now}`,user,now);
+    await logStaffAction(env,user,access,"tester_cases",id,"tester",0,20,{});
+    return sendTelegramMessage(env,chatId,"Выдано по 5 кейсов каждого типа.");
+  }
+  if(action==="guarantee"){
+    await ensureCasePlayerState(env,id,{});
+    await env.DB.prepare(`UPDATE case_player_state SET legendary_pity_counter=49,revision=revision+1,updated_at=? WHERE telegram_id=?`).bind(now,id).run();
+    await env.DB.prepare(`UPDATE tester_accounts SET accelerated_guarantee=1,updated_at=?,updated_by=? WHERE telegram_id=?`).bind(now,String(user.id),id).run();
+    await recordPlayerTimeline(env,id,"tester","включён ускоренный гарант",{},`tester_guarantee_${now}`,user,now);
+    await logStaffAction(env,user,access,"tester_guarantee",id,"tester",0,1,{});
+    return sendTelegramMessage(env,chatId,"Следующее открытие Легендарного кейса сработает как гарантированное.");
+  }
+  if(action==="reset"){
+    await env.DB.prepare(`UPDATE admin_profile_state SET wallet=0,best_score=0,treats=0,coffee=0,profile_xp=0,pending_wallet=0,pending_treats=0,pending_coffee=0,wallet_override=NULL,revision=revision+1,updated_at=?,updated_by=? WHERE telegram_id=?`).bind(now,String(user.id),id).run();
+    await env.DB.prepare(`DELETE FROM granted_cases WHERE telegram_id=?`).bind(id).run();
+    await env.DB.prepare(`DELETE FROM level_case_openings WHERE telegram_id=?`).bind(id).run();
+    await env.DB.prepare(`DELETE FROM case_booster_run_consumptions WHERE telegram_id=?`).bind(id).run();
+    await env.DB.prepare(`DELETE FROM promo_redemptions WHERE telegram_id=?`).bind(id).run();
+    await env.DB.prepare(`DELETE FROM content_analytics_events WHERE telegram_id=?`).bind(id).run();
+    await env.DB.prepare(`DELETE FROM leaderboard_entries WHERE telegram_id=?`).bind(id).run();
+    await env.DB.prepare(`DELETE FROM leaderboard_all_time WHERE telegram_id=?`).bind(id).run();
+    await env.DB.prepare(`DELETE FROM leaderboard_runs WHERE telegram_id=?`).bind(id).run();
+    await env.DB.prepare(`DELETE FROM leaderboard_rewards WHERE telegram_id=?`).bind(id).run();
+    await env.DB.prepare(`DELETE FROM reward_delivery_queue WHERE telegram_id=? AND source_type IN ('promo','compensation','campaign','tester')`).bind(id).run();
+    await env.DB.prepare(`UPDATE case_player_state SET boosters_points=0,boosters_treats=0,boosters_coffee=0,active_booster_type='',active_booster_runs=0,owned_avatars_json='[]',active_avatar_id='',owned_frames_json='[]',active_frame_id='',owned_trails_json='[]',active_trail_id='',owned_music_json='["cafe_run"]',active_music_id='cafe_run',owned_skins_json='[]',active_skin_id='',legendary_pity_counter=0,revision=revision+1,updated_at=? WHERE telegram_id=?`).bind(now,id).run();
+    await env.DB.prepare(`UPDATE tester_accounts SET test_balance_enabled=0,unlock_all_skins=0,unlock_all_cases=0,accelerated_guarantee=0,exclude_from_rating=1,updated_at=?,updated_by=? WHERE telegram_id=?`).bind(now,String(user.id),id).run();
+    await recordPlayerTimeline(env,id,"tester_reset","тестовый аккаунт сброшен",{},`tester_reset_${now}`,user,now);
+    await logStaffAction(env,user,access,"tester_reset",id,"tester",1,0,{});
+    return sendTelegramMessage(env,chatId,"Тестовый аккаунт сброшен. Игрок остаётся в группе тестеров и вне основного рейтинга.");
+  }
+}
+
+async function setTesterRatingExclusion(chatId,user,telegramId,enabled,env){
+  const access=await requireSecurityPermission(chatId,user,"manageTesters",env); if(!access)return;
+  await ensureTesterExists(String(telegramId),user,"",env); const now=Math.floor(Date.now()/1000);
+  await env.DB.prepare(`UPDATE tester_accounts SET exclude_from_rating=?,updated_at=?,updated_by=? WHERE telegram_id=?`).bind(enabled?1:0,now,String(user.id),String(telegramId)).run();
+  const control = await env.DB.prepare(`SELECT blocked FROM player_admin_controls WHERE telegram_id=? LIMIT 1`).bind(String(telegramId)).first().catch(() => null);
+  const hidden = enabled || Number(control?.blocked || 0) === 1 ? 1 : 0;
+  await env.DB.prepare(`UPDATE leaderboard_entries SET hidden=? WHERE telegram_id=?`).bind(hidden,String(telegramId)).run();
+  await env.DB.prepare(`UPDATE leaderboard_all_time SET hidden=? WHERE telegram_id=?`).bind(hidden,String(telegramId)).run();
+  await logStaffAction(env,user,access,"tester_rating_exclusion",String(telegramId),"tester",enabled?0:1,enabled?1:0,{hidden:Boolean(hidden)});
+  await sendTelegramMessage(env,chatId,enabled?"Результаты тестера исключены из основного рейтинга.":hidden?"Исключение тестера отключено, но игрок остаётся скрыт из-за блокировки.":"Результаты тестера снова могут отображаться в рейтинге.");
+}
+
+function parsePromoRewardSpec(spec){
+  const rewards=[];
+  for(const part of String(spec||"").split(",").map(item=>item.trim()).filter(Boolean)){
+    const bits=part.split(":").map(item=>item.trim());
+    const kind=String(bits[0]||"").toLowerCase();
+    if(["points","zefir","coffee"].includes(kind)){
+      const amount=Math.max(1,Math.floor(Number(bits[1]||0))); if(!amount)throw new Error(`Некорректная сумма: ${part}`);
+      rewards.push({kind,amount}); continue;
+    }
+    if(kind==="case"){
+      const id=normalizeCaseType(bits[1]); const amount=Math.max(1,Math.floor(Number(bits[2]||1))); if(!id)throw new Error(`Неизвестный кейс: ${part}`);
+      rewards.push({kind:"case",id,amount}); continue;
+    }
+    if(["avatar","frame","trail","skin"].includes(kind)){
+      const id=String(bits[1]||""); const catalog=({avatar:CASE_AVATARS,frame:CASE_FRAMES,trail:CASE_TRAILS,skin:SKINS})[kind]; if(!catalog?.[id])throw new Error(`Неизвестный предмет: ${part}`);
+      rewards.push({kind,id,amount:1}); continue;
+    }
+    throw new Error(`Неизвестная награда: ${part}`);
+  }
+  if(!rewards.length)throw new Error("Награды не указаны");
+  return rewards;
+}
+
+function parsePromoExpiryDateTime(value){
+  const raw=String(value||"").trim();
+  if(!raw||/^(never|none|без)$/i.test(raw))return 0;
+  const normalized=/^\d{4}-\d{2}-\d{2}$/.test(raw)?`${raw}T23:59:59+03:00`:/^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}$/.test(raw)?`${raw.replace(" ","T")}:00+03:00`:raw;
+  const ms=Date.parse(normalized); if(!Number.isFinite(ms))throw new Error("Дата должна быть в формате YYYY-MM-DD HH:MM"); return Math.floor(ms/1000);
+}
+
+
+function promoCodeWorkflowCancelKeyboard() {
+  return { inline_keyboard: [[{ text: "❌ Отмена", callback_data: "v60_pc_cancel" }]] };
+}
+
+function promoCodeWorkflowCodeKeyboard() {
+  return {
+    inline_keyboard: [
+      [{ text: "🎲 Сгенерировать код", callback_data: "v60_pc_code:auto" }],
+      [{ text: "✍️ Ввести свой код", callback_data: "v60_pc_code:custom" }],
+      [{ text: "❌ Отмена", callback_data: "v60_pc_cancel" }]
+    ]
+  };
+}
+
+function promoCodeWorkflowRewardKeyboard() {
+  return {
+    inline_keyboard: [
+      [
+        { text: "📦 Обычный кейс", callback_data: "v60_pc_case:small" },
+        { text: "🥈 Серебряный", callback_data: "v60_pc_case:sweet" }
+      ],
+      [
+        { text: "🥇 Золотой", callback_data: "v60_pc_case:gold" },
+        { text: "👑 Легендарный", callback_data: "v60_pc_case:legendary" }
+      ],
+      [
+        { text: "⭐ Очки", callback_data: "v60_pc_reward:points" },
+        { text: "🍬 Зефир", callback_data: "v60_pc_reward:zefir" },
+        { text: "☕ Кофе", callback_data: "v60_pc_reward:coffee" }
+      ],
+      [
+        { text: "🐶 Скин", callback_data: "v60_pc_catalog:skin:0" },
+        { text: "🖼 Аватарка", callback_data: "v60_pc_catalog:avatar:0" }
+      ],
+      [
+        { text: "🎀 Рамка", callback_data: "v60_pc_catalog:frame:0" },
+        { text: "✨ След", callback_data: "v60_pc_catalog:trail:0" }
+      ],
+      [{ text: "❌ Отмена", callback_data: "v60_pc_cancel" }]
+    ]
+  };
+}
+
+function promoAmountPresets(kind) {
+  if (kind === "points") return [500, 1000, 2500, 5000, 10000, 25000];
+  if (kind === "zefir" || kind === "coffee") return [10, 25, 50, 100, 250, 500];
+  return [1, 2, 3, 5, 10];
+}
+
+function promoCodeWorkflowAmountKeyboard(kind) {
+  const values = promoAmountPresets(kind);
+  const rows = [];
+  for (let index = 0; index < values.length; index += 3) {
+    rows.push(values.slice(index, index + 3).map((value) => ({
+      text: value.toLocaleString("ru-RU"),
+      callback_data: `v60_pc_amount:${value}`
+    })));
+  }
+  rows.push([{ text: "✍️ Другое количество", callback_data: "v60_pc_amount:custom" }]);
+  rows.push([{ text: "⬅️ К наградам", callback_data: "v60_pc_rewards:add" }, { text: "❌ Отмена", callback_data: "v60_pc_cancel" }]);
+  return { inline_keyboard: rows };
+}
+
+function promoCatalogByKind(kind) {
+  if (kind === "skin") return SKINS;
+  if (kind === "avatar") return CASE_AVATARS;
+  if (kind === "frame") return CASE_FRAMES;
+  if (kind === "trail") return CASE_TRAILS;
+  return null;
+}
+
+function promoCatalogLabel(kind) {
+  return ({ skin: "скин", avatar: "аватарку", frame: "рамку", trail: "след" })[kind] || "предмет";
+}
+
+function promoCodeWorkflowCatalogKeyboard(kind, page = 0) {
+  const catalog = promoCatalogByKind(kind) || {};
+  const entries = Object.values(catalog).filter((item) => item?.id && item.id !== "default");
+  const pageSize = 8;
+  const totalPages = Math.max(1, Math.ceil(entries.length / pageSize));
+  const safePage = Math.max(0, Math.min(totalPages - 1, Math.floor(Number(page) || 0)));
+  const slice = entries.slice(safePage * pageSize, safePage * pageSize + pageSize);
+  const rows = slice.map((item) => [{
+    text: `${item.rarity === "legendary" ? "👑 " : ""}${String(item.title || item.id).slice(0, 38)}`,
+    callback_data: `v60_pc_item:${kind}:${item.id}`
+  }]);
+  if (totalPages > 1) {
+    const nav = [];
+    if (safePage > 0) nav.push({ text: "⬅️", callback_data: `v60_pc_catalog:${kind}:${safePage - 1}` });
+    nav.push({ text: `${safePage + 1}/${totalPages}`, callback_data: "v60_pc_noop" });
+    if (safePage + 1 < totalPages) nav.push({ text: "➡️", callback_data: `v60_pc_catalog:${kind}:${safePage + 1}` });
+    rows.push(nav);
+  }
+  rows.push([{ text: "⬅️ К наградам", callback_data: "v60_pc_rewards:add" }, { text: "❌ Отмена", callback_data: "v60_pc_cancel" }]);
+  return { inline_keyboard: rows };
+}
+
+function promoCodeWorkflowRewardReviewKeyboard(rewards) {
+  const rows = [[
+    { text: "➕ Добавить награду", callback_data: "v60_pc_rewards:add" },
+    { text: "Далее ➡️", callback_data: "v60_pc_rewards:next" }
+  ]];
+  if (Array.isArray(rewards) && rewards.length) rows.push([{ text: "↩️ Убрать последнюю", callback_data: "v60_pc_rewards:undo" }]);
+  rows.push([{ text: "❌ Отмена", callback_data: "v60_pc_cancel" }]);
+  return { inline_keyboard: rows };
+}
+
+function promoCodeWorkflowLimitKeyboard() {
+  return {
+    inline_keyboard: [
+      [
+        { text: "50", callback_data: "v60_pc_limit:50" },
+        { text: "100", callback_data: "v60_pc_limit:100" },
+        { text: "500", callback_data: "v60_pc_limit:500" }
+      ],
+      [
+        { text: "1 000", callback_data: "v60_pc_limit:1000" },
+        { text: "5 000", callback_data: "v60_pc_limit:5000" },
+        { text: "∞ Без лимита", callback_data: "v60_pc_limit:inf" }
+      ],
+      [{ text: "✍️ Указать свой лимит", callback_data: "v60_pc_limit:custom" }],
+      [{ text: "❌ Отмена", callback_data: "v60_pc_cancel" }]
+    ]
+  };
+}
+
+function promoCodeWorkflowExpiryKeyboard() {
+  return {
+    inline_keyboard: [
+      [
+        { text: "24 часа", callback_data: "v60_pc_expiry:1d" },
+        { text: "3 дня", callback_data: "v60_pc_expiry:3d" },
+        { text: "7 дней", callback_data: "v60_pc_expiry:7d" }
+      ],
+      [
+        { text: "14 дней", callback_data: "v60_pc_expiry:14d" },
+        { text: "30 дней", callback_data: "v60_pc_expiry:30d" }
+      ],
+      [{ text: "♾ Без срока", callback_data: "v60_pc_expiry:none" }],
+      [{ text: "📅 Указать дату", callback_data: "v60_pc_expiry:custom" }],
+      [{ text: "❌ Отмена", callback_data: "v60_pc_cancel" }]
+    ]
+  };
+}
+
+function promoCodeWorkflowTitleKeyboard() {
+  return {
+    inline_keyboard: [
+      [{ text: "✅ Использовать предложенное", callback_data: "v60_pc_title:auto" }],
+      [{ text: "❌ Отмена", callback_data: "v60_pc_cancel" }]
+    ]
+  };
+}
+
+function promoCodeWorkflowConfirmKeyboard() {
+  return {
+    inline_keyboard: [
+      [{ text: "🚀 Создать и включить", callback_data: "v60_pc_create:on" }],
+      [{ text: "📝 Создать выключенным", callback_data: "v60_pc_create:off" }],
+      [{ text: "✏️ Изменить название", callback_data: "v60_pc_title:custom" }],
+      [{ text: "❌ Отмена", callback_data: "v60_pc_cancel" }]
+    ]
+  };
+}
+
+function buildPromoAutoTitle(code, rewards) {
+  const list = Array.isArray(rewards) ? rewards : [];
+  if (list.length === 1) return String(safeRewardDescription(list[0]) || `Подарок ${code}`).slice(0, 120);
+  return `Набор наград ${code}`.slice(0, 120);
+}
+
+function renderPromoRewardList(rewards) {
+  const list = Array.isArray(rewards) ? rewards : [];
+  return list.length
+    ? list.map((reward, index) => `${index + 1}. ${escapeHtml(safeRewardDescription(reward))}`).join("\n")
+    : "Награды ещё не выбраны.";
+}
+
+function promoExpiryFromPreset(preset) {
+  const now = Math.floor(Date.now() / 1000);
+  const days = ({ "1d": 1, "3d": 3, "7d": 7, "14d": 14, "30d": 30 })[String(preset || "")];
+  return days ? now + days * 24 * 60 * 60 : 0;
+}
+
+async function generateUniquePromoCode(env) {
+  await ensureOperationsSecuritySchema(env);
+  for (let attempt = 0; attempt < 12; attempt += 1) {
+    const bytes = new Uint8Array(6);
+    crypto.getRandomValues(bytes);
+    let suffix = "";
+    for (const byte of bytes) suffix += CODE_ALPHABET[byte % CODE_ALPHABET.length];
+    const code = `SWEET-${suffix}`;
+    const existing = await env.DB.prepare(`SELECT code FROM promo_codes WHERE code=? LIMIT 1`).bind(code).first();
+    if (!existing?.code) return code;
+  }
+  throw new Error("Не удалось создать уникальный код. Попробуйте ещё раз.");
+}
+
+async function promoCodeExists(code, env) {
+  await ensureOperationsSecuritySchema(env);
+  const row = await env.DB.prepare(`SELECT code FROM promo_codes WHERE code=? LIMIT 1`).bind(normalizedPromoCode(code)).first();
+  return Boolean(row?.code);
+}
+
+async function startPromoCodeWorkflow(chatId, user, env) {
+  const access = await requireSecurityPermission(chatId, user, "managePromocodes", env);
+  if (!access) return;
+  await clearStaffWorkflow(user.id, env);
+  await setStaffWorkflow(user.id, chatId, "promo_create", "code", { rewards: [] }, env);
+  await sendTelegramMessage(env, chatId,
+    `<b>🎟 Новый промокод</b>\n\nШаг 1 из 6. Выберите код. Бот может создать безопасный уникальный код автоматически.`,
+    promoCodeWorkflowCodeKeyboard()
+  );
+}
+
+async function showPromoRewardKindStep(chatId, user, env) {
+  const workflow = await getStaffWorkflow(user.id, env);
+  if (!workflow || workflow.flow_type !== "promo_create") return;
+  const rewards = Array.isArray(workflow.data?.rewards) ? workflow.data.rewards : [];
+  await updateStaffWorkflow(user.id, { step: "reward_kind" }, env);
+  await sendTelegramMessage(env, chatId,
+    `<b>🎁 Награда промокода</b>\n\nКод: <code>${escapeHtml(workflow.data?.code || "")}</code>\n${rewards.length ? `Уже добавлено: <b>${rewards.length}</b>\n\n` : ""}Выберите награду. Можно добавить несколько разных наград.`,
+    promoCodeWorkflowRewardKeyboard()
+  );
+}
+
+async function showPromoRewardReviewStep(chatId, user, env) {
+  const workflow = await getStaffWorkflow(user.id, env);
+  if (!workflow || workflow.flow_type !== "promo_create") return;
+  const rewards = Array.isArray(workflow.data?.rewards) ? workflow.data.rewards : [];
+  await updateStaffWorkflow(user.id, { step: "reward_review", data: { pendingReward: null } }, env);
+  await sendTelegramMessage(env, chatId,
+    `<b>🎁 Состав промокода</b>\n\n${renderPromoRewardList(rewards)}\n\nМожно добавить ещё одну награду или перейти к лимиту активаций.`,
+    promoCodeWorkflowRewardReviewKeyboard(rewards)
+  );
+}
+
+async function showPromoAmountStep(chatId, user, kind, title, env) {
+  await updateStaffWorkflow(user.id, { step: "reward_amount", data: { pendingReward: { kind, ...(kind === "case" ? { id: title.id } : {}) } } }, env);
+  const label = kind === "case" ? title.title : ({ points: "очки", zefir: "зефир", coffee: "кофе" })[kind] || "награду";
+  await sendTelegramMessage(env, chatId,
+    `<b>Количество</b>\n\nВыберите, сколько игрок получит: <b>${escapeHtml(label)}</b>.`,
+    promoCodeWorkflowAmountKeyboard(kind)
+  );
+}
+
+async function showPromoCatalogStep(chatId, user, kind, page, env) {
+  const catalog = promoCatalogByKind(kind);
+  if (!catalog) return sendTelegramMessage(env, chatId, "Неизвестный тип предмета.");
+  await updateStaffWorkflow(user.id, { step: "reward_item", data: { pendingReward: { kind } } }, env);
+  await sendTelegramMessage(env, chatId,
+    `<b>Выберите ${escapeHtml(promoCatalogLabel(kind))}</b>\n\nПредмет будет выдан один раз и останется в коллекции игрока.`,
+    promoCodeWorkflowCatalogKeyboard(kind, page)
+  );
+}
+
+async function showPromoLimitStep(chatId, user, env) {
+  const workflow = await getStaffWorkflow(user.id, env);
+  if (!workflow || workflow.flow_type !== "promo_create") return;
+  const rewards = Array.isArray(workflow.data?.rewards) ? workflow.data.rewards : [];
+  if (!rewards.length) return showPromoRewardKindStep(chatId, user, env);
+  await updateStaffWorkflow(user.id, { step: "limit" }, env);
+  await sendTelegramMessage(env, chatId,
+    `<b>👥 Лимит активаций</b>\n\nШаг 3 из 6. Сколько игроков сможет активировать код?\n\nКаждый игрок в любом случае сможет использовать его только <b>один раз</b>.`,
+    promoCodeWorkflowLimitKeyboard()
+  );
+}
+
+async function showPromoExpiryStep(chatId, user, env) {
+  await updateStaffWorkflow(user.id, { step: "expiry" }, env);
+  await sendTelegramMessage(env, chatId,
+    `<b>⏳ Срок действия</b>\n\nШаг 4 из 6. Когда промокод должен перестать работать?`,
+    promoCodeWorkflowExpiryKeyboard()
+  );
+}
+
+async function showPromoTitleStep(chatId, user, env) {
+  const workflow = await getStaffWorkflow(user.id, env);
+  if (!workflow || workflow.flow_type !== "promo_create") return;
+  const suggestedTitle = workflow.data?.title || buildPromoAutoTitle(workflow.data?.code || "", workflow.data?.rewards || []);
+  await updateStaffWorkflow(user.id, { step: "title_custom", data: { suggestedTitle } }, env);
+  await sendTelegramMessage(env, chatId,
+    `<b>🏷 Название промокода</b>
+
+Шаг 5 из 6. Отправьте название одним сообщением. Оно видно только в админ-панели.
+
+Предлагаемое название: <b>${escapeHtml(suggestedTitle)}</b>
+
+Можно написать своё название сразу или нажать кнопку ниже.`,
+    promoCodeWorkflowTitleKeyboard()
+  );
+}
+
+async function showPromoConfirmStep(chatId, user, env) {
+  const workflow = await getStaffWorkflow(user.id, env);
+  if (!workflow || workflow.flow_type !== "promo_create") return;
+  const data = workflow.data || {};
+  const rewards = Array.isArray(data.rewards) ? data.rewards : [];
+  if (!data.code || !rewards.length) return startPromoCodeWorkflow(chatId, user, env);
+  const title = data.title || buildPromoAutoTitle(data.code, rewards);
+  await updateStaffWorkflow(user.id, { step: "confirm", data: { title } }, env);
+  await sendTelegramMessage(env, chatId,
+    `<b>✅ Проверка промокода</b>\n\n` +
+    `Код: <code>${escapeHtml(data.code)}</code>\n` +
+    `Название: <b>${escapeHtml(title)}</b>\n\n` +
+    `<b>Награды</b>\n${renderPromoRewardList(rewards)}\n\n` +
+    `Лимит активаций: <b>${Number(data.limit || 0) ? Number(data.limit).toLocaleString("ru-RU") : "без ограничения"}</b>\n` +
+    `Один раз на игрока: <b>да</b>\n` +
+    `Действует до: <b>${Number(data.expiresAt || 0) ? escapeHtml(formatUtcDate(data.expiresAt)) : "без срока"}</b>\n\n` +
+    `Шаг 6 из 6. Выберите, запустить код сразу или оставить его выключенным.`,
+    promoCodeWorkflowConfirmKeyboard()
+  );
+}
+
+async function handlePromoCodeWorkflowMessage(message, workflow, env) {
+  const chatId = message.chat.id;
+  const user = message.from;
+  const text = String(message.text || "").trim();
+  const access = await requireSecurityPermission(chatId, user, "managePromocodes", env);
+  if (!access) return true;
+
+  if (workflow.step === "code_custom") {
+    const code = normalizedPromoCode(text);
+    if (code.length < 4) {
+      await sendTelegramMessage(env, chatId, "Код должен содержать минимум 4 символа: латинские буквы, цифры, <code>_</code> или <code>-</code>.", promoCodeWorkflowCancelKeyboard());
+      return true;
+    }
+    if (await promoCodeExists(code, env)) {
+      await sendTelegramMessage(env, chatId, `Промокод <code>${escapeHtml(code)}</code> уже существует. Введите другой код.`, promoCodeWorkflowCancelKeyboard());
+      return true;
+    }
+    await updateStaffWorkflow(user.id, { step: "reward_kind", data: { code } }, env);
+    await showPromoRewardKindStep(chatId, user, env);
+    return true;
+  }
+
+  if (workflow.step === "reward_amount_custom") {
+    const amount = Math.floor(Number(text.replace(/\s+/g, "")) || 0);
+    const pending = workflow.data?.pendingReward || {};
+    const max = pending.kind === "points" ? 10000000 : pending.kind === "case" ? 100 : 100000;
+    if (amount < 1 || amount > max) {
+      await sendTelegramMessage(env, chatId, `Введите целое число от 1 до ${max.toLocaleString("ru-RU")}.`, promoCodeWorkflowCancelKeyboard());
+      return true;
+    }
+    const reward = pending.kind === "case" ? { kind: "case", id: pending.id, amount } : { kind: pending.kind, amount };
+    const rewards = [...(Array.isArray(workflow.data?.rewards) ? workflow.data.rewards : []), reward];
+    await updateStaffWorkflow(user.id, { step: "reward_review", data: { rewards, pendingReward: null } }, env);
+    await showPromoRewardReviewStep(chatId, user, env);
+    return true;
+  }
+
+  if (workflow.step === "limit_custom") {
+    const limit = Math.floor(Number(text.replace(/\s+/g, "")) || 0);
+    if (limit < 1 || limit > 1000000) {
+      await sendTelegramMessage(env, chatId, "Введите лимит от 1 до 1 000 000.", promoCodeWorkflowCancelKeyboard());
+      return true;
+    }
+    await updateStaffWorkflow(user.id, { step: "expiry", data: { limit } }, env);
+    await showPromoExpiryStep(chatId, user, env);
+    return true;
+  }
+
+  if (workflow.step === "expiry_custom") {
+    let expiresAt = 0;
+    try { expiresAt = parsePromoExpiryDateTime(text); }
+    catch (error) {
+      await sendTelegramMessage(env, chatId, `${escapeHtml(String(error.message || error))}\n\nПример: <code>2026-08-10 23:59</code>`, promoCodeWorkflowCancelKeyboard());
+      return true;
+    }
+    if (expiresAt && expiresAt <= Math.floor(Date.now() / 1000)) {
+      await sendTelegramMessage(env, chatId, "Дата завершения должна быть в будущем.", promoCodeWorkflowCancelKeyboard());
+      return true;
+    }
+    await updateStaffWorkflow(user.id, { step: "title", data: { expiresAt } }, env);
+    await showPromoTitleStep(chatId, user, env);
+    return true;
+  }
+
+  if (workflow.step === "title" || workflow.step === "title_custom") {
+    const title = text.replace(/\s+/g, " ").trim().slice(0, 120);
+    if (title.length < 2) {
+      await sendTelegramMessage(env, chatId, "Название должно содержать минимум 2 символа.", promoCodeWorkflowCancelKeyboard());
+      return true;
+    }
+    await updateStaffWorkflow(user.id, { step: "confirm", data: { title } }, env);
+    await showPromoConfirmStep(chatId, user, env);
+    return true;
+  }
+
+  const stepHints = {
+    code: "Выберите способ создания кода кнопкой ниже.",
+    reward_kind: "Выберите награду кнопками в сообщении мастера.",
+    reward_amount: "Выберите количество кнопкой или нажмите «Другое количество».",
+    reward_item: "Выберите предмет кнопкой в каталоге.",
+    reward_review: "Добавьте ещё награду или перейдите к лимиту кнопкой.",
+    limit: "Выберите лимит активаций кнопкой или нажмите «Указать свой лимит».",
+    expiry: "Выберите срок действия кнопкой или нажмите «Указать дату».",
+    confirm: "Подтвердите создание промокода кнопкой в сообщении мастера."
+  };
+  await sendTelegramMessage(
+    env,
+    chatId,
+    stepHints[String(workflow.step || "")] || "Продолжите создание промокода кнопками в сообщении мастера или отмените действие.",
+    promoCodeWorkflowCancelKeyboard()
+  );
+  return true;
+}
+
+async function createPromoCodeRecord(user, access, input, env) {
+  await ensureOperationsSecuritySchema(env);
+  const code = normalizedPromoCode(input?.code);
+  const rewards = Array.isArray(input?.rewards) ? input.rewards : [];
+  const title = String(input?.title || buildPromoAutoTitle(code, rewards)).slice(0, 120);
+  const limit = Math.max(0, Math.min(1000000, Math.floor(Number(input?.limit || 0))));
+  const expiresAt = Math.max(0, Math.floor(Number(input?.expiresAt || 0)));
+  const enabled = input?.enabled === false ? 0 : 1;
+  if (code.length < 4) throw new Error("Код слишком короткий.");
+  if (!rewards.length) throw new Error("Награда не выбрана.");
+  const now = Math.floor(Date.now() / 1000);
+  await env.DB.prepare(`INSERT INTO promo_codes(code,title,reward_json,max_redemptions,per_player_limit,redemption_count,starts_at,expires_at,enabled,created_by,created_by_name,created_at,updated_at) VALUES(?,?,?,?,1,0,0,?,?,?,?,?,?)`)
+    .bind(code,title,JSON.stringify(rewards),limit,expiresAt,enabled,String(user.id),telegramDisplayName(user),now,now).run();
+  const saved = await env.DB.prepare(`SELECT code FROM promo_codes WHERE code = ? LIMIT 1`).bind(code).first();
+  if (!saved?.code) throw new Error("Промокод не сохранился в базе данных.");
+  await logStaffAction(env,user,access,"promo_create",null,"promo",null,null,{code,title,limit,expiresAt,enabled:Boolean(enabled),rewards});
+  return { code, title, rewards, limit, expiresAt, enabled: Boolean(enabled) };
+}
+
+async function finalizePromoCodeWorkflow(query, enabled, env) {
+  const chatId = query.message?.chat?.id;
+  const access = await requireSecurityPermission(chatId, query.from, "managePromocodes", env);
+  if (!access) return;
+  const workflow = await getStaffWorkflow(query.from.id, env);
+  if (!workflow || workflow.flow_type !== "promo_create" || workflow.step !== "confirm") {
+    await answerCallback(env, query.id, "Мастер устарел. Начните создание заново.", true);
+    return;
+  }
+  try {
+    const result = await createPromoCodeRecord(query.from, access, { ...workflow.data, enabled }, env);
+    await clearStaffWorkflow(query.from.id, env);
+    await answerCallback(env, query.id, "Промокод создан.");
+    await sendTelegramMessage(env, chatId,
+      `<b>✅ Промокод создан</b>\n\n` +
+      `Код: <code>${escapeHtml(result.code)}</code>\n` +
+      `Статус: <b>${result.enabled ? "включён" : "выключен"}</b>\n` +
+      `Награды: <b>${escapeHtml(result.rewards.map(safeRewardDescription).join(", "))}</b>\n` +
+      `Лимит: <b>${result.limit ? result.limit.toLocaleString("ru-RU") : "без ограничения"}</b>\n` +
+      `Действует до: <b>${result.expiresAt ? escapeHtml(formatUtcDate(result.expiresAt)) : "без срока"}</b>`,
+      { inline_keyboard: [[{ text: "📊 Открыть промокоды", callback_data: "v57_promos" }], [{ text: "➕ Создать ещё", callback_data: "v60_promo_new" }]] }
+    );
+  } catch (error) {
+    const duplicate = String(error?.message || error).toLowerCase().includes("unique");
+    await answerCallback(env, query.id, duplicate ? "Такой код уже существует." : "Не удалось создать промокод.", true);
+    await sendTelegramMessage(env, chatId, duplicate
+      ? "Такой промокод уже существует. Отмените мастер и создайте новый код."
+      : `Не удалось создать промокод: ${escapeHtml(String(error?.message || error))}`,
+      promoCodeWorkflowCancelKeyboard()
+    );
+  }
+}
+
+async function createPromoCodeFromCommand(chatId,user,payload,env){
+  const access=await requireSecurityPermission(chatId,user,"managePromocodes",env); if(!access)return;
+  const parts=String(payload||"").split("|").map(item=>item.trim());
+  if(parts.length<4)return sendTelegramMessage(env,chatId,"Формат: <code>/promo_new CODE | НАЗВАНИЕ | case:gold:1,points:500 | ЛИМИТ | YYYY-MM-DD HH:MM</code>\n\nПроще создать код кнопками через <code>/promocodes</code>.");
+  const code=normalizedPromoCode(parts[0]); if(code.length<4)return sendTelegramMessage(env,chatId,"Код должен содержать минимум 4 символа A-Z, 0-9, _ или -.");
+  let rewards,expiresAt; try{rewards=parsePromoRewardSpec(parts[2]);expiresAt=parsePromoExpiryDateTime(parts[4]||"");}catch(error){return sendTelegramMessage(env,chatId,escapeHtml(String(error.message||error)));}
+  const limit=Math.max(0,Math.floor(Number(parts[3]||0)));
+  try{
+    const result=await createPromoCodeRecord(user,access,{code,title:String(parts[1]||code).slice(0,120),rewards,limit,expiresAt,enabled:true},env);
+    await sendTelegramMessage(env,chatId,`✅ Промокод <code>${escapeHtml(result.code)}</code> создан.\nНаграда: <b>${escapeHtml(result.rewards.map(safeRewardDescription).join(", "))}</b>\nЛимит: <b>${result.limit||"без ограничения"}</b>\nДействует до: <b>${result.expiresAt?escapeHtml(formatUtcDate(result.expiresAt)):"без срока"}</b>`);
+  }catch(error){if(String(error?.message||error).toLowerCase().includes("unique"))return sendTelegramMessage(env,chatId,"Такой промокод уже существует.");throw error;}
+}
+
+async function showPromoCodesDashboard(chatId,user,env){
+  const access=await requireSecurityPermission(chatId,user,"managePromocodes",env);if(!access)return;
+  await ensureOperationsSecuritySchema(env); const now=Math.floor(Date.now()/1000);
+  const rows=(await env.DB.prepare(`SELECT * FROM promo_codes ORDER BY created_at DESC LIMIT 50`).all()).results||[];
+  const lines=rows.map(row=>{const active=Number(row.enabled)&&(!row.starts_at||row.starts_at<=now)&&(!row.expires_at||row.expires_at>now)&&(Number(row.max_redemptions||0)===0||Number(row.redemption_count||0)<Number(row.max_redemptions));return `• ${active?"🟢":"⚪"} <code>${escapeHtml(row.code)}</code> — ${escapeHtml(row.title||"")}\n  ${Number(row.redemption_count||0).toLocaleString("ru-RU")}/${Number(row.max_redemptions||0)?Number(row.max_redemptions).toLocaleString("ru-RU"):"∞"} · до ${row.expires_at?escapeHtml(formatUtcDate(row.expires_at)):"без срока"}`});
+  const buttons=[[{text:"➕ Создать промокод",callback_data:"v60_promo_new"}],...rows.slice(0,20).map(row=>[{text:`📊 ${row.code}`,callback_data:`v57_promo_stats:${row.code}`},{text:Number(row.enabled)?"⏸":"▶️",callback_data:`v57_promo_toggle:${row.code}:${Number(row.enabled)?"off":"on"}`}])];
+  buttons.push([{text:"⬅️ Панель",callback_data:"adm_home"}]);
+  await sendTelegramMessage(env,chatId,`<b>🎟 Промокоды</b>\n\n${lines.join("\n\n")||"Промокодов пока нет."}\n\nНажмите <b>«Создать промокод»</b> — бот по шагам предложит код, награду, лимит и срок действия. Команды вручную вводить не нужно.`,{inline_keyboard:buttons});
+}
+
+async function setPromoCodeEnabled(chatId,user,rawCode,enabled,env){
+  const access=await requireSecurityPermission(chatId,user,"managePromocodes",env);if(!access)return;
+  const code=normalizedPromoCode(rawCode);await ensureOperationsSecuritySchema(env);
+  const result=await env.DB.prepare(`UPDATE promo_codes SET enabled=?,updated_at=? WHERE code=?`).bind(enabled?1:0,Math.floor(Date.now()/1000),code).run();
+  if(Number(result.meta?.changes||0)<1)return sendTelegramMessage(env,chatId,"Промокод не найден.");
+  await logStaffAction(env,user,access,enabled?"promo_enable":"promo_disable",null,"promo",enabled?0:1,enabled?1:0,{code});
+  await sendTelegramMessage(env,chatId,`Промокод <code>${escapeHtml(code)}</code> ${enabled?"включён":"отключён"}.`);
+}
+
+async function showPromoCodeStats(chatId,user,rawCode,env){
+  const access=await requireSecurityPermission(chatId,user,"managePromocodes",env);if(!access)return;
+  const code=normalizedPromoCode(rawCode);await ensureOperationsSecuritySchema(env);
+  const row=await env.DB.prepare(`SELECT * FROM promo_codes WHERE code=? LIMIT 1`).bind(code).first();if(!row)return sendTelegramMessage(env,chatId,"Промокод не найден.");
+  const redemptions=(await env.DB.prepare(`SELECT telegram_id,status,created_at FROM promo_redemptions WHERE code=? ORDER BY created_at DESC LIMIT 30`).bind(code).all()).results||[];
+  const remaining=Number(row.max_redemptions||0)>0?Math.max(0,Number(row.max_redemptions)-Number(row.redemption_count||0)):null;
+  const lines=redemptions.map(item=>`• <code>${escapeHtml(String(item.telegram_id))}</code> · ${escapeHtml(item.status)} · ${escapeHtml(formatUtcDate(item.created_at))}`);
+  await sendTelegramMessage(env,chatId,`<b>Промокод ${escapeHtml(code)}</b>\n\nНазвание: <b>${escapeHtml(row.title||code)}</b>\nСтатус: <b>${Number(row.enabled)?"включён":"отключён"}</b>\nНаграда: <b>${escapeHtml(safeJson(row.reward_json,[]).map(safeRewardDescription).join(", "))}</b>\nАктиваций: <b>${Number(row.redemption_count||0).toLocaleString("ru-RU")}</b>\nОсталось: <b>${remaining==null?"∞":remaining.toLocaleString("ru-RU")}</b>\nДействует до: <b>${row.expires_at?escapeHtml(formatUtcDate(row.expires_at)):"без срока"}</b>\n\n<b>Последние активации</b>\n${lines.join("\n")||"Нет активаций."}`);
+}
+
+async function redeemPromoCodeCore(telegramId,rawCode,env,actor=null){
+  await ensureOperationsSecuritySchema(env);await ensureSafeControlCenterSchema(env);
+  const code=normalizedPromoCode(rawCode);const now=Math.floor(Date.now()/1000);
+  const row=await env.DB.prepare(`SELECT * FROM promo_codes WHERE code=? LIMIT 1`).bind(code).first();
+  if(!row)throw new ApiError(404,"Промокод не найден.");
+  if(Number(row.enabled||0)!==1)throw new ApiError(409,"Промокод отключён.");
+  if(Number(row.starts_at||0)>now)throw new ApiError(409,"Промокод ещё не действует.");
+  if(Number(row.expires_at||0)>0&&Number(row.expires_at)<=now)throw new ApiError(409,"Срок действия промокода истёк.");
+  if(Number(row.max_redemptions||0)>0&&Number(row.redemption_count||0)>=Number(row.max_redemptions))throw new ApiError(409,"Лимит активаций промокода исчерпан.");
+  const rewards=safeJson(row.reward_json,[]);
+  let redemptionId=0;
+  try{
+    const inserted=await env.DB.prepare(`INSERT INTO promo_redemptions(code,telegram_id,reward_json,status,created_at,updated_at) VALUES(?,?,?,'queued',?,?)`).bind(code,String(telegramId),JSON.stringify(rewards),now,now).run();
+    redemptionId=Number(inserted.meta?.last_row_id||0);
+  }catch(error){if(String(error?.message||error).toLowerCase().includes("unique"))throw new ApiError(409,"Вы уже активировали этот промокод.");throw error;}
+  const counter=await env.DB.prepare(`UPDATE promo_codes SET redemption_count=redemption_count+1,updated_at=? WHERE code=? AND enabled=1 AND (max_redemptions=0 OR redemption_count<max_redemptions)`).bind(now,code).run();
+  if(Number(counter.meta?.changes||0)<1){await env.DB.prepare(`DELETE FROM promo_redemptions WHERE id=?`).bind(redemptionId).run();throw new ApiError(409,"Лимит активаций промокода исчерпан.");}
+  try{
+    for(let index=0;index<rewards.length;index+=1){await enqueueRewardDelivery(env,String(telegramId),"promo",`${code}:${redemptionId}:${index}`,rewards[index],`Промокод ${code}`);}
+    await processRewardDeliveryQueue(env,Math.max(10,rewards.length));
+    const pending=await env.DB.prepare(`SELECT COUNT(*) AS count FROM reward_delivery_queue WHERE telegram_id=? AND source_type='promo' AND source_id LIKE ? AND status NOT IN ('delivered','claimed')`).bind(String(telegramId),`${code}:${redemptionId}:%`).first();
+    const status=Number(pending?.count||0)>0?"queued":"delivered";
+    await env.DB.prepare(`UPDATE promo_redemptions SET status=?,updated_at=? WHERE id=?`).bind(status,Math.floor(Date.now()/1000),redemptionId).run();
+    await recordPlayerTimeline(env,telegramId,"promo",`активировал промокод ${code}`,{rewards,status},`promo_${code}`,actor,now);
+    return {code,title:String(row.title||code),rewards,status};
+  }catch(error){
+    await env.DB.prepare(`UPDATE promo_redemptions SET status='failed',updated_at=? WHERE id=?`).bind(Math.floor(Date.now()/1000),redemptionId).run();
+    throw error;
+  }
+}
+
+async function redeemPromoCodeForTelegram(chatId,user,code,env){
+  try{
+    if(!(await isFeatureEnabled(env,"promocodes",String(user.id)))) throw new Error("Промокоды временно недоступны. Попробуйте позже.");
+    const result=await redeemPromoCodeCore(String(user.id),code,env,user);await sendTelegramMessage(env,chatId,`✅ <b>Промокод активирован</b>\n\n${escapeHtml(result.rewards.map(safeRewardDescription).join("\n"))}\n\n${result.status==="delivered"?"Награда уже начислена.":"Награда поставлена в безопасную очередь и появится после синхронизации игры."}`);}catch(error){await sendTelegramMessage(env,chatId,escapeHtml(String(error?.message||error)));}
+}
+
+async function redeemPromoCodeApi(request,env){
+  try{const body=await readJson(request);const auth=await validateTelegramInitData(String(body.initData||""),env);const result=await redeemPromoCodeCore(String(auth.user.id),body.code,env,auth.user);return jsonResponse({ok:true,...result});}catch(error){if(error instanceof ApiError)return jsonResponse({ok:false,error:error.message},error.status);console.error("promo redeem failed",error);return jsonResponse({ok:false,error:"Не удалось активировать промокод."},500);}
+}
+
+function notificationPresetForRole(role, owner = false) {
+  if (owner || normalizeTeamRole(role) === "administrator") return Object.fromEntries(NOTIFICATION_KEYS.map((key) => [key, 1]));
+  return {
+    rating_finished: 0,
+    physical_reward: 1,
+    low_stock: 1,
+    bot_errors: 0,
+    new_tickets: 1,
+    suspicious_runs: 0,
+    mass_grants: 0,
+    case_changes: 0,
+    player_blocks: 0
+  };
+}
+
+async function notificationPreferences(telegramId,env){
+  await ensureOperationsSecuritySchema(env);
+  const id=String(telegramId);
+  const existing=await env.DB.prepare(`SELECT * FROM staff_notification_preferences WHERE telegram_id=? LIMIT 1`).bind(id).first();
+  if(existing)return existing;
+  const owner=botAdminTelegramIds(env).includes(id);
+  const staff=owner?null:await env.DB.prepare(`SELECT role FROM staff_users WHERE telegram_id=? LIMIT 1`).bind(id).first();
+  const preset=notificationPresetForRole(staff?.role||"cashier",owner);
+  const now=Math.floor(Date.now()/1000);
+  await env.DB.prepare(`INSERT OR IGNORE INTO staff_notification_preferences(telegram_id,rating_finished,physical_reward,low_stock,bot_errors,new_tickets,suspicious_runs,mass_grants,case_changes,player_blocks,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?)`)
+    .bind(id,...NOTIFICATION_KEYS.map((key)=>Number(preset[key]||0)),now).run();
+  return env.DB.prepare(`SELECT * FROM staff_notification_preferences WHERE telegram_id=? LIMIT 1`).bind(id).first();
+}
+
+async function showNotificationPreferences(chatId,user,env){
+  const access=await getTeamAccess(user,env);if(!access.authorized)return sendTelegramMessage(env,chatId,"Доступно только сотрудникам с активной сессией.");
+  const prefs=await notificationPreferences(user.id,env);
+  const lines=NOTIFICATION_KEYS.map(key=>`${Number(prefs?.[key]||0)?"✅":"❌"} <code>${key}</code> — ${escapeHtml(NOTIFICATION_LABELS[key])}`);
+  const buttons=[];for(let i=0;i<NOTIFICATION_KEYS.length;i+=2){buttons.push(NOTIFICATION_KEYS.slice(i,i+2).map(key=>({text:`${Number(prefs?.[key]||0)?"✅":"⬜"} ${NOTIFICATION_LABELS[key]}`,callback_data:`v57_notify:${key}:${Number(prefs?.[key]||0)?"off":"on"}`})));}
+  buttons.push([{text:"⬅️ Панель",callback_data:"adm_home"}]);
+  await sendTelegramMessage(env,chatId,`<b>🔔 Подписки на уведомления</b>\n\n${lines.join("\n")}\n\nКоманда: <code>/notify KEY on|off</code>`,{inline_keyboard:buttons});
+}
+
+async function setNotificationPreference(chatId,user,key,enabled,env){
+  const access=await getTeamAccess(user,env);if(!access.authorized)return sendTelegramMessage(env,chatId,"Доступно только сотрудникам.");
+  if(!NOTIFICATION_KEYS.includes(String(key)))return sendTelegramMessage(env,chatId,`Неизвестная подписка. Доступно: ${NOTIFICATION_KEYS.map(item=>`<code>${item}</code>`).join(", ")}`);
+  await notificationPreferences(user.id,env);const now=Math.floor(Date.now()/1000);
+  await env.DB.prepare(`UPDATE staff_notification_preferences SET ${key}=?,updated_at=? WHERE telegram_id=?`).bind(enabled?1:0,now,String(user.id)).run();
+  await sendTelegramMessage(env,chatId,`Уведомления «${escapeHtml(NOTIFICATION_LABELS[key])}» ${enabled?"включены":"выключены"}.`);
+}
+
+async function staffNotificationRecipientIds(env,category){
+  await ensureOperationsSecuritySchema(env);
+  if(!NOTIFICATION_KEYS.includes(String(category)))category="bot_errors";
+  const ownerIds=new Set(botAdminTelegramIds(env).map(String));
+  const recipients=new Set(ownerIds);
+  const rows=(await env.DB.prepare(`SELECT s.telegram_id,s.role,p.${category} AS preference
+    FROM staff_users s
+    LEFT JOIN staff_notification_preferences p ON p.telegram_id=s.telegram_id
+    WHERE s.active=1`).all()).results||[];
+  for(const row of rows){
+    const id=String(row.telegram_id||"");if(!id)continue;
+    const enabled=row.preference==null
+      ? Number(notificationPresetForRole(row.role,ownerIds.has(id))?.[category]||0)
+      : Number(row.preference||0);
+    if(enabled===1)recipients.add(id);
+  }
+  return [...recipients];
+}
+
+async function notifySubscribedStaff(env,category,messageHtml){
+  if(!NOTIFICATION_KEYS.includes(String(category)))category="bot_errors";
+  try{
+    const recipients=await staffNotificationRecipientIds(env,category);
+    const results=await Promise.allSettled(recipients.map((id)=>sendTelegramMessage(env,id,String(messageHtml))));
+    results.forEach((result,index)=>{if(result.status==="rejected")console.error("staff notification failed",recipients[index],result.reason);});
+    return results.filter((result)=>result.status==="fulfilled").length;
+  }catch(error){console.error("notifySubscribedStaff failed",error);return 0;}
+}
+
+async function snapshotPayload(env){
+  await ensureOperationsSecuritySchema(env);await ensureLiveOpsAdminSchema(env);await ensureShopAssortmentSchema(env);await ensureShopSchema(env);await ensureSkinPriceSchema(env);await ensureShopStockSchema(env);
+  const [seasons,content,cases,assortment,shopPrices,skinPrices,stock,maintenance]=await Promise.all([
+    env.DB.prepare(`SELECT * FROM leaderboard_seasons ORDER BY created_at DESC LIMIT 20`).all(),
+    env.DB.prepare(`SELECT * FROM liveops_content_items ORDER BY item_kind,item_id`).all(),
+    env.DB.prepare(`SELECT * FROM liveops_case_configs ORDER BY case_id`).all(),
+    env.DB.prepare(`SELECT * FROM shop_assortment ORDER BY product_id`).all(),
+    env.DB.prepare(`SELECT * FROM shop_prices ORDER BY product_id`).all(),
+    env.DB.prepare(`SELECT * FROM skin_prices ORDER BY skin_id`).all(),
+    env.DB.prepare(`SELECT * FROM shop_stock_limits ORDER BY scope_key`).all(),
+    env.DB.prepare(`SELECT * FROM maintenance_settings WHERE id=1`).first()
+  ]);
+  return {version:1,createdAt:Math.floor(Date.now()/1000),leaderboardSeasons:seasons.results||[],content:content.results||[],cases:cases.results||[],shopAssortment:assortment.results||[],shopPrices:shopPrices.results||[],skinPrices:skinPrices.results||[],stock:stock.results||[],maintenance:maintenance||{}};
+}
+
+async function createConfigSnapshot(env,type,title,user){
+  await ensureOperationsSecuritySchema(env);const now=Math.floor(Date.now()/1000);const snapshotId=`snap_${now}_${crypto.randomUUID().slice(0,8)}`;const payload=await snapshotPayload(env);
+  await env.DB.prepare(`INSERT INTO config_snapshots(snapshot_id,snapshot_type,title,data_json,created_by,created_by_name,created_at,restored_at,restored_by,restore_status) VALUES(?,?,?,?,?,?,?,0,'','')`).bind(snapshotId,String(type||"manual"),String(title||"Снимок настроек").slice(0,200),JSON.stringify(payload),String(user?.id||"system"),user?telegramDisplayName(user):"Система",now).run();
+  return snapshotId;
+}
+
+async function createManualSnapshot(chatId,user,title,env){
+  const access=await requireSecurityPermission(chatId,user,"rollbackSettings",env);if(!access)return;
+  const snapshotId=await createConfigSnapshot(env,"manual",title||`Ручной снимок ${formatUtcDate(Math.floor(Date.now()/1000))}`,user);
+  await logStaffAction(env,user,access,"snapshot_create",null,"snapshot",null,null,{snapshotId,title});
+  await sendTelegramMessage(env,chatId,`✅ Снимок создан: <code>${escapeHtml(snapshotId)}</code>`);
+}
+
+async function showSnapshotsDashboard(chatId,user,env){
+  const access=await requireSecurityPermission(chatId,user,"rollbackSettings",env);if(!access)return;
+  await ensureOperationsSecuritySchema(env);
+  const rows=(await env.DB.prepare(`SELECT snapshot_id,snapshot_type,title,created_by_name,created_at,restored_at,restore_status FROM config_snapshots ORDER BY created_at DESC LIMIT 30`).all()).results||[];
+  const lines=rows.map(row=>`• <code>${escapeHtml(row.snapshot_id)}</code>\n  <b>${escapeHtml(row.title)}</b> · ${escapeHtml(row.snapshot_type)} · ${escapeHtml(formatUtcDate(row.created_at))}${row.restored_at?`\n  восстановлен ${escapeHtml(formatUtcDate(row.restored_at))}`:""}`);
+  const buttons=rows.slice(0,15).map(row=>[{text:`♻️ ${String(row.title).slice(0,30)}`,callback_data:`v57_snap_restore:${row.snapshot_id}`}]);buttons.push([{text:"➕ Создать снимок",callback_data:"v57_snap_create"},{text:"⬅️ Панель",callback_data:"adm_home"}]);
+  await sendTelegramMessage(env,chatId,`<b>💾 Резервные снимки</b>\n\n${lines.join("\n\n")||"Снимков пока нет."}\n\nВосстановление возвращает только настройки. Уже полученные игроками награды не откатываются.`,{inline_keyboard:buttons});
+}
+
+async function requestSnapshotRestore(chatId,user,snapshotId,env){
+  const access=await requireSecurityPermission(chatId,user,"rollbackSettings",env);if(!access)return;
+  await ensureOperationsSecuritySchema(env);const row=await env.DB.prepare(`SELECT snapshot_id,title FROM config_snapshots WHERE snapshot_id=? LIMIT 1`).bind(String(snapshotId)).first();if(!row)return sendTelegramMessage(env,chatId,"Снимок не найден.");
+  const approvalId=await requestDangerousAction(env,user,"snapshot_restore",`Восстановить снимок «${row.title}»`,{snapshotId:row.snapshot_id,chatId:String(chatId)});
+  await sendTelegramMessage(env,chatId,`⚠️ Восстановление требует подтверждения второго администратора. Запрос <b>#${approvalId}</b> создан.\n\n<code>/approve ${approvalId}</code>`);
+}
+
+async function restoreSnapshotById(snapshotId, user, env) {
+  await ensureOperationsSecuritySchema(env);
+  await ensureLiveOpsAdminSchema(env);
+  await ensureShopAssortmentSchema(env);
+  await ensureShopSchema(env);
+  await ensureSkinPriceSchema(env);
+  await ensureShopStockSchema(env);
+  const row = await env.DB.prepare(`SELECT * FROM config_snapshots WHERE snapshot_id=? LIMIT 1`).bind(String(snapshotId)).first();
+  if (!row) throw new Error("Снимок не найден");
+  const data = safeJson(row.data_json, {});
+  await createConfigSnapshot(env, "pre_restore", `Перед восстановлением ${snapshotId}`, user);
+  const now = Math.floor(Date.now() / 1000);
+  const actor = `snapshot:${snapshotId}`;
+  const statements = [];
+
+  const deleteMissing = (table, expression, values) => {
+    const ids = [...new Set((values || []).map((value) => String(value)))];
+    if (!ids.length) statements.push(env.DB.prepare(`DELETE FROM ${table}`));
+    else statements.push(env.DB.prepare(`DELETE FROM ${table} WHERE ${expression} NOT IN (${ids.map(() => "?").join(",")})`).bind(...ids));
+  };
+
+  for (const item of data.leaderboardSeasons || []) {
+    statements.push(env.DB.prepare(
+      `INSERT INTO leaderboard_seasons(id,title,starts_at,ends_at,status,reward_type,reward_amount,reward_claim_days,reset_plan_json,close_reason,created_at,updated_at,finalized_at,manual_override,reward_title,reward_image_url,reward_item_id)
+       VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+       ON CONFLICT(id) DO UPDATE SET title=excluded.title,starts_at=excluded.starts_at,ends_at=excluded.ends_at,status=excluded.status,reward_type=excluded.reward_type,reward_amount=excluded.reward_amount,reward_claim_days=excluded.reward_claim_days,reset_plan_json=excluded.reset_plan_json,close_reason=excluded.close_reason,created_at=excluded.created_at,updated_at=excluded.updated_at,finalized_at=excluded.finalized_at,manual_override=excluded.manual_override,reward_title=excluded.reward_title,reward_image_url=excluded.reward_image_url,reward_item_id=excluded.reward_item_id`
+    ).bind(item.id,item.title,item.starts_at,item.ends_at,item.status,item.reward_type,item.reward_amount,item.reward_claim_days,item.reset_plan_json,item.close_reason,item.created_at||now,now,item.finalized_at??null,Number(item.manual_override||0),item.reward_title||"",item.reward_image_url||"",item.reward_item_id||""));
+  }
+
+  if (Array.isArray(data.content)) {
+    deleteMissing("liveops_content_items", `item_kind || ':' || item_id`, data.content.map((item) => `${item.item_kind}:${item.item_id}`));
+    for (const item of data.content) statements.push(env.DB.prepare(`INSERT INTO liveops_content_items(item_kind,item_id,title,rarity,weight,enabled,is_new,legendary_only,image_url,updated_at,updated_by) VALUES(?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(item_kind,item_id) DO UPDATE SET title=excluded.title,rarity=excluded.rarity,weight=excluded.weight,enabled=excluded.enabled,is_new=excluded.is_new,legendary_only=excluded.legendary_only,image_url=excluded.image_url,updated_at=excluded.updated_at,updated_by=excluded.updated_by`).bind(item.item_kind,item.item_id,item.title,item.rarity,item.weight,item.enabled,item.is_new,item.legendary_only,item.image_url,now,actor));
+  }
+  if (Array.isArray(data.cases)) {
+    deleteMissing("liveops_case_configs", "case_id", data.cases.map((item) => item.case_id));
+    for (const item of data.cases) statements.push(env.DB.prepare(`INSERT INTO liveops_case_configs(case_id,enabled,title,guarantee_count,chances_json,ranges_json,updated_at,updated_by) VALUES(?,?,?,?,?,?,?,?) ON CONFLICT(case_id) DO UPDATE SET enabled=excluded.enabled,title=excluded.title,guarantee_count=excluded.guarantee_count,chances_json=excluded.chances_json,ranges_json=excluded.ranges_json,updated_at=excluded.updated_at,updated_by=excluded.updated_by`).bind(item.case_id,item.enabled,item.title,item.guarantee_count,item.chances_json,item.ranges_json,now,actor));
+  }
+  if (Array.isArray(data.shopAssortment)) {
+    deleteMissing("shop_assortment", "product_id", data.shopAssortment.map((item) => item.product_id));
+    for (const item of data.shopAssortment) statements.push(env.DB.prepare(`INSERT INTO shop_assortment(product_id,enabled,points,treats,coffee,updated_at,updated_by) VALUES(?,?,?,?,?,?,?) ON CONFLICT(product_id) DO UPDATE SET enabled=excluded.enabled,points=excluded.points,treats=excluded.treats,coffee=excluded.coffee,updated_at=excluded.updated_at,updated_by=excluded.updated_by`).bind(item.product_id,item.enabled,item.points,item.treats,item.coffee,now,actor));
+  }
+  if (Array.isArray(data.shopPrices)) {
+    deleteMissing("shop_prices", "product_id", data.shopPrices.map((item) => item.product_id));
+    for (const item of data.shopPrices) statements.push(env.DB.prepare(`INSERT INTO shop_prices(product_id,points,treats,coffee,version,updated_at,updated_by) VALUES(?,?,?,?,?,?,?) ON CONFLICT(product_id) DO UPDATE SET points=excluded.points,treats=excluded.treats,coffee=excluded.coffee,version=shop_prices.version+1,updated_at=excluded.updated_at,updated_by=excluded.updated_by`).bind(item.product_id,item.points,item.treats,item.coffee,Math.max(1,Number(item.version||1)+1),now,actor));
+  }
+  if (Array.isArray(data.skinPrices)) {
+    deleteMissing("skin_prices", "skin_id", data.skinPrices.map((item) => item.skin_id));
+    for (const item of data.skinPrices) statements.push(env.DB.prepare(`INSERT INTO skin_prices(skin_id,points,treats,coffee,version,updated_at,updated_by) VALUES(?,?,?,?,?,?,?) ON CONFLICT(skin_id) DO UPDATE SET points=excluded.points,treats=excluded.treats,coffee=excluded.coffee,version=skin_prices.version+1,updated_at=excluded.updated_at,updated_by=excluded.updated_by`).bind(item.skin_id,item.points,item.treats,item.coffee,Math.max(1,Number(item.version||1)+1),now,actor));
+  }
+  if (Array.isArray(data.stock)) {
+    deleteMissing("shop_stock_limits", "scope_key", data.stock.map((item) => item.scope_key));
+    for (const item of data.stock) statements.push(env.DB.prepare(`INSERT INTO shop_stock_limits(scope_key,category,product_id,configured_limit,remaining,updated_at,updated_by) VALUES(?,?,?,?,?,?,?) ON CONFLICT(scope_key) DO UPDATE SET category=excluded.category,product_id=excluded.product_id,configured_limit=excluded.configured_limit,remaining=excluded.remaining,updated_at=excluded.updated_at,updated_by=excluded.updated_by`).bind(item.scope_key,item.category,item.product_id,item.configured_limit,item.remaining,now,actor));
+  }
+  if (data.maintenance && typeof data.maintenance === "object") {
+    const m = data.maintenance;
+    statements.push(env.DB.prepare(`UPDATE maintenance_settings SET full_closed=?,rating_disabled=?,purchases_disabled=?,cases_disabled=?,physical_rewards_disabled=?,testers_only=?,message=?,updated_at=?,updated_by=? WHERE id=1`).bind(Number(m.full_closed||0),Number(m.rating_disabled||0),Number(m.purchases_disabled||0),Number(m.cases_disabled||0),Number(m.physical_rewards_disabled||0),Number(m.testers_only||0),String(m.message||""),now,actor));
+  }
+
+  try {
+    if (statements.length) await env.DB.batch(statements);
+    await env.DB.prepare(`UPDATE config_snapshots SET restored_at=?,restored_by=?,restore_status='restored' WHERE snapshot_id=?`).bind(now,String(user.id),String(snapshotId)).run();
+  } catch (error) {
+    await env.DB.prepare(`UPDATE config_snapshots SET restore_status=? WHERE snapshot_id=?`).bind(`failed:${String(error?.message||error).slice(0,180)}`,String(snapshotId)).run().catch(() => {});
+    throw error;
+  }
+  await notifySubscribedStaff(env,"case_changes",`♻️ <b>Настройки восстановлены из снимка</b>\n\n${escapeHtml(row.title)}\nСотрудник: ${escapeHtml(telegramDisplayName(user))}`);
+}
+
+function contentCatalog(kind){return ({avatar:CASE_AVATARS,frame:CASE_FRAMES,trail:CASE_TRAILS,skin:SKINS})[kind]||{};}
+function contentOwnedColumn(kind){return ({avatar:"owned_avatars_json",frame:"owned_frames_json",trail:"owned_trails_json",skin:"owned_skins_json"})[kind]||"";}
+function contentActiveColumn(kind){return ({avatar:"active_avatar_id",frame:"active_frame_id",trail:"active_trail_id",skin:"active_skin_id"})[kind]||"";}
+
+async function contentItemAnalytics(kind, itemId, env) {
+  await ensureOperationsSecuritySchema(env);
+  const ownedColumn = contentOwnedColumn(kind);
+  const activeColumn = contentActiveColumn(kind);
+  const catalog = contentCatalog(kind);
+  if (!ownedColumn || !catalog[itemId]) return null;
+
+  const activeSince = Math.floor(Date.now() / 1000) - 30 * 24 * 60 * 60;
+  const [owners, currentUsers, activePlayers, activeOwners, levelDrops, grantDrops, levelSources, grantSources, eventStats, eventSources] = await Promise.all([
+    env.DB.prepare(`SELECT COUNT(*) AS count FROM case_player_state s WHERE NOT EXISTS (SELECT 1 FROM tester_accounts t WHERE t.telegram_id=s.telegram_id) AND EXISTS (SELECT 1 FROM json_each(s.${ownedColumn}) WHERE value=?)`).bind(itemId).first(),
+    env.DB.prepare(`SELECT COUNT(*) AS count FROM case_player_state s WHERE s.${activeColumn}=? AND NOT EXISTS (SELECT 1 FROM tester_accounts t WHERE t.telegram_id=s.telegram_id)`).bind(itemId).first(),
+    env.DB.prepare(`SELECT COUNT(*) AS count FROM (SELECT r.telegram_id FROM leaderboard_runs r WHERE r.created_at>=? AND NOT EXISTS (SELECT 1 FROM tester_accounts t WHERE t.telegram_id=r.telegram_id) UNION SELECT p.telegram_id FROM admin_profile_state p WHERE p.updated_at>=? AND NOT EXISTS (SELECT 1 FROM tester_accounts t WHERE t.telegram_id=p.telegram_id))`).bind(activeSince, activeSince).first(),
+    env.DB.prepare(`SELECT COUNT(*) AS count FROM case_player_state s WHERE NOT EXISTS (SELECT 1 FROM tester_accounts t WHERE t.telegram_id=s.telegram_id) AND EXISTS (SELECT 1 FROM json_each(s.${ownedColumn}) WHERE value=?) AND (EXISTS (SELECT 1 FROM leaderboard_runs r WHERE r.telegram_id=s.telegram_id AND r.created_at>=?) OR EXISTS (SELECT 1 FROM admin_profile_state p WHERE p.telegram_id=s.telegram_id AND p.updated_at>=?))`).bind(itemId, activeSince, activeSince).first(),
+    env.DB.prepare(`SELECT COUNT(*) AS total,SUM(CASE WHEN json_extract(j.value,'$.duplicate')=1 THEN 1 ELSE 0 END) AS duplicates,MAX(o.opened_at) AS last_drop FROM level_case_openings o,json_each(o.rewards_json) j WHERE NOT EXISTS (SELECT 1 FROM tester_accounts t WHERE t.telegram_id=o.telegram_id) AND json_extract(j.value,'$.kind')=? AND json_extract(j.value,'$.id')=?`).bind(kind, itemId).first(),
+    env.DB.prepare(`SELECT COUNT(*) AS total,SUM(CASE WHEN json_extract(j.value,'$.duplicate')=1 THEN 1 ELSE 0 END) AS duplicates,MAX(g.opened_at) AS last_drop FROM granted_cases g,json_each(g.rewards_json) j WHERE g.opened_at IS NOT NULL AND NOT EXISTS (SELECT 1 FROM tester_accounts t WHERE t.telegram_id=g.telegram_id) AND json_extract(j.value,'$.kind')=? AND json_extract(j.value,'$.id')=?`).bind(kind, itemId).first(),
+    env.DB.prepare(`SELECT o.case_type,COUNT(*) AS count FROM level_case_openings o,json_each(o.rewards_json) j WHERE NOT EXISTS (SELECT 1 FROM tester_accounts t WHERE t.telegram_id=o.telegram_id) AND json_extract(j.value,'$.kind')=? AND json_extract(j.value,'$.id')=? GROUP BY o.case_type`).bind(kind, itemId).all(),
+    env.DB.prepare(`SELECT g.case_type,COUNT(*) AS count FROM granted_cases g,json_each(g.rewards_json) j WHERE g.opened_at IS NOT NULL AND NOT EXISTS (SELECT 1 FROM tester_accounts t WHERE t.telegram_id=g.telegram_id) AND json_extract(j.value,'$.kind')=? AND json_extract(j.value,'$.id')=? GROUP BY g.case_type`).bind(kind, itemId).all(),
+    env.DB.prepare(`SELECT event_type,COUNT(*) AS count,MAX(created_at) AS last_at FROM content_analytics_events WHERE item_kind=? AND item_id=? AND NOT EXISTS (SELECT 1 FROM tester_accounts t WHERE t.telegram_id=content_analytics_events.telegram_id) AND NOT (source_type IN ('level_case','granted_case') AND event_type IN ('acquired','duplicate')) GROUP BY event_type`).bind(kind, itemId).all(),
+    env.DB.prepare(`SELECT source_type,COUNT(*) AS count FROM content_analytics_events WHERE item_kind=? AND item_id=? AND NOT EXISTS (SELECT 1 FROM tester_accounts t WHERE t.telegram_id=content_analytics_events.telegram_id) AND event_type IN ('acquired','duplicate') AND source_type NOT IN ('level_case','granted_case') GROUP BY source_type`).bind(kind, itemId).all()
+  ]);
+
+  const eventMap = {};
+  for (const row of eventStats.results || []) eventMap[row.event_type] = { count: Number(row.count || 0), lastAt: Number(row.last_at || 0) };
+  const manualDrops = Number(eventMap.acquired?.count || 0) + Number(eventMap.duplicate?.count || 0);
+  const totalDrops = Number(levelDrops?.total || 0) + Number(grantDrops?.total || 0) + manualDrops;
+  const duplicates = Number(levelDrops?.duplicates || 0) + Number(grantDrops?.duplicates || 0) + Number(eventMap.duplicate?.count || 0);
+  const lastDrop = Math.max(Number(levelDrops?.last_drop || 0), Number(grantDrops?.last_drop || 0), Number(eventMap.acquired?.lastAt || 0), Number(eventMap.duplicate?.lastAt || 0));
+  const ownerCount = Number(owners?.count || 0);
+  const usingCount = Number(currentUsers?.count || 0);
+  const activeCount = Math.max(0, Number(activePlayers?.count || 0));
+  const activeOwnerCount = Math.max(0, Number(activeOwners?.count || 0));
+
+  const caseSourceMap = new Map();
+  for (const row of [...(levelSources.results || []), ...(grantSources.results || [])]) {
+    const caseType = String(row.case_type || "unknown");
+    caseSourceMap.set(caseType, Number(caseSourceMap.get(caseType) || 0) + Number(row.count || 0));
+  }
+  const caseSources = [...caseSourceMap.entries()]
+    .map(([caseType, count]) => ({ caseType, title: LEVEL_CASE_CONFIG[caseType]?.title || caseType, count }))
+    .sort((a, b) => b.count - a.count || a.title.localeCompare(b.title, "ru"));
+  const otherSources = (eventSources.results || [])
+    .map((row) => ({ sourceType: String(row.source_type || "other"), count: Number(row.count || 0) }))
+    .sort((a, b) => b.count - a.count);
+
+  return {
+    kind,
+    itemId,
+    title: catalog[itemId]?.title || itemId,
+    owners: ownerCount,
+    using: usingCount,
+    totalDrops,
+    duplicates,
+    lastDrop,
+    activePlayers: activeCount,
+    activeOwners: activeOwnerCount,
+    ownerPercent: activeCount ? activeOwnerCount / activeCount * 100 : 0,
+    caseSources,
+    otherSources,
+    manualDrops
+  };
+}
+
+const CONTENT_ANALYTICS_OVERVIEW_TTL_MS = 2 * 60 * 1000;
+let contentAnalyticsOverviewCache = { key: "", rows: null, expiresAt: 0 };
+
+async function contentAnalyticsOverview(kinds, env, force = false) {
+  await ensureOperationsSecuritySchema(env);
+  const allowed = ["avatar", "frame", "trail", "skin"];
+  const selected = [...new Set((kinds || allowed).filter((kind) => allowed.includes(String(kind))))];
+  const cacheKey = selected.slice().sort().join(",");
+  const nowMs = Date.now();
+  if (!force && contentAnalyticsOverviewCache.rows && contentAnalyticsOverviewCache.key === cacheKey && contentAnalyticsOverviewCache.expiresAt > nowMs) {
+    return contentAnalyticsOverviewCache.rows;
+  }
+  const activeSince = Math.floor(nowMs / 1000) - 30 * 24 * 60 * 60;
+  const definitions = {
+    avatar: { owned: "owned_avatars_json", active: "active_avatar_id" },
+    frame: { owned: "owned_frames_json", active: "active_frame_id" },
+    trail: { owned: "owned_trails_json", active: "active_trail_id" },
+    skin: { owned: "owned_skins_json", active: "active_skin_id" }
+  };
+  const ownerSql = selected.map((kind) => {
+    const column = definitions[kind].owned;
+    return `SELECT '${kind}' AS kind,CAST(j.value AS TEXT) AS item_id,COUNT(DISTINCT s.telegram_id) AS count
+      FROM case_player_state s,json_each(s.${column}) j
+      WHERE NOT EXISTS (SELECT 1 FROM tester_accounts t WHERE t.telegram_id=s.telegram_id)
+      GROUP BY CAST(j.value AS TEXT)`;
+  }).join(" UNION ALL ");
+  const currentSql = selected.map((kind) => {
+    const column = definitions[kind].active;
+    return `SELECT '${kind}' AS kind,CAST(s.${column} AS TEXT) AS item_id,COUNT(*) AS count
+      FROM case_player_state s
+      WHERE COALESCE(s.${column},'')<>'' AND NOT EXISTS (SELECT 1 FROM tester_accounts t WHERE t.telegram_id=s.telegram_id)
+      GROUP BY CAST(s.${column} AS TEXT)`;
+  }).join(" UNION ALL ");
+  const activeOwnerSql = selected.map((kind) => {
+    const column = definitions[kind].owned;
+    return `SELECT '${kind}' AS kind,CAST(j.value AS TEXT) AS item_id,COUNT(DISTINCT s.telegram_id) AS count
+      FROM case_player_state s,json_each(s.${column}) j
+      WHERE NOT EXISTS (SELECT 1 FROM tester_accounts t WHERE t.telegram_id=s.telegram_id)
+        AND (EXISTS (SELECT 1 FROM leaderboard_runs r WHERE r.telegram_id=s.telegram_id AND r.created_at>=${activeSince})
+          OR EXISTS (SELECT 1 FROM admin_profile_state p WHERE p.telegram_id=s.telegram_id AND p.updated_at>=${activeSince}))
+      GROUP BY CAST(j.value AS TEXT)`;
+  }).join(" UNION ALL ");
+  const kindList = selected.map((kind) => `'${kind}'`).join(",");
+  const [owners,currentUsers,activeOwners,levelDrops,grantDrops,eventDrops,activePlayers] = await Promise.all([
+    env.DB.prepare(ownerSql).all(),
+    env.DB.prepare(currentSql).all(),
+    env.DB.prepare(activeOwnerSql).all(),
+    env.DB.prepare(`SELECT CAST(json_extract(j.value,'$.kind') AS TEXT) AS kind,CAST(json_extract(j.value,'$.id') AS TEXT) AS item_id,
+      COUNT(*) AS total,SUM(CASE WHEN json_extract(j.value,'$.duplicate')=1 THEN 1 ELSE 0 END) AS duplicates,MAX(o.opened_at) AS last_drop
+      FROM level_case_openings o,json_each(o.rewards_json) j
+      WHERE NOT EXISTS (SELECT 1 FROM tester_accounts t WHERE t.telegram_id=o.telegram_id)
+        AND json_extract(j.value,'$.kind') IN (${kindList})
+      GROUP BY kind,item_id`).all(),
+    env.DB.prepare(`SELECT CAST(json_extract(j.value,'$.kind') AS TEXT) AS kind,CAST(json_extract(j.value,'$.id') AS TEXT) AS item_id,
+      COUNT(*) AS total,SUM(CASE WHEN json_extract(j.value,'$.duplicate')=1 THEN 1 ELSE 0 END) AS duplicates,MAX(g.opened_at) AS last_drop
+      FROM granted_cases g,json_each(g.rewards_json) j
+      WHERE g.opened_at IS NOT NULL AND NOT EXISTS (SELECT 1 FROM tester_accounts t WHERE t.telegram_id=g.telegram_id)
+        AND json_extract(j.value,'$.kind') IN (${kindList})
+      GROUP BY kind,item_id`).all(),
+    env.DB.prepare(`SELECT item_kind AS kind,item_id,
+      SUM(CASE WHEN event_type IN ('acquired','duplicate') THEN 1 ELSE 0 END) AS total,
+      SUM(CASE WHEN event_type='duplicate' THEN 1 ELSE 0 END) AS duplicates,
+      MAX(CASE WHEN event_type IN ('acquired','duplicate') THEN created_at ELSE 0 END) AS last_drop
+      FROM content_analytics_events
+      WHERE item_kind IN (${kindList})
+        AND NOT EXISTS (SELECT 1 FROM tester_accounts t WHERE t.telegram_id=content_analytics_events.telegram_id)
+        AND NOT (source_type IN ('level_case','granted_case') AND event_type IN ('acquired','duplicate'))
+      GROUP BY item_kind,item_id`).all(),
+    env.DB.prepare(`SELECT COUNT(*) AS count FROM (SELECT r.telegram_id FROM leaderboard_runs r WHERE r.created_at>=? AND NOT EXISTS (SELECT 1 FROM tester_accounts t WHERE t.telegram_id=r.telegram_id) UNION SELECT p.telegram_id FROM admin_profile_state p WHERE p.updated_at>=? AND NOT EXISTS (SELECT 1 FROM tester_accounts t WHERE t.telegram_id=p.telegram_id))`).bind(activeSince,activeSince).first()
+  ]);
+  const mapRows = (result, valueKey = "count") => {
+    const map = new Map();
+    for (const row of result?.results || []) map.set(`${row.kind}:${row.item_id}`, Number(row[valueKey] || 0));
+    return map;
+  };
+  const ownerMap = mapRows(owners);
+  const currentMap = mapRows(currentUsers);
+  const activeOwnerMap = mapRows(activeOwners);
+  const aggregateDropMap = new Map();
+  for (const result of [levelDrops,grantDrops,eventDrops]) {
+    for (const row of result?.results || []) {
+      const key = `${row.kind}:${row.item_id}`;
+      const current = aggregateDropMap.get(key) || { total:0,duplicates:0,lastDrop:0 };
+      current.total += Number(row.total || 0);
+      current.duplicates += Number(row.duplicates || 0);
+      current.lastDrop = Math.max(current.lastDrop,Number(row.last_drop || 0));
+      aggregateDropMap.set(key,current);
+    }
+  }
+  const activeCount = Math.max(0,Number(activePlayers?.count || 0));
+  const output = [];
+  for (const currentKind of selected) {
+    const catalog = contentCatalog(currentKind);
+    for (const [itemId,item] of Object.entries(catalog)) {
+      const key = `${currentKind}:${itemId}`;
+      const drops = aggregateDropMap.get(key) || { total:0,duplicates:0,lastDrop:0 };
+      const activeOwnerCount = Number(activeOwnerMap.get(key) || 0);
+      output.push({
+        kind:currentKind,itemId,title:item?.title || itemId,
+        owners:Number(ownerMap.get(key) || 0),using:Number(currentMap.get(key) || 0),
+        totalDrops:drops.total,duplicates:drops.duplicates,lastDrop:drops.lastDrop,
+        activePlayers:activeCount,activeOwners:activeOwnerCount,
+        ownerPercent:activeCount ? activeOwnerCount / activeCount * 100 : 0,
+        caseSources:[],otherSources:[]
+      });
+    }
+  }
+  contentAnalyticsOverviewCache = { key:cacheKey,rows:output,expiresAt:nowMs + CONTENT_ANALYTICS_OVERVIEW_TTL_MS };
+  return output;
+}
+
+async function showContentAnalytics(chatId, user, kind, itemId, env) {
+  const access = await requireSecurityPermission(chatId, user, "viewContentAnalytics", env);
+  if (!access) return;
+  if (kind && itemId) {
+    const stats = await contentItemAnalytics(kind, itemId, env);
+    if (!stats) return sendTelegramMessage(env, chatId, "Контент не найден.");
+    const caseSources = stats.caseSources.length
+      ? stats.caseSources.map((row) => `• ${escapeHtml(row.title)} — <b>${row.count.toLocaleString("ru-RU")}</b>`).join("\n")
+      : "• из кейсов пока не выпадал";
+    const sourceLabels = { staff: "ручные выдачи", shop: "магазин", compensation: "компенсации", promo: "промокоды", leaderboard: "рейтинг", event: "события", reward_queue: "очередь наград" };
+    const otherSources = stats.otherSources.length
+      ? stats.otherSources.map((row) => `• ${escapeHtml(sourceLabels[row.sourceType] || row.sourceType)} — <b>${row.count.toLocaleString("ru-RU")}</b>`).join("\n")
+      : "• других источников нет";
+    return sendTelegramMessage(env, chatId,
+      `<b>📈 Аналитика контента</b>\n\n` +
+      `${escapeHtml(kind)}:<code>${escapeHtml(itemId)}</code>\n` +
+      `Название: <b>${escapeHtml(stats.title)}</b>\n` +
+      `Получили игроков: <b>${stats.owners.toLocaleString("ru-RU")}</b>\n` +
+      `Используют сейчас: <b>${stats.using.toLocaleString("ru-RU")}</b>\n` +
+      `Всего выпадений и выдач: <b>${stats.totalDrops.toLocaleString("ru-RU")}</b>\n` +
+      `Дубликатов: <b>${stats.duplicates.toLocaleString("ru-RU")}</b>\n` +
+      `Последнее получение: <b>${stats.lastDrop ? escapeHtml(formatUtcDate(stats.lastDrop)) : "нет данных"}</b>\n` +
+      `Владельцев среди активных за 30 дней: <b>${stats.activeOwners.toLocaleString("ru-RU")} из ${stats.activePlayers.toLocaleString("ru-RU")} · ${stats.ownerPercent.toLocaleString("ru-RU", { maximumFractionDigits: 1 })}%</b>\n\n` +
+      `<b>Из каких кейсов получали</b>\n${caseSources}\n\n` +
+      `<b>Другие источники</b>\n${otherSources}`
+    );
+  }
+  const kinds = kind ? [kind] : ["avatar", "frame", "trail", "skin"];
+  const all = await contentAnalyticsOverview(kinds, env);
+  all.sort((a, b) => b.using - a.using || b.owners - a.owners || b.totalDrops - a.totalDrops);
+  const lines = all.slice(0, 30).map((stats, index) => `${index + 1}. <b>${escapeHtml(stats.title)}</b> · <code>${stats.kind}:${stats.itemId}</code>\n   владельцев ${stats.owners} · используют ${stats.using} · получений ${stats.totalDrops} · дублей ${stats.duplicates}`);
+  await sendTelegramListChunks(env, chatId, `Аналитика контента${kind ? ` · ${kind}` : ""}`, lines, "Данных нет.");
+  await sendTelegramMessage(env, chatId, "Карточка предмета: <code>/content_stats frame ITEM_ID</code>");
+}
+
+
+// =============================================================
+// ADMIN SAFETY + PERFORMANCE CENTER v0.65
+// =============================================================
+const ADMIN_OVERVIEW_CACHE_KEY = "admin:overview:v2";
+const ADMIN_OVERVIEW_CACHE_TTL_SECONDS = 180;
+let adminOverviewMemoryCache = null;
+let adminOverviewRefreshPromise = null;
+const STAFF_LIMIT_METRICS = Object.freeze({
+  points_per_player: "Очки одному игроку",
+  points_daily: "Очки за сутки",
+  cases_daily: "Обычные кейсы за сутки",
+  legendary_daily: "Легендарные кейсы за сутки",
+  campaigns_daily: "Массовые кампании за сутки"
+});
+const STAFF_LIMIT_PRESETS = Object.freeze({
+  cashier: Object.freeze({ points_per_player: 1000, points_daily: 5000, cases_daily: 2, legendary_daily: 0, campaigns_daily: 0 }),
+  administrator: Object.freeze({ points_per_player: 10000, points_daily: 100000, cases_daily: 20, legendary_daily: 2, campaigns_daily: 2 }),
+  trusted: Object.freeze({ points_per_player: 50000, points_daily: 500000, cases_daily: 100, legendary_daily: 10, campaigns_daily: 10 }),
+  unlimited: Object.freeze({ points_per_player: 0, points_daily: 0, cases_daily: 0, legendary_daily: 0, campaigns_daily: 0 })
+});
+const FEATURE_FLAG_LABELS = Object.freeze({
+  cases: "Кейсы",
+  rating: "Рейтинг",
+  shop: "Покупки",
+  promocodes: "Промокоды",
+  physical_rewards: "Физические награды"
+});
+const FEATURE_FLAG_PERMISSIONS = Object.freeze({
+  cases: "manageCases",
+  rating: "manageSeasons",
+  shop: "manageShop",
+  promocodes: "managePromocodes",
+  physical_rewards: "manageMaintenance"
+});
+
+function canManageFeatureFlag(access, flagKey) {
+  return Boolean(access?.owner || access?.permissions?.[FEATURE_FLAG_PERMISSIONS[flagKey]]);
+}
+
+async function requireFeatureFlagPermission(chatId, user, flagKey, env) {
+  const permission = FEATURE_FLAG_PERMISSIONS[flagKey];
+  if (!permission) return null;
+  return requireSecurityPermission(chatId, user, permission, env);
+}
+const FEATURE_FLAG_DEFAULTS = Object.freeze([
+  Object.freeze({ flag_key:"cases", title:"Кейсы", description:"Открытие, покупка и активация кейсов", mode:"all", rollout_percent:100 }),
+  Object.freeze({ flag_key:"rating", title:"Рейтинг", description:"Отправка результатов и получение сезонной награды", mode:"all", rollout_percent:100 }),
+  Object.freeze({ flag_key:"shop", title:"Покупки", description:"Покупки скинов и кейсов", mode:"all", rollout_percent:100 }),
+  Object.freeze({ flag_key:"promocodes", title:"Промокоды", description:"Активация промокодов игроками", mode:"all", rollout_percent:100 }),
+  Object.freeze({ flag_key:"physical_rewards", title:"Физические награды", description:"Создание и выдача физических наград", mode:"all", rollout_percent:100 })
+]);
+const FEATURE_FLAG_CACHE_TTL_MS = 15000;
+let featureFlagsSchemaPromise = null;
+let featureFlagsMemoryCache = { rows: null, expiresAt: 0 };
+
+async function ensureFeatureFlagsSchema(env) {
+  if (!featureFlagsSchemaPromise) {
+    featureFlagsSchemaPromise = (async () => {
+      await env.DB.prepare(`CREATE TABLE IF NOT EXISTS live_feature_flags (flag_key TEXT PRIMARY KEY,title TEXT NOT NULL,description TEXT NOT NULL DEFAULT '',mode TEXT NOT NULL DEFAULT 'all',rollout_percent INTEGER NOT NULL DEFAULT 100,updated_at INTEGER NOT NULL,updated_by TEXT NOT NULL DEFAULT '')`).run();
+      const now = Math.floor(Date.now() / 1000);
+      await env.DB.batch(FEATURE_FLAG_DEFAULTS.map((row) => env.DB.prepare(`INSERT OR IGNORE INTO live_feature_flags(flag_key,title,description,mode,rollout_percent,updated_at,updated_by) VALUES(?,?,?,?,?,?,?)`).bind(row.flag_key,row.title,row.description,row.mode,row.rollout_percent,now,"runtime")));
+    })().catch((error) => { featureFlagsSchemaPromise = null; throw error; });
+  }
+  await featureFlagsSchemaPromise;
+}
+
+function invalidateFeatureFlagsCache() {
+  featureFlagsMemoryCache = { rows: null, expiresAt: 0 };
+}
+
+async function loadFeatureFlagRows(env, force = false) {
+  const now = Date.now();
+  if (!force && featureFlagsMemoryCache.rows && featureFlagsMemoryCache.expiresAt > now) return featureFlagsMemoryCache.rows;
+  await ensureFeatureFlagsSchema(env);
+  const rows = (await env.DB.prepare(`SELECT * FROM live_feature_flags ORDER BY flag_key`).all()).results || [];
+  featureFlagsMemoryCache = { rows, expiresAt: now + FEATURE_FLAG_CACHE_TTL_MS };
+  return rows;
+}
+
+function parseCachedAdminOverview(state) {
+  if (!state?.value) return null;
+  try {
+    const parsed = JSON.parse(state.value);
+    return parsed && typeof parsed === "object" ? { ...parsed, cacheUpdatedAt: Number(state.updatedAt || 0) } : null;
+  } catch { return null; }
+}
+
+async function readCachedAdminOverview(env, maxAgeSeconds = ADMIN_OVERVIEW_CACHE_TTL_SECONDS) {
+  const now = Math.floor(Date.now() / 1000);
+  if (adminOverviewMemoryCache?.overview) {
+    const age = Math.max(0, now - Number(adminOverviewMemoryCache.updatedAt || 0));
+    if (age <= maxAgeSeconds) return { ...adminOverviewMemoryCache.overview, cacheAgeSeconds: age, cacheFresh: true };
+  }
+  const state = await getSystemState(env, ADMIN_OVERVIEW_CACHE_KEY);
+  const overview = parseCachedAdminOverview(state);
+  if (!overview) return null;
+  const age = Math.max(0, now - Number(state.updatedAt || 0));
+  adminOverviewMemoryCache = { overview: { ...overview }, updatedAt: Number(state.updatedAt || now) };
+  overview.cacheAgeSeconds = age;
+  overview.cacheFresh = age <= maxAgeSeconds;
+  return overview;
+}
+
+async function writeCachedAdminOverview(env, overview) {
+  if (!overview) return;
+  const now = Math.floor(Date.now() / 1000);
+  adminOverviewMemoryCache = { overview: { ...overview, generatedAt: now }, updatedAt: now };
+  await setSystemState(env, ADMIN_OVERVIEW_CACHE_KEY, JSON.stringify({ ...overview, generatedAt: now }));
+}
+
+async function getAdminOverviewFast(env, force = false) {
+  if (!force) {
+    const cached = await readCachedAdminOverview(env, 10 * 60);
+    if (cached) return cached;
+  }
+  if (!adminOverviewRefreshPromise) {
+    adminOverviewRefreshPromise = (async () => {
+      const overview = await buildAdminOverview(env, { syncProblems: false });
+      await writeCachedAdminOverview(env, overview);
+      return { ...overview, cacheFresh: true, cacheAgeSeconds: 0 };
+    })().finally(() => { adminOverviewRefreshPromise = null; });
+  }
+  return adminOverviewRefreshPromise;
+}
+
+function staffLimitValueText(value) {
+  const number = Math.max(0, Math.floor(Number(value) || 0));
+  return number === 0 ? "без ограничения" : number.toLocaleString("ru-RU");
+}
+
+async function readStaffActionLimits(env, telegramId) {
+  await ensureOperationsSecuritySchema(env);
+  const row = await env.DB.prepare(`SELECT * FROM staff_action_limits WHERE telegram_id=? LIMIT 1`).bind(String(telegramId)).first();
+  return {
+    telegram_id: String(telegramId),
+    points_per_player: Math.max(0, Number(row?.points_per_player ?? 10000)),
+    points_daily: Math.max(0, Number(row?.points_daily ?? 100000)),
+    cases_daily: Math.max(0, Number(row?.cases_daily ?? 20)),
+    legendary_daily: Math.max(0, Number(row?.legendary_daily ?? 2)),
+    campaigns_daily: Math.max(0, Number(row?.campaigns_daily ?? 2)),
+    customized: Boolean(row)
+  };
+}
+
+async function writeStaffActionLimits(env, telegramId, values, actor) {
+  await ensureOperationsSecuritySchema(env);
+  const current = await readStaffActionLimits(env, telegramId);
+  const next = { ...current, ...(values || {}) };
+  const now = Math.floor(Date.now() / 1000);
+  await env.DB.prepare(`INSERT INTO staff_action_limits
+    (telegram_id,points_per_player,points_daily,cases_daily,legendary_daily,campaigns_daily,updated_at,updated_by)
+    VALUES(?,?,?,?,?,?,?,?)
+    ON CONFLICT(telegram_id) DO UPDATE SET points_per_player=excluded.points_per_player,points_daily=excluded.points_daily,
+      cases_daily=excluded.cases_daily,legendary_daily=excluded.legendary_daily,campaigns_daily=excluded.campaigns_daily,
+      updated_at=excluded.updated_at,updated_by=excluded.updated_by`)
+    .bind(String(telegramId), Math.max(0, Math.floor(Number(next.points_per_player)||0)), Math.max(0, Math.floor(Number(next.points_daily)||0)),
+      Math.max(0, Math.floor(Number(next.cases_daily)||0)), Math.max(0, Math.floor(Number(next.legendary_daily)||0)),
+      Math.max(0, Math.floor(Number(next.campaigns_daily)||0)), now, String(actor?.id || "system")).run();
+  return readStaffActionLimits(env, telegramId);
+}
+
+async function staffUsageAmount(env, telegramId, metric) {
+  await ensureOperationsSecuritySchema(env);
+  const row = await env.DB.prepare(`SELECT amount FROM staff_action_usage WHERE telegram_id=? AND day_key=? AND metric=? LIMIT 1`)
+    .bind(String(telegramId), moscowDateKey(), String(metric)).first();
+  return Math.max(0, Number(row?.amount || 0));
+}
+
+async function recordStaffUsage(env, telegramId, metric, amount) {
+  await ensureOperationsSecuritySchema(env);
+  const now = Math.floor(Date.now() / 1000);
+  await env.DB.prepare(`INSERT INTO staff_action_usage(telegram_id,day_key,metric,amount,updated_at) VALUES(?,?,?,?,?)
+    ON CONFLICT(telegram_id,day_key,metric) DO UPDATE SET amount=amount+excluded.amount,updated_at=excluded.updated_at`)
+    .bind(String(telegramId), moscowDateKey(), String(metric), Math.max(0, Math.floor(Number(amount)||0)), now).run();
+}
+
+async function checkStaffUsageLimit(env, user, access, metric, amount, perOperationMetric = "") {
+  if (access?.owner) return { ok: true };
+  const limits = await readStaffActionLimits(env, user.id);
+  const requested = Math.max(0, Math.floor(Number(amount)||0));
+  if (perOperationMetric) {
+    const opLimit = Math.max(0, Number(limits[perOperationMetric] || 0));
+    if (opLimit > 0 && requested > opLimit) return { ok:false, text:`Лимит одной операции: ${staffLimitValueText(opLimit)}.` };
+  }
+  const dailyLimit = Math.max(0, Number(limits[metric] || 0));
+  const used = await staffUsageAmount(env, user.id, metric);
+  if (dailyLimit > 0 && used + requested > dailyLimit) {
+    return { ok:false, text:`Суточный лимит исчерпан: использовано ${used.toLocaleString("ru-RU")} из ${dailyLimit.toLocaleString("ru-RU")}.` };
+  }
+  return { ok:true, used, dailyLimit };
+}
+
+async function showStaffLimitsDashboard(chatId, user, env) {
+  const access = await requireSecurityPermission(chatId, user, "approveDangerous", env);
+  if (!access) return;
+  await ensureOperationsSecuritySchema(env);
+  const rows = (await env.DB.prepare(`SELECT s.telegram_id,s.role,s.active,COALESCE(n.custom_name,'') AS custom_name,
+    l.points_per_player,l.points_daily,l.cases_daily,l.legendary_daily,l.campaigns_daily
+    FROM staff_users s LEFT JOIN staff_custom_names n ON n.telegram_id=s.telegram_id
+    LEFT JOIN staff_action_limits l ON l.telegram_id=s.telegram_id
+    WHERE s.active=1 ORDER BY CASE s.role WHEN 'administrator' THEN 1 WHEN 'cashier' THEN 2 ELSE 3 END,n.custom_name,s.telegram_id LIMIT 50`).all()).results || [];
+  const buttons = rows.map((row) => [{ text:`📏 ${String(row.custom_name || row.telegram_id).slice(0,28)}`, callback_data:`v65_limit_staff:${row.telegram_id}` }]);
+  buttons.push([{ text:"⬅️ Админ-панель", callback_data:"adm_home" }]);
+  await sendTelegramMessage(env, chatId, `<b>📏 Лимиты сотрудников</b>\n\nЛимиты защищают от случайных и массовых выдач. Значение 0 означает «без ограничения».\n\nСотрудников: <b>${rows.length}</b>`, { inline_keyboard: buttons });
+}
+
+async function showStaffLimitCard(chatId, user, telegramId, env) {
+  const access = await requireSecurityPermission(chatId, user, "approveDangerous", env);
+  if (!access) return;
+  const target = await env.DB.prepare(`SELECT s.telegram_id,s.role,COALESCE(n.custom_name,'') AS custom_name FROM staff_users s LEFT JOIN staff_custom_names n ON n.telegram_id=s.telegram_id WHERE s.telegram_id=? LIMIT 1`).bind(String(telegramId)).first();
+  if (!target) return sendTelegramMessage(env, chatId, "Сотрудник не найден.");
+  const limits = await readStaffActionLimits(env, telegramId);
+  const usage = {};
+  for (const metric of ["points_daily","cases_daily","legendary_daily","campaigns_daily"]) usage[metric] = await staffUsageAmount(env, telegramId, metric);
+  await sendTelegramMessage(env, chatId,
+    `<b>📏 ${escapeHtml(target.custom_name || target.telegram_id)}</b>\nРоль: <b>${escapeHtml(teamRoleLabel(target.role))}</b>\nID: <code>${escapeHtml(String(telegramId))}</code>\n\n`+
+    `Очки одному игроку: <b>${staffLimitValueText(limits.points_per_player)}</b>\n`+
+    `Очки за сутки: <b>${usage.points_daily.toLocaleString("ru-RU")} / ${staffLimitValueText(limits.points_daily)}</b>\n`+
+    `Обычные кейсы: <b>${usage.cases_daily.toLocaleString("ru-RU")} / ${staffLimitValueText(limits.cases_daily)}</b>\n`+
+    `Легендарные кейсы: <b>${usage.legendary_daily.toLocaleString("ru-RU")} / ${staffLimitValueText(limits.legendary_daily)}</b>\n`+
+    `Кампании: <b>${usage.campaigns_daily.toLocaleString("ru-RU")} / ${staffLimitValueText(limits.campaigns_daily)}</b>\n\n`+
+    `Точная настройка: <code>/limit ${escapeHtml(String(telegramId))} points_daily 100000</code>`,
+    { inline_keyboard: [
+      [{ text:"☕ Кассир",callback_data:`v65_limit_preset:${telegramId}:cashier`},{text:"🛡 Администратор",callback_data:`v65_limit_preset:${telegramId}:administrator`}],
+      [{ text:"⭐ Доверенный",callback_data:`v65_limit_preset:${telegramId}:trusted`},{text:"∞ Без лимитов",callback_data:`v65_limit_preset:${telegramId}:unlimited`}],
+      [{ text:"⬅️ Сотрудники",callback_data:"v65_limits"}]
+    ] }
+  );
+}
+
+async function setStaffLimitFromCommand(chatId, user, telegramId, metric, value, env) {
+  const access = await requireSecurityPermission(chatId, user, "approveDangerous", env);
+  if (!access) return;
+  if (!Object.prototype.hasOwnProperty.call(STAFF_LIMIT_METRICS, metric)) return sendTelegramMessage(env, chatId, `Неизвестная метрика. Доступно: <code>${Object.keys(STAFF_LIMIT_METRICS).join("</code>, <code>")}</code>`);
+  const amount = Math.floor(Number(value));
+  if (!Number.isFinite(amount) || amount < 0 || amount > 1000000000) return sendTelegramMessage(env, chatId, "Значение должно быть целым числом от 0 до 1 000 000 000.");
+  const result = await writeStaffActionLimits(env, telegramId, { [metric]: amount }, user);
+  await logStaffAction(env, user, access, "staff_limit_change", String(telegramId), metric, null, amount, { metric });
+  await sendTelegramMessage(env, chatId, `✅ ${escapeHtml(STAFF_LIMIT_METRICS[metric])}: <b>${staffLimitValueText(result[metric])}</b>.`);
+}
+
+function featureModeLabel(row) {
+  const mode = String(row?.mode || "all");
+  if (mode === "off") return "🔴 выключено";
+  if (mode === "testers") return "🧪 только тестеры";
+  if (mode === "percent") return `🟡 ${Math.max(0,Math.min(100,Number(row?.rollout_percent||0)))}% игроков`;
+  return "🟢 все игроки";
+}
+
+function stableRolloutBucket(value) {
+  const input = String(value || "anonymous");
+  let hash = 2166136261;
+  for (let i=0;i<input.length;i+=1) { hash ^= input.charCodeAt(i); hash = Math.imul(hash,16777619); }
+  return (hash >>> 0) % 100;
+}
+
+async function getFeatureFlag(env, flagKey) {
+  const rows = await loadFeatureFlagRows(env);
+  return rows.find((row) => String(row.flag_key) === String(flagKey)) || null;
+}
+
+async function isFeatureEnabled(env, flagKey, telegramId = "") {
+  const row = await getFeatureFlag(env, flagKey);
+  if (!row || row.mode === "all") return true;
+  if (row.mode === "off") return false;
+  if (row.mode === "testers") return Boolean(await getTesterAccountSafe(telegramId, env));
+  if (row.mode === "percent") return stableRolloutBucket(`${flagKey}:${telegramId}`) < Math.max(0,Math.min(100,Number(row.rollout_percent||0)));
+  return true;
+}
+
+async function requestTelegramIdHint(request) {
+  try {
+    const body = await request.clone().json();
+    const direct = body?.telegramId || body?.telegram_id || body?.userId || body?.user_id;
+    if (direct) return String(direct);
+    const initData = String(body?.initData || body?.init_data || "");
+    if (initData) {
+      const params = new URLSearchParams(initData);
+      const user = JSON.parse(params.get("user") || "{}");
+      if (user?.id != null) return String(user.id);
+    }
+  } catch {}
+  return "";
+}
+
+async function enforceFeatureFlagForRequest(request, env, flagKey) {
+  const telegramId = await requestTelegramIdHint(request);
+  const enabled = await isFeatureEnabled(env, flagKey, telegramId);
+  if (enabled) return null;
+  const title = FEATURE_FLAG_LABELS[flagKey] || flagKey;
+  return jsonResponse({ ok:false, error:`Функция «${title}» временно недоступна. Прогресс сохранён.` }, 503);
+}
+
+async function publicFeatureFlags(env, telegramId = "") {
+  const rows = await loadFeatureFlagRows(env);
+  const flags = {};
+  let tester = null;
+  for (const row of rows) {
+    const mode = String(row.mode || "all");
+    if (mode === "all") flags[row.flag_key] = true;
+    else if (mode === "off") flags[row.flag_key] = false;
+    else if (mode === "percent") flags[row.flag_key] = stableRolloutBucket(`${row.flag_key}:${telegramId}`) < Math.max(0,Math.min(100,Number(row.rollout_percent||0)));
+    else if (mode === "testers") {
+      if (tester == null) tester = Boolean(await getTesterAccountSafe(telegramId, env));
+      flags[row.flag_key] = tester;
+    } else flags[row.flag_key] = true;
+  }
+  return flags;
+}
+
+async function showFeatureFlagsDashboard(chatId, user, env) {
+  const access = await requireAnySecurityPermission(chatId, user, ["manageMaintenance","manageCases","manageSeasons","manageShop","managePromocodes"], env);
+  if (!access) return;
+  const rows = (await loadFeatureFlagRows(env)).filter((row) => canManageFeatureFlag(access, row.flag_key));
+  const lines = rows.map((row)=>`• <b>${escapeHtml(row.title)}</b> — ${escapeHtml(featureModeLabel(row))}`);
+  const buttons = rows.map((row)=>[{ text:`${row.mode==='off'?'🔴':row.mode==='testers'?'🧪':row.mode==='percent'?'🟡':'🟢'} ${String(row.title).slice(0,28)}`, callback_data:`v65_feature:${row.flag_key}` }]);
+  buttons.push([{ text:"⬅️ Админ-панель",callback_data:"adm_home" }]);
+  await sendTelegramMessage(env, chatId, `<b>🚩 Флаги функций</b>\n\n${lines.join("\n")}\n\nФлаги применяются на серверных API без нового деплоя. Режим «процент» распределяет игроков стабильно по Telegram ID.`, { inline_keyboard: buttons });
+}
+
+async function showFeatureFlagCard(chatId, user, flagKey, env) {
+  const access = await requireFeatureFlagPermission(chatId, user, flagKey, env);
+  if (!access) return;
+  const row = await getFeatureFlag(env, flagKey);
+  if (!row) return sendTelegramMessage(env, chatId, "Флаг не найден.");
+  await sendTelegramMessage(env, chatId, `<b>🚩 ${escapeHtml(row.title)}</b>\n\n${escapeHtml(row.description || "")}\nТекущий режим: <b>${escapeHtml(featureModeLabel(row))}</b>\nОбновлено: ${escapeHtml(formatUtcDate(row.updated_at))}`,
+    { inline_keyboard:[
+      [{text:"🔴 Выключить",callback_data:`v65_feature_set:${flagKey}:off:0`},{text:"🧪 Тестеры",callback_data:`v65_feature_set:${flagKey}:testers:0`}],
+      [{text:"🟡 10%",callback_data:`v65_feature_set:${flagKey}:percent:10`},{text:"🟡 25%",callback_data:`v65_feature_set:${flagKey}:percent:25`},{text:"🟡 50%",callback_data:`v65_feature_set:${flagKey}:percent:50`}],
+      [{text:"🟢 Все игроки",callback_data:`v65_feature_set:${flagKey}:all:100`}],
+      [{text:"⬅️ Флаги",callback_data:"v65_features"}]
+    ] }
+  );
+}
+
+async function setFeatureFlag(query, flagKey, mode, percent, env) {
+  const chatId=query.message?.chat?.id;
+  const access=await requireFeatureFlagPermission(chatId,query.from,flagKey,env);
+  if(!access)return;
+  if(!["off","testers","percent","all"].includes(mode))return answerCallback(env,query.id,"Некорректный режим.",true);
+  const current=await getFeatureFlag(env,flagKey);if(!current)return answerCallback(env,query.id,"Флаг не найден.",true);
+  const rollout=Math.max(0,Math.min(100,Math.floor(Number(percent)||0)));const now=Math.floor(Date.now()/1000);
+  await createConfigSnapshot(env,"pre_feature_flag",`Перед изменением функции: ${current.title}`,query.from);
+  await env.DB.prepare(`UPDATE live_feature_flags SET mode=?,rollout_percent=?,updated_at=?,updated_by=? WHERE flag_key=?`).bind(mode,rollout,now,String(query.from.id),flagKey).run();
+  invalidateFeatureFlagsCache();
+  await logLiveOpsConfigChange(env,query.from,"feature",flagKey,"feature_flag_change",current,{...current,mode,rollout_percent:rollout},"");
+  await recordV67SettingChange(env,query.from,"feature",flagKey,"change",current,{...current,mode,rollout_percent:rollout});
+  await answerCallback(env,query.id,"Режим функции изменён.");
+  await showFeatureFlagCard(chatId,query.from,flagKey,env);
+}
+
+function emptySimulationCaseState() {
+  return { boosters:{points:0,treats:0,coffee:0}, activeBooster:{type:"",runsLeft:0}, ownedAvatars:[], activeAvatarId:"", ownedFrames:[], activeFrameId:"", ownedTrails:[], activeTrailId:"", ownedMusicTracks:["cafe_run"], activeMusicTrackId:"cafe_run", ownedSkins:["default"], activeSkinId:"default", legendaryPityCounter:0, legendaryGuaranteedEvery:50, revision:0, updatedAt:0 };
+}
+
+async function runCaseSimulation(env, caseType, sampleCount) {
+  const liveops=await readLiveOpsConfig(env);const samples=Math.max(100,Math.min(10000,Math.floor(Number(sampleCount)||1000)));
+  const players=Array.from({length:100},()=>emptySimulationCaseState());
+  const categoryCounts={};const rarityCounts={};let physical=0,duplicates=0,guaranteed=0,totalRewards=0,totalPoints=0,totalTreats=0,totalCoffee=0;
+  for(let i=0;i<samples;i+=1){
+    const index=i%players.length;const rolled=rollLevelCase(caseType,players[index],players[index].ownedSkins,liveops);players[index]=rolled.state;
+    totalPoints+=Number(rolled.points||0);totalTreats+=Number(rolled.treats||0);totalCoffee+=Number(rolled.coffee||0);
+    for(const reward of rolled.rewards||[]){totalRewards+=1;const kind=String(reward.kind||"unknown");categoryCounts[kind]=(categoryCounts[kind]||0)+1;if(kind==="physical")physical+=1;if(reward.duplicate)duplicates+=1;if(reward.guaranteed)guaranteed+=1;if(reward.rarity)rarityCounts[reward.rarity]=(rarityCounts[reward.rarity]||0)+1;}
+  }
+  return {caseType,samples,totalRewards,categoryCounts,rarityCounts,physical,duplicates,guaranteed,totalPoints,totalTreats,totalCoffee,guaranteeCount:Number(liveops?.cases?.[caseType]?.guaranteeCount||0)};
+}
+
+function percentOf(value,total){return total>0?Number(value||0)*100/total:0;}
+async function showCaseSimulatorDashboard(chatId,user,env){
+  const access=await requireSecurityPermission(chatId,user,"manageCases",env);if(!access)return;
+  await sendTelegramMessage(env,chatId,"<b>🧪 Симулятор кейсов</b>\n\nВиртуальные открытия ничего не начисляют игрокам и не меняют экономику. Выберите кейс и объём выборки.",
+    {inline_keyboard:[
+      [{text:"📦 Обычный · 1 000",callback_data:"v65_sim:small:1000"},{text:"🥈 Серебряный · 1 000",callback_data:"v65_sim:sweet:1000"}],
+      [{text:"🥇 Золотой · 5 000",callback_data:"v65_sim:gold:5000"},{text:"👑 Легендарный · 5 000",callback_data:"v65_sim:legendary:5000"}],
+      [{text:"👑 Легендарный · 10 000",callback_data:"v65_sim:legendary:10000"}],
+      [{text:"⬅️ Админ-панель",callback_data:"adm_home"}]
+    ]});
+}
+
+async function showCaseSimulationReport(chatId,user,caseType,samples,env){
+  const access=await requireSecurityPermission(chatId,user,"manageCases",env);if(!access)return;
+  const started=Date.now();const report=await runCaseSimulation(env,caseType,samples);const duration=Date.now()-started;
+  const categories=Object.entries(report.categoryCounts).sort((a,b)=>b[1]-a[1]).map(([kind,count])=>`• ${escapeHtml(kind)}: <b>${percentOf(count,report.totalRewards).toLocaleString("ru-RU",{maximumFractionDigits:2})}%</b> · ${count.toLocaleString("ru-RU")}`);
+  const rarities=Object.entries(report.rarityCounts).sort((a,b)=>(CASE_RARITY_ORDER[b[0]]||0)-(CASE_RARITY_ORDER[a[0]]||0)).map(([rarity,count])=>`• ${escapeHtml(rarity)}: <b>${percentOf(count,Object.values(report.rarityCounts).reduce((a,b)=>a+b,0)).toLocaleString("ru-RU",{maximumFractionDigits:2})}%</b>`);
+  await sendTelegramMessage(env,chatId,`<b>🧪 ${escapeHtml(LEVEL_CASE_CONFIG[caseType]?.title||caseType)}</b>\n\nОткрытий: <b>${report.samples.toLocaleString("ru-RU")}</b>\nВремя расчёта: <b>${duration.toLocaleString("ru-RU")} мс</b>\nГарант: <b>${report.guaranteeCount||"выключен"}</b>\n\n<b>Категории</b>\n${categories.join("\n")}\n\n<b>Редкости косметики</b>\n${rarities.join("\n")||"Нет косметических выпадений."}\n\nФизические награды: <b>${percentOf(report.physical,report.totalRewards).toLocaleString("ru-RU",{maximumFractionDigits:2})}%</b>\nДубликаты: <b>${percentOf(report.duplicates,report.totalRewards).toLocaleString("ru-RU",{maximumFractionDigits:2})}%</b>\nСрабатываний гаранта: <b>${report.guaranteed}</b>\n\nСреднее за кейс: <b>${Math.round(report.totalPoints/report.samples).toLocaleString("ru-RU")} очков</b>, <b>${(report.totalTreats/report.samples).toLocaleString("ru-RU",{maximumFractionDigits:1})} зефира</b>, <b>${(report.totalCoffee/report.samples).toLocaleString("ru-RU",{maximumFractionDigits:1})} кофе</b>.`,
+    {inline_keyboard:[[{text:"🔄 Повторить",callback_data:`v65_sim:${caseType}:${report.samples}`},{text:"⬅️ Симулятор",callback_data:"v65_case_sim"}]]});
+}
+
+async function showPublicationCenter(chatId,user,env,createBatch=false){
+  const access=await requireAnySecurityPermission(chatId,user,["manageCases","manageSeasons"],env);if(!access)return;
+  await ensureSafeControlCenterSchema(env);await ensureLiveOpsAdminSchema(env);await ensureOperationsSecuritySchema(env);
+  const drafts=(await env.DB.prepare(`SELECT * FROM liveops_drafts WHERE status='draft' ORDER BY updated_at DESC,id DESC LIMIT 20`).all()).results||[];
+  const history=(await env.DB.prepare(`SELECT entity_type,COUNT(*) AS versions,MAX(created_at) AS last_at FROM liveops_config_history GROUP BY entity_type ORDER BY last_at DESC`).all()).results||[];
+  let valid=0;const validationLines=[];const validationItems=[];
+  for(const row of drafts){
+    const validation=await validateSafeDraftRow(row,env);
+    if(validation.ok)valid+=1;
+    validationLines.push(`${validation.ok?'✅':'❌'} #${row.id} ${row.title}`);
+    validationItems.push({id:Number(row.id),entityType:String(row.entity_type),entityId:String(row.entity_id),title:String(row.title),ok:Boolean(validation.ok),errors:Array.isArray(validation.errors)?validation.errors:[]});
+  }
+  let batchText="";
+  if(createBatch&&drafts.length){
+    const now=Math.floor(Date.now()/1000);
+    const result=await env.DB.prepare(`INSERT INTO admin_publication_batches(title,status,draft_ids_json,validation_json,created_by,created_by_name,created_at,updated_at,published_at,published_by,error_text) VALUES(?,?,?,?,?,?,?,?,0,'','')`)
+      .bind(`Проверка пакета ${formatUtcDate(now)}`,valid===drafts.length?'checked':'blocked',JSON.stringify(drafts.map((row)=>Number(row.id))),JSON.stringify({valid,total:drafts.length,items:validationItems}),String(user.id),telegramDisplayName(user),now,now).run();
+    const batchId=Number(result.meta?.last_row_id||0);
+    batchText=`\n\nПроверка сохранена как пакет <b>#${batchId}</b> · ${valid===drafts.length?'готов':'заблокирован'}.`;
+    await logStaffAction(env,user,access,"publication_batch_check",String(batchId),"publication",null,valid,{total:drafts.length,blocked:drafts.length-valid});
+  }
+  const versionText=history.length?history.map((row)=>`• ${escapeHtml(row.entity_type)}: <b>v${Number(row.versions)}</b> · ${escapeHtml(formatUtcDate(row.last_at))}`).join("\n"):"История публикаций пока пуста.";
+  const buttons=drafts.slice(0,12).map((row)=>[{text:`${String(row.title).slice(0,32)}`,callback_data:`safe_draft:${row.id}`}]);
+  buttons.push([{text:"🔎 Проверить и сохранить",callback_data:"v65_publish_validate"},{text:"⬅️ Админ-панель",callback_data:"adm_home"}]);
+  await sendTelegramMessage(env,chatId,`<b>🚀 Центр публикации</b>\n\nНеопубликованных изменений: <b>${drafts.length}</b>\nГотовы к публикации: <b>${valid}</b>\nЗаблокированы проверкой: <b>${Math.max(0,drafts.length-valid)}</b>\n\n<b>Проверка пакета</b>\n${validationLines.slice(0,10).map(escapeHtml).join("\n")||"Нет черновиков."}\n\n<b>Версии конфигураций</b>\n${versionText}${batchText}\n\nПубликация выполняется по одному черновику: перед каждым изменением создаётся снимок, а конфликт с уже изменённой конфигурацией блокирует запись.`,{inline_keyboard:buttons});
+}
+
+async function buildCampaignDryRun(env,data){
+  const rawIds=await segmentPlayerIds(env,data.segmentKey,10000);const unique=[...new Set(rawIds)];
+  const testers=new Set(((await env.DB.prepare(`SELECT telegram_id FROM tester_accounts`).all()).results||[]).map((r)=>String(r.telegram_id)));
+  const blocked=new Set(((await env.DB.prepare(`SELECT telegram_id FROM player_admin_controls WHERE blocked=1`).all()).results||[]).map((r)=>String(r.telegram_id)));
+  const eligible=unique.filter((id)=>!testers.has(id)&&!blocked.has(id));
+  const totalUnits=eligible.length*Math.max(1,Number(data.amount||1));
+  return {rawCount:rawIds.length,uniqueCount:unique.length,testersExcluded:unique.filter((id)=>testers.has(id)).length,blockedExcluded:unique.filter((id)=>blocked.has(id)).length,eligibleIds:eligible,totalUnits,estimatedPhysical:data.rewardKind==='case'?totalUnits*CASE_PHYSICAL_TOTAL_CHANCE:0};
+}
+// =============================================================
+
+async function processOperationsSecurityCron(env){
+  await ensureOperationsSecuritySchema(env);const now=Math.floor(Date.now()/1000);
+  await env.DB.prepare(`UPDATE dangerous_action_approvals SET status='expired',updated_at=? WHERE status='pending' AND expires_at<=?`).bind(now,now).run();
+  const parts=moscowDateParts();const dateKey=moscowDateKey();
+  if(parts.hour===0){const stateKey=`security-snapshot:${dateKey}`;const existing=await getSystemState(env,stateKey);if(!existing){const id=await createConfigSnapshot(env,"automatic",`Автоматический снимок ${dateKey}`,{id:"system",first_name:"Система"});await setSystemState(env,stateKey,id);}}
+  const settings=await getMaintenanceSettings(env);if(settings.fullClosed&&now-settings.updatedAt>4*3600){const stateKey=`maintenance-long:${settings.updatedAt}`;if(!(await getSystemState(env,stateKey))){await notifySubscribedStaff(env,"bot_errors",`⚠️ <b>Игра закрыта на технические работы более 4 часов</b>\n\nВключено: ${escapeHtml(formatUtcDate(settings.updatedAt))}`);await setSystemState(env,stateKey,"sent");}}
+}
+
+async function handleOperationsSecurityCallback(query,env,runtime={}){
+  const data=String(query.data||"");const chatId=query.message?.chat?.id;if(!chatId||!query.from?.id)return false;
+  if(data==="v65_limits"){await answerCallback(env,query.id,"Открываю лимиты.");await showStaffLimitsDashboard(chatId,query.from,env);return true;}
+  const limitStaff=data.match(/^v65_limit_staff:(\d{4,20})$/);if(limitStaff){await answerCallback(env,query.id,"Открываю лимиты сотрудника.");await showStaffLimitCard(chatId,query.from,limitStaff[1],env);return true;}
+  const limitPreset=data.match(/^v65_limit_preset:(\d{4,20}):(cashier|administrator|trusted|unlimited)$/);if(limitPreset){const access=await requireSecurityPermission(chatId,query.from,"approveDangerous",env);if(!access)return true;const preset=STAFF_LIMIT_PRESETS[limitPreset[2]];await writeStaffActionLimits(env,limitPreset[1],preset,query.from);await logStaffAction(env,query.from,access,"staff_limit_preset",limitPreset[1],"staff",null,null,{preset:limitPreset[2]});await answerCallback(env,query.id,"Профиль лимитов применён.");await showStaffLimitCard(chatId,query.from,limitPreset[1],env);return true;}
+  if(data==="v65_features"){await answerCallback(env,query.id,"Открываю флаги.");await showFeatureFlagsDashboard(chatId,query.from,env);return true;}
+  const featureCard=data.match(/^v65_feature:([a-z_]+)$/);if(featureCard){await answerCallback(env,query.id,"Открываю функцию.");await showFeatureFlagCard(chatId,query.from,featureCard[1],env);return true;}
+  const featureSet=data.match(/^v65_feature_set:([a-z_]+):(off|testers|percent|all):(\d{1,3})$/);if(featureSet){await setFeatureFlag(query,featureSet[1],featureSet[2],Number(featureSet[3]),env);return true;}
+  if(data==="v65_case_sim"){await answerCallback(env,query.id,"Выберите кейс.");await showCaseSimulatorDashboard(chatId,query.from,env);return true;}
+  const sim=data.match(/^v65_sim:(small|sweet|gold|legendary):(1000|5000|10000)$/);if(sim){await answerCallback(env,query.id,"Запускаю виртуальные открытия.");await showCaseSimulationReport(chatId,query.from,sim[1],Number(sim[2]),env);return true;}
+  if(data==="v65_publish"||data==="v65_publish_validate"){await answerCallback(env,query.id,"Проверяю пакет изменений.");await showPublicationCenter(chatId,query.from,env,data==="v65_publish_validate");return true;}
+  const historyPage=data.match(/^v57_history:(\d{4,20}):(\d{1,2})$/);if(historyPage){await answerCallback(env,query.id,"Открываю страницу истории.");await showPlayerTimeline(chatId,query.from,historyPage[1],env,Number(historyPage[2]));return true;}
+  if(data==="v57_history_help"){const access=await requireSecurityPermission(chatId,query.from,"viewPlayers",env);if(!access)return true;await answerCallback(env,query.id,"Введите Telegram ID.");await sendTelegramMessage(env,chatId,"История игрока: <code>/player_history TELEGRAM_ID [СТРАНИЦА]</code>");return true;}
+  if(data==="v57_permissions"){await answerCallback(env,query.id,"Открываю права.");await showGranularPermissions(chatId,query.from,"",env);return true;}
+  if(data==="v57_maintenance"){await answerCallback(env,query.id,"Открываю техработы.");await showMaintenanceDashboard(chatId,query.from,env);return true;}
+  if(data==="v57_testers"){await answerCallback(env,query.id,"Открываю тестеров.");await showTestersDashboard(chatId,query.from,env);return true;}
+  if(data==="v57_promos"){await answerCallback(env,query.id,"Открываю промокоды.");await showPromoCodesDashboard(chatId,query.from,env);return true;}
+  if(data==="v57_notifications"){await answerCallback(env,query.id,"Открываю подписки.");await showNotificationPreferences(chatId,query.from,env);return true;}
+  if(data==="v57_approvals"){await answerCallback(env,query.id,"Открываю подтверждения.");await showDangerousApprovals(chatId,query.from,env);return true;}
+  if(data==="v57_snapshots"){await answerCallback(env,query.id,"Открываю снимки.");await showSnapshotsDashboard(chatId,query.from,env);return true;}
+  if(data==="v57_content"){await answerCallback(env,query.id,"Собираю аналитику.");await showContentAnalytics(chatId,query.from,"","",env);return true;}
+  if(data==="ops_search"){await answerCallback(env,query.id,"Введите запрос.");await startUniversalAdminSearch(chatId,query.from,env);return true;}
+  if(data==="ops_problems"){await answerCallback(env,query.id,"Проверяю систему.");await showOperationalProblemsDashboard(chatId,query.from,env,false,runtime);return true;}
+  if(data==="ops_problems_resolved"){await answerCallback(env,query.id,"Открываю решённые проблемы.");await showOperationalProblemsDashboard(chatId,query.from,env,true,runtime);return true;}
+  const opsIssue=data.match(/^ops_issue:(\d+)$/);if(opsIssue){await answerCallback(env,query.id,"Открываю проблему.");await showOperationalIssueDetails(chatId,query.from,Number(opsIssue[1]),env);return true;}
+  const opsIssueAction=data.match(/^ops_issue_(ack|assign|snooze|resolve):(\d+)$/);if(opsIssueAction){await updateOperationalIssue(query,Number(opsIssueAction[2]),opsIssueAction[1],env);return true;}
+  const opsSearchReward=data.match(/^ops_search_reward:([A-Z0-9]+)$/);if(opsSearchReward){await answerCallback(env,query.id,"Открываю награду.");await showRewardInBot(chatId,query.from,opsSearchReward[1],env,{viewOnly:true});return true;}
+  if(data==="v57_snap_create"){await answerCallback(env,query.id,"Создаю снимок.");await createManualSnapshot(chatId,query.from,"Ручной снимок из админ-панели",env);return true;}
+  const maint=data.match(/^v57_maint:([a-z_]+):(on|off)$/);if(maint){await answerCallback(env,query.id,"Изменяю режим.");await changeMaintenanceMode(chatId,query.from,maint[1],maint[2],"",env,runtime);return true;}
+  const approve=data.match(/^v57_(approve|reject):(\d+)$/);if(approve){await answerCallback(env,query.id,"Обрабатываю запрос.");await processDangerousApproval(chatId,query.from,Number(approve[2]),approve[1],env);return true;}
+  const notify=data.match(/^v57_notify:([a-z_]+):(on|off)$/);if(notify){await answerCallback(env,query.id,"Настройка сохранена.");await setNotificationPreference(chatId,query.from,notify[1],notify[2]==="on",env);await showNotificationPreferences(chatId,query.from,env);return true;}
+  if(data==="v60_promo_new"){await answerCallback(env,query.id,"Создаём промокод.");await startPromoCodeWorkflow(chatId,query.from,env);return true;}
+  if(data==="v60_pc_noop"){await answerCallback(env,query.id,"Выберите предмет.");return true;}
+  if(data==="v60_pc_cancel"){await clearStaffWorkflow(query.from.id,env);await answerCallback(env,query.id,"Создание отменено.");await showPromoCodesDashboard(chatId,query.from,env);return true;}
+  const promoCodeStep=data.match(/^v60_pc_code:(auto|custom)$/);if(promoCodeStep){
+    const workflow=await getStaffWorkflow(query.from.id,env);if(!workflow||workflow.flow_type!=="promo_create"){await answerCallback(env,query.id,"Мастер устарел. Начните заново.",true);return true;}
+    if(promoCodeStep[1]==="custom"){await updateStaffWorkflow(query.from.id,{step:"code_custom"},env);await answerCallback(env,query.id,"Введите свой код.");await sendTelegramMessage(env,chatId,"Отправьте код одним сообщением. Допустимы латинские буквы, цифры, <code>_</code> и <code>-</code>.\n\nПример: <code>SUMMER2026</code>",promoCodeWorkflowCancelKeyboard());return true;}
+    try{const code=await generateUniquePromoCode(env);await updateStaffWorkflow(query.from.id,{step:"reward_kind",data:{code}},env);await answerCallback(env,query.id,"Код создан.");await showPromoRewardKindStep(chatId,query.from,env);}catch(error){await answerCallback(env,query.id,String(error?.message||error),true);}return true;
+  }
+  const promoReward=data.match(/^v60_pc_reward:(points|zefir|coffee)$/);if(promoReward){await answerCallback(env,query.id,"Выберите количество.");await showPromoAmountStep(chatId,query.from,promoReward[1],{},env);return true;}
+  const promoCase=data.match(/^v60_pc_case:(small|sweet|gold|legendary)$/);if(promoCase){const item=LEVEL_CASE_CONFIG[promoCase[1]];await answerCallback(env,query.id,"Выберите количество кейсов.");await showPromoAmountStep(chatId,query.from,"case",item,env);return true;}
+  const promoCatalog=data.match(/^v60_pc_catalog:(skin|avatar|frame|trail):(\d+)$/);if(promoCatalog){await answerCallback(env,query.id,"Выберите предмет.");await showPromoCatalogStep(chatId,query.from,promoCatalog[1],Number(promoCatalog[2]),env);return true;}
+  const promoItem=data.match(/^v60_pc_item:(skin|avatar|frame|trail):([A-Za-z0-9_-]+)$/);if(promoItem){
+    const workflow=await getStaffWorkflow(query.from.id,env);const catalog=promoCatalogByKind(promoItem[1]);const item=catalog?.[promoItem[2]];
+    if(!workflow||workflow.flow_type!=="promo_create"||!item){await answerCallback(env,query.id,"Предмет не найден или мастер устарел.",true);return true;}
+    const rewards=[...(Array.isArray(workflow.data?.rewards)?workflow.data.rewards:[]),{kind:promoItem[1],id:promoItem[2],amount:1}];
+    await updateStaffWorkflow(query.from.id,{step:"reward_review",data:{rewards,pendingReward:null}},env);await answerCallback(env,query.id,"Награда добавлена.");await showPromoRewardReviewStep(chatId,query.from,env);return true;
+  }
+  const promoAmount=data.match(/^v60_pc_amount:(custom|\d+)$/);if(promoAmount){
+    const workflow=await getStaffWorkflow(query.from.id,env);if(!workflow||workflow.flow_type!=="promo_create"||workflow.step!=="reward_amount"){await answerCallback(env,query.id,"Мастер устарел.",true);return true;}
+    if(promoAmount[1]==="custom"){await updateStaffWorkflow(query.from.id,{step:"reward_amount_custom"},env);await answerCallback(env,query.id,"Введите количество.");await sendTelegramMessage(env,chatId,"Отправьте нужное количество одним числом.",promoCodeWorkflowCancelKeyboard());return true;}
+    const amount=Math.max(1,Math.floor(Number(promoAmount[1])));const pending=workflow.data?.pendingReward||{};const reward=pending.kind==="case"?{kind:"case",id:pending.id,amount}:{kind:pending.kind,amount};
+    const rewards=[...(Array.isArray(workflow.data?.rewards)?workflow.data.rewards:[]),reward];await updateStaffWorkflow(query.from.id,{step:"reward_review",data:{rewards,pendingReward:null}},env);await answerCallback(env,query.id,"Награда добавлена.");await showPromoRewardReviewStep(chatId,query.from,env);return true;
+  }
+  if(data==="v60_pc_rewards:add"){await answerCallback(env,query.id,"Выберите награду.");await showPromoRewardKindStep(chatId,query.from,env);return true;}
+  if(data==="v60_pc_rewards:next"){await answerCallback(env,query.id,"Настраиваем лимит.");await showPromoLimitStep(chatId,query.from,env);return true;}
+  if(data==="v60_pc_rewards:undo"){const workflow=await getStaffWorkflow(query.from.id,env);if(!workflow||workflow.flow_type!=="promo_create"){await answerCallback(env,query.id,"Мастер устарел.",true);return true;}const rewards=[...(Array.isArray(workflow.data?.rewards)?workflow.data.rewards:[])];rewards.pop();await updateStaffWorkflow(query.from.id,{data:{rewards}},env);await answerCallback(env,query.id,"Последняя награда удалена.");await showPromoRewardReviewStep(chatId,query.from,env);return true;}
+  const promoLimit=data.match(/^v60_pc_limit:(inf|custom|\d+)$/);if(promoLimit){
+    if(promoLimit[1]==="custom"){await updateStaffWorkflow(query.from.id,{step:"limit_custom"},env);await answerCallback(env,query.id,"Введите лимит.");await sendTelegramMessage(env,chatId,"Отправьте максимальное количество активаций одним числом.",promoCodeWorkflowCancelKeyboard());return true;}
+    const limit=promoLimit[1]==="inf"?0:Math.max(1,Math.floor(Number(promoLimit[1])));await updateStaffWorkflow(query.from.id,{step:"expiry",data:{limit}},env);await answerCallback(env,query.id,"Лимит сохранён.");await showPromoExpiryStep(chatId,query.from,env);return true;
+  }
+  const promoExpiry=data.match(/^v60_pc_expiry:(1d|3d|7d|14d|30d|none|custom)$/);if(promoExpiry){
+    if(promoExpiry[1]==="custom"){await updateStaffWorkflow(query.from.id,{step:"expiry_custom"},env);await answerCallback(env,query.id,"Введите дату.");await sendTelegramMessage(env,chatId,"Введите дату завершения по московскому времени.\n\nПример: <code>2026-08-10 23:59</code>",promoCodeWorkflowCancelKeyboard());return true;}
+    const expiresAt=promoExpiry[1]==="none"?0:promoExpiryFromPreset(promoExpiry[1]);await updateStaffWorkflow(query.from.id,{step:"title",data:{expiresAt}},env);await answerCallback(env,query.id,"Срок сохранён.");await showPromoTitleStep(chatId,query.from,env);return true;
+  }
+  const promoTitle=data.match(/^v60_pc_title:(auto|custom)$/);if(promoTitle){
+    const workflow=await getStaffWorkflow(query.from.id,env);if(!workflow||workflow.flow_type!=="promo_create"){await answerCallback(env,query.id,"Мастер устарел.",true);return true;}
+    if(promoTitle[1]==="custom"){await updateStaffWorkflow(query.from.id,{step:"title_custom"},env);await answerCallback(env,query.id,"Введите название.");await sendTelegramMessage(env,chatId,"Отправьте внутреннее название промокода одним сообщением.",promoCodeWorkflowCancelKeyboard());return true;}
+    const title=workflow.data?.suggestedTitle||workflow.data?.title||buildPromoAutoTitle(workflow.data?.code||"",workflow.data?.rewards||[]);await updateStaffWorkflow(query.from.id,{step:"confirm",data:{title}},env);await answerCallback(env,query.id,"Название сохранено.");await showPromoConfirmStep(chatId,query.from,env);return true;
+  }
+  const promoCreate=data.match(/^v60_pc_create:(on|off)$/);if(promoCreate){await finalizePromoCodeWorkflow(query,promoCreate[1]==="on",env);return true;}
+  const promoStats=data.match(/^v57_promo_stats:([A-Z0-9_-]+)$/);if(promoStats){await answerCallback(env,query.id,"Открываю статистику.");await showPromoCodeStats(chatId,query.from,promoStats[1],env);return true;}
+  const promoToggle=data.match(/^v57_promo_toggle:([A-Z0-9_-]+):(on|off)$/);if(promoToggle){await answerCallback(env,query.id,"Состояние изменено.");await setPromoCodeEnabled(chatId,query.from,promoToggle[1],promoToggle[2]==="on",env);await showPromoCodesDashboard(chatId,query.from,env);return true;}
+  const snap=data.match(/^v57_snap_restore:(snap_[A-Za-z0-9_-]+)$/);if(snap){await answerCallback(env,query.id,"Создаю запрос на восстановление.");await requestSnapshotRestore(chatId,query.from,snap[1],env);return true;}
+  return false;
+}
+
+async function getTesterAccountSafe(telegramId, env) {
+  try {
+    await ensureOperationsSecuritySchema(env);
+    return await env.DB.prepare(`SELECT * FROM tester_accounts WHERE telegram_id=? LIMIT 1`).bind(String(telegramId)).first();
+  } catch {
+    return null;
+  }
+}
+
+async function recordContentAnalyticsEvent(env, telegramId, itemKind, itemId, eventType, sourceType = "", sourceId = "") {
+  if (!["avatar", "frame", "trail", "skin"].includes(String(itemKind))) return;
+  if (!["acquired", "duplicate", "equipped"].includes(String(eventType))) return;
+  try {
+    await ensureOperationsSecuritySchema(env);
+    await env.DB.prepare(
+      `INSERT OR IGNORE INTO content_analytics_events
+       (telegram_id,item_kind,item_id,event_type,source_type,source_id,created_at)
+       VALUES(?,?,?,?,?,?,?)`
+    ).bind(String(telegramId), String(itemKind), String(itemId), String(eventType), String(sourceType), String(sourceId), Math.floor(Date.now()/1000)).run();
+  } catch (error) {
+    console.error("content analytics event failed", error);
+  }
+}
+
+async function recordCaseRewardsAnalytics(env, telegramId, rewards, sourceType, sourceId, createdAt = Math.floor(Date.now()/1000)) {
+  for (let index = 0; index < (Array.isArray(rewards) ? rewards : []).length; index += 1) {
+    const reward = rewards[index];
+    if (!["avatar", "frame", "trail", "skin"].includes(String(reward?.kind || "")) || !reward?.id) continue;
+    await recordContentAnalyticsEvent(env, telegramId, reward.kind, reward.id, reward.duplicate ? "duplicate" : "acquired", sourceType, `${sourceId}:${index}:${createdAt}`);
+  }
+}
+
+// =============================================================
+// ADMIN AUTOMATION & ANALYTICS CENTER v0.67
+// =============================================================
+const V67_DAY = 86400;
+
+
+// =============================================================
+// v0.74: Опросы игроков и редактирование готовых автоматизаций.
+const V74_POLL_REWARD_PRESETS = Object.freeze({
+  none: { kind: "none", id: "", amount: 0 },
+  case_small: { kind: "case", id: "small", amount: 1 },
+  case_sweet: { kind: "case", id: "sweet", amount: 1 },
+  case_gold: { kind: "case", id: "gold", amount: 1 },
+  case_legendary: { kind: "case", id: "legendary", amount: 1 },
+  points_500: { kind: "points", id: "", amount: 500 },
+  points_1000: { kind: "points", id: "", amount: 1000 },
+  coffee_50: { kind: "coffee", id: "", amount: 50 },
+  treats_100: { kind: "zefir", id: "", amount: 100 }
+});
+
+let v74PollSchemaPromise = null;
+async function ensureV74PollSchema(env) {
+  if (!v74PollSchemaPromise) {
+    v74PollSchemaPromise = env.DB.batch([
+      env.DB.prepare(`CREATE TABLE IF NOT EXISTS player_polls (
+        poll_id TEXT PRIMARY KEY, question TEXT NOT NULL, description TEXT NOT NULL DEFAULT '',
+        status TEXT NOT NULL DEFAULT 'draft', answer_type TEXT NOT NULL DEFAULT 'choice',
+        response_mode TEXT NOT NULL DEFAULT 'single', max_choices INTEGER NOT NULL DEFAULT 1,
+        comment_mode TEXT NOT NULL DEFAULT 'none', comment_min_length INTEGER NOT NULL DEFAULT 10,
+        comment_max_length INTEGER NOT NULL DEFAULT 1000,
+        comment_prompt TEXT NOT NULL DEFAULT 'Напишите свой ответ сообщением.',
+        audience_type TEXT NOT NULL DEFAULT 'all', delivery_mode TEXT NOT NULL DEFAULT 'bot',
+        results_mode TEXT NOT NULL DEFAULT 'after_vote',
+        allow_change INTEGER NOT NULL DEFAULT 0, show_in_tasks INTEGER NOT NULL DEFAULT 0,
+        duration_seconds INTEGER NOT NULL DEFAULT 0, starts_at INTEGER NOT NULL DEFAULT 0,
+        ends_at INTEGER NOT NULL DEFAULT 0, reward_kind TEXT NOT NULL DEFAULT 'none',
+        reward_id TEXT NOT NULL DEFAULT '', reward_amount INTEGER NOT NULL DEFAULT 0,
+        created_by TEXT NOT NULL, created_by_name TEXT NOT NULL DEFAULT '', report_chat_id TEXT NOT NULL DEFAULT '',
+        bot_queue_prepared INTEGER NOT NULL DEFAULT 0, created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL,
+        published_at INTEGER NOT NULL DEFAULT 0, ended_at INTEGER NOT NULL DEFAULT 0
+      )`),
+      env.DB.prepare(`CREATE TABLE IF NOT EXISTS player_poll_options (
+        option_id TEXT PRIMARY KEY, poll_id TEXT NOT NULL, option_order INTEGER NOT NULL,
+        option_text TEXT NOT NULL, UNIQUE(poll_id, option_order)
+      )`),
+      env.DB.prepare(`CREATE TABLE IF NOT EXISTS player_poll_responses (
+        poll_id TEXT NOT NULL, telegram_id TEXT NOT NULL, source TEXT NOT NULL DEFAULT 'bot',
+        submitted_at INTEGER NOT NULL, updated_at INTEGER NOT NULL, reward_queue_id INTEGER NOT NULL DEFAULT 0,
+        comment_text TEXT NOT NULL DEFAULT '', comment_submitted_at INTEGER NOT NULL DEFAULT 0,
+        PRIMARY KEY(poll_id, telegram_id)
+      )`),
+      env.DB.prepare(`CREATE TABLE IF NOT EXISTS player_poll_votes (
+        poll_id TEXT NOT NULL, telegram_id TEXT NOT NULL, option_id TEXT NOT NULL, created_at INTEGER NOT NULL,
+        PRIMARY KEY(poll_id, telegram_id, option_id)
+      )`),
+      env.DB.prepare(`CREATE TABLE IF NOT EXISTS player_poll_bot_deliveries (
+        poll_id TEXT NOT NULL, telegram_id TEXT NOT NULL, chat_id TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'pending', attempts INTEGER NOT NULL DEFAULT 0,
+        last_error TEXT NOT NULL DEFAULT '', available_at INTEGER NOT NULL DEFAULT 0,
+        delivered_at INTEGER NOT NULL DEFAULT 0, updated_at INTEGER NOT NULL,
+        PRIMARY KEY(poll_id, telegram_id)
+      )`),
+      env.DB.prepare(`CREATE TABLE IF NOT EXISTS player_poll_game_deliveries (
+        poll_id TEXT NOT NULL, telegram_id TEXT NOT NULL, shown_count INTEGER NOT NULL DEFAULT 0,
+        last_shown_at INTEGER NOT NULL DEFAULT 0, snoozed_until INTEGER NOT NULL DEFAULT 0,
+        answered_at INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(poll_id, telegram_id)
+      )`),
+      env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_player_polls_status_schedule ON player_polls(status, starts_at, ends_at, updated_at)`),
+      env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_player_poll_responses_poll ON player_poll_responses(poll_id, submitted_at DESC)`),
+      env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_player_poll_votes_option ON player_poll_votes(poll_id, option_id)`),
+      env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_player_poll_bot_queue ON player_poll_bot_deliveries(status, available_at, updated_at)`)
+    ]).catch((error) => { v74PollSchemaPromise = null; throw error; });
+  }
+  await v74PollSchemaPromise;
+}
+
+function v74PollAccess(access) {
+  return Boolean(access?.owner || normalizeTeamRole(access?.role) === "administrator");
+}
+
+function v74PollStatusLabel(status) {
+  return ({ draft:"черновик", scheduled:"запланирован", active:"активен", ended:"завершён", cancelled:"отменён" })[String(status)] || String(status || "неизвестно");
+}
+function v74PollDeliveryLabel(mode) {
+  return ({ bot:"в боте", game:"после открытия игры", both:"в боте и после открытия игры" })[String(mode)] || String(mode || "бот");
+}
+function v74PollAudienceLabel(type) {
+  return ({ all:"все игроки", active_7d:"активные за 7 дней", testers:"тестеры", season:"участники сезона", staff:"сотрудники" })[String(type)] || String(type || "все");
+}
+function v74PollResultsLabel(type) {
+  return ({ after_vote:"после ответа", after_end:"после завершения", hidden:"не показывать" })[String(type)] || String(type || "после ответа");
+}
+function v75PollAnswerTypeLabel(type) {
+  return ({ choice:"варианты ответа", text:"текстовый ответ", choice_comment:"варианты и комментарий" })[String(type)] || "варианты ответа";
+}
+function v75PollCommentModeLabel(mode) {
+  return ({ none:"не нужен", optional:"необязательный", required:"обязательный" })[String(mode)] || "не нужен";
+}
+function v75PollCommentLimits(poll) {
+  const min = Math.max(1, Math.min(500, Number(poll?.comment_min_length || 10)));
+  const max = Math.max(min, Math.min(2000, Number(poll?.comment_max_length || 1000)));
+  return { min, max };
+}
+function v75NormalizePollComment(value) {
+  return String(value || "")
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, " ")
+    .replace(/\r\n?/g, "\n")
+    .trim();
+}
+function v74PollReward(row) {
+  return { kind:String(row?.reward_kind || "none"), id:String(row?.reward_id || ""), amount:Math.max(0, Number(row?.reward_amount || 0)) };
+}
+function v74PollRewardText(reward) {
+  return !reward || reward.kind === "none" ? "без награды" : safeRewardDescription(reward);
+}
+function v74PollId() {
+  return `p${Math.floor(Date.now()/1000).toString(36)}${Math.random().toString(36).slice(2,7)}`;
+}
+
+async function v74PollAudienceAllowed(env, poll, telegramId) {
+  const type = String(poll.audience_type || "all");
+  const id = String(telegramId);
+  const now = Math.floor(Date.now()/1000);
+  if (type === "all") return true;
+  if (type === "active_7d") {
+    const row = await env.DB.prepare(`SELECT 1 AS ok FROM admin_profile_state WHERE telegram_id=? AND updated_at>=? LIMIT 1`).bind(id, now-7*V67_DAY).first();
+    return Boolean(row?.ok);
+  }
+  if (type === "testers") {
+    const row = await env.DB.prepare(`SELECT 1 AS ok FROM tester_accounts WHERE telegram_id=? LIMIT 1`).bind(id).first();
+    return Boolean(row?.ok);
+  }
+  if (type === "staff") {
+    const row = await env.DB.prepare(`SELECT 1 AS ok FROM staff_users WHERE telegram_id=? AND active=1 LIMIT 1`).bind(id).first();
+    return Boolean(row?.ok || isBotAdminTelegramId(id, env));
+  }
+  if (type === "season") {
+    const row = await env.DB.prepare(`SELECT 1 AS ok FROM leaderboard_entries e JOIN leaderboard_seasons s ON s.id=e.season_id WHERE e.telegram_id=? AND s.status='active' LIMIT 1`).bind(id).first();
+    return Boolean(row?.ok);
+  }
+  return false;
+}
+
+async function v74ActivePollsForPlayer(env, telegramId, delivery = "bot") {
+  await ensureV74PollSchema(env);
+  const now = Math.floor(Date.now()/1000);
+  await env.DB.prepare(`UPDATE player_polls SET status='ended',ended_at=?,updated_at=? WHERE status='active' AND ends_at>0 AND ends_at<=?`).bind(now,now,now).run();
+  const rows = (await env.DB.prepare(`SELECT * FROM player_polls WHERE status='active' AND (starts_at=0 OR starts_at<=?) AND (ends_at=0 OR ends_at>?) AND delivery_mode IN (?, 'both') ORDER BY published_at DESC, created_at DESC LIMIT 20`).bind(now,now,String(delivery)).all()).results || [];
+  const allowed = [];
+  for (const row of rows) if (await v74PollAudienceAllowed(env,row,telegramId)) allowed.push(row);
+  return allowed;
+}
+
+async function v74PollOptions(env, pollId) {
+  return (await env.DB.prepare(`SELECT option_id,option_order,option_text FROM player_poll_options WHERE poll_id=? ORDER BY option_order`).bind(String(pollId)).all()).results || [];
+}
+
+async function v74PollResultData(env, pollId) {
+  const options = await v74PollOptions(env,pollId);
+  const counts = (await env.DB.prepare(`SELECT option_id,COUNT(*) AS votes FROM player_poll_votes v JOIN player_poll_responses r ON r.poll_id=v.poll_id AND r.telegram_id=v.telegram_id WHERE v.poll_id=? GROUP BY option_id`).bind(String(pollId)).all()).results || [];
+  const totalRow = await env.DB.prepare(`SELECT COUNT(*) AS total,SUM(CASE WHEN TRIM(comment_text)<>'' THEN 1 ELSE 0 END) AS comments FROM player_poll_responses WHERE poll_id=?`).bind(String(pollId)).first();
+  const map = new Map(counts.map((row)=>[String(row.option_id),Number(row.votes||0)]));
+  const total = Number(totalRow?.total || 0);
+  const comments = Number(totalRow?.comments || 0);
+  return { total, comments, options: options.map((option)=>({ ...option, votes:map.get(String(option.option_id))||0, percent:total?Math.round((map.get(String(option.option_id))||0)*1000/total)/10:0 })) };
+}
+
+function v74PollResultsText(result) {
+  const header = `<b>📊 Результаты</b> · ответов: <b>${Number(result.total||0)}</b>`;
+  const optionLines = result.options.length
+    ? result.options.map((item)=>`• ${escapeHtml(item.option_text)} — <b>${item.votes}</b> · ${item.percent}%`).join("\n")
+    : `• Текстовых ответов: <b>${Number(result.total||0)}</b>`;
+  const commentLine = Number(result.comments||0) ? `\n• Комментариев: <b>${Number(result.comments||0)}</b>` : "";
+  return `${header}\n${optionLines}${commentLine}`;
+}
+
+async function v74CompletePollVote(env, poll, telegramId, optionIds, source, commentValue = "") {
+  await ensureV74PollSchema(env);
+  const id = String(telegramId);
+  const now = Math.floor(Date.now()/1000);
+  const answerType = String(poll.answer_type || "choice");
+  const commentMode = answerType === "text" ? "required" : String(poll.comment_mode || "none");
+  const options = await v74PollOptions(env,poll.poll_id);
+  const allowed = new Set(options.map((item)=>String(item.option_id)));
+  const unique = [...new Set((optionIds||[]).map(String).filter((optionId)=>allowed.has(optionId)))];
+  const max = poll.response_mode === "multiple" ? Math.max(1,Number(poll.max_choices||options.length||1)) : 1;
+  if (answerType !== "text" && (!unique.length || unique.length > max || (poll.response_mode === "single" && unique.length !== 1))) {
+    throw new ApiError(400,"Выберите допустимое количество вариантов.");
+  }
+  if (answerType === "text" && unique.length) throw new ApiError(400,"Для этого опроса нужен текстовый ответ.");
+  const comment = v75NormalizePollComment(commentValue);
+  const limits = v75PollCommentLimits(poll);
+  if (comment.length > limits.max) throw new ApiError(400,`Комментарий должен быть не длиннее ${limits.max} символов.`);
+  if ((commentMode === "required" || answerType === "text") && comment.length < limits.min) {
+    throw new ApiError(400,`Напишите ответ длиной не менее ${limits.min} символов.`);
+  }
+  if (commentMode === "optional" && comment.length > 0 && comment.length < limits.min) {
+    throw new ApiError(400,`Комментарий должен содержать не менее ${limits.min} символов или быть пустым.`);
+  }
+  const previous = await env.DB.prepare(`SELECT * FROM player_poll_responses WHERE poll_id=? AND telegram_id=? LIMIT 1`).bind(poll.poll_id,id).first();
+  if (previous && !Number(poll.allow_change)) return { already:true, rewardQueued:false };
+  await env.DB.prepare(`DELETE FROM player_poll_votes WHERE poll_id=? AND telegram_id=?`).bind(poll.poll_id,id).run();
+  if (unique.length) {
+    await env.DB.batch(unique.map((optionId)=>env.DB.prepare(`INSERT INTO player_poll_votes(poll_id,telegram_id,option_id,created_at) VALUES(?,?,?,?)`).bind(poll.poll_id,id,optionId,now)));
+  }
+  const commentAt = comment ? now : 0;
+  if (previous) {
+    await env.DB.prepare(`UPDATE player_poll_responses SET source=?,submitted_at=?,updated_at=?,comment_text=?,comment_submitted_at=? WHERE poll_id=? AND telegram_id=?`).bind(String(source),now,now,comment,commentAt,poll.poll_id,id).run();
+  } else {
+    await env.DB.prepare(`INSERT INTO player_poll_responses(poll_id,telegram_id,source,submitted_at,updated_at,reward_queue_id,comment_text,comment_submitted_at) VALUES(?,?,?,?,?,0,?,?)`).bind(poll.poll_id,id,String(source),now,now,comment,commentAt).run();
+  }
+  await env.DB.prepare(`INSERT INTO player_poll_game_deliveries(poll_id,telegram_id,shown_count,last_shown_at,snoozed_until,answered_at) VALUES(?,?,0,0,0,?) ON CONFLICT(poll_id,telegram_id) DO UPDATE SET answered_at=excluded.answered_at`).bind(poll.poll_id,id,now).run();
+  let rewardQueued = false;
+  if (!previous && poll.reward_kind && poll.reward_kind !== "none" && Number(poll.reward_amount||0)>0) {
+    const reward = v74PollReward(poll);
+    let queueId = await enqueueRewardDelivery(env,id,"poll",poll.poll_id,reward,`Участие в опросе «${String(poll.question).slice(0,120)}»`,"");
+    if (!queueId) {
+      const existing = await env.DB.prepare(`SELECT id FROM reward_delivery_queue WHERE source_type='poll' AND source_id=? AND telegram_id=? LIMIT 1`).bind(poll.poll_id,id).first();
+      queueId = Number(existing?.id||0);
+    }
+    await env.DB.prepare(`UPDATE player_poll_responses SET reward_queue_id=?,updated_at=? WHERE poll_id=? AND telegram_id=?`).bind(queueId,now,poll.poll_id,id).run();
+    if (queueId) { rewardQueued = true; await processPlayerRewardDeliveryQueue(env,id,10); }
+  }
+  return { already:false, rewardQueued };
+}
+
+async function showV74PlayerPolls(chatId,user,env,pollId="") {
+  await ensureV74PollSchema(env);
+  const active = await v74ActivePollsForPlayer(env,user.id,"bot");
+  let poll = pollId ? active.find((item)=>String(item.poll_id)===String(pollId)) : null;
+  if (!poll) {
+    for (const candidate of active) {
+      const response = await env.DB.prepare(`SELECT 1 AS done FROM player_poll_responses WHERE poll_id=? AND telegram_id=? LIMIT 1`).bind(candidate.poll_id,String(user.id)).first();
+      if (!response?.done || Number(candidate.allow_change)) { poll=candidate; break; }
+    }
+  }
+  if (!poll) {
+    await sendTelegramMessage(env,chatId,`<b>🗳 Опросы</b>\n\nСейчас нет новых опросов.`,{inline_keyboard:[[{text:"🔄 Обновить",callback_data:"polls_refresh"}],[{text:"← Главное меню",callback_data:"menu:home"}]]});
+    return;
+  }
+  const answerType = String(poll.answer_type || "choice");
+  const commentMode = answerType === "text" ? "required" : String(poll.comment_mode || "none");
+  const options = await v74PollOptions(env,poll.poll_id);
+  const response = await env.DB.prepare(`SELECT * FROM player_poll_responses WHERE poll_id=? AND telegram_id=? LIMIT 1`).bind(poll.poll_id,String(user.id)).first();
+  const selectedRows = (await env.DB.prepare(`SELECT option_id FROM player_poll_votes WHERE poll_id=? AND telegram_id=?`).bind(poll.poll_id,String(user.id)).all()).results || [];
+  const selected = new Set(selectedRows.map((row)=>String(row.option_id)));
+  const buttons = [];
+  if (!response || Number(poll.allow_change)) {
+    if (answerType === "text") {
+      buttons.push([{text:"✍️ Написать ответ",callback_data:`poll_comment_start:${poll.poll_id}`}]);
+    } else {
+      for (const option of options) {
+        const mark = poll.response_mode === "multiple" ? (selected.has(String(option.option_id))?"☑️":"⬜") : "○";
+        buttons.push([{text:`${mark} ${String(option.option_text).slice(0,48)}`,callback_data:`poll_${poll.response_mode === "multiple"?"toggle":"vote"}:${poll.poll_id}:${option.option_id}`}]);
+      }
+      if (poll.response_mode === "multiple") buttons.push([{text:"✅ Продолжить",callback_data:`poll_submit:${poll.poll_id}`}]);
+    }
+  }
+  buttons.push([{text:"🔄 Обновить",callback_data:`poll_open:${poll.poll_id}`}],[{text:"← Главное меню",callback_data:"menu:home"}]);
+  let pollText = `<b>🗳 Опрос</b>\n\n<b>${escapeHtml(poll.question)}</b>`;
+  if (poll.description) pollText += `\n\n${escapeHtml(poll.description)}`;
+  if (answerType === "text") pollText += `\n\n${escapeHtml(poll.comment_prompt || "Напишите свой ответ сообщением.")}`;
+  else pollText += `\n\nВыберите ${poll.response_mode === "multiple" ? `до ${Math.max(1,Number(poll.max_choices||1))} вариантов` : "один вариант"}.`;
+  if (commentMode === "required" && answerType !== "text") pollText += `\nПосле выбора потребуется обязательный комментарий.`;
+  if (commentMode === "optional") pollText += `\nПосле выбора можно добавить комментарий.`;
+  if (poll.reward_kind !== "none") pollText += `\nНаграда за участие: <b>${escapeHtml(v74PollRewardText(v74PollReward(poll)))}</b>`;
+  if (response) {
+    pollText += `\n\n✅ Ваш ответ принят.`;
+    if (response.comment_text) pollText += `\n💬 Комментарий: ${escapeHtml(String(response.comment_text).slice(0,500))}`;
+    if (poll.results_mode === "after_vote" || poll.status === "ended") pollText += `\n\n${v74PollResultsText(await v74PollResultData(env,poll.poll_id))}`;
+  }
+  await sendTelegramMessage(env,chatId,pollText,{inline_keyboard:buttons});
+}
+
+async function startV75PollCommentFlow(query,poll,optionIds,env) {
+  const chatId = query.message?.chat?.id;
+  const answerType = String(poll.answer_type || "choice");
+  const commentMode = answerType === "text" ? "required" : String(poll.comment_mode || "none");
+  const limits = v75PollCommentLimits(poll);
+  if (answerType !== "text" && commentMode === "none") {
+    await answerCallback(env,query.id,"Для этого опроса комментарий не требуется.",true);
+    return;
+  }
+  const data = { pollId:String(poll.poll_id), optionIds:Array.isArray(optionIds)?optionIds.map(String):[], source:"bot" };
+  if (commentMode === "optional") {
+    await setStaffWorkflow(query.from.id,chatId,"poll_response_comment","choice",data,env);
+    await answerCallback(env,query.id,"Добавьте комментарий или отправьте без него.");
+    await sendTelegramMessage(env,chatId,`<b>💬 Комментарий к ответу</b>\n\nКомментарий необязательный. Можно написать подробнее или сразу отправить выбранный ответ.`,{inline_keyboard:[[{text:"✍️ Добавить комментарий",callback_data:`poll_comment_write:${poll.poll_id}`}],[{text:"✅ Отправить без комментария",callback_data:`poll_comment_skip:${poll.poll_id}`}],[{text:"❌ Отменить",callback_data:`poll_comment_cancel:${poll.poll_id}`}]]});
+    return;
+  }
+  await setStaffWorkflow(query.from.id,chatId,"poll_response_comment","input",data,env);
+  await answerCallback(env,query.id,"Отправьте комментарий сообщением.");
+  await sendTelegramMessage(env,chatId,`<b>✍️ Напишите ответ</b>\n\n${escapeHtml(poll.comment_prompt || "Напишите свой ответ сообщением.")}\n\nДлина: от <b>${limits.min}</b> до <b>${limits.max}</b> символов.\nОтмена: <code>/cancel</code>`);
+}
+
+async function handleV75PollResponseMessage(message,workflow,env) {
+  if (workflow.step !== "input") return true;
+  await ensureV74PollSchema(env);
+  const poll = await env.DB.prepare(`SELECT * FROM player_polls WHERE poll_id=? AND status='active' LIMIT 1`).bind(String(workflow.data.pollId||"")).first();
+  if (!poll || !(await v74PollAudienceAllowed(env,poll,message.from.id))) {
+    await clearStaffWorkflow(message.from.id,env);
+    await sendTelegramMessage(env,message.chat.id,"Опрос уже завершён или больше недоступен.");
+    return true;
+  }
+  try {
+    const result = await v74CompletePollVote(env,poll,message.from.id,workflow.data.optionIds||[],"bot",message.text||"");
+    await clearStaffWorkflow(message.from.id,env);
+    await sendTelegramMessage(env,message.chat.id,result.already?"Ваш ответ уже был сохранён.":`✅ Спасибо! Ваш ответ и комментарий приняты.${result.rewardQueued?`\n\n🎁 Награда «${escapeHtml(v74PollRewardText(v74PollReward(poll)))}» отправлена в профиль.`:""}`);
+    await showV74PlayerPolls(message.chat.id,message.from,env,poll.poll_id);
+  } catch (error) {
+    await sendTelegramMessage(env,message.chat.id,`Не удалось сохранить ответ: ${escapeHtml(String(error?.message||error))}`);
+  }
+  return true;
+}
+
+async function handleV74PollCallback(query,env,runtime={}) {
+  const data=String(query.data||""); const chatId=query.message?.chat?.id; if(!chatId)return false;
+  if(data==="polls_refresh"){await answerCallback(env,query.id,"Опросы обновлены.");await showV74PlayerPolls(chatId,query.from,env);return true;}
+  const open=data.match(/^poll_open:([A-Za-z0-9_-]+)$/); if(open){await answerCallback(env,query.id,"Открываю опрос.");await showV74PlayerPolls(chatId,query.from,env,open[1]);return true;}
+  const vote=data.match(/^poll_vote:([A-Za-z0-9_-]+):([A-Za-z0-9_-]+)$/); if(vote){
+    await ensureV74PollSchema(env); const poll=await env.DB.prepare(`SELECT * FROM player_polls WHERE poll_id=? AND status='active' LIMIT 1`).bind(vote[1]).first();
+    if(!poll||!(await v74PollAudienceAllowed(env,poll,query.from.id))){await answerCallback(env,query.id,"Опрос уже недоступен.",true);return true;}
+    const answerType=String(poll.answer_type||"choice");const commentMode=answerType==="text"?"required":String(poll.comment_mode||"none");
+    if(commentMode!=="none"){await startV75PollCommentFlow(query,poll,[vote[2]],env);return true;}
+    const result=await v74CompletePollVote(env,poll,query.from.id,[vote[2]],"bot",""); await answerCallback(env,query.id,result.already?"Вы уже отвечали.":"Ответ принят!"); await showV74PlayerPolls(chatId,query.from,env,poll.poll_id);return true;
+  }
+  const toggle=data.match(/^poll_toggle:([A-Za-z0-9_-]+):([A-Za-z0-9_-]+)$/); if(toggle){
+    await ensureV74PollSchema(env); const poll=await env.DB.prepare(`SELECT * FROM player_polls WHERE poll_id=? AND status='active' LIMIT 1`).bind(toggle[1]).first();
+    if(!poll||poll.response_mode!=="multiple"){await answerCallback(env,query.id,"Опрос недоступен.",true);return true;}
+    const response=await env.DB.prepare(`SELECT 1 AS done FROM player_poll_responses WHERE poll_id=? AND telegram_id=? LIMIT 1`).bind(poll.poll_id,String(query.from.id)).first();
+    if(response?.done&&!Number(poll.allow_change)){await answerCallback(env,query.id,"Ответ уже отправлен.",true);return true;}
+    const exists=await env.DB.prepare(`SELECT 1 AS yes FROM player_poll_votes WHERE poll_id=? AND telegram_id=? AND option_id=? LIMIT 1`).bind(poll.poll_id,String(query.from.id),toggle[2]).first();
+    if(exists?.yes) await env.DB.prepare(`DELETE FROM player_poll_votes WHERE poll_id=? AND telegram_id=? AND option_id=?`).bind(poll.poll_id,String(query.from.id),toggle[2]).run();
+    else {
+      const count=await env.DB.prepare(`SELECT COUNT(*) AS count FROM player_poll_votes WHERE poll_id=? AND telegram_id=?`).bind(poll.poll_id,String(query.from.id)).first();
+      if(Number(count?.count||0)>=Math.max(1,Number(poll.max_choices||1))){await answerCallback(env,query.id,"Выбрано максимальное число вариантов.",true);return true;}
+      await env.DB.prepare(`INSERT OR IGNORE INTO player_poll_votes(poll_id,telegram_id,option_id,created_at) VALUES(?,?,?,?)`).bind(poll.poll_id,String(query.from.id),toggle[2],Math.floor(Date.now()/1000)).run();
+    }
+    await answerCallback(env,query.id,exists?.yes?"Вариант снят.":"Вариант выбран.");await showV74PlayerPolls(chatId,query.from,env,poll.poll_id);return true;
+  }
+  const submit=data.match(/^poll_submit:([A-Za-z0-9_-]+)$/); if(submit){
+    await ensureV74PollSchema(env);const poll=await env.DB.prepare(`SELECT * FROM player_polls WHERE poll_id=? AND status='active' LIMIT 1`).bind(submit[1]).first();
+    if(!poll){await answerCallback(env,query.id,"Опрос завершён.",true);return true;}
+    const rows=(await env.DB.prepare(`SELECT option_id FROM player_poll_votes WHERE poll_id=? AND telegram_id=?`).bind(poll.poll_id,String(query.from.id)).all()).results||[];
+    const optionIds=rows.map((row)=>row.option_id);const answerType=String(poll.answer_type||"choice");const commentMode=answerType==="text"?"required":String(poll.comment_mode||"none");
+    if(commentMode!=="none"){try{if(!optionIds.length)throw new ApiError(400,"Сначала выберите вариант ответа.");await startV75PollCommentFlow(query,poll,optionIds,env);}catch(error){await answerCallback(env,query.id,String(error?.message||error),true);}return true;}
+    try{const result=await v74CompletePollVote(env,poll,query.from.id,optionIds,"bot","");await answerCallback(env,query.id,result.already?"Вы уже отвечали.":"Ответ принят!");}catch(error){await answerCallback(env,query.id,String(error?.message||error),true);}await showV74PlayerPolls(chatId,query.from,env,poll.poll_id);return true;
+  }
+
+  const commentStart=data.match(/^poll_comment_start:([A-Za-z0-9_-]+)$/);if(commentStart){await ensureV74PollSchema(env);const poll=await env.DB.prepare(`SELECT * FROM player_polls WHERE poll_id=? AND status='active' LIMIT 1`).bind(commentStart[1]).first();if(!poll||!(await v74PollAudienceAllowed(env,poll,query.from.id))){await answerCallback(env,query.id,"Опрос недоступен.",true);return true;}await startV75PollCommentFlow(query,poll,[],env);return true;}
+  const commentWrite=data.match(/^poll_comment_write:([A-Za-z0-9_-]+)$/);if(commentWrite){const workflow=await getStaffWorkflow(query.from.id,env);if(!workflow||workflow.flow_type!=="poll_response_comment"||workflow.step!=="choice"||String(workflow.data.pollId)!==commentWrite[1]){await answerCallback(env,query.id,"Действие устарело.",true);return true;}const poll=await env.DB.prepare(`SELECT * FROM player_polls WHERE poll_id=? AND status='active' LIMIT 1`).bind(commentWrite[1]).first();if(!poll){await answerCallback(env,query.id,"Опрос завершён.",true);return true;}await updateStaffWorkflow(query.from.id,{step:"input",data:workflow.data},env);const limits=v75PollCommentLimits(poll);await answerCallback(env,query.id,"Отправьте комментарий сообщением.");await sendTelegramMessage(env,chatId,`<b>✍️ Напишите комментарий</b>\n\n${escapeHtml(poll.comment_prompt||"Напишите свой ответ сообщением.")}\n\nДлина: от <b>${limits.min}</b> до <b>${limits.max}</b> символов.\nОтмена: <code>/cancel</code>`);return true;}
+  const commentSkip=data.match(/^poll_comment_skip:([A-Za-z0-9_-]+)$/);if(commentSkip){const workflow=await getStaffWorkflow(query.from.id,env);if(!workflow||workflow.flow_type!=="poll_response_comment"||workflow.step!=="choice"||String(workflow.data.pollId)!==commentSkip[1]){await answerCallback(env,query.id,"Действие устарело.",true);return true;}const poll=await env.DB.prepare(`SELECT * FROM player_polls WHERE poll_id=? AND status='active' LIMIT 1`).bind(commentSkip[1]).first();if(!poll){await answerCallback(env,query.id,"Опрос завершён.",true);return true;}try{const result=await v74CompletePollVote(env,poll,query.from.id,workflow.data.optionIds||[],"bot","");await clearStaffWorkflow(query.from.id,env);await answerCallback(env,query.id,result.already?"Вы уже отвечали.":"Ответ принят!");await showV74PlayerPolls(chatId,query.from,env,poll.poll_id);}catch(error){await answerCallback(env,query.id,String(error?.message||error),true);}return true;}
+  const commentCancel=data.match(/^poll_comment_cancel:([A-Za-z0-9_-]+)$/);if(commentCancel){await clearStaffWorkflow(query.from.id,env);await answerCallback(env,query.id,"Ответ не отправлен.");await showV74PlayerPolls(chatId,query.from,env,commentCancel[1]);return true;}
+
+  if(data==="v74_polls_admin"){await answerCallback(env,query.id,"Опросы обновлены.");await showV74PollAdminDashboard(chatId,query.from,env);return true;}
+  if(data==="v74_poll_new"){await startV74PollCreate(query,env);return true;}
+  if(data==="v74_poll_cancel"){await clearStaffWorkflow(query.from.id,env);await answerCallback(env,query.id,"Создание отменено.");await showV74PollAdminDashboard(chatId,query.from,env);return true;}
+  const answerType=data.match(/^v75_poll_answer:(choice|text|choice_comment)$/);if(answerType){await selectV75PollAnswerType(query,answerType[1],env);return true;}
+  const mode=data.match(/^v74_poll_mode:(single|multiple)$/);if(mode){await selectV74PollMode(query,mode[1],env);return true;}
+  const commentMode=data.match(/^v75_poll_comment:(optional|required)$/);if(commentMode){await selectV75PollCommentMode(query,commentMode[1],env);return true;}
+  const audience=data.match(/^v74_poll_audience:(all|active_7d|testers|season|staff)$/);if(audience){await selectV74PollAudience(query,audience[1],env);return true;}
+  const delivery=data.match(/^v74_poll_delivery:(bot|game|both)$/);if(delivery){await selectV74PollDelivery(query,delivery[1],env);return true;}
+  const duration=data.match(/^v74_poll_duration:(0|86400|259200|604800)$/);if(duration){await selectV74PollDuration(query,Number(duration[1]),env);return true;}
+  const results=data.match(/^v74_poll_results:(after_vote|after_end|hidden)$/);if(results){await selectV74PollResults(query,results[1],env);return true;}
+  const reward=data.match(/^v74_poll_reward:(none|case_small|case_sweet|case_gold|case_legendary|points_500|points_1000|coffee_50|treats_100)$/);if(reward){await selectV74PollReward(query,reward[1],env);return true;}
+  if(data==="v74_poll_save"){await saveV74PollDraft(query,env);return true;}
+  const details=data.match(/^v74_poll:([A-Za-z0-9_-]+)$/);if(details){await answerCallback(env,query.id,"Открываю опрос.");await showV74PollAdminDetails(chatId,query.from,env,details[1]);return true;}
+  const publish=data.match(/^v74_poll_publish:([A-Za-z0-9_-]+)$/);if(publish){await publishV74Poll(query,publish[1],env,runtime);return true;}
+  const end=data.match(/^v74_poll_end:([A-Za-z0-9_-]+)$/);if(end){await endV74Poll(query,end[1],env);return true;}
+  const duplicate=data.match(/^v74_poll_duplicate:([A-Za-z0-9_-]+)$/);if(duplicate){await duplicateV74Poll(query,duplicate[1],env);return true;}
+  const adminResults=data.match(/^v74_poll_results_view:([A-Za-z0-9_-]+)$/);if(adminResults){await answerCallback(env,query.id,"Результаты обновлены.");await showV74PollAdminResults(chatId,query.from,env,adminResults[1]);return true;}
+  const adminComments=data.match(/^v75_poll_comments:([A-Za-z0-9_-]+):(\d{1,6})$/);if(adminComments){await answerCallback(env,query.id,"Комментарии обновлены.");await showV75PollAdminComments(chatId,query.from,env,adminComments[1],Number(adminComments[2]||0));return true;}
+
+  const edit=data.match(/^v74_auto_edit:([a-z0-9_]+)$/);if(edit){await showV74AutomationEditMenu(query,edit[1],env);return true;}
+  if(data==="v74_auto_edit_title"){await startV74AutomationTitleEdit(query,env);return true;}
+  if(data==="v74_auto_edit_trigger"){await startV74AutomationTriggerEdit(query,env);return true;}
+  if(data==="v74_auto_edit_action"){await startV74AutomationActionEdit(query,env);return true;}
+  const editTrigger=data.match(/^v74_auto_edit_trigger_pick:(new_player_delay|inactive_days|accepted_runs|total_score|opened_cases|best_score|promo_activations|level_reached|season_ending|shop_purchases|skin_purchases|physical_purchases|case_purchases)$/);if(editTrigger){await selectV74AutomationEditTrigger(query,editTrigger[1],env);return true;}
+  const editValue=data.match(/^v74_auto_edit_value:(\d{1,7})$/);if(editValue){await selectV74AutomationEditValue(query,Number(editValue[1]),env);return true;}
+  if(data==="v74_auto_edit_value_custom"){await startV74AutomationEditCustomValue(query,env);return true;}
+  const editReward=data.match(/^v74_auto_edit_reward:(case_small|case_sweet|case_gold|case_legendary|points_500|points_1000|coffee_50|treats_100)$/);if(editReward){await selectV74AutomationEditReward(query,editReward[1],env);return true;}
+  if(data==="v74_auto_edit_save"){await saveV74AutomationEdit(query,env,runtime);return true;}
+  if(data==="v74_auto_edit_cancel"){const workflow=await getStaffWorkflow(query.from.id,env);const key=String(workflow?.data?.chainKey||"");await clearStaffWorkflow(query.from.id,env);await answerCallback(env,query.id,"Изменение отменено.");if(key)await showV67AutomationDetails(chatId,query.from,key,env);else await showV67AutomationDashboard(chatId,query.from,env);return true;}
+  return false;
+}
+
+async function showV74PollAdminDashboard(chatId,user,env) {
+  const access=await getTeamAccess(user,env);if(!access.authorized||!v74PollAccess(access))return sendTelegramMessage(env,chatId,"Создавать опросы могут только владелец и администратор.");
+  await ensureV74PollSchema(env);const rows=(await env.DB.prepare(`SELECT p.*,(SELECT COUNT(*) FROM player_poll_responses r WHERE r.poll_id=p.poll_id) AS responses,(SELECT COUNT(*) FROM player_poll_responses r WHERE r.poll_id=p.poll_id AND TRIM(r.comment_text)<>'') AS comments FROM player_polls p ORDER BY created_at DESC LIMIT 20`).all()).results||[];
+  const lines=rows.map((row)=>`${row.status==="active"?"🟢":row.status==="draft"?"📝":"⚫"} <b>${escapeHtml(row.question)}</b>\n  ${escapeHtml(v74PollStatusLabel(row.status))} · ответов <b>${Number(row.responses||0)}</b>${Number(row.comments||0)?` · комментариев <b>${Number(row.comments||0)}</b>`:""} · ${escapeHtml(v74PollDeliveryLabel(row.delivery_mode))}`);
+  const buttons=rows.map((row)=>[{text:`${row.status==="active"?"🟢":row.status==="draft"?"📝":"⚫"} ${String(row.question).slice(0,42)}`,callback_data:`v74_poll:${row.poll_id}`}]);
+  buttons.push([{text:"➕ Создать опрос",callback_data:"v74_poll_new"}],[{text:"🔄 Обновить",callback_data:"v74_polls_admin"},{text:"⬅️ Админ-панель",callback_data:"adm_home"}]);
+  await sendTelegramMessage(env,chatId,`<b>🗳 Опросы игроков</b>\n\n${lines.join("\n\n")||"Опросов пока нет."}\n\nОпрос можно отправить в бот, показать после открытия игры или использовать оба способа.`,{inline_keyboard:buttons});
+}
+
+async function startV74PollCreate(query,env){
+  const chatId=query.message?.chat?.id;const access=await getTeamAccess(query.from,env);if(!access.authorized||!v74PollAccess(access)){await answerCallback(env,query.id,"Недостаточно прав.",true);return;}
+  await setStaffWorkflow(query.from.id,chatId,"poll_create","question",{},env);await answerCallback(env,query.id,"Введите вопрос.");await sendTelegramMessage(env,chatId,`<b>🗳 Новый опрос · 1/9</b>\n\nОтправьте вопрос опроса длиной от 5 до 300 символов.`);
+}
+async function handleV74PollCreateMessage(message,workflow,env){
+  const chatId=message.chat.id;const messageText=String(message.text||"").trim();const data=workflow.data||{};const access=await getTeamAccess(message.from,env);if(!access.authorized||!v74PollAccess(access)){await clearStaffWorkflow(message.from.id,env);await sendTelegramMessage(env,chatId,"Доступ к созданию опроса больше не активен.");return true;}
+  if(workflow.step==="question"){
+    if(messageText.length<5||messageText.length>300){await sendTelegramMessage(env,chatId,"Вопрос должен содержать от 5 до 300 символов.");return true;}
+    await setStaffWorkflow(message.from.id,chatId,"poll_create","answer_type",{question:messageText},env);
+    await sendTelegramMessage(env,chatId,`<b>🗳 Новый опрос · 2/9</b>\n\nКак игрок будет отвечать?`,{inline_keyboard:[[{text:"🔘 Варианты ответа",callback_data:"v75_poll_answer:choice"}],[{text:"💬 Только текстовый ответ",callback_data:"v75_poll_answer:text"}],[{text:"🔘 Варианты + комментарий",callback_data:"v75_poll_answer:choice_comment"}],[{text:"❌ Отменить",callback_data:"v74_poll_cancel"}]]});return true;
+  }
+  if(workflow.step==="options"){
+    const options=[...new Set(messageText.split(/\r?\n/).map((item)=>item.trim()).filter(Boolean))];if(options.length<2||options.length>10||options.some((item)=>item.length>100)){await sendTelegramMessage(env,chatId,"Нужно от 2 до 10 уникальных вариантов, каждый не длиннее 100 символов.");return true;}
+    const next={...data,options};await setStaffWorkflow(message.from.id,chatId,"poll_create","mode",next,env);await sendTelegramMessage(env,chatId,`<b>🗳 Новый опрос · 4/9</b>\n\nСколько вариантов сможет выбрать игрок?`,{inline_keyboard:[[{text:"1️⃣ Один вариант",callback_data:"v74_poll_mode:single"}],[{text:"☑️ Несколько вариантов",callback_data:"v74_poll_mode:multiple"}],[{text:"❌ Отменить",callback_data:"v74_poll_cancel"}]]});return true;
+  }
+  await sendTelegramMessage(env,chatId,"Продолжите настройку кнопками или отправьте <code>/cancel</code>.");return true;
+}
+async function selectV75PollAnswerType(query,answerType,env){
+  const chatId=query.message?.chat?.id;const workflow=await getStaffWorkflow(query.from.id,env);if(!workflow||workflow.flow_type!=="poll_create"||workflow.step!=="answer_type"){await answerCallback(env,query.id,"Мастер устарел.",true);return;}
+  if(answerType==="text"){
+    const next={...workflow.data,answerType:"text",responseMode:"single",maxChoices:1,options:[],commentMode:"required",commentMin:10,commentMax:1000,commentPrompt:"Напишите свой ответ сообщением."};
+    await answerCallback(env,query.id,"Будет запрашиваться текстовый ответ.");await showV75PollAudienceStep(query,next,env);return;
+  }
+  const next={...workflow.data,answerType,commentMode:answerType==="choice"?"none":"required",commentMin:10,commentMax:1000,commentPrompt:"Напишите свой ответ сообщением."};
+  await setStaffWorkflow(query.from.id,chatId,"poll_create","options",next,env);await answerCallback(env,query.id,"Введите варианты.");await sendTelegramMessage(env,chatId,`<b>🗳 Новый опрос · 3/9</b>\n\nОтправьте от 2 до 10 вариантов ответа, каждый с новой строки.\n\nПример:\n<code>Новый скин\nЛегендарная музыка\nЗолотой кейс</code>`);
+}
+async function selectV74PollMode(query,mode,env){
+  const chatId=query.message?.chat?.id;const workflow=await getStaffWorkflow(query.from.id,env);if(!workflow||workflow.flow_type!=="poll_create"||workflow.step!=="mode"){await answerCallback(env,query.id,"Мастер устарел.",true);return;}
+  const next={...workflow.data,responseMode:mode,maxChoices:mode==="multiple"?Math.min(3,workflow.data.options.length):1};
+  if(next.answerType==="choice_comment"){
+    await setStaffWorkflow(query.from.id,chatId,"poll_create","comment_mode",next,env);await answerCallback(env,query.id,"Настройте комментарий.");await sendTelegramMessage(env,chatId,`<b>🗳 Новый опрос · 5/9</b>\n\nКомментарий после выбора варианта должен быть обязательным?\n\nТекст: от 10 до 1 000 символов.`,{inline_keyboard:[[{text:"🔒 Обязательный",callback_data:"v75_poll_comment:required"}],[{text:"💬 Необязательный",callback_data:"v75_poll_comment:optional"}],[{text:"❌ Отменить",callback_data:"v74_poll_cancel"}]]});return;
+  }
+  await answerCallback(env,query.id,"Выберите аудиторию.");await showV75PollAudienceStep(query,next,env);
+}
+async function selectV75PollCommentMode(query,commentMode,env){
+  const workflow=await getStaffWorkflow(query.from.id,env);if(!workflow||workflow.flow_type!=="poll_create"||workflow.step!=="comment_mode"){await answerCallback(env,query.id,"Мастер устарел.",true);return;}
+  const next={...workflow.data,commentMode,commentMin:10,commentMax:1000,commentPrompt:"Напишите свой ответ сообщением."};await answerCallback(env,query.id,"Комментарий настроен.");await showV75PollAudienceStep(query,next,env);
+}
+async function showV75PollAudienceStep(query,next,env){
+  const chatId=query.message?.chat?.id;await setStaffWorkflow(query.from.id,chatId,"poll_create","audience",next,env);await sendTelegramMessage(env,chatId,`<b>🗳 Новый опрос · 6/9</b>\n\nКому показать опрос?`,{inline_keyboard:[[{text:"👥 Всем игрокам",callback_data:"v74_poll_audience:all"}],[{text:"🔥 Активным за 7 дней",callback_data:"v74_poll_audience:active_7d"}],[{text:"🧪 Тестерам",callback_data:"v74_poll_audience:testers"}],[{text:"🏆 Участникам сезона",callback_data:"v74_poll_audience:season"}],[{text:"🛡 Сотрудникам",callback_data:"v74_poll_audience:staff"}],[{text:"❌ Отменить",callback_data:"v74_poll_cancel"}]]});
+}
+async function selectV74PollAudience(query,audience,env){const chatId=query.message?.chat?.id;const workflow=await getStaffWorkflow(query.from.id,env);if(!workflow||workflow.flow_type!=="poll_create"||workflow.step!=="audience"){await answerCallback(env,query.id,"Мастер устарел.",true);return;}const next={...workflow.data,audience};await setStaffWorkflow(query.from.id,chatId,"poll_create","delivery",next,env);await answerCallback(env,query.id,"Выберите способ отправки.");await sendTelegramMessage(env,chatId,`<b>🗳 Новый опрос · 7/9</b>\n\nГде игрок увидит опрос?`,{inline_keyboard:[[{text:"🤖 В боте",callback_data:"v74_poll_delivery:bot"}],[{text:"🎮 После открытия игры",callback_data:"v74_poll_delivery:game"}],[{text:"🤖 + 🎮 В обоих местах",callback_data:"v74_poll_delivery:both"}],[{text:"❌ Отменить",callback_data:"v74_poll_cancel"}]]});}
+async function selectV74PollDelivery(query,delivery,env){const chatId=query.message?.chat?.id;const workflow=await getStaffWorkflow(query.from.id,env);if(!workflow||workflow.flow_type!=="poll_create"||workflow.step!=="delivery"){await answerCallback(env,query.id,"Мастер устарел.",true);return;}const next={...workflow.data,delivery};await setStaffWorkflow(query.from.id,chatId,"poll_create","duration",next,env);await answerCallback(env,query.id,"Выберите срок.");await sendTelegramMessage(env,chatId,`<b>🗳 Новый опрос · 8/9</b>\n\nСколько времени принимать ответы?`,{inline_keyboard:[[{text:"1 день",callback_data:"v74_poll_duration:86400"},{text:"3 дня",callback_data:"v74_poll_duration:259200"}],[{text:"7 дней",callback_data:"v74_poll_duration:604800"},{text:"Без срока",callback_data:"v74_poll_duration:0"}],[{text:"❌ Отменить",callback_data:"v74_poll_cancel"}]]});}
+async function selectV74PollDuration(query,duration,env){const chatId=query.message?.chat?.id;const workflow=await getStaffWorkflow(query.from.id,env);if(!workflow||workflow.flow_type!=="poll_create"||workflow.step!=="duration"){await answerCallback(env,query.id,"Мастер устарел.",true);return;}const next={...workflow.data,duration};await setStaffWorkflow(query.from.id,chatId,"poll_create","results",next,env);await answerCallback(env,query.id,"Настройте результаты.");await sendTelegramMessage(env,chatId,`<b>Показывать результаты игрокам?</b>`,{inline_keyboard:[[{text:"📊 После ответа",callback_data:"v74_poll_results:after_vote"}],[{text:"⏳ После завершения",callback_data:"v74_poll_results:after_end"}],[{text:"🙈 Не показывать",callback_data:"v74_poll_results:hidden"}],[{text:"❌ Отменить",callback_data:"v74_poll_cancel"}]]});}
+async function selectV74PollResults(query,resultsMode,env){const chatId=query.message?.chat?.id;const workflow=await getStaffWorkflow(query.from.id,env);if(!workflow||workflow.flow_type!=="poll_create"||workflow.step!=="results"){await answerCallback(env,query.id,"Мастер устарел.",true);return;}const next={...workflow.data,resultsMode};await setStaffWorkflow(query.from.id,chatId,"poll_create","reward",next,env);await answerCallback(env,query.id,"Выберите награду.");await sendTelegramMessage(env,chatId,`<b>🗳 Новый опрос · 9/9</b>\n\nНаграда за участие необязательна. Она выдаётся только после сохранения полного ответа и обязательного комментария.`,{inline_keyboard:[[{text:"Без награды",callback_data:"v74_poll_reward:none"}],[{text:"📦 Обычный",callback_data:"v74_poll_reward:case_small"},{text:"🥈 Серебряный",callback_data:"v74_poll_reward:case_sweet"}],[{text:"🥇 Золотой",callback_data:"v74_poll_reward:case_gold"},{text:"💎 Легендарный",callback_data:"v74_poll_reward:case_legendary"}],[{text:"⭐ 500",callback_data:"v74_poll_reward:points_500"},{text:"⭐ 1 000",callback_data:"v74_poll_reward:points_1000"}],[{text:"☕ 50",callback_data:"v74_poll_reward:coffee_50"},{text:"🍥 100",callback_data:"v74_poll_reward:treats_100"}],[{text:"❌ Отменить",callback_data:"v74_poll_cancel"}]]});}
+async function selectV74PollReward(query,key,env){const chatId=query.message?.chat?.id;const workflow=await getStaffWorkflow(query.from.id,env);if(!workflow||workflow.flow_type!=="poll_create"||workflow.step!=="reward"){await answerCallback(env,query.id,"Мастер устарел.",true);return;}const reward=V74_POLL_REWARD_PRESETS[key];if(!reward){await answerCallback(env,query.id,"Награда не найдена.",true);return;}const next={...workflow.data,reward};await setStaffWorkflow(query.from.id,chatId,"poll_create","confirm",next,env);await answerCallback(env,query.id,"Проверьте опрос.");await sendTelegramMessage(env,chatId,`<b>✅ Проверьте опрос</b>\n\nВопрос: <b>${escapeHtml(next.question)}</b>\nТип ответа: <b>${escapeHtml(v75PollAnswerTypeLabel(next.answerType))}</b>\n${next.options?.length?`Варианты: <b>${next.options.length}</b>\n`:""}${next.answerType!=="text"?`Выбор: <b>${next.responseMode==="multiple"?`до ${next.maxChoices} вариантов`:"один вариант"}</b>\n`:""}Комментарий: <b>${escapeHtml(v75PollCommentModeLabel(next.answerType==="text"?"required":next.commentMode))}</b>\nАудитория: <b>${escapeHtml(v74PollAudienceLabel(next.audience))}</b>\nОтправка: <b>${escapeHtml(v74PollDeliveryLabel(next.delivery))}</b>\nСрок: <b>${next.duration?`${Math.round(next.duration/V67_DAY)} дн.`:"без срока"}</b>\nРезультаты: <b>${escapeHtml(v74PollResultsLabel(next.resultsMode))}</b>\nНаграда: <b>${escapeHtml(v74PollRewardText(next.reward))}</b>\n\nОпрос сохранится черновиком.`,{inline_keyboard:[[{text:"✅ Сохранить черновик",callback_data:"v74_poll_save"}],[{text:"❌ Отменить",callback_data:"v74_poll_cancel"}]]});}
+async function saveV74PollDraft(query,env){const chatId=query.message?.chat?.id;const workflow=await getStaffWorkflow(query.from.id,env);const access=await getTeamAccess(query.from,env);if(!workflow||workflow.flow_type!=="poll_create"||workflow.step!=="confirm"||!access.authorized||!v74PollAccess(access)){await answerCallback(env,query.id,"Черновик не найден.",true);return;}await ensureV74PollSchema(env);const d=workflow.data;const pollId=v74PollId();const now=Math.floor(Date.now()/1000);const reward=d.reward||V74_POLL_REWARD_PRESETS.none;await env.DB.prepare(`INSERT INTO player_polls(poll_id,question,description,status,response_mode,max_choices,audience_type,delivery_mode,results_mode,allow_change,show_in_tasks,duration_seconds,starts_at,ends_at,reward_kind,reward_id,reward_amount,created_by,created_by_name,report_chat_id,bot_queue_prepared,created_at,updated_at,published_at,ended_at) VALUES(?,?,?,'draft',?,?,?,?,?,0,0,?,0,0,?,?,?,?,?,?,0,?,?,0,0)`).bind(pollId,String(d.question).slice(0,300),"",d.responseMode||"single",Number(d.maxChoices||1),d.audience,d.delivery,d.resultsMode,Number(d.duration||0),reward.kind,String(reward.id||""),Number(reward.amount||0),String(query.from.id),telegramDisplayName(query.from),String(chatId),now,now).run();await env.DB.prepare(`UPDATE player_polls SET answer_type=?,comment_mode=?,comment_min_length=?,comment_max_length=?,comment_prompt=? WHERE poll_id=?`).bind(String(d.answerType||"choice"),String(d.answerType==="text"?"required":d.commentMode||"none"),Number(d.commentMin||10),Number(d.commentMax||1000),String(d.commentPrompt||"Напишите свой ответ сообщением.").slice(0,300),pollId).run();if(Array.isArray(d.options)&&d.options.length)await env.DB.batch(d.options.map((option,index)=>env.DB.prepare(`INSERT INTO player_poll_options(option_id,poll_id,option_order,option_text) VALUES(?,?,?,?)`).bind(`${pollId}o${index+1}`,pollId,index+1,String(option).slice(0,100))));await logStaffAction(env,query.from,access,"poll_create",null,"poll",null,null,{pollId,question:d.question,delivery:d.delivery,audience:d.audience,answerType:d.answerType,commentMode:d.commentMode});await clearStaffWorkflow(query.from.id,env);await answerCallback(env,query.id,"Опрос сохранён.");await showV74PollAdminDetails(chatId,query.from,env,pollId);}
+
+
+async function showV74PollAdminDetails(chatId,user,env,pollId){const access=await getTeamAccess(user,env);if(!access.authorized||!v74PollAccess(access))return;await ensureV74PollSchema(env);const row=await env.DB.prepare(`SELECT p.*,(SELECT COUNT(*) FROM player_poll_responses r WHERE r.poll_id=p.poll_id) AS responses,(SELECT COUNT(*) FROM player_poll_responses r WHERE r.poll_id=p.poll_id AND TRIM(r.comment_text)<>'') AS comments FROM player_polls p WHERE poll_id=? LIMIT 1`).bind(String(pollId)).first();if(!row)return sendTelegramMessage(env,chatId,"Опрос не найден.");const options=await v74PollOptions(env,pollId);const keyboard=[];if(row.status==="draft")keyboard.push([{text:"🚀 Опубликовать",callback_data:`v74_poll_publish:${pollId}`}]);if(row.status==="active")keyboard.push([{text:"⏹ Завершить",callback_data:`v74_poll_end:${pollId}`}]);keyboard.push([{text:"📊 Результаты",callback_data:`v74_poll_results_view:${pollId}`}]);if(String(row.answer_type||"choice")==="text"||String(row.comment_mode||"none")!=="none"||Number(row.comments||0)>0)keyboard.push([{text:`💬 Комментарии · ${Number(row.comments||0)}`,callback_data:`v75_poll_comments:${pollId}:0`}]);keyboard.push([{text:"📄 Дублировать",callback_data:`v74_poll_duplicate:${pollId}`}],[{text:"⬅️ Опросы",callback_data:"v74_polls_admin"}]);const optionText=options.length?`\n<b>Варианты</b>\n${options.map((item)=>`${item.option_order}. ${escapeHtml(item.option_text)}`).join("\n")}`:"";await sendTelegramMessage(env,chatId,`<b>🗳 ${escapeHtml(row.question)}</b>\n\nСтатус: <b>${escapeHtml(v74PollStatusLabel(row.status))}</b>\nОтветов: <b>${Number(row.responses||0)}</b>\nКомментариев: <b>${Number(row.comments||0)}</b>\nТип ответа: <b>${escapeHtml(v75PollAnswerTypeLabel(row.answer_type))}</b>\n${String(row.answer_type||"choice")!=="text"?`Выбор: <b>${row.response_mode==="multiple"?`несколько, до ${row.max_choices}`:"один вариант"}</b>\n`:""}Комментарий: <b>${escapeHtml(v75PollCommentModeLabel(String(row.answer_type||"choice")==="text"?"required":row.comment_mode))}</b>\nАудитория: <b>${escapeHtml(v74PollAudienceLabel(row.audience_type))}</b>\nОтправка: <b>${escapeHtml(v74PollDeliveryLabel(row.delivery_mode))}</b>\nРезультаты игрокам: <b>${escapeHtml(v74PollResultsLabel(row.results_mode))}</b>\nНаграда: <b>${escapeHtml(v74PollRewardText(v74PollReward(row)))}</b>\n${row.ends_at?`Завершение: <b>${escapeHtml(formatUtcDate(row.ends_at))}</b>\n`:""}${optionText}`,{inline_keyboard:keyboard});}
+async function publishV74Poll(query,pollId,env,runtime={}){
+  const chatId=query.message?.chat?.id;const access=await getTeamAccess(query.from,env);if(!access.authorized||!v74PollAccess(access)){await answerCallback(env,query.id,"Недостаточно прав.",true);return;}
+  await ensureV74PollSchema(env);const old=await env.DB.prepare(`SELECT * FROM player_polls WHERE poll_id=? LIMIT 1`).bind(pollId).first();if(!old||old.status!=="draft"){await answerCallback(env,query.id,"Черновик не найден.",true);return;}
+  const now=Math.floor(Date.now()/1000);const ends=Number(old.duration_seconds||0)>0?now+Number(old.duration_seconds):0;
+  await env.DB.prepare(`UPDATE player_polls SET status='active',starts_at=?,ends_at=?,published_at=?,updated_at=?,bot_queue_prepared=0 WHERE poll_id=?`).bind(now,ends,now,now,pollId).run();
+  const deliveryTask=(async()=>{await prepareV74PollBotQueue(env,pollId);await processV74PollBotDeliveries(env,20);})();
+  const auditTask=Promise.all([
+    recordV67SettingChange(env,query.from,"poll",pollId,"publish",{status:old.status},{status:"active",startsAt:now,endsAt:ends}),
+    logStaffAction(env,query.from,access,"poll_publish",null,"poll",null,null,{pollId})
+  ]);
+  const deliveryBackground=runWorkerBackground(runtime,deliveryTask,"poll delivery preparation");
+  const auditBackground=runWorkerBackground(runtime,auditTask,"poll publish audit");
+  if(!deliveryBackground)await deliveryTask;
+  if(!auditBackground)await auditTask;
+  await answerCallback(env,query.id,"Опрос опубликован.");await showV74PollAdminDetails(chatId,query.from,env,pollId);
+}
+
+async function prepareV74PollBotQueue(env,pollId){await ensureV74PollSchema(env);const poll=await env.DB.prepare(`SELECT * FROM player_polls WHERE poll_id=? LIMIT 1`).bind(pollId).first();if(!poll||poll.status!=="active"||!["bot","both"].includes(String(poll.delivery_mode)))return 0;if(Number(poll.bot_queue_prepared))return 0;const rows=await v74PollRecipientRows(env,poll);const now=Math.floor(Date.now()/1000);for(let i=0;i<rows.length;i+=100){await env.DB.batch(rows.slice(i,i+100).map((row)=>env.DB.prepare(`INSERT OR IGNORE INTO player_poll_bot_deliveries(poll_id,telegram_id,chat_id,status,attempts,last_error,available_at,delivered_at,updated_at) VALUES(?,?,?,'pending',0,'',?,0,?)`).bind(pollId,String(row.telegram_id),String(row.chat_id),now,now)));}await env.DB.prepare(`UPDATE player_polls SET bot_queue_prepared=1,updated_at=? WHERE poll_id=?`).bind(now,pollId).run();return rows.length;}
+async function processV74PollBotDeliveries(env,limit=25){await ensureV74PollSchema(env);const now=Math.floor(Date.now()/1000);const rows=(await env.DB.prepare(`SELECT d.*,p.question,p.ends_at,p.status FROM player_poll_bot_deliveries d JOIN player_polls p ON p.poll_id=d.poll_id WHERE d.status IN ('pending','failed') AND d.available_at<=? AND d.attempts<4 AND p.status='active' ORDER BY d.updated_at ASC LIMIT ?`).bind(now,Math.max(1,Math.min(50,Number(limit)||25))).all()).results||[];for(const row of rows){try{const notification=await v77DeliverPlayerNotification(env,row.telegram_id,row.chat_id,"poll",`<b>🗳 Новый опрос</b>
+
+${escapeHtml(row.question)}${row.ends_at?`
+
+Ответы принимаются до ${escapeHtml(formatUtcDate(row.ends_at))}.`:""}`,{inline_keyboard:[[{text:"🗳 Ответить",callback_data:`poll_open:${row.poll_id}`}]]});await env.DB.prepare(`UPDATE player_poll_bot_deliveries SET status='sent',attempts=attempts+1,last_error=?,delivered_at=?,updated_at=? WHERE poll_id=? AND telegram_id=?`).bind(notification.status==='queued'?'queued by notification policy':'',now,now,row.poll_id,row.telegram_id).run();}catch(error){await env.DB.prepare(`UPDATE player_poll_bot_deliveries SET status='failed',attempts=attempts+1,last_error=?,available_at=?,updated_at=? WHERE poll_id=? AND telegram_id=?`).bind(String(error?.message||error).slice(0,300),now+300,now,row.poll_id,row.telegram_id).run();}}}
+async function processV74PollCron(env){await ensureV74PollSchema(env);const now=Math.floor(Date.now()/1000);await env.DB.prepare(`UPDATE player_polls SET status='active',published_at=CASE WHEN published_at=0 THEN ? ELSE published_at END,updated_at=? WHERE status='scheduled' AND starts_at<=?`).bind(now,now,now).run();await env.DB.prepare(`UPDATE player_polls SET status='ended',ended_at=?,updated_at=? WHERE status='active' AND ends_at>0 AND ends_at<=?`).bind(now,now,now).run();const pending=(await env.DB.prepare(`SELECT poll_id FROM player_polls WHERE status='active' AND delivery_mode IN ('bot','both') AND bot_queue_prepared=0 LIMIT 10`).all()).results||[];for(const row of pending)await prepareV74PollBotQueue(env,row.poll_id);await processV74PollBotDeliveries(env,25);}
+
+async function getV74GamePoll(request,env){try{requireDatabase(env);requireBotToken(env);const body=await readJson(request);const auth=await validateTelegramInitData(String(body.initData||""),env);await ensureV74PollSchema(env);const rows=await v74ActivePollsForPlayer(env,auth.user.id,"game");const now=Math.floor(Date.now()/1000);let poll=null;for(const candidate of rows){const response=await env.DB.prepare(`SELECT 1 AS done FROM player_poll_responses WHERE poll_id=? AND telegram_id=? LIMIT 1`).bind(candidate.poll_id,String(auth.user.id)).first();if(response?.done&&!Number(candidate.allow_change))continue;const delivery=await env.DB.prepare(`SELECT snoozed_until FROM player_poll_game_deliveries WHERE poll_id=? AND telegram_id=? LIMIT 1`).bind(candidate.poll_id,String(auth.user.id)).first();if(Number(delivery?.snoozed_until||0)>now)continue;poll=candidate;break;}if(!poll)return jsonResponse({ok:true,poll:null});const options=await v74PollOptions(env,poll.poll_id);await env.DB.prepare(`INSERT INTO player_poll_game_deliveries(poll_id,telegram_id,shown_count,last_shown_at,snoozed_until,answered_at) VALUES(?,?,1,?,0,0) ON CONFLICT(poll_id,telegram_id) DO UPDATE SET shown_count=shown_count+1,last_shown_at=excluded.last_shown_at`).bind(poll.poll_id,String(auth.user.id),now).run();return jsonResponse({ok:true,poll:{id:poll.poll_id,question:poll.question,description:poll.description,answerType:String(poll.answer_type||"choice"),responseMode:poll.response_mode,maxChoices:poll.max_choices,commentMode:String(poll.answer_type||"choice")==="text"?"required":String(poll.comment_mode||"none"),commentMin:Number(poll.comment_min_length||10),commentMax:Number(poll.comment_max_length||1000),commentPrompt:String(poll.comment_prompt||"Напишите свой ответ сообщением."),endsAt:Number(poll.ends_at||0)*1000,rewardText:v74PollRewardText(v74PollReward(poll)),options:options.map((item)=>({id:item.option_id,text:item.option_text}))}});}catch(error){if(error instanceof ApiError)return jsonResponse({ok:false,error:error.message},error.status);console.error("getV74GamePoll failed",error);return jsonResponse({ok:false,error:"Не удалось загрузить опрос."},500);}}
+async function voteV74GamePoll(request,env){try{requireDatabase(env);requireBotToken(env);const body=await readJson(request);const auth=await validateTelegramInitData(String(body.initData||""),env);await ensureV74PollSchema(env);const poll=await env.DB.prepare(`SELECT * FROM player_polls WHERE poll_id=? AND status='active' LIMIT 1`).bind(String(body.pollId||"")).first();if(!poll||!(await v74PollAudienceAllowed(env,poll,auth.user.id)))throw new ApiError(404,"Опрос уже недоступен.");const result=await v74CompletePollVote(env,poll,auth.user.id,Array.isArray(body.optionIds)?body.optionIds:[],"game",String(body.comment||""));const results=(poll.results_mode==="after_vote")?await v74PollResultData(env,poll.poll_id):null;return jsonResponse({ok:true,already:result.already,rewardQueued:result.rewardQueued,rewardText:result.rewardQueued?v74PollRewardText(v74PollReward(poll)):"",results});}catch(error){if(error instanceof ApiError)return jsonResponse({ok:false,error:error.message},error.status);console.error("voteV74GamePoll failed",error);return jsonResponse({ok:false,error:"Не удалось сохранить ответ."},500);}}
+async function snoozeV74GamePoll(request,env){try{requireDatabase(env);requireBotToken(env);const body=await readJson(request);const auth=await validateTelegramInitData(String(body.initData||""),env);await ensureV74PollSchema(env);const pollId=String(body.pollId||"");const now=Math.floor(Date.now()/1000);await env.DB.prepare(`INSERT INTO player_poll_game_deliveries(poll_id,telegram_id,shown_count,last_shown_at,snoozed_until,answered_at) VALUES(?,?,0,0,?,0) ON CONFLICT(poll_id,telegram_id) DO UPDATE SET snoozed_until=excluded.snoozed_until`).bind(pollId,String(auth.user.id),now+6*3600).run();return jsonResponse({ok:true});}catch(error){if(error instanceof ApiError)return jsonResponse({ok:false,error:error.message},error.status);return jsonResponse({ok:false,error:"Не удалось отложить опрос."},500);}}
+
+// Редактирование существующих автоматизаций.
+async function showV74AutomationEditMenu(query,key,env){const chatId=query.message?.chat?.id;const access=await getTeamAccess(query.from,env);if(!access.authorized||!v67AutomationAccess(access)){await answerCallback(env,query.id,"Недостаточно прав.",true);return;}await ensureV67Schema(env);const row=await env.DB.prepare(`SELECT * FROM automation_chains WHERE chain_key=? LIMIT 1`).bind(key).first();if(!row){await answerCallback(env,query.id,"Цепочка не найдена.",true);return;}await setStaffWorkflow(query.from.id,chatId,"automation_edit","menu",{chainKey:key},env);await answerCallback(env,query.id,"Выберите поле.");await sendTelegramMessage(env,chatId,`<b>✏️ Редактирование автоматизации</b>\n\n${escapeHtml(row.title)}\n\nИзменения применяются к будущим выполнениям. Уже выданные награды повторно не начисляются.`,{inline_keyboard:[[{text:"📝 Название",callback_data:"v74_auto_edit_title"}],[{text:"🎯 Условие",callback_data:"v74_auto_edit_trigger"}],[{text:row.action_type==="reward"?"🎁 Награда":"💬 Сообщение",callback_data:"v74_auto_edit_action"}],[{text:"❌ Отменить",callback_data:"v74_auto_edit_cancel"}]]});}
+async function startV74AutomationTitleEdit(query,env){const chatId=query.message?.chat?.id;const workflow=await getStaffWorkflow(query.from.id,env);if(!workflow||workflow.flow_type!=="automation_edit"){await answerCallback(env,query.id,"Редактирование устарело.",true);return;}await updateStaffWorkflow(query.from.id,{step:"title_input",data:workflow.data},env);await answerCallback(env,query.id,"Введите название.");await sendTelegramMessage(env,chatId,"Отправьте новое название от 3 до 80 символов.");}
+async function startV74AutomationTriggerEdit(query,env){
+  const chatId=query.message?.chat?.id;
+  const workflow=await getStaffWorkflow(query.from.id,env);
+  if(!workflow||workflow.flow_type!=="automation_edit"){await answerCallback(env,query.id,"Редактирование устарело.",true);return;}
+  await updateStaffWorkflow(query.from.id,{step:"trigger_pick",data:workflow.data},env);
+  await answerCallback(env,query.id,"Выберите условие.");
+  await sendTelegramMessage(env,chatId,"<b>Новое условие</b>",{inline_keyboard:[
+    [{text:"🏃 Забеги",callback_data:"v74_auto_edit_trigger_pick:accepted_runs"},{text:"⭐ Сумма очков",callback_data:"v74_auto_edit_trigger_pick:total_score"}],
+    [{text:"🎁 Открытие кейсов",callback_data:"v74_auto_edit_trigger_pick:opened_cases"},{text:"🏆 Рекорд",callback_data:"v74_auto_edit_trigger_pick:best_score"}],
+    [{text:"🛍 Любая покупка",callback_data:"v74_auto_edit_trigger_pick:shop_purchases"},{text:"👗 Покупка образа",callback_data:"v74_auto_edit_trigger_pick:skin_purchases"}],
+    [{text:"🎟 Покупка награды",callback_data:"v74_auto_edit_trigger_pick:physical_purchases"},{text:"📦 Покупка кейса",callback_data:"v74_auto_edit_trigger_pick:case_purchases"}],
+    [{text:"🎟 Промокоды",callback_data:"v74_auto_edit_trigger_pick:promo_activations"},{text:"📈 Уровень",callback_data:"v74_auto_edit_trigger_pick:level_reached"}],
+    [{text:"👋 Регистрация",callback_data:"v74_auto_edit_trigger_pick:new_player_delay"},{text:"💤 Неактивность",callback_data:"v74_auto_edit_trigger_pick:inactive_days"}],
+    [{text:"🏆 Конец сезона",callback_data:"v74_auto_edit_trigger_pick:season_ending"}],
+    [{text:"❌ Отменить",callback_data:"v74_auto_edit_cancel"}]
+  ]});
+}
+async function startV74AutomationActionEdit(query,env){const chatId=query.message?.chat?.id;const workflow=await getStaffWorkflow(query.from.id,env);if(!workflow||workflow.flow_type!=="automation_edit"){await answerCallback(env,query.id,"Редактирование устарело.",true);return;}const access=await getTeamAccess(query.from,env);const row=await env.DB.prepare(`SELECT * FROM automation_chains WHERE chain_key=? LIMIT 1`).bind(workflow.data.chainKey).first();if(!row){await answerCallback(env,query.id,"Цепочка не найдена.",true);return;}if(row.action_type==="message"){if(!(access.owner||access.permissions?.massBroadcasts||access.permissions?.manageSeasons)){await answerCallback(env,query.id,"Нет права изменять автоматические сообщения.",true);return;}await updateStaffWorkflow(query.from.id,{step:"message_input",data:{...workflow.data}},env);await answerCallback(env,query.id,"Введите новый текст.");await sendTelegramMessage(env,chatId,"Отправьте новый текст сообщения от 3 до 1500 символов.");return;}if(!(access.owner||access.permissions?.grantRewards)){await answerCallback(env,query.id,"Нет права изменять автоматические награды.",true);return;}await updateStaffWorkflow(query.from.id,{step:"reward_pick",data:workflow.data},env);await answerCallback(env,query.id,"Выберите награду.");await sendTelegramMessage(env,chatId,"<b>Новая награда</b>",{inline_keyboard:[[{text:"📦 Обычный",callback_data:"v74_auto_edit_reward:case_small"},{text:"🥈 Серебряный",callback_data:"v74_auto_edit_reward:case_sweet"}],[{text:"🥇 Золотой",callback_data:"v74_auto_edit_reward:case_gold"},{text:"💎 Легендарный",callback_data:"v74_auto_edit_reward:case_legendary"}],[{text:"⭐ 500",callback_data:"v74_auto_edit_reward:points_500"},{text:"⭐ 1 000",callback_data:"v74_auto_edit_reward:points_1000"}],[{text:"☕ 50",callback_data:"v74_auto_edit_reward:coffee_50"},{text:"🍥 100",callback_data:"v74_auto_edit_reward:treats_100"}],[{text:"❌ Отменить",callback_data:"v74_auto_edit_cancel"}]]});}
+async function selectV74AutomationEditTrigger(query,triggerType,env){
+  const chatId=query.message?.chat?.id;
+  const workflow=await getStaffWorkflow(query.from.id,env);
+  if(!workflow||workflow.flow_type!=="automation_edit"||workflow.step!=="trigger_pick"){await answerCallback(env,query.id,"Редактирование устарело.",true);return;}
+  const allowed=new Set(["new_player_delay","inactive_days","accepted_runs","total_score","opened_cases","best_score","promo_activations","level_reached","season_ending",...V76_PURCHASE_TRIGGER_TYPES]);
+  if(!allowed.has(triggerType)){await answerCallback(env,query.id,"Неизвестное условие.",true);return;}
+  const options=v76AutomationTriggerOptions(triggerType);
+  await updateStaffWorkflow(query.from.id,{step:"trigger_value",data:{...workflow.data,editTriggerType:triggerType}},env);
+  const rows=[];
+  for(let i=0;i<options.length;i+=2)rows.push(options.slice(i,i+2).map(([label,value])=>({text:String(label),callback_data:`v74_auto_edit_value:${value}`})));
+  if(v76IsCustomCountTrigger(triggerType))rows.push([{text:"✍️ Вписать своё количество",callback_data:"v74_auto_edit_value_custom"}]);
+  rows.push([{text:"❌ Отменить",callback_data:"v74_auto_edit_cancel"}]);
+  await answerCallback(env,query.id,"Выберите значение.");
+  await sendTelegramMessage(env,chatId,"<b>Новое значение условия</b>",{inline_keyboard:rows});
+}
+async function selectV74AutomationEditValue(query,value,env){const workflow=await getStaffWorkflow(query.from.id,env);if(!workflow||workflow.flow_type!=="automation_edit"||workflow.step!=="trigger_value"){await answerCallback(env,query.id,"Редактирование устарело.",true);return;}const changes={trigger_type:workflow.data.editTriggerType,trigger_value:Math.max(1,Math.floor(Number(value)||1))};await showV74AutomationEditPreview(query,{...workflow.data,changes},env);}
+async function startV74AutomationEditCustomValue(query,env){
+  const chatId=query.message?.chat?.id;
+  const workflow=await getStaffWorkflow(query.from.id,env);
+  if(!workflow||workflow.flow_type!=="automation_edit"||workflow.step!=="trigger_value"||!v76IsCustomCountTrigger(workflow.data.editTriggerType)){await answerCallback(env,query.id,"Редактирование устарело.",true);return;}
+  await updateStaffWorkflow(query.from.id,{step:"custom_runs",data:workflow.data},env);
+  await answerCallback(env,query.id,"Введите число.");
+  await sendTelegramMessage(env,chatId,`Введите количество от 1 до 1 000 000 для условия «${escapeHtml(v67AutomationTriggerLabel(workflow.data.editTriggerType,1))}».`);
+}
+async function selectV74AutomationEditReward(query,rewardKey,env){const workflow=await getStaffWorkflow(query.from.id,env);if(!workflow||workflow.flow_type!=="automation_edit"||workflow.step!=="reward_pick"){await answerCallback(env,query.id,"Редактирование устарело.",true);return;}const row=await env.DB.prepare(`SELECT title FROM automation_chains WHERE chain_key=? LIMIT 1`).bind(workflow.data.chainKey).first();const action=v67AutomationRewardPreset(rewardKey,row?.title||"Автоматическая награда");if(!action){await answerCallback(env,query.id,"Награда не найдена.",true);return;}await showV74AutomationEditPreview(query,{...workflow.data,changes:{action_json:JSON.stringify(action)}},env);}
+async function handleV74AutomationEditMessage(message,workflow,env){const text=String(message.text||"").trim();if(workflow.step==="title_input"){if(text.length<3||text.length>80){await sendTelegramMessage(env,message.chat.id,"Название должно содержать от 3 до 80 символов.");return true;}await showV74AutomationEditPreview({from:message.from,message,id:""},{...workflow.data,changes:{title:text}},env,false);return true;}if(workflow.step==="message_input"){if(text.length<3||text.length>1500){await sendTelegramMessage(env,message.chat.id,"Сообщение должно содержать от 3 до 1500 символов.");return true;}await showV74AutomationEditPreview({from:message.from,message,id:""},{...workflow.data,changes:{action_json:JSON.stringify({text:escapeHtml(text)})}},env,false);return true;}if(workflow.step==="custom_runs"){const normalized=text.replace(/[ _.,]/g,"");const value=Number(normalized);if(!/^\d{1,7}$/.test(normalized)||value<1||value>1000000||!v76IsCustomCountTrigger(workflow.data.editTriggerType)){await sendTelegramMessage(env,message.chat.id,"Введите целое число от 1 до 1 000 000.");return true;}await showV74AutomationEditPreview({from:message.from,message,id:""},{...workflow.data,changes:{trigger_type:workflow.data.editTriggerType,trigger_value:value}},env,false);return true;}await sendTelegramMessage(env,message.chat.id,"Продолжите кнопками или отправьте <code>/cancel</code>.");return true;}
+async function showV74AutomationEditPreview(query,data,env,answer=true){const chatId=query.message?.chat?.id;const row=await env.DB.prepare(`SELECT * FROM automation_chains WHERE chain_key=? LIMIT 1`).bind(data.chainKey).first();if(!row)return;const next={...row,...data.changes};await setStaffWorkflow(query.from.id,chatId,"automation_edit","confirm",{chainKey:data.chainKey,changes:data.changes},env);if(answer&&query.id)await answerCallback(env,query.id,"Проверьте изменение.");const action=safeJson(next.action_json,{});await sendTelegramMessage(env,chatId,`<b>✅ Подтвердите изменение</b>\n\nНазвание: <b>${escapeHtml(next.title)}</b>\nУсловие: <b>${escapeHtml(v67AutomationTriggerLabel(next.trigger_type,next.trigger_value))}</b>\nДействие: <b>${escapeHtml(next.action_type==="reward"?safeRewardDescription(action):String(action.text||"").replace(/<[^>]+>/g,"").slice(0,300))}</b>\n\nСтатус включения сохранится. Изменение затронет только будущие выполнения.`,{inline_keyboard:[[{text:"✅ Сохранить",callback_data:"v74_auto_edit_save"}],[{text:"❌ Отменить",callback_data:"v74_auto_edit_cancel"}]]});}
+async function saveV74AutomationEdit(query,env,runtime={}){const chatId=query.message?.chat?.id;const workflow=await getStaffWorkflow(query.from.id,env);const access=await getTeamAccess(query.from,env);if(!workflow||workflow.flow_type!=="automation_edit"||workflow.step!=="confirm"||!access.authorized||!v67AutomationAccess(access)){await answerCallback(env,query.id,"Изменение устарело.",true);return;}await ensureV67Schema(env);const key=String(workflow.data.chainKey);const old=await env.DB.prepare(`SELECT * FROM automation_chains WHERE chain_key=? LIMIT 1`).bind(key).first();if(!old){await answerCallback(env,query.id,"Цепочка не найдена.",true);return;}const c=workflow.data.changes||{};if(Object.prototype.hasOwnProperty.call(c,"action_json")){const allowed=old.action_type==="reward"?Boolean(access.owner||access.permissions?.grantRewards):Boolean(access.owner||access.permissions?.massBroadcasts||access.permissions?.manageSeasons);if(!allowed){await answerCallback(env,query.id,"Нет права изменять действие этой автоматизации.",true);return;}}const nextTitle=String(c.title??old.title).slice(0,80);const nextTrigger=String(c.trigger_type??old.trigger_type);const nextValue=Math.max(1,Math.floor(Number(c.trigger_value??old.trigger_value)||1));let nextAction=String(c.action_json??old.action_json);if(!Object.prototype.hasOwnProperty.call(c,"action_json")&&old.action_type==="reward"&&nextTitle!==old.title){const action=safeJson(old.action_json,{});action.reason=nextTitle;nextAction=JSON.stringify(action);}const taskSupported=old.action_type==="reward"&&v71TaskTriggerSupported(nextTrigger);const nextShowAsTask=taskSupported?Number(old.show_as_task||0):0;const repeatableTriggers=new Set(["accepted_runs","total_score","opened_cases","promo_activations",...V76_PURCHASE_TRIGGER_TYPES]);const nextTaskMode=nextShowAsTask&&String(old.task_mode||"one_time")!=="one_time"&&!repeatableTriggers.has(nextTrigger)?"one_time":String(old.task_mode||"one_time");const now=Math.floor(Date.now()/1000);await env.DB.prepare(`UPDATE automation_chains SET title=?,trigger_type=?,trigger_value=?,action_json=?,show_as_task=?,task_mode=?,task_description=CASE WHEN task_description='' OR task_description=? THEN ? ELSE task_description END,updated_at=?,updated_by=? WHERE chain_key=?`).bind(nextTitle,nextTrigger,nextValue,nextAction,nextShowAsTask,nextTaskMode,old.title,nextTitle,now,String(query.from.id),key).run();const fresh=await env.DB.prepare(`SELECT * FROM automation_chains WHERE chain_key=? LIMIT 1`).bind(key).first();const auditTask=Promise.all([recordV67SettingChange(env,query.from,"automation",key,"edit",{title:old.title,triggerType:old.trigger_type,triggerValue:old.trigger_value,action:safeJson(old.action_json,{}),showAsTask:Boolean(old.show_as_task),taskMode:old.task_mode},{title:fresh.title,triggerType:fresh.trigger_type,triggerValue:fresh.trigger_value,action:safeJson(fresh.action_json,{}),showAsTask:Boolean(fresh.show_as_task),taskMode:fresh.task_mode}),logStaffAction(env,query.from,access,"automation_edit",null,"automation",null,null,{chainKey:key,changes:Object.keys(c)})]);const auditBackground=runWorkerBackground(runtime,auditTask,"automation edit audit");if(!auditBackground)await auditTask;await clearStaffWorkflow(query.from.id,env);await answerCallback(env,query.id,"Автоматизация обновлена.");await showV67AutomationDetails(chatId,query.from,key,env);}
+// =============================================================
+
+const V67_AUTOMATION_PRESETS = Object.freeze([
+  {
+    key: "welcome_message",
+    title: "Приветствие через 10 минут",
+    description: "Новому игроку отправляется короткое приветствие после создания профиля.",
+    triggerType: "new_player_delay",
+    triggerValue: 600,
+    actionType: "message",
+    action: { text: "🍥 <b>Добро пожаловать в «Сладкий Забег»!</b>\n\nЗефи уже ждёт вас в кафе. Совершите первый забег, собирайте зефир и кофе и открывайте награды." },
+    cooldown: 0
+  },
+  {
+    key: "welcome_case_24h",
+    title: "Подарок новичку через сутки",
+    description: "Через 24 часа после регистрации игрок получает Обычный кейс.",
+    triggerType: "new_player_delay",
+    triggerValue: 86400,
+    actionType: "reward",
+    action: { kind: "case", id: "small", amount: 1, reason: "Подарок новичку" },
+    cooldown: 0
+  },
+  {
+    key: "inactive_3d",
+    title: "Возвращение после 3 дней",
+    description: "Неактивному игроку отправляется напоминание. Повтор не чаще одного раза в 7 дней.",
+    triggerType: "inactive_days",
+    triggerValue: 3,
+    actionType: "message",
+    action: { text: "🐶 <b>Зефи соскучился!</b>\n\nВ кафе накопились новые сладости и награды. Возвращайтесь в «Сладкий Забег» и попробуйте побить рекорд." },
+    cooldown: 604800
+  },
+  {
+    key: "ten_runs_case",
+    title: "Награда за 10 забегов",
+    description: "После 10 зачтённых забегов игрок один раз получает Обычный кейс.",
+    triggerType: "accepted_runs",
+    triggerValue: 10,
+    actionType: "reward",
+    action: { kind: "case", id: "small", amount: 1, reason: "Награда за 10 забегов" },
+    cooldown: 0
+  },
+  {
+    key: "season_end_24h",
+    title: "Напоминание о конце сезона",
+    description: "За 24 часа до окончания сезона активным подписчикам отправляется напоминание.",
+    triggerType: "season_ending",
+    triggerValue: 86400,
+    actionType: "message",
+    action: { text: "🏆 <b>Сезон скоро завершится!</b>\n\nДо подведения итогов осталось меньше суток. Это последний шанс улучшить результат в рейтинге." },
+    cooldown: 0
+  }
+]);
+
+let v67SchemaPromise = null;
+async function ensureV67Schema(env) {
+  if (!v67SchemaPromise) {
+    v67SchemaPromise = (async () => {
+      await env.DB.batch([
+        env.DB.prepare(`CREATE TABLE IF NOT EXISTS automation_chains (
+          chain_key TEXT PRIMARY KEY,
+          title TEXT NOT NULL,
+          description TEXT NOT NULL DEFAULT '',
+          enabled INTEGER NOT NULL DEFAULT 0,
+          trigger_type TEXT NOT NULL,
+          trigger_value INTEGER NOT NULL DEFAULT 0,
+          action_type TEXT NOT NULL,
+          action_json TEXT NOT NULL DEFAULT '{}',
+          show_as_task INTEGER NOT NULL DEFAULT 0,
+          task_mode TEXT NOT NULL DEFAULT 'one_time',
+          task_description TEXT NOT NULL DEFAULT '',
+          task_starts_at INTEGER NOT NULL DEFAULT 0,
+          task_ends_at INTEGER NOT NULL DEFAULT 0,
+          task_sort INTEGER NOT NULL DEFAULT 100,
+          cooldown_seconds INTEGER NOT NULL DEFAULT 0,
+          last_run_at INTEGER NOT NULL DEFAULT 0,
+          updated_at INTEGER NOT NULL,
+          updated_by TEXT NOT NULL DEFAULT ''
+        )`),
+        env.DB.prepare(`CREATE TABLE IF NOT EXISTS automation_chain_executions (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          execution_key TEXT NOT NULL UNIQUE,
+          chain_key TEXT NOT NULL,
+          telegram_id TEXT NOT NULL,
+          status TEXT NOT NULL DEFAULT 'pending',
+          details_json TEXT NOT NULL DEFAULT '{}',
+          created_at INTEGER NOT NULL,
+          updated_at INTEGER NOT NULL
+        )`),
+        env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_automation_executions_chain ON automation_chain_executions(chain_key, created_at DESC)`),
+        env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_automation_executions_player ON automation_chain_executions(telegram_id, created_at DESC)`),
+        env.DB.prepare(`CREATE TABLE IF NOT EXISTS player_task_claims (
+          claim_key TEXT PRIMARY KEY,
+          chain_key TEXT NOT NULL,
+          telegram_id TEXT NOT NULL,
+          cycle_key TEXT NOT NULL,
+          status TEXT NOT NULL DEFAULT 'pending',
+          queue_id INTEGER NOT NULL DEFAULT 0,
+          reward_json TEXT NOT NULL DEFAULT '{}',
+          created_at INTEGER NOT NULL,
+          updated_at INTEGER NOT NULL,
+          claimed_at INTEGER NOT NULL DEFAULT 0,
+          UNIQUE(chain_key, telegram_id, cycle_key)
+        )`),
+        env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_player_task_claims_player ON player_task_claims(telegram_id, created_at DESC)`),
+        env.DB.prepare(`CREATE TABLE IF NOT EXISTS admin_setting_history (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          setting_group TEXT NOT NULL,
+          setting_key TEXT NOT NULL,
+          action TEXT NOT NULL,
+          old_json TEXT NOT NULL DEFAULT '{}',
+          new_json TEXT NOT NULL DEFAULT '{}',
+          actor_telegram_id TEXT NOT NULL DEFAULT '',
+          actor_name TEXT NOT NULL DEFAULT '',
+          created_at INTEGER NOT NULL
+        )`),
+        env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_admin_setting_history_recent ON admin_setting_history(created_at DESC, id DESC)`),
+        env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_admin_setting_history_entity ON admin_setting_history(setting_group, setting_key, created_at DESC)`),
+        env.DB.prepare(`CREATE TABLE IF NOT EXISTS admin_performance_samples (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          area TEXT NOT NULL,
+          duration_ms INTEGER NOT NULL,
+          success INTEGER NOT NULL DEFAULT 1,
+          error_text TEXT NOT NULL DEFAULT '',
+          created_at INTEGER NOT NULL
+        )`),
+        env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_admin_performance_recent ON admin_performance_samples(created_at DESC, area)`),
+        env.DB.prepare(`CREATE TABLE IF NOT EXISTS release_plans (
+          release_id TEXT PRIMARY KEY,
+          title TEXT NOT NULL,
+          starts_at INTEGER NOT NULL,
+          status TEXT NOT NULL DEFAULT 'scheduled',
+          created_by TEXT NOT NULL,
+          created_by_name TEXT NOT NULL DEFAULT '',
+          report_chat_id TEXT NOT NULL DEFAULT '',
+          current_step INTEGER NOT NULL DEFAULT 0,
+          last_error TEXT NOT NULL DEFAULT '',
+          created_at INTEGER NOT NULL,
+          updated_at INTEGER NOT NULL,
+          completed_at INTEGER NOT NULL DEFAULT 0
+        )`),
+        env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_release_plans_due ON release_plans(status, starts_at, updated_at)`),
+        env.DB.prepare(`CREATE TABLE IF NOT EXISTS release_steps (
+          release_id TEXT NOT NULL,
+          step_order INTEGER NOT NULL,
+          offset_seconds INTEGER NOT NULL DEFAULT 0,
+          action_type TEXT NOT NULL,
+          title TEXT NOT NULL,
+          status TEXT NOT NULL DEFAULT 'pending',
+          started_at INTEGER NOT NULL DEFAULT 0,
+          completed_at INTEGER NOT NULL DEFAULT 0,
+          error_text TEXT NOT NULL DEFAULT '',
+          PRIMARY KEY(release_id, step_order)
+        )`),
+        env.DB.prepare(`CREATE TABLE IF NOT EXISTS stock_forecast_snapshots (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          scope_key TEXT NOT NULL,
+          remaining INTEGER NOT NULL,
+          used_14d INTEGER NOT NULL DEFAULT 0,
+          avg_daily REAL NOT NULL DEFAULT 0,
+          days_left REAL NOT NULL DEFAULT 0,
+          expected_7d INTEGER NOT NULL DEFAULT 0,
+          status TEXT NOT NULL DEFAULT 'ok',
+          created_at INTEGER NOT NULL
+        )`),
+        env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_stock_forecast_recent ON stock_forecast_snapshots(scope_key, created_at DESC)`),
+        env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_profile_created_v67 ON admin_profile_state(created_at, telegram_id)`),
+        env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_profile_updated_v67 ON admin_profile_state(updated_at, telegram_id)`),
+        env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_runs_created_player_v67 ON leaderboard_runs(created_at, telegram_id, accepted)`),
+        env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_stock_scope_created_v67 ON shop_stock_consumptions(scope_key, created_at)`),
+        env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_shop_stock_player_created_v76 ON shop_stock_consumptions(telegram_id, created_at, category, product_id)`)
+      ]);
+      const taskColumns = new Map([
+        ["show_as_task", "INTEGER NOT NULL DEFAULT 0"],
+        ["task_mode", "TEXT NOT NULL DEFAULT 'one_time'"],
+        ["task_description", "TEXT NOT NULL DEFAULT ''"],
+        ["task_starts_at", "INTEGER NOT NULL DEFAULT 0"],
+        ["task_ends_at", "INTEGER NOT NULL DEFAULT 0"],
+        ["task_sort", "INTEGER NOT NULL DEFAULT 100"]
+      ]);
+      const tableInfo = await env.DB.prepare(`PRAGMA table_info(automation_chains)`).all();
+      const existingColumns = new Set((tableInfo.results || []).map((column) => String(column.name)));
+      for (const [column, definition] of taskColumns) {
+        if (!existingColumns.has(column)) await env.DB.prepare(`ALTER TABLE automation_chains ADD COLUMN ${column} ${definition}`).run();
+      }
+      const now = Math.floor(Date.now() / 1000);
+      for (const preset of V67_AUTOMATION_PRESETS) {
+        await env.DB.prepare(`INSERT OR IGNORE INTO automation_chains
+          (chain_key,title,description,enabled,trigger_type,trigger_value,action_type,action_json,cooldown_seconds,last_run_at,updated_at,updated_by)
+          VALUES (?,?,?,0,?,?,?,?,?,0,?,'system')`)
+          .bind(preset.key, preset.title, preset.description, preset.triggerType, preset.triggerValue, preset.actionType, JSON.stringify(preset.action), preset.cooldown, now).run();
+      }
+    })().catch((error) => {
+      v67SchemaPromise = null;
+      throw error;
+    });
+  }
+  await v67SchemaPromise;
+}
+
+async function recordV67SettingChange(env, user, group, key, action, oldValue, newValue) {
+  v67SettingsHistoryCache={text:"",buttons:null,expiresAt:0};
+  v77CalendarCache={html:"",expiresAt:0};
+  v67StockForecastCache={rows:null,expiresAt:0};
+  await ensureV67Schema(env);
+  const now = Math.floor(Date.now() / 1000);
+  await env.DB.prepare(`INSERT INTO admin_setting_history
+    (setting_group,setting_key,action,old_json,new_json,actor_telegram_id,actor_name,created_at)
+    VALUES (?,?,?,?,?,?,?,?)`)
+    .bind(String(group), String(key), String(action), JSON.stringify(oldValue || {}), JSON.stringify(newValue || {}), String(user?.id || "system"), telegramDisplayName(user || { id: "system", first_name: "Система" }), now).run();
+}
+
+function v67AutomationAccess(access) {
+  return Boolean(access?.owner || access?.permissions?.massBroadcasts || access?.permissions?.grantRewards || access?.permissions?.manageSeasons);
+}
+
+async function showV67AutomationDashboard(chatId, user, env) {
+  const access = await getTeamAccess(user, env);
+  if (!access.authorized || !v67AutomationAccess(access)) return sendTelegramMessage(env, chatId, "Недостаточно прав для управления автоматизациями.");
+  await ensureV67Schema(env);
+  const rows = (await env.DB.prepare(`SELECT c.*,
+    (SELECT COUNT(*) FROM automation_chain_executions e WHERE e.chain_key=c.chain_key AND e.created_at>=?) AS executions_7d,
+    (SELECT MAX(created_at) FROM automation_chain_executions e WHERE e.chain_key=c.chain_key) AS last_execution_at
+    FROM automation_chains c ORDER BY c.chain_key`).bind(Math.floor(Date.now()/1000)-7*V67_DAY).all()).results || [];
+  const lines = rows.map((row) => `${Number(row.enabled) ? "🟢" : "⚫"}${Number(row.show_as_task) ? " 📋" : ""} <b>${escapeHtml(row.title)}</b>\n  За 7 дней: <b>${Number(row.executions_7d || 0)}</b>${row.last_execution_at ? ` · последний запуск ${escapeHtml(formatUtcDate(row.last_execution_at))}` : ""}`);
+  const buttons = rows.map((row) => [{ text: `${Number(row.enabled) ? "🟢" : "⚫"}${Number(row.show_as_task) ? " 📋" : ""} ${String(row.title).slice(0, 30)}`, callback_data: `v67_auto:${row.chain_key}` }]);
+  buttons.push([{ text: "➕ Новая цепочка", callback_data: "v67_auto_new" }]);
+  buttons.push([{ text: "🔄 Обновить", callback_data: "v67_automations" }, { text: "⬅️ Админ-панель", callback_data: "adm_home" }]);
+  await sendTelegramMessage(env, chatId, `<b>🤖 Автоматические цепочки</b>\n\n${lines.join("\n\n") || "Цепочки не настроены."}\n\nПо умолчанию новые сценарии выключены. Включайте их после проверки текста и наград.`, { inline_keyboard: buttons });
+}
+
+async function showV67AutomationDetails(chatId, user, key, env) {
+  const access = await getTeamAccess(user, env);
+  if (!access.authorized || !v67AutomationAccess(access)) return;
+  await ensureV67Schema(env);
+  const row = await env.DB.prepare(`SELECT * FROM automation_chains WHERE chain_key=? LIMIT 1`).bind(String(key)).first();
+  if (!row) return sendTelegramMessage(env, chatId, "Цепочка не найдена.");
+  const action = safeJson(row.action_json, {});
+  const triggerText = v67AutomationTriggerLabel(row.trigger_type, row.trigger_value);
+  const actionText = row.action_type === "message" ? `сообщение: ${String(action.text || "").replace(/<[^>]+>/g, "").slice(0, 180)}` : `награда: ${safeRewardDescription(action)}`;
+  const recent = (await env.DB.prepare(`SELECT telegram_id,status,created_at FROM automation_chain_executions WHERE chain_key=? ORDER BY created_at DESC LIMIT 5`).bind(row.chain_key).all()).results || [];
+  const taskSupported = row.action_type === "reward" && v71TaskTriggerSupported(row.trigger_type);
+  const taskText = Number(row.show_as_task)
+    ? `да · ${v71TaskModeLabel(row.task_mode)}`
+    : "нет";
+  const keyboard = [[{ text: Number(row.enabled) ? "⏸ Выключить" : "▶️ Включить", callback_data: `v67_auto_toggle:${row.chain_key}` }]];
+  keyboard.push([{ text: "✏️ Редактировать", callback_data: `v74_auto_edit:${row.chain_key}` }]);
+  if (taskSupported) keyboard.push([{ text: Number(row.show_as_task) ? "🙈 Убрать из заданий" : "📋 Показать в заданиях", callback_data: `v71_task_toggle:${row.chain_key}` }]);
+  keyboard.push([{ text: "⬅️ Автоматизации", callback_data: "v67_automations" }]);
+  await sendTelegramMessage(env, chatId,
+    `<b>🤖 ${escapeHtml(row.title)}</b>\n\nСтатус: <b>${Number(row.enabled) ? "включена" : "выключена"}</b>\nУсловие: <b>${escapeHtml(triggerText)}</b>\nДействие: <b>${escapeHtml(actionText)}</b>\nВ списке заданий: <b>${escapeHtml(taskText)}</b>\n\n${escapeHtml(row.task_description || row.description)}\n\n<b>Последние выполнения</b>\n${recent.map((item) => `• <code>${escapeHtml(item.telegram_id)}</code> · ${escapeHtml(item.status)} · ${escapeHtml(formatUtcDate(item.created_at))}`).join("\n") || "Выполнений пока нет."}`,
+    { inline_keyboard: keyboard }
+  );
+}
+
+async function toggleV67Automation(query, key, env) {
+  const chatId = query.message?.chat?.id;
+  const access = await getTeamAccess(query.from, env);
+  if (!access.authorized || !v67AutomationAccess(access)) { await answerCallback(env, query.id, "Недостаточно прав.", true); return; }
+  await ensureV67Schema(env);
+  const old = await env.DB.prepare(`SELECT * FROM automation_chains WHERE chain_key=? LIMIT 1`).bind(String(key)).first();
+  if (!old) { await answerCallback(env, query.id, "Цепочка не найдена.", true); return; }
+  const canControl = old.action_type === "reward"
+    ? Boolean(access.owner || access.permissions?.grantRewards)
+    : Boolean(access.owner || access.permissions?.massBroadcasts || access.permissions?.manageSeasons);
+  if (!canControl) { await answerCallback(env, query.id, old.action_type === "reward" ? "Нет права включать автоматическую выдачу наград." : "Нет права включать автоматические сообщения.", true); return; }
+  const enabled = Number(old.enabled) ? 0 : 1;
+  if (enabled) {
+    const conflicts = v77ConflictList({ ...old, enabled: 1 }, []);
+    const critical = conflicts.find((item) => item.severity === "critical");
+    if (critical) { await answerCallback(env, query.id, `Нельзя включить: ${critical.text}`, true); return; }
+  }
+  const now = Math.floor(Date.now()/1000);
+  const eventStart = enabled && Number(old.show_as_task) && String(old.task_mode || "one_time") === "event" ? now : Number(old.task_starts_at || 0);
+  await env.DB.prepare(`UPDATE automation_chains SET enabled=?,task_starts_at=?,updated_at=?,updated_by=? WHERE chain_key=?`).bind(enabled,eventStart,now,String(query.from.id),String(key)).run();
+  await recordV67SettingChange(env, query.from, "automation", String(key), enabled ? "enable" : "disable", { enabled: Number(old.enabled) }, { enabled });
+  await logStaffAction(env, query.from, access, "automation_toggle", null, "automation", Number(old.enabled), enabled, { chainKey: key });
+  await answerCallback(env, query.id, enabled ? "Цепочка включена." : "Цепочка выключена.");
+  await showV67AutomationDetails(chatId, query.from, key, env);
+}
+
+
+function v67AutomationTriggerLabel(triggerType, triggerValue) {
+  if (triggerType === "new_player_delay") return `через ${triggerValue >= V67_DAY ? `${Math.round(triggerValue / V67_DAY)} дн.` : triggerValue >= 3600 ? `${Math.round(triggerValue / 3600)} ч.` : `${Math.round(triggerValue / 60)} мин.`} после регистрации`;
+  if (triggerType === "inactive_days") return `нет активности ${Number(triggerValue)} дн.`;
+  if (triggerType === "accepted_runs") return `${Number(triggerValue)} зачтённых забегов`;
+  if (triggerType === "total_score") return `набрать суммарно ${Number(triggerValue).toLocaleString("ru-RU")} очков`;
+  if (triggerType === "opened_cases") return `открыть ${Number(triggerValue)} кейсов`;
+  if (triggerType === "best_score") return `достичь рекорда ${Number(triggerValue).toLocaleString("ru-RU")}`;
+  if (triggerType === "promo_activations") return `активировать ${Number(triggerValue)} промокодов`;
+  if (triggerType === "level_reached") return `достичь ${Number(triggerValue)} уровня`;
+  if (triggerType === "season_ending") return `за ${Math.round(Number(triggerValue) / 3600)} ч. до конца сезона`;
+  if (triggerType === "shop_purchases") return `совершить ${Number(triggerValue)} ${v76RuPlural(triggerValue, "покупку", "покупки", "покупок")} в магазине`;
+  if (triggerType === "skin_purchases") return `купить ${Number(triggerValue)} ${v76RuPlural(triggerValue, "образ", "образа", "образов")}`;
+  if (triggerType === "physical_purchases") return `купить ${Number(triggerValue)} ${v76RuPlural(triggerValue, "награду", "награды", "наград")} в магазине`;
+  if (triggerType === "case_purchases") return `купить ${Number(triggerValue)} ${v76RuPlural(triggerValue, "кейс", "кейса", "кейсов")}`;
+  return String(triggerType || "не выбрано");
+}
+
+async function startV67AutomationCreate(query, env) {
+  const chatId = query.message?.chat?.id;
+  const access = await getTeamAccess(query.from, env);
+  if (!access.authorized || !v67AutomationAccess(access)) {
+    await answerCallback(env, query.id, "Недостаточно прав.", true);
+    return;
+  }
+  await setStaffWorkflow(query.from.id, chatId, "automation_create", "title", {}, env);
+  await answerCallback(env, query.id, "Введите название цепочки.");
+  await sendTelegramMessage(env, chatId, `<b>🤖 Новая автоматическая цепочка</b>\n\nОтправьте понятное название, например: <code>Подарок после 25 забегов</code>.\n\nСозданная цепочка будет выключена до ручного включения.`);
+}
+
+async function handleV67AutomationCreateMessage(message, workflow, env) {
+  const chatId = message.chat.id;
+  const text = String(message.text || "").trim();
+  const data = workflow.data || {};
+  const access = await getTeamAccess(message.from, env);
+  if (!access.authorized || !v67AutomationAccess(access)) {
+    await clearStaffWorkflow(message.from.id, env);
+    await sendTelegramMessage(env, chatId, "Доступ к конструктору автоматизаций больше не активен.");
+    return true;
+  }
+  if (workflow.step === "title") {
+    if (text.length < 3 || text.length > 80) {
+      await sendTelegramMessage(env, chatId, "Название должно содержать от 3 до 80 символов.");
+      return true;
+    }
+    await setStaffWorkflow(message.from.id, chatId, "automation_create", "trigger", { title: text }, env);
+    await sendTelegramMessage(env, chatId, `<b>1/4 · Когда запускать?</b>`, { inline_keyboard: [
+      [{ text: "🏃 После числа забегов", callback_data: "v67_auto_new_trigger:accepted_runs" }, { text: "⭐ По сумме очков", callback_data: "v67_auto_new_trigger:total_score" }],
+      [{ text: "🎁 После открытия кейсов", callback_data: "v67_auto_new_trigger:opened_cases" }, { text: "🏆 По рекорду", callback_data: "v67_auto_new_trigger:best_score" }],
+      [{ text: "🛍 После любой покупки", callback_data: "v67_auto_new_trigger:shop_purchases" }, { text: "👗 После покупки образа", callback_data: "v67_auto_new_trigger:skin_purchases" }],
+      [{ text: "🎟 После покупки награды", callback_data: "v67_auto_new_trigger:physical_purchases" }, { text: "📦 После покупки кейса", callback_data: "v67_auto_new_trigger:case_purchases" }],
+      [{ text: "🎟 По промокодам", callback_data: "v67_auto_new_trigger:promo_activations" }, { text: "📈 По уровню", callback_data: "v67_auto_new_trigger:level_reached" }],
+      [{ text: "👋 После регистрации", callback_data: "v67_auto_new_trigger:new_player_delay" }, { text: "💤 После неактивности", callback_data: "v67_auto_new_trigger:inactive_days" }],
+      [{ text: "🏆 Перед концом сезона", callback_data: "v67_auto_new_trigger:season_ending" }],
+      [{ text: "❌ Отменить", callback_data: "v67_auto_new_cancel" }]
+    ] });
+    return true;
+  }
+  if (workflow.step === "trigger_value_custom" && v76IsCustomCountTrigger(data.triggerType)) {
+    const normalized = text.replace(/[ _.,]/g, "");
+    if (!/^\d{1,7}$/.test(normalized)) {
+      await sendTelegramMessage(env, chatId, "Введите целое количество, например <code>1</code>, <code>50</code> или <code>100</code>.");
+      return true;
+    }
+    const triggerValue = Number(normalized);
+    if (!Number.isSafeInteger(triggerValue) || triggerValue < 1 || triggerValue > 1000000) {
+      await sendTelegramMessage(env, chatId, "Количество должно быть от 1 до 1 000 000.");
+      return true;
+    }
+    const next = { ...data, triggerValue };
+    await setStaffWorkflow(message.from.id, chatId, "automation_create", "action_type", next, env);
+    await sendTelegramMessage(env, chatId, `<b>3/4 · Что выполнить?</b>`, { inline_keyboard: [
+      [{ text: "💬 Отправить сообщение", callback_data: "v67_auto_new_action:message" }],
+      [{ text: "🎁 Выдать награду", callback_data: "v67_auto_new_action:reward" }],
+      [{ text: "❌ Отменить", callback_data: "v67_auto_new_cancel" }]
+    ] });
+    return true;
+  }
+  if (workflow.step === "action_content" && data.actionType === "message") {
+    if (text.length < 3 || text.length > 1500) {
+      await sendTelegramMessage(env, chatId, "Сообщение должно содержать от 3 до 1500 символов.");
+      return true;
+    }
+    const next = { ...data, action: { text: escapeHtml(text) } };
+    await setStaffWorkflow(message.from.id, chatId, "automation_create", "confirm", next, env);
+    await showV67AutomationDraftPreview(chatId, message.from, next, env);
+    return true;
+  }
+  await sendTelegramMessage(env, chatId, "Продолжите создание кнопками в предыдущем сообщении или отправьте <code>/cancel</code>.");
+  return true;
+}
+
+async function selectV67AutomationTrigger(query, triggerType, env) {
+  const chatId = query.message?.chat?.id;
+  const workflow = await getStaffWorkflow(query.from.id, env);
+  if (!workflow || workflow.flow_type !== "automation_create" || workflow.step !== "trigger") {
+    await answerCallback(env, query.id, "Мастер создания уже завершён или устарел.", true);
+    return;
+  }
+  const allowed = new Set(["new_player_delay", "inactive_days", "accepted_runs", "total_score", "opened_cases", "best_score", "promo_activations", "level_reached", "season_ending", ...V76_PURCHASE_TRIGGER_TYPES]);
+  if (!allowed.has(triggerType)) return answerCallback(env, query.id, "Неизвестное условие.", true);
+  const options = v76AutomationTriggerOptions(triggerType);
+  await setStaffWorkflow(query.from.id, chatId, "automation_create", "trigger_value", { ...workflow.data, triggerType }, env);
+  const rows = [];
+  for (let i = 0; i < options.length; i += 2) rows.push(options.slice(i,i+2).map(([label,value]) => ({ text: label, callback_data: `v67_auto_new_value:${value}` })));
+  if (v76IsCustomCountTrigger(triggerType)) rows.push([{ text: "✍️ Вписать своё количество", callback_data: "v67_auto_new_value_custom" }]);
+  rows.push([{ text: "❌ Отменить", callback_data: "v67_auto_new_cancel" }]);
+  await answerCallback(env, query.id, "Выберите значение.");
+  await sendTelegramMessage(env, chatId, `<b>2/4 · Уточните условие</b>`, { inline_keyboard: rows });
+}
+
+async function startV67AutomationCustomTriggerValue(query, env) {
+  const chatId = query.message?.chat?.id;
+  const workflow = await getStaffWorkflow(query.from.id, env);
+  if (!workflow || workflow.flow_type !== "automation_create" || workflow.step !== "trigger_value" || !v76IsCustomCountTrigger(workflow.data?.triggerType)) {
+    await answerCallback(env, query.id, "Мастер создания уже завершён или устарел.", true);
+    return;
+  }
+  await setStaffWorkflow(query.from.id, chatId, "automation_create", "trigger_value_custom", workflow.data, env);
+  await answerCallback(env, query.id, "Введите количество.");
+  await sendTelegramMessage(env, chatId,
+    `<b>Своё количество</b>\n\nУсловие: <b>${escapeHtml(v67AutomationTriggerLabel(workflow.data.triggerType, 1))}</b>\n\nВведите целое число от <b>1</b> до <b>1 000 000</b>. Например: <code>1</code>, <code>50</code> или <code>100</code>.`
+  );
+}
+
+async function selectV67AutomationTriggerValue(query, value, env) {
+  const chatId = query.message?.chat?.id;
+  const workflow = await getStaffWorkflow(query.from.id, env);
+  if (!workflow || workflow.flow_type !== "automation_create" || workflow.step !== "trigger_value") {
+    await answerCallback(env, query.id, "Мастер создания уже завершён или устарел.", true);
+    return;
+  }
+  const triggerValue = Math.max(1, Math.floor(Number(value) || 0));
+  const next = { ...workflow.data, triggerValue };
+  await setStaffWorkflow(query.from.id, chatId, "automation_create", "action_type", next, env);
+  await answerCallback(env, query.id, "Теперь выберите действие.");
+  await sendTelegramMessage(env, chatId, `<b>3/4 · Что выполнить?</b>`, { inline_keyboard: [
+    [{ text: "💬 Отправить сообщение", callback_data: "v67_auto_new_action:message" }],
+    [{ text: "🎁 Выдать награду", callback_data: "v67_auto_new_action:reward" }],
+    [{ text: "❌ Отменить", callback_data: "v67_auto_new_cancel" }]
+  ] });
+}
+
+async function selectV67AutomationAction(query, actionType, env) {
+  const chatId = query.message?.chat?.id;
+  const workflow = await getStaffWorkflow(query.from.id, env);
+  if (!workflow || workflow.flow_type !== "automation_create" || workflow.step !== "action_type") {
+    await answerCallback(env, query.id, "Мастер создания уже завершён или устарел.", true);
+    return;
+  }
+  if (!new Set(["message","reward"]).has(actionType)) return answerCallback(env, query.id, "Неизвестное действие.", true);
+  const access = await getTeamAccess(query.from, env);
+  const canChoose = actionType === "reward"
+    ? Boolean(access.owner || access.permissions?.grantRewards)
+    : Boolean(access.owner || access.permissions?.massBroadcasts || access.permissions?.manageSeasons);
+  if (!canChoose) return answerCallback(env, query.id, actionType === "reward" ? "Нет права создавать автоматические выдачи наград." : "Нет права создавать автоматические сообщения.", true);
+  const next = { ...workflow.data, actionType };
+  await answerCallback(env, query.id, actionType === "message" ? "Отправьте текст." : "Выберите награду.");
+  if (actionType === "message") {
+    await setStaffWorkflow(query.from.id, chatId, "automation_create", "action_content", next, env);
+    await sendTelegramMessage(env, chatId, `<b>4/4 · Текст сообщения</b>\n\nОтправьте текст, который получит игрок. Разметка будет безопасно экранирована.`);
+    return;
+  }
+  await setStaffWorkflow(query.from.id, chatId, "automation_create", "reward", next, env);
+  await sendTelegramMessage(env, chatId, `<b>4/4 · Выберите награду</b>`, { inline_keyboard: [
+    [{ text: "📦 Обычный кейс", callback_data: "v67_auto_new_reward:case_small" }, { text: "🥈 Серебряный кейс", callback_data: "v67_auto_new_reward:case_sweet" }],
+    [{ text: "🥇 Золотой кейс", callback_data: "v67_auto_new_reward:case_gold" }, { text: "💎 Легендарный кейс", callback_data: "v67_auto_new_reward:case_legendary" }],
+    [{ text: "⭐ 500 очков", callback_data: "v67_auto_new_reward:points_500" }, { text: "⭐ 1 000 очков", callback_data: "v67_auto_new_reward:points_1000" }],
+    [{ text: "☕ 50 кофе", callback_data: "v67_auto_new_reward:coffee_50" }, { text: "🍥 100 зефира", callback_data: "v67_auto_new_reward:treats_100" }],
+    [{ text: "❌ Отменить", callback_data: "v67_auto_new_cancel" }]
+  ] });
+}
+
+function v67AutomationRewardPreset(key, title) {
+  const reason = String(title || "Автоматическая награда");
+  return ({
+    case_small: { kind:"case", id:"small", amount:1, reason },
+    case_sweet: { kind:"case", id:"sweet", amount:1, reason },
+    case_gold: { kind:"case", id:"gold", amount:1, reason },
+    case_legendary: { kind:"case", id:"legendary", amount:1, reason },
+    points_500: { kind:"points", amount:500, reason },
+    points_1000: { kind:"points", amount:1000, reason },
+    coffee_50: { kind:"coffee", amount:50, reason },
+    treats_100: { kind:"zefir", amount:100, reason }
+  })[String(key)] || null;
+}
+
+async function selectV67AutomationReward(query, rewardKey, env) {
+  const chatId = query.message?.chat?.id;
+  const workflow = await getStaffWorkflow(query.from.id, env);
+  if (!workflow || workflow.flow_type !== "automation_create" || workflow.step !== "reward") {
+    await answerCallback(env, query.id, "Мастер создания уже завершён или устарел.", true);
+    return;
+  }
+  const action = v67AutomationRewardPreset(rewardKey, workflow.data.title);
+  if (!action) return answerCallback(env, query.id, "Неизвестная награда.", true);
+  const next = { ...workflow.data, action };
+  await setStaffWorkflow(query.from.id, chatId, "automation_create", "task_visibility", next, env);
+  await answerCallback(env, query.id, "Настройте отображение задания.");
+  await sendTelegramMessage(env, chatId, `<b>📋 Показывать игрокам как задание?</b>\n\nЕсли включить, награда не будет выдана автоматически: игрок увидит прогресс и заберёт её кнопкой «Получить».`, { inline_keyboard: [
+    [{ text: "📋 Да, показывать", callback_data: "v71_task_visibility:on" }],
+    [{ text: "🤖 Нет, оставить автоматизацией", callback_data: "v71_task_visibility:off" }],
+    [{ text: "❌ Отменить", callback_data: "v67_auto_new_cancel" }]
+  ] });
+}
+
+
+async function selectV71TaskVisibility(query, visible, env) {
+  const chatId = query.message?.chat?.id;
+  const workflow = await getStaffWorkflow(query.from.id, env);
+  if (!workflow || workflow.flow_type !== "automation_create" || workflow.step !== "task_visibility") {
+    await answerCallback(env, query.id, "Мастер создания уже завершён или устарел.", true);
+    return;
+  }
+  if (!visible) {
+    const next = { ...workflow.data, showAsTask: false, taskMode: "one_time" };
+    await setStaffWorkflow(query.from.id, chatId, "automation_create", "confirm", next, env);
+    await answerCallback(env, query.id, "Оставлено как обычная автоматизация.");
+    await showV67AutomationDraftPreview(chatId, query.from, next, env);
+    return;
+  }
+  if (!v71TaskTriggerSupported(workflow.data?.triggerType)) {
+    await answerCallback(env, query.id, "Это условие нельзя показывать игроку как задание. Выберите обычную автоматизацию.", true);
+    return;
+  }
+  const next = { ...workflow.data, showAsTask: true };
+  await setStaffWorkflow(query.from.id, chatId, "automation_create", "task_mode", next, env);
+  await answerCallback(env, query.id, "Выберите тип задания.");
+  await sendTelegramMessage(env, chatId, `<b>📋 Тип задания</b>\n\nОдноразовое можно выполнить один раз. Ежедневное сбрасывается в 00:00 по Москве. Событийное считает прогресс с момента публикации до отключения.`, { inline_keyboard: [
+    [{ text: "1️⃣ Одноразовое", callback_data: "v71_task_mode:one_time" }],
+    [{ text: "📅 Ежедневное", callback_data: "v71_task_mode:daily" }],
+    [{ text: "🎉 Событийное", callback_data: "v71_task_mode:event" }],
+    [{ text: "❌ Отменить", callback_data: "v67_auto_new_cancel" }]
+  ] });
+}
+
+async function selectV71TaskMode(query, mode, env) {
+  const chatId = query.message?.chat?.id;
+  const workflow = await getStaffWorkflow(query.from.id, env);
+  if (!workflow || workflow.flow_type !== "automation_create" || workflow.step !== "task_mode") {
+    await answerCallback(env, query.id, "Мастер создания уже завершён или устарел.", true);
+    return;
+  }
+  if (!Object.prototype.hasOwnProperty.call(V71_TASK_MODES, mode)) {
+    await answerCallback(env, query.id, "Неизвестный тип задания.", true);
+    return;
+  }
+  const repeatableTriggers = new Set(["accepted_runs", "total_score", "opened_cases", "promo_activations", ...V76_PURCHASE_TRIGGER_TYPES]);
+  if (mode !== "one_time" && !repeatableTriggers.has(String(workflow.data?.triggerType || ""))) {
+    await answerCallback(env, query.id, "Для этого условия доступно только одноразовое задание.", true);
+    return;
+  }
+  const now = Math.floor(Date.now()/1000);
+  const next = { ...workflow.data, showAsTask: true, taskMode: mode, taskStartsAt: mode === "event" ? now : 0, taskDescription: workflow.data.title };
+  await setStaffWorkflow(query.from.id, chatId, "automation_create", "confirm", next, env);
+  await answerCallback(env, query.id, "Проверьте задание.");
+  await showV67AutomationDraftPreview(chatId, query.from, next, env);
+}
+
+async function toggleV71TaskVisibility(query, key, env) {
+  const chatId = query.message?.chat?.id;
+  const access = await getTeamAccess(query.from, env);
+  if (!access.authorized || !v67AutomationAccess(access)) {
+    await answerCallback(env, query.id, "Недостаточно прав.", true);
+    return;
+  }
+  await ensureV67Schema(env);
+  const row = await env.DB.prepare(`SELECT * FROM automation_chains WHERE chain_key=? LIMIT 1`).bind(String(key)).first();
+  if (!row) {
+    await answerCallback(env, query.id, "Цепочка не найдена.", true);
+    return;
+  }
+  if (row.action_type !== "reward" || !v71TaskTriggerSupported(row.trigger_type)) {
+    await answerCallback(env, query.id, "Эту цепочку нельзя показать как задание.", true);
+    return;
+  }
+  if (!(access.owner || access.permissions?.grantRewards)) {
+    await answerCallback(env, query.id, "Нет права управлять заданиями с наградами.", true);
+    return;
+  }
+  const visible = Number(row.show_as_task) ? 0 : 1;
+  const now = Math.floor(Date.now()/1000);
+  const startsAt = visible && String(row.task_mode || "one_time") === "event" ? now : Number(row.task_starts_at || 0);
+  await env.DB.prepare(`UPDATE automation_chains SET show_as_task=?,task_starts_at=?,updated_at=?,updated_by=? WHERE chain_key=?`).bind(visible,startsAt,now,String(query.from.id),String(key)).run();
+  await recordV67SettingChange(env, query.from, "automation", String(key), visible ? "show_as_task" : "hide_as_task", { showAsTask:Boolean(row.show_as_task) }, { showAsTask:Boolean(visible) });
+  await answerCallback(env, query.id, visible ? "Задание опубликовано в списке игроков." : "Задание скрыто от игроков.");
+  await showV67AutomationDetails(chatId, query.from, key, env);
+}
+
+async function showV67AutomationDraftPreview(chatId, user, data, env) {
+  const actionText = data.actionType === "message"
+    ? `сообщение: ${String(data.action?.text || "").replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&amp;/g,"&").slice(0,500)}`
+    : `награда: ${safeRewardDescription(data.action || {})}`;
+  const taskLine = data.showAsTask ? `\nВ списке заданий: <b>да · ${escapeHtml(v71TaskModeLabel(data.taskMode))}</b>` : "\nВ списке заданий: <b>нет</b>";
+  await sendTelegramMessage(env, chatId, `<b>✅ Проверка автоматической цепочки</b>\n\nНазвание: <b>${escapeHtml(data.title)}</b>\nУсловие: <b>${escapeHtml(v67AutomationTriggerLabel(data.triggerType, data.triggerValue))}</b>\nДействие: <b>${escapeHtml(actionText)}</b>${taskLine}\n\nПосле создания цепочка останется выключенной.`, { inline_keyboard: [
+    [{ text: "✅ Создать выключенной", callback_data: "v67_auto_new_save" }],
+    [{ text: "❌ Отменить", callback_data: "v67_auto_new_cancel" }]
+  ] });
+}
+
+async function saveV67AutomationDraft(query, env) {
+  const chatId = query.message?.chat?.id;
+  const workflow = await getStaffWorkflow(query.from.id, env);
+  const access = await getTeamAccess(query.from, env);
+  if (!workflow || workflow.flow_type !== "automation_create" || workflow.step !== "confirm" || !access.authorized || !v67AutomationAccess(access)) {
+    await answerCallback(env, query.id, "Черновик не найден или доступ истёк.", true);
+    return;
+  }
+  const data = workflow.data || {};
+  const canSave = data.actionType === "reward"
+    ? Boolean(access.owner || access.permissions?.grantRewards)
+    : Boolean(access.owner || access.permissions?.massBroadcasts || access.permissions?.manageSeasons);
+  if (!canSave) { await answerCallback(env, query.id, "Недостаточно прав для выбранного действия.", true); return; }
+  if (!data.title || !data.triggerType || !data.triggerValue || !data.actionType || !data.action) {
+    await answerCallback(env, query.id, "Черновик заполнен не полностью.", true);
+    return;
+  }
+  await ensureV67Schema(env);
+  const now = Math.floor(Date.now()/1000);
+  const key = `custom_${now}_${Math.random().toString(36).slice(2,7)}`;
+  const cooldown = data.triggerType === "inactive_days" ? 7*V67_DAY : 0;
+  const description = `Создано в конструкторе: ${v67AutomationTriggerLabel(data.triggerType, data.triggerValue)}.`;
+  const showAsTask = data.actionType === "reward" && data.showAsTask && v71TaskTriggerSupported(data.triggerType) ? 1 : 0;
+  const taskMode = showAsTask ? String(data.taskMode || "one_time") : "one_time";
+  const taskStartsAt = showAsTask && taskMode === "event" ? Number(data.taskStartsAt || now) : 0;
+  await env.DB.prepare(`INSERT INTO automation_chains
+    (chain_key,title,description,enabled,trigger_type,trigger_value,action_type,action_json,show_as_task,task_mode,task_description,task_starts_at,task_ends_at,task_sort,cooldown_seconds,last_run_at,updated_at,updated_by)
+    VALUES(?,?,?,0,?,?,?,?,?,?,?,?,?,100,?,0,?,?)`)
+    .bind(key,String(data.title).slice(0,80),description,data.triggerType,Number(data.triggerValue),data.actionType,JSON.stringify(data.action),showAsTask,taskMode,String(data.taskDescription || data.title).slice(0,300),taskStartsAt,0,cooldown,now,String(query.from.id)).run();
+  await recordV67SettingChange(env, query.from, "automation", key, "create", {}, { title:data.title, triggerType:data.triggerType, triggerValue:data.triggerValue, actionType:data.actionType, action:data.action, enabled:false, showAsTask:Boolean(showAsTask), taskMode });
+  await logStaffAction(env, query.from, access, "automation_create", null, "automation", null, null, { chainKey:key, title:data.title });
+  await clearStaffWorkflow(query.from.id, env);
+  await answerCallback(env, query.id, "Цепочка создана.");
+  await showV67AutomationDetails(chatId, query.from, key, env);
+}
+
+async function cancelV67AutomationDraft(query, env) {
+  await clearStaffWorkflow(query.from.id, env);
+  await answerCallback(env, query.id, "Создание отменено.");
+  await showV67AutomationDashboard(query.message?.chat?.id, query.from, env);
+}
+
+function v67AutomationExecutionKey(chain, telegramId, context = {}) {
+  if (chain.trigger_type === "inactive_days") {
+    const bucket = Math.floor(Math.floor(Date.now()/1000) / Math.max(V67_DAY, Number(chain.cooldown_seconds || 7*V67_DAY)));
+    return `${chain.chain_key}:${telegramId}:inactive:${bucket}`;
+  }
+  if (chain.trigger_type === "season_ending") return `${chain.chain_key}:${telegramId}:season:${context.seasonId || "unknown"}`;
+  return `${chain.chain_key}:${telegramId}:once`;
+}
+
+async function executeV67AutomationTarget(env, chain, target, context = {}) {
+  const now = Math.floor(Date.now()/1000);
+  const executionKey = v67AutomationExecutionKey(chain, target.telegram_id, context);
+  const claim = await env.DB.prepare(`INSERT OR IGNORE INTO automation_chain_executions
+    (execution_key,chain_key,telegram_id,status,details_json,created_at,updated_at)
+    VALUES (?,?,?,'pending','{}',?,?)`).bind(executionKey,chain.chain_key,String(target.telegram_id),now,now).run();
+  if (Number(claim.meta?.changes || 0) < 1) return false;
+  try {
+    const action = safeJson(chain.action_json, {});
+    let details = {};
+    if (chain.action_type === "message") {
+      if (!target.chat_id) throw new Error("У игрока нет активного чата с ботом");
+      const notification = await v77DeliverPlayerNotification(env, String(target.telegram_id), target.chat_id, "automation", String(action.text || ""), { inline_keyboard: [[{ text: "🎮 Открыть игру", web_app: { url: configuredGameUrl(env) } }]] });
+      details = { delivered: notification.status === "sent", queued: notification.status === "queued", notification };
+    } else if (chain.action_type === "reward") {
+      let queueId = await enqueueRewardDelivery(env, String(target.telegram_id), "automation", executionKey, action, String(action.reason || chain.title), "");
+      if (!queueId) {
+        const existingQueue = await env.DB.prepare(`SELECT id FROM reward_delivery_queue WHERE source_type='automation' AND source_id=? AND telegram_id=? AND reward_kind=? AND reward_id=? LIMIT 1`).bind(executionKey,String(target.telegram_id),String(action.kind||""),String(action.id||"")).first();
+        queueId = Number(existingQueue?.id || 0);
+      }
+      await processRewardDeliveryQueue(env, 10);
+      const delivered = queueId ? await env.DB.prepare(`SELECT status,last_error FROM reward_delivery_queue WHERE id=? LIMIT 1`).bind(queueId).first() : null;
+      details = { queueId, reward: action, deliveryStatus: delivered?.status || "missing" };
+      if (delivered?.status !== "delivered") throw new Error(delivered?.last_error || "Награда поставлена в очередь, но ещё не доставлена");
+    } else throw new Error("Неизвестное действие цепочки");
+    await env.DB.prepare(`UPDATE automation_chain_executions SET status='completed',details_json=?,updated_at=? WHERE execution_key=?`).bind(JSON.stringify(details),now,executionKey).run();
+    return true;
+  } catch (error) {
+    await env.DB.prepare(`UPDATE automation_chain_executions SET status='failed',details_json=?,updated_at=? WHERE execution_key=?`).bind(JSON.stringify({ error: String(error?.message || error).slice(0,500) }),now,executionKey).run();
+    return false;
+  }
+}
+
+async function processV67AutomationChains(env) {
+  await ensureV67Schema(env);
+  const now = Math.floor(Date.now()/1000);
+  const chains = (await env.DB.prepare(`SELECT * FROM automation_chains WHERE enabled=1 AND COALESCE(show_as_task,0)=0 ORDER BY chain_key`).all()).results || [];
+  let deliveryBudget = 5;
+  for (const chain of chains) {
+    if (deliveryBudget <= 0) break;
+    let targets = [];
+    let context = {};
+    if (chain.trigger_type === "new_player_delay") {
+      targets = (await env.DB.prepare(`SELECT p.telegram_id,b.chat_id,p.created_at FROM admin_profile_state p JOIN bot_subscribers b ON b.telegram_id=p.telegram_id AND b.active=1 WHERE p.created_at<=? AND p.created_at>=? AND NOT EXISTS(SELECT 1 FROM automation_chain_executions e WHERE e.chain_key=? AND e.telegram_id=p.telegram_id) ORDER BY p.created_at ASC LIMIT 40`).bind(now-Number(chain.trigger_value||0),now-45*V67_DAY,chain.chain_key).all()).results || [];
+    } else if (chain.trigger_type === "inactive_days") {
+      const bucket=Math.floor(now/Math.max(V67_DAY,Number(chain.cooldown_seconds||7*V67_DAY)));targets = (await env.DB.prepare(`SELECT p.telegram_id,b.chat_id,p.updated_at FROM admin_profile_state p JOIN bot_subscribers b ON b.telegram_id=p.telegram_id AND b.active=1 WHERE p.updated_at<=? AND NOT EXISTS(SELECT 1 FROM automation_chain_executions e WHERE e.execution_key= (? || ':' || p.telegram_id || ':inactive:' || ?)) ORDER BY p.updated_at ASC LIMIT 40`).bind(now-Number(chain.trigger_value||3)*V67_DAY,chain.chain_key,bucket).all()).results || [];
+    } else if (chain.trigger_type === "accepted_runs") {
+      targets = (await env.DB.prepare(`SELECT r.telegram_id,b.chat_id,COUNT(*) AS run_count FROM leaderboard_runs r LEFT JOIN bot_subscribers b ON b.telegram_id=r.telegram_id AND b.active=1 WHERE r.accepted=1 AND NOT EXISTS(SELECT 1 FROM automation_chain_executions e WHERE e.chain_key=? AND e.telegram_id=r.telegram_id) GROUP BY r.telegram_id HAVING COUNT(*)>=? ORDER BY COUNT(*) ASC LIMIT 40`).bind(chain.chain_key,Number(chain.trigger_value||10)).all()).results || [];
+    } else if (chain.trigger_type === "total_score") {
+      targets = (await env.DB.prepare(`SELECT r.telegram_id,b.chat_id,SUM(r.score) AS total_score FROM leaderboard_runs r LEFT JOIN bot_subscribers b ON b.telegram_id=r.telegram_id AND b.active=1 WHERE r.accepted=1 AND NOT EXISTS(SELECT 1 FROM automation_chain_executions e WHERE e.chain_key=? AND e.telegram_id=r.telegram_id) GROUP BY r.telegram_id HAVING SUM(r.score)>=? ORDER BY SUM(r.score) ASC LIMIT 40`).bind(chain.chain_key,Number(chain.trigger_value||10000)).all()).results || [];
+    } else if (chain.trigger_type === "opened_cases") {
+      targets = (await env.DB.prepare(`SELECT p.telegram_id,b.chat_id,((SELECT COUNT(*) FROM level_case_openings l WHERE l.telegram_id=p.telegram_id)+(SELECT COUNT(*) FROM granted_cases g WHERE g.telegram_id=p.telegram_id AND g.status='opened')) AS opened_count FROM admin_profile_state p LEFT JOIN bot_subscribers b ON b.telegram_id=p.telegram_id AND b.active=1 WHERE NOT EXISTS(SELECT 1 FROM automation_chain_executions e WHERE e.chain_key=? AND e.telegram_id=p.telegram_id) AND ((SELECT COUNT(*) FROM level_case_openings l WHERE l.telegram_id=p.telegram_id)+(SELECT COUNT(*) FROM granted_cases g WHERE g.telegram_id=p.telegram_id AND g.status='opened'))>=? ORDER BY opened_count ASC LIMIT 40`).bind(chain.chain_key,Number(chain.trigger_value||1)).all()).results || [];
+    } else if (chain.trigger_type === "best_score") {
+      targets = (await env.DB.prepare(`SELECT p.telegram_id,b.chat_id,p.best_score FROM admin_profile_state p LEFT JOIN bot_subscribers b ON b.telegram_id=p.telegram_id AND b.active=1 WHERE p.best_score>=? AND NOT EXISTS(SELECT 1 FROM automation_chain_executions e WHERE e.chain_key=? AND e.telegram_id=p.telegram_id) ORDER BY p.best_score ASC LIMIT 40`).bind(Number(chain.trigger_value||1000),chain.chain_key).all()).results || [];
+    } else if (chain.trigger_type === "promo_activations") {
+      await ensureV57OperationsSchema(env);
+      targets = (await env.DB.prepare(`SELECT p.telegram_id,b.chat_id,COUNT(*) AS promo_count FROM promo_redemptions p LEFT JOIN bot_subscribers b ON b.telegram_id=p.telegram_id AND b.active=1 WHERE p.status<>'failed' AND NOT EXISTS(SELECT 1 FROM automation_chain_executions e WHERE e.chain_key=? AND e.telegram_id=p.telegram_id) GROUP BY p.telegram_id HAVING COUNT(*)>=? ORDER BY COUNT(*) ASC LIMIT 40`).bind(chain.chain_key,Number(chain.trigger_value||1)).all()).results || [];
+    } else if (chain.trigger_type === "level_reached") {
+      const candidates=(await env.DB.prepare(`SELECT p.telegram_id,p.profile_xp,b.chat_id FROM admin_profile_state p LEFT JOIN bot_subscribers b ON b.telegram_id=p.telegram_id AND b.active=1 WHERE NOT EXISTS(SELECT 1 FROM automation_chain_executions e WHERE e.chain_key=? AND e.telegram_id=p.telegram_id) ORDER BY p.updated_at DESC LIMIT 200`).bind(chain.chain_key).all()).results||[];
+      targets=candidates.filter((item)=>caseProfileLevel(Number(item.profile_xp||0))>=Number(chain.trigger_value||1)).slice(0,40);
+    } else if (v76IsPurchaseTrigger(chain.trigger_type)) {
+      targets = (await env.DB.prepare(`SELECT s.telegram_id,b.chat_id,COUNT(*) AS purchase_count FROM shop_stock_consumptions s LEFT JOIN bot_subscribers b ON b.telegram_id=s.telegram_id AND b.active=1 WHERE ${v76PurchaseFilterSql(chain.trigger_type,"s")} AND NOT EXISTS(SELECT 1 FROM automation_chain_executions e WHERE e.chain_key=? AND e.telegram_id=s.telegram_id) GROUP BY s.telegram_id HAVING COUNT(*)>=? ORDER BY COUNT(*) ASC LIMIT 40`).bind(chain.chain_key,Number(chain.trigger_value||1)).all()).results || [];
+    } else if (chain.trigger_type === "season_ending") {
+      const season = await env.DB.prepare(`SELECT id,title,ends_at FROM leaderboard_seasons WHERE status='active' AND ends_at>? AND ends_at<=? ORDER BY ends_at ASC LIMIT 1`).bind(now,now+Number(chain.trigger_value||V67_DAY)).first();
+      if (season) {
+        context = { seasonId: season.id, seasonTitle: season.title };
+        targets = (await env.DB.prepare(`SELECT b.telegram_id,b.chat_id FROM bot_subscribers b WHERE b.active=1 AND NOT EXISTS(SELECT 1 FROM automation_chain_executions e WHERE e.execution_key=(? || ':' || b.telegram_id || ':season:' || ?)) ORDER BY b.id ASC LIMIT 80`).bind(chain.chain_key,String(season.id)).all()).results || [];
+      }
+    }
+    let completed = 0;
+    for (const target of targets) {
+      if (deliveryBudget <= 0) break;
+      if (await executeV67AutomationTarget(env, chain, target, context)) { completed += 1; deliveryBudget -= 1; }
+    }
+    await env.DB.prepare(`UPDATE automation_chains SET last_run_at=? WHERE chain_key=?`).bind(now,chain.chain_key).run();
+  }
+}
+
+async function v67RetentionCohort(env, days) {
+  const now = Math.floor(Date.now()/1000);
+  const start = now-(days+1)*V67_DAY;
+  const end = now-days*V67_DAY;
+  const row = await env.DB.prepare(`SELECT COUNT(*) AS cohort,
+    SUM(CASE WHEN EXISTS(SELECT 1 FROM leaderboard_runs r WHERE r.telegram_id=p.telegram_id AND r.accepted=1 AND r.created_at>=p.created_at+? AND r.created_at<p.created_at+?) THEN 1 ELSE 0 END) AS retained
+    FROM admin_profile_state p WHERE p.created_at>=? AND p.created_at<?`)
+    .bind(days*V67_DAY,(days+1)*V67_DAY,start,end).first();
+  return { days, cohort: Number(row?.cohort||0), retained: Number(row?.retained||0) };
+}
+
+async function showV67RetentionAnalytics(chatId, user, env) {
+  const access = await requireSecurityPermission(chatId, user, "viewEconomy", env);
+  if (!access) return;
+  await ensureV67Schema(env);
+  const now = Math.floor(Date.now()/1000);
+  const start = now-7*V67_DAY;
+  const [newRow, runRow, acceptedRow, caseRow, shopRow, returnRow, d1, d3, d7, d30] = await Promise.all([
+    env.DB.prepare(`SELECT COUNT(*) AS count FROM admin_profile_state WHERE created_at>=?`).bind(start).first(),
+    env.DB.prepare(`SELECT COUNT(DISTINCT r.telegram_id) AS count FROM leaderboard_runs r JOIN admin_profile_state p ON p.telegram_id=r.telegram_id WHERE p.created_at>=? AND r.created_at>=p.created_at`).bind(start).first(),
+    env.DB.prepare(`SELECT COUNT(DISTINCT r.telegram_id) AS count FROM leaderboard_runs r JOIN admin_profile_state p ON p.telegram_id=r.telegram_id WHERE p.created_at>=? AND r.created_at>=p.created_at AND r.accepted=1`).bind(start).first(),
+    env.DB.prepare(`SELECT COUNT(*) AS count FROM admin_profile_state p WHERE p.created_at>=? AND (EXISTS(SELECT 1 FROM level_case_openings o WHERE o.telegram_id=p.telegram_id AND o.opened_at>=p.created_at) OR EXISTS(SELECT 1 FROM granted_cases g WHERE g.telegram_id=p.telegram_id AND g.opened_at>=p.created_at))`).bind(start).first(),
+    env.DB.prepare(`SELECT COUNT(*) AS count FROM admin_profile_state p WHERE p.created_at>=? AND EXISTS(SELECT 1 FROM shop_stock_consumptions s WHERE s.telegram_id=p.telegram_id AND s.created_at>=p.created_at)`).bind(start).first(),
+    env.DB.prepare(`SELECT COUNT(*) AS count FROM admin_profile_state p WHERE p.created_at>=? AND p.created_at<=? AND EXISTS(SELECT 1 FROM leaderboard_runs r WHERE r.telegram_id=p.telegram_id AND r.accepted=1 AND r.created_at>=p.created_at+?)`).bind(start,now-V67_DAY,V67_DAY).first(),
+    v67RetentionCohort(env,1), v67RetentionCohort(env,3), v67RetentionCohort(env,7), v67RetentionCohort(env,30)
+  ]);
+  const newCount = Number(newRow?.count||0);
+  const funnel = [
+    ["Создали профиль", newCount],
+    ["Начали забег", Number(runRow?.count||0)],
+    ["Завершили зачтённый забег", Number(acceptedRow?.count||0)],
+    ["Открыли кейс", Number(caseRow?.count||0)],
+    ["Совершили покупку", Number(shopRow?.count||0)],
+    ["Вернулись на следующий день", Number(returnRow?.count||0)]
+  ];
+  const funnelText = funnel.map(([title,count],index) => `${index+1}. ${escapeHtml(title)}: <b>${count.toLocaleString("ru-RU")}</b>${newCount ? ` · ${(count/newCount*100).toFixed(1)}%` : ""}`).join("\n");
+  const cohortText = [d1,d3,d7,d30].map((item) => `D${item.days}: <b>${item.retained}/${item.cohort}</b>${item.cohort ? ` · ${(item.retained/item.cohort*100).toFixed(1)}%` : " · нет готовой когорты"}`).join("\n");
+  await sendTelegramMessage(env, chatId, `<b>📊 Удержание игроков</b>\n\n<b>Воронка новых игроков за 7 дней</b>\n${funnelText}\n\n<b>Возврат когорт</b>\n${cohortText}\n\nD1/D3/D7/D30 считаются по повторному зачтённому забегу в соответствующие сутки после регистрации.`, { inline_keyboard: [[{ text: "🔄 Обновить", callback_data: "v67_retention" }, { text: "🎯 Сегменты", callback_data: "adm_segments" }], [{ text: "⬅️ Админ-панель", callback_data: "adm_home" }]] });
+}
+
+function v67FlattenObject(value, prefix = "", output = {}) {
+  if (value == null || typeof value !== "object" || Array.isArray(value)) {
+    output[prefix || "value"] = value;
+    return output;
+  }
+  for (const [key, item] of Object.entries(value)) {
+    const next = prefix ? `${prefix}.${key}` : key;
+    if (item && typeof item === "object" && !Array.isArray(item)) v67FlattenObject(item, next, output);
+    else output[next] = item;
+  }
+  return output;
+}
+
+function v67SettingDiff(oldValue, newValue) {
+  const oldFlat = v67FlattenObject(oldValue || {});
+  const newFlat = v67FlattenObject(newValue || {});
+  const keys = Array.from(new Set([...Object.keys(oldFlat), ...Object.keys(newFlat)])).sort();
+  const lines = [];
+  for (const key of keys) {
+    const before = oldFlat[key];
+    const after = newFlat[key];
+    if (JSON.stringify(before) === JSON.stringify(after)) continue;
+    const render = (value) => value == null ? "—" : typeof value === "object" ? JSON.stringify(value) : String(value);
+    lines.push(`• <code>${escapeHtml(key)}</code>: ${escapeHtml(render(before)).slice(0,120)} → <b>${escapeHtml(render(after)).slice(0,120)}</b>`);
+    if (lines.length >= 24) break;
+  }
+  return lines.length ? lines.join("\n") : "Изменившиеся поля не определены.";
+}
+
+const V67_SETTINGS_HISTORY_CACHE_TTL_MS=45*1000;
+let v67SettingsHistoryCache={text:"",buttons:null,expiresAt:0};
+async function showV67SettingsHistory(chatId, user, env) {
+  const access = await requireSecurityPermission(chatId, user, "rollbackSettings", env);if(!access)return;
+  const nowMs=Date.now();let payload=v67SettingsHistoryCache.expiresAt>nowMs?v67SettingsHistoryCache:null;
+  if(!payload?.buttons){
+    await Promise.all([ensureV67Schema(env),ensureLiveOpsAdminSchema(env)]);
+    const [settings,liveops,audit]=await Promise.all([
+      env.DB.prepare(`SELECT id,setting_group,setting_key,action,actor_name,actor_telegram_id,created_at FROM admin_setting_history ORDER BY created_at DESC,id DESC LIMIT 25`).all(),
+      env.DB.prepare(`SELECT id,entity_type,entity_id,action,actor_name,actor_telegram_id,created_at FROM liveops_config_history ORDER BY created_at DESC,id DESC LIMIT 25`).all(),
+      env.DB.prepare(`SELECT id,action,target_telegram_id,target_type,actor_name,actor_telegram_id,created_at FROM staff_action_log WHERE action GLOB '*case*' OR action GLOB '*content*' OR action GLOB '*shop*' OR action GLOB '*stock*' OR action GLOB '*maintenance*' OR action GLOB '*limit*' OR action GLOB '*feature*' OR action GLOB '*season*' OR action GLOB '*promo*' OR action GLOB '*tester*' OR action GLOB '*permission*' OR action GLOB '*snapshot*' OR action GLOB '*publication*' OR action GLOB '*event*' OR action GLOB '*automation*' OR action GLOB '*release*' ORDER BY created_at DESC,id DESC LIMIT 50`).all()
+    ]);
+    const rows=[
+      ...(settings.results||[]).map((row)=>({source:"s",id:row.id,group:row.setting_group,key:row.setting_key,action:row.action,actor:row.actor_name||row.actor_telegram_id,at:row.created_at})),
+      ...(liveops.results||[]).map((row)=>({source:"l",id:row.id,group:row.entity_type,key:row.entity_id,action:row.action,actor:row.actor_name||row.actor_telegram_id,at:row.created_at})),
+      ...(audit.results||[]).map((row)=>({source:"a",id:row.id,group:row.target_type||"system",key:row.target_telegram_id||row.action,action:row.action,actor:row.actor_name||row.actor_telegram_id,at:row.created_at}))
+    ].sort((a,b)=>Number(b.at)-Number(a.at)).slice(0,20);
+    const lines=rows.map((row)=>`• <b>${escapeHtml(row.group)} · ${escapeHtml(row.key)}</b>\n  ${escapeHtml(row.action)} · ${escapeHtml(row.actor)} · ${escapeHtml(formatUtcDate(row.at))}`);
+    const buttons=rows.slice(0,12).map((row)=>[{text:`🧾 ${row.group}:${String(row.key).slice(0,24)}`,callback_data:`v67_hist:${row.source}:${row.id}`}]);buttons.push([{text:"⬅️ Админ-панель",callback_data:"adm_home"}]);
+    payload={text:`<b>🧾 История каждой настройки</b>\n\n${lines.join("\n\n")||"Изменений пока нет."}\n\nОткройте запись, чтобы увидеть точные поля до и после изменения.`,buttons,expiresAt:nowMs+V67_SETTINGS_HISTORY_CACHE_TTL_MS};v67SettingsHistoryCache=payload;
+  }
+  await sendTelegramMessage(env,chatId,payload.text,{inline_keyboard:payload.buttons});
+}
+
+async function showV67HistoryDetails(chatId, user, source, id, env) {
+  const access = await requireSecurityPermission(chatId, user, "rollbackSettings", env);
+  if (!access) return;
+  await ensureV67Schema(env);
+  let row;
+  let oldValue;
+  let newValue;
+  let group;
+  let key;
+  let action;
+  let actor;
+  let at;
+  if (source === "s") {
+    row = await env.DB.prepare(`SELECT * FROM admin_setting_history WHERE id=? LIMIT 1`).bind(Number(id)).first();
+    if (!row) return sendTelegramMessage(env,chatId,"Запись не найдена.");
+    oldValue=safeJson(row.old_json,{});newValue=safeJson(row.new_json,{});group=row.setting_group;key=row.setting_key;action=row.action;actor=row.actor_name||row.actor_telegram_id;at=row.created_at;
+  } else if (source === "l") {
+    row = await env.DB.prepare(`SELECT * FROM liveops_config_history WHERE id=? LIMIT 1`).bind(Number(id)).first();
+    if (!row) return sendTelegramMessage(env,chatId,"Запись не найдена.");
+    oldValue=safeJson(row.old_json,{});newValue=safeJson(row.new_json,{});group=row.entity_type;key=row.entity_id;action=row.action;actor=row.actor_name||row.actor_telegram_id;at=row.created_at;
+  } else {
+    row = await env.DB.prepare(`SELECT * FROM staff_action_log WHERE id=? LIMIT 1`).bind(Number(id)).first();
+    if (!row) return sendTelegramMessage(env,chatId,"Запись не найдена.");
+    const details=safeJson(row.details_json,{});oldValue={value:row.old_value,details:details.before||{}};newValue={value:row.new_value,details:details.after||details};group=row.target_type||"system";key=row.target_telegram_id||row.action;action=row.action;actor=row.actor_name||row.actor_telegram_id;at=row.created_at;
+  }
+  const buttons=[];
+  if (source === "l" && ["content","case"].includes(String(group))) buttons.push([{ text:"↩️ Подготовить откат",callback_data:`cfg_rollback:${id}` }]);
+  buttons.push([{text:"⬅️ История",callback_data:"v67_settings_history"}]);
+  await sendTelegramMessage(env,chatId,`<b>🧾 Изменение #${id}</b>\n\nРаздел: <b>${escapeHtml(String(group))}</b>\nНастройка: <code>${escapeHtml(String(key))}</code>\nДействие: <b>${escapeHtml(String(action))}</b>\nСотрудник: ${escapeHtml(String(actor))}\nВремя: ${escapeHtml(formatUtcDate(at))}\n\n<b>Что изменилось</b>\n${v67SettingDiff(oldValue,newValue)}`,{inline_keyboard:buttons});
+}
+
+function v67PerformanceArea(data) {
+  const value = String(data || "unknown");
+  return value
+    .replace(/:\d{1,20}(?=:|$)/g, ":#")
+    .replace(/:[A-Fa-f0-9_-]{12,}(?=:|$)/g, ":id")
+    .slice(0,80);
+}
+
+async function recordV67PerformanceSample(env, area, durationMs, success, errorText = "") {
+  try {
+    await env.DB.prepare(`INSERT INTO admin_performance_samples(area,duration_ms,success,error_text,created_at) VALUES(?,?,?,?,?)`)
+      .bind(v67PerformanceArea(area),Math.max(0,Math.round(Number(durationMs)||0)),success?1:0,String(errorText||"").slice(0,300),Math.floor(Date.now()/1000)).run();
+  } catch (error) {
+    console.warn("Performance sample write failed", String(error?.message || error));
+  }
+}
+
+function v67Percentile(values, percentile) {
+  if (!values.length) return 0;
+  const sorted=[...values].sort((a,b)=>a-b);
+  const index=Math.min(sorted.length-1,Math.max(0,Math.ceil(percentile*sorted.length)-1));
+  return sorted[index];
+}
+
+async function showV67PerformanceCenter(chatId,user,env) {
+  const access=await requireSecurityPermission(chatId,user,"viewEconomy",env);if(!access)return;
+  await ensureV67Schema(env);
+  const since=Math.floor(Date.now()/1000)-V67_DAY;
+  const rows=(await env.DB.prepare(`SELECT area,duration_ms,success,created_at FROM admin_performance_samples WHERE created_at>=? ORDER BY created_at DESC LIMIT 1000`).bind(since).all()).results||[];
+  const groups=new Map();
+  for(const row of rows){const key=String(row.area);if(!groups.has(key))groups.set(key,[]);groups.get(key).push(row);}
+  const stats=[];
+  for(const [area,items] of groups){const times=items.map(i=>Number(i.duration_ms||0));stats.push({area,count:items.length,avg:times.reduce((a,b)=>a+b,0)/Math.max(1,times.length),p95:v67Percentile(times,.95),max:Math.max(...times),errors:items.filter(i=>!Number(i.success)).length});}
+  stats.sort((a,b)=>b.p95-a.p95);
+  const all=rows.map(i=>Number(i.duration_ms||0));
+  const health=v67Percentile(all,.95)<=700?"🟢":v67Percentile(all,.95)<=1500?"🟡":"🔴";
+  const lines=stats.slice(0,15).map(item=>`• <code>${escapeHtml(item.area)}</code>\n  среднее <b>${Math.round(item.avg)} мс</b> · p95 ${item.p95} мс · максимум ${item.max} мс${item.errors?` · ошибок ${item.errors}`:""}`);
+  await sendTelegramMessage(env,chatId,`<b>⚡ Производительность бота</b>\n\n${health} За последние 24 часа: <b>${rows.length}</b> измерений\nСреднее: <b>${all.length?Math.round(all.reduce((a,b)=>a+b,0)/all.length):0} мс</b>\np95: <b>${v67Percentile(all,.95)} мс</b>\n\n<b>Самые медленные разделы</b>\n${lines.join("\n\n")||"Данных пока нет. Нажмите несколько кнопок админ-панели и обновите отчёт."}\n\nИзмеряется полный обработчик кнопки: запросы D1, расчёты и обращения к Telegram API.`,{inline_keyboard:[[{text:"🔄 Обновить",callback_data:"v67_performance"},{text:"🧹 Очистить старше 7 дней",callback_data:"v67_perf_cleanup"}],[{text:"⬅️ Админ-панель",callback_data:"adm_home"}]]});
+}
+
+const V67_RELEASE_STEPS = Object.freeze([
+  { order:1, offset:0, action:"maintenance_on", title:"Закрыть игру на технические работы" },
+  { order:2, offset:30, action:"integrity_check", title:"Проверить целостность конфигурации" },
+  { order:3, offset:60, action:"publish_ready_drafts", title:"Опубликовать готовые черновики" },
+  { order:4, offset:120, action:"maintenance_off", title:"Открыть игру" },
+  { order:5, offset:150, action:"notify_staff", title:"Отправить итог сотрудникам" }
+]);
+
+async function showV67ReleaseDashboard(chatId,user,env) {
+  const access=await getTeamAccess(user,env);
+  if(!access.authorized || !(access.owner || access.permissions?.manageSeasons || access.permissions?.manageMaintenance)) return sendTelegramMessage(env,chatId,"Недостаточно прав для планировщика релиза.");
+  await ensureV67Schema(env);
+  const rows=(await env.DB.prepare(`SELECT * FROM release_plans ORDER BY created_at DESC LIMIT 12`).all()).results||[];
+  const lines=rows.map(row=>`${row.status==="completed"?"✅":row.status==="failed"?"🔴":row.status==="paused"?"⏸":row.status==="running"?"🟠":"🕒"} <b>${escapeHtml(row.title)}</b>\n  ${escapeHtml(formatUtcDate(row.starts_at))} · ${escapeHtml(row.status)}${row.last_error?`\n  Ошибка: ${escapeHtml(String(row.last_error).slice(0,180))}`:""}`);
+  const buttons=rows.map(row=>[{text:`${row.status==="completed"?"✅":"📦"} ${String(row.title).slice(0,30)}`,callback_data:`v67_release:${row.release_id}`}]);
+  if(access.owner) buttons.push([{text:"➕ Новый релиз",callback_data:"v67_release_new"}]);
+  buttons.push([{text:"⬅️ Админ-панель",callback_data:"adm_home"}]);
+  await sendTelegramMessage(env,chatId,`<b>🚀 Планировщик релиза</b>\n\n${lines.join("\n\n")||"Запланированных релизов нет."}\n\nСтандартный сценарий сам закрывает игру, проверяет конфигурацию, публикует готовые черновики и открывает игру. При ошибке сценарий ставится на паузу.`,{inline_keyboard:buttons});
+}
+
+async function startV67ReleaseWorkflow(query,env){
+  const chatId=query.message?.chat?.id;const access=await getTeamAccess(query.from,env);
+  if(!access.authorized || !access.owner) {await answerCallback(env,query.id,"Создавать план релиза может только владелец.",true);return;}
+  await setStaffWorkflow(query.from.id,chatId,"release_plan","title",{},env);
+  await answerCallback(env,query.id,"Введите название релиза.");
+  await sendTelegramMessage(env,chatId,"<b>🚀 Новый релиз</b>\n\nОтправьте название, например: <code>Версия 5.3 — летнее событие</code>.");
+}
+
+async function handleV67ReleaseWorkflowMessage(message,workflow,env){
+  const chatId=message.chat.id;const text=String(message.text||"").trim();const payload=workflow.data || {};
+  const access=await getTeamAccess(message.from,env);
+  if(!access.authorized || !access.owner){await clearStaffWorkflow(message.from.id,env);await sendTelegramMessage(env,chatId,"Планировать релиз и прямое закрытие игры может только владелец.");return true;}
+  if(workflow.step==="title"){
+    if(text.length<3)return sendTelegramMessage(env,chatId,"Название должно содержать минимум 3 символа.");
+    await setStaffWorkflow(message.from.id,chatId,"release_plan","starts_at",{title:text.slice(0,100)},env);
+    await sendTelegramMessage(env,chatId,"Укажите дату и время запуска по Москве.\n\nФормат: <code>31.07.2026 12:00</code>");return true;
+  }
+  if(workflow.step==="starts_at"){
+    let startsAt;try{startsAt=parseMoscowDateTime(text);}catch(error){startsAt=0;}if(!startsAt){await sendTelegramMessage(env,chatId,`Не удалось распознать дату. Пример: <code>31.07.2026 12:00</code>`);return true;}
+    const now=Math.floor(Date.now()/1000);if(startsAt<now+60){await sendTelegramMessage(env,chatId,"Время релиза должно быть хотя бы на 1 минуту позже текущего.");return true;}
+    await ensureV67Schema(env);const releaseId=`rel_${now}_${Math.random().toString(36).slice(2,8)}`;
+    await env.DB.prepare(`INSERT INTO release_plans(release_id,title,starts_at,status,created_by,created_by_name,report_chat_id,current_step,last_error,created_at,updated_at,completed_at) VALUES(?,?,?,'scheduled',?,?,?,0,'',?,?,0)`).bind(releaseId,String(payload.title||"Релиз"),startsAt,String(message.from.id),telegramDisplayName(message.from),String(chatId),now,now).run();
+    for(const step of V67_RELEASE_STEPS) await env.DB.prepare(`INSERT INTO release_steps(release_id,step_order,offset_seconds,action_type,title,status) VALUES(?,?,?,?,?,'pending')`).bind(releaseId,step.order,step.offset,step.action,step.title).run();
+    await recordV67SettingChange(env,message.from,"release",releaseId,"schedule",{}, {title:payload.title,startsAt,steps:V67_RELEASE_STEPS});
+    await clearStaffWorkflow(message.from.id,env);
+    await sendTelegramMessage(env,chatId,`✅ Релиз <b>${escapeHtml(String(payload.title))}</b> запланирован на <b>${escapeHtml(formatUtcDate(startsAt))}</b>.`);
+    await showV67ReleaseDetails(chatId,message.from,releaseId,env);return true;
+  }
+  return false;
+}
+
+async function showV67ReleaseDetails(chatId,user,releaseId,env){
+  const access=await getTeamAccess(user,env);if(!access.authorized)return;
+  await ensureV67Schema(env);const plan=await env.DB.prepare(`SELECT * FROM release_plans WHERE release_id=? LIMIT 1`).bind(String(releaseId)).first();if(!plan)return sendTelegramMessage(env,chatId,"План релиза не найден.");
+  const steps=(await env.DB.prepare(`SELECT * FROM release_steps WHERE release_id=? ORDER BY step_order`).bind(String(releaseId)).all()).results||[];
+  const lines=steps.map(step=>`${step.status==="completed"?"✅":step.status==="failed"?"❌":step.status==="running"?"🟠":"⬜"} ${step.step_order}. ${escapeHtml(step.title)} · +${step.offset_seconds} сек.${step.error_text?`\n   ${escapeHtml(step.error_text)}`:""}`);
+  const buttons=[];
+  if(access.owner && ["scheduled","running"].includes(plan.status))buttons.push([{text:"⏸ Пауза",callback_data:`v67_release_state:${releaseId}:paused`},{text:"⛔ Отменить",callback_data:`v67_release_state:${releaseId}:cancelled`}]);
+  if(access.owner && plan.status==="paused")buttons.push([{text:"▶️ Продолжить",callback_data:`v67_release_state:${releaseId}:running`},{text:"⛔ Отменить",callback_data:`v67_release_state:${releaseId}:cancelled`}]);
+  buttons.push([{text:"⬅️ Релизы",callback_data:"v67_releases"}]);
+  await sendTelegramMessage(env,chatId,`<b>🚀 ${escapeHtml(plan.title)}</b>\n\nID: <code>${escapeHtml(plan.release_id)}</code>\nСтарт: <b>${escapeHtml(formatUtcDate(plan.starts_at))}</b>\nСтатус: <b>${escapeHtml(plan.status)}</b>${plan.last_error?`\nОшибка: ${escapeHtml(plan.last_error)}`:""}\n\n${lines.join("\n")}`,{inline_keyboard:buttons});
+}
+
+async function changeV67ReleaseState(query,releaseId,state,env){
+  const access=await getTeamAccess(query.from,env);if(!access.authorized || !access.owner){await answerCallback(env,query.id,"Управлять запуском релиза может только владелец.",true);return;}
+  await ensureV67Schema(env);const old=await env.DB.prepare(`SELECT * FROM release_plans WHERE release_id=? LIMIT 1`).bind(releaseId).first();if(!old){await answerCallback(env,query.id,"План не найден.",true);return;}
+  const now=Math.floor(Date.now()/1000);if(state==='running')await env.DB.prepare(`UPDATE release_steps SET status='pending',started_at=0,completed_at=0,error_text='' WHERE release_id=? AND status='failed'`).bind(releaseId).run();
+  if(state==='cancelled'){
+    const maintenanceRow=await env.DB.prepare(`SELECT full_closed,updated_by FROM maintenance_settings WHERE id=1 LIMIT 1`).first();
+    if(Number(maintenanceRow?.full_closed||0)===1 && String(maintenanceRow?.updated_by||'')===`release:${releaseId}`){
+      await env.DB.prepare(`UPDATE maintenance_settings SET full_closed=0,updated_at=?,updated_by=? WHERE id=1`).bind(now,String(query.from.id)).run();
+      await recordV67SettingChange(env,query.from,"maintenance","full_closed","release_cancel_open",{enabled:true},{enabled:false});
+    }
+  }
+  await env.DB.prepare(`UPDATE release_plans SET status=?,updated_at=?,last_error=CASE WHEN ?='running' THEN '' ELSE last_error END WHERE release_id=?`).bind(state,now,state,releaseId).run();
+  await recordV67SettingChange(env,query.from,"release",releaseId,"state",{status:old.status},{status:state});
+  await answerCallback(env,query.id,"Статус обновлён.");await showV67ReleaseDetails(query.message.chat.id,query.from,releaseId,env);
+}
+
+async function publishV67ReadyDrafts(plan,env){
+  await ensureSafeControlCenterSchema(env);await ensureLiveOpsAdminSchema(env);
+  const rows=(await env.DB.prepare(`SELECT * FROM liveops_drafts WHERE status='draft' ORDER BY id ASC LIMIT 20`).all()).results||[];
+  if(!rows.length)return {published:0,skipped:0};
+  const actor={id:String(plan.created_by||"release"),first_name:"Планировщик релиза"};
+  await createConfigSnapshot(env,"pre_release",`Перед релизом ${plan.title}`,actor);
+  let published=0,skipped=0;
+  for(const row of rows){
+    const validation=await validateSafeDraftRow(row,env);if(!validation.ok){skipped++;continue;}
+    const value=safeJson(row.draft_json,{});const base=safeJson(row.base_json,{});const now=Math.floor(Date.now()/1000);
+    try{
+      if(row.entity_type==="season_reward"){
+        const current=await env.DB.prepare(`SELECT reward_type,reward_amount,reward_title,reward_image_url,reward_item_id FROM leaderboard_seasons WHERE id=? AND finalized_at IS NULL LIMIT 1`).bind(row.entity_id).first();if(!current)throw new Error("Сезон завершён");
+        const snapshot={reward_type:String(current.reward_type||""),reward_amount:Number(current.reward_amount||0),reward_title:String(current.reward_title||""),reward_image_url:String(current.reward_image_url||""),reward_item_id:String(current.reward_item_id||"")};if(JSON.stringify(snapshot)!==JSON.stringify(base))throw new Error("Базовая версия сезона изменилась");
+        await env.DB.prepare(`UPDATE leaderboard_seasons SET reward_type=?,reward_amount=?,reward_title=?,reward_image_url=?,reward_item_id=?,manual_override=1,updated_at=? WHERE id=? AND finalized_at IS NULL`).bind(value.reward_type,Number(value.reward_amount||0),String(value.reward_title||""),String(value.reward_image_url||""),String(value.reward_item_id||""),now,row.entity_id).run();
+      }else if(row.entity_type==="case"){
+        const currentRow=await env.DB.prepare(`SELECT * FROM liveops_case_configs WHERE case_id=? LIMIT 1`).bind(row.entity_id).first();if(!currentRow)throw new Error("Кейс не найден");
+        const current=liveOpsCaseConfigFromRow(currentRow);const snapshot={enabled:current.enabled,title:current.title,guarantee_count:current.guaranteeCount,chances_json:current.chances,ranges_json:current.ranges};if(JSON.stringify(snapshot)!==JSON.stringify(base))throw new Error("Базовая версия кейса изменилась");
+        await env.DB.prepare(`UPDATE liveops_case_configs SET enabled=?,title=?,guarantee_count=?,chances_json=?,ranges_json=?,updated_at=?,updated_by=? WHERE case_id=?`).bind(value.enabled?1:0,String(value.title||row.entity_id),Number(value.guarantee_count||0),JSON.stringify(value.chances_json||value.chances||{}),JSON.stringify(value.ranges_json||value.ranges||{}),now,String(plan.created_by),row.entity_id).run();
+      }else if(row.entity_type==="content"){
+        await env.DB.prepare(`UPDATE liveops_content_items SET enabled=?,is_new=?,weight=?,title=?,rarity=?,image_url=?,updated_at=?,updated_by=? WHERE item_kind || ':' || item_id=?`).bind(value.enabled?1:0,value.is_new?1:0,Number(value.weight||0),String(value.title||""),String(value.rarity||"common"),String(value.image_url||""),now,String(plan.created_by),row.entity_id).run();
+      }else{skipped++;continue;}
+      await env.DB.prepare(`UPDATE liveops_drafts SET status='published',published_at=?,published_by=?,updated_at=?,error_text='' WHERE id=? AND status='draft'`).bind(now,String(plan.created_by),now,row.id).run();
+      await logLiveOpsConfigChange(env,actor,row.entity_type,row.entity_id,"release_publish",base,value,`Релиз ${plan.release_id}`);published++;
+    }catch(error){await env.DB.prepare(`UPDATE liveops_drafts SET error_text=?,updated_at=? WHERE id=?`).bind(String(error?.message||error).slice(0,500),now,row.id).run();skipped++;}
+  }
+  return {published,skipped};
+}
+
+async function executeV67ReleaseStep(plan,step,env){
+  const now=Math.floor(Date.now()/1000);const systemUser={id:String(plan.created_by||"release"),first_name:"Планировщик релиза"};
+  if(step.action_type==="maintenance_on"){
+    const old=await getMaintenanceSettings(env);await env.DB.prepare(`UPDATE maintenance_settings SET full_closed=1,updated_at=?,updated_by=? WHERE id=1`).bind(now,`release:${plan.release_id}`).run();await recordV67SettingChange(env,systemUser,"maintenance","full_closed","release_enable",{enabled:old.fullClosed},{enabled:true});return {closed:true};
+  }
+  if(step.action_type==="integrity_check"){
+    const result=await runGameIntegrityCheck(env);await env.DB.prepare(`INSERT INTO integrity_check_runs(status,result_json,created_by,created_at) VALUES(?,?,?,?)`).bind(result.ok?"ok":"failed",JSON.stringify(result),`release:${plan.release_id}`,result.createdAt).run();if(!result.ok)throw new Error(`Проверка не пройдена: ${result.errors} ошибок`);return {errors:result.errors,warnings:result.warnings};
+  }
+  if(step.action_type==="publish_ready_drafts")return publishV67ReadyDrafts(plan,env);
+  if(step.action_type==="maintenance_off"){
+    const old=await getMaintenanceSettings(env);await env.DB.prepare(`UPDATE maintenance_settings SET full_closed=0,updated_at=?,updated_by=? WHERE id=1`).bind(now,`release:${plan.release_id}`).run();await recordV67SettingChange(env,systemUser,"maintenance","full_closed","release_disable",{enabled:old.fullClosed},{enabled:false});return {opened:true};
+  }
+  if(step.action_type==="notify_staff"){
+    await notifySubscribedStaff(env,"bot_errors",`✅ <b>Релиз завершён</b>\n\n${escapeHtml(plan.title)}\nВремя: ${escapeHtml(formatUtcDate(now))}`);return {notified:true};
+  }
+  throw new Error("Неизвестный шаг релиза");
+}
+
+async function processV67ReleasePlans(env){
+  await ensureV67Schema(env);const now=Math.floor(Date.now()/1000);
+  const plans=(await env.DB.prepare(`SELECT * FROM release_plans WHERE status IN ('scheduled','running') AND starts_at<=? ORDER BY starts_at ASC LIMIT 3`).bind(now).all()).results||[];
+  for(const plan of plans){
+    if(plan.status==="scheduled")await env.DB.prepare(`UPDATE release_plans SET status='running',updated_at=? WHERE release_id=? AND status='scheduled'`).bind(now,plan.release_id).run();
+    const steps=(await env.DB.prepare(`SELECT * FROM release_steps WHERE release_id=? AND status='pending' AND ? >= ? + offset_seconds ORDER BY step_order ASC LIMIT 2`).bind(plan.release_id,now,Number(plan.starts_at)).all()).results||[];
+    let failed=false;
+    for(const step of steps){
+      const claim=await env.DB.prepare(`UPDATE release_steps SET status='running',started_at=? WHERE release_id=? AND step_order=? AND status='pending'`).bind(now,plan.release_id,step.step_order).run();if(Number(claim.meta?.changes||0)<1)continue;
+      try{const details=await executeV67ReleaseStep(plan,step,env);await env.DB.prepare(`UPDATE release_steps SET status='completed',completed_at=?,error_text='' WHERE release_id=? AND step_order=?`).bind(Math.floor(Date.now()/1000),plan.release_id,step.step_order).run();await env.DB.prepare(`UPDATE release_plans SET current_step=?,updated_at=? WHERE release_id=?`).bind(step.step_order,Math.floor(Date.now()/1000),plan.release_id).run();
+        await recordV67SettingChange(env,{id:plan.created_by,first_name:"Планировщик релиза"},"release_step",`${plan.release_id}:${step.step_order}`,"complete",{},details||{});
+      }catch(error){const message=String(error?.message||error).slice(0,500);await env.DB.prepare(`UPDATE release_steps SET status='failed',completed_at=?,error_text=? WHERE release_id=? AND step_order=?`).bind(Math.floor(Date.now()/1000),message,plan.release_id,step.step_order).run();await env.DB.prepare(`UPDATE release_plans SET status='paused',last_error=?,updated_at=? WHERE release_id=?`).bind(message,Math.floor(Date.now()/1000),plan.release_id).run();try{await sendTelegramMessage(env,plan.report_chat_id,`🔴 <b>Релиз поставлен на паузу</b>\n\n${escapeHtml(plan.title)}\nШаг: ${escapeHtml(step.title)}\nОшибка: ${escapeHtml(message)}\n\nИгра останется в текущем состоянии до ручной проверки.`);}catch{}failed=true;break;}
+    }
+    if(failed)continue;
+    const remaining=await env.DB.prepare(`SELECT COUNT(*) AS count FROM release_steps WHERE release_id=? AND status<>'completed'`).bind(plan.release_id).first();
+    if(Number(remaining?.count||0)===0)await env.DB.prepare(`UPDATE release_plans SET status='completed',completed_at=?,updated_at=?,last_error='' WHERE release_id=?`).bind(Math.floor(Date.now()/1000),Math.floor(Date.now()/1000),plan.release_id).run();
+  }
+}
+
+const V67_STOCK_FORECAST_CACHE_TTL_MS=2*60*1000;
+let v67StockForecastCache={rows:null,expiresAt:0};
+async function calculateV67StockForecast(env,force=false){
+  const nowMs=Date.now();if(!force&&v67StockForecastCache.rows&&v67StockForecastCache.expiresAt>nowMs)return v67StockForecastCache.rows;
+  await Promise.all([ensureV67Schema(env),ensureShopStockSchema(env)]);
+  const now=Math.floor(nowMs/1000);const since=now-14*V67_DAY;
+  const [stockResult,eventResult]=await Promise.all([
+    env.DB.prepare(`SELECT l.scope_key,l.category,l.product_id,l.configured_limit,l.remaining,COUNT(c.consumption_id) AS used_14d
+      FROM shop_stock_limits l LEFT JOIN shop_stock_consumptions c ON c.scope_key=l.scope_key AND c.created_at>=?
+      GROUP BY l.scope_key,l.category,l.product_id,l.configured_limit,l.remaining ORDER BY l.category,l.product_id`).bind(since).all(),
+    env.DB.prepare(`SELECT COUNT(*) AS count FROM liveops_events WHERE status IN ('scheduled','active') AND ends_at>=? AND starts_at<=?`).bind(now,now+7*V67_DAY).first().catch(()=>({count:0}))
+  ]);
+  const rows=stockResult.results||[];const eventFactor=Number(eventResult?.count||0)>0?1.5:1;
+  const output=rows.map(row=>{const used14=Number(row.used_14d||0);const avg=used14/14;const remaining=Math.max(0,Number(row.remaining||0));const days=avg>0?remaining/avg:9999;const expected=Math.ceil(avg*7*eventFactor);const status=remaining===0||days<=3||expected>remaining?"critical":days<=7||expected>=remaining*.75?"warning":"ok";return {...row,used14,avgDaily:avg,daysLeft:days,expected7d:expected,status,eventFactor};});
+  v67StockForecastCache={rows:output,expiresAt:nowMs+V67_STOCK_FORECAST_CACHE_TTL_MS};return output;
+}
+
+async function showV67StockForecast(chatId,user,env){
+  const access=await requireAnySecurityPermission(chatId,user,["manageShop","redeemPhysical","viewEconomy"],env);if(!access)return;
+  const rows=await calculateV67StockForecast(env,true);
+  const lines=rows.map(row=>`${row.status==="critical"?"🔴":row.status==="warning"?"🟡":"🟢"} <b>${escapeHtml(row.product_id)}</b> · ${escapeHtml(row.category)}\n  Осталось: <b>${Number(row.remaining).toLocaleString("ru-RU")}</b> · расход 14 дн.: ${row.used14}\n  Среднее: ${row.avgDaily.toFixed(2)}/день · прогноз: <b>${row.daysLeft>=9999?"нет расхода":`${row.daysLeft.toFixed(1)} дн.`}</b> · нужно на 7 дней ≈ ${row.expected7d}`);
+  const eventNote=rows.some(r=>r.eventFactor>1)?"\n\n<i>Для активного или ближайшего события применён осторожный коэффициент спроса ×1,5.</i>":"";
+  await sendTelegramMessage(env,chatId,`<b>📦 Прогноз физических остатков</b>\n\n${lines.join("\n\n")||"Лимиты физических остатков не настроены."}${eventNote}\n\nКрасный статус означает, что запас может закончиться менее чем за 3 дня или не покрывает ожидаемый спрос недели.`,{inline_keyboard:[[{text:"🔄 Пересчитать",callback_data:"v67_stock_forecast"},{text:"📦 Текущие остатки",callback_data:"stock_refresh"}],[{text:"⬅️ Админ-панель",callback_data:"adm_home"}]]});
+}
+
+async function processV67StockForecastAlerts(env){
+  const rows=await calculateV67StockForecast(env,true);const now=Math.floor(Date.now()/1000);const day=Math.floor(now/V67_DAY);
+  for(const row of rows.filter(item=>item.status==="critical")){
+    const key=`stock-forecast:${row.scope_key}:${day}`;if(await getSystemState(env,key))continue;
+    await notifySubscribedStaff(env,"low_stock",`🔴 <b>Прогноз дефицита</b>\n\n${escapeHtml(row.product_id)}\nОсталось: <b>${Number(row.remaining)}</b>\nСредний расход: <b>${row.avgDaily.toFixed(2)}/день</b>\nЗапаса примерно на: <b>${row.daysLeft>=9999?"не определено":`${row.daysLeft.toFixed(1)} дня`}</b>`);
+    await setSystemState(env,key,"sent");
+  }
+  const snapshotRows=rows.slice(0,50).map(row=>env.DB.prepare(`INSERT INTO stock_forecast_snapshots(scope_key,remaining,used_14d,avg_daily,days_left,expected_7d,status,created_at) VALUES(?,?,?,?,?,?,?,?)`).bind(row.scope_key,Number(row.remaining),row.used14,row.avgDaily,row.daysLeft,row.expected7d,row.status,now));
+  if(snapshotRows.length)await env.DB.batch(snapshotRows);
+}
+
+async function processV67Cron(env){
+  await ensureV67Schema(env);
+  const now=Math.floor(Date.now()/1000);
+  await processV67ReleasePlans(env);
+  const automationState=await getSystemState(env,"v67:automations:last");
+  if(!automationState || now-Number(automationState.value||0)>=300){await processV67AutomationChains(env);await setSystemState(env,"v67:automations:last",String(now));}
+  const stockState=await getSystemState(env,"v67:stock:last");
+  if(!stockState || now-Number(stockState.value||0)>=3600){await processV67StockForecastAlerts(env);await setSystemState(env,"v67:stock:last",String(now));}
+  const cleanupState=await getSystemState(env,"v67:cleanup:last");
+  if(!cleanupState || now-Number(cleanupState.value||0)>=V67_DAY){await env.DB.prepare(`DELETE FROM admin_performance_samples WHERE created_at<?`).bind(now-7*V67_DAY).run();await env.DB.prepare(`DELETE FROM stock_forecast_snapshots WHERE created_at<?`).bind(now-30*V67_DAY).run();await setSystemState(env,"v67:cleanup:last",String(now));}
+}
+
+// ======================= v0.77 ADMIN OPERATIONS SUITE =======================
+let v77SchemaPromise = null;
+async function ensureV77Schema(env) {
+  if (!v77SchemaPromise) {
+    v77SchemaPromise = env.DB.batch([
+      env.DB.prepare(`CREATE TABLE IF NOT EXISTS task_series (series_key TEXT PRIMARY KEY,title TEXT NOT NULL,description TEXT NOT NULL DEFAULT '',enabled INTEGER NOT NULL DEFAULT 0,completion_mode TEXT NOT NULL DEFAULT 'ordered',final_reward_json TEXT NOT NULL DEFAULT '{}',task_mode TEXT NOT NULL DEFAULT 'one_time',starts_at INTEGER NOT NULL DEFAULT 0,ends_at INTEGER NOT NULL DEFAULT 0,sort_order INTEGER NOT NULL DEFAULT 100,created_at INTEGER NOT NULL,updated_at INTEGER NOT NULL,updated_by TEXT NOT NULL DEFAULT '')`),
+      env.DB.prepare(`CREATE TABLE IF NOT EXISTS task_series_steps (series_key TEXT NOT NULL,step_order INTEGER NOT NULL,chain_key TEXT NOT NULL,PRIMARY KEY(series_key,step_order),UNIQUE(series_key,chain_key))`),
+      env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_task_series_steps_chain ON task_series_steps(chain_key,series_key)`),
+      env.DB.prepare(`CREATE TABLE IF NOT EXISTS player_task_series_claims (claim_key TEXT PRIMARY KEY,series_key TEXT NOT NULL,telegram_id TEXT NOT NULL,cycle_key TEXT NOT NULL,status TEXT NOT NULL DEFAULT 'pending',queue_id INTEGER NOT NULL DEFAULT 0,created_at INTEGER NOT NULL,updated_at INTEGER NOT NULL,claimed_at INTEGER NOT NULL DEFAULT 0,UNIQUE(series_key,telegram_id,cycle_key))`),
+      env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_task_series_claims_player ON player_task_series_claims(telegram_id,created_at DESC)`),
+      env.DB.prepare(`CREATE TABLE IF NOT EXISTS task_exposure_log (chain_key TEXT NOT NULL,telegram_id TEXT NOT NULL,cycle_key TEXT NOT NULL,first_seen_at INTEGER NOT NULL,last_seen_at INTEGER NOT NULL,progress_value INTEGER NOT NULL DEFAULT 0,target_value INTEGER NOT NULL DEFAULT 1,completed_at INTEGER NOT NULL DEFAULT 0,PRIMARY KEY(chain_key,telegram_id,cycle_key))`),
+      env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_task_exposure_chain ON task_exposure_log(chain_key,last_seen_at DESC)`),
+      env.DB.prepare(`CREATE TABLE IF NOT EXISTS poll_comment_moderation (poll_id TEXT NOT NULL,telegram_id TEXT NOT NULL,status TEXT NOT NULL DEFAULT 'new',tag TEXT NOT NULL DEFAULT '',note TEXT NOT NULL DEFAULT '',updated_at INTEGER NOT NULL,updated_by TEXT NOT NULL DEFAULT '',PRIMARY KEY(poll_id,telegram_id))`),
+      env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_poll_comment_moderation_status ON poll_comment_moderation(status,updated_at DESC)`),
+      env.DB.prepare(`CREATE TABLE IF NOT EXISTS player_notification_policy (id INTEGER PRIMARY KEY CHECK(id=1),paused INTEGER NOT NULL DEFAULT 0,max_per_day INTEGER NOT NULL DEFAULT 3,min_gap_seconds INTEGER NOT NULL DEFAULT 3600,quiet_start_hour INTEGER NOT NULL DEFAULT 22,quiet_end_hour INTEGER NOT NULL DEFAULT 9,updated_at INTEGER NOT NULL,updated_by TEXT NOT NULL DEFAULT '')`),
+      env.DB.prepare(`CREATE TABLE IF NOT EXISTS player_notification_queue (id INTEGER PRIMARY KEY AUTOINCREMENT,telegram_id TEXT NOT NULL,chat_id TEXT NOT NULL,category TEXT NOT NULL,message_html TEXT NOT NULL,reply_markup_json TEXT NOT NULL DEFAULT '{}',status TEXT NOT NULL DEFAULT 'pending',attempts INTEGER NOT NULL DEFAULT 0,last_error TEXT NOT NULL DEFAULT '',available_at INTEGER NOT NULL,created_at INTEGER NOT NULL,updated_at INTEGER NOT NULL)`),
+      env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_player_notification_queue_due ON player_notification_queue(status,available_at,id)`),
+      env.DB.prepare(`CREATE TABLE IF NOT EXISTS player_notification_log (id INTEGER PRIMARY KEY AUTOINCREMENT,telegram_id TEXT NOT NULL,category TEXT NOT NULL,sent_at INTEGER NOT NULL)`),
+      env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_player_notification_log_player ON player_notification_log(telegram_id,sent_at DESC)`),
+      env.DB.prepare(`CREATE TABLE IF NOT EXISTS smart_alert_events (alert_key TEXT PRIMARY KEY,alert_type TEXT NOT NULL,severity TEXT NOT NULL DEFAULT 'warning',title TEXT NOT NULL,details TEXT NOT NULL DEFAULT '',status TEXT NOT NULL DEFAULT 'open',first_seen_at INTEGER NOT NULL,last_seen_at INTEGER NOT NULL,last_notified_at INTEGER NOT NULL DEFAULT 0,resolved_at INTEGER NOT NULL DEFAULT 0)`),
+      env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_smart_alert_events_status ON smart_alert_events(status,severity,last_seen_at DESC)`),
+      env.DB.prepare(`INSERT OR IGNORE INTO player_notification_policy(id,paused,max_per_day,min_gap_seconds,quiet_start_hour,quiet_end_hour,updated_at,updated_by) VALUES(1,0,3,3600,22,9,unixepoch(),'runtime')`)
+    ]).catch((error) => { v77SchemaPromise = null; throw error; });
+  }
+  await v77SchemaPromise;
+}
+
+function v77OperationsAccess(access) {
+  return Boolean(access?.owner || normalizeTeamRole(access?.role) === "administrator");
+}
+
+async function requireV77OperationsAccess(chatId, user, env) {
+  const access = await getTeamAccess(user, env);
+  if (!access.authorized || !v77OperationsAccess(access)) {
+    await sendTelegramMessage(env, chatId, "Недостаточно прав для центра управления.");
+    return null;
+  }
+  await ensureV77Schema(env);
+  return access;
+}
+
+async function showV77OperationsHub(chatId, user, env) {
+  const access = await requireV77OperationsAccess(chatId, user, env); if (!access) return;
+  const [series, alerts, queued, comments] = await Promise.all([
+    env.DB.prepare(`SELECT COUNT(*) AS total,SUM(enabled) AS active FROM task_series`).first(),
+    env.DB.prepare(`SELECT COUNT(*) AS count FROM smart_alert_events WHERE status='open'`).first(),
+    env.DB.prepare(`SELECT COUNT(*) AS count FROM player_notification_queue WHERE status IN ('pending','failed')`).first(),
+    env.DB.prepare(`SELECT COUNT(*) AS count FROM player_poll_responses r LEFT JOIN poll_comment_moderation m ON m.poll_id=r.poll_id AND m.telegram_id=r.telegram_id WHERE TRIM(COALESCE(r.comment_text,''))<>'' AND COALESCE(m.status,'new')='new'`).first()
+  ]);
+  await sendTelegramMessage(env, chatId,
+    `<b>🧭 Центр управления</b>\n\nДиагностика автоматизаций, серии заданий, календарь, отзывы, защита уведомлений и аналитика.\n\nСерии: <b>${Number(series?.active||0)}/${Number(series?.total||0)}</b>\nНовые отзывы: <b>${Number(comments?.count||0)}</b>\nОчередь уведомлений: <b>${Number(queued?.count||0)}</b>\nОткрытые предупреждения: <b>${Number(alerts?.count||0)}</b>`,
+    { inline_keyboard: [
+      [{text:"🔍 Диагностика игрока",callback_data:"v77_diag_start"},{text:"🧩 Серии заданий",callback_data:"v77_series"}],
+      [{text:"📅 Календарь",callback_data:"v77_calendar"},{text:"💬 Обратная связь",callback_data:"v77_feedback:new:0"}],
+      [{text:"🔕 Уведомления игроков",callback_data:"v77_notify"},{text:"📊 Аналитика заданий",callback_data:"v77_task_analytics"}],
+      [{text:"💰 Экономика+",callback_data:"v77_economy"},{text:"⚠️ Конфликты",callback_data:"v77_conflicts"}],
+      [{text:"🧰 Массовые действия",callback_data:"v77_bulk"},{text:"🚨 Умные предупреждения",callback_data:"v77_alerts"}],
+      [{text:"⬅️ Админ-панель",callback_data:"adm_home"}]
+    ] }
+  );
+}
+
+async function startV77PlayerDiagnostics(query, env) {
+  const chatId=query.message?.chat?.id; const access=await requireV77OperationsAccess(chatId,query.from,env); if(!access)return;
+  await setStaffWorkflow(query.from.id,chatId,"v77_diag","player_id",{},env);
+  await answerCallback(env,query.id,"Введите Telegram ID игрока.");
+  await sendTelegramMessage(env,chatId,"<b>🔍 Диагностика автоматизаций</b>\n\nОтправьте Telegram ID игрока цифрами. Проверка ничего не начисляет и не изменяет.");
+}
+
+async function v77AutomationProgress(env,row,telegramId,now=Math.floor(Date.now()/1000)) {
+  if (v71TaskTriggerSupported(row.trigger_type)) return {supported:true,...await v71TaskProgress(env,row,telegramId,now)};
+  if (row.trigger_type === "inactive_days") {
+    const profile=await env.DB.prepare(`SELECT updated_at FROM admin_profile_state WHERE telegram_id=? LIMIT 1`).bind(String(telegramId)).first();
+    const value=profile?.updated_at?Math.max(0,Math.floor((now-Number(profile.updated_at))/V67_DAY)):0;
+    return {supported:true,value,target:Number(row.trigger_value||1),completed:value>=Number(row.trigger_value||1),cycleKey:"once"};
+  }
+  if (row.trigger_type === "season_ending") {
+    const season=await env.DB.prepare(`SELECT ends_at FROM leaderboard_seasons WHERE status='active' ORDER BY ends_at ASC LIMIT 1`).first();
+    const left=season?.ends_at?Math.max(0,Number(season.ends_at)-now):Number.MAX_SAFE_INTEGER;
+    return {supported:true,value:left,target:Number(row.trigger_value||0),completed:left<=Number(row.trigger_value||0),cycleKey:"season"};
+  }
+  return {supported:false,value:0,target:Number(row.trigger_value||0),completed:false,cycleKey:"once"};
+}
+
+async function showV77PlayerDiagnostics(chatId,user,playerId,env){
+  const access=await requireV77OperationsAccess(chatId,user,env);if(!access)return;
+  const id=String(playerId); const now=Math.floor(Date.now()/1000);
+  const [profile,subscriber,chains]=await Promise.all([
+    env.DB.prepare(`SELECT telegram_id,created_at,updated_at,best_score,profile_xp FROM admin_profile_state WHERE telegram_id=? LIMIT 1`).bind(id).first(),
+    env.DB.prepare(`SELECT chat_id,active,last_started_at,display_name,username FROM bot_subscribers WHERE telegram_id=? LIMIT 1`).bind(id).first(),
+    env.DB.prepare(`SELECT * FROM automation_chains ORDER BY enabled DESC,show_as_task DESC,updated_at DESC LIMIT 30`).all()
+  ]);
+  if(!profile){await sendTelegramMessage(env,chatId,`Игровой профиль <code>${escapeHtml(id)}</code> не найден.`,{inline_keyboard:[[{text:"🔍 Другой игрок",callback_data:"v77_diag_start"}],[{text:"⬅️ Центр",callback_data:"v77_home"}]]});return;}
+  const lines=[];
+  for(const row of chains.results||[]){
+    const progress=await v77AutomationProgress(env,row,id,now);
+    const execution=await env.DB.prepare(`SELECT status,details_json,created_at FROM automation_chain_executions WHERE chain_key=? AND telegram_id=? ORDER BY created_at DESC LIMIT 1`).bind(row.chain_key,id).first();
+    let reason="";
+    if(!Number(row.enabled))reason="выключена";
+    else if(execution?.status==="completed")reason="уже выполнена";
+    else if(execution?.status==="failed")reason=`последняя попытка: ошибка`;
+    else if(row.action_type==="message"&&!subscriber?.active)reason="нет активного чата с ботом";
+    else if(!progress.supported)reason="условие не поддерживает точный предпросмотр";
+    else if(progress.completed)reason=Number(row.show_as_task)?"можно забрать награду":"готова к ближайшему Cron";
+    else reason="условие ещё не выполнено";
+    const progressText=progress.supported?`${Math.min(Number(progress.value||0),Number(progress.target||0)).toLocaleString("ru-RU")} / ${Number(progress.target||0).toLocaleString("ru-RU")}`:"—";
+    lines.push(`${Number(row.enabled)?"🟢":"⚫"}${Number(row.show_as_task)?" 📋":""} <b>${escapeHtml(row.title)}</b>\n  Прогресс: <b>${escapeHtml(progressText)}</b> · ${escapeHtml(reason)}`);
+    if(lines.length>=14)break;
+  }
+  const label=subscriber?.display_name||subscriber?.username||id;
+  await sendTelegramMessage(env,chatId,`<b>🔍 Диагностика игрока</b>\n\nИгрок: <b>${escapeHtml(label)}</b> · <code>${escapeHtml(id)}</code>\nБот: <b>${subscriber?.active?"активен":"неактивен"}</b>\nПоследняя активность: <b>${escapeHtml(formatUtcDate(profile.updated_at))}</b>\n\n${lines.join("\n\n")||"Автоматизаций нет."}\n\n<i>Проверка только читает данные и ничего не выдаёт.</i>`,{inline_keyboard:[[{text:"🔄 Повторить",callback_data:`v77_diag:${id}`},{text:"🔍 Другой игрок",callback_data:"v77_diag_start"}],[{text:"⬅️ Центр",callback_data:"v77_home"}]]});
+}
+
+async function handleV77WorkflowMessage(message,workflow,env){
+  const text=String(message.text||"").trim(); const chatId=message.chat.id;
+  if(workflow.flow_type==="v77_diag"){
+    if(!/^\d{4,20}$/.test(text)){await sendTelegramMessage(env,chatId,"Отправьте Telegram ID цифрами.");return true;}
+    await clearStaffWorkflow(message.from.id,env); await showV77PlayerDiagnostics(chatId,message.from,text,env); return true;
+  }
+  if(workflow.flow_type==="v77_series_create"){
+    if(workflow.step==="title"){
+      if(text.length<3||text.length>80){await sendTelegramMessage(env,chatId,"Название должно содержать от 3 до 80 символов.");return true;}
+      await updateStaffWorkflow(message.from.id,{step:"mode",data:{title:text,selected:[]}},env);
+      await sendTelegramMessage(env,chatId,"<b>Порядок выполнения</b>",{inline_keyboard:[[{text:"➡️ Строго по порядку",callback_data:"v77_series_mode:ordered"}],[{text:"🔀 В любом порядке",callback_data:"v77_series_mode:any"}],[{text:"❌ Отменить",callback_data:"v77_series_cancel"}]]}); return true;
+    }
+  }
+  return false;
+}
+
+async function showV77SeriesDashboard(chatId,user,env){
+  const access=await requireV77OperationsAccess(chatId,user,env);if(!access)return;
+  const rows=(await env.DB.prepare(`SELECT s.*,(SELECT COUNT(*) FROM task_series_steps x WHERE x.series_key=s.series_key) AS steps FROM task_series s ORDER BY s.enabled DESC,s.updated_at DESC LIMIT 20`).all()).results||[];
+  const lines=rows.map(r=>`${Number(r.enabled)?"🟢":"⚫"} <b>${escapeHtml(r.title)}</b>\n  Этапов: ${Number(r.steps||0)} · ${r.completion_mode==="ordered"?"по порядку":"в любом порядке"} · финал: ${escapeHtml(safeRewardDescription(safeJson(r.final_reward_json,{}))||"без награды")}`);
+  const buttons=rows.map(r=>[{text:`${Number(r.enabled)?"🟢":"⚫"} ${String(r.title).slice(0,34)}`,callback_data:`v77_series_open:${r.series_key}`}]);
+  buttons.push([{text:"➕ Создать серию",callback_data:"v77_series_new"}],[{text:"⬅️ Центр",callback_data:"v77_home"}]);
+  await sendTelegramMessage(env,chatId,`<b>🧩 Серии заданий</b>\n\n${lines.join("\n\n")||"Серий пока нет."}\n\nСерия объединяет существующие задания и выдаёт отдельную финальную награду.`,{inline_keyboard:buttons});
+}
+
+async function startV77SeriesCreate(query,env){
+  const chatId=query.message?.chat?.id; const access=await requireV77OperationsAccess(chatId,query.from,env);if(!access)return;
+  await setStaffWorkflow(query.from.id,chatId,"v77_series_create","title",{},env); await answerCallback(env,query.id,"Введите название серии.");
+  await sendTelegramMessage(env,chatId,"<b>🧩 Новая серия заданий</b>\n\nОтправьте название. После создания серия будет выключена до ручного включения.");
+}
+
+async function showV77SeriesTaskPicker(query,env){
+  const chatId=query.message?.chat?.id; const workflow=await getStaffWorkflow(query.from.id,env);if(!workflow||workflow.flow_type!=="v77_series_create")return;
+  const tasks=(await env.DB.prepare(`SELECT chain_key,title FROM automation_chains WHERE action_type='reward' AND show_as_task=1 ORDER BY enabled DESC,task_sort ASC,updated_at DESC LIMIT 16`).all()).results||[];
+  const selected=new Set(workflow.data.selected||[]); const buttons=tasks.map(t=>[{text:`${selected.has(t.chain_key)?"☑️":"⬜"} ${String(t.title).slice(0,36)}`,callback_data:`v77_series_task:${t.chain_key}`}]);
+  buttons.push([{text:`✅ Продолжить · ${selected.size}`,callback_data:"v77_series_tasks_done"}],[{text:"❌ Отменить",callback_data:"v77_series_cancel"}]);
+  await sendTelegramMessage(env,chatId,"<b>Выберите этапы серии</b>\n\nНужно выбрать минимум два задания.",{inline_keyboard:buttons});
+}
+
+async function showV77SeriesDetails(chatId,user,key,env){
+  const access=await requireV77OperationsAccess(chatId,user,env);if(!access)return;
+  const row=await env.DB.prepare(`SELECT * FROM task_series WHERE series_key=? LIMIT 1`).bind(String(key)).first();if(!row)return sendTelegramMessage(env,chatId,"Серия не найдена.");
+  const steps=(await env.DB.prepare(`SELECT x.step_order,c.title,c.enabled,c.show_as_task FROM task_series_steps x LEFT JOIN automation_chains c ON c.chain_key=x.chain_key WHERE x.series_key=? ORDER BY x.step_order`).bind(row.series_key).all()).results||[];
+  const lines=steps.map(s=>`${s.step_order}. ${s.title?escapeHtml(s.title):"⚠️ удалённое задание"}${!Number(s.enabled)?" · выключено":""}${!Number(s.show_as_task)?" · скрыто":""}`);
+  await sendTelegramMessage(env,chatId,`<b>🧩 ${escapeHtml(row.title)}</b>\n\nСтатус: <b>${Number(row.enabled)?"включена":"выключена"}</b>\nПорядок: <b>${row.completion_mode==="ordered"?"строго по порядку":"в любом порядке"}</b>\nФинальная награда: <b>${escapeHtml(safeRewardDescription(safeJson(row.final_reward_json,{}))||"нет")}</b>\n\n<b>Этапы</b>\n${lines.join("\n")||"Этапов нет."}`,{inline_keyboard:[[{text:Number(row.enabled)?"⏸ Выключить":"▶️ Включить",callback_data:`v77_series_toggle:${row.series_key}`}],[{text:"⬅️ Серии",callback_data:"v77_series"}]]});
+}
+
+async function v77PlayerSeriesState(env,series,telegramId,now=Math.floor(Date.now()/1000)){
+  const steps=(await env.DB.prepare(`SELECT x.step_order,c.* FROM task_series_steps x JOIN automation_chains c ON c.chain_key=x.chain_key WHERE x.series_key=? ORDER BY x.step_order`).bind(series.series_key).all()).results||[];
+  let completed=0; let current=null; const details=[];
+  for(const step of steps){const p=await v71TaskProgress(env,step,String(telegramId),now);details.push({step,progress:p});if(p.completed){if(!current)completed+=1;}else if(!current){current={step,progress:p};if(series.completion_mode==="ordered")break;}}
+  if(series.completion_mode!=="ordered")completed=details.filter(x=>x.progress.completed).length;
+  return {steps,details,completed,total:steps.length,current,done:steps.length>0&&completed>=steps.length,cycleKey:"once"};
+}
+
+async function v77AppendPlayerSeries(env,telegramId,lines,buttons,now=Math.floor(Date.now()/1000)){
+  await ensureV77Schema(env);
+  const seriesRows=(await env.DB.prepare(`SELECT * FROM task_series WHERE enabled=1 AND (starts_at=0 OR starts_at<=?) AND (ends_at=0 OR ends_at>?) ORDER BY sort_order,updated_at DESC LIMIT 8`).bind(now,now).all()).results||[];
+  for(const series of seriesRows){const state=await v77PlayerSeriesState(env,series,telegramId,now);const claimKey=`${series.series_key}:${telegramId}:${state.cycleKey}`;const claim=await env.DB.prepare(`SELECT status FROM player_task_series_claims WHERE claim_key=? LIMIT 1`).bind(claimKey).first();const reward=safeJson(series.final_reward_json,{});const status=claim?.status==="claimed"?"✅ Финальная награда получена":state.done?"🎁 Финальная награда готова":`⏳ Этапов выполнено: ${state.completed}/${state.total}`;const current=state.current?`\nСейчас: <b>${escapeHtml(state.current.step.title)}</b> · ${escapeHtml(v71TaskProgressText(state.current.step,state.current.progress))}`:"";lines.push(`<b>🧩 ${escapeHtml(series.title)}</b>\n${status}${current}\nФинал: <b>${escapeHtml(safeRewardDescription(reward)||"без награды")}</b>`);if(state.done&&claim?.status!=="claimed"&&reward?.kind)buttons.push([{text:`🎁 Финал · ${String(series.title).slice(0,26)}`,callback_data:`v77_series_claim:${series.series_key}`}]);}
+  return seriesRows.length;
+}
+
+async function claimV77Series(query,key,env){
+  const chatId=query.message?.chat?.id;await ensureV77Schema(env);const now=Math.floor(Date.now()/1000);const series=await env.DB.prepare(`SELECT * FROM task_series WHERE series_key=? AND enabled=1 LIMIT 1`).bind(String(key)).first();if(!series){await answerCallback(env,query.id,"Серия недоступна.",true);return;}
+  const state=await v77PlayerSeriesState(env,series,String(query.from.id),now);if(!state.done){await answerCallback(env,query.id,"Не все этапы выполнены.",true);return;}
+  const reward=safeJson(series.final_reward_json,{});if(!reward?.kind){await answerCallback(env,query.id,"Финальная награда не настроена.",true);return;}
+  const claimKey=`${series.series_key}:${query.from.id}:${state.cycleKey}`;await env.DB.prepare(`INSERT OR IGNORE INTO player_task_series_claims(claim_key,series_key,telegram_id,cycle_key,status,queue_id,created_at,updated_at,claimed_at) VALUES(?,?,?,?, 'pending',0,?,?,0)`).bind(claimKey,series.series_key,String(query.from.id),state.cycleKey,now,now).run();let claim=await env.DB.prepare(`SELECT * FROM player_task_series_claims WHERE claim_key=?`).bind(claimKey).first();if(claim?.status==="claimed"){await answerCallback(env,query.id,"Награда уже получена.",true);return;}
+  let queueId=Number(claim?.queue_id||0);if(!queueId){queueId=await enqueueRewardDelivery(env,String(query.from.id),"task_series",claimKey,reward,String(reward.reason||series.title),"");await env.DB.prepare(`UPDATE player_task_series_claims SET queue_id=?,updated_at=? WHERE claim_key=?`).bind(queueId,now,claimKey).run();}
+  await processRewardDeliveryQueue(env,10);const queue=queueId?await env.DB.prepare(`SELECT status,last_error FROM reward_delivery_queue WHERE id=?`).bind(queueId).first():null;if(queue?.status==="delivered"){await env.DB.prepare(`UPDATE player_task_series_claims SET status='claimed',claimed_at=?,updated_at=? WHERE claim_key=?`).bind(now,now,claimKey).run();await answerCallback(env,query.id,"Финальная награда получена!");}else await answerCallback(env,query.id,"Награда находится в очереди доставки.",true);await showPlayerTasks(chatId,query.from,env);
+}
+
+async function v77TrackTaskExposure(env,row,telegramId,progress,now=Math.floor(Date.now()/1000)){
+  await ensureV77Schema(env);await env.DB.prepare(`INSERT INTO task_exposure_log(chain_key,telegram_id,cycle_key,first_seen_at,last_seen_at,progress_value,target_value,completed_at) VALUES(?,?,?,?,?,?,?,?) ON CONFLICT(chain_key,telegram_id,cycle_key) DO UPDATE SET last_seen_at=excluded.last_seen_at,progress_value=excluded.progress_value,target_value=excluded.target_value,completed_at=CASE WHEN task_exposure_log.completed_at>0 THEN task_exposure_log.completed_at ELSE excluded.completed_at END`).bind(row.chain_key,String(telegramId),progress.cycleKey,now,now,Number(progress.value||0),Number(progress.target||1),progress.completed?now:0).run();
+}
+
+const V77_CALENDAR_CACHE_TTL_MS=60*1000;
+let v77CalendarCache={html:"",expiresAt:0};
+async function showV77Calendar(chatId,user,env){
+  const access=await requireV77OperationsAccess(chatId,user,env);if(!access)return;
+  const nowMs=Date.now();let html=v77CalendarCache.expiresAt>nowMs?v77CalendarCache.html:"";
+  if(!html){
+    await Promise.all([ensureV67Schema(env),ensureV74PollSchema(env),ensureSafeControlCenterSchema(env)]);
+    const now=Math.floor(nowMs/1000),end=now+30*V67_DAY;const items=[];const push=(at,icon,title,kind)=>{at=Number(at||0);if(at>=now&&at<=end)items.push({at,icon,title,kind});};
+    const results=await Promise.allSettled([
+      env.DB.prepare(`SELECT title,task_starts_at,task_ends_at FROM automation_chains WHERE enabled=1 AND show_as_task=1 AND (task_starts_at BETWEEN ? AND ? OR task_ends_at BETWEEN ? AND ?)`).bind(now,end,now,end).all(),
+      env.DB.prepare(`SELECT question,starts_at,ends_at FROM player_polls WHERE status IN ('scheduled','active') AND (starts_at BETWEEN ? AND ? OR ends_at BETWEEN ? AND ?)`).bind(now,end,now,end).all(),
+      env.DB.prepare(`SELECT title,starts_at,status FROM release_plans WHERE status IN ('scheduled','running') AND starts_at BETWEEN ? AND ?`).bind(now,end).all(),
+      env.DB.prepare(`SELECT title,starts_at,ends_at,status FROM liveops_events WHERE status IN ('scheduled','active') AND (starts_at BETWEEN ? AND ? OR ends_at BETWEEN ? AND ?)`).bind(now,end,now,end).all(),
+      env.DB.prepare(`SELECT title,starts_at,ends_at,status FROM leaderboard_seasons WHERE status IN ('scheduled','active') AND (starts_at BETWEEN ? AND ? OR ends_at BETWEEN ? AND ?)`).bind(now,end,now,end).all()
+    ]);
+    const rows=(index)=>results[index].status==="fulfilled"?(results[index].value.results||[]):[];
+    for(const r of rows(0)){push(r.task_starts_at,"📋",`Старт задания: ${r.title}`,"task");push(r.task_ends_at,"🏁",`Конец задания: ${r.title}`,"task");}
+    for(const r of rows(1)){push(r.starts_at,"🗳",`Старт опроса: ${r.question}`,"poll");push(r.ends_at,"🏁",`Конец опроса: ${r.question}`,"poll");}
+    for(const r of rows(2))push(r.starts_at,"🚀",`Релиз: ${r.title}`,"release");
+    for(const r of rows(3)){push(r.starts_at,"🗓",`Событие: ${r.title}`,"event");push(r.ends_at,"🏁",`Конец события: ${r.title}`,"event");}
+    for(const r of rows(4)){push(r.starts_at,"🏆",`Сезон: ${r.title}`,"season");push(r.ends_at,"🏁",`Финал сезона: ${r.title}`,"season");}
+    items.sort((a,b)=>a.at-b.at);const lines=items.slice(0,30).map(i=>`${i.icon} <b>${escapeHtml(formatUtcDate(i.at))}</b>\n${escapeHtml(i.title)}`);
+    html=`<b>📅 Единый календарь · 30 дней</b>\n\n${lines.join("\n\n")||"Запланированных действий нет."}`;
+    v77CalendarCache={html,expiresAt:nowMs+V77_CALENDAR_CACHE_TTL_MS};
+  }
+  await sendTelegramMessage(env,chatId,html,{inline_keyboard:[[{text:"🔄 Обновить",callback_data:"v77_calendar"}],[{text:"⬅️ Центр",callback_data:"v77_home"}]]});
+}
+
+async function showV77Feedback(chatId,user,filter="new",page=0,env){
+  const access=await requireV77OperationsAccess(chatId,user,env);if(!access)return;await ensureV74PollSchema(env);await ensureV77Schema(env);const offset=Math.max(0,Number(page)||0)*6;let where="TRIM(COALESCE(r.comment_text,''))<>''";const binds=[];if(filter!=="all"){where+=` AND COALESCE(m.status,'new')=?`;binds.push(filter);}const sql=`SELECT r.poll_id,r.telegram_id,r.comment_text,r.submitted_at,p.question,COALESCE(m.status,'new') AS moderation_status,b.display_name,b.username FROM player_poll_responses r JOIN player_polls p ON p.poll_id=r.poll_id LEFT JOIN poll_comment_moderation m ON m.poll_id=r.poll_id AND m.telegram_id=r.telegram_id LEFT JOIN bot_subscribers b ON b.telegram_id=r.telegram_id WHERE ${where} ORDER BY r.submitted_at DESC LIMIT 7 OFFSET ?`;binds.push(offset);const rows=(await env.DB.prepare(sql).bind(...binds).all()).results||[];const visible=rows.slice(0,6);const lines=visible.map((r,i)=>`<b>${offset+i+1}. ${escapeHtml(r.question).slice(0,90)}</b>\n${escapeHtml(r.display_name||r.username||r.telegram_id)} · ${escapeHtml(formatUtcDate(r.submitted_at))}\n${escapeHtml(String(r.comment_text).slice(0,500))}\nСтатус: <b>${escapeHtml(r.moderation_status)}</b>`);const buttons=[];for(const r of visible){buttons.push([{text:"⭐ Важное",callback_data:`v77_fb_set:${r.poll_id}:${r.telegram_id}:important`},{text:"🐞 Ошибка",callback_data:`v77_fb_set:${r.poll_id}:${r.telegram_id}:bug`},{text:"✅ Решено",callback_data:`v77_fb_set:${r.poll_id}:${r.telegram_id}:resolved`}]);}buttons.push([{text:"🆕 Новые",callback_data:"v77_feedback:new:0"},{text:"⭐ Важные",callback_data:"v77_feedback:important:0"},{text:"📚 Все",callback_data:"v77_feedback:all:0"}]);const nav=[];if(page>0)nav.push({text:"←",callback_data:`v77_feedback:${filter}:${page-1}`});if(rows.length>6)nav.push({text:"→",callback_data:`v77_feedback:${filter}:${page+1}`});if(nav.length)buttons.push(nav);buttons.push([{text:"⬅️ Центр",callback_data:"v77_home"}]);await sendTelegramMessage(env,chatId,`<b>💬 Обратная связь</b>\n\n${lines.join("\n\n")||"Комментариев по фильтру нет."}`,{inline_keyboard:buttons});
+}
+
+function v77MoscowHour(now){return new Date((Number(now)+3*3600)*1000).getUTCHours();}
+function v77QuietDelaySeconds(policy,now){const start=Number(policy.quiet_start_hour),end=Number(policy.quiet_end_hour),hour=v77MoscowHour(now);const quiet=start===end?false:start<end?(hour>=start&&hour<end):(hour>=start||hour<end);if(!quiet)return 0;let hours=(end-hour+24)%24;if(hours===0)hours=24;return hours*3600+60;}
+async function v77NotificationDecision(env,telegramId,now=Math.floor(Date.now()/1000)){
+  await ensureV77Schema(env);const policy=await env.DB.prepare(`SELECT * FROM player_notification_policy WHERE id=1`).first();if(Number(policy?.paused))return {allowed:false,delay:3600,reason:"paused",policy};const quiet=v77QuietDelaySeconds(policy,now);if(quiet)return {allowed:false,delay:quiet,reason:"quiet",policy};const dayStart=Math.floor((now+3*3600)/V67_DAY)*V67_DAY-3*3600;const count=await env.DB.prepare(`SELECT COUNT(*) AS count,MAX(sent_at) AS last_at FROM player_notification_log WHERE telegram_id=? AND sent_at>=?`).bind(String(telegramId),dayStart).first();if(Number(count?.count||0)>=Number(policy?.max_per_day||3))return {allowed:false,delay:Math.max(900,dayStart+V67_DAY-now),reason:"daily_limit",policy};const gap=Math.max(0,Number(policy?.min_gap_seconds||0));if(count?.last_at&&now-Number(count.last_at)<gap)return {allowed:false,delay:gap-(now-Number(count.last_at))+30,reason:"gap",policy};return {allowed:true,delay:0,reason:"ok",policy};
+}
+
+async function v77DeliverPlayerNotification(env,telegramId,chatId,category,messageHtml,replyMarkup={}){
+  const now=Math.floor(Date.now()/1000);const decision=await v77NotificationDecision(env,telegramId,now);if(decision.allowed){await sendTelegramMessage(env,chatId,messageHtml,replyMarkup);await env.DB.prepare(`INSERT INTO player_notification_log(telegram_id,category,sent_at) VALUES(?,?,?)`).bind(String(telegramId),String(category),now).run();return {status:"sent"};}
+  const result=await env.DB.prepare(`INSERT INTO player_notification_queue(telegram_id,chat_id,category,message_html,reply_markup_json,status,attempts,last_error,available_at,created_at,updated_at) VALUES(?,?,?,?,?,'pending',0,'',?,?,?)`).bind(String(telegramId),String(chatId),String(category),String(messageHtml),JSON.stringify(replyMarkup||{}),now+Math.max(60,decision.delay),now,now).run();return {status:"queued",id:Number(result.meta?.last_row_id||0),reason:decision.reason};
+}
+
+async function processV77NotificationQueue(env,limit=12){await ensureV77Schema(env);const now=Math.floor(Date.now()/1000);const rows=(await env.DB.prepare(`SELECT * FROM player_notification_queue WHERE status IN ('pending','failed') AND available_at<=? AND attempts<5 ORDER BY id LIMIT ?`).bind(now,Math.max(1,Math.min(30,Number(limit)||12))).all()).results||[];for(const row of rows){try{const decision=await v77NotificationDecision(env,row.telegram_id,now);if(!decision.allowed){await env.DB.prepare(`UPDATE player_notification_queue SET available_at=?,updated_at=? WHERE id=?`).bind(now+Math.max(60,decision.delay),now,row.id).run();continue;}await sendTelegramMessage(env,row.chat_id,row.message_html,safeJson(row.reply_markup_json,{}));await env.DB.prepare(`UPDATE player_notification_queue SET status='sent',attempts=attempts+1,last_error='',updated_at=? WHERE id=?`).bind(now,row.id).run();await env.DB.prepare(`INSERT INTO player_notification_log(telegram_id,category,sent_at) VALUES(?,?,?)`).bind(row.telegram_id,row.category,now).run();}catch(error){await env.DB.prepare(`UPDATE player_notification_queue SET status='failed',attempts=attempts+1,last_error=?,available_at=?,updated_at=? WHERE id=?`).bind(String(error?.message||error).slice(0,300),now+600,now,row.id).run();}}}
+
+async function showV77NotificationPolicy(chatId,user,env){const access=await requireV77OperationsAccess(chatId,user,env);if(!access)return;const p=await env.DB.prepare(`SELECT * FROM player_notification_policy WHERE id=1`).first();const stats=await env.DB.prepare(`SELECT SUM(CASE WHEN status='pending' THEN 1 ELSE 0 END) AS pending,SUM(CASE WHEN status='failed' THEN 1 ELSE 0 END) AS failed FROM player_notification_queue`).first();await sendTelegramMessage(env,chatId,`<b>🔕 Защита уведомлений игроков</b>\n\nСтатус: <b>${Number(p.paused)?"все необязательные приостановлены":"работает"}</b>\nМаксимум: <b>${Number(p.max_per_day)} в сутки</b>\nМинимальный интервал: <b>${Math.round(Number(p.min_gap_seconds)/60)} мин.</b>\nТихие часы: <b>${String(p.quiet_start_hour).padStart(2,"0")}:00–${String(p.quiet_end_hour).padStart(2,"0")}:00 МСК</b>\nОчередь: <b>${Number(stats?.pending||0)}</b> · ошибок ${Number(stats?.failed||0)}`,{inline_keyboard:[[{text:Number(p.paused)?"▶️ Возобновить":"⏸ Приостановить",callback_data:"v77_notify_pause"}],[{text:"1/сутки",callback_data:"v77_notify_max:1"},{text:"3/сутки",callback_data:"v77_notify_max:3"},{text:"5/сутки",callback_data:"v77_notify_max:5"}],[{text:"15 мин",callback_data:"v77_notify_gap:900"},{text:"1 час",callback_data:"v77_notify_gap:3600"},{text:"3 часа",callback_data:"v77_notify_gap:10800"}],[{text:"🚚 Обработать очередь",callback_data:"v77_notify_process"}],[{text:"⬅️ Центр",callback_data:"v77_home"}]]});}
+
+async function showV77TaskAnalytics(chatId,user,env){const access=await requireV77OperationsAccess(chatId,user,env);if(!access)return;const since=Math.floor(Date.now()/1000)-30*V67_DAY;const rows=(await env.DB.prepare(`SELECT c.chain_key,c.title,c.enabled,COUNT(DISTINCT e.telegram_id) AS seen,SUM(CASE WHEN e.completed_at>0 THEN 1 ELSE 0 END) AS completed,(SELECT COUNT(*) FROM player_task_claims cl WHERE cl.chain_key=c.chain_key AND cl.status='claimed' AND cl.created_at>=?) AS claimed FROM automation_chains c LEFT JOIN task_exposure_log e ON e.chain_key=c.chain_key AND e.last_seen_at>=? WHERE c.show_as_task=1 GROUP BY c.chain_key ORDER BY seen DESC,c.updated_at DESC LIMIT 20`).bind(since,since).all()).results||[];const lines=rows.map(r=>{const seen=Number(r.seen||0),done=Number(r.completed||0),claimed=Number(r.claimed||0);return `${Number(r.enabled)?"🟢":"⚫"} <b>${escapeHtml(r.title)}</b>\n  Увидели: <b>${seen}</b> · выполнили ${done}${seen?` (${(done/seen*100).toFixed(1)}%)`:""} · забрали ${claimed}`});const buttons=rows.slice(0,12).map(r=>[{text:`📊 ${String(r.title).slice(0,34)}`,callback_data:`v77_task_stat:${r.chain_key}`}]);buttons.push([{text:"⬅️ Центр",callback_data:"v77_home"}]);await sendTelegramMessage(env,chatId,`<b>📊 Аналитика заданий · 30 дней</b>\n\n${lines.join("\n\n")||"Данных пока нет. Они появятся после открытия игроками раздела «Задания»."}`,{inline_keyboard:buttons});}
+
+async function showV77TaskAnalyticsDetails(chatId,user,key,env){const access=await requireV77OperationsAccess(chatId,user,env);if(!access)return;const row=await env.DB.prepare(`SELECT * FROM automation_chains WHERE chain_key=?`).bind(String(key)).first();if(!row)return;const since=Math.floor(Date.now()/1000)-30*V67_DAY;const [exp,claims]=await Promise.all([env.DB.prepare(`SELECT COUNT(DISTINCT telegram_id) AS seen,SUM(CASE WHEN completed_at>0 THEN 1 ELSE 0 END) AS completed,AVG(CASE WHEN completed_at>0 THEN completed_at-first_seen_at END) AS avg_seconds FROM task_exposure_log WHERE chain_key=? AND last_seen_at>=?`).bind(row.chain_key,since).first(),env.DB.prepare(`SELECT COUNT(*) AS claimed FROM player_task_claims WHERE chain_key=? AND status='claimed' AND created_at>=?`).bind(row.chain_key,since).first()]);await sendTelegramMessage(env,chatId,`<b>📊 ${escapeHtml(row.title)}</b>\n\nУвидели: <b>${Number(exp?.seen||0)}</b>\nВыполнили: <b>${Number(exp?.completed||0)}</b>\nЗабрали награду: <b>${Number(claims?.claimed||0)}</b>\nСреднее время: <b>${exp?.avg_seconds?`${Math.round(Number(exp.avg_seconds)/3600)} ч.`:"нет данных"}</b>\n\nУсловие: ${escapeHtml(v67AutomationTriggerLabel(row.trigger_type,row.trigger_value))}`,{inline_keyboard:[[{text:"⬅️ Аналитика",callback_data:"v77_task_analytics"}]]});}
+
+async function showV77Economy(chatId,user,env){const access=await requireV77OperationsAccess(chatId,user,env);if(!access)return;const since=Math.floor(Date.now()/1000)-7*V67_DAY;const [balances,rewards,purchases,cases,queue]=await Promise.all([env.DB.prepare(`SELECT COUNT(*) AS players,SUM(wallet) AS points,SUM(treats) AS treats,SUM(coffee) AS coffee,SUM(pending_wallet) AS ppoints,SUM(pending_treats) AS ptreats,SUM(pending_coffee) AS pcoffee FROM admin_profile_state`).first(),env.DB.prepare(`SELECT reward_kind,SUM(amount) AS amount,COUNT(*) AS operations FROM reward_delivery_queue WHERE status='delivered' AND updated_at>=? GROUP BY reward_kind`).bind(since).all(),env.DB.prepare(`SELECT category,COUNT(*) AS operations FROM shop_stock_consumptions WHERE created_at>=? GROUP BY category`).bind(since).all(),env.DB.prepare(`SELECT case_type,COUNT(*) AS amount FROM granted_cases WHERE status IN ('available','pending') GROUP BY case_type`).all(),env.DB.prepare(`SELECT SUM(CASE WHEN status='pending' THEN 1 ELSE 0 END) AS pending,SUM(CASE WHEN status='failed' THEN 1 ELSE 0 END) AS failed FROM reward_delivery_queue`).first()]);const rewardLines=(rewards.results||[]).map(r=>`• ${escapeHtml(r.reward_kind)}: <b>${Number(r.amount||0).toLocaleString("ru-RU")}</b> · ${Number(r.operations||0)} операций`);const purchaseLines=(purchases.results||[]).map(r=>`• ${escapeHtml(r.category)}: <b>${Number(r.operations||0)}</b> покупок`);const caseLines=(cases.results||[]).map(r=>`• ${escapeHtml(r.case_type)}: <b>${Number(r.amount||0)}</b>`);const warning=Number(queue?.failed||0)>0?"\n\n🔴 Есть ошибки доставки наград.":Number(balances?.ppoints||0)+Number(balances?.ptreats||0)+Number(balances?.pcoffee||0)>0?"\n\n🟡 Есть ожидающие начисления в профилях.":"";await sendTelegramMessage(env,chatId,`<b>💰 Экономика+</b>\n\nИгроков: <b>${Number(balances?.players||0)}</b>\nБаланс очков: <b>${Number(balances?.points||0).toLocaleString("ru-RU")}</b>\nЗефир: <b>${Number(balances?.treats||0).toLocaleString("ru-RU")}</b>\nКофе: <b>${Number(balances?.coffee||0).toLocaleString("ru-RU")}</b>\nОжидает начисления: ${Number(balances?.ppoints||0)} очков, ${Number(balances?.ptreats||0)} зефира, ${Number(balances?.pcoffee||0)} кофе\n\n<b>Выдано за 7 дней</b>\n${rewardLines.join("\n")||"Нет выдач."}\n\n<b>Покупки за 7 дней</b>\n${purchaseLines.join("\n")||"Нет покупок."}\n\n<b>Неоткрытые выданные кейсы</b>\n${caseLines.join("\n")||"Нет."}\n\nОчередь наград: ${Number(queue?.pending||0)} · ошибок ${Number(queue?.failed||0)}${warning}\n\n<i>Историческая сумма расходов по валютам пока недоступна: старые операции магазина не сохраняли цену на момент покупки.</i>`,{inline_keyboard:[[{text:"🔄 Обновить",callback_data:"v77_economy"}],[{text:"⬅️ Центр",callback_data:"v77_home"}]]});}
+
+function v77ConflictList(row,allRows=[]){const issues=[];const action=safeJson(row.action_json,{});if(Number(row.trigger_value||0)<=0)issues.push({severity:"critical",text:"нулевое значение условия"});if(row.action_type==="reward"){if(!action.kind||Number(action.amount||0)<=0)issues.push({severity:"critical",text:"награда не настроена"});if(action.kind==="case"&&!new Set(["small","sweet","gold","legendary"]).has(String(action.id)))issues.push({severity:"critical",text:"неизвестный тип кейса"});}if(Number(row.show_as_task)&&!v71TaskTriggerSupported(row.trigger_type))issues.push({severity:"critical",text:"условие нельзя показать как задание"});if(Number(row.task_starts_at||0)&&Number(row.task_ends_at||0)&&Number(row.task_starts_at)>=Number(row.task_ends_at))issues.push({severity:"critical",text:"дата начала позже даты окончания"});for(const other of allRows){if(other.chain_key===row.chain_key||!Number(other.enabled)||!Number(row.enabled))continue;if(other.trigger_type===row.trigger_type&&Number(other.trigger_value)===Number(row.trigger_value)&&other.action_type===row.action_type&&String(other.action_json)===String(row.action_json)) {issues.push({severity:"warning",text:`дублирует «${other.title}»`});break;}}return issues;}
+async function showV77Conflicts(chatId,user,env){const access=await requireV77OperationsAccess(chatId,user,env);if(!access)return;const rows=(await env.DB.prepare(`SELECT * FROM automation_chains ORDER BY enabled DESC,updated_at DESC`).all()).results||[];const lines=[];let critical=0,warning=0;for(const row of rows){const issues=v77ConflictList(row,rows);if(!issues.length)continue;critical+=issues.filter(i=>i.severity==="critical").length;warning+=issues.filter(i=>i.severity==="warning").length;lines.push(`<b>${escapeHtml(row.title)}</b>\n${issues.map(i=>`${i.severity==="critical"?"🔴":"🟡"} ${escapeHtml(i.text)}`).join("\n")}`);}await sendTelegramMessage(env,chatId,`<b>⚠️ Проверка конфликтов</b>\n\nКритических: <b>${critical}</b> · предупреждений: <b>${warning}</b>\n\n${lines.join("\n\n")||"🟢 Конфликтов не обнаружено."}`,{inline_keyboard:[[{text:"🔄 Проверить снова",callback_data:"v77_conflicts"}],[{text:"⬅️ Центр",callback_data:"v77_home"}]]});}
+
+async function showV77Bulk(chatId,user,env){const access=await requireV77OperationsAccess(chatId,user,env);if(!access)return;let workflow=await getStaffWorkflow(user.id,env);if(!workflow||workflow.flow_type!=="v77_bulk"){await setStaffWorkflow(user.id,chatId,"v77_bulk","select",{selected:[]},env);workflow=await getStaffWorkflow(user.id,env);}const rows=(await env.DB.prepare(`SELECT chain_key,title,enabled,show_as_task,action_type FROM automation_chains ORDER BY enabled DESC,updated_at DESC LIMIT 16`).all()).results||[];const selected=new Set(workflow.data.selected||[]);const buttons=rows.map(r=>[{text:`${selected.has(r.chain_key)?"☑️":"⬜"} ${Number(r.enabled)?"🟢":"⚫"} ${String(r.title).slice(0,30)}`,callback_data:`v77_bulk_pick:${r.chain_key}`}]);buttons.push([{text:`▶️ Включить · ${selected.size}`,callback_data:"v77_bulk_apply:enable"},{text:"⏸ Выключить",callback_data:"v77_bulk_apply:disable"}],[{text:"📋 Показать задания",callback_data:"v77_bulk_apply:show"},{text:"🙈 Скрыть задания",callback_data:"v77_bulk_apply:hide"}],[{text:"🎁 Заменить награду",callback_data:"v77_bulk_reward"}],[{text:"🧹 Сбросить выбор",callback_data:"v77_bulk_clear"}],[{text:"⬅️ Центр",callback_data:"v77_home"}]);await sendTelegramMessage(env,chatId,`<b>🧰 Массовые действия</b>\n\nВыбрано: <b>${selected.size}</b>. Действия применяются только после отдельного подтверждения.`,{inline_keyboard:buttons});}
+async function v77BulkConfirm(query,action,env){const workflow=await getStaffWorkflow(query.from.id,env);const selected=workflow?.flow_type==="v77_bulk"?(workflow.data.selected||[]):[];if(!selected.length){await answerCallback(env,query.id,"Сначала выберите элементы.",true);return;}await updateStaffWorkflow(query.from.id,{step:"confirm",data:{...workflow.data,action}},env);await answerCallback(env,query.id,"Подтвердите действие.");await sendTelegramMessage(env,query.message.chat.id,`<b>Подтверждение</b>\n\nБудет изменено: <b>${selected.length}</b> автоматизаций.\nДействие: <b>${escapeHtml(action)}</b>`,{inline_keyboard:[[{text:"✅ Применить",callback_data:"v77_bulk_confirm"}],[{text:"❌ Отмена",callback_data:"v77_bulk"}]]});}
+async function applyV77Bulk(query,env){const workflow=await getStaffWorkflow(query.from.id,env);if(!workflow||workflow.flow_type!=="v77_bulk"||workflow.step!=="confirm"){await answerCallback(env,query.id,"Операция устарела.",true);return;}const access=await getTeamAccess(query.from,env);const selected=(workflow.data.selected||[]).slice(0,30);const action=workflow.data.action;const now=Math.floor(Date.now()/1000);let changes=0;for(const key of selected){const row=await env.DB.prepare(`SELECT * FROM automation_chains WHERE chain_key=?`).bind(key).first();if(!row)continue;if(action==="enable"||action==="disable"){const enable=action==="enable"?1:0;if(enable&&v77ConflictList({...row,enabled:1},[]).some(i=>i.severity==="critical"))continue;await env.DB.prepare(`UPDATE automation_chains SET enabled=?,updated_at=?,updated_by=? WHERE chain_key=?`).bind(enable,now,String(query.from.id),key).run();changes++;}else if(action==="show"||action==="hide"){const show=action==="show"&&row.action_type==="reward"&&v71TaskTriggerSupported(row.trigger_type)?1:0;await env.DB.prepare(`UPDATE automation_chains SET show_as_task=?,updated_at=?,updated_by=? WHERE chain_key=?`).bind(show,now,String(query.from.id),key).run();changes++;}else if(String(action).startsWith("reward:")){if(row.action_type!=="reward")continue;const preset=v67AutomationRewardPreset(String(action).slice(7),row.title);if(!preset)continue;await env.DB.prepare(`UPDATE automation_chains SET action_json=?,updated_at=?,updated_by=? WHERE chain_key=?`).bind(JSON.stringify(preset),now,String(query.from.id),key).run();changes++;}}
+  await logStaffAction(env,query.from,access,"automation_bulk_edit",null,"automation",null,null,{selected,action,changes});await setStaffWorkflow(query.from.id,query.message.chat.id,"v77_bulk","select",{selected:[]},env);await answerCallback(env,query.id,`Изменено: ${changes}.`);await showV77Bulk(query.message.chat.id,query.from,env);
+}
+
+async function v77UpsertAlert(env,key,type,severity,title,details,open=true){const now=Math.floor(Date.now()/1000);if(open)await env.DB.prepare(`INSERT INTO smart_alert_events(alert_key,alert_type,severity,title,details,status,first_seen_at,last_seen_at,last_notified_at,resolved_at) VALUES(?,?,?,?,?,'open',?,?,0,0) ON CONFLICT(alert_key) DO UPDATE SET severity=excluded.severity,title=excluded.title,details=excluded.details,status='open',last_seen_at=excluded.last_seen_at,resolved_at=0`).bind(key,type,severity,title,details,now,now).run();else await env.DB.prepare(`UPDATE smart_alert_events SET status='resolved',resolved_at=?,last_seen_at=? WHERE alert_key=? AND status='open'`).bind(now,now,key).run();}
+async function scanV77SmartAlerts(env){await ensureV77Schema(env);const now=Math.floor(Date.now()/1000);const activeKeys=new Set();const queue=await env.DB.prepare(`SELECT SUM(CASE WHEN status='failed' THEN 1 ELSE 0 END) AS failed,SUM(CASE WHEN status='pending' AND created_at<? THEN 1 ELSE 0 END) AS stale FROM reward_delivery_queue`).bind(now-900).first();if(Number(queue?.failed||0)>0){activeKeys.add("reward-queue-failed");await v77UpsertAlert(env,"reward-queue-failed","reward_queue","critical","Ошибки доставки наград",`${Number(queue.failed)} записей со статусом failed`);}if(Number(queue?.stale||0)>0){activeKeys.add("reward-queue-stale");await v77UpsertAlert(env,"reward-queue-stale","reward_queue","warning","Награды долго ожидают",`${Number(queue.stale)} записей старше 15 минут`);}const silent=(await env.DB.prepare(`SELECT c.chain_key,c.title FROM automation_chains c WHERE c.enabled=1 AND c.updated_at<? AND NOT EXISTS(SELECT 1 FROM automation_chain_executions e WHERE e.chain_key=c.chain_key AND e.created_at>=?) LIMIT 20`).bind(now-7*V67_DAY,now-7*V67_DAY).all()).results||[];for(const r of silent){const key=`silent-auto:${r.chain_key}`;activeKeys.add(key);await v77UpsertAlert(env,key,"automation","warning",`Автоматизация не срабатывает: ${r.title}`,"За последние 7 дней нет выполнений.");}try{const polls=(await env.DB.prepare(`SELECT p.poll_id,p.question,p.published_at FROM player_polls p WHERE p.status='active' AND p.published_at<? AND NOT EXISTS(SELECT 1 FROM player_poll_responses r WHERE r.poll_id=p.poll_id) LIMIT 10`).bind(now-V67_DAY).all()).results||[];for(const r of polls){const key=`poll-empty:${r.poll_id}`;activeKeys.add(key);await v77UpsertAlert(env,key,"poll","warning",`Опрос без ответов: ${r.question}`,"Опрос активен более суток, но ответов нет.");}}catch{}
+  const existing=(await env.DB.prepare(`SELECT alert_key FROM smart_alert_events WHERE status='open'`).all()).results||[];for(const r of existing)if(!activeKeys.has(r.alert_key)&&(/^(reward-queue|silent-auto|poll-empty)/.test(r.alert_key)))await v77UpsertAlert(env,r.alert_key,"","","","",false);
+  const urgent=(await env.DB.prepare(`SELECT * FROM smart_alert_events WHERE status='open' AND severity='critical' AND (last_notified_at=0 OR last_notified_at<?) LIMIT 5`).bind(now-V67_DAY).all()).results||[];for(const a of urgent){await notifySubscribedStaff(env,"bot_errors",`🔴 <b>${escapeHtml(a.title)}</b>\n\n${escapeHtml(a.details)}`);await env.DB.prepare(`UPDATE smart_alert_events SET last_notified_at=? WHERE alert_key=?`).bind(now,a.alert_key).run();}
+}
+async function showV77Alerts(chatId,user,env){const access=await requireV77OperationsAccess(chatId,user,env);if(!access)return;await scanV77SmartAlerts(env);const rows=(await env.DB.prepare(`SELECT * FROM smart_alert_events WHERE status='open' ORDER BY CASE severity WHEN 'critical' THEN 0 ELSE 1 END,last_seen_at DESC LIMIT 30`).all()).results||[];const lines=rows.map(r=>`${r.severity==="critical"?"🔴":"🟡"} <b>${escapeHtml(r.title)}</b>\n${escapeHtml(r.details)}\nПоследнее подтверждение: ${escapeHtml(formatUtcDate(r.last_seen_at))}`);await sendTelegramMessage(env,chatId,`<b>🚨 Умные предупреждения</b>\n\n${lines.join("\n\n")||"🟢 Значимых отклонений не обнаружено."}`,{inline_keyboard:[[{text:"🔄 Проверить",callback_data:"v77_alerts"}],[{text:"⬅️ Центр",callback_data:"v77_home"}]]});}
+
+async function processV77Cron(env){await ensureV77Schema(env);await processV77NotificationQueue(env,12);const now=Math.floor(Date.now()/1000);const state=await getSystemState(env,"v77:alerts:last");if(!state||now-Number(state.value||0)>=3600){await scanV77SmartAlerts(env);await setSystemState(env,"v77:alerts:last",String(now));}await env.DB.prepare(`DELETE FROM player_notification_log WHERE sent_at<?`).bind(now-30*V67_DAY).run();}
+
+async function handleV77Callback(query,env){const data=String(query.data||"");const chatId=query.message?.chat?.id;if(!chatId)return false;
+  if(data==="v77_home"){await answerCallback(env,query.id,"Центр обновлён.");await showV77OperationsHub(chatId,query.from,env);return true;}
+  if(data==="v77_diag_start"){await startV77PlayerDiagnostics(query,env);return true;}const diag=data.match(/^v77_diag:(\d{4,20})$/);if(diag){await answerCallback(env,query.id,"Проверяю.");await showV77PlayerDiagnostics(chatId,query.from,diag[1],env);return true;}
+  if(data==="v77_series"){await answerCallback(env,query.id,"Серии обновлены.");await showV77SeriesDashboard(chatId,query.from,env);return true;}if(data==="v77_series_new"){await startV77SeriesCreate(query,env);return true;}if(data==="v77_series_cancel"){await clearStaffWorkflow(query.from.id,env);await answerCallback(env,query.id,"Создание отменено.");await showV77SeriesDashboard(chatId,query.from,env);return true;}
+  const mode=data.match(/^v77_series_mode:(ordered|any)$/);if(mode){const w=await getStaffWorkflow(query.from.id,env);if(!w||w.flow_type!=="v77_series_create")return true;await updateStaffWorkflow(query.from.id,{step:"tasks",data:{...w.data,mode:mode[1]}},env);await answerCallback(env,query.id,"Выберите этапы.");await showV77SeriesTaskPicker(query,env);return true;}
+  const task=data.match(/^v77_series_task:([a-z0-9_]+)$/);if(task){const w=await getStaffWorkflow(query.from.id,env);if(!w||w.flow_type!=="v77_series_create")return true;const selected=new Set(w.data.selected||[]);selected.has(task[1])?selected.delete(task[1]):selected.add(task[1]);await updateStaffWorkflow(query.from.id,{step:"tasks",data:{...w.data,selected:[...selected].slice(0,8)}},env);await answerCallback(env,query.id,selected.has(task[1])?"Добавлено":"Убрано");await showV77SeriesTaskPicker(query,env);return true;}
+  if(data==="v77_series_tasks_done"){const w=await getStaffWorkflow(query.from.id,env);if(!w||w.flow_type!=="v77_series_create"||(w.data.selected||[]).length<2){await answerCallback(env,query.id,"Выберите минимум два задания.",true);return true;}await updateStaffWorkflow(query.from.id,{step:"reward",data:w.data},env);await answerCallback(env,query.id,"Выберите финальную награду.");await sendTelegramMessage(env,chatId,"<b>Финальная награда серии</b>",{inline_keyboard:[[{text:"📦 Обычный",callback_data:"v77_series_reward:case_small"},{text:"🥈 Серебряный",callback_data:"v77_series_reward:case_sweet"}],[{text:"🥇 Золотой",callback_data:"v77_series_reward:case_gold"},{text:"💎 Легендарный",callback_data:"v77_series_reward:case_legendary"}],[{text:"⭐ 500",callback_data:"v77_series_reward:points_500"},{text:"☕ 50",callback_data:"v77_series_reward:coffee_50"}],[{text:"❌ Отменить",callback_data:"v77_series_cancel"}]]});return true;}
+  const reward=data.match(/^v77_series_reward:(case_small|case_sweet|case_gold|case_legendary|points_500|coffee_50)$/);if(reward){const w=await getStaffWorkflow(query.from.id,env);if(!w||w.flow_type!=="v77_series_create")return true;const now=Math.floor(Date.now()/1000),key=`series_${now.toString(36)}_${String(query.from.id).slice(-6)}`;const action=v67AutomationRewardPreset(reward[1],`Финал серии «${w.data.title}»`);await env.DB.prepare(`INSERT INTO task_series(series_key,title,description,enabled,completion_mode,final_reward_json,task_mode,starts_at,ends_at,sort_order,created_at,updated_at,updated_by) VALUES(?,?,?,0,?,?,'one_time',0,0,100,?,?,?)`).bind(key,w.data.title,"",w.data.mode||"ordered",JSON.stringify(action),now,now,String(query.from.id)).run();await env.DB.batch((w.data.selected||[]).map((chainKey,index)=>env.DB.prepare(`INSERT INTO task_series_steps(series_key,step_order,chain_key) VALUES(?,?,?)`).bind(key,index+1,chainKey)));await clearStaffWorkflow(query.from.id,env);await answerCallback(env,query.id,"Серия создана и выключена.");await showV77SeriesDetails(chatId,query.from,key,env);return true;}
+  const seriesOpen=data.match(/^v77_series_open:([a-z0-9_]+)$/);if(seriesOpen){await answerCallback(env,query.id,"Открываю серию.");await showV77SeriesDetails(chatId,query.from,seriesOpen[1],env);return true;}const seriesToggle=data.match(/^v77_series_toggle:([a-z0-9_]+)$/);if(seriesToggle){const access=await requireV77OperationsAccess(chatId,query.from,env);if(!access)return true;const row=await env.DB.prepare(`SELECT * FROM task_series WHERE series_key=?`).bind(seriesToggle[1]).first();const broken=await env.DB.prepare(`SELECT COUNT(*) AS count FROM task_series_steps x LEFT JOIN automation_chains c ON c.chain_key=x.chain_key WHERE x.series_key=? AND (c.chain_key IS NULL OR c.enabled=0 OR c.show_as_task=0)`).bind(seriesToggle[1]).first();if(!Number(row?.enabled)&&Number(broken?.count||0)>0){await answerCallback(env,query.id,"Нельзя включить: этапы выключены или скрыты.",true);return true;}await env.DB.prepare(`UPDATE task_series SET enabled=?,updated_at=?,updated_by=? WHERE series_key=?`).bind(Number(row.enabled)?0:1,Math.floor(Date.now()/1000),String(query.from.id),seriesToggle[1]).run();await answerCallback(env,query.id,Number(row.enabled)?"Серия выключена.":"Серия включена.");await showV77SeriesDetails(chatId,query.from,seriesToggle[1],env);return true;}
+  const seriesClaim=data.match(/^v77_series_claim:([a-z0-9_]+)$/);if(seriesClaim){await claimV77Series(query,seriesClaim[1],env);return true;}
+  if(data==="v77_calendar"){await answerCallback(env,query.id,"Календарь обновлён.");await showV77Calendar(chatId,query.from,env);return true;}
+  const feedback=data.match(/^v77_feedback:(new|important|bug|resolved|spam|all):(\d+)$/);if(feedback){await answerCallback(env,query.id,"Отзывы обновлены.");await showV77Feedback(chatId,query.from,feedback[1],Number(feedback[2]),env);return true;}const fbSet=data.match(/^v77_fb_set:([^:]+):(\d{4,20}):(important|bug|resolved|spam)$/);if(fbSet){const access=await requireV77OperationsAccess(chatId,query.from,env);if(!access)return true;const now=Math.floor(Date.now()/1000);await env.DB.prepare(`INSERT INTO poll_comment_moderation(poll_id,telegram_id,status,tag,note,updated_at,updated_by) VALUES(?,?,?,'','',?,?) ON CONFLICT(poll_id,telegram_id) DO UPDATE SET status=excluded.status,updated_at=excluded.updated_at,updated_by=excluded.updated_by`).bind(fbSet[1],fbSet[2],fbSet[3],now,String(query.from.id)).run();await answerCallback(env,query.id,"Статус обновлён.");await showV77Feedback(chatId,query.from,"new",0,env);return true;}
+  if(data==="v77_notify"){await answerCallback(env,query.id,"Настройки обновлены.");await showV77NotificationPolicy(chatId,query.from,env);return true;}if(data==="v77_notify_pause"){const access=await requireV77OperationsAccess(chatId,query.from,env);if(!access)return true;const p=await env.DB.prepare(`SELECT paused FROM player_notification_policy WHERE id=1`).first();await env.DB.prepare(`UPDATE player_notification_policy SET paused=?,updated_at=?,updated_by=? WHERE id=1`).bind(Number(p.paused)?0:1,Math.floor(Date.now()/1000),String(query.from.id)).run();await answerCallback(env,query.id,Number(p.paused)?"Уведомления возобновлены.":"Уведомления приостановлены.");await showV77NotificationPolicy(chatId,query.from,env);return true;}const nMax=data.match(/^v77_notify_max:(1|3|5)$/);if(nMax){await env.DB.prepare(`UPDATE player_notification_policy SET max_per_day=?,updated_at=?,updated_by=? WHERE id=1`).bind(Number(nMax[1]),Math.floor(Date.now()/1000),String(query.from.id)).run();await answerCallback(env,query.id,"Лимит изменён.");await showV77NotificationPolicy(chatId,query.from,env);return true;}const nGap=data.match(/^v77_notify_gap:(900|3600|10800)$/);if(nGap){await env.DB.prepare(`UPDATE player_notification_policy SET min_gap_seconds=?,updated_at=?,updated_by=? WHERE id=1`).bind(Number(nGap[1]),Math.floor(Date.now()/1000),String(query.from.id)).run();await answerCallback(env,query.id,"Интервал изменён.");await showV77NotificationPolicy(chatId,query.from,env);return true;}if(data==="v77_notify_process"){await processV77NotificationQueue(env,20);await answerCallback(env,query.id,"Очередь обработана.");await showV77NotificationPolicy(chatId,query.from,env);return true;}
+  if(data==="v77_task_analytics"){await answerCallback(env,query.id,"Аналитика обновлена.");await showV77TaskAnalytics(chatId,query.from,env);return true;}const taskStat=data.match(/^v77_task_stat:([a-z0-9_]+)$/);if(taskStat){await answerCallback(env,query.id,"Открываю отчёт.");await showV77TaskAnalyticsDetails(chatId,query.from,taskStat[1],env);return true;}
+  if(data==="v77_economy"){await answerCallback(env,query.id,"Экономика обновлена.");await showV77Economy(chatId,query.from,env);return true;}if(data==="v77_conflicts"){await answerCallback(env,query.id,"Проверка завершена.");await showV77Conflicts(chatId,query.from,env);return true;}
+  if(data==="v77_bulk"){await answerCallback(env,query.id,"Массовые действия.");await showV77Bulk(chatId,query.from,env);return true;}const bulkPick=data.match(/^v77_bulk_pick:([a-z0-9_]+)$/);if(bulkPick){let w=await getStaffWorkflow(query.from.id,env);if(!w||w.flow_type!=="v77_bulk"){await setStaffWorkflow(query.from.id,chatId,"v77_bulk","select",{selected:[]},env);w=await getStaffWorkflow(query.from.id,env);}const selected=new Set(w.data.selected||[]);selected.has(bulkPick[1])?selected.delete(bulkPick[1]):selected.add(bulkPick[1]);await updateStaffWorkflow(query.from.id,{step:"select",data:{selected:[...selected].slice(0,20)}},env);await answerCallback(env,query.id,selected.has(bulkPick[1])?"Выбрано":"Убрано");await showV77Bulk(chatId,query.from,env);return true;}if(data==="v77_bulk_clear"){await setStaffWorkflow(query.from.id,chatId,"v77_bulk","select",{selected:[]},env);await answerCallback(env,query.id,"Выбор очищен.");await showV77Bulk(chatId,query.from,env);return true;}const bulkApply=data.match(/^v77_bulk_apply:(enable|disable|show|hide)$/);if(bulkApply){await v77BulkConfirm(query,bulkApply[1],env);return true;}if(data==="v77_bulk_reward"){const w=await getStaffWorkflow(query.from.id,env);if(!w||!(w.data.selected||[]).length){await answerCallback(env,query.id,"Сначала выберите элементы.",true);return true;}await answerCallback(env,query.id,"Выберите награду.");await sendTelegramMessage(env,chatId,"<b>Новая награда для выбранных автоматизаций</b>",{inline_keyboard:[[{text:"📦 Обычный",callback_data:"v77_bulk_reward_pick:case_small"},{text:"🥈 Серебряный",callback_data:"v77_bulk_reward_pick:case_sweet"}],[{text:"🥇 Золотой",callback_data:"v77_bulk_reward_pick:case_gold"},{text:"💎 Легендарный",callback_data:"v77_bulk_reward_pick:case_legendary"}],[{text:"⭐ 500",callback_data:"v77_bulk_reward_pick:points_500"},{text:"☕ 50",callback_data:"v77_bulk_reward_pick:coffee_50"}]]});return true;}const bulkReward=data.match(/^v77_bulk_reward_pick:(case_small|case_sweet|case_gold|case_legendary|points_500|coffee_50)$/);if(bulkReward){await v77BulkConfirm(query,`reward:${bulkReward[1]}`,env);return true;}if(data==="v77_bulk_confirm"){await applyV77Bulk(query,env);return true;}
+  if(data==="v77_alerts"){await answerCallback(env,query.id,"Проверяю систему.");await showV77Alerts(chatId,query.from,env);return true;}
+  return false;
+}
+// ===================== END v0.77 ADMIN OPERATIONS SUITE =====================
+
+
+async function handleV67Callback(query,env){
+  const data=String(query.data||"");const chatId=query.message?.chat?.id;if(!chatId)return false;
+  if(data==="v67_automations"){await answerCallback(env,query.id,"Автоматизации обновлены.");await showV67AutomationDashboard(chatId,query.from,env);return true;}
+  if(data==="v67_auto_new"){await startV67AutomationCreate(query,env);return true;}
+  if(data==="v67_auto_new_cancel"){await cancelV67AutomationDraft(query,env);return true;}
+  if(data==="v67_auto_new_save"){await saveV67AutomationDraft(query,env);return true;}
+  const autoNewTrigger=data.match(/^v67_auto_new_trigger:(new_player_delay|inactive_days|accepted_runs|total_score|opened_cases|best_score|promo_activations|level_reached|season_ending|shop_purchases|skin_purchases|physical_purchases|case_purchases)$/);if(autoNewTrigger){await selectV67AutomationTrigger(query,autoNewTrigger[1],env);return true;}
+  const autoNewValue=data.match(/^v67_auto_new_value:(\d{1,7})$/);if(autoNewValue){await selectV67AutomationTriggerValue(query,Number(autoNewValue[1]),env);return true;}
+  if(data==="v67_auto_new_value_custom"){await startV67AutomationCustomTriggerValue(query,env);return true;}
+  const autoNewAction=data.match(/^v67_auto_new_action:(message|reward)$/);if(autoNewAction){await selectV67AutomationAction(query,autoNewAction[1],env);return true;}
+  const autoNewReward=data.match(/^v67_auto_new_reward:(case_small|case_sweet|case_gold|case_legendary|points_500|points_1000|coffee_50|treats_100)$/);if(autoNewReward){await selectV67AutomationReward(query,autoNewReward[1],env);return true;}
+  const taskVisibility=data.match(/^v71_task_visibility:(on|off)$/);if(taskVisibility){await selectV71TaskVisibility(query,taskVisibility[1]==="on",env);return true;}
+  const taskMode=data.match(/^v71_task_mode:(one_time|daily|event)$/);if(taskMode){await selectV71TaskMode(query,taskMode[1],env);return true;}
+  const auto=data.match(/^v67_auto:([a-z0-9_]+)$/);if(auto){await answerCallback(env,query.id,"Открываю цепочку.");await showV67AutomationDetails(chatId,query.from,auto[1],env);return true;}
+  const autoToggle=data.match(/^v67_auto_toggle:([a-z0-9_]+)$/);if(autoToggle){await toggleV67Automation(query,autoToggle[1],env);return true;}
+  const taskToggle=data.match(/^v71_task_toggle:([a-z0-9_]+)$/);if(taskToggle){await toggleV71TaskVisibility(query,taskToggle[1],env);return true;}
+  if(data==="v67_retention"){await answerCallback(env,query.id,"Считаю удержание.");await showV67RetentionAnalytics(chatId,query.from,env);return true;}
+  if(data==="v67_settings_history"){await answerCallback(env,query.id,"История обновлена.");await showV67SettingsHistory(chatId,query.from,env);return true;}
+  const history=data.match(/^v67_hist:([sla]):(\d+)$/);if(history){await answerCallback(env,query.id,"Открываю изменение.");await showV67HistoryDetails(chatId,query.from,history[1],Number(history[2]),env);return true;}
+  if(data==="v67_performance"){await answerCallback(env,query.id,"Собираю статистику скорости.");await showV67PerformanceCenter(chatId,query.from,env);return true;}
+  if(data==="v67_perf_cleanup"){const access=await requireSecurityPermission(chatId,query.from,"viewEconomy",env);if(!access)return true;await ensureV67Schema(env);await env.DB.prepare(`DELETE FROM admin_performance_samples WHERE created_at<?`).bind(Math.floor(Date.now()/1000)-7*V67_DAY).run();await answerCallback(env,query.id,"Старые измерения удалены.");await showV67PerformanceCenter(chatId,query.from,env);return true;}
+  if(data==="v67_releases"){await answerCallback(env,query.id,"Релизы обновлены.");await showV67ReleaseDashboard(chatId,query.from,env);return true;}
+  if(data==="v67_release_new"){await startV67ReleaseWorkflow(query,env);return true;}
+  const release=data.match(/^v67_release:([A-Za-z0-9_-]+)$/);if(release){await answerCallback(env,query.id,"Открываю релиз.");await showV67ReleaseDetails(chatId,query.from,release[1],env);return true;}
+  const releaseState=data.match(/^v67_release_state:([A-Za-z0-9_-]+):(paused|running|cancelled)$/);if(releaseState){await changeV67ReleaseState(query,releaseState[1],releaseState[2],env);return true;}
+  if(data==="v67_stock_forecast"){await answerCallback(env,query.id,"Пересчитываю прогноз.");await showV67StockForecast(chatId,query.from,env);return true;}
+  return false;
+}
+
+
+// =============================================================
+// STAFF TRAINING + PLAYER RESET CENTER v0.78
+// =============================================================
+const STAFF_TRAINING_VERSION = 1;
+const PLAYER_RESET_COMPONENTS = Object.freeze({
+  points: Object.freeze({ label: "Очки", icon: "⭐" }),
+  treats: Object.freeze({ label: "Зефир", icon: "🍥" }),
+  coffee: Object.freeze({ label: "Кофе", icon: "☕" }),
+  record: Object.freeze({ label: "Рекорд и рейтинг", icon: "🏆" }),
+  xp: Object.freeze({ label: "Уровень и опыт", icon: "🎚" }),
+  cases: Object.freeze({ label: "Кейсы и бустеры", icon: "📦" }),
+  collection: Object.freeze({ label: "Образы и коллекция", icon: "🎨" })
+});
+const PLAYER_RESET_COMPONENT_KEYS = Object.freeze(Object.keys(PLAYER_RESET_COMPONENTS));
+
+const STAFF_TRAINING_STEPS = Object.freeze({
+  cashier: Object.freeze([
+    Object.freeze({ title: "Роль кассира", text: "Кассир проверяет и погашает только конкретные коды физических наград. Списки игроков и история заказов недоступны." }),
+    Object.freeze({ title: "Проверка кода", text: "Сначала отсканируйте QR или введите код вручную. Сверьте товар, срок действия и статус. Не подтверждайте выдачу по фотографии старого кода." }),
+    Object.freeze({ title: "Передача товара", text: "Нажимайте «Подарок выдан» только после фактической передачи гостю. При сомнении отмените действие и позовите администратора." }),
+    Object.freeze({ title: "Ошибки и безопасность", text: "Не просите пароль игрока, не меняйте его баланс и не передавайте рабочую сессию другому человеку. Ошибочное списание сразу оформляйте через обращение." }),
+    Object.freeze({ title: "Проверка знаний", text: "Когда можно нажать «Подарок выдан»?", answers: Object.freeze([
+      Object.freeze({ id: "after", title: "После передачи товара", correct: true }),
+      Object.freeze({ id: "before", title: "До передачи, чтобы ускорить очередь", correct: false }),
+      Object.freeze({ id: "photo", title: "По фотографии кода", correct: false })
+    ]) })
+  ]),
+  cook: Object.freeze([
+    Object.freeze({ title: "Роль повара", text: "Повар работает с внутренними задачами точки и не получает доступ к игрокам, их балансам, заказам и кодам." }),
+    Object.freeze({ title: "Данные игроков", text: "Нельзя запрашивать Telegram ID, историю покупок или показывать чужие данные. Все вопросы гостя передаются кассиру или администратору." }),
+    Object.freeze({ title: "Рабочие сообщения", text: "Используйте бот только для доступных вашей роли разделов. Не пытайтесь открывать старые команды или ссылки из чужих сообщений." }),
+    Object.freeze({ title: "Проблемы", text: "При технической ошибке запишите время и краткое описание, затем создайте обращение. Не обещайте игроку ручную награду без решения администратора." }),
+    Object.freeze({ title: "Проверка знаний", text: "Что делать, если игрок просит проверить его заказ?", answers: Object.freeze([
+      Object.freeze({ id: "escalate", title: "Передать кассиру или администратору", correct: true }),
+      Object.freeze({ id: "search", title: "Самостоятельно искать игрока", correct: false }),
+      Object.freeze({ id: "askpass", title: "Попросить пароль", correct: false })
+    ]) })
+  ]),
+  administrator: Object.freeze([
+    Object.freeze({ title: "Роль администратора", text: "Администратор управляет игроками, магазином, заданиями, опросами и автоматизациями. Каждое опасное действие записывается в аудит." }),
+    Object.freeze({ title: "Награды и экономика", text: "Перед массовой выдачей проверяйте аудиторию, причину и итоговую стоимость. Сначала используйте предпросмотр или диагностику на одном тестовом аккаунте." }),
+    Object.freeze({ title: "Сбросы и блокировки", text: "Сброс прогресса необратим. Для всех игроков он доступен только владельцу. Всегда указывайте понятную причину и проверяйте выбранные параметры." }),
+    Object.freeze({ title: "Автоматизации", text: "Перед включением проверяйте конфликты, условия, награды и видимость задания. После запуска смотрите аналитику и очередь доставки." }),
+    Object.freeze({ title: "Проверка знаний", text: "Что нужно сделать перед массовым опасным действием?", answers: Object.freeze([
+      Object.freeze({ id: "preview", title: "Проверить параметры и подтверждение", correct: true }),
+      Object.freeze({ id: "fast", title: "Запустить сразу без проверки", correct: false }),
+      Object.freeze({ id: "cashier", title: "Передать действие кассиру", correct: false })
+    ]) })
+  ])
+});
+
+let v78SchemaPromise = null;
+async function ensureV78Schema(env) {
+  if (!v78SchemaPromise) {
+    v78SchemaPromise = (async () => {
+      await env.DB.batch([
+        env.DB.prepare(`CREATE TABLE IF NOT EXISTS staff_training_progress (
+          telegram_id TEXT PRIMARY KEY, role TEXT NOT NULL, training_version INTEGER NOT NULL DEFAULT 1,
+          step_index INTEGER NOT NULL DEFAULT 0, quiz_score INTEGER NOT NULL DEFAULT 0,
+          status TEXT NOT NULL DEFAULT 'not_started', started_at INTEGER NOT NULL DEFAULT 0,
+          completed_at INTEGER NOT NULL DEFAULT 0, updated_at INTEGER NOT NULL, updated_by TEXT NOT NULL DEFAULT ''
+        )`),
+        env.DB.prepare(`CREATE TABLE IF NOT EXISTS player_reset_history (
+          id INTEGER PRIMARY KEY AUTOINCREMENT, reset_id TEXT NOT NULL UNIQUE, scope TEXT NOT NULL,
+          target_telegram_id TEXT NOT NULL DEFAULT '', components_json TEXT NOT NULL DEFAULT '[]',
+          reason TEXT NOT NULL, affected_count INTEGER NOT NULL DEFAULT 0, notification_status TEXT NOT NULL DEFAULT '',
+          created_by TEXT NOT NULL, created_by_name TEXT NOT NULL DEFAULT '', created_at INTEGER NOT NULL
+        )`),
+        env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_player_reset_history_recent ON player_reset_history(created_at DESC, id DESC)`),
+        env.DB.prepare(`CREATE TABLE IF NOT EXISTS player_reset_acknowledgements (
+          reset_id TEXT NOT NULL, telegram_id TEXT NOT NULL, applied_at INTEGER NOT NULL,
+          PRIMARY KEY(reset_id,telegram_id)
+        )`),
+        env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_player_reset_ack_player ON player_reset_acknowledgements(telegram_id,applied_at DESC)`),
+        env.DB.prepare(`CREATE TABLE IF NOT EXISTS player_reset_directives (
+          reset_id TEXT PRIMARY KEY, scope TEXT NOT NULL, target_telegram_id TEXT NOT NULL DEFAULT '',
+          reset_json TEXT NOT NULL DEFAULT '{}', reason TEXT NOT NULL DEFAULT '', active INTEGER NOT NULL DEFAULT 1,
+          created_at INTEGER NOT NULL, created_by TEXT NOT NULL DEFAULT ''
+        )`),
+        env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_player_reset_directives_target ON player_reset_directives(active,target_telegram_id,created_at DESC)`)
+      ]);
+      const info = await env.DB.prepare(`PRAGMA table_info(admin_profile_state)`).all();
+      const columns = new Set((info.results || []).map((row) => String(row.name)));
+      const additions = {
+        treats_override: "INTEGER",
+        coffee_override: "INTEGER",
+        best_score_override: "INTEGER",
+        profile_xp_override: "INTEGER"
+      };
+      for (const [name, definition] of Object.entries(additions)) {
+        if (!columns.has(name)) await env.DB.prepare(`ALTER TABLE admin_profile_state ADD COLUMN ${name} ${definition}`).run();
+      }
+    })().catch((error) => { v78SchemaPromise = null; throw error; });
+  }
+  await v78SchemaPromise;
+}
+
+async function processV78Cron(env) {
+  await ensureV78Schema(env);
+  await env.DB.prepare(`DELETE FROM player_reset_acknowledgements WHERE reset_id NOT IN (SELECT reset_id FROM player_reset_directives)`).run();
+}
+
+function trainingStepsForRole(roleValue) {
+  return STAFF_TRAINING_STEPS[normalizeTeamRole(roleValue)] || STAFF_TRAINING_STEPS.cashier;
+}
+
+async function getStaffTrainingStatus(env, telegramId, roleValue) {
+  await ensureV78Schema(env);
+  const role = normalizeTeamRole(roleValue);
+  const now = Math.floor(Date.now() / 1000);
+  let row = await env.DB.prepare(`SELECT * FROM staff_training_progress WHERE telegram_id=? LIMIT 1`).bind(String(telegramId)).first();
+  if (!row) {
+    await env.DB.prepare(`INSERT INTO staff_training_progress(telegram_id,role,training_version,step_index,quiz_score,status,started_at,completed_at,updated_at,updated_by) VALUES(?,?,?,0,0,'not_started',0,0,?,'system')`).bind(String(telegramId), role, STAFF_TRAINING_VERSION, now).run();
+    row = await env.DB.prepare(`SELECT * FROM staff_training_progress WHERE telegram_id=? LIMIT 1`).bind(String(telegramId)).first();
+  } else if (normalizeTeamRole(row.role) !== role || Number(row.training_version || 0) !== STAFF_TRAINING_VERSION) {
+    await resetStaffTrainingRecord(env, telegramId, role, "role-change");
+    row = await env.DB.prepare(`SELECT * FROM staff_training_progress WHERE telegram_id=? LIMIT 1`).bind(String(telegramId)).first();
+  }
+  return row;
+}
+
+async function resetStaffTrainingRecord(env, telegramId, roleValue, updatedBy = "system") {
+  await ensureV78Schema(env);
+  const now = Math.floor(Date.now() / 1000);
+  const role = normalizeTeamRole(roleValue);
+  await env.DB.prepare(`INSERT INTO staff_training_progress(telegram_id,role,training_version,step_index,quiz_score,status,started_at,completed_at,updated_at,updated_by) VALUES(?,?,?,0,0,'not_started',0,0,?,?) ON CONFLICT(telegram_id) DO UPDATE SET role=excluded.role,training_version=excluded.training_version,step_index=0,quiz_score=0,status='not_started',started_at=0,completed_at=0,updated_at=excluded.updated_at,updated_by=excluded.updated_by`).bind(String(telegramId), role, STAFF_TRAINING_VERSION, now, String(updatedBy)).run();
+}
+
+function staffTrainingStatusLabel(row) {
+  if (!row) return "не начато";
+  if (row.status === "completed") return `пройдено${row.completed_at ? ` · ${formatUtcDate(row.completed_at)}` : ""}`;
+  if (row.status === "in_progress") return `в процессе · шаг ${Math.max(1, Number(row.step_index || 0) + 1)}`;
+  return "не начато";
+}
+
+async function showStaffTraining(chatId, user, env, options = {}) {
+  const access = await getTeamAccess(user, env);
+  if (!access.authorized) {
+    await sendTelegramMessage(env, chatId, access.reason === "expired" ? "Сессия истекла. Выполните <code>/staff</code>." : "Доступно только сотрудникам.");
+    return;
+  }
+  if (access.owner) {
+    await sendTelegramMessage(env, chatId, `<b>🎓 Обучение сотрудников</b>\n\nВладельцу обучение не требуется. Статус каждого сотрудника отображается в разделе «Сотрудники».`, { inline_keyboard: [[{ text: "👥 Сотрудники", callback_data: "adm_team" }], [{ text: "⬅️ Админ-панель", callback_data: "adm_home" }]] });
+    return;
+  }
+  const status = await getStaffTrainingStatus(env, String(user.id), access.role);
+  if (status.status === "completed" && !options.force) {
+    await sendTelegramMessage(env, chatId, `<b>✅ Обучение пройдено</b>\n\nРоль: <b>${escapeHtml(teamRoleLabel(access.role))}</b>\nДата: <b>${escapeHtml(formatUtcDate(status.completed_at))}</b>\nРезультат: <b>${Number(status.quiz_score || 1)} из 1</b>`, { inline_keyboard: [[{ text: "🔁 Повторить обучение", callback_data: "v78_training_restart" }], [{ text: "⚙️ Админ-панель", callback_data: "adm_home" }]] });
+    return;
+  }
+  const title = options.compact ? "🎓 Перед началом работы" : "🎓 Обучение сотрудника";
+  await sendTelegramMessage(env, chatId, `<b>${title}</b>\n\nРоль: <b>${escapeHtml(teamRoleLabel(access.role))}</b>\nСтатус: <b>${escapeHtml(staffTrainingStatusLabel(status))}</b>\n\nКурс займёт несколько минут. В конце будет один проверочный вопрос.`, { inline_keyboard: [[{ text: status.status === "in_progress" ? "▶️ Продолжить" : "▶️ Начать обучение", callback_data: status.status === "in_progress" ? "v78_training_continue" : "v78_training_start" }], [{ text: "⬅️ Админ-панель", callback_data: "adm_home" }]] });
+}
+
+async function showStaffTrainingStep(chatId, user, env) {
+  const access = await getTeamAccess(user, env);
+  if (!access.authorized || access.owner) return;
+  const status = await getStaffTrainingStatus(env, String(user.id), access.role);
+  const steps = trainingStepsForRole(access.role);
+  const index = Math.max(0, Math.min(steps.length - 1, Number(status.step_index || 0)));
+  const step = steps[index];
+  const rows = [];
+  if (Array.isArray(step.answers)) {
+    for (const answer of step.answers) rows.push([{ text: answer.title, callback_data: `v78_training_quiz:${answer.id}` }]);
+  } else {
+    rows.push([{ text: index + 1 >= steps.length ? "✅ Завершить" : "Далее →", callback_data: "v78_training_next" }]);
+  }
+  rows.push([{ text: "❌ Закрыть", callback_data: "v78_training_close" }]);
+  await sendTelegramMessage(env, chatId, `<b>🎓 ${escapeHtml(step.title)}</b>\n\nШаг <b>${index + 1} из ${steps.length}</b>\n\n${escapeHtml(step.text)}`, { inline_keyboard: rows });
+}
+
+async function handleStaffTrainingCallback(query, env) {
+  const data = String(query.data || "");
+  const chatId = query.message?.chat?.id;
+  if (!chatId) return false;
+  if (data === "v78_training") { await answerCallback(env, query.id, "Открываю обучение."); await showStaffTraining(chatId, query.from, env); return true; }
+  if (data === "v78_training_close") { await answerCallback(env, query.id, "Обучение закрыто."); await showAdminMainMenu(chatId, query.from, env); return true; }
+  if (data === "v78_training_continue") {
+    const access = await getTeamAccess(query.from, env);
+    if (!access.authorized || access.owner) { await answerCallback(env, query.id, "Обучение для этой роли не требуется.", true); return true; }
+    await answerCallback(env, query.id, "Продолжаем обучение.");
+    await showStaffTrainingStep(chatId, query.from, env);
+    return true;
+  }
+  if (data === "v78_training_start" || data === "v78_training_restart") {
+    const access = await getTeamAccess(query.from, env);
+    if (!access.authorized || access.owner) { await answerCallback(env, query.id, "Обучение для этой роли не требуется.", true); return true; }
+    await getStaffTrainingStatus(env, String(query.from.id), access.role);
+    const now = Math.floor(Date.now() / 1000);
+    await env.DB.prepare(`UPDATE staff_training_progress SET status='in_progress',step_index=0,quiz_score=0,started_at=CASE WHEN started_at=0 THEN ? ELSE started_at END,completed_at=0,updated_at=?,updated_by=? WHERE telegram_id=?`).bind(now, now, String(query.from.id), String(query.from.id)).run();
+    await answerCallback(env, query.id, data.endsWith("restart") ? "Обучение начато заново." : "Обучение начато.");
+    await showStaffTrainingStep(chatId, query.from, env);
+    return true;
+  }
+  if (data === "v78_training_next") {
+    const access = await getTeamAccess(query.from, env);
+    if (!access.authorized || access.owner) return true;
+    const status = await getStaffTrainingStatus(env, String(query.from.id), access.role);
+    const max = trainingStepsForRole(access.role).length - 1;
+    await env.DB.prepare(`UPDATE staff_training_progress SET status='in_progress',step_index=MIN(?,step_index+1),updated_at=?,updated_by=? WHERE telegram_id=?`).bind(max, Math.floor(Date.now() / 1000), String(query.from.id), String(query.from.id)).run();
+    await answerCallback(env, query.id, "Следующий шаг.");
+    await showStaffTrainingStep(chatId, query.from, env);
+    return true;
+  }
+  const quiz = data.match(/^v78_training_quiz:([a-z]+)$/);
+  if (quiz) {
+    const access = await getTeamAccess(query.from, env);
+    if (!access.authorized || access.owner) return true;
+    const status = await getStaffTrainingStatus(env, String(query.from.id), access.role);
+    const steps = trainingStepsForRole(access.role);
+    const step = steps[Math.max(0, Math.min(steps.length - 1, Number(status.step_index || 0)))];
+    const answer = (step.answers || []).find((item) => item.id === quiz[1]);
+    if (!answer?.correct) {
+      await answerCallback(env, query.id, "Неверно. Попробуйте ещё раз.", true);
+      return true;
+    }
+    const now = Math.floor(Date.now() / 1000);
+    await env.DB.prepare(`UPDATE staff_training_progress SET status='completed',step_index=?,quiz_score=1,completed_at=?,updated_at=?,updated_by=? WHERE telegram_id=?`).bind(steps.length - 1, now, now, String(query.from.id), String(query.from.id)).run();
+    const teamAccess = await getTeamAccess(query.from, env);
+    await logStaffAction(env, query.from, teamAccess, "staff_training_completed", String(query.from.id), "staff_training", null, "completed", { role: access.role, version: STAFF_TRAINING_VERSION });
+    await answerCallback(env, query.id, "Обучение завершено.");
+    await sendTelegramMessage(env, chatId, `<b>✅ Обучение завершено</b>\n\nРоль: <b>${escapeHtml(teamRoleLabel(access.role))}</b>\nРезультат: <b>1 из 1</b>\nДата: <b>${escapeHtml(formatUtcDate(now))}</b>\n\nРабочая панель готова к использованию.`, { inline_keyboard: [[{ text: "⚙️ Открыть админ-панель", callback_data: "adm_home" }]] });
+    return true;
+  }
+  const reset = data.match(/^v78_training_reset:(\d{4,20})$/);
+  if (reset) {
+    const access = await requireTeamPermission(chatId, query.from, "staff", env);
+    if (!access) return true;
+    const target = await targetTeamMember(env, reset[1]);
+    if (!target) { await answerCallback(env, query.id, "Сотрудник не найден.", true); return true; }
+    await resetStaffTrainingRecord(env, reset[1], target.role, String(query.from.id));
+    await logStaffAction(env, query.from, access, "staff_training_reset", reset[1], "staff_training", "completed", "not_started", {});
+    await answerCallback(env, query.id, "Обучение сброшено.");
+    await showStaffMemberCard(chatId, query.from, reset[1], env);
+    return true;
+  }
+  return false;
+}
+
+async function requirePlayerResetAccess(chatId, user, env, scope = "one") {
+  const access = await getTeamAccess(user, env);
+  if (!access.authorized) {
+    await sendTelegramMessage(env, chatId, access.reason === "expired" ? "Сессия истекла. Выполните <code>/staff</code>." : "Доступно только сотрудникам.");
+    return null;
+  }
+  const administrator = normalizeTeamRole(access.role) === "administrator";
+  if (!access.owner && !(administrator && access.permissions?.approveDangerous)) {
+    await sendTelegramMessage(env, chatId, "Сброс прогресса доступен владельцу и администратору с правом подтверждения опасных действий.");
+    return null;
+  }
+  if (scope === "all" && !access.owner) {
+    await sendTelegramMessage(env, chatId, "Сброс всех игроков может выполнить только владелец.");
+    return null;
+  }
+  return access;
+}
+
+function resetComponentsLabel(keys) {
+  return (keys || []).map((key) => PLAYER_RESET_COMPONENTS[key]).filter(Boolean).map((item) => `${item.icon} ${item.label}`).join(", ");
+}
+
+async function showPlayerResetDashboard(chatId, user, env) {
+  const access = await requirePlayerResetAccess(chatId, user, env, "one");
+  if (!access) return;
+  await ensureV78Schema(env);
+  const history = (await env.DB.prepare(`SELECT * FROM player_reset_history ORDER BY created_at DESC LIMIT 5`).all()).results || [];
+  const lines = history.map((row) => `• ${row.scope === "all" ? "Все игроки" : `<code>${escapeHtml(row.target_telegram_id)}</code>`} · ${escapeHtml(resetComponentsLabel(safeJson(row.components_json, [])))}\n  ${escapeHtml(formatUtcDate(row.created_at))} · ${Number(row.affected_count || 0)} аккаунтов`).join("\n\n") || "Сбросов ещё не было.";
+  const buttons = [[{ text: "👤 Сбросить одного игрока", callback_data: "v78_reset_scope:one" }]];
+  if (access.owner) buttons.push([{ text: "🌍 Сбросить всех игроков", callback_data: "v78_reset_scope:all" }]);
+  buttons.push([{ text: "⬅️ Админ-панель", callback_data: "adm_home" }]);
+  await sendTelegramMessage(env, chatId, `<b>♻️ Сброс прогресса игроков</b>\n\nМожно выбрать отдельные параметры или полный игровой прогресс. Физические коды, журнал аудита и история выдачи товаров не удаляются.\n\n<b>Последние операции</b>\n${lines}`, { inline_keyboard: buttons });
+}
+
+async function startPlayerResetScope(query, scope, env, presetTarget = "") {
+  const chatId = query.message?.chat?.id;
+  const access = await requirePlayerResetAccess(chatId, query.from, env, scope);
+  if (!access) return;
+  if (scope === "one" && presetTarget) {
+    if (await protectedPlayerControlTarget(presetTarget, env)) { await answerCallback(env, query.id, "Владельца или активного сотрудника сбрасывать нельзя.", true); return; }
+    await setStaffWorkflow(query.from.id, chatId, "player_reset", "components", { scope, targetId: String(presetTarget), selected: [] }, env);
+    await answerCallback(env, query.id, "Выберите параметры.");
+    await showPlayerResetComponents(chatId, query.from, env);
+    return;
+  }
+  if (scope === "one") {
+    await setStaffWorkflow(query.from.id, chatId, "player_reset", "target", { scope, selected: [] }, env);
+    await answerCallback(env, query.id, "Укажите игрока.");
+    await sendTelegramMessage(env, chatId, `<b>👤 Сброс одного игрока</b>\n\nОтправьте Telegram ID или точный @username игрока.\n\nОтмена: <code>/cancel</code>`);
+    return;
+  }
+  await setStaffWorkflow(query.from.id, chatId, "player_reset", "components", { scope: "all", selected: [] }, env);
+  await answerCallback(env, query.id, "Выберите параметры.");
+  await showPlayerResetComponents(chatId, query.from, env);
+}
+
+async function showPlayerResetComponents(chatId, user, env) {
+  const workflow = await getStaffWorkflow(user.id, env);
+  if (!workflow || workflow.flow_type !== "player_reset") return;
+  const selected = new Set(workflow.data.selected || []);
+  const rows = [];
+  const keys = PLAYER_RESET_COMPONENT_KEYS;
+  for (let index = 0; index < keys.length; index += 2) {
+    rows.push(keys.slice(index, index + 2).map((key) => ({
+      text: `${selected.has(key) ? "✅" : "⬜"} ${PLAYER_RESET_COMPONENTS[key].icon} ${PLAYER_RESET_COMPONENTS[key].label}`,
+      callback_data: `v78_reset_toggle:${key}`
+    })));
+  }
+  rows.push([{ text: selected.size === keys.length ? "☑️ Снять всё" : "✅ Выбрать полный сброс", callback_data: "v78_reset_all_fields" }]);
+  rows.push([{ text: "Далее →", callback_data: "v78_reset_continue" }, { text: "❌ Отмена", callback_data: "v78_reset_cancel" }]);
+  const scopeText = workflow.data.scope === "all" ? "все игроки" : `игрок <code>${escapeHtml(String(workflow.data.targetId || ""))}</code>`;
+  await sendTelegramMessage(env, chatId, `<b>♻️ Что сбросить?</b>\n\nОбласть: <b>${scopeText}</b>\nВыбрано: <b>${selected.size ? escapeHtml(resetComponentsLabel([...selected])) : "ничего"}</b>\n\nПолный сброс не удаляет активные физические коды и аудит.`, { inline_keyboard: rows });
+}
+
+async function handlePlayerResetWorkflowMessage(message, workflow, env) {
+  const chatId = message.chat.id;
+  if (workflow.step === "target") {
+    const targetId = await resolvePlayerTelegramId(String(message.text || "").trim(), env);
+    if (!targetId || !(await playerProfileExists(targetId, env))) {
+      await sendTelegramMessage(env, chatId, "Игрок не найден. Отправьте точный Telegram ID или @username.");
+      return true;
+    }
+    if (await protectedPlayerControlTarget(targetId, env)) {
+      await clearStaffWorkflow(message.from.id, env);
+      await sendTelegramMessage(env, chatId, "Владельца или активного сотрудника сбрасывать нельзя.");
+      return true;
+    }
+    await updateStaffWorkflow(message.from.id, { step: "components", data: { ...workflow.data, targetId, selected: [] } }, env);
+    await showPlayerResetComponents(chatId, message.from, env);
+    return true;
+  }
+  if (workflow.step === "reason") {
+    const reason = String(message.text || "").trim().replace(/\s+/g, " ").slice(0, 300);
+    if (reason.length < 3) {
+      await sendTelegramMessage(env, chatId, "Причина слишком короткая. Напишите хотя бы 3 символа.");
+      return true;
+    }
+    await updateStaffWorkflow(message.from.id, { step: "preview", data: { ...workflow.data, reason } }, env);
+    await showPlayerResetPreview(chatId, message.from, env);
+    return true;
+  }
+  if (workflow.step === "confirm_phrase") {
+    if (String(message.text || "").trim().toUpperCase() !== "СБРОС ВСЕХ") {
+      await sendTelegramMessage(env, chatId, `Для подтверждения отправьте точно: <code>СБРОС ВСЕХ</code>\n\nИли отмените: <code>/cancel</code>`);
+      return true;
+    }
+    const access = await requirePlayerResetAccess(chatId, message.from, env, "all");
+    if (!access) return true;
+    await executePlayerResetFromWorkflow(chatId, message.from, workflow, access, env);
+    return true;
+  }
+  await sendTelegramMessage(env, chatId, "Используйте кнопки в предыдущем сообщении или отмените действие командой <code>/cancel</code>.");
+  return true;
+}
+
+async function showPlayerResetPreview(chatId, user, env) {
+  const workflow = await getStaffWorkflow(user.id, env);
+  if (!workflow || workflow.flow_type !== "player_reset") return;
+  const selected = workflow.data.selected || [];
+  const scope = workflow.data.scope;
+  const countRow = scope === "all"
+    ? await env.DB.prepare(`SELECT COUNT(*) AS count FROM admin_profile_state`).first()
+    : { count: 1 };
+  const warning = scope === "all" ? `\n\n🔴 <b>Будет затронуто аккаунтов: ${Number(countRow?.count || 0)}</b>` : "";
+  const buttons = scope === "all"
+    ? [[{ text: "🔴 Перейти к финальному подтверждению", callback_data: "v78_reset_confirm_all" }], [{ text: "⬅️ Изменить параметры", callback_data: "v78_reset_back_fields" }, { text: "❌ Отмена", callback_data: "v78_reset_cancel" }]]
+    : [[{ text: "✅ Подтвердить сброс игрока", callback_data: "v78_reset_confirm_one" }], [{ text: "⬅️ Изменить параметры", callback_data: "v78_reset_back_fields" }, { text: "❌ Отмена", callback_data: "v78_reset_cancel" }]];
+  await sendTelegramMessage(env, chatId, `<b>⚠️ Проверьте сброс</b>\n\nКому: <b>${scope === "all" ? "всем игрокам" : `<code>${escapeHtml(String(workflow.data.targetId))}</code>`}</b>\nПараметры: <b>${escapeHtml(resetComponentsLabel(selected))}</b>\nПричина: <b>${escapeHtml(String(workflow.data.reason || ""))}</b>${warning}\n\nОперация необратима и будет записана в аудит. Ожидающие начисления выбранных валют, кейсов или косметики также будут отменены.`, { inline_keyboard: buttons });
+}
+
+function resetPlanFromComponents(keys) {
+  const set = new Set(keys || []);
+  return {
+    points: set.has("points"), treats: set.has("treats"), coffee: set.has("coffee"),
+    personalRecord: set.has("record"), xp: set.has("xp"),
+    cases: set.has("cases"), collection: set.has("collection"),
+    statistics: set.size === PLAYER_RESET_COMPONENT_KEYS.length,
+    ownedSkins: set.has("collection"), equippedSkin: set.has("collection")
+  };
+}
+
+function resetDirectiveBatchId(sourceIds) {
+  let hash = 2166136261;
+  for (const char of sourceIds.join("|")) { hash ^= char.charCodeAt(0); hash = Math.imul(hash, 16777619); }
+  return `reset_batch_${(hash >>> 0).toString(36)}`;
+}
+
+async function latestPlayerResetDirective(env, telegramId) {
+  await ensureV78Schema(env);
+  const id = String(telegramId);
+  const rows = (await env.DB.prepare(`SELECT d.reset_id,d.reset_json,d.created_at FROM player_reset_directives d WHERE d.active=1 AND ((d.scope='one' AND d.target_telegram_id=?) OR (d.scope='all' AND EXISTS(SELECT 1 FROM admin_profile_state p WHERE p.telegram_id=? AND p.created_at<=d.created_at))) AND NOT EXISTS(SELECT 1 FROM player_reset_acknowledgements a WHERE a.reset_id=d.reset_id AND a.telegram_id=?) ORDER BY d.created_at ASC,d.reset_id ASC LIMIT 50`).bind(id,id,id).all()).results || [];
+  if (!rows.length) return null;
+  const merged = {};
+  const sourceIds = [];
+  let applyAt = 0;
+  for (const row of rows) {
+    sourceIds.push(String(row.reset_id));
+    applyAt = Math.max(applyAt, Number(row.created_at || 0) * 1000);
+    const reset = safeJson(row.reset_json, {});
+    for (const [key, value] of Object.entries(reset)) if (value === true) merged[key] = true;
+  }
+  return { id: resetDirectiveBatchId(sourceIds), sourceIds, applyAt, reset: merged };
+}
+
+async function applyPlayerReset(env, options) {
+  await ensureV78Schema(env);
+  await ensureSafeControlCenterSchema(env);
+  const scope = options.scope === "all" ? "all" : "one";
+  const targetId = scope === "one" ? String(options.targetId || "") : "";
+  const selected = [...new Set((options.selected || []).filter((key) => PLAYER_RESET_COMPONENTS[key]))];
+  if (!selected.length) throw new Error("Не выбраны параметры сброса.");
+  const now = Math.floor(Date.now() / 1000);
+  const resetId = `reset_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+  const where = scope === "all" ? "" : " WHERE telegram_id=?";
+  const bind = (statement) => scope === "all" ? statement : statement.bind(targetId);
+  if (scope === "one") {
+    await env.DB.prepare(`INSERT OR IGNORE INTO admin_profile_state(telegram_id,wallet,best_score,treats,coffee,profile_xp,revision,created_at,updated_at,updated_by) VALUES(?,0,0,0,0,0,1,?,?,?)`).bind(targetId, now, now, String(options.actor.id)).run();
+  }
+  const profileSet = [];
+  if (selected.includes("points")) profileSet.push("wallet=0", "pending_wallet=0", "wallet_override=0");
+  if (selected.includes("treats")) profileSet.push("treats=0", "pending_treats=0", "treats_override=0");
+  if (selected.includes("coffee")) profileSet.push("coffee=0", "pending_coffee=0", "coffee_override=0");
+  if (selected.includes("record")) profileSet.push("best_score=0", "best_score_override=0");
+  if (selected.includes("xp")) profileSet.push("profile_xp=0", "profile_xp_override=0");
+  if (profileSet.length) {
+    profileSet.push("revision=revision+1", `updated_at=${now}`, `updated_by='${String(options.actor.id).replace(/'/g, "")}'`);
+    await bind(env.DB.prepare(`UPDATE admin_profile_state SET ${profileSet.join(",")}${where}`)).run();
+  }
+  const statements = [];
+  if (selected.includes("record")) {
+    statements.push(bind(env.DB.prepare(`DELETE FROM leaderboard_entries${where}`)), bind(env.DB.prepare(`DELETE FROM leaderboard_all_time${where}`)), bind(env.DB.prepare(`DELETE FROM leaderboard_runs${where}`)), bind(env.DB.prepare(`DELETE FROM leaderboard_rewards${where}`)));
+  }
+  if (selected.includes("cases")) {
+    statements.push(bind(env.DB.prepare(`DELETE FROM granted_cases${where}`)), bind(env.DB.prepare(`DELETE FROM level_case_openings${where}`)), bind(env.DB.prepare(`DELETE FROM case_booster_run_consumptions${where}`)));
+    statements.push(bind(env.DB.prepare(`UPDATE case_player_state SET boosters_points=0,boosters_treats=0,boosters_coffee=0,active_booster_type='',active_booster_runs=0,legendary_pity_counter=0,revision=revision+1,updated_at=${now}${where}`)));
+  }
+  if (selected.includes("collection")) {
+    statements.push(bind(env.DB.prepare(`UPDATE case_player_state SET owned_avatars_json='[]',active_avatar_id='',owned_frames_json='[]',active_frame_id='',owned_trails_json='[]',active_trail_id='',owned_music_json='["cafe_run"]',active_music_id='cafe_run',owned_skins_json='[]',active_skin_id='',revision=revision+1,updated_at=${now}${where}`)));
+  }
+  const queueKinds = [];
+  if (selected.includes("points")) queueKinds.push("points");
+  if (selected.includes("treats")) queueKinds.push("zefir");
+  if (selected.includes("coffee")) queueKinds.push("coffee");
+  if (selected.includes("cases")) queueKinds.push("case");
+  if (selected.includes("collection")) queueKinds.push("avatar", "frame", "trail", "skin", "music");
+  if (queueKinds.length) {
+    const placeholders = queueKinds.map(() => "?").join(",");
+    const statement = env.DB.prepare(`UPDATE reward_delivery_queue SET status='cancelled',last_error=?,updated_at=?,lease_token='',lease_until=0 WHERE status IN ('pending','failed','delivering') AND reward_kind IN (${placeholders})${scope === "all" ? "" : " AND telegram_id=?"}`);
+    const reason = `Отменено сбросом ${resetId}`;
+    statements.push(scope === "all" ? statement.bind(reason, now, ...queueKinds) : statement.bind(reason, now, ...queueKinds, targetId));
+  }
+  if (statements.length) await env.DB.batch(statements);
+  const countRow = scope === "all" ? await env.DB.prepare(`SELECT COUNT(*) AS count FROM admin_profile_state`).first() : { count: 1 };
+  const affected = Number(countRow?.count || 0);
+  const resetJson = resetPlanFromComponents(selected);
+  await env.DB.prepare(`INSERT INTO player_reset_directives(reset_id,scope,target_telegram_id,reset_json,reason,active,created_at,created_by) VALUES(?,?,?,?,?,1,?,?)`).bind(resetId, scope, targetId, JSON.stringify(resetJson), String(options.reason).slice(0, 300), now, String(options.actor.id)).run();
+  const notificationText = `♻️ В игре произошёл сброс\n\nСброшено: ${resetComponentsLabel(selected)}\nПричина: ${String(options.reason).slice(0, 300)}\n\nПриносим извинения за причинённые неудобства.`;
+  let notificationStatus = "not_found";
+  if (scope === "all") {
+    const broadcastId = await queueSystemBroadcast(env, notificationText, String(options.reportChatId || ""), resetId);
+    notificationStatus = broadcastId ? `broadcast:${broadcastId}` : "no_subscribers";
+  } else {
+    const subscriber = await env.DB.prepare(`SELECT chat_id FROM bot_subscribers WHERE telegram_id=? AND active=1 LIMIT 1`).bind(targetId).first();
+    if (subscriber?.chat_id) {
+      try { await sendTelegramPlainMessage(env, subscriber.chat_id, notificationText); notificationStatus = "sent"; }
+      catch (error) { notificationStatus = `failed:${String(error?.message || error).slice(0, 120)}`; }
+    }
+    await recordPlayerTimeline(env, targetId, "admin_reset", `сброшены: ${resetComponentsLabel(selected)}`, { selected, reason: options.reason, resetId }, resetId, options.actor, now);
+  }
+  await env.DB.prepare(`INSERT INTO player_reset_history(reset_id,scope,target_telegram_id,components_json,reason,affected_count,notification_status,created_by,created_by_name,created_at) VALUES(?,?,?,?,?,?,?,?,?,?)`).bind(resetId, scope, targetId, JSON.stringify(selected), String(options.reason).slice(0, 300), affected, notificationStatus, String(options.actor.id), telegramDisplayName(options.actor), now).run();
+  return { resetId, affected, notificationStatus };
+}
+
+async function executePlayerResetFromWorkflow(chatId, user, workflow, access, env) {
+  const data = workflow.data || {};
+  const result = await applyPlayerReset(env, { scope: data.scope, targetId: data.targetId, selected: data.selected, reason: data.reason, actor: user, reportChatId: chatId });
+  await logStaffAction(env, user, access, data.scope === "all" ? "players_reset_all" : "player_reset", data.scope === "all" ? null : data.targetId, "player_reset", null, 0, { resetId: result.resetId, selected: data.selected, reason: data.reason, affected: result.affected, notificationStatus: result.notificationStatus });
+  await clearStaffWorkflow(user.id, env);
+  await sendTelegramMessage(env, chatId, `<b>✅ Сброс выполнен</b>\n\nЗатронуто аккаунтов: <b>${result.affected}</b>\nПараметры: <b>${escapeHtml(resetComponentsLabel(data.selected))}</b>\nУведомление: <b>${data.scope === "all" ? "добавлено в очередь рассылки" : result.notificationStatus === "sent" ? "отправлено игроку" : "игрок не запускал бота или доставка не удалась"}</b>\nID операции: <code>${escapeHtml(result.resetId)}</code>`, { inline_keyboard: [[{ text: "♻️ К сбросам", callback_data: "v78_reset_home" }], [{ text: "⬅️ Админ-панель", callback_data: "adm_home" }]] });
+}
+
+async function handlePlayerResetCallback(query, env) {
+  const data = String(query.data || "");
+  const chatId = query.message?.chat?.id;
+  if (!chatId) return false;
+  if (data === "v78_reset_home") { await answerCallback(env, query.id, "Открываю сбросы."); await showPlayerResetDashboard(chatId, query.from, env); return true; }
+  const target = data.match(/^v78_reset_target:(\d{4,20})$/);
+  if (target) { await startPlayerResetScope(query, "one", env, target[1]); return true; }
+  const scope = data.match(/^v78_reset_scope:(one|all)$/);
+  if (scope) { await startPlayerResetScope(query, scope[1], env); return true; }
+  const toggle = data.match(/^v78_reset_toggle:(points|treats|coffee|record|xp|cases|collection)$/);
+  if (toggle) {
+    const workflow = await getStaffWorkflow(query.from.id, env);
+    if (!workflow || workflow.flow_type !== "player_reset" || workflow.step !== "components") { await answerCallback(env, query.id, "Настройка устарела.", true); return true; }
+    const selected = new Set(workflow.data.selected || []);
+    selected.has(toggle[1]) ? selected.delete(toggle[1]) : selected.add(toggle[1]);
+    await updateStaffWorkflow(query.from.id, { step: "components", data: { ...workflow.data, selected: [...selected] } }, env);
+    await answerCallback(env, query.id, selected.has(toggle[1]) ? "Добавлено." : "Убрано.");
+    await showPlayerResetComponents(chatId, query.from, env);
+    return true;
+  }
+  if (data === "v78_reset_all_fields") {
+    const workflow = await getStaffWorkflow(query.from.id, env);
+    if (!workflow || workflow.flow_type !== "player_reset") return true;
+    const allSelected = (workflow.data.selected || []).length === PLAYER_RESET_COMPONENT_KEYS.length;
+    await updateStaffWorkflow(query.from.id, { step: "components", data: { ...workflow.data, selected: allSelected ? [] : [...PLAYER_RESET_COMPONENT_KEYS] } }, env);
+    await answerCallback(env, query.id, allSelected ? "Выбор снят." : "Выбран полный сброс.");
+    await showPlayerResetComponents(chatId, query.from, env);
+    return true;
+  }
+  if (data === "v78_reset_continue") {
+    const workflow = await getStaffWorkflow(query.from.id, env);
+    if (!workflow || workflow.flow_type !== "player_reset" || !(workflow.data.selected || []).length) { await answerCallback(env, query.id, "Выберите хотя бы один параметр.", true); return true; }
+    await updateStaffWorkflow(query.from.id, { step: "reason", data: workflow.data }, env);
+    await answerCallback(env, query.id, "Введите причину.");
+    await sendTelegramMessage(env, chatId, `<b>📝 Причина сброса</b>\n\nНапишите причину одним сообщением. Она будет показана игроку или всем игрокам в уведомлении.\n\nПример: <i>исправление ошибки начисления очков</i>`);
+    return true;
+  }
+  if (data === "v78_reset_back_fields") {
+    const workflow = await getStaffWorkflow(query.from.id, env);
+    if (!workflow || workflow.flow_type !== "player_reset") return true;
+    await updateStaffWorkflow(query.from.id, { step: "components", data: workflow.data }, env);
+    await answerCallback(env, query.id, "Измените параметры.");
+    await showPlayerResetComponents(chatId, query.from, env);
+    return true;
+  }
+  if (data === "v78_reset_confirm_one") {
+    const workflow = await getStaffWorkflow(query.from.id, env);
+    const access = await requirePlayerResetAccess(chatId, query.from, env, "one");
+    if (!workflow || workflow.flow_type !== "player_reset" || workflow.step !== "preview" || workflow.data.scope !== "one" || !access) { await answerCallback(env, query.id, "Подтверждение устарело.", true); return true; }
+    await answerCallback(env, query.id, "Выполняю сброс.");
+    await executePlayerResetFromWorkflow(chatId, query.from, workflow, access, env);
+    return true;
+  }
+  if (data === "v78_reset_confirm_all") {
+    const workflow = await getStaffWorkflow(query.from.id, env);
+    const access = await requirePlayerResetAccess(chatId, query.from, env, "all");
+    if (!workflow || workflow.flow_type !== "player_reset" || workflow.step !== "preview" || workflow.data.scope !== "all" || !access) { await answerCallback(env, query.id, "Подтверждение устарело.", true); return true; }
+    await updateStaffWorkflow(query.from.id, { step: "confirm_phrase", data: workflow.data }, env);
+    await answerCallback(env, query.id, "Нужно текстовое подтверждение.");
+    await sendTelegramMessage(env, chatId, `<b>🔴 Финальное подтверждение</b>\n\nЧтобы сбросить выбранные параметры у всех игроков, отправьте отдельным сообщением:\n\n<code>СБРОС ВСЕХ</code>\n\nЛюбой другой текст не запустит операцию.`);
+    return true;
+  }
+  if (data === "v78_reset_cancel") {
+    await clearStaffWorkflow(query.from.id, env);
+    await answerCallback(env, query.id, "Сброс отменён.");
+    await showPlayerResetDashboard(chatId, query.from, env);
+    return true;
+  }
+  return false;
+}
+
+async function handleV78Callback(query, env) {
+  if (await handleStaffTrainingCallback(query, env)) return true;
+  if (await handlePlayerResetCallback(query, env)) return true;
+  return false;
+}
+// ===================== END v0.78 =====================
