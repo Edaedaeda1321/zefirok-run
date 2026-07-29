@@ -6,3 +6,7 @@
 !.env.example
 
 .DS_Store
+
+# Local backups
+*копия.html
+Сборка.zip
