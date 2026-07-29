@@ -132,15 +132,19 @@ const CASE_MUSIC_TRACKS = Object.freeze({
   cafe_run: Object.freeze({ id: "cafe_run", title: "Зефирное кафе", rarity: "common", weight: 0, defaultOwned: true }),
   legendary_cafe_run: Object.freeze({ id: "legendary_cafe_run", title: "Легендарный забег", rarity: "legendary", weight: 1, legendaryOnly: true, isNew: true }),
   legendary_marshmallow_dash_1: Object.freeze({ id: "legendary_marshmallow_dash_1", title: "Зефирный рывок I", rarity: "legendary", weight: 1, legendaryOnly: true, isNew: true }),
-  legendary_marshmallow_dash_2: Object.freeze({ id: "legendary_marshmallow_dash_2", title: "Зефирный рывок II", rarity: "legendary", weight: 1, legendaryOnly: true, isNew: true })
+  legendary_marshmallow_dash_2: Object.freeze({ id: "legendary_marshmallow_dash_2", title: "Зефирный рывок II", rarity: "legendary", weight: 1, legendaryOnly: true, isNew: true }),
+  legendary_marshmallow_cafe_dash_1: Object.freeze({ id: "legendary_marshmallow_cafe_dash_1", title: "Кафейный рывок I", rarity: "legendary", weight: 1, legendaryOnly: true, isNew: true }),
+  legendary_marshmallow_cafe_dash_2: Object.freeze({ id: "legendary_marshmallow_cafe_dash_2", title: "Кафейный рывок II", rarity: "legendary", weight: 1, legendaryOnly: true, isNew: true }),
+  legendary_marshmallow_dash_3: Object.freeze({ id: "legendary_marshmallow_dash_3", title: "Зефирный рывок III", rarity: "legendary", weight: 1, legendaryOnly: true, isNew: true }),
+  legendary_marshmallow_dash_4: Object.freeze({ id: "legendary_marshmallow_dash_4", title: "Зефирный рывок IV", rarity: "legendary", weight: 1, legendaryOnly: true, isNew: true })
 });
 
+const CASE_PHYSICAL_TOTAL_CHANCE = 0.035;
 const CASE_PHYSICAL_REWARDS = Object.freeze({
-  zefir: Object.freeze({ id: "zefir", title: PRODUCTS.zefir.title, chance: 0.015 }),
-  americano: Object.freeze({ id: "americano", title: PRODUCTS.americano.title, chance: 0.015 }),
-  cappuccino: Object.freeze({ id: "cappuccino", title: PRODUCTS.cappuccino.title, chance: 0.015 })
+  zefir: Object.freeze({ id: "zefir", title: PRODUCTS.zefir.title, chance: CASE_PHYSICAL_TOTAL_CHANCE / 3 }),
+  americano: Object.freeze({ id: "americano", title: PRODUCTS.americano.title, chance: CASE_PHYSICAL_TOTAL_CHANCE / 3 }),
+  cappuccino: Object.freeze({ id: "cappuccino", title: PRODUCTS.cappuccino.title, chance: CASE_PHYSICAL_TOTAL_CHANCE / 3 })
 });
-const CASE_PHYSICAL_TOTAL_CHANCE = 0.045;
 
 const CASE_BOOSTER_TYPES = Object.freeze(["points", "treats", "coffee"]);
 const CASE_DUPLICATE_COMPENSATION = Object.freeze({ skin: 150000, avatar: 500, frame: 1500, trail: 5000, music: 150000 });
@@ -327,11 +331,40 @@ const DEFAULT_REWARD_TTL_SECONDS = 24 * 60 * 60;
 const DEFAULT_LIMIT_WINDOW_SECONDS = 24 * 60 * 60;
 const DEFAULT_LIMIT_MAX = 2;
 const DEFAULT_INIT_DATA_MAX_AGE_SECONDS = 24 * 60 * 60;
-const STAFF_SESSION_TTL_SECONDS = 30 * 60;
+const STAFF_SESSION_TTL_SECONDS = 12 * 60 * 60;
 const SUPPORT_USERNAME = "ve4n0_em";
 const SUPPORT_URL = `https://t.me/${SUPPORT_USERNAME}`;
 const DEFAULT_GAME_URL = "https://zefirok-run.patokad6.workers.dev/";
-const WORKER_BUILD = "0.79.3";
+const WORKER_BUILD = "0.79.35";
+
+// =============================================================
+// СЕРВЕРНОЕ СОСТОЯНИЕ СЕЗОННОГО ПРОПУСКА.
+// Папка ассетов постоянная: /assets/season-pass/
+// Дату и название можно переопределить через Cloudflare env без правок HTML:
+// SEASON_PASS_START_AT, SEASON_PASS_END_AT, SEASON_PASS_TITLE.
+const DEFAULT_SEASON_PASS_ID = "season-1-cafe-opening";
+const DEFAULT_SEASON_PASS_TITLE = "Сезон I: Открытие Кафе";
+const DEFAULT_SEASON_PASS_START_AT = "2026-08-10T00:00:00+03:00";
+const DEFAULT_SEASON_PASS_END_AT = "";
+
+function configuredSeasonPassState(env, nowMs = Date.now()) {
+  const startsAt = String(env?.SEASON_PASS_START_AT || DEFAULT_SEASON_PASS_START_AT);
+  const endsAt = String(env?.SEASON_PASS_END_AT || DEFAULT_SEASON_PASS_END_AT);
+  const startMs = Date.parse(startsAt);
+  const endMs = Date.parse(endsAt);
+  const safeStartMs = Number.isFinite(startMs) ? startMs : Date.parse(DEFAULT_SEASON_PASS_START_AT);
+  const safeEndMs = Number.isFinite(endMs) ? endMs : null;
+  const status = nowMs < safeStartMs ? "upcoming" : safeEndMs != null && nowMs >= safeEndMs ? "ended" : "active";
+  return {
+    id: String(env?.SEASON_PASS_ID || DEFAULT_SEASON_PASS_ID),
+    title: String(env?.SEASON_PASS_TITLE || DEFAULT_SEASON_PASS_TITLE),
+    status,
+    startsAt: new Date(safeStartMs).toISOString(),
+    endsAt: safeEndMs == null ? null : new Date(safeEndMs).toISOString(),
+    serverTime: new Date(nowMs).toISOString(),
+    assetBase: "/assets/season-pass/"
+  };
+}
 
 // Покупки, созданные раньше этой точки, сохраняют свои коды и статусы,
 // но больше не занимают лимитные слоты после глобального сброса 0.1.1 Beta.
@@ -454,6 +487,21 @@ const STAFF_COMMON_BOT_COMMANDS = Object.freeze([
   { command: "cancel", description: "Отменить текущее действие" }
 ]);
 
+const STAFF_FRONTLINE_BOT_COMMANDS = Object.freeze([
+  { command: "adminpanel", description: "Открыть рабочую панель" },
+  { command: "training", description: "Обучение сотрудника" },
+  { command: "redeem", description: "Проверить и списать физический код" },
+  { command: "stock", description: "Остатки физических товаров" },
+  { command: "stock_forecast", description: "Прогноз физических остатков" },
+  { command: "notifications", description: "Мои уведомления" },
+  { command: "ticket", description: "Создать обращение" },
+  { command: "tickets", description: "Список обращений" },
+  { command: "help_staff", description: "Все доступные команды" },
+  { command: "clean_chat", description: "Очистить рабочий чат" },
+  { command: "staff_me", description: "Моя роль и права" },
+  { command: "cancel", description: "Отменить текущее действие" }
+]);
+
 const OWNER_CANONICAL_BOT_COMMANDS = Object.freeze([
   { command: "sync_commands", description: "Обновить меню команд" },
   { command: "players", description: "Список игроков" },
@@ -573,6 +621,14 @@ export default {
       }
       if (url.pathname === "/api/staff/rewards/redeem" && request.method === "POST") {
         return await staffQrRedeem(request, env);
+      }
+      if (url.pathname === "/api/maintenance/access" && request.method === "POST") {
+        return await getMaintenanceAccess(request, env);
+      }
+      // Access gates must stay reachable even while maintenance restrictions are enabled.
+      // Each gate performs its own signed Telegram identity check.
+      if (url.pathname === "/api/battle-pass/access" && request.method === "POST") {
+        return await getBattlePassAccess(request, env);
       }
 
       const maintenanceResponse = await enforceMaintenanceForRequest(request, url, env);
@@ -1175,7 +1231,7 @@ async function getGameStartupPackage(request, env) {
     const [casesResult, rewardsResult, flagsResult] = await Promise.allSettled([
       getLevelCaseState(null, env, { raw: true, body: internalBody, auth, shared }),
       listMyRewards(null, env, { raw: true, body: internalBody, auth }),
-      publicFeatureFlags(env, String(auth.user.id))
+      publicFeatureFlags(env, String(auth.user.id), { trustedIdentity: true })
     ]);
     const cases = casesResult.status === "fulfilled" ? casesResult.value : null;
     const rewards = rewardsResult.status === "fulfilled" ? rewardsResult.value : null;
@@ -5550,7 +5606,7 @@ async function handlePlayerTaskCallback(query, env) {
 
 const TEAM_ROLE_PRESETS = Object.freeze({
   cashier: Object.freeze({ redeem: 1, points: 0, products: 0, news: 0, staff: 0 }),
-  cook: Object.freeze({ redeem: 0, points: 0, products: 0, news: 0, staff: 0 }),
+  cook: Object.freeze({ redeem: 1, points: 0, products: 0, news: 0, staff: 0 }),
   administrator: Object.freeze({ redeem: 1, points: 1, products: 1, news: 1, staff: 1 })
 });
 
@@ -5647,9 +5703,12 @@ async function getTeamAccess(user, env) {
   } catch (error) {
     console.error("granular permissions fallback", error);
   }
-  // Кассир и повар не получают доступ к спискам, карточкам и истории игроков,
-  // даже если в базе остался старый точечный override.
-  if (role === "cashier" || role === "cook") security.viewPlayers = false;
+  // Кассир и повар используют только рабочую панель точки:
+  // доступ к игрокам всегда закрыт, а проверка физических кодов всегда доступна.
+  if (role === "cashier" || role === "cook") {
+    security.viewPlayers = false;
+    security.redeemPhysical = true;
+  }
   return {
     authorized: activeSession,
     owner: false,
@@ -6813,6 +6872,33 @@ async function showAdminPanelCommands(chatId, user, env) {
     return;
   }
 
+  const role = normalizeTeamRole(access?.role);
+  if (!access.owner && (role === "cashier" || role === "cook")) {
+    const text = `<b>📚 Рабочие команды</b>\n\n` +
+      `<b>Основное</b>\n` +
+      `<code>/adminpanel</code> — открыть рабочую панель\n` +
+      `<code>/training</code> — пройти или повторить обучение\n` +
+      `<code>/staff_me</code> — посмотреть роль и права\n` +
+      `<code>/clean_chat</code> — очистить рабочий чат\n` +
+      `<code>/cancel</code> — отменить текущее действие\n\n` +
+      `<b>Физические товары</b>\n` +
+      `<code>/check_code КОД</code> — проверить код без списания\n` +
+      `<code>/redeem</code> — открыть пошаговое списание\n` +
+      `<code>/redeem КОД</code> — открыть конкретный код\n` +
+      `<code>/stock</code> — посмотреть остатки\n` +
+      `<code>/stock_forecast</code> — прогноз остатков\n` +
+      `Сканер QR доступен кнопкой в рабочей панели.\n\n` +
+      `<b>Уведомления</b>\n` +
+      `<code>/notifications</code> — настроить рабочие уведомления\n\n` +
+      `<b>Обращения</b>\n` +
+      `<code>/ticket</code> — создать обращение\n` +
+      `<code>/tickets</code> — открытые обращения\n` +
+      `<code>/tickets mine</code> — мои обращения\n` +
+      `<code>/ticket_info НОМЕР</code> — открыть обращение`;
+    await sendTelegramMessage(env, chatId, text, { inline_keyboard: [[{ text: "⬅️ Рабочая панель", callback_data: "adm_home" }]] });
+    return;
+  }
+
   const entries = [
     `<b>Основное</b>\n<code>/training</code> — пройти или повторить обучение\n<code>/staff_me</code> — моя роль, права и статистика\n<code>/adminpanel</code> — кнопочная админ-панель и очистка старых сообщений\n<code>/clean_chat</code> — очистить рабочий чат вручную\n<code>/adminpanel_kmd</code> — полный справочник команд\n<code>/bot_version</code> — проверить версию Worker\n<code>/status</code> — состояние игры, бота, Cron и рейтинга\n<code>/search</code> — универсальный поиск\n<code>/problems</code> — центр проблем\n<code>/cancel</code> — отменить текущее действие\n<code>/whoami</code> — мой Telegram ID`,
     `<b>Обращения</b>\n<code>/ticket</code> — создать обращение через кнопки\n<code>/tickets</code> — открытые обращения\n<code>/tickets mine</code> — мои обращения\n<code>/ticket_info НОМЕР</code> — открыть карточку обращения`,
@@ -7483,6 +7569,7 @@ function staffActionLabel(action) {
     view_stock: "просмотр остатков",
     view_season: "просмотр сезона",
     season_extend: "продление сезона",
+    season_shorten: "сокращение сезона",
     season_reward_change: "изменение награды сезона",
     season_finish_early: "досрочное завершение сезона",
     ticket_create: "создание обращения",
@@ -7709,12 +7796,12 @@ async function registerStaff(chatId, user, suppliedCode, env) {
   await refreshBotCommandMenuSilently(env, user.id);
   const enabled = Object.entries(access.permissions || {}).filter(([, value]) => value).map(([key]) => permissionLabel(key)).join(", ");
   await sendTelegramMessage(env, chatId,
-    `<b>Рабочая сессия открыта на 30 минут</b>
+    `<b>Рабочая сессия открыта на 12 часов</b>
 
 Роль: <b>${escapeHtml(owner ? "Владелец" : teamRoleLabel(access.role))}</b>
 Разрешения: ${escapeHtml(enabled || "нет")}.
 
-Через 30 минут снова выполните <code>/staff</code>.`
+Через 12 часов снова выполните <code>/staff</code>.`
   );
   if (!owner) {
     const training = await getStaffTrainingStatus(env, String(user.id), access.role);
@@ -9071,6 +9158,10 @@ async function showSeasonAdminDashboard(chatId, user, env) {
       { text: "+1 день", callback_data: "season_extend:1" },
       { text: "+7 дней", callback_data: "season_extend:7" }
     ]);
+    keyboard.push([
+      { text: "−1 день", callback_data: "season_shorten:1" },
+      { text: "−7 дней", callback_data: "season_shorten:7" }
+    ]);
     keyboard.push([{ text: "🎁 Изменить награду", callback_data: "season_reward" }]);
     keyboard.push([{ text: "⛔ Завершить досрочно", callback_data: "season_finish_preview" }]);
   }
@@ -9126,6 +9217,42 @@ async function extendSeason(query, days, env) {
   ).bind(nextEnd, now, now, season.id).run();
   await logStaffAction(env, query.from, access, "season_extend", null, "season", Number(season.ends_at || 0), nextEnd, { seasonId: season.id, days });
   await answerCallback(env, query.id, `Сезон продлён на ${days} дн.`);
+  await showSeasonAdminDashboard(chatId, query.from, env);
+}
+
+async function shortenSeason(query, days, env) {
+  const chatId = query.message?.chat?.id;
+  const access = await requireSecurityPermission(chatId, query.from, "manageSeasons", env);
+  if (!access) return;
+  const season = await ensureSeason(env);
+  if (season.finalized_at || String(season.status) === "ended") {
+    await answerCallback(env, query.id, "Завершённый сезон нельзя сокращать.", true);
+    return;
+  }
+
+  const normalizedDays = Math.max(1, Math.min(30, Number(days || 1)));
+  const reduction = normalizedDays * 24 * 60 * 60;
+  const now = Math.floor(Date.now() / 1000);
+  const currentEnd = Number(season.ends_at || now);
+  const startsAt = Number(season.starts_at || 0);
+  const nextEnd = currentEnd - reduction;
+  const minimumAllowedEnd = Math.max(now, startsAt);
+
+  if (nextEnd <= minimumAllowedEnd) {
+    const reason = nextEnd <= startsAt
+      ? "Дата завершения не может быть раньше старта сезона."
+      : "Дата завершения окажется в прошлом.";
+    await answerCallback(env, query.id, `${reason} Для немедленного закрытия используйте «Завершить досрочно».`, true);
+    return;
+  }
+
+  await env.DB.prepare(
+    `UPDATE leaderboard_seasons SET ends_at = ?, manual_override = 1,
+     status = CASE WHEN starts_at <= ? THEN 'active' ELSE 'scheduled' END,
+     updated_at = ? WHERE id = ? AND finalized_at IS NULL`
+  ).bind(nextEnd, now, now, season.id).run();
+  await logStaffAction(env, query.from, access, "season_shorten", null, "season", currentEnd, nextEnd, { seasonId: season.id, days: normalizedDays });
+  await answerCallback(env, query.id, `Сезон сокращён на ${normalizedDays} дн.`);
   await showSeasonAdminDashboard(chatId, query.from, env);
 }
 
@@ -10939,6 +11066,11 @@ async function handleStaffOperationsCallback(query, env) {
     await extendSeason(query, Number(seasonExtend[1]), env);
     return true;
   }
+  const seasonShorten = data.match(/^season_shorten:(1|7)$/);
+  if (seasonShorten) {
+    await shortenSeason(query, Number(seasonShorten[1]), env);
+    return true;
+  }
   if (data === "season_reward") {
     await startSeasonRewardWorkflow(query, env);
     return true;
@@ -11007,7 +11139,7 @@ const LIVEOPS_CASE_DEFAULTS = Object.freeze({
   small: Object.freeze({ enabled: true, title: "Обычный кейс", guaranteeCount: 0, chances: { treats: 40.5, coffee: 40.5, points: 16.5, booster: 2.5, skin: 0, avatar: 0, frame: 0, trail: 0, music: 0, physical: 0 }, ranges: { treats: [10, 20], coffee: [10, 20], points: [500, 1000] } }),
   sweet: Object.freeze({ enabled: true, title: "Серебряный кейс", guaranteeCount: 0, chances: { treats: 30, coffee: 30, points: 23.5, booster: 12, skin: 0, avatar: 3, frame: 1, trail: 0.5, music: 0, physical: 0 }, ranges: { treats: [20, 40], coffee: [20, 40], points: [1000, 2500] } }),
   gold: Object.freeze({ enabled: true, title: "Золотой кейс", guaranteeCount: 0, chances: { treats: 25, coffee: 25, points: 26, booster: 15, skin: 0, avatar: 5, frame: 3, trail: 1, music: 0, physical: 0 }, ranges: { treats: [40, 70], coffee: [40, 70], points: [2500, 5000] } }),
-  legendary: Object.freeze({ enabled: true, title: "Легендарный кейс", guaranteeCount: 50, chances: { treats: 25, coffee: 25, points: 39.455, booster: 0, skin: 0.5, avatar: 2, frame: 3, trail: 4.5, music: 0.5, physical: 0.045 }, ranges: { treats: [250, 1200], coffee: [250, 1200], points: [35000, 150000] } })
+  legendary: Object.freeze({ enabled: true, title: "Легендарный кейс", guaranteeCount: 50, chances: { treats: 25, coffee: 25, points: 39.665, booster: 0, skin: 0.35, avatar: 2, frame: 3, trail: 4.5, music: 0.45, physical: 0.035 }, ranges: { treats: [250, 1200], coffee: [250, 1200], points: [35000, 150000] } })
 });
 
 const LIVEOPS_CONTENT_IMAGES = Object.freeze({
@@ -11125,8 +11257,8 @@ function liveOpsCaseConfigFromRow(row) {
   const storedChances = parseJsonObject(row?.chances_json, {});
   const chances = { ...fallback.chances, ...storedChances };
   if (caseId === "legendary" && !Object.prototype.hasOwnProperty.call(storedChances, "music")) {
-    chances.music = 0.5;
-    chances.points = Math.max(0, Number(chances.points || 0) - 0.5);
+    chances.music = 0.45;
+    chances.points = Math.max(0, Number(chances.points || 0) - 0.45);
   }
   const ranges = { ...fallback.ranges, ...parseJsonObject(row?.ranges_json, {}) };
   return {
@@ -11200,6 +11332,27 @@ async function logLiveOpsConfigChange(env, user, entityType, entityId, action, o
 
 function adminMainMenuMarkup(access, overview = {}, env = {}) {
   const can = (...permissions) => Boolean(access?.owner || permissions.some((permission) => access?.permissions?.[permission]));
+  const role = normalizeTeamRole(access?.role);
+  const frontline = !access?.owner && (role === "cashier" || role === "cook");
+  if (frontline) {
+    return {
+      inline_keyboard: [
+        [{ text: "🎓 Обучение", callback_data: "v78_training" }],
+        [{ text: "☕ Физические товары", callback_data: "adm_physical" }],
+        [
+          { text: "📷 Сканировать QR", web_app: { url: configuredStaffQrUrl(env) } },
+          { text: "⌨️ Ввести код", callback_data: "adm_redeem_manual" }
+        ],
+        [{ text: "🔔 Уведомления", callback_data: "v57_notifications" }],
+        [{ text: "📦 Прогноз остатков", callback_data: "v67_stock_forecast" }],
+        [{ text: "🎫 Обращения", callback_data: "tickets_open" }],
+        [
+          { text: "📚 Все команды", callback_data: "adminpanel_commands" },
+          { text: "🧹 Очистить чат", callback_data: "admin_clean_chat" }
+        ]
+      ]
+    };
+  }
   const rows = [];
   const addRow = (...buttons) => {
     const visible = buttons.filter(Boolean);
@@ -11289,6 +11442,9 @@ function adminMainMenuMarkup(access, overview = {}, env = {}) {
     can("manageMaintenance", "manageCases", "managePromocodes") && { text: "🚩 Функции", callback_data: "v65_features" }
   );
   addRow(
+    can("manageMaintenance") && { text: "🎟 Сезонный пропуск", callback_data: "v65_feature:battle_pass" }
+  );
+  addRow(
     can("manageCases") && { text: "🧪 Симулятор кейсов", callback_data: "v65_case_sim" },
     can("manageCases", "manageSeasons") && { text: "🚀 Публикация", callback_data: "v65_publish" }
   );
@@ -11315,8 +11471,12 @@ async function showAdminMainMenu(chatId, user, env, options = {}) {
     await sendTelegramMessage(env, chatId, access.reason === "expired" ? "Сессия истекла. Выполните <code>/staff</code>." : "Доступно только сотрудникам.");
     return;
   }
+  const role = normalizeTeamRole(access?.role);
+  const frontline = !access.owner && (role === "cashier" || role === "cook");
   let overview = null;
-  try { overview = await getAdminOverviewFast(env, Boolean(options.forceRefresh)); } catch (error) { console.error("Admin overview failed", error); }
+  if (!frontline) {
+    try { overview = await getAdminOverviewFast(env, Boolean(options.forceRefresh)); } catch (error) { console.error("Admin overview failed", error); }
+  }
   const summary = overview
     ? `\n\n<b>${overview.healthIcon} Состояние игры</b>\n` +
       `Cron: <b>${escapeHtml(overview.cronText)}</b>\n` +
@@ -11329,7 +11489,9 @@ async function showAdminMainMenu(chatId, user, env, options = {}) {
       `Обращений открыто: <b>${overview.tickets}</b> · ошибок за час ${overview.errors}` +
       `${overview.cacheAgeSeconds > 5 ? `\n<i>Сводка: ${Math.max(1, Math.floor(overview.cacheAgeSeconds / 60))} мин. назад</i>` : ""}`
     : `\n\n🟡 Быстрая сводка временно недоступна. Остальные разделы работают.`;
-  const panelText = `<b>⚙️ Админ-панель</b>\n\nСотрудник: <b>${escapeHtml(telegramDisplayName(user))}</b>\nРоль: <b>${escapeHtml(staffRoleTitle(access))}</b>\nWorker: <b>v${escapeHtml(WORKER_BUILD)}</b>${summary}\n\nВыберите раздел. Критические действия требуют подтверждения и записываются в журнал.`;
+  const panelText = frontline
+    ? `<b>🧾 Рабочая панель</b>\n\nСотрудник: <b>${escapeHtml(telegramDisplayName(user))}</b>\nРоль: <b>${escapeHtml(staffRoleTitle(access))}</b>\n\nВыберите нужный рабочий раздел.`
+    : `<b>⚙️ Админ-панель</b>\n\nСотрудник: <b>${escapeHtml(telegramDisplayName(user))}</b>\nРоль: <b>${escapeHtml(staffRoleTitle(access))}</b>\nWorker: <b>v${escapeHtml(WORKER_BUILD)}</b>${summary}\n\nВыберите раздел. Критические действия требуют подтверждения и записываются в журнал.`;
   const panelMarkup = adminMainMenuMarkup(access, overview || {}, env);
   const editMessageId = Math.floor(Number(options.editMessageId) || 0);
   if (editMessageId > 0) {
@@ -13518,6 +13680,12 @@ async function performGameIntegrityCheck(env) {
   return {ok:errors===0,errors,warnings,checks,createdAt:now};
 }
 
+
+// Compatibility alias retained for release-plan code created before the checker was renamed.
+async function runGameIntegrityCheck(env) {
+  return performGameIntegrityCheck(env);
+}
+
 async function refreshIntegrityOperationalIssue(env,result){
   await ensureObservabilitySchema(env);const now=Math.floor(Date.now()/1000);
   if(result.ok){
@@ -13669,6 +13837,10 @@ function uniqueBotCommands(commands) {
 
 function botCommandsForAccess(access) {
   if (!access?.authorized) return STAFF_LOGIN_BOT_COMMANDS;
+  const role = normalizeTeamRole(access?.role);
+  if (!access.owner && (role === "cashier" || role === "cook")) {
+    return uniqueBotCommands(STAFF_FRONTLINE_BOT_COMMANDS);
+  }
   const commands = [...PLAYER_BOT_COMMANDS, ...STAFF_COMMON_BOT_COMMANDS];
   const add = (...items) => commands.push(...items);
   if (access.owner) return uniqueBotCommands([...commands, ...OWNER_CANONICAL_BOT_COMMANDS]);
@@ -14346,6 +14518,8 @@ async function ensureOperationsSecuritySchema(env) {
       env.DB.prepare(`CREATE TABLE IF NOT EXISTS live_feature_flags (flag_key TEXT PRIMARY KEY,title TEXT NOT NULL,description TEXT NOT NULL DEFAULT '',mode TEXT NOT NULL DEFAULT 'all',rollout_percent INTEGER NOT NULL DEFAULT 100,updated_at INTEGER NOT NULL,updated_by TEXT NOT NULL DEFAULT '')`),
       env.DB.prepare(`CREATE TABLE IF NOT EXISTS admin_publication_batches (id INTEGER PRIMARY KEY AUTOINCREMENT,title TEXT NOT NULL,status TEXT NOT NULL DEFAULT 'draft',draft_ids_json TEXT NOT NULL DEFAULT '[]',validation_json TEXT NOT NULL DEFAULT '{}',created_by TEXT NOT NULL,created_by_name TEXT NOT NULL DEFAULT '',created_at INTEGER NOT NULL,updated_at INTEGER NOT NULL,published_at INTEGER NOT NULL DEFAULT 0,published_by TEXT NOT NULL DEFAULT '',error_text TEXT NOT NULL DEFAULT '')`),
       env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_admin_publication_batches_status ON admin_publication_batches(status,updated_at DESC)`),
+      env.DB.prepare(`INSERT OR IGNORE INTO live_feature_flags(flag_key,title,description,mode,rollout_percent,updated_at,updated_by) VALUES ('battle_pass','Сезонный пропуск','Кнопка в профиле и доступ к отдельной странице сезонного пропуска','off',0,unixepoch(),'runtime')`),
+      env.DB.prepare(`UPDATE live_feature_flags SET title='Сезонный пропуск',description='Кнопка в профиле и доступ к отдельной странице сезонного пропуска' WHERE flag_key='battle_pass' AND (title!='Сезонный пропуск' OR description!='Кнопка в профиле и доступ к отдельной странице сезонного пропуска')`),
       env.DB.prepare(`INSERT OR IGNORE INTO live_feature_flags(flag_key,title,description,mode,rollout_percent,updated_at,updated_by) VALUES ('cases','Кейсы','Открытие, покупка и активация кейсов','all',100,unixepoch(),'runtime')`),
       env.DB.prepare(`INSERT OR IGNORE INTO live_feature_flags(flag_key,title,description,mode,rollout_percent,updated_at,updated_by) VALUES ('rating','Рейтинг','Отправка результатов и получение сезонной награды','all',100,unixepoch(),'runtime')`),
       env.DB.prepare(`INSERT OR IGNORE INTO live_feature_flags(flag_key,title,description,mode,rollout_percent,updated_at,updated_by) VALUES ('shop','Покупки','Покупки скинов и кейсов','all',100,unixepoch(),'runtime')`),
@@ -14359,20 +14533,28 @@ async function ensureOperationsSecuritySchema(env) {
   await operationsSecuritySchemaPromise;
 }
 
+
+// Compatibility alias retained for older automation/task code paths.
+async function ensureV57OperationsSchema(env) {
+  return ensureOperationsSecuritySchema(env);
+}
+
 function completeSecurityPermissions(value) {
   return Object.fromEntries(SECURITY_PERMISSION_KEYS.map((key) => [key, Boolean(value)]));
 }
 
 function securityPermissionPreset(role, legacy = {}) {
-  const admin = normalizeTeamRole(role) === "administrator";
-  const cashier = normalizeTeamRole(role) === "cashier";
+  const normalizedRole = normalizeTeamRole(role);
+  const admin = normalizedRole === "administrator";
+  const cashier = normalizedRole === "cashier";
+  const cook = normalizedRole === "cook";
   return {
     viewPlayers: admin,
     grantRewards: admin || Boolean(legacy.points),
     grantLegendaryCases: admin,
     blockPlayers: admin,
     unblockPlayers: admin,
-    redeemPhysical: admin || cashier || Boolean(legacy.redeem),
+    redeemPhysical: admin || cashier || cook || Boolean(legacy.redeem),
     manageSeasons: admin,
     manageCases: admin,
     manageShop: admin || Boolean(legacy.products),
@@ -14742,31 +14924,65 @@ async function setGranularPermission(chatId, user, telegramId, rawKey, enabled, 
   await sendTelegramMessage(env, chatId, `Право «${escapeHtml(permissionLabel(key))}» для <code>${escapeHtml(String(telegramId))}</code> ${enabled ? "включено" : "отключено"}. Меню команд обновлено.`);
 }
 
+const DEFAULT_MAINTENANCE_SETTINGS = Object.freeze({
+  fullClosed: false,
+  ratingDisabled: false,
+  purchasesDisabled: false,
+  casesDisabled: false,
+  physicalRewardsDisabled: false,
+  testersOnly: false,
+  message: "В игре проходят технические работы. Прогресс сохранён. Попробуйте снова через несколько минут.",
+  updatedAt: 0,
+  updatedBy: ""
+});
+let maintenanceSchemaPromise = null;
+let maintenanceSettingsMemory = { value: null };
+
+async function ensureMaintenanceSchema(env) {
+  if (!maintenanceSchemaPromise) {
+    maintenanceSchemaPromise = env.DB.batch([
+      env.DB.prepare(`CREATE TABLE IF NOT EXISTS maintenance_settings (id INTEGER PRIMARY KEY,full_closed INTEGER NOT NULL DEFAULT 0,rating_disabled INTEGER NOT NULL DEFAULT 0,purchases_disabled INTEGER NOT NULL DEFAULT 0,cases_disabled INTEGER NOT NULL DEFAULT 0,physical_rewards_disabled INTEGER NOT NULL DEFAULT 0,testers_only INTEGER NOT NULL DEFAULT 0,message TEXT NOT NULL DEFAULT 'В игре проходят технические работы. Прогресс сохранён. Попробуйте снова через несколько минут.',updated_at INTEGER NOT NULL,updated_by TEXT NOT NULL DEFAULT '')`),
+      env.DB.prepare(`INSERT OR IGNORE INTO maintenance_settings(id,updated_at,updated_by) VALUES(1,unixepoch(),'runtime')`)
+    ]).catch((error) => {
+      maintenanceSchemaPromise = null;
+      throw error;
+    });
+  }
+  await maintenanceSchemaPromise;
+}
+
 async function getMaintenanceSettings(env) {
-  await ensureOperationsSecuritySchema(env);
-  const row = await env.DB.prepare(`SELECT * FROM maintenance_settings WHERE id=1 LIMIT 1`).first();
-  return {
-    fullClosed: Number(row?.full_closed || 0) === 1,
-    ratingDisabled: Number(row?.rating_disabled || 0) === 1,
-    purchasesDisabled: Number(row?.purchases_disabled || 0) === 1,
-    casesDisabled: Number(row?.cases_disabled || 0) === 1,
-    physicalRewardsDisabled: Number(row?.physical_rewards_disabled || 0) === 1,
-    testersOnly: Number(row?.testers_only || 0) === 1,
-    message: String(row?.message || "В игре проходят технические работы. Прогресс сохранён. Попробуйте снова через несколько минут."),
-    updatedAt: Number(row?.updated_at || 0),
-    updatedBy: String(row?.updated_by || "")
-  };
+  try {
+    await ensureMaintenanceSchema(env);
+    const row = await env.DB.prepare(`SELECT * FROM maintenance_settings WHERE id=1 LIMIT 1`).first();
+    const value = {
+      fullClosed: Number(row?.full_closed || 0) === 1,
+      ratingDisabled: Number(row?.rating_disabled || 0) === 1,
+      purchasesDisabled: Number(row?.purchases_disabled || 0) === 1,
+      casesDisabled: Number(row?.cases_disabled || 0) === 1,
+      physicalRewardsDisabled: Number(row?.physical_rewards_disabled || 0) === 1,
+      testersOnly: Number(row?.testers_only || 0) === 1,
+      message: String(row?.message || DEFAULT_MAINTENANCE_SETTINGS.message),
+      updatedAt: Number(row?.updated_at || 0),
+      updatedBy: String(row?.updated_by || "")
+    };
+    maintenanceSettingsMemory = { value };
+    return value;
+  } catch (error) {
+    console.error("maintenance settings read failed; using safe fallback", error);
+    if (maintenanceSettingsMemory.value) return { ...maintenanceSettingsMemory.value, degraded: true };
+    return { ...DEFAULT_MAINTENANCE_SETTINGS, degraded: true };
+  }
 }
 
 async function requestTelegramId(request, env) {
   try {
     if (!["POST", "PUT", "PATCH"].includes(String(request.method || "GET").toUpperCase())) return "";
     const body = await request.clone().json();
-    if (body?.initData) {
-      const auth = await validateTelegramInitData(String(body.initData), env);
-      return String(auth?.user?.id || "");
-    }
-    return String(body?.telegramId || body?.telegram_id || body?.targetTelegramId || body?.user?.id || "");
+    const initData = String(body?.initData || body?.init_data || "");
+    if (!initData) return "";
+    const auth = await validateTelegramInitData(initData, env);
+    return String(auth?.user?.id || "");
   } catch {
     return "";
   }
@@ -14774,9 +14990,67 @@ async function requestTelegramId(request, env) {
 
 async function isTesterAccount(telegramId, env) {
   if (!telegramId) return false;
-  await ensureOperationsSecuritySchema(env);
-  const row = await env.DB.prepare(`SELECT telegram_id FROM tester_accounts WHERE telegram_id=? LIMIT 1`).bind(String(telegramId)).first();
-  return Boolean(row);
+  try {
+    const row = await env.DB.prepare(`SELECT telegram_id FROM tester_accounts WHERE telegram_id=? LIMIT 1`).bind(String(telegramId)).first();
+    return Boolean(row);
+  } catch (error) {
+    console.error("maintenance tester lookup failed", error);
+    return false;
+  }
+}
+
+async function isAdministratorStaffAccount(telegramId, env) {
+  if (!telegramId) return false;
+  try {
+    const row = await env.DB.prepare(`SELECT role FROM staff_users WHERE telegram_id=? AND active=1 LIMIT 1`).bind(String(telegramId)).first();
+    return normalizeTeamRole(row?.role) === "administrator";
+  } catch (error) {
+    console.error("maintenance administrator lookup failed", error);
+    return false;
+  }
+}
+
+async function maintenanceAccessIdentity(telegramId, env) {
+  const id = String(telegramId || "");
+  if (!id) return { allowed:false, owner:false, administrator:false, tester:false, accessRole:"player" };
+  const owner = isBotAdminTelegramId(id, env);
+  if (owner) {
+    return { allowed:true, owner:true, administrator:false, tester:false, accessRole:"owner" };
+  }
+  const [administrator, tester] = await Promise.all([
+    isAdministratorStaffAccount(id, env),
+    isTesterAccount(id, env)
+  ]);
+  return {
+    allowed: Boolean(administrator || tester),
+    owner: false,
+    administrator: Boolean(administrator),
+    tester: Boolean(tester),
+    accessRole: administrator ? "administrator" : tester ? "tester" : "player"
+  };
+}
+
+async function getMaintenanceAccess(request, env) {
+  const settings = await getMaintenanceSettings(env);
+  const restricted = settings.fullClosed || settings.testersOnly;
+  if (!restricted) {
+    return jsonResponse({ ok: true, allowed: true, maintenance: false, mode: "open" });
+  }
+
+  const telegramId = await requestTelegramId(request, env);
+  const identity = await maintenanceAccessIdentity(telegramId, env);
+  const allowed = identity.allowed;
+  const mode = settings.fullClosed ? "full" : "testers_only";
+  const payload = {
+    ok: allowed,
+    allowed,
+    maintenance: true,
+    mode,
+    accessRole: identity.accessRole,
+    error: allowed ? "" : settings.message,
+    message: settings.message
+  };
+  return jsonResponse(payload, allowed ? 200 : 503);
 }
 
 function maintenanceHtml(message) {
@@ -14785,17 +15059,16 @@ function maintenanceHtml(message) {
 
 async function enforceMaintenanceForRequest(request, url, env) {
   const path = String(url.pathname || "");
-  if (path === "/api/health" || path.startsWith("/api/admin/") || path.startsWith("/api/bot/") || path === "/telegram/webhook") return null;
+  if (path === "/api/health" || path === "/api/maintenance/access" || path === "/api/shop/config" || path === "/api/skins/config" || path === "/api/features" || path.startsWith("/api/admin/") || path.startsWith("/api/bot/") || path === "/telegram/webhook") return null;
   let settings;
   try { settings = await getMaintenanceSettings(env); } catch { return null; }
   if (!settings.fullClosed && !settings.ratingDisabled && !settings.purchasesDisabled && !settings.casesDisabled && !settings.physicalRewardsDisabled && !settings.testersOnly) return null;
-  const staticEntry = request.method === "GET" && (path === "/" || path === "/index.html");
-  if (settings.fullClosed && staticEntry) return new Response(maintenanceHtml(settings.message), { status: 503, headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" } });
   if (!path.startsWith("/api/")) return null;
   const telegramId = await requestTelegramId(request, env);
-  const tester = await isTesterAccount(telegramId, env);
-  if (settings.testersOnly && !tester) return jsonResponse({ ok: false, maintenance: true, mode: "testers_only", error: settings.message }, 503);
-  if (settings.fullClosed && !tester) return jsonResponse({ ok: false, maintenance: true, mode: "full", error: settings.message }, 503);
+  const identity = await maintenanceAccessIdentity(telegramId, env);
+  const privileged = identity.allowed;
+  if (settings.testersOnly && !privileged) return jsonResponse({ ok: false, maintenance: true, mode: "testers_only", error: settings.message }, 503);
+  if (settings.fullClosed && !privileged) return jsonResponse({ ok: false, maintenance: true, mode: "full", error: settings.message }, 503);
   if (settings.ratingDisabled && path.startsWith("/api/leaderboard/")) return jsonResponse({ ok: false, maintenance: true, mode: "rating", error: settings.message }, 503);
   if (settings.purchasesDisabled && ["/api/rewards/create", "/api/skins/purchase", "/api/skins/bonus-case", "/api/cases/purchase"].includes(path)) return jsonResponse({ ok: false, maintenance: true, mode: "purchases", error: settings.message }, 503);
   if (settings.casesDisabled && ["/api/cases/open", "/api/cases/open-granted", "/api/cases/purchase", "/api/cases/activate"].includes(path)) return jsonResponse({ ok: false, maintenance: true, mode: "cases", error: settings.message }, 503);
@@ -14826,6 +15099,7 @@ async function showMaintenanceDashboard(chatId, user, env) {
     `Кейсы: <b>${settings.casesDisabled ? "отключены" : "работают"}</b>\n` +
     `Физические награды: <b>${settings.physicalRewardsDisabled ? "отключены" : "работают"}</b>\n\n` +
     `Сообщение игрокам:\n<i>${escapeHtml(settings.message)}</i>\n\n` +
+    `<b>Доступ при полном закрытии:</b> владелец, администраторы и аккаунты из списка тестеров.\n\n` +
     `Команда текста: <code>/maintenance message НОВЫЙ ТЕКСТ</code>`,
     maintenanceKeyboard(settings)
   );
@@ -16082,6 +16356,7 @@ const STAFF_LIMIT_PRESETS = Object.freeze({
   unlimited: Object.freeze({ points_per_player: 0, points_daily: 0, cases_daily: 0, legendary_daily: 0, campaigns_daily: 0 })
 });
 const FEATURE_FLAG_LABELS = Object.freeze({
+  battle_pass: "Сезонный пропуск",
   cases: "Кейсы",
   rating: "Рейтинг",
   shop: "Покупки",
@@ -16089,6 +16364,7 @@ const FEATURE_FLAG_LABELS = Object.freeze({
   physical_rewards: "Физические награды"
 });
 const FEATURE_FLAG_PERMISSIONS = Object.freeze({
+  battle_pass: "manageMaintenance",
   cases: "manageCases",
   rating: "manageSeasons",
   shop: "manageShop",
@@ -16106,6 +16382,7 @@ async function requireFeatureFlagPermission(chatId, user, flagKey, env) {
   return requireSecurityPermission(chatId, user, permission, env);
 }
 const FEATURE_FLAG_DEFAULTS = Object.freeze([
+  Object.freeze({ flag_key:"battle_pass", title:"Сезонный пропуск", description:"Кнопка в профиле и доступ к отдельной странице сезонного пропуска", mode:"off", rollout_percent:0 }),
   Object.freeze({ flag_key:"cases", title:"Кейсы", description:"Открытие, покупка и активация кейсов", mode:"all", rollout_percent:100 }),
   Object.freeze({ flag_key:"rating", title:"Рейтинг", description:"Отправка результатов и получение сезонной награды", mode:"all", rollout_percent:100 }),
   Object.freeze({ flag_key:"shop", title:"Покупки", description:"Покупки скинов и кейсов", mode:"all", rollout_percent:100 }),
@@ -16354,18 +16631,110 @@ async function enforceFeatureFlagForRequest(request, env, flagKey) {
   return jsonResponse({ ok:false, error:`Функция «${title}» временно недоступна. Прогресс сохранён.` }, 503);
 }
 
-async function publicFeatureFlags(env, telegramId = "") {
+async function battlePassAudienceAccess(env, telegramId, flag = null) {
+  const row = flag || await getFeatureFlag(env, "battle_pass");
+  const mode = String(row?.mode || "off");
+  const identity = await maintenanceAccessIdentity(String(telegramId || ""), env);
+
+  // Владелец и активные администраторы сохраняют доступ к тестовой странице,
+  // даже когда она скрыта от обычных игроков.
+  if (identity.owner || identity.administrator) {
+    return { allowed: true, mode, identity, reason: "staff_bypass" };
+  }
+
+  if (mode === "all") return { allowed: true, mode, identity, reason: "all" };
+  if (mode === "testers" && identity.tester) return { allowed: true, mode, identity, reason: "tester" };
+  if (mode === "percent") {
+    const allowed = stableRolloutBucket(`battle_pass:${telegramId}`) < Math.max(0, Math.min(100, Number(row?.rollout_percent || 0)));
+    return { allowed, mode, identity, reason: allowed ? "percent" : "percent_blocked" };
+  }
+  return { allowed: false, mode, identity, reason: "hidden" };
+}
+
+async function getBattlePassAccess(request, env) {
+  try {
+    const body = await readJson(request);
+    const initData = String(body.initData || body.init_data || "");
+    if (!initData) throw new ApiError(401, "Откройте игру через Telegram, чтобы проверить доступ.");
+    requireBotToken(env);
+    const auth = await validateTelegramInitData(initData, env);
+    const telegramId = String(auth.user.id);
+    const identity = await maintenanceAccessIdentity(telegramId, env);
+    const season = configuredSeasonPassState(env);
+
+    // The owner and active administrators do not depend on the feature-flag query.
+    // This keeps the test page available even if the flag table is temporarily slow.
+    if (identity.owner || identity.administrator) {
+      return jsonResponse({
+        ok: true,
+        allowed: true,
+        mode: "staff",
+        accessRole: identity.accessRole,
+        accessReason: "staff_bypass",
+        telegramId,
+        canPreviewUpcoming: true,
+        season
+      });
+    }
+
+    const flag = await getFeatureFlag(env, "battle_pass");
+    const access = await battlePassAudienceAccess(env, telegramId, flag);
+    if (!access.allowed) {
+      return jsonResponse({
+        ok: false,
+        allowed: false,
+        mode: access.mode,
+        accessRole: access.identity.accessRole,
+        error: "Сезонный пропуск пока скрыт. Он появится в профиле после запуска.",
+        season
+      }, 403);
+    }
+    return jsonResponse({
+      ok: true,
+      allowed: true,
+      mode: access.mode,
+      accessRole: access.identity.accessRole,
+      accessReason: access.reason,
+      telegramId,
+      canPreviewUpcoming: false,
+      season
+    });
+  } catch (error) {
+    if (error instanceof ApiError) return jsonResponse({ ok: false, allowed: false, error: error.message }, error.status);
+    console.error("getBattlePassAccess failed", error);
+    return jsonResponse({ ok: false, allowed: false, error: "Не удалось проверить доступ к сезонному пропуску." }, 500);
+  }
+}
+
+async function publicFeatureFlags(env, telegramId = "", options = {}) {
   const rows = await loadFeatureFlagRows(env);
   const flags = {};
   let tester = null;
+  let trustedIdentity = null;
   for (const row of rows) {
     const mode = String(row.mode || "all");
+
+    // Исключение владельца и администратора применяется только после серверной
+    // проверки Telegram initData в startup package. Публичный GET /api/features
+    // не может получить привилегии простой подстановкой telegram_id.
+    if (row.flag_key === "battle_pass" && options?.trustedIdentity === true) {
+      if (trustedIdentity == null) trustedIdentity = await maintenanceAccessIdentity(String(telegramId || ""), env);
+      if (trustedIdentity.owner || trustedIdentity.administrator) {
+        flags[row.flag_key] = true;
+        continue;
+      }
+    }
+
     if (mode === "all") flags[row.flag_key] = true;
     else if (mode === "off") flags[row.flag_key] = false;
     else if (mode === "percent") flags[row.flag_key] = stableRolloutBucket(`${row.flag_key}:${telegramId}`) < Math.max(0,Math.min(100,Number(row.rollout_percent||0)));
     else if (mode === "testers") {
-      if (tester == null) tester = Boolean(await getTesterAccountSafe(telegramId, env));
-      flags[row.flag_key] = tester;
+      if (row.flag_key === "battle_pass" && trustedIdentity != null) {
+        flags[row.flag_key] = Boolean(trustedIdentity.tester);
+      } else {
+        if (tester == null) tester = Boolean(await getTesterAccountSafe(telegramId, env));
+        flags[row.flag_key] = tester;
+      }
     } else flags[row.flag_key] = true;
   }
   return flags;
@@ -16386,14 +16755,22 @@ async function showFeatureFlagCard(chatId, user, flagKey, env) {
   if (!access) return;
   const row = await getFeatureFlag(env, flagKey);
   if (!row) return sendTelegramMessage(env, chatId, "Флаг не найден.");
-  await sendTelegramMessage(env, chatId, `<b>🚩 ${escapeHtml(row.title)}</b>\n\n${escapeHtml(row.description || "")}\nТекущий режим: <b>${escapeHtml(featureModeLabel(row))}</b>\nОбновлено: ${escapeHtml(formatUtcDate(row.updated_at))}`,
-    { inline_keyboard:[
-      [{text:"🔴 Выключить",callback_data:`v65_feature_set:${flagKey}:off:0`},{text:"🧪 Тестеры",callback_data:`v65_feature_set:${flagKey}:testers:0`}],
-      [{text:"🟡 10%",callback_data:`v65_feature_set:${flagKey}:percent:10`},{text:"🟡 25%",callback_data:`v65_feature_set:${flagKey}:percent:25`},{text:"🟡 50%",callback_data:`v65_feature_set:${flagKey}:percent:50`}],
-      [{text:"🟢 Все игроки",callback_data:`v65_feature_set:${flagKey}:all:100`}],
-      [{text:"⬅️ Флаги",callback_data:"v65_features"}]
-    ] }
-  );
+  const keyboard = flagKey === "battle_pass"
+    ? { inline_keyboard:[
+        [{text:"🔴 Скрыть от игроков",callback_data:"v65_feature_set:battle_pass:off:0"},{text:"🧪 Только тестеры",callback_data:"v65_feature_set:battle_pass:testers:0"}],
+        [{text:"🟢 Показать всем",callback_data:"v65_feature_set:battle_pass:all:100"}],
+        [{text:"⬅️ Флаги",callback_data:"v65_features"}]
+      ] }
+    : { inline_keyboard:[
+        [{text:"🔴 Выключить",callback_data:`v65_feature_set:${flagKey}:off:0`},{text:"🧪 Тестеры",callback_data:`v65_feature_set:${flagKey}:testers:0`}],
+        [{text:"🟡 10%",callback_data:`v65_feature_set:${flagKey}:percent:10`},{text:"🟡 25%",callback_data:`v65_feature_set:${flagKey}:percent:25`},{text:"🟡 50%",callback_data:`v65_feature_set:${flagKey}:percent:50`}],
+        [{text:"🟢 Все игроки",callback_data:`v65_feature_set:${flagKey}:all:100`}],
+        [{text:"⬅️ Флаги",callback_data:"v65_features"}]
+      ] };
+  const extra = flagKey === "battle_pass"
+    ? "\n\nРежим «Скрыть от игроков» убирает кнопку у обычных игроков и блокирует прямой адрес. Владелец и активные администраторы сохраняют доступ для подготовки и тестирования. В режиме «Только тестеры» дополнительно получают доступ аккаунты из списка тестеров."
+    : "";
+  await sendTelegramMessage(env, chatId, `<b>🚩 ${escapeHtml(row.title)}</b>\n\n${escapeHtml(row.description || "")}\nТекущий режим: <b>${escapeHtml(featureModeLabel(row))}</b>\nОбновлено: ${escapeHtml(formatUtcDate(row.updated_at))}${extra}`, keyboard);
 }
 
 async function setFeatureFlag(query, flagKey, mode, percent, env) {
@@ -16626,7 +17003,8 @@ const V74_POLL_REWARD_PRESETS = Object.freeze({
 let v74PollSchemaPromise = null;
 async function ensureV74PollSchema(env) {
   if (!v74PollSchemaPromise) {
-    v74PollSchemaPromise = env.DB.batch([
+    v74PollSchemaPromise = (async () => {
+      await env.DB.batch([
       env.DB.prepare(`CREATE TABLE IF NOT EXISTS player_polls (
         poll_id TEXT PRIMARY KEY, question TEXT NOT NULL, description TEXT NOT NULL DEFAULT '',
         status TEXT NOT NULL DEFAULT 'draft', answer_type TEXT NOT NULL DEFAULT 'choice',
@@ -16635,6 +17013,7 @@ async function ensureV74PollSchema(env) {
         comment_max_length INTEGER NOT NULL DEFAULT 1000,
         comment_prompt TEXT NOT NULL DEFAULT 'Напишите свой ответ сообщением.',
         audience_type TEXT NOT NULL DEFAULT 'all', delivery_mode TEXT NOT NULL DEFAULT 'bot',
+        min_accepted_runs INTEGER NOT NULL DEFAULT 0,
         results_mode TEXT NOT NULL DEFAULT 'after_vote',
         allow_change INTEGER NOT NULL DEFAULT 0, show_in_tasks INTEGER NOT NULL DEFAULT 0,
         duration_seconds INTEGER NOT NULL DEFAULT 0, starts_at INTEGER NOT NULL DEFAULT 0,
@@ -16674,7 +17053,17 @@ async function ensureV74PollSchema(env) {
       env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_player_poll_responses_poll ON player_poll_responses(poll_id, submitted_at DESC)`),
       env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_player_poll_votes_option ON player_poll_votes(poll_id, option_id)`),
       env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_player_poll_bot_queue ON player_poll_bot_deliveries(status, available_at, updated_at)`)
-    ]).catch((error) => { v74PollSchemaPromise = null; throw error; });
+      ]);
+      const pollTableInfo = await env.DB.prepare(`PRAGMA table_info(player_polls)`).all();
+      const pollColumns = new Set((pollTableInfo.results || []).map((column) => String(column.name)));
+      if (!pollColumns.has("min_accepted_runs")) {
+        try {
+          await env.DB.prepare(`ALTER TABLE player_polls ADD COLUMN min_accepted_runs INTEGER NOT NULL DEFAULT 0`).run();
+        } catch (error) {
+          if (!String(error?.message || error).toLowerCase().includes("duplicate column")) throw error;
+        }
+      }
+    })().catch((error) => { v74PollSchemaPromise = null; throw error; });
   }
   await v74PollSchemaPromise;
 }
@@ -16752,7 +17141,18 @@ async function v74ActivePollsForPlayer(env, telegramId, delivery = "bot") {
   await env.DB.prepare(`UPDATE player_polls SET status='ended',ended_at=?,updated_at=? WHERE status='active' AND ends_at>0 AND ends_at<=?`).bind(now,now,now).run();
   const rows = (await env.DB.prepare(`SELECT * FROM player_polls WHERE status='active' AND (starts_at=0 OR starts_at<=?) AND (ends_at=0 OR ends_at>?) AND delivery_mode IN (?, 'both') ORDER BY published_at DESC, created_at DESC LIMIT 20`).bind(now,now,String(delivery)).all()).results || [];
   const allowed = [];
-  for (const row of rows) if (await v74PollAudienceAllowed(env,row,telegramId)) allowed.push(row);
+  let acceptedRuns = null;
+  for (const row of rows) {
+    const requiredRuns = Math.max(0, Number(row.min_accepted_runs || 0));
+    if (String(delivery) === "game" && requiredRuns > 0) {
+      if (acceptedRuns === null) {
+        const runRow = await env.DB.prepare(`SELECT COUNT(*) AS total FROM leaderboard_runs WHERE telegram_id=? AND accepted=1`).bind(String(telegramId)).first();
+        acceptedRuns = Number(runRow?.total || 0);
+      }
+      if (acceptedRuns < requiredRuns) continue;
+    }
+    if (await v74PollAudienceAllowed(env,row,telegramId)) allowed.push(row);
+  }
   return allowed;
 }
 
@@ -16965,6 +17365,8 @@ async function handleV74PollCallback(query,env,runtime={}) {
   const commentMode=data.match(/^v75_poll_comment:(optional|required)$/);if(commentMode){await selectV75PollCommentMode(query,commentMode[1],env);return true;}
   const audience=data.match(/^v74_poll_audience:(all|active_7d|testers|season|staff)$/);if(audience){await selectV74PollAudience(query,audience[1],env);return true;}
   const delivery=data.match(/^v74_poll_delivery:(bot|game|both)$/);if(delivery){await selectV74PollDelivery(query,delivery[1],env);return true;}
+  const runTrigger=data.match(/^v79_poll_runs:(0|1|2|3|5|10)$/);if(runTrigger){await selectV79PollRunTrigger(query,Number(runTrigger[1]),env);return true;}
+  if(data==="v79_poll_runs_custom"){await startV79PollCustomRunTrigger(query,env);return true;}
   const duration=data.match(/^v74_poll_duration:(0|86400|259200|604800)$/);if(duration){await selectV74PollDuration(query,Number(duration[1]),env);return true;}
   const results=data.match(/^v74_poll_results:(after_vote|after_end|hidden)$/);if(results){await selectV74PollResults(query,results[1],env);return true;}
   const reward=data.match(/^v74_poll_reward:(none|case_small|case_sweet|case_gold|case_legendary|points_500|points_1000|coffee_50|treats_100)$/);if(reward){await selectV74PollReward(query,reward[1],env);return true;}
@@ -17000,18 +17402,24 @@ async function showV74PollAdminDashboard(chatId,user,env) {
 
 async function startV74PollCreate(query,env){
   const chatId=query.message?.chat?.id;const access=await getTeamAccess(query.from,env);if(!access.authorized||!v74PollAccess(access)){await answerCallback(env,query.id,"Недостаточно прав.",true);return;}
-  await setStaffWorkflow(query.from.id,chatId,"poll_create","question",{},env);await answerCallback(env,query.id,"Введите вопрос.");await sendTelegramMessage(env,chatId,`<b>🗳 Новый опрос · 1/9</b>\n\nОтправьте вопрос опроса длиной от 5 до 300 символов.`);
+  await setStaffWorkflow(query.from.id,chatId,"poll_create","question",{},env);await answerCallback(env,query.id,"Введите вопрос.");await sendTelegramMessage(env,chatId,`<b>🗳 Новый опрос · 1/10</b>\n\nОтправьте вопрос опроса длиной от 5 до 300 символов.`);
 }
 async function handleV74PollCreateMessage(message,workflow,env){
   const chatId=message.chat.id;const messageText=String(message.text||"").trim();const data=workflow.data||{};const access=await getTeamAccess(message.from,env);if(!access.authorized||!v74PollAccess(access)){await clearStaffWorkflow(message.from.id,env);await sendTelegramMessage(env,chatId,"Доступ к созданию опроса больше не активен.");return true;}
   if(workflow.step==="question"){
     if(messageText.length<5||messageText.length>300){await sendTelegramMessage(env,chatId,"Вопрос должен содержать от 5 до 300 символов.");return true;}
     await setStaffWorkflow(message.from.id,chatId,"poll_create","answer_type",{question:messageText},env);
-    await sendTelegramMessage(env,chatId,`<b>🗳 Новый опрос · 2/9</b>\n\nКак игрок будет отвечать?`,{inline_keyboard:[[{text:"🔘 Варианты ответа",callback_data:"v75_poll_answer:choice"}],[{text:"💬 Только текстовый ответ",callback_data:"v75_poll_answer:text"}],[{text:"🔘 Варианты + комментарий",callback_data:"v75_poll_answer:choice_comment"}],[{text:"❌ Отменить",callback_data:"v74_poll_cancel"}]]});return true;
+    await sendTelegramMessage(env,chatId,`<b>🗳 Новый опрос · 2/10</b>\n\nКак игрок будет отвечать?`,{inline_keyboard:[[{text:"🔘 Варианты ответа",callback_data:"v75_poll_answer:choice"}],[{text:"💬 Только текстовый ответ",callback_data:"v75_poll_answer:text"}],[{text:"🔘 Варианты + комментарий",callback_data:"v75_poll_answer:choice_comment"}],[{text:"❌ Отменить",callback_data:"v74_poll_cancel"}]]});return true;
   }
   if(workflow.step==="options"){
     const options=[...new Set(messageText.split(/\r?\n/).map((item)=>item.trim()).filter(Boolean))];if(options.length<2||options.length>10||options.some((item)=>item.length>100)){await sendTelegramMessage(env,chatId,"Нужно от 2 до 10 уникальных вариантов, каждый не длиннее 100 символов.");return true;}
-    const next={...data,options};await setStaffWorkflow(message.from.id,chatId,"poll_create","mode",next,env);await sendTelegramMessage(env,chatId,`<b>🗳 Новый опрос · 4/9</b>\n\nСколько вариантов сможет выбрать игрок?`,{inline_keyboard:[[{text:"1️⃣ Один вариант",callback_data:"v74_poll_mode:single"}],[{text:"☑️ Несколько вариантов",callback_data:"v74_poll_mode:multiple"}],[{text:"❌ Отменить",callback_data:"v74_poll_cancel"}]]});return true;
+    const next={...data,options};await setStaffWorkflow(message.from.id,chatId,"poll_create","mode",next,env);await sendTelegramMessage(env,chatId,`<b>🗳 Новый опрос · 4/10</b>\n\nСколько вариантов сможет выбрать игрок?`,{inline_keyboard:[[{text:"1️⃣ Один вариант",callback_data:"v74_poll_mode:single"}],[{text:"☑️ Несколько вариантов",callback_data:"v74_poll_mode:multiple"}],[{text:"❌ Отменить",callback_data:"v74_poll_cancel"}]]});return true;
+  }
+  if(workflow.step==="min_runs_input"){
+    if(!/^\d{1,4}$/.test(messageText)){await sendTelegramMessage(env,chatId,"Введите целое число от 1 до 1000.");return true;}
+    const minAcceptedRuns=Number(messageText);
+    if(minAcceptedRuns<1||minAcceptedRuns>1000){await sendTelegramMessage(env,chatId,"Количество забегов должно быть от 1 до 1000.");return true;}
+    await showV79PollDurationStep(message.from.id,chatId,{...data,minAcceptedRuns},env);return true;
   }
   await sendTelegramMessage(env,chatId,"Продолжите настройку кнопками или отправьте <code>/cancel</code>.");return true;
 }
@@ -17022,13 +17430,13 @@ async function selectV75PollAnswerType(query,answerType,env){
     await answerCallback(env,query.id,"Будет запрашиваться текстовый ответ.");await showV75PollAudienceStep(query,next,env);return;
   }
   const next={...workflow.data,answerType,commentMode:answerType==="choice"?"none":"required",commentMin:10,commentMax:1000,commentPrompt:"Напишите свой ответ сообщением."};
-  await setStaffWorkflow(query.from.id,chatId,"poll_create","options",next,env);await answerCallback(env,query.id,"Введите варианты.");await sendTelegramMessage(env,chatId,`<b>🗳 Новый опрос · 3/9</b>\n\nОтправьте от 2 до 10 вариантов ответа, каждый с новой строки.\n\nПример:\n<code>Новый скин\nЛегендарная музыка\nЗолотой кейс</code>`);
+  await setStaffWorkflow(query.from.id,chatId,"poll_create","options",next,env);await answerCallback(env,query.id,"Введите варианты.");await sendTelegramMessage(env,chatId,`<b>🗳 Новый опрос · 3/10</b>\n\nОтправьте от 2 до 10 вариантов ответа, каждый с новой строки.\n\nПример:\n<code>Новый скин\nЛегендарная музыка\nЗолотой кейс</code>`);
 }
 async function selectV74PollMode(query,mode,env){
   const chatId=query.message?.chat?.id;const workflow=await getStaffWorkflow(query.from.id,env);if(!workflow||workflow.flow_type!=="poll_create"||workflow.step!=="mode"){await answerCallback(env,query.id,"Мастер устарел.",true);return;}
   const next={...workflow.data,responseMode:mode,maxChoices:mode==="multiple"?Math.min(3,workflow.data.options.length):1};
   if(next.answerType==="choice_comment"){
-    await setStaffWorkflow(query.from.id,chatId,"poll_create","comment_mode",next,env);await answerCallback(env,query.id,"Настройте комментарий.");await sendTelegramMessage(env,chatId,`<b>🗳 Новый опрос · 5/9</b>\n\nКомментарий после выбора варианта должен быть обязательным?\n\nТекст: от 10 до 1 000 символов.`,{inline_keyboard:[[{text:"🔒 Обязательный",callback_data:"v75_poll_comment:required"}],[{text:"💬 Необязательный",callback_data:"v75_poll_comment:optional"}],[{text:"❌ Отменить",callback_data:"v74_poll_cancel"}]]});return;
+    await setStaffWorkflow(query.from.id,chatId,"poll_create","comment_mode",next,env);await answerCallback(env,query.id,"Настройте комментарий.");await sendTelegramMessage(env,chatId,`<b>🗳 Новый опрос · 5/10</b>\n\nКомментарий после выбора варианта должен быть обязательным?\n\nТекст: от 10 до 1 000 символов.`,{inline_keyboard:[[{text:"🔒 Обязательный",callback_data:"v75_poll_comment:required"}],[{text:"💬 Необязательный",callback_data:"v75_poll_comment:optional"}],[{text:"❌ Отменить",callback_data:"v74_poll_cancel"}]]});return;
   }
   await answerCallback(env,query.id,"Выберите аудиторию.");await showV75PollAudienceStep(query,next,env);
 }
@@ -17037,17 +17445,76 @@ async function selectV75PollCommentMode(query,commentMode,env){
   const next={...workflow.data,commentMode,commentMin:10,commentMax:1000,commentPrompt:"Напишите свой ответ сообщением."};await answerCallback(env,query.id,"Комментарий настроен.");await showV75PollAudienceStep(query,next,env);
 }
 async function showV75PollAudienceStep(query,next,env){
-  const chatId=query.message?.chat?.id;await setStaffWorkflow(query.from.id,chatId,"poll_create","audience",next,env);await sendTelegramMessage(env,chatId,`<b>🗳 Новый опрос · 6/9</b>\n\nКому показать опрос?`,{inline_keyboard:[[{text:"👥 Всем игрокам",callback_data:"v74_poll_audience:all"}],[{text:"🔥 Активным за 7 дней",callback_data:"v74_poll_audience:active_7d"}],[{text:"🧪 Тестерам",callback_data:"v74_poll_audience:testers"}],[{text:"🏆 Участникам сезона",callback_data:"v74_poll_audience:season"}],[{text:"🛡 Сотрудникам",callback_data:"v74_poll_audience:staff"}],[{text:"❌ Отменить",callback_data:"v74_poll_cancel"}]]});
+  const chatId=query.message?.chat?.id;await setStaffWorkflow(query.from.id,chatId,"poll_create","audience",next,env);await sendTelegramMessage(env,chatId,`<b>🗳 Новый опрос · 6/10</b>\n\nКому показать опрос?`,{inline_keyboard:[[{text:"👥 Всем игрокам",callback_data:"v74_poll_audience:all"}],[{text:"🔥 Активным за 7 дней",callback_data:"v74_poll_audience:active_7d"}],[{text:"🧪 Тестерам",callback_data:"v74_poll_audience:testers"}],[{text:"🏆 Участникам сезона",callback_data:"v74_poll_audience:season"}],[{text:"🛡 Сотрудникам",callback_data:"v74_poll_audience:staff"}],[{text:"❌ Отменить",callback_data:"v74_poll_cancel"}]]});
 }
-async function selectV74PollAudience(query,audience,env){const chatId=query.message?.chat?.id;const workflow=await getStaffWorkflow(query.from.id,env);if(!workflow||workflow.flow_type!=="poll_create"||workflow.step!=="audience"){await answerCallback(env,query.id,"Мастер устарел.",true);return;}const next={...workflow.data,audience};await setStaffWorkflow(query.from.id,chatId,"poll_create","delivery",next,env);await answerCallback(env,query.id,"Выберите способ отправки.");await sendTelegramMessage(env,chatId,`<b>🗳 Новый опрос · 7/9</b>\n\nГде игрок увидит опрос?`,{inline_keyboard:[[{text:"🤖 В боте",callback_data:"v74_poll_delivery:bot"}],[{text:"🎮 После открытия игры",callback_data:"v74_poll_delivery:game"}],[{text:"🤖 + 🎮 В обоих местах",callback_data:"v74_poll_delivery:both"}],[{text:"❌ Отменить",callback_data:"v74_poll_cancel"}]]});}
-async function selectV74PollDelivery(query,delivery,env){const chatId=query.message?.chat?.id;const workflow=await getStaffWorkflow(query.from.id,env);if(!workflow||workflow.flow_type!=="poll_create"||workflow.step!=="delivery"){await answerCallback(env,query.id,"Мастер устарел.",true);return;}const next={...workflow.data,delivery};await setStaffWorkflow(query.from.id,chatId,"poll_create","duration",next,env);await answerCallback(env,query.id,"Выберите срок.");await sendTelegramMessage(env,chatId,`<b>🗳 Новый опрос · 8/9</b>\n\nСколько времени принимать ответы?`,{inline_keyboard:[[{text:"1 день",callback_data:"v74_poll_duration:86400"},{text:"3 дня",callback_data:"v74_poll_duration:259200"}],[{text:"7 дней",callback_data:"v74_poll_duration:604800"},{text:"Без срока",callback_data:"v74_poll_duration:0"}],[{text:"❌ Отменить",callback_data:"v74_poll_cancel"}]]});}
+async function selectV74PollAudience(query,audience,env){const chatId=query.message?.chat?.id;const workflow=await getStaffWorkflow(query.from.id,env);if(!workflow||workflow.flow_type!=="poll_create"||workflow.step!=="audience"){await answerCallback(env,query.id,"Мастер устарел.",true);return;}const next={...workflow.data,audience};await setStaffWorkflow(query.from.id,chatId,"poll_create","delivery",next,env);await answerCallback(env,query.id,"Выберите способ отправки.");await sendTelegramMessage(env,chatId,`<b>🗳 Новый опрос · 7/10</b>\n\nГде игрок увидит опрос?`,{inline_keyboard:[[{text:"🤖 В боте",callback_data:"v74_poll_delivery:bot"}],[{text:"🎮 После открытия игры",callback_data:"v74_poll_delivery:game"}],[{text:"🤖 + 🎮 В обоих местах",callback_data:"v74_poll_delivery:both"}],[{text:"❌ Отменить",callback_data:"v74_poll_cancel"}]]});}
+async function showV79PollDurationStep(actorId,chatId,next,env){await setStaffWorkflow(actorId,chatId,"poll_create","duration",next,env);await sendTelegramMessage(env,chatId,`<b>🗳 Новый опрос · 9/10</b>
+
+Сколько времени принимать ответы?`,{inline_keyboard:[[{text:"1 день",callback_data:"v74_poll_duration:86400"},{text:"3 дня",callback_data:"v74_poll_duration:259200"}],[{text:"7 дней",callback_data:"v74_poll_duration:604800"},{text:"Без срока",callback_data:"v74_poll_duration:0"}],[{text:"❌ Отменить",callback_data:"v74_poll_cancel"}]]});}
+async function selectV74PollDelivery(query,delivery,env){const chatId=query.message?.chat?.id;const workflow=await getStaffWorkflow(query.from.id,env);if(!workflow||workflow.flow_type!=="poll_create"||workflow.step!=="delivery"){await answerCallback(env,query.id,"Мастер устарел.",true);return;}const next={...workflow.data,delivery};if(delivery==="bot"){await answerCallback(env,query.id,"Опрос будет отправлен в боте.");await showV79PollDurationStep(query.from.id,chatId,{...next,minAcceptedRuns:0},env);return;}await setStaffWorkflow(query.from.id,chatId,"poll_create","min_runs",next,env);await answerCallback(env,query.id,"Настройте момент показа.");await sendTelegramMessage(env,chatId,`<b>🗳 Новый опрос · 8/10</b>
+
+После какого количества зачтённых забегов показать опрос в игре?
+
+Опрос появится один раз после успешной отправки нужного забега.`,{inline_keyboard:[[{text:"Сразу",callback_data:"v79_poll_runs:0"}],[{text:"После 1 игры",callback_data:"v79_poll_runs:1"},{text:"После 2 игр",callback_data:"v79_poll_runs:2"}],[{text:"После 3 игр",callback_data:"v79_poll_runs:3"},{text:"После 5 игр",callback_data:"v79_poll_runs:5"}],[{text:"После 10 игр",callback_data:"v79_poll_runs:10"},{text:"✍️ Своё число",callback_data:"v79_poll_runs_custom"}],[{text:"❌ Отменить",callback_data:"v74_poll_cancel"}]]});}
+async function selectV79PollRunTrigger(query,minAcceptedRuns,env){const chatId=query.message?.chat?.id;const workflow=await getStaffWorkflow(query.from.id,env);if(!workflow||workflow.flow_type!=="poll_create"||workflow.step!=="min_runs"){await answerCallback(env,query.id,"Мастер устарел.",true);return;}await answerCallback(env,query.id,minAcceptedRuns>0?`Показ после ${minAcceptedRuns} игр.`:"Показ сразу.");await showV79PollDurationStep(query.from.id,chatId,{...workflow.data,minAcceptedRuns:Math.max(0,Number(minAcceptedRuns||0))},env);}
+async function startV79PollCustomRunTrigger(query,env){const chatId=query.message?.chat?.id;const workflow=await getStaffWorkflow(query.from.id,env);if(!workflow||workflow.flow_type!=="poll_create"||workflow.step!=="min_runs"){await answerCallback(env,query.id,"Мастер устарел.",true);return;}await updateStaffWorkflow(query.from.id,{step:"min_runs_input",data:workflow.data},env);await answerCallback(env,query.id,"Введите количество.");await sendTelegramMessage(env,chatId,"Введите количество зачтённых забегов от <b>1</b> до <b>1000</b>, после которого показать опрос.");}
 async function selectV74PollDuration(query,duration,env){const chatId=query.message?.chat?.id;const workflow=await getStaffWorkflow(query.from.id,env);if(!workflow||workflow.flow_type!=="poll_create"||workflow.step!=="duration"){await answerCallback(env,query.id,"Мастер устарел.",true);return;}const next={...workflow.data,duration};await setStaffWorkflow(query.from.id,chatId,"poll_create","results",next,env);await answerCallback(env,query.id,"Настройте результаты.");await sendTelegramMessage(env,chatId,`<b>Показывать результаты игрокам?</b>`,{inline_keyboard:[[{text:"📊 После ответа",callback_data:"v74_poll_results:after_vote"}],[{text:"⏳ После завершения",callback_data:"v74_poll_results:after_end"}],[{text:"🙈 Не показывать",callback_data:"v74_poll_results:hidden"}],[{text:"❌ Отменить",callback_data:"v74_poll_cancel"}]]});}
-async function selectV74PollResults(query,resultsMode,env){const chatId=query.message?.chat?.id;const workflow=await getStaffWorkflow(query.from.id,env);if(!workflow||workflow.flow_type!=="poll_create"||workflow.step!=="results"){await answerCallback(env,query.id,"Мастер устарел.",true);return;}const next={...workflow.data,resultsMode};await setStaffWorkflow(query.from.id,chatId,"poll_create","reward",next,env);await answerCallback(env,query.id,"Выберите награду.");await sendTelegramMessage(env,chatId,`<b>🗳 Новый опрос · 9/9</b>\n\nНаграда за участие необязательна. Она выдаётся только после сохранения полного ответа и обязательного комментария.`,{inline_keyboard:[[{text:"Без награды",callback_data:"v74_poll_reward:none"}],[{text:"📦 Обычный",callback_data:"v74_poll_reward:case_small"},{text:"🥈 Серебряный",callback_data:"v74_poll_reward:case_sweet"}],[{text:"🥇 Золотой",callback_data:"v74_poll_reward:case_gold"},{text:"💎 Легендарный",callback_data:"v74_poll_reward:case_legendary"}],[{text:"⭐ 500",callback_data:"v74_poll_reward:points_500"},{text:"⭐ 1 000",callback_data:"v74_poll_reward:points_1000"}],[{text:"☕ 50",callback_data:"v74_poll_reward:coffee_50"},{text:"🍥 100",callback_data:"v74_poll_reward:treats_100"}],[{text:"❌ Отменить",callback_data:"v74_poll_cancel"}]]});}
-async function selectV74PollReward(query,key,env){const chatId=query.message?.chat?.id;const workflow=await getStaffWorkflow(query.from.id,env);if(!workflow||workflow.flow_type!=="poll_create"||workflow.step!=="reward"){await answerCallback(env,query.id,"Мастер устарел.",true);return;}const reward=V74_POLL_REWARD_PRESETS[key];if(!reward){await answerCallback(env,query.id,"Награда не найдена.",true);return;}const next={...workflow.data,reward};await setStaffWorkflow(query.from.id,chatId,"poll_create","confirm",next,env);await answerCallback(env,query.id,"Проверьте опрос.");await sendTelegramMessage(env,chatId,`<b>✅ Проверьте опрос</b>\n\nВопрос: <b>${escapeHtml(next.question)}</b>\nТип ответа: <b>${escapeHtml(v75PollAnswerTypeLabel(next.answerType))}</b>\n${next.options?.length?`Варианты: <b>${next.options.length}</b>\n`:""}${next.answerType!=="text"?`Выбор: <b>${next.responseMode==="multiple"?`до ${next.maxChoices} вариантов`:"один вариант"}</b>\n`:""}Комментарий: <b>${escapeHtml(v75PollCommentModeLabel(next.answerType==="text"?"required":next.commentMode))}</b>\nАудитория: <b>${escapeHtml(v74PollAudienceLabel(next.audience))}</b>\nОтправка: <b>${escapeHtml(v74PollDeliveryLabel(next.delivery))}</b>\nСрок: <b>${next.duration?`${Math.round(next.duration/V67_DAY)} дн.`:"без срока"}</b>\nРезультаты: <b>${escapeHtml(v74PollResultsLabel(next.resultsMode))}</b>\nНаграда: <b>${escapeHtml(v74PollRewardText(next.reward))}</b>\n\nОпрос сохранится черновиком.`,{inline_keyboard:[[{text:"✅ Сохранить черновик",callback_data:"v74_poll_save"}],[{text:"❌ Отменить",callback_data:"v74_poll_cancel"}]]});}
-async function saveV74PollDraft(query,env){const chatId=query.message?.chat?.id;const workflow=await getStaffWorkflow(query.from.id,env);const access=await getTeamAccess(query.from,env);if(!workflow||workflow.flow_type!=="poll_create"||workflow.step!=="confirm"||!access.authorized||!v74PollAccess(access)){await answerCallback(env,query.id,"Черновик не найден.",true);return;}await ensureV74PollSchema(env);const d=workflow.data;const pollId=v74PollId();const now=Math.floor(Date.now()/1000);const reward=d.reward||V74_POLL_REWARD_PRESETS.none;await env.DB.prepare(`INSERT INTO player_polls(poll_id,question,description,status,response_mode,max_choices,audience_type,delivery_mode,results_mode,allow_change,show_in_tasks,duration_seconds,starts_at,ends_at,reward_kind,reward_id,reward_amount,created_by,created_by_name,report_chat_id,bot_queue_prepared,created_at,updated_at,published_at,ended_at) VALUES(?,?,?,'draft',?,?,?,?,?,0,0,?,0,0,?,?,?,?,?,?,0,?,?,0,0)`).bind(pollId,String(d.question).slice(0,300),"",d.responseMode||"single",Number(d.maxChoices||1),d.audience,d.delivery,d.resultsMode,Number(d.duration||0),reward.kind,String(reward.id||""),Number(reward.amount||0),String(query.from.id),telegramDisplayName(query.from),String(chatId),now,now).run();await env.DB.prepare(`UPDATE player_polls SET answer_type=?,comment_mode=?,comment_min_length=?,comment_max_length=?,comment_prompt=? WHERE poll_id=?`).bind(String(d.answerType||"choice"),String(d.answerType==="text"?"required":d.commentMode||"none"),Number(d.commentMin||10),Number(d.commentMax||1000),String(d.commentPrompt||"Напишите свой ответ сообщением.").slice(0,300),pollId).run();if(Array.isArray(d.options)&&d.options.length)await env.DB.batch(d.options.map((option,index)=>env.DB.prepare(`INSERT INTO player_poll_options(option_id,poll_id,option_order,option_text) VALUES(?,?,?,?)`).bind(`${pollId}o${index+1}`,pollId,index+1,String(option).slice(0,100))));await logStaffAction(env,query.from,access,"poll_create",null,"poll",null,null,{pollId,question:d.question,delivery:d.delivery,audience:d.audience,answerType:d.answerType,commentMode:d.commentMode});await clearStaffWorkflow(query.from.id,env);await answerCallback(env,query.id,"Опрос сохранён.");await showV74PollAdminDetails(chatId,query.from,env,pollId);}
+async function selectV74PollResults(query,resultsMode,env){const chatId=query.message?.chat?.id;const workflow=await getStaffWorkflow(query.from.id,env);if(!workflow||workflow.flow_type!=="poll_create"||workflow.step!=="results"){await answerCallback(env,query.id,"Мастер устарел.",true);return;}const next={...workflow.data,resultsMode};await setStaffWorkflow(query.from.id,chatId,"poll_create","reward",next,env);await answerCallback(env,query.id,"Выберите награду.");await sendTelegramMessage(env,chatId,`<b>🗳 Новый опрос · 10/10</b>\n\nНаграда за участие необязательна. Она выдаётся только после сохранения полного ответа и обязательного комментария.`,{inline_keyboard:[[{text:"Без награды",callback_data:"v74_poll_reward:none"}],[{text:"📦 Обычный",callback_data:"v74_poll_reward:case_small"},{text:"🥈 Серебряный",callback_data:"v74_poll_reward:case_sweet"}],[{text:"🥇 Золотой",callback_data:"v74_poll_reward:case_gold"},{text:"💎 Легендарный",callback_data:"v74_poll_reward:case_legendary"}],[{text:"⭐ 500",callback_data:"v74_poll_reward:points_500"},{text:"⭐ 1 000",callback_data:"v74_poll_reward:points_1000"}],[{text:"☕ 50",callback_data:"v74_poll_reward:coffee_50"},{text:"🍥 100",callback_data:"v74_poll_reward:treats_100"}],[{text:"❌ Отменить",callback_data:"v74_poll_cancel"}]]});}
+async function selectV74PollReward(query,key,env){const chatId=query.message?.chat?.id;const workflow=await getStaffWorkflow(query.from.id,env);if(!workflow||workflow.flow_type!=="poll_create"||workflow.step!=="reward"){await answerCallback(env,query.id,"Мастер устарел.",true);return;}const reward=V74_POLL_REWARD_PRESETS[key];if(!reward){await answerCallback(env,query.id,"Награда не найдена.",true);return;}const next={...workflow.data,reward};await setStaffWorkflow(query.from.id,chatId,"poll_create","confirm",next,env);await answerCallback(env,query.id,"Проверьте опрос.");await sendTelegramMessage(env,chatId,`<b>✅ Проверьте опрос</b>\n\nВопрос: <b>${escapeHtml(next.question)}</b>\nТип ответа: <b>${escapeHtml(v75PollAnswerTypeLabel(next.answerType))}</b>\n${next.options?.length?`Варианты: <b>${next.options.length}</b>\n`:""}${next.answerType!=="text"?`Выбор: <b>${next.responseMode==="multiple"?`до ${next.maxChoices} вариантов`:"один вариант"}</b>\n`:""}Комментарий: <b>${escapeHtml(v75PollCommentModeLabel(next.answerType==="text"?"required":next.commentMode))}</b>\nАудитория: <b>${escapeHtml(v74PollAudienceLabel(next.audience))}</b>\nОтправка: <b>${escapeHtml(v74PollDeliveryLabel(next.delivery))}</b>\n${["game","both"].includes(String(next.delivery))?`Показ в игре: <b>${Number(next.minAcceptedRuns||0)>0?`после ${Number(next.minAcceptedRuns)} зачтённых забегов`:"сразу"}</b>\n`:""}Срок: <b>${next.duration?`${Math.round(next.duration/V67_DAY)} дн.`:"без срока"}</b>\nРезультаты: <b>${escapeHtml(v74PollResultsLabel(next.resultsMode))}</b>\nНаграда: <b>${escapeHtml(v74PollRewardText(next.reward))}</b>\n\nОпрос сохранится черновиком.`,{inline_keyboard:[[{text:"✅ Сохранить черновик",callback_data:"v74_poll_save"}],[{text:"❌ Отменить",callback_data:"v74_poll_cancel"}]]});}
+async function saveV74PollDraft(query,env){const chatId=query.message?.chat?.id;const workflow=await getStaffWorkflow(query.from.id,env);const access=await getTeamAccess(query.from,env);if(!workflow||workflow.flow_type!=="poll_create"||workflow.step!=="confirm"||!access.authorized||!v74PollAccess(access)){await answerCallback(env,query.id,"Черновик не найден.",true);return;}await ensureV74PollSchema(env);const d=workflow.data;const pollId=v74PollId();const now=Math.floor(Date.now()/1000);const reward=d.reward||V74_POLL_REWARD_PRESETS.none;await env.DB.prepare(`INSERT INTO player_polls(poll_id,question,description,status,response_mode,max_choices,audience_type,delivery_mode,results_mode,allow_change,show_in_tasks,duration_seconds,starts_at,ends_at,reward_kind,reward_id,reward_amount,created_by,created_by_name,report_chat_id,bot_queue_prepared,created_at,updated_at,published_at,ended_at) VALUES(?,?,?,'draft',?,?,?,?,?,0,0,?,0,0,?,?,?,?,?,?,0,?,?,0,0)`).bind(pollId,String(d.question).slice(0,300),"",d.responseMode||"single",Number(d.maxChoices||1),d.audience,d.delivery,d.resultsMode,Number(d.duration||0),reward.kind,String(reward.id||""),Number(reward.amount||0),String(query.from.id),telegramDisplayName(query.from),String(chatId),now,now).run();await env.DB.prepare(`UPDATE player_polls SET answer_type=?,comment_mode=?,comment_min_length=?,comment_max_length=?,comment_prompt=?,min_accepted_runs=? WHERE poll_id=?`).bind(String(d.answerType||"choice"),String(d.answerType==="text"?"required":d.commentMode||"none"),Number(d.commentMin||10),Number(d.commentMax||1000),String(d.commentPrompt||"Напишите свой ответ сообщением.").slice(0,300),Math.max(0,Math.min(1000,Number(d.minAcceptedRuns||0))),pollId).run();if(Array.isArray(d.options)&&d.options.length)await env.DB.batch(d.options.map((option,index)=>env.DB.prepare(`INSERT INTO player_poll_options(option_id,poll_id,option_order,option_text) VALUES(?,?,?,?)`).bind(`${pollId}o${index+1}`,pollId,index+1,String(option).slice(0,100))));await logStaffAction(env,query.from,access,"poll_create",null,"poll",null,null,{pollId,question:d.question,delivery:d.delivery,audience:d.audience,answerType:d.answerType,commentMode:d.commentMode,minAcceptedRuns:Number(d.minAcceptedRuns||0)});await clearStaffWorkflow(query.from.id,env);await answerCallback(env,query.id,"Опрос сохранён.");await showV74PollAdminDetails(chatId,query.from,env,pollId);}
 
 
-async function showV74PollAdminDetails(chatId,user,env,pollId){const access=await getTeamAccess(user,env);if(!access.authorized||!v74PollAccess(access))return;await ensureV74PollSchema(env);const row=await env.DB.prepare(`SELECT p.*,(SELECT COUNT(*) FROM player_poll_responses r WHERE r.poll_id=p.poll_id) AS responses,(SELECT COUNT(*) FROM player_poll_responses r WHERE r.poll_id=p.poll_id AND TRIM(r.comment_text)<>'') AS comments FROM player_polls p WHERE poll_id=? LIMIT 1`).bind(String(pollId)).first();if(!row)return sendTelegramMessage(env,chatId,"Опрос не найден.");const options=await v74PollOptions(env,pollId);const keyboard=[];if(row.status==="draft")keyboard.push([{text:"🚀 Опубликовать",callback_data:`v74_poll_publish:${pollId}`}]);if(row.status==="active")keyboard.push([{text:"⏹ Завершить",callback_data:`v74_poll_end:${pollId}`}]);keyboard.push([{text:"📊 Результаты",callback_data:`v74_poll_results_view:${pollId}`}]);if(String(row.answer_type||"choice")==="text"||String(row.comment_mode||"none")!=="none"||Number(row.comments||0)>0)keyboard.push([{text:`💬 Комментарии · ${Number(row.comments||0)}`,callback_data:`v75_poll_comments:${pollId}:0`}]);keyboard.push([{text:"📄 Дублировать",callback_data:`v74_poll_duplicate:${pollId}`}],[{text:"⬅️ Опросы",callback_data:"v74_polls_admin"}]);const optionText=options.length?`\n<b>Варианты</b>\n${options.map((item)=>`${item.option_order}. ${escapeHtml(item.option_text)}`).join("\n")}`:"";await sendTelegramMessage(env,chatId,`<b>🗳 ${escapeHtml(row.question)}</b>\n\nСтатус: <b>${escapeHtml(v74PollStatusLabel(row.status))}</b>\nОтветов: <b>${Number(row.responses||0)}</b>\nКомментариев: <b>${Number(row.comments||0)}</b>\nТип ответа: <b>${escapeHtml(v75PollAnswerTypeLabel(row.answer_type))}</b>\n${String(row.answer_type||"choice")!=="text"?`Выбор: <b>${row.response_mode==="multiple"?`несколько, до ${row.max_choices}`:"один вариант"}</b>\n`:""}Комментарий: <b>${escapeHtml(v75PollCommentModeLabel(String(row.answer_type||"choice")==="text"?"required":row.comment_mode))}</b>\nАудитория: <b>${escapeHtml(v74PollAudienceLabel(row.audience_type))}</b>\nОтправка: <b>${escapeHtml(v74PollDeliveryLabel(row.delivery_mode))}</b>\nРезультаты игрокам: <b>${escapeHtml(v74PollResultsLabel(row.results_mode))}</b>\nНаграда: <b>${escapeHtml(v74PollRewardText(v74PollReward(row)))}</b>\n${row.ends_at?`Завершение: <b>${escapeHtml(formatUtcDate(row.ends_at))}</b>\n`:""}${optionText}`,{inline_keyboard:keyboard});}
+
+async function showV75PollAdminComments(chatId,user,env,pollId,page=0){
+  const access=await getTeamAccess(user,env);
+  if(!access.authorized||!v74PollAccess(access))return;
+  await ensureV74PollSchema(env);
+  const poll=await env.DB.prepare(`SELECT poll_id,question FROM player_polls WHERE poll_id=? LIMIT 1`).bind(String(pollId)).first();
+  if(!poll)return sendTelegramMessage(env,chatId,"Опрос не найден.");
+  const safePage=Math.max(0,Math.floor(Number(page)||0));
+  const pageSize=6;
+  const offset=safePage*pageSize;
+  const rows=(await env.DB.prepare(`
+    SELECT
+      r.telegram_id,
+      r.comment_text,
+      r.source,
+      r.submitted_at,
+      r.comment_submitted_at,
+      b.display_name,
+      b.username,
+      GROUP_CONCAT(o.option_text,' • ') AS selected_options
+    FROM player_poll_responses r
+    LEFT JOIN bot_subscribers b ON b.telegram_id=r.telegram_id
+    LEFT JOIN player_poll_votes v ON v.poll_id=r.poll_id AND v.telegram_id=r.telegram_id
+    LEFT JOIN player_poll_options o ON o.poll_id=v.poll_id AND o.option_id=v.option_id
+    WHERE r.poll_id=? AND TRIM(COALESCE(r.comment_text,''))<>''
+    GROUP BY r.poll_id,r.telegram_id
+    ORDER BY CASE WHEN COALESCE(r.comment_submitted_at,0)>0 THEN r.comment_submitted_at ELSE r.submitted_at END DESC
+    LIMIT ? OFFSET ?
+  `).bind(String(pollId),pageSize+1,offset).all()).results||[];
+  const visible=rows.slice(0,pageSize);
+  const lines=visible.map((row,index)=>{
+    const name=String(row.display_name||row.username||row.telegram_id||"Игрок");
+    const username=row.username?` · @${escapeHtml(String(row.username).replace(/^@/,""))}`:"";
+    const submittedAt=Number(row.comment_submitted_at||row.submitted_at||0);
+    const selected=String(row.selected_options||"").trim();
+    const answerLine=selected?`\nОтвет: <b>${escapeHtml(selected).slice(0,500)}</b>`:"";
+    const comment=escapeHtml(String(row.comment_text||"").slice(0,1000));
+    return `<b>${offset+index+1}. ${escapeHtml(name)}</b>${username}\nID: <code>${escapeHtml(String(row.telegram_id||""))}</code> · ${escapeHtml(formatUtcDate(submittedAt))}${answerLine}\n${comment}`;
+  });
+  const keyboard=[];
+  const navigation=[];
+  if(safePage>0)navigation.push({text:"← Назад",callback_data:`v75_poll_comments:${pollId}:${safePage-1}`});
+  if(rows.length>pageSize)navigation.push({text:"Далее →",callback_data:`v75_poll_comments:${pollId}:${safePage+1}`});
+  if(navigation.length)keyboard.push(navigation);
+  keyboard.push([{text:"🔄 Обновить",callback_data:`v75_poll_comments:${pollId}:${safePage}`}]);
+  keyboard.push([{text:"⬅️ К опросу",callback_data:`v74_poll:${pollId}`}]);
+  const body=lines.length?lines.join("\n\n"):"Комментариев пока нет.";
+  await sendTelegramMessage(env,chatId,`<b>💬 Комментарии к опросу</b>\n${escapeHtml(String(poll.question||"")).slice(0,500)}\n\n${body}\n\nСтраница: <b>${safePage+1}</b>`,{inline_keyboard:keyboard});
+}
+
+async function showV74PollAdminDetails(chatId,user,env,pollId){const access=await getTeamAccess(user,env);if(!access.authorized||!v74PollAccess(access))return;await ensureV74PollSchema(env);const row=await env.DB.prepare(`SELECT p.*,(SELECT COUNT(*) FROM player_poll_responses r WHERE r.poll_id=p.poll_id) AS responses,(SELECT COUNT(*) FROM player_poll_responses r WHERE r.poll_id=p.poll_id AND TRIM(r.comment_text)<>'') AS comments FROM player_polls p WHERE poll_id=? LIMIT 1`).bind(String(pollId)).first();if(!row)return sendTelegramMessage(env,chatId,"Опрос не найден.");const options=await v74PollOptions(env,pollId);const keyboard=[];if(row.status==="draft")keyboard.push([{text:"🚀 Опубликовать",callback_data:`v74_poll_publish:${pollId}`}]);if(row.status==="active")keyboard.push([{text:"⏹ Завершить",callback_data:`v74_poll_end:${pollId}`}]);keyboard.push([{text:"📊 Результаты",callback_data:`v74_poll_results_view:${pollId}`}]);if(String(row.answer_type||"choice")==="text"||String(row.comment_mode||"none")!=="none"||Number(row.comments||0)>0)keyboard.push([{text:`💬 Комментарии · ${Number(row.comments||0)}`,callback_data:`v75_poll_comments:${pollId}:0`}]);keyboard.push([{text:"📄 Дублировать",callback_data:`v74_poll_duplicate:${pollId}`}],[{text:"⬅️ Опросы",callback_data:"v74_polls_admin"}]);const optionText=options.length?`\n<b>Варианты</b>\n${options.map((item)=>`${item.option_order}. ${escapeHtml(item.option_text)}`).join("\n")}`:"";await sendTelegramMessage(env,chatId,`<b>🗳 ${escapeHtml(row.question)}</b>\n\nСтатус: <b>${escapeHtml(v74PollStatusLabel(row.status))}</b>\nОтветов: <b>${Number(row.responses||0)}</b>\nКомментариев: <b>${Number(row.comments||0)}</b>\nТип ответа: <b>${escapeHtml(v75PollAnswerTypeLabel(row.answer_type))}</b>\n${String(row.answer_type||"choice")!=="text"?`Выбор: <b>${row.response_mode==="multiple"?`несколько, до ${row.max_choices}`:"один вариант"}</b>\n`:""}Комментарий: <b>${escapeHtml(v75PollCommentModeLabel(String(row.answer_type||"choice")==="text"?"required":row.comment_mode))}</b>\nАудитория: <b>${escapeHtml(v74PollAudienceLabel(row.audience_type))}</b>\nОтправка: <b>${escapeHtml(v74PollDeliveryLabel(row.delivery_mode))}</b>\n${["game","both"].includes(String(row.delivery_mode))?`Показ в игре: <b>${Number(row.min_accepted_runs||0)>0?`после ${Number(row.min_accepted_runs)} зачтённых забегов`:"сразу"}</b>\n`:""}Результаты игрокам: <b>${escapeHtml(v74PollResultsLabel(row.results_mode))}</b>\nНаграда: <b>${escapeHtml(v74PollRewardText(v74PollReward(row)))}</b>\n${row.ends_at?`Завершение: <b>${escapeHtml(formatUtcDate(row.ends_at))}</b>\n`:""}${optionText}`,{inline_keyboard:keyboard});}
 async function publishV74Poll(query,pollId,env,runtime={}){
   const chatId=query.message?.chat?.id;const access=await getTeamAccess(query.from,env);if(!access.authorized||!v74PollAccess(access)){await answerCallback(env,query.id,"Недостаточно прав.",true);return;}
   await ensureV74PollSchema(env);const old=await env.DB.prepare(`SELECT * FROM player_polls WHERE poll_id=? LIMIT 1`).bind(pollId).first();if(!old||old.status!=="draft"){await answerCallback(env,query.id,"Черновик не найден.",true);return;}
@@ -17063,6 +17530,128 @@ async function publishV74Poll(query,pollId,env,runtime={}){
   if(!deliveryBackground)await deliveryTask;
   if(!auditBackground)await auditTask;
   await answerCallback(env,query.id,"Опрос опубликован.");await showV74PollAdminDetails(chatId,query.from,env,pollId);
+}
+
+
+async function endV74Poll(query,pollId,env){
+  const chatId=query.message?.chat?.id;
+  const access=await getTeamAccess(query.from,env);
+  if(!access.authorized||!v74PollAccess(access)){
+    await answerCallback(env,query.id,"Недостаточно прав.",true);
+    return;
+  }
+  await ensureV74PollSchema(env);
+  const old=await env.DB.prepare(`SELECT * FROM player_polls WHERE poll_id=? LIMIT 1`).bind(String(pollId)).first();
+  if(!old){
+    await answerCallback(env,query.id,"Опрос не найден.",true);
+    return;
+  }
+  if(!["active","scheduled"].includes(String(old.status))){
+    await answerCallback(env,query.id,old.status==="ended"?"Опрос уже завершён.":"Этот опрос сейчас нельзя завершить.",true);
+    await showV74PollAdminDetails(chatId,query.from,env,pollId);
+    return;
+  }
+  const now=Math.floor(Date.now()/1000);
+  const result=await env.DB.prepare(`UPDATE player_polls SET status='ended',ended_at=?,ends_at=CASE WHEN ends_at=0 OR ends_at>? THEN ? ELSE ends_at END,updated_at=? WHERE poll_id=? AND status IN ('active','scheduled')`).bind(now,now,now,now,String(pollId)).run();
+  if(Number(result.meta?.changes||0)<1){
+    await answerCallback(env,query.id,"Статус опроса уже изменился. Обновите карточку.",true);
+    await showV74PollAdminDetails(chatId,query.from,env,pollId);
+    return;
+  }
+  await env.DB.prepare(`UPDATE player_poll_bot_deliveries SET status='cancelled',last_error='Опрос завершён администратором',updated_at=? WHERE poll_id=? AND status IN ('pending','failed')`).bind(now,String(pollId)).run();
+  await Promise.all([
+    recordV67SettingChange(env,query.from,"poll",String(pollId),"end",{status:old.status,endsAt:Number(old.ends_at||0)},{status:"ended",endedAt:now}),
+    logStaffAction(env,query.from,access,"poll_end",null,"poll",null,null,{pollId:String(pollId),previousStatus:String(old.status)})
+  ]);
+  await answerCallback(env,query.id,"Опрос завершён.");
+  await showV74PollAdminDetails(chatId,query.from,env,pollId);
+}
+
+async function duplicateV74Poll(query,pollId,env){
+  const chatId=query.message?.chat?.id;
+  const access=await getTeamAccess(query.from,env);
+  if(!access.authorized||!v74PollAccess(access)){
+    await answerCallback(env,query.id,"Недостаточно прав.",true);
+    return;
+  }
+  await ensureV74PollSchema(env);
+  const source=await env.DB.prepare(`SELECT * FROM player_polls WHERE poll_id=? LIMIT 1`).bind(String(pollId)).first();
+  if(!source){
+    await answerCallback(env,query.id,"Опрос не найден.",true);
+    return;
+  }
+  const newPollId=v74PollId();
+  const now=Math.floor(Date.now()/1000);
+  const copiedQuestion=String(source.question||"").slice(0,300);
+  const values=[
+    newPollId,copiedQuestion,String(source.description||"").slice(0,1000),"draft",
+    String(source.answer_type||"choice"),String(source.response_mode||"single"),Math.max(1,Number(source.max_choices||1)),
+    String(source.comment_mode||"none"),Math.max(1,Number(source.comment_min_length||10)),Math.max(1,Number(source.comment_max_length||1000)),String(source.comment_prompt||"Напишите свой ответ сообщением.").slice(0,300),
+    String(source.audience_type||"all"),String(source.delivery_mode||"bot"),Math.max(0,Math.min(1000,Number(source.min_accepted_runs||0))),String(source.results_mode||"after_vote"),Number(source.allow_change||0),Number(source.show_in_tasks||0),
+    Math.max(0,Number(source.duration_seconds||0)),0,0,String(source.reward_kind||"none"),String(source.reward_id||""),Math.max(0,Number(source.reward_amount||0)),
+    String(query.from.id),telegramDisplayName(query.from),String(chatId||source.report_chat_id||""),0,now,now,0,0
+  ];
+  await env.DB.prepare(`INSERT INTO player_polls(
+    poll_id,question,description,status,answer_type,response_mode,max_choices,
+    comment_mode,comment_min_length,comment_max_length,comment_prompt,
+    audience_type,delivery_mode,min_accepted_runs,results_mode,allow_change,show_in_tasks,
+    duration_seconds,starts_at,ends_at,reward_kind,reward_id,reward_amount,
+    created_by,created_by_name,report_chat_id,bot_queue_prepared,created_at,updated_at,published_at,ended_at
+  ) VALUES(${values.map(()=>"?").join(",")})`).bind(...values).run();
+  const options=await v74PollOptions(env,pollId);
+  if(options.length){
+    await env.DB.batch(options.map((option,index)=>env.DB.prepare(`INSERT INTO player_poll_options(option_id,poll_id,option_order,option_text) VALUES(?,?,?,?)`).bind(`${newPollId}o${index+1}`,newPollId,index+1,String(option.option_text||"").slice(0,100))));
+  }
+  await Promise.all([
+    recordV67SettingChange(env,query.from,"poll",newPollId,"duplicate",{sourcePollId:String(pollId)},{status:"draft",question:copiedQuestion}),
+    logStaffAction(env,query.from,access,"poll_duplicate",null,"poll",null,null,{sourcePollId:String(pollId),pollId:newPollId})
+  ]);
+  await answerCallback(env,query.id,"Копия создана как черновик.");
+  await showV74PollAdminDetails(chatId,query.from,env,newPollId);
+}
+
+async function showV74PollAdminResults(chatId,user,env,pollId){
+  const access=await getTeamAccess(user,env);
+  if(!access.authorized||!v74PollAccess(access))return;
+  await ensureV74PollSchema(env);
+  const poll=await env.DB.prepare(`SELECT poll_id,question,status,answer_type,comment_mode FROM player_polls WHERE poll_id=? LIMIT 1`).bind(String(pollId)).first();
+  if(!poll)return sendTelegramMessage(env,chatId,"Опрос не найден.");
+  const result=await v74PollResultData(env,pollId);
+  const keyboard=[[{text:"🔄 Обновить",callback_data:`v74_poll_results_view:${pollId}`}]];
+  if(String(poll.answer_type||"choice")==="text"||String(poll.comment_mode||"none")!=="none"||Number(result.comments||0)>0){
+    keyboard.push([{text:`💬 Комментарии · ${Number(result.comments||0)}`,callback_data:`v75_poll_comments:${pollId}:0`}]);
+  }
+  keyboard.push([{text:"⬅️ К опросу",callback_data:`v74_poll:${pollId}`}]);
+  await sendTelegramMessage(env,chatId,`<b>📊 Результаты опроса</b>\n${escapeHtml(String(poll.question||"")).slice(0,500)}\n\nСтатус: <b>${escapeHtml(v74PollStatusLabel(poll.status))}</b>\n\n${v74PollResultsText(result)}`,{inline_keyboard:keyboard});
+}
+
+async function v74PollRecipientRows(env,poll){
+  await ensureV74PollSchema(env);
+  const audience=String(poll?.audience_type||"all");
+  const now=Math.floor(Date.now()/1000);
+  let sql=`SELECT DISTINCT b.telegram_id,b.chat_id FROM bot_subscribers b WHERE b.active=1 AND TRIM(COALESCE(b.chat_id,''))<>''`;
+  let bindings=[];
+  if(audience==="active_7d"){
+    sql=`SELECT DISTINCT b.telegram_id,b.chat_id FROM bot_subscribers b JOIN admin_profile_state p ON p.telegram_id=b.telegram_id WHERE b.active=1 AND TRIM(COALESCE(b.chat_id,''))<>'' AND p.updated_at>=?`;
+    bindings=[now-7*V67_DAY];
+  }else if(audience==="testers"){
+    sql=`SELECT DISTINCT b.telegram_id,b.chat_id FROM bot_subscribers b JOIN tester_accounts t ON t.telegram_id=b.telegram_id WHERE b.active=1 AND TRIM(COALESCE(b.chat_id,''))<>''`;
+  }else if(audience==="season"){
+    sql=`SELECT DISTINCT b.telegram_id,b.chat_id FROM bot_subscribers b JOIN leaderboard_entries e ON e.telegram_id=b.telegram_id JOIN leaderboard_seasons s ON s.id=e.season_id WHERE b.active=1 AND TRIM(COALESCE(b.chat_id,''))<>'' AND s.status='active'`;
+  }else if(audience==="staff"){
+    sql=`SELECT DISTINCT b.telegram_id,b.chat_id FROM bot_subscribers b JOIN staff_users s ON s.telegram_id=b.telegram_id WHERE b.active=1 AND TRIM(COALESCE(b.chat_id,''))<>'' AND s.active=1`;
+  }
+  let query=env.DB.prepare(sql);
+  if(bindings.length)query=query.bind(...bindings);
+  const rows=(await query.all()).results||[];
+  if(audience!=="staff")return rows;
+  const byId=new Map(rows.map((row)=>[String(row.telegram_id),row]));
+  for(const ownerId of botAdminTelegramIds(env)){
+    if(byId.has(String(ownerId)))continue;
+    const owner=await env.DB.prepare(`SELECT telegram_id,chat_id FROM bot_subscribers WHERE telegram_id=? AND active=1 AND TRIM(COALESCE(chat_id,''))<>'' LIMIT 1`).bind(String(ownerId)).first();
+    if(owner)byId.set(String(owner.telegram_id),owner);
+  }
+  return [...byId.values()];
 }
 
 async function prepareV74PollBotQueue(env,pollId){await ensureV74PollSchema(env);const poll=await env.DB.prepare(`SELECT * FROM player_polls WHERE poll_id=? LIMIT 1`).bind(pollId).first();if(!poll||poll.status!=="active"||!["bot","both"].includes(String(poll.delivery_mode)))return 0;if(Number(poll.bot_queue_prepared))return 0;const rows=await v74PollRecipientRows(env,poll);const now=Math.floor(Date.now()/1000);for(let i=0;i<rows.length;i+=100){await env.DB.batch(rows.slice(i,i+100).map((row)=>env.DB.prepare(`INSERT OR IGNORE INTO player_poll_bot_deliveries(poll_id,telegram_id,chat_id,status,attempts,last_error,available_at,delivered_at,updated_at) VALUES(?,?,?,'pending',0,'',?,0,?)`).bind(pollId,String(row.telegram_id),String(row.chat_id),now,now)));}await env.DB.prepare(`UPDATE player_polls SET bot_queue_prepared=1,updated_at=? WHERE poll_id=?`).bind(now,pollId).run();return rows.length;}
@@ -18604,14 +19193,14 @@ const STAFF_TRAINING_STEPS = Object.freeze({
     ]) })
   ]),
   cook: Object.freeze([
-    Object.freeze({ title: "Роль повара", text: "Повар работает с внутренними задачами точки и не получает доступ к игрокам, их балансам, заказам и кодам." }),
-    Object.freeze({ title: "Данные игроков", text: "Нельзя запрашивать Telegram ID, историю покупок или показывать чужие данные. Все вопросы гостя передаются кассиру или администратору." }),
-    Object.freeze({ title: "Рабочие сообщения", text: "Используйте бот только для доступных вашей роли разделов. Не пытайтесь открывать старые команды или ссылки из чужих сообщений." }),
-    Object.freeze({ title: "Проблемы", text: "При технической ошибке запишите время и краткое описание, затем создайте обращение. Не обещайте игроку ручную награду без решения администратора." }),
-    Object.freeze({ title: "Проверка знаний", text: "Что делать, если игрок просит проверить его заказ?", answers: Object.freeze([
-      Object.freeze({ id: "escalate", title: "Передать кассиру или администратору", correct: true }),
-      Object.freeze({ id: "search", title: "Самостоятельно искать игрока", correct: false }),
-      Object.freeze({ id: "askpass", title: "Попросить пароль", correct: false })
+    Object.freeze({ title: "Роль повара", text: "Повар использует только рабочие разделы точки: обучение, физические товары, сканер, уведомления, остатки и обращения. Доступ к игрокам, их балансам и игровому управлению закрыт." }),
+    Object.freeze({ title: "Проверка кода", text: "Отсканируйте QR или введите код вручную. Сверьте название товара, срок действия и статус. Не подтверждайте выдачу по фотографии старого кода." }),
+    Object.freeze({ title: "Передача товара", text: "Нажимайте «Подарок выдан» только после фактической передачи товара гостю. Если товара нет или данные не совпадают, не списывайте код и создайте обращение." }),
+    Object.freeze({ title: "Безопасность", text: "Не запрашивайте пароль, баланс или историю игрока и не используйте чужую рабочую сессию. По спорным ситуациям обращайтесь к администратору." }),
+    Object.freeze({ title: "Проверка знаний", text: "Когда можно подтвердить списание физического кода?", answers: Object.freeze([
+      Object.freeze({ id: "after", title: "После фактической передачи товара", correct: true }),
+      Object.freeze({ id: "before", title: "До передачи товара", correct: false }),
+      Object.freeze({ id: "photo", title: "По фотографии кода", correct: false })
     ]) })
   ]),
   administrator: Object.freeze([

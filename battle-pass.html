@@ -1,0 +1,3482 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' https://telegram.org; style-src 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'">
+<title>Сезонный пропуск — Зефирок</title>
+<script src="https://telegram.org/js/telegram-web-app.js?63"></script>
+<style>
+:root{
+  color-scheme:light;
+  --bg:#fff5f4;
+  --card:#fffdfb;
+  --pink:#df5c91;
+  --pink-dark:#9d355d;
+  --pink-soft:#ffe7f0;
+  --brown:#633b31;
+  --muted:#8f7169;
+  --line:#efcdc5;
+  --gold:#e9a838;
+  --gold-soft:#fff0b9;
+  --silver:#d8d8e4;
+  --silver-soft:#f2f1f8;
+  --green:#67b66f;
+  --shadow:0 14px 34px rgba(102,55,52,.12);
+  font-family:"Sofia Sans","Arial Rounded MT Bold","Trebuchet MS",-apple-system,BlinkMacSystemFont,system-ui,sans-serif
+}
+*{box-sizing:border-box}
+html,body{
+  width:100%;
+  height:100%;
+  margin:0;
+  overflow:hidden;
+  overscroll-behavior:none;
+  background:#160f11;
+  color:var(--brown)
+}
+body{padding:0}
+body,button,input,textarea,select{
+  font-family:"Sofia Sans","Arial Rounded MT Bold","Trebuchet MS",-apple-system,BlinkMacSystemFont,system-ui,sans-serif
+}
+button,input{font:inherit}
+button{-webkit-tap-highlight-color:transparent}
+[hidden]{display:none!important}
+
+.app-scroll{
+  width:100%;
+  height:100%;
+  height:100dvh;
+  overflow-y:auto;
+  overflow-x:hidden;
+  overscroll-behavior-y:contain;
+  -webkit-overflow-scrolling:touch;
+  touch-action:pan-y;
+  background:linear-gradient(180deg,#fff2f1 0,#fff9f4 45%,#f8eeee 100%);
+  padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)
+}
+.page{
+  width:min(100%,680px);
+  min-height:100%;
+  margin:0 auto;
+  padding:14px 12px 34px
+}
+.topbar{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  min-height:48px;
+  margin-bottom:10px
+}
+.back{
+  width:42px;
+  height:42px;
+  border:1px solid rgba(225,174,185,.55);
+  border-radius:15px;
+  background:#fff;
+  color:#8b4a62;
+  font-size:21px;
+  font-weight:900;
+  box-shadow:0 6px 18px rgba(119,69,83,.11)
+}
+.title{display:grid;gap:2px}
+.title strong{font-size:21px}
+.title span{color:var(--muted);font-size:11px;font-weight:750}
+
+.pass-shell{
+  overflow:hidden;
+  border:1px solid rgba(231,180,184,.8);
+  border-radius:28px;
+  background:rgba(255,252,250,.96);
+  box-shadow:var(--shadow)
+}
+.hero{
+  position:relative;
+  min-height:190px;
+  padding:22px 168px 22px 20px;
+  overflow:hidden;
+  background:
+    radial-gradient(circle at 87% 18%,rgba(255,255,255,.9) 0 8%,transparent 28%),
+    linear-gradient(135deg,#fff8f2 0,#ffe8ee 56%,#fff4e3 100%)
+}
+.hero:before{
+  content:"";
+  position:absolute;
+  right:74px;
+  bottom:20px;
+  display:grid;
+  place-items:center;
+  width:94px;
+  height:94px;
+  border-radius:30px;
+  background:url("/assets/skins/avatars/default.png") center/82% auto no-repeat,linear-gradient(145deg,#fff,#ffe6ee);
+  border:2px solid rgba(223,92,145,.18);
+  box-shadow:0 12px 25px rgba(158,67,98,.13);
+  font-size:0
+}
+.hero:after{
+  content:"";
+  position:absolute;
+  right:12px;
+  bottom:22px;
+  display:grid;
+  place-items:center;
+  width:82px;
+  height:76px;
+  border-radius:25px;
+  background:url("/assets/cases/gold_closed.png") center/88% auto no-repeat,linear-gradient(145deg,#ff7cad,#cc477f);
+  border:3px solid #f4bb55;
+  box-shadow:0 12px 24px rgba(160,67,91,.17);
+  font-size:0;
+  transform:rotate(-4deg)
+}
+.hero h1{
+  margin:0 0 8px;
+  color:#7f294d;
+  font-size:27px;
+  line-height:1.05
+}
+.hero p{
+  max-width:355px;
+  margin:0;
+  color:#745b55;
+  font-size:13px;
+  line-height:1.5;
+  font-weight:700
+}
+.hero-meta{
+  display:flex;
+  flex-wrap:wrap;
+  gap:7px;
+  margin-top:16px
+}
+.pill{
+  padding:7px 10px;
+  border:1px solid rgba(223,92,145,.16);
+  border-radius:999px;
+  background:rgba(255,255,255,.82);
+  color:#7f5360;
+  font-size:10px;
+  font-weight:900
+}
+
+.content{padding:14px}
+.main-tabs{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px
+}
+.main-tab{
+  min-height:58px;
+  border:1px solid #efcfc9;
+  border-radius:18px;
+  background:#fffaf8;
+  color:#6a4237;
+  font-size:15px;
+  font-weight:950;
+  box-shadow:0 5px 15px rgba(100,61,53,.05)
+}
+.main-tab.active{
+  border-color:#ef9dba;
+  background:linear-gradient(145deg,#fff,#ffe9f1);
+  color:#c34778;
+  box-shadow:0 8px 20px rgba(205,77,124,.12)
+}
+
+.progress-card{
+  display:grid;
+  grid-template-columns:68px minmax(0,1fr) auto;
+  gap:12px;
+  align-items:center;
+  margin-top:13px;
+  padding:13px;
+  border:1px solid #efd7d0;
+  border-radius:20px;
+  background:#fffaf7
+}
+.level-badge{
+  display:grid;
+  place-items:center;
+  width:60px;
+  height:60px;
+  border-radius:21px;
+  background:linear-gradient(145deg,#f276a4,#c84178);
+  color:#fff;
+  font-size:23px;
+  font-weight:950;
+  box-shadow:0 8px 18px rgba(206,72,121,.22)
+}
+.progress-copy{min-width:0}
+.progress-copy strong{display:block;font-size:14px}
+.progress-track{
+  height:13px;
+  margin-top:8px;
+  overflow:hidden;
+  border-radius:999px;
+  background:#eadde0
+}
+.progress-track i{
+  display:block;
+  height:100%;
+  width:0;
+  border-radius:inherit;
+  background:linear-gradient(90deg,#ed5a95,#8c334c);
+  transition:width .25s
+}
+.progress-meta{
+  display:flex;
+  justify-content:space-between;
+  gap:8px;
+  margin-top:5px;
+  color:var(--muted);
+  font-size:9px;
+  font-weight:800
+}
+.buy-level{
+  min-height:42px;
+  padding:0 12px;
+  border:1px solid #efb7c9;
+  border-radius:14px;
+  background:#ffe7ef;
+  color:#bc3d70;
+  font-size:10px;
+  font-weight:950
+}
+
+.view[hidden]{display:none!important}
+.section-head{
+  display:flex;
+  justify-content:space-between;
+  gap:12px;
+  align-items:center;
+  margin:16px 2px 10px
+}
+.section-head strong{font-size:16px}
+.section-head span{color:var(--muted);font-size:10px;font-weight:800}
+
+.level-navigator{
+  margin-bottom:11px;
+  padding:12px 13px 10px;
+  border:1px solid #efd7d0;
+  border-radius:18px;
+  background:#fff
+}
+.level-nav-top{
+  display:flex;
+  justify-content:space-between;
+  gap:10px;
+  align-items:center
+}
+.level-nav-top strong{font-size:12px}
+.level-nav-top span{color:#b23f6c;font-size:12px;font-weight:950}
+.level-range{
+  width:100%;
+  margin:11px 0 6px;
+  accent-color:var(--pink)
+}
+.level-marks{
+  display:flex;
+  justify-content:space-between;
+  color:#a9887f;
+  font-size:9px;
+  font-weight:900
+}
+.level-marks button{
+  min-width:24px;
+  padding:0;
+  border:0;
+  background:transparent;
+  color:inherit;
+  font-size:inherit;
+  font-weight:inherit
+}
+.level-marks button.active{color:#d6477e}
+
+.reward-board{
+  display:grid;
+  grid-template-columns:82px minmax(0,1fr);
+  overflow:hidden;
+  border:1px solid #efd1ca;
+  border-radius:22px;
+  background:#fffaf7
+}
+.lane-labels{
+  position:relative;
+  z-index:5;
+  display:grid;
+  grid-template-rows:38px 112px 28px 112px;
+  border-right:1px solid #efd1ca;
+  background:#fff9f7;
+  box-shadow:8px 0 18px rgba(112,61,55,.05)
+}
+.lane-empty{border-bottom:1px solid #f1ddd7}
+.lane-label{
+  display:grid;
+  place-items:center;
+  padding:7px;
+  text-align:center;
+  font-size:10px;
+  font-weight:950;
+  line-height:1.2
+}
+.lane-label.free{
+  color:#66577d;
+  background:linear-gradient(180deg,#f6f2fb,#efedf7)
+}
+.lane-label.premium{
+  color:#8c5a17;
+  background:linear-gradient(180deg,#fff1bd,#ffe3a2)
+}
+.lane-divider{
+  display:grid;
+  place-items:center;
+  background:#fff7f2;
+  color:#d64d83;
+  font-size:12px
+}
+.reward-scroll{
+  overflow-x:auto;
+  overflow-y:hidden;
+  overscroll-behavior-x:contain;
+  scroll-snap-type:x proximity;
+  scrollbar-width:none;
+  touch-action:auto
+}
+.reward-scroll::-webkit-scrollbar{display:none}
+.reward-track{
+  display:flex;
+  width:max-content;
+  min-width:100%
+}
+.level-column{
+  flex:0 0 104px;
+  display:grid;
+  grid-template-rows:38px 112px 28px 112px;
+  scroll-snap-align:start;
+  border-right:1px solid #f0ddd7;
+  background:#fffdfb
+}
+.level-column.current{
+  background:linear-gradient(180deg,#fff7fb,#fffdfb 44%,#fff8eb)
+}
+.level-column.selected{
+  box-shadow:inset 0 0 0 2px rgba(224,83,139,.28)
+}
+.level-number{
+  display:grid;
+  place-items:center;
+  border-bottom:1px solid #f0ddd7;
+  color:#6a4136;
+  font-size:14px;
+  font-weight:950
+}
+.level-column.current .level-number{
+  margin:4px auto;
+  width:31px;
+  height:31px;
+  border:0;
+  border-radius:50%;
+  background:linear-gradient(145deg,#f379a7,#d94680);
+  color:#fff
+}
+.reward-cell{
+  position:relative;
+  isolation:isolate;
+  display:grid;
+  align-content:center;
+  justify-items:center;
+  gap:5px;
+  padding:17px 6px 7px;
+  border:1px solid transparent;
+  overflow:hidden;
+  text-align:center;
+  transition:background .28s ease,border-color .28s ease,box-shadow .28s ease,filter .28s ease,opacity .28s ease
+}
+.reward-cell.premium{
+  background:linear-gradient(180deg,#fffaf0,#fff1cf)
+}
+.reward-cell.unlocked:not(.premium){
+  border-color:rgba(221,78,137,.46);
+  background:linear-gradient(155deg,#fff,#fff0f6);
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.9),0 7px 18px rgba(201,69,119,.12)
+}
+.reward-cell.premium.unlocked{
+  border-color:#e7b449;
+  background:linear-gradient(150deg,#fffdf4 0,#fff1bd 58%,#ffe59a 100%);
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.82),0 8px 20px rgba(194,132,27,.2)
+}
+.reward-cell.unlocked .reward-icon{
+  transform:translateY(-1px);
+  border-color:rgba(218,80,135,.48);
+  box-shadow:0 6px 14px rgba(194,70,116,.13)
+}
+.reward-cell.premium.unlocked .reward-icon{
+  border-color:#dfad3b;
+  background:linear-gradient(145deg,#fffdf3,#ffeab0);
+  box-shadow:0 6px 15px rgba(178,119,20,.2)
+}
+.reward-cell.claimed{
+  opacity:1
+}
+.reward-cell.claimed:not(.premium){
+  border-color:#91c997;
+  background:linear-gradient(155deg,#fbfffb,#eaf8ed);
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.88),0 5px 14px rgba(71,139,80,.11)
+}
+.reward-cell.premium.claimed{
+  border-color:#d8a12c;
+  background:linear-gradient(150deg,#fffdf5,#ffedb1);
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.82),0 7px 18px rgba(184,124,22,.17)
+}
+.reward-cell.locked{filter:grayscale(.68);opacity:.5}
+.reward-cell.gold-reward.unlocked{
+  border-color:#c98a12;
+  background:linear-gradient(135deg,#fffdf1 0,#ffe59a 48%,#ffd36d 100%);
+  box-shadow:inset 0 0 0 2px rgba(255,249,211,.94),0 0 0 2px rgba(211,145,24,.16),0 10px 24px rgba(174,110,12,.26)
+}
+.reward-cell.gold-reward.unlocked:after{
+  content:"✦";
+  position:absolute;
+  right:7px;
+  bottom:6px;
+  z-index:-1;
+  color:rgba(160,99,4,.16);
+  font-size:34px;
+  line-height:1
+}
+.reward-cell.silver-reward.unlocked:not(.premium){
+  border-color:#aeb0c7;
+  background:linear-gradient(150deg,#fff,#f0f1f8);
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.9),0 7px 17px rgba(105,108,137,.14)
+}
+.reward-state{
+  position:absolute;
+  top:5px;
+  left:50%;
+  z-index:2;
+  transform:translateX(-50%);
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-width:52px;
+  min-height:16px;
+  padding:2px 7px;
+  border-radius:999px;
+  background:#ffe2ed;
+  color:#a13e65;
+  font-size:7px;
+  font-weight:950;
+  letter-spacing:.035em;
+  white-space:nowrap;
+  box-shadow:0 3px 8px rgba(153,58,93,.1)
+}
+.reward-cell.premium .reward-state{background:#f6d984;color:#78520f}
+.reward-cell.claimed .reward-state{background:#dff2e2;color:#397843}
+.reward-cell.premium.claimed .reward-state,
+.reward-cell.gold-reward.claimed .reward-state{background:#d99d21;color:#fff8dc}
+.reward-cell.locked .reward-state{display:none}
+.reward-icon{
+  display:grid;
+  place-items:center;
+  width:47px;
+  height:47px;
+  border:1px solid #f0d5cf;
+  border-radius:15px;
+  background:#fff;
+  font-size:26px
+}
+.reward-cell.premium .reward-icon{
+  border-color:#edd497;
+  background:#fff9df
+}
+.reward-name{
+  min-height:24px;
+  color:#633b31;
+  font-size:9px;
+  font-weight:900;
+  line-height:1.16
+}
+.reward-action{
+  min-height:23px;
+  padding:0 8px;
+  border:0;
+  border-radius:999px;
+  background:#f7dce7;
+  color:#a63e68;
+  font-size:8px;
+  font-weight:950
+}
+.reward-cell.premium .reward-action{
+  background:#f6dda2;
+  color:#7e5814
+}
+.reward-action:disabled{
+  background:#eee7e4!important;
+  color:#a68f86!important
+}
+.reward-cell.claimed .reward-action:disabled{
+  background:#dcefe0!important;
+  color:#3f7d49!important
+}
+.reward-cell.premium.claimed .reward-action:disabled,
+.reward-cell.gold-reward.claimed .reward-action:disabled{
+  background:#dfaa35!important;
+  color:#fffaf0!important
+}
+.reward-connector{
+  display:grid;
+  place-items:center;
+  position:relative;
+  color:#d9457e;
+  background:#fff8f3
+}
+.reward-connector:before{
+  content:"";
+  position:absolute;
+  left:0;
+  right:0;
+  height:2px;
+  background:#efabc4
+}
+.reward-connector span{
+  position:relative;
+  z-index:1;
+  width:12px;
+  height:12px;
+  border-radius:3px;
+  background:#e95b91;
+  transform:rotate(45deg)
+}
+.claim-all{
+  width:100%;
+  min-height:46px;
+  margin-top:11px;
+  border:0;
+  border-radius:16px;
+  background:linear-gradient(145deg,#eb6799,#cb3c75);
+  color:#fff;
+  font-weight:950
+}
+
+.premium-offer{
+  position:relative;
+  overflow:hidden;
+  margin-top:14px;
+  padding:18px;
+  border:1px solid #efcfbf;
+  border-radius:23px;
+  background:linear-gradient(145deg,#fffaf5,#fff0ef 55%,#fff5df)
+}
+.premium-offer:after{
+  content:"";
+  position:absolute;
+  right:14px;
+  top:17px;
+  width:92px;
+  height:76px;
+  background:url("/assets/cases/gold_closed.png") center/contain no-repeat;
+  filter:drop-shadow(0 8px 12px rgba(151,96,16,.18))
+}
+.premium-offer h2{
+  max-width:330px;
+  margin:0 0 6px;
+  color:#744155;
+  font-size:21px
+}
+.premium-offer p{
+  max-width:340px;
+  margin:0;
+  color:#846b62;
+  font-size:11px;
+  line-height:1.45;
+  font-weight:750
+}
+.offer-list{
+  display:grid;
+  gap:6px;
+  max-width:360px;
+  margin:13px 0
+}
+.offer-item{
+  padding:8px 10px;
+  border:1px solid #f0ddd4;
+  border-radius:13px;
+  background:rgba(255,255,255,.78);
+  font-size:10px;
+  font-weight:850
+}
+.price-row{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:7px;
+  margin-top:12px
+}
+.price-chip{
+  padding:8px 6px;
+  border:1px solid #efcfbf;
+  border-radius:13px;
+  background:#fff;
+  text-align:center;
+  font-size:9px;
+  font-weight:900
+}
+.price-chip strong{display:block;margin-top:2px;font-size:13px}
+.buy-pass{
+  width:100%;
+  min-height:48px;
+  margin-top:9px;
+  border:0;
+  border-radius:16px;
+  background:linear-gradient(145deg,#eb6799,#c93770);
+  color:#fff;
+  font-weight:950
+}
+.buy-pass:disabled{background:#d9c7cd;color:#fff}
+
+.pass-tiers{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:11px;
+  margin-top:14px
+}
+.tier-card{
+  position:relative;
+  overflow:hidden;
+  padding:16px;
+  border:1px solid #efcfbf;
+  border-radius:22px;
+  background:linear-gradient(145deg,#fffaf7,#fff1ef);
+  box-shadow:0 9px 24px rgba(104,61,54,.08)
+}
+.tier-card.elite-plus{
+  border:2px solid #e1ad45;
+  background:linear-gradient(145deg,#fffdf1,#fff0b7 52%,#ffe4a2);
+  box-shadow:0 0 0 3px rgba(255,239,177,.72),0 12px 30px rgba(178,119,25,.17)
+}
+.tier-card.elite-plus:after{
+  content:"ЭЛИТНЫЙ+";
+  position:absolute;
+  right:-34px;
+  top:15px;
+  width:126px;
+  padding:5px 0;
+  background:#d59a2d;
+  color:#fff;
+  text-align:center;
+  font-size:8px;
+  font-weight:1000;
+  letter-spacing:.08em;
+  transform:rotate(38deg)
+}
+.tier-title{display:flex;align-items:center;gap:9px;padding-right:32px}
+.tier-title i{
+  display:grid;
+  place-items:center;
+  width:42px;
+  height:42px;
+  border-radius:14px;
+  background:#ffe5ef;
+  font-style:normal;
+  font-size:23px
+}
+.elite-plus .tier-title i{background:#fff3c7}
+.tier-title strong{display:block;font-size:18px;color:#744155}
+.tier-title span{display:block;margin-top:2px;color:#9a7568;font-size:9px;font-weight:850}
+.tier-benefits{display:grid;gap:6px;margin:13px 0}
+.tier-benefit{
+  min-height:34px;
+  display:flex;
+  align-items:center;
+  gap:7px;
+  padding:7px 9px;
+  border:1px solid rgba(231,205,190,.86);
+  border-radius:12px;
+  background:rgba(255,255,255,.74);
+  font-size:9px;
+  font-weight:850;
+  line-height:1.25
+}
+.tier-price{display:grid;grid-template-columns:repeat(3,1fr);gap:5px}
+.tier-price span{
+  padding:7px 4px;
+  border:1px solid rgba(228,200,183,.9);
+  border-radius:11px;
+  background:rgba(255,255,255,.82);
+  text-align:center;
+  font-size:8px;
+  font-weight:900
+}
+.tier-price b{display:block;margin-top:2px;font-size:12px}
+.tier-buy{
+  width:100%;
+  min-height:43px;
+  margin-top:8px;
+  border:0;
+  border-radius:14px;
+  background:linear-gradient(145deg,#eb6799,#c93770);
+  color:#fff;
+  font-size:11px;
+  font-weight:950
+}
+.elite-plus .tier-buy{background:linear-gradient(145deg,#efbb4f,#c9841f)}
+.tier-buy:disabled{background:#d9c7cd;color:#fff}
+.tier-owned{
+  display:none;
+  margin-top:8px;
+  padding:8px;
+  border-radius:12px;
+  background:#e5f5e5;
+  color:#3f8248;
+  text-align:center;
+  font-size:9px;
+  font-weight:950
+}
+.tier-card.owned .tier-owned{display:block}
+.tier-card.owned .tier-buy{display:none}
+@media(max-width:520px){.pass-tiers{grid-template-columns:1fr}}
+
+.task-toolbar{
+  display:flex;
+  gap:7px;
+  overflow-x:auto;
+  margin:0 0 10px;
+  padding-bottom:3px;
+  scrollbar-width:none
+}
+.task-toolbar::-webkit-scrollbar{display:none}
+.task-filter{
+  flex:0 0 auto;
+  min-height:35px;
+  padding:0 14px;
+  border:1px solid #ead2cb;
+  border-radius:999px;
+  background:#fff;
+  color:#765248;
+  font-size:10px;
+  font-weight:950
+}
+.task-filter.active{
+  border-color:#ec9fba;
+  background:#ffe8f0;
+  color:#b43d6c
+}
+.task-summary{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:8px;
+  margin-bottom:10px
+}
+.summary-card{
+  padding:11px;
+  border:1px solid #efd8d1;
+  border-radius:15px;
+  background:#fff
+}
+.summary-card strong{display:block;font-size:12px}
+.summary-card span{color:var(--muted);font-size:9px;font-weight:750}
+.claim-all-tasks{
+  width:100%;
+  min-height:46px;
+  margin:0 0 10px;
+  padding:9px 14px;
+  border:0;
+  border-radius:16px;
+  background:linear-gradient(135deg,#f5c452,#d99021);
+  box-shadow:0 8px 20px rgba(195,126,22,.2),inset 0 1px 0 rgba(255,255,255,.55);
+  color:#fff;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  font-size:12px;
+  font-weight:950;
+  transition:transform .18s ease,box-shadow .18s ease,filter .18s ease,opacity .18s ease
+}
+.claim-all-tasks:not(:disabled):active{transform:scale(.985)}
+.claim-all-tasks b{
+  flex:0 0 auto;
+  padding:6px 9px;
+  border-radius:999px;
+  background:rgba(255,255,255,.2);
+  font-size:10px
+}
+.claim-all-tasks:disabled{
+  background:#e8dfdb;
+  box-shadow:none;
+  color:#a9948c;
+  opacity:.8
+}
+.claim-all-tasks:disabled b{background:rgba(255,255,255,.45)}
+.task-list{display:grid;gap:9px}
+.task-card{
+  position:relative;
+  isolation:isolate;
+  overflow:hidden;
+  max-height:340px;
+  padding:12px;
+  border:1px solid #eadbd4;
+  border-radius:18px;
+  background:#fff;
+  transform-origin:center top;
+  transition:opacity .34s cubic-bezier(.22,1,.36,1),transform .34s cubic-bezier(.22,1,.36,1),max-height .48s cubic-bezier(.22,1,.36,1),margin .48s cubic-bezier(.22,1,.36,1),padding .48s cubic-bezier(.22,1,.36,1),border-color .28s ease,box-shadow .28s ease,background .28s ease
+}
+.task-card > *{position:relative;z-index:2}
+.task-card.ready{
+  border-color:#edbb4c;
+  box-shadow:0 0 0 1px rgba(237,187,76,.2),0 7px 24px rgba(221,155,41,.19);
+  animation:taskReadyGlow 2.8s ease-in-out infinite
+}
+.task-card.ready:before{
+  content:"";
+  position:absolute;
+  inset:0;
+  z-index:1;
+  pointer-events:none;
+  border-radius:inherit;
+  background:linear-gradient(105deg,transparent 20%,rgba(255,243,174,0) 34%,rgba(255,238,144,.42) 50%,rgba(255,243,174,0) 66%,transparent 80%);
+  transform:translateX(-115%);
+  animation:taskGoldSweep 3.1s cubic-bezier(.45,0,.2,1) infinite
+}
+.task-card.ready:after{
+  content:"";
+  position:absolute;
+  inset:2px;
+  z-index:1;
+  pointer-events:none;
+  border:1px solid rgba(255,239,163,.7);
+  border-radius:15px;
+  opacity:.72;
+  animation:taskGoldBorder 2.8s ease-in-out infinite
+}
+.task-card.claimed{
+  padding:10px 12px;
+  background:#f7f4f1;
+  opacity:.78
+}
+.task-card.claimed .task-progress,
+.task-card.claimed .task-bottom span,
+.task-card.claimed p{display:none}
+.task-card.claimed h3{margin:7px 0 0}
+.task-card.collecting{
+  pointer-events:none;
+  animation:none!important;
+  transition:none!important;
+  transform-style:preserve-3d;
+  backface-visibility:hidden;
+  -webkit-backface-visibility:hidden;
+  will-change:transform,opacity,height
+}
+.task-card.collecting:before,
+.task-card.collecting:after{
+  animation:none!important;
+  opacity:0!important
+}
+.task-card.collecting.fallback-flip{
+  animation:taskCardFlipFallback .42s cubic-bezier(.22,.75,.18,1) forwards!important
+}
+@keyframes taskReadyGlow{
+  0%,100%{box-shadow:0 0 0 1px rgba(237,187,76,.18),0 7px 22px rgba(221,155,41,.15)}
+  50%{box-shadow:0 0 0 2px rgba(244,198,91,.28),0 9px 29px rgba(221,155,41,.28)}
+}
+@keyframes taskGoldSweep{
+  0%,18%{transform:translateX(-115%);opacity:0}
+  32%{opacity:1}
+  62%{transform:translateX(115%);opacity:.9}
+  76%,100%{transform:translateX(115%);opacity:0}
+}
+@keyframes taskGoldBorder{
+  0%,100%{opacity:.42}
+  50%{opacity:.9}
+}
+@keyframes taskCardFlipFallback{
+  0%{opacity:1;transform:perspective(900px) rotateX(0deg) translateY(0) scale(1)}
+  18%{opacity:1;transform:perspective(900px) rotateX(-6deg) translateY(-1px) scale(1.002)}
+  78%{opacity:.96;transform:perspective(900px) rotateX(-72deg) translateY(-2px) scale(.995)}
+  100%{opacity:0;transform:perspective(900px) rotateX(-88deg) translateY(-3px) scale(.99)}
+}
+@media (prefers-reduced-motion:reduce){
+  .task-card.ready,.task-card.ready:before,.task-card.ready:after{animation:none}
+}
+.task-card.premium{
+  border-color:#ebd39b;
+  background:linear-gradient(145deg,#fffaf1,#fff3cf)
+}
+.task-card.locked{opacity:.62}
+.task-card.complete{
+  border-color:#b9ddb9;
+  background:#f6fff5
+}
+.task-card.complete h3,
+.task-card.complete p{
+  text-decoration:line-through;
+  text-decoration-thickness:1.5px;
+  color:#8b9988
+}
+.task-card.complete.ready{
+  border-color:#edbb4c;
+  background:#fffdf5
+}
+.task-card.complete.ready.premium{background:linear-gradient(145deg,#fffaf1,#fff3cf)}
+.task-top{
+  display:flex;
+  justify-content:space-between;
+  gap:8px;
+  align-items:flex-start
+}
+.task-badges{display:flex;flex-wrap:wrap;gap:5px}
+.task-badge{
+  padding:4px 7px;
+  border-radius:999px;
+  background:#f8e7ee;
+  color:#9a4b70;
+  font-size:8px;
+  font-weight:950
+}
+.task-badge.weekly{background:#eee7fa;color:#6f58a1}
+.task-badge.premium{background:#ffe9a9;color:#88611a}
+.task-badge.done{background:#ddf2dc;color:#3e8745}
+.task-xp{
+  white-space:nowrap;
+  color:#b37624;
+  font-size:11px;
+  font-weight:950
+}
+.task-card h3{margin:9px 0 4px;font-size:14px}
+.task-card p{
+  margin:0;
+  color:var(--muted);
+  font-size:10px;
+  line-height:1.4;
+  font-weight:700
+}
+.task-progress{
+  height:9px;
+  margin-top:10px;
+  overflow:hidden;
+  border-radius:999px;
+  background:#f0e3dd
+}
+.task-progress i{
+  display:block;
+  height:100%;
+  border-radius:inherit;
+  background:linear-gradient(90deg,#f39ab9,#d9a847)
+}
+.task-card.complete .task-progress i{background:var(--green)}
+.task-bottom{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  margin-top:8px
+}
+.task-bottom span{
+  color:#8a6e64;
+  font-size:9px;
+  font-weight:850
+}
+.task-action{
+  min-height:32px;
+  padding:0 10px;
+  border:0;
+  border-radius:12px;
+  background:#f5e7e1;
+  color:#6d4d42;
+  font-size:9px;
+  font-weight:950
+}
+.task-action.primary{
+  background:linear-gradient(135deg,#f08db2,#d75586);
+  color:#fff
+}
+.task-action:disabled{background:#eee5e1;color:#a68f86}
+
+.test-tools{
+  margin-top:14px;
+  border:1px dashed #ddbdb5;
+  border-radius:17px;
+  background:#fffaf7
+}
+.test-tools summary{
+  padding:12px 14px;
+  cursor:pointer;
+  color:#7d5e55;
+  font-size:11px;
+  font-weight:900
+}
+.test-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:7px;
+  padding:0 12px 12px
+}
+.test-button{
+  min-height:39px;
+  border:0;
+  border-radius:12px;
+  background:#f4e6e0;
+  color:#6c4c42;
+  font-size:10px;
+  font-weight:900
+}
+.notice{
+  margin-top:12px;
+  padding:12px 13px;
+  border-radius:16px;
+  background:#fff3d7;
+  color:#765425;
+  font-size:10px;
+  line-height:1.45;
+  font-weight:750
+}
+.toast{
+  position:fixed;
+  left:50%;
+  bottom:calc(18px + env(safe-area-inset-bottom));
+  z-index:100;
+  transform:translate(-50%,20px);
+  opacity:0;
+  max-width:calc(100vw - 30px);
+  padding:11px 15px;
+  border-radius:15px;
+  background:#4f3b35;
+  color:#fff;
+  font-size:12px;
+  font-weight:800;
+  transition:.22s
+}
+.toast.show{transform:translate(-50%,0);opacity:1}
+
+.reward-summary{
+  position:fixed;
+  inset:0;
+  z-index:180;
+  display:grid;
+  place-items:center;
+  padding:20px;
+  background:rgba(48,25,30,.48);
+  backdrop-filter:blur(8px)
+}
+.reward-summary[hidden]{display:none!important}
+.reward-summary-card{
+  width:min(100%,520px);
+  max-height:min(82dvh,760px);
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+  border:1px solid #efd4cb;
+  border-radius:26px;
+  background:linear-gradient(180deg,#fffaf8,#fff4ee);
+  box-shadow:0 24px 70px rgba(70,35,41,.28);
+  animation:rewardSummaryIn .24s ease-out
+}
+.reward-summary-head{
+  padding:20px 20px 13px;
+  text-align:center
+}
+.reward-summary-head .summary-icon{font-size:40px}
+.reward-summary-head h2{margin:7px 0 4px;font-size:22px;color:#743c50}
+.reward-summary-head p{margin:0;color:var(--muted);font-size:11px;font-weight:750}
+.reward-summary-list{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:9px;
+  overflow-y:auto;
+  padding:4px 14px 14px;
+  overscroll-behavior:contain
+}
+.received-reward{
+  position:relative;
+  display:grid;
+  grid-template-columns:48px minmax(0,1fr);
+  gap:9px;
+  align-items:center;
+  min-height:72px;
+  padding:10px;
+  border:1px solid #eed9d2;
+  border-radius:17px;
+  background:#fff;
+  box-shadow:0 5px 16px rgba(87,52,45,.06)
+}
+.received-reward.premium{
+  border:2px solid #e6ae3f;
+  background:linear-gradient(145deg,#fffdf3,#fff0bb);
+  box-shadow:0 0 0 2px rgba(255,239,177,.9),0 8px 24px rgba(191,132,30,.18)
+}
+.received-reward.premium:after{
+  content:"ПРЕМИУМ";
+  position:absolute;
+  right:8px;
+  top:7px;
+  color:#956514;
+  font-size:7px;
+  font-weight:1000;
+  letter-spacing:.08em
+}
+.received-reward-icon{
+  display:grid;
+  place-items:center;
+  width:46px;
+  height:46px;
+  border-radius:14px;
+  background:#fff7f4;
+  font-size:25px
+}
+.received-reward.premium .received-reward-icon{background:#fff7d7}
+.received-reward-copy{min-width:0;padding-right:2px}
+.received-reward-copy strong{display:block;font-size:10px;line-height:1.2;color:#674036}
+.received-reward-copy span{display:block;margin-top:4px;color:#9b7467;font-size:8px;font-weight:850}
+.reward-summary-close{
+  min-height:48px;
+  margin:0 14px 14px;
+  border:0;
+  border-radius:16px;
+  background:linear-gradient(145deg,#eb6799,#cb3c75);
+  color:#fff;
+  font-weight:950
+}
+@keyframes rewardSummaryIn{
+  from{opacity:0;transform:translateY(20px) scale(.96)}
+  to{opacity:1;transform:translateY(0) scale(1)}
+}
+@media(max-width:430px){.reward-summary-list{grid-template-columns:1fr}}
+
+.purchase-confirm{
+  position:fixed;
+  inset:0;
+  z-index:190;
+  display:grid;
+  place-items:center;
+  padding:20px;
+  background:rgba(48,25,30,.52);
+  backdrop-filter:blur(9px)
+}
+.purchase-confirm[hidden]{display:none!important}
+.purchase-confirm-card{
+  width:min(100%,500px);
+  max-height:min(86dvh,760px);
+  overflow:auto;
+  border:1px solid #efd3c7;
+  border-radius:26px;
+  background:linear-gradient(180deg,#fffaf8,#fff2eb);
+  box-shadow:0 24px 72px rgba(70,35,41,.3);
+  animation:rewardSummaryIn .22s ease-out
+}
+.purchase-confirm-head{padding:20px 20px 12px;text-align:center}
+.purchase-confirm-head .purchase-icon{font-size:42px}
+.purchase-confirm-head h2{margin:7px 0 4px;color:#743c50;font-size:22px}
+.purchase-confirm-head p{margin:0;color:var(--muted);font-size:11px;font-weight:750;line-height:1.45}
+.purchase-benefits{display:grid;gap:8px;padding:2px 16px 14px}
+.purchase-benefit{padding:10px 12px;border:1px solid #eed8cf;border-radius:15px;background:#fff;color:#674036;font-size:10px;font-weight:850}
+.purchase-price-title{padding:0 16px 7px;color:#946c61;font-size:9px;font-weight:950;text-transform:uppercase;letter-spacing:.07em}
+.purchase-price{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:0 16px 15px}
+.purchase-price span{display:flex;flex-direction:column;align-items:center;gap:3px;padding:9px 6px;border:1px solid #ead8d1;border-radius:14px;background:#fff;color:#8d6458;font-size:9px;font-weight:850}
+.purchase-price b{color:#6c4035;font-size:15px}
+.purchase-note{margin:0 16px 14px;padding:10px 12px;border-radius:14px;background:#fff3d7;color:#765425;font-size:9px;line-height:1.45;font-weight:800}
+.purchase-actions{display:grid;grid-template-columns:1fr 1.25fr;gap:9px;padding:0 16px 16px}
+.purchase-actions button{min-height:48px;border:0;border-radius:16px;font-weight:950}
+.purchase-cancel{background:#f0e4df;color:#744e43}
+.purchase-submit{background:linear-gradient(145deg,#efbb4f,#c9841f);color:#fff;box-shadow:0 7px 18px rgba(188,124,25,.2)}
+
+.access-gate{
+  width:100%;
+  height:100%;
+  display:grid;
+  place-items:center;
+  padding:24px;
+  background:linear-gradient(180deg,#fff1f6,#fff9ef)
+}
+.access-card{
+  width:min(100%,480px);
+  padding:24px 20px;
+  border:1px solid rgba(220,188,172,.72);
+  border-radius:25px;
+  background:rgba(255,255,255,.94);
+  box-shadow:0 16px 38px rgba(80,49,40,.12);
+  text-align:center
+}
+.access-icon{font-size:43px}
+.access-card h1{margin:12px 0 7px;font-size:22px}
+.access-card p{
+  margin:0;
+  color:var(--muted);
+  font-size:13px;
+  line-height:1.5;
+  font-weight:700
+}
+.access-back{
+  width:100%;
+  min-height:44px;
+  margin-top:16px;
+  border:0;
+  border-radius:14px;
+  background:linear-gradient(135deg,#f28eb3,#d95486);
+  color:#fff;
+  font-weight:900
+}
+.access-spinner{
+  width:30px;
+  height:30px;
+  margin:16px auto 0;
+  border:4px solid #f0ddd6;
+  border-top-color:var(--pink);
+  border-radius:50%;
+  animation:spin .8s linear infinite
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media(max-width:470px){
+  .page{padding-inline:8px}
+  .content{padding:11px}
+  .hero{padding-right:126px}
+  .hero:before{right:56px;width:78px;height:78px;background-size:82% auto}
+  .hero:after{right:8px;width:64px;height:61px;background-size:88% auto}
+  .hero h1{font-size:24px}
+  .progress-card{grid-template-columns:56px minmax(0,1fr)}
+  .level-badge{width:52px;height:52px;font-size:20px}
+  .buy-level{grid-column:1/-1;width:100%}
+  .premium-offer:after{position:static;display:block;margin:8px 0;width:74px;height:62px}
+}
+
+
+/* v0.79.29 — реальные изображения наград и однозначные состояния ячеек */
+.reward-cell{
+  min-width:0;
+  padding-top:20px;
+}
+.reward-cell.level-locked,
+.reward-cell.tier-locked{
+  opacity:1;
+  filter:none;
+  border-color:#d8d3d4;
+  background:linear-gradient(155deg,#f4f2f2,#e9e6e7);
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.72)
+}
+.reward-cell.tier-locked{
+  border-color:#d8c89e;
+  background:linear-gradient(155deg,#f4f1e8,#e8e1d1)
+}
+.reward-cell.claimable:not(.premium){
+  border-color:#dc4f88;
+  background:linear-gradient(155deg,#fff 0,#ffe8f1 100%);
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.94),0 0 0 2px rgba(221,78,137,.13),0 9px 20px rgba(201,69,119,.17)
+}
+.reward-cell.premium.claimable{
+  border-color:#d79718;
+  background:linear-gradient(145deg,#fffdf2 0,#ffe9a4 58%,#ffd76f 100%);
+  box-shadow:inset 0 0 0 2px rgba(255,251,224,.9),0 0 0 2px rgba(211,145,24,.16),0 10px 24px rgba(174,110,12,.24)
+}
+.reward-cell.claimed:not(.premium){
+  border-color:#66aa70;
+  background:linear-gradient(155deg,#fafffa,#dff2e3);
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.9),0 6px 15px rgba(62,127,72,.13)
+}
+.reward-cell.premium.claimed,
+.reward-cell.gold-reward.claimed{
+  border-color:#b98116;
+  background:linear-gradient(145deg,#fffaf0,#f3d98c);
+  box-shadow:inset 0 0 0 2px rgba(255,250,221,.86),0 7px 18px rgba(156,105,19,.17)
+}
+.reward-cell.claimed:after{
+  content:"✓";
+  position:absolute;
+  right:6px;
+  bottom:5px;
+  z-index:4;
+  display:grid;
+  place-items:center;
+  width:22px;
+  height:22px;
+  border-radius:50%;
+  background:#55a862;
+  color:#fff;
+  font-size:13px;
+  font-weight:1000;
+  box-shadow:0 4px 10px rgba(50,116,59,.28)
+}
+.reward-cell.premium.claimed:after,
+.reward-cell.gold-reward.claimed:after{
+  content:"✓";
+  background:#bd8216;
+  box-shadow:0 4px 10px rgba(137,86,5,.28)
+}
+.reward-state{
+  min-width:62px;
+  min-height:18px;
+  padding:2px 8px;
+  font-size:7.5px
+}
+.reward-cell.level-locked .reward-state{
+  display:inline-flex;
+  background:#dedadb;
+  color:#756b6d;
+  box-shadow:none
+}
+.reward-cell.tier-locked .reward-state{
+  display:inline-flex;
+  background:#ded2ae;
+  color:#796126;
+  box-shadow:none
+}
+.reward-cell.claimable:not(.premium) .reward-state{
+  background:#d94c84;
+  color:#fff
+}
+.reward-cell.premium.claimable .reward-state,
+.reward-cell.gold-reward.claimable .reward-state{
+  background:#bd7f10;
+  color:#fff9de
+}
+.reward-cell.claimed .reward-state{
+  background:#4d9b59;
+  color:#fff
+}
+.reward-cell.premium.claimed .reward-state,
+.reward-cell.gold-reward.claimed .reward-state{
+  background:#a96f0e;
+  color:#fff8dc
+}
+.reward-icon{
+  position:relative;
+  width:58px;
+  height:58px;
+  padding:3px;
+  overflow:hidden;
+  border-radius:17px
+}
+.reward-art{
+  position:relative;
+  display:grid;
+  place-items:center;
+  width:100%;
+  height:100%
+}
+.reward-art img{
+  position:relative;
+  z-index:2;
+  display:block;
+  width:100%;
+  height:100%;
+  object-fit:contain;
+  filter:drop-shadow(0 4px 5px rgba(83,48,37,.14));
+  transition:filter .24s ease,opacity .24s ease,transform .24s ease
+}
+.reward-art .reward-emoji-fallback{
+  position:absolute;
+  inset:0;
+  z-index:1;
+  display:grid;
+  place-items:center;
+  font-size:28px
+}
+.reward-cell.level-locked .reward-art img,
+.reward-cell.tier-locked .reward-art img{
+  filter:grayscale(1) opacity(.43);
+  transform:scale(.94)
+}
+.reward-cell.claimed .reward-art img{
+  filter:saturate(.72) brightness(.96) opacity(.82)
+}
+.reward-status-mark{
+  position:absolute;
+  inset:0;
+  z-index:3;
+  display:grid;
+  place-items:center;
+  pointer-events:none
+}
+.reward-status-mark span{
+  display:grid;
+  place-items:center;
+  width:29px;
+  height:29px;
+  border-radius:50%;
+  border:2px solid rgba(255,255,255,.9);
+  background:rgba(97,91,93,.82);
+  color:#fff;
+  font-size:14px;
+  font-weight:1000;
+  box-shadow:0 4px 12px rgba(63,52,55,.24)
+}
+.reward-cell.tier-locked .reward-status-mark span{
+  background:rgba(151,112,29,.83)
+}
+.reward-cell.claimed .reward-status-mark span{
+  background:rgba(67,145,78,.9)
+}
+.reward-cell.premium.claimed .reward-status-mark span,
+.reward-cell.gold-reward.claimed .reward-status-mark span{
+  background:rgba(174,113,13,.92)
+}
+.reward-availability{
+  min-height:13px;
+  color:#817273;
+  font-size:7.2px;
+  font-weight:900;
+  line-height:1.1
+}
+.reward-cell.claimable .reward-availability{color:#a53762}
+.reward-cell.premium.claimable .reward-availability{color:#805509}
+.reward-cell.claimed .reward-availability{color:#34713e}
+.reward-cell.premium.claimed .reward-availability{color:#795008}
+.reward-cell.level-locked .reward-action,
+.reward-cell.tier-locked .reward-action{
+  opacity:.86
+}
+.received-reward-icon{
+  overflow:hidden
+}
+.received-reward-icon .reward-art{
+  width:100%;
+  height:100%
+}
+.received-reward-icon .reward-art img{
+  width:100%;
+  height:100%;
+  object-fit:contain
+}
+@media(max-width:430px){
+  .reward-icon{width:54px;height:54px}
+}
+
+
+
+/* v0.79.30 — реальные ассеты во всех наградах и тарифах */
+.buy-level{display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.buy-level img{width:19px;height:19px;object-fit:contain}
+.hero:before,.hero:after{background-color:transparent}
+.summary-icon,.purchase-icon,.access-icon{display:grid;place-items:center}
+.summary-icon img{width:56px;height:56px;object-fit:contain;filter:drop-shadow(0 6px 8px rgba(126,73,22,.18))}
+.purchase-confirm-head .purchase-icon img{width:74px;height:62px;object-fit:contain;filter:drop-shadow(0 7px 10px rgba(145,91,20,.2))}
+.access-icon img{width:84px;height:64px;object-fit:contain;filter:drop-shadow(0 7px 10px rgba(130,78,28,.16))}
+.tier-title i{overflow:hidden;padding:3px}
+.tier-title i img{display:block;width:100%;height:100%;object-fit:contain}
+.tier-benefit img,.purchase-benefit img{flex:0 0 auto;width:34px;height:34px;object-fit:contain;filter:drop-shadow(0 3px 4px rgba(99,59,42,.12))}
+.tier-benefit span,.purchase-benefit span{min-width:0}
+.purchase-benefit{display:flex;align-items:center;gap:10px;text-align:left}
+.tier-price span,.purchase-price span{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
+.tier-price img{width:27px;height:27px;object-fit:contain;margin-bottom:1px}
+.purchase-price img{width:34px;height:34px;object-fit:contain;margin-bottom:1px}
+.reward-art .reward-emoji-fallback{display:none!important}
+.reward-cell.locked .reward-status-mark span{
+  width:25px;
+  height:25px;
+  font-size:12px;
+  transform:translateY(13px);
+  box-shadow:0 4px 10px rgba(63,52,55,.2)
+}
+.reward-cell.locked .reward-state{
+  z-index:5;
+  top:4px;
+}
+.reward-cell.locked .reward-icon{overflow:visible}
+.reward-cell.locked .reward-status-mark{z-index:4}
+@media(max-width:470px){
+  .premium-offer:after{width:72px;height:62px;top:18px}
+  .tier-benefit img,.purchase-benefit img{width:31px;height:31px}
+}
+
+
+/* v0.79.31 — пользовательские арты, сияние Элитного+ и безопасный возврат */
+.main-tab{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  padding:6px 12px
+}
+.main-tab-art{
+  flex:0 0 auto;
+  width:39px;
+  height:39px;
+  object-fit:contain;
+  filter:drop-shadow(0 4px 7px rgba(111,62,53,.15))
+}
+.main-tab span{min-width:0}
+.section-title-art{
+  display:inline-flex;
+  align-items:center;
+  gap:8px
+}
+.section-title-art img{
+  width:42px;
+  height:42px;
+  object-fit:contain;
+  filter:drop-shadow(0 4px 7px rgba(112,63,50,.13))
+}
+.lane-label{padding:3px;overflow:hidden}
+.lane-label-art{
+  display:block;
+  width:100%;
+  height:100%;
+  border-radius:10px;
+  object-fit:cover;
+  object-position:center;
+  filter:drop-shadow(0 3px 5px rgba(96,55,48,.12))
+}
+.premium-offer:after{content:none!important;display:none!important}
+.tier-title{align-items:center;padding-right:30px}
+.tier-title i.tier-card-art{
+  flex:0 0 auto;
+  width:62px;
+  height:76px;
+  padding:0;
+  border:1px solid rgba(230,178,173,.58);
+  border-radius:17px;
+  background:#fff6f1;
+  box-shadow:0 7px 16px rgba(114,64,54,.12)
+}
+.elite-plus .tier-title i.tier-card-art{
+  border-color:rgba(220,165,50,.68);
+  background:#fff7d6;
+  box-shadow:0 8px 19px rgba(180,117,21,.18)
+}
+.tier-title i.tier-card-art img{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  object-position:center 42%
+}
+.tier-benefit img,.purchase-benefit img{border-radius:10px}
+.claim-all-tasks > span{
+  display:flex;
+  align-items:center;
+  gap:8px
+}
+.claim-all-task-art{
+  width:35px;
+  height:35px;
+  object-fit:contain;
+  filter:drop-shadow(0 4px 7px rgba(134,77,19,.2))
+}
+.tier-card.elite-plus{
+  animation:elitePlusCardGlow 3.4s ease-in-out infinite
+}
+.tier-card.elite-plus:before{
+  content:"";
+  position:absolute;
+  z-index:1;
+  top:-35%;
+  bottom:-35%;
+  left:-65%;
+  width:42%;
+  pointer-events:none;
+  background:linear-gradient(100deg,transparent,rgba(255,255,255,.72),transparent);
+  transform:skewX(-18deg);
+  animation:elitePlusCardSweep 4.2s ease-in-out infinite
+}
+.tier-card.elite-plus > *{position:relative;z-index:2}
+.elite-plus .tier-buy{
+  position:relative;
+  isolation:isolate;
+  overflow:hidden;
+  box-shadow:0 8px 19px rgba(190,123,20,.25),inset 0 1px 0 rgba(255,255,255,.6);
+  animation:elitePlusButtonGlow 2.5s ease-in-out infinite
+}
+.elite-plus .tier-buy:before{
+  content:"";
+  position:absolute;
+  z-index:-1;
+  top:-80%;
+  bottom:-80%;
+  left:-60%;
+  width:45%;
+  pointer-events:none;
+  background:linear-gradient(100deg,transparent,rgba(255,255,255,.82),transparent);
+  transform:skewX(-18deg);
+  animation:elitePlusButtonSweep 3.1s ease-in-out infinite
+}
+.elite-plus .tier-buy:disabled{animation:none;box-shadow:none}
+.elite-plus .tier-buy:disabled:before{display:none}
+@keyframes elitePlusCardGlow{
+  0%,100%{box-shadow:0 0 0 3px rgba(255,239,177,.68),0 12px 30px rgba(178,119,25,.16)}
+  50%{box-shadow:0 0 0 4px rgba(255,224,115,.88),0 15px 36px rgba(193,126,18,.28)}
+}
+@keyframes elitePlusCardSweep{
+  0%,18%{left:-65%;opacity:0}
+  32%{opacity:.9}
+  58%,100%{left:130%;opacity:0}
+}
+@keyframes elitePlusButtonGlow{
+  0%,100%{filter:saturate(1);transform:translateY(0)}
+  50%{filter:saturate(1.18) brightness(1.05);transform:translateY(-1px)}
+}
+@keyframes elitePlusButtonSweep{
+  0%,24%{left:-60%;opacity:0}
+  38%{opacity:.95}
+  64%,100%{left:135%;opacity:0}
+}
+@media(prefers-reduced-motion:reduce){
+  .tier-card.elite-plus,.elite-plus .tier-buy{animation:none!important}
+  .tier-card.elite-plus:before,.elite-plus .tier-buy:before{animation:none!important;display:none!important}
+}
+@media(max-width:430px){
+  .main-tab-art{width:35px;height:35px}
+  .tier-title i.tier-card-art{width:58px;height:70px}
+  .section-title-art img{width:38px;height:38px}
+}
+
+
+
+/* v0.79.32 — чистые арты, компактные ячейки и отдельная типографика уровней */
+img[src$="/levels_5.webp"],
+img[src$="/premium_line.webp"],
+img[src$="/free_line.webp"],
+img[src$="/quest.webp"],
+img[src$="/season.webp"],
+img[src$="/xp.webp"]{
+  border:0!important;
+  border-radius:0!important;
+  outline:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+  filter:none!important
+}
+
+.level-column{
+  flex-basis:96px;
+  grid-template-rows:38px 120px 24px 120px
+}
+.level-number{
+  position:relative;
+  z-index:2;
+  font-family:Georgia,"Times New Roman",serif;
+  font-size:19px;
+  font-weight:900;
+  font-style:italic;
+  letter-spacing:-.035em;
+  font-variant-numeric:lining-nums tabular-nums;
+  color:#744238;
+  text-shadow:0 1px 0 #fff,0 3px 7px rgba(113,61,49,.15)
+}
+.level-column.current .level-number{
+  width:33px;
+  height:33px;
+  margin:2px auto;
+  border:2px solid rgba(255,255,255,.92);
+  background:linear-gradient(145deg,#f47fad,#d9417d);
+  box-shadow:0 0 0 2px rgba(222,73,130,.2),0 5px 12px rgba(181,53,104,.24);
+  font-size:19px;
+  font-style:normal;
+  text-shadow:0 2px 4px rgba(124,29,68,.25)
+}
+
+.reward-cell{
+  box-sizing:border-box;
+  height:120px;
+  min-height:120px;
+  max-height:120px;
+  display:grid;
+  grid-template-areas:
+    "state"
+    "icon"
+    "name"
+    "availability"
+    "action";
+  grid-template-rows:15px 42px 20px 12px 18px;
+  align-content:start;
+  justify-items:center;
+  gap:1px;
+  padding:4px 5px 5px;
+  overflow:hidden
+}
+.reward-state{
+  position:static;
+  grid-area:state;
+  transform:none;
+  min-width:0;
+  max-width:92%;
+  min-height:15px;
+  height:15px;
+  padding:0 7px;
+  font-size:6.7px;
+  line-height:15px;
+  overflow:hidden;
+  text-overflow:ellipsis
+}
+.reward-icon{
+  grid-area:icon;
+  align-self:center;
+  width:42px;
+  height:42px;
+  padding:2px;
+  border-radius:13px
+}
+.reward-art img{
+  max-width:100%;
+  max-height:100%;
+  object-fit:contain
+}
+.reward-name{
+  grid-area:name;
+  align-self:center;
+  width:100%;
+  min-height:0;
+  max-height:20px;
+  display:-webkit-box;
+  -webkit-box-orient:vertical;
+  -webkit-line-clamp:2;
+  overflow:hidden;
+  font-size:8px;
+  line-height:1.14
+}
+.reward-availability{
+  grid-area:availability;
+  align-self:center;
+  width:100%;
+  min-height:0;
+  max-height:12px;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  font-size:6.2px;
+  line-height:12px
+}
+.reward-action{
+  grid-area:action;
+  align-self:end;
+  width:90%;
+  min-height:18px;
+  height:18px;
+  padding:0 5px;
+  font-size:6.8px;
+  line-height:18px;
+  overflow:hidden;
+  white-space:nowrap;
+  text-overflow:ellipsis
+}
+.reward-cell.claimed .reward-action{display:none}
+.reward-status-mark span{
+  width:25px;
+  height:25px;
+  font-size:12px
+}
+.reward-cell.locked .reward-status-mark span{
+  transform:translateY(8px)
+}
+.reward-cell.claimed:after{
+  right:4px;
+  bottom:4px;
+  width:19px;
+  height:19px;
+  font-size:11px
+}
+.reward-connector span{
+  width:10px;
+  height:10px
+}
+
+.main-tab-art,
+.section-title-art img,
+.claim-all-task-art{
+  object-fit:contain
+}
+.lane-label{
+  padding:0;
+  background:transparent!important
+}
+.lane-label-art{
+  border:0;
+  border-radius:0;
+  background:transparent;
+  object-fit:contain;
+  filter:none
+}
+@media(max-width:430px){
+  .level-column{flex-basis:92px}
+  .reward-icon{width:40px;height:40px}
+  .reward-name{font-size:7.7px}
+}
+
+
+
+/* v0.79.35 — season identity, reliable PNG art and unified level number */
+.hero{
+  min-height:218px;
+  padding-right:210px
+}
+.hero::before{
+  right:10px;
+  bottom:7px;
+  width:198px;
+  height:198px;
+  border:0;
+  border-radius:0;
+  background:url("/assets/season-pass/season_pass1.png?v=07935") center/contain no-repeat;
+  box-shadow:none;
+  filter:drop-shadow(0 12px 18px rgba(142,74,63,.18))
+}
+.hero::after{display:none!important;content:none!important}
+.hero h1{
+  max-width:390px;
+  font-family:Georgia,"Times New Roman",serif;
+  font-size:29px;
+  font-weight:900;
+  line-height:1.08;
+  letter-spacing:-.025em;
+  color:#bb7817;
+  background:linear-gradient(105deg,#8f5511 0%,#d99b29 20%,#fff0a6 40%,#c88617 56%,#8d5310 72%,#f4cc68 88%,#9a5e13 100%);
+  background-size:240% 100%;
+  -webkit-background-clip:text;
+  background-clip:text;
+  -webkit-text-fill-color:transparent;
+  filter:drop-shadow(0 2px 0 rgba(255,255,255,.88)) drop-shadow(0 4px 6px rgba(137,79,15,.18));
+  animation:seasonTitleGoldShimmer 4.6s ease-in-out infinite
+}
+@keyframes seasonTitleGoldShimmer{
+  0%,18%{background-position:100% 50%}
+  55%,100%{background-position:0 50%}
+}
+.level-badge{
+  position:relative;
+  overflow:hidden;
+  border:2px solid #e2b14b;
+  border-radius:50%;
+  background:radial-gradient(circle at 36% 27%,#fff8cf 0 13%,#f6cf69 34%,#d99522 71%,#ad6811 100%);
+  color:#fff8dd;
+  font-family:Georgia,"Times New Roman",serif;
+  font-size:31px;
+  font-weight:900;
+  font-style:italic;
+  font-variant-numeric:lining-nums tabular-nums;
+  text-shadow:0 2px 0 #8c4d0a,0 4px 8px rgba(100,51,5,.3);
+  box-shadow:inset 0 0 0 3px rgba(255,249,211,.62),0 8px 18px rgba(184,112,20,.24)
+}
+.level-badge::after{
+  content:"";
+  position:absolute;
+  inset:-40% auto -40% -70%;
+  width:42%;
+  background:linear-gradient(100deg,transparent,rgba(255,255,255,.72),transparent);
+  transform:skewX(-18deg);
+  animation:levelBadgeSweep 4.8s ease-in-out infinite
+}
+@keyframes levelBadgeSweep{
+  0%,35%{left:-70%;opacity:0}
+  48%{opacity:.8}
+  70%,100%{left:135%;opacity:0}
+}
+.main-tab-art,
+.section-title-art img,
+.claim-all-task-art,
+.tier-benefit img,
+.purchase-benefit img,
+.lane-label-art{
+  border:0!important;
+  outline:0!important;
+  background:transparent!important
+}
+@media(max-width:560px){
+  .hero{min-height:208px;padding-right:148px}
+  .hero::before{right:2px;bottom:12px;width:150px;height:150px}
+  .hero h1{font-size:25px}
+}
+@media(max-width:390px){
+  .hero{padding-right:126px}
+  .hero::before{width:132px;height:132px}
+  .hero h1{font-size:23px}
+}
+@media(prefers-reduced-motion:reduce){
+  .hero h1,.level-badge::after{animation:none!important}
+}
+
+
+
+/* v0.79.35 — centered levels, paid-only level purchase, clean art and top purchase dialogs */
+.hero h1{
+  background:none!important;
+  -webkit-background-clip:border-box!important;
+  background-clip:border-box!important;
+  -webkit-text-fill-color:currentColor!important;
+  color:#7f435b!important;
+  animation:none!important;
+}
+.hero h1 .season-index,
+.title .season-index-mini{
+  background:linear-gradient(100deg,#9b5d0b 0%,#f0bc43 24%,#fff1a7 46%,#c77a0a 68%,#f5c85b 100%);
+  background-size:230% 100%;
+  -webkit-background-clip:text;
+  background-clip:text;
+  color:transparent;
+  animation:seasonTitleGoldShimmer 4.6s ease-in-out infinite;
+}
+.hero h1 .season-name{
+  background:linear-gradient(100deg,#8f3f65 0%,#d56b94 28%,#ffb5ca 48%,#b34b78 70%,#e58aaa 100%);
+  background-size:230% 100%;
+  -webkit-background-clip:text;
+  background-clip:text;
+  -webkit-text-fill-color:transparent;
+  color:transparent;
+  text-shadow:0 1px 0 rgba(255,255,255,.55),0 4px 12px rgba(185,79,121,.12);
+  animation:seasonTitleGoldShimmer 4.6s ease-in-out infinite;
+}
+.title .season-name-mini{
+  color:#b94f79;
+  font-style:normal;
+  font-weight:900;
+}
+.level-badge,
+.level-number,
+.level-column.current .level-number{
+  box-sizing:border-box;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  padding:0!important;
+  line-height:1!important;
+  text-align:center!important;
+  text-indent:0!important;
+  font-family:"Arial Rounded MT Bold","Trebuchet MS",system-ui,sans-serif!important;
+  font-style:normal!important;
+  font-variant-numeric:tabular-nums lining-nums!important;
+}
+.level-badge{padding-bottom:1px!important}
+.level-column.current .level-number{padding-bottom:1px!important}
+.buy-level[hidden]{display:none!important}
+.progress-card:has(.buy-level[hidden]){grid-template-columns:68px minmax(0,1fr)}
+.purchase-confirm{
+  place-items:start center!important;
+  overflow-y:auto;
+  overscroll-behavior:contain;
+  padding-top:max(14px,calc(env(safe-area-inset-top) + 10px));
+  padding-bottom:max(20px,env(safe-area-inset-bottom));
+}
+.purchase-confirm-card{
+  margin:0 auto;
+  max-height:calc(100dvh - max(34px,env(safe-area-inset-top)) - max(24px,env(safe-area-inset-bottom)));
+}
+.purchase-confirm-head .purchase-icon{
+  min-height:150px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  overflow:hidden;
+}
+.purchase-confirm-head .purchase-icon img{
+  width:min(168px,46vw)!important;
+  height:min(210px,31dvh)!important;
+  max-width:100%;
+  max-height:100%;
+  object-fit:contain!important;
+  border:0!important;
+  outline:0!important;
+  background:transparent!important;
+  border-radius:0!important;
+}
+.purchase-confirm[data-purchase-kind="level"] .purchase-confirm-head .purchase-icon{
+  min-height:112px;
+}
+.purchase-confirm[data-purchase-kind="level"] .purchase-confirm-head .purchase-icon img{
+  width:112px!important;
+  height:112px!important;
+}
+.main-tab-art,
+.section-title-art img,
+.claim-all-task-art,
+.tier-benefit img,
+.purchase-benefit img{
+  border-radius:0!important;
+  clip-path:none!important;
+}
+@media(max-width:430px){
+  .purchase-confirm-head .purchase-icon{min-height:128px}
+  .purchase-confirm-head .purchase-icon img{width:min(138px,43vw)!important;height:min(174px,27dvh)!important}
+}
+
+/* v0.79.35 — server-controlled prelaunch and permanent asset folder */
+.preseason-gate{
+  position:fixed;
+  inset:0;
+  z-index:1300;
+  display:grid;
+  place-items:start center;
+  overflow-y:auto;
+  overscroll-behavior:contain;
+  padding:max(16px,env(safe-area-inset-top)) 14px max(24px,env(safe-area-inset-bottom));
+  background:
+    radial-gradient(circle at 50% 0%,rgba(255,218,226,.82),transparent 44%),
+    linear-gradient(180deg,#fff6f4 0%,#fffaf5 100%);
+}
+.preseason-gate[hidden]{display:none!important}
+.preseason-card{
+  width:min(760px,100%);
+  margin:auto;
+  border:1px solid rgba(220,151,142,.45);
+  border-radius:32px;
+  background:rgba(255,255,255,.92);
+  box-shadow:0 24px 70px rgba(115,59,72,.18);
+  overflow:hidden;
+}
+.preseason-art-wrap{
+  position:relative;
+  aspect-ratio:9/16;
+  max-height:min(68dvh,820px);
+  min-height:420px;
+  background:#f8d8d8;
+  overflow:hidden;
+}
+.preseason-art{
+  width:100%;
+  height:100%;
+  display:block;
+  object-fit:cover;
+  object-position:center;
+}
+.preseason-art-wrap::after{
+  content:"";
+  position:absolute;
+  inset:auto 0 0;
+  height:30%;
+  background:linear-gradient(180deg,transparent,rgba(67,25,36,.58));
+  pointer-events:none;
+}
+.preseason-copy{
+  position:absolute;
+  left:18px;
+  right:18px;
+  bottom:18px;
+  z-index:2;
+  color:#fff;
+  text-align:center;
+  text-shadow:0 3px 14px rgba(72,27,39,.42);
+}
+.preseason-kicker{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-height:32px;
+  padding:5px 14px;
+  border:1px solid rgba(255,235,173,.76);
+  border-radius:999px;
+  background:rgba(94,45,50,.42);
+  color:#ffe7a3;
+  font-weight:1000;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+}
+.preseason-copy h1{
+  margin:10px 0 6px;
+  font-size:clamp(25px,6vw,42px);
+  line-height:1.04;
+  font-family:"Arial Rounded MT Bold","Trebuchet MS",system-ui,sans-serif;
+}
+.preseason-copy p{margin:0;font-size:clamp(14px,3.7vw,19px);font-weight:800;line-height:1.35}
+.preseason-details{padding:22px 20px 24px;text-align:center}
+.preseason-details h2{margin:0;color:#7d4057;font-size:24px}
+.preseason-details>p{margin:8px auto 18px;max-width:520px;color:#8c6e6c;font-weight:750;line-height:1.45}
+.preseason-countdown{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:8px;
+  margin:0 auto 16px;
+}
+.preseason-time{
+  min-width:0;
+  padding:12px 4px 10px;
+  border:1px solid #f0d3cd;
+  border-radius:17px;
+  background:linear-gradient(180deg,#fff,#fff7f3);
+  box-shadow:0 7px 20px rgba(127,66,79,.06);
+}
+.preseason-time strong{display:block;color:#bd4e77;font-size:25px;font-variant-numeric:tabular-nums}
+.preseason-time span{display:block;margin-top:2px;color:#9b7b76;font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.04em}
+.preseason-start{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-height:40px;
+  padding:7px 16px;
+  margin-bottom:15px;
+  border-radius:999px;
+  background:#fff0cf;
+  color:#9c6413;
+  font-weight:1000;
+}
+.preseason-actions{display:grid;gap:9px}
+.preseason-action{
+  min-height:54px;
+  border:0;
+  border-radius:18px;
+  font:inherit;
+  font-weight:1000;
+  cursor:pointer;
+}
+.preseason-action.preview{
+  color:#fff;
+  background:linear-gradient(100deg,#d84b82,#ee7ca0,#c53d73);
+  box-shadow:0 10px 24px rgba(190,59,112,.22);
+}
+.preseason-action.back{color:#805953;background:#f5eae6}
+@media(max-width:440px){
+  .preseason-gate{padding-left:8px;padding-right:8px}
+  .preseason-card{border-radius:24px}
+  .preseason-art-wrap{min-height:390px;max-height:59dvh}
+  .preseason-details{padding:18px 14px 20px}
+  .preseason-time strong{font-size:21px}
+}
+@media(prefers-reduced-motion:reduce){.preseason-action,.preseason-time{transition:none!important}}
+
+</style>
+</head>
+<body>
+<section class="access-gate" id="accessGate">
+  <div class="access-card">
+    <div class="access-icon" id="accessIcon"><img src="/assets/season-pass/season.png?v=07935" alt=""></div>
+    <h1 id="accessTitle">Проверяем доступ</h1>
+    <p id="accessMessage">Подождите несколько секунд.</p>
+    <div class="access-spinner" id="accessSpinner" aria-hidden="true"></div>
+    <div class="access-actions">
+      <button class="access-back" id="accessRetry" type="button" hidden>Повторить проверку</button>
+      <button class="access-back" id="accessBack" type="button" hidden>Вернуться в игру</button>
+    </div>
+  </div>
+</section>
+
+<section class="preseason-gate" id="preseasonGate" hidden>
+  <article class="preseason-card">
+    <div class="preseason-art-wrap">
+      <img class="preseason-art" src="/assets/season-pass/zaglyshka_season.png?v=07935" alt="Новый сезон скоро в игре">
+      <div class="preseason-copy">
+        <span class="preseason-kicker">Сладкий Забег</span>
+        <h1>Кафе готовится к открытию</h1>
+        <p>Новые награды, уровни и сладкие сюрпризы уже совсем рядом.</p>
+      </div>
+    </div>
+    <div class="preseason-details">
+      <h2 id="preseasonTitle">Сезон I: Открытие Кафе</h2>
+      <p>Сезонный пропуск откроется автоматически в день старта. Возвращайся за первыми наградами!</p>
+      <div class="preseason-countdown" aria-label="До начала сезона">
+        <div class="preseason-time"><strong id="preDays">00</strong><span>дней</span></div>
+        <div class="preseason-time"><strong id="preHours">00</strong><span>часов</span></div>
+        <div class="preseason-time"><strong id="preMinutes">00</strong><span>минут</span></div>
+        <div class="preseason-time"><strong id="preSeconds">00</strong><span>секунд</span></div>
+      </div>
+      <div class="preseason-start" id="preseasonStartText">Старт 10 августа 2026 года</div>
+      <div class="preseason-actions">
+        <button class="preseason-action preview" id="preseasonPreview" type="button" hidden>Открыть тестовый предпросмотр</button>
+        <button class="preseason-action back" id="preseasonReturn" type="button">Вернуться в игру</button>
+      </div>
+    </div>
+  </article>
+</section>
+
+<div class="app-scroll" id="appScroll" hidden>
+<main class="page" id="seasonPassPage">
+  <header class="topbar">
+    <button class="back" id="backButton" aria-label="Назад в профиль">←</button>
+    <div class="title"><strong>Сезонный пропуск</strong><span><b class="season-index-mini">Сезон I:</b> <em class="season-name-mini">Открытие Кафе</em></span></div>
+  </header>
+
+  <section class="pass-shell">
+    <section class="hero">
+      <h1><span class="season-index">Сезон I:</span> <span class="season-name">Открытие Кафе</span></h1>
+      <p>Получай дополнительные награды, выполняй задания и продвигайся по 50 уровням сезона.</p>
+      <div class="hero-meta">
+        <span class="pill" id="playerName">Гость кафе</span>
+        <span class="pill">До конца сезона: 27 дней</span>
+        <span class="pill" id="premiumStatus">Премиум не активирован</span>
+      </div>
+    </section>
+
+    <div class="content">
+      <nav class="main-tabs" aria-label="Разделы сезонного пропуска">
+        <button class="main-tab active" data-view-tab="rewards" type="button"><img class="main-tab-art" src="/assets/season-pass/season.png?v=07935" alt=""><span>Сезон</span></button>
+        <button class="main-tab" data-view-tab="tasks" type="button"><img class="main-tab-art" src="/assets/season-pass/quest.png?v=07935" alt=""><span>Задания</span></button>
+      </nav>
+
+      <section class="progress-card">
+        <div class="level-badge" id="levelValue">1</div>
+        <div class="progress-copy">
+          <strong>Уровень пропуска</strong>
+          <div class="progress-track"><i id="progressFill"></i></div>
+          <div class="progress-meta"><span id="progressText">0 / 100 XP</span><span id="runsText">0 забегов</span></div>
+        </div>
+        <button class="buy-level" id="buyLevel" type="button"><img src="/assets/optimized/v0.79.5/iconScore.png" alt="">Купить уровень · 0</button>
+      </section>
+
+      <section class="view" data-view="rewards">
+        <div class="section-head"><div><strong>Награды сезона</strong><br><span>Листай уровни горизонтально</span></div><span id="claimedCount">0 получено</span></div>
+
+        <div class="level-navigator">
+          <div class="level-nav-top"><strong>Быстрый переход по уровням</strong><span id="selectedLevelText">Уровень 1</span></div>
+          <input class="level-range" id="levelSlider" type="range" min="1" max="50" step="1" value="1" aria-label="Выберите уровень сезонного пропуска">
+          <div class="level-marks" id="levelMarks">
+            <button data-level-mark="1" type="button">0</button>
+            <button data-level-mark="10" type="button">10</button>
+            <button data-level-mark="20" type="button">20</button>
+            <button data-level-mark="30" type="button">30</button>
+            <button data-level-mark="40" type="button">40</button>
+            <button data-level-mark="50" type="button">50</button>
+          </div>
+        </div>
+
+        <div class="reward-board">
+          <aside class="lane-labels" aria-hidden="true">
+            <div class="lane-empty"></div>
+            <div class="lane-label free"><img class="lane-label-art" src="/assets/season-pass/free_line.png?v=07935" alt="Бесплатная линия"></div>
+            <div class="lane-divider">◆</div>
+            <div class="lane-label premium"><img class="lane-label-art" src="/assets/season-pass/premium_line.png?v=07935" alt="Премиальная линия"></div>
+          </aside>
+          <div class="reward-scroll" id="rewardScroll">
+            <div class="reward-track" id="rewardTrack"></div>
+          </div>
+        </div>
+
+        <button class="claim-all" id="claimAll" type="button">Получить все доступные награды</button>
+
+        <section class="premium-offer">
+          <h2>Тарифы сезонного пропуска</h2>
+          <p>Выбери обычный премиальный доступ или расширенный тариф с дополнительными бонусами.</p>
+          <div class="pass-tiers">
+            <article class="tier-card" id="eliteCard">
+              <div class="tier-title"><i class="tier-card-art"><img src="/assets/season-pass/elite.png?v=07935" alt="Элитный"></i><div><strong>Элитный</strong><span>Базовый премиальный тариф</span></div></div>
+              <div class="tier-benefits">
+                <div class="tier-benefit"><img src="/assets/season-pass/season.png?v=07935" alt=""><span>Открывает премиальную линию наград</span></div>
+                <div class="tier-benefit"><img src="/assets/season-pass/quest.png?v=07935" alt=""><span>Открывает премиальные задания</span></div>
+                <div class="tier-benefit"><img src="/assets/cases/legendary_closed.png" alt=""><span>Легендарный кейс на 50 уровне</span></div>
+              </div>
+              <div class="tier-price">
+                <span><img src="/assets/optimized/v0.79.5/iconScore.png" alt="">Очки<b>0</b></span>
+                <span><img src="/assets/optimized/v0.79.5/shopMarshmallowAssortment.png" alt="">Зефир<b>0</b></span>
+                <span><img src="/assets/optimized/v0.79.5/iconCoffee.png" alt="">Кофе<b>0</b></span>
+              </div>
+              <button class="tier-buy" id="buyElite" type="button">Открыть Элитный</button>
+              <div class="tier-owned">Тариф активирован</div>
+            </article>
+
+            <article class="tier-card elite-plus" id="elitePlusCard">
+              <div class="tier-title"><i class="tier-card-art"><img src="/assets/season-pass/elite_plus.png?v=07935" alt="Элитный+"></i><div><strong>Элитный+</strong><span>Максимальный тариф сезона</span></div></div>
+              <div class="tier-benefits">
+                <div class="tier-benefit"><img src="/assets/season-pass/xp_x2.png?v=07935" alt=""><span>×2 XP за новые завершённые забеги</span></div>
+                <div class="tier-benefit"><img src="/assets/season-pass/levels_5.png?v=07935" alt=""><span>Сразу +5 уровней пропуска</span></div>
+                <div class="tier-benefit"><img src="/assets/rating/frames/profile/ramka_profile_elita.png" alt=""><span>Эксклюзивная рамка</span></div>
+                <div class="tier-benefit"><img src="/assets/cases/avatars/legendary_avatarka_5.png" alt=""><span>Эксклюзивная аватарка</span></div>
+                <div class="tier-benefit"><img src="/assets/cases/gold_closed.png" alt=""><span>Золотой кейс при открытии</span></div>
+                <div class="tier-benefit"><img src="/assets/season-pass/elite.png?v=07935" alt=""><span>Все преимущества тарифа «Элитный»</span></div>
+              </div>
+              <div class="tier-price">
+                <span><img src="/assets/optimized/v0.79.5/iconScore.png" alt="">Очки<b>0</b></span>
+                <span><img src="/assets/optimized/v0.79.5/shopMarshmallowAssortment.png" alt="">Зефир<b>0</b></span>
+                <span><img src="/assets/optimized/v0.79.5/iconCoffee.png" alt="">Кофе<b>0</b></span>
+              </div>
+              <button class="tier-buy" id="buyElitePlus" type="button">Открыть Элитный+</button>
+              <div class="tier-owned">Тариф активирован</div>
+            </article>
+          </div>
+        </section>
+      </section>
+
+      <section class="view" data-view="tasks" hidden>
+        <div class="section-head"><div class="section-title-art"><img src="/assets/season-pass/quest.png?v=07935" alt=""><div><strong>Задания сезона</strong><br><span>Обычные и премиальные</span></div></div><span id="taskClaimedCount">0 выполнено</span></div>
+        <div class="task-toolbar">
+          <button class="task-filter active" data-task-filter="all" type="button">Все</button>
+          <button class="task-filter" data-task-filter="daily" type="button">Ежедневные</button>
+          <button class="task-filter" data-task-filter="weekly" type="button">Недельные</button>
+        </div>
+        <div class="task-summary">
+          <div class="summary-card"><strong>Ежедневные</strong><span>Обновятся через 14 ч. 15 мин.</span></div>
+          <div class="summary-card"><strong>Недельные</strong><span>Обновятся через 4 дня</span></div>
+        </div>
+        <button class="claim-all-tasks" id="claimAllTasks" type="button" disabled>
+          <span><img class="claim-all-task-art" src="/assets/season-pass/xp.png?v=07935" alt="">Забрать весь XP</span>
+          <b id="claimAllTasksValue">0 XP</b>
+        </button>
+        <div class="task-list" id="taskList"></div>
+        <div class="notice">Выполненные задания зачёркиваются. Пока прогресс увеличивается тестовой кнопкой; позже он будет приходить с сервера автоматически.</div>
+      </section>
+
+      <details class="test-tools">
+        <summary>Тестовые инструменты</summary>
+        <div class="test-grid">
+          <button class="test-button" id="addXp" type="button">+1 уровень</button>
+          <button class="test-button" id="removeXp" type="button">−1 уровень</button>
+          <button class="test-button" id="resetPass" type="button">Сбросить тест</button>
+          <button class="test-button" id="togglePremium" type="button">Переключить премиум</button>
+        </div>
+      </details>
+
+      <div class="notice">Тестовая версия: награды и покупки пока сохраняются только на устройстве и не изменяют настоящий баланс игрока.</div>
+    </div>
+  </section>
+</main>
+</div>
+
+<section class="reward-summary" id="rewardSummary" hidden aria-modal="true" role="dialog" aria-labelledby="rewardSummaryTitle">
+  <div class="reward-summary-card">
+    <header class="reward-summary-head">
+      <div class="summary-icon"><img src="/assets/cases/gold_open.png" alt=""></div>
+      <h2 id="rewardSummaryTitle">Полученные награды</h2>
+      <p id="rewardSummarySubtitle">Все доступные награды добавлены в тестовый прогресс.</p>
+    </header>
+    <div class="reward-summary-list" id="rewardSummaryList"></div>
+    <button class="reward-summary-close" id="rewardSummaryClose" type="button">Отлично</button>
+  </div>
+</section>
+
+<section class="purchase-confirm" id="purchaseConfirm" hidden aria-modal="true" role="dialog" aria-labelledby="purchaseConfirmTitle">
+  <div class="purchase-confirm-card">
+    <header class="purchase-confirm-head">
+      <div class="purchase-icon" id="purchaseConfirmIcon"><img src="/assets/season-pass/elite.png?v=07935" alt=""></div>
+      <h2 id="purchaseConfirmTitle">Подтвердить покупку</h2>
+      <p id="purchaseConfirmSubtitle">Проверьте тариф и его бонусы перед активацией.</p>
+    </header>
+    <div class="purchase-benefits" id="purchaseConfirmBenefits"></div>
+    <div class="purchase-price-title">Стоимость</div>
+    <div class="purchase-price">
+      <span><img src="/assets/optimized/v0.79.5/iconScore.png" alt="">Очки<b id="purchasePricePoints">0</b></span>
+      <span><img src="/assets/optimized/v0.79.5/shopMarshmallowAssortment.png" alt="">Зефир<b id="purchasePriceMarshmallow">0</b></span>
+      <span><img src="/assets/optimized/v0.79.5/iconCoffee.png" alt="">Кофе<b id="purchasePriceCoffee">0</b></span>
+    </div>
+    <div class="purchase-note">Тестовая покупка: ресурсы пока не списываются. В боевой версии перед подтверждением будет проверяться и списываться настоящий баланс.</div>
+    <div class="purchase-actions">
+      <button class="purchase-cancel" id="purchaseCancel" type="button">Отмена</button>
+      <button class="purchase-submit" id="purchaseSubmit" type="button">Подтвердить покупку</button>
+    </div>
+  </div>
+</section>
+
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+(() => {
+  const PROGRESS_KEY = "zefirok-runner-progress-v2";
+  const LEGACY_PROGRESS_KEY = "zefirok-runner-progress-v1";
+  const PASS_KEY = "zefirok-season-pass-test-v3";
+  const OLD_PASS_KEYS = ["zefirok-season-pass-test-v2","zefirok-season-pass-test-v1","zefirok-battle-pass-test-v1"];
+  const ACCESS_PATH = "/api/battle-pass/access";
+  const MAX_LEVEL = 50;
+  const LEVEL_XP = Array.from({length:MAX_LEVEL},(_,index)=>{
+    const level = index + 1;
+    return 50 + 25 * level * (level + 1);
+  });
+  const LEVEL_START_XP = [0];
+  for (let level=1;level<=MAX_LEVEL;level++) {
+    LEVEL_START_XP[level] = LEVEL_START_XP[level-1] + LEVEL_XP[level-1];
+  }
+  const MAX_PASS_XP = LEVEL_START_XP[MAX_LEVEL-1];
+  const el = id => document.getElementById(id);
+  let toastTimer = 0;
+  let activeTaskFilter = "all";
+  let selectedLevel = 1;
+  let scrollFrame = 0;
+  let suppressScrollSync = false;
+  let scrollSyncTimer = 0;
+  let sliderInteracting = false;
+  let pendingPurchaseTier = null;
+  let pendingLevelPurchase = false;
+
+  const tasks = [
+    {id:"d_run_1",period:"daily",premium:false,title:"Заверши 1 забег",description:"Засчитывается любой завершённый забег.",target:1,step:1,xp:180},
+    {id:"d_marsh_20",period:"daily",premium:false,title:"Собери 20 зефирок",description:"Собирай зефир во время забегов.",target:20,step:5,xp:140},
+    {id:"d_coffee_5",period:"daily",premium:false,title:"Собери 5 кофе",description:"Найди пять чашек кофе за день.",target:5,step:1,xp:160},
+    {id:"d_points_3000",period:"daily",premium:false,title:"Набери 3 000 очков",description:"Можно выполнить за несколько забегов.",target:3000,step:750,xp:200},
+    {id:"d_p_run_3",period:"daily",premium:true,title:"Заверши 3 забега",description:"Дополнительное ежедневное задание премиума.",target:3,step:1,xp:280},
+    {id:"d_p_marsh_50",period:"daily",premium:true,title:"Собери 50 зефирок",description:"Премиальное задание с повышенной наградой.",target:50,step:10,xp:250},
+    {id:"w_run_15",period:"weekly",premium:false,title:"Заверши 15 забегов",description:"Недельная цель для постоянных игроков.",target:15,step:3,xp:800},
+    {id:"w_marsh_250",period:"weekly",premium:false,title:"Собери 250 зефирок",description:"Суммарно за все забеги недели.",target:250,step:50,xp:750},
+    {id:"w_coffee_40",period:"weekly",premium:false,title:"Собери 40 кофе",description:"Суммарно за текущую неделю.",target:40,step:8,xp:700},
+    {id:"w_points_50000",period:"weekly",premium:false,title:"Набери 50 000 очков",description:"Очки складываются со всех забегов.",target:50000,step:10000,xp:900},
+    {id:"w_p_run_25",period:"weekly",premium:true,title:"Заверши 25 забегов",description:"Большая недельная цель премиального пропуска.",target:25,step:5,xp:1200},
+    {id:"w_p_cases_3",period:"weekly",premium:true,title:"Открой 3 кейса",description:"Подойдут кейсы любого качества.",target:3,step:1,xp:1100}
+  ];
+
+  const REWARD_ASSETS = Object.freeze({
+    marshmallow:"/assets/optimized/v0.79.5/shopMarshmallowAssortment.png",
+    coffee:"/assets/optimized/v0.79.5/iconCoffee.png",
+    points:"/assets/optimized/v0.79.5/iconScore.png",
+    standardCase:"/assets/cases/standart_closed.png",
+    silverCase:"/assets/cases/Bronze_close.png",
+    goldCase:"/assets/cases/gold_closed.png",
+    legendaryCase:"/assets/cases/legendary_closed.png",
+    eliteFrame:"/assets/rating/frames/profile/ramka_profile_elita.png",
+    eliteAvatar:"/assets/cases/avatars/legendary_avatarka_5.png",
+    eliteBadge:"/assets/season-pass/elite.png?v=07935",
+    elitePlusBadge:"/assets/season-pass/elite_plus.png?v=07935",
+    premiumReward:"/assets/season-pass/season.png?v=07935",
+    premiumTask:"/assets/season-pass/quest.png?v=07935",
+    levelBoost:"/assets/season-pass/levels_5.png?v=07935",
+    xpBoost:"/assets/season-pass/xp_x2.png?v=07935",
+    questIcon:"/assets/season-pass/quest.png?v=07935",
+    seasonIcon:"/assets/season-pass/season.png?v=07935",
+    xpIcon:"/assets/season-pass/xp.png?v=07935"
+  });
+
+  function rewardAssetFor(name) {
+    const text = String(name || "").toLowerCase();
+    if (text.includes("легендар") && text.includes("кейс")) return REWARD_ASSETS.legendaryCase;
+    if (text.includes("золот") && text.includes("кейс")) return REWARD_ASSETS.goldCase;
+    if (text.includes("серебр") && text.includes("кейс")) return REWARD_ASSETS.silverCase;
+    if (text.includes("обычн") && text.includes("кейс")) return REWARD_ASSETS.standardCase;
+    if (text.includes("зефир")) return REWARD_ASSETS.marshmallow;
+    if (text.includes("кофе")) return REWARD_ASSETS.coffee;
+    if (text.includes("очк")) return REWARD_ASSETS.points;
+    if (text.includes("рамк")) return REWARD_ASSETS.eliteFrame;
+    if (text.includes("аватар")) return REWARD_ASSETS.eliteAvatar;
+    if (text.includes("уров")) return REWARD_ASSETS.levelBoost;
+    if (text.includes("xp") || text.includes("опыт")) return REWARD_ASSETS.xpBoost;
+    if (text.includes("тариф") || text.includes("элитн")) return REWARD_ASSETS.eliteBadge;
+    return "";
+  }
+
+  function rewardArtMarkup(name, fallback, imageOverride="") {
+    const image = String(imageOverride || rewardAssetFor(name) || "");
+    const alt = String(name || "Награда").replace(/"/g,"&quot;");
+    return image
+      ? `<span class="reward-art"><img src="${image}" alt="${alt}" loading="lazy" decoding="async"></span>`
+      : `<span class="reward-art" aria-hidden="true"></span>`;
+  }
+
+  function rewardFor(level, premium) {
+    const tier = Math.floor((level - 1) / 10);
+    if (premium) {
+      if (level === 50) return ["legendaryCase","Легендарный кейс","Финальная премиум-награда"];
+      if (level % 10 === 0) return ["goldCase","Золотой кейс","Премиальная линия"];
+      if (level % 5 === 0) return ["silverCase","Серебряный кейс","Премиальная линия"];
+      if (level % 4 === 0) return ["standardCase","Обычный кейс","Премиальная линия"];
+      const cycle = level % 3;
+      if (cycle === 1) return ["marshmallow",`${80 + tier * 15} зефира`,"Премиальная валюта"];
+      if (cycle === 2) return ["coffee",`${25 + tier * 5} кофе`,"Премиальная валюта"];
+      return ["points",`${2000 + tier * 500} очков`,"Премиальная валюта"];
+    }
+    if (level === 50) return ["goldCase","Золотой кейс","Финал бесплатной линии"];
+    if ([40,45,48].includes(level)) return ["silverCase","Серебряный кейс","Поздняя бесплатная награда"];
+    if (level % 5 === 0) return ["standardCase","Обычный кейс","Бесплатная линия"];
+    const cycle = level % 3;
+    if (cycle === 1) return ["marshmallow",`${35 + tier * 8} зефира`,"Бесплатная валюта"];
+    if (cycle === 2) return ["coffee",`${10 + tier * 4} кофе`,"Бесплатная валюта"];
+    return ["points",`${700 + tier * 300} очков`,"Бесплатная валюта"];
+  }
+
+  const rewards = Array.from({length:MAX_LEVEL},(_,index)=>({
+    free:rewardFor(index+1,false),
+    premium:rewardFor(index+1,true)
+  }));
+
+  function safeJson(raw, fallback) {
+    try {
+      const value = JSON.parse(raw);
+      return value && typeof value === "object" ? value : fallback;
+    } catch {
+      return fallback;
+    }
+  }
+
+  function telegramInitData() {
+    const direct = String(window.Telegram?.WebApp?.initData || "");
+    if (direct) {
+      try { sessionStorage.setItem("zefirok-telegram-init-data", direct); } catch {}
+      return direct;
+    }
+
+    try {
+      const hashParams = new URLSearchParams(String(location.hash || "").replace(/^#/, ""));
+      const fromHash = String(hashParams.get("tgInitData") || "");
+      if (fromHash) {
+        sessionStorage.setItem("zefirok-telegram-init-data", fromHash);
+        try { history.replaceState(null, "", location.pathname + location.search); } catch {}
+        return fromHash;
+      }
+    } catch {}
+
+    try { return String(sessionStorage.getItem("zefirok-telegram-init-data") || ""); }
+    catch { return ""; }
+  }
+
+  async function waitForTelegramInitData(timeoutMs = 1600) {
+    const startedAt = Date.now();
+    let value = telegramInitData();
+    while (!value && Date.now() - startedAt < timeoutMs) {
+      await new Promise((resolve) => setTimeout(resolve, 80));
+      value = telegramInitData();
+    }
+    return value;
+  }
+
+  function showAccessError(message, title = "Не удалось открыть пропуск") {
+    el("accessIcon").innerHTML = `<img src="${REWARD_ASSETS.eliteBadge}" alt="">`;
+    el("accessTitle").textContent = title;
+    el("accessMessage").textContent = message || "Попробуйте повторить проверку.";
+    el("accessSpinner").hidden = true;
+    el("accessRetry").hidden = false;
+    el("accessBack").hidden = false;
+  }
+
+  function denyAccess(message) {
+    el("accessIcon").innerHTML = `<img src="${REWARD_ASSETS.eliteBadge}" alt="">`;
+    el("accessTitle").textContent = "Сезонный пропуск пока скрыт";
+    el("accessMessage").textContent = message || "Он появится в профиле после запуска.";
+    el("accessSpinner").hidden = true;
+    el("accessRetry").hidden = true;
+    el("accessBack").hidden = false;
+  }
+
+  function showAccessLoading() {
+    el("accessIcon").innerHTML = `<img src="${REWARD_ASSETS.eliteBadge}" alt="">`;
+    el("accessTitle").textContent = "Проверяем доступ";
+    el("accessMessage").textContent = "Подождите несколько секунд.";
+    el("accessSpinner").hidden = false;
+    el("accessRetry").hidden = true;
+    el("accessBack").hidden = true;
+    el("accessGate").hidden = false;
+    el("preseasonGate").hidden = true;
+    el("appScroll").hidden = true;
+  }
+
+  let preseasonTimer = 0;
+  let preseasonServerOffsetMs = 0;
+  let preseasonStartMs = 0;
+
+  function stopPreseasonTimer() {
+    if (preseasonTimer) clearInterval(preseasonTimer);
+    preseasonTimer = 0;
+  }
+
+  function formatSeasonStart(value) {
+    const date = new Date(value);
+    if (!Number.isFinite(date.getTime())) return "Старт 10 августа 2026 года";
+    return `Старт ${new Intl.DateTimeFormat("ru-RU",{day:"numeric",month:"long",year:"numeric",timeZone:"Europe/Moscow"}).format(date)}`;
+  }
+
+  function updatePreseasonCountdown() {
+    const now = Date.now() + preseasonServerOffsetMs;
+    const remaining = Math.max(0, preseasonStartMs - now);
+    const total = Math.floor(remaining / 1000);
+    const days = Math.floor(total / 86400);
+    const hours = Math.floor((total % 86400) / 3600);
+    const minutes = Math.floor((total % 3600) / 60);
+    const seconds = total % 60;
+    el("preDays").textContent = String(days).padStart(2,"0");
+    el("preHours").textContent = String(hours).padStart(2,"0");
+    el("preMinutes").textContent = String(minutes).padStart(2,"0");
+    el("preSeconds").textContent = String(seconds).padStart(2,"0");
+    if (remaining <= 0) {
+      stopPreseasonTimer();
+      setTimeout(()=>{ void boot(); }, 450);
+    }
+  }
+
+  function showPreseason(season, canPreview) {
+    stopPreseasonTimer();
+    const safe = season && typeof season === "object" ? season : {};
+    const serverMs = Date.parse(String(safe.serverTime || ""));
+    const startMs = Date.parse(String(safe.startsAt || ""));
+    preseasonServerOffsetMs = Number.isFinite(serverMs) ? serverMs - Date.now() : 0;
+    preseasonStartMs = Number.isFinite(startMs) ? startMs : Date.parse("2026-08-10T00:00:00+03:00");
+    el("preseasonTitle").textContent = String(safe.title || "Сезон I: Открытие Кафе");
+    el("preseasonStartText").textContent = formatSeasonStart(preseasonStartMs);
+    el("preseasonPreview").hidden = !canPreview;
+    el("accessGate").hidden = true;
+    el("appScroll").hidden = true;
+    el("preseasonGate").hidden = false;
+    updatePreseasonCountdown();
+    preseasonTimer = setInterval(updatePreseasonCountdown,1000);
+  }
+
+  function openSeasonPassInterface() {
+    stopPreseasonTimer();
+    el("accessGate").hidden = true;
+    el("preseasonGate").hidden = true;
+    el("appScroll").hidden = false;
+    selectedLevel = currentLevel();
+    render();
+    requestAnimationFrame(()=>requestAnimationFrame(()=>scrollToLevel(selectedLevel,"auto")));
+  }
+
+  async function checkAccess() {
+    const initData = await waitForTelegramInitData();
+    if (!initData) return {allowed:false,kind:"auth",error:"Telegram не передал данные входа. Закройте страницу и снова откройте сезонный пропуск из профиля."};
+
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 9000);
+    try {
+      const response = await fetch(ACCESS_PATH,{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({initData}),
+        cache:"no-store",
+        credentials:"same-origin",
+        signal:controller.signal
+      });
+      const data = await response.json().catch(()=>({}));
+      return {
+        allowed:response.ok && data?.allowed === true,
+        kind:response.status === 403 ? "hidden" : response.ok ? "ok" : "server",
+        error:data?.error || "Сезонный пропуск пока недоступен.",
+        season:data?.season && typeof data.season === "object" ? data.season : null,
+        canPreviewUpcoming:data?.canPreviewUpcoming === true,
+        accessRole:String(data?.accessRole || "player")
+      };
+    } catch (error) {
+      const timedOut = error?.name === "AbortError";
+      return {
+        allowed:false,
+        kind:timedOut ? "timeout" : "network",
+        error:timedOut
+          ? "Сервер слишком долго отвечает. Нажмите «Повторить проверку»."
+          : "Не удалось связаться с сервером. Проверьте интернет и повторите попытку."
+      };
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  function readProgress() {
+    return safeJson(localStorage.getItem(PROGRESS_KEY) || localStorage.getItem(LEGACY_PROGRESS_KEY),{});
+  }
+
+  function readLegacyPass() {
+    for (const key of OLD_PASS_KEYS) {
+      const value = safeJson(localStorage.getItem(key),null);
+      if (value) return value;
+    }
+    return {};
+  }
+
+  function readPass() {
+    const current = safeJson(localStorage.getItem(PASS_KEY),null);
+    const old = current || readLegacyPass();
+    const oldVersion = Number(old?.schemaVersion) || (current ? 2 : 1);
+    const rawBonus = Math.max(0,Number(old?.bonusXp)||0);
+    let bonusXp = oldVersion < 2 ? rawBonus * 10 : rawBonus;
+    if (oldVersion < 3 && bonusXp > 0) {
+      const legacyLevel = Math.min(MAX_LEVEL,Math.max(1,Math.floor(bonusXp / 1000) + 1));
+      bonusXp = LEVEL_START_XP[legacyLevel-1] || 0;
+    }
+    const storedTier = String(old?.premiumTier || "");
+    const premiumTier = ["elite","elite_plus"].includes(storedTier)
+      ? storedTier
+      : Boolean(old?.premium) ? "elite" : "none";
+    const currentRuns = Math.max(0,Number(readProgress().completedRuns)||0);
+    const runBaseline = oldVersion >= 5 && Number.isFinite(Number(old?.runBaseline))
+      ? Math.max(0,Number(old.runBaseline))
+      : currentRuns;
+    return {
+      schemaVersion:5,
+      runBaseline,
+      bonusXp,
+      premium:premiumTier !== "none",
+      premiumTier,
+      elitePlusStartRuns:old?.elitePlusStartRuns !== null && old?.elitePlusStartRuns !== undefined && Number.isFinite(Number(old.elitePlusStartRuns)) ? Math.max(0,Number(old.elitePlusStartRuns)) : null,
+      elitePlusBonusGranted:Boolean(old?.elitePlusBonusGranted),
+      entitlements:Array.isArray(old?.entitlements) ? old.entitlements.map(String) : [],
+      claimed:Array.isArray(old?.claimed) ? old.claimed.map(String) : [],
+      taskProgress:old?.taskProgress && typeof old.taskProgress === "object" ? old.taskProgress : {},
+      claimedTasks:Array.isArray(old?.claimedTasks) ? old.claimedTasks.map(String) : []
+    };
+  }
+
+  function savePass() {
+    pass.schemaVersion = 5;
+    localStorage.setItem(PASS_KEY,JSON.stringify(pass));
+  }
+
+  function showToast(text) {
+    const toast = el("toast");
+    toast.textContent = text;
+    toast.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(()=>toast.classList.remove("show"),1800);
+  }
+
+  function profileName() {
+    const user = window.Telegram?.WebApp?.initDataUnsafe?.user;
+    return [user?.first_name,user?.last_name].filter(Boolean).join(" ") || "Гость кафе";
+  }
+
+  function premiumTierLabel() {
+    if (pass.premiumTier === "elite_plus") return "Элитный+ активирован";
+    if (pass.premiumTier === "elite") return "Элитный активирован";
+    return "Премиум не активирован";
+  }
+
+  function realRunXp() {
+    const totalRuns = Math.max(0,Number(readProgress().completedRuns)||0);
+    const baseline = Math.max(0,Number(pass.runBaseline)||0);
+    const runs = Math.max(0,totalRuns-baseline);
+    const boostStartRaw = pass.elitePlusStartRuns !== null && Number.isFinite(Number(pass.elitePlusStartRuns))
+      ? Math.max(0,Number(pass.elitePlusStartRuns))
+      : totalRuns;
+    const boostStart = Math.max(baseline,boostStartRaw);
+    const boostedRuns = pass.premiumTier === "elite_plus" ? Math.max(0,totalRuns-boostStart) : 0;
+    return {runs,totalRuns,boostedRuns,xp:runs*100 + boostedRuns*100};
+  }
+
+  function totalXp() { return realRunXp().xp + pass.bonusXp; }
+  function xpRequiredForLevel(level) {
+    return LEVEL_XP[Math.max(1,Math.min(MAX_LEVEL,Number(level)||1))-1];
+  }
+  function xpAtLevelStart(level) {
+    return LEVEL_START_XP[Math.max(1,Math.min(MAX_LEVEL,Number(level)||1))-1] || 0;
+  }
+  function currentLevel() {
+    const xp = totalXp();
+    let low = 1;
+    let high = MAX_LEVEL;
+    while (low < high) {
+      const mid = Math.ceil((low + high) / 2);
+      if (xp >= xpAtLevelStart(mid)) low = mid;
+      else high = mid - 1;
+    }
+    return low;
+  }
+  function xpNeededForNextLevel() {
+    const level = currentLevel();
+    if (level >= MAX_LEVEL) return 0;
+    return Math.max(0,xpAtLevelStart(level+1)-totalXp());
+  }
+  function addBonusXp(amount) {
+    const realXp = realRunXp().xp;
+    const cap = Math.max(0,MAX_PASS_XP-realXp);
+    pass.bonusXp = Math.max(0,Math.min(cap,pass.bonusXp+Math.max(0,Number(amount)||0)));
+  }
+  function rewardId(level,type) { return `${level}:${type}`; }
+  function isUnlocked(level) { return currentLevel() >= level; }
+  function taskProgress(task) { return Math.max(0,Math.min(task.target,Number(pass.taskProgress[task.id])||0)); }
+  function taskComplete(task) { return taskProgress(task) >= task.target; }
+  function taskClaimed(task) { return pass.claimedTasks.includes(task.id); }
+  function claimableTasks() {
+    return tasks.filter(task=>taskComplete(task) && !taskClaimed(task) && !(task.premium && !pass.premium));
+  }
+
+  let pass = readPass();
+
+  function rewardCellMarkup(level,type,data) {
+    const id = rewardId(level,type);
+    const premium = type === "premium";
+    const claimed = pass.claimed.includes(id);
+    const levelUnlocked = isUnlocked(level);
+    const tierLocked = premium && !pass.premium;
+    const levelLocked = !levelUnlocked;
+    const locked = levelLocked || tierLocked;
+    const claimable = !locked && !claimed;
+    const unlocked = !locked;
+    const rewardName = String(data?.[1] || "");
+    const goldReward = /золот|легендар/i.test(rewardName);
+    const silverReward = /серебр/i.test(rewardName);
+    const label = levelLocked ? "Закрыто" : tierLocked ? "Нужен Элитный" : "Получить";
+    const state = claimed ? "✓ Получено" : claimable ? "Можно забрать" : tierLocked ? "Элитный" : `Уровень ${level}`;
+    const availability = claimed ? "Награда уже забрана" : claimable ? "Награда открыта" : tierLocked ? "Откроется с премиумом" : `Откроется на ${level} уровне`;
+    const mark = claimed ? "✓" : locked ? "🔒" : "";
+    return `<article class="reward-cell ${premium?"premium":""} ${unlocked?"unlocked":""} ${claimable?"claimable":""} ${claimed?"claimed":""} ${locked?"locked":""} ${levelLocked?"level-locked":""} ${tierLocked?"tier-locked":""} ${goldReward?"gold-reward":""} ${silverReward?"silver-reward":""}" aria-label="${rewardName}. ${availability}">
+      <span class="reward-state">${state}</span>
+      <div class="reward-icon">
+        ${rewardArtMarkup(rewardName,data[0])}
+        ${mark?`<span class="reward-status-mark"><span>${mark}</span></span>`:""}
+      </div>
+      <div class="reward-name">${data[1]}</div>
+      <div class="reward-availability">${availability}</div>
+      ${claimed ? "" : `<button class="reward-action" data-claim="${id}" ${locked?"disabled":""} type="button">${label}</button>`}
+    </article>`;
+  }
+
+  function renderRewardTrack() {
+    const level = currentLevel();
+    el("rewardTrack").innerHTML = rewards.map((reward,index)=>{
+      const itemLevel = index + 1;
+      return `<section class="level-column ${itemLevel===level?"current":""} ${itemLevel===selectedLevel?"selected":""}" data-level-column="${itemLevel}">
+        <div class="level-number">${itemLevel}</div>
+        ${rewardCellMarkup(itemLevel,"free",reward.free)}
+        <div class="reward-connector"><span></span></div>
+        ${rewardCellMarkup(itemLevel,"premium",reward.premium)}
+      </section>`;
+    }).join("");
+  }
+
+  function updateNavigator(level) {
+    selectedLevel = Math.max(1,Math.min(MAX_LEVEL,Number(level)||1));
+    el("levelSlider").value = String(selectedLevel);
+    el("selectedLevelText").textContent = `Уровень ${selectedLevel}`;
+    document.querySelectorAll("[data-level-mark]").forEach(button=>{
+      button.classList.toggle("active",Number(button.dataset.levelMark)===selectedLevel);
+    });
+    document.querySelectorAll("[data-level-column]").forEach(column=>{
+      column.classList.toggle("selected",Number(column.dataset.levelColumn)===selectedLevel);
+    });
+  }
+
+  function releaseScrollSync(delay = 0) {
+    clearTimeout(scrollSyncTimer);
+    scrollSyncTimer = setTimeout(()=>{ suppressScrollSync = false; },delay);
+  }
+
+  function scrollToLevel(level,behavior="smooth") {
+    const targetLevel = Math.max(1,Math.min(MAX_LEVEL,Number(level)||1));
+    const target = document.querySelector(`[data-level-column="${targetLevel}"]`);
+    if (!target) return;
+    const scroll = el("rewardScroll");
+    const left = Math.max(0,target.offsetLeft - Math.max(0,(scroll.clientWidth-target.offsetWidth)/2));
+    suppressScrollSync = true;
+    updateNavigator(targetLevel);
+    scroll.scrollTo({left,behavior});
+    releaseScrollSync(behavior === "smooth" ? 460 : 90);
+  }
+
+  function nearestVisibleLevel() {
+    const scroll = el("rewardScroll");
+    const center = scroll.scrollLeft + scroll.clientWidth/2;
+    let bestLevel = selectedLevel;
+    let bestDistance = Infinity;
+    document.querySelectorAll("[data-level-column]").forEach(column=>{
+      const columnCenter = column.offsetLeft + column.offsetWidth/2;
+      const distance = Math.abs(columnCenter-center);
+      if (distance < bestDistance) {
+        bestDistance = distance;
+        bestLevel = Number(column.dataset.levelColumn);
+      }
+    });
+    return bestLevel;
+  }
+
+  function taskMarkup(task) {
+    const progress = taskProgress(task);
+    const complete = taskComplete(task);
+    const claimed = taskClaimed(task);
+    const locked = task.premium && !pass.premium;
+    const ready = complete && !claimed && !locked;
+    const percent = Math.min(100,Math.round(progress/task.target*100));
+    let action = "Добавить прогресс";
+    if (locked) action = "Нужен премиум";
+    else if (claimed) action = "XP получен";
+    else if (complete) action = `Забрать ${task.xp} XP`;
+
+    if (claimed) {
+      return `<article class="task-card ${task.premium?"premium":""} complete claimed" data-task-card="${task.id}">
+        <div class="task-top">
+          <div class="task-badges">
+            <span class="task-badge ${task.period==="weekly"?"weekly":""}">${task.period==="daily"?"ЕЖЕДНЕВНОЕ":"НЕДЕЛЬНОЕ"}</span>
+            ${task.premium?'<span class="task-badge premium">ПРЕМИУМ</span>':'<span class="task-badge">ОБЫЧНОЕ</span>'}
+            <span class="task-badge done">XP ПОЛУЧЕН</span>
+          </div>
+          <span class="task-xp">+${task.xp} XP</span>
+        </div>
+        <h3>${task.title}</h3>
+      </article>`;
+    }
+
+    return `<article class="task-card ${task.premium?"premium":""} ${locked?"locked":""} ${complete?"complete":""} ${ready?"ready":""}" data-task-card="${task.id}">
+      <div class="task-top">
+        <div class="task-badges">
+          <span class="task-badge ${task.period==="weekly"?"weekly":""}">${task.period==="daily"?"ЕЖЕДНЕВНОЕ":"НЕДЕЛЬНОЕ"}</span>
+          ${task.premium?'<span class="task-badge premium">ПРЕМИУМ</span>':'<span class="task-badge">ОБЫЧНОЕ</span>'}
+          ${complete?'<span class="task-badge done">ВЫПОЛНЕНО</span>':""}
+        </div>
+        <span class="task-xp">+${task.xp} XP</span>
+      </div>
+      <h3>${task.title}</h3>
+      <p>${task.description}</p>
+      <div class="task-progress"><i style="width:${percent}%"></i></div>
+      <div class="task-bottom">
+        <span>${progress.toLocaleString("ru-RU")} / ${task.target.toLocaleString("ru-RU")}</span>
+        <button class="task-action ${ready?"primary":""}" data-task-action="${task.id}" ${locked?"disabled":""} type="button">${action}</button>
+      </div>
+    </article>`;
+  }
+
+  function renderTasks() {
+    const visible = tasks.filter(task=>activeTaskFilter==="all" || task.period===activeTaskFilter);
+    const readyTasks = claimableTasks();
+    const readyXp = readyTasks.reduce((sum,task)=>sum+task.xp,0);
+    el("taskList").innerHTML = visible.map(taskMarkup).join("");
+    el("taskClaimedCount").textContent = `${tasks.filter(task=>taskComplete(task)).length} выполнено`;
+    el("claimAllTasks").disabled = readyTasks.length === 0;
+    el("claimAllTasksValue").textContent = readyTasks.length ? `+${readyXp.toLocaleString("ru-RU")} XP` : "0 XP";
+    document.querySelectorAll("[data-task-filter]").forEach(button=>{
+      button.classList.toggle("active",button.dataset.taskFilter===activeTaskFilter);
+    });
+  }
+
+  function animateCollectedTaskCard(card,index=0) {
+    return new Promise(resolve=>{
+      if (!card) {
+        resolve();
+        return;
+      }
+
+      card.querySelectorAll("button").forEach(button=>button.disabled=true);
+      const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
+      const rect = card.getBoundingClientRect();
+      const style = getComputedStyle(card);
+      const height = Math.max(1,Math.round(rect.height));
+      const delay = reducedMotion ? 0 : Math.min(index,7)*70;
+
+      card.classList.add("collecting");
+      card.style.height = `${height}px`;
+      card.style.minHeight = `${height}px`;
+      card.style.maxHeight = `${height}px`;
+      card.style.transformOrigin = "50% 8%";
+
+      const finish = ()=>{
+        card.style.opacity = "0";
+        card.style.height = "0px";
+        card.style.minHeight = "0px";
+        card.style.maxHeight = "0px";
+        card.style.paddingTop = "0px";
+        card.style.paddingBottom = "0px";
+        card.style.marginTop = "0px";
+        card.style.marginBottom = "0px";
+        card.style.borderTopWidth = "0px";
+        card.style.borderBottomWidth = "0px";
+        resolve();
+      };
+
+      setTimeout(()=>{
+        if (reducedMotion || typeof card.animate !== "function") {
+          card.classList.add("fallback-flip");
+          setTimeout(finish,reducedMotion?90:430);
+          return;
+        }
+
+        const flip = card.animate([
+          {opacity:1,transform:"perspective(900px) rotateX(0deg) translateY(0) scale(1)",offset:0},
+          {opacity:1,transform:"perspective(900px) rotateX(-6deg) translateY(-1px) scale(1.002)",offset:.18},
+          {opacity:.96,transform:"perspective(900px) rotateX(-72deg) translateY(-2px) scale(.995)",offset:.78},
+          {opacity:.18,transform:"perspective(900px) rotateX(-88deg) translateY(-3px) scale(.99)",offset:1}
+        ],{
+          duration:520,
+          easing:"cubic-bezier(.22,.75,.18,1)",
+          fill:"forwards"
+        });
+
+        flip.finished.then(()=>{
+          const collapse = card.animate([
+            {
+              opacity:.18,
+              height:`${height}px`,
+              minHeight:`${height}px`,
+              maxHeight:`${height}px`,
+              paddingTop:style.paddingTop,
+              paddingBottom:style.paddingBottom,
+              marginTop:style.marginTop,
+              marginBottom:style.marginBottom
+            },
+            {
+              opacity:0,
+              height:"0px",
+              minHeight:"0px",
+              maxHeight:"0px",
+              paddingTop:"0px",
+              paddingBottom:"0px",
+              marginTop:"0px",
+              marginBottom:"0px"
+            }
+          ],{
+            duration:280,
+            easing:"cubic-bezier(.4,0,.2,1)",
+            fill:"forwards"
+          });
+          collapse.finished.then(finish).catch(finish);
+        }).catch(finish);
+      },delay);
+    });
+  }
+
+  function collectTaskRewards(taskItems) {
+    const readyTasks = taskItems.filter(task=>taskComplete(task) && !taskClaimed(task) && !(task.premium && !pass.premium));
+    if (!readyTasks.length) {
+      showToast("Нет готовых заданий");
+      return;
+    }
+
+    const readyIds = new Set(readyTasks.map(task=>task.id));
+    const cards = [...document.querySelectorAll("[data-task-card]")].filter(card=>readyIds.has(card.dataset.taskCard));
+    el("claimAllTasks").disabled = true;
+
+    const totalXp = readyTasks.reduce((sum,task)=>sum+task.xp,0);
+    const animations = cards.map((card,index)=>animateCollectedTaskCard(card,index));
+    const waitForCards = animations.length ? Promise.all(animations) : new Promise(resolve=>setTimeout(resolve,120));
+
+    waitForCards.then(()=>{
+      readyTasks.forEach(task=>{
+        if (!taskClaimed(task)) pass.claimedTasks.push(task.id);
+      });
+      addBonusXp(totalXp);
+      savePass();
+      render();
+      showToast(`Получено ${totalXp.toLocaleString("ru-RU")} XP за ${readyTasks.length} заданий`);
+    });
+  }
+
+  function render() {
+    const real = realRunXp();
+    const xp = totalXp();
+    const level = currentLevel();
+    const required = xpRequiredForLevel(level);
+    const within = level>=MAX_LEVEL ? required : Math.max(0,xp-xpAtLevelStart(level));
+    const percent = level>=MAX_LEVEL ? 100 : Math.min(100,Math.round(within/required*100));
+
+    el("playerName").textContent = profileName();
+    el("premiumStatus").textContent = premiumTierLabel();
+    el("levelValue").textContent = String(level);
+    el("progressFill").style.width = `${percent}%`;
+    el("progressText").textContent = level>=MAX_LEVEL ? "Максимальный уровень" : `${within.toLocaleString("ru-RU")} / ${required.toLocaleString("ru-RU")} XP`;
+    el("runsText").textContent = pass.premiumTier === "elite_plus" ? `${real.runs} забегов · ×2 XP активно` : `${real.runs} забегов`;
+    el("claimedCount").textContent = `${pass.claimed.length} получено`;
+    el("eliteCard").classList.toggle("owned",pass.premiumTier === "elite");
+    el("elitePlusCard").classList.toggle("owned",pass.premiumTier === "elite_plus");
+    el("buyElite").disabled = pass.premiumTier !== "none";
+    el("buyElite").textContent = pass.premiumTier === "elite_plus" ? "Включён Элитный+" : pass.premiumTier === "elite" ? "Элитный активирован" : "Открыть Элитный";
+    el("buyElitePlus").disabled = pass.premiumTier === "elite_plus";
+    el("buyElitePlus").textContent = pass.premiumTier === "elite_plus" ? "Элитный+ активирован" : pass.premiumTier === "elite" ? "Улучшить до Элитный+" : "Открыть Элитный+";
+    el("buyLevel").hidden = pass.premiumTier === "none" || level >= MAX_LEVEL;
+    el("buyLevel").disabled = pass.premiumTier === "none" || level >= MAX_LEVEL;
+    el("togglePremium").textContent = `Тестовый тариф: ${pass.premiumTier === "elite_plus" ? "Элитный+" : pass.premiumTier === "elite" ? "Элитный" : "Нет"}`;
+
+    renderRewardTrack();
+    renderTasks();
+    updateNavigator(selectedLevel || level);
+  }
+
+  function rewardDetailsFromId(id) {
+    const [rawLevel,type] = String(id).split(":");
+    const level = Number(rawLevel);
+    const premium = type === "premium";
+    const data = rewards[level-1]?.[premium?"premium":"free"];
+    if (!data) return null;
+    return {id,level,premium,icon:data[0],image:rewardAssetFor(data[1]),name:data[1],description:data[2]};
+  }
+
+  function addEntitlement(id) {
+    if (!pass.entitlements.includes(id)) pass.entitlements.push(id);
+  }
+
+  const TIER_CONFIG = {
+    elite:{
+      image:REWARD_ASSETS.eliteBadge,
+      title:"Элитный",
+      subtitle:"Открывает премиальную линию сезонного пропуска.",
+      benefits:[
+        {image:REWARD_ASSETS.premiumReward,text:"Премиальная линия из 50 наград"},
+        {image:REWARD_ASSETS.premiumTask,text:"Премиальные ежедневные и недельные задания"},
+        {image:REWARD_ASSETS.legendaryCase,text:"Легендарный кейс на 50 уровне"}
+      ]
+    },
+    elite_plus:{
+      image:REWARD_ASSETS.elitePlusBadge,
+      title:"Элитный+",
+      subtitle:"Максимальный тариф со всеми дополнительными бонусами.",
+      benefits:[
+        {image:REWARD_ASSETS.eliteBadge,text:"Все преимущества тарифа «Элитный»"},
+        {image:REWARD_ASSETS.xpBoost,text:"×2 XP за новые завершённые забеги"},
+        {image:REWARD_ASSETS.levelBoost,text:"Сразу +5 уровней пропуска"},
+        {image:REWARD_ASSETS.eliteFrame,text:"Эксклюзивная рамка"},
+        {image:REWARD_ASSETS.eliteAvatar,text:"Эксклюзивная аватарка"},
+        {image:REWARD_ASSETS.goldCase,text:"Золотой кейс при открытии"}
+      ]
+    }
+  };
+
+  function openPurchaseConfirm(tier) {
+    const config = TIER_CONFIG[tier];
+    if (!config) return;
+    if (tier === "elite" && pass.premiumTier !== "none") return;
+    if (tier === "elite_plus" && pass.premiumTier === "elite_plus") return;
+    pendingLevelPurchase = false;
+    pendingPurchaseTier = tier;
+    el("purchaseConfirmIcon").innerHTML = `<img src="${config.image}" alt="${config.title}">`;
+    el("purchaseConfirmTitle").textContent = tier === "elite_plus" && pass.premiumTier === "elite"
+      ? "Улучшить до «Элитный+»?"
+      : `Купить «${config.title}»?`;
+    el("purchaseConfirmSubtitle").textContent = config.subtitle;
+    el("purchaseConfirmBenefits").innerHTML = config.benefits.map(item=>`<div class="purchase-benefit"><img src="${item.image}" alt=""><span>${item.text}</span></div>`).join("");
+    el("purchasePricePoints").textContent = "0";
+    el("purchasePriceMarshmallow").textContent = "0";
+    el("purchasePriceCoffee").textContent = "0";
+    el("purchaseSubmit").textContent = tier === "elite_plus" && pass.premiumTier === "elite"
+      ? "Подтвердить улучшение"
+      : "Подтвердить покупку";
+    el("purchaseConfirm").dataset.purchaseKind = tier;
+    el("purchaseConfirm").hidden = false;
+    document.body.style.overflow = "hidden";
+    el("purchaseConfirm").scrollTop = 0;
+    el("purchaseConfirm").querySelector(".purchase-confirm-card")?.scrollTo?.(0,0);
+    requestAnimationFrame(()=>{ el("purchaseConfirm").scrollTop = 0; el("purchaseSubmit").focus(); });
+  }
+
+  function openLevelPurchaseConfirm() {
+    if (pass.premiumTier === "none") {
+      showToast("Покупка уровней доступна только владельцам тарифа «Элитный» или «Элитный+»");
+      return;
+    }
+    const level = currentLevel();
+    const needed = xpNeededForNextLevel();
+    if (!needed || level >= MAX_LEVEL) {
+      showToast("Достигнут максимальный уровень");
+      return;
+    }
+    pendingPurchaseTier = null;
+    pendingLevelPurchase = true;
+    el("purchaseConfirm").dataset.purchaseKind = "level";
+    el("purchaseConfirmIcon").innerHTML = `<img src="/assets/season-pass/levels_5.png?v=07935" alt="Покупка уровня">`;
+    el("purchaseConfirmTitle").textContent = `Купить ${level + 1} уровень?`;
+    el("purchaseConfirmSubtitle").textContent = `Будет добавлено ${needed.toLocaleString("ru-RU")} XP — ровно до следующего уровня.`;
+    el("purchaseConfirmBenefits").innerHTML = `<div class="purchase-benefit"><img src="/assets/season-pass/xp.png?v=07935" alt=""><span>Текущий уровень: ${level}. После покупки: ${level + 1}.</span></div><div class="purchase-benefit"><img src="/assets/optimized/v0.79.5/iconScore.png" alt=""><span>Перед покупкой всегда показывается подтверждение, чтобы исключить случайное нажатие.</span></div>`;
+    el("purchasePricePoints").textContent = "0";
+    el("purchasePriceMarshmallow").textContent = "0";
+    el("purchasePriceCoffee").textContent = "0";
+    el("purchaseSubmit").textContent = "Купить уровень";
+    el("purchaseConfirm").hidden = false;
+    document.body.style.overflow = "hidden";
+    el("purchaseConfirm").scrollTop = 0;
+    el("purchaseConfirm").querySelector(".purchase-confirm-card")?.scrollTo?.(0,0);
+    requestAnimationFrame(()=>{ el("purchaseConfirm").scrollTop = 0; el("purchaseSubmit").focus(); });
+  }
+
+  function performLevelPurchase() {
+    if (pass.premiumTier === "none") return showToast("Покупка уровней доступна только с платным тарифом");
+    const needed = xpNeededForNextLevel();
+    if (!needed) return showToast("Достигнут максимальный уровень");
+    addBonusXp(needed);
+    savePass();
+    render();
+    scrollToLevel(currentLevel());
+    showToast("Тестовый уровень куплен за 0 очков");
+  }
+
+  function closePurchaseConfirm() {
+    pendingPurchaseTier = null;
+    pendingLevelPurchase = false;
+    delete el("purchaseConfirm").dataset.purchaseKind;
+    el("purchaseConfirm").hidden = true;
+    if (el("rewardSummary").hidden) document.body.style.overflow = "";
+  }
+
+  function activatePremiumTier(tier) {
+    if (!["elite","elite_plus"].includes(tier)) return;
+    if (tier === "elite" && pass.premiumTier !== "none") return;
+    if (tier === "elite_plus" && pass.premiumTier === "elite_plus") return;
+
+    const received = [];
+    pass.premiumTier = tier;
+    pass.premium = true;
+
+    if (tier === "elite") {
+      savePass();
+      render();
+      showToast("Тариф «Элитный» активирован за 0 ресурсов");
+      openRewardSummary([{premium:true,icon:"",image:REWARD_ASSETS.eliteBadge,name:"Тариф «Элитный»",description:"Открыта премиальная линия",level:"—",source:"Покупка тарифа"}]);
+      return;
+    }
+
+    const runsNow = Math.max(0,Number(readProgress().completedRuns)||0);
+    if (pass.elitePlusStartRuns === null || !Number.isFinite(Number(pass.elitePlusStartRuns))) pass.elitePlusStartRuns = runsNow;
+
+    if (!pass.elitePlusBonusGranted) {
+      const beforeLevel = currentLevel();
+      const targetLevel = Math.min(MAX_LEVEL,beforeLevel+5);
+      addBonusXp(Math.max(0,xpAtLevelStart(targetLevel)-totalXp()));
+      pass.elitePlusBonusGranted = true;
+      addEntitlement("elite_plus_frame");
+      addEntitlement("elite_plus_avatar");
+      addEntitlement("elite_plus_gold_case");
+      received.push(
+        {premium:true,icon:"",image:REWARD_ASSETS.levelBoost,name:`+${targetLevel-beforeLevel} уровней`,description:"Уровни сезонного пропуска",level:"—",source:"Элитный+"},
+        {premium:true,icon:"",image:REWARD_ASSETS.xpBoost,name:"×2 XP за забеги",description:"Для новых завершённых забегов",level:"—",source:"Элитный+"},
+        {premium:true,icon:"",image:REWARD_ASSETS.eliteFrame,name:"Эксклюзивная рамка",description:"Награда тарифа",level:"—",source:"Элитный+"},
+        {premium:true,icon:"",image:REWARD_ASSETS.eliteAvatar,name:"Эксклюзивная аватарка",description:"Награда тарифа",level:"—",source:"Элитный+"},
+        {premium:true,icon:"",image:REWARD_ASSETS.goldCase,name:"Золотой кейс",description:"Награда при открытии",level:"—",source:"Элитный+"}
+      );
+    }
+
+    savePass();
+    render();
+    scrollToLevel(currentLevel());
+    showToast("Тариф «Элитный+» активирован за 0 ресурсов");
+    if (received.length) openRewardSummary(received);
+  }
+
+  function openRewardSummary(items) {
+    const valid = items.filter(Boolean);
+    if (!valid.length) return;
+    el("rewardSummarySubtitle").textContent = `Получено наград: ${valid.length}. Премиальные отмечены золотой рамкой.`;
+    el("rewardSummaryList").innerHTML = valid.map(item=>`<article class="received-reward ${item.premium?"premium":""}">
+      <div class="received-reward-icon">${rewardArtMarkup(item.name,item.icon,item.image)}</div>
+      <div class="received-reward-copy">
+        <strong>${item.name}</strong>
+        <span>${item.source || (`Уровень ${item.level} · ${item.premium?"Премиум":"Бесплатно"}`)}</span>
+      </div>
+    </article>`).join("");
+    el("rewardSummary").hidden = false;
+    document.body.style.overflow = "hidden";
+    requestAnimationFrame(()=>el("rewardSummaryClose").focus());
+  }
+
+  function closeRewardSummary() {
+    el("rewardSummary").hidden = true;
+    document.body.style.overflow = "";
+  }
+
+  function claim(id,quiet=false) {
+    if (pass.claimed.includes(id)) return false;
+    const [level,type] = id.split(":");
+    if (!isUnlocked(Number(level)) || (type==="premium"&&!pass.premium)) return false;
+    pass.claimed.push(id);
+    savePass();
+    if (!quiet) showToast("Тестовая награда отмечена как полученная");
+    return true;
+  }
+
+  function openView(name) {
+    document.querySelectorAll("[data-view]").forEach(view=>{
+      view.hidden = view.dataset.view !== name;
+    });
+    document.querySelectorAll("[data-view-tab]").forEach(tab=>{
+      tab.classList.toggle("active",tab.dataset.viewTab===name);
+    });
+    if (name === "rewards") {
+      requestAnimationFrame(()=>scrollToLevel(selectedLevel,"auto"));
+    }
+  }
+
+  function installScrollProtection() {
+    const appScroll = el("appScroll");
+    let touchStartY = 0;
+    appScroll.addEventListener("touchstart",event=>{
+      touchStartY = event.touches[0]?.clientY || 0;
+    },{passive:true});
+    appScroll.addEventListener("touchmove",event=>{
+      const currentY = event.touches[0]?.clientY || 0;
+      const pullingDownAtTop = appScroll.scrollTop <= 0 && currentY > touchStartY;
+      const pullingUpAtBottom = appScroll.scrollTop + appScroll.clientHeight >= appScroll.scrollHeight - 1 && currentY < touchStartY;
+      if (pullingDownAtTop || pullingUpAtBottom) event.preventDefault();
+    },{passive:false});
+  }
+
+  document.addEventListener("click",event=>{
+    const rewardButton = event.target.closest("[data-claim]");
+    if (rewardButton) {
+      if (claim(rewardButton.dataset.claim)) render();
+      return;
+    }
+
+    const tab = event.target.closest("[data-view-tab]");
+    if (tab) {
+      openView(tab.dataset.viewTab);
+      return;
+    }
+
+    const mark = event.target.closest("[data-level-mark]");
+    if (mark) {
+      scrollToLevel(Number(mark.dataset.levelMark));
+      return;
+    }
+
+    const filter = event.target.closest("[data-task-filter]");
+    if (filter) {
+      activeTaskFilter = filter.dataset.taskFilter;
+      renderTasks();
+      return;
+    }
+
+    const taskButton = event.target.closest("[data-task-action]");
+    if (taskButton) {
+      const task = tasks.find(item=>item.id===taskButton.dataset.taskAction);
+      if (!task || taskClaimed(task) || (task.premium&&!pass.premium)) return;
+      if (taskComplete(task)) {
+        const card = taskButton.closest(".task-card");
+        if (card?.classList.contains("collecting")) return;
+        collectTaskRewards([task]);
+      } else {
+        pass.taskProgress[task.id] = Math.min(task.target,taskProgress(task)+task.step);
+        savePass();
+        renderTasks();
+        showToast("Тестовый прогресс задания увеличен");
+      }
+    }
+  });
+
+  el("levelSlider").addEventListener("pointerdown",()=>{ sliderInteracting = true; });
+  el("levelSlider").addEventListener("touchstart",()=>{ sliderInteracting = true; },{passive:true});
+  el("levelSlider").addEventListener("input",event=>{
+    sliderInteracting = true;
+    scrollToLevel(Number(event.target.value),"auto");
+  });
+  const finishSliderInteraction = ()=>{
+    sliderInteracting = false;
+    releaseScrollSync(120);
+  };
+  el("levelSlider").addEventListener("change",finishSliderInteraction);
+  el("levelSlider").addEventListener("pointerup",finishSliderInteraction);
+  el("levelSlider").addEventListener("touchend",finishSliderInteraction,{passive:true});
+  el("levelSlider").addEventListener("blur",finishSliderInteraction);
+
+  el("rewardScroll").addEventListener("scroll",()=>{
+    if (suppressScrollSync || sliderInteracting) return;
+    cancelAnimationFrame(scrollFrame);
+    scrollFrame = requestAnimationFrame(()=>{
+      if (!suppressScrollSync && !sliderInteracting) updateNavigator(nearestVisibleLevel());
+    });
+  },{passive:true});
+
+  el("buyLevel").addEventListener("click",openLevelPurchaseConfirm);
+
+  el("buyElite").addEventListener("click",()=>openPurchaseConfirm("elite"));
+  el("buyElitePlus").addEventListener("click",()=>openPurchaseConfirm("elite_plus"));
+
+  el("addXp").addEventListener("click",()=>{
+    const needed = xpNeededForNextLevel();
+    if (!needed) return showToast("Достигнут максимальный уровень");
+    addBonusXp(needed);
+    savePass();
+    render();
+    scrollToLevel(currentLevel());
+    showToast("Добавлен один тестовый уровень");
+  });
+
+  el("removeXp").addEventListener("click",()=>{
+    const level = currentLevel();
+    if (level <= 1) return showToast("Уже установлен первый уровень");
+    const targetTotal = xpAtLevelStart(level-1);
+    pass.bonusXp = Math.max(0,targetTotal-realRunXp().xp);
+    savePass();
+    render();
+    scrollToLevel(currentLevel());
+    showToast("Убран один тестовый уровень");
+  });
+
+  el("togglePremium").addEventListener("click",()=>{
+    const next = pass.premiumTier === "none" ? "elite" : pass.premiumTier === "elite" ? "elite_plus" : "none";
+    if (next === "elite_plus") {
+      activatePremiumTier("elite_plus");
+      return;
+    }
+    pass.premiumTier = next;
+    pass.premium = next !== "none";
+    savePass();
+    render();
+    showToast(next === "elite" ? "Включён тестовый Элитный" : "Премиум выключен");
+  });
+
+  el("claimAllTasks").addEventListener("click",()=>{
+    collectTaskRewards(claimableTasks());
+  });
+
+  el("resetPass").addEventListener("click",()=>{
+    if (!confirm("Сбросить тестовый прогресс, задания и полученные награды?")) return;
+    pass = {schemaVersion:5,runBaseline:Math.max(0,Number(readProgress().completedRuns)||0),bonusXp:0,premium:false,premiumTier:"none",elitePlusStartRuns:null,elitePlusBonusGranted:false,entitlements:[],claimed:[],taskProgress:{},claimedTasks:[]};
+    selectedLevel = 1;
+    savePass();
+    render();
+    scrollToLevel(1,"auto");
+    showToast("Тестовый прогресс сброшен");
+  });
+
+  el("claimAll").addEventListener("click",()=>{
+    const received = [];
+    for (let level=1;level<=MAX_LEVEL;level++) {
+      const freeId = rewardId(level,"free");
+      if (claim(freeId,true)) received.push(rewardDetailsFromId(freeId));
+      const premiumId = rewardId(level,"premium");
+      if (claim(premiumId,true)) received.push(rewardDetailsFromId(premiumId));
+    }
+    render();
+    if (received.length) openRewardSummary(received);
+    else showToast("Нет доступных наград");
+  });
+
+  el("purchaseCancel").addEventListener("click",closePurchaseConfirm);
+  el("purchaseSubmit").addEventListener("click",()=>{
+    const tier = pendingPurchaseTier;
+    const buyLevelNow = pendingLevelPurchase;
+    closePurchaseConfirm();
+    if (buyLevelNow) performLevelPurchase();
+    else if (tier) activatePremiumTier(tier);
+  });
+  el("purchaseConfirm").addEventListener("click",event=>{
+    if (event.target === el("purchaseConfirm")) closePurchaseConfirm();
+  });
+
+  el("rewardSummaryClose").addEventListener("click",closeRewardSummary);
+  el("rewardSummary").addEventListener("click",event=>{
+    if (event.target === el("rewardSummary")) closeRewardSummary();
+  });
+  document.addEventListener("keydown",event=>{
+    if (event.key !== "Escape") return;
+    if (!el("purchaseConfirm").hidden) closePurchaseConfirm();
+    else if (!el("rewardSummary").hidden) closeRewardSummary();
+  });
+
+  let returningToGame = false;
+  function restoreTelegramNavigation() {
+    try {
+      const webApp = window.Telegram?.WebApp;
+      if (typeof webApp?.enableVerticalSwipes === "function") webApp.enableVerticalSwipes();
+      try { webApp?.BackButton?.hide?.(); } catch {}
+    } catch {}
+  }
+  function returnToGame() {
+    if (returningToGame) return;
+    returningToGame = true;
+    restoreTelegramNavigation();
+    try {
+      window.sessionStorage.setItem("zefirok-return-screen", "profile");
+      window.sessionStorage.setItem("zefirok-season-pass-returning", "1");
+    } catch {}
+    if (window.parent && window.parent !== window) {
+      try {
+        window.parent.postMessage({ type: "zefirok-close-season-pass", screen: "profile" }, "*");
+        return;
+      } catch {}
+    }
+    const resumeToken = Date.now().toString(36);
+    location.replace(`/?screen=profile&from=season-pass&resume=${resumeToken}`);
+  }
+  window.addEventListener("pagehide", restoreTelegramNavigation);
+  window.addEventListener("beforeunload", restoreTelegramNavigation);
+  el("backButton").addEventListener("click",returnToGame);
+  el("accessBack").addEventListener("click",returnToGame);
+  el("preseasonReturn").addEventListener("click",returnToGame);
+  el("preseasonPreview").addEventListener("click",openSeasonPassInterface);
+
+  let bootPromise = null;
+  async function boot() {
+    if (bootPromise) return bootPromise;
+    bootPromise = (async () => {
+      showAccessLoading();
+      try {
+        const webApp = window.Telegram?.WebApp;
+        webApp?.ready();
+        webApp?.expand();
+        if (webApp?.BackButton) {
+          try { webApp.BackButton.show(); } catch {}
+          try { webApp.BackButton.offClick?.(returnToGame); } catch {}
+          try { webApp.BackButton.onClick?.(returnToGame); } catch {}
+        }
+        if (typeof webApp?.disableVerticalSwipes === "function") webApp.disableVerticalSwipes();
+        webApp?.setHeaderColor?.("#fff2f1");
+        webApp?.setBackgroundColor?.("#fff5f4");
+      } catch {}
+
+      installScrollProtection();
+      const access = await checkAccess();
+      if (!access.allowed) {
+        if (access.kind === "hidden") denyAccess(access.error);
+        else showAccessError(access.error);
+        return;
+      }
+
+      if (access.season?.status === "upcoming") {
+        showPreseason(access.season, access.canPreviewUpcoming);
+        return;
+      }
+      if (access.season?.status === "ended") {
+        showAccessError("Первый сезон завершён. Информация о следующем сезоне появится совсем скоро.", "Сезон завершён");
+        return;
+      }
+      openSeasonPassInterface();
+    })().catch((error) => {
+      console.error("Season pass boot failed", error);
+      showAccessError("Страница не смогла завершить загрузку. Нажмите «Повторить проверку».");
+    }).finally(() => { bootPromise = null; });
+    return bootPromise;
+  }
+
+  el("accessRetry").addEventListener("click",()=>{ void boot(); });
+  window.addEventListener("pageshow",(event)=>{
+    if (event.persisted && !el("accessGate").hidden) void boot();
+  });
+  void boot();
+})();
+</script>
+<script type="application/json" id="zefirok-v07935-season-pass-server-prelaunch">{"version":"0.79.35","scope":"season-pass-server-prelaunch","changes":["permanent_asset_folder","server_controlled_start_date","prelaunch_teaser_screen","server_time_countdown","existing_access_rules_preserved","staff_preview_before_launch","same_page_season_pass_overlay"],"assetsPath":"/assets/season-pass/"}</script>
+</body>
+</html>

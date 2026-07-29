@@ -7,13 +7,7 @@
 <meta content="no-referrer" name="referrer"/>
 <meta content="default-src 'none'; script-src 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com https://telegram.org; style-src 'unsafe-inline' blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; img-src 'self' blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; font-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; media-src 'self' blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; worker-src blob:; connect-src 'self' blob: data:; frame-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'" http-equiv="Content-Security-Policy"/>
 <title>Сладкий Забег</title>
-<style>:root{color-scheme:light dark;background:light-dark(rgb(255 255 255), rgb(24 24 24))}html,body{margin:0;min-height:100%}body{box-sizing:border-box;padding:1rem;background:inherit}iframe{display:none;width:100%;max-width:736px;height:calc(100vh - 2rem);margin:0 auto;border:0}iframe.is-ready{display:block}.zefirok-maintenance-gate{min-height:calc(100vh - 2rem);display:grid;background:#fff5f5;border-radius:24px;place-items:center;padding:24px;box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#4e3a42}.zefirok-maintenance-card{width:min(430px,100%);box-sizing:border-box;padding:28px;border:1px solid #efd0d9;border-radius:28px;background:#fff;box-shadow:0 18px 50px rgba(91,54,68,.13);text-align:center}.zefirok-maintenance-icon{font-size:54px}.zefirok-maintenance-card h1{font-size:25px;margin:12px 0}.zefirok-maintenance-card p{font-size:16px;line-height:1.5;color:#786870;margin:0}.zefirok-maintenance-card button{margin-top:18px;padding:12px 18px;border:0;border-radius:14px;background:#e56f9b;color:#fff;font-weight:800;font-size:15px}
-.zefirok-season-pass-layer{position:fixed;inset:0;z-index:2147483000;background:#fff5f4;display:block;overflow:hidden}
-.zefirok-season-pass-layer[hidden]{display:none!important}
-.zefirok-season-pass-frame{display:block!important;width:100%!important;max-width:none!important;height:100%!important;margin:0!important;border:0!important;background:#fff5f4}
-body.zefirok-season-pass-open{overflow:hidden!important;padding:0!important}
-body.zefirok-season-pass-open>iframe:not(.zefirok-season-pass-frame){visibility:hidden!important;pointer-events:none!important}
-</style>
+<style>:root{color-scheme:light dark;background:light-dark(rgb(255 255 255), rgb(24 24 24))}html,body{margin:0;min-height:100%}body{box-sizing:border-box;padding:1rem;background:inherit}iframe{display:none;width:100%;max-width:736px;height:calc(100vh - 2rem);margin:0 auto;border:0}iframe.is-ready{display:block}.zefirok-maintenance-gate{min-height:calc(100vh - 2rem);display:grid;background:#fff5f5;border-radius:24px;place-items:center;padding:24px;box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#4e3a42}.zefirok-maintenance-card{width:min(430px,100%);box-sizing:border-box;padding:28px;border:1px solid #efd0d9;border-radius:28px;background:#fff;box-shadow:0 18px 50px rgba(91,54,68,.13);text-align:center}.zefirok-maintenance-icon{font-size:54px}.zefirok-maintenance-card h1{font-size:25px;margin:12px 0}.zefirok-maintenance-card p{font-size:16px;line-height:1.5;color:#786870;margin:0}.zefirok-maintenance-card button{margin-top:18px;padding:12px 18px;border:0;border-radius:14px;background:#e56f9b;color:#fff;font-weight:800;font-size:15px}</style>
 <script src="https://telegram.org/js/telegram-web-app.js?63"></script>
 <script>
 (() => {
@@ -36,45 +30,6 @@ body.zefirok-season-pass-open>iframe:not(.zefirok-season-pass-frame){visibility:
 
   const frame = () => document.querySelector("iframe");
   const MAINTENANCE_ACCESS_PATH = "/api/maintenance/access";
-  const SEASON_PASS_AWAY_KEY = "zefirok-season-pass-away";
-
-  function isFreshSeasonPassReturn() {
-    try { return new URLSearchParams(window.location.search).get("from") === "season-pass"; }
-    catch { return false; }
-  }
-
-  function seasonPassRecoveryUrl() {
-    return `/?screen=profile&from=season-pass&resume=${Date.now().toString(36)}`;
-  }
-
-  function hasSeasonPassAwayMarker() {
-    try { return window.sessionStorage.getItem(SEASON_PASS_AWAY_KEY) === "1"; }
-    catch { return false; }
-  }
-
-  function clearSeasonPassAwayMarker() {
-    try {
-      window.sessionStorage.removeItem(SEASON_PASS_AWAY_KEY);
-      window.sessionStorage.removeItem("zefirok-season-pass-returning");
-    } catch {}
-  }
-
-  function recoverMainGameAfterSeasonPass() {
-    if (isFreshSeasonPassReturn()) {
-      clearSeasonPassAwayMarker();
-      return false;
-    }
-    if (!hasSeasonPassAwayMarker()) return false;
-    clearSeasonPassAwayMarker();
-    window.location.replace(seasonPassRecoveryUrl());
-    return true;
-  }
-
-  window.addEventListener("pageshow", () => { recoverMainGameAfterSeasonPass(); });
-  window.addEventListener("focus", () => { recoverMainGameAfterSeasonPass(); });
-  document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "visible") recoverMainGameAfterSeasonPass();
-  });
 
   function maintenanceGate() {
     let gate = document.querySelector(".zefirok-maintenance-gate");
@@ -85,20 +40,20 @@ body.zefirok-season-pass-open>iframe:not(.zefirok-season-pass-frame){visibility:
     return gate;
   }
 
-  function showMaintenanceGate(message, options = {}) {
+  function showMaintenanceGate(message, retry = false) {
     const gate = maintenanceGate();
     gate.innerHTML = "";
     const card = document.createElement("div");
     card.className = "zefirok-maintenance-card";
     const icon = document.createElement("div");
     icon.className = "zefirok-maintenance-icon";
-    icon.textContent = String(options.icon || "🍬");
+    icon.textContent = "🛠";
     const title = document.createElement("h1");
-    title.textContent = String(options.title || "Загрузка игры");
+    title.textContent = retry ? "Не удалось проверить доступ" : "Технические работы";
     const text = document.createElement("p");
-    text.textContent = String(message || "Подготавливаем игру…");
+    text.textContent = String(message || "В игре проходят технические работы. Прогресс сохранён. Попробуйте снова позже.");
     card.append(icon, title, text);
-    if (options.retry) {
+    if (retry) {
       const button = document.createElement("button");
       button.type = "button";
       button.textContent = "Повторить";
@@ -112,26 +67,18 @@ body.zefirok-season-pass-open>iframe:not(.zefirok-season-pass-frame){visibility:
     const gameFrame = frame();
     if (!gameFrame) return;
     const source = gameFrame.getAttribute("data-srcdoc");
-    if (source != null && gameFrame.dataset.activated !== "1") {
-      const preparedSource = /<base\s/i.test(source)
-        ? source
-        : source.replace(/<head([^>]*)>/i, '<head$1><base href="/">');
-      gameFrame.srcdoc = preparedSource;
+    if (source != null) {
+      gameFrame.srcdoc = source;
       gameFrame.removeAttribute("data-srcdoc");
-      gameFrame.dataset.activated = "1";
     }
     gameFrame.classList.add("is-ready");
     document.querySelector(".zefirok-maintenance-gate")?.remove();
   }
 
   async function resolveMaintenanceAccess() {
-    if (window.__zefirokMaintenanceCheckActive) return;
-    window.__zefirokMaintenanceCheckActive = true;
     const gameFrame = frame();
     if (gameFrame) gameFrame.classList.remove("is-ready");
-    showMaintenanceGate("Проверяем доступ и загружаем данные…", { title: "Загрузка игры", icon: "🍬" });
-    const controller = new AbortController();
-    const timeoutId = window.setTimeout(() => controller.abort(), 4500);
+    showMaintenanceGate("Проверяем доступ к игре…");
     try {
       const initData = String(window.Telegram?.WebApp?.initData || "");
       const response = await fetch(MAINTENANCE_ACCESS_PATH, {
@@ -139,33 +86,16 @@ body.zefirok-season-pass-open>iframe:not(.zefirok-season-pass-frame){visibility:
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ initData }),
         cache: "no-store",
-        credentials: "same-origin",
-        signal: controller.signal
+        credentials: "same-origin"
       });
       const data = await response.json().catch(() => null);
-      const explicitlyClosed = Boolean(
-        data?.maintenance === true &&
-        data?.allowed === false &&
-        (data?.mode === "full" || data?.mode === "testers_only")
-      );
-      if (explicitlyClosed) {
-        showMaintenanceGate(
-          data?.error || data?.message || "Игра временно закрыта для игроков.",
-          { title: "Технические работы", icon: "🛠" }
-        );
+      if (response.ok && data?.allowed) {
+        activateGameFrame();
         return;
       }
-
-      if (!response.ok || !data || data.allowed === false) {
-        console.warn("Maintenance access check returned a non-blocking error; starting the game.", response.status, data);
-      }
-      activateGameFrame();
+      showMaintenanceGate(data?.error || data?.message || "Игра временно закрыта для игроков.");
     } catch (error) {
-      console.warn("Maintenance access check failed; starting the game in fail-open mode.", error);
-      activateGameFrame();
-    } finally {
-      window.clearTimeout(timeoutId);
-      window.__zefirokMaintenanceCheckActive = false;
+      showMaintenanceGate("Проверьте подключение к интернету и повторите попытку.", true);
     }
   }
 
@@ -352,102 +282,16 @@ body.zefirok-season-pass-open>iframe:not(.zefirok-season-pass-frame){visibility:
     window.setTimeout(checkGamePollAfterOpen, 900);
   }
 
-  function sendRequestedScreen(targetWindow) {
-    if (!targetWindow) return;
-    try {
-      const screen = new URLSearchParams(window.location.search).get("screen");
-      if (screen === "profile") {
-        targetWindow.postMessage({ type: "zefirok-open-screen", screen: "profile" }, "*");
-      }
-    } catch (error) {
-      // Query parsing is optional; the game still opens normally.
-    }
-  }
-
-  let seasonPassLayer = null;
-
-  function seasonPassFrame() {
-    return seasonPassLayer?.querySelector?.(".zefirok-season-pass-frame") || null;
-  }
-
-  function openSeasonPassOverlay(initData = "") {
-    if (seasonPassLayer?.isConnected) return;
-    clearSeasonPassAwayMarker();
-    const layer = document.createElement("div");
-    layer.className = "zefirok-season-pass-layer";
-    layer.setAttribute("role", "dialog");
-    layer.setAttribute("aria-label", "Сезонный пропуск");
-    const passFrame = document.createElement("iframe");
-    passFrame.className = "zefirok-season-pass-frame";
-    passFrame.title = "Сезонный пропуск";
-    passFrame.allow = "clipboard-write; autoplay";
-    passFrame.referrerPolicy = "same-origin";
-    passFrame.src = initData
-      ? `/battle-pass.html?v=0.79.34#tgInitData=${encodeURIComponent(initData)}`
-      : "/battle-pass.html?v=0.79.34";
-    layer.append(passFrame);
-    document.body.append(layer);
-    document.body.classList.add("zefirok-season-pass-open");
-    seasonPassLayer = layer;
-  }
-
-  function refreshMainGameAfterSeasonPass() {
-    const gameFrame = frame();
-    const target = gameFrame?.contentWindow;
-    if (!target) return;
-    activateGameFrame();
-    gameFrame.classList.add("is-ready");
-    const refresh = () => {
-      try { target.postMessage({ type: "zefirok-open-screen", screen: "profile" }, "*"); } catch {}
-      try { void sendSavedProgress(target); } catch {}
-      try { sendTelegramProfile(target); } catch {}
-    };
-    refresh();
-    window.setTimeout(refresh, 180);
-    window.setTimeout(refresh, 850);
-  }
-
-  function closeSeasonPassOverlay() {
-    const layer = seasonPassLayer;
-    seasonPassLayer = null;
-    if (layer?.isConnected) layer.remove();
-    document.body.classList.remove("zefirok-season-pass-open");
-    clearSeasonPassAwayMarker();
-    try {
-      const webApp = window.Telegram?.WebApp;
-      if (typeof webApp?.enableVerticalSwipes === "function") webApp.enableVerticalSwipes();
-      webApp?.BackButton?.hide?.();
-    } catch {}
-    refreshMainGameAfterSeasonPass();
-  }
-
   window.addEventListener("message", (event) => {
     const gameFrame = frame();
-    const passFrame = seasonPassFrame();
-    const fromGame = Boolean(gameFrame && event.source === gameFrame.contentWindow);
-    const fromSeasonPass = Boolean(passFrame && event.source === passFrame.contentWindow);
-    if (!fromGame && !fromSeasonPass) return;
+    if (gameFrame && event.source !== gameFrame.contentWindow) return;
     const message = event.data;
     if (!message || typeof message !== "object") return;
-    if (fromSeasonPass) {
-      if (message.type === "zefirok-close-season-pass") closeSeasonPassOverlay();
-      return;
-    }
     if (message.type === "zefirok-progress-ready") {
       void sendSavedProgress(event.source);
       sendTelegramProfile(event.source);
-      sendRequestedScreen(event.source);
     } else if (message.type === "zefirok-telegram-profile-ready") {
       sendTelegramProfile(event.source);
-      sendRequestedScreen(event.source);
-    } else if (message.type === "zefirok-open-battle-pass") {
-      let initData = "";
-      try {
-        window.sessionStorage.setItem("zefirok-return-screen", "profile");
-        initData = String(window.Telegram?.WebApp?.initData || "");
-        if (initData) window.sessionStorage.setItem("zefirok-telegram-init-data", initData);
-      } catch (error) {}
-      openSeasonPassOverlay(initData);
     } else if (message.type === "zefirok-progress-save") {
       storeProgress(message.payload);
     } else if (message.type === "zefirok-run-completed") {
@@ -7794,32 +7638,6 @@ html&gt;body{padding:0}
 
 
 #zefirok-maltipoo-runner .profile-shell &gt; .profile-hero { order: 0; }
-#zefirok-maltipoo-runner .profile-section--battle-pass { order: 15; }
-#zefirok-maltipoo-runner .battle-pass-profile-card {
-  display: grid;
-  grid-template-columns: 54px minmax(0,1fr);
-  gap: 12px;
-  align-items: center;
-  padding: 15px;
-  border: 1px solid rgba(219, 151, 70, .34);
-  border-radius: 20px;
-  background: linear-gradient(135deg, #fff8dc, #ffe8f1 72%);
-  box-shadow: 0 8px 22px rgba(128, 82, 47, .08);
-}
-#zefirok-maltipoo-runner .battle-pass-profile-icon {
-  width: 54px;
-  height: 54px;
-  display: grid;
-  place-items: center;
-  border-radius: 17px;
-  background: rgba(255,255,255,.78);
-  font-size: 29px;
-  box-shadow: inset 0 0 0 1px rgba(219,151,70,.22);
-}
-#zefirok-maltipoo-runner .battle-pass-profile-copy { display: grid; gap: 4px; min-width: 0; }
-#zefirok-maltipoo-runner .battle-pass-profile-copy strong { color: #7e4a25; font-size: 15px; }
-#zefirok-maltipoo-runner .battle-pass-profile-copy span { color: #8d6b62; font-size: 11px; line-height: 1.4; }
-#zefirok-maltipoo-runner .battle-pass-profile-card .profile-action { grid-column: 1 / -1; width: 100%; }
 #zefirok-maltipoo-runner .profile-section--progress { order: 20; }
 #zefirok-maltipoo-runner .profile-section--leaderboard { order: 30; }
 #zefirok-maltipoo-runner .profile-section--leaderboard.is-season-active { order: 10; }
@@ -8757,23 +8575,6 @@ html&gt;body{padding:0}
     &lt;/div&gt;
   &lt;/section&gt;
 
-
-  &lt;section class=&quot;profile-section profile-section--battle-pass&quot; data-battle-pass-section aria-labelledby=&quot;profile-battle-pass-title&quot; hidden&gt;
-    &lt;div class=&quot;profile-section-head&quot;&gt;
-      &lt;div&gt;
-        &lt;h3 id=&quot;profile-battle-pass-title&quot;&gt;Сезонный пропуск&lt;/h3&gt;
-        &lt;span&gt;Первая тестовая версия&lt;/span&gt;
-      &lt;/div&gt;
-    &lt;/div&gt;
-    &lt;div class=&quot;battle-pass-profile-card&quot;&gt;
-      &lt;div class=&quot;battle-pass-profile-icon&quot; aria-hidden=&quot;true&quot;&gt;🎟️&lt;/div&gt;
-      &lt;div class=&quot;battle-pass-profile-copy&quot;&gt;
-        &lt;strong&gt;Сезон «Сладкий старт»&lt;/strong&gt;
-        &lt;span&gt;50 горизонтальных уровней, задания, кейсы и две линии наград.&lt;/span&gt;
-      &lt;/div&gt;
-      &lt;button class=&quot;profile-action profile-action--primary&quot; data-battle-pass-open type=&quot;button&quot;&gt;Открыть сезонный пропуск&lt;/button&gt;
-    &lt;/div&gt;
-  &lt;/section&gt;
 
   &lt;section class=&quot;profile-section profile-section--cases&quot; aria-labelledby=&quot;profile-cases-title&quot;&gt;
     &lt;div class=&quot;profile-section-head profile-section-head--cases&quot;&gt;
@@ -15791,9 +15592,6 @@ html&gt;body{padding:0}
           }
 
           const publicConfig = data.publicConfig || {};
-          const nextFeatureFlags = data.flags || {};
-          window.__ZEFIROK_FEATURE_FLAGS__ = nextFeatureFlags;
-          try { window.dispatchEvent(new CustomEvent(&quot;zefirok-feature-flags&quot;, { detail: nextFeatureFlags })); } catch (error) {}
           const shopLoaded = applyRemoteShopConfig(publicConfig.shop);
           const skinsLoaded = applyRemoteSkinConfig(publicConfig.skins);
           if (!shopLoaded) void loadRemoteShopPrices(force);
@@ -19177,43 +18975,7 @@ html&gt;body{padding:0}
 &lt;script id=&quot;zefirok-v07921-hotfix-audit&quot; type=&quot;application/json&quot;&gt;{&quot;version&quot;:&quot;0.79.2.1&quot;,&quot;fixes&quot;:[&quot;stableProfileBoosterImages&quot;,&quot;stableCollectionImages&quot;,&quot;removeCaseCosmeticContentVisibility&quot;,&quot;repairIframeDocumentTail&quot;]}&lt;/script&gt;
 &lt;script id=&quot;zefirok-v0798-legendary-music-balance-audit&quot; type=&quot;application/json&quot;&gt;{&quot;version&quot;:&quot;0.79.8&quot;,&quot;scope&quot;:&quot;legendary-case-music-and-balance&quot;,&quot;newMusicTracks&quot;:4,&quot;categoryChances&quot;:{&quot;skin&quot;:0.35,&quot;music&quot;:0.45,&quot;physical&quot;:0.035,&quot;points&quot;:39.665},&quot;totalChance&quot;:100}&lt;/script&gt;
 &lt;script id=&quot;zefirok-v0797-high-speed-smoothness-audit&quot; type=&quot;application/json&quot;&gt;{&quot;version&quot;:&quot;0.79.7&quot;,&quot;scope&quot;:&quot;high-speed-gameplay-smoothness&quot;,&quot;backwardCompatible&quot;:true,&quot;gameplayValuesChanged&quot;:false,&quot;optimizations&quot;:[&quot;speedWeightedHorizontalExtrapolation&quot;,&quot;smoothedRenderVelocity&quot;,&quot;preRenderedRoadTileCache&quot;,&quot;particleObjectPool&quot;,&quot;allocationFreeCollisionChecks&quot;,&quot;highSpeedJitterMetrics&quot;,&quot;cachedCaseTrailSprite&quot;]}&lt;/script&gt;
-
-&lt;script id=&quot;zefirok-v07914-battle-pass-visibility&quot;&gt;
-(() =&gt; {
-  let battlePassEnabled = false;
-  const section = () =&gt; document.querySelector(&quot;[data-battle-pass-section]&quot;);
-  const applyFlags = (flags) =&gt; {
-    battlePassEnabled = flags?.battle_pass === true;
-    const node = section();
-    if (node) node.hidden = !battlePassEnabled;
-  };
-  applyFlags(window.__ZEFIROK_FEATURE_FLAGS__ || { battle_pass: false });
-  window.addEventListener(&quot;zefirok-feature-flags&quot;, (event) =&gt; applyFlags(event.detail || {}));
-  document.addEventListener(&quot;click&quot;, (event) =&gt; {
-    const button = event.target?.closest?.(&quot;[data-battle-pass-open]&quot;);
-    if (!button) return;
-    event.preventDefault();
-    button.disabled = true;
-    window.parent.postMessage({ type: &quot;zefirok-open-battle-pass&quot; }, &quot;*&quot;);
-    window.setTimeout(() =&gt; { button.disabled = false; }, 900);
-  });
-  window.addEventListener(&quot;pageshow&quot;, () =&gt; {
-    document.querySelectorAll(&quot;[data-battle-pass-open]&quot;).forEach((button) =&gt; { button.disabled = false; });
-    if (window.__ZEFIROK_FEATURE_FLAGS__) applyFlags(window.__ZEFIROK_FEATURE_FLAGS__);
-  });
-  window.addEventListener(&quot;message&quot;, (event) =&gt; {
-    const message = event.data;
-    if (!message || message.type !== &quot;zefirok-open-screen&quot; || message.screen !== &quot;profile&quot;) return;
-    const profileTab = document.querySelector(&#x27;[data-tab=&quot;profile&quot;]&#x27;);
-    if (profileTab) profileTab.click();
-  });
-})();
-&lt;/script&gt;
-&lt;script id=&quot;zefirok-v07915-maintenance-gate-hotfix-audit&quot; type=&quot;application/json&quot;&gt;{&quot;version&quot;:&quot;0.79.15&quot;,&quot;scope&quot;:&quot;maintenance-gate-hotfix&quot;,&quot;failOpenOnCheckError&quot;:true,&quot;explicitMaintenanceOnly&quot;:true,&quot;loadingTitleFixed&quot;:true,&quot;baseHrefInjected&quot;:true}&lt;/script&gt;
-&lt;script id=&quot;zefirok-v07921-season-pass-access-hotfix-audit&quot; type=&quot;application/json&quot;&gt;{&quot;version&quot;:&quot;0.79.21&quot;,&quot;scope&quot;:&quot;season-pass-access&quot;,&quot;buttonRecovery&quot;:true,&quot;hashInitDataHandoff&quot;:true,&quot;featureFlagSnapshot&quot;:true}&lt;/script&gt;
-&lt;script id=&quot;zefirok-v07919-season-pass-v2-audit&quot; type=&quot;application/json&quot;&gt;{&quot;version&quot;:&quot;0.79.19&quot;,&quot;scope&quot;:&quot;season-pass-v2&quot;,&quot;levels&quot;:50,&quot;horizontalRewards&quot;:true,&quot;tasks&quot;:[&quot;daily&quot;,&quot;weekly&quot;,&quot;free&quot;,&quot;premium&quot;],&quot;skinsRemoved&quot;:true,&quot;finalReward&quot;:&quot;legendary_case&quot;}&lt;/script&gt;
 &lt;/body&gt;
 &lt;/html&gt;" title="Сладкий Забег"></iframe>
-<script id="zefirok-v07934-season-pass-overlay-audit" type="application/json">{"version":"0.79.34","scope":"outer-app-return-recovery","samePageOverlay":true,"mainGamePreserved":true,"restores":["telegram_profile","rating","balances","cases","notifications","feature_flags"]}</script>
 </body>
 </html>
