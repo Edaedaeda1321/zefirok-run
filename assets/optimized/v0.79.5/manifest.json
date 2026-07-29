@@ -1,0 +1,132 @@
+{
+  "skinDefaultPortrait": {
+    "primary": "/assets/optimized/v0.79.5/skinDefaultPortrait.webp?v=0.79.5",
+    "fallback": "/assets/optimized/v0.79.5/skinDefaultPortrait.png?v=0.79.5",
+    "originalMime": "image/png",
+    "originalBytes": 1020916,
+    "webpBytes": 632290,
+    "pngBytes": 1020916,
+    "width": 1040,
+    "height": 1040
+  },
+  "navGameButtonSelected": {
+    "primary": "/assets/optimized/v0.79.5/navGameButtonSelected.webp?v=0.79.5",
+    "fallback": "/assets/optimized/v0.79.5/navGameButtonSelected.png?v=0.79.5",
+    "originalMime": "image/png",
+    "originalBytes": 620228,
+    "webpBytes": 428302,
+    "pngBytes": 620228,
+    "width": 1900,
+    "height": 540
+  },
+  "navGameButtonUnselected": {
+    "primary": "/assets/optimized/v0.79.5/navGameButtonUnselected.webp?v=0.79.5",
+    "fallback": "/assets/optimized/v0.79.5/navGameButtonUnselected.png?v=0.79.5",
+    "originalMime": "image/png",
+    "originalBytes": 541176,
+    "webpBytes": 373654,
+    "pngBytes": 541176,
+    "width": 1900,
+    "height": 540
+  },
+  "iconScore": {
+    "primary": "/assets/optimized/v0.79.5/iconScore.webp?v=0.79.5",
+    "fallback": "/assets/optimized/v0.79.5/iconScore.png?v=0.79.5",
+    "originalMime": "image/png",
+    "originalBytes": 416265,
+    "webpBytes": 255018,
+    "pngBytes": 416265,
+    "width": 788,
+    "height": 774
+  },
+  "cafeBackground": {
+    "primary": "/assets/optimized/v0.79.5/cafeBackground.webp?v=0.79.5",
+    "fallback": "/assets/optimized/v0.79.5/cafeBackground.png?v=0.79.5",
+    "originalMime": "image/jpeg",
+    "originalBytes": 144210,
+    "webpBytes": 40186,
+    "pngBytes": 496123,
+    "width": 853,
+    "height": 1049
+  },
+  "skinDefaultAvatar": {
+    "primary": "/assets/optimized/v0.79.5/skinDefaultAvatar.webp?v=0.79.5",
+    "fallback": "/assets/optimized/v0.79.5/skinDefaultAvatar.png?v=0.79.5",
+    "originalMime": "image/png",
+    "originalBytes": 119531,
+    "webpBytes": 86950,
+    "pngBytes": 119531,
+    "width": 256,
+    "height": 256
+  },
+  "shopMarshmallowAssortment": {
+    "primary": "/assets/optimized/v0.79.5/shopMarshmallowAssortment.webp?v=0.79.5",
+    "fallback": "/assets/optimized/v0.79.5/shopMarshmallowAssortment.png?v=0.79.5",
+    "originalMime": "image/png",
+    "originalBytes": 89563,
+    "webpBytes": 64720,
+    "pngBytes": 89563,
+    "width": 220,
+    "height": 195
+  },
+  "shopMascot": {
+    "primary": "/assets/optimized/v0.79.5/shopMascot.webp?v=0.79.5",
+    "fallback": "/assets/optimized/v0.79.5/shopMascot.png?v=0.79.5",
+    "originalMime": "image/png",
+    "originalBytes": 67412,
+    "webpBytes": 45800,
+    "pngBytes": 67412,
+    "width": 384,
+    "height": 384
+  },
+  "pillowObstacle": {
+    "primary": "/assets/optimized/v0.79.5/pillowObstacle.webp?v=0.79.5",
+    "fallback": "/assets/optimized/v0.79.5/pillowObstacle.png?v=0.79.5",
+    "originalMime": "image/png",
+    "originalBytes": 64114,
+    "webpBytes": 44944,
+    "pngBytes": 64114,
+    "width": 260,
+    "height": 157
+  },
+  "coffeePickup": {
+    "primary": "/assets/optimized/v0.79.5/coffeePickup.webp?v=0.79.5",
+    "fallback": "/assets/optimized/v0.79.5/coffeePickup.png?v=0.79.5",
+    "originalMime": "image/png",
+    "originalBytes": 62245,
+    "webpBytes": 42074,
+    "pngBytes": 62245,
+    "width": 207,
+    "height": 220
+  },
+  "vaseObstacle": {
+    "primary": "/assets/optimized/v0.79.5/vaseObstacle.webp?v=0.79.5",
+    "fallback": "/assets/optimized/v0.79.5/vaseObstacle.png?v=0.79.5",
+    "originalMime": "image/png",
+    "originalBytes": 60218,
+    "webpBytes": 43314,
+    "pngBytes": 60218,
+    "width": 149,
+    "height": 240
+  },
+  "iconCoffee": {
+    "primary": "/assets/optimized/v0.79.5/iconCoffee.webp?v=0.79.5",
+    "fallback": "/assets/optimized/v0.79.5/iconCoffee.png?v=0.79.5",
+    "originalMime": "image/png",
+    "originalBytes": 58985,
+    "webpBytes": 41676,
+    "pngBytes": 58985,
+    "width": 180,
+    "height": 179
+  },
+  "iconRecord": {
+    "primary": "/assets/optimized/v0.79.5/iconRecord.webp?v=0.79.5",
+    "fallback": "/assets/optimized/v0.79.5/iconRecord.png?v=0.79.5",
+    "originalMime": "image/png",
+    "originalBytes": 56700,
+    "webpBytes": 40296,
+    "pngBytes": 56700,
+    "width": 220,
+    "height": 198
+  }
+}

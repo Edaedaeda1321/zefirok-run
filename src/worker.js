@@ -331,7 +331,7 @@ const STAFF_SESSION_TTL_SECONDS = 30 * 60;
 const SUPPORT_USERNAME = "ve4n0_em";
 const SUPPORT_URL = `https://t.me/${SUPPORT_USERNAME}`;
 const DEFAULT_GAME_URL = "https://zefirok-run.patokad6.workers.dev/";
-const WORKER_BUILD = "0.79.1";
+const WORKER_BUILD = "0.79.3";
 
 // Покупки, созданные раньше этой точки, сохраняют свои коды и статусы,
 // но больше не занимают лимитные слоты после глобального сброса 0.1.1 Beta.
@@ -578,6 +578,10 @@ export default {
       const maintenanceResponse = await enforceMaintenanceForRequest(request, url, env);
       if (maintenanceResponse) return maintenanceResponse;
 
+      if (url.pathname === "/api/game/startup" && request.method === "POST") {
+        return await getGameStartupPackage(request, env);
+      }
+
       if (url.pathname === "/api/features" && request.method === "GET") {
         const telegramId = String(url.searchParams.get("telegram_id") || "");
         return jsonResponse({ ok: true, flags: await publicFeatureFlags(env, telegramId) });
@@ -593,6 +597,7 @@ export default {
           service: "zefirok-admin",
           version: GAME_VERSION,
           routes: [
+            "/api/game/startup",
             "/api/admin/profile/sync",
             "/api/admin/leaderboard/set",
             "/api/admin/shop/prices",
@@ -735,71 +740,15 @@ export default {
     return new Response("Not found", { status: 404 });
   },
 
-  async scheduled(_controller, env, ctx) {
-    const webhookTask = ensureTelegramWebhookHealth(env)
-      .then(async () => { try { await clearOperationalIssue(env, "telegram-webhook"); } catch {} })
-      .catch(async (error) => {
-        console.error("Scheduled Telegram webhook health check failed", error);
-        try {
-          await notifyOperationalIssue(env, "telegram-webhook", `🔴 <b>Проблема Telegram webhook</b>
+  async scheduled(controller, env, ctx) {
+    ctx.waitUntil(processServerCron(env, controller).catch(async (error) => {
+      console.error("Server Cron dispatcher failed", error);
+      try {
+        await notifyOperationalIssue(env, "server-cron", `🔴 <b>Ошибка планировщика сервера</b>
 
 ${escapeHtml(String(error?.message || error).slice(0, 500))}`);
-        } catch (notifyError) {
-          console.error("Webhook issue notification failed", notifyError);
-        }
-      });
-    const leaderboardTask = (async () => {
-      try {
-        await ensureSeason(env);
-        await clearOperationalIssue(env, "leaderboard");
-      } catch (error) {
-        console.error("Scheduled leaderboard finalization failed", error);
-        try { await notifyOperationalIssue(env, "leaderboard", `🔴 <b>Ошибка рейтинга</b>
-
-${escapeHtml(String(error?.message || error).slice(0, 500))}`); } catch {}
-      }
-      try {
-        await expireLeaderboardRewardsAndNotify(env);
-      } catch (error) {
-        console.error("Scheduled leaderboard reward expiry failed", error);
-      }
-      try {
-        await processPendingLeaderboardStaffNotifications(env);
-      } catch (error) {
-        console.error("Scheduled leaderboard notifications failed", error);
-      }
-    })();
-    const broadcastTask = processPendingBotBroadcast(env)
-      .then(async () => { try { await clearOperationalIssue(env, "broadcast"); } catch {} })
-      .catch(async (error) => {
-        console.error("Scheduled bot broadcast failed", error);
-        try { await notifyOperationalIssue(env, "broadcast", `🔴 <b>Ошибка рассылки</b>
-
-${escapeHtml(String(error?.message || error).slice(0, 500))}`); } catch {}
-      });
-    const operationsTask = processStaffOperationsCron(env)
-      .then(async () => { try { await clearOperationalIssue(env, "staff-operations"); } catch {} })
-      .catch(async (error) => {
-        console.error("Scheduled staff operations failed", error);
-        try { await notifyOperationalIssue(env, "staff-operations", `🔴 <b>Ошибка центра сотрудников</b>
-
-${escapeHtml(String(error?.message || error).slice(0, 500))}`); } catch {}
-      });
-    const v78Task = processV78Cron(env)
-      .catch(async (error) => {
-        console.error("Scheduled v0.78 maintenance failed", error);
-        try { await notifySubscribedStaff(env, "bot_errors", `🔴 <b>Ошибка обучения или сбросов</b>
-
-${escapeHtml(String(error?.message || error).slice(0, 500))}`); } catch {}
-      });
-    const securityCenterTask = processOperationsSecurityCron(env)
-      .catch(async (error) => {
-        console.error("Scheduled operations security center failed", error);
-        try { await notifySubscribedStaff(env, "bot_errors", `🔴 <b>Ошибка безопасного центра</b>
-
-${escapeHtml(String(error?.message || error).slice(0, 500))}`); } catch {}
-      });
-    ctx.waitUntil(Promise.allSettled([webhookTask, leaderboardTask, broadcastTask, operationsTask, securityCenterTask, v78Task]));
+      } catch {}
+    }));
   }
 };
 
@@ -812,6 +761,346 @@ function apiHeaders() {
     "Access-Control-Allow-Methods": "GET, POST, OPTIONS"
   };
 }
+
+
+const SERVER_CRON_LEASE_SECONDS = 4 * 60;
+const SERVER_CRON_MAX_JOBS_PER_TICK = 4;
+const SERVER_ANALYTICS_RETENTION_SECONDS = 180 * 24 * 60 * 60;
+const SERVER_NOTIFICATION_LEASE_SECONDS = 2 * 60;
+const SERVER_NOTIFICATION_RETRY_BASE_SECONDS = 60;
+const SERVER_CRON_JOB_DEFAULTS = Object.freeze([
+  Object.freeze({ key: "critical-queues", interval: 60, priority: 10 }),
+  Object.freeze({ key: "liveops-minute", interval: 60, priority: 20 }),
+  Object.freeze({ key: "health-five-minutes", interval: 300, priority: 30 }),
+  Object.freeze({ key: "automations-five-minutes", interval: 300, priority: 40 }),
+  Object.freeze({ key: "hourly-maintenance", interval: 3600, priority: 50 }),
+  Object.freeze({ key: "daily-cleanup", interval: 86400, priority: 60 })
+]);
+
+let serverOptimizationSchemaPromise = null;
+
+async function assertServerTableColumns(env, tableName, columnNames) {
+  const info = await env.DB.prepare(`PRAGMA table_info(${tableName})`).all();
+  const existing = new Set((info.results || []).map((row) => String(row.name || "")));
+  const missing = columnNames.filter((name) => !existing.has(name));
+  if (missing.length) throw new Error(`D1 migration 0032 is required: ${tableName}.${missing.join(",")}`);
+}
+
+async function ensureServerOptimizationSchema(env) {
+  if (!serverOptimizationSchemaPromise) {
+    serverOptimizationSchemaPromise = (async () => {
+      await ensureStaffOperationsSchema(env);
+      await ensureBotBroadcastSchema(env);
+      await ensureSafeControlCenterSchema(env);
+      await ensureV67Schema(env);
+      await ensureV77Schema(env);
+      await ensureOperationsSecuritySchema(env);
+      await env.DB.batch([
+        env.DB.prepare(`CREATE TABLE IF NOT EXISTS leaderboard_staff_notifications (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,event_key TEXT NOT NULL,recipient_telegram_id TEXT NOT NULL,
+          message_html TEXT NOT NULL,status TEXT NOT NULL DEFAULT 'pending',attempts INTEGER NOT NULL DEFAULT 0,
+          last_error TEXT NOT NULL DEFAULT '',created_at INTEGER NOT NULL,updated_at INTEGER NOT NULL,
+          sent_at INTEGER NOT NULL DEFAULT 0,UNIQUE(event_key,recipient_telegram_id))`),
+        env.DB.prepare(`CREATE TABLE IF NOT EXISTS server_cron_jobs (
+          job_key TEXT PRIMARY KEY,interval_seconds INTEGER NOT NULL,priority INTEGER NOT NULL DEFAULT 100,
+          enabled INTEGER NOT NULL DEFAULT 1,next_run_at INTEGER NOT NULL DEFAULT 0,lease_token TEXT NOT NULL DEFAULT '',
+          lease_until INTEGER NOT NULL DEFAULT 0,last_started_at INTEGER NOT NULL DEFAULT 0,
+          last_finished_at INTEGER NOT NULL DEFAULT 0,last_success_at INTEGER NOT NULL DEFAULT 0,
+          last_duration_ms INTEGER NOT NULL DEFAULT 0,last_status TEXT NOT NULL DEFAULT 'never',
+          last_error TEXT NOT NULL DEFAULT '',runs_total INTEGER NOT NULL DEFAULT 0,
+          failures_total INTEGER NOT NULL DEFAULT 0,updated_at INTEGER NOT NULL DEFAULT 0)`),
+        env.DB.prepare(`CREATE TABLE IF NOT EXISTS server_analytics_hourly (
+          bucket_at INTEGER PRIMARY KEY,active_players INTEGER NOT NULL DEFAULT 0,new_players INTEGER NOT NULL DEFAULT 0,
+          runs_total INTEGER NOT NULL DEFAULT 0,runs_accepted INTEGER NOT NULL DEFAULT 0,cases_opened INTEGER NOT NULL DEFAULT 0,
+          shop_operations INTEGER NOT NULL DEFAULT 0,rewards_delivered INTEGER NOT NULL DEFAULT 0,rewards_failed INTEGER NOT NULL DEFAULT 0,
+          staff_notifications_sent INTEGER NOT NULL DEFAULT 0,staff_notifications_failed INTEGER NOT NULL DEFAULT 0,
+          player_notifications_sent INTEGER NOT NULL DEFAULT 0,player_notifications_failed INTEGER NOT NULL DEFAULT 0,
+          cron_runs INTEGER NOT NULL DEFAULT 0,cron_failures INTEGER NOT NULL DEFAULT 0,cron_duration_ms INTEGER NOT NULL DEFAULT 0,
+          created_at INTEGER NOT NULL,updated_at INTEGER NOT NULL)`)
+      ]);
+      await assertServerTableColumns(env, "leaderboard_staff_notifications", ["available_at", "lease_token", "lease_until"]);
+      await assertServerTableColumns(env, "player_notification_queue", ["lease_token", "lease_until"]);
+      await env.DB.batch([
+        env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_server_cron_jobs_due ON server_cron_jobs(enabled,next_run_at,lease_until,priority,job_key)`),
+        env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_server_analytics_hourly_recent ON server_analytics_hourly(bucket_at DESC)`),
+        env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_staff_notifications_due_v0793 ON leaderboard_staff_notifications(status,available_at,created_at,id,lease_until) WHERE attempts<5`),
+        env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_player_notifications_due_v0793 ON player_notification_queue(status,available_at,id,lease_until) WHERE attempts<5`),
+        env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_reward_delivery_due_v0793 ON reward_delivery_queue(status,available_at,created_at,id,lease_until) WHERE attempts<5`),
+        env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_leaderboard_rewards_expiry_v0793 ON leaderboard_rewards(expires_at,id) WHERE status='pending'`),
+        env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_player_notification_log_cleanup_v0793 ON player_notification_log(sent_at,id)`),
+        env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_performance_samples_analytics_v0793 ON admin_performance_samples(created_at,area,duration_ms,success)`),
+        env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_reward_delivery_analytics_v0793 ON reward_delivery_queue(status,updated_at,reward_kind)`),
+        env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_staff_notifications_analytics_v0793 ON leaderboard_staff_notifications(status,updated_at)`),
+        env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_player_notifications_analytics_v0793 ON player_notification_queue(status,updated_at)`)
+      ]);
+      const now = Math.floor(Date.now() / 1000);
+      await env.DB.batch(SERVER_CRON_JOB_DEFAULTS.map((job) => env.DB.prepare(
+        `INSERT INTO server_cron_jobs(job_key,interval_seconds,priority,enabled,next_run_at,updated_at)
+         VALUES(?,?,?,1,0,?)
+         ON CONFLICT(job_key) DO UPDATE SET interval_seconds=excluded.interval_seconds,priority=excluded.priority,updated_at=excluded.updated_at`
+      ).bind(job.key, job.interval, job.priority, now)));
+    })().catch((error) => {
+      serverOptimizationSchemaPromise = null;
+      throw error;
+    });
+  }
+  await serverOptimizationSchemaPromise;
+}
+
+async function runServerCronSteps(label, steps) {
+  const errors = [];
+  const results = {};
+  for (const [stepName, handler] of steps) {
+    const startedAt = Date.now();
+    try {
+      results[stepName] = await handler();
+    } catch (error) {
+      console.error(`${label}:${stepName} failed`, error);
+      errors.push(`${stepName}: ${String(error?.message || error).slice(0, 180)}`);
+    } finally {
+      results[`${stepName}DurationMs`] = Date.now() - startedAt;
+    }
+  }
+  if (errors.length) throw new Error(errors.join(" | "));
+  return results;
+}
+
+async function processCriticalServerQueues(env) {
+  return runServerCronSteps("critical-queues", [
+    ["leaderboard", async () => {
+      const season = await ensureSeason(env);
+      await expireLeaderboardRewardsAndNotify(env);
+      try { await clearOperationalIssue(env, "leaderboard"); } catch {}
+      return { seasonId: String(season?.id || "") };
+    }],
+    ["rewardQueue", () => processRewardDeliveryQueue(env, 25)],
+    ["staffNotifications", () => processPendingLeaderboardStaffNotifications(env, 30)],
+    ["playerNotifications", () => processV77NotificationQueue(env, 12)],
+    ["broadcast", async () => {
+      const result = await processPendingBotBroadcast(env);
+      try { await clearOperationalIssue(env, "broadcast"); } catch {}
+      return result;
+    }]
+  ]);
+}
+
+async function processMinuteLiveOps(env) {
+  return runServerCronSteps("liveops-minute", [
+    ["workflowCleanup", async () => {
+      const now = Math.floor(Date.now() / 1000);
+      await env.DB.prepare(`DELETE FROM bot_staff_workflows WHERE expires_at<=?`).bind(now).run();
+      await expireAllTemporaryPlayerBans(env);
+    }],
+    ["campaigns", () => processPendingAdminCampaign(env)],
+    ["events", async () => {
+      await ensureSafeControlCenterSchema(env);
+      await processSafeEvents(env);
+      await notifyStaleRewardQueue(env);
+    }],
+    ["releasePlans", async () => {
+      await ensureV67Schema(env);
+      await processV67ReleasePlans(env);
+    }],
+    ["polls", () => processV74PollCron(env)],
+    ["security", () => processOperationsSecurityCron(env)]
+  ]);
+}
+
+async function processFiveMinuteServerHealth(env) {
+  return runServerCronSteps("health-five-minutes", [
+    ["webhook", async () => {
+      await ensureTelegramWebhookHealth(env);
+      try { await clearOperationalIssue(env, "telegram-webhook"); } catch {}
+    }],
+    ["lowStock", () => checkLowStockAlerts(env)],
+    ["operationalProblems", () => syncOperationalProblems(env, { checkWebhook: false, checkCron: false })],
+    ["dailyReport", () => maybeSendDailyStaffReport(env)],
+    ["overview", async () => {
+      const overview = await buildAdminOverview(env, { syncProblems: false });
+      await writeCachedAdminOverview(env, overview);
+      return overview;
+    }]
+  ]);
+}
+
+async function processFiveMinuteAutomations(env) {
+  await ensureV67Schema(env);
+  return processV67AutomationChains(env);
+}
+
+function firstD1BatchRow(result) {
+  return result?.results?.[0] || {};
+}
+
+async function recordServerCronDispatchAnalytics(env, summary, now = Math.floor(Date.now() / 1000)) {
+  const jobs = Array.isArray(summary) ? summary : [];
+  if (!jobs.length) return { recorded: 0 };
+  const bucketAt = Math.floor(now / 3600) * 3600;
+  const failures = jobs.reduce((total, item) => total + (item?.success ? 0 : 1), 0);
+  const durationMs = jobs.reduce((total, item) => total + Math.max(0, Number(item?.durationMs || 0)), 0);
+  await env.DB.prepare(
+    `INSERT INTO server_analytics_hourly(
+       bucket_at,cron_runs,cron_failures,cron_duration_ms,created_at,updated_at
+     ) VALUES(?,?,?,?,?,?)
+     ON CONFLICT(bucket_at) DO UPDATE SET
+       cron_runs=server_analytics_hourly.cron_runs+excluded.cron_runs,
+       cron_failures=server_analytics_hourly.cron_failures+excluded.cron_failures,
+       cron_duration_ms=server_analytics_hourly.cron_duration_ms+excluded.cron_duration_ms,
+       updated_at=excluded.updated_at`
+  ).bind(bucketAt, jobs.length, failures, durationMs, now, now).run();
+  return { recorded: jobs.length, failures, durationMs, bucketAt };
+}
+
+async function collectServerAnalyticsHourly(env, now = Math.floor(Date.now() / 1000)) {
+  await ensureServerOptimizationSchema(env);
+  const currentHour = Math.floor(now / 3600) * 3600;
+  const bucketAt = Math.max(0, currentHour - 3600);
+  const endAt = bucketAt + 3600;
+  const results = await env.DB.batch([
+    env.DB.prepare(`SELECT COUNT(DISTINCT telegram_id) AS count FROM leaderboard_runs WHERE created_at>=? AND created_at<?`).bind(bucketAt, endAt),
+    env.DB.prepare(`SELECT COUNT(*) AS count FROM admin_profile_state WHERE created_at>=? AND created_at<?`).bind(bucketAt, endAt),
+    env.DB.prepare(`SELECT COUNT(*) AS total,SUM(CASE WHEN accepted=1 THEN 1 ELSE 0 END) AS accepted FROM leaderboard_runs WHERE created_at>=? AND created_at<?`).bind(bucketAt, endAt),
+    env.DB.prepare(`SELECT COUNT(*) AS count FROM level_case_openings WHERE opened_at>=? AND opened_at<?`).bind(bucketAt, endAt),
+    env.DB.prepare(`SELECT COUNT(*) AS count FROM granted_cases WHERE opened_at>=? AND opened_at<?`).bind(bucketAt, endAt),
+    env.DB.prepare(`SELECT COUNT(*) AS count FROM shop_stock_consumptions WHERE created_at>=? AND created_at<?`).bind(bucketAt, endAt),
+    env.DB.prepare(`SELECT SUM(CASE WHEN status='delivered' THEN 1 ELSE 0 END) AS delivered,SUM(CASE WHEN status='failed' THEN 1 ELSE 0 END) AS failed FROM reward_delivery_queue WHERE updated_at>=? AND updated_at<?`).bind(bucketAt, endAt),
+    env.DB.prepare(`SELECT SUM(CASE WHEN status='sent' THEN 1 ELSE 0 END) AS sent,SUM(CASE WHEN status='failed' THEN 1 ELSE 0 END) AS failed FROM leaderboard_staff_notifications WHERE updated_at>=? AND updated_at<?`).bind(bucketAt, endAt),
+    env.DB.prepare(`SELECT SUM(CASE WHEN status='sent' THEN 1 ELSE 0 END) AS sent,SUM(CASE WHEN status='failed' THEN 1 ELSE 0 END) AS failed FROM player_notification_queue WHERE updated_at>=? AND updated_at<?`).bind(bucketAt, endAt),
+    env.DB.prepare(`SELECT cron_runs AS runs,cron_failures AS failures,cron_duration_ms AS duration FROM server_analytics_hourly WHERE bucket_at=?`).bind(bucketAt)
+  ]);
+  const active = firstD1BatchRow(results[0]);
+  const players = firstD1BatchRow(results[1]);
+  const runs = firstD1BatchRow(results[2]);
+  const levelCases = firstD1BatchRow(results[3]);
+  const grantedCases = firstD1BatchRow(results[4]);
+  const shop = firstD1BatchRow(results[5]);
+  const rewards = firstD1BatchRow(results[6]);
+  const staff = firstD1BatchRow(results[7]);
+  const player = firstD1BatchRow(results[8]);
+  const cron = firstD1BatchRow(results[9]);
+  await env.DB.prepare(
+    `INSERT INTO server_analytics_hourly(
+       bucket_at,active_players,new_players,runs_total,runs_accepted,cases_opened,shop_operations,
+       rewards_delivered,rewards_failed,staff_notifications_sent,staff_notifications_failed,
+       player_notifications_sent,player_notifications_failed,cron_runs,cron_failures,cron_duration_ms,created_at,updated_at
+     ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+     ON CONFLICT(bucket_at) DO UPDATE SET
+       active_players=excluded.active_players,new_players=excluded.new_players,runs_total=excluded.runs_total,
+       runs_accepted=excluded.runs_accepted,cases_opened=excluded.cases_opened,shop_operations=excluded.shop_operations,
+       rewards_delivered=excluded.rewards_delivered,rewards_failed=excluded.rewards_failed,
+       staff_notifications_sent=excluded.staff_notifications_sent,staff_notifications_failed=excluded.staff_notifications_failed,
+       player_notifications_sent=excluded.player_notifications_sent,player_notifications_failed=excluded.player_notifications_failed,
+       cron_runs=excluded.cron_runs,cron_failures=excluded.cron_failures,cron_duration_ms=excluded.cron_duration_ms,updated_at=excluded.updated_at`
+  ).bind(
+    bucketAt, Number(active.count || 0), Number(players.count || 0), Number(runs.total || 0), Number(runs.accepted || 0),
+    Number(levelCases.count || 0) + Number(grantedCases.count || 0), Number(shop.count || 0), Number(rewards.delivered || 0),
+    Number(rewards.failed || 0), Number(staff.sent || 0), Number(staff.failed || 0), Number(player.sent || 0),
+    Number(player.failed || 0), Number(cron.runs || 0), Number(cron.failures || 0), Number(cron.duration || 0), now, now
+  ).run();
+  return { bucketAt };
+}
+
+async function processHourlyServerMaintenance(env) {
+  return runServerCronSteps("hourly-maintenance", [
+    ["fraud", () => scanFraudAlerts(env)],
+    ["stockForecast", () => processV67StockForecastAlerts(env)],
+    ["smartAlerts", () => scanV77SmartAlerts(env)],
+    ["analytics", () => collectServerAnalyticsHourly(env)]
+  ]);
+}
+
+async function processDailyServerCleanup(env) {
+  const now = Math.floor(Date.now() / 1000);
+  await ensureV78Schema(env);
+  return runServerCronSteps("daily-cleanup", [
+    ["training", () => processV78Cron(env)],
+    ["history", async () => {
+      await env.DB.batch([
+        env.DB.prepare(`DELETE FROM admin_performance_samples WHERE created_at<?`).bind(now - 7 * V67_DAY),
+        env.DB.prepare(`DELETE FROM stock_forecast_snapshots WHERE created_at<?`).bind(now - 30 * V67_DAY),
+        env.DB.prepare(`DELETE FROM player_notification_log WHERE sent_at<?`).bind(now - 30 * V67_DAY),
+        env.DB.prepare(`DELETE FROM leaderboard_staff_notifications WHERE status='sent' AND sent_at>0 AND sent_at<?`).bind(now - 30 * V67_DAY),
+        env.DB.prepare(`DELETE FROM player_notification_queue WHERE status='sent' AND updated_at<?`).bind(now - 30 * V67_DAY),
+        env.DB.prepare(`DELETE FROM server_analytics_hourly WHERE bucket_at<?`).bind(now - SERVER_ANALYTICS_RETENTION_SECONDS)
+      ]);
+    }]
+  ]);
+}
+
+async function executeServerCronJob(jobKey, env) {
+  if (jobKey === "critical-queues") return processCriticalServerQueues(env);
+  if (jobKey === "liveops-minute") return processMinuteLiveOps(env);
+  if (jobKey === "health-five-minutes") return processFiveMinuteServerHealth(env);
+  if (jobKey === "automations-five-minutes") return processFiveMinuteAutomations(env);
+  if (jobKey === "hourly-maintenance") return processHourlyServerMaintenance(env);
+  if (jobKey === "daily-cleanup") return processDailyServerCleanup(env);
+  throw new Error(`Unknown server Cron job: ${jobKey}`);
+}
+
+async function processServerCron(env, controller = null) {
+  await ensureServerOptimizationSchema(env);
+  const now = Math.floor(Date.now() / 1000);
+  await setSystemState(env, "cron:last_start", String(now));
+  const due = await env.DB.prepare(
+    `SELECT job_key,interval_seconds,next_run_at
+     FROM server_cron_jobs
+     WHERE enabled=1 AND next_run_at<=? AND (lease_until=0 OR lease_until<?)
+     ORDER BY priority ASC,next_run_at ASC,job_key ASC
+     LIMIT ?`
+  ).bind(now, now, SERVER_CRON_MAX_JOBS_PER_TICK).all();
+  const summary = [];
+  for (const row of due.results || []) {
+    const jobKey = String(row.job_key || "");
+    const token = caseGrantId("cron_lock");
+    const startedAt = Math.floor(Date.now() / 1000);
+    const startedMs = Date.now();
+    const claim = await env.DB.prepare(
+      `UPDATE server_cron_jobs
+       SET lease_token=?,lease_until=?,last_started_at=?,last_status='running',last_error='',updated_at=?
+       WHERE job_key=? AND enabled=1 AND next_run_at<=? AND (lease_until=0 OR lease_until<?)`
+    ).bind(token, startedAt + SERVER_CRON_LEASE_SECONDS, startedAt, startedAt, jobKey, startedAt, startedAt).run();
+    if (Number(claim.meta?.changes || 0) < 1) continue;
+    let success = true;
+    let errorText = "";
+    try {
+      await executeServerCronJob(jobKey, env);
+      try { await clearOperationalIssue(env, `cron:${jobKey}`); } catch {}
+    } catch (error) {
+      success = false;
+      errorText = String(error?.message || error).slice(0, 500);
+      console.error(`Cron job ${jobKey} failed`, error);
+      try {
+        await notifyOperationalIssue(env, `cron:${jobKey}`, `🔴 <b>Ошибка фоновой задачи</b>\n\nЗадача: <code>${escapeHtml(jobKey)}</code>\n${escapeHtml(errorText)}`);
+      } catch {}
+    }
+    const finishedAt = Math.floor(Date.now() / 1000);
+    const durationMs = Math.max(0, Date.now() - startedMs);
+    const interval = Math.max(60, Number(row.interval_seconds || 60));
+    await env.DB.prepare(
+      `UPDATE server_cron_jobs SET
+         next_run_at=?,lease_token='',lease_until=0,last_finished_at=?,
+         last_success_at=CASE WHEN ?=1 THEN ? ELSE last_success_at END,
+         last_duration_ms=?,last_status=?,last_error=?,runs_total=runs_total+1,
+         failures_total=failures_total+CASE WHEN ?=1 THEN 0 ELSE 1 END,updated_at=?
+       WHERE job_key=? AND lease_token=?`
+    ).bind(finishedAt + interval, finishedAt, success ? 1 : 0, finishedAt, durationMs, success ? "success" : "failed", errorText, success ? 1 : 0, finishedAt, jobKey, token).run();
+    summary.push({ jobKey, success, durationMs });
+  }
+  const completedAt = Math.floor(Date.now() / 1000);
+  try {
+    await recordServerCronDispatchAnalytics(env, summary, completedAt);
+  } catch (error) {
+    console.error("Cron analytics write failed", error);
+  }
+  await setSystemState(env, "cron:last_success", String(completedAt));
+  await setSystemState(env, "cron:last_dispatch", JSON.stringify({
+    scheduledTime: Number(controller?.scheduledTime || 0),
+    completedAt,
+    jobs: summary
+  }));
+  return { processed: summary.length, jobs: summary };
+}
+
 
 function jsonResponse(payload, status = 200) {
   return new Response(JSON.stringify(payload), { status, headers: apiHeaders() });
@@ -835,28 +1124,195 @@ class ApiError extends Error {
   }
 }
 
-async function getShopConfig(env) {
+function startupSectionError(error) {
+  return {
+    status: error instanceof ApiError ? error.status : 500,
+    message: String(error?.message || "Временная ошибка сервиса.").slice(0, 240)
+  };
+}
+
+async function getGameStartupPackage(request, env) {
   try {
-    requireDatabase(env);
-    await ensureShopAssortmentSchema(env);
+    const body = await readJson(request);
+    let publicConfig;
+    try {
+      publicConfig = await readGamePublicConfig(env);
+    } catch (error) {
+      console.error("startup public config failed", error);
+      publicConfig = fallbackGamePublicConfig();
+    }
+
+    const initData = String(body.initData || "");
+    if (!initData) {
+      return jsonResponse({
+        ok: true,
+        authenticated: false,
+        workerBuild: WORKER_BUILD,
+        generatedAt: Date.now(),
+        publicConfig
+      });
+    }
+
+    requireBotToken(env);
+    const auth = await validateTelegramInitData(initData, env);
+    const internalBody = {
+      initData,
+      mode: "read",
+      current: body.current && typeof body.current === "object" ? body.current : {}
+    };
+    const shared = { caseEnsured: null, skipRewardQueue: true };
+    try { await processPlayerRewardDeliveryQueue(env, String(auth.user.id), 10); }
+    catch (error) { console.error("startup reward queue refresh failed", error); }
+    const errors = {};
+    let profile = null;
+    try {
+      profile = await syncAdminProfile(null, env, { raw: true, body: internalBody, auth, shared });
+    } catch (error) {
+      console.error("startup profile failed", error);
+      errors.profile = startupSectionError(error);
+    }
+
+    const [casesResult, rewardsResult, flagsResult] = await Promise.allSettled([
+      getLevelCaseState(null, env, { raw: true, body: internalBody, auth, shared }),
+      listMyRewards(null, env, { raw: true, body: internalBody, auth }),
+      publicFeatureFlags(env, String(auth.user.id))
+    ]);
+    const cases = casesResult.status === "fulfilled" ? casesResult.value : null;
+    const rewards = rewardsResult.status === "fulfilled" ? rewardsResult.value : null;
+    const flags = flagsResult.status === "fulfilled" ? flagsResult.value : null;
+    if (casesResult.status === "rejected") errors.cases = startupSectionError(casesResult.reason);
+    if (rewardsResult.status === "rejected") errors.rewards = startupSectionError(rewardsResult.reason);
+    if (flagsResult.status === "rejected") errors.flags = startupSectionError(flagsResult.reason);
+
     return jsonResponse({
       ok: true,
-      products: await readShopPrices(env),
-      assortment: await readShopAssortment(env),
-      stock: await readShopStockAvailability(env, "prize", Object.keys(SHOP_ASSORTMENT_PRODUCTS)),
-      defaults: DEFAULT_SHOP_PRODUCTS,
-      source: "d1"
+      authenticated: true,
+      workerBuild: WORKER_BUILD,
+      generatedAt: Date.now(),
+      publicConfig,
+      profile,
+      cases,
+      rewards,
+      flags,
+      errors
     });
   } catch (error) {
-    console.error("getShopConfig failed", error);
-    return jsonResponse({
-      ok: true,
+    if (error instanceof ApiError) return jsonResponse({ ok: false, error: error.message }, error.status);
+    console.error("getGameStartupPackage failed", error);
+    return jsonResponse({ ok: false, error: "Не удалось загрузить стартовый пакет игры." }, 500);
+  }
+}
+
+const GAME_PUBLIC_CONFIG_CACHE_TTL_MS = 20 * 1000;
+let gamePublicConfigMemory = { value: null, expiresAt: 0, promise: null, generation: 0 };
+let gamePublicSchemaReady = false;
+let gamePublicSchemaPromise = null;
+
+function invalidateGamePublicConfigCache() {
+  gamePublicConfigMemory.value = null;
+  gamePublicConfigMemory.expiresAt = 0;
+  gamePublicConfigMemory.promise = null;
+  gamePublicConfigMemory.generation += 1;
+}
+
+async function ensureGamePublicSchemas(env) {
+  if (gamePublicSchemaReady) return;
+  if (gamePublicSchemaPromise) return gamePublicSchemaPromise;
+  const promise = Promise.all([
+    ensureShopAssortmentSchema(env),
+    ensureSkinPriceSchema(env),
+    ensureShopStockSchema(env)
+  ]).then(() => { gamePublicSchemaReady = true; });
+  gamePublicSchemaPromise = promise;
+  try {
+    await promise;
+  } finally {
+    if (gamePublicSchemaPromise === promise) gamePublicSchemaPromise = null;
+  }
+}
+
+function fallbackGamePublicConfig() {
+  return {
+    shop: {
       products: cloneDefaultShopProducts(),
       assortment: cloneDefaultShopAssortment(),
       stock: {},
       defaults: DEFAULT_SHOP_PRODUCTS,
       source: "fallback"
-    });
+    },
+    skins: {
+      skins: cloneDefaultSkinPrices(),
+      stock: {},
+      defaults: DEFAULT_SKIN_PRICES,
+      source: "fallback"
+    }
+  };
+}
+
+async function readGamePublicConfig(env, force = false) {
+  const now = Date.now();
+  if (!force && gamePublicConfigMemory.value && gamePublicConfigMemory.expiresAt > now) {
+    return gamePublicConfigMemory.value;
+  }
+  if (!force && gamePublicConfigMemory.promise) return gamePublicConfigMemory.promise;
+
+  const generation = gamePublicConfigMemory.generation;
+  const promise = (async () => {
+    requireDatabase(env);
+    await ensureGamePublicSchemas(env);
+    const [products, assortment, skins, stockResult] = await Promise.all([
+      readShopPrices(env),
+      readShopAssortment(env),
+      readSkinPrices(env),
+      env.DB.prepare(
+        `SELECT scope_key, category, product_id, configured_limit, remaining, updated_at
+         FROM shop_stock_limits ORDER BY category ASC, product_id ASC`
+      ).all()
+    ]);
+    const stockRows = stockResult.results || [];
+    const value = {
+      shop: {
+        products,
+        assortment,
+        stock: Object.fromEntries(Object.keys(SHOP_ASSORTMENT_PRODUCTS).map((productId) => [
+          productId,
+          shopStockAvailabilityFromRows(stockRows, "prize", productId)
+        ])),
+        defaults: DEFAULT_SHOP_PRODUCTS,
+        source: "d1"
+      },
+      skins: {
+        skins,
+        stock: Object.fromEntries(Object.keys(SKINS).filter((id) => id !== "default").map((skinId) => [
+          skinId,
+          shopStockAvailabilityFromRows(stockRows, "skins", skinId)
+        ])),
+        defaults: DEFAULT_SKIN_PRICES,
+        source: "d1"
+      }
+    };
+    if (generation === gamePublicConfigMemory.generation) {
+      gamePublicConfigMemory.value = value;
+      gamePublicConfigMemory.expiresAt = Date.now() + GAME_PUBLIC_CONFIG_CACHE_TTL_MS;
+    }
+    return value;
+  })();
+
+  gamePublicConfigMemory.promise = promise;
+  try {
+    return await promise;
+  } finally {
+    if (gamePublicConfigMemory.promise === promise) gamePublicConfigMemory.promise = null;
+  }
+}
+
+async function getShopConfig(env) {
+  try {
+    const config = await readGamePublicConfig(env);
+    return jsonResponse({ ok: true, ...config.shop });
+  } catch (error) {
+    console.error("getShopConfig failed", error);
+    return jsonResponse({ ok: true, ...fallbackGamePublicConfig().shop });
   }
 }
 
@@ -888,6 +1344,7 @@ async function updateShopPrices(request, env) {
       `UPDATE shop_assortment SET points = ?, treats = ?, coffee = ?, updated_at = ?, updated_by = ?
        WHERE product_id = ?`
     ).bind(price.points, price.treats, price.coffee, now, updatedBy, productId)));
+    invalidateGamePublicConfigCache();
     return jsonResponse({
       ok: true,
       products: await readShopPrices(env),
@@ -1098,6 +1555,7 @@ async function consumeShopStock(env, { category, productId, consumptionId, teleg
   const updated = await env.DB.prepare(
     `SELECT configured_limit, remaining FROM shop_stock_limits WHERE scope_key = ? LIMIT 1`
   ).bind(availability.scope).first();
+  invalidateGamePublicConfigCache();
   return {
     limited: true,
     soldOut: safeAdminNumber(updated?.remaining) <= 0,
@@ -1124,6 +1582,7 @@ async function releaseShopStock(env, consumptionId) {
        WHERE scope_key = ?`
     ).bind(String(row.scope_key))
   ]);
+  invalidateGamePublicConfigCache();
 }
 
 async function claimSkinPurchaseCaseBonus(request, env) {
@@ -1196,24 +1655,11 @@ async function purchaseSkinWithStock(request, env) {
 
 async function getSkinConfig(env) {
   try {
-    requireDatabase(env);
-    await ensureSkinPriceSchema(env);
-    return jsonResponse({
-      ok: true,
-      skins: await readSkinPrices(env),
-      stock: await readShopStockAvailability(env, "skins", Object.keys(SKINS).filter((id) => id !== "default")),
-      defaults: DEFAULT_SKIN_PRICES,
-      source: "d1"
-    });
+    const config = await readGamePublicConfig(env);
+    return jsonResponse({ ok: true, ...config.skins });
   } catch (error) {
     console.error("getSkinConfig failed", error);
-    return jsonResponse({
-      ok: true,
-      skins: cloneDefaultSkinPrices(),
-      stock: {},
-      defaults: DEFAULT_SKIN_PRICES,
-      source: "fallback"
-    });
+    return jsonResponse({ ok: true, ...fallbackGamePublicConfig().skins });
   }
 }
 
@@ -1240,6 +1686,7 @@ async function updateSkinPrices(request, env) {
         updated_at = excluded.updated_at,
         updated_by = excluded.updated_by`
     ).bind(skinId, price.points, price.treats, price.coffee, now, updatedBy)));
+    invalidateGamePublicConfigCache();
     return jsonResponse({ ok: true, skins: await readSkinPrices(env), updatedAt: now * 1000 });
   } catch (error) {
     if (error instanceof ApiError) return jsonResponse({ ok: false, error: error.message }, error.status);
@@ -1306,13 +1753,13 @@ function normalizeSkinPrices(input) {
   return skins;
 }
 
-async function syncAdminProfile(request, env) {
+async function syncAdminProfile(request, env, internal = null) {
   try {
     requireDatabase(env);
     requireBotToken(env);
     await ensureV78Schema(env);
-    const body = await readJson(request);
-    const auth = await validateTelegramInitData(String(body.initData || ""), env);
+    const body = internal?.body || await readJson(request);
+    const auth = internal?.auth || await validateTelegramInitData(String(body.initData || ""), env);
     const mode = String(body.mode || "read");
     if (mode === "write" || mode === "set") requireAdminUser(auth.user, env);
     const telegramId = String(auth.user.id);
@@ -1359,11 +1806,12 @@ async function syncAdminProfile(request, env) {
     }
     const syncedOwnedSkins = hasSkinSnapshot ? normalizeCurrentOwnedSkins(body.current.ownedSkins) : undefined;
     const syncedActiveSkin = hasSkinSnapshot ? normalizeCurrentActiveSkin(body.current?.activeSkin, syncedOwnedSkins) : "";
-    await ensureCasePlayerState(env, telegramId, {
+    const ensuredCaseState = await ensureCasePlayerState(env, telegramId, {
       ...current,
       ownedSkins: syncedOwnedSkins,
       activeSkin: syncedActiveSkin
     });
+    if (internal?.shared) internal.shared.caseEnsured = ensuredCaseState;
     if (hasSkinSnapshot && previousActiveSkin && previousActiveSkin !== syncedActiveSkin) {
       const skinTitle = SKINS[syncedActiveSkin]?.title || (syncedActiveSkin === "default" ? "Стандартный" : syncedActiveSkin);
       const eventId = `skin_equip_${now}_${syncedActiveSkin}`;
@@ -1485,7 +1933,7 @@ async function syncAdminProfile(request, env) {
       ).bind(telegramId).first();
     }
 
-    return jsonResponse({
+    const payload = {
       ok: true,
       resetPlan: activeResetPlan,
       profile: {
@@ -1505,8 +1953,22 @@ async function syncAdminProfile(request, env) {
         revision: safeAdminNumber(row?.revision),
         updatedAt: safeAdminNumber(row?.updated_at) * 1000
       }
-    });
+    };
+    if (internal?.shared?.caseEnsured) {
+      internal.shared.caseEnsured.profile = {
+        ...(internal.shared.caseEnsured.profile || {}),
+        wallet: payload.profile.wallet,
+        best_score: payload.profile.best,
+        treats: payload.profile.treats,
+        coffee: payload.profile.coffee,
+        profile_xp: payload.profile.profileXp,
+        revision: payload.profile.revision,
+        updated_at: Math.floor(Number(payload.profile.updatedAt || 0) / 1000)
+      };
+    }
+    return internal?.raw ? payload : jsonResponse(payload);
   } catch (error) {
+    if (internal?.raw) throw error;
     if (error instanceof ApiError) return jsonResponse({ ok: false, error: error.message }, error.status);
     console.error("syncAdminProfile failed", error);
     return jsonResponse({ ok: false, error: "Не удалось синхронизировать глобальные начисления." }, 500);
@@ -1721,62 +2183,60 @@ async function createReward(request, env) {
   }
 }
 
-async function listMyRewards(request, env) {
+async function listMyRewards(request, env, internal = null) {
   try {
     requireDatabase(env);
     requireBotToken(env);
-    const body = await readJson(request);
-    const auth = await validateTelegramInitData(String(body.initData || ""), env);
+    const body = internal?.body || await readJson(request);
+    const auth = internal?.auth || await validateTelegramInitData(String(body.initData || ""), env);
     const ownerId = String(auth.user.id);
     const now = Math.floor(Date.now() / 1000);
 
-    await env.DB.prepare(
-      `UPDATE reward_codes SET status = 'expired'
-       WHERE owner_telegram_id = ? AND status = 'active' AND expires_at <= ?`
-    ).bind(ownerId, now).run();
+    const limitWindow = positiveInt(env.REWARD_LIMIT_WINDOW_SECONDS, DEFAULT_LIMIT_WINDOW_SECONDS);
+    const limit = positiveInt(env.REWARD_LIMIT_MAX, DEFAULT_LIMIT_MAX);
+    const configuredResetAt = positiveInt(env.REWARD_LIMIT_RESET_AT_SECONDS, REWARD_LIMIT_RESET_AT_SECONDS);
+    const threshold = Math.max(now - limitWindow, configuredResetAt);
+    const [, rewardsResult, limitResult] = await env.DB.batch([
+      env.DB.prepare(
+        `UPDATE reward_codes SET status = 'expired'
+         WHERE owner_telegram_id = ? AND status = 'active' AND expires_at <= ?`
+      ).bind(ownerId, now),
+      env.DB.prepare(
+        `SELECT code, product_id, product_name, created_at, expires_at, status, redeemed_at
+         FROM reward_codes WHERE owner_telegram_id = ?
+         ORDER BY created_at DESC LIMIT 20`
+      ).bind(ownerId),
+      env.DB.prepare(
+        `SELECT created_at
+         FROM reward_codes
+         WHERE owner_telegram_id = ? AND created_at > ? AND status <> 'cancelled'
+           AND request_id NOT LIKE 'case_reward_%'
+         ORDER BY created_at ASC`
+      ).bind(ownerId, threshold)
+    ]);
 
-    const result = await env.DB.prepare(
-      `SELECT code, product_id, product_name, created_at, expires_at, status, redeemed_at
-       FROM reward_codes WHERE owner_telegram_id = ?
-       ORDER BY created_at DESC LIMIT 20`
-    ).bind(ownerId).all();
-
-    const limitStatus = await getRewardLimitStatus(env, ownerId, now);
-    return jsonResponse({
+    const payload = {
       ok: true,
-      rewards: (result.results || []).map(rewardRowToClient),
-      limitStatus
-    });
+      rewards: (rewardsResult.results || []).map(rewardRowToClient),
+      limitStatus: rewardLimitStatusFromRows(limitResult.results || [], now, limitWindow, limit, configuredResetAt, threshold)
+    };
+    return internal?.raw ? payload : jsonResponse(payload);
   } catch (error) {
+    if (internal?.raw) throw error;
     if (error instanceof ApiError) return jsonResponse({ ok: false, error: error.message }, error.status);
     console.error("listMyRewards failed", error);
     return jsonResponse({ ok: false, error: "Не удалось обновить покупки." }, 500);
   }
 }
 
-async function getRewardLimitStatus(env, ownerId, now = Math.floor(Date.now() / 1000)) {
-  const limitWindow = positiveInt(env.REWARD_LIMIT_WINDOW_SECONDS, DEFAULT_LIMIT_WINDOW_SECONDS);
-  const limit = positiveInt(env.REWARD_LIMIT_MAX, DEFAULT_LIMIT_MAX);
-  const configuredResetAt = positiveInt(env.REWARD_LIMIT_RESET_AT_SECONDS, REWARD_LIMIT_RESET_AT_SECONDS);
-  const threshold = Math.max(now - limitWindow, configuredResetAt);
-
-  const result = await env.DB.prepare(
-    `SELECT created_at
-     FROM reward_codes
-     WHERE owner_telegram_id = ? AND created_at > ? AND status <> 'cancelled'
-       AND request_id NOT LIKE 'case_reward_%'
-     ORDER BY created_at ASC`
-  ).bind(ownerId, threshold).all();
-
-  const purchaseSeconds = (result.results || [])
+function rewardLimitStatusFromRows(rows, now, limitWindow, limit, configuredResetAt, threshold) {
+  const purchaseSeconds = (rows || [])
     .map((row) => Number(row?.created_at || 0))
     .filter((value) => Number.isFinite(value) && value > threshold && value <= now + 300)
     .sort((left, right) => left - right);
-
   const used = purchaseSeconds.length;
   const reached = used >= limit;
   const nextAvailableAtSeconds = reached ? purchaseSeconds[0] + limitWindow : 0;
-
   return {
     used,
     limit,
@@ -1787,6 +2247,21 @@ async function getRewardLimitStatus(env, ownerId, now = Math.floor(Date.now() / 
     windowSeconds: limitWindow,
     resetAt: configuredResetAt * 1000
   };
+}
+
+async function getRewardLimitStatus(env, ownerId, now = Math.floor(Date.now() / 1000)) {
+  const limitWindow = positiveInt(env.REWARD_LIMIT_WINDOW_SECONDS, DEFAULT_LIMIT_WINDOW_SECONDS);
+  const limit = positiveInt(env.REWARD_LIMIT_MAX, DEFAULT_LIMIT_MAX);
+  const configuredResetAt = positiveInt(env.REWARD_LIMIT_RESET_AT_SECONDS, REWARD_LIMIT_RESET_AT_SECONDS);
+  const threshold = Math.max(now - limitWindow, configuredResetAt);
+  const result = await env.DB.prepare(
+    `SELECT created_at
+     FROM reward_codes
+     WHERE owner_telegram_id = ? AND created_at > ? AND status <> 'cancelled'
+       AND request_id NOT LIKE 'case_reward_%'
+     ORDER BY created_at ASC`
+  ).bind(ownerId, threshold).all();
+  return rewardLimitStatusFromRows(result.results || [], now, limitWindow, limit, configuredResetAt, threshold);
 }
 
 
@@ -2123,19 +2598,19 @@ async function leaderboardStaffRecipientIds(env, category = "rating_finished") {
   return staffNotificationRecipientIds(env, category);
 }
 
-async function queueLeaderboardStaffNotification(env, eventKey, messageHtml) {
+async function queueLeaderboardStaffNotification(env, eventKey, messageHtml, categoryOverride = "") {
   try {
-    const recipients = await leaderboardStaffRecipientIds(env, notificationCategoryForEventKey(eventKey));
+    const category = NOTIFICATION_KEYS.includes(String(categoryOverride)) ? String(categoryOverride) : notificationCategoryForEventKey(eventKey);
+    const recipients = await leaderboardStaffRecipientIds(env, category);
     if (!recipients.length) return { queued: 0, sent: 0 };
     const now = Math.floor(Date.now() / 1000);
     await env.DB.batch(recipients.map((telegramId) => env.DB.prepare(
       `INSERT OR IGNORE INTO leaderboard_staff_notifications (
-         event_key, recipient_telegram_id, message_html, status,
-         attempts, last_error, created_at, updated_at, sent_at
-       ) VALUES (?, ?, ?, 'pending', 0, '', ?, ?, 0)`
-    ).bind(String(eventKey), telegramId, String(messageHtml), now, now)));
-    const delivery = await processPendingLeaderboardStaffNotifications(env, Math.max(20, recipients.length));
-    return { queued: recipients.length, sent: delivery.sent };
+         event_key,recipient_telegram_id,message_html,status,attempts,last_error,
+         created_at,updated_at,sent_at,available_at,lease_token,lease_until
+       ) VALUES (?, ?, ?, 'pending', 0, '', ?, ?, 0, ?, '', 0)`
+    ).bind(String(eventKey), telegramId, String(messageHtml), now, now, now)));
+    return { queued: recipients.length, sent: 0 };
   } catch (error) {
     console.error("Queue leaderboard staff notification failed", error);
     return { queued: 0, sent: 0 };
@@ -2185,37 +2660,53 @@ async function expireLeaderboardRewardsAndNotify(env, now = Math.floor(Date.now(
 
 async function processPendingLeaderboardStaffNotifications(env, limitValue = 30) {
   const limit = Math.max(1, Math.min(100, Math.floor(Number(limitValue) || 30)));
+  const now = Math.floor(Date.now() / 1000);
   const rows = await env.DB.prepare(
-    `SELECT id, recipient_telegram_id, message_html, attempts
+    `SELECT id,recipient_telegram_id,message_html,attempts
      FROM leaderboard_staff_notifications
-     WHERE status IN ('pending', 'failed') AND attempts < 5
-     ORDER BY created_at ASC, id ASC
+     WHERE status IN ('pending','failed') AND attempts<5 AND available_at<=?
+       AND (lease_until=0 OR lease_until<?)
+     ORDER BY available_at ASC,created_at ASC,id ASC
      LIMIT ?`
-  ).bind(limit).all();
+  ).bind(now, now, limit).all();
   let sent = 0;
   let failed = 0;
+  let skipped = 0;
   for (const row of rows.results || []) {
-    const now = Math.floor(Date.now() / 1000);
+    const token = caseGrantId("staff_notice_lock");
+    const claimAt = Math.floor(Date.now() / 1000);
+    const claim = await env.DB.prepare(
+      `UPDATE leaderboard_staff_notifications
+       SET lease_token=?,lease_until=?,updated_at=?
+       WHERE id=? AND status IN ('pending','failed') AND attempts<5 AND available_at<=?
+         AND (lease_until=0 OR lease_until<?)`
+    ).bind(token, claimAt + SERVER_NOTIFICATION_LEASE_SECONDS, claimAt, row.id, claimAt, claimAt).run();
+    if (Number(claim.meta?.changes || 0) < 1) { skipped += 1; continue; }
     try {
       await sendTelegramMessage(env, String(row.recipient_telegram_id), String(row.message_html || ""));
+      const finishedAt = Math.floor(Date.now() / 1000);
       await env.DB.prepare(
         `UPDATE leaderboard_staff_notifications
-         SET status = 'sent', attempts = attempts + 1, last_error = '', updated_at = ?, sent_at = ?
-         WHERE id = ?`
-      ).bind(now, now, row.id).run();
+         SET status='sent',attempts=attempts+1,last_error='',updated_at=?,sent_at=?,
+             lease_token='',lease_until=0
+         WHERE id=? AND lease_token=?`
+      ).bind(finishedAt, finishedAt, row.id, token).run();
       sent += 1;
     } catch (error) {
+      const finishedAt = Math.floor(Date.now() / 1000);
       const permanent = isPermanentTelegramDeliveryError(error);
       const attempts = permanent ? 5 : Math.max(1, Number(row.attempts || 0) + 1);
+      const delay = permanent ? 0 : Math.min(3600, SERVER_NOTIFICATION_RETRY_BASE_SECONDS * (2 ** Math.max(0, attempts - 1)));
       await env.DB.prepare(
         `UPDATE leaderboard_staff_notifications
-         SET status = 'failed', attempts = ?, last_error = ?, updated_at = ?
-         WHERE id = ?`
-      ).bind(attempts, leaderboardNotificationErrorReason(error), now, row.id).run();
+         SET status='failed',attempts=?,last_error=?,updated_at=?,available_at=?,
+             lease_token='',lease_until=0
+         WHERE id=? AND lease_token=?`
+      ).bind(attempts, leaderboardNotificationErrorReason(error), finishedAt, finishedAt + delay, row.id, token).run();
       failed += 1;
     }
   }
-  return { sent, failed, processed: sent + failed };
+  return { sent, failed, skipped, processed: sent + failed };
 }
 
 
@@ -2539,13 +3030,17 @@ async function ensureCasePlayerState(env, telegramId, currentProfile) {
       `UPDATE case_player_state SET owned_skins_json = ?, active_skin_id = ?, updated_at = ? WHERE telegram_id = ?`
     ).bind(JSON.stringify(snapshotOwnedSkins), snapshotActiveSkin, now, telegramId).run();
   }
-  const profile = await env.DB.prepare(
-    `SELECT wallet, best_score, treats, coffee, profile_xp, revision, updated_at
-     FROM admin_profile_state WHERE telegram_id = ? LIMIT 1`
-  ).bind(telegramId).first();
-  const row = await env.DB.prepare(
-    `SELECT * FROM case_player_state WHERE telegram_id = ? LIMIT 1`
-  ).bind(telegramId).first();
+  const [profileResult, caseResult] = await env.DB.batch([
+    env.DB.prepare(
+      `SELECT wallet, best_score, treats, coffee, profile_xp, revision, updated_at
+       FROM admin_profile_state WHERE telegram_id = ? LIMIT 1`
+    ).bind(telegramId),
+    env.DB.prepare(
+      `SELECT * FROM case_player_state WHERE telegram_id = ? LIMIT 1`
+    ).bind(telegramId)
+  ]);
+  const profile = profileResult.results?.[0] || null;
+  const row = caseResult.results?.[0] || null;
   return { now, profile, row, state: caseStateFromRow(row) };
 }
 
@@ -2560,20 +3055,22 @@ function normalizeCurrentActiveSkin(value, ownedSkins = []) {
   return Array.isArray(ownedSkins) && ownedSkins.includes(id) && Object.prototype.hasOwnProperty.call(CASE_SKINS, id) ? id : "default";
 }
 
-async function buildCasePayload(env, telegramId, currentProfile, extra = {}) {
-  try { await processPlayerRewardDeliveryQueue(env, telegramId, 10); }
-  catch (error) { console.error("player reward queue refresh failed", error); }
-  const ensured = await ensureCasePlayerState(env, telegramId, currentProfile);
+async function buildCasePayload(env, telegramId, currentProfile, extra = {}, options = {}) {
+  if (!options.skipRewardQueue) {
+    try { await processPlayerRewardDeliveryQueue(env, telegramId, 10); }
+    catch (error) { console.error("player reward queue refresh failed", error); }
+  }
+  const ensured = options.ensured || await ensureCasePlayerState(env, telegramId, currentProfile);
   const liveops = await readLiveOpsConfig(env);
-  const [openingsResult, giftedResult] = await Promise.all([
+  const [openingsResult, giftedResult] = await env.DB.batch([
     env.DB.prepare(
       `SELECT level, case_type, rewards_json, opened_at
        FROM level_case_openings WHERE telegram_id = ? ORDER BY level ASC`
-    ).bind(telegramId).all(),
+    ).bind(telegramId),
     env.DB.prepare(
       `SELECT case_type, COUNT(*) AS count FROM granted_cases
        WHERE telegram_id = ? AND status = 'pending' GROUP BY case_type`
-    ).bind(telegramId).all()
+    ).bind(telegramId)
   ]);
   const openedCases = (openingsResult.results || []).map((row) => {
     let rewards = [];
@@ -2891,14 +3388,19 @@ async function releaseCasePhysicalStock(env, consumptionIds) {
   }
 }
 
-async function getLevelCaseState(request, env) {
+async function getLevelCaseState(request, env, internal = null) {
   try {
     requireDatabase(env);
     requireBotToken(env);
-    const body = await readJson(request);
-    const auth = await validateTelegramInitData(String(body.initData || ""), env);
-    return jsonResponse(await buildCasePayload(env, String(auth.user.id), body.current || {}));
+    const body = internal?.body || await readJson(request);
+    const auth = internal?.auth || await validateTelegramInitData(String(body.initData || ""), env);
+    const payload = await buildCasePayload(env, String(auth.user.id), body.current || {}, {}, {
+      ensured: internal?.shared?.caseEnsured || null,
+      skipRewardQueue: Boolean(internal?.shared?.skipRewardQueue)
+    });
+    return internal?.raw ? payload : jsonResponse(payload);
   } catch (error) {
+    if (internal?.raw) throw error;
     if (error instanceof ApiError) return jsonResponse({ ok: false, error: error.message }, error.status);
     console.error("getLevelCaseState failed", error);
     return jsonResponse({ ok: false, error: "Не удалось загрузить кейсы. Проверьте миграцию 0010." }, 500);
@@ -5372,6 +5874,7 @@ async function setShopStockLimitFromBot(chatId, user, rawPayload, env) {
   const now = Math.floor(Date.now() / 1000);
   if (parsed.remove) {
     await env.DB.prepare(`DELETE FROM shop_stock_limits WHERE scope_key = ?`).bind(scopeKey).run();
+    invalidateGamePublicConfigCache();
     await logStaffAction(env, user, access, "shop_stock_limit_remove", null, "product", null, null, {
       category: parsed.category, productId: parsed.productId, scopeKey
     });
@@ -5388,6 +5891,7 @@ async function setShopStockLimitFromBot(chatId, user, rawPayload, env) {
        updated_at = excluded.updated_at,
        updated_by = excluded.updated_by`
   ).bind(scopeKey, parsed.category, parsed.productId, parsed.amount, parsed.amount, now, String(user.id)).run();
+  invalidateGamePublicConfigCache();
   await logStaffAction(env, user, access, "shop_stock_limit_set", null, "product", null, parsed.amount, {
     category: parsed.category, productId: parsed.productId, scopeKey
   });
@@ -5467,6 +5971,7 @@ async function addShopProductFromBot(chatId, user, rawPayload, env) {
     ).bind(parsedProduct.id, price.points, price.treats, price.coffee, now, actorId));
   }
   await env.DB.batch(statements);
+  invalidateGamePublicConfigCache();
   await logStaffAction(env, user, access, "shop_product_enable", null, "product", null, null, {
     productId: parsedProduct.id,
     price
@@ -5522,6 +6027,7 @@ async function updateShopProductPriceFromBot(chatId, user, rawPayload, env) {
   }
 
   await env.DB.batch(statements);
+  invalidateGamePublicConfigCache();
   await logStaffAction(env, user, access, "shop_product_price_update", null, "product", null, null, {
     productId: parsedProduct.id,
     previousPrice: { points: current.points, treats: current.treats, coffee: current.coffee },
@@ -5599,6 +6105,7 @@ async function deleteShopProductFromBot(chatId, user, rawPayload, env) {
     await sendTelegramMessage(env, chatId, "Не удалось скрыть товар. Повторите команду через несколько секунд.");
     return;
   }
+  invalidateGamePublicConfigCache();
   await logStaffAction(env, user, access, "shop_product_disable", null, "product", null, null, {
     productId: parsedProduct.id
   });
@@ -12635,36 +13142,94 @@ async function deliverQueuedReward(env, row) {
 async function processRewardDeliveryQueue(env, limit = 25) {
   await ensureSafeControlCenterSchema(env);
   const now = Math.floor(Date.now() / 1000);
-  const rows = await env.DB.prepare(`SELECT * FROM reward_delivery_queue WHERE status IN ('pending','failed') AND available_at <= ? AND attempts < 5 AND (lease_until=0 OR lease_until < ?) ORDER BY created_at ASC LIMIT ?`).bind(now, now, limit).all();
+  const max = Math.max(1, Math.min(100, Math.floor(Number(limit) || 25)));
+  const rows = await env.DB.prepare(
+    `SELECT id,telegram_id,source_type,source_id,reward_kind,reward_id,amount,reason,attempts
+     FROM reward_delivery_queue
+     WHERE status IN ('pending','failed') AND available_at<=? AND attempts<5
+       AND (lease_until=0 OR lease_until<?)
+     ORDER BY available_at ASC,created_at ASC,id ASC
+     LIMIT ?`
+  ).bind(now, now, max).all();
+  let delivered = 0;
+  let failed = 0;
+  let skipped = 0;
   for (const row of rows.results || []) {
     const token = caseGrantId("reward_lock");
-    const lock = await env.DB.prepare(`UPDATE reward_delivery_queue SET status='delivering',lease_token=?,lease_until=?,updated_at=? WHERE id=? AND status IN ('pending','failed') AND (lease_until=0 OR lease_until < ?)`)
-      .bind(token, now + 60, now, row.id, now).run();
-    if (Number(lock.meta?.changes || 0) < 1) continue;
+    const claimAt = Math.floor(Date.now() / 1000);
+    const lock = await env.DB.prepare(
+      `UPDATE reward_delivery_queue
+       SET status='delivering',lease_token=?,lease_until=?,updated_at=?
+       WHERE id=? AND status IN ('pending','failed') AND attempts<5 AND available_at<=?
+         AND (lease_until=0 OR lease_until<?)`
+    ).bind(token, claimAt + SERVER_NOTIFICATION_LEASE_SECONDS, claimAt, row.id, claimAt, claimAt).run();
+    if (Number(lock.meta?.changes || 0) < 1) { skipped += 1; continue; }
     try {
       await deliverQueuedReward(env, row);
-      await env.DB.prepare(`UPDATE reward_delivery_queue SET status='delivered',attempts=attempts+1,last_error='',delivered_at=?,updated_at=?,lease_token='',lease_until=0 WHERE id=? AND lease_token=?`).bind(now, now, row.id, token).run();
+      const finishedAt = Math.floor(Date.now() / 1000);
+      await env.DB.prepare(
+        `UPDATE reward_delivery_queue
+         SET status='delivered',attempts=attempts+1,last_error='',delivered_at=?,updated_at=?,
+             lease_token='',lease_until=0
+         WHERE id=? AND lease_token=?`
+      ).bind(finishedAt, finishedAt, row.id, token).run();
+      delivered += 1;
     } catch (error) {
-      await env.DB.prepare(`UPDATE reward_delivery_queue SET status='failed',attempts=attempts+1,last_error=?,updated_at=?,lease_token='',lease_until=0,available_at=? WHERE id=? AND lease_token=?`).bind(String(error?.message || error).slice(0, 500), now, now + 300, row.id, token).run();
+      const finishedAt = Math.floor(Date.now() / 1000);
+      const attempts = Math.max(1, Number(row.attempts || 0) + 1);
+      const delay = Math.min(3600, 60 * (2 ** Math.max(0, attempts - 1)));
+      await env.DB.prepare(
+        `UPDATE reward_delivery_queue
+         SET status='failed',attempts=?,last_error=?,updated_at=?,lease_token='',lease_until=0,available_at=?
+         WHERE id=? AND lease_token=?`
+      ).bind(attempts, String(error?.message || error).slice(0, 500), finishedAt, finishedAt + delay, row.id, token).run();
+      failed += 1;
     }
   }
+  return { delivered, failed, skipped, processed: delivered + failed };
 }
 
 async function processPlayerRewardDeliveryQueue(env, telegramId, limit = 10) {
   await ensureSafeControlCenterSchema(env);
   const now = Math.floor(Date.now() / 1000);
-  const rows = await env.DB.prepare(`SELECT * FROM reward_delivery_queue WHERE telegram_id=? AND status IN ('pending','failed') AND available_at<=? AND attempts<5 AND (lease_until=0 OR lease_until<?) ORDER BY created_at ASC LIMIT ?`).bind(String(telegramId),now,now,Math.max(1,Math.min(25,Number(limit)||10))).all();
+  const max = Math.max(1, Math.min(25, Number(limit) || 10));
+  const rows = await env.DB.prepare(
+    `SELECT id,telegram_id,source_type,source_id,reward_kind,reward_id,amount,reason,attempts
+     FROM reward_delivery_queue
+     WHERE telegram_id=? AND status IN ('pending','failed') AND available_at<=? AND attempts<5
+       AND (lease_until=0 OR lease_until<?)
+     ORDER BY available_at ASC,created_at ASC,id ASC
+     LIMIT ?`
+  ).bind(String(telegramId), now, now, max).all();
+  let delivered = 0;
+  let failed = 0;
   for (const row of rows.results || []) {
     const token = caseGrantId("reward_player_lock");
-    const lock = await env.DB.prepare(`UPDATE reward_delivery_queue SET status='delivering',lease_token=?,lease_until=?,updated_at=? WHERE id=? AND status IN ('pending','failed') AND (lease_until=0 OR lease_until<?)`).bind(token,now+60,now,row.id,now).run();
+    const claimAt = Math.floor(Date.now() / 1000);
+    const lock = await env.DB.prepare(
+      `UPDATE reward_delivery_queue SET status='delivering',lease_token=?,lease_until=?,updated_at=?
+       WHERE id=? AND status IN ('pending','failed') AND attempts<5 AND available_at<=?
+         AND (lease_until=0 OR lease_until<?)`
+    ).bind(token, claimAt + SERVER_NOTIFICATION_LEASE_SECONDS, claimAt, row.id, claimAt, claimAt).run();
     if (Number(lock.meta?.changes || 0) < 1) continue;
     try {
-      await deliverQueuedReward(env,row);
-      await env.DB.prepare(`UPDATE reward_delivery_queue SET status='delivered',attempts=attempts+1,last_error='',delivered_at=?,updated_at=?,lease_token='',lease_until=0 WHERE id=? AND lease_token=?`).bind(now,now,row.id,token).run();
+      await deliverQueuedReward(env, row);
+      const finishedAt = Math.floor(Date.now() / 1000);
+      await env.DB.prepare(
+        `UPDATE reward_delivery_queue SET status='delivered',attempts=attempts+1,last_error='',delivered_at=?,updated_at=?,lease_token='',lease_until=0 WHERE id=? AND lease_token=?`
+      ).bind(finishedAt, finishedAt, row.id, token).run();
+      delivered += 1;
     } catch (error) {
-      await env.DB.prepare(`UPDATE reward_delivery_queue SET status='failed',attempts=attempts+1,last_error=?,updated_at=?,lease_token='',lease_until=0,available_at=? WHERE id=? AND lease_token=?`).bind(String(error?.message||error).slice(0,500),now,now+300,row.id,token).run();
+      const finishedAt = Math.floor(Date.now() / 1000);
+      const attempts = Math.max(1, Number(row.attempts || 0) + 1);
+      const delay = Math.min(3600, 60 * (2 ** Math.max(0, attempts - 1)));
+      await env.DB.prepare(
+        `UPDATE reward_delivery_queue SET status='failed',attempts=?,last_error=?,updated_at=?,lease_token='',lease_until=0,available_at=? WHERE id=? AND lease_token=?`
+      ).bind(attempts, String(error?.message || error).slice(0, 500), finishedAt, finishedAt + delay, row.id, token).run();
+      failed += 1;
     }
   }
+  return { delivered, failed, processed: delivered + failed };
 }
 
 async function showRewardQueueDashboard(chatId, user, env) {
@@ -15152,14 +15717,23 @@ async function staffNotificationRecipientIds(env,category){
   return [...recipients];
 }
 
+function staffNotificationMessageHash(value) {
+  let hash = 2166136261;
+  const text = String(value || "");
+  for (let index = 0; index < text.length; index += 1) {
+    hash ^= text.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0).toString(36);
+}
+
 async function notifySubscribedStaff(env,category,messageHtml){
   if(!NOTIFICATION_KEYS.includes(String(category)))category="bot_errors";
-  try{
-    const recipients=await staffNotificationRecipientIds(env,category);
-    const results=await Promise.allSettled(recipients.map((id)=>sendTelegramMessage(env,id,String(messageHtml))));
-    results.forEach((result,index)=>{if(result.status==="rejected")console.error("staff notification failed",recipients[index],result.reason);});
-    return results.filter((result)=>result.status==="fulfilled").length;
-  }catch(error){console.error("notifySubscribedStaff failed",error);return 0;}
+  const now=Math.floor(Date.now()/1000);
+  const minuteBucket=Math.floor(now/60);
+  const eventKey=`staff:${category}:${minuteBucket}:${staffNotificationMessageHash(messageHtml)}`;
+  const result=await queueLeaderboardStaffNotification(env,eventKey,String(messageHtml),category);
+  return Number(result?.queued||0);
 }
 
 async function snapshotPayload(env){
@@ -17413,18 +17987,56 @@ function v67Percentile(values, percentile) {
 
 async function showV67PerformanceCenter(chatId,user,env) {
   const access=await requireSecurityPermission(chatId,user,"viewEconomy",env);if(!access)return;
-  await ensureV67Schema(env);
+  await ensureServerOptimizationSchema(env);
   const since=Math.floor(Date.now()/1000)-V67_DAY;
-  const rows=(await env.DB.prepare(`SELECT area,duration_ms,success,created_at FROM admin_performance_samples WHERE created_at>=? ORDER BY created_at DESC LIMIT 1000`).bind(since).all()).results||[];
-  const groups=new Map();
-  for(const row of rows){const key=String(row.area);if(!groups.has(key))groups.set(key,[]);groups.get(key).push(row);}
-  const stats=[];
-  for(const [area,items] of groups){const times=items.map(i=>Number(i.duration_ms||0));stats.push({area,count:items.length,avg:times.reduce((a,b)=>a+b,0)/Math.max(1,times.length),p95:v67Percentile(times,.95),max:Math.max(...times),errors:items.filter(i=>!Number(i.success)).length});}
-  stats.sort((a,b)=>b.p95-a.p95);
-  const all=rows.map(i=>Number(i.duration_ms||0));
-  const health=v67Percentile(all,.95)<=700?"🟢":v67Percentile(all,.95)<=1500?"🟡":"🔴";
-  const lines=stats.slice(0,15).map(item=>`• <code>${escapeHtml(item.area)}</code>\n  среднее <b>${Math.round(item.avg)} мс</b> · p95 ${item.p95} мс · максимум ${item.max} мс${item.errors?` · ошибок ${item.errors}`:""}`);
-  await sendTelegramMessage(env,chatId,`<b>⚡ Производительность бота</b>\n\n${health} За последние 24 часа: <b>${rows.length}</b> измерений\nСреднее: <b>${all.length?Math.round(all.reduce((a,b)=>a+b,0)/all.length):0} мс</b>\np95: <b>${v67Percentile(all,.95)} мс</b>\n\n<b>Самые медленные разделы</b>\n${lines.join("\n\n")||"Данных пока нет. Нажмите несколько кнопок админ-панели и обновите отчёт."}\n\nИзмеряется полный обработчик кнопки: запросы D1, расчёты и обращения к Telegram API.`,{inline_keyboard:[[{text:"🔄 Обновить",callback_data:"v67_performance"},{text:"🧹 Очистить старше 7 дней",callback_data:"v67_perf_cleanup"}],[{text:"⬅️ Админ-панель",callback_data:"adm_home"}]]});
+  const [areasResult,overallResult,cronResult,hourResult]=await env.DB.batch([
+    env.DB.prepare(`WITH ranked AS (
+      SELECT area,duration_ms,success,
+             ROW_NUMBER() OVER(PARTITION BY area ORDER BY duration_ms) AS rn,
+             COUNT(*) OVER(PARTITION BY area) AS cnt
+      FROM admin_performance_samples WHERE created_at>=?
+    )
+    SELECT area,COUNT(*) AS count,ROUND(AVG(duration_ms)) AS avg_ms,MAX(duration_ms) AS max_ms,
+           SUM(CASE WHEN success=0 THEN 1 ELSE 0 END) AS errors,
+           MAX(CASE WHEN rn=CAST((cnt*95+99)/100 AS INTEGER) THEN duration_ms ELSE 0 END) AS p95_ms
+    FROM ranked GROUP BY area ORDER BY p95_ms DESC LIMIT 15`).bind(since),
+    env.DB.prepare(`WITH ordered AS (
+      SELECT duration_ms,success,ROW_NUMBER() OVER(ORDER BY duration_ms) AS rn,COUNT(*) OVER() AS cnt
+      FROM admin_performance_samples WHERE created_at>=?
+    )
+    SELECT COUNT(*) AS count,ROUND(AVG(duration_ms)) AS avg_ms,MAX(duration_ms) AS max_ms,
+           SUM(CASE WHEN success=0 THEN 1 ELSE 0 END) AS errors,
+           MAX(CASE WHEN rn=CAST((cnt*95+99)/100 AS INTEGER) THEN duration_ms ELSE 0 END) AS p95_ms
+    FROM ordered`).bind(since),
+    env.DB.prepare(`SELECT job_key,interval_seconds,last_duration_ms,last_status,last_error,last_finished_at,runs_total,failures_total FROM server_cron_jobs ORDER BY priority ASC,job_key ASC`),
+    env.DB.prepare(`SELECT * FROM server_analytics_hourly ORDER BY bucket_at DESC LIMIT 1`)
+  ]);
+  const stats=areasResult.results||[];
+  const overall=overallResult.results?.[0]||{};
+  const p95=Number(overall.p95_ms||0);
+  const health=p95<=700?"🟢":p95<=1500?"🟡":"🔴";
+  const lines=stats.map(item=>`• <code>${escapeHtml(item.area)}</code>
+  среднее <b>${Number(item.avg_ms||0)} мс</b> · p95 ${Number(item.p95_ms||0)} мс · максимум ${Number(item.max_ms||0)} мс${Number(item.errors||0)?` · ошибок ${Number(item.errors||0)}`:""}`);
+  const cronLines=(cronResult.results||[]).map(job=>`${job.last_status==="failed"?"🔴":job.last_status==="success"?"🟢":job.last_status==="running"?"🟠":"⚪"} <code>${escapeHtml(job.job_key)}</code> · ${Number(job.last_duration_ms||0)} мс · каждые ${Math.max(1,Math.round(Number(job.interval_seconds||60)/60))} мин.${Number(job.failures_total||0)?` · ошибок ${Number(job.failures_total||0)}`:""}`);
+  const hour=hourResult.results?.[0]||null;
+  const hourText=hour?`Игроков: <b>${Number(hour.active_players||0)}</b> · забегов ${Number(hour.runs_total||0)} · кейсов ${Number(hour.cases_opened||0)} · покупок ${Number(hour.shop_operations||0)}
+Очереди: наград ${Number(hour.rewards_failed||0)} ошибок · уведомлений ${Number(hour.staff_notifications_failed||0)+Number(hour.player_notifications_failed||0)} ошибок`:`Часовой снимок появится после первого часового Cron.`;
+  await sendTelegramMessage(env,chatId,`<b>⚡ Производительность сервера</b>
+
+${health} За последние 24 часа: <b>${Number(overall.count||0)}</b> измерений
+Среднее: <b>${Number(overall.avg_ms||0)} мс</b>
+p95: <b>${p95} мс</b> · максимум ${Number(overall.max_ms||0)} мс${Number(overall.errors||0)?` · ошибок ${Number(overall.errors||0)}`:""}
+
+<b>Самые медленные разделы</b>
+${lines.join("\n\n")||"Данных пока нет."}
+
+<b>Cron-задачи</b>
+${cronLines.join("\n")||"Планировщик ещё не запускался."}
+
+<b>Последний полный час</b>
+${hourText}
+
+<i>Агрегация выполняется в D1: в бот больше не выгружается до 1 000 сырых измерений для расчёта отчёта.</i>`,{inline_keyboard:[[{text:"🔄 Обновить",callback_data:"v67_performance"},{text:"🧹 Очистить старше 7 дней",callback_data:"v67_perf_cleanup"}],[{text:"⬅️ Админ-панель",callback_data:"adm_home"}]]});
 }
 
 const V67_RELEASE_STEPS = Object.freeze([
@@ -17851,7 +18463,40 @@ async function v77DeliverPlayerNotification(env,telegramId,chatId,category,messa
   const result=await env.DB.prepare(`INSERT INTO player_notification_queue(telegram_id,chat_id,category,message_html,reply_markup_json,status,attempts,last_error,available_at,created_at,updated_at) VALUES(?,?,?,?,?,'pending',0,'',?,?,?)`).bind(String(telegramId),String(chatId),String(category),String(messageHtml),JSON.stringify(replyMarkup||{}),now+Math.max(60,decision.delay),now,now).run();return {status:"queued",id:Number(result.meta?.last_row_id||0),reason:decision.reason};
 }
 
-async function processV77NotificationQueue(env,limit=12){await ensureV77Schema(env);const now=Math.floor(Date.now()/1000);const rows=(await env.DB.prepare(`SELECT * FROM player_notification_queue WHERE status IN ('pending','failed') AND available_at<=? AND attempts<5 ORDER BY id LIMIT ?`).bind(now,Math.max(1,Math.min(30,Number(limit)||12))).all()).results||[];for(const row of rows){try{const decision=await v77NotificationDecision(env,row.telegram_id,now);if(!decision.allowed){await env.DB.prepare(`UPDATE player_notification_queue SET available_at=?,updated_at=? WHERE id=?`).bind(now+Math.max(60,decision.delay),now,row.id).run();continue;}await sendTelegramMessage(env,row.chat_id,row.message_html,safeJson(row.reply_markup_json,{}));await env.DB.prepare(`UPDATE player_notification_queue SET status='sent',attempts=attempts+1,last_error='',updated_at=? WHERE id=?`).bind(now,row.id).run();await env.DB.prepare(`INSERT INTO player_notification_log(telegram_id,category,sent_at) VALUES(?,?,?)`).bind(row.telegram_id,row.category,now).run();}catch(error){await env.DB.prepare(`UPDATE player_notification_queue SET status='failed',attempts=attempts+1,last_error=?,available_at=?,updated_at=? WHERE id=?`).bind(String(error?.message||error).slice(0,300),now+600,now,row.id).run();}}}
+async function processV77NotificationQueue(env,limit=12){
+  await ensureV77Schema(env);
+  const now=Math.floor(Date.now()/1000);
+  const max=Math.max(1,Math.min(30,Number(limit)||12));
+  const rows=(await env.DB.prepare(`SELECT id,telegram_id,chat_id,category,message_html,reply_markup_json,attempts FROM player_notification_queue WHERE status IN ('pending','failed') AND available_at<=? AND attempts<5 AND (lease_until=0 OR lease_until<?) ORDER BY available_at ASC,id ASC LIMIT ?`).bind(now,now,max).all()).results||[];
+  let sent=0,failed=0,deferred=0,skipped=0;
+  for(const row of rows){
+    const token=caseGrantId("player_notice_lock");
+    const claimAt=Math.floor(Date.now()/1000);
+    const claim=await env.DB.prepare(`UPDATE player_notification_queue SET lease_token=?,lease_until=?,updated_at=? WHERE id=? AND status IN ('pending','failed') AND attempts<5 AND available_at<=? AND (lease_until=0 OR lease_until<?)`).bind(token,claimAt+SERVER_NOTIFICATION_LEASE_SECONDS,claimAt,row.id,claimAt,claimAt).run();
+    if(Number(claim.meta?.changes||0)<1){skipped+=1;continue;}
+    try{
+      const decision=await v77NotificationDecision(env,row.telegram_id,claimAt);
+      if(!decision.allowed){
+        await env.DB.prepare(`UPDATE player_notification_queue SET available_at=?,updated_at=?,lease_token='',lease_until=0 WHERE id=? AND lease_token=?`).bind(claimAt+Math.max(60,decision.delay),claimAt,row.id,token).run();
+        deferred+=1;continue;
+      }
+      await sendTelegramMessage(env,row.chat_id,row.message_html,safeJson(row.reply_markup_json,{}));
+      const finishedAt=Math.floor(Date.now()/1000);
+      await env.DB.batch([
+        env.DB.prepare(`UPDATE player_notification_queue SET status='sent',attempts=attempts+1,last_error='',updated_at=?,lease_token='',lease_until=0 WHERE id=? AND lease_token=?`).bind(finishedAt,row.id,token),
+        env.DB.prepare(`INSERT INTO player_notification_log(telegram_id,category,sent_at) VALUES(?,?,?)`).bind(row.telegram_id,row.category,finishedAt)
+      ]);
+      sent+=1;
+    }catch(error){
+      const finishedAt=Math.floor(Date.now()/1000);
+      const attempts=Math.max(1,Number(row.attempts||0)+1);
+      const delay=Math.min(3600,SERVER_NOTIFICATION_RETRY_BASE_SECONDS*(2**Math.max(0,attempts-1)));
+      await env.DB.prepare(`UPDATE player_notification_queue SET status='failed',attempts=?,last_error=?,available_at=?,updated_at=?,lease_token='',lease_until=0 WHERE id=? AND lease_token=?`).bind(attempts,String(error?.message||error).slice(0,300),finishedAt+delay,finishedAt,row.id,token).run();
+      failed+=1;
+    }
+  }
+  return {sent,failed,deferred,skipped,processed:sent+failed};
+}
 
 async function showV77NotificationPolicy(chatId,user,env){const access=await requireV77OperationsAccess(chatId,user,env);if(!access)return;const p=await env.DB.prepare(`SELECT * FROM player_notification_policy WHERE id=1`).first();const stats=await env.DB.prepare(`SELECT SUM(CASE WHEN status='pending' THEN 1 ELSE 0 END) AS pending,SUM(CASE WHEN status='failed' THEN 1 ELSE 0 END) AS failed FROM player_notification_queue`).first();await sendTelegramMessage(env,chatId,`<b>🔕 Защита уведомлений игроков</b>\n\nСтатус: <b>${Number(p.paused)?"все необязательные приостановлены":"работает"}</b>\nМаксимум: <b>${Number(p.max_per_day)} в сутки</b>\nМинимальный интервал: <b>${Math.round(Number(p.min_gap_seconds)/60)} мин.</b>\nТихие часы: <b>${String(p.quiet_start_hour).padStart(2,"0")}:00–${String(p.quiet_end_hour).padStart(2,"0")}:00 МСК</b>\nОчередь: <b>${Number(stats?.pending||0)}</b> · ошибок ${Number(stats?.failed||0)}`,{inline_keyboard:[[{text:Number(p.paused)?"▶️ Возобновить":"⏸ Приостановить",callback_data:"v77_notify_pause"}],[{text:"1/сутки",callback_data:"v77_notify_max:1"},{text:"3/сутки",callback_data:"v77_notify_max:3"},{text:"5/сутки",callback_data:"v77_notify_max:5"}],[{text:"15 мин",callback_data:"v77_notify_gap:900"},{text:"1 час",callback_data:"v77_notify_gap:3600"},{text:"3 часа",callback_data:"v77_notify_gap:10800"}],[{text:"🚚 Обработать очередь",callback_data:"v77_notify_process"}],[{text:"⬅️ Центр",callback_data:"v77_home"}]]});}
 
