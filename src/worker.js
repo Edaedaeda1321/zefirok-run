@@ -335,7 +335,7 @@ const STAFF_SESSION_TTL_SECONDS = 12 * 60 * 60;
 const SUPPORT_USERNAME = "ve4n0_em";
 const SUPPORT_URL = `https://t.me/${SUPPORT_USERNAME}`;
 const DEFAULT_GAME_URL = "https://zefirok-run.patokad6.workers.dev/";
-const WORKER_BUILD = "6.0 RC.1";
+const WORKER_BUILD = "6.0 RC.1 + season force close";
 const V07944_RELEASE_CANDIDATE_AUDIT = Object.freeze({ reset: true, claims: true, purchases: true, xp: true, concurrency: true });
 
 // =============================================================
@@ -349,6 +349,7 @@ const DEFAULT_SEASON_PASS_START_AT = "2026-08-10T00:00:00+03:00";
 const DEFAULT_SEASON_PASS_END_AT = "2026-09-10T23:59:59+03:00";
 const DEFAULT_SEASON_PASS_CLAIM_GRACE_END_AT = "2026-09-13T23:59:59+03:00";
 const SEASON_PASS_MANUAL_CLAIM_GRACE_SECONDS = 3 * 24 * 60 * 60;
+const SEASON_PASS_FORCE_CLOSE_STATE_KEY = "season_pass:forced_close";
 const DEFAULT_SEASON_PASS_LEVEL_PRICE_POINTS = 10000;
 const DEFAULT_SEASON_PASS_ELITE_PRICE = Object.freeze({ points:25000, treats:450, coffee:450 });
 const DEFAULT_SEASON_PASS_ELITE_PLUS_PRICE = Object.freeze({ points:50000, treats:650, coffee:650 });
@@ -17499,6 +17500,81 @@ function seasonPassSeasonFromRow(row, fallback, nowMs = Date.now()) {
   };
 }
 
+function seasonPassForcedClosureFromState(rawState, nowMs = Date.now()) {
+  if (!rawState?.value) return null;
+  try {
+    const data = JSON.parse(String(rawState.value || '{}'));
+    const unlockAt = Math.max(0, Number(data.unlockAt || data.nextSeasonStartsAt || 0));
+    if (!unlockAt) return null;
+    if (nowMs >= unlockAt * 1000) return { expired: true, unlockAt };
+    const startsAtIso = data.nextSeasonStartsAtIso || new Date(unlockAt * 1000).toISOString();
+    const endsAtValue = Math.max(unlockAt, Number(data.nextSeasonEndsAt || data.unlockAt || 0));
+    return {
+      expired: false,
+      lockedSeasonId: String(data.closedSeasonId || ''),
+      lockedSeasonTitle: String(data.closedSeasonTitle || ''),
+      nextSeasonId: String(data.nextSeasonId || ''),
+      nextSeasonTitle: String(data.nextSeasonTitle || data.title || 'Новый сезон'),
+      unlockAt,
+      startsAt: startsAtIso,
+      endsAt: data.nextSeasonEndsAtIso || new Date(endsAtValue * 1000).toISOString(),
+      message: String(data.message || 'Не скучай, новый сезон уже скоро'),
+      activatedAt: Math.max(0, Number(data.activatedAt || 0)),
+      activatedBy: String(data.activatedBy || '')
+    };
+  } catch (error) {
+    console.error('season pass forced closure state parse failed', error);
+    return null;
+  }
+}
+
+async function getSeasonPassForcedClosure(env, nowMs = Date.now()) {
+  const state = await getSystemState(env, SEASON_PASS_FORCE_CLOSE_STATE_KEY);
+  if (!state) return null;
+  const closure = seasonPassForcedClosureFromState(state, nowMs);
+  if (!closure) return null;
+  if (closure.expired) {
+    try { await deleteSystemState(env, SEASON_PASS_FORCE_CLOSE_STATE_KEY); }
+    catch (error) { console.error('season pass forced closure cleanup failed', error); }
+    return null;
+  }
+  return closure;
+}
+
+async function assertSeasonPassNotForceClosed(env) {
+  const closure = await getSeasonPassForcedClosure(env);
+  if (closure) throw new ApiError(409,'Сезонный пропуск принудительно закрыт до начала нового сезона.');
+}
+
+function seasonPassForcedClosureSeason(closure, fallback, nowMs = Date.now()) {
+  const safeFallback = fallback || configuredSeasonPassState(null, nowMs);
+  const startsAt = closure?.startsAt || safeFallback.startsAt;
+  const endsAt = closure?.endsAt || safeFallback.endsAt || startsAt;
+  return {
+    ...safeFallback,
+    id: String(closure?.nextSeasonId || safeFallback.id),
+    title: String(closure?.nextSeasonTitle || safeFallback.title || 'Новый сезон'),
+    status: 'upcoming',
+    startsAt,
+    endsAt,
+    claimGraceEndsAt: endsAt,
+    claimWindowOpen: false,
+    serverTime: new Date(nowMs).toISOString(),
+    forceClosed: true,
+    forceClosedMessage: String(closure?.message || 'Не скучай, новый сезон уже скоро'),
+    lockedSeasonId: String(closure?.lockedSeasonId || ''),
+    lockedSeasonTitle: String(closure?.lockedSeasonTitle || ''),
+    nextSeasonId: String(closure?.nextSeasonId || ''),
+    nextSeasonTitle: String(closure?.nextSeasonTitle || '')
+  };
+}
+
+async function resolveSeasonPassForceCloseTarget(env, season, nowSeconds = Math.floor(Date.now() / 1000)) {
+  await ensureSeasonPassSchema(env);
+  const row = await env.DB.prepare(`SELECT * FROM season_pass_seasons WHERE season_id!=? AND starts_at>? AND manual_status!='ended' ORDER BY starts_at ASC,updated_at DESC LIMIT 1`).bind(String(season?.id||''),nowSeconds).first();
+  return row ? seasonPassSeasonFromRow(row, configuredSeasonPassState(env, nowSeconds * 1000), nowSeconds * 1000) : null;
+}
+
 async function selectSeasonPassSeasonRow(env, nowMs = Date.now()) {
   const now = Math.max(0,Math.floor((Number(nowMs)||Date.now())/1000));
   return env.DB.prepare(`SELECT * FROM season_pass_seasons
@@ -17612,6 +17688,8 @@ async function seasonPassRequestContext(request,env){
   const auth=await validateTelegramInitData(initData,env);const telegramId=String(auth.user.id);
   const flag=await getFeatureFlag(env,'battle_pass');const access=await battlePassAudienceAccess(env,telegramId,flag);
   if(!access.allowed)throw new ApiError(403,'Сезонный пропуск пока скрыт.');
+  const forcedClosure=await getSeasonPassForcedClosure(env);
+  if(forcedClosure)throw new ApiError(409,'Сезонный пропуск временно закрыт. Не скучай, новый сезон уже скоро.');
   const season=await loadSeasonPassSeason(env);
   const player=await seasonPassPlayerForRequest(env,season,telegramId);
   return {body,auth,telegramId,access,season,player};
@@ -17698,7 +17776,7 @@ async function buildSeasonPassPayload(env,season,telegramId,player=null){
   const availableCoffee=(profileRow?.coffee_override==null?Number(profileRow?.coffee||0):Number(profileRow?.coffee_override||0))+Number(profileRow?.pending_coffee||0);
   return {ok:true,season:{...season,capabilities:seasonPassCapabilities(season)},player:{xp,level,xpWithin:Math.max(0,xp-start),xpRequired:required,premiumTier:String(current?.premium_tier||'none'),elitePlusBonusGranted:Number(current?.elite_plus_bonus_granted||0)===1,revision:Number(current?.revision||0)},
     rewards:(rewardsResult.results||[]).map(row=>({level:Number(row.level),lane:String(row.lane),rewardType:String(row.reward_type),amount:Number(row.amount),itemId:String(row.item_id||''),title:String(row.title||''),imageUrl:String(row.image_url||''),enabled:Number(row.enabled||0)===1})),
-    claimed:(claimsResult.results||[]).map(row=>`${Number(row.level)}:${String(row.lane)}`),entitlements:(entitlementsResult.results||[]).map(row=>String(row.item_id)),tasks:tasksPayload.tasks,taskPeriods:tasksPayload.periods,taskClaimableCount:tasksPayload.claimableCount,summary,
+    claimed:(claimsResult.results||[]).map(row=>`${Number(row.level)}:${String(row.lane)}`),entitlements:(entitlementsResult.results||[]).map(row=>String(row.item_id)),tasks:tasksPayload.tasks,taskPeriods:tasksPayload.periods,taskClaimableCount:seasonPassCapabilities(season).canClaimTasks?tasksPayload.claimableCount:0,summary,
     balance:{points:availablePoints,treats:availableTreats,coffee:availableCoffee}};
 }
 
@@ -17710,13 +17788,13 @@ function seasonPassPlayerView(current){
 
 function seasonPassCapabilities(season){
   const active=season.status==='active';
-  const canClaim=active||Boolean(season.claimWindowOpen);
-  return {canEarnXp:active,canPurchase:active,canClaimRewards:canClaim,canClaimTasks:canClaim};
+  const canClaimRewards=active||Boolean(season.claimWindowOpen);
+  return {canEarnXp:active,canPurchase:active,canClaimRewards,canClaimTasks:active};
 }
 
 function assertSeasonPassTaskClaimsOpen(season){
   if(!seasonPassCapabilities(season).canClaimTasks){
-    throw new ApiError(409,'Период получения наград за задания завершён.');
+    throw new ApiError(409,'Сезон завершён, задания отключены. Можно забрать только уже открытые награды.');
   }
 }
 
@@ -17734,11 +17812,15 @@ async function buildSeasonPassMutationPayload(env,season,telegramId,options={}){
   }};
   if(options.includeClaims)payload.claimed=(claimsResult?.results||[]).map(row=>`${Number(row.level)}:${String(row.lane)}`);
   if(options.includeEntitlements)payload.entitlements=(entitlementsResult?.results||[]).map(row=>String(row.item_id));
-  if(options.includeTasks&&tasksPayload){payload.tasks=tasksPayload.tasks;payload.taskPeriods=tasksPayload.periods;payload.taskClaimableCount=tasksPayload.claimableCount;}
+  if(options.includeTasks&&tasksPayload){payload.tasks=tasksPayload.tasks;payload.taskPeriods=tasksPayload.periods;payload.taskClaimableCount=seasonPassCapabilities(season).canClaimTasks?tasksPayload.claimableCount:0;}
   return payload;
 }
 
 async function getSeasonPassProfileBonusForUser(env,telegramId){
+  const forcedClosure=await getSeasonPassForcedClosure(env);
+  if(forcedClosure){
+    return {ok:true,active:false,multiplier:1,premiumTier:'none',seasonId:forcedClosure.nextSeasonId||'',status:'upcoming',startsAt:forcedClosure.startsAt,endsAt:forcedClosure.endsAt,claimWindowOpen:false,forceClosed:true};
+  }
   const season=await loadSeasonPassSeason(env);
   if(season.status==='ended'){
     const player=season.claimWindowOpen?await ensureSeasonPassPlayer(env,season,String(telegramId)):null;
@@ -17760,6 +17842,7 @@ async function getSeasonPassState(request,env){
 }
 
 async function grantSeasonPassReward(env,ctx,reward){
+  await assertSeasonPassNotForceClosed(env);
   const now=Math.floor(Date.now()/1000);const level=Number(reward.level);const lane=String(reward.lane);const key=[ctx.season.id,ctx.telegramId,level,lane];
   await env.DB.prepare(`INSERT OR IGNORE INTO season_pass_claims(season_id,telegram_id,level,lane,status,reward_json,claimed_at) VALUES(?,?,?,?, 'pending', ?,?)`).bind(...key,JSON.stringify(reward),now).run();
   await env.DB.prepare(`UPDATE season_pass_claims SET status='pending',reward_json=?,claimed_at=?,error_text='' WHERE season_id=? AND telegram_id=? AND level=? AND lane=? AND status='failed'`).bind(JSON.stringify(reward),now,...key).run();
@@ -17803,7 +17886,7 @@ async function claimSeasonPassReward(request,env){
 
 async function claimAllSeasonPassRewards(request,env){
   try{
-    const ctx=await seasonPassRequestContext(request,env);if(ctx.season.status!=='active'&&!ctx.season.claimWindowOpen)throw new ApiError(409,'Период получения наград завершён.');
+    const ctx=await seasonPassRequestContext(request,env);await assertSeasonPassNotForceClosed(env);if(ctx.season.status!=='active'&&!ctx.season.claimWindowOpen)throw new ApiError(409,'Период получения наград завершён.');
     const level=seasonPassLevelFromXp(ctx.player.xp);const premium=String(ctx.player.premium_tier||'none')!=='none';const now=Math.floor(Date.now()/1000);
     await env.DB.prepare(`UPDATE season_pass_claims SET status='pending',claimed_at=?,error_text='' WHERE season_id=? AND telegram_id=? AND status='failed' AND level<=? AND (lane='free' OR ?=1)`).bind(now,ctx.season.id,ctx.telegramId,level,premium?1:0).run();
     const rows=(await env.DB.prepare(`SELECT r.* FROM season_pass_rewards r LEFT JOIN season_pass_claims c ON c.season_id=r.season_id AND c.telegram_id=? AND c.level=r.level AND c.lane=r.lane AND c.status='delivered' WHERE r.season_id=? AND r.enabled=1 AND r.level<=? AND (r.lane='free' OR ?=1) AND c.level IS NULL ORDER BY r.level,r.lane`).bind(ctx.telegramId,ctx.season.id,level,premium?1:0).all()).results||[];
@@ -17828,6 +17911,7 @@ async function claimAllSeasonPassRewards(request,env){
 }
 
 async function grantSeasonPassTaskXp(env,ctx,task){
+  await assertSeasonPassNotForceClosed(env);
   const now=Math.floor(Date.now()/1000);const key=[ctx.season.id,ctx.telegramId,String(task.id),String(task.periodKey)];
   await env.DB.prepare(`INSERT OR IGNORE INTO season_pass_task_claims(season_id,telegram_id,task_id,period_key,status,xp_awarded,claimed_at) VALUES(?,?,?,?, 'pending', ?,?)`).bind(...key,Math.max(1,Number(task.xp)||1),now).run();
   await env.DB.prepare(`UPDATE season_pass_task_claims SET status='pending',xp_awarded=?,claimed_at=?,error_text='' WHERE season_id=? AND telegram_id=? AND task_id=? AND period_key=? AND status='failed'`).bind(Math.max(1,Number(task.xp)||1),now,...key).run();
@@ -17854,7 +17938,7 @@ async function claimSeasonPassTask(request,env){
 
 async function claimAllSeasonPassTasks(request,env){
   try{
-    const ctx=await seasonPassRequestContext(request,env);assertSeasonPassTaskClaimsOpen(ctx.season);
+    const ctx=await seasonPassRequestContext(request,env);await assertSeasonPassNotForceClosed(env);assertSeasonPassTaskClaimsOpen(ctx.season);
     const tasksPayload=await buildSeasonPassTasksPayload(env,ctx.season,ctx.telegramId,ctx.player.premium_tier);const ready=tasksPayload.tasks.filter(task=>task.complete&&!task.claimed&&!task.locked);const now=Math.floor(Date.now()/1000);
     if(!ready.length)return jsonResponse({...await buildSeasonPassMutationPayload(env,ctx.season,ctx.telegramId,{includeTasks:true,premiumTier:ctx.player.premium_tier}),receivedTasks:[],totalXp:0});
     const predicates=ready.map(()=>`(task_id=? AND period_key=?)`).join(' OR ');const pairBinds=ready.flatMap(task=>[String(task.id),String(task.periodKey)]);
@@ -17981,6 +18065,7 @@ async function reconcileDeliveredSeasonPassTier(env,ctx,effectiveTier,now){
 async function purchaseSeasonPassTier(request,env){
   try{
     const ctx=await seasonPassRequestContext(request,env);
+    await assertSeasonPassNotForceClosed(env);
     if(ctx.season.status!=='active'&&!ctx.access.identity?.owner&&!ctx.access.identity?.administrator)throw new ApiError(409,'Сезон ещё не начался.');
     const tier=String(ctx.body.tier||'');if(tier!=='elite'&&tier!=='elite_plus')throw new ApiError(400,'Некорректный тариф сезонного пропуска.');
     let current=String(ctx.player.premium_tier||'none');
@@ -18035,6 +18120,7 @@ async function purchaseSeasonPassTier(request,env){
 async function purchaseSeasonPassLevel(request,env){
   try{
     const ctx=await seasonPassRequestContext(request,env);
+    await assertSeasonPassNotForceClosed(env);
     if(ctx.season.status!=='active')throw new ApiError(409,'Сезон ещё не активен.');
     if(String(ctx.player.premium_tier||'none')==='none')throw new ApiError(403,'Покупка уровней доступна только платному тарифу.');
     const currentLevel=seasonPassLevelFromXp(ctx.player.xp);if(currentLevel>=50)throw new ApiError(409,'Уже достигнут максимальный уровень.');
@@ -18081,8 +18167,10 @@ async function recordSeasonPassRunActivity(env,telegramId,input={},seasonValue=n
   await ensureSeasonPassSchema(env);
   const flag=await getFeatureFlag(env,'battle_pass');const access=await battlePassAudienceAccess(env,String(telegramId),flag);
   if(!access.allowed)return {accepted:false,ignored:true,reason:'not_allowed',xpAwarded:0,multiplier:1};
-  const now=Math.floor(Date.now()/1000);const season=seasonValue||await loadSeasonPassSeason(env,now*1000);
+  const now=Math.floor(Date.now()/1000);const forcedClosure=await getSeasonPassForcedClosure(env,now*1000);
+  if(forcedClosure)return {accepted:false,ignored:true,reason:'forced_closed',xpAwarded:0,multiplier:1};const season=seasonValue||await loadSeasonPassSeason(env,now*1000);
   if(season.status!=='active')return {accepted:false,ignored:true,reason:season.status,xpAwarded:0,multiplier:1};
+  await assertSeasonPassNotForceClosed(env);
   const runId=String(input.runId||input.run_id||'').trim();if(!/^[A-Za-z0-9_-]{12,96}$/.test(runId))throw new ApiError(400,'Некорректный идентификатор забега.');
   const score=Math.max(0,Math.floor(Number(input.score)||0));const durationMs=Math.max(0,Math.floor(Number(input.durationMs||input.duration_ms)||0));
   const runTreats=Math.max(0,Math.min(10000,Math.floor(Number(input.runTreats||input.run_treats)||0)));const runCoffee=Math.max(0,Math.min(10000,Math.floor(Number(input.runCoffee||input.run_coffee)||0)));
@@ -18110,7 +18198,7 @@ async function submitSeasonPassRun(request,env){
 }
 
 async function awardSeasonPassRunXp(env,telegramId,runId,createdAt){
-  try{const runAt=Math.max(0,Number(createdAt||Math.floor(Date.now()/1000)))*1000;const season=await loadSeasonPassSeason(env,runAt);if(season.status!=='active')return null;const startsAt=Date.parse(String(season.startsAt||''));const endsAt=Date.parse(String(season.endsAt||''));if((Number.isFinite(startsAt)&&runAt<startsAt)||(Number.isFinite(endsAt)&&runAt>=endsAt))return null;const player=await ensureSeasonPassPlayer(env,season,String(telegramId));const multiplier=String(player.premium_tier||'none')==='elite_plus'?2:1;const base=Math.max(1,Number(season.baseRunXp)||100);const awarded=base*multiplier;const now=Math.floor(Date.now()/1000);
+  try{await assertSeasonPassNotForceClosed(env);const runAt=Math.max(0,Number(createdAt||Math.floor(Date.now()/1000)))*1000;const forcedClosure=await getSeasonPassForcedClosure(env,runAt);if(forcedClosure)return null;const season=await loadSeasonPassSeason(env,runAt);if(season.status!=='active')return null;const startsAt=Date.parse(String(season.startsAt||''));const endsAt=Date.parse(String(season.endsAt||''));if((Number.isFinite(startsAt)&&runAt<startsAt)||(Number.isFinite(endsAt)&&runAt>=endsAt))return null;const player=await ensureSeasonPassPlayer(env,season,String(telegramId));const multiplier=String(player.premium_tier||'none')==='elite_plus'?2:1;const base=Math.max(1,Number(season.baseRunXp)||100);const awarded=base*multiplier;const now=Math.floor(Date.now()/1000);
     const result=await env.DB.prepare(`INSERT OR IGNORE INTO season_pass_run_xp(run_id,season_id,telegram_id,base_xp,multiplier,xp_awarded,created_at) VALUES(?,?,?,?,?,?,?)`).bind(String(runId),season.id,String(telegramId),base,multiplier,awarded,Number(createdAt)||now).run();
     if(Number(result.meta?.changes||0)>0)await env.DB.prepare(`UPDATE season_pass_players SET xp=xp+?,revision=revision+1,updated_at=? WHERE season_id=? AND telegram_id=?`).bind(awarded,now,season.id,String(telegramId)).run();return {xpAwarded:Number(result.meta?.changes||0)>0?awarded:0,multiplier};
   }catch(error){console.error('awardSeasonPassRunXp failed',error);return null;}
@@ -18142,15 +18230,35 @@ async function resolveSeasonPassAdminSeason(env,user,nowMs=Date.now()){
 async function showSeasonPassAdminDashboard(chatId,user,env){
   const access=await requireAnySecurityPermission(chatId,user,['manageSeasons','manageMaintenance'],env);if(!access)return;
   const season=await resolveSeasonPassAdminSeason(env,user);const status=seasonPassStatusLabel(season);const elite=season.prices.elite;const plus=season.prices.elite_plus;
+  const forcedClosure=await getSeasonPassForcedClosure(env);
+  const forcedLine=forcedClosure
+    ? `включено до ${escapeHtml(formatUtcDate(forcedClosure.unlockAt))} · откроется ${escapeHtml(forcedClosure.nextSeasonTitle || 'новый сезон')}`
+    : 'выключено';
   const keyboard=[
     [{text:'🗓 Все сезоны',callback_data:'sp_seasons'},{text:'➕ Новый сезон',callback_data:'sp_season_new'}],
     [{text:'🎁 Награды уровней',callback_data:'sp_rewards:0'},{text:'📋 Задания',callback_data:'sp_tasks:0'}],
     [{text:'💳 Цены и XP',callback_data:'sp_settings'},{text:'📊 Статистика',callback_data:'sp_stats'}],
     [{text:'▶️ Начать сейчас',callback_data:`sp_start_now:${season.id}`},{text:'⏹ Завершить сейчас',callback_data:`sp_end_now:${season.id}`}]
   ];
-  if(season.status==='upcoming'&&season.id!==DEFAULT_SEASON_PASS_ID)keyboard.push([{text:'🗑 Удалить будущий сезон',callback_data:`sp_season_delete_confirm:${season.id}`}]);
+  if(forcedClosure)keyboard.push([{text:`🔒 Закрыто до ${formatUtcDate(forcedClosure.unlockAt)}`,callback_data:'sp_noop'}]);
+  else if(season.status==='active'||season.claimWindowOpen)keyboard.push([{text:'🔒 Принудительно закрыть до нового сезона',callback_data:`sp_force_close_confirm:${season.id}`}]);
+  const lockedNextSeason=forcedClosure&&forcedClosure.nextSeasonId===season.id;
+  if(season.status==='upcoming'&&!lockedNextSeason&&season.id!==DEFAULT_SEASON_PASS_ID)keyboard.push([{text:'🗑 Удалить будущий сезон',callback_data:`sp_season_delete_confirm:${season.id}`}]);
   keyboard.push([{text:'♻️ Сбросить прогресс и покупки всех',callback_data:`sp_reset_all_confirm:${season.id}`}],[{text:'👁 Настройки видимости',callback_data:'v65_feature:battle_pass'}],[{text:'⬅️ Админ-панель',callback_data:'adm_home'}]);
-  await sendTelegramMessage(env,chatId,`<b>🎟 Сезонный пропуск</b>\n\nУправляемый сезон: <b>${escapeHtml(season.title)}</b>\nID: <code>${escapeHtml(season.id)}</code>\nСтатус: <b>${status}</b>\nНачало: <b>${escapeHtml(formatUtcDate(Math.floor(Date.parse(season.startsAt)/1000)))}</b>\nОкончание: <b>${escapeHtml(formatUtcDate(Math.floor(Date.parse(season.endsAt)/1000)))}</b>\nПолучение наград до: <b>${escapeHtml(formatUtcDate(Math.floor(Date.parse(season.claimGraceEndsAt)/1000)))}</b>\n\n<b>Тарифы</b>\nЭлитный: ${elite.points.toLocaleString('ru-RU')} очков · ${elite.treats} зефира · ${elite.coffee} кофе\nЭлитный+: ${plus.points.toLocaleString('ru-RU')} очков · ${plus.treats} зефира · ${plus.coffee} кофе\nУровень: ${season.levelPricePoints.toLocaleString('ru-RU')} очков`,{inline_keyboard:keyboard});
+  await sendTelegramMessage(env,chatId,`<b>🎟 Сезонный пропуск</b>
+
+Управляемый сезон: <b>${escapeHtml(season.title)}</b>
+ID: <code>${escapeHtml(season.id)}</code>
+Статус: <b>${status}</b>
+Начало: <b>${escapeHtml(formatUtcDate(Math.floor(Date.parse(season.startsAt)/1000)))}</b>
+Окончание: <b>${escapeHtml(formatUtcDate(Math.floor(Date.parse(season.endsAt)/1000)))}</b>
+Получение наград до: <b>${escapeHtml(formatUtcDate(Math.floor(Date.parse(season.claimGraceEndsAt)/1000)))}</b>
+Принудительное закрытие: <b>${forcedLine}</b>
+
+<b>Тарифы</b>
+Элитный: ${elite.points.toLocaleString('ru-RU')} очков · ${elite.treats} зефира · ${elite.coffee} кофе
+Элитный+: ${plus.points.toLocaleString('ru-RU')} очков · ${plus.treats} зефира · ${plus.coffee} кофе
+Уровень: ${season.levelPricePoints.toLocaleString('ru-RU')} очков`,{inline_keyboard:keyboard});
 }
 
 async function showSeasonPassSeasonsAdmin(chatId,user,env){
@@ -18242,12 +18350,14 @@ async function finalizeSeasonPassSeasonCreate(query,env){
 
 async function showSeasonPassDeleteConfirmation(query,env,seasonId=''){
   const chatId=query.message?.chat?.id;const access=await requireAnySecurityPermission(chatId,query.from,['manageSeasons','manageMaintenance'],env);if(!access)return;const season=seasonId?await loadSeasonPassSeasonById(env,seasonId):await resolveSeasonPassAdminSeason(env,query.from);if(!season){await answerCallback(env,query.id,'Сезон не найден.',true);return;}const now=Math.floor(Date.now()/1000);
+  const forcedClosure=await getSeasonPassForcedClosure(env);if(forcedClosure?.nextSeasonId===season.id){await answerCallback(env,query.id,'Этот сезон используется таймером принудительного закрытия и не может быть удалён до старта.',true);return;}
   if(season.id===DEFAULT_SEASON_PASS_ID||Math.floor(Date.parse(season.startsAt)/1000)<=now||season.status!=='upcoming'){await answerCallback(env,query.id,'Удалять можно только ещё не начавшийся новый сезон.',true);return;}
   await answerCallback(env,query.id,'Требуется подтверждение.');await sendTelegramMessage(env,chatId,`<b>Удалить будущий сезон?</b>\n\n<b>${escapeHtml(season.title)}</b>\n${escapeHtml(formatUtcDate(Math.floor(Date.parse(season.startsAt)/1000)))} — ${escapeHtml(formatUtcDate(Math.floor(Date.parse(season.endsAt)/1000)))}\n\nБудут удалены только настройки, награды и задания этого ещё не начавшегося сезона.`,{inline_keyboard:[[{text:'🗑 Да, удалить',callback_data:`sp_season_delete_execute:${season.id}`}],[{text:'❌ Отмена',callback_data:'sp_admin'}]]});
 }
 
 async function deleteSeasonPassScheduledSeason(query,env,seasonId=''){
   const chatId=query.message?.chat?.id;const access=await requireAnySecurityPermission(chatId,query.from,['manageSeasons','manageMaintenance'],env);if(!access)return;const season=seasonId?await loadSeasonPassSeasonById(env,seasonId):await resolveSeasonPassAdminSeason(env,query.from);if(!season){await answerCallback(env,query.id,'Сезон не найден.',true);return;}const now=Math.floor(Date.now()/1000);
+  const forcedClosure=await getSeasonPassForcedClosure(env);if(forcedClosure?.nextSeasonId===season.id){await answerCallback(env,query.id,'Этот сезон используется таймером принудительного закрытия и не может быть удалён до старта.',true);return;}
   if(season.id===DEFAULT_SEASON_PASS_ID||Math.floor(Date.parse(season.startsAt)/1000)<=now||season.status!=='upcoming'){await answerCallback(env,query.id,'Этот сезон уже нельзя удалить.',true);return;}
   const counts=await Promise.all([
     env.DB.prepare(`SELECT COUNT(*) AS count FROM season_pass_players WHERE season_id=?`).bind(season.id).first(),
@@ -18455,11 +18565,63 @@ async function setSeasonPassTimingAction(query,action,env,seasonId=''){
   if(action==='start'){
     const currentEnd=Math.floor(Date.parse(season.endsAt)/1000);if(currentEnd<=now){await answerCallback(env,query.id,'Нельзя повторно запускать уже окончившийся сезон. Создайте новый.',true);return;}
     const overlap=await env.DB.prepare(`SELECT title FROM season_pass_seasons WHERE season_id!=? AND starts_at<=? AND MAX(ends_at,claim_grace_ends_at)>? LIMIT 1`).bind(season.id,now,now).first();if(overlap){await answerCallback(env,query.id,`Сейчас идёт сезон или ещё открыта выдача наград «${String(overlap.title).slice(0,40)}».`,true);return;}
-    await env.DB.prepare(`UPDATE season_pass_seasons SET starts_at=?,manual_status='',updated_at=?,updated_by=? WHERE season_id=?`).bind(now,now,String(query.from.id),season.id).run();await answerCallback(env,query.id,'Сезон запущен.');
+    await env.DB.prepare(`UPDATE season_pass_seasons SET starts_at=?,manual_status='',updated_at=?,updated_by=? WHERE season_id=?`).bind(now,now,String(query.from.id),season.id).run();const forcedClosure=await getSeasonPassForcedClosure(env,now*1000);if(forcedClosure&&(forcedClosure.nextSeasonId===season.id||forcedClosure.unlockAt<=now)){await deleteSystemState(env,SEASON_PASS_FORCE_CLOSE_STATE_KEY);}await answerCallback(env,query.id,'Сезон запущен.');
   }else if(action==='end'){
     const graceEndsAt=now+SEASON_PASS_MANUAL_CLAIM_GRACE_SECONDS;await env.DB.prepare(`UPDATE season_pass_seasons SET ends_at=?,claim_grace_ends_at=?,manual_status='ended',updated_at=?,updated_by=? WHERE season_id=?`).bind(now,graceEndsAt,now,String(query.from.id),season.id).run();seasonPassExpiryCleanupPromises.clear();await answerCallback(env,query.id,'Сезон завершён. Награды доступны ещё 3 дня.');await sendTelegramMessage(env,chatId,`<b>🏁 Сезон завершён</b>\n\n<b>${escapeHtml(season.title)}</b>\n\nНовые XP, задания и покупки остановлены. Уже открытые награды можно получить до <b>${escapeHtml(formatUtcDate(graceEndsAt))}</b>.\n\nПосле окончания окна прогресс и сезонные покупки будут очищены автоматически.`,{inline_keyboard:[[{text:'⬅️ Сезонный пропуск',callback_data:'sp_admin'}]]});return;
   }
   await showSeasonPassAdminDashboard(chatId,query.from,env);
+}
+
+async function showSeasonPassForceCloseConfirmation(query,env,seasonId=''){
+  const chatId=query.message?.chat?.id;const access=await requireAnySecurityPermission(chatId,query.from,['manageSeasons','manageMaintenance'],env);if(!access)return;
+  const season=seasonId?await loadSeasonPassSeasonById(env,seasonId):await resolveSeasonPassAdminSeason(env,query.from);if(!season){await answerCallback(env,query.id,'Сезон не найден.',true);return;}
+  if(season.status!=='active'&&!season.claimWindowOpen){await answerCallback(env,query.id,'Принудительно закрыть можно только текущий сезон или открытое окно выдачи наград.',true);return;}
+  const now=Math.floor(Date.now()/1000);const nextSeason=await resolveSeasonPassForceCloseTarget(env,season,now);
+  if(!nextSeason){await answerCallback(env,query.id,'Сначала создайте следующий сезон с будущей датой начала.',true);return;}
+  await answerCallback(env,query.id,'Требуется подтверждение.');
+  await sendTelegramMessage(env,chatId,`<b>🔒 Принудительно закрыть сезонный пропуск?</b>
+
+Текущий сезон: <b>${escapeHtml(season.title)}</b>
+Следующий сезон: <b>${escapeHtml(nextSeason.title)}</b>
+Открытие: <b>${escapeHtml(formatUtcDate(Math.floor(Date.parse(nextSeason.startsAt)/1000)))}</b>
+
+После подтверждения выдача наград закроется <b>сразу, без трёхдневного окна</b>. XP, уровни, задания, покупки «Элитного» и «Элитного+» и покупки уровней этого сезона будут удалены.
+
+До старта следующего сезона никто, включая владельца, не сможет открыть пропуск или получить тестовые награды. Игрокам будет показана <b>zaglyshka_season.png</b>, подпись «Не скучай, новый сезон уже скоро» и таймер.
+
+Уже начисленные на аккаунт кейсы, валюта и постоянная косметика не отзываются. Действие нельзя отменить.`,{inline_keyboard:[[{text:'❌ Отмена',callback_data:'sp_admin'}],[{text:'🔒 Да, закрыть немедленно',callback_data:`sp_force_close_execute:${season.id}`}]]});
+}
+
+async function executeSeasonPassForceClose(query,env,seasonId=''){
+  const chatId=query.message?.chat?.id;const access=await requireSecurityPermission(chatId,query.from,'approveDangerous',env);if(!access)return;
+  const season=seasonId?await loadSeasonPassSeasonById(env,seasonId):await resolveSeasonPassAdminSeason(env,query.from);if(!season){await answerCallback(env,query.id,'Сезон не найден.',true);return;}
+  if(season.status!=='active'&&!season.claimWindowOpen){await answerCallback(env,query.id,'Этот сезон уже нельзя принудительно закрыть.',true);return;}
+  const now=Math.floor(Date.now()/1000);const nextSeason=await resolveSeasonPassForceCloseTarget(env,season,now);
+  if(!nextSeason){await answerCallback(env,query.id,'Нет следующего сезона для таймера открытия.',true);return;}
+  const unlockAt=Math.floor(Date.parse(nextSeason.startsAt)/1000);
+  if(!Number.isFinite(unlockAt)||unlockAt<=now){await answerCallback(env,query.id,'Дата старта следующего сезона уже наступила. Сначала проверьте расписание.',true);return;}
+  const payload={closedSeasonId:season.id,closedSeasonTitle:season.title,nextSeasonId:nextSeason.id,nextSeasonTitle:nextSeason.title,nextSeasonStartsAt:unlockAt,nextSeasonStartsAtIso:nextSeason.startsAt,nextSeasonEndsAt:Math.floor(Date.parse(nextSeason.endsAt)/1000),nextSeasonEndsAtIso:nextSeason.endsAt,message:'Не скучай, новый сезон уже скоро',activatedAt:now,activatedBy:String(query.from.id)};
+  await setSystemState(env,SEASON_PASS_FORCE_CLOSE_STATE_KEY,JSON.stringify(payload));
+  await env.DB.prepare(`UPDATE season_pass_seasons SET ends_at=CASE WHEN ends_at>? THEN ? ELSE ends_at END,claim_grace_ends_at=?,manual_status='ended',updated_at=?,updated_by=? WHERE season_id=?`).bind(now,now,now,now,String(query.from.id),season.id).run();
+  seasonPassExpiryCleanupPromises.clear();
+  let resetResult=null;let resetError='';
+  try{resetResult=await resetSeasonPassDataForSeason(env,season,{reason:'forced-close-until-next-season'});}catch(error){resetError=String(error?.message||error);console.error('season pass forced close reset failed',error);}
+  await setSeasonPassAdminSelection(env,query.from.id,nextSeason.id);
+  try{await logStaffAction(env,query.from,access,'season_pass_force_close',null,'season_pass',season.id,nextSeason.id,{nextSeasonId:nextSeason.id,unlockAt,resetResult,resetError});}catch(error){console.error('season pass force close audit failed',error);}
+  await answerCallback(env,query.id,'Сезонный пропуск принудительно закрыт.');
+  const resetLine=resetError?`
+
+⚠️ Блокировка уже включена, но автоматическая очистка вернула ошибку: <code>${escapeHtml(resetError.slice(0,300))}</code>. Старый сезон всё равно недоступен; очистку можно повторить через кнопку сброса.`:`
+
+Сброшено профилей: <b>${Number(resetResult?.playersReset||0)}</b>
+Удалено покупок: <b>${Number(resetResult?.purchasesRemoved||0)}</b>`;
+  await sendTelegramMessage(env,chatId,`<b>🔒 Сезонный пропуск закрыт принудительно</b>
+
+Закрытый сезон: <b>${escapeHtml(season.title)}</b>
+Следующий сезон: <b>${escapeHtml(nextSeason.title)}</b>
+Старт: <b>${escapeHtml(formatUtcDate(unlockAt))}</b>
+
+Выдача наград закрыта без дополнительного окна. Игрокам показывается заглушка с таймером, а доступ к странице, XP, покупкам и получению наград заблокирован до старта нового сезона.${resetLine}`,{inline_keyboard:[[{text:'➡️ Управление следующим сезоном',callback_data:'sp_admin'}]]});
 }
 
 async function battlePassAudienceAccess(env, telegramId, flag = null) {
@@ -18491,7 +18653,23 @@ async function getBattlePassAccess(request, env) {
     const auth = await validateTelegramInitData(initData, env);
     const telegramId = String(auth.user.id);
     const identity = await maintenanceAccessIdentity(telegramId, env);
-    const season = await loadSeasonPassSeasonForAccess(env);
+    const nowMs = Date.now();
+    const actualSeason = await loadSeasonPassSeasonForAccess(env, nowMs);
+    const forcedClosure = await getSeasonPassForcedClosure(env, nowMs);
+    const season = forcedClosure ? seasonPassForcedClosureSeason(forcedClosure, configuredSeasonPassState(env, nowMs), nowMs) : actualSeason;
+
+    if (forcedClosure) {
+      return jsonResponse({
+        ok: true,
+        allowed: true,
+        mode: "forced_closed",
+        accessRole: identity.accessRole,
+        accessReason: "forced_closed",
+        telegramId,
+        canPreviewUpcoming: false,
+        season
+      });
+    }
 
     // The owner and active administrators do not depend on the feature-flag query.
     // Only the owner can bypass the upcoming-season screen for production checks.
@@ -18743,6 +18921,8 @@ async function handleOperationsSecurityCallback(query,env,runtime={}){
   if(data==="sp_stats"){await answerCallback(env,query.id,"Обновляю статистику.");await showSeasonPassStats(chatId,query.from,env);return true;}
   const spStartNow=data.match(/^sp_start_now:([A-Za-z0-9_-]{2,48})$/);if(spStartNow){await setSeasonPassTimingAction(query,"start",env,spStartNow[1]);return true;}
   const spEndNow=data.match(/^sp_end_now:([A-Za-z0-9_-]{2,48})$/);if(spEndNow){await setSeasonPassTimingAction(query,"end",env,spEndNow[1]);return true;}
+  const spForceCloseConfirm=data.match(/^sp_force_close_confirm:([A-Za-z0-9_-]{2,48})$/);if(spForceCloseConfirm){await showSeasonPassForceCloseConfirmation(query,env,spForceCloseConfirm[1]);return true;}
+  const spForceCloseExecute=data.match(/^sp_force_close_execute:([A-Za-z0-9_-]{2,48})$/);if(spForceCloseExecute){await executeSeasonPassForceClose(query,env,spForceCloseExecute[1]);return true;}
   const spResetConfirm=data.match(/^sp_reset_all_confirm:([A-Za-z0-9_-]{2,48})$/);if(spResetConfirm){await showSeasonPassResetAllConfirmation(query,env,spResetConfirm[1]);return true;}
   const spResetExecute=data.match(/^sp_reset_all_execute:([A-Za-z0-9_-]{2,48})$/);if(spResetExecute){await resetSeasonPassAllPlayers(query,env,spResetExecute[1]);return true;}
   if(data==="sp_start_now"){await setSeasonPassTimingAction(query,"start",env);return true;}
