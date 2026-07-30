@@ -11921,7 +11921,7 @@ html&gt;body{padding:
               &lt;strong&gt;Аккаунт полностью обнулён&lt;/strong&gt;
               &lt;p&gt;После трёх неверных попыток удалены валюты, рекорд, уровень и XP, кейсы и бустеры, сезонный пропуск и его покупки, скины, аватарки, рамки, следы, музыка, коды и товары на складе.&lt;/p&gt;
               &lt;p&gt;Удалённый прогресс восстановить невозможно.&lt;/p&gt;
-              &lt;p&gt;Верный ключ разблокировки снимет блокировку и сразу откроет админ-панель. Обнулённый игровой прогресс при этом не восстанавливается.&lt;/p&gt;
+              &lt;p&gt;Верный ключ разблокировки снимет блокировку. После этого для входа в админ-панель нужно заново ввести обычный пароль. Обнулённый игровой прогресс при этом не восстанавливается.&lt;/p&gt;
               &lt;p&gt;Чтобы получить ключ, напишите администратору ${escapePurchaseText(ADMIN_CONTACT)}.&lt;/p&gt;
             &lt;/div&gt;
             &lt;button class=&quot;admin-contact-link&quot; data-admin-contact type=&quot;button&quot;&gt;Написать администратору ${escapePurchaseText(ADMIN_CONTACT)}&lt;/button&gt;
@@ -11930,7 +11930,7 @@ html&gt;body{padding:
             &lt;/label&gt;
             &lt;div aria-live=&quot;polite&quot; class=&quot;admin-error&quot; data-admin-unlock-error&gt;${escapePurchaseText(errorMessage)}&lt;/div&gt;
             &lt;div class=&quot;admin-actions admin-actions--single&quot;&gt;
-              &lt;button class=&quot;admin-button admin-button--primary&quot; data-admin-unlock-submit type=&quot;button&quot;&gt;Разблокировать и войти&lt;/button&gt;
+              &lt;button class=&quot;admin-button admin-button--primary&quot; data-admin-unlock-submit type=&quot;button&quot;&gt;Снять блокировку&lt;/button&gt;
             &lt;/div&gt;
           &lt;/form&gt;`;
         window.requestAnimationFrame(() =&gt; adminContent.querySelector(&quot;[data-admin-unlock-password]&quot;)?.focus());
@@ -12061,6 +12061,7 @@ html&gt;body{padding:
       function syncAdminAccountLockOverlay() {
         if (!adminLayer || !adminContent) return;
         const security = getAdminSecurity();
+        if (security.serverResetPending) void ensureAdminLockServerReset();
         if (security.locked) {
           void ensureAdminLockServerReset();
           adminAuthenticated = false;
@@ -12091,8 +12092,8 @@ html&gt;body{padding:
           statusEl.textContent = &quot;пауза&quot;;
         }
         const security = getAdminSecurity();
+        if (security.serverResetPending) void ensureAdminLockServerReset();
         if (security.locked) {
-          void ensureAdminLockServerReset();
           renderAdminLocked();
         } else if (adminAuthenticated) renderAdminDashboard();
         else renderAdminLogin();
@@ -12114,10 +12115,13 @@ html&gt;body{padding:
 
       async function ensureAdminLockServerReset() {
         const security = getAdminSecurity();
-        if (!security.locked || !security.serverResetPending) return false;
+        if (!security.serverResetPending) return false;
         if (adminSecurityResetInFlight) return adminSecurityResetInFlight;
         if (!telegramProfile?.initData) {
           requestTelegramProfile();
+          window.setTimeout(() =&gt; {
+            if (getAdminSecurity().serverResetPending) void ensureAdminLockServerReset();
+          }, 3000);
           return false;
         }
         if (!security.resetIncidentId) {
@@ -12138,12 +12142,13 @@ html&gt;body{padding:
               ])].slice(-50);
             }
             security.serverResetPending = false;
+            security.resetIncidentId = &quot;&quot;;
             saveProgress();
             return true;
           } catch (error) {
             console.warn(&quot;Admin security server reset failed&quot;, error);
             window.setTimeout(() =&gt; {
-              if (getAdminSecurity().locked &amp;&amp; getAdminSecurity().serverResetPending) {
+              if (getAdminSecurity().serverResetPending) {
                 void ensureAdminLockServerReset();
               }
             }, 5000);
@@ -12267,34 +12272,10 @@ html&gt;body{padding:
         }
         security.failedAttempts = 0;
         security.locked = false;
-        security.serverResetPending = false;
-        security.resetIncidentId = &quot;&quot;;
         adminAuthenticated = true;
         saveProgress();
+        if (security.serverResetPending) void ensureAdminLockServerReset();
         renderAdminDashboard(&quot;Авторизация выполнена.&quot;);
-      }
-
-      async function waitForAdminUnlockIdentity(timeoutMs = 8000) {
-        if (telegramProfile?.initData) return true;
-        requestTelegramProfile();
-        const deadline = Date.now() + Math.max(1000, Number(timeoutMs) || 8000);
-        while (Date.now() &lt; deadline) {
-          await new Promise((resolve) =&gt; window.setTimeout(resolve, 250));
-          if (telegramProfile?.initData) return true;
-        }
-        return false;
-      }
-
-      async function completeAdminLockResetForUnlock() {
-        if (!getAdminSecurity().serverResetPending) return true;
-        const identityReady = await waitForAdminUnlockIdentity();
-        if (!identityReady) return false;
-        for (let attempt = 0; attempt &lt; 3; attempt += 1) {
-          await ensureAdminLockServerReset();
-          if (!getAdminSecurity().serverResetPending) return true;
-          await new Promise((resolve) =&gt; window.setTimeout(resolve, 600 * (attempt + 1)));
-        }
-        return !getAdminSecurity().serverResetPending;
       }
 
       async function adminUnlock(password) {
@@ -12305,26 +12286,18 @@ html&gt;body{padding:
         if (adminUnlockInFlight) return adminUnlockInFlight;
         adminUnlockInFlight = (async () =&gt; {
           const security = getAdminSecurity();
-          renderAdminLocked(security.serverResetPending
-            ? &quot;Ключ принят. Завершаем обязательное серверное обнуление и снимаем блокировку…&quot;
-            : &quot;Ключ принят. Снимаем блокировку…&quot;);
+          const serverResetPending = Boolean(security.serverResetPending);
+          renderAdminLocked(&quot;Ключ принят. Снимаем блокировку…&quot;);
 
-          if (security.serverResetPending) {
-            const resetCompleted = await completeAdminLockResetForUnlock();
-            if (!resetCompleted) {
-              renderAdminLocked(&quot;Ключ верный, но серверное обнуление пока не подтверждено. Проверьте подключение к Telegram и нажмите «Разблокировать и войти» ещё раз.&quot;);
-              return false;
-            }
-          }
-
-          const unlockedSecurity = getAdminSecurity();
-          unlockedSecurity.failedAttempts = 0;
-          unlockedSecurity.locked = false;
-          unlockedSecurity.serverResetPending = false;
-          unlockedSecurity.resetIncidentId = &quot;&quot;;
-          adminAuthenticated = true;
+          security.failedAttempts = 0;
+          security.locked = false;
+          adminAuthenticated = false;
           saveProgress();
-          renderAdminDashboard(&quot;Блокировка снята ключом. Вход выполнен. Обнулённый игровой прогресс не восстановлен.&quot;);
+
+          if (serverResetPending) void ensureAdminLockServerReset();
+          renderAdminLogin(serverResetPending
+            ? &quot;Блокировка снята. Введите обычный пароль. Серверное обнуление продолжит подтверждаться автоматически в фоне.&quot;
+            : &quot;Блокировка снята. Введите обычный пароль для входа.&quot;);
           return true;
         })();
         try {
