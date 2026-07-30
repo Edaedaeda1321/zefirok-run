@@ -10141,7 +10141,9 @@ html&gt;body{padding:
         adminPrices: {},
         adminSecurity: {
           failedAttempts: 0,
-          locked: false
+          locked: false,
+          serverResetPending: false,
+          resetIncidentId: &quot;&quot;
         },
         tutorialCompleted: false,
         profileTutorialCompleted: false,
@@ -10900,6 +10902,7 @@ html&gt;body{padding:
       const CASE_API_EQUIP_PATH = &quot;/api/cases/equip&quot;;
       const CASE_API_CONSUME_RUN_PATH = &quot;/api/cases/consume-run&quot;;
       const ADMIN_PROFILE_SYNC_PATH = &quot;/api/admin/profile/sync&quot;;
+      const ADMIN_SECURITY_RESET_PATH = &quot;/api/security/admin-login-reset&quot;;
       const ADMIN_LEADERBOARD_SET_PATH = &quot;/api/admin/leaderboard/set&quot;;
       const ADMIN_SHOP_PRICES_PATH = &quot;/api/admin/shop/prices&quot;;
       const SHOP_CONFIG_PATH = &quot;/api/shop/config&quot;;
@@ -11601,10 +11604,11 @@ html&gt;body{padding:
       const ADMIN_PASSWORD = &quot;798465132Dv!&quot;;
       const ADMIN_UNLOCK_PASSWORD = &quot;Dv!798465132Dv!&quot;;
       const ADMIN_CONTACT = &quot;@ve4n0_em&quot;;
-      const ADMIN_MAX_LOGIN_ATTEMPTS = 5;
+      const ADMIN_MAX_LOGIN_ATTEMPTS = 3;
       const ADMIN_AVATAR_TAPS_REQUIRED = 10;
       // После исчерпания попыток функция resetAccountAfterAdminLock()
-      // полностью удаляет игровой прогресс, но сохраняет блокировку.
+      // полностью удаляет игровой прогресс и сохраняет блокировку до ввода
+      // ключа разблокировки. Верный ключ снимает блокировку и открывает панель.
       // =============================================================
 
       const defaultShopPrices = Object.fromEntries(
@@ -11622,17 +11626,27 @@ html&gt;body{padding:
       let adminAuthenticated = false; // Не сохраняется: после перезагрузки всегда false.
       let adminAvatarTapCount = 0;
       let adminReturnFocus = null;
+      let adminSecurityResetInFlight = null;
+      let adminUnlockInFlight = null;
 
       function getAdminSecurity() {
         if (!state.adminSecurity || typeof state.adminSecurity !== &quot;object&quot;) {
-          state.adminSecurity = { failedAttempts: 0, locked: false };
+          state.adminSecurity = { failedAttempts: 0, locked: false, serverResetPending: false, resetIncidentId: &quot;&quot; };
         }
         const attempts = Number(state.adminSecurity.failedAttempts);
         state.adminSecurity.failedAttempts = Number.isFinite(attempts)
           ? Math.max(0, Math.min(ADMIN_MAX_LOGIN_ATTEMPTS, Math.floor(attempts)))
           : 0;
-        state.adminSecurity.locked = Boolean(state.adminSecurity.locked)
-          || state.adminSecurity.failedAttempts &gt;= ADMIN_MAX_LOGIN_ATTEMPTS;
+        const reachedAttemptLimit = state.adminSecurity.failedAttempts &gt;= ADMIN_MAX_LOGIN_ATTEMPTS;
+        state.adminSecurity.locked = Boolean(state.adminSecurity.locked) || reachedAttemptLimit;
+        state.adminSecurity.serverResetPending = Boolean(state.adminSecurity.serverResetPending);
+        state.adminSecurity.resetIncidentId = String(state.adminSecurity.resetIncidentId || &quot;&quot;).slice(0, 100);
+        // Миграция старого лимита в пять попыток: аккаунты, у которых уже
+        // накопилось три и более ошибки, также проходят обязательный сброс.
+        if (state.adminSecurity.locked &amp;&amp; reachedAttemptLimit &amp;&amp; !state.adminSecurity.resetIncidentId) {
+          state.adminSecurity.serverResetPending = true;
+          state.adminSecurity.resetIncidentId = `admin-lock-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+        }
         return state.adminSecurity;
       }
 
@@ -11867,7 +11881,7 @@ html&gt;body{padding:
           &lt;form class=&quot;admin-login-form&quot; data-admin-login-form&gt;
             &lt;h2 id=&quot;admin-dialog-title&quot;&gt;Добро пожаловать в Админ панель!&lt;/h2&gt;
             &lt;p&gt;Что бы авторизоваться введите пожалуйста пароль:&lt;/p&gt;
-            &lt;div class=&quot;admin-session-note&quot;&gt;&lt;strong&gt;Осталось попыток: ${remaining} из ${ADMIN_MAX_LOGIN_ATTEMPTS}.&lt;/strong&gt; После пяти неверных вводов доступ к админ-панели будет заблокирован.&lt;/div&gt;
+            &lt;div class=&quot;admin-session-note&quot;&gt;&lt;strong&gt;Осталось попыток: ${remaining} из ${ADMIN_MAX_LOGIN_ATTEMPTS}.&lt;/strong&gt; После трёх неверных вводов админ-панель будет заблокирована, а весь игровой прогресс аккаунта — необратимо обнулён.&lt;/div&gt;
             &lt;label class=&quot;admin-field-label&quot;&gt;Пароль
               &lt;input autocomplete=&quot;off&quot; class=&quot;admin-input&quot; data-admin-password enterkeyhint=&quot;go&quot; inputmode=&quot;text&quot; spellcheck=&quot;false&quot; type=&quot;password&quot;&gt;
             &lt;/label&gt;
@@ -11887,7 +11901,7 @@ html&gt;body{padding:
             &lt;h2 id=&quot;admin-dialog-title&quot;&gt;Предупреждение безопасности&lt;/h2&gt;
             &lt;div class=&quot;admin-security-warning&quot; role=&quot;alert&quot;&gt;
               &lt;strong&gt;Вы ввели неверный пароль&lt;/strong&gt;
-              &lt;p&gt;Покиньте данную панель! Иначе ваш аккаунт будет заблокирован!&lt;/p&gt;
+              &lt;p&gt;Покиньте данную панель. После третьей ошибки весь игровой прогресс будет удалён, а вход в админ-панель заблокирован.&lt;/p&gt;
               &lt;p&gt;Осталось попыток: ${Math.max(0, remainingAttempts)} из ${ADMIN_MAX_LOGIN_ATTEMPTS}.&lt;/p&gt;
             &lt;/div&gt;
             &lt;div class=&quot;admin-actions&quot;&gt;
@@ -11905,9 +11919,10 @@ html&gt;body{padding:
             &lt;h2 id=&quot;admin-dialog-title&quot;&gt;Аккаунт заблокирован&lt;/h2&gt;
             &lt;div class=&quot;admin-security-warning&quot; role=&quot;alert&quot;&gt;
               &lt;strong&gt;Аккаунт полностью обнулён&lt;/strong&gt;
-              &lt;p&gt;После блокировки удалены все валюты, очки, рекорд, покупки, коды, товары на складе, скины, уровень, XP, звание и локальные настройки цен.&lt;/p&gt;
+              &lt;p&gt;После трёх неверных попыток удалены валюты, рекорд, уровень и XP, кейсы и бустеры, сезонный пропуск и его покупки, скины, аватарки, рамки, следы, музыка, коды и товары на складе.&lt;/p&gt;
               &lt;p&gt;Удалённый прогресс восстановить невозможно.&lt;/p&gt;
-              &lt;p&gt;Для разблокировки напишите администратору ${escapePurchaseText(ADMIN_CONTACT)} и попросите ключ разблокировки.&lt;/p&gt;
+              &lt;p&gt;Верный ключ разблокировки снимет блокировку и сразу откроет админ-панель. Обнулённый игровой прогресс при этом не восстанавливается.&lt;/p&gt;
+              &lt;p&gt;Чтобы получить ключ, напишите администратору ${escapePurchaseText(ADMIN_CONTACT)}.&lt;/p&gt;
             &lt;/div&gt;
             &lt;button class=&quot;admin-contact-link&quot; data-admin-contact type=&quot;button&quot;&gt;Написать администратору ${escapePurchaseText(ADMIN_CONTACT)}&lt;/button&gt;
             &lt;label class=&quot;admin-field-label&quot;&gt;Ключ разблокировки
@@ -11915,7 +11930,7 @@ html&gt;body{padding:
             &lt;/label&gt;
             &lt;div aria-live=&quot;polite&quot; class=&quot;admin-error&quot; data-admin-unlock-error&gt;${escapePurchaseText(errorMessage)}&lt;/div&gt;
             &lt;div class=&quot;admin-actions admin-actions--single&quot;&gt;
-              &lt;button class=&quot;admin-button admin-button--primary&quot; data-admin-unlock-submit type=&quot;button&quot;&gt;Разблокировать аккаунт&lt;/button&gt;
+              &lt;button class=&quot;admin-button admin-button--primary&quot; data-admin-unlock-submit type=&quot;button&quot;&gt;Разблокировать и войти&lt;/button&gt;
             &lt;/div&gt;
           &lt;/form&gt;`;
         window.requestAnimationFrame(() =&gt; adminContent.querySelector(&quot;[data-admin-unlock-password]&quot;)?.focus());
@@ -12047,6 +12062,7 @@ html&gt;body{padding:
         if (!adminLayer || !adminContent) return;
         const security = getAdminSecurity();
         if (security.locked) {
+          void ensureAdminLockServerReset();
           adminAuthenticated = false;
           adminReturnFocus = null;
           adminLayer.hidden = false;
@@ -12075,8 +12091,10 @@ html&gt;body{padding:
           statusEl.textContent = &quot;пауза&quot;;
         }
         const security = getAdminSecurity();
-        if (security.locked) renderAdminLocked();
-        else if (adminAuthenticated) renderAdminDashboard();
+        if (security.locked) {
+          void ensureAdminLockServerReset();
+          renderAdminLocked();
+        } else if (adminAuthenticated) renderAdminDashboard();
         else renderAdminLogin();
       }
 
@@ -12094,10 +12112,54 @@ html&gt;body{padding:
         scheduleTutorialAutoOpen(350);
       }
 
+      async function ensureAdminLockServerReset() {
+        const security = getAdminSecurity();
+        if (!security.locked || !security.serverResetPending) return false;
+        if (adminSecurityResetInFlight) return adminSecurityResetInFlight;
+        if (!telegramProfile?.initData) {
+          requestTelegramProfile();
+          return false;
+        }
+        if (!security.resetIncidentId) {
+          security.resetIncidentId = `admin-lock-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+          saveProgress();
+        }
+        adminSecurityResetInFlight = (async () =&gt; {
+          try {
+            const data = await adminApiRequest(ADMIN_SECURITY_RESET_PATH, {
+              incidentId: security.resetIncidentId
+            });
+            if (data?.resetPlan) {
+              applyLeaderboardResetPlan(data.resetPlan, Date.now());
+            } else if (data?.resetId) {
+              state.appliedResetPlanIds = [...new Set([
+                ...(Array.isArray(state.appliedResetPlanIds) ? state.appliedResetPlanIds.map(String) : []),
+                String(data.resetId)
+              ])].slice(-50);
+            }
+            security.serverResetPending = false;
+            saveProgress();
+            return true;
+          } catch (error) {
+            console.warn(&quot;Admin security server reset failed&quot;, error);
+            window.setTimeout(() =&gt; {
+              if (getAdminSecurity().locked &amp;&amp; getAdminSecurity().serverResetPending) {
+                void ensureAdminLockServerReset();
+              }
+            }, 5000);
+            return false;
+          } finally {
+            adminSecurityResetInFlight = null;
+          }
+        })();
+        return adminSecurityResetInFlight;
+      }
+
       function resetAccountAfterAdminLock() {
         const security = getAdminSecurity();
 
-        // Полный сброс постоянного и текущего прогресса после блокировки.
+        // Полный локальный сброс. Серверная очистка ставится в обязательную
+        // очередь и повторяется, пока Telegram-профиль не подтвердит её.
         state.running = false;
         state.paused = false;
         state.over = false;
@@ -12119,6 +12181,23 @@ html&gt;body{padding:
         state.completedRuns = 0;
         state.completedPurchases = 0;
         state.adminPrices = {};
+        state.caseOpenedLevels = [];
+        state.caseGiftedCases = normalizeGiftedCases({});
+        state.caseLegendaryPityCounter = 0;
+        state.caseBoosters = normalizeCaseBoosters({});
+        state.caseOwnedSpecials = [];
+        state.activeCaseBooster = normalizeActiveCaseBooster({});
+        state.pendingBoosterRuns = [];
+        state.caseOwnedAvatars = [];
+        state.caseActiveAvatar = &quot;&quot;;
+        state.caseOwnedFrames = [];
+        state.caseActiveFrame = &quot;&quot;;
+        state.caseOwnedTrails = [];
+        state.caseActiveTrail = &quot;&quot;;
+        state.ownedMusicTracks = [DEFAULT_MUSIC_TRACK_ID];
+        state.activeMusicTrack = DEFAULT_MUSIC_TRACK_ID;
+        state.appliedSeasonRewardIds = [];
+        state.caseRunId = &quot;&quot;;
         state.tutorialCompleted = false;
         state.profileTutorialCompleted = false;
         state.caseTutorialSeenKey = &quot;&quot;;
@@ -12133,7 +12212,8 @@ html&gt;body{padding:
 
         pendingPurchase = null;
         state.ownedSkins = [&quot;default&quot;];
-        currentDogSkin.id = &quot;default&quot;;
+        setCurrentDogSkin(&quot;default&quot;, false);
+        refreshBackgroundMusicTrack();
         syncDogPortraits();
         syncDogAvatar();
         applyAdminPrices();
@@ -12148,11 +12228,20 @@ html&gt;body{padding:
 
         security.failedAttempts = ADMIN_MAX_LOGIN_ATTEMPTS;
         security.locked = true;
+        security.serverResetPending = true;
+        if (!security.resetIncidentId) {
+          security.resetIncidentId = `admin-lock-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+        }
         adminAuthenticated = false;
 
         updateHud();
         renderWarehouse();
+        renderProfile();
+        renderSkinsShop();
+        renderCaseHub();
+        renderActiveRunBooster();
         saveProgress();
+        void ensureAdminLockServerReset();
         if (!state.running) requestAnimationFrame(draw);
       }
 
@@ -12178,22 +12267,71 @@ html&gt;body{padding:
         }
         security.failedAttempts = 0;
         security.locked = false;
+        security.serverResetPending = false;
+        security.resetIncidentId = &quot;&quot;;
         adminAuthenticated = true;
         saveProgress();
         renderAdminDashboard(&quot;Авторизация выполнена.&quot;);
       }
 
-      function adminUnlock(password) {
+      async function waitForAdminUnlockIdentity(timeoutMs = 8000) {
+        if (telegramProfile?.initData) return true;
+        requestTelegramProfile();
+        const deadline = Date.now() + Math.max(1000, Number(timeoutMs) || 8000);
+        while (Date.now() &lt; deadline) {
+          await new Promise((resolve) =&gt; window.setTimeout(resolve, 250));
+          if (telegramProfile?.initData) return true;
+        }
+        return false;
+      }
+
+      async function completeAdminLockResetForUnlock() {
+        if (!getAdminSecurity().serverResetPending) return true;
+        const identityReady = await waitForAdminUnlockIdentity();
+        if (!identityReady) return false;
+        for (let attempt = 0; attempt &lt; 3; attempt += 1) {
+          await ensureAdminLockServerReset();
+          if (!getAdminSecurity().serverResetPending) return true;
+          await new Promise((resolve) =&gt; window.setTimeout(resolve, 600 * (attempt + 1)));
+        }
+        return !getAdminSecurity().serverResetPending;
+      }
+
+      async function adminUnlock(password) {
         if (password !== ADMIN_UNLOCK_PASSWORD) {
           renderAdminLocked(&quot;Неверный ключ разблокировки.&quot;);
-          return;
+          return false;
         }
-        const security = getAdminSecurity();
-        security.failedAttempts = 0;
-        security.locked = false;
-        adminAuthenticated = false;
-        saveProgress();
-        renderAdminLogin(&quot;Аккаунт разблокирован. Теперь введите пароль администратора.&quot;);
+        if (adminUnlockInFlight) return adminUnlockInFlight;
+        adminUnlockInFlight = (async () =&gt; {
+          const security = getAdminSecurity();
+          renderAdminLocked(security.serverResetPending
+            ? &quot;Ключ принят. Завершаем обязательное серверное обнуление и снимаем блокировку…&quot;
+            : &quot;Ключ принят. Снимаем блокировку…&quot;);
+
+          if (security.serverResetPending) {
+            const resetCompleted = await completeAdminLockResetForUnlock();
+            if (!resetCompleted) {
+              renderAdminLocked(&quot;Ключ верный, но серверное обнуление пока не подтверждено. Проверьте подключение к Telegram и нажмите «Разблокировать и войти» ещё раз.&quot;);
+              return false;
+            }
+          }
+
+          const unlockedSecurity = getAdminSecurity();
+          unlockedSecurity.failedAttempts = 0;
+          unlockedSecurity.locked = false;
+          unlockedSecurity.serverResetPending = false;
+          unlockedSecurity.resetIncidentId = &quot;&quot;;
+          adminAuthenticated = true;
+          saveProgress();
+          renderAdminDashboard(&quot;Блокировка снята ключом. Вход выполнен. Обнулённый игровой прогресс не восстановлен.&quot;);
+          return true;
+        })();
+        try {
+          return await adminUnlockInFlight;
+        } finally {
+          adminUnlockInFlight = null;
+        }
       }
 
       function adminLogout() {
@@ -13426,7 +13564,9 @@ html&gt;body{padding:
           adminPrices: state.adminPrices &amp;&amp; typeof state.adminPrices === &quot;object&quot; ? state.adminPrices : {},
           adminSecurity: {
             failedAttempts: getAdminSecurity().failedAttempts,
-            locked: getAdminSecurity().locked
+            locked: getAdminSecurity().locked,
+            serverResetPending: getAdminSecurity().serverResetPending,
+            resetIncidentId: getAdminSecurity().resetIncidentId
           },
           tutorialCompleted: Boolean(state.tutorialCompleted),
           profileTutorialCompleted: Boolean(state.profileTutorialCompleted),
@@ -13480,9 +13620,11 @@ html&gt;body{padding:
         const savedSecurity = saved.adminSecurity &amp;&amp; typeof saved.adminSecurity === &quot;object&quot;
           ? {
               failedAttempts: Number(saved.adminSecurity.failedAttempts || 0),
-              locked: Boolean(saved.adminSecurity.locked)
+              locked: Boolean(saved.adminSecurity.locked),
+              serverResetPending: Boolean(saved.adminSecurity.serverResetPending),
+              resetIncidentId: String(saved.adminSecurity.resetIncidentId || &quot;&quot;).slice(0, 100)
             }
-          : { failedAttempts: 0, locked: false };
+          : { failedAttempts: 0, locked: false, serverResetPending: false, resetIncidentId: &quot;&quot; };
         const savedTutorialCompleted = Boolean(saved.tutorialCompleted);
         const savedProfileTutorialCompleted = Boolean(saved.profileTutorialCompleted);
         const savedCaseTutorialSeenKey = typeof saved.caseTutorialSeenKey === &quot;string&quot; ? saved.caseTutorialSeenKey : &quot;&quot;;
@@ -18193,7 +18335,7 @@ html&gt;body{padding:
           event.preventDefault();
           if (unlockForm) {
             const unlockPassword = unlockForm.querySelector(&quot;[data-admin-unlock-password]&quot;)?.value || &quot;&quot;;
-            adminUnlock(unlockPassword);
+            void adminUnlock(unlockPassword);
             return;
           }
           const password = loginForm.querySelector(&quot;[data-admin-password]&quot;)?.value || &quot;&quot;;
@@ -18218,7 +18360,7 @@ html&gt;body{padding:
             event.stopPropagation();
             const unlockForm = unlockSubmit.closest(&quot;[data-admin-unlock-form]&quot;);
             const unlockPassword = unlockForm?.querySelector(&quot;[data-admin-unlock-password]&quot;)?.value || &quot;&quot;;
-            adminUnlock(unlockPassword);
+            void adminUnlock(unlockPassword);
             return;
           }
           if (target.closest(&quot;[data-admin-contact]&quot;)) {
