@@ -18248,7 +18248,8 @@ async function showSeasonPassAdminDashboard(chatId,user,env){
   if(forcedClosure)keyboard.push([{text:`🔒 Закрыто до ${formatUtcDate(forcedClosure.unlockAt)}`,callback_data:'sp_noop'}]);
   else if(season.status==='active'||season.claimWindowOpen)keyboard.push([{text:'🔒 Принудительно закрыть до нового сезона',callback_data:`sp_force_close_confirm:${season.id}`}]);
   const lockedNextSeason=forcedClosure&&forcedClosure.nextSeasonId===season.id;
-  if(season.status==='upcoming'&&!lockedNextSeason&&season.id!==DEFAULT_SEASON_PASS_ID)keyboard.push([{text:'🗑 Удалить будущий сезон',callback_data:`sp_season_delete_confirm:${season.id}`}]);
+  const seasonStartsAtMs=Date.parse(String(season.startsAt||''));
+  if(!lockedNextSeason&&season.id!==DEFAULT_SEASON_PASS_ID&&Number.isFinite(seasonStartsAtMs)&&seasonStartsAtMs>Date.now())keyboard.push([{text:'🗑 Удалить запланированный сезон',callback_data:`sp_season_delete_confirm:${season.id}`}]);
   keyboard.push([{text:'♻️ Сбросить прогресс и покупки всех',callback_data:`sp_reset_all_confirm:${season.id}`}],[{text:'👁 Настройки видимости',callback_data:'v65_feature:battle_pass'}],[{text:'⬅️ Админ-панель',callback_data:'adm_home'}]);
   await sendTelegramMessage(env,chatId,`<b>🎟 Сезонный пропуск</b>
 
@@ -18276,13 +18277,13 @@ async function showSeasonPassSeasonsAdmin(chatId,user,env){
     const mark=item.id===selected.id?'✅ ':'';
     const lockedNextSeason=Boolean(forcedClosure&&forcedClosure.nextSeasonId===item.id);
     const startsAtMs=Date.parse(String(item.startsAt||''));
-    const canDelete=item.status==='upcoming'&&item.id!==DEFAULT_SEASON_PASS_ID&&!lockedNextSeason&&Number.isFinite(startsAtMs)&&startsAtMs>nowMs;
+    const canDelete=item.id!==DEFAULT_SEASON_PASS_ID&&!lockedNextSeason&&Number.isFinite(startsAtMs)&&startsAtMs>nowMs;
     const selectButton={text:`${mark}${seasonPassStatusLabel(item).split(' ')[0]} ${String(item.title).slice(0,canDelete?25:30)}`,callback_data:`sp_season_pick:${item.id}`};
     return canDelete?[selectButton,{text:'🗑',callback_data:`sp_season_delete_confirm:${item.id}`}]:[selectButton];
   });
   buttons.push([{text:'➕ Создать новый сезон',callback_data:'sp_season_new'}],[{text:'⬅️ Текущий сезон',callback_data:'sp_admin'}]);
   const lines=items.map(({row,item})=>{const lockedNextSeason=Boolean(forcedClosure&&forcedClosure.nextSeasonId===item.id);const note=lockedNextSeason?' · 🔒 выбран для таймера':'';return `${item.id===selected.id?'✅':'•'} <b>${escapeHtml(item.title)}</b> · ${seasonPassStatusLabel(item)}${note}\n${escapeHtml(formatUtcDate(Number(row.starts_at)))} — ${escapeHtml(formatUtcDate(Number(row.ends_at)))}`;});
-  await sendTelegramMessage(env,chatId,`<b>🗓 Сезоны пропуска</b>\n\n${lines.join('\n\n')||'Сезонов пока нет.'}\n\nВыберите сезон, чтобы редактировать его. Будущий сезон без данных игроков можно удалить кнопкой 🗑 рядом с ним.`,{inline_keyboard:buttons});
+  await sendTelegramMessage(env,chatId,`<b>🗓 Сезоны пропуска</b>\n\n${lines.join('\n\n')||'Сезонов пока нет.'}\n\nВыберите сезон, чтобы редактировать его. Любой сезон с будущей датой начала и без данных игроков можно удалить кнопкой 🗑, даже если его случайно завершили раньше старта. Сезон с отметкой 🔒 защищён, пока используется таймером.`,{inline_keyboard:buttons});
 }
 
 async function selectSeasonPassAdminSeason(query,seasonId,env){
@@ -18365,14 +18366,14 @@ async function finalizeSeasonPassSeasonCreate(query,env){
 async function showSeasonPassDeleteConfirmation(query,env,seasonId=''){
   const chatId=query.message?.chat?.id;const access=await requireAnySecurityPermission(chatId,query.from,['manageSeasons','manageMaintenance'],env);if(!access)return;const season=seasonId?await loadSeasonPassSeasonById(env,seasonId):await resolveSeasonPassAdminSeason(env,query.from);if(!season){await answerCallback(env,query.id,'Сезон не найден.',true);return;}const now=Math.floor(Date.now()/1000);
   const forcedClosure=await getSeasonPassForcedClosure(env);if(forcedClosure?.nextSeasonId===season.id){await answerCallback(env,query.id,'Этот сезон используется таймером принудительного закрытия и не может быть удалён до старта.',true);return;}
-  if(season.id===DEFAULT_SEASON_PASS_ID||Math.floor(Date.parse(season.startsAt)/1000)<=now||season.status!=='upcoming'){await answerCallback(env,query.id,'Удалять можно только ещё не начавшийся новый сезон.',true);return;}
-  await answerCallback(env,query.id,'Требуется подтверждение.');await sendTelegramMessage(env,chatId,`<b>Удалить будущий сезон?</b>\n\n<b>${escapeHtml(season.title)}</b>\n${escapeHtml(formatUtcDate(Math.floor(Date.parse(season.startsAt)/1000)))} — ${escapeHtml(formatUtcDate(Math.floor(Date.parse(season.endsAt)/1000)))}\n\nБудут удалены только настройки, награды и задания этого ещё не начавшегося сезона.`,{inline_keyboard:[[{text:'🗑 Да, удалить',callback_data:`sp_season_delete_execute:${season.id}`}],[{text:'❌ Отмена',callback_data:'sp_seasons'}]]});
+  if(season.id===DEFAULT_SEASON_PASS_ID||Math.floor(Date.parse(season.startsAt)/1000)<=now){await answerCallback(env,query.id,'Удалять можно только сезон с будущей датой начала.',true);return;}
+  await answerCallback(env,query.id,'Требуется подтверждение.');await sendTelegramMessage(env,chatId,`<b>Удалить запланированный сезон?</b>\n\n<b>${escapeHtml(season.title)}</b>\n${escapeHtml(formatUtcDate(Math.floor(Date.parse(season.startsAt)/1000)))} — ${escapeHtml(formatUtcDate(Math.floor(Date.parse(season.endsAt)/1000)))}\n\nБудут удалены настройки, награды и задания этого сезона. Удаление разрешено, потому что его дата начала ещё не наступила.`,{inline_keyboard:[[{text:'🗑 Да, удалить',callback_data:`sp_season_delete_execute:${season.id}`}],[{text:'❌ Отмена',callback_data:'sp_seasons'}]]});
 }
 
 async function deleteSeasonPassScheduledSeason(query,env,seasonId=''){
   const chatId=query.message?.chat?.id;const access=await requireAnySecurityPermission(chatId,query.from,['manageSeasons','manageMaintenance'],env);if(!access)return;const season=seasonId?await loadSeasonPassSeasonById(env,seasonId):await resolveSeasonPassAdminSeason(env,query.from);if(!season){await answerCallback(env,query.id,'Сезон не найден.',true);return;}const now=Math.floor(Date.now()/1000);
   const forcedClosure=await getSeasonPassForcedClosure(env);if(forcedClosure?.nextSeasonId===season.id){await answerCallback(env,query.id,'Этот сезон используется таймером принудительного закрытия и не может быть удалён до старта.',true);return;}
-  if(season.id===DEFAULT_SEASON_PASS_ID||Math.floor(Date.parse(season.startsAt)/1000)<=now||season.status!=='upcoming'){await answerCallback(env,query.id,'Этот сезон уже нельзя удалить.',true);return;}
+  if(season.id===DEFAULT_SEASON_PASS_ID||Math.floor(Date.parse(season.startsAt)/1000)<=now){await answerCallback(env,query.id,'Этот сезон уже нельзя удалить: дата его начала наступила.',true);return;}
   const counts=await Promise.all([
     env.DB.prepare(`SELECT COUNT(*) AS count FROM season_pass_players WHERE season_id=?`).bind(season.id).first(),
     env.DB.prepare(`SELECT COUNT(*) AS count FROM season_pass_claims WHERE season_id=?`).bind(season.id).first(),
@@ -18389,7 +18390,7 @@ async function deleteSeasonPassScheduledSeason(query,env,seasonId=''){
     env.DB.prepare(`DELETE FROM season_pass_seasons WHERE season_id=?`).bind(season.id)
   ]);
   try{await logStaffAction(env,query.from,access,'season_pass_delete',null,'season_pass',season.id,null,{title:season.title,startsAt:season.startsAt,endsAt:season.endsAt});}catch(error){console.error('season pass delete audit failed',error);}
-  await deleteSystemState(env,seasonPassAdminSelectionKey(query.from.id));await answerCallback(env,query.id,'Будущий сезон удалён.');await showSeasonPassSeasonsAdmin(chatId,query.from,env);
+  await deleteSystemState(env,seasonPassAdminSelectionKey(query.from.id));await answerCallback(env,query.id,'Запланированный сезон удалён.');await showSeasonPassSeasonsAdmin(chatId,query.from,env);
 }
 
 async function showSeasonPassSettings(chatId,user,env){
