@@ -7,10 +7,10 @@
 <meta content="no-referrer" name="referrer"/>
 <meta content="default-src 'none'; script-src 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com https://telegram.org; style-src 'unsafe-inline' blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; img-src 'self' blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; font-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; media-src 'self' blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; worker-src blob:; connect-src 'self' blob: data:; frame-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'" http-equiv="Content-Security-Policy"/>
 <title>Сладкий Забег</title>
-<style>:root{color-scheme:light dark;background:light-dark(rgb(255 255 255), rgb(24 24 24))}html,body{margin:0;min-height:100%}body{box-sizing:border-box;padding:1rem;background:inherit}iframe{display:none;width:100%;max-width:736px;height:calc(100vh - 2rem);margin:0 auto;border:0}iframe.is-ready{display:block}.zefirok-maintenance-gate{min-height:calc(100vh - 2rem);display:grid;background:#fff5f5;border-radius:24px;place-items:center;padding:24px;box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#4e3a42}.zefirok-maintenance-card{width:min(430px,100%);box-sizing:border-box;padding:28px;border:1px solid #efd0d9;border-radius:28px;background:#fff;box-shadow:0 18px 50px rgba(91,54,68,.13);text-align:center}.zefirok-maintenance-icon{font-size:54px}.zefirok-maintenance-card h1{font-size:25px;margin:12px 0}.zefirok-maintenance-card p{font-size:16px;line-height:1.5;color:#786870;margin:0}.zefirok-maintenance-card button{margin-top:18px;padding:12px 18px;border:0;border-radius:14px;background:#e56f9b;color:#fff;font-weight:800;font-size:15px}
-.zefirok-season-pass-layer{position:fixed;inset:0;z-index:2147483000;background:#fff5f4;display:block;overflow:hidden}
+<style>:root{color-scheme:light dark;background:light-dark(rgb(255 255 255), rgb(24 24 24));--zefirok-app-height:100dvh}html,body{margin:0;width:100%;height:100%;min-height:0;overflow:hidden}body{box-sizing:border-box;padding:0;background:inherit}iframe{display:none;height:var(--zefirok-app-height,100dvh);border:0}body>iframe:not(.zefirok-season-pass-frame){width:calc(100% - 32px);max-width:736px;margin:0 auto}iframe.is-ready{display:block}.zefirok-maintenance-gate{width:100%;min-height:var(--zefirok-app-height,100dvh);display:grid;background:#fff5f5;place-items:center;padding:max(24px,var(--zefirok-content-safe-top,0px)) max(24px,var(--zefirok-content-safe-right,0px)) max(24px,var(--zefirok-content-safe-bottom,0px)) max(24px,var(--zefirok-content-safe-left,0px));box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#4e3a42}.zefirok-maintenance-card{width:min(430px,100%);box-sizing:border-box;padding:28px;border:1px solid #efd0d9;border-radius:28px;background:#fff;box-shadow:0 18px 50px rgba(91,54,68,.13);text-align:center}.zefirok-maintenance-icon{font-size:54px}.zefirok-maintenance-card h1{font-size:25px;margin:12px 0}.zefirok-maintenance-card p{font-size:16px;line-height:1.5;color:#786870;margin:0}.zefirok-maintenance-card button{margin-top:18px;padding:12px 18px;border:0;border-radius:14px;background:#e56f9b;color:#fff;font-weight:800;font-size:15px}
+.zefirok-season-pass-layer{position:fixed;inset:0;width:100%;height:var(--zefirok-app-height,100dvh);z-index:2147483000;background:#fff5f4;display:block;overflow:hidden}
 .zefirok-season-pass-layer[hidden]{display:none!important}
-.zefirok-season-pass-frame{display:block!important;width:100%!important;max-width:none!important;height:100%!important;margin:0!important;border:0!important;background:#fff5f4}
+.zefirok-season-pass-frame{display:block!important;width:100%!important;max-width:none!important;height:var(--zefirok-app-height,100dvh)!important;margin:0!important;border:0!important;background:#fff5f4}
 body.zefirok-season-pass-open{overflow:hidden!important;padding:0!important}
 body.zefirok-season-pass-open>iframe:not(.zefirok-season-pass-frame){visibility:hidden!important;pointer-events:none!important}
 </style>
@@ -37,6 +37,171 @@ body.zefirok-season-pass-open>iframe:not(.zefirok-season-pass-frame){visibility:
   const frame = () => document.querySelector("iframe");
   const MAINTENANCE_ACCESS_PATH = "/api/maintenance/access";
   const SEASON_PASS_AWAY_KEY = "zefirok-season-pass-away";
+
+  const TELEGRAM_FULLSCREEN_MIN_VERSION = "8.0";
+  let telegramFullscreenRequestPending = false;
+  let telegramFullscreenUnsupported = false;
+  let telegramFullscreenExpected = false;
+  let telegramViewportFrame = 0;
+
+  function clampInset(value) {
+    const number = Number(value || 0);
+    return Number.isFinite(number) ? Math.max(0, Math.round(number)) : 0;
+  }
+
+  function telegramCssInset(name) {
+    try {
+      const raw = getComputedStyle(document.documentElement).getPropertyValue(name);
+      return clampInset(String(raw || "").replace("px", "").trim());
+    } catch {
+      return 0;
+    }
+  }
+
+  function telegramViewportSnapshot() {
+    const webApp = window.Telegram?.WebApp;
+    const visualViewport = window.visualViewport;
+    const stableHeight = Number(webApp?.viewportStableHeight || 0);
+    const liveHeight = Number(webApp?.viewportHeight || 0);
+    const visualHeight = Number(visualViewport?.height || 0);
+    // Live/visual height is preferred during fullscreen transitions. Stable height can
+    // temporarily contain the previous screen size and made the embedded game rescale.
+    const height = Math.max(1, Math.round(liveHeight || visualHeight || stableHeight || window.innerHeight || document.documentElement.clientHeight || 1));
+    const width = Math.max(1, Math.round(Number(visualViewport?.width || 0) || window.innerWidth || document.documentElement.clientWidth || 1));
+    const safeArea = webApp?.safeAreaInset || {};
+    const contentSafeArea = webApp?.contentSafeAreaInset || safeArea;
+    const fullscreen = Boolean(webApp?.isFullscreen);
+    const fullscreenLayout = fullscreen || telegramFullscreenExpected;
+    const safeTop = Math.max(clampInset(safeArea.top), telegramCssInset("--tg-safe-area-inset-top"));
+    const safeRight = Math.max(clampInset(safeArea.right), telegramCssInset("--tg-safe-area-inset-right"));
+    const safeBottom = Math.max(clampInset(safeArea.bottom), telegramCssInset("--tg-safe-area-inset-bottom"));
+    const safeLeft = Math.max(clampInset(safeArea.left), telegramCssInset("--tg-safe-area-inset-left"));
+    const contentTop = Math.max(
+      clampInset(contentSafeArea.top),
+      telegramCssInset("--tg-content-safe-area-inset-top"),
+      fullscreenLayout ? 88 : 0
+    );
+    return {
+      width,
+      height,
+      fullscreen: fullscreenLayout,
+      safeArea: { top: safeTop, right: safeRight, bottom: safeBottom, left: safeLeft },
+      contentSafeArea: {
+        top: contentTop,
+        right: Math.max(clampInset(contentSafeArea.right), telegramCssInset("--tg-content-safe-area-inset-right"), safeRight),
+        bottom: Math.max(clampInset(contentSafeArea.bottom), telegramCssInset("--tg-content-safe-area-inset-bottom"), safeBottom),
+        left: Math.max(clampInset(contentSafeArea.left), telegramCssInset("--tg-content-safe-area-inset-left"), safeLeft)
+      }
+    };
+  }
+
+  function sendViewportSnapshot(targetWindow, snapshot) {
+    if (!targetWindow) return;
+    try {
+      targetWindow.postMessage({ type: "zefirok-host-viewport-changed", payload: snapshot }, "*");
+    } catch {}
+  }
+
+  function syncTelegramViewport() {
+    const snapshot = telegramViewportSnapshot();
+    const rootStyle = document.documentElement.style;
+    rootStyle.setProperty("--zefirok-app-height", `${snapshot.height}px`);
+    rootStyle.setProperty("--zefirok-content-safe-top", `${snapshot.contentSafeArea.top}px`);
+    rootStyle.setProperty("--zefirok-content-safe-right", `${snapshot.contentSafeArea.right}px`);
+    rootStyle.setProperty("--zefirok-content-safe-bottom", `${snapshot.contentSafeArea.bottom}px`);
+    rootStyle.setProperty("--zefirok-content-safe-left", `${snapshot.contentSafeArea.left}px`);
+    const gameFrame = frame();
+    const passOpen = Boolean(document.body?.classList?.contains("zefirok-season-pass-open"));
+    // Freeze the game while the pass iframe is on top. Resizing a hidden iframe in
+    // iOS Telegram can return a transient narrow rectangle and distort the canvas.
+    if (!passOpen) sendViewportSnapshot(gameFrame?.contentWindow, snapshot);
+    sendViewportSnapshot(seasonPassFrame()?.contentWindow, snapshot);
+    return snapshot;
+  }
+
+  function scheduleTelegramViewportSync() {
+    if (telegramViewportFrame) return;
+    telegramViewportFrame = window.requestAnimationFrame(() => {
+      telegramViewportFrame = 0;
+      syncTelegramViewport();
+    });
+  }
+
+  function requestTelegramFullscreen() {
+    const webApp = window.Telegram?.WebApp;
+    if (!webApp) {
+      scheduleTelegramViewportSync();
+      return false;
+    }
+    try { webApp.ready?.(); } catch {}
+    try { webApp.expand?.(); } catch {}
+    try { webApp.setHeaderColor?.("#fff5f4"); } catch {}
+    try { webApp.setBackgroundColor?.("#fff5f4"); } catch {}
+    try { webApp.setBottomBarColor?.("#fff5f4"); } catch {}
+    scheduleTelegramViewportSync();
+    if (webApp.isFullscreen) {
+      telegramFullscreenExpected = true;
+      return true;
+    }
+    if (telegramFullscreenUnsupported || telegramFullscreenRequestPending || typeof webApp.requestFullscreen !== "function") return false;
+    try {
+      if (typeof webApp.isVersionAtLeast === "function" && !webApp.isVersionAtLeast(TELEGRAM_FULLSCREEN_MIN_VERSION)) return false;
+    } catch {}
+    try {
+      telegramFullscreenRequestPending = true;
+      telegramFullscreenExpected = true;
+      webApp.requestFullscreen();
+      window.setTimeout(() => { telegramFullscreenRequestPending = false; }, 1400);
+      return true;
+    } catch {
+      telegramFullscreenRequestPending = false;
+      telegramFullscreenExpected = false;
+      return false;
+    }
+  }
+
+  function installTelegramViewportBridge() {
+    const webApp = window.Telegram?.WebApp;
+    const sync = () => scheduleTelegramViewportSync();
+    window.addEventListener("resize", sync, { passive: true });
+    window.addEventListener("orientationchange", sync, { passive: true });
+    window.visualViewport?.addEventListener?.("resize", sync, { passive: true });
+    window.visualViewport?.addEventListener?.("scroll", sync, { passive: true });
+    if (webApp?.onEvent) {
+      for (const eventName of ["viewportChanged", "fullscreenChanged", "safeAreaChanged", "contentSafeAreaChanged"]) {
+        try { webApp.onEvent(eventName, sync); } catch {}
+      }
+      try {
+        webApp.onEvent("fullscreenChanged", () => {
+          telegramFullscreenRequestPending = false;
+          telegramFullscreenExpected = Boolean(webApp?.isFullscreen);
+          scheduleTelegramViewportSync();
+        });
+      } catch {}
+      try {
+        webApp.onEvent("fullscreenFailed", (event) => {
+          telegramFullscreenRequestPending = false;
+          telegramFullscreenExpected = false;
+          if (String(event?.error || "") === "UNSUPPORTED") telegramFullscreenUnsupported = true;
+          scheduleTelegramViewportSync();
+        });
+      } catch {}
+      try {
+        webApp.onEvent("activated", () => {
+          requestTelegramFullscreen();
+          scheduleTelegramViewportSync();
+        });
+      } catch {}
+    }
+    const start = () => {
+      requestTelegramFullscreen();
+      syncTelegramViewport();
+      window.setTimeout(syncTelegramViewport, 180);
+      window.setTimeout(syncTelegramViewport, 650);
+    };
+    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start, { once: true });
+    else start();
+  }
 
   function isFreshSeasonPassReturn() {
     try { return new URLSearchParams(window.location.search).get("from") === "season-pass"; }
@@ -111,6 +276,22 @@ body.zefirok-season-pass-open>iframe:not(.zefirok-season-pass-frame){visibility:
   function activateGameFrame() {
     const gameFrame = frame();
     if (!gameFrame) return;
+    if (gameFrame.dataset.viewportBridgeInstalled !== "1") {
+      gameFrame.dataset.viewportBridgeInstalled = "1";
+      gameFrame.addEventListener("load", () => {
+        const restoreViewport = () => {
+          const snapshot = syncTelegramViewport();
+          sendViewportSnapshot(gameFrame.contentWindow, snapshot);
+          try {
+            gameFrame.contentWindow?.postMessage?.({ type: "zefirok-restore-game-layout", payload: snapshot }, "*");
+          } catch {}
+        };
+        restoreViewport();
+        window.requestAnimationFrame(() => window.requestAnimationFrame(restoreViewport));
+        window.setTimeout(restoreViewport, 120);
+        window.setTimeout(restoreViewport, 480);
+      });
+    }
     const source = gameFrame.getAttribute("data-srcdoc");
     if (source != null && gameFrame.dataset.activated !== "1") {
       const preparedSource = /<base\s/i.test(source)
@@ -380,15 +561,27 @@ body.zefirok-season-pass-open>iframe:not(.zefirok-season-pass-frame){visibility:
     const passFrame = document.createElement("iframe");
     passFrame.className = "zefirok-season-pass-frame";
     passFrame.title = "Сезонный пропуск";
-    passFrame.allow = "clipboard-write; autoplay";
+    passFrame.allow = "clipboard-write; autoplay; fullscreen";
     passFrame.referrerPolicy = "same-origin";
     passFrame.src = initData
-      ? `/battle-pass.html?v=0.79.34#tgInitData=${encodeURIComponent(initData)}`
-      : "/battle-pass.html?v=0.79.34";
+      ? `/battle-pass.html?v=0.79.46-rc.4#tgInitData=${encodeURIComponent(initData)}`
+      : "/battle-pass.html?v=0.79.46-rc.4";
     layer.append(passFrame);
+    passFrame.addEventListener("load", () => {
+      const snapshot = syncTelegramViewport();
+      sendViewportSnapshot(passFrame.contentWindow, snapshot);
+      try { sendTelegramProfile(passFrame.contentWindow); } catch {}
+    }, { once: true });
     document.body.append(layer);
     document.body.classList.add("zefirok-season-pass-open");
     seasonPassLayer = layer;
+    try {
+      const webApp = window.Telegram?.WebApp;
+      webApp?.disableVerticalSwipes?.();
+      webApp?.enableClosingConfirmation?.();
+    } catch {}
+    requestTelegramFullscreen();
+    scheduleTelegramViewportSync();
   }
 
   function refreshMainGameAfterSeasonPass() {
@@ -399,12 +592,20 @@ body.zefirok-season-pass-open>iframe:not(.zefirok-season-pass-frame){visibility:
     gameFrame.classList.add("is-ready");
     const refresh = () => {
       try { target.postMessage({ type: "zefirok-open-screen", screen: "profile" }, "*"); } catch {}
-      try { void sendSavedProgress(target); } catch {}
+      try { target.postMessage({ type: "zefirok-season-pass-account-updated" }, "*"); } catch {}
       try { sendTelegramProfile(target); } catch {}
     };
+    const restoreLayout = () => {
+      const snapshot = syncTelegramViewport();
+      try { target.postMessage({ type: "zefirok-host-viewport-changed", payload: snapshot }, "*"); } catch {}
+      try { target.postMessage({ type: "zefirok-restore-game-layout", payload: snapshot }, "*"); } catch {}
+    };
     refresh();
-    window.setTimeout(refresh, 180);
-    window.setTimeout(refresh, 850);
+    window.requestAnimationFrame(() => window.requestAnimationFrame(restoreLayout));
+    window.setTimeout(refresh, 260);
+    window.setTimeout(restoreLayout, 140);
+    window.setTimeout(restoreLayout, 480);
+    window.setTimeout(restoreLayout, 920);
   }
 
   function closeSeasonPassOverlay() {
@@ -416,8 +617,12 @@ body.zefirok-season-pass-open>iframe:not(.zefirok-season-pass-frame){visibility:
     try {
       const webApp = window.Telegram?.WebApp;
       if (typeof webApp?.enableVerticalSwipes === "function") webApp.enableVerticalSwipes();
+      webApp?.disableClosingConfirmation?.();
       webApp?.BackButton?.hide?.();
     } catch {}
+    try { window.scrollTo(0, 0); } catch {}
+    requestTelegramFullscreen();
+    scheduleTelegramViewportSync();
     refreshMainGameAfterSeasonPass();
   }
 
@@ -431,6 +636,13 @@ body.zefirok-season-pass-open>iframe:not(.zefirok-season-pass-frame){visibility:
     if (!message || typeof message !== "object") return;
     if (fromSeasonPass) {
       if (message.type === "zefirok-close-season-pass") closeSeasonPassOverlay();
+      else if (message.type === "zefirok-season-pass-account-updated") {
+        const target = gameFrame?.contentWindow;
+        try { target?.postMessage?.({ type: "zefirok-season-pass-account-updated" }, "*"); } catch {}
+      } else if (message.type === "zefirok-request-fullscreen") {
+        requestTelegramFullscreen();
+        scheduleTelegramViewportSync();
+      }
       return;
     }
     if (message.type === "zefirok-progress-ready") {
@@ -616,6 +828,7 @@ body.zefirok-season-pass-open>iframe:not(.zefirok-season-pass-frame){visibility:
   } catch (error) {
     // Normal browser preview: localStorage fallback will be used.
   }
+  installTelegramViewportBridge();
 })();
 </script>
 </head>
@@ -721,7 +934,11 @@ body.zefirok-season-pass-open>iframe:not(.zefirok-season-pass-frame){visibility:
 
 html &gt; body {
   margin: 0;
-  padding: 5px;
+  padding:
+    max(5px, var(--zefirok-content-safe-top, 0px))
+    max(5px, var(--zefirok-content-safe-right, 0px))
+    max(5px, var(--zefirok-content-safe-bottom, 0px))
+    max(5px, var(--zefirok-content-safe-left, 0px));
   color: var(--foreground);
   background: transparent !important;
   font-family: var(--font-sans);
@@ -1422,7 +1639,11 @@ svg {
   color: var(--destructive);
 }
 
-html&gt;body{padding:0}
+html&gt;body{padding:
+  max(5px,var(--zefirok-content-safe-top,0px))
+  max(5px,var(--zefirok-content-safe-right,0px))
+  max(5px,var(--zefirok-content-safe-bottom,0px))
+  max(5px,var(--zefirok-content-safe-left,0px))!important}
     #zefirok-maltipoo-runner .shop-card[data-shop-card=&quot;zefir&quot;] .shop-card-main &gt; img {
       width: 92%;
       max-width: 78px;
@@ -6019,6 +6240,11 @@ html&gt;body{padding:0}
     }
   }
 &lt;/style&gt;
+&lt;style id=&quot;zefirok-v07937-season-xp-collection&quot;&gt;
+#zefirok-maltipoo-runner .case-booster-card--season{border-color:#e4b44d;background:linear-gradient(145deg,#fffaf0,#fff0bd);box-shadow:0 8px 22px rgba(190,132,31,.16)}
+#zefirok-maltipoo-runner .case-booster-card--season strong{color:#9a6814}
+#zefirok-maltipoo-runner .case-booster-card--season button:disabled{opacity:1;background:linear-gradient(135deg,#e7bd55,#bd7d19);color:#fff}
+&lt;/style&gt;
 &lt;/head&gt;
 &lt;body&gt;
 &lt;div aria-label=&quot;Мини-игра Сладкий забег&quot; class=&quot;zefirok-runner&quot; id=&quot;zefirok-maltipoo-runner&quot;&gt;
@@ -7811,10 +8037,16 @@ html&gt;body{padding:0}
   height: 54px;
   display: grid;
   place-items: center;
+  overflow: hidden;
   border-radius: 17px;
   background: rgba(255,255,255,.78);
-  font-size: 29px;
   box-shadow: inset 0 0 0 1px rgba(219,151,70,.22);
+}
+#zefirok-maltipoo-runner .battle-pass-profile-icon img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: contain;
 }
 #zefirok-maltipoo-runner .battle-pass-profile-copy { display: grid; gap: 4px; min-width: 0; }
 #zefirok-maltipoo-runner .battle-pass-profile-copy strong { color: #7e4a25; font-size: 15px; }
@@ -8762,14 +8994,14 @@ html&gt;body{padding:0}
     &lt;div class=&quot;profile-section-head&quot;&gt;
       &lt;div&gt;
         &lt;h3 id=&quot;profile-battle-pass-title&quot;&gt;Сезонный пропуск&lt;/h3&gt;
-        &lt;span&gt;Первая тестовая версия&lt;/span&gt;
+        &lt;span&gt;Сезон I · 10 августа — 10 сентября&lt;/span&gt;
       &lt;/div&gt;
     &lt;/div&gt;
     &lt;div class=&quot;battle-pass-profile-card&quot;&gt;
-      &lt;div class=&quot;battle-pass-profile-icon&quot; aria-hidden=&quot;true&quot;&gt;🎟️&lt;/div&gt;
+      &lt;div class=&quot;battle-pass-profile-icon&quot; aria-hidden=&quot;true&quot;&gt;&lt;img src=&quot;/assets/season-pass/icon_one_season.png&quot; alt=&quot;&quot;&gt;&lt;/div&gt;
       &lt;div class=&quot;battle-pass-profile-copy&quot;&gt;
-        &lt;strong&gt;Сезон «Сладкий старт»&lt;/strong&gt;
-        &lt;span&gt;50 горизонтальных уровней, задания, кейсы и две линии наград.&lt;/span&gt;
+        &lt;strong&gt;Сезон I: Открытие Кафе&lt;/strong&gt;
+        &lt;span&gt;50 уровней, ежедневные и недельные задания, кейсы и две линии наград.&lt;/span&gt;
       &lt;/div&gt;
       &lt;button class=&quot;profile-action profile-action--primary&quot; data-battle-pass-open type=&quot;button&quot;&gt;Открыть сезонный пропуск&lt;/button&gt;
     &lt;/div&gt;
@@ -9901,6 +10133,9 @@ html&gt;body{padding:0}
         redemptionCodes: [],
         purchaseTimestamps: [],
         profileXp: 0,
+        seasonProfileXpMultiplier: 1,
+        seasonProfileXpBonusActive: false,
+        seasonProfileXpEndsAt: &quot;&quot;,
         completedRuns: 0,
         completedPurchases: 0,
         adminPrices: {},
@@ -9923,6 +10158,7 @@ html&gt;body{padding:0}
         caseGiftedCases: { small: 0, sweet: 0, gold: 0, legendary: 0 },
         caseLegendaryPityCounter: 0,
         caseBoosters: { points: 0, treats: 0, coffee: 0 },
+        caseOwnedSpecials: [],
         activeCaseBooster: { type: &quot;&quot;, runsLeft: 0 },
         caseOwnedAvatars: [],
         caseActiveAvatar: &quot;&quot;,
@@ -10644,6 +10880,7 @@ html&gt;body{padding:0}
       const REWARD_API_CREATE_PATH = &quot;/api/rewards/create&quot;;
       const REWARD_API_MINE_PATH = &quot;/api/rewards/mine&quot;;
       const GAME_STARTUP_API_PATH = &quot;/api/game/startup&quot;;
+      const SEASON_PASS_PROFILE_BONUS_PATH = &quot;/api/battle-pass/profile-bonus&quot;;
       const REWARD_SYNC_INTERVAL_MS = 10000;
       let rewardSyncInFlight = false;
       let rewardLastSyncAt = 0;
@@ -10653,6 +10890,7 @@ html&gt;body{padding:0}
       // СЕРВЕРНЫЙ СЕЗОННЫЙ РЕЙТИНГ.
       const LEADERBOARD_API_STATE_PATH = &quot;/api/leaderboard/state&quot;;
       const LEADERBOARD_API_SUBMIT_PATH = &quot;/api/leaderboard/submit&quot;;
+      const SEASON_PASS_RUN_API_PATH = &quot;/api/battle-pass/run&quot;;
       const LEADERBOARD_API_CLAIM_PATH = &quot;/api/leaderboard/claim&quot;;
       const CASE_API_STATE_PATH = &quot;/api/cases/state&quot;;
       const CASE_API_OPEN_PATH = &quot;/api/cases/open&quot;;
@@ -10826,6 +11064,9 @@ html&gt;body{padding:0}
         coffee: { title: &quot;×2 кофе&quot;, src: &quot;/assets/cases/boosters/11FDBEBF-D838-4DA5-AA57-9DE0E4BA26AE.PNG&quot;, noun: &quot;кофе&quot; },
         treats: { title: &quot;×2 зефир&quot;, src: &quot;/assets/cases/boosters/80C21DC3-04A8-46F7-B8E4-9AC8FE13CCEB.PNG&quot;, noun: &quot;зефир&quot; }
       });
+      const CASE_SPECIAL_CATALOG = Object.freeze({
+        season_xp_x2: { title: &quot;×2 XP&quot;, src: &quot;/assets/season-pass/xp_x2.png&quot;, description: &quot;Удваивает XP профиля за зачтённые забеги и покупки, а также XP сезона за новые забеги&quot; }
+      });
       const CASE_REWARD_EFFECTS = Object.freeze({
         common: &quot;/assets/cases/effects/effect_standart.png&quot;,
         rare: &quot;/assets/cases/effects/effect_rar.png&quot;,
@@ -10972,7 +11213,7 @@ html&gt;body{padding:0}
         {
           title: &quot;Профиль, XP и уровни&quot;,
           description: &quot;Во вкладке «Профиль» показываются уровень, звание и данные Telegram. Если Telegram не передал фото или профиль, игра покажет Зефи и метку «Гостевой профиль».&quot;,
-          extra: `За зачтённый забег начисляется +${PROFILE_XP_PER_COMPLETED_RUN} XP, а за успешную покупку — +${PROFILE_XP_PER_PURCHASE} XP. Чтобы забег дал XP, продержись минимум ${PROFILE_XP_MIN_RUN_SECONDS} секунд и набери ${PROFILE_XP_MIN_RUN_SCORE} очков.`,
+          extra: `За зачтённый забег начисляется +${profileRunXpReward()} XP, а за успешную покупку — +${profilePurchaseXpReward()} XP. Чтобы забег дал XP, продержись минимум ${PROFILE_XP_MIN_RUN_SECONDS} секунд и набери ${PROFILE_XP_MIN_RUN_SCORE} очков.`,
           visual: () =&gt; `
             &lt;div class=&quot;tutorial-profile-card&quot;&gt;
               &lt;img class=&quot;tutorial-profile-avatar&quot; src=&quot;${assetSources[currentDogAvatarKey()] || assetSources.avatar || &quot;&quot;}&quot; alt=&quot;&quot;&gt;
@@ -10984,8 +11225,8 @@ html&gt;body{padding:0}
               &lt;/div&gt;
             &lt;/div&gt;
             &lt;div class=&quot;tutorial-xp-row&quot;&gt;
-              &lt;span&gt;&lt;strong&gt;+${PROFILE_XP_PER_COMPLETED_RUN} XP&lt;/strong&gt;за зачтённый забег&lt;/span&gt;
-              &lt;span&gt;&lt;strong&gt;+${PROFILE_XP_PER_PURCHASE} XP&lt;/strong&gt;за успешную покупку&lt;/span&gt;
+              &lt;span&gt;&lt;strong&gt;+${profileRunXpReward()} XP&lt;/strong&gt;за зачтённый забег&lt;/span&gt;
+              &lt;span&gt;&lt;strong&gt;+${profilePurchaseXpReward()} XP&lt;/strong&gt;за успешную покупку&lt;/span&gt;
             &lt;/div&gt;`
         }
       ];
@@ -11008,7 +11249,7 @@ html&gt;body{padding:0}
         },
         {
           title: &quot;Как зарабатывать XP&quot;,
-          description: `Получай +${PROFILE_XP_PER_COMPLETED_RUN} XP за зачтённый забег и +${PROFILE_XP_PER_PURCHASE} XP за успешную покупку.`,
+          description: `Получай +${profileRunXpReward()} XP за зачтённый забег и +${profilePurchaseXpReward()} XP за успешную покупку.`,
           extra: `Защита от фарма не начисляет XP за мгновенную смерть. Забег засчитывается только после ${PROFILE_XP_MIN_RUN_SECONDS} секунд и ${PROFILE_XP_MIN_RUN_SCORE} очков. Покупки дополнительно ограничены магазинным лимитом.`,
           visual: () =&gt; `
             &lt;div class=&quot;tutorial-xp-row&quot;&gt;
@@ -12259,12 +12500,18 @@ html&gt;body{padding:0}
 
       function resize() {
         const rect = canvas.getBoundingClientRect();
+        const rectWidth = Number(rect.width || canvas.clientWidth || 0);
+        const rectHeight = Number(rect.height || canvas.clientHeight || 0);
+        // Ignore transient hidden/half-restored iframe measurements. The previous
+        // renderer forced a 320x270 backing canvas into a narrower CSS box, which
+        // visibly flattened the dog after returning from the season pass.
+        if (!Number.isFinite(rectWidth) || !Number.isFinite(rectHeight) || rectWidth < 220 || rectHeight < 180) return;
         const scale = Math.min(2, Math.max(1, Number(window.devicePixelRatio) || 1));
-        canvasViewWidth = Math.max(320, rect.width || 320);
-        canvasViewHeight = Math.max(270, rect.height || 270);
+        canvasViewWidth = rectWidth;
+        canvasViewHeight = rectHeight;
         canvasPixelRatio = scale;
-        canvas.width = Math.max(320, Math.floor(canvasViewWidth * scale));
-        canvas.height = Math.max(270, Math.floor(canvasViewHeight * scale));
+        canvas.width = Math.max(1, Math.floor(canvasViewWidth * scale));
+        canvas.height = Math.max(1, Math.floor(canvasViewHeight * scale));
         ctx.setTransform(scale, 0, 0, scale, 0, 0);
         ctx.imageSmoothingEnabled = true;
         try { ctx.imageSmoothingQuality = &quot;medium&quot;; } catch (error) {}
@@ -12452,7 +12699,7 @@ html&gt;body{padding:0}
           state.coffee += credited.coffee;
           const boosterRunSummary = consumeLocalCaseBoosterRun(credited, state.caseRunId);
           state.completedRuns = sanitizeAdminNumber(Number(state.completedRuns || 0) + 1);
-          const runXpEarned = profileRunQualifiesForXp(state.time, earned) ? PROFILE_XP_PER_COMPLETED_RUN : 0;
+          const runXpEarned = profileRunQualifiesForXp(state.time, earned) ? profileRunXpReward() : 0;
           if (runXpEarned &gt; 0) state.profileXp = sanitizeAdminNumber(Number(state.profileXp || 0) + runXpEarned);
           const currentLevelAfterRun = profileLevelState(state.profileXp).level;
           const reachedNewLevel = currentLevelAfterRun &gt; previousLevel;
@@ -12470,7 +12717,7 @@ html&gt;body{padding:0}
           setStartButtonVisual(&quot;restart&quot;, false);
           updateHud();
           saveProgress();
-          void submitLeaderboardRun(earned, state.time);
+          void submitLeaderboardRun(earned, state.time, null, { treats: earnedTreats, coffee: earnedCoffee, newRecord: isNewRecord, profileXpAwarded: runXpEarned });
           void flushPendingCaseBoosterRuns();
           if (reachedNewLevel) void loadCaseState(true);
           const finishLines = [
@@ -13195,6 +13442,7 @@ html&gt;body{padding:0}
           currentDogSkin: currentDogSkin.id || &quot;default&quot;,
           caseOpenedLevels: normalizeCaseNumberList(state.caseOpenedLevels),
           caseBoosters: normalizeCaseBoosters(state.caseBoosters),
+          caseOwnedSpecials: normalizeCaseSpecials(state.caseOwnedSpecials),
           activeCaseBooster: normalizeActiveCaseBooster(state.activeCaseBooster),
           caseOwnedAvatars: normalizeCaseOwned(&quot;avatar&quot;, state.caseOwnedAvatars),
           caseActiveAvatar: normalizeCaseCosmetic(&quot;avatar&quot;, state.caseActiveAvatar),
@@ -13414,6 +13662,26 @@ html&gt;body{padding:0}
       window.addEventListener(&quot;message&quot;, (event) =&gt; {
         const message = event.data;
         if (!message || typeof message !== &quot;object&quot;) return;
+        if (message.type === &quot;zefirok-host-viewport-changed&quot;) {
+          const viewport = message.payload &amp;&amp; typeof message.payload === &quot;object&quot; ? message.payload : {};
+          const safe = viewport.contentSafeArea &amp;&amp; typeof viewport.contentSafeArea === &quot;object&quot; ? viewport.contentSafeArea : {};
+          const rootStyle = document.documentElement.style;
+          rootStyle.setProperty(&quot;--zefirok-content-safe-top&quot;, `${Math.max(0, Number(safe.top || 0))}px`);
+          rootStyle.setProperty(&quot;--zefirok-content-safe-right&quot;, `${Math.max(0, Number(safe.right || 0))}px`);
+          rootStyle.setProperty(&quot;--zefirok-content-safe-bottom&quot;, `${Math.max(0, Number(safe.bottom || 0))}px`);
+          rootStyle.setProperty(&quot;--zefirok-content-safe-left&quot;, `${Math.max(0, Number(safe.left || 0))}px`);
+          scheduleResize();
+          window.setTimeout(scheduleResize, 80);
+          return;
+        }
+        if (message.type === &quot;zefirok-restore-game-layout&quot;) {
+          try { window.scrollTo(0, 0); } catch (error) {}
+          scheduleResize();
+          window.requestAnimationFrame(() =&gt; window.requestAnimationFrame(scheduleResize));
+          window.setTimeout(scheduleResize, 160);
+          window.setTimeout(scheduleResize, 520);
+          return;
+        }
         if (message.type === &quot;zefirok-telegram-profile-data&quot;) {
           telegramProfile = message.payload &amp;&amp; typeof message.payload === &quot;object&quot;
             ? message.payload
@@ -13437,6 +13705,16 @@ html&gt;body{padding:0}
               telegramProfile?.available ? &quot;success&quot; : &quot;warning&quot;
             );
           }
+          return;
+        }
+        if (message.type === &quot;zefirok-season-pass-account-updated&quot;) {
+          // The startup package can be coalesced with an older in-flight request.
+          // Always follow it with a direct case-state read so a newly claimed case
+          // appears in the warehouse immediately and cannot be hidden by stale data.
+          void (async () =&gt; {
+            await syncGameStartupPackage(true);
+            await loadCaseState(true);
+          })();
           return;
         }
         if (message.type !== &quot;zefirok-progress-data&quot;) return;
@@ -13482,9 +13760,60 @@ html&gt;body{padding:0}
         return sanitizeAdminNumber(total);
       }
 
+      function profileXpMultiplier() {
+        const endsAtMs = Date.parse(String(state.seasonProfileXpEndsAt || &quot;&quot;));
+        if (Number.isFinite(endsAtMs) &amp;&amp; Date.now() &gt;= endsAtMs) {
+          state.seasonProfileXpBonusActive = false;
+          state.seasonProfileXpMultiplier = 1;
+          return 1;
+        }
+        return state.seasonProfileXpBonusActive &amp;&amp; Number(state.seasonProfileXpMultiplier || 1) &gt;= 2 ? 2 : 1;
+      }
+
+      function profileRunXpReward() {
+        return sanitizeAdminNumber(PROFILE_XP_PER_COMPLETED_RUN * profileXpMultiplier());
+      }
+
+      function profilePurchaseXpReward() {
+        return sanitizeAdminNumber(PROFILE_XP_PER_PURCHASE * profileXpMultiplier());
+      }
+
+      function applySeasonPassProfileBonus(payload) {
+        const data = payload &amp;&amp; typeof payload === &quot;object&quot; ? payload : {};
+        const active = Boolean(data.active) &amp;&amp; Number(data.multiplier || 1) &gt;= 2;
+        state.seasonProfileXpBonusActive = active;
+        state.seasonProfileXpMultiplier = active ? 2 : 1;
+        state.seasonProfileXpEndsAt = String(data.endsAt || &quot;&quot;);
+        if (isScreenVisible(&quot;profile&quot;)) renderProfile();
+      }
+
+      async function loadSeasonPassProfileBonus() {
+        const initData = String(telegramProfile?.initData || &quot;&quot;);
+        if (!initData) {
+          applySeasonPassProfileBonus({ active: false, multiplier: 1 });
+          return false;
+        }
+        try {
+          const { response, data } = await sharedJsonApiRequest(SEASON_PASS_PROFILE_BONUS_PATH, {
+            method: &quot;POST&quot;,
+            headers: { &quot;Content-Type&quot;: &quot;application/json&quot; },
+            body: JSON.stringify({ initData }),
+            cache: &quot;no-store&quot;,
+            credentials: &quot;same-origin&quot;
+          }, { key: `POST:${SEASON_PASS_PROFILE_BONUS_PATH}:${String(telegramProfile?.id || &quot;guest&quot;)}` });
+          if (!response.ok || !data?.ok) throw new Error(data?.error || &quot;Бонус XP временно недоступен.&quot;);
+          applySeasonPassProfileBonus(data);
+          return true;
+        } catch (error) {
+          console.warn(&quot;Season pass profile XP bonus sync failed&quot;, error);
+          return false;
+        }
+      }
+
       function profileRunRequirementText() {
-        if (!PROFILE_XP_RUN_ANTI_FARM_ENABLED) return &quot;XP начисляется за каждый завершённый забег.&quot;;
-        return `Чтобы получить XP за забег, нужно продержаться минимум ${PROFILE_XP_MIN_RUN_SECONDS} секунд и набрать ${PROFILE_XP_MIN_RUN_SCORE} очков.`;
+        const multiplierNote = profileXpMultiplier() &gt; 1 ? &quot; Элитный+ активен: XP удваивается.&quot; : &quot;&quot;;
+        if (!PROFILE_XP_RUN_ANTI_FARM_ENABLED) return `XP начисляется за каждый завершённый забег.${multiplierNote}`;
+        return `Чтобы получить XP за забег, нужно продержаться минимум ${PROFILE_XP_MIN_RUN_SECONDS} секунд и набрать ${PROFILE_XP_MIN_RUN_SCORE} очков.${multiplierNote}`;
       }
 
       function profileRunQualifiesForXp(durationSeconds, scoreValue) {
@@ -13542,7 +13871,7 @@ html&gt;body{padding:0}
             &lt;span&gt;${formatter.format(levelState.totalXp)} XP всего${levelState.isMax ? &quot; · максимальный уровень&quot; : ` · до следующего уровня ${formatter.format(levelState.needed - levelState.currentXp)} XP`}&lt;/span&gt;
           &lt;/div&gt;
           &lt;div class=&quot;level-guide-list&quot;&gt;${profileLevelGuideMarkup()}&lt;/div&gt;
-          &lt;div class=&quot;purchase-warning&quot;&gt;&lt;strong&gt;Как получать XP&lt;/strong&gt;&lt;span&gt;+${PROFILE_XP_PER_COMPLETED_RUN} XP за зачтённый забег и +${PROFILE_XP_PER_PURCHASE} XP за успешную покупку. ${escapePurchaseText(profileRunRequirementText())}&lt;/span&gt;&lt;/div&gt;
+          &lt;div class=&quot;purchase-warning&quot;&gt;&lt;strong&gt;Как получать XP&lt;/strong&gt;&lt;span&gt;+${profileRunXpReward()} XP за зачтённый забег и +${profilePurchaseXpReward()} XP за успешную покупку. ${escapePurchaseText(profileRunRequirementText())}&lt;/span&gt;&lt;/div&gt;
           &lt;button class=&quot;purchase-action purchase-action--done&quot; data-purchase-close type=&quot;button&quot;&gt;Понятно&lt;/button&gt;
         `, &quot;[data-purchase-close]&quot;);
       }
@@ -13621,10 +13950,10 @@ html&gt;body{padding:0}
             ? `Уровень ${PROFILE_LEVEL_MAX} достигнут`
             : `До уровня ${levelState.level + 1}: ${formatter.format(levelState.needed - levelState.currentXp)} XP`;
         }
-        if (profileRunXpEl) profileRunXpEl.textContent = `+${formatter.format(PROFILE_XP_PER_COMPLETED_RUN)} XP`;
+        if (profileRunXpEl) profileRunXpEl.textContent = `+${formatter.format(profileRunXpReward())} XP`;
         if (profileRunRuleEl) profileRunRuleEl.textContent = profileRunRequirementText();
         if (profileRankEl) profileRankEl.title = &quot;Нажми, чтобы посмотреть требования всех уровней и званий&quot;;
-        if (profilePurchaseXpEl) profilePurchaseXpEl.textContent = `+${formatter.format(PROFILE_XP_PER_PURCHASE)} XP`;
+        if (profilePurchaseXpEl) profilePurchaseXpEl.textContent = `+${formatter.format(profilePurchaseXpReward())} XP`;
         if (profileBestEl) profileBestEl.textContent = formatter.format(Math.floor(state.best));
         if (profileWalletEl) profileWalletEl.textContent = formatter.format(Math.floor(state.wallet));
         if (profileTreatsEl) profileTreatsEl.textContent = formatter.format(state.treats);
@@ -13738,6 +14067,11 @@ html&gt;body{padding:0}
         };
       }
 
+      function normalizeCaseSpecials(value) {
+        const values = Array.isArray(value) ? value : [];
+        return [...new Set(values.map((item) =&gt; String(item || &quot;&quot;).trim()).filter((item) =&gt; Object.prototype.hasOwnProperty.call(CASE_SPECIAL_CATALOG, item)))];
+      }
+
       function normalizeActiveCaseBooster(value) {
         const source = value &amp;&amp; typeof value === &quot;object&quot; ? value : {};
         const type = Object.prototype.hasOwnProperty.call(CASE_BOOSTER_CATALOG, String(source.type || &quot;&quot;)) ? String(source.type) : &quot;&quot;;
@@ -13757,6 +14091,7 @@ html&gt;body{padding:0}
       function applySavedCaseState(saved) {
         state.caseOpenedLevels = normalizeCaseNumberList(saved?.caseOpenedLevels);
         state.caseBoosters = normalizeCaseBoosters(saved?.caseBoosters);
+        state.caseOwnedSpecials = normalizeCaseSpecials(saved?.caseOwnedSpecials);
         state.activeCaseBooster = normalizeActiveCaseBooster(saved?.activeCaseBooster);
         state.caseOwnedAvatars = normalizeCaseOwned(&quot;avatar&quot;, saved?.caseOwnedAvatars);
         state.caseActiveAvatar = state.caseOwnedAvatars.includes(normalizeCaseCosmetic(&quot;avatar&quot;, saved?.caseActiveAvatar)) ? normalizeCaseCosmetic(&quot;avatar&quot;, saved?.caseActiveAvatar) : &quot;&quot;;
@@ -13814,6 +14149,7 @@ html&gt;body{padding:0}
             ? Math.max(0, Math.min(CASE_LEGENDARY_GUARANTEE - 1, Math.floor(Number(server.legendaryPityCounter || 0))))
             : 0;
           state.caseBoosters = normalizeCaseBoosters(server.boosters);
+          state.caseOwnedSpecials = normalizeCaseSpecials(server.ownedSpecials);
           state.activeCaseBooster = normalizeActiveCaseBooster(server.activeBooster);
           state.caseOwnedAvatars = normalizeCaseOwned(&quot;avatar&quot;, server.ownedAvatars);
           state.caseActiveAvatar = state.caseOwnedAvatars.includes(normalizeCaseCosmetic(&quot;avatar&quot;, server.activeAvatarId)) ? normalizeCaseCosmetic(&quot;avatar&quot;, server.activeAvatarId) : &quot;&quot;;
@@ -14563,12 +14899,16 @@ html&gt;body{padding:0}
         }
         const active = normalizeActiveCaseBooster(state.activeCaseBooster);
         if (caseBoostersListEl) {
-          const boostersMarkup = Object.entries(CASE_BOOSTER_CATALOG).map(([type,item]) =&gt; {
+          const consumableMarkup = Object.entries(CASE_BOOSTER_CATALOG).map(([type,item]) =&gt; {
             const count = Number(state.caseBoosters?.[type] || 0); const isActive = active.type === type;
             const disabled = Boolean(active.type) || count &lt;= 0;
             return `&lt;div class=&quot;case-booster-card&quot;&gt;&lt;img class=&quot;case-booster-icon&quot; src=&quot;${escapePurchaseText(item.src)}&quot; alt=&quot;&quot; loading=&quot;eager&quot; decoding=&quot;async&quot;&gt;&lt;strong&gt;${item.title}&lt;/strong&gt;&lt;span&gt;${isActive?`Активен · ${active.runsLeft} ${caseRunWord(active.runsLeft)}`:`В запасе: ${formatter.format(count)}`}&lt;/span&gt;&lt;button data-activate-case-booster=&quot;${type}&quot; type=&quot;button&quot; ${disabled?&quot;disabled&quot;:&quot;&quot;}&gt;${isActive?&quot;Активен&quot;:&quot;Активировать&quot;}&lt;/button&gt;&lt;/div&gt;`;
           }).join(&quot;&quot;);
-          setStableMarkup(caseBoostersListEl, boostersMarkup, &quot;boosters&quot;);
+          const specialMarkup = normalizeCaseSpecials(state.caseOwnedSpecials).map((id) =&gt; {
+            const item = CASE_SPECIAL_CATALOG[id];
+            return `&lt;div class=&quot;case-booster-card case-booster-card--season&quot;&gt;&lt;img class=&quot;case-booster-icon&quot; src=&quot;${escapePurchaseText(item.src)}&quot; alt=&quot;&quot; loading=&quot;eager&quot; decoding=&quot;async&quot;&gt;&lt;strong&gt;${item.title}&lt;/strong&gt;&lt;span&gt;${item.description}&lt;/span&gt;&lt;button type=&quot;button&quot; disabled&gt;Активен&lt;/button&gt;&lt;/div&gt;`;
+          }).join(&quot;&quot;);
+          setStableMarkup(caseBoostersListEl, consumableMarkup + specialMarkup, &quot;boosters&quot;);
         }
         renderCaseCosmetics(caseAvatarsEl,&quot;avatar&quot;,CASE_AVATAR_CATALOG,state.caseOwnedAvatars,state.caseActiveAvatar);
         renderCaseCosmetics(caseFramesEl,&quot;frame&quot;,CASE_FRAME_CATALOG,state.caseOwnedFrames,state.caseActiveFrame);
@@ -15804,6 +16144,8 @@ html&gt;body{padding:0}
           else void syncAdminProfileFromServer();
           if (data.cases) applyServerCasePayload(data.cases);
           else void loadCaseState(true);
+          if (data.seasonPassBonus) applySeasonPassProfileBonus(data.seasonPassBonus);
+          else void loadSeasonPassProfileBonus();
           if (data.rewards) {
             applyServerRewardsPayload(data.rewards);
             rewardLastSyncAt = Date.now();
@@ -15822,13 +16164,44 @@ html&gt;body{padding:0}
             await Promise.all([
               syncServerRewards(true),
               syncAdminProfileFromServer(),
-              loadCaseState(true)
+              loadCaseState(true),
+              loadSeasonPassProfileBonus()
             ]);
             await syncOwnedSkinBonusCases({ notify: true });
           }
           return false;
         }
       }
+
+      let serverAccountResumeSyncTimer = 0;
+      let serverAccountResumeSyncAt = 0;
+
+      function scheduleServerAccountResumeSync(delay = 180) {
+        if (!telegramProfile?.initData || document.visibilityState === &quot;hidden&quot;) return;
+        const now = Date.now();
+        if (now - serverAccountResumeSyncAt &lt; 4500) return;
+        window.clearTimeout(serverAccountResumeSyncTimer);
+        serverAccountResumeSyncTimer = window.setTimeout(() =&gt; {
+          if (!telegramProfile?.initData || document.visibilityState === &quot;hidden&quot;) return;
+          serverAccountResumeSyncAt = Date.now();
+          void syncGameStartupPackage(true);
+        }, Math.max(0, Number(delay) || 0));
+      }
+
+      document.addEventListener(&quot;visibilitychange&quot;, () =&gt; {
+        if (document.visibilityState === &quot;visible&quot;) scheduleServerAccountResumeSync(140);
+      });
+      window.addEventListener(&quot;pageshow&quot;, () =&gt; scheduleServerAccountResumeSync(180));
+      window.addEventListener(&quot;focus&quot;, () =&gt; scheduleServerAccountResumeSync(220));
+      // Currency grants from the Telegram admin panel are queued server-side.
+      // Pull the lightweight profile endpoint while the mini app stays open so an
+      // administrator does not have to reload the whole game to see the grant.
+      window.setInterval(() =&gt; {
+        if (!telegramProfile?.initData || document.visibilityState !== &quot;visible&quot;) return;
+        if (Date.now() - serverAccountResumeSyncAt &lt; 15000) return;
+        serverAccountResumeSyncAt = Date.now();
+        void syncAdminProfileFromServer();
+      }, 10000);
 
       async function pushAdminProfileMinimums() {
         if (!telegramProfile?.initData) return false;
@@ -16244,7 +16617,60 @@ html&gt;body{padding:0}
         return pendingLeaderboardRun;
       }
 
-      async function submitLeaderboardRun(scoreValue, durationSeconds, existingRun = null) {
+      function reconcileSeasonProfileXpForRun(run, payload) {
+        if (!run || !run.runId || run.profileXpReconciled === true) return 0;
+        const multiplier = Math.max(1, Math.min(2, Math.floor(Number(payload?.profileXpMultiplier || payload?.multiplier || 1))));
+        const expected = sanitizeAdminNumber(PROFILE_XP_PER_COMPLETED_RUN * multiplier);
+        const localAwarded = sanitizeAdminNumber(run.profileXpLocalAwarded);
+        const delta = Math.max(0, expected - localAwarded);
+        antiCheatWithTrustedChange(&quot;season-profile-xp-reconcile&quot;, () =&gt; {
+          if (delta &gt; 0) state.profileXp = sanitizeAdminNumber(Number(state.profileXp || 0) + delta);
+          run.profileXpLocalAwarded = expected;
+          run.profileXpReconciled = true;
+          savePendingLeaderboardRun(run);
+          if (delta &gt; 0) {
+            updateHud();
+            if (isScreenVisible(&quot;profile&quot;)) renderProfile();
+            saveProgress();
+          }
+        });
+        if (delta &gt; 0) showProfileToast(`Элитный+: дополнительно +${formatter.format(delta)} XP профиля`, &quot;success&quot;, 3000);
+        return delta;
+      }
+
+      async function submitSeasonPassRun(run, initDataValue = &quot;&quot;) {
+        const initData = String(initDataValue || telegramProfile?.initData || &quot;&quot;);
+        if (!initData || !run?.runId) return false;
+        try {
+          const controller = new AbortController();
+          const timeout = setTimeout(() =&gt; controller.abort(), 8000);
+          let response;
+          try {
+            response = await fetch(SEASON_PASS_RUN_API_PATH, {
+              method: &quot;POST&quot;,
+              headers: { &quot;Content-Type&quot;: &quot;application/json&quot; },
+              body: JSON.stringify({ initData, ...run }),
+              credentials: &quot;same-origin&quot;,
+              cache: &quot;no-store&quot;,
+              keepalive: true,
+              signal: controller.signal
+            });
+          } finally { clearTimeout(timeout); }
+          const data = await response.json().catch(() =&gt; ({}));
+          if (!response.ok || data?.ok === false) throw new Error(data?.error || &quot;Не удалось сохранить XP сезона.&quot;);
+          reconcileSeasonProfileXpForRun(run, data);
+          if (Number(data?.xpAwarded || 0) &gt; 0) {
+            showProfileToast(`Сезонный пропуск: +${formatter.format(Number(data.xpAwarded || 0))} XP`, &quot;success&quot;, 2600);
+            try { window.parent.postMessage({ type: &quot;zefirok-season-pass-updated&quot;, xpAwarded: Number(data.xpAwarded || 0) }, &quot;*&quot;); } catch (error) {}
+          }
+          return true;
+        } catch (error) {
+          console.warn(&quot;Season pass run submit failed&quot;, error);
+          return false;
+        }
+      }
+
+      async function submitLeaderboardRun(scoreValue, durationSeconds, existingRun = null, runMetrics = null) {
         const score = Math.floor(Number(scoreValue || 0));
         const durationMs = Math.floor(Number(durationSeconds || 0) * 1000);
         if (score &lt; PROFILE_XP_MIN_RUN_SCORE || durationMs &lt; PROFILE_XP_MIN_RUN_SECONDS * 1000) return false;
@@ -16253,7 +16679,7 @@ html&gt;body{padding:0}
           let runId;
           try { runId = `run_${crypto.randomUUID().replaceAll(&quot;-&quot;, &quot;&quot;)}`; }
           catch { runId = `run_${Date.now().toString(36)}_${Math.random().toString(36).slice(2)}`; }
-          run = { runId, score, durationMs, level: profileLevelState(state.profileXp).level, gameVersion: GAME_VERSION, caseAvatarId: state.caseActiveAvatar || &quot;&quot;, caseFrameId: state.caseActiveFrame || &quot;&quot;, createdAt: Date.now() };
+          run = { runId, score, durationMs, runTreats: Math.max(0, Math.floor(Number(runMetrics?.treats || 0))), runCoffee: Math.max(0, Math.floor(Number(runMetrics?.coffee || 0))), newRecord: Boolean(runMetrics?.newRecord), profileXpLocalAwarded: Math.max(0, Math.floor(Number(runMetrics?.profileXpAwarded || 0))), profileXpReconciled: false, level: profileLevelState(state.profileXp).level, gameVersion: GAME_VERSION, caseAvatarId: state.caseActiveAvatar || &quot;&quot;, caseFrameId: state.caseActiveFrame || &quot;&quot;, createdAt: Date.now() };
         }
         savePendingLeaderboardRun(run);
         const initData = String(telegramProfile?.initData || &quot;&quot;);
@@ -16263,12 +16689,26 @@ html&gt;body{padding:0}
         }
         try {
           const loaded = await leaderboardApiRequest(LEADERBOARD_API_SUBMIT_PATH, { initData, ...run });
+          const seasonPassAward = loaded?.seasonPassAward &amp;&amp; typeof loaded.seasonPassAward === &quot;object&quot;
+            ? loaded.seasonPassAward
+            : null;
+          let seasonPassSaved = Boolean(seasonPassAward);
+          if (seasonPassAward) {
+            reconcileSeasonProfileXpForRun(run, seasonPassAward);
+            if (Number(seasonPassAward.xpAwarded || 0) &gt; 0) {
+              showProfileToast(`Сезонный пропуск: +${formatter.format(Number(seasonPassAward.xpAwarded || 0))} XP`, &quot;success&quot;, 2600);
+              try { window.parent.postMessage({ type: &quot;zefirok-season-pass-updated&quot;, xpAwarded: Number(seasonPassAward.xpAwarded || 0) }, &quot;*&quot;); } catch (error) {}
+            }
+          } else {
+            seasonPassSaved = await submitSeasonPassRun(run, initData);
+          }
           loaded._loadedAt = Date.now();
           leaderboardCache.season = loaded;
           leaderboardCache.all_time = null;
           if (leaderboardMode === &quot;season&quot;) leaderboardData = loaded;
           leaderboardLastRefreshAt = Date.now();
-          savePendingLeaderboardRun(null);
+          if (seasonPassSaved) savePendingLeaderboardRun(null);
+          else showProfileToast(&quot;Результат рейтинга сохранён, но XP сезона будет отправлен повторно при следующем открытии игры.&quot;, &quot;warning&quot;, 4800);
           renderLeaderboardSummary();
           if (leaderboardLayer &amp;&amp; !leaderboardLayer.hidden &amp;&amp; leaderboardMode === &quot;season&quot;) renderLeaderboardModal();
           void prefetchLeaderboard(&quot;all_time&quot;, true);
@@ -16276,6 +16716,8 @@ html&gt;body{padding:0}
           try { window.parent.postMessage({ type: &quot;zefirok-run-completed&quot;, accepted: true, runId: String(run.runId || &quot;&quot;) }, &quot;*&quot;); } catch (error) {}
           return true;
         } catch (error) {
+          const seasonPassSaved = await submitSeasonPassRun(run, initData);
+          if (seasonPassSaved) savePendingLeaderboardRun(null);
           console.warn(&quot;Leaderboard submit failed&quot;, error);
           showProfileToast(error.message || &quot;Результат сохранён и будет отправлен позже.&quot;, &quot;warning&quot;, 4200);
           return false;
@@ -16614,7 +17056,7 @@ html&gt;body{padding:0}
         `, &quot;[data-purchase-close]&quot;);
       }
 
-      function showPurchaseSuccess(purchase, code, expiresAt) {
+      function showPurchaseSuccess(purchase, code, expiresAt, xpEarned = profilePurchaseXpReward()) {
         const productImage = assetSources[purchase.product.image] || &quot;&quot;;
         openPurchaseLayer(`
           &lt;span class=&quot;purchase-kicker&quot;&gt;Покупка оформлена&lt;/span&gt;
@@ -16625,7 +17067,7 @@ html&gt;body{padding:0}
           &lt;div class=&quot;purchase-code-label&quot;&gt;Или введите код вручную&lt;/div&gt;
           &lt;button aria-label=&quot;Скопировать код ${escapePurchaseText(code)}&quot; class=&quot;purchase-code&quot; data-copy-reward-code=&quot;${escapePurchaseText(code)}&quot; type=&quot;button&quot;&gt;&lt;span class=&quot;purchase-code__value&quot;&gt;${escapePurchaseText(code)}&lt;/span&gt;&lt;span class=&quot;purchase-code__hint&quot;&gt;Нажмите, чтобы скопировать&lt;/span&gt;&lt;/button&gt;
           &lt;div class=&quot;purchase-expiry&quot;&gt;&lt;strong&gt;Код действует 24 часа.&lt;/strong&gt;&lt;br&gt;Действителен до ${escapePurchaseText(formatPurchaseExpiry(expiresAt))}.&lt;/div&gt;
-          &lt;div class=&quot;purchase-warning&quot;&gt;&lt;strong&gt;+${PROFILE_XP_PER_PURCHASE} XP профиля&lt;/strong&gt;&lt;span&gt;Опыт уже добавлен к шкале уровня.&lt;/span&gt;&lt;/div&gt;
+          &lt;div class=&quot;purchase-warning&quot;&gt;&lt;strong&gt;+${xpEarned} XP профиля&lt;/strong&gt;&lt;span&gt;Опыт уже добавлен к шкале уровня.${profileXpMultiplier() &gt; 1 ? &quot; Бонус Элитного+ применён.&quot; : &quot;&quot;}&lt;/span&gt;&lt;/div&gt;
           &lt;p class=&quot;purchase-screenshot&quot;&gt;После выдачи сотрудник спишет код, и карточка станет неактивной.&lt;/p&gt;
           &lt;div class=&quot;purchase-actions&quot;&gt;
             &lt;button class=&quot;purchase-action&quot; data-open-reward-bot=&quot;${escapePurchaseText(code)}&quot; type=&quot;button&quot;&gt;Открыть в боте&lt;/button&gt;
@@ -16771,8 +17213,9 @@ html&gt;body{padding:0}
             state.purchaseTimestamps.push(issuedAt);
           }
           const purchasePreviousLevel = profileLevelState(state.profileXp).level;
+          const purchaseXpEarned = profilePurchaseXpReward();
           state.completedPurchases = sanitizeAdminNumber(Number(state.completedPurchases || 0) + 1);
-          state.profileXp = sanitizeAdminNumber(Number(state.profileXp || 0) + PROFILE_XP_PER_PURCHASE);
+          state.profileXp = sanitizeAdminNumber(Number(state.profileXp || 0) + purchaseXpEarned);
           const purchaseReachedNewLevel = profileLevelState(state.profileXp).level &gt; purchasePreviousLevel;
           state.redemptionCodes = Array.isArray(state.redemptionCodes) ? state.redemptionCodes : [];
           state.redemptionCodes.push({
@@ -16786,11 +17229,11 @@ html&gt;body{padding:0}
             serverVerified: true
           });
 
-          shopMessageEl.textContent = `${purchase.product.title}: проверяемый код выдан на 24 часа, +${PROFILE_XP_PER_PURCHASE} XP профиля.`;
+          shopMessageEl.textContent = `${purchase.product.title}: проверяемый код выдан на 24 часа, +${purchaseXpEarned} XP профиля.`;
           saveProgress();
           updateHud();
           renderWarehouse();
-          showPurchaseSuccess(purchase, code, expiresAt);
+          showPurchaseSuccess(purchase, code, expiresAt, purchaseXpEarned);
           playGameSound(&quot;purchaseReward&quot;);
           if (purchaseReachedNewLevel) playGameSound(&quot;levelUp&quot;, 360);
         });
@@ -19212,8 +19655,14 @@ html&gt;body{padding:0}
 &lt;script id=&quot;zefirok-v07915-maintenance-gate-hotfix-audit&quot; type=&quot;application/json&quot;&gt;{&quot;version&quot;:&quot;0.79.15&quot;,&quot;scope&quot;:&quot;maintenance-gate-hotfix&quot;,&quot;failOpenOnCheckError&quot;:true,&quot;explicitMaintenanceOnly&quot;:true,&quot;loadingTitleFixed&quot;:true,&quot;baseHrefInjected&quot;:true}&lt;/script&gt;
 &lt;script id=&quot;zefirok-v07921-season-pass-access-hotfix-audit&quot; type=&quot;application/json&quot;&gt;{&quot;version&quot;:&quot;0.79.21&quot;,&quot;scope&quot;:&quot;season-pass-access&quot;,&quot;buttonRecovery&quot;:true,&quot;hashInitDataHandoff&quot;:true,&quot;featureFlagSnapshot&quot;:true}&lt;/script&gt;
 &lt;script id=&quot;zefirok-v07919-season-pass-v2-audit&quot; type=&quot;application/json&quot;&gt;{&quot;version&quot;:&quot;0.79.19&quot;,&quot;scope&quot;:&quot;season-pass-v2&quot;,&quot;levels&quot;:50,&quot;horizontalRewards&quot;:true,&quot;tasks&quot;:[&quot;daily&quot;,&quot;weekly&quot;,&quot;free&quot;,&quot;premium&quot;],&quot;skinsRemoved&quot;:true,&quot;finalReward&quot;:&quot;legendary_case&quot;}&lt;/script&gt;
+  &lt;script type=&quot;application/json&quot; id=&quot;zefirok-v07944-main-game-audit&quot;&gt;{&quot;build&quot;:&quot;0.79.44&quot;,&quot;fixes&quot;:[&quot;single-season-run-submit&quot;,&quot;profile-xp-expiry-guard&quot;,&quot;startup-package-season-bonus-refresh&quot;]}&lt;/script&gt;
 &lt;/body&gt;
 &lt;/html&gt;" title="Сладкий Забег"></iframe>
 <script id="zefirok-v07934-season-pass-overlay-audit" type="application/json">{"version":"0.79.34","scope":"outer-app-return-recovery","samePageOverlay":true,"mainGamePreserved":true,"restores":["telegram_profile","rating","balances","cases","notifications","feature_flags"]}</script>
+<script type="application/json" id="zefirok-v07944-outer-audit">{"build":"0.79.44","fixes":["season-pass-cache-version","return-refresh"]}</script>
+
+<script type="application/json" id="zefirok-v07945-rc1-outer-audit">{"build":"0.79.45-rc.1","fixes":["season-pass-d1-compound-select","season-pass-read-availability","local-tooltip-runtime"]}</script>
+<script type="application/json" id="zefirok-v07946-fullscreen-viewport-audit">{"build":"0.79.46-rc.4","fixes":["telegram-fullscreen-game","telegram-fullscreen-season-pass","stable-viewport-height","season-pass-return-resize","safe-area-css-override","account-refresh-on-resume","admin-grant-profile-heartbeat"]}</script>
+<script type="application/json" id="zefirok-v07946-rc5-season-case-audit">{"build":"0.79.46-rc.5","fixes":["season-case-inventory-refresh","delivered-case-self-heal","season-end-case-preservation"]}</script>
 </body>
 </html>
