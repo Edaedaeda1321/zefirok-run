@@ -18066,7 +18066,12 @@ async function purchaseSeasonPassTier(request,env){
   try{
     const ctx=await seasonPassRequestContext(request,env);
     await assertSeasonPassNotForceClosed(env);
-    if(ctx.season.status!=='active'&&!ctx.access.identity?.owner&&!ctx.access.identity?.administrator)throw new ApiError(409,'Сезон ещё не начался.');
+    if(ctx.season.status!=='active'){
+      const message=ctx.season.status==='ended'
+        ? 'Сезон завершён. Покупка «Элитного» и «Элитного+» недоступна.'
+        : 'Сезон ещё не начался. Покупка тарифов недоступна.';
+      throw new ApiError(409,message);
+    }
     const tier=String(ctx.body.tier||'');if(tier!=='elite'&&tier!=='elite_plus')throw new ApiError(400,'Некорректный тариф сезонного пропуска.');
     let current=String(ctx.player.premium_tier||'none');
     const now=Math.floor(Date.now()/1000);const purchaseKey=tier;
@@ -18121,7 +18126,7 @@ async function purchaseSeasonPassLevel(request,env){
   try{
     const ctx=await seasonPassRequestContext(request,env);
     await assertSeasonPassNotForceClosed(env);
-    if(ctx.season.status!=='active')throw new ApiError(409,'Сезон ещё не активен.');
+    if(ctx.season.status!=='active')throw new ApiError(409,ctx.season.status==='ended'?'Сезон завершён. Покупка уровней недоступна.':'Сезон ещё не начался. Покупка уровней недоступна.');
     if(String(ctx.player.premium_tier||'none')==='none')throw new ApiError(403,'Покупка уровней доступна только платному тарифу.');
     const currentLevel=seasonPassLevelFromXp(ctx.player.xp);if(currentLevel>=50)throw new ApiError(409,'Уже достигнут максимальный уровень.');
     const targetLevel=Math.max(2,Math.min(50,Math.floor(Number(ctx.body.targetLevel||ctx.body.target_level||currentLevel+1))));
