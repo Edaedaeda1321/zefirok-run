@@ -5870,8 +5870,15 @@ async function getTeamAccess(user, env) {
   };
   let security = securityPermissionPreset(role, legacy);
   try {
-    await ensureOperationsSecuritySchema(env);
-    const override = await env.DB.prepare(`SELECT * FROM staff_permission_overrides WHERE telegram_id = ? LIMIT 1`).bind(String(row.telegram_id)).first();
+    // Fast path: the permissions table already exists in a deployed system.
+    // Avoid running the full security schema batch on every cold Worker isolate.
+    let override;
+    try {
+      override = await env.DB.prepare(`SELECT * FROM staff_permission_overrides WHERE telegram_id = ? LIMIT 1`).bind(String(row.telegram_id)).first();
+    } catch (readError) {
+      await ensureOperationsSecuritySchema(env);
+      override = await env.DB.prepare(`SELECT * FROM staff_permission_overrides WHERE telegram_id = ? LIMIT 1`).bind(String(row.telegram_id)).first();
+    }
     if (override) security = securityPermissionsFromRow(override, security);
   } catch (error) {
     console.error("granular permissions fallback", error);
@@ -8133,7 +8140,8 @@ async function handleCallbackQuery(query, env, runtime = {}) {
   } finally {
     const data = String(query?.data || "");
     if (/^(adm_|ops_|safe_|v5[7-9]_|v6[0-9]_|v67_|v74_|v77_|v78_|grant_|ticket_|season_|stock_|status_|player_)/.test(data)) {
-      await recordV67PerformanceSample(env, data, Date.now() - startedAt, success, errorText);
+      const sampleTask = recordV67PerformanceSample(env, data, Date.now() - startedAt, success, errorText);
+      if (!runWorkerBackground(runtime, sampleTask, "admin performance sample")) await sampleTask;
     }
   }
 }
@@ -10019,23 +10027,39 @@ async function updateTicketStatus(query, ticketId, status, env) {
 }
 
 async function getSystemState(env, key) {
-  await ensureStaffOperationsSchema(env);
-  const row = await env.DB.prepare(`SELECT state_value, updated_at FROM bot_system_state WHERE state_key = ? LIMIT 1`).bind(String(key)).first();
+  const readState = () => env.DB.prepare(`SELECT state_value, updated_at FROM bot_system_state WHERE state_key = ? LIMIT 1`).bind(String(key)).first();
+  let row;
+  try {
+    row = await readState();
+  } catch (readError) {
+    await ensureStaffOperationsSchema(env);
+    row = await readState();
+  }
   return row ? { value: String(row.state_value || ""), updatedAt: Number(row.updated_at || 0) } : null;
 }
 
 async function setSystemState(env, key, value) {
-  await ensureStaffOperationsSchema(env);
   const now = Math.floor(Date.now() / 1000);
-  await env.DB.prepare(
+  const writeState = () => env.DB.prepare(
     `INSERT INTO bot_system_state (state_key, state_value, updated_at) VALUES (?, ?, ?)
      ON CONFLICT(state_key) DO UPDATE SET state_value = excluded.state_value, updated_at = excluded.updated_at`
   ).bind(String(key), String(value ?? ""), now).run();
+  try {
+    await writeState();
+  } catch (writeError) {
+    await ensureStaffOperationsSchema(env);
+    await writeState();
+  }
 }
 
 async function deleteSystemState(env, key) {
-  await ensureStaffOperationsSchema(env);
-  await env.DB.prepare(`DELETE FROM bot_system_state WHERE state_key = ?`).bind(String(key)).run();
+  const deleteState = () => env.DB.prepare(`DELETE FROM bot_system_state WHERE state_key = ?`).bind(String(key)).run();
+  try {
+    await deleteState();
+  } catch (deleteError) {
+    await ensureStaffOperationsSchema(env);
+    await deleteState();
+  }
 }
 
 function moscowDateParts(nowMs = Date.now()) {
@@ -14512,6 +14536,10 @@ async function promptPlayerPromoCode(chatId, user, env, message = "") {
   );
 }
 
+const TELEGRAM_STAFF_CHAT_CACHE_TTL_MS = 5 * 60 * 1000;
+const telegramStaffChatMemoryCache = new Map();
+const telegramTrackedMessagesMemoryCache = new Map();
+
 function telegramCleanChatStateKey(chatId) {
   return `${TELEGRAM_CLEAN_CHAT_STATE_PREFIX}${String(chatId)}`;
 }
@@ -14527,11 +14555,16 @@ async function isCleanStaffPrivateChat(env, chatId) {
   const numericChatId = Number(chatId);
   if (!Number.isFinite(numericChatId) || numericChatId <= 0) return false;
   if (isBotAdminTelegramId(chatId, env)) return true;
+  const cacheKey = String(chatId);
+  const cached = telegramStaffChatMemoryCache.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) return cached.active;
   try {
     const row = await env.DB.prepare(
       `SELECT active FROM staff_users WHERE telegram_id = ? LIMIT 1`
-    ).bind(String(chatId)).first();
-    return Number(row?.active || 0) === 1;
+    ).bind(cacheKey).first();
+    const active = Number(row?.active || 0) === 1;
+    telegramStaffChatMemoryCache.set(cacheKey, { active, expiresAt: Date.now() + TELEGRAM_STAFF_CHAT_CACHE_TTL_MS });
+    return active;
   } catch (error) {
     console.warn("Clean staff chat lookup failed", String(error?.message || error));
     return false;
@@ -14539,15 +14572,31 @@ async function isCleanStaffPrivateChat(env, chatId) {
 }
 
 async function readTrackedTelegramMessages(env, chatId) {
+  const cacheKey = String(chatId);
+  if (telegramTrackedMessagesMemoryCache.has(cacheKey)) {
+    return [...telegramTrackedMessagesMemoryCache.get(cacheKey)];
+  }
+  const readState = () => env.DB.prepare(
+    `SELECT state_value FROM bot_system_state WHERE state_key = ? LIMIT 1`
+  ).bind(telegramCleanChatStateKey(chatId)).first();
   try {
-    await ensureStaffOperationsSchema(env);
-    const row = await env.DB.prepare(
-      `SELECT state_value FROM bot_system_state WHERE state_key = ? LIMIT 1`
-    ).bind(telegramCleanChatStateKey(chatId)).first();
-    if (!row?.state_value) return [];
+    let row;
+    try {
+      // Fast path: do not run nine CREATE statements just to read one state row.
+      row = await readState();
+    } catch (readError) {
+      await ensureStaffOperationsSchema(env);
+      row = await readState();
+    }
+    if (!row?.state_value) {
+      telegramTrackedMessagesMemoryCache.set(cacheKey, []);
+      return [];
+    }
     const parsed = JSON.parse(String(row.state_value || "[]"));
     const values = Array.isArray(parsed) ? parsed : parsed?.messageIds;
-    return normalizeTelegramMessageIds(values);
+    const normalized = normalizeTelegramMessageIds(values);
+    telegramTrackedMessagesMemoryCache.set(cacheKey, normalized);
+    return [...normalized];
   } catch (error) {
     console.warn("Read clean chat state failed", String(error?.message || error));
     return [];
@@ -14555,16 +14604,16 @@ async function readTrackedTelegramMessages(env, chatId) {
 }
 
 async function writeTrackedTelegramMessages(env, chatId, messageIds) {
-  try {
-    await ensureStaffOperationsSchema(env);
-    const now = Math.floor(Date.now() / 1000);
-    const normalized = normalizeTelegramMessageIds(messageIds);
+  const cacheKey = String(chatId);
+  const now = Math.floor(Date.now() / 1000);
+  const normalized = normalizeTelegramMessageIds(messageIds);
+  telegramTrackedMessagesMemoryCache.set(cacheKey, normalized);
+  const writeState = () => {
     if (!normalized.length) {
-      await env.DB.prepare(`DELETE FROM bot_system_state WHERE state_key = ?`)
+      return env.DB.prepare(`DELETE FROM bot_system_state WHERE state_key = ?`)
         .bind(telegramCleanChatStateKey(chatId)).run();
-      return;
     }
-    await env.DB.prepare(
+    return env.DB.prepare(
       `INSERT INTO bot_system_state (state_key, state_value, updated_at)
        VALUES (?, ?, ?)
        ON CONFLICT(state_key) DO UPDATE SET
@@ -14575,6 +14624,15 @@ async function writeTrackedTelegramMessages(env, chatId, messageIds) {
       JSON.stringify({ messageIds: normalized }),
       now
     ).run();
+  };
+  try {
+    try {
+      // Fast path: the state table is already present in production.
+      await writeState();
+    } catch (writeError) {
+      await ensureStaffOperationsSchema(env);
+      await writeState();
+    }
   } catch (error) {
     console.warn("Write clean chat state failed", String(error?.message || error));
   }
@@ -16888,7 +16946,9 @@ async function writeCachedAdminOverview(env, overview) {
 
 async function getAdminOverviewFast(env, force = false) {
   if (!force) {
-    const cached = await readCachedAdminOverview(env, 10 * 60);
+    // The five-minute Cron refreshes this snapshot. A wider read window keeps
+    // ordinary navigation instant even after a Worker redeploy or cold start.
+    const cached = await readCachedAdminOverview(env, 30 * 60);
     if (cached) return cached;
   }
   if (!adminOverviewRefreshPromise) {
