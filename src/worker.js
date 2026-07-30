@@ -335,7 +335,7 @@ const STAFF_SESSION_TTL_SECONDS = 12 * 60 * 60;
 const SUPPORT_USERNAME = "ve4n0_em";
 const SUPPORT_URL = `https://t.me/${SUPPORT_USERNAME}`;
 const DEFAULT_GAME_URL = "https://zefirok-run.patokad6.workers.dev/";
-const WORKER_BUILD = "0.79.46-rc.5";
+const WORKER_BUILD = "0.79.48-rc.2";
 const V07944_RELEASE_CANDIDATE_AUDIT = Object.freeze({ reset: true, claims: true, purchases: true, xp: true, concurrency: true });
 
 // =============================================================
@@ -718,8 +718,17 @@ export default {
         await ensureRuntimeCompatibilitySchema(env);
       }
       if (url.pathname === "/staff-qr.html" && request.method === "GET") {
-        if (env.ASSETS) return env.ASSETS.fetch(request);
-        return new Response("Not found", { status: 404 });
+        if (!env.ASSETS) return new Response("Not found", { status: 404 });
+        const asset = await env.ASSETS.fetch(request);
+        const headers = new Headers(asset.headers);
+        headers.set("Cache-Control", "no-store, no-cache, must-revalidate, private");
+        headers.set("Pragma", "no-cache");
+        headers.set("X-Robots-Tag", "noindex, nofollow, noarchive");
+        headers.set("Referrer-Policy", "no-referrer");
+        return new Response(asset.body, { status: asset.status, statusText: asset.statusText, headers });
+      }
+      if (url.pathname === "/api/staff/qr/access" && request.method === "POST") {
+        return await staffQrAccess(request, env);
       }
       if (url.pathname === "/api/staff/rewards/lookup" && request.method === "POST") {
         return await staffQrLookup(request, env);
@@ -1197,6 +1206,7 @@ async function processDailyServerCleanup(env) {
   await ensureV78Schema(env);
   return runServerCronSteps("daily-cleanup", [
     ["training", () => processV78Cron(env)],
+    ["seasonPass", () => cleanupExpiredSeasonPassSeasons(env)],
     ["history", async () => {
       await env.DB.batch([
         env.DB.prepare(`DELETE FROM admin_performance_samples WHERE created_at<?`).bind(now - 7 * V67_DAY),
@@ -5081,7 +5091,8 @@ Telegram ID можно найти командой <code>/players</code>.`);
   if (staffEnableMatch) {
     const action = staffEnableMatch[1].toLowerCase();
     if (action === "enable") await setStaffEnabled(chatId, user, staffEnableMatch[2], true, env);
-    else await removeTeamMember(chatId, user, staffEnableMatch[2], env);
+    else if (action === "disable") await setStaffEnabled(chatId, user, staffEnableMatch[2], false, env);
+    else await beginStaffProfileDeletionFromCommand(chatId, user, staffEnableMatch[2], env);
     return;
   }
 
@@ -5098,7 +5109,7 @@ Telegram ID можно найти командой <code>/players</code>.`);
 
   const teamRemoveMatch = text.match(/^\/team_remove(?:@\w+)?\s+(\d{4,20})$/i);
   if (teamRemoveMatch) {
-    await removeTeamMember(chatId, user, teamRemoveMatch[1], env);
+    await beginStaffProfileDeletionFromCommand(chatId, user, teamRemoveMatch[1], env);
     return;
   }
 
@@ -6805,6 +6816,9 @@ async function showStaffMemberCard(chatId, user, telegramId, env) {
   if (access.owner) buttons.push([{ text: "🔐 Точные права", callback_data: `adm_staff_permissions:${row.telegram_id}` }]);
   buttons.push([{ text: "🎓 Сбросить обучение", callback_data: `v78_training_reset:${row.telegram_id}` }]);
   buttons.push([{ text: active ? "⛔ Отключить доступ" : "✅ Включить доступ", callback_data: `adm_staff_toggle:${row.telegram_id}:${active ? "off" : "on"}` }]);
+  if (!isBotAdminTelegramId(row.telegram_id, env) && String(row.telegram_id) !== String(user.id)) {
+    buttons.push([{ text: "🗑 Удалить профиль сотрудника", callback_data: `adm_staff_delete:${row.telegram_id}` }]);
+  }
   buttons.push([{ text: "⬅️ Сотрудники", callback_data: "adm_team" }]);
   await sendTelegramMessage(env, chatId,
     `<b>👤 Сотрудник</b>\n\nИмя: <b>${escapeHtml(staffListDisplayName(row))}</b>\nTelegram ID: <code>${escapeHtml(String(row.telegram_id))}</code>\nРоль: <b>${escapeHtml(staffListRoleLabel(row, env))}</b>\nДоступ: <b>${active ? "включён" : "отключён"}</b>\nСессия: <b>${sessionActive ? `активна до ${escapeHtml(formatUtcDate(row.session_expires_at))}` : "не открыта"}</b>
@@ -6813,6 +6827,97 @@ async function showStaffMemberCard(chatId, user, telegramId, env) {
 ${escapeHtml(staffRolePresetSummary(row.role))}`,
     { inline_keyboard: buttons }
   );
+}
+
+
+async function validateStaffProfileDeletion(chatId, requester, telegramId, env) {
+  const access = await requireTeamPermission(chatId, requester, "staff", env);
+  if (!access) return null;
+  const targetId = String(telegramId || "");
+  const target = await targetTeamMember(env, targetId);
+  if (!target) {
+    await sendTelegramMessage(env, chatId, "Сотрудник не найден или уже удалён.");
+    return null;
+  }
+  if (isBotAdminTelegramId(targetId, env)) {
+    await sendTelegramMessage(env, chatId, "Профиль владельца удалить нельзя.");
+    return null;
+  }
+  if (targetId === String(requester.id)) {
+    await sendTelegramMessage(env, chatId, "Нельзя удалить собственный профиль сотрудника.");
+    return null;
+  }
+  if (!access.owner && normalizeTeamRole(target.role) === "administrator") {
+    await sendTelegramMessage(env, chatId, "Удалить администратора может только владелец.");
+    return null;
+  }
+  return { access, target, targetId };
+}
+
+async function beginStaffProfileDeletion(query, telegramId, env) {
+  const chatId = query.message?.chat?.id;
+  if (!chatId) return;
+  const context = await validateStaffProfileDeletion(chatId, query.from, telegramId, env);
+  if (!context) {
+    await answerCallback(env, query.id, "Удаление недоступно.", true);
+    return;
+  }
+  await answerCallback(env, query.id, "Требуется подтверждение.");
+  await sendTelegramMessage(env, chatId,
+    `<b>Удалить профиль сотрудника?</b>\n\nСотрудник: <b>${escapeHtml(staffListDisplayName(context.target))}</b>\nTelegram ID: <code>${escapeHtml(context.targetId)}</code>\nРоль: <b>${escapeHtml(staffListRoleLabel(context.target, env))}</b>\n\nБудут удалены роль, права, лимиты, обучение, рабочая сессия и настройки уведомлений. История действий останется в аудите. После удаления команда /staff для этого пользователя будет молча игнорироваться.`,
+    { inline_keyboard: [[
+      { text: "🗑 Да, удалить профиль", callback_data: `adm_staff_delete_confirm:${context.targetId}` },
+      { text: "Отмена", callback_data: `adm_staff_card:${context.targetId}` }
+    ]] }
+  );
+}
+
+async function beginStaffProfileDeletionFromCommand(chatId, requester, telegramId, env) {
+  const context = await validateStaffProfileDeletion(chatId, requester, telegramId, env);
+  if (!context) return;
+  await sendTelegramMessage(env, chatId,
+    `<b>Удалить профиль сотрудника?</b>\n\nСотрудник: <b>${escapeHtml(staffListDisplayName(context.target))}</b>\nTelegram ID: <code>${escapeHtml(context.targetId)}</code>\n\nОперация полностью удалит сотрудника из списка, но сохранит аудит.`,
+    { inline_keyboard: [[
+      { text: "🗑 Да, удалить профиль", callback_data: `adm_staff_delete_confirm:${context.targetId}` },
+      { text: "Отмена", callback_data: `adm_staff_card:${context.targetId}` }
+    ]] }
+  );
+}
+
+async function confirmStaffProfileDeletion(query, telegramId, env) {
+  const chatId = query.message?.chat?.id;
+  if (!chatId) return;
+  const context = await validateStaffProfileDeletion(chatId, query.from, telegramId, env);
+  if (!context) {
+    await answerCallback(env, query.id, "Удаление недоступно.", true);
+    return;
+  }
+  await ensureStaffCustomNamesSchema(env);
+  await ensureStaffOperationsSchema(env);
+  await ensureOperationsSecuritySchema(env);
+  await ensureLiveOpsAdminSchema(env);
+  await ensureV78Schema(env);
+  await env.DB.batch([
+    env.DB.prepare(`DELETE FROM bot_staff_workflows WHERE telegram_id=?`).bind(context.targetId),
+    env.DB.prepare(`DELETE FROM staff_custom_names WHERE telegram_id=?`).bind(context.targetId),
+    env.DB.prepare(`DELETE FROM staff_permission_overrides WHERE telegram_id=?`).bind(context.targetId),
+    env.DB.prepare(`DELETE FROM staff_action_limits WHERE telegram_id=?`).bind(context.targetId),
+    env.DB.prepare(`DELETE FROM staff_action_usage WHERE telegram_id=?`).bind(context.targetId),
+    env.DB.prepare(`DELETE FROM staff_training_progress WHERE telegram_id=?`).bind(context.targetId),
+    env.DB.prepare(`DELETE FROM staff_work_context WHERE telegram_id=?`).bind(context.targetId),
+    env.DB.prepare(`DELETE FROM staff_notification_preferences WHERE telegram_id=?`).bind(context.targetId),
+    env.DB.prepare(`DELETE FROM staff_users WHERE telegram_id=?`).bind(context.targetId)
+  ]);
+  await logStaffAction(env, query.from, context.access, "staff_delete", context.targetId, "staff", context.target.role, null, {
+    displayName: staffListDisplayName(context.target),
+    active: Number(context.target.active || 0) === 1
+  });
+  await refreshBotCommandMenuSilently(env, context.targetId);
+  await answerCallback(env, query.id, "Профиль сотрудника удалён.");
+  await sendTelegramMessage(env, chatId,
+    `🗑 Профиль сотрудника <b>${escapeHtml(staffListDisplayName(context.target))}</b> · <code>${escapeHtml(context.targetId)}</code> полностью удалён из системы. История его действий сохранена в аудите.`
+  );
+  await showTeamManagement(chatId, query.from, env);
 }
 
 async function showStaffRoleMenu(query, telegramId, env) {
@@ -7751,6 +7856,7 @@ function staffActionLabel(action) {
     staff_role: "изменение роли",
     staff_disable: "отключение сотрудника",
     staff_enable: "включение сотрудника",
+    staff_delete: "удаление профиля сотрудника",
     staff_permission: "изменение разрешения",
     staff_limit_change: "изменение лимита сотрудника",
     staff_limit_preset: "профиль лимитов сотрудника",
@@ -7906,26 +8012,14 @@ async function setStaffAccountState(chatId, requester, targetTelegramId, enabled
 }
 
 async function registerStaff(chatId, user, suppliedCode, env) {
-  const expected = String(env.STAFF_SETUP_CODE || "").trim();
   const existingStaff = await env.DB.prepare(
     `SELECT active, role FROM staff_users WHERE telegram_id = ? LIMIT 1`
   ).bind(String(user.id)).first();
-
-  const invited = existingStaff && Number(existingStaff.active || 0) === 1;
   const owner = isBotAdminUser(user, env);
-  const legacyCodeAccepted = Boolean(expected && suppliedCode && timingSafeEqualString(expected, suppliedCode));
 
-  if (!invited && !owner && !legacyCodeAccepted) {
-    await sendTelegramMessage(env, chatId,
-      `<b>Доступ не выдан</b>
-
-Попросите владельца добавить ваш Telegram ID командой:
-<code>/employee_add ${escapeHtml(String(user.id))} cashier</code>
-
-Ваш ID: <code>${escapeHtml(String(user.id))}</code>`
-    );
-    return;
-  }
+  // /staff is silent for unknown users. Access is granted only through the
+  // administrator-managed employee list.
+  if (!existingStaff && !owner) return;
 
   if (existingStaff && Number(existingStaff.active || 0) !== 1) {
     await sendTelegramMessage(env, chatId, "Учётная запись сотрудника отключена. Обратитесь к владельцу проекта.");
@@ -7945,16 +8039,6 @@ async function registerStaff(chatId, user, suppliedCode, env) {
     ).bind(String(user.id), telegramDisplayName(user), now, sessionExpiresAt,
       preset.redeem, preset.points, preset.products, preset.news, preset.staff,
       String(user.id), now).run();
-  } else if (!existingStaff && legacyCodeAccepted) {
-    const preset = TEAM_ROLE_PRESETS.cashier;
-    await env.DB.prepare(
-      `INSERT INTO staff_users (
-        telegram_id, display_name, added_at, active, session_expires_at, role,
-        can_redeem_rewards, can_adjust_points, can_manage_products,
-        can_publish_news, can_manage_staff, invited_by, updated_at
-      ) VALUES (?, ?, ?, 1, ?, 'cashier', ?, ?, ?, ?, ?, '', ?)`
-    ).bind(String(user.id), telegramDisplayName(user), now, sessionExpiresAt,
-      preset.redeem, preset.points, preset.products, preset.news, preset.staff, now).run();
   } else {
     await env.DB.prepare(
       `UPDATE staff_users SET display_name = ?, session_expires_at = ?, updated_at = ? WHERE telegram_id = ?`
@@ -7965,12 +8049,7 @@ async function registerStaff(chatId, user, suppliedCode, env) {
   await refreshBotCommandMenuSilently(env, user.id);
   const enabled = Object.entries(access.permissions || {}).filter(([, value]) => value).map(([key]) => permissionLabel(key)).join(", ");
   await sendTelegramMessage(env, chatId,
-    `<b>Рабочая сессия открыта на 12 часов</b>
-
-Роль: <b>${escapeHtml(owner ? "Владелец" : teamRoleLabel(access.role))}</b>
-Разрешения: ${escapeHtml(enabled || "нет")}.
-
-Через 12 часов снова выполните <code>/staff</code>.`
+    `<b>Рабочая сессия открыта на 12 часов</b>\n\nРоль: <b>${escapeHtml(owner ? "Владелец" : teamRoleLabel(access.role))}</b>\nРазрешения: ${escapeHtml(enabled || "нет")}.\n\nЧерез 12 часов снова выполните <code>/staff</code>.`
   );
   if (!owner) {
     const training = await getStaffTrainingStatus(env, String(user.id), access.role);
@@ -8269,6 +8348,26 @@ async function requireStaffQrAccess(initData, env) {
     throw new ApiError(403, "У вашей роли нет права выдавать физические награды.");
   }
   return { auth, access };
+}
+
+async function staffQrAccess(request, env) {
+  try {
+    const body = await readJson(request);
+    const { auth, access } = await requireStaffQrAccess(body?.initData, env);
+    return jsonResponse({
+      ok: true,
+      staff: {
+        telegramId: String(auth.user.id || ""),
+        displayName: telegramDisplayName(auth.user),
+        role: access.owner ? "owner" : normalizeTeamRole(access.role),
+        expiresAt: Number(access.expiresAt || 0)
+      }
+    });
+  } catch (error) {
+    if (error instanceof ApiError) return jsonResponse({ ok: false, error: error.message }, error.status);
+    console.error("staffQrAccess failed", error);
+    return jsonResponse({ ok: false, error: "Не удалось проверить доступ к сканеру." }, 500);
+  }
 }
 
 function rewardToStaffQrClient(reward) {
@@ -10861,13 +10960,137 @@ async function handlePlayerBlockWorkflowMessage(message, workflow, env) {
   await sendTelegramMessage(env, chatId,
     `<b>Подтвердите блокировку</b>\n\nИгрок: <b>${escapeHtml(playerName)}</b> · <code>${escapeHtml(targetId)}</code>\n` +
     `Срок: <b>${escapeHtml(banDurationLabel(blockType, blockedUntil))}</b>\n` +
-    `Причина: <b>${escapeHtml(reason)}</b>\n\nДоступ к игре будет ограничен сразу. Действие попадёт в журнал модерации.`,
+    `Причина: <b>${escapeHtml(reason)}</b>\n\nПосле подтверждения доступ будет ограничен, а весь игровой прогресс будет необратимо удалён: баланс, рекорд, кейсы, коллекция, задания, рейтинг и все покупки сезонного пропуска. Разблокировка или окончание временной блокировки не восстановят старые данные. Действие попадёт в журнал модерации.`,
     { inline_keyboard: [[
       { text: "⛔ Заблокировать", callback_data: `player_block_confirm:${targetId}` },
       { text: "Отмена", callback_data: "ops_cancel" }
     ]] }
   );
   return true;
+}
+
+
+function blockedPlayerResetPlan() {
+  return {
+    points: true,
+    treats: true,
+    coffee: true,
+    personalRecord: true,
+    xp: true,
+    cases: true,
+    collection: true,
+    statistics: true,
+    ownedSkins: true,
+    equippedSkin: true
+  };
+}
+
+async function blockPlayerAndWipeProgress(env, options) {
+  await ensureLiveOpsAdminSchema(env);
+  await ensureV78Schema(env);
+  await ensureV77Schema(env);
+  await ensureSafeControlCenterSchema(env);
+  await ensureSeasonPassSchema(env);
+
+  const telegramId = String(options.telegramId || "");
+  if (!/^\d{4,20}$/.test(telegramId)) throw new Error("Некорректный Telegram ID игрока.");
+  const now = Math.floor(Date.now() / 1000);
+  const actorId = String(options.actor?.id || options.updatedBy || "system");
+  const actorName = String(options.actorName || telegramDisplayName(options.actor || {})).trim().slice(0, 100);
+  const reason = String(options.reason || "").trim().slice(0, 300);
+  const blockType = String(options.blockType || "permanent") === "temporary" ? "temporary" : "permanent";
+  const blockedUntil = blockType === "temporary" ? Math.max(0, Math.floor(Number(options.blockedUntil) || 0)) : 0;
+  const before = options.before || await getPlayerAdminControl(telegramId, env);
+  const resetId = `reset_ban_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+  const resetReason = `Блокировка: ${reason}`.slice(0, 300);
+  const resetComponents = ["points", "treats", "coffee", "record", "xp", "cases", "collection"];
+  const resetJson = JSON.stringify(blockedPlayerResetPlan());
+  const campaignSkipReason = `Игрок заблокирован; прогресс сброшен ${resetId}`.slice(0, 500);
+  const queueCancelReason = `Отменено при блокировке ${resetId}`.slice(0, 500);
+
+  await env.DB.batch([
+    env.DB.prepare(`INSERT OR IGNORE INTO admin_profile_state(
+      telegram_id,wallet,best_score,treats,coffee,profile_xp,revision,created_at,updated_at,updated_by
+    ) VALUES(?,0,0,0,0,0,1,?,?,?)`).bind(telegramId, now, now, actorId),
+    env.DB.prepare(`INSERT OR IGNORE INTO case_player_state(telegram_id,created_at,updated_at) VALUES(?,?,?)`).bind(telegramId, now, now)
+  ]);
+
+  await env.DB.batch([
+    env.DB.prepare(`INSERT INTO player_admin_controls(
+      telegram_id,custom_name,blocked,block_reason,block_type,blocked_until,
+      blocked_at,blocked_by_name,appeal_note,last_unblocked_at,last_unblocked_by,
+      updated_at,updated_by
+    ) VALUES(?,?,1,?,?,?,?,?,?,?,?,?,?)
+    ON CONFLICT(telegram_id) DO UPDATE SET
+      custom_name=excluded.custom_name,blocked=1,block_reason=excluded.block_reason,
+      block_type=excluded.block_type,blocked_until=excluded.blocked_until,
+      blocked_at=excluded.blocked_at,blocked_by_name=excluded.blocked_by_name,
+      appeal_note=excluded.appeal_note,last_unblocked_at=excluded.last_unblocked_at,
+      last_unblocked_by=excluded.last_unblocked_by,updated_at=excluded.updated_at,
+      updated_by=excluded.updated_by`).bind(
+        telegramId, String(before.customName || ""), reason, blockType, blockedUntil,
+        now, actorName, String(before.appealNote || ""), Number(before.lastUnblockedAt || 0),
+        String(before.lastUnblockedBy || ""), now, actorId
+      ),
+    env.DB.prepare(`UPDATE admin_profile_state SET
+      wallet=0,best_score=0,treats=0,coffee=0,profile_xp=0,
+      pending_wallet=0,pending_treats=0,pending_coffee=0,
+      wallet_override=0,treats_override=0,coffee_override=0,
+      best_score_override=0,profile_xp_override=0,
+      revision=revision+1,updated_at=?,updated_by=?
+      WHERE telegram_id=?`).bind(now, actorId, telegramId),
+    env.DB.prepare(`UPDATE case_player_state SET
+      boosters_points=0,boosters_treats=0,boosters_coffee=0,
+      active_booster_type='',active_booster_runs=0,
+      owned_avatars_json='[]',active_avatar_id='',
+      owned_frames_json='[]',active_frame_id='',
+      owned_trails_json='[]',active_trail_id='',
+      owned_music_json='["cafe_run"]',active_music_id='cafe_run',
+      owned_specials_json='[]',owned_skins_json='[]',active_skin_id='',
+      legendary_pity_counter=0,revision=revision+1,updated_at=?
+      WHERE telegram_id=?`).bind(now, telegramId),
+    env.DB.prepare(`DELETE FROM granted_cases WHERE telegram_id=?`).bind(telegramId),
+    env.DB.prepare(`DELETE FROM level_case_openings WHERE telegram_id=?`).bind(telegramId),
+    env.DB.prepare(`DELETE FROM case_booster_run_consumptions WHERE telegram_id=?`).bind(telegramId),
+    env.DB.prepare(`DELETE FROM leaderboard_entries WHERE telegram_id=?`).bind(telegramId),
+    env.DB.prepare(`DELETE FROM leaderboard_all_time WHERE telegram_id=?`).bind(telegramId),
+    env.DB.prepare(`DELETE FROM leaderboard_runs WHERE telegram_id=?`).bind(telegramId),
+    env.DB.prepare(`DELETE FROM leaderboard_rewards WHERE telegram_id=?`).bind(telegramId),
+    env.DB.prepare(`DELETE FROM season_pass_claims WHERE telegram_id=?`).bind(telegramId),
+    env.DB.prepare(`DELETE FROM season_pass_task_claims WHERE telegram_id=?`).bind(telegramId),
+    env.DB.prepare(`DELETE FROM season_pass_run_xp WHERE telegram_id=?`).bind(telegramId),
+    env.DB.prepare(`DELETE FROM season_pass_activity_runs WHERE telegram_id=?`).bind(telegramId),
+    env.DB.prepare(`DELETE FROM season_pass_entitlements WHERE telegram_id=?`).bind(telegramId),
+    env.DB.prepare(`DELETE FROM season_pass_purchases WHERE telegram_id=?`).bind(telegramId),
+    env.DB.prepare(`DELETE FROM season_pass_players WHERE telegram_id=?`).bind(telegramId),
+    env.DB.prepare(`DELETE FROM season_pass_purchase_guards WHERE instr(guard_id,?)>0`).bind(`:${telegramId}:`),
+    env.DB.prepare(`DELETE FROM player_task_claims WHERE telegram_id=?`).bind(telegramId),
+    env.DB.prepare(`DELETE FROM player_task_series_claims WHERE telegram_id=?`).bind(telegramId),
+    env.DB.prepare(`DELETE FROM tester_accounts WHERE telegram_id=?`).bind(telegramId),
+    env.DB.prepare(`UPDATE reward_delivery_queue SET
+      status='cancelled',last_error=?,updated_at=?,lease_token='',lease_until=0
+      WHERE telegram_id=? AND status IN ('pending','failed','delivering')`).bind(queueCancelReason, now, telegramId),
+    env.DB.prepare(`UPDATE reward_codes SET status='cancelled'
+      WHERE owner_telegram_id=? AND status='active'`).bind(telegramId),
+    env.DB.prepare(`UPDATE admin_campaign_recipients SET status='skipped',error_text=?,processed_at=?
+      WHERE telegram_id=? AND status='pending'`).bind(campaignSkipReason, now, telegramId),
+    env.DB.prepare(`INSERT INTO player_reset_directives(
+      reset_id,scope,target_telegram_id,reset_json,reason,active,created_at,created_by
+    ) VALUES(?,'one',?,?,?,1,?,?)`).bind(resetId, telegramId, resetJson, resetReason, now, actorId),
+    env.DB.prepare(`INSERT INTO player_reset_history(
+      reset_id,scope,target_telegram_id,components_json,reason,affected_count,
+      notification_status,created_by,created_by_name,created_at
+    ) VALUES(?,'one',?,?,?,1,'moderation_block',?,?,?)`).bind(
+      resetId, telegramId, JSON.stringify(resetComponents), resetReason,
+      actorId, actorName, now
+    )
+  ]);
+
+  return {
+    ...(await getPlayerAdminControl(telegramId, env)),
+    resetId,
+    resetComponents
+  };
 }
 
 async function confirmPlayerBlock(query, telegramId, env) {
@@ -10901,28 +11124,39 @@ async function confirmPlayerBlock(query, telegramId, env) {
   }
   const now = Math.floor(Date.now() / 1000);
   const before = await getPlayerAdminControl(targetId, env);
-  const after = await savePlayerAdminControl(targetId, {
-    blocked: true,
-    blockReason: reason,
-    blockType,
-    blockedUntil,
-    blockedAt: now,
-    blockedByName: telegramDisplayName(query.from)
-  }, query.from.id, env);
+  let after;
+  try {
+    after = await blockPlayerAndWipeProgress(env, {
+      telegramId: targetId,
+      reason,
+      blockType,
+      blockedUntil,
+      actor: query.from,
+      before
+    });
+  } catch (error) {
+    console.error("player block wipe failed", error);
+    await answerCallback(env, query.id, "Блокировка не выполнена: не удалось полностью обнулить профиль.", true);
+    await sendTelegramMessage(env, chatId, `<b>Блокировка отменена</b>\n\nНе удалось безопасно удалить весь прогресс игрока. Частичная блокировка не считается завершённой.\n\nОшибка: <code>${escapeHtml(String(error?.message || error).slice(0, 300))}</code>`);
+    return;
+  }
   await writeModerationHistory(env, targetId, "block", after, query.from, reason);
   await logStaffAction(env, query.from, access, "player_block", targetId, "player", before.blocked ? 1 : 0, 1, {
     reason: after.blockReason,
     blockType: after.blockType,
-    blockedUntil: after.blockedUntil
+    blockedUntil: after.blockedUntil,
+    progressReset: true,
+    resetId: after.resetId,
+    resetComponents: after.resetComponents
   });
   await notifyPlayerModeration(env, targetId,
-    `⛔ <b>Доступ к игре ограничен</b>\n\nСрок: <b>${escapeHtml(banDurationLabel(after.blockType, after.blockedUntil))}</b>\nПричина: <b>${escapeHtml(after.blockReason)}</b>\n\nПо вопросам обратитесь в поддержку игры.`
+    `⛔ <b>Доступ к игре ограничен</b>\n\nСрок: <b>${escapeHtml(banDurationLabel(after.blockType, after.blockedUntil))}</b>\nПричина: <b>${escapeHtml(after.blockReason)}</b>\n\nИгровой прогресс и покупки сезонного пропуска обнулены. Разблокировка не восстановит старые данные.\n\nПо вопросам обратитесь в поддержку игры.`
   );
-  await notifySubscribedStaff(env, "player_blocks", `⛔ <b>Игрок заблокирован</b>\n\nИгрок: <code>${escapeHtml(targetId)}</code>\nСрок: ${escapeHtml(banDurationLabel(after.blockType, after.blockedUntil))}\nПричина: ${escapeHtml(after.blockReason)}\nСотрудник: ${escapeHtml(telegramDisplayName(query.from))}`);
+  await notifySubscribedStaff(env, "player_blocks", `⛔ <b>Игрок заблокирован и обнулён</b>\n\nИгрок: <code>${escapeHtml(targetId)}</code>\nСрок: ${escapeHtml(banDurationLabel(after.blockType, after.blockedUntil))}\nПричина: ${escapeHtml(after.blockReason)}\nСотрудник: ${escapeHtml(telegramDisplayName(query.from))}\nСброс: <code>${escapeHtml(after.resetId)}</code>`);
   await clearStaffWorkflow(query.from.id, env);
-  await answerCallback(env, query.id, "Игрок заблокирован.");
+  await answerCallback(env, query.id, "Игрок заблокирован и обнулён.");
   await sendTelegramMessage(env, chatId,
-    `⛔ Игрок <code>${escapeHtml(targetId)}</code> заблокирован <b>${escapeHtml(banDurationLabel(after.blockType, after.blockedUntil))}</b>.\nПричина: <b>${escapeHtml(after.blockReason)}</b>`
+    `⛔ Игрок <code>${escapeHtml(targetId)}</code> заблокирован <b>${escapeHtml(banDurationLabel(after.blockType, after.blockedUntil))}</b>.\nПричина: <b>${escapeHtml(after.blockReason)}</b>\n\n✅ Полностью удалены баланс, рекорд, кейсы, коллекция, рейтинг, задания и сезонный пропуск, включая «Элитный» и «Элитный+».\nID сброса: <code>${escapeHtml(after.resetId)}</code>`
   );
   await showPlayerProfile(chatId, query.from, targetId, env);
 }
@@ -11065,6 +11299,8 @@ async function handleActiveStaffWorkflowMessage(message, env) {
   if (workflow.flow_type === "player_reset") return handlePlayerResetWorkflowMessage(message, workflow, env);
   if (workflow.flow_type === "shop_price_edit") return handleShopPriceEditWorkflowMessage(message, workflow, env);
   if (workflow.flow_type === "season_pass_numeric") return handleSeasonPassNumericWorkflowMessage(message, workflow, env);
+  if (workflow.flow_type === "season_pass_task_create") return handleSeasonPassTaskCreateWorkflowMessage(message, workflow, env);
+  if (workflow.flow_type === "season_pass_season_create") return handleSeasonPassSeasonCreateWorkflowMessage(message, workflow, env);
   if (workflow.flow_type === "release_plan") return handleV67ReleaseWorkflowMessage(message, workflow, env);
   if (workflow.flow_type === "staff_create") return handleStaffCreateWorkflowMessage(message, workflow, env);
   return false;
@@ -11130,6 +11366,16 @@ async function handleStaffOperationsCallback(query, env) {
   const staffToggle = data.match(/^adm_staff_toggle:(\d{4,20}):(on|off)$/);
   if (staffToggle) {
     await toggleStaffFromButton(query, staffToggle[1], staffToggle[2] === "on", env);
+    return true;
+  }
+  const staffDelete = data.match(/^adm_staff_delete:(\d{4,20})$/);
+  if (staffDelete) {
+    await beginStaffProfileDeletion(query, staffDelete[1], env);
+    return true;
+  }
+  const staffDeleteConfirm = data.match(/^adm_staff_delete_confirm:(\d{4,20})$/);
+  if (staffDeleteConfirm) {
+    await confirmStaffProfileDeletion(query, staffDeleteConfirm[1], env);
     return true;
   }
   const staffPermissions = data.match(/^adm_staff_permissions:(\d{4,20})$/);
@@ -17178,7 +17424,7 @@ function seasonPassSeasonFromRow(row, fallback, nowMs = Date.now()) {
   const startsAt = Math.max(0,Number(row.starts_at)||0)*1000;
   const endsAt = Math.max(0,Number(row.ends_at)||0)*1000;
   const graceAtRaw = Math.max(0,Number(row.claim_grace_ends_at)||0)*1000;
-  const claimGraceEndsAt = graceAtRaw > endsAt ? graceAtRaw : Date.parse(DEFAULT_SEASON_PASS_CLAIM_GRACE_END_AT);
+  const claimGraceEndsAt = graceAtRaw > endsAt ? graceAtRaw : endsAt + SEASON_PASS_MANUAL_CLAIM_GRACE_SECONDS * 1000;
   const manual = String(row.manual_status || '');
   let status = nowMs < startsAt ? 'upcoming' : nowMs >= endsAt ? 'ended' : 'active';
   if (manual === 'active') status = nowMs >= endsAt ? 'ended' : 'active';
@@ -17196,10 +17442,57 @@ function seasonPassSeasonFromRow(row, fallback, nowMs = Date.now()) {
   };
 }
 
+async function selectSeasonPassSeasonRow(env, nowMs = Date.now()) {
+  const now = Math.max(0,Math.floor((Number(nowMs)||Date.now())/1000));
+  return env.DB.prepare(`SELECT * FROM season_pass_seasons
+    ORDER BY
+      CASE
+        WHEN manual_status!='ended' AND starts_at<=? AND ends_at>? THEN 0
+        WHEN (manual_status='ended' OR ends_at<=?) AND claim_grace_ends_at>? THEN 1
+        WHEN manual_status!='ended' AND starts_at>? THEN 2
+        ELSE 3
+      END,
+      CASE WHEN manual_status!='ended' AND starts_at<=? AND ends_at>? THEN starts_at END DESC,
+      CASE WHEN (manual_status='ended' OR ends_at<=?) AND claim_grace_ends_at>? THEN ends_at END DESC,
+      CASE WHEN manual_status!='ended' AND starts_at>? THEN starts_at END ASC,
+      ends_at DESC,updated_at DESC
+    LIMIT 1`).bind(now,now,now,now,now,now,now,now,now,now).first();
+}
+
+async function loadSeasonPassSeasonById(env, seasonId, nowMs = Date.now()) {
+  await ensureSeasonPassSchema(env);
+  const id = String(seasonId || '').trim();
+  if (!id) return null;
+  const row = await env.DB.prepare(`SELECT * FROM season_pass_seasons WHERE season_id=? LIMIT 1`).bind(id).first();
+  return row ? seasonPassSeasonFromRow(row,configuredSeasonPassState(env,nowMs),nowMs) : null;
+}
+
+async function cleanupExpiredSeasonPassSeasons(env) {
+  try {
+    await ensureSeasonPassSchema(env);
+    const now = Math.floor(Date.now()/1000);
+    const rows = (await env.DB.prepare(`SELECT * FROM season_pass_seasons
+      WHERE (manual_status='ended' OR ends_at<=?) AND claim_grace_ends_at>0 AND claim_grace_ends_at<=?
+      ORDER BY ends_at DESC LIMIT 50`).bind(now,now).all()).results || [];
+    let playersReset = 0;
+    let seasonsChecked = 0;
+    for (const row of rows) {
+      const season = seasonPassSeasonFromRow(row,configuredSeasonPassState(env,now*1000),now*1000);
+      const result = await resetSeasonPassDataForSeason(env,season,{reason:'scheduled-expiry-cleanup'});
+      playersReset += Number(result?.playersReset || 0);
+      seasonsChecked += 1;
+    }
+    return { seasonsChecked, playersReset };
+  } catch (error) {
+    console.error('season pass scheduled cleanup failed',error);
+    return { seasonsChecked:0, playersReset:0, error:String(error?.message||error) };
+  }
+}
+
 async function loadSeasonPassSeasonForAccess(env, nowMs = Date.now()) {
   const fallback = configuredSeasonPassState(env,nowMs);
   try {
-    const row = await env.DB.prepare(`SELECT * FROM season_pass_seasons WHERE season_id=? LIMIT 1`).bind(fallback.id).first();
+    const row = await selectSeasonPassSeasonRow(env,nowMs);
     return seasonPassSeasonFromRow(row,fallback,nowMs);
   } catch (error) {
     // Access checking must remain available during a cold deploy or while the
@@ -17213,7 +17506,7 @@ async function loadSeasonPassSeasonForAccess(env, nowMs = Date.now()) {
 async function loadSeasonPassSeason(env, nowMs = Date.now()) {
   await ensureSeasonPassSchema(env);
   const fallback = configuredSeasonPassState(env,nowMs);
-  const row = await env.DB.prepare(`SELECT * FROM season_pass_seasons WHERE season_id=? LIMIT 1`).bind(fallback.id).first();
+  const row = await selectSeasonPassSeasonRow(env,nowMs);
   const season = seasonPassSeasonFromRow(row,fallback,nowMs);
   if (season.status === 'ended' && !season.claimWindowOpen) {
     try {
@@ -17766,22 +18059,161 @@ async function awardSeasonPassRunXp(env,telegramId,runId,createdAt){
   }catch(error){console.error('awardSeasonPassRunXp failed',error);return null;}
 }
 
+const SEASON_PASS_ADMIN_SELECTION_PREFIX='season-pass-admin-selection:';
+const SEASON_PASS_CUSTOM_TASK_PREFIX='custom_';
+
+function seasonPassAdminSelectionKey(userId){return `${SEASON_PASS_ADMIN_SELECTION_PREFIX}${String(userId||'')}`;}
+function seasonPassStatusLabel(season){return season.status==='active'?'🟢 идёт':season.claimWindowOpen?'🟠 завершён · выдача наград':season.status==='ended'?'⚫ завершён':'🕒 ожидает старта';}
+function seasonPassWorkflowCancelKeyboard(){return {inline_keyboard:[[{text:'❌ Отмена',callback_data:'sp_workflow_cancel'}]]};}
+
+async function setSeasonPassAdminSelection(env,userId,seasonId){
+  await setSystemState(env,seasonPassAdminSelectionKey(userId),String(seasonId||''));
+}
+
+async function resolveSeasonPassAdminSeason(env,user,nowMs=Date.now()){
+  await ensureSeasonPassSchema(env);
+  const state=await getSystemState(env,seasonPassAdminSelectionKey(user?.id));
+  if(state?.value){
+    const selected=await loadSeasonPassSeasonById(env,state.value,nowMs);
+    if(selected)return selected;
+  }
+  const current=await loadSeasonPassSeason(env,nowMs);
+  await setSeasonPassAdminSelection(env,user?.id,current.id);
+  return current;
+}
+
 async function showSeasonPassAdminDashboard(chatId,user,env){
-  const access=await requireAnySecurityPermission(chatId,user,['manageSeasons','manageMaintenance'],env);if(!access)return;const season=await loadSeasonPassSeason(env);const status=season.status==='active'?'🟢 идёт':season.claimWindowOpen?'🟠 завершён · выдача наград':season.status==='ended'?'⚫ завершён':'🕒 ожидает старта';
-  const elite=season.prices.elite;const plus=season.prices.elite_plus;
-  await sendTelegramMessage(env,chatId,`<b>🎟 Сезонный пропуск</b>\n\n<b>${escapeHtml(season.title)}</b>\nСтатус: <b>${status}</b>\nНачало: <b>${escapeHtml(formatUtcDate(Math.floor(Date.parse(season.startsAt)/1000)))}</b>\nОкончание: <b>${escapeHtml(formatUtcDate(Math.floor(Date.parse(season.endsAt)/1000)))}</b>\nПолучение наград до: <b>${escapeHtml(formatUtcDate(Math.floor(Date.parse(season.claimGraceEndsAt)/1000)))}</b>\n\n<b>Тарифы</b>\nЭлитный: ${elite.points.toLocaleString('ru-RU')} очков · ${elite.treats} зефира · ${elite.coffee} кофе\nЭлитный+: ${plus.points.toLocaleString('ru-RU')} очков · ${plus.treats} зефира · ${plus.coffee} кофе\nУровень: ${season.levelPricePoints.toLocaleString('ru-RU')} очков`,{inline_keyboard:[
+  const access=await requireAnySecurityPermission(chatId,user,['manageSeasons','manageMaintenance'],env);if(!access)return;
+  const season=await resolveSeasonPassAdminSeason(env,user);const status=seasonPassStatusLabel(season);const elite=season.prices.elite;const plus=season.prices.elite_plus;
+  const keyboard=[
+    [{text:'🗓 Все сезоны',callback_data:'sp_seasons'},{text:'➕ Новый сезон',callback_data:'sp_season_new'}],
     [{text:'🎁 Награды уровней',callback_data:'sp_rewards:0'},{text:'📋 Задания',callback_data:'sp_tasks:0'}],
     [{text:'💳 Цены и XP',callback_data:'sp_settings'},{text:'📊 Статистика',callback_data:'sp_stats'}],
-    [{text:'▶️ Начать сейчас',callback_data:'sp_start_now'},{text:'⏹ Завершить сейчас',callback_data:'sp_end_now'}],
-    [{text:'🗓 Вернуть даты 10.08–10.09',callback_data:'sp_schedule_reset'}],
-    [{text:'♻️ Сбросить прогресс и покупки всех',callback_data:'sp_reset_all_confirm'}],
-    [{text:'👁 Настройки видимости',callback_data:'v65_feature:battle_pass'}],[{text:'⬅️ Админ-панель',callback_data:'adm_home'}]
-  ]});
+    [{text:'▶️ Начать сейчас',callback_data:`sp_start_now:${season.id}`},{text:'⏹ Завершить сейчас',callback_data:`sp_end_now:${season.id}`}]
+  ];
+  if(season.status==='upcoming'&&season.id!==DEFAULT_SEASON_PASS_ID)keyboard.push([{text:'🗑 Удалить будущий сезон',callback_data:`sp_season_delete_confirm:${season.id}`}]);
+  keyboard.push([{text:'♻️ Сбросить прогресс и покупки всех',callback_data:`sp_reset_all_confirm:${season.id}`}],[{text:'👁 Настройки видимости',callback_data:'v65_feature:battle_pass'}],[{text:'⬅️ Админ-панель',callback_data:'adm_home'}]);
+  await sendTelegramMessage(env,chatId,`<b>🎟 Сезонный пропуск</b>\n\nУправляемый сезон: <b>${escapeHtml(season.title)}</b>\nID: <code>${escapeHtml(season.id)}</code>\nСтатус: <b>${status}</b>\nНачало: <b>${escapeHtml(formatUtcDate(Math.floor(Date.parse(season.startsAt)/1000)))}</b>\nОкончание: <b>${escapeHtml(formatUtcDate(Math.floor(Date.parse(season.endsAt)/1000)))}</b>\nПолучение наград до: <b>${escapeHtml(formatUtcDate(Math.floor(Date.parse(season.claimGraceEndsAt)/1000)))}</b>\n\n<b>Тарифы</b>\nЭлитный: ${elite.points.toLocaleString('ru-RU')} очков · ${elite.treats} зефира · ${elite.coffee} кофе\nЭлитный+: ${plus.points.toLocaleString('ru-RU')} очков · ${plus.treats} зефира · ${plus.coffee} кофе\nУровень: ${season.levelPricePoints.toLocaleString('ru-RU')} очков`,{inline_keyboard:keyboard});
+}
+
+async function showSeasonPassSeasonsAdmin(chatId,user,env){
+  const access=await requireAnySecurityPermission(chatId,user,['manageSeasons','manageMaintenance'],env);if(!access)return;await ensureSeasonPassSchema(env);
+  const selected=await resolveSeasonPassAdminSeason(env,user);const nowMs=Date.now();
+  const rows=(await env.DB.prepare(`SELECT * FROM season_pass_seasons ORDER BY starts_at DESC,updated_at DESC LIMIT 24`).all()).results||[];
+  const buttons=rows.map(row=>{const item=seasonPassSeasonFromRow(row,configuredSeasonPassState(env,nowMs),nowMs);const mark=item.id===selected.id?'✅ ':'';return [{text:`${mark}${seasonPassStatusLabel(item).split(' ')[0]} ${String(item.title).slice(0,30)}`,callback_data:`sp_season_pick:${item.id}`}];});
+  buttons.push([{text:'➕ Создать новый сезон',callback_data:'sp_season_new'}],[{text:'⬅️ Текущий сезон',callback_data:'sp_admin'}]);
+  const lines=rows.map(row=>{const item=seasonPassSeasonFromRow(row,configuredSeasonPassState(env,nowMs),nowMs);return `${item.id===selected.id?'✅':'•'} <b>${escapeHtml(item.title)}</b> · ${seasonPassStatusLabel(item)}\n${escapeHtml(formatUtcDate(Number(row.starts_at)))} — ${escapeHtml(formatUtcDate(Number(row.ends_at)))}`;});
+  await sendTelegramMessage(env,chatId,`<b>🗓 Сезоны пропуска</b>\n\n${lines.join('\n\n')||'Сезонов пока нет.'}\n\nВыберите сезон, чтобы редактировать его награды, задания, цены и расписание.`,{inline_keyboard:buttons});
+}
+
+async function selectSeasonPassAdminSeason(query,seasonId,env){
+  const chatId=query.message?.chat?.id;const access=await requireAnySecurityPermission(chatId,query.from,['manageSeasons','manageMaintenance'],env);if(!access)return;
+  const season=await loadSeasonPassSeasonById(env,seasonId);if(!season){await answerCallback(env,query.id,'Сезон не найден.',true);return;}
+  await setSeasonPassAdminSelection(env,query.from.id,season.id);await answerCallback(env,query.id,'Сезон выбран.');await showSeasonPassAdminDashboard(chatId,query.from,env);
+}
+
+function seasonPassSeasonCreateDateLabel(timestamp){return formatUtcDate(Math.floor(Number(timestamp)||0));}
+async function seasonPassSeasonOverlap(env,startsAt,endsAt,excludeId=''){
+  return env.DB.prepare(`SELECT season_id,title,starts_at,ends_at,claim_grace_ends_at FROM season_pass_seasons WHERE season_id!=? AND starts_at<? AND MAX(ends_at,claim_grace_ends_at)>? ORDER BY starts_at LIMIT 1`).bind(String(excludeId||''),Number(endsAt),Number(startsAt)).first();
+}
+
+async function startSeasonPassSeasonCreate(query,env){
+  const chatId=query.message?.chat?.id;const access=await requireAnySecurityPermission(chatId,query.from,['manageSeasons','manageMaintenance'],env);if(!access)return;
+  const source=await resolveSeasonPassAdminSeason(env,query.from);
+  await setStaffWorkflow(query.from.id,chatId,'season_pass_season_create','title',{sourceSeasonId:source.id},env);
+  await answerCallback(env,query.id,'Создаём новый сезон.');
+  await sendTelegramMessage(env,chatId,`<b>➕ Новый сезон</b>\n\nОтправьте название сезона одним сообщением.\n\nПример: <code>Сезон II: Сладкое лето</code>`,seasonPassWorkflowCancelKeyboard());
+}
+
+async function handleSeasonPassSeasonCreateWorkflowMessage(message,workflow,env){
+  const chatId=message.chat?.id;const access=await requireAnySecurityPermission(chatId,message.from,['manageSeasons','manageMaintenance'],env);if(!access){await clearStaffWorkflow(message.from.id,env);return true;}
+  const text=String(message.text||'').trim();if(text==='/cancel'){await clearStaffWorkflow(message.from.id,env);await sendTelegramMessage(env,chatId,'Создание сезона отменено.');return true;}
+  const data=workflow.data||{};
+  if(workflow.step==='title'){
+    if(text.length<3||text.length>80){await sendTelegramMessage(env,chatId,'Название должно содержать от 3 до 80 символов.');return true;}
+    await updateStaffWorkflow(message.from.id,{step:'starts_at',data:{...data,title:text}},env);
+    await sendTelegramMessage(env,chatId,`Введите <b>дату и время начала</b> по Москве.\n\nФормат: <code>10.09.2026 00:00</code>`,seasonPassWorkflowCancelKeyboard());return true;
+  }
+  if(workflow.step==='starts_at'){
+    const startsAt=parseMoscowDateTime(text);const now=Math.floor(Date.now()/1000);
+    if(!startsAt){await sendTelegramMessage(env,chatId,'Не удалось распознать дату. Пример: <code>10.09.2026 00:00</code>');return true;}
+    if(startsAt<now){await sendTelegramMessage(env,chatId,'Для нового сезона дата начала должна быть в будущем. Для текущего сезона используйте «Начать сейчас».');return true;}
+    await updateStaffWorkflow(message.from.id,{step:'ends_at',data:{...data,startsAt}},env);
+    await sendTelegramMessage(env,chatId,`Начало: <b>${escapeHtml(seasonPassSeasonCreateDateLabel(startsAt))}</b>\n\nТеперь введите <b>дату и время окончания</b> по Москве.\n\nПример: <code>10.10.2026 23:59</code>`,seasonPassWorkflowCancelKeyboard());return true;
+  }
+  if(workflow.step==='ends_at'){
+    const endsAt=parseMoscowDateTime(text);const startsAt=Number(data.startsAt||0);
+    if(!endsAt){await sendTelegramMessage(env,chatId,'Не удалось распознать дату окончания. Пример: <code>10.10.2026 23:59</code>');return true;}
+    if(endsAt<=startsAt+3600){await sendTelegramMessage(env,chatId,'Окончание должно быть минимум на 1 час позже начала.');return true;}
+    const overlap=await seasonPassSeasonOverlap(env,startsAt,endsAt);
+    if(overlap){await sendTelegramMessage(env,chatId,`Период пересекается с сезоном <b>${escapeHtml(overlap.title)}</b> или его окном выдачи наград (${escapeHtml(formatUtcDate(Number(overlap.starts_at)))} — ${escapeHtml(formatUtcDate(Math.max(Number(overlap.ends_at)||0,Number(overlap.claim_grace_ends_at)||0)))}). Введите другую дату окончания или отмените создание.`);return true;}
+    await updateStaffWorkflow(message.from.id,{step:'confirm',data:{...data,endsAt}},env);
+    const graceEndsAt=endsAt+SEASON_PASS_MANUAL_CLAIM_GRACE_SECONDS;
+    await sendTelegramMessage(env,chatId,`<b>Проверьте новый сезон</b>\n\nНазвание: <b>${escapeHtml(data.title)}</b>\nНачало: <b>${escapeHtml(seasonPassSeasonCreateDateLabel(startsAt))}</b>\nОкончание: <b>${escapeHtml(seasonPassSeasonCreateDateLabel(endsAt))}</b>\nНаграды можно забрать до: <b>${escapeHtml(seasonPassSeasonCreateDateLabel(graceEndsAt))}</b>\n\nНаграды уровней, задания, цены и XP будут скопированы из выбранного сейчас сезона. После создания их можно изменить отдельно.`,{inline_keyboard:[[{text:'✅ Создать сезон',callback_data:'sp_season_create_save'}],[{text:'❌ Отмена',callback_data:'sp_workflow_cancel'}]]});return true;
+  }
+  await sendTelegramMessage(env,chatId,'Используйте кнопки в предыдущем сообщении или /cancel.');return true;
+}
+
+async function uniqueSeasonPassSeasonId(env,startsAt){
+  const local=new Date(Number(startsAt)*1000+3*3600*1000);const date=`${local.getUTCFullYear()}${String(local.getUTCMonth()+1).padStart(2,'0')}${String(local.getUTCDate()).padStart(2,'0')}`;
+  for(let attempt=0;attempt<20;attempt+=1){const suffix=Math.random().toString(36).slice(2,7);const id=`season-${date}-${suffix}`;const row=await env.DB.prepare(`SELECT 1 AS ok FROM season_pass_seasons WHERE season_id=? LIMIT 1`).bind(id).first();if(!row)return id;}
+  throw new Error('Не удалось создать уникальный ID сезона.');
+}
+
+async function finalizeSeasonPassSeasonCreate(query,env){
+  const chatId=query.message?.chat?.id;const access=await requireAnySecurityPermission(chatId,query.from,['manageSeasons','manageMaintenance'],env);if(!access)return;
+  const workflow=await getStaffWorkflow(query.from.id,env);if(!workflow||workflow.flow_type!=='season_pass_season_create'||workflow.step!=='confirm'){await answerCallback(env,query.id,'Мастер создания устарел. Начните заново.',true);return;}
+  const data=workflow.data||{};const startsAt=Number(data.startsAt||0);const endsAt=Number(data.endsAt||0);const title=String(data.title||'').trim();
+  if(title.length<3||title.length>80||!Number.isFinite(startsAt)||!Number.isFinite(endsAt)||endsAt<=startsAt+3600){await answerCallback(env,query.id,'Данные сезона повреждены. Начните создание заново.',true);await clearStaffWorkflow(query.from.id,env);return;}
+  const overlap=await seasonPassSeasonOverlap(env,startsAt,endsAt);if(overlap){await answerCallback(env,query.id,'Период уже занят другим сезоном.',true);await sendTelegramMessage(env,chatId,`Сезон пересекается с <b>${escapeHtml(overlap.title)}</b>. Создание остановлено.`);return;}
+  const sourceId=String(data.sourceSeasonId||DEFAULT_SEASON_PASS_ID);const source=await env.DB.prepare(`SELECT * FROM season_pass_seasons WHERE season_id=? LIMIT 1`).bind(sourceId).first();const now=Math.floor(Date.now()/1000);const actor=String(query.from.id);const seasonId=await uniqueSeasonPassSeasonId(env,startsAt);const graceEndsAt=endsAt+SEASON_PASS_MANUAL_CLAIM_GRACE_SECONDS;
+  const cfg=source||{base_run_xp:100,level_price_points:DEFAULT_SEASON_PASS_LEVEL_PRICE_POINTS,elite_price_points:DEFAULT_SEASON_PASS_ELITE_PRICE.points,elite_price_treats:DEFAULT_SEASON_PASS_ELITE_PRICE.treats,elite_price_coffee:DEFAULT_SEASON_PASS_ELITE_PRICE.coffee,elite_plus_price_points:DEFAULT_SEASON_PASS_ELITE_PLUS_PRICE.points,elite_plus_price_treats:DEFAULT_SEASON_PASS_ELITE_PLUS_PRICE.treats,elite_plus_price_coffee:DEFAULT_SEASON_PASS_ELITE_PLUS_PRICE.coffee};
+  const cfgInt=(value,fallback=0)=>Number.isFinite(Number(value))?Math.max(0,Math.floor(Number(value))):fallback;
+  await env.DB.batch([
+    env.DB.prepare(`INSERT INTO season_pass_seasons(season_id,title,starts_at,ends_at,claim_grace_ends_at,manual_status,base_run_xp,level_price_points,elite_price_points,elite_price_treats,elite_price_coffee,elite_plus_price_points,elite_plus_price_treats,elite_plus_price_coffee,updated_at,updated_by) VALUES(?,?,?,?,?,'',?,?,?,?,?,?,?,?,?,?)`).bind(seasonId,title,startsAt,endsAt,graceEndsAt,Math.max(1,cfgInt(cfg.base_run_xp,100)),cfgInt(cfg.level_price_points,DEFAULT_SEASON_PASS_LEVEL_PRICE_POINTS),cfgInt(cfg.elite_price_points,DEFAULT_SEASON_PASS_ELITE_PRICE.points),cfgInt(cfg.elite_price_treats,DEFAULT_SEASON_PASS_ELITE_PRICE.treats),cfgInt(cfg.elite_price_coffee,DEFAULT_SEASON_PASS_ELITE_PRICE.coffee),cfgInt(cfg.elite_plus_price_points,DEFAULT_SEASON_PASS_ELITE_PLUS_PRICE.points),cfgInt(cfg.elite_plus_price_treats,DEFAULT_SEASON_PASS_ELITE_PLUS_PRICE.treats),cfgInt(cfg.elite_plus_price_coffee,DEFAULT_SEASON_PASS_ELITE_PLUS_PRICE.coffee),now,actor),
+    env.DB.prepare(`INSERT INTO season_pass_rewards(season_id,level,lane,reward_type,amount,item_id,title,image_url,enabled,updated_at,updated_by) SELECT ?,level,lane,reward_type,amount,item_id,title,image_url,enabled,?,? FROM season_pass_rewards WHERE season_id=?`).bind(seasonId,now,actor,sourceId),
+    env.DB.prepare(`INSERT INTO season_pass_tasks(season_id,task_id,period,premium,metric,target,xp_reward,title,description,enabled,sort_order,updated_at,updated_by) SELECT ?,task_id,period,premium,metric,target,xp_reward,title,description,enabled,sort_order,?,? FROM season_pass_tasks WHERE season_id=?`).bind(seasonId,now,actor,sourceId)
+  ]);
+  const rewardCount=Number((await env.DB.prepare(`SELECT COUNT(*) AS count FROM season_pass_rewards WHERE season_id=?`).bind(seasonId).first())?.count||0);
+  if(!rewardCount){const seed=[];for(let level=1;level<=SEASON_PASS_MAX_LEVEL;level+=1){for(const lane of ['free','premium']){const reward=defaultSeasonPassReward(level,lane);seed.push(env.DB.prepare(`INSERT INTO season_pass_rewards(season_id,level,lane,reward_type,amount,item_id,title,image_url,enabled,updated_at,updated_by) VALUES(?,?,?,?,?,?,?,?,1,?,?)`).bind(seasonId,level,lane,reward.rewardType,reward.amount,reward.itemId,reward.title,reward.imageUrl,now,actor));}}for(let i=0;i<seed.length;i+=25)await env.DB.batch(seed.slice(i,i+25));}
+  const taskCount=Number((await env.DB.prepare(`SELECT COUNT(*) AS count FROM season_pass_tasks WHERE season_id=?`).bind(seasonId).first())?.count||0);
+  if(!taskCount){const tasks=defaultSeasonPassTasks().map((task,index)=>env.DB.prepare(`INSERT INTO season_pass_tasks(season_id,task_id,period,premium,metric,target,xp_reward,title,description,enabled,sort_order,updated_at,updated_by) VALUES(?,?,?,?,?,?,?,?,?,1,?,?,?)`).bind(seasonId,task.id,task.period,task.premium?1:0,task.metric,task.target,task.xp,task.title,task.description,(index+1)*10,now,actor));if(tasks.length)await env.DB.batch(tasks);}
+  await setSeasonPassAdminSelection(env,query.from.id,seasonId);await clearStaffWorkflow(query.from.id,env);
+  try{await logStaffAction(env,query.from,access,'season_pass_create',null,'season_pass',null,null,{seasonId,title,startsAt,endsAt,sourceSeasonId:sourceId});}catch(error){console.error('season pass create audit failed',error);}
+  await answerCallback(env,query.id,'Новый сезон создан.');await showSeasonPassAdminDashboard(chatId,query.from,env);
+}
+
+async function showSeasonPassDeleteConfirmation(query,env,seasonId=''){
+  const chatId=query.message?.chat?.id;const access=await requireAnySecurityPermission(chatId,query.from,['manageSeasons','manageMaintenance'],env);if(!access)return;const season=seasonId?await loadSeasonPassSeasonById(env,seasonId):await resolveSeasonPassAdminSeason(env,query.from);if(!season){await answerCallback(env,query.id,'Сезон не найден.',true);return;}const now=Math.floor(Date.now()/1000);
+  if(season.id===DEFAULT_SEASON_PASS_ID||Math.floor(Date.parse(season.startsAt)/1000)<=now||season.status!=='upcoming'){await answerCallback(env,query.id,'Удалять можно только ещё не начавшийся новый сезон.',true);return;}
+  await answerCallback(env,query.id,'Требуется подтверждение.');await sendTelegramMessage(env,chatId,`<b>Удалить будущий сезон?</b>\n\n<b>${escapeHtml(season.title)}</b>\n${escapeHtml(formatUtcDate(Math.floor(Date.parse(season.startsAt)/1000)))} — ${escapeHtml(formatUtcDate(Math.floor(Date.parse(season.endsAt)/1000)))}\n\nБудут удалены только настройки, награды и задания этого ещё не начавшегося сезона.`,{inline_keyboard:[[{text:'🗑 Да, удалить',callback_data:`sp_season_delete_execute:${season.id}`}],[{text:'❌ Отмена',callback_data:'sp_admin'}]]});
+}
+
+async function deleteSeasonPassScheduledSeason(query,env,seasonId=''){
+  const chatId=query.message?.chat?.id;const access=await requireAnySecurityPermission(chatId,query.from,['manageSeasons','manageMaintenance'],env);if(!access)return;const season=seasonId?await loadSeasonPassSeasonById(env,seasonId):await resolveSeasonPassAdminSeason(env,query.from);if(!season){await answerCallback(env,query.id,'Сезон не найден.',true);return;}const now=Math.floor(Date.now()/1000);
+  if(season.id===DEFAULT_SEASON_PASS_ID||Math.floor(Date.parse(season.startsAt)/1000)<=now||season.status!=='upcoming'){await answerCallback(env,query.id,'Этот сезон уже нельзя удалить.',true);return;}
+  const counts=await Promise.all([
+    env.DB.prepare(`SELECT COUNT(*) AS count FROM season_pass_players WHERE season_id=?`).bind(season.id).first(),
+    env.DB.prepare(`SELECT COUNT(*) AS count FROM season_pass_claims WHERE season_id=?`).bind(season.id).first(),
+    env.DB.prepare(`SELECT COUNT(*) AS count FROM season_pass_task_claims WHERE season_id=?`).bind(season.id).first(),
+    env.DB.prepare(`SELECT COUNT(*) AS count FROM season_pass_run_xp WHERE season_id=?`).bind(season.id).first(),
+    env.DB.prepare(`SELECT COUNT(*) AS count FROM season_pass_activity_runs WHERE season_id=?`).bind(season.id).first(),
+    env.DB.prepare(`SELECT COUNT(*) AS count FROM season_pass_entitlements WHERE season_id=?`).bind(season.id).first(),
+    env.DB.prepare(`SELECT COUNT(*) AS count FROM season_pass_purchases WHERE season_id=?`).bind(season.id).first()
+  ]);
+  if(counts.some(row=>Number(row?.count||0)>0)){await answerCallback(env,query.id,'У сезона уже есть данные игроков, удаление запрещено.',true);return;}
+  await env.DB.batch([
+    env.DB.prepare(`DELETE FROM season_pass_rewards WHERE season_id=?`).bind(season.id),
+    env.DB.prepare(`DELETE FROM season_pass_tasks WHERE season_id=?`).bind(season.id),
+    env.DB.prepare(`DELETE FROM season_pass_seasons WHERE season_id=?`).bind(season.id)
+  ]);
+  try{await logStaffAction(env,query.from,access,'season_pass_delete',null,'season_pass',season.id,null,{title:season.title,startsAt:season.startsAt,endsAt:season.endsAt});}catch(error){console.error('season pass delete audit failed',error);}
+  await deleteSystemState(env,seasonPassAdminSelectionKey(query.from.id));await answerCallback(env,query.id,'Будущий сезон удалён.');await showSeasonPassSeasonsAdmin(chatId,query.from,env);
 }
 
 async function showSeasonPassSettings(chatId,user,env){
-  const access=await requireAnySecurityPermission(chatId,user,['manageSeasons','manageMaintenance'],env);if(!access)return;const season=await loadSeasonPassSeason(env);const elite=season.prices.elite;const plus=season.prices.elite_plus;
-  await sendTelegramMessage(env,chatId,`<b>💳 Цены и XP сезонного пропуска</b>\n\nЭлитный: <b>${elite.points.toLocaleString('ru-RU')}</b> очков · <b>${elite.treats}</b> зефира · <b>${elite.coffee}</b> кофе\nЭлитный+: <b>${plus.points.toLocaleString('ru-RU')}</b> очков · <b>${plus.treats}</b> зефира · <b>${plus.coffee}</b> кофе\nПокупка уровня: <b>${season.levelPricePoints.toLocaleString('ru-RU')}</b> очков\nXP за забег: <b>${season.baseRunXp}</b>`,{inline_keyboard:[
+  const access=await requireAnySecurityPermission(chatId,user,['manageSeasons','manageMaintenance'],env);if(!access)return;const season=await resolveSeasonPassAdminSeason(env,user);const elite=season.prices.elite;const plus=season.prices.elite_plus;
+  await sendTelegramMessage(env,chatId,`<b>💳 Цены и XP сезонного пропуска</b>\n\nСезон: <b>${escapeHtml(season.title)}</b>\n\nЭлитный: <b>${elite.points.toLocaleString('ru-RU')}</b> очков · <b>${elite.treats}</b> зефира · <b>${elite.coffee}</b> кофе\nЭлитный+: <b>${plus.points.toLocaleString('ru-RU')}</b> очков · <b>${plus.treats}</b> зефира · <b>${plus.coffee}</b> кофе\nПокупка уровня: <b>${season.levelPricePoints.toLocaleString('ru-RU')}</b> очков\nXP за забег: <b>${season.baseRunXp}</b>`,{inline_keyboard:[
     [{text:'✅ Цены запуска',callback_data:'sp_prices_launch'}],
     [{text:'✏️ Элитный · очки',callback_data:'sp_input:elite_points'},{text:'✏️ зефир',callback_data:'sp_input:elite_treats'},{text:'✏️ кофе',callback_data:'sp_input:elite_coffee'}],
     [{text:'✏️ Элитный+ · очки',callback_data:'sp_input:plus_points'},{text:'✏️ зефир',callback_data:'sp_input:plus_treats'},{text:'✏️ кофе',callback_data:'sp_input:plus_coffee'}],
@@ -17793,13 +18225,12 @@ async function showSeasonPassSettings(chatId,user,env){
 }
 
 async function setSeasonPassSettingsAction(query,kind,value,env){
-  const chatId=query.message?.chat?.id;const access=await requireAnySecurityPermission(chatId,query.from,['manageSeasons','manageMaintenance'],env);if(!access)return;const now=Math.floor(Date.now()/1000);const actor=String(query.from.id);
-  if(kind==='launch')await env.DB.prepare(`UPDATE season_pass_seasons SET elite_price_points=25000,elite_price_treats=450,elite_price_coffee=450,elite_plus_price_points=50000,elite_plus_price_treats=650,elite_plus_price_coffee=650,level_price_points=10000,updated_at=?,updated_by=? WHERE season_id=?`).bind(now,actor,DEFAULT_SEASON_PASS_ID).run();
-  else if(kind==='level_price')await env.DB.prepare(`UPDATE season_pass_seasons SET level_price_points=?,updated_at=?,updated_by=? WHERE season_id=?`).bind(Math.max(0,Math.min(1000000,Number(value)||0)),now,actor,DEFAULT_SEASON_PASS_ID).run();
-  else if(kind==='run_xp')await env.DB.prepare(`UPDATE season_pass_seasons SET base_run_xp=?,updated_at=?,updated_by=? WHERE season_id=?`).bind(Math.max(1,Math.min(10000,Number(value)||100)),now,actor,DEFAULT_SEASON_PASS_ID).run();
+  const chatId=query.message?.chat?.id;const access=await requireAnySecurityPermission(chatId,query.from,['manageSeasons','manageMaintenance'],env);if(!access)return;const season=await resolveSeasonPassAdminSeason(env,query.from);const now=Math.floor(Date.now()/1000);const actor=String(query.from.id);
+  if(kind==='launch')await env.DB.prepare(`UPDATE season_pass_seasons SET elite_price_points=25000,elite_price_treats=450,elite_price_coffee=450,elite_plus_price_points=50000,elite_plus_price_treats=650,elite_plus_price_coffee=650,level_price_points=10000,updated_at=?,updated_by=? WHERE season_id=?`).bind(now,actor,season.id).run();
+  else if(kind==='level_price')await env.DB.prepare(`UPDATE season_pass_seasons SET level_price_points=?,updated_at=?,updated_by=? WHERE season_id=?`).bind(Math.max(0,Math.min(1000000,Number(value)||0)),now,actor,season.id).run();
+  else if(kind==='run_xp')await env.DB.prepare(`UPDATE season_pass_seasons SET base_run_xp=?,updated_at=?,updated_by=? WHERE season_id=?`).bind(Math.max(1,Math.min(10000,Number(value)||100)),now,actor,season.id).run();
   await answerCallback(env,query.id,'Настройки сезонного пропуска сохранены.');await showSeasonPassSettings(chatId,query.from,env);
 }
-
 
 const SEASON_PASS_NUMERIC_FIELDS=Object.freeze({
   elite_points:{column:'elite_price_points',label:'стоимость «Элитного» в очках',min:0,max:999999999},elite_treats:{column:'elite_price_treats',label:'стоимость «Элитного» в зефире',min:0,max:999999999},elite_coffee:{column:'elite_price_coffee',label:'стоимость «Элитного» в кофе',min:0,max:999999999},
@@ -17808,121 +18239,143 @@ const SEASON_PASS_NUMERIC_FIELDS=Object.freeze({
 });
 
 async function startSeasonPassNumericInput(query,field,env){
-  const chatId=query.message?.chat?.id;const access=await requireAnySecurityPermission(chatId,query.from,['manageSeasons','manageMaintenance'],env);if(!access)return;const config=SEASON_PASS_NUMERIC_FIELDS[field];if(!config){await answerCallback(env,query.id,'Неизвестное поле.',true);return;}
-  await setStaffWorkflow(query.from.id,chatId,'season_pass_numeric','value',{mode:'setting',field},env);await answerCallback(env,query.id,'Введите число сообщением.');await sendTelegramMessage(env,chatId,`Введите <b>${escapeHtml(config.label)}</b> целым числом от ${config.min.toLocaleString('ru-RU')} до ${config.max.toLocaleString('ru-RU')}.\n\nОтмена: /cancel`);
+  const chatId=query.message?.chat?.id;const access=await requireAnySecurityPermission(chatId,query.from,['manageSeasons','manageMaintenance'],env);if(!access)return;const config=SEASON_PASS_NUMERIC_FIELDS[field];if(!config){await answerCallback(env,query.id,'Неизвестное поле.',true);return;}const season=await resolveSeasonPassAdminSeason(env,query.from);
+  await setStaffWorkflow(query.from.id,chatId,'season_pass_numeric','value',{mode:'setting',field,seasonId:season.id},env);await answerCallback(env,query.id,'Введите число сообщением.');await sendTelegramMessage(env,chatId,`Сезон: <b>${escapeHtml(season.title)}</b>\nВведите <b>${escapeHtml(config.label)}</b> целым числом от ${config.min.toLocaleString('ru-RU')} до ${config.max.toLocaleString('ru-RU')}.\n\nОтмена: /cancel`);
 }
 
 async function startSeasonPassTaskNumericInput(query,taskId,field,page,env){
-  const chatId=query.message?.chat?.id;const access=await requireAnySecurityPermission(chatId,query.from,['manageSeasons','manageMaintenance'],env);if(!access)return;if(!['target','xp'].includes(field))return;const row=await env.DB.prepare(`SELECT title FROM season_pass_tasks WHERE season_id=? AND task_id=? LIMIT 1`).bind(DEFAULT_SEASON_PASS_ID,String(taskId)).first();if(!row){await answerCallback(env,query.id,'Задание не найдено.',true);return;}
-  await setStaffWorkflow(query.from.id,chatId,'season_pass_numeric','value',{mode:'task',taskId:String(taskId),field,page:Number(page)||0},env);await answerCallback(env,query.id,'Введите число сообщением.');await sendTelegramMessage(env,chatId,`Задание: <b>${escapeHtml(row.title)}</b>\nВведите ${field==='xp'?'<b>XP за выполнение</b>':'<b>точную цель</b>'} целым числом от 1 до 999 999 999.\n\nОтмена: /cancel`);
+  const chatId=query.message?.chat?.id;const access=await requireAnySecurityPermission(chatId,query.from,['manageSeasons','manageMaintenance'],env);if(!access)return;if(!['target','xp'].includes(field))return;const season=await resolveSeasonPassAdminSeason(env,query.from);const row=await env.DB.prepare(`SELECT title FROM season_pass_tasks WHERE season_id=? AND task_id=? LIMIT 1`).bind(season.id,String(taskId)).first();if(!row){await answerCallback(env,query.id,'Задание не найдено.',true);return;}
+  await setStaffWorkflow(query.from.id,chatId,'season_pass_numeric','value',{mode:'task',seasonId:season.id,taskId:String(taskId),field,page:Number(page)||0},env);await answerCallback(env,query.id,'Введите число сообщением.');await sendTelegramMessage(env,chatId,`Задание: <b>${escapeHtml(row.title)}</b>\nВведите ${field==='xp'?'<b>XP за выполнение</b>':'<b>точную цель</b>'} целым числом от 1 до 999 999 999.\n\nОтмена: /cancel`);
 }
 
 async function handleSeasonPassNumericWorkflowMessage(message,workflow,env){
   const chatId=message.chat?.id;const access=await requireAnySecurityPermission(chatId,message.from,['manageSeasons','manageMaintenance'],env);if(!access){await clearStaffWorkflow(message.from.id,env);return true;}const raw=String(message.text||'').trim();if(raw==='/cancel'){await clearStaffWorkflow(message.from.id,env);await sendTelegramMessage(env,chatId,'Изменение отменено.');return true;}
-  const normalized=raw.replace(/[\s\u00A0\u202F]/g,'');if(!/^\d+$/.test(normalized)){await sendTelegramMessage(env,chatId,'Нужно отправить одно целое неотрицательное число без текста. Попробуйте ещё раз или /cancel.');return true;}const value=Number(normalized);if(!Number.isSafeInteger(value)||value>999999999){await sendTelegramMessage(env,chatId,'Значение должно быть целым числом от 0 до 999 999 999.');return true;}const now=Math.floor(Date.now()/1000);const data=workflow.data||{};
+  const normalized=raw.replace(/[\s\u00A0\u202F]/g,'');if(!/^\d+$/.test(normalized)){await sendTelegramMessage(env,chatId,'Нужно отправить одно целое неотрицательное число без текста. Попробуйте ещё раз или /cancel.');return true;}const value=Number(normalized);if(!Number.isSafeInteger(value)||value>999999999){await sendTelegramMessage(env,chatId,'Значение должно быть целым числом от 0 до 999 999 999.');return true;}const now=Math.floor(Date.now()/1000);const data=workflow.data||{};const seasonId=String(data.seasonId||DEFAULT_SEASON_PASS_ID);
   if(data.mode==='setting'){
     const config=SEASON_PASS_NUMERIC_FIELDS[String(data.field||'')];if(!config){await clearStaffWorkflow(message.from.id,env);await sendTelegramMessage(env,chatId,'Поле настройки больше недоступно.');return true;}if(value<config.min||value>config.max){await sendTelegramMessage(env,chatId,`Допустимый диапазон: ${config.min.toLocaleString('ru-RU')}–${config.max.toLocaleString('ru-RU')}.`);return true;}
-    await env.DB.prepare(`UPDATE season_pass_seasons SET ${config.column}=?,updated_at=?,updated_by=? WHERE season_id=?`).bind(value,now,String(message.from.id),DEFAULT_SEASON_PASS_ID).run();await clearStaffWorkflow(message.from.id,env);await sendTelegramMessage(env,chatId,`✅ Сохранено: ${escapeHtml(config.label)} — <b>${value.toLocaleString('ru-RU')}</b>.`);await showSeasonPassSettings(chatId,message.from,env);return true;
+    await env.DB.prepare(`UPDATE season_pass_seasons SET ${config.column}=?,updated_at=?,updated_by=? WHERE season_id=?`).bind(value,now,String(message.from.id),seasonId).run();await clearStaffWorkflow(message.from.id,env);await sendTelegramMessage(env,chatId,`✅ Сохранено: ${escapeHtml(config.label)} — <b>${value.toLocaleString('ru-RU')}</b>.`);await showSeasonPassSettings(chatId,message.from,env);return true;
   }
   if(data.mode==='task'){
-    if(value<1){await sendTelegramMessage(env,chatId,'Для задания значение должно быть не меньше 1.');return true;}const field=String(data.field)==='xp'?'xp_reward':'target';await env.DB.prepare(`UPDATE season_pass_tasks SET ${field}=?,updated_at=?,updated_by=? WHERE season_id=? AND task_id=?`).bind(value,now,String(message.from.id),DEFAULT_SEASON_PASS_ID,String(data.taskId)).run();await clearStaffWorkflow(message.from.id,env);await sendTelegramMessage(env,chatId,`✅ Значение задания сохранено: <b>${value.toLocaleString('ru-RU')}</b>.`);await showSeasonPassTaskEditor(chatId,message.from,String(data.taskId),Number(data.page)||0,env);return true;
+    if(value<1){await sendTelegramMessage(env,chatId,'Для задания значение должно быть не меньше 1.');return true;}const field=String(data.field)==='xp'?'xp_reward':'target';await env.DB.prepare(`UPDATE season_pass_tasks SET ${field}=?,updated_at=?,updated_by=? WHERE season_id=? AND task_id=?`).bind(value,now,String(message.from.id),seasonId,String(data.taskId)).run();await clearStaffWorkflow(message.from.id,env);await sendTelegramMessage(env,chatId,`✅ Значение задания сохранено: <b>${value.toLocaleString('ru-RU')}</b>.`);await showSeasonPassTaskEditor(chatId,message.from,String(data.taskId),Number(data.page)||0,env);return true;
   }
   await clearStaffWorkflow(message.from.id,env);return true;
 }
 
 async function showSeasonPassTasksAdmin(chatId,user,env,pageValue=0){
-  const access=await requireAnySecurityPermission(chatId,user,['manageSeasons','manageMaintenance'],env);if(!access)return;await ensureSeasonPassSchema(env);const rows=(await env.DB.prepare(`SELECT task_id,period,premium,title,target,xp_reward,enabled FROM season_pass_tasks WHERE season_id=? ORDER BY sort_order,task_id`).bind(DEFAULT_SEASON_PASS_ID).all()).results||[];const page=Math.max(0,Math.min(Math.max(0,Math.ceil(rows.length/6)-1),Number(pageValue)||0));const slice=rows.slice(page*6,page*6+6);const buttons=slice.map(row=>[{text:`${Number(row.enabled)?'🟢':'🔴'} ${String(row.title).slice(0,25)}`,callback_data:`sp_task_edit:${row.task_id}:${page}`}]);buttons.push([{text:'◀️',callback_data:`sp_tasks:${Math.max(0,page-1)}`},{text:`${page+1}/${Math.max(1,Math.ceil(rows.length/6))}`,callback_data:'sp_noop'},{text:'▶️',callback_data:`sp_tasks:${Math.min(Math.max(0,Math.ceil(rows.length/6)-1),page+1)}`}],[{text:'♻️ Вернуть задания запуска',callback_data:'sp_tasks_reset'}],[{text:'⬅️ Сезонный пропуск',callback_data:'sp_admin'}]);const lines=slice.map(row=>`• ${Number(row.enabled)?'🟢':'🔴'} <b>${escapeHtml(row.title)}</b> — ${Number(row.target).toLocaleString('ru-RU')} · +${Number(row.xp_reward).toLocaleString('ru-RU')} XP${Number(row.premium)?' · Элитный':''}`);await sendTelegramMessage(env,chatId,`<b>📋 Задания сезонного пропуска</b>\n\n${lines.join('\n')||'Нет заданий.'}\n\nНажмите задание, чтобы изменить цель, XP или включить/отключить его.`,{inline_keyboard:buttons});
+  const access=await requireAnySecurityPermission(chatId,user,['manageSeasons','manageMaintenance'],env);if(!access)return;await ensureSeasonPassSchema(env);const season=await resolveSeasonPassAdminSeason(env,user);const rows=(await env.DB.prepare(`SELECT task_id,period,premium,title,target,xp_reward,enabled FROM season_pass_tasks WHERE season_id=? ORDER BY sort_order,task_id`).bind(season.id).all()).results||[];const totalPages=Math.max(1,Math.ceil(rows.length/6));const page=Math.max(0,Math.min(totalPages-1,Number(pageValue)||0));const slice=rows.slice(page*6,page*6+6);const buttons=slice.map(row=>[{text:`${Number(row.enabled)?'🟢':'🔴'} ${String(row.title).slice(0,25)}`,callback_data:`sp_task_edit:${row.task_id}:${page}`}]);buttons.push([{text:'➕ Создать своё задание',callback_data:'sp_task_new'}],[{text:'◀️',callback_data:`sp_tasks:${Math.max(0,page-1)}`},{text:`${page+1}/${totalPages}`,callback_data:'sp_noop'},{text:'▶️',callback_data:`sp_tasks:${Math.min(totalPages-1,page+1)}`}],[{text:'♻️ Восстановить стандартные',callback_data:'sp_tasks_reset'}],[{text:'⬅️ Сезонный пропуск',callback_data:'sp_admin'}]);const lines=slice.map(row=>`• ${Number(row.enabled)?'🟢':'🔴'} <b>${escapeHtml(row.title)}</b> — ${Number(row.target).toLocaleString('ru-RU')} · +${Number(row.xp_reward).toLocaleString('ru-RU')} XP${Number(row.premium)?' · Элитный':''}`);await sendTelegramMessage(env,chatId,`<b>📋 Задания сезонного пропуска</b>\n\nСезон: <b>${escapeHtml(season.title)}</b>\n\n${lines.join('\n')||'Нет заданий.'}\n\nМожно создавать собственные ежедневные и еженедельные задания.`,{inline_keyboard:buttons});
+}
+
+async function startSeasonPassTaskCreate(query,env){
+  const chatId=query.message?.chat?.id;const access=await requireAnySecurityPermission(chatId,query.from,['manageSeasons','manageMaintenance'],env);if(!access)return;const season=await resolveSeasonPassAdminSeason(env,query.from);
+  await setStaffWorkflow(query.from.id,chatId,'season_pass_task_create','title',{seasonId:season.id},env);await answerCallback(env,query.id,'Создаём задание.');await sendTelegramMessage(env,chatId,`<b>➕ Новое задание</b>\n\nСезон: <b>${escapeHtml(season.title)}</b>\n\nОтправьте короткое название задания.\nПример: <code>Собери 100 зефирок</code>`,seasonPassWorkflowCancelKeyboard());
+}
+
+async function handleSeasonPassTaskCreateWorkflowMessage(message,workflow,env){
+  const chatId=message.chat?.id;const access=await requireAnySecurityPermission(chatId,message.from,['manageSeasons','manageMaintenance'],env);if(!access){await clearStaffWorkflow(message.from.id,env);return true;}const text=String(message.text||'').trim();if(text==='/cancel'){await clearStaffWorkflow(message.from.id,env);await sendTelegramMessage(env,chatId,'Создание задания отменено.');return true;}const data=workflow.data||{};
+  if(workflow.step==='title'){
+    if(text.length<3||text.length>80){await sendTelegramMessage(env,chatId,'Название должно содержать от 3 до 80 символов.');return true;}
+    await updateStaffWorkflow(message.from.id,{step:'period',data:{...data,title:text}},env);await sendTelegramMessage(env,chatId,'Как часто обновляется задание?',{inline_keyboard:[[{text:'☀️ Ежедневно',callback_data:'sp_tc_period:daily'},{text:'📅 Еженедельно',callback_data:'sp_tc_period:weekly'}],[{text:'❌ Отмена',callback_data:'sp_workflow_cancel'}]]});return true;
+  }
+  if(workflow.step==='target'){
+    const normalized=text.replace(/[\s\u00A0\u202F]/g,'');if(!/^\d+$/.test(normalized)||Number(normalized)<1||Number(normalized)>999999999){await sendTelegramMessage(env,chatId,'Введите цель целым числом от 1 до 999 999 999.');return true;}
+    await updateStaffWorkflow(message.from.id,{step:'xp',data:{...data,target:Number(normalized)}},env);await sendTelegramMessage(env,chatId,'Сколько XP выдавать за выполнение? Введите число от 1 до 100 000.',seasonPassWorkflowCancelKeyboard());return true;
+  }
+  if(workflow.step==='xp'){
+    const normalized=text.replace(/[\s\u00A0\u202F]/g,'');if(!/^\d+$/.test(normalized)||Number(normalized)<1||Number(normalized)>100000){await sendTelegramMessage(env,chatId,'Введите XP целым числом от 1 до 100 000.');return true;}
+    await updateStaffWorkflow(message.from.id,{step:'description',data:{...data,xp:Number(normalized)}},env);await sendTelegramMessage(env,chatId,'Отправьте описание задания. Чтобы оставить его пустым, отправьте <code>-</code>.',seasonPassWorkflowCancelKeyboard());return true;
+  }
+  if(workflow.step==='description'){
+    const description=text==='-'?'':text;if(description.length>240){await sendTelegramMessage(env,chatId,'Описание должно быть не длиннее 240 символов.');return true;}
+    await updateStaffWorkflow(message.from.id,{step:'confirm',data:{...data,description}},env);await showSeasonPassTaskCreateConfirmation(chatId,message.from,env);return true;
+  }
+  await sendTelegramMessage(env,chatId,'Используйте кнопки в предыдущем сообщении или /cancel.');return true;
+}
+
+async function setSeasonPassTaskCreateChoice(query,field,value,env){
+  const chatId=query.message?.chat?.id;const access=await requireAnySecurityPermission(chatId,query.from,['manageSeasons','manageMaintenance'],env);if(!access)return;const workflow=await getStaffWorkflow(query.from.id,env);if(!workflow||workflow.flow_type!=='season_pass_task_create'){await answerCallback(env,query.id,'Мастер создания устарел. Начните заново.',true);return;}
+  const data=workflow.data||{};
+  if(field==='period'&&['daily','weekly'].includes(value)){
+    await updateStaffWorkflow(query.from.id,{step:'lane',data:{...data,period:value}},env);await answerCallback(env,query.id,'Период выбран.');await sendTelegramMessage(env,chatId,'Для какой линии доступно задание?',{inline_keyboard:[[{text:'🆓 Бесплатная',callback_data:'sp_tc_lane:free'},{text:'⭐ Только Элитная',callback_data:'sp_tc_lane:premium'}],[{text:'❌ Отмена',callback_data:'sp_workflow_cancel'}]]});return;
+  }
+  if(field==='lane'&&['free','premium'].includes(value)){
+    await updateStaffWorkflow(query.from.id,{step:'metric',data:{...data,premium:value==='premium'}},env);await answerCallback(env,query.id,'Линия выбрана.');await sendTelegramMessage(env,chatId,'Что должен сделать игрок?',{inline_keyboard:[[{text:'🏃 Завершить забеги',callback_data:'sp_tc_metric:runs'}],[{text:'🍥 Собрать зефир',callback_data:'sp_tc_metric:treats'},{text:'☕ Собрать кофе',callback_data:'sp_tc_metric:coffee'}],[{text:'⭐ Набрать очки',callback_data:'sp_tc_metric:score'},{text:'📦 Открыть кейсы',callback_data:'sp_tc_metric:cases_opened'}],[{text:'❌ Отмена',callback_data:'sp_workflow_cancel'}]]});return;
+  }
+  if(field==='metric'&&['runs','treats','coffee','score','cases_opened'].includes(value)){
+    await updateStaffWorkflow(query.from.id,{step:'target',data:{...data,metric:value}},env);await answerCallback(env,query.id,'Условие выбрано.');await sendTelegramMessage(env,chatId,'Введите числом цель задания. Например: <code>10</code>.',seasonPassWorkflowCancelKeyboard());return;
+  }
+  await answerCallback(env,query.id,'Некорректный выбор.',true);
+}
+
+async function showSeasonPassTaskCreateConfirmation(chatId,user,env){
+  const workflow=await getStaffWorkflow(user.id,env);if(!workflow||workflow.flow_type!=='season_pass_task_create'||workflow.step!=='confirm')return;const d=workflow.data||{};const metricLabel={runs:'завершённые забеги',treats:'собранный зефир',coffee:'собранный кофе',score:'набранные очки',cases_opened:'открытые кейсы'}[d.metric]||d.metric;
+  await sendTelegramMessage(env,chatId,`<b>Проверьте задание</b>\n\nНазвание: <b>${escapeHtml(d.title)}</b>\nПериод: <b>${d.period==='weekly'?'еженедельное':'ежедневное'}</b>\nЛиния: <b>${d.premium?'только Элитная':'бесплатная'}</b>\nУсловие: <b>${escapeHtml(metricLabel)}</b>\nЦель: <b>${Number(d.target||0).toLocaleString('ru-RU')}</b>\nНаграда: <b>${Number(d.xp||0).toLocaleString('ru-RU')} XP</b>\nОписание: ${d.description?escapeHtml(d.description):'—'}`,{inline_keyboard:[[{text:'✅ Создать задание',callback_data:'sp_tc_save'}],[{text:'❌ Отмена',callback_data:'sp_workflow_cancel'}]]});
+}
+
+async function finalizeSeasonPassTaskCreate(query,env){
+  const chatId=query.message?.chat?.id;const access=await requireAnySecurityPermission(chatId,query.from,['manageSeasons','manageMaintenance'],env);if(!access)return;const workflow=await getStaffWorkflow(query.from.id,env);if(!workflow||workflow.flow_type!=='season_pass_task_create'||workflow.step!=='confirm'){await answerCallback(env,query.id,'Мастер создания устарел.',true);return;}const d=workflow.data||{};const seasonId=String(d.seasonId||'');const season=await loadSeasonPassSeasonById(env,seasonId);if(!season){await answerCallback(env,query.id,'Сезон больше не существует.',true);return;}const now=Math.floor(Date.now()/1000);const taskId=`${SEASON_PASS_CUSTOM_TASK_PREFIX}${Date.now().toString(36)}_${Math.random().toString(36).slice(2,6)}`;const maxRow=await env.DB.prepare(`SELECT COALESCE(MAX(sort_order),0) AS value FROM season_pass_tasks WHERE season_id=?`).bind(seasonId).first();const sortOrder=Number(maxRow?.value||0)+10;
+  await env.DB.prepare(`INSERT INTO season_pass_tasks(season_id,task_id,period,premium,metric,target,xp_reward,title,description,enabled,sort_order,updated_at,updated_by) VALUES(?,?,?,?,?,?,?,?,?,1,?,?,?)`).bind(seasonId,taskId,d.period,d.premium?1:0,d.metric,Number(d.target),Number(d.xp),String(d.title),String(d.description||''),sortOrder,now,String(query.from.id)).run();const taskCount=Number((await env.DB.prepare(`SELECT COUNT(*) AS count FROM season_pass_tasks WHERE season_id=?`).bind(seasonId).first())?.count||1);await clearStaffWorkflow(query.from.id,env);try{await logStaffAction(env,query.from,access,'season_pass_task_create',null,'season_pass_task',null,null,{seasonId,taskId,title:d.title,period:d.period,metric:d.metric,target:d.target,xp:d.xp,premium:Boolean(d.premium)});}catch(error){console.error('season pass task create audit failed',error);}await answerCallback(env,query.id,'Задание создано.');await showSeasonPassTasksAdmin(chatId,query.from,env,Math.max(0,Math.ceil(taskCount/6)-1));
 }
 
 async function toggleSeasonPassTask(query,taskId,page,env){
-  const chatId=query.message?.chat?.id;const access=await requireAnySecurityPermission(chatId,query.from,['manageSeasons','manageMaintenance'],env);if(!access)return;const now=Math.floor(Date.now()/1000);await env.DB.prepare(`UPDATE season_pass_tasks SET enabled=CASE enabled WHEN 1 THEN 0 ELSE 1 END,updated_at=?,updated_by=? WHERE season_id=? AND task_id=?`).bind(now,String(query.from.id),DEFAULT_SEASON_PASS_ID,String(taskId)).run();await answerCallback(env,query.id,'Статус задания изменён.');await showSeasonPassTaskEditor(chatId,query.from,taskId,page,env);
+  const chatId=query.message?.chat?.id;const access=await requireAnySecurityPermission(chatId,query.from,['manageSeasons','manageMaintenance'],env);if(!access)return;const season=await resolveSeasonPassAdminSeason(env,query.from);const now=Math.floor(Date.now()/1000);await env.DB.prepare(`UPDATE season_pass_tasks SET enabled=CASE enabled WHEN 1 THEN 0 ELSE 1 END,updated_at=?,updated_by=? WHERE season_id=? AND task_id=?`).bind(now,String(query.from.id),season.id,String(taskId)).run();await answerCallback(env,query.id,'Статус задания изменён.');await showSeasonPassTaskEditor(chatId,query.from,taskId,page,env);
 }
 
-function seasonPassTaskTargetStep(metric){
-  const value=String(metric||'runs');
-  if(value==='score')return 500;
-  if(value==='treats')return 10;
-  if(value==='coffee')return 1;
-  return 1;
-}
+function seasonPassTaskTargetStep(metric){const value=String(metric||'runs');if(value==='score')return 500;if(value==='treats')return 10;if(value==='coffee')return 1;return 1;}
 
 async function showSeasonPassTaskEditor(chatId,user,taskId,pageValue,env){
-  const access=await requireAnySecurityPermission(chatId,user,['manageSeasons','manageMaintenance'],env);if(!access)return;await ensureSeasonPassSchema(env);
-  const row=await env.DB.prepare(`SELECT task_id,period,premium,metric,target,xp_reward,title,description,enabled FROM season_pass_tasks WHERE season_id=? AND task_id=? LIMIT 1`).bind(DEFAULT_SEASON_PASS_ID,String(taskId)).first();
-  if(!row)return sendTelegramMessage(env,chatId,'Задание не найдено.');
-  const page=Math.max(0,Number(pageValue)||0);const step=seasonPassTaskTargetStep(row.metric);const xpStep=50;
-  await sendTelegramMessage(env,chatId,`<b>📋 ${escapeHtml(row.title)}</b>
-
-${escapeHtml(row.description||'')}
-
-Период: <b>${row.period==='weekly'?'недельное':'ежедневное'}</b>
-Линия: <b>${Number(row.premium)?'Элитная':'Бесплатная'}</b>
-Метрика: <code>${escapeHtml(row.metric)}</code>
-Цель: <b>${Number(row.target).toLocaleString('ru-RU')}</b>
-Награда: <b>${Number(row.xp_reward).toLocaleString('ru-RU')} XP</b>
-Статус: <b>${Number(row.enabled)?'включено':'отключено'}</b>`,{inline_keyboard:[
+  const access=await requireAnySecurityPermission(chatId,user,['manageSeasons','manageMaintenance'],env);if(!access)return;await ensureSeasonPassSchema(env);const season=await resolveSeasonPassAdminSeason(env,user);
+  const row=await env.DB.prepare(`SELECT task_id,period,premium,metric,target,xp_reward,title,description,enabled FROM season_pass_tasks WHERE season_id=? AND task_id=? LIMIT 1`).bind(season.id,String(taskId)).first();if(!row)return sendTelegramMessage(env,chatId,'Задание не найдено.');const page=Math.max(0,Number(pageValue)||0);const step=seasonPassTaskTargetStep(row.metric);const xpStep=50;const keyboard=[
     [{text:`Цель −${step}`,callback_data:`sp_task_target:${row.task_id}:dec:${page}`},{text:`Цель +${step}`,callback_data:`sp_task_target:${row.task_id}:inc:${page}`}],
     [{text:'✏️ Ввести цель',callback_data:`sp_task_input:${row.task_id}:target:${page}`}],
     [{text:`XP −${xpStep}`,callback_data:`sp_task_xp:${row.task_id}:dec:${page}`},{text:`XP +${xpStep}`,callback_data:`sp_task_xp:${row.task_id}:inc:${page}`}],
     [{text:'✏️ Ввести XP',callback_data:`sp_task_input:${row.task_id}:xp:${page}`}],
-    [{text:Number(row.enabled)?'🔴 Отключить':'🟢 Включить',callback_data:`sp_task_toggle:${row.task_id}:${page}`}],
-    [{text:'⬅️ К списку заданий',callback_data:`sp_tasks:${page}`}]
-  ]});
+    [{text:Number(row.enabled)?'🔴 Отключить':'🟢 Включить',callback_data:`sp_task_toggle:${row.task_id}:${page}`}]
+  ];if(String(row.task_id).startsWith(SEASON_PASS_CUSTOM_TASK_PREFIX))keyboard.push([{text:'🗑 Удалить своё задание',callback_data:`sp_task_delete_confirm:${row.task_id}:${page}`}]);keyboard.push([{text:'⬅️ К списку заданий',callback_data:`sp_tasks:${page}`}]);
+  await sendTelegramMessage(env,chatId,`<b>📋 ${escapeHtml(row.title)}</b>\n\n${escapeHtml(row.description||'')}\n\nСезон: <b>${escapeHtml(season.title)}</b>\nПериод: <b>${row.period==='weekly'?'недельное':'ежедневное'}</b>\nЛиния: <b>${Number(row.premium)?'Элитная':'Бесплатная'}</b>\nМетрика: <code>${escapeHtml(row.metric)}</code>\nЦель: <b>${Number(row.target).toLocaleString('ru-RU')}</b>\nНаграда: <b>${Number(row.xp_reward).toLocaleString('ru-RU')} XP</b>\nСтатус: <b>${Number(row.enabled)?'включено':'отключено'}</b>`,{inline_keyboard:keyboard});
 }
 
 async function updateSeasonPassTaskValue(query,taskId,field,direction,page,env){
-  const chatId=query.message?.chat?.id;const access=await requireAnySecurityPermission(chatId,query.from,['manageSeasons','manageMaintenance'],env);if(!access)return;await ensureSeasonPassSchema(env);
-  const row=await env.DB.prepare(`SELECT metric,target,xp_reward FROM season_pass_tasks WHERE season_id=? AND task_id=? LIMIT 1`).bind(DEFAULT_SEASON_PASS_ID,String(taskId)).first();if(!row){await answerCallback(env,query.id,'Задание не найдено.');return;}
-  const now=Math.floor(Date.now()/1000);const sign=direction==='dec'?-1:1;
-  if(field==='target'){
-    const step=seasonPassTaskTargetStep(row.metric);const value=Math.max(1,Math.min(10000000,Number(row.target||1)+sign*step));
-    await env.DB.prepare(`UPDATE season_pass_tasks SET target=?,updated_at=?,updated_by=? WHERE season_id=? AND task_id=?`).bind(value,now,String(query.from.id),DEFAULT_SEASON_PASS_ID,String(taskId)).run();
-  }else{
-    const value=Math.max(1,Math.min(100000,Number(row.xp_reward||1)+sign*50));
-    await env.DB.prepare(`UPDATE season_pass_tasks SET xp_reward=?,updated_at=?,updated_by=? WHERE season_id=? AND task_id=?`).bind(value,now,String(query.from.id),DEFAULT_SEASON_PASS_ID,String(taskId)).run();
-  }
+  const chatId=query.message?.chat?.id;const access=await requireAnySecurityPermission(chatId,query.from,['manageSeasons','manageMaintenance'],env);if(!access)return;await ensureSeasonPassSchema(env);const season=await resolveSeasonPassAdminSeason(env,query.from);const row=await env.DB.prepare(`SELECT metric,target,xp_reward FROM season_pass_tasks WHERE season_id=? AND task_id=? LIMIT 1`).bind(season.id,String(taskId)).first();if(!row){await answerCallback(env,query.id,'Задание не найдено.');return;}const now=Math.floor(Date.now()/1000);const sign=direction==='dec'?-1:1;
+  if(field==='target'){const step=seasonPassTaskTargetStep(row.metric);const value=Math.max(1,Math.min(10000000,Number(row.target||1)+sign*step));await env.DB.prepare(`UPDATE season_pass_tasks SET target=?,updated_at=?,updated_by=? WHERE season_id=? AND task_id=?`).bind(value,now,String(query.from.id),season.id,String(taskId)).run();}
+  else{const value=Math.max(1,Math.min(100000,Number(row.xp_reward||1)+sign*50));await env.DB.prepare(`UPDATE season_pass_tasks SET xp_reward=?,updated_at=?,updated_by=? WHERE season_id=? AND task_id=?`).bind(value,now,String(query.from.id),season.id,String(taskId)).run();}
   await answerCallback(env,query.id,'Задание обновлено.');await showSeasonPassTaskEditor(chatId,query.from,taskId,page,env);
 }
 
+async function showSeasonPassTaskDeleteConfirmation(query,taskId,page,env){
+  const chatId=query.message?.chat?.id;const access=await requireAnySecurityPermission(chatId,query.from,['manageSeasons','manageMaintenance'],env);if(!access)return;const season=await resolveSeasonPassAdminSeason(env,query.from);const row=await env.DB.prepare(`SELECT title FROM season_pass_tasks WHERE season_id=? AND task_id=? LIMIT 1`).bind(season.id,String(taskId)).first();if(!row||!String(taskId).startsWith(SEASON_PASS_CUSTOM_TASK_PREFIX)){await answerCallback(env,query.id,'Удалять можно только созданные вручную задания.',true);return;}await answerCallback(env,query.id,'Требуется подтверждение.');await sendTelegramMessage(env,chatId,`Удалить задание <b>${escapeHtml(row.title)}</b>? Уже выданный за него XP у игроков останется.`,{inline_keyboard:[[{text:'🗑 Удалить',callback_data:`sp_task_delete_execute:${taskId}:${page}`}],[{text:'❌ Отмена',callback_data:`sp_task_edit:${taskId}:${page}`}]]});
+}
+
+async function deleteSeasonPassCustomTask(query,taskId,page,env){
+  const chatId=query.message?.chat?.id;const access=await requireAnySecurityPermission(chatId,query.from,['manageSeasons','manageMaintenance'],env);if(!access)return;if(!String(taskId).startsWith(SEASON_PASS_CUSTOM_TASK_PREFIX)){await answerCallback(env,query.id,'Стандартное задание удалить нельзя.',true);return;}const season=await resolveSeasonPassAdminSeason(env,query.from);const row=await env.DB.prepare(`SELECT title,period,premium,metric,target,xp_reward FROM season_pass_tasks WHERE season_id=? AND task_id=? LIMIT 1`).bind(season.id,String(taskId)).first();if(!row){await answerCallback(env,query.id,'Задание уже удалено.');await showSeasonPassTasksAdmin(chatId,query.from,env,page);return;}await env.DB.prepare(`DELETE FROM season_pass_tasks WHERE season_id=? AND task_id=?`).bind(season.id,String(taskId)).run();try{await logStaffAction(env,query.from,access,'season_pass_task_delete',null,'season_pass_task',taskId,null,{seasonId:season.id,...row});}catch(error){console.error('season pass task delete audit failed',error);}await answerCallback(env,query.id,'Задание удалено.');await showSeasonPassTasksAdmin(chatId,query.from,env,page);
+}
+
 async function resetSeasonPassTasks(query,env){
-  const chatId=query.message?.chat?.id;const access=await requireAnySecurityPermission(chatId,query.from,['manageSeasons','manageMaintenance'],env);if(!access)return;const now=Math.floor(Date.now()/1000);const statements=defaultSeasonPassTasks().map((task,index)=>env.DB.prepare(`INSERT INTO season_pass_tasks(season_id,task_id,period,premium,metric,target,xp_reward,title,description,enabled,sort_order,updated_at,updated_by) VALUES(?,?,?,?,?,?,?,?,?,1,?,?,?) ON CONFLICT(season_id,task_id) DO UPDATE SET period=excluded.period,premium=excluded.premium,metric=excluded.metric,target=excluded.target,xp_reward=excluded.xp_reward,title=excluded.title,description=excluded.description,enabled=1,sort_order=excluded.sort_order,updated_at=excluded.updated_at,updated_by=excluded.updated_by`).bind(DEFAULT_SEASON_PASS_ID,task.id,task.period,task.premium?1:0,task.metric,task.target,task.xp,task.title,task.description,(index+1)*10,now,String(query.from.id)));await env.DB.batch(statements);await answerCallback(env,query.id,'Задания запуска восстановлены.');await showSeasonPassTasksAdmin(chatId,query.from,env,0);
+  const chatId=query.message?.chat?.id;const access=await requireAnySecurityPermission(chatId,query.from,['manageSeasons','manageMaintenance'],env);if(!access)return;const season=await resolveSeasonPassAdminSeason(env,query.from);const now=Math.floor(Date.now()/1000);const statements=defaultSeasonPassTasks().map((task,index)=>env.DB.prepare(`INSERT INTO season_pass_tasks(season_id,task_id,period,premium,metric,target,xp_reward,title,description,enabled,sort_order,updated_at,updated_by) VALUES(?,?,?,?,?,?,?,?,?,1,?,?,?) ON CONFLICT(season_id,task_id) DO UPDATE SET period=excluded.period,premium=excluded.premium,metric=excluded.metric,target=excluded.target,xp_reward=excluded.xp_reward,title=excluded.title,description=excluded.description,enabled=1,sort_order=excluded.sort_order,updated_at=excluded.updated_at,updated_by=excluded.updated_by`).bind(season.id,task.id,task.period,task.premium?1:0,task.metric,task.target,task.xp,task.title,task.description,(index+1)*10,now,String(query.from.id)));await env.DB.batch(statements);await answerCallback(env,query.id,'Стандартные задания восстановлены.');await showSeasonPassTasksAdmin(chatId,query.from,env,0);
 }
 
 async function showSeasonPassStats(chatId,user,env){
-  const access=await requireAnySecurityPermission(chatId,user,['manageSeasons','manageMaintenance'],env);if(!access)return;await ensureSeasonPassSchema(env);const [players,tiers,claims,tasks,purchases]=await Promise.all([
-    env.DB.prepare(`SELECT COUNT(*) AS players,COALESCE(AVG(xp),0) AS avg_xp,MAX(xp) AS max_xp FROM season_pass_players WHERE season_id=?`).bind(DEFAULT_SEASON_PASS_ID).first(),
-    env.DB.prepare(`SELECT premium_tier,COUNT(*) AS count FROM season_pass_players WHERE season_id=? GROUP BY premium_tier`).bind(DEFAULT_SEASON_PASS_ID).all(),
-    env.DB.prepare(`SELECT COUNT(*) AS count FROM season_pass_claims WHERE season_id=? AND status='delivered'`).bind(DEFAULT_SEASON_PASS_ID).first(),
-    env.DB.prepare(`SELECT COUNT(*) AS count,COALESCE(SUM(xp_awarded),0) AS xp FROM season_pass_task_claims WHERE season_id=? AND status='delivered'`).bind(DEFAULT_SEASON_PASS_ID).first(),
-    env.DB.prepare(`SELECT COUNT(*) AS count,COALESCE(SUM(price_points),0) AS points,COALESCE(SUM(price_treats),0) AS treats,COALESCE(SUM(price_coffee),0) AS coffee FROM season_pass_purchases WHERE season_id=? AND status='delivered'`).bind(DEFAULT_SEASON_PASS_ID).first()
-  ]);const tierMap=Object.fromEntries((tiers.results||[]).map(row=>[String(row.premium_tier),Number(row.count||0)]));await sendTelegramMessage(env,chatId,`<b>📊 Статистика сезонного пропуска</b>\n\nИгроков: <b>${Number(players?.players||0)}</b>\nСредний XP: <b>${Math.round(Number(players?.avg_xp||0)).toLocaleString('ru-RU')}</b>\nМаксимальный XP: <b>${Number(players?.max_xp||0).toLocaleString('ru-RU')}</b>\n\nБез тарифа: <b>${tierMap.none||0}</b>\nЭлитный: <b>${tierMap.elite||0}</b>\nЭлитный+: <b>${tierMap.elite_plus||0}</b>\n\nПолучено наград: <b>${Number(claims?.count||0)}</b>\nПолучено заданий: <b>${Number(tasks?.count||0)}</b> · ${Number(tasks?.xp||0).toLocaleString('ru-RU')} XP\nПокупок: <b>${Number(purchases?.count||0)}</b>\nСписано: ${Number(purchases?.points||0).toLocaleString('ru-RU')} очков · ${Number(purchases?.treats||0)} зефира · ${Number(purchases?.coffee||0)} кофе`,{inline_keyboard:[[{text:'🔄 Обновить',callback_data:'sp_stats'}],[{text:'⬅️ Сезонный пропуск',callback_data:'sp_admin'}]]});
+  const access=await requireAnySecurityPermission(chatId,user,['manageSeasons','manageMaintenance'],env);if(!access)return;await ensureSeasonPassSchema(env);const season=await resolveSeasonPassAdminSeason(env,user);const [players,tiers,claims,tasks,purchases]=await Promise.all([
+    env.DB.prepare(`SELECT COUNT(*) AS players,COALESCE(AVG(xp),0) AS avg_xp,MAX(xp) AS max_xp FROM season_pass_players WHERE season_id=?`).bind(season.id).first(),
+    env.DB.prepare(`SELECT premium_tier,COUNT(*) AS count FROM season_pass_players WHERE season_id=? GROUP BY premium_tier`).bind(season.id).all(),
+    env.DB.prepare(`SELECT COUNT(*) AS count FROM season_pass_claims WHERE season_id=? AND status='delivered'`).bind(season.id).first(),
+    env.DB.prepare(`SELECT COUNT(*) AS count,COALESCE(SUM(xp_awarded),0) AS xp FROM season_pass_task_claims WHERE season_id=? AND status='delivered'`).bind(season.id).first(),
+    env.DB.prepare(`SELECT COUNT(*) AS count,COALESCE(SUM(price_points),0) AS points,COALESCE(SUM(price_treats),0) AS treats,COALESCE(SUM(price_coffee),0) AS coffee FROM season_pass_purchases WHERE season_id=? AND status='delivered'`).bind(season.id).first()
+  ]);const tierMap=Object.fromEntries((tiers.results||[]).map(row=>[String(row.premium_tier),Number(row.count||0)]));await sendTelegramMessage(env,chatId,`<b>📊 Статистика сезонного пропуска</b>\n\nСезон: <b>${escapeHtml(season.title)}</b>\n\nИгроков: <b>${Number(players?.players||0)}</b>\nСредний XP: <b>${Math.round(Number(players?.avg_xp||0)).toLocaleString('ru-RU')}</b>\nМаксимальный XP: <b>${Number(players?.max_xp||0).toLocaleString('ru-RU')}</b>\n\nБез тарифа: <b>${tierMap.none||0}</b>\nЭлитный: <b>${tierMap.elite||0}</b>\nЭлитный+: <b>${tierMap.elite_plus||0}</b>\n\nПолучено наград: <b>${Number(claims?.count||0)}</b>\nПолучено заданий: <b>${Number(tasks?.count||0)}</b> · ${Number(tasks?.xp||0).toLocaleString('ru-RU')} XP\nПокупок: <b>${Number(purchases?.count||0)}</b>\nСписано: ${Number(purchases?.points||0).toLocaleString('ru-RU')} очков · ${Number(purchases?.treats||0)} зефира · ${Number(purchases?.coffee||0)} кофе`,{inline_keyboard:[[{text:'🔄 Обновить',callback_data:'sp_stats'}],[{text:'⬅️ Сезонный пропуск',callback_data:'sp_admin'}]]});
 }
 
-
-async function showSeasonPassResetAllConfirmation(query,env){
-  const chatId=query.message?.chat?.id;
-  const access=await requireSecurityPermission(chatId,query.from,'approveDangerous',env);if(!access)return;
-  await answerCallback(env,query.id,'Требуется подтверждение.');
-  await sendTelegramMessage(env,chatId,`<b>⚠️ Сбросить сезонный пропуск у всех?</b>\n\nБудут удалены уровни, XP, полученные ячейки, задания, покупки «Элитного» и «Элитного+», покупки уровней и сезонный ×2 XP.\n\nНастройки сезона, награды уровней и задания останутся. Уже полученные кейсы и постоянная косметика также сохранятся. Действие нельзя отменить.`,{inline_keyboard:[[{text:'❌ Отмена',callback_data:'sp_admin'}],[{text:'♻️ Да, сбросить всех',callback_data:'sp_reset_all_execute'}]]});
+async function showSeasonPassResetAllConfirmation(query,env,seasonId=''){
+  const chatId=query.message?.chat?.id;const access=await requireSecurityPermission(chatId,query.from,'approveDangerous',env);if(!access)return;const season=seasonId?await loadSeasonPassSeasonById(env,seasonId):await resolveSeasonPassAdminSeason(env,query.from);if(!season){await answerCallback(env,query.id,'Сезон не найден.',true);return;}await answerCallback(env,query.id,'Требуется подтверждение.');await sendTelegramMessage(env,chatId,`<b>⚠️ Сбросить сезонный пропуск у всех?</b>\n\nСезон: <b>${escapeHtml(season.title)}</b>\n\nБудут удалены уровни, XP, полученные ячейки, задания, покупки «Элитного» и «Элитного+», покупки уровней и сезонный ×2 XP.\n\nНастройки сезона, награды уровней и задания останутся. Уже полученные кейсы и постоянная косметика также сохранятся. Действие нельзя отменить.`,{inline_keyboard:[[{text:'❌ Отмена',callback_data:'sp_admin'}],[{text:'♻️ Да, сбросить всех',callback_data:`sp_reset_all_execute:${season.id}`}]]});
 }
 
-async function resetSeasonPassAllPlayers(query,env){
-  const chatId=query.message?.chat?.id;
-  const access=await requireSecurityPermission(chatId,query.from,'approveDangerous',env);if(!access)return;
-  await ensureSeasonPassSchema(env);
-  const season=await loadSeasonPassSeason(env);
-  seasonPassExpiryCleanupPromises.clear();
-  const result=await resetSeasonPassDataForSeason(env,season,{reason:'admin-reset-all'});
-  try{await logStaffAction(env,query.from,access,'season_pass_reset_all',null,'season_pass',null,null,{seasonId:season.id,...result});}catch(error){console.error('season pass reset audit failed',error);}
-  await answerCallback(env,query.id,'Сезонный прогресс и покупки всех игроков сброшены.');
-  await sendTelegramMessage(env,chatId,`<b>✅ Сезонный пропуск полностью сброшен</b>\n\nИгроков сброшено: <b>${result.playersReset}</b>\nУровни, XP, задания и полученные ячейки удалены.\nПокупок тарифов и уровней удалено: <b>${result.purchasesRemoved}</b>\nУдалено сезонных ×2 XP: <b>${result.boostsRemoved}</b>\nПолученные кейсы и постоянная косметика сохранены.`,{inline_keyboard:[[{text:'⬅️ Сезонный пропуск',callback_data:'sp_admin'}]]});
+async function resetSeasonPassAllPlayers(query,env,seasonId=''){
+  const chatId=query.message?.chat?.id;const access=await requireSecurityPermission(chatId,query.from,'approveDangerous',env);if(!access)return;await ensureSeasonPassSchema(env);const season=seasonId?await loadSeasonPassSeasonById(env,seasonId):await resolveSeasonPassAdminSeason(env,query.from);if(!season){await answerCallback(env,query.id,'Сезон не найден.',true);return;}seasonPassExpiryCleanupPromises.clear();const result=await resetSeasonPassDataForSeason(env,season,{reason:'admin-reset-all'});try{await logStaffAction(env,query.from,access,'season_pass_reset_all',null,'season_pass',null,null,{seasonId:season.id,...result});}catch(error){console.error('season pass reset audit failed',error);}await answerCallback(env,query.id,'Сезонный прогресс и покупки всех игроков сброшены.');await sendTelegramMessage(env,chatId,`<b>✅ Сезонный пропуск полностью сброшен</b>\n\nСезон: <b>${escapeHtml(season.title)}</b>\nИгроков сброшено: <b>${result.playersReset}</b>\nУровни, XP, задания и полученные ячейки удалены.\nПокупок тарифов и уровней удалено: <b>${result.purchasesRemoved}</b>\nУдалено сезонных ×2 XP: <b>${result.boostsRemoved}</b>\nПолученные кейсы и постоянная косметика сохранены.`,{inline_keyboard:[[{text:'⬅️ Сезонный пропуск',callback_data:'sp_admin'}]]});
 }
 
 async function showSeasonPassRewardsPage(chatId,user,env,pageValue=0){
-  const access=await requireAnySecurityPermission(chatId,user,['manageSeasons','manageMaintenance'],env);if(!access)return;await ensureSeasonPassSchema(env);const page=Math.max(0,Math.min(4,Number(pageValue)||0));const start=page*10+1;const buttons=[];for(let l=start;l<start+10;l+=2)buttons.push([{text:`Уровень ${l}`,callback_data:`sp_level:${l}`},{text:`Уровень ${l+1}`,callback_data:`sp_level:${l+1}`}]);buttons.push([{text:'◀️',callback_data:`sp_rewards:${Math.max(0,page-1)}`},{text:`${start}–${start+9}`,callback_data:'sp_noop'},{text:'▶️',callback_data:`sp_rewards:${Math.min(4,page+1)}`}],[{text:'⬅️ Сезонный пропуск',callback_data:'sp_admin'}]);await sendTelegramMessage(env,chatId,`<b>🎁 Награды уровней ${start}–${start+9}</b>\n\nВыберите уровень, затем бесплатную или премиальную линию.`,{inline_keyboard:buttons});
+  const access=await requireAnySecurityPermission(chatId,user,['manageSeasons','manageMaintenance'],env);if(!access)return;await ensureSeasonPassSchema(env);const season=await resolveSeasonPassAdminSeason(env,user);const page=Math.max(0,Math.min(4,Number(pageValue)||0));const start=page*10+1;const buttons=[];for(let l=start;l<start+10;l+=2)buttons.push([{text:`Уровень ${l}`,callback_data:`sp_level:${l}`},{text:`Уровень ${l+1}`,callback_data:`sp_level:${l+1}`}]);buttons.push([{text:'◀️',callback_data:`sp_rewards:${Math.max(0,page-1)}`},{text:`${start}–${start+9}`,callback_data:'sp_noop'},{text:'▶️',callback_data:`sp_rewards:${Math.min(4,page+1)}`}],[{text:'⬅️ Сезонный пропуск',callback_data:'sp_admin'}]);await sendTelegramMessage(env,chatId,`<b>🎁 Награды уровней ${start}–${start+9}</b>\n\nСезон: <b>${escapeHtml(season.title)}</b>\n\nВыберите уровень, затем бесплатную или премиальную линию.`,{inline_keyboard:buttons});
 }
 async function showSeasonPassLevelCard(chatId,user,env,levelValue){
-  const access=await requireAnySecurityPermission(chatId,user,['manageSeasons','manageMaintenance'],env);if(!access)return;const level=Math.max(1,Math.min(50,Number(levelValue)||1));const rows=(await env.DB.prepare(`SELECT lane,title FROM season_pass_rewards WHERE season_id=? AND level=? ORDER BY lane`).bind(DEFAULT_SEASON_PASS_ID,level).all()).results||[];const by=Object.fromEntries(rows.map(r=>[r.lane,r.title]));await sendTelegramMessage(env,chatId,`<b>Уровень ${level}</b>\n\nБесплатно: <b>${escapeHtml(by.free||'—')}</b>\nПремиум: <b>${escapeHtml(by.premium||'—')}</b>`,{inline_keyboard:[[{text:'Бесплатная линия',callback_data:`sp_lane:${level}:free`}],[{text:'Премиальная линия',callback_data:`sp_lane:${level}:premium`}],[{text:'⬅️ Уровни',callback_data:`sp_rewards:${Math.floor((level-1)/10)}`}]]});
+  const access=await requireAnySecurityPermission(chatId,user,['manageSeasons','manageMaintenance'],env);if(!access)return;const season=await resolveSeasonPassAdminSeason(env,user);const level=Math.max(1,Math.min(50,Number(levelValue)||1));const rows=(await env.DB.prepare(`SELECT lane,title FROM season_pass_rewards WHERE season_id=? AND level=? ORDER BY lane`).bind(season.id,level).all()).results||[];const by=Object.fromEntries(rows.map(r=>[r.lane,r.title]));await sendTelegramMessage(env,chatId,`<b>${escapeHtml(season.title)} · уровень ${level}</b>\n\nБесплатно: <b>${escapeHtml(by.free||'—')}</b>\nПремиум: <b>${escapeHtml(by.premium||'—')}</b>`,{inline_keyboard:[[{text:'Бесплатная линия',callback_data:`sp_lane:${level}:free`}],[{text:'Премиальная линия',callback_data:`sp_lane:${level}:premium`}],[{text:'⬅️ Уровни',callback_data:`sp_rewards:${Math.floor((level-1)/10)}`}]]});
 }
 async function showSeasonPassRewardTypePicker(chatId,user,env,level,lane){
   const access=await requireAnySecurityPermission(chatId,user,['manageSeasons','manageMaintenance'],env);if(!access)return;await sendTelegramMessage(env,chatId,`<b>Уровень ${level} · ${lane==='premium'?'Премиум':'Бесплатно'}</b>\n\nВыберите новую награду.`,{inline_keyboard:[
@@ -17934,31 +18387,21 @@ async function showSeasonPassRewardTypePicker(chatId,user,env,level,lane){
   ]});
 }
 async function setSeasonPassRewardFromCallback(query,level,lane,type,value,env){
-  const chatId=query.message?.chat?.id;const access=await requireAnySecurityPermission(chatId,query.from,['manageSeasons','manageMaintenance'],env);if(!access)return;const now=Math.floor(Date.now()/1000);let reward;
+  const chatId=query.message?.chat?.id;const access=await requireAnySecurityPermission(chatId,query.from,['manageSeasons','manageMaintenance'],env);if(!access)return;const season=await resolveSeasonPassAdminSeason(env,query.from);const now=Math.floor(Date.now()/1000);let reward;
   if(type==='case'){const item=normalizeCaseType(value)||'small';const names={small:'Обычный кейс',sweet:'Серебряный кейс',gold:'Золотой кейс',legendary:'Легендарный кейс'};const images={small:'/assets/cases/standart_closed.png',sweet:'/assets/cases/Bronze_close.png',gold:'/assets/cases/gold_closed.png',legendary:'/assets/cases/legendary_closed.png'};reward={amount:1,itemId:item,title:names[item],imageUrl:images[item]};}
   else{const amount=Math.max(0,Number(value)||0);const map={points:['очков','/assets/optimized/v0.79.5/iconScore.png'],treats:['зефира','/assets/optimized/v0.79.5/shopMarshmallowAssortment.png'],coffee:['кофе','/assets/optimized/v0.79.5/iconCoffee.png']};reward={amount,itemId:'',title:`${amount.toLocaleString('ru-RU')} ${map[type][0]}`,imageUrl:map[type][1]};}
-  await env.DB.prepare(`UPDATE season_pass_rewards SET reward_type=?,amount=?,item_id=?,title=?,image_url=?,updated_at=?,updated_by=? WHERE season_id=? AND level=? AND lane=?`).bind(type,reward.amount,reward.itemId,reward.title,reward.imageUrl,now,String(query.from.id),DEFAULT_SEASON_PASS_ID,level,lane).run();await answerCallback(env,query.id,'Награда уровня изменена.');await showSeasonPassLevelCard(chatId,query.from,env,level);
+  await env.DB.prepare(`UPDATE season_pass_rewards SET reward_type=?,amount=?,item_id=?,title=?,image_url=?,updated_at=?,updated_by=? WHERE season_id=? AND level=? AND lane=?`).bind(type,reward.amount,reward.itemId,reward.title,reward.imageUrl,now,String(query.from.id),season.id,level,lane).run();await answerCallback(env,query.id,'Награда уровня изменена.');await showSeasonPassLevelCard(chatId,query.from,env,level);
 }
-async function setSeasonPassTimingAction(query,action,env){
-  const chatId=query.message?.chat?.id;const access=await requireAnySecurityPermission(chatId,query.from,['manageSeasons','manageMaintenance'],env);if(!access)return;
-  const now=Math.floor(Date.now()/1000);
+
+async function setSeasonPassTimingAction(query,action,env,seasonId=''){
+  const chatId=query.message?.chat?.id;const access=await requireAnySecurityPermission(chatId,query.from,['manageSeasons','manageMaintenance'],env);if(!access)return;const season=seasonId?await loadSeasonPassSeasonById(env,seasonId):await resolveSeasonPassAdminSeason(env,query.from);if(!season){await answerCallback(env,query.id,'Сезон не найден.',true);return;}const now=Math.floor(Date.now()/1000);
   if(action==='start'){
-    await env.DB.prepare(`UPDATE season_pass_seasons SET starts_at=?,manual_status='',updated_at=?,updated_by=? WHERE season_id=?`).bind(now,now,String(query.from.id),DEFAULT_SEASON_PASS_ID).run();
+    const currentEnd=Math.floor(Date.parse(season.endsAt)/1000);if(currentEnd<=now){await answerCallback(env,query.id,'Нельзя повторно запускать уже окончившийся сезон. Создайте новый.',true);return;}
+    const overlap=await env.DB.prepare(`SELECT title FROM season_pass_seasons WHERE season_id!=? AND starts_at<=? AND MAX(ends_at,claim_grace_ends_at)>? LIMIT 1`).bind(season.id,now,now).first();if(overlap){await answerCallback(env,query.id,`Сейчас идёт сезон или ещё открыта выдача наград «${String(overlap.title).slice(0,40)}».`,true);return;}
+    await env.DB.prepare(`UPDATE season_pass_seasons SET starts_at=?,manual_status='',updated_at=?,updated_by=? WHERE season_id=?`).bind(now,now,String(query.from.id),season.id).run();await answerCallback(env,query.id,'Сезон запущен.');
   }else if(action==='end'){
-    const graceEndsAt=now+SEASON_PASS_MANUAL_CLAIM_GRACE_SECONDS;
-    await env.DB.prepare(`UPDATE season_pass_seasons SET ends_at=?,claim_grace_ends_at=?,manual_status='ended',updated_at=?,updated_by=? WHERE season_id=?`).bind(now,graceEndsAt,now,String(query.from.id),DEFAULT_SEASON_PASS_ID).run();
-    seasonPassExpiryCleanupPromises.clear();
-    await answerCallback(env,query.id,'Сезон завершён. Награды доступны ещё 3 дня.');
-    await sendTelegramMessage(env,chatId,`<b>🏁 Сезон завершён</b>
-
-Новые XP, задания и покупки остановлены. Уже открытые награды можно получить до <b>${escapeHtml(formatUtcDate(graceEndsAt))}</b>.
-
-После окончания окна прогресс и сезонные покупки будут очищены автоматически. Для немедленной очистки используйте отдельную кнопку полного сброса.`,{inline_keyboard:[[{text:'⬅️ Сезонный пропуск',callback_data:'sp_admin'}]]});
-    return;
-  }else{
-    await env.DB.prepare(`UPDATE season_pass_seasons SET starts_at=?,ends_at=?,claim_grace_ends_at=?,manual_status='',updated_at=?,updated_by=? WHERE season_id=?`).bind(Math.floor(Date.parse(DEFAULT_SEASON_PASS_START_AT)/1000),Math.floor(Date.parse(DEFAULT_SEASON_PASS_END_AT)/1000),Math.floor(Date.parse(DEFAULT_SEASON_PASS_CLAIM_GRACE_END_AT)/1000),now,String(query.from.id),DEFAULT_SEASON_PASS_ID).run();
+    const graceEndsAt=now+SEASON_PASS_MANUAL_CLAIM_GRACE_SECONDS;await env.DB.prepare(`UPDATE season_pass_seasons SET ends_at=?,claim_grace_ends_at=?,manual_status='ended',updated_at=?,updated_by=? WHERE season_id=?`).bind(now,graceEndsAt,now,String(query.from.id),season.id).run();seasonPassExpiryCleanupPromises.clear();await answerCallback(env,query.id,'Сезон завершён. Награды доступны ещё 3 дня.');await sendTelegramMessage(env,chatId,`<b>🏁 Сезон завершён</b>\n\n<b>${escapeHtml(season.title)}</b>\n\nНовые XP, задания и покупки остановлены. Уже открытые награды можно получить до <b>${escapeHtml(formatUtcDate(graceEndsAt))}</b>.\n\nПосле окончания окна прогресс и сезонные покупки будут очищены автоматически.`,{inline_keyboard:[[{text:'⬅️ Сезонный пропуск',callback_data:'sp_admin'}]]});return;
   }
-  await answerCallback(env,query.id,action==='start'?'Сезон запущен.':'Расписание восстановлено.');
   await showSeasonPassAdminDashboard(chatId,query.from,env);
 }
 
@@ -18212,25 +18655,44 @@ async function handleOperationsSecurityCallback(query,env,runtime={}){
   const featureCard=data.match(/^v65_feature:([a-z_]+)$/);if(featureCard){await answerCallback(env,query.id,"Открываю функцию.");await showFeatureFlagCard(chatId,query.from,featureCard[1],env);return true;}
   const featureSet=data.match(/^v65_feature_set:([a-z_]+):(off|testers|percent|all):(\d{1,3})$/);if(featureSet){await setFeatureFlag(query,featureSet[1],featureSet[2],Number(featureSet[3]),env);return true;}
   if(data==="sp_admin"){await answerCallback(env,query.id,"Открываю сезонный пропуск.");await showSeasonPassAdminDashboard(chatId,query.from,env);return true;}
+  if(data==="sp_seasons"||data==="sp_schedule_reset"){await answerCallback(env,query.id,"Открываю сезоны.");await showSeasonPassSeasonsAdmin(chatId,query.from,env);return true;}
+  if(data==="sp_season_new"){await startSeasonPassSeasonCreate(query,env);return true;}
+  const spSeasonPick=data.match(/^sp_season_pick:([A-Za-z0-9_-]{2,48})$/);if(spSeasonPick){await selectSeasonPassAdminSeason(query,spSeasonPick[1],env);return true;}
+  if(data==="sp_season_create_save"){await finalizeSeasonPassSeasonCreate(query,env);return true;}
+  const spSeasonDeleteConfirm=data.match(/^sp_season_delete_confirm:([A-Za-z0-9_-]{2,48})$/);if(spSeasonDeleteConfirm){await showSeasonPassDeleteConfirmation(query,env,spSeasonDeleteConfirm[1]);return true;}
+  const spSeasonDeleteExecute=data.match(/^sp_season_delete_execute:([A-Za-z0-9_-]{2,48})$/);if(spSeasonDeleteExecute){await deleteSeasonPassScheduledSeason(query,env,spSeasonDeleteExecute[1]);return true;}
+  if(data==="sp_season_delete_confirm"){await showSeasonPassDeleteConfirmation(query,env);return true;}
+  if(data==="sp_season_delete_execute"){await deleteSeasonPassScheduledSeason(query,env);return true;}
+  if(data==="sp_workflow_cancel"){await clearStaffWorkflow(query.from.id,env);await answerCallback(env,query.id,"Действие отменено.");await showSeasonPassAdminDashboard(chatId,query.from,env);return true;}
   if(data==="sp_settings"){await answerCallback(env,query.id,"Открываю цены.");await showSeasonPassSettings(chatId,query.from,env);return true;}
   if(data==="sp_prices_launch"){await setSeasonPassSettingsAction(query,"launch",0,env);return true;}
   const spLevelPrice=data.match(/^sp_level_price:(\d{1,7})$/);if(spLevelPrice){await setSeasonPassSettingsAction(query,"level_price",Number(spLevelPrice[1]),env);return true;}
   const spRunXp=data.match(/^sp_run_xp:(\d{1,9})$/);if(spRunXp){await setSeasonPassSettingsAction(query,"run_xp",Number(spRunXp[1]),env);return true;}
   const spInput=data.match(/^sp_input:(elite_points|elite_treats|elite_coffee|plus_points|plus_treats|plus_coffee|level_price|run_xp)$/);if(spInput){await startSeasonPassNumericInput(query,spInput[1],env);return true;}
-  const spTasks=data.match(/^sp_tasks:(\d)$/);if(spTasks){await answerCallback(env,query.id,"Открываю задания.");await showSeasonPassTasksAdmin(chatId,query.from,env,Number(spTasks[1]));return true;}
-  const spTaskEdit=data.match(/^sp_task_edit:([A-Za-z0-9_-]{2,40}):(\d)$/);if(spTaskEdit){await answerCallback(env,query.id,"Открываю задание.");await showSeasonPassTaskEditor(chatId,query.from,spTaskEdit[1],Number(spTaskEdit[2]),env);return true;}
-  const spTaskTarget=data.match(/^sp_task_target:([A-Za-z0-9_-]{2,40}):(dec|inc):(\d)$/);if(spTaskTarget){await updateSeasonPassTaskValue(query,spTaskTarget[1],'target',spTaskTarget[2],Number(spTaskTarget[3]),env);return true;}
-  const spTaskXp=data.match(/^sp_task_xp:([A-Za-z0-9_-]{2,40}):(dec|inc):(\d)$/);if(spTaskXp){await updateSeasonPassTaskValue(query,spTaskXp[1],'xp',spTaskXp[2],Number(spTaskXp[3]),env);return true;}
-  const spTaskInput=data.match(/^sp_task_input:([A-Za-z0-9_-]{2,40}):(target|xp):(\d)$/);if(spTaskInput){await startSeasonPassTaskNumericInput(query,spTaskInput[1],spTaskInput[2],Number(spTaskInput[3]),env);return true;}
-  const spTaskToggle=data.match(/^sp_task_toggle:([A-Za-z0-9_-]{2,80}):(\d)$/);if(spTaskToggle){await toggleSeasonPassTask(query,spTaskToggle[1],Number(spTaskToggle[2]),env);return true;}
+  const spTasks=data.match(/^sp_tasks:(\d{1,3})$/);if(spTasks){await answerCallback(env,query.id,"Открываю задания.");await showSeasonPassTasksAdmin(chatId,query.from,env,Number(spTasks[1]));return true;}
+  if(data==="sp_task_new"){await startSeasonPassTaskCreate(query,env);return true;}
+  const spTcPeriod=data.match(/^sp_tc_period:(daily|weekly)$/);if(spTcPeriod){await setSeasonPassTaskCreateChoice(query,'period',spTcPeriod[1],env);return true;}
+  const spTcLane=data.match(/^sp_tc_lane:(free|premium)$/);if(spTcLane){await setSeasonPassTaskCreateChoice(query,'lane',spTcLane[1],env);return true;}
+  const spTcMetric=data.match(/^sp_tc_metric:(runs|treats|coffee|score|cases_opened)$/);if(spTcMetric){await setSeasonPassTaskCreateChoice(query,'metric',spTcMetric[1],env);return true;}
+  if(data==="sp_tc_save"){await finalizeSeasonPassTaskCreate(query,env);return true;}
+  const spTaskEdit=data.match(/^sp_task_edit:([A-Za-z0-9_-]{2,80}):(\d{1,3})$/);if(spTaskEdit){await answerCallback(env,query.id,"Открываю задание.");await showSeasonPassTaskEditor(chatId,query.from,spTaskEdit[1],Number(spTaskEdit[2]),env);return true;}
+  const spTaskTarget=data.match(/^sp_task_target:([A-Za-z0-9_-]{2,80}):(dec|inc):(\d{1,3})$/);if(spTaskTarget){await updateSeasonPassTaskValue(query,spTaskTarget[1],'target',spTaskTarget[2],Number(spTaskTarget[3]),env);return true;}
+  const spTaskXp=data.match(/^sp_task_xp:([A-Za-z0-9_-]{2,80}):(dec|inc):(\d{1,3})$/);if(spTaskXp){await updateSeasonPassTaskValue(query,spTaskXp[1],'xp',spTaskXp[2],Number(spTaskXp[3]),env);return true;}
+  const spTaskInput=data.match(/^sp_task_input:([A-Za-z0-9_-]{2,80}):(target|xp):(\d{1,3})$/);if(spTaskInput){await startSeasonPassTaskNumericInput(query,spTaskInput[1],spTaskInput[2],Number(spTaskInput[3]),env);return true;}
+  const spTaskToggle=data.match(/^sp_task_toggle:([A-Za-z0-9_-]{2,80}):(\d{1,3})$/);if(spTaskToggle){await toggleSeasonPassTask(query,spTaskToggle[1],Number(spTaskToggle[2]),env);return true;}
+  const spTaskDeleteConfirm=data.match(/^sp_task_delete_confirm:([A-Za-z0-9_-]{2,80}):(\d{1,3})$/);if(spTaskDeleteConfirm){await showSeasonPassTaskDeleteConfirmation(query,spTaskDeleteConfirm[1],Number(spTaskDeleteConfirm[2]),env);return true;}
+  const spTaskDeleteExecute=data.match(/^sp_task_delete_execute:([A-Za-z0-9_-]{2,80}):(\d{1,3})$/);if(spTaskDeleteExecute){await deleteSeasonPassCustomTask(query,spTaskDeleteExecute[1],Number(spTaskDeleteExecute[2]),env);return true;}
   if(data==="sp_tasks_reset"){await resetSeasonPassTasks(query,env);return true;}
   if(data==="sp_stats"){await answerCallback(env,query.id,"Обновляю статистику.");await showSeasonPassStats(chatId,query.from,env);return true;}
+  const spStartNow=data.match(/^sp_start_now:([A-Za-z0-9_-]{2,48})$/);if(spStartNow){await setSeasonPassTimingAction(query,"start",env,spStartNow[1]);return true;}
+  const spEndNow=data.match(/^sp_end_now:([A-Za-z0-9_-]{2,48})$/);if(spEndNow){await setSeasonPassTimingAction(query,"end",env,spEndNow[1]);return true;}
+  const spResetConfirm=data.match(/^sp_reset_all_confirm:([A-Za-z0-9_-]{2,48})$/);if(spResetConfirm){await showSeasonPassResetAllConfirmation(query,env,spResetConfirm[1]);return true;}
+  const spResetExecute=data.match(/^sp_reset_all_execute:([A-Za-z0-9_-]{2,48})$/);if(spResetExecute){await resetSeasonPassAllPlayers(query,env,spResetExecute[1]);return true;}
   if(data==="sp_start_now"){await setSeasonPassTimingAction(query,"start",env);return true;}
   if(data==="sp_end_now"){await setSeasonPassTimingAction(query,"end",env);return true;}
-  if(data==="sp_schedule_reset"){await setSeasonPassTimingAction(query,"reset",env);return true;}
   if(data==="sp_reset_all_confirm"){await showSeasonPassResetAllConfirmation(query,env);return true;}
   if(data==="sp_reset_all_execute"){await resetSeasonPassAllPlayers(query,env);return true;}
-  if(data==="sp_noop"){await answerCallback(env,query.id,"Выберите уровень.");return true;}
+  if(data==="sp_noop"){await answerCallback(env,query.id,"Выберите пункт.");return true;}
   const spRewards=data.match(/^sp_rewards:(\d)$/);if(spRewards){await answerCallback(env,query.id,"Открываю уровни.");await showSeasonPassRewardsPage(chatId,query.from,env,Number(spRewards[1]));return true;}
   const spLevel=data.match(/^sp_level:(\d{1,2})$/);if(spLevel){await answerCallback(env,query.id,"Открываю награды уровня.");await showSeasonPassLevelCard(chatId,query.from,env,Number(spLevel[1]));return true;}
   const spLane=data.match(/^sp_lane:(\d{1,2}):(free|premium)$/);if(spLane){await answerCallback(env,query.id,"Выберите награду.");await showSeasonPassRewardTypePicker(chatId,query.from,env,Number(spLane[1]),spLane[2]);return true;}
