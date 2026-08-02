@@ -335,7 +335,7 @@ const STAFF_SESSION_TTL_SECONDS = 12 * 60 * 60;
 const SUPPORT_USERNAME = "ve4n0_em";
 const SUPPORT_URL = `https://t.me/${SUPPORT_USERNAME}`;
 const DEFAULT_GAME_URL = "https://zefirok-run.patokad6.workers.dev/";
-const WORKER_BUILD = "6.0 RC.1 + season force close";
+const WORKER_BUILD = "6.0 RC.1 + limited administrator access v2";
 const V07944_RELEASE_CANDIDATE_AUDIT = Object.freeze({ reset: true, claims: true, purchases: true, xp: true, concurrency: true });
 
 // =============================================================
@@ -527,6 +527,61 @@ const STAFF_FRONTLINE_BOT_COMMANDS = Object.freeze([
   { command: "cancel", description: "Отменить текущее действие" }
 ]);
 
+const LIMITED_ADMINISTRATOR_BOT_COMMANDS = Object.freeze([
+  ...PLAYER_BOT_COMMANDS,
+  { command: "adminpanel", description: "Открыть админ-панель" },
+  { command: "training", description: "Обучение сотрудника" },
+  { command: "staff_me", description: "Моя роль и права" },
+  { command: "players", description: "Список игроков" },
+  { command: "player", description: "Карточка игрока" },
+  { command: "staff_list", description: "Сотрудники" },
+  { command: "employee_add", description: "Добавить сотрудника" },
+  { command: "employee_role", description: "Изменить роль сотрудника" },
+  { command: "employee_disable", description: "Отключить сотрудника" },
+  { command: "employee_enable", description: "Включить сотрудника" },
+  { command: "grant", description: "Выдать награду" },
+  { command: "redeem", description: "Проверить и списать код" },
+  { command: "check_code", description: "Проверить код без списания" },
+  { command: "compensations", description: "Шаблоны компенсаций" },
+  { command: "compensate", description: "Выдать компенсацию" },
+  { command: "ticket", description: "Создать обращение" },
+  { command: "tickets", description: "Список обращений" },
+  { command: "cancel", description: "Отменить текущее действие" }
+]);
+
+const LIMITED_ADMINISTRATOR_ALLOWED_COMMAND_NAMES = new Set([
+  // Public player commands remain available.
+  "start", "game", "rating", "top", "tasks", "polls", "news", "promo",
+  "rewards", "story", "faq", "update", "support", "help", "whoami",
+  // Session and the eight allowed administrator sections.
+  "staff", "adminpanel", "admin", "panel", "training", "staff_me", "cancel",
+  "players", "members", "pleyers", "player",
+  "staff_list", "member_staff", "employee_add", "employee_role",
+  "employee_enable", "employee_disable", "set_name",
+  "grant", "redeem", "check_code", "compensations", "compensate",
+  "ticket", "tickets", "ticket_info"
+]);
+
+const LIMITED_ADMINISTRATOR_ALLOWED_WORKFLOWS = new Set([
+  "grant_prefill", "grant", "redeem", "ticket", "compensation",
+  "staff_create", "poll_response_comment"
+]);
+
+function limitedAdministratorCommandAllowed(text) {
+  const command = telegramCommandName(text);
+  return !command || LIMITED_ADMINISTRATOR_ALLOWED_COMMAND_NAMES.has(command);
+}
+
+function limitedAdministratorCallbackAllowed(data) {
+  const value = String(data || "");
+  if ([
+    "adm_home", "adm_home_refresh", "adm_players", "adm_team",
+    "adm_redeem_manual", "grant_home", "safe_comp", "safe_comp_start",
+    "tickets_open", "ops_cancel"
+  ].includes(value)) return true;
+  return /^(?:player_refresh:|player_grant:|adm_staff_(?!permissions)|v78_training|grant_|safe_comp_|ticket_|tickets_|redeem:|confirm:|cancel:|poll_)/.test(value);
+}
+
 const OWNER_CANONICAL_BOT_COMMANDS = Object.freeze([
   { command: "sync_commands", description: "Обновить меню команд" },
   { command: "players", description: "Список игроков" },
@@ -712,7 +767,25 @@ export default {
       if (url.pathname === "/api/battle-pass/access" && request.method === "POST") {
         return await getBattlePassAccess(request, env);
       }
-      if (url.pathname.startsWith("/api/") || url.pathname === "/telegram/webhook") {
+      // Telegram service routes must stay independent from D1 schema checks.
+      // Otherwise a temporary or unrelated database migration error makes the
+      // webhook return 500 and the bot appears completely silent.
+      if (url.pathname === "/api/health" && request.method === "GET") {
+        if (ctx?.waitUntil) {
+          ctx.waitUntil(ensureTelegramWebhookHealth(env).catch((error) => console.error("Telegram webhook repair from health route failed", error)));
+        }
+        return jsonResponse({ ok: true, service: "zefirok-rewards", workerBuild: WORKER_BUILD, gameVersion: GAME_VERSION });
+      }
+      if (url.pathname === "/api/bot/health" && request.method === "GET") {
+        return await getTelegramBotHealth(env);
+      }
+      if (url.pathname === "/api/bot/setup-webhook" && request.method === "POST") {
+        return await setupWebhook(request, env);
+      }
+      if (url.pathname === "/telegram/webhook" && request.method === "POST") {
+        return await receiveTelegramWebhook(request, env, ctx);
+      }
+      if (url.pathname.startsWith("/api/")) {
         await ensureRuntimeCompatibilitySchema(env);
       }
       if (url.pathname === "/staff-qr.html" && request.method === "GET") {
@@ -914,13 +987,6 @@ export default {
         return await snoozeV74GamePoll(request, env);
       }
 
-      if (url.pathname === "/api/bot/setup-webhook" && request.method === "POST") {
-        return await setupWebhook(request, env);
-      }
-
-      if (url.pathname === "/telegram/webhook" && request.method === "POST") {
-        return await receiveTelegramWebhook(request, env, ctx);
-      }
     } catch (error) {
       console.error("Unhandled Worker error", error);
       return jsonResponse({ ok: false, error: "Временная ошибка сервиса. Попробуйте ещё раз." }, 500);
@@ -931,14 +997,26 @@ export default {
   },
 
   async scheduled(controller, env, ctx) {
-    ctx.waitUntil(processServerCron(env, controller).catch(async (error) => {
-      console.error("Server Cron dispatcher failed", error);
+    ctx.waitUntil((async () => {
+      // Repair Telegram independently from the main D1-backed scheduler. A
+      // database problem must not prevent webhook recovery.
       try {
-        await notifyOperationalIssue(env, "server-cron", `🔴 <b>Ошибка планировщика сервера</b>
+        await ensureTelegramWebhookHealth(env);
+      } catch (error) {
+        console.error("Telegram webhook health check failed", error);
+      }
+
+      try {
+        await processServerCron(env, controller);
+      } catch (error) {
+        console.error("Server Cron dispatcher failed", error);
+        try {
+          await notifyOperationalIssue(env, "server-cron", `🔴 <b>Ошибка планировщика сервера</b>
 
 ${escapeHtml(String(error?.message || error).slice(0, 500))}`);
-      } catch {}
-    }));
+        } catch {}
+      }
+    })());
   }
 };
 
@@ -4430,6 +4508,21 @@ function rewardToClient(row, config = null) {
 
 let telegramWebhookRepairCooldownUntil = 0;
 
+async function resolvedTelegramWebhookSecret(env) {
+  const configured = String(env?.TELEGRAM_WEBHOOK_SECRET || "").trim();
+  if (/^[A-Za-z0-9_-]{16,256}$/.test(configured)) return configured;
+
+  // Keep the webhook protected even when a separate secret was not created in
+  // Cloudflare. The fallback is a stable SHA-256 value derived from the private
+  // bot token and is never returned by an API response.
+  requireBotToken(env);
+  const digest = await crypto.subtle.digest(
+    "SHA-256",
+    encoder.encode(`zefirok-telegram-webhook:${String(env.TELEGRAM_BOT_TOKEN)}`)
+  );
+  return bytesToHex(new Uint8Array(digest));
+}
+
 function expectedTelegramWebhookUrl(env) {
   const url = new URL(configuredGameUrl(env));
   url.pathname = "/telegram/webhook";
@@ -4452,7 +4545,8 @@ async function getTelegramBotHealth(env) {
       lastErrorDate: Math.max(0, Number(info?.last_error_date || 0)),
       lastErrorMessage: String(info?.last_error_message || "").slice(0, 500),
       botTokenConfigured: true,
-      webhookSecretConfigured: Boolean(String(env.TELEGRAM_WEBHOOK_SECRET || ""))
+      webhookSecretConfigured: /^[A-Za-z0-9_-]{16,256}$/.test(String(env.TELEGRAM_WEBHOOK_SECRET || "").trim()),
+      webhookSecretMode: /^[A-Za-z0-9_-]{16,256}$/.test(String(env.TELEGRAM_WEBHOOK_SECRET || "").trim()) ? "configured" : "derived"
     });
   } catch (error) {
     console.error("getTelegramBotHealth failed", error);
@@ -4461,22 +4555,20 @@ async function getTelegramBotHealth(env) {
 }
 
 async function ensureTelegramWebhookHealth(env) {
-  if (!env?.TELEGRAM_BOT_TOKEN || !env?.TELEGRAM_WEBHOOK_SECRET) return { skipped: true };
+  if (!env?.TELEGRAM_BOT_TOKEN) return { skipped: true, reason: "missing_bot_token" };
+  const webhookSecret = await resolvedTelegramWebhookSecret(env);
   const nowMs = Date.now();
   const info = await telegramApi(env, "getWebhookInfo", {});
   const expectedUrl = expectedTelegramWebhookUrl(env);
   const currentUrl = String(info?.url || "");
   const lastErrorDate = Math.max(0, Number(info?.last_error_date || 0));
+  const pendingUpdates = Math.max(0, Number(info?.pending_update_count || 0));
   const recentWebhookError = lastErrorDate > Math.floor(nowMs / 1000) - 15 * 60;
-  const needsRepair = currentUrl !== expectedUrl || !currentUrl || recentWebhookError;
+  const needsRepair = currentUrl !== expectedUrl || !currentUrl || recentWebhookError || pendingUpdates > 0;
   if (!needsRepair || nowMs < telegramWebhookRepairCooldownUntil) {
-    return { repaired: false, currentUrl, expectedUrl, recentWebhookError };
+    return { repaired: false, currentUrl, expectedUrl, recentWebhookError, pendingUpdates };
   }
   telegramWebhookRepairCooldownUntil = nowMs + 5 * 60 * 1000;
-  const webhookSecret = String(env.TELEGRAM_WEBHOOK_SECRET || "");
-  if (!/^[A-Za-z0-9_-]{16,256}$/.test(webhookSecret)) {
-    throw new ApiError(500, "TELEGRAM_WEBHOOK_SECRET не настроен или содержит недопустимые символы.");
-  }
   const result = await telegramApi(env, "setWebhook", {
     url: expectedUrl,
     secret_token: webhookSecret,
@@ -4494,10 +4586,7 @@ async function setupWebhook(request, env) {
     if (!expected || !timingSafeEqualString(expected, supplied)) {
       throw new ApiError(401, "Неверный ключ настройки.");
     }
-    const webhookSecret = String(env.TELEGRAM_WEBHOOK_SECRET || "");
-    if (!/^[A-Za-z0-9_-]{16,256}$/.test(webhookSecret)) {
-      throw new ApiError(500, "TELEGRAM_WEBHOOK_SECRET не настроен или содержит недопустимые символы.");
-    }
+    const webhookSecret = await resolvedTelegramWebhookSecret(env);
 
     const origin = new URL(request.url).origin;
     const webhook = await telegramApi(env, "setWebhook", {
@@ -4517,9 +4606,9 @@ async function setupWebhook(request, env) {
 }
 
 async function receiveTelegramWebhook(request, env, ctx) {
-  const expected = String(env.TELEGRAM_WEBHOOK_SECRET || "");
+  const expected = await resolvedTelegramWebhookSecret(env);
   const supplied = String(request.headers.get("X-Telegram-Bot-Api-Secret-Token") || "");
-  if (!expected || !timingSafeEqualString(expected, supplied)) return new Response("Forbidden", { status: 403 });
+  if (!timingSafeEqualString(expected, supplied)) return new Response("Forbidden", { status: 403 });
 
   let update;
   try {
@@ -4545,7 +4634,8 @@ async function receiveTelegramWebhook(request, env, ctx) {
 }
 
 async function handleTelegramUpdate(update, env, runtime = {}) {
-  requireDatabase(env);
+  // Public bot commands such as /start only need the Telegram token. Do not
+  // make the whole bot unavailable merely because D1 is temporarily failing.
   requireBotToken(env);
 
   if (update.callback_query) {
@@ -4558,6 +4648,57 @@ async function handleTelegramUpdate(update, env, runtime = {}) {
   const text = String(message.text || "").trim();
   const chatId = message.chat.id;
   const user = message.from;
+  if (text.startsWith("/")) {
+    telegramFreshCommandResponseChats.add(String(chatId));
+  }
+
+  // /start is deliberately handled before staff cleanup and every D1-backed
+  // admin router. This guarantees that the public menu can answer even while
+  // the database or an unrelated admin table is unavailable.
+  const startMatch = text.match(/^\/start(?:@\w+)?(?:\s+(.+))?$/i);
+  if (startMatch) {
+    if (env.DB) {
+      try {
+        await registerBotSubscriber(message, env);
+      } catch (error) {
+        console.error("Bot subscriber registration failed", error);
+      }
+    }
+    const payload = String(startMatch[1] || "").trim();
+    const rewardPayload = payload.match(/^reward_([A-Za-z0-9_-]+)$/i);
+    if (rewardPayload) {
+      try {
+        await showRewardInBot(chatId, user, rewardPayload[1], env);
+        return;
+      } catch (error) {
+        console.error("Reward deep link failed", error);
+      }
+    }
+    try { await syncBotCommandMenuForTelegramId(env, user.id); } catch (error) { console.error("Bot command menu sync failed", error); }
+    if (env.DB) {
+      try { await processPlayerRewardDeliveryQueue(env, String(user.id), 10); } catch (error) { console.error("Player pending reward refresh failed", error); }
+    }
+    await sendTelegramMessage(
+      env,
+      chatId,
+      botMainMenuText(),
+      mainMenuMarkup(env),
+      { cleanChat: false, preferEdit: false, adminBack: false }
+    );
+    return;
+  }
+
+  const commandName = telegramCommandName(text);
+  if (commandName && !limitedAdministratorCommandAllowed(text)) {
+    const commandAccess = await getTeamAccess(user, env);
+    if (isLimitedAdministratorAccess(commandAccess)) {
+      await sendTelegramMessage(env, chatId,
+        "У роли <b>Администратор</b> нет доступа к этой команде. Используйте разделы: Игроки, Сотрудники, Обучение, Сканировать QR, Ввести код, Награды, Компенсации и Обращения."
+      );
+      return;
+    }
+  }
+
   const cleanStaffChat = await isCleanStaffPrivateChat(env, chatId);
   if (cleanStaffChat && message.message_id) {
     await deleteTelegramMessageBestEffort(env, chatId, message.message_id);
@@ -5202,25 +5343,6 @@ Telegram ID можно найти командой <code>/players</code>.`);
     return;
   }
 
-  const startMatch = text.match(/^\/start(?:@\w+)?(?:\s+(.+))?$/i);
-  if (startMatch) {
-    try {
-      await registerBotSubscriber(message, env);
-    } catch (error) {
-      console.error("Bot subscriber registration failed", error);
-    }
-    const payload = String(startMatch[1] || "").trim();
-    const rewardPayload = payload.match(/^reward_([A-Za-z0-9_-]+)$/i);
-    if (rewardPayload) {
-      await showRewardInBot(chatId, user, rewardPayload[1], env);
-      return;
-    }
-    try { await syncBotCommandMenuForTelegramId(env, user.id); } catch (error) { console.error("Bot command menu sync failed", error); }
-    try { await processPlayerRewardDeliveryQueue(env, String(user.id), 10); } catch (error) { console.error("Player pending reward refresh failed", error); }
-    await sendTelegramMessage(env, chatId, botMainMenuText(), mainMenuMarkup(env));
-    return;
-  }
-
   if (text && !text.startsWith("/") && await consumePlayerPromoInput(user.id, chatId, env)) {
     const code = normalizedPromoCode(text);
     if (code.length < 4) {
@@ -5815,6 +5937,10 @@ function teamRoleLabel(role) {
   return "Кассир";
 }
 
+function isLimitedAdministratorAccess(access) {
+  return Boolean(access && !access.owner && normalizeTeamRole(access.role) === "administrator");
+}
+
 function permissionLabel(permission) {
   return ({
     view: "просмотр заказов",
@@ -5889,6 +6015,23 @@ async function getTeamAccess(user, env) {
   if (role === "cashier" || role === "cook") {
     security.viewPlayers = false;
     security.redeemPhysical = true;
+  }
+  // Администратор ограничивается только рабочими разделами из панели.
+  // Ограничение применяется в Worker и не меняет схему или записи D1.
+  if (role === "administrator") {
+    legacy.redeem = true;
+    legacy.points = false;
+    legacy.products = false;
+    legacy.news = false;
+    legacy.staff = true;
+    legacy.log = false;
+    security = {
+      ...completeSecurityPermissions(false),
+      viewPlayers: true,
+      grantRewards: true,
+      grantLegendaryCases: true,
+      redeemPhysical: true
+    };
   }
   return {
     authorized: activeSession,
@@ -7365,7 +7508,7 @@ async function showStaffProfile(chatId, user, env) {
 }
 
 function canViewOrderHistory(access) {
-  return Boolean(access?.owner || normalizeTeamRole(access?.role) === "administrator");
+  return Boolean(access?.owner);
 }
 
 async function requireOrderHistoryAccess(chatId, user, env) {
@@ -7676,25 +7819,33 @@ async function showPlayerProfile(chatId, user, telegramId, env) {
     customName: playerControl.customName,
     blocked: playerControl.blocked
   });
+  const limitedAdministrator = isLimitedAdministratorAccess(access);
   const primaryPlayerActions = [];
   if (access.owner || access.permissions?.grantRewards || access.permissions?.grantLegendaryCases) primaryPlayerActions.push({ text: "🎁 Выдать награду", callback_data: `player_grant:${playerId}` });
-  primaryPlayerActions.push({ text: `📝 Заметки (${Number(notesCountRow?.count || 0)})`, callback_data: `player_notes:${playerId}` });
-  if (access.owner || access.permissions?.viewPlayers) primaryPlayerActions.push({ text: "🕓 История игрока", callback_data: `player_audit:${playerId}` });
-  const playerActions = [primaryPlayerActions];
-  if (canManagePlayerControls(access)) playerActions.push([{ text: "✏️ Изменить имя", callback_data: `player_name:${playerId}` }]);
-  if (access.owner || (normalizeTeamRole(access.role) === "administrator" && access.permissions?.approveDangerous)) {
+  if (!limitedAdministrator) {
+    primaryPlayerActions.push({ text: `📝 Заметки (${Number(notesCountRow?.count || 0)})`, callback_data: `player_notes:${playerId}` });
+    if (access.owner || access.permissions?.viewPlayers) primaryPlayerActions.push({ text: "🕓 История игрока", callback_data: `player_audit:${playerId}` });
+  }
+  const playerActions = primaryPlayerActions.length ? [primaryPlayerActions] : [];
+  if (!limitedAdministrator && canManagePlayerControls(access)) playerActions.push([{ text: "✏️ Изменить имя", callback_data: `player_name:${playerId}` }]);
+  if (!limitedAdministrator && (access.owner || (normalizeTeamRole(access.role) === "administrator" && access.permissions?.approveDangerous))) {
     playerActions.push([{ text: "♻️ Сбросить прогресс", callback_data: `v78_reset_target:${playerId}` }]);
   }
-  if (playerControl.blocked && (access.owner || access.permissions?.unblockPlayers)) {
+  if (!limitedAdministrator && playerControl.blocked && (access.owner || access.permissions?.unblockPlayers)) {
     playerActions.push([{ text: "✅ Разблокировать", callback_data: `player_unblock:${playerId}` }]);
-  } else if (!playerControl.blocked && (access.owner || access.permissions?.blockPlayers)) {
+  } else if (!limitedAdministrator && !playerControl.blocked && (access.owner || access.permissions?.blockPlayers)) {
     playerActions.push([{ text: "⛔ Заблокировать", callback_data: `player_block:${playerId}` }]);
   }
   playerActions.push(
-    [
-      { text: "🔄 Обновить карточку", callback_data: `player_refresh:${playerId}` },
-      { text: "📚 Все команды", callback_data: "adminpanel_commands" }
-    ]
+    limitedAdministrator
+      ? [
+          { text: "🔄 Обновить карточку", callback_data: `player_refresh:${playerId}` },
+          { text: "⬅️ Игроки", callback_data: "adm_players" }
+        ]
+      : [
+          { text: "🔄 Обновить карточку", callback_data: `player_refresh:${playerId}` },
+          { text: "📚 Все команды", callback_data: "adminpanel_commands" }
+        ]
   );
   await sendTelegramMessage(env, chatId, text, { inline_keyboard: playerActions });
 }
@@ -7985,8 +8136,26 @@ function isBotAdminTelegramId(telegramId, env) {
   return botAdminTelegramIds(env).includes(String(telegramId || ""));
 }
 
+function botOwnerTelegramId(env) {
+  const explicitOwnerId = String(
+    env.BOT_OWNER_TELEGRAM_ID ||
+    env.OWNER_TELEGRAM_ID ||
+    env.PROJECT_OWNER_TELEGRAM_ID ||
+    ""
+  ).trim();
+  if (explicitOwnerId) return explicitOwnerId;
+  return botAdminTelegramIds(env)[0] || "";
+}
+
+function isBotOwnerTelegramId(telegramId, env) {
+  const ownerId = botOwnerTelegramId(env);
+  return Boolean(ownerId && ownerId === String(telegramId || ""));
+}
+
 function isBotAdminUser(user, env) {
-  return isBotAdminTelegramId(user?.id, env);
+  // Owner-only checks must not treat every configured administrator as owner.
+  // Additional IDs from SHOP_ADMIN_TELEGRAM_IDS are resolved through staff_users.
+  return isBotOwnerTelegramId(user?.id, env);
 }
 
 async function setStaffAccountState(chatId, requester, targetTelegramId, enabled, env) {
@@ -8166,11 +8335,28 @@ async function handleCallbackQueryAction(query, env, runtime = {}) {
     return;
   }
 
-  if (await handleMenuCallback(query, env)) return;
-  if (await handlePlayerTaskCallback(query, env)) return;
+  const publicCallbackChatKey = String(chatId);
+  const runPublicCallback = async (handler) => {
+    telegramPublicCallbackResponseChats.add(publicCallbackChatKey);
+    try {
+      return await handler();
+    } finally {
+      telegramPublicCallbackResponseChats.delete(publicCallbackChatKey);
+    }
+  };
+
+  if (await runPublicCallback(() => handleMenuCallback(query, env))) return;
+  if (await runPublicCallback(() => handlePlayerTaskCallback(query, env))) return;
+
+  const callbackAccess = await getTeamAccess(user, env);
+  if (isLimitedAdministratorAccess(callbackAccess) && !limitedAdministratorCallbackAllowed(data)) {
+    await answerCallback(env, query.id, "Этот раздел недоступен роли Администратор.", true);
+    return;
+  }
+
   if (await handleV78Callback(query, env)) return;
   if (await handleV77Callback(query, env)) return;
-  if (await handleV74PollCallback(query, env, runtime)) return;
+  if (await runPublicCallback(() => handleV74PollCallback(query, env, runtime))) return;
   if (await handleOperationsSecurityCallback(query, env, runtime)) return;
   if (await handleV67Callback(query, env)) return;
 
@@ -9400,7 +9586,7 @@ function canManageSeason(access) {
 }
 
 function canManagePlayerControls(access) {
-  return Boolean(access?.owner || normalizeTeamRole(access?.role) === "administrator");
+  return Boolean(access?.owner || access?.permissions?.blockPlayers || access?.permissions?.unblockPlayers);
 }
 
 async function requirePlayerControlAccess(chatId, user, env) {
@@ -11296,6 +11482,12 @@ async function handleActiveStaffWorkflowMessage(message, env) {
   const workflow = await getStaffWorkflow(message.from.id, env);
   if (!workflow) return false;
   if (String(workflow.chat_id) !== String(message.chat.id)) return false;
+  const workflowAccess = await getTeamAccess(message.from, env);
+  if (isLimitedAdministratorAccess(workflowAccess) && !LIMITED_ADMINISTRATOR_ALLOWED_WORKFLOWS.has(String(workflow.flow_type || ""))) {
+    await clearStaffWorkflow(message.from.id, env);
+    await sendTelegramMessage(env, message.chat.id, "Это действие больше недоступно роли <b>Администратор</b>. Откройте админ-панель и выберите разрешённый раздел.");
+    return true;
+  }
   if (workflow.flow_type === "grant_prefill") {
     await sendTelegramMessage(env, message.chat.id, "Выберите награду кнопкой в предыдущем сообщении или отмените действие командой <code>/cancel</code>.");
     return true;
@@ -11810,6 +12002,26 @@ function adminMainMenuMarkup(access, overview = {}, env = {}) {
       ]
     };
   }
+  if (!access?.owner && role === "administrator") {
+    return {
+      inline_keyboard: [
+        [
+          { text: "👤 Игроки", callback_data: "adm_players" },
+          { text: "👥 Сотрудники", callback_data: "adm_team" }
+        ],
+        [{ text: "🎓 Обучение", callback_data: "v78_training" }],
+        [
+          { text: "📷 Сканировать QR", web_app: { url: configuredStaffQrUrl(env) } },
+          { text: "⌨️ Ввести код", callback_data: "adm_redeem_manual" }
+        ],
+        [
+          { text: "🎁 Награды", callback_data: "grant_home" },
+          { text: "🧰 Компенсации", callback_data: "safe_comp" }
+        ],
+        [{ text: "🎫 Обращения", callback_data: "tickets_open" }]
+      ]
+    };
+  }
   const rows = [];
   const addRow = (...buttons) => {
     const visible = buttons.filter(Boolean);
@@ -11930,8 +12142,9 @@ async function showAdminMainMenu(chatId, user, env, options = {}) {
   }
   const role = normalizeTeamRole(access?.role);
   const frontline = !access.owner && (role === "cashier" || role === "cook");
+  const limitedAdministrator = !access.owner && role === "administrator";
   let overview = null;
-  if (!frontline) {
+  if (!frontline && !limitedAdministrator) {
     try { overview = await getAdminOverviewFast(env, Boolean(options.forceRefresh)); } catch (error) { console.error("Admin overview failed", error); }
   }
   const summary = overview
@@ -11948,7 +12161,9 @@ async function showAdminMainMenu(chatId, user, env, options = {}) {
     : `\n\n🟡 Быстрая сводка временно недоступна. Остальные разделы работают.`;
   const panelText = frontline
     ? `<b>🧾 Рабочая панель</b>\n\nСотрудник: <b>${escapeHtml(telegramDisplayName(user))}</b>\nРоль: <b>${escapeHtml(staffRoleTitle(access))}</b>\n\nВыберите нужный рабочий раздел.`
-    : `<b>⚙️ Админ-панель</b>\n\nСотрудник: <b>${escapeHtml(telegramDisplayName(user))}</b>\nРоль: <b>${escapeHtml(staffRoleTitle(access))}</b>\nWorker: <b>v${escapeHtml(WORKER_BUILD)}</b>${summary}\n\nВыберите раздел. Критические действия требуют подтверждения и записываются в журнал.`;
+    : limitedAdministrator
+      ? `<b>⚙️ Админ-панель</b>\n\nСотрудник: <b>${escapeHtml(telegramDisplayName(user))}</b>\nРоль: <b>${escapeHtml(staffRoleTitle(access))}</b>\nWorker: <b>v${escapeHtml(WORKER_BUILD)}</b>\n\nДоступны только рабочие разделы, назначенные владельцем.`
+      : `<b>⚙️ Админ-панель</b>\n\nСотрудник: <b>${escapeHtml(telegramDisplayName(user))}</b>\nРоль: <b>${escapeHtml(staffRoleTitle(access))}</b>\nWorker: <b>v${escapeHtml(WORKER_BUILD)}</b>${summary}\n\nВыберите раздел. Критические действия требуют подтверждения и записываются в журнал.`;
   const panelMarkup = adminMainMenuMarkup(access, overview || {}, env);
   const editMessageId = Math.floor(Number(options.editMessageId) || 0);
   if (editMessageId > 0) {
@@ -14298,6 +14513,9 @@ function botCommandsForAccess(access) {
   if (!access.owner && (role === "cashier" || role === "cook")) {
     return uniqueBotCommands(STAFF_FRONTLINE_BOT_COMMANDS);
   }
+  if (!access.owner && role === "administrator") {
+    return uniqueBotCommands(LIMITED_ADMINISTRATOR_BOT_COMMANDS);
+  }
   const commands = [...PLAYER_BOT_COMMANDS, ...STAFF_COMMON_BOT_COMMANDS];
   const add = (...items) => commands.push(...items);
   if (access.owner) return uniqueBotCommands([...commands, ...OWNER_CANONICAL_BOT_COMMANDS]);
@@ -14396,7 +14614,7 @@ async function setBotCommandsForChat(env, telegramId, commands) {
 async function syncBotCommandMenuForTelegramId(env, telegramId) {
   const id = String(telegramId || "").trim();
   if (!id) return { skipped: true };
-  if (isBotAdminTelegramId(id, env)) {
+  if (isBotOwnerTelegramId(id, env)) {
     return setBotCommandsForChat(env, id, botCommandsForAccess({ authorized: true, owner: true, permissions: completeSecurityPermissions(true) }));
   }
   let row = null;
@@ -14540,6 +14758,13 @@ async function promptPlayerPromoCode(chatId, user, env, message = "") {
 const TELEGRAM_STAFF_CHAT_CACHE_TTL_MS = 5 * 60 * 1000;
 const telegramStaffChatMemoryCache = new Map();
 const telegramTrackedMessagesMemoryCache = new Map();
+// A typed command must create a fresh visible reply. Callback navigation may
+// still edit the currently tracked admin-panel message.
+const telegramFreshCommandResponseChats = new Set();
+// Public player-menu callbacks must stay outside the staff clean-chat mode.
+// Otherwise an owner or employee pressing FAQ/Story/Tasks can silently edit an
+// old tracked admin-panel message instead of showing the selected player page.
+const telegramPublicCallbackResponseChats = new Set();
 
 function telegramCleanChatStateKey(chatId) {
   return `${TELEGRAM_CLEAN_CHAT_STATE_PREFIX}${String(chatId)}`;
@@ -14717,7 +14942,9 @@ function canEditTrackedTelegramPayload(payload) {
 
 async function sendTelegramPayload(env, chatId, payload, options = {}) {
   const cleanMode = String(options?.cleanMode || "replace");
-  const cleanChat = options?.cleanChat !== false && await isCleanStaffPrivateChat(env, chatId);
+  const forceFreshCommandResponse = telegramFreshCommandResponseChats.delete(String(chatId));
+  const publicCallbackResponse = telegramPublicCallbackResponseChats.has(String(chatId));
+  const cleanChat = !publicCallbackResponse && options?.cleanChat !== false && await isCleanStaffPrivateChat(env, chatId);
   if (cleanChat && options?.adminBack !== false) {
     payload = { ...payload, reply_markup: addAdminPanelBackButton(payload?.reply_markup) };
   }
@@ -14727,6 +14954,7 @@ async function sendTelegramPayload(env, chatId, payload, options = {}) {
   // sending a new one and then deleting the old one. This removes the visual
   // flash of the /start screen and saves Telegram API calls on every click.
   if (
+    !forceFreshCommandResponse &&
     cleanChat &&
     cleanMode === "replace" &&
     options?.preferEdit !== false &&
@@ -19139,7 +19367,7 @@ async function ensureV74PollSchema(env) {
 }
 
 function v74PollAccess(access) {
-  return Boolean(access?.owner || normalizeTeamRole(access?.role) === "administrator");
+  return Boolean(access?.owner || access?.permissions?.massBroadcasts);
 }
 
 function v74PollStatusLabel(status) {
@@ -20919,7 +21147,7 @@ async function ensureV77Schema(env) {
 }
 
 function v77OperationsAccess(access) {
-  return Boolean(access?.owner || normalizeTeamRole(access?.role) === "administrator");
+  return Boolean(access?.owner || access?.permissions?.manageSeasons || access?.permissions?.manageMaintenance || access?.permissions?.massBroadcasts);
 }
 
 async function requireV77OperationsAccess(chatId, user, env) {

@@ -7,29 +7,12 @@
 <meta content="no-referrer" name="referrer"/>
 <meta content="default-src 'none'; script-src 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com https://telegram.org; style-src 'unsafe-inline' blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; img-src 'self' blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; font-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; media-src 'self' blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; worker-src blob:; connect-src 'self' blob: data:; frame-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'" http-equiv="Content-Security-Policy"/>
 <title>Сладкий Забег</title>
-<style>:root{color-scheme:light dark;background:light-dark(rgb(255 255 255), rgb(24 24 24));--zefirok-app-height:100dvh}html,body{margin:0;width:100%;height:100%;min-height:0;overflow:hidden}body{box-sizing:border-box;padding:0;background:inherit}iframe{display:none;height:var(--zefirok-app-height,100dvh);border:0}body>iframe:not(.zefirok-season-pass-frame):not(.zefirok-rating-frame){width:calc(100% - 32px);max-width:736px;margin:0 auto}iframe.is-ready{display:block}.zefirok-maintenance-gate{width:100%;min-height:var(--zefirok-app-height,100dvh);display:grid;background:#fff5f5;place-items:center;padding:max(24px,var(--zefirok-content-safe-top,0px)) max(24px,var(--zefirok-content-safe-right,0px)) max(24px,var(--zefirok-content-safe-bottom,0px)) max(24px,var(--zefirok-content-safe-left,0px));box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#4e3a42}.zefirok-maintenance-card{width:min(430px,100%);box-sizing:border-box;padding:28px;border:1px solid #efd0d9;border-radius:28px;background:#fff;box-shadow:0 18px 50px rgba(91,54,68,.13);text-align:center}.zefirok-maintenance-icon{font-size:54px}.zefirok-maintenance-card h1{font-size:25px;margin:12px 0}.zefirok-maintenance-card p{font-size:16px;line-height:1.5;color:#786870;margin:0}.zefirok-maintenance-card button{margin-top:18px;padding:12px 18px;border:0;border-radius:14px;background:#e56f9b;color:#fff;font-weight:800;font-size:15px}
+<style>:root{color-scheme:light dark;background:light-dark(rgb(255 255 255), rgb(24 24 24));--zefirok-app-height:100dvh}html,body{margin:0;width:100%;height:100%;min-height:0;overflow:hidden}body{box-sizing:border-box;padding:0;background:inherit}iframe{display:none;height:var(--zefirok-app-height,100dvh);border:0}body>iframe:not(.zefirok-season-pass-frame){width:calc(100% - 32px);max-width:736px;margin:0 auto}iframe.is-ready{display:block}.zefirok-maintenance-gate{width:100%;min-height:var(--zefirok-app-height,100dvh);display:grid;background:#fff5f5;place-items:center;padding:max(24px,var(--zefirok-content-safe-top,0px)) max(24px,var(--zefirok-content-safe-right,0px)) max(24px,var(--zefirok-content-safe-bottom,0px)) max(24px,var(--zefirok-content-safe-left,0px));box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#4e3a42}.zefirok-maintenance-card{width:min(430px,100%);box-sizing:border-box;padding:28px;border:1px solid #efd0d9;border-radius:28px;background:#fff;box-shadow:0 18px 50px rgba(91,54,68,.13);text-align:center}.zefirok-maintenance-icon{font-size:54px}.zefirok-maintenance-card h1{font-size:25px;margin:12px 0}.zefirok-maintenance-card p{font-size:16px;line-height:1.5;color:#786870;margin:0}.zefirok-maintenance-card button{margin-top:18px;padding:12px 18px;border:0;border-radius:14px;background:#e56f9b;color:#fff;font-weight:800;font-size:15px}
 .zefirok-season-pass-layer{position:fixed;inset:0;width:100%;height:var(--zefirok-app-height,100dvh);z-index:2147483000;background:#fff5f4;display:block;overflow:hidden}
 .zefirok-season-pass-layer[hidden]{display:none!important}
 .zefirok-season-pass-frame{display:block!important;width:100%!important;max-width:none!important;height:var(--zefirok-app-height,100dvh)!important;margin:0!important;border:0!important;background:#fff5f4}
 body.zefirok-season-pass-open{overflow:hidden!important;padding:0!important}
 body.zefirok-season-pass-open>iframe:not(.zefirok-season-pass-frame){visibility:hidden!important;pointer-events:none!important}
-.zefirok-rating-layer{position:fixed;inset:0;width:100%;height:var(--zefirok-app-height,100dvh);z-index:2147483100;background:#fff5f4;display:block;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
-.zefirok-rating-layer[hidden]{display:none!important}
-.zefirok-rating-frame{display:block!important;width:100%!important;max-width:none!important;height:var(--zefirok-app-height,100dvh)!important;margin:0!important;border:0!important;background:#fff5f4;opacity:0;visibility:hidden;transition:opacity .16s ease}
-.zefirok-rating-layer[data-state="ready"] .zefirok-rating-frame{opacity:1;visibility:visible}
-.zefirok-rating-status{position:absolute;inset:0;z-index:2;display:grid;place-items:center;box-sizing:border-box;padding:max(26px,var(--zefirok-content-safe-top,0px)) max(22px,var(--zefirok-content-safe-right,0px)) max(26px,var(--zefirok-content-safe-bottom,0px)) max(22px,var(--zefirok-content-safe-left,0px));background:#fff5f4;color:#6c4654;text-align:center}
-.zefirok-rating-layer[data-state="ready"] .zefirok-rating-status{display:none}
-.zefirok-rating-status-card{width:min(390px,100%);box-sizing:border-box;padding:28px 24px;border:1px solid #efcbd7;border-radius:26px;background:#fffdfc;box-shadow:0 18px 52px rgba(102,55,72,.12)}
-.zefirok-rating-status-icon{display:block;font-size:42px;line-height:1;margin-bottom:13px}
-.zefirok-rating-status-title{display:block;font-size:21px;line-height:1.25;font-weight:900;color:#71384f}
-.zefirok-rating-status-copy{display:block;margin-top:10px;font-size:15px;line-height:1.48;color:#856a74}
-.zefirok-rating-status-spinner{width:34px;height:34px;margin:20px auto 0;border:4px solid #f5dbe4;border-top-color:#d95f90;border-radius:50%;animation:zefirok-rating-spin .8s linear infinite}
-.zefirok-rating-retry{display:none;width:100%;margin-top:20px;padding:13px 18px;border:0;border-radius:15px;background:#df6594;color:#fff;font:800 15px/1.2 inherit;cursor:pointer}
-.zefirok-rating-layer[data-state="error"] .zefirok-rating-status-spinner{display:none}
-.zefirok-rating-layer[data-state="error"] .zefirok-rating-retry{display:block}
-@keyframes zefirok-rating-spin{to{transform:rotate(360deg)}}
-body.zefirok-rating-open{overflow:hidden!important;padding:0!important}
-body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!important;pointer-events:none!important}
 </style>
 <script src="https://telegram.org/js/telegram-web-app.js?63"></script>
 <script>
@@ -129,12 +112,10 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
     rootStyle.setProperty("--zefirok-content-safe-left", `${snapshot.contentSafeArea.left}px`);
     const gameFrame = frame();
     const passOpen = Boolean(document.body?.classList?.contains("zefirok-season-pass-open"));
-    const ratingOpen = Boolean(document.body?.classList?.contains("zefirok-rating-open"));
-    // Freeze the game while a full-screen section is on top. Resizing a hidden iframe
-    // in iOS Telegram can return a transient narrow rectangle and distort the canvas.
-    if (!passOpen && !ratingOpen) sendViewportSnapshot(gameFrame?.contentWindow, snapshot);
+    // Freeze the game while the pass iframe is on top. Resizing a hidden iframe in
+    // iOS Telegram can return a transient narrow rectangle and distort the canvas.
+    if (!passOpen) sendViewportSnapshot(gameFrame?.contentWindow, snapshot);
     sendViewportSnapshot(seasonPassFrame()?.contentWindow, snapshot);
-    sendViewportSnapshot(ratingFrame()?.contentWindow, snapshot);
     return snapshot;
   }
 
@@ -645,146 +626,12 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
     refreshMainGameAfterSeasonPass();
   }
 
-  let ratingLayer = null;
-  let ratingReadyTimer = 0;
-  const RATING_RELEASE_BUILD = "6.0-rc1-rating-release-1";
-  const RATING_READY_TIMEOUT_MS = 16000;
-
-  function ratingFrame() {
-    return ratingLayer?.querySelector?.(".zefirok-rating-frame") || null;
-  }
-
-  function clearRatingReadyTimer() {
-    if (!ratingReadyTimer) return;
-    window.clearTimeout(ratingReadyTimer);
-    ratingReadyTimer = 0;
-  }
-
-  function setRatingOverlayState(state, copy = "") {
-    const layer = ratingLayer;
-    if (!layer?.isConnected) return;
-    layer.dataset.state = state;
-    const title = layer.querySelector("[data-rating-status-title]");
-    const message = layer.querySelector("[data-rating-status-copy]");
-    const icon = layer.querySelector("[data-rating-status-icon]");
-    if (state === "error") {
-      if (title) title.textContent = "Рейтинг не загрузился";
-      if (icon) icon.textContent = "⚠️";
-    } else {
-      if (title) title.textContent = "Открываем рейтинг";
-      if (icon) icon.textContent = "🏆";
-    }
-    if (message) message.textContent = copy || (state === "error"
-      ? "Проверьте соединение и повторите попытку."
-      : "Загружаем результаты игроков…");
-  }
-
-  function ratingUrl(initData = "", retryToken = "") {
-    const query = new URLSearchParams({ v: RATING_RELEASE_BUILD });
-    if (retryToken) query.set("retry", retryToken);
-    const hash = initData ? `#tgInitData=${encodeURIComponent(initData)}` : "";
-    return `/rating.html?${query.toString()}${hash}`;
-  }
-
-  function armRatingReadyTimeout() {
-    clearRatingReadyTimer();
-    ratingReadyTimer = window.setTimeout(() => {
-      ratingReadyTimer = 0;
-      if (!ratingLayer?.isConnected || ratingLayer.dataset.state === "ready") return;
-      setRatingOverlayState("error", "Страница рейтинга не ответила вовремя. Нажмите «Повторить».");
-    }, RATING_READY_TIMEOUT_MS);
-  }
-
-  function loadRatingFrame(initData = "", forceReload = false) {
-    const layer = ratingLayer;
-    const rating = ratingFrame();
-    if (!layer?.isConnected || !rating) return;
-    setRatingOverlayState("loading");
-    rating.src = ratingUrl(initData, forceReload ? Date.now().toString(36) : "");
-    armRatingReadyTimeout();
-  }
-
-  function closeRatingOverlay() {
-    clearRatingReadyTimer();
-    const layer = ratingLayer;
-    ratingLayer = null;
-    if (layer?.isConnected) layer.remove();
-    document.body.classList.remove("zefirok-rating-open");
-    try {
-      const webApp = window.Telegram?.WebApp;
-      webApp?.BackButton?.offClick?.(closeRatingOverlay);
-      webApp?.BackButton?.hide?.();
-      if (typeof webApp?.enableVerticalSwipes === "function") webApp.enableVerticalSwipes();
-      webApp?.disableClosingConfirmation?.();
-    } catch {}
-    const target = frame()?.contentWindow;
-    try { target?.postMessage?.({ type: "zefirok-open-screen", screen: "profile" }, "*"); } catch {}
-    try { target?.postMessage?.({ type: "zefirok-rating-account-updated" }, "*"); } catch {}
-    requestTelegramFullscreen();
-    scheduleTelegramViewportSync();
-  }
-
-  function openRatingOverlay(initData = "") {
-    if (ratingLayer?.isConnected) return;
-    const layer = document.createElement("div");
-    layer.className = "zefirok-rating-layer";
-    layer.dataset.state = "loading";
-    layer.setAttribute("role", "dialog");
-    layer.setAttribute("aria-label", "Рейтинг игроков");
-    layer.setAttribute("aria-modal", "true");
-
-    const status = document.createElement("div");
-    status.className = "zefirok-rating-status";
-    status.setAttribute("role", "status");
-    status.setAttribute("aria-live", "polite");
-    status.innerHTML = '<div class="zefirok-rating-status-card"><span class="zefirok-rating-status-icon" data-rating-status-icon>🏆</span><strong class="zefirok-rating-status-title" data-rating-status-title>Открываем рейтинг</strong><span class="zefirok-rating-status-copy" data-rating-status-copy>Загружаем результаты игроков…</span><div class="zefirok-rating-status-spinner" aria-hidden="true"></div><button class="zefirok-rating-retry" type="button" data-rating-retry>Повторить</button></div>';
-
-    const rating = document.createElement("iframe");
-    rating.className = "zefirok-rating-frame";
-    rating.title = "Рейтинг игроков";
-    rating.allow = "clipboard-write; autoplay; fullscreen";
-    rating.referrerPolicy = "same-origin";
-    rating.setAttribute("aria-label", "Рейтинг игроков");
-
-    layer.append(status, rating);
-    document.body.append(layer);
-    document.body.classList.add("zefirok-rating-open");
-    ratingLayer = layer;
-
-    status.querySelector("[data-rating-retry]")?.addEventListener("click", () => {
-      loadRatingFrame(initData, true);
-    });
-    rating.addEventListener("load", () => {
-      const snapshot = syncTelegramViewport();
-      sendViewportSnapshot(rating.contentWindow, snapshot);
-      try { sendTelegramProfile(rating.contentWindow); } catch {}
-    });
-    rating.addEventListener("error", () => {
-      clearRatingReadyTimer();
-      setRatingOverlayState("error", "Не удалось открыть файл рейтинга. Проверьте соединение и повторите попытку.");
-    });
-
-    try {
-      const webApp = window.Telegram?.WebApp;
-      webApp?.disableVerticalSwipes?.();
-      webApp?.enableClosingConfirmation?.();
-      webApp?.BackButton?.offClick?.(closeRatingOverlay);
-      webApp?.BackButton?.onClick?.(closeRatingOverlay);
-      webApp?.BackButton?.show?.();
-    } catch {}
-    requestTelegramFullscreen();
-    scheduleTelegramViewportSync();
-    loadRatingFrame(initData, false);
-  }
-
   window.addEventListener("message", (event) => {
     const gameFrame = frame();
     const passFrame = seasonPassFrame();
-    const currentRatingFrame = ratingFrame();
     const fromGame = Boolean(gameFrame && event.source === gameFrame.contentWindow);
     const fromSeasonPass = Boolean(passFrame && event.source === passFrame.contentWindow);
-    const fromRating = Boolean(currentRatingFrame && event.source === currentRatingFrame.contentWindow);
-    if (!fromGame && !fromSeasonPass && !fromRating) return;
+    if (!fromGame && !fromSeasonPass) return;
     const message = event.data;
     if (!message || typeof message !== "object") return;
     if (fromSeasonPass) {
@@ -792,39 +639,6 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
       else if (message.type === "zefirok-season-pass-account-updated") {
         const target = gameFrame?.contentWindow;
         try { target?.postMessage?.({ type: "zefirok-season-pass-account-updated" }, "*"); } catch {}
-      } else if (message.type === "zefirok-request-fullscreen") {
-        requestTelegramFullscreen();
-        scheduleTelegramViewportSync();
-      }
-      return;
-    }
-    if (fromRating) {
-      if (message.type === "zefirok-close-rating") closeRatingOverlay();
-      else if (message.type === "zefirok-rating-ready") {
-        clearRatingReadyTimer();
-        setRatingOverlayState("ready");
-        const snapshot = syncTelegramViewport();
-        sendViewportSnapshot(currentRatingFrame?.contentWindow, snapshot);
-        try { sendTelegramProfile(currentRatingFrame?.contentWindow); } catch {}
-      } else if (message.type === "zefirok-rating-fatal") {
-        clearRatingReadyTimer();
-        setRatingOverlayState("error", String(message.error || "Рейтинг не удалось запустить."));
-      } else if (message.type === "zefirok-rating-claim-request") {
-        try {
-          gameFrame?.contentWindow?.postMessage?.({
-            type: "zefirok-rating-claim-request",
-            requestId: String(message.requestId || ""),
-            rewardId: String(message.rewardId || "")
-          }, "*");
-        } catch {}
-      } else if (message.type === "zefirok-rating-reset-plan") {
-        try {
-          gameFrame?.contentWindow?.postMessage?.({
-            type: "zefirok-rating-reset-plan",
-            resetPlan: message.resetPlan && typeof message.resetPlan === "object" ? message.resetPlan : null,
-            serverTime: Number(message.serverTime || Date.now())
-          }, "*");
-        } catch {}
       } else if (message.type === "zefirok-request-fullscreen") {
         requestTelegramFullscreen();
         scheduleTelegramViewportSync();
@@ -846,30 +660,6 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
         if (initData) window.sessionStorage.setItem("zefirok-telegram-init-data", initData);
       } catch (error) {}
       openSeasonPassOverlay(initData);
-    } else if (message.type === "zefirok-open-rating") {
-      let initData = "";
-      try {
-        window.sessionStorage.setItem("zefirok-return-screen", "profile");
-        initData = String(window.Telegram?.WebApp?.initData || "");
-        if (initData) window.sessionStorage.setItem("zefirok-telegram-init-data", initData);
-      } catch (error) {}
-      openRatingOverlay(initData);
-    } else if (message.type === "zefirok-rating-claim-result") {
-      try {
-        ratingFrame()?.contentWindow?.postMessage?.({
-          type: "zefirok-rating-claim-result",
-          requestId: String(message.requestId || ""),
-          result: message.result || null
-        }, "*");
-      } catch {}
-    } else if (message.type === "zefirok-rating-reset-plan-result") {
-      try {
-        ratingFrame()?.contentWindow?.postMessage?.({
-          type: "zefirok-rating-reset-plan-result",
-          resetPlanId: String(message.resetPlanId || ""),
-          applied: Boolean(message.applied)
-        }, "*");
-      } catch {}
     } else if (message.type === "zefirok-progress-save") {
       storeProgress(message.payload);
     } else if (message.type === "zefirok-run-completed") {
@@ -2168,17 +1958,23 @@ html&gt;body{padding:
     }
 
     /* 0.3.0 Beta — profile, rating and update-dialog fixes */
-    #zefirok-maltipoo-runner #profile-rating-title, #zefirok-maltipoo-runner .leaderboard-season-title{
+    #zefirok-maltipoo-runner #profile-rating-title,
+    #zefirok-maltipoo-runner #leaderboard-dialog-title,
+    #zefirok-maltipoo-runner .leaderboard-season-title {
       color: #9a5576;
       background: none;
       -webkit-background-clip: border-box;
       background-clip: border-box;
       text-shadow: 0 1px 0 rgba(255,255,255,.78);
     }
-    #zefirok-maltipoo-runner #profile-rating-title{
+    #zefirok-maltipoo-runner #profile-rating-title,
+    #zefirok-maltipoo-runner #leaderboard-dialog-title {
       letter-spacing: .05em;
     }
-    
+    #zefirok-maltipoo-runner .leaderboard-dialog-head strong,
+    #zefirok-maltipoo-runner #leaderboard-dialog-title {
+      color: #a15e7b;
+    }
     #zefirok-maltipoo-runner .leaderboard-profile-season-title {
       display: block;
       width: 100%;
@@ -2732,11 +2528,55 @@ html&gt;body{padding:
   box-shadow: 0 12px 20px rgba(185, 76, 120, .18), inset 0 1px 0 rgba(255,255,255,.3);
 }
 
-
-
-
-
-
+#zefirok-maltipoo-runner .leaderboard-dialog {
+  border-radius: 30px;
+  border-color: rgba(226, 187, 200, .98);
+  background:
+    radial-gradient(circle at 100% 0%, rgba(255, 221, 137, .16), transparent 28%),
+    linear-gradient(180deg, #fffdfa 0%, #fff4f8 100%);
+}
+#zefirok-maltipoo-runner .leaderboard-dialog-head {
+  min-height: 72px;
+  padding: 14px 18px 12px;
+  border-bottom: 1px solid rgba(231, 196, 209, .8);
+  background: rgba(255, 250, 248, .97);
+}
+#zefirok-maltipoo-runner #leaderboard-dialog-title {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 10px 16px;
+  border: 1px solid rgba(121, 47, 76, .34);
+  border-radius: 16px;
+  background: linear-gradient(180deg, #8f4168, #6b2d49) !important;
+  color: #fff2ca !important;
+  -webkit-background-clip: border-box !important;
+  background-clip: border-box !important;
+  -webkit-text-fill-color: initial !important;
+  -webkit-text-stroke: 0 !important;
+  font-family: Copperplate, &quot;Copperplate Gothic Light&quot;, &quot;Palatino Linotype&quot;, Georgia, serif;
+  font-size: clamp(18px, 4.7vw, 24px);
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  text-shadow: 0 2px 0 rgba(89, 36, 58, .38), 0 4px 10px rgba(61, 22, 40, .18);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.18), 0 8px 16px rgba(111, 47, 78, .12);
+}
+#zefirok-maltipoo-runner .leaderboard-close {
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #fff, #fde6ef);
+  color: #8a4662;
+  box-shadow: 0 6px 12px rgba(130, 66, 92, .12);
+}
+#zefirok-maltipoo-runner .leaderboard-content {
+  gap: 16px;
+  padding: 14px 16px 22px;
+}
 #zefirok-maltipoo-runner .leaderboard-modal-media {
   overflow: hidden;
   border: 1px solid rgba(230, 192, 207, .84);
@@ -2866,29 +2706,34 @@ html&gt;body{padding:
     padding: 14px 15px;
     font-size: 22px;
   }
-  
+  #zefirok-maltipoo-runner #leaderboard-dialog-title {
+    font-size: 17px;
+    letter-spacing: .06em;
+  }
 }
 
 
 /* 0.3.5 Beta — premium plaques, reward alignment and centered podium scores */
-#zefirok-maltipoo-runner .leaderboard-v4-kicker{
-  background-image: url(&quot;/assets/rating/v6/header-badge-premium.png&quot;);
+#zefirok-maltipoo-runner .leaderboard-v4-kicker,
+#zefirok-maltipoo-runner .leaderboard-v4-title-wrap &gt; span {
+  background-image: url(&#x27;/assets/rating/v6/header-badge-premium.png&#x27;);
   background-size: 100% 100%;
   color: #79501d;
   filter: drop-shadow(0 5px 8px rgba(91, 57, 20, .15));
 }
 #zefirok-maltipoo-runner .leaderboard-v4-season-badge {
-  background-image: url(&quot;/assets/rating/v6/season-badge-premium.png&quot;);
+  background-image: url(&#x27;/assets/rating/v6/season-badge-premium.png&#x27;);
   background-size: 100% 100%;
   color: #79501d;
   filter: drop-shadow(0 5px 8px rgba(91, 57, 20, .12));
 }
-#zefirok-maltipoo-runner .leaderboard-v4-reward-wrap{
+#zefirok-maltipoo-runner .leaderboard-v4-reward-wrap,
+#zefirok-maltipoo-runner .leaderboard-v4-season-reward {
   box-sizing: border-box;
   aspect-ratio: 1200 / 360;
   min-height: 0;
   overflow: hidden;
-  background-image: url(&quot;/assets/rating/v6/reward-card-premium.png&quot;);
+  background-image: url(&#x27;/assets/rating/v6/reward-card-premium.png&#x27;);
   background-position: center;
   background-size: 100% 100%;
   background-repeat: no-repeat;
@@ -2896,8 +2741,11 @@ html&gt;body{padding:
 #zefirok-maltipoo-runner .leaderboard-v4-reward-wrap {
   padding: 20px 30% 20px 7%;
 }
-
-#zefirok-maltipoo-runner .leaderboard-v4-reward-wrap .leaderboard-reward-line{
+#zefirok-maltipoo-runner .leaderboard-v4-season-reward {
+  padding: 15px 30% 15px 7%;
+}
+#zefirok-maltipoo-runner .leaderboard-v4-reward-wrap .leaderboard-reward-line,
+#zefirok-maltipoo-runner .leaderboard-v4-season-reward .leaderboard-reward-line {
   width: 100%;
   min-width: 0;
   min-height: 0;
@@ -2911,8 +2759,12 @@ html&gt;body{padding:
   color: #644451;
   line-height: 1.28;
 }
-
-#zefirok-maltipoo-runner .leaderboard-v4-reward-wrap .leaderboard-reward-line &gt; span:last-child{
+#zefirok-maltipoo-runner .leaderboard-v4-season-reward .leaderboard-reward-line {
+  grid-template-columns: 58px minmax(0, 1fr);
+  gap: 11px;
+}
+#zefirok-maltipoo-runner .leaderboard-v4-reward-wrap .leaderboard-reward-line &gt; span:last-child,
+#zefirok-maltipoo-runner .leaderboard-v4-season-reward .leaderboard-reward-line &gt; span:last-child {
   display: flex;
   min-width: 0;
   flex-direction: column;
@@ -2920,17 +2772,20 @@ html&gt;body{padding:
   gap: 5px;
   overflow-wrap: anywhere;
 }
-#zefirok-maltipoo-runner .leaderboard-v4-reward-wrap .leaderboard-reward-line br{
+#zefirok-maltipoo-runner .leaderboard-v4-reward-wrap .leaderboard-reward-line br,
+#zefirok-maltipoo-runner .leaderboard-v4-season-reward .leaderboard-reward-line br {
   display: none;
 }
-#zefirok-maltipoo-runner .leaderboard-v4-reward-wrap .leaderboard-reward-line strong{
+#zefirok-maltipoo-runner .leaderboard-v4-reward-wrap .leaderboard-reward-line strong,
+#zefirok-maltipoo-runner .leaderboard-v4-season-reward .leaderboard-reward-line strong {
   display: block;
   color: #69364d;
   font-size: clamp(14px, 3.6vw, 18px);
   font-weight: 900;
   line-height: 1.16;
 }
-#zefirok-maltipoo-runner .leaderboard-v4-reward-wrap .leaderboard-reward-visual{
+#zefirok-maltipoo-runner .leaderboard-v4-reward-wrap .leaderboard-reward-visual,
+#zefirok-maltipoo-runner .leaderboard-v4-season-reward .leaderboard-reward-visual {
   position: relative;
   display: grid;
   place-items: center;
@@ -2939,32 +2794,70 @@ html&gt;body{padding:
   min-width: 0;
   overflow: visible;
 }
-
-#zefirok-maltipoo-runner .leaderboard-v4-reward-wrap .leaderboard-reward-cups img{
+#zefirok-maltipoo-runner .leaderboard-v4-season-reward .leaderboard-reward-visual {
+  width: 54px;
+  height: 54px;
+}
+#zefirok-maltipoo-runner .leaderboard-v4-reward-wrap .leaderboard-reward-cups img,
+#zefirok-maltipoo-runner .leaderboard-v4-season-reward .leaderboard-reward-cups img {
   width: 34px;
   height: 34px;
 }
-
-
-
-
+#zefirok-maltipoo-runner .leaderboard-v4-ribbon {
+  left: 6px;
+  right: 6px;
+  bottom: 7px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 540 / 160;
+  min-height: 0;
+  padding: 0 14px !important;
+  text-align: center;
+  line-height: 1;
+  background-position: center;
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+}
+#zefirok-maltipoo-runner .leaderboard-v4-podium-card[data-place=&quot;1&quot;] .leaderboard-v4-ribbon {
+  background-image: url(&#x27;/assets/rating/v7/podlozka_gold.png&#x27;);
+}
+#zefirok-maltipoo-runner .leaderboard-v4-podium-card[data-place=&quot;2&quot;] .leaderboard-v4-ribbon {
+  background-image: url(&#x27;/assets/rating/v7/serebryannay.png&#x27;);
+}
+#zefirok-maltipoo-runner .leaderboard-v4-podium-card[data-place=&quot;3&quot;] .leaderboard-v4-ribbon {
+  background-image: url(&#x27;/assets/rating/v7/bronze_podl.png&#x27;);
+}
 @media (max-width: 430px) {
   #zefirok-maltipoo-runner .leaderboard-v4-reward-wrap {
     padding: 15px 27% 15px 6%;
   }
-  
+  #zefirok-maltipoo-runner .leaderboard-v4-season-reward {
+    padding: 11px 27% 11px 6%;
+  }
   #zefirok-maltipoo-runner .leaderboard-v4-reward-wrap .leaderboard-reward-line {
     grid-template-columns: 60px minmax(0, 1fr);
     gap: 9px;
     font-size: 11px;
   }
-  
+  #zefirok-maltipoo-runner .leaderboard-v4-season-reward .leaderboard-reward-line {
+    grid-template-columns: 48px minmax(0, 1fr);
+    gap: 8px;
+    font-size: 10px;
+  }
   #zefirok-maltipoo-runner .leaderboard-v4-reward-wrap .leaderboard-reward-visual {
     width: 58px;
     height: 58px;
   }
-  
-  
+  #zefirok-maltipoo-runner .leaderboard-v4-season-reward .leaderboard-reward-visual {
+    width: 46px;
+    height: 46px;
+  }
+  #zefirok-maltipoo-runner .leaderboard-v4-ribbon {
+    padding: 0 10px !important;
+    font-size: clamp(14px, 4vw, 18px);
+  }
 }
 &lt;/style&gt;
 
@@ -4812,7 +4705,7 @@ html&gt;body{padding:
     font-weight: 950;
     letter-spacing: .14em;
     text-transform: uppercase;
-    background: url(&quot;/assets/rating/v6/header-badge-premium.png&quot;) center/100% 100% no-repeat;
+    background: url(&#x27;/assets/rating/v6/header-badge-premium.png&#x27;) center/100% 100% no-repeat;
   }
   #zefirok-maltipoo-runner .leaderboard-v4 #profile-rating-title {
     margin: 0;
@@ -4877,7 +4770,7 @@ html&gt;body{padding:
     content: &quot;&quot;;
     position: absolute;
     inset: 0;
-    background: url(&quot;/assets/rating/v4/season-plaque.png&quot;) center/100% 100% no-repeat;
+    background: url(&#x27;/assets/rating/v4/season-plaque.png&#x27;) center/100% 100% no-repeat;
     pointer-events: none;
   }
   #zefirok-maltipoo-runner .leaderboard-v4-plaque strong {
@@ -4905,7 +4798,7 @@ html&gt;body{padding:
     font-weight: 950;
     letter-spacing: .13em;
     text-transform: uppercase;
-    background: url(&quot;/assets/rating/v6/season-badge-premium.png&quot;) center/100% 100% no-repeat;
+    background: url(&#x27;/assets/rating/v6/season-badge-premium.png&#x27;) center/100% 100% no-repeat;
   }
   #zefirok-maltipoo-runner .leaderboard-v4-summary-grid {
     display: grid;
@@ -4961,7 +4854,7 @@ html&gt;body{padding:
     display: grid;
     align-items: center;
     padding: 14px 18px;
-    background: url(&quot;/assets/rating/v6/reward-card-premium.png&quot;) center/100% 100% no-repeat;
+    background: url(&#x27;/assets/rating/v6/reward-card-premium.png&#x27;) center/100% 100% no-repeat;
   }
   #zefirok-maltipoo-runner .leaderboard-v4-reward-wrap .leaderboard-reward-line {
     grid-template-columns: 82px minmax(0,1fr);
@@ -4992,66 +4885,307 @@ html&gt;body{padding:
   }
   #zefirok-maltipoo-runner .leaderboard-v4-open b { font-size: 28px; }
 
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
+  #zefirok-maltipoo-runner .leaderboard-v4-layer {
+    padding: 8px;
+    background: rgba(56,33,44,.61);
+    backdrop-filter: blur(10px);
+  }
+  #zefirok-maltipoo-runner .leaderboard-v4-dialog {
+    width: min(100%, 540px);
+    max-height: min(97dvh, 940px);
+    border: 1px solid rgba(226,184,198,.98);
+    border-radius: 32px;
+    background:
+      radial-gradient(circle at 100% 0%, rgba(255,223,135,.15), transparent 25%),
+      linear-gradient(180deg, #fffdfa, #fff2f6);
+    box-shadow: 0 32px 86px rgba(60,29,43,.36), inset 0 1px 0 rgba(255,255,255,.94);
+  }
+  #zefirok-maltipoo-runner .leaderboard-v4-dialog .leaderboard-dialog-head {
+    min-height: 76px;
+    padding: 14px 16px 12px;
+    background: rgba(255,251,248,.98);
+  }
+  #zefirok-maltipoo-runner .leaderboard-v4-title-wrap {
+    display: grid;
+    gap: 6px;
+    min-width: 0;
+  }
+  #zefirok-maltipoo-runner .leaderboard-v4-title-wrap &gt; span {
+    display: inline-flex;
+    width: fit-content;
+    min-height: 28px;
+    align-items: center;
+    padding: 6px 12px 6px 38px;
+    color: #8f5f16;
+    font-size: 10px;
+    font-weight: 950;
+    letter-spacing: .13em;
+    text-transform: uppercase;
+    background: url(&#x27;/assets/rating/v6/header-badge-premium.png&#x27;) center/100% 100% no-repeat;
+  }
+  #zefirok-maltipoo-runner .leaderboard-v4-dialog #leaderboard-dialog-title {
+    color: #6f2e4b !important;
+    background: none !important;
+    -webkit-text-fill-color: initial !important;
+    font-family: Copperplate, &quot;Copperplate Gothic Light&quot;, &quot;Palatino Linotype&quot;, Georgia, serif;
+    font-size: clamp(22px, 5.5vw, 31px);
+    font-weight: 900;
+    line-height: 1;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+    text-shadow: 0 2px 0 #fff, 0 5px 13px rgba(107,47,73,.14);
+  }
+  #zefirok-maltipoo-runner .leaderboard-v4-dialog .leaderboard-close {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
+    border-radius: 15px;
+    background: linear-gradient(180deg, #fff, #fde5ee);
+    color: #8a4561;
+  }
+  #zefirok-maltipoo-runner .leaderboard-v4-dialog .leaderboard-content {
+    gap: 14px;
+    padding: 12px 14px 22px;
+  }
+  #zefirok-maltipoo-runner .leaderboard-v4-modal-hero {
+    position: relative;
+    overflow: hidden;
+    aspect-ratio: 1400/660;
+    border: 1px solid rgba(226,180,200,.9);
+    border-radius: 24px;
+    background: #fff0f5;
+    box-shadow: 0 11px 25px rgba(126,68,91,.13);
+  }
+  #zefirok-maltipoo-runner .leaderboard-v4-modal-hero &gt; img {
+    display:block;
+    width:100%;
+    height:100%;
+    object-fit:cover;
+  }
+  #zefirok-maltipoo-runner .leaderboard-v4-modal-hero .leaderboard-v4-plaque {
+    top: 14%;
+    right: 3%;
+    width: 53%;
+  }
+  #zefirok-maltipoo-runner .leaderboard-v4-modal-hero .leaderboard-v4-plaque strong {
+    font-size: clamp(18px,4.5vw,31px);
+  }
+  #zefirok-maltipoo-runner .leaderboard-v4-season-card {
+    display: grid;
+    grid-template-columns: minmax(0,1.05fr) minmax(0,.95fr);
+    gap: 10px;
+    align-items: stretch;
+    padding: 13px;
+    border: 1px solid rgba(226,185,199,.9);
+    border-radius: 23px;
+    background: linear-gradient(180deg, rgba(255,255,255,.99), rgba(255,245,248,.97));
+    box-shadow: 0 10px 22px rgba(117,69,87,.09);
+  }
+  #zefirok-maltipoo-runner .leaderboard-v4-season-main {
+    display:grid;
+    align-content:center;
+    gap:9px;
+    min-width:0;
+  }
+  #zefirok-maltipoo-runner .leaderboard-v4-season-timing {
+    display:grid;
+    grid-template-columns:auto 1fr;
+    gap:8px;
+    align-items:start;
+    color:#705562;
+    font-size:12px;
+    font-weight:800;
+    line-height:1.42;
+  }
+  #zefirok-maltipoo-runner .leaderboard-v4-season-timing i {
+    display:grid;
+    place-items:center;
+    width:34px;
+    height:34px;
+    border-radius:12px;
+    background:linear-gradient(180deg,#fff0f5,#ffd9e7);
+    font-style:normal;
+    font-size:18px;
+  }
+  #zefirok-maltipoo-runner .leaderboard-v4-season-reward {
+    position:relative;
+    min-height:104px;
+    display:grid;
+    align-items:center;
+    padding:10px 13px;
+    background:url(&#x27;/assets/rating/v6/reward-card-premium.png&#x27;) center/100% 100% no-repeat;
+  }
+  #zefirok-maltipoo-runner .leaderboard-v4-season-reward .leaderboard-reward-line {
+    grid-template-columns:62px minmax(0,1fr);
+    gap:9px;
+    min-height:66px;
+    padding:0;
+    border:0;
+    font-size:11px;
+  }
+  #zefirok-maltipoo-runner .leaderboard-v4-season-reward .leaderboard-reward-line strong { font-size:14px; }
+  #zefirok-maltipoo-runner .leaderboard-v4-tabs {
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:6px;
+    padding:6px;
+    border:1px solid rgba(226,184,201,.78);
+    border-radius:18px;
+    background:rgba(248,226,235,.88);
+  }
+  #zefirok-maltipoo-runner .leaderboard-v4-tabs button {
+    min-height:46px;
+    padding:8px 10px;
+    border:0;
+    border-radius:13px;
+    background:transparent;
+    color:#7e405d;
+    font:900 13px/1.15 var(--font-sans);
+  }
+  #zefirok-maltipoo-runner .leaderboard-v4-tabs button.is-active {
+    background:linear-gradient(180deg,#df82a7,#c65382);
+    color:#fff;
+    box-shadow:0 7px 14px rgba(170,68,109,.2), inset 0 1px 0 rgba(255,255,255,.32);
+  }
+  #zefirok-maltipoo-runner .leaderboard-v4-podium {
+    display:grid;
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:8px;
+    align-items:end;
+    padding-top:20px;
+  }
+  #zefirok-maltipoo-runner .leaderboard-v4-podium-card {
+    position:relative;
+    display:grid;
+    justify-items:center;
+    align-content:start;
+    gap:7px;
+    min-width:0;
+    min-height:190px;
+    padding:32px 7px 70px;
+    border:1px solid rgba(224,192,205,.9);
+    border-radius:22px;
+    background:linear-gradient(180deg,rgba(255,255,255,.99),rgba(255,246,250,.97));
+    box-shadow:0 9px 19px rgba(102,52,73,.08);
+  }
+  #zefirok-maltipoo-runner .leaderboard-v4-podium-card.is-first {
+    min-height:210px;
+    transform:translateY(-11px);
+    border-color:rgba(226,173,54,.7);
+    background:radial-gradient(circle at 50% 6%,rgba(255,235,130,.5),transparent 44%),linear-gradient(180deg,#fffbed,#fff9f5);
+    box-shadow:0 14px 26px rgba(185,126,33,.15);
+  }
+  #zefirok-maltipoo-runner .leaderboard-v4-medal {
+    position:absolute;
+    top:-16px;
+    left:50%;
+    display:grid;
+    place-items:center;
+    width:45px;
+    height:45px;
+    transform:translateX(-50%);
+    border-radius:50%;
+    color:#704418;
+    font:950 18px/1 var(--font-sans);
+    background:linear-gradient(145deg,#fff1a9,#d69a2b);
+    border:3px solid rgba(255,255,255,.94);
+    box-shadow:0 5px 11px rgba(124,70,26,.2);
+  }
+  #zefirok-maltipoo-runner .leaderboard-v4-podium-card[data-place=&quot;2&quot;] .leaderboard-v4-medal { background:linear-gradient(145deg,#f7fbff,#aeb8c7); color:#4d5968; }
+  #zefirok-maltipoo-runner .leaderboard-v4-podium-card[data-place=&quot;3&quot;] .leaderboard-v4-medal { background:linear-gradient(145deg,#ffd9a3,#be6f2b); color:#754018; }
+  #zefirok-maltipoo-runner .leaderboard-v4-podium-card .leaderboard-avatar-frame { width:74px; height:74px; }
+  #zefirok-maltipoo-runner .leaderboard-v4-podium-card.is-first .leaderboard-avatar-frame { width:84px; height:84px; }
+  #zefirok-maltipoo-runner .leaderboard-v4-podium-name {
+    max-width:100%;
+    overflow:hidden;
+    color:#673047;
+    font-size:13px;
+    font-weight:900;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  #zefirok-maltipoo-runner .leaderboard-v4-ribbon {
+    position:absolute;
+    left:5px;
+    right:5px;
+    bottom:4px;
+    min-height:68px;
+    display:grid;
+    place-items:center;
+    padding:16px 42px 14px;
+    color:#fff;
+    font-size:clamp(18px,4.2vw,25px);
+    font-weight:950;
+    font-variant-numeric:tabular-nums;
+    text-shadow:0 2px 3px rgba(90,35,53,.28);
+    background-position:center;
+    background-size:100% 100%;
+    background-repeat:no-repeat;
+  }
+  #zefirok-maltipoo-runner .leaderboard-v4-podium-card[data-place=&quot;1&quot;] .leaderboard-v4-ribbon { background-image:url(&#x27;/assets/rating/v7/podlozka_gold.png&#x27;); }
+  #zefirok-maltipoo-runner .leaderboard-v4-podium-card[data-place=&quot;2&quot;] .leaderboard-v4-ribbon { background-image:url(&#x27;/assets/rating/v7/serebryannay.png&#x27;); color:#5c4b53; text-shadow:0 1px 0 #fff; }
+  #zefirok-maltipoo-runner .leaderboard-v4-podium-card[data-place=&quot;3&quot;] .leaderboard-v4-ribbon { background-image:url(&#x27;/assets/rating/v7/bronze_podl.png&#x27;); color:#754018; text-shadow:0 1px 0 rgba(255,255,255,.7); }
+  #zefirok-maltipoo-runner .leaderboard-v4-you {
+    position:absolute;
+    top:10px;
+    right:7px;
+    padding:5px 7px;
+    border-radius:10px;
+    background:#ce5b87;
+    color:#fff;
+    font-size:9px;
+    font-weight:950;
+  }
+  #zefirok-maltipoo-runner .leaderboard-v4-list {
+    display:grid;
+    gap:9px;
+  }
+  #zefirok-maltipoo-runner .leaderboard-v4-row {
+    display:grid;
+    grid-template-columns:34px 48px minmax(0,1fr) auto;
+    align-items:center;
+    gap:10px;
+    min-height:68px;
+    padding:9px 12px;
+    border:1px solid rgba(224,188,202,.88);
+    border-radius:19px;
+    background:rgba(255,255,255,.9);
+    box-shadow:0 6px 14px rgba(105,59,76,.06);
+  }
+  #zefirok-maltipoo-runner .leaderboard-v4-row.is-me { border-color:rgba(205,90,136,.68); background:linear-gradient(180deg,#fff4f8,#ffe8f0); }
+  #zefirok-maltipoo-runner .leaderboard-v4-place { color:#bd4e7a; font-size:18px; font-weight:950; text-align:center; }
+  #zefirok-maltipoo-runner .leaderboard-v4-row .leaderboard-avatar-frame.is-compact { width:48px; height:48px; }
+  #zefirok-maltipoo-runner .leaderboard-v4-row-copy { display:grid; gap:3px; min-width:0; }
+  #zefirok-maltipoo-runner .leaderboard-v4-row-copy strong { overflow:hidden; color:#673047; font-size:13px; font-weight:900; text-overflow:ellipsis; white-space:nowrap; }
+  #zefirok-maltipoo-runner .leaderboard-v4-row-copy span { color:#927583; font-size:10px; font-weight:800; }
+  #zefirok-maltipoo-runner .leaderboard-v4-score { color:#b74673; font-size:17px; font-weight:950; font-variant-numeric:tabular-nums; }
+  #zefirok-maltipoo-runner .leaderboard-v4-me-card,
+  #zefirok-maltipoo-runner .leaderboard-v4-reward-card {
+    display:grid;
+    gap:5px;
+    padding:13px 15px;
+    border:1px solid rgba(224,184,198,.9);
+    border-radius:20px;
+    background:linear-gradient(180deg,rgba(255,255,255,.99),rgba(255,243,247,.97));
+    color:#765b68;
+    font-size:12px;
+    font-weight:800;
+  }
+  #zefirok-maltipoo-runner .leaderboard-v4-me-card strong { color:#673047; font-size:14px; }
+  #zefirok-maltipoo-runner .leaderboard-v4-reward-card { background:linear-gradient(180deg,#fffaf0,#fff0d6); border-color:rgba(228,190,105,.72); }
+  #zefirok-maltipoo-runner .leaderboard-v4-reward-card .leaderboard-reward-line { border:0; padding:0; }
   @media (max-width: 430px) {
     #zefirok-maltipoo-runner .leaderboard-v4-head { grid-template-columns:1fr; }
     #zefirok-maltipoo-runner .leaderboard-v4-status { justify-self:start; }
     #zefirok-maltipoo-runner .leaderboard-v4-plaque { width:54%; padding:8% 7%; }
     #zefirok-maltipoo-runner .leaderboard-v4-plaque strong { font-size:clamp(15px,4.4vw,22px); }
-    
-    
-    
-    
-    
-    
+    #zefirok-maltipoo-runner .leaderboard-v4-season-card { grid-template-columns:1fr; }
+    #zefirok-maltipoo-runner .leaderboard-v4-podium-card { min-height:178px; padding-inline:4px; }
+    #zefirok-maltipoo-runner .leaderboard-v4-podium-card.is-first { min-height:194px; }
+    #zefirok-maltipoo-runner .leaderboard-v4-podium-card .leaderboard-avatar-frame { width:62px; height:62px; }
+    #zefirok-maltipoo-runner .leaderboard-v4-podium-card.is-first .leaderboard-avatar-frame { width:72px; height:72px; }
+    #zefirok-maltipoo-runner .leaderboard-v4-ribbon { padding-inline:26px; font-size:17px; }
   }
 
 
@@ -5063,7 +5197,13 @@ html&gt;body{padding:
   padding: 0 20px 0 66px;
   background-size: 100% 100%;
 }
-
+#zefirok-maltipoo-runner .leaderboard-v4-title-wrap &gt; span {
+  width: min(100%, 238px);
+  min-height: 0;
+  aspect-ratio: 760 / 150;
+  padding: 0 14px 0 48px;
+  background-size: 100% 100%;
+}
 #zefirok-maltipoo-runner .leaderboard-v4-season-badge {
   width: min(100%, 430px);
   min-height: 0;
@@ -5073,11 +5213,13 @@ html&gt;body{padding:
   background-size: 100% 100%;
   white-space: nowrap;
 }
-#zefirok-maltipoo-runner .leaderboard-v4-hero &gt; img.leaderboard-v4-hero-art{
+#zefirok-maltipoo-runner .leaderboard-v4-hero &gt; img.leaderboard-v4-hero-art,
+#zefirok-maltipoo-runner .leaderboard-v4-modal-hero &gt; img {
   object-fit: contain;
   object-position: center;
 }
-#zefirok-maltipoo-runner .leaderboard-v4-reward-wrap{
+#zefirok-maltipoo-runner .leaderboard-v4-reward-wrap,
+#zefirok-maltipoo-runner .leaderboard-v4-season-reward {
   min-height: 0;
   aspect-ratio: 1100 / 320;
   background-size: 100% 100%;
@@ -5086,18 +5228,37 @@ html&gt;body{padding:
 #zefirok-maltipoo-runner .leaderboard-v4-reward-wrap {
   padding: 12px 30% 12px 18px;
 }
-
-#zefirok-maltipoo-runner .leaderboard-v4-reward-wrap .leaderboard-reward-line{
+#zefirok-maltipoo-runner .leaderboard-v4-season-reward {
+  padding: 8px 29% 8px 12px;
+}
+#zefirok-maltipoo-runner .leaderboard-v4-reward-wrap .leaderboard-reward-line,
+#zefirok-maltipoo-runner .leaderboard-v4-season-reward .leaderboard-reward-line {
   min-height: 0;
 }
 #zefirok-maltipoo-runner .leaderboard-v4-reward-wrap .leaderboard-reward-visual {
   width: 72px;
   height: 72px;
 }
-
-
-
-
+#zefirok-maltipoo-runner .leaderboard-v4-season-reward .leaderboard-reward-visual {
+  width: 56px;
+  height: 56px;
+}
+#zefirok-maltipoo-runner .leaderboard-v4-ribbon {
+  left: 7px;
+  right: 7px;
+  bottom: 8px;
+  min-height: 0;
+  aspect-ratio: 540 / 160;
+  padding: 0 24px;
+  background-size: 100% 100%;
+  font-size: clamp(15px, 3.8vw, 21px);
+}
+#zefirok-maltipoo-runner .leaderboard-v4-podium-card {
+  padding-bottom: 54px;
+}
+#zefirok-maltipoo-runner .leaderboard-v4-podium-card.is-first {
+  padding-bottom: 56px;
+}
 @media (max-width: 430px) {
   #zefirok-maltipoo-runner .leaderboard-v4-panel {
     gap: 14px;
@@ -5108,7 +5269,11 @@ html&gt;body{padding:
     padding-left: 60px;
     font-size: 10px;
   }
-  
+  #zefirok-maltipoo-runner .leaderboard-v4-title-wrap &gt; span {
+    width: min(100%, 222px);
+    padding-left: 45px;
+    font-size: 9px;
+  }
   #zefirok-maltipoo-runner .leaderboard-v4-season-badge {
     width: min(100%, 360px);
     padding-inline: 36px;
@@ -5118,7 +5283,9 @@ html&gt;body{padding:
   #zefirok-maltipoo-runner .leaderboard-v4-reward-wrap {
     padding: 10px 27% 10px 13px;
   }
-  
+  #zefirok-maltipoo-runner .leaderboard-v4-season-reward {
+    padding: 8px 27% 8px 11px;
+  }
   #zefirok-maltipoo-runner .leaderboard-v4-reward-wrap .leaderboard-reward-line {
     grid-template-columns: 68px minmax(0,1fr);
     gap: 9px;
@@ -5127,17 +5294,36 @@ html&gt;body{padding:
   #zefirok-maltipoo-runner .leaderboard-v4-reward-wrap .leaderboard-reward-line strong {
     font-size: 15px;
   }
-  
-  
-  
-  
-  
+  #zefirok-maltipoo-runner .leaderboard-v4-season-reward .leaderboard-reward-line {
+    grid-template-columns: 54px minmax(0,1fr);
+    gap: 7px;
+    font-size: 10px;
+  }
+  #zefirok-maltipoo-runner .leaderboard-v4-season-reward .leaderboard-reward-line strong {
+    font-size: 13px;
+  }
+  #zefirok-maltipoo-runner .leaderboard-v4-podium-card {
+    min-height: 166px;
+    padding-bottom: 48px;
+  }
+  #zefirok-maltipoo-runner .leaderboard-v4-podium-card.is-first {
+    min-height: 182px;
+    padding-bottom: 50px;
+  }
+  #zefirok-maltipoo-runner .leaderboard-v4-ribbon {
+    left: 4px;
+    right: 4px;
+    bottom: 7px;
+    padding-inline: 17px;
+    font-size: 15px;
+  }
 }
 &lt;/style&gt;
 
 &lt;style id=&quot;leaderboard-v7-final-frames&quot;&gt;
   /* 0.3.5 Beta: user-provided rating frames, fixed proportions and safe reward layout. */
-  #zefirok-maltipoo-runner .leaderboard-v4-kicker{
+  #zefirok-maltipoo-runner .leaderboard-v4-kicker,
+  #zefirok-maltipoo-runner .leaderboard-v4-title-wrap &gt; span {
     box-sizing: border-box !important;
     display: flex !important;
     align-items: center !important;
@@ -5149,7 +5335,7 @@ html&gt;body{padding:
     padding: 0 8% 0 23% !important;
     border: 0 !important;
     border-radius: 0 !important;
-    background: url(&quot;/assets/rating/v7/premium-crown-plaque.png&quot;) center / 100% 100% no-repeat !important;
+    background: url(&#x27;/assets/rating/v7/premium-crown-plaque.png&#x27;) center / 100% 100% no-repeat !important;
     color: #7b4b16 !important;
     box-shadow: none !important;
     filter: drop-shadow(0 5px 8px rgba(91, 57, 20, .14)) !important;
@@ -5172,7 +5358,7 @@ html&gt;body{padding:
     padding: 0 11% !important;
     border: 0 !important;
     border-radius: 0 !important;
-    background: url(&quot;/assets/rating/v7/premium-simple-plaque.png&quot;) center / 100% 100% no-repeat !important;
+    background: url(&#x27;/assets/rating/v7/premium-simple-plaque.png&#x27;) center / 100% 100% no-repeat !important;
     color: #82531c !important;
     box-shadow: none !important;
     filter: drop-shadow(0 5px 8px rgba(91, 57, 20, .12)) !important;
@@ -5182,7 +5368,8 @@ html&gt;body{padding:
     letter-spacing: .14em !important;
   }
 
-  #zefirok-maltipoo-runner .leaderboard-v4-plaque{
+  #zefirok-maltipoo-runner .leaderboard-v4-plaque,
+  #zefirok-maltipoo-runner .leaderboard-v4-modal-hero .leaderboard-v4-plaque {
     box-sizing: border-box !important;
     display: flex !important;
     align-items: center !important;
@@ -5194,7 +5381,7 @@ html&gt;body{padding:
     padding: 12% 7% 9% !important;
     border: 0 !important;
     border-radius: 0 !important;
-    background: url(&quot;/assets/rating/v7/season-name-frame.png&quot;) center / 100% 100% no-repeat !important;
+    background: url(&#x27;/assets/rating/v7/season-name-frame.png&#x27;) center / 100% 100% no-repeat !important;
     box-shadow: none !important;
     filter: drop-shadow(0 7px 10px rgba(81, 31, 46, .18)) !important;
     overflow: visible !important;
@@ -5213,7 +5400,8 @@ html&gt;body{padding:
     text-shadow: 0 2px 0 rgba(70, 19, 36, .55), 0 5px 12px rgba(58, 17, 31, .28) !important;
   }
 
-  #zefirok-maltipoo-runner .leaderboard-v4-reward-wrap{
+  #zefirok-maltipoo-runner .leaderboard-v4-reward-wrap,
+  #zefirok-maltipoo-runner .leaderboard-v4-season-reward {
     position: relative !important;
     box-sizing: border-box !important;
     display: block !important;
@@ -5224,13 +5412,17 @@ html&gt;body{padding:
     padding: 0 !important;
     border: 0 !important;
     border-radius: 0 !important;
-    background: url(&quot;/assets/rating/v7/reward-frame.png&quot;) center / 100% 100% no-repeat !important;
+    background: url(&#x27;/assets/rating/v7/reward-frame.png&#x27;) center / 100% 100% no-repeat !important;
     box-shadow: none !important;
     filter: drop-shadow(0 7px 10px rgba(116, 74, 22, .14)) !important;
     overflow: hidden !important;
   }
-  
-  #zefirok-maltipoo-runner .leaderboard-v4-reward-wrap .leaderboard-reward-line{
+  #zefirok-maltipoo-runner .leaderboard-v4-season-reward {
+    width: 100% !important;
+    max-width: none !important;
+  }
+  #zefirok-maltipoo-runner .leaderboard-v4-reward-wrap .leaderboard-reward-line,
+  #zefirok-maltipoo-runner .leaderboard-v4-season-reward .leaderboard-reward-line {
     position: absolute !important;
     inset: 0 !important;
     display: block !important;
@@ -5243,7 +5435,8 @@ html&gt;body{padding:
     color: #654327 !important;
     line-height: 1 !important;
   }
-  #zefirok-maltipoo-runner .leaderboard-v4-reward-wrap .leaderboard-reward-visual{
+  #zefirok-maltipoo-runner .leaderboard-v4-reward-wrap .leaderboard-reward-visual,
+  #zefirok-maltipoo-runner .leaderboard-v4-season-reward .leaderboard-reward-visual {
     position: absolute !important;
     left: 3.1% !important;
     top: 9% !important;
@@ -5258,7 +5451,8 @@ html&gt;body{padding:
     background: transparent !important;
     box-shadow: none !important;
   }
-  #zefirok-maltipoo-runner .leaderboard-v4-reward-wrap .leaderboard-reward-line &gt; span:last-child{
+  #zefirok-maltipoo-runner .leaderboard-v4-reward-wrap .leaderboard-reward-line &gt; span:last-child,
+  #zefirok-maltipoo-runner .leaderboard-v4-season-reward .leaderboard-reward-line &gt; span:last-child {
     position: absolute !important;
     left: 29% !important;
     right: 25% !important;
@@ -5271,12 +5465,13 @@ html&gt;body{padding:
     overflow: hidden !important;
     text-align: center !important;
   }
-  #zefirok-maltipoo-runner .leaderboard-v4-reward-wrap .leaderboard-reward-line strong{
+  #zefirok-maltipoo-runner .leaderboard-v4-reward-wrap .leaderboard-reward-line strong,
+  #zefirok-maltipoo-runner .leaderboard-v4-season-reward .leaderboard-reward-line strong {
     display: block !important;
     max-width: 100% !important;
     overflow: hidden !important;
     color: #805020 !important;
-    font-family: Georgia, &quot;Times New Roman&quot;, serif !important;
+    font-family: Georgia, &#x27;Times New Roman&#x27;, serif !important;
     font-size: clamp(16px, 4.5vw, 25px) !important;
     font-weight: 800 !important;
     line-height: 1.05 !important;
@@ -5284,7 +5479,8 @@ html&gt;body{padding:
     white-space: nowrap !important;
     text-shadow: 0 1px 0 rgba(255,255,255,.8) !important;
   }
-  #zefirok-maltipoo-runner .leaderboard-v4-reward-wrap .leaderboard-reward-cups img{
+  #zefirok-maltipoo-runner .leaderboard-v4-reward-wrap .leaderboard-reward-cups img,
+  #zefirok-maltipoo-runner .leaderboard-v4-season-reward .leaderboard-reward-cups img {
     position: absolute !important;
     width: 43% !important;
     height: 43% !important;
@@ -5293,16 +5489,20 @@ html&gt;body{padding:
     object-fit: contain !important;
     filter: drop-shadow(0 2px 3px rgba(136,81,33,.13)) !important;
   }
-  #zefirok-maltipoo-runner .leaderboard-v4-reward-wrap .leaderboard-reward-cups img:nth-child(1){
+  #zefirok-maltipoo-runner .leaderboard-v4-reward-wrap .leaderboard-reward-cups img:nth-child(1),
+  #zefirok-maltipoo-runner .leaderboard-v4-season-reward .leaderboard-reward-cups img:nth-child(1) {
     left: 6% !important; bottom: 8% !important; transform: rotate(-7deg) !important;
   }
-  #zefirok-maltipoo-runner .leaderboard-v4-reward-wrap .leaderboard-reward-cups img:nth-child(2){
+  #zefirok-maltipoo-runner .leaderboard-v4-reward-wrap .leaderboard-reward-cups img:nth-child(2),
+  #zefirok-maltipoo-runner .leaderboard-v4-season-reward .leaderboard-reward-cups img:nth-child(2) {
     left: 29% !important; top: 5% !important; z-index: 2 !important;
   }
-  #zefirok-maltipoo-runner .leaderboard-v4-reward-wrap .leaderboard-reward-cups img:nth-child(3){
+  #zefirok-maltipoo-runner .leaderboard-v4-reward-wrap .leaderboard-reward-cups img:nth-child(3),
+  #zefirok-maltipoo-runner .leaderboard-v4-season-reward .leaderboard-reward-cups img:nth-child(3) {
     right: 6% !important; bottom: 8% !important; transform: rotate(7deg) !important;
   }
-  #zefirok-maltipoo-runner .leaderboard-v4-reward-wrap .leaderboard-reward-icon{
+  #zefirok-maltipoo-runner .leaderboard-v4-reward-wrap .leaderboard-reward-icon,
+  #zefirok-maltipoo-runner .leaderboard-v4-season-reward .leaderboard-reward-icon {
     width: 72% !important;
     height: 72% !important;
     max-width: 72% !important;
@@ -5312,20 +5512,27 @@ html&gt;body{padding:
   }
 
   /* Full leaderboard reward must not become smaller than the profile reward. */
-  
-  
+  #zefirok-maltipoo-runner .leaderboard-v4-season-card {
+    grid-template-columns: 1fr !important;
+  }
+  #zefirok-maltipoo-runner .leaderboard-v4-season-main {
+    width: 100% !important;
+  }
 
   @media (max-width: 430px) {
-    #zefirok-maltipoo-runner .leaderboard-v4-kicker{
+    #zefirok-maltipoo-runner .leaderboard-v4-kicker,
+    #zefirok-maltipoo-runner .leaderboard-v4-title-wrap &gt; span {
       width: min(100%, 330px) !important;
       padding-left: 23% !important;
       padding-right: 7% !important;
       font-size: 10px !important;
     }
-    #zefirok-maltipoo-runner .leaderboard-v4-plaque{
+    #zefirok-maltipoo-runner .leaderboard-v4-plaque,
+    #zefirok-maltipoo-runner .leaderboard-v4-modal-hero .leaderboard-v4-plaque {
       width: 55% !important;
     }
-    #zefirok-maltipoo-runner .leaderboard-v4-reward-wrap .leaderboard-reward-line strong{
+    #zefirok-maltipoo-runner .leaderboard-v4-reward-wrap .leaderboard-reward-line strong,
+    #zefirok-maltipoo-runner .leaderboard-v4-season-reward .leaderboard-reward-line strong {
       font-size: clamp(15px, 4.4vw, 20px) !important;
     }
   }
@@ -5334,7 +5541,8 @@ html&gt;body{padding:
 
 &lt;style id=&quot;leaderboard-typography-0-3-6&quot;&gt;
   /* 0.3.6 Beta — final type hierarchy for the approved rating layout. */
-  #zefirok-maltipoo-runner .leaderboard-v4-kicker{
+  #zefirok-maltipoo-runner .leaderboard-v4-kicker,
+  #zefirok-maltipoo-runner .leaderboard-v4-title-wrap &gt; span {
     padding-top: 1.3% !important;
     padding-bottom: 1.3% !important;
   }
@@ -5364,8 +5572,8 @@ html&gt;body{padding:
     letter-spacing: .10em;
     white-space: nowrap;
   }
-  
-  
+  #zefirok-maltipoo-runner .leaderboard-v4-title-wrap .leaderboard-v4-kicker-label small { font-size: clamp(6px, 1.45vw, 8px); }
+  #zefirok-maltipoo-runner .leaderboard-v4-title-wrap .leaderboard-v4-kicker-label strong { font-size: clamp(10px, 2.55vw, 14px); }
 
   #zefirok-maltipoo-runner .leaderboard-v4-plaque strong {
     display: grid !important;
@@ -5411,7 +5619,8 @@ html&gt;body{padding:
     white-space: nowrap !important;
   }
 
-  #zefirok-maltipoo-runner .leaderboard-v4-reward-wrap .leaderboard-reward-line &gt; .leaderboard-reward-copy:last-child{
+  #zefirok-maltipoo-runner .leaderboard-v4-reward-wrap .leaderboard-reward-line &gt; .leaderboard-reward-copy:last-child,
+  #zefirok-maltipoo-runner .leaderboard-v4-season-reward .leaderboard-reward-line &gt; .leaderboard-reward-copy:last-child {
     position: absolute !important;
     left: 27% !important;
     right: 25% !important;
@@ -5444,7 +5653,8 @@ html&gt;body{padding:
     height: 1px;
     background: linear-gradient(90deg, transparent, rgba(174,112,38,.72) 18%, rgba(174,112,38,.72) 82%, transparent);
   }
-  #zefirok-maltipoo-runner .leaderboard-v4-reward-wrap .leaderboard-reward-line &gt; .leaderboard-reward-copy .leaderboard-reward-amount{
+  #zefirok-maltipoo-runner .leaderboard-v4-reward-wrap .leaderboard-reward-line &gt; .leaderboard-reward-copy .leaderboard-reward-amount,
+  #zefirok-maltipoo-runner .leaderboard-v4-season-reward .leaderboard-reward-line &gt; .leaderboard-reward-copy .leaderboard-reward-amount {
     display: block !important;
     max-width: 100% !important;
     overflow: hidden !important;
@@ -5462,12 +5672,13 @@ html&gt;body{padding:
   @media (max-width: 430px) {
     #zefirok-maltipoo-runner .leaderboard-v4-kicker-label small { font-size: 7px; }
     #zefirok-maltipoo-runner .leaderboard-v4-kicker-label strong { font-size: 12px; }
-    
-    
+    #zefirok-maltipoo-runner .leaderboard-v4-title-wrap .leaderboard-v4-kicker-label small { font-size: 6px; }
+    #zefirok-maltipoo-runner .leaderboard-v4-title-wrap .leaderboard-v4-kicker-label strong { font-size: 10px; }
     #zefirok-maltipoo-runner .leaderboard-v4-plaque strong { font-size: clamp(15px, 4.3vw, 20px) !important; }
     #zefirok-maltipoo-runner .leaderboard-v4-season-badge { font-size: clamp(18px, 5vw, 23px) !important; }
     #zefirok-maltipoo-runner .leaderboard-reward-title { font-size: clamp(11px, 3.15vw, 15px); }
-    #zefirok-maltipoo-runner .leaderboard-v4-reward-wrap .leaderboard-reward-line &gt; .leaderboard-reward-copy .leaderboard-reward-amount{ font-size: clamp(9px, 2.55vw, 12px) !important; }
+    #zefirok-maltipoo-runner .leaderboard-v4-reward-wrap .leaderboard-reward-line &gt; .leaderboard-reward-copy .leaderboard-reward-amount,
+    #zefirok-maltipoo-runner .leaderboard-v4-season-reward .leaderboard-reward-line &gt; .leaderboard-reward-copy .leaderboard-reward-amount { font-size: clamp(9px, 2.55vw, 12px) !important; }
   }
 &lt;/style&gt;
 
@@ -5779,10 +5990,10 @@ html&gt;body{padding:
 #zefirok-maltipoo-runner .case-result-item{padding:12px 13px;border-radius:15px;background:#fff;display:flex;gap:10px;align-items:center;color:#704b37;box-shadow:0 6px 16px rgba(97,58,39,.08)}
 #zefirok-maltipoo-runner .case-result-item b{font-size:19px}.case-result-item span{display:grid;font-size:12px}.case-result-item strong{font-size:14px;color:#5b3928}
 #zefirok-maltipoo-runner .case-result-done{margin-top:15px;border:0;border-radius:14px;padding:11px 22px;background:#e9809e;color:#fff;font-weight:900}
-#zefirok-maltipoo-runner .profile-avatar-wrap.case-frame-strawberry{box-shadow:0 0 0 4px #ef96ae,0 0 0 7px #ffe1e9!important}
-#zefirok-maltipoo-runner .profile-avatar-wrap.case-frame-coffee{box-shadow:0 0 0 4px #936047,0 0 0 7px #ead1bd!important}
-#zefirok-maltipoo-runner .profile-avatar-wrap.case-frame-mint{box-shadow:0 0 0 4px #6fcab0,0 0 0 7px #d8f7ee!important}
-#zefirok-maltipoo-runner .profile-avatar-wrap.case-frame-gold{box-shadow:0 0 0 4px #e2b53d,0 0 0 7px #fff0a3,0 5px 18px rgba(205,153,31,.28)!important}
+#zefirok-maltipoo-runner .profile-avatar-wrap.case-frame-strawberry,#zefirok-maltipoo-runner .leaderboard-avatar-frame.case-frame-strawberry{box-shadow:0 0 0 4px #ef96ae,0 0 0 7px #ffe1e9!important}
+#zefirok-maltipoo-runner .profile-avatar-wrap.case-frame-coffee,#zefirok-maltipoo-runner .leaderboard-avatar-frame.case-frame-coffee{box-shadow:0 0 0 4px #936047,0 0 0 7px #ead1bd!important}
+#zefirok-maltipoo-runner .profile-avatar-wrap.case-frame-mint,#zefirok-maltipoo-runner .leaderboard-avatar-frame.case-frame-mint{box-shadow:0 0 0 4px #6fcab0,0 0 0 7px #d8f7ee!important}
+#zefirok-maltipoo-runner .profile-avatar-wrap.case-frame-gold,#zefirok-maltipoo-runner .leaderboard-avatar-frame.case-frame-gold{box-shadow:0 0 0 4px #e2b53d,0 0 0 7px #fff0a3,0 5px 18px rgba(205,153,31,.28)!important}
 @media(max-width:390px){#zefirok-maltipoo-runner .level-cases-list{grid-template-columns:1fr}#zefirok-maltipoo-runner .level-case-card.is-gold{grid-column:auto}#zefirok-maltipoo-runner .case-cosmetic-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
 &lt;/style&gt;
 
@@ -5803,12 +6014,12 @@ html&gt;body{padding:
 #zefirok-maltipoo-runner .level-guide-case.is-gold .case-mini-chest{background:linear-gradient(#ffdc70 0 30%,#d4a12d 31%)}
 #zefirok-maltipoo-runner .case-frame-preview{position:relative;border:0!important;background:#fff!important;box-shadow:none!important;overflow:visible}
 #zefirok-maltipoo-runner .case-frame-preview&gt;img{display:block;width:52px!important;height:52px!important;max-width:none!important;object-fit:contain!important;border-radius:0!important}
-#zefirok-maltipoo-runner .profile-avatar-wrap[class*=&quot;case-frame-&quot;]{overflow:visible!important;box-shadow:none!important}
-#zefirok-maltipoo-runner .profile-avatar-wrap[class*=&quot;case-frame-&quot;]::after{content:&quot;&quot;;position:absolute;inset:-14%;z-index:4;pointer-events:none;background-position:center;background-size:contain;background-repeat:no-repeat;filter:drop-shadow(0 3px 5px rgba(85,50,38,.16))}
-#zefirok-maltipoo-runner .profile-avatar-wrap.case-frame-strawberry::after{background-image:url(&quot;/assets/rating/frames/strawberry.png&quot;)}
-#zefirok-maltipoo-runner .profile-avatar-wrap.case-frame-coffee::after{background-image:url(&quot;/assets/rating/frames/coffee.png&quot;)}
-#zefirok-maltipoo-runner .profile-avatar-wrap.case-frame-mint::after{background-image:url(&quot;/assets/rating/frames/mint.png&quot;)}
-#zefirok-maltipoo-runner .profile-avatar-wrap.case-frame-gold::after{background-image:url(&quot;/assets/rating/frames/gold.png&quot;)}
+#zefirok-maltipoo-runner .profile-avatar-wrap[class*=&quot;case-frame-&quot;],#zefirok-maltipoo-runner .leaderboard-avatar-frame[class*=&quot;case-frame-&quot;]{overflow:visible!important;box-shadow:none!important}
+#zefirok-maltipoo-runner .profile-avatar-wrap[class*=&quot;case-frame-&quot;]::after,#zefirok-maltipoo-runner .leaderboard-avatar-frame[class*=&quot;case-frame-&quot;]::after{content:&quot;&quot;;position:absolute;inset:-14%;z-index:4;pointer-events:none;background-position:center;background-size:contain;background-repeat:no-repeat;filter:drop-shadow(0 3px 5px rgba(85,50,38,.16))}
+#zefirok-maltipoo-runner .profile-avatar-wrap.case-frame-strawberry::after,#zefirok-maltipoo-runner .leaderboard-avatar-frame.case-frame-strawberry::after{background-image:url(&#x27;/assets/rating/frames/strawberry.png&#x27;)}
+#zefirok-maltipoo-runner .profile-avatar-wrap.case-frame-coffee::after,#zefirok-maltipoo-runner .leaderboard-avatar-frame.case-frame-coffee::after{background-image:url(&#x27;/assets/rating/frames/coffee.png&#x27;)}
+#zefirok-maltipoo-runner .profile-avatar-wrap.case-frame-mint::after,#zefirok-maltipoo-runner .leaderboard-avatar-frame.case-frame-mint::after{background-image:url(&#x27;/assets/rating/frames/mint.png&#x27;)}
+#zefirok-maltipoo-runner .profile-avatar-wrap.case-frame-gold::after,#zefirok-maltipoo-runner .leaderboard-avatar-frame.case-frame-gold::after{background-image:url(&#x27;/assets/rating/frames/gold.png&#x27;)}
 #zefirok-maltipoo-runner .case-result-head.is-opening .case-chest{animation:case-chest-shake .48s ease-in-out infinite alternate}
 #zefirok-maltipoo-runner .case-roulette-list{display:grid;gap:12px;margin-top:8px}
 #zefirok-maltipoo-runner .case-roulette-row{display:grid;gap:7px}
@@ -5921,29 +6132,35 @@ html&gt;body{padding:
 &lt;/style&gt;
 
 &lt;style id=&quot;zefirok-5-0-1-cases-frames-effects-flicker-fix&quot;&gt;
+#zefirok-maltipoo-runner .leaderboard-v4-podium-card .leaderboard-v4-ribbon{
+  border:0!important;outline:0!important;border-radius:0!important;box-shadow:none!important;
+  background-color:transparent!important;background-repeat:no-repeat!important;background-position:center!important;background-size:100% 100%!important;
+}
 
 
 
-
-#zefirok-maltipoo-runner .profile-avatar-wrap[class*=&quot;case-frame-&quot;]{overflow:visible!important;box-shadow:none!important}
+#zefirok-maltipoo-runner .profile-avatar-wrap[class*=&quot;case-frame-&quot;],
+#zefirok-maltipoo-runner .leaderboard-avatar-frame[class*=&quot;case-frame-&quot;]{overflow:visible!important;box-shadow:none!important}
 #zefirok-maltipoo-runner .profile-avatar-wrap[class*=&quot;case-frame-&quot;]::after{
   content:&quot;&quot;;position:absolute;inset:-8%;z-index:5;pointer-events:none;background-position:center;background-size:contain;background-repeat:no-repeat;filter:drop-shadow(0 3px 5px rgba(85,50,38,.16));
 }
-
-#zefirok-maltipoo-runner .profile-avatar-wrap.case-frame-heart::after{background-image:url(&quot;/assets/rating/frames/profile/ramka_profile_sedce.png&quot;)}
-#zefirok-maltipoo-runner .profile-avatar-wrap.case-frame-marshmallow::after{background-image:url(&quot;/assets/rating/frames/profile/ramka_profile_zefir.png&quot;)}
-#zefirok-maltipoo-runner .profile-avatar-wrap.case-frame-coffee::after{background-image:url(&quot;/assets/rating/frames/profile/ramka_profile_coffie.png&quot;)}
-#zefirok-maltipoo-runner .profile-avatar-wrap.case-frame-strawberry::after{background-image:url(&quot;/assets/rating/frames/profile/ramka_profile_klybnika.png&quot;)}
-#zefirok-maltipoo-runner .profile-avatar-wrap.case-frame-winter::after{background-image:url(&quot;/assets/rating/frames/profile/ramka_profile_zima.png&quot;)}
-#zefirok-maltipoo-runner .profile-avatar-wrap.case-frame-sleep::after{background-image:url(&quot;/assets/rating/frames/profile/ramka_profile_sleep.png&quot;)}
-#zefirok-maltipoo-runner .profile-avatar-wrap.case-frame-lovers::after{background-image:url(&quot;/assets/rating/frames/profile/ramka_profile_lovers.png&quot;)}
-#zefirok-maltipoo-runner .profile-avatar-wrap.case-frame-elite::after{background-image:url(&quot;/assets/rating/frames/profile/ramka_profile_elita.png&quot;)}
-#zefirok-maltipoo-runner .profile-avatar-wrap.case-frame-princess::after{background-image:url(&quot;/assets/rating/frames/profile/ramka_profile_princess.png&quot;)}
-#zefirok-maltipoo-runner .profile-avatar-wrap.case-frame-legendary_frame_1::after{background-image:url(&quot;/assets/rating/frames/profile/legendary_ramka_1.png&quot;)}
-#zefirok-maltipoo-runner .profile-avatar-wrap.case-frame-legendary_frame_2::after{background-image:url(&quot;/assets/rating/frames/profile/legendary_ramka_2.png&quot;)}
-#zefirok-maltipoo-runner .profile-avatar-wrap.case-frame-legendary_frame_3::after{background-image:url(&quot;/assets/rating/frames/profile/legendary_ramka_3.png&quot;)}
-#zefirok-maltipoo-runner .profile-avatar-wrap.case-frame-legendary_frame_4::after{background-image:url(&quot;/assets/rating/frames/profile/legendary_ramka_4.png&quot;)}
-#zefirok-maltipoo-runner .profile-avatar-wrap.case-frame-legendary_frame_5::after{background-image:url(&quot;/assets/rating/frames/profile/legendary_ramka_5.png&quot;)}
+#zefirok-maltipoo-runner .leaderboard-avatar-frame[class*=&quot;case-frame-&quot;]::after{
+  content:&quot;&quot;;position:absolute;inset:-12%;z-index:5;pointer-events:none;background-position:center;background-size:contain;background-repeat:no-repeat;filter:drop-shadow(0 3px 5px rgba(85,50,38,.16));
+}
+#zefirok-maltipoo-runner .profile-avatar-wrap.case-frame-heart::after,#zefirok-maltipoo-runner .leaderboard-avatar-frame.case-frame-heart::after{background-image:url(&#x27;/assets/rating/frames/profile/ramka_profile_sedce.png&#x27;)}
+#zefirok-maltipoo-runner .profile-avatar-wrap.case-frame-marshmallow::after,#zefirok-maltipoo-runner .leaderboard-avatar-frame.case-frame-marshmallow::after{background-image:url(&#x27;/assets/rating/frames/profile/ramka_profile_zefir.png&#x27;)}
+#zefirok-maltipoo-runner .profile-avatar-wrap.case-frame-coffee::after,#zefirok-maltipoo-runner .leaderboard-avatar-frame.case-frame-coffee::after{background-image:url(&#x27;/assets/rating/frames/profile/ramka_profile_coffie.png&#x27;)}
+#zefirok-maltipoo-runner .profile-avatar-wrap.case-frame-strawberry::after,#zefirok-maltipoo-runner .leaderboard-avatar-frame.case-frame-strawberry::after{background-image:url(&#x27;/assets/rating/frames/profile/ramka_profile_klybnika.png&#x27;)}
+#zefirok-maltipoo-runner .profile-avatar-wrap.case-frame-winter::after,#zefirok-maltipoo-runner .leaderboard-avatar-frame.case-frame-winter::after{background-image:url(&#x27;/assets/rating/frames/profile/ramka_profile_zima.png&#x27;)}
+#zefirok-maltipoo-runner .profile-avatar-wrap.case-frame-sleep::after,#zefirok-maltipoo-runner .leaderboard-avatar-frame.case-frame-sleep::after{background-image:url(&#x27;/assets/rating/frames/profile/ramka_profile_sleep.png&#x27;)}
+#zefirok-maltipoo-runner .profile-avatar-wrap.case-frame-lovers::after,#zefirok-maltipoo-runner .leaderboard-avatar-frame.case-frame-lovers::after{background-image:url(&#x27;/assets/rating/frames/profile/ramka_profile_lovers.png&#x27;)}
+#zefirok-maltipoo-runner .profile-avatar-wrap.case-frame-elite::after,#zefirok-maltipoo-runner .leaderboard-avatar-frame.case-frame-elite::after{background-image:url(&#x27;/assets/rating/frames/profile/ramka_profile_elita.png&#x27;)}
+#zefirok-maltipoo-runner .profile-avatar-wrap.case-frame-princess::after,#zefirok-maltipoo-runner .leaderboard-avatar-frame.case-frame-princess::after{background-image:url(&#x27;/assets/rating/frames/profile/ramka_profile_princess.png&#x27;)}
+#zefirok-maltipoo-runner .profile-avatar-wrap.case-frame-legendary_frame_1::after,#zefirok-maltipoo-runner .leaderboard-avatar-frame.case-frame-legendary_frame_1::after{background-image:url(&#x27;/assets/rating/frames/profile/legendary_ramka_1.png&#x27;)}
+#zefirok-maltipoo-runner .profile-avatar-wrap.case-frame-legendary_frame_2::after,#zefirok-maltipoo-runner .leaderboard-avatar-frame.case-frame-legendary_frame_2::after{background-image:url(&#x27;/assets/rating/frames/profile/legendary_ramka_2.png&#x27;)}
+#zefirok-maltipoo-runner .profile-avatar-wrap.case-frame-legendary_frame_3::after,#zefirok-maltipoo-runner .leaderboard-avatar-frame.case-frame-legendary_frame_3::after{background-image:url(&#x27;/assets/rating/frames/profile/legendary_ramka_3.png&#x27;)}
+#zefirok-maltipoo-runner .profile-avatar-wrap.case-frame-legendary_frame_4::after,#zefirok-maltipoo-runner .leaderboard-avatar-frame.case-frame-legendary_frame_4::after{background-image:url(&#x27;/assets/rating/frames/profile/legendary_ramka_4.png&#x27;)}
+#zefirok-maltipoo-runner .profile-avatar-wrap.case-frame-legendary_frame_5::after,#zefirok-maltipoo-runner .leaderboard-avatar-frame.case-frame-legendary_frame_5::after{background-image:url(&#x27;/assets/rating/frames/profile/legendary_ramka_5.png&#x27;)}
 #zefirok-maltipoo-runner .case-frame-preview{width:52px!important;height:52px!important;border:0!important;background:transparent!important;box-shadow:none!important;overflow:visible!important}
 #zefirok-maltipoo-runner .case-frame-preview&gt;img{width:58px!important;height:58px!important;object-fit:contain!important;border-radius:0!important}
 #zefirok-maltipoo-runner .case-rarity{display:block;margin-top:-2px;font-size:8px;font-weight:950;line-height:1.1}
@@ -5981,11 +6198,28 @@ html&gt;body{padding:
 
 &lt;style id=&quot;zefirok-0-71-1-leaderboard-frame-scroll-fix&quot;&gt;
   /* iOS Telegram/Safari: keep decorative avatar frames inside their own row stacking context. */
-  
-  
-  
-  
-  
+  #zefirok-maltipoo-runner .leaderboard-v4-dialog .leaderboard-dialog-head {
+    z-index: 50 !important;
+    isolation: isolate;
+  }
+  #zefirok-maltipoo-runner .leaderboard-v4-row,
+  #zefirok-maltipoo-runner .leaderboard-v4-podium-card {
+    position: relative;
+    z-index: 0;
+    isolation: isolate;
+  }
+  #zefirok-maltipoo-runner .leaderboard-avatar-frame {
+    position: relative;
+    z-index: 0;
+    isolation: isolate;
+  }
+  #zefirok-maltipoo-runner .leaderboard-avatar-frame .leaderboard-avatar {
+    position: relative;
+    z-index: 1;
+  }
+  #zefirok-maltipoo-runner .leaderboard-avatar-frame[class*=&quot;case-frame-&quot;]::after {
+    z-index: 2 !important;
+  }
 &lt;/style&gt;
 
 &lt;style id=&quot;zefirok-v0792-client-performance&quot;&gt;
@@ -7885,7 +8119,9 @@ html&gt;body{padding:
   letter-spacing: .16em;
   text-transform: uppercase;
 }
-#zefirok-maltipoo-runner #profile-rating-title, #zefirok-maltipoo-runner .leaderboard-season-title{
+#zefirok-maltipoo-runner #profile-rating-title,
+#zefirok-maltipoo-runner #leaderboard-dialog-title,
+#zefirok-maltipoo-runner .leaderboard-season-title {
   color: transparent;
   background: linear-gradient(180deg, #fff7cb 0%, #f6d76d 35%, #d99e35 70%, #8f5b1f 100%);
   -webkit-background-clip: text;
@@ -8037,15 +8273,75 @@ html&gt;body{padding:
     font-size: 17px;
   }
 }
-
-
-
-
-
-
-
-
-
+#zefirok-maltipoo-runner .leaderboard-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: grid;
+  place-items: center;
+  padding: 12px;
+  background: rgba(77, 46, 58, .46);
+  backdrop-filter: blur(8px);
+}
+#zefirok-maltipoo-runner .leaderboard-layer[hidden] { display: none; }
+#zefirok-maltipoo-runner .leaderboard-dialog {
+  width: min(100%, 480px);
+  max-height: min(94vh, 820px);
+  overflow: auto;
+  overscroll-behavior: contain;
+  border: 1px solid rgba(225, 191, 177, .98);
+  border-radius: 28px;
+  background: linear-gradient(180deg, #fffaf8 0%, #fff2f6 100%);
+  box-shadow: 0 28px 72px rgba(72, 36, 50, .32);
+  scrollbar-width: thin;
+  scrollbar-color: rgba(194, 106, 142, .45) transparent;
+}
+@supports (height: 100dvh) {
+  #zefirok-maltipoo-runner .leaderboard-dialog { max-height: min(94dvh, 820px); }
+}
+#zefirok-maltipoo-runner .leaderboard-dialog-head {
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 62px;
+  padding: 12px 16px 10px;
+  border-bottom: 1px solid rgba(231, 197, 209, .62);
+  background: rgba(255, 250, 248, .94);
+  backdrop-filter: blur(14px);
+}
+#zefirok-maltipoo-runner .leaderboard-dialog-head strong {
+  font-family: &quot;Copperplate&quot;, &quot;Palatino Linotype&quot;, Georgia, serif;
+  font-size: 22px;
+  line-height: 1;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+#zefirok-maltipoo-runner .leaderboard-close {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  min-height: 40px;
+  aspect-ratio: 1 / 1;
+  padding: 0;
+  border: 1px solid rgba(212, 142, 169, .45);
+  border-radius: 12px;
+  background: linear-gradient(145deg, #fff, #f8dce7);
+  color: #843f5c;
+  font: 950 23px/1 var(--font-sans);
+  box-shadow: 0 5px 12px rgba(132, 63, 92, .12);
+}
+#zefirok-maltipoo-runner .leaderboard-close:active { transform: scale(.96); }
+#zefirok-maltipoo-runner .leaderboard-content {
+  display: grid;
+  gap: 14px;
+  padding: 12px 16px 20px;
+}
 #zefirok-maltipoo-runner .leaderboard-modal-media {
   position: relative;
   display: block;
@@ -8074,7 +8370,12 @@ html&gt;body{padding:
   object-fit: cover;
   object-position: center;
 }
-
+#zefirok-maltipoo-runner .leaderboard-dynamic {
+  display: grid;
+  gap: 13px;
+  min-height: 480px;
+  align-content: start;
+}
 #zefirok-maltipoo-runner .leaderboard-season-card {
   display: grid;
   gap: 11px;
@@ -8242,10 +8543,35 @@ html&gt;body{padding:
 }
 #zefirok-maltipoo-runner .leaderboard-podium-card[data-place=&quot;2&quot;] .leaderboard-medal { background: linear-gradient(145deg, #f7fbff, #aeb8c7); color:#4d5968; }
 #zefirok-maltipoo-runner .leaderboard-podium-card[data-place=&quot;3&quot;] .leaderboard-medal { background: linear-gradient(145deg, #ffc98e, #ba6a2a); color:#6c3514; }
-
-
-
-
+#zefirok-maltipoo-runner .leaderboard-avatar-frame {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  flex: 0 0 64px;
+  overflow: hidden;
+  border: 3px solid #fff;
+  border-radius: 50%;
+  background: linear-gradient(145deg, #ffe4ee, #f5d9e6);
+  box-shadow: 0 6px 14px rgba(116, 57, 80, .14), 0 0 0 1px rgba(216, 171, 189, .58);
+}
+#zefirok-maltipoo-runner .leaderboard-avatar-frame.is-compact {
+  width: 44px;
+  height: 44px;
+  flex-basis: 44px;
+  border-width: 2px;
+}
+#zefirok-maltipoo-runner .leaderboard-avatar {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  border-radius: inherit;
+  object-fit: cover;
+  background: #f5dae5;
+}
+#zefirok-maltipoo-runner .leaderboard-avatar.is-fallback { object-fit: cover; }
 #zefirok-maltipoo-runner .leaderboard-name {
   width: 100%;
   min-width: 0;
@@ -8321,24 +8647,57 @@ html&gt;body{padding:
 #zefirok-maltipoo-runner .leaderboard-reward-card strong { color: #6f3650; }
 #zefirok-maltipoo-runner .leaderboard-me-card span,
 #zefirok-maltipoo-runner .leaderboard-reward-card span { color: #87707a; font-size: 12px; font-weight: 700; }
-
-
-
-
-
-
-
-
-
+#zefirok-maltipoo-runner .leaderboard-claim {
+  min-height: 42px;
+  border: 0;
+  border-radius: 13px;
+  background: linear-gradient(180deg,#ec9cbb,#cd648f);
+  color: white;
+  font-weight: 950;
+}
+#zefirok-maltipoo-runner .leaderboard-soon-card {
+  display: grid;
+  justify-items: center;
+  gap: 9px;
+  padding: 17px;
+  border: 1px solid rgba(230, 192, 207, .82);
+  border-radius: 20px;
+  text-align: center;
+  background: radial-gradient(circle at 50% 0%, #fff, #ffe5ef 76%);
+}
+#zefirok-maltipoo-runner .leaderboard-soon-card h3 { margin: 0; color: #b14875; font-size: 25px; }
+#zefirok-maltipoo-runner .leaderboard-soon-card p { margin: 0; color: #765b66; font-size: 13px; font-weight: 700; }
+#zefirok-maltipoo-runner .leaderboard-empty {
+  display: grid;
+  place-items: center;
+  min-height: 170px;
+  padding: 18px;
+  border: 1px dashed rgba(216, 173, 191, .78);
+  border-radius: 18px;
+  color: #8e737e;
+  font-weight: 800;
+  text-align: center;
+  background: rgba(255,255,255,.55);
+}
+#zefirok-maltipoo-runner .leaderboard-skeleton {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(90deg, rgba(241,218,228,.7), rgba(255,255,255,.94), rgba(241,218,228,.7));
+  background-size: 220% 100%;
+  animation: leaderboard-shimmer 1.25s linear infinite;
+}
+#zefirok-maltipoo-runner .leaderboard-skeleton-card { min-height: 112px; border-radius: 20px; }
+#zefirok-maltipoo-runner .leaderboard-skeleton-tabs { min-height: 52px; border-radius: 16px; }
+#zefirok-maltipoo-runner .leaderboard-skeleton-podium { min-height: 174px; border-radius: 20px; }
 @keyframes leaderboard-shimmer { to { background-position: -220% 0; } }
 @media (max-width: 380px) {
-  
+  #zefirok-maltipoo-runner .leaderboard-content { padding-inline: 12px; }
   #zefirok-maltipoo-runner .leaderboard-podium { gap: 6px; }
   #zefirok-maltipoo-runner .leaderboard-podium-card { min-height: 154px; padding-inline: 4px; }
   #zefirok-maltipoo-runner .leaderboard-podium-card.is-first { min-height: 168px; }
-  
+  #zefirok-maltipoo-runner .leaderboard-avatar-frame { width: 56px; height: 56px; flex-basis: 56px; }
   #zefirok-maltipoo-runner .leaderboard-row { grid-template-columns: 28px 40px minmax(0,1fr) auto; gap: 7px; }
-  
+  #zefirok-maltipoo-runner .leaderboard-avatar-frame.is-compact { width: 40px; height: 40px; flex-basis: 40px; }
   #zefirok-maltipoo-runner .leaderboard-score { font-size: 13px; }
 }
 
@@ -8765,6 +9124,27 @@ html&gt;body{padding:
   &lt;/div&gt;
 &lt;/div&gt;
 
+&lt;div aria-hidden=&quot;true&quot; class=&quot;leaderboard-layer leaderboard-v4-layer&quot; data-leaderboard-layer hidden&gt;
+  &lt;div aria-labelledby=&quot;leaderboard-dialog-title&quot; aria-modal=&quot;true&quot; class=&quot;leaderboard-dialog leaderboard-v4-dialog&quot; role=&quot;dialog&quot;&gt;
+    &lt;div class=&quot;leaderboard-dialog-head&quot;&gt;
+      &lt;div class=&quot;leaderboard-v4-title-wrap&quot;&gt;
+        &lt;span&gt;&lt;span class=&quot;leaderboard-v4-kicker-label&quot;&gt;&lt;small&gt;СЛАДКИЙ ЗАБЕГ&lt;/small&gt;&lt;strong&gt;СЕЗОННЫЙ РЕЙТИНГ&lt;/strong&gt;&lt;/span&gt;&lt;/span&gt;
+        &lt;strong id=&quot;leaderboard-dialog-title&quot;&gt;РЕЙТИНГ ИГРОКОВ&lt;/strong&gt;
+      &lt;/div&gt;
+      &lt;button aria-label=&quot;Закрыть рейтинг&quot; class=&quot;leaderboard-close&quot; data-leaderboard-close type=&quot;button&quot;&gt;×&lt;/button&gt;
+    &lt;/div&gt;
+    &lt;div class=&quot;leaderboard-content&quot; data-leaderboard-content&gt;
+      &lt;div class=&quot;leaderboard-v4-modal-hero leaderboard-fixed-media&quot; aria-hidden=&quot;true&quot;&gt;
+        &lt;img src=&quot;/assets/rating/v8/season-current-banner.jpg&quot; alt=&quot;&quot; decoding=&quot;async&quot; loading=&quot;lazy&quot; fetchpriority=&quot;low&quot; data-leaderboard-modal-banner/&gt;
+
+      &lt;/div&gt;
+      &lt;div class=&quot;leaderboard-dynamic&quot; data-leaderboard-dynamic&gt;
+        &lt;div class=&quot;leaderboard-empty&quot;&gt;Загружаем рейтинг…&lt;/div&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+&lt;/div&gt;
+
 &lt;div aria-hidden=&quot;true&quot; class=&quot;admin-layer&quot; data-admin-layer=&quot;&quot; hidden=&quot;&quot;&gt;
   &lt;div aria-labelledby=&quot;admin-dialog-title&quot; aria-modal=&quot;true&quot; class=&quot;admin-dialog&quot; data-admin-dialog=&quot;&quot; role=&quot;dialog&quot;&gt;
     &lt;div data-admin-content=&quot;&quot;&gt;&lt;/div&gt;
@@ -8995,7 +9375,12 @@ html&gt;body{padding:
       const leaderboardSummaryScoreEl = root.querySelector(&quot;[data-leaderboard-summary-score]&quot;);
       const leaderboardSummaryDetailEl = root.querySelector(&quot;[data-leaderboard-summary-detail]&quot;);
       const leaderboardSummaryRewardEl = root.querySelector(&quot;[data-leaderboard-summary-reward]&quot;);
+      const leaderboardModalSeasonTitleEl = root.querySelector(&quot;[data-leaderboard-modal-season-title]&quot;);
       const leaderboardOpenButton = root.querySelector(&quot;[data-leaderboard-open]&quot;);
+      const leaderboardLayer = root.querySelector(&quot;[data-leaderboard-layer]&quot;);
+      const leaderboardContentEl = root.querySelector(&quot;[data-leaderboard-content]&quot;);
+      const leaderboardDynamicEl = root.querySelector(&quot;[data-leaderboard-dynamic]&quot;);
+      const leaderboardCloseButton = root.querySelector(&quot;[data-leaderboard-close]&quot;);
       const caseLayer = root.querySelector(&quot;[data-case-layer]&quot;);
       const caseContentEl = root.querySelector(&quot;[data-case-content]&quot;);
       const caseCloseButton = root.querySelector(&quot;[data-case-close]&quot;);
@@ -12231,7 +12616,7 @@ html&gt;body{padding:
         // Ignore transient hidden/half-restored iframe measurements. The previous
         // renderer forced a 320x270 backing canvas into a narrower CSS box, which
         // visibly flattened the dog after returning from the season pass.
-        if (!Number.isFinite(rectWidth) || !Number.isFinite(rectHeight) || rectWidth &lt; 220 || rectHeight &lt; 180) return;
+        if (!Number.isFinite(rectWidth) || !Number.isFinite(rectHeight) || rectWidth < 220 || rectHeight < 180) return;
         const scale = Math.min(2, Math.max(1, Number(window.devicePixelRatio) || 1));
         canvasViewWidth = rectWidth;
         canvasViewHeight = rectHeight;
@@ -13420,7 +13805,7 @@ html&gt;body{padding:
           void syncGameStartupPackage(true);
           void (async () =&gt; {
             await retryPendingLeaderboardRun();
-            if (isScreenVisible(&quot;profile&quot;)) {
+            if (isScreenVisible(&quot;profile&quot;) || (leaderboardLayer &amp;&amp; !leaderboardLayer.hidden)) {
               await refreshLeaderboard(true, &quot;season&quot;, false);
             }
           })();
@@ -13444,38 +13829,6 @@ html&gt;body{padding:
           void (async () =&gt; {
             await syncGameStartupPackage(true);
             await loadCaseState(true);
-          })();
-          return;
-        }
-        if (message.type === &quot;zefirok-rating-claim-request&quot;) {
-          const requestId = String(message.requestId || &quot;&quot;);
-          void claimLeaderboardReward(String(message.rewardId || &quot;&quot;)).then((result) =&gt; {
-            try { window.parent.postMessage({ type: &quot;zefirok-rating-claim-result&quot;, requestId, result }, &quot;*&quot;); } catch (error) {}
-          });
-          return;
-        }
-        if (message.type === &quot;zefirok-rating-reset-plan&quot;) {
-          const resetPlan = message.resetPlan &amp;&amp; typeof message.resetPlan === &quot;object&quot; ? message.resetPlan : null;
-          const applied = Boolean(resetPlan &amp;&amp; applyLeaderboardResetPlan(resetPlan, Number(message.serverTime || Date.now())));
-          if (applied) {
-            leaderboardCache.season = null;
-            leaderboardCache.all_time = null;
-            leaderboardData = null;
-          }
-          try {
-            window.parent.postMessage({
-              type: &quot;zefirok-rating-reset-plan-result&quot;,
-              resetPlanId: String(resetPlan?.id || &quot;&quot;),
-              applied
-            }, &quot;*&quot;);
-          } catch (error) {}
-          return;
-        }
-        if (message.type === &quot;zefirok-rating-account-updated&quot;) {
-          void (async () =&gt; {
-            await syncGameStartupPackage(true);
-            await loadCaseState(true);
-            await refreshLeaderboard(true, &quot;season&quot;, false);
           })();
           return;
         }
@@ -15493,6 +15846,15 @@ html&gt;body{padding:
           .replaceAll(&#x27;&quot;&#x27;, &quot;&amp;quot;&quot;);
       }
 
+      function leaderboardSeasonTitleMarkup(value) {
+        const title = String(value || &quot;Сладкий сезон&quot;).trim().toUpperCase();
+        const words = title.split(/\s+/).filter(Boolean);
+        if (words.length === 3 &amp;&amp; words[1] === &quot;СЛАДКИЙ&quot;) {
+          return `&lt;span class=&quot;season-title-line season-title-line--top&quot;&gt;${leaderboardEscape(words[0])}&lt;/span&gt;&lt;span class=&quot;season-title-line season-title-line--accent&quot;&gt;${leaderboardEscape(words[1])}&lt;/span&gt;&lt;span class=&quot;season-title-line season-title-line--bottom&quot;&gt;${leaderboardEscape(words[2])}&lt;/span&gt;`;
+        }
+        return `&lt;span class=&quot;season-title-single&quot;&gt;${leaderboardEscape(title)}&lt;/span&gt;`;
+      }
+
       function leaderboardDate(value) {
         const date = new Date(Number(value || 0));
         if (!Number.isFinite(date.getTime())) return &quot;дата не указана&quot;;
@@ -15504,6 +15866,165 @@ html&gt;body{padding:
           hour: &quot;2-digit&quot;,
           minute: &quot;2-digit&quot;
         }).format(date) + &quot; МСК&quot;;
+      }
+
+      function leaderboardRemaining(target, serverTime) {
+        const ms = Math.max(0, Number(target || 0) - Number(serverTime || Date.now()));
+        const seconds = Math.floor(ms / 1000);
+        const days = Math.floor(seconds / 86400);
+        const hours = Math.floor((seconds % 86400) / 3600);
+        const minutes = Math.floor((seconds % 3600) / 60);
+        const secs = seconds % 60;
+        if (days &gt; 0) return `${days} дн. ${hours} ч. ${minutes} мин.`;
+        if (hours &gt; 0) return `${hours} ч. ${minutes} мин.`;
+        return `${minutes}:${String(secs).padStart(2, &quot;0&quot;)}`;
+      }
+
+      const LEADERBOARD_FALLBACK_AVATARS = Object.freeze([
+        &quot;/assets/rating/avatars/avatar-fox.png&quot;,
+        &quot;/assets/rating/avatars/avatar-corgi.png&quot;,
+        &quot;/assets/rating/avatars/avatar-bunny.png&quot;,
+        &quot;/assets/rating/avatars/avatar-hedgehog.png&quot;,
+        &quot;/assets/rating/avatars/avatar-koala.png&quot;,
+        &quot;/assets/rating/avatars/avatar-penguin.png&quot;,
+        &quot;/assets/rating/avatars/avatar-cat.png&quot;,
+        &quot;/assets/rating/avatars/avatar-bear.png&quot;,
+        &quot;/assets/rating/avatars/avatar-shiba.png&quot;,
+        &quot;/assets/rating/avatars/avatar-poodle.png&quot;,
+        &quot;/assets/rating/avatars/avatar-corgi-blue.png&quot;,
+        &quot;/assets/rating/avatars/avatar-fox-red.png&quot;,
+        &quot;/assets/rating/avatars/avatar-bunny-white.png&quot;,
+        &quot;/assets/rating/avatars/avatar-kitten-gray.png&quot;,
+        &quot;/assets/rating/avatars/avatar-bear-bow.png&quot;,
+        &quot;/assets/rating/avatars/avatar-koala-leaf.png&quot;,
+        &quot;/assets/rating/avatars/avatar-hedgehog-mint.png&quot;,
+        &quot;/assets/rating/avatars/avatar-penguin-blue.png&quot;,
+        &quot;/assets/rating/avatars/avatar-raccoon.png&quot;,
+        &quot;/assets/rating/avatars/avatar-deer.png&quot;,
+        &quot;/assets/rating/avatars/avatar-hamster.png&quot;,
+        &quot;/assets/rating/avatars/avatar-chick.png&quot;,
+        &quot;/assets/rating/avatars/avatar-panda.png&quot;,
+        &quot;/assets/rating/avatars/avatar-husky.png&quot;
+      ]);
+      const leaderboardRemoteAvatarState = new Map();
+      let leaderboardAvatarObserver = null;
+
+      function leaderboardFallbackAvatar(entry) {
+        const key = String(entry?.telegramId || entry?.name || &quot;zefirok-player&quot;);
+        let hash = 2166136261;
+        for (let index = 0; index &lt; key.length; index += 1) {
+          hash ^= key.charCodeAt(index);
+          hash = Math.imul(hash, 16777619);
+        }
+        return LEADERBOARD_FALLBACK_AVATARS[Math.abs(hash) % LEADERBOARD_FALLBACK_AVATARS.length];
+      }
+
+      function preloadLeaderboardRemoteAvatar(remote) {
+        if (!remote) return Promise.resolve(false);
+        const cached = leaderboardRemoteAvatarState.get(remote);
+        if (cached?.state === &quot;loaded&quot;) return Promise.resolve(true);
+        if (cached?.state === &quot;failed&quot;) return Promise.resolve(false);
+        if (cached?.promise) return cached.promise;
+        let resolveState = null;
+        const promise = new Promise(resolve =&gt; { resolveState = resolve; });
+        leaderboardRemoteAvatarState.set(remote, { state: &quot;loading&quot;, promise });
+        const probe = new Image();
+        probe.decoding = &quot;async&quot;;
+        probe.referrerPolicy = &quot;no-referrer&quot;;
+        probe.onload = async () =&gt; {
+          try {
+            if (typeof probe.decode === &quot;function&quot;) await probe.decode();
+          } catch (error) {
+            // onload уже подтверждает, что изображение доступно; decode — только ускорение первого показа.
+          }
+          leaderboardRemoteAvatarState.set(remote, { state: &quot;loaded&quot;, image: probe });
+          resolveState(true);
+        };
+        probe.onerror = () =&gt; {
+          leaderboardRemoteAvatarState.set(remote, { state: &quot;failed&quot; });
+          resolveState(false);
+        };
+        probe.src = remote;
+        return promise;
+      }
+
+      function primeLeaderboardRemoteAvatars(data, limit = 3) {
+        const entries = Array.isArray(data?.top) ? data.top.slice(0, Math.max(0, Number(limit) || 0)) : [];
+        if (data?.me &amp;&amp; !entries.some((entry) =&gt; String(entry?.telegramId || &quot;&quot;) === String(data.me?.telegramId || &quot;&quot;))) entries.push(data.me);
+        for (const entry of entries) {
+          if (CASE_AVATAR_CATALOG[normalizeCaseCosmetic(&quot;avatar&quot;, entry?.caseAvatarId)]) continue;
+          const remote = /^https:\/\//i.test(String(entry?.photoUrl || &quot;&quot;)) ? String(entry.photoUrl) : &quot;&quot;;
+          if (remote) void preloadLeaderboardRemoteAvatar(remote);
+        }
+      }
+
+      function leaderboardAvatar(entry) {
+        const caseAvatar = CASE_AVATAR_CATALOG[normalizeCaseCosmetic(&quot;avatar&quot;, entry?.caseAvatarId)] || null;
+        const remote = !caseAvatar &amp;&amp; /^https:\/\//i.test(String(entry?.photoUrl || &quot;&quot;)) ? String(entry.photoUrl) : &quot;&quot;;
+        const fallback = caseAvatar?.src || leaderboardFallbackAvatar(entry);
+        const remoteLoaded = Boolean(remote &amp;&amp; leaderboardRemoteAvatarState.get(remote)?.state === &quot;loaded&quot;);
+        return {
+          src: caseAvatar?.src || (remoteLoaded ? remote : fallback),
+          fallback,
+          remote: remote || &quot;&quot;,
+          hasRemote: Boolean(remote),
+          remoteLoaded: Boolean(caseAvatar || remoteLoaded)
+        };
+      }
+
+      function leaderboardAvatarMarkup(entry, compact = false, eager = false) {
+        const avatar = leaderboardAvatar(entry);
+        const caseFrameId = normalizeCaseCosmetic(&quot;frame&quot;, entry?.caseFrameId);
+        const frameClass = `${compact ? &quot;leaderboard-avatar-frame is-compact&quot; : &quot;leaderboard-avatar-frame&quot;}${caseFrameId ? ` case-frame-${caseFrameId}` : &quot;&quot;}`;
+        const priority = eager ? &quot;high&quot; : &quot;auto&quot;;
+        const remoteAttr = avatar.hasRemote ? ` data-avatar-remote=&quot;${leaderboardEscape(avatar.remote)}&quot;` : &quot;&quot;;
+        const fallbackClass = avatar.remoteLoaded ? &quot;&quot; : &quot; is-fallback&quot;;
+        const loading = eager ? &quot;eager&quot; : &quot;lazy&quot;;
+        return `&lt;span class=&quot;${frameClass}&quot;&gt;&lt;img class=&quot;leaderboard-avatar${fallbackClass}&quot; src=&quot;${leaderboardEscape(avatar.src)}&quot; data-leaderboard-avatar data-avatar-fallback=&quot;${leaderboardEscape(avatar.fallback)}&quot;${remoteAttr} alt=&quot;&quot; loading=&quot;${loading}&quot; fetchpriority=&quot;${priority}&quot; decoding=&quot;async&quot; referrerpolicy=&quot;no-referrer&quot;&gt;&lt;/span&gt;`;
+      }
+
+      function loadLeaderboardRemoteAvatarForImage(image) {
+        const fallback = String(image?.dataset?.avatarFallback || &quot;&quot;);
+        const remote = String(image?.dataset?.avatarRemote || &quot;&quot;).trim();
+        const key = `${remote}::${fallback}`;
+        if (!fallback || !remote || !image?.isConnected) return;
+        image.dataset.avatarKey = key;
+        preloadLeaderboardRemoteAvatar(remote).then(success =&gt; {
+          if (!success || !image.isConnected || image.dataset.avatarKey !== key) return;
+          image.classList.remove(&quot;is-fallback&quot;);
+          image.src = remote;
+        });
+      }
+
+      function hydrateLeaderboardAvatars() {
+        if (!leaderboardDynamicEl) return;
+        if (typeof IntersectionObserver === &quot;function&quot; &amp;&amp; !leaderboardAvatarObserver) {
+          leaderboardAvatarObserver = new IntersectionObserver((entries) =&gt; {
+            for (const entry of entries) {
+              if (!entry.isIntersecting) continue;
+              leaderboardAvatarObserver.unobserve(entry.target);
+              loadLeaderboardRemoteAvatarForImage(entry.target);
+            }
+          }, { root: leaderboardContentEl || null, rootMargin: &quot;180px 0px&quot; });
+        }
+        for (const image of leaderboardDynamicEl.querySelectorAll(&quot;[data-leaderboard-avatar]&quot;)) {
+          const fallback = String(image.dataset.avatarFallback || &quot;&quot;);
+          const remote = String(image.dataset.avatarRemote || &quot;&quot;).trim();
+          const key = `${remote}::${fallback}`;
+          if (!fallback) continue;
+          image.dataset.avatarKey = key;
+          const avatarState = remote ? (leaderboardRemoteAvatarState.get(remote)?.state || &quot;idle&quot;) : &quot;none&quot;;
+          if (avatarState === &quot;loaded&quot;) {
+            image.classList.remove(&quot;is-fallback&quot;);
+            if (image.getAttribute(&quot;src&quot;) !== remote) image.src = remote;
+            continue;
+          }
+          if (image.getAttribute(&quot;src&quot;) !== fallback) image.src = fallback;
+          image.classList.add(&quot;is-fallback&quot;);
+          if (!remote || avatarState === &quot;failed&quot;) continue;
+          if (image.loading === &quot;eager&quot; || !leaderboardAvatarObserver) loadLeaderboardRemoteAvatarForImage(image);
+          else leaderboardAvatarObserver.observe(image);
+        }
       }
 
       const sharedApiInFlight = new Map();
@@ -15852,6 +16373,7 @@ html&gt;body{padding:
           }
           leaderboardData = leaderboardCache[leaderboardMode] || leaderboardCache.season || null;
           renderLeaderboardSummary();
+          if (leaderboardLayer &amp;&amp; !leaderboardLayer.hidden) renderLeaderboardModal();
           renderAdminDashboard(`Серверный рейтинг установлен: ${formatter.format(score)} очков.`);
         } catch (error) {
           console.warn(&quot;Admin leaderboard update failed&quot;, error);
@@ -15947,9 +16469,11 @@ html&gt;body{padding:
         if (activate) leaderboardMode = requestedMode;
         const cached = leaderboardCache[requestedMode];
         if (cached) {
+          primeLeaderboardRemoteAvatars(cached);
           if (requestedMode === &quot;season&quot;) renderLeaderboardSummary();
           if (requestedMode === leaderboardMode) {
             leaderboardData = cached;
+            if (leaderboardLayer &amp;&amp; !leaderboardLayer.hidden) renderLeaderboardModal();
           }
         }
         if (!initData) {
@@ -15965,11 +16489,13 @@ html&gt;body{padding:
           loaded._loadedAt = Date.now();
           if (serial !== leaderboardRequestSerial[requestedMode]) return loaded;
           leaderboardCache[requestedMode] = loaded;
+          primeLeaderboardRemoteAvatars(loaded);
           leaderboardLastRefreshAt = now;
           applyLeaderboardResetPlan(loaded?.season?.resetPlan, loaded?.serverTime);
           if (requestedMode === &quot;season&quot;) renderLeaderboardSummary();
           if (requestedMode === leaderboardMode) {
             leaderboardData = loaded;
+            if (leaderboardLayer &amp;&amp; !leaderboardLayer.hidden) renderLeaderboardModal();
           }
           return loaded;
         } catch (error) {
@@ -16006,11 +16532,15 @@ html&gt;body{padding:
       function renderLeaderboardUnavailable(message) {
         updateProfileLeaderboardPosition(&quot;unavailable&quot;);
         setLeaderboardSummary(&quot;РЕЙТИНГ НЕДОСТУПЕН&quot;, message, null, &quot;Недоступен&quot;, &quot;Попробовать ещё раз&quot;, LEADERBOARD_MODAL_IMAGE, &quot;—&quot;, &quot;—&quot;);
+        if (leaderboardDynamicEl &amp;&amp; leaderboardLayer &amp;&amp; !leaderboardLayer.hidden) {
+          leaderboardDynamicEl.innerHTML = `&lt;div class=&quot;leaderboard-empty&quot;&gt;${leaderboardEscape(message)}&lt;/div&gt;`;
+        }
       }
 
       function renderLeaderboardSummary() {
         const data = leaderboardSeasonSummaryData();
         if (!data?.season) return;
+        primeLeaderboardRemoteAvatars(data);
         const season = data.season;
         const status = String(season.status || &quot;scheduled&quot;);
         updateProfileLeaderboardPosition(status);
@@ -16031,18 +16561,144 @@ html&gt;body{padding:
         setLeaderboardSummary(title, detail, season.reward, statusLabel, &quot;Открыть рейтинг&quot;, imageSrc, place, score);
       }
 
+      function leaderboardSeasonHeaderMarkup(season, timing, mode = &quot;season&quot;) {
+        const allTime = mode === &quot;all_time&quot;;
+        const badge = allTime ? &quot;ЛУЧШИЕ РЕЗУЛЬТАТЫ&quot; : &quot;ПРЕМИАЛЬНЫЙ СЕЗОН&quot;;
+        const reward = allTime ? &quot;&quot; : `&lt;div class=&quot;leaderboard-v4-season-reward&quot;&gt;${leaderboardRewardMarkup(season?.reward)}&lt;/div&gt;`;
+        return `&lt;section class=&quot;leaderboard-v4-season-card${allTime ? &quot; is-all-time&quot; : &quot;&quot;}&quot;&gt;
+          &lt;div class=&quot;leaderboard-v4-season-main&quot;&gt;
+            &lt;span class=&quot;leaderboard-v4-season-badge&quot;&gt;${badge}&lt;/span&gt;
+            &lt;div class=&quot;leaderboard-v4-season-timing&quot; data-leaderboard-season-timing&gt;&lt;span&gt;${leaderboardEscape(timing)}&lt;/span&gt;&lt;/div&gt;
+          &lt;/div&gt;
+          ${reward}
+        &lt;/section&gt;`;
+      }
+
+      function leaderboardTabsMarkup(mode = leaderboardMode) {
+        return `&lt;div class=&quot;leaderboard-v4-tabs&quot;&gt;&lt;button class=&quot;${mode === &quot;season&quot; ? &quot;is-active&quot; : &quot;&quot;}&quot; data-leaderboard-mode=&quot;season&quot; type=&quot;button&quot;&gt;🏆 Текущий сезон&lt;/button&gt;&lt;button class=&quot;${mode === &quot;all_time&quot; ? &quot;is-active&quot; : &quot;&quot;}&quot; data-leaderboard-mode=&quot;all_time&quot; type=&quot;button&quot;&gt;За всё время&lt;/button&gt;&lt;/div&gt;`;
+      }
+
+      function leaderboardSkeletonMarkup() {
+        return `&lt;div class=&quot;leaderboard-skeleton leaderboard-skeleton-card&quot; aria-hidden=&quot;true&quot;&gt;&lt;/div&gt;
+          ${leaderboardTabsMarkup(leaderboardMode)}
+          &lt;div class=&quot;leaderboard-skeleton leaderboard-skeleton-podium&quot; aria-hidden=&quot;true&quot;&gt;&lt;/div&gt;`;
+      }
+
+      function podiumCard(entry, place) {
+        const ribbonAsset = place === 1
+          ? &quot;/assets/rating/v7/podlozka_gold.png&quot;
+          : place === 2
+            ? &quot;/assets/rating/v7/serebryannay.png&quot;
+            : &quot;/assets/rating/v7/bronze_podl.png&quot;;
+        const ribbonValue = entry ? formatter.format(entry.score) : &quot;—&quot;;
+        const ribbonMarkup = `&lt;span class=&quot;leaderboard-v4-ribbon&quot;&gt;&lt;img class=&quot;leaderboard-v4-ribbon-art&quot; src=&quot;${ribbonAsset}&quot; alt=&quot;&quot;&gt;&lt;span class=&quot;leaderboard-v4-ribbon-value&quot;&gt;${ribbonValue}&lt;/span&gt;&lt;/span&gt;`;
+        if (!entry) return `&lt;div class=&quot;leaderboard-v4-podium-card&quot; data-place=&quot;${place}&quot;&gt;&lt;span class=&quot;leaderboard-v4-medal&quot;&gt;${place}&lt;/span&gt;${leaderboardAvatarMarkup({ telegramId: `empty-${place}`, name: &quot;Свободно&quot; }, false, true)}&lt;strong class=&quot;leaderboard-v4-podium-name&quot;&gt;Свободно&lt;/strong&gt;${ribbonMarkup}&lt;/div&gt;`;
+        const isMe = String(entry.telegramId || &quot;&quot;) === String(telegramProfile?.id || &quot;&quot;);
+        return `&lt;div class=&quot;leaderboard-v4-podium-card${place === 1 ? &quot; is-first&quot; : &quot;&quot;}${isMe ? &quot; is-me&quot; : &quot;&quot;}&quot; data-place=&quot;${place}&quot;&gt;
+          &lt;span class=&quot;leaderboard-v4-medal&quot;&gt;${place}&lt;/span&gt;${isMe ? `&lt;span class=&quot;leaderboard-v4-you&quot;&gt;ВЫ&lt;/span&gt;` : &quot;&quot;}
+          ${leaderboardAvatarMarkup(entry, false, true)}
+          &lt;strong class=&quot;leaderboard-v4-podium-name&quot;&gt;${leaderboardEscape(entry.name)}&lt;/strong&gt;
+          ${ribbonMarkup}
+        &lt;/div&gt;`;
+      }
+
+      function leaderboardRows(entries) {
+        const myId = String(telegramProfile?.id || &quot;&quot;);
+        return entries.slice(3).map((entry) =&gt; `&lt;div class=&quot;leaderboard-v4-row${String(entry.telegramId) === myId ? &quot; is-me&quot; : &quot;&quot;}&quot;&gt;
+          &lt;span class=&quot;leaderboard-v4-place&quot;&gt;${entry.place}&lt;/span&gt;
+          ${leaderboardAvatarMarkup(entry, true, false)}
+          &lt;span class=&quot;leaderboard-v4-row-copy&quot;&gt;&lt;strong&gt;${leaderboardEscape(entry.name)}&lt;/strong&gt;&lt;span&gt;Уровень ${Number(entry.level || 1)}&lt;/span&gt;&lt;/span&gt;
+          &lt;span class=&quot;leaderboard-v4-score&quot;&gt;${formatter.format(entry.score)}&lt;/span&gt;
+        &lt;/div&gt;`).join(&quot;&quot;);
+      }
+
+      function updateLeaderboardCountdownText() {
+        if (!leaderboardDynamicEl) return;
+        const data = leaderboardCache[leaderboardMode] || leaderboardData;
+        const season = data?.season;
+        const timingEl = leaderboardDynamicEl.querySelector(&quot;[data-leaderboard-season-timing]&quot;);
+        if (!season || !timingEl) return;
+        const status = String(season.status || &quot;scheduled&quot;);
+        const timing = data.mode === &quot;all_time&quot;
+          ? &quot;Лучшие результаты игроков за всё время&quot;
+          : status === &quot;scheduled&quot;
+            ? `Старт через ${leaderboardRemaining(season.startsAt, data.serverTime)}`
+            : status === &quot;active&quot;
+              ? `Сезон сбросится через ${leaderboardRemaining(season.endsAt, data.serverTime)}`
+              : `Сезон завершён ${leaderboardDate(season.endsAt)}`;
+        timingEl.textContent = timing;
+      }
+
+      function syncLeaderboardModalBanner(mode = leaderboardMode) {
+        const modalBanner = root.querySelector(&quot;[data-leaderboard-modal-banner]&quot;);
+        if (!modalBanner) return;
+        const normalizedMode = mode === &quot;all_time&quot; ? &quot;all_time&quot; : &quot;season&quot;;
+        const nextSrc = normalizedMode === &quot;all_time&quot;
+          ? &quot;/assets/rating/v8/all-time-banner.jpg&quot;
+          : &quot;/assets/rating/v8/season-current-banner.jpg&quot;;
+        if (modalBanner.getAttribute(&quot;src&quot;) !== nextSrc) modalBanner.setAttribute(&quot;src&quot;, nextSrc);
+        modalBanner.dataset.leaderboardBannerMode = normalizedMode;
+      }
+
+      function renderLeaderboardModal() {
+        if (!leaderboardDynamicEl) return;
+        leaderboardAvatarObserver?.disconnect();
+        syncLeaderboardModalBanner(leaderboardMode);
+        const data = leaderboardCache[leaderboardMode] || leaderboardData;
+        if (!data?.season) {
+          leaderboardDynamicEl.innerHTML = leaderboardSkeletonMarkup();
+          return;
+        }
+        const season = data.season;
+        const status = String(season.status || &quot;scheduled&quot;);
+        const modalTitle = data.mode === &quot;all_time&quot; ? &quot;ЗА ВСЁ ВРЕМЯ&quot; : String(season.title || &quot;Сладкий сезон&quot;).toUpperCase();
+        /* Modal title is baked into the selected banner artwork. */
+        if (status === &quot;scheduled&quot; &amp;&amp; data.mode !== &quot;all_time&quot;) {
+          const timing = `Старт через ${leaderboardRemaining(season.startsAt, data.serverTime)}`;
+          leaderboardDynamicEl.innerHTML = `${leaderboardSeasonHeaderMarkup(season, timing, &quot;season&quot;)}
+          ${leaderboardTabsMarkup(&quot;season&quot;)}
+          &lt;div class=&quot;leaderboard-soon-card&quot;&gt;&lt;h3&gt;Уже скоро!&lt;/h3&gt;&lt;p&gt;После старта завершите зачтённый забег. В таблице сохранится ваш лучший результат сезона.&lt;/p&gt;&lt;/div&gt;`;
+          hydrateLeaderboardAvatars();
+          return;
+        }
+        const top = Array.isArray(data.top) ? data.top : [];
+        primeLeaderboardRemoteAvatars(data, 12);
+        const timing = data.mode === &quot;all_time&quot;
+          ? &quot;Лучшие результаты игроков за всё время&quot;
+          : status === &quot;active&quot;
+            ? `Сезон сбросится через ${leaderboardRemaining(season.endsAt, data.serverTime)}`
+            : `Сезон завершён ${leaderboardDate(season.endsAt)}`;
+        const reward = data.reward;
+        const rewardMarkup = reward
+          ? `&lt;div class=&quot;leaderboard-v4-reward-card&quot;&gt;&lt;div class=&quot;leaderboard-v4-season-reward leaderboard-v4-claimed-reward-frame&quot;&gt;${leaderboardRewardMarkup({ type: reward.type, amount: reward.amount, title: reward.title, imageUrl: reward.imageUrl })}&lt;/div&gt;&lt;span&gt;${reward.place} место · ${leaderboardEscape(reward.title || `${reward.amount} кофе`)}&lt;/span&gt;${reward.status === &quot;pending&quot; ? `&lt;button class=&quot;leaderboard-claim&quot; data-leaderboard-claim type=&quot;button&quot;&gt;Забрать награду&lt;/button&gt;` : &quot;&quot;}&lt;/div&gt;`
+          : &quot;&quot;;
+        const meMarkup = data.me
+          ? `&lt;div class=&quot;leaderboard-v4-me-card&quot;&gt;&lt;strong&gt;Ваше место: ${data.me.place}&lt;/strong&gt;&lt;span&gt;Лучший результат: ${formatter.format(data.me.score)}${data.gapToFirst &gt; 0 ? ` · до первого места ${formatter.format(data.gapToFirst)}` : &quot; · вы на первом месте!&quot;}&lt;/span&gt;&lt;/div&gt;`
+          : `&lt;div class=&quot;leaderboard-v4-me-card&quot;&gt;&lt;strong&gt;Вы ещё не в таблице&lt;/strong&gt;&lt;span&gt;Завершите забег от ${PROFILE_XP_MIN_RUN_SECONDS} секунд и ${PROFILE_XP_MIN_RUN_SCORE} очков.&lt;/span&gt;&lt;/div&gt;`;
+        leaderboardDynamicEl.innerHTML = `${leaderboardSeasonHeaderMarkup(season, timing, data.mode)}
+          ${leaderboardTabsMarkup(data.mode)}
+          ${top.length ? `&lt;div class=&quot;leaderboard-v4-podium&quot;&gt;${podiumCard(top[1], 2)}${podiumCard(top[0], 1)}${podiumCard(top[2], 3)}&lt;/div&gt;&lt;div class=&quot;leaderboard-v4-list&quot;&gt;${leaderboardRows(top)}&lt;/div&gt;` : `&lt;div class=&quot;leaderboard-empty&quot;&gt;Пока нет результатов. Станьте первым!&lt;/div&gt;`}
+          ${meMarkup}${rewardMarkup}`;
+        hydrateLeaderboardAvatars();
+      }
+
       async function prefetchLeaderboard(mode, force = false) {
         const requestedMode = mode === &quot;all_time&quot; ? &quot;all_time&quot; : &quot;season&quot;;
         return refreshLeaderboard(force, requestedMode, false);
       }
 
       function openLeaderboard() {
-        saveProgress();
-        try {
-          window.parent.postMessage({ type: &quot;zefirok-open-rating&quot; }, &quot;*&quot;);
-        } catch (error) {
-          showProfileToast(&quot;Не удалось открыть рейтинг.&quot;, &quot;warning&quot;, 3200);
-        }
+        if (!leaderboardLayer) return;
+        leaderboardMode = &quot;season&quot;;
+        leaderboardData = leaderboardCache.season || leaderboardData;
+        syncLeaderboardModalBanner(&quot;season&quot;);
+        leaderboardLayer.hidden = false;
+        leaderboardLayer.setAttribute(&quot;aria-hidden&quot;, &quot;false&quot;);
+        renderLeaderboardModal();
+        void Promise.all([
+          refreshLeaderboard(false, &quot;season&quot;, true),
+          prefetchLeaderboard(&quot;all_time&quot;, false)
+        ]);
       }
 
       function requestOpenLeaderboard() {
@@ -16053,6 +16709,11 @@ html&gt;body{padding:
         openLeaderboard();
       }
 
+      function closeLeaderboard() {
+        if (!leaderboardLayer) return;
+        leaderboardLayer.hidden = true;
+        leaderboardLayer.setAttribute(&quot;aria-hidden&quot;, &quot;true&quot;);
+      }
 
       function savePendingLeaderboardRun(run) {
         pendingLeaderboardRun = run || null;
@@ -16164,6 +16825,7 @@ html&gt;body{padding:
           if (seasonPassSaved) savePendingLeaderboardRun(null);
           else showProfileToast(&quot;Результат рейтинга сохранён, но XP сезона будет отправлен повторно при следующем открытии игры.&quot;, &quot;warning&quot;, 4800);
           renderLeaderboardSummary();
+          if (leaderboardLayer &amp;&amp; !leaderboardLayer.hidden &amp;&amp; leaderboardMode === &quot;season&quot;) renderLeaderboardModal();
           void prefetchLeaderboard(&quot;all_time&quot;, true);
           showProfileToast(&quot;Результат добавлен в рейтинг.&quot;, &quot;success&quot;, 2600);
           try { window.parent.postMessage({ type: &quot;zefirok-run-completed&quot;, accepted: true, runId: String(run.runId || &quot;&quot;) }, &quot;*&quot;); } catch (error) {}
@@ -16183,17 +16845,13 @@ html&gt;body{padding:
         return submitLeaderboardRun(Number(run.score || 0), Number(run.durationMs || 0) / 1000, run);
       }
 
-      async function claimLeaderboardReward(requestedRewardId = &quot;&quot;) {
+      async function claimLeaderboardReward() {
         const initData = String(telegramProfile?.initData || &quot;&quot;);
-        if (!initData) {
-          const error = &quot;Откройте игру системной кнопкой «ИГРАТЬ» в Telegram.&quot;;
-          showProfileToast(error, &quot;warning&quot;);
-          return { ok: false, error };
-        }
+        if (!initData) return showProfileToast(&quot;Откройте игру системной кнопкой «ИГРАТЬ» в Telegram.&quot;, &quot;warning&quot;);
         try {
           const result = await leaderboardApiRequest(LEADERBOARD_API_CLAIM_PATH, {
             initData,
-            rewardId: String(requestedRewardId || leaderboardData?.reward?.id || &quot;&quot;)
+            rewardId: String(leaderboardData?.reward?.id || &quot;&quot;)
           });
           const reward = result.reward;
           if (result.claimed &amp;&amp; reward?.id &amp;&amp; !state.appliedSeasonRewardIds.includes(String(reward.id))) {
@@ -16220,12 +16878,9 @@ html&gt;body{padding:
           } else if (result.alreadyClaimed) {
             showProfileToast(&quot;Эта награда уже была получена.&quot;, &quot;warning&quot;);
           }
-          await refreshLeaderboard(true, &quot;season&quot;, false);
-          return { ok: true, ...result };
+          await refreshLeaderboard(true, leaderboardMode);
         } catch (error) {
-          const message = error.message || &quot;Не удалось получить награду.&quot;;
-          showProfileToast(message, &quot;warning&quot;, 4200);
-          return { ok: false, error: message };
+          showProfileToast(error.message || &quot;Не удалось получить награду.&quot;, &quot;warning&quot;, 4200);
         }
       }
 
@@ -17763,6 +18418,28 @@ html&gt;body{padding:
 
 
       if (leaderboardOpenButton) leaderboardOpenButton.addEventListener(&quot;click&quot;, requestOpenLeaderboard);
+      if (leaderboardCloseButton) leaderboardCloseButton.addEventListener(&quot;click&quot;, closeLeaderboard);
+      if (leaderboardLayer) {
+        leaderboardLayer.addEventListener(&quot;click&quot;, (event) =&gt; {
+          const target = event.target instanceof Element ? event.target : null;
+          if (!target) return;
+          if (target === leaderboardLayer || target.closest(&quot;[data-leaderboard-close]&quot;)) {
+            closeLeaderboard();
+            return;
+          }
+          const modeButton = target.closest(&quot;[data-leaderboard-mode]&quot;);
+          if (modeButton) {
+            const nextMode = modeButton.dataset.leaderboardMode === &quot;all_time&quot; ? &quot;all_time&quot; : &quot;season&quot;;
+            leaderboardMode = nextMode;
+            leaderboardData = leaderboardCache[nextMode] || null;
+            syncLeaderboardModalBanner(nextMode);
+            renderLeaderboardModal();
+            void refreshLeaderboard(false, nextMode, true);
+            return;
+          }
+          if (target.closest(&quot;[data-leaderboard-claim]&quot;)) void claimLeaderboardReward();
+        });
+      }
       if (leaderboardSummaryEl) {
         leaderboardSummaryEl.addEventListener(&quot;click&quot;, (event) =&gt; {
           if (event.target instanceof Element &amp;&amp; event.target.closest(&quot;[data-leaderboard-open]&quot;)) requestOpenLeaderboard();
@@ -17984,6 +18661,11 @@ html&gt;body{padding:
           closeTutorial(true);
           return;
         }
+        if (leaderboardLayer &amp;&amp; !leaderboardLayer.hidden) {
+          event.preventDefault();
+          closeLeaderboard();
+          return;
+        }
         if (adminLayer &amp;&amp; !adminLayer.hidden) {
           event.preventDefault();
           if (getAdminSecurity().locked) syncAdminAccountLockOverlay();
@@ -18006,7 +18688,7 @@ html&gt;body{padding:
       });
       stage.addEventListener(&quot;pointerdown&quot;, jump);
       root.addEventListener(&quot;keydown&quot;, (event) =&gt; {
-        if ((purchaseLayer &amp;&amp; !purchaseLayer.hidden) || (adminLayer &amp;&amp; !adminLayer.hidden) || (tutorialLayer &amp;&amp; !tutorialLayer.hidden) || (releaseLayer &amp;&amp; !releaseLayer.hidden) || (caseLayer &amp;&amp; !caseLayer.hidden)) return;
+        if ((purchaseLayer &amp;&amp; !purchaseLayer.hidden) || (leaderboardLayer &amp;&amp; !leaderboardLayer.hidden) || (adminLayer &amp;&amp; !adminLayer.hidden) || (tutorialLayer &amp;&amp; !tutorialLayer.hidden) || (releaseLayer &amp;&amp; !releaseLayer.hidden) || (caseLayer &amp;&amp; !caseLayer.hidden)) return;
         if (event.code === &quot;Space&quot; || event.code === &quot;Enter&quot;) {
           event.preventDefault();
           jump();
@@ -18037,6 +18719,7 @@ html&gt;body{padding:
       leaderboardCountdownTimer = window.setInterval(() =&gt; {
         if (!leaderboardData?.season) return;
         leaderboardData.serverTime = Number(leaderboardData.serverTime || Date.now()) + 1000;
+        if (leaderboardLayer &amp;&amp; !leaderboardLayer.hidden) updateLeaderboardCountdownText();
         const boundary = leaderboardData.season.status === &quot;scheduled&quot; ? leaderboardData.season.startsAt : leaderboardData.season.endsAt;
         if (Number(boundary || 0) &lt;= Number(leaderboardData.serverTime || 0)) void refreshLeaderboard(true, leaderboardMode);
       }, 1000);
@@ -18328,7 +19011,15 @@ html&gt;body{padding:
     text-size-adjust: 100% !important;
     touch-action: pan-y !important;
   }
-  #zefirok-maltipoo-runner [data-screen=&quot;profile&quot;], #zefirok-maltipoo-runner .profile-shell, #zefirok-maltipoo-runner .profile-shell &gt; *, #zefirok-maltipoo-runner .profile-section--leaderboard, #zefirok-maltipoo-runner .leaderboard-v4, #zefirok-maltipoo-runner .leaderboard-v4-panel, #zefirok-maltipoo-runner .leaderboard-v4-card{
+  #zefirok-maltipoo-runner [data-screen=&quot;profile&quot;],
+  #zefirok-maltipoo-runner .profile-shell,
+  #zefirok-maltipoo-runner .profile-shell &gt; *,
+  #zefirok-maltipoo-runner .profile-section--leaderboard,
+  #zefirok-maltipoo-runner .leaderboard-v4,
+  #zefirok-maltipoo-runner .leaderboard-v4-panel,
+  #zefirok-maltipoo-runner .leaderboard-v4-card,
+  #zefirok-maltipoo-runner .leaderboard-dialog,
+  #zefirok-maltipoo-runner .leaderboard-content {
     width: 100% !important;
     max-width: 100% !important;
     min-width: 0 !important;
@@ -18336,7 +19027,10 @@ html&gt;body{padding:
     margin-right: auto !important;
     box-sizing: border-box !important;
   }
-  #zefirok-maltipoo-runner [data-screen=&quot;profile&quot;], #zefirok-maltipoo-runner .profile-shell{
+  #zefirok-maltipoo-runner [data-screen=&quot;profile&quot;],
+  #zefirok-maltipoo-runner .profile-shell,
+  #zefirok-maltipoo-runner .leaderboard-dialog,
+  #zefirok-maltipoo-runner .leaderboard-content {
     overflow-x: clip !important;
   }
   #zefirok-maltipoo-runner .leaderboard-v4-panel {
@@ -18345,13 +19039,15 @@ html&gt;body{padding:
   }
 
   /* Fixed three-line composition inside the burgundy frame. */
-  #zefirok-maltipoo-runner .leaderboard-v4-plaque{
+  #zefirok-maltipoo-runner .leaderboard-v4-plaque,
+  #zefirok-maltipoo-runner .leaderboard-v4-modal-hero .leaderboard-v4-plaque {
     position: absolute !important;
     display: block !important;
     overflow: hidden !important;
     box-sizing: border-box !important;
   }
-  #zefirok-maltipoo-runner .leaderboard-v4-plaque strong{
+  #zefirok-maltipoo-runner .leaderboard-v4-plaque strong,
+  #zefirok-maltipoo-runner .leaderboard-v4-modal-hero .leaderboard-v4-plaque strong {
     position: absolute !important;
     inset: 23% 10% 20% 10% !important;
     width: auto !important;
@@ -18425,17 +19121,27 @@ html&gt;body{padding:
     overflow: hidden !important;
     text-overflow: ellipsis !important;
   }
-  
+  #zefirok-maltipoo-runner .leaderboard-v4-season-card .leaderboard-v4-season-badge {
+    padding: 0 16% !important;
+    font-size: 18px !important;
+    line-height: 1 !important;
+    letter-spacing: .035em !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+  }
 
   /* Clean countdown row: no injected icons. */
-  
+  #zefirok-maltipoo-runner .leaderboard-v4-season-timing i {
+    display: none !important;
+  }
 
   /* Reward artwork already contains the title and separator. Only the amount is dynamic. */
   #zefirok-maltipoo-runner .leaderboard-reward-title,
   #zefirok-maltipoo-runner .leaderboard-reward-rule {
     display: none !important;
   }
-  #zefirok-maltipoo-runner .leaderboard-v4-reward-wrap .leaderboard-reward-line &gt; .leaderboard-reward-copy{
+  #zefirok-maltipoo-runner .leaderboard-v4-reward-wrap .leaderboard-reward-line &gt; .leaderboard-reward-copy,
+  #zefirok-maltipoo-runner .leaderboard-v4-season-reward .leaderboard-reward-line &gt; .leaderboard-reward-copy {
     position: absolute !important;
     left: 29% !important;
     right: 25% !important;
@@ -18486,7 +19192,7 @@ html&gt;body{padding:
     #zefirok-maltipoo-runner .season-title-line--bottom { font-size: 10px !important; }
     #zefirok-maltipoo-runner .season-title-single { font-size: 14px !important; }
     #zefirok-maltipoo-runner .leaderboard-v4-card &gt; .leaderboard-v4-season-badge { font-size: 14px !important; }
-    
+    #zefirok-maltipoo-runner .leaderboard-v4-season-card .leaderboard-v4-season-badge { font-size: 16px !important; }
     #zefirok-maltipoo-runner .leaderboard-reward-amount { font-size: 11px !important; }
   }
 &lt;/style&gt;
@@ -18503,13 +19209,15 @@ html&gt;body{padding:
 &lt;/script&gt;
 
 &lt;style id=&quot;zefirok-0-3-12-banner-score-fix&quot;&gt;
-#zefirok-maltipoo-runner .leaderboard-v4-hero{
+#zefirok-maltipoo-runner .leaderboard-v4-hero,
+#zefirok-maltipoo-runner .leaderboard-v4-modal-hero {
   aspect-ratio: 2.02 / 1 !important;
   min-height: 0 !important;
   overflow: hidden !important;
   background: #fff !important;
 }
-#zefirok-maltipoo-runner .leaderboard-v4-hero &gt; img.leaderboard-v4-hero-art{
+#zefirok-maltipoo-runner .leaderboard-v4-hero &gt; img.leaderboard-v4-hero-art,
+#zefirok-maltipoo-runner .leaderboard-v4-modal-hero &gt; img {
   width: 100% !important; height: 100% !important; object-fit: cover !important; object-position: center !important;
 }
 #zefirok-maltipoo-runner .leaderboard-v4-plaque,
@@ -18520,10 +19228,14 @@ html&gt;body{padding:
   content:none !important;
   background:none !important;
 }
-#zefirok-maltipoo-runner .leaderboard-v4-hero{
+#zefirok-maltipoo-runner .leaderboard-v4-hero,
+#zefirok-maltipoo-runner .leaderboard-v4-modal-hero {
   isolation:isolate !important;
 }
-#zefirok-maltipoo-runner .leaderboard-v4-hero::before, #zefirok-maltipoo-runner .leaderboard-v4-hero::after{
+#zefirok-maltipoo-runner .leaderboard-v4-hero::before,
+#zefirok-maltipoo-runner .leaderboard-v4-hero::after,
+#zefirok-maltipoo-runner .leaderboard-v4-modal-hero::before,
+#zefirok-maltipoo-runner .leaderboard-v4-modal-hero::after {
   display:none !important;
   content:none !important;
 }
@@ -18543,16 +19255,49 @@ html&gt;body{padding:
 #zefirok-maltipoo-runner .leaderboard-reward-icon {
   display:block !important; object-fit:contain !important; object-position:center !important; margin:auto !important;
 }
-#zefirok-maltipoo-runner .leaderboard-v4-reward-wrap .leaderboard-reward-icon--case{
+#zefirok-maltipoo-runner .leaderboard-v4-reward-wrap .leaderboard-reward-icon--case,
+#zefirok-maltipoo-runner .leaderboard-v4-season-reward .leaderboard-reward-icon--case {
   width:66% !important; height:82% !important; max-width:66% !important; max-height:82% !important; border-radius:0 !important;
 }
-
-
+#zefirok-maltipoo-runner .leaderboard-v4-claimed-reward-frame {
+  width:100% !important; margin:0 !important;
+}
+#zefirok-maltipoo-runner .leaderboard-v4-reward-card &gt; .leaderboard-reward-line { display:none !important; }
 
 /* 0.3.13: profile rank badge is bound to live level state. */
-
-
-
+#zefirok-maltipoo-runner .leaderboard-v4-podium-card .leaderboard-v4-ribbon {
+  left: 50% !important;
+  right: auto !important;
+  width: 82% !important;
+  max-width: 154px !important;
+  min-width: 88px !important;
+  transform: translateX(-50%) !important;
+  margin: 0 !important;
+  box-sizing: border-box !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  text-align: center !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: clip !important;
+  padding-left: 20px !important;
+  padding-right: 20px !important;
+  background-position: center center !important;
+}
+#zefirok-maltipoo-runner .leaderboard-v4-podium-card.is-first .leaderboard-v4-ribbon {
+  width: 84% !important;
+  max-width: 166px !important;
+}
+@media (max-width: 390px) {
+  #zefirok-maltipoo-runner .leaderboard-v4-podium-card .leaderboard-v4-ribbon {
+    width: 84% !important;
+    min-width: 82px !important;
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+    font-size: clamp(14px, 4vw, 18px) !important;
+  }
+}
 &lt;/style&gt;
 
 &lt;style id=&quot;zefirok-5-0-2-compact-collection-roulette-ranking-fixes&quot;&gt;
@@ -18586,43 +19331,248 @@ html&gt;body{padding:
 @keyframes case-opening-spinner{to{transform:rotate(360deg)}}
 
 /* Final top-three score plaques: larger, uncropped and without the old colored rectangle. */
-
-
-
-
-
-
+#zefirok-maltipoo-runner .leaderboard-v4-podium-card .leaderboard-v4-ribbon{
+  left:50%!important;right:auto!important;bottom:2px!important;width:112%!important;max-width:198px!important;min-width:116px!important;height:54px!important;min-height:54px!important;aspect-ratio:auto!important;margin:0!important;padding:1px 23px 0!important;transform:translateX(-50%)!important;box-sizing:border-box!important;display:flex!important;align-items:center!important;justify-content:center!important;overflow:visible!important;border:0!important;outline:0!important;border-radius:0!important;background-color:transparent!important;background-repeat:no-repeat!important;background-position:center!important;background-size:contain!important;box-shadow:none!important;color:#fffaf5!important;font-size:clamp(20px,5.1vw,28px)!important;font-weight:950!important;line-height:1!important;text-align:center!important;text-shadow:0 2px 4px rgba(72,34,16,.54)!important;font-variant-numeric:tabular-nums!important;white-space:nowrap!important;z-index:4!important;
+}
+#zefirok-maltipoo-runner .leaderboard-v4-podium-card.is-first .leaderboard-v4-ribbon{width:118%!important;max-width:214px!important;height:58px!important;min-height:58px!important;font-size:clamp(22px,5.6vw,31px)!important}
+#zefirok-maltipoo-runner .leaderboard-v4-podium-card[data-place=&quot;1&quot;] .leaderboard-v4-ribbon{background-image:url(&#x27;/assets/rating/v7/podlozka_gold.png&#x27;)!important;}
+#zefirok-maltipoo-runner .leaderboard-v4-podium-card[data-place=&quot;2&quot;] .leaderboard-v4-ribbon{background-image:url(&#x27;/assets/rating/v7/serebryannay.png&#x27;)!important;}
+#zefirok-maltipoo-runner .leaderboard-v4-podium-card[data-place=&quot;3&quot;] .leaderboard-v4-ribbon{background-image:url(&#x27;/assets/rating/v7/bronze_podl.png&#x27;)!important;}
+@media(max-width:390px){
+  #zefirok-maltipoo-runner .leaderboard-v4-podium-card .leaderboard-v4-ribbon{width:116%!important;min-width:102px!important;height:50px!important;min-height:50px!important;padding-inline:18px!important;font-size:clamp(18px,4.9vw,23px)!important}
+  #zefirok-maltipoo-runner .leaderboard-v4-podium-card.is-first .leaderboard-v4-ribbon{width:122%!important;height:55px!important;min-height:55px!important;font-size:clamp(20px,5.3vw,26px)!important}
+}
 &lt;/style&gt;
 &lt;style id=&quot;zefirok-5-0-3-podium-assets-and-instant-cosmetics&quot;&gt;
-
-
-
-
-
-
+#zefirok-maltipoo-runner .leaderboard-v4-podium-card .leaderboard-v4-ribbon{
+  left:50%!important;
+  right:auto!important;
+  bottom:0!important;
+  width:126%!important;
+  max-width:190px!important;
+  min-width:108px!important;
+  height:58px!important;
+  min-height:58px!important;
+  aspect-ratio:auto!important;
+  transform:translateX(-50%)!important;
+  box-sizing:border-box!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  padding:3px 24px 0!important;
+  overflow:visible!important;
+  border:0!important;
+  outline:0!important;
+  border-radius:0!important;
+  background-color:transparent!important;
+  background-position:center!important;
+  background-size:100% auto!important;
+  background-repeat:no-repeat!important;
+  box-shadow:none!important;
+  color:#fff!important;
+  font-size:clamp(19px,4.8vw,27px)!important;
+  line-height:1!important;
+  text-shadow:0 2px 3px rgba(73,39,23,.42)!important;
+}
+#zefirok-maltipoo-runner .leaderboard-v4-podium-card.is-first .leaderboard-v4-ribbon{
+  width:134%!important;
+  max-width:208px!important;
+  height:64px!important;
+  min-height:64px!important;
+  font-size:clamp(22px,5.3vw,31px)!important;
+}
+#zefirok-maltipoo-runner .leaderboard-v4-podium-card[data-place=&quot;1&quot;] .leaderboard-v4-ribbon{
+  background-image:url(&#x27;/assets/rating/v7/podlozka_gold.png&#x27;)!important;
+  color:#8a531a!important;
+  text-shadow:0 1px 0 rgba(255,255,255,.92),0 2px 4px rgba(137,77,13,.22)!important;
+}
+#zefirok-maltipoo-runner .leaderboard-v4-podium-card[data-place=&quot;2&quot;] .leaderboard-v4-ribbon{
+  background-image:url(&#x27;/assets/rating/v7/serebryannay.png&#x27;)!important;
+  color:#655c58!important;
+  text-shadow:0 1px 0 rgba(255,255,255,.94),0 2px 4px rgba(64,56,52,.18)!important;
+}
+#zefirok-maltipoo-runner .leaderboard-v4-podium-card[data-place=&quot;3&quot;] .leaderboard-v4-ribbon{
+  background-image:url(&#x27;/assets/rating/v7/bronze_podl.png&#x27;)!important;
+  color:#fff!important;
+  text-shadow:0 2px 3px rgba(70,29,8,.58)!important;
+}
+@media(max-width:390px){
+  #zefirok-maltipoo-runner .leaderboard-v4-podium-card .leaderboard-v4-ribbon{
+    width:128%!important;
+    min-width:104px!important;
+    height:55px!important;
+    min-height:55px!important;
+    padding-inline:20px!important;
+    font-size:clamp(17px,4.7vw,22px)!important;
+  }
+  #zefirok-maltipoo-runner .leaderboard-v4-podium-card.is-first .leaderboard-v4-ribbon{
+    width:136%!important;
+    height:61px!important;
+    min-height:61px!important;
+    font-size:clamp(20px,5.2vw,27px)!important;
+  }
+}
 &lt;/style&gt;
 
 &lt;style id=&quot;zefirok-5-0-4-podium-background-and-cosmetic-integrity-fix&quot;&gt;
 /* Полностью сбрасывает старую цветную заливку под PNG-подложками рейтинга. */
-
-
-
+#zefirok-maltipoo-runner .leaderboard-v4-podium-card[data-place=&quot;1&quot;] .leaderboard-v4-ribbon{
+  background:transparent url(&#x27;/assets/rating/v7/podlozka_gold.png&#x27;) center center / contain no-repeat!important;
+  background-color:transparent!important;
+}
+#zefirok-maltipoo-runner .leaderboard-v4-podium-card[data-place=&quot;2&quot;] .leaderboard-v4-ribbon{
+  background:transparent url(&#x27;/assets/rating/v7/serebryannay.png&#x27;) center center / contain no-repeat!important;
+  background-color:transparent!important;
+}
+#zefirok-maltipoo-runner .leaderboard-v4-podium-card[data-place=&quot;3&quot;] .leaderboard-v4-ribbon{
+  background:transparent url(&#x27;/assets/rating/v7/bronze_podl.png&#x27;) center center / contain no-repeat!important;
+  background-color:transparent!important;
+}
 &lt;/style&gt;
 
 &lt;style id=&quot;zefirok-5-0-5-podium-img-and-cosmetic-switch-fix&quot;&gt;
-
-
-
+#zefirok-maltipoo-runner .leaderboard-v4-podium-card .leaderboard-v4-ribbon{
+  background:none!important;
+  background-image:none!important;
+  background-color:transparent!important;
+  box-shadow:none!important;
+  isolation:isolate!important;
+}
+#zefirok-maltipoo-runner .leaderboard-v4-ribbon-art{
+  position:absolute!important;
+  inset:0!important;
+  z-index:0!important;
+  display:block!important;
+  width:100%!important;
+  height:100%!important;
+  max-width:none!important;
+  max-height:none!important;
+  object-fit:contain!important;
+  object-position:center!important;
+  border:0!important;
+  border-radius:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+  filter:none!important;
+  pointer-events:none!important;
+  user-select:none!important;
+  -webkit-user-drag:none!important;
+}
+#zefirok-maltipoo-runner .leaderboard-v4-ribbon-value{
+  position:relative!important;
+  z-index:1!important;
+  display:block!important;
+  min-width:0!important;
+  background:transparent!important;
+}
 &lt;/style&gt;
 
 &lt;style id=&quot;leaderboard-v15-balanced-plates&quot;&gt;
-  
-  
-  
-  
-  
-  
-  
+  #zefirok-maltipoo-runner .leaderboard-v4-podium-card .leaderboard-v4-ribbon {
+    left: 50% !important;
+    right: auto !important;
+    bottom: 5px !important;
+    width: 106% !important;
+    max-width: 168px !important;
+    min-width: 108px !important;
+    height: 60px !important;
+    min-height: 60px !important;
+    margin: 0 !important;
+    padding: 0 26px 1px !important;
+    transform: translateX(-50%) !important;
+    box-sizing: border-box !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    overflow: visible !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    font-size: clamp(17px, 4vw, 23px) !important;
+    line-height: 1 !important;
+    letter-spacing: -0.03em !important;
+    text-align: center !important;
+    white-space: nowrap !important;
+  }
+  #zefirok-maltipoo-runner .leaderboard-v4-podium-card.is-first .leaderboard-v4-ribbon {
+    width: 114% !important;
+    max-width: 184px !important;
+    height: 60px !important;
+    min-height: 60px !important;
+    padding-inline: 28px !important;
+    bottom: 5px !important;
+    font-size: clamp(17px, 4vw, 23px) !important;
+  }
+  #zefirok-maltipoo-runner .leaderboard-v4-podium-card[data-place=&quot;2&quot;] .leaderboard-v4-ribbon {
+    width: 106% !important;
+    max-width: 168px !important;
+    height: 60px !important;
+    min-height: 60px !important;
+    padding-inline: 26px !important;
+    bottom: 5px !important;
+    font-size: clamp(17px, 4vw, 23px) !important;
+  }
+  #zefirok-maltipoo-runner .leaderboard-v4-podium-card[data-place=&quot;3&quot;] .leaderboard-v4-ribbon {
+    width: 108% !important;
+    max-width: 172px !important;
+    height: 60px !important;
+    min-height: 60px !important;
+    padding-inline: 26px !important;
+    bottom: 5px !important;
+    font-size: clamp(17px, 4vw, 23px) !important;
+  }
+  #zefirok-maltipoo-runner .leaderboard-v4-ribbon-art {
+    position: absolute !important;
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: fill !important;
+    object-position: center !important;
+    background: transparent !important;
+    pointer-events: none !important;
+  }
+  #zefirok-maltipoo-runner .leaderboard-v4-ribbon-value {
+    position: relative !important;
+    z-index: 1 !important;
+    display: block !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    text-align: center !important;
+    background: transparent !important;
+  }
+  @media (max-width: 390px) {
+    #zefirok-maltipoo-runner .leaderboard-v4-podium-card .leaderboard-v4-ribbon {
+      width: 110% !important;
+      max-width: 160px !important;
+      min-width: 104px !important;
+      height: 56px !important;
+      min-height: 56px !important;
+      padding-inline: 22px !important;
+      font-size: 17px !important;
+    }
+    #zefirok-maltipoo-runner .leaderboard-v4-podium-card.is-first .leaderboard-v4-ribbon {
+      width: 118% !important;
+      max-width: 176px !important;
+      height: 56px !important;
+      min-height: 56px !important;
+      padding-inline: 25px !important;
+      font-size: 17px !important;
+    }
+    #zefirok-maltipoo-runner .leaderboard-v4-podium-card[data-place=&quot;2&quot;] .leaderboard-v4-ribbon {
+      width: 110% !important;
+      max-width: 160px !important;
+      height: 56px !important;
+      min-height: 56px !important;
+      padding-inline: 22px !important;
+    }
+    #zefirok-maltipoo-runner .leaderboard-v4-podium-card[data-place=&quot;3&quot;] .leaderboard-v4-ribbon {
+      width: 112% !important;
+      max-width: 164px !important;
+      height: 56px !important;
+      min-height: 56px !important;
+      padding-inline: 22px !important;
+      bottom: 5px !important;
+    }
+  }
 &lt;/style&gt;
 
 &lt;style id=&quot;zefirok-v018-case-rewards-info&quot;&gt;
@@ -18738,11 +19688,28 @@ html&gt;body{padding:
 
 /* iOS Telegram WebView could detach the absolute score plaques of places 2 and 3
    from their cards while scrolling. Every podium card now owns one composited layer. */
-
-
-
-
-
+#zefirok-maltipoo-runner .leaderboard-v4-podium{isolation:isolate!important;-webkit-transform:translateZ(0)!important;transform:translateZ(0)!important}
+#zefirok-maltipoo-runner .leaderboard-v4-podium-card{
+  position:relative!important;
+  isolation:isolate!important;
+  -webkit-backface-visibility:hidden!important;
+  backface-visibility:hidden!important;
+  will-change:transform!important;
+}
+#zefirok-maltipoo-runner .leaderboard-v4-podium-card:not(.is-first){
+  -webkit-transform:translate3d(0,0,0)!important;
+  transform:translate3d(0,0,0)!important;
+}
+#zefirok-maltipoo-runner .leaderboard-v4-podium-card.is-first{
+  -webkit-transform:translate3d(0,-11px,0)!important;
+  transform:translate3d(0,-11px,0)!important;
+}
+#zefirok-maltipoo-runner .leaderboard-v4-podium-card .leaderboard-v4-ribbon{
+  -webkit-transform:translate3d(-50%,0,0)!important;
+  transform:translate3d(-50%,0,0)!important;
+  -webkit-backface-visibility:hidden!important;
+  backface-visibility:hidden!important;
+}
 &lt;/style&gt;
 
 &lt;style id=&quot;zefirok-v046-owned-new-cosmetics&quot;&gt;
@@ -18804,9 +19771,8 @@ html&gt;body{padding:
 &lt;script id=&quot;zefirok-v07921-season-pass-access-hotfix-audit&quot; type=&quot;application/json&quot;&gt;{&quot;version&quot;:&quot;0.79.21&quot;,&quot;scope&quot;:&quot;season-pass-access&quot;,&quot;buttonRecovery&quot;:true,&quot;hashInitDataHandoff&quot;:true,&quot;featureFlagSnapshot&quot;:true}&lt;/script&gt;
 &lt;script id=&quot;zefirok-v07919-season-pass-v2-audit&quot; type=&quot;application/json&quot;&gt;{&quot;version&quot;:&quot;0.79.19&quot;,&quot;scope&quot;:&quot;season-pass-v2&quot;,&quot;levels&quot;:50,&quot;horizontalRewards&quot;:true,&quot;tasks&quot;:[&quot;daily&quot;,&quot;weekly&quot;,&quot;free&quot;,&quot;premium&quot;],&quot;skinsRemoved&quot;:true,&quot;finalReward&quot;:&quot;legendary_case&quot;}&lt;/script&gt;
   &lt;script type=&quot;application/json&quot; id=&quot;zefirok-v07944-main-game-audit&quot;&gt;{&quot;build&quot;:&quot;0.79.44&quot;,&quot;fixes&quot;:[&quot;single-season-run-submit&quot;,&quot;profile-xp-expiry-guard&quot;,&quot;startup-package-season-bonus-refresh&quot;]}&lt;/script&gt;
-&lt;script type=&quot;application/json&quot; id=&quot;zefirok-rating-release-main-audit&quot;&gt;{&quot;build&quot;:&quot;v6.0 RC.1&quot;,&quot;rating&quot;:&quot;external-release-1&quot;,&quot;embeddedModalRemoved&quot;:true,&quot;bridges&quot;:[&quot;claim&quot;,&quot;reset-plan&quot;,&quot;account-refresh&quot;]}&lt;/script&gt;
 &lt;/body&gt;
-&lt;/html&gt;&quot; title=&quot;Сладкий Забег"></iframe>
+&lt;/html&gt;" title="Сладкий Забег"></iframe>
 <script id="zefirok-v07934-season-pass-overlay-audit" type="application/json">{"version":"0.79.34","scope":"outer-app-return-recovery","samePageOverlay":true,"mainGamePreserved":true,"restores":["telegram_profile","rating","balances","cases","notifications","feature_flags"]}</script>
 <script type="application/json" id="zefirok-v07944-outer-audit">{"build":"0.79.44","fixes":["season-pass-cache-version","return-refresh"]}</script>
 

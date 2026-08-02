@@ -1,0 +1,141 @@
+--- /mnt/data/project_orig/worker.js	2026-08-02 10:44:55.089085883 +0000
++++ /mnt/data/administrator_emergency_recovery/src/worker.js	2026-08-02 11:04:57.965121369 +0000
+@@ -335,7 +335,7 @@
+ const SUPPORT_USERNAME = "ve4n0_em";
+ const SUPPORT_URL = `https://t.me/${SUPPORT_USERNAME}`;
+ const DEFAULT_GAME_URL = "https://zefirok-run.patokad6.workers.dev/";
+-const WORKER_BUILD = "6.0 RC.1 + season force close";
++const WORKER_BUILD = "6.0 RC.1 + administrator menu only";
+ const V07944_RELEASE_CANDIDATE_AUDIT = Object.freeze({ reset: true, claims: true, purchases: true, xp: true, concurrency: true });
+ 
+ // =============================================================
+@@ -512,6 +512,24 @@
+   { command: "cancel", description: "Отменить текущее действие" }
+ ]);
+ 
++const STAFF_ADMINISTRATOR_BOT_COMMANDS = Object.freeze([
++  { command: "adminpanel", description: "Открыть панель администратора" },
++  { command: "training", description: "Обучение сотрудника" },
++  { command: "redeem", description: "Выдача по коду" },
++  { command: "check_code", description: "Проверить код без списания" },
++  { command: "players", description: "Список игроков" },
++  { command: "player", description: "Карточка игрока" },
++  { command: "player_history", description: "История игрока" },
++  { command: "grant", description: "Выдать награду" },
++  { command: "compensations", description: "Компенсации" },
++  { command: "compensate", description: "Выдать компенсацию" },
++  { command: "ticket", description: "Создать обращение" },
++  { command: "tickets", description: "Список обращений" },
++  { command: "ticket_info", description: "Открыть обращение" },
++  { command: "help_staff", description: "Все команды администратора" },
++  { command: "cancel", description: "Отменить текущее действие" }
++]);
++
+ const STAFF_FRONTLINE_BOT_COMMANDS = Object.freeze([
+   { command: "adminpanel", description: "Открыть рабочую панель" },
+   { command: "training", description: "Обучение сотрудника" },
+@@ -7174,6 +7192,63 @@
+     return;
+   }
+ 
++  // Для администратора скрываем лишние пункты только в интерфейсе и справке.
++  // Роль, права, база сотрудников и обработчики команд не изменяются.
++  if (!access.owner && role === "administrator") {
++    const text = `<b>📚 Команды администратора</b>
++
++` +
++      `<b>Панель</b>
++` +
++      `<code>/adminpanel</code> — открыть панель администратора
++` +
++      `<code>/help_staff</code> — показать этот список
++` +
++      `<code>/cancel</code> — отменить текущее действие
++
++` +
++      `<b>Выдача по QR и коду</b>
++` +
++      `QR-сканер открывается кнопкой «Выдача по QR» в панели.
++` +
++      `<code>/check_code КОД</code> — проверить код без списания
++` +
++      `<code>/redeem</code> — начать выдачу по коду
++` +
++      `<code>/redeem КОД</code> — открыть конкретный код
++
++` +
++      `<b>Игроки</b>
++` +
++      `<code>/players</code> — список игроков
++` +
++      `<code>/player TELEGRAM_ID</code> — карточка игрока
++` +
++      `<code>/player_history TELEGRAM_ID</code> — история игрока
++
++` +
++      `<b>Награды и компенсации</b>
++` +
++      `<code>/grant</code> — выдать награду
++` +
++      `<code>/compensations</code> — шаблоны компенсаций
++` +
++      `<code>/compensate TELEGRAM_ID</code> — выдать компенсацию
++
++` +
++      `<b>Обучение и обращения</b>
++` +
++      `<code>/training</code> — пройти или повторить обучение
++` +
++      `<code>/ticket</code> — создать обращение
++` +
++      `<code>/tickets</code> — открытые обращения
++` +
++      `<code>/ticket_info НОМЕР</code> — открыть обращение`;
++    await sendTelegramMessage(env, chatId, text, { inline_keyboard: [[{ text: "⬅️ Панель администратора", callback_data: "adm_home" }]] });
++    return;
++  }
++
+   const entries = [
+     `<b>Основное</b>\n<code>/training</code> — пройти или повторить обучение\n<code>/staff_me</code> — моя роль, права и статистика\n<code>/adminpanel</code> — кнопочная админ-панель и очистка старых сообщений\n<code>/clean_chat</code> — очистить рабочий чат вручную\n<code>/adminpanel_kmd</code> — полный справочник команд\n<code>/bot_version</code> — проверить версию Worker\n<code>/status</code> — состояние игры, бота, Cron и рейтинга\n<code>/search</code> — универсальный поиск\n<code>/problems</code> — центр проблем\n<code>/cancel</code> — отменить текущее действие\n<code>/whoami</code> — мой Telegram ID`,
+     `<b>Обращения</b>\n<code>/ticket</code> — создать обращение через кнопки\n<code>/tickets</code> — открытые обращения\n<code>/tickets mine</code> — мои обращения\n<code>/ticket_info НОМЕР</code> — открыть карточку обращения`,
+@@ -11810,6 +11885,30 @@
+       ]
+     };
+   }
++  // Только внешний состав панели администратора. Права и серверные проверки не меняем.
++  if (!access?.owner && role === "administrator") {
++    return {
++      inline_keyboard: [
++        [
++          { text: "📷 Выдача по QR", web_app: { url: configuredStaffQrUrl(env) } },
++          { text: "⌨️ Выдача по коду", callback_data: "adm_redeem_manual" }
++        ],
++        [
++          { text: "🧰 Компенсации", callback_data: "safe_comp" },
++          { text: "👤 Игроки", callback_data: "adm_players" }
++        ],
++        [
++          { text: "🎓 Обучение", callback_data: "v78_training" },
++          { text: "🕓 История игрока", callback_data: "v57_history_help" }
++        ],
++        [
++          { text: "🎁 Награды", callback_data: "grant_home" },
++          { text: "🎫 Обращения", callback_data: "tickets_open" }
++        ],
++        [{ text: "📚 Все команды", callback_data: "adminpanel_commands" }]
++      ]
++    };
++  }
+   const rows = [];
+   const addRow = (...buttons) => {
+     const visible = buttons.filter(Boolean);
+@@ -14295,6 +14394,9 @@
+ function botCommandsForAccess(access) {
+   if (!access?.authorized) return STAFF_LOGIN_BOT_COMMANDS;
+   const role = normalizeTeamRole(access?.role);
++  if (!access.owner && role === "administrator") {
++    return uniqueBotCommands([...PLAYER_BOT_COMMANDS, ...STAFF_ADMINISTRATOR_BOT_COMMANDS]);
++  }
+   if (!access.owner && (role === "cashier" || role === "cook")) {
+     return uniqueBotCommands(STAFF_FRONTLINE_BOT_COMMANDS);
+   }

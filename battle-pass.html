@@ -741,6 +741,8 @@ button{-webkit-tap-highlight-color:transparent}
 }
 .elite-plus .tier-buy{background:linear-gradient(145deg,#efbb4f,#c9841f)}
 .tier-buy:disabled{background:#d9c7cd;color:#fff}
+.tier-card.season-ended:not(.owned) .tier-price{opacity:.48;filter:grayscale(.35)}
+.tier-card.season-ended:not(.owned) .tier-buy:disabled{padding:8px 10px;line-height:1.25;background:#d9c7cd;color:#fff}
 .tier-owned{
   display:none;
   margin-top:8px;
@@ -828,6 +830,50 @@ button{-webkit-tap-highlight-color:transparent}
   opacity:.8
 }
 .claim-all-tasks:disabled b{background:rgba(255,255,255,.45)}
+.tasks-closed-state{
+  display:grid;
+  justify-items:center;
+  gap:10px;
+  margin-top:4px;
+  padding:28px 18px;
+  border:1px solid #ead8d2;
+  border-radius:22px;
+  background:linear-gradient(145deg,#fffaf8,#fff0f2);
+  box-shadow:0 12px 30px rgba(112,73,65,.08);
+  text-align:center
+}
+.tasks-closed-state img{
+  width:92px;
+  height:92px;
+  object-fit:contain;
+  filter:drop-shadow(0 10px 14px rgba(170,72,111,.16))
+}
+.tasks-closed-state strong{
+  color:#754e47;
+  font-size:17px;
+  line-height:1.2;
+  font-weight:950
+}
+.tasks-closed-state p{
+  max-width:430px;
+  margin:0;
+  color:#8b6c64;
+  font-size:11px;
+  line-height:1.55;
+  font-weight:750
+}
+.tasks-closed-deadline{
+  display:inline-flex;
+  align-items:center;
+  min-height:30px;
+  padding:6px 11px;
+  border-radius:999px;
+  background:#fff;
+  color:#b34b70;
+  box-shadow:inset 0 0 0 1px #f0d8df;
+  font-size:10px;
+  font-weight:900
+}
 .task-list{display:grid;gap:9px}
 .task-card{
   position:relative;
@@ -2376,7 +2422,7 @@ img[src$="/xp.webp"]{
     </div>
     <div class="preseason-details">
       <h2 id="preseasonTitle">Сезон I: Открытие Кафе</h2>
-      <p>Сезонный пропуск откроется автоматически в день старта. Возвращайся за первыми наградами!</p>
+      <p id="preseasonDescription">Сезонный пропуск откроется автоматически в день старта. Возвращайся за первыми наградами!</p>
       <div class="preseason-countdown" aria-label="До начала сезона">
         <div class="preseason-time"><strong id="preDays">00</strong><span>дней</span></div>
         <div class="preseason-time"><strong id="preHours">00</strong><span>часов</span></div>
@@ -2499,23 +2545,31 @@ img[src$="/xp.webp"]{
         </section>
       </section>
 
-      <section class="view" data-view="tasks" hidden>
+      <section class="view" data-view="tasks" id="tasksView" hidden>
         <div class="section-head"><div class="section-title-art"><img src="/assets/season-pass/quest.png?v=07939" alt=""><div><strong>Задания сезона</strong><br><span>Обычные и премиальные</span></div></div><span id="taskClaimedCount">0 выполнено</span></div>
-        <div class="task-toolbar">
-          <button class="task-filter active" data-task-filter="all" type="button">Все</button>
-          <button class="task-filter" data-task-filter="daily" type="button">Ежедневные</button>
-          <button class="task-filter" data-task-filter="weekly" type="button">Недельные</button>
+        <div id="activeTasksContent">
+          <div class="task-toolbar">
+            <button class="task-filter active" data-task-filter="all" type="button">Все</button>
+            <button class="task-filter" data-task-filter="daily" type="button">Ежедневные</button>
+            <button class="task-filter" data-task-filter="weekly" type="button">Недельные</button>
+          </div>
+          <div class="task-summary">
+            <div class="summary-card"><strong>Ежедневные</strong><span id="dailyTaskReset">Обновление по Москве</span></div>
+            <div class="summary-card"><strong>Недельные</strong><span id="weeklyTaskReset">Обновление по Москве</span></div>
+          </div>
+          <button class="claim-all-tasks" id="claimAllTasks" type="button" disabled>
+            <span><img class="claim-all-task-art" src="/assets/season-pass/xp.png?v=07939" alt="">Забрать весь XP</span>
+            <b id="claimAllTasksValue">0 XP</b>
+          </button>
+          <div class="task-list" id="taskList"></div>
+          <div class="notice">Прогресс заданий считается сервером по завершённым забегам, собранным наградам и открытым кейсам. Ежедневные и недельные задания обновляются по московскому времени.</div>
         </div>
-        <div class="task-summary">
-          <div class="summary-card"><strong>Ежедневные</strong><span id="dailyTaskReset">Обновление по Москве</span></div>
-          <div class="summary-card"><strong>Недельные</strong><span id="weeklyTaskReset">Обновление по Москве</span></div>
+        <div class="tasks-closed-state" id="tasksClosedState" hidden>
+          <img src="/assets/season-pass/quest.png?v=07939" alt="">
+          <strong>Сезон завершён — задания отключены</strong>
+          <p>Новые задания больше не засчитываются, и получить за них XP нельзя. До конца окна получения можно забрать только уже открытые награды во вкладке «Сезон».</p>
+          <span class="tasks-closed-deadline" id="tasksClosedDeadline">Окно получения наград ещё открыто</span>
         </div>
-        <button class="claim-all-tasks" id="claimAllTasks" type="button" disabled>
-          <span><img class="claim-all-task-art" src="/assets/season-pass/xp.png?v=07939" alt="">Забрать весь XP</span>
-          <b id="claimAllTasksValue">0 XP</b>
-        </button>
-        <div class="task-list" id="taskList"></div>
-        <div class="notice">Прогресс заданий считается сервером по завершённым забегам, собранным наградам и открытым кейсам. Ежедневные и недельные задания обновляются по московскому времени.</div>
       </section>
 
     </div>
@@ -3005,9 +3059,13 @@ img[src$="/xp.webp"]{
     const startMs = Date.parse(String(safe.startsAt || ""));
     preseasonServerOffsetMs = Number.isFinite(serverMs) ? serverMs - Date.now() : 0;
     preseasonStartMs = Number.isFinite(startMs) ? startMs : Date.parse("2026-08-10T00:00:00+03:00");
+    const forcedClosed = safe.forceClosed === true;
     el("preseasonTitle").textContent = String(safe.title || "Сезон I: Открытие Кафе");
+    el("preseasonDescription").textContent = forcedClosed
+      ? String(safe.forceClosedMessage || "Не скучай, новый сезон уже скоро")
+      : "Сезонный пропуск откроется автоматически в день старта. Возвращайся за первыми наградами!";
     el("preseasonStartText").textContent = formatSeasonStart(preseasonStartMs);
-    el("preseasonPreview").hidden = !canPreview;
+    el("preseasonPreview").hidden = forcedClosed || !canPreview;
     el("accessGate").hidden = true;
     el("appScroll").hidden = true;
     el("preseasonGate").hidden = false;
@@ -3183,6 +3241,7 @@ img[src$="/xp.webp"]{
   function taskClaimed(task) { return serverPass ? Boolean(task.claimed) : pass.claimedTasks.includes(task.id); }
   function taskLocked(task) { return serverPass ? Boolean(task.locked) : Boolean(task.premium && !pass.premium); }
   function claimableTasks() {
+    if (serverPass?.season?.capabilities?.canClaimTasks === false) return [];
     return activeTasks().filter(task=>taskComplete(task) && !taskClaimed(task) && !taskLocked(task));
   }
 
@@ -3371,6 +3430,34 @@ img[src$="/xp.webp"]{
   }
 
   function renderTasks() {
+    const seasonEnded = String(serverPass?.season?.status || "active") === "ended";
+    const activeContent = el("activeTasksContent");
+    const closedState = el("tasksClosedState");
+    if (activeContent) activeContent.hidden = seasonEnded;
+    if (closedState) closedState.hidden = !seasonEnded;
+
+    if (seasonEnded) {
+      el("taskList").innerHTML = "";
+      el("taskClaimedCount").textContent = "Задания отключены";
+      el("claimAllTasks").disabled = true;
+      el("claimAllTasksValue").textContent = "0 XP";
+      const deadline = el("tasksClosedDeadline");
+      const claimWindowOpen = Boolean(serverPass?.season?.claimWindowOpen);
+      const graceEndsAt = Date.parse(String(serverPass?.season?.claimGraceEndsAt || ""));
+      if (deadline) {
+        if (claimWindowOpen && Number.isFinite(graceEndsAt)) {
+          const formatted = new Intl.DateTimeFormat("ru-RU",{day:"numeric",month:"long",hour:"2-digit",minute:"2-digit",timeZone:"Europe/Moscow"}).format(new Date(graceEndsAt));
+          deadline.textContent = `Открытые награды можно забрать до ${formatted} МСК`;
+        } else if (claimWindowOpen) {
+          deadline.textContent = "Окно получения наград ещё открыто";
+        } else {
+          deadline.textContent = "Окно получения наград завершено";
+        }
+      }
+      updateSeasonBadges();
+      return;
+    }
+
     const list = activeTasks();
     const visible = list.filter(task=>activeTaskFilter==="all" || task.period===activeTaskFilter);
     const readyTasks = claimableTasks();
@@ -3645,13 +3732,33 @@ img[src$="/xp.webp"]{
       const summary = serverPass?.summary || {};
       banner.textContent = grace ? `Сезон завершён. Открытые награды можно забрать до ${new Intl.DateTimeFormat("ru-RU",{day:"numeric",month:"long",timeZone:"Europe/Moscow"}).format(new Date(serverPass.season.claimGraceEndsAt))}.` : `Сезон завершён · уровень ${level} · заданий выполнено ${Number(summary.tasksClaimed||0)} · наград получено ${Number(summary.rewardsClaimed||0)}.`;
     } else banner.hidden = true;
-    el("eliteCard").classList.toggle("owned",pass.premiumTier !== "none");
-    el("elitePlusCard").classList.toggle("owned",pass.premiumTier === "elite_plus");
-    const canPurchase = serverPass?.season?.capabilities?.canPurchase !== false;
-    el("buyElite").disabled = pass.premiumTier !== "none" || !canPurchase;
-    el("buyElite").textContent = pass.premiumTier === "elite_plus" ? "Включён Элитный+" : pass.premiumTier === "elite" ? "Элитный активирован" : "Открыть Элитный";
-    el("buyElitePlus").disabled = pass.premiumTier === "elite_plus" || !canPurchase;
-    el("buyElitePlus").textContent = pass.premiumTier === "elite_plus" ? "Элитный+ активирован" : pass.premiumTier === "elite" ? "Улучшить до Элитный+" : "Открыть Элитный+";
+    const seasonEnded = seasonStatus === "ended";
+    const eliteCard = el("eliteCard");
+    const elitePlusCard = el("elitePlusCard");
+    eliteCard.classList.toggle("owned",pass.premiumTier !== "none");
+    elitePlusCard.classList.toggle("owned",pass.premiumTier === "elite_plus");
+    eliteCard.classList.toggle("season-ended",seasonEnded);
+    elitePlusCard.classList.toggle("season-ended",seasonEnded);
+    const canPurchase = serverPass?.season?.capabilities?.canPurchase !== false && !seasonEnded;
+    const buyElite = el("buyElite");
+    const buyElitePlus = el("buyElitePlus");
+    buyElite.disabled = pass.premiumTier !== "none" || !canPurchase;
+    buyElitePlus.disabled = pass.premiumTier === "elite_plus" || !canPurchase;
+    if (seasonEnded) {
+      buyElite.textContent = "Сезон завершён — недоступно";
+      buyElitePlus.textContent = "Сезон завершён — недоступно";
+      buyElite.title = "Покупка тарифов недоступна после завершения сезона";
+      buyElitePlus.title = "Покупка тарифов недоступна после завершения сезона";
+      buyElite.setAttribute("aria-label","Сезон завершён. Покупка тарифа Элитный недоступна");
+      buyElitePlus.setAttribute("aria-label","Сезон завершён. Покупка тарифа Элитный плюс недоступна");
+    } else {
+      buyElite.textContent = pass.premiumTier === "elite_plus" ? "Включён Элитный+" : pass.premiumTier === "elite" ? "Элитный активирован" : "Открыть Элитный";
+      buyElitePlus.textContent = pass.premiumTier === "elite_plus" ? "Элитный+ активирован" : pass.premiumTier === "elite" ? "Улучшить до Элитный+" : "Открыть Элитный+";
+      buyElite.removeAttribute("title");
+      buyElitePlus.removeAttribute("title");
+      buyElite.setAttribute("aria-label",buyElite.textContent);
+      buyElitePlus.setAttribute("aria-label",buyElitePlus.textContent);
+    }
     for (const [cardId,tierKey] of [["eliteCard","elite"],["elitePlusCard","elite_plus"]]) {
       const values = el(cardId)?.querySelectorAll(".tier-price b") || [];
       const price = serverPass?.season?.prices?.[tierKey] || {};
@@ -3733,6 +3840,12 @@ img[src$="/xp.webp"]{
   function openPurchaseConfirm(tier) {
     const config = TIER_CONFIG[tier];
     if (!config) return;
+    const seasonStatus = String(serverPass?.season?.status || "active");
+    const canPurchase = serverPass?.season?.capabilities?.canPurchase !== false && seasonStatus === "active";
+    if (!canPurchase) {
+      showToast(seasonStatus === "ended" ? "Сезон завершён — покупка тарифов недоступна" : "Покупка тарифов пока недоступна");
+      return;
+    }
     if (tier === "elite" && pass.premiumTier !== "none") return;
     if (tier === "elite_plus" && pass.premiumTier === "elite_plus") return;
     pendingLevelPurchase = false;
@@ -3758,6 +3871,12 @@ img[src$="/xp.webp"]{
   }
 
   function openLevelPurchaseConfirm() {
+    const seasonStatus = String(serverPass?.season?.status || "active");
+    const canPurchase = serverPass?.season?.capabilities?.canPurchase !== false && seasonStatus === "active";
+    if (!canPurchase) {
+      showToast(seasonStatus === "ended" ? "Сезон завершён — покупка уровней недоступна" : "Покупка уровней пока недоступна");
+      return;
+    }
     if (pass.premiumTier === "none") {
       showToast("Покупка уровней доступна только владельцам тарифа «Элитный» или «Элитный+»");
       return;
@@ -4111,5 +4230,7 @@ img[src$="/xp.webp"]{
 <script type="application/json" id="zefirok-v07946-fullscreen-viewport-audit">{"version":"0.79.46-rc.2","changes":["telegram-fullscreen","host-viewport-sync","content-safe-area","stable-return-scale"]}</script>
 <script type="application/json" id="zefirok-v07946-rc2-ui-audit">{"version":"0.79.46-rc.2","changes":["stable-game-return-scale","fullscreen-native-control-safe-zone","season-xp-count-animation","level-unlock-animation","close-confirmation"]}</script>
 <script type="application/json" id="zefirok-v07946-rc4-reliability-audit">{"version":"0.79.46-rc.4","changes":["fast-access-server-path","longer-access-timeout","longer-state-timeout"]}</script>
+<script type="application/json" id="zefirok-v060-ended-task-state">{"version":"6.0 RC.1","changes":["ended_season_tasks_hidden","claim_window_explanation","task_claim_badge_suppressed"]}</script>
+<script type="application/json" id="zefirok-v060-season-force-close">{"version":"6.0 RC.1","changes":["forced_season_close_gate","next_season_countdown_lock","no_claim_grace","immediate_progress_and_purchase_reset","owner_preview_block","no_manual_unlock"]}</script>
 </body>
 </html>

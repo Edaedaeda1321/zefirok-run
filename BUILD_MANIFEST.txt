@@ -1,0 +1,5 @@
+Pre-admin-rights rollback build
+Generated: 2026-08-02
+Worker SHA256: 9b31a29b1473b1aa852cd09038bf5386123e628214b04d163a4a0d24154e5758
+Migration 0036 included: no
+Latest included migration: 0035_season_pass_tasks_prices.sql
