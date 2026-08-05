@@ -4916,7 +4916,7 @@ html>body{padding:
 #zefirok-maltipoo-runner .case-roulette-reward>span:last-child{position:relative;z-index:2}
 @keyframes case-final-effect-pop{from{opacity:0;transform:translate(-50%,-50%) scale(.45) rotate(-8deg)}to{opacity:1;transform:translate(-50%,-50%) scale(1) rotate(0)}}
 @keyframes case-final-effect-glow{from{filter:brightness(1.02) saturate(1.02) drop-shadow(0 0 12px rgba(255,214,145,.24));opacity:.88}to{filter:brightness(1.24) saturate(1.16) drop-shadow(0 0 22px rgba(255,214,145,.46));opacity:1}}
-#zefirok-maltipoo-runner .release-image-wrap{aspect-ratio:4/5;max-height:min(58dvh,470px);padding:6px}
+#zefirok-maltipoo-runner .release-image-wrap{aspect-ratio:1/1;max-height:min(58dvh,470px);padding:6px}
 #zefirok-maltipoo-runner .release-image{object-fit:contain;object-position:center;background:transparent}
 </style>
 
@@ -7741,7 +7741,7 @@ body.zefirok-profile-standalone .release-layer{display:none!important}
     <div class="profile-section-head"><h3 id="profile-help-title">Полезно знать</h3></div>
     <p class="profile-help-copy">Метка «Telegram-профиль» означает, что имя и данные получены из Telegram. Если Telegram не передал фотографию, игра покажет Зефи — это не ошибка. XP начисляется за успешные покупки и только за зачтённые забеги, которые прошли антифарм-порог по времени и счёту.</p>
   </section>
-  <div class="profile-version-row"><span>Версия игры</span><strong data-profile-game-version>v6.0 RC.1</strong></div>
+  <div class="profile-version-row"><span>Версия игры</span><strong data-profile-game-version>1.0.0</strong></div>
   <div aria-live="polite" class="profile-toast" data-profile-toast hidden></div>
 </div>
 </section>
@@ -7777,9 +7777,9 @@ body.zefirok-profile-standalone .release-layer{display:none!important}
 <div aria-hidden="true" class="release-layer" data-release-layer hidden>
   <div aria-labelledby="release-dialog-title" aria-modal="true" class="release-dialog" role="dialog" tabindex="-1">
     <div class="release-image-wrap" aria-hidden="true">
-      <img class="release-image" src="/assets/news/cases-5.0.1.png" alt="Новые кейсы в Сладком Забеге" width="1122" height="1402" decoding="async" loading="lazy" fetchpriority="low"/>
+      <img class="release-image" src="/assets/news/relise_game_news.png?v=1.0.0" alt="Релиз Сладкого Забега 1.0.0 — 10 августа" width="1254" height="1254" decoding="async" loading="lazy" fetchpriority="low"/>
     </div>
-    <div class="release-kicker">Новая версия</div>
+    <div class="release-kicker">Релиз игры</div>
     <h2 id="release-dialog-title" data-release-title>Обновление</h2>
     <p class="release-copy" data-release-copy></p>
     <div class="release-version" data-release-version></div>
@@ -8011,18 +8011,23 @@ body.zefirok-profile-standalone .release-layer{display:none!important}
       //
       // Заголовок, текст и кнопку ниже можно свободно редактировать.
       // Переносы строк внутри UPDATE_NOTICE_TEXT сохраняются.
-      const GAME_VERSION = "v6.0 RC.1";
+      // Версия: год игры.сезонное обновление.исправление.
+      const GAME_VERSION = "1.0.0";
       const ECONOMY_RESET_KEY = "economy-reset-0.1.1-beta-purchase-limit-fix-2026-07-23";
-      const UPDATE_NOTICE_KEY = "update-v6-0-rc1-release-announcement-2026-07-30";
+      const UPDATE_NOTICE_KEY = "release-1-0-0-season-1-2026-08-10";
       const UPDATE_NOTICE_ENABLED = true;
-      const UPDATE_NOTICE_TITLE = "Обновление v6.0 RC.1";
-      const UPDATE_NOTICE_TEXT = `10 августа состоится релиз Сладкого Забега.
+      const UPDATE_NOTICE_TITLE = "Сладкий Забег 1.0.0 — релиз игры";
+      const UPDATE_NOTICE_TEXT = `10 августа уютное кафе Зефи открывает двери — «Сладкий Забег» выходит в релизной версии 1.0.0!
 
-В день релиза откроется первый сезонный пропуск и начнётся новый рейтинговый сезон.
+В день релиза стартует сезонный пропуск «Сезон I: Открытие кафе»: 50 уровней, новые задания и награды на бесплатной и премиальной линиях.
 
-Текущая версия — v6.0 RC.1.
+На 50 уровне бесплатной линии ждёт Золотой кейс, а премиальной — Легендарный кейс.
 
-Это информационное обновление: игровые механики, баланс и прогресс не изменены.`;
+Одновременно начнётся рейтинговый сезон «Сезон 1: Открытие кафе». Все игроки стартуют с 0, а прошлые результаты сохраняются во вкладке «За всё время». Победитель сезона получит Легендарный кейс.
+
+Сезонный пропуск и рейтинг продлятся до 10 сентября.
+
+Новая система версий: исправления меняют третье число, сезонные обновления — второе, новый год игры — первое.`;
       const UPDATE_NOTICE_BUTTON = "Продолжить";
       const CASE_TUTORIAL_KEY = "cases-tutorial-1-2026-07-25";
       const RATING_TUTORIAL_KEY = "rating-tutorial-1-2026-07-25";
@@ -14495,6 +14500,24 @@ body.zefirok-profile-standalone .release-layer{display:none!important}
         }).format(date) + " МСК";
       }
 
+      function leaderboardServerNow(data) {
+        const base = Number(data?.serverTime || Date.now());
+        const loadedAt = Number(data?._loadedAt || Date.now());
+        return base + Math.max(0, Date.now() - loadedAt);
+      }
+
+      function leaderboardRemaining(target, data) {
+        const milliseconds = Math.max(0, Number(target || 0) - leaderboardServerNow(data));
+        const seconds = Math.floor(milliseconds / 1000);
+        const days = Math.floor(seconds / 86400);
+        const hours = Math.floor((seconds % 86400) / 3600);
+        const minutes = Math.floor((seconds % 3600) / 60);
+        const secs = seconds % 60;
+        if (days > 0) return `${days} дн. ${hours} ч. ${minutes} мин.`;
+        if (hours > 0) return `${hours} ч. ${minutes} мин.`;
+        return `${minutes}:${String(secs).padStart(2, "0")}`;
+      }
+
       const sharedApiInFlight = new Map();
       const sharedApiCache = new Map();
       const PUBLIC_CONFIG_CLIENT_CACHE_MS = 15000;
@@ -15008,14 +15031,14 @@ body.zefirok-profile-standalone .release-layer{display:none!important}
         const seasonTitle = String(season.title || "Сладкий сезон").trim();
         const title = seasonTitle ? seasonTitle.toUpperCase() : "СЛАДКИЙ СЕЗОН";
         const detail = status === "scheduled"
-          ? `Старт сезона: ${leaderboardDate(season.startsAt)}`
+          ? `До начала нового сезона: ${leaderboardRemaining(season.startsAt, data)}`
           : status === "active"
-            ? `Сезон сбросится: ${leaderboardDate(season.endsAt)}`
+            ? `До конца сезона: ${leaderboardRemaining(season.endsAt, data)}`
             : status === "ended"
               ? `Сезон завершён: ${leaderboardDate(season.endsAt)}`
               : "Сезон временно недоступен";
         const place = me?.place ? formatter.format(me.place) : "—";
-        const score = me?.score ? formatter.format(me.score) : "—";
+        const score = me ? formatter.format(Number(me.score || 0)) : "0";
         const imageSrc = status === "scheduled" ? LEADERBOARD_WAITING_IMAGE : LEADERBOARD_MODAL_IMAGE;
         setLeaderboardSummary(title, detail, season.reward, statusLabel, "Открыть рейтинг", imageSrc, place, score);
       }
@@ -17024,10 +17047,11 @@ body.zefirok-profile-standalone .release-layer{display:none!important}
       requestTelegramProfile();
       window.clearInterval(leaderboardCountdownTimer);
       leaderboardCountdownTimer = window.setInterval(() => {
-        if (!leaderboardData?.season) return;
-        leaderboardData.serverTime = Number(leaderboardData.serverTime || Date.now()) + 1000;
-        const boundary = leaderboardData.season.status === "scheduled" ? leaderboardData.season.startsAt : leaderboardData.season.endsAt;
-        if (Number(boundary || 0) <= Number(leaderboardData.serverTime || 0)) void refreshLeaderboard(true, leaderboardMode);
+        const seasonData = leaderboardSeasonSummaryData();
+        if (!seasonData?.season) return;
+        renderLeaderboardSummary();
+        const boundary = seasonData.season.status === "scheduled" ? seasonData.season.startsAt : seasonData.season.endsAt;
+        if (Number(boundary || 0) <= leaderboardServerNow(seasonData)) void refreshLeaderboard(true, "season", false);
       }, 1000);
       if (!window.__ZEFIROK_PROFILE_STANDALONE__) {
         if (pendingReleaseNotice) scheduleReleaseNotice();
@@ -17795,7 +17819,7 @@ body.zefirok-profile-standalone .release-layer{display:none!important}
 <script id="zefirok-v07921-season-pass-access-hotfix-audit" type="application/json">{"version":"0.79.21","scope":"season-pass-access","buttonRecovery":true,"hashInitDataHandoff":true,"featureFlagSnapshot":true}</script>
 <script id="zefirok-v07919-season-pass-v2-audit" type="application/json">{"version":"0.79.19","scope":"season-pass-v2","levels":50,"horizontalRewards":true,"tasks":["daily","weekly","free","premium"],"skinsRemoved":true,"finalReward":"legendary_case"}</script>
   <script type="application/json" id="zefirok-v07944-main-game-audit">{"build":"0.79.44","fixes":["single-season-run-submit","profile-xp-expiry-guard","startup-package-season-bonus-refresh"]}</script>
-<script type="application/json" id="zefirok-rating-release-main-audit">{"build":"v6.0 RC.1","rating":"external-release-1","embeddedModalRemoved":true,"bridges":["claim","reset-plan","account-refresh"]}</script>
+<script type="application/json" id="zefirok-rating-release-main-audit">{"build":"1.0.0","rating":"external-release-1","embeddedModalRemoved":true,"bridges":["claim","reset-plan","account-refresh"]}</script>
 
 <script id="zefirok-profile-standalone-bridge">
 (() => {
@@ -17818,7 +17842,7 @@ body.zefirok-profile-standalone .release-layer{display:none!important}
     if (message.type === "zefirok-progress-data") {
       window.requestAnimationFrame(() => window.requestAnimationFrame(() => {
         showProfile();
-        post({ type: "zefirok-profile-ready", build: "v6.0 RC.1-profile-release-1" });
+        post({ type: "zefirok-profile-ready", build: "1.0.0-profile-release-1" });
       }));
     } else if (message.type === "zefirok-profile-force-refresh") {
       showProfile();
@@ -17831,7 +17855,7 @@ body.zefirok-profile-standalone .release-layer{display:none!important}
   });
 })();
 </script>
-<script type="application/json" id="zefirok-profile-release-audit">{"build":"v6.0 RC.1","profilePage":"release-1","standalone":true,"bridges":["progress","telegram-profile","cases","cosmetics","music","rating","season-pass"],"mainProfileMarkupRemoved":true}</script>
+<script type="application/json" id="zefirok-profile-release-audit">{"build":"1.0.0","profilePage":"release-1","standalone":true,"bridges":["progress","telegram-profile","cases","cosmetics","music","rating","season-pass"],"mainProfileMarkupRemoved":true}</script>
 
 </body>
 </html>

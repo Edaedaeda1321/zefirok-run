@@ -335,7 +335,7 @@ const STAFF_SESSION_TTL_SECONDS = 12 * 60 * 60;
 const SUPPORT_USERNAME = "ve4n0_em";
 const SUPPORT_URL = `https://t.me/${SUPPORT_USERNAME}`;
 const DEFAULT_GAME_URL = "https://zefirok-run.patokad6.workers.dev/";
-const WORKER_BUILD = "6.0 RC.1 + cumulative all-time rating";
+const WORKER_BUILD = "1.0.0 + release season scheduler";
 const V07944_RELEASE_CANDIDATE_AUDIT = Object.freeze({ reset: true, claims: true, purchases: true, xp: true, concurrency: true });
 
 // =============================================================
@@ -399,10 +399,12 @@ function configuredSeasonPassState(env, nowMs = Date.now()) {
 const REWARD_LIMIT_RESET_AT_SECONDS = 1784805300; // 23.07.2026 11:15 UTC
 
 // НАСТРОЙКИ ВЕРСИИ И РАЗДЕЛА «ОБНОВЛЕНИЕ» В БОТЕ.
-// Меняйте эти значения при каждом новом релизе игры.
-const GAME_VERSION = "v6.0 RC.1";
-const GAME_UPDATE_DATE = "30 июля 2026";
-const GAME_UPDATE_TITLE = "Обновление v6.0 RC.1";
+// Схема версии: первая цифра — год игры, вторая — сезонное обновление, третья — исправление.
+// Примеры: 1.0.1 — фикс, 1.2.0 — сезонное обновление, 2.0.0 — второй год игры.
+const GAME_VERSION = "1.0.0";
+const GAME_UPDATE_DATE = "10 августа 2026";
+const GAME_UPDATE_TITLE = "Сладкий Забег 1.0.0 — релиз игры";
+const GAME_UPDATE_TYPE = "Релиз игры";
 
 // Что произошло с прогрессом в этом релизе:
 // "reset" — крупное обновление с обнулением прогресса;
@@ -411,10 +413,12 @@ const GAME_UPDATE_PROGRESS_MODE = "keep";
 const GAME_UPDATE_RESET_REASON = "Прогресс в этом обновлении сохраняется.";
 
 const GAME_UPDATE_NOTES = Object.freeze([
-  "10 августа состоится релиз Сладкого Забега.",
-  "В день релиза откроется первый сезонный пропуск.",
-  "10 августа начнётся рейтинговый сезон «Сезон 1: Открытие кафе».",
-  "Сезон продлится до 10 сентября, награда за первое место — Легендарный кейс."
+  "10 августа «Сладкий Забег» выходит в релизной версии 1.0.0.",
+  "Открывается сезонный пропуск «Сезон I: Открытие кафе» на 50 уровней с бесплатной и премиальной линиями наград.",
+  "Финальные награды сезонного пропуска: Золотой кейс на бесплатной линии и Легендарный кейс на премиальной.",
+  "Стартует рейтинговый сезон «Сезон 1: Открытие кафе»: все игроки начинают с 0, а прошлые результаты сохраняются в «За всё время».",
+  "Победитель рейтингового сезона получит Легендарный кейс. Сезонный пропуск и рейтинг продлятся до 10 сентября.",
+  "Новая система версий: третье число — исправления, второе — сезонные обновления, первое — новый год игры."
 ]);
 
 
@@ -466,12 +470,19 @@ const DEFAULT_SEASON_RESET_PLAN = Object.freeze({
   }
 });
 
-// Новость может быть с картинкой или без неё. Для картинки задайте
-// BOT_NEWS_IMAGE_URL в Cloudflare либо замените пустую строку ниже на HTTPS URL.
-const DEFAULT_BOT_NEWS_IMAGE_URL = "";
-const BOT_NEWS_TITLE = "10 августа — релиз Сладкого Забега";
-const BOT_NEWS_TEXT = "10 августа состоится релиз Сладкого Забега. В этот день откроется первый сезонный пропуск и начнётся рейтинговый сезон «Сезон 1: Открытие кафе». Сезон продлится до 10 сентября, а победитель получит Легендарный кейс. Текущая версия — v6.0 RC.1.";
-const BOT_NEWS_PUBLISHED_AT = Math.floor(Date.parse("2026-07-30T20:53:00+03:00") / 1000);
+// Встроенная релизная новость. BOT_NEWS_IMAGE_URL в Cloudflare может переопределить картинку.
+const DEFAULT_BOT_NEWS_IMAGE_URL = `${DEFAULT_GAME_URL.replace(/\/$/, "")}/assets/news/relise_game_news.png?v=1.0.0`;
+const BOT_NEWS_TITLE = "10 августа — релиз Сладкого Забега 1.0.0";
+const BOT_NEWS_TEXT = `Кафе Зефи готово к открытию! 10 августа игра выходит в релиз.
+
+🎟 Стартует сезонный пропуск «Сезон I: Открытие кафе» на 50 уровней. Финал бесплатной линии — Золотой кейс, премиальной — Легендарный кейс.
+
+🏆 Начинается рейтинговый сезон «Сезон 1: Открытие кафе». Все стартуют с 0, прошлые результаты остаются в «За всё время». Победитель получит Легендарный кейс.
+
+Оба сезона продлятся до 10 сентября. В день релиза откроются новые задания, награды и события.
+
+Версия 1.0.0 начинает первый год истории «Сладкого Забега».`;
+const BOT_NEWS_PUBLISHED_AT = Math.floor(Date.parse("2026-08-05T22:38:00+03:00") / 1000);
 // =============================================================
 
 const PLAYER_BOT_COMMANDS = Object.freeze([
@@ -600,6 +611,7 @@ const OWNER_CANONICAL_BOT_COMMANDS = Object.freeze([
   { command: "campaigns", description: "Кампании и статусы" },
   { command: "fraud", description: "Антифрод и аномалии" },
   { command: "season", description: "Управление рейтингом" },
+  { command: "season_new", description: "Создать рейтинговый сезон" },
   { command: "events", description: "Планировщик событий" },
   { command: "event_new", description: "Создать событие" },
   { command: "content", description: "Управление косметикой" },
@@ -2642,30 +2654,25 @@ function parseConfiguredDate(value, label) {
   return Math.floor(timestamp / 1000);
 }
 
-async function ensureSeason(env, now = Math.floor(Date.now() / 1000)) {
-  requireDatabase(env);
+function leaderboardSeasonStatusAt(season, now = Math.floor(Date.now() / 1000)) {
+  const stored = String(season?.status || "scheduled");
+  if (stored === "cancelled") return "cancelled";
+  if (Number(season?.finalized_at || 0) > 0) return "ended";
+  const startsAt = Number(season?.starts_at || 0);
+  const endsAt = Number(season?.ends_at || 0);
+  if (now < startsAt) return "scheduled";
+  if (endsAt > now) return "active";
+  return "ended";
+}
 
-  // Опубликованный сезон из центра управления имеет приоритет над константами Worker.
-  // Это позволяет запускать и завершать события по Cron без нового деплоя.
-  let managedSeason = await env.DB.prepare(
-    `SELECT * FROM leaderboard_seasons
-     WHERE manual_override = 1 AND finalized_at IS NULL AND status IN ('active','scheduled')
-     ORDER BY CASE status WHEN 'active' THEN 0 ELSE 1 END, starts_at ASC
-     LIMIT 1`
-  ).first();
-  if (managedSeason) {
-    const managedStatus = String(managedSeason.status || 'scheduled');
-    const nextStatus = now < Number(managedSeason.starts_at) ? 'scheduled' : now < Number(managedSeason.ends_at) ? 'active' : 'ended';
-    if (nextStatus === 'ended') {
-      await finalizeSeason(env, managedSeason, now);
-    } else if (nextStatus !== managedStatus) {
-      await env.DB.prepare(`UPDATE leaderboard_seasons SET status = ?, updated_at = ? WHERE id = ?`)
-        .bind(nextStatus, now, managedSeason.id).run();
-    }
-    managedSeason = await env.DB.prepare(`SELECT * FROM leaderboard_seasons WHERE id = ? LIMIT 1`).bind(managedSeason.id).first();
-    return managedSeason;
-  }
+function leaderboardSeasonResetPlan(seasonId) {
+  return {
+    id: `${String(seasonId || "season")}-end-reset`,
+    reset: { ...(DEFAULT_SEASON_RESET_PLAN.reset || {}) }
+  };
+}
 
+async function upsertConfiguredLeaderboardSeason(env, now) {
   const config = configuredSeason(env);
   await env.DB.prepare(
     `INSERT INTO leaderboard_seasons (
@@ -2700,24 +2707,59 @@ async function ensureSeason(env, now = Math.floor(Date.now() / 1000)) {
     now,
     now
   ).run();
+  return config;
+}
 
-  let row = await env.DB.prepare(`SELECT * FROM leaderboard_seasons WHERE id = ? LIMIT 1`).bind(config.id).first();
-  if (!row) throw new ApiError(500, "Не удалось подготовить сезон рейтинга.");
-
-  const storedStatus = String(row.status || "scheduled");
-  if (storedStatus !== "cancelled" && storedStatus !== "ended") {
-    const nextStatus = now < Number(row.starts_at) ? "scheduled" : now < Number(row.ends_at) ? "active" : "ended";
+async function reconcileLeaderboardSeasonTimeline(env, now = Math.floor(Date.now() / 1000)) {
+  const result = await env.DB.prepare(
+    `SELECT * FROM leaderboard_seasons
+     WHERE status IN ('scheduled','active') OR (status = 'ended' AND finalized_at IS NULL)
+     ORDER BY ends_at ASC, starts_at ASC, id ASC`
+  ).all();
+  for (const row of result.results || []) {
+    const nextStatus = leaderboardSeasonStatusAt(row, now);
     if (nextStatus === "ended") {
-      await finalizeSeason(env, row, now);
-    } else if (nextStatus !== storedStatus) {
-      await env.DB.prepare(`UPDATE leaderboard_seasons SET status = ?, updated_at = ? WHERE id = ?`)
-        .bind(nextStatus, now, config.id).run();
+      if (!row.finalized_at) await finalizeSeason(env, row, now);
+      continue;
     }
-    row = await env.DB.prepare(`SELECT * FROM leaderboard_seasons WHERE id = ? LIMIT 1`).bind(config.id).first();
-  } else if (storedStatus === "ended" && !row.finalized_at) {
-    await finalizeSeason(env, row, now);
-    row = await env.DB.prepare(`SELECT * FROM leaderboard_seasons WHERE id = ? LIMIT 1`).bind(config.id).first();
+    if (nextStatus !== String(row.status || "")) {
+      await env.DB.prepare(`UPDATE leaderboard_seasons SET status = ?, updated_at = ? WHERE id = ? AND finalized_at IS NULL`)
+        .bind(nextStatus, now, row.id).run();
+    }
   }
+}
+
+async function selectLeaderboardSeasonForPlayers(env, now = Math.floor(Date.now() / 1000)) {
+  let row = await env.DB.prepare(
+    `SELECT * FROM leaderboard_seasons
+     WHERE status = 'active' AND finalized_at IS NULL AND starts_at <= ? AND ends_at > ?
+     ORDER BY manual_override DESC, starts_at DESC, created_at DESC, id ASC
+     LIMIT 1`
+  ).bind(now, now).first();
+  if (row) return row;
+
+  row = await env.DB.prepare(
+    `SELECT * FROM leaderboard_seasons
+     WHERE status = 'scheduled' AND finalized_at IS NULL AND starts_at > ? AND ends_at > ?
+     ORDER BY starts_at ASC, manual_override DESC, created_at ASC, id ASC
+     LIMIT 1`
+  ).bind(now, now).first();
+  if (row) return row;
+
+  return env.DB.prepare(
+    `SELECT * FROM leaderboard_seasons
+     WHERE status = 'ended'
+     ORDER BY ends_at DESC, finalized_at DESC, updated_at DESC, id ASC
+     LIMIT 1`
+  ).first();
+}
+
+async function ensureSeason(env, now = Math.floor(Date.now() / 1000)) {
+  requireDatabase(env);
+  await upsertConfiguredLeaderboardSeason(env, now);
+  await reconcileLeaderboardSeasonTimeline(env, now);
+  const row = await selectLeaderboardSeasonForPlayers(env, now);
+  if (!row) throw new ApiError(500, "Не удалось подготовить сезон рейтинга.");
   return row;
 }
 
@@ -4436,6 +4478,13 @@ async function buildLeaderboardPayload(env, season, telegramId, mode = "season")
   ).bind(telegramId, season.id).first();
   const firstScore = top.length ? top[0].score : 0;
   const serverTime = Date.now();
+  const nextSeasonRow = String(season.status) === "active"
+    ? await env.DB.prepare(
+        `SELECT id,title,starts_at,ends_at,status FROM leaderboard_seasons
+         WHERE status = 'scheduled' AND finalized_at IS NULL AND starts_at > ? AND id <> ?
+         ORDER BY starts_at ASC LIMIT 1`
+      ).bind(Math.floor(serverTime / 1000), String(season.id)).first()
+    : null;
   const rewardConfig = configuredSeason(env);
   const seasonReward = leaderboardRewardPresentation(
     season.reward_type || rewardConfig.rewardType,
@@ -4465,6 +4514,13 @@ async function buildLeaderboardPayload(env, season, telegramId, mode = "season")
       },
       resetPlan: resetPlan ? { ...resetPlan, applyAt: Number(season.ends_at || 0) * 1000 } : null
     },
+    nextSeason: nextSeasonRow ? {
+      id: String(nextSeasonRow.id || ""),
+      title: String(nextSeasonRow.title || ""),
+      status: String(nextSeasonRow.status || "scheduled"),
+      startsAt: Number(nextSeasonRow.starts_at || 0) * 1000,
+      endsAt: Number(nextSeasonRow.ends_at || 0) * 1000
+    } : null,
     top,
     me: myEntry,
     firstScore,
@@ -5159,6 +5215,11 @@ Telegram ID можно найти командой <code>/players</code>.`);
     return;
   }
 
+  if (/^\/season_new(?:@\w+)?$/i.test(text)) {
+    await startLeaderboardSeasonCreateFromMessage(chatId, user, env);
+    return;
+  }
+
   const auditMatch = text.match(/^\/audit(?:@\w+)?(?:\s+([\s\S]+))?$/i);
   if (auditMatch) {
     await showAdvancedAuditLog(chatId, user, String(auditMatch[1] || ""), env);
@@ -5556,7 +5617,7 @@ async function sendBotNews(env, chatId) {
 ${escapeHtml(body)}
 
 Версия: <b>${escapeHtml(GAME_VERSION)}</b>`;
-  const imageUrl = String(useBuiltInRelease ? (env.BOT_NEWS_IMAGE_URL || DEFAULT_BOT_NEWS_IMAGE_URL) : (news.image_url || env.BOT_NEWS_IMAGE_URL || DEFAULT_BOT_NEWS_IMAGE_URL)).trim();
+  const imageUrl = String(useBuiltInRelease ? DEFAULT_BOT_NEWS_IMAGE_URL : (news.image_url || env.BOT_NEWS_IMAGE_URL || DEFAULT_BOT_NEWS_IMAGE_URL)).trim();
   if (imageUrl) {
     try {
       await telegramApi(env, "sendPhoto", {
@@ -5577,7 +5638,7 @@ ${escapeHtml(body)}
 function botUpdateText() {
   const notes = GAME_UPDATE_NOTES.map((item) => `• ${escapeHtml(item)}`).join("\n");
   const isReset = GAME_UPDATE_PROGRESS_MODE === "reset";
-  const updateType = isReset ? "Крупное обновление экономики" : "Обычное обновление";
+  const updateType = isReset ? "Крупное обновление экономики" : GAME_UPDATE_TYPE;
   const progressStatus = isReset
     ? `⚠️ <b>Прогресс:</b> аккаунты обнулены.\n<b>Почему:</b> ${escapeHtml(GAME_UPDATE_RESET_REASON)}`
     : "✅ <b>Прогресс:</b> сохранён. Валюты, рекорд, покупки, уровень и XP остаются на аккаунте.";
@@ -9643,6 +9704,377 @@ async function requirePlayerControlAccess(chatId, user, env) {
   return access;
 }
 
+function leaderboardSeasonIcon(status) {
+  return ({ scheduled: "🕒", active: "🟢", ended: "🏁", cancelled: "⛔" })[String(status || "")] || "⚪";
+}
+
+function leaderboardSeasonCreateId(startsAt) {
+  const stamp = new Date(Number(startsAt || 0) * 1000).toISOString().slice(0, 10).replaceAll("-", "");
+  return `rating_${stamp}_${crypto.randomUUID().replaceAll("-", "").slice(0, 8)}`;
+}
+
+async function findLeaderboardSeasonOverlap(env, startsAt, endsAt, ignoredId = "") {
+  return env.DB.prepare(
+    `SELECT id, title, starts_at, ends_at, status
+     FROM leaderboard_seasons
+     WHERE status IN ('scheduled','active') AND finalized_at IS NULL
+       AND id <> ? AND starts_at < ? AND ends_at > ?
+     ORDER BY starts_at ASC LIMIT 1`
+  ).bind(String(ignoredId || ""), Number(endsAt), Number(startsAt)).first();
+}
+
+function seasonCreateRewardTypeKeyboard() {
+  return { inline_keyboard: [
+    [
+      { text: "⭐ Очки", callback_data: "season_create_reward:points" },
+      { text: "🍥 Зефир", callback_data: "season_create_reward:treats" }
+    ],
+    [
+      { text: "☕ Кофе", callback_data: "season_create_reward:coffee" },
+      { text: "🎁 Кейс", callback_data: "season_create_reward:case" }
+    ],
+    [{ text: "❌ Отмена", callback_data: "season_create_cancel" }]
+  ] };
+}
+
+function seasonCreateCaseKeyboard() {
+  return { inline_keyboard: [
+    [
+      { text: "Обычный", callback_data: "season_create_case:small" },
+      { text: "Серебряный", callback_data: "season_create_case:sweet" }
+    ],
+    [
+      { text: "Золотой", callback_data: "season_create_case:gold" },
+      { text: "Легендарный", callback_data: "season_create_case:legendary" }
+    ],
+    [{ text: "← Назад", callback_data: "season_create_reward_back" }, { text: "❌ Отмена", callback_data: "season_create_cancel" }]
+  ] };
+}
+
+async function startLeaderboardSeasonCreateFromMessage(chatId, user, env) {
+  const access = await requireSecurityPermission(chatId, user, "manageSeasons", env);
+  if (!access) return;
+  await ensureSeason(env);
+  await setStaffWorkflow(user.id, chatId, "season_create", "title", {}, env);
+  await sendTelegramMessage(env, chatId,
+    `<b>Новый рейтинговый сезон</b>\n\nШаг 1 из 5. Отправьте название сезона.\nПример: <code>Сезон 2: Осеннее меню</code>\n\nОтмена: <code>/cancel</code>`
+  );
+}
+
+async function startLeaderboardSeasonCreate(query, env) {
+  const chatId = query.message?.chat?.id;
+  const access = await requireSecurityPermission(chatId, query.from, "manageSeasons", env);
+  if (!access) return;
+  await answerCallback(env, query.id, "Начинаем создание сезона.");
+  await startLeaderboardSeasonCreateFromMessage(chatId, query.from, env);
+}
+
+async function handleLeaderboardSeasonCreateWorkflowMessage(message, workflow, env) {
+  const chatId = message.chat?.id;
+  const user = message.from;
+  const access = await requireSecurityPermission(chatId, user, "manageSeasons", env);
+  if (!access) {
+    await clearStaffWorkflow(user.id, env);
+    return true;
+  }
+  const textValue = String(message.text || "").trim();
+  if (/^\/cancel$/i.test(textValue)) {
+    await clearStaffWorkflow(user.id, env);
+    await sendTelegramMessage(env, chatId, "Создание рейтингового сезона отменено.");
+    return true;
+  }
+  const data = workflow.data || {};
+  if (workflow.step === "title") {
+    if (textValue.length < 3 || textValue.length > 80) {
+      await sendTelegramMessage(env, chatId, "Название должно содержать от 3 до 80 символов.");
+      return true;
+    }
+    await updateStaffWorkflow(user.id, { step: "starts_at", data: { title: textValue } }, env);
+    await sendTelegramMessage(env, chatId,
+      `<b>Шаг 2 из 5</b>\n\nВведите дату и время старта по Москве.\nФормат: <code>ДД.ММ.ГГГГ ЧЧ:ММ</code>\nПример: <code>11.09.2026 00:00</code>`
+    );
+    return true;
+  }
+  if (workflow.step === "starts_at") {
+    const startsAt = parseMoscowDateTime(textValue);
+    const now = Math.floor(Date.now() / 1000);
+    if (!startsAt) {
+      await sendTelegramMessage(env, chatId, "Дата не распознана. Используйте формат <code>ДД.ММ.ГГГГ ЧЧ:ММ</code>.");
+      return true;
+    }
+    if (startsAt < now - 300) {
+      await sendTelegramMessage(env, chatId, "Старт не может быть в прошлом. Укажите текущее или будущее время.");
+      return true;
+    }
+    await updateStaffWorkflow(user.id, { step: "ends_at", data: { startsAt } }, env);
+    await sendTelegramMessage(env, chatId,
+      `<b>Шаг 3 из 5</b>\n\nВведите дату и время завершения по Москве.\nПример: <code>11.10.2026 23:59</code>`
+    );
+    return true;
+  }
+  if (workflow.step === "ends_at") {
+    const endsAt = parseMoscowDateTime(textValue);
+    const startsAt = Number(data.startsAt || 0);
+    if (!endsAt || endsAt <= startsAt + 60 * 60) {
+      await sendTelegramMessage(env, chatId, "Завершение должно быть минимум на 1 час позже старта.");
+      return true;
+    }
+    if (endsAt - startsAt > 180 * 24 * 60 * 60) {
+      await sendTelegramMessage(env, chatId, "Продолжительность сезона не может превышать 180 дней.");
+      return true;
+    }
+    const overlap = await findLeaderboardSeasonOverlap(env, startsAt, endsAt);
+    if (overlap) {
+      await sendTelegramMessage(env, chatId,
+        `Этот период пересекается с сезоном <b>${escapeHtml(overlap.title)}</b>\n${escapeHtml(formatUtcDate(overlap.starts_at))} → ${escapeHtml(formatUtcDate(overlap.ends_at))}.\n\nЕсли подходит выбранный старт, укажите более раннюю дату завершения. Если старт нужно изменить — отмените мастер командой <code>/cancel</code> и создайте сезон заново.`
+      );
+      return true;
+    }
+    await updateStaffWorkflow(user.id, { step: "reward_type", data: { endsAt } }, env);
+    await sendTelegramMessage(env, chatId, "<b>Шаг 4 из 5</b>\n\nВыберите награду за первое место.", seasonCreateRewardTypeKeyboard());
+    return true;
+  }
+  if (workflow.step === "reward_amount") {
+    const parsed = parseSeasonRewardInput(textValue, workflow);
+    if (!parsed || !parsed.type || (parsed.type === "case" && !parsed.itemId)) {
+      await sendTelegramMessage(env, chatId, "Количество не распознано. Пример: <code>1</code> или <code>1 | Легендарный кейс</code>.");
+      return true;
+    }
+    const maxAmount = parsed.type === "case" ? 20 : 999999999;
+    if (parsed.amount < 1 || parsed.amount > maxAmount) {
+      await sendTelegramMessage(env, chatId, parsed.type === "case" ? "Количество кейсов должно быть от 1 до 20." : "Количество должно быть целым числом больше нуля.");
+      return true;
+    }
+    const presentation = leaderboardRewardPresentation(parsed.type, parsed.amount, parsed.itemId, parsed.title, "");
+    const next = await updateStaffWorkflow(user.id, {
+      step: "confirm",
+      data: {
+        rewardType: presentation.type,
+        rewardAmount: presentation.amount,
+        rewardTitle: presentation.title,
+        rewardImageUrl: presentation.imageUrl,
+        rewardItemId: presentation.itemId
+      }
+    }, env);
+    const review = next?.data || { ...data, ...presentation };
+    await sendTelegramMessage(env, chatId,
+      `<b>Шаг 5 из 5 · проверьте сезон</b>\n\n` +
+      `Название: <b>${escapeHtml(review.title)}</b>\n` +
+      `Старт: <b>${escapeHtml(formatUtcDate(review.startsAt))}</b>\n` +
+      `Завершение: <b>${escapeHtml(formatUtcDate(review.endsAt))}</b>\n` +
+      `Награда за 1 место: <b>${escapeHtml(review.rewardTitle)}</b>\n\n` +
+      `После создания сезон появится в расписании. В момент старта текущий рейтинг будет пустым, а результаты прошлых сезонов сохранятся в «За всё время».`,
+      { inline_keyboard: [
+        [{ text: "✅ Создать сезон", callback_data: "season_create_save" }],
+        [{ text: "❌ Отмена", callback_data: "season_create_cancel" }]
+      ] }
+    );
+    return true;
+  }
+  await sendTelegramMessage(env, chatId, "Завершите текущий шаг кнопками в предыдущем сообщении или отмените действие командой <code>/cancel</code>.");
+  return true;
+}
+
+async function selectLeaderboardSeasonCreateReward(query, rewardTypeValue, itemIdValue, env) {
+  const chatId = query.message?.chat?.id;
+  const access = await requireSecurityPermission(chatId, query.from, "manageSeasons", env);
+  if (!access) return;
+  const workflow = await getStaffWorkflow(query.from.id, env);
+  if (!workflow || workflow.flow_type !== "season_create" || !["reward_type", "reward_case"].includes(String(workflow.step))) {
+    await answerCallback(env, query.id, "Мастер создания устарел. Начните заново.", true);
+    return;
+  }
+  const rewardType = normalizeLeaderboardRewardType(rewardTypeValue);
+  if (rewardType === "case" && !normalizeCaseType(itemIdValue)) {
+    await updateStaffWorkflow(query.from.id, { step: "reward_case", data: { rewardType: "case", rewardItemId: "" } }, env);
+    await answerCallback(env, query.id, "Выберите кейс.");
+    await sendTelegramMessage(env, chatId, "<b>Какой кейс станет наградой?</b>", seasonCreateCaseKeyboard());
+    return;
+  }
+  const itemId = rewardType === "case" ? normalizeCaseType(itemIdValue) : "";
+  await updateStaffWorkflow(query.from.id, { step: "reward_amount", data: { rewardType, itemId } }, env);
+  const preview = leaderboardRewardPresentation(rewardType, 1, itemId);
+  await answerCallback(env, query.id, "Введите количество.");
+  await sendTelegramMessage(env, chatId,
+    `<b>${escapeHtml(preview.title)}</b>\n\nВведите количество${rewardType === "case" ? " от 1 до 20" : ""}.\nМожно добавить своё название через <code>|</code>.\nПример: <code>1 | ${escapeHtml(preview.title)}</code>\n\nОтмена: <code>/cancel</code>`
+  );
+}
+
+async function finalizeLeaderboardSeasonCreate(query, env) {
+  const chatId = query.message?.chat?.id;
+  const access = await requireSecurityPermission(chatId, query.from, "manageSeasons", env);
+  if (!access) return;
+  const workflow = await getStaffWorkflow(query.from.id, env);
+  if (!workflow || workflow.flow_type !== "season_create" || workflow.step !== "confirm") {
+    await answerCallback(env, query.id, "Мастер создания устарел. Начните заново.", true);
+    return;
+  }
+  const data = workflow.data || {};
+  const title = String(data.title || "").trim();
+  const startsAt = Number(data.startsAt || 0);
+  const endsAt = Number(data.endsAt || 0);
+  if (title.length < 3 || title.length > 80 || !startsAt || !endsAt || endsAt <= startsAt + 60 * 60) {
+    await clearStaffWorkflow(query.from.id, env);
+    await answerCallback(env, query.id, "Данные сезона повреждены. Начните создание заново.", true);
+    return;
+  }
+  const overlap = await findLeaderboardSeasonOverlap(env, startsAt, endsAt);
+  if (overlap) {
+    await answerCallback(env, query.id, "Период уже занят другим сезоном.", true);
+    await sendTelegramMessage(env, chatId,
+      `Создание остановлено: период пересекается с сезоном <b>${escapeHtml(overlap.title)}</b> (${escapeHtml(formatUtcDate(overlap.starts_at))} → ${escapeHtml(formatUtcDate(overlap.ends_at))}).\n\nОтмените мастер и создайте сезон с другими датами.`
+    );
+    return;
+  }
+  const now = Math.floor(Date.now() / 1000);
+  if (endsAt <= now) {
+    await answerCallback(env, query.id, "Сезон уже завершился по указанным датам.", true);
+    return;
+  }
+  const seasonId = leaderboardSeasonCreateId(startsAt);
+  const status = startsAt <= now ? "active" : "scheduled";
+  const reward = leaderboardRewardPresentation(
+    data.rewardType,
+    data.rewardAmount,
+    data.rewardItemId,
+    data.rewardTitle,
+    data.rewardImageUrl
+  );
+  await env.DB.prepare(
+    `INSERT INTO leaderboard_seasons (
+      id,title,starts_at,ends_at,status,reward_type,reward_amount,reward_claim_days,
+      reset_plan_json,close_reason,created_at,updated_at,finalized_at,manual_override,
+      reward_title,reward_image_url,reward_item_id
+    ) VALUES (?,?,?,?,?,?,?,?,?,'',?,?,NULL,1,?,?,?)`
+  ).bind(
+    seasonId,
+    title,
+    startsAt,
+    endsAt,
+    status,
+    reward.type,
+    reward.amount,
+    DEFAULT_SEASON_REWARD_CLAIM_DAYS,
+    JSON.stringify(leaderboardSeasonResetPlan(seasonId)),
+    now,
+    now,
+    reward.title,
+    reward.imageUrl,
+    reward.itemId
+  ).run();
+  await logStaffAction(env, query.from, access, "season_create", null, "season", null, null, {
+    seasonId, title, startsAt, endsAt, rewardType: reward.type, rewardAmount: reward.amount, rewardItemId: reward.itemId
+  });
+  await clearStaffWorkflow(query.from.id, env);
+  await answerCallback(env, query.id, status === "active" ? "Сезон создан и запущен." : "Сезон добавлен в расписание.");
+  await showLeaderboardSeasonDetails(chatId, query.from, seasonId, env);
+}
+
+async function cancelLeaderboardSeasonCreate(query, env) {
+  const chatId = query.message?.chat?.id;
+  await clearStaffWorkflow(query.from.id, env);
+  await answerCallback(env, query.id, "Создание отменено.");
+  await showSeasonAdminDashboard(chatId, query.from, env);
+}
+
+async function showLeaderboardSeasonsAdmin(chatId, user, env) {
+  const access = await requireSecurityPermission(chatId, user, "manageSeasons", env);
+  if (!access) return;
+  await ensureSeason(env);
+  const result = await env.DB.prepare(
+    `SELECT id,title,starts_at,ends_at,status,finalized_at,manual_override
+     FROM leaderboard_seasons
+     ORDER BY CASE status WHEN 'active' THEN 0 WHEN 'scheduled' THEN 1 WHEN 'ended' THEN 2 ELSE 3 END,
+              CASE WHEN status IN ('active','scheduled') THEN starts_at ELSE -ends_at END ASC
+     LIMIT 30`
+  ).all();
+  const rows = result.results || [];
+  const lines = rows.map((row) =>
+    `${leaderboardSeasonIcon(row.status)} <b>${escapeHtml(row.title)}</b>\n` +
+    `   ${escapeHtml(seasonStatusLabel(row.status))} · ${escapeHtml(formatUtcDate(row.starts_at))} → ${escapeHtml(formatUtcDate(row.ends_at))}`
+  );
+  const buttons = rows.slice(0, 18).map((row) => [{
+    text: `${leaderboardSeasonIcon(row.status)} ${String(row.title || row.id).slice(0, 38)}`,
+    callback_data: `season_view:${row.id}`
+  }]);
+  buttons.push([{ text: "➕ Новый сезон", callback_data: "season_new" }]);
+  buttons.push([{ text: "⬅️ Управление сезоном", callback_data: "season_refresh" }]);
+  await sendTelegramMessage(env, chatId,
+    `<b>🗓 Рейтинговые сезоны</b>\n\n${lines.join("\n\n") || "Сезонов пока нет."}\n\n` +
+    `Будущие сезоны автоматически показывают обратный отсчёт, запускаются по Cron и создают чистый текущий рейтинг. «За всё время» не обнуляется.`,
+    { inline_keyboard: buttons }
+  );
+}
+
+async function showLeaderboardSeasonDetails(chatId, user, seasonId, env) {
+  const access = await requireSecurityPermission(chatId, user, "manageSeasons", env);
+  if (!access) return;
+  await reconcileLeaderboardSeasonTimeline(env);
+  const season = await env.DB.prepare(`SELECT * FROM leaderboard_seasons WHERE id = ? LIMIT 1`).bind(String(seasonId)).first();
+  if (!season) {
+    await sendTelegramMessage(env, chatId, "Сезон не найден.");
+    return;
+  }
+  const count = await env.DB.prepare(`SELECT COUNT(*) AS count FROM leaderboard_entries WHERE season_id = ? AND hidden = 0`).bind(season.id).first();
+  const reward = leaderboardRewardPresentation(
+    season.reward_type,
+    season.reward_amount,
+    season.reward_item_id,
+    season.reward_title,
+    season.reward_image_url
+  );
+  const keyboard = [];
+  if (!season.finalized_at && ["scheduled", "active"].includes(String(season.status))) {
+    keyboard.push([{ text: "🎁 Изменить награду", callback_data: `season_reward_for:${season.id}` }]);
+  }
+  if (!season.finalized_at && String(season.status) === "scheduled") {
+    keyboard.push([{ text: "⛔ Отменить запланированный сезон", callback_data: `season_cancel_preview:${season.id}` }]);
+  }
+  keyboard.push([{ text: "⬅️ Все сезоны", callback_data: "season_list" }, { text: "🏆 Текущий", callback_data: "season_refresh" }]);
+  await sendTelegramMessage(env, chatId,
+    `<b>${leaderboardSeasonIcon(season.status)} ${escapeHtml(season.title)}</b>\n\n` +
+    `ID: <code>${escapeHtml(season.id)}</code>\n` +
+    `Статус: <b>${escapeHtml(seasonStatusLabel(season.status))}</b>\n` +
+    `Старт: <b>${escapeHtml(formatUtcDate(season.starts_at))}</b>\n` +
+    `Завершение: <b>${escapeHtml(formatUtcDate(season.ends_at))}</b>\n` +
+    `Участников: <b>${Number(count?.count || 0).toLocaleString("ru-RU")}</b>\n` +
+    `Награда за 1 место: <b>${escapeHtml(reward.title)}</b>\n\n` +
+    `Баннеры используются автоматически: общий сезонный баннер для текущего сезона и отдельный баннер «За всё время».`,
+    { inline_keyboard: keyboard }
+  );
+}
+
+async function cancelScheduledLeaderboardSeason(query, seasonId, env, confirmed = false) {
+  const chatId = query.message?.chat?.id;
+  const access = await requireSecurityPermission(chatId, query.from, "manageSeasons", env);
+  if (!access) return;
+  const season = await env.DB.prepare(`SELECT * FROM leaderboard_seasons WHERE id = ? LIMIT 1`).bind(String(seasonId)).first();
+  if (!season || String(season.status) !== "scheduled" || season.finalized_at) {
+    await answerCallback(env, query.id, "Отменить можно только запланированный сезон.", true);
+    return;
+  }
+  if (!confirmed) {
+    await answerCallback(env, query.id, "Требуется подтверждение.");
+    await sendTelegramMessage(env, chatId,
+      `<b>Отменить запланированный сезон?</b>\n\n${escapeHtml(season.title)}\n${escapeHtml(formatUtcDate(season.starts_at))} → ${escapeHtml(formatUtcDate(season.ends_at))}\n\nРезультаты других сезонов не изменятся.`,
+      { inline_keyboard: [
+        [{ text: "⛔ Да, отменить", callback_data: `season_cancel_confirm:${season.id}` }],
+        [{ text: "Назад", callback_data: `season_view:${season.id}` }]
+      ] }
+    );
+    return;
+  }
+  const now = Math.floor(Date.now() / 1000);
+  await env.DB.prepare(
+    `UPDATE leaderboard_seasons SET status = 'cancelled', finalized_at = COALESCE(finalized_at, ?),
+     close_reason = 'Запланированный сезон отменён через Telegram-бота', updated_at = ?
+     WHERE id = ? AND status = 'scheduled' AND finalized_at IS NULL`
+  ).bind(now, now, season.id).run();
+  await logStaffAction(env, query.from, access, "season_cancel", null, "season", null, null, { seasonId: season.id, title: season.title });
+  await answerCallback(env, query.id, "Сезон отменён.");
+  await showLeaderboardSeasonsAdmin(chatId, query.from, env);
+}
+
 async function showSeasonAdminDashboard(chatId, user, env) {
   const access = await requireSecurityPermission(chatId, user, "manageSeasons", env);
   if (!access) return;
@@ -9669,6 +10101,7 @@ async function showSeasonAdminDashboard(chatId, user, env) {
   const manual = Number(season.manual_override || 0) === 1 ? "да" : "нет";
   const manage = canManageSeason(access);
   const keyboard = [
+    [{ text: "🗓 Все сезоны", callback_data: "season_list" }, { text: "➕ Новый сезон", callback_data: "season_new" }],
     [{ text: "🏆 Топ-10", callback_data: "season_top" }, { text: "🔄 Обновить", callback_data: "season_refresh" }]
   ];
   if (manage && !season.finalized_at) {
@@ -9681,7 +10114,9 @@ async function showSeasonAdminDashboard(chatId, user, env) {
       { text: "−7 дней", callback_data: "season_shorten:7" }
     ]);
     keyboard.push([{ text: "🎁 Изменить награду", callback_data: "season_reward" }]);
-    keyboard.push([{ text: "⛔ Завершить досрочно", callback_data: "season_finish_preview" }]);
+    if (String(season.status) === "active") {
+      keyboard.push([{ text: "⛔ Завершить досрочно", callback_data: "season_finish_preview" }]);
+    }
   }
   keyboard.push([{ text: "📚 Все команды", callback_data: "adminpanel_commands" }]);
 
@@ -9802,11 +10237,18 @@ function seasonRewardCaseKeyboard() {
   ] };
 }
 
-async function startSeasonRewardWorkflow(query, env) {
+async function startSeasonRewardWorkflow(query, env, seasonIdValue = "") {
   const chatId = query.message?.chat?.id;
   const access = await requireTeamPermission(chatId, query.from, "staff", env);
   if (!access || !canManageSeason(access)) return;
-  const season = await ensureSeason(env);
+  const seasonId = String(seasonIdValue || "").trim();
+  const season = seasonId
+    ? await env.DB.prepare(`SELECT * FROM leaderboard_seasons WHERE id = ? LIMIT 1`).bind(seasonId).first()
+    : await ensureSeason(env);
+  if (!season) {
+    await answerCallback(env, query.id, "Сезон не найден.", true);
+    return;
+  }
   if (season.finalized_at) {
     await answerCallback(env, query.id, "Награду завершённого сезона менять нельзя.", true);
     return;
@@ -9823,8 +10265,12 @@ async function beginSeasonRewardAmountWorkflow(query, rewardTypeValue, itemIdVal
   const chatId = query.message?.chat?.id;
   const access = await requireSecurityPermission(chatId, query.from, "manageSeasons", env);
   if (!access) return;
-  const season = await ensureSeason(env);
-  if (season.finalized_at) {
+  const workflow = await getStaffWorkflow(query.from.id, env);
+  const targetSeasonId = workflow?.flow_type === "season_reward" ? String(workflow.data?.seasonId || "") : "";
+  const season = targetSeasonId
+    ? await env.DB.prepare(`SELECT * FROM leaderboard_seasons WHERE id = ? LIMIT 1`).bind(targetSeasonId).first()
+    : await ensureSeason(env);
+  if (!season || season.finalized_at) {
     await answerCallback(env, query.id, "Награду завершённого сезона менять нельзя.", true);
     return;
   }
@@ -9853,7 +10299,7 @@ function parseSeasonRewardInput(textValue, workflow) {
   const presetRawType = String(workflow?.data?.rewardType || "").trim();
   const presetType = presetRawType ? normalizeLeaderboardRewardType(presetRawType) : "";
   const presetItemId = String(workflow?.data?.itemId || "").trim();
-  if (presetType && workflow?.step === "amount") {
+  if (presetType && ["amount", "reward_amount"].includes(String(workflow?.step || ""))) {
     const amountMatch = text.match(/^(\d{1,9})(?:\s*\|\s*(.{1,100}))?$/i);
     if (!amountMatch) return null;
     return {
@@ -11535,6 +11981,7 @@ async function handleActiveStaffWorkflowMessage(message, env) {
   if (workflow.flow_type === "redeem") return handleRedeemWorkflowMessage(message, workflow, env);
   if (workflow.flow_type === "ticket") return handleTicketWorkflowMessage(message, workflow, env);
   if (workflow.flow_type === "season_reward") return handleSeasonRewardWorkflowMessage(message, workflow, env);
+  if (workflow.flow_type === "season_create") return handleLeaderboardSeasonCreateWorkflowMessage(message, workflow, env);
   if (workflow.flow_type === "safe_event") return handleSafeEventWorkflowMessage(message, workflow, env);
   if (workflow.flow_type === "compensation") return handleCompensationWorkflowMessage(message, workflow, env);
   if (workflow.flow_type === "player_name") return handlePlayerNameWorkflowMessage(message, workflow, env);
@@ -11737,6 +12184,61 @@ async function handleStaffOperationsCallback(query, env) {
   if (data === "status_refresh") {
     await answerCallback(env, query.id, "Статус обновлён.");
     await showOperationsStatus(chatId, query.from, env);
+    return true;
+  }
+  if (data === "season_list") {
+    await answerCallback(env, query.id, "Открываю сезоны.");
+    await showLeaderboardSeasonsAdmin(chatId, query.from, env);
+    return true;
+  }
+  if (data === "season_new") {
+    await startLeaderboardSeasonCreate(query, env);
+    return true;
+  }
+  if (data === "season_create_cancel") {
+    await cancelLeaderboardSeasonCreate(query, env);
+    return true;
+  }
+  if (data === "season_create_reward_back") {
+    const workflow = await getStaffWorkflow(query.from.id, env);
+    if (workflow?.flow_type === "season_create") await updateStaffWorkflow(query.from.id, { step: "reward_type", data: { rewardType: "", itemId: "" } }, env);
+    await answerCallback(env, query.id, "Выберите награду.");
+    await sendTelegramMessage(env, chatId, "<b>Выберите награду за первое место</b>", seasonCreateRewardTypeKeyboard());
+    return true;
+  }
+  const seasonCreateReward = data.match(/^season_create_reward:(points|treats|coffee|case)$/);
+  if (seasonCreateReward) {
+    await selectLeaderboardSeasonCreateReward(query, seasonCreateReward[1], "", env);
+    return true;
+  }
+  const seasonCreateCase = data.match(/^season_create_case:(small|sweet|gold|legendary)$/);
+  if (seasonCreateCase) {
+    await selectLeaderboardSeasonCreateReward(query, "case", seasonCreateCase[1], env);
+    return true;
+  }
+  if (data === "season_create_save") {
+    await finalizeLeaderboardSeasonCreate(query, env);
+    return true;
+  }
+  const seasonView = data.match(/^season_view:([A-Za-z0-9_-]{2,64})$/);
+  if (seasonView) {
+    await answerCallback(env, query.id, "Открываю сезон.");
+    await showLeaderboardSeasonDetails(chatId, query.from, seasonView[1], env);
+    return true;
+  }
+  const seasonRewardFor = data.match(/^season_reward_for:([A-Za-z0-9_-]{2,64})$/);
+  if (seasonRewardFor) {
+    await startSeasonRewardWorkflow(query, env, seasonRewardFor[1]);
+    return true;
+  }
+  const seasonCancelPreview = data.match(/^season_cancel_preview:([A-Za-z0-9_-]{2,64})$/);
+  if (seasonCancelPreview) {
+    await cancelScheduledLeaderboardSeason(query, seasonCancelPreview[1], env, false);
+    return true;
+  }
+  const seasonCancelConfirm = data.match(/^season_cancel_confirm:([A-Za-z0-9_-]{2,64})$/);
+  if (seasonCancelConfirm) {
+    await cancelScheduledLeaderboardSeason(query, seasonCancelConfirm[1], env, true);
     return true;
   }
   if (data === "season_refresh") {
@@ -14589,6 +15091,7 @@ function botCommandsForAccess(access) {
   );
   if (permissions.manageSeasons) add(
     { command: "season", description: "Управление рейтингом" },
+    { command: "season_new", description: "Создать рейтинговый сезон" },
     { command: "events", description: "Планировщик событий" },
     { command: "event_new", description: "Создать событие" },
     { command: "drafts", description: "Черновики изменений" },

@@ -583,8 +583,8 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
     passFrame.allow = "clipboard-write; autoplay; fullscreen";
     passFrame.referrerPolicy = "same-origin";
     passFrame.src = initData
-      ? `/battle-pass.html?v=0.79.46-rc.4#tgInitData=${encodeURIComponent(initData)}`
-      : "/battle-pass.html?v=0.79.46-rc.4";
+      ? `/battle-pass.html?v=1.0.0#tgInitData=${encodeURIComponent(initData)}`
+      : "/battle-pass.html?v=1.0.0";
     layer.append(passFrame);
     passFrame.addEventListener("load", () => {
       const snapshot = syncTelegramViewport();
@@ -647,7 +647,7 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
 
   let ratingLayer = null;
   let ratingReadyTimer = 0;
-  const RATING_RELEASE_BUILD = "6.0-rc1-rating-season-1-20260810";
+  const RATING_RELEASE_BUILD = "1.0.0-rating-season-scheduler";
   const RATING_READY_TIMEOUT_MS = 16000;
 
   function ratingFrame() {
@@ -5961,7 +5961,7 @@ html&gt;body{padding:
 #zefirok-maltipoo-runner .case-roulette-reward&gt;span:last-child{position:relative;z-index:2}
 @keyframes case-final-effect-pop{from{opacity:0;transform:translate(-50%,-50%) scale(.45) rotate(-8deg)}to{opacity:1;transform:translate(-50%,-50%) scale(1) rotate(0)}}
 @keyframes case-final-effect-glow{from{filter:brightness(1.02) saturate(1.02) drop-shadow(0 0 12px rgba(255,214,145,.24));opacity:.88}to{filter:brightness(1.24) saturate(1.16) drop-shadow(0 0 22px rgba(255,214,145,.46));opacity:1}}
-#zefirok-maltipoo-runner .release-image-wrap{aspect-ratio:4/5;max-height:min(58dvh,470px);padding:6px}
+#zefirok-maltipoo-runner .release-image-wrap{aspect-ratio:1/1;max-height:min(58dvh,470px);padding:6px}
 #zefirok-maltipoo-runner .release-image{object-fit:contain;object-position:center;background:transparent}
 &lt;/style&gt;
 
@@ -8753,7 +8753,7 @@ html&gt;body{padding:
     &lt;div class=&quot;profile-section-head&quot;&gt;&lt;h3 id=&quot;profile-help-title&quot;&gt;Полезно знать&lt;/h3&gt;&lt;/div&gt;
     &lt;p class=&quot;profile-help-copy&quot;&gt;Метка «Telegram-профиль» означает, что имя и данные получены из Telegram. Если Telegram не передал фотографию, игра покажет Зефи — это не ошибка. XP начисляется за успешные покупки и только за зачтённые забеги, которые прошли антифарм-порог по времени и счёту.&lt;/p&gt;
   &lt;/section&gt;
-  &lt;div class=&quot;profile-version-row&quot;&gt;&lt;span&gt;Версия игры&lt;/span&gt;&lt;strong data-profile-game-version&gt;v6.0 RC.1&lt;/strong&gt;&lt;/div&gt;
+  &lt;div class=&quot;profile-version-row&quot;&gt;&lt;span&gt;Версия игры&lt;/span&gt;&lt;strong data-profile-game-version&gt;1.0.0&lt;/strong&gt;&lt;/div&gt;
   &lt;div aria-live=&quot;polite&quot; class=&quot;profile-toast&quot; data-profile-toast hidden&gt;&lt;/div&gt;
 &lt;/div&gt;
 &lt;/section&gt;
@@ -8789,9 +8789,9 @@ html&gt;body{padding:
 &lt;div aria-hidden=&quot;true&quot; class=&quot;release-layer&quot; data-release-layer hidden&gt;
   &lt;div aria-labelledby=&quot;release-dialog-title&quot; aria-modal=&quot;true&quot; class=&quot;release-dialog&quot; role=&quot;dialog&quot; tabindex=&quot;-1&quot;&gt;
     &lt;div class=&quot;release-image-wrap&quot; aria-hidden=&quot;true&quot;&gt;
-      &lt;img class=&quot;release-image&quot; src=&quot;/assets/news/cases-5.0.1.png&quot; alt=&quot;Новые кейсы в Сладком Забеге&quot; width=&quot;1122&quot; height=&quot;1402&quot; decoding=&quot;async&quot; loading=&quot;lazy&quot; fetchpriority=&quot;low&quot;/&gt;
+      &lt;img class=&quot;release-image&quot; src=&quot;/assets/news/relise_game_news.png?v=1.0.0&quot; alt=&quot;Релиз Сладкого Забега 1.0.0 — 10 августа&quot; width=&quot;1254&quot; height=&quot;1254&quot; decoding=&quot;async&quot; loading=&quot;lazy&quot; fetchpriority=&quot;low&quot;/&gt;
     &lt;/div&gt;
-    &lt;div class=&quot;release-kicker&quot;&gt;Новая версия&lt;/div&gt;
+    &lt;div class=&quot;release-kicker&quot;&gt;Релиз игры&lt;/div&gt;
     &lt;h2 id=&quot;release-dialog-title&quot; data-release-title&gt;Обновление&lt;/h2&gt;
     &lt;p class=&quot;release-copy&quot; data-release-copy&gt;&lt;/p&gt;
     &lt;div class=&quot;release-version&quot; data-release-version&gt;&lt;/div&gt;
@@ -9023,18 +9023,23 @@ html&gt;body{padding:
       //
       // Заголовок, текст и кнопку ниже можно свободно редактировать.
       // Переносы строк внутри UPDATE_NOTICE_TEXT сохраняются.
-      const GAME_VERSION = &quot;v6.0 RC.1&quot;;
+      // Версия: год игры.сезонное обновление.исправление.
+      const GAME_VERSION = &quot;1.0.0&quot;;
       const ECONOMY_RESET_KEY = &quot;economy-reset-0.1.1-beta-purchase-limit-fix-2026-07-23&quot;;
-      const UPDATE_NOTICE_KEY = &quot;update-v6-0-rc1-release-announcement-2026-07-30&quot;;
+      const UPDATE_NOTICE_KEY = &quot;release-1-0-0-season-1-2026-08-10&quot;;
       const UPDATE_NOTICE_ENABLED = true;
-      const UPDATE_NOTICE_TITLE = &quot;Обновление v6.0 RC.1&quot;;
-      const UPDATE_NOTICE_TEXT = `10 августа состоится релиз Сладкого Забега.
+      const UPDATE_NOTICE_TITLE = &quot;Сладкий Забег 1.0.0 — релиз игры&quot;;
+      const UPDATE_NOTICE_TEXT = `10 августа уютное кафе Зефи открывает двери — «Сладкий Забег» выходит в релизной версии 1.0.0!
 
-В день релиза откроется первый сезонный пропуск и начнётся новый рейтинговый сезон.
+В день релиза стартует сезонный пропуск «Сезон I: Открытие кафе»: 50 уровней, новые задания и награды на бесплатной и премиальной линиях.
 
-Текущая версия — v6.0 RC.1.
+На 50 уровне бесплатной линии ждёт Золотой кейс, а премиальной — Легендарный кейс.
 
-Это информационное обновление: игровые механики, баланс и прогресс не изменены.`;
+Одновременно начнётся рейтинговый сезон «Сезон 1: Открытие кафе». Все игроки стартуют с 0, а прошлые результаты сохраняются во вкладке «За всё время». Победитель сезона получит Легендарный кейс.
+
+Сезонный пропуск и рейтинг продлятся до 10 сентября.
+
+Новая система версий: исправления меняют третье число, сезонные обновления — второе, новый год игры — первое.`;
       const UPDATE_NOTICE_BUTTON = &quot;Продолжить&quot;;
       const CASE_TUTORIAL_KEY = &quot;cases-tutorial-1-2026-07-25&quot;;
       const RATING_TUTORIAL_KEY = &quot;rating-tutorial-1-2026-07-25&quot;;
@@ -15506,6 +15511,24 @@ html&gt;body{padding:
         }).format(date) + &quot; МСК&quot;;
       }
 
+      function leaderboardServerNow(data) {
+        const base = Number(data?.serverTime || Date.now());
+        const loadedAt = Number(data?._loadedAt || Date.now());
+        return base + Math.max(0, Date.now() - loadedAt);
+      }
+
+      function leaderboardRemaining(target, data) {
+        const milliseconds = Math.max(0, Number(target || 0) - leaderboardServerNow(data));
+        const seconds = Math.floor(milliseconds / 1000);
+        const days = Math.floor(seconds / 86400);
+        const hours = Math.floor((seconds % 86400) / 3600);
+        const minutes = Math.floor((seconds % 3600) / 60);
+        const secs = seconds % 60;
+        if (days &gt; 0) return `${days} дн. ${hours} ч. ${minutes} мин.`;
+        if (hours &gt; 0) return `${hours} ч. ${minutes} мин.`;
+        return `${minutes}:${String(secs).padStart(2, &quot;0&quot;)}`;
+      }
+
       const sharedApiInFlight = new Map();
       const sharedApiCache = new Map();
       const PUBLIC_CONFIG_CLIENT_CACHE_MS = 15000;
@@ -16019,14 +16042,14 @@ html&gt;body{padding:
         const seasonTitle = String(season.title || &quot;Сладкий сезон&quot;).trim();
         const title = seasonTitle ? seasonTitle.toUpperCase() : &quot;СЛАДКИЙ СЕЗОН&quot;;
         const detail = status === &quot;scheduled&quot;
-          ? `Старт сезона: ${leaderboardDate(season.startsAt)}`
+          ? `До начала нового сезона: ${leaderboardRemaining(season.startsAt, data)}`
           : status === &quot;active&quot;
-            ? `Сезон сбросится: ${leaderboardDate(season.endsAt)}`
+            ? `До конца сезона: ${leaderboardRemaining(season.endsAt, data)}`
             : status === &quot;ended&quot;
               ? `Сезон завершён: ${leaderboardDate(season.endsAt)}`
               : &quot;Сезон временно недоступен&quot;;
         const place = me?.place ? formatter.format(me.place) : &quot;—&quot;;
-        const score = me?.score ? formatter.format(me.score) : &quot;—&quot;;
+        const score = me ? formatter.format(Number(me.score || 0)) : &quot;0&quot;;
         const imageSrc = status === &quot;scheduled&quot; ? LEADERBOARD_WAITING_IMAGE : LEADERBOARD_MODAL_IMAGE;
         setLeaderboardSummary(title, detail, season.reward, statusLabel, &quot;Открыть рейтинг&quot;, imageSrc, place, score);
       }
@@ -18035,10 +18058,11 @@ html&gt;body{padding:
       requestTelegramProfile();
       window.clearInterval(leaderboardCountdownTimer);
       leaderboardCountdownTimer = window.setInterval(() =&gt; {
-        if (!leaderboardData?.season) return;
-        leaderboardData.serverTime = Number(leaderboardData.serverTime || Date.now()) + 1000;
-        const boundary = leaderboardData.season.status === &quot;scheduled&quot; ? leaderboardData.season.startsAt : leaderboardData.season.endsAt;
-        if (Number(boundary || 0) &lt;= Number(leaderboardData.serverTime || 0)) void refreshLeaderboard(true, leaderboardMode);
+        const seasonData = leaderboardSeasonSummaryData();
+        if (!seasonData?.season) return;
+        renderLeaderboardSummary();
+        const boundary = seasonData.season.status === &quot;scheduled&quot; ? seasonData.season.startsAt : seasonData.season.endsAt;
+        if (Number(boundary || 0) &lt;= leaderboardServerNow(seasonData)) void refreshLeaderboard(true, &quot;season&quot;, false);
       }, 1000);
       if (pendingReleaseNotice) scheduleReleaseNotice();
       else scheduleTutorialAutoOpen();
@@ -18804,7 +18828,7 @@ html&gt;body{padding:
 &lt;script id=&quot;zefirok-v07921-season-pass-access-hotfix-audit&quot; type=&quot;application/json&quot;&gt;{&quot;version&quot;:&quot;0.79.21&quot;,&quot;scope&quot;:&quot;season-pass-access&quot;,&quot;buttonRecovery&quot;:true,&quot;hashInitDataHandoff&quot;:true,&quot;featureFlagSnapshot&quot;:true}&lt;/script&gt;
 &lt;script id=&quot;zefirok-v07919-season-pass-v2-audit&quot; type=&quot;application/json&quot;&gt;{&quot;version&quot;:&quot;0.79.19&quot;,&quot;scope&quot;:&quot;season-pass-v2&quot;,&quot;levels&quot;:50,&quot;horizontalRewards&quot;:true,&quot;tasks&quot;:[&quot;daily&quot;,&quot;weekly&quot;,&quot;free&quot;,&quot;premium&quot;],&quot;skinsRemoved&quot;:true,&quot;finalReward&quot;:&quot;legendary_case&quot;}&lt;/script&gt;
   &lt;script type=&quot;application/json&quot; id=&quot;zefirok-v07944-main-game-audit&quot;&gt;{&quot;build&quot;:&quot;0.79.44&quot;,&quot;fixes&quot;:[&quot;single-season-run-submit&quot;,&quot;profile-xp-expiry-guard&quot;,&quot;startup-package-season-bonus-refresh&quot;]}&lt;/script&gt;
-&lt;script type=&quot;application/json&quot; id=&quot;zefirok-rating-release-main-audit&quot;&gt;{&quot;build&quot;:&quot;v6.0 RC.1&quot;,&quot;rating&quot;:&quot;external-release-1&quot;,&quot;embeddedModalRemoved&quot;:true,&quot;bridges&quot;:[&quot;claim&quot;,&quot;reset-plan&quot;,&quot;account-refresh&quot;]}&lt;/script&gt;
+&lt;script type=&quot;application/json&quot; id=&quot;zefirok-rating-release-main-audit&quot;&gt;{&quot;build&quot;:&quot;1.0.0&quot;,&quot;rating&quot;:&quot;external-release-1&quot;,&quot;embeddedModalRemoved&quot;:true,&quot;bridges&quot;:[&quot;claim&quot;,&quot;reset-plan&quot;,&quot;account-refresh&quot;]}&lt;/script&gt;
 &lt;/body&gt;
 &lt;/html&gt;" title="Сладкий Забег"></iframe>
 <script id="zefirok-v07934-season-pass-overlay-audit" type="application/json">{"version":"0.79.34","scope":"outer-app-return-recovery","samePageOverlay":true,"mainGamePreserved":true,"restores":["telegram_profile","rating","balances","cases","notifications","feature_flags"]}</script>

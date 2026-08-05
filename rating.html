@@ -8668,7 +8668,7 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
 .rating-retry-button:disabled { opacity:.58; }
 @media (prefers-reduced-motion: reduce) { * { scroll-behavior:auto !important; } }
 </style>
-<script type="application/json" id="zefirok-rating-release-audit">{"build":"v6.0 RC.1","ratingPage":"release-season-1","standalone":true,"features":["season-1-cafe-opening","all-time-banner","legendary-case-reward","reward-claim-bridge","reset-plan-bridge","privacy-safe-game-avatars","lifecycle-refresh","safe-area"]}</script>
+<script type="application/json" id="zefirok-rating-release-audit">{"build":"1.0.0","ratingPage":"universal-season-scheduler","standalone":true,"features":["season-1-cafe-opening","all-time-banner","legendary-case-reward","reward-claim-bridge","reset-plan-bridge","privacy-safe-game-avatars","lifecycle-refresh","safe-area"]}</script>
 <script type="application/json" id="zefirok-rating-avatar-privacy">{"telegramPhotos":false,"priority":["equipped-game-avatar","deterministic-game-placeholder"],"externalAvatarImages":false}</script>
 </head>
 <body>
@@ -8690,7 +8690,7 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
 <script>(() => {
   "use strict";
 
-  const BUILD = "v6.0 RC.1 · rating-release-2";
+  const BUILD = "1.0.0 · rating-season-scheduler";
   const tg = window.Telegram?.WebApp;
   const embedded = window.parent !== window;
   try { tg?.ready?.(); tg?.expand?.(); tg?.disableVerticalSwipes?.(); } catch {}
@@ -8961,8 +8961,8 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
     const season = data?.season || {};
     if (requestedMode === "all_time") return "Лучшие результаты игроков за всё время";
     const status = String(season.status || "scheduled");
-    if (status === "scheduled") return `Старт через ${remaining(season.startsAt, data?.serverTime)}`;
-    if (status === "active") return `Сезон сбросится через ${remaining(season.endsAt, data?.serverTime)}`;
+    if (status === "scheduled") return `До начала нового сезона: ${remaining(season.startsAt, data?.serverTime)}`;
+    if (status === "active") return `До конца сезона: ${remaining(season.endsAt, data?.serverTime)}`;
     return `Сезон завершён ${dateText(season.endsAt)}`;
   }
 
@@ -8974,7 +8974,8 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
       top: data.top,
       me: data.me,
       gapToFirst: data.gapToFirst,
-      reward: data.reward
+      reward: data.reward,
+      nextSeason: data.nextSeason
     });
   }
 
@@ -9055,7 +9056,7 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
     const season = data.season;
     const status = String(season.status || "scheduled");
     if (status === "scheduled" && mode === "season") {
-      dynamic.innerHTML = `${seasonHeader(season, `Старт через ${remaining(season.startsAt, data.serverTime)}`, mode)}${tabs()}<div class="leaderboard-soon-card"><h3>Уже скоро!</h3><p>После старта завершите зачтённый забег. В таблице сохранится ваш лучший результат сезона.</p></div>`;
+      dynamic.innerHTML = `${seasonHeader(season, `До начала нового сезона: ${remaining(season.startsAt, data.serverTime)}`, mode)}${tabs()}<div class="leaderboard-soon-card"><h3>Уже скоро!</h3><p>После старта завершите зачтённый забег. В таблице сохранится ваш лучший результат сезона.</p></div>`;
       return;
     }
 
