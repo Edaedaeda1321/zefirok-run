@@ -8666,9 +8666,10 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
 .rating-error-card span { max-width:420px; color:#8c6b78; font-size:12px; font-weight:750; line-height:1.45; }
 .rating-retry-button { min-height:44px; padding:10px 18px; border:1px solid rgba(198,69,116,.58); border-radius:16px; background:linear-gradient(180deg,#ef8ab0,#cf527f); color:#fff; font:900 13px/1 "Sofia Sans",system-ui,sans-serif; box-shadow:0 8px 18px rgba(186,69,113,.18); }
 .rating-retry-button:disabled { opacity:.58; }
+#zefirok-maltipoo-runner .leaderboard-close { display:none !important; }
 @media (prefers-reduced-motion: reduce) { * { scroll-behavior:auto !important; } }
 </style>
-<script type="application/json" id="zefirok-rating-release-audit">{"build":"1.0.0","ratingPage":"universal-season-scheduler","standalone":true,"features":["season-1-cafe-opening","all-time-banner","legendary-case-reward","reward-claim-bridge","reset-plan-bridge","privacy-safe-game-avatars","lifecycle-refresh","safe-area"]}</script>
+<script type="application/json" id="zefirok-rating-release-audit">{"build":"1.0.0-no-close-fix","ratingPage":"universal-season-scheduler","standalone":true,"features":["season-1-cafe-opening","all-time-banner","legendary-case-reward","reward-claim-bridge","reset-plan-bridge","privacy-safe-game-avatars","lifecycle-refresh","safe-area"]}</script>
 <script type="application/json" id="zefirok-rating-avatar-privacy">{"telegramPhotos":false,"priority":["equipped-game-avatar","deterministic-game-placeholder"],"externalAvatarImages":false}</script>
 </head>
 <body>
@@ -8677,7 +8678,6 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
     <div aria-labelledby="leaderboard-dialog-title" aria-modal="true" class="leaderboard-dialog leaderboard-v4-dialog" role="dialog">
       <div class="leaderboard-dialog-head">
         <div class="leaderboard-v4-title-wrap"><span><span class="leaderboard-v4-kicker-label"><small>СЛАДКИЙ ЗАБЕГ</small><strong>СЕЗОННЫЙ РЕЙТИНГ</strong></span></span><strong id="leaderboard-dialog-title">РЕЙТИНГ ИГРОКОВ</strong></div>
-        <button aria-label="Закрыть рейтинг" class="leaderboard-close" data-leaderboard-close type="button">×</button>
       </div>
       <div class="leaderboard-content" data-leaderboard-content>
         <div class="leaderboard-v4-modal-hero leaderboard-fixed-media" aria-hidden="true"><img src="/assets/rating/v8/season-1-cafe-opening.png?v=20260810" alt="" decoding="async" loading="eager" fetchpriority="high" data-leaderboard-modal-banner></div>
@@ -8690,7 +8690,7 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
 <script>(() => {
   "use strict";
 
-  const BUILD = "1.0.0 · rating-season-scheduler";
+  const BUILD = "1.0.0 · rating-season-scheduler-no-close";
   const tg = window.Telegram?.WebApp;
   const embedded = window.parent !== window;
   try { tg?.ready?.(); tg?.expand?.(); tg?.disableVerticalSwipes?.(); } catch {}
@@ -8748,7 +8748,6 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
   const dynamic = document.querySelector("[data-leaderboard-dynamic]");
   const banner = document.querySelector("[data-leaderboard-modal-banner]");
   const toast = document.querySelector("[data-rating-toast]");
-  const closeButton = document.querySelector("[data-leaderboard-close]");
   const cache = { season: null, all_time: null };
   const requestSerial = { season: 0, all_time: 0 };
   const requestControllers = { season: null, all_time: null };
@@ -9214,8 +9213,6 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
       image.parentElement.textContent = "🎁";
     }
   }, true);
-
-  closeButton?.addEventListener("click", closeRating);
 
   window.addEventListener("message", event => {
     if (embedded && event.source !== window.parent) return;
