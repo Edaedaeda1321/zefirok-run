@@ -647,7 +647,7 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
 
   let ratingLayer = null;
   let ratingReadyTimer = 0;
-  const RATING_RELEASE_BUILD = "6.0-rc1-rating-release-1";
+  const RATING_RELEASE_BUILD = "6.0-rc1-rating-season-1-20260810";
   const RATING_READY_TIMEOUT_MS = 16000;
 
   function ratingFrame() {
@@ -8734,7 +8734,7 @@ html&gt;body{padding:
       &lt;/div&gt;
       &lt;div class=&quot;leaderboard-v4-card&quot; data-leaderboard-summary&gt;
         &lt;div class=&quot;leaderboard-v4-hero leaderboard-fixed-media&quot;&gt;
-          &lt;img class=&quot;leaderboard-v4-hero-art&quot; data-leaderboard-summary-image alt=&quot;Зефи с кубком и десертом&quot; src=&quot;/assets/rating/v8/season-current-banner.jpg&quot; decoding=&quot;async&quot; loading=&quot;lazy&quot; fetchpriority=&quot;low&quot; data-leaderboard-banner/&gt;
+          &lt;img class=&quot;leaderboard-v4-hero-art&quot; data-leaderboard-summary-image alt=&quot;Сезон 1: Открытие кафе&quot; src=&quot;/assets/rating/v8/season-1-cafe-opening.png?v=20260810&quot; decoding=&quot;async&quot; loading=&quot;lazy&quot; fetchpriority=&quot;low&quot; data-leaderboard-banner/&gt;
 
         &lt;/div&gt;
         &lt;div class=&quot;leaderboard-v4-season-badge&quot;&gt;ПРЕМИАЛЬНЫЙ СЕЗОН&lt;/div&gt;
@@ -16000,7 +16000,7 @@ html&gt;body{padding:
         if (leaderboardSummaryDetailEl) leaderboardSummaryDetailEl.textContent = detail;
         if (leaderboardSummaryRewardEl) leaderboardSummaryRewardEl.innerHTML = reward ? leaderboardRewardMarkup(reward) : &quot;&quot;;
         if (leaderboardOpenButton) leaderboardOpenButton.innerHTML = `&lt;span aria-hidden=&quot;true&quot;&gt;🏆&lt;/span&gt; ${leaderboardEscape(buttonText)} &lt;b aria-hidden=&quot;true&quot;&gt;›&lt;/b&gt;`;
-        if (leaderboardSummaryImageEl) leaderboardSummaryImageEl.src = &quot;/assets/rating/v8/season-current-banner.jpg&quot;;
+        if (leaderboardSummaryImageEl) leaderboardSummaryImageEl.src = &quot;/assets/rating/v8/season-1-cafe-opening.png?v=20260810&quot;;
       }
 
       function renderLeaderboardUnavailable(message) {

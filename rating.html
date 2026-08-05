@@ -8668,7 +8668,7 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
 .rating-retry-button:disabled { opacity:.58; }
 @media (prefers-reduced-motion: reduce) { * { scroll-behavior:auto !important; } }
 </style>
-<script type="application/json" id="zefirok-rating-release-audit">{"build":"v6.0 RC.1","ratingPage":"release-2","standalone":true,"features":["season","all-time","reward-claim-bridge","reset-plan-bridge","privacy-safe-game-avatars","lifecycle-refresh","safe-area"]}</script>
+<script type="application/json" id="zefirok-rating-release-audit">{"build":"v6.0 RC.1","ratingPage":"release-season-1","standalone":true,"features":["season-1-cafe-opening","all-time-banner","legendary-case-reward","reward-claim-bridge","reset-plan-bridge","privacy-safe-game-avatars","lifecycle-refresh","safe-area"]}</script>
 <script type="application/json" id="zefirok-rating-avatar-privacy">{"telegramPhotos":false,"priority":["equipped-game-avatar","deterministic-game-placeholder"],"externalAvatarImages":false}</script>
 </head>
 <body>
@@ -8680,7 +8680,7 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
         <button aria-label="Закрыть рейтинг" class="leaderboard-close" data-leaderboard-close type="button">×</button>
       </div>
       <div class="leaderboard-content" data-leaderboard-content>
-        <div class="leaderboard-v4-modal-hero leaderboard-fixed-media" aria-hidden="true"><img src="/assets/rating/v8/season-current-banner.jpg" alt="" decoding="async" loading="eager" fetchpriority="high" data-leaderboard-modal-banner></div>
+        <div class="leaderboard-v4-modal-hero leaderboard-fixed-media" aria-hidden="true"><img src="/assets/rating/v8/season-1-cafe-opening.png?v=20260810" alt="" decoding="async" loading="eager" fetchpriority="high" data-leaderboard-modal-banner></div>
         <div class="leaderboard-dynamic" data-leaderboard-dynamic aria-live="polite" aria-busy="true"><div class="leaderboard-empty">Загружаем рейтинг…</div></div>
       </div>
     </div>
@@ -8953,7 +8953,7 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
   }
 
   function syncBanner() {
-    const src = mode === "all_time" ? "/assets/rating/v8/all-time-banner.jpg" : "/assets/rating/v8/season-current-banner.jpg";
+    const src = mode === "all_time" ? "/assets/rating/v8/all-time-rating.png?v=20260810" : "/assets/rating/v8/season-1-cafe-opening.png?v=20260810";
     if (banner?.getAttribute("src") !== src) banner?.setAttribute("src", src);
   }
 
@@ -9310,8 +9310,8 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
   for (const src of [
     ...Object.values(PODIUM_RIBBONS),
     COFFEE_REWARD_ICON,
-    "/assets/rating/v8/season-current-banner.jpg",
-    "/assets/rating/v8/all-time-banner.jpg"
+    "/assets/rating/v8/season-1-cafe-opening.png?v=20260810",
+    "/assets/rating/v8/all-time-rating.png?v=20260810"
   ]) {
     try {
       const image = new Image();

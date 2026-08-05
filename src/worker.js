@@ -335,7 +335,7 @@ const STAFF_SESSION_TTL_SECONDS = 12 * 60 * 60;
 const SUPPORT_USERNAME = "ve4n0_em";
 const SUPPORT_URL = `https://t.me/${SUPPORT_USERNAME}`;
 const DEFAULT_GAME_URL = "https://zefirok-run.patokad6.workers.dev/";
-const WORKER_BUILD = "6.0 RC.1 + limited administrator access v2";
+const WORKER_BUILD = "6.0 RC.1 + cumulative all-time rating";
 const V07944_RELEASE_CANDIDATE_AUDIT = Object.freeze({ reset: true, claims: true, purchases: true, xp: true, concurrency: true });
 
 // =============================================================
@@ -413,8 +413,8 @@ const GAME_UPDATE_RESET_REASON = "Прогресс в этом обновлен�
 const GAME_UPDATE_NOTES = Object.freeze([
   "10 августа состоится релиз Сладкого Забега.",
   "В день релиза откроется первый сезонный пропуск.",
-  "10 августа также начнётся новый рейтинговый сезон.",
-  "Это информационное обновление: игровые механики, баланс и прогресс не изменены."
+  "10 августа начнётся рейтинговый сезон «Сезон 1: Открытие кафе».",
+  "Сезон продлится до 10 сентября, награда за первое место — Легендарный кейс."
 ]);
 
 
@@ -422,15 +422,15 @@ const GAME_UPDATE_NOTES = Object.freeze([
 // НАСТРОЙКИ СЕЗОННОГО РЕЙТИНГА.
 // Даты можно менять вручную. Они не обязаны совпадать с первым числом месяца.
 // Значения Cloudflare env с такими же именами имеют приоритет над константами.
-const DEFAULT_SEASON_ID = "sweet-season-1";
-const DEFAULT_SEASON_TITLE = "Первый сладкий сезон";
-const DEFAULT_SEASON_START_AT = "2026-07-23T15:40:00+03:00";
-const DEFAULT_SEASON_END_AT = "2026-08-07T12:00:00+03:00";
-const DEFAULT_SEASON_REWARD_COFFEE = 50;
-const DEFAULT_SEASON_REWARD_TYPE = "coffee"; // coffee | points | treats | case | skin | item
-const DEFAULT_SEASON_REWARD_TITLE = "50 кофе";
+const DEFAULT_SEASON_ID = "release-season-1-cafe-opening";
+const DEFAULT_SEASON_TITLE = "Сезон 1: Открытие кафе";
+const DEFAULT_SEASON_START_AT = "2026-08-10T00:00:00+03:00";
+const DEFAULT_SEASON_END_AT = "2026-09-10T23:59:59+03:00";
+const DEFAULT_SEASON_REWARD_AMOUNT = 1;
+const DEFAULT_SEASON_REWARD_TYPE = "case"; // coffee | points | treats | case | skin | item
+const DEFAULT_SEASON_REWARD_TITLE = "Легендарный кейс";
 const DEFAULT_SEASON_REWARD_IMAGE_URL = ""; // Пусто = стандартная картинка по типу награды
-const DEFAULT_SEASON_REWARD_ITEM_ID = "";
+const DEFAULT_SEASON_REWARD_ITEM_ID = "legendary";
 const LEADERBOARD_REWARD_ASSETS = Object.freeze({
   coffee: "/assets/rating/frames/coffee.png",
   points: "/assets/shop/currency_star_256x256.png",
@@ -448,11 +448,11 @@ const DEFAULT_LEADERBOARD_MIN_RUN_SECONDS = 12;
 const DEFAULT_LEADERBOARD_MIN_SCORE = 150;
 
 // Что сбрасывать ПОСЛЕ завершения текущего сезона.
-// Для первого сезона сбрасывается только сам сезонный рейтинг: новый season_id
-// автоматически создаёт чистую таблицу, а игровой прогресс остаётся нетронутым.
+// Для релизного сезона сбрасывается только сам сезонный рейтинг: новый season_id
+// автоматически создаёт чистый текущий рейтинг. «За всё время» хранит сумму лучших результатов каждого сезона.
 // В будущих сезонах меняйте true/false и обязательно задавайте новый id.
 const DEFAULT_SEASON_RESET_PLAN = Object.freeze({
-  id: "sweet-season-1-end-reset",
+  id: "release-season-1-cafe-opening-end-reset",
   reset: {
     seasonalRating: true,
     currencies: false,
@@ -470,7 +470,7 @@ const DEFAULT_SEASON_RESET_PLAN = Object.freeze({
 // BOT_NEWS_IMAGE_URL в Cloudflare либо замените пустую строку ниже на HTTPS URL.
 const DEFAULT_BOT_NEWS_IMAGE_URL = "";
 const BOT_NEWS_TITLE = "10 августа — релиз Сладкого Забега";
-const BOT_NEWS_TEXT = "10 августа состоится релиз Сладкого Забега. В этот день откроется первый сезонный пропуск и начнётся новый рейтинговый сезон. Текущая версия — v6.0 RC.1. Это информационное обновление: игровые механики, баланс и прогресс не изменены.";
+const BOT_NEWS_TEXT = "10 августа состоится релиз Сладкого Забега. В этот день откроется первый сезонный пропуск и начнётся рейтинговый сезон «Сезон 1: Открытие кафе». Сезон продлится до 10 сентября, а победитель получит Легендарный кейс. Текущая версия — v6.0 RC.1.";
 const BOT_NEWS_PUBLISHED_AT = Math.floor(Date.parse("2026-07-30T20:53:00+03:00") / 1000);
 // =============================================================
 
@@ -2286,23 +2286,17 @@ async function setAdminLeaderboardScore(request, env) {
         hidden = excluded.hidden`
     ).bind(season.id, telegramId, displayName, username, photoUrl, score, level, now, now, ratingHidden, caseAvatarId, caseFrameId).run();
 
-    await env.DB.prepare(
-      `INSERT INTO leaderboard_all_time (
-        telegram_id, display_name, username, photo_url,
-        best_score, level, achieved_at, updated_at, hidden, case_avatar_id, case_frame_id
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      ON CONFLICT(telegram_id) DO UPDATE SET
-        display_name = excluded.display_name,
-        username = excluded.username,
-        photo_url = excluded.photo_url,
-        case_avatar_id = excluded.case_avatar_id,
-        case_frame_id = excluded.case_frame_id,
-        best_score = excluded.best_score,
-        level = excluded.level,
-        achieved_at = excluded.achieved_at,
-        updated_at = excluded.updated_at,
-        hidden = excluded.hidden`
-    ).bind(telegramId, displayName, username, photoUrl, score, level, now, now, ratingHidden, caseAvatarId, caseFrameId).run();
+    await syncLeaderboardAllTimeFromSeasonEntries(env, {
+      telegramId,
+      displayName,
+      username,
+      photoUrl,
+      level,
+      hidden: ratingHidden,
+      caseAvatarId,
+      caseFrameId,
+      now
+    });
 
     await recordPlayerTimeline(env, telegramId, "rating_admin", `администратор установил результат ${score.toLocaleString("ru-RU")}`, { score, level, excludedFromRating: Boolean(ratingHidden) }, `admin_rating_${now}`, auth.user, now);
     return jsonResponse({
@@ -2610,10 +2604,16 @@ function configuredSeason(env) {
   const endsAt = parseConfiguredDate(env.LEADERBOARD_SEASON_END_AT || DEFAULT_SEASON_END_AT, "дата завершения сезона");
   if (endsAt <= startsAt) throw new ApiError(500, "Дата завершения сезона должна быть позже даты старта.");
   const rawRewardType = String(env.LEADERBOARD_REWARD_TYPE || DEFAULT_SEASON_REWARD_TYPE).trim() || DEFAULT_SEASON_REWARD_TYPE;
-  const rawRewardAmount = positiveInt(env.LEADERBOARD_REWARD_AMOUNT || env.LEADERBOARD_REWARD_COFFEE, DEFAULT_SEASON_REWARD_COFFEE);
+  const normalizedRewardType = normalizeLeaderboardRewardType(rawRewardType);
+  const configuredRewardAmount = env.LEADERBOARD_REWARD_AMOUNT !== undefined
+    ? env.LEADERBOARD_REWARD_AMOUNT
+    : normalizedRewardType === "coffee" && env.LEADERBOARD_REWARD_COFFEE !== undefined
+      ? env.LEADERBOARD_REWARD_COFFEE
+      : DEFAULT_SEASON_REWARD_AMOUNT;
+  const rawRewardAmount = positiveInt(configuredRewardAmount, DEFAULT_SEASON_REWARD_AMOUNT);
   const rewardTitleOverride = env.LEADERBOARD_REWARD_TITLE !== undefined
     ? String(env.LEADERBOARD_REWARD_TITLE || "").trim()
-    : "";
+    : DEFAULT_SEASON_REWARD_TITLE;
   const rewardImageOverride = env.LEADERBOARD_REWARD_IMAGE_URL !== undefined
     ? String(env.LEADERBOARD_REWARD_IMAGE_URL || "").trim()
     : DEFAULT_SEASON_REWARD_IMAGE_URL;
@@ -4150,6 +4150,51 @@ async function consumeCaseBoosterRun(request, env) {
   }
 }
 
+async function syncLeaderboardAllTimeFromSeasonEntries(env, player) {
+  const telegramId = String(player?.telegramId || "").trim();
+  if (!telegramId) throw new ApiError(400, "Не указан Telegram ID игрока.");
+  const now = Math.max(1, Math.floor(Number(player?.now || Date.now() / 1000)) || Math.floor(Date.now() / 1000));
+  const totals = await env.DB.prepare(
+    `SELECT COALESCE(SUM(best_score), 0) AS total_score
+     FROM leaderboard_entries
+     WHERE telegram_id = ?`
+  ).bind(telegramId).first();
+  const totalScore = Math.max(0, Math.floor(Number(totals?.total_score || 0)) || 0);
+  await env.DB.prepare(
+    `INSERT INTO leaderboard_all_time (
+      telegram_id, display_name, username, photo_url,
+      best_score, level, achieved_at, updated_at, hidden, case_avatar_id, case_frame_id
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(telegram_id) DO UPDATE SET
+      display_name = excluded.display_name,
+      username = excluded.username,
+      photo_url = excluded.photo_url,
+      case_avatar_id = excluded.case_avatar_id,
+      case_frame_id = excluded.case_frame_id,
+      level = excluded.level,
+      best_score = excluded.best_score,
+      achieved_at = CASE
+        WHEN excluded.best_score <> leaderboard_all_time.best_score THEN excluded.achieved_at
+        ELSE leaderboard_all_time.achieved_at
+      END,
+      hidden = excluded.hidden,
+      updated_at = excluded.updated_at`
+  ).bind(
+    telegramId,
+    String(player?.displayName || "").slice(0, 120),
+    String(player?.username || "").slice(0, 64),
+    String(player?.photoUrl || "").slice(0, 500),
+    totalScore,
+    Math.max(1, Math.floor(Number(player?.level || 1)) || 1),
+    now,
+    now,
+    Number(player?.hidden || 0) ? 1 : 0,
+    normalizeCaseCosmeticId("avatar", player?.caseAvatarId),
+    normalizeCaseCosmeticId("frame", player?.caseFrameId)
+  ).run();
+  return totalScore;
+}
+
 async function leaderboardState(request, env) {
   try {
     requireDatabase(env);
@@ -4249,23 +4294,17 @@ async function submitLeaderboardRun(request, env) {
         updated_at = excluded.updated_at`
     ).bind(season.id, telegramId, displayName, username, photoUrl, score, level, achievedAt, now, ratingHidden, caseAvatarId, caseFrameId).run();
 
-    await env.DB.prepare(
-      `INSERT INTO leaderboard_all_time (
-        telegram_id, display_name, username, photo_url,
-        best_score, level, achieved_at, updated_at, hidden, case_avatar_id, case_frame_id
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      ON CONFLICT(telegram_id) DO UPDATE SET
-        display_name = excluded.display_name,
-        username = excluded.username,
-        photo_url = excluded.photo_url,
-        case_avatar_id = excluded.case_avatar_id,
-        case_frame_id = excluded.case_frame_id,
-        level = excluded.level,
-        best_score = CASE WHEN excluded.best_score > leaderboard_all_time.best_score THEN excluded.best_score ELSE leaderboard_all_time.best_score END,
-        achieved_at = CASE WHEN excluded.best_score > leaderboard_all_time.best_score THEN excluded.achieved_at ELSE leaderboard_all_time.achieved_at END,
-        hidden = excluded.hidden,
-        updated_at = excluded.updated_at`
-    ).bind(telegramId, displayName, username, photoUrl, score, level, achievedAt, now, ratingHidden, caseAvatarId, caseFrameId).run();
+    await syncLeaderboardAllTimeFromSeasonEntries(env, {
+      telegramId,
+      displayName,
+      username,
+      photoUrl,
+      level,
+      hidden: ratingHidden,
+      caseAvatarId,
+      caseFrameId,
+      now: achievedAt
+    });
 
     await recordPlayerTimeline(env, telegramId, "run", `завершил забег с результатом ${score.toLocaleString("ru-RU")}`, { runId, score, durationMs, runTreats, runCoffee, level, accepted: true, excludedFromRating: Boolean(ratingHidden) }, `run_${runId}`, auth.user, achievedAt);
     const seasonPassAward = await recordSeasonPassRunActivity(env, telegramId, { runId, score, durationMs, runTreats, runCoffee, newRecord:Boolean(body.newRecord||body.new_record) });
