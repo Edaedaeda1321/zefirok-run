@@ -335,7 +335,7 @@ const STAFF_SESSION_TTL_SECONDS = 12 * 60 * 60;
 const SUPPORT_USERNAME = "ve4n0_em";
 const SUPPORT_URL = `https://t.me/${SUPPORT_USERNAME}`;
 const DEFAULT_GAME_URL = "https://zefirok-run.patokad6.workers.dev/";
-const WORKER_BUILD = "1.0.0 + release season scheduler";
+const WORKER_BUILD = "1.0.0 + owner control center";
 const V07944_RELEASE_CANDIDATE_AUDIT = Object.freeze({ reset: true, claims: true, purchases: true, xp: true, concurrency: true });
 
 // =============================================================
@@ -783,9 +783,9 @@ export default {
       // Otherwise a temporary or unrelated database migration error makes the
       // webhook return 500 and the bot appears completely silent.
       if (url.pathname === "/api/health" && request.method === "GET") {
-        if (ctx?.waitUntil) {
-          ctx.waitUntil(ensureTelegramWebhookHealth(env).catch((error) => console.error("Telegram webhook repair from health route failed", error)));
-        }
+        // Public health must stay side-effect free. Webhook verification/repair is
+        // handled by the scheduled health job so ordinary clients cannot cause
+        // Telegram API traffic or repeated setWebhook calls.
         return jsonResponse({ ok: true, service: "zefirok-rewards", workerBuild: WORKER_BUILD, gameVersion: GAME_VERSION });
       }
       if (url.pathname === "/api/bot/health" && request.method === "GET") {
@@ -810,6 +810,20 @@ export default {
         headers.set("Referrer-Policy", "no-referrer");
         return new Response(asset.body, { status: asset.status, statusText: asset.statusText, headers });
       }
+      if (url.pathname === "/owner.html" && request.method === "GET") {
+        if (!env.ASSETS) return new Response("Not found", { status: 404 });
+        const asset = await env.ASSETS.fetch(request);
+        const headers = new Headers(asset.headers);
+        headers.set("Cache-Control", "no-store, no-cache, must-revalidate, private");
+        headers.set("Pragma", "no-cache");
+        headers.set("X-Robots-Tag", "noindex, nofollow, noarchive");
+        headers.set("Referrer-Policy", "no-referrer");
+        headers.set("X-Frame-Options", "DENY");
+        headers.set("Cross-Origin-Resource-Policy", "same-origin");
+        headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=()");
+        headers.set("Content-Security-Policy", "default-src 'self'; script-src 'self' 'unsafe-inline' https://telegram.org; style-src 'self' 'unsafe-inline'; img-src 'self' https: data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'");
+        return new Response(asset.body, { status: asset.status, statusText: asset.statusText, headers });
+      }
       if (url.pathname === "/api/staff/qr/access" && request.method === "POST") {
         return await staffQrAccess(request, env);
       }
@@ -821,6 +835,9 @@ export default {
       }
       if (url.pathname === "/api/maintenance/access" && request.method === "POST") {
         return await getMaintenanceAccess(request, env);
+      }
+      if (url.pathname.startsWith("/api/owner/") && request.method === "POST") {
+        return await handleOwnerPanelApi(request, env, url.pathname);
       }
       const maintenanceResponse = await enforceMaintenanceForRequest(request, url, env);
       if (maintenanceResponse) return maintenanceResponse;
@@ -1010,12 +1027,16 @@ export default {
 
   async scheduled(controller, env, ctx) {
     ctx.waitUntil((async () => {
-      // Repair Telegram independently from the main D1-backed scheduler. A
-      // database problem must not prevent webhook recovery.
-      try {
-        await ensureTelegramWebhookHealth(env);
-      } catch (error) {
-        console.error("Telegram webhook health check failed", error);
+      // Verify Telegram independently from the D1-backed scheduler, but only
+      // once per five minutes. The Worker cron itself runs every minute.
+      const scheduledAtMs = Math.max(0, Number(controller?.scheduledTime || Date.now()));
+      const shouldCheckTelegramWebhook = Math.floor(scheduledAtMs / 60000) % 5 === 0;
+      if (shouldCheckTelegramWebhook) {
+        try {
+          await ensureTelegramWebhookHealth(env);
+        } catch (error) {
+          console.error("Telegram webhook health check failed", error);
+        }
       }
 
       try {
@@ -1188,10 +1209,6 @@ async function processMinuteLiveOps(env) {
 
 async function processFiveMinuteServerHealth(env) {
   return runServerCronSteps("health-five-minutes", [
-    ["webhook", async () => {
-      await ensureTelegramWebhookHealth(env);
-      try { await clearOperationalIssue(env, "telegram-webhook"); } catch {}
-    }],
     ["lowStock", () => checkLowStockAlerts(env)],
     ["operationalProblems", () => syncOperationalProblems(env, { checkWebhook: false, checkCron: false })],
     ["dailyReport", () => maybeSendDailyStaffReport(env)],
@@ -4626,10 +4643,34 @@ function expectedTelegramWebhookUrl(env) {
   return url.toString();
 }
 
+function telegramApiStatus(error) {
+  return Math.max(0, Number(error?.status || 0));
+}
+
+function isTransientTelegramApiError(error) {
+  const status = telegramApiStatus(error);
+  return status === 0 || status === 408 || status === 425 || status === 429 || (status >= 500 && status <= 599);
+}
+
+function telegramWebhookAllowedUpdates(info) {
+  return Array.isArray(info?.allowed_updates)
+    ? info.allowed_updates.map((value) => String(value || "").trim()).filter(Boolean)
+    : [];
+}
+
+function telegramWebhookMissingRequiredUpdates(info) {
+  const allowedUpdates = telegramWebhookAllowedUpdates(info);
+  // Telegram may omit allowed_updates when the default subscription is used.
+  // Only treat an explicit non-empty list as restrictive.
+  if (!allowedUpdates.length) return false;
+  return !allowedUpdates.includes("message") || !allowedUpdates.includes("callback_query");
+}
+
 async function getTelegramBotHealth(env) {
   try {
     requireBotToken(env);
     const info = await telegramApi(env, "getWebhookInfo", {});
+    const allowedUpdates = telegramWebhookAllowedUpdates(info);
     return jsonResponse({
       ok: true,
       worker: GAME_VERSION,
@@ -4637,6 +4678,8 @@ async function getTelegramBotHealth(env) {
       expectedWebhookUrl: expectedTelegramWebhookUrl(env),
       webhookUrl: String(info?.url || ""),
       pendingUpdates: Math.max(0, Number(info?.pending_update_count || 0)),
+      allowedUpdates,
+      callbackQueriesEnabled: !telegramWebhookMissingRequiredUpdates(info),
       lastErrorDate: Math.max(0, Number(info?.last_error_date || 0)),
       lastErrorMessage: String(info?.last_error_message || "").slice(0, 500),
       botTokenConfigured: true,
@@ -4644,6 +4687,18 @@ async function getTelegramBotHealth(env) {
       webhookSecretMode: /^[A-Za-z0-9_-]{16,256}$/.test(String(env.TELEGRAM_WEBHOOK_SECRET || "").trim()) ? "configured" : "derived"
     });
   } catch (error) {
+    if (isTransientTelegramApiError(error)) {
+      console.warn("getTelegramBotHealth transient Telegram API failure", String(error?.message || error));
+      return jsonResponse({
+        ok: true,
+        degraded: true,
+        telegramReachable: false,
+        worker: GAME_VERSION,
+        workerBuild: WORKER_BUILD,
+        expectedWebhookUrl: expectedTelegramWebhookUrl(env),
+        error: String(error?.message || "Telegram API временно не ответил.").slice(0, 500)
+      });
+    }
     console.error("getTelegramBotHealth failed", error);
     return jsonResponse({ ok: false, error: String(error?.message || "Не удалось проверить Telegram-бота.") }, 500);
   }
@@ -4651,26 +4706,54 @@ async function getTelegramBotHealth(env) {
 
 async function ensureTelegramWebhookHealth(env) {
   if (!env?.TELEGRAM_BOT_TOKEN) return { skipped: true, reason: "missing_bot_token" };
-  const webhookSecret = await resolvedTelegramWebhookSecret(env);
   const nowMs = Date.now();
-  const info = await telegramApi(env, "getWebhookInfo", {});
   const expectedUrl = expectedTelegramWebhookUrl(env);
+  let info;
+  try {
+    info = await telegramApi(env, "getWebhookInfo", {});
+  } catch (error) {
+    if (isTransientTelegramApiError(error)) {
+      // A temporary Telegram 5xx/timeout must not turn the whole five-minute
+      // server-health job red and must not trigger a blind setWebhook loop.
+      console.warn("Telegram getWebhookInfo temporarily unavailable", String(error?.message || error));
+      return {
+        repaired: false,
+        transient: true,
+        degraded: true,
+        expectedUrl,
+        error: String(error?.message || error).slice(0, 300)
+      };
+    }
+    throw error;
+  }
+
   const currentUrl = String(info?.url || "");
   const lastErrorDate = Math.max(0, Number(info?.last_error_date || 0));
+  const lastErrorMessage = String(info?.last_error_message || "").slice(0, 500);
   const pendingUpdates = Math.max(0, Number(info?.pending_update_count || 0));
-  const recentWebhookError = lastErrorDate > Math.floor(nowMs / 1000) - 15 * 60;
-  const needsRepair = currentUrl !== expectedUrl || !currentUrl || recentWebhookError || pendingUpdates > 0;
+  const allowedUpdates = telegramWebhookAllowedUpdates(info);
+  const missingRequiredUpdates = telegramWebhookMissingRequiredUpdates(info);
+
+  // Queue length and a historical Telegram delivery error are diagnostics, not
+  // reasons to reset a healthy webhook. Repeated setWebhook calls can make a
+  // temporary Telegram problem worse and are unnecessary while updates drain.
+  const needsRepair = !currentUrl || currentUrl !== expectedUrl || missingRequiredUpdates;
   if (!needsRepair || nowMs < telegramWebhookRepairCooldownUntil) {
-    return { repaired: false, currentUrl, expectedUrl, recentWebhookError, pendingUpdates };
+    return {
+      repaired: false, currentUrl, expectedUrl, pendingUpdates, allowedUpdates,
+      missingRequiredUpdates, lastErrorDate, lastErrorMessage
+    };
   }
+
   telegramWebhookRepairCooldownUntil = nowMs + 5 * 60 * 1000;
+  const webhookSecret = await resolvedTelegramWebhookSecret(env);
   const result = await telegramApi(env, "setWebhook", {
     url: expectedUrl,
     secret_token: webhookSecret,
     allowed_updates: ["message", "callback_query"],
     drop_pending_updates: false
   });
-  return { repaired: true, result, expectedUrl };
+  return { repaired: true, result, expectedUrl, allowedUpdates: ["message", "callback_query"] };
 }
 
 async function setupWebhook(request, env) {
@@ -4844,6 +4927,11 @@ async function handleTelegramUpdate(update, env, runtime = {}) {
       await purgeTelegramPrivateChat(env, chatId, message.message_id, TELEGRAM_CLEAN_CHAT_TRACK_LIMIT);
     }
     await showAdminMainMenu(chatId, user, env);
+    // The command itself arrives as a message update. Use it as a safe recovery
+    // point to verify that callback_query is also subscribed before the user
+    // starts pressing section buttons.
+    const webhookCheck = ensureTelegramWebhookHealth(env);
+    if (!runWorkerBackground(runtime, webhookCheck, "admin webhook recovery")) await webhookCheck;
     return;
   }
 
@@ -5399,7 +5487,7 @@ Telegram ID можно найти командой <code>/players</code>.`);
   }
 
   if (/^\/faq(?:@\w+)?$/i.test(text)) {
-    await sendTelegramMessage(env, chatId, botFaqText(), sectionMenuMarkup(env));
+    await sendTelegramMessage(env, chatId, botFaqText(), faqMenuMarkup(env));
     return;
   }
 
@@ -5496,6 +5584,18 @@ function configuredStaffQrUrl(env) {
   }
 }
 
+function configuredOwnerPanelUrl(env) {
+  try {
+    const url = new URL(configuredGameUrl(env));
+    url.pathname = "/owner.html";
+    url.search = "?v=owner-1.0.0-6";
+    url.hash = "";
+    return url.toString();
+  } catch {
+    return `${DEFAULT_GAME_URL.replace(/\/$/, "")}/owner.html?v=owner-1.0.0-6`;
+  }
+}
+
 function botMainMenuText() {
   return `<b>Зефирок — помощник кафе</b>\n\nТекущая версия игры: <b>${escapeHtml(GAME_VERSION)}</b>\n\nЗапускайте игру только системной кнопкой <b>«ИГРАТЬ»</b> в профиле бота — так Telegram передаст данные игрока для рейтинга и сохранений.\n\nЗдесь можно посмотреть задания, опросы и награды, сезонный рейтинг и новости, узнать историю Зефи, прочитать ответы на частые вопросы и проверить код награды.\n\nЧтобы проверить подарок, просто отправьте код из раздела «Мои покупки» одним сообщением.`;
 }
@@ -5509,67 +5609,35 @@ function botStoryText() {
 }
 
 function botFaqText() {
-  return `<b>FAQ — частые вопросы</b>
+  return `<b>FAQ — Сладкий Забег ${escapeHtml(GAME_VERSION)}</b>\n\nИгра выходит <b>10 августа 2026 года</b>. В этот же день стартуют Сезон 1 рейтинга и первый сезонный пропуск.\n\nВыберите тему — внутри собраны актуальные ответы по релизной версии игры.`;
+}
 
-<b>Как начать играть?</b>
-Нажмите системную кнопку «ИГРАТЬ» в профиле бота, перейдите во вкладку «Играть» и нажмите «Старт».
+function botFaqSectionText(section) {
+  const key = String(section || "game");
+  if (key === "game") return `<b>🎮 Игра и прогресс</b>\n\n<b>Как правильно открыть игру?</b>\nИспользуйте системную кнопку «ИГРАТЬ» в профиле бота. Так Telegram передаёт данные аккаунта для сохранений, рейтинга и сезонного пропуска.\n\n<b>Как управлять Зефи?</b>\nНажимайте на экран, чтобы перепрыгивать препятствия. Во время забега собирайте зефир и кофе и набирайте очки.\n\n<b>Почему забег мог не засчитаться?</b>\nСервер проверяет слишком короткие и подозрительные попытки. Незачтённый забег не должен влиять на рейтинг и сезонные задания.\n\n<b>Почему не начислился XP?</b>\nСлишком короткие попытки не дают опыт. Для сезонного пропуска также учитываются только подходящие серверу забеги и выполненные задания.\n\n<b>Где уровень, баланс и коллекция?</b>\nВо вкладке «Профиль». Там же находятся аватарка, рамка, настройки музыки и звуков.\n\n<b>Сохранится ли прогресс, если сменить телефон?</b>\nДа, если вы входите через тот же Telegram-аккаунт. Основные данные профиля хранятся на сервере.\n\n<b>Что делать, если игра временно закрыта?</b>\nВо время техработ дождитесь сообщения о восстановлении доступа. Обычный технический режим сам по себе не сбрасывает прогресс.`;
+  if (key === "rating") return `<b>🏆 Рейтинг и сезоны</b>\n\n<b>Когда стартует Сезон 1?</b>\n<b>10 августа 2026 в 00:00 по Москве</b>. Завершение — <b>10 сентября 2026 в 23:59 по Москве</b>.\n\n<b>Почему у всех 0 очков в начале сезона?</b>\nКаждый рейтинговый сезон начинается отдельно. Старые результаты не дают преимущества в новом сезоне. Забеги, сделанные до официального старта сезона, не превращаются в стартовые очки нового сезона.\n\n<b>Что произойдёт, если я улучшу результат?</b>\nВ текущем сезоне старый рекорд заменится новым. Во «За всё время» добавится только разница между старым и новым сезонным рекордом — повторного начисления одного и того же результата нет.\n\n<b>Что такое «За всё время»?</b>\nЭто накопительная история рейтинговых сезонов. Лучший результат текущего сезона добавляется к результатам прошлых сезонов без двойного начисления при улучшении рекорда.\n\n<b>Какой результат идёт в рейтинг?</b>\nЛучший зачтённый сервером результат текущего сезона. Новый лучший забег заменяет предыдущий результат этого сезона.\n\n<b>Что получает победитель Сезона 1?</b>\nЗа первое место — <b>Легендарный кейс</b>. После финализации сезона у награды есть отдельное окно получения.\n\n<b>Сбрасываются ли валюты и уровень при новом рейтинговом сезоне?</b>\nНет. Обычная смена рейтингового сезона сбрасывает только текущий сезонный результат. Остальной прогресс меняется только если это отдельно объявлено.`;
+  if (key === "pass") return `<b>🎟 Сезонный пропуск</b>\n\n<b>Когда работает первый пропуск?</b>\nС <b>10 августа</b> до <b>10 сентября 2026 года</b> по московскому времени.\n\n<b>Сколько уровней?</b>\nВ сезоне <b>50 уровней</b>. На каждом есть бесплатная и премиальная награда.\n\n<b>Что можно получить бесплатно?</b>\nБесплатную линию можно пройти без покупки тарифа. Финальная бесплатная награда 50-го уровня — <b>Золотой кейс</b>.\n\n<b>Что даёт «Элитный»?</b>\nОткрывает премиальную линию наград всех 50 уровней. Финальная премиальная награда — <b>Легендарный кейс</b>. Если тариф куплен после нескольких уже пройденных уровней, премиальные награды достигнутых уровней становятся доступными для получения.\n\n<b>Пропадут ли бесплатные награды после покупки тарифа?</b>\nНет. «Элитный» и «Элитный+» добавляют премиальную линию и не заменяют бесплатную.\n\n<b>Что даёт «Элитный+»?</b>\nВсе преимущества «Элитного», плюс бонусные <b>+5 уровней</b>, сезонное ускорение XP, эксклюзивные рамка и аватарка и отдельный бонусный Золотой кейс.\n\n<b>Как получать XP пропуска?</b>\nЗа зачтённые забеги и за ежедневные/недельные задания. Некоторые задания доступны только премиальной линии.\n\n<b>Можно ли забрать награды после окончания?</b>\nДля уже разблокированных наград предусмотрено короткое окно получения после завершения сезона. Точный срок показывает сам пропуск.`;
+  if (key === "rewards") return `<b>🎁 Кейсы, магазин и промокоды</b>\n\n<b>Какие кейсы есть в игре?</b>\nОбычный, Серебряный, Золотой и Легендарный. Состав и вероятность категорий зависят от типа кейса и могут меняться вместе с балансом игры.\n\n<b>Где появляются выданные кейсы?</b>\nВ профиле/разделе кейсов. Если награда пришла через очередь сервера, иногда достаточно заново открыть профиль, чтобы получить свежий статус.\n\n<b>Как работают промокоды?</b>\nВведите код через раздел «Промокод» в боте. Один и тот же код обычно можно активировать одним игроком один раз; у кода могут быть срок и общий лимит активаций.\n\n<b>Где посмотреть покупки?</b>\nВо вкладке «Мои покупки». Код физической награды можно нажать и скопировать.\n\n<b>Сколько действует код физического подарка?</b>\nОбычно <b>24 часа</b> с момента покупки. После истечения срока код не принимается.\n\n<b>Можно использовать физический код повторно?</b>\nНет. После фактической выдачи сотрудник подтверждает подарок, и код становится использованным.\n\n<b>Есть ли лимит физических наград?</b>\nДа, действует суточный лимит получения физических подарков. Игра покажет, когда новый заказ снова будет доступен.`;
+  if (key === "support") return `<b>🤖 Бот, опросы, новости и поддержка</b>\n\n<b>Где читать новости?</b>\nВ боте есть отдельная лента новостей. Внутри игры также могут появляться важные релизные окна — это два разных канала.\n\n<b>Что такое опросы?</b>\nРазработчики могут показывать опросы в боте, в игре или сразу в обоих местах. Иногда за участие назначается игровая награда — она будет указана прямо в опросе.\n\n<b>Можно изменить голос?</b>\nТолько если для конкретного опроса включена возможность изменить ответ.\n\n<b>Если за опрос обещана награда, когда она приходит?</b>\nПосле принятого ответа сервер ставит награду в безопасную очередь доставки. Если Telegram или сервер временно отвечает с задержкой, награда может появиться чуть позже, но повторно голосовать для этого не нужно.\n\n<b>Где узнать свой Telegram ID?</b>\nОтправьте боту команду <code>/whoami</code>. ID полезно прикладывать к обращению, если проблема связана с прогрессом или наградой.\n\n<b>Куда писать о баге или потерянной награде?</b>\nОткройте «Поддержка игры» в главном меню бота. Приложите описание, что произошло, примерное время и скриншот/видео, если они есть.\n\n<b>Что делать, если награда не появилась сразу?</b>\nПерезапустите профиль через бота и проверьте раздел ещё раз. Если награды всё ещё нет — напишите в поддержку и укажите Telegram ID и источник награды.\n\n<b>Почему бот просит запускать игру только кнопкой «ИГРАТЬ»?</b>\nОбычная ссылка может открыться без Telegram-данных. Тогда сервер не сможет корректно связать забег с вашим профилем.`;
+  return `<b>🔄 Обновления, версии и сохранения</b>\n\n<b>Какая версия на релизе?</b>\n<b>${escapeHtml(GAME_VERSION)}</b>. Релиз игры — <b>10 августа 2026 года</b>.\n\n<b>Как нумеруются версии?</b>\nИсправления ошибок меняют третье число, например <b>1.0.0 → 1.0.1</b>. Крупное сезонное обновление меняет второе число. Первый номер обозначает год жизни проекта: в следующем игровом году основная версия перейдёт на 2.x.x.\n\n<b>Сбрасывается ли прогресс при обычном фиксе?</b>\nНет. Исправления интерфейса, багов, музыки, новостей или технической части не требуют обнуления.\n\n<b>Когда вообще возможен сброс прогресса?</b>\nТолько при отдельном решении разработчиков, например при несовместимом изменении экономики или исправлении повреждённых данных. Такой сброс должен быть явно объявлен.\n\n<b>Новый сезон рейтинга — это полный сброс аккаунта?</b>\nНет. Новый рейтинговый сезон начинает только текущий сезонный счёт с нуля. «За всё время», профиль и обычные игровые данные сохраняются.\n\n<b>Почему после обновления вижу старый интерфейс?</b>\nПолностью закройте Mini App и откройте игру заново из бота. Telegram иногда некоторое время держит старые статические файлы в кэше.\n\n<b>Где посмотреть, что изменилось?</b>\nРаздел «Обновление» в главном меню бота показывает текущую версию и ключевые изменения.`;
+}
 
-<b>Как управлять Зефи?</b>
-Нажимайте на экран, чтобы перепрыгивать пуфики и другие препятствия.
+function faqMenuMarkup(env) {
+  return { inline_keyboard: [
+    [{ text: "🎮 Игра и прогресс", callback_data: "faq:game" }, { text: "🏆 Рейтинг", callback_data: "faq:rating" }],
+    [{ text: "🎟 Сезонный пропуск", callback_data: "faq:pass" }],
+    [{ text: "🎁 Кейсы, магазин и коды", callback_data: "faq:rewards" }],
+    [{ text: "🤖 Бот, опросы и поддержка", callback_data: "faq:support" }],
+    [{ text: "🔄 Обновления и сохранения", callback_data: "faq:updates" }],
+    [{ text: "← Главное меню", callback_data: "menu:home" }]
+  ] };
+}
 
-<b>Почему за забег не начислили XP?</b>
-Слишком короткие попытки не дают опыт. Нужно пройти минимальный порог по времени и счёту.
-
-<b>Где посмотреть уровень и прогресс?</b>
-Во вкладке «Профиль». Нажмите на плашку уровня, чтобы увидеть требования ко всем уровням.
-
-<b>Можно отключить звуки и музыку?</b>
-Да. Во вкладке «Профиль» есть отдельные переключатели звуковых эффектов и фоновой музыки.
-
-<b>Где посмотреть покупки?</b>
-Во вкладке «Мои покупки». Нажмите на сам код, чтобы скопировать его.
-
-<b>Сколько действует код?</b>
-24 часа с момента покупки. После окончания срока подарок получить нельзя.
-
-<b>Сколько наград можно получить?</b>
-Не больше двух наград за каждые 24 часа.
-
-<b>Как получить подарок?</b>
-Покажите действующий код сотруднику кафе. Сотрудник проверит его в этом боте и спишет только после выдачи.
-
-<b>Почему бот пишет «Код не найден»?</b>
-Проверьте символы и убедитесь, что код создан в актуальной версии игры.
-
-<b>Можно использовать код повторно?</b>
-Нет. После выдачи подарок отмечается как использованный.
-
-<b>Почему разработчики иногда могут обнулить аккаунты?</b>
-Обнуление применяется только при крупных изменениях, когда старая экономика, цены, уровни, XP или награды становятся несовместимы с новой системой. Это помогает начать обновлённую версию в равных условиях и не переносить ошибки старого баланса.
-
-<b>Что сбрасывается при полном обнулении?</b>
-Могут быть сброшены валюты, рекорд, покупки, коды, уровень, XP, статистика и выбранные предметы. Перед таким обновлением игрок получает отдельное уведомление с точным списком.
-
-<b>Чем крупное обновление отличается от обычного?</b>
-Крупное обновление экономики может сопровождаться обнулением прогресса. Обычное обновление игры — исправление ошибок, новый интерфейс, музыка, звуки или технические улучшения — обычно сохраняет прогресс.
-
-<b>Сбросится ли прогресс при обновлении ассортимента?</b>
-Нет. Добавление новых напитков, подарков, скинов или изменение витрины само по себе не требует сброса. Прогресс и уже полученные данные сохраняются, если в объявлении обновления прямо не указано обратное.
-
-<b>Как заранее понять, будет ли обнуление?</b>
-Откройте раздел «Обновление» в этом боте. Там указаны версия, тип обновления и статус прогресса. При сбросе игра также покажет обязательное информационное окно.
-
-<b>Как работает рейтинг?</b>
-В таблицу попадает лучший результат одного зачтённого забега за текущий сезон. Дата старта и сброса задаётся разработчиками и отображается в игре.
-
-<b>Что сбрасывается после сезона?</b>
-Обычный сезон сбрасывает только сезонное место. Валюты, уровень, скины, покупки и настройки меняются только тогда, когда это отдельно указано в плане обновления.
-
-<b>Какая награда за первое место?</b>
-В первом сезоне победитель сможет забрать 50 кофе. В будущих сезонах наградой может стать уникальный скин.
-
-<b>Где посмотреть версию и изменения?</b>
-Нажмите «Обновление» в главном меню бота или отправьте команду /update.`;
+function faqSectionMenuMarkup(env) {
+  return { inline_keyboard: [
+    [{ text: "← Все вопросы FAQ", callback_data: "menu:faq" }],
+    [{ text: "🛟 Поддержка", callback_data: "menu:support" }, { text: "🏠 Главное меню", callback_data: "menu:home" }]
+  ] };
 }
 
 function botRewardsText() {
@@ -5720,6 +5788,14 @@ function sectionMenuMarkup(env) {
 }
 
 async function handleMenuCallback(query, env) {
+  const faqMatch = String(query.data || "").match(/^faq:(game|rating|pass|rewards|support|updates)$/);
+  if (faqMatch) {
+    const message = query.message;
+    if (!message?.chat?.id) { await answerCallback(env, query.id, "Откройте FAQ командой /faq."); return true; }
+    await answerCallback(env, query.id, "FAQ открыт");
+    await sendTelegramMessage(env, message.chat.id, botFaqSectionText(faqMatch[1]), faqSectionMenuMarkup(env));
+    return true;
+  }
   const match = String(query.data || "").match(/^menu:(home|story|faq|rewards|rating|tasks|polls|news|update|support|promo)$/);
   if (!match) return false;
   const message = query.message;
@@ -5769,7 +5845,9 @@ async function handleMenuCallback(query, env) {
     ? mainMenuMarkup(env)
     : section === "support"
       ? supportMenuMarkup(env)
-      : sectionMenuMarkup(env);
+      : section === "faq"
+        ? faqMenuMarkup(env)
+        : sectionMenuMarkup(env);
 
   await answerCallback(env, query.id, section === "home" ? "Главное меню" : "Раздел открыт");
   await sendTelegramMessage(env, message.chat.id, text, replyMarkup);
@@ -8236,20 +8314,32 @@ function isBotAdminTelegramId(telegramId, env) {
   return botAdminTelegramIds(env).includes(String(telegramId || ""));
 }
 
+function botOwnerTelegramIds(env) {
+  const values = [
+    env.BOT_OWNER_TELEGRAM_IDS,
+    env.OWNER_TELEGRAM_IDS,
+    env.BOT_OWNER_TELEGRAM_ID,
+    env.OWNER_TELEGRAM_ID,
+    env.PROJECT_OWNER_TELEGRAM_ID
+  ];
+  const ids = values
+    .flatMap((value) => String(value || "").split(/[\s,;]+/))
+    .map((value) => value.trim())
+    .filter(Boolean);
+  if (!ids.length) {
+    const fallback = botAdminTelegramIds(env)[0];
+    if (fallback) ids.push(fallback);
+  }
+  return [...new Set(ids)];
+}
+
 function botOwnerTelegramId(env) {
-  const explicitOwnerId = String(
-    env.BOT_OWNER_TELEGRAM_ID ||
-    env.OWNER_TELEGRAM_ID ||
-    env.PROJECT_OWNER_TELEGRAM_ID ||
-    ""
-  ).trim();
-  if (explicitOwnerId) return explicitOwnerId;
-  return botAdminTelegramIds(env)[0] || "";
+  return botOwnerTelegramIds(env)[0] || "";
 }
 
 function isBotOwnerTelegramId(telegramId, env) {
-  const ownerId = botOwnerTelegramId(env);
-  return Boolean(ownerId && ownerId === String(telegramId || ""));
+  const id = String(telegramId || "");
+  return Boolean(id && botOwnerTelegramIds(env).includes(id));
 }
 
 function isBotAdminUser(user, env) {
@@ -10877,17 +10967,24 @@ async function syncOperationalProblems(env, options = {}) {
       const info = await telegramApi(env, "getWebhookInfo", {});
       const expected = expectedTelegramWebhookUrl(env);
       const actual = String(info?.url || "");
-      if (!actual || actual !== expected || info?.last_error_message) {
+      const missingRequiredUpdates = telegramWebhookMissingRequiredUpdates(info);
+      if (!actual || actual !== expected || missingRequiredUpdates || info?.last_error_message) {
+        const title = missingRequiredUpdates
+          ? "Telegram webhook не принимает кнопки админ-панели"
+          : info?.last_error_message
+            ? "Telegram webhook сообщает об ошибке"
+            : "Telegram webhook настроен неверно";
         add({
-          fingerprint: "telegram:webhook", issueType: "webhook", severity: info?.last_error_message ? "high" : "warning",
-          title: info?.last_error_message ? "Telegram webhook сообщает об ошибке" : "Telegram webhook настроен неверно",
-          details: { expected, actual, pending: Number(info?.pending_update_count || 0), error: String(info?.last_error_message || "") },
+          fingerprint: "telegram:webhook", issueType: "webhook", severity: missingRequiredUpdates || info?.last_error_message ? "high" : "warning",
+          title,
+          details: { expected, actual, pending: Number(info?.pending_update_count || 0), allowedUpdates: telegramWebhookAllowedUpdates(info), error: String(info?.last_error_message || "") },
           sourceType: "telegram", sourceId: "webhook"
         });
       }
     } catch (error) {
       add({
-        fingerprint: "telegram:webhook", issueType: "webhook", severity: "high", title: "Не удалось проверить Telegram webhook",
+        fingerprint: "telegram:webhook", issueType: "webhook", severity: isTransientTelegramApiError(error) ? "warning" : "high",
+        title: isTransientTelegramApiError(error) ? "Telegram API временно не ответил на проверку webhook" : "Не удалось проверить Telegram webhook",
         details: { error: String(error?.message || error).slice(0, 300) }, sourceType: "telegram", sourceId: "webhook"
       });
     }
@@ -11342,10 +11439,13 @@ async function showOperationsStatus(chatId, user, env) {
     const info = await telegramApi(env, "getWebhookInfo", {});
     const expected = expectedTelegramWebhookUrl(env);
     const actual = String(info?.url || "");
-    if (!actual || actual !== expected || info?.last_error_message) webhookStatus = "🟡 требует внимания";
-    webhookDetails = `URL: ${actual === expected ? "верный" : "не совпадает"} · очередь: ${Number(info?.pending_update_count || 0)}${info?.last_error_message ? ` · ${String(info.last_error_message).slice(0, 120)}` : ""}`;
+    const missingRequiredUpdates = telegramWebhookMissingRequiredUpdates(info);
+    if (!actual || actual !== expected || missingRequiredUpdates || info?.last_error_message) webhookStatus = "🟡 требует внимания";
+    webhookDetails = `URL: ${actual === expected ? "верный" : "не совпадает"} · кнопки: ${missingRequiredUpdates ? "не подключены" : "подключены"} · очередь: ${Number(info?.pending_update_count || 0)}${info?.last_error_message ? ` · ${String(info.last_error_message).slice(0, 120)}` : ""}`;
   } catch (error) {
-    webhookStatus = `🔴 ошибка: ${String(error?.message || error).slice(0, 100)}`;
+    webhookStatus = isTransientTelegramApiError(error)
+      ? `🟡 Telegram API временно не ответил: ${String(error?.message || error).slice(0, 80)}`
+      : `🔴 ошибка: ${String(error?.message || error).slice(0, 100)}`;
   }
   try {
     const season = await ensureSeason(env);
@@ -12520,6 +12620,78 @@ async function logLiveOpsConfigChange(env, user, entityType, entityId, action, o
   ).bind(entityType, entityId, action, JSON.stringify(oldValue || {}), JSON.stringify(newValue || {}), String(reason || "").slice(0, 300), String(user?.id || ""), telegramDisplayName(user), now).run();
 }
 
+function ownerMoreMenuMarkup(env = {}) {
+  return { inline_keyboard: [
+    [{ text: "🔐 Точные права", callback_data: "v57_permissions" }],
+    [
+      { text: "📈 Аналитика контента", callback_data: "v57_content" },
+      { text: "🎯 Сегменты", callback_data: "adm_segments" }
+    ],
+    [
+      { text: "🤖 Автоматизации", callback_data: "v67_automations" },
+      { text: "📊 Удержание", callback_data: "v67_retention" }
+    ],
+    [
+      { text: "📣 Кампании", callback_data: "adm_campaigns" },
+      { text: "🧪 Тестеры", callback_data: "v57_testers" }
+    ],
+    [
+      { text: "✅ Подтверждения", callback_data: "v57_approvals" },
+      { text: "💾 Снимки", callback_data: "v57_snapshots" }
+    ],
+    [
+      { text: "🧾 История настроек", callback_data: "v67_settings_history" },
+      { text: "🗓 События", callback_data: "safe_events" }
+    ],
+    [{ text: "📝 Черновики", callback_data: "safe_drafts" }],
+    [
+      { text: "🧰 Компенсации", callback_data: "safe_comp" },
+      { text: "🔎 Проверить игру", callback_data: "safe_check" }
+    ],
+    [
+      { text: "📏 Лимиты", callback_data: "v65_limits" },
+      { text: "🚩 Функции", callback_data: "v65_features" }
+    ],
+    [
+      { text: "🧪 Симулятор кейсов", callback_data: "v65_case_sim" },
+      { text: "🚀 Публикация", callback_data: "v65_publish" }
+    ],
+    [
+      { text: "⚡ Скорость", callback_data: "v67_performance" },
+      { text: "🚀 План релиза", callback_data: "v67_releases" }
+    ],
+    [
+      { text: "📦 Прогноз остатков", callback_data: "v67_stock_forecast" },
+      { text: "🩺 Диагностика", callback_data: "status_refresh" }
+    ],
+    [
+      { text: "🎓 Обучение", callback_data: "v78_training" },
+      { text: "📚 Все команды", callback_data: "adminpanel_commands" }
+    ],
+    [{ text: "⬅️ Главная панель", callback_data: "adm_home" }]
+  ] };
+}
+
+async function showOwnerMoreMenu(chatId, user, env, editMessageId = 0) {
+  const access = await getTeamAccess(user, env);
+  if (!access?.authorized || !access?.owner) {
+    await sendTelegramMessage(env, chatId, "Этот раздел доступен только владельцу.");
+    return;
+  }
+  const text = `<b>⚙️ Дополнительно</b>\n\nЗдесь оставлены редкие и служебные инструменты. Основное визуальное управление находится в <b>«Панели владельца»</b>.`;
+  const markup = ownerMoreMenuMarkup(env);
+  const messageId = Math.floor(Number(editMessageId) || 0);
+  if (messageId > 0) {
+    try {
+      await telegramApi(env, "editMessageText", { chat_id: chatId, message_id: messageId, text, parse_mode: "HTML", disable_web_page_preview: true, reply_markup: markup });
+      return;
+    } catch (error) {
+      if (/message is not modified/i.test(String(error?.description || error?.message || ""))) return;
+    }
+  }
+  await sendTelegramMessage(env, chatId, text, markup, { adminBack: false });
+}
+
 function adminMainMenuMarkup(access, overview = {}, env = {}) {
   const can = (...permissions) => Boolean(access?.owner || permissions.some((permission) => access?.permissions?.[permission]));
   const role = normalizeTeamRole(access?.role);
@@ -12563,12 +12735,33 @@ function adminMainMenuMarkup(access, overview = {}, env = {}) {
       ]
     };
   }
+
+  // Владелец: все визуальные и аналитические разделы перенесены в Mini App.
+  // В боте оставляем только действия, которые удобно выполнять прямо в рабочем чате.
+  if (access?.owner) {
+    return { inline_keyboard: [
+      [{ text: "👑 Панель владельца", web_app: { url: configuredOwnerPanelUrl(env) } }],
+      [
+        { text: "🎁 Быстрая выдача", callback_data: "grant_home" },
+        { text: "☕ Физические товары", callback_data: "adm_physical" }
+      ],
+      [
+        { text: "📷 Сканировать QR", web_app: { url: configuredStaffQrUrl(env) } },
+        { text: "⌨️ Ввести код", callback_data: "adm_redeem_manual" }
+      ],
+      [
+        { text: "🔔 Уведомления", callback_data: "v57_notifications" },
+        { text: "⚙️ Дополнительно", callback_data: "adm_more" }
+      ],
+      [{ text: "🧹 Очистить чат", callback_data: "admin_clean_chat" }]
+    ] };
+  }
+
   const rows = [];
   const addRow = (...buttons) => {
     const visible = buttons.filter(Boolean);
     if (visible.length) rows.push(visible);
   };
-
   addRow(
     { text: "🔄 Обновить", callback_data: "adm_home_refresh" },
     { text: `🚨 Проблемы${Number(overview?.issueCount || 0) ? ` · ${Number(overview.issueCount)}` : ""}`, callback_data: "ops_problems" },
@@ -12582,13 +12775,7 @@ function adminMainMenuMarkup(access, overview = {}, env = {}) {
     can("blockPlayers", "unblockPlayers") && { text: "🛡 Модерация", callback_data: "adm_moderation" },
     can("staff", "approveDangerous") && { text: "👥 Сотрудники", callback_data: "adm_team" }
   );
-  addRow(
-    { text: "🎓 Обучение", callback_data: "v78_training" },
-    can("approveDangerous") && { text: "♻️ Сброс игроков", callback_data: "v78_reset_home" }
-  );
-  addRow(
-    can("approveDangerous") && { text: "🔐 Точные права", callback_data: "v57_permissions" }
-  );
+  addRow({ text: "🎓 Обучение", callback_data: "v78_training" });
   addRow(
     can("grantRewards", "grantLegendaryCases") && { text: "🎁 Награды", callback_data: "grant_home" },
     can("redeemPhysical") && { text: "☕ Физические товары", callback_data: "adm_physical" }
@@ -12596,14 +12783,6 @@ function adminMainMenuMarkup(access, overview = {}, env = {}) {
   addRow(
     can("redeemPhysical") && { text: "📷 Сканировать QR", web_app: { url: configuredStaffQrUrl(env) } },
     can("redeemPhysical") && { text: "⌨️ Ввести код", callback_data: "adm_redeem_manual" }
-  );
-  addRow(
-    can("manageCases") && { text: "📦 Контент", callback_data: "adm_content" },
-    can("viewContentAnalytics") && { text: "📈 Аналитика контента", callback_data: "v57_content" }
-  );
-  addRow(
-    can("manageCases") && { text: "🎲 Кейсы", callback_data: "adm_cases" },
-    can("manageShop") && { text: "🛒 Магазин", callback_data: "adm_shop" }
   );
   addRow(
     can("viewEconomy") && { text: "📊 Экономика", callback_data: "adm_economy" },
@@ -12614,18 +12793,8 @@ function adminMainMenuMarkup(access, overview = {}, env = {}) {
     can("viewEconomy") && { text: "📊 Удержание", callback_data: "v67_retention" }
   );
   addRow(
-    (access?.owner || normalizeTeamRole(access?.role) === "administrator") && { text: "🧭 Центр управления", callback_data: "v77_home" }
-  );
-  addRow(
-    (access?.owner || normalizeTeamRole(access?.role) === "administrator") && { text: "🗳 Опросы", callback_data: "v74_polls_admin" }
-  );
-  addRow(
     can("massBroadcasts") && { text: "📣 Кампании", callback_data: "adm_campaigns" },
-    can("managePromocodes") && { text: "🎟 Промокоды", callback_data: "v57_promos" }
-  );
-  addRow(
-    can("manageTesters") && { text: "🧪 Тестеры", callback_data: "v57_testers" },
-    can("manageMaintenance") && { text: "🛠 Техработы", callback_data: "v57_maintenance" }
+    can("manageTesters") && { text: "🧪 Тестеры", callback_data: "v57_testers" }
   );
   addRow(
     { text: "🔔 Уведомления", callback_data: "v57_notifications" },
@@ -12645,24 +12814,18 @@ function adminMainMenuMarkup(access, overview = {}, env = {}) {
   );
   addRow(
     can("viewEconomy") && { text: "🔎 Проверить игру", callback_data: "safe_check" },
-    can("manageSeasons") && { text: "🏆 Рейтинг", callback_data: "season_refresh" }
+    can("approveDangerous") && { text: "📏 Лимиты", callback_data: "v65_limits" }
   );
   addRow(
-    can("approveDangerous") && { text: "📏 Лимиты", callback_data: "v65_limits" },
-    can("manageMaintenance", "manageCases", "managePromocodes") && { text: "🚩 Функции", callback_data: "v65_features" }
+    can("manageMaintenance", "manageCases", "managePromocodes") && { text: "🚩 Функции", callback_data: "v65_features" },
+    can("manageCases") && { text: "🧪 Симулятор кейсов", callback_data: "v65_case_sim" }
   );
   addRow(
-    can("manageSeasons", "manageMaintenance") && { text: "🎟 Сезонный пропуск", callback_data: "sp_admin" }
+    can("manageCases", "manageSeasons") && { text: "🚀 Публикация", callback_data: "v65_publish" },
+    can("viewEconomy") && { text: "⚡ Скорость", callback_data: "v67_performance" }
   );
   addRow(
-    can("manageCases") && { text: "🧪 Симулятор кейсов", callback_data: "v65_case_sim" },
-    can("manageCases", "manageSeasons") && { text: "🚀 Публикация", callback_data: "v65_publish" }
-  );
-  addRow(
-    can("viewEconomy") && { text: "⚡ Скорость", callback_data: "v67_performance" },
-    can("manageSeasons", "manageMaintenance") && { text: "🚀 План релиза", callback_data: "v67_releases" }
-  );
-  addRow(
+    can("manageSeasons", "manageMaintenance") && { text: "🚀 План релиза", callback_data: "v67_releases" },
     can("manageShop", "redeemPhysical", "viewEconomy") && { text: "📦 Прогноз остатков", callback_data: "v67_stock_forecast" }
   );
   addRow(
@@ -12704,7 +12867,9 @@ async function showAdminMainMenu(chatId, user, env, options = {}) {
     ? `<b>🧾 Рабочая панель</b>\n\nСотрудник: <b>${escapeHtml(telegramDisplayName(user))}</b>\nРоль: <b>${escapeHtml(staffRoleTitle(access))}</b>\n\nВыберите нужный рабочий раздел.`
     : limitedAdministrator
       ? `<b>⚙️ Админ-панель</b>\n\nСотрудник: <b>${escapeHtml(telegramDisplayName(user))}</b>\nРоль: <b>${escapeHtml(staffRoleTitle(access))}</b>\nWorker: <b>v${escapeHtml(WORKER_BUILD)}</b>\n\nДоступны только рабочие разделы, назначенные владельцем.`
-      : `<b>⚙️ Админ-панель</b>\n\nСотрудник: <b>${escapeHtml(telegramDisplayName(user))}</b>\nРоль: <b>${escapeHtml(staffRoleTitle(access))}</b>\nWorker: <b>v${escapeHtml(WORKER_BUILD)}</b>${summary}\n\nВыберите раздел. Критические действия требуют подтверждения и записываются в журнал.`;
+      : access.owner
+        ? `<b>⚙️ Панель владельца</b>\n\nВладелец: <b>${escapeHtml(telegramDisplayName(user))}</b>\nWorker: <b>v${escapeHtml(WORKER_BUILD)}</b>${summary}\n\nВ <b>👑 Панель владельца</b> перенесены игроки, сезоны, экономика, проблемы, модерация, обращения, кейсы, магазин, промокоды, опросы и системное управление. В боте оставлены только быстрые действия для работы в чате.`
+        : `<b>⚙️ Админ-панель</b>\n\nСотрудник: <b>${escapeHtml(telegramDisplayName(user))}</b>\nРоль: <b>${escapeHtml(staffRoleTitle(access))}</b>\nWorker: <b>v${escapeHtml(WORKER_BUILD)}</b>${summary}\n\nВыберите раздел. Критические действия требуют подтверждения и записываются в журнал.`;
   const panelMarkup = adminMainMenuMarkup(access, overview || {}, env);
   const editMessageId = Math.floor(Number(options.editMessageId) || 0);
   if (editMessageId > 0) {
@@ -13835,6 +14000,7 @@ async function handleLiveOpsAdminCallback(query, env, runtime = {}) {
   if (await handleSafeControlCenterCallback(query, env, runtime)) return true;
   if (data === "adm_home") { await answerCallback(env, query.id, "Админ-панель."); await showAdminMainMenu(chatId, query.from, env, { forceRefresh: false, editMessageId: query.message?.message_id }); return true; }
   if (data === "adm_home_refresh") { await answerCallback(env, query.id, "Обновляю сводку."); await showAdminMainMenu(chatId, query.from, env, { forceRefresh: true, editMessageId: query.message?.message_id }); return true; }
+  if (data === "adm_more") { await answerCallback(env, query.id, "Дополнительные инструменты."); await showOwnerMoreMenu(chatId, query.from, env, query.message?.message_id); return true; }
   if (data === "adm_players") { await answerCallback(env, query.id, "Список игроков."); await showPlayerMembers(chatId, query.from, env); return true; }
   if (data === "adm_moderation") { await answerCallback(env, query.id, "Модерация."); await showBannedPlayers(chatId, query.from, env); return true; }
   if (data === "ban_start") { await answerCallback(env, query.id, "Отправьте игрока."); await startBlockCommand(chatId, query.from, env); return true; }
@@ -14855,7 +15021,7 @@ async function performGameIntegrityCheck(env) {
     try{
       const info=await telegramApi(env,"getWebhookInfo",{});const expected=expectedTelegramWebhookUrl(env);
       return String(info?.url||"")===expected?{level:"ok",text:"Telegram webhook работает"}:{level:"error",text:"Telegram webhook настроен на другой URL"};
-    }catch(error){return isWorkerSubrequestLimitError(error)?{level:"warning",text:"Telegram webhook не удалось проверить из-за лимита диагностических запросов Worker"}:{level:"error",text:`Telegram webhook: ${String(error?.message||error)}`};}
+    }catch(error){return isWorkerSubrequestLimitError(error)||isTransientTelegramApiError(error)?{level:"warning",text:`Telegram webhook временно не удалось проверить: ${String(error?.message||error).slice(0,160)}`}:{level:"error",text:`Telegram webhook: ${String(error?.message||error)}`};}
   })();
   const seasonPromise=ensureSeason(env);
   const liveopsPromise=readLiveOpsConfig(env);
@@ -16274,7 +16440,7 @@ async function isAdministratorStaffAccount(telegramId, env) {
 async function maintenanceAccessIdentity(telegramId, env) {
   const id = String(telegramId || "");
   if (!id) return { allowed:false, owner:false, administrator:false, tester:false, accessRole:"player" };
-  const owner = isBotAdminTelegramId(id, env);
+  const owner = isBotOwnerTelegramId(id, env);
   if (owner) {
     return { allowed:true, owner:true, administrator:false, tester:false, accessRole:"owner" };
   }
@@ -16320,7 +16486,7 @@ function maintenanceHtml(message) {
 
 async function enforceMaintenanceForRequest(request, url, env) {
   const path = String(url.pathname || "");
-  if (path === "/api/health" || path === "/api/maintenance/access" || path === "/api/shop/config" || path === "/api/skins/config" || path === "/api/features" || path.startsWith("/api/admin/") || path.startsWith("/api/bot/") || path === "/telegram/webhook") return null;
+  if (path === "/api/health" || path === "/api/maintenance/access" || path === "/api/shop/config" || path === "/api/skins/config" || path === "/api/features" || path === "/owner.html" || path.startsWith("/api/owner/") || path.startsWith("/api/admin/") || path.startsWith("/api/bot/") || path === "/telegram/webhook") return null;
   let settings;
   try { settings = await getMaintenanceSettings(env); } catch { return null; }
   if (!settings.fullClosed && !settings.ratingDisabled && !settings.purchasesDisabled && !settings.casesDisabled && !settings.physicalRewardsDisabled && !settings.testersOnly) return null;
@@ -22562,3 +22728,1030 @@ async function handleV78Callback(query, env) {
   return false;
 }
 // ===================== END v0.78 =====================
+
+// ================= OWNER CONTROL CENTER =================
+// The owner Mini App is a static shell. Every data read and every mutation below
+// independently verifies Telegram initData and then requires the strict owner ID.
+// Staff roles (including "administrator") are never accepted by these endpoints.
+function ownerPanelCaseAsset(caseType) {
+  return ({
+    small: "/assets/cases/standart_closed.png",
+    sweet: "/assets/cases/Bronze_close.png",
+    gold: "/assets/cases/gold_closed.png",
+    legendary: "/assets/cases/legendary_closed.png"
+  })[String(caseType || "")] || "/assets/cases/standart_closed.png";
+}
+
+function ownerPanelRewardAsset(kind, itemId = "") {
+  const normalized = String(kind || "");
+  if (normalized === "case") return ownerPanelCaseAsset(normalizeCaseType(itemId) || "small");
+  if (normalized === "points") return "/assets/optimized/v0.79.5/iconScore.png";
+  if (normalized === "treats" || normalized === "zefir") return "/assets/optimized/v0.79.5/shopMarshmallowAssortment.png";
+  if (normalized === "coffee") return "/assets/optimized/v0.79.5/iconCoffee.png";
+  return "/assets/season-pass/season.png";
+}
+
+function ownerPanelInteger(value, min = 0, max = 999999999) {
+  const number = Number(value);
+  if (!Number.isFinite(number) || !Number.isInteger(number)) return null;
+  if (number < min || number > max) return null;
+  return number;
+}
+
+async function requireOwnerPanelContext(request, env) {
+  const body = await readJson(request);
+  const initData = String(body?.initData || body?.init_data || "").trim();
+  if (!initData) throw new ApiError(401, "Откройте панель владельца через Telegram-бота.");
+  const auth = await validateTelegramInitData(initData, env);
+  const user = auth?.user || null;
+  if (!user?.id || !isBotOwnerTelegramId(user.id, env)) {
+    throw new ApiError(403, "Доступ разрешён только владельцу проекта.");
+  }
+  const access = await getTeamAccess(user, env);
+  if (!access?.authorized || !access?.owner || String(access.role || "") !== "owner") {
+    throw new ApiError(403, "Роль владельца не подтверждена сервером.");
+  }
+  return { body, auth, user, access };
+}
+
+function ownerPanelApiError(error, label = "owner panel") {
+  if (error instanceof ApiError) return jsonResponse({ ok: false, error: error.message }, error.status);
+  console.error(`${label} failed`, error);
+  return jsonResponse({ ok: false, error: "Не удалось выполнить действие панели владельца." }, 500);
+}
+
+async function handleOwnerPanelApi(request, env, path) {
+  try {
+    const ctx = await requireOwnerPanelContext(request, env);
+    if (path === "/api/owner/bootstrap") return jsonResponse(await ownerPanelBootstrap(env, ctx));
+    if (path === "/api/owner/players") return jsonResponse(await ownerPanelPlayers(env, ctx));
+    if (path === "/api/owner/player") return jsonResponse(await ownerPanelPlayer(env, ctx));
+    if (path === "/api/owner/player/grant") return jsonResponse(await ownerPanelGrantPlayer(env, ctx));
+    if (path === "/api/owner/resets") return jsonResponse(await ownerPanelResets(env, ctx));
+    if (path === "/api/owner/resets/apply") return jsonResponse(await ownerPanelApplyReset(env, ctx));
+    if (path === "/api/owner/polls") return jsonResponse(await ownerPanelPolls(env, ctx));
+    if (path === "/api/owner/polls/details") return jsonResponse(await ownerPanelPollDetails(env, ctx));
+    if (path === "/api/owner/polls/create") return jsonResponse(await ownerPanelCreatePoll(env, ctx));
+    if (path === "/api/owner/polls/publish") return jsonResponse(await ownerPanelPublishPoll(env, ctx));
+    if (path === "/api/owner/polls/end") return jsonResponse(await ownerPanelEndPoll(env, ctx));
+    if (path === "/api/owner/polls/cancel") return jsonResponse(await ownerPanelCancelPoll(env, ctx));
+    if (path === "/api/owner/polls/delete") return jsonResponse(await ownerPanelDeletePoll(env, ctx));
+    if (path === "/api/owner/control") return jsonResponse(await ownerPanelControl(env, ctx));
+    if (path === "/api/owner/control/reward-queue/update") return jsonResponse(await ownerPanelUpdateRewardQueue(env, ctx));
+    if (path === "/api/owner/control/issue/update") return jsonResponse(await ownerPanelUpdateIssue(env, ctx));
+    if (path === "/api/owner/control/moderation/block") return jsonResponse(await ownerPanelModerationBlock(env, ctx));
+    if (path === "/api/owner/control/moderation/unblock") return jsonResponse(await ownerPanelModerationUnblock(env, ctx));
+    if (path === "/api/owner/control/ticket/update") return jsonResponse(await ownerPanelTicketUpdate(env, ctx));
+    if (path === "/api/owner/rating") return jsonResponse(await ownerPanelRating(env, ctx));
+    if (path === "/api/owner/rating/create") return jsonResponse(await ownerPanelCreateRatingSeason(env, ctx));
+    if (path === "/api/owner/rating/cancel") return jsonResponse(await ownerPanelCancelRatingSeason(env, ctx));
+    if (path === "/api/owner/season-pass") return jsonResponse(await ownerPanelSeasonPass(env, ctx));
+    if (path === "/api/owner/season-pass/reward") return jsonResponse(await ownerPanelSetSeasonPassReward(env, ctx));
+    if (path === "/api/owner/season-pass/task/save") return jsonResponse(await ownerPanelSaveSeasonPassTask(env, ctx));
+    if (path === "/api/owner/season-pass/task/delete") return jsonResponse(await ownerPanelDeleteSeasonPassTask(env, ctx));
+    if (path === "/api/owner/season-pass/create") return jsonResponse(await ownerPanelCreateSeasonPassSeason(env, ctx));
+    if (path === "/api/owner/season-pass/delete") return jsonResponse(await ownerPanelDeleteSeasonPassSeason(env, ctx));
+    if (path === "/api/owner/news") return jsonResponse(await ownerPanelNews(env, ctx));
+    if (path === "/api/owner/news/publish") return jsonResponse(await ownerPanelPublishNews(env, ctx));
+    if (path === "/api/owner/cases") return jsonResponse(await ownerPanelCases(env, ctx));
+    if (path === "/api/owner/cases/save") return jsonResponse(await ownerPanelSaveCase(env, ctx));
+    if (path === "/api/owner/cases/content/save") return jsonResponse(await ownerPanelSaveCaseContent(env, ctx));
+    if (path === "/api/owner/promocodes") return jsonResponse(await ownerPanelPromocodes(env, ctx));
+    if (path === "/api/owner/promocodes/create") return jsonResponse(await ownerPanelCreatePromocode(env, ctx));
+    if (path === "/api/owner/promocodes/toggle") return jsonResponse(await ownerPanelTogglePromocode(env, ctx));
+    if (path === "/api/owner/shop") return jsonResponse(await ownerPanelShop(env, ctx));
+    if (path === "/api/owner/shop/save") return jsonResponse(await ownerPanelSaveShopItem(env, ctx));
+    if (path === "/api/owner/staff") return jsonResponse(await ownerPanelStaff(env, ctx));
+    if (path === "/api/owner/staff/create") return jsonResponse(await ownerPanelCreateStaff(env, ctx));
+    if (path === "/api/owner/staff/update") return jsonResponse(await ownerPanelUpdateStaff(env, ctx));
+    if (path === "/api/owner/staff/delete") return jsonResponse(await ownerPanelDeleteStaff(env, ctx));
+    if (path === "/api/owner/system") return jsonResponse(await ownerPanelSystem(env, ctx));
+    if (path === "/api/owner/maintenance/update") return jsonResponse(await ownerPanelUpdateMaintenance(env, ctx));
+    throw new ApiError(404, "Раздел панели владельца не найден.");
+  } catch (error) {
+    return ownerPanelApiError(error, path);
+  }
+}
+
+async function ownerPanelRecentAudit(env, limit = 20) {
+  try {
+    const result = await env.DB.prepare(
+      `SELECT id,action,target_telegram_id,target_type,actor_name,actor_telegram_id,actor_role,old_value,new_value,created_at,details_json
+       FROM staff_action_log ORDER BY created_at DESC,id DESC LIMIT ?`
+    ).bind(Math.max(1, Math.min(50, Number(limit) || 20))).all();
+    const rows = result.results || [];
+    const targetIds = [...new Set(rows.map((row) => String(row.target_telegram_id || "").trim()).filter(Boolean))];
+    const targetNames = new Map();
+    if (targetIds.length) {
+      const placeholders = targetIds.map(() => "?").join(",");
+      try {
+        const subscribers = await env.DB.prepare(`SELECT telegram_id,display_name FROM bot_subscribers WHERE telegram_id IN (${placeholders})`).bind(...targetIds).all();
+        for (const row of subscribers.results || []) if (String(row.display_name || "").trim()) targetNames.set(String(row.telegram_id), String(row.display_name).trim());
+      } catch {}
+      try {
+        const staff = await env.DB.prepare(`SELECT telegram_id,display_name FROM staff_users WHERE telegram_id IN (${placeholders})`).bind(...targetIds).all();
+        for (const row of staff.results || []) if (String(row.display_name || "").trim()) targetNames.set(String(row.telegram_id), String(row.display_name).trim());
+      } catch {}
+    }
+    return rows.map((row) => {
+      const details = safeJson(row.details_json, {});
+      const targetTelegramId = String(row.target_telegram_id || "");
+      return {
+        id: Number(row.id || 0),
+        action: String(row.action || ""),
+        targetTelegramId,
+        targetName: String(targetNames.get(targetTelegramId) || details?.displayName || details?.targetName || ""),
+        targetType: String(row.target_type || ""),
+        actorName: String(row.actor_name || ""),
+        actorTelegramId: String(row.actor_telegram_id || ""),
+        actorRole: String(row.actor_role || ""),
+        oldValue: row.old_value == null ? null : Number(row.old_value),
+        newValue: row.new_value == null ? null : Number(row.new_value),
+        createdAt: Number(row.created_at || 0),
+        details
+      };
+    });
+  } catch (error) {
+    console.error("owner panel audit failed", error);
+    return [];
+  }
+}
+
+async function ownerPanelBootstrap(env, ctx) {
+  await Promise.all([ensureSeason(env), ensureSeasonPassSchema(env), ensureMaintenanceSchema(env)]);
+  const now = Math.floor(Date.now() / 1000);
+  const ratingSeason = await ensureSeason(env);
+  const seasonPass = await loadSeasonPassSeason(env);
+  const maintenance = await getMaintenanceSettings(env);
+  const [players, staff, tickets, queue, runs, currentTop, nextRating, latestNews, audit] = await Promise.all([
+    env.DB.prepare(`SELECT COUNT(*) AS count FROM admin_profile_state`).first(),
+    env.DB.prepare(`SELECT COUNT(*) AS count FROM staff_users WHERE active=1`).first().catch(() => ({ count: 0 })),
+    env.DB.prepare(`SELECT COUNT(*) AS count FROM support_tickets WHERE status IN ('new','working')`).first().catch(() => ({ count: 0 })),
+    env.DB.prepare(`SELECT SUM(CASE WHEN status='pending' THEN 1 ELSE 0 END) AS pending,SUM(CASE WHEN status='failed' THEN 1 ELSE 0 END) AS failed FROM reward_delivery_queue`).first().catch(() => ({ pending: 0, failed: 0 })),
+    env.DB.prepare(`SELECT COUNT(*) AS count FROM leaderboard_runs WHERE created_at>=?`).bind(moscowDayStartUnix()).first().catch(() => ({ count: 0 })),
+    env.DB.prepare(`SELECT telegram_id,display_name,username,photo_url,best_score,level FROM leaderboard_entries WHERE season_id=? AND hidden=0 ORDER BY best_score DESC,achieved_at ASC,telegram_id ASC LIMIT 3`).bind(String(ratingSeason.id)).all(),
+    env.DB.prepare(`SELECT id,title,starts_at,ends_at,status,reward_title,reward_image_url,reward_item_id,reward_type,reward_amount FROM leaderboard_seasons WHERE status='scheduled' AND starts_at>? ORDER BY starts_at ASC LIMIT 1`).bind(now).first(),
+    latestBotNews(env).catch(() => null),
+    ownerPanelRecentAudit(env, 14)
+  ]);
+  return {
+    ok: true,
+    owner: {
+      telegramId: String(ctx.user.id),
+      name: telegramDisplayName(ctx.user),
+      role: "owner"
+    },
+    version: GAME_VERSION,
+    workerBuild: WORKER_BUILD,
+    serverTime: new Date().toISOString(),
+    counts: {
+      players: Number(players?.count || 0),
+      staff: Number(staff?.count || 0),
+      tickets: Number(tickets?.count || 0),
+      queuePending: Number(queue?.pending || 0),
+      queueFailed: Number(queue?.failed || 0),
+      runsToday: Number(runs?.count || 0)
+    },
+    rating: {
+      current: ownerPanelRatingSeasonView(ratingSeason),
+      next: nextRating ? ownerPanelRatingSeasonView(nextRating) : null,
+      top: (currentTop.results || []).map((row, index) => ({
+        place: index + 1,
+        telegramId: String(row.telegram_id || ""),
+        name: String(row.display_name || row.username || row.telegram_id || "Игрок"),
+        username: String(row.username || ""),
+        photoUrl: String(row.photo_url || ""),
+        score: Number(row.best_score || 0),
+        level: Number(row.level || 1)
+      }))
+    },
+    seasonPass,
+    maintenance,
+    latestNews: latestNews ? {
+      title: String(latestNews.title || ""), body: String(latestNews.body || ""),
+      imageUrl: String(latestNews.image_url || ""), publishedAt: Number(latestNews.published_at || 0)
+    } : null,
+    audit
+  };
+}
+
+async function ownerPanelPlayers(env, ctx) {
+  const query = String(ctx.body?.query || "").trim().slice(0, 80);
+  const pattern = query ? `%${query.replace(/[%_]/g, "")}%` : "%";
+  const result = await env.DB.prepare(
+    `SELECT p.telegram_id,p.wallet,p.best_score,p.treats,p.coffee,p.profile_xp,p.pending_wallet,p.pending_treats,p.pending_coffee,p.updated_at,
+            COALESCE(NULLIF(a.display_name,''),NULLIF(b.display_name,''),NULLIF(s.display_name,''),'') AS display_name,
+            COALESCE(NULLIF(a.username,''),NULLIF(b.username,''),'') AS username,
+            COALESCE(a.photo_url,'') AS photo_url,
+            COALESCE(a.best_score,0) AS all_time_score,
+            COALESCE(c.active_avatar_id,'') AS active_avatar_id,
+            COALESCE(s.role,'') AS staff_role,
+            COALESCE(s.active,0) AS staff_active
+     FROM admin_profile_state p
+     LEFT JOIN leaderboard_all_time a ON a.telegram_id=p.telegram_id
+     LEFT JOIN bot_subscribers b ON b.telegram_id=p.telegram_id
+     LEFT JOIN case_player_state c ON c.telegram_id=p.telegram_id
+     LEFT JOIN staff_users s ON s.telegram_id=p.telegram_id
+     WHERE (?='' OR p.telegram_id LIKE ? OR LOWER(COALESCE(a.display_name,b.display_name,s.display_name,'')) LIKE LOWER(?) OR LOWER(COALESCE(a.username,b.username,'')) LIKE LOWER(?))
+     ORDER BY p.updated_at DESC LIMIT 30`
+  ).bind(query, pattern, pattern, pattern).all();
+  return {
+    ok: true,
+    query,
+    players: (result.results || []).map((row) => {
+      const telegramId = String(row.telegram_id);
+      const activeAvatarId = normalizeCaseCosmeticId("avatar", row.active_avatar_id);
+      const gameAvatarUrl = activeAvatarId ? String(LIVEOPS_CONTENT_IMAGES.avatar?.[activeAvatarId] || "") : "";
+      const projectRole = isBotOwnerTelegramId(telegramId, env) ? "owner" : String(row.staff_role || "");
+      return {
+        telegramId,
+        name: String(row.display_name || row.username || `Telegram ${row.telegram_id}`),
+        username: String(row.username || ""),
+        photoUrl: String(row.photo_url || ""),
+        activeAvatarId,
+        gameAvatarUrl,
+        avatarUrl: gameAvatarUrl || String(row.photo_url || ""),
+        projectRole,
+        projectRoleActive: projectRole === "owner" ? true : Number(row.staff_active || 0) === 1,
+        points: Number(row.wallet || 0) + Number(row.pending_wallet || 0),
+        treats: Number(row.treats || 0) + Number(row.pending_treats || 0),
+        coffee: Number(row.coffee || 0) + Number(row.pending_coffee || 0),
+        xp: Number(row.profile_xp || 0),
+        allTimeScore: Number(row.all_time_score || 0),
+        updatedAt: Number(row.updated_at || 0)
+      };
+    })
+  };
+}
+
+async function ownerPanelPlayer(env, ctx) {
+  const telegramId = String(ctx.body?.telegramId || "").trim();
+  if (!/^\d{4,20}$/.test(telegramId)) throw new ApiError(400, "Некорректный Telegram ID игрока.");
+  const profile = await env.DB.prepare(`SELECT * FROM admin_profile_state WHERE telegram_id=? LIMIT 1`).bind(telegramId).first();
+  if (!profile) throw new ApiError(404, "Профиль игрока не найден.");
+  const season = await ensureSeason(env);
+  const seasonPass = await loadSeasonPassSeason(env);
+  const [allTime, seasonal, subscriber, caseRow, caseCounts, passPlayer, staffMember, recentRuns, recentAudit] = await Promise.all([
+    env.DB.prepare(`SELECT * FROM leaderboard_all_time WHERE telegram_id=? LIMIT 1`).bind(telegramId).first(),
+    env.DB.prepare(`SELECT * FROM leaderboard_entries WHERE season_id=? AND telegram_id=? LIMIT 1`).bind(String(season.id), telegramId).first(),
+    env.DB.prepare(`SELECT display_name,username,last_started_at,active FROM bot_subscribers WHERE telegram_id=? LIMIT 1`).bind(telegramId).first().catch(() => null),
+    env.DB.prepare(`SELECT * FROM case_player_state WHERE telegram_id=? LIMIT 1`).bind(telegramId).first(),
+    env.DB.prepare(`SELECT case_type,COUNT(*) AS count FROM granted_cases WHERE telegram_id=? AND status='pending' GROUP BY case_type`).bind(telegramId).all(),
+    env.DB.prepare(`SELECT xp,premium_tier,elite_plus_bonus_granted,updated_at FROM season_pass_players WHERE season_id=? AND telegram_id=? LIMIT 1`).bind(String(seasonPass.id), telegramId).first().catch(() => null),
+    env.DB.prepare(`SELECT role,active FROM staff_users WHERE telegram_id=? LIMIT 1`).bind(telegramId).first().catch(() => null),
+    env.DB.prepare(`SELECT run_id,season_id,score,duration_ms,accepted,rejection_reason,created_at FROM leaderboard_runs WHERE telegram_id=? ORDER BY created_at DESC LIMIT 10`).bind(telegramId).all().catch(() => ({results:[]})),
+    env.DB.prepare(`SELECT id,action,target_telegram_id,target_type,actor_name,actor_telegram_id,actor_role,old_value,new_value,created_at,details_json FROM staff_action_log WHERE target_telegram_id=? ORDER BY created_at DESC,id DESC LIMIT 12`).bind(telegramId).all().catch(() => ({results:[]}))
+  ]);
+  const identity = seasonal || allTime || subscriber || {};
+  const caseState = caseStateFromRow(caseRow || {});
+  const activeAvatarId = normalizeCaseCosmeticId("avatar", caseState.activeAvatarId);
+  const gameAvatarUrl = activeAvatarId ? String(LIVEOPS_CONTENT_IMAGES.avatar?.[activeAvatarId] || "") : "";
+  const photoUrl = String(identity.photo_url || allTime?.photo_url || "");
+  const projectRole = isBotOwnerTelegramId(telegramId, env) ? "owner" : String(staffMember?.role || "");
+  const pendingCases = { small: 0, sweet: 0, gold: 0, legendary: 0 };
+  for (const row of caseCounts.results || []) if (row.case_type in pendingCases) pendingCases[row.case_type] = Number(row.count || 0);
+  const passXp = Math.max(0, Number(passPlayer?.xp || 0));
+  return {
+    ok: true,
+    player: {
+      telegramId,
+      name: String(identity.display_name || subscriber?.display_name || `Telegram ${telegramId}`),
+      username: String(identity.username || subscriber?.username || ""),
+      photoUrl,
+      activeAvatarId,
+      gameAvatarUrl,
+      avatarUrl: gameAvatarUrl || photoUrl,
+      projectRole,
+      projectRoleActive: projectRole === "owner" ? true : Number(staffMember?.active || 0) === 1,
+      balances: {
+        points: Number(profile.wallet || 0), treats: Number(profile.treats || 0), coffee: Number(profile.coffee || 0),
+        pendingPoints: Number(profile.pending_wallet || 0), pendingTreats: Number(profile.pending_treats || 0), pendingCoffee: Number(profile.pending_coffee || 0)
+      },
+      profileXp: Number(profile.profile_xp || 0),
+      personalRecord: Number(profile.best_score || 0),
+      currentSeasonScore: Number(seasonal?.best_score || 0),
+      allTimeScore: Number(allTime?.best_score || 0),
+      currentSeasonTitle: String(season.title || ""),
+      pendingCases,
+      cosmetics: {
+        activeAvatarId: String(caseState.activeAvatarId || ""),
+        activeFrameId: String(caseState.activeFrameId || ""),
+        activeTrailId: String(caseState.activeTrailId || ""),
+        activeSkinId: String(caseState.activeSkinId || "default"),
+        ownedAvatars: Array.isArray(caseState.ownedAvatars) ? caseState.ownedAvatars : [],
+        ownedFrames: Array.isArray(caseState.ownedFrames) ? caseState.ownedFrames : [],
+        ownedTrails: Array.isArray(caseState.ownedTrails) ? caseState.ownedTrails : []
+      },
+      seasonPass: {
+        title: String(seasonPass.title || ""),
+        level: seasonPassLevelFromXp(passXp),
+        xp: passXp,
+        tier: String(passPlayer?.premium_tier || "none")
+      },
+      updatedAt: Number(profile.updated_at || 0),
+      recentRuns: (recentRuns.results || []).map((row) => ({runId:String(row.run_id||''),seasonId:String(row.season_id||''),score:Number(row.score||0),durationMs:Number(row.duration_ms||0),accepted:Number(row.accepted||0)===1,rejectionReason:String(row.rejection_reason||''),createdAt:Number(row.created_at||0)})),
+      audit: (recentAudit.results || []).map((row) => ({id:Number(row.id||0),action:String(row.action||''),targetTelegramId:String(row.target_telegram_id||telegramId),targetName:String(identity.display_name||subscriber?.display_name||`Telegram ${telegramId}`),targetType:String(row.target_type||''),actorName:String(row.actor_name||''),actorTelegramId:String(row.actor_telegram_id||''),actorRole:String(row.actor_role||''),oldValue:row.old_value==null?null:Number(row.old_value),newValue:row.new_value==null?null:Number(row.new_value),createdAt:Number(row.created_at||0),details:safeJson(row.details_json,{})}))
+    },
+    caseAssets: {
+      small: ownerPanelCaseAsset("small"), sweet: ownerPanelCaseAsset("sweet"),
+      gold: ownerPanelCaseAsset("gold"), legendary: ownerPanelCaseAsset("legendary")
+    }
+  };
+}
+
+async function ownerPanelGrantPlayer(env, ctx) {
+  const telegramId = String(ctx.body?.telegramId || "").trim();
+  if (!/^\d{4,20}$/.test(telegramId)) throw new ApiError(400, "Некорректный Telegram ID игрока.");
+  const profile = await env.DB.prepare(`SELECT telegram_id FROM admin_profile_state WHERE telegram_id=? LIMIT 1`).bind(telegramId).first();
+  if (!profile) throw new ApiError(404, "Профиль игрока не найден.");
+  const rawKind = String(ctx.body?.kind || "");
+  const kind = rawKind === "treats" ? "zefir" : rawKind;
+  if (!["points", "zefir", "coffee", "case"].includes(kind)) throw new ApiError(400, "Неизвестный тип награды.");
+  const amount = ownerPanelInteger(ctx.body?.amount, 1, kind === "case" ? 20 : 10000000);
+  if (amount == null) throw new ApiError(400, "Некорректное количество награды.");
+  const itemId = kind === "case" ? normalizeCaseType(ctx.body?.itemId) : "";
+  if (kind === "case" && !itemId) throw new ApiError(400, "Выберите тип кейса.");
+  const reason = String(ctx.body?.reason || "Выдача из панели владельца").trim().slice(0, 300) || "Выдача из панели владельца";
+  const sourceId = `owner_${Date.now()}_${crypto.randomUUID().replaceAll("-", "").slice(0, 10)}`;
+  const queueId = await enqueueRewardDelivery(env, telegramId, "owner_panel", sourceId, { kind, id: itemId, amount }, reason);
+  if (!queueId) throw new ApiError(409, "Такая выдача уже существует.");
+  try { await processRewardDeliveryQueue(env, 12); } catch (error) { console.error("owner panel immediate reward delivery deferred", error); }
+  await logStaffAction(env, ctx.user, ctx.access, "owner_panel_grant", telegramId, "reward", null, amount, { kind, itemId, reason, queueId });
+  return { ok: true, queueId, message: "Награда поставлена в безопасную очередь доставки." };
+}
+
+function ownerPanelRatingSeasonView(row) {
+  if (!row) return null;
+  const reward = leaderboardRewardPresentation(row.reward_type, row.reward_amount, row.reward_item_id, row.reward_title, row.reward_image_url);
+  return {
+    id: String(row.id || ""), title: String(row.title || ""),
+    startsAt: Number(row.starts_at || 0), endsAt: Number(row.ends_at || 0),
+    status: String(row.status || ""), finalizedAt: Number(row.finalized_at || 0),
+    reward: { type: reward.type, amount: reward.amount, title: reward.title, itemId: reward.itemId, imageUrl: ownerPanelRewardAsset(reward.type, reward.itemId) || reward.imageUrl },
+    manualOverride: Number(row.manual_override || 0) === 1
+  };
+}
+
+async function ownerPanelRating(env, ctx) {
+  await reconcileLeaderboardSeasonTimeline(env);
+  const seasonsResult = await env.DB.prepare(`SELECT * FROM leaderboard_seasons ORDER BY CASE status WHEN 'active' THEN 0 WHEN 'scheduled' THEN 1 WHEN 'ended' THEN 2 ELSE 3 END, starts_at DESC LIMIT 30`).all();
+  const active = (seasonsResult.results || []).find((row) => String(row.status) === "active") || await ensureSeason(env);
+  const topResult = active ? await env.DB.prepare(`SELECT telegram_id,display_name,username,photo_url,best_score,level,achieved_at FROM leaderboard_entries WHERE season_id=? AND hidden=0 ORDER BY best_score DESC,achieved_at ASC,telegram_id ASC LIMIT 20`).bind(String(active.id)).all() : { results: [] };
+  return {
+    ok: true,
+    seasons: (seasonsResult.results || []).map(ownerPanelRatingSeasonView),
+    active: ownerPanelRatingSeasonView(active),
+    top: (topResult.results || []).map((row, index) => ({ place: index + 1, telegramId: String(row.telegram_id), name: String(row.display_name || row.username || row.telegram_id), username: String(row.username || ""), photoUrl: String(row.photo_url || ""), score: Number(row.best_score || 0), level: Number(row.level || 1) })),
+    banners: { current: "/assets/rating/v8/season-1-cafe-opening.png", allTime: "/assets/rating/v8/all-time-rating.png" }
+  };
+}
+
+async function ownerPanelCreateRatingSeason(env, ctx) {
+  const title = String(ctx.body?.title || "").trim().slice(0, 80);
+  const startsAt = ownerPanelInteger(ctx.body?.startsAt, 1, 4102444800);
+  const endsAt = ownerPanelInteger(ctx.body?.endsAt, 1, 4102444800);
+  if (title.length < 3) throw new ApiError(400, "Название сезона слишком короткое.");
+  if (startsAt == null || endsAt == null || endsAt <= startsAt + 3600) throw new ApiError(400, "Проверьте даты сезона: длительность должна быть больше часа.");
+  if (endsAt - startsAt > 180 * 24 * 3600) throw new ApiError(400, "Рейтинговый сезон не может длиться больше 180 дней.");
+  const overlap = await findLeaderboardSeasonOverlap(env, startsAt, endsAt);
+  if (overlap) throw new ApiError(409, `Период пересекается с сезоном «${String(overlap.title || overlap.id)}».`);
+  const type = normalizeLeaderboardRewardType(ctx.body?.rewardType || "case");
+  const amount = ownerPanelInteger(ctx.body?.rewardAmount, 1, type === "case" ? 20 : 999999999);
+  if (amount == null) throw new ApiError(400, "Некорректное количество награды.");
+  const itemId = type === "case" ? normalizeCaseType(ctx.body?.rewardItemId || "legendary") : "";
+  if (type === "case" && !itemId) throw new ApiError(400, "Некорректный тип кейса.");
+  const reward = leaderboardRewardPresentation(type, amount, itemId, "", "");
+  const now = Math.floor(Date.now() / 1000);
+  if (endsAt <= now) throw new ApiError(400, "Дата окончания уже прошла.");
+  const seasonId = leaderboardSeasonCreateId(startsAt);
+  const status = startsAt <= now ? "active" : "scheduled";
+  await env.DB.prepare(`INSERT INTO leaderboard_seasons(id,title,starts_at,ends_at,status,reward_type,reward_amount,reward_claim_days,reset_plan_json,close_reason,created_at,updated_at,finalized_at,manual_override,reward_title,reward_image_url,reward_item_id) VALUES(?,?,?,?,?,?,?,?,?,'',?,?,NULL,1,?,?,?)`).bind(
+    seasonId,title,startsAt,endsAt,status,reward.type,reward.amount,DEFAULT_SEASON_REWARD_CLAIM_DAYS,JSON.stringify(leaderboardSeasonResetPlan(seasonId)),now,now,reward.title,reward.imageUrl,reward.itemId
+  ).run();
+  await logStaffAction(env, ctx.user, ctx.access, "owner_panel_rating_create", null, "season", null, null, { seasonId,title,startsAt,endsAt,rewardType:reward.type,rewardAmount:reward.amount,rewardItemId:reward.itemId });
+  return { ok: true, season: ownerPanelRatingSeasonView(await env.DB.prepare(`SELECT * FROM leaderboard_seasons WHERE id=?`).bind(seasonId).first()) };
+}
+
+async function ownerPanelCancelRatingSeason(env, ctx) {
+  const seasonId = String(ctx.body?.seasonId || "").trim();
+  const season = await env.DB.prepare(`SELECT * FROM leaderboard_seasons WHERE id=? LIMIT 1`).bind(seasonId).first();
+  if (!season || String(season.status) !== "scheduled" || season.finalized_at) throw new ApiError(409, "Отменить можно только запланированный сезон.");
+  const now = Math.floor(Date.now() / 1000);
+  await env.DB.prepare(`UPDATE leaderboard_seasons SET status='cancelled',finalized_at=COALESCE(finalized_at,?),close_reason='Запланированный сезон отменён из панели владельца',updated_at=? WHERE id=? AND status='scheduled' AND finalized_at IS NULL`).bind(now,now,seasonId).run();
+  await logStaffAction(env, ctx.user, ctx.access, "owner_panel_rating_cancel", null, "season", null, null, { seasonId, title: season.title });
+  return { ok: true };
+}
+
+function ownerPanelSeasonPassRewardView(row) {
+  return {
+    level: Number(row.level || 0), lane: String(row.lane || "free"),
+    rewardType: String(row.reward_type || ""), amount: Number(row.amount || 0),
+    itemId: String(row.item_id || ""), title: String(row.title || ""),
+    imageUrl: String(row.image_url || ownerPanelRewardAsset(row.reward_type, row.item_id)), enabled: Number(row.enabled || 0) === 1
+  };
+}
+
+async function ownerPanelSeasonPass(env, ctx) {
+  await ensureSeasonPassSchema(env);
+  const requested = String(ctx.body?.seasonId || "").trim();
+  const selected = requested ? await loadSeasonPassSeasonById(env, requested) : await loadSeasonPassSeason(env);
+  if (!selected) throw new ApiError(404, "Сезонный пропуск не найден.");
+  const [seasonsResult, rewardsResult, tasksResult, stats] = await Promise.all([
+    env.DB.prepare(`SELECT * FROM season_pass_seasons ORDER BY starts_at DESC,updated_at DESC LIMIT 30`).all(),
+    env.DB.prepare(`SELECT level,lane,reward_type,amount,item_id,title,image_url,enabled FROM season_pass_rewards WHERE season_id=? ORDER BY level,lane`).bind(selected.id).all(),
+    env.DB.prepare(`SELECT task_id,period,premium,metric,target,xp_reward,title,description,enabled,sort_order FROM season_pass_tasks WHERE season_id=? ORDER BY sort_order,task_id`).bind(selected.id).all(),
+    env.DB.prepare(`SELECT COUNT(*) AS players,SUM(CASE WHEN premium_tier='elite' THEN 1 ELSE 0 END) AS elite,SUM(CASE WHEN premium_tier='elite_plus' THEN 1 ELSE 0 END) AS elite_plus,MAX(xp) AS max_xp FROM season_pass_players WHERE season_id=?`).bind(selected.id).first()
+  ]);
+  const nowMs = Date.now();
+  return {
+    ok: true,
+    selected,
+    seasons: (seasonsResult.results || []).map((row) => seasonPassSeasonFromRow(row, configuredSeasonPassState(env, nowMs), nowMs)),
+    rewards: (rewardsResult.results || []).map(ownerPanelSeasonPassRewardView),
+    tasks: (tasksResult.results || []).map((row) => ({ id:String(row.task_id),period:String(row.period),premium:Number(row.premium||0)===1,metric:String(row.metric),target:Number(row.target||0),xp:Number(row.xp_reward||0),title:String(row.title||""),description:String(row.description||""),enabled:Number(row.enabled||0)===1 })),
+    stats: { players:Number(stats?.players||0),elite:Number(stats?.elite||0),elitePlus:Number(stats?.elite_plus||0),maxXp:Number(stats?.max_xp||0) }
+  };
+}
+
+function ownerPanelSeasonPassRewardPresentation(typeValue, amountValue, itemValue) {
+  const type = String(typeValue || "");
+  if (type === "case") {
+    const itemId = normalizeCaseType(itemValue);
+    if (!itemId) throw new ApiError(400, "Неизвестный тип кейса.");
+    const amount = ownerPanelInteger(amountValue, 1, 20);
+    if (amount == null) throw new ApiError(400, "Количество кейсов должно быть от 1 до 20.");
+    const label = ({small:"Обычный кейс",sweet:"Серебряный кейс",gold:"Золотой кейс",legendary:"Легендарный кейс"})[itemId];
+    return { rewardType:"case",amount,itemId,title:amount===1?label:`${label} ×${amount}`,imageUrl:ownerPanelCaseAsset(itemId) };
+  }
+  if (!["points","treats","coffee"].includes(type)) throw new ApiError(400, "Неизвестный тип награды.");
+  const amount = ownerPanelInteger(amountValue, 1, 999999999);
+  if (amount == null) throw new ApiError(400, "Количество должно быть целым числом больше нуля.");
+  const title = type === "points" ? `${amount.toLocaleString("ru-RU")} очков` : type === "treats" ? `${amount.toLocaleString("ru-RU")} зефира` : `${amount.toLocaleString("ru-RU")} кофе`;
+  return { rewardType:type,amount,itemId:"",title,imageUrl:ownerPanelRewardAsset(type) };
+}
+
+async function ownerPanelSetSeasonPassReward(env, ctx) {
+  await ensureSeasonPassSchema(env);
+  const seasonId = String(ctx.body?.seasonId || "").trim();
+  const level = ownerPanelInteger(ctx.body?.level, 1, 50);
+  const lane = String(ctx.body?.lane || "") === "premium" ? "premium" : String(ctx.body?.lane || "") === "free" ? "free" : "";
+  if (!seasonId || level == null || !lane) throw new ApiError(400, "Не выбран сезон, уровень или линия.");
+  const season = await loadSeasonPassSeasonById(env, seasonId);
+  if (!season) throw new ApiError(404, "Сезонный пропуск не найден.");
+  if (season.status === "ended") throw new ApiError(409, "Награды завершённого сезона изменять нельзя.");
+  const reward = ownerPanelSeasonPassRewardPresentation(ctx.body?.rewardType, ctx.body?.amount, ctx.body?.itemId);
+  const before = await env.DB.prepare(`SELECT * FROM season_pass_rewards WHERE season_id=? AND level=? AND lane=? LIMIT 1`).bind(seasonId,level,lane).first();
+  const now = Math.floor(Date.now()/1000);
+  await env.DB.prepare(`INSERT INTO season_pass_rewards(season_id,level,lane,reward_type,amount,item_id,title,image_url,enabled,updated_at,updated_by) VALUES(?,?,?,?,?,?,?,?,1,?,?) ON CONFLICT(season_id,level,lane) DO UPDATE SET reward_type=excluded.reward_type,amount=excluded.amount,item_id=excluded.item_id,title=excluded.title,image_url=excluded.image_url,enabled=1,updated_at=excluded.updated_at,updated_by=excluded.updated_by`).bind(seasonId,level,lane,reward.rewardType,reward.amount,reward.itemId,reward.title,reward.imageUrl,now,String(ctx.user.id)).run();
+  await logStaffAction(env,ctx.user,ctx.access,"owner_panel_season_pass_reward",null,"season_pass_reward",null,null,{seasonId,level,lane,before:before||null,after:reward});
+  return { ok:true, reward:{level,lane,...reward,enabled:true} };
+}
+
+async function ownerPanelCreateSeasonPassSeason(env, ctx) {
+  await ensureSeasonPassSchema(env);
+  const title = String(ctx.body?.title || "").trim().slice(0,80);
+  const startsAt = ownerPanelInteger(ctx.body?.startsAt,1,4102444800);
+  const endsAt = ownerPanelInteger(ctx.body?.endsAt,1,4102444800);
+  if(title.length<3) throw new ApiError(400,"Название сезона слишком короткое.");
+  const now=Math.floor(Date.now()/1000);
+  if(startsAt==null||endsAt==null||startsAt<=now||endsAt<=startsAt+3600) throw new ApiError(400,"Новый сезон должен начинаться в будущем и длиться больше часа.");
+  if(endsAt-startsAt>180*24*3600) throw new ApiError(400,"Сезонный пропуск не может длиться больше 180 дней.");
+  const overlap=await seasonPassSeasonOverlap(env,startsAt,endsAt);
+  if(overlap) throw new ApiError(409,`Период пересекается с сезоном «${String(overlap.title||overlap.season_id)}» или его окном получения наград.`);
+  const sourceId=String(ctx.body?.sourceSeasonId||"").trim()||String((await loadSeasonPassSeason(env)).id);
+  const source=await env.DB.prepare(`SELECT * FROM season_pass_seasons WHERE season_id=? LIMIT 1`).bind(sourceId).first();
+  const seasonId=await uniqueSeasonPassSeasonId(env,startsAt);const graceEndsAt=endsAt+SEASON_PASS_MANUAL_CLAIM_GRACE_SECONDS;const actor=String(ctx.user.id);
+  const cfg=source||{base_run_xp:100,level_price_points:DEFAULT_SEASON_PASS_LEVEL_PRICE_POINTS,elite_price_points:DEFAULT_SEASON_PASS_ELITE_PRICE.points,elite_price_treats:DEFAULT_SEASON_PASS_ELITE_PRICE.treats,elite_price_coffee:DEFAULT_SEASON_PASS_ELITE_PRICE.coffee,elite_plus_price_points:DEFAULT_SEASON_PASS_ELITE_PLUS_PRICE.points,elite_plus_price_treats:DEFAULT_SEASON_PASS_ELITE_PLUS_PRICE.treats,elite_plus_price_coffee:DEFAULT_SEASON_PASS_ELITE_PLUS_PRICE.coffee};
+  const cfgInt=(value,fallback=0)=>Number.isFinite(Number(value))?Math.max(0,Math.floor(Number(value))):fallback;
+  await env.DB.batch([
+    env.DB.prepare(`INSERT INTO season_pass_seasons(season_id,title,starts_at,ends_at,claim_grace_ends_at,manual_status,base_run_xp,level_price_points,elite_price_points,elite_price_treats,elite_price_coffee,elite_plus_price_points,elite_plus_price_treats,elite_plus_price_coffee,updated_at,updated_by) VALUES(?,?,?,?,?,'',?,?,?,?,?,?,?,?,?,?)`).bind(seasonId,title,startsAt,endsAt,graceEndsAt,Math.max(1,cfgInt(cfg.base_run_xp,100)),cfgInt(cfg.level_price_points,DEFAULT_SEASON_PASS_LEVEL_PRICE_POINTS),cfgInt(cfg.elite_price_points,DEFAULT_SEASON_PASS_ELITE_PRICE.points),cfgInt(cfg.elite_price_treats,DEFAULT_SEASON_PASS_ELITE_PRICE.treats),cfgInt(cfg.elite_price_coffee,DEFAULT_SEASON_PASS_ELITE_PRICE.coffee),cfgInt(cfg.elite_plus_price_points,DEFAULT_SEASON_PASS_ELITE_PLUS_PRICE.points),cfgInt(cfg.elite_plus_price_treats,DEFAULT_SEASON_PASS_ELITE_PLUS_PRICE.treats),cfgInt(cfg.elite_plus_price_coffee,DEFAULT_SEASON_PASS_ELITE_PLUS_PRICE.coffee),now,actor),
+    env.DB.prepare(`INSERT INTO season_pass_rewards(season_id,level,lane,reward_type,amount,item_id,title,image_url,enabled,updated_at,updated_by) SELECT ?,level,lane,reward_type,amount,item_id,title,image_url,enabled,?,? FROM season_pass_rewards WHERE season_id=?`).bind(seasonId,now,actor,sourceId),
+    env.DB.prepare(`INSERT INTO season_pass_tasks(season_id,task_id,period,premium,metric,target,xp_reward,title,description,enabled,sort_order,updated_at,updated_by) SELECT ?,task_id,period,premium,metric,target,xp_reward,title,description,enabled,sort_order,?,? FROM season_pass_tasks WHERE season_id=?`).bind(seasonId,now,actor,sourceId)
+  ]);
+  const rewardCount=Number((await env.DB.prepare(`SELECT COUNT(*) AS count FROM season_pass_rewards WHERE season_id=?`).bind(seasonId).first())?.count||0);
+  if(!rewardCount){const seed=[];for(let level=1;level<=50;level+=1){for(const lane of ["free","premium"]){const reward=defaultSeasonPassReward(level,lane);seed.push(env.DB.prepare(`INSERT INTO season_pass_rewards(season_id,level,lane,reward_type,amount,item_id,title,image_url,enabled,updated_at,updated_by) VALUES(?,?,?,?,?,?,?,?,1,?,?)`).bind(seasonId,level,lane,reward.rewardType,reward.amount,reward.itemId,reward.title,reward.imageUrl,now,actor));}}for(let i=0;i<seed.length;i+=25)await env.DB.batch(seed.slice(i,i+25));}
+  const taskCount=Number((await env.DB.prepare(`SELECT COUNT(*) AS count FROM season_pass_tasks WHERE season_id=?`).bind(seasonId).first())?.count||0);
+  if(!taskCount){const tasks=defaultSeasonPassTasks().map((task,index)=>env.DB.prepare(`INSERT INTO season_pass_tasks(season_id,task_id,period,premium,metric,target,xp_reward,title,description,enabled,sort_order,updated_at,updated_by) VALUES(?,?,?,?,?,?,?,?,?,1,?,?,?)`).bind(seasonId,task.id,task.period,task.premium?1:0,task.metric,task.target,task.xp,task.title,task.description,(index+1)*10,now,actor));if(tasks.length)await env.DB.batch(tasks);}
+  await logStaffAction(env,ctx.user,ctx.access,"owner_panel_season_pass_create",null,"season_pass",null,null,{seasonId,title,startsAt,endsAt,sourceSeasonId:sourceId});
+  return {ok:true,season:await loadSeasonPassSeasonById(env,seasonId)};
+}
+
+async function ownerPanelSaveSeasonPassTask(env, ctx) {
+  await ensureSeasonPassSchema(env);
+  const seasonId=String(ctx.body?.seasonId||"").trim();
+  const season=await loadSeasonPassSeasonById(env,seasonId);if(!season)throw new ApiError(404,"Сезонный пропуск не найден.");
+  const existingId=String(ctx.body?.taskId||"").trim();
+  const period=String(ctx.body?.period||"");if(!["daily","weekly"].includes(period))throw new ApiError(400,"Период задания должен быть daily или weekly.");
+  const metric=String(ctx.body?.metric||"");if(!["runs","treats","coffee","score","cases_opened"].includes(metric))throw new ApiError(400,"Неизвестный тип задания.");
+  const target=ownerPanelInteger(ctx.body?.target,1,10000000);const xp=ownerPanelInteger(ctx.body?.xp,1,10000000);
+  if(target==null||xp==null)throw new ApiError(400,"Цель и XP должны быть целыми положительными числами.");
+  const title=String(ctx.body?.title||"").replace(/\s+/g," ").trim().slice(0,120);const description=String(ctx.body?.description||"").trim().slice(0,500);
+  if(title.length<3)throw new ApiError(400,"Название задания слишком короткое.");
+  const now=Math.floor(Date.now()/1000);const actor=String(ctx.user.id);let taskId=existingId;
+  let before=null;
+  if(taskId){before=await env.DB.prepare(`SELECT * FROM season_pass_tasks WHERE season_id=? AND task_id=? LIMIT 1`).bind(seasonId,taskId).first();if(!before)throw new ApiError(404,"Задание не найдено.");}
+  else {taskId=`owner_${now.toString(36)}_${crypto.randomUUID().replaceAll("-","").slice(0,8)}`;}
+  const premium=Boolean(ctx.body?.premium);const enabled=ctx.body?.enabled!==false;
+  const sortRow=before?null:await env.DB.prepare(`SELECT COALESCE(MAX(sort_order),0) AS max_sort FROM season_pass_tasks WHERE season_id=?`).bind(seasonId).first();
+  const sortOrder=before?Number(before.sort_order||100):Math.max(10,Number(sortRow?.max_sort||0)+10);
+  await env.DB.prepare(`INSERT INTO season_pass_tasks(season_id,task_id,period,premium,metric,target,xp_reward,title,description,enabled,sort_order,updated_at,updated_by)
+    VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)
+    ON CONFLICT(season_id,task_id) DO UPDATE SET period=excluded.period,premium=excluded.premium,metric=excluded.metric,target=excluded.target,xp_reward=excluded.xp_reward,title=excluded.title,description=excluded.description,enabled=excluded.enabled,updated_at=excluded.updated_at,updated_by=excluded.updated_by`)
+    .bind(seasonId,taskId,period,premium?1:0,metric,target,xp,title,description,enabled?1:0,sortOrder,now,actor).run();
+  await logStaffAction(env,ctx.user,ctx.access,before?"owner_panel_season_pass_task_update":"owner_panel_season_pass_task_create",null,"season_pass_task",null,null,{seasonId,taskId,period,premium,metric,target,xp,title,enabled});
+  return {ok:true,task:{id:taskId,period,premium,metric,target,xp,title,description,enabled}};
+}
+
+async function ownerPanelDeleteSeasonPassTask(env, ctx) {
+  await ensureSeasonPassSchema(env);
+  const seasonId=String(ctx.body?.seasonId||"").trim();const taskId=String(ctx.body?.taskId||"").trim();
+  if(!seasonId||!taskId)throw new ApiError(400,"Не выбрано задание.");
+  const task=await env.DB.prepare(`SELECT * FROM season_pass_tasks WHERE season_id=? AND task_id=? LIMIT 1`).bind(seasonId,taskId).first();if(!task)throw new ApiError(404,"Задание не найдено.");
+  const claims=Number((await env.DB.prepare(`SELECT COUNT(*) AS count FROM season_pass_task_claims WHERE season_id=? AND task_id=?`).bind(seasonId,taskId).first())?.count||0);
+  if(claims>0)throw new ApiError(409,"У задания уже есть полученные награды. Отключите его вместо удаления, чтобы сохранить историю.");
+  await env.DB.prepare(`DELETE FROM season_pass_tasks WHERE season_id=? AND task_id=?`).bind(seasonId,taskId).run();
+  await logStaffAction(env,ctx.user,ctx.access,"owner_panel_season_pass_task_delete",null,"season_pass_task",null,null,{seasonId,taskId,title:String(task.title||"")});
+  return {ok:true};
+}
+
+async function ownerPanelDeleteSeasonPassSeason(env, ctx) {
+  await ensureSeasonPassSchema(env);
+  const seasonId=String(ctx.body?.seasonId||"").trim();const season=await loadSeasonPassSeasonById(env,seasonId);if(!season)throw new ApiError(404,"Сезон не найден.");
+  const now=Math.floor(Date.now()/1000);const startsAt=Math.floor(Date.parse(season.startsAt)/1000);
+  if(season.id===DEFAULT_SEASON_PASS_ID||startsAt<=now)throw new ApiError(409,"Удалять можно только будущий сезон.");
+  const forced=await getSeasonPassForcedClosure(env);if(forced?.nextSeasonId===season.id)throw new ApiError(409,"Этот сезон используется таймером и пока защищён от удаления.");
+  const playerCount=Number((await env.DB.prepare(`SELECT COUNT(*) AS count FROM season_pass_players WHERE season_id=?`).bind(seasonId).first())?.count||0);if(playerCount)throw new ApiError(409,"У сезона уже есть данные игроков, удаление запрещено.");
+  await env.DB.batch([
+    env.DB.prepare(`DELETE FROM season_pass_task_claims WHERE season_id=?`).bind(seasonId),env.DB.prepare(`DELETE FROM season_pass_tasks WHERE season_id=?`).bind(seasonId),env.DB.prepare(`DELETE FROM season_pass_claims WHERE season_id=?`).bind(seasonId),env.DB.prepare(`DELETE FROM season_pass_rewards WHERE season_id=?`).bind(seasonId),env.DB.prepare(`DELETE FROM season_pass_entitlements WHERE season_id=?`).bind(seasonId),env.DB.prepare(`DELETE FROM season_pass_purchases WHERE season_id=?`).bind(seasonId),env.DB.prepare(`DELETE FROM season_pass_run_xp WHERE season_id=?`).bind(seasonId),env.DB.prepare(`DELETE FROM season_pass_activity_runs WHERE season_id=?`).bind(seasonId),env.DB.prepare(`DELETE FROM season_pass_seasons WHERE season_id=?`).bind(seasonId)
+  ]);
+  await logStaffAction(env,ctx.user,ctx.access,"owner_panel_season_pass_delete",null,"season_pass",null,null,{seasonId,title:season.title});
+  return {ok:true};
+}
+
+async function ownerPanelNews(env, ctx) {
+  const result=await env.DB.prepare(`SELECT id,title,body,image_url,status,created_at,published_at,created_by,created_by_name FROM bot_news ORDER BY published_at DESC,id DESC LIMIT 20`).all().catch(()=>({results:[]}));
+  const base=`${configuredGameUrl(env).replace(/\/$/,"")}`;
+  return {ok:true,
+    channelHelp:{bot:"Публикация меняет раздел «Новости» Telegram-бота. Игрок получает этот пост по команде /news.",game:"Новость внутри игры — релизное окно, встроенное в index.html. Она показана здесь для контроля и не меняется публикацией в боте."},
+    gameNews:{title:BOT_NEWS_TITLE,body:BOT_NEWS_TEXT,imageUrl:`${base}/assets/news/relise_game_news.png?v=1.0.0`,version:GAME_VERSION,source:"index.html / релизное окно"},
+    news:(result.results||[]).map(row=>({id:Number(row.id||0),title:String(row.title||""),body:String(row.body||""),imageUrl:String(row.image_url||""),status:String(row.status||""),publishedAt:Number(row.published_at||0),createdByName:String(row.created_by_name||"")})),presets:[
+      {label:"Релиз 1.0.0",url:`${base}/assets/news/relise_game_news.png?v=1.0.0`},
+      {label:"Сезон 1",url:`${base}/assets/rating/v8/season-1-cafe-opening.png`},
+      {label:"За всё время",url:`${base}/assets/rating/v8/all-time-rating.png`}
+    ]};
+}
+
+function ownerPanelNormalizeNewsImage(env, value) {
+  const raw=String(value||"").trim();if(!raw)return "";
+  try{const base=new URL(configuredGameUrl(env));const url=new URL(raw,base);if(url.protocol!=="https:")throw new Error("protocol");return url.toString();}catch{throw new ApiError(400,"Картинка должна быть HTTPS-ссылкой или путём /assets/...");}
+}
+
+async function ownerPanelPublishNews(env, ctx) {
+  const title=String(ctx.body?.title||"").trim().slice(0,120);const body=String(ctx.body?.body||"").trim().slice(0,3000);const imageUrl=ownerPanelNormalizeNewsImage(env,ctx.body?.imageUrl);
+  if(!title||!body)throw new ApiError(400,"Заполните заголовок и текст новости.");const now=Math.floor(Date.now()/1000);
+  await env.DB.batch([
+    env.DB.prepare(`UPDATE bot_news SET status='archived' WHERE status='published'`),
+    env.DB.prepare(`INSERT INTO bot_news(title,body,image_url,status,created_at,published_at,created_by,created_by_name) VALUES(?,?,?,'published',?,?,?,?)`).bind(title,body,imageUrl||null,now,now,String(ctx.user.id),telegramDisplayName(ctx.user))
+  ]).catch(async(error)=>{
+    // Some D1 clients reject a malformed batch before running anything; keep the
+    // publication path simple and deterministic as a fallback.
+    console.error("owner news batch fallback",error);
+    await env.DB.prepare(`UPDATE bot_news SET status='archived' WHERE status='published'`).run();
+    await env.DB.prepare(`INSERT INTO bot_news(title,body,image_url,status,created_at,published_at,created_by,created_by_name) VALUES(?,?,?,'published',?,?,?,?)`).bind(title,body,imageUrl||null,now,now,String(ctx.user.id),telegramDisplayName(ctx.user)).run();
+  });
+  await logStaffAction(env,ctx.user,ctx.access,"owner_panel_publish_news",null,"news",null,null,{title,imageUrl});
+  return {ok:true,title,body,imageUrl,publishedAt:now};
+}
+
+async function ownerPanelStaff(env, ctx) {
+  const result=await env.DB.prepare(`SELECT telegram_id,display_name,active,role,session_expires_at,can_redeem_rewards,can_adjust_points,can_manage_products,can_publish_news,can_manage_staff,updated_at FROM staff_users ORDER BY active DESC,role,display_name,telegram_id LIMIT 100`).all();
+  return {ok:true,owner:{telegramId:String(ctx.user.id),name:telegramDisplayName(ctx.user),role:"owner",active:true},staff:(result.results||[]).filter(row=>!isBotOwnerTelegramId(row.telegram_id,env)).map(row=>({telegramId:String(row.telegram_id),name:String(row.display_name||`Telegram ${row.telegram_id}`),active:Number(row.active||0)===1,role:normalizeTeamRole(row.role),sessionExpiresAt:Number(row.session_expires_at||0),updatedAt:Number(row.updated_at||0)}))};
+}
+
+async function ownerPanelCreateStaff(env, ctx) {
+  const identity=String(ctx.body?.identity||ctx.body?.telegramId||"").trim();
+  const role=String(ctx.body?.role||"");
+  if(!identity)throw new ApiError(400,"Укажите Telegram ID или @username сотрудника.");
+  if(!["cashier","cook","administrator"].includes(role))throw new ApiError(400,"Некорректная роль сотрудника.");
+  const telegramId=/^\d{4,20}$/.test(identity)?identity:await resolvePlayerTelegramId(identity,env);
+  if(!telegramId)throw new ApiError(404,"Не удалось найти пользователя. Укажите числовой Telegram ID или точный @username пользователя, который уже открывал бота.");
+  if(isBotOwnerTelegramId(telegramId,env)||String(telegramId)===String(ctx.user.id))throw new ApiError(409,"Владелец уже имеет полный доступ и не добавляется как сотрудник.");
+  const preset=TEAM_ROLE_PRESETS[role];
+  const previous=await env.DB.prepare(`SELECT telegram_id,display_name,active,role FROM staff_users WHERE telegram_id=? LIMIT 1`).bind(String(telegramId)).first();
+  if(previous&&Number(previous.active||0)===1)throw new ApiError(409,"Этот пользователь уже является активным сотрудником.");
+  const profile=await staffInviteProfile(String(telegramId),env);
+  const displayName=String(profile?.displayName||previous?.display_name||`Telegram ${telegramId}`).slice(0,120);
+  const now=Math.floor(Date.now()/1000);
+  await env.DB.prepare(`INSERT INTO staff_users (
+    telegram_id,display_name,added_at,active,session_expires_at,role,
+    can_redeem_rewards,can_adjust_points,can_manage_products,can_publish_news,can_manage_staff,invited_by,updated_at
+  ) VALUES(?,?,?,1,0,?,?,?,?,?,?,?,?)
+  ON CONFLICT(telegram_id) DO UPDATE SET display_name=excluded.display_name,active=1,session_expires_at=0,role=excluded.role,
+    can_redeem_rewards=excluded.can_redeem_rewards,can_adjust_points=excluded.can_adjust_points,can_manage_products=excluded.can_manage_products,
+    can_publish_news=excluded.can_publish_news,can_manage_staff=excluded.can_manage_staff,invited_by=excluded.invited_by,updated_at=excluded.updated_at`)
+    .bind(String(telegramId),displayName,now,role,preset.redeem,preset.points,preset.products,preset.news,preset.staff,String(ctx.user.id),now).run();
+  try{await ensureOperationsSecuritySchema(env);await env.DB.prepare(`DELETE FROM staff_permission_overrides WHERE telegram_id=?`).bind(String(telegramId)).run();}catch{}
+  await resetStaffTrainingRecord(env,String(telegramId),role,String(ctx.user.id));
+  await logStaffAction(env,ctx.user,ctx.access,previous?"owner_panel_staff_reactivate":"owner_panel_staff_create",String(telegramId),"staff",null,null,{displayName,role,previousRole:previous?.role||null});
+  try{await refreshBotCommandMenuSilently(env,String(telegramId));}catch(error){console.error("owner panel staff create command refresh failed",error);}
+  return {ok:true,reactivated:Boolean(previous),staff:{telegramId:String(telegramId),name:displayName,role,active:true,sessionExpiresAt:0,updatedAt:now}};
+}
+
+async function ownerPanelUpdateStaff(env, ctx) {
+  const telegramId=String(ctx.body?.telegramId||"").trim();if(!/^\d{4,20}$/.test(telegramId))throw new ApiError(400,"Некорректный Telegram ID сотрудника.");if(isBotOwnerTelegramId(telegramId,env))throw new ApiError(409,"Роль владельца нельзя изменить из панели.");
+  const role=String(ctx.body?.role||"");if(!["cashier","cook","administrator"].includes(role))throw new ApiError(400,"Некорректная роль сотрудника.");const active=Boolean(ctx.body?.active);const preset=TEAM_ROLE_PRESETS[role];const before=await env.DB.prepare(`SELECT telegram_id,display_name,active,role FROM staff_users WHERE telegram_id=? LIMIT 1`).bind(telegramId).first();if(!before)throw new ApiError(404,"Сотрудник не найден.");const now=Math.floor(Date.now()/1000);
+  await env.DB.prepare(`UPDATE staff_users SET role=?,active=?,can_redeem_rewards=?,can_adjust_points=?,can_manage_products=?,can_publish_news=?,can_manage_staff=?,session_expires_at=0,updated_at=? WHERE telegram_id=?`).bind(role,active?1:0,preset.redeem,preset.points,preset.products,preset.news,preset.staff,now,telegramId).run();
+  try { await refreshBotCommandMenuSilently(env, telegramId); } catch (error) { console.error("owner panel command menu refresh failed", error); }
+  await logStaffAction(env,ctx.user,ctx.access,"owner_panel_staff_update",telegramId,"staff",null,null,{before:{role:before.role,active:Boolean(before.active)},after:{role,active}});
+  return {ok:true,staff:{telegramId,name:String(before.display_name||`Telegram ${telegramId}`),role,active,sessionExpiresAt:0,updatedAt:now}};
+}
+
+async function ownerPanelDeleteStaff(env, ctx) {
+  const telegramId=String(ctx.body?.telegramId||"").trim();
+  if(!/^\d{4,20}$/.test(telegramId))throw new ApiError(400,"Некорректный Telegram ID сотрудника.");
+  if(isBotOwnerTelegramId(telegramId,env)||telegramId===String(ctx.user.id))throw new ApiError(409,"Профиль владельца удалить нельзя.");
+  const target=await env.DB.prepare(`SELECT telegram_id,display_name,active,role FROM staff_users WHERE telegram_id=? LIMIT 1`).bind(telegramId).first();
+  if(!target)throw new ApiError(404,"Сотрудник не найден или уже удалён.");
+  await ensureStaffCustomNamesSchema(env);await ensureStaffOperationsSchema(env);await ensureOperationsSecuritySchema(env);await ensureLiveOpsAdminSchema(env);await ensureV78Schema(env);
+  await env.DB.batch([
+    env.DB.prepare(`DELETE FROM bot_staff_workflows WHERE telegram_id=?`).bind(telegramId),
+    env.DB.prepare(`DELETE FROM staff_custom_names WHERE telegram_id=?`).bind(telegramId),
+    env.DB.prepare(`DELETE FROM staff_permission_overrides WHERE telegram_id=?`).bind(telegramId),
+    env.DB.prepare(`DELETE FROM staff_action_limits WHERE telegram_id=?`).bind(telegramId),
+    env.DB.prepare(`DELETE FROM staff_action_usage WHERE telegram_id=?`).bind(telegramId),
+    env.DB.prepare(`DELETE FROM staff_training_progress WHERE telegram_id=?`).bind(telegramId),
+    env.DB.prepare(`DELETE FROM staff_work_context WHERE telegram_id=?`).bind(telegramId),
+    env.DB.prepare(`DELETE FROM staff_notification_preferences WHERE telegram_id=?`).bind(telegramId),
+    env.DB.prepare(`DELETE FROM staff_users WHERE telegram_id=?`).bind(telegramId)
+  ]);
+  const displayName=String(target.display_name||`Telegram ${telegramId}`);
+  await logStaffAction(env,ctx.user,ctx.access,"owner_panel_staff_delete",telegramId,"staff",null,null,{displayName,role:normalizeTeamRole(target.role),active:Number(target.active||0)===1});
+  try{await refreshBotCommandMenuSilently(env,telegramId);}catch(error){console.error("owner panel staff delete command refresh failed",error);}
+  return {ok:true,deleted:{telegramId,name:displayName}};
+}
+
+async function ownerPanelSystem(env, ctx) {
+  const maintenance=await getMaintenanceSettings(env);const audit=await ownerPanelRecentAudit(env,40);
+  const [queue,profiles,ratings,passes,newsCount,pollsActive,resetsCount]=await Promise.all([
+    env.DB.prepare(`SELECT SUM(CASE WHEN status='pending' THEN 1 ELSE 0 END) AS pending,SUM(CASE WHEN status='failed' THEN 1 ELSE 0 END) AS failed,SUM(CASE WHEN status='delivering' THEN 1 ELSE 0 END) AS delivering FROM reward_delivery_queue`).first().catch(()=>({})),
+    env.DB.prepare(`SELECT COUNT(*) AS count FROM admin_profile_state`).first(),
+    env.DB.prepare(`SELECT COUNT(*) AS count FROM leaderboard_seasons`).first(),
+    env.DB.prepare(`SELECT COUNT(*) AS count FROM season_pass_seasons`).first(),
+    env.DB.prepare(`SELECT COUNT(*) AS count FROM bot_news`).first().catch(()=>({count:0})),
+    env.DB.prepare(`SELECT COUNT(*) AS count FROM player_polls WHERE status='active'`).first().catch(()=>({count:0})),
+    env.DB.prepare(`SELECT COUNT(*) AS count FROM player_reset_history`).first().catch(()=>({count:0}))
+  ]);
+  return {ok:true,version:GAME_VERSION,workerBuild:WORKER_BUILD,serverTime:new Date().toISOString(),maintenance,queue:{pending:Number(queue?.pending||0),failed:Number(queue?.failed||0),delivering:Number(queue?.delivering||0)},tables:{profiles:Number(profiles?.count||0),ratingSeasons:Number(ratings?.count||0),seasonPassSeasons:Number(passes?.count||0),news:Number(newsCount?.count||0),activePolls:Number(pollsActive?.count||0),resetOperations:Number(resetsCount?.count||0)},audit};
+}
+
+async function ownerPanelUpdateMaintenance(env, ctx) {
+  await ensureMaintenanceSchema(env);const before=await getMaintenanceSettings(env);const payload=ctx.body?.settings||{};
+  const message=String(payload.message??before.message).trim().slice(0,500)||DEFAULT_MAINTENANCE_SETTINGS.message;
+  const next={fullClosed:Boolean(payload.fullClosed),ratingDisabled:Boolean(payload.ratingDisabled),purchasesDisabled:Boolean(payload.purchasesDisabled),casesDisabled:Boolean(payload.casesDisabled),physicalRewardsDisabled:Boolean(payload.physicalRewardsDisabled),testersOnly:Boolean(payload.testersOnly),message};const now=Math.floor(Date.now()/1000);
+  await env.DB.prepare(`UPDATE maintenance_settings SET full_closed=?,rating_disabled=?,purchases_disabled=?,cases_disabled=?,physical_rewards_disabled=?,testers_only=?,message=?,updated_at=?,updated_by=? WHERE id=1`).bind(next.fullClosed?1:0,next.ratingDisabled?1:0,next.purchasesDisabled?1:0,next.casesDisabled?1:0,next.physicalRewardsDisabled?1:0,next.testersOnly?1:0,next.message,now,String(ctx.user.id)).run();
+  maintenanceSettingsMemory={value:{...next,updatedAt:now,updatedBy:String(ctx.user.id)}};
+  try{await recordV67SettingChange(env,ctx.user,"maintenance","owner_panel","change",before,next);}catch(error){console.error("owner maintenance history failed",error);}
+  await logStaffAction(env,ctx.user,ctx.access,"owner_panel_maintenance",null,"system",null,null,{before,after:next});
+  return {ok:true,maintenance:{...next,updatedAt:now,updatedBy:String(ctx.user.id)}};
+}
+
+function ownerPanelCaseCategoryLabels() {
+  return {points:"Очки",treats:"Зефир",coffee:"Кофе",booster:"Бустер ×2",skin:"Скин",avatar:"Аватарка",frame:"Рамка",trail:"След",music:"Музыка",physical:"Физический приз"};
+}
+
+async function ownerPanelCases(env, ctx) {
+  const config=await readLiveOpsConfig(env);const labels=ownerPanelCaseCategoryLabels();
+  const cases=LIVEOPS_CASE_IDS.map((id)=>{const item=config.cases[id];const total=Object.values(item.chances||{}).reduce((sum,v)=>sum+Number(v||0),0);return {...item,imageUrl:ownerPanelCaseAsset(id),chanceTotal:Number(total.toFixed(6))};});
+  const content=[];for(const [kind,items] of Object.entries(config.content||{})){for(const [id,item] of Object.entries(items||{})){content.push({kind,id,...item});}}
+  return {ok:true,cases,content,categoryLabels:labels,rarities:LIVEOPS_RARITIES};
+}
+
+async function ownerPanelSaveCase(env, ctx) {
+  await ensureLiveOpsAdminSchema(env);const caseId=String(ctx.body?.caseId||"");if(!LIVEOPS_CASE_IDS.includes(caseId))throw new ApiError(400,"Неизвестный кейс.");
+  const row=await env.DB.prepare(`SELECT * FROM liveops_case_configs WHERE case_id=? LIMIT 1`).bind(caseId).first();if(!row)throw new ApiError(404,"Кейс не найден.");
+  const before=liveOpsCaseConfigFromRow(row);const allowed=Object.keys(ownerPanelCaseCategoryLabels());const input=ctx.body?.chances||{};const chances={};
+  for(const key of allowed){const value=Number(input[key]??before.chances?.[key]??0);if(!Number.isFinite(value)||value<0||value>100)throw new ApiError(400,`Шанс «${key}» должен быть от 0 до 100.`);chances[key]=Number(value.toFixed(6));}
+  const total=Object.values(chances).reduce((sum,v)=>sum+v,0);if(Math.abs(total-100)>0.001)throw new ApiError(400,`Сумма шансов должна быть ровно 100%. Сейчас ${total.toFixed(3)}%.`);
+  const ranges={...before.ranges};for(const key of ["points","treats","coffee"]){const raw=ctx.body?.ranges?.[key]??ranges[key]??[0,0];const min=ownerPanelInteger(raw?.[0],0,999999999);const max=ownerPanelInteger(raw?.[1],0,999999999);if(min==null||max==null||max<min)throw new ApiError(400,`Проверьте диапазон «${key}».`);ranges[key]=[min,max];}
+  const guarantee=ownerPanelInteger(ctx.body?.guaranteeCount,0,50);if(guarantee==null)throw new ApiError(400,"Гарант должен быть от 0 до 50.");const enabled=ctx.body?.enabled!==false;const now=Math.floor(Date.now()/1000);
+  const next={...before,enabled,guaranteeCount:guarantee,chances,ranges,updatedAt:now,updatedBy:String(ctx.user.id)};
+  const beforeHistory={enabled:Number(row.enabled||0),title:String(row.title||before.title),guarantee_count:Number(row.guarantee_count||0),chances_json:String(row.chances_json||"{}"),ranges_json:String(row.ranges_json||"{}")};
+  const nextHistory={enabled:enabled?1:0,title:String(row.title||before.title),guarantee_count:guarantee,chances_json:JSON.stringify(chances),ranges_json:JSON.stringify(ranges)};
+  await createConfigSnapshot(env,"pre_owner_case_change",`Перед изменением кейса: ${before.title}`,ctx.user).catch(()=>{});
+  await env.DB.prepare(`UPDATE liveops_case_configs SET enabled=?,guarantee_count=?,chances_json=?,ranges_json=?,updated_at=?,updated_by=? WHERE case_id=?`).bind(enabled?1:0,guarantee,JSON.stringify(chances),JSON.stringify(ranges),now,String(ctx.user.id),caseId).run();
+  await logLiveOpsConfigChange(env,ctx.user,"case",caseId,"owner_panel_update",beforeHistory,nextHistory,"Изменение из панели владельца");await logStaffAction(env,ctx.user,ctx.access,"owner_panel_case_update",null,"case",null,null,{caseId,enabled,guarantee,chances,ranges});
+  return {ok:true,case:{...next,imageUrl:ownerPanelCaseAsset(caseId),chanceTotal:100}};
+}
+
+async function ownerPanelSaveCaseContent(env, ctx) {
+  await ensureLiveOpsAdminSchema(env);const kind=String(ctx.body?.kind||"");const itemId=String(ctx.body?.itemId||"");if(!["avatar","frame","trail","skin"].includes(kind)||!itemId)throw new ApiError(400,"Неизвестный предмет кейса.");
+  const row=await env.DB.prepare(`SELECT * FROM liveops_content_items WHERE item_kind=? AND item_id=? LIMIT 1`).bind(kind,itemId).first();if(!row)throw new ApiError(404,"Предмет не найден.");
+  const rarity=String(ctx.body?.rarity||row.rarity);if(!LIVEOPS_RARITIES.includes(rarity))throw new ApiError(400,"Некорректная редкость.");const weight=Number(ctx.body?.weight);if(!Number.isFinite(weight)||weight<0||weight>100000)throw new ApiError(400,"Вес предмета должен быть от 0 до 100000.");
+  const enabled=ctx.body?.enabled!==false;const legendaryOnly=Boolean(ctx.body?.legendaryOnly);const now=Math.floor(Date.now()/1000);const before={title:String(row.title||itemId),rarity:String(row.rarity||"common"),weight:Number(row.weight||0),enabled:Number(row.enabled||0)===1,isNew:Number(row.is_new||0)===1,legendaryOnly:Number(row.legendary_only||0)===1,imageUrl:String(row.image_url||"")};
+  await env.DB.prepare(`UPDATE liveops_content_items SET rarity=?,weight=?,enabled=?,legendary_only=?,updated_at=?,updated_by=? WHERE item_kind=? AND item_id=?`).bind(rarity,Number(weight.toFixed(6)),enabled?1:0,legendaryOnly?1:0,now,String(ctx.user.id),kind,itemId).run();
+  const next={...before,rarity,weight:Number(weight.toFixed(6)),enabled,legendaryOnly};
+  const beforeHistory={title:String(row.title||itemId),rarity:String(row.rarity||"common"),weight:Number(row.weight||0),enabled:Number(row.enabled||0),is_new:Number(row.is_new||0),legendary_only:Number(row.legendary_only||0),image_url:String(row.image_url||"")};
+  const nextHistory={...beforeHistory,rarity,weight:Number(weight.toFixed(6)),enabled:enabled?1:0,legendary_only:legendaryOnly?1:0};
+  await logLiveOpsConfigChange(env,ctx.user,"content",`${kind}:${itemId}`,"owner_panel_update",beforeHistory,nextHistory,"Изменение награды кейса из панели владельца");await logStaffAction(env,ctx.user,ctx.access,"owner_panel_case_content_update",null,"case_content",null,null,{kind,itemId,rarity,weight,enabled,legendaryOnly});
+  return {ok:true,item:{kind,id:itemId,...next}};
+}
+
+function ownerPanelPromoReward(input) {
+  const kind=String(input?.kind||"");const amount=ownerPanelInteger(input?.amount,1,999999999);if(amount==null)throw new ApiError(400,"Некорректное количество награды промокода.");
+  if(["points","zefir","coffee"].includes(kind))return {kind,amount};if(kind==="case"){const id=normalizeCaseType(input?.id);if(!id||amount>20)throw new ApiError(400,"Некорректная награда-кейс промокода.");return {kind:"case",id,amount};}
+  throw new ApiError(400,"Промокоды в панели поддерживают очки, зефир, кофе и кейсы.");
+}
+
+async function ownerPanelPromocodes(env, ctx) {
+  await ensureOperationsSecuritySchema(env);const now=Math.floor(Date.now()/1000);const rows=(await env.DB.prepare(`SELECT * FROM promo_codes ORDER BY created_at DESC LIMIT 100`).all()).results||[];
+  return {ok:true,now,promocodes:rows.map(row=>({code:String(row.code),title:String(row.title||row.code),rewards:safeJson(row.reward_json,[]),maxRedemptions:Number(row.max_redemptions||0),redemptionCount:Number(row.redemption_count||0),startsAt:Number(row.starts_at||0),expiresAt:Number(row.expires_at||0),enabled:Number(row.enabled||0)===1,createdAt:Number(row.created_at||0),active:Number(row.enabled||0)===1&&(!row.starts_at||row.starts_at<=now)&&(!row.expires_at||row.expires_at>now)&&(Number(row.max_redemptions||0)===0||Number(row.redemption_count||0)<Number(row.max_redemptions))}))};
+}
+
+async function ownerPanelCreatePromocode(env, ctx) {
+  const code=normalizedPromoCode(ctx.body?.code);if(code.length<4)throw new ApiError(400,"Промокод должен содержать минимум 4 символа.");const rewards=(Array.isArray(ctx.body?.rewards)?ctx.body.rewards:[]).slice(0,5).map(ownerPanelPromoReward);if(!rewards.length)throw new ApiError(400,"Добавьте хотя бы одну награду.");
+  const limit=ownerPanelInteger(ctx.body?.limit??0,0,1000000);if(limit==null)throw new ApiError(400,"Лимит активаций некорректен.");const expiresAt=ownerPanelInteger(ctx.body?.expiresAt??0,0,4102444800);if(expiresAt==null)throw new ApiError(400,"Дата окончания некорректна.");if(expiresAt&&expiresAt<=Math.floor(Date.now()/1000))throw new ApiError(400,"Дата окончания должна быть в будущем.");
+  try{return {ok:true,promo:await createPromoCodeRecord(ctx.user,ctx.access,{code,title:String(ctx.body?.title||code).trim().slice(0,120),rewards,limit,expiresAt,enabled:ctx.body?.enabled!==false},env)};}catch(error){if(String(error?.message||error).toLowerCase().includes("unique"))throw new ApiError(409,"Такой промокод уже существует.");throw error;}
+}
+
+async function ownerPanelTogglePromocode(env, ctx) {
+  await ensureOperationsSecuritySchema(env);const code=normalizedPromoCode(ctx.body?.code);const enabled=Boolean(ctx.body?.enabled);const now=Math.floor(Date.now()/1000);const before=await env.DB.prepare(`SELECT enabled,title FROM promo_codes WHERE code=? LIMIT 1`).bind(code).first();if(!before)throw new ApiError(404,"Промокод не найден.");await env.DB.prepare(`UPDATE promo_codes SET enabled=?,updated_at=? WHERE code=?`).bind(enabled?1:0,now,code).run();await logStaffAction(env,ctx.user,ctx.access,enabled?"owner_panel_promo_enable":"owner_panel_promo_disable",null,"promo",Number(before.enabled||0),enabled?1:0,{code,title:String(before.title||code)});return {ok:true,code,enabled};
+}
+
+function ownerPanelShopProductAsset(productId) {
+  const id=String(productId||"");if(id.startsWith("case-"))return ownerPanelCaseAsset(id.slice(5));if(id==="zefir")return "/assets/optimized/v0.79.5/shopMarshmallowAssortment.png?v=0.79.5";if(id==="americano"||id==="cappuccino")return "/assets/optimized/v0.79.5/iconCoffee.png?v=0.79.5";return "/assets/optimized/v0.79.5/shopMascot.webp?v=0.79.5";
+}
+function ownerPanelSkinAsset(skinId){return skinId==="default"?"/assets/optimized/v0.79.5/skinDefaultAvatar.png?v=0.79.5":`/assets/skins/avatars/${String(skinId)}.png`;}
+
+async function ownerPanelShop(env, ctx) {
+  await ensureShopAssortmentSchema(env);await ensureSkinPriceSchema(env);await ensureShopStockSchema(env);const [assortment,skins,stockRows]=await Promise.all([readShopAssortment(env),readSkinPrices(env),readShopStockRows(env)]);
+  const products=Object.keys(SHOP_ASSORTMENT_PRODUCTS).map(id=>{const value=assortment[id];const stock=shopStockAvailabilityFromRows(stockRows,"prize",id);return {kind:"product",id,title:botShopProductTitle(id),imageUrl:ownerPanelShopProductAsset(id),enabled:Boolean(value.enabled),points:Number(value.points||0),treats:Number(value.treats||0),coffee:Number(value.coffee||0),stock};});
+  const skinItems=Object.keys(DEFAULT_SKIN_PRICES).map(id=>{const value=skins[id];const stock=shopStockAvailabilityFromRows(stockRows,"skins",id);return {kind:"skin",id,title:SKINS[id]?.title||id,imageUrl:ownerPanelSkinAsset(id),enabled:true,points:Number(value.points||0),treats:Number(value.treats||0),coffee:Number(value.coffee||0),stock};});
+  return {ok:true,products,skins:skinItems};
+}
+
+async function ownerPanelSaveShopItem(env, ctx) {
+  const kind=String(ctx.body?.kind||"");const itemId=String(ctx.body?.itemId||"");const points=ownerPanelInteger(ctx.body?.points,0,999999999);const treats=ownerPanelInteger(ctx.body?.treats,0,999999999);const coffee=ownerPanelInteger(ctx.body?.coffee,0,999999999);if(points==null||treats==null||coffee==null)throw new ApiError(400,"Цена должна быть целым неотрицательным числом.");if(points+treats+coffee<=0&&itemId!=="default")throw new ApiError(400,"У товара должна быть хотя бы одна цена.");
+  const now=Math.floor(Date.now()/1000),actor=String(ctx.user.id);let title="",stockCategory="";
+  if(kind==="product"){
+    if(!SHOP_ASSORTMENT_PRODUCTS[itemId])throw new ApiError(404,"Товар магазина не найден.");await ensureShopAssortmentSchema(env);const before=await readShopAssortmentProduct(env,itemId);title=botShopProductTitle(itemId);const enabled=ctx.body?.enabled!==false;const statements=[env.DB.prepare(`UPDATE shop_assortment SET enabled=?,points=?,treats=?,coffee=?,updated_at=?,updated_by=? WHERE product_id=?`).bind(enabled?1:0,points,treats,coffee,now,actor,itemId)];if(DEFAULT_SHOP_PRODUCTS[itemId])statements.push(env.DB.prepare(`INSERT INTO shop_prices(product_id,points,treats,coffee,version,updated_at,updated_by) VALUES(?,?,?,?,1,?,?) ON CONFLICT(product_id) DO UPDATE SET points=excluded.points,treats=excluded.treats,coffee=excluded.coffee,version=shop_prices.version+1,updated_at=excluded.updated_at,updated_by=excluded.updated_by`).bind(itemId,points,treats,coffee,now,actor));await env.DB.batch(statements);stockCategory="prize";await logStaffAction(env,ctx.user,ctx.access,"owner_panel_shop_product_update",null,"product",null,null,{itemId,title,before,after:{enabled,points,treats,coffee}});
+  }else if(kind==="skin"){
+    if(!DEFAULT_SKIN_PRICES[itemId])throw new ApiError(404,"Скин не найден.");await ensureSkinPriceSchema(env);title=SKINS[itemId]?.title||itemId;await env.DB.prepare(`UPDATE skin_prices SET points=?,treats=?,coffee=?,version=version+1,updated_at=?,updated_by=? WHERE skin_id=?`).bind(points,treats,coffee,now,actor,itemId).run();stockCategory="skins";await logStaffAction(env,ctx.user,ctx.access,"owner_panel_shop_skin_update",null,"skin",null,null,{itemId,title,points,treats,coffee});
+  }else throw new ApiError(400,"Неизвестный тип товара.");
+  await ensureShopStockSchema(env);const stockValue=ctx.body?.stockLimit;const scope=shopStockScopeKey(stockCategory,itemId);if(stockValue===null||stockValue===""||stockValue===undefined){await env.DB.prepare(`DELETE FROM shop_stock_limits WHERE scope_key=?`).bind(scope).run();}else{const limit=ownerPanelInteger(stockValue,0,999999999);if(limit==null)throw new ApiError(400,"Остаток должен быть целым числом.");await env.DB.prepare(`INSERT INTO shop_stock_limits(scope_key,category,product_id,configured_limit,remaining,updated_at,updated_by) VALUES(?,?,?,?,?,?,?) ON CONFLICT(scope_key) DO UPDATE SET configured_limit=excluded.configured_limit,remaining=excluded.remaining,updated_at=excluded.updated_at,updated_by=excluded.updated_by`).bind(scope,stockCategory,itemId,limit,limit,now,actor).run();}
+  invalidateGamePublicConfigCache();return {ok:true,itemId,title};
+}
+
+
+function ownerPanelResetComponents() {
+  return PLAYER_RESET_COMPONENT_KEYS.map((key) => ({ key, label:PLAYER_RESET_COMPONENTS[key].label, icon:PLAYER_RESET_COMPONENTS[key].icon }));
+}
+
+async function ownerPanelResets(env, ctx) {
+  await ensureV78Schema(env);
+  const [historyResult, countRow] = await Promise.all([
+    env.DB.prepare(`SELECT reset_id,scope,target_telegram_id,components_json,reason,affected_count,notification_status,created_by,created_by_name,created_at FROM player_reset_history ORDER BY created_at DESC LIMIT 30`).all(),
+    env.DB.prepare(`SELECT COUNT(*) AS count FROM admin_profile_state`).first()
+  ]);
+  const rows = historyResult.results || [];
+  const ids = [...new Set(rows.map((row)=>String(row.target_telegram_id||'')).filter(Boolean))];
+  const names = new Map();
+  if (ids.length) {
+    const placeholders = ids.map(()=>'?').join(',');
+    try {
+      const found = await env.DB.prepare(`SELECT telegram_id,display_name FROM bot_subscribers WHERE telegram_id IN (${placeholders})`).bind(...ids).all();
+      for (const row of found.results || []) if (String(row.display_name||'').trim()) names.set(String(row.telegram_id),String(row.display_name).trim());
+    } catch {}
+  }
+  return {ok:true,playerCount:Number(countRow?.count||0),components:ownerPanelResetComponents(),history:rows.map((row)=>({
+    id:String(row.reset_id||''),scope:String(row.scope||'one'),targetTelegramId:String(row.target_telegram_id||''),targetName:String(names.get(String(row.target_telegram_id||''))||''),components:safeJson(row.components_json,[]),reason:String(row.reason||''),affected:Number(row.affected_count||0),notificationStatus:String(row.notification_status||''),createdBy:String(row.created_by||''),createdByName:String(row.created_by_name||''),createdAt:Number(row.created_at||0)
+  }))};
+}
+
+async function ownerPanelApplyReset(env, ctx) {
+  await ensureV78Schema(env);
+  const scope = String(ctx.body?.scope||'one') === 'all' ? 'all' : 'one';
+  const selected = [...new Set((Array.isArray(ctx.body?.components)?ctx.body.components:[]).map(String).filter((key)=>PLAYER_RESET_COMPONENTS[key]))];
+  if (!selected.length) throw new ApiError(400,'Выберите хотя бы один параметр сброса.');
+  const reason = String(ctx.body?.reason||'').trim().replace(/\s+/g,' ').slice(0,300);
+  if (reason.length < 3) throw new ApiError(400,'Укажите причину сброса минимум из 3 символов.');
+  const phrase = String(ctx.body?.confirmation||'').trim().replace(/\s+/g,' ').toUpperCase();
+  const expected = scope === 'all' ? 'СБРОС ВСЕХ' : 'СБРОС ИГРОКА';
+  if (phrase !== expected) throw new ApiError(400,`Для подтверждения введите: ${expected}`);
+  let targetId = '';
+  if (scope === 'one') {
+    targetId = await resolvePlayerTelegramId(String(ctx.body?.target||ctx.body?.telegramId||'').trim(), env);
+    if (!targetId || !(await playerProfileExists(targetId, env))) throw new ApiError(404,'Игрок не найден.');
+    if (await protectedPlayerControlTarget(targetId, env)) throw new ApiError(403,'Нельзя сбросить владельца или активного сотрудника.');
+  }
+  const result = await applyPlayerReset(env,{scope,targetId,selected,reason,actor:ctx.user,reportChatId:''});
+  await logStaffAction(env,ctx.user,ctx.access,scope==='all'?'owner_panel_players_reset_all':'owner_panel_player_reset',scope==='all'?null:targetId,'player_reset',null,0,{resetId:result.resetId,selected,reason,affected:result.affected,notificationStatus:result.notificationStatus});
+  return {ok:true,...result,scope,targetId,components:selected};
+}
+
+function ownerPanelPollRewardView(row) {
+  const reward=v74PollReward(row);
+  return {...reward,title:v74PollRewardText(reward),imageUrl:reward.kind==='none'?'':ownerPanelRewardAsset(reward.kind,reward.id)};
+}
+
+function ownerPanelPollView(row) {
+  return {
+    id:String(row.poll_id||''),question:String(row.question||''),description:String(row.description||''),status:String(row.status||'draft'),statusLabel:v74PollStatusLabel(row.status),answerType:String(row.answer_type||'choice'),answerTypeLabel:v75PollAnswerTypeLabel(row.answer_type),responseMode:String(row.response_mode||'single'),maxChoices:Number(row.max_choices||1),commentMode:String(row.comment_mode||'none'),commentModeLabel:v75PollCommentModeLabel(String(row.answer_type||'choice')==='text'?'required':row.comment_mode),commentMin:Number(row.comment_min_length||10),commentMax:Number(row.comment_max_length||1000),commentPrompt:String(row.comment_prompt||''),audience:String(row.audience_type||'all'),audienceLabel:v74PollAudienceLabel(row.audience_type),delivery:String(row.delivery_mode||'bot'),deliveryLabel:v74PollDeliveryLabel(row.delivery_mode),minAcceptedRuns:Number(row.min_accepted_runs||0),resultsMode:String(row.results_mode||'after_vote'),resultsLabel:v74PollResultsLabel(row.results_mode),allowChange:Number(row.allow_change||0)===1,showInTasks:Number(row.show_in_tasks||0)===1,durationSeconds:Number(row.duration_seconds||0),startsAt:Number(row.starts_at||0),endsAt:Number(row.ends_at||0),createdAt:Number(row.created_at||0),publishedAt:Number(row.published_at||0),endedAt:Number(row.ended_at||0),responses:Number(row.responses||0),comments:Number(row.comments||0),reward:ownerPanelPollRewardView(row)
+  };
+}
+
+async function ownerPanelPolls(env, ctx) {
+  await ensureV74PollSchema(env);
+  const now=Math.floor(Date.now()/1000);
+  await env.DB.prepare(`UPDATE player_polls SET status='ended',ended_at=?,updated_at=? WHERE status='active' AND ends_at>0 AND ends_at<=?`).bind(now,now,now).run();
+  const rows=(await env.DB.prepare(`SELECT p.*,(SELECT COUNT(*) FROM player_poll_responses r WHERE r.poll_id=p.poll_id) AS responses,(SELECT COUNT(*) FROM player_poll_responses r WHERE r.poll_id=p.poll_id AND TRIM(COALESCE(r.comment_text,''))<>'') AS comments FROM player_polls p ORDER BY CASE p.status WHEN 'active' THEN 0 WHEN 'draft' THEN 1 WHEN 'scheduled' THEN 2 ELSE 3 END,p.updated_at DESC,p.created_at DESC LIMIT 60`).all()).results||[];
+  const stats={draft:0,active:0,scheduled:0,ended:0,cancelled:0};
+  for(const row of rows)stats[String(row.status||'')] = (stats[String(row.status||'')]||0)+1;
+  return {ok:true,stats,polls:rows.map(ownerPanelPollView),rewardPresets:Object.entries(V74_POLL_REWARD_PRESETS).map(([key,reward])=>({key,...reward,title:v74PollRewardText(reward),imageUrl:reward.kind==='none'?'':ownerPanelRewardAsset(reward.kind,reward.id)}))};
+}
+
+async function ownerPanelPollDetails(env, ctx) {
+  await ensureV74PollSchema(env);
+  const pollId=String(ctx.body?.pollId||'').trim();
+  const row=await env.DB.prepare(`SELECT p.*,(SELECT COUNT(*) FROM player_poll_responses r WHERE r.poll_id=p.poll_id) AS responses,(SELECT COUNT(*) FROM player_poll_responses r WHERE r.poll_id=p.poll_id AND TRIM(COALESCE(r.comment_text,''))<>'') AS comments FROM player_polls p WHERE p.poll_id=? LIMIT 1`).bind(pollId).first();
+  if(!row)throw new ApiError(404,'Опрос не найден.');
+  const [options,result,comments,deliveries]=await Promise.all([
+    v74PollOptions(env,pollId),
+    v74PollResultData(env,pollId),
+    env.DB.prepare(`SELECT r.telegram_id,r.source,r.submitted_at,r.comment_text,b.display_name,b.username,GROUP_CONCAT(o.option_text,' · ') AS choices FROM player_poll_responses r LEFT JOIN bot_subscribers b ON b.telegram_id=r.telegram_id LEFT JOIN player_poll_votes v ON v.poll_id=r.poll_id AND v.telegram_id=r.telegram_id LEFT JOIN player_poll_options o ON o.poll_id=v.poll_id AND o.option_id=v.option_id WHERE r.poll_id=? GROUP BY r.poll_id,r.telegram_id ORDER BY r.submitted_at DESC LIMIT 50`).bind(pollId).all(),
+    env.DB.prepare(`SELECT status,COUNT(*) AS count FROM player_poll_bot_deliveries WHERE poll_id=? GROUP BY status`).bind(pollId).all()
+  ]);
+  return {ok:true,poll:ownerPanelPollView(row),options:(options||[]).map(x=>({id:String(x.option_id),order:Number(x.option_order),text:String(x.option_text)})),result,comments:(comments.results||[]).map(x=>({telegramId:String(x.telegram_id),name:String(x.display_name||x.username||x.telegram_id),username:String(x.username||''),source:String(x.source||''),submittedAt:Number(x.submitted_at||0),comment:String(x.comment_text||''),choices:String(x.choices||'')})),deliveries:Object.fromEntries((deliveries.results||[]).map(x=>[String(x.status),Number(x.count||0)]))};
+}
+
+async function ownerPanelCreatePoll(env, ctx) {
+  await ensureV74PollSchema(env);
+  const question=String(ctx.body?.question||'').trim().replace(/\s+/g,' ').slice(0,300);if(question.length<4)throw new ApiError(400,'Вопрос должен содержать минимум 4 символа.');
+  const description=String(ctx.body?.description||'').trim().slice(0,1000);
+  const answerType=['choice','text','choice_comment'].includes(String(ctx.body?.answerType))?String(ctx.body.answerType):'choice';
+  let options=(Array.isArray(ctx.body?.options)?ctx.body.options:[]).map(x=>String(x||'').trim().replace(/\s+/g,' ').slice(0,100)).filter(Boolean);options=[...new Set(options)].slice(0,10);
+  if(answerType!=='text'&&options.length<2)throw new ApiError(400,'Добавьте минимум два варианта ответа.');
+  if(answerType==='text')options=[];
+  const responseMode=answerType==='text'?'single':(String(ctx.body?.responseMode)==='multiple'?'multiple':'single');
+  const maxChoices=responseMode==='multiple'?Math.max(1,Math.min(options.length,Number(ctx.body?.maxChoices)||2)):1;
+  const commentMode=answerType==='text'?'required':(['none','optional','required'].includes(String(ctx.body?.commentMode))?String(ctx.body.commentMode):(answerType==='choice_comment'?'optional':'none'));
+  const audience=['all','active_7d','testers','season','staff'].includes(String(ctx.body?.audience))?String(ctx.body.audience):'all';
+  const delivery=['bot','game','both'].includes(String(ctx.body?.delivery))?String(ctx.body.delivery):'bot';
+  const resultsMode=['after_vote','after_end','hidden'].includes(String(ctx.body?.resultsMode))?String(ctx.body.resultsMode):'after_vote';
+  const durationSeconds=ownerPanelInteger(ctx.body?.durationSeconds??0,0,90*V67_DAY);if(durationSeconds==null)throw new ApiError(400,'Некорректный срок опроса.');
+  const minAcceptedRuns=ownerPanelInteger(ctx.body?.minAcceptedRuns??0,0,1000);if(minAcceptedRuns==null)throw new ApiError(400,'Некорректное число забегов.');
+  const rewardKey=String(ctx.body?.rewardKey||'none');const reward=V74_POLL_REWARD_PRESETS[rewardKey]||V74_POLL_REWARD_PRESETS.none;
+  const pollId=v74PollId(),now=Math.floor(Date.now()/1000);
+  await env.DB.prepare(`INSERT INTO player_polls(poll_id,question,description,status,answer_type,response_mode,max_choices,comment_mode,comment_min_length,comment_max_length,comment_prompt,audience_type,delivery_mode,min_accepted_runs,results_mode,allow_change,show_in_tasks,duration_seconds,starts_at,ends_at,reward_kind,reward_id,reward_amount,created_by,created_by_name,report_chat_id,bot_queue_prepared,created_at,updated_at,published_at,ended_at) VALUES(?,?,?,'draft',?,?,?,?,10,1000,?,?,?,?,?,?,?,?,0,0,?,?,?,?,?, '',0,?,?,0,0)`).bind(pollId,question,description,answerType,responseMode,maxChoices,commentMode,String(ctx.body?.commentPrompt||'Напишите свой ответ сообщением.').trim().slice(0,300)||'Напишите свой ответ сообщением.',audience,delivery,minAcceptedRuns,resultsMode,ctx.body?.allowChange?1:0,ctx.body?.showInTasks?1:0,durationSeconds,reward.kind,String(reward.id||''),Number(reward.amount||0),String(ctx.user.id),telegramDisplayName(ctx.user),now,now).run();
+  if(options.length)await env.DB.batch(options.map((text,index)=>env.DB.prepare(`INSERT INTO player_poll_options(option_id,poll_id,option_order,option_text) VALUES(?,?,?,?)`).bind(`${pollId}o${index+1}`,pollId,index+1,text)));
+  await logStaffAction(env,ctx.user,ctx.access,'owner_panel_poll_create',null,'poll',null,null,{pollId,question,answerType,audience,delivery,resultsMode,rewardKey,options:options.length,durationSeconds});
+  return {ok:true,pollId};
+}
+
+async function ownerPanelPublishPoll(env, ctx) {
+  await ensureV74PollSchema(env);const pollId=String(ctx.body?.pollId||'');const old=await env.DB.prepare(`SELECT * FROM player_polls WHERE poll_id=? LIMIT 1`).bind(pollId).first();if(!old)throw new ApiError(404,'Опрос не найден.');if(String(old.status)!=='draft')throw new ApiError(409,'Опубликовать можно только черновик.');
+  const now=Math.floor(Date.now()/1000),ends=Number(old.duration_seconds||0)>0?now+Number(old.duration_seconds):0;
+  await env.DB.prepare(`UPDATE player_polls SET status='active',starts_at=?,ends_at=?,published_at=?,updated_at=?,bot_queue_prepared=0 WHERE poll_id=? AND status='draft'`).bind(now,ends,now,now,pollId).run();
+  let queued=0;if(['bot','both'].includes(String(old.delivery_mode))){queued=await prepareV74PollBotQueue(env,pollId);await processV74PollBotDeliveries(env,20).catch((error)=>console.error('owner poll first delivery failed',error));}
+  await Promise.all([recordV67SettingChange(env,ctx.user,'poll',pollId,'publish',{status:'draft'},{status:'active',startsAt:now,endsAt:ends}).catch(()=>{}),logStaffAction(env,ctx.user,ctx.access,'owner_panel_poll_publish',null,'poll',null,null,{pollId,question:String(old.question||''),delivery:String(old.delivery_mode||''),queued,endsAt:ends})]);
+  return {ok:true,pollId,queued,endsAt:ends};
+}
+
+async function ownerPanelEndPoll(env, ctx) {
+  await ensureV74PollSchema(env);const pollId=String(ctx.body?.pollId||'');const old=await env.DB.prepare(`SELECT * FROM player_polls WHERE poll_id=? LIMIT 1`).bind(pollId).first();if(!old)throw new ApiError(404,'Опрос не найден.');if(!['active','scheduled'].includes(String(old.status)))throw new ApiError(409,'Этот опрос сейчас нельзя завершить.');const now=Math.floor(Date.now()/1000);
+  await env.DB.batch([env.DB.prepare(`UPDATE player_polls SET status='ended',ended_at=?,ends_at=CASE WHEN ends_at=0 OR ends_at>? THEN ? ELSE ends_at END,updated_at=? WHERE poll_id=? AND status IN ('active','scheduled')`).bind(now,now,now,now,pollId),env.DB.prepare(`UPDATE player_poll_bot_deliveries SET status='cancelled',last_error='Опрос завершён владельцем',updated_at=? WHERE poll_id=? AND status IN ('pending','failed')`).bind(now,pollId)]);
+  await logStaffAction(env,ctx.user,ctx.access,'owner_panel_poll_end',null,'poll',null,null,{pollId,question:String(old.question||''),previousStatus:String(old.status)});return {ok:true,pollId};
+}
+
+async function ownerPanelCancelPoll(env, ctx) {
+  await ensureV74PollSchema(env);const pollId=String(ctx.body?.pollId||'');const old=await env.DB.prepare(`SELECT * FROM player_polls WHERE poll_id=? LIMIT 1`).bind(pollId).first();if(!old)throw new ApiError(404,'Опрос не найден.');if(!['draft','scheduled'].includes(String(old.status)))throw new ApiError(409,'Отменить можно только черновик или запланированный опрос.');const now=Math.floor(Date.now()/1000);
+  await env.DB.batch([env.DB.prepare(`UPDATE player_polls SET status='cancelled',updated_at=?,ended_at=? WHERE poll_id=?`).bind(now,now,pollId),env.DB.prepare(`UPDATE player_poll_bot_deliveries SET status='cancelled',last_error='Опрос отменён владельцем',updated_at=? WHERE poll_id=? AND status IN ('pending','failed')`).bind(now,pollId)]);
+  await logStaffAction(env,ctx.user,ctx.access,'owner_panel_poll_cancel',null,'poll',null,null,{pollId,question:String(old.question||''),previousStatus:String(old.status)});return {ok:true,pollId};
+}
+
+async function ownerPanelDeletePoll(env, ctx) {
+  await ensureV74PollSchema(env);
+  const pollId=String(ctx.body?.pollId||'').trim();
+  const row=await env.DB.prepare(`SELECT p.*,(SELECT COUNT(*) FROM player_poll_responses r WHERE r.poll_id=p.poll_id) AS responses,(SELECT COUNT(*) FROM player_poll_responses r WHERE r.poll_id=p.poll_id AND TRIM(COALESCE(r.comment_text,''))<>'') AS comments FROM player_polls p WHERE p.poll_id=? LIMIT 1`).bind(pollId).first();
+  if(!row)throw new ApiError(404,'Опрос не найден.');
+  const status=String(row.status||'');
+  if(!['draft','ended','cancelled'].includes(status))throw new ApiError(409,'Активный или запланированный опрос сначала нужно завершить или отменить.');
+  const confirmation=String(ctx.body?.confirmation||'').trim();
+  if(confirmation!=='УДАЛИТЬ ОПРОС')throw new ApiError(400,'Для удаления введите: УДАЛИТЬ ОПРОС');
+  await env.DB.batch([
+    env.DB.prepare(`DELETE FROM player_poll_votes WHERE poll_id=?`).bind(pollId),
+    env.DB.prepare(`DELETE FROM player_poll_responses WHERE poll_id=?`).bind(pollId),
+    env.DB.prepare(`DELETE FROM player_poll_bot_deliveries WHERE poll_id=?`).bind(pollId),
+    env.DB.prepare(`DELETE FROM player_poll_game_deliveries WHERE poll_id=?`).bind(pollId),
+    env.DB.prepare(`DELETE FROM player_poll_options WHERE poll_id=?`).bind(pollId),
+    env.DB.prepare(`DELETE FROM player_polls WHERE poll_id=?`).bind(pollId)
+  ]);
+  await logStaffAction(env,ctx.user,ctx.access,'owner_panel_poll_delete',null,'poll',null,null,{pollId,question:String(row.question||''),previousStatus:status,responses:Number(row.responses||0),comments:Number(row.comments||0)});
+  return {ok:true,pollId,deleted:true};
+}
+
+async function ownerPanelControl(env, ctx) {
+  await Promise.all([ensureObservabilitySchema(env),ensureStaffOperationsSchema(env),ensureLiveOpsAdminSchema(env)]);
+  await expireAllTemporaryPlayerBans(env).catch(()=>{});
+  if(ctx.body?.refresh){
+    try{await ensureOperationalProblemsFresh(env,{checkWebhook:false});}catch(error){console.error('owner control refresh failed',error);}
+  }
+  const now=Math.floor(Date.now()/1000),day=moscowDayStartUnix(),week=now-7*86400;
+  const [issues,totals,dayRuns,weekRuns,casesDay,grantsDay,physicalPending,topWallet,queue,queueItems,blocked,tickets]=await Promise.all([
+    env.DB.prepare(`SELECT * FROM admin_operational_issues ORDER BY CASE WHEN status='resolved' THEN 2 ELSE 1 END,CASE severity WHEN 'critical' THEN 1 WHEN 'high' THEN 2 WHEN 'warning' THEN 3 ELSE 4 END,updated_at DESC LIMIT 40`).all(),
+    env.DB.prepare(`SELECT COUNT(*) AS players,SUM(wallet) AS wallet,SUM(treats) AS treats,SUM(coffee) AS coffee,SUM(pending_wallet) AS pending_wallet,SUM(pending_treats) AS pending_treats,SUM(pending_coffee) AS pending_coffee FROM admin_profile_state`).first(),
+    env.DB.prepare(`SELECT COUNT(*) AS total,SUM(CASE WHEN accepted=1 THEN 1 ELSE 0 END) AS accepted FROM leaderboard_runs WHERE created_at>=?`).bind(day).first(),
+    env.DB.prepare(`SELECT COUNT(*) AS total,SUM(score) AS score FROM leaderboard_runs WHERE created_at>=? AND accepted=1`).bind(week).first(),
+    env.DB.prepare(`SELECT (SELECT COUNT(*) FROM level_case_openings WHERE opened_at>=?)+(SELECT COUNT(*) FROM granted_cases WHERE opened_at>=?) AS total`).bind(day,day).first(),
+    env.DB.prepare(`SELECT COUNT(*) AS count FROM staff_action_log WHERE action IN ('add_points','add_zefir','add_coffee','add_keys','grant_avatar','grant_frame','grant_trail','grant_skin','owner_panel_grant') AND created_at>=?`).bind(day).first(),
+    env.DB.prepare(`SELECT COUNT(*) AS count FROM reward_codes WHERE status='active' AND expires_at>?`).bind(now).first(),
+    env.DB.prepare(`SELECT p.telegram_id,p.wallet,p.treats,p.coffee,COALESCE(NULLIF(b.display_name,''),NULLIF(b.username,''),p.telegram_id) AS name,b.username FROM admin_profile_state p LEFT JOIN bot_subscribers b ON b.telegram_id=p.telegram_id ORDER BY p.wallet DESC LIMIT 8`).all(),
+    env.DB.prepare(`SELECT SUM(CASE WHEN status='pending' THEN 1 ELSE 0 END) AS pending,SUM(CASE WHEN status='failed' THEN 1 ELSE 0 END) AS failed,SUM(CASE WHEN status='delivered' THEN 1 ELSE 0 END) AS delivered FROM reward_delivery_queue`).first(),
+    env.DB.prepare(`SELECT q.id,q.telegram_id,q.source_type,q.source_id,q.reward_kind,q.reward_id,q.amount,q.reason,q.status,q.attempts,q.last_error,q.created_at,q.updated_at,COALESCE(NULLIF(b.display_name,''),NULLIF(b.username,''),q.telegram_id) AS name,b.username FROM reward_delivery_queue q LEFT JOIN bot_subscribers b ON b.telegram_id=q.telegram_id WHERE q.status IN ('pending','failed','delivering') ORDER BY CASE q.status WHEN 'failed' THEN 0 WHEN 'delivering' THEN 1 ELSE 2 END,q.created_at ASC LIMIT 30`).all(),
+    env.DB.prepare(`SELECT c.telegram_id,c.block_reason,c.block_type,c.blocked_until,c.updated_at,COALESCE(NULLIF(b.display_name,''),NULLIF(b.username,''),c.telegram_id) AS name,b.username FROM player_admin_controls c LEFT JOIN bot_subscribers b ON b.telegram_id=c.telegram_id WHERE c.blocked=1 ORDER BY CASE WHEN c.block_type='permanent' THEN 0 ELSE 1 END,c.updated_at DESC LIMIT 50`).all(),
+    env.DB.prepare(`SELECT id,created_by,created_by_name,player_telegram_id,player_name,category,description,status,assigned_to,assigned_to_name,resolution,created_at,updated_at,closed_at FROM support_tickets ORDER BY CASE status WHEN 'new' THEN 0 WHEN 'working' THEN 1 WHEN 'resolved' THEN 2 ELSE 3 END,updated_at DESC LIMIT 60`).all()
+  ]);
+  return {ok:true,serverTime:new Date(now*1000).toISOString(),issues:(issues.results||[]).map(r=>({id:Number(r.id),title:String(r.title||''),severity:String(r.severity||'warning'),status:String(r.status||'open'),sourceType:String(r.source_type||''),sourceId:String(r.source_id||''),assignedToName:String(r.assigned_to_name||''),firstSeenAt:Number(r.first_seen_at||0),lastSeenAt:Number(r.last_seen_at||0),snoozedUntil:Number(r.snoozed_until||0),details:safeJson(r.details_json,{})})),economy:{players:Number(totals?.players||0),points:Number(totals?.wallet||0),treats:Number(totals?.treats||0),coffee:Number(totals?.coffee||0),pendingPoints:Number(totals?.pending_wallet||0),pendingTreats:Number(totals?.pending_treats||0),pendingCoffee:Number(totals?.pending_coffee||0),runsToday:Number(dayRuns?.total||0),acceptedRunsToday:Number(dayRuns?.accepted||0),runs7d:Number(weekRuns?.total||0),score7d:Number(weekRuns?.score||0),casesToday:Number(casesDay?.total||0),manualGrantsToday:Number(grantsDay?.count||0),activePhysicalCodes:Number(physicalPending?.count||0),queue:{pending:Number(queue?.pending||0),failed:Number(queue?.failed||0),delivered:Number(queue?.delivered||0)},queueItems:(queueItems.results||[]).map(r=>({id:Number(r.id||0),telegramId:String(r.telegram_id||''),name:String(r.name||r.telegram_id||''),username:String(r.username||''),sourceType:String(r.source_type||''),sourceId:String(r.source_id||''),rewardKind:String(r.reward_kind||''),rewardId:String(r.reward_id||''),amount:Number(r.amount||0),reason:String(r.reason||''),status:String(r.status||''),attempts:Number(r.attempts||0),lastError:String(r.last_error||''),createdAt:Number(r.created_at||0),updatedAt:Number(r.updated_at||0),description:safeRewardDescription({kind:r.reward_kind,id:r.reward_id,amount:r.amount})})),topWallet:(topWallet.results||[]).map(r=>({telegramId:String(r.telegram_id),name:String(r.name||r.telegram_id),username:String(r.username||''),points:Number(r.wallet||0),treats:Number(r.treats||0),coffee:Number(r.coffee||0)}))},moderation:{blocked:(blocked.results||[]).map(r=>({telegramId:String(r.telegram_id),name:String(r.name||r.telegram_id),username:String(r.username||''),reason:String(r.block_reason||''),blockType:String(r.block_type||'permanent'),blockedUntil:Number(r.blocked_until||0),updatedAt:Number(r.updated_at||0)}))},tickets:(tickets.results||[]).map(r=>({id:Number(r.id),createdBy:String(r.created_by||''),createdByName:String(r.created_by_name||''),playerTelegramId:String(r.player_telegram_id||''),playerName:String(r.player_name||''),category:String(r.category||''),categoryLabel:String(SUPPORT_TICKET_CATEGORIES[r.category]||r.category||''),description:String(r.description||''),status:String(r.status||'new'),statusLabel:ticketStatusLabel(r.status),assignedTo:String(r.assigned_to||''),assignedToName:String(r.assigned_to_name||''),resolution:String(r.resolution||''),createdAt:Number(r.created_at||0),updatedAt:Number(r.updated_at||0),closedAt:Number(r.closed_at||0)}))};
+}
+
+async function ownerPanelUpdateRewardQueue(env, ctx) {
+  await ensureSafeControlCenterSchema(env);
+  const id=ownerPanelInteger(ctx.body?.id,1,999999999);
+  if(id==null)throw new ApiError(400,'Некорректный ID записи очереди.');
+  const action=String(ctx.body?.action||'');
+  if(!['retry','cancel'].includes(action))throw new ApiError(400,'Некорректное действие очереди.');
+  const row=await env.DB.prepare(`SELECT * FROM reward_delivery_queue WHERE id=? LIMIT 1`).bind(id).first();
+  if(!row)throw new ApiError(404,'Запись очереди не найдена.');
+  const status=String(row.status||'');
+  if(action==='retry'){
+    if(!['failed','delivering','pending'].includes(status))throw new ApiError(409,'Эту награду уже нельзя повторно поставить в очередь.');
+    const now=Math.floor(Date.now()/1000);
+    await env.DB.prepare(`UPDATE reward_delivery_queue SET status='pending',attempts=0,available_at=?,lease_token='',lease_until=0,last_error='',notify_after=?,updated_at=? WHERE id=? AND status IN ('failed','delivering','pending')`).bind(now,now+900,now,id).run();
+    await logStaffAction(env,ctx.user,ctx.access,'owner_panel_reward_queue_retry',String(row.telegram_id||''),'reward_queue',null,null,{queueId:id,rewardKind:String(row.reward_kind||''),rewardId:String(row.reward_id||''),amount:Number(row.amount||0),reason:String(row.reason||''),previousStatus:status});
+    try{await processRewardDeliveryQueue(env,8);}catch(error){console.error('owner queue retry deferred',error);}
+    return {ok:true,id,action};
+  }
+  if(!['pending','failed','delivering'].includes(status))throw new ApiError(409,'Эту награду уже нельзя отменить.');
+  const now=Math.floor(Date.now()/1000);
+  await env.DB.prepare(`UPDATE reward_delivery_queue SET status='cancelled',updated_at=?,lease_token='',lease_until=0 WHERE id=? AND status NOT IN ('delivered','claimed','cancelled')`).bind(now,id).run();
+  await logStaffAction(env,ctx.user,ctx.access,'owner_panel_reward_queue_cancel',String(row.telegram_id||''),'reward_queue',null,null,{queueId:id,rewardKind:String(row.reward_kind||''),rewardId:String(row.reward_id||''),amount:Number(row.amount||0),reason:String(row.reason||''),previousStatus:status});
+  return {ok:true,id,action};
+}
+
+async function ownerPanelUpdateIssue(env, ctx) {
+  await ensureObservabilitySchema(env);
+  const issueId=ownerPanelInteger(ctx.body?.issueId,1,999999999);if(issueId==null)throw new ApiError(400,'Некорректный ID проблемы.');
+  const action=String(ctx.body?.action||'');if(!['ack','assign','snooze','resolve'].includes(action))throw new ApiError(400,'Некорректное действие.');
+  const row=await env.DB.prepare(`SELECT * FROM admin_operational_issues WHERE id=? LIMIT 1`).bind(issueId).first();if(!row)throw new ApiError(404,'Проблема не найдена.');
+  const now=Math.floor(Date.now()/1000),actor=telegramDisplayName(ctx.user);
+  if(action==='ack')await env.DB.prepare(`UPDATE admin_operational_issues SET status='acknowledged',assigned_to=CASE WHEN assigned_to='' THEN ? ELSE assigned_to END,assigned_to_name=CASE WHEN assigned_to_name='' THEN ? ELSE assigned_to_name END,updated_at=? WHERE id=?`).bind(String(ctx.user.id),actor,now,issueId).run();
+  if(action==='assign')await env.DB.prepare(`UPDATE admin_operational_issues SET status=CASE WHEN status='open' THEN 'acknowledged' ELSE status END,assigned_to=?,assigned_to_name=?,updated_at=? WHERE id=?`).bind(String(ctx.user.id),actor,now,issueId).run();
+  if(action==='snooze')await env.DB.prepare(`UPDATE admin_operational_issues SET status='snoozed',snoozed_until=?,assigned_to=?,assigned_to_name=?,updated_at=? WHERE id=?`).bind(now+3600,String(ctx.user.id),actor,now,issueId).run();
+  if(action==='resolve')await env.DB.prepare(`UPDATE admin_operational_issues SET status='resolved',resolved_at=?,resolved_by=?,resolved_by_name=?,snoozed_until=0,updated_at=? WHERE id=?`).bind(now,String(ctx.user.id),actor,now,issueId).run();
+  await logStaffAction(env,ctx.user,ctx.access,`owner_panel_issue_${action}`,null,'operational_issue',Number(row.id),Number(row.id),{issueId,title:String(row.title||''),sourceType:String(row.source_type||''),sourceId:String(row.source_id||'')});
+  return {ok:true,issueId,action};
+}
+
+async function ownerPanelModerationBlock(env, ctx) {
+  await ensureLiveOpsAdminSchema(env);
+  const identity=String(ctx.body?.identity||'').trim();const targetId=await resolvePlayerTelegramId(identity,env)||(/^[0-9]{4,20}$/.test(identity)?identity:'');
+  if(!targetId||!(await playerProfileExists(targetId,env)))throw new ApiError(404,'Игрок не найден.');
+  if(await protectedPlayerControlTarget(targetId,env))throw new ApiError(409,'Владельца и активного сотрудника блокировать нельзя.');
+  if(String(ctx.body?.confirmation||'').trim()!=='ЗАБЛОКИРОВАТЬ И СБРОСИТЬ')throw new ApiError(400,'Введите подтверждение: ЗАБЛОКИРОВАТЬ И СБРОСИТЬ');
+  const reason=String(ctx.body?.reason||'').trim().slice(0,300);if(reason.length<3)throw new ApiError(400,'Укажите причину блокировки.');
+  const durationKey=String(ctx.body?.duration||'permanent');const seconds=({ '1d':86400,'7d':7*86400,'30d':30*86400,permanent:0 })[durationKey];if(seconds===undefined)throw new ApiError(400,'Некорректный срок блокировки.');
+  const now=Math.floor(Date.now()/1000),before=await getPlayerAdminControl(targetId,env);if(before.blocked)throw new ApiError(409,'Игрок уже заблокирован.');
+  const blockType=seconds>0?'temporary':'permanent',blockedUntil=seconds>0?now+seconds:0;
+  const after=await blockPlayerAndWipeProgress(env,{telegramId:targetId,reason,blockType,blockedUntil,actor:ctx.user,before});
+  await writeModerationHistory(env,targetId,'block',after,ctx.user,reason);
+  await logStaffAction(env,ctx.user,ctx.access,'player_block',targetId,'player',0,1,{reason,blockType,blockedUntil,progressReset:true,resetId:after.resetId,resetComponents:after.resetComponents,source:'owner_panel'});
+  await notifyPlayerModeration(env,targetId,`⛔ <b>Доступ к игре ограничен</b>\n\nСрок: <b>${escapeHtml(banDurationLabel(after.blockType,after.blockedUntil))}</b>\nПричина: <b>${escapeHtml(after.blockReason)}</b>\n\nИгровой прогресс и сезонный пропуск обнулены. По вопросам обратитесь в поддержку игры.`);
+  await notifySubscribedStaff(env,'player_blocks',`⛔ <b>Игрок заблокирован и обнулён</b>\n\nИгрок: <code>${escapeHtml(targetId)}</code>\nСрок: ${escapeHtml(banDurationLabel(after.blockType,after.blockedUntil))}\nПричина: ${escapeHtml(after.blockReason)}\nВладелец: ${escapeHtml(telegramDisplayName(ctx.user))}`);
+  return {ok:true,telegramId:targetId,name:await playerDisplayNameById(targetId,env),blockedUntil:after.blockedUntil,blockType:after.blockType,resetId:after.resetId};
+}
+
+async function ownerPanelModerationUnblock(env, ctx) {
+  await ensureLiveOpsAdminSchema(env);
+  const identity=String(ctx.body?.identity||'').trim();const targetId=await resolvePlayerTelegramId(identity,env)||(/^[0-9]{4,20}$/.test(identity)?identity:'');if(!targetId)throw new ApiError(404,'Игрок не найден.');
+  if(String(ctx.body?.confirmation||'').trim()!=='РАЗБЛОКИРОВАТЬ')throw new ApiError(400,'Введите подтверждение: РАЗБЛОКИРОВАТЬ');
+  const before=await getPlayerAdminControl(targetId,env);if(!before.blocked)throw new ApiError(409,'Игрок уже разблокирован.');
+  const now=Math.floor(Date.now()/1000);await savePlayerAdminControl(targetId,{blocked:false,blockReason:'',lastUnblockedAt:now,lastUnblockedBy:telegramDisplayName(ctx.user)},ctx.user.id,env);
+  await writeModerationHistory(env,targetId,'unblock',{blockType:before.blockType,blockReason:before.blockReason,blockedUntil:before.blockedUntil},ctx.user,before.blockReason);
+  await logStaffAction(env,ctx.user,ctx.access,'player_unblock',targetId,'player',1,0,{previousReason:before.blockReason,previousBlockType:before.blockType,previousBlockedUntil:before.blockedUntil,source:'owner_panel'});
+  await notifyPlayerModeration(env,targetId,'✅ <b>Доступ к игре восстановлен</b>\n\nВы снова можете пользоваться игрой и участвовать в рейтинге.');
+  return {ok:true,telegramId:targetId,name:await playerDisplayNameById(targetId,env)};
+}
+
+async function ownerPanelTicketUpdate(env, ctx) {
+  await ensureStaffOperationsSchema(env);
+  const ticketId=ownerPanelInteger(ctx.body?.ticketId,1,999999999);if(ticketId==null)throw new ApiError(400,'Некорректный номер обращения.');
+  const status=String(ctx.body?.status||'');if(!['new','working','resolved','rejected'].includes(status))throw new ApiError(400,'Некорректный статус обращения.');
+  const row=await env.DB.prepare(`SELECT * FROM support_tickets WHERE id=? LIMIT 1`).bind(ticketId).first();if(!row)throw new ApiError(404,'Обращение не найдено.');
+  const resolution=String(ctx.body?.resolution||'').trim().slice(0,1500),now=Math.floor(Date.now()/1000),actor=telegramDisplayName(ctx.user);
+  const assignee=status==='new'?'':String(ctx.user.id),assigneeName=status==='new'?'':actor,closed=['resolved','rejected'].includes(status)?now:0;
+  await env.DB.prepare(`UPDATE support_tickets SET status=?,assigned_to=?,assigned_to_name=?,resolution=?,updated_at=?,closed_at=? WHERE id=?`).bind(status,assignee,assigneeName,resolution,now,closed,ticketId).run();
+  await logStaffAction(env,ctx.user,ctx.access,'ticket_status',String(row.player_telegram_id||''),'ticket',null,ticketId,{ticketId,oldStatus:String(row.status),newStatus:status,resolution,source:'owner_panel'});
+  if(String(row.created_by||'')&&String(row.created_by)!==String(ctx.user.id)){try{await sendTelegramMessage(env,String(row.created_by),`<b>Обращение #${ticketId} обновлено</b>\n\nСтатус: <b>${escapeHtml(ticketStatusLabel(status))}</b>\nОтветственный: <b>${escapeHtml(actor)}</b>${resolution?`\n\n${escapeHtml(resolution)}`:''}`);}catch(error){console.error('owner ticket notification failed',error);}}
+  return {ok:true,ticketId,status};
+}
+
+// ================= /OWNER CONTROL CENTER =================
