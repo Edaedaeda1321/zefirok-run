@@ -335,7 +335,7 @@ const STAFF_SESSION_TTL_SECONDS = 12 * 60 * 60;
 const SUPPORT_USERNAME = "ve4n0_em";
 const SUPPORT_URL = `https://t.me/${SUPPORT_USERNAME}`;
 const DEFAULT_GAME_URL = "https://zefirok-run.patokad6.workers.dev/";
-const WORKER_BUILD = "1.0.0 + owner control center v7 + client cleanup + clean player navigation";
+const WORKER_BUILD = "1.0.0 + owner control center v8 + safe liveops web";
 const V07944_RELEASE_CANDIDATE_AUDIT = Object.freeze({ reset: true, claims: true, purchases: true, xp: true, concurrency: true });
 
 // =============================================================
@@ -12520,6 +12520,27 @@ async function ensureLiveOpsAdminSchema(env) {
         env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_fraud_alerts_status_severity ON fraud_alerts(status, severity, created_at DESC)`),
         env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_liveops_config_history_recent ON liveops_config_history(created_at DESC, id DESC)`)
       ]);
+      const campaignInfo = await env.DB.prepare(`PRAGMA table_info(admin_campaigns)`).all();
+      const campaignColumns = new Set((campaignInfo.results || []).map((column) => String(column.name || '')));
+      const campaignUpgrades = [
+        ['scheduled_at', `INTEGER NOT NULL DEFAULT 0`],
+        ['image_url', `TEXT NOT NULL DEFAULT ''`],
+        ['button_text', `TEXT NOT NULL DEFAULT ''`],
+        ['button_url', `TEXT NOT NULL DEFAULT ''`]
+      ];
+      for (const [column, definition] of campaignUpgrades) {
+        if (!campaignColumns.has(column)) await env.DB.prepare(`ALTER TABLE admin_campaigns ADD COLUMN ${column} ${definition}`).run();
+      }
+      const recipientInfo = await env.DB.prepare(`PRAGMA table_info(admin_campaign_recipients)`).all();
+      const recipientColumns = new Set((recipientInfo.results || []).map((column) => String(column.name || '')));
+      if (!recipientColumns.has('delivered_at')) {
+        await env.DB.prepare(`ALTER TABLE admin_campaign_recipients ADD COLUMN delivered_at INTEGER NOT NULL DEFAULT 0`).run();
+        await env.DB.prepare(`UPDATE admin_campaign_recipients SET delivered_at=processed_at WHERE status='processed' AND processed_at>0`).run();
+      }
+      if (!recipientColumns.has('delivery_error')) {
+        await env.DB.prepare(`ALTER TABLE admin_campaign_recipients ADD COLUMN delivery_error TEXT NOT NULL DEFAULT ''`).run();
+        await env.DB.prepare(`UPDATE admin_campaign_recipients SET delivery_error=error_text WHERE status='failed' AND error_text<>''`).run();
+      }
       const now = Math.floor(Date.now() / 1000);
       const contentStatements = [];
       for (const [kind, catalog] of Object.entries({ avatar: CASE_AVATARS, frame: CASE_FRAMES, trail: CASE_TRAILS, skin: CASE_SKINS })) {
@@ -13128,11 +13149,19 @@ async function showEconomyDashboard(chatId, user, env) {
 
 const PLAYER_SEGMENTS = Object.freeze({
   new_today: "Новые сегодня",
+  active_today: "Активны сегодня",
+  returning_today: "Вернулись сегодня",
+  active_7d: "Активны 7 дней",
   inactive_7d: "Неактивны 7 дней",
   top_10: "Топ-10 рейтинга",
+  elite: "Elite",
+  elite_plus: "Elite+",
+  no_purchases: "Без покупок",
+  high_play_no_purchase: "Много играют без покупок",
+  promo_redeemers: "Использовали промокод",
+  pass_complete: "Завершили пропуск",
   legendary_openers: "Открывали Легендарный кейс",
   physical_winners: "Получали физическую награду",
-  no_purchases: "Без покупок",
   banned: "Заблокированные"
 });
 
@@ -13143,11 +13172,19 @@ async function segmentPlayerIds(env, key, limit = 10000) {
   let sql = "";
   let binds = [];
   if (key === "new_today") { sql = `SELECT telegram_id FROM admin_profile_state WHERE created_at >= ? ORDER BY created_at DESC LIMIT ?`; binds = [day, max]; }
+  else if (key === "active_today") { sql = `SELECT telegram_id,MAX(created_at) AS last_at FROM leaderboard_runs WHERE accepted=1 AND created_at>=? GROUP BY telegram_id ORDER BY last_at DESC LIMIT ?`; binds = [day, max]; }
+  else if (key === "returning_today") { sql = `SELECT DISTINCT r.telegram_id FROM leaderboard_runs r JOIN admin_profile_state p ON p.telegram_id=r.telegram_id WHERE r.accepted=1 AND r.created_at>=? AND p.created_at<? ORDER BY r.created_at DESC LIMIT ?`; binds = [day, day, max]; }
+  else if (key === "active_7d") { sql = `SELECT telegram_id,MAX(created_at) AS last_at FROM leaderboard_runs WHERE accepted=1 AND created_at>=? GROUP BY telegram_id ORDER BY last_at DESC LIMIT ?`; binds = [now - 7 * 86400, max]; }
   else if (key === "inactive_7d") { sql = `SELECT telegram_id FROM admin_profile_state WHERE updated_at <= ? ORDER BY updated_at ASC LIMIT ?`; binds = [now - 7 * 86400, max]; }
   else if (key === "top_10") { sql = `SELECT telegram_id FROM leaderboard_all_time WHERE hidden = 0 ORDER BY best_score DESC, achieved_at ASC LIMIT 10`; }
+  else if (key === "elite") { sql = `SELECT telegram_id FROM season_pass_players WHERE premium_tier='elite' AND season_id=(SELECT season_id FROM season_pass_seasons WHERE starts_at<=? AND ends_at>? ORDER BY starts_at DESC LIMIT 1) ORDER BY updated_at DESC LIMIT ?`; binds = [now, now, max]; }
+  else if (key === "elite_plus") { sql = `SELECT telegram_id FROM season_pass_players WHERE premium_tier='elite_plus' AND season_id=(SELECT season_id FROM season_pass_seasons WHERE starts_at<=? AND ends_at>? ORDER BY starts_at DESC LIMIT 1) ORDER BY updated_at DESC LIMIT ?`; binds = [now, now, max]; }
   else if (key === "legendary_openers") { sql = `SELECT DISTINCT telegram_id FROM granted_cases WHERE case_type = 'legendary' AND status = 'opened' ORDER BY opened_at DESC LIMIT ?`; binds = [max]; }
   else if (key === "physical_winners") { sql = `SELECT DISTINCT owner_telegram_id AS telegram_id FROM reward_codes WHERE owner_telegram_id <> '' ORDER BY created_at DESC LIMIT ?`; binds = [max]; }
   else if (key === "no_purchases") { sql = `SELECT p.telegram_id FROM admin_profile_state p WHERE NOT EXISTS (SELECT 1 FROM granted_cases g WHERE g.telegram_id = p.telegram_id AND g.granted_by = 'shop') AND NOT EXISTS (SELECT 1 FROM shop_stock_consumptions s WHERE s.telegram_id = p.telegram_id AND s.category = 'skins') ORDER BY p.created_at DESC LIMIT ?`; binds = [max]; }
+  else if (key === "high_play_no_purchase") { sql = `SELECT r.telegram_id FROM leaderboard_runs r WHERE r.accepted=1 AND r.created_at>=? AND NOT EXISTS (SELECT 1 FROM granted_cases g WHERE g.telegram_id=r.telegram_id AND g.granted_by='shop') AND NOT EXISTS (SELECT 1 FROM shop_stock_consumptions s WHERE s.telegram_id=r.telegram_id AND s.category='skins') GROUP BY r.telegram_id HAVING COUNT(*)>=10 ORDER BY COUNT(*) DESC LIMIT ?`; binds = [now - 7 * 86400, max]; }
+  else if (key === "promo_redeemers") { sql = `SELECT telegram_id,MAX(created_at) AS last_at FROM promo_redemptions WHERE status IN ('queued','delivered') GROUP BY telegram_id ORDER BY last_at DESC LIMIT ?`; binds = [max]; }
+  else if (key === "pass_complete") { sql = `SELECT telegram_id FROM season_pass_players WHERE xp>=? ORDER BY updated_at DESC LIMIT ?`; binds = [seasonPassXpForLevel(50), max]; }
   else if (key === "banned") { sql = `SELECT telegram_id FROM player_admin_controls WHERE blocked = 1 ORDER BY updated_at DESC LIMIT ?`; binds = [max]; }
   else return [];
   let statement = env.DB.prepare(sql);
@@ -13298,38 +13335,77 @@ async function createCampaignFromWorkflow(query, env) {
   await sendTelegramMessage(env, chatId, `<b>📣 Кампания создана</b>\n\nID: <code>${escapeHtml(campaignId)}</code>\nПолучателей: <b>${ids.length.toLocaleString("ru-RU")}</b>\nСтатус: ожидает Cron.`, { inline_keyboard: [[{ text: "📋 Кампании", callback_data: "adm_campaigns" }, { text: "⬅️ Админ-панель", callback_data: "adm_home" }]] });
 }
 
+function campaignAbsoluteUrl(env, rawValue = "") {
+  const value = String(rawValue || "").trim();
+  if (!value) return "";
+  try {
+    if (/^https:\/\//i.test(value)) return new URL(value).toString();
+    const base = new URL(configuredGameUrl(env));
+    return new URL(value.startsWith("/") ? value : `/${value}`, base).toString();
+  } catch {
+    return "";
+  }
+}
+
 async function processCampaignRecipient(env, campaign, telegramId) {
   const amount = Math.max(1, Math.floor(Number(campaign.amount || 1)));
-  if (["points", "zefir", "coffee"].includes(campaign.reward_kind)) {
-    const field = ({ points: "pending_wallet", zefir: "pending_treats", coffee: "pending_coffee" })[campaign.reward_kind];
+  const rewardKind = String(campaign.reward_kind || "none");
+  if (["points", "zefir", "coffee"].includes(rewardKind)) {
+    const field = ({ points: "pending_wallet", zefir: "pending_treats", coffee: "pending_coffee" })[rewardKind];
     const result = await env.DB.prepare(`UPDATE admin_profile_state SET ${field} = ${field} + ?, revision = revision + 1, updated_at = ?, updated_by = ? WHERE telegram_id = ?`)
       .bind(amount, Math.floor(Date.now() / 1000), `campaign:${campaign.campaign_id}`, telegramId).run();
-    if (Number(result.meta?.changes || 0) < 1) throw new Error("Профиль игрока не найден");
-  } else if (campaign.reward_kind === "case") {
+    if (Number(result.meta?.changes || 0) < 1) throw new Error("\u041f\u0440\u043e\u0444\u0438\u043b\u044c \u0438\u0433\u0440\u043e\u043a\u0430 \u043d\u0435 \u043d\u0430\u0439\u0434\u0435\u043d");
+  } else if (rewardKind === "case") {
     await createGrantedCases(env, telegramId, campaign.reward_id, amount, `campaign:${campaign.campaign_id}`, campaign.reason);
-  } else throw new Error("Неизвестный тип награды");
+  } else if (rewardKind !== "none") {
+    throw new Error("\u041d\u0435\u0438\u0437\u0432\u0435\u0441\u0442\u043d\u044b\u0439 \u0442\u0438\u043f \u043d\u0430\u0433\u0440\u0430\u0434\u044b");
+  }
+
   try {
     const subscriber = await env.DB.prepare(`SELECT chat_id FROM bot_subscribers WHERE telegram_id = ? AND active = 1 LIMIT 1`).bind(telegramId).first();
-    if (subscriber?.chat_id) await sendTelegramMessage(env, subscriber.chat_id, `<b>🎁 Вам выдана награда</b>\n\n${escapeHtml(campaignRewardTitle(campaign.reward_kind, campaign.reward_id, amount))}\nПричина: ${escapeHtml(campaign.reason)}\n\nНаграда появится после следующей синхронизации игры.`);
-  } catch {}
+    if (!subscriber?.chat_id) return { delivered:false, error:"\u0410\u043a\u0442\u0438\u0432\u043d\u044b\u0439 Telegram-\u0447\u0430\u0442 \u043d\u0435 \u043d\u0430\u0439\u0434\u0435\u043d" };
+    const custom = String(campaign.message_text || "").trim();
+    const rewardLine = rewardKind === "none" ? "" : `\n\n\ud83c\udf81 <b>\u041d\u0430\u0433\u0440\u0430\u0434\u0430:</b> ${escapeHtml(campaignRewardTitle(rewardKind, campaign.reward_id, amount))}`;
+    const reasonLine = rewardKind === "none" || !String(campaign.reason || "").trim() ? "" : `\n${escapeHtml(String(campaign.reason))}`;
+    const text = custom ? `${escapeHtml(custom)}${rewardLine}${reasonLine}` : rewardKind === "none" ? `<b>${escapeHtml(campaign.title || "\u0421\u043e\u043e\u0431\u0449\u0435\u043d\u0438\u0435 \u043e\u0442 \u0421\u043b\u0430\u0434\u043a\u043e\u0433\u043e \u0417\u0430\u0431\u0435\u0433\u0430")}</b>` : `<b>\ud83c\udf81 \u0412\u0430\u043c \u0432\u044b\u0434\u0430\u043d\u0430 \u043d\u0430\u0433\u0440\u0430\u0434\u0430</b>${rewardLine}${reasonLine}\n\n\u041d\u0430\u0433\u0440\u0430\u0434\u0430 \u043f\u043e\u044f\u0432\u0438\u0442\u0441\u044f \u043f\u043e\u0441\u043b\u0435 \u0441\u043b\u0435\u0434\u0443\u044e\u0449\u0435\u0439 \u0441\u0438\u043d\u0445\u0440\u043e\u043d\u0438\u0437\u0430\u0446\u0438\u0438 \u0438\u0433\u0440\u044b.`;
+    const buttonText = String(campaign.button_text || "").trim().slice(0, 60);
+    const buttonUrl = campaignAbsoluteUrl(env, campaign.button_url || "");
+    const replyMarkup = buttonText && buttonUrl ? { inline_keyboard: [[{ text: buttonText, url: buttonUrl }]] } : null;
+    const imageUrl = campaignAbsoluteUrl(env, campaign.image_url || "");
+    if (imageUrl) {
+      try {
+        await telegramApi(env, "sendPhoto", { chat_id:subscriber.chat_id, photo:imageUrl, caption:text.slice(0,1000), parse_mode:"HTML", ...(replyMarkup ? { reply_markup:replyMarkup } : {}) });
+        return { delivered:true, error:"" };
+      } catch (error) {
+        console.warn("Campaign photo fallback", String(error?.message || error));
+      }
+    }
+    await sendTelegramMessage(env, subscriber.chat_id, text, replyMarkup);
+    return { delivered:true, error:"" };
+  } catch (error) {
+    console.warn("Campaign notification failed", String(error?.message || error));
+    return { delivered:false, error:String(error?.message || error).slice(0,500) };
+  }
 }
 
 async function processPendingAdminCampaign(env) {
   await ensureLiveOpsAdminSchema(env);
   const now = Math.floor(Date.now() / 1000);
-  const job = await env.DB.prepare(`SELECT * FROM admin_campaigns WHERE status IN ('pending','running') AND (lease_until = 0 OR lease_until < ?) ORDER BY created_at ASC LIMIT 1`).bind(now).first();
+  const job = await env.DB.prepare(`SELECT * FROM admin_campaigns WHERE status IN ('pending','running') AND COALESCE(scheduled_at,0) <= ? AND (lease_until = 0 OR lease_until < ?) ORDER BY CASE WHEN COALESCE(scheduled_at,0)=0 THEN created_at ELSE scheduled_at END ASC, created_at ASC LIMIT 1`).bind(now,now).first();
   if (!job) return { processed: false };
   const leaseToken = caseGrantId("campaign_lock");
-  const lease = await env.DB.prepare(`UPDATE admin_campaigns SET status = 'running', lease_token = ?, lease_until = ?, started_at = CASE WHEN started_at = 0 THEN ? ELSE started_at END, updated_at = ? WHERE campaign_id = ? AND status IN ('pending','running') AND (lease_until = 0 OR lease_until < ?)`)
-    .bind(leaseToken, now + LIVEOPS_CAMPAIGN_LEASE_SECONDS, now, now, job.campaign_id, now).run();
+  const lease = await env.DB.prepare(`UPDATE admin_campaigns SET status = 'running', lease_token = ?, lease_until = ?, started_at = CASE WHEN started_at = 0 THEN ? ELSE started_at END, updated_at = ? WHERE campaign_id = ? AND status IN ('pending','running') AND COALESCE(scheduled_at,0) <= ? AND (lease_until = 0 OR lease_until < ?)`)
+    .bind(leaseToken, now + LIVEOPS_CAMPAIGN_LEASE_SECONDS, now, now, job.campaign_id, now, now).run();
   if (Number(lease.meta?.changes || 0) < 1) return { processed: false };
   const recipients = await env.DB.prepare(`SELECT telegram_id FROM admin_campaign_recipients WHERE campaign_id = ? AND status = 'pending' ORDER BY telegram_id LIMIT ?`).bind(job.campaign_id, LIVEOPS_CAMPAIGN_BATCH_SIZE).all();
   for (const row of recipients.results || []) {
     try {
-      await processCampaignRecipient(env, job, String(row.telegram_id));
-      await env.DB.prepare(`UPDATE admin_campaign_recipients SET status = 'processed', processed_at = ? WHERE campaign_id = ? AND telegram_id = ?`).bind(Math.floor(Date.now() / 1000), job.campaign_id, row.telegram_id).run();
+      const delivery = await processCampaignRecipient(env, job, String(row.telegram_id));
+      const processedAt = Math.floor(Date.now() / 1000);
+      await env.DB.prepare(`UPDATE admin_campaign_recipients SET status='processed',processed_at=?,delivered_at=?,delivery_error=? WHERE campaign_id=? AND telegram_id=?`).bind(processedAt,delivery?.delivered?processedAt:0,String(delivery?.error||''),job.campaign_id,row.telegram_id).run();
     } catch (error) {
-      await env.DB.prepare(`UPDATE admin_campaign_recipients SET status = 'failed', error_text = ?, processed_at = ? WHERE campaign_id = ? AND telegram_id = ?`).bind(String(error?.message || error).slice(0, 500), Math.floor(Date.now() / 1000), job.campaign_id, row.telegram_id).run();
+      const message = String(error?.message || error).slice(0, 500);
+      await env.DB.prepare(`UPDATE admin_campaign_recipients SET status='failed',error_text=?,processed_at=?,delivered_at=0,delivery_error=? WHERE campaign_id=? AND telegram_id=?`).bind(message,Math.floor(Date.now()/1000),message,job.campaign_id,row.telegram_id).run();
     }
   }
   const counts = await env.DB.prepare(`SELECT SUM(CASE WHEN status = 'processed' THEN 1 ELSE 0 END) AS processed, SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) AS failed, SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) AS pending FROM admin_campaign_recipients WHERE campaign_id = ?`).bind(job.campaign_id).first();
@@ -19769,7 +19845,7 @@ function emptySimulationCaseState() {
 }
 
 async function runCaseSimulation(env, caseType, sampleCount) {
-  const liveops=await readLiveOpsConfig(env);const samples=Math.max(100,Math.min(10000,Math.floor(Number(sampleCount)||1000)));
+  const liveops=await readLiveOpsConfig(env);const samples=Math.max(100,Math.min(100000,Math.floor(Number(sampleCount)||1000)));
   const players=Array.from({length:100},()=>emptySimulationCaseState());
   const categoryCounts={};const rarityCounts={};let physical=0,duplicates=0,guaranteed=0,totalRewards=0,totalPoints=0,totalTreats=0,totalCoffee=0;
   for(let i=0;i<samples;i+=1){
@@ -22794,6 +22870,366 @@ function ownerPanelApiError(error, label = "owner panel") {
   return jsonResponse({ ok: false, error: "Не удалось выполнить действие панели владельца." }, 500);
 }
 
+// ======================= CONTROL CENTER v8 · OWNER WEB =======================
+function ownerV8SafeJson(value, fallback = {}) {
+  try { return value && typeof value === "object" ? value : JSON.parse(String(value || "")); } catch { return fallback; }
+}
+
+function ownerV8AssetPath(value = "") {
+  const text = String(value || "").trim().slice(0, 500);
+  if (!text) return "";
+  if (/^\/assets\/[A-Za-z0-9_./%()@+\-]+$/.test(text)) return text;
+  if (/^https:\/\//i.test(text)) {
+    try { return new URL(text).toString(); } catch { return ""; }
+  }
+  return "";
+}
+
+async function ownerPanelV8Analytics(env, ctx) {
+  await Promise.all([ensureOperationsSecuritySchema(env), ensureV67Schema(env), ensureLiveOpsAdminSchema(env), ensureSeasonPassSchema(env)]);
+  const now = Math.floor(Date.now() / 1000);
+  const day = moscowDayStartUnix();
+  const week = now - 7 * 86400;
+  const month = now - 30 * 86400;
+  const [
+    dau, newPlayers, returning, runs, avgRecord, cases, shopPurchases, rewards, promos, pass, rating,
+    economy, physical, hourlyResult, contentResult, d1, d3, d7
+  ] = await Promise.all([
+    env.DB.prepare(`SELECT COUNT(DISTINCT telegram_id) AS count FROM leaderboard_runs WHERE accepted=1 AND created_at>=?`).bind(day).first(),
+    env.DB.prepare(`SELECT COUNT(*) AS count FROM admin_profile_state WHERE created_at>=?`).bind(day).first(),
+    env.DB.prepare(`SELECT COUNT(DISTINCT r.telegram_id) AS count FROM leaderboard_runs r JOIN admin_profile_state p ON p.telegram_id=r.telegram_id WHERE r.accepted=1 AND r.created_at>=? AND p.created_at<?`).bind(day, day).first(),
+    env.DB.prepare(`SELECT COUNT(*) AS total,SUM(CASE WHEN accepted=1 THEN 1 ELSE 0 END) AS accepted,SUM(CASE WHEN accepted=0 THEN 1 ELSE 0 END) AS rejected FROM leaderboard_runs WHERE created_at>=?`).bind(day).first(),
+    env.DB.prepare(`SELECT AVG(a.best_score) AS value FROM leaderboard_all_time a WHERE EXISTS(SELECT 1 FROM leaderboard_runs r WHERE r.telegram_id=a.telegram_id AND r.accepted=1 AND r.created_at>=?)`).bind(day).first(),
+    env.DB.prepare(`SELECT (SELECT COUNT(*) FROM level_case_openings WHERE opened_at>=?) + (SELECT COUNT(*) FROM granted_cases WHERE opened_at>=?) AS count`).bind(day, day).first(),
+    env.DB.prepare(`SELECT (SELECT COUNT(*) FROM shop_stock_consumptions WHERE category='skins' AND created_at>=?) + (SELECT COUNT(*) FROM granted_cases WHERE granted_by='shop' AND created_at>=?) + (SELECT COUNT(*) FROM reward_codes WHERE created_at>=? AND request_id NOT LIKE 'case_reward_%') AS count`).bind(day, day, day).first(),
+    env.DB.prepare(`SELECT COUNT(*) AS delivered FROM reward_delivery_queue WHERE status IN ('delivered','claimed') AND delivered_at>=?`).bind(day).first(),
+    env.DB.prepare(`SELECT COUNT(*) AS count FROM promo_redemptions WHERE created_at>=?`).bind(day).first(),
+    env.DB.prepare(`SELECT COUNT(DISTINCT telegram_id) AS players,COUNT(*) AS runs FROM season_pass_activity_runs WHERE created_at>=?`).bind(day).first(),
+    env.DB.prepare(`SELECT COUNT(DISTINCT telegram_id) AS players,COUNT(*) AS runs FROM leaderboard_runs WHERE accepted=1 AND created_at>=?`).bind(day).first(),
+    env.DB.prepare(`SELECT COUNT(*) AS players,COALESCE(SUM(wallet),0) AS points,COALESCE(SUM(treats),0) AS treats,COALESCE(SUM(coffee),0) AS coffee FROM admin_profile_state`).first(),
+    env.DB.prepare(`SELECT SUM(CASE WHEN created_at>=? THEN 1 ELSE 0 END) AS created,SUM(CASE WHEN redeemed_at>=? THEN 1 ELSE 0 END) AS redeemed FROM reward_codes WHERE created_at>=? OR redeemed_at>=?`).bind(day,day,day,day).first(),
+    env.DB.prepare(`SELECT bucket_at,active_players,new_players,runs_total,runs_accepted,cases_opened,shop_operations,rewards_delivered,rewards_failed,cron_failures,cron_duration_ms FROM server_analytics_hourly WHERE bucket_at>=? ORDER BY bucket_at ASC LIMIT 48`).bind(now - 48 * 3600).all(),
+    env.DB.prepare(`SELECT item_kind,item_id,SUM(CASE WHEN event_type='acquired' THEN 1 ELSE 0 END) AS acquired,SUM(CASE WHEN event_type='equipped' THEN 1 ELSE 0 END) AS equipped,SUM(CASE WHEN event_type='duplicate' THEN 1 ELSE 0 END) AS duplicates,COUNT(*) AS events FROM content_analytics_events WHERE created_at>=? GROUP BY item_kind,item_id ORDER BY events DESC LIMIT 12`).bind(month).all(),
+    v67RetentionCohort(env, 1), v67RetentionCohort(env, 3), v67RetentionCohort(env, 7)
+  ]);
+  const weekRun = await env.DB.prepare(`SELECT COUNT(*) AS total,COUNT(DISTINCT telegram_id) AS players,COALESCE(AVG(score),0) AS avg_score FROM leaderboard_runs WHERE accepted=1 AND created_at>=?`).bind(week).first();
+  return {
+    ok: true,
+    generatedAt: now,
+    summary: {
+      dau: Number(dau?.count || 0), newPlayers: Number(newPlayers?.count || 0), returningPlayers: Number(returning?.count || 0),
+      runs: Number(runs?.total || 0), acceptedRuns: Number(runs?.accepted || 0), rejectedRuns: Number(runs?.rejected || 0),
+      averageRecord: Math.round(Number(avgRecord?.value || 0)), casesOpened: Number(cases?.count || 0), purchases: Number(shopPurchases?.count || 0),
+      rewardsDelivered: Number(rewards?.delivered || 0), promoUses: Number(promos?.count || 0), passPlayers: Number(pass?.players || 0),
+      ratingPlayers: Number(rating?.players || 0), physicalCreated: Number(physical?.created || 0), physicalRedeemed: Number(physical?.redeemed || 0)
+    },
+    retention: [d1, d3, d7].map((x) => ({ days: x.days, cohort: x.cohort, retained: x.retained, percent: x.cohort ? x.retained * 100 / x.cohort : 0 })),
+    economy: { players: Number(economy?.players || 0), points: Number(economy?.points || 0), treats: Number(economy?.treats || 0), coffee: Number(economy?.coffee || 0) },
+    sevenDays: { runs: Number(weekRun?.total || 0), activePlayers: Number(weekRun?.players || 0), averageScore: Math.round(Number(weekRun?.avg_score || 0)) },
+    hourly: (hourlyResult.results || []).map((r) => ({ at:Number(r.bucket_at||0), active:Number(r.active_players||0), newPlayers:Number(r.new_players||0), runs:Number(r.runs_total||0), accepted:Number(r.runs_accepted||0), cases:Number(r.cases_opened||0), shop:Number(r.shop_operations||0), rewards:Number(r.rewards_delivered||0), rewardErrors:Number(r.rewards_failed||0), cronFailures:Number(r.cron_failures||0), cronDuration:Number(r.cron_duration_ms||0) })),
+    content: (contentResult.results || []).map((r) => ({ kind:String(r.item_kind||""), id:String(r.item_id||""), acquired:Number(r.acquired||0), equipped:Number(r.equipped||0), duplicates:Number(r.duplicates||0), events:Number(r.events||0) }))
+  };
+}
+
+async function ownerPanelV8Segments(env, ctx) {
+  await Promise.all([ensureOperationsSecuritySchema(env), ensureSeasonPassSchema(env)]);
+  const requested = String(ctx.body?.segmentKey || "").trim();
+  const keys = Object.keys(PLAYER_SEGMENTS);
+  const rows = [];
+  for (const key of keys) {
+    const ids = await segmentPlayerIds(env, key, 10000);
+    rows.push({ key, title: PLAYER_SEGMENTS[key], count: ids.length });
+  }
+  let players = [];
+  if (requested && PLAYER_SEGMENTS[requested]) {
+    const ids = await segmentPlayerIds(env, requested, 10000);
+    const previewIds = ids.slice(0, 80);
+    if (previewIds.length) {
+      const q = previewIds.map(() => "?").join(",");
+      const result = await env.DB.prepare(`SELECT p.telegram_id,COALESCE(NULLIF(b.display_name,''),NULLIF(a.display_name,''),p.telegram_id) AS display_name,COALESCE(b.username,a.username,'') AS username,COALESCE(a.photo_url,'') AS photo_url,COALESCE(a.best_score,p.best_score,0) AS best_score,p.wallet,p.treats,p.coffee,p.created_at,p.updated_at FROM admin_profile_state p LEFT JOIN bot_subscribers b ON b.telegram_id=p.telegram_id LEFT JOIN leaderboard_all_time a ON a.telegram_id=p.telegram_id WHERE p.telegram_id IN (${q}) ORDER BY COALESCE(a.best_score,p.best_score,0) DESC,p.updated_at DESC`).bind(...previewIds).all();
+      players = (result.results || []).map((r) => ({ telegramId:String(r.telegram_id), name:String(r.display_name||r.telegram_id), username:String(r.username||""), photoUrl:String(r.photo_url||""), bestScore:Number(r.best_score||0), wallet:Number(r.wallet||0), treats:Number(r.treats||0), coffee:Number(r.coffee||0), createdAt:Number(r.created_at||0), updatedAt:Number(r.updated_at||0) }));
+    }
+    return { ok:true, segments:rows, selected:{ key:requested, title:PLAYER_SEGMENTS[requested], count:ids.length, players } };
+  }
+  return { ok:true, segments:rows, selected:null };
+}
+
+async function ownerPanelV8Campaigns(env, ctx) {
+  await Promise.all([ensureLiveOpsAdminSchema(env), ensureOperationsSecuritySchema(env)]);
+  const result = await env.DB.prepare(`SELECT c.*,
+    SUM(CASE WHEN COALESCE(r.delivered_at,0)>0 THEN 1 ELSE 0 END) AS delivered_count,
+    SUM(CASE WHEN r.status='failed' OR COALESCE(r.delivery_error,'')<>'' THEN 1 ELSE 0 END) AS recipient_errors,
+    SUM(CASE WHEN COALESCE(r.delivered_at,0)>0 AND (COALESCE(b.last_started_at,0)>r.delivered_at OR EXISTS(SELECT 1 FROM leaderboard_runs lr WHERE lr.telegram_id=r.telegram_id AND lr.accepted=1 AND lr.created_at>r.delivered_at)) THEN 1 ELSE 0 END) AS opened_count
+    FROM admin_campaigns c LEFT JOIN admin_campaign_recipients r ON r.campaign_id=c.campaign_id LEFT JOIN bot_subscribers b ON b.telegram_id=r.telegram_id
+    GROUP BY c.campaign_id ORDER BY c.created_at DESC LIMIT 40`).all();
+  return { ok:true, segments:Object.entries(PLAYER_SEGMENTS).map(([key,title])=>({key,title})), campaigns:(result.results||[]).map((r)=>({
+    id:String(r.campaign_id), title:String(r.title||""), segmentKey:String(r.segment_key||""), segmentTitle:PLAYER_SEGMENTS[String(r.segment_key)]||String(r.segment_key||""), rewardKind:String(r.reward_kind||"none"), rewardId:String(r.reward_id||""), amount:Number(r.amount||1), reason:String(r.reason||""), message:String(r.message_text||""), imageUrl:String(r.image_url||""), buttonText:String(r.button_text||""), buttonUrl:String(r.button_url||""), status:String(r.status||""), total:Number(r.total_count||0), delivered:Number(r.delivered_count||r.processed_count||0), failed:Number(r.recipient_errors||r.failed_count||0), opened:Number(r.opened_count||0), scheduledAt:Number(r.scheduled_at||0), createdAt:Number(r.created_at||0), completedAt:Number(r.completed_at||0)
+  })) };
+}
+
+async function ownerPanelV8CreateCampaign(env, ctx) {
+  await Promise.all([ensureLiveOpsAdminSchema(env), ensureOperationsSecuritySchema(env)]);
+  const segmentKey = String(ctx.body?.segmentKey || "").trim();
+  if (!PLAYER_SEGMENTS[segmentKey]) throw new ApiError(400, "Неизвестный сегмент игроков.");
+  const title = String(ctx.body?.title || "").trim().replace(/\s+/g," ").slice(0,120);
+  const message = String(ctx.body?.message || "").trim().slice(0,3500);
+  if (title.length < 3) throw new ApiError(400, "Укажите название кампании.");
+  if (!message) throw new ApiError(400, "Сообщение кампании не может быть пустым.");
+  const rewardKind = String(ctx.body?.rewardKind || "none").trim();
+  if (!["none","points","zefir","coffee","case"].includes(rewardKind)) throw new ApiError(400, "Неизвестный тип награды.");
+  let rewardId = "";
+  let amount = 1;
+  if (rewardKind === "case") {
+    rewardId = normalizeCaseType(ctx.body?.rewardId || "small");
+    if (!rewardId) throw new ApiError(400, "Неизвестный кейс.");
+    amount = ownerPanelInteger(ctx.body?.amount,1,10) || 1;
+  } else if (rewardKind !== "none") {
+    amount = ownerPanelInteger(ctx.body?.amount,1,rewardKind === "points" ? 1000000 : 5000) || 1;
+  }
+  const reason = String(ctx.body?.reason || title).trim().slice(0,300) || title;
+  const scheduledAt = Math.max(0, Math.floor(Number(ctx.body?.scheduledAt || 0)));
+  const now = Math.floor(Date.now()/1000);
+  if (scheduledAt && scheduledAt > now + 180*86400) throw new ApiError(400, "Кампанию нельзя планировать дальше чем на 180 дней.");
+  const imageUrl = ownerV8AssetPath(ctx.body?.imageUrl || "");
+  if (String(ctx.body?.imageUrl || "").trim() && !imageUrl) throw new ApiError(400, "Картинка должна быть HTTPS или локальным путём /assets/...");
+  const buttonText = String(ctx.body?.buttonText || "").trim().slice(0,60);
+  const rawButtonUrl = String(ctx.body?.buttonUrl || "").trim();
+  if (rawButtonUrl && !/^https:\/\//i.test(rawButtonUrl) && !rawButtonUrl.startsWith("/")) throw new ApiError(400, "Ссылка кнопки должна быть HTTPS или внутренним путём /...");
+  const data = { segmentKey, rewardKind, rewardId, amount };
+  const dryRun = await buildCampaignDryRun(env, data);
+  if (!dryRun.eligibleIds.length) throw new ApiError(409, "В выбранном сегменте нет подходящих игроков.");
+  const campaignId = caseGrantId("campaign");
+  await env.DB.prepare(`INSERT INTO admin_campaigns(campaign_id,title,segment_key,reward_kind,reward_id,amount,reason,message_text,status,created_by,created_by_name,report_chat_id,total_count,created_at,updated_at,scheduled_at,image_url,button_text,button_url) VALUES(?,?,?,?,?,?,?,?, 'pending',?,?,?,?,?,?,?,?,?,?)`)
+    .bind(campaignId,title,segmentKey,rewardKind,rewardId,amount,reason,message,String(ctx.user.id),telegramDisplayName(ctx.user),String(ctx.user.id),dryRun.eligibleIds.length,now,now,scheduledAt||now,imageUrl,buttonText,rawButtonUrl).run();
+  const statements = dryRun.eligibleIds.map((id)=>env.DB.prepare(`INSERT OR IGNORE INTO admin_campaign_recipients(campaign_id,telegram_id) VALUES(?,?)`).bind(campaignId,id));
+  for (let i=0;i<statements.length;i+=80) await env.DB.batch(statements.slice(i,i+80));
+  await Promise.all([
+    logStaffAction(env,ctx.user,ctx.access,"owner_panel_campaign_create",null,"campaign",null,dryRun.eligibleIds.length,{campaignId,title,segmentKey,rewardKind,rewardId,amount,scheduledAt:scheduledAt||now,imageUrl,buttonText,buttonUrl:rawButtonUrl,testersExcluded:dryRun.testersExcluded,blockedExcluded:dryRun.blockedExcluded}),
+    recordV67SettingChange(env,ctx.user,"campaign",campaignId,"create",{}, {title,segmentKey,rewardKind,rewardId,amount,scheduledAt:scheduledAt||now})
+  ]);
+  return { ok:true, campaignId, recipients:dryRun.eligibleIds.length, testersExcluded:dryRun.testersExcluded, blockedExcluded:dryRun.blockedExcluded };
+}
+
+async function ownerPanelV8CancelCampaign(env, ctx) {
+  await ensureLiveOpsAdminSchema(env);
+  const id = String(ctx.body?.campaignId || "").trim();
+  const row = await env.DB.prepare(`SELECT * FROM admin_campaigns WHERE campaign_id=? LIMIT 1`).bind(id).first();
+  if (!row) throw new ApiError(404,"Кампания не найдена.");
+  if (!["pending","running"].includes(String(row.status))) throw new ApiError(409,"Эту кампанию уже нельзя отменить.");
+  const now=Math.floor(Date.now()/1000);
+  await env.DB.batch([
+    env.DB.prepare(`UPDATE admin_campaigns SET status='cancelled',lease_token='',lease_until=0,updated_at=?,completed_at=? WHERE campaign_id=? AND status IN ('pending','running')`).bind(now,now,id),
+    env.DB.prepare(`UPDATE admin_campaign_recipients SET status='skipped',processed_at=? WHERE campaign_id=? AND status='pending'`).bind(now,id)
+  ]);
+  await logStaffAction(env,ctx.user,ctx.access,"owner_panel_campaign_cancel",null,"campaign",null,null,{campaignId:id,title:row.title});
+  return {ok:true};
+}
+
+async function ownerPanelV8Fraud(env, ctx) {
+  await Promise.all([ensureLiveOpsAdminSchema(env), ensureOperationsSecuritySchema(env)]);
+  await scanFraudAlerts(env);
+  const result = await env.DB.prepare(`SELECT f.*,COALESCE(NULLIF(b.display_name,''),NULLIF(a.display_name,''),f.telegram_id) AS display_name,COALESCE(a.best_score,0) AS best_score FROM fraud_alerts f LEFT JOIN bot_subscribers b ON b.telegram_id=f.telegram_id LEFT JOIN leaderboard_all_time a ON a.telegram_id=f.telegram_id WHERE f.status IN ('open','reviewing') ORDER BY CASE f.severity WHEN 'critical' THEN 1 WHEN 'high' THEN 2 WHEN 'medium' THEN 3 ELSE 4 END,f.created_at DESC LIMIT 80`).all();
+  const summary = {critical:0,high:0,medium:0,low:0};
+  const alerts=(result.results||[]).map((r)=>{summary[String(r.severity)] = (summary[String(r.severity)]||0)+1;return {id:Number(r.id),telegramId:String(r.telegram_id),name:String(r.display_name||r.telegram_id),type:String(r.alert_type||""),severity:String(r.severity||"medium"),title:String(r.title||""),details:ownerV8SafeJson(r.details_json,{}),status:String(r.status||"open"),bestScore:Number(r.best_score||0),createdAt:Number(r.created_at||0)};});
+  return {ok:true,summary,alerts};
+}
+
+async function ownerPanelV8UpdateFraud(env, ctx) {
+  await ensureLiveOpsAdminSchema(env);
+  const id=ownerPanelInteger(ctx.body?.id,1,2147483647);const status=String(ctx.body?.status||"");
+  if(id==null||!["reviewing","resolved","dismissed"].includes(status))throw new ApiError(400,"Некорректное действие антифрода.");
+  const row=await env.DB.prepare(`SELECT * FROM fraud_alerts WHERE id=? LIMIT 1`).bind(id).first();if(!row)throw new ApiError(404,"Сигнал не найден.");
+  const now=Math.floor(Date.now()/1000);await env.DB.prepare(`UPDATE fraud_alerts SET status=?,assigned_to=?,resolution=?,updated_at=? WHERE id=?`).bind(status,String(ctx.user.id),String(ctx.body?.resolution||"").slice(0,300),now,id).run();
+  await logStaffAction(env,ctx.user,ctx.access,"owner_panel_fraud_status",String(row.telegram_id),"fraud",null,id,{status,alertType:row.alert_type});return {ok:true};
+}
+
+async function ownerPanelV8FraudTester(env, ctx) {
+  await ensureOperationsSecuritySchema(env);const telegramId=String(ctx.body?.telegramId||"").trim();if(!/^\d{4,20}$/.test(telegramId))throw new ApiError(400,"Некорректный Telegram ID.");const now=Math.floor(Date.now()/1000);
+  await env.DB.prepare(`INSERT INTO tester_accounts(telegram_id,test_balance_enabled,unlock_all_skins,unlock_all_cases,accelerated_guarantee,exclude_from_rating,note,created_at,updated_at,updated_by) VALUES(?,0,0,0,0,1,?,?,?,?) ON CONFLICT(telegram_id) DO UPDATE SET note=excluded.note,updated_at=excluded.updated_at,updated_by=excluded.updated_by`).bind(telegramId,"Добавлен из Control Center v8 / Антифрод",now,now,String(ctx.user.id)).run();
+  await logStaffAction(env,ctx.user,ctx.access,"owner_panel_tester_add",telegramId,"tester",null,1,{source:"fraud"});return {ok:true};
+}
+
+function ownerV8RewardPayload(kindValue, itemValue, amountValue, imageUrl="") {
+  const kind=String(kindValue||"none");if(kind==="none")return {kind:"none",amount:0,imageUrl:""};
+  if(kind==="case"){const id=normalizeCaseType(itemValue||"legendary");if(!id)throw new ApiError(400,"Неизвестный кейс.");return {kind:"case",id,amount:ownerPanelInteger(amountValue,1,20)||1,imageUrl:ownerV8AssetPath(imageUrl)};}
+  if(!["points","zefir","coffee"].includes(kind))throw new ApiError(400,"Неизвестная награда.");return {kind,amount:ownerPanelInteger(amountValue,1,999999999)||1,imageUrl:ownerV8AssetPath(imageUrl)};
+}
+
+async function ownerPanelV8Events(env, ctx) {
+  await ensureSafeControlCenterSchema(env);const result=await env.DB.prepare(`SELECT * FROM liveops_events ORDER BY starts_at DESC LIMIT 60`).all();
+  return {ok:true,events:(result.results||[]).map((r)=>({id:String(r.event_id),title:String(r.title||""),startsAt:Number(r.starts_at||0),endsAt:Number(r.ends_at||0),status:String(r.status||""),payload:ownerV8SafeJson(r.status==='draft'?r.draft_json:r.published_json,{}),lastError:String(r.last_error||""),createdAt:Number(r.created_at||0)}))};
+}
+
+async function ownerPanelV8SaveEvent(env, ctx) {
+  await ensureSafeControlCenterSchema(env);const now=Math.floor(Date.now()/1000);const eventId=String(ctx.body?.eventId||"").trim();const title=String(ctx.body?.title||"").trim().slice(0,100);const startsAt=ownerPanelInteger(ctx.body?.startsAt,1,4102444800);const endsAt=ownerPanelInteger(ctx.body?.endsAt,1,4102444800);
+  if(title.length<3||startsAt==null||endsAt==null||endsAt<=startsAt)throw new ApiError(400,"Проверьте название и даты события.");
+  const winner=ownerV8RewardPayload(ctx.body?.winnerKind||"case",ctx.body?.winnerId||"legendary",ctx.body?.winnerAmount||1,ctx.body?.imageUrl||"");if(winner.kind==='none')throw new ApiError(400,"Награда победителя обязательна.");
+  const participant=ownerV8RewardPayload(ctx.body?.participantKind||"none",ctx.body?.participantId||"",ctx.body?.participantAmount||1,"");
+  const payload={title,startsAt,endsAt,winnerReward:winner,participantReward:participant,shop:{products:{},discounts:{}},broadcasts:{start:String(ctx.body?.startMessage||"").slice(0,3500),end:String(ctx.body?.endMessage||"").slice(0,3500)}};
+  const id=eventId||`evt_${now}_${crypto.randomUUID().slice(0,8)}`;
+  if(eventId){const row=await env.DB.prepare(`SELECT * FROM liveops_events WHERE event_id=? LIMIT 1`).bind(eventId).first();if(!row)throw new ApiError(404,"Событие не найдено.");if(String(row.status)!=='draft')throw new ApiError(409,"Изменять можно только черновик события.");await env.DB.prepare(`UPDATE liveops_events SET title=?,starts_at=?,ends_at=?,draft_json=?,updated_at=? WHERE event_id=?`).bind(title,startsAt,endsAt,JSON.stringify(payload),now,eventId).run();}
+  else await env.DB.prepare(`INSERT INTO liveops_events(event_id,title,starts_at,ends_at,status,draft_json,published_json,runtime_snapshot_json,created_by,created_by_name,created_at,updated_at) VALUES(?,?,?,?,'draft',?,'{}','{}',?,?,?,?)`).bind(id,title,startsAt,endsAt,JSON.stringify(payload),String(ctx.user.id),telegramDisplayName(ctx.user),now,now).run();
+  await logStaffAction(env,ctx.user,ctx.access,"owner_panel_event_save",null,"event",null,null,{eventId:id,title,startsAt,endsAt});return {ok:true,eventId:id};
+}
+
+async function ownerPanelV8PublishEvent(env, ctx) {
+  await ensureSafeControlCenterSchema(env);const eventId=String(ctx.body?.eventId||"").trim();const row=await env.DB.prepare(`SELECT * FROM liveops_events WHERE event_id=? AND status='draft' LIMIT 1`).bind(eventId).first();if(!row)throw new ApiError(404,"Черновик события не найден.");
+  const payload=ownerV8SafeJson(row.draft_json,{});const validation=await validateSafeDraftRow({entity_type:"event",draft_json:JSON.stringify(payload)},env);if(!validation.ok)throw new ApiError(409,"Событие не прошло проверку: "+validation.checks.filter(x=>!x.ok).map(x=>x.text).join(", "));
+  const overlap=await env.DB.prepare(`SELECT title FROM liveops_events WHERE event_id<>? AND status IN ('scheduled','active') AND starts_at<? AND ends_at>? LIMIT 1`).bind(eventId,row.ends_at,row.starts_at).first();if(overlap)throw new ApiError(409,`Период пересекается с событием «${overlap.title}».`);
+  const now=Math.floor(Date.now()/1000);await env.DB.prepare(`UPDATE liveops_events SET status='scheduled',published_json=draft_json,published_at=?,updated_at=?,last_error='' WHERE event_id=? AND status='draft'`).bind(now,now,eventId).run();await logStaffAction(env,ctx.user,ctx.access,"owner_panel_event_publish",null,"event",null,null,{eventId,title:row.title});return {ok:true};
+}
+
+async function ownerPanelV8CancelEvent(env, ctx) {
+  await ensureSafeControlCenterSchema(env);const eventId=String(ctx.body?.eventId||"").trim();const row=await env.DB.prepare(`SELECT * FROM liveops_events WHERE event_id=? LIMIT 1`).bind(eventId).first();if(!row)throw new ApiError(404,"Событие не найдено.");if(String(row.status)==='active')await finishSafeEvent(row,env,true);const now=Math.floor(Date.now()/1000);await env.DB.prepare(`UPDATE liveops_events SET status='cancelled',updated_at=?,completed_at=CASE WHEN completed_at=0 THEN ? ELSE completed_at END WHERE event_id=?`).bind(now,now,eventId).run();await logStaffAction(env,ctx.user,ctx.access,"owner_panel_event_cancel",null,"event",null,null,{eventId,title:row.title});return {ok:true};
+}
+
+async function ownerPanelV8Releases(env, ctx) {
+  await Promise.all([ensureV67Schema(env),ensureSafeControlCenterSchema(env)]);const plans=(await env.DB.prepare(`SELECT * FROM release_plans ORDER BY created_at DESC LIMIT 30`).all()).results||[];const rows=[];
+  for(const plan of plans){const steps=(await env.DB.prepare(`SELECT * FROM release_steps WHERE release_id=? ORDER BY step_order`).bind(plan.release_id).all()).results||[];rows.push({id:String(plan.release_id),title:String(plan.title||""),startsAt:Number(plan.starts_at||0),status:String(plan.status||""),currentStep:Number(plan.current_step||0),lastError:String(plan.last_error||""),createdAt:Number(plan.created_at||0),completedAt:Number(plan.completed_at||0),steps:steps.map(s=>({order:Number(s.step_order),title:String(s.title||""),action:String(s.action_type||""),offset:Number(s.offset_seconds||0),status:String(s.status||""),error:String(s.error_text||"")}))});}
+  const [news,rating,pass,drafts]=await Promise.all([
+    env.DB.prepare(`SELECT created_at FROM bot_news ORDER BY created_at DESC LIMIT 1`).first().catch(()=>null),
+    env.DB.prepare(`SELECT COUNT(*) AS count FROM leaderboard_seasons WHERE status IN ('active','scheduled')`).first(),
+    env.DB.prepare(`SELECT COUNT(*) AS count FROM season_pass_seasons WHERE ends_at>?`).bind(Math.floor(Date.now()/1000)).first(),
+    env.DB.prepare(`SELECT COUNT(*) AS count FROM liveops_drafts WHERE status='draft'`).first()
+  ]);
+  let webhook={ok:false,detail:"Telegram Bot API \u043d\u0435 \u043d\u0430\u0441\u0442\u0440\u043e\u0435\u043d"};
+  if(env.TELEGRAM_BOT_TOKEN){
+    try{
+      const info=await telegramApi(env,"getWebhookInfo",{});
+      const expected=expectedTelegramWebhookUrl(env);
+      const actual=String(info?.url||"");
+      const missingUpdates=telegramWebhookMissingRequiredUpdates(info);
+      const lastError=String(info?.last_error_message||"").trim();
+      webhook={
+        ok:actual===expected&&!missingUpdates&&!lastError,
+        detail:actual!==expected?"URL webhook \u043d\u0435 \u0441\u043e\u0432\u043f\u0430\u0434\u0430\u0435\u0442":missingUpdates?"Webhook \u043d\u0435 \u043f\u0440\u0438\u043d\u0438\u043c\u0430\u0435\u0442 message/callback_query":lastError?lastError.slice(0,180):`\u041e\u0447\u0435\u0440\u0435\u0434\u044c Telegram: ${Math.max(0,Number(info?.pending_update_count||0))}`
+      };
+    }catch(error){
+      webhook={ok:false,detail:isTransientTelegramApiError(error)?"Telegram API \u0432\u0440\u0435\u043c\u0435\u043d\u043d\u043e \u043d\u0435 \u043e\u0442\u0432\u0435\u0442\u0438\u043b":String(error?.message||error).slice(0,180)};
+    }
+  }
+  return {ok:true,releases:rows,checklist:[
+    {key:"worker",title:"Worker \u043e\u0442\u0432\u0435\u0447\u0430\u0435\u0442",ok:true,detail:WORKER_BUILD},
+    {key:"news",title:"\u041d\u043e\u0432\u043e\u0441\u0442\u0438 \u043f\u043e\u0434\u0433\u043e\u0442\u043e\u0432\u043b\u0435\u043d\u044b",ok:Boolean(news)},
+    {key:"season",title:"\u0421\u0435\u0437\u043e\u043d \u043f\u0440\u043e\u043f\u0443\u0441\u043a\u0430 \u043d\u0430\u0441\u0442\u0440\u043e\u0435\u043d",ok:Number(pass?.count||0)>0},
+    {key:"rating",title:"\u0420\u0435\u0439\u0442\u0438\u043d\u0433 \u043d\u0430\u0441\u0442\u0440\u043e\u0435\u043d",ok:Number(rating?.count||0)>0},
+    {key:"faq",title:"FAQ \u0432\u0441\u0442\u0440\u043e\u0435\u043d",ok:typeof botFaqText==="function"},
+    {key:"drafts",title:"\u0427\u0435\u0440\u043d\u043e\u0432\u0438\u043a\u0438 \u043f\u0440\u043e\u0432\u0435\u0440\u0435\u043d\u044b",ok:Number(drafts?.count||0)===0,detail:Number(drafts?.count||0)?`${Number(drafts.count)} \u0447\u0435\u0440\u043d\u043e\u0432\u0438\u043a\u043e\u0432 \u0436\u0434\u0443\u0442 \u043f\u0443\u0431\u043b\u0438\u043a\u0430\u0446\u0438\u0438`:"\u041d\u0435\u0442 \u043e\u0436\u0438\u0434\u0430\u044e\u0449\u0438\u0445 \u0447\u0435\u0440\u043d\u043e\u0432\u0438\u043a\u043e\u0432"},
+    {key:"bot",title:"Bot API \u043d\u0430\u0441\u0442\u0440\u043e\u0435\u043d",ok:Boolean(env.TELEGRAM_BOT_TOKEN)},
+    {key:"webhook",title:"Telegram webhook",ok:webhook.ok,detail:webhook.detail}
+  ]};
+}
+
+async function ownerPanelV8CreateRelease(env, ctx) {
+  await ensureV67Schema(env);const title=String(ctx.body?.title||"").trim().slice(0,100);const startsAt=ownerPanelInteger(ctx.body?.startsAt,1,4102444800);const now=Math.floor(Date.now()/1000);if(title.length<3||startsAt==null||startsAt<now+60)throw new ApiError(400,"Укажите название и время релиза минимум на минуту вперёд.");const releaseId=`rel_${now}_${crypto.randomUUID().slice(0,6)}`;
+  await env.DB.prepare(`INSERT INTO release_plans(release_id,title,starts_at,status,created_by,created_by_name,report_chat_id,current_step,last_error,created_at,updated_at,completed_at) VALUES(?,?,?,'scheduled',?,?,?,0,'',?,?,0)`).bind(releaseId,title,startsAt,String(ctx.user.id),telegramDisplayName(ctx.user),String(ctx.user.id),now,now).run();for(const step of V67_RELEASE_STEPS)await env.DB.prepare(`INSERT INTO release_steps(release_id,step_order,offset_seconds,action_type,title,status) VALUES(?,?,?,?,?,'pending')`).bind(releaseId,step.order,step.offset,step.action,step.title).run();await recordV67SettingChange(env,ctx.user,"release",releaseId,"schedule",{}, {title,startsAt,steps:V67_RELEASE_STEPS});await logStaffAction(env,ctx.user,ctx.access,"owner_panel_release_create",null,"release",null,null,{releaseId,title,startsAt});return {ok:true,releaseId};
+}
+
+async function ownerPanelV8ReleaseState(env, ctx) {
+  await ensureV67Schema(env);const releaseId=String(ctx.body?.releaseId||"").trim();const state=String(ctx.body?.state||"");if(!["paused","running","cancelled"].includes(state))throw new ApiError(400,"Неизвестный статус релиза.");const old=await env.DB.prepare(`SELECT * FROM release_plans WHERE release_id=? LIMIT 1`).bind(releaseId).first();if(!old)throw new ApiError(404,"План релиза не найден.");const now=Math.floor(Date.now()/1000);
+  if(state==='running')await env.DB.prepare(`UPDATE release_steps SET status='pending',started_at=0,completed_at=0,error_text='' WHERE release_id=? AND status='failed'`).bind(releaseId).run();
+  if(state==='cancelled'){const m=await env.DB.prepare(`SELECT full_closed,updated_by FROM maintenance_settings WHERE id=1 LIMIT 1`).first();if(Number(m?.full_closed||0)===1&&String(m?.updated_by||'')===`release:${releaseId}`)await env.DB.prepare(`UPDATE maintenance_settings SET full_closed=0,updated_at=?,updated_by=? WHERE id=1`).bind(now,String(ctx.user.id)).run();}
+  await env.DB.prepare(`UPDATE release_plans SET status=?,updated_at=?,last_error=CASE WHEN ?='running' THEN '' ELSE last_error END WHERE release_id=?`).bind(state,now,state,releaseId).run();await recordV67SettingChange(env,ctx.user,"release",releaseId,"state",{status:old.status},{status:state});await logStaffAction(env,ctx.user,ctx.access,"owner_panel_release_state",null,"release",null,null,{releaseId,before:old.status,after:state});return {ok:true};
+}
+
+async function ownerPanelV8Testing(env, ctx) {
+  await Promise.all([ensureOperationsSecuritySchema(env),ensureFeatureFlagsSchema(env)]);const [flagsResult,testersResult]=await Promise.all([env.DB.prepare(`SELECT * FROM live_feature_flags ORDER BY flag_key`).all(),env.DB.prepare(`SELECT t.*,COALESCE(NULLIF(b.display_name,''),t.telegram_id) AS display_name FROM tester_accounts t LEFT JOIN bot_subscribers b ON b.telegram_id=t.telegram_id ORDER BY t.updated_at DESC LIMIT 200`).all()]);return {ok:true,flags:(flagsResult.results||[]).map(r=>({key:String(r.flag_key),title:String(r.title||r.flag_key),description:String(r.description||""),mode:String(r.mode||"all"),rollout:Number(r.rollout_percent||0),updatedAt:Number(r.updated_at||0)})),testers:(testersResult.results||[]).map(r=>({telegramId:String(r.telegram_id),name:String(r.display_name||r.telegram_id),testBalance:Boolean(r.test_balance_enabled),unlockSkins:Boolean(r.unlock_all_skins),unlockCases:Boolean(r.unlock_all_cases),acceleratedGuarantee:Boolean(r.accelerated_guarantee),excludeRating:Boolean(r.exclude_from_rating),note:String(r.note||""),updatedAt:Number(r.updated_at||0)}))};
+}
+
+async function ownerPanelV8SaveFeatureFlag(env, ctx) {
+  await ensureFeatureFlagsSchema(env);const key=String(ctx.body?.key||"").trim();const mode=String(ctx.body?.mode||"");const rollout=Math.max(0,Math.min(100,Math.floor(Number(ctx.body?.rollout)||0)));if(!["off","testers","percent","all"].includes(mode))throw new ApiError(400,"Неизвестный режим функции.");const row=await env.DB.prepare(`SELECT * FROM live_feature_flags WHERE flag_key=? LIMIT 1`).bind(key).first();if(!row)throw new ApiError(404,"Feature Flag не найден.");const before={mode:String(row.mode),rollout_percent:Number(row.rollout_percent||0)};await createConfigSnapshot(env,"pre_feature_flag",`Перед изменением функции: ${row.title}`,ctx.user).catch(()=>{});const now=Math.floor(Date.now()/1000);const normalizedRollout=mode==='all'?100:mode==='off'||mode==='testers'?0:rollout;await env.DB.prepare(`UPDATE live_feature_flags SET mode=?,rollout_percent=?,updated_at=?,updated_by=? WHERE flag_key=?`).bind(mode,normalizedRollout,now,String(ctx.user.id),key).run();invalidateFeatureFlagsCache();await recordV67SettingChange(env,ctx.user,"feature",key,"change",before,{mode,rollout_percent:normalizedRollout});await logStaffAction(env,ctx.user,ctx.access,"owner_panel_feature_flag",null,"feature",null,null,{key,before,after:{mode,rollout:normalizedRollout}});return {ok:true};
+}
+
+async function ownerPanelV8SaveTester(env, ctx) {
+  await ensureOperationsSecuritySchema(env);const telegramId=String(ctx.body?.telegramId||"").trim();if(!/^\d{4,20}$/.test(telegramId))throw new ApiError(400,"Некорректный Telegram ID.");const now=Math.floor(Date.now()/1000);const note=String(ctx.body?.note||"").trim().slice(0,300);await env.DB.prepare(`INSERT INTO tester_accounts(telegram_id,test_balance_enabled,unlock_all_skins,unlock_all_cases,accelerated_guarantee,exclude_from_rating,note,created_at,updated_at,updated_by) VALUES(?,?,?,?,?,?,?,?,?,?) ON CONFLICT(telegram_id) DO UPDATE SET test_balance_enabled=excluded.test_balance_enabled,unlock_all_skins=excluded.unlock_all_skins,unlock_all_cases=excluded.unlock_all_cases,accelerated_guarantee=excluded.accelerated_guarantee,exclude_from_rating=excluded.exclude_from_rating,note=excluded.note,updated_at=excluded.updated_at,updated_by=excluded.updated_by`).bind(telegramId,ctx.body?.testBalance?1:0,ctx.body?.unlockSkins?1:0,ctx.body?.unlockCases?1:0,ctx.body?.acceleratedGuarantee?1:0,ctx.body?.excludeRating===false?0:1,note,now,now,String(ctx.user.id)).run();await logStaffAction(env,ctx.user,ctx.access,"owner_panel_tester_save",telegramId,"tester",null,1,{note});return {ok:true};
+}
+
+async function ownerPanelV8DeleteTester(env, ctx) {await ensureOperationsSecuritySchema(env);const id=String(ctx.body?.telegramId||"").trim();await env.DB.prepare(`DELETE FROM tester_accounts WHERE telegram_id=?`).bind(id).run();await logStaffAction(env,ctx.user,ctx.access,"owner_panel_tester_delete",id,"tester",1,0,{});return {ok:true};}
+
+async function ownerPanelV8Stock(env, ctx) {
+  await Promise.all([ensureV67Schema(env),ensureShopStockSchema(env)]);const now=Math.floor(Date.now()/1000);const forecast=await calculateV67StockForecast(env,true);const [redemptions,usage7,usage30]=await Promise.all([env.DB.prepare(`SELECT code,code_compact,product_id,product_name,owner_telegram_id,owner_name,status,created_at,expires_at,redeemed_at,redeemed_by,redeemed_by_name FROM reward_codes ORDER BY COALESCE(redeemed_at,created_at) DESC LIMIT 80`).all(),env.DB.prepare(`SELECT product_id,COUNT(*) AS count FROM shop_stock_consumptions WHERE created_at>=? GROUP BY product_id`).bind(now-7*86400).all(),env.DB.prepare(`SELECT product_id,COUNT(*) AS count FROM shop_stock_consumptions WHERE created_at>=? GROUP BY product_id`).bind(now-30*86400).all()]);const map7=Object.fromEntries((usage7.results||[]).map(r=>[String(r.product_id),Number(r.count||0)]));const map30=Object.fromEntries((usage30.results||[]).map(r=>[String(r.product_id),Number(r.count||0)]));return {ok:true,undoSeconds:REDEEM_UNDO_SECONDS,stock:forecast.map(r=>({scopeKey:String(r.scope_key||""),category:String(r.category||""),productId:String(r.product_id||""),limit:Number(r.configured_limit||0),remaining:Number(r.remaining||0),used14:Number(r.used14||0),used7:map7[String(r.product_id)]||0,used30:map30[String(r.product_id)]||0,avgDaily:Number(r.avgDaily||0),daysLeft:Number(r.daysLeft||0),expected7d:Number(r.expected7d||0),status:String(r.status||"ok")})),redemptions:(redemptions.results||[]).map(r=>({code:String(r.code||""),compact:String(r.code_compact||""),productId:String(r.product_id||""),productName:String(r.product_name||""),telegramId:String(r.owner_telegram_id||""),ownerName:String(r.owner_name||""),status:String(r.status||""),createdAt:Number(r.created_at||0),expiresAt:Number(r.expires_at||0),redeemedAt:Number(r.redeemed_at||0),redeemedBy:String(r.redeemed_by_name||r.redeemed_by||"")}))};
+}
+
+async function ownerPanelV8UndoRedeem(env, ctx) {
+  const code=compactCode(ctx.body?.code||"");const reward=await getRewardByCompact(code,env);if(!reward)throw new ApiError(404,"Код не найден.");const now=Math.floor(Date.now()/1000);if(String(reward.status)!=='used'||!reward.redeemed_at)throw new ApiError(409,"Код сейчас не находится в статусе погашенного.");const age=now-Number(reward.redeemed_at||0);if(age<0||age>REDEEM_UNDO_SECONDS)throw new ApiError(409,"Отмена доступна только в течение пяти минут после погашения.");if(Number(reward.expires_at||0)<=now)throw new ApiError(409,"Срок действия кода уже истёк.");const result=await env.DB.prepare(`UPDATE reward_codes SET status='active',redeemed_at=NULL,redeemed_by=NULL,redeemed_by_name=NULL WHERE code_compact=? AND status='used'`).bind(code).run();if(Number(result.meta?.changes||0)<1)throw new ApiError(409,"Состояние кода уже изменилось.");await logStaffAction(env,ctx.user,ctx.access,"undo_redeem",String(reward.owner_telegram_id||""),"reward",1,0,{code:reward.code,product:reward.product_name,previousRedeemedBy:reward.redeemed_by||"",source:"owner_v8"});return {ok:true};
+}
+
+async function ownerPanelV8CaseSimulate(env, ctx) {const caseType=normalizeCaseType(ctx.body?.caseType||"legendary");if(!caseType)throw new ApiError(400,"Неизвестный кейс.");const samples=Math.max(100,Math.min(100000,Math.floor(Number(ctx.body?.samples)||10000)));const result=await runCaseSimulation(env,caseType,samples);return {ok:true,result};}
+
+async function ownerPanelV8Safety(env, ctx) {
+  await Promise.all([ensureOperationsSecuritySchema(env),ensureSafeControlCenterSchema(env),ensureV67Schema(env)]);const now=Math.floor(Date.now()/1000);await env.DB.prepare(`UPDATE dangerous_action_approvals SET status='expired',updated_at=? WHERE status='pending' AND expires_at<=?`).bind(now,now).run();const [snapshots,drafts,approvals,history,performance,cron]=await Promise.all([env.DB.prepare(`SELECT snapshot_id,snapshot_type,title,created_by,created_by_name,created_at,restored_at,restored_by,restore_status FROM config_snapshots ORDER BY created_at DESC LIMIT 40`).all(),env.DB.prepare(`SELECT id,entity_type,entity_id,title,base_json,draft_json,status,validation_json,created_by_name,created_at,updated_at,error_text FROM liveops_drafts ORDER BY updated_at DESC LIMIT 50`).all(),env.DB.prepare(`SELECT * FROM dangerous_action_approvals ORDER BY created_at DESC LIMIT 40`).all(),env.DB.prepare(`SELECT * FROM admin_setting_history ORDER BY created_at DESC,id DESC LIMIT 60`).all(),env.DB.prepare(`SELECT area,COUNT(*) AS samples,ROUND(AVG(duration_ms),1) AS avg_ms,MAX(duration_ms) AS max_ms,SUM(CASE WHEN success=0 THEN 1 ELSE 0 END) AS errors FROM admin_performance_samples WHERE created_at>=? GROUP BY area ORDER BY avg_ms DESC LIMIT 30`).bind(now-24*3600).all(),env.DB.prepare(`SELECT job_key,enabled,priority,interval_seconds,last_success_at,next_run_at,last_status,last_duration_ms,last_error FROM server_cron_jobs ORDER BY priority,job_key LIMIT 50`).all()]);return {ok:true,snapshots:(snapshots.results||[]).map(r=>({id:String(r.snapshot_id),type:String(r.snapshot_type||""),title:String(r.title||""),createdBy:String(r.created_by_name||r.created_by||""),createdAt:Number(r.created_at||0),restoredAt:Number(r.restored_at||0),restoreStatus:String(r.restore_status||"")})),drafts:(drafts.results||[]).map(r=>({id:Number(r.id),entityType:String(r.entity_type||""),entityId:String(r.entity_id||""),title:String(r.title||""),base:ownerV8SafeJson(r.base_json,{}),draft:ownerV8SafeJson(r.draft_json,{}),status:String(r.status||""),validation:ownerV8SafeJson(r.validation_json,{}),createdBy:String(r.created_by_name||""),createdAt:Number(r.created_at||0),updatedAt:Number(r.updated_at||0),error:String(r.error_text||"")})),approvals:(approvals.results||[]).map(r=>({id:Number(r.id),type:String(r.action_type||""),title:String(r.title||""),requestedBy:String(r.requested_by_name||r.requested_by||""),status:String(r.status||""),expiresAt:Number(r.expires_at||0),createdAt:Number(r.created_at||0),error:String(r.error_text||"")})),history:(history.results||[]).map(r=>({id:Number(r.id),group:String(r.setting_group||""),key:String(r.setting_key||""),action:String(r.action||""),old:ownerV8SafeJson(r.old_json,{}),next:ownerV8SafeJson(r.new_json,{}),actor:String(r.actor_name||r.actor_telegram_id||""),createdAt:Number(r.created_at||0)})),performance:(performance.results||[]).map(r=>({area:String(r.area||""),samples:Number(r.samples||0),avgMs:Number(r.avg_ms||0),maxMs:Number(r.max_ms||0),errors:Number(r.errors||0)})),cron:(cron.results||[]).map(r=>({key:String(r.job_key||""),title:String(r.job_key||""),enabled:Boolean(r.enabled),priority:Number(r.priority||0),interval:Number(r.interval_seconds||0),lastRunAt:Number(r.last_success_at||0),nextRunAt:Number(r.next_run_at||0),lastStatus:String(r.last_status||""),duration:Number(r.last_duration_ms||0),error:String(r.last_error||"")}))};
+}
+
+async function ownerPanelV8CreateSnapshot(env, ctx) {const title=String(ctx.body?.title||"").trim().slice(0,180)||`Control Center v8 · ${formatUtcDate(Math.floor(Date.now()/1000))}`;const snapshotId=await createConfigSnapshot(env,"manual",title,ctx.user);await logStaffAction(env,ctx.user,ctx.access,"snapshot_create",null,"snapshot",null,null,{snapshotId,title,source:"owner_v8"});return {ok:true,snapshotId};}
+async function ownerPanelV8RestoreSnapshot(env, ctx) {await ensureOperationsSecuritySchema(env);const snapshotId=String(ctx.body?.snapshotId||"").trim();const row=await env.DB.prepare(`SELECT snapshot_id,title FROM config_snapshots WHERE snapshot_id=? LIMIT 1`).bind(snapshotId).first();if(!row)throw new ApiError(404,"Снимок не найден.");const approvalId=await requestDangerousAction(env,ctx.user,"snapshot_restore",`Восстановить снимок «${row.title}»`,{snapshotId:row.snapshot_id,chatId:String(ctx.user.id)});await logStaffAction(env,ctx.user,ctx.access,"owner_panel_snapshot_restore_request",null,"snapshot",null,approvalId,{snapshotId});return {ok:true,approvalId};}
+
+async function ownerPanelV8DraftAction(env, ctx) {
+  await ensureSafeControlCenterSchema(env);
+  const id=ownerPanelInteger(ctx.body?.id,1,2147483647);
+  const action=String(ctx.body?.action||"");
+  if(id==null||!["publish","discard"].includes(action))throw new ApiError(400,"\u041d\u0435\u0438\u0437\u0432\u0435\u0441\u0442\u043d\u043e\u0435 \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u0435 \u0447\u0435\u0440\u043d\u043e\u0432\u0438\u043a\u0430.");
+  const row=await env.DB.prepare(`SELECT * FROM liveops_drafts WHERE id=? LIMIT 1`).bind(id).first();
+  if(!row)throw new ApiError(404,"\u0427\u0435\u0440\u043d\u043e\u0432\u0438\u043a \u043d\u0435 \u043d\u0430\u0439\u0434\u0435\u043d.");
+  if(String(row.status)!=='draft')throw new ApiError(409,"\u0427\u0435\u0440\u043d\u043e\u0432\u0438\u043a \u0443\u0436\u0435 \u043e\u0431\u0440\u0430\u0431\u043e\u0442\u0430\u043d.");
+  const now=Math.floor(Date.now()/1000);
+  if(action==='discard'){
+    const discarded=await env.DB.prepare(`UPDATE liveops_drafts SET status='discarded',updated_at=? WHERE id=? AND status='draft'`).bind(now,id).run();
+    if(Number(discarded.meta?.changes||0)<1)throw new ApiError(409,"\u0427\u0435\u0440\u043d\u043e\u0432\u0438\u043a \u0443\u0436\u0435 \u043e\u0431\u0440\u0430\u0431\u0430\u0442\u044b\u0432\u0430\u0435\u0442\u0441\u044f \u0438\u043b\u0438 \u043e\u0431\u0440\u0430\u0431\u043e\u0442\u0430\u043d.");
+    await logStaffAction(env,ctx.user,ctx.access,"owner_panel_draft_discard",null,"draft",null,id,{entityType:row.entity_type,entityId:row.entity_id});
+    return {ok:true};
+  }
+  const validation=await validateSafeDraftRow(row,env);
+  if(!validation.ok)throw new ApiError(409,"\u0427\u0435\u0440\u043d\u043e\u0432\u0438\u043a \u043d\u0435 \u043f\u0440\u043e\u0448\u0451\u043b \u043f\u0440\u043e\u0432\u0435\u0440\u043a\u0443: "+validation.checks.filter(x=>!x.ok).map(x=>x.text).join(", "));
+  await createConfigSnapshot(env,"pre_publish",`\u041f\u0435\u0440\u0435\u0434 \u043f\u0443\u0431\u043b\u0438\u043a\u0430\u0446\u0438\u0435\u0439 \u0447\u0435\u0440\u043d\u043e\u0432\u0438\u043a\u0430 #${row.id}: ${row.title}`,ctx.user);
+  const claim=await env.DB.prepare(`UPDATE liveops_drafts SET status='publishing',updated_at=? WHERE id=? AND status='draft'`).bind(now,id).run();
+  if(Number(claim.meta?.changes||0)<1)throw new ApiError(409,"\u0427\u0435\u0440\u043d\u043e\u0432\u0438\u043a \u0443\u0436\u0435 \u043f\u0443\u0431\u043b\u0438\u043a\u0443\u0435\u0442\u0441\u044f \u0438\u043b\u0438 \u043e\u0431\u0440\u0430\u0431\u043e\u0442\u0430\u043d.");
+  const value=ownerV8SafeJson(row.draft_json,{});
+  const base=ownerV8SafeJson(row.base_json,{});
+  try {
+    if(row.entity_type==='season_reward'){
+      const current=await env.DB.prepare(`SELECT reward_type,reward_amount,reward_title,reward_image_url,reward_item_id FROM leaderboard_seasons WHERE id=? AND finalized_at IS NULL LIMIT 1`).bind(row.entity_id).first();
+      if(!current)throw new ApiError(409,"\u0420\u0435\u0439\u0442\u0438\u043d\u0433\u043e\u0432\u044b\u0439 \u0441\u0435\u0437\u043e\u043d \u0443\u0436\u0435 \u0437\u0430\u0432\u0435\u0440\u0448\u0451\u043d.");
+      const snapshot={reward_type:String(current.reward_type||""),reward_amount:Number(current.reward_amount||0),reward_title:String(current.reward_title||""),reward_image_url:String(current.reward_image_url||""),reward_item_id:String(current.reward_item_id||"")};
+      if(JSON.stringify(snapshot)!==JSON.stringify(base))throw new ApiError(409,"\u0411\u0430\u0437\u043e\u0432\u0430\u044f \u0432\u0435\u0440\u0441\u0438\u044f \u0441\u0435\u0437\u043e\u043d\u0430 \u0438\u0437\u043c\u0435\u043d\u0438\u043b\u0430\u0441\u044c. \u0421\u043e\u0437\u0434\u0430\u0439\u0442\u0435 \u043d\u043e\u0432\u044b\u0439 \u0447\u0435\u0440\u043d\u043e\u0432\u0438\u043a.");
+      await env.DB.prepare(`UPDATE leaderboard_seasons SET reward_type=?,reward_amount=?,reward_title=?,reward_image_url=?,reward_item_id=?,manual_override=1,updated_at=? WHERE id=? AND finalized_at IS NULL`).bind(value.reward_type,Number(value.reward_amount||0),String(value.reward_title||""),String(value.reward_image_url||""),String(value.reward_item_id||""),now,row.entity_id).run();
+    } else if(row.entity_type==='case'){
+      const currentRow=await env.DB.prepare(`SELECT * FROM liveops_case_configs WHERE case_id=? LIMIT 1`).bind(row.entity_id).first();
+      if(!currentRow)throw new ApiError(409,"\u041a\u0435\u0439\u0441 \u043d\u0435 \u043d\u0430\u0439\u0434\u0435\u043d.");
+      const current=liveOpsCaseConfigFromRow(currentRow);
+      const snapshot={enabled:current.enabled,title:current.title,guarantee_count:current.guaranteeCount,chances_json:current.chances,ranges_json:current.ranges};
+      if(JSON.stringify(snapshot)!==JSON.stringify(base))throw new ApiError(409,"\u0411\u0430\u0437\u043e\u0432\u0430\u044f \u0432\u0435\u0440\u0441\u0438\u044f \u043a\u0435\u0439\u0441\u0430 \u0438\u0437\u043c\u0435\u043d\u0438\u043b\u0430\u0441\u044c. \u0421\u043e\u0437\u0434\u0430\u0439\u0442\u0435 \u043d\u043e\u0432\u044b\u0439 \u0447\u0435\u0440\u043d\u043e\u0432\u0438\u043a.");
+      await env.DB.prepare(`UPDATE liveops_case_configs SET enabled=?,title=?,guarantee_count=?,chances_json=?,ranges_json=?,updated_at=?,updated_by=? WHERE case_id=?`).bind(value.enabled?1:0,String(value.title||row.entity_id),Number(value.guarantee_count||0),JSON.stringify(value.chances_json||value.chances||{}),JSON.stringify(value.ranges_json||value.ranges||{}),now,String(ctx.user.id),row.entity_id).run();
+    } else if(row.entity_type==='content'){
+      const changed=await env.DB.prepare(`UPDATE liveops_content_items SET enabled=?,is_new=?,weight=?,title=?,rarity=?,image_url=?,updated_at=?,updated_by=? WHERE item_kind || ':' || item_id=?`).bind(value.enabled?1:0,value.is_new?1:0,Number(value.weight||0),String(value.title||""),String(value.rarity||"common"),String(value.image_url||""),now,String(ctx.user.id),row.entity_id).run();
+      if(Number(changed.meta?.changes||0)<1)throw new ApiError(409,"\u041a\u043e\u043d\u0442\u0435\u043d\u0442 \u043d\u0435 \u043d\u0430\u0439\u0434\u0435\u043d \u0438\u043b\u0438 \u0431\u044b\u043b \u0438\u0437\u043c\u0435\u043d\u0451\u043d.");
+    } else {
+      throw new ApiError(409,"\u042d\u0442\u043e\u0442 \u0442\u0438\u043f \u0447\u0435\u0440\u043d\u043e\u0432\u0438\u043a\u0430 \u043f\u043e\u043a\u0430 \u043f\u0443\u0431\u043b\u0438\u043a\u0443\u0435\u0442\u0441\u044f \u0447\u0435\u0440\u0435\u0437 \u0441\u0443\u0449\u0435\u0441\u0442\u0432\u0443\u044e\u0449\u0438\u0439 \u0440\u0435\u043b\u0438\u0437\u043d\u044b\u0439 \u0441\u0446\u0435\u043d\u0430\u0440\u0438\u0439.");
+    }
+    await env.DB.prepare(`UPDATE liveops_drafts SET status='published',published_at=?,published_by=?,updated_at=?,error_text='' WHERE id=? AND status='publishing'`).bind(now,String(ctx.user.id),now,id).run();
+    await logLiveOpsConfigChange(env,ctx.user,row.entity_type,row.entity_id,"owner_v8_publish_draft",base,value,`\u0427\u0435\u0440\u043d\u043e\u0432\u0438\u043a #${id}`);
+    await logStaffAction(env,ctx.user,ctx.access,"owner_panel_draft_publish",null,"draft",null,id,{entityType:row.entity_type,entityId:row.entity_id});
+    return {ok:true};
+  } catch(error) {
+    await env.DB.prepare(`UPDATE liveops_drafts SET status='failed',error_text=?,updated_at=? WHERE id=? AND status='publishing'`).bind(String(error?.message||error).slice(0,500),now,id).run();
+    throw error;
+  }
+}
+
+async function ownerPanelV8Search(env, ctx) {
+  await Promise.all([ensureOperationsSecuritySchema(env),ensureLiveOpsAdminSchema(env),ensureSafeControlCenterSchema(env),ensureV67Schema(env)]);const raw=String(ctx.body?.query||"").trim();if(raw.length<2)throw new ApiError(400,"Введите минимум 2 символа.");const q=raw.replace(/^@/,"");const like=`%${q}%`;const compact=compactCode(raw);const [players,rewards,promos,events,campaigns,releases,tickets]=await Promise.all([
+    env.DB.prepare(`SELECT p.telegram_id,COALESCE(NULLIF(b.display_name,''),NULLIF(a.display_name,''),p.telegram_id) AS title,COALESCE(b.username,a.username,'') AS username,COALESCE(a.best_score,p.best_score,0) AS score FROM admin_profile_state p LEFT JOIN bot_subscribers b ON b.telegram_id=p.telegram_id LEFT JOIN leaderboard_all_time a ON a.telegram_id=p.telegram_id WHERE p.telegram_id=? OR LOWER(COALESCE(b.username,a.username,''))=LOWER(?) OR LOWER(COALESCE(b.display_name,a.display_name,'')) LIKE LOWER(?) LIMIT 12`).bind(q,q,like).all(),
+    compact?env.DB.prepare(`SELECT code,product_name,owner_telegram_id,status,created_at FROM reward_codes WHERE code_compact=? OR code LIKE ? ORDER BY created_at DESC LIMIT 10`).bind(compact,like).all():Promise.resolve({results:[]}),
+    env.DB.prepare(`SELECT code,title,enabled,redemption_count,created_at FROM promo_codes WHERE LOWER(code) LIKE LOWER(?) OR LOWER(title) LIKE LOWER(?) ORDER BY created_at DESC LIMIT 10`).bind(like,like).all(),
+    env.DB.prepare(`SELECT event_id,title,status,starts_at FROM liveops_events WHERE LOWER(event_id) LIKE LOWER(?) OR LOWER(title) LIKE LOWER(?) ORDER BY starts_at DESC LIMIT 10`).bind(like,like).all(),
+    env.DB.prepare(`SELECT campaign_id,title,status,created_at FROM admin_campaigns WHERE LOWER(campaign_id) LIKE LOWER(?) OR LOWER(title) LIKE LOWER(?) ORDER BY created_at DESC LIMIT 10`).bind(like,like).all(),
+    env.DB.prepare(`SELECT release_id,title,status,starts_at FROM release_plans WHERE LOWER(release_id) LIKE LOWER(?) OR LOWER(title) LIKE LOWER(?) ORDER BY starts_at DESC LIMIT 10`).bind(like,like).all(),
+    env.DB.prepare(`SELECT id AS ticket_id,player_telegram_id AS telegram_id,category AS subject,status,created_at FROM support_tickets WHERE CAST(id AS TEXT)=? OR LOWER(category) LIKE LOWER(?) OR LOWER(description) LIKE LOWER(?) ORDER BY created_at DESC LIMIT 10`).bind(q,like,like).all().catch(()=>({results:[]}))
+  ]);
+  const results=[];for(const r of players.results||[])results.push({type:"player",id:String(r.telegram_id),title:String(r.title||r.telegram_id),meta:`${r.username?'@'+r.username+' · ':''}рекорд ${Number(r.score||0)}`});for(const r of rewards.results||[])results.push({type:"reward",id:String(r.code),title:String(r.product_name||r.code),meta:`${r.status} · игрок ${r.owner_telegram_id}`});for(const r of promos.results||[])results.push({type:"promo",id:String(r.code),title:String(r.title||r.code),meta:`${Number(r.redemption_count||0)} активаций · ${Number(r.enabled)?'включён':'выключен'}`});for(const r of events.results||[])results.push({type:"event",id:String(r.event_id),title:String(r.title||r.event_id),meta:`${r.status} · ${formatUtcDate(r.starts_at)}`});for(const r of campaigns.results||[])results.push({type:"campaign",id:String(r.campaign_id),title:String(r.title||r.campaign_id),meta:String(r.status)});for(const r of releases.results||[])results.push({type:"release",id:String(r.release_id),title:String(r.title||r.release_id),meta:`${r.status} · ${formatUtcDate(r.starts_at)}`});for(const r of tickets.results||[])results.push({type:"ticket",id:String(r.ticket_id),title:String(r.subject||`Обращение #${r.ticket_id}`),meta:`${r.status} · игрок ${r.telegram_id}`});return {ok:true,query:raw,results:results.slice(0,60)};
+}
+// ===================== /CONTROL CENTER v8 · OWNER WEB ======================
+
+
 async function handleOwnerPanelApi(request, env, path) {
   try {
     const ctx = await requireOwnerPanelContext(request, env);
@@ -22841,6 +23277,33 @@ async function handleOwnerPanelApi(request, env, path) {
     if (path === "/api/owner/staff/delete") return jsonResponse(await ownerPanelDeleteStaff(env, ctx));
     if (path === "/api/owner/system") return jsonResponse(await ownerPanelSystem(env, ctx));
     if (path === "/api/owner/maintenance/update") return jsonResponse(await ownerPanelUpdateMaintenance(env, ctx));
+    if (path === "/api/owner/v8/analytics") return jsonResponse(await ownerPanelV8Analytics(env, ctx));
+    if (path === "/api/owner/v8/segments") return jsonResponse(await ownerPanelV8Segments(env, ctx));
+    if (path === "/api/owner/v8/campaigns") return jsonResponse(await ownerPanelV8Campaigns(env, ctx));
+    if (path === "/api/owner/v8/campaigns/create") return jsonResponse(await ownerPanelV8CreateCampaign(env, ctx));
+    if (path === "/api/owner/v8/campaigns/cancel") return jsonResponse(await ownerPanelV8CancelCampaign(env, ctx));
+    if (path === "/api/owner/v8/fraud") return jsonResponse(await ownerPanelV8Fraud(env, ctx));
+    if (path === "/api/owner/v8/fraud/update") return jsonResponse(await ownerPanelV8UpdateFraud(env, ctx));
+    if (path === "/api/owner/v8/fraud/tester") return jsonResponse(await ownerPanelV8FraudTester(env, ctx));
+    if (path === "/api/owner/v8/events") return jsonResponse(await ownerPanelV8Events(env, ctx));
+    if (path === "/api/owner/v8/events/save") return jsonResponse(await ownerPanelV8SaveEvent(env, ctx));
+    if (path === "/api/owner/v8/events/publish") return jsonResponse(await ownerPanelV8PublishEvent(env, ctx));
+    if (path === "/api/owner/v8/events/cancel") return jsonResponse(await ownerPanelV8CancelEvent(env, ctx));
+    if (path === "/api/owner/v8/releases") return jsonResponse(await ownerPanelV8Releases(env, ctx));
+    if (path === "/api/owner/v8/releases/create") return jsonResponse(await ownerPanelV8CreateRelease(env, ctx));
+    if (path === "/api/owner/v8/releases/state") return jsonResponse(await ownerPanelV8ReleaseState(env, ctx));
+    if (path === "/api/owner/v8/testing") return jsonResponse(await ownerPanelV8Testing(env, ctx));
+    if (path === "/api/owner/v8/feature-flag/save") return jsonResponse(await ownerPanelV8SaveFeatureFlag(env, ctx));
+    if (path === "/api/owner/v8/tester/save") return jsonResponse(await ownerPanelV8SaveTester(env, ctx));
+    if (path === "/api/owner/v8/tester/delete") return jsonResponse(await ownerPanelV8DeleteTester(env, ctx));
+    if (path === "/api/owner/v8/stock") return jsonResponse(await ownerPanelV8Stock(env, ctx));
+    if (path === "/api/owner/v8/stock/undo") return jsonResponse(await ownerPanelV8UndoRedeem(env, ctx));
+    if (path === "/api/owner/v8/case-simulate") return jsonResponse(await ownerPanelV8CaseSimulate(env, ctx));
+    if (path === "/api/owner/v8/safety") return jsonResponse(await ownerPanelV8Safety(env, ctx));
+    if (path === "/api/owner/v8/snapshot/create") return jsonResponse(await ownerPanelV8CreateSnapshot(env, ctx));
+    if (path === "/api/owner/v8/snapshot/restore") return jsonResponse(await ownerPanelV8RestoreSnapshot(env, ctx));
+    if (path === "/api/owner/v8/draft/action") return jsonResponse(await ownerPanelV8DraftAction(env, ctx));
+    if (path === "/api/owner/v8/search") return jsonResponse(await ownerPanelV8Search(env, ctx));
     throw new ApiError(404, "Раздел панели владельца не найден.");
   } catch (error) {
     return ownerPanelApiError(error, path);
@@ -23675,9 +24138,10 @@ async function ownerPanelControl(env, ctx) {
     try{await ensureOperationalProblemsFresh(env,{checkWebhook:false});}catch(error){console.error('owner control refresh failed',error);}
   }
   const now=Math.floor(Date.now()/1000),day=moscowDayStartUnix(),week=now-7*86400;
-  const [issues,totals,dayRuns,weekRuns,casesDay,grantsDay,physicalPending,topWallet,queue,queueItems,blocked,tickets]=await Promise.all([
+  const [issues,totals,allTimeRuns,dayRuns,weekRuns,casesDay,grantsDay,physicalPending,topWallet,queue,queueItems,blocked,tickets]=await Promise.all([
     env.DB.prepare(`SELECT * FROM admin_operational_issues ORDER BY CASE WHEN status='resolved' THEN 2 ELSE 1 END,CASE severity WHEN 'critical' THEN 1 WHEN 'high' THEN 2 WHEN 'warning' THEN 3 ELSE 4 END,updated_at DESC LIMIT 40`).all(),
     env.DB.prepare(`SELECT COUNT(*) AS players,SUM(wallet) AS wallet,SUM(treats) AS treats,SUM(coffee) AS coffee,SUM(pending_wallet) AS pending_wallet,SUM(pending_treats) AS pending_treats,SUM(pending_coffee) AS pending_coffee FROM admin_profile_state`).first(),
+    env.DB.prepare(`SELECT COUNT(*) AS total,SUM(CASE WHEN accepted=1 THEN 1 ELSE 0 END) AS accepted,COALESCE(SUM(CASE WHEN accepted=1 THEN score ELSE 0 END),0) AS score FROM leaderboard_runs`).first(),
     env.DB.prepare(`SELECT COUNT(*) AS total,SUM(CASE WHEN accepted=1 THEN 1 ELSE 0 END) AS accepted FROM leaderboard_runs WHERE created_at>=?`).bind(day).first(),
     env.DB.prepare(`SELECT COUNT(*) AS total,SUM(score) AS score FROM leaderboard_runs WHERE created_at>=? AND accepted=1`).bind(week).first(),
     env.DB.prepare(`SELECT (SELECT COUNT(*) FROM level_case_openings WHERE opened_at>=?)+(SELECT COUNT(*) FROM granted_cases WHERE opened_at>=?) AS total`).bind(day,day).first(),
@@ -23689,7 +24153,7 @@ async function ownerPanelControl(env, ctx) {
     env.DB.prepare(`SELECT c.telegram_id,c.block_reason,c.block_type,c.blocked_until,c.updated_at,COALESCE(NULLIF(b.display_name,''),NULLIF(b.username,''),c.telegram_id) AS name,b.username FROM player_admin_controls c LEFT JOIN bot_subscribers b ON b.telegram_id=c.telegram_id WHERE c.blocked=1 ORDER BY CASE WHEN c.block_type='permanent' THEN 0 ELSE 1 END,c.updated_at DESC LIMIT 50`).all(),
     env.DB.prepare(`SELECT id,created_by,created_by_name,player_telegram_id,player_name,category,description,status,assigned_to,assigned_to_name,resolution,created_at,updated_at,closed_at FROM support_tickets ORDER BY CASE status WHEN 'new' THEN 0 WHEN 'working' THEN 1 WHEN 'resolved' THEN 2 ELSE 3 END,updated_at DESC LIMIT 60`).all()
   ]);
-  return {ok:true,serverTime:new Date(now*1000).toISOString(),issues:(issues.results||[]).map(r=>({id:Number(r.id),title:String(r.title||''),severity:String(r.severity||'warning'),status:String(r.status||'open'),sourceType:String(r.source_type||''),sourceId:String(r.source_id||''),assignedToName:String(r.assigned_to_name||''),firstSeenAt:Number(r.first_seen_at||0),lastSeenAt:Number(r.last_seen_at||0),snoozedUntil:Number(r.snoozed_until||0),details:safeJson(r.details_json,{})})),economy:{players:Number(totals?.players||0),points:Number(totals?.wallet||0),treats:Number(totals?.treats||0),coffee:Number(totals?.coffee||0),pendingPoints:Number(totals?.pending_wallet||0),pendingTreats:Number(totals?.pending_treats||0),pendingCoffee:Number(totals?.pending_coffee||0),runsToday:Number(dayRuns?.total||0),acceptedRunsToday:Number(dayRuns?.accepted||0),runs7d:Number(weekRuns?.total||0),score7d:Number(weekRuns?.score||0),casesToday:Number(casesDay?.total||0),manualGrantsToday:Number(grantsDay?.count||0),activePhysicalCodes:Number(physicalPending?.count||0),queue:{pending:Number(queue?.pending||0),failed:Number(queue?.failed||0),delivered:Number(queue?.delivered||0)},queueItems:(queueItems.results||[]).map(r=>({id:Number(r.id||0),telegramId:String(r.telegram_id||''),name:String(r.name||r.telegram_id||''),username:String(r.username||''),sourceType:String(r.source_type||''),sourceId:String(r.source_id||''),rewardKind:String(r.reward_kind||''),rewardId:String(r.reward_id||''),amount:Number(r.amount||0),reason:String(r.reason||''),status:String(r.status||''),attempts:Number(r.attempts||0),lastError:String(r.last_error||''),createdAt:Number(r.created_at||0),updatedAt:Number(r.updated_at||0),description:safeRewardDescription({kind:r.reward_kind,id:r.reward_id,amount:r.amount})})),topWallet:(topWallet.results||[]).map(r=>({telegramId:String(r.telegram_id),name:String(r.name||r.telegram_id),username:String(r.username||''),points:Number(r.wallet||0),treats:Number(r.treats||0),coffee:Number(r.coffee||0)}))},moderation:{blocked:(blocked.results||[]).map(r=>({telegramId:String(r.telegram_id),name:String(r.name||r.telegram_id),username:String(r.username||''),reason:String(r.block_reason||''),blockType:String(r.block_type||'permanent'),blockedUntil:Number(r.blocked_until||0),updatedAt:Number(r.updated_at||0)}))},tickets:(tickets.results||[]).map(r=>({id:Number(r.id),createdBy:String(r.created_by||''),createdByName:String(r.created_by_name||''),playerTelegramId:String(r.player_telegram_id||''),playerName:String(r.player_name||''),category:String(r.category||''),categoryLabel:String(SUPPORT_TICKET_CATEGORIES[r.category]||r.category||''),description:String(r.description||''),status:String(r.status||'new'),statusLabel:ticketStatusLabel(r.status),assignedTo:String(r.assigned_to||''),assignedToName:String(r.assigned_to_name||''),resolution:String(r.resolution||''),createdAt:Number(r.created_at||0),updatedAt:Number(r.updated_at||0),closedAt:Number(r.closed_at||0)}))};
+  return {ok:true,serverTime:new Date(now*1000).toISOString(),issues:(issues.results||[]).map(r=>({id:Number(r.id),title:String(r.title||''),severity:String(r.severity||'warning'),status:String(r.status||'open'),sourceType:String(r.source_type||''),sourceId:String(r.source_id||''),assignedToName:String(r.assigned_to_name||''),firstSeenAt:Number(r.first_seen_at||0),lastSeenAt:Number(r.last_seen_at||0),snoozedUntil:Number(r.snoozed_until||0),details:safeJson(r.details_json,{})})),economy:{players:Number(totals?.players||0),points:Number(totals?.wallet||0),treats:Number(totals?.treats||0),coffee:Number(totals?.coffee||0),allTimeRuns:Number(allTimeRuns?.total||0),allTimeAcceptedRuns:Number(allTimeRuns?.accepted||0),allTimeRunScore:Number(allTimeRuns?.score||0),pendingPoints:Number(totals?.pending_wallet||0),pendingTreats:Number(totals?.pending_treats||0),pendingCoffee:Number(totals?.pending_coffee||0),runsToday:Number(dayRuns?.total||0),acceptedRunsToday:Number(dayRuns?.accepted||0),runs7d:Number(weekRuns?.total||0),score7d:Number(weekRuns?.score||0),casesToday:Number(casesDay?.total||0),manualGrantsToday:Number(grantsDay?.count||0),activePhysicalCodes:Number(physicalPending?.count||0),queue:{pending:Number(queue?.pending||0),failed:Number(queue?.failed||0),delivered:Number(queue?.delivered||0)},queueItems:(queueItems.results||[]).map(r=>({id:Number(r.id||0),telegramId:String(r.telegram_id||''),name:String(r.name||r.telegram_id||''),username:String(r.username||''),sourceType:String(r.source_type||''),sourceId:String(r.source_id||''),rewardKind:String(r.reward_kind||''),rewardId:String(r.reward_id||''),amount:Number(r.amount||0),reason:String(r.reason||''),status:String(r.status||''),attempts:Number(r.attempts||0),lastError:String(r.last_error||''),createdAt:Number(r.created_at||0),updatedAt:Number(r.updated_at||0),description:safeRewardDescription({kind:r.reward_kind,id:r.reward_id,amount:r.amount})})),topWallet:(topWallet.results||[]).map(r=>({telegramId:String(r.telegram_id),name:String(r.name||r.telegram_id),username:String(r.username||''),points:Number(r.wallet||0),treats:Number(r.treats||0),coffee:Number(r.coffee||0)}))},moderation:{blocked:(blocked.results||[]).map(r=>({telegramId:String(r.telegram_id),name:String(r.name||r.telegram_id),username:String(r.username||''),reason:String(r.block_reason||''),blockType:String(r.block_type||'permanent'),blockedUntil:Number(r.blocked_until||0),updatedAt:Number(r.updated_at||0)}))},tickets:(tickets.results||[]).map(r=>({id:Number(r.id),createdBy:String(r.created_by||''),createdByName:String(r.created_by_name||''),playerTelegramId:String(r.player_telegram_id||''),playerName:String(r.player_name||''),category:String(r.category||''),categoryLabel:String(SUPPORT_TICKET_CATEGORIES[r.category]||r.category||''),description:String(r.description||''),status:String(r.status||'new'),statusLabel:ticketStatusLabel(r.status),assignedTo:String(r.assigned_to||''),assignedToName:String(r.assigned_to_name||''),resolution:String(r.resolution||''),createdAt:Number(r.created_at||0),updatedAt:Number(r.updated_at||0),closedAt:Number(r.closed_at||0)}))};
 }
 
 async function ownerPanelUpdateRewardQueue(env, ctx) {
