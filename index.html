@@ -4197,7 +4197,7 @@ html&gt;body{padding:
 &lt;/style&gt;
 
 
-&lt;style id=&quot;profile-button-level-guide-admin-antifarm&quot;&gt;
+&lt;style id=&quot;profile-button-level-guide-antifarm&quot;&gt;
   #zefirok-maltipoo-runner .profile-tab {
     padding: 0 !important;
     border: 0 !important;
@@ -4356,29 +4356,7 @@ html&gt;body{padding:
     font-weight: 900;
     white-space: nowrap;
   }
-  #zefirok-maltipoo-runner .admin-profile-level-controls {
-    display: grid;
-    gap: 10px;
-  }
-  #zefirok-maltipoo-runner .admin-profile-control-card {
-    display: grid;
-    gap: 8px;
-    padding: 11px;
-    border: 1px solid rgba(229, 201, 188, .94);
-    border-radius: 16px;
-    background: rgba(255, 252, 249, .92);
-  }
-  #zefirok-maltipoo-runner .admin-profile-control-card &gt; strong { font-size: 14px; }
-  #zefirok-maltipoo-runner .admin-profile-control-actions {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 7px;
-  }
-  #zefirok-maltipoo-runner .admin-profile-control-actions .admin-button {
-    min-height: 38px;
-    padding: 7px 6px;
-    font-size: 11px;
-  }
+
   #zefirok-maltipoo-runner .tutorial-title-ladder {
     display: grid;
     gap: 6px;
@@ -4398,9 +4376,6 @@ html&gt;body{padding:
     font-weight: 800;
   }
   @media (max-width: 520px) {
-    #zefirok-maltipoo-runner .admin-profile-control-actions {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
     #zefirok-maltipoo-runner .level-guide-item {
       grid-template-columns: 32px minmax(0, 1fr);
     }
@@ -5786,7 +5761,7 @@ html&gt;body{padding:
 @media(max-width:390px){#zefirok-maltipoo-runner .level-cases-list{grid-template-columns:1fr}#zefirok-maltipoo-runner .level-case-card.is-gold{grid-column:auto}#zefirok-maltipoo-runner .case-cosmetic-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
 &lt;/style&gt;
 
-&lt;style id=&quot;zefirok-4-0-12-case-admin-roulette&quot;&gt;
+&lt;style id=&quot;zefirok-4-0-12-case-roulette&quot;&gt;
 #zefirok-maltipoo-runner .case-gifted-wrap{display:grid;gap:9px;padding:11px;border-radius:17px;background:linear-gradient(145deg,#fff5fb,#fff9e9);border:1px solid rgba(224,151,179,.34)}
 #zefirok-maltipoo-runner .case-gifted-wrap[hidden]{display:none!important}
 #zefirok-maltipoo-runner .case-gifted-list{display:grid;gap:8px}
@@ -5821,10 +5796,9 @@ html&gt;body{padding:
 #zefirok-maltipoo-runner .case-roulette-card b{font-size:22px;line-height:1}.case-roulette-card.is-final{background:linear-gradient(145deg,#fff8cf,#ffe6ef);box-shadow:inset 0 0 0 2px rgba(218,103,143,.28),0 5px 13px rgba(114,59,79,.13)}
 #zefirok-maltipoo-runner .case-roulette-reward{padding:9px 12px;border-radius:13px;background:#fff;display:flex;align-items:center;gap:10px;text-align:left;animation:case-reward-pop .34s ease both}.case-roulette-reward[hidden]{display:none!important}.case-roulette-reward&gt;b{font-size:20px}.case-roulette-reward&gt;span{display:grid}.case-roulette-reward strong{font-size:13px;color:#5d3928}.case-roulette-reward small{font-size:10px;color:#97715e}
 #zefirok-maltipoo-runner .case-result-done:disabled{opacity:.45;cursor:wait}
-#zefirok-maltipoo-runner .admin-case-grant-grid{display:grid;gap:10px}.admin-case-grant-card{display:grid;grid-template-columns:minmax(0,1fr) 92px auto;gap:8px;align-items:center;padding:10px;border-radius:14px;background:#fff}.admin-case-grant-card&gt;strong{grid-column:1/-1;font-size:13px;color:#70465a}.admin-case-grant-card .admin-button{min-height:42px}
 @keyframes case-chest-shake{from{transform:rotate(-3deg) translateY(0)}to{transform:rotate(3deg) translateY(-3px)}}
 @keyframes case-reward-pop{from{opacity:0;transform:scale(.92) translateY(-4px)}to{opacity:1;transform:scale(1) translateY(0)}}
-@media(max-width:390px){#zefirok-maltipoo-runner .gifted-case-card{grid-template-columns:58px minmax(0,1fr)}#zefirok-maltipoo-runner .gifted-case-card&gt;button{grid-column:1/-1}.admin-case-grant-card{grid-template-columns:1fr}.admin-case-grant-card&gt;strong{grid-column:auto}}
+@media(max-width:390px){#zefirok-maltipoo-runner .gifted-case-card{grid-template-columns:58px minmax(0,1fr)}#zefirok-maltipoo-runner .gifted-case-card&gt;button{grid-column:1/-1}}
 &lt;/style&gt;
 
 &lt;style id=&quot;zefirok-4-0-13-premium-single-reward-cases&quot;&gt;
@@ -7358,432 +7332,6 @@ html&gt;body{padding:
     }
 
 
-    /* Hidden developer admin panel. Authentication is intentionally session-only. */
-    #zefirok-maltipoo-runner .admin-layer[hidden] {
-      display: none !important;
-    }
-
-    #zefirok-maltipoo-runner .admin-layer {
-      position: fixed;
-      inset: 0;
-      z-index: 1300;
-      display: grid;
-      place-items: center;
-      padding: max(16px, env(safe-area-inset-top)) 14px max(16px, env(safe-area-inset-bottom));
-      background: rgba(42, 31, 36, 0.58);
-      backdrop-filter: blur(9px);
-      -webkit-backdrop-filter: blur(9px);
-      overflow-y: auto;
-    }
-
-    #zefirok-maltipoo-runner .admin-dialog {
-      width: min(100%, 520px);
-      max-height: calc(100dvh - 30px);
-      overflow-y: auto;
-      border: 1px solid rgba(226, 190, 175, 0.96);
-      border-radius: 28px;
-      background:
-        radial-gradient(circle at 16% 5%, rgba(255, 211, 225, 0.5), transparent 30%),
-        linear-gradient(165deg, rgba(255, 252, 249, 0.995), rgba(255, 240, 236, 0.995));
-      box-shadow: 0 25px 76px rgba(48, 31, 37, 0.34), inset 0 1px 0 rgba(255, 255, 255, 0.96);
-      color: var(--ink);
-      padding: 20px;
-      text-align: left;
-      overscroll-behavior: contain;
-    }
-
-    #zefirok-maltipoo-runner .admin-dialog h2,
-    #zefirok-maltipoo-runner .admin-dialog h3,
-    #zefirok-maltipoo-runner .admin-dialog p {
-      margin-top: 0;
-    }
-
-    #zefirok-maltipoo-runner .admin-dialog h2 {
-      margin-bottom: 8px;
-      font-size: clamp(23px, 6vw, 30px);
-      line-height: 1.08;
-      font-weight: 800;
-    }
-
-    #zefirok-maltipoo-runner .admin-dialog p {
-      margin-bottom: 14px;
-      color: #77727a;
-      line-height: 1.4;
-    }
-
-    #zefirok-maltipoo-runner .admin-login-form,
-    #zefirok-maltipoo-runner .admin-dashboard {
-      display: grid;
-      gap: 12px;
-    }
-
-    #zefirok-maltipoo-runner .admin-field-label {
-      display: grid;
-      gap: 6px;
-      color: #756b70;
-      font-size: 13px;
-      font-weight: 700;
-    }
-
-    #zefirok-maltipoo-runner .admin-input {
-      width: 100%;
-      min-height: 46px;
-      border: 1px solid rgba(221, 185, 171, 0.96);
-      border-radius: 15px;
-      padding: 9px 12px;
-      background: rgba(255, 255, 255, 0.94);
-      color: var(--ink);
-      font: 700 15px/1.2 var(--font-sans);
-      outline: none;
-      box-shadow: inset 0 1px 2px rgba(100, 68, 55, 0.06);
-      user-select: text !important;
-      -webkit-user-select: text !important;
-    }
-
-    #zefirok-maltipoo-runner .admin-input:focus {
-      border-color: rgba(226, 108, 151, 0.88);
-      box-shadow: 0 0 0 3px rgba(240, 147, 179, 0.17);
-    }
-
-    #zefirok-maltipoo-runner .admin-actions {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 9px;
-    }
-
-    #zefirok-maltipoo-runner .admin-actions--single {
-      grid-template-columns: minmax(0, 1fr);
-    }
-
-    #zefirok-maltipoo-runner .admin-button {
-      min-width: 0;
-      min-height: 44px;
-      border: 1px solid rgba(220, 185, 170, 0.96);
-      border-radius: 15px;
-      padding: 9px 11px;
-      background: rgba(255, 255, 255, 0.92);
-      color: #736a6d;
-      box-shadow: 0 6px 14px rgba(94, 61, 59, 0.08);
-      font: 800 13px/1.15 var(--font-sans);
-      cursor: pointer;
-    }
-
-    #zefirok-maltipoo-runner .admin-button--primary {
-      border-color: rgba(218, 108, 148, 0.65);
-      background: linear-gradient(180deg, #f7aac4, #ed7ea6);
-      color: #fff;
-      text-shadow: 0 1px 2px rgba(159, 62, 95, 0.22);
-    }
-
-    #zefirok-maltipoo-runner .admin-button--danger {
-      border-color: rgba(199, 93, 92, 0.5);
-      background: rgba(255, 232, 231, 0.96);
-      color: #ad5554;
-    }
-
-    #zefirok-maltipoo-runner .admin-button:active {
-      transform: translateY(1px) scale(0.985);
-    }
-
-    #zefirok-maltipoo-runner .admin-error,
-    #zefirok-maltipoo-runner .admin-message {
-      min-height: 18px;
-      margin: 0;
-      font-size: 13px;
-      font-weight: 700;
-    }
-
-    #zefirok-maltipoo-runner .admin-error { color: #bd5262; }
-    #zefirok-maltipoo-runner .admin-message { color: #8a6170; }
-
-    #zefirok-maltipoo-runner .admin-security-warning {
-      display: grid;
-      gap: 11px;
-      padding: 16px;
-      border: 1px solid rgba(198, 73, 78, 0.62);
-      border-radius: 19px;
-      background: linear-gradient(180deg, rgba(255, 239, 239, 0.98), rgba(255, 226, 228, 0.96));
-      color: #963e49;
-      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.82);
-      text-align: center;
-    }
-
-    #zefirok-maltipoo-runner .admin-security-warning strong {
-      font-size: 18px;
-      line-height: 1.2;
-      color: #a33d49;
-    }
-
-    #zefirok-maltipoo-runner .admin-security-warning p {
-      margin: 0;
-      color: #8d4a53;
-      font-size: 15px;
-      font-weight: 800;
-      line-height: 1.45;
-    }
-
-    #zefirok-maltipoo-runner .admin-contact-link {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 46px;
-      border: 1px solid rgba(66, 147, 225, 0.42);
-      border-radius: 15px;
-      padding: 10px 13px;
-      background: rgba(231, 244, 255, 0.92);
-      color: #327fbe;
-      font-size: 14px;
-      font-weight: 800;
-      text-align: center;
-      text-decoration: none;
-      user-select: none !important;
-      -webkit-user-select: none !important;
-    }
-
-    #zefirok-maltipoo-runner .admin-contact-link:active {
-      transform: translateY(1px) scale(0.985);
-    }
-
-    #zefirok-maltipoo-runner .admin-session-note,
-    #zefirok-maltipoo-runner .admin-global-note {
-      padding: 10px 12px;
-      border-radius: 15px;
-      font-size: 13px;
-      line-height: 1.35;
-    }
-
-    #zefirok-maltipoo-runner .admin-session-note {
-      border: 1px solid rgba(239, 151, 181, 0.46);
-      background: rgba(255, 229, 238, 0.72);
-      color: #8b6874;
-    }
-
-    #zefirok-maltipoo-runner .admin-global-note {
-      border: 1px solid rgba(226, 191, 148, 0.55);
-      background: rgba(255, 244, 226, 0.9);
-      color: #8b6847;
-    }
-
-    #zefirok-maltipoo-runner .admin-section {
-      display: grid;
-      gap: 10px;
-      padding: 13px;
-      border: 1px solid rgba(229, 203, 190, 0.92);
-      border-radius: 19px;
-      background: rgba(255, 255, 255, 0.67);
-    }
-
-    #zefirok-maltipoo-runner .admin-section h3 {
-      margin-bottom: 0;
-      font-size: 17px;
-      font-weight: 800;
-    }
-
-    #zefirok-maltipoo-runner .admin-value-row {
-      display: grid;
-      grid-template-columns: minmax(92px, 0.9fr) minmax(90px, 1fr) repeat(3, minmax(58px, auto));
-      gap: 7px;
-      align-items: center;
-    }
-
-    #zefirok-maltipoo-runner .admin-value-row &gt; span {
-      color: #716a70;
-      font-size: 13px;
-      font-weight: 800;
-    }
-
-    #zefirok-maltipoo-runner .admin-value-row .admin-input {
-      min-height: 40px;
-      padding: 7px 9px;
-    }
-
-    #zefirok-maltipoo-runner .admin-value-row .admin-button {
-      min-height: 38px;
-      padding: 7px 8px;
-      font-size: 12px;
-    }
-
-    #zefirok-maltipoo-runner .admin-price-card {
-      display: grid;
-      gap: 8px;
-      padding: 10px;
-      border: 1px solid rgba(232, 211, 201, 0.94);
-      border-radius: 16px;
-      background: rgba(255, 252, 249, 0.88);
-    }
-
-    #zefirok-maltipoo-runner .admin-price-card &gt; strong {
-      font-size: 14px;
-    }
-
-    #zefirok-maltipoo-runner .admin-price-fields {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 7px;
-    }
-
-    #zefirok-maltipoo-runner .admin-price-fields label {
-      display: grid;
-      gap: 4px;
-      color: #7b7276;
-      font-size: 11px;
-      font-weight: 700;
-    }
-
-    #zefirok-maltipoo-runner .admin-price-fields .admin-input {
-      min-height: 39px;
-      padding: 7px 8px;
-      font-size: 13px;
-    }
-
-    #zefirok-maltipoo-runner .admin-skin-account-list {
-      display: grid;
-      gap: 8px;
-    }
-
-    #zefirok-maltipoo-runner .admin-skin-account-card {
-      display: grid;
-      grid-template-columns: 54px minmax(0, 1fr) auto;
-      gap: 10px;
-      align-items: center;
-      padding: 9px;
-      border: 1px solid rgba(232, 211, 201, 0.94);
-      border-radius: 16px;
-      background: rgba(255, 252, 249, 0.88);
-    }
-
-    #zefirok-maltipoo-runner .admin-skin-account-card img {
-      width: 54px;
-      height: 54px;
-      object-fit: contain;
-      border-radius: 13px;
-      background: rgba(255, 241, 246, 0.78);
-    }
-
-    #zefirok-maltipoo-runner .admin-skin-account-copy {
-      display: grid;
-      gap: 3px;
-      min-width: 0;
-    }
-
-    #zefirok-maltipoo-runner .admin-skin-account-copy strong {
-      font-size: 14px;
-    }
-
-    #zefirok-maltipoo-runner .admin-skin-account-copy span {
-      color: #8d7c83;
-      font-size: 11px;
-      font-weight: 700;
-    }
-
-    #zefirok-maltipoo-runner .admin-skin-account-card .admin-button {
-      min-height: 38px;
-      padding: 7px 9px;
-      font-size: 11px;
-    }
-
-    #zefirok-maltipoo-runner .admin-purchase-list {
-      display: grid;
-      gap: 9px;
-    }
-
-    #zefirok-maltipoo-runner .admin-purchase-card {
-      display: grid;
-      gap: 9px;
-      padding: 11px;
-      border: 1px solid rgba(229, 201, 188, 0.94);
-      border-radius: 17px;
-      background: rgba(255, 252, 249, 0.92);
-    }
-
-    #zefirok-maltipoo-runner .admin-purchase-card.is-expired {
-      background: rgba(238, 236, 236, 0.9);
-      filter: grayscale(0.35);
-      opacity: 0.82;
-    }
-
-    #zefirok-maltipoo-runner .admin-purchase-head {
-      display: grid;
-      grid-template-columns: 54px minmax(0, 1fr);
-      align-items: center;
-      gap: 10px;
-    }
-
-    #zefirok-maltipoo-runner .admin-purchase-head img {
-      width: 54px;
-      height: 54px;
-      object-fit: contain;
-      pointer-events: none;
-    }
-
-    #zefirok-maltipoo-runner .admin-purchase-info {
-      display: grid;
-      gap: 3px;
-      min-width: 0;
-    }
-
-    #zefirok-maltipoo-runner .admin-purchase-info strong {
-      font-size: 14px;
-      color: var(--ink);
-    }
-
-    #zefirok-maltipoo-runner .admin-purchase-info code {
-      color: #b45176;
-      font: 800 12px/1.2 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-      overflow-wrap: anywhere;
-      user-select: text !important;
-      -webkit-user-select: text !important;
-    }
-
-    #zefirok-maltipoo-runner .admin-purchase-status {
-      color: #7b7377;
-      font-size: 12px;
-      font-weight: 700;
-    }
-
-    #zefirok-maltipoo-runner .admin-purchase-time-controls {
-      display: grid;
-      grid-template-columns: minmax(74px, 0.75fr) minmax(92px, 0.9fr) minmax(120px, 1.2fr);
-      gap: 7px;
-    }
-
-    #zefirok-maltipoo-runner .admin-purchase-time-controls .admin-input {
-      min-height: 40px;
-      padding: 7px 9px;
-      font-size: 13px;
-    }
-
-    #zefirok-maltipoo-runner .admin-purchase-actions {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 7px;
-    }
-
-    #zefirok-maltipoo-runner .admin-purchase-empty {
-      padding: 14px;
-      border: 1px dashed rgba(218, 184, 169, 0.9);
-      border-radius: 15px;
-      color: #85797c;
-      text-align: center;
-      font-size: 13px;
-      font-weight: 700;
-    }
-
-    @media (max-width: 520px) {
-      #zefirok-maltipoo-runner .admin-dialog { padding: 16px; }
-      #zefirok-maltipoo-runner .admin-value-row {
-        grid-template-columns: 1fr 1fr 1fr;
-      }
-      #zefirok-maltipoo-runner .admin-value-row &gt; span,
-      #zefirok-maltipoo-runner .admin-value-row &gt; .admin-input {
-        grid-column: span 3;
-      }
-      #zefirok-maltipoo-runner .admin-price-fields {
-        grid-template-columns: 1fr;
-      }
-    }
-
-
 
 #zefirok-maltipoo-runner .profile-shell &gt; .profile-hero { order: 0; }
 #zefirok-maltipoo-runner .profile-section--battle-pass { order: 15; }
@@ -8765,12 +8313,6 @@ html&gt;body{padding:
   &lt;/div&gt;
 &lt;/div&gt;
 
-&lt;div aria-hidden=&quot;true&quot; class=&quot;admin-layer&quot; data-admin-layer=&quot;&quot; hidden=&quot;&quot;&gt;
-  &lt;div aria-labelledby=&quot;admin-dialog-title&quot; aria-modal=&quot;true&quot; class=&quot;admin-dialog&quot; data-admin-dialog=&quot;&quot; role=&quot;dialog&quot;&gt;
-    &lt;div data-admin-content=&quot;&quot;&gt;&lt;/div&gt;
-  &lt;/div&gt;
-&lt;/div&gt;
-
 &lt;div aria-hidden=&quot;true&quot; class=&quot;tutorial-layer&quot; data-tutorial-layer hidden&gt;
   &lt;div aria-labelledby=&quot;tutorial-dialog-title&quot; aria-modal=&quot;true&quot; class=&quot;tutorial-dialog&quot; role=&quot;dialog&quot;&gt;
     &lt;button class=&quot;tutorial-skip&quot; data-tutorial-skip type=&quot;button&quot;&gt;Пропустить&lt;/button&gt;
@@ -8926,8 +8468,6 @@ html&gt;body{padding:
       const skinsMessageEl = root.querySelector(&quot;[data-skins-message]&quot;);
       const purchaseLayer = root.querySelector(&quot;[data-purchase-layer]&quot;);
       const purchaseContent = root.querySelector(&quot;[data-purchase-content]&quot;);
-      const adminLayer = root.querySelector(&quot;[data-admin-layer]&quot;);
-      const adminContent = root.querySelector(&quot;[data-admin-content]&quot;);
       const tutorialLayer = root.querySelector(&quot;[data-tutorial-layer]&quot;);
       const tutorialContent = root.querySelector(&quot;[data-tutorial-content]&quot;);
       const tutorialOpenButton = root.querySelector(&quot;[data-tutorial-open]&quot;);
@@ -9048,10 +8588,9 @@ html&gt;body{padding:
       // КЛИЕНТСКАЯ ЗАЩИТА ПРОГРЕССА
       //
       // Защита не запрещает F12 и не мешает браузерным инструментам.
-      // Авторизованная скрытая админ-панель может легально менять значения.
+      // Доверенные игровые и серверные операции отмечаются отдельно.
       // &quot;rollback&quot; возвращает последнее корректное состояние при подмене.
       const CLIENT_ANTI_CHEAT_ENABLED = true;
-      const CLIENT_ANTI_CHEAT_ALLOW_ADMIN_CHANGES = true;
       const CLIENT_ANTI_CHEAT_ACTION = &quot;rollback&quot;;
       const CLIENT_ANTI_CHEAT_MAX_VIOLATIONS = 3;
       const CLIENT_ANTI_CHEAT_SHOW_WARNING = true;
@@ -9758,13 +9297,6 @@ html&gt;body{padding:
         seasonProfileXpEndsAt: &quot;&quot;,
         completedRuns: 0,
         completedPurchases: 0,
-        adminPrices: {},
-        adminSecurity: {
-          failedAttempts: 0,
-          locked: false,
-          serverResetPending: false,
-          resetIncidentId: &quot;&quot;
-        },
         tutorialCompleted: false,
         profileTutorialCompleted: false,
         caseTutorialSeenKey: &quot;&quot;,
@@ -10475,9 +10007,9 @@ html&gt;body{padding:
 
       function shopProductOwnedCount(id, product = shopProducts[id]) {
         if (product?.kind === &quot;case&quot;) {
-          return sanitizeAdminNumber(state.caseGiftedCases?.[product.caseType] || 0);
+          return sanitizeGameNumber(state.caseGiftedCases?.[product.caseType] || 0);
         }
-        return sanitizeAdminNumber(state.inventory?.[id] || 0);
+        return sanitizeGameNumber(state.inventory?.[id] || 0);
       }
 
 
@@ -10521,13 +10053,8 @@ html&gt;body{padding:
       const CASE_API_ACTIVATE_PATH = &quot;/api/cases/activate&quot;;
       const CASE_API_EQUIP_PATH = &quot;/api/cases/equip&quot;;
       const CASE_API_CONSUME_RUN_PATH = &quot;/api/cases/consume-run&quot;;
-      const ADMIN_PROFILE_SYNC_PATH = &quot;/api/admin/profile/sync&quot;;
-      const ADMIN_SECURITY_RESET_PATH = &quot;/api/security/admin-login-reset&quot;;
-      const ADMIN_LEADERBOARD_SET_PATH = &quot;/api/admin/leaderboard/set&quot;;
-      const ADMIN_SHOP_PRICES_PATH = &quot;/api/admin/shop/prices&quot;;
+      const PROFILE_SYNC_PATH = &quot;/api/profile/sync&quot;;
       const SHOP_CONFIG_PATH = &quot;/api/shop/config&quot;;
-      const ADMIN_SKIN_PRICES_PATH = &quot;/api/admin/skins/prices&quot;;
-      const ADMIN_CASE_GRANT_PATH = &quot;/api/admin/cases/grant&quot;;
       const SKIN_CONFIG_PATH = &quot;/api/skins/config&quot;;
       const SKIN_BONUS_CASE_PATH = &quot;/api/skins/bonus-case&quot;;
       const SKIN_PURCHASE_PATH = &quot;/api/skins/purchase&quot;;
@@ -10887,7 +10414,7 @@ html&gt;body{padding:
           extra: &quot;Нажми на плашку со званием или на карточку уровня в профиле — откроется полный список уровней, требований XP и званий.&quot;,
           visual: () =&gt; `
             &lt;div class=&quot;tutorial-title-ladder&quot;&gt;
-              ${PROFILE_TITLES.map((entry) =&gt; `&lt;span&gt;&lt;strong&gt;${escapePurchaseText(entry.title)}&lt;/strong&gt;&lt;em&gt;с уровня ${sanitizeAdminNumber(entry.level)}&lt;/em&gt;&lt;/span&gt;`).join(&quot;&quot;)}
+              ${PROFILE_TITLES.map((entry) =&gt; `&lt;span&gt;&lt;strong&gt;${escapePurchaseText(entry.title)}&lt;/strong&gt;&lt;em&gt;с уровня ${sanitizeGameNumber(entry.level)}&lt;/em&gt;&lt;/span&gt;`).join(&quot;&quot;)}
             &lt;/div&gt;`
         },
         {
@@ -11040,7 +10567,6 @@ html&gt;body{padding:
         state.profileXp = 0;
         state.completedRuns = 0;
         state.completedPurchases = 0;
-        state.adminPrices = {};
         state.speed = 210;
         state.visualDistance = 0;
         state.spawn = 0;
@@ -11056,16 +10582,14 @@ html&gt;body{padding:
         currentDogSkin.id = &quot;default&quot;;
         syncDogPortraits();
         syncDogAvatar();
-        applyAdminPrices();
+        applyRemoteShopPrices();
       }
 
       function showReleaseNotice() {
         window.clearTimeout(releaseNoticeTimer);
         if (!pendingReleaseNotice || !UPDATE_NOTICE_ENABLED || !releaseLayer) return;
-        if (getAdminSecurity().locked) return;
         if (tutorialLayer &amp;&amp; !tutorialLayer.hidden) closeTutorial(false);
         if (purchaseLayer &amp;&amp; !purchaseLayer.hidden) closePurchaseLayer();
-        if (adminLayer &amp;&amp; !adminLayer.hidden) closeAdminLayer();
         if (state.running &amp;&amp; !state.paused) togglePause();
         if (releaseTitleEl) releaseTitleEl.textContent = UPDATE_NOTICE_TITLE;
         if (releaseCopyEl) releaseCopyEl.innerHTML = escapeReleaseText(UPDATE_NOTICE_TEXT).replace(/\n/g, &quot;&lt;br&gt;&quot;);
@@ -11094,7 +10618,7 @@ html&gt;body{padding:
 
       function scheduleReleaseNotice(delay = 250) {
         window.clearTimeout(releaseNoticeTimer);
-        if (!pendingReleaseNotice || !UPDATE_NOTICE_ENABLED || getAdminSecurity().locked) return;
+        if (!pendingReleaseNotice || !UPDATE_NOTICE_ENABLED) return;
         releaseNoticeTimer = window.setTimeout(showReleaseNotice, delay);
       }
 
@@ -11132,9 +10656,8 @@ html&gt;body{padding:
       }
 
       function openTutorialMode(automatic = false, startIndex = 0) {
-        if (!tutorialLayer || !tutorialContent || getAdminSecurity().locked) return;
+        if (!tutorialLayer || !tutorialContent) return;
         if (releaseLayer &amp;&amp; !releaseLayer.hidden) return;
-        if (adminLayer &amp;&amp; !adminLayer.hidden) return;
         if (purchaseLayer &amp;&amp; !purchaseLayer.hidden) closePurchaseLayer();
         if (state.running) togglePause();
         tutorialOpenedAutomatically = Boolean(automatic);
@@ -11193,21 +10716,19 @@ html&gt;body{padding:
 
       function scheduleTutorialAutoOpen(delay = 1800) {
         window.clearTimeout(tutorialAutoTimer);
-        if (state.tutorialCompleted || getAdminSecurity().locked || pendingReleaseNotice || (releaseLayer &amp;&amp; !releaseLayer.hidden)) return;
+        if (state.tutorialCompleted || pendingReleaseNotice || (releaseLayer &amp;&amp; !releaseLayer.hidden)) return;
         tutorialAutoTimer = window.setTimeout(() =&gt; {
-          if (!state.tutorialCompleted &amp;&amp; !getAdminSecurity().locked &amp;&amp; (!adminLayer || adminLayer.hidden)) {
-            openTutorial(true);
-          }
+          if (!state.tutorialCompleted) openTutorial(true);
         }, delay);
       }
 
       function scheduleProfileTutorialAutoOpen(delay = 300) {
         window.clearTimeout(profileTutorialAutoTimer);
         const caseTutorialPending = String(state.caseTutorialSeenKey || &quot;&quot;) !== CASE_TUTORIAL_KEY;
-        if ((!caseTutorialPending &amp;&amp; state.profileTutorialCompleted) || getAdminSecurity().locked || pendingReleaseNotice || (releaseLayer &amp;&amp; !releaseLayer.hidden)) return;
+        if ((!caseTutorialPending &amp;&amp; state.profileTutorialCompleted) || pendingReleaseNotice || (releaseLayer &amp;&amp; !releaseLayer.hidden)) return;
         profileTutorialAutoTimer = window.setTimeout(() =&gt; {
           const profileScreen = root.querySelector(&#x27;[data-screen=&quot;profile&quot;]&#x27;);
-          if (!profileScreen || profileScreen.hidden || (adminLayer &amp;&amp; !adminLayer.hidden)) return;
+          if (!profileScreen || profileScreen.hidden) return;
           if (String(state.caseTutorialSeenKey || &quot;&quot;) !== CASE_TUTORIAL_KEY) {
             openCaseTutorial(true);
             return;
@@ -11216,20 +10737,6 @@ html&gt;body{padding:
         }, delay);
       }
 
-
-      // =============================================================
-      // НАСТРОЙКИ СКРЫТОЙ АДМИН-ПАНЕЛИ.
-      // Меняйте значения только между кавычками или число попыток.
-      // ВАЖНО: пароли находятся внутри клиентского HTML и не заменяют серверную защиту.
-      const ADMIN_PASSWORD = &quot;798465132Dv!&quot;;
-      const ADMIN_UNLOCK_PASSWORD = &quot;Dv!798465132Dv!&quot;;
-      const ADMIN_CONTACT = &quot;@ve4n0_em&quot;;
-      const ADMIN_MAX_LOGIN_ATTEMPTS = 3;
-      const ADMIN_AVATAR_TAPS_REQUIRED = 10;
-      // После исчерпания попыток функция resetAccountAfterAdminLock()
-      // полностью удаляет игровой прогресс и сохраняет блокировку до ввода
-      // ключа разблокировки. Верный ключ снимает блокировку и открывает панель.
-      // =============================================================
 
       const defaultShopPrices = Object.fromEntries(
         Object.entries(shopProducts)
@@ -11243,50 +10750,22 @@ html&gt;body{padding:
       let remoteShopPrices = {};
       let remoteShopAssortment = {};
 
-      let adminAuthenticated = false; // Не сохраняется: после перезагрузки всегда false.
-      let adminAvatarTapCount = 0;
-      let adminReturnFocus = null;
-      let adminSecurityResetInFlight = null;
-      let adminUnlockInFlight = null;
 
-      function getAdminSecurity() {
-        if (!state.adminSecurity || typeof state.adminSecurity !== &quot;object&quot;) {
-          state.adminSecurity = { failedAttempts: 0, locked: false, serverResetPending: false, resetIncidentId: &quot;&quot; };
-        }
-        const attempts = Number(state.adminSecurity.failedAttempts);
-        state.adminSecurity.failedAttempts = Number.isFinite(attempts)
-          ? Math.max(0, Math.min(ADMIN_MAX_LOGIN_ATTEMPTS, Math.floor(attempts)))
-          : 0;
-        const reachedAttemptLimit = state.adminSecurity.failedAttempts &gt;= ADMIN_MAX_LOGIN_ATTEMPTS;
-        state.adminSecurity.locked = Boolean(state.adminSecurity.locked) || reachedAttemptLimit;
-        state.adminSecurity.serverResetPending = Boolean(state.adminSecurity.serverResetPending);
-        state.adminSecurity.resetIncidentId = String(state.adminSecurity.resetIncidentId || &quot;&quot;).slice(0, 100);
-        // Миграция старого лимита в пять попыток: аккаунты, у которых уже
-        // накопилось три и более ошибки, также проходят обязательный сброс.
-        if (state.adminSecurity.locked &amp;&amp; reachedAttemptLimit &amp;&amp; !state.adminSecurity.resetIncidentId) {
-          state.adminSecurity.serverResetPending = true;
-          state.adminSecurity.resetIncidentId = `admin-lock-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
-        }
-        return state.adminSecurity;
-      }
-
-      function sanitizeAdminNumber(value) {
+      function sanitizeGameNumber(value) {
         const number = Number(value);
         if (!Number.isFinite(number)) return 0;
         return Math.max(0, Math.min(999999999, Math.floor(number)));
       }
 
-      function applyAdminPrices() {
+      function applyRemoteShopPrices() {
         const remote = remoteShopPrices &amp;&amp; typeof remoteShopPrices === &quot;object&quot; ? remoteShopPrices : {};
-        const overrides = state.adminPrices &amp;&amp; typeof state.adminPrices === &quot;object&quot; ? state.adminPrices : {};
         for (const [id, defaults] of Object.entries(defaultShopPrices)) {
           const serverPrice = remote[id] &amp;&amp; typeof remote[id] === &quot;object&quot; ? remote[id] : {};
-          const override = overrides[id] &amp;&amp; typeof overrides[id] === &quot;object&quot; ? overrides[id] : {};
           const product = shopProducts[id];
           if (!product) continue;
-          product.points = sanitizeAdminNumber(override.points ?? serverPrice.points ?? defaults.points);
-          product.treats = sanitizeAdminNumber(override.treats ?? serverPrice.treats ?? defaults.treats);
-          product.coffee = sanitizeAdminNumber(override.coffee ?? serverPrice.coffee ?? defaults.coffee);
+          product.points = sanitizeGameNumber(serverPrice.points ?? defaults.points);
+          product.treats = sanitizeGameNumber(serverPrice.treats ?? defaults.treats);
+          product.coffee = sanitizeGameNumber(serverPrice.coffee ?? defaults.coffee);
         }
         syncShopPricesFromProducts();
         updateHud();
@@ -11299,9 +10778,9 @@ html&gt;body{padding:
           const entry = remote[id] &amp;&amp; typeof remote[id] === &quot;object&quot; ? remote[id] : null;
           if (entry) {
             product.enabled = entry.enabled !== false &amp;&amp; Number(entry.enabled ?? 1) !== 0;
-            product.points = sanitizeAdminNumber(entry.points ?? product.points);
-            product.treats = sanitizeAdminNumber(entry.treats ?? product.treats);
-            product.coffee = sanitizeAdminNumber(entry.coffee ?? product.coffee);
+            product.points = sanitizeGameNumber(entry.points ?? product.points);
+            product.treats = sanitizeGameNumber(entry.treats ?? product.treats);
+            product.coffee = sanitizeGameNumber(entry.coffee ?? product.coffee);
           } else {
             product.enabled = product.enabled !== false;
           }
@@ -11324,836 +10803,13 @@ html&gt;body{padding:
           const serverPrice = remote[id] &amp;&amp; typeof remote[id] === &quot;object&quot; ? remote[id] : {};
           const skin = SKIN_CATALOG[id];
           if (!skin) continue;
-          skin.points = sanitizeAdminNumber(serverPrice.points ?? defaults.points);
-          skin.treats = sanitizeAdminNumber(serverPrice.treats ?? defaults.treats);
-          skin.coffee = sanitizeAdminNumber(serverPrice.coffee ?? defaults.coffee);
+          skin.points = sanitizeGameNumber(serverPrice.points ?? defaults.points);
+          skin.treats = sanitizeGameNumber(serverPrice.treats ?? defaults.treats);
+          skin.coffee = sanitizeGameNumber(serverPrice.coffee ?? defaults.coffee);
         }
         renderSkinsShop();
       }
 
-      function adminValueRowsMarkup() {
-        const rows = [
-          [&quot;wallet&quot;, &quot;Очки магазина&quot;, state.wallet],
-          [&quot;score&quot;, &quot;Текущий счёт&quot;, state.score],
-          [&quot;best&quot;, &quot;Рекорд&quot;, state.best],
-          [&quot;treats&quot;, &quot;Зефир&quot;, state.treats],
-          [&quot;coffee&quot;, &quot;Чашки кофе&quot;, state.coffee]
-        ];
-        return rows.map(([field, label, value]) =&gt; `
-          &lt;div class=&quot;admin-value-row&quot;&gt;
-            &lt;span&gt;${label}&lt;/span&gt;
-            &lt;input class=&quot;admin-input&quot; data-admin-value-input=&quot;${field}&quot; inputmode=&quot;numeric&quot; min=&quot;0&quot; step=&quot;1&quot; type=&quot;number&quot; value=&quot;${sanitizeAdminNumber(value)}&quot;&gt;
-            &lt;button class=&quot;admin-button&quot; data-admin-value-action=&quot;set&quot; data-admin-value-field=&quot;${field}&quot; type=&quot;button&quot;&gt;Задать&lt;/button&gt;
-            &lt;button class=&quot;admin-button&quot; data-admin-value-action=&quot;add&quot; data-admin-value-field=&quot;${field}&quot; type=&quot;button&quot;&gt;+ Добавить&lt;/button&gt;
-            &lt;button class=&quot;admin-button admin-button--danger&quot; data-admin-value-action=&quot;zero&quot; data-admin-value-field=&quot;${field}&quot; type=&quot;button&quot;&gt;В 0&lt;/button&gt;
-          &lt;/div&gt;`).join(&quot;&quot;);
-      }
-
-      function adminProfileLevelControlsMarkup() {
-        const levelState = profileLevelState(state.profileXp);
-        return `
-          &lt;div class=&quot;admin-profile-level-controls&quot;&gt;
-            &lt;div class=&quot;admin-global-note&quot;&gt;&lt;strong&gt;Сейчас:&lt;/strong&gt; уровень ${levelState.level}, ${formatter.format(levelState.totalXp)} XP, звание «${escapePurchaseText(profileTitleForLevel(levelState.level))}». Установка уровня переносит игрока в начало выбранного уровня.&lt;/div&gt;
-            &lt;div class=&quot;admin-profile-control-card&quot;&gt;
-              &lt;strong&gt;Опыт профиля (XP)&lt;/strong&gt;
-              &lt;input class=&quot;admin-input&quot; data-admin-profile-value=&quot;xp&quot; inputmode=&quot;numeric&quot; min=&quot;0&quot; step=&quot;1&quot; type=&quot;number&quot; value=&quot;${sanitizeAdminNumber(state.profileXp)}&quot;&gt;
-              &lt;div class=&quot;admin-profile-control-actions&quot;&gt;
-                &lt;button class=&quot;admin-button&quot; data-admin-profile-action=&quot;set-xp&quot; type=&quot;button&quot;&gt;Задать&lt;/button&gt;
-                &lt;button class=&quot;admin-button&quot; data-admin-profile-action=&quot;add-xp&quot; type=&quot;button&quot;&gt;+ XP&lt;/button&gt;
-                &lt;button class=&quot;admin-button&quot; data-admin-profile-action=&quot;subtract-xp&quot; type=&quot;button&quot;&gt;− XP&lt;/button&gt;
-                &lt;button class=&quot;admin-button admin-button--danger&quot; data-admin-profile-action=&quot;reset-xp&quot; type=&quot;button&quot;&gt;В 0&lt;/button&gt;
-              &lt;/div&gt;
-            &lt;/div&gt;
-            &lt;div class=&quot;admin-profile-control-card&quot;&gt;
-              &lt;strong&gt;Уровень профиля — задать уровень или изменить на N&lt;/strong&gt;
-              &lt;input class=&quot;admin-input&quot; data-admin-profile-value=&quot;level&quot; inputmode=&quot;numeric&quot; min=&quot;1&quot; max=&quot;${PROFILE_LEVEL_MAX}&quot; step=&quot;1&quot; type=&quot;number&quot; value=&quot;1&quot;&gt;
-              &lt;div class=&quot;admin-profile-control-actions&quot;&gt;
-                &lt;button class=&quot;admin-button&quot; data-admin-profile-action=&quot;set-level&quot; type=&quot;button&quot;&gt;Задать&lt;/button&gt;
-                &lt;button class=&quot;admin-button&quot; data-admin-profile-action=&quot;add-level&quot; type=&quot;button&quot;&gt;+ N уровней&lt;/button&gt;
-                &lt;button class=&quot;admin-button&quot; data-admin-profile-action=&quot;subtract-level&quot; type=&quot;button&quot;&gt;− N уровней&lt;/button&gt;
-                &lt;button class=&quot;admin-button admin-button--danger&quot; data-admin-profile-action=&quot;reset-level&quot; type=&quot;button&quot;&gt;До 1&lt;/button&gt;
-              &lt;/div&gt;
-            &lt;/div&gt;
-          &lt;/div&gt;`;
-      }
-
-      async function updateAdminProfileProgress(action) {
-        if (!adminAuthenticated || !adminContent) return;
-        const currentState = profileLevelState(state.profileXp);
-        const xpInput = sanitizeAdminNumber(adminContent.querySelector(&#x27;[data-admin-profile-value=&quot;xp&quot;]&#x27;)?.value || 0);
-        const rawLevel = Number(adminContent.querySelector(&#x27;[data-admin-profile-value=&quot;level&quot;]&#x27;)?.value || 1);
-        const levelInput = Math.max(1, Math.min(PROFILE_LEVEL_MAX, Math.floor(Number.isFinite(rawLevel) ? rawLevel : 1)));
-        let nextXp = sanitizeAdminNumber(state.profileXp);
-        if (action === &quot;set-xp&quot;) nextXp = xpInput;
-        else if (action === &quot;add-xp&quot;) nextXp = sanitizeAdminNumber(nextXp + xpInput);
-        else if (action === &quot;subtract-xp&quot;) nextXp = Math.max(0, nextXp - xpInput);
-        else if (action === &quot;reset-xp&quot;) nextXp = 0;
-        else if (action === &quot;set-level&quot;) nextXp = profileTotalXpForLevel(levelInput);
-        else if (action === &quot;add-level&quot;) nextXp = profileTotalXpForLevel(Math.min(PROFILE_LEVEL_MAX, currentState.level + Math.max(1, levelInput)));
-        else if (action === &quot;subtract-level&quot;) nextXp = profileTotalXpForLevel(Math.max(1, currentState.level - Math.max(1, levelInput)));
-        else if (action === &quot;reset-level&quot;) nextXp = 0;
-        else return;
-        state.profileXp = sanitizeAdminNumber(nextXp);
-        renderProfile();
-        updateHud();
-        saveProgress();
-        const updated = profileLevelState(state.profileXp);
-        const isGlobalAdd = action === &quot;add-xp&quot; || action === &quot;add-level&quot;;
-        const synced = isGlobalAdd
-          ? await pushAdminProfileMinimums()
-          : await setAdminProfileSnapshot();
-        renderAdminDashboard(`Профиль обновлён: уровень ${updated.level}, ${formatter.format(updated.totalXp)} XP.${synced ? (isGlobalAdd ? &quot; Начисление сохранено глобально.&quot; : &quot; Точное значение сохранено глобально.&quot;) : &quot; Серверная синхронизация не выполнена.&quot;}`);
-      }
-
-      function adminPriceCardsMarkup() {
-        return Object.entries(shopProducts).filter(([, product]) =&gt; !product.fixedPrice).map(([id, product]) =&gt; `
-          &lt;div class=&quot;admin-price-card&quot; data-admin-price-card=&quot;${id}&quot;&gt;
-            &lt;strong&gt;${escapePurchaseText(product.title)}&lt;/strong&gt;
-            &lt;div class=&quot;admin-price-fields&quot;&gt;
-              &lt;label&gt;Очки&lt;input class=&quot;admin-input&quot; data-admin-price-field=&quot;points&quot; inputmode=&quot;numeric&quot; min=&quot;0&quot; step=&quot;1&quot; type=&quot;number&quot; value=&quot;${sanitizeAdminNumber(product.points)}&quot;&gt;&lt;/label&gt;
-              &lt;label&gt;Зефир&lt;input class=&quot;admin-input&quot; data-admin-price-field=&quot;treats&quot; inputmode=&quot;numeric&quot; min=&quot;0&quot; step=&quot;1&quot; type=&quot;number&quot; value=&quot;${sanitizeAdminNumber(product.treats)}&quot;&gt;&lt;/label&gt;
-              &lt;label&gt;Кофе&lt;input class=&quot;admin-input&quot; data-admin-price-field=&quot;coffee&quot; inputmode=&quot;numeric&quot; min=&quot;0&quot; step=&quot;1&quot; type=&quot;number&quot; value=&quot;${sanitizeAdminNumber(product.coffee)}&quot;&gt;&lt;/label&gt;
-            &lt;/div&gt;
-          &lt;/div&gt;`).join(&quot;&quot;);
-      }
-
-      function adminSkinPriceCardsMarkup() {
-        return Object.values(SKIN_CATALOG).map((skin) =&gt; `
-          &lt;div class=&quot;admin-price-card&quot; data-admin-skin-price-card=&quot;${skin.id}&quot;&gt;
-            &lt;strong&gt;${escapePurchaseText(skin.title)}&lt;/strong&gt;
-            &lt;div class=&quot;admin-price-fields&quot;&gt;
-              &lt;label&gt;Очки&lt;input class=&quot;admin-input&quot; data-admin-skin-price-field=&quot;points&quot; inputmode=&quot;numeric&quot; min=&quot;0&quot; step=&quot;1&quot; type=&quot;number&quot; value=&quot;${sanitizeAdminNumber(skin.points)}&quot;&gt;&lt;/label&gt;
-              &lt;label&gt;Зефир&lt;input class=&quot;admin-input&quot; data-admin-skin-price-field=&quot;treats&quot; inputmode=&quot;numeric&quot; min=&quot;0&quot; step=&quot;1&quot; type=&quot;number&quot; value=&quot;${sanitizeAdminNumber(skin.treats)}&quot;&gt;&lt;/label&gt;
-              &lt;label&gt;Кофе&lt;input class=&quot;admin-input&quot; data-admin-skin-price-field=&quot;coffee&quot; inputmode=&quot;numeric&quot; min=&quot;0&quot; step=&quot;1&quot; type=&quot;number&quot; value=&quot;${sanitizeAdminNumber(skin.coffee)}&quot;&gt;&lt;/label&gt;
-            &lt;/div&gt;
-          &lt;/div&gt;`).join(&quot;&quot;);
-      }
-
-      function adminOwnedSkinCardsMarkup() {
-        const owned = new Set(normalizeOwnedSkins(state.ownedSkins));
-        return `&lt;div class=&quot;admin-skin-account-list&quot;&gt;${Object.values(SKIN_CATALOG).map((skin) =&gt; {
-          const isDefault = skin.id === &quot;default&quot;;
-          const isOwned = owned.has(skin.id);
-          const isEquipped = currentDogSkin.id === skin.id;
-          const status = isEquipped ? &quot;Надет сейчас&quot; : isOwned ? &quot;Куплен&quot; : &quot;Не куплен&quot;;
-          return `&lt;div class=&quot;admin-skin-account-card&quot;&gt;
-            &lt;img src=&quot;${skin.image}&quot; alt=&quot;&quot;&gt;
-            &lt;div class=&quot;admin-skin-account-copy&quot;&gt;
-              &lt;strong&gt;${escapePurchaseText(skin.title)}&lt;/strong&gt;
-              &lt;span&gt;${status}${isDefault ? &quot; · базовый скин&quot; : &quot;&quot;}&lt;/span&gt;
-            &lt;/div&gt;
-            &lt;button class=&quot;admin-button admin-button--danger&quot; data-admin-remove-skin=&quot;${skin.id}&quot; type=&quot;button&quot; ${isDefault || !isOwned ? &quot;disabled&quot; : &quot;&quot;}&gt;Удалить&lt;/button&gt;
-          &lt;/div&gt;`;
-        }).join(&quot;&quot;)}&lt;/div&gt;`;
-      }
-
-      function adminPurchaseCardsMarkup() {
-        const now = Date.now();
-        const purchases = Array.isArray(state.redemptionCodes)
-          ? [...state.redemptionCodes].filter((entry) =&gt; entry &amp;&amp; typeof entry.code === &quot;string&quot;)
-          : [];
-        purchases.sort((left, right) =&gt; Number(right?.issuedAt || 0) - Number(left?.issuedAt || 0));
-        if (!purchases.length) {
-          return `&lt;div class=&quot;admin-purchase-empty&quot;&gt;Покупок для тестирования пока нет.&lt;/div&gt;`;
-        }
-        return `&lt;div class=&quot;admin-purchase-list&quot;&gt;${purchases.map((entry) =&gt; {
-          const product = warehouseProduct(entry);
-          const expiresAt = Number(entry.expiresAt || 0);
-          const expired = expiresAt &lt;= now;
-          const image = assetSources[product.image] || &quot;&quot;;
-          const status = expired ? &quot;Срок истёк&quot; : formatWarehouseRemaining(expiresAt - now);
-          return `
-            &lt;div class=&quot;admin-purchase-card${expired ? &quot; is-expired&quot; : &quot;&quot;}&quot; data-admin-purchase-card=&quot;${escapePurchaseText(entry.code)}&quot;&gt;
-              &lt;div class=&quot;admin-purchase-head&quot;&gt;
-                &lt;img alt=&quot;&quot; src=&quot;${image}&quot;&gt;
-                &lt;div class=&quot;admin-purchase-info&quot;&gt;
-                  &lt;strong&gt;${escapePurchaseText(product.title)}&lt;/strong&gt;
-                  &lt;code&gt;${escapePurchaseText(entry.code)}&lt;/code&gt;
-                  &lt;span class=&quot;admin-purchase-status&quot; data-admin-purchase-expires=&quot;${expiresAt}&quot;&gt;${expired ? &quot;Сгорела&quot; : `Осталось ${status}`}&lt;/span&gt;
-                &lt;/div&gt;
-              &lt;/div&gt;
-              &lt;div class=&quot;admin-purchase-time-controls&quot;&gt;
-                &lt;input aria-label=&quot;Количество времени&quot; class=&quot;admin-input&quot; data-admin-purchase-time inputmode=&quot;numeric&quot; min=&quot;0&quot; step=&quot;1&quot; type=&quot;number&quot; value=&quot;24&quot;&gt;
-                &lt;select aria-label=&quot;Единица времени&quot; class=&quot;admin-input&quot; data-admin-purchase-unit&gt;
-                  &lt;option value=&quot;minutes&quot;&gt;Минуты&lt;/option&gt;
-                  &lt;option selected value=&quot;hours&quot;&gt;Часы&lt;/option&gt;
-                  &lt;option value=&quot;days&quot;&gt;Дни&lt;/option&gt;
-                &lt;/select&gt;
-                &lt;button class=&quot;admin-button admin-button--primary&quot; data-admin-purchase-action=&quot;set-time&quot; data-admin-purchase-code=&quot;${escapePurchaseText(entry.code)}&quot; type=&quot;button&quot;&gt;Задать время&lt;/button&gt;
-              &lt;/div&gt;
-              &lt;div class=&quot;admin-purchase-actions&quot;&gt;
-                &lt;button class=&quot;admin-button&quot; data-admin-purchase-action=&quot;zero-time&quot; data-admin-purchase-code=&quot;${escapePurchaseText(entry.code)}&quot; type=&quot;button&quot;&gt;Время в 0&lt;/button&gt;
-                &lt;button class=&quot;admin-button admin-button--danger&quot; data-admin-purchase-action=&quot;delete&quot; data-admin-purchase-code=&quot;${escapePurchaseText(entry.code)}&quot; type=&quot;button&quot;&gt;Удалить покупку&lt;/button&gt;
-              &lt;/div&gt;
-            &lt;/div&gt;`;
-        }).join(&quot;&quot;)}&lt;/div&gt;`;
-      }
-
-      function renderAdminLogin(errorMessage = &quot;&quot;) {
-        if (!adminContent) return;
-        const security = getAdminSecurity();
-        if (security.locked) {
-          renderAdminLocked();
-          return;
-        }
-        const remaining = Math.max(0, ADMIN_MAX_LOGIN_ATTEMPTS - security.failedAttempts);
-        adminContent.innerHTML = `
-          &lt;form class=&quot;admin-login-form&quot; data-admin-login-form&gt;
-            &lt;h2 id=&quot;admin-dialog-title&quot;&gt;Добро пожаловать в Админ панель!&lt;/h2&gt;
-            &lt;p&gt;Что бы авторизоваться введите пожалуйста пароль:&lt;/p&gt;
-            &lt;div class=&quot;admin-session-note&quot;&gt;&lt;strong&gt;Осталось попыток: ${remaining} из ${ADMIN_MAX_LOGIN_ATTEMPTS}.&lt;/strong&gt; После трёх неверных вводов админ-панель будет заблокирована, а весь игровой прогресс аккаунта — необратимо обнулён.&lt;/div&gt;
-            &lt;label class=&quot;admin-field-label&quot;&gt;Пароль
-              &lt;input autocomplete=&quot;off&quot; class=&quot;admin-input&quot; data-admin-password enterkeyhint=&quot;go&quot; inputmode=&quot;text&quot; spellcheck=&quot;false&quot; type=&quot;password&quot;&gt;
-            &lt;/label&gt;
-            &lt;div aria-live=&quot;polite&quot; class=&quot;admin-error&quot; data-admin-error&gt;${escapePurchaseText(errorMessage)}&lt;/div&gt;
-            &lt;div class=&quot;admin-actions&quot;&gt;
-              &lt;button class=&quot;admin-button&quot; data-admin-close type=&quot;button&quot;&gt;Отмена&lt;/button&gt;
-              &lt;button class=&quot;admin-button admin-button--primary&quot; data-admin-login-submit type=&quot;button&quot;&gt;Войти&lt;/button&gt;
-            &lt;/div&gt;
-          &lt;/form&gt;`;
-        window.requestAnimationFrame(() =&gt; adminContent.querySelector(&quot;[data-admin-password]&quot;)?.focus());
-      }
-
-      function renderAdminPasswordWarning(remainingAttempts) {
-        if (!adminContent) return;
-        adminContent.innerHTML = `
-          &lt;div class=&quot;admin-dashboard&quot;&gt;
-            &lt;h2 id=&quot;admin-dialog-title&quot;&gt;Предупреждение безопасности&lt;/h2&gt;
-            &lt;div class=&quot;admin-security-warning&quot; role=&quot;alert&quot;&gt;
-              &lt;strong&gt;Вы ввели неверный пароль&lt;/strong&gt;
-              &lt;p&gt;Покиньте данную панель. После третьей ошибки весь игровой прогресс будет удалён, а вход в админ-панель заблокирован.&lt;/p&gt;
-              &lt;p&gt;Осталось попыток: ${Math.max(0, remainingAttempts)} из ${ADMIN_MAX_LOGIN_ATTEMPTS}.&lt;/p&gt;
-            &lt;/div&gt;
-            &lt;div class=&quot;admin-actions&quot;&gt;
-              &lt;button class=&quot;admin-button&quot; data-admin-warning-retry type=&quot;button&quot;&gt;Ввести пароль снова&lt;/button&gt;
-              &lt;button class=&quot;admin-button admin-button--danger&quot; data-admin-close type=&quot;button&quot;&gt;Покинуть панель&lt;/button&gt;
-            &lt;/div&gt;
-          &lt;/div&gt;`;
-        window.requestAnimationFrame(() =&gt; adminContent.querySelector(&quot;[data-admin-close]&quot;)?.focus());
-      }
-
-      function renderAdminLocked(errorMessage = &quot;&quot;) {
-        if (!adminContent) return;
-        adminContent.innerHTML = `
-          &lt;form class=&quot;admin-login-form&quot; data-admin-unlock-form&gt;
-            &lt;h2 id=&quot;admin-dialog-title&quot;&gt;Аккаунт заблокирован&lt;/h2&gt;
-            &lt;div class=&quot;admin-security-warning&quot; role=&quot;alert&quot;&gt;
-              &lt;strong&gt;Аккаунт полностью обнулён&lt;/strong&gt;
-              &lt;p&gt;После трёх неверных попыток удалены валюты, рекорд, уровень и XP, кейсы и бустеры, сезонный пропуск и его покупки, скины, аватарки, рамки, следы, музыка, коды и товары на складе.&lt;/p&gt;
-              &lt;p&gt;Удалённый прогресс восстановить невозможно.&lt;/p&gt;
-              &lt;p&gt;Верный ключ разблокировки снимет блокировку. После этого для входа в админ-панель нужно заново ввести обычный пароль. Обнулённый игровой прогресс при этом не восстанавливается.&lt;/p&gt;
-              &lt;p&gt;Чтобы получить ключ, напишите администратору ${escapePurchaseText(ADMIN_CONTACT)}.&lt;/p&gt;
-            &lt;/div&gt;
-            &lt;button class=&quot;admin-contact-link&quot; data-admin-contact type=&quot;button&quot;&gt;Написать администратору ${escapePurchaseText(ADMIN_CONTACT)}&lt;/button&gt;
-            &lt;label class=&quot;admin-field-label&quot;&gt;Ключ разблокировки
-              &lt;input autocomplete=&quot;off&quot; class=&quot;admin-input&quot; data-admin-unlock-password enterkeyhint=&quot;go&quot; inputmode=&quot;text&quot; spellcheck=&quot;false&quot; type=&quot;password&quot;&gt;
-            &lt;/label&gt;
-            &lt;div aria-live=&quot;polite&quot; class=&quot;admin-error&quot; data-admin-unlock-error&gt;${escapePurchaseText(errorMessage)}&lt;/div&gt;
-            &lt;div class=&quot;admin-actions admin-actions--single&quot;&gt;
-              &lt;button class=&quot;admin-button admin-button--primary&quot; data-admin-unlock-submit type=&quot;button&quot;&gt;Снять блокировку&lt;/button&gt;
-            &lt;/div&gt;
-          &lt;/form&gt;`;
-        window.requestAnimationFrame(() =&gt; adminContent.querySelector(&quot;[data-admin-unlock-password]&quot;)?.focus());
-      }
-
-      function adminCaseGrantMarkup() {
-        const defaultTelegramId = String(telegramProfile?.id || &quot;&quot;);
-        return `&lt;div class=&quot;admin-case-grant-grid&quot;&gt;
-          &lt;label class=&quot;admin-field-label&quot;&gt;Telegram ID игрока
-            &lt;input class=&quot;admin-input&quot; data-admin-grant-target inputmode=&quot;numeric&quot; pattern=&quot;[0-9]*&quot; type=&quot;text&quot; value=&quot;${escapePurchaseText(defaultTelegramId)}&quot; placeholder=&quot;Например, 123456789&quot;&gt;
-          &lt;/label&gt;
-          &lt;div class=&quot;admin-case-grant-card&quot;&gt;
-            &lt;strong&gt;Выдать кейсы&lt;/strong&gt;
-            &lt;select class=&quot;admin-input&quot; data-admin-grant-case-type&gt;
-              &lt;option value=&quot;small&quot;&gt;Обычный кейс&lt;/option&gt;&lt;option value=&quot;sweet&quot;&gt;Серебряный кейс&lt;/option&gt;&lt;option value=&quot;gold&quot;&gt;Золотой кейс&lt;/option&gt;&lt;option value=&quot;legendary&quot;&gt;Легендарный кейс&lt;/option&gt;
-            &lt;/select&gt;
-            &lt;input class=&quot;admin-input&quot; data-admin-grant-case-count inputmode=&quot;numeric&quot; min=&quot;1&quot; max=&quot;20&quot; step=&quot;1&quot; type=&quot;number&quot; value=&quot;1&quot;&gt;
-            &lt;button class=&quot;admin-button admin-button--primary&quot; data-admin-grant-cases type=&quot;button&quot;&gt;Выдать кейсы&lt;/button&gt;
-          &lt;/div&gt;
-          &lt;div class=&quot;admin-case-grant-card&quot;&gt;
-            &lt;strong&gt;Выдать рамку&lt;/strong&gt;
-            &lt;select class=&quot;admin-input&quot; data-admin-grant-frame-id&gt;${Object.entries(CASE_FRAME_CATALOG).map(([id,item])=&gt;`&lt;option value=&quot;${id}&quot;&gt;${escapePurchaseText(item.title)}&lt;/option&gt;`).join(&quot;&quot;)}&lt;/select&gt;
-            &lt;button class=&quot;admin-button admin-button--primary&quot; data-admin-grant-frame type=&quot;button&quot;&gt;Выдать рамку&lt;/button&gt;
-          &lt;/div&gt;
-          &lt;label class=&quot;admin-field-label&quot;&gt;Причина
-            &lt;input class=&quot;admin-input&quot; data-admin-grant-reason type=&quot;text&quot; value=&quot;Компенсация&quot; maxlength=&quot;300&quot;&gt;
-          &lt;/label&gt;
-        &lt;/div&gt;`;
-      }
-
-      async function grantAdminCasesOrFrame(kind) {
-        if (!adminAuthenticated || !adminContent) return;
-        const targetTelegramId = String(adminContent.querySelector(&quot;[data-admin-grant-target]&quot;)?.value || &quot;&quot;).trim();
-        const reason = String(adminContent.querySelector(&quot;[data-admin-grant-reason]&quot;)?.value || &quot;Компенсация&quot;).trim();
-        if (!/^\d{4,20}$/.test(targetTelegramId)) {
-          renderAdminDashboard(&quot;Укажите корректный Telegram ID игрока.&quot;);
-          return;
-        }
-        try {
-          if (kind === &quot;case&quot;) {
-            const caseType = String(adminContent.querySelector(&quot;[data-admin-grant-case-type]&quot;)?.value || &quot;small&quot;);
-            const quantity = Math.max(1, Math.min(20, Math.floor(Number(adminContent.querySelector(&quot;[data-admin-grant-case-count]&quot;)?.value || 1))));
-            const data = await adminApiRequest(ADMIN_CASE_GRANT_PATH, { grantKind: &quot;case&quot;, targetTelegramId, caseType, quantity, reason });
-            if (targetTelegramId === String(telegramProfile?.id || &quot;&quot;)) await loadCaseState(true);
-            renderAdminDashboard(`Выдано ${data.quantity || quantity} кейс(а): ${targetTelegramId}.`);
-          } else {
-            const frameId = String(adminContent.querySelector(&quot;[data-admin-grant-frame-id]&quot;)?.value || &quot;strawberry&quot;);
-            const data = await adminApiRequest(ADMIN_CASE_GRANT_PATH, { grantKind: &quot;frame&quot;, targetTelegramId, frameId, reason });
-            if (targetTelegramId === String(telegramProfile?.id || &quot;&quot;)) await loadCaseState(true);
-            renderAdminDashboard(data.alreadyOwned ? `Рамка уже была у игрока ${targetTelegramId}.` : `Рамка «${data.title || frameId}» выдана игроку ${targetTelegramId}.`);
-          }
-        } catch (error) {
-          renderAdminDashboard(adminErrorMessage(error, &quot;Не удалось выдать компенсацию.&quot;));
-        }
-      }
-
-      function renderAdminDashboard(message = &quot;&quot;) {
-        if (!adminContent) return;
-        adminContent.innerHTML = `
-          &lt;div class=&quot;admin-dashboard&quot;&gt;
-            &lt;h2 id=&quot;admin-dialog-title&quot;&gt;Админ-панель разработчика&lt;/h2&gt;
-            &lt;div class=&quot;admin-session-note&quot;&gt;Вход действует только до перезагрузки страницы. После обновления сайта админ-панель автоматически выйдет из аккаунта.&lt;/div&gt;
-            &lt;section class=&quot;admin-section&quot;&gt;
-              &lt;h3&gt;Баланс и результаты&lt;/h3&gt;
-              ${adminValueRowsMarkup()}
-              &lt;button class=&quot;admin-button admin-button--danger&quot; data-admin-zero-all type=&quot;button&quot;&gt;Обнулить баланс, текущий счёт и рекорд&lt;/button&gt;
-            &lt;/section&gt;
-            &lt;section class=&quot;admin-section&quot;&gt;
-              &lt;h3&gt;Уровень, XP и звания&lt;/h3&gt;
-              ${adminProfileLevelControlsMarkup()}
-            &lt;/section&gt;
-            &lt;section class=&quot;admin-section&quot;&gt;
-              &lt;h3&gt;Компенсации: кейсы и рамки&lt;/h3&gt;
-              &lt;div class=&quot;admin-global-note&quot;&gt;Можно выдать игроку подарочный кейс или любую коллекционную рамку. Подарочный кейс появится в профиле и открывается отдельно от уровневых наград.&lt;/div&gt;
-              ${adminCaseGrantMarkup()}
-            &lt;/section&gt;
-            &lt;section class=&quot;admin-section&quot;&gt;
-              &lt;h3&gt;Покупки и таймеры&lt;/h3&gt;
-              &lt;div class=&quot;admin-global-note&quot;&gt;Заданное время отсчитывается заново от текущего момента. Удаление покупки не возвращает потраченные очки, зефир или кофе.&lt;/div&gt;
-              ${adminPurchaseCardsMarkup()}
-              &lt;div class=&quot;admin-global-note&quot;&gt;&lt;strong&gt;Лимит покупок:&lt;/strong&gt; сейчас учтено ${getPurchaseLimitStatus().used} из ${getPurchaseLimitStatus().limit} за ${escapePurchaseText(purchaseLimitWindowLabel())}. Источник истины — сервер. Локальный сброс аккаунта не обходит ограничение.&lt;/div&gt;
-              &lt;button class=&quot;admin-button&quot; data-admin-reset-purchase-limit type=&quot;button&quot;&gt;Синхронизировать лимит с сервером&lt;/button&gt;
-            &lt;/section&gt;
-            &lt;section class=&quot;admin-section&quot;&gt;
-              &lt;h3&gt;Глобальные цены магазина&lt;/h3&gt;
-              ${adminPriceCardsMarkup()}
-              &lt;div class=&quot;admin-actions&quot;&gt;
-                &lt;button class=&quot;admin-button&quot; data-admin-reset-prices type=&quot;button&quot;&gt;Вернуть стандартные&lt;/button&gt;
-                &lt;button class=&quot;admin-button admin-button--primary&quot; data-admin-save-prices type=&quot;button&quot;&gt;Сохранить для всех&lt;/button&gt;
-              &lt;/div&gt;
-              &lt;div class=&quot;admin-global-note&quot;&gt;&lt;strong&gt;Глобально.&lt;/strong&gt; Цены сохраняются в Cloudflare D1 и применяются у всех игроков после следующей загрузки игры.&lt;/div&gt;
-            &lt;/section&gt;
-            &lt;section class=&quot;admin-section&quot;&gt;
-              &lt;h3&gt;Глобальные цены скинов&lt;/h3&gt;
-              ${adminSkinPriceCardsMarkup()}
-              &lt;div class=&quot;admin-actions&quot;&gt;
-                &lt;button class=&quot;admin-button&quot; data-admin-reset-skin-prices type=&quot;button&quot;&gt;Вернуть стандартные&lt;/button&gt;
-                &lt;button class=&quot;admin-button admin-button--primary&quot; data-admin-save-skin-prices type=&quot;button&quot;&gt;Сохранить для всех&lt;/button&gt;
-              &lt;/div&gt;
-              &lt;div class=&quot;admin-global-note&quot;&gt;&lt;strong&gt;Глобально.&lt;/strong&gt; Цена каждого скина сохраняется в Cloudflare D1 и применяется у всех игроков после следующей загрузки игры.&lt;/div&gt;
-            &lt;/section&gt;
-            &lt;section class=&quot;admin-section&quot;&gt;
-              &lt;h3&gt;Скины текущего аккаунта&lt;/h3&gt;
-              &lt;div class=&quot;admin-global-note&quot;&gt;Удаление убирает купленный скин из прогресса текущего Telegram-аккаунта. Валюта не возвращается. Если удалён активный скин, автоматически надевается стандартная Зефи.&lt;/div&gt;
-              ${adminOwnedSkinCardsMarkup()}
-            &lt;/section&gt;
-            &lt;section class=&quot;admin-section admin-section--global-rating&quot;&gt;
-              &lt;h3&gt;Серверный рейтинг сезона&lt;/h3&gt;
-              &lt;div class=&quot;admin-global-note&quot;&gt;&lt;strong&gt;Это отдельный блок.&lt;/strong&gt; Он меняет только место в рейтинге текущего сезона и результат во вкладке «За всё время».&lt;/div&gt;
-              &lt;div class=&quot;admin-global-note&quot;&gt;Баланс, XP, зефир и кофе изменяются в блоке игровых значений выше.&lt;/div&gt;
-              &lt;label class=&quot;admin-field-label&quot;&gt;Очки рейтинга
-                &lt;input class=&quot;admin-input&quot; data-admin-global-rating-value inputmode=&quot;numeric&quot; min=&quot;0&quot; step=&quot;1&quot; type=&quot;number&quot; value=&quot;${sanitizeAdminNumber(state.best)}&quot;&gt;
-              &lt;/label&gt;
-              &lt;div class=&quot;admin-actions admin-actions--single&quot;&gt;
-                &lt;button class=&quot;admin-button admin-button--primary&quot; data-admin-global-rating-save type=&quot;button&quot;&gt;Задать рейтинг&lt;/button&gt;
-              &lt;/div&gt;
-            &lt;/section&gt;
-            &lt;div aria-live=&quot;polite&quot; class=&quot;admin-message&quot; data-admin-message&gt;${escapePurchaseText(message)}&lt;/div&gt;
-            &lt;div class=&quot;admin-actions&quot;&gt;
-              &lt;button class=&quot;admin-button&quot; data-admin-close type=&quot;button&quot;&gt;Закрыть&lt;/button&gt;
-              &lt;button class=&quot;admin-button admin-button--danger&quot; data-admin-logout type=&quot;button&quot;&gt;Выйти из админки&lt;/button&gt;
-            &lt;/div&gt;
-          &lt;/div&gt;`;
-        const ratingSections = Array.from(adminContent.querySelectorAll(&quot;.admin-section--global-rating&quot;));
-        ratingSections.slice(1).forEach(section =&gt; section.remove());
-      }
-
-      function syncAdminAccountLockOverlay() {
-        if (!adminLayer || !adminContent) return;
-        const security = getAdminSecurity();
-        if (security.serverResetPending) void ensureAdminLockServerReset();
-        if (security.locked) {
-          void ensureAdminLockServerReset();
-          adminAuthenticated = false;
-          adminReturnFocus = null;
-          adminLayer.hidden = false;
-          adminLayer.setAttribute(&quot;aria-hidden&quot;, &quot;false&quot;);
-          if (state.running) {
-            state.running = false;
-            state.paused = true;
-            statusEl.textContent = &quot;пауза&quot;;
-          }
-          renderAdminLocked();
-          return;
-        }
-        if (!adminLayer.hidden &amp;&amp; adminContent.querySelector(&quot;[data-admin-unlock-form]&quot;)) {
-          closeAdminLayer();
-        }
-      }
-
-      function openAdminLayer() {
-        if (!adminLayer || !adminContent) return;
-        adminReturnFocus = document.activeElement;
-        adminLayer.hidden = false;
-        adminLayer.setAttribute(&quot;aria-hidden&quot;, &quot;false&quot;);
-        if (state.running) {
-          state.running = false;
-          state.paused = true;
-          statusEl.textContent = &quot;пауза&quot;;
-        }
-        const security = getAdminSecurity();
-        if (security.serverResetPending) void ensureAdminLockServerReset();
-        if (security.locked) {
-          renderAdminLocked();
-        } else if (adminAuthenticated) renderAdminDashboard();
-        else renderAdminLogin();
-      }
-
-      function closeAdminLayer() {
-        if (!adminLayer || !adminContent) return;
-        if (getAdminSecurity().locked) {
-          syncAdminAccountLockOverlay();
-          return;
-        }
-        adminLayer.hidden = true;
-        adminLayer.setAttribute(&quot;aria-hidden&quot;, &quot;true&quot;);
-        adminContent.innerHTML = &quot;&quot;;
-        if (adminReturnFocus?.isConnected) adminReturnFocus.focus();
-        adminReturnFocus = null;
-        scheduleTutorialAutoOpen(350);
-      }
-
-      async function ensureAdminLockServerReset() {
-        const security = getAdminSecurity();
-        if (!security.serverResetPending) return false;
-        if (adminSecurityResetInFlight) return adminSecurityResetInFlight;
-        if (!telegramProfile?.initData) {
-          requestTelegramProfile();
-          window.setTimeout(() =&gt; {
-            if (getAdminSecurity().serverResetPending) void ensureAdminLockServerReset();
-          }, 3000);
-          return false;
-        }
-        if (!security.resetIncidentId) {
-          security.resetIncidentId = `admin-lock-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
-          saveProgress();
-        }
-        adminSecurityResetInFlight = (async () =&gt; {
-          try {
-            const data = await adminApiRequest(ADMIN_SECURITY_RESET_PATH, {
-              incidentId: security.resetIncidentId
-            });
-            if (data?.resetPlan) {
-              applyLeaderboardResetPlan(data.resetPlan, Date.now());
-            } else if (data?.resetId) {
-              state.appliedResetPlanIds = [...new Set([
-                ...(Array.isArray(state.appliedResetPlanIds) ? state.appliedResetPlanIds.map(String) : []),
-                String(data.resetId)
-              ])].slice(-50);
-            }
-            security.serverResetPending = false;
-            security.resetIncidentId = &quot;&quot;;
-            saveProgress();
-            return true;
-          } catch (error) {
-            console.warn(&quot;Admin security server reset failed&quot;, error);
-            window.setTimeout(() =&gt; {
-              if (getAdminSecurity().serverResetPending) {
-                void ensureAdminLockServerReset();
-              }
-            }, 5000);
-            return false;
-          } finally {
-            adminSecurityResetInFlight = null;
-          }
-        })();
-        return adminSecurityResetInFlight;
-      }
-
-      function resetAccountAfterAdminLock() {
-        const security = getAdminSecurity();
-
-        // Полный локальный сброс. Серверная очистка ставится в обязательную
-        // очередь и повторяется, пока Telegram-профиль не подтвердит её.
-        state.running = false;
-        state.paused = false;
-        state.over = false;
-        state.time = 0;
-        state.last = 0;
-        fixedStepAccumulator = 0;
-        renderInterpolationAlpha = 1;
-        state.score = 0;
-        state.best = 0;
-        state.treats = 0;
-        state.runTreats = 0;
-        state.coffee = 0;
-        state.runCoffee = 0;
-        state.wallet = 0;
-        state.inventory = {};
-        state.redemptionCodes = [];
-        state.purchaseTimestamps = [];
-        state.profileXp = 0;
-        state.completedRuns = 0;
-        state.completedPurchases = 0;
-        state.adminPrices = {};
-        state.caseOpenedLevels = [];
-        state.caseGiftedCases = normalizeGiftedCases({});
-        state.caseLegendaryPityCounter = 0;
-        state.caseBoosters = normalizeCaseBoosters({});
-        state.caseOwnedSpecials = [];
-        state.activeCaseBooster = normalizeActiveCaseBooster({});
-        state.pendingBoosterRuns = [];
-        state.caseOwnedAvatars = [];
-        state.caseActiveAvatar = &quot;&quot;;
-        state.caseOwnedFrames = [];
-        state.caseActiveFrame = &quot;&quot;;
-        state.caseOwnedTrails = [];
-        state.caseActiveTrail = &quot;&quot;;
-        state.ownedMusicTracks = [DEFAULT_MUSIC_TRACK_ID];
-        state.activeMusicTrack = DEFAULT_MUSIC_TRACK_ID;
-        state.appliedSeasonRewardIds = [];
-        state.caseRunId = &quot;&quot;;
-        state.tutorialCompleted = false;
-        state.profileTutorialCompleted = false;
-        state.caseTutorialSeenKey = &quot;&quot;;
-        state.ratingTutorialSeenKey = &quot;&quot;;
-        state.speed = 210;
-        state.visualDistance = 0;
-        state.spawn = 0;
-        state.treatSpawn = 0;
-        state.obstacles = [];
-        state.pickups = [];
-        state.crumbs = [];
-
-        pendingPurchase = null;
-        state.ownedSkins = [&quot;default&quot;];
-        setCurrentDogSkin(&quot;default&quot;, false);
-        refreshBackgroundMusicTrack();
-        syncDogPortraits();
-        syncDogAvatar();
-        applyAdminPrices();
-
-        if (purchaseLayer) {
-          purchaseLayer.hidden = true;
-          purchaseLayer.setAttribute(&quot;aria-hidden&quot;, &quot;true&quot;);
-        }
-        if (purchaseContent) purchaseContent.innerHTML = &quot;&quot;;
-        if (overlay) overlay.style.display = &quot;none&quot;;
-        if (statusEl) statusEl.textContent = &quot;готов&quot;;
-
-        security.failedAttempts = ADMIN_MAX_LOGIN_ATTEMPTS;
-        security.locked = true;
-        security.serverResetPending = true;
-        if (!security.resetIncidentId) {
-          security.resetIncidentId = `admin-lock-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
-        }
-        adminAuthenticated = false;
-
-        updateHud();
-        renderWarehouse();
-        renderProfile();
-        renderSkinsShop();
-        renderCaseHub();
-        renderActiveRunBooster();
-        saveProgress();
-        void ensureAdminLockServerReset();
-        if (!state.running) requestAnimationFrame(draw);
-      }
-
-      function adminLogin(password) {
-        const security = getAdminSecurity();
-        if (security.locked) {
-          adminAuthenticated = false;
-          renderAdminLocked();
-          return;
-        }
-        if (password !== ADMIN_PASSWORD) {
-          security.failedAttempts = Math.min(ADMIN_MAX_LOGIN_ATTEMPTS, security.failedAttempts + 1);
-          security.locked = security.failedAttempts &gt;= ADMIN_MAX_LOGIN_ATTEMPTS;
-          adminAuthenticated = false;
-          if (security.locked) {
-            resetAccountAfterAdminLock();
-            renderAdminLocked();
-          } else {
-            saveProgress();
-            renderAdminPasswordWarning(ADMIN_MAX_LOGIN_ATTEMPTS - security.failedAttempts);
-          }
-          return;
-        }
-        security.failedAttempts = 0;
-        security.locked = false;
-        adminAuthenticated = true;
-        saveProgress();
-        if (security.serverResetPending) void ensureAdminLockServerReset();
-        renderAdminDashboard(&quot;Авторизация выполнена.&quot;);
-      }
-
-      async function adminUnlock(password) {
-        if (password !== ADMIN_UNLOCK_PASSWORD) {
-          renderAdminLocked(&quot;Неверный ключ разблокировки.&quot;);
-          return false;
-        }
-        if (adminUnlockInFlight) return adminUnlockInFlight;
-        adminUnlockInFlight = (async () =&gt; {
-          const security = getAdminSecurity();
-          const serverResetPending = Boolean(security.serverResetPending);
-          renderAdminLocked(&quot;Ключ принят. Снимаем блокировку…&quot;);
-
-          security.failedAttempts = 0;
-          security.locked = false;
-          adminAuthenticated = false;
-          saveProgress();
-
-          if (serverResetPending) void ensureAdminLockServerReset();
-          renderAdminLogin(serverResetPending
-            ? &quot;Блокировка снята. Введите обычный пароль. Серверное обнуление продолжит подтверждаться автоматически в фоне.&quot;
-            : &quot;Блокировка снята. Введите обычный пароль для входа.&quot;);
-          return true;
-        })();
-        try {
-          return await adminUnlockInFlight;
-        } finally {
-          adminUnlockInFlight = null;
-        }
-      }
-
-      function adminLogout() {
-        adminAuthenticated = false;
-        closeAdminLayer();
-      }
-
-      async function updateAdminValue(field, action) {
-        if (!adminAuthenticated) return;
-        const allowedFields = new Set([&quot;wallet&quot;, &quot;score&quot;, &quot;best&quot;, &quot;treats&quot;, &quot;coffee&quot;, &quot;profileXp&quot;]);
-        if (!allowedFields.has(field)) return;
-        const input = adminContent?.querySelector(`[data-admin-value-input=&quot;${field}&quot;]`);
-        const entered = sanitizeAdminNumber(input?.value || 0);
-        const current = sanitizeAdminNumber(state[field]);
-        state[field] = action === &quot;zero&quot; ? 0 : action === &quot;add&quot; ? sanitizeAdminNumber(current + entered) : entered;
-        if (field === &quot;score&quot;) state.score = Number(state.score || 0);
-        updateHud();
-        renderProfile();
-        saveProgress();
-        let message = `${field === &quot;best&quot; ? &quot;Рекорд&quot; : field === &quot;profileXp&quot; ? &quot;Опыт профиля&quot; : &quot;Значение&quot;} обновлено.`;
-        if (field !== &quot;score&quot;) {
-          const synced = action === &quot;add&quot;
-            ? await pushAdminProfileMinimums()
-            : await setAdminProfileSnapshot();
-          message += synced
-            ? (action === &quot;add&quot; ? &quot; Начисление сохранено глобально.&quot; : &quot; Точное значение сохранено глобально.&quot;)
-            : &quot; Локально сохранено, но серверная синхронизация не выполнена.&quot;;
-        }
-        renderAdminDashboard(message);
-      }
-
-      async function zeroAdminBalances() {
-        if (!adminAuthenticated) return;
-        state.wallet = 0;
-        state.score = 0;
-        state.best = 0;
-        state.treats = 0;
-        state.runTreats = 0;
-        state.coffee = 0;
-        state.runCoffee = 0;
-        updateHud();
-        saveProgress();
-        const synced = await setAdminProfileSnapshot();
-        renderAdminDashboard(synced
-          ? &quot;Баланс, текущий счёт и рекорд обнулены локально и на сервере.&quot;
-          : &quot;Локально всё обнулено, но серверная синхронизация не выполнена.&quot;);
-      }
-
-      async function resetAdminPurchaseLimit() {
-        if (!adminAuthenticated) return;
-        renderAdminDashboard(&quot;Синхронизируем лимит покупок с сервером…&quot;);
-        const synced = await syncServerRewards(true);
-        renderAdminDashboard(synced
-          ? &quot;Лимит покупок обновлён по данным сервера.&quot;
-          : &quot;Не удалось получить лимит с сервера. Проверьте соединение и Telegram-профиль.&quot;);
-      }
-
-      async function saveAdminPrices() {
-        if (!adminAuthenticated || !adminContent) return;
-        const nextPrices = {};
-        for (const card of adminContent.querySelectorAll(&quot;[data-admin-price-card]&quot;)) {
-          const id = card.dataset.adminPriceCard;
-          if (!shopProducts[id]) continue;
-          nextPrices[id] = {};
-          for (const input of card.querySelectorAll(&quot;[data-admin-price-field]&quot;)) {
-            nextPrices[id][input.dataset.adminPriceField] = sanitizeAdminNumber(input.value);
-          }
-        }
-        renderAdminDashboard(&quot;Сохраняем глобальные цены…&quot;);
-        try {
-          const data = await adminApiRequest(ADMIN_SHOP_PRICES_PATH, { products: nextPrices });
-          remoteShopPrices = data.products || nextPrices;
-          remoteShopAssortment = data.assortment || remoteShopAssortment;
-          sharedApiCache.delete(`GET:${SHOP_CONFIG_PATH}`);
-          state.adminPrices = {};
-          applyAdminPrices();
-          applyShopAssortment();
-          saveProgress();
-          renderAdminDashboard(&quot;Глобальные цены сохранены для всех игроков.&quot;);
-        } catch (error) {
-          renderAdminDashboard(adminErrorMessage(error, &quot;Не удалось сохранить глобальные цены.&quot;));
-        }
-      }
-
-      async function resetAdminPrices() {
-        if (!adminAuthenticated) return;
-        renderAdminDashboard(&quot;Возвращаем стандартные цены глобально…&quot;);
-        try {
-          const data = await adminApiRequest(ADMIN_SHOP_PRICES_PATH, { products: defaultShopPrices });
-          remoteShopPrices = data.products || defaultShopPrices;
-          remoteShopAssortment = data.assortment || remoteShopAssortment;
-          sharedApiCache.delete(`GET:${SHOP_CONFIG_PATH}`);
-          state.adminPrices = {};
-          applyAdminPrices();
-          applyShopAssortment();
-          saveProgress();
-          renderAdminDashboard(&quot;Стандартные цены сохранены глобально.&quot;);
-        } catch (error) {
-          renderAdminDashboard(adminErrorMessage(error, &quot;Не удалось вернуть стандартные цены.&quot;));
-        }
-      }
-
-      async function saveAdminSkinPrices() {
-        if (!adminAuthenticated || !adminContent) return;
-        const nextPrices = {};
-        for (const card of adminContent.querySelectorAll(&quot;[data-admin-skin-price-card]&quot;)) {
-          const id = card.dataset.adminSkinPriceCard;
-          if (!SKIN_CATALOG[id]) continue;
-          nextPrices[id] = {};
-          for (const input of card.querySelectorAll(&quot;[data-admin-skin-price-field]&quot;)) {
-            nextPrices[id][input.dataset.adminSkinPriceField] = sanitizeAdminNumber(input.value);
-          }
-        }
-        renderAdminDashboard(&quot;Сохраняем глобальные цены скинов…&quot;);
-        try {
-          const data = await adminApiRequest(ADMIN_SKIN_PRICES_PATH, { skins: nextPrices });
-          remoteSkinPrices = data.skins || nextPrices;
-          sharedApiCache.delete(`GET:${SKIN_CONFIG_PATH}`);
-          applySkinPrices();
-          saveProgress();
-          renderAdminDashboard(&quot;Глобальные цены скинов сохранены для всех игроков.&quot;);
-        } catch (error) {
-          renderAdminDashboard(adminErrorMessage(error, &quot;Не удалось сохранить глобальные цены скинов.&quot;));
-        }
-      }
-
-      async function resetAdminSkinPrices() {
-        if (!adminAuthenticated) return;
-        renderAdminDashboard(&quot;Возвращаем стандартные цены скинов глобально…&quot;);
-        try {
-          const data = await adminApiRequest(ADMIN_SKIN_PRICES_PATH, { skins: defaultSkinPrices });
-          remoteSkinPrices = data.skins || defaultSkinPrices;
-          sharedApiCache.delete(`GET:${SKIN_CONFIG_PATH}`);
-          applySkinPrices();
-          saveProgress();
-          renderAdminDashboard(&quot;Стандартные цены скинов сохранены глобально.&quot;);
-        } catch (error) {
-          renderAdminDashboard(adminErrorMessage(error, &quot;Не удалось вернуть стандартные цены скинов.&quot;));
-        }
-      }
-
-      function removeAdminSkinFromAccount(skinId) {
-        if (!adminAuthenticated) return;
-        const skin = SKIN_CATALOG[String(skinId || &quot;&quot;)];
-        if (!skin || skin.id === &quot;default&quot;) {
-          renderAdminDashboard(&quot;Стандартный скин удалить нельзя.&quot;);
-          return;
-        }
-        if (!skinIsOwned(skin.id)) {
-          renderAdminDashboard(`Скин «${skin.title}» не куплен на этом аккаунте.`);
-          return;
-        }
-        antiCheatWithTrustedChange(&quot;admin-remove-skin&quot;, () =&gt; {
-          state.ownedSkins = normalizeOwnedSkins((state.ownedSkins || []).filter((id) =&gt; id !== skin.id));
-          if (currentDogSkin.id === skin.id) setCurrentDogSkin(&quot;default&quot;, false);
-          renderSkinsShop();
-          renderProfile();
-          saveProgress();
-          if (!state.running) requestAnimationFrame(draw);
-        });
-        renderAdminDashboard(`Скин «${skin.title}» удалён с текущего аккаунта. Валюта не возвращена.`);
-      }
-
-      function findAdminPurchaseCard(code) {
-        if (!adminContent) return null;
-        return [...adminContent.querySelectorAll(&quot;[data-admin-purchase-card]&quot;)]
-          .find((card) =&gt; card.dataset.adminPurchaseCard === code) || null;
-      }
-
-      function updateAdminPurchase(code, action) {
-        if (!adminAuthenticated || !Array.isArray(state.redemptionCodes)) return;
-        const index = state.redemptionCodes.findIndex((entry) =&gt; entry?.code === code);
-        if (index &lt; 0) {
-          renderAdminDashboard(&quot;Покупка не найдена.&quot;);
-          return;
-        }
-        const entry = state.redemptionCodes[index];
-        const product = warehouseProduct(entry);
-
-        if (action === &quot;delete&quot;) {
-          state.redemptionCodes.splice(index, 1);
-          if (entry.productId &amp;&amp; Number(state.inventory?.[entry.productId] || 0) &gt; 0) {
-            state.inventory[entry.productId] = Math.max(0, Number(state.inventory[entry.productId]) - 1);
-          }
-          saveProgress();
-          updateHud();
-          renderWarehouse();
-          renderAdminDashboard(`Покупка «${product.title}» удалена. Валюта не возвращена.`);
-          return;
-        }
-
-        if (action === &quot;zero-time&quot;) {
-          entry.expiresAt = Date.now() - 1000;
-          saveProgress();
-          renderWarehouse();
-          renderAdminDashboard(`Время покупки «${product.title}» обнулено. Код теперь сгорел.`);
-          return;
-        }
-
-        if (action === &quot;set-time&quot;) {
-          const card = findAdminPurchaseCard(code);
-          const input = card?.querySelector(&quot;[data-admin-purchase-time]&quot;);
-          const unit = card?.querySelector(&quot;[data-admin-purchase-unit]&quot;)?.value || &quot;hours&quot;;
-          const amount = sanitizeAdminNumber(input?.value || 0);
-          const multipliers = {
-            minutes: 60 * 1000,
-            hours: 60 * 60 * 1000,
-            days: 24 * 60 * 60 * 1000
-          };
-          const multiplier = multipliers[unit] || multipliers.hours;
-          entry.expiresAt = Date.now() + amount * multiplier;
-          saveProgress();
-          renderWarehouse();
-          const unitLabel = unit === &quot;days&quot; ? &quot;дн.&quot; : unit === &quot;minutes&quot; ? &quot;мин.&quot; : &quot;ч.&quot;;
-          renderAdminDashboard(`Для покупки «${product.title}» задано время: ${amount} ${unitLabel}`);
-        }
-      }
-
-      function refreshAdminPurchaseTimers() {
-        if (!adminAuthenticated || !adminLayer || adminLayer.hidden || !adminContent) return;
-        const now = Date.now();
-        for (const status of adminContent.querySelectorAll(&quot;[data-admin-purchase-expires]&quot;)) {
-          const expiresAt = Number(status.dataset.adminPurchaseExpires || 0);
-          const card = status.closest(&quot;.admin-purchase-card&quot;);
-          const expired = expiresAt &lt;= now;
-          status.textContent = expired ? &quot;Сгорела&quot; : `Осталось ${formatWarehouseRemaining(expiresAt - now)}`;
-          card?.classList.toggle(&quot;is-expired&quot;, expired);
-        }
-      }
 
       // Автоматически переносит цены из shopProducts в карточки и кнопки покупки.
       function syncShopPricesFromProducts() {
@@ -12198,7 +10854,6 @@ html&gt;body{padding:
       const integrityRequiredStorageKey = `${storageKey}-integrity-required-v1`;
       syncShopPricesFromProducts();
       loadProgress();
-      window.requestAnimationFrame(syncAdminAccountLockOverlay);
 
       const dog = {
         x: 46,
@@ -12429,9 +11084,9 @@ html&gt;body{padding:
           state.treats += credited.treats;
           state.coffee += credited.coffee;
           const boosterRunSummary = consumeLocalCaseBoosterRun(credited, state.caseRunId);
-          state.completedRuns = sanitizeAdminNumber(Number(state.completedRuns || 0) + 1);
+          state.completedRuns = sanitizeGameNumber(Number(state.completedRuns || 0) + 1);
           const runXpEarned = profileRunQualifiesForXp(state.time, earned) ? profileRunXpReward() : 0;
-          if (runXpEarned &gt; 0) state.profileXp = sanitizeAdminNumber(Number(state.profileXp || 0) + runXpEarned);
+          if (runXpEarned &gt; 0) state.profileXp = sanitizeGameNumber(Number(state.profileXp || 0) + runXpEarned);
           const currentLevelAfterRun = profileLevelState(state.profileXp).level;
           const reachedNewLevel = currentLevelAfterRun &gt; previousLevel;
           const unlockedLevelCase = reachedNewLevel
@@ -12919,9 +11574,6 @@ html&gt;body{padding:
         }
       }
 
-      function antiCheatAdminBypassActive() {
-        return CLIENT_ANTI_CHEAT_ALLOW_ADMIN_CHANGES &amp;&amp; adminAuthenticated;
-      }
 
       function antiCheatExactCodeSubset(currentCodes, previousCodes) {
         const previousMap = new Map(
@@ -13022,11 +11674,6 @@ html&gt;body{padding:
           }
         }
 
-        const currentPrices = candidate.adminPrices &amp;&amp; typeof candidate.adminPrices === &quot;object&quot; ? candidate.adminPrices : {};
-        const previousPrices = previous.adminPrices &amp;&amp; typeof previous.adminPrices === &quot;object&quot; ? previous.adminPrices : {};
-        if (Object.keys(currentPrices).length &gt; 0 &amp;&amp; antiCheatStableStringify(currentPrices) !== antiCheatStableStringify(previousPrices)) {
-          return &quot;Обнаружено изменение цен вне админ-панели.&quot;;
-        }
         return &quot;&quot;;
       }
 
@@ -13051,8 +11698,7 @@ html&gt;body{padding:
             : &quot;default&quot;;
           state.soundEnabled = snapshot.soundEnabled !== false;
           state.musicEnabled = snapshot.musicEnabled !== false;
-          state.adminPrices = antiCheatClone(snapshot.adminPrices) || {};
-          applyAdminPrices();
+          applyRemoteShopPrices();
           updateHud();
           renderWarehouse();
           renderProfile();
@@ -13095,7 +11741,7 @@ html&gt;body{padding:
 
       function antiCheatCandidateAllowed(snapshot) {
         if (!CLIENT_ANTI_CHEAT_ENABLED) return { allowed: true };
-        if (antiCheatApplyingSavedProgress || antiCheatTrustedChangeDepth &gt; 0 || antiCheatAdminBypassActive()) {
+        if (antiCheatApplyingSavedProgress || antiCheatTrustedChangeDepth &gt; 0) {
           return { allowed: true };
         }
         if (!antiCheatCheckpoint) return { allowed: true };
@@ -13110,7 +11756,7 @@ html&gt;body{padding:
       }
 
       function antiCheatRuntimeGuard(force = false) {
-        if (!CLIENT_ANTI_CHEAT_ENABLED || antiCheatApplyingSavedProgress || antiCheatTrustedChangeDepth &gt; 0 || antiCheatAdminBypassActive()) return;
+        if (!CLIENT_ANTI_CHEAT_ENABLED || antiCheatApplyingSavedProgress || antiCheatTrustedChangeDepth &gt; 0) return;
         if (CLIENT_OPT_DEFER_HEAVY_ANTICHEAT_DURING_RUN &amp;&amp; !force &amp;&amp; state.running &amp;&amp; !state.paused &amp;&amp; !state.over) {
           antiCheatGuardDeferred = true;
           clientPerformance.antiCheatDeferred += 1;
@@ -13139,7 +11785,7 @@ html&gt;body{padding:
               .slice(-20)
           : [];
         const snapshot = {
-          version: 16,
+          version: 17,
           updatedAt: now,
           economyResetKey: ECONOMY_RESET_KEY,
           seenUpdateNoticeKey: String(state.seenUpdateNoticeKey || &quot;&quot;),
@@ -13154,13 +11800,6 @@ html&gt;body{padding:
           profileXp: sanitizeProgressNumber(state.profileXp),
           completedRuns: sanitizeProgressNumber(state.completedRuns),
           completedPurchases: sanitizeProgressNumber(state.completedPurchases),
-          adminPrices: state.adminPrices &amp;&amp; typeof state.adminPrices === &quot;object&quot; ? state.adminPrices : {},
-          adminSecurity: {
-            failedAttempts: getAdminSecurity().failedAttempts,
-            locked: getAdminSecurity().locked,
-            serverResetPending: getAdminSecurity().serverResetPending,
-            resetIncidentId: getAdminSecurity().resetIncidentId
-          },
           tutorialCompleted: Boolean(state.tutorialCompleted),
           profileTutorialCompleted: Boolean(state.profileTutorialCompleted),
           caseTutorialSeenKey: String(state.caseTutorialSeenKey || &quot;&quot;),
@@ -13210,14 +11849,6 @@ html&gt;body{padding:
           ? saved.seenUpdateNoticeKey
           : &quot;&quot;;
         const economyResetRequired = savedEconomyResetKey !== ECONOMY_RESET_KEY;
-        const savedSecurity = saved.adminSecurity &amp;&amp; typeof saved.adminSecurity === &quot;object&quot;
-          ? {
-              failedAttempts: Number(saved.adminSecurity.failedAttempts || 0),
-              locked: Boolean(saved.adminSecurity.locked),
-              serverResetPending: Boolean(saved.adminSecurity.serverResetPending),
-              resetIncidentId: String(saved.adminSecurity.resetIncidentId || &quot;&quot;).slice(0, 100)
-            }
-          : { failedAttempts: 0, locked: false, serverResetPending: false, resetIncidentId: &quot;&quot; };
         const savedTutorialCompleted = Boolean(saved.tutorialCompleted);
         const savedProfileTutorialCompleted = Boolean(saved.profileTutorialCompleted);
         const savedCaseTutorialSeenKey = typeof saved.caseTutorialSeenKey === &quot;string&quot; ? saved.caseTutorialSeenKey : &quot;&quot;;
@@ -13227,8 +11858,6 @@ html&gt;body{padding:
 
         if (economyResetRequired) {
           resetProgressForEconomyUpdate();
-          state.adminSecurity = savedSecurity;
-          getAdminSecurity();
           state.tutorialCompleted = savedTutorialCompleted;
           state.profileTutorialCompleted = savedProfileTutorialCompleted;
           state.caseTutorialSeenKey = savedCaseTutorialSeenKey;
@@ -13266,9 +11895,6 @@ html&gt;body{padding:
         state.completedRuns = sanitizeProgressNumber(saved.completedRuns);
         state.completedPurchases = sanitizeProgressNumber(saved.completedPurchases ?? legacyPurchaseCount);
         state.profileXp = sanitizeProgressNumber(saved.profileXp ?? (state.completedPurchases * PROFILE_XP_PER_PURCHASE));
-        state.adminPrices = saved.adminPrices &amp;&amp; typeof saved.adminPrices === &quot;object&quot; ? saved.adminPrices : {};
-        state.adminSecurity = savedSecurity;
-        getAdminSecurity();
         state.tutorialCompleted = savedTutorialCompleted;
         state.profileTutorialCompleted = savedProfileTutorialCompleted;
         state.caseTutorialSeenKey = savedCaseTutorialSeenKey;
@@ -13281,7 +11907,7 @@ html&gt;body{padding:
         applySavedCaseState(saved);
         state.economyResetKey = ECONOMY_RESET_KEY;
         state.seenUpdateNoticeKey = savedNoticeKey;
-        applyAdminPrices();
+        applyRemoteShopPrices();
         const savedSkin = typeof saved.currentDogSkin === &quot;string&quot; ? saved.currentDogSkin : &quot;default&quot;;
         currentDogSkin.id = SKIN_CATALOG[savedSkin] &amp;&amp; state.ownedSkins.includes(savedSkin) ? savedSkin : &quot;default&quot;;
         syncDogPortraits();
@@ -13365,7 +11991,7 @@ html&gt;body{padding:
           antiCheatHandleViolation(candidateCheck.reason, &quot;save&quot;);
           return false;
         }
-        if (CLIENT_ANTI_CHEAT_ENABLED &amp;&amp; antiCheatSaveBlocked &amp;&amp; !antiCheatAdminBypassActive()) {
+        if (CLIENT_ANTI_CHEAT_ENABLED &amp;&amp; antiCheatSaveBlocked) {
           antiCheatShowWarning(&quot;Сохранение временно заблокировано после нескольких подозрительных изменений. Перезапустите игру.&quot;);
           return false;
         }
@@ -13507,7 +12133,6 @@ html&gt;body{padding:
         if (isScreenVisible(&quot;warehouse&quot;)) renderWarehouse();
         else updateWarehouseSummary();
         if (isScreenVisible(&quot;profile&quot;)) renderProfile();
-        syncAdminAccountLockOverlay();
         if (pendingReleaseNotice) {
           scheduleReleaseNotice(180);
         } else if (state.tutorialCompleted &amp;&amp; tutorialOpenedAutomatically) {
@@ -13524,7 +12149,7 @@ html&gt;body{padding:
         const targetLevel = Math.max(1, Math.min(PROFILE_LEVEL_MAX, Math.floor(Number(levelValue) || 1)));
         let total = 0;
         for (let level = 1; level &lt; targetLevel; level += 1) total += profileXpNeededForLevel(level);
-        return sanitizeAdminNumber(total);
+        return sanitizeGameNumber(total);
       }
 
       function profileXpMultiplier() {
@@ -13538,11 +12163,11 @@ html&gt;body{padding:
       }
 
       function profileRunXpReward() {
-        return sanitizeAdminNumber(PROFILE_XP_PER_COMPLETED_RUN * profileXpMultiplier());
+        return sanitizeGameNumber(PROFILE_XP_PER_COMPLETED_RUN * profileXpMultiplier());
       }
 
       function profilePurchaseXpReward() {
-        return sanitizeAdminNumber(PROFILE_XP_PER_PURCHASE * profileXpMultiplier());
+        return sanitizeGameNumber(PROFILE_XP_PER_PURCHASE * profileXpMultiplier());
       }
 
       function applySeasonPassProfileBonus(payload) {
@@ -13649,7 +12274,7 @@ html&gt;body{padding:
       }
 
       function profileLevelState(totalXpValue) {
-        const totalXp = sanitizeAdminNumber(totalXpValue);
+        const totalXp = sanitizeGameNumber(totalXpValue);
         let level = 1;
         let currentXp = totalXp;
         while (level &lt; PROFILE_LEVEL_MAX) {
@@ -15296,7 +13921,7 @@ html&gt;body{padding:
       function rewardQrMarkup(code) {
         const payload = rewardQrPayload(code);
         if (!payload) return &quot;&quot;;
-        return `&lt;div class=&quot;purchase-qr-wrap&quot;&gt;&lt;strong class=&quot;purchase-qr-title&quot;&gt;Покажите QR сотруднику&lt;/strong&gt;&lt;div aria-label=&quot;QR-код награды&quot; class=&quot;purchase-qr&quot; data-reward-qr=&quot;${escapePurchaseText(payload)}&quot;&gt;&lt;/div&gt;&lt;span class=&quot;purchase-qr-note&quot;&gt;Сотрудник отсканирует QR в своей админ-панели. Код ниже остаётся запасным вариантом.&lt;/span&gt;&lt;/div&gt;`;
+        return `&lt;div class=&quot;purchase-qr-wrap&quot;&gt;&lt;strong class=&quot;purchase-qr-title&quot;&gt;Покажите QR сотруднику&lt;/strong&gt;&lt;div aria-label=&quot;QR-код награды&quot; class=&quot;purchase-qr&quot; data-reward-qr=&quot;${escapePurchaseText(payload)}&quot;&gt;&lt;/div&gt;&lt;span class=&quot;purchase-qr-note&quot;&gt;Сотрудник отсканирует QR в рабочей панели. Код ниже остаётся запасным вариантом.&lt;/span&gt;&lt;/div&gt;`;
       }
 
       function renderRewardQrCodes(container = document) {
@@ -15576,13 +14201,13 @@ html&gt;body{padding:
         return data;
       }
 
-      async function adminApiRequest(path, payload = {}) {
+      async function profileSyncRequest(payload = {}) {
         const initData = String(telegramProfile?.initData || &quot;&quot;);
         if (!initData) {
           requestTelegramProfile();
           throw new Error(&quot;Откройте игру внутри Telegram и повторите действие.&quot;);
         }
-        const response = await fetch(path, {
+        const response = await fetch(PROFILE_SYNC_PATH, {
           method: &quot;POST&quot;,
           headers: { &quot;Content-Type&quot;: &quot;application/json&quot; },
           body: JSON.stringify({ initData, ...payload }),
@@ -15591,28 +14216,20 @@ html&gt;body{padding:
         });
         const data = await response.json().catch(() =&gt; null);
         if (!response.ok || !data?.ok) {
-          const fallback = response.status === 404
-            ? &quot;Административный API не найден. Замените src/worker.js и wrangler.jsonc из одной сборки, затем выполните deploy.&quot;
-            : &quot;Административная операция не выполнена.&quot;;
-          const error = new Error(data?.error || fallback);
+          const error = new Error(data?.error || &quot;Не удалось синхронизировать профиль игрока.&quot;);
           error.status = response.status;
           throw error;
         }
         return data;
       }
 
-      function adminErrorMessage(error, fallback) {
-        const message = String(error?.message || fallback || &quot;Неизвестная ошибка.&quot;);
-        return error?.status ? `${message} (HTTP ${error.status})` : message;
-      }
-
-      function adminProfileSnapshot() {
+      function playerProfileSnapshot() {
         return {
-          wallet: sanitizeAdminNumber(state.wallet),
-          best: sanitizeAdminNumber(state.best),
-          treats: sanitizeAdminNumber(state.treats),
-          coffee: sanitizeAdminNumber(state.coffee),
-          profileXp: sanitizeAdminNumber(state.profileXp),
+          wallet: sanitizeGameNumber(state.wallet),
+          best: sanitizeGameNumber(state.best),
+          treats: sanitizeGameNumber(state.treats),
+          coffee: sanitizeGameNumber(state.coffee),
+          profileXp: sanitizeGameNumber(state.profileXp),
           ownedSkins: normalizeOwnedSkins(state.ownedSkins),
           activeSkin: currentDogSkin.id || &quot;default&quot;,
           appliedResetPlanIds: Array.isArray(state.appliedResetPlanIds)
@@ -15624,9 +14241,9 @@ html&gt;body{padding:
       async function pushPlayerAppearanceSnapshot() {
         if (!telegramProfile?.initData) return false;
         try {
-          await adminApiRequest(ADMIN_PROFILE_SYNC_PATH, {
+          await profileSyncRequest({
             mode: &quot;read&quot;,
-            current: adminProfileSnapshot()
+            current: playerProfileSnapshot()
           });
           return true;
         } catch (error) {
@@ -15639,8 +14256,7 @@ html&gt;body{padding:
         if (!data?.products) return false;
         remoteShopPrices = data.products;
         remoteShopAssortment = data.assortment &amp;&amp; typeof data.assortment === &quot;object&quot; ? data.assortment : {};
-        state.adminPrices = {};
-        applyAdminPrices();
+        applyRemoteShopPrices();
         applyShopAssortment();
         saveProgress();
         return true;
@@ -15685,14 +14301,14 @@ html&gt;body{padding:
         }
       }
 
-      function applyAdminProfilePayload(data) {
+      function applyServerProfilePayload(data) {
         const profile = data?.profile || {};
         let changed = false;
         if (data?.resetPlan) changed = applyLeaderboardResetPlan(data.resetPlan, Date.now()) || changed;
-        antiCheatWithTrustedChange(&quot;admin-profile-server-sync&quot;, () =&gt; {
+        antiCheatWithTrustedChange(&quot;profile-server-sync&quot;, () =&gt; {
           for (const field of [&quot;wallet&quot;, &quot;best&quot;, &quot;treats&quot;, &quot;coffee&quot;, &quot;profileXp&quot;]) {
-            const current = sanitizeAdminNumber(state[field]);
-            const serverValue = sanitizeAdminNumber(profile[field]);
+            const current = sanitizeGameNumber(state[field]);
+            const serverValue = sanitizeGameNumber(profile[field]);
             const authoritative = profile.authoritativeFields?.[field] === true || (field === &quot;wallet&quot; &amp;&amp; profile.authoritativeWallet === true);
             const next = authoritative ? serverValue : Math.max(current, serverValue);
             if (next !== current) {
@@ -15709,16 +14325,16 @@ html&gt;body{padding:
         return true;
       }
 
-      async function syncAdminProfileFromServer() {
+      async function syncPlayerProfileFromServer() {
         if (!telegramProfile?.initData) return false;
         try {
-          const data = await adminApiRequest(ADMIN_PROFILE_SYNC_PATH, {
+          const data = await profileSyncRequest({
             mode: &quot;read&quot;,
-            current: adminProfileSnapshot()
+            current: playerProfileSnapshot()
           });
-          return applyAdminProfilePayload(data);
+          return applyServerProfilePayload(data);
         } catch (error) {
-          if (error?.status !== 403) console.warn(&quot;Admin profile sync failed&quot;, error);
+          if (error?.status !== 403) console.warn(&quot;Player profile sync failed&quot;, error);
           return false;
         }
       }
@@ -15757,8 +14373,8 @@ html&gt;body{padding:
           if (!skinsLoaded) void loadRemoteSkinPrices(force);
 
           if (!initData) return true;
-          if (data.profile) applyAdminProfilePayload(data.profile);
-          else void syncAdminProfileFromServer();
+          if (data.profile) applyServerProfilePayload(data.profile);
+          else void syncPlayerProfileFromServer();
           if (data.cases) applyServerCasePayload(data.cases);
           else void loadCaseState(true);
           if (data.seasonPassBonus) applySeasonPassProfileBonus(data.seasonPassBonus);
@@ -15780,7 +14396,7 @@ html&gt;body{padding:
           if (initData) {
             await Promise.all([
               syncServerRewards(true),
-              syncAdminProfileFromServer(),
+              syncPlayerProfileFromServer(),
               loadCaseState(true),
               loadSeasonPassProfileBonus()
             ]);
@@ -15810,80 +14426,16 @@ html&gt;body{padding:
       });
       window.addEventListener(&quot;pageshow&quot;, () =&gt; scheduleServerAccountResumeSync(180));
       window.addEventListener(&quot;focus&quot;, () =&gt; scheduleServerAccountResumeSync(220));
-      // Currency grants from the Telegram admin panel are queued server-side.
+      // Server-side grants from the owner panel and Telegram bot are queued centrally.
       // Pull the lightweight profile endpoint while the mini app stays open so an
-      // administrator does not have to reload the whole game to see the grant.
+      // player does not have to reload the whole game to see the grant.
       window.setInterval(() =&gt; {
         if (!telegramProfile?.initData || document.visibilityState !== &quot;visible&quot;) return;
         if (Date.now() - serverAccountResumeSyncAt &lt; 15000) return;
         serverAccountResumeSyncAt = Date.now();
-        void syncAdminProfileFromServer();
+        void syncPlayerProfileFromServer();
       }, 10000);
 
-      async function pushAdminProfileMinimums() {
-        if (!telegramProfile?.initData) return false;
-        try {
-          await adminApiRequest(ADMIN_PROFILE_SYNC_PATH, {
-            mode: &quot;write&quot;,
-            current: adminProfileSnapshot(),
-            next: adminProfileSnapshot()
-          });
-          return true;
-        } catch (error) {
-          console.warn(&quot;Admin profile minimum save failed&quot;, error);
-          return false;
-        }
-      }
-
-      async function setAdminProfileSnapshot() {
-        if (!telegramProfile?.initData) return false;
-        try {
-          const snapshot = adminProfileSnapshot();
-          await adminApiRequest(ADMIN_PROFILE_SYNC_PATH, {
-            mode: &quot;set&quot;,
-            current: snapshot,
-            next: snapshot
-          });
-          return true;
-        } catch (error) {
-          console.warn(&quot;Admin profile exact save failed&quot;, error);
-          return false;
-        }
-      }
-
-      async function setAdminLeaderboardScore() {
-        if (!adminAuthenticated || !adminContent) return;
-        const input = adminContent.querySelector(&quot;[data-admin-global-rating-value]&quot;);
-        const score = sanitizeAdminNumber(input?.value || 0);
-        const button = adminContent.querySelector(&quot;[data-admin-global-rating-save]&quot;);
-        if (button) button.disabled = true;
-        renderAdminDashboard(&quot;Сохраняем серверный рейтинг…&quot;);
-        try {
-          const data = await adminApiRequest(ADMIN_LEADERBOARD_SET_PATH, {
-            score,
-            level: profileLevelState(state.profileXp).level,
-            caseAvatarId: state.caseActiveAvatar || &quot;&quot;,
-            caseFrameId: state.caseActiveFrame || &quot;&quot;
-          });
-          if (data.season) {
-            data.season._loadedAt = Date.now();
-            leaderboardCache.season = data.season;
-          }
-          if (data.allTime) {
-            data.allTime._loadedAt = Date.now();
-            leaderboardCache.all_time = data.allTime;
-          }
-          leaderboardData = leaderboardCache[leaderboardMode] || leaderboardCache.season || null;
-          renderLeaderboardSummary();
-          renderAdminDashboard(`Серверный рейтинг установлен: ${formatter.format(score)} очков.`);
-        } catch (error) {
-          console.warn(&quot;Admin leaderboard update failed&quot;, error);
-          renderAdminDashboard(adminErrorMessage(error, &quot;Не удалось изменить серверный рейтинг.&quot;));
-        } finally {
-          const currentButton = adminContent?.querySelector(&quot;[data-admin-global-rating-save]&quot;);
-          if (currentButton) currentButton.disabled = false;
-        }
-      }
 
       function applyLeaderboardResetPlan(resetPlan, serverTime = Date.now()) {
         if (!resetPlan?.id || Number(resetPlan.applyAt || 0) &gt; Number(serverTime || Date.now())) return false;
@@ -16097,11 +14649,11 @@ html&gt;body{padding:
       function reconcileSeasonProfileXpForRun(run, payload) {
         if (!run || !run.runId || run.profileXpReconciled === true) return 0;
         const multiplier = Math.max(1, Math.min(2, Math.floor(Number(payload?.profileXpMultiplier || payload?.multiplier || 1))));
-        const expected = sanitizeAdminNumber(PROFILE_XP_PER_COMPLETED_RUN * multiplier);
-        const localAwarded = sanitizeAdminNumber(run.profileXpLocalAwarded);
+        const expected = sanitizeGameNumber(PROFILE_XP_PER_COMPLETED_RUN * multiplier);
+        const localAwarded = sanitizeGameNumber(run.profileXpLocalAwarded);
         const delta = Math.max(0, expected - localAwarded);
         antiCheatWithTrustedChange(&quot;season-profile-xp-reconcile&quot;, () =&gt; {
-          if (delta &gt; 0) state.profileXp = sanitizeAdminNumber(Number(state.profileXp || 0) + delta);
+          if (delta &gt; 0) state.profileXp = sanitizeGameNumber(Number(state.profileXp || 0) + delta);
           run.profileXpLocalAwarded = expected;
           run.profileXpReconciled = true;
           savePendingLeaderboardRun(run);
@@ -16697,8 +15249,8 @@ html&gt;body{padding:
           }
           const purchasePreviousLevel = profileLevelState(state.profileXp).level;
           const purchaseXpEarned = profilePurchaseXpReward();
-          state.completedPurchases = sanitizeAdminNumber(Number(state.completedPurchases || 0) + 1);
-          state.profileXp = sanitizeAdminNumber(Number(state.profileXp || 0) + purchaseXpEarned);
+          state.completedPurchases = sanitizeGameNumber(Number(state.completedPurchases || 0) + 1);
+          state.profileXp = sanitizeGameNumber(Number(state.profileXp || 0) + purchaseXpEarned);
           const purchaseReachedNewLevel = profileLevelState(state.profileXp).level &gt; purchasePreviousLevel;
           state.redemptionCodes = Array.isArray(state.redemptionCodes) ? state.redemptionCodes : [];
           state.redemptionCodes.push({
@@ -17656,133 +16208,6 @@ html&gt;body{padding:
         }
       }
 
-      const avatarAdminTarget = avatarImg?.closest(&quot;.avatar&quot;);
-      if (avatarAdminTarget) {
-        avatarAdminTarget.addEventListener(&quot;click&quot;, (event) =&gt; {
-          event.stopPropagation();
-          adminAvatarTapCount += 1;
-          if (adminAvatarTapCount &lt; ADMIN_AVATAR_TAPS_REQUIRED) return;
-          adminAvatarTapCount = 0;
-          openAdminLayer();
-        });
-      }
-
-      if (adminLayer) {
-        adminLayer.addEventListener(&quot;submit&quot;, (event) =&gt; {
-          const target = event.target instanceof Element ? event.target : null;
-          const loginForm = target?.closest(&quot;[data-admin-login-form]&quot;);
-          const unlockForm = target?.closest(&quot;[data-admin-unlock-form]&quot;);
-          if (!loginForm &amp;&amp; !unlockForm) return;
-          event.preventDefault();
-          if (unlockForm) {
-            const unlockPassword = unlockForm.querySelector(&quot;[data-admin-unlock-password]&quot;)?.value || &quot;&quot;;
-            void adminUnlock(unlockPassword);
-            return;
-          }
-          const password = loginForm.querySelector(&quot;[data-admin-password]&quot;)?.value || &quot;&quot;;
-          adminLogin(password);
-        });
-
-        adminLayer.addEventListener(&quot;click&quot;, (event) =&gt; {
-          const target = event.target instanceof Element ? event.target : null;
-          if (!target) return;
-          const loginSubmit = target.closest(&quot;[data-admin-login-submit]&quot;);
-          if (loginSubmit) {
-            event.preventDefault();
-            event.stopPropagation();
-            const loginForm = loginSubmit.closest(&quot;[data-admin-login-form]&quot;);
-            const password = loginForm?.querySelector(&quot;[data-admin-password]&quot;)?.value || &quot;&quot;;
-            adminLogin(password);
-            return;
-          }
-          const unlockSubmit = target.closest(&quot;[data-admin-unlock-submit]&quot;);
-          if (unlockSubmit) {
-            event.preventDefault();
-            event.stopPropagation();
-            const unlockForm = unlockSubmit.closest(&quot;[data-admin-unlock-form]&quot;);
-            const unlockPassword = unlockForm?.querySelector(&quot;[data-admin-unlock-password]&quot;)?.value || &quot;&quot;;
-            void adminUnlock(unlockPassword);
-            return;
-          }
-          if (target.closest(&quot;[data-admin-contact]&quot;)) {
-            try {
-              window.parent.postMessage({ type: &quot;zefirok-open-telegram&quot;, username: ADMIN_CONTACT }, &quot;*&quot;);
-            } catch (error) {
-              window.location.href = `https://t.me/${ADMIN_CONTACT.replace(/^@/, &quot;&quot;)}`;
-            }
-            return;
-          }
-          if (target === adminLayer || target.closest(&quot;[data-admin-close]&quot;)) {
-            if (getAdminSecurity().locked) syncAdminAccountLockOverlay();
-            else closeAdminLayer();
-            return;
-          }
-          if (target.closest(&quot;[data-admin-logout]&quot;)) {
-            adminLogout();
-            return;
-          }
-          if (target.closest(&quot;[data-admin-warning-retry]&quot;)) {
-            if (getAdminSecurity().locked) renderAdminLocked();
-            else renderAdminLogin();
-            return;
-          }
-          const valueButton = target.closest(&quot;[data-admin-value-action]&quot;);
-          if (valueButton) {
-            void updateAdminValue(valueButton.dataset.adminValueField, valueButton.dataset.adminValueAction);
-            return;
-          }
-          const profileProgressButton = target.closest(&quot;[data-admin-profile-action]&quot;);
-          if (profileProgressButton) {
-            void updateAdminProfileProgress(profileProgressButton.dataset.adminProfileAction);
-            return;
-          }
-          const purchaseButton = target.closest(&quot;[data-admin-purchase-action]&quot;);
-          if (purchaseButton) {
-            updateAdminPurchase(purchaseButton.dataset.adminPurchaseCode, purchaseButton.dataset.adminPurchaseAction);
-            return;
-          }
-          if (target.closest(&quot;[data-admin-zero-all]&quot;)) {
-            void zeroAdminBalances();
-            return;
-          }
-          if (target.closest(&quot;[data-admin-grant-cases]&quot;)) {
-            void grantAdminCasesOrFrame(&quot;case&quot;);
-            return;
-          }
-          if (target.closest(&quot;[data-admin-grant-frame]&quot;)) {
-            void grantAdminCasesOrFrame(&quot;frame&quot;);
-            return;
-          }
-          if (target.closest(&quot;[data-admin-reset-purchase-limit]&quot;)) {
-            resetAdminPurchaseLimit();
-            return;
-          }
-          if (target.closest(&quot;[data-admin-save-prices]&quot;)) {
-            void saveAdminPrices();
-            return;
-          }
-          if (target.closest(&quot;[data-admin-reset-prices]&quot;)) {
-            void resetAdminPrices();
-            return;
-          }
-          if (target.closest(&quot;[data-admin-save-skin-prices]&quot;)) {
-            void saveAdminSkinPrices();
-            return;
-          }
-          if (target.closest(&quot;[data-admin-reset-skin-prices]&quot;)) {
-            void resetAdminSkinPrices();
-            return;
-          }
-          const removeSkinButton = target.closest(&quot;[data-admin-remove-skin]&quot;);
-          if (removeSkinButton) {
-            removeAdminSkinFromAccount(removeSkinButton.dataset.adminRemoveSkin);
-            return;
-          }
-          if (target.closest(&quot;[data-admin-global-rating-save]&quot;)) {
-            void setAdminLeaderboardScore();
-          }
-        });
-      }
 
 
       if (leaderboardOpenButton) leaderboardOpenButton.addEventListener(&quot;click&quot;, requestOpenLeaderboard);
@@ -18007,12 +16432,6 @@ html&gt;body{padding:
           closeTutorial(true);
           return;
         }
-        if (adminLayer &amp;&amp; !adminLayer.hidden) {
-          event.preventDefault();
-          if (getAdminSecurity().locked) syncAdminAccountLockOverlay();
-          else closeAdminLayer();
-          return;
-        }
         if (purchaseLayer &amp;&amp; !purchaseLayer.hidden) {
           event.preventDefault();
           closePurchaseLayer();
@@ -18029,7 +16448,7 @@ html&gt;body{padding:
       });
       stage.addEventListener(&quot;pointerdown&quot;, jump);
       root.addEventListener(&quot;keydown&quot;, (event) =&gt; {
-        if ((purchaseLayer &amp;&amp; !purchaseLayer.hidden) || (adminLayer &amp;&amp; !adminLayer.hidden) || (tutorialLayer &amp;&amp; !tutorialLayer.hidden) || (releaseLayer &amp;&amp; !releaseLayer.hidden) || (caseLayer &amp;&amp; !caseLayer.hidden)) return;
+        if ((purchaseLayer &amp;&amp; !purchaseLayer.hidden) || (tutorialLayer &amp;&amp; !tutorialLayer.hidden) || (releaseLayer &amp;&amp; !releaseLayer.hidden) || (caseLayer &amp;&amp; !caseLayer.hidden)) return;
         if (event.code === &quot;Space&quot; || event.code === &quot;Enter&quot;) {
           event.preventDefault();
           jump();
@@ -18079,7 +16498,6 @@ html&gt;body{padding:
             void syncServerRewards(false);
           }
         }
-        refreshAdminPurchaseTimers();
       }, 1000);
 
       if (CLIENT_ANTI_CHEAT_ENABLED) {
@@ -18491,17 +16909,6 @@ html&gt;body{padding:
     text-overflow: ellipsis !important;
   }
 
-  #zefirok-maltipoo-runner .admin-dialog,
-  #zefirok-maltipoo-runner .admin-button,
-  #zefirok-maltipoo-runner .admin-input {
-    touch-action: manipulation !important;
-  }
-  #zefirok-maltipoo-runner [data-admin-login-submit],
-  #zefirok-maltipoo-runner [data-admin-unlock-submit] {
-    position: relative;
-    z-index: 2;
-    pointer-events: auto !important;
-  }
 
   @media (max-width: 390px) {
     #zefirok-maltipoo-runner .leaderboard-v4-panel { padding: 13px !important; }
@@ -18835,7 +17242,7 @@ html&gt;body{padding:
 <script type="application/json" id="zefirok-v07944-outer-audit">{"build":"0.79.44","fixes":["season-pass-cache-version","return-refresh"]}</script>
 
 <script type="application/json" id="zefirok-v07945-rc1-outer-audit">{"build":"0.79.45-rc.1","fixes":["season-pass-d1-compound-select","season-pass-read-availability","local-tooltip-runtime"]}</script>
-<script type="application/json" id="zefirok-v07946-fullscreen-viewport-audit">{"build":"0.79.46-rc.4","fixes":["telegram-fullscreen-game","telegram-fullscreen-season-pass","stable-viewport-height","season-pass-return-resize","safe-area-css-override","account-refresh-on-resume","admin-grant-profile-heartbeat"]}</script>
+<script type="application/json" id="zefirok-v07946-fullscreen-viewport-audit">{"build":"0.79.46-rc.4","fixes":["telegram-fullscreen-game","telegram-fullscreen-season-pass","stable-viewport-height","season-pass-return-resize","safe-area-css-override","account-refresh-on-resume","profile-grant-heartbeat"]}</script>
 <script type="application/json" id="zefirok-v07946-rc5-season-case-audit">{"build":"0.79.46-rc.5","fixes":["season-case-inventory-refresh","delivered-case-self-heal","season-end-case-preservation"]}</script>
 </body>
 </html>

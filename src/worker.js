@@ -335,7 +335,7 @@ const STAFF_SESSION_TTL_SECONDS = 12 * 60 * 60;
 const SUPPORT_USERNAME = "ve4n0_em";
 const SUPPORT_URL = `https://t.me/${SUPPORT_USERNAME}`;
 const DEFAULT_GAME_URL = "https://zefirok-run.patokad6.workers.dev/";
-const WORKER_BUILD = "1.0.0 + owner control center";
+const WORKER_BUILD = "1.0.0 + owner control center v7 + client cleanup + clean player navigation";
 const V07944_RELEASE_CANDIDATE_AUDIT = Object.freeze({ reset: true, claims: true, purchases: true, xp: true, concurrency: true });
 
 // =============================================================
@@ -969,7 +969,7 @@ export default {
         return await grantAdminCaseOrFrame(request, env);
       }
 
-      if (url.pathname === "/api/admin/profile/sync" && request.method === "POST") {
+      if ((url.pathname === "/api/profile/sync" || url.pathname === "/api/admin/profile/sync") && request.method === "POST") {
         return await syncAdminProfile(request, env);
       }
 
@@ -4867,6 +4867,9 @@ async function handleTelegramUpdate(update, env, runtime = {}) {
   }
 
   const commandName = telegramCommandName(text);
+  if (commandName && PLAYER_BOT_COMMANDS.some((item) => item.command === commandName)) {
+    telegramPublicCommandResponseChats.add(String(chatId));
+  }
   if (commandName && !limitedAdministratorCommandAllowed(text)) {
     const commandAccess = await getTeamAccess(user, env);
     if (isLimitedAdministratorAccess(commandAccess)) {
@@ -5588,11 +5591,11 @@ function configuredOwnerPanelUrl(env) {
   try {
     const url = new URL(configuredGameUrl(env));
     url.pathname = "/owner.html";
-    url.search = "?v=owner-1.0.0-6";
+    url.search = "?v=owner-1.0.0-7";
     url.hash = "";
     return url.toString();
   } catch {
-    return `${DEFAULT_GAME_URL.replace(/\/$/, "")}/owner.html?v=owner-1.0.0-6`;
+    return `${DEFAULT_GAME_URL.replace(/\/$/, "")}/owner.html?v=owner-1.0.0-7`;
   }
 }
 
@@ -8512,6 +8515,14 @@ async function handleCallbackQueryAction(query, env, runtime = {}) {
   const message = query.message;
   const chatId = message?.chat?.id;
   if (!chatId || !user?.id) return;
+
+  if (Number(chatId) > 0 && Number(message?.message_id) > 0) {
+    const tracked = await readTrackedTelegramMessages(env, chatId);
+    const sourceMessageId = Math.floor(Number(message.message_id) || 0);
+    if (sourceMessageId > 0 && !tracked.includes(sourceMessageId)) {
+      await writeTrackedTelegramMessages(env, chatId, [...tracked, sourceMessageId]);
+    }
+  }
 
   if (data === "admin_clean_chat") {
     const access = await getTeamAccess(user, env);
@@ -15469,10 +15480,10 @@ const telegramTrackedMessagesMemoryCache = new Map();
 // A typed command must create a fresh visible reply. Callback navigation may
 // still edit the currently tracked admin-panel message.
 const telegramFreshCommandResponseChats = new Set();
-// Public player-menu callbacks must stay outside the staff clean-chat mode.
-// Otherwise an owner or employee pressing FAQ/Story/Tasks can silently edit an
-// old tracked admin-panel message instead of showing the selected player page.
+// Interactive player navigation uses the same single-message behavior as the staff panel,
+// but without staff-only back buttons. Background notifications are not affected.
 const telegramPublicCallbackResponseChats = new Set();
+const telegramPublicCommandResponseChats = new Set();
 
 function telegramCleanChatStateKey(chatId) {
   return `${TELEGRAM_CLEAN_CHAT_STATE_PREFIX}${String(chatId)}`;
@@ -15650,17 +15661,20 @@ function canEditTrackedTelegramPayload(payload) {
 
 async function sendTelegramPayload(env, chatId, payload, options = {}) {
   const cleanMode = String(options?.cleanMode || "replace");
-  const forceFreshCommandResponse = telegramFreshCommandResponseChats.delete(String(chatId));
-  const publicCallbackResponse = telegramPublicCallbackResponseChats.has(String(chatId));
-  const cleanChat = !publicCallbackResponse && options?.cleanChat !== false && await isCleanStaffPrivateChat(env, chatId);
-  if (cleanChat && options?.adminBack !== false) {
+  const chatKey = String(chatId);
+  const forceFreshCommandResponse = telegramFreshCommandResponseChats.delete(chatKey);
+  const publicCallbackResponse = telegramPublicCallbackResponseChats.has(chatKey);
+  const publicCommandResponse = telegramPublicCommandResponseChats.delete(chatKey);
+  const cleanStaffChat = await isCleanStaffPrivateChat(env, chatId);
+  const cleanChat = options?.cleanChat !== false && (cleanStaffChat || publicCallbackResponse || publicCommandResponse);
+  if (cleanStaffChat && !publicCallbackResponse && !publicCommandResponse && options?.adminBack !== false) {
     payload = { ...payload, reply_markup: addAdminPanelBackButton(payload?.reply_markup) };
   }
   const previous = cleanChat ? await readTrackedTelegramMessages(env, chatId) : [];
 
-  // Fast path for the staff panel: edit the current bot message instead of
-  // sending a new one and then deleting the old one. This removes the visual
-  // flash of the /start screen and saves Telegram API calls on every click.
+  // Fast path for interactive bot navigation: edit the current bot message instead of
+  // sending a new one and then deleting the old one. This keeps player and staff
+  // button navigation on one current message and saves Telegram API calls.
   if (
     !forceFreshCommandResponse &&
     cleanChat &&
@@ -23478,7 +23492,12 @@ async function ownerPanelTogglePromocode(env, ctx) {
 }
 
 function ownerPanelShopProductAsset(productId) {
-  const id=String(productId||"");if(id.startsWith("case-"))return ownerPanelCaseAsset(id.slice(5));if(id==="zefir")return "/assets/optimized/v0.79.5/shopMarshmallowAssortment.png?v=0.79.5";if(id==="americano"||id==="cappuccino")return "/assets/optimized/v0.79.5/iconCoffee.png?v=0.79.5";return "/assets/optimized/v0.79.5/shopMascot.webp?v=0.79.5";
+  const id=String(productId||"");
+  if(id.startsWith("case-"))return ownerPanelCaseAsset(id.slice(5));
+  if(id==="zefir")return "/assets/optimized/v0.79.5/shopMarshmallowAssortment.png?v=0.79.5";
+  if(id==="americano")return "/assets/optimized/v0.79.5/shopAmericano.webp?v=1.0.0";
+  if(id==="cappuccino")return "/assets/optimized/v0.79.5/shopCappuccino.webp?v=1.0.0";
+  return "/assets/optimized/v0.79.5/shopMascot.webp?v=0.79.5";
 }
 function ownerPanelSkinAsset(skinId){return skinId==="default"?"/assets/optimized/v0.79.5/skinDefaultAvatar.png?v=0.79.5":`/assets/skins/avatars/${String(skinId)}.png`;}
 
