@@ -8155,7 +8155,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 &lt;img alt=&quot;Мифический кейс&quot; data-shop-case-type=&quot;mythic&quot; src=&quot;/assets/cases/Mifik_case_closed.png&quot;/&gt;
 &lt;span&gt;
 &lt;strong&gt;Мифический кейс&lt;/strong&gt;
-&lt;span&gt;Редкий премиальный кейс с шансом на Epic, Mythic и Legendary косметику и гарантом Mythic+.&lt;/span&gt;
+&lt;span&gt;Редкий премиальный кейс с шансом на эпическую, мифическую и легендарную косметику. Каждое 25-е открытие гарантирует мифическую или легендарную косметику.&lt;/span&gt;
 &lt;span class=&quot;shop-price&quot;&gt;&lt;span class=&quot;price-pill&quot;&gt;&lt;img alt=&quot;&quot; data-shop-img=&quot;shopStar&quot;/&gt;300 000 очков&lt;/span&gt;&lt;span class=&quot;price-pill alt&quot;&gt;&lt;img alt=&quot;&quot; data-shop-img=&quot;iconTreatPanel&quot;/&gt;350 зефира&lt;/span&gt;&lt;span class=&quot;price-pill alt&quot;&gt;&lt;img alt=&quot;&quot; data-shop-img=&quot;shopCoffee&quot;/&gt;350 кофе&lt;/span&gt;&lt;/span&gt;
 &lt;/span&gt;
 &lt;/button&gt;
@@ -10230,7 +10230,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         &quot;case-mythic&quot;: {
           enabled: true,
           title: &quot;Мифический кейс&quot;,
-          description: &quot;90% ресурсов и усилителей, 10% косметики Epic–Legendary. На 25-м открытии — гарант Mythic+.&quot;,
+          description: &quot;90% ресурсов и усилителей, 10% косметики: эпическая, мифическая или легендарная. На 25-м открытии — гарант мифической или легендарной косметики.&quot;,
           points: 300000,
           treats: 350,
           coffee: 350,
@@ -10696,7 +10696,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
               &lt;span class=&quot;tutorial-case-card&quot;&gt;&lt;img src=&quot;${CASE_IMAGE_CATALOG.small.closed}&quot; alt=&quot;&quot;&gt;&lt;strong&gt;Обычный&lt;/strong&gt;&lt;small&gt;награда за уровни&lt;/small&gt;&lt;/span&gt;
               &lt;span class=&quot;tutorial-case-card&quot;&gt;&lt;img src=&quot;${CASE_IMAGE_CATALOG.sweet.closed}&quot; alt=&quot;&quot;&gt;&lt;strong&gt;Серебряный&lt;/strong&gt;&lt;small&gt;ценнее обычного&lt;/small&gt;&lt;/span&gt;
               &lt;span class=&quot;tutorial-case-card&quot;&gt;&lt;img src=&quot;${CASE_IMAGE_CATALOG.gold.closed}&quot; alt=&quot;&quot;&gt;&lt;strong&gt;Золотой&lt;/strong&gt;&lt;small&gt;продвинутый кейс&lt;/small&gt;&lt;/span&gt;
-              &lt;span class=&quot;tutorial-case-card&quot;&gt;&lt;img src=&quot;${CASE_IMAGE_CATALOG.mythic.closed}&quot; alt=&quot;&quot;&gt;&lt;strong&gt;Мифический&lt;/strong&gt;&lt;small&gt;гарант Mythic+ на 25-м&lt;/small&gt;&lt;/span&gt;
+              &lt;span class=&quot;tutorial-case-card&quot;&gt;&lt;img src=&quot;${CASE_IMAGE_CATALOG.mythic.closed}&quot; alt=&quot;&quot;&gt;&lt;strong&gt;Мифический&lt;/strong&gt;&lt;small&gt;гарант мифической или легендарной на 25-м&lt;/small&gt;&lt;/span&gt;
               &lt;span class=&quot;tutorial-case-card&quot;&gt;&lt;img src=&quot;${CASE_IMAGE_CATALOG.legendary.closed}&quot; alt=&quot;&quot;&gt;&lt;strong&gt;Легендарный&lt;/strong&gt;&lt;small&gt;высшая постоянная ступень&lt;/small&gt;&lt;/span&gt;
             &lt;/div&gt;`
         },
@@ -13633,7 +13633,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           : &quot;&quot;;
         const note = info.type === &quot;mythic&quot;
           ? guaranteeCount &gt; 0
-            ? `&lt;strong&gt;Гарант Mythic+ на ${formatter.format(guaranteeCount)}-м открытии&lt;/strong&gt;&lt;span&gt;Если за предыдущие открытия не выпала Mythic или Legendary косметика, гарант пытается выдать неполученный предмет Mythic+. Естественное выпадение Mythic/Legendary сбрасывает счётчик. Обычные косметические выпадения могут повторяться и тогда превращаются в компенсацию очками. Legendary+ в этом кейсе отсутствует.&lt;/span&gt;`
+            ? `&lt;strong&gt;Гарант мифической или легендарной косметики на ${formatter.format(guaranteeCount)}-м открытии&lt;/strong&gt;&lt;span&gt;Если за предыдущие открытия не выпала мифическая или легендарная косметика, гарант выдаёт предмет одной из этих редкостей и сначала выбирает из ещё не полученных. Естественное выпадение мифической или легендарной косметики сбрасывает счётчик. Обычные косметические выпадения могут повторяться и тогда превращаются в компенсацию очками.&lt;/span&gt;`
             : `&lt;strong&gt;Гарант отключён&lt;/strong&gt;&lt;span&gt;Обычная косметика всё равно выпадает только по опубликованным процентам и может повторяться с компенсацией.&lt;/span&gt;`
           : info.type === &quot;legendary&quot;
             ? guaranteeCount &gt; 0

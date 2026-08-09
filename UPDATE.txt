@@ -1,58 +1,35 @@
-SweetRun Update v0.98 — Music Covers
-Дата: 09.08.2026
+SweetRun Update v0.102 — Mythic Case terminology hotfix
+Дата: 10.08.2026
 
-ИЗМЕНЕНО
+ИЗМЕНЕННЫЕ ФАЙЛЫ
 - index.html
 - owner.html
-- src/worker.js
 
-ДОБАВЛЕНЫ АССЕТЫ
-- assets/sounds/covers/season3_lunar_music.png
-- assets/sounds/covers/music_legendary_cafe_run.png
-- assets/sounds/covers/music_marshmallow_dash_1.png
-- assets/sounds/covers/music_marshmallow_dash_2.png
-- assets/sounds/covers/music_cafe_dash_1.png
-- assets/sounds/covers/music_cafe_dash_2.png
-- assets/sounds/covers/music_marshmallow_dash_3.png
-- assets/sounds/covers/music_marshmallow_dash_4.png
+ЧТО ИСПРАВЛЕНО
+1. Убраны несуществующие названия редкостей Mythic+ / Legendary+ из интерфейса Мифического кейса.
+2. В описании Мифического кейса больше нет англоязычных Epic / Mythic / Legendary.
+3. Используются только реальные игровые редкости:
+   - Эпическая
+   - Мифическая
+   - Легендарная
+4. Гарант Мифического кейса теперь описан корректно: на 25-м открытии гарантируется Мифическая или Легендарная косметика, если счётчик не был сброшен естественным выпадением одной из этих редкостей.
+5. В симуляторе Control Center терминология также полностью переведена на русские названия редкостей.
+6. Текст гаранта Легендарного кейса в Control Center теперь говорит «не ниже эпической редкости», без Epic+.
+7. Control Center badge: v9.10.
 
-ЧТО СДЕЛАНО
-1. Единая обложка музыки Сезона 3 «Лунный забег»
-- Все четыре скрытых трека Сезона 3 используют approved-обложку season3_lunar_music.png.
-- Одна и та же imageUrl приходит в Control Center, награды сезонного пропуска и будущий игровой каталог после открытия контента.
-- Скрытие будущего контента для игроков сохранено: до релизного открытия публичный пропуск не раскрывает секретную награду.
-
-2. Уникальные обложки существующих легендарных треков
-- Легендарный забег -> music_legendary_cafe_run.png
-- Зефирный рывок I -> music_marshmallow_dash_1.png
-- Зефирный рывок II -> music_marshmallow_dash_2.png
-- Кафейный рывок I -> music_cafe_dash_1.png
-- Кафейный рывок II -> music_cafe_dash_2.png
-- Зефирный рывок III -> music_marshmallow_dash_3.png
-- Зефирный рывок IV -> music_marshmallow_dash_4.png
-
-3. Игра
-- В раскрывающемся разделе «Музыка» у легендарных мелодий показываются реальные обложки вместо символа/замка.
-- Статусы ИГРАЕТ / ВЫБРАТЬ / ЗАКРЫТО и логика владения не менялись.
-
-4. Control Center
-- Выбор музыки для награды пропуска показывает реальную мини-обложку трека.
-- «Контент сезона» использует новую обложку для всей музыки «Лунного забега».
-- CC badge обновлён до v9.8.
-
-5. Сезонный пропуск
-- Worker теперь возвращает индивидуальную imageUrl и для обычных музыкальных наград.
-- Для музыки Сезона 3 после релизного открытия пропуск автоматически покажет season3_lunar_music.png.
+ЛОГИКА
+- Шансы Мифического кейса не изменялись.
+- Гарант 25 открытий не изменялся.
+- Серверная логика выпадений не изменялась.
+- Скрытый контент будущего сезона не изменялся.
 
 БАЗА ДАННЫХ
-- D1 migration не требуется.
+- D1 migration не нужна.
 
 ПРОВЕРКИ
-- src/worker.js: синтаксис JavaScript OK.
-- owner.html: inline JavaScript OK.
-- index.html: outer + srcdoc JavaScript OK.
-- Все 8 PNG валидны (1254x1254 RGBA).
-- Все новые пути обложек существуют в архиве.
+- Исполняемый JavaScript index.html: OK.
+- Исполняемый JavaScript owner.html: OK.
+- В пользовательских описаниях Мифического кейса нет Mythic+, Legendary+, Epic+, Epic/Mythic/Legendary.
 
 ДЕПЛОЙ
 npx wrangler deploy
