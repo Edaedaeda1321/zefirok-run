@@ -232,6 +232,8 @@ const BOT_BROADCASTS_SCHEMA_SQL = `CREATE TABLE IF NOT EXISTS bot_broadcasts (
   updated_at INTEGER NOT NULL,
   completed_at INTEGER NOT NULL DEFAULT 0,
   completion_notified INTEGER NOT NULL DEFAULT 0 CHECK(completion_notified IN (0, 1)),
+  image_url TEXT NOT NULL DEFAULT '',
+  message_format TEXT NOT NULL DEFAULT 'plain',
   lease_token TEXT NOT NULL DEFAULT '',
   lease_until INTEGER NOT NULL DEFAULT 0
 )`;
@@ -335,7 +337,7 @@ const STAFF_SESSION_TTL_SECONDS = 12 * 60 * 60;
 const SUPPORT_USERNAME = "ve4n0_em";
 const SUPPORT_URL = `https://t.me/${SUPPORT_USERNAME}`;
 const DEFAULT_GAME_URL = "https://zefirok-run.patokad6.workers.dev/";
-const WORKER_BUILD = "1.0.0 + owner control center v8 + safe liveops web";
+const WORKER_BUILD = "1.0.0 + Control Center v9.3 + season pass cosmetics + story seasons + pass scheduling UX";
 const V07944_RELEASE_CANDIDATE_AUDIT = Object.freeze({ reset: true, claims: true, purchases: true, xp: true, concurrency: true });
 
 // =============================================================
@@ -383,8 +385,55 @@ function seasonPassBoostRewardDefinition(value) {
   return null;
 }
 
+const SEASON_PASS_COSMETIC_PREFIX = "season_cosmetic:";
+const SEASON_PASS_COSMETIC_KINDS = Object.freeze(["avatar","frame","trail","skin","music"]);
+
+function seasonPassCosmeticCatalog(kind) {
+  return ({ avatar:CASE_AVATARS, frame:CASE_FRAMES, trail:CASE_TRAILS, skin:CASE_SKINS, music:CASE_MUSIC_TRACKS })[String(kind||"")] || null;
+}
+
+function seasonPassCosmeticImage(kind, itemId) {
+  const k=String(kind||""), id=String(itemId||"");
+  if (k === "skin") return ownerPanelSkinAsset(id);
+  if (["avatar","frame","trail"].includes(k)) return String(LIVEOPS_CONTENT_IMAGES?.[k]?.[id] || "/assets/season-pass/season.png?v=07939");
+  if (k === "music") return "/assets/season-pass/season.png?v=07939";
+  return "/assets/season-pass/season.png?v=07939";
+}
+
+function seasonPassCosmeticRewardDefinition(value) {
+  if (!value) return null;
+  const raw=String(value?.item_id ?? value?.itemId ?? "");
+  if (!raw.startsWith(SEASON_PASS_COSMETIC_PREFIX)) return null;
+  const body=raw.slice(SEASON_PASS_COSMETIC_PREFIX.length);
+  const split=body.indexOf(":");
+  if (split <= 0) return null;
+  const kind=body.slice(0,split), itemId=body.slice(split+1);
+  if (!SEASON_PASS_COSMETIC_KINDS.includes(kind)) return null;
+  const catalog=seasonPassCosmeticCatalog(kind);
+  const item=catalog?.[itemId];
+  if (!item) return null;
+  return { publicType:kind, storedType:"points", kind, itemId, storedItemId:`${SEASON_PASS_COSMETIC_PREFIX}${kind}:${itemId}`, title:String(item.title||itemId), imageUrl:seasonPassCosmeticImage(kind,itemId) };
+}
+
 function seasonPassPublicRewardType(row) {
-  return seasonPassBoostRewardDefinition(row)?.publicType || String(row?.reward_type ?? row?.rewardType ?? "");
+  return seasonPassCosmeticRewardDefinition(row)?.publicType || seasonPassBoostRewardDefinition(row)?.publicType || String(row?.reward_type ?? row?.rewardType ?? "");
+}
+
+function seasonPassPublicRewardItemId(row) {
+  const cosmetic=seasonPassCosmeticRewardDefinition(row);
+  return cosmetic ? cosmetic.itemId : String(row?.item_id ?? row?.itemId ?? "");
+}
+
+function seasonPassApplyCosmeticToState(state, cosmetic) {
+  if (!state || !cosmetic) return false;
+  const id=String(cosmetic.itemId||"");
+  if (!id) return false;
+  if (cosmetic.kind === "avatar") { state.ownedAvatars=[...new Set([...(state.ownedAvatars||[]),id])]; return true; }
+  if (cosmetic.kind === "frame") { state.ownedFrames=[...new Set([...(state.ownedFrames||[]),id])]; return true; }
+  if (cosmetic.kind === "trail") { state.ownedTrails=[...new Set([...(state.ownedTrails||[]),id])]; return true; }
+  if (cosmetic.kind === "music") { state.ownedMusicTracks=caseParseOwned(JSON.stringify([...(state.ownedMusicTracks||[]),id]),"music",CASE_MUSIC_TRACKS); return true; }
+  if (cosmetic.kind === "skin") { state.ownedSkins=normalizeCurrentOwnedSkins([...(state.ownedSkins||[]),id]); return true; }
+  return false;
 }
 
 async function seasonPassHasXpX2(env, seasonId, telegramId, player = null) {
@@ -828,6 +877,16 @@ export default {
       if (url.pathname === "/telegram/webhook" && request.method === "POST") {
         return await receiveTelegramWebhook(request, env, ctx);
       }
+      // Owner identity check is intentionally before the broad compatibility audit.
+      // This makes opening the control center fast even on a cold Worker while
+      // every protected endpoint still verifies a short-lived signed owner session.
+      if (url.pathname === "/api/owner/auth" && request.method === "POST") {
+        return await ownerPanelFastAuth(request, env);
+      }
+      const ownerMediaMatch = request.method === "GET" ? url.pathname.match(/^\/media\/(med_[A-Za-z0-9_-]{12,80})$/) : null;
+      if (ownerMediaMatch) {
+        return await serveOwnerMediaAsset(env, ownerMediaMatch[1]);
+      }
       if (url.pathname.startsWith("/api/")) {
         await ensureRuntimeCompatibilitySchema(env);
       }
@@ -868,7 +927,7 @@ export default {
         return await getMaintenanceAccess(request, env);
       }
       if (url.pathname.startsWith("/api/owner/") && request.method === "POST") {
-        return await handleOwnerPanelApi(request, env, url.pathname);
+        return await handleOwnerPanelApi(request, env, url.pathname, ctx);
       }
       const maintenanceResponse = await enforceMaintenanceForRequest(request, url, env);
       if (maintenanceResponse) return maintenanceResponse;
@@ -903,6 +962,9 @@ export default {
 
       if (url.pathname === "/api/game/startup" && request.method === "POST") {
         return await getGameStartupPackage(request, env);
+      }
+      if (url.pathname === "/api/news/read" && request.method === "POST") {
+        return await markGameNewsRead(request, env);
       }
 
       if (url.pathname === "/api/features" && request.method === "GET") {
@@ -941,6 +1003,18 @@ export default {
 
       if (url.pathname === "/api/shop/config" && request.method === "GET") {
         return await getShopConfig(env);
+      }
+
+      if (url.pathname === "/api/shop/offers" && request.method === "POST") {
+        const gate = await enforceFeatureFlagForRequest(request, env, "shop"); if (gate) return gate;
+        return await getFlashOffersForPlayer(request, env);
+      }
+      if (url.pathname === "/api/shop/offers/event" && request.method === "POST") {
+        return await recordFlashOfferEvent(request, env);
+      }
+      if (url.pathname === "/api/shop/offers/purchase" && request.method === "POST") {
+        const gate = await enforceFeatureFlagForRequest(request, env, "shop"); if (gate) return gate;
+        return await purchaseFlashOffer(request, env);
       }
 
       if (url.pathname === "/api/skins/config" && request.method === "GET") {
@@ -1504,17 +1578,20 @@ async function getGameStartupPackage(request, env) {
     let seasonPassBonus = { active:false, multiplier:1 };
     try { seasonPassBonus = await getSeasonPassProfileBonusForUser(env, String(auth.user.id)); }
     catch (error) { errors.seasonPassBonus = startupSectionError(error); }
-    const [casesResult, rewardsResult, flagsResult] = await Promise.allSettled([
+    const [casesResult, rewardsResult, flagsResult, newsResult] = await Promise.allSettled([
       getLevelCaseState(null, env, { raw: true, body: internalBody, auth, shared }),
       listMyRewards(null, env, { raw: true, body: internalBody, auth }),
-      publicFeatureFlags(env, String(auth.user.id), { trustedIdentity: true })
+      publicFeatureFlags(env, String(auth.user.id), { trustedIdentity: true }),
+      getGameNewsForPlayer(env, String(auth.user.id))
     ]);
     const cases = casesResult.status === "fulfilled" ? casesResult.value : null;
     const rewards = rewardsResult.status === "fulfilled" ? rewardsResult.value : null;
     const flags = flagsResult.status === "fulfilled" ? flagsResult.value : null;
+    const news = newsResult.status === "fulfilled" ? newsResult.value : null;
     if (casesResult.status === "rejected") errors.cases = startupSectionError(casesResult.reason);
     if (rewardsResult.status === "rejected") errors.rewards = startupSectionError(rewardsResult.reason);
     if (flagsResult.status === "rejected") errors.flags = startupSectionError(flagsResult.reason);
+    if (newsResult.status === "rejected") errors.news = startupSectionError(newsResult.reason);
 
     return jsonResponse({
       ok: true,
@@ -1527,12 +1604,81 @@ async function getGameStartupPackage(request, env) {
       rewards,
       flags,
       seasonPassBonus,
+      news,
       errors
     });
   } catch (error) {
     if (error instanceof ApiError) return jsonResponse({ ok: false, error: error.message }, error.status);
     console.error("getGameStartupPackage failed", error);
     return jsonResponse({ ok: false, error: "Не удалось загрузить стартовый пакет игры." }, 500);
+  }
+}
+
+let gameNewsReadSchemaReady = false;
+let gameNewsReadSchemaPromise = null;
+
+async function ensureGameNewsReadSchema(env) {
+  requireDatabase(env);
+  if (gameNewsReadSchemaReady) return;
+  if (gameNewsReadSchemaPromise) return gameNewsReadSchemaPromise;
+  gameNewsReadSchemaPromise = (async () => {
+    await env.DB.prepare(`CREATE TABLE IF NOT EXISTS player_news_reads (
+      telegram_id TEXT PRIMARY KEY,
+      last_news_id INTEGER NOT NULL DEFAULT 0,
+      read_at INTEGER NOT NULL DEFAULT 0
+    )`).run();
+    gameNewsReadSchemaReady = true;
+  })().finally(() => { gameNewsReadSchemaPromise = null; });
+  return gameNewsReadSchemaPromise;
+}
+
+async function getGameNewsForPlayer(env, telegramId) {
+  await ensureGameNewsReadSchema(env);
+  const id = String(telegramId || "").trim();
+  if (!id) return null;
+  const row = await env.DB.prepare(`
+    SELECT n.id,n.title,n.body,n.image_url,n.published_at,COALESCE(r.last_news_id,0) AS last_news_id
+    FROM bot_news n
+    LEFT JOIN player_news_reads r ON r.telegram_id=?
+    WHERE n.status='published'
+    ORDER BY n.published_at DESC,n.id DESC
+    LIMIT 1
+  `).bind(id).first();
+  if (!row) return null;
+  const newsId = Math.max(0, Number(row.id || 0));
+  return {
+    id: newsId,
+    title: String(row.title || ""),
+    body: String(row.body || ""),
+    imageUrl: String(row.image_url || ""),
+    publishedAt: Number(row.published_at || 0),
+    unread: newsId > Math.max(0, Number(row.last_news_id || 0))
+  };
+}
+
+async function markGameNewsRead(request, env) {
+  try {
+    requireDatabase(env);
+    requireBotToken(env);
+    const body = await readJson(request);
+    const auth = await validateTelegramInitData(String(body.initData || ""), env);
+    const newsId = Math.max(0, Math.floor(Number(body.newsId) || 0));
+    if (!newsId) throw new ApiError(400, "Некорректная новость.");
+    const exists = await env.DB.prepare(`SELECT id FROM bot_news WHERE id=? LIMIT 1`).bind(newsId).first();
+    if (!exists) throw new ApiError(404, "Новость не найдена.");
+    await ensureGameNewsReadSchema(env);
+    const now = Math.floor(Date.now() / 1000);
+    await env.DB.prepare(`
+      INSERT INTO player_news_reads(telegram_id,last_news_id,read_at) VALUES(?,?,?)
+      ON CONFLICT(telegram_id) DO UPDATE SET
+        last_news_id=MAX(player_news_reads.last_news_id,excluded.last_news_id),
+        read_at=excluded.read_at
+    `).bind(String(auth.user.id), newsId, now).run();
+    return jsonResponse({ ok:true, newsId, readAt:now });
+  } catch (error) {
+    if (error instanceof ApiError) return jsonResponse({ ok:false, error:error.message }, error.status);
+    console.error("markGameNewsRead failed", error);
+    return jsonResponse({ ok:false, error:"Не удалось отметить новость прочитанной." }, 500);
   }
 }
 
@@ -1566,6 +1712,7 @@ async function ensureGamePublicSchemas(env) {
 
 function fallbackGamePublicConfig() {
   return {
+    gameplay: { ...DEFAULT_GAME_RUNTIME_CONFIG, source: "fallback", version: 1 },
     shop: {
       products: cloneDefaultShopProducts(),
       assortment: cloneDefaultShopAssortment(),
@@ -1593,17 +1740,19 @@ async function readGamePublicConfig(env, force = false) {
   const promise = (async () => {
     requireDatabase(env);
     await ensureGamePublicSchemas(env);
-    const [products, assortment, skins, stockResult] = await Promise.all([
+    const [products, assortment, skins, stockResult, gameplay] = await Promise.all([
       readShopPrices(env),
       readShopAssortment(env),
       readSkinPrices(env),
       env.DB.prepare(
         `SELECT scope_key, category, product_id, configured_limit, remaining, updated_at
          FROM shop_stock_limits ORDER BY category ASC, product_id ASC`
-      ).all()
+      ).all(),
+      readPublishedGameRuntimeConfig(env)
     ]);
     const stockRows = stockResult.results || [];
     const value = {
+      gameplay,
       shop: {
         products,
         assortment,
@@ -5516,7 +5665,7 @@ Telegram ID можно найти командой <code>/players</code>.`);
   }
 
   if (/^\/story(?:@\w+)?$/i.test(text)) {
-    await sendTelegramMessage(env, chatId, botStoryText(), sectionMenuMarkup(env));
+    await sendTelegramMessage(env, chatId, botStoryText(), storyMenuMarkup(env));
     return;
   }
 
@@ -5639,7 +5788,28 @@ function botGameText() {
 }
 
 function botStoryText() {
-  return `<b>Сюжет «Сладкого забега»</b>\n\nЗефи — маленький мальтипу и главный помощник уютного кафе. Перед открытием он отправляется в сладкий забег: собирает зефир и кофе, перепрыгивает пуфики и помогает наполнить витрину любимыми угощениями гостей.\n\nЧем дальше пробежит Зефи, тем больше наград, опыта и новых возможностей откроется в его профиле.`;
+  return `<b>📖 Сюжет «Сладкого забега»</b>\n\nЗефи — маленький мальтипу и главный помощник уютного кафе. Каждый сезон продолжает его историю и открывает новую главу жизни кафе.\n\nВыберите сезон ниже, чтобы прочитать его часть сюжета.`;
+}
+
+function botStorySeasonText(season) {
+  const key=String(season||"1");
+  if(key==="1")return `<b>🌸 Сезон 1: Открытие кафе</b>\n\nУ кафе «Зефирок» начинается первый настоящий сезон.\n\nЗефи готовится принять гостей, но впереди ещё много работы: нужно собрать зефир, приготовить кофе и показать всему городу, какое это уютное место.\n\nУстанавливай рекорды, поднимайся в рейтинге и помоги кафе провести своё большое открытие.`;
+  return botStoryText();
+}
+
+function storyMenuMarkup(env) {
+  return {inline_keyboard:[
+    [{text:"🌸 Сезон 1 · Открытие кафе",callback_data:"story:1"}],
+    [{text:"🛟 Поддержка",callback_data:"menu:support"}],
+    [{text:"← Главное меню",callback_data:"menu:home"}]
+  ]};
+}
+
+function storySeasonMenuMarkup(env) {
+  return {inline_keyboard:[
+    [{text:"← Все сезоны",callback_data:"menu:story"}],
+    [{text:"🏠 Главное меню",callback_data:"menu:home"}]
+  ]};
 }
 
 function botFaqText() {
@@ -5822,6 +5992,8 @@ function sectionMenuMarkup(env) {
 }
 
 async function handleMenuCallback(query, env) {
+  const storyMatch=String(query.data||"").match(/^story:(1)$/);
+  if(storyMatch){const message=query.message;if(!message?.chat?.id){await answerCallback(env,query.id,"Откройте сюжет командой /story.");return true;}await answerCallback(env,query.id,"Открываю сезон");await sendTelegramMessage(env,message.chat.id,botStorySeasonText(storyMatch[1]),storySeasonMenuMarkup(env));return true;}
   const faqMatch = String(query.data || "").match(/^faq:(game|rating|pass|rewards|support|updates)$/);
   if (faqMatch) {
     const message = query.message;
@@ -5881,7 +6053,9 @@ async function handleMenuCallback(query, env) {
       ? supportMenuMarkup(env)
       : section === "faq"
         ? faqMenuMarkup(env)
-        : sectionMenuMarkup(env);
+        : section === "story"
+          ? storyMenuMarkup(env)
+          : sectionMenuMarkup(env);
 
   await answerCallback(env, query.id, section === "home" ? "Главное меню" : "Раздел открыт");
   await sendTelegramMessage(env, message.chat.id, text, replyMarkup);
@@ -8895,15 +9069,26 @@ async function ensureBotSubscriberSchema(env) {
   await env.DB.prepare(BOT_SUBSCRIBERS_SCHEMA_SQL).run();
 }
 
+let botBroadcastSchemaReady = false;
+let botBroadcastSchemaPromise = null;
 async function ensureBotBroadcastSchema(env) {
-  await env.DB.batch([
-    env.DB.prepare(BOT_SUBSCRIBERS_SCHEMA_SQL),
-    env.DB.prepare(BOT_BROADCASTS_SCHEMA_SQL),
-    env.DB.prepare(BOT_BROADCAST_DELIVERIES_SCHEMA_SQL),
-    env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_bot_subscribers_active ON bot_subscribers(active, id)`),
-    env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_bot_broadcasts_pending ON bot_broadcasts(status, lease_until, created_at)`),
-    env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_bot_broadcast_deliveries_pending ON bot_broadcast_deliveries(broadcast_id, status, subscriber_id)`)
-  ]);
+  if (botBroadcastSchemaReady) return;
+  if (botBroadcastSchemaPromise) return botBroadcastSchemaPromise;
+  const promise = (async () => {
+    await env.DB.batch([
+      env.DB.prepare(BOT_SUBSCRIBERS_SCHEMA_SQL),
+      env.DB.prepare(BOT_BROADCASTS_SCHEMA_SQL),
+      env.DB.prepare(BOT_BROADCAST_DELIVERIES_SCHEMA_SQL),
+      env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_bot_subscribers_active ON bot_subscribers(active, id)`),
+      env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_bot_broadcasts_pending ON bot_broadcasts(status, lease_until, created_at)`),
+      env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_bot_broadcast_deliveries_pending ON bot_broadcast_deliveries(broadcast_id, status, subscriber_id)`)
+    ]);
+    await addRuntimeColumnIfMissing(env, 'bot_broadcasts', 'image_url', "TEXT NOT NULL DEFAULT ''");
+    await addRuntimeColumnIfMissing(env, 'bot_broadcasts', 'message_format', "TEXT NOT NULL DEFAULT 'plain'");
+    botBroadcastSchemaReady = true;
+  })().catch((error) => { botBroadcastSchemaReady = false; throw error; });
+  botBroadcastSchemaPromise = promise;
+  try { await promise; } finally { if (botBroadcastSchemaPromise === promise) botBroadcastSchemaPromise = null; }
 }
 
 async function registerBotSubscriber(message, env) {
@@ -9019,7 +9204,7 @@ async function processBotBroadcastJob(env, broadcastId) {
   if (safeAdminNumber(lease?.meta?.changes) < 1) return { processed: false, locked: true };
 
   const job = await env.DB.prepare(
-    `SELECT broadcast_id, message_text, report_chat_id, total_count,
+    `SELECT broadcast_id, message_text, image_url, message_format, report_chat_id, total_count,
             sent_count, failed_count, completion_notified
      FROM bot_broadcasts
      WHERE broadcast_id = ? AND lease_token = ? LIMIT 1`
@@ -9040,7 +9225,23 @@ async function processBotBroadcastJob(env, broadcastId) {
     const attemptedAt = Math.floor(Date.now() / 1000);
     const attempts = safeAdminNumber(delivery.attempts) + 1;
     try {
-      await sendTelegramPlainMessage(env, delivery.chat_id, String(job.message_text || ""));
+      const messageText = String(job.message_text || "");
+      const messageFormat = String(job.message_format || "plain");
+      const imageUrl = String(job.image_url || "").trim();
+      if (messageFormat === "html") {
+        let sentAsPhoto = false;
+        if (imageUrl && messageText.length <= 1000) {
+          try {
+            await telegramApi(env, "sendPhoto", { chat_id: delivery.chat_id, photo: imageUrl, caption: messageText, parse_mode: "HTML", reply_markup: sectionMenuMarkup(env) });
+            sentAsPhoto = true;
+          } catch (photoError) {
+            console.warn("Broadcast photo fallback", String(photoError?.message || photoError));
+          }
+        }
+        if (!sentAsPhoto) await sendTelegramMessage(env, delivery.chat_id, messageText, sectionMenuMarkup(env));
+      } else {
+        await sendTelegramPlainMessage(env, delivery.chat_id, messageText);
+      }
       await env.DB.batch([
         env.DB.prepare(
           `UPDATE bot_broadcast_deliveries
@@ -13217,7 +13418,7 @@ async function segmentPlayerIds(env, key, limit = 10000) {
   else if (key === "promo_redeemers") { sql = `SELECT telegram_id,MAX(created_at) AS last_at FROM promo_redemptions WHERE status IN ('queued','delivered') GROUP BY telegram_id ORDER BY last_at DESC LIMIT ?`; binds = [max]; }
   else if (key === "pass_complete") { sql = `SELECT telegram_id FROM season_pass_players WHERE xp>=? ORDER BY updated_at DESC LIMIT ?`; binds = [seasonPassXpForLevel(50), max]; }
   else if (key === "banned") { sql = `SELECT telegram_id FROM player_admin_controls WHERE blocked = 1 ORDER BY updated_at DESC LIMIT ?`; binds = [max]; }
-  else return [];
+  else return ownerV85CustomSegmentPlayerIds(env, key, max);
   let statement = env.DB.prepare(sql);
   if (binds.length) statement = statement.bind(...binds);
   const result = await statement.all();
@@ -13396,6 +13597,7 @@ async function processCampaignRecipient(env, campaign, telegramId) {
     const subscriber = await env.DB.prepare(`SELECT chat_id FROM bot_subscribers WHERE telegram_id = ? AND active = 1 LIMIT 1`).bind(telegramId).first();
     if (!subscriber?.chat_id) return { delivered:false, error:"\u0410\u043a\u0442\u0438\u0432\u043d\u044b\u0439 Telegram-\u0447\u0430\u0442 \u043d\u0435 \u043d\u0430\u0439\u0434\u0435\u043d" };
     const custom = String(campaign.message_text || "").trim();
+    if (custom === "__CC_SILENT__") return { delivered:true, error:"" };
     const rewardLine = rewardKind === "none" ? "" : `\n\n\ud83c\udf81 <b>\u041d\u0430\u0433\u0440\u0430\u0434\u0430:</b> ${escapeHtml(campaignRewardTitle(rewardKind, campaign.reward_id, amount))}`;
     const reasonLine = rewardKind === "none" || !String(campaign.reason || "").trim() ? "" : `\n${escapeHtml(String(campaign.reason))}`;
     const text = custom ? `${escapeHtml(custom)}${rewardLine}${reasonLine}` : rewardKind === "none" ? `<b>${escapeHtml(campaign.title || "\u0421\u043e\u043e\u0431\u0449\u0435\u043d\u0438\u0435 \u043e\u0442 \u0421\u043b\u0430\u0434\u043a\u043e\u0433\u043e \u0417\u0430\u0431\u0435\u0433\u0430")}</b>` : `<b>\ud83c\udf81 \u0412\u0430\u043c \u0432\u044b\u0434\u0430\u043d\u0430 \u043d\u0430\u0433\u0440\u0430\u0434\u0430</b>${rewardLine}${reasonLine}\n\n\u041d\u0430\u0433\u0440\u0430\u0434\u0430 \u043f\u043e\u044f\u0432\u0438\u0442\u0441\u044f \u043f\u043e\u0441\u043b\u0435 \u0441\u043b\u0435\u0434\u0443\u044e\u0449\u0435\u0439 \u0441\u0438\u043d\u0445\u0440\u043e\u043d\u0438\u0437\u0430\u0446\u0438\u0438 \u0438\u0433\u0440\u044b.`;
@@ -16618,7 +16820,7 @@ async function enforceMaintenanceForRequest(request, url, env) {
   if (settings.testersOnly && !privileged) return jsonResponse({ ok: false, maintenance: true, mode: "testers_only", error: settings.message }, 503);
   if (settings.fullClosed && !privileged) return jsonResponse({ ok: false, maintenance: true, mode: "full", error: settings.message }, 503);
   if (settings.ratingDisabled && path.startsWith("/api/leaderboard/")) return jsonResponse({ ok: false, maintenance: true, mode: "rating", error: settings.message }, 503);
-  if (settings.purchasesDisabled && ["/api/rewards/create", "/api/skins/purchase", "/api/skins/bonus-case", "/api/cases/purchase"].includes(path)) return jsonResponse({ ok: false, maintenance: true, mode: "purchases", error: settings.message }, 503);
+  if (settings.purchasesDisabled && ["/api/rewards/create", "/api/skins/purchase", "/api/skins/bonus-case", "/api/cases/purchase", "/api/shop/offers/purchase"].includes(path)) return jsonResponse({ ok: false, maintenance: true, mode: "purchases", error: settings.message }, 503);
   if (settings.casesDisabled && ["/api/cases/open", "/api/cases/open-granted", "/api/cases/purchase", "/api/cases/activate"].includes(path)) return jsonResponse({ ok: false, maintenance: true, mode: "cases", error: settings.message }, 503);
   if (settings.physicalRewardsDisabled && path === "/api/rewards/create") return jsonResponse({ ok: false, maintenance: true, mode: "physical", error: settings.message }, 503);
   return null;
@@ -16788,6 +16990,17 @@ async function executeDangerousAction(row,env,approver) {
     if(queued>0) await recordCompensationUsage(env,String(row.requested_by),usage);
     await recordPlayerTimeline(env,String(payload.targetId),"staff_grant",`сотрудник выдал компенсацию «${String(payload.templateTitle||payload.templateId||"Компенсация")}»`,{templateId:payload.templateId,rewards,reason:payload.reason,queued},`approval_${row.id}`,approver);
     if(payload.reportChatId) await sendTelegramMessage(env,String(payload.reportChatId),`✅ <b>Компенсация подтверждена</b>\n\nИгрок: <code>${escapeHtml(String(payload.targetId))}</code>\nШаблон: <b>${escapeHtml(String(payload.templateTitle||payload.templateId||"Компенсация"))}</b>\nПозиций в очереди: <b>${queued}</b>`);
+    return;
+  }
+  if(row.action_type==="bulk_compensation"){
+    const ids=Array.isArray(payload.targetIds)?payload.targetIds.map(String).filter(Boolean):[];
+    if(!ids.length)throw new Error("В запросе компенсации нет получателей");
+    const campaignIds=await ownerV85QueueCompensationCampaigns(env,approver,ids,{...payload,reportChatId:String(payload.reportChatId||"")});
+    await recordPlayerTimeline(env,ids[0],"staff_grant",`подтверждена массовая компенсация для ${ids.length} игроков`,{campaignIds,count:ids.length,templateId:payload.templateId},`approval_${row.id}`,approver).catch(()=>{});
+    if(payload.reportChatId)try{await sendTelegramMessage(env,String(payload.reportChatId),`✅ <b>Массовая компенсация подтверждена</b>
+
+Получателей: <b>${ids.length}</b>
+Кампаний в очереди: <b>${campaignIds.length}</b>`);}catch{}
     return;
   }
   throw new Error("Неизвестный тип опасного действия");
@@ -18832,7 +19045,7 @@ async function buildSeasonPassPayload(env,season,telegramId,player=null){
   const availableTreats=(profileRow?.treats_override==null?Number(profileRow?.treats||0):Number(profileRow?.treats_override||0))+Number(profileRow?.pending_treats||0);
   const availableCoffee=(profileRow?.coffee_override==null?Number(profileRow?.coffee||0):Number(profileRow?.coffee_override||0))+Number(profileRow?.pending_coffee||0);
   return {ok:true,season:{...season,capabilities:seasonPassCapabilities(season)},player:{xp,level,xpWithin:Math.max(0,xp-start),xpRequired:required,premiumTier:String(current?.premium_tier||'none'),elitePlusBonusGranted:Number(current?.elite_plus_bonus_granted||0)===1,revision:Number(current?.revision||0)},
-    rewards:(rewardsResult.results||[]).map(row=>({level:Number(row.level),lane:String(row.lane),rewardType:seasonPassPublicRewardType(row),amount:Number(row.amount),itemId:String(row.item_id||''),title:String(row.title||''),imageUrl:String(row.image_url||seasonPassBoostRewardDefinition(row)?.imageUrl||''),enabled:Number(row.enabled||0)===1})),
+    rewards:(rewardsResult.results||[]).map(row=>({level:Number(row.level),lane:String(row.lane),rewardType:seasonPassPublicRewardType(row),amount:Number(row.amount),itemId:seasonPassPublicRewardItemId(row),title:String(row.title||''),imageUrl:String(row.image_url||seasonPassCosmeticRewardDefinition(row)?.imageUrl||seasonPassBoostRewardDefinition(row)?.imageUrl||''),enabled:Number(row.enabled||0)===1})),
     claimed:(claimsResult.results||[]).map(row=>`${Number(row.level)}:${String(row.lane)}`),entitlements:(entitlementsResult.results||[]).map(row=>String(row.item_id)),tasks:tasksPayload.tasks,taskPeriods:tasksPayload.periods,taskClaimableCount:seasonPassCapabilities(season).canClaimTasks?tasksPayload.claimableCount:0,summary,
     balance:{points:availablePoints,treats:availableTreats,coffee:availableCoffee}};
 }
@@ -18910,10 +19123,18 @@ async function grantSeasonPassReward(env,ctx,reward){
     }
     return {repeated:true,reward};
   }
-  await ensureCasePlayerState(env,ctx.telegramId,{});
+  const caseEnsured=await ensureCasePlayerState(env,ctx.telegramId,{});
   let finalized=false;
+  const cosmeticReward=seasonPassCosmeticRewardDefinition(reward);
   const boostReward=seasonPassBoostRewardDefinition(reward);
-  if(boostReward?.kind==='xp'){
+  if(cosmeticReward){
+    const state=caseEnsured.state;seasonPassApplyCosmeticToState(state,cosmeticReward);
+    const result=await env.DB.batch([
+      caseStateUpdateStatement(env,ctx.telegramId,state,now),
+      env.DB.prepare(`UPDATE season_pass_claims SET status='delivered',delivered_at=?,error_text='' WHERE season_id=? AND telegram_id=? AND level=? AND lane=? AND status='pending'`).bind(now,...key)
+    ]);
+    finalized=Number(result?.[1]?.meta?.changes||0)>0;
+  }else if(boostReward?.kind==='xp'){
     const result=await env.DB.batch([
       env.DB.prepare(`INSERT OR IGNORE INTO season_pass_entitlements(season_id,telegram_id,item_id,source,granted_at) SELECT ?,?,?,?,? WHERE EXISTS(SELECT 1 FROM season_pass_claims WHERE season_id=? AND telegram_id=? AND level=? AND lane=? AND status='pending')`).bind(ctx.season.id,ctx.telegramId,SEASON_PASS_SPECIAL_XP_X2,`reward:${level}:${lane}`,now,...key),
       env.DB.prepare(`UPDATE season_pass_claims SET status='delivered',delivered_at=?,error_text='' WHERE season_id=? AND telegram_id=? AND level=? AND lane=? AND status='pending'`).bind(now,...key)
@@ -18940,7 +19161,7 @@ async function grantSeasonPassReward(env,ctx,reward){
     ]);
     finalized=Number(result?.[1]?.meta?.changes||0)>0;
   }else throw new ApiError(400,'Неизвестный тип награды сезонного пропуска.');
-  if(finalized){try{await recordPlayerTimeline(env,ctx.telegramId,'season_pass_reward',`получил награду сезонного пропуска «${String(reward.title||'Награда')}»`,{seasonId:ctx.season.id,level,lane,rewardType:seasonPassPublicRewardType(reward),amount:reward.amount,itemId:reward.item_id},`season_pass_${ctx.season.id}_${level}_${lane}`,ctx.auth.user,now);}catch(error){console.error('season pass reward timeline failed',error);}}
+  if(finalized){try{await recordPlayerTimeline(env,ctx.telegramId,'season_pass_reward',`получил награду сезонного пропуска «${String(reward.title||'Награда')}»`,{seasonId:ctx.season.id,level,lane,rewardType:seasonPassPublicRewardType(reward),amount:reward.amount,itemId:seasonPassPublicRewardItemId(reward)},`season_pass_${ctx.season.id}_${level}_${lane}`,ctx.auth.user,now);}catch(error){console.error('season pass reward timeline failed',error);}}
   return {repeated:!finalized,reward};
 }
 
@@ -18951,7 +19172,7 @@ async function claimSeasonPassReward(request,env){
     const playerLevel=seasonPassLevelFromXp(ctx.player.xp);if(level>playerLevel)throw new ApiError(409,'Этот уровень ещё не открыт.');
     if(lane==='premium'&&String(ctx.player.premium_tier||'none')==='none')throw new ApiError(403,'Нужен тариф «Элитный» или «Элитный+».');
     const reward=await env.DB.prepare(`SELECT * FROM season_pass_rewards WHERE season_id=? AND level=? AND lane=? AND enabled=1 LIMIT 1`).bind(ctx.season.id,level,lane).first();if(!reward)throw new ApiError(404,'Награда не найдена.');
-    const result=await grantSeasonPassReward(env,ctx,reward);return jsonResponse({...await buildSeasonPassMutationPayload(env,ctx.season,ctx.telegramId,{includeClaims:true}),received:[{level,lane,title:reward.title,rewardType:seasonPassPublicRewardType(reward),amount:reward.amount,itemId:reward.item_id,imageUrl:reward.image_url}],repeated:result.repeated});
+    const result=await grantSeasonPassReward(env,ctx,reward);return jsonResponse({...await buildSeasonPassMutationPayload(env,ctx.season,ctx.telegramId,{includeClaims:true}),received:[{level,lane,title:reward.title,rewardType:seasonPassPublicRewardType(reward),amount:reward.amount,itemId:seasonPassPublicRewardItemId(reward),imageUrl:reward.image_url}],repeated:result.repeated});
   }catch(error){if(error instanceof ApiError)return jsonResponse({ok:false,error:error.message},error.status);console.error('claimSeasonPassReward failed',error);return jsonResponse({ok:false,error:'Не удалось начислить награду.'},500);}
 }
 
@@ -18966,15 +19187,17 @@ async function claimAllSeasonPassRewards(request,env){
     for(let index=0;index<claimInsertStatements.length;index+=40)await env.DB.batch(claimInsertStatements.slice(index,index+40));
     const pending=(await env.DB.prepare(`SELECT r.* FROM season_pass_rewards r JOIN season_pass_claims c ON c.season_id=r.season_id AND c.telegram_id=? AND c.level=r.level AND c.lane=r.lane AND c.status='pending' WHERE r.season_id=? AND r.enabled=1 AND r.level<=? AND (r.lane='free' OR ?=1) ORDER BY r.level,r.lane`).bind(ctx.telegramId,ctx.season.id,level,premium?1:0).all()).results||[];
     if(!pending.length)return jsonResponse({...await buildSeasonPassMutationPayload(env,ctx.season,ctx.telegramId,{includeClaims:true}),received:[]});
-    let points=0,treats=0,coffee=0;const boosterTotals={points:0,treats:0,coffee:0};const caseStatements=[];const xpBoostRewards=[];await ensureCasePlayerState(env,ctx.telegramId,{});
+    let points=0,treats=0,coffee=0;const boosterTotals={points:0,treats:0,coffee:0};const caseStatements=[];const xpBoostRewards=[];const cosmeticRewards=[];const caseEnsured=await ensureCasePlayerState(env,ctx.telegramId,{});
     for(const reward of pending){
-      const boostReward=seasonPassBoostRewardDefinition(reward);const type=String(reward.reward_type);const amount=Math.max(0,Number(reward.amount)||0);
-      if(boostReward?.kind==='xp')xpBoostRewards.push(reward);
+      const cosmeticReward=seasonPassCosmeticRewardDefinition(reward);const boostReward=seasonPassBoostRewardDefinition(reward);const type=String(reward.reward_type);const amount=Math.max(0,Number(reward.amount)||0);
+      if(cosmeticReward)cosmeticRewards.push(cosmeticReward);
+      else if(boostReward?.kind==='xp')xpBoostRewards.push(reward);
       else if(boostReward&&CASE_BOOSTER_TYPES.includes(boostReward.kind))boosterTotals[boostReward.kind]+=Math.max(1,amount||1);
       else if(type==='points')points+=amount;else if(type==='treats')treats+=amount;else if(type==='coffee')coffee+=amount;else if(type==='case'){caseStatements.push(seasonPassCaseGrantStatement(env,{seasonId:ctx.season.id,telegramId:ctx.telegramId,level:reward.level,lane:reward.lane,caseType:reward.item_id,seasonTitle:ctx.season.title,rewardTitle:`${ctx.season.title}: уровень ${reward.level}`,now}));}else throw new ApiError(400,'Неизвестный тип награды сезонного пропуска.');
     }
     for(let index=0;index<caseStatements.length;index+=40)await env.DB.batch(caseStatements.slice(index,index+40));
     const finalizeStatements=[];
+    if(cosmeticRewards.length){for(const cosmetic of cosmeticRewards)seasonPassApplyCosmeticToState(caseEnsured.state,cosmetic);finalizeStatements.push(caseStateUpdateStatement(env,ctx.telegramId,caseEnsured.state,now));}
     if(points||treats||coffee)finalizeStatements.push(env.DB.prepare(`UPDATE admin_profile_state SET pending_wallet=pending_wallet+?,pending_treats=pending_treats+?,pending_coffee=pending_coffee+?,revision=revision+1,updated_at=?,updated_by=? WHERE telegram_id=? AND EXISTS(SELECT 1 FROM season_pass_claims WHERE season_id=? AND telegram_id=? AND status='pending' AND level<=? AND (lane='free' OR ?=1))`).bind(points,treats,coffee,now,`season-pass:${ctx.season.id}`,ctx.telegramId,ctx.season.id,ctx.telegramId,level,premium?1:0));
     if(boosterTotals.points||boosterTotals.treats||boosterTotals.coffee)finalizeStatements.push(env.DB.prepare(`UPDATE case_player_state SET boosters_points=boosters_points+?,boosters_treats=boosters_treats+?,boosters_coffee=boosters_coffee+?,revision=revision+1,updated_at=? WHERE telegram_id=? AND EXISTS(SELECT 1 FROM season_pass_claims WHERE season_id=? AND telegram_id=? AND status='pending' AND level<=? AND (lane='free' OR ?=1))`).bind(boosterTotals.points,boosterTotals.treats,boosterTotals.coffee,now,ctx.telegramId,ctx.season.id,ctx.telegramId,level,premium?1:0));
     for(const reward of xpBoostRewards)finalizeStatements.push(env.DB.prepare(`INSERT OR IGNORE INTO season_pass_entitlements(season_id,telegram_id,item_id,source,granted_at) SELECT ?,?,?,?,? WHERE EXISTS(SELECT 1 FROM season_pass_claims WHERE season_id=? AND telegram_id=? AND level=? AND lane=? AND status='pending')`).bind(ctx.season.id,ctx.telegramId,SEASON_PASS_SPECIAL_XP_X2,`reward:${reward.level}:${reward.lane}`,now,ctx.season.id,ctx.telegramId,Number(reward.level),String(reward.lane)));
@@ -18982,8 +19205,8 @@ async function claimAllSeasonPassRewards(request,env){
     const finalizeResult=await env.DB.batch(finalizeStatements);
     const claimResult=finalizeResult[finalizeResult.length-1];
     const finalized=Number(claimResult?.meta?.changes||0)>0;
-    if(finalized){try{await recordPlayerTimeline(env,ctx.telegramId,'season_pass_reward_bulk',`получил ${pending.length} наград сезонного пропуска`,{seasonId:ctx.season.id,count:pending.length,points,treats,coffee,boosters:boosterTotals,xpBoosts:xpBoostRewards.length},`season_pass_bulk_${ctx.season.id}_${now}`,ctx.auth.user,now);}catch(error){console.error('season pass bulk timeline failed',error);}}
-    const received=finalized?pending.map(reward=>({level:Number(reward.level),lane:String(reward.lane),title:String(reward.title),rewardType:seasonPassPublicRewardType(reward),amount:Number(reward.amount),itemId:String(reward.item_id||''),imageUrl:String(reward.image_url||'')})):[];
+    if(finalized){try{await recordPlayerTimeline(env,ctx.telegramId,'season_pass_reward_bulk',`получил ${pending.length} наград сезонного пропуска`,{seasonId:ctx.season.id,count:pending.length,points,treats,coffee,boosters:boosterTotals,xpBoosts:xpBoostRewards.length,cosmetics:cosmeticRewards.length},`season_pass_bulk_${ctx.season.id}_${now}`,ctx.auth.user,now);}catch(error){console.error('season pass bulk timeline failed',error);}}
+    const received=finalized?pending.map(reward=>({level:Number(reward.level),lane:String(reward.lane),title:String(reward.title),rewardType:seasonPassPublicRewardType(reward),amount:Number(reward.amount),itemId:seasonPassPublicRewardItemId(reward),imageUrl:String(reward.image_url||'')})):[];
     return jsonResponse({...await buildSeasonPassMutationPayload(env,ctx.season,ctx.telegramId,{includeClaims:true}),received});
   }catch(error){if(error instanceof ApiError)return jsonResponse({ok:false,error:error.message},error.status);console.error('claimAllSeasonPassRewards failed',error);return jsonResponse({ok:false,error:'Не удалось начислить награды.'},500);}
 }
@@ -19897,22 +20120,22 @@ function emptySimulationCaseState() {
 }
 
 async function runCaseSimulation(env, caseType, sampleCount) {
-  const liveops=await readLiveOpsConfig(env);const samples=Math.max(100,Math.min(100000,Math.floor(Number(sampleCount)||1000)));
+  const liveops=await readLiveOpsConfig(env);const samples=Math.max(1,Math.min(100000,Math.floor(Number(sampleCount)||1000)));
   const caseConfig=liveOpsCaseConfig(liveops,caseType);if(caseConfig?.enabled===false)throw new ApiError(409,"Этот кейс временно отключён администратором.");
   const catalogs={avatar:runtimeCaseCatalog("avatar",CASE_AVATARS,liveops),frame:runtimeCaseCatalog("frame",CASE_FRAMES,liveops),trail:runtimeCaseCatalog("trail",CASE_TRAILS,liveops),skin:runtimeCaseCatalog("skin",CASE_SKINS,liveops),music:CASE_MUSIC_TRACKS};
   const cosmeticKinds=["avatar","frame","trail","skin","music"],categoryOrder=["points","treats","coffee","booster",...cosmeticKinds,"physical"];
   const chances={...(caseConfig?.chances||LIVEOPS_CASE_DEFAULTS[caseType]?.chances||{})};const guaranteeCount=caseType==="legendary"?Math.max(0,Math.min(50,Math.floor(Number(caseConfig?.guaranteeCount??50)))):0;const pityMax=Math.max(0,guaranteeCount-1);
   const regularCatalog={},epicCatalog={};for(const kind of cosmeticKinds){regularCatalog[kind]=Object.entries(catalogs[kind]||{}).filter(([,item])=>(caseType==="legendary"||!item?.legendaryOnly)&&Math.max(0,Number(item?.weight||0))>0);epicCatalog[kind]=regularCatalog[kind].filter(([,item])=>(CASE_RARITY_ORDER[String(item?.rarity||"common")]??0)>=(CASE_RARITY_ORDER.epic??3));}
   const makePlayer=()=>{const remaining={},epicRemaining={};for(const kind of cosmeticKinds){remaining[kind]=regularCatalog[kind].length;epicRemaining[kind]=epicCatalog[kind].length;}return{pity:0,owned:{avatar:new Set(),frame:new Set(),trail:new Set(),skin:new Set(),music:new Set(["cafe_run"])},remaining,epicRemaining};};
-  const players=Array.from({length:Math.min(100,samples)},makePlayer);let seed=crypto.getRandomValues(new Uint32Array(1))[0]||0x6d2b79f5;const random=()=>{seed^=seed<<13;seed^=seed>>>17;seed^=seed<<5;return(seed>>>0)/4294967296;};const randomInt=(min,max)=>{const lo=Math.floor(Number(min)||0),hi=Math.max(lo,Math.floor(Number(max)||lo));return lo+Math.floor(random()*(hi-lo+1));};
+  const virtualPlayers=caseType==="legendary"&&guaranteeCount>0?Math.max(1,Math.min(100,Math.floor(samples/guaranteeCount)||1)):Math.max(1,Math.min(100,samples));const players=Array.from({length:virtualPlayers},makePlayer);let seed=crypto.getRandomValues(new Uint32Array(1))[0]||0x6d2b79f5;const random=()=>{seed^=seed<<13;seed^=seed>>>17;seed^=seed<<5;return(seed>>>0)/4294967296;};const randomInt=(min,max)=>{const lo=Math.floor(Number(min)||0),hi=Math.max(lo,Math.floor(Number(max)||lo));return lo+Math.floor(random()*(hi-lo+1));};
   const weightedChoice=(entries,owned=null,unownedOnly=false)=>{let total=0;for(const [id,item] of entries){if(unownedOnly&&owned?.has(id))continue;total+=Math.max(0,Number(item?.weight||0));}if(total<=0)return null;let roll=random()*total;for(const entry of entries){const[id,item]=entry;if(unownedOnly&&owned?.has(id))continue;roll-=Math.max(0,Number(item?.weight||0));if(roll<0)return entry;}return null;};
   const chooseCosmetic=(kind,player,epicOnly=false)=>{const entries=epicOnly?epicCatalog[kind]:regularCatalog[kind],owned=player.owned[kind],remaining=epicOnly?player.epicRemaining[kind]:player.remaining[kind];let selected=remaining>0?weightedChoice(entries,owned,true):null;if(!selected&&caseType!=="legendary")selected=weightedChoice(entries);if(!selected)return null;const[id,item]=selected,duplicate=owned.has(id);if(!duplicate){owned.add(id);player.remaining[kind]=Math.max(0,player.remaining[kind]-1);if((CASE_RARITY_ORDER[String(item?.rarity||"common")]??0)>=(CASE_RARITY_ORDER.epic??3))player.epicRemaining[kind]=Math.max(0,player.epicRemaining[kind]-1);}return{id,item,duplicate};};
   const staticWeights=categoryOrder.map(kind=>[kind,Math.max(0,Number(chances[kind]||0))]);const chooseKind=(player)=>{let pointsWeight=staticWeights[0]?.[1]||0,total=0;const dynamic=[];for(const[kind,weight]of staticWeights){if(!weight||kind==="points")continue;if(cosmeticKinds.includes(kind)&&caseType==="legendary"&&player.remaining[kind]<=0){pointsWeight+=weight;continue;}dynamic.push([kind,weight]);total+=weight;}if(pointsWeight>0){dynamic.unshift(["points",pointsWeight]);total+=pointsWeight;}if(total<=0)return"points";let roll=random()*total;for(const[kind,weight]of dynamic){roll-=weight;if(roll<0)return kind;}return dynamic[dynamic.length-1]?.[0]||"points";};
-  const categoryCounts={},rarityCounts={};let physical=0,duplicates=0,guaranteed=0,totalRewards=0,totalPoints=0,totalTreats=0,totalCoffee=0;const countReward=kind=>{totalRewards+=1;categoryCounts[kind]=(categoryCounts[kind]||0)+1;};
+  const categoryCounts={},rarityCounts={};let physical=0,duplicates=0,guaranteeAttempts=0,guaranteed=0,totalRewards=0,totalPoints=0,totalTreats=0,totalCoffee=0;const countReward=kind=>{totalRewards+=1;categoryCounts[kind]=(categoryCounts[kind]||0)+1;};
   const grantCosmetic=(kind,player,epicOnly=false,isGuaranteed=false)=>{const selected=chooseCosmetic(kind,player,epicOnly);if(!selected)return false;countReward(kind);if(selected.duplicate){duplicates+=1;totalPoints+=Number(CASE_DUPLICATE_COMPENSATION[kind]||0);}else{const rarity=String(selected.item?.rarity||"common");rarityCounts[rarity]=(rarityCounts[rarity]||0)+1;}if(isGuaranteed)guaranteed+=1;return true;};
   const grantGuarantee=player=>{const defs=[["skin",5],["avatar",10],["frame",15],["trail",20],["music",8]],available=[];let total=0;for(const def of defs)if(player.epicRemaining[def[0]]>0){available.push(def);total+=def[1];}if(!available.length)return false;let roll=random()*total,selected=available[available.length-1];for(const def of available){roll-=def[1];if(roll<0){selected=def;break;}}return grantCosmetic(selected[0],player,true,true);};
-  for(let i=0;i<samples;i+=1){const player=players[i%players.length];if(caseType==="legendary"&&guaranteeCount>0&&player.pity>=pityMax){player.pity=0;if(grantGuarantee(player))continue;}const kind=chooseKind(player);if(kind==="points"||kind==="treats"||kind==="coffee"){const[min,max]=caseCurrencyRange(caseType,kind,liveops),amount=randomInt(min,max);countReward(kind);if(kind==="points")totalPoints+=amount;else if(kind==="treats")totalTreats+=amount;else totalCoffee+=amount;}else if(kind==="booster")countReward("booster");else if(kind==="physical"){countReward("physical");physical+=1;}else if(cosmeticKinds.includes(kind)){if(!grantCosmetic(kind,player)){const[min,max]=caseCurrencyRange(caseType,"points",liveops);countReward("points");totalPoints+=randomInt(min,max);}}else{const[min,max]=caseCurrencyRange(caseType,"points",liveops);countReward("points");totalPoints+=randomInt(min,max);}if(caseType==="legendary"&&guaranteeCount>0)player.pity=Math.min(pityMax,player.pity+1);}
-  return {caseType,samples,totalRewards,categoryCounts,rarityCounts,physical,duplicates,guaranteed,totalPoints,totalTreats,totalCoffee,guaranteeCount};
+  for(let i=0;i<samples;i+=1){const player=players[i%players.length];if(caseType==="legendary"&&guaranteeCount>0&&player.pity>=pityMax){guaranteeAttempts+=1;player.pity=0;if(grantGuarantee(player))continue;}const kind=chooseKind(player);if(kind==="points"||kind==="treats"||kind==="coffee"){const[min,max]=caseCurrencyRange(caseType,kind,liveops),amount=randomInt(min,max);countReward(kind);if(kind==="points")totalPoints+=amount;else if(kind==="treats")totalTreats+=amount;else totalCoffee+=amount;}else if(kind==="booster")countReward("booster");else if(kind==="physical"){countReward("physical");physical+=1;}else if(cosmeticKinds.includes(kind)){if(!grantCosmetic(kind,player)){const[min,max]=caseCurrencyRange(caseType,"points",liveops);countReward("points");totalPoints+=randomInt(min,max);}}else{const[min,max]=caseCurrencyRange(caseType,"points",liveops);countReward("points");totalPoints+=randomInt(min,max);}if(caseType==="legendary"&&guaranteeCount>0)player.pity=Math.min(pityMax,player.pity+1);}
+  return {caseType,samples,virtualPlayers,totalRewards,categoryCounts,rarityCounts,physical,duplicates,guaranteeAttempts,guaranteed,totalPoints,totalTreats,totalCoffee,guaranteeCount};
 }
 
 function percentOf(value,total){return total>0?Number(value||0)*100/total:0;}
@@ -19932,7 +20155,7 @@ async function showCaseSimulationReport(chatId,user,caseType,samples,env){
   const started=Date.now();const report=await runCaseSimulation(env,caseType,samples);const duration=Date.now()-started;
   const categories=Object.entries(report.categoryCounts).sort((a,b)=>b[1]-a[1]).map(([kind,count])=>`• ${escapeHtml(kind)}: <b>${percentOf(count,report.totalRewards).toLocaleString("ru-RU",{maximumFractionDigits:2})}%</b> · ${count.toLocaleString("ru-RU")}`);
   const rarities=Object.entries(report.rarityCounts).sort((a,b)=>(CASE_RARITY_ORDER[b[0]]||0)-(CASE_RARITY_ORDER[a[0]]||0)).map(([rarity,count])=>`• ${escapeHtml(rarity)}: <b>${percentOf(count,Object.values(report.rarityCounts).reduce((a,b)=>a+b,0)).toLocaleString("ru-RU",{maximumFractionDigits:2})}%</b>`);
-  await sendTelegramMessage(env,chatId,`<b>🧪 ${escapeHtml(LEVEL_CASE_CONFIG[caseType]?.title||caseType)}</b>\n\nОткрытий: <b>${report.samples.toLocaleString("ru-RU")}</b>\nВремя расчёта: <b>${duration.toLocaleString("ru-RU")} мс</b>\nГарант: <b>${report.guaranteeCount||"выключен"}</b>\n\n<b>Категории</b>\n${categories.join("\n")}\n\n<b>Редкости косметики</b>\n${rarities.join("\n")||"Нет косметических выпадений."}\n\nФизические награды: <b>${percentOf(report.physical,report.totalRewards).toLocaleString("ru-RU",{maximumFractionDigits:2})}%</b>\nДубликаты: <b>${percentOf(report.duplicates,report.totalRewards).toLocaleString("ru-RU",{maximumFractionDigits:2})}%</b>\nСрабатываний гаранта: <b>${report.guaranteed}</b>\n\nСреднее за кейс: <b>${Math.round(report.totalPoints/report.samples).toLocaleString("ru-RU")} очков</b>, <b>${(report.totalTreats/report.samples).toLocaleString("ru-RU",{maximumFractionDigits:1})} зефира</b>, <b>${(report.totalCoffee/report.samples).toLocaleString("ru-RU",{maximumFractionDigits:1})} кофе</b>.`,
+  await sendTelegramMessage(env,chatId,`<b>🧪 ${escapeHtml(LEVEL_CASE_CONFIG[caseType]?.title||caseType)}</b>\n\nОткрытий: <b>${report.samples.toLocaleString("ru-RU")}</b>\nВиртуальных игроков: <b>${Number(report.virtualPlayers||1).toLocaleString("ru-RU")}</b>\nВремя расчёта: <b>${duration.toLocaleString("ru-RU")} мс</b>\nГарант: <b>${report.guaranteeCount||"выключен"}</b>\n\n<b>Категории</b>\n${categories.join("\n")}\n\n<b>Редкости косметики</b>\n${rarities.join("\n")||"Нет косметических выпадений."}\n\nФизические награды: <b>${percentOf(report.physical,report.totalRewards).toLocaleString("ru-RU",{maximumFractionDigits:2})}%</b>\nДубликаты: <b>${percentOf(report.duplicates,report.totalRewards).toLocaleString("ru-RU",{maximumFractionDigits:2})}%</b>\nДошли до гаранта: <b>${Number(report.guaranteeAttempts||0).toLocaleString("ru-RU")}</b>\nГарант-наград выдано: <b>${Number(report.guaranteed||0).toLocaleString("ru-RU")}</b>\n\nСреднее за кейс: <b>${Math.round(report.totalPoints/report.samples).toLocaleString("ru-RU")} очков</b>, <b>${(report.totalTreats/report.samples).toLocaleString("ru-RU",{maximumFractionDigits:1})} зефира</b>, <b>${(report.totalCoffee/report.samples).toLocaleString("ru-RU",{maximumFractionDigits:1})} кофе</b>.`,
     {inline_keyboard:[[{text:"🔄 Повторить",callback_data:`v65_sim:${caseType}:${report.samples}`},{text:"⬅️ Симулятор",callback_data:"v65_case_sim"}]]});
 }
 
@@ -22897,6 +23120,9 @@ function ownerPanelRewardAsset(kind, itemId = "") {
   if (normalized === "points") return "/assets/optimized/v0.79.5/iconScore.png";
   if (normalized === "treats" || normalized === "zefir") return "/assets/optimized/v0.79.5/shopMarshmallowAssortment.png";
   if (normalized === "coffee") return "/assets/optimized/v0.79.5/iconCoffee.png";
+  if (SEASON_PASS_COSMETIC_KINDS.includes(normalized)) return seasonPassCosmeticImage(normalized,itemId);
+  const encodedCosmetic=seasonPassCosmeticRewardDefinition({item_id:itemId});
+  if (encodedCosmetic?.imageUrl) return encodedCosmetic.imageUrl;
   const boost=SEASON_PASS_BOOST_REWARDS[normalized] || seasonPassBoostRewardDefinition({item_id:itemId});
   if (boost?.imageUrl) return boost.imageUrl;
   return "/assets/season-pass/season.png";
@@ -22909,20 +23135,118 @@ function ownerPanelInteger(value, min = 0, max = 999999999) {
   return number;
 }
 
+
+const OWNER_PANEL_SESSION_TTL_SECONDS = 15 * 60;
+const OWNER_MEDIA_MAX_BYTES = 6 * 1024 * 1024;
+const OWNER_MEDIA_CHUNK_BYTES = 1024 * 1024;
+const OWNER_MEDIA_ALLOWED_TYPES = Object.freeze(new Set(["image/png","image/jpeg","image/webp","image/gif"]));
+const DEFAULT_GAME_RUNTIME_CONFIG = Object.freeze({
+  startSpeed:165,maxSpeed:405,speedBaseAccel:3.2,speedDifficultyAccel:7,speedScoreAccel:10.5,
+  scoreBaseRate:10,scoreSpeedFactor:0.018,gravity:1680,jumpVelocity:-745,
+  difficultyStartSeconds:6,difficultyRampSeconds:55,scoreDifficultyStart:1600,scoreDifficultyRange:6400,minimumScoreSpeedBonus:88,
+  initialObstacleDelay:4.2,obstacleMinDelayBase:2.05,obstacleMinDelayDifficulty:0.7,obstacleMinDelayScore:0.22,
+  obstacleExtraDelayBase:1.2,obstacleExtraDelayDifficulty:0.42,obstacleExtraDelayScore:0.14,
+  initialPickupDelay:1.05,pickupDelayBase:1.05,pickupDelayRandomBase:1.35,pickupDelayDifficulty:0.38
+});
+let ownerV9SchemaReady=false,ownerV9SchemaPromise=null;
+let ownerRuntimeConfigCache={value:null,expiresAt:0,promise:null};
+let ownerMediaListCache={value:null,expiresAt:0};
+
+function ownerPanelSessionBase64Encode(value){return btoa(String(value)).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/g,"");}
+function ownerPanelSessionBase64Decode(value){let text=String(value||"").replace(/-/g,"+").replace(/_/g,"/");while(text.length%4)text+="=";return atob(text);}
+async function createOwnerPanelSession(user,env){
+  const now=Math.floor(Date.now()/1000);const payload={id:String(user?.id||""),iat:now,exp:now+OWNER_PANEL_SESSION_TTL_SECONDS,n:encodeURIComponent(telegramDisplayName(user)).slice(0,260)};
+  const body=ownerPanelSessionBase64Encode(JSON.stringify(payload));const key=encoder.encode(`owner-panel:${String(env.TELEGRAM_BOT_TOKEN||"")}`);const sig=bytesToHex(await hmacSha256(key,body));return `${body}.${sig}`;
+}
+async function verifyOwnerPanelSession(token,env){
+  try{const [body,sig]=String(token||"").split(".");if(!body||!/^[a-f0-9]{64}$/i.test(sig||""))return null;const key=encoder.encode(`owner-panel:${String(env.TELEGRAM_BOT_TOKEN||"")}`);const expected=bytesToHex(await hmacSha256(key,body));if(!timingSafeEqualString(String(sig).toLowerCase(),expected))return null;const payload=JSON.parse(ownerPanelSessionBase64Decode(body));const now=Math.floor(Date.now()/1000);if(!payload?.id||Number(payload.exp||0)<=now||Number(payload.iat||0)>now+60)return null;if(!isBotOwnerTelegramId(payload.id,env))return null;return {id:String(payload.id),name:decodeURIComponent(String(payload.n||"Владелец")),exp:Number(payload.exp||0)};}catch{return null;}
+}
+async function validateOwnerTelegramInitDataFast(initData,env){
+  if(!initData)throw new ApiError(401,"Откройте панель владельца через Telegram-бота.");const params=new URLSearchParams(initData);const receivedHash=String(params.get("hash")||"").toLowerCase();if(!/^[a-f0-9]{64}$/.test(receivedHash))throw new ApiError(401,"Данные Telegram не прошли проверку.");params.delete("hash");const dataCheckString=[...params.entries()].sort(([a],[b])=>a.localeCompare(b)).map(([k,v])=>`${k}=${v}`).join("\n");const secretKey=await hmacSha256(encoder.encode("WebAppData"),String(env.TELEGRAM_BOT_TOKEN));const calculated=bytesToHex(await hmacSha256(secretKey,dataCheckString));if(!timingSafeEqualString(receivedHash,calculated))throw new ApiError(401,"Данные Telegram не прошли проверку.");const authDate=Number(params.get("auth_date")||0),now=Math.floor(Date.now()/1000),maxAge=positiveInt(env.INIT_DATA_MAX_AGE_SECONDS,DEFAULT_INIT_DATA_MAX_AGE_SECONDS);if(!authDate||authDate>now+60||now-authDate>maxAge)throw new ApiError(401,"Сессия Telegram устарела. Перезапустите панель из бота.");let user=null;try{user=JSON.parse(params.get("user")||"null");}catch{}if(!user?.id)throw new ApiError(401,"Telegram не передал профиль владельца.");return {user,authDate};
+}
+async function ownerPanelFastAuth(request,env){
+  try{const body=await readJson(request);const cached=await verifyOwnerPanelSession(body?.ownerSession,env);if(cached){return jsonResponse({ok:true,owner:{telegramId:cached.id,name:cached.name,role:"owner"},sessionToken:String(body.ownerSession),sessionExpiresAt:cached.exp,workerBuild:WORKER_BUILD,version:GAME_VERSION,cached:true});}
+    const auth=await validateOwnerTelegramInitDataFast(String(body?.initData||""),env);if(!isBotOwnerTelegramId(auth.user.id,env))throw new ApiError(403,"Доступ разрешён только владельцу проекта.");const access=await getTeamAccess(auth.user,env);if(!access?.authorized||!access?.owner||String(access.role||"")!=="owner")throw new ApiError(403,"Роль владельца не подтверждена сервером.");const sessionToken=await createOwnerPanelSession(auth.user,env);return jsonResponse({ok:true,owner:{telegramId:String(auth.user.id),name:telegramDisplayName(auth.user),role:"owner"},sessionToken,sessionExpiresAt:Math.floor(Date.now()/1000)+OWNER_PANEL_SESSION_TTL_SECONDS,workerBuild:WORKER_BUILD,version:GAME_VERSION,cached:false});
+  }catch(error){return ownerPanelApiError(error,"owner fast auth");}
+}
+
+function ownerV9Number(value,fallback,min,max){const n=Number(value);return Number.isFinite(n)?Math.min(max,Math.max(min,n)):fallback;}
+function normalizeGameRuntimeConfig(input={}){const d=DEFAULT_GAME_RUNTIME_CONFIG,c=input&&typeof input==="object"?input:{};const x={
+  startSpeed:ownerV9Number(c.startSpeed,d.startSpeed,120,220),maxSpeed:ownerV9Number(c.maxSpeed,d.maxSpeed,260,480),speedBaseAccel:ownerV9Number(c.speedBaseAccel,d.speedBaseAccel,0,12),speedDifficultyAccel:ownerV9Number(c.speedDifficultyAccel,d.speedDifficultyAccel,0,18),speedScoreAccel:ownerV9Number(c.speedScoreAccel,d.speedScoreAccel,0,24),
+  scoreBaseRate:ownerV9Number(c.scoreBaseRate,d.scoreBaseRate,4,24),scoreSpeedFactor:ownerV9Number(c.scoreSpeedFactor,d.scoreSpeedFactor,0.004,0.045),gravity:ownerV9Number(c.gravity,d.gravity,1200,2200),jumpVelocity:ownerV9Number(c.jumpVelocity,d.jumpVelocity,-950,-540),
+  difficultyStartSeconds:ownerV9Number(c.difficultyStartSeconds,d.difficultyStartSeconds,0,25),difficultyRampSeconds:ownerV9Number(c.difficultyRampSeconds,d.difficultyRampSeconds,25,120),scoreDifficultyStart:ownerV9Number(c.scoreDifficultyStart,d.scoreDifficultyStart,300,5000),scoreDifficultyRange:ownerV9Number(c.scoreDifficultyRange,d.scoreDifficultyRange,1500,16000),minimumScoreSpeedBonus:ownerV9Number(c.minimumScoreSpeedBonus,d.minimumScoreSpeedBonus,0,140),
+  initialObstacleDelay:ownerV9Number(c.initialObstacleDelay,d.initialObstacleDelay,1.5,8),obstacleMinDelayBase:ownerV9Number(c.obstacleMinDelayBase,d.obstacleMinDelayBase,1.4,3.2),obstacleMinDelayDifficulty:ownerV9Number(c.obstacleMinDelayDifficulty,d.obstacleMinDelayDifficulty,0,1.1),obstacleMinDelayScore:ownerV9Number(c.obstacleMinDelayScore,d.obstacleMinDelayScore,0,0.6),obstacleExtraDelayBase:ownerV9Number(c.obstacleExtraDelayBase,d.obstacleExtraDelayBase,0.5,2.2),obstacleExtraDelayDifficulty:ownerV9Number(c.obstacleExtraDelayDifficulty,d.obstacleExtraDelayDifficulty,0,0.9),obstacleExtraDelayScore:ownerV9Number(c.obstacleExtraDelayScore,d.obstacleExtraDelayScore,0,0.5),
+  initialPickupDelay:ownerV9Number(c.initialPickupDelay,d.initialPickupDelay,0.5,2.5),pickupDelayBase:ownerV9Number(c.pickupDelayBase,d.pickupDelayBase,0.5,2.3),pickupDelayRandomBase:ownerV9Number(c.pickupDelayRandomBase,d.pickupDelayRandomBase,0.7,2.8),pickupDelayDifficulty:ownerV9Number(c.pickupDelayDifficulty,d.pickupDelayDifficulty,0,1)
+};if(x.maxSpeed<x.startSpeed+40)x.maxSpeed=x.startSpeed+40;return x;}
+async function ensureOwnerV9Schema(env){if(ownerV9SchemaReady)return;if(ownerV9SchemaPromise)return ownerV9SchemaPromise;const now=Math.floor(Date.now()/1000);const promise=env.DB.batch([
+  env.DB.prepare(`CREATE TABLE IF NOT EXISTS game_runtime_config(id INTEGER PRIMARY KEY CHECK(id=1),draft_json TEXT NOT NULL DEFAULT '{}',published_json TEXT NOT NULL DEFAULT '{}',version INTEGER NOT NULL DEFAULT 1,updated_at INTEGER NOT NULL DEFAULT 0,published_at INTEGER NOT NULL DEFAULT 0,updated_by TEXT NOT NULL DEFAULT '',published_by TEXT NOT NULL DEFAULT '')`),
+  env.DB.prepare(`CREATE TABLE IF NOT EXISTS game_runtime_config_history(id INTEGER PRIMARY KEY AUTOINCREMENT,version INTEGER NOT NULL,config_json TEXT NOT NULL,reason TEXT NOT NULL DEFAULT '',created_at INTEGER NOT NULL,created_by TEXT NOT NULL DEFAULT '',created_by_name TEXT NOT NULL DEFAULT '')`),
+  env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_game_runtime_history_created ON game_runtime_config_history(created_at DESC)`),
+  env.DB.prepare(`CREATE TABLE IF NOT EXISTS owner_media_assets(asset_id TEXT PRIMARY KEY,file_name TEXT NOT NULL,content_type TEXT NOT NULL,byte_size INTEGER NOT NULL,chunk_count INTEGER NOT NULL DEFAULT 0,created_at INTEGER NOT NULL,created_by TEXT NOT NULL DEFAULT '',created_by_name TEXT NOT NULL DEFAULT '',deleted_at INTEGER NOT NULL DEFAULT 0)`),
+  env.DB.prepare(`CREATE TABLE IF NOT EXISTS owner_media_chunks(asset_id TEXT NOT NULL,chunk_index INTEGER NOT NULL,data BLOB NOT NULL,PRIMARY KEY(asset_id,chunk_index))`),
+  env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_owner_media_created ON owner_media_assets(deleted_at,created_at DESC)`),
+  env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_owner_media_chunks_asset ON owner_media_chunks(asset_id,chunk_index)`),
+  env.DB.prepare(`INSERT OR IGNORE INTO game_runtime_config(id,draft_json,published_json,version,updated_at,published_at,updated_by,published_by) VALUES(1,?,?,1,?,?, 'runtime','runtime')`).bind(JSON.stringify(DEFAULT_GAME_RUNTIME_CONFIG),JSON.stringify(DEFAULT_GAME_RUNTIME_CONFIG),now,now)
+]).then(()=>{ownerV9SchemaReady=true;});ownerV9SchemaPromise=promise;try{await promise;}finally{if(ownerV9SchemaPromise===promise)ownerV9SchemaPromise=null;}}
+async function readPublishedGameRuntimeConfig(env,force=false){const now=Date.now();if(!force&&ownerRuntimeConfigCache.value&&ownerRuntimeConfigCache.expiresAt>now)return ownerRuntimeConfigCache.value;if(!force&&ownerRuntimeConfigCache.promise)return ownerRuntimeConfigCache.promise;const promise=(async()=>{try{const row=await env.DB.prepare(`SELECT published_json,version FROM game_runtime_config WHERE id=1 LIMIT 1`).first();if(!row)return {...DEFAULT_GAME_RUNTIME_CONFIG,version:1,source:"default"};const config=normalizeGameRuntimeConfig(safeJson(row?.published_json,DEFAULT_GAME_RUNTIME_CONFIG));return {...config,version:Number(row?.version||1),source:"d1"};}catch(error){const message=String(error?.message||error||"");if(!/no such table|does not exist/i.test(message))console.error("game runtime config fallback",error);return {...DEFAULT_GAME_RUNTIME_CONFIG,version:1,source:"fallback"};}})();ownerRuntimeConfigCache.promise=promise;try{const value=await promise;ownerRuntimeConfigCache.value=value;ownerRuntimeConfigCache.expiresAt=Date.now()+15000;return value;}finally{ownerRuntimeConfigCache.promise=null;}}
+function invalidateOwnerRuntimeConfig(){ownerRuntimeConfigCache={value:null,expiresAt:0,promise:null};invalidateGamePublicConfigCache();}
+async function ownerPanelV9GameConfig(env,ctx){await ensureOwnerV9Schema(env);const [row,hist]=await Promise.all([env.DB.prepare(`SELECT * FROM game_runtime_config WHERE id=1`).first(),env.DB.prepare(`SELECT id,version,config_json,reason,created_at,created_by_name FROM game_runtime_config_history ORDER BY id DESC LIMIT 12`).all()]);return {ok:true,published:normalizeGameRuntimeConfig(safeJson(row?.published_json,DEFAULT_GAME_RUNTIME_CONFIG)),draft:normalizeGameRuntimeConfig(safeJson(row?.draft_json,row?.published_json||DEFAULT_GAME_RUNTIME_CONFIG)),version:Number(row?.version||1),updatedAt:Number(row?.updated_at||0),publishedAt:Number(row?.published_at||0),history:(hist.results||[]).map(r=>({id:Number(r.id),version:Number(r.version),config:normalizeGameRuntimeConfig(safeJson(r.config_json,{})),reason:String(r.reason||""),createdAt:Number(r.created_at||0),createdBy:String(r.created_by_name||"")}))};}
+async function ownerPanelV9GameConfigDraft(env,ctx){await ensureOwnerV9Schema(env);const config=normalizeGameRuntimeConfig(ctx.body?.config);const now=Math.floor(Date.now()/1000);await env.DB.prepare(`UPDATE game_runtime_config SET draft_json=?,updated_at=?,updated_by=? WHERE id=1`).bind(JSON.stringify(config),now,String(ctx.user.id)).run();await logStaffAction(env,ctx.user,ctx.access,"owner_game_config_draft",null,"game_config",null,null,{config});return {ok:true,config};}
+async function ownerPanelV9GameConfigPublish(env,ctx){await ensureOwnerV9Schema(env);const row=await env.DB.prepare(`SELECT * FROM game_runtime_config WHERE id=1`).first();if(!row)throw new ApiError(500,"Конфигурация игры не найдена.");const previous=normalizeGameRuntimeConfig(safeJson(row.published_json,DEFAULT_GAME_RUNTIME_CONFIG)),next=normalizeGameRuntimeConfig(safeJson(row.draft_json,previous)),now=Math.floor(Date.now()/1000),nextVersion=Math.max(1,Number(row.version||1))+1;await env.DB.batch([env.DB.prepare(`INSERT INTO game_runtime_config_history(version,config_json,reason,created_at,created_by,created_by_name) VALUES(?,?,?,?,?,?)`).bind(Number(row.version||1),JSON.stringify(previous),String(ctx.body?.reason||"Автоснимок перед публикацией").slice(0,200),now,String(ctx.user.id),telegramDisplayName(ctx.user)),env.DB.prepare(`UPDATE game_runtime_config SET published_json=?,version=?,published_at=?,updated_at=?,published_by=?,updated_by=? WHERE id=1`).bind(JSON.stringify(next),nextVersion,now,now,String(ctx.user.id),String(ctx.user.id))]);invalidateOwnerRuntimeConfig();await Promise.all([logStaffAction(env,ctx.user,ctx.access,"owner_game_config_publish",null,"game_config",Number(row.version||1),nextVersion,{previous,next}),recordV67SettingChange(env,ctx.user,"game_config","runtime","publish",previous,next).catch(()=>{})]);return {ok:true,version:nextVersion,config:next};}
+async function ownerPanelV9GameConfigRestore(env,ctx){await ensureOwnerV9Schema(env);if(String(ctx.body?.confirmation||"").trim()!=="ОТКАТИТЬ БАЛАНС")throw new ApiError(400,"Введите точное подтверждение: ОТКАТИТЬ БАЛАНС");const id=ownerPanelInteger(ctx.body?.historyId,1,2147483647);if(id==null)throw new ApiError(400,"Снимок не выбран.");const hist=await env.DB.prepare(`SELECT * FROM game_runtime_config_history WHERE id=? LIMIT 1`).bind(id).first();if(!hist)throw new ApiError(404,"Снимок баланса не найден.");const row=await env.DB.prepare(`SELECT * FROM game_runtime_config WHERE id=1`).first(),current=normalizeGameRuntimeConfig(safeJson(row?.published_json,DEFAULT_GAME_RUNTIME_CONFIG)),target=normalizeGameRuntimeConfig(safeJson(hist.config_json,DEFAULT_GAME_RUNTIME_CONFIG)),now=Math.floor(Date.now()/1000),nextVersion=Math.max(1,Number(row?.version||1))+1;await env.DB.batch([env.DB.prepare(`INSERT INTO game_runtime_config_history(version,config_json,reason,created_at,created_by,created_by_name) VALUES(?,?,?,?,?,?)`).bind(Number(row?.version||1),JSON.stringify(current),"Автоснимок перед откатом",now,String(ctx.user.id),telegramDisplayName(ctx.user)),env.DB.prepare(`UPDATE game_runtime_config SET draft_json=?,published_json=?,version=?,published_at=?,updated_at=?,published_by=?,updated_by=? WHERE id=1`).bind(JSON.stringify(target),JSON.stringify(target),nextVersion,now,now,String(ctx.user.id),String(ctx.user.id))]);invalidateOwnerRuntimeConfig();await logStaffAction(env,ctx.user,ctx.access,"owner_game_config_restore",null,"game_config",Number(row?.version||1),nextVersion,{historyId:id,restoredFromVersion:Number(hist.version||0)});return {ok:true,version:nextVersion,config:target};}
+function ownerMediaExtension(type){return type==="image/png"?"png":type==="image/jpeg"?"jpg":type==="image/webp"?"webp":"gif";}
+function ownerMediaLooksValid(bytes,type){if(!(bytes instanceof Uint8Array)||bytes.length<8)return false;if(type==="image/png")return bytes[0]===0x89&&bytes[1]===0x50&&bytes[2]===0x4e&&bytes[3]===0x47;if(type==="image/jpeg")return bytes[0]===0xff&&bytes[1]===0xd8&&bytes[2]===0xff;if(type==="image/gif")return String.fromCharCode(...bytes.slice(0,4))==="GIF8";if(type==="image/webp")return String.fromCharCode(...bytes.slice(0,4))==="RIFF"&&String.fromCharCode(...bytes.slice(8,12))==="WEBP";return false;}
+async function ownerPanelV9MediaListData(env,limit=60){await ensureOwnerV9Schema(env);const now=Date.now();if(ownerMediaListCache.value&&ownerMediaListCache.expiresAt>now)return ownerMediaListCache.value;const result=await env.DB.prepare(`SELECT asset_id,file_name,content_type,byte_size,created_at,created_by_name FROM owner_media_assets WHERE deleted_at=0 ORDER BY created_at DESC LIMIT ?`).bind(Math.max(1,Math.min(100,Number(limit)||60))).all();const value=(result.results||[]).map(r=>({id:String(r.asset_id),fileName:String(r.file_name||"image"),contentType:String(r.content_type||"image/png"),byteSize:Number(r.byte_size||0),createdAt:Number(r.created_at||0),createdBy:String(r.created_by_name||""),url:`/media/${String(r.asset_id)}`}));ownerMediaListCache={value,expiresAt:Date.now()+10000};return value;}
+async function ownerPanelV9Media(env,ctx){return {ok:true,maxBytes:OWNER_MEDIA_MAX_BYTES,items:await ownerPanelV9MediaListData(env,80)};}
+async function ownerPanelV9MediaUpload(env,ctx){
+  await ensureOwnerV9Schema(env);
+  const fileName=String(ctx.body?.fileName||"image").replace(/[\\/\0\r\n]/g,"_").slice(0,120),contentType=String(ctx.body?.contentType||"").toLowerCase();
+  if(!OWNER_MEDIA_ALLOWED_TYPES.has(contentType))throw new ApiError(400,"Поддерживаются PNG, JPG, WEBP и GIF.");
+  const raw=String(ctx.body?.base64||"").replace(/^data:[^;]+;base64,/i,"").replace(/\s+/g,"");
+  if(!raw)throw new ApiError(400,"Файл не получен.");
+  let binary="";try{binary=atob(raw);}catch{throw new ApiError(400,"Файл повреждён.");}
+  if(binary.length>OWNER_MEDIA_MAX_BYTES)throw new ApiError(413,"Изображение больше 6 МБ.");
+  const bytes=new Uint8Array(binary.length);for(let i=0;i<binary.length;i++)bytes[i]=binary.charCodeAt(i);
+  if(!ownerMediaLooksValid(bytes,contentType))throw new ApiError(400,"Содержимое файла не соответствует формату изображения.");
+  const id=`med_${crypto.randomUUID().replace(/-/g,"").slice(0,24)}`,now=Math.floor(Date.now()/1000),safeName=(fileName.replace(/\.[A-Za-z0-9]+$/,'')||"image").slice(0,90)+`.`+ownerMediaExtension(contentType);
+  const chunks=[];for(let offset=0,index=0;offset<bytes.length;offset+=OWNER_MEDIA_CHUNK_BYTES,index+=1){chunks.push({index,data:bytes.slice(offset,Math.min(bytes.length,offset+OWNER_MEDIA_CHUNK_BYTES))});}
+  const statements=[env.DB.prepare(`INSERT INTO owner_media_assets(asset_id,file_name,content_type,byte_size,chunk_count,created_at,created_by,created_by_name,deleted_at) VALUES(?,?,?,?,?,?,?,?,0)`).bind(id,safeName,contentType,bytes.length,chunks.length,now,String(ctx.user.id),telegramDisplayName(ctx.user))];
+  for(const chunk of chunks)statements.push(env.DB.prepare(`INSERT INTO owner_media_chunks(asset_id,chunk_index,data) VALUES(?,?,?)`).bind(id,chunk.index,chunk.data.buffer));
+  await env.DB.batch(statements);
+  ownerMediaListCache={value:null,expiresAt:0};
+  await logStaffAction(env,ctx.user,ctx.access,"owner_media_upload",null,"media",null,bytes.length,{assetId:id,fileName:safeName,contentType,chunks:chunks.length});
+  return {ok:true,item:{id,fileName:safeName,contentType,byteSize:bytes.length,createdAt:now,url:`/media/${id}`}};
+}
+async function ownerPanelV9MediaDelete(env,ctx){
+  await ensureOwnerV9Schema(env);const id=String(ctx.body?.assetId||"").trim();if(!/^med_[A-Za-z0-9_-]{12,80}$/.test(id))throw new ApiError(400,"Некорректный файл.");const now=Math.floor(Date.now()/1000);
+  const row=await env.DB.prepare(`SELECT asset_id FROM owner_media_assets WHERE asset_id=? AND deleted_at=0 LIMIT 1`).bind(id).first();if(!row)throw new ApiError(404,"Файл не найден.");
+  await env.DB.batch([env.DB.prepare(`UPDATE owner_media_assets SET deleted_at=? WHERE asset_id=? AND deleted_at=0`).bind(now,id),env.DB.prepare(`DELETE FROM owner_media_chunks WHERE asset_id=?`).bind(id)]);
+  ownerMediaListCache={value:null,expiresAt:0};await logStaffAction(env,ctx.user,ctx.access,"owner_media_delete",null,"media",null,null,{assetId:id});return {ok:true};
+}
+async function serveOwnerMediaAsset(env,id){
+  try{
+    const assetId=String(id);const row=await env.DB.prepare(`SELECT content_type,byte_size,chunk_count,created_at FROM owner_media_assets WHERE asset_id=? AND deleted_at=0 LIMIT 1`).bind(assetId).first();if(!row)return new Response("Not found",{status:404});
+    const result=await env.DB.prepare(`SELECT chunk_index,data FROM owner_media_chunks WHERE asset_id=? ORDER BY chunk_index ASC`).bind(assetId).all();const parts=result.results||[];if(parts.length!==Number(row.chunk_count||0)||!parts.length)return new Response("Not found",{status:404});
+    const total=Math.max(0,Number(row.byte_size||0));const body=new Uint8Array(total);let offset=0;for(const part of parts){let chunk=part.data;if(Array.isArray(chunk))chunk=new Uint8Array(chunk);else if(chunk instanceof ArrayBuffer)chunk=new Uint8Array(chunk);else if(ArrayBuffer.isView(chunk))chunk=new Uint8Array(chunk.buffer,chunk.byteOffset,chunk.byteLength);else return new Response("Not found",{status:404});body.set(chunk,offset);offset+=chunk.byteLength;}if(offset!==total)return new Response("Not found",{status:404});
+    const headers=new Headers({"Content-Type":String(row.content_type||"application/octet-stream"),"Content-Length":String(total),"Cache-Control":"public, max-age=31536000, immutable","X-Content-Type-Options":"nosniff","Cross-Origin-Resource-Policy":"cross-origin"});return new Response(body,{status:200,headers});
+  }catch(error){console.error("serve media failed",error);return new Response("Not found",{status:404});}
+}
+
 async function requireOwnerPanelContext(request, env) {
   const body = await readJson(request);
+  const fast = await verifyOwnerPanelSession(String(body?.ownerSession || ""), env);
+  if (fast) {
+    const user = { id: fast.id, first_name: fast.name || "Владелец", last_name: "" };
+    return { body, auth: { user, authDate: Math.floor(Date.now()/1000) }, user, access: { authorized:true, owner:true, role:"owner", permissions:{} }, fastSession:true };
+  }
   const initData = String(body?.initData || body?.init_data || "").trim();
   if (!initData) throw new ApiError(401, "Откройте панель владельца через Telegram-бота.");
-  const auth = await validateTelegramInitData(initData, env);
+  const auth = await validateOwnerTelegramInitDataFast(initData, env);
   const user = auth?.user || null;
-  if (!user?.id || !isBotOwnerTelegramId(user.id, env)) {
-    throw new ApiError(403, "Доступ разрешён только владельцу проекта.");
-  }
+  if (!user?.id || !isBotOwnerTelegramId(user.id, env)) throw new ApiError(403, "Доступ разрешён только владельцу проекта.");
   const access = await getTeamAccess(user, env);
-  if (!access?.authorized || !access?.owner || String(access.role || "") !== "owner") {
-    throw new ApiError(403, "Роль владельца не подтверждена сервером.");
-  }
-  return { body, auth, user, access };
+  if (!access?.authorized || !access?.owner || String(access.role || "") !== "owner") throw new ApiError(403, "Роль владельца не подтверждена сервером.");
+  return { body, auth, user, access, fastSession:false };
 }
 
 function ownerPanelApiError(error, label = "owner panel") {
@@ -22940,13 +23264,14 @@ function ownerV8AssetPath(value = "") {
   const text = String(value || "").trim().slice(0, 500);
   if (!text) return "";
   if (/^\/assets\/[A-Za-z0-9_./%()@+\-]+$/.test(text)) return text;
+  if (/^\/media\/med_[A-Za-z0-9_-]{12,80}$/.test(text)) return text;
   if (/^https:\/\//i.test(text)) {
     try { return new URL(text).toString(); } catch { return ""; }
   }
   return "";
 }
 
-async function ownerPanelV8Analytics(env, ctx) {
+async function ownerPanelV8AnalyticsFresh(env, ctx) {
   await Promise.all([ensureOperationsSecuritySchema(env), ensureV67Schema(env), ensureLiveOpsAdminSchema(env), ensureSeasonPassSchema(env)]);
   const now = Math.floor(Date.now() / 1000);
   const day = moscowDayStartUnix();
@@ -22992,83 +23317,40 @@ async function ownerPanelV8Analytics(env, ctx) {
   };
 }
 
+async function ownerPanelV8Analytics(env, ctx) {
+  return ownerV85Cached("analytics", 30000, () => ownerPanelV8AnalyticsFresh(env, ctx));
+}
+
 async function ownerPanelV8Segments(env, ctx) {
-  await Promise.all([ensureOperationsSecuritySchema(env), ensureSeasonPassSchema(env)]);
-  const requested = String(ctx.body?.segmentKey || "").trim();
-  const keys = Object.keys(PLAYER_SEGMENTS);
-  const rows = [];
-  for (const key of keys) {
-    const ids = await segmentPlayerIds(env, key, 10000);
-    rows.push({ key, title: PLAYER_SEGMENTS[key], count: ids.length });
-  }
-  let players = [];
-  if (requested && PLAYER_SEGMENTS[requested]) {
-    const ids = await segmentPlayerIds(env, requested, 10000);
-    const previewIds = ids.slice(0, 80);
-    if (previewIds.length) {
-      const q = previewIds.map(() => "?").join(",");
-      const result = await env.DB.prepare(`SELECT p.telegram_id,COALESCE(NULLIF(b.display_name,''),NULLIF(a.display_name,''),p.telegram_id) AS display_name,COALESCE(b.username,a.username,'') AS username,COALESCE(a.photo_url,'') AS photo_url,COALESCE(a.best_score,p.best_score,0) AS best_score,p.wallet,p.treats,p.coffee,p.created_at,p.updated_at FROM admin_profile_state p LEFT JOIN bot_subscribers b ON b.telegram_id=p.telegram_id LEFT JOIN leaderboard_all_time a ON a.telegram_id=p.telegram_id WHERE p.telegram_id IN (${q}) ORDER BY COALESCE(a.best_score,p.best_score,0) DESC,p.updated_at DESC`).bind(...previewIds).all();
-      players = (result.results || []).map((r) => ({ telegramId:String(r.telegram_id), name:String(r.display_name||r.telegram_id), username:String(r.username||""), photoUrl:String(r.photo_url||""), bestScore:Number(r.best_score||0), wallet:Number(r.wallet||0), treats:Number(r.treats||0), coffee:Number(r.coffee||0), createdAt:Number(r.created_at||0), updatedAt:Number(r.updated_at||0) }));
-    }
-    return { ok:true, segments:rows, selected:{ key:requested, title:PLAYER_SEGMENTS[requested], count:ids.length, players } };
-  }
-  return { ok:true, segments:rows, selected:null };
+  await ensureControlCenterV85Schema(env);
+  const requested=String(ctx.body?.segmentKey||"").trim();
+  const rows=await ownerV85Cached("segments:catalog",20000,()=>ownerV85SegmentCatalog(env,true));
+  if(!requested)return {ok:true,segments:rows,selected:null};
+  const title=await ownerV85SegmentTitle(env,requested);if(!title)return {ok:true,segments:rows,selected:null};
+  const previewIds=(await segmentPlayerIds(env,requested,80)).slice(0,80);let players=[];
+  if(previewIds.length){const q=previewIds.map(()=>"?").join(",");const result=await env.DB.prepare(`SELECT p.telegram_id,COALESCE(NULLIF(b.display_name,''),NULLIF(a.display_name,''),p.telegram_id) AS display_name,COALESCE(b.username,a.username,'') AS username,COALESCE(a.photo_url,'') AS photo_url,COALESCE(a.best_score,p.best_score,0) AS best_score,p.wallet,p.treats,p.coffee,p.created_at,p.updated_at FROM admin_profile_state p LEFT JOIN bot_subscribers b ON b.telegram_id=p.telegram_id LEFT JOIN leaderboard_all_time a ON a.telegram_id=p.telegram_id WHERE p.telegram_id IN (${q}) ORDER BY COALESCE(a.best_score,p.best_score,0) DESC,p.updated_at DESC`).bind(...previewIds).all();players=(result.results||[]).map(r=>({telegramId:String(r.telegram_id),name:String(r.display_name||r.telegram_id),username:String(r.username||""),photoUrl:String(r.photo_url||""),bestScore:Number(r.best_score||0),wallet:Number(r.wallet||0),treats:Number(r.treats||0),coffee:Number(r.coffee||0),createdAt:Number(r.created_at||0),updatedAt:Number(r.updated_at||0)}));}
+  const meta=rows.find(x=>x.key===requested)||{key:requested,title,count:previewIds.length,builtin:Boolean(PLAYER_SEGMENTS[requested])};
+  return {ok:true,segments:rows,selected:{...meta,count:Number(meta.count??previewIds.length),players}};
 }
 
 async function ownerPanelV8Campaigns(env, ctx) {
-  await Promise.all([ensureLiveOpsAdminSchema(env), ensureOperationsSecuritySchema(env)]);
-  const result = await env.DB.prepare(`SELECT c.*,
-    SUM(CASE WHEN COALESCE(r.delivered_at,0)>0 THEN 1 ELSE 0 END) AS delivered_count,
-    SUM(CASE WHEN r.status='failed' OR COALESCE(r.delivery_error,'')<>'' THEN 1 ELSE 0 END) AS recipient_errors,
-    SUM(CASE WHEN COALESCE(r.delivered_at,0)>0 AND (COALESCE(b.last_started_at,0)>r.delivered_at OR EXISTS(SELECT 1 FROM leaderboard_runs lr WHERE lr.telegram_id=r.telegram_id AND lr.accepted=1 AND lr.created_at>r.delivered_at)) THEN 1 ELSE 0 END) AS opened_count
-    FROM admin_campaigns c LEFT JOIN admin_campaign_recipients r ON r.campaign_id=c.campaign_id LEFT JOIN bot_subscribers b ON b.telegram_id=r.telegram_id
-    GROUP BY c.campaign_id ORDER BY c.created_at DESC LIMIT 40`).all();
-  return { ok:true, segments:Object.entries(PLAYER_SEGMENTS).map(([key,title])=>({key,title})), campaigns:(result.results||[]).map((r)=>({
-    id:String(r.campaign_id), title:String(r.title||""), segmentKey:String(r.segment_key||""), segmentTitle:PLAYER_SEGMENTS[String(r.segment_key)]||String(r.segment_key||""), rewardKind:String(r.reward_kind||"none"), rewardId:String(r.reward_id||""), amount:Number(r.amount||1), reason:String(r.reason||""), message:String(r.message_text||""), imageUrl:String(r.image_url||""), buttonText:String(r.button_text||""), buttonUrl:String(r.button_url||""), status:String(r.status||""), total:Number(r.total_count||0), delivered:Number(r.delivered_count||r.processed_count||0), failed:Number(r.recipient_errors||r.failed_count||0), opened:Number(r.opened_count||0), scheduledAt:Number(r.scheduled_at||0), createdAt:Number(r.created_at||0), completedAt:Number(r.completed_at||0)
-  })) };
+  await Promise.all([ensureLiveOpsAdminSchema(env),ensureControlCenterV85Schema(env)]);
+  const [result,segments]=await Promise.all([
+    env.DB.prepare(`SELECT c.*,SUM(CASE WHEN COALESCE(r.delivered_at,0)>0 THEN 1 ELSE 0 END) AS delivered_count,SUM(CASE WHEN r.status='failed' OR COALESCE(r.delivery_error,'')<>'' THEN 1 ELSE 0 END) AS recipient_errors,SUM(CASE WHEN COALESCE(r.delivered_at,0)>0 AND (COALESCE(b.last_started_at,0)>r.delivered_at OR EXISTS(SELECT 1 FROM leaderboard_runs lr WHERE lr.telegram_id=r.telegram_id AND lr.accepted=1 AND lr.created_at>r.delivered_at)) THEN 1 ELSE 0 END) AS opened_count FROM admin_campaigns c LEFT JOIN admin_campaign_recipients r ON r.campaign_id=c.campaign_id LEFT JOIN bot_subscribers b ON b.telegram_id=r.telegram_id GROUP BY c.campaign_id ORDER BY c.created_at DESC LIMIT 40`).all(),
+    ownerV85SegmentCatalog(env,false)
+  ]);
+  const titles=new Map(segments.map(x=>[x.key,x.title]));
+  return {ok:true,segments:segments.map(({key,title,builtin})=>({key,title,builtin})),campaigns:(result.results||[]).map(r=>({id:String(r.campaign_id),title:String(r.title||""),segmentKey:String(r.segment_key||""),segmentTitle:titles.get(String(r.segment_key))||String(r.segment_key||""),rewardKind:String(r.reward_kind||"none"),rewardId:String(r.reward_id||""),amount:Number(r.amount||1),reason:String(r.reason||""),message:String(r.message_text||""),imageUrl:String(r.image_url||""),buttonText:String(r.button_text||""),buttonUrl:String(r.button_url||""),status:String(r.status||""),total:Number(r.total_count||0),delivered:Number(r.delivered_count||r.processed_count||0),failed:Number(r.recipient_errors||r.failed_count||0),opened:Number(r.opened_count||0),scheduledAt:Number(r.scheduled_at||0),createdAt:Number(r.created_at||0),completedAt:Number(r.completed_at||0)}))};
 }
 
 async function ownerPanelV8CreateCampaign(env, ctx) {
-  await Promise.all([ensureLiveOpsAdminSchema(env), ensureOperationsSecuritySchema(env)]);
-  const segmentKey = String(ctx.body?.segmentKey || "").trim();
-  if (!PLAYER_SEGMENTS[segmentKey]) throw new ApiError(400, "Неизвестный сегмент игроков.");
-  const title = String(ctx.body?.title || "").trim().replace(/\s+/g," ").slice(0,120);
-  const message = String(ctx.body?.message || "").trim().slice(0,3500);
-  if (title.length < 3) throw new ApiError(400, "Укажите название кампании.");
-  if (!message) throw new ApiError(400, "Сообщение кампании не может быть пустым.");
-  const rewardKind = String(ctx.body?.rewardKind || "none").trim();
-  if (!["none","points","zefir","coffee","case"].includes(rewardKind)) throw new ApiError(400, "Неизвестный тип награды.");
-  let rewardId = "";
-  let amount = 1;
-  if (rewardKind === "case") {
-    rewardId = normalizeCaseType(ctx.body?.rewardId || "small");
-    if (!rewardId) throw new ApiError(400, "Неизвестный кейс.");
-    amount = ownerPanelInteger(ctx.body?.amount,1,10) || 1;
-  } else if (rewardKind !== "none") {
-    amount = ownerPanelInteger(ctx.body?.amount,1,rewardKind === "points" ? 1000000 : 5000) || 1;
-  }
-  const reason = String(ctx.body?.reason || title).trim().slice(0,300) || title;
-  const scheduledAt = Math.max(0, Math.floor(Number(ctx.body?.scheduledAt || 0)));
-  const now = Math.floor(Date.now()/1000);
-  if (scheduledAt && scheduledAt > now + 180*86400) throw new ApiError(400, "Кампанию нельзя планировать дальше чем на 180 дней.");
-  const imageUrl = ownerV8AssetPath(ctx.body?.imageUrl || "");
-  if (String(ctx.body?.imageUrl || "").trim() && !imageUrl) throw new ApiError(400, "Картинка должна быть HTTPS или локальным путём /assets/...");
-  const buttonText = String(ctx.body?.buttonText || "").trim().slice(0,60);
-  const rawButtonUrl = String(ctx.body?.buttonUrl || "").trim();
-  if (rawButtonUrl && !/^https:\/\//i.test(rawButtonUrl) && !rawButtonUrl.startsWith("/")) throw new ApiError(400, "Ссылка кнопки должна быть HTTPS или внутренним путём /...");
-  const data = { segmentKey, rewardKind, rewardId, amount };
-  const dryRun = await buildCampaignDryRun(env, data);
-  if (!dryRun.eligibleIds.length) throw new ApiError(409, "В выбранном сегменте нет подходящих игроков.");
-  const campaignId = caseGrantId("campaign");
-  await env.DB.prepare(`INSERT INTO admin_campaigns(campaign_id,title,segment_key,reward_kind,reward_id,amount,reason,message_text,status,created_by,created_by_name,report_chat_id,total_count,created_at,updated_at,scheduled_at,image_url,button_text,button_url) VALUES(?,?,?,?,?,?,?,?, 'pending',?,?,?,?,?,?,?,?,?,?)`)
-    .bind(campaignId,title,segmentKey,rewardKind,rewardId,amount,reason,message,String(ctx.user.id),telegramDisplayName(ctx.user),String(ctx.user.id),dryRun.eligibleIds.length,now,now,scheduledAt||now,imageUrl,buttonText,rawButtonUrl).run();
-  const statements = dryRun.eligibleIds.map((id)=>env.DB.prepare(`INSERT OR IGNORE INTO admin_campaign_recipients(campaign_id,telegram_id) VALUES(?,?)`).bind(campaignId,id));
-  for (let i=0;i<statements.length;i+=80) await env.DB.batch(statements.slice(i,i+80));
-  await Promise.all([
-    logStaffAction(env,ctx.user,ctx.access,"owner_panel_campaign_create",null,"campaign",null,dryRun.eligibleIds.length,{campaignId,title,segmentKey,rewardKind,rewardId,amount,scheduledAt:scheduledAt||now,imageUrl,buttonText,buttonUrl:rawButtonUrl,testersExcluded:dryRun.testersExcluded,blockedExcluded:dryRun.blockedExcluded}),
-    recordV67SettingChange(env,ctx.user,"campaign",campaignId,"create",{}, {title,segmentKey,rewardKind,rewardId,amount,scheduledAt:scheduledAt||now})
-  ]);
-  return { ok:true, campaignId, recipients:dryRun.eligibleIds.length, testersExcluded:dryRun.testersExcluded, blockedExcluded:dryRun.blockedExcluded };
+  await Promise.all([ensureLiveOpsAdminSchema(env),ensureControlCenterV85Schema(env)]);
+  const segmentKey=String(ctx.body?.segmentKey||"").trim();const segmentTitle=await ownerV85SegmentTitle(env,segmentKey);if(!segmentTitle)throw new ApiError(400,"Неизвестный сегмент игроков.");
+  const title=String(ctx.body?.title||"").trim().replace(/\s+/g," ").slice(0,120),message=String(ctx.body?.message||"").trim().slice(0,3500);if(title.length<3)throw new ApiError(400,"Укажите название кампании.");if(!message)throw new ApiError(400,"Сообщение кампании не может быть пустым.");
+  const rewardKind=String(ctx.body?.rewardKind||"none").trim();if(!["none","points","zefir","coffee","case"].includes(rewardKind))throw new ApiError(400,"Неизвестный тип награды.");let rewardId="",amount=1;if(rewardKind==="case"){rewardId=normalizeCaseType(ctx.body?.rewardId||"small");if(!rewardId)throw new ApiError(400,"Неизвестный кейс.");amount=ownerPanelInteger(ctx.body?.amount,1,10)||1;}else if(rewardKind!=="none")amount=ownerPanelInteger(ctx.body?.amount,1,rewardKind==="points"?1000000:5000)||1;
+  const reason=String(ctx.body?.reason||title).trim().slice(0,300)||title,scheduledAt=Math.max(0,Math.floor(Number(ctx.body?.scheduledAt||0))),now=Math.floor(Date.now()/1000);if(scheduledAt&&scheduledAt>now+180*86400)throw new ApiError(400,"Кампанию нельзя планировать дальше чем на 180 дней.");const imageUrl=ownerV8AssetPath(ctx.body?.imageUrl||"");if(String(ctx.body?.imageUrl||"").trim()&&!imageUrl)throw new ApiError(400,"Картинка должна быть HTTPS, /assets/... или /media/...");const buttonText=String(ctx.body?.buttonText||"").trim().slice(0,60),rawButtonUrl=String(ctx.body?.buttonUrl||"").trim();if(rawButtonUrl&&!/^https:\/\//i.test(rawButtonUrl)&&!rawButtonUrl.startsWith("/"))throw new ApiError(400,"Ссылка кнопки должна быть HTTPS или внутренним путём /...");
+  const dryRun=await buildCampaignDryRun(env,{segmentKey,rewardKind,rewardId,amount});if(!dryRun.eligibleIds.length)throw new ApiError(409,"В выбранном сегменте нет подходящих игроков.");const campaignId=await ownerV85CreateCampaignForIds(env,ctx.user,dryRun.eligibleIds,{title,segmentKey,rewardKind,rewardId,amount,reason,message,imageUrl,buttonText,buttonUrl:rawButtonUrl,scheduledAt:scheduledAt||now,reportChatId:String(ctx.user.id)});
+  await Promise.all([logStaffAction(env,ctx.user,ctx.access,"owner_panel_campaign_create",null,"campaign",null,dryRun.eligibleIds.length,{campaignId,title,segmentKey,segmentTitle,rewardKind,rewardId,amount,scheduledAt:scheduledAt||now,imageUrl,buttonText,buttonUrl:rawButtonUrl,testersExcluded:dryRun.testersExcluded,blockedExcluded:dryRun.blockedExcluded}),recordV67SettingChange(env,ctx.user,"campaign",campaignId,"create",{},{title,segmentKey,rewardKind,rewardId,amount,scheduledAt:scheduledAt||now})]);return {ok:true,campaignId,recipients:dryRun.eligibleIds.length,testersExcluded:dryRun.testersExcluded,blockedExcluded:dryRun.blockedExcluded};
 }
 
 async function ownerPanelV8CancelCampaign(env, ctx) {
@@ -23215,7 +23497,7 @@ async function ownerPanelV8UndoRedeem(env, ctx) {
   const code=compactCode(ctx.body?.code||"");const reward=await getRewardByCompact(code,env);if(!reward)throw new ApiError(404,"Код не найден.");const now=Math.floor(Date.now()/1000);if(String(reward.status)!=='used'||!reward.redeemed_at)throw new ApiError(409,"Код сейчас не находится в статусе погашенного.");const age=now-Number(reward.redeemed_at||0);if(age<0||age>REDEEM_UNDO_SECONDS)throw new ApiError(409,"Отмена доступна только в течение пяти минут после погашения.");if(Number(reward.expires_at||0)<=now)throw new ApiError(409,"Срок действия кода уже истёк.");const result=await env.DB.prepare(`UPDATE reward_codes SET status='active',redeemed_at=NULL,redeemed_by=NULL,redeemed_by_name=NULL WHERE code_compact=? AND status='used'`).bind(code).run();if(Number(result.meta?.changes||0)<1)throw new ApiError(409,"Состояние кода уже изменилось.");await logStaffAction(env,ctx.user,ctx.access,"undo_redeem",String(reward.owner_telegram_id||""),"reward",1,0,{code:reward.code,product:reward.product_name,previousRedeemedBy:reward.redeemed_by||"",source:"owner_v8"});return {ok:true};
 }
 
-async function ownerPanelV8CaseSimulate(env, ctx) {const caseType=normalizeCaseType(ctx.body?.caseType||"legendary");if(!caseType)throw new ApiError(400,"Неизвестный кейс.");const samples=Math.max(100,Math.min(100000,Math.floor(Number(ctx.body?.samples)||10000)));const result=await runCaseSimulation(env,caseType,samples);return {ok:true,result};}
+async function ownerPanelV8CaseSimulate(env, ctx) {const caseType=normalizeCaseType(ctx.body?.caseType||"legendary");if(!caseType)throw new ApiError(400,"Неизвестный кейс.");const rawSamples=Math.floor(Number(ctx.body?.samples));if(!Number.isFinite(rawSamples)||rawSamples<1||rawSamples>100000)throw new ApiError(400,"Количество открытий должно быть от 1 до 100 000.");const result=await runCaseSimulation(env,caseType,rawSamples);return {ok:true,result};}
 
 async function ownerPanelV8Safety(env, ctx) {
   await Promise.all([ensureOperationsSecuritySchema(env),ensureSafeControlCenterSchema(env),ensureV67Schema(env)]);const now=Math.floor(Date.now()/1000);await env.DB.prepare(`UPDATE dangerous_action_approvals SET status='expired',updated_at=? WHERE status='pending' AND expires_at<=?`).bind(now,now).run();const [snapshots,drafts,approvals,history,performance,cron]=await Promise.all([env.DB.prepare(`SELECT snapshot_id,snapshot_type,title,created_by,created_by_name,created_at,restored_at,restored_by,restore_status FROM config_snapshots ORDER BY created_at DESC LIMIT 40`).all(),env.DB.prepare(`SELECT id,entity_type,entity_id,title,base_json,draft_json,status,validation_json,created_by_name,created_at,updated_at,error_text FROM liveops_drafts ORDER BY updated_at DESC LIMIT 50`).all(),env.DB.prepare(`SELECT * FROM dangerous_action_approvals ORDER BY created_at DESC LIMIT 40`).all(),env.DB.prepare(`SELECT * FROM admin_setting_history ORDER BY created_at DESC,id DESC LIMIT 60`).all(),env.DB.prepare(`SELECT area,COUNT(*) AS samples,ROUND(AVG(duration_ms),1) AS avg_ms,MAX(duration_ms) AS max_ms,SUM(CASE WHEN success=0 THEN 1 ELSE 0 END) AS errors FROM admin_performance_samples WHERE created_at>=? GROUP BY area ORDER BY avg_ms DESC LIMIT 30`).bind(now-24*3600).all(),env.DB.prepare(`SELECT job_key,enabled,priority,interval_seconds,last_success_at,next_run_at,last_status,last_duration_ms,last_error FROM server_cron_jobs ORDER BY priority,job_key LIMIT 50`).all()]);return {ok:true,snapshots:(snapshots.results||[]).map(r=>({id:String(r.snapshot_id),type:String(r.snapshot_type||""),title:String(r.title||""),createdBy:String(r.created_by_name||r.created_by||""),createdAt:Number(r.created_at||0),restoredAt:Number(r.restored_at||0),restoreStatus:String(r.restore_status||"")})),drafts:(drafts.results||[]).map(r=>({id:Number(r.id),entityType:String(r.entity_type||""),entityId:String(r.entity_id||""),title:String(r.title||""),base:ownerV8SafeJson(r.base_json,{}),draft:ownerV8SafeJson(r.draft_json,{}),status:String(r.status||""),validation:ownerV8SafeJson(r.validation_json,{}),createdBy:String(r.created_by_name||""),createdAt:Number(r.created_at||0),updatedAt:Number(r.updated_at||0),error:String(r.error_text||"")})),approvals:(approvals.results||[]).map(r=>({id:Number(r.id),type:String(r.action_type||""),title:String(r.title||""),requestedBy:String(r.requested_by_name||r.requested_by||""),status:String(r.status||""),expiresAt:Number(r.expires_at||0),createdAt:Number(r.created_at||0),error:String(r.error_text||"")})),history:(history.results||[]).map(r=>({id:Number(r.id),group:String(r.setting_group||""),key:String(r.setting_key||""),action:String(r.action||""),old:ownerV8SafeJson(r.old_json,{}),next:ownerV8SafeJson(r.new_json,{}),actor:String(r.actor_name||r.actor_telegram_id||""),createdAt:Number(r.created_at||0)})),performance:(performance.results||[]).map(r=>({area:String(r.area||""),samples:Number(r.samples||0),avgMs:Number(r.avg_ms||0),maxMs:Number(r.max_ms||0),errors:Number(r.errors||0)})),cron:(cron.results||[]).map(r=>({key:String(r.job_key||""),title:String(r.job_key||""),enabled:Boolean(r.enabled),priority:Number(r.priority||0),interval:Number(r.interval_seconds||0),lastRunAt:Number(r.last_success_at||0),nextRunAt:Number(r.next_run_at||0),lastStatus:String(r.last_status||""),duration:Number(r.last_duration_ms||0),error:String(r.last_error||"")}))};
@@ -23456,10 +23738,688 @@ async function ownerPanelV8ToggleAutomation(env, ctx) {
 // ===================== /CONTROL CENTER v8 · OWNER WEB ======================
 
 
-async function handleOwnerPanelApi(request, env, path) {
+// ================= CONTROL CENTER v8.5 · OWNER OPERATIONS =================
+const V85_MONITOR_STATE_KEY = "cc:v85:monitor-config";
+const V85_SCHEMA_MARKER_KEY = "cc:v85:schema-ready:2";
+const V85_MONITOR_DEFAULTS = Object.freeze({ rewardFailed:1, rewardStaleMinutes:15, notificationFailed:3, cronFailures:1, cronStaleMinutes:20, slowMs:1200 });
+let controlCenterV85SchemaPromise = null;
+let ownerV85MemoryCache = new Map();
+
+async function ensureControlCenterV85Schema(env) {
+  if (!controlCenterV85SchemaPromise) {
+    controlCenterV85SchemaPromise = (async () => {
+      const marker = await getSystemState(env,V85_SCHEMA_MARKER_KEY).catch(()=>null);
+      if(marker?.value === "ready") return;
+      await Promise.all([
+        ensureSafeControlCenterSchema(env), ensureLiveOpsAdminSchema(env), ensureOperationsSecuritySchema(env),
+        ensureStaffOperationsSchema(env), ensureFeatureFlagsSchema(env), ensureV67Schema(env), ensureV77Schema(env)
+      ]);
+      await env.DB.batch([
+        env.DB.prepare(`CREATE TABLE IF NOT EXISTS saved_player_segments (segment_key TEXT PRIMARY KEY,title TEXT NOT NULL,description TEXT NOT NULL DEFAULT '',rules_json TEXT NOT NULL DEFAULT '{}',enabled INTEGER NOT NULL DEFAULT 1,created_by TEXT NOT NULL,created_by_name TEXT NOT NULL DEFAULT '',created_at INTEGER NOT NULL,updated_at INTEGER NOT NULL,updated_by TEXT NOT NULL DEFAULT '')`),
+        env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_saved_player_segments_enabled ON saved_player_segments(enabled,updated_at DESC)`),
+        env.DB.prepare(`CREATE TABLE IF NOT EXISTS ab_experiments (experiment_key TEXT PRIMARY KEY,title TEXT NOT NULL,description TEXT NOT NULL DEFAULT '',flag_key TEXT NOT NULL,variant_percent INTEGER NOT NULL DEFAULT 50,primary_metric TEXT NOT NULL DEFAULT 'runs',status TEXT NOT NULL DEFAULT 'draft',starts_at INTEGER NOT NULL DEFAULT 0,ends_at INTEGER NOT NULL DEFAULT 0,baseline_mode TEXT NOT NULL DEFAULT 'all',baseline_rollout INTEGER NOT NULL DEFAULT 100,winner TEXT NOT NULL DEFAULT '',created_by TEXT NOT NULL,created_by_name TEXT NOT NULL DEFAULT '',created_at INTEGER NOT NULL,updated_at INTEGER NOT NULL,updated_by TEXT NOT NULL DEFAULT '',completed_at INTEGER NOT NULL DEFAULT 0)`),
+        env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_ab_experiments_status ON ab_experiments(status,updated_at DESC)`),
+        env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_player_notes_active_v85 ON player_notes(telegram_id,deleted_at,created_at DESC)`),
+        env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_promo_redemptions_player_v85 ON promo_redemptions(telegram_id,created_at DESC)`),
+        env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_reward_queue_player_recent_v85 ON reward_delivery_queue(telegram_id,created_at DESC,status)`),
+        env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_campaign_recipients_player_v85 ON admin_campaign_recipients(telegram_id,status,processed_at DESC)`),
+        env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_fraud_alerts_player_recent_v85 ON fraud_alerts(telegram_id,created_at DESC,status)`),
+        env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_support_tickets_player_recent_v85 ON support_tickets(player_telegram_id,updated_at DESC,status)`),
+        env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_runs_player_recent_v85 ON leaderboard_runs(telegram_id,created_at DESC,accepted)`),
+        env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_pass_players_player_recent_v85 ON season_pass_players(telegram_id,updated_at DESC)`)
+      ]);
+      await setSystemState(env,V85_SCHEMA_MARKER_KEY,"ready");
+    })().catch((error) => { controlCenterV85SchemaPromise = null; throw error; });
+  }
+  return controlCenterV85SchemaPromise;
+}
+
+function ownerV85CacheInvalidate(prefix = "") {
+  if (!prefix) { ownerV85MemoryCache.clear(); return; }
+  for (const key of [...ownerV85MemoryCache.keys()]) if (key.startsWith(prefix)) ownerV85MemoryCache.delete(key);
+}
+async function ownerV85Cached(key, ttlMs, loader) {
+  const now = Date.now();
+  const cached = ownerV85MemoryCache.get(key);
+  if (cached?.value && cached.expiresAt > now) return cached.value;
+  if (cached?.promise) return cached.promise;
+  const promise = Promise.resolve().then(loader).then((value) => {
+    ownerV85MemoryCache.set(key, { value, expiresAt: Date.now() + Math.max(1000, ttlMs) });
+    return value;
+  }).catch((error) => { ownerV85MemoryCache.delete(key); throw error; });
+  ownerV85MemoryCache.set(key, { promise, expiresAt: now + Math.max(1000, ttlMs) });
+  return promise;
+}
+
+function ownerV85NormalizeSegmentRules(input = {}) {
+  const pickInt = (key, min, max) => {
+    const raw = Number(input?.[key]);
+    if (!Number.isFinite(raw) || raw <= 0) return 0;
+    return Math.max(min, Math.min(max, Math.floor(raw)));
+  };
+  const enumValue = (key, values, fallback = "any") => values.includes(String(input?.[key] || "")) ? String(input[key]) : fallback;
+  return {
+    activeWithinDays: pickInt("activeWithinDays", 1, 365),
+    inactiveForDays: pickInt("inactiveForDays", 1, 365),
+    minRuns7d: pickInt("minRuns7d", 1, 10000),
+    minRecord: pickInt("minRecord", 1, 1000000000),
+    purchase: enumValue("purchase", ["any","yes","no"]),
+    premium: enumValue("premium", ["any","none","elite","elite_plus"]),
+    promo: enumValue("promo", ["any","yes","no"]),
+    passComplete: enumValue("passComplete", ["any","yes","no"]),
+    banned: enumValue("banned", ["any","yes","no"])
+  };
+}
+
+function ownerV85CustomSegmentSql(rules, countOnly = false) {
+  const now = Math.floor(Date.now() / 1000);
+  const r = ownerV85NormalizeSegmentRules(rules);
+  const conditions = ["1=1"];
+  const binds = [];
+  if (r.activeWithinDays) { conditions.push(`EXISTS(SELECT 1 FROM leaderboard_runs lr WHERE lr.telegram_id=p.telegram_id AND lr.accepted=1 AND lr.created_at>=?)`); binds.push(now-r.activeWithinDays*86400); }
+  if (r.inactiveForDays) { conditions.push(`NOT EXISTS(SELECT 1 FROM leaderboard_runs lr WHERE lr.telegram_id=p.telegram_id AND lr.accepted=1 AND lr.created_at>=?)`); binds.push(now-r.inactiveForDays*86400); }
+  if (r.minRuns7d) { conditions.push(`(SELECT COUNT(*) FROM leaderboard_runs lr WHERE lr.telegram_id=p.telegram_id AND lr.accepted=1 AND lr.created_at>=?)>=?`); binds.push(now-7*86400,r.minRuns7d); }
+  if (r.minRecord) { conditions.push(`COALESCE((SELECT la.best_score FROM leaderboard_all_time la WHERE la.telegram_id=p.telegram_id),p.best_score,0)>=?`); binds.push(r.minRecord); }
+  const purchaseExists = `EXISTS(SELECT 1 FROM granted_cases g WHERE g.telegram_id=p.telegram_id AND g.granted_by='shop') OR EXISTS(SELECT 1 FROM shop_stock_consumptions sc WHERE sc.telegram_id=p.telegram_id AND sc.category='skins')`;
+  if (r.purchase === "yes") conditions.push(`(${purchaseExists})`);
+  if (r.purchase === "no") conditions.push(`NOT (${purchaseExists})`);
+  if (r.premium !== "any") {
+    const expr = `(SELECT spp.premium_tier FROM season_pass_players spp WHERE spp.telegram_id=p.telegram_id ORDER BY spp.updated_at DESC LIMIT 1)`;
+    conditions.push(r.premium === "none" ? `COALESCE(${expr},'none')='none'` : `${expr}=?`);
+    if (r.premium !== "none") binds.push(r.premium);
+  }
+  if (r.promo === "yes") conditions.push(`EXISTS(SELECT 1 FROM promo_redemptions pr WHERE pr.telegram_id=p.telegram_id AND pr.status IN ('queued','delivered'))`);
+  if (r.promo === "no") conditions.push(`NOT EXISTS(SELECT 1 FROM promo_redemptions pr WHERE pr.telegram_id=p.telegram_id AND pr.status IN ('queued','delivered'))`);
+  if (r.passComplete !== "any") {
+    const threshold = seasonPassXpForLevel(50);
+    const expr = `EXISTS(SELECT 1 FROM season_pass_players spp WHERE spp.telegram_id=p.telegram_id AND spp.xp>=?)`;
+    conditions.push(r.passComplete === "yes" ? expr : `NOT ${expr}`); binds.push(threshold);
+  }
+  if (r.banned === "yes") conditions.push(`EXISTS(SELECT 1 FROM player_admin_controls pc WHERE pc.telegram_id=p.telegram_id AND pc.blocked=1)`);
+  if (r.banned === "no") conditions.push(`NOT EXISTS(SELECT 1 FROM player_admin_controls pc WHERE pc.telegram_id=p.telegram_id AND pc.blocked=1)`);
+  return { sql: countOnly ? `SELECT COUNT(*) AS count FROM admin_profile_state p WHERE ${conditions.join(" AND ")}` : `SELECT p.telegram_id FROM admin_profile_state p WHERE ${conditions.join(" AND ")} ORDER BY p.updated_at DESC`, binds, rules:r };
+}
+
+async function ownerV85BuiltInSegmentCount(env, key) {
+  const now=Math.floor(Date.now()/1000),day=moscowDayStartUnix();
+  let sql="",binds=[];
+  if(key==="new_today"){sql=`SELECT COUNT(*) AS count FROM admin_profile_state WHERE created_at>=?`;binds=[day];}
+  else if(key==="active_today"){sql=`SELECT COUNT(DISTINCT telegram_id) AS count FROM leaderboard_runs WHERE accepted=1 AND created_at>=?`;binds=[day];}
+  else if(key==="returning_today"){sql=`SELECT COUNT(DISTINCT r.telegram_id) AS count FROM leaderboard_runs r JOIN admin_profile_state p ON p.telegram_id=r.telegram_id WHERE r.accepted=1 AND r.created_at>=? AND p.created_at<?`;binds=[day,day];}
+  else if(key==="active_7d"){sql=`SELECT COUNT(DISTINCT telegram_id) AS count FROM leaderboard_runs WHERE accepted=1 AND created_at>=?`;binds=[now-7*86400];}
+  else if(key==="inactive_7d"){sql=`SELECT COUNT(*) AS count FROM admin_profile_state WHERE updated_at<=?`;binds=[now-7*86400];}
+  else if(key==="top_10"){sql=`SELECT COUNT(*) AS count FROM (SELECT telegram_id FROM leaderboard_all_time WHERE hidden=0 ORDER BY best_score DESC,achieved_at ASC LIMIT 10)`;}
+  else if(key==="elite"||key==="elite_plus"){sql=`SELECT COUNT(*) AS count FROM season_pass_players WHERE premium_tier=? AND season_id=(SELECT season_id FROM season_pass_seasons WHERE starts_at<=? AND ends_at>? ORDER BY starts_at DESC LIMIT 1)`;binds=[key,now,now];}
+  else if(key==="legendary_openers"){sql=`SELECT COUNT(DISTINCT telegram_id) AS count FROM granted_cases WHERE case_type='legendary' AND status='opened'`;}
+  else if(key==="physical_winners"){sql=`SELECT COUNT(DISTINCT owner_telegram_id) AS count FROM reward_codes WHERE owner_telegram_id<>''`;}
+  else if(key==="no_purchases"){sql=`SELECT COUNT(*) AS count FROM admin_profile_state p WHERE NOT EXISTS(SELECT 1 FROM granted_cases g WHERE g.telegram_id=p.telegram_id AND g.granted_by='shop') AND NOT EXISTS(SELECT 1 FROM shop_stock_consumptions sc WHERE sc.telegram_id=p.telegram_id AND sc.category='skins')`;}
+  else if(key==="high_play_no_purchase"){sql=`SELECT COUNT(*) AS count FROM (SELECT r.telegram_id FROM leaderboard_runs r WHERE r.accepted=1 AND r.created_at>=? AND NOT EXISTS(SELECT 1 FROM granted_cases g WHERE g.telegram_id=r.telegram_id AND g.granted_by='shop') AND NOT EXISTS(SELECT 1 FROM shop_stock_consumptions sc WHERE sc.telegram_id=r.telegram_id AND sc.category='skins') GROUP BY r.telegram_id HAVING COUNT(*)>=10)`;binds=[now-7*86400];}
+  else if(key==="promo_redeemers"){sql=`SELECT COUNT(DISTINCT telegram_id) AS count FROM promo_redemptions WHERE status IN ('queued','delivered')`;}
+  else if(key==="pass_complete"){sql=`SELECT COUNT(DISTINCT telegram_id) AS count FROM season_pass_players WHERE xp>=?`;binds=[seasonPassXpForLevel(50)];}
+  else if(key==="banned"){sql=`SELECT COUNT(*) AS count FROM player_admin_controls WHERE blocked=1`;}
+  else return 0;
+  let stmt=env.DB.prepare(sql);if(binds.length)stmt=stmt.bind(...binds);const row=await stmt.first();return Number(row?.count||0);
+}
+
+async function ownerV85SavedSegment(env, key) {
+  await ensureControlCenterV85Schema(env);
+  return env.DB.prepare(`SELECT * FROM saved_player_segments WHERE segment_key=? AND enabled=1 LIMIT 1`).bind(String(key)).first();
+}
+async function ownerV85CustomSegmentPlayerIds(env, key, limit = 10000) {
+  const row = await ownerV85SavedSegment(env,key); if (!row) return [];
+  const query = ownerV85CustomSegmentSql(ownerV8SafeJson(row.rules_json,{}),false);
+  const max = Math.max(1,Math.min(10000,Number(limit)||10000));
+  const result = await env.DB.prepare(`${query.sql} LIMIT ?`).bind(...query.binds,max).all();
+  return [...new Set((result.results||[]).map((x)=>String(x.telegram_id||"")).filter(Boolean))];
+}
+async function ownerV85SegmentTitle(env,key) {
+  if (PLAYER_SEGMENTS[key]) return PLAYER_SEGMENTS[key];
+  const row = await ownerV85SavedSegment(env,key); return row ? String(row.title||key) : "";
+}
+async function ownerV85SegmentCatalog(env, withCounts = true) {
+  await ensureControlCenterV85Schema(env);
+  const builtins = Object.entries(PLAYER_SEGMENTS).map(([key,title])=>({key,title,builtin:true,count:0}));
+  if (withCounts) await Promise.all(builtins.map(async(row)=>{row.count=await ownerV85BuiltInSegmentCount(env,row.key);}));
+  const customRows=(await env.DB.prepare(`SELECT * FROM saved_player_segments WHERE enabled=1 ORDER BY updated_at DESC,title LIMIT 100`).all()).results||[];
+  const custom=customRows.map((row)=>({key:String(row.segment_key),title:String(row.title),description:String(row.description||""),rules:ownerV8SafeJson(row.rules_json,{}),builtin:false,updatedAt:Number(row.updated_at||0),count:0}));
+  if(withCounts) await Promise.all(custom.map(async(item)=>{const q=ownerV85CustomSegmentSql(item.rules,true);const c=await env.DB.prepare(q.sql).bind(...q.binds).first();item.count=Number(c?.count||0);}));
+  return [...builtins,...custom];
+}
+
+async function ownerPanelV85SegmentSave(env,ctx) {
+  await ensureControlCenterV85Schema(env);
+  const title=String(ctx.body?.title||"").trim().replace(/\s+/g," ").slice(0,100); if(title.length<2)throw new ApiError(400,"Укажите название сегмента.");
+  const description=String(ctx.body?.description||"").trim().slice(0,300); const rules=ownerV85NormalizeSegmentRules(ctx.body?.rules||{});
+  if(!Object.values(rules).some((v)=>v&&v!=="any"&&v!==0))throw new ApiError(400,"Добавьте хотя бы одно условие сегмента.");
+  let key=String(ctx.body?.segmentKey||"").trim(); if(key&&PLAYER_SEGMENTS[key])throw new ApiError(409,"Системный сегмент нельзя перезаписать.");
+  const now=Math.floor(Date.now()/1000); if(!key)key=`custom_${Date.now().toString(36)}_${Math.random().toString(36).slice(2,7)}`;
+  const before=await env.DB.prepare(`SELECT * FROM saved_player_segments WHERE segment_key=? LIMIT 1`).bind(key).first();
+  await env.DB.prepare(`INSERT INTO saved_player_segments(segment_key,title,description,rules_json,enabled,created_by,created_by_name,created_at,updated_at,updated_by) VALUES(?,?,?,?,1,?,?,?,?,?) ON CONFLICT(segment_key) DO UPDATE SET title=excluded.title,description=excluded.description,rules_json=excluded.rules_json,enabled=1,updated_at=excluded.updated_at,updated_by=excluded.updated_by`).bind(key,title,description,JSON.stringify(rules),String(ctx.user.id),telegramDisplayName(ctx.user),before?.created_at||now,now,String(ctx.user.id)).run();
+  ownerV85CacheInvalidate("segments");
+  await logStaffAction(env,ctx.user,ctx.access,before?"owner_panel_segment_update":"owner_panel_segment_create",null,"segment",null,null,{segmentKey:key,title,rules});
+  return {ok:true,segmentKey:key,title,rules};
+}
+async function ownerPanelV85SegmentDelete(env,ctx) {
+  await ensureControlCenterV85Schema(env); const key=String(ctx.body?.segmentKey||"").trim(); if(PLAYER_SEGMENTS[key])throw new ApiError(409,"Системный сегмент удалить нельзя.");
+  const row=await env.DB.prepare(`SELECT * FROM saved_player_segments WHERE segment_key=? LIMIT 1`).bind(key).first(); if(!row)throw new ApiError(404,"Сегмент не найден.");
+  await env.DB.prepare(`UPDATE saved_player_segments SET enabled=0,updated_at=?,updated_by=? WHERE segment_key=?`).bind(Math.floor(Date.now()/1000),String(ctx.user.id),key).run(); ownerV85CacheInvalidate("segments");
+  await logStaffAction(env,ctx.user,ctx.access,"owner_panel_segment_delete",null,"segment",1,0,{segmentKey:key,title:String(row.title||key)}); return {ok:true};
+}
+async function ownerPanelV85SegmentPreview(env,ctx) {
+  await ensureControlCenterV85Schema(env);
+  const key=String(ctx.body?.segmentKey||"").trim();
+  const hasDraftRules=ctx.body?.rules&&typeof ctx.body.rules==="object";
+  let title=String(ctx.body?.title||"Новый сегмент").trim().slice(0,100)||"Новый сегмент",count=0,sampleIds=[];
+  if(hasDraftRules){
+    const rules=ownerV85NormalizeSegmentRules(ctx.body.rules);
+    if(!Object.values(rules).some((v)=>v&&v!=="any"&&v!==0))throw new ApiError(400,"Добавьте хотя бы одно условие сегмента.");
+    const countQuery=ownerV85CustomSegmentSql(rules,true);
+    const countRow=await env.DB.prepare(countQuery.sql).bind(...countQuery.binds).first();
+    count=Number(countRow?.count||0);
+    const sampleQuery=ownerV85CustomSegmentSql(rules,false);
+    const sample=await env.DB.prepare(`${sampleQuery.sql} LIMIT 30`).bind(...sampleQuery.binds).all();
+    sampleIds=(sample.results||[]).map(r=>String(r.telegram_id||"")).filter(Boolean);
+  }else{
+    title=await ownerV85SegmentTitle(env,key); if(!title)throw new ApiError(404,"Сегмент не найден.");
+    if(PLAYER_SEGMENTS[key]){count=await ownerV85BuiltInSegmentCount(env,key);sampleIds=(await segmentPlayerIds(env,key,30)).slice(0,30);}
+    else{
+      const row=await ownerV85SavedSegment(env,key);if(!row)throw new ApiError(404,"Сегмент не найден.");
+      const rules=ownerV8SafeJson(row.rules_json,{}),countQuery=ownerV85CustomSegmentSql(rules,true),sampleQuery=ownerV85CustomSegmentSql(rules,false);
+      const [countRow,sample]=await Promise.all([env.DB.prepare(countQuery.sql).bind(...countQuery.binds).first(),env.DB.prepare(`${sampleQuery.sql} LIMIT 30`).bind(...sampleQuery.binds).all()]);
+      count=Number(countRow?.count||0);sampleIds=(sample.results||[]).map(r=>String(r.telegram_id||"")).filter(Boolean);
+    }
+  }
+  let players=[];
+  if(sampleIds.length){const q=sampleIds.map(()=>"?").join(",");const res=await env.DB.prepare(`SELECT p.telegram_id,COALESCE(NULLIF(b.display_name,''),NULLIF(a.display_name,''),p.telegram_id) AS display_name,COALESCE(b.username,a.username,'') AS username,COALESCE(a.photo_url,'') AS photo_url,COALESCE(a.best_score,p.best_score,0) AS best_score FROM admin_profile_state p LEFT JOIN bot_subscribers b ON b.telegram_id=p.telegram_id LEFT JOIN leaderboard_all_time a ON a.telegram_id=p.telegram_id WHERE p.telegram_id IN (${q}) ORDER BY COALESCE(a.best_score,p.best_score,0) DESC`).bind(...sampleIds).all();players=(res.results||[]).map(r=>({telegramId:String(r.telegram_id),name:String(r.display_name||r.telegram_id),username:String(r.username||""),photoUrl:String(r.photo_url||""),bestScore:Number(r.best_score||0)}));}
+  return {ok:true,key:key||"draft",title,count,players};
+}
+
+async function ownerPanelV85Player360(env,ctx){
+  await ensureControlCenterV85Schema(env);const telegramId=String(ctx.body?.telegramId||"").trim();if(!/^\d{4,20}$/.test(telegramId))throw new ApiError(400,"Некорректный Telegram ID.");
+  const exists=await env.DB.prepare(`SELECT telegram_id FROM admin_profile_state WHERE telegram_id=? LIMIT 1`).bind(telegramId).first();if(!exists)throw new ApiError(404,"Игрок не найден.");
+  const now=Math.floor(Date.now()/1000),week=now-7*86400;
+  const [runStats,cases,purchases,promos,physical,rewardQueue,campaigns,notifications,tickets,fraud,notes,timeline,moderation,moderationHistory] = await Promise.all([
+    env.DB.prepare(`SELECT COUNT(*) AS total,SUM(CASE WHEN accepted=1 THEN 1 ELSE 0 END) AS accepted,SUM(CASE WHEN accepted=0 THEN 1 ELSE 0 END) AS rejected,ROUND(AVG(CASE WHEN accepted=1 THEN score END),1) AS avg_score,MAX(created_at) AS last_run,MIN(created_at) AS first_run,SUM(CASE WHEN accepted=1 AND created_at>=? THEN 1 ELSE 0 END) AS runs7 FROM leaderboard_runs WHERE telegram_id=?`).bind(week,telegramId).first(),
+    env.DB.prepare(`SELECT (SELECT COUNT(*) FROM level_case_openings WHERE telegram_id=?)+(SELECT COUNT(*) FROM granted_cases WHERE telegram_id=? AND status='opened') AS opened`).bind(telegramId,telegramId).first(),
+    env.DB.prepare(`SELECT (SELECT COUNT(*) FROM granted_cases WHERE telegram_id=? AND granted_by='shop')+(SELECT COUNT(*) FROM shop_stock_consumptions WHERE telegram_id=? AND category='skins') AS count`).bind(telegramId,telegramId).first(),
+    env.DB.prepare(`SELECT code,status,created_at FROM promo_redemptions WHERE telegram_id=? ORDER BY created_at DESC LIMIT 12`).bind(telegramId).all(),
+    env.DB.prepare(`SELECT code,product_id,product_name,status,created_at,redeemed_at FROM reward_codes WHERE owner_telegram_id=? ORDER BY created_at DESC LIMIT 12`).bind(telegramId).all(),
+    env.DB.prepare(`SELECT id,source_type,source_id,reward_kind,reward_id,amount,reason,status,attempts,last_error,created_at,delivered_at,claimed_at FROM reward_delivery_queue WHERE telegram_id=? ORDER BY created_at DESC LIMIT 20`).bind(telegramId).all(),
+    env.DB.prepare(`SELECT r.campaign_id,r.status,r.processed_at,r.delivered_at,r.delivery_error,c.title,c.created_at FROM admin_campaign_recipients r JOIN admin_campaigns c ON c.campaign_id=r.campaign_id WHERE r.telegram_id=? ORDER BY c.created_at DESC LIMIT 12`).bind(telegramId).all(),
+    env.DB.prepare(`SELECT category,sent_at FROM player_notification_log WHERE telegram_id=? ORDER BY sent_at DESC LIMIT 20`).bind(telegramId).all(),
+    env.DB.prepare(`SELECT id,category,description,status,resolution,created_at,updated_at,closed_at FROM support_tickets WHERE player_telegram_id=? ORDER BY updated_at DESC LIMIT 12`).bind(telegramId).all(),
+    env.DB.prepare(`SELECT id,alert_type,severity,title,status,resolution,created_at,updated_at FROM fraud_alerts WHERE telegram_id=? ORDER BY created_at DESC LIMIT 12`).bind(telegramId).all(),
+    env.DB.prepare(`SELECT id,note_text,created_by,created_by_name,created_at FROM player_notes WHERE telegram_id=? AND deleted_at=0 ORDER BY created_at DESC LIMIT 30`).bind(telegramId).all(),
+    env.DB.prepare(`SELECT id,event_type,title,details_json,source_id,actor_name,created_at FROM player_timeline_events WHERE telegram_id=? ORDER BY created_at DESC,id DESC LIMIT 40`).bind(telegramId).all(),
+    getPlayerAdminControl(telegramId,env),
+    env.DB.prepare(`SELECT id,action,reason,actor_name,created_at,block_type,blocked_until FROM player_moderation_history WHERE telegram_id=? ORDER BY created_at DESC LIMIT 20`).bind(telegramId).all()
+  ]);
+  return {ok:true,telegramId,stats:{runs:Number(runStats?.total||0),accepted:Number(runStats?.accepted||0),rejected:Number(runStats?.rejected||0),runs7:Number(runStats?.runs7||0),avgScore:Number(runStats?.avg_score||0),firstRunAt:Number(runStats?.first_run||0),lastRunAt:Number(runStats?.last_run||0),casesOpened:Number(cases?.opened||0),purchases:Number(purchases?.count||0),promoUses:(promos.results||[]).length,physicalRewards:(physical.results||[]).length},promos:(promos.results||[]).map(r=>({code:String(r.code||""),status:String(r.status||""),createdAt:Number(r.created_at||0)})),physical:(physical.results||[]).map(r=>({code:String(r.code||""),productId:String(r.product_id||""),productName:String(r.product_name||""),status:String(r.status||""),createdAt:Number(r.created_at||0),redeemedAt:Number(r.redeemed_at||0)})),rewards:(rewardQueue.results||[]).map(r=>({id:Number(r.id||0),sourceType:String(r.source_type||""),sourceId:String(r.source_id||""),kind:String(r.reward_kind||""),rewardId:String(r.reward_id||""),amount:Number(r.amount||0),reason:String(r.reason||""),status:String(r.status||""),attempts:Number(r.attempts||0),error:String(r.last_error||""),createdAt:Number(r.created_at||0),deliveredAt:Number(r.delivered_at||0),claimedAt:Number(r.claimed_at||0)})),campaigns:(campaigns.results||[]).map(r=>({id:String(r.campaign_id||""),title:String(r.title||""),status:String(r.status||""),processedAt:Number(r.processed_at||0),deliveredAt:Number(r.delivered_at||0),error:String(r.delivery_error||""),createdAt:Number(r.created_at||0)})),notifications:(notifications.results||[]).map(r=>({category:String(r.category||""),sentAt:Number(r.sent_at||0)})),tickets:(tickets.results||[]).map(r=>({id:Number(r.id||0),category:String(r.category||""),description:String(r.description||""),status:String(r.status||""),resolution:String(r.resolution||""),createdAt:Number(r.created_at||0),updatedAt:Number(r.updated_at||0),closedAt:Number(r.closed_at||0)})),fraud:(fraud.results||[]).map(r=>({id:Number(r.id||0),type:String(r.alert_type||""),severity:String(r.severity||""),title:String(r.title||""),status:String(r.status||""),resolution:String(r.resolution||""),createdAt:Number(r.created_at||0),updatedAt:Number(r.updated_at||0)})),notes:(notes.results||[]).map(r=>({id:Number(r.id||0),text:String(r.note_text||""),createdBy:String(r.created_by_name||r.created_by||""),createdAt:Number(r.created_at||0)})),timeline:(timeline.results||[]).map(r=>({id:Number(r.id||0),type:String(r.event_type||""),title:String(r.title||""),details:ownerV8SafeJson(r.details_json,{}),sourceId:String(r.source_id||""),actor:String(r.actor_name||""),createdAt:Number(r.created_at||0)})),moderation:{blocked:Boolean(moderation?.blocked),reason:String(moderation?.blockReason||""),type:String(moderation?.blockType||""),until:Number(moderation?.blockedUntil||0)},moderationHistory:(moderationHistory.results||[]).map(r=>({id:Number(r.id||0),action:String(r.action||""),reason:String(r.reason||""),actor:String(r.actor_name||""),createdAt:Number(r.created_at||0),blockType:String(r.block_type||""),blockedUntil:Number(r.blocked_until||0)}))};
+}
+async function ownerPanelV85PlayerNoteSave(env,ctx){await ensureControlCenterV85Schema(env);const id=String(ctx.body?.telegramId||"").trim(),text=String(ctx.body?.text||"").trim().slice(0,1200);if(!/^\d{4,20}$/.test(id)||text.length<2)throw new ApiError(400,"Выберите игрока и укажите заметку.");const now=Math.floor(Date.now()/1000);const result=await env.DB.prepare(`INSERT INTO player_notes(telegram_id,note_text,created_by,created_by_name,created_at,deleted_at,deleted_by) VALUES(?,?,?,?,?,0,'')`).bind(id,text,String(ctx.user.id),telegramDisplayName(ctx.user),now).run();await logStaffAction(env,ctx.user,ctx.access,"owner_panel_player_note",id,"player_note",null,Number(result.meta?.last_row_id||0),{text});return {ok:true,id:Number(result.meta?.last_row_id||0)};}
+async function ownerPanelV85PlayerNoteDelete(env,ctx){await ensureControlCenterV85Schema(env);const noteId=ownerPanelInteger(ctx.body?.noteId,1,999999999);if(noteId==null)throw new ApiError(400,"Некорректная заметка.");const row=await env.DB.prepare(`SELECT * FROM player_notes WHERE id=? AND deleted_at=0 LIMIT 1`).bind(noteId).first();if(!row)throw new ApiError(404,"Заметка не найдена.");await env.DB.prepare(`UPDATE player_notes SET deleted_at=?,deleted_by=? WHERE id=? AND deleted_at=0`).bind(Math.floor(Date.now()/1000),String(ctx.user.id),noteId).run();await logStaffAction(env,ctx.user,ctx.access,"owner_panel_player_note_delete",String(row.telegram_id),"player_note",noteId,null,{});return {ok:true};}
+
+async function ownerV85CreateCampaignForIds(env, actor, ids, spec={}) {
+  await ensureLiveOpsAdminSchema(env);
+  const cleanIds=[...new Set((ids||[]).map(x=>String(x||"").trim()).filter(Boolean))];
+  if(!cleanIds.length) throw new ApiError(409,"Нет получателей.");
+  const now=Math.floor(Date.now()/1000),campaignId=caseGrantId("campaign");
+  await env.DB.prepare(`INSERT INTO admin_campaigns(campaign_id,title,segment_key,reward_kind,reward_id,amount,reason,message_text,image_url,button_text,button_url,scheduled_at,status,created_by,created_by_name,report_chat_id,total_count,processed_count,failed_count,created_at,started_at,completed_at,updated_at,lease_token,lease_until) VALUES(?,?,?,?,?,?,?,?,?,?,?,?, 'pending',?,?,?,?,0,0,?,0,0,?,'',0)`).bind(
+    campaignId,String(spec.title||"Компенсация").slice(0,120),String(spec.segmentKey||"direct").slice(0,120),String(spec.rewardKind||"none"),String(spec.rewardId||""),Math.max(1,Math.floor(Number(spec.amount||1))),String(spec.reason||"").slice(0,300),String(spec.message||"").slice(0,2500),String(spec.imageUrl||"").slice(0,1000),String(spec.buttonText||"").slice(0,60),String(spec.buttonUrl||"").slice(0,1000),Math.max(0,Math.floor(Number(spec.scheduledAt||0))),String(actor?.id||"owner"),telegramDisplayName(actor||{}),String(spec.reportChatId||actor?.id||""),cleanIds.length,now,now
+  ).run();
+  const statements=cleanIds.map(id=>env.DB.prepare(`INSERT OR IGNORE INTO admin_campaign_recipients(campaign_id,telegram_id) VALUES(?,?)`).bind(campaignId,id));
+  for(let i=0;i<statements.length;i+=80) await env.DB.batch(statements.slice(i,i+80));
+  return campaignId;
+}
+
+async function ownerV85QueueCompensationCampaigns(env, actor, ids, data={}) {
+  const rewards=Array.isArray(data.rewards)?data.rewards.filter(Boolean):[];
+  const jobs=rewards.length?rewards:[{kind:"none",amount:1}];
+  const campaignIds=[];
+  for(let index=0;index<jobs.length;index+=1){
+    const reward=jobs[index]||{};const rawKind=String(reward.kind||"none");
+    if(rawKind==="physical_restore") throw new ApiError(409,"Шаблон восстановления физической награды требует ручной проверки и не может быть выдан массово.");
+    const kind=rawKind==="treats"?"zefir":rawKind;
+    if(!["none","points","zefir","coffee","case"].includes(kind)) throw new ApiError(400,`Неподдерживаемая награда: ${rawKind}`);
+    const message=index===0?String(data.message||""):"__CC_SILENT__";
+    const campaignId=await ownerV85CreateCampaignForIds(env,actor,ids,{
+      title:`Компенсация: ${String(data.templateTitle||"Без шаблона").slice(0,90)}${jobs.length>1?` · ${index+1}/${jobs.length}`:""}`,
+      segmentKey:data.segmentKey||"direct",rewardKind:kind,rewardId:String(reward.id||reward.rewardId||""),amount:Math.max(1,Math.floor(Number(reward.amount||1))),reason:data.reason||"Компенсация",message,
+      reportChatId:data.reportChatId||actor?.id||""
+    });
+    campaignIds.push(campaignId);
+  }
+  return campaignIds;
+}
+
+async function ownerPanelV85Compensations(env,ctx){
+  await ensureControlCenterV85Schema(env);const [templates,segments,queue,campaigns,notifyQueue]=await Promise.all([
+    env.DB.prepare(`SELECT * FROM compensation_templates WHERE enabled=1 ORDER BY template_id`).all(),ownerV85SegmentCatalog(env,false),
+    env.DB.prepare(`SELECT status,COUNT(*) AS count FROM reward_delivery_queue WHERE source_type IN ('compensation','campaign') AND created_at>=? GROUP BY status`).bind(Math.floor(Date.now()/1000)-7*86400).all(),
+    env.DB.prepare(`SELECT campaign_id,title,status,total_count,processed_count,failed_count,created_at,completed_at FROM admin_campaigns WHERE title LIKE 'Компенсация:%' ORDER BY created_at DESC LIMIT 24`).all(),
+    env.DB.prepare(`SELECT status,COUNT(*) AS count FROM player_notification_queue GROUP BY status`).all().catch(()=>({results:[]}))
+  ]);
+  const mappedTemplates=(templates.results||[]).filter(r=>!ownerV8SafeJson(r.rewards_json,[]).some(x=>String(x?.kind)==='physical_restore')).map(r=>({id:String(r.template_id),title:String(r.title),description:String(r.description||""),rewards:ownerV8SafeJson(r.rewards_json,[])}));
+  mappedTemplates.unshift({id:"__message__",title:"Только уведомление",description:"Сообщение без игровой награды",rewards:[]});
+  return {ok:true,templates:mappedTemplates,segments,queue:(queue.results||[]).map(r=>({status:String(r.status),count:Number(r.count||0)})),notificationQueue:(notifyQueue.results||[]).map(r=>({status:String(r.status),count:Number(r.count||0)})),recent:(campaigns.results||[]).map(r=>({id:String(r.campaign_id),title:String(r.title||""),status:String(r.status||""),total:Number(r.total_count||0),processed:Number(r.processed_count||0),failed:Number(r.failed_count||0),createdAt:Number(r.created_at||0),completedAt:Number(r.completed_at||0)}))};
+}
+async function ownerPanelV85CompensationPreview(env,ctx){const target=String(ctx.body?.target||"segment");if(target==="player"){const id=String(ctx.body?.telegramId||"").trim();if(!/^\d{4,20}$/.test(id)||!(await playerProfileExists(id,env)))throw new ApiError(404,"Игрок не найден.");return {ok:true,count:1,players:[{telegramId:id,name:await playerDisplayNameById(id,env)}]};}return ownerPanelV85SegmentPreview(env,ctx);}
+async function ownerPanelV85CompensationSend(env,ctx){
+  await ensureControlCenterV85Schema(env);const templateId=String(ctx.body?.templateId||"").trim();let template=null,rewards=[];
+  if(templateId==="__message__"){template={template_id:"__message__",title:"Уведомление"};rewards=[];}else{template=await env.DB.prepare(`SELECT * FROM compensation_templates WHERE template_id=? AND enabled=1 LIMIT 1`).bind(templateId).first();if(!template)throw new ApiError(404,"Шаблон компенсации не найден.");rewards=ownerV8SafeJson(template.rewards_json,[]);if(!Array.isArray(rewards)||!rewards.length)throw new ApiError(409,"В шаблоне нет наград.");if(rewards.some(r=>String(r?.kind)==='physical_restore'))throw new ApiError(409,"Этот шаблон требует ручной проверки физической награды.");}
+  const reason=String(ctx.body?.reason||template.title||"Компенсация").trim().slice(0,300);if(reason.length<3)throw new ApiError(400,"Укажите причину.");const message=String(ctx.body?.message||"").trim().slice(0,2500);if(!rewards.length&&!message)throw new ApiError(400,"Для уведомления укажите текст сообщения.");
+  const target=String(ctx.body?.target||"segment");let ids=[],segmentKey="";if(target==="player"){const id=String(ctx.body?.telegramId||"").trim();if(!/^\d{4,20}$/.test(id)||!(await playerProfileExists(id,env)))throw new ApiError(404,"Игрок не найден.");ids=[id];segmentKey=`player_${id}`;}else{segmentKey=String(ctx.body?.segmentKey||"").trim();if(!(await ownerV85SegmentTitle(env,segmentKey)))throw new ApiError(404,"Сегмент не найден.");ids=await segmentPlayerIds(env,segmentKey,10000);}
+  ids=[...new Set(ids)];if(!ids.length)throw new ApiError(409,"Нет получателей.");const confirmation=String(ctx.body?.confirmation||"").trim();if(confirmation!==`ВЫДАТЬ ${ids.length}`)throw new ApiError(400,`Введите подтверждение: ВЫДАТЬ ${ids.length}`);
+  const hasLegendary=rewards.some(r=>String(r?.kind)==="case"&&String(r?.id)==="legendary");const payload={templateId,templateTitle:String(template.title||"Уведомление"),rewards,reason,message,segmentKey,targetIds:ids.slice(0,10000),reportChatId:String(ctx.user.id)};
+  if(hasLegendary||ids.length>250){const approvalId=await requestDangerousAction(env,ctx.user,"bulk_compensation",`${rewards.length?'Компенсация':'Уведомление'} «${template.title}» · ${ids.length} игроков`,payload);await logStaffAction(env,ctx.user,ctx.access,"owner_panel_bulk_compensation_request",null,"compensation",null,ids.length,{templateId,segmentKey,approvalId});return {ok:true,approvalRequired:true,approvalId,count:ids.length};}
+  const campaignIds=await ownerV85QueueCompensationCampaigns(env,ctx.user,ids,payload);await logStaffAction(env,ctx.user,ctx.access,"owner_panel_bulk_compensation",null,"compensation",null,ids.length,{campaignIds,templateId,count:ids.length,segmentKey,reason});ownerV85CacheInvalidate("compensations");return {ok:true,count:ids.length,campaignIds};
+}
+
+async function ownerV85MonitorConfig(env){const state=await getSystemState(env,V85_MONITOR_STATE_KEY);const raw=state?ownerV8SafeJson(state.value,{}):{};if(raw.rewardStale&&!raw.rewardStaleMinutes)raw.rewardStaleMinutes=Math.max(5,Number(raw.rewardStale)||15);return {...V85_MONITOR_DEFAULTS,...raw};}
+async function ownerPanelV85Monitoring(env,ctx){
+  await ensureControlCenterV85Schema(env);return ownerV85Cached("monitoring",10000,async()=>{const now=Math.floor(Date.now()/1000),since=now-24*3600,config=await ownerV85MonitorConfig(env);const [rewards,playerNotifications,staffNotifications,cron,perf,alerts,hourly]=await Promise.all([
+    env.DB.prepare(`SELECT status,COUNT(*) AS count,MAX(CASE WHEN status='pending' THEN ?-created_at ELSE 0 END) AS max_age FROM reward_delivery_queue WHERE status IN ('pending','delivering','failed') GROUP BY status`).bind(now).all(),
+    env.DB.prepare(`SELECT status,COUNT(*) AS count,MAX(CASE WHEN status='pending' THEN ?-created_at ELSE 0 END) AS max_age FROM player_notification_queue WHERE status IN ('pending','sending','failed') GROUP BY status`).bind(now).all(),
+    env.DB.prepare(`SELECT status,COUNT(*) AS count FROM leaderboard_staff_notifications WHERE status IN ('pending','sending','failed') GROUP BY status`).all(),
+    env.DB.prepare(`SELECT * FROM server_cron_jobs ORDER BY priority,job_key`).all(),
+    env.DB.prepare(`SELECT area,COUNT(*) AS samples,ROUND(AVG(duration_ms),1) AS avg_ms,MAX(duration_ms) AS max_ms,SUM(CASE WHEN success=0 THEN 1 ELSE 0 END) AS errors FROM admin_performance_samples WHERE created_at>=? GROUP BY area ORDER BY avg_ms DESC LIMIT 30`).bind(since).all(),
+    env.DB.prepare(`SELECT * FROM smart_alert_events WHERE status='open' ORDER BY CASE severity WHEN 'critical' THEN 0 ELSE 1 END,last_seen_at DESC LIMIT 40`).all(),
+    env.DB.prepare(`SELECT * FROM server_analytics_hourly WHERE bucket_at>=? ORDER BY bucket_at ASC LIMIT 48`).bind(now-48*3600).all()
+  ]);const queueMap=(rows)=>Object.fromEntries((rows.results||[]).map(r=>[String(r.status),{count:Number(r.count||0),maxAge:Number(r.max_age||0)}]));const rQ=queueMap(rewards),pQ=queueMap(playerNotifications),sQ=queueMap(staffNotifications);const cronRows=(cron.results||[]).map(r=>({key:String(r.job_key),enabled:Boolean(r.enabled),interval:Number(r.interval_seconds||0),lastSuccessAt:Number(r.last_success_at||0),nextRunAt:Number(r.next_run_at||0),status:String(r.last_status||"never"),duration:Number(r.last_duration_ms||0),error:String(r.last_error||""),failures:Number(r.failures_total||0)}));const cronFailures24=(hourly.results||[]).reduce((sum,r)=>sum+Number(r.cron_failures||0),0);const slowAreas=(perf.results||[]).filter(r=>Number(r.avg_ms||0)>=Number(config.slowMs||1200)).length;const critical=(rQ.failed?.count||0)>=config.rewardFailed||cronFailures24>=config.cronFailures||cronRows.some(r=>r.enabled&&r.status==='failed');const warning=(rQ.pending?.maxAge||0)>Number(config.rewardStaleMinutes||15)*60||(pQ.failed?.count||0)>=config.notificationFailed||slowAreas>0||cronRows.some(r=>r.enabled&&r.lastSuccessAt&&now-r.lastSuccessAt>Math.max(r.interval*3,config.cronStaleMinutes*60));return {ok:true,generatedAt:now,status:critical?'critical':warning?'warning':'healthy',config,queues:{rewards:rQ,playerNotifications:pQ,staffNotifications:sQ},cron:cronRows,performance:(perf.results||[]).map(r=>({area:String(r.area),samples:Number(r.samples||0),avgMs:Number(r.avg_ms||0),maxMs:Number(r.max_ms||0),errors:Number(r.errors||0)})),alerts:(alerts.results||[]).map(r=>({key:String(r.alert_key),type:String(r.alert_type||""),severity:String(r.severity||""),title:String(r.title||""),details:String(r.details||""),firstSeenAt:Number(r.first_seen_at||0),lastSeenAt:Number(r.last_seen_at||0)})),hourly:(hourly.results||[]).map(r=>({at:Number(r.bucket_at||0),active:Number(r.active_players||0),runs:Number(r.runs_total||0),rewardErrors:Number(r.rewards_failed||0),staffErrors:Number(r.staff_notifications_failed||0),playerErrors:Number(r.player_notifications_failed||0),cronFailures:Number(r.cron_failures||0),cronMs:Number(r.cron_duration_ms||0)}))};});
+}
+async function ownerPanelV85MonitoringConfig(env,ctx){await ensureControlCenterV85Schema(env);const c={rewardFailed:ownerPanelInteger(ctx.body?.rewardFailed,1,1000)||1,rewardStaleMinutes:ownerPanelInteger(ctx.body?.rewardStaleMinutes,5,1440)||15,notificationFailed:ownerPanelInteger(ctx.body?.notificationFailed,1,1000)||3,cronFailures:ownerPanelInteger(ctx.body?.cronFailures,1,100)||1,cronStaleMinutes:ownerPanelInteger(ctx.body?.cronStaleMinutes,5,1440)||20,slowMs:ownerPanelInteger(ctx.body?.slowMs,100,60000)||1200};await setSystemState(env,V85_MONITOR_STATE_KEY,JSON.stringify(c));ownerV85CacheInvalidate("monitoring");await logStaffAction(env,ctx.user,ctx.access,"owner_panel_monitor_config",null,"system",null,null,c);return {ok:true,config:c};}
+
+function ownerV85ExperimentMetricLabel(key){return ({runs:"Забеги/игрока",avg_score:"Средний результат",purchase_rate:"Доля покупателей",cases:"Кейсы/игрока"})[key]||key;}
+async function ownerV85ExperimentMetrics(env,row){const start=Math.max(0,Number(row.starts_at||0));if(!start)return {control:{players:0},variant:{players:0}};const end=String(row.status)==='completed'&&Number(row.completed_at||0)>0?Number(row.completed_at):Math.floor(Date.now()/1000);const [runs,purchases,cases]=await Promise.all([
+  env.DB.prepare(`SELECT telegram_id,COUNT(*) AS runs,AVG(score) AS avg_score FROM leaderboard_runs WHERE accepted=1 AND created_at>=? AND created_at<=? GROUP BY telegram_id LIMIT 10000`).bind(start,end).all(),
+  env.DB.prepare(`SELECT telegram_id,SUM(ops) AS ops FROM (SELECT telegram_id,COUNT(*) AS ops FROM granted_cases WHERE granted_by='shop' AND created_at>=? AND created_at<=? GROUP BY telegram_id UNION ALL SELECT telegram_id,COUNT(*) AS ops FROM shop_stock_consumptions WHERE category='skins' AND created_at>=? AND created_at<=? GROUP BY telegram_id) GROUP BY telegram_id LIMIT 10000`).bind(start,end,start,end).all(),
+  env.DB.prepare(`SELECT telegram_id,SUM(opened) AS opened FROM (SELECT telegram_id,COUNT(*) AS opened FROM level_case_openings WHERE opened_at>=? AND opened_at<=? GROUP BY telegram_id UNION ALL SELECT telegram_id,COUNT(*) AS opened FROM granted_cases WHERE status='opened' AND opened_at>=? AND opened_at<=? GROUP BY telegram_id) GROUP BY telegram_id LIMIT 10000`).bind(start,end,start,end).all()
+]);const map=new Map();for(const r of runs.results||[])map.set(String(r.telegram_id),{runs:Number(r.runs||0),avgScore:Number(r.avg_score||0),purchases:0,cases:0});for(const r of purchases.results||[]){const id=String(r.telegram_id),x=map.get(id)||{runs:0,avgScore:0,purchases:0,cases:0};x.purchases=Number(r.ops||0);map.set(id,x);}for(const r of cases.results||[]){const id=String(r.telegram_id),x=map.get(id)||{runs:0,avgScore:0,purchases:0,cases:0};x.cases=Number(r.opened||0);map.set(id,x);}const group=()=>({players:0,runs:0,scoreWeighted:0,purchases:0,buyers:0,cases:0});const control=group(),variant=group();for(const [id,x] of map){const g=stableRolloutBucket(`${row.flag_key}:${id}`)<Number(row.variant_percent||50)?variant:control;g.players++;g.runs+=x.runs;g.scoreWeighted+=x.avgScore*x.runs;g.purchases+=x.purchases;if(x.purchases>0)g.buyers++;g.cases+=x.cases;}for(const g of [control,variant]){g.runsPerPlayer=g.players?g.runs/g.players:0;g.avgScore=g.runs?g.scoreWeighted/g.runs:0;g.purchaseRate=g.players?g.buyers*100/g.players:0;g.casesPerPlayer=g.players?g.cases/g.players:0;delete g.scoreWeighted;}return {control,variant};}
+async function ownerPanelV85Experiments(env,ctx){
+  await ensureControlCenterV85Schema(env);
+  return ownerV85Cached("experiments",15000,async()=>{
+    const [rows,flags]=await Promise.all([env.DB.prepare(`SELECT * FROM ab_experiments ORDER BY updated_at DESC LIMIT 20`).all(),loadFeatureFlagRows(env)]);
+    const source=rows.results||[],experiments=[];
+    for(let i=0;i<source.length;i+=3){
+      const chunk=source.slice(i,i+3);
+      const mapped=await Promise.all(chunk.map(async(row)=>{
+        let metrics={control:{players:0},variant:{players:0}};
+        if(Number(row.starts_at||0)>0)metrics=await ownerV85Cached(`experiment-metrics:${String(row.experiment_key)}`,20000,()=>ownerV85ExperimentMetrics(env,row));
+        return {key:String(row.experiment_key),title:String(row.title),description:String(row.description||""),flagKey:String(row.flag_key),variantPercent:Number(row.variant_percent||50),metric:String(row.primary_metric||"runs"),metricTitle:ownerV85ExperimentMetricLabel(row.primary_metric),status:String(row.status||"draft"),startsAt:Number(row.starts_at||0),endsAt:Number(row.ends_at||0),winner:String(row.winner||""),updatedAt:Number(row.updated_at||0),metrics};
+      }));
+      experiments.push(...mapped);
+    }
+    return {ok:true,flags:flags.map(r=>({key:String(r.flag_key),title:String(r.title||r.flag_key),mode:String(r.mode||"all"),rollout:Number(r.rollout_percent||0)})),experiments};
+  });
+}
+async function ownerPanelV85ExperimentSave(env,ctx){await ensureControlCenterV85Schema(env);const title=String(ctx.body?.title||"").trim().slice(0,100),flagKey=String(ctx.body?.flagKey||"").trim(),metric=String(ctx.body?.metric||"runs"),percent=ownerPanelInteger(ctx.body?.variantPercent,1,99);if(title.length<3)throw new ApiError(400,"Укажите название эксперимента.");if(!["runs","avg_score","purchase_rate","cases"].includes(metric))throw new ApiError(400,"Некорректная метрика.");if(percent==null)throw new ApiError(400,"Доля варианта B должна быть 1–99%.");const flag=await getFeatureFlag(env,flagKey);if(!flag)throw new ApiError(404,"Feature Flag не найден.");const endsAt=Math.max(0,Math.floor(Number(ctx.body?.endsAt||0)));if(endsAt&&endsAt<=Math.floor(Date.now()/1000))throw new ApiError(400,"Дата окончания должна быть в будущем.");const key=`exp_${Date.now().toString(36)}_${Math.random().toString(36).slice(2,7)}`,now=Math.floor(Date.now()/1000);await env.DB.prepare(`INSERT INTO ab_experiments(experiment_key,title,description,flag_key,variant_percent,primary_metric,status,starts_at,ends_at,baseline_mode,baseline_rollout,winner,created_by,created_by_name,created_at,updated_at,updated_by,completed_at) VALUES(?,?,?,?,?,?,'draft',0,?,?,?,'',?,?,?,?,?,0)`).bind(key,title,String(ctx.body?.description||"").trim().slice(0,300),flagKey,percent,metric,endsAt,String(flag.mode||"all"),Number(flag.rollout_percent||100),String(ctx.user.id),telegramDisplayName(ctx.user),now,now,String(ctx.user.id)).run();await logStaffAction(env,ctx.user,ctx.access,"owner_panel_experiment_create",null,"experiment",null,null,{key,title,flagKey,percent,metric,endsAt});ownerV85CacheInvalidate("experiment");return {ok:true,key};}
+async function ownerPanelV85ExperimentAction(env,ctx){await ensureControlCenterV85Schema(env);const key=String(ctx.body?.key||"").trim(),action=String(ctx.body?.action||"").trim();const row=await env.DB.prepare(`SELECT * FROM ab_experiments WHERE experiment_key=? LIMIT 1`).bind(key).first();if(!row)throw new ApiError(404,"Эксперимент не найден.");const now=Math.floor(Date.now()/1000);const flag=await getFeatureFlag(env,row.flag_key);if(!flag)throw new ApiError(409,"Feature Flag эксперимента удалён.");if(action==="start"||action==="resume"){const conflict=await env.DB.prepare(`SELECT experiment_key,title FROM ab_experiments WHERE flag_key=? AND status='running' AND experiment_key<>? LIMIT 1`).bind(row.flag_key,key).first();if(conflict)throw new ApiError(409,`На этом Feature Flag уже запущен эксперимент «${conflict.title}».`);await createConfigSnapshot(env,"pre_ab_experiment",`Перед A/B: ${row.title}`,ctx.user).catch(()=>{});await env.DB.batch([env.DB.prepare(`UPDATE live_feature_flags SET mode='percent',rollout_percent=?,updated_at=?,updated_by=? WHERE flag_key=?`).bind(Number(row.variant_percent||50),now,String(ctx.user.id),row.flag_key),env.DB.prepare(`UPDATE ab_experiments SET status='running',starts_at=CASE WHEN starts_at=0 THEN ? ELSE starts_at END,updated_at=?,updated_by=? WHERE experiment_key=?`).bind(now,now,String(ctx.user.id),key)]);invalidateFeatureFlagsCache();}
+  else if(action==="pause"){if(String(row.status)!=='running')throw new ApiError(409,"Эксперимент не запущен.");await env.DB.batch([env.DB.prepare(`UPDATE live_feature_flags SET mode=?,rollout_percent=?,updated_at=?,updated_by=? WHERE flag_key=?`).bind(String(row.baseline_mode||"all"),Number(row.baseline_rollout||100),now,String(ctx.user.id),row.flag_key),env.DB.prepare(`UPDATE ab_experiments SET status='paused',updated_at=?,updated_by=? WHERE experiment_key=?`).bind(now,String(ctx.user.id),key)]);invalidateFeatureFlagsCache();}
+  else if(action==="complete"){const winner=String(ctx.body?.winner||"inconclusive");if(!["control","variant","inconclusive"].includes(winner))throw new ApiError(400,"Выберите итог эксперимента.");const mode=winner==='control'?'off':winner==='variant'?'all':String(row.baseline_mode||"all"),rollout=winner==='control'?0:winner==='variant'?100:Number(row.baseline_rollout||100);await env.DB.batch([env.DB.prepare(`UPDATE live_feature_flags SET mode=?,rollout_percent=?,updated_at=?,updated_by=? WHERE flag_key=?`).bind(mode,rollout,now,String(ctx.user.id),row.flag_key),env.DB.prepare(`UPDATE ab_experiments SET status='completed',winner=?,completed_at=?,updated_at=?,updated_by=? WHERE experiment_key=?`).bind(winner,now,now,String(ctx.user.id),key)]);invalidateFeatureFlagsCache();}
+  else if(action==="cancel"){await env.DB.batch([env.DB.prepare(`UPDATE live_feature_flags SET mode=?,rollout_percent=?,updated_at=?,updated_by=? WHERE flag_key=?`).bind(String(row.baseline_mode||"all"),Number(row.baseline_rollout||100),now,String(ctx.user.id),row.flag_key),env.DB.prepare(`UPDATE ab_experiments SET status='cancelled',updated_at=?,updated_by=? WHERE experiment_key=?`).bind(now,String(ctx.user.id),key)]);invalidateFeatureFlagsCache();}
+  else throw new ApiError(400,"Неизвестное действие эксперимента.");ownerV85CacheInvalidate("experiment");await logStaffAction(env,ctx.user,ctx.access,"owner_panel_experiment_action",null,"experiment",null,null,{key,action,winner:String(ctx.body?.winner||"")});return {ok:true};}
+
+async function ownerPanelV85StaffDetail(env,ctx){await ensureControlCenterV85Schema(env);const id=String(ctx.body?.telegramId||"").trim();const row=await env.DB.prepare(`SELECT s.*,p.* FROM staff_users s LEFT JOIN staff_permission_overrides p ON p.telegram_id=s.telegram_id WHERE s.telegram_id=? LIMIT 1`).bind(id).first();if(!row)throw new ApiError(404,"Сотрудник не найден.");const legacy={redeem:row.can_redeem_rewards,points:row.can_adjust_points,products:row.can_manage_products,news:row.can_publish_news};const perms=securityPermissionsFromRow(row,securityPermissionPreset(row.role,legacy));if(["cashier","cook"].includes(normalizeTeamRole(row.role)))perms.viewPlayers=false;const limits=await readStaffActionLimits(env,id);const usageKeys=["points_daily","cases_daily","legendary_daily","campaigns_daily"];const usageValues=await Promise.all(usageKeys.map(metric=>staffUsageAmount(env,id,metric)));const usage=Object.fromEntries(usageKeys.map((key,i)=>[key,usageValues[i]]));return {ok:true,staff:{telegramId:id,name:String(row.display_name||`Telegram ${id}`),role:normalizeTeamRole(row.role),active:Boolean(row.active),permissions:perms,limits,usage},permissionLabels:Object.fromEntries(SECURITY_PERMISSION_KEYS.map(k=>[k,permissionLabel(k)]))};}
+async function ownerPanelV85StaffPermissionsSave(env,ctx){await ensureControlCenterV85Schema(env);const id=String(ctx.body?.telegramId||"").trim();const staff=await env.DB.prepare(`SELECT * FROM staff_users WHERE telegram_id=? LIMIT 1`).bind(id).first();if(!staff)throw new ApiError(404,"Сотрудник не найден.");const requested=ctx.body?.permissions&&typeof ctx.body.permissions==='object'?ctx.body.permissions:{};const preset=securityPermissionPreset(staff.role,{redeem:staff.can_redeem_rewards,points:staff.can_adjust_points,products:staff.can_manage_products,news:staff.can_publish_news});const current=securityPermissionsFromRow(await env.DB.prepare(`SELECT * FROM staff_permission_overrides WHERE telegram_id=? LIMIT 1`).bind(id).first(),preset);for(const key of SECURITY_PERMISSION_KEYS)if(Object.prototype.hasOwnProperty.call(requested,key))current[key]=Boolean(requested[key]);if(["cashier","cook"].includes(normalizeTeamRole(staff.role)))current.viewPlayers=false;const columns=Object.values(SECURITY_PERMISSION_COLUMNS),values=SECURITY_PERMISSION_KEYS.map(k=>current[k]?1:0),now=Math.floor(Date.now()/1000);await env.DB.prepare(`INSERT INTO staff_permission_overrides(telegram_id,${columns.join(",")},updated_at,updated_by) VALUES(?,${columns.map(()=>"?").join(",")},?,?) ON CONFLICT(telegram_id) DO UPDATE SET ${columns.map(c=>`${c}=excluded.${c}`).join(",")},updated_at=excluded.updated_at,updated_by=excluded.updated_by`).bind(id,...values,now,String(ctx.user.id)).run();await logStaffAction(env,ctx.user,ctx.access,"owner_panel_staff_permissions",id,"staff",null,null,{permissions:current});try{await refreshBotCommandMenuSilently(env,id);}catch{}return {ok:true,permissions:current};}
+async function ownerPanelV85StaffLimitsSave(env,ctx){await ensureControlCenterV85Schema(env);const id=String(ctx.body?.telegramId||"").trim();if(!(await env.DB.prepare(`SELECT telegram_id FROM staff_users WHERE telegram_id=? LIMIT 1`).bind(id).first()))throw new ApiError(404,"Сотрудник не найден.");const values={};for(const key of ["points_per_player","points_daily","cases_daily","legendary_daily","campaigns_daily"]){const v=ownerPanelInteger(ctx.body?.limits?.[key],0,1000000000);if(v==null)throw new ApiError(400,"Проверьте лимиты.");values[key]=v;}const result=await writeStaffActionLimits(env,id,values,ctx.user);await logStaffAction(env,ctx.user,ctx.access,"owner_panel_staff_limits",id,"staff",null,null,{limits:values});return {ok:true,limits:result};}
+// ================= /CONTROL CENTER v8.5 · OWNER OPERATIONS =================
+
+// ===================== FLASH OFFERS / SHOP PROMOTIONS v9.1 =====================
+const FLASH_OFFER_SCHEMA_SQL = `CREATE TABLE IF NOT EXISTS shop_flash_offers (
+  offer_id TEXT PRIMARY KEY,
+  title TEXT NOT NULL,
+  subtitle TEXT NOT NULL DEFAULT '',
+  badge_text TEXT NOT NULL DEFAULT 'АКЦИЯ',
+  image_url TEXT NOT NULL DEFAULT '',
+  rewards_json TEXT NOT NULL DEFAULT '[]',
+  price_points INTEGER NOT NULL DEFAULT 0,
+  price_treats INTEGER NOT NULL DEFAULT 0,
+  price_coffee INTEGER NOT NULL DEFAULT 0,
+  original_points INTEGER NOT NULL DEFAULT 0,
+  original_treats INTEGER NOT NULL DEFAULT 0,
+  original_coffee INTEGER NOT NULL DEFAULT 0,
+  starts_at INTEGER NOT NULL DEFAULT 0,
+  ends_at INTEGER NOT NULL DEFAULT 0,
+  enabled INTEGER NOT NULL DEFAULT 0 CHECK(enabled IN (0,1)),
+  status TEXT NOT NULL DEFAULT 'draft',
+  segment_key TEXT NOT NULL DEFAULT 'all',
+  purchase_limit INTEGER NOT NULL DEFAULT 1,
+  show_frequency TEXT NOT NULL DEFAULT 'once_session',
+  priority INTEGER NOT NULL DEFAULT 100,
+  created_at INTEGER NOT NULL,
+  created_by TEXT NOT NULL DEFAULT '',
+  created_by_name TEXT NOT NULL DEFAULT '',
+  updated_at INTEGER NOT NULL,
+  updated_by TEXT NOT NULL DEFAULT '',
+  updated_by_name TEXT NOT NULL DEFAULT '',
+  published_at INTEGER NOT NULL DEFAULT 0,
+  ended_at INTEGER NOT NULL DEFAULT 0
+)`;
+const FLASH_OFFER_PURCHASE_SCHEMA_SQL = `CREATE TABLE IF NOT EXISTS shop_flash_offer_purchases (
+  purchase_id TEXT PRIMARY KEY,
+  offer_id TEXT NOT NULL,
+  telegram_id TEXT NOT NULL,
+  request_id TEXT NOT NULL UNIQUE,
+  slot_no INTEGER NOT NULL DEFAULT 1,
+  status TEXT NOT NULL DEFAULT 'reserved',
+  rewards_json TEXT NOT NULL DEFAULT '[]',
+  physical_codes_json TEXT NOT NULL DEFAULT '[]',
+  price_points INTEGER NOT NULL DEFAULT 0,
+  price_treats INTEGER NOT NULL DEFAULT 0,
+  price_coffee INTEGER NOT NULL DEFAULT 0,
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL,
+  completed_at INTEGER NOT NULL DEFAULT 0
+)`;
+const FLASH_OFFER_EVENT_SCHEMA_SQL = `CREATE TABLE IF NOT EXISTS shop_flash_offer_events (
+  event_id TEXT PRIMARY KEY,
+  offer_id TEXT NOT NULL,
+  telegram_id TEXT NOT NULL,
+  event_type TEXT NOT NULL,
+  created_at INTEGER NOT NULL
+)`;
+let flashOfferSchemaReady = false;
+async function ensureFlashOfferSchema(env) {
+  if (flashOfferSchemaReady) return;
+  await env.DB.batch([
+    env.DB.prepare(FLASH_OFFER_SCHEMA_SQL),
+    env.DB.prepare(FLASH_OFFER_PURCHASE_SCHEMA_SQL),
+    env.DB.prepare(FLASH_OFFER_EVENT_SCHEMA_SQL),
+    env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_flash_offers_active ON shop_flash_offers(status,enabled,starts_at,ends_at,priority)`),
+    env.DB.prepare(`CREATE UNIQUE INDEX IF NOT EXISTS idx_flash_offer_player_slot ON shop_flash_offer_purchases(offer_id,telegram_id,slot_no)`),
+    env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_flash_offer_purchases_player ON shop_flash_offer_purchases(telegram_id,offer_id,status,created_at)`),
+    env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_flash_offer_events_offer ON shop_flash_offer_events(offer_id,event_type,created_at)`)
+  ]);
+  flashOfferSchemaReady = true;
+}
+function flashOfferId(prefix = "offer") {
+  try { return `${prefix}_${crypto.randomUUID().replace(/-/g, "")}`; }
+  catch { return `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 14)}`; }
+}
+function flashOfferUnix(value, fallback = 0) {
+  if (value === "" || value == null) return fallback;
+  const numeric = Number(value);
+  if (Number.isFinite(numeric) && numeric > 0) return Math.floor(numeric > 100000000000 ? numeric / 1000 : numeric);
+  const parsed = Date.parse(String(value));
+  return Number.isFinite(parsed) ? Math.floor(parsed / 1000) : fallback;
+}
+function flashOfferPrice(source, prefix = "price") {
+  const read = (key) => {
+    const raw = source?.[`${prefix}_${key}`] ?? source?.[`${prefix}${key[0].toUpperCase()}${key.slice(1)}`] ?? source?.[prefix]?.[key] ?? 0;
+    const n = Number(raw);
+    if (!Number.isInteger(n) || n < 0 || n > 999999999) throw new ApiError(400, "Цена акции должна быть целым неотрицательным числом.");
+    return n;
+  };
+  return { points: read("points"), treats: read("treats"), coffee: read("coffee") };
+}
+function flashOfferNormalizeRewards(input) {
+  const rows = Array.isArray(input) ? input : [];
+  const result = [];
+  for (const raw of rows.slice(0, 12)) {
+    const kind = String(raw?.kind || "").trim().toLowerCase();
+    let amount = Math.max(1, Math.min(999999999, Math.floor(Number(raw?.amount) || 1)));
+    if (["points", "treats", "coffee"].includes(kind)) { result.push({ kind, amount }); continue; }
+    if (kind === "case") {
+      const id = normalizeCaseType(raw?.id || raw?.itemId);
+      if (!id) throw new ApiError(400, "В акции выбран неизвестный кейс.");
+      amount = Math.min(20, amount);
+      result.push({ kind:"case", id, amount });
+      continue;
+    }
+    if (kind === "product") {
+      const id = String(raw?.id || raw?.itemId || "").trim();
+      if (!PRODUCTS[id]) throw new ApiError(400, "В акции выбран неизвестный физический товар.");
+      amount = Math.min(5, amount);
+      result.push({ kind:"product", id, amount });
+      continue;
+    }
+    if (["booster_points", "booster_treats", "booster_coffee"].includes(kind)) {
+      amount = Math.min(20, amount);
+      result.push({ kind, amount });
+      continue;
+    }
+    if (kind === "booster_xp") {
+      result.push({ kind, amount:1 });
+      continue;
+    }
+    throw new ApiError(400, "Акция поддерживает очки, зефир, кофе, кейсы, физические товары и бусты.");
+  }
+  if (!result.length) throw new ApiError(400, "Добавьте хотя бы одну награду в акцию.");
+  return result;
+}
+function flashOfferRewardTitle(reward) {
+  const amount = Math.max(1, Number(reward?.amount) || 1);
+  if (reward?.kind === "points") return `${amount.toLocaleString("ru-RU")} очков`;
+  if (reward?.kind === "treats") return `${amount.toLocaleString("ru-RU")} зефира`;
+  if (reward?.kind === "coffee") return `${amount.toLocaleString("ru-RU")} кофе`;
+  if (reward?.kind === "case") return `${amount > 1 ? `${amount} × ` : ""}${LEVEL_CASE_CONFIG[normalizeCaseType(reward.id)]?.title || "Кейс"}`;
+  if (reward?.kind === "product") return `${amount > 1 ? `${amount} × ` : ""}${PRODUCTS[reward.id]?.title || reward.id}`;
+  if (SEASON_PASS_BOOST_REWARDS[String(reward?.kind || "")]) return SEASON_PASS_BOOST_REWARDS[String(reward.kind)].title;
+  return "Награда";
+}
+function flashOfferRewardImage(reward) {
+  if (!reward) return "/assets/optimized/v0.79.5/shopMascot.webp?v=0.79.5";
+  if (reward.kind === "product") return ownerPanelShopProductAsset(reward.id);
+  if (reward.kind === "case") return ownerPanelCaseAsset(normalizeCaseType(reward.id) || "small");
+  return ownerPanelRewardAsset(reward.kind, reward.id || "");
+}
+function flashOfferAutoImage(rewards) {
+  const list = Array.isArray(rewards) ? rewards : [];
+  return list.length === 1 ? flashOfferRewardImage(list[0]) : "/assets/optimized/v0.79.5/shopMascot.webp?v=0.79.5";
+}
+function flashOfferDiscountPercent(row) {
+  const pairs = [
+    [Number(row?.original_points || row?.original?.points || 0), Number(row?.price_points || row?.price?.points || 0)],
+    [Number(row?.original_treats || row?.original?.treats || 0), Number(row?.price_treats || row?.price?.treats || 0)],
+    [Number(row?.original_coffee || row?.original?.coffee || 0), Number(row?.price_coffee || row?.price?.coffee || 0)]
+  ];
+  const valid = pairs.filter(([before, after]) => before > 0 && after >= 0 && before > after);
+  if (!valid.length) return 0;
+  const [before, after] = valid.sort((a,b) => (1-b[1]/b[0])-(1-a[1]/a[0]))[0];
+  return Math.max(1, Math.min(99, Math.round((1 - after / before) * 100)));
+}
+function flashOfferRowView(row, extra = {}) {
+  const rewards = ownerV8SafeJson(row?.rewards_json, []);
+  const customImage = String(row?.image_url || "").trim();
+  const price = { points:Number(row?.price_points||0), treats:Number(row?.price_treats||0), coffee:Number(row?.price_coffee||0) };
+  const original = { points:Number(row?.original_points||0), treats:Number(row?.original_treats||0), coffee:Number(row?.original_coffee||0) };
+  return {
+    id:String(row?.offer_id||""), title:String(row?.title||"Акционное предложение"), subtitle:String(row?.subtitle||""), badgeText:String(row?.badge_text||"АКЦИЯ"),
+    imageUrl:customImage, fallbackImageUrl:flashOfferAutoImage(rewards), resolvedImageUrl:customImage || flashOfferAutoImage(rewards), rewards:rewards.map(r=>({...r,title:flashOfferRewardTitle(r),imageUrl:flashOfferRewardImage(r)})),
+    price, original, discountPercent:flashOfferDiscountPercent(row), startsAt:Number(row?.starts_at||0)*1000, endsAt:Number(row?.ends_at||0)*1000,
+    enabled:Number(row?.enabled||0)===1, status:String(row?.status||"draft"), segmentKey:String(row?.segment_key||"all"),
+    purchaseLimit:Number(row?.purchase_limit||0), showFrequency:String(row?.show_frequency||"once_session"), priority:Number(row?.priority||0),
+    createdAt:Number(row?.created_at||0)*1000, updatedAt:Number(row?.updated_at||0)*1000, publishedAt:Number(row?.published_at||0)*1000, endedAt:Number(row?.ended_at||0)*1000,
+    ...extra
+  };
+}
+async function flashOfferMatchesSegment(env, telegramId, segmentKey) {
+  const id = String(telegramId || "");
+  const key = String(segmentKey || "all");
+  if (!key || key === "all") return true;
+  const now = Math.floor(Date.now()/1000), day = moscowDayStartUnix();
+  let sql = "", binds = [];
+  if (key === "new_today") { sql=`SELECT 1 AS ok FROM admin_profile_state WHERE telegram_id=? AND created_at>=? LIMIT 1`; binds=[id,day]; }
+  else if (key === "active_today") { sql=`SELECT 1 AS ok FROM leaderboard_runs WHERE telegram_id=? AND accepted=1 AND created_at>=? LIMIT 1`; binds=[id,day]; }
+  else if (key === "returning_today") { sql=`SELECT 1 AS ok FROM admin_profile_state p WHERE p.telegram_id=? AND p.created_at<? AND EXISTS(SELECT 1 FROM leaderboard_runs r WHERE r.telegram_id=p.telegram_id AND r.accepted=1 AND r.created_at>=?) LIMIT 1`; binds=[id,day,day]; }
+  else if (key === "active_7d") { sql=`SELECT 1 AS ok FROM leaderboard_runs WHERE telegram_id=? AND accepted=1 AND created_at>=? LIMIT 1`; binds=[id,now-7*86400]; }
+  else if (key === "inactive_7d") { sql=`SELECT 1 AS ok FROM admin_profile_state WHERE telegram_id=? AND updated_at<=? LIMIT 1`; binds=[id,now-7*86400]; }
+  else if (key === "top_10") { sql=`SELECT 1 AS ok FROM (SELECT telegram_id FROM leaderboard_all_time WHERE hidden=0 ORDER BY best_score DESC,achieved_at ASC LIMIT 10) WHERE telegram_id=? LIMIT 1`; binds=[id]; }
+  else if (key === "elite" || key === "elite_plus") { sql=`SELECT 1 AS ok FROM season_pass_players WHERE telegram_id=? AND premium_tier=? AND season_id=(SELECT season_id FROM season_pass_seasons WHERE starts_at<=? AND ends_at>? ORDER BY starts_at DESC LIMIT 1) LIMIT 1`; binds=[id,key,now,now]; }
+  else if (key === "legendary_openers") { sql=`SELECT 1 AS ok FROM granted_cases WHERE telegram_id=? AND case_type='legendary' AND status='opened' LIMIT 1`; binds=[id]; }
+  else if (key === "physical_winners") { sql=`SELECT 1 AS ok FROM reward_codes WHERE owner_telegram_id=? LIMIT 1`; binds=[id]; }
+  else if (key === "no_purchases") { sql=`SELECT 1 AS ok FROM admin_profile_state p WHERE p.telegram_id=? AND NOT EXISTS(SELECT 1 FROM granted_cases g WHERE g.telegram_id=p.telegram_id AND g.granted_by='shop') AND NOT EXISTS(SELECT 1 FROM shop_stock_consumptions sc WHERE sc.telegram_id=p.telegram_id AND sc.category='skins') LIMIT 1`; binds=[id]; }
+  else if (key === "high_play_no_purchase") { sql=`SELECT 1 AS ok FROM admin_profile_state p WHERE p.telegram_id=? AND (SELECT COUNT(*) FROM leaderboard_runs r WHERE r.telegram_id=p.telegram_id AND r.accepted=1 AND r.created_at>=?)>=10 AND NOT EXISTS(SELECT 1 FROM granted_cases g WHERE g.telegram_id=p.telegram_id AND g.granted_by='shop') AND NOT EXISTS(SELECT 1 FROM shop_stock_consumptions sc WHERE sc.telegram_id=p.telegram_id AND sc.category='skins') LIMIT 1`; binds=[id,now-7*86400]; }
+  else if (key === "promo_redeemers") { sql=`SELECT 1 AS ok FROM promo_redemptions WHERE telegram_id=? AND status IN ('queued','delivered') LIMIT 1`; binds=[id]; }
+  else if (key === "pass_complete") { sql=`SELECT 1 AS ok FROM season_pass_players WHERE telegram_id=? AND xp>=? LIMIT 1`; binds=[id,seasonPassXpForLevel(50)]; }
+  else if (key === "banned") { sql=`SELECT 1 AS ok FROM player_admin_controls WHERE telegram_id=? AND blocked=1 LIMIT 1`; binds=[id]; }
+  else {
+    const saved = await ownerV85SavedSegment(env,key);
+    if (!saved) return false;
+    const q = ownerV85CustomSegmentSql(ownerV8SafeJson(saved.rules_json,{}),false);
+    const scopedSql = q.sql.replace("WHERE 1=1", "WHERE p.telegram_id=? AND 1=1");
+    const row = await env.DB.prepare(`${scopedSql} LIMIT 1`).bind(id,...q.binds).first();
+    return Boolean(row?.telegram_id);
+  }
+  const row = await env.DB.prepare(sql).bind(...binds).first();
+  return Boolean(row?.ok);
+}
+async function flashOfferEligibleRows(env, telegramId) {
+  await ensureFlashOfferSchema(env);
+  const now = Math.floor(Date.now()/1000);
+  const result = await env.DB.prepare(`SELECT * FROM shop_flash_offers WHERE status='published' AND enabled=1 AND (starts_at=0 OR starts_at<=?) AND (ends_at=0 OR ends_at>?) ORDER BY priority DESC,updated_at DESC LIMIT 20`).bind(now,now).all();
+  const out=[];
+  for (const row of result.results||[]) {
+    if (!(await flashOfferMatchesSegment(env,telegramId,row.segment_key))) continue;
+    const completedRow=await env.DB.prepare(`SELECT COUNT(*) AS count FROM shop_flash_offer_purchases WHERE offer_id=? AND telegram_id=? AND status='completed'`).bind(String(row.offer_id),String(telegramId)).first();
+    const completed=Number(completedRow?.count||0), limit=Math.max(0,Number(row.purchase_limit||0));
+    if(limit>0&&completed>=limit)continue;
+    out.push({row,completed}); if(out.length>=3)break;
+  }
+  return out;
+}
+async function getFlashOffersForPlayer(request, env) {
   try {
-    const ctx = await requireOwnerPanelContext(request, env);
+    requireDatabase(env); requireBotToken(env);
+    const body=await readJson(request); const auth=await validateTelegramInitData(String(body.initData||""),env); const telegramId=String(auth.user.id);
+    const eligible=await flashOfferEligibleRows(env,telegramId);
+    return jsonResponse({ok:true,serverTime:Date.now(),offers:eligible.map(({row,completed})=>flashOfferRowView(row,{purchaseCount:completed}))});
+  } catch(error) { if(error instanceof ApiError)return jsonResponse({ok:false,error:error.message},error.status); console.error("flash offer list failed",error); return jsonResponse({ok:false,error:"Не удалось загрузить акции магазина."},500); }
+}
+async function recordFlashOfferEvent(request, env) {
+  try {
+    requireDatabase(env); requireBotToken(env); await ensureFlashOfferSchema(env);
+    const body=await readJson(request); const auth=await validateTelegramInitData(String(body.initData||""),env); const offerId=String(body.offerId||"").trim();
+    const eventType=String(body.eventType||"").trim(); if(!offerId||!["impression","click","dismiss"].includes(eventType))throw new ApiError(400,"Некорректное событие акции.");
+    const eventId=String(body.eventId||flashOfferId("event")).replace(/[^A-Za-z0-9_-]/g,"").slice(0,100); const now=Math.floor(Date.now()/1000);
+    await env.DB.prepare(`INSERT OR IGNORE INTO shop_flash_offer_events(event_id,offer_id,telegram_id,event_type,created_at) VALUES(?,?,?,?,?)`).bind(eventId,offerId,String(auth.user.id),eventType,now).run();
+    return jsonResponse({ok:true});
+  } catch(error){if(error instanceof ApiError)return jsonResponse({ok:false,error:error.message},error.status);return jsonResponse({ok:false,error:"Не удалось записать событие акции."},500);}
+}
+async function flashOfferProfilePayload(env, telegramId) {
+  const row=await env.DB.prepare(`SELECT wallet,best_score,treats,coffee,profile_xp,revision,updated_at FROM admin_profile_state WHERE telegram_id=? LIMIT 1`).bind(String(telegramId)).first();
+  return {wallet:safeAdminNumber(row?.wallet),best:safeAdminNumber(row?.best_score),treats:safeAdminNumber(row?.treats),coffee:safeAdminNumber(row?.coffee),profileXp:safeAdminNumber(row?.profile_xp),revision:safeAdminNumber(row?.revision),updatedAt:safeAdminNumber(row?.updated_at)*1000};
+}
+async function purchaseFlashOffer(request, env) {
+  let reservedPurchaseId="", stockConsumptionIds=[], charged=null;
+  try {
+    requireDatabase(env); requireBotToken(env); await ensureFlashOfferSchema(env);
+    const body=await readJson(request); const auth=await validateTelegramInitData(String(body.initData||""),env); const telegramId=String(auth.user.id); const offerId=String(body.offerId||"").trim(); const requestId=String(body.requestId||"").trim();
+    if(!offerId)throw new ApiError(400,"Акция не выбрана."); if(!/^[A-Za-z0-9_-]{12,100}$/.test(requestId))throw new ApiError(400,"Некорректный идентификатор покупки.");
+    const existing=await env.DB.prepare(`SELECT * FROM shop_flash_offer_purchases WHERE request_id=? AND telegram_id=? LIMIT 1`).bind(requestId,telegramId).first();
+    if(existing?.status==="completed")return jsonResponse({ok:true,repeated:true,purchaseId:String(existing.purchase_id),profile:await flashOfferProfilePayload(env,telegramId),rewards:ownerV8SafeJson(existing.rewards_json,[]),physicalRewards:ownerV8SafeJson(existing.physical_codes_json,[])});
+    const row=await env.DB.prepare(`SELECT * FROM shop_flash_offers WHERE offer_id=? LIMIT 1`).bind(offerId).first(); if(!row)throw new ApiError(404,"Акция больше недоступна.");
+    const now=Math.floor(Date.now()/1000); if(String(row.status)!=="published"||Number(row.enabled)!==1||(Number(row.starts_at)>0&&Number(row.starts_at)>now)||(Number(row.ends_at)>0&&Number(row.ends_at)<=now))throw new ApiError(409,"Акция уже завершилась или временно отключена.");
+    if(!(await flashOfferMatchesSegment(env,telegramId,row.segment_key)))throw new ApiError(403,"Эта акция недоступна для вашего аккаунта.");
+    const rewards=flashOfferNormalizeRewards(ownerV8SafeJson(row.rewards_json,[])); const limit=Math.max(0,Math.min(99,Number(row.purchase_limit||0)));
+    if(existing?.status==="reserved"&&now-Number(existing.created_at||0)>180)await env.DB.prepare(`DELETE FROM shop_flash_offer_purchases WHERE purchase_id=? AND status='reserved'`).bind(String(existing.purchase_id)).run();
+    await env.DB.prepare(`DELETE FROM shop_flash_offer_purchases WHERE offer_id=? AND telegram_id=? AND status='reserved' AND created_at<?`).bind(offerId,telegramId,now-180).run();
+    const completedRow=await env.DB.prepare(`SELECT COUNT(*) AS count FROM shop_flash_offer_purchases WHERE offer_id=? AND telegram_id=? AND status='completed'`).bind(offerId,telegramId).first(); if(limit>0&&Number(completedRow?.count||0)>=limit)throw new ApiError(409,"Лимит покупок этой акции уже исчерпан.");
+    const hasInventoryBoosters=rewards.some(r=>["booster_points","booster_treats","booster_coffee"].includes(String(r.kind)));
+    const hasXpBooster=rewards.some(r=>String(r.kind)==="booster_xp");
+    if(hasInventoryBoosters)await ensureCasePlayerState(env,telegramId,body.current||{});
+    let offerBoostSeason=null;
+    if(hasXpBooster){offerBoostSeason=await loadSeasonPassSeason(env);if(String(offerBoostSeason?.status||"")==="ended")throw new ApiError(409,"Буст ×2 XP сейчас недоступен: сезонный пропуск завершён.");}
+    const profileSync=await syncAdminProfile(null,env,{raw:true,body:{initData:String(body.initData||""),mode:"read",current:body.current||{}},auth});
+    const profile=profileSync.profile||{}; const price={points:Number(row.price_points||0),treats:Number(row.price_treats||0),coffee:Number(row.price_coffee||0)};
+    if(Number(profile.wallet||0)<price.points||Number(profile.treats||0)<price.treats||Number(profile.coffee||0)<price.coffee)throw new ApiError(409,"Недостаточно ресурсов для покупки акции.");
+    const physicalCount=rewards.filter(r=>r.kind==="product").reduce((sum,r)=>sum+Number(r.amount||1),0),caseCount=rewards.filter(r=>r.kind==="case").reduce((sum,r)=>sum+Number(r.amount||1),0);
+    if(physicalCount||caseCount){const maintenance=await getMaintenanceSettings(env),flags=await publicFeatureFlags(env,telegramId);if(physicalCount&&(maintenance.physicalRewardsDisabled||flags.physical_rewards===false))throw new ApiError(503,"Физические награды временно отключены.");if(caseCount&&(maintenance.casesDisabled||flags.cases===false))throw new ApiError(503,"Кейсы временно отключены.");}
+    if(physicalCount){const status=await getRewardLimitStatus(env,telegramId,now);if(physicalCount>Math.max(0,status.limit-status.used))throw new ApiError(429,`Лимит физических наград: доступно ещё ${Math.max(0,status.limit-status.used)}.`,status);}
+    reservedPurchaseId=flashOfferId("buy"); let slotNo=0;
+    const tryReserve=async(slot)=>{const result=await env.DB.prepare(`INSERT OR IGNORE INTO shop_flash_offer_purchases(purchase_id,offer_id,telegram_id,request_id,slot_no,status,rewards_json,physical_codes_json,price_points,price_treats,price_coffee,created_at,updated_at,completed_at) VALUES(?,?,?,?,?,'reserved','[]','[]',?,?,?,?,?,0)`).bind(reservedPurchaseId,offerId,telegramId,requestId,slot,price.points,price.treats,price.coffee,now,now).run();return safeAdminNumber(result?.meta?.changes)>0;};
+    if(limit>0){for(let slot=1;slot<=limit;slot+=1){if(await tryReserve(slot)){slotNo=slot;break;}}}else{for(let i=0;i<8&&!slotNo;i+=1){const slot=1000+Math.floor(Math.random()*2000000000);if(await tryReserve(slot))slotNo=slot;}}
+    if(!slotNo){const retry=await env.DB.prepare(`SELECT * FROM shop_flash_offer_purchases WHERE request_id=? AND telegram_id=? LIMIT 1`).bind(requestId,telegramId).first();if(retry?.status==="completed")return jsonResponse({ok:true,repeated:true,purchaseId:String(retry.purchase_id),profile:await flashOfferProfilePayload(env,telegramId),rewards:ownerV8SafeJson(retry.rewards_json,[]),physicalRewards:ownerV8SafeJson(retry.physical_codes_json,[])});throw new ApiError(409,"Лимит покупок этой акции уже исчерпан.");}
+    const ownerName=telegramDisplayName(auth.user),ttl=positiveInt(env.REWARD_TTL_SECONDS,DEFAULT_REWARD_TTL_SECONDS),physicalRows=[];
+    for(const reward of rewards){if(reward.kind!=="product")continue;for(let i=0;i<reward.amount;i+=1){const product=PRODUCTS[reward.id];const consumptionId=`flash:${reservedPurchaseId}:${physicalRows.length}`;await consumeShopStock(env,{category:"prize",productId:product.id,consumptionId,telegramId});stockConsumptionIds.push(consumptionId);const unique=await generateUniqueRewardCode(env,product);physicalRows.push({code:unique.code,compact:unique.compact,requestId:`flash_${reservedPurchaseId}_${physicalRows.length}`,productId:product.id,productName:product.title,createdAt:now,expiresAt:now+ttl,status:"active"});}}
+    const chargedResult=await env.DB.prepare(`UPDATE admin_profile_state SET wallet=wallet-?,treats=treats-?,coffee=coffee-?,revision=revision+1,updated_at=?,updated_by=? WHERE telegram_id=? AND wallet>=? AND treats>=? AND coffee>=?`).bind(price.points,price.treats,price.coffee,now,telegramId,telegramId,price.points,price.treats,price.coffee).run();
+    if(safeAdminNumber(chargedResult?.meta?.changes)<1)throw new ApiError(409,"Баланс изменился. Откройте магазин ещё раз и повторите покупку."); charged=price;
+    const virtual={points:0,treats:0,coffee:0}; const boosterTotals={points:0,treats:0,coffee:0}; const statements=[]; const publicRewards=[];
+    for(const reward of rewards){
+      if(["points","treats","coffee"].includes(reward.kind)){virtual[reward.kind]+=Number(reward.amount||0);publicRewards.push({...reward,title:flashOfferRewardTitle(reward),imageUrl:flashOfferRewardImage(reward)});}
+      else if(reward.kind==="case"){for(let i=0;i<reward.amount;i+=1)statements.push(env.DB.prepare(`INSERT INTO granted_cases(id,telegram_id,case_type,status,granted_by,reason,created_at) VALUES(?,?,?,'pending',?,?,?)`).bind(caseGrantId("offer"),telegramId,reward.id,"shop",`Акция ${offerId}: ${String(row.title||offerId)}`.slice(0,300),now));publicRewards.push({...reward,title:flashOfferRewardTitle(reward),imageUrl:flashOfferRewardImage(reward)});}
+      else if(reward.kind==="product")publicRewards.push({...reward,title:flashOfferRewardTitle(reward),imageUrl:flashOfferRewardImage(reward)});
+      else if(reward.kind==="booster_points"){boosterTotals.points+=Number(reward.amount||1);publicRewards.push({...reward,title:flashOfferRewardTitle(reward),imageUrl:flashOfferRewardImage(reward)});}
+      else if(reward.kind==="booster_treats"){boosterTotals.treats+=Number(reward.amount||1);publicRewards.push({...reward,title:flashOfferRewardTitle(reward),imageUrl:flashOfferRewardImage(reward)});}
+      else if(reward.kind==="booster_coffee"){boosterTotals.coffee+=Number(reward.amount||1);publicRewards.push({...reward,title:flashOfferRewardTitle(reward),imageUrl:flashOfferRewardImage(reward)});}
+      else if(reward.kind==="booster_xp"){publicRewards.push({...reward,amount:1,title:flashOfferRewardTitle(reward),imageUrl:flashOfferRewardImage(reward)});}
+    }
+    if(virtual.points||virtual.treats||virtual.coffee)statements.push(env.DB.prepare(`UPDATE admin_profile_state SET wallet=wallet+?,treats=treats+?,coffee=coffee+?,revision=revision+1,updated_at=?,updated_by=? WHERE telegram_id=?`).bind(virtual.points,virtual.treats,virtual.coffee,now,`offer:${offerId}`,telegramId));
+    if(boosterTotals.points||boosterTotals.treats||boosterTotals.coffee)statements.push(env.DB.prepare(`UPDATE case_player_state SET boosters_points=boosters_points+?,boosters_treats=boosters_treats+?,boosters_coffee=boosters_coffee+?,revision=revision+1,updated_at=? WHERE telegram_id=?`).bind(boosterTotals.points,boosterTotals.treats,boosterTotals.coffee,now,telegramId));
+    if(hasXpBooster&&offerBoostSeason?.id)statements.push(env.DB.prepare(`INSERT OR IGNORE INTO season_pass_entitlements(season_id,telegram_id,item_id,source,granted_at) VALUES(?,?,?,?,?)`).bind(String(offerBoostSeason.id),telegramId,SEASON_PASS_SPECIAL_XP_X2,`flash-offer:${offerId}`,now));
+    for(const p of physicalRows)statements.push(env.DB.prepare(`INSERT INTO reward_codes(code,code_compact,request_id,product_id,product_name,owner_telegram_id,owner_name,created_at,expires_at,status) VALUES(?,?,?,?,?,?,?,?,?,'active')`).bind(p.code,p.compact,p.requestId,p.productId,p.productName,telegramId,ownerName,p.createdAt,p.expiresAt));
+    const physicalRewards=physicalRows.map(p=>rewardRowToClient({code:p.code,product_id:p.productId,product_name:p.productName,created_at:p.createdAt,expires_at:p.expiresAt,status:p.status,redeemed_at:0}));
+    statements.push(env.DB.prepare(`UPDATE shop_flash_offer_purchases SET status='completed',rewards_json=?,physical_codes_json=?,updated_at=?,completed_at=? WHERE purchase_id=? AND status='reserved'`).bind(JSON.stringify(publicRewards),JSON.stringify(physicalRewards),now,now,reservedPurchaseId));
+    await env.DB.batch(statements); charged=null;
+    await recordPlayerTimeline(env,telegramId,"flash_offer_purchase",`купил акцию «${String(row.title||offerId)}»`,{offerId,price,rewards:publicRewards.map(r=>({kind:r.kind,id:r.id||"",amount:r.amount}))},reservedPurchaseId,auth.user,now);
+    return jsonResponse({ok:true,purchaseId:reservedPurchaseId,offerId,profile:await flashOfferProfilePayload(env,telegramId),authoritativeProfile:true,rewards:publicRewards,physicalRewards});
+  } catch(error) {
+    if(charged&&reservedPurchaseId){try{await env.DB.prepare(`UPDATE admin_profile_state SET wallet=wallet+?,treats=treats+?,coffee=coffee+?,revision=revision+1,updated_at=? WHERE telegram_id=(SELECT telegram_id FROM shop_flash_offer_purchases WHERE purchase_id=? LIMIT 1)`).bind(charged.points,charged.treats,charged.coffee,Math.floor(Date.now()/1000),reservedPurchaseId).run();}catch(e){console.error("flash offer refund failed",e);}}
+    for(const id of stockConsumptionIds){try{await releaseShopStock(env,id);}catch(e){console.error("flash offer stock release failed",e);}}
+    if(reservedPurchaseId){try{await env.DB.prepare(`DELETE FROM shop_flash_offer_purchases WHERE purchase_id=? AND status='reserved'`).bind(reservedPurchaseId).run();}catch{}}
+    if(error instanceof ApiError)return jsonResponse({ok:false,error:error.message,details:error.details},error.status);console.error("flash offer purchase failed",error);return jsonResponse({ok:false,error:"Не удалось завершить акционную покупку. Ресурсы не списаны."},500);
+  }
+}
+async function ownerPanelFlashOffers(env, ctx) {
+  await ensureFlashOfferSchema(env);
+  const [offersResult,segments,media]=await Promise.all([
+    env.DB.prepare(`SELECT o.*,(SELECT COUNT(*) FROM shop_flash_offer_events e WHERE e.offer_id=o.offer_id AND e.event_type='impression') AS impressions,(SELECT COUNT(*) FROM shop_flash_offer_events e WHERE e.offer_id=o.offer_id AND e.event_type='click') AS clicks,(SELECT COUNT(*) FROM shop_flash_offer_purchases p WHERE p.offer_id=o.offer_id AND p.status='completed') AS purchases FROM shop_flash_offers o ORDER BY CASE o.status WHEN 'published' THEN 0 WHEN 'draft' THEN 1 WHEN 'ended' THEN 2 ELSE 3 END,o.priority DESC,o.updated_at DESC LIMIT 100`).all(),
+    ownerV85SegmentCatalog(env,false), ownerPanelV9MediaListData(env,80)
+  ]);
+  const imagePresets=[
+    {url:"",title:"Авто — картинка товара/кейса"},
+    ...Object.keys(SHOP_ASSORTMENT_PRODUCTS).map(id=>({url:ownerPanelShopProductAsset(id),title:botShopProductTitle(id)})),
+    ...media.map(m=>({url:m.url,title:`Медиатека · ${m.fileName}`}))
+  ];
+  return {ok:true,serverTime:Date.now(),offers:(offersResult.results||[]).map(r=>flashOfferRowView(r,{stats:{impressions:Number(r.impressions||0),clicks:Number(r.clicks||0),purchases:Number(r.purchases||0)}})),segments:[{key:"all",title:"Все игроки",builtin:true},...segments],imagePresets,rewardCatalog:[
+    {kind:"points",id:"",title:"Очки",imageUrl:flashOfferRewardImage({kind:"points"})},{kind:"treats",id:"",title:"Зефир",imageUrl:flashOfferRewardImage({kind:"treats"})},{kind:"coffee",id:"",title:"Кофе",imageUrl:flashOfferRewardImage({kind:"coffee"})},
+    {kind:"booster_points",id:"",title:SEASON_PASS_BOOST_REWARDS.booster_points.title,imageUrl:flashOfferRewardImage({kind:"booster_points"})},
+    {kind:"booster_treats",id:"",title:SEASON_PASS_BOOST_REWARDS.booster_treats.title,imageUrl:flashOfferRewardImage({kind:"booster_treats"})},
+    {kind:"booster_coffee",id:"",title:SEASON_PASS_BOOST_REWARDS.booster_coffee.title,imageUrl:flashOfferRewardImage({kind:"booster_coffee"})},
+    {kind:"booster_xp",id:"",title:SEASON_PASS_BOOST_REWARDS.booster_xp.title,imageUrl:flashOfferRewardImage({kind:"booster_xp"})},
+    ...["small","sweet","gold","legendary"].map(id=>({kind:"case",id,title:LEVEL_CASE_CONFIG[id]?.title||id,imageUrl:flashOfferRewardImage({kind:"case",id})})),
+    ...Object.keys(PRODUCTS).map(id=>({kind:"product",id,title:PRODUCTS[id].title,imageUrl:flashOfferRewardImage({kind:"product",id})}))
+  ]};
+}
+async function ownerPanelSaveFlashOffer(env, ctx) {
+  await ensureFlashOfferSchema(env);
+  const existingId=String(ctx.body?.offerId||"").trim(); const before=existingId?await env.DB.prepare(`SELECT * FROM shop_flash_offers WHERE offer_id=? LIMIT 1`).bind(existingId).first():null;
+  if(existingId&&!before)throw new ApiError(404,"Акция не найдена.");
+  const title=String(ctx.body?.title||"").trim().slice(0,100); if(title.length<2)throw new ApiError(400,"Укажите название акции."); const subtitle=String(ctx.body?.subtitle||"").trim().slice(0,220); const badgeText=String(ctx.body?.badgeText||"АКЦИЯ").trim().slice(0,28)||"АКЦИЯ";
+  const rawImageUrl=String(ctx.body?.imageUrl||"").trim(); const imageUrl=ownerV8AssetPath(rawImageUrl); if(rawImageUrl&&!imageUrl)throw new ApiError(400,"Картинка акции должна быть из Медиатеки (/media/...), проекта (/assets/...) или HTTPS."); const rewards=flashOfferNormalizeRewards(ctx.body?.rewards); const price=flashOfferPrice(ctx.body,"price"),original=flashOfferPrice(ctx.body,"original");
+  const startsAt=flashOfferUnix(ctx.body?.startsAt,0),endsAt=flashOfferUnix(ctx.body?.endsAt,0); if(startsAt&&endsAt&&endsAt<=startsAt)throw new ApiError(400,"Окончание акции должно быть позже начала.");
+  const purchaseLimit=Math.max(0,Math.min(99,Math.floor(Number(ctx.body?.purchaseLimit??1)||0))); const showFrequency=["once_session","once_day","every_entry"].includes(String(ctx.body?.showFrequency))?String(ctx.body.showFrequency):"once_session"; const priority=Math.max(-999,Math.min(999,Math.floor(Number(ctx.body?.priority)||100)));
+  const segmentKey=String(ctx.body?.segmentKey||"all").trim()||"all"; if(segmentKey!=="all"&&!PLAYER_SEGMENTS[segmentKey]&&!(await ownerV85SavedSegment(env,segmentKey)))throw new ApiError(400,"Выбранный сегмент игроков не найден.");
+  const now=Math.floor(Date.now()/1000),offerId=existingId||flashOfferId("offer"),status=String(before?.status||"draft"),enabled=Number(before?.enabled||0),createdAt=Number(before?.created_at||now),createdBy=String(before?.created_by||ctx.user.id),createdByName=String(before?.created_by_name||telegramDisplayName(ctx.user));
+  if(status==="published"&&(!endsAt||endsAt<=now))throw new ApiError(409,"У опубликованной акции должно быть будущее время окончания. Чтобы завершить её сейчас, используйте «Завершить».");
+  await env.DB.prepare(`INSERT INTO shop_flash_offers(offer_id,title,subtitle,badge_text,image_url,rewards_json,price_points,price_treats,price_coffee,original_points,original_treats,original_coffee,starts_at,ends_at,enabled,status,segment_key,purchase_limit,show_frequency,priority,created_at,created_by,created_by_name,updated_at,updated_by,updated_by_name,published_at,ended_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(offer_id) DO UPDATE SET title=excluded.title,subtitle=excluded.subtitle,badge_text=excluded.badge_text,image_url=excluded.image_url,rewards_json=excluded.rewards_json,price_points=excluded.price_points,price_treats=excluded.price_treats,price_coffee=excluded.price_coffee,original_points=excluded.original_points,original_treats=excluded.original_treats,original_coffee=excluded.original_coffee,starts_at=excluded.starts_at,ends_at=excluded.ends_at,segment_key=excluded.segment_key,purchase_limit=excluded.purchase_limit,show_frequency=excluded.show_frequency,priority=excluded.priority,updated_at=excluded.updated_at,updated_by=excluded.updated_by,updated_by_name=excluded.updated_by_name`).bind(offerId,title,subtitle,badgeText,imageUrl,JSON.stringify(rewards),price.points,price.treats,price.coffee,original.points,original.treats,original.coffee,startsAt,endsAt,enabled,status,segmentKey,purchaseLimit,showFrequency,priority,createdAt,createdBy,createdByName,now,String(ctx.user.id),telegramDisplayName(ctx.user),Number(before?.published_at||0),Number(before?.ended_at||0)).run();
+  await logStaffAction(env,ctx.user,ctx.access,before?"owner_panel_offer_update":"owner_panel_offer_create",null,"flash_offer",offerId,null,{title,status,segmentKey,purchaseLimit,price,original,rewards,imageUrl});
+  return {ok:true,offerId,offer:flashOfferRowView(await env.DB.prepare(`SELECT * FROM shop_flash_offers WHERE offer_id=?`).bind(offerId).first())};
+}
+async function ownerPanelFlashOfferAction(env, ctx) {
+  await ensureFlashOfferSchema(env); const offerId=String(ctx.body?.offerId||"").trim(),action=String(ctx.body?.action||"").trim(); const row=await env.DB.prepare(`SELECT * FROM shop_flash_offers WHERE offer_id=? LIMIT 1`).bind(offerId).first(); if(!row)throw new ApiError(404,"Акция не найдена."); const now=Math.floor(Date.now()/1000);
+  if(action==="publish") { if(Number(row.ends_at)<=now)throw new ApiError(409,"Перед публикацией укажите будущее время окончания акции."); await env.DB.prepare(`UPDATE shop_flash_offers SET status='published',enabled=1,starts_at=CASE WHEN starts_at=0 THEN ? ELSE starts_at END,published_at=CASE WHEN published_at=0 THEN ? ELSE published_at END,ended_at=0,updated_at=?,updated_by=?,updated_by_name=? WHERE offer_id=?`).bind(now,now,now,String(ctx.user.id),telegramDisplayName(ctx.user),offerId).run(); }
+  else if(action==="pause") await env.DB.prepare(`UPDATE shop_flash_offers SET enabled=0,updated_at=?,updated_by=?,updated_by_name=? WHERE offer_id=? AND status='published'`).bind(now,String(ctx.user.id),telegramDisplayName(ctx.user),offerId).run();
+  else if(action==="resume") { if(String(row.status)!=="published")throw new ApiError(409,"Возобновить можно только опубликованную акцию."); if(Number(row.ends_at)>0&&Number(row.ends_at)<=now)throw new ApiError(409,"Срок акции закончился. Сначала продлите её."); await env.DB.prepare(`UPDATE shop_flash_offers SET enabled=1,updated_at=?,updated_by=?,updated_by_name=? WHERE offer_id=?`).bind(now,String(ctx.user.id),telegramDisplayName(ctx.user),offerId).run(); }
+  else if(action==="end") await env.DB.prepare(`UPDATE shop_flash_offers SET status='ended',enabled=0,ends_at=CASE WHEN ends_at=0 OR ends_at>? THEN ? ELSE ends_at END,ended_at=?,updated_at=?,updated_by=?,updated_by_name=? WHERE offer_id=?`).bind(now,now,now,now,String(ctx.user.id),telegramDisplayName(ctx.user),offerId).run();
+  else if(action==="extend") { const seconds=Math.max(60,Math.min(90*86400,Math.floor(Number(ctx.body?.seconds)||86400))); const base=Math.max(now,Number(row.ends_at||0)); await env.DB.prepare(`UPDATE shop_flash_offers SET ends_at=?,updated_at=?,updated_by=?,updated_by_name=? WHERE offer_id=?`).bind(base+seconds,now,String(ctx.user.id),telegramDisplayName(ctx.user),offerId).run(); }
+  else throw new ApiError(400,"Неизвестное действие акции.");
+  await logStaffAction(env,ctx.user,ctx.access,`owner_panel_offer_${action}`,null,"flash_offer",offerId,null,{action,seconds:Number(ctx.body?.seconds||0)}); const updated=await env.DB.prepare(`SELECT * FROM shop_flash_offers WHERE offer_id=?`).bind(offerId).first(); return {ok:true,offer:flashOfferRowView(updated)};
+}
+// =================== END FLASH OFFERS / SHOP PROMOTIONS ===================
+
+
+async function handleOwnerPanelApi(request, env, path, executionCtx = null) {
+  try {
+    const ctx = { ...(await requireOwnerPanelContext(request, env)), executionCtx };
     if (path === "/api/owner/bootstrap") return jsonResponse(await ownerPanelBootstrap(env, ctx));
+    if (path === "/api/owner/v9/game-config") return jsonResponse(await ownerPanelV9GameConfig(env, ctx));
+    if (path === "/api/owner/v9/game-config/draft") return jsonResponse(await ownerPanelV9GameConfigDraft(env, ctx));
+    if (path === "/api/owner/v9/game-config/publish") return jsonResponse(await ownerPanelV9GameConfigPublish(env, ctx));
+    if (path === "/api/owner/v9/game-config/restore") return jsonResponse(await ownerPanelV9GameConfigRestore(env, ctx));
+    if (path === "/api/owner/v9/media") return jsonResponse(await ownerPanelV9Media(env, ctx));
+    if (path === "/api/owner/v9/media/upload") return jsonResponse(await ownerPanelV9MediaUpload(env, ctx));
+    if (path === "/api/owner/v9/media/delete") return jsonResponse(await ownerPanelV9MediaDelete(env, ctx));
     if (path === "/api/owner/players") return jsonResponse(await ownerPanelPlayers(env, ctx));
     if (path === "/api/owner/player") return jsonResponse(await ownerPanelPlayer(env, ctx));
     if (path === "/api/owner/player/grant") return jsonResponse(await ownerPanelGrantPlayer(env, ctx));
@@ -23489,6 +24449,7 @@ async function handleOwnerPanelApi(request, env, path) {
     if (path === "/api/owner/season-pass/delete") return jsonResponse(await ownerPanelDeleteSeasonPassSeason(env, ctx));
     if (path === "/api/owner/news") return jsonResponse(await ownerPanelNews(env, ctx));
     if (path === "/api/owner/news/publish") return jsonResponse(await ownerPanelPublishNews(env, ctx));
+    if (path === "/api/owner/news/broadcast") return jsonResponse(await ownerPanelBroadcastNews(env, ctx));
     if (path === "/api/owner/cases") return jsonResponse(await ownerPanelCases(env, ctx));
     if (path === "/api/owner/cases/save") return jsonResponse(await ownerPanelSaveCase(env, ctx));
     if (path === "/api/owner/cases/content/save") return jsonResponse(await ownerPanelSaveCaseContent(env, ctx));
@@ -23497,6 +24458,9 @@ async function handleOwnerPanelApi(request, env, path) {
     if (path === "/api/owner/promocodes/toggle") return jsonResponse(await ownerPanelTogglePromocode(env, ctx));
     if (path === "/api/owner/shop") return jsonResponse(await ownerPanelShop(env, ctx));
     if (path === "/api/owner/shop/save") return jsonResponse(await ownerPanelSaveShopItem(env, ctx));
+    if (path === "/api/owner/offers") return jsonResponse(await ownerPanelFlashOffers(env, ctx));
+    if (path === "/api/owner/offers/save") return jsonResponse(await ownerPanelSaveFlashOffer(env, ctx));
+    if (path === "/api/owner/offers/action") return jsonResponse(await ownerPanelFlashOfferAction(env, ctx));
     if (path === "/api/owner/staff") return jsonResponse(await ownerPanelStaff(env, ctx));
     if (path === "/api/owner/staff/create") return jsonResponse(await ownerPanelCreateStaff(env, ctx));
     if (path === "/api/owner/staff/update") return jsonResponse(await ownerPanelUpdateStaff(env, ctx));
@@ -23532,6 +24496,23 @@ async function handleOwnerPanelApi(request, env, path) {
     if (path === "/api/owner/v8/snapshot/create") return jsonResponse(await ownerPanelV8CreateSnapshot(env, ctx));
     if (path === "/api/owner/v8/snapshot/restore") return jsonResponse(await ownerPanelV8RestoreSnapshot(env, ctx));
     if (path === "/api/owner/v8/draft/action") return jsonResponse(await ownerPanelV8DraftAction(env, ctx));
+    if (path === "/api/owner/v85/player/360") return jsonResponse(await ownerPanelV85Player360(env, ctx));
+    if (path === "/api/owner/v85/player/note/save") return jsonResponse(await ownerPanelV85PlayerNoteSave(env, ctx));
+    if (path === "/api/owner/v85/player/note/delete") return jsonResponse(await ownerPanelV85PlayerNoteDelete(env, ctx));
+    if (path === "/api/owner/v85/segments/save") return jsonResponse(await ownerPanelV85SegmentSave(env, ctx));
+    if (path === "/api/owner/v85/segments/delete") return jsonResponse(await ownerPanelV85SegmentDelete(env, ctx));
+    if (path === "/api/owner/v85/segments/preview") return jsonResponse(await ownerPanelV85SegmentPreview(env, ctx));
+    if (path === "/api/owner/v85/compensations") return jsonResponse(await ownerPanelV85Compensations(env, ctx));
+    if (path === "/api/owner/v85/compensations/preview") return jsonResponse(await ownerPanelV85CompensationPreview(env, ctx));
+    if (path === "/api/owner/v85/compensations/send") return jsonResponse(await ownerPanelV85CompensationSend(env, ctx));
+    if (path === "/api/owner/v85/monitoring") return jsonResponse(await ownerPanelV85Monitoring(env, ctx));
+    if (path === "/api/owner/v85/monitoring/config") return jsonResponse(await ownerPanelV85MonitoringConfig(env, ctx));
+    if (path === "/api/owner/v85/experiments") return jsonResponse(await ownerPanelV85Experiments(env, ctx));
+    if (path === "/api/owner/v85/experiments/save") return jsonResponse(await ownerPanelV85ExperimentSave(env, ctx));
+    if (path === "/api/owner/v85/experiments/action") return jsonResponse(await ownerPanelV85ExperimentAction(env, ctx));
+    if (path === "/api/owner/v85/staff/detail") return jsonResponse(await ownerPanelV85StaffDetail(env, ctx));
+    if (path === "/api/owner/v85/staff/permissions") return jsonResponse(await ownerPanelV85StaffPermissionsSave(env, ctx));
+    if (path === "/api/owner/v85/staff/limits") return jsonResponse(await ownerPanelV85StaffLimitsSave(env, ctx));
     if (path === "/api/owner/v8/search") return jsonResponse(await ownerPanelV8Search(env, ctx));
     throw new ApiError(404, "Раздел панели владельца не найден.");
   } catch (error) {
@@ -23583,7 +24564,7 @@ async function ownerPanelRecentAudit(env, limit = 20) {
   }
 }
 
-async function ownerPanelBootstrap(env, ctx) {
+async function ownerPanelBootstrapFresh(env, ctx) {
   await Promise.all([ensureSeason(env), ensureSeasonPassSchema(env), ensureMaintenanceSchema(env)]);
   const now = Math.floor(Date.now() / 1000);
   const ratingSeason = await ensureSeason(env);
@@ -23640,6 +24621,8 @@ async function ownerPanelBootstrap(env, ctx) {
     audit
   };
 }
+
+async function ownerPanelBootstrap(env,ctx){return ownerV85Cached("owner:bootstrap",10000,()=>ownerPanelBootstrapFresh(env,ctx));}
 
 async function ownerPanelPlayers(env, ctx) {
   const query = String(ctx.body?.query || "").trim().slice(0, 80);
@@ -23849,13 +24832,25 @@ async function ownerPanelCancelRatingSeason(env, ctx) {
 }
 
 function ownerPanelSeasonPassRewardView(row) {
-  const publicType=seasonPassPublicRewardType(row);
+  const publicType=seasonPassPublicRewardType(row);const publicItemId=seasonPassPublicRewardItemId(row);
   return {
     level: Number(row.level || 0), lane: String(row.lane || "free"),
     rewardType: publicType, amount: Number(row.amount || 0),
-    itemId: String(row.item_id || ""), title: String(row.title || ""),
-    imageUrl: String(row.image_url || ownerPanelRewardAsset(publicType, row.item_id)), enabled: Number(row.enabled || 0) === 1
+    itemId: publicItemId, title: String(row.title || ""),
+    imageUrl: String(row.image_url || ownerPanelRewardAsset(publicType, publicItemId)), enabled: Number(row.enabled || 0) === 1
   };
+}
+
+function ownerPanelSeasonPassCosmeticCatalogs(liveops={content:{}}) {
+  const result={};
+  for(const kind of SEASON_PASS_COSMETIC_KINDS){
+    const base=seasonPassCosmeticCatalog(kind)||{};const overrides=liveops?.content?.[kind]||{};
+    result[kind]=Object.entries(base).map(([id,item])=>({
+      id,title:String(overrides?.[id]?.title||item.title||id),rarity:String(overrides?.[id]?.rarity||item.rarity||"common"),
+      imageUrl:String(overrides?.[id]?.imageUrl||seasonPassCosmeticImage(kind,id))
+    }));
+  }
+  return result;
 }
 
 async function ownerPanelSeasonPass(env, ctx) {
@@ -23863,25 +24858,35 @@ async function ownerPanelSeasonPass(env, ctx) {
   const requested = String(ctx.body?.seasonId || "").trim();
   const selected = requested ? await loadSeasonPassSeasonById(env, requested) : await loadSeasonPassSeason(env);
   if (!selected) throw new ApiError(404, "Сезонный пропуск не найден.");
-  const [seasonsResult, rewardsResult, tasksResult, stats] = await Promise.all([
+  const [seasonsResult, rewardsResult, tasksResult, stats, liveops] = await Promise.all([
     env.DB.prepare(`SELECT * FROM season_pass_seasons ORDER BY starts_at DESC,updated_at DESC LIMIT 30`).all(),
     env.DB.prepare(`SELECT level,lane,reward_type,amount,item_id,title,image_url,enabled FROM season_pass_rewards WHERE season_id=? ORDER BY level,lane`).bind(selected.id).all(),
     env.DB.prepare(`SELECT task_id,period,premium,metric,target,xp_reward,title,description,enabled,sort_order FROM season_pass_tasks WHERE season_id=? ORDER BY sort_order,task_id`).bind(selected.id).all(),
-    env.DB.prepare(`SELECT COUNT(*) AS players,SUM(CASE WHEN premium_tier='elite' THEN 1 ELSE 0 END) AS elite,SUM(CASE WHEN premium_tier='elite_plus' THEN 1 ELSE 0 END) AS elite_plus,MAX(xp) AS max_xp FROM season_pass_players WHERE season_id=?`).bind(selected.id).first()
+    env.DB.prepare(`SELECT COUNT(*) AS players,SUM(CASE WHEN premium_tier='elite' THEN 1 ELSE 0 END) AS elite,SUM(CASE WHEN premium_tier='elite_plus' THEN 1 ELSE 0 END) AS elite_plus,MAX(xp) AS max_xp FROM season_pass_players WHERE season_id=?`).bind(selected.id).first(),
+    readLiveOpsConfig(env).catch(()=>({content:{}}))
   ]);
-  const nowMs = Date.now();
+  const nowMs = Date.now();const seasonRows=seasonsResult.results||[];
+  const lastReserved=Math.max(Math.floor(nowMs/1000)+3600,...seasonRows.map(row=>Math.max(Number(row.ends_at||0),Number(row.claim_grace_ends_at||0))));
+  const suggestedStart=lastReserved+60,suggestedEnd=suggestedStart+30*24*3600;
   return {
     ok: true,
     selected,
-    seasons: (seasonsResult.results || []).map((row) => seasonPassSeasonFromRow(row, configuredSeasonPassState(env, nowMs), nowMs)),
+    seasons: seasonRows.map((row) => seasonPassSeasonFromRow(row, configuredSeasonPassState(env, nowMs), nowMs)),
     rewards: (rewardsResult.results || []).map(ownerPanelSeasonPassRewardView),
     tasks: (tasksResult.results || []).map((row) => ({ id:String(row.task_id),period:String(row.period),premium:Number(row.premium||0)===1,metric:String(row.metric),target:Number(row.target||0),xp:Number(row.xp_reward||0),title:String(row.title||""),description:String(row.description||""),enabled:Number(row.enabled||0)===1 })),
+    catalogs: ownerPanelSeasonPassCosmeticCatalogs(liveops),
+    createSuggestion:{startsAt:suggestedStart,endsAt:suggestedEnd},
     stats: { players:Number(stats?.players||0),elite:Number(stats?.elite||0),elitePlus:Number(stats?.elite_plus||0),maxXp:Number(stats?.max_xp||0) }
   };
 }
 
 function ownerPanelSeasonPassRewardPresentation(typeValue, amountValue, itemValue) {
   const type = String(typeValue || "");
+  if(SEASON_PASS_COSMETIC_KINDS.includes(type)){
+    const itemId=String(itemValue||"").trim();const catalog=seasonPassCosmeticCatalog(type);const item=catalog?.[itemId];
+    if(!item)throw new ApiError(400,"Выберите существующий предмет оформления.");
+    return {rewardType:"points",publicRewardType:type,amount:1,itemId:`${SEASON_PASS_COSMETIC_PREFIX}${type}:${itemId}`,publicItemId:itemId,title:String(item.title||itemId),imageUrl:seasonPassCosmeticImage(type,itemId)};
+  }
   const boost=seasonPassBoostRewardDefinition(type);
   if (boost) {
     const amount=boost.kind==='xp'?1:ownerPanelInteger(amountValue,1,50);
@@ -23917,7 +24922,7 @@ async function ownerPanelSetSeasonPassReward(env, ctx) {
   const now = Math.floor(Date.now()/1000);
   await env.DB.prepare(`INSERT INTO season_pass_rewards(season_id,level,lane,reward_type,amount,item_id,title,image_url,enabled,updated_at,updated_by) VALUES(?,?,?,?,?,?,?,?,1,?,?) ON CONFLICT(season_id,level,lane) DO UPDATE SET reward_type=excluded.reward_type,amount=excluded.amount,item_id=excluded.item_id,title=excluded.title,image_url=excluded.image_url,enabled=1,updated_at=excluded.updated_at,updated_by=excluded.updated_by`).bind(seasonId,level,lane,reward.rewardType,reward.amount,reward.itemId,reward.title,reward.imageUrl,now,String(ctx.user.id)).run();
   await logStaffAction(env,ctx.user,ctx.access,"owner_panel_season_pass_reward",null,"season_pass_reward",null,null,{seasonId,level,lane,before:before||null,after:reward});
-  return { ok:true, reward:{level,lane,...reward,rewardType:reward.publicRewardType||reward.rewardType,enabled:true} };
+  return { ok:true, reward:{level,lane,...reward,rewardType:reward.publicRewardType||reward.rewardType,itemId:reward.publicItemId||reward.itemId,enabled:true} };
 }
 
 async function ownerPanelCreateSeasonPassSeason(env, ctx) {
@@ -23930,8 +24935,8 @@ async function ownerPanelCreateSeasonPassSeason(env, ctx) {
   if(startsAt==null||endsAt==null||startsAt<=now||endsAt<=startsAt+3600) throw new ApiError(400,"Новый сезон должен начинаться в будущем и длиться больше часа.");
   if(endsAt-startsAt>180*24*3600) throw new ApiError(400,"Сезонный пропуск не может длиться больше 180 дней.");
   const overlap=await seasonPassSeasonOverlap(env,startsAt,endsAt);
-  if(overlap) throw new ApiError(409,`Период пересекается с сезоном «${String(overlap.title||overlap.season_id)}» или его окном получения наград.`);
-  const sourceId=String(ctx.body?.sourceSeasonId||"").trim()||String((await loadSeasonPassSeason(env)).id);
+  if(overlap){const reservedUntil=Math.max(Number(overlap.ends_at||0),Number(overlap.claim_grace_ends_at||0));throw new ApiError(409,`Период пересекается с сезоном «${String(overlap.title||overlap.season_id)}». Для нового пропуска выберите старт после ${formatUtcDate(reservedUntil)}.`);}
+  const currentSource=await loadSeasonPassSeason(env);const sourceId=String(ctx.body?.sourceSeasonId||"").trim()||String(currentSource?.id||DEFAULT_SEASON_PASS_ID);
   const source=await env.DB.prepare(`SELECT * FROM season_pass_seasons WHERE season_id=? LIMIT 1`).bind(sourceId).first();
   const seasonId=await uniqueSeasonPassSeasonId(env,startsAt);const graceEndsAt=endsAt+SEASON_PASS_MANUAL_CLAIM_GRACE_SECONDS;const actor=String(ctx.user.id);
   const cfg=source||{base_run_xp:100,level_price_points:DEFAULT_SEASON_PASS_LEVEL_PRICE_POINTS,elite_price_points:DEFAULT_SEASON_PASS_ELITE_PRICE.points,elite_price_treats:DEFAULT_SEASON_PASS_ELITE_PRICE.treats,elite_price_coffee:DEFAULT_SEASON_PASS_ELITE_PRICE.coffee,elite_plus_price_points:DEFAULT_SEASON_PASS_ELITE_PLUS_PRICE.points,elite_plus_price_treats:DEFAULT_SEASON_PASS_ELITE_PLUS_PRICE.treats,elite_plus_price_coffee:DEFAULT_SEASON_PASS_ELITE_PLUS_PRICE.coffee};
@@ -24035,39 +25040,103 @@ async function ownerPanelNewsAssetCatalog(env, base) {
   }
 }
 
+function ownerPanelNewsBroadcastState(row) {
+  const broadcastId=String(row?.broadcast_id||row?.broadcastId||"").trim();
+  if(!broadcastId)return null;
+  const total=Math.max(0,Number(row?.broadcast_total_count??row?.total_count??row?.total??0));
+  const sent=Math.max(0,Number(row?.broadcast_sent_count??row?.sent_count??row?.sent??0));
+  const failed=Math.max(0,Number(row?.broadcast_failed_count??row?.failed_count??row?.failed??0));
+  return {broadcastId,status:String(row?.broadcast_status||row?.status||"pending"),total,sent,failed,pending:Math.max(0,total-sent-failed),updatedAt:Number(row?.broadcast_updated_at??row?.updated_at??0),completedAt:Number(row?.broadcast_completed_at??row?.completed_at??0)};
+}
+
 async function ownerPanelNews(env, ctx) {
-  const result=await env.DB.prepare(`SELECT id,title,body,image_url,status,created_at,published_at,created_by,created_by_name FROM bot_news ORDER BY published_at DESC,id DESC LIMIT 20`).all().catch(()=>({results:[]}));
+  await ensureBotBroadcastSchema(env);
+  const result=await env.DB.prepare(`SELECT n.id,n.title,n.body,n.image_url,n.status,n.created_at,n.published_at,n.created_by,n.created_by_name,
+      b.broadcast_id,b.status AS broadcast_status,b.total_count AS broadcast_total_count,b.sent_count AS broadcast_sent_count,
+      b.failed_count AS broadcast_failed_count,b.updated_at AS broadcast_updated_at,b.completed_at AS broadcast_completed_at
+    FROM bot_news n LEFT JOIN bot_broadcasts b ON b.broadcast_id=('news_' || n.id)
+    ORDER BY n.published_at DESC,n.id DESC LIMIT 20`).all().catch(()=>({results:[]}));
   const base=`${configuredGameUrl(env).replace(/\/$/,"")}`;
   const assetCatalog=await ownerPanelNewsAssetCatalog(env,base);
+  const mediaItems=await ownerPanelV9MediaListData(env,40).catch(()=>[]);
+  const mediaPresets=mediaItems.map(item=>({label:item.fileName,url:`${base}${item.url}`,path:item.url,group:"Медиатека",fileName:item.fileName}));
+  const rows=result.results||[];
+  const published=rows.find((row)=>String(row.status||"")==="published")||null;
   return {ok:true,
-    channelHelp:{bot:"Публикация меняет раздел «Новости» Telegram-бота. Игрок получает этот пост по команде /news.",game:"Новость внутри игры — релизное окно, встроенное в index.html. Она показана здесь для контроля и не меняется публикацией в боте."},
-    gameNews:{title:BOT_NEWS_TITLE,body:BOT_NEWS_TEXT,imageUrl:`${base}/assets/news/relise_game_news.png?v=1.0.0`,version:GAME_VERSION,source:"index.html / релизное окно"},
-    news:(result.results||[]).map(row=>({id:Number(row.id||0),title:String(row.title||""),body:String(row.body||""),imageUrl:String(row.image_url||""),status:String(row.status||""),publishedAt:Number(row.published_at||0),createdByName:String(row.created_by_name||"")})),
+    channelHelp:{bot:"Публикация сохраняет пост в разделе «Новости» бота и запускает массовую доставку активным подписчикам через безопасную очередь/Cron.",game:"Та же опубликованная новость автоматически становится текущей новостью внутри игры. Непрочитавшие игроки увидят индикатор «Новая новость» при входе; отметка прочтения хранится на сервере."},
+    gameNews:published?{id:Number(published.id||0),title:String(published.title||""),body:String(published.body||""),imageUrl:String(published.image_url||""),version:GAME_VERSION,source:"Control Center · уведомление внутри игры",publishedAt:Number(published.published_at||0)}:{title:BOT_NEWS_TITLE,body:BOT_NEWS_TEXT,imageUrl:`${base}/assets/news/relise_game_news.png?v=1.0.0`,version:GAME_VERSION,source:"встроенное релизное окно"},
+    news:rows.map(row=>({id:Number(row.id||0),title:String(row.title||""),body:String(row.body||""),imageUrl:String(row.image_url||""),status:String(row.status||""),publishedAt:Number(row.published_at||0),createdByName:String(row.created_by_name||""),delivery:ownerPanelNewsBroadcastState(row)})),
     assetCatalog:{source:assetCatalog.source,catalogHash:assetCatalog.catalogHash||"",count:assetCatalog.count},
-    presets:assetCatalog.presets
+    presets:[...mediaPresets,...assetCatalog.presets]
   };
 }
 
 function ownerPanelNormalizeNewsImage(env, value) {
   const raw=String(value||"").trim();if(!raw)return "";
-  try{const base=new URL(configuredGameUrl(env));const url=new URL(raw,base);if(url.protocol!=="https:")throw new Error("protocol");return url.toString();}catch{throw new ApiError(400,"Картинка должна быть HTTPS-ссылкой или путём /assets/...");}
+  try{const base=new URL(configuredGameUrl(env));const url=new URL(raw,base);if(url.protocol!=="https:")throw new Error("protocol");return url.toString();}catch{throw new ApiError(400,"Картинка должна быть HTTPS-ссылкой, /assets/... или /media/...");}
+}
+
+function ownerPanelNewsBroadcastMessage(title,body){
+  return `<b>📰 ${escapeHtml(String(title||""))}</b>\n\n${escapeHtml(String(body||""))}\n\nВерсия: <b>${escapeHtml(GAME_VERSION)}</b>`;
+}
+
+async function ownerPanelCancelOlderNewsBroadcasts(env, keepBroadcastId, now=Math.floor(Date.now()/1000)) {
+  await ensureBotBroadcastSchema(env);
+  const rows=(await env.DB.prepare(`SELECT broadcast_id FROM bot_broadcasts WHERE broadcast_id LIKE 'news_%' AND broadcast_id<>? AND status IN ('pending','running')`).bind(String(keepBroadcastId)).all()).results||[];
+  if(!rows.length)return 0;
+  for(const row of rows){
+    const id=String(row.broadcast_id||"");if(!id)continue;
+    await env.DB.batch([
+      env.DB.prepare(`UPDATE bot_broadcast_deliveries SET status='failed',attempts=CASE WHEN attempts<1 THEN 1 ELSE attempts END,error_text='Остановлено новой публикацией новости',attempted_at=? WHERE broadcast_id=? AND status='pending'`).bind(now,id),
+      env.DB.prepare(`UPDATE bot_broadcasts SET status='failed',lease_token='',lease_until=0,updated_at=? WHERE broadcast_id=? AND status IN ('pending','running')`).bind(now,id)
+    ]);
+  }
+  return rows.length;
+}
+
+async function ownerPanelQueueNewsBroadcast(env, news, ctx) {
+  await ensureBotBroadcastSchema(env);
+  const newsId=Math.max(0,Number(news?.id||0));if(!newsId)throw new ApiError(500,"Не удалось определить ID опубликованной новости.");
+  const broadcastId=`news_${newsId}`;
+  const existing=await env.DB.prepare(`SELECT broadcast_id,status,total_count,sent_count,failed_count,updated_at,completed_at FROM bot_broadcasts WHERE broadcast_id=? LIMIT 1`).bind(broadcastId).first();
+  if(existing)return ownerPanelNewsBroadcastState(existing);
+  const totalRow=await env.DB.prepare(`SELECT COUNT(*) AS total FROM bot_subscribers WHERE active=1`).first();
+  const total=Math.max(0,Number(totalRow?.total||0));
+  if(total<1)return {broadcastId:"",status:"no_recipients",total:0,sent:0,failed:0,pending:0,updatedAt:Math.floor(Date.now()/1000),completedAt:0};
+  const now=Math.floor(Date.now()/1000);
+  await ownerPanelCancelOlderNewsBroadcasts(env,broadcastId,now);
+  const messageText=ownerPanelNewsBroadcastMessage(news.title,news.body);
+  await env.DB.batch([
+    env.DB.prepare(`INSERT INTO bot_broadcasts (broadcast_id,message_text,created_by,report_chat_id,created_at,status,total_count,sent_count,failed_count,updated_at,completed_at,completion_notified,image_url,message_format,lease_token,lease_until) VALUES (?,?,?,?,?,'pending',?,0,0,?,0,0,?,'html','',0)`).bind(broadcastId,messageText,String(ctx.user.id),String(ctx.user.id),now,total,now,String(news.imageUrl||"")),
+    env.DB.prepare(`INSERT INTO bot_broadcast_deliveries (broadcast_id,subscriber_id,telegram_id,status,attempts,error_text,attempted_at) SELECT ?,id,telegram_id,'pending',0,'',0 FROM bot_subscribers WHERE active=1`).bind(broadcastId)
+  ]);
+  const task=processBotBroadcastJob(env,broadcastId).catch((error)=>console.error("Initial news broadcast batch failed",error));
+  if(ctx.executionCtx?.waitUntil)ctx.executionCtx.waitUntil(task);
+  return {broadcastId,status:"pending",total,sent:0,failed:0,pending:total,updatedAt:now,completedAt:0};
 }
 
 async function ownerPanelPublishNews(env, ctx) {
   const title=String(ctx.body?.title||"").trim().slice(0,120);const body=String(ctx.body?.body||"").trim().slice(0,3000);const imageUrl=ownerPanelNormalizeNewsImage(env,ctx.body?.imageUrl);
   if(!title||!body)throw new ApiError(400,"Заполните заголовок и текст новости.");const now=Math.floor(Date.now()/1000);
-  await env.DB.batch([
-    env.DB.prepare(`UPDATE bot_news SET status='archived' WHERE status='published'`),
-    env.DB.prepare(`INSERT INTO bot_news(title,body,image_url,status,created_at,published_at,created_by,created_by_name) VALUES(?,?,?,'published',?,?,?,?)`).bind(title,body,imageUrl||null,now,now,String(ctx.user.id),telegramDisplayName(ctx.user))
-  ]).catch(async(error)=>{
-    // Some D1 clients reject a malformed batch before running anything; keep the
-    // publication path simple and deterministic as a fallback.
-    console.error("owner news batch fallback",error);
-    await env.DB.prepare(`UPDATE bot_news SET status='archived' WHERE status='published'`).run();
-    await env.DB.prepare(`INSERT INTO bot_news(title,body,image_url,status,created_at,published_at,created_by,created_by_name) VALUES(?,?,?,'published',?,?,?,?)`).bind(title,body,imageUrl||null,now,now,String(ctx.user.id),telegramDisplayName(ctx.user)).run();
-  });
-  await logStaffAction(env,ctx.user,ctx.access,"owner_panel_publish_news",null,"news",null,null,{title,imageUrl});
-  return {ok:true,title,body,imageUrl,publishedAt:now};
+  const insert=await env.DB.prepare(`INSERT INTO bot_news(title,body,image_url,status,created_at,published_at,created_by,created_by_name) VALUES(?,?,?,'published',?,?,?,?)`).bind(title,body,imageUrl||null,now,now,String(ctx.user.id),telegramDisplayName(ctx.user)).run();
+  let newsId=Number(insert.meta?.last_row_id||0);
+  if(!newsId){const row=await env.DB.prepare(`SELECT id FROM bot_news WHERE status='published' AND created_by=? AND published_at=? ORDER BY id DESC LIMIT 1`).bind(String(ctx.user.id),now).first();newsId=Number(row?.id||0);}
+  if(!newsId)throw new ApiError(500,"Новость сохранена, но не удалось определить её ID для рассылки.");
+  await env.DB.prepare(`UPDATE bot_news SET status='archived' WHERE status='published' AND id<>?`).bind(newsId).run();
+  const broadcast=await ownerPanelQueueNewsBroadcast(env,{id:newsId,title,body,imageUrl},ctx);
+  await logStaffAction(env,ctx.user,ctx.access,"owner_panel_publish_news",null,"news",null,null,{newsId,title,imageUrl,broadcastId:broadcast?.broadcastId||"",recipients:Number(broadcast?.total||0)});
+  return {ok:true,id:newsId,title,body,imageUrl,publishedAt:now,broadcast};
+}
+
+async function ownerPanelBroadcastNews(env,ctx){
+  const requestedId=Math.max(0,Math.floor(Number(ctx.body?.id)||0));
+  const row=requestedId
+    ? await env.DB.prepare(`SELECT id,title,body,image_url,status,published_at FROM bot_news WHERE id=? AND status='published' LIMIT 1`).bind(requestedId).first()
+    : await env.DB.prepare(`SELECT id,title,body,image_url,status,published_at FROM bot_news WHERE status='published' ORDER BY published_at DESC,id DESC LIMIT 1`).first();
+  if(!row)throw new ApiError(404,"Текущая опубликованная новость не найдена.");
+  const broadcast=await ownerPanelQueueNewsBroadcast(env,{id:Number(row.id),title:String(row.title||""),body:String(row.body||""),imageUrl:String(row.image_url||"")},ctx);
+  await logStaffAction(env,ctx.user,ctx.access,"owner_panel_news_broadcast",null,"news",null,null,{newsId:Number(row.id),title:String(row.title||""),broadcastId:broadcast?.broadcastId||"",recipients:Number(broadcast?.total||0)});
+  return {ok:true,id:Number(row.id),broadcast};
 }
 
 async function ownerPanelStaff(env, ctx) {

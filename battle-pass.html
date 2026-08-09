@@ -2825,6 +2825,9 @@ img[src$="/xp.webp"]{
     legendaryCase:"/assets/cases/legendary_closed.png",
     eliteFrame:"/assets/rating/frames/profile/ramka_profile_elita.png",
     eliteAvatar:"/assets/cases/avatars/legendary_avatarka_5.png",
+    cosmeticSkin:"/assets/skins/avatars/barista.png",
+    cosmeticTrail:"/assets/cases/trails/BBFD9E7E-393D-4B0A-B990-CC93BFCFB505.PNG",
+    cosmeticMusic:"/assets/season-pass/season.png?v=07939",
     eliteBadge:"/assets/season-pass/elite.png?v=07939",
     elitePlusBadge:"/assets/season-pass/elite_plus.png?v=07939",
     premiumReward:"/assets/season-pass/season.png?v=07939",
@@ -2847,6 +2850,9 @@ img[src$="/xp.webp"]{
     if (text.includes("очк")) return REWARD_ASSETS.points;
     if (text.includes("рамк")) return REWARD_ASSETS.eliteFrame;
     if (text.includes("аватар")) return REWARD_ASSETS.eliteAvatar;
+    if (text.includes("скин") || text.includes("образ")) return REWARD_ASSETS.cosmeticSkin;
+    if (text.includes("след")) return REWARD_ASSETS.cosmeticTrail;
+    if (text.includes("музык") || text.includes("мелод") || text.includes("трек")) return REWARD_ASSETS.cosmeticMusic;
     if (text.includes("уров")) return REWARD_ASSETS.levelBoost;
     if (text.includes("xp") || text.includes("опыт")) return REWARD_ASSETS.xpBoost;
     if (text.includes("тариф") || text.includes("элитн")) return REWARD_ASSETS.eliteBadge;
