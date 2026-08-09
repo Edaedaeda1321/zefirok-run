@@ -1425,6 +1425,7 @@ async function processCriticalServerQueues(env) {
     ["rewardQueue", () => processRewardDeliveryQueue(env, 25)],
     ["staffNotifications", () => processPendingLeaderboardStaffNotifications(env, 30)],
     ["playerNotifications", () => processV77NotificationQueue(env, 12)],
+    ["seasonStarts", () => processSeasonStartBroadcasts(env)],
     ["broadcast", async () => {
       const result = await processPendingBotBroadcast(env);
       try { await clearOperationalIssue(env, "broadcast"); } catch {}
@@ -8618,6 +8619,13 @@ function staffActionLabel(action) {
     season_shorten: "сокращение сезона",
     season_reward_change: "изменение награды сезона",
     season_finish_early: "досрочное завершение сезона",
+    owner_panel_rating_start: "досрочный запуск рейтингового сезона",
+    owner_panel_rating_timing: "изменение срока рейтингового сезона",
+    owner_panel_rating_end: "завершение рейтингового сезона",
+    owner_panel_season_pass_start: "досрочный запуск сезонного пропуска",
+    owner_panel_season_pass_timing: "изменение срока сезонного пропуска",
+    owner_panel_season_pass_end: "завершение сезонного пропуска",
+    owner_panel_season_pass_force_close: "принудительное закрытие пропуска без окна",
     ticket_create: "создание обращения",
     ticket_status: "изменение статуса обращения",
     view_daily_report: "просмотр дневной сводки",
@@ -15129,6 +15137,72 @@ async function queueSystemBroadcast(env, text, reportChatId = "", dedupeKey = ""
     env.DB.prepare(`INSERT OR IGNORE INTO bot_broadcast_deliveries (broadcast_id,subscriber_id,telegram_id,status,attempts,error_text,attempted_at) SELECT ?,id,telegram_id,'pending',0,'',0 FROM bot_subscribers WHERE active = 1`).bind(id)
   ]);
   return id;
+}
+
+const SEASON_START_BROADCAST_SCAN_STATE_KEY = "season_start_broadcast:last_scan_v1";
+
+function ratingSeasonStartBroadcastText(season) {
+  const reward = leaderboardRewardPresentation(season?.reward_type, season?.reward_amount, season?.reward_item_id, season?.reward_title, season?.reward_image_url);
+  return [
+    "🏆 Новый сезон рейтинга стартовал!",
+    "",
+    `«${String(season?.title || "Новый сезон") }» уже идёт в «Сладком Забеге».`,
+    `Награда за 1 место: ${reward.title}.`,
+    `Сезон завершится ${formatUtcDate(Number(season?.ends_at || 0))}.`,
+    "",
+    "Заходи в игру и поборись за первое место!"
+  ].join("\n");
+}
+
+function seasonPassStartBroadcastText(row) {
+  return [
+    "🎟 Новый сезон сезонного пропуска стартовал!",
+    "",
+    `«${String(row?.title || "Новый сезон") }» уже открыт в «Сладком Забеге».`,
+    "Выполняй задания, получай XP и забирай награды бесплатной и Элитной линий.",
+    `Сезон завершится ${formatUtcDate(Number(row?.ends_at || 0))}.`,
+    "",
+    "Открой сезонный пропуск в профиле игры."
+  ].join("\n");
+}
+
+async function queueRatingSeasonStartBroadcast(env, season) {
+  if (!season?.id) return null;
+  return queueSystemBroadcast(env, ratingSeasonStartBroadcastText(season), "", `rating_season_start_${String(season.id)}`);
+}
+
+async function queueSeasonPassStartBroadcast(env, row) {
+  if (!row?.season_id) return null;
+  return queueSystemBroadcast(env, seasonPassStartBroadcastText(row), "", `season_pass_start_${String(row.season_id)}`);
+}
+
+async function processSeasonStartBroadcasts(env) {
+  const now = Math.floor(Date.now() / 1000);
+  const state = await getSystemState(env, SEASON_START_BROADCAST_SCAN_STATE_KEY);
+  const previous = Math.max(0, Number(state?.value || 0));
+  const since = previous > 0 ? Math.min(previous, now) : Math.max(0, now - 10 * 60);
+  await reconcileLeaderboardSeasonTimeline(env, now);
+  await ensureSeasonPassSchema(env);
+  const [ratingsResult, passResult] = await Promise.all([
+    env.DB.prepare(`SELECT * FROM leaderboard_seasons WHERE status='active' AND finalized_at IS NULL AND starts_at>=? AND starts_at<=? AND ends_at>? ORDER BY starts_at,id`).bind(since, now, now).all(),
+    env.DB.prepare(`SELECT * FROM season_pass_seasons WHERE manual_status!='ended' AND starts_at>=? AND starts_at<=? AND ends_at>? ORDER BY starts_at,season_id`).bind(since, now, now).all()
+  ]);
+  let ratingQueued = 0;
+  let passQueued = 0;
+  for (const season of ratingsResult.results || []) {
+    const id = await queueRatingSeasonStartBroadcast(env, season);
+    if (id) ratingQueued += 1;
+  }
+  for (const row of passResult.results || []) {
+    const season = seasonPassSeasonFromRow(row, configuredSeasonPassState(env, now * 1000), now * 1000);
+    if (season.status !== "active") continue;
+    const closure = await getSeasonPassForcedClosure(env, now * 1000);
+    if (closure && closure.nextSeasonId !== String(row.season_id || "")) continue;
+    const id = await queueSeasonPassStartBroadcast(env, row);
+    if (id) passQueued += 1;
+  }
+  await setSystemState(env, SEASON_START_BROADCAST_SCAN_STATE_KEY, String(now));
+  return { since, now, ratingQueued, passQueued };
 }
 
 async function restoreSafeEventShop(row, env, reason = "event_restore") {
@@ -24721,6 +24795,9 @@ async function handleOwnerPanelApi(request, env, path, executionCtx = null) {
     if (path === "/api/owner/control/ticket/update") return jsonResponse(await ownerPanelTicketUpdate(env, ctx));
     if (path === "/api/owner/rating") return jsonResponse(await ownerPanelRating(env, ctx));
     if (path === "/api/owner/rating/create") return jsonResponse(await ownerPanelCreateRatingSeason(env, ctx));
+    if (path === "/api/owner/rating/start") return jsonResponse(await ownerPanelStartRatingSeason(env, ctx));
+    if (path === "/api/owner/rating/timing") return jsonResponse(await ownerPanelAdjustRatingSeason(env, ctx));
+    if (path === "/api/owner/rating/end") return jsonResponse(await ownerPanelEndRatingSeason(env, ctx));
     if (path === "/api/owner/rating/cancel") return jsonResponse(await ownerPanelCancelRatingSeason(env, ctx));
     if (path === "/api/owner/season-pass") return jsonResponse(await ownerPanelSeasonPass(env, ctx));
     if (path === "/api/owner/season-pass/reward") return jsonResponse(await ownerPanelSetSeasonPassReward(env, ctx));
@@ -24728,6 +24805,10 @@ async function handleOwnerPanelApi(request, env, path, executionCtx = null) {
     if (path === "/api/owner/season-pass/task/save") return jsonResponse(await ownerPanelSaveSeasonPassTask(env, ctx));
     if (path === "/api/owner/season-pass/task/delete") return jsonResponse(await ownerPanelDeleteSeasonPassTask(env, ctx));
     if (path === "/api/owner/season-pass/create") return jsonResponse(await ownerPanelCreateSeasonPassSeason(env, ctx));
+    if (path === "/api/owner/season-pass/start") return jsonResponse(await ownerPanelStartSeasonPassSeason(env, ctx));
+    if (path === "/api/owner/season-pass/timing") return jsonResponse(await ownerPanelAdjustSeasonPassTiming(env, ctx));
+    if (path === "/api/owner/season-pass/end") return jsonResponse(await ownerPanelEndSeasonPassSeason(env, ctx));
+    if (path === "/api/owner/season-pass/force-close") return jsonResponse(await ownerPanelForceCloseSeasonPassSeason(env, ctx));
     if (path === "/api/owner/season-pass/delete") return jsonResponse(await ownerPanelDeleteSeasonPassSeason(env, ctx));
     if (path === "/api/owner/news") return jsonResponse(await ownerPanelNews(env, ctx));
     if (path === "/api/owner/news/publish") return jsonResponse(await ownerPanelPublishNews(env, ctx));
@@ -25103,6 +25184,83 @@ async function ownerPanelCreateRatingSeason(env, ctx) {
   return { ok: true, season: ownerPanelRatingSeasonView(await env.DB.prepare(`SELECT * FROM leaderboard_seasons WHERE id=?`).bind(seasonId).first()) };
 }
 
+async function ownerPanelStartRatingSeason(env, ctx) {
+  await reconcileLeaderboardSeasonTimeline(env);
+  const seasonId = String(ctx.body?.seasonId || "").trim();
+  if (!seasonId) throw new ApiError(400, "Не выбран рейтинговый сезон.");
+  const season = await env.DB.prepare(`SELECT * FROM leaderboard_seasons WHERE id=? LIMIT 1`).bind(seasonId).first();
+  if (!season) throw new ApiError(404, "Рейтинговый сезон не найден.");
+  const now = Math.floor(Date.now() / 1000);
+  if (season.finalized_at || String(season.status) !== "scheduled" || Number(season.starts_at || 0) <= now) {
+    throw new ApiError(409, "Запустить раньше времени можно только будущий запланированный сезон.");
+  }
+  if (Number(season.ends_at || 0) <= now) throw new ApiError(409, "Дата окончания этого сезона уже прошла.");
+
+  const update = await env.DB.prepare(
+    `UPDATE leaderboard_seasons
+     SET starts_at=?,status='active',manual_override=1,updated_at=?
+     WHERE id=? AND status='scheduled' AND finalized_at IS NULL AND starts_at>? AND ends_at=?
+       AND NOT EXISTS (
+         SELECT 1 FROM leaderboard_seasons other
+         WHERE other.id<>? AND other.status IN ('scheduled','active') AND other.finalized_at IS NULL
+           AND other.starts_at<? AND other.ends_at>?
+       )`
+  ).bind(now, now, seasonId, now, Number(season.ends_at), seasonId, Number(season.ends_at), now).run();
+
+  if (Number(update?.meta?.changes || 0) < 1) {
+    const fresh = await env.DB.prepare(`SELECT * FROM leaderboard_seasons WHERE id=? LIMIT 1`).bind(seasonId).first();
+    if (!fresh || fresh.finalized_at || String(fresh.status) !== "scheduled" || Number(fresh.starts_at || 0) <= now) {
+      throw new ApiError(409, "Состояние сезона уже изменилось. Обновите список сезонов.");
+    }
+    const overlap = await findLeaderboardSeasonOverlap(env, now, Number(fresh.ends_at || season.ends_at), seasonId);
+    if (overlap) throw new ApiError(409, `Нельзя запустить сезон: период пересечётся с «${String(overlap.title || overlap.id)}».`);
+    throw new ApiError(409, "Не удалось безопасно запустить сезон. Обновите данные и повторите попытку.");
+  }
+
+  const updated = await env.DB.prepare(`SELECT * FROM leaderboard_seasons WHERE id=? LIMIT 1`).bind(seasonId).first();
+  let broadcastId = null;
+  try { broadcastId = await queueRatingSeasonStartBroadcast(env, updated); }
+  catch (error) { console.error("rating season start broadcast queue failed", error); }
+  await logStaffAction(env, ctx.user, ctx.access, "owner_panel_rating_start", null, "season", null, null, {
+    seasonId, title: String(updated?.title || season.title || ""), previousStartsAt: Number(season.starts_at || 0), startsAt: now,
+    endsAt: Number(updated?.ends_at || season.ends_at || 0), broadcastId: String(broadcastId || "")
+  });
+  return { ok:true, season:ownerPanelRatingSeasonView(updated), notificationQueued:Boolean(broadcastId) };
+}
+
+async function ownerPanelAdjustRatingSeason(env, ctx) {
+  await reconcileLeaderboardSeasonTimeline(env);
+  const seasonId = String(ctx.body?.seasonId || "").trim();
+  const direction = String(ctx.body?.direction || "");
+  const days = ownerPanelInteger(ctx.body?.days, 1, 7);
+  if (!seasonId || !["extend","shorten"].includes(direction) || ![1,7].includes(days)) throw new ApiError(400, "Выберите сезон и изменение срока на 1 или 7 дней.");
+  const season = await env.DB.prepare(`SELECT * FROM leaderboard_seasons WHERE id=? LIMIT 1`).bind(seasonId).first();
+  if (!season) throw new ApiError(404, "Рейтинговый сезон не найден.");
+  if (season.finalized_at || !["scheduled","active"].includes(String(season.status))) throw new ApiError(409, "Срок можно менять только у активного или запланированного сезона.");
+  const now = Math.floor(Date.now()/1000);const startsAt=Number(season.starts_at||0);const currentEnd=Number(season.ends_at||0);const delta=days*24*60*60;const nextEnd=direction==="extend"?currentEnd+delta:currentEnd-delta;
+  if (direction==="shorten" && String(season.status)==="active" && nextEnd<=now) throw new ApiError(409, "После сокращения дата окажется в прошлом. Используйте «Закончить сейчас».");
+  if (nextEnd<=startsAt+3600) throw new ApiError(409, "Сезон должен длиться больше часа.");
+  if (nextEnd-startsAt>180*24*60*60) throw new ApiError(409, "Рейтинговый сезон не может длиться больше 180 дней.");
+  const overlap=await findLeaderboardSeasonOverlap(env,startsAt,nextEnd,seasonId);if(overlap)throw new ApiError(409,`Новая дата пересечётся с сезоном «${String(overlap.title||overlap.id)}».`);
+  const update=await env.DB.prepare(`UPDATE leaderboard_seasons SET ends_at=?,manual_override=1,status=CASE WHEN starts_at<=? THEN 'active' ELSE 'scheduled' END,updated_at=? WHERE id=? AND finalized_at IS NULL AND status IN ('scheduled','active') AND ends_at=? AND NOT EXISTS(SELECT 1 FROM leaderboard_seasons other WHERE other.id<>? AND other.status IN ('scheduled','active') AND other.finalized_at IS NULL AND other.starts_at<? AND other.ends_at>?)`).bind(nextEnd,now,now,seasonId,currentEnd,seasonId,nextEnd,startsAt).run();
+  if(Number(update?.meta?.changes||0)<1)throw new ApiError(409,"Состояние сезона изменилось или новая дата конфликтует с другим сезоном. Обновите список.");
+  const updated=await env.DB.prepare(`SELECT * FROM leaderboard_seasons WHERE id=? LIMIT 1`).bind(seasonId).first();
+  await logStaffAction(env,ctx.user,ctx.access,"owner_panel_rating_timing",null,"season",currentEnd,nextEnd,{seasonId,title:String(season.title||""),direction,days});
+  return {ok:true,season:ownerPanelRatingSeasonView(updated)};
+}
+
+async function ownerPanelEndRatingSeason(env, ctx) {
+  await reconcileLeaderboardSeasonTimeline(env);
+  const seasonId=String(ctx.body?.seasonId||"").trim();if(!seasonId)throw new ApiError(400,"Не выбран рейтинговый сезон.");
+  const season=await env.DB.prepare(`SELECT * FROM leaderboard_seasons WHERE id=? LIMIT 1`).bind(seasonId).first();if(!season)throw new ApiError(404,"Рейтинговый сезон не найден.");
+  if(season.finalized_at||String(season.status)!=="active")throw new ApiError(409,"Закончить сейчас можно только активный рейтинговый сезон.");
+  const now=Math.floor(Date.now()/1000);const update=await env.DB.prepare(`UPDATE leaderboard_seasons SET ends_at=?,status='ended',manual_override=1,close_reason='Завершён досрочно через Control Center',updated_at=? WHERE id=? AND status='active' AND finalized_at IS NULL AND ends_at>?`).bind(now,now,seasonId,now).run();
+  if(Number(update?.meta?.changes||0)<1)throw new ApiError(409,"Сезон уже изменился. Обновите список.");
+  const updated=await env.DB.prepare(`SELECT * FROM leaderboard_seasons WHERE id=? LIMIT 1`).bind(seasonId).first();await finalizeSeason(env,updated,now);const finalRow=await env.DB.prepare(`SELECT * FROM leaderboard_seasons WHERE id=? LIMIT 1`).bind(seasonId).first();
+  await logStaffAction(env,ctx.user,ctx.access,"owner_panel_rating_end",null,"season",Number(season.ends_at||0),now,{seasonId,title:String(season.title||"")});
+  return {ok:true,season:ownerPanelRatingSeasonView(finalRow)};
+}
+
 async function ownerPanelCancelRatingSeason(env, ctx) {
   const seasonId = String(ctx.body?.seasonId || "").trim();
   const season = await env.DB.prepare(`SELECT * FROM leaderboard_seasons WHERE id=? LIMIT 1`).bind(seasonId).first();
@@ -25311,6 +25469,92 @@ async function ownerPanelCreateSeasonPassSeason(env, ctx) {
   if(!taskCount){const tasks=defaultSeasonPassTasks().map((task,index)=>env.DB.prepare(`INSERT INTO season_pass_tasks(season_id,task_id,period,premium,metric,target,xp_reward,title,description,enabled,sort_order,updated_at,updated_by) VALUES(?,?,?,?,?,?,?,?,?,1,?,?,?)`).bind(seasonId,task.id,task.period,task.premium?1:0,task.metric,task.target,task.xp,task.title,task.description,(index+1)*10,now,actor));if(tasks.length)await env.DB.batch(tasks);}
   await logStaffAction(env,ctx.user,ctx.access,"owner_panel_season_pass_create",null,"season_pass",null,null,{seasonId,title,startsAt,endsAt,sourceSeasonId:sourceId});
   return {ok:true,season:await loadSeasonPassSeasonById(env,seasonId)};
+}
+
+async function ownerPanelStartSeasonPassSeason(env, ctx) {
+  await ensureSeasonPassSchema(env);
+  const seasonId = String(ctx.body?.seasonId || "").trim();
+  if (!seasonId) throw new ApiError(400, "Не выбран сезонный пропуск.");
+  const row = await env.DB.prepare(`SELECT * FROM season_pass_seasons WHERE season_id=? LIMIT 1`).bind(seasonId).first();
+  if (!row) throw new ApiError(404, "Сезонный пропуск не найден.");
+  const now = Math.floor(Date.now() / 1000);
+  if (String(row.manual_status || "") === "ended" || Number(row.starts_at || 0) <= now) {
+    throw new ApiError(409, "Запустить раньше времени можно только будущий сезонный пропуск.");
+  }
+  if (Number(row.ends_at || 0) <= now) throw new ApiError(409, "Дата окончания этого сезона уже прошла.");
+
+  const update = await env.DB.prepare(
+    `UPDATE season_pass_seasons
+     SET starts_at=?,manual_status='',updated_at=?,updated_by=?
+     WHERE season_id=? AND starts_at>? AND ends_at=? AND manual_status!='ended'
+       AND NOT EXISTS (
+         SELECT 1 FROM season_pass_seasons other
+         WHERE other.season_id<>? AND other.starts_at<? AND MAX(other.ends_at,other.claim_grace_ends_at)>?
+       )`
+  ).bind(now, now, String(ctx.user.id), seasonId, now, Number(row.ends_at), seasonId, Number(row.ends_at), now).run();
+
+  if (Number(update?.meta?.changes || 0) < 1) {
+    const fresh = await env.DB.prepare(`SELECT * FROM season_pass_seasons WHERE season_id=? LIMIT 1`).bind(seasonId).first();
+    if (!fresh || String(fresh.manual_status || "") === "ended" || Number(fresh.starts_at || 0) <= now) {
+      throw new ApiError(409, "Состояние сезона уже изменилось. Обновите список сезонов.");
+    }
+    const overlap = await seasonPassSeasonOverlap(env, now, Number(fresh.ends_at || row.ends_at), seasonId);
+    if (overlap) {
+      const reservedUntil = Math.max(Number(overlap.ends_at || 0), Number(overlap.claim_grace_ends_at || 0));
+      throw new ApiError(409, `Нельзя запустить пропуск: сейчас идёт сезон или открыто окно наград «${String(overlap.title || overlap.season_id)}» до ${formatUtcDate(reservedUntil)}.`);
+    }
+    throw new ApiError(409, "Не удалось безопасно запустить сезонный пропуск. Обновите данные и повторите попытку.");
+  }
+
+  const forcedClosure = await getSeasonPassForcedClosure(env, now * 1000);
+  if (forcedClosure && (forcedClosure.nextSeasonId === seasonId || forcedClosure.unlockAt <= now)) {
+    await deleteSystemState(env, SEASON_PASS_FORCE_CLOSE_STATE_KEY);
+  }
+  seasonPassExpiryCleanupPromises.clear();
+  const updatedRow = await env.DB.prepare(`SELECT * FROM season_pass_seasons WHERE season_id=? LIMIT 1`).bind(seasonId).first();
+  let broadcastId = null;
+  try { broadcastId = await queueSeasonPassStartBroadcast(env, updatedRow); }
+  catch (error) { console.error("season pass start broadcast queue failed", error); }
+  await logStaffAction(env, ctx.user, ctx.access, "owner_panel_season_pass_start", null, "season_pass", null, null, {
+    seasonId, title:String(updatedRow?.title || row.title || ""), previousStartsAt:Number(row.starts_at || 0), startsAt:now,
+    endsAt:Number(updatedRow?.ends_at || row.ends_at || 0), broadcastId:String(broadcastId || "")
+  });
+  return { ok:true, season:seasonPassSeasonFromRow(updatedRow, configuredSeasonPassState(env, now * 1000), now * 1000), notificationQueued:Boolean(broadcastId) };
+}
+
+async function ownerPanelAdjustSeasonPassTiming(env, ctx) {
+  await ensureSeasonPassSchema(env);
+  const seasonId=String(ctx.body?.seasonId||"").trim();const direction=String(ctx.body?.direction||"");const days=ownerPanelInteger(ctx.body?.days,1,7);
+  if(!seasonId||!["extend","shorten"].includes(direction)||![1,7].includes(days))throw new ApiError(400,"Выберите сезон и изменение срока на 1 или 7 дней.");
+  const row=await env.DB.prepare(`SELECT * FROM season_pass_seasons WHERE season_id=? LIMIT 1`).bind(seasonId).first();if(!row)throw new ApiError(404,"Сезонный пропуск не найден.");
+  const now=Math.floor(Date.now()/1000);const season=seasonPassSeasonFromRow(row,configuredSeasonPassState(env,now*1000),now*1000);if(!["upcoming","active"].includes(season.status))throw new ApiError(409,"Срок можно менять только у активного или будущего сезонного пропуска.");
+  const startsAt=Number(row.starts_at||0),currentEnd=Number(row.ends_at||0),currentGrace=Math.max(currentEnd,Number(row.claim_grace_ends_at||0)),graceOffset=Math.max(0,currentGrace-currentEnd)||SEASON_PASS_MANUAL_CLAIM_GRACE_SECONDS,delta=days*24*60*60,nextEnd=direction==="extend"?currentEnd+delta:currentEnd-delta,nextGrace=nextEnd+graceOffset;
+  if(direction==="shorten"&&season.status==="active"&&nextEnd<=now)throw new ApiError(409,"После сокращения дата окажется в прошлом. Используйте «Закончить сейчас».");
+  if(nextEnd<=startsAt+3600)throw new ApiError(409,"Сезонный пропуск должен длиться больше часа.");
+  if(nextEnd-startsAt>180*24*60*60)throw new ApiError(409,"Сезонный пропуск не может длиться больше 180 дней.");
+  const overlap=await env.DB.prepare(`SELECT season_id,title,starts_at,ends_at,claim_grace_ends_at FROM season_pass_seasons WHERE season_id<>? AND starts_at<? AND MAX(ends_at,claim_grace_ends_at)>? ORDER BY starts_at LIMIT 1`).bind(seasonId,nextGrace,startsAt).first();
+  if(overlap){const reservedUntil=Math.max(Number(overlap.ends_at||0),Number(overlap.claim_grace_ends_at||0));throw new ApiError(409,`Новая дата вместе с окном наград пересечётся с «${String(overlap.title||overlap.season_id)}» до ${formatUtcDate(reservedUntil)}.`);}
+  const update=await env.DB.prepare(`UPDATE season_pass_seasons SET ends_at=?,claim_grace_ends_at=?,updated_at=?,updated_by=? WHERE season_id=? AND ends_at=? AND manual_status!='ended' AND NOT EXISTS(SELECT 1 FROM season_pass_seasons other WHERE other.season_id<>? AND other.starts_at<? AND MAX(other.ends_at,other.claim_grace_ends_at)>?)`).bind(nextEnd,nextGrace,now,String(ctx.user.id),seasonId,currentEnd,seasonId,nextGrace,startsAt).run();
+  if(Number(update?.meta?.changes||0)<1)throw new ApiError(409,"Состояние сезона изменилось или новая дата конфликтует с другим сезоном. Обновите данные.");
+  seasonPassExpiryCleanupPromises.clear();const updated=await loadSeasonPassSeasonById(env,seasonId);await logStaffAction(env,ctx.user,ctx.access,"owner_panel_season_pass_timing",null,"season_pass",currentEnd,nextEnd,{seasonId,title:String(row.title||""),direction,days,claimGraceEndsAt:nextGrace});return {ok:true,season:updated};
+}
+
+async function ownerPanelEndSeasonPassSeason(env, ctx) {
+  await ensureSeasonPassSchema(env);const seasonId=String(ctx.body?.seasonId||"").trim();if(!seasonId)throw new ApiError(400,"Не выбран сезонный пропуск.");const row=await env.DB.prepare(`SELECT * FROM season_pass_seasons WHERE season_id=? LIMIT 1`).bind(seasonId).first();if(!row)throw new ApiError(404,"Сезонный пропуск не найден.");
+  const now=Math.floor(Date.now()/1000);const season=seasonPassSeasonFromRow(row,configuredSeasonPassState(env,now*1000),now*1000);if(season.status!=="active")throw new ApiError(409,"Закончить сейчас можно только активный сезонный пропуск.");const graceEndsAt=now+SEASON_PASS_MANUAL_CLAIM_GRACE_SECONDS;
+  const overlap=await env.DB.prepare(`SELECT season_id,title FROM season_pass_seasons WHERE season_id<>? AND starts_at<? AND MAX(ends_at,claim_grace_ends_at)>? ORDER BY starts_at LIMIT 1`).bind(seasonId,graceEndsAt,now).first();if(overlap)throw new ApiError(409,`Стандартное 3-дневное окно пересечётся с «${String(overlap.title||overlap.season_id)}». Используйте принудительное закрытие без окна или измените расписание.`);
+  const update=await env.DB.prepare(`UPDATE season_pass_seasons SET ends_at=?,claim_grace_ends_at=?,manual_status='ended',updated_at=?,updated_by=? WHERE season_id=? AND manual_status!='ended' AND starts_at<=? AND ends_at>?`).bind(now,graceEndsAt,now,String(ctx.user.id),seasonId,now,now).run();if(Number(update?.meta?.changes||0)<1)throw new ApiError(409,"Состояние сезона уже изменилось. Обновите данные.");
+  seasonPassExpiryCleanupPromises.clear();await logStaffAction(env,ctx.user,ctx.access,"owner_panel_season_pass_end",null,"season_pass",Number(row.ends_at||0),now,{seasonId,title:String(row.title||""),claimGraceEndsAt:graceEndsAt});return {ok:true,season:await loadSeasonPassSeasonById(env,seasonId),claimGraceEndsAt:graceEndsAt};
+}
+
+async function ownerPanelForceCloseSeasonPassSeason(env, ctx) {
+  await ensureSeasonPassSchema(env);const confirmation=String(ctx.body?.confirmation||"");if(confirmation!=="ЗАКРЫТЬ БЕЗ ОКНА")throw new ApiError(400,"Для принудительного закрытия требуется точное подтверждение «ЗАКРЫТЬ БЕЗ ОКНА».");const seasonId=String(ctx.body?.seasonId||"").trim();if(!seasonId)throw new ApiError(400,"Не выбран сезонный пропуск.");
+  const row=await env.DB.prepare(`SELECT * FROM season_pass_seasons WHERE season_id=? LIMIT 1`).bind(seasonId).first();if(!row)throw new ApiError(404,"Сезонный пропуск не найден.");const now=Math.floor(Date.now()/1000);const season=seasonPassSeasonFromRow(row,configuredSeasonPassState(env,now*1000),now*1000);if(season.status!=="active"&&!season.claimWindowOpen)throw new ApiError(409,"Принудительно закрыть можно только активный сезон или открытое окно получения наград.");
+  const existingClosure=await getSeasonPassForcedClosure(env,now*1000);if(existingClosure)throw new ApiError(409,"Сезонный пропуск уже принудительно закрыт до следующего сезона.");const nextSeason=await resolveSeasonPassForceCloseTarget(env,season,now);if(!nextSeason)throw new ApiError(409,"Сначала создайте следующий сезон с будущей датой старта — он нужен для таймера открытия.");const unlockAt=Math.floor(Date.parse(nextSeason.startsAt)/1000);if(!Number.isFinite(unlockAt)||unlockAt<=now)throw new ApiError(409,"Дата старта следующего сезона уже наступила. Обновите расписание.");
+  const actor=String(ctx.user.id);const update=await env.DB.prepare(`UPDATE season_pass_seasons SET ends_at=CASE WHEN ends_at>? THEN ? ELSE ends_at END,claim_grace_ends_at=?,manual_status='ended',updated_at=?,updated_by=? WHERE season_id=? AND (ends_at>? OR claim_grace_ends_at>?)`).bind(now,now,now,now,actor,seasonId,now,now).run();if(Number(update?.meta?.changes||0)<1)throw new ApiError(409,"Состояние сезона уже изменилось. Обновите данные.");
+  const payload={closedSeasonId:season.id,closedSeasonTitle:season.title,nextSeasonId:nextSeason.id,nextSeasonTitle:nextSeason.title,nextSeasonStartsAt:unlockAt,nextSeasonStartsAtIso:nextSeason.startsAt,nextSeasonEndsAt:Math.floor(Date.parse(nextSeason.endsAt)/1000),nextSeasonEndsAtIso:nextSeason.endsAt,message:'Не скучай, новый сезон уже скоро',activatedAt:now,activatedBy:actor};
+  try{await setSystemState(env,SEASON_PASS_FORCE_CLOSE_STATE_KEY,JSON.stringify(payload));}catch(error){try{await env.DB.prepare(`UPDATE season_pass_seasons SET ends_at=?,claim_grace_ends_at=?,manual_status=?,updated_at=?,updated_by=? WHERE season_id=? AND updated_at=? AND updated_by=?`).bind(Number(row.ends_at||0),Number(row.claim_grace_ends_at||0),String(row.manual_status||''),Number(row.updated_at||now),String(row.updated_by||''),seasonId,now,actor).run();}catch(rollbackError){console.error('owner season pass force close rollback failed',rollbackError);}throw error;}
+  seasonPassExpiryCleanupPromises.clear();let resetResult=null,resetError='';try{resetResult=await resetSeasonPassDataForSeason(env,season,{reason:'owner-control-center-force-close'});}catch(error){resetError=String(error?.message||error);console.error('owner season pass force close reset failed',error);}await logStaffAction(env,ctx.user,ctx.access,"owner_panel_season_pass_force_close",null,"season_pass",seasonId,nextSeason.id,{seasonId,title:String(season.title||""),nextSeasonId:nextSeason.id,unlockAt,resetResult,resetError});return {ok:true,nextSeasonId:nextSeason.id,unlockAt,resetResult,resetError};
 }
 
 async function ownerPanelSaveSeasonPassTask(env, ctx) {
