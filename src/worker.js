@@ -130,13 +130,13 @@ const CASE_SKINS = Object.freeze({
 
 const CASE_MUSIC_TRACKS = Object.freeze({
   cafe_run: Object.freeze({ id: "cafe_run", title: "Зефирное кафе", rarity: "common", weight: 0, defaultOwned: true, src: "/assets/sounds/marshmallow_cafe_run_main.ogg" }),
-  legendary_cafe_run: Object.freeze({ id: "legendary_cafe_run", title: "Легендарный забег", rarity: "legendary", weight: 1, legendaryOnly: true, isNew: true, src: "/assets/sounds/marshmallow_cafe_run_legendary.ogg" }),
-  legendary_marshmallow_dash_1: Object.freeze({ id: "legendary_marshmallow_dash_1", title: "Зефирный рывок I", rarity: "legendary", weight: 1, legendaryOnly: true, isNew: true, src: "/assets/sounds/marshmallow_dash_1.ogg" }),
-  legendary_marshmallow_dash_2: Object.freeze({ id: "legendary_marshmallow_dash_2", title: "Зефирный рывок II", rarity: "legendary", weight: 1, legendaryOnly: true, isNew: true, src: "/assets/sounds/marshmallow_dash_2.ogg" }),
-  legendary_marshmallow_cafe_dash_1: Object.freeze({ id: "legendary_marshmallow_cafe_dash_1", title: "Кафейный рывок I", rarity: "legendary", weight: 1, legendaryOnly: true, isNew: true, src: "/assets/sounds/marshmallow_cafe_dash_1.ogg?v=0.79.8" }),
-  legendary_marshmallow_cafe_dash_2: Object.freeze({ id: "legendary_marshmallow_cafe_dash_2", title: "Кафейный рывок II", rarity: "legendary", weight: 1, legendaryOnly: true, isNew: true, src: "/assets/sounds/marshmallow_cafe_dash_2.ogg?v=0.79.8" }),
-  legendary_marshmallow_dash_3: Object.freeze({ id: "legendary_marshmallow_dash_3", title: "Зефирный рывок III", rarity: "legendary", weight: 1, legendaryOnly: true, isNew: true, src: "/assets/sounds/marshmallow_dash_3.ogg?v=0.79.8" }),
-  legendary_marshmallow_dash_4: Object.freeze({ id: "legendary_marshmallow_dash_4", title: "Зефирный рывок IV", rarity: "legendary", weight: 1, legendaryOnly: true, isNew: true, src: "/assets/sounds/marshmallow_dash_4.ogg?v=0.79.8" })
+  legendary_cafe_run: Object.freeze({ id: "legendary_cafe_run", title: "Легендарный забег", rarity: "legendary", weight: 1, legendaryOnly: true, isNew: true, src: "/assets/sounds/marshmallow_cafe_run_legendary.ogg", imageUrl: "/assets/sounds/covers/music_legendary_cafe_run.png" }),
+  legendary_marshmallow_dash_1: Object.freeze({ id: "legendary_marshmallow_dash_1", title: "Зефирный рывок I", rarity: "legendary", weight: 1, legendaryOnly: true, isNew: true, src: "/assets/sounds/marshmallow_dash_1.ogg", imageUrl: "/assets/sounds/covers/music_marshmallow_dash_1.png" }),
+  legendary_marshmallow_dash_2: Object.freeze({ id: "legendary_marshmallow_dash_2", title: "Зефирный рывок II", rarity: "legendary", weight: 1, legendaryOnly: true, isNew: true, src: "/assets/sounds/marshmallow_dash_2.ogg", imageUrl: "/assets/sounds/covers/music_marshmallow_dash_2.png" }),
+  legendary_marshmallow_cafe_dash_1: Object.freeze({ id: "legendary_marshmallow_cafe_dash_1", title: "Кафейный рывок I", rarity: "legendary", weight: 1, legendaryOnly: true, isNew: true, src: "/assets/sounds/marshmallow_cafe_dash_1.ogg?v=0.79.8", imageUrl: "/assets/sounds/covers/music_cafe_dash_1.png" }),
+  legendary_marshmallow_cafe_dash_2: Object.freeze({ id: "legendary_marshmallow_cafe_dash_2", title: "Кафейный рывок II", rarity: "legendary", weight: 1, legendaryOnly: true, isNew: true, src: "/assets/sounds/marshmallow_cafe_dash_2.ogg?v=0.79.8", imageUrl: "/assets/sounds/covers/music_cafe_dash_2.png" }),
+  legendary_marshmallow_dash_3: Object.freeze({ id: "legendary_marshmallow_dash_3", title: "Зефирный рывок III", rarity: "legendary", weight: 1, legendaryOnly: true, isNew: true, src: "/assets/sounds/marshmallow_dash_3.ogg?v=0.79.8", imageUrl: "/assets/sounds/covers/music_marshmallow_dash_3.png" }),
+  legendary_marshmallow_dash_4: Object.freeze({ id: "legendary_marshmallow_dash_4", title: "Зефирный рывок IV", rarity: "legendary", weight: 1, legendaryOnly: true, isNew: true, src: "/assets/sounds/marshmallow_dash_4.ogg?v=0.79.8", imageUrl: "/assets/sounds/covers/music_marshmallow_dash_4.png" })
 });
 
 // Будущий контент сезона «Лунный забег». Он доступен только владельцу
@@ -166,10 +166,10 @@ const FUTURE_SEASON_CONTENT = Object.freeze({
   }),
   skin: Object.freeze({}),
   music: Object.freeze({
-    season3_music_moon_cafe_epic: Object.freeze({ id:"season3_music_moon_cafe_epic", title:"Лунное зефирное кафе", rarity:"epic", imageUrl:"/assets/season-pass/season_pass3_prize.png", audioUrl:"/assets/sounds/Moon Marshmallow Café(Epik).mp3" }),
-    season3_music_moon_cafe_epic_2: Object.freeze({ id:"season3_music_moon_cafe_epic_2", title:"Лунное зефирное кафе II", rarity:"epic", imageUrl:"/assets/season-pass/season_pass3_prize.png", audioUrl:"/assets/sounds/Moon Marshmallow Café_2(epik).mp3" }),
-    season3_music_lunar_run_legendary: Object.freeze({ id:"season3_music_lunar_run_legendary", title:"Лунный забег", rarity:"legendary", imageUrl:"/assets/season-pass/season_pass3_prize.png", audioUrl:"/assets/sounds/new_song_season3(Legendary).mp3" }),
-    season3_music_lunar_run_mythic: Object.freeze({ id:"season3_music_lunar_run_mythic", title:"Лунный забег II", rarity:"mythic", imageUrl:"/assets/season-pass/season_pass3_prize.png", audioUrl:"/assets/sounds/new_song_season3_2(Mifik).mp3" })
+    season3_music_moon_cafe_epic: Object.freeze({ id:"season3_music_moon_cafe_epic", title:"Лунное зефирное кафе", rarity:"epic", imageUrl:"/assets/sounds/covers/season3_lunar_music.png", audioUrl:"/assets/sounds/Moon Marshmallow Café(Epik).mp3" }),
+    season3_music_moon_cafe_epic_2: Object.freeze({ id:"season3_music_moon_cafe_epic_2", title:"Лунное зефирное кафе II", rarity:"epic", imageUrl:"/assets/sounds/covers/season3_lunar_music.png", audioUrl:"/assets/sounds/Moon Marshmallow Café_2(epik).mp3" }),
+    season3_music_lunar_run_legendary: Object.freeze({ id:"season3_music_lunar_run_legendary", title:"Лунный забег", rarity:"legendary", imageUrl:"/assets/sounds/covers/season3_lunar_music.png", audioUrl:"/assets/sounds/new_song_season3(Legendary).mp3" }),
+    season3_music_lunar_run_mythic: Object.freeze({ id:"season3_music_lunar_run_mythic", title:"Лунный забег II", rarity:"mythic", imageUrl:"/assets/sounds/covers/season3_lunar_music.png", audioUrl:"/assets/sounds/new_song_season3_2(Mifik).mp3" })
   })
 });
 
@@ -517,7 +517,7 @@ function seasonPassCosmeticImage(kind, itemId) {
   if (future?.imageUrl) return String(future.imageUrl);
   if (k === "skin") return ownerPanelSkinAsset(id);
   if (["avatar","frame","trail"].includes(k)) return String(LIVEOPS_CONTENT_IMAGES?.[k]?.[id] || "/assets/season-pass/season.png?v=07939");
-  if (k === "music") return "/assets/season-pass/season.png?v=07939";
+  if (k === "music") return String(CASE_MUSIC_TRACKS?.[id]?.imageUrl || "/assets/season-pass/season.png?v=07939");
   return "/assets/season-pass/season.png?v=07939";
 }
 
