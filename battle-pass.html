@@ -2822,6 +2822,7 @@ img[src$="/xp.webp"]{
     standardCase:"/assets/cases/standart_closed.png",
     silverCase:"/assets/cases/Bronze_close.png",
     goldCase:"/assets/cases/gold_closed.png",
+    mythicCase:"/assets/cases/Mifik_case_closed.png",
     legendaryCase:"/assets/cases/legendary_closed.png",
     eliteFrame:"/assets/rating/frames/profile/ramka_profile_elita.png",
     eliteAvatar:"/assets/cases/avatars/legendary_avatarka_5.png",
@@ -2842,6 +2843,7 @@ img[src$="/xp.webp"]{
   function rewardAssetFor(name) {
     const text = String(name || "").toLowerCase();
     if (text.includes("легендар") && text.includes("кейс")) return REWARD_ASSETS.legendaryCase;
+    if (text.includes("мифическ") && text.includes("кейс")) return REWARD_ASSETS.mythicCase;
     if (text.includes("золот") && text.includes("кейс")) return REWARD_ASSETS.goldCase;
     if (text.includes("серебр") && text.includes("кейс")) return REWARD_ASSETS.silverCase;
     if (text.includes("обычн") && text.includes("кейс")) return REWARD_ASSETS.standardCase;

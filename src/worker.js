@@ -14,6 +14,7 @@ const CASE_SHOP_PRODUCTS = Object.freeze({
   small: Object.freeze({ id: "case-small", title: "Обычный кейс", points: 10000, treats: 100, coffee: 100 }),
   sweet: Object.freeze({ id: "case-sweet", title: "Серебряный кейс", points: 10000, treats: 100, coffee: 100 }),
   gold: Object.freeze({ id: "case-gold", title: "Золотой кейс", points: 10000, treats: 100, coffee: 100 }),
+  mythic: Object.freeze({ id: "case-mythic", title: "Мифический кейс", points: 300000, treats: 350, coffee: 350 }),
   legendary: Object.freeze({ id: "case-legendary", title: "Легендарный кейс", points: 600000, treats: 600, coffee: 600 })
 });
 
@@ -24,6 +25,7 @@ const SHOP_ASSORTMENT_PRODUCTS = Object.freeze({
   "case-small": Object.freeze({ ...CASE_SHOP_PRODUCTS.small, caseType: "small" }),
   "case-sweet": Object.freeze({ ...CASE_SHOP_PRODUCTS.sweet, caseType: "sweet" }),
   "case-gold": Object.freeze({ ...CASE_SHOP_PRODUCTS.gold, caseType: "gold" }),
+  "case-mythic": Object.freeze({ ...CASE_SHOP_PRODUCTS.mythic, caseType: "mythic" }),
   "case-legendary": Object.freeze({ ...CASE_SHOP_PRODUCTS.legendary, caseType: "legendary" })
 });
 
@@ -68,6 +70,7 @@ const LEVEL_CASE_CONFIG = Object.freeze({
   small: Object.freeze({ id: "small", title: "Обычный кейс", slots: 1 }),
   sweet: Object.freeze({ id: "sweet", title: "Серебряный кейс", slots: 1 }),
   gold: Object.freeze({ id: "gold", title: "Золотой кейс", slots: 1 }),
+  mythic: Object.freeze({ id: "mythic", title: "Мифический кейс", slots: 1 }),
   legendary: Object.freeze({ id: "legendary", title: "Легендарный кейс", slots: 1 })
 });
 
@@ -483,7 +486,7 @@ function seasonPassElitePlusBenefitsConfig(rawValue) {
 function seasonPassElitePlusBenefitsView(rawValue, options = {}) {
   const config = seasonPassElitePlusBenefitsConfig(rawValue);
   const publicView = Boolean(options.publicView);
-  const caseLabels = { small:"Обычный кейс", sweet:"Серебряный кейс", gold:"Золотой кейс", legendary:"Легендарный кейс" };
+  const caseLabels = { small:"Обычный кейс", sweet:"Серебряный кейс", gold:"Золотой кейс", mythic:"Мифический кейс", legendary:"Легендарный кейс" };
   const cosmetics = config.cosmetics.map(({kind,itemId}) => {
     const item = seasonPassAnyCosmeticCatalog(kind)?.[itemId];
     const future = Boolean(futureSeasonContentItem(kind,itemId));
@@ -661,6 +664,7 @@ const LEADERBOARD_REWARD_ASSETS = Object.freeze({
     small: "/assets/cases/standart_closed.png",
     sweet: "/assets/cases/Bronze_close.png",
     gold: "/assets/cases/gold_closed.png",
+    mythic: "/assets/cases/Mifik_case_closed.png",
     legendary: "/assets/cases/legendary_closed.png"
   })
 });
@@ -944,6 +948,7 @@ async function ensureRuntimeCompatibilitySchema(env) {
       ['admin_profile_state', 'pending_treats', 'INTEGER NOT NULL DEFAULT 0'],
       ['admin_profile_state', 'pending_coffee', 'INTEGER NOT NULL DEFAULT 0'],
       ['case_player_state', 'owned_specials_json', "TEXT NOT NULL DEFAULT '[]'"],
+      ['case_player_state', 'mythic_pity_counter', 'INTEGER NOT NULL DEFAULT 0'],
       ['leaderboard_runs', 'run_treats', 'INTEGER NOT NULL DEFAULT 0'],
       ['leaderboard_runs', 'run_coffee', 'INTEGER NOT NULL DEFAULT 0'],
       ['leaderboard_entries', 'case_avatar_id', "TEXT NOT NULL DEFAULT ''"],
@@ -3381,6 +3386,7 @@ function normalizeCaseType(value) {
     small: "small", mini: "small", little: "small", "маленький": "small", "малый": "small", standart: "small", standard: "small", common: "small", "обычный": "small",
     sweet: "sweet", silver: "sweet", "сладкий": "sweet", "средний": "sweet", "серебряный": "sweet",
     gold: "gold", golden: "gold", "золотой": "gold",
+    mythic: "mythic", mifik: "mythic", "мифический": "mythic", "мифик": "mythic",
     legendary: "legendary", legend: "legendary", "легендарный": "legendary", "легенда": "legendary"
   };
   return aliases[raw] || "";
@@ -3546,22 +3552,32 @@ function caseWeightedKind(caseType, state = null, liveops = null, catalogs = nul
     skin: state?.ownedSkins,
     music: state?.ownedMusicTracks
   };
-  const categoryOrder = ["points", "treats", "coffee", "booster", "avatar", "frame", "trail", "skin", "music", "physical"];
+  const rarityBuckets = {
+    epicCosmetic: "epic",
+    mythicCosmetic: "mythic",
+    legendaryCosmetic: "legendary"
+  };
+  const cosmeticKinds = ["avatar", "frame", "trail", "skin", "music"];
+  const rarityBucketAvailable = (rarity) => cosmeticKinds.some((kind) =>
+    Object.values(runtimeCatalogs[kind] || {}).some((item) =>
+      !item?.legendaryOnly && String(item?.rarity || "common") === rarity && Math.max(0, Number(item?.weight || 0)) > 0
+    )
+  );
+  const categoryOrder = ["points", "treats", "coffee", "booster", "epicCosmetic", "mythicCosmetic", "legendaryCosmetic", "avatar", "frame", "trail", "skin", "music", "physical"];
   let pointsWeight = Math.max(0, Number(chances.points || 0));
   const table = [];
   for (const kind of categoryOrder) {
     let weight = Math.max(0, Number(chances[kind] || 0));
     if (!weight || kind === "points") continue;
-    if (["avatar", "frame", "trail", "skin", "music"].includes(kind)) {
+    if (rarityBuckets[kind]) {
+      if (!rarityBucketAvailable(rarityBuckets[kind])) { pointsWeight += weight; continue; }
+    } else if (cosmeticKinds.includes(kind)) {
       const catalog = runtimeCatalogs[kind] || {};
       const predicate = (item) => caseType === "legendary" || !item?.legendaryOnly;
       const available = caseType === "legendary"
         ? caseCatalogHasUnowned(catalog, ownedMap[kind], predicate)
         : Object.values(catalog).some(predicate);
-      if (!available) {
-        pointsWeight += weight;
-        continue;
-      }
+      if (!available) { pointsWeight += weight; continue; }
     }
     table.push([kind, weight]);
   }
@@ -3633,6 +3649,8 @@ function caseStateFromRow(row) {
     ownedSpecials,
     ownedSkins,
     activeSkinId,
+    mythicPityCounter: safeAdminNumber(row?.mythic_pity_counter),
+    mythicGuaranteedEvery: 25,
     legendaryPityCounter: safeAdminNumber(row?.legendary_pity_counter),
     legendaryGuaranteedEvery: 50,
     revision: safeAdminNumber(row?.revision),
@@ -3651,7 +3669,7 @@ function caseStateUpdateStatement(env, telegramId, caseState, now) {
       owned_music_json = ?, active_music_id = ?,
       owned_specials_json = ?,
       owned_skins_json = ?, active_skin_id = ?,
-      legendary_pity_counter = ?,
+      mythic_pity_counter = ?, legendary_pity_counter = ?,
       revision = revision + 1, updated_at = ?
      WHERE telegram_id = ?`
   ).bind(
@@ -3673,6 +3691,7 @@ function caseStateUpdateStatement(env, telegramId, caseState, now) {
     JSON.stringify(Array.isArray(caseState.ownedSpecials) ? [...new Set(caseState.ownedSpecials.map((value) => String(value || "").trim()).filter(Boolean))] : []),
     JSON.stringify(normalizeCurrentOwnedSkins(caseState.ownedSkins)),
     normalizeCurrentActiveSkin(caseState.activeSkinId, normalizeCurrentOwnedSkins(caseState.ownedSkins)),
+    Math.max(0, Math.min(49, safeAdminNumber(caseState.mythicPityCounter))),
     Math.max(0, Math.min(49, safeAdminNumber(caseState.legendaryPityCounter))),
     now,
     telegramId
@@ -3759,7 +3778,7 @@ async function buildCasePayload(env, telegramId, currentProfile, extra = {}, opt
     };
   });
   const openedLevels = openedCases.map((entry) => entry.level);
-  const giftedCases = { small: 0, sweet: 0, gold: 0, legendary: 0 };
+  const giftedCases = { small: 0, sweet: 0, gold: 0, mythic: 0, legendary: 0 };
   for (const row of giftedResult.results || []) {
     const type = normalizeCaseType(row.case_type);
     if (type) giftedCases[type] = safeAdminNumber(row.count);
@@ -3787,6 +3806,7 @@ async function buildCasePayload(env, telegramId, currentProfile, extra = {}, opt
     giftedCases,
     caseState: {
       ...ensured.state,
+      mythicGuaranteedEvery: Math.max(0, Math.min(50, Number(liveops?.cases?.mythic?.guaranteeCount ?? 25))),
       legendaryGuaranteedEvery: Math.max(0, Math.min(50, Number(liveops?.cases?.legendary?.guaranteeCount ?? 50)))
     },
     liveops,
@@ -3814,7 +3834,9 @@ function rollLevelCase(caseType, sourceState, currentOwnedSkins = [], liveops = 
   };
   const guaranteeCount = caseType === "legendary"
     ? Math.max(0, Math.min(50, Math.floor(Number(caseConfig?.guaranteeCount ?? 50))))
-    : 0;
+    : caseType === "mythic"
+      ? Math.max(0, Math.min(50, Math.floor(Number(caseConfig?.guaranteeCount ?? 25))))
+      : 0;
   const pityMax = Math.max(0, guaranteeCount - 1);
   const state = JSON.parse(JSON.stringify(sourceState));
   state.ownedSkins = normalizeCurrentOwnedSkins(currentOwnedSkins);
@@ -3823,20 +3845,28 @@ function rollLevelCase(caseType, sourceState, currentOwnedSkins = [], liveops = 
   state.activeMusicTrackId = state.ownedMusicTracks.includes(normalizeCaseCosmeticId("music", state.activeMusicTrackId))
     ? normalizeCaseCosmeticId("music", state.activeMusicTrackId)
     : "cafe_run";
-  state.legendaryPityCounter = Math.max(0, Math.min(pityMax, safeAdminNumber(state.legendaryPityCounter)));
-  state.legendaryGuaranteedEvery = guaranteeCount;
+  state.mythicPityCounter = Math.max(0, Math.min(caseType === "mythic" ? pityMax : 49, safeAdminNumber(state.mythicPityCounter)));
+  state.mythicGuaranteedEvery = caseType === "mythic" ? guaranteeCount : Math.max(0, Number(state.mythicGuaranteedEvery || 25));
+  state.legendaryPityCounter = Math.max(0, Math.min(caseType === "legendary" ? pityMax : 49, safeAdminNumber(state.legendaryPityCounter)));
+  state.legendaryGuaranteedEvery = caseType === "legendary" ? guaranteeCount : Math.max(0, Number(state.legendaryGuaranteedEvery || 50));
   const rewards = [];
   const selectedCosmetics = new Set();
   let points = 0;
   let treats = 0;
   let coffee = 0;
 
+  const cosmeticKinds = ["skin", "avatar", "frame", "trail", "music"];
+  const ownedKeyByKind = { skin:"ownedSkins", avatar:"ownedAvatars", frame:"ownedFrames", trail:"ownedTrails", music:"ownedMusicTracks" };
   const caseAvailabilityPredicate = (item) => caseType === "legendary" || !item?.legendaryOnly;
   const incrementPity = () => {
     if (caseType === "legendary" && guaranteeCount > 0) state.legendaryPityCounter = Math.min(pityMax, state.legendaryPityCounter + 1);
+    if (caseType === "mythic" && guaranteeCount > 0) state.mythicPityCounter = Math.min(pityMax, state.mythicPityCounter + 1);
+  };
+  const resetMythicPityForHighRarity = (rarity) => {
+    if (caseType === "mythic" && ["mythic", "legendary"].includes(String(rarity || ""))) state.mythicPityCounter = 0;
   };
 
-  const addCosmetic = (kind, catalog, ownedKey, compensation, predicate = null) => {
+  const addCosmetic = (kind, catalog, ownedKey, compensation, predicate = null, options = {}) => {
     const excluded = new Set(
       [...selectedCosmetics]
         .filter((value) => value.startsWith(`${kind}:`))
@@ -3844,20 +3874,59 @@ function rollLevelCase(caseType, sourceState, currentOwnedSkins = [], liveops = 
     );
     const ownedList = Array.isArray(state[ownedKey]) ? state[ownedKey] : [];
     const ownedSet = new Set(ownedList);
-    const unownedPredicate = (item, id) => (!predicate || predicate(item, id)) && !ownedSet.has(id);
-    const unownedId = caseWeightedCatalogChoice(catalog, excluded, unownedPredicate);
-    const id = unownedId || (caseType === "legendary" ? null : caseWeightedCatalogChoice(catalog, excluded, predicate));
+    let id = null;
+    if (options.preferUnowned !== false) {
+      const unownedPredicate = (item, candidateId) => (!predicate || predicate(item, candidateId)) && !ownedSet.has(candidateId);
+      id = caseWeightedCatalogChoice(catalog, excluded, unownedPredicate);
+    }
+    if (!id && options.allowDuplicate !== false) id = caseWeightedCatalogChoice(catalog, excluded, predicate);
     if (!id) return false;
     selectedCosmetics.add(`${kind}:${id}`);
     const item = catalog[id];
     const owned = ownedSet.has(id);
     if (owned) {
       points += compensation;
-      rewards.push({ kind, id, title: item.title, duplicate: true, compensationPoints: compensation });
+      rewards.push({ kind, id, title: item.title, rarity: item.rarity, duplicate: true, compensationPoints: compensation });
     } else {
       ownedList.push(id);
       state[ownedKey] = [...new Set(ownedList)];
       rewards.push({ kind, id, title: item.title, rarity: item.rarity, isNew: Boolean(item.isNew), duplicate: false });
+    }
+    return true;
+  };
+
+  const weightedRarityCosmetic = (rarity, options = {}) => {
+    const candidates = [];
+    for (const kind of cosmeticKinds) {
+      const catalog = catalogs[kind] || {};
+      const ownedKey = ownedKeyByKind[kind];
+      const ownedSet = new Set(Array.isArray(state[ownedKey]) ? state[ownedKey] : []);
+      for (const [id, item] of Object.entries(catalog)) {
+        if (item?.legendaryOnly || String(item?.rarity || "common") !== rarity) continue;
+        if (Math.max(0, Number(item?.weight || 0)) <= 0) continue;
+        if (options.unownedOnly && ownedSet.has(id)) continue;
+        candidates.push({ kind, id, item, ownedKey, weight: Math.max(0, Number(item?.weight || 1)) });
+      }
+    }
+    if (!candidates.length) return null;
+    let roll = caseSecureFloat() * candidates.reduce((sum, item) => sum + item.weight, 0);
+    for (const item of candidates) { roll -= item.weight; if (roll < 0) return item; }
+    return candidates[candidates.length - 1];
+  };
+
+  const grantSelectedCosmetic = (selected, guaranteed = false) => {
+    if (!selected) return false;
+    const {kind,id,item,ownedKey} = selected;
+    const ownedList = Array.isArray(state[ownedKey]) ? state[ownedKey] : [];
+    const owned = ownedList.includes(id);
+    selectedCosmetics.add(`${kind}:${id}`);
+    if (owned) {
+      const compensation = Number(CASE_DUPLICATE_COMPENSATION[kind] || 0);
+      points += compensation;
+      rewards.push({kind,id,title:item.title,rarity:item.rarity,duplicate:true,compensationPoints:compensation,guaranteed});
+    } else {
+      state[ownedKey] = [...new Set([...ownedList,id])];
+      rewards.push({kind,id,title:item.title,rarity:item.rarity,isNew:Boolean(item.isNew),duplicate:false,guaranteed});
     }
     return true;
   };
@@ -3878,20 +3947,47 @@ function rollLevelCase(caseType, sourceState, currentOwnedSkins = [], liveops = 
     if (!categoriesWithUnowned.length) return false;
     let roll = caseSecureFloat() * categoriesWithUnowned.reduce((sum, [, weight]) => sum + weight, 0);
     let selected = categoriesWithUnowned[categoriesWithUnowned.length - 1];
-    for (const entry of categoriesWithUnowned) {
-      roll -= entry[1];
-      if (roll < 0) { selected = entry; break; }
-    }
+    for (const entry of categoriesWithUnowned) { roll -= entry[1]; if (roll < 0) { selected = entry; break; } }
     const [kind, , catalog, ownedKey] = selected;
-    return addCosmetic(kind, catalog, ownedKey, CASE_DUPLICATE_COMPENSATION[kind], rarityPredicate);
+    return addCosmetic(kind, catalog, ownedKey, CASE_DUPLICATE_COMPENSATION[kind], rarityPredicate, {preferUnowned:true,allowDuplicate:false});
+  };
+
+  const guaranteeMythicReward = () => {
+    const highRarities = ["mythic", "legendary"];
+    const collect = (unownedOnly) => {
+      const candidates=[];
+      for (const rarity of highRarities) {
+        const selectedPool=[];
+        for (const kind of cosmeticKinds) {
+          const catalog=catalogs[kind]||{}; const ownedKey=ownedKeyByKind[kind]; const owned=new Set(Array.isArray(state[ownedKey])?state[ownedKey]:[]);
+          for (const [id,item] of Object.entries(catalog)) {
+            if (item?.legendaryOnly || String(item?.rarity||"")!==rarity || Math.max(0,Number(item?.weight||0))<=0) continue;
+            if (unownedOnly && owned.has(id)) continue;
+            selectedPool.push({kind,id,item,ownedKey,weight:Math.max(0,Number(item?.weight||1))});
+          }
+        }
+        candidates.push(...selectedPool);
+      }
+      return candidates;
+    };
+    let candidates=collect(true); if(!candidates.length)candidates=collect(false); if(!candidates.length)return false;
+    let roll=caseSecureFloat()*candidates.reduce((sum,item)=>sum+item.weight,0);let selected=candidates[candidates.length-1];
+    for(const item of candidates){roll-=item.weight;if(roll<0){selected=item;break;}}
+    return grantSelectedCosmetic(selected,true);
   };
 
   for (let slot = 0; slot < config.slots; slot += 1) {
     const isLegendaryGuaranteed = caseType === "legendary" && guaranteeCount > 0 && state.legendaryPityCounter >= pityMax;
+    const isMythicGuaranteed = caseType === "mythic" && guaranteeCount > 0 && state.mythicPityCounter >= pityMax;
     if (isLegendaryGuaranteed) {
       const success = guaranteeLegendaryReward();
       state.legendaryPityCounter = 0;
       if (success && rewards.length) rewards[rewards.length - 1].guaranteed = true;
+      if (success) continue;
+    }
+    if (isMythicGuaranteed) {
+      const success = guaranteeMythicReward();
+      state.mythicPityCounter = 0;
       if (success) continue;
     }
     const kind = caseWeightedKind(caseType, state, liveops, catalogs);
@@ -3901,43 +3997,33 @@ function rollLevelCase(caseType, sourceState, currentOwnedSkins = [], liveops = 
       if (kind === "points") points += amount;
       if (kind === "treats") treats += amount;
       if (kind === "coffee") coffee += amount;
-      rewards.push({ kind, amount });
-      incrementPity();
-      continue;
+      rewards.push({ kind, amount }); incrementPity(); continue;
     }
     if (kind === "booster") {
       const boosterType = caseRandomChoice(CASE_BOOSTER_TYPES) || "points";
       state.boosters[boosterType] = safeAdminNumber(state.boosters[boosterType] + 1);
-      rewards.push({ kind: "booster", boosterType, amount: 1, runs: 2 });
-      incrementPity();
-      continue;
+      rewards.push({ kind: "booster", boosterType, amount: 1, runs: 2 }); incrementPity(); continue;
     }
     if (kind === "physical") {
       const physical = caseRandomChoice(Object.values(CASE_PHYSICAL_REWARDS)) || CASE_PHYSICAL_REWARDS.zefir;
-      rewards.push({ kind: "physical", productId: physical.id, productName: physical.title });
-      incrementPity();
+      rewards.push({ kind: "physical", productId: physical.id, productName: physical.title }); incrementPity(); continue;
+    }
+    const rarityMap = {epicCosmetic:"epic",mythicCosmetic:"mythic",legendaryCosmetic:"legendary"};
+    if (rarityMap[kind]) {
+      const rarity=rarityMap[kind];
+      const success=grantSelectedCosmetic(weightedRarityCosmetic(rarity),false);
+      if(!success){const[min,max]=caseCurrencyRange(caseType,"points",liveops);const amount=caseRandomInt(min,max);points+=amount;rewards.push({kind:"points",amount,fallbackFromUnavailableCategory:kind});incrementPity();continue;}
+      if (caseType === "mythic" && ["mythic","legendary"].includes(rarity)) resetMythicPityForHighRarity(rarity); else incrementPity();
       continue;
     }
-    const mapping = {
-      avatar: [catalogs.avatar, "ownedAvatars"],
-      frame: [catalogs.frame, "ownedFrames"],
-      trail: [catalogs.trail, "ownedTrails"],
-      skin: [catalogs.skin, "ownedSkins"],
-      music: [catalogs.music, "ownedMusicTracks"]
-    };
+    const mapping = {avatar:[catalogs.avatar,"ownedAvatars"],frame:[catalogs.frame,"ownedFrames"],trail:[catalogs.trail,"ownedTrails"],skin:[catalogs.skin,"ownedSkins"],music:[catalogs.music,"ownedMusicTracks"]};
     if (mapping[kind]) {
       const [catalog, ownedKey] = mapping[kind];
-      const success = addCosmetic(kind, catalog, ownedKey, CASE_DUPLICATE_COMPENSATION[kind], kind === "skin" ? null : caseAvailabilityPredicate);
-      if (!success) {
-        const [min, max] = caseCurrencyRange(caseType, "points", liveops);
-        const amount = caseRandomInt(min, max);
-        points += amount;
-        rewards.push({ kind: "points", amount, fallbackFromUnavailableCategory: kind });
-      }
+      const success = addCosmetic(kind, catalog, ownedKey, CASE_DUPLICATE_COMPENSATION[kind], kind === "skin" ? null : caseAvailabilityPredicate, {preferUnowned:true,allowDuplicate:caseType!=="legendary"});
+      if (!success) {const [min,max]=caseCurrencyRange(caseType,"points",liveops);const amount=caseRandomInt(min,max);points+=amount;rewards.push({kind:"points",amount,fallbackFromUnavailableCategory:kind});}
       incrementPity();
     }
   }
-
   return { rewards, state, points, treats, coffee, caseConfig };
 }
 
@@ -5476,13 +5562,13 @@ async function handleTelegramUpdate(update, env, runtime = {}) {
     return;
   }
 
-  const caseChanceMatch = text.match(/^\/case_chance(?:@\w+)?\s+(small|sweet|gold|legendary)\s+(points|treats|coffee|booster|skin|avatar|frame|trail|music|physical)\s+([0-9]+(?:[.,][0-9]+)?)$/i);
+  const caseChanceMatch = text.match(/^\/case_chance(?:@\w+)?\s+(small|sweet|gold|mythic|legendary)\s+(points|treats|coffee|booster|epicCosmetic|mythicCosmetic|legendaryCosmetic|skin|avatar|frame|trail|music|physical)\s+([0-9]+(?:[.,][0-9]+)?)$/i);
   if (caseChanceMatch) {
     await setCaseChance(chatId, user, caseChanceMatch[1].toLowerCase(), caseChanceMatch[2].toLowerCase(), Number(caseChanceMatch[3].replace(',', '.')), env);
     return;
   }
 
-  const caseGuaranteeMatch = text.match(/^\/case_guarantee(?:@\w+)?\s+(small|sweet|gold|legendary)\s+(\d{1,3})$/i);
+  const caseGuaranteeMatch = text.match(/^\/case_guarantee(?:@\w+)?\s+(small|sweet|gold|mythic|legendary)\s+(\d{1,3})$/i);
   if (caseGuaranteeMatch) {
     await setCaseGuarantee(chatId, user, caseGuaranteeMatch[1].toLowerCase(), Number(caseGuaranteeMatch[2]), env);
     return;
@@ -5710,8 +5796,8 @@ Telegram ID можно найти командой <code>/players</code>.`);
     return;
   }
 
-  const addKeysWithCountMatch = text.match(/^\/add_keys(?:@\w+)?\s+(small|sweet|gold|legendary|legend|маленький|малый|сладкий|золотой|легендарный|легенда)\s+(\d{1,2})\s+(\d{4,20})(?:\s+([\s\S]+))?$/i);
-  const addKeysSingleMatch = text.match(/^\/add_keys(?:@\w+)?\s+(small|sweet|gold|legendary|legend|маленький|малый|сладкий|золотой|легендарный|легенда)\s+(\d{4,20})(?:\s+([\s\S]+))?$/i);
+  const addKeysWithCountMatch = text.match(/^\/add_keys(?:@\w+)?\s+(small|sweet|gold|mythic|legendary|legend|маленький|малый|сладкий|золотой|мифический|мифик|легендарный|легенда)\s+(\d{1,2})\s+(\d{4,20})(?:\s+([\s\S]+))?$/i);
+  const addKeysSingleMatch = text.match(/^\/add_keys(?:@\w+)?\s+(small|sweet|gold|mythic|legendary|legend|маленький|малый|сладкий|золотой|мифический|мифик|легендарный|легенда)\s+(\d{4,20})(?:\s+([\s\S]+))?$/i);
   if (addKeysWithCountMatch || addKeysSingleMatch) {
     const match = addKeysWithCountMatch || addKeysSingleMatch;
     const hasCount = Boolean(addKeysWithCountMatch);
@@ -6592,6 +6678,7 @@ const BOT_SHOP_PRODUCT_ALIASES = Object.freeze({
   "case-small": "case-small",
   "case-sweet": "case-sweet",
   "case-gold": "case-gold",
+  "case-mythic": "case-mythic",
   "case-legendary": "case-legendary"
 });
 
@@ -6609,6 +6696,10 @@ const BOT_CASE_TYPE_ALIASES = Object.freeze({
   gold: "case-gold",
   golden: "case-gold",
   "золотой": "case-gold",
+  mythic: "case-mythic",
+  mifik: "case-mythic",
+  "мифический": "case-mythic",
+  "мифик": "case-mythic",
   legendary: "case-legendary",
   legend: "case-legendary",
   "легендарный": "case-legendary",
@@ -6687,6 +6778,7 @@ const BOT_SHOP_PRODUCT_COMMAND_NAMES = Object.freeze({
   "case-small": "case small",
   "case-sweet": "case sweet",
   "case-gold": "case gold",
+  "case-mythic": "case mythic",
   "case-legendary": "case legendary"
 });
 
@@ -8241,7 +8333,7 @@ async function showPlayerProfile(chatId, user, telegramId, env) {
   const ownedSkins = ["default", ...mergedOwnedSkins];
   const activeSkinId = normalizeCurrentActiveSkin(caseState.activeSkinId, mergedOwnedSkins);
   const activeSkinTitle = SKINS[activeSkinId]?.title || SKINS.default.title;
-  const pendingCaseCounts = { small: 0, sweet: 0, gold: 0, legendary: 0 };
+  const pendingCaseCounts = { small: 0, sweet: 0, gold: 0, mythic: 0, legendary: 0 };
   for (const row of Array.isArray(pendingCasesResult.results) ? pendingCasesResult.results : []) {
     if (Object.prototype.hasOwnProperty.call(pendingCaseCounts, String(row.case_type))) {
       pendingCaseCounts[String(row.case_type)] = Math.max(0, Number(row.count || 0));
@@ -8325,7 +8417,7 @@ async function showPlayerProfile(chatId, user, telegramId, env) {
     `Следы: <b>${caseState.ownedTrails.length}/${Object.keys(CASE_TRAILS).length}</b> · активный: <b>${escapeHtml(playerActiveCosmeticTitle(caseState.activeTrailId, CASE_TRAILS))}</b>\n${escapeHtml(playerCatalogNames(caseState.ownedTrails, CASE_TRAILS))}\n` +
     `Музыка: <b>${caseState.ownedMusicTracks.length}/${Object.keys(CASE_MUSIC_TRACKS).length}</b> · играет: <b>${escapeHtml(playerActiveCosmeticTitle(caseState.activeMusicTrackId, CASE_MUSIC_TRACKS))}</b>\n${escapeHtml(playerCatalogNames(caseState.ownedMusicTracks, CASE_MUSIC_TRACKS))}\n\n` +
     `<b>Кейсы и усилители</b>\n` +
-    `Обычные: <b>${pendingCaseCounts.small}</b> · Серебряные: <b>${pendingCaseCounts.sweet}</b> · Золотые: <b>${pendingCaseCounts.gold}</b> · Легендарные: <b>${pendingCaseCounts.legendary}</b>\n` +
+    `Обычные: <b>${pendingCaseCounts.small}</b> · Серебряные: <b>${pendingCaseCounts.sweet}</b> · Золотые: <b>${pendingCaseCounts.gold}</b> · Мифические: <b>${pendingCaseCounts.mythic}</b> · Легендарные: <b>${pendingCaseCounts.legendary}</b>\n` +
     `Активный бустер: <b>${escapeHtml(boosterLabel)}</b>\n` +
     `Сезонное усиление: <b>${escapeHtml(ownedSpecialsLine)}</b>\n` +
     `До гаранта Легендарного кейса: <b>${Math.max(1, legendaryGuarantee - Math.max(0, Math.min(legendaryGuarantee - 1, Number(caseState.legendaryPityCounter || 0))))}</b> открытий\n\n` +
@@ -8456,7 +8548,7 @@ async function addPlayerCases(chatId, user, caseTypeValue, quantityValue, telegr
     return;
   }
   if (!caseType) {
-    await sendTelegramMessage(env, chatId, "Неизвестный тип кейса. Доступно: <code>small</code>, <code>sweet</code>, <code>gold</code>, <code>legendary</code>.");
+    await sendTelegramMessage(env, chatId, "Неизвестный тип кейса. Доступно: <code>small</code>, <code>sweet</code>, <code>gold</code>, <code>mythic</code>, <code>legendary</code>.");
     return;
   }
   if (caseType === "legendary") {
@@ -10216,8 +10308,9 @@ function seasonCreateCaseKeyboard() {
     ],
     [
       { text: "Золотой", callback_data: "season_create_case:gold" },
-      { text: "Легендарный", callback_data: "season_create_case:legendary" }
+      { text: "Мифический", callback_data: "season_create_case:mythic" }
     ],
+    [{ text: "Легендарный", callback_data: "season_create_case:legendary" }],
     [{ text: "← Назад", callback_data: "season_create_reward_back" }, { text: "❌ Отмена", callback_data: "season_create_cancel" }]
   ] };
 }
@@ -10702,8 +10795,9 @@ function seasonRewardCaseKeyboard() {
     ],
     [
       { text: "Золотой", callback_data: "season_reward_case:gold" },
-      { text: "Легендарный", callback_data: "season_reward_case:legendary" }
+      { text: "Мифический", callback_data: "season_reward_case:mythic" }
     ],
+    [{ text: "Легендарный", callback_data: "season_reward_case:legendary" }],
     [{ text: "← Назад", callback_data: "season_reward" }]
   ] };
 }
@@ -10781,7 +10875,7 @@ function parseSeasonRewardInput(textValue, workflow) {
     };
   }
 
-  const caseMatch = text.match(/^(?:case|cases|кейс|кейсы)?\s*(small|mini|standart|standard|common|обычный|sweet|silver|серебряный|gold|golden|золотой|legendary|legend|легендарный)\s+(\d{1,2})(?:\s*\|\s*(.{1,100}))?$/i);
+  const caseMatch = text.match(/^(?:case|cases|кейс|кейсы)?\s*(small|mini|standart|standard|common|обычный|sweet|silver|серебряный|gold|golden|золотой|mythic|mifik|мифический|мифик|legendary|legend|легендарный)\s+(\d{1,2})(?:\s*\|\s*(.{1,100}))?$/i);
   if (caseMatch) {
     return {
       type: "case",
@@ -12221,7 +12315,7 @@ async function blockPlayerAndWipeProgress(env, options) {
       owned_trails_json='[]',active_trail_id='',
       owned_music_json='["cafe_run"]',active_music_id='cafe_run',
       owned_specials_json='[]',owned_skins_json='[]',active_skin_id='',
-      legendary_pity_counter=0,revision=revision+1,updated_at=?
+      mythic_pity_counter=0,legendary_pity_counter=0,revision=revision+1,updated_at=?
       WHERE telegram_id=?`).bind(now, telegramId),
     env.DB.prepare(`DELETE FROM granted_cases WHERE telegram_id=?`).bind(telegramId),
     env.DB.prepare(`DELETE FROM level_case_openings WHERE telegram_id=?`).bind(telegramId),
@@ -12692,7 +12786,7 @@ async function handleStaffOperationsCallback(query, env) {
     await selectLeaderboardSeasonCreateReward(query, seasonCreateReward[1], "", env);
     return true;
   }
-  const seasonCreateCase = data.match(/^season_create_case:(small|sweet|gold|legendary)$/);
+  const seasonCreateCase = data.match(/^season_create_case:(small|sweet|gold|mythic|legendary)$/);
   if (seasonCreateCase) {
     await selectLeaderboardSeasonCreateReward(query, "case", seasonCreateCase[1], env);
     return true;
@@ -12751,7 +12845,7 @@ async function handleStaffOperationsCallback(query, env) {
     await beginSeasonRewardAmountWorkflow(query, seasonRewardPick[1], "", env);
     return true;
   }
-  const seasonRewardCase = data.match(/^season_reward_case:(small|sweet|gold|legendary)$/);
+  const seasonRewardCase = data.match(/^season_reward_case:(small|sweet|gold|mythic|legendary)$/);
   if (seasonRewardCase) {
     await beginSeasonRewardAmountWorkflow(query, "case", seasonRewardCase[1], env);
     return true;
@@ -12805,12 +12899,13 @@ async function handleStaffOperationsCallback(query, env) {
 const LIVEOPS_CAMPAIGN_BATCH_SIZE = 30;
 const LIVEOPS_CAMPAIGN_LEASE_SECONDS = 120;
 const LIVEOPS_RARITIES = Object.freeze(["common", "rare", "superrare", "epic", "mythic", "legendary"]);
-const LIVEOPS_CASE_IDS = Object.freeze(["small", "sweet", "gold", "legendary"]);
+const LIVEOPS_CASE_IDS = Object.freeze(["small", "sweet", "gold", "mythic", "legendary"]);
 const LIVEOPS_CASE_DEFAULTS = Object.freeze({
-  small: Object.freeze({ enabled: true, title: "Обычный кейс", guaranteeCount: 0, chances: { treats: 40.5, coffee: 40.5, points: 16.5, booster: 2.5, skin: 0, avatar: 0, frame: 0, trail: 0, music: 0, physical: 0 }, ranges: { treats: [10, 20], coffee: [10, 20], points: [500, 1000] } }),
-  sweet: Object.freeze({ enabled: true, title: "Серебряный кейс", guaranteeCount: 0, chances: { treats: 30, coffee: 30, points: 23.5, booster: 12, skin: 0, avatar: 3, frame: 1, trail: 0.5, music: 0, physical: 0 }, ranges: { treats: [20, 40], coffee: [20, 40], points: [1000, 2500] } }),
-  gold: Object.freeze({ enabled: true, title: "Золотой кейс", guaranteeCount: 0, chances: { treats: 25, coffee: 25, points: 26, booster: 15, skin: 0, avatar: 5, frame: 3, trail: 1, music: 0, physical: 0 }, ranges: { treats: [40, 70], coffee: [40, 70], points: [2500, 5000] } }),
-  legendary: Object.freeze({ enabled: true, title: "Легендарный кейс", guaranteeCount: 50, chances: { treats: 25, coffee: 25, points: 39.665, booster: 0, skin: 0.35, avatar: 2, frame: 3, trail: 4.5, music: 0.45, physical: 0.035 }, ranges: { treats: [250, 1200], coffee: [250, 1200], points: [35000, 150000] } })
+  small: Object.freeze({ enabled: true, title: "Обычный кейс", guaranteeCount: 0, chances: { treats: 40.5, coffee: 40.5, points: 16.5, booster: 2.5, epicCosmetic:0, mythicCosmetic:0, legendaryCosmetic:0, skin: 0, avatar: 0, frame: 0, trail: 0, music: 0, physical: 0 }, ranges: { treats: [10, 20], coffee: [10, 20], points: [500, 1000] } }),
+  sweet: Object.freeze({ enabled: true, title: "Серебряный кейс", guaranteeCount: 0, chances: { treats: 30, coffee: 30, points: 23.5, booster: 12, epicCosmetic:0, mythicCosmetic:0, legendaryCosmetic:0, skin: 0, avatar: 3, frame: 1, trail: 0.5, music: 0, physical: 0 }, ranges: { treats: [20, 40], coffee: [20, 40], points: [1000, 2500] } }),
+  gold: Object.freeze({ enabled: true, title: "Золотой кейс", guaranteeCount: 0, chances: { treats: 25, coffee: 25, points: 26, booster: 15, epicCosmetic:0, mythicCosmetic:0, legendaryCosmetic:0, skin: 0, avatar: 5, frame: 3, trail: 1, music: 0, physical: 0 }, ranges: { treats: [40, 70], coffee: [40, 70], points: [2500, 5000] } }),
+  mythic: Object.freeze({ enabled: true, title: "Мифический кейс", guaranteeCount: 25, chances: { treats: 20, coffee: 15, points: 45, booster: 10, epicCosmetic:7, mythicCosmetic:2.5, legendaryCosmetic:0.5, skin:0, avatar:0, frame:0, trail:0, music:0, physical:0 }, ranges: { treats: [100, 300], coffee: [100, 300], points: [15000, 60000] } }),
+  legendary: Object.freeze({ enabled: true, title: "Легендарный кейс", guaranteeCount: 50, chances: { treats: 25, coffee: 25, points: 39.665, booster: 0, epicCosmetic:0, mythicCosmetic:0, legendaryCosmetic:0, skin: 0.35, avatar: 2, frame: 3, trail: 4.5, music: 0.45, physical: 0.035 }, ranges: { treats: [250, 1200], coffee: [250, 1200], points: [35000, 150000] } })
 });
 
 const LIVEOPS_CONTENT_IMAGES = Object.freeze({
@@ -12969,7 +13064,7 @@ async function readLiveOpsConfig(env) {
   await ensureLiveOpsAdminSchema(env);
   const [contentResult, caseResult] = await Promise.all([
     env.DB.prepare(`SELECT * FROM liveops_content_items ORDER BY item_kind, title`).all(),
-    env.DB.prepare(`SELECT * FROM liveops_case_configs ORDER BY CASE case_id WHEN 'small' THEN 1 WHEN 'sweet' THEN 2 WHEN 'gold' THEN 3 ELSE 4 END`).all()
+    env.DB.prepare(`SELECT * FROM liveops_case_configs ORDER BY CASE case_id WHEN 'small' THEN 1 WHEN 'sweet' THEN 2 WHEN 'gold' THEN 3 WHEN 'mythic' THEN 4 ELSE 5 END`).all()
   ]);
   const content = { avatar: {}, frame: {}, trail: {}, skin: {} };
   for (const row of contentResult.results || []) {
@@ -13617,7 +13712,8 @@ function campaignRewardMarkup() {
   return { inline_keyboard: [
     [{ text: "⭐ Очки", callback_data: "campaign_reward:points:_" }, { text: "🍥 Зефир", callback_data: "campaign_reward:zefir:_" }, { text: "☕ Кофе", callback_data: "campaign_reward:coffee:_" }],
     [{ text: "📦 Обычный кейс", callback_data: "campaign_reward:case:small" }, { text: "🥈 Серебряный", callback_data: "campaign_reward:case:sweet" }],
-    [{ text: "🥇 Золотой", callback_data: "campaign_reward:case:gold" }, { text: "👑 Легендарный", callback_data: "campaign_reward:case:legendary" }],
+    [{ text: "🥇 Золотой", callback_data: "campaign_reward:case:gold" }, { text: "🔮 Мифический", callback_data: "campaign_reward:case:mythic" }],
+    [{ text: "👑 Легендарный", callback_data: "campaign_reward:case:legendary" }],
     [{ text: "Отмена", callback_data: "ops_cancel" }]
   ] };
 }
@@ -14491,9 +14587,9 @@ async function handleLiveOpsAdminCallback(query, env, runtime = {}) {
   const contentKind = data.match(/^content_kind:(avatar|frame|trail|skin)$/); if (contentKind) { await answerCallback(env, query.id, "Каталог."); await showContentKind(chatId, query.from, contentKind[1], env); return true; }
   const contentToggle = data.match(/^content_toggle:(avatar|frame|trail|skin):([A-Za-z0-9_-]+):(enabled|new)$/); if (contentToggle) { await toggleContentItem(query, contentToggle[1], contentToggle[2], contentToggle[3], env); return true; }
   if (data === "adm_cases") { await answerCallback(env, query.id, "Кейсы."); await showCasesAdminDashboard(chatId, query.from, env); return true; }
-  const caseAdmin = data.match(/^case_admin:(small|sweet|gold|legendary)$/); if (caseAdmin) { await answerCallback(env, query.id, "Настройки кейса."); await showCaseAdminDetails(chatId, query.from, caseAdmin[1], env); return true; }
-  const caseToggle = data.match(/^case_toggle:(small|sweet|gold|legendary)$/); if (caseToggle) { await toggleCaseEnabled(query, caseToggle[1], env); return true; }
-  const caseSimulate = data.match(/^case_simulate:(small|sweet|gold|legendary)$/); if (caseSimulate) { await answerCallback(env, query.id, "Расчёт готов."); await showCaseSimulation(chatId, query.from, caseSimulate[1], env); return true; }
+  const caseAdmin = data.match(/^case_admin:(small|sweet|gold|mythic|legendary)$/); if (caseAdmin) { await answerCallback(env, query.id, "Настройки кейса."); await showCaseAdminDetails(chatId, query.from, caseAdmin[1], env); return true; }
+  const caseToggle = data.match(/^case_toggle:(small|sweet|gold|mythic|legendary)$/); if (caseToggle) { await toggleCaseEnabled(query, caseToggle[1], env); return true; }
+  const caseSimulate = data.match(/^case_simulate:(small|sweet|gold|mythic|legendary)$/); if (caseSimulate) { await answerCallback(env, query.id, "Расчёт готов."); await showCaseSimulation(chatId, query.from, caseSimulate[1], env); return true; }
   if (data === "adm_config_history") { await answerCallback(env, query.id, "История настроек."); await showConfigHistory(chatId, query.from, env); return true; }
   const rollback = data.match(/^cfg_rollback:(\d+)$/); if (rollback) { await rollbackConfigChange(query, Number(rollback[1]), env); return true; }
   if (data === "adm_shop") { await answerCallback(env, query.id, "Магазин."); await showShopAdminDashboard(chatId, query.from, env); return true; }
@@ -14612,7 +14708,7 @@ function parseMoscowDateTime(value) {
 function parseSafeReward(value, allowNone = false) {
   const text = String(value || "").trim();
   if (allowNone && /^(none|нет|без награды)$/i.test(text)) return { kind: "none", id: "", amount: 0, title: "Без награды" };
-  const match = text.match(/^(points|очки|zefir|зефир|treats|coffee|кофе|case|кейс)\s+(?:(small|sweet|gold|legendary|обычный|серебряный|золотой|легендарный)\s+)?(\d{1,9})(?:\s*\|\s*(.{1,120}))?$/i);
+  const match = text.match(/^(points|очки|zefir|зефир|treats|coffee|кофе|case|кейс)\s+(?:(small|sweet|gold|mythic|legendary|обычный|серебряный|золотой|мифический|легендарный)\s+)?(\d{1,9})(?:\s*\|\s*(.{1,120}))?$/i);
   if (!match) return null;
   const rawKind = match[1].toLowerCase();
   const kind = /points|очки/.test(rawKind) ? "points" : /zefir|зефир|treats/.test(rawKind) ? "zefir" : /coffee|кофе/.test(rawKind) ? "coffee" : "case";
@@ -17205,19 +17301,19 @@ async function manageTesterAccount(chatId,user,action,telegramId,note,env){
     return sendTelegramMessage(env,chatId,"Все скины, аватарки, рамки, следы и мелодии открыты для тестового аккаунта.");
   }
   if(action==="cases"){
-    for(const caseType of ["small","sweet","gold","legendary"]) await createGrantedCases(env,id,caseType,5,String(user.id),"Тестовый набор кейсов");
+    for(const caseType of ["small","sweet","gold","mythic","legendary"]) await createGrantedCases(env,id,caseType,5,String(user.id),"Тестовый набор кейсов");
     await env.DB.prepare(`UPDATE tester_accounts SET unlock_all_cases=1,updated_at=?,updated_by=? WHERE telegram_id=?`).bind(now,String(user.id),id).run();
     await recordPlayerTimeline(env,id,"tester","выдан тестовый набор кейсов",{perType:5},`tester_cases_${now}`,user,now);
-    await logStaffAction(env,user,access,"tester_cases",id,"tester",0,20,{});
+    await logStaffAction(env,user,access,"tester_cases",id,"tester",0,25,{});
     return sendTelegramMessage(env,chatId,"Выдано по 5 кейсов каждого типа.");
   }
   if(action==="guarantee"){
     await ensureCasePlayerState(env,id,{});
-    await env.DB.prepare(`UPDATE case_player_state SET legendary_pity_counter=49,revision=revision+1,updated_at=? WHERE telegram_id=?`).bind(now,id).run();
+    await env.DB.prepare(`UPDATE case_player_state SET mythic_pity_counter=24,legendary_pity_counter=49,revision=revision+1,updated_at=? WHERE telegram_id=?`).bind(now,id).run();
     await env.DB.prepare(`UPDATE tester_accounts SET accelerated_guarantee=1,updated_at=?,updated_by=? WHERE telegram_id=?`).bind(now,String(user.id),id).run();
     await recordPlayerTimeline(env,id,"tester","включён ускоренный гарант",{},`tester_guarantee_${now}`,user,now);
     await logStaffAction(env,user,access,"tester_guarantee",id,"tester",0,1,{});
-    return sendTelegramMessage(env,chatId,"Следующее открытие Легендарного кейса сработает как гарантированное.");
+    return sendTelegramMessage(env,chatId,"Следующее открытие Мифического и Легендарного кейса сработает как гарантированное.");
   }
   if(action==="reset"){
     await env.DB.prepare(`UPDATE admin_profile_state SET wallet=0,best_score=0,treats=0,coffee=0,profile_xp=0,pending_wallet=0,pending_treats=0,pending_coffee=0,wallet_override=NULL,revision=revision+1,updated_at=?,updated_by=? WHERE telegram_id=?`).bind(now,String(user.id),id).run();
@@ -17237,7 +17333,7 @@ async function manageTesterAccount(chatId,user,action,telegramId,note,env){
     await env.DB.prepare(`DELETE FROM season_pass_entitlements WHERE telegram_id=?`).bind(id).run();
     await env.DB.prepare(`DELETE FROM season_pass_purchases WHERE telegram_id=?`).bind(id).run();
     await env.DB.prepare(`DELETE FROM season_pass_players WHERE telegram_id=?`).bind(id).run();
-    await env.DB.prepare(`UPDATE case_player_state SET boosters_points=0,boosters_treats=0,boosters_coffee=0,active_booster_type='',active_booster_runs=0,owned_avatars_json='[]',active_avatar_id='',owned_frames_json='[]',active_frame_id='',owned_trails_json='[]',active_trail_id='',owned_music_json='["cafe_run"]',active_music_id='cafe_run',owned_specials_json='[]',owned_skins_json='[]',active_skin_id='',legendary_pity_counter=0,revision=revision+1,updated_at=? WHERE telegram_id=?`).bind(now,id).run();
+    await env.DB.prepare(`UPDATE case_player_state SET boosters_points=0,boosters_treats=0,boosters_coffee=0,active_booster_type='',active_booster_runs=0,owned_avatars_json='[]',active_avatar_id='',owned_frames_json='[]',active_frame_id='',owned_trails_json='[]',active_trail_id='',owned_music_json='["cafe_run"]',active_music_id='cafe_run',owned_specials_json='[]',owned_skins_json='[]',active_skin_id='',mythic_pity_counter=0,legendary_pity_counter=0,revision=revision+1,updated_at=? WHERE telegram_id=?`).bind(now,id).run();
     await env.DB.prepare(`UPDATE tester_accounts SET test_balance_enabled=0,unlock_all_skins=0,unlock_all_cases=0,accelerated_guarantee=0,exclude_from_rating=1,updated_at=?,updated_by=? WHERE telegram_id=?`).bind(now,String(user.id),id).run();
     await recordPlayerTimeline(env,id,"tester_reset","тестовый аккаунт сброшен",{},`tester_reset_${now}`,user,now);
     await logStaffAction(env,user,access,"tester_reset",id,"tester",1,0,{});
@@ -17311,8 +17407,9 @@ function promoCodeWorkflowRewardKeyboard() {
       ],
       [
         { text: "🥇 Золотой", callback_data: "v60_pc_case:gold" },
-        { text: "👑 Легендарный", callback_data: "v60_pc_case:legendary" }
+        { text: "🔮 Мифический", callback_data: "v60_pc_case:mythic" }
       ],
+      [{ text: "👑 Легендарный", callback_data: "v60_pc_case:legendary" }],
       [
         { text: "⭐ Очки", callback_data: "v60_pc_reward:points" },
         { text: "🍬 Зефир", callback_data: "v60_pc_reward:zefir" },
@@ -18702,7 +18799,7 @@ function defaultSeasonPassReward(levelValue,laneValue) {
   const level = Math.max(1,Math.min(SEASON_PASS_MAX_LEVEL,Math.floor(Number(levelValue)||1)));
   const lane = laneValue === 'premium' ? 'premium' : 'free';
   const tier = Math.floor((level - 1) / 10);
-  const makeCase = (itemId,title) => ({rewardType:'case',amount:1,itemId,title,imageUrl:({small:'/assets/cases/standart_closed.png',sweet:'/assets/cases/Bronze_close.png',gold:'/assets/cases/gold_closed.png',legendary:'/assets/cases/legendary_closed.png'})[itemId]});
+  const makeCase = (itemId,title) => ({rewardType:'case',amount:1,itemId,title,imageUrl:({small:'/assets/cases/standart_closed.png',sweet:'/assets/cases/Bronze_close.png',gold:'/assets/cases/gold_closed.png',mythic:'/assets/cases/Mifik_case_closed.png',legendary:'/assets/cases/legendary_closed.png'})[itemId]});
   if (lane === 'premium') {
     if (level === 50) return makeCase('legendary','Легендарный кейс');
     if (level % 10 === 0) return makeCase('gold','Золотой кейс');
@@ -20040,13 +20137,14 @@ async function showSeasonPassRewardTypePicker(chatId,user,env,level,lane){
     [{text:'⭐ 1 000 очков',callback_data:`sp_set:${level}:${lane}:points:1000`},{text:'⭐ 5 000 очков',callback_data:`sp_set:${level}:${lane}:points:5000`}],
     [{text:'🍥 50 зефира',callback_data:`sp_set:${level}:${lane}:treats:50`},{text:'☕ 25 кофе',callback_data:`sp_set:${level}:${lane}:coffee:25`}],
     [{text:'📦 Обычный кейс',callback_data:`sp_set:${level}:${lane}:case:small`},{text:'🥈 Серебряный',callback_data:`sp_set:${level}:${lane}:case:sweet`}],
-    [{text:'🥇 Золотой кейс',callback_data:`sp_set:${level}:${lane}:case:gold`},{text:'👑 Легендарный',callback_data:`sp_set:${level}:${lane}:case:legendary`}],
+    [{text:'🥇 Золотой кейс',callback_data:`sp_set:${level}:${lane}:case:gold`},{text:'🔮 Мифический',callback_data:`sp_set:${level}:${lane}:case:mythic`}],
+    [{text:'👑 Легендарный',callback_data:`sp_set:${level}:${lane}:case:legendary`}],
     [{text:'⬅️ Уровень',callback_data:`sp_level:${level}`}]
   ]});
 }
 async function setSeasonPassRewardFromCallback(query,level,lane,type,value,env){
   const chatId=query.message?.chat?.id;const access=await requireAnySecurityPermission(chatId,query.from,['manageSeasons','manageMaintenance'],env);if(!access)return;const season=await resolveSeasonPassAdminSeason(env,query.from);const now=Math.floor(Date.now()/1000);let reward;
-  if(type==='case'){const item=normalizeCaseType(value)||'small';const names={small:'Обычный кейс',sweet:'Серебряный кейс',gold:'Золотой кейс',legendary:'Легендарный кейс'};const images={small:'/assets/cases/standart_closed.png',sweet:'/assets/cases/Bronze_close.png',gold:'/assets/cases/gold_closed.png',legendary:'/assets/cases/legendary_closed.png'};reward={amount:1,itemId:item,title:names[item],imageUrl:images[item]};}
+  if(type==='case'){const item=normalizeCaseType(value)||'small';const names={small:'Обычный кейс',sweet:'Серебряный кейс',gold:'Золотой кейс',mythic:'Мифический кейс',legendary:'Легендарный кейс'};const images={small:'/assets/cases/standart_closed.png',sweet:'/assets/cases/Bronze_close.png',gold:'/assets/cases/gold_closed.png',mythic:'/assets/cases/Mifik_case_closed.png',legendary:'/assets/cases/legendary_closed.png'};reward={amount:1,itemId:item,title:names[item],imageUrl:images[item]};}
   else{const amount=Math.max(0,Number(value)||0);const map={points:['очков','/assets/optimized/v0.79.5/iconScore.png'],treats:['зефира','/assets/optimized/v0.79.5/shopMarshmallowAssortment.png'],coffee:['кофе','/assets/optimized/v0.79.5/iconCoffee.png']};reward={amount,itemId:'',title:`${amount.toLocaleString('ru-RU')} ${map[type][0]}`,imageUrl:map[type][1]};}
   await env.DB.prepare(`UPDATE season_pass_rewards SET reward_type=?,amount=?,item_id=?,title=?,image_url=?,updated_at=?,updated_by=? WHERE season_id=? AND level=? AND lane=?`).bind(type,reward.amount,reward.itemId,reward.title,reward.imageUrl,now,String(query.from.id),season.id,level,lane).run();await answerCallback(env,query.id,'Награда уровня изменена.');await showSeasonPassLevelCard(chatId,query.from,env,level);
 }
@@ -20291,27 +20389,32 @@ async function setFeatureFlag(query, flagKey, mode, percent, env) {
 }
 
 function emptySimulationCaseState() {
-  return { boosters:{points:0,treats:0,coffee:0}, activeBooster:{type:"",runsLeft:0}, ownedAvatars:[], activeAvatarId:"", ownedFrames:[], activeFrameId:"", ownedTrails:[], activeTrailId:"", ownedMusicTracks:["cafe_run"], activeMusicTrackId:"cafe_run", ownedSpecials:[], ownedSkins:["default"], activeSkinId:"default", legendaryPityCounter:0, legendaryGuaranteedEvery:50, revision:0, updatedAt:0 };
+  return { boosters:{points:0,treats:0,coffee:0}, activeBooster:{type:"",runsLeft:0}, ownedAvatars:[], activeAvatarId:"", ownedFrames:[], activeFrameId:"", ownedTrails:[], activeTrailId:"", ownedMusicTracks:["cafe_run"], activeMusicTrackId:"cafe_run", ownedSpecials:[], ownedSkins:["default"], activeSkinId:"default", mythicPityCounter:0, mythicGuaranteedEvery:25, legendaryPityCounter:0, legendaryGuaranteedEvery:50, revision:0, updatedAt:0 };
 }
 
 async function runCaseSimulation(env, caseType, sampleCount) {
+  const normalized=normalizeCaseType(caseType);if(!normalized)throw new ApiError(400,"Неизвестный кейс.");caseType=normalized;
   const liveops=await readLiveOpsConfig(env);const samples=Math.max(1,Math.min(100000,Math.floor(Number(sampleCount)||1000)));
   const caseConfig=liveOpsCaseConfig(liveops,caseType);if(caseConfig?.enabled===false)throw new ApiError(409,"Этот кейс временно отключён администратором.");
-  const catalogs={avatar:runtimeCaseCatalog("avatar",CASE_AVATARS,liveops),frame:runtimeCaseCatalog("frame",CASE_FRAMES,liveops),trail:runtimeCaseCatalog("trail",CASE_TRAILS,liveops),skin:runtimeCaseCatalog("skin",CASE_SKINS,liveops),music:CASE_MUSIC_TRACKS};
-  const cosmeticKinds=["avatar","frame","trail","skin","music"],categoryOrder=["points","treats","coffee","booster",...cosmeticKinds,"physical"];
-  const chances={...(caseConfig?.chances||LIVEOPS_CASE_DEFAULTS[caseType]?.chances||{})};const guaranteeCount=caseType==="legendary"?Math.max(0,Math.min(50,Math.floor(Number(caseConfig?.guaranteeCount??50)))):0;const pityMax=Math.max(0,guaranteeCount-1);
-  const regularCatalog={},epicCatalog={};for(const kind of cosmeticKinds){regularCatalog[kind]=Object.entries(catalogs[kind]||{}).filter(([,item])=>(caseType==="legendary"||!item?.legendaryOnly)&&Math.max(0,Number(item?.weight||0))>0);epicCatalog[kind]=regularCatalog[kind].filter(([,item])=>(CASE_RARITY_ORDER[String(item?.rarity||"common")]??0)>=(CASE_RARITY_ORDER.epic??3));}
-  const makePlayer=()=>{const remaining={},epicRemaining={};for(const kind of cosmeticKinds){remaining[kind]=regularCatalog[kind].length;epicRemaining[kind]=epicCatalog[kind].length;}return{pity:0,owned:{avatar:new Set(),frame:new Set(),trail:new Set(),skin:new Set(),music:new Set(["cafe_run"])},remaining,epicRemaining};};
-  const virtualPlayers=caseType==="legendary"&&guaranteeCount>0?Math.max(1,Math.min(100,Math.floor(samples/guaranteeCount)||1)):Math.max(1,Math.min(100,samples));const players=Array.from({length:virtualPlayers},makePlayer);let seed=crypto.getRandomValues(new Uint32Array(1))[0]||0x6d2b79f5;const random=()=>{seed^=seed<<13;seed^=seed>>>17;seed^=seed<<5;return(seed>>>0)/4294967296;};const randomInt=(min,max)=>{const lo=Math.floor(Number(min)||0),hi=Math.max(lo,Math.floor(Number(max)||lo));return lo+Math.floor(random()*(hi-lo+1));};
-  const weightedChoice=(entries,owned=null,unownedOnly=false)=>{let total=0;for(const [id,item] of entries){if(unownedOnly&&owned?.has(id))continue;total+=Math.max(0,Number(item?.weight||0));}if(total<=0)return null;let roll=random()*total;for(const entry of entries){const[id,item]=entry;if(unownedOnly&&owned?.has(id))continue;roll-=Math.max(0,Number(item?.weight||0));if(roll<0)return entry;}return null;};
-  const chooseCosmetic=(kind,player,epicOnly=false)=>{const entries=epicOnly?epicCatalog[kind]:regularCatalog[kind],owned=player.owned[kind],remaining=epicOnly?player.epicRemaining[kind]:player.remaining[kind];let selected=remaining>0?weightedChoice(entries,owned,true):null;if(!selected&&caseType!=="legendary")selected=weightedChoice(entries);if(!selected)return null;const[id,item]=selected,duplicate=owned.has(id);if(!duplicate){owned.add(id);player.remaining[kind]=Math.max(0,player.remaining[kind]-1);if((CASE_RARITY_ORDER[String(item?.rarity||"common")]??0)>=(CASE_RARITY_ORDER.epic??3))player.epicRemaining[kind]=Math.max(0,player.epicRemaining[kind]-1);}return{id,item,duplicate};};
-  const staticWeights=categoryOrder.map(kind=>[kind,Math.max(0,Number(chances[kind]||0))]);const chooseKind=(player)=>{let pointsWeight=staticWeights[0]?.[1]||0,total=0;const dynamic=[];for(const[kind,weight]of staticWeights){if(!weight||kind==="points")continue;if(cosmeticKinds.includes(kind)&&caseType==="legendary"&&player.remaining[kind]<=0){pointsWeight+=weight;continue;}dynamic.push([kind,weight]);total+=weight;}if(pointsWeight>0){dynamic.unshift(["points",pointsWeight]);total+=pointsWeight;}if(total<=0)return"points";let roll=random()*total;for(const[kind,weight]of dynamic){roll-=weight;if(roll<0)return kind;}return dynamic[dynamic.length-1]?.[0]||"points";};
-  const categoryCounts={},rarityCounts={};let physical=0,duplicates=0,guaranteeAttempts=0,guaranteed=0,totalRewards=0,totalPoints=0,totalTreats=0,totalCoffee=0;const countReward=kind=>{totalRewards+=1;categoryCounts[kind]=(categoryCounts[kind]||0)+1;};
-  const grantCosmetic=(kind,player,epicOnly=false,isGuaranteed=false)=>{const selected=chooseCosmetic(kind,player,epicOnly);if(!selected)return false;countReward(kind);if(selected.duplicate){duplicates+=1;totalPoints+=Number(CASE_DUPLICATE_COMPENSATION[kind]||0);}else{const rarity=String(selected.item?.rarity||"common");rarityCounts[rarity]=(rarityCounts[rarity]||0)+1;}if(isGuaranteed)guaranteed+=1;return true;};
-  const grantGuarantee=player=>{const defs=[["skin",5],["avatar",10],["frame",15],["trail",20],["music",8]],available=[];let total=0;for(const def of defs)if(player.epicRemaining[def[0]]>0){available.push(def);total+=def[1];}if(!available.length)return false;let roll=random()*total,selected=available[available.length-1];for(const def of available){roll-=def[1];if(roll<0){selected=def;break;}}return grantCosmetic(selected[0],player,true,true);};
-  for(let i=0;i<samples;i+=1){const player=players[i%players.length];if(caseType==="legendary"&&guaranteeCount>0&&player.pity>=pityMax){guaranteeAttempts+=1;player.pity=0;if(grantGuarantee(player))continue;}const kind=chooseKind(player);if(kind==="points"||kind==="treats"||kind==="coffee"){const[min,max]=caseCurrencyRange(caseType,kind,liveops),amount=randomInt(min,max);countReward(kind);if(kind==="points")totalPoints+=amount;else if(kind==="treats")totalTreats+=amount;else totalCoffee+=amount;}else if(kind==="booster")countReward("booster");else if(kind==="physical"){countReward("physical");physical+=1;}else if(cosmeticKinds.includes(kind)){if(!grantCosmetic(kind,player)){const[min,max]=caseCurrencyRange(caseType,"points",liveops);countReward("points");totalPoints+=randomInt(min,max);}}else{const[min,max]=caseCurrencyRange(caseType,"points",liveops);countReward("points");totalPoints+=randomInt(min,max);}if(caseType==="legendary"&&guaranteeCount>0)player.pity=Math.min(pityMax,player.pity+1);}
+  const guaranteeCount=(caseType==="legendary"||caseType==="mythic")?Math.max(0,Math.min(50,Math.floor(Number(caseConfig?.guaranteeCount??(caseType==="mythic"?25:50))))):0;
+  const virtualPlayers=guaranteeCount>0?Math.max(1,Math.min(100,Math.floor(samples/Math.max(1,guaranteeCount))||1)):Math.max(1,Math.min(100,samples));
+  const players=Array.from({length:virtualPlayers},()=>emptySimulationCaseState());
+  const categoryCounts={},rarityCounts={};let physical=0,duplicates=0,guaranteeAttempts=0,guaranteed=0,totalRewards=0,totalPoints=0,totalTreats=0,totalCoffee=0;
+  for(let i=0;i<samples;i+=1){
+    const player=players[i%players.length];
+    const beforePity=caseType==="mythic"?Number(player.mythicPityCounter||0):Number(player.legendaryPityCounter||0);
+    const wasDue=guaranteeCount>0&&beforePity>=guaranteeCount-1;if(wasDue)guaranteeAttempts+=1;
+    const rolled=rollLevelCase(caseType,player,player.ownedSkins,liveops);players[i%players.length]=rolled.state;
+    totalPoints+=Number(rolled.points||0);totalTreats+=Number(rolled.treats||0);totalCoffee+=Number(rolled.coffee||0);
+    for(const reward of rolled.rewards||[]){
+      totalRewards+=1;const kind=String(reward.kind||"points");categoryCounts[kind]=(categoryCounts[kind]||0)+1;
+      if(kind==="physical")physical+=1;if(reward.duplicate)duplicates+=1;if(reward.guaranteed)guaranteed+=1;
+      if(["avatar","frame","trail","skin","music"].includes(kind)&&!reward.duplicate){const rarity=String(reward.rarity||"common");rarityCounts[rarity]=(rarityCounts[rarity]||0)+1;}
+    }
+  }
   return {caseType,samples,virtualPlayers,totalRewards,categoryCounts,rarityCounts,physical,duplicates,guaranteeAttempts,guaranteed,totalPoints,totalTreats,totalCoffee,guaranteeCount};
 }
+
 
 function percentOf(value,total){return total>0?Number(value||0)*100/total:0;}
 async function showCaseSimulatorDashboard(chatId,user,env){
@@ -20319,8 +20422,8 @@ async function showCaseSimulatorDashboard(chatId,user,env){
   await sendTelegramMessage(env,chatId,"<b>🧪 Симулятор кейсов</b>\n\nВиртуальные открытия ничего не начисляют игрокам и не меняют экономику. Выберите кейс и объём выборки.",
     {inline_keyboard:[
       [{text:"📦 Обычный · 1 000",callback_data:"v65_sim:small:1000"},{text:"🥈 Серебряный · 1 000",callback_data:"v65_sim:sweet:1000"}],
-      [{text:"🥇 Золотой · 5 000",callback_data:"v65_sim:gold:5000"},{text:"👑 Легендарный · 5 000",callback_data:"v65_sim:legendary:5000"}],
-      [{text:"👑 Легендарный · 10 000",callback_data:"v65_sim:legendary:10000"}],
+      [{text:"🥇 Золотой · 5 000",callback_data:"v65_sim:gold:5000"},{text:"🔮 Мифический · 5 000",callback_data:"v65_sim:mythic:5000"}],
+      [{text:"🔮 Мифический · 10 000",callback_data:"v65_sim:mythic:10000"},{text:"👑 Легендарный · 10 000",callback_data:"v65_sim:legendary:10000"}],
       [{text:"⬅️ Админ-панель",callback_data:"adm_home"}]
     ]});
 }
@@ -20433,7 +20536,7 @@ async function handleOperationsSecurityCallback(query,env,runtime={}){
   const spLane=data.match(/^sp_lane:(\d{1,2}):(free|premium)$/);if(spLane){await answerCallback(env,query.id,"Выберите награду.");await showSeasonPassRewardTypePicker(chatId,query.from,env,Number(spLane[1]),spLane[2]);return true;}
   const spSet=data.match(/^sp_set:(\d{1,2}):(free|premium):(points|treats|coffee|case):([A-Za-z0-9_]+)$/);if(spSet){await setSeasonPassRewardFromCallback(query,Number(spSet[1]),spSet[2],spSet[3],spSet[4],env);return true;}
   if(data==="v65_case_sim"){await answerCallback(env,query.id,"Выберите кейс.");await showCaseSimulatorDashboard(chatId,query.from,env);return true;}
-  const sim=data.match(/^v65_sim:(small|sweet|gold|legendary):(1000|5000|10000)$/);if(sim){await answerCallback(env,query.id,"Запускаю виртуальные открытия.");await showCaseSimulationReport(chatId,query.from,sim[1],Number(sim[2]),env);return true;}
+  const sim=data.match(/^v65_sim:(small|sweet|gold|mythic|legendary):(1000|5000|10000)$/);if(sim){await answerCallback(env,query.id,"Запускаю виртуальные открытия.");await showCaseSimulationReport(chatId,query.from,sim[1],Number(sim[2]),env);return true;}
   if(data==="v65_publish"||data==="v65_publish_validate"){await answerCallback(env,query.id,"Проверяю пакет изменений.");await showPublicationCenter(chatId,query.from,env,data==="v65_publish_validate");return true;}
   const historyPage=data.match(/^v57_history:(\d{4,20}):(\d{1,2})$/);if(historyPage){await answerCallback(env,query.id,"Открываю страницу истории.");await showPlayerTimeline(chatId,query.from,historyPage[1],env,Number(historyPage[2]));return true;}
   if(data==="v57_history_help"){const access=await requireSecurityPermission(chatId,query.from,"viewPlayers",env);if(!access)return true;await answerCallback(env,query.id,"Введите Telegram ID.");await sendTelegramMessage(env,chatId,"История игрока: <code>/player_history TELEGRAM_ID [СТРАНИЦА]</code>");return true;}
@@ -20464,7 +20567,7 @@ async function handleOperationsSecurityCallback(query,env,runtime={}){
     try{const code=await generateUniquePromoCode(env);await updateStaffWorkflow(query.from.id,{step:"reward_kind",data:{code}},env);await answerCallback(env,query.id,"Код создан.");await showPromoRewardKindStep(chatId,query.from,env);}catch(error){await answerCallback(env,query.id,String(error?.message||error),true);}return true;
   }
   const promoReward=data.match(/^v60_pc_reward:(points|zefir|coffee)$/);if(promoReward){await answerCallback(env,query.id,"Выберите количество.");await showPromoAmountStep(chatId,query.from,promoReward[1],{},env);return true;}
-  const promoCase=data.match(/^v60_pc_case:(small|sweet|gold|legendary)$/);if(promoCase){const item=LEVEL_CASE_CONFIG[promoCase[1]];await answerCallback(env,query.id,"Выберите количество кейсов.");await showPromoAmountStep(chatId,query.from,"case",item,env);return true;}
+  const promoCase=data.match(/^v60_pc_case:(small|sweet|gold|mythic|legendary)$/);if(promoCase){const item=LEVEL_CASE_CONFIG[promoCase[1]];await answerCallback(env,query.id,"Выберите количество кейсов.");await showPromoAmountStep(chatId,query.from,"case",item,env);return true;}
   const promoCatalog=data.match(/^v60_pc_catalog:(skin|avatar|frame|trail):(\d+)$/);if(promoCatalog){await answerCallback(env,query.id,"Выберите предмет.");await showPromoCatalogStep(chatId,query.from,promoCatalog[1],Number(promoCatalog[2]),env);return true;}
   const promoItem=data.match(/^v60_pc_item:(skin|avatar|frame|trail):([A-Za-z0-9_-]+)$/);if(promoItem){
     const workflow=await getStaffWorkflow(query.from.id,env);const catalog=promoCatalogByKind(promoItem[1]);const item=catalog?.[promoItem[2]];
@@ -20546,6 +20649,7 @@ const V74_POLL_REWARD_PRESETS = Object.freeze({
   case_small: { kind: "case", id: "small", amount: 1 },
   case_sweet: { kind: "case", id: "sweet", amount: 1 },
   case_gold: { kind: "case", id: "gold", amount: 1 },
+  case_mythic: { kind: "case", id: "mythic", amount: 1 },
   case_legendary: { kind: "case", id: "legendary", amount: 1 },
   points_500: { kind: "points", id: "", amount: 500 },
   points_1000: { kind: "points", id: "", amount: 1000 },
@@ -20922,7 +21026,7 @@ async function handleV74PollCallback(query,env,runtime={}) {
   if(data==="v79_poll_runs_custom"){await startV79PollCustomRunTrigger(query,env);return true;}
   const duration=data.match(/^v74_poll_duration:(0|86400|259200|604800)$/);if(duration){await selectV74PollDuration(query,Number(duration[1]),env);return true;}
   const results=data.match(/^v74_poll_results:(after_vote|after_end|hidden)$/);if(results){await selectV74PollResults(query,results[1],env);return true;}
-  const reward=data.match(/^v74_poll_reward:(none|case_small|case_sweet|case_gold|case_legendary|points_500|points_1000|coffee_50|treats_100)$/);if(reward){await selectV74PollReward(query,reward[1],env);return true;}
+  const reward=data.match(/^v74_poll_reward:(none|case_small|case_sweet|case_gold|case_mythic|case_legendary|points_500|points_1000|coffee_50|treats_100)$/);if(reward){await selectV74PollReward(query,reward[1],env);return true;}
   if(data==="v74_poll_save"){await saveV74PollDraft(query,env);return true;}
   const details=data.match(/^v74_poll:([A-Za-z0-9_-]+)$/);if(details){await answerCallback(env,query.id,"Открываю опрос.");await showV74PollAdminDetails(chatId,query.from,env,details[1]);return true;}
   const publish=data.match(/^v74_poll_publish:([A-Za-z0-9_-]+)$/);if(publish){await publishV74Poll(query,publish[1],env,runtime);return true;}
@@ -20938,7 +21042,7 @@ async function handleV74PollCallback(query,env,runtime={}) {
   const editTrigger=data.match(/^v74_auto_edit_trigger_pick:(new_player_delay|inactive_days|accepted_runs|total_score|opened_cases|best_score|promo_activations|level_reached|season_ending|shop_purchases|skin_purchases|physical_purchases|case_purchases)$/);if(editTrigger){await selectV74AutomationEditTrigger(query,editTrigger[1],env);return true;}
   const editValue=data.match(/^v74_auto_edit_value:(\d{1,7})$/);if(editValue){await selectV74AutomationEditValue(query,Number(editValue[1]),env);return true;}
   if(data==="v74_auto_edit_value_custom"){await startV74AutomationEditCustomValue(query,env);return true;}
-  const editReward=data.match(/^v74_auto_edit_reward:(case_small|case_sweet|case_gold|case_legendary|points_500|points_1000|coffee_50|treats_100)$/);if(editReward){await selectV74AutomationEditReward(query,editReward[1],env);return true;}
+  const editReward=data.match(/^v74_auto_edit_reward:(case_small|case_sweet|case_gold|case_mythic|case_legendary|points_500|points_1000|coffee_50|treats_100)$/);if(editReward){await selectV74AutomationEditReward(query,editReward[1],env);return true;}
   if(data==="v74_auto_edit_save"){await saveV74AutomationEdit(query,env,runtime);return true;}
   if(data==="v74_auto_edit_cancel"){const workflow=await getStaffWorkflow(query.from.id,env);const key=String(workflow?.data?.chainKey||"");await clearStaffWorkflow(query.from.id,env);await answerCallback(env,query.id,"Изменение отменено.");if(key)await showV67AutomationDetails(chatId,query.from,key,env);else await showV67AutomationDashboard(chatId,query.from,env);return true;}
   return false;
@@ -21012,7 +21116,7 @@ async function selectV74PollDelivery(query,delivery,env){const chatId=query.mess
 async function selectV79PollRunTrigger(query,minAcceptedRuns,env){const chatId=query.message?.chat?.id;const workflow=await getStaffWorkflow(query.from.id,env);if(!workflow||workflow.flow_type!=="poll_create"||workflow.step!=="min_runs"){await answerCallback(env,query.id,"Мастер устарел.",true);return;}await answerCallback(env,query.id,minAcceptedRuns>0?`Показ после ${minAcceptedRuns} игр.`:"Показ сразу.");await showV79PollDurationStep(query.from.id,chatId,{...workflow.data,minAcceptedRuns:Math.max(0,Number(minAcceptedRuns||0))},env);}
 async function startV79PollCustomRunTrigger(query,env){const chatId=query.message?.chat?.id;const workflow=await getStaffWorkflow(query.from.id,env);if(!workflow||workflow.flow_type!=="poll_create"||workflow.step!=="min_runs"){await answerCallback(env,query.id,"Мастер устарел.",true);return;}await updateStaffWorkflow(query.from.id,{step:"min_runs_input",data:workflow.data},env);await answerCallback(env,query.id,"Введите количество.");await sendTelegramMessage(env,chatId,"Введите количество зачтённых забегов от <b>1</b> до <b>1000</b>, после которого показать опрос.");}
 async function selectV74PollDuration(query,duration,env){const chatId=query.message?.chat?.id;const workflow=await getStaffWorkflow(query.from.id,env);if(!workflow||workflow.flow_type!=="poll_create"||workflow.step!=="duration"){await answerCallback(env,query.id,"Мастер устарел.",true);return;}const next={...workflow.data,duration};await setStaffWorkflow(query.from.id,chatId,"poll_create","results",next,env);await answerCallback(env,query.id,"Настройте результаты.");await sendTelegramMessage(env,chatId,`<b>Показывать результаты игрокам?</b>`,{inline_keyboard:[[{text:"📊 После ответа",callback_data:"v74_poll_results:after_vote"}],[{text:"⏳ После завершения",callback_data:"v74_poll_results:after_end"}],[{text:"🙈 Не показывать",callback_data:"v74_poll_results:hidden"}],[{text:"❌ Отменить",callback_data:"v74_poll_cancel"}]]});}
-async function selectV74PollResults(query,resultsMode,env){const chatId=query.message?.chat?.id;const workflow=await getStaffWorkflow(query.from.id,env);if(!workflow||workflow.flow_type!=="poll_create"||workflow.step!=="results"){await answerCallback(env,query.id,"Мастер устарел.",true);return;}const next={...workflow.data,resultsMode};await setStaffWorkflow(query.from.id,chatId,"poll_create","reward",next,env);await answerCallback(env,query.id,"Выберите награду.");await sendTelegramMessage(env,chatId,`<b>🗳 Новый опрос · 10/10</b>\n\nНаграда за участие необязательна. Она выдаётся только после сохранения полного ответа и обязательного комментария.`,{inline_keyboard:[[{text:"Без награды",callback_data:"v74_poll_reward:none"}],[{text:"📦 Обычный",callback_data:"v74_poll_reward:case_small"},{text:"🥈 Серебряный",callback_data:"v74_poll_reward:case_sweet"}],[{text:"🥇 Золотой",callback_data:"v74_poll_reward:case_gold"},{text:"💎 Легендарный",callback_data:"v74_poll_reward:case_legendary"}],[{text:"⭐ 500",callback_data:"v74_poll_reward:points_500"},{text:"⭐ 1 000",callback_data:"v74_poll_reward:points_1000"}],[{text:"☕ 50",callback_data:"v74_poll_reward:coffee_50"},{text:"🍥 100",callback_data:"v74_poll_reward:treats_100"}],[{text:"❌ Отменить",callback_data:"v74_poll_cancel"}]]});}
+async function selectV74PollResults(query,resultsMode,env){const chatId=query.message?.chat?.id;const workflow=await getStaffWorkflow(query.from.id,env);if(!workflow||workflow.flow_type!=="poll_create"||workflow.step!=="results"){await answerCallback(env,query.id,"Мастер устарел.",true);return;}const next={...workflow.data,resultsMode};await setStaffWorkflow(query.from.id,chatId,"poll_create","reward",next,env);await answerCallback(env,query.id,"Выберите награду.");await sendTelegramMessage(env,chatId,`<b>🗳 Новый опрос · 10/10</b>\n\nНаграда за участие необязательна. Она выдаётся только после сохранения полного ответа и обязательного комментария.`,{inline_keyboard:[[{text:"Без награды",callback_data:"v74_poll_reward:none"}],[{text:"📦 Обычный",callback_data:"v74_poll_reward:case_small"},{text:"🥈 Серебряный",callback_data:"v74_poll_reward:case_sweet"}],[{text:"🥇 Золотой",callback_data:"v74_poll_reward:case_gold"},{text:"🔮 Мифический",callback_data:"v74_poll_reward:case_mythic"},{text:"💎 Легендарный",callback_data:"v74_poll_reward:case_legendary"}],[{text:"⭐ 500",callback_data:"v74_poll_reward:points_500"},{text:"⭐ 1 000",callback_data:"v74_poll_reward:points_1000"}],[{text:"☕ 50",callback_data:"v74_poll_reward:coffee_50"},{text:"🍥 100",callback_data:"v74_poll_reward:treats_100"}],[{text:"❌ Отменить",callback_data:"v74_poll_cancel"}]]});}
 async function selectV74PollReward(query,key,env){const chatId=query.message?.chat?.id;const workflow=await getStaffWorkflow(query.from.id,env);if(!workflow||workflow.flow_type!=="poll_create"||workflow.step!=="reward"){await answerCallback(env,query.id,"Мастер устарел.",true);return;}const reward=V74_POLL_REWARD_PRESETS[key];if(!reward){await answerCallback(env,query.id,"Награда не найдена.",true);return;}const next={...workflow.data,reward};await setStaffWorkflow(query.from.id,chatId,"poll_create","confirm",next,env);await answerCallback(env,query.id,"Проверьте опрос.");await sendTelegramMessage(env,chatId,`<b>✅ Проверьте опрос</b>\n\nВопрос: <b>${escapeHtml(next.question)}</b>\nТип ответа: <b>${escapeHtml(v75PollAnswerTypeLabel(next.answerType))}</b>\n${next.options?.length?`Варианты: <b>${next.options.length}</b>\n`:""}${next.answerType!=="text"?`Выбор: <b>${next.responseMode==="multiple"?`до ${next.maxChoices} вариантов`:"один вариант"}</b>\n`:""}Комментарий: <b>${escapeHtml(v75PollCommentModeLabel(next.answerType==="text"?"required":next.commentMode))}</b>\nАудитория: <b>${escapeHtml(v74PollAudienceLabel(next.audience))}</b>\nОтправка: <b>${escapeHtml(v74PollDeliveryLabel(next.delivery))}</b>\n${["game","both"].includes(String(next.delivery))?`Показ в игре: <b>${Number(next.minAcceptedRuns||0)>0?`после ${Number(next.minAcceptedRuns)} зачтённых забегов`:"сразу"}</b>\n`:""}Срок: <b>${next.duration?`${Math.round(next.duration/V67_DAY)} дн.`:"без срока"}</b>\nРезультаты: <b>${escapeHtml(v74PollResultsLabel(next.resultsMode))}</b>\nНаграда: <b>${escapeHtml(v74PollRewardText(next.reward))}</b>\n\nОпрос сохранится черновиком.`,{inline_keyboard:[[{text:"✅ Сохранить черновик",callback_data:"v74_poll_save"}],[{text:"❌ Отменить",callback_data:"v74_poll_cancel"}]]});}
 async function saveV74PollDraft(query,env){const chatId=query.message?.chat?.id;const workflow=await getStaffWorkflow(query.from.id,env);const access=await getTeamAccess(query.from,env);if(!workflow||workflow.flow_type!=="poll_create"||workflow.step!=="confirm"||!access.authorized||!v74PollAccess(access)){await answerCallback(env,query.id,"Черновик не найден.",true);return;}await ensureV74PollSchema(env);const d=workflow.data;const pollId=v74PollId();const now=Math.floor(Date.now()/1000);const reward=d.reward||V74_POLL_REWARD_PRESETS.none;await env.DB.prepare(`INSERT INTO player_polls(poll_id,question,description,status,response_mode,max_choices,audience_type,delivery_mode,results_mode,allow_change,show_in_tasks,duration_seconds,starts_at,ends_at,reward_kind,reward_id,reward_amount,created_by,created_by_name,report_chat_id,bot_queue_prepared,created_at,updated_at,published_at,ended_at) VALUES(?,?,?,'draft',?,?,?,?,?,0,0,?,0,0,?,?,?,?,?,?,0,?,?,0,0)`).bind(pollId,String(d.question).slice(0,300),"",d.responseMode||"single",Number(d.maxChoices||1),d.audience,d.delivery,d.resultsMode,Number(d.duration||0),reward.kind,String(reward.id||""),Number(reward.amount||0),String(query.from.id),telegramDisplayName(query.from),String(chatId),now,now).run();await env.DB.prepare(`UPDATE player_polls SET answer_type=?,comment_mode=?,comment_min_length=?,comment_max_length=?,comment_prompt=?,min_accepted_runs=? WHERE poll_id=?`).bind(String(d.answerType||"choice"),String(d.answerType==="text"?"required":d.commentMode||"none"),Number(d.commentMin||10),Number(d.commentMax||1000),String(d.commentPrompt||"Напишите свой ответ сообщением.").slice(0,300),Math.max(0,Math.min(1000,Number(d.minAcceptedRuns||0))),pollId).run();if(Array.isArray(d.options)&&d.options.length)await env.DB.batch(d.options.map((option,index)=>env.DB.prepare(`INSERT INTO player_poll_options(option_id,poll_id,option_order,option_text) VALUES(?,?,?,?)`).bind(`${pollId}o${index+1}`,pollId,index+1,String(option).slice(0,100))));await logStaffAction(env,query.from,access,"poll_create",null,"poll",null,null,{pollId,question:d.question,delivery:d.delivery,audience:d.audience,answerType:d.answerType,commentMode:d.commentMode,minAcceptedRuns:Number(d.minAcceptedRuns||0)});await clearStaffWorkflow(query.from.id,env);await answerCallback(env,query.id,"Опрос сохранён.");await showV74PollAdminDetails(chatId,query.from,env,pollId);}
 
@@ -21239,7 +21343,7 @@ async function startV74AutomationTriggerEdit(query,env){
     [{text:"❌ Отменить",callback_data:"v74_auto_edit_cancel"}]
   ]});
 }
-async function startV74AutomationActionEdit(query,env){const chatId=query.message?.chat?.id;const workflow=await getStaffWorkflow(query.from.id,env);if(!workflow||workflow.flow_type!=="automation_edit"){await answerCallback(env,query.id,"Редактирование устарело.",true);return;}const access=await getTeamAccess(query.from,env);const row=await env.DB.prepare(`SELECT * FROM automation_chains WHERE chain_key=? LIMIT 1`).bind(workflow.data.chainKey).first();if(!row){await answerCallback(env,query.id,"Цепочка не найдена.",true);return;}if(row.action_type==="message"){if(!(access.owner||access.permissions?.massBroadcasts||access.permissions?.manageSeasons)){await answerCallback(env,query.id,"Нет права изменять автоматические сообщения.",true);return;}await updateStaffWorkflow(query.from.id,{step:"message_input",data:{...workflow.data}},env);await answerCallback(env,query.id,"Введите новый текст.");await sendTelegramMessage(env,chatId,"Отправьте новый текст сообщения от 3 до 1500 символов.");return;}if(!(access.owner||access.permissions?.grantRewards)){await answerCallback(env,query.id,"Нет права изменять автоматические награды.",true);return;}await updateStaffWorkflow(query.from.id,{step:"reward_pick",data:workflow.data},env);await answerCallback(env,query.id,"Выберите награду.");await sendTelegramMessage(env,chatId,"<b>Новая награда</b>",{inline_keyboard:[[{text:"📦 Обычный",callback_data:"v74_auto_edit_reward:case_small"},{text:"🥈 Серебряный",callback_data:"v74_auto_edit_reward:case_sweet"}],[{text:"🥇 Золотой",callback_data:"v74_auto_edit_reward:case_gold"},{text:"💎 Легендарный",callback_data:"v74_auto_edit_reward:case_legendary"}],[{text:"⭐ 500",callback_data:"v74_auto_edit_reward:points_500"},{text:"⭐ 1 000",callback_data:"v74_auto_edit_reward:points_1000"}],[{text:"☕ 50",callback_data:"v74_auto_edit_reward:coffee_50"},{text:"🍥 100",callback_data:"v74_auto_edit_reward:treats_100"}],[{text:"❌ Отменить",callback_data:"v74_auto_edit_cancel"}]]});}
+async function startV74AutomationActionEdit(query,env){const chatId=query.message?.chat?.id;const workflow=await getStaffWorkflow(query.from.id,env);if(!workflow||workflow.flow_type!=="automation_edit"){await answerCallback(env,query.id,"Редактирование устарело.",true);return;}const access=await getTeamAccess(query.from,env);const row=await env.DB.prepare(`SELECT * FROM automation_chains WHERE chain_key=? LIMIT 1`).bind(workflow.data.chainKey).first();if(!row){await answerCallback(env,query.id,"Цепочка не найдена.",true);return;}if(row.action_type==="message"){if(!(access.owner||access.permissions?.massBroadcasts||access.permissions?.manageSeasons)){await answerCallback(env,query.id,"Нет права изменять автоматические сообщения.",true);return;}await updateStaffWorkflow(query.from.id,{step:"message_input",data:{...workflow.data}},env);await answerCallback(env,query.id,"Введите новый текст.");await sendTelegramMessage(env,chatId,"Отправьте новый текст сообщения от 3 до 1500 символов.");return;}if(!(access.owner||access.permissions?.grantRewards)){await answerCallback(env,query.id,"Нет права изменять автоматические награды.",true);return;}await updateStaffWorkflow(query.from.id,{step:"reward_pick",data:workflow.data},env);await answerCallback(env,query.id,"Выберите награду.");await sendTelegramMessage(env,chatId,"<b>Новая награда</b>",{inline_keyboard:[[{text:"📦 Обычный",callback_data:"v74_auto_edit_reward:case_small"},{text:"🥈 Серебряный",callback_data:"v74_auto_edit_reward:case_sweet"}],[{text:"🥇 Золотой",callback_data:"v74_auto_edit_reward:case_gold"},{text:"🔮 Мифический",callback_data:"v74_auto_edit_reward:case_mythic"},{text:"💎 Легендарный",callback_data:"v74_auto_edit_reward:case_legendary"}],[{text:"⭐ 500",callback_data:"v74_auto_edit_reward:points_500"},{text:"⭐ 1 000",callback_data:"v74_auto_edit_reward:points_1000"}],[{text:"☕ 50",callback_data:"v74_auto_edit_reward:coffee_50"},{text:"🍥 100",callback_data:"v74_auto_edit_reward:treats_100"}],[{text:"❌ Отменить",callback_data:"v74_auto_edit_cancel"}]]});}
 async function selectV74AutomationEditTrigger(query,triggerType,env){
   const chatId=query.message?.chat?.id;
   const workflow=await getStaffWorkflow(query.from.id,env);
@@ -21716,7 +21820,7 @@ async function selectV67AutomationAction(query, actionType, env) {
   await setStaffWorkflow(query.from.id, chatId, "automation_create", "reward", next, env);
   await sendTelegramMessage(env, chatId, `<b>4/4 · Выберите награду</b>`, { inline_keyboard: [
     [{ text: "📦 Обычный кейс", callback_data: "v67_auto_new_reward:case_small" }, { text: "🥈 Серебряный кейс", callback_data: "v67_auto_new_reward:case_sweet" }],
-    [{ text: "🥇 Золотой кейс", callback_data: "v67_auto_new_reward:case_gold" }, { text: "💎 Легендарный кейс", callback_data: "v67_auto_new_reward:case_legendary" }],
+    [{ text: "🥇 Золотой кейс", callback_data: "v67_auto_new_reward:case_gold" }, { text: "🔮 Мифический кейс", callback_data: "v67_auto_new_reward:case_mythic" }, { text: "💎 Легендарный кейс", callback_data: "v67_auto_new_reward:case_legendary" }],
     [{ text: "⭐ 500 очков", callback_data: "v67_auto_new_reward:points_500" }, { text: "⭐ 1 000 очков", callback_data: "v67_auto_new_reward:points_1000" }],
     [{ text: "☕ 50 кофе", callback_data: "v67_auto_new_reward:coffee_50" }, { text: "🍥 100 зефира", callback_data: "v67_auto_new_reward:treats_100" }],
     [{ text: "❌ Отменить", callback_data: "v67_auto_new_cancel" }]
@@ -21729,6 +21833,7 @@ function v67AutomationRewardPreset(key, title) {
     case_small: { kind:"case", id:"small", amount:1, reason },
     case_sweet: { kind:"case", id:"sweet", amount:1, reason },
     case_gold: { kind:"case", id:"gold", amount:1, reason },
+    case_mythic: { kind:"case", id:"mythic", amount:1, reason },
     case_legendary: { kind:"case", id:"legendary", amount:1, reason },
     points_500: { kind:"points", amount:500, reason },
     points_1000: { kind:"points", amount:1000, reason },
@@ -22648,7 +22753,7 @@ async function showV77TaskAnalyticsDetails(chatId,user,key,env){const access=awa
 
 async function showV77Economy(chatId,user,env){const access=await requireV77OperationsAccess(chatId,user,env);if(!access)return;const since=Math.floor(Date.now()/1000)-7*V67_DAY;const [balances,rewards,purchases,cases,queue]=await Promise.all([env.DB.prepare(`SELECT COUNT(*) AS players,SUM(wallet) AS points,SUM(treats) AS treats,SUM(coffee) AS coffee,SUM(pending_wallet) AS ppoints,SUM(pending_treats) AS ptreats,SUM(pending_coffee) AS pcoffee FROM admin_profile_state`).first(),env.DB.prepare(`SELECT reward_kind,SUM(amount) AS amount,COUNT(*) AS operations FROM reward_delivery_queue WHERE status='delivered' AND updated_at>=? GROUP BY reward_kind`).bind(since).all(),env.DB.prepare(`SELECT category,COUNT(*) AS operations FROM shop_stock_consumptions WHERE created_at>=? GROUP BY category`).bind(since).all(),env.DB.prepare(`SELECT case_type,COUNT(*) AS amount FROM granted_cases WHERE status IN ('available','pending') GROUP BY case_type`).all(),env.DB.prepare(`SELECT SUM(CASE WHEN status='pending' THEN 1 ELSE 0 END) AS pending,SUM(CASE WHEN status='failed' THEN 1 ELSE 0 END) AS failed FROM reward_delivery_queue`).first()]);const rewardLines=(rewards.results||[]).map(r=>`• ${escapeHtml(r.reward_kind)}: <b>${Number(r.amount||0).toLocaleString("ru-RU")}</b> · ${Number(r.operations||0)} операций`);const purchaseLines=(purchases.results||[]).map(r=>`• ${escapeHtml(r.category)}: <b>${Number(r.operations||0)}</b> покупок`);const caseLines=(cases.results||[]).map(r=>`• ${escapeHtml(r.case_type)}: <b>${Number(r.amount||0)}</b>`);const warning=Number(queue?.failed||0)>0?"\n\n🔴 Есть ошибки доставки наград.":Number(balances?.ppoints||0)+Number(balances?.ptreats||0)+Number(balances?.pcoffee||0)>0?"\n\n🟡 Есть ожидающие начисления в профилях.":"";await sendTelegramMessage(env,chatId,`<b>💰 Экономика+</b>\n\nИгроков: <b>${Number(balances?.players||0)}</b>\nБаланс очков: <b>${Number(balances?.points||0).toLocaleString("ru-RU")}</b>\nЗефир: <b>${Number(balances?.treats||0).toLocaleString("ru-RU")}</b>\nКофе: <b>${Number(balances?.coffee||0).toLocaleString("ru-RU")}</b>\nОжидает начисления: ${Number(balances?.ppoints||0)} очков, ${Number(balances?.ptreats||0)} зефира, ${Number(balances?.pcoffee||0)} кофе\n\n<b>Выдано за 7 дней</b>\n${rewardLines.join("\n")||"Нет выдач."}\n\n<b>Покупки за 7 дней</b>\n${purchaseLines.join("\n")||"Нет покупок."}\n\n<b>Неоткрытые выданные кейсы</b>\n${caseLines.join("\n")||"Нет."}\n\nОчередь наград: ${Number(queue?.pending||0)} · ошибок ${Number(queue?.failed||0)}${warning}\n\n<i>Историческая сумма расходов по валютам пока недоступна: старые операции магазина не сохраняли цену на момент покупки.</i>`,{inline_keyboard:[[{text:"🔄 Обновить",callback_data:"v77_economy"}],[{text:"⬅️ Центр",callback_data:"v77_home"}]]});}
 
-function v77ConflictList(row,allRows=[]){const issues=[];const action=safeJson(row.action_json,{});if(Number(row.trigger_value||0)<=0)issues.push({severity:"critical",text:"нулевое значение условия"});if(row.action_type==="reward"){if(!action.kind||Number(action.amount||0)<=0)issues.push({severity:"critical",text:"награда не настроена"});if(action.kind==="case"&&!new Set(["small","sweet","gold","legendary"]).has(String(action.id)))issues.push({severity:"critical",text:"неизвестный тип кейса"});}if(Number(row.show_as_task)&&!v71TaskTriggerSupported(row.trigger_type))issues.push({severity:"critical",text:"условие нельзя показать как задание"});if(Number(row.task_starts_at||0)&&Number(row.task_ends_at||0)&&Number(row.task_starts_at)>=Number(row.task_ends_at))issues.push({severity:"critical",text:"дата начала позже даты окончания"});for(const other of allRows){if(other.chain_key===row.chain_key||!Number(other.enabled)||!Number(row.enabled))continue;if(other.trigger_type===row.trigger_type&&Number(other.trigger_value)===Number(row.trigger_value)&&other.action_type===row.action_type&&String(other.action_json)===String(row.action_json)) {issues.push({severity:"warning",text:`дублирует «${other.title}»`});break;}}return issues;}
+function v77ConflictList(row,allRows=[]){const issues=[];const action=safeJson(row.action_json,{});if(Number(row.trigger_value||0)<=0)issues.push({severity:"critical",text:"нулевое значение условия"});if(row.action_type==="reward"){if(!action.kind||Number(action.amount||0)<=0)issues.push({severity:"critical",text:"награда не настроена"});if(action.kind==="case"&&!new Set(["small","sweet","gold","mythic","legendary"]).has(String(action.id)))issues.push({severity:"critical",text:"неизвестный тип кейса"});}if(Number(row.show_as_task)&&!v71TaskTriggerSupported(row.trigger_type))issues.push({severity:"critical",text:"условие нельзя показать как задание"});if(Number(row.task_starts_at||0)&&Number(row.task_ends_at||0)&&Number(row.task_starts_at)>=Number(row.task_ends_at))issues.push({severity:"critical",text:"дата начала позже даты окончания"});for(const other of allRows){if(other.chain_key===row.chain_key||!Number(other.enabled)||!Number(row.enabled))continue;if(other.trigger_type===row.trigger_type&&Number(other.trigger_value)===Number(row.trigger_value)&&other.action_type===row.action_type&&String(other.action_json)===String(row.action_json)) {issues.push({severity:"warning",text:`дублирует «${other.title}»`});break;}}return issues;}
 async function showV77Conflicts(chatId,user,env){const access=await requireV77OperationsAccess(chatId,user,env);if(!access)return;const rows=(await env.DB.prepare(`SELECT * FROM automation_chains ORDER BY enabled DESC,updated_at DESC`).all()).results||[];const lines=[];let critical=0,warning=0;for(const row of rows){const issues=v77ConflictList(row,rows);if(!issues.length)continue;critical+=issues.filter(i=>i.severity==="critical").length;warning+=issues.filter(i=>i.severity==="warning").length;lines.push(`<b>${escapeHtml(row.title)}</b>\n${issues.map(i=>`${i.severity==="critical"?"🔴":"🟡"} ${escapeHtml(i.text)}`).join("\n")}`);}await sendTelegramMessage(env,chatId,`<b>⚠️ Проверка конфликтов</b>\n\nКритических: <b>${critical}</b> · предупреждений: <b>${warning}</b>\n\n${lines.join("\n\n")||"🟢 Конфликтов не обнаружено."}`,{inline_keyboard:[[{text:"🔄 Проверить снова",callback_data:"v77_conflicts"}],[{text:"⬅️ Центр",callback_data:"v77_home"}]]});}
 
 async function showV77Bulk(chatId,user,env){const access=await requireV77OperationsAccess(chatId,user,env);if(!access)return;let workflow=await getStaffWorkflow(user.id,env);if(!workflow||workflow.flow_type!=="v77_bulk"){await setStaffWorkflow(user.id,chatId,"v77_bulk","select",{selected:[]},env);workflow=await getStaffWorkflow(user.id,env);}const rows=(await env.DB.prepare(`SELECT chain_key,title,enabled,show_as_task,action_type FROM automation_chains ORDER BY enabled DESC,updated_at DESC LIMIT 16`).all()).results||[];const selected=new Set(workflow.data.selected||[]);const buttons=rows.map(r=>[{text:`${selected.has(r.chain_key)?"☑️":"⬜"} ${Number(r.enabled)?"🟢":"⚫"} ${String(r.title).slice(0,30)}`,callback_data:`v77_bulk_pick:${r.chain_key}`}]);buttons.push([{text:`▶️ Включить · ${selected.size}`,callback_data:"v77_bulk_apply:enable"},{text:"⏸ Выключить",callback_data:"v77_bulk_apply:disable"}],[{text:"📋 Показать задания",callback_data:"v77_bulk_apply:show"},{text:"🙈 Скрыть задания",callback_data:"v77_bulk_apply:hide"}],[{text:"🎁 Заменить награду",callback_data:"v77_bulk_reward"}],[{text:"🧹 Сбросить выбор",callback_data:"v77_bulk_clear"}],[{text:"⬅️ Центр",callback_data:"v77_home"}]);await sendTelegramMessage(env,chatId,`<b>🧰 Массовые действия</b>\n\nВыбрано: <b>${selected.size}</b>. Действия применяются только после отдельного подтверждения.`,{inline_keyboard:buttons});}
@@ -22672,8 +22777,8 @@ async function handleV77Callback(query,env){const data=String(query.data||"");co
   if(data==="v77_series"){await answerCallback(env,query.id,"Серии обновлены.");await showV77SeriesDashboard(chatId,query.from,env);return true;}if(data==="v77_series_new"){await startV77SeriesCreate(query,env);return true;}if(data==="v77_series_cancel"){await clearStaffWorkflow(query.from.id,env);await answerCallback(env,query.id,"Создание отменено.");await showV77SeriesDashboard(chatId,query.from,env);return true;}
   const mode=data.match(/^v77_series_mode:(ordered|any)$/);if(mode){const w=await getStaffWorkflow(query.from.id,env);if(!w||w.flow_type!=="v77_series_create")return true;await updateStaffWorkflow(query.from.id,{step:"tasks",data:{...w.data,mode:mode[1]}},env);await answerCallback(env,query.id,"Выберите этапы.");await showV77SeriesTaskPicker(query,env);return true;}
   const task=data.match(/^v77_series_task:([a-z0-9_]+)$/);if(task){const w=await getStaffWorkflow(query.from.id,env);if(!w||w.flow_type!=="v77_series_create")return true;const selected=new Set(w.data.selected||[]);selected.has(task[1])?selected.delete(task[1]):selected.add(task[1]);await updateStaffWorkflow(query.from.id,{step:"tasks",data:{...w.data,selected:[...selected].slice(0,8)}},env);await answerCallback(env,query.id,selected.has(task[1])?"Добавлено":"Убрано");await showV77SeriesTaskPicker(query,env);return true;}
-  if(data==="v77_series_tasks_done"){const w=await getStaffWorkflow(query.from.id,env);if(!w||w.flow_type!=="v77_series_create"||(w.data.selected||[]).length<2){await answerCallback(env,query.id,"Выберите минимум два задания.",true);return true;}await updateStaffWorkflow(query.from.id,{step:"reward",data:w.data},env);await answerCallback(env,query.id,"Выберите финальную награду.");await sendTelegramMessage(env,chatId,"<b>Финальная награда серии</b>",{inline_keyboard:[[{text:"📦 Обычный",callback_data:"v77_series_reward:case_small"},{text:"🥈 Серебряный",callback_data:"v77_series_reward:case_sweet"}],[{text:"🥇 Золотой",callback_data:"v77_series_reward:case_gold"},{text:"💎 Легендарный",callback_data:"v77_series_reward:case_legendary"}],[{text:"⭐ 500",callback_data:"v77_series_reward:points_500"},{text:"☕ 50",callback_data:"v77_series_reward:coffee_50"}],[{text:"❌ Отменить",callback_data:"v77_series_cancel"}]]});return true;}
-  const reward=data.match(/^v77_series_reward:(case_small|case_sweet|case_gold|case_legendary|points_500|coffee_50)$/);if(reward){const w=await getStaffWorkflow(query.from.id,env);if(!w||w.flow_type!=="v77_series_create")return true;const now=Math.floor(Date.now()/1000),key=`series_${now.toString(36)}_${String(query.from.id).slice(-6)}`;const action=v67AutomationRewardPreset(reward[1],`Финал серии «${w.data.title}»`);await env.DB.prepare(`INSERT INTO task_series(series_key,title,description,enabled,completion_mode,final_reward_json,task_mode,starts_at,ends_at,sort_order,created_at,updated_at,updated_by) VALUES(?,?,?,0,?,?,'one_time',0,0,100,?,?,?)`).bind(key,w.data.title,"",w.data.mode||"ordered",JSON.stringify(action),now,now,String(query.from.id)).run();await env.DB.batch((w.data.selected||[]).map((chainKey,index)=>env.DB.prepare(`INSERT INTO task_series_steps(series_key,step_order,chain_key) VALUES(?,?,?)`).bind(key,index+1,chainKey)));await clearStaffWorkflow(query.from.id,env);await answerCallback(env,query.id,"Серия создана и выключена.");await showV77SeriesDetails(chatId,query.from,key,env);return true;}
+  if(data==="v77_series_tasks_done"){const w=await getStaffWorkflow(query.from.id,env);if(!w||w.flow_type!=="v77_series_create"||(w.data.selected||[]).length<2){await answerCallback(env,query.id,"Выберите минимум два задания.",true);return true;}await updateStaffWorkflow(query.from.id,{step:"reward",data:w.data},env);await answerCallback(env,query.id,"Выберите финальную награду.");await sendTelegramMessage(env,chatId,"<b>Финальная награда серии</b>",{inline_keyboard:[[{text:"📦 Обычный",callback_data:"v77_series_reward:case_small"},{text:"🥈 Серебряный",callback_data:"v77_series_reward:case_sweet"}],[{text:"🥇 Золотой",callback_data:"v77_series_reward:case_gold"},{text:"🔮 Мифический",callback_data:"v77_series_reward:case_mythic"},{text:"💎 Легендарный",callback_data:"v77_series_reward:case_legendary"}],[{text:"⭐ 500",callback_data:"v77_series_reward:points_500"},{text:"☕ 50",callback_data:"v77_series_reward:coffee_50"}],[{text:"❌ Отменить",callback_data:"v77_series_cancel"}]]});return true;}
+  const reward=data.match(/^v77_series_reward:(case_small|case_sweet|case_gold|case_mythic|case_legendary|points_500|coffee_50)$/);if(reward){const w=await getStaffWorkflow(query.from.id,env);if(!w||w.flow_type!=="v77_series_create")return true;const now=Math.floor(Date.now()/1000),key=`series_${now.toString(36)}_${String(query.from.id).slice(-6)}`;const action=v67AutomationRewardPreset(reward[1],`Финал серии «${w.data.title}»`);await env.DB.prepare(`INSERT INTO task_series(series_key,title,description,enabled,completion_mode,final_reward_json,task_mode,starts_at,ends_at,sort_order,created_at,updated_at,updated_by) VALUES(?,?,?,0,?,?,'one_time',0,0,100,?,?,?)`).bind(key,w.data.title,"",w.data.mode||"ordered",JSON.stringify(action),now,now,String(query.from.id)).run();await env.DB.batch((w.data.selected||[]).map((chainKey,index)=>env.DB.prepare(`INSERT INTO task_series_steps(series_key,step_order,chain_key) VALUES(?,?,?)`).bind(key,index+1,chainKey)));await clearStaffWorkflow(query.from.id,env);await answerCallback(env,query.id,"Серия создана и выключена.");await showV77SeriesDetails(chatId,query.from,key,env);return true;}
   const seriesOpen=data.match(/^v77_series_open:([a-z0-9_]+)$/);if(seriesOpen){await answerCallback(env,query.id,"Открываю серию.");await showV77SeriesDetails(chatId,query.from,seriesOpen[1],env);return true;}const seriesToggle=data.match(/^v77_series_toggle:([a-z0-9_]+)$/);if(seriesToggle){const access=await requireV77OperationsAccess(chatId,query.from,env);if(!access)return true;const row=await env.DB.prepare(`SELECT * FROM task_series WHERE series_key=?`).bind(seriesToggle[1]).first();const broken=await env.DB.prepare(`SELECT COUNT(*) AS count FROM task_series_steps x LEFT JOIN automation_chains c ON c.chain_key=x.chain_key WHERE x.series_key=? AND (c.chain_key IS NULL OR c.enabled=0 OR c.show_as_task=0)`).bind(seriesToggle[1]).first();if(!Number(row?.enabled)&&Number(broken?.count||0)>0){await answerCallback(env,query.id,"Нельзя включить: этапы выключены или скрыты.",true);return true;}await env.DB.prepare(`UPDATE task_series SET enabled=?,updated_at=?,updated_by=? WHERE series_key=?`).bind(Number(row.enabled)?0:1,Math.floor(Date.now()/1000),String(query.from.id),seriesToggle[1]).run();await answerCallback(env,query.id,Number(row.enabled)?"Серия выключена.":"Серия включена.");await showV77SeriesDetails(chatId,query.from,seriesToggle[1],env);return true;}
   const seriesClaim=data.match(/^v77_series_claim:([a-z0-9_]+)$/);if(seriesClaim){await claimV77Series(query,seriesClaim[1],env);return true;}
   if(data==="v77_calendar"){await answerCallback(env,query.id,"Календарь обновлён.");await showV77Calendar(chatId,query.from,env);return true;}
@@ -22681,7 +22786,7 @@ async function handleV77Callback(query,env){const data=String(query.data||"");co
   if(data==="v77_notify"){await answerCallback(env,query.id,"Настройки обновлены.");await showV77NotificationPolicy(chatId,query.from,env);return true;}if(data==="v77_notify_pause"){const access=await requireV77OperationsAccess(chatId,query.from,env);if(!access)return true;const p=await env.DB.prepare(`SELECT paused FROM player_notification_policy WHERE id=1`).first();await env.DB.prepare(`UPDATE player_notification_policy SET paused=?,updated_at=?,updated_by=? WHERE id=1`).bind(Number(p.paused)?0:1,Math.floor(Date.now()/1000),String(query.from.id)).run();await answerCallback(env,query.id,Number(p.paused)?"Уведомления возобновлены.":"Уведомления приостановлены.");await showV77NotificationPolicy(chatId,query.from,env);return true;}const nMax=data.match(/^v77_notify_max:(1|3|5)$/);if(nMax){await env.DB.prepare(`UPDATE player_notification_policy SET max_per_day=?,updated_at=?,updated_by=? WHERE id=1`).bind(Number(nMax[1]),Math.floor(Date.now()/1000),String(query.from.id)).run();await answerCallback(env,query.id,"Лимит изменён.");await showV77NotificationPolicy(chatId,query.from,env);return true;}const nGap=data.match(/^v77_notify_gap:(900|3600|10800)$/);if(nGap){await env.DB.prepare(`UPDATE player_notification_policy SET min_gap_seconds=?,updated_at=?,updated_by=? WHERE id=1`).bind(Number(nGap[1]),Math.floor(Date.now()/1000),String(query.from.id)).run();await answerCallback(env,query.id,"Интервал изменён.");await showV77NotificationPolicy(chatId,query.from,env);return true;}if(data==="v77_notify_process"){await processV77NotificationQueue(env,20);await answerCallback(env,query.id,"Очередь обработана.");await showV77NotificationPolicy(chatId,query.from,env);return true;}
   if(data==="v77_task_analytics"){await answerCallback(env,query.id,"Аналитика обновлена.");await showV77TaskAnalytics(chatId,query.from,env);return true;}const taskStat=data.match(/^v77_task_stat:([a-z0-9_]+)$/);if(taskStat){await answerCallback(env,query.id,"Открываю отчёт.");await showV77TaskAnalyticsDetails(chatId,query.from,taskStat[1],env);return true;}
   if(data==="v77_economy"){await answerCallback(env,query.id,"Экономика обновлена.");await showV77Economy(chatId,query.from,env);return true;}if(data==="v77_conflicts"){await answerCallback(env,query.id,"Проверка завершена.");await showV77Conflicts(chatId,query.from,env);return true;}
-  if(data==="v77_bulk"){await answerCallback(env,query.id,"Массовые действия.");await showV77Bulk(chatId,query.from,env);return true;}const bulkPick=data.match(/^v77_bulk_pick:([a-z0-9_]+)$/);if(bulkPick){let w=await getStaffWorkflow(query.from.id,env);if(!w||w.flow_type!=="v77_bulk"){await setStaffWorkflow(query.from.id,chatId,"v77_bulk","select",{selected:[]},env);w=await getStaffWorkflow(query.from.id,env);}const selected=new Set(w.data.selected||[]);selected.has(bulkPick[1])?selected.delete(bulkPick[1]):selected.add(bulkPick[1]);await updateStaffWorkflow(query.from.id,{step:"select",data:{selected:[...selected].slice(0,20)}},env);await answerCallback(env,query.id,selected.has(bulkPick[1])?"Выбрано":"Убрано");await showV77Bulk(chatId,query.from,env);return true;}if(data==="v77_bulk_clear"){await setStaffWorkflow(query.from.id,chatId,"v77_bulk","select",{selected:[]},env);await answerCallback(env,query.id,"Выбор очищен.");await showV77Bulk(chatId,query.from,env);return true;}const bulkApply=data.match(/^v77_bulk_apply:(enable|disable|show|hide)$/);if(bulkApply){await v77BulkConfirm(query,bulkApply[1],env);return true;}if(data==="v77_bulk_reward"){const w=await getStaffWorkflow(query.from.id,env);if(!w||!(w.data.selected||[]).length){await answerCallback(env,query.id,"Сначала выберите элементы.",true);return true;}await answerCallback(env,query.id,"Выберите награду.");await sendTelegramMessage(env,chatId,"<b>Новая награда для выбранных автоматизаций</b>",{inline_keyboard:[[{text:"📦 Обычный",callback_data:"v77_bulk_reward_pick:case_small"},{text:"🥈 Серебряный",callback_data:"v77_bulk_reward_pick:case_sweet"}],[{text:"🥇 Золотой",callback_data:"v77_bulk_reward_pick:case_gold"},{text:"💎 Легендарный",callback_data:"v77_bulk_reward_pick:case_legendary"}],[{text:"⭐ 500",callback_data:"v77_bulk_reward_pick:points_500"},{text:"☕ 50",callback_data:"v77_bulk_reward_pick:coffee_50"}]]});return true;}const bulkReward=data.match(/^v77_bulk_reward_pick:(case_small|case_sweet|case_gold|case_legendary|points_500|coffee_50)$/);if(bulkReward){await v77BulkConfirm(query,`reward:${bulkReward[1]}`,env);return true;}if(data==="v77_bulk_confirm"){await applyV77Bulk(query,env);return true;}
+  if(data==="v77_bulk"){await answerCallback(env,query.id,"Массовые действия.");await showV77Bulk(chatId,query.from,env);return true;}const bulkPick=data.match(/^v77_bulk_pick:([a-z0-9_]+)$/);if(bulkPick){let w=await getStaffWorkflow(query.from.id,env);if(!w||w.flow_type!=="v77_bulk"){await setStaffWorkflow(query.from.id,chatId,"v77_bulk","select",{selected:[]},env);w=await getStaffWorkflow(query.from.id,env);}const selected=new Set(w.data.selected||[]);selected.has(bulkPick[1])?selected.delete(bulkPick[1]):selected.add(bulkPick[1]);await updateStaffWorkflow(query.from.id,{step:"select",data:{selected:[...selected].slice(0,20)}},env);await answerCallback(env,query.id,selected.has(bulkPick[1])?"Выбрано":"Убрано");await showV77Bulk(chatId,query.from,env);return true;}if(data==="v77_bulk_clear"){await setStaffWorkflow(query.from.id,chatId,"v77_bulk","select",{selected:[]},env);await answerCallback(env,query.id,"Выбор очищен.");await showV77Bulk(chatId,query.from,env);return true;}const bulkApply=data.match(/^v77_bulk_apply:(enable|disable|show|hide)$/);if(bulkApply){await v77BulkConfirm(query,bulkApply[1],env);return true;}if(data==="v77_bulk_reward"){const w=await getStaffWorkflow(query.from.id,env);if(!w||!(w.data.selected||[]).length){await answerCallback(env,query.id,"Сначала выберите элементы.",true);return true;}await answerCallback(env,query.id,"Выберите награду.");await sendTelegramMessage(env,chatId,"<b>Новая награда для выбранных автоматизаций</b>",{inline_keyboard:[[{text:"📦 Обычный",callback_data:"v77_bulk_reward_pick:case_small"},{text:"🥈 Серебряный",callback_data:"v77_bulk_reward_pick:case_sweet"}],[{text:"🥇 Золотой",callback_data:"v77_bulk_reward_pick:case_gold"},{text:"🔮 Мифический",callback_data:"v77_bulk_reward_pick:case_mythic"},{text:"💎 Легендарный",callback_data:"v77_bulk_reward_pick:case_legendary"}],[{text:"⭐ 500",callback_data:"v77_bulk_reward_pick:points_500"},{text:"☕ 50",callback_data:"v77_bulk_reward_pick:coffee_50"}]]});return true;}const bulkReward=data.match(/^v77_bulk_reward_pick:(case_small|case_sweet|case_gold|case_mythic|case_legendary|points_500|coffee_50)$/);if(bulkReward){await v77BulkConfirm(query,`reward:${bulkReward[1]}`,env);return true;}if(data==="v77_bulk_confirm"){await applyV77Bulk(query,env);return true;}
   if(data==="v77_alerts"){await answerCallback(env,query.id,"Проверяю систему.");await showV77Alerts(chatId,query.from,env);return true;}
   return false;
 }
@@ -22698,7 +22803,7 @@ async function handleV67Callback(query,env){
   const autoNewValue=data.match(/^v67_auto_new_value:(\d{1,7})$/);if(autoNewValue){await selectV67AutomationTriggerValue(query,Number(autoNewValue[1]),env);return true;}
   if(data==="v67_auto_new_value_custom"){await startV67AutomationCustomTriggerValue(query,env);return true;}
   const autoNewAction=data.match(/^v67_auto_new_action:(message|reward)$/);if(autoNewAction){await selectV67AutomationAction(query,autoNewAction[1],env);return true;}
-  const autoNewReward=data.match(/^v67_auto_new_reward:(case_small|case_sweet|case_gold|case_legendary|points_500|points_1000|coffee_50|treats_100)$/);if(autoNewReward){await selectV67AutomationReward(query,autoNewReward[1],env);return true;}
+  const autoNewReward=data.match(/^v67_auto_new_reward:(case_small|case_sweet|case_gold|case_mythic|case_legendary|points_500|points_1000|coffee_50|treats_100)$/);if(autoNewReward){await selectV67AutomationReward(query,autoNewReward[1],env);return true;}
   const taskVisibility=data.match(/^v71_task_visibility:(on|off)$/);if(taskVisibility){await selectV71TaskVisibility(query,taskVisibility[1]==="on",env);return true;}
   const taskMode=data.match(/^v71_task_mode:(one_time|daily|event)$/);if(taskMode){await selectV71TaskMode(query,taskMode[1],env);return true;}
   const auto=data.match(/^v67_auto:([a-z0-9_]+)$/);if(auto){await answerCallback(env,query.id,"Открываю цепочку.");await showV67AutomationDetails(chatId,query.from,auto[1],env);return true;}
@@ -23151,7 +23256,7 @@ async function applyPlayerReset(env, options) {
   }
   if (selected.includes("cases")) {
     statements.push(bind(env.DB.prepare(`DELETE FROM granted_cases${where}`)), bind(env.DB.prepare(`DELETE FROM level_case_openings${where}`)), bind(env.DB.prepare(`DELETE FROM case_booster_run_consumptions${where}`)));
-    statements.push(bind(env.DB.prepare(`UPDATE case_player_state SET boosters_points=0,boosters_treats=0,boosters_coffee=0,active_booster_type='',active_booster_runs=0,legendary_pity_counter=0,revision=revision+1,updated_at=${now}${where}`)));
+    statements.push(bind(env.DB.prepare(`UPDATE case_player_state SET boosters_points=0,boosters_treats=0,boosters_coffee=0,active_booster_type='',active_booster_runs=0,mythic_pity_counter=0,legendary_pity_counter=0,revision=revision+1,updated_at=${now}${where}`)));
   }
   if (selected.includes("collection")) {
     statements.push(bind(env.DB.prepare(`UPDATE case_player_state SET owned_avatars_json='[]',active_avatar_id='',owned_frames_json='[]',active_frame_id='',owned_trails_json='[]',active_trail_id='',owned_music_json='["cafe_run"]',active_music_id='cafe_run',owned_specials_json='[]',owned_skins_json='[]',active_skin_id='',revision=revision+1,updated_at=${now}${where}`)));
@@ -23285,6 +23390,7 @@ function ownerPanelCaseAsset(caseType) {
     small: "/assets/cases/standart_closed.png",
     sweet: "/assets/cases/Bronze_close.png",
     gold: "/assets/cases/gold_closed.png",
+    mythic: "/assets/cases/Mifik_case_closed.png",
     legendary: "/assets/cases/legendary_closed.png"
   })[String(caseType || "")] || "/assets/cases/standart_closed.png";
 }
@@ -24552,7 +24658,7 @@ async function ownerPanelFlashOffers(env, ctx) {
     {kind:"booster_treats",id:"",title:SEASON_PASS_BOOST_REWARDS.booster_treats.title,imageUrl:flashOfferRewardImage({kind:"booster_treats"})},
     {kind:"booster_coffee",id:"",title:SEASON_PASS_BOOST_REWARDS.booster_coffee.title,imageUrl:flashOfferRewardImage({kind:"booster_coffee"})},
     {kind:"booster_xp",id:"",title:SEASON_PASS_BOOST_REWARDS.booster_xp.title,imageUrl:flashOfferRewardImage({kind:"booster_xp"})},
-    ...["small","sweet","gold","legendary"].map(id=>({kind:"case",id,title:LEVEL_CASE_CONFIG[id]?.title||id,imageUrl:flashOfferRewardImage({kind:"case",id})})),
+    ...["small","sweet","gold","mythic","legendary"].map(id=>({kind:"case",id,title:LEVEL_CASE_CONFIG[id]?.title||id,imageUrl:flashOfferRewardImage({kind:"case",id})})),
     ...Object.keys(PRODUCTS).map(id=>({kind:"product",id,title:PRODUCTS[id].title,imageUrl:flashOfferRewardImage({kind:"product",id})}))
   ]};
 }
@@ -24873,7 +24979,7 @@ async function ownerPanelPlayer(env, ctx) {
   const gameAvatarUrl = activeAvatarId ? String(LIVEOPS_CONTENT_IMAGES.avatar?.[activeAvatarId] || "") : "";
   const photoUrl = String(identity.photo_url || allTime?.photo_url || "");
   const projectRole = isBotOwnerTelegramId(telegramId, env) ? "owner" : String(staffMember?.role || "");
-  const pendingCases = { small: 0, sweet: 0, gold: 0, legendary: 0 };
+  const pendingCases = { small: 0, sweet: 0, gold: 0, mythic: 0, legendary: 0 };
   for (const row of caseCounts.results || []) if (row.case_type in pendingCases) pendingCases[row.case_type] = Number(row.count || 0);
   const passXp = Math.max(0, Number(passPlayer?.xp || 0));
   return {
@@ -24919,7 +25025,7 @@ async function ownerPanelPlayer(env, ctx) {
     },
     caseAssets: {
       small: ownerPanelCaseAsset("small"), sweet: ownerPanelCaseAsset("sweet"),
-      gold: ownerPanelCaseAsset("gold"), legendary: ownerPanelCaseAsset("legendary")
+      gold: ownerPanelCaseAsset("gold"), mythic: ownerPanelCaseAsset("mythic"), legendary: ownerPanelCaseAsset("legendary")
     }
   };
 }
@@ -25081,7 +25187,7 @@ function ownerPanelSeasonPassRewardPresentation(typeValue, amountValue, itemValu
     if (!itemId) throw new ApiError(400, "Неизвестный тип кейса.");
     const amount = ownerPanelInteger(amountValue, 1, 20);
     if (amount == null) throw new ApiError(400, "Количество кейсов должно быть от 1 до 20.");
-    const label = ({small:"Обычный кейс",sweet:"Серебряный кейс",gold:"Золотой кейс",legendary:"Легендарный кейс"})[itemId];
+    const label = ({small:"Обычный кейс",sweet:"Серебряный кейс",gold:"Золотой кейс",mythic:"Мифический кейс",legendary:"Легендарный кейс"})[itemId];
     return { rewardType:"case",publicRewardType:"case",amount,itemId,title:amount===1?label:`${label} ×${amount}`,imageUrl:ownerPanelCaseAsset(itemId) };
   }
   if (!["points","treats","coffee"].includes(type)) throw new ApiError(400, "Неизвестный тип награды.");
@@ -25485,7 +25591,7 @@ async function ownerPanelUpdateMaintenance(env, ctx) {
 }
 
 function ownerPanelCaseCategoryLabels() {
-  return {points:"Очки",treats:"Зефир",coffee:"Кофе",booster:"Бустер ×2",skin:"Скин",avatar:"Аватарка",frame:"Рамка",trail:"След",music:"Музыка",physical:"Физический приз"};
+  return {points:"Очки",treats:"Зефир",coffee:"Кофе",booster:"Бустер ×2",epicCosmetic:"Эпическая косметика",mythicCosmetic:"Мифическая косметика",legendaryCosmetic:"Легендарная косметика",skin:"Скин",avatar:"Аватарка",frame:"Рамка",trail:"След",music:"Музыка",physical:"Физический приз"};
 }
 
 async function ownerPanelCases(env, ctx) {
