@@ -8693,6 +8693,24 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
   const BUILD = "1.0.0 · rating-season-scheduler-no-close";
   const tg = window.Telegram?.WebApp;
   const embedded = window.parent !== window;
+  let lastHapticAt = 0;
+  function ratingHaptic(kind = "selection", value = "", minInterval = 0) {
+    const now = Date.now();
+    if (minInterval > 0 && now - lastHapticAt < minInterval) return;
+    lastHapticAt = now;
+    if (embedded) {
+      try { window.parent.postMessage({ type: "zefirok-haptic", kind, value }, "*"); return; } catch {}
+    }
+    try {
+      const feedback = tg?.HapticFeedback;
+      if (kind === "impact") feedback?.impactOccurred?.(value || "light");
+      else if (kind === "notification") feedback?.notificationOccurred?.(value || "success");
+      else feedback?.selectionChanged?.();
+    } catch {}
+  }
+  const ratingSelectHaptic = () => ratingHaptic("selection", "", 40);
+  const ratingImpactHaptic = (style = "light") => ratingHaptic("impact", style, 40);
+  const ratingNotifyHaptic = (type = "success") => ratingHaptic("notification", type);
   try { tg?.ready?.(); tg?.expand?.(); tg?.disableVerticalSwipes?.(); } catch {}
 
   const STATE_PATH = "/api/leaderboard/state";
@@ -8830,6 +8848,7 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
   }
 
   function closeRating() {
+    ratingSelectHaptic();
     if (postToHost({ type: "zefirok-close-rating" })) return;
     try {
       if (history.length > 1) {
@@ -9167,6 +9186,7 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
       if (!pendingClaim || pendingClaim.requestId !== requestId) return;
       setClaimButtonState(pendingClaim.button, false);
       pendingClaim = null;
+      ratingNotifyHaptic("error");
       showToast("Основная игра не ответила. Закройте рейтинг и попробуйте снова.", "warning", 5200);
     }, CLAIM_TIMEOUT_MS);
 
@@ -9174,6 +9194,7 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
       clearTimeout(pendingClaim.timer);
       setClaimButtonState(button, false);
       pendingClaim = null;
+      ratingNotifyHaptic("error");
       showToast("Не удалось связаться с основной игрой.", "warning", 4800);
     }
   }
@@ -9183,6 +9204,7 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
     if (!target) return;
     const modeButton = target.closest("[data-leaderboard-mode]");
     if (modeButton) {
+      ratingSelectHaptic();
       const nextMode = modeButton.dataset.leaderboardMode === "all_time" ? "all_time" : "season";
       if (nextMode === mode) return;
       mode = nextMode;
@@ -9192,12 +9214,13 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
       return;
     }
     if (target.closest("[data-rating-retry]")) {
+      ratingImpactHaptic("light");
       render();
       void refresh(mode, true);
       return;
     }
     const claim = target.closest("[data-leaderboard-claim]");
-    if (claim) requestClaim(claim);
+    if (claim) { ratingImpactHaptic("medium"); requestClaim(claim); }
   });
 
   dynamic?.addEventListener("error", event => {
@@ -9257,8 +9280,10 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
       }
       const result = message.result || {};
       if (result.ok) {
+        ratingNotifyHaptic(result.alreadyClaimed ? "warning" : "success");
         showToast(result.alreadyClaimed ? "Награда уже была получена." : "Награда получена!", result.alreadyClaimed ? "warning" : "success", 4200);
       } else {
+        ratingNotifyHaptic("error");
         showToast(result.error || "Не удалось получить награду.", "warning", 4800);
       }
       void refresh("season", true);

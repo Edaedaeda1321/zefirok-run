@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "catalogHash": "e3a818c2ab176722",
+  "count": 5,
+  "images": [
+    {
+      "fileName": "cases-5.0.1.png",
+      "label": "Кейсы 5.0.1",
+      "path": "/assets/news/cases-5.0.1.png",
+      "hash": "9b96e1e68b22",
+      "size": 3338769
+    },
+    {
+      "fileName": "clear_progress_news.png",
+      "label": "Clear progress news",
+      "path": "/assets/news/clear_progress_news.png",
+      "hash": "bc4a2c2c5ded",
+      "size": 2304565
+    },
+    {
+      "fileName": "relise_clear_progress_news.png",
+      "label": "Relise clear progress news",
+      "path": "/assets/news/relise_clear_progress_news.png",
+      "hash": "c441988f113c",
+      "size": 2249721
+    },
+    {
+      "fileName": "relise_game_news.png",
+      "label": "Релиз игры",
+      "path": "/assets/news/relise_game_news.png",
+      "hash": "001866f0a6cd",
+      "size": 3691925
+    },
+    {
+      "fileName": "tex_raboty_news.png",
+      "label": "Tex raboty news",
+      "path": "/assets/news/tex_raboty_news.png",
+      "hash": "c51992c8fb04",
+      "size": 2644033
+    }
+  ]
+}

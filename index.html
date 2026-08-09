@@ -777,6 +777,17 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
     loadRatingFrame(initData, false);
   }
 
+  function performTelegramHaptic(message = {}) {
+    try {
+      const feedback = window.Telegram?.WebApp?.HapticFeedback;
+      const kind = String(message.kind || "selection");
+      const value = String(message.value || "");
+      if (kind === "impact") feedback?.impactOccurred?.(["light","medium","heavy","rigid","soft"].includes(value) ? value : "light");
+      else if (kind === "notification") feedback?.notificationOccurred?.(["error","success","warning"].includes(value) ? value : "success");
+      else feedback?.selectionChanged?.();
+    } catch {}
+  }
+
   window.addEventListener("message", (event) => {
     const gameFrame = frame();
     const passFrame = seasonPassFrame();
@@ -787,6 +798,10 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
     if (!fromGame && !fromSeasonPass && !fromRating) return;
     const message = event.data;
     if (!message || typeof message !== "object") return;
+    if (message.type === "zefirok-haptic") {
+      performTelegramHaptic(message);
+      return;
+    }
     if (fromSeasonPass) {
       if (message.type === "zefirok-close-season-pass") closeSeasonPassOverlay();
       else if (message.type === "zefirok-season-pass-account-updated") {
@@ -8351,6 +8366,29 @@ html&gt;body{padding:
 &lt;script&gt;
     (() =&gt; {
       const root = document.getElementById(&quot;zefirok-maltipoo-runner&quot;);
+      let lastHapticAt = 0;
+      function canRunHaptic(minInterval = 0) {
+        const now = Date.now();
+        if (minInterval &gt; 0 &amp;&amp; now - lastHapticAt &lt; minInterval) return false;
+        lastHapticAt = now;
+        return true;
+      }
+      function requestHaptic(kind, value, minInterval = 0) {
+        if (!canRunHaptic(minInterval)) return;
+        const payload = { type: &quot;zefirok-haptic&quot;, kind, value };
+        if (window.parent &amp;&amp; window.parent !== window) {
+          try { window.parent.postMessage(payload, &quot;*&quot;); return; } catch (error) {}
+        }
+        try {
+          const feedback = window.Telegram?.WebApp?.HapticFeedback;
+          if (kind === &quot;impact&quot;) feedback?.impactOccurred?.(value || &quot;light&quot;);
+          else if (kind === &quot;notification&quot;) feedback?.notificationOccurred?.(value || &quot;success&quot;);
+          else feedback?.selectionChanged?.();
+        } catch (error) {}
+      }
+      const hapticImpact = (style = &quot;light&quot;, minInterval = 0) =&gt; requestHaptic(&quot;impact&quot;, style, minInterval);
+      const hapticNotify = (type = &quot;success&quot;) =&gt; requestHaptic(&quot;notification&quot;, type, 0);
+      const hapticSelection = (minInterval = 35) =&gt; requestHaptic(&quot;selection&quot;, &quot;&quot;, minInterval);
       const stage = root.querySelector(&quot;[data-stage]&quot;);
       const canvas = root.querySelector(&quot;canvas&quot;);
       const ctx = canvas.getContext(&quot;2d&quot;, { desynchronized: true }) || canvas.getContext(&quot;2d&quot;);
@@ -9100,6 +9138,7 @@ html&gt;body{padding:
         syncDogAvatar();
         if (persist &amp;&amp; currentDogSkin.id !== previousSkinId &amp;&amp; currentDogSkin.id !== &quot;default&quot;) {
           playGameSound(&quot;unlockSkin&quot;);
+          hapticNotify(&quot;success&quot;);
         }
         if (persist) {
           saveProgress();
@@ -10967,14 +11006,17 @@ html&gt;body{padding:
 
       function jump() {
         if (state.paused) {
+          hapticImpact(&quot;medium&quot;, 90);
           resume();
           return;
         }
         if (!state.running) {
+          hapticImpact(&quot;medium&quot;, 90);
           reset();
           return;
         }
         if (dog.grounded) {
+          hapticImpact(&quot;light&quot;, 70);
           dog.vy = jumpVelocity;
           dog.grounded = false;
           puff(dog.x + 18, ground.y - 6, 7);
@@ -11079,6 +11121,8 @@ html&gt;body{padding:
           const previousBest = Number(state.best || 0);
           const previousLevel = profileLevelState(state.profileXp).level;
           const isNewRecord = state.score &gt; previousBest &amp;&amp; earned &gt; 0;
+          hapticImpact(&quot;heavy&quot;);
+          if (isNewRecord) window.setTimeout(() =&gt; hapticNotify(&quot;success&quot;), 420);
           state.best = Math.max(state.best, state.score);
           state.wallet += credited.points;
           state.treats += credited.treats;
@@ -11407,9 +11451,11 @@ html&gt;body{padding:
             if (item.kind === &quot;coffee&quot;) {
               state.runCoffee += 1;
               playGameSound(&quot;collectCoffee&quot;);
+              hapticImpact(&quot;medium&quot;, 120);
             } else {
               state.runTreats += 1;
               playGameSound(&quot;collectMarshmallow&quot;);
+              hapticImpact(&quot;light&quot;, 120);
             }
             state.score += 35;
             puff(item.x + item.size / 2, item.y + item.size / 2, 10);
@@ -12636,9 +12682,11 @@ html&gt;body{padding:
           applyServerCasePayload(data, rewards);
           showCaseResult(data.opened);
           playGameSound(&quot;purchaseReward&quot;);
+          hapticNotify(&quot;success&quot;);
         } catch (error) {
           caseRouletteBusy = false;
           if (caseLayer) { caseLayer.hidden = true; caseLayer.setAttribute(&quot;aria-hidden&quot;, &quot;true&quot;); }
+          hapticNotify(&quot;error&quot;);
           showProfileToast(error?.message || &quot;Не удалось открыть кейс.&quot;, &quot;warning&quot;);
           await loadCaseState(true);
         } finally { renderCaseHub(); }
@@ -12663,9 +12711,11 @@ html&gt;body{padding:
           applyServerCasePayload(data, rewards);
           showCaseResult(data.opened);
           playGameSound(&quot;purchaseReward&quot;);
+          hapticNotify(&quot;success&quot;);
         } catch (error) {
           caseRouletteBusy = false;
           if (caseLayer) { caseLayer.hidden = true; caseLayer.setAttribute(&quot;aria-hidden&quot;, &quot;true&quot;); }
+          hapticNotify(&quot;error&quot;);
           showProfileToast(error?.message || &quot;Не удалось открыть подарочный кейс.&quot;, &quot;warning&quot;);
           await loadCaseState(true);
         } finally { renderCaseHub(); }
@@ -12677,7 +12727,8 @@ html&gt;body{padding:
           const data = await caseApiRequest(CASE_API_ACTIVATE_PATH, { boosterType: type });
           applyServerCasePayload(data);
           showProfileToast(`${CASE_BOOSTER_CATALOG[type]?.title || &quot;Усилитель&quot;} активирован на 2 забега.`, &quot;success&quot;);
-        } catch (error) { showProfileToast(error?.message || &quot;Не удалось активировать усилитель.&quot;, &quot;warning&quot;); }
+          hapticNotify(&quot;success&quot;);
+        } catch (error) { hapticNotify(&quot;error&quot;); showProfileToast(error?.message || &quot;Не удалось активировать усилитель.&quot;, &quot;warning&quot;); }
         finally { renderCaseHub(); renderActiveRunBooster(); }
       }
 
@@ -13636,6 +13687,7 @@ html&gt;body{padding:
         void syncOwnedSkinBonusCases({ notify: true, force: true });
         void pushPlayerAppearanceSnapshot();
         playGameSound(&quot;unlockSkin&quot;);
+        hapticNotify(&quot;success&quot;);
         setSkinsMessage(`Образ «${skin.title}» куплен навсегда и сразу надет.`, &quot;success&quot;);
         showSkinPurchaseSuccess(purchase);
       }
@@ -14003,9 +14055,7 @@ html&gt;body{padding:
           copied ? &quot;success&quot; : &quot;warning&quot;,
           2200
         );
-        if (copied) {
-          try { window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred?.(&quot;success&quot;); } catch (error) {}
-        }
+        if (copied) hapticNotify(&quot;success&quot;);
         return copied;
       }
 
@@ -15042,6 +15092,7 @@ html&gt;body{padding:
       }
 
       function showPurchaseNotice(title, text) {
+        hapticNotify(&quot;error&quot;);
         openPurchaseLayer(`
           &lt;span class=&quot;purchase-kicker&quot;&gt;Магазин&lt;/span&gt;
           &lt;h2 id=&quot;purchase-dialog-title&quot;&gt;${escapePurchaseText(title)}&lt;/h2&gt;
@@ -15177,6 +15228,7 @@ html&gt;body{padding:
           renderCaseHub();
           showCaseShopPurchaseSuccess(purchase);
           playGameSound(&quot;purchaseReward&quot;);
+          hapticNotify(&quot;success&quot;);
         } catch (error) {
           showPurchaseNotice(&quot;Кейс не куплен&quot;, error?.message || &quot;Не удалось добавить кейс на склад.&quot;);
           await loadCaseState(true);
@@ -15270,6 +15322,7 @@ html&gt;body{padding:
           renderWarehouse();
           showPurchaseSuccess(purchase, code, expiresAt, purchaseXpEarned);
           playGameSound(&quot;purchaseReward&quot;);
+          hapticNotify(&quot;success&quot;);
           if (purchaseReachedNewLevel) playGameSound(&quot;levelUp&quot;, 360);
         });
       }
@@ -16353,6 +16406,14 @@ html&gt;body{padding:
           }
         });
       }
+
+      root.addEventListener(&quot;click&quot;, (event) =&gt; {
+        const target = event.target instanceof Element ? event.target.closest(&quot;button, [role=&#x27;button&#x27;]&quot;) : null;
+        if (!target || target.disabled || target.getAttribute(&quot;aria-disabled&quot;) === &quot;true&quot;) return;
+        if (target === startBtn) hapticImpact(&quot;medium&quot;, 50);
+        else if (target === pauseBtn) hapticSelection(50);
+        else hapticSelection(40);
+      }, true);
 
       root.addEventListener(&quot;dragstart&quot;, (event) =&gt; event.preventDefault());
       root.addEventListener(&quot;contextmenu&quot;, (event) =&gt; {

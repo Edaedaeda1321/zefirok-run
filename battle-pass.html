@@ -2629,6 +2629,25 @@ img[src$="/xp.webp"]{
   const CLAIM_ALL_TASKS_PATH = "/api/battle-pass/tasks/claim-all";
   const MAX_LEVEL = 50;
 
+  let lastPassHapticAt = 0;
+  function passHaptic(kind = "selection", value = "", minInterval = 0) {
+    const now = Date.now();
+    if (minInterval > 0 && now - lastPassHapticAt < minInterval) return;
+    lastPassHapticAt = now;
+    if (window.parent && window.parent !== window) {
+      try { window.parent.postMessage({ type: "zefirok-haptic", kind, value }, "*"); return; } catch {}
+    }
+    try {
+      const feedback = window.Telegram?.WebApp?.HapticFeedback;
+      if (kind === "impact") feedback?.impactOccurred?.(value || "light");
+      else if (kind === "notification") feedback?.notificationOccurred?.(value || "success");
+      else feedback?.selectionChanged?.();
+    } catch {}
+  }
+  const passSelectHaptic = () => passHaptic("selection", "", 40);
+  const passImpactHaptic = (style = "light") => passHaptic("impact", style, 40);
+  const passNotifyHaptic = (type = "success") => passHaptic("notification", type);
+
   const TELEGRAM_FULLSCREEN_MIN_VERSION = "8.0";
   let viewportFrame = 0;
   let hostViewportSnapshot = null;
@@ -3838,6 +3857,7 @@ img[src$="/xp.webp"]{
   }
 
   function openPurchaseConfirm(tier) {
+    passImpactHaptic("medium");
     const config = TIER_CONFIG[tier];
     if (!config) return;
     const seasonStatus = String(serverPass?.season?.status || "active");
@@ -3871,6 +3891,7 @@ img[src$="/xp.webp"]{
   }
 
   function openLevelPurchaseConfirm() {
+    passImpactHaptic("medium");
     const seasonStatus = String(serverPass?.season?.status || "active");
     const canPurchase = serverPass?.season?.capabilities?.canPurchase !== false && seasonStatus === "active";
     if (!canPurchase) {
@@ -3912,8 +3933,9 @@ img[src$="/xp.webp"]{
       render();
       scrollToLevel(currentLevel());
       notifyAccountChanged();
+      passNotifyHaptic("success");
       showToast(`Уровень ${data.purchasedLevel || currentLevel()} открыт`);
-    } catch (error) { showToast(error.message || "Не удалось купить уровень"); }
+    } catch (error) { passNotifyHaptic("error"); showToast(error.message || "Не удалось купить уровень"); }
     finally { if(button){button.innerHTML=previous;button.disabled=false;} render(); }
   }
 
@@ -3939,9 +3961,10 @@ img[src$="/xp.webp"]{
       scrollToLevel(currentLevel());
       notifyAccountChanged();
       const received = Array.isArray(data.received) ? data.received.map(item=>({premium:true,icon:"",image:item.imageUrl||"",name:item.title||"Награда",description:"Бонус тарифа",level:"—",source:tier==="elite_plus"?"Элитный+":"Элитный"})) : [];
+      passNotifyHaptic(data.repeated ? "warning" : "success");
       showToast(data.repeated ? "Тариф уже активирован" : (tier === "elite_plus" ? "Тариф «Элитный+» активирован" : "Тариф «Элитный» активирован"));
       if (received.length) openRewardSummary(received);
-    } catch (error) { showToast(error.message || "Не удалось активировать тариф"); }
+    } catch (error) { passNotifyHaptic("error"); showToast(error.message || "Не удалось активировать тариф"); }
     finally { if(button){button.textContent=previous;button.disabled=false;} render(); }
   }
 
@@ -3973,10 +3996,13 @@ img[src$="/xp.webp"]{
       const data = await seasonPassApi(CLAIM_PATH,{level:Number(rawLevel),lane});
       applyServerPass(data);
       notifyAccountChanged();
-      if (!quiet) showToast(data.repeated ? "Награда уже была получена" : "Награда начислена на аккаунт");
+      if (!quiet) {
+        passNotifyHaptic(data.repeated ? "warning" : "success");
+        showToast(data.repeated ? "Награда уже была получена" : "Награда начислена на аккаунт");
+      }
       return Array.isArray(data.received) ? data.received[0] : null;
     } catch (error) {
-      if (!quiet) showToast(error.message || "Не удалось получить награду");
+      if (!quiet) { passNotifyHaptic("error"); showToast(error.message || "Не удалось получить награду"); }
       return null;
     }
   }
@@ -4021,6 +4047,7 @@ img[src$="/xp.webp"]{
   document.addEventListener("click",event=>{
     const rewardButton = event.target.closest("[data-claim]");
     if (rewardButton) {
+      passImpactHaptic("medium");
       rewardButton.disabled = true;
       void claim(rewardButton.dataset.claim).then((received)=>{
         render();
@@ -4031,18 +4058,21 @@ img[src$="/xp.webp"]{
 
     const tab = event.target.closest("[data-view-tab]");
     if (tab) {
+      passSelectHaptic();
       openView(tab.dataset.viewTab);
       return;
     }
 
     const mark = event.target.closest("[data-level-mark]");
     if (mark) {
+      passSelectHaptic();
       scrollToLevel(Number(mark.dataset.levelMark));
       return;
     }
 
     const filter = event.target.closest("[data-task-filter]");
     if (filter) {
+      passSelectHaptic();
       activeTaskFilter = filter.dataset.taskFilter;
       renderTasks();
       return;
@@ -4050,6 +4080,7 @@ img[src$="/xp.webp"]{
 
     const taskButton = event.target.closest("[data-task-action]");
     if (taskButton) {
+      passImpactHaptic("medium");
       const task = activeTasks().find(item=>item.id===taskButton.dataset.taskAction);
       if (!task || taskClaimed(task) || taskLocked(task) || !taskComplete(task)) return;
       const card = taskButton.closest(".task-card");
@@ -4057,17 +4088,23 @@ img[src$="/xp.webp"]{
       taskButton.disabled = true;
       if (serverPass) {
         void seasonPassApi(CLAIM_TASK_PATH,{taskId:task.id}).then(async data=>{
-          await animateCollectedTaskCard(card,0);applyServerPass(data);render();showToast(`Получено ${Number(data?.receivedTask?.xp||task.xp).toLocaleString("ru-RU")} XP`);
-        }).catch(error=>{showToast(error.message||"Не удалось получить XP");renderTasks();});
+          await animateCollectedTaskCard(card,0);applyServerPass(data);render();passNotifyHaptic("success");showToast(`Получено ${Number(data?.receivedTask?.xp||task.xp).toLocaleString("ru-RU")} XP`);
+        }).catch(error=>{passNotifyHaptic("error");showToast(error.message||"Не удалось получить XP");renderTasks();});
       } else collectTaskRewards([task]);
     }
   });
 
   el("levelSlider").addEventListener("pointerdown",()=>{ sliderInteracting = true; });
   el("levelSlider").addEventListener("touchstart",()=>{ sliderInteracting = true; },{passive:true});
+  let lastSliderHapticLevel = Number(el("levelSlider")?.value || 0);
   el("levelSlider").addEventListener("input",event=>{
     sliderInteracting = true;
-    scrollToLevel(Number(event.target.value),"auto");
+    const nextLevel = Number(event.target.value);
+    if (nextLevel !== lastSliderHapticLevel) {
+      lastSliderHapticLevel = nextLevel;
+      passSelectHaptic();
+    }
+    scrollToLevel(nextLevel,"auto");
   });
   const finishSliderInteraction = ()=>{
     sliderInteracting = false;
@@ -4092,26 +4129,29 @@ img[src$="/xp.webp"]{
   el("buyElitePlus").addEventListener("click",()=>openPurchaseConfirm("elite_plus"));
 
   el("claimAllTasks").addEventListener("click",()=>{
+    passImpactHaptic("medium");
     if (!serverPass) { collectTaskRewards(claimableTasks()); return; }
     const ready = claimableTasks();if(!ready.length)return showToast("Нет готовых заданий");const button=el("claimAllTasks");const oldHtml=button.innerHTML;button.disabled=true;button.innerHTML='<span>Получаем XP…</span><b>Подождите</b>';
     const cards=[...document.querySelectorAll("[data-task-card]")].filter(card=>ready.some(task=>task.id===card.dataset.taskCard));
     void seasonPassApi(CLAIM_ALL_TASKS_PATH).then(data=>{
-      applyServerPass(data);showToast(data.totalXp>0?`Получено ${Number(data.totalXp||0).toLocaleString("ru-RU")} XP`:"XP уже был получен");
+      applyServerPass(data);passNotifyHaptic(data.totalXp>0?"success":"warning");showToast(data.totalXp>0?`Получено ${Number(data.totalXp||0).toLocaleString("ru-RU")} XP`:"XP уже был получен");
       const animation=Promise.all(cards.map((card,index)=>animateCollectedTaskCard(card,index)));void animation.finally(()=>render());
-    }).catch(error=>showToast(error.message||"Не удалось получить XP")).finally(()=>{button.innerHTML=oldHtml;renderTasks();});
+    }).catch(error=>{passNotifyHaptic("error");showToast(error.message||"Не удалось получить XP");}).finally(()=>{button.innerHTML=oldHtml;renderTasks();});
   });
 
   el("claimAll").addEventListener("click",()=>{
+    passImpactHaptic("medium");
     const button=el("claimAll");const oldText=button.textContent;button.disabled=true;button.textContent="Получаем награды…";
     void seasonPassApi(CLAIM_ALL_PATH).then((data)=>{
       applyServerPass(data); render(); notifyAccountChanged();
       const received = Array.isArray(data.received) ? data.received.map(item=>({premium:item.lane==="premium",icon:"",image:item.imageUrl||"",name:item.title||"Награда",description:"Начислено на аккаунт",level:item.level,source:`Уровень ${item.level} · ${item.lane==="premium"?"Премиум":"Бесплатно"}`})) : [];
-      if (received.length) openRewardSummary(received); else showToast("Нет доступных наград");
-    }).catch(error=>showToast(error.message||"Не удалось получить награды")).finally(()=>{button.textContent=oldText;button.disabled=false;render();});
+      if (received.length) { passNotifyHaptic("success"); openRewardSummary(received); } else { passNotifyHaptic("warning"); showToast("Нет доступных наград"); }
+    }).catch(error=>{passNotifyHaptic("error");showToast(error.message||"Не удалось получить награды");}).finally(()=>{button.textContent=oldText;button.disabled=false;render();});
   });
 
-  el("purchaseCancel").addEventListener("click",closePurchaseConfirm);
+  el("purchaseCancel").addEventListener("click",()=>{ passSelectHaptic(); closePurchaseConfirm(); });
   el("purchaseSubmit").addEventListener("click",()=>{
+    passImpactHaptic("medium");
     const tier = pendingPurchaseTier;
     const buyLevelNow = pendingLevelPurchase;
     closePurchaseConfirm();
@@ -4122,7 +4162,7 @@ img[src$="/xp.webp"]{
     if (event.target === el("purchaseConfirm")) closePurchaseConfirm();
   });
 
-  el("rewardSummaryClose").addEventListener("click",closeRewardSummary);
+  el("rewardSummaryClose").addEventListener("click",()=>{ passSelectHaptic(); closeRewardSummary(); });
   el("rewardSummary").addEventListener("click",event=>{
     if (event.target === el("rewardSummary")) closeRewardSummary();
   });
@@ -4143,6 +4183,7 @@ img[src$="/xp.webp"]{
   }
   function returnToGame() {
     if (returningToGame) return;
+    passSelectHaptic();
     returningToGame = true;
     try { document.activeElement?.blur?.(); } catch {}
     try { window.scrollTo(0, 0); } catch {}
@@ -4165,7 +4206,7 @@ img[src$="/xp.webp"]{
   el("backButton").addEventListener("click",returnToGame);
   el("accessBack").addEventListener("click",returnToGame);
   el("preseasonReturn").addEventListener("click",returnToGame);
-  el("preseasonPreview").addEventListener("click",()=>{ void openSeasonPassInterface(); });
+  el("preseasonPreview").addEventListener("click",()=>{ passImpactHaptic("light"); void openSeasonPassInterface(); });
 
   let bootPromise = null;
   async function boot() {
@@ -4210,7 +4251,7 @@ img[src$="/xp.webp"]{
     return bootPromise;
   }
 
-  el("accessRetry").addEventListener("click",()=>{ void boot(); });
+  el("accessRetry").addEventListener("click",()=>{ passImpactHaptic("light"); void boot(); });
   window.setInterval(()=>{ if (serverPass) updateSeasonBadges(); },30000);
   window.addEventListener("pageshow",(event)=>{
     if (event.persisted && !el("accessGate").hidden) void boot();

@@ -1,11 +1,89 @@
 #!/usr/bin/env node
-import { readFile, readdir, stat } from 'node:fs/promises';
+import { readFile, readdir, stat, writeFile } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
 import path from 'node:path';
 import process from 'node:process';
 
 const root = process.cwd();
 const newOnly = process.argv.includes('--new-only');
+const newsManifestOnly = process.argv.includes('--news-manifest');
 const indexPath = path.join(root, 'index.html');
+const newsRoot = path.join(root, 'assets', 'news');
+const newsManifestPath = path.join(newsRoot, 'manifest.json');
+const newsExtensions = new Set(['.png', '.jpg', '.jpeg', '.webp', '.gif', '.avif', '.svg']);
+
+function newsLabel(relativePath) {
+  const base = path.basename(relativePath, path.extname(relativePath));
+  const aliases = new Map([
+    ['cases-5.0.1', 'Кейсы 5.0.1'],
+    ['relise_game_news', 'Релиз игры'],
+    ['release_game_news', 'Релиз игры']
+  ]);
+  const alias = aliases.get(base.toLowerCase());
+  if (alias) return alias;
+  const text = base.replace(/[_-]+/g, ' ').replace(/\s+/g, ' ').trim();
+  return text ? text.charAt(0).toUpperCase() + text.slice(1) : relativePath;
+}
+
+function encodeAssetPath(relativePath) {
+  return relativePath.split('/').map(part => encodeURIComponent(part)).join('/');
+}
+
+async function collectNewsImages(directory, prefix = '') {
+  let entries = [];
+  try {
+    entries = await readdir(directory, { withFileTypes: true });
+  } catch (error) {
+    if (error?.code === 'ENOENT') return [];
+    throw error;
+  }
+  entries.sort((a, b) => a.name.localeCompare(b.name, 'ru'));
+  const images = [];
+  for (const entry of entries) {
+    if (!entry.name || entry.name.startsWith('.') || entry.name.startsWith('._')) continue;
+    const relativePath = prefix ? `${prefix}/${entry.name}` : entry.name;
+    const absolutePath = path.join(directory, entry.name);
+    if (entry.isDirectory()) {
+      images.push(...await collectNewsImages(absolutePath, relativePath));
+      continue;
+    }
+    if (!entry.isFile() || entry.name === 'manifest.json' || !newsExtensions.has(path.extname(entry.name).toLowerCase())) continue;
+    const info = await stat(absolutePath);
+    if (!info.size) continue;
+    const data = await readFile(absolutePath);
+    const hash = createHash('sha256').update(data).digest('hex').slice(0, 12);
+    images.push({
+      fileName: relativePath,
+      label: newsLabel(relativePath),
+      path: `/assets/news/${encodeAssetPath(relativePath)}`,
+      hash,
+      size: info.size
+    });
+  }
+  return images;
+}
+
+async function generateNewsManifest() {
+  const images = await collectNewsImages(newsRoot);
+  const catalogHash = createHash('sha256')
+    .update(images.map(item => `${item.path}:${item.hash}`).join('\n'))
+    .digest('hex')
+    .slice(0, 16);
+  const payload = {
+    version: 1,
+    catalogHash,
+    count: images.length,
+    images
+  };
+  await writeFile(newsManifestPath, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
+  console.log(`News manifest generated: ${images.length} image(s).`);
+  return payload;
+}
+
+if (newsManifestOnly) {
+  await generateNewsManifest();
+  process.exit(0);
+}
 
 const requiredNew = [
   'assets/vendor/floating-ui/floating-ui.core.umd.min.js',

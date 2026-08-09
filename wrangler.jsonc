@@ -6,6 +6,9 @@
   "observability": {
     "enabled": true
   },
+  "build": {
+    "command": "node scripts/check-assets.mjs --news-manifest"
+  },
   "assets": {
     "directory": ".",
     "binding": "ASSETS",
