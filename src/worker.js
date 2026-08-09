@@ -129,15 +129,53 @@ const CASE_SKINS = Object.freeze({
 });
 
 const CASE_MUSIC_TRACKS = Object.freeze({
-  cafe_run: Object.freeze({ id: "cafe_run", title: "Зефирное кафе", rarity: "common", weight: 0, defaultOwned: true }),
-  legendary_cafe_run: Object.freeze({ id: "legendary_cafe_run", title: "Легендарный забег", rarity: "legendary", weight: 1, legendaryOnly: true, isNew: true }),
-  legendary_marshmallow_dash_1: Object.freeze({ id: "legendary_marshmallow_dash_1", title: "Зефирный рывок I", rarity: "legendary", weight: 1, legendaryOnly: true, isNew: true }),
-  legendary_marshmallow_dash_2: Object.freeze({ id: "legendary_marshmallow_dash_2", title: "Зефирный рывок II", rarity: "legendary", weight: 1, legendaryOnly: true, isNew: true }),
-  legendary_marshmallow_cafe_dash_1: Object.freeze({ id: "legendary_marshmallow_cafe_dash_1", title: "Кафейный рывок I", rarity: "legendary", weight: 1, legendaryOnly: true, isNew: true }),
-  legendary_marshmallow_cafe_dash_2: Object.freeze({ id: "legendary_marshmallow_cafe_dash_2", title: "Кафейный рывок II", rarity: "legendary", weight: 1, legendaryOnly: true, isNew: true }),
-  legendary_marshmallow_dash_3: Object.freeze({ id: "legendary_marshmallow_dash_3", title: "Зефирный рывок III", rarity: "legendary", weight: 1, legendaryOnly: true, isNew: true }),
-  legendary_marshmallow_dash_4: Object.freeze({ id: "legendary_marshmallow_dash_4", title: "Зефирный рывок IV", rarity: "legendary", weight: 1, legendaryOnly: true, isNew: true })
+  cafe_run: Object.freeze({ id: "cafe_run", title: "Зефирное кафе", rarity: "common", weight: 0, defaultOwned: true, src: "/assets/sounds/marshmallow_cafe_run_main.ogg" }),
+  legendary_cafe_run: Object.freeze({ id: "legendary_cafe_run", title: "Легендарный забег", rarity: "legendary", weight: 1, legendaryOnly: true, isNew: true, src: "/assets/sounds/marshmallow_cafe_run_legendary.ogg" }),
+  legendary_marshmallow_dash_1: Object.freeze({ id: "legendary_marshmallow_dash_1", title: "Зефирный рывок I", rarity: "legendary", weight: 1, legendaryOnly: true, isNew: true, src: "/assets/sounds/marshmallow_dash_1.ogg" }),
+  legendary_marshmallow_dash_2: Object.freeze({ id: "legendary_marshmallow_dash_2", title: "Зефирный рывок II", rarity: "legendary", weight: 1, legendaryOnly: true, isNew: true, src: "/assets/sounds/marshmallow_dash_2.ogg" }),
+  legendary_marshmallow_cafe_dash_1: Object.freeze({ id: "legendary_marshmallow_cafe_dash_1", title: "Кафейный рывок I", rarity: "legendary", weight: 1, legendaryOnly: true, isNew: true, src: "/assets/sounds/marshmallow_cafe_dash_1.ogg?v=0.79.8" }),
+  legendary_marshmallow_cafe_dash_2: Object.freeze({ id: "legendary_marshmallow_cafe_dash_2", title: "Кафейный рывок II", rarity: "legendary", weight: 1, legendaryOnly: true, isNew: true, src: "/assets/sounds/marshmallow_cafe_dash_2.ogg?v=0.79.8" }),
+  legendary_marshmallow_dash_3: Object.freeze({ id: "legendary_marshmallow_dash_3", title: "Зефирный рывок III", rarity: "legendary", weight: 1, legendaryOnly: true, isNew: true, src: "/assets/sounds/marshmallow_dash_3.ogg?v=0.79.8" }),
+  legendary_marshmallow_dash_4: Object.freeze({ id: "legendary_marshmallow_dash_4", title: "Зефирный рывок IV", rarity: "legendary", weight: 1, legendaryOnly: true, isNew: true, src: "/assets/sounds/marshmallow_dash_4.ogg?v=0.79.8" })
 });
+
+// Будущий контент сезона «Лунный забег». Он доступен только владельцу
+// при подготовке будущего сезонного пропуска и намеренно НЕ входит
+// в игровые каталоги кейсов/коллекции до отдельного релизного обновления.
+const FUTURE_SEASON_CONTENT = Object.freeze({
+  avatar: Object.freeze({
+    season3_avatar_elite: Object.freeze({ id:"season3_avatar_elite", title:"Лунная принцесса", rarity:"mythic", imageUrl:"/assets/cases/avatars/avatrs_season3Elit.png" }),
+    season3_avatar_epic: Object.freeze({ id:"season3_avatar_epic", title:"Вечерняя бариста", rarity:"epic", imageUrl:"/assets/cases/avatars/avatrs_season3Epik.png" }),
+    season3_avatar_epic_2: Object.freeze({ id:"season3_avatar_epic_2", title:"Бариста на прогулке", rarity:"epic", imageUrl:"/assets/cases/avatars/avatrs_season3Epik2.png" }),
+    season3_avatar_mythic: Object.freeze({ id:"season3_avatar_mythic", title:"Кофе под луной", rarity:"mythic", imageUrl:"/assets/cases/avatars/avatrs_season3Mifik.png" }),
+    season3_avatar_elite_plus: Object.freeze({ id:"season3_avatar_elite_plus", title:"Ночная королева", rarity:"legendary", imageUrl:"/assets/rating/frames/profile/Elit+avatrs_season3.png" })
+  }),
+  frame: Object.freeze({
+    season3_frame_elite_plus: Object.freeze({ id:"season3_frame_elite_plus", title:"Ночная Королева", rarity:"legendary", imageUrl:"/assets/rating/frames/profile/Elit+ramka_season3_5.png" }),
+    season3_frame_elite_1: Object.freeze({ id:"season3_frame_elite_1", title:"Ночная принцесса", rarity:"legendary", imageUrl:"/assets/rating/frames/profile/Elitramka_season3_1.png" }),
+    season3_frame_elite_4: Object.freeze({ id:"season3_frame_elite_4", title:"Премиальные сладости", rarity:"legendary", imageUrl:"/assets/rating/frames/profile/Elitramka_season3_4.png" }),
+    season3_frame_epic: Object.freeze({ id:"season3_frame_epic", title:"Ночная смена", rarity:"epic", imageUrl:"/assets/rating/frames/profile/epickramka_season3_2.png" }),
+    season3_frame_mythic: Object.freeze({ id:"season3_frame_mythic", title:"Ночные сладости", rarity:"epic", imageUrl:"/assets/rating/frames/profile/mifikramka_season3_3.png" })
+  }),
+  trail: Object.freeze({
+    season3_trail_epic: Object.freeze({ id:"season3_trail_epic", title:"Ночной Волшебный след", rarity:"epic", imageUrl:"/assets/cases/trails/Epik_sled_season3.png" }),
+    season3_trail_epic_2: Object.freeze({ id:"season3_trail_epic_2", title:"Ночной кофейный след", rarity:"epic", imageUrl:"/assets/cases/trails/Epik_sled_season3_2.png" }),
+    season3_trail_legendary_plus: Object.freeze({ id:"season3_trail_legendary_plus", title:"Ночная королева", rarity:"legendary", imageUrl:"/assets/cases/trails/legendary+_sled_season_3.png" }),
+    season3_trail_legendary: Object.freeze({ id:"season3_trail_legendary", title:"Воздушные сны", rarity:"legendary", imageUrl:"/assets/cases/trails/Legendary_sled_season3.png" }),
+    season3_trail_mythic: Object.freeze({ id:"season3_trail_mythic", title:"Ночная принцесса", rarity:"mythic", imageUrl:"/assets/cases/trails/mifik_sled_season3.png" })
+  }),
+  skin: Object.freeze({}),
+  music: Object.freeze({
+    season3_music_moon_cafe_epic: Object.freeze({ id:"season3_music_moon_cafe_epic", title:"Лунное зефирное кафе", rarity:"epic", imageUrl:"/assets/season-pass/season_pass3_prize.png", audioUrl:"/assets/sounds/Moon Marshmallow Café(Epik).mp3" }),
+    season3_music_moon_cafe_epic_2: Object.freeze({ id:"season3_music_moon_cafe_epic_2", title:"Лунное зефирное кафе II", rarity:"epic", imageUrl:"/assets/season-pass/season_pass3_prize.png", audioUrl:"/assets/sounds/Moon Marshmallow Café_2(epik).mp3" }),
+    season3_music_lunar_run_legendary: Object.freeze({ id:"season3_music_lunar_run_legendary", title:"Лунный забег", rarity:"legendary", imageUrl:"/assets/season-pass/season_pass3_prize.png", audioUrl:"/assets/sounds/new_song_season3(Legendary).mp3" }),
+    season3_music_lunar_run_mythic: Object.freeze({ id:"season3_music_lunar_run_mythic", title:"Лунный забег II", rarity:"mythic", imageUrl:"/assets/season-pass/season_pass3_prize.png", audioUrl:"/assets/sounds/new_song_season3_2(Mifik).mp3" })
+  })
+});
+
+const FUTURE_SEASON_CONTENT_LABEL = "Лунный забег";
+function futureSeasonContentCatalog(kind){ return FUTURE_SEASON_CONTENT[String(kind||"")] || Object.freeze({}); }
+function futureSeasonContentItem(kind,itemId){ return futureSeasonContentCatalog(kind)?.[String(itemId||"")] || null; }
 
 const CASE_PHYSICAL_TOTAL_CHANCE = 0.035;
 const CASE_PHYSICAL_REWARDS = Object.freeze({
@@ -337,7 +375,7 @@ const STAFF_SESSION_TTL_SECONDS = 12 * 60 * 60;
 const SUPPORT_USERNAME = "ve4n0_em";
 const SUPPORT_URL = `https://t.me/${SUPPORT_USERNAME}`;
 const DEFAULT_GAME_URL = "https://zefirok-run.patokad6.workers.dev/";
-const WORKER_BUILD = "1.0.0 + Control Center v9.3 + season pass cosmetics + story seasons + pass scheduling UX";
+const WORKER_BUILD = "1.0.0 + Control Center v9.6 + season tariff control + lunar catalog";
 const V07944_RELEASE_CANDIDATE_AUDIT = Object.freeze({ reset: true, claims: true, purchases: true, xp: true, concurrency: true });
 
 // =============================================================
@@ -355,6 +393,16 @@ const SEASON_PASS_FORCE_CLOSE_STATE_KEY = "season_pass:forced_close";
 const DEFAULT_SEASON_PASS_LEVEL_PRICE_POINTS = 10000;
 const DEFAULT_SEASON_PASS_ELITE_PRICE = Object.freeze({ points:25000, treats:450, coffee:450 });
 const DEFAULT_SEASON_PASS_ELITE_PLUS_PRICE = Object.freeze({ points:50000, treats:650, coffee:650 });
+const DEFAULT_SEASON_PASS_ELITE_PLUS_BENEFITS = Object.freeze({
+  xpBoost: true,
+  bonusLevels: 5,
+  caseType: "gold",
+  caseCount: 1,
+  cosmetics: Object.freeze([
+    Object.freeze({ kind:"frame", itemId:"elite" }),
+    Object.freeze({ kind:"avatar", itemId:"legendary_avatar_5" })
+  ])
+});
 const SEASON_PASS_MAX_LEVEL = 50;
 const SEASON_PASS_LEVEL_XP = Object.freeze(Array.from({ length: SEASON_PASS_MAX_LEVEL }, (_, index) => {
   const level = index + 1;
@@ -392,8 +440,81 @@ function seasonPassCosmeticCatalog(kind) {
   return ({ avatar:CASE_AVATARS, frame:CASE_FRAMES, trail:CASE_TRAILS, skin:CASE_SKINS, music:CASE_MUSIC_TRACKS })[String(kind||"")] || null;
 }
 
+function seasonPassAnyCosmeticCatalog(kind) {
+  return { ...(seasonPassCosmeticCatalog(kind)||{}), ...(futureSeasonContentCatalog(kind)||{}) };
+}
+
+function defaultSeasonPassElitePlusBenefits() {
+  return {
+    xpBoost: Boolean(DEFAULT_SEASON_PASS_ELITE_PLUS_BENEFITS.xpBoost),
+    bonusLevels: Number(DEFAULT_SEASON_PASS_ELITE_PLUS_BENEFITS.bonusLevels || 0),
+    caseType: String(DEFAULT_SEASON_PASS_ELITE_PLUS_BENEFITS.caseType || ""),
+    caseCount: Number(DEFAULT_SEASON_PASS_ELITE_PLUS_BENEFITS.caseCount || 0),
+    cosmetics: DEFAULT_SEASON_PASS_ELITE_PLUS_BENEFITS.cosmetics.map((item) => ({ kind:String(item.kind), itemId:String(item.itemId) }))
+  };
+}
+
+function seasonPassElitePlusBenefitsConfig(rawValue) {
+  let parsed = null;
+  if (rawValue && typeof rawValue === "object" && !Array.isArray(rawValue)) parsed = rawValue;
+  else if (typeof rawValue === "string" && rawValue.trim()) {
+    try { parsed = JSON.parse(rawValue); } catch {}
+  }
+  const defaults = defaultSeasonPassElitePlusBenefits();
+  const source = parsed && Object.keys(parsed).length ? parsed : defaults;
+  const xpBoost = source.xpBoost !== false;
+  const bonusLevels = Math.max(0, Math.min(25, Math.floor(Number(source.bonusLevels ?? defaults.bonusLevels) || 0)));
+  const requestedCase = String(source.caseType ?? defaults.caseType ?? "").trim();
+  const caseType = requestedCase && requestedCase !== "none" ? (normalizeCaseType(requestedCase) || "") : "";
+  const caseCount = caseType ? Math.max(0, Math.min(10, Math.floor(Number(source.caseCount ?? defaults.caseCount) || 0))) : 0;
+  const rawCosmetics = Array.isArray(source.cosmetics) ? source.cosmetics : defaults.cosmetics;
+  const cosmetics = [];
+  for (const entry of rawCosmetics.slice(0, 2)) {
+    const kind = String(entry?.kind || "").trim();
+    const itemId = String(entry?.itemId || entry?.item_id || "").trim();
+    if (!SEASON_PASS_COSMETIC_KINDS.includes(kind) || !itemId) continue;
+    if (!seasonPassAnyCosmeticCatalog(kind)?.[itemId]) continue;
+    if (cosmetics.some((item) => item.kind === kind && item.itemId === itemId)) continue;
+    cosmetics.push({ kind, itemId });
+  }
+  return { xpBoost, bonusLevels, caseType, caseCount, cosmetics };
+}
+
+function seasonPassElitePlusBenefitsView(rawValue, options = {}) {
+  const config = seasonPassElitePlusBenefitsConfig(rawValue);
+  const publicView = Boolean(options.publicView);
+  const caseLabels = { small:"Обычный кейс", sweet:"Серебряный кейс", gold:"Золотой кейс", legendary:"Легендарный кейс" };
+  const cosmetics = config.cosmetics.map(({kind,itemId}) => {
+    const item = seasonPassAnyCosmeticCatalog(kind)?.[itemId];
+    const future = Boolean(futureSeasonContentItem(kind,itemId));
+    if (publicView && future) {
+      return { kind:"secret", itemId:"", title:"Секретная награда сезона", imageUrl:"/assets/season-pass/season.png?v=07939", future:true, released:false };
+    }
+    return {
+      kind, itemId,
+      title:String(item?.title || itemId),
+      imageUrl:seasonPassCosmeticImage(kind,itemId),
+      future,
+      released:!future
+    };
+  });
+  return {
+    xpBoost: config.xpBoost,
+    bonusLevels: config.bonusLevels,
+    case: config.caseType && config.caseCount > 0 ? {
+      type:config.caseType,
+      count:config.caseCount,
+      title:String(caseLabels[config.caseType] || "Кейс"),
+      imageUrl:ownerPanelCaseAsset(config.caseType)
+    } : null,
+    cosmetics
+  };
+}
+
 function seasonPassCosmeticImage(kind, itemId) {
   const k=String(kind||""), id=String(itemId||"");
+  const future=futureSeasonContentItem(k,id);
+  if (future?.imageUrl) return String(future.imageUrl);
   if (k === "skin") return ownerPanelSkinAsset(id);
   if (["avatar","frame","trail"].includes(k)) return String(LIVEOPS_CONTENT_IMAGES?.[k]?.[id] || "/assets/season-pass/season.png?v=07939");
   if (k === "music") return "/assets/season-pass/season.png?v=07939";
@@ -407,12 +528,19 @@ function seasonPassCosmeticRewardDefinition(value) {
   const body=raw.slice(SEASON_PASS_COSMETIC_PREFIX.length);
   const split=body.indexOf(":");
   if (split <= 0) return null;
-  const kind=body.slice(0,split), itemId=body.slice(split+1);
+  let kind=body.slice(0,split), itemId=body.slice(split+1);
+  // Совместимость с ранней скрытой сборкой v9.4: файл Elit+avatrs_season3
+  // лежал в папке рамок, хотя фактически это аватарка.
+  if (kind === "frame" && itemId === "season3_frame_elite_plus_portrait") {
+    kind = "avatar";
+    itemId = "season3_avatar_elite_plus";
+  }
   if (!SEASON_PASS_COSMETIC_KINDS.includes(kind)) return null;
-  const catalog=seasonPassCosmeticCatalog(kind);
+  const catalog=seasonPassAnyCosmeticCatalog(kind);
   const item=catalog?.[itemId];
   if (!item) return null;
-  return { publicType:kind, storedType:"points", kind, itemId, storedItemId:`${SEASON_PASS_COSMETIC_PREFIX}${kind}:${itemId}`, title:String(item.title||itemId), imageUrl:seasonPassCosmeticImage(kind,itemId) };
+  const future=Boolean(futureSeasonContentItem(kind,itemId));
+  return { publicType:kind, storedType:"points", kind, itemId, storedItemId:`${SEASON_PASS_COSMETIC_PREFIX}${kind}:${itemId}`, title:String(item.title||itemId), imageUrl:seasonPassCosmeticImage(kind,itemId), future, released:!future, seasonLabel:future?FUTURE_SEASON_CONTENT_LABEL:"", audioUrl:String(item.audioUrl||item.src||"") };
 }
 
 function seasonPassPublicRewardType(row) {
@@ -437,10 +565,19 @@ function seasonPassApplyCosmeticToState(state, cosmetic) {
 }
 
 async function seasonPassHasXpX2(env, seasonId, telegramId, player = null) {
-  if (String(player?.premium_tier || "none") === "elite_plus") return true;
   try {
-    const row=await env.DB.prepare(`SELECT 1 AS ok FROM season_pass_entitlements WHERE season_id=? AND telegram_id=? AND item_id=? LIMIT 1`).bind(String(seasonId),String(telegramId),SEASON_PASS_SPECIAL_XP_X2).first();
-    return Boolean(row?.ok);
+    const [seasonRow, entitlement]=await Promise.all([
+      String(player?.premium_tier || "none") === "elite_plus"
+        ? env.DB.prepare(`SELECT elite_plus_benefits_json FROM season_pass_seasons WHERE season_id=? LIMIT 1`).bind(String(seasonId)).first()
+        : Promise.resolve(null),
+      env.DB.prepare(`SELECT 1 AS ok,source FROM season_pass_entitlements WHERE season_id=? AND telegram_id=? AND item_id=? LIMIT 1`).bind(String(seasonId),String(telegramId),SEASON_PASS_SPECIAL_XP_X2).first()
+    ]);
+    if (String(player?.premium_tier || "none") === "elite_plus") {
+      const config=seasonPassElitePlusBenefitsConfig(seasonRow?.elite_plus_benefits_json);
+      if (config.xpBoost) return true;
+      return Boolean(entitlement?.ok) && !String(entitlement?.source || "").startsWith("elite_plus");
+    }
+    return Boolean(entitlement?.ok);
   } catch (error) {
     console.error("season pass xp boost check failed", error);
     return false;
@@ -470,7 +607,8 @@ function configuredSeasonPassState(env, nowMs = Date.now()) {
     assetBase: "/assets/season-pass/",
     baseRunXp:100,
     levelPricePoints:DEFAULT_SEASON_PASS_LEVEL_PRICE_POINTS,
-    prices:{elite:{...DEFAULT_SEASON_PASS_ELITE_PRICE},elite_plus:{...DEFAULT_SEASON_PASS_ELITE_PLUS_PRICE}}
+    prices:{elite:{...DEFAULT_SEASON_PASS_ELITE_PRICE},elite_plus:{...DEFAULT_SEASON_PASS_ELITE_PLUS_PRICE}},
+    tierSettings:{elitePlus:seasonPassElitePlusBenefitsView(defaultSeasonPassElitePlusBenefits())}
   };
 }
 
@@ -18416,6 +18554,7 @@ async function ensureSeasonPassSchema(env) {
         base_run_xp INTEGER NOT NULL DEFAULT 100, level_price_points INTEGER NOT NULL DEFAULT 10000,
         elite_price_points INTEGER NOT NULL DEFAULT 0, elite_price_treats INTEGER NOT NULL DEFAULT 0, elite_price_coffee INTEGER NOT NULL DEFAULT 0,
         elite_plus_price_points INTEGER NOT NULL DEFAULT 0, elite_plus_price_treats INTEGER NOT NULL DEFAULT 0, elite_plus_price_coffee INTEGER NOT NULL DEFAULT 0,
+        elite_plus_benefits_json TEXT NOT NULL DEFAULT '{}',
         updated_at INTEGER NOT NULL, updated_by TEXT NOT NULL DEFAULT ''
       )`),
       env.DB.prepare(`CREATE TABLE IF NOT EXISTS season_pass_rewards (
@@ -18493,6 +18632,9 @@ async function ensureSeasonPassSchema(env) {
     const seasonColumns = new Set((seasonInfo.results || []).map((row) => String(row.name || '')));
     if (!seasonColumns.has('claim_grace_ends_at')) {
       await env.DB.prepare(`ALTER TABLE season_pass_seasons ADD COLUMN claim_grace_ends_at INTEGER NOT NULL DEFAULT 0`).run();
+    }
+    if (!seasonColumns.has('elite_plus_benefits_json')) {
+      await env.DB.prepare(`ALTER TABLE season_pass_seasons ADD COLUMN elite_plus_benefits_json TEXT NOT NULL DEFAULT '{}'`).run();
     }
     const runInfo = await env.DB.prepare(`PRAGMA table_info(leaderboard_runs)`).all();
     const runColumns = new Set((runInfo.results || []).map((row) => String(row.name || '')));
@@ -18766,7 +18908,8 @@ function seasonPassSeasonFromRow(row, fallback, nowMs = Date.now()) {
     prices:{
       elite:{points:seasonPassInteger(row.elite_price_points,DEFAULT_SEASON_PASS_ELITE_PRICE.points),treats:seasonPassInteger(row.elite_price_treats,DEFAULT_SEASON_PASS_ELITE_PRICE.treats),coffee:seasonPassInteger(row.elite_price_coffee,DEFAULT_SEASON_PASS_ELITE_PRICE.coffee)},
       elite_plus:{points:seasonPassInteger(row.elite_plus_price_points,DEFAULT_SEASON_PASS_ELITE_PLUS_PRICE.points),treats:seasonPassInteger(row.elite_plus_price_treats,DEFAULT_SEASON_PASS_ELITE_PLUS_PRICE.treats),coffee:seasonPassInteger(row.elite_plus_price_coffee,DEFAULT_SEASON_PASS_ELITE_PLUS_PRICE.coffee)}
-    }
+    },
+    tierSettings:{ elitePlus:seasonPassElitePlusBenefitsView(row.elite_plus_benefits_json) }
   };
 }
 
@@ -19030,6 +19173,14 @@ async function buildSeasonPassSummary(env,season,telegramId){
   return {runs:Number(runs?.runs||0),totalScore:Number(runs?.total_score||0),rewardsClaimed:Number(rewards?.count||0),tasksClaimed:Number(tasks?.count||0),bestScore:Number(best?.score||0)};
 }
 
+function seasonPassPlayerRewardView(row){
+  const cosmetic=seasonPassCosmeticRewardDefinition(row);
+  if(cosmetic?.future&&!cosmetic?.released){
+    return {level:Number(row.level),lane:String(row.lane),rewardType:"hidden_future",amount:0,itemId:"",title:"Секретная награда",imageUrl:"/assets/season-pass/season.png?v=07939",enabled:false,hiddenFuture:true};
+  }
+  return {level:Number(row.level),lane:String(row.lane),rewardType:seasonPassPublicRewardType(row),amount:Number(row.amount),itemId:seasonPassPublicRewardItemId(row),title:String(row.title||''),imageUrl:String(row.image_url||cosmetic?.imageUrl||seasonPassBoostRewardDefinition(row)?.imageUrl||''),enabled:Number(row.enabled||0)===1};
+}
+
 async function buildSeasonPassPayload(env,season,telegramId,player=null){
   const current=player||await ensureSeasonPassPlayer(env,season,telegramId);
   const [rewardsResult,claimsResult,entitlementsResult,profileRow,tasksPayload,summary]=await Promise.all([
@@ -19044,8 +19195,8 @@ async function buildSeasonPassPayload(env,season,telegramId,player=null){
   const availablePoints=(profileRow?.wallet_override==null?Number(profileRow?.wallet||0):Number(profileRow?.wallet_override||0))+Number(profileRow?.pending_wallet||0);
   const availableTreats=(profileRow?.treats_override==null?Number(profileRow?.treats||0):Number(profileRow?.treats_override||0))+Number(profileRow?.pending_treats||0);
   const availableCoffee=(profileRow?.coffee_override==null?Number(profileRow?.coffee||0):Number(profileRow?.coffee_override||0))+Number(profileRow?.pending_coffee||0);
-  return {ok:true,season:{...season,capabilities:seasonPassCapabilities(season)},player:{xp,level,xpWithin:Math.max(0,xp-start),xpRequired:required,premiumTier:String(current?.premium_tier||'none'),elitePlusBonusGranted:Number(current?.elite_plus_bonus_granted||0)===1,revision:Number(current?.revision||0)},
-    rewards:(rewardsResult.results||[]).map(row=>({level:Number(row.level),lane:String(row.lane),rewardType:seasonPassPublicRewardType(row),amount:Number(row.amount),itemId:seasonPassPublicRewardItemId(row),title:String(row.title||''),imageUrl:String(row.image_url||seasonPassCosmeticRewardDefinition(row)?.imageUrl||seasonPassBoostRewardDefinition(row)?.imageUrl||''),enabled:Number(row.enabled||0)===1})),
+  return {ok:true,season:{...season,tierSettings:seasonPassPublicTierSettings(season),capabilities:seasonPassCapabilities(season)},player:{xp,level,xpWithin:Math.max(0,xp-start),xpRequired:required,premiumTier:String(current?.premium_tier||'none'),elitePlusBonusGranted:Number(current?.elite_plus_bonus_granted||0)===1,revision:Number(current?.revision||0)},
+    rewards:(rewardsResult.results||[]).map(seasonPassPlayerRewardView),
     claimed:(claimsResult.results||[]).map(row=>`${Number(row.level)}:${String(row.lane)}`),entitlements:(entitlementsResult.results||[]).map(row=>String(row.item_id)),tasks:tasksPayload.tasks,taskPeriods:tasksPayload.periods,taskClaimableCount:seasonPassCapabilities(season).canClaimTasks?tasksPayload.claimableCount:0,summary,
     balance:{points:availablePoints,treats:availableTreats,coffee:availableCoffee}};
 }
@@ -19062,6 +19213,21 @@ function seasonPassCapabilities(season){
   return {canEarnXp:active,canPurchase:active,canClaimRewards,canClaimTasks:active};
 }
 
+function seasonPassPublicTierSettings(season) {
+  const fallback=seasonPassElitePlusBenefitsView(defaultSeasonPassElitePlusBenefits());
+  const source=season?.tierSettings?.elitePlus || fallback;
+  return {
+    elitePlus:{
+      xpBoost:source.xpBoost !== false,
+      bonusLevels:Math.max(0,Number(source.bonusLevels)||0),
+      case:source.case ? {...source.case} : null,
+      cosmetics:(Array.isArray(source.cosmetics)?source.cosmetics:[]).map((item)=>item?.future&&!item?.released
+        ? {kind:"secret",itemId:"",title:"Секретная награда сезона",imageUrl:"/assets/season-pass/season.png?v=07939",future:true,released:false}
+        : {...item})
+    }
+  };
+}
+
 function assertSeasonPassTaskClaimsOpen(season){
   if(!seasonPassCapabilities(season).canClaimTasks){
     throw new ApiError(409,'Сезон завершён, задания отключены. Можно забрать только уже открытые награды.');
@@ -19075,7 +19241,7 @@ async function buildSeasonPassMutationPayload(env,season,telegramId,options={}){
   const entitlementsPromise=options.includeEntitlements?env.DB.prepare(`SELECT item_id FROM season_pass_entitlements WHERE season_id=? AND telegram_id=? ORDER BY item_id`).bind(season.id,String(telegramId)).all():Promise.resolve(null);
   const tasksPromise=options.includeTasks?buildSeasonPassTasksPayload(env,season,String(telegramId),options.premiumTier):Promise.resolve(null);
   const [player,profileRow,claimsResult,entitlementsResult,tasksPayload]=await Promise.all([playerPromise,profilePromise,claimsPromise,entitlementsPromise,tasksPromise]);
-  const payload={ok:true,season:{id:season.id,title:season.title,status:season.status,startsAt:season.startsAt,endsAt:season.endsAt,claimGraceEndsAt:season.claimGraceEndsAt,claimWindowOpen:season.claimWindowOpen,baseRunXp:season.baseRunXp,levelPricePoints:season.levelPricePoints,prices:season.prices,capabilities:seasonPassCapabilities(season)},player:seasonPassPlayerView(player),balance:{
+  const payload={ok:true,season:{id:season.id,title:season.title,status:season.status,startsAt:season.startsAt,endsAt:season.endsAt,claimGraceEndsAt:season.claimGraceEndsAt,claimWindowOpen:season.claimWindowOpen,baseRunXp:season.baseRunXp,levelPricePoints:season.levelPricePoints,prices:season.prices,tierSettings:seasonPassPublicTierSettings(season),capabilities:seasonPassCapabilities(season)},player:seasonPassPlayerView(player),balance:{
     points:(profileRow?.wallet_override==null?Number(profileRow?.wallet||0):Number(profileRow?.wallet_override||0))+Number(profileRow?.pending_wallet||0),
     treats:(profileRow?.treats_override==null?Number(profileRow?.treats||0):Number(profileRow?.treats_override||0))+Number(profileRow?.pending_treats||0),
     coffee:(profileRow?.coffee_override==null?Number(profileRow?.coffee||0):Number(profileRow?.coffee_override||0))+Number(profileRow?.pending_coffee||0)
@@ -19113,6 +19279,9 @@ async function getSeasonPassState(request,env){
 
 async function grantSeasonPassReward(env,ctx,reward){
   await assertSeasonPassNotForceClosed(env);
+  const cosmeticReward=seasonPassCosmeticRewardDefinition(reward);
+  const boostReward=seasonPassBoostRewardDefinition(reward);
+  if(cosmeticReward?.future&&!cosmeticReward?.released) throw new ApiError(409,'Эта награда относится к скрытому будущему контенту и откроется после релизного обновления сезона.');
   const now=Math.floor(Date.now()/1000);const level=Number(reward.level);const lane=String(reward.lane);const key=[ctx.season.id,ctx.telegramId,level,lane];
   await env.DB.prepare(`INSERT OR IGNORE INTO season_pass_claims(season_id,telegram_id,level,lane,status,reward_json,claimed_at) VALUES(?,?,?,?, 'pending', ?,?)`).bind(...key,JSON.stringify(reward),now).run();
   await env.DB.prepare(`UPDATE season_pass_claims SET status='pending',reward_json=?,claimed_at=?,error_text='' WHERE season_id=? AND telegram_id=? AND level=? AND lane=? AND status='failed'`).bind(JSON.stringify(reward),now,...key).run();
@@ -19125,8 +19294,6 @@ async function grantSeasonPassReward(env,ctx,reward){
   }
   const caseEnsured=await ensureCasePlayerState(env,ctx.telegramId,{});
   let finalized=false;
-  const cosmeticReward=seasonPassCosmeticRewardDefinition(reward);
-  const boostReward=seasonPassBoostRewardDefinition(reward);
   if(cosmeticReward){
     const state=caseEnsured.state;seasonPassApplyCosmeticToState(state,cosmeticReward);
     const result=await env.DB.batch([
@@ -19183,6 +19350,7 @@ async function claimAllSeasonPassRewards(request,env){
     await env.DB.prepare(`UPDATE season_pass_claims SET status='pending',claimed_at=?,error_text='' WHERE season_id=? AND telegram_id=? AND status='failed' AND level<=? AND (lane='free' OR ?=1)`).bind(now,ctx.season.id,ctx.telegramId,level,premium?1:0).run();
     const rows=(await env.DB.prepare(`SELECT r.* FROM season_pass_rewards r LEFT JOIN season_pass_claims c ON c.season_id=r.season_id AND c.telegram_id=? AND c.level=r.level AND c.lane=r.lane AND c.status='delivered' WHERE r.season_id=? AND r.enabled=1 AND r.level<=? AND (r.lane='free' OR ?=1) AND c.level IS NULL ORDER BY r.level,r.lane`).bind(ctx.telegramId,ctx.season.id,level,premium?1:0).all()).results||[];
     if(!rows.length)return jsonResponse({...await buildSeasonPassMutationPayload(env,ctx.season,ctx.telegramId,{includeClaims:true}),received:[]});
+    if(rows.some(reward=>{const cosmetic=seasonPassCosmeticRewardDefinition(reward);return cosmetic?.future&&!cosmetic?.released;}))throw new ApiError(409,'Среди наград есть скрытый будущий контент. Откройте его релизным обновлением перед стартом сезона.');
     const claimInsertStatements=rows.map(reward=>env.DB.prepare(`INSERT OR IGNORE INTO season_pass_claims(season_id,telegram_id,level,lane,status,reward_json,claimed_at) VALUES(?,?,?,?,'pending',?,?)`).bind(ctx.season.id,ctx.telegramId,Number(reward.level),String(reward.lane),JSON.stringify(reward),now));
     for(let index=0;index<claimInsertStatements.length;index+=40)await env.DB.batch(claimInsertStatements.slice(index,index+40));
     const pending=(await env.DB.prepare(`SELECT r.* FROM season_pass_rewards r JOIN season_pass_claims c ON c.season_id=r.season_id AND c.telegram_id=? AND c.level=r.level AND c.lane=r.lane AND c.status='pending' WHERE r.season_id=? AND r.enabled=1 AND r.level<=? AND (r.lane='free' OR ?=1) ORDER BY r.level,r.lane`).bind(ctx.telegramId,ctx.season.id,level,premium?1:0).all()).results||[];
@@ -19190,6 +19358,7 @@ async function claimAllSeasonPassRewards(request,env){
     let points=0,treats=0,coffee=0;const boosterTotals={points:0,treats:0,coffee:0};const caseStatements=[];const xpBoostRewards=[];const cosmeticRewards=[];const caseEnsured=await ensureCasePlayerState(env,ctx.telegramId,{});
     for(const reward of pending){
       const cosmeticReward=seasonPassCosmeticRewardDefinition(reward);const boostReward=seasonPassBoostRewardDefinition(reward);const type=String(reward.reward_type);const amount=Math.max(0,Number(reward.amount)||0);
+      if(cosmeticReward?.future&&!cosmeticReward?.released)throw new ApiError(409,'Среди наград есть скрытый будущий контент. Откройте его релизным обновлением перед стартом сезона.');
       if(cosmeticReward)cosmeticRewards.push(cosmeticReward);
       else if(boostReward?.kind==='xp')xpBoostRewards.push(reward);
       else if(boostReward&&CASE_BOOSTER_TYPES.includes(boostReward.kind))boosterTotals[boostReward.kind]+=Math.max(1,amount||1);
@@ -19315,21 +19484,43 @@ function seasonPassChargeStatement(env,telegramId,price,now,source){
     WHERE telegram_id=?`).bind(points,points,treats,treats,coffee,coffee,now,String(source),String(telegramId));
 }
 
-async function elitePlusBenefitStatements(env,ctx,player,now){
+async function elitePlusBenefitPlan(env,ctx,player,now,options={}){
+  const benefits=ctx.season?.tierSettings?.elitePlus || seasonPassElitePlusBenefitsView(defaultSeasonPassElitePlusBenefits());
+  const hidden=(Array.isArray(benefits.cosmetics)?benefits.cosmetics:[]).find((item)=>item?.future&&!item?.released);
+  if(hidden)throw new ApiError(409,'Эксклюзивная награда тарифа относится к скрытому будущему контенту. Откройте контент релизным обновлением перед продажей тарифа.');
+  const bonusAlreadyGranted=Boolean(options.bonusAlreadyGranted);
+  const source=String(options.source||'elite_plus');
   const state=(await ensureCasePlayerState(env,ctx.telegramId,{})).state;
-  if(!state.ownedFrames.includes('elite'))state.ownedFrames.push('elite');
-  if(!state.ownedAvatars.includes('legendary_avatar_5'))state.ownedAvatars.push('legendary_avatar_5');
-  state.ownedSpecials=Array.isArray(state.ownedSpecials)?state.ownedSpecials:[];if(!state.ownedSpecials.includes(SEASON_PASS_SPECIAL_XP_X2))state.ownedSpecials.push(SEASON_PASS_SPECIAL_XP_X2);
-  const currentLevel=seasonPassLevelFromXp(player.xp);const targetLevel=Math.min(50,currentLevel+5);const targetXp=Math.max(Number(player.xp)||0,seasonPassXpForLevel(targetLevel));
-  const goldGrantId=`sp_elite_plus_gold_${ctx.season.id}_${ctx.telegramId}`.replace(/[^A-Za-z0-9_-]/g,'_').slice(0,120);
-  return [
-    env.DB.prepare(`UPDATE season_pass_players SET xp=?,premium_tier='elite_plus',elite_plus_bonus_granted=1,revision=revision+1,updated_at=? WHERE season_id=? AND telegram_id=?`).bind(targetXp,now,ctx.season.id,ctx.telegramId),
-    env.DB.prepare(`INSERT OR IGNORE INTO season_pass_entitlements(season_id,telegram_id,item_id,source,granted_at) VALUES(?,?,?,'elite_plus',?)`).bind(ctx.season.id,ctx.telegramId,SEASON_PASS_SPECIAL_XP_X2,now),
-    env.DB.prepare(`INSERT OR IGNORE INTO season_pass_entitlements(season_id,telegram_id,item_id,source,granted_at) VALUES(?,?,'elite_frame','elite_plus',?)`).bind(ctx.season.id,ctx.telegramId,now),
-    env.DB.prepare(`INSERT OR IGNORE INTO season_pass_entitlements(season_id,telegram_id,item_id,source,granted_at) VALUES(?,?,'elite_avatar','elite_plus',?)`).bind(ctx.season.id,ctx.telegramId,now),
-    env.DB.prepare(`INSERT OR IGNORE INTO granted_cases(id,telegram_id,case_type,status,granted_by,reason,rewards_json,created_at) VALUES(?,?,'gold','pending','season-pass',?,'[]',?)`).bind(goldGrantId,ctx.telegramId,`${ctx.season.title}: бонус Элитный+`,now),
-    caseStateUpdateStatement(env,ctx.telegramId,state,now)
+  state.ownedSpecials=Array.isArray(state.ownedSpecials)?state.ownedSpecials:[];
+  if(benefits.xpBoost&&!state.ownedSpecials.includes(SEASON_PASS_SPECIAL_XP_X2))state.ownedSpecials.push(SEASON_PASS_SPECIAL_XP_X2);
+  const cosmetics=(Array.isArray(benefits.cosmetics)?benefits.cosmetics:[]).filter((item)=>item?.kind&&item?.itemId);
+  for(const cosmetic of cosmetics)seasonPassApplyCosmeticToState(state,cosmetic);
+  const currentLevel=seasonPassLevelFromXp(player.xp);
+  const bonusLevels=bonusAlreadyGranted?0:Math.max(0,Math.min(25,Number(benefits.bonusLevels)||0));
+  const targetLevel=Math.min(50,currentLevel+bonusLevels);
+  const targetXp=bonusLevels>0?Math.max(Number(player.xp)||0,seasonPassXpForLevel(targetLevel)):Math.max(0,Number(player.xp)||0);
+  const statements=[
+    env.DB.prepare(`UPDATE season_pass_players SET xp=?,premium_tier='elite_plus',elite_plus_bonus_granted=1,revision=revision+1,updated_at=? WHERE season_id=? AND telegram_id=?`).bind(targetXp,now,ctx.season.id,ctx.telegramId)
   ];
+  if(benefits.xpBoost){
+    statements.push(env.DB.prepare(`INSERT OR IGNORE INTO season_pass_entitlements(season_id,telegram_id,item_id,source,granted_at) VALUES(?,?,?,?,?)`).bind(ctx.season.id,ctx.telegramId,SEASON_PASS_SPECIAL_XP_X2,source,now));
+  }
+  for(const cosmetic of cosmetics){
+    statements.push(env.DB.prepare(`INSERT OR IGNORE INTO season_pass_entitlements(season_id,telegram_id,item_id,source,granted_at) VALUES(?,?,?,?,?)`).bind(ctx.season.id,ctx.telegramId,`${SEASON_PASS_COSMETIC_PREFIX}${cosmetic.kind}:${cosmetic.itemId}`,source,now));
+  }
+  const caseType=benefits.case?.type?normalizeCaseType(benefits.case.type):"";
+  const caseCount=!bonusAlreadyGranted&&caseType?Math.max(0,Math.min(10,Number(benefits.case?.count)||0)):0;
+  for(let index=0;index<caseCount;index+=1){
+    const grantId=`sp_elite_plus_case_${ctx.season.id}_${ctx.telegramId}_${index+1}`.replace(/[^A-Za-z0-9_-]/g,'_').slice(0,120);
+    statements.push(env.DB.prepare(`INSERT OR IGNORE INTO granted_cases(id,telegram_id,case_type,status,granted_by,reason,rewards_json,created_at) VALUES(?,? ,?,'pending','season-pass',?,'[]',?)`).bind(grantId,ctx.telegramId,caseType,`${ctx.season.title}: бонус Элитный+`,now));
+  }
+  statements.push(caseStateUpdateStatement(env,ctx.telegramId,state,now));
+  const received=[];
+  if(benefits.xpBoost)received.push({title:'×2 XP сезонного пропуска',itemId:SEASON_PASS_SPECIAL_XP_X2,imageUrl:'/assets/season-pass/xp_x2.png'});
+  if(bonusLevels>0)received.push({title:`+${bonusLevels} уровней`,itemId:`levels_${bonusLevels}`,imageUrl:'/assets/season-pass/levels_5.png'});
+  for(const cosmetic of cosmetics)received.push({title:String(cosmetic.title||'Эксклюзивная награда'),itemId:String(cosmetic.itemId),imageUrl:String(cosmetic.imageUrl||'/assets/season-pass/season.png')});
+  if(caseCount>0)received.push({title:`${String(benefits.case?.title||'Кейс')}${caseCount>1?` ×${caseCount}`:''}`,itemId:`${caseType}_case`,imageUrl:String(benefits.case?.imageUrl||ownerPanelCaseAsset(caseType))});
+  return {statements,received};
 }
 
 async function reconcileDeliveredSeasonPassTier(env,ctx,effectiveTier,now){
@@ -19339,27 +19530,8 @@ async function reconcileDeliveredSeasonPassTier(env,ctx,effectiveTier,now){
   }
   const currentPlayer=await env.DB.prepare(`SELECT xp,elite_plus_bonus_granted FROM season_pass_players WHERE season_id=? AND telegram_id=? LIMIT 1`).bind(ctx.season.id,ctx.telegramId).first();
   const bonusAlreadyGranted=Number(currentPlayer?.elite_plus_bonus_granted||0)===1;
-  const currentXp=Math.max(0,Number(currentPlayer?.xp)||0);
-  const currentLevel=seasonPassLevelFromXp(currentXp);
-  const targetLevel=Math.min(50,currentLevel+5);
-  const targetXp=bonusAlreadyGranted?currentXp:Math.max(currentXp,seasonPassXpForLevel(targetLevel));
-  const goldGrantId=`sp_elite_plus_gold_${ctx.season.id}_${ctx.telegramId}`.replace(/[^A-Za-z0-9_-]/g,'_').slice(0,120);
-  const state=(await ensureCasePlayerState(env,ctx.telegramId,{})).state;
-  if(!state.ownedFrames.includes('elite'))state.ownedFrames.push('elite');
-  if(!state.ownedAvatars.includes('legendary_avatar_5'))state.ownedAvatars.push('legendary_avatar_5');
-  state.ownedSpecials=Array.isArray(state.ownedSpecials)?state.ownedSpecials:[];
-  if(!state.ownedSpecials.includes(SEASON_PASS_SPECIAL_XP_X2))state.ownedSpecials.push(SEASON_PASS_SPECIAL_XP_X2);
-  const statements=[
-    env.DB.prepare(`UPDATE season_pass_players SET xp=?,premium_tier='elite_plus',elite_plus_bonus_granted=1,revision=revision+1,updated_at=? WHERE season_id=? AND telegram_id=?`).bind(targetXp,now,ctx.season.id,ctx.telegramId),
-    env.DB.prepare(`INSERT OR IGNORE INTO season_pass_entitlements(season_id,telegram_id,item_id,source,granted_at) VALUES(?,?,?,'elite_plus-reconcile',?)`).bind(ctx.season.id,ctx.telegramId,SEASON_PASS_SPECIAL_XP_X2,now),
-    env.DB.prepare(`INSERT OR IGNORE INTO season_pass_entitlements(season_id,telegram_id,item_id,source,granted_at) VALUES(?,?,'elite_frame','elite_plus-reconcile',?)`).bind(ctx.season.id,ctx.telegramId,now),
-    env.DB.prepare(`INSERT OR IGNORE INTO season_pass_entitlements(season_id,telegram_id,item_id,source,granted_at) VALUES(?,?,'elite_avatar','elite_plus-reconcile',?)`).bind(ctx.season.id,ctx.telegramId,now),
-    caseStateUpdateStatement(env,ctx.telegramId,state,now)
-  ];
-  if(!bonusAlreadyGranted){
-    statements.push(env.DB.prepare(`INSERT OR IGNORE INTO granted_cases(id,telegram_id,case_type,status,granted_by,reason,rewards_json,created_at) VALUES(?,?,'gold','pending','season-pass',?,'[]',?)`).bind(goldGrantId,ctx.telegramId,`${ctx.season.title}: восстановление бонуса Элитный+`,now));
-  }
-  await env.DB.batch(statements);
+  const plan=await elitePlusBenefitPlan(env,ctx,{...ctx.player,xp:Math.max(0,Number(currentPlayer?.xp)||0)},now,{source:'elite_plus-reconcile',bonusAlreadyGranted});
+  await env.DB.batch(plan.statements);
   return 'elite_plus';
 }
 
@@ -19403,8 +19575,11 @@ async function purchaseSeasonPassTier(request,env){
       seasonPassBalanceGuardStatement(env,guardId,ctx.telegramId,price),
       seasonPassChargeStatement(env,ctx.telegramId,price,now,`season-pass:${ctx.season.id}:${tier}`)
     ];
-    if(tier==='elite_plus')statements.push(...await elitePlusBenefitStatements(env,ctx,ctx.player,now));
-    else statements.push(env.DB.prepare(`UPDATE season_pass_players SET premium_tier='elite',revision=revision+1,updated_at=? WHERE season_id=? AND telegram_id=?`).bind(now,ctx.season.id,ctx.telegramId));
+    let elitePlusPlan=null;
+    if(tier==='elite_plus'){
+      elitePlusPlan=await elitePlusBenefitPlan(env,ctx,ctx.player,now,{source:'elite_plus',bonusAlreadyGranted:Boolean(ctx.player?.elite_plus_bonus_granted)});
+      statements.push(...elitePlusPlan.statements);
+    } else statements.push(env.DB.prepare(`UPDATE season_pass_players SET premium_tier='elite',revision=revision+1,updated_at=? WHERE season_id=? AND telegram_id=?`).bind(now,ctx.season.id,ctx.telegramId));
     statements.push(
       env.DB.prepare(`UPDATE season_pass_purchases SET status='delivered',completed_at=? WHERE season_id=? AND telegram_id=? AND purchase_key=? AND status='pending'`).bind(now,ctx.season.id,ctx.telegramId,purchaseKey),
       env.DB.prepare(`DELETE FROM season_pass_purchase_guards WHERE guard_id=?`).bind(guardId)
@@ -19418,7 +19593,7 @@ async function purchaseSeasonPassTier(request,env){
       throw batchError;
     }
     try{await recordPlayerTimeline(env,ctx.telegramId,'season_pass_purchase',`активировал тариф «${tier==='elite_plus'?'Элитный+':'Элитный'}»`,{seasonId:ctx.season.id,tier,price},`season_pass_purchase_${ctx.season.id}_${tier}`,ctx.auth.user,now);}catch(error){console.error('season pass purchase timeline failed',error);}
-    const received=tier==='elite_plus'?[{title:'×2 XP за забеги и покупки',itemId:SEASON_PASS_SPECIAL_XP_X2,imageUrl:'/assets/season-pass/xp_x2.png'},{title:'+5 уровней',itemId:'levels_5',imageUrl:'/assets/season-pass/levels_5.png'},{title:'Эксклюзивная рамка',itemId:'elite_frame',imageUrl:'/assets/rating/frames/profile/ramka_profile_elita.png'},{title:'Эксклюзивная аватарка',itemId:'elite_avatar',imageUrl:'/assets/cases/avatars/legendary_avatarka_5.png'},{title:'Золотой кейс',itemId:'gold_case',imageUrl:'/assets/cases/gold_closed.png'}]:[];
+    const received=tier==='elite_plus'?(elitePlusPlan?.received||[]):[];
     return jsonResponse({...await buildSeasonPassMutationPayload(env,ctx.season,ctx.telegramId,{includeEntitlements:true}),received,pricePaid:price,repeated:false,purchasedTier:tier});
   }catch(error){if(error instanceof ApiError)return jsonResponse({ok:false,error:error.message},error.status);console.error('purchaseSeasonPassTier failed',error);return jsonResponse({ok:false,error:'Не удалось активировать тариф.'},500);}
 }
@@ -19648,10 +19823,10 @@ async function finalizeSeasonPassSeasonCreate(query,env){
   if(title.length<3||title.length>80||!Number.isFinite(startsAt)||!Number.isFinite(endsAt)||endsAt<=startsAt+3600){await answerCallback(env,query.id,'Данные сезона повреждены. Начните создание заново.',true);await clearStaffWorkflow(query.from.id,env);return;}
   const overlap=await seasonPassSeasonOverlap(env,startsAt,endsAt);if(overlap){await answerCallback(env,query.id,'Период уже занят другим сезоном.',true);await sendTelegramMessage(env,chatId,`Сезон пересекается с <b>${escapeHtml(overlap.title)}</b>. Создание остановлено.`);return;}
   const sourceId=String(data.sourceSeasonId||DEFAULT_SEASON_PASS_ID);const source=await env.DB.prepare(`SELECT * FROM season_pass_seasons WHERE season_id=? LIMIT 1`).bind(sourceId).first();const now=Math.floor(Date.now()/1000);const actor=String(query.from.id);const seasonId=await uniqueSeasonPassSeasonId(env,startsAt);const graceEndsAt=endsAt+SEASON_PASS_MANUAL_CLAIM_GRACE_SECONDS;
-  const cfg=source||{base_run_xp:100,level_price_points:DEFAULT_SEASON_PASS_LEVEL_PRICE_POINTS,elite_price_points:DEFAULT_SEASON_PASS_ELITE_PRICE.points,elite_price_treats:DEFAULT_SEASON_PASS_ELITE_PRICE.treats,elite_price_coffee:DEFAULT_SEASON_PASS_ELITE_PRICE.coffee,elite_plus_price_points:DEFAULT_SEASON_PASS_ELITE_PLUS_PRICE.points,elite_plus_price_treats:DEFAULT_SEASON_PASS_ELITE_PLUS_PRICE.treats,elite_plus_price_coffee:DEFAULT_SEASON_PASS_ELITE_PLUS_PRICE.coffee};
+  const cfg=source||{base_run_xp:100,level_price_points:DEFAULT_SEASON_PASS_LEVEL_PRICE_POINTS,elite_price_points:DEFAULT_SEASON_PASS_ELITE_PRICE.points,elite_price_treats:DEFAULT_SEASON_PASS_ELITE_PRICE.treats,elite_price_coffee:DEFAULT_SEASON_PASS_ELITE_PRICE.coffee,elite_plus_price_points:DEFAULT_SEASON_PASS_ELITE_PLUS_PRICE.points,elite_plus_price_treats:DEFAULT_SEASON_PASS_ELITE_PLUS_PRICE.treats,elite_plus_price_coffee:DEFAULT_SEASON_PASS_ELITE_PLUS_PRICE.coffee,elite_plus_benefits_json:JSON.stringify(defaultSeasonPassElitePlusBenefits())};
   const cfgInt=(value,fallback=0)=>Number.isFinite(Number(value))?Math.max(0,Math.floor(Number(value))):fallback;
   await env.DB.batch([
-    env.DB.prepare(`INSERT INTO season_pass_seasons(season_id,title,starts_at,ends_at,claim_grace_ends_at,manual_status,base_run_xp,level_price_points,elite_price_points,elite_price_treats,elite_price_coffee,elite_plus_price_points,elite_plus_price_treats,elite_plus_price_coffee,updated_at,updated_by) VALUES(?,?,?,?,?,'',?,?,?,?,?,?,?,?,?,?)`).bind(seasonId,title,startsAt,endsAt,graceEndsAt,Math.max(1,cfgInt(cfg.base_run_xp,100)),cfgInt(cfg.level_price_points,DEFAULT_SEASON_PASS_LEVEL_PRICE_POINTS),cfgInt(cfg.elite_price_points,DEFAULT_SEASON_PASS_ELITE_PRICE.points),cfgInt(cfg.elite_price_treats,DEFAULT_SEASON_PASS_ELITE_PRICE.treats),cfgInt(cfg.elite_price_coffee,DEFAULT_SEASON_PASS_ELITE_PRICE.coffee),cfgInt(cfg.elite_plus_price_points,DEFAULT_SEASON_PASS_ELITE_PLUS_PRICE.points),cfgInt(cfg.elite_plus_price_treats,DEFAULT_SEASON_PASS_ELITE_PLUS_PRICE.treats),cfgInt(cfg.elite_plus_price_coffee,DEFAULT_SEASON_PASS_ELITE_PLUS_PRICE.coffee),now,actor),
+    env.DB.prepare(`INSERT INTO season_pass_seasons(season_id,title,starts_at,ends_at,claim_grace_ends_at,manual_status,base_run_xp,level_price_points,elite_price_points,elite_price_treats,elite_price_coffee,elite_plus_price_points,elite_plus_price_treats,elite_plus_price_coffee,elite_plus_benefits_json,updated_at,updated_by) VALUES(?,?,?,?,?,'',?,?,?,?,?,?,?,?,?,?,?)`).bind(seasonId,title,startsAt,endsAt,graceEndsAt,Math.max(1,cfgInt(cfg.base_run_xp,100)),cfgInt(cfg.level_price_points,DEFAULT_SEASON_PASS_LEVEL_PRICE_POINTS),cfgInt(cfg.elite_price_points,DEFAULT_SEASON_PASS_ELITE_PRICE.points),cfgInt(cfg.elite_price_treats,DEFAULT_SEASON_PASS_ELITE_PRICE.treats),cfgInt(cfg.elite_price_coffee,DEFAULT_SEASON_PASS_ELITE_PRICE.coffee),cfgInt(cfg.elite_plus_price_points,DEFAULT_SEASON_PASS_ELITE_PLUS_PRICE.points),cfgInt(cfg.elite_plus_price_treats,DEFAULT_SEASON_PASS_ELITE_PLUS_PRICE.treats),cfgInt(cfg.elite_plus_price_coffee,DEFAULT_SEASON_PASS_ELITE_PLUS_PRICE.coffee),String(cfg.elite_plus_benefits_json||JSON.stringify(defaultSeasonPassElitePlusBenefits())),now,actor),
     env.DB.prepare(`INSERT INTO season_pass_rewards(season_id,level,lane,reward_type,amount,item_id,title,image_url,enabled,updated_at,updated_by) SELECT ?,level,lane,reward_type,amount,item_id,title,image_url,enabled,?,? FROM season_pass_rewards WHERE season_id=?`).bind(seasonId,now,actor,sourceId),
     env.DB.prepare(`INSERT INTO season_pass_tasks(season_id,task_id,period,premium,metric,target,xp_reward,title,description,enabled,sort_order,updated_at,updated_by) SELECT ?,task_id,period,premium,metric,target,xp_reward,title,description,enabled,sort_order,?,? FROM season_pass_tasks WHERE season_id=?`).bind(seasonId,now,actor,sourceId)
   ]);
@@ -24443,6 +24618,7 @@ async function handleOwnerPanelApi(request, env, path, executionCtx = null) {
     if (path === "/api/owner/rating/cancel") return jsonResponse(await ownerPanelCancelRatingSeason(env, ctx));
     if (path === "/api/owner/season-pass") return jsonResponse(await ownerPanelSeasonPass(env, ctx));
     if (path === "/api/owner/season-pass/reward") return jsonResponse(await ownerPanelSetSeasonPassReward(env, ctx));
+    if (path === "/api/owner/season-pass/tariffs") return jsonResponse(await ownerPanelSaveSeasonPassTariffs(env, ctx));
     if (path === "/api/owner/season-pass/task/save") return jsonResponse(await ownerPanelSaveSeasonPassTask(env, ctx));
     if (path === "/api/owner/season-pass/task/delete") return jsonResponse(await ownerPanelDeleteSeasonPassTask(env, ctx));
     if (path === "/api/owner/season-pass/create") return jsonResponse(await ownerPanelCreateSeasonPassSeason(env, ctx));
@@ -24832,23 +25008,28 @@ async function ownerPanelCancelRatingSeason(env, ctx) {
 }
 
 function ownerPanelSeasonPassRewardView(row) {
-  const publicType=seasonPassPublicRewardType(row);const publicItemId=seasonPassPublicRewardItemId(row);
+  const cosmetic=seasonPassCosmeticRewardDefinition(row);const publicType=seasonPassPublicRewardType(row);const publicItemId=seasonPassPublicRewardItemId(row);
   return {
     level: Number(row.level || 0), lane: String(row.lane || "free"),
     rewardType: publicType, amount: Number(row.amount || 0),
     itemId: publicItemId, title: String(row.title || ""),
-    imageUrl: String(row.image_url || ownerPanelRewardAsset(publicType, publicItemId)), enabled: Number(row.enabled || 0) === 1
+    imageUrl: String(row.image_url || cosmetic?.imageUrl || ownerPanelRewardAsset(publicType, publicItemId)), enabled: Number(row.enabled || 0) === 1,
+    future:Boolean(cosmetic?.future),released:Boolean(cosmetic?.released),seasonLabel:String(cosmetic?.seasonLabel||"")
   };
 }
 
 function ownerPanelSeasonPassCosmeticCatalogs(liveops={content:{}}) {
   const result={};
   for(const kind of SEASON_PASS_COSMETIC_KINDS){
-    const base=seasonPassCosmeticCatalog(kind)||{};const overrides=liveops?.content?.[kind]||{};
-    result[kind]=Object.entries(base).map(([id,item])=>({
-      id,title:String(overrides?.[id]?.title||item.title||id),rarity:String(overrides?.[id]?.rarity||item.rarity||"common"),
-      imageUrl:String(overrides?.[id]?.imageUrl||seasonPassCosmeticImage(kind,id))
-    }));
+    const base=seasonPassCosmeticCatalog(kind)||{};const future=futureSeasonContentCatalog(kind)||{};const overrides=liveops?.content?.[kind]||{};
+    result[kind]=Object.entries({...base,...future}).map(([id,item])=>{
+      const isFuture=Boolean(future[id]);
+      return {
+        id,title:String(overrides?.[id]?.title||item.title||id),rarity:String(overrides?.[id]?.rarity||item.rarity||"common"),
+        imageUrl:String(overrides?.[id]?.imageUrl||item.imageUrl||seasonPassCosmeticImage(kind,id)),
+        audioUrl:String(item.audioUrl||item.src||""),future:isFuture,released:!isFuture,seasonLabel:isFuture?FUTURE_SEASON_CONTENT_LABEL:""
+      };
+    });
   }
   return result;
 }
@@ -24858,11 +25039,12 @@ async function ownerPanelSeasonPass(env, ctx) {
   const requested = String(ctx.body?.seasonId || "").trim();
   const selected = requested ? await loadSeasonPassSeasonById(env, requested) : await loadSeasonPassSeason(env);
   if (!selected) throw new ApiError(404, "Сезонный пропуск не найден.");
-  const [seasonsResult, rewardsResult, tasksResult, stats, liveops] = await Promise.all([
+  const [seasonsResult, rewardsResult, tasksResult, stats, tariffPurchases, liveops] = await Promise.all([
     env.DB.prepare(`SELECT * FROM season_pass_seasons ORDER BY starts_at DESC,updated_at DESC LIMIT 30`).all(),
     env.DB.prepare(`SELECT level,lane,reward_type,amount,item_id,title,image_url,enabled FROM season_pass_rewards WHERE season_id=? ORDER BY level,lane`).bind(selected.id).all(),
     env.DB.prepare(`SELECT task_id,period,premium,metric,target,xp_reward,title,description,enabled,sort_order FROM season_pass_tasks WHERE season_id=? ORDER BY sort_order,task_id`).bind(selected.id).all(),
     env.DB.prepare(`SELECT COUNT(*) AS players,SUM(CASE WHEN premium_tier='elite' THEN 1 ELSE 0 END) AS elite,SUM(CASE WHEN premium_tier='elite_plus' THEN 1 ELSE 0 END) AS elite_plus,MAX(xp) AS max_xp FROM season_pass_players WHERE season_id=?`).bind(selected.id).first(),
+    env.DB.prepare(`SELECT COUNT(*) AS count FROM season_pass_purchases WHERE season_id=? AND status='delivered'`).bind(selected.id).first(),
     readLiveOpsConfig(env).catch(()=>({content:{}}))
   ]);
   const nowMs = Date.now();const seasonRows=seasonsResult.results||[];
@@ -24876,6 +25058,7 @@ async function ownerPanelSeasonPass(env, ctx) {
     tasks: (tasksResult.results || []).map((row) => ({ id:String(row.task_id),period:String(row.period),premium:Number(row.premium||0)===1,metric:String(row.metric),target:Number(row.target||0),xp:Number(row.xp_reward||0),title:String(row.title||""),description:String(row.description||""),enabled:Number(row.enabled||0)===1 })),
     catalogs: ownerPanelSeasonPassCosmeticCatalogs(liveops),
     createSuggestion:{startsAt:suggestedStart,endsAt:suggestedEnd},
+    tariffPurchases:Number(tariffPurchases?.count||0),
     stats: { players:Number(stats?.players||0),elite:Number(stats?.elite||0),elitePlus:Number(stats?.elite_plus||0),maxXp:Number(stats?.max_xp||0) }
   };
 }
@@ -24883,7 +25066,7 @@ async function ownerPanelSeasonPass(env, ctx) {
 function ownerPanelSeasonPassRewardPresentation(typeValue, amountValue, itemValue) {
   const type = String(typeValue || "");
   if(SEASON_PASS_COSMETIC_KINDS.includes(type)){
-    const itemId=String(itemValue||"").trim();const catalog=seasonPassCosmeticCatalog(type);const item=catalog?.[itemId];
+    const itemId=String(itemValue||"").trim();const catalog=seasonPassAnyCosmeticCatalog(type);const item=catalog?.[itemId];
     if(!item)throw new ApiError(400,"Выберите существующий предмет оформления.");
     return {rewardType:"points",publicRewardType:type,amount:1,itemId:`${SEASON_PASS_COSMETIC_PREFIX}${type}:${itemId}`,publicItemId:itemId,title:String(item.title||itemId),imageUrl:seasonPassCosmeticImage(type,itemId)};
   }
@@ -24925,6 +25108,76 @@ async function ownerPanelSetSeasonPassReward(env, ctx) {
   return { ok:true, reward:{level,lane,...reward,rewardType:reward.publicRewardType||reward.rewardType,itemId:reward.publicItemId||reward.itemId,enabled:true} };
 }
 
+async function ownerPanelSaveSeasonPassTariffs(env, ctx) {
+  await ensureSeasonPassSchema(env);
+  const seasonId=String(ctx.body?.seasonId||"").trim();
+  if(!seasonId)throw new ApiError(400,"Не выбран сезон.");
+  const season=await loadSeasonPassSeasonById(env,seasonId);
+  if(!season)throw new ApiError(404,"Сезонный пропуск не найден.");
+  if(season.status==="ended")throw new ApiError(409,"Тарифы завершённого сезона изменять нельзя.");
+  const priceValue=(value,label)=>{
+    const parsed=ownerPanelInteger(value,0,999999999);
+    if(parsed==null)throw new ApiError(400,`${label}: укажите целое число от 0.`);
+    return parsed;
+  };
+  const prices={
+    elite:{
+      points:priceValue(ctx.body?.elite?.points,"Элитный · очки"),
+      treats:priceValue(ctx.body?.elite?.treats,"Элитный · зефир"),
+      coffee:priceValue(ctx.body?.elite?.coffee,"Элитный · кофе")
+    },
+    elite_plus:{
+      points:priceValue(ctx.body?.elitePlus?.points,"Элитный+ · очки"),
+      treats:priceValue(ctx.body?.elitePlus?.treats,"Элитный+ · зефир"),
+      coffee:priceValue(ctx.body?.elitePlus?.coffee,"Элитный+ · кофе")
+    }
+  };
+  if(prices.elite.points+prices.elite.treats+prices.elite.coffee<=0)throw new ApiError(400,"Стоимость тарифа «Элитный» не может быть полностью нулевой.");
+  if(prices.elite_plus.points+prices.elite_plus.treats+prices.elite_plus.coffee<=0)throw new ApiError(400,"Стоимость тарифа «Элитный+» не может быть полностью нулевой.");
+  for(const key of ["points","treats","coffee"]){
+    if(prices.elite_plus[key]<prices.elite[key])throw new ApiError(400,"Каждая часть стоимости «Элитный+» должна быть не ниже соответствующей стоимости «Элитный».");
+  }
+  const benefitsInput=ctx.body?.elitePlusBenefits||{};
+  const bonusLevels=ownerPanelInteger(benefitsInput.bonusLevels,0,25);
+  const caseCount=ownerPanelInteger(benefitsInput.caseCount,0,10);
+  if(bonusLevels==null||caseCount==null)throw new ApiError(400,"Проверьте количество бонусных уровней и кейсов.");
+  const rawCaseType=String(benefitsInput.caseType||"").trim();
+  const caseType=rawCaseType&&rawCaseType!=="none"?normalizeCaseType(rawCaseType):"";
+  if(rawCaseType&&rawCaseType!=="none"&&!caseType)throw new ApiError(400,"Неизвестный тип бонусного кейса.");
+  const cosmetics=[];
+  for(const entry of (Array.isArray(benefitsInput.cosmetics)?benefitsInput.cosmetics:[]).slice(0,2)){
+    const kind=String(entry?.kind||"").trim();
+    const itemId=String(entry?.itemId||"").trim();
+    if(!kind||kind==="none")continue;
+    if(!SEASON_PASS_COSMETIC_KINDS.includes(kind))throw new ApiError(400,"Неизвестный тип эксклюзивной награды.");
+    const item=seasonPassAnyCosmeticCatalog(kind)?.[itemId];
+    if(!item)throw new ApiError(400,"Выберите существующую эксклюзивную награду.");
+    if(season.status==="active"&&futureSeasonContentItem(kind,itemId))throw new ApiError(409,"Скрытый контент будущего сезона нельзя назначить уже активному тарифу.");
+    if(!cosmetics.some((value)=>value.kind===kind&&value.itemId===itemId))cosmetics.push({kind,itemId});
+  }
+  const benefits={
+    xpBoost:benefitsInput.xpBoost!==false,
+    bonusLevels,
+    caseType:caseCount>0?caseType:"",
+    caseCount:caseType?caseCount:0,
+    cosmetics
+  };
+  const before=await env.DB.prepare(`SELECT * FROM season_pass_seasons WHERE season_id=? LIMIT 1`).bind(seasonId).first();
+  const purchaseCount=Number((await env.DB.prepare(`SELECT COUNT(*) AS count FROM season_pass_purchases WHERE season_id=? AND status='delivered'`).bind(seasonId).first())?.count||0);
+  const beforeBenefits=seasonPassElitePlusBenefitsConfig(before?.elite_plus_benefits_json);
+  const beforePrices={
+    elite:{points:Number(before?.elite_price_points||0),treats:Number(before?.elite_price_treats||0),coffee:Number(before?.elite_price_coffee||0)},
+    elite_plus:{points:Number(before?.elite_plus_price_points||0),treats:Number(before?.elite_plus_price_treats||0),coffee:Number(before?.elite_plus_price_coffee||0)}
+  };
+  const changed=JSON.stringify({prices,benefits})!==JSON.stringify({prices:beforePrices,benefits:beforeBenefits});
+  if(changed&&purchaseCount>0)throw new ApiError(409,"Тариф уже покупали в этом сезоне. Для защиты игроков его цену и бонусы после первой покупки менять нельзя.");
+  const now=Math.floor(Date.now()/1000);
+  await env.DB.prepare(`UPDATE season_pass_seasons SET elite_price_points=?,elite_price_treats=?,elite_price_coffee=?,elite_plus_price_points=?,elite_plus_price_treats=?,elite_plus_price_coffee=?,elite_plus_benefits_json=?,updated_at=?,updated_by=? WHERE season_id=?`)
+    .bind(prices.elite.points,prices.elite.treats,prices.elite.coffee,prices.elite_plus.points,prices.elite_plus.treats,prices.elite_plus.coffee,JSON.stringify(benefits),now,String(ctx.user.id),seasonId).run();
+  await logStaffAction(env,ctx.user,ctx.access,"owner_panel_season_pass_tariffs",null,"season_pass_tariffs",null,null,{seasonId,before:{prices:beforePrices,benefits:beforeBenefits},after:{prices,benefits}});
+  return {ok:true,season:await loadSeasonPassSeasonById(env,seasonId)};
+}
+
 async function ownerPanelCreateSeasonPassSeason(env, ctx) {
   await ensureSeasonPassSchema(env);
   const title = String(ctx.body?.title || "").trim().slice(0,80);
@@ -24939,10 +25192,10 @@ async function ownerPanelCreateSeasonPassSeason(env, ctx) {
   const currentSource=await loadSeasonPassSeason(env);const sourceId=String(ctx.body?.sourceSeasonId||"").trim()||String(currentSource?.id||DEFAULT_SEASON_PASS_ID);
   const source=await env.DB.prepare(`SELECT * FROM season_pass_seasons WHERE season_id=? LIMIT 1`).bind(sourceId).first();
   const seasonId=await uniqueSeasonPassSeasonId(env,startsAt);const graceEndsAt=endsAt+SEASON_PASS_MANUAL_CLAIM_GRACE_SECONDS;const actor=String(ctx.user.id);
-  const cfg=source||{base_run_xp:100,level_price_points:DEFAULT_SEASON_PASS_LEVEL_PRICE_POINTS,elite_price_points:DEFAULT_SEASON_PASS_ELITE_PRICE.points,elite_price_treats:DEFAULT_SEASON_PASS_ELITE_PRICE.treats,elite_price_coffee:DEFAULT_SEASON_PASS_ELITE_PRICE.coffee,elite_plus_price_points:DEFAULT_SEASON_PASS_ELITE_PLUS_PRICE.points,elite_plus_price_treats:DEFAULT_SEASON_PASS_ELITE_PLUS_PRICE.treats,elite_plus_price_coffee:DEFAULT_SEASON_PASS_ELITE_PLUS_PRICE.coffee};
+  const cfg=source||{base_run_xp:100,level_price_points:DEFAULT_SEASON_PASS_LEVEL_PRICE_POINTS,elite_price_points:DEFAULT_SEASON_PASS_ELITE_PRICE.points,elite_price_treats:DEFAULT_SEASON_PASS_ELITE_PRICE.treats,elite_price_coffee:DEFAULT_SEASON_PASS_ELITE_PRICE.coffee,elite_plus_price_points:DEFAULT_SEASON_PASS_ELITE_PLUS_PRICE.points,elite_plus_price_treats:DEFAULT_SEASON_PASS_ELITE_PLUS_PRICE.treats,elite_plus_price_coffee:DEFAULT_SEASON_PASS_ELITE_PLUS_PRICE.coffee,elite_plus_benefits_json:JSON.stringify(defaultSeasonPassElitePlusBenefits())};
   const cfgInt=(value,fallback=0)=>Number.isFinite(Number(value))?Math.max(0,Math.floor(Number(value))):fallback;
   await env.DB.batch([
-    env.DB.prepare(`INSERT INTO season_pass_seasons(season_id,title,starts_at,ends_at,claim_grace_ends_at,manual_status,base_run_xp,level_price_points,elite_price_points,elite_price_treats,elite_price_coffee,elite_plus_price_points,elite_plus_price_treats,elite_plus_price_coffee,updated_at,updated_by) VALUES(?,?,?,?,?,'',?,?,?,?,?,?,?,?,?,?)`).bind(seasonId,title,startsAt,endsAt,graceEndsAt,Math.max(1,cfgInt(cfg.base_run_xp,100)),cfgInt(cfg.level_price_points,DEFAULT_SEASON_PASS_LEVEL_PRICE_POINTS),cfgInt(cfg.elite_price_points,DEFAULT_SEASON_PASS_ELITE_PRICE.points),cfgInt(cfg.elite_price_treats,DEFAULT_SEASON_PASS_ELITE_PRICE.treats),cfgInt(cfg.elite_price_coffee,DEFAULT_SEASON_PASS_ELITE_PRICE.coffee),cfgInt(cfg.elite_plus_price_points,DEFAULT_SEASON_PASS_ELITE_PLUS_PRICE.points),cfgInt(cfg.elite_plus_price_treats,DEFAULT_SEASON_PASS_ELITE_PLUS_PRICE.treats),cfgInt(cfg.elite_plus_price_coffee,DEFAULT_SEASON_PASS_ELITE_PLUS_PRICE.coffee),now,actor),
+    env.DB.prepare(`INSERT INTO season_pass_seasons(season_id,title,starts_at,ends_at,claim_grace_ends_at,manual_status,base_run_xp,level_price_points,elite_price_points,elite_price_treats,elite_price_coffee,elite_plus_price_points,elite_plus_price_treats,elite_plus_price_coffee,elite_plus_benefits_json,updated_at,updated_by) VALUES(?,?,?,?,?,'',?,?,?,?,?,?,?,?,?,?,?)`).bind(seasonId,title,startsAt,endsAt,graceEndsAt,Math.max(1,cfgInt(cfg.base_run_xp,100)),cfgInt(cfg.level_price_points,DEFAULT_SEASON_PASS_LEVEL_PRICE_POINTS),cfgInt(cfg.elite_price_points,DEFAULT_SEASON_PASS_ELITE_PRICE.points),cfgInt(cfg.elite_price_treats,DEFAULT_SEASON_PASS_ELITE_PRICE.treats),cfgInt(cfg.elite_price_coffee,DEFAULT_SEASON_PASS_ELITE_PRICE.coffee),cfgInt(cfg.elite_plus_price_points,DEFAULT_SEASON_PASS_ELITE_PLUS_PRICE.points),cfgInt(cfg.elite_plus_price_treats,DEFAULT_SEASON_PASS_ELITE_PLUS_PRICE.treats),cfgInt(cfg.elite_plus_price_coffee,DEFAULT_SEASON_PASS_ELITE_PLUS_PRICE.coffee),String(cfg.elite_plus_benefits_json||JSON.stringify(defaultSeasonPassElitePlusBenefits())),now,actor),
     env.DB.prepare(`INSERT INTO season_pass_rewards(season_id,level,lane,reward_type,amount,item_id,title,image_url,enabled,updated_at,updated_by) SELECT ?,level,lane,reward_type,amount,item_id,title,image_url,enabled,?,? FROM season_pass_rewards WHERE season_id=?`).bind(seasonId,now,actor,sourceId),
     env.DB.prepare(`INSERT INTO season_pass_tasks(season_id,task_id,period,premium,metric,target,xp_reward,title,description,enabled,sort_order,updated_at,updated_by) SELECT ?,task_id,period,premium,metric,target,xp_reward,title,description,enabled,sort_order,?,? FROM season_pass_tasks WHERE season_id=?`).bind(seasonId,now,actor,sourceId)
   ]);

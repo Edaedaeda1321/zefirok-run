@@ -4728,16 +4728,16 @@ html&gt;body{padding:
 }
 #zefirok-maltipoo-runner .profile-music-list {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 7px;
 }
 #zefirok-maltipoo-runner .profile-music-option {
   position: relative;
   min-width: 0;
   display: grid;
-  grid-template-columns: 38px minmax(0, 1fr);
+  grid-template-columns: 42px minmax(0, 1fr) auto;
   align-items: center;
-  gap: 9px;
+  gap: 10px;
   padding: 10px;
   border: 1px solid rgba(188, 133, 151, .25);
   border-radius: 16px;
@@ -4795,10 +4795,9 @@ html&gt;body{padding:
   text-overflow: ellipsis;
 }
 #zefirok-maltipoo-runner .profile-music-state {
-  position: absolute;
-  top: 5px;
-  right: 6px;
-  padding: 2px 5px;
+  position: static;
+  justify-self: end;
+  padding: 4px 7px;
   border-radius: 999px;
   background: #f2e6eb;
   color: #8e6876;
@@ -4817,9 +4816,6 @@ html&gt;body{padding:
   }
   #zefirok-maltipoo-runner .profile-sound-toggle {
     width: 100%;
-  }
-  #zefirok-maltipoo-runner .profile-music-list {
-    grid-template-columns: 1fr;
   }
 }
 &lt;/style&gt;
@@ -8329,6 +8325,10 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         &lt;summary&gt;&lt;span&gt;Следы&lt;/span&gt;&lt;span class=&quot;case-collection-meta&quot; data-case-collection-count=&quot;trail&quot;&gt;0 / 0&lt;/span&gt;&lt;i aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;&lt;/summary&gt;
         &lt;div class=&quot;case-collection-panel&quot;&gt;&lt;div class=&quot;case-cosmetic-grid&quot; data-case-trails&gt;&lt;/div&gt;&lt;/div&gt;
       &lt;/details&gt;
+      &lt;div class=&quot;profile-music-library profile-music-library--collection&quot;&gt;
+        &lt;div class=&quot;profile-music-library-head&quot;&gt;&lt;strong&gt;Музыка&lt;/strong&gt;&lt;span&gt;Выбери мелодию из коллекции&lt;/span&gt;&lt;/div&gt;
+        &lt;div class=&quot;profile-music-list&quot; data-profile-music-list&gt;&lt;/div&gt;
+      &lt;/div&gt;
     &lt;/div&gt;
   &lt;/section&gt;
 
@@ -8362,10 +8362,6 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         &lt;span aria-hidden=&quot;true&quot; class=&quot;profile-sound-track&quot;&gt;&lt;i&gt;&lt;/i&gt;&lt;/span&gt;
         &lt;strong data-profile-music-label&gt;Включена&lt;/strong&gt;
       &lt;/button&gt;
-    &lt;/div&gt;
-    &lt;div class=&quot;profile-music-library&quot;&gt;
-      &lt;div class=&quot;profile-music-library-head&quot;&gt;&lt;strong&gt;Мелодии кафе&lt;/strong&gt;&lt;span&gt;Выбери музыку для игры&lt;/span&gt;&lt;/div&gt;
-      &lt;div class=&quot;profile-music-list&quot; data-profile-music-list&gt;&lt;/div&gt;
     &lt;/div&gt;
     &lt;div class=&quot;profile-actions profile-actions--level&quot;&gt;
       &lt;button class=&quot;profile-action profile-action--primary&quot; data-profile-tutorial type=&quot;button&quot;&gt;Пройти всё обучение&lt;/button&gt;

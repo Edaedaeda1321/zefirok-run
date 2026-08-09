@@ -3747,7 +3747,9 @@ img[src$="/xp.webp"]{
     el("premiumStatus").textContent = premiumTierLabel();
     animatePassProgress({level,within,required,percent});
     const runCount = serverPass?.summary ? Number(serverPass.summary.runs||0) : real.runs;
-    el("runsText").textContent = pass.premiumTier === "elite_plus" ? `${runCount} забегов · ×2 XP активно` : `${runCount} забегов`;
+    const elitePlusSettings = serverPass?.season?.tierSettings?.elitePlus || {};
+    const seasonXpBoostActive = pass.entitlements.includes("season_xp_x2") || (pass.premiumTier === "elite_plus" && elitePlusSettings.xpBoost !== false);
+    el("runsText").textContent = seasonXpBoostActive ? `${runCount} забегов · ×2 XP активно` : `${runCount} забегов`;
     el("claimedCount").textContent = `${pass.claimed.length} получено`;
     const seasonStatus = String(serverPass?.season?.status||"active");
     const banner = el("seasonStateBanner");
@@ -3784,6 +3786,10 @@ img[src$="/xp.webp"]{
       buyElite.setAttribute("aria-label",buyElite.textContent);
       buyElitePlus.setAttribute("aria-label",buyElitePlus.textContent);
     }
+    const eliteBenefitsNode=eliteCard.querySelector(".tier-benefits");
+    const elitePlusBenefitsNode=elitePlusCard.querySelector(".tier-benefits");
+    if(eliteBenefitsNode)eliteBenefitsNode.innerHTML=TIER_CONFIG.elite.benefits.map(item=>`<div class="tier-benefit"><img src="${item.image}" alt=""><span>${item.text}</span></div>`).join("");
+    if(elitePlusBenefitsNode)elitePlusBenefitsNode.innerHTML=elitePlusBenefitItems().map(item=>`<div class="tier-benefit"><img src="${item.image}" alt=""><span>${item.text}</span></div>`).join("");
     for (const [cardId,tierKey] of [["eliteCard","elite"],["elitePlusCard","elite_plus"]]) {
       const values = el(cardId)?.querySelectorAll(".tier-price b") || [];
       const price = serverPass?.season?.prices?.[tierKey] || {};
@@ -3841,6 +3847,22 @@ img[src$="/xp.webp"]{
     }
   };
 
+  function elitePlusBenefitItems(){
+    const cfg=serverPass?.season?.tierSettings?.elitePlus||{};
+    const items=[{image:REWARD_ASSETS.eliteBadge,text:"Все преимущества тарифа «Элитный»"}];
+    if(cfg.xpBoost!==false)items.push({image:REWARD_ASSETS.xpBoost,text:"×2 XP сезонного пропуска"});
+    const levels=Math.max(0,Number(cfg.bonusLevels)||0);if(levels>0)items.push({image:REWARD_ASSETS.levelBoost,text:`Сразу +${levels} ${levels===1?"уровень":"уровней"} пропуска`});
+    for(const cosmetic of (Array.isArray(cfg.cosmetics)?cfg.cosmetics:[])){
+      items.push({image:cosmetic.imageUrl||"/assets/season-pass/season.png?v=07939",text:cosmetic.title||"Эксклюзивная награда"});
+    }
+    if(cfg.case&&Number(cfg.case.count)>0)items.push({image:cfg.case.imageUrl||REWARD_ASSETS.goldCase,text:`${cfg.case.title||"Кейс"}${Number(cfg.case.count)>1?` ×${Number(cfg.case.count)}`:""} при открытии`});
+    return items;
+  }
+  function tierConfigFor(tier){
+    const config=TIER_CONFIG[tier];if(!config)return null;
+    return tier==="elite_plus"?{...config,benefits:elitePlusBenefitItems()}:config;
+  }
+
   function resetPurchaseDialogToTop() {
     const overlay = el("purchaseConfirm");
     const card = overlay?.querySelector(".purchase-confirm-card");
@@ -3864,7 +3886,7 @@ img[src$="/xp.webp"]{
 
   function openPurchaseConfirm(tier) {
     passImpactHaptic("medium");
-    const config = TIER_CONFIG[tier];
+    const config = tierConfigFor(tier);
     if (!config) return;
     const seasonStatus = String(serverPass?.season?.status || "active");
     const canPurchase = serverPass?.season?.capabilities?.canPurchase !== false && seasonStatus === "active";
