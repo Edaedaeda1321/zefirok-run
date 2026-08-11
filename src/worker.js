@@ -227,7 +227,14 @@ const SHOP_STOCK_CONSUMPTION_SCHEMA_SQL = `CREATE TABLE IF NOT EXISTS shop_stock
   category TEXT NOT NULL CHECK(category IN ('skins', 'prize')),
   product_id TEXT NOT NULL,
   telegram_id TEXT NOT NULL,
-  created_at INTEGER NOT NULL
+  created_at INTEGER NOT NULL,
+  committed INTEGER NOT NULL DEFAULT 1 CHECK(committed IN (0, 1)),
+  committed_at INTEGER NOT NULL DEFAULT 0
+)`;
+
+const SHOP_STOCK_COMMIT_GUARD_SCHEMA_SQL = `CREATE TABLE IF NOT EXISTS shop_stock_commit_guards (
+  guard_id TEXT PRIMARY KEY,
+  ok INTEGER NOT NULL CONSTRAINT shop_stock_commit_guard_ok CHECK(ok=1)
 )`;
 
 const SHOP_STOCK_CONSUMPTION_DECREMENT_TRIGGER_SQL = `CREATE TRIGGER IF NOT EXISTS trg_shop_stock_consumption_decrement
@@ -1093,7 +1100,7 @@ async function ensureRuntimeCompatibilitySchema(env) {
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
-    const technicalAssetPath = /^(?:\/(?:src|migrations|scripts|__MACOSX)(?:\/|$)|\/(?:wrangler\.jsonc|update\.sh|package(?:-lock)?\.json|\.assetsignore|UPDATE\.txt)$)/i;
+    const technicalAssetPath = /^(?:\/(?:src|migrations|scripts|__MACOSX)(?:\/|$)|\/(?:wrangler\.jsonc|update\.sh|package(?:-lock)?\.json|\.assetsignore|UPDATE\.txt)$|\/[^/]*\.before[^/]*\.html$)/i;
     if ((request.method === "GET" || request.method === "HEAD") && technicalAssetPath.test(url.pathname)) {
       return new Response("Not found", { status: 404, headers: { "Cache-Control": "no-store", "X-Robots-Tag": "noindex, nofollow" } });
     }
@@ -1139,7 +1146,7 @@ export default {
       if (ownerMediaMatch) {
         return await serveOwnerMediaAsset(env, ownerMediaMatch[1]);
       }
-      if (url.pathname.startsWith("/api/")) {
+      if (url.pathname.startsWith("/api/") && url.pathname !== "/api/runs/start" && url.pathname !== "/api/runs/checkpoint") {
         await ensureRuntimeCompatibilitySchema(env);
       }
       if (url.pathname === "/staff-qr.html" && request.method === "GET") {
@@ -2045,10 +2052,7 @@ async function processGiftInboxRewardQueue(env, telegramId, giftId) {
     ).bind(token, claimAt + SERVER_NOTIFICATION_LEASE_SECONDS, claimAt, row.id, String(telegramId), sourcePattern, claimAt, claimAt).run();
     if (Number(lock.meta?.changes || 0) < 1) continue;
     try {
-      await deliverQueuedReward(env, row);
-      const finishedAt = Math.floor(Date.now() / 1000);
-      await env.DB.prepare(`UPDATE reward_delivery_queue SET status='delivered',attempts=attempts+1,last_error='',delivered_at=?,updated_at=?,lease_token='',lease_until=0 WHERE id=? AND lease_token=?`)
-        .bind(finishedAt, finishedAt, row.id, token).run();
+      await deliverQueuedReward(env, row, token);
       delivered += 1;
     } catch (error) {
       const finishedAt = Math.floor(Date.now() / 1000);
@@ -2558,9 +2562,41 @@ async function ensureShopStockSchema(env) {
   await env.DB.batch([
     env.DB.prepare(SHOP_STOCK_LIMIT_SCHEMA_SQL),
     env.DB.prepare(SHOP_STOCK_CONSUMPTION_SCHEMA_SQL),
+    env.DB.prepare(SHOP_STOCK_COMMIT_GUARD_SCHEMA_SQL),
     env.DB.prepare(SHOP_STOCK_CONSUMPTION_DECREMENT_TRIGGER_SQL),
     env.DB.prepare(SHOP_STOCK_CONSUMPTION_RELEASE_TRIGGER_SQL)
   ]);
+  // Existing production rows represent already-consumed stock. They are added
+  // with DEFAULT 1 so a deploy can never make historical purchases releasable.
+  // New reservations explicitly insert committed=0 below and are committed in
+  // the same transaction as the purchase/reward they protect.
+  await addRuntimeColumnIfMissing(env, 'shop_stock_consumptions', 'committed', 'INTEGER NOT NULL DEFAULT 1 CHECK(committed IN (0, 1))');
+  await addRuntimeColumnIfMissing(env, 'shop_stock_consumptions', 'committed_at', 'INTEGER NOT NULL DEFAULT 0');
+}
+
+function shopStockCommitGuardStatement(env, consumptionId, guardId) {
+  return env.DB.prepare(
+    `INSERT INTO shop_stock_commit_guards(guard_id,ok)
+     VALUES(?,COALESCE((SELECT CASE WHEN committed=0 THEN 1 ELSE 0 END
+                         FROM shop_stock_consumptions WHERE consumption_id=? LIMIT 1),0))`
+  ).bind(String(guardId), String(consumptionId));
+}
+
+function shopStockCommitStatement(env, consumptionId, now, proofSql = "", proofBinds = []) {
+  const proof = String(proofSql || "").trim();
+  const suffix = proof ? ` AND EXISTS(${proof})` : "";
+  return env.DB.prepare(
+    `UPDATE shop_stock_consumptions SET committed=1,committed_at=?
+     WHERE consumption_id=? AND committed=0${suffix}`
+  ).bind(Math.max(0, Math.floor(Number(now) || 0)), String(consumptionId), ...(Array.isArray(proofBinds) ? proofBinds : []));
+}
+
+function shopStockCommitGuardCleanupStatement(env, guardId) {
+  return env.DB.prepare(`DELETE FROM shop_stock_commit_guards WHERE guard_id=?`).bind(String(guardId));
+}
+
+function isShopStockCommitGuardError(error) {
+  return String(error?.message || error).includes('shop_stock_commit_guard_ok');
 }
 
 async function readShopStockRows(env) {
@@ -2606,7 +2642,7 @@ async function consumeShopStock(env, { category, productId, consumptionId, teleg
   if (!normalizedConsumptionId) throw new ApiError(400, "Некорректный идентификатор покупки.");
 
   const existing = await env.DB.prepare(
-    `SELECT scope_key,category,product_id,created_at FROM shop_stock_consumptions WHERE consumption_id = ? LIMIT 1`
+    `SELECT scope_key,category,product_id,created_at,committed FROM shop_stock_consumptions WHERE consumption_id = ? LIMIT 1`
   ).bind(normalizedConsumptionId).first();
   if (existing) {
     if (String(existing.category || '') !== normalizedCategory || String(existing.product_id || '') !== normalizedProduct) {
@@ -2615,6 +2651,7 @@ async function consumeShopStock(env, { category, productId, consumptionId, teleg
     const rows = await readShopStockRows(env);
     return {
       repeated: true,
+      reservationCommitted: Number(existing.committed || 0) === 1,
       consumptionCreatedAt: safeAdminNumber(existing.created_at),
       ...shopStockAvailabilityFromRows(rows, normalizedCategory, normalizedProduct)
     };
@@ -2633,8 +2670,8 @@ async function consumeShopStock(env, { category, productId, consumptionId, teleg
     // insert back too. INSERT OR IGNORE retries do not fire the AFTER trigger.
     inserted = await env.DB.prepare(
       `INSERT OR IGNORE INTO shop_stock_consumptions (
-         consumption_id, scope_key, category, product_id, telegram_id, created_at
-       ) VALUES (?, ?, ?, ?, ?, ?)`
+         consumption_id, scope_key, category, product_id, telegram_id, created_at, committed, committed_at
+       ) VALUES (?, ?, ?, ?, ?, ?, 0, 0)`
     ).bind(normalizedConsumptionId, availability.scope, normalizedCategory, normalizedProduct, String(telegramId || ""), now).run();
   } catch (error) {
     const text = String(error?.message || error);
@@ -2643,11 +2680,12 @@ async function consumeShopStock(env, { category, productId, consumptionId, teleg
   }
   if (safeAdminNumber(inserted?.meta?.changes) < 1) {
     const raced = await env.DB.prepare(
-      `SELECT created_at FROM shop_stock_consumptions WHERE consumption_id = ? LIMIT 1`
+      `SELECT created_at,committed FROM shop_stock_consumptions WHERE consumption_id = ? LIMIT 1`
     ).bind(normalizedConsumptionId).first();
     const freshRows = await readShopStockRows(env);
     return {
       repeated: true,
+      reservationCommitted: Number(raced?.committed || 0) === 1,
       consumptionCreatedAt: safeAdminNumber(raced?.created_at),
       ...shopStockAvailabilityFromRows(freshRows, normalizedCategory, normalizedProduct)
     };
@@ -2664,6 +2702,7 @@ async function consumeShopStock(env, { category, productId, consumptionId, teleg
     limit: safeAdminNumber(updated?.configured_limit),
     scope: availability.scope,
     repeated: false,
+    reservationCommitted: false,
     consumptionCreatedAt: now
   };
 }
@@ -2675,7 +2714,7 @@ async function releaseShopStock(env, consumptionId) {
   // AFTER DELETE trigger restores exactly one unit only when a consumption row
   // was actually removed, so retries cannot double-return stock.
   const removed = await env.DB.prepare(
-    `DELETE FROM shop_stock_consumptions WHERE consumption_id = ?`
+    `DELETE FROM shop_stock_consumptions WHERE consumption_id = ? AND committed=0`
   ).bind(normalizedConsumptionId).run();
   if (safeAdminNumber(removed?.meta?.changes) > 0) invalidateGamePublicConfigCache();
 }
@@ -3119,24 +3158,42 @@ async function attestAuthoritativeRunProgress(env, session, rawMetrics) {
   throw new ApiError(409, 'Контрольная точка забега устарела. Повторите отправку.');
 }
 
+function isAuthoritativeRunSchemaMissingError(error) {
+  const text = String(error?.message || error || '').toLowerCase();
+  return (
+    (text.includes('no such table') && (text.includes('game_run_sessions') || text.includes('game_run_live_proofs'))) ||
+    (text.includes('no such column') && (text.includes('anchor_duration_ms') || text.includes('anchor_server_at_ms')))
+  );
+}
+
 async function checkpointAuthoritativeRunSession(request, env) {
   try {
     requireDatabase(env);
     requireBotToken(env);
-    await ensureAuthoritativeEconomySchema(env);
     const body = await readJson(request);
     const auth = await validateTelegramInitData(String(body.initData || ''), env);
     const telegramId = String(auth.user.id);
     const runId = String(body.runId || '').trim();
     if (!/^[A-Za-z0-9_-]{12,96}$/.test(runId)) throw new ApiError(400, 'Некорректный идентификатор забега.');
-    const session = await env.DB.prepare(`SELECT * FROM game_run_sessions WHERE run_id=? LIMIT 1`).bind(runId).first();
-    if (!session || String(session.telegram_id || '') !== telegramId) throw new ApiError(409, 'Защищённая сессия забега не найдена.');
-    if (String(session.status || '') !== 'started') throw new ApiError(409, 'Эта сессия забега уже завершена или заменена.');
-    const checkpoint = await attestAuthoritativeRunProgress(env, session, body);
-    return jsonResponse({ ok: true, checkpoint: {
-      runId, seq: checkpoint.proofSeq, durationMs: checkpoint.durationMs, score: checkpoint.score,
-      runTreats: checkpoint.runTreats, runCoffee: checkpoint.runCoffee, serverTime: checkpoint.attestedAtMs
-    }});
+
+    const execute = async () => {
+      const session = await env.DB.prepare(`SELECT * FROM game_run_sessions WHERE run_id=? LIMIT 1`).bind(runId).first();
+      if (!session || String(session.telegram_id || '') !== telegramId) throw new ApiError(409, 'Защищённая сессия забега не найдена.');
+      if (String(session.status || '') !== 'started') throw new ApiError(409, 'Эта сессия забега уже завершена или заменена.');
+      const checkpoint = await attestAuthoritativeRunProgress(env, session, body);
+      return jsonResponse({ ok: true, checkpoint: {
+        runId, seq: checkpoint.proofSeq, durationMs: checkpoint.durationMs, score: checkpoint.score,
+        runTreats: checkpoint.runTreats, runCoffee: checkpoint.runCoffee, serverTime: checkpoint.attestedAtMs
+      }});
+    };
+
+    try {
+      return await execute();
+    } catch (error) {
+      if (!isAuthoritativeRunSchemaMissingError(error)) throw error;
+      await ensureAuthoritativeEconomySchema(env);
+      return await execute();
+    }
   } catch (error) {
     if (error instanceof ApiError) return jsonResponse({ ok:false, error:error.message }, error.status);
     console.error('checkpointAuthoritativeRunSession failed', error);
@@ -3145,48 +3202,83 @@ async function checkpointAuthoritativeRunSession(request, env) {
 }
 
 async function startAuthoritativeRunSession(request, env) {
+  const requestReceivedAtMs = Date.now();
   try {
     requireDatabase(env);
     requireBotToken(env);
-    await ensureAuthoritativeEconomySchema(env);
     const body = await readJson(request);
-    const auth = await validateTelegramInitData(String(body.initData || ''), env);
+    // Starting a run is deliberately a minimal hot path. The Telegram signature
+    // and auth_date are still verified cryptographically here, while the D1-backed
+    // player-control check remains mandatory on checkpoints and settlement. This
+    // avoids an extra sequential D1 read before the run can begin without letting
+    // a blocked player earn anything.
+    const auth = await validateTelegramInitDataSignature(String(body.initData || ''), env);
     const telegramId = String(auth.user.id);
     const runId = String(body.runId || '').trim();
     if (!/^[A-Za-z0-9_-]{12,96}$/.test(runId)) throw new ApiError(400, 'Некорректный идентификатор забега.');
-    await ensureCasePlayerState(env, telegramId, {});
-    const existing = await env.DB.prepare(`SELECT * FROM game_run_sessions WHERE run_id=? LIMIT 1`).bind(runId).first();
-    if (existing) {
-      if (String(existing.telegram_id || '') !== telegramId) throw new ApiError(409, 'Этот идентификатор забега уже используется.');
-      if (String(existing.status || '') !== 'started') throw new ApiError(409, 'Эта сессия забега уже завершена или заменена новым забегом.');
-      await ensureAuthoritativeRunProof(env, existing);
-      return jsonResponse({ ok:true, runSession:{ runId, startedAt:Number(existing.started_at_ms||0), expiresAt:Number(existing.expires_at_ms||0), status:'started' }, repeated:true });
-    }
-    const nowMs = Date.now();
-    const now = Math.floor(nowMs / 1000);
-    const expiresAtMs = nowMs + AUTHORITATIVE_RUN_SESSION_MAX_MS;
-    try {
-      await env.DB.batch([
-        env.DB.prepare(`UPDATE game_run_sessions SET status='superseded',updated_at=? WHERE telegram_id=? AND status='started' AND run_id<>?`).bind(now, telegramId, runId),
+
+    const execute = async () => {
+      const nowMs = requestReceivedAtMs;
+      const now = Math.floor(nowMs / 1000);
+      const expiresAtMs = nowMs + AUTHORITATIVE_RUN_SESSION_MAX_MS;
+      // One D1 round trip only. The batch is atomic: it conditionally retires the
+      // previous active session, creates/reuses this run, creates its proof row,
+      // and returns the authoritative session state in the same transaction.
+      const result = await env.DB.batch([
         env.DB.prepare(
-          `INSERT INTO game_run_sessions(run_id,telegram_id,started_at_ms,expires_at_ms,status,created_at,updated_at)
-           VALUES(?,?,?,?,'started',?,?)`
+          `UPDATE game_run_sessions SET status='superseded',updated_at=?
+           WHERE telegram_id=? AND status='started' AND run_id<>?
+             AND NOT EXISTS(
+               SELECT 1 FROM game_run_sessions conflict
+               WHERE conflict.run_id=? AND (
+                 conflict.telegram_id<>? OR conflict.status<>'started'
+               )
+             )`
+        ).bind(now, telegramId, runId, runId, telegramId),
+        env.DB.prepare(
+          `INSERT OR IGNORE INTO game_run_sessions(
+             run_id,telegram_id,started_at_ms,expires_at_ms,status,created_at,updated_at
+           ) VALUES(?,?,?,?,'started',?,?)`
         ).bind(runId, telegramId, nowMs, expiresAtMs, now, now),
         env.DB.prepare(
-          `INSERT INTO game_run_live_proofs(
-            run_id,telegram_id,seq,duration_ms,score,run_treats,run_coffee,last_server_at_ms,anchor_duration_ms,anchor_server_at_ms,created_at,updated_at
-          ) VALUES(?,?,0,0,0,0,0,?,0,?,?,?)`
-        ).bind(runId, telegramId, nowMs, nowMs, now, now)
+          `INSERT OR IGNORE INTO game_run_live_proofs(
+             run_id,telegram_id,seq,duration_ms,score,run_treats,run_coffee,last_server_at_ms,
+             anchor_duration_ms,anchor_server_at_ms,created_at,updated_at
+           )
+           SELECT run_id,telegram_id,0,0,0,0,0,started_at_ms,0,started_at_ms,created_at,updated_at
+           FROM game_run_sessions
+           WHERE run_id=? AND telegram_id=? AND status='started'`
+        ).bind(runId, telegramId),
+        env.DB.prepare(
+          `SELECT run_id,telegram_id,started_at_ms,expires_at_ms,status
+           FROM game_run_sessions WHERE run_id=? LIMIT 1`
+        ).bind(runId)
       ]);
+
+      const session = result?.[3]?.results?.[0] || null;
+      if (!session) throw new ApiError(409, 'Защищённая сессия забега не создана. Начните новый забег.');
+      if (String(session.telegram_id || '') !== telegramId) throw new ApiError(409, 'Этот идентификатор забега уже используется.');
+      if (String(session.status || '') !== 'started') throw new ApiError(409, 'Эта сессия забега уже завершена или заменена новым забегом.');
+      const repeated = safeAdminNumber(result?.[1]?.meta?.changes) < 1;
+      return jsonResponse({
+        ok:true,
+        runSession:{
+          runId,
+          startedAt:Number(session.started_at_ms || nowMs),
+          expiresAt:Number(session.expires_at_ms || expiresAtMs),
+          status:'started'
+        },
+        repeated
+      });
+    };
+
+    try {
+      return await execute();
     } catch (error) {
-      const raced = await env.DB.prepare(`SELECT * FROM game_run_sessions WHERE run_id=? LIMIT 1`).bind(runId).first();
-      if (raced && String(raced.telegram_id || '') === telegramId && String(raced.status || '') === 'started') {
-        await ensureAuthoritativeRunProof(env, raced);
-        return jsonResponse({ ok:true, runSession:{ runId, startedAt:Number(raced.started_at_ms||0), expiresAt:Number(raced.expires_at_ms||0), status:'started' }, repeated:true });
-      }
-      throw error;
+      if (!isAuthoritativeRunSchemaMissingError(error)) throw error;
+      await ensureAuthoritativeEconomySchema(env);
+      return await execute();
     }
-    return jsonResponse({ ok:true, runSession:{ runId, startedAt:nowMs, expiresAt:expiresAtMs, status:'started' } });
   } catch (error) {
     if (error instanceof ApiError) return jsonResponse({ ok:false, error:error.message }, error.status);
     console.error('startAuthoritativeRunSession failed', error);
@@ -3340,35 +3432,46 @@ async function purchaseSkinWithStock(request, env) {
       }
 
       const marker = `skin-purchase:${skinId}:${caseGrantId("txn")}`;
-      const results = await env.DB.batch([
-        env.DB.prepare(
-          `UPDATE admin_profile_state SET
-             wallet=wallet-?,treats=treats-?,coffee=coffee-?,revision=revision+1,updated_at=?,updated_by=?
-           WHERE telegram_id=? AND wallet>=? AND treats>=? AND coffee>=?
-             AND NOT EXISTS(
-               SELECT 1
-                 FROM case_player_state c,
-                      json_each(CASE WHEN json_valid(c.owned_skins_json) THEN c.owned_skins_json ELSE '[]' END) j
-                WHERE c.telegram_id=? AND lower(CAST(j.value AS TEXT))=?
-             )`
-        ).bind(price.points,price.treats,price.coffee,now,marker,telegramId,price.points,price.treats,price.coffee,telegramId,skinId),
-        env.DB.prepare(
-          `UPDATE case_player_state SET
-             owned_skins_json=CASE
-               WHEN EXISTS(
-                 SELECT 1 FROM json_each(CASE WHEN json_valid(owned_skins_json) THEN owned_skins_json ELSE '[]' END)
-                 WHERE lower(CAST(value AS TEXT))=?
-               ) THEN CASE WHEN json_valid(owned_skins_json) THEN owned_skins_json ELSE '[]' END
-               ELSE json_insert(CASE WHEN json_valid(owned_skins_json) THEN owned_skins_json ELSE '[]' END,'$[#]',?)
-             END,
-             active_skin_id=?,revision=revision+1,updated_at=?
-           WHERE telegram_id=?
-             AND EXISTS(SELECT 1 FROM admin_profile_state WHERE telegram_id=? AND updated_by=?)`
-        ).bind(skinId,skinId,skinId,now,telegramId,telegramId,marker)
-      ]);
+      const purchaseStatements=[];
+      let stockGuardId="";
+      if(stock?.limited){
+        stockGuardId=`stock-skin:${telegramId}:${skinId}`.slice(0,180);
+        purchaseStatements.push(shopStockCommitGuardStatement(env,consumptionId,stockGuardId));
+      }
+      const chargeIndex=purchaseStatements.length;
+      purchaseStatements.push(env.DB.prepare(
+        `UPDATE admin_profile_state SET
+           wallet=wallet-?,treats=treats-?,coffee=coffee-?,revision=revision+1,updated_at=?,updated_by=?
+         WHERE telegram_id=? AND wallet>=? AND treats>=? AND coffee>=?
+           AND NOT EXISTS(
+             SELECT 1
+               FROM case_player_state c,
+                    json_each(CASE WHEN json_valid(c.owned_skins_json) THEN c.owned_skins_json ELSE '[]' END) j
+              WHERE c.telegram_id=? AND lower(CAST(j.value AS TEXT))=?
+           )`
+      ).bind(price.points,price.treats,price.coffee,now,marker,telegramId,price.points,price.treats,price.coffee,telegramId,skinId));
+      const grantIndex=purchaseStatements.length;
+      purchaseStatements.push(env.DB.prepare(
+        `UPDATE case_player_state SET
+           owned_skins_json=CASE
+             WHEN EXISTS(
+               SELECT 1 FROM json_each(CASE WHEN json_valid(owned_skins_json) THEN owned_skins_json ELSE '[]' END)
+               WHERE lower(CAST(value AS TEXT))=?
+             ) THEN CASE WHEN json_valid(owned_skins_json) THEN owned_skins_json ELSE '[]' END
+             ELSE json_insert(CASE WHEN json_valid(owned_skins_json) THEN owned_skins_json ELSE '[]' END,'$[#]',?)
+           END,
+           active_skin_id=?,revision=revision+1,updated_at=?
+         WHERE telegram_id=?
+           AND EXISTS(SELECT 1 FROM admin_profile_state WHERE telegram_id=? AND updated_by=?)`
+      ).bind(skinId,skinId,skinId,now,telegramId,telegramId,marker));
+      if(stock?.limited){
+        purchaseStatements.push(shopStockCommitStatement(env,consumptionId,now,`SELECT 1 FROM case_player_state c,json_each(CASE WHEN json_valid(c.owned_skins_json) THEN c.owned_skins_json ELSE '[]' END) j WHERE c.telegram_id=? AND lower(CAST(j.value AS TEXT))=?`,[telegramId,skinId]));
+        purchaseStatements.push(shopStockCommitGuardCleanupStatement(env,stockGuardId));
+      }
+      const results = await env.DB.batch(purchaseStatements);
 
-      const charged = Number(results?.[0]?.meta?.changes || 0) === 1;
-      const granted = Number(results?.[1]?.meta?.changes || 0) === 1;
+      const charged = Number(results?.[chargeIndex]?.meta?.changes || 0) === 1;
+      const granted = Number(results?.[grantIndex]?.meta?.changes || 0) === 1;
       if (!charged || !granted) {
         const freshState = await ensureCasePlayerState(env, telegramId, {});
         if (freshState.state.ownedSkins.includes(skinId)) {
@@ -3752,17 +3855,28 @@ async function createReward(request, env) {
       for(let attempt=0;attempt<8;attempt+=1){
         const generated=await generateUniqueRewardCode(env,product);
         try {
-          const results=await env.DB.batch([
-            env.DB.prepare(
-              `UPDATE admin_profile_state SET wallet=wallet-?,treats=treats-?,coffee=coffee-?,profile_xp=MIN(999999999,profile_xp+?),revision=revision+1,updated_at=?,updated_by=?
-               WHERE telegram_id=? AND wallet>=? AND treats>=? AND coffee>=?`
-            ).bind(price.points,price.treats,price.coffee,profileXpAwarded,now,marker,ownerId,price.points,price.treats,price.coffee),
-            env.DB.prepare(
-              `INSERT INTO reward_codes(code,code_compact,request_id,product_id,product_name,owner_telegram_id,owner_name,created_at,expires_at,status)
-               SELECT ?,?,?,?,?,?,?,?,?,'active' WHERE EXISTS(SELECT 1 FROM admin_profile_state WHERE telegram_id=? AND updated_by=?)`
-            ).bind(generated.code,generated.compact,requestId,product.id,product.title,ownerId,ownerName,now,expiresAt,ownerId,marker)
-          ]);
-          if(Number(results?.[0]?.meta?.changes||0)!==1 || Number(results?.[1]?.meta?.changes||0)!==1)throw new ApiError(409,"Баланс изменился. Обновите магазин и повторите покупку.");
+          const purchaseStatements=[];
+          let stockGuardId="";
+          if(stock?.limited){
+            stockGuardId=`stock-reward:${ownerId}:${requestId}`.slice(0,180);
+            purchaseStatements.push(shopStockCommitGuardStatement(env,stockConsumptionId,stockGuardId));
+          }
+          const chargeIndex=purchaseStatements.length;
+          purchaseStatements.push(env.DB.prepare(
+            `UPDATE admin_profile_state SET wallet=wallet-?,treats=treats-?,coffee=coffee-?,profile_xp=MIN(999999999,profile_xp+?),revision=revision+1,updated_at=?,updated_by=?
+             WHERE telegram_id=? AND wallet>=? AND treats>=? AND coffee>=?`
+          ).bind(price.points,price.treats,price.coffee,profileXpAwarded,now,marker,ownerId,price.points,price.treats,price.coffee));
+          const codeIndex=purchaseStatements.length;
+          purchaseStatements.push(env.DB.prepare(
+            `INSERT INTO reward_codes(code,code_compact,request_id,product_id,product_name,owner_telegram_id,owner_name,created_at,expires_at,status)
+             SELECT ?,?,?,?,?,?,?,?,?,'active' WHERE EXISTS(SELECT 1 FROM admin_profile_state WHERE telegram_id=? AND updated_by=?)`
+          ).bind(generated.code,generated.compact,requestId,product.id,product.title,ownerId,ownerName,now,expiresAt,ownerId,marker));
+          if(stock?.limited){
+            purchaseStatements.push(shopStockCommitStatement(env,stockConsumptionId,now,`SELECT 1 FROM reward_codes WHERE request_id=? AND owner_telegram_id=?`,[requestId,ownerId]));
+            purchaseStatements.push(shopStockCommitGuardCleanupStatement(env,stockGuardId));
+          }
+          const results=await env.DB.batch(purchaseStatements);
+          if(Number(results?.[chargeIndex]?.meta?.changes||0)!==1 || Number(results?.[codeIndex]?.meta?.changes||0)!==1)throw new ApiError(409,"Баланс изменился. Обновите магазин и повторите покупку.");
           insertedCode=generated.code;
           break;
         }catch(error){
@@ -3770,6 +3884,13 @@ async function createReward(request, env) {
           if(errorText.includes('REWARD_DAILY_LIMIT')){
             const freshLimit=await getRewardLimitStatus(env,ownerId,now);
             throw new ApiError(429,`Лимит наград: не больше ${freshLimit.limit} за 24 часа.`,freshLimit);
+          }
+          if(isShopStockCommitGuardError(error)){
+            repeatedRow=await env.DB.prepare(
+              `SELECT code,product_id,product_name,created_at,expires_at,status FROM reward_codes WHERE request_id=? AND owner_telegram_id=? LIMIT 1`
+            ).bind(requestId,ownerId).first();
+            if(repeatedRow){insertedCode=String(repeatedRow.code||"");break;}
+            throw new ApiError(409,"Покупка уже обрабатывается. Обновите магазин и повторите запрос.");
           }
           if(error instanceof ApiError)throw error;
           if(errorText.toLowerCase().includes("unique")){
@@ -4734,7 +4855,8 @@ function caseStateUpdateStatement(env, telegramId, caseState, now) {
   return env.DB.prepare(
     `UPDATE case_player_state SET
       boosters_points = ?, boosters_treats = ?, boosters_coffee = ?,
-      active_booster_type = ?, active_booster_runs = ?,
+      active_booster_type = ?,
+      active_booster_runs = CASE WHEN revision = ? THEN ? ELSE -1 END,
       owned_avatars_json = ?, active_avatar_id = ?,
       owned_frames_json = ?, active_frame_id = ?,
       owned_trails_json = ?, active_trail_id = ?,
@@ -4757,6 +4879,7 @@ function caseStateUpdateStatement(env, telegramId, caseState, now) {
     safeAdminNumber(caseState.boosters.treats),
     safeAdminNumber(caseState.boosters.coffee),
     String(caseState.activeBooster.type || ""),
+    safeAdminNumber(caseState.revision),
     safeAdminNumber(caseState.activeBooster.runsLeft),
     JSON.stringify(caseState.ownedAvatars),
     String(caseState.activeAvatarId || ""),
@@ -5222,22 +5345,31 @@ async function prepareCasePhysicalRewards(env, { rolled, telegramId, ownerName, 
     reward.status = "active";
     reward.rarity = "legendary";
 
-    statements.push(env.DB.prepare(
-      `INSERT INTO reward_codes (
-         code, code_compact, request_id, product_id, product_name,
-         owner_telegram_id, owner_name, created_at, expires_at, status
-       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'active')`
-    ).bind(
-      unique.code,
-      unique.compact,
-      requestId,
-      selectedProduct.id,
-      selectedProduct.title,
-      String(telegramId),
-      String(ownerName || ""),
-      now,
-      expiresAt
-    ));
+    if (selectedStock?.limited) {
+      const stockGuardId = `stock-case-reward:${consumptionId}`.slice(0,180);
+      statements.push(shopStockCommitGuardStatement(env,consumptionId,stockGuardId));
+      statements.push(env.DB.prepare(
+        `INSERT INTO reward_codes (
+           code, code_compact, request_id, product_id, product_name,
+           owner_telegram_id, owner_name, created_at, expires_at, status
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'active')`
+      ).bind(
+        unique.code, unique.compact, requestId, selectedProduct.id, selectedProduct.title,
+        String(telegramId), String(ownerName || ""), now, expiresAt
+      ));
+      statements.push(shopStockCommitStatement(env,consumptionId,now,`SELECT 1 FROM reward_codes WHERE request_id=? AND owner_telegram_id=?`,[requestId,String(telegramId)]));
+      statements.push(shopStockCommitGuardCleanupStatement(env,stockGuardId));
+    } else {
+      statements.push(env.DB.prepare(
+        `INSERT INTO reward_codes (
+           code, code_compact, request_id, product_id, product_name,
+           owner_telegram_id, owner_name, created_at, expires_at, status
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'active')`
+      ).bind(
+        unique.code, unique.compact, requestId, selectedProduct.id, selectedProduct.title,
+        String(telegramId), String(ownerName || ""), now, expiresAt
+      ));
+    }
 
       if (selectedStock?.limited && !selectedStock?.repeated) {
         stockConsumptionIds.push(consumptionId);
@@ -5401,21 +5533,40 @@ async function purchaseCaseFromShop(request, env) {
     const now=Math.floor(Date.now()/1000);
     const marker=`case-purchase:${requestId}`;
     try {
-      const results=await env.DB.batch([
-        env.DB.prepare(
-          `UPDATE admin_profile_state SET wallet=wallet-?,treats=treats-?,coffee=coffee-?,revision=revision+1,updated_at=?,updated_by=?
-           WHERE telegram_id=? AND wallet>=? AND treats>=? AND coffee>=?`
-        ).bind(product.points,product.treats,product.coffee,now,marker,telegramId,product.points,product.treats,product.coffee),
-        env.DB.prepare(
-          `INSERT OR IGNORE INTO granted_cases(id,telegram_id,case_type,status,granted_by,reason,created_at)
-           SELECT ?,?,?,'pending','shop',?,? WHERE EXISTS(SELECT 1 FROM admin_profile_state WHERE telegram_id=? AND updated_by=?)`
-        ).bind(grantId,telegramId,caseType,`Покупка в магазине: ${product.title}`,now,telegramId,marker)
-      ]);
-      if(Number(results?.[0]?.meta?.changes||0)!==1 || Number(results?.[1]?.meta?.changes||0)!==1) {
+      const purchaseStatements=[];
+      let stockGuardId="";
+      if(stock?.limited){
+        stockGuardId=`stock-case:${telegramId}:${requestId}`.slice(0,180);
+        purchaseStatements.push(shopStockCommitGuardStatement(env,stockConsumptionId,stockGuardId));
+      }
+      const chargeIndex=purchaseStatements.length;
+      purchaseStatements.push(env.DB.prepare(
+        `UPDATE admin_profile_state SET wallet=wallet-?,treats=treats-?,coffee=coffee-?,revision=revision+1,updated_at=?,updated_by=?
+         WHERE telegram_id=? AND wallet>=? AND treats>=? AND coffee>=?
+           AND NOT EXISTS(SELECT 1 FROM granted_cases WHERE id=? AND telegram_id=?)`
+      ).bind(product.points,product.treats,product.coffee,now,marker,telegramId,product.points,product.treats,product.coffee,grantId,telegramId));
+      const grantIndex=purchaseStatements.length;
+      purchaseStatements.push(env.DB.prepare(
+        `INSERT OR IGNORE INTO granted_cases(id,telegram_id,case_type,status,granted_by,reason,created_at)
+         SELECT ?,?,?,'pending','shop',?,? WHERE EXISTS(SELECT 1 FROM admin_profile_state WHERE telegram_id=? AND updated_by=?)`
+      ).bind(grantId,telegramId,caseType,`Покупка в магазине: ${product.title}`,now,telegramId,marker));
+      if(stock?.limited){
+        purchaseStatements.push(shopStockCommitStatement(env,stockConsumptionId,now,`SELECT 1 FROM granted_cases WHERE id=? AND telegram_id=?`,[grantId,telegramId]));
+        purchaseStatements.push(shopStockCommitGuardCleanupStatement(env,stockGuardId));
+      }
+      const results=await env.DB.batch(purchaseStatements);
+      const charged=Number(results?.[chargeIndex]?.meta?.changes||0)===1;
+      const granted=Number(results?.[grantIndex]?.meta?.changes||0)===1;
+      if(!charged || !granted) {
         const repeated=await env.DB.prepare(`SELECT id FROM granted_cases WHERE id=? AND telegram_id=? LIMIT 1`).bind(grantId,telegramId).first();
         if(!repeated)throw new ApiError(409,"Баланс изменился. Обновите магазин и повторите покупку.");
       }
     } catch(error) {
+      const repeated=await env.DB.prepare(`SELECT id FROM granted_cases WHERE id=? AND telegram_id=? LIMIT 1`).bind(grantId,telegramId).first().catch(()=>null);
+      if(repeated && isShopStockCommitGuardError(error)){
+        ensured=await ensureCasePlayerState(env,telegramId,{});
+        return jsonResponse(await buildCasePayload(env,telegramId,{}, { repeated:true,purchase:{productId:product.id,caseType,title:product.title,stock} }, { ensured }));
+      }
       if(!stock.repeated)await releaseShopStock(env,stockConsumptionId);
       throw error;
     }
@@ -16206,6 +16357,9 @@ async function ensureSafeControlCenterSchema(env) {
           delivered_at INTEGER NOT NULL DEFAULT 0, claimed_at INTEGER NOT NULL DEFAULT 0, notify_after INTEGER NOT NULL DEFAULT 0,
           report_chat_id TEXT NOT NULL DEFAULT '', lease_token TEXT NOT NULL DEFAULT '', lease_until INTEGER NOT NULL DEFAULT 0,
           UNIQUE(source_type, source_id, telegram_id, reward_kind, reward_id))`),
+        env.DB.prepare(`CREATE TABLE IF NOT EXISTS reward_delivery_effects (
+          queue_id INTEGER PRIMARY KEY, telegram_id TEXT NOT NULL, reward_kind TEXT NOT NULL,
+          reward_id TEXT NOT NULL DEFAULT '', apply_token TEXT NOT NULL, applied_at INTEGER NOT NULL)`),
         env.DB.prepare(`CREATE TABLE IF NOT EXISTS compensation_templates (
           template_id TEXT PRIMARY KEY, title TEXT NOT NULL, description TEXT NOT NULL DEFAULT '',
           rewards_json TEXT NOT NULL DEFAULT '[]', enabled INTEGER NOT NULL DEFAULT 1,
@@ -16846,40 +17000,115 @@ async function finishSafeEvent(row, env, cancelled = false) {
   await env.DB.prepare(`UPDATE liveops_events SET end_notified=1,updated_at=? WHERE event_id=?`).bind(now,row.event_id).run();
 }
 
-async function deliverQueuedReward(env, row) {
+async function deliverQueuedReward(env, row, leaseToken) {
   const amount = Math.max(1, Math.floor(Number(row.amount || 1)));
   const telegramId = String(row.telegram_id);
+  const queueId = Math.max(1, Math.floor(Number(row.id || 0)));
+  const token = String(leaseToken || "");
+  if (!queueId || !token) throw new Error("Некорректная блокировка очереди наград");
+  const now = Math.floor(Date.now() / 1000);
+
   // A promo, automation or campaign may reach a verified Telegram user before
-  // that user has opened the game for the first time. Queue delivery must not
-  // depend on a pre-existing profile row: create the authoritative zero-state
-  // profile once, then deliver the queued reward normally.
-  await ensureAuthoritativeProfileRow(env, telegramId, `queue-profile:${row.id}`);
+  // the first game launch. Creating zero-state rows is idempotent and happens
+  // before the atomic reward transaction.
+  await ensureAuthoritativeProfileRow(env, telegramId, `queue-profile:${queueId}`);
+
   let cosmeticDuplicate = false;
-  if (["points", "zefir", "coffee"].includes(row.reward_kind)) {
-    const field = ({ points: "pending_wallet", zefir: "pending_treats", coffee: "pending_coffee" })[row.reward_kind];
-    const result = await env.DB.prepare(`UPDATE admin_profile_state SET ${field} = ${field} + ?, revision = revision + 1, updated_at = ?, updated_by = ? WHERE telegram_id = ?`).bind(amount, Math.floor(Date.now() / 1000), `queue:${row.id}`, telegramId).run();
-    if (Number(result.meta?.changes || 0) < 1) throw new Error("Профиль игрока не найден");
-  } else if (row.reward_kind === "case") {
-    await createGrantedCases(env, telegramId, row.reward_id, amount, `queue:${row.id}`, row.reason);
-    const verification = await env.DB.prepare(`SELECT COUNT(*) AS count FROM granted_cases WHERE telegram_id=? AND granted_by=? AND status='pending'`).bind(telegramId,`queue:${row.id}`).first();
-    if (Number(verification?.count || 0) < amount) throw new Error("Кейс не появился в профиле после записи");
-  } else if (["avatar", "frame", "trail", "skin"].includes(row.reward_kind)) {
-    const cosmetic = await grantCosmeticToPlayer(env, telegramId, row.reward_kind, row.reward_id);
-    cosmeticDuplicate = Boolean(cosmetic?.alreadyOwned);
+  let cosmeticId = "";
+  let cosmeticColumn = "";
+  if (["avatar", "frame", "trail", "skin"].includes(row.reward_kind)) {
+    await ensureCasePlayerState(env, telegramId, {});
+    if (row.reward_kind === "skin") {
+      cosmeticId = String(row.reward_id || "").trim().toLowerCase();
+      if (!SKINS[cosmeticId] || cosmeticId === "default") throw new Error("Неизвестный косметический предмет");
+      cosmeticColumn = "owned_skins_json";
+    } else {
+      cosmeticId = normalizeCaseCosmeticId(row.reward_kind, row.reward_id);
+      if (!cosmeticId) throw new Error("Неизвестный косметический предмет");
+      cosmeticColumn = ({ avatar:"owned_avatars_json", frame:"owned_frames_json", trail:"owned_trails_json" })[row.reward_kind];
+    }
+    const current = await env.DB.prepare(`SELECT ${cosmeticColumn} AS owned FROM case_player_state WHERE telegram_id=? LIMIT 1`).bind(telegramId).first();
+    let owned = [];
+    try { owned = JSON.parse(String(current?.owned || "[]")); } catch {}
+    cosmeticDuplicate = Array.isArray(owned) && owned.map((value) => String(value || "").toLowerCase()).includes(cosmeticId.toLowerCase());
   } else if (row.reward_kind === "physical_restore") {
     throw new Error("Требуется ручная проверка и восстановление физического кода");
-  } else {
+  } else if (!["points", "zefir", "coffee", "case"].includes(row.reward_kind)) {
     throw new Error("Неизвестный тип награды");
   }
+
+  const statements = [
+    env.DB.prepare(
+      `INSERT OR IGNORE INTO reward_delivery_effects(queue_id,telegram_id,reward_kind,reward_id,apply_token,applied_at)
+       SELECT ?,?,?,?,?,? WHERE EXISTS(
+         SELECT 1 FROM reward_delivery_queue WHERE id=? AND status='delivering' AND lease_token=?
+       )`
+    ).bind(queueId, telegramId, String(row.reward_kind), String(row.reward_id || ""), token, now, queueId, token)
+  ];
+
+  if (["points", "zefir", "coffee"].includes(row.reward_kind)) {
+    const field = ({ points: "pending_wallet", zefir: "pending_treats", coffee: "pending_coffee" })[row.reward_kind];
+    statements.push(env.DB.prepare(
+      `UPDATE admin_profile_state SET ${field}=${field}+?,revision=revision+1,updated_at=?,updated_by=?
+       WHERE telegram_id=? AND EXISTS(
+         SELECT 1 FROM reward_delivery_effects WHERE queue_id=? AND apply_token=?
+       )`
+    ).bind(amount, now, `queue:${queueId}`, telegramId, queueId, token));
+  } else if (row.reward_kind === "case") {
+    const caseType = normalizeCaseType(row.reward_id);
+    if (!caseType) throw new Error("Неизвестный тип кейса");
+    const quantity = Math.max(1, Math.min(20, amount));
+    for (let index = 0; index < quantity; index += 1) {
+      const grantId = `queuecase_${queueId}_${index + 1}`;
+      statements.push(env.DB.prepare(
+        `INSERT OR IGNORE INTO granted_cases(id,telegram_id,case_type,status,granted_by,reason,created_at)
+         SELECT ?,?,?,'pending',?,?,? WHERE EXISTS(
+           SELECT 1 FROM reward_delivery_effects WHERE queue_id=? AND apply_token=?
+         )`
+      ).bind(grantId, telegramId, caseType, `queue:${queueId}`, String(row.reason || "").slice(0,300), now, queueId, token));
+    }
+  } else if (["avatar", "frame", "trail", "skin"].includes(row.reward_kind)) {
+    statements.push(env.DB.prepare(
+      `UPDATE case_player_state SET ${cosmeticColumn}=CASE
+         WHEN EXISTS(
+           SELECT 1 FROM json_each(CASE WHEN json_valid(${cosmeticColumn}) THEN ${cosmeticColumn} ELSE '[]' END)
+           WHERE lower(CAST(value AS TEXT))=lower(?)
+         ) THEN CASE WHEN json_valid(${cosmeticColumn}) THEN ${cosmeticColumn} ELSE '[]' END
+         ELSE json_insert(CASE WHEN json_valid(${cosmeticColumn}) THEN ${cosmeticColumn} ELSE '[]' END,'$[#]',?)
+       END,revision=revision+1,updated_at=?
+       WHERE telegram_id=? AND EXISTS(
+         SELECT 1 FROM reward_delivery_effects WHERE queue_id=? AND apply_token=?
+       )`
+    ).bind(cosmeticId, cosmeticId, now, telegramId, queueId, token));
+  }
+
+  statements.push(env.DB.prepare(
+    `UPDATE reward_delivery_queue
+     SET status='delivered',attempts=attempts+1,last_error='',delivered_at=?,updated_at=?,lease_token='',lease_until=0
+     WHERE id=? AND lease_token=? AND EXISTS(SELECT 1 FROM reward_delivery_effects WHERE queue_id=?)`
+  ).bind(now, now, queueId, token, queueId));
+
+  const results = await env.DB.batch(statements);
+  if (Number(results?.[results.length - 1]?.meta?.changes || 0) !== 1) {
+    throw new Error("Не удалось атомарно завершить доставку награды");
+  }
+
+  // Everything below is non-economic side effect. A notification/timeline
+  // failure must never make the atomic reward transaction retry.
   const rewardDescription = safeRewardDescription({ kind: row.reward_kind, id: row.reward_id, amount });
-  await recordPlayerTimeline(env, telegramId, "reward_delivery", cosmeticDuplicate ? `получил дубликат: ${rewardDescription}` : `получил ${rewardDescription}`, { queueId: row.id, sourceType: row.source_type, sourceId: row.source_id, reason: row.reason, duplicate: cosmeticDuplicate }, `queue_${row.id}`, null);
-  if (["avatar", "frame", "trail", "skin"].includes(row.reward_kind)) await recordContentAnalyticsEvent(env, telegramId, row.reward_kind, row.reward_id, cosmeticDuplicate ? "duplicate" : "acquired", row.source_type, row.source_id);
+  try {
+    await recordPlayerTimeline(env, telegramId, "reward_delivery", cosmeticDuplicate ? `получил дубликат: ${rewardDescription}` : `получил ${rewardDescription}`, { queueId, sourceType: row.source_type, sourceId: row.source_id, reason: row.reason, duplicate: cosmeticDuplicate }, `queue_${queueId}`, null);
+  } catch (error) { console.error("reward delivery timeline failed", error); }
+  if (["avatar", "frame", "trail", "skin"].includes(row.reward_kind)) {
+    try { await recordContentAnalyticsEvent(env, telegramId, row.reward_kind, cosmeticId || row.reward_id, cosmeticDuplicate ? "duplicate" : "acquired", row.source_type, row.source_id); } catch (error) { console.error("reward delivery analytics failed", error); }
+  }
   if (!["gift_inbox", "leaderboard"].includes(String(row.source_type || ""))) {
     try {
       const subscriber = await env.DB.prepare(`SELECT chat_id FROM bot_subscribers WHERE telegram_id=? AND active=1 LIMIT 1`).bind(telegramId).first();
-      if (subscriber?.chat_id) await sendTelegramMessage(env, subscriber.chat_id, `<b>🎁 Награда доставлена</b>\n\n${escapeHtml(safeRewardDescription({ kind: row.reward_kind, id: row.reward_id, amount }))}\nПричина: ${escapeHtml(row.reason || "Системная выдача")}\n\nНаграда уже записана в профиль. Откройте игру или обновите раздел с кейсами.`, { inline_keyboard: [[{ text: "🎮 Открыть игру", web_app: { url: configuredGameUrl(env) } }], [{ text: "📋 Задания", callback_data: "menu:tasks" }]] });
-    } catch {}
+      if (subscriber?.chat_id) await sendTelegramMessage(env, subscriber.chat_id, `<b>🎁 Награда доставлена</b>\n\n${escapeHtml(rewardDescription)}\nПричина: ${escapeHtml(row.reason || "Системная выдача")}\n\nНаграда уже записана в профиль. Откройте игру или обновите раздел с кейсами.`, { inline_keyboard: [[{ text: "🎮 Открыть игру", web_app: { url: configuredGameUrl(env) } }], [{ text: "📋 Задания", callback_data: "menu:tasks" }]] });
+    } catch (error) { console.error("reward delivery notification failed", error); }
   }
+  return { cosmeticDuplicate };
 }
 
 async function processRewardDeliveryQueue(env, limit = 25) {
@@ -16908,14 +17137,7 @@ async function processRewardDeliveryQueue(env, limit = 25) {
     ).bind(token, claimAt + SERVER_NOTIFICATION_LEASE_SECONDS, claimAt, row.id, claimAt, claimAt).run();
     if (Number(lock.meta?.changes || 0) < 1) { skipped += 1; continue; }
     try {
-      await deliverQueuedReward(env, row);
-      const finishedAt = Math.floor(Date.now() / 1000);
-      await env.DB.prepare(
-        `UPDATE reward_delivery_queue
-         SET status='delivered',attempts=attempts+1,last_error='',delivered_at=?,updated_at=?,
-             lease_token='',lease_until=0
-         WHERE id=? AND lease_token=?`
-      ).bind(finishedAt, finishedAt, row.id, token).run();
+      await deliverQueuedReward(env, row, token);
       delivered += 1;
     } catch (error) {
       const finishedAt = Math.floor(Date.now() / 1000);
@@ -16956,11 +17178,7 @@ async function processPlayerRewardDeliveryQueue(env, telegramId, limit = 10) {
     ).bind(token, claimAt + SERVER_NOTIFICATION_LEASE_SECONDS, claimAt, row.id, claimAt, claimAt).run();
     if (Number(lock.meta?.changes || 0) < 1) continue;
     try {
-      await deliverQueuedReward(env, row);
-      const finishedAt = Math.floor(Date.now() / 1000);
-      await env.DB.prepare(
-        `UPDATE reward_delivery_queue SET status='delivered',attempts=attempts+1,last_error='',delivered_at=?,updated_at=?,lease_token='',lease_until=0 WHERE id=? AND lease_token=?`
-      ).bind(finishedAt, finishedAt, row.id, token).run();
+      await deliverQueuedReward(env, row, token);
       delivered += 1;
     } catch (error) {
       const finishedAt = Math.floor(Date.now() / 1000);
@@ -17947,7 +18165,7 @@ async function telegramApi(env, method, payload) {
   return data.result;
 }
 
-async function validateTelegramInitData(initData, env) {
+async function validateTelegramInitDataSignature(initData, env) {
   if (!initData) throw new ApiError(401, "Откройте игру внутри Telegram, чтобы получить настоящий код.");
   const params = new URLSearchParams(initData);
   const receivedHash = String(params.get("hash") || "").toLowerCase();
@@ -17977,8 +18195,13 @@ async function validateTelegramInitData(initData, env) {
     user = null;
   }
   if (!user?.id) throw new ApiError(401, "Telegram не передал профиль игрока.");
-  user = await applyPlayerAdminControl(user, env);
   return { user, authDate };
+}
+
+async function validateTelegramInitData(initData, env) {
+  const auth = await validateTelegramInitDataSignature(initData, env);
+  const user = await applyPlayerAdminControl(auth.user, env);
+  return { ...auth, user };
 }
 
 async function hmacSha256(rawKey, data) {
@@ -21742,6 +21965,16 @@ function seasonPassBalanceGuardStatement(env,guardId,telegramId,price){
   ),0))`).bind(String(guardId),seasonPassInteger(price.points),seasonPassInteger(price.treats),seasonPassInteger(price.coffee),String(telegramId));
 }
 
+// The tier price is calculated from the tier seen at request start. Guard that
+// exact state inside the same D1 transaction so concurrent Elite / Elite+
+// purchases cannot both charge a stale "none" (or stale "elite") price.
+function seasonPassTierStateGuardStatement(env,guardId,seasonId,telegramId,expectedTier){
+  return env.DB.prepare(`INSERT INTO season_pass_purchase_guards(guard_id,ok) VALUES(?,COALESCE((
+    SELECT CASE WHEN premium_tier=? THEN 1 ELSE 0 END
+    FROM season_pass_players WHERE season_id=? AND telegram_id=? LIMIT 1
+  ),0))`).bind(String(guardId),String(expectedTier),String(seasonId),String(telegramId));
+}
+
 function seasonPassChargeStatement(env,telegramId,price,now,source){
   const points=seasonPassInteger(price.points);const treats=seasonPassInteger(price.treats);const coffee=seasonPassInteger(price.coffee);
   return env.DB.prepare(`UPDATE admin_profile_state SET
@@ -21843,8 +22076,10 @@ async function purchaseSeasonPassTier(request,env){
     const balance=await seasonPassAccountBalance(env,ctx.telegramId);
     if(balance.points<price.points||balance.treats<price.treats||balance.coffee<price.coffee)throw new ApiError(409,'Недостаточно игровой валюты для покупки тарифа.');
     const guardId=`tier:${ctx.season.id}:${ctx.telegramId}:${purchaseKey}:${now}`.slice(0,180);
+    const tierStateGuardId=`tier-state:${ctx.season.id}:${ctx.telegramId}:${tier}:${current}:${now}`.slice(0,180);
     const statements=[
       env.DB.prepare(`INSERT INTO season_pass_purchases(season_id,telegram_id,purchase_key,status,price_points,price_treats,price_coffee,created_at) VALUES(?,?,?,'pending',?,?,?,?)`).bind(ctx.season.id,ctx.telegramId,purchaseKey,price.points,price.treats,price.coffee,now),
+      seasonPassTierStateGuardStatement(env,tierStateGuardId,ctx.season.id,ctx.telegramId,current),
       seasonPassBalanceGuardStatement(env,guardId,ctx.telegramId,price),
       seasonPassChargeStatement(env,ctx.telegramId,price,now,`season-pass:${ctx.season.id}:${tier}`)
     ];
@@ -21855,13 +22090,17 @@ async function purchaseSeasonPassTier(request,env){
     } else statements.push(env.DB.prepare(`UPDATE season_pass_players SET premium_tier='elite',revision=revision+1,updated_at=? WHERE season_id=? AND telegram_id=?`).bind(now,ctx.season.id,ctx.telegramId));
     statements.push(
       env.DB.prepare(`UPDATE season_pass_purchases SET status='delivered',completed_at=? WHERE season_id=? AND telegram_id=? AND purchase_key=? AND status='pending'`).bind(now,ctx.season.id,ctx.telegramId,purchaseKey),
-      env.DB.prepare(`DELETE FROM season_pass_purchase_guards WHERE guard_id=?`).bind(guardId)
+      env.DB.prepare(`DELETE FROM season_pass_purchase_guards WHERE guard_id IN (?,?)`).bind(guardId,tierStateGuardId)
     );
     try{await env.DB.batch(statements);}catch(batchError){
       const after=await env.DB.prepare(`SELECT status FROM season_pass_purchases WHERE season_id=? AND telegram_id=? AND purchase_key=? LIMIT 1`).bind(ctx.season.id,ctx.telegramId,purchaseKey).first();
       if(String(after?.status)==='delivered')return jsonResponse({...await buildSeasonPassMutationPayload(env,ctx.season,ctx.telegramId,{includeEntitlements:true,includeTasks:true,premiumTier:tier}),received:[],repeated:true,purchasedTier:tier});
       const text=String(batchError?.message||batchError).toLowerCase();
-      if(text.includes('check constraint')||text.includes('season_pass_purchase_guards'))throw new ApiError(409,'Баланс изменился. Проверьте валюту и повторите покупку.');
+      if(text.includes('check constraint')||text.includes('season_pass_purchase_guards')){
+        const actualTier=String((await env.DB.prepare(`SELECT premium_tier FROM season_pass_players WHERE season_id=? AND telegram_id=? LIMIT 1`).bind(ctx.season.id,ctx.telegramId).first())?.premium_tier||'none');
+        if(actualTier!==current)throw new ApiError(409,'Тариф уже изменился. Обновите сезонный пропуск и повторите покупку по актуальной цене.');
+        throw new ApiError(409,'Баланс изменился. Проверьте валюту и повторите покупку.');
+      }
       if(text.includes('unique')||text.includes('primary key'))throw new ApiError(409,'Покупка уже обрабатывается. Повторите через несколько секунд.');
       throw batchError;
     }
@@ -26990,7 +27229,7 @@ async function purchaseFlashOffer(request, env) {
     if(limit>0){for(let slot=1;slot<=limit;slot+=1){if(await tryReserve(slot)){slotNo=slot;break;}}}else{for(let i=0;i<8&&!slotNo;i+=1){const slot=1000+Math.floor(Math.random()*2000000000);if(await tryReserve(slot))slotNo=slot;}}
     if(!slotNo){const retry=await env.DB.prepare(`SELECT * FROM shop_flash_offer_purchases WHERE request_id=? AND telegram_id=? LIMIT 1`).bind(requestId,telegramId).first();if(retry?.status==="completed")return jsonResponse({ok:true,repeated:true,purchaseId:String(retry.purchase_id),profile:await flashOfferProfilePayload(env,telegramId),rewards:ownerV8SafeJson(retry.rewards_json,[]),physicalRewards:ownerV8SafeJson(retry.physical_codes_json,[])});throw new ApiError(409,"Лимит покупок этой акции уже исчерпан.");}
     const ownerName=telegramDisplayName(auth.user),ttl=positiveInt(env.REWARD_TTL_SECONDS,DEFAULT_REWARD_TTL_SECONDS),physicalRows=[];
-    for(const reward of rewards){if(reward.kind!=="product")continue;for(let i=0;i<reward.amount;i+=1){const product=PRODUCTS[reward.id];const consumptionId=`flash:${reservedPurchaseId}:${physicalRows.length}`;await consumeShopStock(env,{category:"prize",productId:product.id,consumptionId,telegramId});stockConsumptionIds.push(consumptionId);const unique=await generateUniqueRewardCode(env,product);physicalRows.push({code:unique.code,compact:unique.compact,requestId:`flash_${reservedPurchaseId}_${physicalRows.length}`,productId:product.id,productName:product.title,createdAt:now,expiresAt:now+ttl,status:"active"});}}
+    for(const reward of rewards){if(reward.kind!=="product")continue;for(let i=0;i<reward.amount;i+=1){const product=PRODUCTS[reward.id];const consumptionId=`flash:${reservedPurchaseId}:${physicalRows.length}`;const stockReservation=await consumeShopStock(env,{category:"prize",productId:product.id,consumptionId,telegramId});stockConsumptionIds.push(consumptionId);const unique=await generateUniqueRewardCode(env,product);physicalRows.push({code:unique.code,compact:unique.compact,requestId:`flash_${reservedPurchaseId}_${physicalRows.length}`,productId:product.id,productName:product.title,createdAt:now,expiresAt:now+ttl,status:"active",consumptionId,stockLimited:Boolean(stockReservation?.limited)});}}
     let passStatements=[],passReceived=[];
     if(passContext?.requestedTier==="elite"){
       passStatements.push(env.DB.prepare(`UPDATE season_pass_players SET premium_tier='elite',revision=revision+1,updated_at=? WHERE season_id=? AND telegram_id=? AND premium_tier='none'`).bind(now,String(passContext.season.id),telegramId));
@@ -27020,7 +27259,17 @@ async function purchaseFlashOffer(request, env) {
     if(virtual.points||virtual.treats||virtual.coffee)statements.push(env.DB.prepare(`UPDATE admin_profile_state SET wallet=wallet+?,treats=treats+?,coffee=coffee+?,revision=revision+1,updated_at=?,updated_by=? WHERE telegram_id=?`).bind(virtual.points,virtual.treats,virtual.coffee,now,`offer:${offerId}`,telegramId));
     if(boosterTotals.points||boosterTotals.treats||boosterTotals.coffee)statements.push(env.DB.prepare(`UPDATE case_player_state SET boosters_points=boosters_points+?,boosters_treats=boosters_treats+?,boosters_coffee=boosters_coffee+?,revision=revision+1,updated_at=? WHERE telegram_id=?`).bind(boosterTotals.points,boosterTotals.treats,boosterTotals.coffee,now,telegramId));
     if(hasXpBooster&&offerBoostSeason?.id)statements.push(env.DB.prepare(`INSERT OR IGNORE INTO season_pass_entitlements(season_id,telegram_id,item_id,source,granted_at) VALUES(?,?,?,?,?)`).bind(String(offerBoostSeason.id),telegramId,SEASON_PASS_SPECIAL_XP_X2,`flash-offer:${offerId}`,now));
-    for(const p of physicalRows)statements.push(env.DB.prepare(`INSERT INTO reward_codes(code,code_compact,request_id,product_id,product_name,owner_telegram_id,owner_name,created_at,expires_at,status) VALUES(?,?,?,?,?,?,?,?,?,'active')`).bind(p.code,p.compact,p.requestId,p.productId,p.productName,telegramId,ownerName,p.createdAt,p.expiresAt));
+    for(const p of physicalRows){
+      if(p.stockLimited){
+        const stockGuardId=`stock-flash:${p.consumptionId}`.slice(0,180);
+        statements.push(shopStockCommitGuardStatement(env,p.consumptionId,stockGuardId));
+        statements.push(env.DB.prepare(`INSERT INTO reward_codes(code,code_compact,request_id,product_id,product_name,owner_telegram_id,owner_name,created_at,expires_at,status) VALUES(?,?,?,?,?,?,?,?,?,'active')`).bind(p.code,p.compact,p.requestId,p.productId,p.productName,telegramId,ownerName,p.createdAt,p.expiresAt));
+        statements.push(shopStockCommitStatement(env,p.consumptionId,now,`SELECT 1 FROM reward_codes WHERE request_id=? AND owner_telegram_id=?`,[p.requestId,telegramId]));
+        statements.push(shopStockCommitGuardCleanupStatement(env,stockGuardId));
+      }else{
+        statements.push(env.DB.prepare(`INSERT INTO reward_codes(code,code_compact,request_id,product_id,product_name,owner_telegram_id,owner_name,created_at,expires_at,status) VALUES(?,?,?,?,?,?,?,?,?,'active')`).bind(p.code,p.compact,p.requestId,p.productId,p.productName,telegramId,ownerName,p.createdAt,p.expiresAt));
+      }
+    }
     const physicalRewards=physicalRows.map(p=>rewardRowToClient({code:p.code,product_id:p.productId,product_name:p.productName,created_at:p.createdAt,expires_at:p.expiresAt,status:p.status,redeemed_at:0}));
     statements.push(
       env.DB.prepare(`UPDATE shop_flash_offer_purchases SET status='completed',rewards_json=?,physical_codes_json=?,updated_at=?,completed_at=? WHERE purchase_id=? AND status='reserved'`).bind(JSON.stringify(publicRewards),JSON.stringify(physicalRewards),now,now,reservedPurchaseId),
