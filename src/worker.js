@@ -230,6 +230,23 @@ const SHOP_STOCK_CONSUMPTION_SCHEMA_SQL = `CREATE TABLE IF NOT EXISTS shop_stock
   created_at INTEGER NOT NULL
 )`;
 
+const SHOP_STOCK_CONSUMPTION_DECREMENT_TRIGGER_SQL = `CREATE TRIGGER IF NOT EXISTS trg_shop_stock_consumption_decrement
+AFTER INSERT ON shop_stock_consumptions
+BEGIN
+  UPDATE shop_stock_limits
+     SET remaining = remaining - 1
+   WHERE scope_key = NEW.scope_key AND remaining > 0;
+  SELECT CASE WHEN changes() = 0 THEN RAISE(ABORT, 'SHOP_STOCK_SOLD_OUT') END;
+END`;
+
+const SHOP_STOCK_CONSUMPTION_RELEASE_TRIGGER_SQL = `CREATE TRIGGER IF NOT EXISTS trg_shop_stock_consumption_release
+AFTER DELETE ON shop_stock_consumptions
+BEGIN
+  UPDATE shop_stock_limits
+     SET remaining = MIN(configured_limit, remaining + 1)
+   WHERE scope_key = OLD.scope_key;
+END`;
+
 const SKIN_PRICE_SCHEMA_SQL = `CREATE TABLE IF NOT EXISTS skin_prices (
   skin_id TEXT PRIMARY KEY,
   points INTEGER NOT NULL DEFAULT 0 CHECK(points >= 0),
@@ -1074,6 +1091,10 @@ async function ensureRuntimeCompatibilitySchema(env) {
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+    const technicalAssetPath = /^(?:\/(?:src|migrations|scripts|__MACOSX)(?:\/|$)|\/(?:wrangler\.jsonc|update\.sh|package(?:-lock)?\.json|\.assetsignore|UPDATE\.txt)$)/i;
+    if ((request.method === "GET" || request.method === "HEAD") && technicalAssetPath.test(url.pathname)) {
+      return new Response("Not found", { status: 404, headers: { "Cache-Control": "no-store", "X-Robots-Tag": "noindex, nofollow" } });
+    }
 
     if (request.method === "OPTIONS" && url.pathname.startsWith("/api/")) {
       return new Response(null, { status: 204, headers: apiHeaders() });
@@ -1096,7 +1117,9 @@ export default {
         return jsonResponse({ ok: true, service: "zefirok-rewards", workerBuild: WORKER_BUILD, gameVersion: GAME_VERSION });
       }
       if (url.pathname === "/api/bot/health" && request.method === "GET") {
-        return await getTelegramBotHealth(env);
+        // Public probe is intentionally side-effect free and does not expose
+        // webhook diagnostics. Telegram getWebhookInfo is checked by cron only.
+        return jsonResponse({ ok: true, service: "zefirok-bot", status: "available" });
       }
       if (url.pathname === "/api/bot/setup-webhook" && request.method === "POST") {
         return await setupWebhook(request, env);
@@ -1116,7 +1139,6 @@ export default {
       }
       if (url.pathname.startsWith("/api/")) {
         await ensureRuntimeCompatibilitySchema(env);
-        await ensureRelease106PlayerFix(env);
       }
       if (url.pathname === "/staff-qr.html" && request.method === "GET") {
         if (!env.ASSETS) return new Response("Not found", { status: 404 });
@@ -1221,28 +1243,13 @@ export default {
       }
 
       if (url.pathname === "/api/admin/health" && request.method === "GET") {
-        return jsonResponse({
-          ok: true,
-          service: "zefirok-admin",
-          version: GAME_VERSION,
-          routes: [
-            "/api/game/startup",
-            "/api/admin/profile/sync",
-            "/api/admin/leaderboard/set",
-            "/api/admin/shop/prices",
-            "/api/admin/skins/prices",
-            "/api/admin/cases/grant",
-            "/api/skins/bonus-case",
-            "/api/cases/state",
-            "/api/cases/open",
-            "/api/cases/open-granted",
-            "/api/cases/purchase"
-          ]
-        });
+        return jsonResponse({ ok: true, service: "zefirok-admin", version: GAME_VERSION });
       }
 
       if (url.pathname === "/api/bot/health" && request.method === "GET") {
-        return await getTelegramBotHealth(env);
+        // Public probe is intentionally side-effect free and does not expose
+        // webhook diagnostics. Telegram getWebhookInfo is checked by cron only.
+        return jsonResponse({ ok: true, service: "zefirok-bot", status: "available" });
       }
 
       if (url.pathname === "/api/shop/config" && request.method === "GET") {
@@ -1396,6 +1403,8 @@ export default {
       }
 
       try {
+        await ensureRuntimeCompatibilitySchema(env);
+        await ensureRelease106PlayerFix(env);
         await processServerCron(env, controller);
       } catch (error) {
         console.error("Server Cron dispatcher failed", error);
@@ -1591,7 +1600,8 @@ async function processSeasonEndReminders(env){
     SELECT ?,?,p.telegram_id,b.chat_id,'pending',0,?,?
     FROM admin_profile_state p JOIN bot_subscribers b ON b.telegram_id=p.telegram_id
     WHERE b.active=1 AND TRIM(COALESCE(b.chat_id,''))<>''`).bind(seasonKey,reminderKey,now,now).run();
-  const rows=(await env.DB.prepare(`SELECT season_key,reminder_key,telegram_id,chat_id FROM season_end_reminder_deliveries WHERE season_key=? AND reminder_key=? AND status='pending' ORDER BY created_at,telegram_id LIMIT 20`).bind(seasonKey,reminderKey).all()).results||[];
+  const reminderBatchLimit=reminderKey==='24h'?120:80;
+  const rows=(await env.DB.prepare(`SELECT season_key,reminder_key,telegram_id,chat_id FROM season_end_reminder_deliveries WHERE season_key=? AND reminder_key=? AND status='pending' ORDER BY created_at,telegram_id LIMIT ?`).bind(seasonKey,reminderKey,reminderBatchLimit).all()).results||[];
   const message=seasonEndReminderMessage(reminderKey,ratingSeason,passSeason,anchorEnd);
   const keyboard={inline_keyboard:[
     [{text:'🎟 Открыть пропуск',web_app:{url:configuredGameOpenUrl(env,'season-pass')}},{text:'🏆 Открыть рейтинг',web_app:{url:configuredGameOpenUrl(env,'rating')}}],
@@ -1620,7 +1630,7 @@ async function processCriticalServerQueues(env) {
     ["rewardQueue", () => processRewardDeliveryQueue(env, 25)],
     ["staffNotifications", () => processPendingLeaderboardStaffNotifications(env, 30)],
     ["seasonEndReminders", () => processSeasonEndReminders(env)],
-    ["playerNotifications", () => processV77NotificationQueue(env, 12)],
+    ["playerNotifications", () => processV77NotificationQueue(env, 40)],
     ["seasonStarts", () => processSeasonStartBroadcasts(env)],
     ["broadcast", async () => {
       const result = await processPendingBotBroadcast(env);
@@ -1744,6 +1754,7 @@ async function collectServerAnalyticsHourly(env, now = Math.floor(Date.now() / 1
 
 async function processHourlyServerMaintenance(env) {
   return runServerCronSteps("hourly-maintenance", [
+    ["flashReservations", () => cleanupStaleFlashOfferReservations(env)],
     ["fraud", () => scanFraudAlerts(env)],
     ["stockForecast", () => processV67StockForecastAlerts(env)],
     ["smartAlerts", () => scanV77SmartAlerts(env)],
@@ -2540,7 +2551,9 @@ function shopStockScopeKey(category, productId = "") {
 async function ensureShopStockSchema(env) {
   await env.DB.batch([
     env.DB.prepare(SHOP_STOCK_LIMIT_SCHEMA_SQL),
-    env.DB.prepare(SHOP_STOCK_CONSUMPTION_SCHEMA_SQL)
+    env.DB.prepare(SHOP_STOCK_CONSUMPTION_SCHEMA_SQL),
+    env.DB.prepare(SHOP_STOCK_CONSUMPTION_DECREMENT_TRIGGER_SQL),
+    env.DB.prepare(SHOP_STOCK_CONSUMPTION_RELEASE_TRIGGER_SQL)
   ]);
 }
 
@@ -2604,11 +2617,21 @@ async function consumeShopStock(env, { category, productId, consumptionId, teleg
   if (availability.soldOut) throw new ApiError(409, "Товар закончился, загляните позже.");
 
   const now = Math.floor(Date.now() / 1000);
-  const inserted = await env.DB.prepare(
-    `INSERT OR IGNORE INTO shop_stock_consumptions (
-       consumption_id, scope_key, category, product_id, telegram_id, created_at
-     ) VALUES (?, ?, ?, ?, ?, ?)`
-  ).bind(normalizedConsumptionId, availability.scope, normalizedCategory, normalizedProduct, String(telegramId || ""), now).run();
+  let inserted;
+  try {
+    // AFTER INSERT trigger decrements the matching stock row in the very same
+    // SQLite statement. If remaining is already zero, RAISE(ABORT) rolls the
+    // insert back too. INSERT OR IGNORE retries do not fire the AFTER trigger.
+    inserted = await env.DB.prepare(
+      `INSERT OR IGNORE INTO shop_stock_consumptions (
+         consumption_id, scope_key, category, product_id, telegram_id, created_at
+       ) VALUES (?, ?, ?, ?, ?, ?)`
+    ).bind(normalizedConsumptionId, availability.scope, normalizedCategory, normalizedProduct, String(telegramId || ""), now).run();
+  } catch (error) {
+    const text = String(error?.message || error);
+    if (text.includes("SHOP_STOCK_SOLD_OUT")) throw new ApiError(409, "Товар закончился, загляните позже.");
+    throw error;
+  }
   if (safeAdminNumber(inserted?.meta?.changes) < 1) {
     const raced = await env.DB.prepare(
       `SELECT created_at FROM shop_stock_consumptions WHERE consumption_id = ? LIMIT 1`
@@ -2619,15 +2642,6 @@ async function consumeShopStock(env, { category, productId, consumptionId, teleg
       consumptionCreatedAt: safeAdminNumber(raced?.created_at),
       ...shopStockAvailabilityFromRows(freshRows, normalizedCategory, normalizedProduct)
     };
-  }
-
-  const decremented = await env.DB.prepare(
-    `UPDATE shop_stock_limits SET remaining = remaining - 1
-     WHERE scope_key = ? AND remaining > 0`
-  ).bind(availability.scope).run();
-  if (safeAdminNumber(decremented?.meta?.changes) < 1) {
-    await env.DB.prepare(`DELETE FROM shop_stock_consumptions WHERE consumption_id = ?`).bind(normalizedConsumptionId).run();
-    throw new ApiError(409, "Товар закончился, загляните позже.");
   }
 
   const updated = await env.DB.prepare(
@@ -2649,21 +2663,13 @@ async function releaseShopStock(env, consumptionId) {
   const normalizedConsumptionId = String(consumptionId || "").trim();
   if (!normalizedConsumptionId) return;
   await ensureShopStockSchema(env);
-  const row = await env.DB.prepare(
-    `SELECT scope_key FROM shop_stock_consumptions WHERE consumption_id = ? LIMIT 1`
-  ).bind(normalizedConsumptionId).first();
-  if (!row?.scope_key) return;
-  await env.DB.batch([
-    env.DB.prepare(`DELETE FROM shop_stock_consumptions WHERE consumption_id = ?`).bind(normalizedConsumptionId),
-    env.DB.prepare(
-      `UPDATE shop_stock_limits
-       SET remaining = MIN(configured_limit, remaining + 1)
-       WHERE scope_key = ?`
-    ).bind(String(row.scope_key))
-  ]);
-  invalidateGamePublicConfigCache();
+  // AFTER DELETE trigger restores exactly one unit only when a consumption row
+  // was actually removed, so retries cannot double-return stock.
+  const removed = await env.DB.prepare(
+    `DELETE FROM shop_stock_consumptions WHERE consumption_id = ?`
+  ).bind(normalizedConsumptionId).run();
+  if (safeAdminNumber(removed?.meta?.changes) > 0) invalidateGamePublicConfigCache();
 }
-
 
 // =============================================================
 // SERVER-AUTHORITATIVE PLAYER ECONOMY / RUN SESSIONS
@@ -4173,6 +4179,7 @@ async function ensureRelease106PlayerFix(env) {
     const playerSource = `SELECT telegram_id FROM admin_profile_state WHERE TRIM(COALESCE(telegram_id,''))<>''
       UNION SELECT telegram_id FROM season_pass_players WHERE TRIM(COALESCE(telegram_id,''))<>''
       UNION SELECT telegram_id FROM leaderboard_all_time WHERE TRIM(COALESCE(telegram_id,''))<>''`;
+    await ensureStaffOperationsSchema(env);
     await env.DB.batch([
       env.DB.prepare(`INSERT OR IGNORE INTO granted_cases(id,telegram_id,case_type,status,granted_by,reason,created_at)
         SELECT 'release106_xp_info_' || telegram_id || '_1',telegram_id,'sweet','pending','release:1.0.6',?,? FROM (${playerSource})`).bind(RELEASE_106_COMPENSATION_REASON, now),
@@ -4182,9 +4189,10 @@ async function ensureRelease106PlayerFix(env) {
       env.DB.prepare(`INSERT INTO bot_news(title,body,image_url,status,created_at,published_at,created_by,created_by_name)
         SELECT ?,?,?,'published',?,?,?,'Система релиза'
         WHERE NOT EXISTS(SELECT 1 FROM bot_news WHERE title=? AND published_at=? LIMIT 1)`)
-        .bind(BOT_NEWS_TITLE,BOT_NEWS_TEXT,DEFAULT_BOT_NEWS_IMAGE_URL,BOT_NEWS_PUBLISHED_AT,BOT_NEWS_PUBLISHED_AT,'release:1.0.6',BOT_NEWS_TITLE,BOT_NEWS_PUBLISHED_AT)
+        .bind(BOT_NEWS_TITLE,BOT_NEWS_TEXT,DEFAULT_BOT_NEWS_IMAGE_URL,BOT_NEWS_PUBLISHED_AT,BOT_NEWS_PUBLISHED_AT,'release:1.0.6',BOT_NEWS_TITLE,BOT_NEWS_PUBLISHED_AT),
+      env.DB.prepare(`INSERT INTO bot_system_state(state_key,state_value,updated_at) VALUES(?, 'done', ?)
+        ON CONFLICT(state_key) DO UPDATE SET state_value='done',updated_at=excluded.updated_at`).bind(RELEASE_106_PLAYER_FIX_KEY,now)
     ]);
-    await setSystemState(env, RELEASE_106_PLAYER_FIX_KEY, "done");
     release106PlayerFixReady = true;
   })().finally(() => { release106PlayerFixPromise = null; });
   return release106PlayerFixPromise;
@@ -17746,6 +17754,7 @@ async function ensureOperationsSecuritySchema(env) {
       env.DB.prepare(`CREATE TABLE IF NOT EXISTS tester_accounts (telegram_id TEXT PRIMARY KEY,test_balance_enabled INTEGER NOT NULL DEFAULT 0,unlock_all_skins INTEGER NOT NULL DEFAULT 0,unlock_all_cases INTEGER NOT NULL DEFAULT 0,accelerated_guarantee INTEGER NOT NULL DEFAULT 0,exclude_from_rating INTEGER NOT NULL DEFAULT 1,note TEXT NOT NULL DEFAULT '',created_at INTEGER NOT NULL,updated_at INTEGER NOT NULL,updated_by TEXT NOT NULL DEFAULT '')`),
       env.DB.prepare(`CREATE TABLE IF NOT EXISTS promo_codes (code TEXT PRIMARY KEY,title TEXT NOT NULL DEFAULT '',reward_json TEXT NOT NULL DEFAULT '[]',max_redemptions INTEGER NOT NULL DEFAULT 0,per_player_limit INTEGER NOT NULL DEFAULT 1,redemption_count INTEGER NOT NULL DEFAULT 0,starts_at INTEGER NOT NULL DEFAULT 0,expires_at INTEGER NOT NULL DEFAULT 0,enabled INTEGER NOT NULL DEFAULT 1,created_by TEXT NOT NULL,created_by_name TEXT NOT NULL DEFAULT '',created_at INTEGER NOT NULL,updated_at INTEGER NOT NULL)`),
       env.DB.prepare(`CREATE TABLE IF NOT EXISTS promo_redemptions (id INTEGER PRIMARY KEY AUTOINCREMENT,code TEXT NOT NULL,telegram_id TEXT NOT NULL,reward_json TEXT NOT NULL DEFAULT '[]',status TEXT NOT NULL DEFAULT 'queued',created_at INTEGER NOT NULL,updated_at INTEGER NOT NULL,UNIQUE(code,telegram_id))`),
+      env.DB.prepare(`CREATE TABLE IF NOT EXISTS promo_redemption_guards (guard_id TEXT PRIMARY KEY,ok INTEGER NOT NULL CONSTRAINT promo_redemption_guard_ok CHECK(ok=1))`),
       env.DB.prepare(`CREATE TABLE IF NOT EXISTS staff_notification_preferences (telegram_id TEXT PRIMARY KEY,rating_finished INTEGER NOT NULL DEFAULT 1,physical_reward INTEGER NOT NULL DEFAULT 1,low_stock INTEGER NOT NULL DEFAULT 1,bot_errors INTEGER NOT NULL DEFAULT 1,new_tickets INTEGER NOT NULL DEFAULT 1,suspicious_runs INTEGER NOT NULL DEFAULT 1,mass_grants INTEGER NOT NULL DEFAULT 1,case_changes INTEGER NOT NULL DEFAULT 1,player_blocks INTEGER NOT NULL DEFAULT 1,updated_at INTEGER NOT NULL)`),
       env.DB.prepare(`CREATE TABLE IF NOT EXISTS config_snapshots (snapshot_id TEXT PRIMARY KEY,snapshot_type TEXT NOT NULL DEFAULT 'manual',title TEXT NOT NULL,data_json TEXT NOT NULL,created_by TEXT NOT NULL,created_by_name TEXT NOT NULL DEFAULT '',created_at INTEGER NOT NULL,restored_at INTEGER NOT NULL DEFAULT 0,restored_by TEXT NOT NULL DEFAULT '',restore_status TEXT NOT NULL DEFAULT '')`),
       env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_config_snapshots_recent ON config_snapshots(created_at DESC)`),
@@ -19146,35 +19155,86 @@ async function showPromoCodeStats(chatId,user,rawCode,env){
   await sendTelegramMessage(env,chatId,`<b>Промокод ${escapeHtml(code)}</b>\n\nНазвание: <b>${escapeHtml(row.title||code)}</b>\nСтатус: <b>${Number(row.enabled)?"включён":"отключён"}</b>\nНаграда: <b>${escapeHtml(safeJson(row.reward_json,[]).map(safeRewardDescription).join(", "))}</b>\nАктиваций: <b>${Number(row.redemption_count||0).toLocaleString("ru-RU")}</b>\nОсталось: <b>${remaining==null?"∞":remaining.toLocaleString("ru-RU")}</b>\nДействует до: <b>${row.expires_at?escapeHtml(formatUtcDate(row.expires_at)):"без срока"}</b>\n\n<b>Последние активации</b>\n${lines.join("\n")||"Нет активаций."}`);
 }
 
+function promoQueueInsertStatement(env,telegramId,code,redemptionId,index,reward,now){
+  const amount=Math.max(1,Number(reward?.amount||1));
+  return env.DB.prepare(`INSERT OR IGNORE INTO reward_delivery_queue
+    (telegram_id,source_type,source_id,reward_kind,reward_id,amount,reason,payload_json,status,attempts,last_error,available_at,created_at,updated_at,notify_after,report_chat_id,lease_token,lease_until)
+    VALUES (?,'promo',?,?,?,?,?,'{}','pending',0,'',?,?,?,?, '','',0)`)
+    .bind(String(telegramId),`${code}:${redemptionId}:${index}`,String(reward?.kind||''),String(reward?.id||''),amount,`Промокод ${code}`,now,now,now,now+900);
+}
+
+async function reconcilePromoRedemption(env,telegramId,code,row,rewards){
+  const redemptionId=Number(row?.id||0);
+  if(!redemptionId)throw new ApiError(500,'Не удалось восстановить активацию промокода.');
+  const now=Math.floor(Date.now()/1000);
+  const statements=(Array.isArray(rewards)?rewards:[]).map((reward,index)=>promoQueueInsertStatement(env,telegramId,code,redemptionId,index,reward,now));
+  if(statements.length)await env.DB.batch(statements);
+  try{await processRewardDeliveryQueue(env,Math.max(10,statements.length));}catch(error){console.error('promo immediate delivery failed',error);}
+  let status='queued';
+  try{
+    const pending=await env.DB.prepare(`SELECT COUNT(*) AS count FROM reward_delivery_queue WHERE telegram_id=? AND source_type='promo' AND source_id GLOB ? AND status NOT IN ('delivered','claimed')`).bind(String(telegramId),`${code}:${redemptionId}:*`).first();
+    status=Number(pending?.count||0)>0?'queued':'delivered';
+    await env.DB.prepare(`UPDATE promo_redemptions SET status=?,updated_at=? WHERE id=?`).bind(status,Math.floor(Date.now()/1000),redemptionId).run();
+  }catch(error){console.error('promo status reconciliation failed',error);}
+  return {redemptionId,status};
+}
+
 async function redeemPromoCodeCore(telegramId,rawCode,env,actor=null){
   await ensureOperationsSecuritySchema(env);await ensureSafeControlCenterSchema(env);
-  const code=normalizedPromoCode(rawCode);const now=Math.floor(Date.now()/1000);
+  const code=normalizedPromoCode(rawCode);const now=Math.floor(Date.now()/1000);const playerId=String(telegramId);
   const row=await env.DB.prepare(`SELECT * FROM promo_codes WHERE code=? LIMIT 1`).bind(code).first();
   if(!row)throw new ApiError(404,"Промокод не найден.");
+  const rewards=safeJson(row.reward_json,[]);
+
+  // A retry after a lost response, or a historical partial redemption from an
+  // older Worker, resumes the exact same redemption instead of consuming the
+  // one-time code again. INSERT OR IGNORE fills only missing queue entries.
+  const existing=await env.DB.prepare(`SELECT * FROM promo_redemptions WHERE code=? AND telegram_id=? LIMIT 1`).bind(code,playerId).first();
+  if(existing){
+    const existingRewards=safeJson(existing.reward_json,rewards);
+    const reconciled=await reconcilePromoRedemption(env,playerId,code,existing,existingRewards);
+    return {code,title:String(row.title||code),rewards:existingRewards,status:reconciled.status,repeated:true};
+  }
+
   if(Number(row.enabled||0)!==1)throw new ApiError(409,"Промокод отключён.");
   if(Number(row.starts_at||0)>now)throw new ApiError(409,"Промокод ещё не действует.");
   if(Number(row.expires_at||0)>0&&Number(row.expires_at)<=now)throw new ApiError(409,"Срок действия промокода истёк.");
   if(Number(row.max_redemptions||0)>0&&Number(row.redemption_count||0)>=Number(row.max_redemptions))throw new ApiError(409,"Лимит активаций промокода исчерпан.");
-  const rewards=safeJson(row.reward_json,[]);
-  let redemptionId=0;
-  try{
-    const inserted=await env.DB.prepare(`INSERT INTO promo_redemptions(code,telegram_id,reward_json,status,created_at,updated_at) VALUES(?,?,?,'queued',?,?)`).bind(code,String(telegramId),JSON.stringify(rewards),now,now).run();
-    redemptionId=Number(inserted.meta?.last_row_id||0);
-  }catch(error){if(String(error?.message||error).toLowerCase().includes("unique"))throw new ApiError(409,"Вы уже активировали этот промокод.");throw error;}
-  const counter=await env.DB.prepare(`UPDATE promo_codes SET redemption_count=redemption_count+1,updated_at=? WHERE code=? AND enabled=1 AND (max_redemptions=0 OR redemption_count<max_redemptions)`).bind(now,code).run();
-  if(Number(counter.meta?.changes||0)<1){await env.DB.prepare(`DELETE FROM promo_redemptions WHERE id=?`).bind(redemptionId).run();throw new ApiError(409,"Лимит активаций промокода исчерпан.");}
-  try{
-    for(let index=0;index<rewards.length;index+=1){await enqueueRewardDelivery(env,String(telegramId),"promo",`${code}:${redemptionId}:${index}`,rewards[index],`Промокод ${code}`);}
-    await processRewardDeliveryQueue(env,Math.max(10,rewards.length));
-    const pending=await env.DB.prepare(`SELECT COUNT(*) AS count FROM reward_delivery_queue WHERE telegram_id=? AND source_type='promo' AND source_id LIKE ? AND status NOT IN ('delivered','claimed')`).bind(String(telegramId),`${code}:${redemptionId}:%`).first();
-    const status=Number(pending?.count||0)>0?"queued":"delivered";
-    await env.DB.prepare(`UPDATE promo_redemptions SET status=?,updated_at=? WHERE id=?`).bind(status,Math.floor(Date.now()/1000),redemptionId).run();
-    await recordPlayerTimeline(env,telegramId,"promo",`активировал промокод ${code}`,{rewards,status},`promo_${code}`,actor,now);
-    return {code,title:String(row.title||code),rewards,status};
-  }catch(error){
-    await env.DB.prepare(`UPDATE promo_redemptions SET status='failed',updated_at=? WHERE id=?`).bind(Math.floor(Date.now()/1000),redemptionId).run();
+
+  const guardId=`promo:${code}:${playerId}:${now}:${Math.random().toString(36).slice(2,8)}`.slice(0,180);
+  const reason=`Промокод ${code}`;
+  const statements=[
+    env.DB.prepare(`INSERT INTO promo_redemption_guards(guard_id,ok) VALUES(?,COALESCE((SELECT CASE WHEN enabled=1 AND starts_at<=? AND (expires_at=0 OR expires_at>?) AND (max_redemptions=0 OR redemption_count<max_redemptions) THEN 1 ELSE 0 END FROM promo_codes WHERE code=? LIMIT 1),0))`).bind(guardId,now,now,code),
+    env.DB.prepare(`INSERT INTO promo_redemptions(code,telegram_id,reward_json,status,created_at,updated_at) VALUES(?,?,?,'queued',?,?)`).bind(code,playerId,JSON.stringify(rewards),now,now),
+    env.DB.prepare(`UPDATE promo_codes SET redemption_count=redemption_count+1,updated_at=? WHERE code=?`).bind(now,code)
+  ];
+  for(let index=0;index<rewards.length;index+=1){
+    const reward=rewards[index];const amount=Math.max(1,Number(reward?.amount||1));
+    statements.push(env.DB.prepare(`INSERT OR IGNORE INTO reward_delivery_queue
+      (telegram_id,source_type,source_id,reward_kind,reward_id,amount,reason,payload_json,status,attempts,last_error,available_at,created_at,updated_at,notify_after,report_chat_id,lease_token,lease_until)
+      SELECT ?,'promo',(? || ':' || CAST(id AS TEXT) || ':' || ?),?,?,?,?, '{}','pending',0,'',?,?,?,?, '','',0
+      FROM promo_redemptions WHERE code=? AND telegram_id=? LIMIT 1`)
+      .bind(playerId,code,index,String(reward?.kind||''),String(reward?.id||''),amount,reason,now,now,now,now+900,code,playerId));
+  }
+  statements.push(env.DB.prepare(`DELETE FROM promo_redemption_guards WHERE guard_id=?`).bind(guardId));
+
+  try{await env.DB.batch(statements);}catch(error){
+    const concurrent=await env.DB.prepare(`SELECT * FROM promo_redemptions WHERE code=? AND telegram_id=? LIMIT 1`).bind(code,playerId).first().catch(()=>null);
+    if(concurrent){
+      const concurrentRewards=safeJson(concurrent.reward_json,rewards);
+      const reconciled=await reconcilePromoRedemption(env,playerId,code,concurrent,concurrentRewards);
+      return {code,title:String(row.title||code),rewards:concurrentRewards,status:reconciled.status,repeated:true};
+    }
+    const text=String(error?.message||error).toLowerCase();
+    if(text.includes('promo_redemption_guard_ok')||text.includes('promo_redemption_guards.ok'))throw new ApiError(409,'Лимит активаций промокода исчерпан или срок действия изменился.');
+    if(text.includes('unique'))throw new ApiError(409,'Вы уже активировали этот промокод.');
     throw error;
   }
+
+  const redemption=await env.DB.prepare(`SELECT * FROM promo_redemptions WHERE code=? AND telegram_id=? LIMIT 1`).bind(code,playerId).first();
+  const reconciled=await reconcilePromoRedemption(env,playerId,code,redemption,rewards);
+  try{await recordPlayerTimeline(env,playerId,"promo",`активировал промокод ${code}`,{rewards,status:reconciled.status},`promo_${code}`,actor,now);}catch(error){console.error('promo timeline failed',error);}
+  return {code,title:String(row.title||code),rewards,status:reconciled.status,repeated:false};
 }
 
 async function redeemPromoCodeForTelegram(chatId,user,code,env){
@@ -24514,10 +24574,10 @@ async function v77DeliverPlayerNotification(env,telegramId,chatId,category,messa
   const result=await env.DB.prepare(`INSERT INTO player_notification_queue(telegram_id,chat_id,category,message_html,reply_markup_json,status,attempts,last_error,available_at,created_at,updated_at) VALUES(?,?,?,?,?,'pending',0,'',?,?,?)`).bind(String(telegramId),String(chatId),String(category),String(messageHtml),JSON.stringify(replyMarkup||{}),now+Math.max(60,decision.delay),now,now).run();return {status:"queued",id:Number(result.meta?.last_row_id||0),reason:decision.reason};
 }
 
-async function processV77NotificationQueue(env,limit=12){
+async function processV77NotificationQueue(env,limit=24){
   await ensureV77Schema(env);
   const now=Math.floor(Date.now()/1000);
-  const max=Math.max(1,Math.min(30,Number(limit)||12));
+  const max=Math.max(1,Math.min(60,Number(limit)||24));
   const rows=(await env.DB.prepare(`SELECT id,telegram_id,chat_id,category,message_html,reply_markup_json,attempts FROM player_notification_queue WHERE status IN ('pending','failed') AND available_at<=? AND attempts<5 AND (lease_until=0 OR lease_until<?) ORDER BY available_at ASC,id ASC LIMIT ?`).bind(now,now,max).all()).results||[];
   let sent=0,failed=0,deferred=0,skipped=0;
   for(const row of rows){
@@ -24573,7 +24633,7 @@ async function scanV77SmartAlerts(env){await ensureV77Schema(env);const now=Math
 }
 async function showV77Alerts(chatId,user,env){const access=await requireV77OperationsAccess(chatId,user,env);if(!access)return;await scanV77SmartAlerts(env);const rows=(await env.DB.prepare(`SELECT * FROM smart_alert_events WHERE status='open' ORDER BY CASE severity WHEN 'critical' THEN 0 ELSE 1 END,last_seen_at DESC LIMIT 30`).all()).results||[];const lines=rows.map(r=>`${r.severity==="critical"?"🔴":"🟡"} <b>${escapeHtml(r.title)}</b>\n${escapeHtml(r.details)}\nПоследнее подтверждение: ${escapeHtml(formatUtcDate(r.last_seen_at))}`);await sendTelegramMessage(env,chatId,`<b>🚨 Умные предупреждения</b>\n\n${lines.join("\n\n")||"🟢 Значимых отклонений не обнаружено."}`,{inline_keyboard:[[{text:"🔄 Проверить",callback_data:"v77_alerts"}],[{text:"⬅️ Центр",callback_data:"v77_home"}]]});}
 
-async function processV77Cron(env){await ensureV77Schema(env);await processV77NotificationQueue(env,12);const now=Math.floor(Date.now()/1000);const state=await getSystemState(env,"v77:alerts:last");if(!state||now-Number(state.value||0)>=3600){await scanV77SmartAlerts(env);await setSystemState(env,"v77:alerts:last",String(now));}await env.DB.prepare(`DELETE FROM player_notification_log WHERE sent_at<?`).bind(now-30*V67_DAY).run();}
+async function processV77Cron(env){await ensureV77Schema(env);await processV77NotificationQueue(env,40);const now=Math.floor(Date.now()/1000);const state=await getSystemState(env,"v77:alerts:last");if(!state||now-Number(state.value||0)>=3600){await scanV77SmartAlerts(env);await setSystemState(env,"v77:alerts:last",String(now));}await env.DB.prepare(`DELETE FROM player_notification_log WHERE sent_at<?`).bind(now-30*V67_DAY).run();}
 
 async function handleV77Callback(query,env){const data=String(query.data||"");const chatId=query.message?.chat?.id;if(!chatId)return false;
   if(data==="v77_home"){await answerCallback(env,query.id,"Центр обновлён.");await showV77OperationsHub(chatId,query.from,env);return true;}
@@ -26237,6 +26297,10 @@ const FLASH_OFFER_PURCHASE_SCHEMA_SQL = `CREATE TABLE IF NOT EXISTS shop_flash_o
   updated_at INTEGER NOT NULL,
   completed_at INTEGER NOT NULL DEFAULT 0
 )`;
+const FLASH_OFFER_PURCHASE_GUARD_SCHEMA_SQL = `CREATE TABLE IF NOT EXISTS shop_flash_offer_purchase_guards (
+  guard_id TEXT PRIMARY KEY,
+  ok INTEGER NOT NULL CONSTRAINT flash_offer_purchase_guard_ok CHECK(ok=1)
+)`;
 const FLASH_OFFER_EVENT_SCHEMA_SQL = `CREATE TABLE IF NOT EXISTS shop_flash_offer_events (
   event_id TEXT PRIMARY KEY,
   offer_id TEXT NOT NULL,
@@ -26250,6 +26314,7 @@ async function ensureFlashOfferSchema(env) {
   await env.DB.batch([
     env.DB.prepare(FLASH_OFFER_SCHEMA_SQL),
     env.DB.prepare(FLASH_OFFER_PURCHASE_SCHEMA_SQL),
+    env.DB.prepare(FLASH_OFFER_PURCHASE_GUARD_SCHEMA_SQL),
     env.DB.prepare(FLASH_OFFER_EVENT_SCHEMA_SQL),
     env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_flash_offers_active ON shop_flash_offers(status,enabled,starts_at,ends_at,priority)`),
     env.DB.prepare(`CREATE UNIQUE INDEX IF NOT EXISTS idx_flash_offer_player_slot ON shop_flash_offer_purchases(offer_id,telegram_id,slot_no)`),
@@ -26485,8 +26550,29 @@ async function flashOfferProfilePayload(env, telegramId) {
   const row=await env.DB.prepare(`SELECT wallet,best_score,treats,coffee,profile_xp,revision,updated_at FROM admin_profile_state WHERE telegram_id=? LIMIT 1`).bind(String(telegramId)).first();
   return {wallet:safeAdminNumber(row?.wallet),best:safeAdminNumber(row?.best_score),treats:safeAdminNumber(row?.treats),coffee:safeAdminNumber(row?.coffee),profileXp:safeAdminNumber(row?.profile_xp),revision:safeAdminNumber(row?.revision),updatedAt:safeAdminNumber(row?.updated_at)*1000};
 }
+async function releaseFlashOfferReservedStock(env,purchaseId){
+  const id=String(purchaseId||'').trim();if(!id)return 0;
+  await ensureShopStockSchema(env);
+  const rows=(await env.DB.prepare(`SELECT consumption_id FROM shop_stock_consumptions WHERE consumption_id GLOB ?`).bind(`flash:${id}:*`).all()).results||[];
+  for(const row of rows)await releaseShopStock(env,String(row.consumption_id||''));
+  return rows.length;
+}
+
+async function cleanupStaleFlashOfferReservations(env,cutoff=Math.floor(Date.now()/1000)-300,limit=100){
+  await ensureFlashOfferSchema(env);
+  const rows=(await env.DB.prepare(`SELECT purchase_id FROM shop_flash_offer_purchases WHERE status='reserved' AND created_at<? ORDER BY created_at ASC LIMIT ?`).bind(Number(cutoff),Math.max(1,Math.min(200,Number(limit)||100))).all()).results||[];
+  let cleaned=0,released=0;
+  for(const row of rows){
+    const purchaseId=String(row.purchase_id||'');
+    released+=await releaseFlashOfferReservedStock(env,purchaseId);
+    const removed=await env.DB.prepare(`DELETE FROM shop_flash_offer_purchases WHERE purchase_id=? AND status='reserved' AND created_at<?`).bind(purchaseId,Number(cutoff)).run();
+    cleaned+=safeAdminNumber(removed?.meta?.changes);
+  }
+  return {cleaned,released};
+}
+
 async function purchaseFlashOffer(request, env) {
-  let reservedPurchaseId="", stockConsumptionIds=[], charged=null;
+  let reservedPurchaseId="", stockConsumptionIds=[], purchaseCommitted=false;
   try {
     requireDatabase(env); requireBotToken(env); await ensureFlashOfferSchema(env);
     const body=await readJson(request); const auth=await validateTelegramInitData(String(body.initData||""),env); const telegramId=String(auth.user.id); const offerId=String(body.offerId||"").trim(); const requestId=String(body.requestId||"").trim();
@@ -26500,8 +26586,9 @@ async function purchaseFlashOffer(request, env) {
     const passContext=await flashOfferSeasonPassContext(env,telegramId,rewards,{createPlayer:true});
     if(passContext&&!passContext.eligible)throw new ApiError(409,passContext.reason||"Сезонный пропуск из этой акции сейчас недоступен.");
     if(passContext?.requestedTier&&limit!==1)throw new ApiError(409,"Акция с сезонным пропуском должна иметь лимит 1 покупка на игрока.");
-    if(existing?.status==="reserved"&&now-Number(existing.created_at||0)>180)await env.DB.prepare(`DELETE FROM shop_flash_offer_purchases WHERE purchase_id=? AND status='reserved'`).bind(String(existing.purchase_id)).run();
-    await env.DB.prepare(`DELETE FROM shop_flash_offer_purchases WHERE offer_id=? AND telegram_id=? AND status='reserved' AND created_at<?`).bind(offerId,telegramId,now-180).run();
+    if(existing?.status==="reserved"&&now-Number(existing.created_at||0)>180){await releaseFlashOfferReservedStock(env,String(existing.purchase_id));await env.DB.prepare(`DELETE FROM shop_flash_offer_purchases WHERE purchase_id=? AND status='reserved' AND created_at<?`).bind(String(existing.purchase_id),now-180).run();}
+    const staleReservations=(await env.DB.prepare(`SELECT purchase_id FROM shop_flash_offer_purchases WHERE offer_id=? AND telegram_id=? AND status='reserved' AND created_at<? LIMIT 20`).bind(offerId,telegramId,now-180).all()).results||[];
+    for(const stale of staleReservations){await releaseFlashOfferReservedStock(env,String(stale.purchase_id));await env.DB.prepare(`DELETE FROM shop_flash_offer_purchases WHERE purchase_id=? AND status='reserved' AND created_at<?`).bind(String(stale.purchase_id),now-180).run();}
     const completedRow=await env.DB.prepare(`SELECT COUNT(*) AS count FROM shop_flash_offer_purchases WHERE offer_id=? AND telegram_id=? AND status='completed'`).bind(offerId,telegramId).first(); if(limit>0&&Number(completedRow?.count||0)>=limit)throw new ApiError(409,"Лимит покупок этой акции уже исчерпан.");
     const hasInventoryBoosters=rewards.some(r=>["booster_points","booster_treats","booster_coffee"].includes(String(r.kind)));
     const hasXpBooster=rewards.some(r=>String(r.kind)==="booster_xp");
@@ -26528,9 +26615,13 @@ async function purchaseFlashOffer(request, env) {
       passStatements.push(...plan.statements);passReceived=Array.isArray(plan.received)?plan.received:[];
     }
     if(passContext?.xpAmount>0)passStatements.push(env.DB.prepare(`UPDATE season_pass_players SET xp=xp+?,revision=revision+1,updated_at=? WHERE season_id=? AND telegram_id=?`).bind(passContext.xpAmount,now,String(passContext.season.id),telegramId));
-    const chargedResult=await env.DB.prepare(`UPDATE admin_profile_state SET wallet=wallet-?,treats=treats-?,coffee=coffee-?,revision=revision+1,updated_at=?,updated_by=? WHERE telegram_id=? AND wallet>=? AND treats>=? AND coffee>=?`).bind(price.points,price.treats,price.coffee,now,telegramId,telegramId,price.points,price.treats,price.coffee).run();
-    if(safeAdminNumber(chargedResult?.meta?.changes)<1)throw new ApiError(409,"Баланс изменился. Откройте магазин ещё раз и повторите покупку."); charged=price;
-    const virtual={points:0,treats:0,coffee:0}; const boosterTotals={points:0,treats:0,coffee:0}; const statements=[...passStatements]; const publicRewards=[];
+    const guardId=`flash:${reservedPurchaseId}`.slice(0,180);
+    const statements=[
+      env.DB.prepare(`INSERT INTO shop_flash_offer_purchase_guards(guard_id,ok) VALUES(?,COALESCE((SELECT CASE WHEN p.status='reserved' AND a.wallet>=? AND a.treats>=? AND a.coffee>=? THEN 1 ELSE 0 END FROM shop_flash_offer_purchases p JOIN admin_profile_state a ON a.telegram_id=p.telegram_id WHERE p.purchase_id=? AND p.telegram_id=? LIMIT 1),0))`).bind(guardId,price.points,price.treats,price.coffee,reservedPurchaseId,telegramId),
+      env.DB.prepare(`UPDATE admin_profile_state SET wallet=wallet-?,treats=treats-?,coffee=coffee-?,revision=revision+1,updated_at=?,updated_by=? WHERE telegram_id=? AND wallet>=? AND treats>=? AND coffee>=?`).bind(price.points,price.treats,price.coffee,now,telegramId,telegramId,price.points,price.treats,price.coffee),
+      ...passStatements
+    ];
+    const virtual={points:0,treats:0,coffee:0}; const boosterTotals={points:0,treats:0,coffee:0}; const publicRewards=[];
     for(const reward of rewards){
       if(["points","treats","coffee"].includes(reward.kind)){virtual[reward.kind]+=Number(reward.amount||0);publicRewards.push({...reward,title:flashOfferRewardTitle(reward),imageUrl:flashOfferRewardImage(reward)});}
       else if(reward.kind==="case"){for(let i=0;i<reward.amount;i+=1)statements.push(env.DB.prepare(`INSERT INTO granted_cases(id,telegram_id,case_type,status,granted_by,reason,created_at) VALUES(?,?,?,'pending',?,?,?)`).bind(caseGrantId("offer"),telegramId,reward.id,"shop",`Акция ${offerId}: ${String(row.title||offerId)}`.slice(0,300),now));publicRewards.push({...reward,title:flashOfferRewardTitle(reward),imageUrl:flashOfferRewardImage(reward)});}
@@ -26547,20 +26638,25 @@ async function purchaseFlashOffer(request, env) {
     if(hasXpBooster&&offerBoostSeason?.id)statements.push(env.DB.prepare(`INSERT OR IGNORE INTO season_pass_entitlements(season_id,telegram_id,item_id,source,granted_at) VALUES(?,?,?,?,?)`).bind(String(offerBoostSeason.id),telegramId,SEASON_PASS_SPECIAL_XP_X2,`flash-offer:${offerId}`,now));
     for(const p of physicalRows)statements.push(env.DB.prepare(`INSERT INTO reward_codes(code,code_compact,request_id,product_id,product_name,owner_telegram_id,owner_name,created_at,expires_at,status) VALUES(?,?,?,?,?,?,?,?,?,'active')`).bind(p.code,p.compact,p.requestId,p.productId,p.productName,telegramId,ownerName,p.createdAt,p.expiresAt));
     const physicalRewards=physicalRows.map(p=>rewardRowToClient({code:p.code,product_id:p.productId,product_name:p.productName,created_at:p.createdAt,expires_at:p.expiresAt,status:p.status,redeemed_at:0}));
-    statements.push(env.DB.prepare(`UPDATE shop_flash_offer_purchases SET status='completed',rewards_json=?,physical_codes_json=?,updated_at=?,completed_at=? WHERE purchase_id=? AND status='reserved'`).bind(JSON.stringify(publicRewards),JSON.stringify(physicalRewards),now,now,reservedPurchaseId));
-    await env.DB.batch(statements); charged=null;
+    statements.push(
+      env.DB.prepare(`UPDATE shop_flash_offer_purchases SET status='completed',rewards_json=?,physical_codes_json=?,updated_at=?,completed_at=? WHERE purchase_id=? AND status='reserved'`).bind(JSON.stringify(publicRewards),JSON.stringify(physicalRewards),now,now,reservedPurchaseId),
+      env.DB.prepare(`DELETE FROM shop_flash_offer_purchase_guards WHERE guard_id=?`).bind(guardId)
+    );
+    await env.DB.batch(statements); purchaseCommitted=true;
     if(passContext?.requestedTier==="elite_plus"){
       try{const updatedPass=await env.DB.prepare(`SELECT * FROM season_pass_players WHERE season_id=? AND telegram_id=? LIMIT 1`).bind(String(passContext.season.id),telegramId).first();await reconcileElitePlusTaskXpBoost(env,passContext.season,telegramId,updatedPass);}catch(error){console.error("flash offer elite+ task xp reconciliation failed",error);}
     }
-    await recordPlayerTimeline(env,telegramId,"flash_offer_purchase",`купил акцию «${String(row.title||offerId)}»`,{offerId,price,rewards:publicRewards.map(r=>({kind:r.kind,id:r.id||"",amount:r.amount}))},reservedPurchaseId,auth.user,now);
+    try{await recordPlayerTimeline(env,telegramId,"flash_offer_purchase",`купил акцию «${String(row.title||offerId)}»`,{offerId,price,rewards:publicRewards.map(r=>({kind:r.kind,id:r.id||"",amount:r.amount}))},reservedPurchaseId,auth.user,now);}catch(error){console.error("flash offer timeline write failed",error);}
     let seasonPass=null;
     if(passContext?.season){try{const passPlayer=await env.DB.prepare(`SELECT xp,premium_tier,elite_plus_bonus_granted,revision FROM season_pass_players WHERE season_id=? AND telegram_id=? LIMIT 1`).bind(String(passContext.season.id),telegramId).first();const xp=Math.max(0,Number(passPlayer?.xp)||0);seasonPass={seasonId:String(passContext.season.id),tier:String(passPlayer?.premium_tier||"none"),xp,level:seasonPassLevelFromXp(xp),displayLevel:seasonPassOverflowView(xp,0).unlocked?"50+":String(seasonPassLevelFromXp(xp))};}catch{}}
     return jsonResponse({ok:true,purchaseId:reservedPurchaseId,offerId,profile:await flashOfferProfilePayload(env,telegramId),authoritativeProfile:true,rewards:publicRewards,physicalRewards,seasonPass});
   } catch(error) {
-    if(charged&&reservedPurchaseId){try{await env.DB.prepare(`UPDATE admin_profile_state SET wallet=wallet+?,treats=treats+?,coffee=coffee+?,revision=revision+1,updated_at=? WHERE telegram_id=(SELECT telegram_id FROM shop_flash_offer_purchases WHERE purchase_id=? LIMIT 1)`).bind(charged.points,charged.treats,charged.coffee,Math.floor(Date.now()/1000),reservedPurchaseId).run();}catch(e){console.error("flash offer refund failed",e);}}
-    for(const id of stockConsumptionIds){try{await releaseShopStock(env,id);}catch(e){console.error("flash offer stock release failed",e);}}
-    if(reservedPurchaseId){try{await env.DB.prepare(`DELETE FROM shop_flash_offer_purchases WHERE purchase_id=? AND status='reserved'`).bind(reservedPurchaseId).run();}catch{}}
-    if(error instanceof ApiError)return jsonResponse({ok:false,error:error.message,details:error.details},error.status);console.error("flash offer purchase failed",error);return jsonResponse({ok:false,error:"Не удалось завершить акционную покупку. Ресурсы не списаны."},500);
+    if(!purchaseCommitted){for(const id of stockConsumptionIds){try{await releaseShopStock(env,id);}catch(e){console.error("flash offer stock release failed",e);}}}
+    if(!purchaseCommitted&&reservedPurchaseId){try{await env.DB.prepare(`DELETE FROM shop_flash_offer_purchases WHERE purchase_id=? AND status='reserved'`).bind(reservedPurchaseId).run();}catch{}}
+    if(error instanceof ApiError)return jsonResponse({ok:false,error:error.message,details:error.details},error.status);
+    const text=String(error?.message||error);
+    if(text.includes('flash_offer_purchase_guard_ok'))return jsonResponse({ok:false,error:"Баланс изменился. Откройте магазин ещё раз и повторите покупку."},409);
+    console.error("flash offer purchase failed",error);return jsonResponse({ok:false,error:"Не удалось завершить акционную покупку. Ресурсы не списаны."},500);
   }
 }
 async function ownerPanelFlashOffers(env, ctx) {

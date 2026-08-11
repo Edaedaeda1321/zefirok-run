@@ -14382,6 +14382,34 @@ body.zefirok-profile-standalone .release-layer{display:none!important}
         }
       }
 
+      const PURCHASE_REQUEST_TTL_MS = 24 * 60 * 60 * 1000;
+      function purchaseRequestIdentity() {
+        return String(telegramProfile?.id || "guest").replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 64) || "guest";
+      }
+      function physicalPurchaseRequestKey(purchase) {
+        return `zefirok:physical-purchase:${purchaseRequestIdentity()}:${String(purchase?.id || "unknown")}`;
+      }
+      function loadOrCreatePhysicalPurchaseRequestId(purchase) {
+        if (purchase?.requestId) return String(purchase.requestId);
+        const key = physicalPurchaseRequestKey(purchase);
+        try {
+          const saved = JSON.parse(localStorage.getItem(key) || "null");
+          const age = Date.now() - Number(saved?.createdAt || 0);
+          if (saved?.requestId && age >= 0 && age < PURCHASE_REQUEST_TTL_MS) {
+            purchase.requestId = String(saved.requestId);
+            return purchase.requestId;
+          }
+          if (saved) localStorage.removeItem(key);
+        } catch (error) {}
+        purchase.requestId = makeRewardRequestId();
+        try { localStorage.setItem(key, JSON.stringify({ requestId: purchase.requestId, createdAt: Date.now() })); } catch (error) {}
+        return purchase.requestId;
+      }
+      function clearPhysicalPurchaseRequestId(purchase) {
+        try { localStorage.removeItem(physicalPurchaseRequestKey(purchase)); } catch (error) {}
+        if (purchase) purchase.requestId = "";
+      }
+
       async function rewardApiRequest(path, payload) {
         const response = await fetch(path, {
           method: "POST",
@@ -15651,9 +15679,10 @@ body.zefirok-profile-standalone .release-layer{display:none!important}
         }
         if (cancelButton) cancelButton.disabled = true;
 
+        purchase.requestId = loadOrCreatePhysicalPurchaseRequestId(purchase);
         let reward;
         try {
-          reward = await createServerReward(purchase, makeRewardRequestId());
+          reward = await createServerReward(purchase, purchase.requestId);
         } catch (error) {
           if (Number(error?.status || 0) === 429 && error?.details) {
             antiCheatWithTrustedChange("server-purchase-limit", () => {
@@ -15706,6 +15735,7 @@ body.zefirok-profile-standalone .release-layer{display:none!important}
           updateHud();
           renderWarehouse();
           showPurchaseSuccess(purchase, code, expiresAt, purchaseXpEarned);
+          clearPhysicalPurchaseRequestId(purchase);
           playGameSound("purchaseReward");
           if (purchaseReachedNewLevel) playGameSound("levelUp", 360);
         });

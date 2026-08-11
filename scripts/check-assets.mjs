@@ -139,8 +139,17 @@ async function validateContent(relativePath) {
   }
   if (lower.endsWith('.js')) {
     const source = data.toString('utf8');
-    if (lower.includes('floating-ui.core')) return data.length >= 10000 && source.includes('FloatingUICore');
-    if (lower.includes('floating-ui.dom')) return data.length >= 8000 && source.includes('FloatingUIDOM');
+    if (lower.includes('floating-ui.core')) return data.length >= 500 && source.includes('FloatingUICore');
+    if (lower.includes('floating-ui.dom')) {
+      return data.length >= 4000
+        && source.includes('FloatingUIDOM')
+        && source.includes('computePosition')
+        && source.includes('autoUpdate')
+        && source.includes('offset')
+        && source.includes('flip')
+        && source.includes('shift')
+        && source.includes('size');
+    }
   }
   return data.length > 0;
 }

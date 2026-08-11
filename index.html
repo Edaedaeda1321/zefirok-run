@@ -15135,6 +15135,44 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         }
       }
 
+      const PURCHASE_REQUEST_TTL_MS = 24 * 60 * 60 * 1000;
+      function purchaseRequestIdentity() {
+        return String(telegramProfile?.id || &quot;guest&quot;).replace(/[^a-zA-Z0-9_-]/g, &quot;_&quot;).slice(0, 64) || &quot;guest&quot;;
+      }
+      function persistedRequestId(key, prefix) {
+        try {
+          const saved = JSON.parse(localStorage.getItem(key) || &quot;null&quot;);
+          const age = Date.now() - Number(saved?.createdAt || 0);
+          if (saved?.requestId &amp;&amp; age &gt;= 0 &amp;&amp; age &lt; PURCHASE_REQUEST_TTL_MS) return String(saved.requestId);
+          if (saved) localStorage.removeItem(key);
+        } catch (error) {}
+        const requestId = `${prefix}${makeRewardRequestId()}`.slice(0, 96);
+        try { localStorage.setItem(key, JSON.stringify({ requestId, createdAt: Date.now() })); } catch (error) {}
+        return requestId;
+      }
+      function physicalPurchaseRequestKey(purchase) {
+        return `zefirok:physical-purchase:${purchaseRequestIdentity()}:${String(purchase?.id || &quot;unknown&quot;)}`;
+      }
+      function loadOrCreatePhysicalPurchaseRequestId(purchase) {
+        if (purchase?.requestId) return String(purchase.requestId);
+        const requestId = persistedRequestId(physicalPurchaseRequestKey(purchase), &quot;&quot;);
+        if (purchase) purchase.requestId = requestId;
+        return requestId;
+      }
+      function clearPhysicalPurchaseRequestId(purchase) {
+        try { localStorage.removeItem(physicalPurchaseRequestKey(purchase)); } catch (error) {}
+        if (purchase) purchase.requestId = &quot;&quot;;
+      }
+      function flashOfferPurchaseRequestKey(offer) {
+        return `zefirok:flash-offer-purchase:${purchaseRequestIdentity()}:${String(offer?.id || &quot;unknown&quot;)}`;
+      }
+      function loadOrCreateFlashOfferRequestId(offer) {
+        return persistedRequestId(flashOfferPurchaseRequestKey(offer), &quot;offer_&quot;);
+      }
+      function clearFlashOfferRequestId(offer) {
+        try { localStorage.removeItem(flashOfferPurchaseRequestKey(offer)); } catch (error) {}
+      }
+
       async function rewardApiRequest(path, payload) {
         const response = await fetch(path, {
           method: &quot;POST&quot;,
@@ -15313,7 +15351,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         recordFlashOfferEvent(&quot;click&quot;, offer);
         hapticImpact(&quot;medium&quot;, 80);
         try {
-          const requestId = `offer_${makeRewardRequestId()}`.slice(0, 96);
+          const requestId = loadOrCreateFlashOfferRequestId(offer);
           const data = await rewardApiRequest(&quot;/api/shop/offers/purchase&quot;, { initData:String(telegramProfile.initData), offerId:offer.id, requestId, current:playerProfileSnapshot() });
           antiCheatWithTrustedChange(&quot;flash-offer-purchase&quot;, () =&gt; {
             if (data.profile) {
@@ -15334,6 +15372,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           if (hasXpBooster || hasSeasonPassReward) await loadSeasonPassProfileBonus().catch(() =&gt; {});
           if ((data.physicalRewards || []).length) await syncServerRewards(true).catch(() =&gt; {});
           flashOfferMessage.textContent = &quot;✅ Покупка успешна — награды уже начислены&quot;;
+          clearFlashOfferRequestId(offer);
           hapticNotify(&quot;success&quot;);
           window.setTimeout(() =&gt; closeFlashOffer(&quot;purchase&quot;), 1050);
         } catch (error) {
@@ -16595,7 +16634,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         }
         if (cancelButton) cancelButton.disabled = true;
 
-        purchase.requestId = purchase.requestId || makeRewardRequestId();
+        purchase.requestId = loadOrCreatePhysicalPurchaseRequestId(purchase);
         let reward;
         try {
           reward = await createServerReward(purchase, purchase.requestId);
@@ -16655,6 +16694,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           ? `${purchase.product.title}: проверяемый код выдан на 24 часа, +${purchaseXpEarned} XP профиля.`
           : `${purchase.product.title}: проверяемый код выдан на 24 часа.`;
         showPurchaseSuccess(purchase, String(reward.code), Number(reward.expiresAt || 0), purchaseXpEarned);
+        clearPhysicalPurchaseRequestId(purchase);
         playGameSound(&quot;purchaseReward&quot;);
         hapticNotify(&quot;success&quot;);
         if (purchaseReachedNewLevel) playGameSound(&quot;levelUp&quot;, 360);
