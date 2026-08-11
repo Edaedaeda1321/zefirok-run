@@ -10562,6 +10562,8 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       const LEADERBOARD_API_STATE_PATH = &quot;/api/leaderboard/state&quot;;
       const LEADERBOARD_API_SUBMIT_PATH = &quot;/api/leaderboard/submit&quot;;
       const RUN_SESSION_START_PATH = &quot;/api/runs/start&quot;;
+      const RUN_SESSION_CHECKPOINT_PATH = &quot;/api/runs/checkpoint&quot;;
+      const RUN_SESSION_CHECKPOINT_INTERVAL_MS = 2000;
       const SEASON_PASS_RUN_API_PATH = &quot;/api/battle-pass/run&quot;;
       const LEADERBOARD_API_CLAIM_PATH = &quot;/api/leaderboard/claim&quot;;
       const CASE_API_STATE_PATH = &quot;/api/cases/state&quot;;
@@ -10589,7 +10591,13 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       const leaderboardRefreshInFlight = { season: false, all_time: false };
       let pendingLeaderboardRun = null;
       let authoritativeRunSessionId = &quot;&quot;;
+      let authoritativeRunSessionReadyId = &quot;&quot;;
       let authoritativeRunStartPromise = null;
+      let authoritativeRunCheckpointRunId = &quot;&quot;;
+      let authoritativeRunCheckpointLastDurationMs = 0;
+      let authoritativeRunCheckpointInFlightRunId = &quot;&quot;;
+      let authoritativeRunCheckpointForcePendingRunId = &quot;&quot;;
+      let authoritativeRunCheckpointLastErrorAt = 0;
       let leaderboardLastRefreshAt = 0;
       let leaderboardCountdownTimer = 0;
       for (const src of [LEADERBOARD_WAITING_IMAGE, LEADERBOARD_MODAL_IMAGE]) {
@@ -11773,7 +11781,14 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         state.time = 0;
         state.runAnimationClock = 0;
         state.caseRunId = makeCaseRunId();
-        void startAuthoritativeRunSession(state.caseRunId);
+        const protectedRunId = String(state.caseRunId || &quot;&quot;);
+        authoritativeRunCheckpointRunId = protectedRunId;
+        authoritativeRunCheckpointLastDurationMs = 0;
+        authoritativeRunCheckpointInFlightRunId = &quot;&quot;;
+        authoritativeRunCheckpointForcePendingRunId = &quot;&quot;;
+        authoritativeRunCheckpointLastErrorAt = 0;
+        authoritativeRunSessionReadyId = &quot;&quot;;
+        const protectedRunStart = startAuthoritativeRunSession(protectedRunId);
         state.trailClock = 0;
         state.last = performance.now();
         fixedStepAccumulator = 0;
@@ -11800,15 +11815,30 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         syncSimulationRenderHistory();
         overlay.classList.remove(&quot;is-finish-modal&quot;);
         overlay.style.display = &quot;none&quot;;
-        statusEl.textContent = &quot;бежим&quot;;
-        playGameSound(&quot;startRun&quot;);
+        statusEl.textContent = &quot;проверка&quot;;
         if (!preservePauseVisual) setPauseButtonVisual(false);
         if (!preserveButtonVisual) setStartButtonVisual(&quot;restart&quot;, false);
         updateRunningHud(state.last, true);
-        scheduleGameLoop();
+        void protectedRunStart.then((ready) =&gt; {
+          if (String(state.caseRunId || &quot;&quot;) !== protectedRunId || state.over || state.paused) return;
+          if (!ready) {
+            state.running = false;
+            statusEl.textContent = &quot;нет связи&quot;;
+            showModal(&quot;Не удалось начать забег&quot;, &quot;Защищённая сессия не создана. Проверь интернет и нажми «Играть» ещё раз.&quot;);
+            return;
+          }
+          state.last = performance.now();
+          statusEl.textContent = &quot;бежим&quot;;
+          playGameSound(&quot;startRun&quot;);
+          scheduleGameLoop();
+        });
       }
 
       function jump() {
+        if (state.running &amp;&amp; state.caseRunId &amp;&amp; authoritativeRunSessionReadyId !== String(state.caseRunId)) {
+          hapticImpact(&quot;light&quot;, 50);
+          return;
+        }
         if (state.paused) {
           hapticImpact(&quot;medium&quot;, 90);
           resume();
@@ -11838,6 +11868,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           return;
         }
         visibilityPauseActive = false;
+        void sendAuthoritativeRunCheckpoint(true);
         state.running = false;
         state.paused = true;
         clientPerformanceLastFrameAt = 0;
@@ -11858,6 +11889,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         clientPerformanceLastFrameAt = 0;
         clientPerformanceLastFrameDurationMs = 0;
         flushDeferredAntiCheatGuard();
+        void sendAuthoritativeRunCheckpoint(true);
         state.paused = false;
         state.running = true;
         state.last = performance.now();
@@ -11877,6 +11909,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         if (!CLIENT_OPT_VISIBILITY_PAUSE || document.visibilityState !== &quot;hidden&quot;) return;
         if (!state.running || state.paused || state.over) return;
         visibilityPauseActive = true;
+        void sendAuthoritativeRunCheckpoint(true);
         state.running = false;
         state.paused = true;
         clientPerformanceLastFrameAt = 0;
@@ -12119,6 +12152,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           renderInterpolationAlpha = 1;
         }
         updateVisualMotionState(rawDelta);
+        void sendAuthoritativeRunCheckpoint(false);
 
         const updateMs = performance.now() - updateStartedAt;
         updateRunningHud(now);
@@ -15135,44 +15169,6 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         }
       }
 
-      const PURCHASE_REQUEST_TTL_MS = 24 * 60 * 60 * 1000;
-      function purchaseRequestIdentity() {
-        return String(telegramProfile?.id || &quot;guest&quot;).replace(/[^a-zA-Z0-9_-]/g, &quot;_&quot;).slice(0, 64) || &quot;guest&quot;;
-      }
-      function persistedRequestId(key, prefix) {
-        try {
-          const saved = JSON.parse(localStorage.getItem(key) || &quot;null&quot;);
-          const age = Date.now() - Number(saved?.createdAt || 0);
-          if (saved?.requestId &amp;&amp; age &gt;= 0 &amp;&amp; age &lt; PURCHASE_REQUEST_TTL_MS) return String(saved.requestId);
-          if (saved) localStorage.removeItem(key);
-        } catch (error) {}
-        const requestId = `${prefix}${makeRewardRequestId()}`.slice(0, 96);
-        try { localStorage.setItem(key, JSON.stringify({ requestId, createdAt: Date.now() })); } catch (error) {}
-        return requestId;
-      }
-      function physicalPurchaseRequestKey(purchase) {
-        return `zefirok:physical-purchase:${purchaseRequestIdentity()}:${String(purchase?.id || &quot;unknown&quot;)}`;
-      }
-      function loadOrCreatePhysicalPurchaseRequestId(purchase) {
-        if (purchase?.requestId) return String(purchase.requestId);
-        const requestId = persistedRequestId(physicalPurchaseRequestKey(purchase), &quot;&quot;);
-        if (purchase) purchase.requestId = requestId;
-        return requestId;
-      }
-      function clearPhysicalPurchaseRequestId(purchase) {
-        try { localStorage.removeItem(physicalPurchaseRequestKey(purchase)); } catch (error) {}
-        if (purchase) purchase.requestId = &quot;&quot;;
-      }
-      function flashOfferPurchaseRequestKey(offer) {
-        return `zefirok:flash-offer-purchase:${purchaseRequestIdentity()}:${String(offer?.id || &quot;unknown&quot;)}`;
-      }
-      function loadOrCreateFlashOfferRequestId(offer) {
-        return persistedRequestId(flashOfferPurchaseRequestKey(offer), &quot;offer_&quot;);
-      }
-      function clearFlashOfferRequestId(offer) {
-        try { localStorage.removeItem(flashOfferPurchaseRequestKey(offer)); } catch (error) {}
-      }
-
       async function rewardApiRequest(path, payload) {
         const response = await fetch(path, {
           method: &quot;POST&quot;,
@@ -15351,7 +15347,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         recordFlashOfferEvent(&quot;click&quot;, offer);
         hapticImpact(&quot;medium&quot;, 80);
         try {
-          const requestId = loadOrCreateFlashOfferRequestId(offer);
+          const requestId = `offer_${makeRewardRequestId()}`.slice(0, 96);
           const data = await rewardApiRequest(&quot;/api/shop/offers/purchase&quot;, { initData:String(telegramProfile.initData), offerId:offer.id, requestId, current:playerProfileSnapshot() });
           antiCheatWithTrustedChange(&quot;flash-offer-purchase&quot;, () =&gt; {
             if (data.profile) {
@@ -15372,7 +15368,6 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           if (hasXpBooster || hasSeasonPassReward) await loadSeasonPassProfileBonus().catch(() =&gt; {});
           if ((data.physicalRewards || []).length) await syncServerRewards(true).catch(() =&gt; {});
           flashOfferMessage.textContent = &quot;✅ Покупка успешна — награды уже начислены&quot;;
-          clearFlashOfferRequestId(offer);
           hapticNotify(&quot;success&quot;);
           window.setTimeout(() =&gt; closeFlashOffer(&quot;purchase&quot;), 1050);
         } catch (error) {
@@ -16052,14 +16047,85 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         if (authoritativeRunSessionId === id &amp;&amp; authoritativeRunStartPromise) return authoritativeRunStartPromise;
         authoritativeRunSessionId = id;
         const task = leaderboardApiRequest(RUN_SESSION_START_PATH, { initData, runId: id, gameVersion: GAME_VERSION })
-          .then(() =&gt; true)
+          .then(() =&gt; {
+            if (authoritativeRunSessionId === id) authoritativeRunSessionReadyId = id;
+            return true;
+          })
           .catch((error) =&gt; {
             if (authoritativeRunSessionId === id) authoritativeRunSessionId = &quot;&quot;;
+            if (authoritativeRunSessionReadyId === id) authoritativeRunSessionReadyId = &quot;&quot;;
             console.warn(&quot;Protected run session start failed&quot;, error);
             return false;
           });
         authoritativeRunStartPromise = task;
         return task;
+      }
+
+      function currentAuthoritativeRunCheckpoint() {
+        return {
+          durationMs: Math.max(0, Math.floor(Number(state.time || 0) * 1000)),
+          score: Math.max(0, Math.floor(Number(state.score || 0))),
+          runTreats: Math.max(0, Math.floor(Number(state.runTreats || 0))),
+          runCoffee: Math.max(0, Math.floor(Number(state.runCoffee || 0)))
+        };
+      }
+
+      async function sendAuthoritativeRunCheckpoint(force = false) {
+        const runId = String(state.caseRunId || &quot;&quot;).trim();
+        if (!/^[A-Za-z0-9_-]{12,96}$/.test(runId)) return false;
+        const initData = String(telegramProfile?.initData || &quot;&quot;);
+        if (!initData) return false;
+        if (!force &amp;&amp; (!state.running || state.paused || state.over)) return false;
+
+        if (authoritativeRunCheckpointRunId !== runId) {
+          authoritativeRunCheckpointRunId = runId;
+          authoritativeRunCheckpointLastDurationMs = 0;
+          authoritativeRunCheckpointInFlightRunId = &quot;&quot;;
+        }
+        const snapshot = currentAuthoritativeRunCheckpoint();
+        if (!force &amp;&amp; snapshot.durationMs - authoritativeRunCheckpointLastDurationMs &lt; RUN_SESSION_CHECKPOINT_INTERVAL_MS) return false;
+        if (authoritativeRunCheckpointInFlightRunId === runId) {
+          if (force) authoritativeRunCheckpointForcePendingRunId = runId;
+          return false;
+        }
+
+        const sessionReady = authoritativeRunSessionId === runId &amp;&amp; authoritativeRunStartPromise
+          ? await authoritativeRunStartPromise
+          : await startAuthoritativeRunSession(runId);
+        if (!sessionReady) return false;
+
+        authoritativeRunCheckpointInFlightRunId = runId;
+        try {
+          const data = await leaderboardApiRequest(RUN_SESSION_CHECKPOINT_PATH, {
+            initData,
+            runId,
+            durationMs: snapshot.durationMs,
+            score: snapshot.score,
+            runTreats: snapshot.runTreats,
+            runCoffee: snapshot.runCoffee,
+            gameVersion: GAME_VERSION
+          });
+          if (authoritativeRunCheckpointRunId === runId) {
+            authoritativeRunCheckpointLastDurationMs = Math.max(
+              authoritativeRunCheckpointLastDurationMs,
+              Number(data?.checkpoint?.durationMs || snapshot.durationMs)
+            );
+          }
+          return true;
+        } catch (error) {
+          const now = Date.now();
+          if (now - authoritativeRunCheckpointLastErrorAt &gt; 4000) {
+            authoritativeRunCheckpointLastErrorAt = now;
+            console.warn(&quot;Protected run checkpoint failed&quot;, error);
+          }
+          return false;
+        } finally {
+          if (authoritativeRunCheckpointInFlightRunId === runId) authoritativeRunCheckpointInFlightRunId = &quot;&quot;;
+          if (authoritativeRunCheckpointForcePendingRunId === runId &amp;&amp; authoritativeRunCheckpointRunId === runId) {
+            authoritativeRunCheckpointForcePendingRunId = &quot;&quot;;
+            void sendAuthoritativeRunCheckpoint(true);
+          }
+        }
       }
 
       async function submitSeasonPassRun(run, initDataValue = &quot;&quot;) {
@@ -16169,7 +16235,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           return true;
         } catch (error) {
           const errorMessage = String(error?.message || &quot;&quot;);
-          const permanentSessionError = Number(error?.status || 0) === 409 &amp;&amp; /(?:начните новый забег|идентификатор забега уже|сессия забега истекла)/i.test(errorMessage);
+          const permanentSessionError = Number(error?.status || 0) === 409 &amp;&amp; /(?:начните новый забег|идентификатор забега уже|сессия забега истекла|проверка забега|контрольн)/i.test(errorMessage);
           if (permanentSessionError) savePendingLeaderboardRun(null);
           console.warn(&quot;Authoritative run submit failed&quot;, error);
           showProfileToast(errorMessage || &quot;Результат сохранён и будет отправлен позже.&quot;, &quot;warning&quot;, 4200);
@@ -16634,7 +16700,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         }
         if (cancelButton) cancelButton.disabled = true;
 
-        purchase.requestId = loadOrCreatePhysicalPurchaseRequestId(purchase);
+        purchase.requestId = purchase.requestId || makeRewardRequestId();
         let reward;
         try {
           reward = await createServerReward(purchase, purchase.requestId);
@@ -16694,7 +16760,6 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           ? `${purchase.product.title}: проверяемый код выдан на 24 часа, +${purchaseXpEarned} XP профиля.`
           : `${purchase.product.title}: проверяемый код выдан на 24 часа.`;
         showPurchaseSuccess(purchase, String(reward.code), Number(reward.expiresAt || 0), purchaseXpEarned);
-        clearPhysicalPurchaseRequestId(purchase);
         playGameSound(&quot;purchaseReward&quot;);
         hapticNotify(&quot;success&quot;);
         if (purchaseReachedNewLevel) playGameSound(&quot;levelUp&quot;, 360);

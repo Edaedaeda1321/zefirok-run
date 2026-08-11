@@ -1056,7 +1056,9 @@ async function ensureRuntimeCompatibilitySchema(env) {
       ['leaderboard_entries', 'case_frame_id', "TEXT NOT NULL DEFAULT ''"],
       ['leaderboard_all_time', 'case_avatar_id', "TEXT NOT NULL DEFAULT ''"],
       ['leaderboard_all_time', 'case_frame_id', "TEXT NOT NULL DEFAULT ''"],
-      ['season_pass_seasons', 'claim_grace_ends_at', 'INTEGER NOT NULL DEFAULT 0']
+      ['season_pass_seasons', 'claim_grace_ends_at', 'INTEGER NOT NULL DEFAULT 0'],
+      ['granted_cases', 'opening_started_at', 'INTEGER NOT NULL DEFAULT 0'],
+      ['granted_cases', 'opening_token', "TEXT NOT NULL DEFAULT ''"]
     ];
     const grouped = new Map();
     for (const [table, column, definition] of columns) {
@@ -1349,6 +1351,10 @@ export default {
 
       if (url.pathname === "/api/runs/start" && request.method === "POST") {
         return await startAuthoritativeRunSession(request, env);
+      }
+
+      if (url.pathname === "/api/runs/checkpoint" && request.method === "POST") {
+        return await checkpointAuthoritativeRunSession(request, env);
       }
 
       if (url.pathname === "/api/leaderboard/submit" && request.method === "POST") {
@@ -2600,9 +2606,12 @@ async function consumeShopStock(env, { category, productId, consumptionId, teleg
   if (!normalizedConsumptionId) throw new ApiError(400, "Некорректный идентификатор покупки.");
 
   const existing = await env.DB.prepare(
-    `SELECT scope_key,created_at FROM shop_stock_consumptions WHERE consumption_id = ? LIMIT 1`
+    `SELECT scope_key,category,product_id,created_at FROM shop_stock_consumptions WHERE consumption_id = ? LIMIT 1`
   ).bind(normalizedConsumptionId).first();
   if (existing) {
+    if (String(existing.category || '') !== normalizedCategory || String(existing.product_id || '') !== normalizedProduct) {
+      throw new ApiError(409, 'Этот идентификатор резерва уже использован для другого товара.');
+    }
     const rows = await readShopStockRows(env);
     return {
       repeated: true,
@@ -2679,6 +2688,13 @@ async function releaseShopStock(env, consumptionId) {
 let authoritativeEconomySchemaPromise = null;
 const AUTHORITATIVE_RUN_SESSION_MAX_MS = 2 * 60 * 60 * 1000;
 const AUTHORITATIVE_RUN_CLOCK_GRACE_MS = 7000;
+// A run must prove its progress continuously while the game is actually
+// advancing. This prevents a client from waiting for the minimum run time and
+// then inventing one large score/currency payload at submit time.
+const AUTHORITATIVE_RUN_CHECKPOINT_MAX_ADVANCE_MS = 6000;
+const AUTHORITATIVE_RUN_CHECKPOINT_MAX_WALL_GAP_MS = 6500;
+const AUTHORITATIVE_RUN_CHECKPOINT_CLOCK_GRACE_MS = 1200;
+const AUTHORITATIVE_RUN_CHECKPOINT_SCORE_SLACK = 8;
 const AUTHORITATIVE_PROFILE_RUN_XP = 4;
 const AUTHORITATIVE_PROFILE_PURCHASE_XP = 5;
 // Runs accepted by an older Worker before this cutoff may be retried after
@@ -2726,6 +2742,21 @@ async function ensureAuthoritativeEconomySchema(env) {
         )`),
         env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_game_run_sessions_player ON game_run_sessions(telegram_id,status,updated_at DESC)`),
         env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_game_run_sessions_expiry ON game_run_sessions(status,expires_at_ms)`),
+        env.DB.prepare(`CREATE TABLE IF NOT EXISTS game_run_live_proofs (
+          run_id TEXT PRIMARY KEY,
+          telegram_id TEXT NOT NULL,
+          seq INTEGER NOT NULL DEFAULT 0,
+          duration_ms INTEGER NOT NULL DEFAULT 0,
+          score INTEGER NOT NULL DEFAULT 0,
+          run_treats INTEGER NOT NULL DEFAULT 0,
+          run_coffee INTEGER NOT NULL DEFAULT 0,
+          last_server_at_ms INTEGER NOT NULL,
+          anchor_duration_ms INTEGER NOT NULL DEFAULT 0,
+          anchor_server_at_ms INTEGER NOT NULL DEFAULT 0,
+          created_at INTEGER NOT NULL,
+          updated_at INTEGER NOT NULL
+        )`),
+        env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_game_run_live_proofs_player ON game_run_live_proofs(telegram_id,updated_at DESC)`),
         env.DB.prepare(`CREATE TABLE IF NOT EXISTS player_economy_run_ledger (
           run_id TEXT PRIMARY KEY,
           telegram_id TEXT NOT NULL,
@@ -2760,13 +2791,34 @@ async function ensureAuthoritativeEconomySchema(env) {
           meta_key TEXT PRIMARY KEY,
           value_int INTEGER NOT NULL DEFAULT 0,
           updated_at INTEGER NOT NULL DEFAULT 0
+        )`),
+        env.DB.prepare(`CREATE TABLE IF NOT EXISTS game_run_settlement_guards (
+          guard_id TEXT PRIMARY KEY,
+          ok INTEGER NOT NULL CONSTRAINT game_run_settlement_guard_ok CHECK(ok=1)
+        )`),
+        env.DB.prepare(`CREATE TABLE IF NOT EXISTS granted_case_opening_guards (
+          guard_id TEXT PRIMARY KEY,
+          ok INTEGER NOT NULL CONSTRAINT granted_case_opening_guard_ok CHECK(ok=1)
         )`)
       ]);
-      const cutoverNow = Math.floor(Date.now() / 1000);
+      const schemaNowMs = Date.now();
+      const schemaNow = Math.floor(schemaNowMs / 1000);
+      await env.DB.prepare(`UPDATE game_run_sessions SET status='expired',updated_at=? WHERE status='started' AND expires_at_ms<=?`).bind(schemaNow,schemaNowMs).run();
+      await env.DB.prepare(`UPDATE game_run_sessions AS old SET status='superseded',updated_at=?
+        WHERE old.status='started' AND EXISTS(
+          SELECT 1 FROM game_run_sessions AS newer
+          WHERE newer.telegram_id=old.telegram_id AND newer.status='started'
+            AND (newer.started_at_ms>old.started_at_ms OR (newer.started_at_ms=old.started_at_ms AND newer.run_id>old.run_id))
+        )`).bind(schemaNow).run();
+      await env.DB.prepare(`CREATE UNIQUE INDEX IF NOT EXISTS idx_game_run_sessions_one_active_player ON game_run_sessions(telegram_id) WHERE status='started'`).run();
+      const cutoverNow = schemaNow;
       await env.DB.prepare(
         `INSERT OR IGNORE INTO player_economy_meta(meta_key,value_int,updated_at) VALUES('server_authority_cutover_at',?,?)`
       ).bind(cutoverNow,cutoverNow).run();
       await addRuntimeColumnIfMissing(env, 'game_run_sessions', 'new_record', 'INTEGER NOT NULL DEFAULT 0');
+      await addRuntimeColumnIfMissing(env, 'game_run_live_proofs', 'anchor_duration_ms', 'INTEGER NOT NULL DEFAULT 0');
+      await addRuntimeColumnIfMissing(env, 'game_run_live_proofs', 'anchor_server_at_ms', 'INTEGER NOT NULL DEFAULT 0');
+      await env.DB.prepare(`UPDATE game_run_live_proofs SET anchor_server_at_ms=last_server_at_ms WHERE anchor_server_at_ms<=0`).run();
       await addRuntimeColumnIfMissing(env, 'player_economy_run_ledger', 'new_record', 'INTEGER NOT NULL DEFAULT 0');
       await addRuntimeColumnIfMissing(env, 'player_economy_run_ledger', 'accepted_rating', 'INTEGER NOT NULL DEFAULT 0');
       await addRuntimeColumnIfMissing(env, 'player_economy_run_ledger', 'season_id', "TEXT NOT NULL DEFAULT ''");
@@ -2904,37 +2956,192 @@ function serverRunSkinBonus(skinId) {
   return SERVER_SKIN_RUN_BONUSES[String(skinId || 'default')] || SERVER_SKIN_RUN_BONUSES.default;
 }
 
-async function validateAuthoritativeRunMetrics(env, session, metrics) {
-  const nowMs = Date.now();
-  const durationMs = Math.max(0, Math.floor(Number(metrics.durationMs || 0)));
-  const score = Math.max(0, Math.floor(Number(metrics.score || 0)));
-  const runTreats = Math.max(0, Math.floor(Number(metrics.runTreats || 0)));
-  const runCoffee = Math.max(0, Math.floor(Number(metrics.runCoffee || 0)));
-  if (durationMs > AUTHORITATIVE_RUN_SESSION_MAX_MS) throw new ApiError(400, 'Забег слишком длинный и не прошёл серверную проверку.');
-  if (session) {
-    const startedAtMs = Number(session.started_at_ms || 0);
-    const expiresAtMs = Number(session.expires_at_ms || 0);
-    if (!startedAtMs || (expiresAtMs && nowMs > expiresAtMs + AUTHORITATIVE_RUN_CLOCK_GRACE_MS)) {
-      throw new ApiError(409, 'Сессия забега истекла. Начните новый забег.');
+function normalizeAuthoritativeRunMetrics(metrics) {
+  return {
+    durationMs: Math.max(0, Math.floor(Number(metrics?.durationMs || 0))),
+    score: Math.max(0, Math.floor(Number(metrics?.score || 0))),
+    runTreats: Math.max(0, Math.floor(Number(metrics?.runTreats || metrics?.run_treats || 0))),
+    runCoffee: Math.max(0, Math.floor(Number(metrics?.runCoffee || metrics?.run_coffee || 0)))
+  };
+}
+
+function authoritativeRunProofView(row) {
+  return {
+    seq: Math.max(0, Math.floor(Number(row?.seq || 0))),
+    durationMs: Math.max(0, Math.floor(Number(row?.duration_ms || 0))),
+    score: Math.max(0, Math.floor(Number(row?.score || 0))),
+    runTreats: Math.max(0, Math.floor(Number(row?.run_treats || 0))),
+    runCoffee: Math.max(0, Math.floor(Number(row?.run_coffee || 0))),
+    lastServerAtMs: Math.max(0, Math.floor(Number(row?.last_server_at_ms || 0))),
+    anchorDurationMs: Math.max(0, Math.floor(Number(row?.anchor_duration_ms || 0))),
+    anchorServerAtMs: Math.max(0, Math.floor(Number(row?.anchor_server_at_ms || row?.last_server_at_ms || 0)))
+  };
+}
+
+function sameAuthoritativeRunMetrics(a, b) {
+  return Number(a?.durationMs || 0) === Number(b?.durationMs || 0)
+    && Number(a?.score || 0) === Number(b?.score || 0)
+    && Number(a?.runTreats || 0) === Number(b?.runTreats || 0)
+    && Number(a?.runCoffee || 0) === Number(b?.runCoffee || 0);
+}
+
+async function ensureAuthoritativeRunProof(env, session) {
+  const runId = String(session?.run_id || '');
+  const telegramId = String(session?.telegram_id || '');
+  const startedAtMs = Math.max(1, Math.floor(Number(session?.started_at_ms || Date.now())));
+  const now = Math.floor(Date.now() / 1000);
+  await env.DB.prepare(
+    `INSERT OR IGNORE INTO game_run_live_proofs(
+      run_id,telegram_id,seq,duration_ms,score,run_treats,run_coffee,last_server_at_ms,anchor_duration_ms,anchor_server_at_ms,created_at,updated_at
+    ) VALUES(?,?,0,0,0,0,0,?,0,?,?,?)`
+  ).bind(runId, telegramId, startedAtMs, startedAtMs, now, now).run();
+  return await env.DB.prepare(`SELECT * FROM game_run_live_proofs WHERE run_id=? LIMIT 1`).bind(runId).first();
+}
+
+async function validateAuthoritativeRunProgressCaps(env, session, previous, metrics, nowMs) {
+  const startedAtMs = Math.max(0, Number(session?.started_at_ms || 0));
+  const expiresAtMs = Math.max(0, Number(session?.expires_at_ms || 0));
+  if (!startedAtMs || (expiresAtMs && nowMs > expiresAtMs + AUTHORITATIVE_RUN_CLOCK_GRACE_MS)) {
+    throw new ApiError(409, 'Сессия забега истекла. Начните новый забег.');
+  }
+  if (metrics.durationMs > AUTHORITATIVE_RUN_SESSION_MAX_MS) {
+    throw new ApiError(400, 'Забег слишком длинный и не прошёл серверную проверку.');
+  }
+  const totalWallElapsedMs = Math.max(0, nowMs - startedAtMs);
+  if (metrics.durationMs > totalWallElapsedMs + AUTHORITATIVE_RUN_CHECKPOINT_CLOCK_GRACE_MS) {
+    throw new ApiError(400, 'Игровое время забега опережает серверное время.');
+  }
+
+  const prev = authoritativeRunProofView(previous);
+  if (metrics.durationMs < prev.durationMs || metrics.score < prev.score || metrics.runTreats < prev.runTreats || metrics.runCoffee < prev.runCoffee) {
+    throw new ApiError(409, 'Контрольные данные забега идут в неверном порядке. Начните новый забег.');
+  }
+
+  const durationDeltaMs = metrics.durationMs - prev.durationMs;
+  const scoreDelta = metrics.score - prev.score;
+  const treatsDelta = metrics.runTreats - prev.runTreats;
+  const coffeeDelta = metrics.runCoffee - prev.runCoffee;
+  const pickupDelta = treatsDelta + coffeeDelta;
+  const serverDeltaMs = Math.max(0, nowMs - prev.lastServerAtMs);
+  const anchorServerDeltaMs = Math.max(0, nowMs - prev.anchorServerAtMs);
+  const anchorDurationDeltaMs = Math.max(0, metrics.durationMs - prev.anchorDurationMs);
+
+  // The grace is measured from a stable wall-clock anchor, not from every
+  // checkpoint. Otherwise an attacker could accumulate the grace by sending
+  // many tiny requests back-to-back after waiting offline.
+  if (anchorDurationDeltaMs > anchorServerDeltaMs + AUTHORITATIVE_RUN_CHECKPOINT_CLOCK_GRACE_MS) {
+    throw new ApiError(400, 'Игровое время не подтверждено непрерывным серверным таймером.');
+  }
+
+  if (durationDeltaMs > AUTHORITATIVE_RUN_CHECKPOINT_MAX_ADVANCE_MS) {
+    throw new ApiError(409, 'Проверка забега потеряла непрерывность. Начните новый забег.');
+  }
+  if (durationDeltaMs > 750 && serverDeltaMs > AUTHORITATIVE_RUN_CHECKPOINT_MAX_WALL_GAP_MS) {
+    throw new ApiError(409, 'Проверка забега была прервана слишком надолго. Начните новый забег.');
+  }
+  if (durationDeltaMs > serverDeltaMs + AUTHORITATIVE_RUN_CHECKPOINT_CLOCK_GRACE_MS) {
+    throw new ApiError(400, 'Прогресс забега идёт быстрее серверного времени.');
+  }
+  if (durationDeltaMs === 0 && (scoreDelta > 0 || pickupDelta > 0)) {
+    throw new ApiError(400, 'Результат изменился без игрового времени.');
+  }
+
+  const gameplay = await readPublishedGameRuntimeConfig(env);
+  const minimumPickupDelay = Math.max(0.25, Number(gameplay.pickupDelayBase || DEFAULT_GAME_RUNTIME_CONFIG.pickupDelayBase));
+  const deltaSeconds = durationDeltaMs / 1000;
+  const totalSeconds = metrics.durationMs / 1000;
+  const maxPickupDelta = durationDeltaMs > 0 ? Math.ceil(deltaSeconds / minimumPickupDelay) + 1 : 0;
+  if (pickupDelta > maxPickupDelta) {
+    throw new ApiError(400, 'Слишком много предметов собрано между контрольными точками.');
+  }
+  const totalMaxPickups = metrics.durationMs > 0 ? Math.ceil(totalSeconds / minimumPickupDelay) + 2 : 0;
+  if (metrics.runTreats + metrics.runCoffee > totalMaxPickups) {
+    throw new ApiError(400, 'Количество собранных предметов не прошло серверную проверку.');
+  }
+
+  const maxPassiveRate = Math.max(0, Number(gameplay.scoreBaseRate || 0))
+    + Math.max(0, Number(gameplay.maxSpeed || 0)) * Math.max(0, Number(gameplay.scoreSpeedFactor || 0));
+  const maxScoreDelta = Math.ceil(deltaSeconds * maxPassiveRate + pickupDelta * 35 + (durationDeltaMs > 0 ? AUTHORITATIVE_RUN_CHECKPOINT_SCORE_SLACK : 0));
+  if (scoreDelta > maxScoreDelta) {
+    throw new ApiError(400, 'Рост счёта между контрольными точками не прошёл серверную проверку.');
+  }
+  const totalMaximumScore = Math.ceil(totalSeconds * maxPassiveRate + (metrics.runTreats + metrics.runCoffee) * 35 + 20);
+  if (metrics.score > totalMaximumScore) {
+    throw new ApiError(400, 'Результат не прошёл серверную проверку.');
+  }
+
+  const minimumRewardRunMs = positiveInt(env.LEADERBOARD_MIN_RUN_SECONDS, DEFAULT_LEADERBOARD_MIN_RUN_SECONDS) * 1000;
+  if (metrics.durationMs >= minimumRewardRunMs && totalWallElapsedMs < minimumRewardRunMs) {
+    throw new ApiError(400, 'Забег завершён слишком рано для начисления награды.');
+  }
+  return metrics;
+}
+
+async function attestAuthoritativeRunProgress(env, session, rawMetrics) {
+  const metrics = normalizeAuthoritativeRunMetrics(rawMetrics);
+  const runId = String(session?.run_id || '');
+  const telegramId = String(session?.telegram_id || '');
+  if (!runId || !telegramId) throw new ApiError(409, 'Защищённая сессия забега не найдена.');
+
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const proofRow = await ensureAuthoritativeRunProof(env, session);
+    if (!proofRow || String(proofRow.telegram_id || '') !== telegramId) {
+      throw new ApiError(409, 'Контрольная запись забега повреждена. Начните новый забег.');
     }
-    const elapsedMs = Math.max(0, nowMs - startedAtMs);
-    if (durationMs > elapsedMs + AUTHORITATIVE_RUN_CLOCK_GRACE_MS) {
-      throw new ApiError(400, 'Длительность забега не прошла серверную проверку.');
+    const proof = authoritativeRunProofView(proofRow);
+    const nowMs = Date.now();
+
+    if (sameAuthoritativeRunMetrics(proof, metrics)) {
+      const heartbeat = await env.DB.prepare(
+        `UPDATE game_run_live_proofs SET
+          seq=seq+1,last_server_at_ms=?,anchor_duration_ms=duration_ms,anchor_server_at_ms=?,updated_at=?
+         WHERE run_id=? AND telegram_id=? AND seq=?`
+      ).bind(nowMs, nowMs, Math.floor(nowMs / 1000), runId, telegramId, proof.seq).run();
+      if (safeAdminNumber(heartbeat?.meta?.changes) > 0) {
+        return { ...metrics, proofSeq: proof.seq + 1, attestedAtMs: nowMs };
+      }
+      continue;
+    }
+
+    await validateAuthoritativeRunProgressCaps(env, session, proofRow, metrics, nowMs);
+    const updated = await env.DB.prepare(
+      `UPDATE game_run_live_proofs SET
+        seq=seq+1,duration_ms=?,score=?,run_treats=?,run_coffee=?,last_server_at_ms=?,updated_at=?
+       WHERE run_id=? AND telegram_id=? AND seq=?`
+    ).bind(
+      metrics.durationMs, metrics.score, metrics.runTreats, metrics.runCoffee,
+      nowMs, Math.floor(nowMs / 1000), runId, telegramId, proof.seq
+    ).run();
+    if (safeAdminNumber(updated?.meta?.changes) > 0) {
+      return { ...metrics, proofSeq: proof.seq + 1, attestedAtMs: nowMs };
     }
   }
-  const gameplay = await readPublishedGameRuntimeConfig(env);
-  const seconds = durationMs / 1000;
-  const minimumPickupDelay = Math.max(0.25, Number(gameplay.pickupDelayBase || DEFAULT_GAME_RUNTIME_CONFIG.pickupDelayBase));
-  const maxPickups = Math.max(2, Math.ceil(seconds / minimumPickupDelay) + 3);
-  if (runTreats + runCoffee > maxPickups) throw new ApiError(400, 'Количество собранных предметов не прошло серверную проверку.');
-  const maxPassiveRate = Math.max(0, Number(gameplay.scoreBaseRate || 0)) + Math.max(0, Number(gameplay.maxSpeed || 0)) * Math.max(0, Number(gameplay.scoreSpeedFactor || 0));
-  // Every collected item adds exactly 35 score on the real client. Only the
-  // submitted-and-rate-limited pickups may contribute that part of the cap;
-  // using the theoretical maximum pickup count here would give forged runs a
-  // large free score allowance.
-  const maximumScore = Math.ceil(seconds * maxPassiveRate + (runTreats + runCoffee) * 35 + 350);
-  if (score > maximumScore) throw new ApiError(400, 'Результат не прошёл серверную проверку.');
-  return { durationMs, score, runTreats, runCoffee, maxPickups, maximumScore };
+  throw new ApiError(409, 'Контрольная точка забега устарела. Повторите отправку.');
+}
+
+async function checkpointAuthoritativeRunSession(request, env) {
+  try {
+    requireDatabase(env);
+    requireBotToken(env);
+    await ensureAuthoritativeEconomySchema(env);
+    const body = await readJson(request);
+    const auth = await validateTelegramInitData(String(body.initData || ''), env);
+    const telegramId = String(auth.user.id);
+    const runId = String(body.runId || '').trim();
+    if (!/^[A-Za-z0-9_-]{12,96}$/.test(runId)) throw new ApiError(400, 'Некорректный идентификатор забега.');
+    const session = await env.DB.prepare(`SELECT * FROM game_run_sessions WHERE run_id=? LIMIT 1`).bind(runId).first();
+    if (!session || String(session.telegram_id || '') !== telegramId) throw new ApiError(409, 'Защищённая сессия забега не найдена.');
+    if (String(session.status || '') !== 'started') throw new ApiError(409, 'Эта сессия забега уже завершена или заменена.');
+    const checkpoint = await attestAuthoritativeRunProgress(env, session, body);
+    return jsonResponse({ ok: true, checkpoint: {
+      runId, seq: checkpoint.proofSeq, durationMs: checkpoint.durationMs, score: checkpoint.score,
+      runTreats: checkpoint.runTreats, runCoffee: checkpoint.runCoffee, serverTime: checkpoint.attestedAtMs
+    }});
+  } catch (error) {
+    if (error instanceof ApiError) return jsonResponse({ ok:false, error:error.message }, error.status);
+    console.error('checkpointAuthoritativeRunSession failed', error);
+    return jsonResponse({ ok:false, error:'Не удалось подтвердить контрольную точку забега.' }, 500);
+  }
 }
 
 async function startAuthoritativeRunSession(request, env) {
@@ -2951,15 +3158,34 @@ async function startAuthoritativeRunSession(request, env) {
     const existing = await env.DB.prepare(`SELECT * FROM game_run_sessions WHERE run_id=? LIMIT 1`).bind(runId).first();
     if (existing) {
       if (String(existing.telegram_id || '') !== telegramId) throw new ApiError(409, 'Этот идентификатор забега уже используется.');
-      return jsonResponse({ ok:true, runSession:{ runId, startedAt:Number(existing.started_at_ms||0), expiresAt:Number(existing.expires_at_ms||0), status:String(existing.status||'started') }, repeated:true });
+      if (String(existing.status || '') !== 'started') throw new ApiError(409, 'Эта сессия забега уже завершена или заменена новым забегом.');
+      await ensureAuthoritativeRunProof(env, existing);
+      return jsonResponse({ ok:true, runSession:{ runId, startedAt:Number(existing.started_at_ms||0), expiresAt:Number(existing.expires_at_ms||0), status:'started' }, repeated:true });
     }
     const nowMs = Date.now();
     const now = Math.floor(nowMs / 1000);
     const expiresAtMs = nowMs + AUTHORITATIVE_RUN_SESSION_MAX_MS;
-    await env.DB.prepare(
-      `INSERT INTO game_run_sessions(run_id,telegram_id,started_at_ms,expires_at_ms,status,created_at,updated_at)
-       VALUES(?,?,?,?,'started',?,?)`
-    ).bind(runId, telegramId, nowMs, expiresAtMs, now, now).run();
+    try {
+      await env.DB.batch([
+        env.DB.prepare(`UPDATE game_run_sessions SET status='superseded',updated_at=? WHERE telegram_id=? AND status='started' AND run_id<>?`).bind(now, telegramId, runId),
+        env.DB.prepare(
+          `INSERT INTO game_run_sessions(run_id,telegram_id,started_at_ms,expires_at_ms,status,created_at,updated_at)
+           VALUES(?,?,?,?,'started',?,?)`
+        ).bind(runId, telegramId, nowMs, expiresAtMs, now, now),
+        env.DB.prepare(
+          `INSERT INTO game_run_live_proofs(
+            run_id,telegram_id,seq,duration_ms,score,run_treats,run_coffee,last_server_at_ms,anchor_duration_ms,anchor_server_at_ms,created_at,updated_at
+          ) VALUES(?,?,0,0,0,0,0,?,0,?,?,?)`
+        ).bind(runId, telegramId, nowMs, nowMs, now, now)
+      ]);
+    } catch (error) {
+      const raced = await env.DB.prepare(`SELECT * FROM game_run_sessions WHERE run_id=? LIMIT 1`).bind(runId).first();
+      if (raced && String(raced.telegram_id || '') === telegramId && String(raced.status || '') === 'started') {
+        await ensureAuthoritativeRunProof(env, raced);
+        return jsonResponse({ ok:true, runSession:{ runId, startedAt:Number(raced.started_at_ms||0), expiresAt:Number(raced.expires_at_ms||0), status:'started' }, repeated:true });
+      }
+      throw error;
+    }
     return jsonResponse({ ok:true, runSession:{ runId, startedAt:nowMs, expiresAt:expiresAtMs, status:'started' } });
   } catch (error) {
     if (error instanceof ApiError) return jsonResponse({ ok:false, error:error.message }, error.status);
@@ -3489,6 +3715,10 @@ async function createReward(request, env) {
     };
     const requestId = String(body.requestId || "").trim();
     if (!/^[A-Za-z0-9_-]{12,80}$/.test(requestId)) throw new ApiError(400, "Некорректный идентификатор покупки.");
+    // case_reward_ is reserved for server-generated physical rewards from cases
+    // and is intentionally excluded from the player's shop daily limit. Never
+    // let a client choose that namespace, otherwise the limit could be bypassed.
+    if (requestId.startsWith("case_reward_")) throw new ApiError(400, "Некорректный идентификатор покупки.");
     const ownerId = String(auth.user.id);
     let profileRow = await ensureAuthoritativeProfileRow(env, ownerId, `physical:${requestId}`);
     const existing = await env.DB.prepare(
@@ -3536,8 +3766,13 @@ async function createReward(request, env) {
           insertedCode=generated.code;
           break;
         }catch(error){
+          const errorText=String(error?.message||error);
+          if(errorText.includes('REWARD_DAILY_LIMIT')){
+            const freshLimit=await getRewardLimitStatus(env,ownerId,now);
+            throw new ApiError(429,`Лимит наград: не больше ${freshLimit.limit} за 24 часа.`,freshLimit);
+          }
           if(error instanceof ApiError)throw error;
-          if(String(error?.message||error).toLowerCase().includes("unique")){
+          if(errorText.toLowerCase().includes("unique")){
             // A concurrent retry with the same requestId may have completed
             // while this request was generating its code. D1 rolls the failed
             // batch back, so returning the already-created row is both safe and
@@ -3646,10 +3881,46 @@ function rewardLimitStatusFromRows(rows, now, limitWindow, limit, configuredRese
   };
 }
 
-async function getRewardLimitStatus(env, ownerId, now = Math.floor(Date.now() / 1000)) {
+let rewardLimitGuardSchemaPromise = null;
+async function ensureRewardLimitGuard(env, now = Math.floor(Date.now() / 1000)) {
+  requireDatabase(env);
+  if (!rewardLimitGuardSchemaPromise) {
+    rewardLimitGuardSchemaPromise = env.DB.batch([
+      env.DB.prepare(`CREATE TABLE IF NOT EXISTS reward_limit_guard_config (
+        id INTEGER PRIMARY KEY CHECK(id=1),
+        max_count INTEGER NOT NULL DEFAULT 2,
+        window_seconds INTEGER NOT NULL DEFAULT 86400,
+        reset_at INTEGER NOT NULL DEFAULT 0,
+        updated_at INTEGER NOT NULL DEFAULT 0
+      )`),
+      env.DB.prepare(`INSERT OR IGNORE INTO reward_limit_guard_config(id,max_count,window_seconds,reset_at,updated_at) VALUES(1,2,86400,0,0)`),
+      env.DB.prepare(`CREATE TRIGGER IF NOT EXISTS trg_reward_codes_daily_limit_v106
+        BEFORE INSERT ON reward_codes
+        WHEN NEW.request_id NOT LIKE 'case_reward_%'
+          AND (SELECT COUNT(*) FROM reward_codes
+               WHERE owner_telegram_id=NEW.owner_telegram_id
+                 AND created_at > MAX(
+                   NEW.created_at - COALESCE((SELECT window_seconds FROM reward_limit_guard_config WHERE id=1),86400),
+                   COALESCE((SELECT reset_at FROM reward_limit_guard_config WHERE id=1),0)
+                 )
+                 AND status <> 'cancelled'
+                 AND request_id NOT LIKE 'case_reward_%') >= COALESCE((SELECT max_count FROM reward_limit_guard_config WHERE id=1),2)
+        BEGIN
+          SELECT RAISE(ABORT,'REWARD_DAILY_LIMIT');
+        END`)
+    ]).catch((error) => { rewardLimitGuardSchemaPromise = null; throw error; });
+  }
+  await rewardLimitGuardSchemaPromise;
   const limitWindow = positiveInt(env.REWARD_LIMIT_WINDOW_SECONDS, DEFAULT_LIMIT_WINDOW_SECONDS);
   const limit = positiveInt(env.REWARD_LIMIT_MAX, DEFAULT_LIMIT_MAX);
   const configuredResetAt = positiveInt(env.REWARD_LIMIT_RESET_AT_SECONDS, REWARD_LIMIT_RESET_AT_SECONDS);
+  await env.DB.prepare(`UPDATE reward_limit_guard_config SET max_count=?,window_seconds=?,reset_at=?,updated_at=? WHERE id=1`)
+    .bind(limit,limitWindow,configuredResetAt,Math.max(0,Math.floor(Number(now)||0))).run();
+  return { limitWindow, limit, configuredResetAt };
+}
+
+async function getRewardLimitStatus(env, ownerId, now = Math.floor(Date.now() / 1000)) {
+  const { limitWindow, limit, configuredResetAt } = await ensureRewardLimitGuard(env, now);
   const threshold = Math.max(now - limitWindow, configuredResetAt);
   const result = await env.DB.prepare(
     `SELECT created_at
@@ -5160,8 +5431,41 @@ async function purchaseCaseFromShop(request, env) {
   }
 }
 
+const GRANTED_CASE_OPENING_STALE_SECONDS = 120;
+async function recoverStaleGrantedCaseOpenings(env, telegramId, now = Math.floor(Date.now() / 1000)) {
+  await ensureShopStockSchema(env);
+  const id = String(telegramId || '');
+  const cutoff = Math.max(0, Number(now || 0) - GRANTED_CASE_OPENING_STALE_SECONDS);
+  const stale = (await env.DB.prepare(
+    `SELECT id FROM granted_cases WHERE telegram_id=? AND status='opening' AND (opening_started_at=0 OR opening_started_at<=?) ORDER BY opening_started_at ASC LIMIT 20`
+  ).bind(id, cutoff).all()).results || [];
+  if (!stale.length) return 0;
+  const stockRows = (await env.DB.prepare(
+    `SELECT consumption_id FROM shop_stock_consumptions WHERE telegram_id=? AND consumption_id LIKE 'case-reward:%' LIMIT 400`
+  ).bind(id).all()).results || [];
+  let recovered = 0;
+  for (const row of stale) {
+    const caseId = String(row.id || '');
+    const legacyPrefix = `case-reward:grant_${caseId}:`;
+    const attemptPrefix = `case-reward:grant_${caseId}_`;
+    for (const stockRow of stockRows) {
+      const consumptionId = String(stockRow.consumption_id || '');
+      if (consumptionId.startsWith(legacyPrefix) || consumptionId.startsWith(attemptPrefix)) {
+        try { await releaseShopStock(env, consumptionId); } catch (error) { console.error('Failed to release stale granted-case stock', error); }
+      }
+    }
+    const result = await env.DB.prepare(
+      `UPDATE granted_cases SET status='pending',opening_started_at=0,opening_token='' WHERE id=? AND telegram_id=? AND status='opening' AND (opening_started_at=0 OR opening_started_at<=?)`
+    ).bind(caseId, id, cutoff).run();
+    recovered += safeAdminNumber(result?.meta?.changes);
+  }
+  return recovered;
+}
+
 async function openGrantedCase(request, env, ctx = null) {
   let claimedId = "";
+  let openingClaimAt = 0;
+  let openingClaimToken = "";
   let physicalStockConsumptionIds = [];
   try {
     requireDatabase(env);
@@ -5172,30 +5476,39 @@ async function openGrantedCase(request, env, ctx = null) {
     const caseType = normalizeCaseType(body.caseType);
     if (!caseType) throw new ApiError(400, "Неизвестный тип кейса.");
     const ensured = await ensureCasePlayerState(env, telegramId, {});
+    const now = Math.floor(Date.now() / 1000);
+    openingClaimAt = now;
+    openingClaimToken = crypto.randomUUID().replace(/-/g, '');
+    await recoverStaleGrantedCaseOpenings(env, telegramId, now);
     const liveops = await readLiveOpsConfig(env);
     if (liveOpsCaseConfig(liveops, caseType)?.enabled === false) throw new ApiError(409, "Этот кейс временно отключён администратором.");
     const gift = await env.DB.prepare(
       `SELECT id FROM granted_cases WHERE telegram_id = ? AND case_type = ? AND status = 'pending'
        ORDER BY created_at ASC, id ASC LIMIT 1`
     ).bind(telegramId, caseType).first();
-    if (!gift?.id) throw new ApiError(409, "Подарочных кейсов этого типа нет.");
+    if (!gift?.id) {
+      const opening = await env.DB.prepare(`SELECT opening_started_at FROM granted_cases WHERE telegram_id=? AND case_type=? AND status='opening' ORDER BY opening_started_at ASC LIMIT 1`).bind(telegramId,caseType).first();
+      if (opening) throw new ApiError(409, "Этот кейс уже открывается. Если соединение оборвалось, повторите попытку через пару минут.");
+      throw new ApiError(409, "Подарочных кейсов этого типа нет.");
+    }
     claimedId = String(gift.id);
     const claim = await env.DB.prepare(
-      `UPDATE granted_cases SET status = 'opening' WHERE id = ? AND telegram_id = ? AND status = 'pending'`
-    ).bind(claimedId, telegramId).run();
+      `UPDATE granted_cases SET status = 'opening',opening_started_at=?,opening_token=? WHERE id = ? AND telegram_id = ? AND status = 'pending'`
+    ).bind(now, openingClaimToken, claimedId, telegramId).run();
     if (Number(claim?.meta?.changes || 0) < 1) throw new ApiError(409, "Этот кейс уже открывается.");
 
     const rolled = rollLevelCase(caseType, ensured.state, ensured.state.ownedSkins, liveops);
-    const now = Math.floor(Date.now() / 1000);
     const physicalRewards = await prepareCasePhysicalRewards(env, {
       rolled,
       telegramId,
       ownerName: telegramDisplayName(auth.user),
-      sourceId: `grant_${claimedId}`,
+      sourceId: `grant_${claimedId}_${openingClaimToken}`,
       now
     });
     physicalStockConsumptionIds = physicalRewards.stockConsumptionIds;
+    const openingGuardId = `case-open:${claimedId}:${openingClaimToken}`.slice(0,180);
     await env.DB.batch([
+      env.DB.prepare(`INSERT INTO granted_case_opening_guards(guard_id,ok) VALUES(?,COALESCE((SELECT CASE WHEN status='opening' AND opening_started_at=? AND opening_token=? THEN 1 ELSE 0 END FROM granted_cases WHERE id=? AND telegram_id=? LIMIT 1),0))`).bind(openingGuardId,openingClaimAt,openingClaimToken,claimedId,telegramId),
       env.DB.prepare(
         `UPDATE admin_profile_state SET
           wallet = MIN(999999999,wallet + ?), treats = MIN(999999999,treats + ?), coffee = MIN(999999999,coffee + ?),
@@ -5207,10 +5520,11 @@ async function openGrantedCase(request, env, ctx = null) {
       ),
       caseStateUpdateStatement(env, telegramId, rolled.state, now),
       env.DB.prepare(
-        `UPDATE granted_cases SET status = 'opened', rewards_json = ?, opened_at = ?
+        `UPDATE granted_cases SET status = 'opened', rewards_json = ?, opened_at = ?, opening_started_at=0, opening_token=''
          WHERE id = ? AND telegram_id = ? AND status = 'opening'`
       ).bind(JSON.stringify(rolled.rewards), now, claimedId, telegramId),
-      ...physicalRewards.statements
+      ...physicalRewards.statements,
+      env.DB.prepare(`DELETE FROM granted_case_opening_guards WHERE guard_id=?`).bind(openingGuardId)
     ]);
     const opened = {
       grantId: claimedId,
@@ -5239,9 +5553,10 @@ async function openGrantedCase(request, env, ctx = null) {
   } catch (error) {
     await releaseCasePhysicalStock(env, physicalStockConsumptionIds);
     if (claimedId) {
-      try { await env.DB.prepare(`UPDATE granted_cases SET status = 'pending' WHERE id = ? AND status = 'opening'`).bind(claimedId).run(); } catch {}
+      try { await env.DB.prepare(`UPDATE granted_cases SET status = 'pending',opening_started_at=0,opening_token='' WHERE id = ? AND status = 'opening' AND opening_token=?`).bind(claimedId,openingClaimToken).run(); } catch {}
     }
     if (error instanceof ApiError) return jsonResponse({ ok: false, error: error.message }, error.status);
+    if (String(error?.message || error).includes('granted_case_opening_guard_ok')) return jsonResponse({ ok:false, error:'Попытка открытия устарела. Повторите открытие кейса.' },409);
     console.error("openGrantedCase failed", error);
     return jsonResponse({ ok: false, error: "Не удалось открыть подарочный кейс. Проверьте миграцию 0011." }, 500);
   }
@@ -5497,7 +5812,6 @@ async function submitLeaderboardRun(request, env) {
     const season = await ensureSeason(env);
     const minSeconds = positiveInt(env.LEADERBOARD_MIN_RUN_SECONDS, DEFAULT_LEADERBOARD_MIN_RUN_SECONDS);
     const minScore = positiveInt(env.LEADERBOARD_MIN_SCORE, DEFAULT_LEADERBOARD_MIN_SCORE);
-    const qualifies = submittedMetrics.durationMs >= minSeconds * 1000 && submittedMetrics.score >= minScore;
 
     const buildResponse = async (ledger, repeated, seasonPassAward = null) => {
       await ensureAuthoritativeProfileRow(env, telegramId, `run:${runId}`);
@@ -5505,6 +5819,8 @@ async function submitLeaderboardRun(request, env) {
       const profileRow = await ensureAuthoritativeProfileRow(env, telegramId, `run:${runId}:response`);
       const leaderboardPayload = await buildLeaderboardPayload(env, season, telegramId, "season");
       const acceptedToRating = Number(ledger?.accepted_rating || 0) === 1;
+      const ledgerQualifies = Number(ledger?.duration_ms || submittedMetrics.durationMs) >= minSeconds * 1000
+        && Number(ledger?.raw_score || submittedMetrics.score) >= minScore;
       const runCreatedAt = Math.max(0, Number(ledger?.created_at || Math.floor(Date.now() / 1000)));
       let passAward = seasonPassAward;
       if (!passAward && Number(ledger?.raw_score || 0) >= minScore && Number(ledger?.duration_ms || 0) >= minSeconds * 1000) {
@@ -5531,7 +5847,7 @@ async function submitLeaderboardRun(request, env) {
           accepted: true,
           repeated: Boolean(repeated),
           acceptedToRating,
-          reason: acceptedToRating ? "accepted" : (!qualifies ? "below_minimum" : (!ratingEntryEnabled ? "rating_disabled" : `season_${String(season.status || "inactive")}`)),
+          reason: acceptedToRating ? "accepted" : (!ledgerQualifies ? "below_minimum" : (!ratingEntryEnabled ? "rating_disabled" : `season_${String(season.status || "inactive")}`)),
           raw: {
             score: Number(ledger?.raw_score || submittedMetrics.score),
             treats: Number(ledger?.raw_treats || submittedMetrics.runTreats),
@@ -5634,7 +5950,13 @@ async function submitLeaderboardRun(request, env) {
     if (String(session.telegram_id || "") !== telegramId) throw new ApiError(409, "Этот идентификатор забега уже используется.");
     if (String(session.status || "") !== "started") throw new ApiError(409, "Этот забег уже завершён. Обновите игру и повторите синхронизацию.");
 
-    const metrics = await validateAuthoritativeRunMetrics(env, session, submittedMetrics);
+    // The final body is not trusted as a one-shot result. It must continue
+    // the live proof chain persisted by /api/runs/checkpoint. A client that
+    // waits 12 seconds and then fabricates a full run cannot backfill the
+    // missing checkpoints because progress is bounded by server time and the
+    // maximum gap between consecutive proofs.
+    const metrics = await attestAuthoritativeRunProgress(env, session, submittedMetrics);
+    const qualifies = metrics.durationMs >= minSeconds * 1000 && metrics.score >= minScore;
     const ensured = await ensureCasePlayerState(env, telegramId, {});
     const profileBefore = await ensureAuthoritativeProfileRow(env, telegramId, `run:${runId}:prepare`);
     const consumed = await env.DB.prepare(`SELECT booster_type,telegram_id FROM case_booster_run_consumptions WHERE run_id=? LIMIT 1`).bind(runId).first();
@@ -5642,21 +5964,23 @@ async function submitLeaderboardRun(request, env) {
 
     const caseState = ensured.state;
     const boosterAlreadyConsumed = Boolean(consumed);
+    const rewardEligible = metrics.durationMs >= minSeconds * 1000;
     const boosterType = boosterAlreadyConsumed
       ? String(consumed.booster_type || "")
       : (caseState.activeBooster.type && caseState.activeBooster.runsLeft > 0 ? String(caseState.activeBooster.type) : "");
+    const appliedBoosterType = rewardEligible ? boosterType : "";
     const skinId = normalizeCurrentActiveSkin(caseState.activeSkinId, caseState.ownedSkins);
     const skinBonus = serverRunSkinBonus(skinId);
     const acceptedToRating = ratingEntryEnabled && String(season.status || "") === "active" && qualifies;
-    const boostedPoints = boosterType === "points" ? metrics.score * 2 : metrics.score;
-    const boostedTreats = boosterType === "treats" ? metrics.runTreats * 2 : metrics.runTreats;
-    const boostedCoffee = boosterType === "coffee" ? metrics.runCoffee * 2 : metrics.runCoffee;
-    const economyPoints = Math.min(999999999, boostedPoints + (qualifies ? skinBonus.points : 0));
-    const economyTreats = Math.min(999999999, boostedTreats + (qualifies ? skinBonus.treats : 0));
-    const economyCoffee = Math.min(999999999, boostedCoffee + (qualifies ? skinBonus.coffee : 0));
+    const boostedPoints = appliedBoosterType === "points" ? metrics.score * 2 : metrics.score;
+    const boostedTreats = appliedBoosterType === "treats" ? metrics.runTreats * 2 : metrics.runTreats;
+    const boostedCoffee = appliedBoosterType === "coffee" ? metrics.runCoffee * 2 : metrics.runCoffee;
+    const economyPoints = rewardEligible ? Math.min(999999999, boostedPoints + (qualifies ? skinBonus.points : 0)) : 0;
+    const economyTreats = rewardEligible ? Math.min(999999999, boostedTreats + (qualifies ? skinBonus.treats : 0)) : 0;
+    const economyCoffee = rewardEligible ? Math.min(999999999, boostedCoffee + (qualifies ? skinBonus.coffee : 0)) : 0;
     const profileBonus = qualifies ? await getSeasonPassProfileBonusForUser(env, telegramId) : { multiplier: 1 };
     const profileXpAwarded = qualifies ? Math.min(999999999, AUTHORITATIVE_PROFILE_RUN_XP * Math.max(1, Number(profileBonus?.multiplier || 1))) : 0;
-    const newRecord = metrics.score > Number(profileBefore?.best_score || 0) && metrics.score > 0;
+    const newRecord = rewardEligible && metrics.score > Number(profileBefore?.best_score || 0) && metrics.score > 0;
     const nextProfileXp = Math.min(999999999, Number(profileBefore?.profile_xp || 0) + profileXpAwarded);
     const nextLevel = profileLevelFromXp(nextProfileXp);
     const now = Math.floor(Date.now() / 1000);
@@ -5667,41 +5991,44 @@ async function submitLeaderboardRun(request, env) {
     const ratingHidden = Number(testerRow?.exclude_from_rating || 0) === 1 ? 1 : 0;
     const rejectionReason = acceptedToRating ? "" : (!qualifies ? "below_minimum" : (!ratingEntryEnabled ? "rating_disabled" : `season_${String(season.status || "inactive")}`));
 
-    if (!boosterAlreadyConsumed) {
-      if (boosterType) {
+    if (!boosterAlreadyConsumed && rewardEligible) {
+      if (appliedBoosterType) {
         caseState.activeBooster.runsLeft = Math.max(0, Number(caseState.activeBooster.runsLeft || 0) - 1);
         if (caseState.activeBooster.runsLeft <= 0) caseState.activeBooster = { type: "", runsLeft: 0 };
       }
     }
 
+    const settlementGuardId = `run-settle:${runId}`.slice(0,180);
     const statements = [
+      env.DB.prepare(`UPDATE game_run_sessions SET status='settling',updated_at=? WHERE run_id=? AND telegram_id=? AND status='started'`).bind(now, runId, telegramId),
+      env.DB.prepare(`INSERT INTO game_run_settlement_guards(guard_id,ok) VALUES(?,COALESCE((SELECT CASE WHEN status='settling' THEN 1 ELSE 0 END FROM game_run_sessions WHERE run_id=? AND telegram_id=? LIMIT 1),0))`).bind(settlementGuardId, runId, telegramId),
       env.DB.prepare(
         `INSERT INTO player_economy_run_ledger(
           run_id,telegram_id,points,treats,coffee,profile_xp,raw_score,raw_treats,raw_coffee,duration_ms,
           booster_type,skin_id,new_record,accepted_rating,season_id,created_at
         ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
-      ).bind(runId, telegramId, economyPoints, economyTreats, economyCoffee, profileXpAwarded, metrics.score, metrics.runTreats, metrics.runCoffee, metrics.durationMs, boosterType, skinId, newRecord ? 1 : 0, acceptedToRating ? 1 : 0, String(season.id || ""), now),
+      ).bind(runId, telegramId, economyPoints, economyTreats, economyCoffee, profileXpAwarded, metrics.score, metrics.runTreats, metrics.runCoffee, metrics.durationMs, appliedBoosterType, skinId, newRecord ? 1 : 0, acceptedToRating ? 1 : 0, String(season.id || ""), now),
       env.DB.prepare(
         `UPDATE admin_profile_state SET
            wallet=MIN(999999999,wallet+?),treats=MIN(999999999,treats+?),coffee=MIN(999999999,coffee+?),
            profile_xp=MIN(999999999,profile_xp+?),best_score=MAX(best_score,?),revision=revision+1,updated_at=?,updated_by=?
          WHERE telegram_id=?`
-      ).bind(economyPoints, economyTreats, economyCoffee, profileXpAwarded, metrics.score, now, `run:${runId}`, telegramId),
+      ).bind(economyPoints, economyTreats, economyCoffee, profileXpAwarded, rewardEligible ? metrics.score : Number(profileBefore?.best_score || 0), now, `run:${runId}`, telegramId),
       env.DB.prepare(
         `UPDATE game_run_sessions SET status='finished',finished_at_ms=?,duration_ms=?,score=?,run_treats=?,run_coffee=?,
            economy_points=?,economy_treats=?,economy_coffee=?,profile_xp=?,new_record=?,accepted_rating=?,season_id=?,updated_at=?
-         WHERE run_id=? AND telegram_id=? AND status='started'`
+         WHERE run_id=? AND telegram_id=? AND status='settling'`
       ).bind(Date.now(), metrics.durationMs, metrics.score, metrics.runTreats, metrics.runCoffee, economyPoints, economyTreats, economyCoffee, profileXpAwarded, newRecord ? 1 : 0, acceptedToRating ? 1 : 0, String(season.id || ""), now, runId, telegramId),
       env.DB.prepare(
         `INSERT INTO leaderboard_runs(run_id,season_id,telegram_id,score,duration_ms,run_treats,run_coffee,accepted,rejection_reason,created_at)
          VALUES(?,?,?,?,?,?,?,?,?,?)`
       ).bind(runId, String(season.id || ""), telegramId, metrics.score, metrics.durationMs, metrics.runTreats, metrics.runCoffee, acceptedToRating ? 1 : 0, rejectionReason, now)
     ];
-    if (!boosterAlreadyConsumed) {
+    if (!boosterAlreadyConsumed && rewardEligible) {
       statements.push(
         env.DB.prepare(
           `INSERT INTO case_booster_run_consumptions(run_id,telegram_id,booster_type,consumed_at) VALUES(?,?,?,?)`
-        ).bind(runId, telegramId, boosterType, now),
+        ).bind(runId, telegramId, appliedBoosterType, now),
         env.DB.prepare(
           `UPDATE case_player_state SET active_booster_type=?,active_booster_runs=?,revision=revision+1,updated_at=? WHERE telegram_id=?`
         ).bind(String(caseState.activeBooster.type || ""), safeAdminNumber(caseState.activeBooster.runsLeft), now, telegramId)
@@ -5721,10 +6048,23 @@ async function submitLeaderboardRun(request, env) {
       ).bind(String(season.id || ""), telegramId, displayName, username, photoUrl, metrics.score, nextLevel, now, now, ratingHidden, caseState.activeAvatarId, caseState.activeFrameId));
     }
 
+    statements.push(env.DB.prepare(`DELETE FROM game_run_settlement_guards WHERE guard_id=?`).bind(settlementGuardId));
     try {
       await env.DB.batch(statements);
     } catch (batchError) {
       const text = String(batchError?.message || batchError).toLowerCase();
+      if (text.includes('game_run_settlement_guard_ok')) {
+        const raced = await env.DB.prepare(`SELECT * FROM player_economy_run_ledger WHERE run_id=? LIMIT 1`).bind(runId).first();
+        if (raced) {
+          const same = String(raced.telegram_id || "") === telegramId
+            && Number(raced.raw_score || 0) === metrics.score
+            && Number(raced.raw_treats || 0) === metrics.runTreats
+            && Number(raced.raw_coffee || 0) === metrics.runCoffee
+            && Number(raced.duration_ms || 0) === metrics.durationMs;
+          if (same) return jsonResponse(await buildResponse(raced, true));
+        }
+        throw new ApiError(409, 'Эта сессия забега была заменена новым забегом.');
+      }
       if (text.includes("unique") || text.includes("primary key")) {
         const raced = await env.DB.prepare(`SELECT * FROM player_economy_run_ledger WHERE run_id=? LIMIT 1`).bind(runId).first();
         if (raced) {
@@ -5769,7 +6109,7 @@ async function submitLeaderboardRun(request, env) {
         {
           runId, score: metrics.score, durationMs: metrics.durationMs, runTreats: metrics.runTreats, runCoffee: metrics.runCoffee,
           credited: { points: economyPoints, treats: economyTreats, coffee: economyCoffee }, profileXpAwarded,
-          boosterType, skinId, newRecord, accepted: acceptedToRating, excludedFromRating: Boolean(ratingHidden)
+          boosterType: appliedBoosterType, skinId, newRecord, accepted: acceptedToRating, excludedFromRating: Boolean(ratingHidden)
         },
         `run_${runId}`, auth.user, now
       );
@@ -15097,22 +15437,52 @@ async function showCampaignsDashboard(chatId, user, env) {
 async function scanFraudAlerts(env) {
   await ensureLiveOpsAdminSchema(env);
   const since = Math.floor(Date.now() / 1000) - 7 * 86400;
+  const now = Math.floor(Date.now() / 1000);
+
+  // These rejection reasons are normal gameplay / LiveOps outcomes, not fraud.
+  // Older versions of the scanner created false-positive alerts for them, so
+  // automatically dismiss any still-open legacy alerts before scanning again.
+  await env.DB.prepare(
+    `UPDATE fraud_alerts
+     SET status='dismissed', resolution='Автоматически закрыто: штатное отклонение забега', updated_at=?
+     WHERE status IN ('open','reviewing') AND alert_type='rejected_run'
+       AND EXISTS (
+         SELECT 1 FROM leaderboard_runs r
+         WHERE ('run:' || r.run_id || ':rejected_run') = fraud_alerts.fingerprint
+           AND (r.rejection_reason IN ('below_minimum','rating_disabled') OR r.rejection_reason LIKE 'season_%')
+       )`
+  ).bind(now).run();
+
   const suspiciousRuns = await env.DB.prepare(
     `SELECT run_id, telegram_id, score, duration_ms, accepted, rejection_reason, created_at
-     FROM leaderboard_runs WHERE created_at >= ? AND (score >= 100000 OR (accepted = 1 AND duration_ms < 12000) OR rejection_reason <> '') ORDER BY created_at DESC LIMIT 200`
+     FROM leaderboard_runs
+     WHERE created_at >= ? AND (
+       score >= 100000
+       OR (accepted = 1 AND duration_ms < 12000)
+       OR (
+         rejection_reason <> ''
+         AND rejection_reason NOT IN ('below_minimum','rating_disabled')
+         AND rejection_reason NOT LIKE 'season_%'
+       )
+     )
+     ORDER BY created_at DESC LIMIT 200`
   ).bind(since).all();
-  const now = Math.floor(Date.now() / 1000);
   for (const row of suspiciousRuns.results || []) {
-    const severity = Number(row.score || 0) >= 250000 ? "critical" : Number(row.score || 0) >= 100000 ? "high" : row.accepted && Number(row.duration_ms || 0) < 12000 ? "high" : "medium";
-    const alertType = row.rejection_reason ? "rejected_run" : Number(row.score || 0) >= 100000 ? "extreme_score" : "too_fast_run";
+    const score = Number(row.score || 0);
+    const durationMs = Number(row.duration_ms || 0);
+    const rejectionReason = String(row.rejection_reason || '');
+    const accepted = Number(row.accepted || 0) === 1;
+    const alertType = score >= 100000 ? "extreme_score" : accepted && durationMs < 12000 ? "too_fast_run" : "rejected_run";
+    const severity = score >= 250000 ? "critical" : score >= 100000 || (accepted && durationMs < 12000) ? "high" : "medium";
     const fingerprint = `run:${row.run_id}:${alertType}`;
-    const alertTitle = alertType === "extreme_score" ? "Аномально высокий результат" : alertType === "too_fast_run" ? "Зачтён слишком быстрый забег" : "Отклонённый забег";
+    const alertTitle = alertType === "extreme_score" ? "Аномально высокий результат" : alertType === "too_fast_run" ? "Зачтён слишком быстрый забег" : "Подозрительно отклонённый забег";
     const insertedAlert = await env.DB.prepare(
       `INSERT OR IGNORE INTO fraud_alerts (telegram_id, alert_type, severity, title, details_json, status, fingerprint, created_at, updated_at)
        VALUES (?, ?, ?, ?, ?, 'open', ?, ?, ?)`
-    ).bind(String(row.telegram_id), alertType, severity, alertTitle, JSON.stringify({ runId: row.run_id, score: row.score, durationMs: row.duration_ms, accepted: row.accepted, rejectionReason: row.rejection_reason }), fingerprint, row.created_at || now, now).run();
+    ).bind(String(row.telegram_id), alertType, severity, alertTitle, JSON.stringify({ runId: row.run_id, score, durationMs, accepted, rejectionReason }), fingerprint, row.created_at || now, now).run();
     if (Number(insertedAlert.meta?.changes || 0) > 0) {
-      await notifySubscribedStaff(env, "suspicious_runs", `🚨 <b>${escapeHtml(alertTitle)}</b>\n\nИгрок: <code>${escapeHtml(String(row.telegram_id))}</code>\nСчёт: <b>${Number(row.score || 0).toLocaleString("ru-RU")}</b>\nЗабег: <code>${escapeHtml(String(row.run_id))}</code>`);
+      const reasonLine = rejectionReason ? `\nПричина: <code>${escapeHtml(rejectionReason)}</code>` : '';
+      await notifySubscribedStaff(env, "suspicious_runs", `🚨 <b>${escapeHtml(alertTitle)}</b>\n\nИгрок: <code>${escapeHtml(String(row.telegram_id))}</code>\nСчёт: <b>${score.toLocaleString("ru-RU")}</b>\nДлительность: <b>${Math.max(0, Math.round(durationMs / 1000))} сек.</b>${reasonLine}\nЗабег: <code>${escapeHtml(String(row.run_id))}</code>`);
     }
   }
   const repeatedCodes = await env.DB.prepare(`SELECT owner_telegram_id AS telegram_id, COUNT(*) AS count FROM reward_codes WHERE created_at >= ? GROUP BY owner_telegram_id HAVING COUNT(*) >= 15 LIMIT 100`).bind(since).all();
@@ -15863,6 +16233,13 @@ async function ensureSafeControlCenterSchema(env) {
          (template_id,title,description,rewards_json,enabled,owner_editable,created_at,updated_at,updated_by)
          VALUES (?,?,?,?,1,1,?,?, 'system')`
       ).bind(id, title, description, JSON.stringify(rewards), now, now)));
+      // Queue rows created by promos before a player opened the game used to
+      // exhaust all retries with "Профиль игрока не найден". The delivery
+      // path now creates the authoritative profile safely, so requeue only
+      // that legacy failure class even when it had already reached 5 attempts.
+      await env.DB.prepare(`UPDATE reward_delivery_queue
+        SET status='pending',attempts=0,last_error='',available_at=?,lease_token='',lease_until=0,updated_at=?
+        WHERE status='failed' AND TRIM(last_error) IN ('Профиль игрока не найден','Профиль игрока не найден.')`).bind(now,now).run();
     })().catch((error) => {
       safeControlCenterSchemaPromise = null;
       throw error;
@@ -16472,6 +16849,11 @@ async function finishSafeEvent(row, env, cancelled = false) {
 async function deliverQueuedReward(env, row) {
   const amount = Math.max(1, Math.floor(Number(row.amount || 1)));
   const telegramId = String(row.telegram_id);
+  // A promo, automation or campaign may reach a verified Telegram user before
+  // that user has opened the game for the first time. Queue delivery must not
+  // depend on a pre-existing profile row: create the authoritative zero-state
+  // profile once, then deliver the queued reward normally.
+  await ensureAuthoritativeProfileRow(env, telegramId, `queue-profile:${row.id}`);
   let cosmeticDuplicate = false;
   if (["points", "zefir", "coffee"].includes(row.reward_kind)) {
     const field = ({ points: "pending_wallet", zefir: "pending_treats", coffee: "pending_coffee" })[row.reward_kind];
@@ -19931,23 +20313,20 @@ async function isFeatureEnabled(env, flagKey, telegramId = "") {
   return true;
 }
 
-async function requestTelegramIdHint(request) {
+async function requestVerifiedTelegramId(request, env) {
   try {
     const body = await request.clone().json();
-    const direct = body?.telegramId || body?.telegram_id || body?.userId || body?.user_id;
-    if (direct) return String(direct);
     const initData = String(body?.initData || body?.init_data || "");
-    if (initData) {
-      const params = new URLSearchParams(initData);
-      const user = JSON.parse(params.get("user") || "{}");
-      if (user?.id != null) return String(user.id);
-    }
-  } catch {}
-  return "";
+    if (!initData) return "";
+    const auth = await validateTelegramInitData(initData, env);
+    return String(auth?.user?.id || "");
+  } catch {
+    return "";
+  }
 }
 
 async function enforceFeatureFlagForRequest(request, env, flagKey) {
-  const telegramId = await requestTelegramIdHint(request);
+  const telegramId = await requestVerifiedTelegramId(request, env);
   const enabled = await isFeatureEnabled(env, flagKey, telegramId);
   if (enabled) return null;
   const title = FEATURE_FLAG_LABELS[flagKey] || flagKey;
@@ -20102,6 +20481,7 @@ async function ensureSeasonPassSchema(env) {
       )`),
       env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_season_pass_task_notifications_player ON season_pass_task_notifications(season_id,telegram_id,game_read_at,completed_at DESC)`)
     ]);
+    await addRuntimeColumnIfMissing(env, 'season_pass_run_xp', 'applied_at', 'INTEGER NOT NULL DEFAULT 1');
     const info = await env.DB.prepare(`PRAGMA table_info(case_player_state)`).all();
     const columns = new Set((info.results || []).map((row) => String(row.name || '')));
     if (!columns.has('owned_specials_json')) {
@@ -21594,9 +21974,13 @@ async function submitSeasonPassRun(request,env){
 }
 
 async function awardSeasonPassRunXp(env,telegramId,runId,createdAt){
-  try{await assertSeasonPassNotForceClosed(env);const runAt=Math.max(0,Number(createdAt||Math.floor(Date.now()/1000)))*1000;const forcedClosure=await getSeasonPassForcedClosure(env,runAt);if(forcedClosure)return null;const season=await loadSeasonPassSeason(env,runAt);if(season.status!=='active')return null;const startsAt=Date.parse(String(season.startsAt||''));const endsAt=Date.parse(String(season.endsAt||''));if((Number.isFinite(startsAt)&&runAt<startsAt)||(Number.isFinite(endsAt)&&runAt>=endsAt))return null;const player=await ensureSeasonPassPlayer(env,season,String(telegramId));const multiplier=await seasonPassHasXpX2(env,season.id,String(telegramId),player)?2:1;const base=Math.max(1,Number(season.baseRunXp)||100);const awarded=base*multiplier;const now=Math.floor(Date.now()/1000);
-    const result=await env.DB.prepare(`INSERT OR IGNORE INTO season_pass_run_xp(run_id,season_id,telegram_id,base_xp,multiplier,xp_awarded,created_at) VALUES(?,?,?,?,?,?,?)`).bind(String(runId),season.id,String(telegramId),base,multiplier,awarded,Number(createdAt)||now).run();
-    if(Number(result.meta?.changes||0)>0)await env.DB.prepare(`UPDATE season_pass_players SET xp=xp+?,revision=revision+1,updated_at=? WHERE season_id=? AND telegram_id=?`).bind(awarded,now,season.id,String(telegramId)).run();return {xpAwarded:Number(result.meta?.changes||0)>0?awarded:0,multiplier};
+  try{await assertSeasonPassNotForceClosed(env);const runAt=Math.max(0,Number(createdAt||Math.floor(Date.now()/1000)))*1000;const forcedClosure=await getSeasonPassForcedClosure(env,runAt);if(forcedClosure)return null;const season=await loadSeasonPassSeason(env,runAt);if(season.status!=='active')return null;const startsAt=Date.parse(String(season.startsAt||''));const endsAt=Date.parse(String(season.endsAt||''));if((Number.isFinite(startsAt)&&runAt<startsAt)||(Number.isFinite(endsAt)&&runAt>=endsAt))return null;const player=await ensureSeasonPassPlayer(env,season,String(telegramId));const multiplier=await seasonPassHasXpX2(env,season.id,String(telegramId),player)?2:1;const base=Math.max(1,Number(season.baseRunXp)||100);const awarded=base*multiplier;const now=Math.floor(Date.now()/1000);const id=String(telegramId),rid=String(runId),sid=String(season.id);
+    const results=await env.DB.batch([
+      env.DB.prepare(`INSERT OR IGNORE INTO season_pass_run_xp(run_id,season_id,telegram_id,base_xp,multiplier,xp_awarded,created_at,applied_at) VALUES(?,?,?,?,?,?,?,0)`).bind(rid,sid,id,base,multiplier,awarded,Number(createdAt)||now),
+      env.DB.prepare(`UPDATE season_pass_players SET xp=xp+COALESCE((SELECT xp_awarded FROM season_pass_run_xp WHERE run_id=? AND season_id=? AND telegram_id=? AND applied_at=0),0),revision=revision+1,updated_at=? WHERE season_id=? AND telegram_id=? AND EXISTS(SELECT 1 FROM season_pass_run_xp WHERE run_id=? AND season_id=? AND telegram_id=? AND applied_at=0)`).bind(rid,sid,id,now,sid,id,rid,sid,id),
+      env.DB.prepare(`UPDATE season_pass_run_xp SET applied_at=? WHERE run_id=? AND season_id=? AND telegram_id=? AND applied_at=0`).bind(now,rid,sid,id)
+    ]);
+    const applied=Number(results?.[2]?.meta?.changes||0)>0;return {xpAwarded:applied?awarded:0,multiplier};
   }catch(error){console.error('awardSeasonPassRunXp failed',error);return null;}
 }
 
@@ -26655,6 +27039,7 @@ async function purchaseFlashOffer(request, env) {
     if(!purchaseCommitted&&reservedPurchaseId){try{await env.DB.prepare(`DELETE FROM shop_flash_offer_purchases WHERE purchase_id=? AND status='reserved'`).bind(reservedPurchaseId).run();}catch{}}
     if(error instanceof ApiError)return jsonResponse({ok:false,error:error.message,details:error.details},error.status);
     const text=String(error?.message||error);
+    if(text.includes('REWARD_DAILY_LIMIT'))return jsonResponse({ok:false,error:"Лимит физических наград за 24 часа уже исчерпан."},429);
     if(text.includes('flash_offer_purchase_guard_ok'))return jsonResponse({ok:false,error:"Баланс изменился. Откройте магазин ещё раз и повторите покупку."},409);
     console.error("flash offer purchase failed",error);return jsonResponse({ok:false,error:"Не удалось завершить акционную покупку. Ресурсы не списаны."},500);
   }
