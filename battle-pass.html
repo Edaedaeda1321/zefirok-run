@@ -728,6 +728,9 @@ button{-webkit-tap-highlight-color:transparent}
   font-weight:900
 }
 .tier-price b{display:block;margin-top:2px;font-size:12px}
+.tier-upgrade-note{margin:7px 2px 0;padding:7px 10px;border-radius:11px;background:#fff3cf;color:#875f1a;font-size:9px;font-weight:900;text-align:center;line-height:1.35}
+.tier-upgrade-note[hidden]{display:none!important}
+.tier-card.is-rating-offer-focus{outline:3px solid rgba(229,171,50,.45);outline-offset:3px;box-shadow:0 0 0 6px rgba(255,235,164,.35),0 12px 30px rgba(171,112,28,.16)}
 .tier-buy{
   width:100%;
   min-height:43px;
@@ -1212,6 +1215,17 @@ button{-webkit-tap-highlight-color:transparent}
 .purchase-price span{display:flex;flex-direction:column;align-items:center;gap:3px;padding:9px 6px;border:1px solid #ead8d1;border-radius:14px;background:#fff;color:#8d6458;font-size:9px;font-weight:850}
 .purchase-price b{color:#6c4035;font-size:15px}
 .purchase-note{margin:0 16px 14px;padding:10px 12px;border-radius:14px;background:#fff3d7;color:#765425;font-size:9px;line-height:1.45;font-weight:800}
+.purchase-balance{margin:0 16px 14px;padding:11px 12px 12px;border:1px solid #ead8d1;border-radius:16px;background:linear-gradient(180deg,#fffaf8,#fff)}
+.purchase-balance-title{margin-bottom:8px;color:#946c61;font-size:9px;font-weight:950;text-transform:uppercase;letter-spacing:.07em}
+.purchase-balance-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+.purchase-balance-grid.level-only,.purchase-price.level-only{grid-template-columns:minmax(0,1fr)}
+.purchase-balance-item{min-width:0;display:grid;grid-template-columns:28px minmax(0,1fr);grid-template-rows:auto auto;column-gap:7px;align-items:center;padding:8px 9px;border:1px solid #ead8d1;border-radius:13px;background:#fff;color:#8d6458;transition:border-color .16s ease,background .16s ease,box-shadow .16s ease}
+.purchase-balance-item img{grid-row:1/3;width:28px;height:28px;object-fit:contain}
+.purchase-balance-item span{min-width:0;font-size:8px;font-weight:850;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.purchase-balance-item b{min-width:0;color:#6c4035;font-size:13px;line-height:1.1;font-weight:950;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.purchase-balance-item.insufficient{border-color:#e49aa3;background:#fff2f4;box-shadow:0 0 0 1px rgba(196,83,98,.06)}
+.purchase-balance-item.insufficient b{color:#b84556}
+.purchase-price [hidden],.purchase-balance-grid [hidden]{display:none!important}
 .purchase-actions{display:grid;grid-template-columns:1fr 1.25fr;gap:9px;padding:0 16px 16px}
 .purchase-actions button{min-height:48px;border:0;border-radius:16px;font-weight:950}
 .purchase-cancel{background:#f0e4df;color:#744e43}
@@ -2400,6 +2414,27 @@ img[src$="/xp.webp"]{
   .progress-track i,.progress-track i::after,.progress-card.is-level-up,.level-badge.is-changing,.level-column.is-unlocking,.reward-cell.is-unlocking,.reward-unlock-animation,.reward-unlock-animation span,.reward-connector.is-unlocking span{animation:none!important;transition:none!important}
 }
 </style>
+
+<style id="zefirok-season-pass-overflow-v2">
+.overflow-card{display:grid;grid-template-columns:68px minmax(0,1fr);gap:12px;align-items:center;margin:10px 0 0;padding:13px;border:1px solid rgba(222,169,48,.46);border-radius:19px;background:linear-gradient(145deg,#fffdf3,#fff4c8);box-shadow:0 9px 24px rgba(163,111,24,.10);transition:opacity .2s ease,border-color .2s ease,background .2s ease}
+.level-column.overflow-reward-column{flex:0 0 124px;background:linear-gradient(180deg,#fffdf6,#fff4ca);box-shadow:inset 0 0 0 1px rgba(222,169,48,.24)}
+.level-column.overflow-reward-column .level-number{color:#835811;background:linear-gradient(180deg,#fff8d9,#ffefad);font-size:13px;letter-spacing:.01em}
+.level-column.overflow-reward-column.current .level-number,.level-column.overflow-reward-column.selected .level-number{margin:4px auto;width:auto;min-width:54px;height:30px;padding:0 8px;border:1px solid rgba(210,148,24,.42);border-radius:999px;background:linear-gradient(145deg,#f4c94c,#c9891d);color:#fff9df;box-shadow:0 4px 12px rgba(171,109,19,.18)}
+.overflow-reward-cell{grid-row:2/5;position:relative;display:grid;grid-template-rows:auto auto auto auto auto 1fr auto;align-content:center;justify-items:center;gap:6px;padding:11px 8px 9px;overflow:hidden;text-align:center;background:linear-gradient(150deg,#fffef7 0,#fff1b9 54%,#ffe18a 100%);border:1px solid rgba(207,143,23,.48)}
+.overflow-reward-cell::after{content:"∞";position:absolute;right:-4px;bottom:-18px;color:rgba(161,100,6,.08);font:950 74px/1 Georgia,serif;pointer-events:none}
+.overflow-reward-cell.is-locked{filter:grayscale(.18);opacity:.72;background:linear-gradient(150deg,#fffaf6,#f7eee8);border-color:rgba(218,185,168,.5)}
+.overflow-cell-state{position:relative;z-index:1;display:inline-flex;align-items:center;justify-content:center;min-height:18px;padding:2px 7px;border-radius:999px;background:#d99d21;color:#fff9e4;font-size:7px;font-weight:950;white-space:nowrap}
+.overflow-reward-cell.is-locked .overflow-cell-state{background:#eee5e0;color:#9a837a}
+.overflow-cell-art{position:relative;z-index:1;width:58px;height:58px;object-fit:contain;filter:drop-shadow(0 7px 8px rgba(142,92,17,.17))}
+.overflow-cell-title{position:relative;z-index:1;color:#704709;font-size:10px;font-weight:950;line-height:1.15}
+.overflow-cell-copy{position:relative;z-index:1;color:#947025;font-size:7px;font-weight:850;line-height:1.3}
+.overflow-cell-track{position:relative;z-index:1;width:100%;height:7px;border-radius:999px;background:rgba(174,119,23,.16);overflow:hidden}
+.overflow-cell-track i{display:block;height:100%;width:0;border-radius:inherit;background:linear-gradient(90deg,#efc34e,#d69720)}
+.overflow-cell-progress{position:relative;z-index:1;color:#8c681e;font-size:7px;font-weight:950;line-height:1.2}
+.overflow-cell-action{position:relative;z-index:1;width:100%;min-height:28px;padding:0 6px;border:0;border-radius:10px;background:linear-gradient(145deg,#e7b63d,#c9891d);color:#fff9e4;font-size:8px;font-weight:950;box-shadow:0 6px 14px rgba(177,116,24,.18)}
+.overflow-cell-action:disabled{background:#eee5df!important;color:#9f8980!important;box-shadow:none!important}
+.overflow-card[hidden]{display:none!important}.overflow-card.is-locked{border-color:rgba(221,183,124,.34);background:linear-gradient(145deg,#fffaf7,#fff5ef);box-shadow:0 7px 20px rgba(129,82,61,.06)}.overflow-card.is-locked .overflow-art{filter:grayscale(.15) opacity(.76) drop-shadow(0 5px 7px rgba(142,92,17,.10))}.overflow-card.is-locked .overflow-track i{width:0!important;background:linear-gradient(90deg,#e9c5b7,#d9b5a8)}.overflow-card.is-locked .overflow-copy strong{color:#7b5560}.overflow-card.is-locked .overflow-copy p,.overflow-card.is-locked .overflow-meta{color:#9b7d83}.overflow-art{width:68px;height:68px;object-fit:contain;filter:drop-shadow(0 7px 9px rgba(142,92,17,.16))}.overflow-copy{min-width:0;display:grid;gap:6px}.overflow-copy strong{color:#744d13;font-size:14px;font-weight:950}.overflow-copy p{margin:0;color:#98752d;font-size:10px;font-weight:800;line-height:1.4}.overflow-track{height:9px;border-radius:999px;background:rgba(183,132,33,.16);overflow:hidden}.overflow-track i{display:block;height:100%;width:0;border-radius:inherit;background:linear-gradient(90deg,#efc34e,#d69720);transition:width .7s cubic-bezier(.22,.78,.24,1)}.overflow-meta{display:flex;justify-content:space-between;gap:8px;color:#98752d;font-size:9px;font-weight:900}.overflow-claim{grid-column:1/-1;min-height:43px;border:0;border-radius:14px;background:linear-gradient(145deg,#e7b63d,#c9891d);color:#fff9e2;font-weight:950;box-shadow:0 8px 18px rgba(177,116,24,.18)}.overflow-claim:disabled{opacity:.55;box-shadow:none}.progress-card.is-overflow{border-color:rgba(220,166,45,.54);background:linear-gradient(145deg,#fffdf5,#fff6d9)}.progress-card.is-overflow .level-badge{background:linear-gradient(145deg,#f4c94c,#c9891d);color:#fff8dd}.progress-card.is-overflow .progress-copy>strong{color:#80571b}
+</style>
 </head>
 <body>
 <section class="access-gate" id="accessGate">
@@ -2449,7 +2484,7 @@ img[src$="/xp.webp"]{
     <div class="season-state-banner" id="seasonStateBanner" hidden></div>
     <section class="hero">
       <h1><span class="season-index">Сезон I:</span> <span class="season-name">Открытие Кафе</span></h1>
-      <p>Получай дополнительные награды, выполняй задания и продвигайся по 50 уровням сезона.</p>
+      <p>Получай награды, проходи 50 уровней сезона, а после финала продолжай бесконечную дорожку 50+ за золотые кейсы.</p>
       <div class="hero-meta">
         <span class="pill" id="playerName">Гость кафе</span>
         <span class="pill">Завершение: <b data-season-end-label>10 сентября 2026</b></span>
@@ -2473,12 +2508,23 @@ img[src$="/xp.webp"]{
         <button class="buy-level" id="buyLevel" type="button"><img src="/assets/optimized/v0.79.5/iconScore.png" alt="">Купить уровень · 0</button>
       </section>
 
+      <section class="overflow-card is-locked" id="overflowCard">
+        <img class="overflow-art" src="/assets/cases/gold_closed.png" alt="Золотой кейс">
+        <div class="overflow-copy">
+          <strong>50+ / ∞ · Бесконечная дорожка</strong>
+          <p><b>Доступна всем игрокам:</b> бесплатному тарифу, Элитному и Элитному+. После полного 50 уровня каждые <b id="overflowStepLabel">5 000 XP</b> открывают ещё один Золотой кейс.</p>
+          <div class="overflow-track"><i id="overflowFill"></i></div>
+          <div class="overflow-meta"><span id="overflowProgress">Откроется после 50 уровня</span><span id="overflowEarned">5 000 XP за кейс</span></div>
+        </div>
+        <button class="overflow-claim" id="claimOverflow" type="button" disabled>Откроется после полного 50 уровня</button>
+      </section>
+
       <section class="view" data-view="rewards">
         <div class="section-head"><div><strong>Награды сезона</strong><br><span>Листай уровни горизонтально</span></div><span id="claimedCount">0 получено</span></div>
 
         <div class="level-navigator">
           <div class="level-nav-top"><strong>Быстрый переход по уровням</strong><span id="selectedLevelText">Уровень 1</span></div>
-          <input class="level-range" id="levelSlider" type="range" min="1" max="50" step="1" value="1" aria-label="Выберите уровень сезонного пропуска">
+          <input class="level-range" id="levelSlider" type="range" min="1" max="51" step="1" value="1" aria-label="Выберите уровень сезонного пропуска">
           <div class="level-marks" id="levelMarks">
             <button data-level-mark="1" type="button">0</button>
             <button data-level-mark="10" type="button">10</button>
@@ -2486,6 +2532,7 @@ img[src$="/xp.webp"]{
             <button data-level-mark="30" type="button">30</button>
             <button data-level-mark="40" type="button">40</button>
             <button data-level-mark="50" type="button">50</button>
+            <button data-level-mark="51" type="button">∞</button>
           </div>
         </div>
 
@@ -2526,7 +2573,7 @@ img[src$="/xp.webp"]{
             <article class="tier-card elite-plus" id="elitePlusCard">
               <div class="tier-title"><i class="tier-card-art"><img src="/assets/season-pass/elite_plus.png?v=07939" alt="Элитный+"></i><div><strong>Элитный+</strong><span>Максимальный тариф сезона</span></div></div>
               <div class="tier-benefits">
-                <div class="tier-benefit"><img src="/assets/season-pass/xp_x2.png?v=07939" alt=""><span>×2 XP за новые завершённые забеги</span></div>
+                <div class="tier-benefit"><img src="/assets/season-pass/xp_x2.png?v=07939" alt=""><span>×2 XP за забеги и задания сезонного пропуска</span></div>
                 <div class="tier-benefit"><img src="/assets/season-pass/levels_5.png?v=07939" alt=""><span>Сразу +5 уровней пропуска</span></div>
                 <div class="tier-benefit"><img src="/assets/rating/frames/profile/ramka_profile_elita.png" alt=""><span>Эксклюзивная рамка</span></div>
                 <div class="tier-benefit"><img src="/assets/cases/avatars/legendary_avatarka_5.png" alt=""><span>Эксклюзивная аватарка</span></div>
@@ -2538,6 +2585,7 @@ img[src$="/xp.webp"]{
                 <span><img src="/assets/optimized/v0.79.5/shopMarshmallowAssortment.png" alt="">Зефир<b>0</b></span>
                 <span><img src="/assets/optimized/v0.79.5/iconCoffee.png" alt="">Кофе<b>0</b></span>
               </div>
+              <div class="tier-upgrade-note" id="elitePlusUpgradePriceNote" hidden>Показана доплата с уже активного тарифа «Элитный»</div>
               <button class="tier-buy" id="buyElitePlus" type="button">Открыть Элитный+</button>
               <div class="tier-owned">Тариф активирован</div>
             </article>
@@ -2599,9 +2647,17 @@ img[src$="/xp.webp"]{
     <div class="purchase-benefits" id="purchaseConfirmBenefits"></div>
     <div class="purchase-price-title">Стоимость</div>
     <div class="purchase-price">
-      <span><img src="/assets/optimized/v0.79.5/iconScore.png" alt="">Очки<b id="purchasePricePoints">0</b></span>
-      <span><img src="/assets/optimized/v0.79.5/shopMarshmallowAssortment.png" alt="">Зефир<b id="purchasePriceMarshmallow">0</b></span>
-      <span><img src="/assets/optimized/v0.79.5/iconCoffee.png" alt="">Кофе<b id="purchasePriceCoffee">0</b></span>
+      <span data-price-kind="points"><img src="/assets/optimized/v0.79.5/iconScore.png" alt="">Очки<b id="purchasePricePoints">0</b></span>
+      <span data-price-kind="treats"><img src="/assets/optimized/v0.79.5/shopMarshmallowAssortment.png" alt="">Зефир<b id="purchasePriceMarshmallow">0</b></span>
+      <span data-price-kind="coffee"><img src="/assets/optimized/v0.79.5/iconCoffee.png" alt="">Кофе<b id="purchasePriceCoffee">0</b></span>
+    </div>
+    <div class="purchase-balance" id="purchaseBalance">
+      <div class="purchase-balance-title">Ваш баланс</div>
+      <div class="purchase-balance-grid" id="purchaseBalanceGrid">
+        <div class="purchase-balance-item" data-balance-kind="points"><img src="/assets/optimized/v0.79.5/iconScore.png" alt=""><span>Очки</span><b id="purchaseBalancePoints">0</b></div>
+        <div class="purchase-balance-item" data-balance-kind="treats"><img src="/assets/optimized/v0.79.5/shopMarshmallowAssortment.png" alt=""><span>Зефир</span><b id="purchaseBalanceMarshmallow">0</b></div>
+        <div class="purchase-balance-item" data-balance-kind="coffee"><img src="/assets/optimized/v0.79.5/iconCoffee.png" alt=""><span>Кофе</span><b id="purchaseBalanceCoffee">0</b></div>
+      </div>
     </div>
     <div class="purchase-note">Покупка выполняется на сервере: баланс проверяется, валюта списывается один раз, а тариф сохраняется в аккаунте.</div>
     <div class="purchase-actions">
@@ -2627,7 +2683,9 @@ img[src$="/xp.webp"]{
   const PURCHASE_LEVEL_PATH = "/api/battle-pass/purchase-level";
   const CLAIM_TASK_PATH = "/api/battle-pass/tasks/claim";
   const CLAIM_ALL_TASKS_PATH = "/api/battle-pass/tasks/claim-all";
+  const CLAIM_OVERFLOW_PATH = "/api/battle-pass/overflow/claim";
   const MAX_LEVEL = 50;
+  const DEFAULT_OVERFLOW_STEP_XP = 5000;
 
   let lastPassHapticAt = 0;
   function passHaptic(kind = "selection", value = "", minInterval = 0) {
@@ -2782,13 +2840,13 @@ img[src$="/xp.webp"]{
   }
   const LEVEL_XP = Array.from({length:MAX_LEVEL},(_,index)=>{
     const level = index + 1;
-    return 50 + 25 * level * (level + 1);
+    return Math.max(300,Math.round((300 + 0.05 * Math.pow(level,3.1))/50)*50);
   });
   const LEVEL_START_XP = [0];
   for (let level=1;level<=MAX_LEVEL;level++) {
     LEVEL_START_XP[level] = LEVEL_START_XP[level-1] + LEVEL_XP[level-1];
   }
-  const MAX_PASS_XP = LEVEL_START_XP[MAX_LEVEL-1];
+  const LEVEL_50_COMPLETE_XP = LEVEL_START_XP[MAX_LEVEL];
   const el = id => document.getElementById(id);
   let toastTimer = 0;
   let activeTaskFilter = "all";
@@ -2807,10 +2865,18 @@ img[src$="/xp.webp"]{
     {id:"d_points_3000",period:"daily",premium:false,title:"Набери 3 000 очков",description:"Можно выполнить за несколько забегов.",target:3000,step:750,xp:200},
     {id:"d_p_run_3",period:"daily",premium:true,title:"Заверши 3 забега",description:"Дополнительное ежедневное задание премиума.",target:3,step:1,xp:280},
     {id:"d_p_marsh_50",period:"daily",premium:true,title:"Собери 50 зефирок",description:"Премиальное задание с повышенной наградой.",target:50,step:10,xp:250},
+    {id:"d_run_5",period:"daily",premium:false,title:"Заверши 5 забегов",description:"Пять принятых сервером забегов за день.",target:5,step:1,xp:260},
+    {id:"d_marsh_75",period:"daily",premium:false,title:"Собери 75 зефирок",description:"Зефир суммируется по всем забегам дня.",target:75,step:15,xp:240},
+    {id:"d_points_10000",period:"daily",premium:false,title:"Набери 10 000 очков",description:"Очки складываются со всех принятых забегов за день.",target:10000,step:2000,xp:300},
+    {id:"d_case_1",period:"daily",premium:false,title:"Открой 1 кейс",description:"Подойдёт любой кейс, открытый сегодня.",target:1,step:1,xp:220},
     {id:"w_run_15",period:"weekly",premium:false,title:"Заверши 15 забегов",description:"Недельная цель для постоянных игроков.",target:15,step:3,xp:800},
     {id:"w_marsh_250",period:"weekly",premium:false,title:"Собери 250 зефирок",description:"Суммарно за все забеги недели.",target:250,step:50,xp:750},
     {id:"w_coffee_40",period:"weekly",premium:false,title:"Собери 40 кофе",description:"Суммарно за текущую неделю.",target:40,step:8,xp:700},
     {id:"w_points_50000",period:"weekly",premium:false,title:"Набери 50 000 очков",description:"Очки складываются со всех забегов.",target:50000,step:10000,xp:900},
+    {id:"w_run_30",period:"weekly",premium:false,title:"Заверши 30 забегов",description:"Большая недельная цель для активных игроков.",target:30,step:5,xp:1150},
+    {id:"w_marsh_500",period:"weekly",premium:false,title:"Собери 500 зефирок",description:"Зефир суммируется за текущую неделю.",target:500,step:100,xp:1050},
+    {id:"w_coffee_80",period:"weekly",premium:false,title:"Собери 80 кофе",description:"Кофе суммируется за текущую неделю.",target:80,step:10,xp:1000},
+    {id:"w_cases_5",period:"weekly",premium:false,title:"Открой 5 кейсов",description:"Подойдут кейсы любого качества.",target:5,step:1,xp:950},
     {id:"w_p_run_25",period:"weekly",premium:true,title:"Заверши 25 забегов",description:"Большая недельная цель премиального пропуска.",target:25,step:5,xp:1200},
     {id:"w_p_cases_3",period:"weekly",premium:true,title:"Открой 3 кейса",description:"Подойдут кейсы любого качества.",target:3,step:1,xp:1100}
   ];
@@ -2929,12 +2995,19 @@ img[src$="/xp.webp"]{
       ...data,
       season:{...(previous.season||{}),...(data.season||{})},
       player:{...(previous.player||{}),...(data.player||{})},
+      overflow:{...(previous.overflow||{}),...(data.overflow||{})},
       balance:{...(previous.balance||{}),...(data.balance||{})}
     };
     if (!("rewards" in data) && Array.isArray(previous.rewards)) serverPass.rewards = previous.rewards;
     if (!("tasks" in data) && Array.isArray(previous.tasks)) serverPass.tasks = previous.tasks;
     if (!("claimed" in data) && Array.isArray(previous.claimed)) serverPass.claimed = previous.claimed;
     if (!("entitlements" in data) && Array.isArray(previous.entitlements)) serverPass.entitlements = previous.entitlements;
+    if (Array.isArray(data.claimedAdded) && data.claimedAdded.length) {
+      serverPass.claimed = [...new Set([...(Array.isArray(serverPass.claimed)?serverPass.claimed:[]).map(String),...data.claimedAdded.map(String)])];
+    }
+    if (Array.isArray(data.entitlementsAdded) && data.entitlementsAdded.length) {
+      serverPass.entitlements = [...new Set([...(Array.isArray(serverPass.entitlements)?serverPass.entitlements:[]).map(String),...data.entitlementsAdded.map(String)])];
+    }
     const player = serverPass.player || {};
     if (data.player) {
       pass.premiumTier = ["elite","elite_plus"].includes(String(player.premiumTier)) ? String(player.premiumTier) : "none";
@@ -2942,7 +3015,9 @@ img[src$="/xp.webp"]{
       pass.elitePlusBonusGranted = Boolean(player.elitePlusBonusGranted);
     }
     if (Array.isArray(data.claimed)) pass.claimed = data.claimed.map(String);
+    else if (Array.isArray(data.claimedAdded) && data.claimedAdded.length) pass.claimed = [...new Set([...(pass.claimed||[]).map(String),...data.claimedAdded.map(String)])];
     if (Array.isArray(data.entitlements)) pass.entitlements = data.entitlements.map(String);
+    else if (Array.isArray(data.entitlementsAdded) && data.entitlementsAdded.length) pass.entitlements = [...new Set([...(pass.entitlements||[]).map(String),...data.entitlementsAdded.map(String)])];
     if (Array.isArray(data.tasks)) pass.claimedTasks = data.tasks.filter(task=>task?.claimed).map(task=>String(task.id));
     if (Array.isArray(data.rewards) && data.rewards.length) {
       const next = Array.from({length:MAX_LEVEL},(_,index)=>({free:rewardFor(index+1,false),premium:rewardFor(index+1,true)}));
@@ -3100,16 +3175,42 @@ img[src$="/xp.webp"]{
     preseasonTimer = setInterval(updatePreseasonCountdown,1000);
   }
 
-  async function openSeasonPassInterface() {
+  let requestedTierOfferHandled = false;
+
+  function handleRequestedTierOffer() {
+    if (requestedTierOfferHandled) return;
+    const requested = String(new URLSearchParams(location.search).get("offer") || "");
+    if (!['elite','elite_plus'].includes(requested)) return;
+    requestedTierOfferHandled = true;
+    const card = requested === 'elite_plus' ? el('elitePlusCard') : el('eliteCard');
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      try { card?.scrollIntoView?.({ behavior:'smooth', block:'center' }); } catch {}
+      card?.classList.add('is-rating-offer-focus');
+      setTimeout(() => card?.classList.remove('is-rating-offer-focus'), 2800);
+      const alreadyOwned = requested === 'elite' ? pass.premiumTier !== 'none' : pass.premiumTier === 'elite_plus';
+      const canPurchase = serverPass?.season?.capabilities?.canPurchase !== false && String(serverPass?.season?.status || 'active') === 'active';
+      if (!alreadyOwned && canPurchase) setTimeout(() => openPurchaseConfirm(requested), 260);
+      else if (alreadyOwned) showToast(requested === 'elite_plus' ? 'Тариф «Элитный+» уже активирован' : 'Премиальный тариф уже активирован');
+    }));
+  }
+
+  async function openSeasonPassInterface(initialState = null) {
     stopPreseasonTimer();
     el("accessGate").hidden = true;
     el("preseasonGate").hidden = true;
     el("appScroll").hidden = false;
-    try { await loadServerPass(); }
-    catch (error) { showToast(error.message || "Не удалось синхронизировать прогресс"); }
+    if (initialState && typeof initialState === "object") {
+      applyServerPass(initialState);
+    } else {
+      try { await loadServerPass(); }
+      catch (error) { showToast(error.message || "Не удалось синхронизировать прогресс"); }
+    }
     selectedLevel = currentLevel();
     render();
-    requestAnimationFrame(()=>requestAnimationFrame(()=>scrollToLevel(selectedLevel,"auto")));
+    const requestedView = new URLSearchParams(location.search).get("view");
+    if (requestedView === "tasks") openView("tasks");
+    else requestAnimationFrame(()=>requestAnimationFrame(()=>scrollToLevel(selectedLevel,"auto")));
+    handleRequestedTierOffer();
   }
 
   async function checkAccess() {
@@ -3122,7 +3223,7 @@ img[src$="/xp.webp"]{
       const response = await fetch(ACCESS_PATH,{
         method:"POST",
         headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({initData}),
+        body:JSON.stringify({initData,includeState:true}),
         cache:"no-store",
         credentials:"same-origin",
         signal:controller.signal
@@ -3134,7 +3235,8 @@ img[src$="/xp.webp"]{
         error:data?.error || "Сезонный пропуск пока недоступен.",
         season:data?.season && typeof data.season === "object" ? data.season : null,
         canPreviewUpcoming:data?.canPreviewUpcoming === true,
-        accessRole:String(data?.accessRole || "player")
+        accessRole:String(data?.accessRole || "player"),
+        state:data?.state && typeof data.state === "object" ? data.state : null
       };
     } catch (error) {
       const timedOut = error?.name === "AbortError";
@@ -3255,14 +3357,27 @@ img[src$="/xp.webp"]{
     if (level >= MAX_LEVEL) return 0;
     return Math.max(0,xpAtLevelStart(level+1)-totalXp());
   }
+  function overflowState(xpValue=totalXp()) {
+    const xp=Math.max(0,Number(xpValue)||0);
+    const step=Math.max(1,Number(serverPass?.season?.progression?.overflowStepXp||serverPass?.overflow?.stepXp||DEFAULT_OVERFLOW_STEP_XP)||DEFAULT_OVERFLOW_STEP_XP);
+    const base=Math.max(LEVEL_50_COMPLETE_XP,Number(serverPass?.season?.progression?.level50CompleteXp||0)||0);
+    const overflowXp=Math.max(0,xp-base);
+    const earned=Math.floor(overflowXp/step);
+    const claimed=Math.max(0,Number(serverPass?.overflow?.claimed||0));
+    return {unlocked:xp>=base,base,step,xp:overflowXp,within:overflowXp%step,earned,claimed,available:Math.max(0,earned-claimed)};
+  }
+
   function addBonusXp(amount) {
-    const realXp = realRunXp().xp;
-    const cap = Math.max(0,MAX_PASS_XP-realXp);
-    pass.bonusXp = Math.max(0,Math.min(cap,pass.bonusXp+Math.max(0,Number(amount)||0)));
+    pass.bonusXp = Math.max(0,pass.bonusXp+Math.max(0,Number(amount)||0));
   }
   function rewardId(level,type) { return `${level}:${type}`; }
   function isUnlocked(level) { return currentLevel() >= level; }
   function activeTasks() { return Array.isArray(serverPass?.tasks) ? serverPass.tasks : tasks; }
+  function taskXpDisplay(task) {
+    const base=Math.max(0,Number(task?.xp)||0);
+    const cfg=serverPass?.season?.tierSettings?.elitePlus||{};
+    return pass.premiumTier === "elite_plus" && cfg.xpBoost !== false ? base*2 : base;
+  }
   function taskProgress(task) { return serverPass ? Math.max(0,Math.min(Number(task.target)||1,Number(task.progress)||0)) : Math.max(0,Math.min(task.target,Number(pass.taskProgress[task.id])||0)); }
   function taskComplete(task) { return serverPass ? Boolean(task.complete) : taskProgress(task) >= task.target; }
   function taskClaimed(task) { return serverPass ? Boolean(task.claimed) : pass.claimedTasks.includes(task.id); }
@@ -3308,7 +3423,7 @@ img[src$="/xp.webp"]{
   }
 
   function updateSeasonBadges() {
-    const rewardCount = claimableRewardCount();
+    const rewardCount = claimableRewardCount() + overflowState().available;
     const taskCount = claimableTasks().length;
     const rewardsLabel = el("rewardsTabLabel");
     const tasksLabel = el("tasksTabLabel");
@@ -3351,9 +3466,39 @@ img[src$="/xp.webp"]{
     </article>`;
   }
 
+  function overflowRewardColumnMarkup() {
+    const state = overflowState();
+    const unlocked = state.unlocked;
+    const available = state.available;
+    const percent = unlocked ? Math.min(100,Math.round(state.within/Math.max(1,state.step)*100)) : 0;
+    const stateLabel = !unlocked ? "После 50" : available > 0 ? `Готово ×${available}` : `50+ · получено ${state.claimed}`;
+    const progressLabel = !unlocked
+      ? `${state.step.toLocaleString("ru-RU")} XP за кейс`
+      : available > 0
+        ? `${available === 1 ? "Кейс готов" : `Готово кейсов: ${available}`}`
+        : `${Math.round(state.within).toLocaleString("ru-RU")} / ${state.step.toLocaleString("ru-RU")} XP`;
+    const actionLabel = !unlocked
+      ? "Откроется после 50"
+      : available > 0
+        ? (available === 1 ? "Забрать кейс" : `Забрать ×${available}`)
+        : "Копи XP";
+    return `<section class="level-column overflow-reward-column ${unlocked?"current":""} ${selectedLevel===MAX_LEVEL+1?"selected":""}" data-level-column="${MAX_LEVEL+1}" aria-label="Бесконечная дорожка 50 плюс">
+      <div class="level-number">50+ · ∞</div>
+      <article class="overflow-reward-cell ${unlocked?"":"is-locked"}">
+        <span class="overflow-cell-state">${stateLabel}</span>
+        <img class="overflow-cell-art" src="/assets/cases/gold_closed.png" alt="Золотой кейс">
+        <div class="overflow-cell-title">Золотой кейс</div>
+        <div class="overflow-cell-copy">Для всех тарифов · каждые ${state.step.toLocaleString("ru-RU")} XP</div>
+        <div class="overflow-cell-track"><i style="width:${percent}%"></i></div>
+        <div class="overflow-cell-progress">${progressLabel}</div>
+        <button class="overflow-cell-action" data-overflow-inline type="button" ${!unlocked||available<=0?"disabled":""}>${actionLabel}</button>
+      </article>
+    </section>`;
+  }
+
   function renderRewardTrack() {
     const level = currentLevel();
-    el("rewardTrack").innerHTML = rewards.map((reward,index)=>{
+    const levelColumns = rewards.map((reward,index)=>{
       const itemLevel = index + 1;
       return `<section class="level-column ${itemLevel===level?"current":""} ${itemLevel===selectedLevel?"selected":""}" data-level-column="${itemLevel}">
         <div class="level-number">${itemLevel}</div>
@@ -3362,12 +3507,13 @@ img[src$="/xp.webp"]{
         ${rewardCellMarkup(itemLevel,"premium",reward.premium)}
       </section>`;
     }).join("");
+    el("rewardTrack").innerHTML = levelColumns + overflowRewardColumnMarkup();
   }
 
   function updateNavigator(level) {
-    selectedLevel = Math.max(1,Math.min(MAX_LEVEL,Number(level)||1));
+    selectedLevel = Math.max(1,Math.min(MAX_LEVEL+1,Number(level)||1));
     el("levelSlider").value = String(selectedLevel);
-    el("selectedLevelText").textContent = `Уровень ${selectedLevel}`;
+    el("selectedLevelText").textContent = selectedLevel > MAX_LEVEL ? "50+ / ∞" : `Уровень ${selectedLevel}`;
     document.querySelectorAll("[data-level-mark]").forEach(button=>{
       button.classList.toggle("active",Number(button.dataset.levelMark)===selectedLevel);
     });
@@ -3382,7 +3528,7 @@ img[src$="/xp.webp"]{
   }
 
   function scrollToLevel(level,behavior="smooth") {
-    const targetLevel = Math.max(1,Math.min(MAX_LEVEL,Number(level)||1));
+    const targetLevel = Math.max(1,Math.min(MAX_LEVEL+1,Number(level)||1));
     const target = document.querySelector(`[data-level-column="${targetLevel}"]`);
     if (!target) return;
     const scroll = el("rewardScroll");
@@ -3421,7 +3567,7 @@ img[src$="/xp.webp"]{
     if (!seasonActive) action = "Сезон завершён";
     else if (locked) action = "Нужен Элитный";
     else if (claimed) action = "XP получен";
-    else if (complete) action = `Забрать ${task.xp} XP`;
+    else if (complete) action = `Забрать ${taskXpDisplay(task)} XP`;
 
     if (claimed) {
       return `<article class="task-card ${task.premium?"premium":""} complete claimed" data-task-card="${task.id}">
@@ -3431,7 +3577,7 @@ img[src$="/xp.webp"]{
             ${task.premium?'<span class="task-badge premium">ПРЕМИУМ</span>':'<span class="task-badge">ОБЫЧНОЕ</span>'}
             <span class="task-badge done">XP ПОЛУЧЕН</span>
           </div>
-          <span class="task-xp">+${task.xp} XP</span>
+          <span class="task-xp">+${taskXpDisplay(task)} XP</span>
         </div>
         <h3>${task.title}</h3>
       </article>`;
@@ -3444,7 +3590,7 @@ img[src$="/xp.webp"]{
           ${task.premium?'<span class="task-badge premium">ПРЕМИУМ</span>':'<span class="task-badge">ОБЫЧНОЕ</span>'}
           ${complete?'<span class="task-badge done">ВЫПОЛНЕНО</span>':""}
         </div>
-        <span class="task-xp">+${task.xp} XP</span>
+        <span class="task-xp">+${taskXpDisplay(task)} XP</span>
       </div>
       <h3>${task.title}</h3>
       <p>${task.description}</p>
@@ -3488,7 +3634,7 @@ img[src$="/xp.webp"]{
     const list = activeTasks();
     const visible = list.filter(task=>activeTaskFilter==="all" || task.period===activeTaskFilter);
     const readyTasks = claimableTasks();
-    const readyXp = readyTasks.reduce((sum,task)=>sum+Number(task.xp||0),0);
+    const readyXp = readyTasks.reduce((sum,task)=>sum+taskXpDisplay(task),0);
     el("taskList").innerHTML = visible.map(taskMarkup).join("");
     el("taskClaimedCount").textContent = `${list.filter(task=>taskComplete(task)).length} выполнено`;
     const canClaimTasks = serverPass ? serverPass?.season?.capabilities?.canClaimTasks !== false : true;
@@ -3596,7 +3742,7 @@ img[src$="/xp.webp"]{
     const cards = [...document.querySelectorAll("[data-task-card]")].filter(card=>readyIds.has(card.dataset.taskCard));
     el("claimAllTasks").disabled = true;
 
-    const totalXp = readyTasks.reduce((sum,task)=>sum+task.xp,0);
+    const totalXp = readyTasks.reduce((sum,task)=>sum+taskXpDisplay(task),0);
     const animations = cards.map((card,index)=>animateCollectedTaskCard(card,index));
     const waitForCards = animations.length ? Promise.all(animations) : new Promise(resolve=>setTimeout(resolve,120));
 
@@ -3653,7 +3799,10 @@ img[src$="/xp.webp"]{
     const card = badge?.closest?.(".progress-card");
     const previous = renderedProgressState;
     const reduced = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
-    const levelUp = Boolean(previous && next.level > previous.level);
+    const stage=Number(next.stage??next.level)||1;
+    const previousStage=Number(previous?.stage??previous?.level)||1;
+    const levelUp = Boolean(previous && stage > previousStage);
+    const badgeLabel = String(next.label ?? next.level);
 
     if (!previous) {
       if (fill) {
@@ -3661,19 +3810,19 @@ img[src$="/xp.webp"]{
         fill.style.width = "0%";
         requestAnimationFrame(()=>{ fill.style.width = `${next.percent}%`; });
       }
-      if (badge) badge.textContent = String(next.level);
-      animateProgressNumber(0,next.within,next.required,next.level>=MAX_LEVEL);
+      if (badge) badge.textContent = badgeLabel;
+      animateProgressNumber(0,next.within,next.required,false);
       renderedProgressState = {...next};
       return;
     }
 
-    if (badge && next.level !== previous.level) {
+    if (badge && badgeLabel !== String(previous.label ?? previous.level)) {
       badge.classList.remove("is-changing");
       void badge.offsetWidth;
       badge.classList.add("is-changing");
-      window.setTimeout(()=>{ badge.textContent = String(next.level); },reduced?0:190);
+      window.setTimeout(()=>{ badge.textContent = badgeLabel; },reduced?0:190);
       window.setTimeout(()=>badge.classList.remove("is-changing"),760);
-    } else if (badge) badge.textContent = String(next.level);
+    } else if (badge) badge.textContent = badgeLabel;
 
     if (fill) {
       if (levelUp && !reduced) {
@@ -3698,7 +3847,7 @@ img[src$="/xp.webp"]{
       card.classList.add("is-level-up");
       window.setTimeout(()=>card.classList.remove("is-level-up"),1050);
     }
-    animateProgressNumber(levelUp?0:previous.within,next.within,next.required,next.level>=MAX_LEVEL);
+    animateProgressNumber(levelUp?0:previous.within,next.within,next.required,false);
     renderedProgressState = {...next};
   }
 
@@ -3740,19 +3889,47 @@ img[src$="/xp.webp"]{
     const real = realRunXp();
     const xp = totalXp();
     const level = currentLevel();
-    const required = serverPass?.player?.xpRequired ?? xpRequiredForLevel(level);
-    const within = level>=MAX_LEVEL ? required : (serverPass?.player?.xpWithin ?? Math.max(0,xp-xpAtLevelStart(level)));
-    const percent = level>=MAX_LEVEL ? 100 : Math.min(100,Math.round(within/required*100));
+    const overflow = overflowState(xp);
+    const required = overflow.unlocked ? overflow.step : (serverPass?.player?.xpRequired ?? xpRequiredForLevel(level));
+    const within = overflow.unlocked ? overflow.within : (serverPass?.player?.xpWithin ?? Math.max(0,Math.min(required,xp-xpAtLevelStart(level))));
+    const percent = Math.min(100,Math.round(within/Math.max(1,required)*100));
 
-    const previousLevel = renderedProgressState?.level ?? level;
+    const previousLevel = Math.min(MAX_LEVEL,Number(renderedProgressState?.rewardLevel ?? level)||level);
     el("playerName").textContent = profileName();
     el("premiumStatus").textContent = premiumTierLabel();
-    animatePassProgress({level,within,required,percent});
+    animatePassProgress({level,stage:overflow.unlocked?MAX_LEVEL+overflow.earned+1:level,rewardLevel:level,label:overflow.unlocked?"50+":String(level),within,required,percent});
+    const progressCard=el("levelValue")?.closest?.(".progress-card");
+    if(progressCard)progressCard.classList.toggle("is-overflow",overflow.unlocked);
+    const progressTitle=progressCard?.querySelector?.(".progress-copy>strong");
+    if(progressTitle)progressTitle.textContent=overflow.unlocked?"Бонусный уровень ∞":"Уровень пропуска";
     const runCount = serverPass?.summary ? Number(serverPass.summary.runs||0) : real.runs;
     const elitePlusSettings = serverPass?.season?.tierSettings?.elitePlus || {};
     const seasonXpBoostActive = pass.entitlements.includes("season_xp_x2") || (pass.premiumTier === "elite_plus" && elitePlusSettings.xpBoost !== false);
-    el("runsText").textContent = seasonXpBoostActive ? `${runCount} забегов · ×2 XP активно` : `${runCount} забегов`;
+    el("runsText").textContent = seasonXpBoostActive ? `${runCount} забегов · ×2 XP за забеги и задания` : `${runCount} забегов`;
     el("claimedCount").textContent = `${pass.claimed.length} получено`;
+    const overflowCard=el("overflowCard"),claimOverflow=el("claimOverflow");
+    if(overflowCard){
+      overflowCard.hidden=false;
+      overflowCard.classList.toggle("is-locked",!overflow.unlocked);
+      el("overflowStepLabel").textContent=`${overflow.step.toLocaleString("ru-RU")} XP`;
+      if(overflow.unlocked){
+        el("overflowProgress").textContent=`${Math.round(overflow.within).toLocaleString("ru-RU")} / ${overflow.step.toLocaleString("ru-RU")} XP`;
+        el("overflowEarned").textContent=`Получено: ${overflow.claimed} · открыто: ${overflow.earned}`;
+        el("overflowFill").style.width=`${Math.min(100,Math.round(overflow.within/overflow.step*100))}%`;
+      }else{
+        el("overflowProgress").textContent="Откроется после 50 уровня";
+        el("overflowEarned").textContent=`${overflow.step.toLocaleString("ru-RU")} XP за кейс`;
+        el("overflowFill").style.width="0%";
+      }
+      if(claimOverflow){
+        claimOverflow.disabled=!overflow.unlocked||overflow.available<=0;
+        claimOverflow.textContent=!overflow.unlocked
+          ? "Откроется после полного 50 уровня"
+          : overflow.available>0
+            ? (overflow.available===1?"Забрать Золотой кейс":`Забрать Золотые кейсы ×${overflow.available}`)
+            : "Следующий кейс ещё не открыт";
+      }
+    }
     const seasonStatus = String(serverPass?.season?.status||"active");
     const banner = el("seasonStateBanner");
     if (seasonStatus === "ended") {
@@ -3794,11 +3971,13 @@ img[src$="/xp.webp"]{
     if(elitePlusBenefitsNode)elitePlusBenefitsNode.innerHTML=elitePlusBenefitItems().map(item=>`<div class="tier-benefit"><img src="${item.image}" alt=""><span>${item.text}</span></div>`).join("");
     for (const [cardId,tierKey] of [["eliteCard","elite"],["elitePlusCard","elite_plus"]]) {
       const values = el(cardId)?.querySelectorAll(".tier-price b") || [];
-      const price = serverPass?.season?.prices?.[tierKey] || {};
+      const price = tierPriceForDisplay(tierKey);
       if (values[0]) values[0].textContent = Math.max(0,Number(price.points)||0).toLocaleString("ru-RU");
       if (values[1]) values[1].textContent = Math.max(0,Number(price.treats)||0).toLocaleString("ru-RU");
       if (values[2]) values[2].textContent = Math.max(0,Number(price.coffee)||0).toLocaleString("ru-RU");
     }
+    const upgradePriceNote = el("elitePlusUpgradePriceNote");
+    if (upgradePriceNote) upgradePriceNote.hidden = pass.premiumTier !== "elite" || seasonEnded;
     el("buyLevel").hidden = pass.premiumTier === "none" || level >= MAX_LEVEL || !canPurchase;
     const levelPrice = Math.max(0,Number(serverPass?.season?.levelPricePoints)||0);
     el("buyLevel").innerHTML = `<img src="/assets/optimized/v0.79.5/iconScore.png" alt="">Купить уровень · ${levelPrice.toLocaleString("ru-RU")}`;
@@ -3852,7 +4031,7 @@ img[src$="/xp.webp"]{
   function elitePlusBenefitItems(){
     const cfg=serverPass?.season?.tierSettings?.elitePlus||{};
     const items=[{image:REWARD_ASSETS.eliteBadge,text:"Все преимущества тарифа «Элитный»"}];
-    if(cfg.xpBoost!==false)items.push({image:REWARD_ASSETS.xpBoost,text:"×2 XP сезонного пропуска"});
+    if(cfg.xpBoost!==false)items.push({image:REWARD_ASSETS.xpBoost,text:"×2 XP за забеги и задания сезонного пропуска"});
     const levels=Math.max(0,Number(cfg.bonusLevels)||0);if(levels>0)items.push({image:REWARD_ASSETS.levelBoost,text:`Сразу +${levels} ${levels===1?"уровень":"уровней"} пропуска`});
     for(const cosmetic of (Array.isArray(cfg.cosmetics)?cfg.cosmetics:[])){
       items.push({image:cosmetic.imageUrl||"/assets/season-pass/season.png?v=07939",text:cosmetic.title||"Эксклюзивная награда"});
@@ -3863,6 +4042,79 @@ img[src$="/xp.webp"]{
   function tierConfigFor(tier){
     const config=TIER_CONFIG[tier];if(!config)return null;
     return tier==="elite_plus"?{...config,benefits:elitePlusBenefitItems()}:config;
+  }
+
+  function tierPriceForDisplay(tier) {
+    const price = serverPass?.season?.prices?.[tier] || {};
+    const base = tier === "elite_plus" && pass.premiumTier === "elite" ? (serverPass?.season?.prices?.elite || {}) : {};
+    return {
+      points: Math.max(0, Number(price.points || 0) - Number(base.points || 0)),
+      treats: Math.max(0, Number(price.treats || 0) - Number(base.treats || 0)),
+      coffee: Math.max(0, Number(price.coffee || 0) - Number(base.coffee || 0))
+    };
+  }
+
+  function purchaseBalanceSnapshot() {
+    const balance = serverPass?.balance || {};
+    return {
+      points: Math.max(0, Number(balance.points) || 0),
+      treats: Math.max(0, Number(balance.treats) || 0),
+      coffee: Math.max(0, Number(balance.coffee) || 0)
+    };
+  }
+
+  function renderPurchaseBalance(kind, price = {}) {
+    const levelOnly = kind === "level";
+    const balance = purchaseBalanceSnapshot();
+    const costs = {
+      points: Math.max(0, Number(price.points) || 0),
+      treats: Math.max(0, Number(price.treats) || 0),
+      coffee: Math.max(0, Number(price.coffee) || 0)
+    };
+    const priceGrid = el("purchaseConfirm")?.querySelector(".purchase-price");
+    const balanceGrid = el("purchaseBalanceGrid");
+    priceGrid?.classList.toggle("level-only", levelOnly);
+    balanceGrid?.classList.toggle("level-only", levelOnly);
+    for (const node of priceGrid?.querySelectorAll("[data-price-kind]") || []) {
+      node.hidden = levelOnly && node.dataset.priceKind !== "points";
+    }
+    const ids = {
+      points: "purchaseBalancePoints",
+      treats: "purchaseBalanceMarshmallow",
+      coffee: "purchaseBalanceCoffee"
+    };
+    for (const currency of ["points","treats","coffee"]) {
+      const card = balanceGrid?.querySelector(`[data-balance-kind="${currency}"]`);
+      if (!card) continue;
+      card.hidden = levelOnly && currency !== "points";
+      const value = el(ids[currency]);
+      if (value) value.textContent = balance[currency].toLocaleString("ru-RU");
+      const insufficient = !card.hidden && balance[currency] < costs[currency];
+      card.classList.toggle("insufficient", insufficient);
+      card.setAttribute("aria-label", insufficient ? "Баланс меньше стоимости" : "Баланс достаточен");
+    }
+  }
+
+  async function refreshOpenPurchaseBalance(kind) {
+    try {
+      const data = await seasonPassApi(STATE_PATH);
+      applyServerPass(data);
+    } catch {
+      return;
+    }
+    const dialog = el("purchaseConfirm");
+    if (!dialog || dialog.hidden || String(dialog.dataset.purchaseKind || "") !== String(kind || "")) return;
+    if (kind === "level") {
+      const levelPrice = Math.max(0, Number(serverPass?.season?.levelPricePoints) || 0);
+      el("purchasePricePoints").textContent = levelPrice.toLocaleString("ru-RU");
+      renderPurchaseBalance("level", {points:levelPrice,treats:0,coffee:0});
+      return;
+    }
+    const tierPrice = tierPriceForDisplay(kind);
+    el("purchasePricePoints").textContent = Math.max(0, Number(tierPrice.points) || 0).toLocaleString("ru-RU");
+    el("purchasePriceMarshmallow").textContent = Math.max(0, Number(tierPrice.treats) || 0).toLocaleString("ru-RU");
+    el("purchasePriceCoffee").textContent = Math.max(0, Number(tierPrice.coffee) || 0).toLocaleString("ru-RU");
+    renderPurchaseBalance(kind, tierPrice);
   }
 
   function resetPurchaseDialogToTop() {
@@ -3906,11 +4158,11 @@ img[src$="/xp.webp"]{
       : `Купить «${config.title}»?`;
     el("purchaseConfirmSubtitle").textContent = config.subtitle;
     el("purchaseConfirmBenefits").innerHTML = config.benefits.map(item=>`<div class="purchase-benefit"><img src="${item.image}" alt=""><span>${item.text}</span></div>`).join("");
-    const tierPrice = serverPass?.season?.prices?.[tier] || {};
-    const alreadyPaid = tier === "elite_plus" && pass.premiumTier === "elite" ? (serverPass?.season?.prices?.elite || {}) : {};
-    el("purchasePricePoints").textContent = Math.max(0,Number(tierPrice.points||0)-Number(alreadyPaid.points||0)).toLocaleString("ru-RU");
-    el("purchasePriceMarshmallow").textContent = Math.max(0,Number(tierPrice.treats||0)-Number(alreadyPaid.treats||0)).toLocaleString("ru-RU");
-    el("purchasePriceCoffee").textContent = Math.max(0,Number(tierPrice.coffee||0)-Number(alreadyPaid.coffee||0)).toLocaleString("ru-RU");
+    const tierPrice = tierPriceForDisplay(tier);
+    el("purchasePricePoints").textContent = Math.max(0,Number(tierPrice.points||0)).toLocaleString("ru-RU");
+    el("purchasePriceMarshmallow").textContent = Math.max(0,Number(tierPrice.treats||0)).toLocaleString("ru-RU");
+    el("purchasePriceCoffee").textContent = Math.max(0,Number(tierPrice.coffee||0)).toLocaleString("ru-RU");
+    renderPurchaseBalance(tier, tierPrice);
     el("purchaseSubmit").textContent = tier === "elite_plus" && pass.premiumTier === "elite"
       ? "Подтвердить улучшение"
       : "Подтвердить покупку";
@@ -3918,6 +4170,7 @@ img[src$="/xp.webp"]{
     el("purchaseConfirm").hidden = false;
     document.body.style.overflow = "hidden";
     resetPurchaseDialogToTop();
+    void refreshOpenPurchaseBalance(tier);
   }
 
   function openLevelPurchaseConfirm() {
@@ -3935,7 +4188,7 @@ img[src$="/xp.webp"]{
     const level = currentLevel();
     const needed = xpNeededForNextLevel();
     if (!needed || level >= MAX_LEVEL) {
-      showToast("Достигнут максимальный уровень");
+      showToast("После 50 уровня XP идёт в бесконечную дорожку 50+");
       return;
     }
     pendingPurchaseTier = null;
@@ -3949,10 +4202,12 @@ img[src$="/xp.webp"]{
     el("purchasePricePoints").textContent = levelPrice.toLocaleString("ru-RU");
     el("purchasePriceMarshmallow").textContent = "0";
     el("purchasePriceCoffee").textContent = "0";
+    renderPurchaseBalance("level", {points:levelPrice,treats:0,coffee:0});
     el("purchaseSubmit").textContent = "Купить уровень";
     el("purchaseConfirm").hidden = false;
     document.body.style.overflow = "hidden";
     resetPurchaseDialogToTop();
+    void refreshOpenPurchaseBalance("level");
   }
 
   async function performLevelPurchase() {
@@ -4037,6 +4292,18 @@ img[src$="/xp.webp"]{
     }
   }
 
+  async function claimOverflowRewards(){
+    const state=overflowState();if(state.available<=0)return showToast("Следующий золотой кейс ещё не открыт");
+    const button=el("claimOverflow"),old=button?.textContent||"";if(button){button.disabled=true;button.textContent="Получаем кейс…";}
+    try{
+      const data=await seasonPassApi(CLAIM_OVERFLOW_PATH,{all:true});
+      applyServerPass(data);render();notifyAccountChanged();passNotifyHaptic("success");
+      const received=Array.isArray(data.received)?data.received.map(item=>({premium:true,icon:"",image:item.imageUrl||"/assets/cases/gold_closed.png",name:item.title||"Золотой кейс",description:"Бонус после 50 уровня",level:"50+",source:"Бесконечная дорожка 50+"})):[];
+      if(received.length)openRewardSummary(received);else showToast("Золотой кейс уже получен");
+    }catch(error){passNotifyHaptic("error");showToast(error.message||"Не удалось получить золотой кейс");}
+    finally{if(button){button.textContent=old;button.disabled=false;}render();}
+  }
+
   function openView(name) {
     document.querySelectorAll("[data-view]").forEach(view=>{
       view.hidden = view.dataset.view !== name;
@@ -4075,10 +4342,20 @@ img[src$="/xp.webp"]{
   }
 
   document.addEventListener("click",event=>{
+    const overflowInlineButton = event.target.closest("[data-overflow-inline]");
+    if (overflowInlineButton) {
+      passImpactHaptic("medium");
+      overflowInlineButton.disabled = true;
+      void claimOverflowRewards();
+      return;
+    }
+
     const rewardButton = event.target.closest("[data-claim]");
     if (rewardButton) {
       passImpactHaptic("medium");
       rewardButton.disabled = true;
+      const rewardButtonLabel = rewardButton.textContent;
+      rewardButton.textContent = "Получаем…";
       void claim(rewardButton.dataset.claim).then((received)=>{
         render();
         if (received) openRewardSummary([{premium:received.lane==="premium",icon:"",image:received.imageUrl||"",name:received.title||"Награда",description:"Начислено на аккаунт",level:received.level,source:`Уровень ${received.level} · ${received.lane==="premium"?"Премиум":"Бесплатно"}`}]);
@@ -4117,9 +4394,32 @@ img[src$="/xp.webp"]{
       if (card?.classList.contains("collecting")) return;
       taskButton.disabled = true;
       if (serverPass) {
+        const previousLabel = taskButton.textContent;
+        taskButton.textContent = "Получаем…";
         void seasonPassApi(CLAIM_TASK_PATH,{taskId:task.id}).then(async data=>{
-          await animateCollectedTaskCard(card,0);applyServerPass(data);render();passNotifyHaptic("success");showToast(`Получено ${Number(data?.receivedTask?.xp||task.xp).toLocaleString("ru-RU")} XP`);
-        }).catch(error=>{passNotifyHaptic("error");showToast(error.message||"Не удалось получить XP");renderTasks();});
+          applyServerPass(data);
+          const update = data?.taskUpdate && typeof data.taskUpdate === "object" ? data.taskUpdate : null;
+          if (update && Array.isArray(serverPass?.tasks)) {
+            const target = serverPass.tasks.find(item=>String(item?.id)===String(update.id) && (!update.periodKey || String(item?.periodKey||"")===String(update.periodKey)));
+            if (target) Object.assign(target,update,{claimed:true});
+            if (!pass.claimedTasks.includes(String(update.id))) pass.claimedTasks.push(String(update.id));
+            if (Number.isFinite(Number(data?.taskClaimableDelta))) serverPass.taskClaimableCount = Math.max(0,Number(serverPass.taskClaimableCount||0)+Number(data.taskClaimableDelta));
+            savePass();
+          }
+          await animateCollectedTaskCard(card,0);
+          render();
+          passNotifyHaptic(data?.repeated?"warning":"success");
+          showToast(data?.repeated?"XP уже был получен":`Получено ${Number(data?.receivedTask?.xp||task.xp).toLocaleString("ru-RU")} XP`);
+        }).catch(async error=>{
+          passNotifyHaptic("error");
+          showToast(error.message||"Не удалось получить XP");
+          // If the server reports an unexpected stale state, refresh only then;
+          // the normal successful claim path avoids a full pass reload.
+          try { await loadServerPass(); } catch {}
+          renderTasks();
+        }).finally(()=>{
+          if (taskButton?.isConnected) taskButton.textContent = previousLabel;
+        });
       } else collectTaskRewards([task]);
     }
   });
@@ -4154,6 +4454,7 @@ img[src$="/xp.webp"]{
   },{passive:true});
 
   el("buyLevel").addEventListener("click",openLevelPurchaseConfirm);
+  el("claimOverflow").addEventListener("click",()=>{passImpactHaptic("medium");void claimOverflowRewards();});
 
   el("buyElite").addEventListener("click",()=>openPurchaseConfirm("elite"));
   el("buyElitePlus").addEventListener("click",()=>openPurchaseConfirm("elite_plus"));
@@ -4163,8 +4464,20 @@ img[src$="/xp.webp"]{
     if (!serverPass) { collectTaskRewards(claimableTasks()); return; }
     const ready = claimableTasks();if(!ready.length)return showToast("Нет готовых заданий");const button=el("claimAllTasks");const oldHtml=button.innerHTML;button.disabled=true;button.innerHTML='<span>Получаем XP…</span><b>Подождите</b>';
     const cards=[...document.querySelectorAll("[data-task-card]")].filter(card=>ready.some(task=>task.id===card.dataset.taskCard));
-    void seasonPassApi(CLAIM_ALL_TASKS_PATH).then(data=>{
-      applyServerPass(data);passNotifyHaptic(data.totalXp>0?"success":"warning");showToast(data.totalXp>0?`Получено ${Number(data.totalXp||0).toLocaleString("ru-RU")} XP`:"XP уже был получен");
+    void seasonPassApi(CLAIM_ALL_TASKS_PATH).then(async data=>{
+      applyServerPass(data);
+      const updates=Array.isArray(data?.taskUpdates)?data.taskUpdates:[];
+      if(updates.length&&Array.isArray(serverPass?.tasks)){
+        for(const update of updates){
+          const target=serverPass.tasks.find(item=>String(item?.id)===String(update?.id)&&(!update?.periodKey||String(item?.periodKey||"")===String(update.periodKey)));
+          if(target)Object.assign(target,update,{claimed:true});
+          if(update?.id&&!pass.claimedTasks.includes(String(update.id)))pass.claimedTasks.push(String(update.id));
+        }
+        if(Number.isFinite(Number(data?.taskClaimableDelta)))serverPass.taskClaimableCount=Math.max(0,Number(serverPass.taskClaimableCount||0)+Number(data.taskClaimableDelta));
+        savePass();
+      }
+      if(data?.stale){try{await loadServerPass();}catch{}}
+      passNotifyHaptic(data.totalXp>0?"success":"warning");showToast(data.totalXp>0?`Получено ${Number(data.totalXp||0).toLocaleString("ru-RU")} XP`:"XP уже был получен");
       const animation=Promise.all(cards.map((card,index)=>animateCollectedTaskCard(card,index)));void animation.finally(()=>render());
     }).catch(error=>{passNotifyHaptic("error");showToast(error.message||"Не удалось получить XP");}).finally(()=>{button.innerHTML=oldHtml;renderTasks();});
   });
@@ -4175,7 +4488,17 @@ img[src$="/xp.webp"]{
     void seasonPassApi(CLAIM_ALL_PATH).then((data)=>{
       applyServerPass(data); render(); notifyAccountChanged();
       const received = Array.isArray(data.received) ? data.received.map(item=>({premium:item.lane==="premium",icon:"",image:item.imageUrl||"",name:item.title||"Награда",description:"Начислено на аккаунт",level:item.level,source:`Уровень ${item.level} · ${item.lane==="premium"?"Премиум":"Бесплатно"}`})) : [];
-      if (received.length) { passNotifyHaptic("success"); openRewardSummary(received); } else { passNotifyHaptic("warning"); showToast("Нет доступных наград"); }
+      const failedCount = Array.isArray(data?.failedRewards) ? data.failedRewards.length : 0;
+      if (received.length) {
+        passNotifyHaptic(failedCount?"warning":"success");
+        openRewardSummary(received);
+        if(failedCount)showToast(`Получено ${received.length}. Не удалось получить: ${failedCount}`);
+      } else if(failedCount) {
+        passNotifyHaptic("error");
+        showToast(`Не удалось получить ${failedCount} наград. Попробуйте ещё раз.`);
+      } else {
+        passNotifyHaptic("warning");showToast("Нет доступных наград");
+      }
     }).catch(error=>{passNotifyHaptic("error");showToast(error.message||"Не удалось получить награды");}).finally(()=>{button.textContent=oldText;button.disabled=false;render();});
   });
 
@@ -4273,7 +4596,7 @@ img[src$="/xp.webp"]{
         showPreseason(access.season, access.canPreviewUpcoming);
         return;
       }
-      await openSeasonPassInterface();
+      await openSeasonPassInterface(access.state);
     })().catch((error) => {
       console.error("Season pass boot failed", error);
       showAccessError("Страница не смогла завершить загрузку. Нажмите «Повторить проверку».");
@@ -4303,5 +4626,7 @@ img[src$="/xp.webp"]{
 <script type="application/json" id="zefirok-v07946-rc4-reliability-audit">{"version":"0.79.46-rc.4","changes":["fast-access-server-path","longer-access-timeout","longer-state-timeout"]}</script>
 <script type="application/json" id="zefirok-v060-ended-task-state">{"version":"6.0 RC.1","changes":["ended_season_tasks_hidden","claim_window_explanation","task_claim_badge_suppressed"]}</script>
 <script type="application/json" id="zefirok-v060-season-force-close">{"version":"6.0 RC.1","changes":["forced_season_close_gate","next_season_countdown_lock","no_claim_grace","immediate_progress_and_purchase_reset","owner_preview_block","no_manual_unlock"]}</script>
+<script type="application/json" id="zefirok-v1001-season-pass-fast-open-audit">{"build":"1.0.6","fixes":["single-request-access-state-bootstrap","skip-duplicate-state-roundtrip"]}</script>
+<script type="application/json" id="zefirok-season-pass-balance-v2">{"version":"1.2.1","level50StartXp":123000,"level50CompleteXp":132550,"overflowStepXp":5000,"overflowAvailableToAll":true,"fairEarnedXpRecalc":"v3","elitePlusTaskXpMultiplier":2}</script>
 </body>
 </html>

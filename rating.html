@@ -8657,6 +8657,54 @@ html > body { padding: 0 !important; }
 }
 </style>
 
+<style id="zefirok-rating-season-pass-status">
+#zefirok-maltipoo-runner .leaderboard-v4-podium-name,
+#zefirok-maltipoo-runner .leaderboard-v4-row-copy>strong{display:flex;align-items:center;gap:4px;min-width:0}
+#zefirok-maltipoo-runner .leaderboard-v4-podium-name{justify-content:center;overflow:visible}
+#zefirok-maltipoo-runner .leaderboard-name-text{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#zefirok-maltipoo-runner .leaderboard-v4-row-copy>strong .leaderboard-name-text{color:inherit;font-size:inherit;font-weight:inherit;line-height:inherit}
+#zefirok-maltipoo-runner .leaderboard-pass-star{all:unset;display:inline-flex;align-items:center;justify-content:center;position:relative;flex:0 0 auto;width:auto;height:auto;min-width:0;min-height:0;margin:0 0 0 2px;padding:0;border:0!important;border-radius:0!important;background:none!important;box-shadow:none!important;outline:none!important;color:#d56f9b;font-family:Georgia,"Times New Roman",serif;font-size:19px;font-weight:950;line-height:1;cursor:pointer;vertical-align:middle;-webkit-appearance:none!important;appearance:none!important;-webkit-tap-highlight-color:transparent;touch-action:manipulation;text-shadow:0 0 4px rgba(213,111,155,.30),0 1px 0 rgba(255,255,255,.95);transform:none!important}
+#zefirok-maltipoo-runner .leaderboard-pass-star::-moz-focus-inner{border:0;padding:0}
+#zefirok-maltipoo-runner .leaderboard-pass-star[data-pass-tier-badge="elite_plus"]{color:#d39a13;font-size:20px;text-shadow:0 0 4px rgba(232,184,49,.52),0 0 10px rgba(220,157,24,.32),0 1px 0 #fff}
+#zefirok-maltipoo-runner .leaderboard-pass-star:focus-visible{outline:2px solid rgba(225,145,178,.42);outline-offset:4px;border-radius:8px!important}
+#zefirok-maltipoo-runner .leaderboard-pass-star:active{transform:scale(.9)!important}
+#zefirok-maltipoo-runner .leaderboard-avatar-frame{position:relative!important;overflow:visible!important}
+#zefirok-maltipoo-runner .leaderboard-level-badge{position:absolute;right:-5px;bottom:-4px;z-index:9;display:grid;place-items:center;width:25px;height:25px;padding:0;border:2px solid rgba(255,255,255,.96);border-radius:50%;box-sizing:border-box;color:#665d58;background:linear-gradient(145deg,#f5f1ed,#d8d3d0);box-shadow:0 3px 8px rgba(83,63,57,.18);font:950 10px/1 var(--font-sans);font-variant-numeric:tabular-nums;cursor:pointer;-webkit-tap-highlight-color:transparent}
+#zefirok-maltipoo-runner .leaderboard-avatar-frame.is-compact .leaderboard-level-badge{right:-5px;bottom:-4px;width:20px;height:20px;border-width:2px;font-size:8px}
+#zefirok-maltipoo-runner .leaderboard-level-badge[data-level-band="20"]{color:#2d7564;background:linear-gradient(145deg,#e6fff8,#90d8c4)}
+#zefirok-maltipoo-runner .leaderboard-level-badge[data-level-band="30"]{color:#9d4068;background:linear-gradient(145deg,#fff0f6,#eea0be)}
+#zefirok-maltipoo-runner .leaderboard-level-badge[data-level-band="40"]{color:#674489;background:linear-gradient(145deg,#f7edff,#c7a2e6)}
+#zefirok-maltipoo-runner .leaderboard-level-badge[data-level-band="50"]{color:#81530c;background:linear-gradient(145deg,#fff7c8,#e5b43c);border-color:#fff8db;box-shadow:0 0 0 1px #d9a52e,0 3px 9px rgba(174,121,17,.28)}
+#zefirok-maltipoo-runner .leaderboard-level-badge:active{transform:scale(.91)}
+#zefirok-maltipoo-runner .leaderboard-v4-row-copy{align-content:center}
+.rating-pass-info{position:fixed;inset:0;z-index:2147483600;display:grid;place-items:center;padding:max(22px,var(--zefirok-content-safe-top,0px)) 18px max(22px,var(--zefirok-content-safe-bottom,0px));background:rgba(67,42,50,.42);backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px);box-sizing:border-box}
+.rating-pass-info[hidden]{display:none!important}
+.rating-pass-info-card{width:min(390px,100%);box-sizing:border-box;padding:22px;border:1px solid rgba(235,205,188,.92);border-radius:26px;background:linear-gradient(165deg,#fffdf9,#fff2f4);box-shadow:0 24px 70px rgba(69,38,49,.24);text-align:center;color:#68404e}
+.rating-pass-info-star{display:grid;place-items:center;width:58px;height:58px;margin:0 auto 12px;border-radius:50%;background:#fff0f6;color:#d68bab;font:950 36px/1 Georgia,serif;box-shadow:inset 0 0 0 1px rgba(214,139,171,.24),0 8px 22px rgba(166,86,118,.12)}
+.rating-pass-info[data-tier="elite_plus"] .rating-pass-info-star{background:#fff7d8;color:#d4a126;box-shadow:inset 0 0 0 1px rgba(215,167,45,.34),0 8px 22px rgba(170,119,22,.13)}
+.rating-pass-info-card h2{margin:0;font-size:22px;font-weight:950}
+.rating-pass-info-card p{margin:9px 0 0;color:#856773;font-size:12px;font-weight:750;line-height:1.5}
+.rating-pass-info-benefit{margin:14px 0 0;padding:11px 13px;border-radius:15px;background:#fff;color:#744c5c;font-size:11px;font-weight:850;line-height:1.45}
+.rating-pass-info-actions{display:grid;grid-template-columns:.85fr 1.35fr;gap:9px;margin-top:18px}
+.rating-pass-info-actions button{min-height:46px;border:0;border-radius:15px;font:900 12px/1.2 var(--font-sans);cursor:pointer}
+.rating-pass-info-close{background:#f1e5e2;color:#73534f}
+.rating-pass-info-open{background:linear-gradient(145deg,#e986a8,#c9517e);color:#fff;box-shadow:0 8px 18px rgba(190,72,115,.19)}
+.rating-pass-info[data-tier="elite_plus"] .rating-pass-info-open{background:linear-gradient(145deg,#efc257,#cf8d20)}
+#zefirok-maltipoo-runner .leaderboard-reward-line[data-rating-case-info-type]{cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation;transition:transform .12s ease,filter .12s ease}
+#zefirok-maltipoo-runner .leaderboard-reward-line[data-rating-case-info-type]:active{transform:scale(.975);filter:brightness(.98)}
+.rating-case-info{position:fixed;inset:0;z-index:2147483610;display:grid;place-items:center;padding:max(22px,var(--zefirok-content-safe-top,0px)) 18px max(22px,var(--zefirok-content-safe-bottom,0px));background:rgba(67,42,50,.42);backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px);box-sizing:border-box}
+.rating-case-info[hidden]{display:none!important}
+.rating-case-info-card{width:min(390px,100%);max-height:min(620px,calc(var(--zefirok-app-height,100dvh) - 44px));overflow:auto;overscroll-behavior:contain;box-sizing:border-box;padding:22px;border:1px solid rgba(235,205,188,.92);border-radius:26px;background:linear-gradient(165deg,#fffdf9,#fff3f5);box-shadow:0 24px 70px rgba(69,38,49,.24);text-align:center;color:#68404e}
+.rating-case-info-image{display:block;width:112px;height:112px;margin:0 auto 8px;object-fit:contain;filter:drop-shadow(0 10px 13px rgba(100,57,39,.12))}
+.rating-case-info-kicker{display:block;margin-bottom:5px;color:#c16d8a;font-size:10px;font-weight:950;letter-spacing:.08em;text-transform:uppercase}
+.rating-case-info-card h2{margin:0;font-size:22px;font-weight:950;line-height:1.15}
+.rating-case-info-card p{margin:9px 0 0;color:#856773;font-size:12px;font-weight:750;line-height:1.5}
+.rating-case-info-details{display:grid;gap:5px;margin-top:14px;padding:12px 13px;border-radius:16px;background:#fff;text-align:left;color:#744c5c}
+.rating-case-info-details strong{font-size:12px;font-weight:950}
+.rating-case-info-details span{font-size:10px;font-weight:750;line-height:1.5;color:#90707c}
+.rating-case-info-note{margin-top:10px;padding:10px 12px;border-radius:14px;background:#fff4d7;color:#7e5b45;font-size:10px;font-weight:800;line-height:1.45}
+.rating-case-info-close{width:100%;min-height:46px;margin-top:16px;border:0;border-radius:15px;background:linear-gradient(145deg,#e986a8,#c9517e);color:#fff;font:900 12px/1.2 var(--font-sans);cursor:pointer;box-shadow:0 8px 18px rgba(190,72,115,.19)}
+</style>
 <style id="rating-release-readiness">
 html, body { min-height: var(--zefirok-app-height, 100dvh); overscroll-behavior: none; }
 body { min-height: var(--zefirok-app-height, 100dvh); }
@@ -8687,10 +8735,36 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
   </div>
 </div>
 <div class="rating-toast" data-rating-toast hidden></div>
+<section class="rating-pass-info" data-rating-pass-info data-tier="elite" hidden role="dialog" aria-modal="true" aria-labelledby="rating-pass-info-title">
+  <div class="rating-pass-info-card">
+    <span class="rating-pass-info-star" aria-hidden="true">✦</span>
+    <h2 id="rating-pass-info-title" data-rating-pass-info-title>Элитный пропуск</h2>
+    <p data-rating-pass-info-copy>У игрока активен премиальный тариф сезонного пропуска.</p>
+    <div class="rating-pass-info-benefit" data-rating-pass-info-benefit>Премиальная линия наград и премиальные задания сезона.</div>
+    <div class="rating-pass-info-actions">
+      <button class="rating-pass-info-close" data-rating-pass-info-close type="button">Остаться</button>
+      <button class="rating-pass-info-open" data-rating-pass-info-open type="button">Посмотреть тариф</button>
+    </div>
+  </div>
+</section>
+<section class="rating-case-info" data-rating-case-info hidden role="dialog" aria-modal="true" aria-labelledby="rating-case-info-title">
+  <div class="rating-case-info-card">
+    <img class="rating-case-info-image" data-rating-case-info-image src="" alt="" hidden>
+    <small class="rating-case-info-kicker" data-rating-case-info-kicker>НАГРАДА РЕЙТИНГА</small>
+    <h2 id="rating-case-info-title" data-rating-case-info-title>Кейс</h2>
+    <p data-rating-case-info-copy>При открытии выпадает одна гарантированная награда.</p>
+    <div class="rating-case-info-details">
+      <strong>Что может быть внутри</strong>
+      <span>Очки, зефир, кофе, усилители, музыка и коллекционные награды. Конкретный набор зависит от типа кейса.</span>
+    </div>
+    <div class="rating-case-info-note">Тип кейса и шансы совпадают с таким же кейсом в разделе кейсов профиля.</div>
+    <button class="rating-case-info-close" data-rating-case-info-close type="button">Понятно</button>
+  </div>
+</section>
 <script>(() => {
   "use strict";
 
-  const BUILD = "1.0.0 · rating-season-scheduler-no-close";
+  const BUILD = "1.0.6 · player-level-badges";
   const tg = window.Telegram?.WebApp;
   const embedded = window.parent !== window;
   let lastHapticAt = 0;
@@ -8766,6 +8840,16 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
   const dynamic = document.querySelector("[data-leaderboard-dynamic]");
   const banner = document.querySelector("[data-leaderboard-modal-banner]");
   const toast = document.querySelector("[data-rating-toast]");
+  const passInfo = document.querySelector("[data-rating-pass-info]");
+  const passInfoTitle = document.querySelector("[data-rating-pass-info-title]");
+  const passInfoCopy = document.querySelector("[data-rating-pass-info-copy]");
+  const passInfoBenefit = document.querySelector("[data-rating-pass-info-benefit]");
+  const passInfoOpen = document.querySelector("[data-rating-pass-info-open]");
+  const caseInfo = document.querySelector("[data-rating-case-info]");
+  const caseInfoImage = document.querySelector("[data-rating-case-info-image]");
+  const caseInfoKicker = document.querySelector("[data-rating-case-info-kicker]");
+  const caseInfoTitle = document.querySelector("[data-rating-case-info-title]");
+  const caseInfoCopy = document.querySelector("[data-rating-case-info-copy]");
   const cache = { season: null, all_time: null };
   const requestSerial = { season: 0, all_time: 0 };
   const requestControllers = { season: null, all_time: null };
@@ -8910,11 +8994,35 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
     };
   }
 
+  function playerLevelBand(value) {
+    const level = Math.max(1, Math.floor(Number(value || 1)));
+    return level >= 50 ? "50" : level >= 40 ? "40" : level >= 30 ? "30" : level >= 20 ? "20" : "1";
+  }
+
+  function playerLevelBadgeMarkup(entry) {
+    if (String(entry?.telegramId || "").startsWith("empty-")) return "";
+    const level = Math.max(1, Math.floor(Number(entry?.level || 1)));
+    return `<span class="leaderboard-level-badge" data-player-level-badge="${level}" data-level-band="${playerLevelBand(level)}" role="button" tabindex="0" aria-label="Уровень игрока: ${level}" title="Уровень игрока: ${level}">${level}</span>`;
+  }
+
   function avatarMarkup(entry, compact = false, eager = false) {
     const avatar = avatarData(entry);
     const frame = normalizeFrame(entry?.caseFrameId);
     const classes = `${compact ? "leaderboard-avatar-frame is-compact" : "leaderboard-avatar-frame"}${frame ? ` case-frame-${frame}` : ""}`;
-    return `<span class="${classes}"><img class="leaderboard-avatar${avatar.isCustom ? "" : " is-fallback"}" src="${escapeHtml(avatar.src)}" data-leaderboard-avatar data-avatar-fallback="${escapeHtml(avatar.fallback)}" alt="${escapeHtml(entry?.name || "Игрок")}" width="96" height="96" loading="${eager ? "eager" : "lazy"}" fetchpriority="${eager ? "high" : "auto"}" decoding="async" referrerpolicy="no-referrer"></span>`;
+    return `<span class="${classes}"><img class="leaderboard-avatar${avatar.isCustom ? "" : " is-fallback"}" src="${escapeHtml(avatar.src)}" data-leaderboard-avatar data-avatar-fallback="${escapeHtml(avatar.fallback)}" alt="${escapeHtml(entry?.name || "Игрок")}" width="96" height="96" loading="${eager ? "eager" : "lazy"}" fetchpriority="${eager ? "high" : "auto"}" decoding="async" referrerpolicy="no-referrer">${playerLevelBadgeMarkup(entry)}</span>`;
+  }
+
+  const RATING_CASE_META = Object.freeze({
+    small: Object.freeze({ label:"Обычный кейс" }),
+    sweet: Object.freeze({ label:"Серебряный кейс" }),
+    gold: Object.freeze({ label:"Золотой кейс" }),
+    mythic: Object.freeze({ label:"Мифический кейс" }),
+    legendary: Object.freeze({ label:"Легендарный кейс" })
+  });
+
+  function normalizedRatingCaseType(value) {
+    const raw = String(value || "").trim().toLowerCase();
+    return Object.prototype.hasOwnProperty.call(RATING_CASE_META, raw) ? raw : "small";
   }
 
   function rewardMarkup(reward) {
@@ -8939,7 +9047,11 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
     } else {
       visual = `<span class="leaderboard-reward-visual" aria-hidden="true">🎁</span>`;
     }
-    return `<span class="leaderboard-reward-line" data-reward-type="${escapeHtml(type)}">${visual}<strong class="leaderboard-reward-amount leaderboard-reward-amount--fixed">${escapeHtml(title)}</strong></span>`;
+    const caseType = type === "case" ? normalizedRatingCaseType(reward?.itemId || "small") : "";
+    const caseAttrs = type === "case"
+      ? ` data-rating-case-info-type="${escapeHtml(caseType)}" data-rating-case-info-title="${escapeHtml(title)}" data-rating-case-info-image="${escapeHtml(image)}" data-rating-case-info-amount="${amount}" role="button" tabindex="0" aria-label="Информация о ${escapeHtml(title)}"`
+      : "";
+    return `<span class="leaderboard-reward-line" data-reward-type="${escapeHtml(type)}"${caseAttrs}>${visual}<strong class="leaderboard-reward-amount leaderboard-reward-amount--fixed">${escapeHtml(title)}</strong></span>`;
   }
 
   function seasonHeader(season, timing, requestedMode) {
@@ -8954,6 +9066,87 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
     return `<div class="leaderboard-v4-tabs" role="tablist" aria-label="Раздел рейтинга"><button class="${mode === "season" ? "is-active" : ""}" data-leaderboard-mode="season" type="button" role="tab" aria-selected="${mode === "season"}">🏆 Текущий сезон</button><button class="${mode === "all_time" ? "is-active" : ""}" data-leaderboard-mode="all_time" type="button" role="tab" aria-selected="${mode === "all_time"}">За всё время</button></div>`;
   }
 
+  function openRatingCaseInfo(trigger) {
+    if (!caseInfo || !(trigger instanceof Element)) return;
+    const type = normalizedRatingCaseType(trigger.dataset.ratingCaseInfoType);
+    const meta = RATING_CASE_META[type] || RATING_CASE_META.small;
+    const amount = Math.max(1, Number(trigger.dataset.ratingCaseInfoAmount || 1));
+    const title = String(trigger.dataset.ratingCaseInfoTitle || meta.label || "Кейс").trim() || meta.label;
+    const image = String(trigger.dataset.ratingCaseInfoImage || "").trim();
+    ratingImpactHaptic("light");
+    if (caseInfoTitle) caseInfoTitle.textContent = title;
+    if (caseInfoKicker) caseInfoKicker.textContent = amount > 1 ? `НАГРАДА РЕЙТИНГА · ${amount} ШТ.` : "НАГРАДА РЕЙТИНГА";
+    if (caseInfoCopy) caseInfoCopy.textContent = `Это ${meta.label.toLowerCase()}. При открытии каждого кейса выпадает одна гарантированная награда.`;
+    if (caseInfoImage) {
+      if (image) {
+        caseInfoImage.src = image;
+        caseInfoImage.alt = title;
+        caseInfoImage.hidden = false;
+      } else {
+        caseInfoImage.removeAttribute("src");
+        caseInfoImage.alt = "";
+        caseInfoImage.hidden = true;
+      }
+    }
+    caseInfo.hidden = false;
+  }
+
+  function closeRatingCaseInfo() {
+    if (!caseInfo) return;
+    caseInfo.hidden = true;
+  }
+
+  function normalizedPassTier(value) {
+    const tier = String(value || "");
+    return tier === "elite_plus" ? "elite_plus" : tier === "elite" ? "elite" : "none";
+  }
+
+  function passBadgeMarkup(entry) {
+    const tier = normalizedPassTier(entry?.seasonPassTier);
+    if (tier === "none") return "";
+    const label = tier === "elite_plus" ? "Элитный+ сезонный пропуск" : "Элитный сезонный пропуск";
+    return `<span class="leaderboard-pass-star" data-pass-tier-badge="${tier}" role="button" tabindex="0" aria-label="${label}" title="${label}">✦</span>`;
+  }
+
+  function playerNameMarkup(entry) {
+    return `<span class="leaderboard-name-text">${escapeHtml(entry?.name || "Игрок")}</span>${passBadgeMarkup(entry)}`;
+  }
+
+  function openPassInfo(tierValue) {
+    const tier = normalizedPassTier(tierValue);
+    if (tier === "none" || !passInfo) return;
+    ratingImpactHaptic("light");
+    passInfo.dataset.tier = tier;
+    const plus = tier === "elite_plus";
+    if (passInfoTitle) passInfoTitle.textContent = plus ? "✦ Элитный+" : "✦ Элитный пропуск";
+    if (passInfoCopy) passInfoCopy.textContent = plus
+      ? "Золотая ✦ означает, что у игрока активен максимальный тариф «Элитный+»."
+      : "✦ означает, что у игрока активен тариф «Элитный» этого сезона.";
+    if (passInfoBenefit) passInfoBenefit.textContent = plus
+      ? "Все преимущества «Элитного» плюс дополнительные бонусы «Элитный+»."
+      : "Премиальная линия наград и премиальные задания сезона.";
+    if (passInfoOpen) passInfoOpen.textContent = plus ? "Перейти к «Элитный+»" : "Перейти к «Элитный»";
+    passInfo.hidden = false;
+  }
+
+  function closePassInfo() {
+    if (!passInfo) return;
+    passInfo.hidden = true;
+  }
+
+  function openPassTierFromInfo() {
+    const tier = normalizedPassTier(passInfo?.dataset?.tier);
+    if (tier === "none") return;
+    ratingImpactHaptic("medium");
+    if (embedded && postToHost({ type:"zefirok-open-season-pass-tier", tier })) {
+      closePassInfo();
+      return;
+    }
+    const auth = currentInitData();
+    const hash = auth ? `#tgInitData=${encodeURIComponent(auth)}` : "";
+    location.href = `/battle-pass.html?v=1.0.1&offer=${encodeURIComponent(tier)}${hash}`;
+  }
+
   function podium(entry, place) {
     const ribbon = PODIUM_RIBBONS[place] || PODIUM_RIBBONS[3];
     const score = entry ? formatter.format(entry.score) : "—";
@@ -8962,12 +9155,12 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
       return `<div class="leaderboard-v4-podium-card" data-place="${place}"><span class="leaderboard-v4-medal">${place}</span>${avatarMarkup({ telegramId: `empty-${place}`, name: "Свободно" }, false, true)}<strong class="leaderboard-v4-podium-name">Свободно</strong>${ribbonMarkup}</div>`;
     }
     const isMe = String(entry.telegramId || "") === String(telegramProfile?.id || "");
-    return `<div class="leaderboard-v4-podium-card${place === 1 ? " is-first" : ""}${isMe ? " is-me" : ""}" data-place="${place}"><span class="leaderboard-v4-medal">${place}</span>${isMe ? '<span class="leaderboard-v4-you">ВЫ</span>' : ""}${avatarMarkup(entry, false, true)}<strong class="leaderboard-v4-podium-name">${escapeHtml(entry.name)}</strong>${ribbonMarkup}</div>`;
+    return `<div class="leaderboard-v4-podium-card${place === 1 ? " is-first" : ""}${isMe ? " is-me" : ""}" data-place="${place}"><span class="leaderboard-v4-medal">${place}</span>${isMe ? '<span class="leaderboard-v4-you">ВЫ</span>' : ""}${avatarMarkup(entry, false, true)}<strong class="leaderboard-v4-podium-name">${playerNameMarkup(entry)}</strong>${ribbonMarkup}</div>`;
   }
 
   function rows(entries) {
     const myId = String(telegramProfile?.id || "");
-    return entries.slice(3).map(entry => `<div class="leaderboard-v4-row${String(entry.telegramId || "") === myId ? " is-me" : ""}"><span class="leaderboard-v4-place">${Number(entry.place || 0)}</span>${avatarMarkup(entry, true, false)}<span class="leaderboard-v4-row-copy"><strong>${escapeHtml(entry.name)}</strong><span>Уровень ${Number(entry.level || 1)}</span></span><span class="leaderboard-v4-score">${formatter.format(entry.score)}</span></div>`).join("");
+    return entries.slice(3).map(entry => `<div class="leaderboard-v4-row${String(entry.telegramId || "") === myId ? " is-me" : ""}"><span class="leaderboard-v4-place">${Number(entry.place || 0)}</span>${avatarMarkup(entry, true, false)}<span class="leaderboard-v4-row-copy"><strong>${playerNameMarkup(entry)}</strong></span><span class="leaderboard-v4-score">${formatter.format(entry.score)}</span></div>`).join("");
   }
 
   function syncBanner() {
@@ -9199,9 +9392,54 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
     }
   }
 
+  dynamic?.addEventListener("keydown", event => {
+    const target = event.target instanceof Element ? event.target : null;
+    if (!target || (event.key !== "Enter" && event.key !== " ")) return;
+    const caseReward = target.closest("[data-rating-case-info-type]");
+    if (caseReward) {
+      event.preventDefault();
+      openRatingCaseInfo(caseReward);
+      return;
+    }
+    const levelBadge = target.closest("[data-player-level-badge]");
+    if (levelBadge) {
+      event.preventDefault();
+      const level = Math.max(1, Number(levelBadge.dataset.playerLevelBadge || 1));
+      showToast(`Уровень игрока: ${level}`, "success", 2200);
+      return;
+    }
+    const passBadge = target.closest("[data-pass-tier-badge]");
+    if (!passBadge) return;
+    event.preventDefault();
+    openPassInfo(passBadge.dataset.passTierBadge);
+  });
+
   dynamic?.addEventListener("click", event => {
     const target = event.target instanceof Element ? event.target : null;
     if (!target) return;
+    const caseReward = target.closest("[data-rating-case-info-type]");
+    if (caseReward) {
+      event.preventDefault();
+      event.stopPropagation();
+      openRatingCaseInfo(caseReward);
+      return;
+    }
+    const levelBadge = target.closest("[data-player-level-badge]");
+    if (levelBadge) {
+      event.preventDefault();
+      event.stopPropagation();
+      const level = Math.max(1, Number(levelBadge.dataset.playerLevelBadge || 1));
+      ratingImpactHaptic("light");
+      showToast(`Уровень игрока: ${level}`, "success", 2200);
+      return;
+    }
+    const passBadge = target.closest("[data-pass-tier-badge]");
+    if (passBadge) {
+      event.preventDefault();
+      event.stopPropagation();
+      openPassInfo(passBadge.dataset.passTierBadge);
+      return;
+    }
     const modeButton = target.closest("[data-leaderboard-mode]");
     if (modeButton) {
       ratingSelectHaptic();
@@ -9221,6 +9459,17 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
     }
     const claim = target.closest("[data-leaderboard-claim]");
     if (claim) { ratingImpactHaptic("medium"); requestClaim(claim); }
+  });
+
+  document.querySelector("[data-rating-pass-info-close]")?.addEventListener("click", () => { ratingSelectHaptic(); closePassInfo(); });
+  passInfoOpen?.addEventListener("click", openPassTierFromInfo);
+  passInfo?.addEventListener("click", event => { if (event.target === passInfo) closePassInfo(); });
+  document.querySelector("[data-rating-case-info-close]")?.addEventListener("click", () => { ratingSelectHaptic(); closeRatingCaseInfo(); });
+  caseInfo?.addEventListener("click", event => { if (event.target === caseInfo) closeRatingCaseInfo(); });
+  document.addEventListener("keydown", event => {
+    if (event.key !== "Escape") return;
+    if (caseInfo && !caseInfo.hidden) { closeRatingCaseInfo(); return; }
+    if (passInfo && !passInfo.hidden) closePassInfo();
   });
 
   dynamic?.addEventListener("error", event => {
