@@ -10561,6 +10561,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       // СЕРВЕРНЫЙ СЕЗОННЫЙ РЕЙТИНГ.
       const LEADERBOARD_API_STATE_PATH = &quot;/api/leaderboard/state&quot;;
       const LEADERBOARD_API_SUBMIT_PATH = &quot;/api/leaderboard/submit&quot;;
+      const RUN_SESSION_START_PATH = &quot;/api/runs/start&quot;;
       const SEASON_PASS_RUN_API_PATH = &quot;/api/battle-pass/run&quot;;
       const LEADERBOARD_API_CLAIM_PATH = &quot;/api/leaderboard/claim&quot;;
       const CASE_API_STATE_PATH = &quot;/api/cases/state&quot;;
@@ -10587,6 +10588,8 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       const leaderboardRequestSerial = { season: 0, all_time: 0 };
       const leaderboardRefreshInFlight = { season: false, all_time: false };
       let pendingLeaderboardRun = null;
+      let authoritativeRunSessionId = &quot;&quot;;
+      let authoritativeRunStartPromise = null;
       let leaderboardLastRefreshAt = 0;
       let leaderboardCountdownTimer = 0;
       for (const src of [LEADERBOARD_WAITING_IMAGE, LEADERBOARD_MODAL_IMAGE]) {
@@ -11770,6 +11773,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         state.time = 0;
         state.runAnimationClock = 0;
         state.caseRunId = makeCaseRunId();
+        void startAuthoritativeRunSession(state.caseRunId);
         state.trailClock = 0;
         state.last = performance.now();
         fixedStepAccumulator = 0;
@@ -11948,7 +11952,6 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           updateHud();
           saveProgress();
           void submitLeaderboardRun(earned, state.time, null, { treats: earnedTreats, coffee: earnedCoffee, newRecord: isNewRecord, profileXpAwarded: runXpEarned });
-          void flushPendingCaseBoosterRuns();
           if (reachedNewLevel) void loadCaseState(true);
           const finishLines = [
             `+${credited.points} очков · +${credited.treats} зефира · +${credited.coffee} кофе`,
@@ -12901,6 +12904,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           if (isScreenVisible(&quot;profile&quot;)) renderProfile();
           if (isScreenVisible(&quot;shop&quot;)) window.setTimeout(() =&gt; void maybeShowFlashOffer(), 120);
           void syncGameStartupPackage(true);
+          if (state.running &amp;&amp; state.caseRunId) void startAuthoritativeRunSession(state.caseRunId);
           window.setTimeout(() =&gt; void refreshSeasonTaskNotice(true), 80);
           void (async () =&gt; {
             await retryPendingLeaderboardRun();
@@ -13448,6 +13452,8 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           state.caseBoosters = normalizeCaseBoosters(server.boosters);
           state.caseOwnedSpecials = normalizeCaseSpecials(server.ownedSpecials);
           state.activeCaseBooster = normalizeActiveCaseBooster(server.activeBooster);
+          state.ownedSkins = normalizeOwnedSkins(server.ownedSkins);
+          setCurrentDogSkin(server.activeSkinId || &quot;default&quot;, false);
           state.caseOwnedAvatars = normalizeCaseOwned(&quot;avatar&quot;, server.ownedAvatars);
           state.caseActiveAvatar = state.caseOwnedAvatars.includes(normalizeCaseCosmetic(&quot;avatar&quot;, server.activeAvatarId)) ? normalizeCaseCosmetic(&quot;avatar&quot;, server.activeAvatarId) : &quot;&quot;;
           state.caseOwnedFrames = normalizeCaseOwned(&quot;frame&quot;, server.ownedFrames);
@@ -13490,14 +13496,18 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
             state.wallet = authoritativeProfile
               ? sanitizeProgressNumber(data.profile.wallet)
               : Math.max(sanitizeProgressNumber(state.wallet), sanitizeProgressNumber(data.profile.wallet));
-            state.best = Math.max(sanitizeProgressNumber(state.best), sanitizeProgressNumber(data.profile.best));
+            state.best = authoritativeProfile
+              ? sanitizeProgressNumber(data.profile.best)
+              : Math.max(sanitizeProgressNumber(state.best), sanitizeProgressNumber(data.profile.best));
             state.treats = authoritativeProfile
               ? sanitizeProgressNumber(data.profile.treats)
               : Math.max(sanitizeProgressNumber(state.treats), sanitizeProgressNumber(data.profile.treats));
             state.coffee = authoritativeProfile
               ? sanitizeProgressNumber(data.profile.coffee)
               : Math.max(sanitizeProgressNumber(state.coffee), sanitizeProgressNumber(data.profile.coffee));
-            state.profileXp = Math.max(sanitizeProgressNumber(state.profileXp), sanitizeProgressNumber(data.profile.profileXp));
+            state.profileXp = authoritativeProfile
+              ? sanitizeProgressNumber(data.profile.profileXp)
+              : Math.max(sanitizeProgressNumber(state.profileXp), sanitizeProgressNumber(data.profile.profileXp));
           }
           saveProgress();
           updateHud();
@@ -14728,8 +14738,10 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           confirmButton.textContent = &quot;Проверяем остаток…&quot;;
         }
         if (cancelButton) cancelButton.disabled = true;
+        let data;
         try {
-          await caseApiRequest(SKIN_PURCHASE_PATH, { skinId: skin.id });
+          data = await caseApiRequest(SKIN_PURCHASE_PATH, { skinId: skin.id });
+          applyServerCasePayload(data);
         } catch (error) {
           const message = error?.message || &quot;Не удалось подтвердить покупку скина.&quot;;
           setSkinsMessage(message, &quot;warning&quot;);
@@ -14737,18 +14749,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           void loadRemoteSkinPrices();
           return;
         }
-        antiCheatWithTrustedChange(&quot;buy-skin&quot;, () =&gt; {
-          state.wallet -= skin.points;
-          state.treats -= skin.treats;
-          state.coffee -= skin.coffee;
-          state.ownedSkins = normalizeOwnedSkins([...(state.ownedSkins || []), skin.id]);
-          setCurrentDogSkin(skin.id, false);
-          saveProgress();
-          updateHud();
-          renderSkinsShop();
-        });
         void syncOwnedSkinBonusCases({ notify: true, force: true });
-        void pushPlayerAppearanceSnapshot();
         playGameSound(&quot;unlockSkin&quot;);
         hapticNotify(&quot;success&quot;);
         setSkinsMessage(`Образ «${skin.title}» куплен навсегда и сразу надет.`, &quot;success&quot;);
@@ -15362,7 +15363,13 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           gameVersion: GAME_VERSION
         });
         if (!data.reward?.code) throw new Error(&quot;Сервис не вернул код награды.&quot;);
-        return { ...data.reward, limitStatus: data.limitStatus || null };
+        return {
+          ...data.reward,
+          limitStatus: data.limitStatus || null,
+          serverProfile: data.profile || null,
+          profileXpAwarded: Math.max(0, Math.floor(Number(data.profileXpAwarded || 0))),
+          repeated: Boolean(data.repeated)
+        };
       }
 
       function applyServerRewardsPayload(data) {
@@ -15998,6 +16005,24 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         return delta;
       }
 
+      async function startAuthoritativeRunSession(runId) {
+        const id = String(runId || &quot;&quot;).trim();
+        if (!/^[A-Za-z0-9_-]{12,96}$/.test(id)) return false;
+        const initData = String(telegramProfile?.initData || &quot;&quot;);
+        if (!initData) return false;
+        if (authoritativeRunSessionId === id &amp;&amp; authoritativeRunStartPromise) return authoritativeRunStartPromise;
+        authoritativeRunSessionId = id;
+        const task = leaderboardApiRequest(RUN_SESSION_START_PATH, { initData, runId: id, gameVersion: GAME_VERSION })
+          .then(() =&gt; true)
+          .catch((error) =&gt; {
+            if (authoritativeRunSessionId === id) authoritativeRunSessionId = &quot;&quot;;
+            console.warn(&quot;Protected run session start failed&quot;, error);
+            return false;
+          });
+        authoritativeRunStartPromise = task;
+        return task;
+      }
+
       async function submitSeasonPassRun(run, initDataValue = &quot;&quot;) {
         const initData = String(initDataValue || telegramProfile?.initData || &quot;&quot;);
         if (!initData || !run?.runId) return false;
@@ -16034,30 +16059,54 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       }
 
       async function submitLeaderboardRun(scoreValue, durationSeconds, existingRun = null, runMetrics = null) {
-        const score = Math.floor(Number(scoreValue || 0));
-        const durationMs = Math.floor(Number(durationSeconds || 0) * 1000);
-        if (score &lt; PROFILE_XP_MIN_RUN_SCORE || durationMs &lt; PROFILE_XP_MIN_RUN_SECONDS * 1000) return false;
+        const score = Math.max(0, Math.floor(Number(scoreValue || 0)));
+        const durationMs = Math.max(0, Math.floor(Number(durationSeconds || 0) * 1000));
         let run = existingRun;
         if (!run) {
-          let runId;
-          try { runId = `run_${crypto.randomUUID().replaceAll(&quot;-&quot;, &quot;&quot;)}`; }
-          catch { runId = `run_${Date.now().toString(36)}_${Math.random().toString(36).slice(2)}`; }
-          run = { runId, score, durationMs, runTreats: Math.max(0, Math.floor(Number(runMetrics?.treats || 0))), runCoffee: Math.max(0, Math.floor(Number(runMetrics?.coffee || 0))), newRecord: Boolean(runMetrics?.newRecord), profileXpLocalAwarded: Math.max(0, Math.floor(Number(runMetrics?.profileXpAwarded || 0))), profileXpReconciled: false, level: profileLevelState(state.profileXp).level, gameVersion: GAME_VERSION, caseAvatarId: state.caseActiveAvatar || &quot;&quot;, caseFrameId: state.caseActiveFrame || &quot;&quot;, createdAt: Date.now() };
+          const currentRunId = String(state.caseRunId || &quot;&quot;);
+          if (!/^[A-Za-z0-9_-]{12,96}$/.test(currentRunId)) {
+            showProfileToast(&quot;Защищённая сессия забега не найдена. Начните новый забег.&quot;, &quot;warning&quot;, 4200);
+            return false;
+          }
+          run = {
+            runId: currentRunId,
+            score,
+            durationMs,
+            runTreats: Math.max(0, Math.floor(Number(runMetrics?.treats || 0))),
+            runCoffee: Math.max(0, Math.floor(Number(runMetrics?.coffee || 0))),
+            newRecord: Boolean(runMetrics?.newRecord),
+            profileXpLocalAwarded: Math.max(0, Math.floor(Number(runMetrics?.profileXpAwarded || 0))),
+            profileXpReconciled: true,
+            gameVersion: GAME_VERSION,
+            createdAt: Date.now()
+          };
         }
         savePendingLeaderboardRun(run);
         const initData = String(telegramProfile?.initData || &quot;&quot;);
         if (!initData) {
-          showProfileToast(&quot;Забег сохранён. Чтобы попасть в рейтинг, откройте игру системной кнопкой «ИГРАТЬ» в Telegram.&quot;, &quot;warning&quot;, 5200);
+          showProfileToast(&quot;Забег сохранён. Откройте игру через Telegram, чтобы сервер подтвердил результат.&quot;, &quot;warning&quot;, 5200);
           return false;
+        }
+        if (!existingRun) {
+          const sessionReady = authoritativeRunSessionId === String(run.runId) &amp;&amp; authoritativeRunStartPromise
+            ? await authoritativeRunStartPromise
+            : await startAuthoritativeRunSession(run.runId);
+          if (!sessionReady) {
+            showProfileToast(&quot;Не удалось подтвердить начало забега. Результат сохранён для повторной синхронизации.&quot;, &quot;warning&quot;, 4600);
+            return false;
+          }
         }
         try {
           const loaded = await leaderboardApiRequest(LEADERBOARD_API_SUBMIT_PATH, { initData, ...run });
+          if (loaded?.caseState) applyServerCasePayload(loaded);
+          antiCheatWithTrustedChange(&quot;run-server-settlement&quot;, () =&gt; {
+            state.pendingBoosterRuns = normalizePendingBoosterRuns(state.pendingBoosterRuns).filter((id) =&gt; id !== String(run.runId));
+            saveProgress();
+          });
           const seasonPassAward = loaded?.seasonPassAward &amp;&amp; typeof loaded.seasonPassAward === &quot;object&quot;
             ? loaded.seasonPassAward
             : null;
-          let seasonPassSaved = Boolean(seasonPassAward);
           if (seasonPassAward) {
-            reconcileSeasonProfileXpForRun(run, seasonPassAward);
             if (seasonPassAward.taskNotice) applySeasonTaskNotice(seasonPassAward.taskNotice);
             window.setTimeout(() =&gt; void refreshSeasonTaskNotice(true), 180);
             if (Number(seasonPassAward.xpAwarded || 0) &gt; 0) {
@@ -16065,37 +16114,27 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
               try { window.parent.postMessage({ type: &quot;zefirok-season-pass-updated&quot;, xpAwarded: Number(seasonPassAward.xpAwarded || 0) }, &quot;*&quot;); } catch (error) {}
             }
             window.setTimeout(() =&gt; void loadSeasonPassProfileBonus(), 420);
-          } else {
-            seasonPassSaved = await submitSeasonPassRun(run, initData);
           }
           loaded._loadedAt = Date.now();
           leaderboardCache.season = loaded;
           leaderboardCache.all_time = null;
           if (leaderboardMode === &quot;season&quot;) leaderboardData = loaded;
           leaderboardLastRefreshAt = Date.now();
-          if (seasonPassSaved) savePendingLeaderboardRun(null);
-          else showProfileToast(&quot;Результат рейтинга сохранён, но XP сезона будет отправлен повторно при следующем открытии игры.&quot;, &quot;warning&quot;, 4800);
+          if (loaded?.runSettlement?.accepted) savePendingLeaderboardRun(null);
           renderLeaderboardSummary();
           void prefetchLeaderboard(&quot;all_time&quot;, true);
-          showProfileToast(&quot;Результат добавлен в рейтинг.&quot;, &quot;success&quot;, 2600);
-          try { window.parent.postMessage({ type: &quot;zefirok-run-completed&quot;, accepted: true, runId: String(run.runId || &quot;&quot;) }, &quot;*&quot;); } catch (error) {}
+          if (loaded?.runSettlement?.acceptedToRating) {
+            showProfileToast(&quot;Результат добавлен в рейтинг.&quot;, &quot;success&quot;, 2600);
+          }
+          try { window.parent.postMessage({ type: &quot;zefirok-run-completed&quot;, accepted: Boolean(loaded?.runSettlement?.acceptedToRating), runId: String(run.runId || &quot;&quot;) }, &quot;*&quot;); } catch (error) {}
           return true;
         } catch (error) {
           const errorMessage = String(error?.message || &quot;&quot;);
-          const inactiveSeason = Number(error?.status || 0) === 409
-            &amp;&amp; (/Сезон\s+(?:ещ[её]\s+не\s+начался|уже\s+заверш[её]н)/i.test(errorMessage));
-          if (inactiveSeason) {
-            // A run completed outside an active season must not be retried from the profile
-            // and must never leak into the next season. Drop it silently instead of showing
-            // the server's season-state warning as a profile toast.
-            savePendingLeaderboardRun(null);
-            console.info(&quot;Leaderboard run skipped because no season is active.&quot;);
-            return false;
-          }
-          const seasonPassSaved = await submitSeasonPassRun(run, initData);
-          if (seasonPassSaved) savePendingLeaderboardRun(null);
-          console.warn(&quot;Leaderboard submit failed&quot;, error);
+          const permanentSessionError = Number(error?.status || 0) === 409 &amp;&amp; /(?:начните новый забег|идентификатор забега уже|сессия забега истекла)/i.test(errorMessage);
+          if (permanentSessionError) savePendingLeaderboardRun(null);
+          console.warn(&quot;Authoritative run submit failed&quot;, error);
           showProfileToast(errorMessage || &quot;Результат сохранён и будет отправлен позже.&quot;, &quot;warning&quot;, 4200);
+          window.setTimeout(() =&gt; void syncPlayerProfileFromServer(), 250);
           return false;
         }
       }
@@ -16119,25 +16158,17 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
             rewardId: String(requestedRewardId || leaderboardData?.reward?.id || &quot;&quot;)
           });
           const reward = result.reward;
-          if (result.claimed &amp;&amp; reward?.id &amp;&amp; !state.appliedSeasonRewardIds.includes(String(reward.id))) {
-            const rewardType = String(reward.type || &quot;coffee&quot;).toLowerCase();
-            const isCaseReward = rewardType === &quot;case&quot;;
-            antiCheatWithTrustedChange(&quot;season-reward&quot;, () =&gt; {
-              const amount = Math.max(0, Math.floor(Number(reward.amount || 0)));
-              if (rewardType === &quot;coffee&quot;) state.coffee += amount;
-              if (rewardType === &quot;points&quot; || rewardType === &quot;currency&quot;) state.wallet += amount;
-              if (rewardType === &quot;marshmallow&quot; || rewardType === &quot;treats&quot;) state.treats += amount;
-              if (rewardType === &quot;skin&quot; &amp;&amp; reward.itemId) {
-                const skinId = String(reward.itemId);
-                state.ownedSkins = Array.from(new Set([...(state.ownedSkins || [&quot;default&quot;]), skinId]));
+          if (result?.caseState) applyServerCasePayload(result);
+          else if (result?.profile) applyServerProfilePayload(result);
+          if (result.claimed &amp;&amp; reward?.id) {
+            antiCheatWithTrustedChange(&quot;season-reward-server-confirmed&quot;, () =&gt; {
+              if (!state.appliedSeasonRewardIds.includes(String(reward.id))) {
+                state.appliedSeasonRewardIds = [...state.appliedSeasonRewardIds, String(reward.id)].slice(-50);
+                saveProgress();
               }
-              state.appliedSeasonRewardIds = [...state.appliedSeasonRewardIds, String(reward.id)].slice(-50);
-              saveProgress();
-              updateHud();
-              renderProfile();
-              renderSkinsShop();
             });
-            if (isCaseReward) await loadCaseState(true);
+            const rewardType = String(reward.type || &quot;coffee&quot;).toLowerCase();
+            if (rewardType === &quot;case&quot;) await loadCaseState(true);
             playGameSound(rewardType === &quot;skin&quot; ? &quot;unlockSkin&quot; : &quot;purchaseReward&quot;);
             showProfileToast(`Награда получена: ${reward.title || `${reward.amount} кофе`}`, &quot;success&quot;, 4200);
           } else if (result.alreadyClaimed) {
@@ -16564,9 +16595,10 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         }
         if (cancelButton) cancelButton.disabled = true;
 
+        purchase.requestId = purchase.requestId || makeRewardRequestId();
         let reward;
         try {
-          reward = await createServerReward(purchase, makeRewardRequestId());
+          reward = await createServerReward(purchase, purchase.requestId);
         } catch (error) {
           if (Number(error?.status || 0) === 429 &amp;&amp; error?.details) {
             antiCheatWithTrustedChange(&quot;server-purchase-limit&quot;, () =&gt; {
@@ -16582,47 +16614,50 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           return;
         }
 
-        antiCheatWithTrustedChange(&quot;purchase&quot;, () =&gt; {
-          state.wallet -= purchase.cost;
-          state.treats -= purchase.treatCost;
-          state.coffee -= purchase.coffeeCost;
-          state.inventory[purchase.id] = (state.inventory[purchase.id] || 0) + 1;
-
+        const previousLevel = profileLevelState(state.profileXp).level;
+        if (reward.serverProfile) applyServerProfilePayload({ profile: reward.serverProfile });
+        antiCheatWithTrustedChange(&quot;purchase-server-confirmed&quot;, () =&gt; {
           const code = String(reward.code);
           const issuedAt = Number(reward.issuedAt || Date.now());
           const expiresAt = Number(reward.expiresAt || (issuedAt + 24 * 60 * 60 * 1000));
+          const localCodes = Array.isArray(state.redemptionCodes) ? state.redemptionCodes : [];
+          const existingCode = localCodes.find((entry) =&gt; String(entry?.code || &quot;&quot;) === code);
           if (reward.limitStatus &amp;&amp; Array.isArray(reward.limitStatus.purchaseTimestamps)) {
             applyServerPurchaseLimit(reward.limitStatus, issuedAt);
-          } else {
+          } else if (!existingCode) {
             state.purchaseTimestamps = normalizePurchaseTimestamps(state.purchaseTimestamps, issuedAt);
             state.purchaseTimestamps.push(issuedAt);
           }
-          const purchasePreviousLevel = profileLevelState(state.profileXp).level;
-          const purchaseXpEarned = profilePurchaseXpReward();
-          state.completedPurchases = sanitizeGameNumber(Number(state.completedPurchases || 0) + 1);
-          state.profileXp = sanitizeGameNumber(Number(state.profileXp || 0) + purchaseXpEarned);
-          const purchaseReachedNewLevel = profileLevelState(state.profileXp).level &gt; purchasePreviousLevel;
-          state.redemptionCodes = Array.isArray(state.redemptionCodes) ? state.redemptionCodes : [];
-          state.redemptionCodes.push({
-            code,
-            productId: purchase.id,
-            title: purchase.product.title,
-            image: purchase.product.image,
-            issuedAt,
-            expiresAt,
-            status: &quot;active&quot;,
-            serverVerified: true
-          });
-
-          shopMessageEl.textContent = `${purchase.product.title}: проверяемый код выдан на 24 часа, +${purchaseXpEarned} XP профиля.`;
+          if (!existingCode) {
+            state.inventory[purchase.id] = (state.inventory[purchase.id] || 0) + 1;
+            state.completedPurchases = sanitizeGameNumber(Number(state.completedPurchases || 0) + 1);
+            localCodes.push({
+              code,
+              productId: purchase.id,
+              title: purchase.product.title,
+              image: purchase.product.image,
+              issuedAt,
+              expiresAt,
+              status: &quot;active&quot;,
+              serverVerified: true
+            });
+          } else {
+            Object.assign(existingCode, { issuedAt, expiresAt, status: &quot;active&quot;, serverVerified: true });
+          }
+          state.redemptionCodes = localCodes.slice(-20);
           saveProgress();
           updateHud();
           renderWarehouse();
-          showPurchaseSuccess(purchase, code, expiresAt, purchaseXpEarned);
-          playGameSound(&quot;purchaseReward&quot;);
-          hapticNotify(&quot;success&quot;);
-          if (purchaseReachedNewLevel) playGameSound(&quot;levelUp&quot;, 360);
         });
+        const purchaseXpEarned = Math.max(0, Number(reward.profileXpAwarded || 0));
+        const purchaseReachedNewLevel = profileLevelState(state.profileXp).level &gt; previousLevel;
+        shopMessageEl.textContent = purchaseXpEarned &gt; 0
+          ? `${purchase.product.title}: проверяемый код выдан на 24 часа, +${purchaseXpEarned} XP профиля.`
+          : `${purchase.product.title}: проверяемый код выдан на 24 часа.`;
+        showPurchaseSuccess(purchase, String(reward.code), Number(reward.expiresAt || 0), purchaseXpEarned);
+        playGameSound(&quot;purchaseReward&quot;);
+        hapticNotify(&quot;success&quot;);
+        if (purchaseReachedNewLevel) playGameSound(&quot;levelUp&quot;, 360);
       }
 
       function selectProduct(id) {

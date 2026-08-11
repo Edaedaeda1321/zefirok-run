@@ -1340,8 +1340,15 @@ export default {
         return await leaderboardState(request, env);
       }
 
+      if (url.pathname === "/api/runs/start" && request.method === "POST") {
+        return await startAuthoritativeRunSession(request, env);
+      }
+
       if (url.pathname === "/api/leaderboard/submit" && request.method === "POST") {
-        const gate = await enforceFeatureFlagForRequest(request, env, "rating"); if (gate) return gate;
+        // Run settlement is also the authoritative wallet/profile persistence
+        // path, so it must stay available even when the public rating UI is
+        // disabled by a feature flag. submitLeaderboardRun decides separately
+        // whether the validated run may enter the rating.
         return await submitLeaderboardRun(request, env);
       }
 
@@ -2580,11 +2587,15 @@ async function consumeShopStock(env, { category, productId, consumptionId, teleg
   if (!normalizedConsumptionId) throw new ApiError(400, "Некорректный идентификатор покупки.");
 
   const existing = await env.DB.prepare(
-    `SELECT scope_key FROM shop_stock_consumptions WHERE consumption_id = ? LIMIT 1`
+    `SELECT scope_key,created_at FROM shop_stock_consumptions WHERE consumption_id = ? LIMIT 1`
   ).bind(normalizedConsumptionId).first();
   if (existing) {
     const rows = await readShopStockRows(env);
-    return { repeated: true, ...shopStockAvailabilityFromRows(rows, normalizedCategory, normalizedProduct) };
+    return {
+      repeated: true,
+      consumptionCreatedAt: safeAdminNumber(existing.created_at),
+      ...shopStockAvailabilityFromRows(rows, normalizedCategory, normalizedProduct)
+    };
   }
 
   const rows = await readShopStockRows(env);
@@ -2599,7 +2610,15 @@ async function consumeShopStock(env, { category, productId, consumptionId, teleg
      ) VALUES (?, ?, ?, ?, ?, ?)`
   ).bind(normalizedConsumptionId, availability.scope, normalizedCategory, normalizedProduct, String(telegramId || ""), now).run();
   if (safeAdminNumber(inserted?.meta?.changes) < 1) {
-    return { repeated: true, ...availability };
+    const raced = await env.DB.prepare(
+      `SELECT created_at FROM shop_stock_consumptions WHERE consumption_id = ? LIMIT 1`
+    ).bind(normalizedConsumptionId).first();
+    const freshRows = await readShopStockRows(env);
+    return {
+      repeated: true,
+      consumptionCreatedAt: safeAdminNumber(raced?.created_at),
+      ...shopStockAvailabilityFromRows(freshRows, normalizedCategory, normalizedProduct)
+    };
   }
 
   const decremented = await env.DB.prepare(
@@ -2621,7 +2640,8 @@ async function consumeShopStock(env, { category, productId, consumptionId, teleg
     remaining: safeAdminNumber(updated?.remaining),
     limit: safeAdminNumber(updated?.configured_limit),
     scope: availability.scope,
-    repeated: false
+    repeated: false,
+    consumptionCreatedAt: now
   };
 }
 
@@ -2644,6 +2664,304 @@ async function releaseShopStock(env, consumptionId) {
   invalidateGamePublicConfigCache();
 }
 
+
+// =============================================================
+// SERVER-AUTHORITATIVE PLAYER ECONOMY / RUN SESSIONS
+// The client may display optimistic values, but it is never the source of
+// truth for wallet, profile XP, skin ownership or competitive run metrics.
+// =============================================================
+let authoritativeEconomySchemaPromise = null;
+const AUTHORITATIVE_RUN_SESSION_MAX_MS = 2 * 60 * 60 * 1000;
+const AUTHORITATIVE_RUN_CLOCK_GRACE_MS = 7000;
+const AUTHORITATIVE_PROFILE_RUN_XP = 4;
+const AUTHORITATIVE_PROFILE_PURCHASE_XP = 5;
+// Runs accepted by an older Worker before this cutoff may be retried after
+// deploy even though they have no run-session row. No new row can be created
+// under the old code after the new Worker is deployed.
+const AUTHORITATIVE_LEGACY_RUN_CUTOFF_FALLBACK = 1786474200; // Used only if the persistent cutover marker cannot be read.
+const SERVER_SKIN_RUN_BONUSES = Object.freeze({
+  default: Object.freeze({ points: 0, treats: 0, coffee: 0 }),
+  barista: Object.freeze({ points: 0, treats: 0, coffee: 5 }),
+  strawberry: Object.freeze({ points: 0, treats: 5, coffee: 0 }),
+  bee: Object.freeze({ points: 0, treats: 8, coffee: 0 }),
+  sailor: Object.freeze({ points: 0, treats: 0, coffee: 8 }),
+  princess: Object.freeze({ points: 120, treats: 10, coffee: 10 }),
+  angel: Object.freeze({ points: 200, treats: 12, coffee: 12 })
+});
+
+async function ensureAuthoritativeEconomySchema(env) {
+  if (!authoritativeEconomySchemaPromise) {
+    authoritativeEconomySchemaPromise = (async () => {
+      await ensureV78Schema(env);
+      // This helper is also used from non-HTTP/background paths, so do not
+      // rely on the fetch router having already added compatibility columns.
+      await ensureRuntimeCompatibilitySchema(env);
+      await env.DB.batch([
+        env.DB.prepare(`CREATE TABLE IF NOT EXISTS game_run_sessions (
+          run_id TEXT PRIMARY KEY,
+          telegram_id TEXT NOT NULL,
+          started_at_ms INTEGER NOT NULL,
+          expires_at_ms INTEGER NOT NULL,
+          status TEXT NOT NULL DEFAULT 'started',
+          finished_at_ms INTEGER NOT NULL DEFAULT 0,
+          duration_ms INTEGER NOT NULL DEFAULT 0,
+          score INTEGER NOT NULL DEFAULT 0,
+          run_treats INTEGER NOT NULL DEFAULT 0,
+          run_coffee INTEGER NOT NULL DEFAULT 0,
+          economy_points INTEGER NOT NULL DEFAULT 0,
+          economy_treats INTEGER NOT NULL DEFAULT 0,
+          economy_coffee INTEGER NOT NULL DEFAULT 0,
+          profile_xp INTEGER NOT NULL DEFAULT 0,
+          new_record INTEGER NOT NULL DEFAULT 0,
+          accepted_rating INTEGER NOT NULL DEFAULT 0,
+          season_id TEXT NOT NULL DEFAULT '',
+          created_at INTEGER NOT NULL,
+          updated_at INTEGER NOT NULL
+        )`),
+        env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_game_run_sessions_player ON game_run_sessions(telegram_id,status,updated_at DESC)`),
+        env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_game_run_sessions_expiry ON game_run_sessions(status,expires_at_ms)`),
+        env.DB.prepare(`CREATE TABLE IF NOT EXISTS player_economy_run_ledger (
+          run_id TEXT PRIMARY KEY,
+          telegram_id TEXT NOT NULL,
+          points INTEGER NOT NULL DEFAULT 0,
+          treats INTEGER NOT NULL DEFAULT 0,
+          coffee INTEGER NOT NULL DEFAULT 0,
+          profile_xp INTEGER NOT NULL DEFAULT 0,
+          raw_score INTEGER NOT NULL DEFAULT 0,
+          raw_treats INTEGER NOT NULL DEFAULT 0,
+          raw_coffee INTEGER NOT NULL DEFAULT 0,
+          duration_ms INTEGER NOT NULL DEFAULT 0,
+          booster_type TEXT NOT NULL DEFAULT '',
+          skin_id TEXT NOT NULL DEFAULT 'default',
+          new_record INTEGER NOT NULL DEFAULT 0,
+          accepted_rating INTEGER NOT NULL DEFAULT 0,
+          season_id TEXT NOT NULL DEFAULT '',
+          created_at INTEGER NOT NULL
+        )`),
+        env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_player_economy_runs_player ON player_economy_run_ledger(telegram_id,created_at DESC)`),
+        env.DB.prepare(`CREATE TABLE IF NOT EXISTS player_economy_cutovers (
+          telegram_id TEXT PRIMARY KEY,
+          recovery_token TEXT NOT NULL,
+          source_updated_at INTEGER NOT NULL DEFAULT 0,
+          recovered_runs INTEGER NOT NULL DEFAULT 0,
+          recovered_points INTEGER NOT NULL DEFAULT 0,
+          recovered_treats INTEGER NOT NULL DEFAULT 0,
+          recovered_coffee INTEGER NOT NULL DEFAULT 0,
+          recovered_profile_xp INTEGER NOT NULL DEFAULT 0,
+          recovered_at INTEGER NOT NULL
+        )`),
+        env.DB.prepare(`CREATE TABLE IF NOT EXISTS player_economy_meta (
+          meta_key TEXT PRIMARY KEY,
+          value_int INTEGER NOT NULL DEFAULT 0,
+          updated_at INTEGER NOT NULL DEFAULT 0
+        )`)
+      ]);
+      const cutoverNow = Math.floor(Date.now() / 1000);
+      await env.DB.prepare(
+        `INSERT OR IGNORE INTO player_economy_meta(meta_key,value_int,updated_at) VALUES('server_authority_cutover_at',?,?)`
+      ).bind(cutoverNow,cutoverNow).run();
+      await addRuntimeColumnIfMissing(env, 'game_run_sessions', 'new_record', 'INTEGER NOT NULL DEFAULT 0');
+      await addRuntimeColumnIfMissing(env, 'player_economy_run_ledger', 'new_record', 'INTEGER NOT NULL DEFAULT 0');
+      await addRuntimeColumnIfMissing(env, 'player_economy_run_ledger', 'accepted_rating', 'INTEGER NOT NULL DEFAULT 0');
+      await addRuntimeColumnIfMissing(env, 'player_economy_run_ledger', 'season_id', "TEXT NOT NULL DEFAULT ''");
+    })().catch((error) => {
+      authoritativeEconomySchemaPromise = null;
+      throw error;
+    });
+  }
+  await authoritativeEconomySchemaPromise;
+}
+
+async function authoritativeEconomyCutoverAt(env) {
+  await ensureAuthoritativeEconomySchema(env);
+  const row = await env.DB.prepare(`SELECT value_int FROM player_economy_meta WHERE meta_key='server_authority_cutover_at' LIMIT 1`).first();
+  return Math.max(0, Math.floor(Number(row?.value_int || AUTHORITATIVE_LEGACY_RUN_CUTOFF_FALLBACK)));
+}
+
+function authoritativeProfileView(row) {
+  return {
+    wallet: safeAdminNumber(row?.wallet),
+    best: safeAdminNumber(row?.best_score),
+    treats: safeAdminNumber(row?.treats),
+    coffee: safeAdminNumber(row?.coffee),
+    profileXp: safeAdminNumber(row?.profile_xp),
+    authoritativeWallet: true,
+    authoritativeFields: { wallet: true, best: true, treats: true, coffee: true, profileXp: true },
+    revision: safeAdminNumber(row?.revision),
+    updatedAt: safeAdminNumber(row?.updated_at) * 1000
+  };
+}
+
+async function recoverLegacyUnsyncedRunProgress(env, telegramId, sourceUpdatedAt) {
+  const id = String(telegramId || '');
+  if (!id) return null;
+  const existing = await env.DB.prepare(`SELECT telegram_id FROM player_economy_cutovers WHERE telegram_id=? LIMIT 1`).bind(id).first();
+  if (existing) return existing;
+  const baseline = Math.max(0, Math.floor(Number(sourceUpdatedAt || 0)));
+  const cutoverAt = await authoritativeEconomyCutoverAt(env);
+  const totals = await env.DB.prepare(
+    `SELECT COUNT(*) AS runs,COALESCE(SUM(score),0) AS points,COALESCE(SUM(run_treats),0) AS treats,
+            COALESCE(SUM(run_coffee),0) AS coffee,COALESCE(MAX(score),0) AS best
+       FROM leaderboard_runs
+      WHERE telegram_id=? AND accepted=1 AND created_at>? AND created_at<=?`
+  ).bind(id, baseline, cutoverAt).first();
+  const runs = Math.max(0, Math.floor(Number(totals?.runs || 0)));
+  const points = Math.max(0, Math.floor(Number(totals?.points || 0)));
+  const treats = Math.max(0, Math.floor(Number(totals?.treats || 0)));
+  const coffee = Math.max(0, Math.floor(Number(totals?.coffee || 0)));
+  const best = Math.max(0, Math.floor(Number(totals?.best || 0)));
+  // Old clients awarded profile XP only for leaderboard-qualified runs. We
+  // recover the base amount that can be proven from accepted server rows.
+  // Any premium multiplier already synchronized before the cutover remains in
+  // the stored profile and is never reduced.
+  const profileXp = Math.min(999999999, runs * AUTHORITATIVE_PROFILE_RUN_XP);
+  const now = Math.floor(Date.now() / 1000);
+  const token = `cutover_${id}_${now}_${Math.random().toString(36).slice(2,10)}`;
+  const insertCutover = env.DB.prepare(
+    `INSERT OR IGNORE INTO player_economy_cutovers(
+      telegram_id,recovery_token,source_updated_at,recovered_runs,recovered_points,recovered_treats,recovered_coffee,recovered_profile_xp,recovered_at
+    ) VALUES(?,?,?,?,?,?,?,?,?)`
+  ).bind(id, token, baseline, runs, points, treats, coffee, profileXp, now);
+  if (runs > 0 || best > 0) {
+    // The marker and the recovered balance are committed in one D1 batch so a
+    // Worker interruption can never record "recovered" without actually
+    // crediting the verifiable legacy progress. The token also makes concurrent
+    // first requests safe: only the request that inserted this exact marker can
+    // apply the credit.
+    await env.DB.batch([
+      insertCutover,
+      env.DB.prepare(
+        `UPDATE admin_profile_state SET
+           wallet=MIN(999999999,wallet+?),treats=MIN(999999999,treats+?),coffee=MIN(999999999,coffee+?),
+           profile_xp=MIN(999999999,profile_xp+?),best_score=MAX(best_score,?),
+           revision=revision+1,updated_at=?,updated_by=?
+         WHERE telegram_id=? AND EXISTS(
+           SELECT 1 FROM player_economy_cutovers c WHERE c.telegram_id=? AND c.recovery_token=?
+         )`
+      ).bind(points, treats, coffee, profileXp, best, now, 'authoritative-cutover', id, id, token)
+    ]);
+  } else {
+    await insertCutover.run();
+  }
+  return await env.DB.prepare(`SELECT * FROM player_economy_cutovers WHERE telegram_id=? LIMIT 1`).bind(id).first();
+}
+
+async function ensureAuthoritativeProfileRow(env, telegramId, actor = 'server') {
+  await ensureAuthoritativeEconomySchema(env);
+  const id = String(telegramId);
+  const now = Math.floor(Date.now() / 1000);
+  const before = await env.DB.prepare(
+    `SELECT wallet,best_score,treats,coffee,profile_xp,revision,created_at,updated_at,updated_by
+     FROM admin_profile_state WHERE telegram_id=? LIMIT 1`
+  ).bind(id).first();
+  await env.DB.prepare(
+    `INSERT OR IGNORE INTO admin_profile_state (
+      telegram_id,wallet,best_score,treats,coffee,profile_xp,
+      revision,created_at,updated_at,updated_by
+    ) VALUES (?,0,0,0,0,0,1,?,?,?)`
+  ).bind(id, now, now, String(actor || 'server')).run();
+  // Recover only progress that can be proved from old accepted run rows and
+  // that happened after the last legacy profile synchronization. No numbers
+  // supplied by the client participate in this cutover.
+  const cutoverAt = await authoritativeEconomyCutoverAt(env);
+  if (before && Number(before.created_at || 0) <= cutoverAt) {
+    await recoverLegacyUnsyncedRunProgress(env, id, Number(before.updated_at || 0));
+  } else {
+    await recoverLegacyUnsyncedRunProgress(env, id, now);
+  }
+  // Fold admin overrides and queued grants into the durable base values. From
+  // this point forward clients receive exact values instead of participating
+  // in conflict resolution.
+  await env.DB.prepare(
+    `UPDATE admin_profile_state SET
+      wallet = MIN(999999999, MAX(0, COALESCE(wallet_override,wallet) + COALESCE(pending_wallet,0))),
+      treats = MIN(999999999, MAX(0, COALESCE(treats_override,treats) + COALESCE(pending_treats,0))),
+      coffee = MIN(999999999, MAX(0, COALESCE(coffee_override,coffee) + COALESCE(pending_coffee,0))),
+      best_score = MIN(999999999, MAX(0, COALESCE(best_score_override,best_score))),
+      profile_xp = MIN(999999999, MAX(0, COALESCE(profile_xp_override,profile_xp))),
+      wallet_override=NULL,treats_override=NULL,coffee_override=NULL,best_score_override=NULL,profile_xp_override=NULL,
+      pending_wallet=0,pending_treats=0,pending_coffee=0,
+      revision=revision+1,updated_at=?,updated_by=?
+     WHERE telegram_id=? AND (
+       wallet_override IS NOT NULL OR treats_override IS NOT NULL OR coffee_override IS NOT NULL OR
+       best_score_override IS NOT NULL OR profile_xp_override IS NOT NULL OR
+       COALESCE(pending_wallet,0)<>0 OR COALESCE(pending_treats,0)<>0 OR COALESCE(pending_coffee,0)<>0
+     )`
+  ).bind(now, String(actor || 'server'), id).run();
+  return await env.DB.prepare(
+    `SELECT wallet,best_score,treats,coffee,profile_xp,revision,created_at,updated_at,updated_by
+     FROM admin_profile_state WHERE telegram_id=? LIMIT 1`
+  ).bind(id).first();
+}
+
+function serverRunSkinBonus(skinId) {
+  return SERVER_SKIN_RUN_BONUSES[String(skinId || 'default')] || SERVER_SKIN_RUN_BONUSES.default;
+}
+
+async function validateAuthoritativeRunMetrics(env, session, metrics) {
+  const nowMs = Date.now();
+  const durationMs = Math.max(0, Math.floor(Number(metrics.durationMs || 0)));
+  const score = Math.max(0, Math.floor(Number(metrics.score || 0)));
+  const runTreats = Math.max(0, Math.floor(Number(metrics.runTreats || 0)));
+  const runCoffee = Math.max(0, Math.floor(Number(metrics.runCoffee || 0)));
+  if (durationMs > AUTHORITATIVE_RUN_SESSION_MAX_MS) throw new ApiError(400, 'Забег слишком длинный и не прошёл серверную проверку.');
+  if (session) {
+    const startedAtMs = Number(session.started_at_ms || 0);
+    const expiresAtMs = Number(session.expires_at_ms || 0);
+    if (!startedAtMs || (expiresAtMs && nowMs > expiresAtMs + AUTHORITATIVE_RUN_CLOCK_GRACE_MS)) {
+      throw new ApiError(409, 'Сессия забега истекла. Начните новый забег.');
+    }
+    const elapsedMs = Math.max(0, nowMs - startedAtMs);
+    if (durationMs > elapsedMs + AUTHORITATIVE_RUN_CLOCK_GRACE_MS) {
+      throw new ApiError(400, 'Длительность забега не прошла серверную проверку.');
+    }
+  }
+  const gameplay = await readPublishedGameRuntimeConfig(env);
+  const seconds = durationMs / 1000;
+  const minimumPickupDelay = Math.max(0.25, Number(gameplay.pickupDelayBase || DEFAULT_GAME_RUNTIME_CONFIG.pickupDelayBase));
+  const maxPickups = Math.max(2, Math.ceil(seconds / minimumPickupDelay) + 3);
+  if (runTreats + runCoffee > maxPickups) throw new ApiError(400, 'Количество собранных предметов не прошло серверную проверку.');
+  const maxPassiveRate = Math.max(0, Number(gameplay.scoreBaseRate || 0)) + Math.max(0, Number(gameplay.maxSpeed || 0)) * Math.max(0, Number(gameplay.scoreSpeedFactor || 0));
+  // Every collected item adds exactly 35 score on the real client. Only the
+  // submitted-and-rate-limited pickups may contribute that part of the cap;
+  // using the theoretical maximum pickup count here would give forged runs a
+  // large free score allowance.
+  const maximumScore = Math.ceil(seconds * maxPassiveRate + (runTreats + runCoffee) * 35 + 350);
+  if (score > maximumScore) throw new ApiError(400, 'Результат не прошёл серверную проверку.');
+  return { durationMs, score, runTreats, runCoffee, maxPickups, maximumScore };
+}
+
+async function startAuthoritativeRunSession(request, env) {
+  try {
+    requireDatabase(env);
+    requireBotToken(env);
+    await ensureAuthoritativeEconomySchema(env);
+    const body = await readJson(request);
+    const auth = await validateTelegramInitData(String(body.initData || ''), env);
+    const telegramId = String(auth.user.id);
+    const runId = String(body.runId || '').trim();
+    if (!/^[A-Za-z0-9_-]{12,96}$/.test(runId)) throw new ApiError(400, 'Некорректный идентификатор забега.');
+    await ensureCasePlayerState(env, telegramId, {});
+    const existing = await env.DB.prepare(`SELECT * FROM game_run_sessions WHERE run_id=? LIMIT 1`).bind(runId).first();
+    if (existing) {
+      if (String(existing.telegram_id || '') !== telegramId) throw new ApiError(409, 'Этот идентификатор забега уже используется.');
+      return jsonResponse({ ok:true, runSession:{ runId, startedAt:Number(existing.started_at_ms||0), expiresAt:Number(existing.expires_at_ms||0), status:String(existing.status||'started') }, repeated:true });
+    }
+    const nowMs = Date.now();
+    const now = Math.floor(nowMs / 1000);
+    const expiresAtMs = nowMs + AUTHORITATIVE_RUN_SESSION_MAX_MS;
+    await env.DB.prepare(
+      `INSERT INTO game_run_sessions(run_id,telegram_id,started_at_ms,expires_at_ms,status,created_at,updated_at)
+       VALUES(?,?,?,?,'started',?,?)`
+    ).bind(runId, telegramId, nowMs, expiresAtMs, now, now).run();
+    return jsonResponse({ ok:true, runSession:{ runId, startedAt:nowMs, expiresAt:expiresAtMs, status:'started' } });
+  } catch (error) {
+    if (error instanceof ApiError) return jsonResponse({ ok:false, error:error.message }, error.status);
+    console.error('startAuthoritativeRunSession failed', error);
+    return jsonResponse({ ok:false, error:'Не удалось начать защищённую сессию забега.' }, 500);
+  }
+}
+
 async function claimSkinPurchaseCaseBonus(request, env) {
   try {
     requireDatabase(env);
@@ -2654,36 +2972,22 @@ async function claimSkinPurchaseCaseBonus(request, env) {
     const skinId = String(body.skinId || "").trim().toLowerCase();
     const bonus = SKIN_PURCHASE_CASE_BONUSES[skinId];
     if (!bonus) throw new ApiError(400, "Для этого скина подарочный кейс не предусмотрен.");
-    const ownedSkins = new Set(
-      (Array.isArray(body.ownedSkins) ? body.ownedSkins : [])
-        .map((value) => String(value || "").trim().toLowerCase())
-        .filter((value) => SKINS[value])
-    );
-    if (!ownedSkins.has(skinId)) throw new ApiError(409, "Сначала купите этот скин.");
-
-    const current = normalizeAdminProfile(body.current || {});
-    await ensureCasePlayerState(env, telegramId, current);
+    const ensured = await ensureCasePlayerState(env, telegramId, {});
+    if (!ensured.state.ownedSkins.includes(skinId)) throw new ApiError(409, "Сначала купите этот скин.");
     const now = Math.floor(Date.now() / 1000);
     const grantId = `skinbonus_${telegramId}_${skinId}_${bonus.version.replace(/[^a-z0-9_-]/gi, "")}`;
     const inserted = await env.DB.prepare(
-      `INSERT OR IGNORE INTO granted_cases (
-         id, telegram_id, case_type, status, granted_by, reason, created_at
-       ) VALUES (?, ?, ?, 'pending', 'skin-bonus', ?, ?)`
+      `INSERT OR IGNORE INTO granted_cases (id,telegram_id,case_type,status,granted_by,reason,created_at)
+       VALUES (?, ?, ?, 'pending', 'skin-bonus', ?, ?)`
     ).bind(grantId, telegramId, bonus.caseType, `Подарок за образ «${SKINS[skinId]?.title || skinId}»`, now).run();
     const granted = safeAdminNumber(inserted?.meta?.changes) > 0;
-    return jsonResponse(await buildCasePayload(env, telegramId, current, {
-      bonusCase: {
-        skinId,
-        caseType: bonus.caseType,
-        title: bonus.title,
-        granted,
-        repeated: !granted
-      }
-    }));
+    return jsonResponse(await buildCasePayload(env, telegramId, {}, {
+      bonusCase:{ skinId,caseType:bonus.caseType,title:bonus.title,granted,repeated:!granted }
+    }, { ensured }));
   } catch (error) {
-    if (error instanceof ApiError) return jsonResponse({ ok: false, error: error.message }, error.status);
+    if (error instanceof ApiError) return jsonResponse({ ok:false,error:error.message }, error.status);
     console.error("claimSkinPurchaseCaseBonus failed", error);
-    return jsonResponse({ ok: false, error: "Не удалось выдать подарочный кейс за скин." }, 500);
+    return jsonResponse({ ok:false,error:"Не удалось выдать подарочный кейс за скин." }, 500);
   }
 }
 
@@ -2691,24 +2995,179 @@ async function purchaseSkinWithStock(request, env) {
   try {
     requireDatabase(env);
     requireBotToken(env);
+    await ensureSkinPriceSchema(env);
+    await ensureAuthoritativeEconomySchema(env);
     const body = await readJson(request);
     const auth = await validateTelegramInitData(String(body.initData || ""), env);
     const skinId = String(body.skinId || "").trim().toLowerCase();
     if (!SKINS[skinId] || skinId === "default") throw new ApiError(400, "Неизвестный скин.");
     const telegramId = String(auth.user.id);
+    const consumptionId = `skin:${telegramId}:${skinId}`;
+    const now = Math.floor(Date.now() / 1000);
+    const cutoverAt = await authoritativeEconomyCutoverAt(env);
+
+    let ensured = await ensureCasePlayerState(env, telegramId, {});
+    if (ensured.state.ownedSkins.includes(skinId)) {
+      return jsonResponse(await buildCasePayload(env, telegramId, {}, {
+        repeated:true, purchase:{ skinId,title:SKINS[skinId]?.title || skinId }
+      }, { ensured }));
+    }
+
+    const prices = await readSkinPrices(env);
+    const rawPrice = prices[skinId] || DEFAULT_SKIN_PRICES[skinId];
+    if (!rawPrice) throw new ApiError(409, "Цена скина временно недоступна.");
+    const price = {
+      points: safeAdminNumber(rawPrice.points),
+      treats: safeAdminNumber(rawPrice.treats),
+      coffee: safeAdminNumber(rawPrice.coffee)
+    };
+
+    // An old stock-consumption row is the only legacy proof we accept. Rows
+    // created at/after the authority cutover are never treated as a free
+    // purchase: they are resumed through the same conditional server charge.
+    await ensureShopStockSchema(env);
+    const priorConsumption = await env.DB.prepare(
+      `SELECT created_at FROM shop_stock_consumptions WHERE consumption_id=? LIMIT 1`
+    ).bind(consumptionId).first();
+    const priorCreatedAt = safeAdminNumber(priorConsumption?.created_at);
+    const priorIsLegacy = priorCreatedAt > 0 && priorCreatedAt < cutoverAt;
+
+    if (!priorIsLegacy) {
+      const profileBeforeStock = await ensureAuthoritativeProfileRow(env, telegramId, `skin:${skinId}:precheck`);
+      const missing=[];
+      if (safeAdminNumber(profileBeforeStock?.wallet) < price.points) missing.push(`${price.points-safeAdminNumber(profileBeforeStock?.wallet)} очков`);
+      if (safeAdminNumber(profileBeforeStock?.treats) < price.treats) missing.push(`${price.treats-safeAdminNumber(profileBeforeStock?.treats)} зефира`);
+      if (safeAdminNumber(profileBeforeStock?.coffee) < price.coffee) missing.push(`${price.coffee-safeAdminNumber(profileBeforeStock?.coffee)} кофе`);
+      if (missing.length) {
+        // A stale post-cutover stock reservation may remain if an older Worker
+        // died between reserving stock and committing the purchase. Release it
+        // only after a grace period; a fresh row may belong to a concurrent
+        // request that is still completing.
+        if (priorCreatedAt >= cutoverAt && priorCreatedAt > 0 && now - priorCreatedAt > 120) {
+          const freshState = await ensureCasePlayerState(env, telegramId, {});
+          if (!freshState.state.ownedSkins.includes(skinId)) await releaseShopStock(env, consumptionId);
+          else {
+            return jsonResponse(await buildCasePayload(env, telegramId, {}, {
+              repeated:true, purchase:{ skinId,title:SKINS[skinId]?.title || skinId,cost:price }
+            }, { ensured:freshState }));
+          }
+        }
+        throw new ApiError(400, `Не хватает ${missing.join(" и ")}.`);
+      }
+    }
+
     const stock = await consumeShopStock(env, {
-      category: "skins",
-      productId: skinId,
-      consumptionId: `skin:${telegramId}:${skinId}`,
-      telegramId
+      category:"skins",productId:skinId,consumptionId,telegramId
     });
-    await recordPlayerTimeline(env, telegramId, "skin_purchase", `купил скин «${SKINS[skinId]?.title || skinId}»`, { skinId, stock }, `skin_purchase_${skinId}`, auth.user);
+    const stockCreatedAt = safeAdminNumber(stock?.consumptionCreatedAt || priorCreatedAt);
+    const legacyRecovered = Boolean(stock?.repeated && stockCreatedAt > 0 && stockCreatedAt < cutoverAt);
+
+    if (legacyRecovered) {
+      // Preserve purchases made by the pre-authority Worker without charging a
+      // second time. Append only this skin so concurrent server grants cannot
+      // be overwritten by an old full-array snapshot.
+      await env.DB.prepare(
+        `UPDATE case_player_state SET
+           owned_skins_json=CASE
+             WHEN EXISTS(
+               SELECT 1 FROM json_each(CASE WHEN json_valid(owned_skins_json) THEN owned_skins_json ELSE '[]' END)
+               WHERE lower(CAST(value AS TEXT))=?
+             ) THEN CASE WHEN json_valid(owned_skins_json) THEN owned_skins_json ELSE '[]' END
+             ELSE json_insert(CASE WHEN json_valid(owned_skins_json) THEN owned_skins_json ELSE '[]' END,'$[#]',?)
+           END,
+           active_skin_id=?,revision=revision+1,updated_at=?
+         WHERE telegram_id=?`
+      ).bind(skinId,skinId,skinId,now,telegramId).run();
+    } else {
+      // Re-check immediately before the atomic purchase. This also catches a
+      // concurrent request that completed while this request was reserving
+      // stock.
+      ensured = await ensureCasePlayerState(env, telegramId, {});
+      if (ensured.state.ownedSkins.includes(skinId)) {
+        return jsonResponse(await buildCasePayload(env, telegramId, {}, {
+          repeated:true, purchase:{ skinId,title:SKINS[skinId]?.title || skinId,cost:price,stock }
+        }, { ensured }));
+      }
+
+      const profile = await ensureAuthoritativeProfileRow(env, telegramId, `skin:${skinId}:commit`);
+      const missing=[];
+      if (safeAdminNumber(profile?.wallet) < price.points) missing.push(`${price.points-safeAdminNumber(profile?.wallet)} очков`);
+      if (safeAdminNumber(profile?.treats) < price.treats) missing.push(`${price.treats-safeAdminNumber(profile?.treats)} зефира`);
+      if (safeAdminNumber(profile?.coffee) < price.coffee) missing.push(`${price.coffee-safeAdminNumber(profile?.coffee)} кофе`);
+      if (missing.length) {
+        const freshState = await ensureCasePlayerState(env, telegramId, {});
+        if (freshState.state.ownedSkins.includes(skinId)) {
+          return jsonResponse(await buildCasePayload(env, telegramId, {}, {
+            repeated:true, purchase:{ skinId,title:SKINS[skinId]?.title || skinId,cost:price,stock }
+          }, { ensured:freshState }));
+        }
+        if (!stock?.repeated || (stockCreatedAt > 0 && now - stockCreatedAt > 120)) {
+          await releaseShopStock(env, consumptionId);
+        }
+        throw new ApiError(400, `Не хватает ${missing.join(" и ")}.`);
+      }
+
+      const marker = `skin-purchase:${skinId}:${caseGrantId("txn")}`;
+      const results = await env.DB.batch([
+        env.DB.prepare(
+          `UPDATE admin_profile_state SET
+             wallet=wallet-?,treats=treats-?,coffee=coffee-?,revision=revision+1,updated_at=?,updated_by=?
+           WHERE telegram_id=? AND wallet>=? AND treats>=? AND coffee>=?
+             AND NOT EXISTS(
+               SELECT 1
+                 FROM case_player_state c,
+                      json_each(CASE WHEN json_valid(c.owned_skins_json) THEN c.owned_skins_json ELSE '[]' END) j
+                WHERE c.telegram_id=? AND lower(CAST(j.value AS TEXT))=?
+             )`
+        ).bind(price.points,price.treats,price.coffee,now,marker,telegramId,price.points,price.treats,price.coffee,telegramId,skinId),
+        env.DB.prepare(
+          `UPDATE case_player_state SET
+             owned_skins_json=CASE
+               WHEN EXISTS(
+                 SELECT 1 FROM json_each(CASE WHEN json_valid(owned_skins_json) THEN owned_skins_json ELSE '[]' END)
+                 WHERE lower(CAST(value AS TEXT))=?
+               ) THEN CASE WHEN json_valid(owned_skins_json) THEN owned_skins_json ELSE '[]' END
+               ELSE json_insert(CASE WHEN json_valid(owned_skins_json) THEN owned_skins_json ELSE '[]' END,'$[#]',?)
+             END,
+             active_skin_id=?,revision=revision+1,updated_at=?
+           WHERE telegram_id=?
+             AND EXISTS(SELECT 1 FROM admin_profile_state WHERE telegram_id=? AND updated_by=?)`
+        ).bind(skinId,skinId,skinId,now,telegramId,telegramId,marker)
+      ]);
+
+      const charged = Number(results?.[0]?.meta?.changes || 0) === 1;
+      const granted = Number(results?.[1]?.meta?.changes || 0) === 1;
+      if (!charged || !granted) {
+        const freshState = await ensureCasePlayerState(env, telegramId, {});
+        if (freshState.state.ownedSkins.includes(skinId)) {
+          return jsonResponse(await buildCasePayload(env, telegramId, {}, {
+            repeated:true, purchase:{ skinId,title:SKINS[skinId]?.title || skinId,cost:price,stock }
+          }, { ensured:freshState }));
+        }
+        // Only the request that created the reservation (or a clearly stale
+        // retry) may give the stock back. A fresh repeated request must not
+        // release stock underneath another in-flight purchase.
+        if (!stock?.repeated || (stockCreatedAt > 0 && now - stockCreatedAt > 120)) {
+          await releaseShopStock(env, consumptionId);
+        }
+        throw new ApiError(409, "Баланс изменился или покупка уже обрабатывается. Обновите магазин и повторите покупку.");
+      }
+    }
+
+    ensured = await ensureCasePlayerState(env, telegramId, { activeSkin:skinId });
+    if (!ensured.state.ownedSkins.includes(skinId)) {
+      if (!stock?.repeated) await releaseShopStock(env, consumptionId);
+      throw new ApiError(500, "Не удалось сохранить купленный скин.");
+    }
+    await recordPlayerTimeline(env, telegramId, "skin_purchase", `купил скин «${SKINS[skinId]?.title || skinId}»`, { skinId,stock,cost:price,legacyRecovered }, `skin_purchase_${skinId}`, auth.user);
     await recordContentAnalyticsEvent(env, telegramId, "skin", skinId, "acquired", "shop", `skin:${telegramId}:${skinId}`);
-    return jsonResponse({ ok: true, skinId, stock });
+    return jsonResponse(await buildCasePayload(env, telegramId, {}, {
+      purchase:{ skinId,title:SKINS[skinId]?.title || skinId,cost:price,stock,legacyRecovered }
+    }, { ensured }));
   } catch (error) {
-    if (error instanceof ApiError) return jsonResponse({ ok: false, error: error.message, details: error.details }, error.status);
+    if (error instanceof ApiError) return jsonResponse({ ok:false,error:error.message,details:error.details }, error.status);
     console.error("purchaseSkinWithStock failed", error);
-    return jsonResponse({ ok: false, error: "Не удалось подтвердить покупку скина." }, 500);
+    return jsonResponse({ ok:false,error:"Не удалось подтвердить покупку скина." }, 500);
   }
 }
 
@@ -2816,13 +3275,12 @@ async function syncAdminProfile(request, env, internal = null) {
   try {
     requireDatabase(env);
     requireBotToken(env);
-    await ensureV78Schema(env);
+    await ensureAuthoritativeEconomySchema(env);
     const body = internal?.body || await readJson(request);
     const auth = internal?.auth || await validateTelegramInitData(String(body.initData || ""), env);
     const mode = String(body.mode || "read");
     if (mode === "write" || mode === "set") requireAdminUser(auth.user, env);
     const telegramId = String(auth.user.id);
-    const current = normalizeAdminProfile(body.current || {});
     const now = Math.floor(Date.now() / 1000);
     const appliedResetIds = Array.isArray(body.current?.appliedResetPlanIds)
       ? [...new Set(body.current.appliedResetPlanIds.map((value) => String(value || "").trim()).filter((value) => /^reset_[A-Za-z0-9_-]{6,120}$/.test(value)))].slice(-50)
@@ -2836,201 +3294,61 @@ async function syncAdminProfile(request, env, internal = null) {
     }
     const activeResetPlan = await latestPlayerResetDirective(env, telegramId);
 
-    await env.DB.prepare(
-      `INSERT OR IGNORE INTO admin_profile_state (
-        telegram_id, wallet, best_score, treats, coffee, profile_xp,
-        revision, created_at, updated_at, updated_by
-      ) VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?, ?)`
-    ).bind(
-      telegramId,
-      current.wallet,
-      current.best,
-      current.treats,
-      current.coffee,
-      current.profileXp,
-      now,
-      now,
-      telegramId
-    ).run();
-
-    // Снимок коллекции и активного скина обновляется при каждой синхронизации профиля.
-    // Старые клиенты, которые не передают эти поля, существующий снимок не перезаписывают.
-    const hasSkinSnapshot = Array.isArray(body.current?.ownedSkins) && !Boolean(activeResetPlan?.reset?.ownedSkins);
-    let previousActiveSkin = "";
-    if (hasSkinSnapshot) {
-      try {
-        const previousSkinRow = await env.DB.prepare(`SELECT active_skin_id FROM case_player_state WHERE telegram_id=? LIMIT 1`).bind(telegramId).first();
-        previousActiveSkin = String(previousSkinRow?.active_skin_id || "default");
-      } catch {}
-    }
-    const syncedOwnedSkins = hasSkinSnapshot ? normalizeCurrentOwnedSkins(body.current.ownedSkins) : undefined;
-    const syncedActiveSkin = hasSkinSnapshot ? normalizeCurrentActiveSkin(body.current?.activeSkin, syncedOwnedSkins) : "";
-    const ensuredCaseState = await ensureCasePlayerState(env, telegramId, {
-      ...current,
-      ownedSkins: syncedOwnedSkins,
-      activeSkin: syncedActiveSkin
-    });
-    if (internal?.shared) internal.shared.caseEnsured = ensuredCaseState;
-    if (hasSkinSnapshot && previousActiveSkin && previousActiveSkin !== syncedActiveSkin) {
-      const skinTitle = SKINS[syncedActiveSkin]?.title || (syncedActiveSkin === "default" ? "Стандартный" : syncedActiveSkin);
-      const eventId = `skin_equip_${now}_${syncedActiveSkin}`;
-      await recordPlayerTimeline(env, telegramId, "skin_equip", `установил скин «${skinTitle}»`, { previousSkin: previousActiveSkin, skinId: syncedActiveSkin }, eventId, auth.user, now);
-      if (syncedActiveSkin && syncedActiveSkin !== "default") await recordContentAnalyticsEvent(env, telegramId, "skin", syncedActiveSkin, "equipped", "profile", eventId);
-    }
-
+    // IMPORTANT: normal player sync never imports wallet / XP / ownership from
+    // the browser. Only authenticated admin write/set operations may mutate
+    // these values directly.
+    await ensureAuthoritativeProfileRow(env, telegramId, `sync:${telegramId}`);
     if (mode === "write") {
-      const next = normalizeAdminProfile(body.next || current);
+      const next = normalizeAdminProfile(body.next || {});
       await env.DB.prepare(
         `UPDATE admin_profile_state SET
-          wallet = MAX(wallet, ?),
-          best_score = MAX(best_score, ?),
-          treats = MAX(treats, ?),
-          coffee = MAX(coffee, ?),
-          profile_xp = MAX(profile_xp, ?),
-          revision = revision + 1,
-          updated_at = ?,
-          updated_by = ?
-         WHERE telegram_id = ?`
-      ).bind(
-        next.wallet,
-        next.best,
-        next.treats,
-        next.coffee,
-        next.profileXp,
-        now,
-        telegramId,
-        telegramId
-      ).run();
+          wallet=MAX(wallet,?),best_score=MAX(best_score,?),treats=MAX(treats,?),coffee=MAX(coffee,?),profile_xp=MAX(profile_xp,?),
+          revision=revision+1,updated_at=?,updated_by=? WHERE telegram_id=?`
+      ).bind(next.wallet,next.best,next.treats,next.coffee,next.profileXp,now,telegramId,telegramId).run();
     } else if (mode === "set") {
-      const next = normalizeAdminProfile(body.next || current);
+      const next = normalizeAdminProfile(body.next || {});
       await env.DB.prepare(
         `UPDATE admin_profile_state SET
-          wallet = ?,
-          best_score = ?,
-          treats = ?,
-          coffee = ?,
-          profile_xp = ?,
-          wallet_override = NULL,
-          treats_override = NULL,
-          coffee_override = NULL,
-          best_score_override = NULL,
-          profile_xp_override = NULL,
-          revision = revision + 1,
-          updated_at = ?,
-          updated_by = ?
-         WHERE telegram_id = ?`
-      ).bind(
-        next.wallet,
-        next.best,
-        next.treats,
-        next.coffee,
-        next.profileXp,
-        now,
-        telegramId,
-        telegramId
-      ).run();
+          wallet=?,best_score=?,treats=?,coffee=?,profile_xp=?,
+          wallet_override=NULL,treats_override=NULL,coffee_override=NULL,best_score_override=NULL,profile_xp_override=NULL,
+          pending_wallet=0,pending_treats=0,pending_coffee=0,
+          revision=revision+1,updated_at=?,updated_by=? WHERE telegram_id=?`
+      ).bind(next.wallet,next.best,next.treats,next.coffee,next.profileXp,now,telegramId,telegramId).run();
     }
 
-    let row = await env.DB.prepare(
-      `SELECT wallet, best_score, treats, coffee, profile_xp, revision, updated_at,
-              wallet_override, treats_override, coffee_override,
-              best_score_override, profile_xp_override,
-              pending_wallet, pending_treats, pending_coffee
-       FROM admin_profile_state WHERE telegram_id = ? LIMIT 1`
-    ).bind(telegramId).first();
-
-    const pendingWallet = safeAdminNumber(row?.pending_wallet);
-    const pendingTreats = safeAdminNumber(row?.pending_treats);
-    const pendingCoffee = safeAdminNumber(row?.pending_coffee);
-    const walletOverride = row?.wallet_override == null ? null : safeAdminNumber(row.wallet_override);
-    const treatsOverride = row?.treats_override == null ? null : safeAdminNumber(row.treats_override);
-    const coffeeOverride = row?.coffee_override == null ? null : safeAdminNumber(row.coffee_override);
-    const bestOverride = row?.best_score_override == null ? null : safeAdminNumber(row.best_score_override);
-    const xpOverride = row?.profile_xp_override == null ? null : safeAdminNumber(row.profile_xp_override);
-
-    const walletBase = walletOverride !== null ? walletOverride : Math.max(current.wallet, safeAdminNumber(row?.wallet));
-    const treatsBase = treatsOverride !== null ? treatsOverride : Math.max(current.treats, safeAdminNumber(row?.treats));
-    const coffeeBase = coffeeOverride !== null ? coffeeOverride : Math.max(current.coffee, safeAdminNumber(row?.coffee));
-    const walletValue = safeAdminNumber(walletBase + pendingWallet);
-    const treatsValue = safeAdminNumber(treatsBase + pendingTreats);
-    const coffeeValue = safeAdminNumber(coffeeBase + pendingCoffee);
-    const bestValue = bestOverride !== null ? bestOverride : Math.max(current.best, safeAdminNumber(row?.best_score));
-    const xpValue = xpOverride !== null ? xpOverride : Math.max(current.profileXp, safeAdminNumber(row?.profile_xp));
-
-    const nextWalletOverride = walletOverride !== null
-      ? ((pendingWallet === 0 && current.wallet === walletValue) ? null : walletValue)
-      : null;
-    const nextTreatsOverride = treatsOverride !== null
-      ? ((pendingTreats === 0 && current.treats === treatsValue) ? null : treatsValue)
-      : null;
-    const nextCoffeeOverride = coffeeOverride !== null
-      ? ((pendingCoffee === 0 && current.coffee === coffeeValue) ? null : coffeeValue)
-      : null;
-    const nextBestOverride = bestOverride !== null && current.best === bestValue ? null : bestOverride;
-    const nextXpOverride = xpOverride !== null && current.profileXp === xpValue ? null : xpOverride;
-
-    const hasAuthoritativeUpdate = walletOverride !== null || treatsOverride !== null || coffeeOverride !== null ||
-      bestOverride !== null || xpOverride !== null || pendingWallet > 0 || pendingTreats > 0 || pendingCoffee > 0;
-    if (hasAuthoritativeUpdate) {
-      await env.DB.prepare(
-        `UPDATE admin_profile_state SET
-          wallet = ?, best_score = ?, treats = ?, coffee = ?, profile_xp = ?,
-          wallet_override = ?, treats_override = ?, coffee_override = ?,
-          best_score_override = ?, profile_xp_override = ?,
-          pending_wallet = 0, pending_treats = 0, pending_coffee = 0,
-          revision = revision + 1, updated_at = ?, updated_by = ?
-         WHERE telegram_id = ?`
-      ).bind(
-        walletValue, bestValue, treatsValue, coffeeValue, xpValue,
-        nextWalletOverride, nextTreatsOverride, nextCoffeeOverride,
-        nextBestOverride, nextXpOverride,
-        now, telegramId, telegramId
-      ).run();
-      row = await env.DB.prepare(
-        `SELECT wallet, best_score, treats, coffee, profile_xp, revision, updated_at
-         FROM admin_profile_state WHERE telegram_id = ? LIMIT 1`
-      ).bind(telegramId).first();
+    const requestedActiveSkin = body.current && Object.prototype.hasOwnProperty.call(body.current, "activeSkin")
+      ? String(body.current.activeSkin || "default")
+      : undefined;
+    let previousActiveSkin = "default";
+    try {
+      const previousSkinRow = await env.DB.prepare(`SELECT active_skin_id FROM case_player_state WHERE telegram_id=? LIMIT 1`).bind(telegramId).first();
+      previousActiveSkin = String(previousSkinRow?.active_skin_id || "default");
+    } catch {}
+    const ensuredCaseState = await ensureCasePlayerState(env, telegramId, requestedActiveSkin === undefined ? {} : { activeSkin: requestedActiveSkin });
+    if (internal?.shared) internal.shared.caseEnsured = ensuredCaseState;
+    const nextActiveSkin = String(ensuredCaseState?.state?.activeSkinId || "default");
+    if (requestedActiveSkin !== undefined && previousActiveSkin !== nextActiveSkin) {
+      const skinTitle = SKINS[nextActiveSkin]?.title || (nextActiveSkin === "default" ? "Стандартный" : nextActiveSkin);
+      const eventId = `skin_equip_${now}_${nextActiveSkin}`;
+      await recordPlayerTimeline(env, telegramId, "skin_equip", `установил скин «${skinTitle}»`, { previousSkin: previousActiveSkin, skinId: nextActiveSkin }, eventId, auth.user, now);
+      if (nextActiveSkin !== "default") await recordContentAnalyticsEvent(env, telegramId, "skin", nextActiveSkin, "equipped", "profile", eventId);
     }
 
-    const payload = {
-      ok: true,
-      resetPlan: activeResetPlan,
-      profile: {
-        wallet: walletOverride !== null || pendingWallet > 0 ? walletValue : safeAdminNumber(row?.wallet),
-        best: bestOverride !== null ? bestValue : safeAdminNumber(row?.best_score),
-        treats: treatsOverride !== null || pendingTreats > 0 ? treatsValue : safeAdminNumber(row?.treats),
-        coffee: coffeeOverride !== null || pendingCoffee > 0 ? coffeeValue : safeAdminNumber(row?.coffee),
-        profileXp: xpOverride !== null ? xpValue : safeAdminNumber(row?.profile_xp),
-        authoritativeWallet: walletOverride !== null || pendingWallet > 0,
-        authoritativeFields: {
-          wallet: walletOverride !== null || pendingWallet > 0,
-          best: bestOverride !== null,
-          treats: treatsOverride !== null || pendingTreats > 0,
-          coffee: coffeeOverride !== null || pendingCoffee > 0,
-          profileXp: xpOverride !== null
-        },
-        revision: safeAdminNumber(row?.revision),
-        updatedAt: safeAdminNumber(row?.updated_at) * 1000
-      }
-    };
+    const row = await ensureAuthoritativeProfileRow(env, telegramId, `sync:${telegramId}`);
+    const payload = { ok:true, resetPlan:activeResetPlan, profile:authoritativeProfileView(row) };
     if (internal?.shared?.caseEnsured) {
       internal.shared.caseEnsured.profile = {
         ...(internal.shared.caseEnsured.profile || {}),
-        wallet: payload.profile.wallet,
-        best_score: payload.profile.best,
-        treats: payload.profile.treats,
-        coffee: payload.profile.coffee,
-        profile_xp: payload.profile.profileXp,
-        revision: payload.profile.revision,
-        updated_at: Math.floor(Number(payload.profile.updatedAt || 0) / 1000)
+        wallet:payload.profile.wallet,best_score:payload.profile.best,treats:payload.profile.treats,coffee:payload.profile.coffee,
+        profile_xp:payload.profile.profileXp,revision:payload.profile.revision,updated_at:Math.floor(Number(payload.profile.updatedAt||0)/1000)
       };
     }
     return internal?.raw ? payload : jsonResponse(payload);
   } catch (error) {
     if (internal?.raw) throw error;
-    if (error instanceof ApiError) return jsonResponse({ ok: false, error: error.message }, error.status);
+    if (error instanceof ApiError) return jsonResponse({ ok:false, error:error.message }, error.status);
     console.error("syncAdminProfile failed", error);
-    return jsonResponse({ ok: false, error: "Не удалось синхронизировать глобальные начисления." }, 500);
+    return jsonResponse({ ok:false, error:"Не удалось синхронизировать глобальные начисления." }, 500);
   }
 }
 
@@ -3158,96 +3476,101 @@ async function createReward(request, env) {
     await ensureShopAssortmentSchema(env);
     const assortmentProduct = await readShopAssortmentProduct(env, product.id);
     if (!assortmentProduct?.enabled) throw new ApiError(409, "Этот товар временно убран из ассортимента.");
-
+    const price = {
+      points:safeAdminNumber(assortmentProduct.points),
+      treats:safeAdminNumber(assortmentProduct.treats),
+      coffee:safeAdminNumber(assortmentProduct.coffee)
+    };
     const requestId = String(body.requestId || "").trim();
-    if (!/^[A-Za-z0-9_-]{12,80}$/.test(requestId)) {
-      throw new ApiError(400, "Некорректный идентификатор покупки.");
-    }
-
+    if (!/^[A-Za-z0-9_-]{12,80}$/.test(requestId)) throw new ApiError(400, "Некорректный идентификатор покупки.");
     const ownerId = String(auth.user.id);
+    let profileRow = await ensureAuthoritativeProfileRow(env, ownerId, `physical:${requestId}`);
     const existing = await env.DB.prepare(
-      `SELECT code, product_id, product_name, created_at, expires_at, status
-       FROM reward_codes WHERE request_id = ? AND owner_telegram_id = ? LIMIT 1`
+      `SELECT code,product_id,product_name,created_at,expires_at,status FROM reward_codes WHERE request_id=? AND owner_telegram_id=? LIMIT 1`
     ).bind(requestId, ownerId).first();
-
-    const now = Math.floor(Date.now() / 1000);
+    const now = Math.floor(Date.now()/1000);
     if (existing) {
-      const limitStatus = await getRewardLimitStatus(env, ownerId, now);
-      return jsonResponse({ ok: true, reward: rewardRowToClient(existing), limitStatus, repeated: true });
+      const limitStatus=await getRewardLimitStatus(env,ownerId,now);
+      return jsonResponse({ok:true,reward:rewardRowToClient(existing),limitStatus,repeated:true,profile:authoritativeProfileView(profileRow),profileXpAwarded:0});
     }
+    const limitStatus=await getRewardLimitStatus(env,ownerId,now);
+    if(limitStatus.used>=limitStatus.limit)throw new ApiError(429,`Лимит наград: не больше ${limitStatus.limit} за 24 часа.`,limitStatus);
+    const missing=[];
+    if(safeAdminNumber(profileRow?.wallet)<price.points)missing.push(`${price.points-safeAdminNumber(profileRow?.wallet)} очков`);
+    if(safeAdminNumber(profileRow?.treats)<price.treats)missing.push(`${price.treats-safeAdminNumber(profileRow?.treats)} зефира`);
+    if(safeAdminNumber(profileRow?.coffee)<price.coffee)missing.push(`${price.coffee-safeAdminNumber(profileRow?.coffee)} кофе`);
+    if(missing.length)throw new ApiError(400,`Не хватает ${missing.join(" и ")}.`);
 
-    const limitStatus = await getRewardLimitStatus(env, ownerId, now);
-    if (limitStatus.used >= limitStatus.limit) {
-      throw new ApiError(429, `Лимит наград: не больше ${limitStatus.limit} за 24 часа.`, limitStatus);
-    }
-
-    const ttl = positiveInt(env.REWARD_TTL_SECONDS, DEFAULT_REWARD_TTL_SECONDS);
-    const expiresAt = now + ttl;
-    const ownerName = telegramDisplayName(auth.user);
-    const stockConsumptionId = `reward:${ownerId}:${requestId}`;
-    const stock = await consumeShopStock(env, {
-      category: "prize",
-      productId: product.id,
-      consumptionId: stockConsumptionId,
-      telegramId: ownerId
-    });
-
-    let insertedCode = null;
-    for (let attempt = 0; attempt < 6; attempt += 1) {
-      const code = generateRewardCode(product.prefix);
-      const compact = compactCode(code);
-      try {
-        await env.DB.prepare(
-          `INSERT INTO reward_codes (
-            code, code_compact, request_id, product_id, product_name,
-            owner_telegram_id, owner_name, created_at, expires_at, status
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'active')`
-        ).bind(
-          code,
-          compact,
-          requestId,
-          product.id,
-          product.title,
-          ownerId,
-          ownerName,
-          now,
-          expiresAt
-        ).run();
-        insertedCode = code;
-        break;
-      } catch (error) {
-        if (String(error?.message || error).toLowerCase().includes("unique")) continue;
-        if (!stock.repeated) await releaseShopStock(env, stockConsumptionId);
-        throw error;
+    let profileXpMultiplier=1;
+    try { profileXpMultiplier=Math.max(1,Number((await getSeasonPassProfileBonusForUser(env,ownerId))?.multiplier||1)); } catch {}
+    const profileXpAwarded=safeAdminNumber(AUTHORITATIVE_PROFILE_PURCHASE_XP*profileXpMultiplier);
+    const ttl=positiveInt(env.REWARD_TTL_SECONDS,DEFAULT_REWARD_TTL_SECONDS);
+    const expiresAt=now+ttl;
+    const ownerName=telegramDisplayName(auth.user);
+    const stockConsumptionId=`reward:${ownerId}:${requestId}`;
+    const stock=await consumeShopStock(env,{category:"prize",productId:product.id,consumptionId:stockConsumptionId,telegramId:ownerId});
+    const marker=`physical-purchase:${requestId}`;
+    let insertedCode="";
+    let repeatedRow=null;
+    try {
+      for(let attempt=0;attempt<8;attempt+=1){
+        const generated=await generateUniqueRewardCode(env,product);
+        try {
+          const results=await env.DB.batch([
+            env.DB.prepare(
+              `UPDATE admin_profile_state SET wallet=wallet-?,treats=treats-?,coffee=coffee-?,profile_xp=MIN(999999999,profile_xp+?),revision=revision+1,updated_at=?,updated_by=?
+               WHERE telegram_id=? AND wallet>=? AND treats>=? AND coffee>=?`
+            ).bind(price.points,price.treats,price.coffee,profileXpAwarded,now,marker,ownerId,price.points,price.treats,price.coffee),
+            env.DB.prepare(
+              `INSERT INTO reward_codes(code,code_compact,request_id,product_id,product_name,owner_telegram_id,owner_name,created_at,expires_at,status)
+               SELECT ?,?,?,?,?,?,?,?,?,'active' WHERE EXISTS(SELECT 1 FROM admin_profile_state WHERE telegram_id=? AND updated_by=?)`
+            ).bind(generated.code,generated.compact,requestId,product.id,product.title,ownerId,ownerName,now,expiresAt,ownerId,marker)
+          ]);
+          if(Number(results?.[0]?.meta?.changes||0)!==1 || Number(results?.[1]?.meta?.changes||0)!==1)throw new ApiError(409,"Баланс изменился. Обновите магазин и повторите покупку.");
+          insertedCode=generated.code;
+          break;
+        }catch(error){
+          if(error instanceof ApiError)throw error;
+          if(String(error?.message||error).toLowerCase().includes("unique")){
+            // A concurrent retry with the same requestId may have completed
+            // while this request was generating its code. D1 rolls the failed
+            // batch back, so returning the already-created row is both safe and
+            // idempotent and avoids showing a false purchase error to the user.
+            repeatedRow=await env.DB.prepare(
+              `SELECT code,product_id,product_name,created_at,expires_at,status FROM reward_codes WHERE request_id=? AND owner_telegram_id=? LIMIT 1`
+            ).bind(requestId,ownerId).first();
+            if(repeatedRow){insertedCode=String(repeatedRow.code||"");break;}
+            continue;
+          }
+          throw error;
+        }
       }
+    }catch(error){
+      if(!stock.repeated)await releaseShopStock(env,stockConsumptionId);
+      throw error;
     }
-
-    if (!insertedCode) {
-      if (!stock.repeated) await releaseShopStock(env, stockConsumptionId);
-      throw new ApiError(503, "Не удалось создать уникальный код. Повторите покупку.");
+    if(!insertedCode){
+      if(!stock.repeated)await releaseShopStock(env,stockConsumptionId);
+      throw new ApiError(503,"Не удалось создать уникальный код. Повторите покупку.");
     }
-
-    const updatedLimitStatus = await getRewardLimitStatus(env, ownerId, now);
-    await recordPlayerTimeline(env, ownerId, "physical_purchase", `купил ${product.title}`, { productId: product.id, code: insertedCode }, `reward_${requestId}`, auth.user, now);
+    profileRow=await ensureAuthoritativeProfileRow(env,ownerId,marker);
+    const updatedLimitStatus=await getRewardLimitStatus(env,ownerId,now);
+    if(repeatedRow){
+      return jsonResponse({
+        ok:true,reward:rewardRowToClient(repeatedRow),limitStatus:updatedLimitStatus,stock,
+        profile:authoritativeProfileView(profileRow),profileXpAwarded:0,repeated:true
+      });
+    }
+    await recordPlayerTimeline(env,ownerId,"physical_purchase",`купил ${product.title}`,{productId:product.id,code:insertedCode,cost:price,profileXpAwarded},`reward_${requestId}`,auth.user,now);
     return jsonResponse({
-      ok: true,
-      reward: {
-        code: insertedCode,
-        productId: product.id,
-        productName: product.title,
-        issuedAt: now * 1000,
-        expiresAt: expiresAt * 1000,
-        status: "active"
-      },
-      limitStatus: updatedLimitStatus,
-      stock
+      ok:true,
+      reward:{code:insertedCode,productId:product.id,productName:product.title,issuedAt:now*1000,expiresAt:expiresAt*1000,status:"active"},
+      limitStatus:updatedLimitStatus,stock,profile:authoritativeProfileView(profileRow),profileXpAwarded,repeated:false
     });
-  } catch (error) {
-    if (error instanceof ApiError) {
-      return jsonResponse({ ok: false, error: error.message, details: error.details }, error.status);
-    }
-    console.error("createReward failed", error);
-    return jsonResponse({ ok: false, error: "Не удалось создать код награды." }, 500);
+  }catch(error){
+    if(error instanceof ApiError)return jsonResponse({ok:false,error:error.message,details:error.details},error.status);
+    console.error("createReward failed",error);
+    return jsonResponse({ok:false,error:"Не удалось создать код награды."},500);
   }
 }
 
@@ -4138,7 +4461,15 @@ function caseStateUpdateStatement(env, telegramId, caseState, now) {
       owned_trails_json = ?, active_trail_id = ?,
       owned_music_json = ?, active_music_id = ?,
       owned_specials_json = ?,
-      owned_skins_json = ?, active_skin_id = ?,
+      owned_skins_json = COALESCE((
+        SELECT json_group_array(value) FROM (
+          SELECT DISTINCT CAST(value AS TEXT) AS value FROM (
+            SELECT value FROM json_each(CASE WHEN json_valid(case_player_state.owned_skins_json) THEN case_player_state.owned_skins_json ELSE '[]' END)
+            UNION ALL
+            SELECT value FROM json_each(?)
+          ) WHERE value IS NOT NULL AND value <> '' AND value <> 'default'
+        )
+      ), '[]'), active_skin_id = ?,
       mythic_pity_counter = ?, legendary_pity_counter = ?,
       revision = revision + 1, updated_at = ?
      WHERE telegram_id = ?`
@@ -4168,42 +4499,31 @@ function caseStateUpdateStatement(env, telegramId, caseState, now) {
   );
 }
 
-async function ensureCasePlayerState(env, telegramId, currentProfile) {
+async function ensureCasePlayerState(env, telegramId, currentProfile = {}) {
+  await ensureAuthoritativeEconomySchema(env);
   const now = Math.floor(Date.now() / 1000);
-  const current = normalizeOptionalAdminProfile(currentProfile);
-  const hasSkinSnapshot = Array.isArray(currentProfile?.ownedSkins);
-  const snapshotOwnedSkins = hasSkinSnapshot ? normalizeCurrentOwnedSkins(currentProfile.ownedSkins) : [];
-  const snapshotActiveSkin = hasSkinSnapshot ? normalizeCurrentActiveSkin(currentProfile?.activeSkin, snapshotOwnedSkins) : "";
-  await env.DB.batch([
-    env.DB.prepare(
-      `INSERT OR IGNORE INTO admin_profile_state (
-        telegram_id, wallet, best_score, treats, coffee, profile_xp,
-        revision, created_at, updated_at, updated_by
-      ) VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?, ?)`
-    ).bind(telegramId, current.wallet, current.best, current.treats, current.coffee, current.profileXp, now, now, telegramId),
-    env.DB.prepare(
-      `INSERT OR IGNORE INTO case_player_state (
-        telegram_id, created_at, updated_at
-      ) VALUES (?, ?, ?)`
-    ).bind(telegramId, now, now)
-  ]);
-  if (hasSkinSnapshot) {
-    await env.DB.prepare(
-      `UPDATE case_player_state SET owned_skins_json = ?, active_skin_id = ?, updated_at = ? WHERE telegram_id = ?`
-    ).bind(JSON.stringify(snapshotOwnedSkins), snapshotActiveSkin, now, telegramId).run();
+  const id = String(telegramId);
+  let profile = await ensureAuthoritativeProfileRow(env, id, `case-sync:${id}`);
+  await env.DB.prepare(
+    `INSERT OR IGNORE INTO case_player_state (telegram_id,created_at,updated_at) VALUES (?,?,?)`
+  ).bind(id, now, now).run();
+  let row = await env.DB.prepare(`SELECT * FROM case_player_state WHERE telegram_id=? LIMIT 1`).bind(id).first();
+
+  // The client may request which already-owned skin is equipped, but it can
+  // never add/remove ownership. Ownership only changes through server grants,
+  // cases, purchases or administrative operations.
+  if (currentProfile && Object.prototype.hasOwnProperty.call(currentProfile, "activeSkin")) {
+    const serverState = caseStateFromRow(row || {});
+    const requested = normalizeCurrentActiveSkin(currentProfile.activeSkin, serverState.ownedSkins);
+    if (requested !== serverState.activeSkinId) {
+      await env.DB.prepare(
+        `UPDATE case_player_state SET active_skin_id=?,revision=revision+1,updated_at=? WHERE telegram_id=?`
+      ).bind(requested, now, id).run();
+      row = await env.DB.prepare(`SELECT * FROM case_player_state WHERE telegram_id=? LIMIT 1`).bind(id).first();
+    }
   }
-  const [profileResult, caseResult] = await env.DB.batch([
-    env.DB.prepare(
-      `SELECT wallet, best_score, treats, coffee, profile_xp, revision, updated_at
-       FROM admin_profile_state WHERE telegram_id = ? LIMIT 1`
-    ).bind(telegramId),
-    env.DB.prepare(
-      `SELECT * FROM case_player_state WHERE telegram_id = ? LIMIT 1`
-    ).bind(telegramId)
-  ]);
-  const profile = profileResult.results?.[0] || null;
-  const row = caseResult.results?.[0] || null;
-  return { now, profile, row, state: caseStateFromRow(row) };
+  profile = await ensureAuthoritativeProfileRow(env, id, `case-sync:${id}`);
+  return { now, profile, row, state:caseStateFromRow(row) };
 }
 
 function normalizeCurrentOwnedSkins(value) {
@@ -4253,8 +4573,7 @@ async function buildCasePayload(env, telegramId, currentProfile, extra = {}, opt
     const type = normalizeCaseType(row.case_type);
     if (type) giftedCases[type] = safeAdminNumber(row.count);
   }
-  const current = normalizeOptionalAdminProfile(currentProfile);
-  const playerLevel = caseProfileLevel(Math.max(current.profileXp, safeAdminNumber(ensured.profile?.profile_xp)));
+  const playerLevel = caseProfileLevel(safeAdminNumber(ensured.profile?.profile_xp));
   const eligibleCases = Object.entries(LEVEL_CASE_SCHEDULE)
     .map(([level, caseType]) => ({
       level: Number(level),
@@ -4264,6 +4583,7 @@ async function buildCasePayload(env, telegramId, currentProfile, extra = {}, opt
     .filter((entry) => entry.level <= playerLevel && !openedLevels.includes(entry.level));
   return {
     ok: true,
+    authoritativeProfile: true,
     profileLevel: playerLevel,
     schedule: Object.entries(LEVEL_CASE_SCHEDULE).map(([level, caseType]) => ({
       level: Number(level),
@@ -4687,26 +5007,17 @@ async function openLevelCase(request, env, ctx = null) {
     const requestedLevel = Math.floor(Number(body.level || 0));
     const caseType = LEVEL_CASE_SCHEDULE[requestedLevel];
     if (!caseType) throw new ApiError(400, "На этом уровне кейс не выдаётся.");
-    const current = normalizeAdminProfile(body.current || {});
-    const currentOwnedSkins = normalizeCurrentOwnedSkins(body.current?.ownedSkins);
-    const ensured = await ensureCasePlayerState(env, telegramId, current);
+    const ensured = await ensureCasePlayerState(env, telegramId, {});
     const liveops = await readLiveOpsConfig(env);
     if (liveOpsCaseConfig(liveops, caseType)?.enabled === false) throw new ApiError(409, "Этот кейс временно отключён администратором.");
-    const playerLevel = caseProfileLevel(Math.max(current.profileXp, safeAdminNumber(ensured.profile?.profile_xp)));
+    const playerLevel = caseProfileLevel(safeAdminNumber(ensured.profile?.profile_xp));
     if (playerLevel < requestedLevel) throw new ApiError(403, `Кейс откроется на ${requestedLevel} уровне.`);
     const existing = await env.DB.prepare(
       `SELECT level FROM level_case_openings WHERE telegram_id = ? AND level = ? LIMIT 1`
     ).bind(telegramId, requestedLevel).first();
     if (existing) throw new ApiError(409, "Этот кейс уже открыт.");
 
-    const rolled = rollLevelCase(caseType, ensured.state, currentOwnedSkins, liveops);
-    const baseProfile = {
-      wallet: Math.max(current.wallet, safeAdminNumber(ensured.profile?.wallet)),
-      best: Math.max(current.best, safeAdminNumber(ensured.profile?.best_score)),
-      treats: Math.max(current.treats, safeAdminNumber(ensured.profile?.treats)),
-      coffee: Math.max(current.coffee, safeAdminNumber(ensured.profile?.coffee)),
-      profileXp: Math.max(current.profileXp, safeAdminNumber(ensured.profile?.profile_xp))
-    };
+    const rolled = rollLevelCase(caseType, ensured.state, ensured.state.ownedSkins, liveops);
     const now = Math.floor(Date.now() / 1000);
     const physicalRewards = await prepareCasePhysicalRewards(env, {
       rolled,
@@ -4723,15 +5034,13 @@ async function openLevelCase(request, env, ctx = null) {
         ).bind(telegramId, requestedLevel, caseType, JSON.stringify(rolled.rewards), now),
         env.DB.prepare(
           `UPDATE admin_profile_state SET
-            wallet = ?, best_score = ?, treats = ?, coffee = ?, profile_xp = ?,
+            wallet = MIN(999999999,wallet + ?), treats = MIN(999999999,treats + ?), coffee = MIN(999999999,coffee + ?),
             revision = revision + 1, updated_at = ?, updated_by = ?
            WHERE telegram_id = ?`
         ).bind(
-          safeAdminNumber(baseProfile.wallet + rolled.points),
-          baseProfile.best,
-          safeAdminNumber(baseProfile.treats + rolled.treats),
-          safeAdminNumber(baseProfile.coffee + rolled.coffee),
-          baseProfile.profileXp,
+          safeAdminNumber(rolled.points),
+          safeAdminNumber(rolled.treats),
+          safeAdminNumber(rolled.coffee),
           now,
           `case:${requestedLevel}`,
           telegramId
@@ -4752,13 +5061,8 @@ async function openLevelCase(request, env, ctx = null) {
       title: LEVEL_CASE_CONFIG[caseType]?.title || "Кейс",
       rewards: rolled.rewards
     };
-    const nextProfile = {
-      wallet: safeAdminNumber(baseProfile.wallet + rolled.points),
-      best: baseProfile.best,
-      treats: safeAdminNumber(baseProfile.treats + rolled.treats),
-      coffee: safeAdminNumber(baseProfile.coffee + rolled.coffee),
-      profileXp: baseProfile.profileXp
-    };
+    const finalProfile = await ensureAuthoritativeProfileRow(env, telegramId, `case:${requestedLevel}:response`);
+    const nextProfile = authoritativeProfileView(finalProfile);
     const inventory = await readFastCaseInventory(env, telegramId);
     const background = Promise.allSettled([
       recordCaseRewardsAnalytics(env, telegramId, rolled.rewards, "level_case", `level_${requestedLevel}`, now),
@@ -4795,113 +5099,56 @@ async function purchaseCaseFromShop(request, env) {
     await ensureShopAssortmentSchema(env);
     const assortmentProduct = await readShopAssortmentProduct(env, baseProduct.id);
     if (!assortmentProduct?.enabled) throw new ApiError(409, "Этот кейс временно убран из ассортимента.");
-    const product = {
-      ...baseProduct,
-      points: assortmentProduct.points,
-      treats: assortmentProduct.treats,
-      coffee: assortmentProduct.coffee
-    };
-
+    const product = { ...baseProduct, points:assortmentProduct.points, treats:assortmentProduct.treats, coffee:assortmentProduct.coffee };
     const requestId = String(body.requestId || "").trim();
-    if (!/^[A-Za-z0-9_-]{12,80}$/.test(requestId)) {
-      throw new ApiError(400, "Некорректный идентификатор покупки.");
-    }
-
+    if (!/^[A-Za-z0-9_-]{12,80}$/.test(requestId)) throw new ApiError(400, "Некорректный идентификатор покупки.");
     const telegramId = String(auth.user.id);
-    const current = normalizeAdminProfile(body.current || {});
-    const ensured = await ensureCasePlayerState(env, telegramId, current);
+    let ensured = await ensureCasePlayerState(env, telegramId, {});
     const grantId = `shopcase_${telegramId}_${requestId}`;
-    const existing = await env.DB.prepare(
-      `SELECT id FROM granted_cases WHERE id = ? AND telegram_id = ? LIMIT 1`
-    ).bind(grantId, telegramId).first();
-
+    const existing = await env.DB.prepare(`SELECT id FROM granted_cases WHERE id=? AND telegram_id=? LIMIT 1`).bind(grantId,telegramId).first();
     if (existing) {
-      return jsonResponse(await buildCasePayload(env, telegramId, current, {
-        authoritativeProfile: true,
-        repeated: true,
-        purchase: { productId: product.id, caseType, title: product.title }
-      }));
+      return jsonResponse(await buildCasePayload(env, telegramId, {}, {
+        repeated:true,purchase:{productId:product.id,caseType,title:product.title}
+      }, { ensured }));
     }
-
-    const wallet = Math.max(current.wallet, safeAdminNumber(ensured.profile?.wallet));
-    const treats = Math.max(current.treats, safeAdminNumber(ensured.profile?.treats));
-    const coffee = Math.max(current.coffee, safeAdminNumber(ensured.profile?.coffee));
-    const missing = [];
-    if (wallet < product.points) missing.push(`${product.points - wallet} очков`);
-    if (treats < product.treats) missing.push(`${product.treats - treats} зефира`);
-    if (coffee < product.coffee) missing.push(`${product.coffee - coffee} кофе`);
-    if (missing.length) throw new ApiError(400, `Не хватает ${missing.join(" и ")}.`);
-
-    const stockConsumptionId = `case:${telegramId}:${requestId}`;
-    const stock = await consumeShopStock(env, {
-      category: "prize",
-      productId: product.id,
-      consumptionId: stockConsumptionId,
-      telegramId
-    });
-
-    const now = Math.floor(Date.now() / 1000);
-    const nextProfile = {
-      wallet: wallet - product.points,
-      best: Math.max(current.best, safeAdminNumber(ensured.profile?.best_score)),
-      treats: treats - product.treats,
-      coffee: coffee - product.coffee,
-      profileXp: Math.max(current.profileXp, safeAdminNumber(ensured.profile?.profile_xp))
-    };
-
-    const inserted = await env.DB.prepare(
-      `INSERT OR IGNORE INTO granted_cases (
-         id, telegram_id, case_type, status, granted_by, reason, created_at
-       ) VALUES (?, ?, ?, 'pending', 'shop', ?, ?)`
-    ).bind(grantId, telegramId, caseType, `Покупка в магазине: ${product.title}`, now).run();
-
-    if (safeAdminNumber(inserted?.meta?.changes) < 1) {
-      if (!stock.repeated) await releaseShopStock(env, stockConsumptionId);
-      return jsonResponse(await buildCasePayload(env, telegramId, current, {
-        authoritativeProfile: true,
-        repeated: true,
-        purchase: { productId: product.id, caseType, title: product.title }
-      }));
-    }
-
+    const wallet=safeAdminNumber(ensured.profile?.wallet), treats=safeAdminNumber(ensured.profile?.treats), coffee=safeAdminNumber(ensured.profile?.coffee);
+    const missing=[];
+    if(wallet<product.points)missing.push(`${product.points-wallet} очков`);
+    if(treats<product.treats)missing.push(`${product.treats-treats} зефира`);
+    if(coffee<product.coffee)missing.push(`${product.coffee-coffee} кофе`);
+    if(missing.length)throw new ApiError(400,`Не хватает ${missing.join(" и ")}.`);
+    const stockConsumptionId=`case:${telegramId}:${requestId}`;
+    const stock=await consumeShopStock(env,{category:"prize",productId:product.id,consumptionId:stockConsumptionId,telegramId});
+    const now=Math.floor(Date.now()/1000);
+    const marker=`case-purchase:${requestId}`;
     try {
-      await env.DB.prepare(
-        `UPDATE admin_profile_state SET
-           wallet = ?, treats = ?, coffee = ?,
-           best_score = MAX(best_score, ?), profile_xp = MAX(profile_xp, ?),
-           revision = revision + 1, updated_at = ?, updated_by = ?
-         WHERE telegram_id = ?`
-      ).bind(
-        nextProfile.wallet,
-        nextProfile.treats,
-        nextProfile.coffee,
-        nextProfile.best,
-        nextProfile.profileXp,
-        now,
-        telegramId,
-        telegramId
-      ).run();
-    } catch (error) {
-      try { await env.DB.prepare(`DELETE FROM granted_cases WHERE id = ? AND status = 'pending'`).bind(grantId).run(); } catch {}
-      if (!stock.repeated) await releaseShopStock(env, stockConsumptionId);
+      const results=await env.DB.batch([
+        env.DB.prepare(
+          `UPDATE admin_profile_state SET wallet=wallet-?,treats=treats-?,coffee=coffee-?,revision=revision+1,updated_at=?,updated_by=?
+           WHERE telegram_id=? AND wallet>=? AND treats>=? AND coffee>=?`
+        ).bind(product.points,product.treats,product.coffee,now,marker,telegramId,product.points,product.treats,product.coffee),
+        env.DB.prepare(
+          `INSERT OR IGNORE INTO granted_cases(id,telegram_id,case_type,status,granted_by,reason,created_at)
+           SELECT ?,?,?,'pending','shop',?,? WHERE EXISTS(SELECT 1 FROM admin_profile_state WHERE telegram_id=? AND updated_by=?)`
+        ).bind(grantId,telegramId,caseType,`Покупка в магазине: ${product.title}`,now,telegramId,marker)
+      ]);
+      if(Number(results?.[0]?.meta?.changes||0)!==1 || Number(results?.[1]?.meta?.changes||0)!==1) {
+        const repeated=await env.DB.prepare(`SELECT id FROM granted_cases WHERE id=? AND telegram_id=? LIMIT 1`).bind(grantId,telegramId).first();
+        if(!repeated)throw new ApiError(409,"Баланс изменился. Обновите магазин и повторите покупку.");
+      }
+    } catch(error) {
+      if(!stock.repeated)await releaseShopStock(env,stockConsumptionId);
       throw error;
     }
-
-    await recordPlayerTimeline(env, telegramId, "case_purchase", `купил ${product.title}`, { caseType, cost: { points: product.points, treats: product.treats, coffee: product.coffee } }, `case_purchase_${requestId}`, auth.user, now);
-    return jsonResponse(await buildCasePayload(env, telegramId, nextProfile, {
-      authoritativeProfile: true,
-      purchase: {
-        productId: product.id,
-        caseType,
-        title: product.title,
-        cost: { points: product.points, treats: product.treats, coffee: product.coffee },
-        stock
-      }
-    }));
-  } catch (error) {
-    if (error instanceof ApiError) return jsonResponse({ ok: false, error: error.message, details: error.details }, error.status);
-    console.error("purchaseCaseFromShop failed", error);
-    return jsonResponse({ ok: false, error: "Не удалось купить кейс." }, 500);
+    ensured=await ensureCasePlayerState(env,telegramId,{});
+    await recordPlayerTimeline(env,telegramId,"case_purchase",`купил ${product.title}`,{caseType,cost:{points:product.points,treats:product.treats,coffee:product.coffee}},`case_purchase_${requestId}`,auth.user,now);
+    return jsonResponse(await buildCasePayload(env,telegramId,{}, {
+      purchase:{productId:product.id,caseType,title:product.title,cost:{points:product.points,treats:product.treats,coffee:product.coffee},stock}
+    }, { ensured }));
+  } catch(error) {
+    if(error instanceof ApiError)return jsonResponse({ok:false,error:error.message,details:error.details},error.status);
+    console.error("purchaseCaseFromShop failed",error);
+    return jsonResponse({ok:false,error:"Не удалось купить кейс."},500);
   }
 }
 
@@ -4916,9 +5163,7 @@ async function openGrantedCase(request, env, ctx = null) {
     const telegramId = String(auth.user.id);
     const caseType = normalizeCaseType(body.caseType);
     if (!caseType) throw new ApiError(400, "Неизвестный тип кейса.");
-    const current = normalizeAdminProfile(body.current || {});
-    const currentOwnedSkins = normalizeCurrentOwnedSkins(body.current?.ownedSkins);
-    const ensured = await ensureCasePlayerState(env, telegramId, current);
+    const ensured = await ensureCasePlayerState(env, telegramId, {});
     const liveops = await readLiveOpsConfig(env);
     if (liveOpsCaseConfig(liveops, caseType)?.enabled === false) throw new ApiError(409, "Этот кейс временно отключён администратором.");
     const gift = await env.DB.prepare(
@@ -4932,14 +5177,7 @@ async function openGrantedCase(request, env, ctx = null) {
     ).bind(claimedId, telegramId).run();
     if (Number(claim?.meta?.changes || 0) < 1) throw new ApiError(409, "Этот кейс уже открывается.");
 
-    const rolled = rollLevelCase(caseType, ensured.state, currentOwnedSkins, liveops);
-    const baseProfile = {
-      wallet: Math.max(current.wallet, safeAdminNumber(ensured.profile?.wallet)),
-      best: Math.max(current.best, safeAdminNumber(ensured.profile?.best_score)),
-      treats: Math.max(current.treats, safeAdminNumber(ensured.profile?.treats)),
-      coffee: Math.max(current.coffee, safeAdminNumber(ensured.profile?.coffee)),
-      profileXp: Math.max(current.profileXp, safeAdminNumber(ensured.profile?.profile_xp))
-    };
+    const rolled = rollLevelCase(caseType, ensured.state, ensured.state.ownedSkins, liveops);
     const now = Math.floor(Date.now() / 1000);
     const physicalRewards = await prepareCasePhysicalRewards(env, {
       rolled,
@@ -4952,13 +5190,12 @@ async function openGrantedCase(request, env, ctx = null) {
     await env.DB.batch([
       env.DB.prepare(
         `UPDATE admin_profile_state SET
-          wallet = ?, best_score = ?, treats = ?, coffee = ?, profile_xp = ?,
+          wallet = MIN(999999999,wallet + ?), treats = MIN(999999999,treats + ?), coffee = MIN(999999999,coffee + ?),
           revision = revision + 1, updated_at = ?, updated_by = ?
          WHERE telegram_id = ?`
       ).bind(
-        safeAdminNumber(baseProfile.wallet + rolled.points), baseProfile.best,
-        safeAdminNumber(baseProfile.treats + rolled.treats), safeAdminNumber(baseProfile.coffee + rolled.coffee),
-        baseProfile.profileXp, now, `gift-case:${caseType}`, telegramId
+        safeAdminNumber(rolled.points), safeAdminNumber(rolled.treats), safeAdminNumber(rolled.coffee),
+        now, `gift-case:${caseType}`, telegramId
       ),
       caseStateUpdateStatement(env, telegramId, rolled.state, now),
       env.DB.prepare(
@@ -4974,13 +5211,8 @@ async function openGrantedCase(request, env, ctx = null) {
       title: LEVEL_CASE_CONFIG[caseType]?.title || "Кейс",
       rewards: rolled.rewards
     };
-    const nextProfile = {
-      wallet: safeAdminNumber(baseProfile.wallet + rolled.points),
-      best: baseProfile.best,
-      treats: safeAdminNumber(baseProfile.treats + rolled.treats),
-      coffee: safeAdminNumber(baseProfile.coffee + rolled.coffee),
-      profileXp: baseProfile.profileXp
-    };
+    const finalProfile = await ensureAuthoritativeProfileRow(env, telegramId, `gift-case:${caseType}:response`);
+    const nextProfile = authoritativeProfileView(finalProfile);
     const inventory = await readFastCaseInventory(env, telegramId);
     const background = Promise.allSettled([
       recordCaseRewardsAnalytics(env, telegramId, rolled.rewards, "granted_case", claimedId, now),
@@ -5122,12 +5354,26 @@ async function consumeCaseBoosterRun(request, env) {
   try {
     requireDatabase(env);
     requireBotToken(env);
+    await ensureAuthoritativeEconomySchema(env);
     const body = await readJson(request);
     const auth = await validateTelegramInitData(String(body.initData || ""), env);
     const telegramId = String(auth.user.id);
     const runId = String(body.runId || "").trim();
     if (!/^[A-Za-z0-9_-]{12,96}$/.test(runId)) throw new ApiError(400, "Некорректный идентификатор забега.");
-    const ensured = await ensureCasePlayerState(env, telegramId, body.current || {});
+
+    // New clients start a protected run session before gameplay. The booster is
+    // consumed by the authoritative settlement together with the economy
+    // credit, so a legacy background /consume-run request must not race it.
+    const session = await env.DB.prepare(`SELECT telegram_id,status FROM game_run_sessions WHERE run_id=? LIMIT 1`).bind(runId).first();
+    if (session) {
+      if (String(session.telegram_id || "") !== telegramId) throw new ApiError(409, "Этот идентификатор забега уже используется.");
+      if (String(session.status || "") === "started") {
+        const payload = await buildCasePayload(env, telegramId, {});
+        return jsonResponse({ ...payload, deferredToRunSettlement: true });
+      }
+    }
+
+    const ensured = await ensureCasePlayerState(env, telegramId, {});
     const existing = await env.DB.prepare(
       `SELECT run_id FROM case_booster_run_consumptions WHERE run_id = ? LIMIT 1`
     ).bind(runId).first();
@@ -5149,7 +5395,7 @@ async function consumeCaseBoosterRun(request, env) {
         caseStateUpdateStatement(env, telegramId, state, now)
       ]);
     }
-    return jsonResponse(await buildCasePayload(env, telegramId, body.current || {}));
+    return jsonResponse(await buildCasePayload(env, telegramId, {}));
   } catch (error) {
     if (error instanceof ApiError) return jsonResponse({ ok: false, error: error.message }, error.status);
     console.error("consumeCaseBoosterRun failed", error);
@@ -5222,107 +5468,354 @@ async function submitLeaderboardRun(request, env) {
   try {
     requireDatabase(env);
     requireBotToken(env);
+    await ensureAuthoritativeEconomySchema(env);
     await ensureSeasonPassSchema(env);
     const body = await readJson(request);
     const auth = await validateTelegramInitData(String(body.initData || ""), env);
-    const season = await ensureSeason(env);
-    if (String(season.status) !== "active") {
-      throw new ApiError(409, String(season.status) === "scheduled" ? "Сезон ещё не начался." : "Сезон уже завершён.");
-    }
-
+    const telegramId = String(auth.user.id);
+    const ratingFeatureEnabled = await isFeatureEnabled(env, "rating", telegramId);
+    let ratingMaintenanceEnabled = true;
+    try { ratingMaintenanceEnabled = !(await getMaintenanceSettings(env))?.ratingDisabled; } catch {}
+    const ratingEntryEnabled = ratingFeatureEnabled && ratingMaintenanceEnabled;
     const runId = String(body.runId || "").trim();
     if (!/^[A-Za-z0-9_-]{12,96}$/.test(runId)) throw new ApiError(400, "Некорректный идентификатор забега.");
-    const score = Math.floor(Number(body.score || 0));
-    const durationMs = Math.floor(Number(body.durationMs || 0));
-    const runTreats = Math.max(0, Math.min(10000, Math.floor(Number(body.runTreats || body.run_treats || 0))));
-    const runCoffee = Math.max(0, Math.min(10000, Math.floor(Number(body.runCoffee || body.run_coffee || 0))));
-    const level = Math.max(1, Math.floor(Number(body.level || 1)));
+
+    const submittedMetrics = {
+      score: Math.max(0, Math.floor(Number(body.score || 0))),
+      durationMs: Math.max(0, Math.floor(Number(body.durationMs || 0))),
+      runTreats: Math.max(0, Math.floor(Number(body.runTreats || body.run_treats || 0))),
+      runCoffee: Math.max(0, Math.floor(Number(body.runCoffee || body.run_coffee || 0)))
+    };
+    const season = await ensureSeason(env);
     const minSeconds = positiveInt(env.LEADERBOARD_MIN_RUN_SECONDS, DEFAULT_LEADERBOARD_MIN_RUN_SECONDS);
     const minScore = positiveInt(env.LEADERBOARD_MIN_SCORE, DEFAULT_LEADERBOARD_MIN_SCORE);
-    const durationSeconds = durationMs / 1000;
-    if (!Number.isFinite(score) || score < minScore || !Number.isFinite(durationSeconds) || durationSeconds < minSeconds) {
-      throw new ApiError(400, `В рейтинг попадают забеги от ${minSeconds} секунд и ${minScore} очков.`);
-    }
-    const generousMaxScore = Math.floor(durationSeconds * 90 + 6000);
-    if (score > generousMaxScore) throw new ApiError(400, "Результат не прошёл серверную проверку.");
+    const qualifies = submittedMetrics.durationMs >= minSeconds * 1000 && submittedMetrics.score >= minScore;
 
+    const buildResponse = async (ledger, repeated, seasonPassAward = null) => {
+      await ensureAuthoritativeProfileRow(env, telegramId, `run:${runId}`);
+      const casePayload = await buildCasePayload(env, telegramId, {});
+      const profileRow = await ensureAuthoritativeProfileRow(env, telegramId, `run:${runId}:response`);
+      const leaderboardPayload = await buildLeaderboardPayload(env, season, telegramId, "season");
+      const acceptedToRating = Number(ledger?.accepted_rating || 0) === 1;
+      const runCreatedAt = Math.max(0, Number(ledger?.created_at || Math.floor(Date.now() / 1000)));
+      let passAward = seasonPassAward;
+      if (!passAward && Number(ledger?.raw_score || 0) >= minScore && Number(ledger?.duration_ms || 0) >= minSeconds * 1000) {
+        try {
+          passAward = await recordSeasonPassRunActivity(env, telegramId, {
+            runId,
+            score: Number(ledger.raw_score || 0),
+            durationMs: Number(ledger.duration_ms || 0),
+            runTreats: Number(ledger.raw_treats || 0),
+            runCoffee: Number(ledger.raw_coffee || 0),
+            newRecord: Number(ledger.new_record || 0) === 1
+          }, null, { serverValidated: true, runCreatedAt });
+        } catch (error) {
+          console.error("authoritative season pass retry failed", error);
+        }
+      }
+      if (passAward) leaderboardPayload.seasonPassAward = passAward;
+      return {
+        ...leaderboardPayload,
+        caseState: casePayload.caseState,
+        profile: authoritativeProfileView(profileRow),
+        authoritativeProfile: true,
+        runSettlement: {
+          accepted: true,
+          repeated: Boolean(repeated),
+          acceptedToRating,
+          reason: acceptedToRating ? "accepted" : (!qualifies ? "below_minimum" : (!ratingEntryEnabled ? "rating_disabled" : `season_${String(season.status || "inactive")}`)),
+          raw: {
+            score: Number(ledger?.raw_score || submittedMetrics.score),
+            treats: Number(ledger?.raw_treats || submittedMetrics.runTreats),
+            coffee: Number(ledger?.raw_coffee || submittedMetrics.runCoffee),
+            durationMs: Number(ledger?.duration_ms || submittedMetrics.durationMs)
+          },
+          credited: {
+            points: Number(ledger?.points || 0),
+            treats: Number(ledger?.treats || 0),
+            coffee: Number(ledger?.coffee || 0)
+          },
+          profileXpAwarded: Number(ledger?.profile_xp || 0),
+          newRecord: Number(ledger?.new_record || 0) === 1,
+          boosterType: String(ledger?.booster_type || ""),
+          skinId: String(ledger?.skin_id || "default"),
+          seasonId: String(ledger?.season_id || season.id || "")
+        }
+      };
+    };
+
+    const existingLedger = await env.DB.prepare(`SELECT * FROM player_economy_run_ledger WHERE run_id=? LIMIT 1`).bind(runId).first();
+    if (existingLedger) {
+      const same = String(existingLedger.telegram_id || "") === telegramId
+        && Number(existingLedger.raw_score || 0) === submittedMetrics.score
+        && Number(existingLedger.raw_treats || 0) === submittedMetrics.runTreats
+        && Number(existingLedger.raw_coffee || 0) === submittedMetrics.runCoffee
+        && Number(existingLedger.duration_ms || 0) === submittedMetrics.durationMs;
+      if (!same) throw new ApiError(409, "Этот идентификатор забега уже использован.");
+      if (Number(existingLedger.accepted_rating || 0) === 1) {
+        try {
+          const caseState = (await ensureCasePlayerState(env, telegramId, {})).state;
+          await syncLeaderboardAllTimeFromSeasonEntries(env, {
+            telegramId,
+            displayName: telegramDisplayName(auth.user).slice(0, 120),
+            username: String(auth.user.username || "").slice(0, 64),
+            photoUrl: String(auth.user.photo_url || "").slice(0, 500),
+            level: profileLevelFromXp(Number((await ensureAuthoritativeProfileRow(env, telegramId, `run:${runId}`))?.profile_xp || 0)),
+            hidden: Number((await getTesterAccountSafe(telegramId, env))?.exclude_from_rating || 0) === 1 ? 1 : 0,
+            caseAvatarId: caseState.activeAvatarId,
+            caseFrameId: caseState.activeFrameId,
+            now: Number(existingLedger.created_at || Math.floor(Date.now()/1000))
+          });
+        } catch (error) { console.error("authoritative all-time retry failed", error); }
+      }
+      return jsonResponse(await buildResponse(existingLedger, true));
+    }
+
+    const session = await env.DB.prepare(`SELECT * FROM game_run_sessions WHERE run_id=? LIMIT 1`).bind(runId).first();
+    if (!session) {
+      // Compatibility only for a run that was already accepted by the old
+      // Worker before the cutover. It is never re-credited here: the one-time
+      // server cutover recovers verifiable unsynchronised legacy progress.
+      const cutoverAt = await authoritativeEconomyCutoverAt(env);
+      const legacy = await env.DB.prepare(
+        `SELECT * FROM leaderboard_runs WHERE run_id=? AND telegram_id=? AND accepted=1 AND created_at<=? LIMIT 1`
+      ).bind(runId, telegramId, cutoverAt).first();
+      const sameLegacy = legacy
+        && Number(legacy.score || 0) === submittedMetrics.score
+        && Number(legacy.duration_ms || 0) === submittedMetrics.durationMs
+        && Number(legacy.run_treats || 0) === submittedMetrics.runTreats
+        && Number(legacy.run_coffee || 0) === submittedMetrics.runCoffee;
+      if (!sameLegacy) throw new ApiError(409, "Начните новый забег после обновления игры.");
+      await ensureAuthoritativeProfileRow(env, telegramId, "legacy-run-cutover");
+      const casePayload = await buildCasePayload(env, telegramId, {});
+      const profileRow = await ensureAuthoritativeProfileRow(env, telegramId, "legacy-run-cutover:response");
+      let passAward = null;
+      try {
+        passAward = await recordSeasonPassRunActivity(env, telegramId, {
+          runId,
+          score: submittedMetrics.score,
+          durationMs: submittedMetrics.durationMs,
+          runTreats: submittedMetrics.runTreats,
+          runCoffee: submittedMetrics.runCoffee,
+          newRecord: false
+        }, null, { serverValidated: true, runCreatedAt: Number(legacy.created_at || cutoverAt) });
+      } catch (error) { console.error("legacy season pass recovery failed", error); }
+      const leaderboardPayload = await buildLeaderboardPayload(env, season, telegramId, "season");
+      if (passAward) leaderboardPayload.seasonPassAward = passAward;
+      return jsonResponse({
+        ...leaderboardPayload,
+        caseState: casePayload.caseState,
+        profile: authoritativeProfileView(profileRow),
+        authoritativeProfile: true,
+        runSettlement: {
+          accepted: true,
+          repeated: true,
+          legacyRecovered: true,
+          acceptedToRating: true,
+          reason: "legacy_recovered",
+          raw: { score: submittedMetrics.score, treats: submittedMetrics.runTreats, coffee: submittedMetrics.runCoffee, durationMs: submittedMetrics.durationMs },
+          credited: { points: 0, treats: 0, coffee: 0 },
+          profileXpAwarded: 0,
+          newRecord: false,
+          boosterType: "",
+          skinId: String(casePayload.caseState?.activeSkinId || "default"),
+          seasonId: String(legacy.season_id || season.id || "")
+        }
+      });
+    }
+    if (String(session.telegram_id || "") !== telegramId) throw new ApiError(409, "Этот идентификатор забега уже используется.");
+    if (String(session.status || "") !== "started") throw new ApiError(409, "Этот забег уже завершён. Обновите игру и повторите синхронизацию.");
+
+    const metrics = await validateAuthoritativeRunMetrics(env, session, submittedMetrics);
+    const ensured = await ensureCasePlayerState(env, telegramId, {});
+    const profileBefore = await ensureAuthoritativeProfileRow(env, telegramId, `run:${runId}:prepare`);
+    const consumed = await env.DB.prepare(`SELECT booster_type,telegram_id FROM case_booster_run_consumptions WHERE run_id=? LIMIT 1`).bind(runId).first();
+    if (consumed && String(consumed.telegram_id || "") !== telegramId) throw new ApiError(409, "Этот идентификатор забега уже использован.");
+
+    const caseState = ensured.state;
+    const boosterAlreadyConsumed = Boolean(consumed);
+    const boosterType = boosterAlreadyConsumed
+      ? String(consumed.booster_type || "")
+      : (caseState.activeBooster.type && caseState.activeBooster.runsLeft > 0 ? String(caseState.activeBooster.type) : "");
+    const skinId = normalizeCurrentActiveSkin(caseState.activeSkinId, caseState.ownedSkins);
+    const skinBonus = serverRunSkinBonus(skinId);
+    const acceptedToRating = ratingEntryEnabled && String(season.status || "") === "active" && qualifies;
+    const boostedPoints = boosterType === "points" ? metrics.score * 2 : metrics.score;
+    const boostedTreats = boosterType === "treats" ? metrics.runTreats * 2 : metrics.runTreats;
+    const boostedCoffee = boosterType === "coffee" ? metrics.runCoffee * 2 : metrics.runCoffee;
+    const economyPoints = Math.min(999999999, boostedPoints + (qualifies ? skinBonus.points : 0));
+    const economyTreats = Math.min(999999999, boostedTreats + (qualifies ? skinBonus.treats : 0));
+    const economyCoffee = Math.min(999999999, boostedCoffee + (qualifies ? skinBonus.coffee : 0));
+    const profileBonus = qualifies ? await getSeasonPassProfileBonusForUser(env, telegramId) : { multiplier: 1 };
+    const profileXpAwarded = qualifies ? Math.min(999999999, AUTHORITATIVE_PROFILE_RUN_XP * Math.max(1, Number(profileBonus?.multiplier || 1))) : 0;
+    const newRecord = metrics.score > Number(profileBefore?.best_score || 0) && metrics.score > 0;
+    const nextProfileXp = Math.min(999999999, Number(profileBefore?.profile_xp || 0) + profileXpAwarded);
+    const nextLevel = profileLevelFromXp(nextProfileXp);
     const now = Math.floor(Date.now() / 1000);
-    const telegramId = String(auth.user.id);
-    const testerRow = await getTesterAccountSafe(telegramId, env);
-    const ratingHidden = Number(testerRow?.exclude_from_rating || 0) === 1 ? 1 : 0;
     const displayName = telegramDisplayName(auth.user).slice(0, 120);
     const username = String(auth.user.username || "").slice(0, 64);
     const photoUrl = String(auth.user.photo_url || "").slice(0, 500);
-    const caseAvatarId = normalizeCaseCosmeticId("avatar", body.caseAvatarId);
-    const caseFrameId = normalizeCaseCosmeticId("frame", body.caseFrameId);
-    let achievedAt = now;
+    const testerRow = await getTesterAccountSafe(telegramId, env);
+    const ratingHidden = Number(testerRow?.exclude_from_rating || 0) === 1 ? 1 : 0;
+    const rejectionReason = acceptedToRating ? "" : (!qualifies ? "below_minimum" : (!ratingEntryEnabled ? "rating_disabled" : `season_${String(season.status || "inactive")}`));
 
-    try {
-      await env.DB.prepare(
-        `INSERT INTO leaderboard_runs (
-          run_id, season_id, telegram_id, score, duration_ms, run_treats, run_coffee, accepted, created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?)`
-      ).bind(runId, season.id, telegramId, score, durationMs, runTreats, runCoffee, now).run();
-    } catch (error) {
-      if (!String(error?.message || error).toLowerCase().includes("unique")) throw error;
-      const existingRun = await env.DB.prepare(
-        `SELECT season_id, telegram_id, score, duration_ms, run_treats, run_coffee, accepted, created_at
-         FROM leaderboard_runs WHERE run_id = ? LIMIT 1`
-      ).bind(runId).first();
-      const sameRun = existingRun
-        && String(existingRun.season_id || "") === String(season.id)
-        && String(existingRun.telegram_id || "") === telegramId
-        && Number(existingRun.score || 0) === score
-        && Number(existingRun.duration_ms || 0) === durationMs
-        && Number(existingRun.run_treats || 0) === runTreats
-        && Number(existingRun.run_coffee || 0) === runCoffee
-        && Number(existingRun.accepted || 0) === 1;
-      if (!sameRun) throw new ApiError(409, "Этот идентификатор забега уже использован.");
-      achievedAt = Number(existingRun.created_at || now);
-      // Не завершаем повторную отправку раньше времени: UPSERT-ы ниже
-      // восстановят таблицу, если первая попытка оборвалась после записи забега.
+    if (!boosterAlreadyConsumed) {
+      if (boosterType) {
+        caseState.activeBooster.runsLeft = Math.max(0, Number(caseState.activeBooster.runsLeft || 0) - 1);
+        if (caseState.activeBooster.runsLeft <= 0) caseState.activeBooster = { type: "", runsLeft: 0 };
+      }
     }
 
-    await env.DB.prepare(
-      `INSERT INTO leaderboard_entries (
-        season_id, telegram_id, display_name, username, photo_url,
-        best_score, level, achieved_at, updated_at, hidden, case_avatar_id, case_frame_id
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      ON CONFLICT(season_id, telegram_id) DO UPDATE SET
-        display_name = excluded.display_name,
-        username = excluded.username,
-        photo_url = excluded.photo_url,
-        case_avatar_id = excluded.case_avatar_id,
-        case_frame_id = excluded.case_frame_id,
-        level = excluded.level,
-        best_score = CASE WHEN excluded.best_score > leaderboard_entries.best_score THEN excluded.best_score ELSE leaderboard_entries.best_score END,
-        achieved_at = CASE WHEN excluded.best_score > leaderboard_entries.best_score THEN excluded.achieved_at ELSE leaderboard_entries.achieved_at END,
-        hidden = excluded.hidden,
-        updated_at = excluded.updated_at`
-    ).bind(season.id, telegramId, displayName, username, photoUrl, score, level, achievedAt, now, ratingHidden, caseAvatarId, caseFrameId).run();
+    const statements = [
+      env.DB.prepare(
+        `INSERT INTO player_economy_run_ledger(
+          run_id,telegram_id,points,treats,coffee,profile_xp,raw_score,raw_treats,raw_coffee,duration_ms,
+          booster_type,skin_id,new_record,accepted_rating,season_id,created_at
+        ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
+      ).bind(runId, telegramId, economyPoints, economyTreats, economyCoffee, profileXpAwarded, metrics.score, metrics.runTreats, metrics.runCoffee, metrics.durationMs, boosterType, skinId, newRecord ? 1 : 0, acceptedToRating ? 1 : 0, String(season.id || ""), now),
+      env.DB.prepare(
+        `UPDATE admin_profile_state SET
+           wallet=MIN(999999999,wallet+?),treats=MIN(999999999,treats+?),coffee=MIN(999999999,coffee+?),
+           profile_xp=MIN(999999999,profile_xp+?),best_score=MAX(best_score,?),revision=revision+1,updated_at=?,updated_by=?
+         WHERE telegram_id=?`
+      ).bind(economyPoints, economyTreats, economyCoffee, profileXpAwarded, metrics.score, now, `run:${runId}`, telegramId),
+      env.DB.prepare(
+        `UPDATE game_run_sessions SET status='finished',finished_at_ms=?,duration_ms=?,score=?,run_treats=?,run_coffee=?,
+           economy_points=?,economy_treats=?,economy_coffee=?,profile_xp=?,new_record=?,accepted_rating=?,season_id=?,updated_at=?
+         WHERE run_id=? AND telegram_id=? AND status='started'`
+      ).bind(Date.now(), metrics.durationMs, metrics.score, metrics.runTreats, metrics.runCoffee, economyPoints, economyTreats, economyCoffee, profileXpAwarded, newRecord ? 1 : 0, acceptedToRating ? 1 : 0, String(season.id || ""), now, runId, telegramId),
+      env.DB.prepare(
+        `INSERT INTO leaderboard_runs(run_id,season_id,telegram_id,score,duration_ms,run_treats,run_coffee,accepted,rejection_reason,created_at)
+         VALUES(?,?,?,?,?,?,?,?,?,?)`
+      ).bind(runId, String(season.id || ""), telegramId, metrics.score, metrics.durationMs, metrics.runTreats, metrics.runCoffee, acceptedToRating ? 1 : 0, rejectionReason, now)
+    ];
+    if (!boosterAlreadyConsumed) {
+      statements.push(
+        env.DB.prepare(
+          `INSERT INTO case_booster_run_consumptions(run_id,telegram_id,booster_type,consumed_at) VALUES(?,?,?,?)`
+        ).bind(runId, telegramId, boosterType, now),
+        env.DB.prepare(
+          `UPDATE case_player_state SET active_booster_type=?,active_booster_runs=?,revision=revision+1,updated_at=? WHERE telegram_id=?`
+        ).bind(String(caseState.activeBooster.type || ""), safeAdminNumber(caseState.activeBooster.runsLeft), now, telegramId)
+      );
+    }
+    if (acceptedToRating) {
+      statements.push(env.DB.prepare(
+        `INSERT INTO leaderboard_entries(
+          season_id,telegram_id,display_name,username,photo_url,best_score,level,achieved_at,updated_at,hidden,case_avatar_id,case_frame_id
+        ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)
+        ON CONFLICT(season_id,telegram_id) DO UPDATE SET
+          display_name=excluded.display_name,username=excluded.username,photo_url=excluded.photo_url,
+          case_avatar_id=excluded.case_avatar_id,case_frame_id=excluded.case_frame_id,level=excluded.level,
+          best_score=CASE WHEN excluded.best_score>leaderboard_entries.best_score THEN excluded.best_score ELSE leaderboard_entries.best_score END,
+          achieved_at=CASE WHEN excluded.best_score>leaderboard_entries.best_score THEN excluded.achieved_at ELSE leaderboard_entries.achieved_at END,
+          hidden=excluded.hidden,updated_at=excluded.updated_at`
+      ).bind(String(season.id || ""), telegramId, displayName, username, photoUrl, metrics.score, nextLevel, now, now, ratingHidden, caseState.activeAvatarId, caseState.activeFrameId));
+    }
 
-    await syncLeaderboardAllTimeFromSeasonEntries(env, {
-      telegramId,
-      displayName,
-      username,
-      photoUrl,
-      level,
-      hidden: ratingHidden,
-      caseAvatarId,
-      caseFrameId,
-      now: achievedAt
-    });
+    try {
+      await env.DB.batch(statements);
+    } catch (batchError) {
+      const text = String(batchError?.message || batchError).toLowerCase();
+      if (text.includes("unique") || text.includes("primary key")) {
+        const raced = await env.DB.prepare(`SELECT * FROM player_economy_run_ledger WHERE run_id=? LIMIT 1`).bind(runId).first();
+        if (raced) {
+          const same = String(raced.telegram_id || "") === telegramId
+            && Number(raced.raw_score || 0) === metrics.score
+            && Number(raced.raw_treats || 0) === metrics.runTreats
+            && Number(raced.raw_coffee || 0) === metrics.runCoffee
+            && Number(raced.duration_ms || 0) === metrics.durationMs;
+          if (!same) throw new ApiError(409, "Этот идентификатор забега уже использован.");
+          return jsonResponse(await buildResponse(raced, true));
+        }
+      }
+      throw batchError;
+    }
 
-    await recordPlayerTimeline(env, telegramId, "run", `завершил забег с результатом ${score.toLocaleString("ru-RU")}`, { runId, score, durationMs, runTreats, runCoffee, level, accepted: true, excludedFromRating: Boolean(ratingHidden) }, `run_${runId}`, auth.user, achievedAt);
-    const seasonPassAward = await recordSeasonPassRunActivity(env, telegramId, { runId, score, durationMs, runTreats, runCoffee, newRecord:Boolean(body.newRecord||body.new_record) });
-    const leaderboardPayload = await buildLeaderboardPayload(env, season, telegramId, "season");
-    if (seasonPassAward) leaderboardPayload.seasonPassAward = seasonPassAward;
-    return jsonResponse(leaderboardPayload);
+    if (acceptedToRating) {
+      try {
+        await syncLeaderboardAllTimeFromSeasonEntries(env, {
+          telegramId, displayName, username, photoUrl, level: nextLevel, hidden: ratingHidden,
+          caseAvatarId: caseState.activeAvatarId, caseFrameId: caseState.activeFrameId, now
+        });
+      } catch (error) { console.error("authoritative all-time sync failed", error); }
+    }
+
+    let seasonPassAward = null;
+    if (qualifies) {
+      try {
+        seasonPassAward = await recordSeasonPassRunActivity(env, telegramId, {
+          runId,
+          score: metrics.score,
+          durationMs: metrics.durationMs,
+          runTreats: metrics.runTreats,
+          runCoffee: metrics.runCoffee,
+          newRecord
+        }, null, { serverValidated: true, runCreatedAt: now });
+      } catch (error) { console.error("authoritative season pass activity failed", error); }
+    }
+    try {
+      await recordPlayerTimeline(
+        env, telegramId, "run",
+        `завершил забег с результатом ${metrics.score.toLocaleString("ru-RU")}`,
+        {
+          runId, score: metrics.score, durationMs: metrics.durationMs, runTreats: metrics.runTreats, runCoffee: metrics.runCoffee,
+          credited: { points: economyPoints, treats: economyTreats, coffee: economyCoffee }, profileXpAwarded,
+          boosterType, skinId, newRecord, accepted: acceptedToRating, excludedFromRating: Boolean(ratingHidden)
+        },
+        `run_${runId}`, auth.user, now
+      );
+    } catch (error) { console.error("authoritative run timeline failed", error); }
+
+    const ledger = await env.DB.prepare(`SELECT * FROM player_economy_run_ledger WHERE run_id=? LIMIT 1`).bind(runId).first();
+    return jsonResponse(await buildResponse(ledger, false, seasonPassAward));
   } catch (error) {
     if (error instanceof ApiError) return jsonResponse({ ok: false, error: error.message }, error.status);
     console.error("submitLeaderboardRun failed", error);
-    return jsonResponse({ ok: false, error: "Не удалось отправить результат в рейтинг." }, 500);
+    return jsonResponse({ ok: false, error: "Не удалось сохранить забег." }, 500);
   }
+}
+
+function leaderboardRewardQueueItem(presentation) {
+  const type = String(presentation?.type || "coffee").toLowerCase();
+  const amount = Math.max(1, Math.floor(Number(presentation?.amount || 1)));
+  let itemId = String(presentation?.itemId || "").trim();
+  if (type === "points") return { kind: "points", id: "", amount };
+  if (type === "treats") return { kind: "zefir", id: "", amount };
+  if (type === "coffee") return { kind: "coffee", id: "", amount };
+  if (type === "case") {
+    const caseType = normalizeCaseType(itemId);
+    if (!caseType) throw new ApiError(500, "В сезонной награде указан неизвестный кейс.");
+    return { kind: "case", id: caseType, amount };
+  }
+  if (type === "skin") {
+    itemId = itemId.replace(/^skin[:_-]/i, "");
+    if (!SKINS[itemId] || itemId === "default") throw new ApiError(500, "В сезонной награде указан неизвестный скин.");
+    return { kind: "skin", id: itemId, amount: 1 };
+  }
+  if (type === "item") {
+    const match = itemId.match(/^(avatar|frame|trail|skin|case)[:_-](.+)$/i);
+    if (match) {
+      const kind = String(match[1]).toLowerCase();
+      const id = String(match[2] || "").trim();
+      if (kind === "case") {
+        const caseType = normalizeCaseType(id);
+        if (!caseType) throw new ApiError(500, "В сезонной награде указан неизвестный кейс.");
+        return { kind: "case", id: caseType, amount };
+      }
+      if (kind === "skin") {
+        if (!SKINS[id] || id === "default") throw new ApiError(500, "В сезонной награде указан неизвестный скин.");
+        return { kind: "skin", id, amount: 1 };
+      }
+      const catalog = kind === "avatar" ? CASE_AVATARS : kind === "frame" ? CASE_FRAMES : CASE_TRAILS;
+      if (!catalog[id]) throw new ApiError(500, "В сезонной награде указан неизвестный предмет.");
+      return { kind, id, amount: 1 };
+    }
+    const caseType = normalizeCaseType(itemId);
+    if (caseType) return { kind: "case", id: caseType, amount };
+    if (SKINS[itemId] && itemId !== "default") return { kind: "skin", id: itemId, amount: 1 };
+  }
+  throw new ApiError(500, "Тип сезонной награды пока не поддерживается серверной выдачей.");
 }
 
 async function claimLeaderboardReward(request, env) {
@@ -5330,73 +5823,155 @@ async function claimLeaderboardReward(request, env) {
   try {
     requireDatabase(env);
     requireBotToken(env);
+    await ensureAuthoritativeEconomySchema(env);
+    await ensureSafeControlCenterSchema(env);
     const body = await readJson(request);
     const auth = await validateTelegramInitData(String(body.initData || ""), env);
     const season = await ensureSeason(env);
     const telegramId = String(auth.user.id);
     const requestedRewardId = String(body.rewardId || "").trim();
     const reward = requestedRewardId
-      ? await env.DB.prepare(
-          `SELECT * FROM leaderboard_rewards WHERE id = ? AND telegram_id = ? LIMIT 1`
-        ).bind(requestedRewardId, telegramId).first()
+      ? await env.DB.prepare(`SELECT * FROM leaderboard_rewards WHERE id=? AND telegram_id=? LIMIT 1`).bind(requestedRewardId, telegramId).first()
       : await env.DB.prepare(
-          `SELECT * FROM leaderboard_rewards
-           WHERE telegram_id = ? AND status IN ('pending', 'claimed')
-           ORDER BY CASE status WHEN 'pending' THEN 0 ELSE 1 END, created_at DESC LIMIT 1`
+          `SELECT * FROM leaderboard_rewards WHERE telegram_id=? AND status IN ('pending','claimed')
+           ORDER BY CASE status WHEN 'pending' THEN 0 ELSE 1 END,created_at DESC LIMIT 1`
         ).bind(telegramId).first();
     if (!reward) throw new ApiError(404, "Для этого аккаунта нет сезонной награды.");
     const rewardSeason = String(reward.season_id || "") === String(season.id || "")
       ? season
-      : await env.DB.prepare(`SELECT * FROM leaderboard_seasons WHERE id = ? LIMIT 1`).bind(String(reward.season_id || "")).first();
+      : await env.DB.prepare(`SELECT * FROM leaderboard_seasons WHERE id=? LIMIT 1`).bind(String(reward.season_id || "")).first();
     const winner = await env.DB.prepare(
-      `SELECT telegram_id, display_name, username, best_score
-       FROM leaderboard_entries WHERE season_id = ? AND telegram_id = ? LIMIT 1`
+      `SELECT telegram_id,display_name,username,best_score FROM leaderboard_entries WHERE season_id=? AND telegram_id=? LIMIT 1`
     ).bind(String(reward.season_id || ""), telegramId).first();
     notificationContext = { reward, season: rewardSeason || season, winner: winner || { telegram_id: telegramId, display_name: telegramDisplayName(auth.user), username: auth.user.username || "" } };
 
     const now = Math.floor(Date.now() / 1000);
     if (String(reward.status) === "cancelled") throw new ApiError(409, "Награда отменена.");
     if (Number(reward.expires_at || 0) <= now && String(reward.status) !== "claimed") {
-      await env.DB.prepare(`UPDATE leaderboard_rewards SET status = 'expired' WHERE id = ?`).bind(reward.id).run();
+      await env.DB.prepare(`UPDATE leaderboard_rewards SET status='expired' WHERE id=? AND status='pending'`).bind(reward.id).run();
       throw new ApiError(410, "Срок получения награды истёк.");
     }
-    const rewardPresentation = leaderboardRewardPresentation(
+
+    // Old already-claimed rewards are not re-issued blindly because older
+    // clients may already have synchronized them. New pending rewards below are
+    // always delivered durably before the claimed flag is written.
+    if (String(reward.status) === "claimed") {
+      await ensureAuthoritativeProfileRow(env, telegramId, `leaderboard:${reward.id}:read`);
+      const casePayload = await buildCasePayload(env, telegramId, {});
+      const profileRow = await ensureAuthoritativeProfileRow(env, telegramId, `leaderboard:${reward.id}:read-response`);
+      return jsonResponse({
+        ok: true,
+        claimed: false,
+        alreadyClaimed: true,
+        reward: rewardToClient(reward, seasonRewardClientConfig(rewardSeason || season, env)),
+        profile: authoritativeProfileView(profileRow),
+        caseState: casePayload.caseState,
+        openedLevels: casePayload.openedLevels,
+        giftedCases: casePayload.giftedCases,
+        liveops: casePayload.liveops,
+        authoritativeProfile: true
+      });
+    }
+
+    const presentation = leaderboardRewardPresentation(
       reward.reward_type || rewardSeason?.reward_type || "coffee",
       reward.reward_amount || rewardSeason?.reward_amount || 1,
       reward.reward_item_id || rewardSeason?.reward_item_id || "",
       rewardSeason?.reward_title || "",
       rewardSeason?.reward_image_url || ""
     );
-    if (rewardPresentation.type === "case") {
-      await createLeaderboardGrantedCases(env, reward, rewardSeason || season);
+    const serverReward = leaderboardRewardQueueItem(presentation);
+    await ensureCasePlayerState(env, telegramId, {});
+    await ensureAuthoritativeProfileRow(env, telegramId, `leaderboard:${reward.id}:prepare`);
+
+    // The payout and the claimed flag are one D1 batch. Every mutation is also
+    // conditioned on the reward still being pending, so two simultaneous taps
+    // cannot both credit the same reward. This removes the old failure window
+    // where the client/server could mark a prize claimed before its value was
+    // durably present in the account.
+    const deliveryStatements = [];
+    if (["points", "zefir", "coffee"].includes(serverReward.kind)) {
+      const field = ({ points:"wallet", zefir:"treats", coffee:"coffee" })[serverReward.kind];
+      deliveryStatements.push(env.DB.prepare(
+        `UPDATE admin_profile_state SET ${field}=MIN(999999999,${field}+?),revision=revision+1,updated_at=?,updated_by=?
+         WHERE telegram_id=? AND EXISTS(
+           SELECT 1 FROM leaderboard_rewards WHERE id=? AND telegram_id=? AND status='pending'
+         )`
+      ).bind(serverReward.amount,now,`leaderboard:${reward.id}`,telegramId,reward.id,telegramId));
+    } else if (serverReward.kind === "case") {
+      for (let index = 0; index < serverReward.amount; index += 1) {
+        const grantId = `leaderboard_${String(reward.id).replace(/[^A-Za-z0-9_-]/g,"_")}_${index + 1}`.slice(0,180);
+        deliveryStatements.push(env.DB.prepare(
+          `INSERT OR IGNORE INTO granted_cases(id,telegram_id,case_type,status,granted_by,reason,created_at)
+           SELECT ?,?,?,'pending',?,?,? WHERE EXISTS(
+             SELECT 1 FROM leaderboard_rewards WHERE id=? AND telegram_id=? AND status='pending'
+           )`
+        ).bind(grantId,telegramId,serverReward.id,`leaderboard:${reward.id}`,`Награда сезонного рейтинга: ${presentation.title}`,now,reward.id,telegramId));
+      }
+    } else if (["avatar", "frame", "trail", "skin"].includes(serverReward.kind)) {
+      const field = ({ avatar:"owned_avatars_json", frame:"owned_frames_json", trail:"owned_trails_json", skin:"owned_skins_json" })[serverReward.kind];
+      const fallback = serverReward.kind === "skin" ? '["default"]' : '[]';
+      deliveryStatements.push(env.DB.prepare(
+        `UPDATE case_player_state SET
+           ${field}=CASE
+             WHEN EXISTS(
+               SELECT 1 FROM json_each(CASE WHEN json_valid(${field}) THEN ${field} ELSE ? END) WHERE value=?
+             ) THEN CASE WHEN json_valid(${field}) THEN ${field} ELSE ? END
+             ELSE json_insert(CASE WHEN json_valid(${field}) THEN ${field} ELSE ? END,'$[#]',?)
+           END,
+           revision=revision+1,updated_at=?
+         WHERE telegram_id=? AND EXISTS(
+           SELECT 1 FROM leaderboard_rewards WHERE id=? AND telegram_id=? AND status='pending'
+         )`
+      ).bind(fallback,serverReward.id,fallback,fallback,serverReward.id,now,telegramId,reward.id,telegramId));
+    } else {
+      throw new ApiError(500, "Тип сезонной награды пока не поддерживается серверной выдачей.");
     }
-    if (String(reward.status) === "claimed") {
-      return jsonResponse({ ok: true, claimed: false, alreadyClaimed: true, reward: rewardToClient(reward, seasonRewardClientConfig(rewardSeason || season, env)) });
+
+    deliveryStatements.push(env.DB.prepare(
+      `UPDATE leaderboard_rewards SET status='claimed',claimed_at=? WHERE id=? AND telegram_id=? AND status='pending'`
+    ).bind(now,reward.id,telegramId));
+
+    const deliveryResults = await env.DB.batch(deliveryStatements);
+    const claimResult = deliveryResults[deliveryResults.length - 1];
+    let updated = await env.DB.prepare(`SELECT * FROM leaderboard_rewards WHERE id=? LIMIT 1`).bind(reward.id).first() || reward;
+    if (Number(claimResult?.meta?.changes || 0) !== 1 && String(updated.status || "") !== "claimed") {
+      throw new ApiError(409, "Награда уже была обработана.");
     }
-    const result = await env.DB.prepare(
-      `UPDATE leaderboard_rewards SET status = 'claimed', claimed_at = ? WHERE id = ? AND status = 'pending'`
-    ).bind(now, reward.id).run();
-    if (Number(result.meta?.changes || 0) !== 1) throw new ApiError(409, "Награда уже была обработана.");
-    let updated = { ...reward, status: "claimed", claimed_at: now };
-    try {
-      updated = await env.DB.prepare(`SELECT * FROM leaderboard_rewards WHERE id = ?`).bind(reward.id).first() || updated;
-    } catch (error) {
-      console.error("Read claimed leaderboard reward failed", error);
+    const newlyClaimed = Number(claimResult?.meta?.changes || 0) === 1;
+    const casePayload = await buildCasePayload(env, telegramId, {});
+    const profileRow = await ensureAuthoritativeProfileRow(env, telegramId, `leaderboard:${reward.id}:response`);
+    if (newlyClaimed) {
+      try {
+        await queueLeaderboardStaffNotification(
+          env,
+          `leaderboard-reward-claimed:${reward.id}`,
+          leaderboardClaimNotificationText({ ...notificationContext, reward: updated, success: true, reason: "" }, env)
+        );
+      } catch (error) { console.error("leaderboard claim notification failed", error); }
     }
-    await queueLeaderboardStaffNotification(
-      env,
-      `leaderboard-reward-claimed:${reward.id}`,
-      leaderboardClaimNotificationText({ ...notificationContext, reward: updated, success: true, reason: "" }, env)
-    );
-    return jsonResponse({ ok: true, claimed: true, reward: rewardToClient(updated, seasonRewardClientConfig(rewardSeason || season, env)) });
+    return jsonResponse({
+      ok: true,
+      claimed: newlyClaimed,
+      alreadyClaimed: !newlyClaimed,
+      reward: rewardToClient(updated, seasonRewardClientConfig(rewardSeason || season, env)),
+      profile: authoritativeProfileView(profileRow),
+      caseState: casePayload.caseState,
+      openedLevels: casePayload.openedLevels,
+      giftedCases: casePayload.giftedCases,
+      liveops: casePayload.liveops,
+      authoritativeProfile: true
+    });
   } catch (error) {
     if (notificationContext?.reward) {
       const reason = leaderboardNotificationErrorReason(error);
-      await queueLeaderboardStaffNotification(
-        env,
-        `leaderboard-reward-claim-failed:${notificationContext.reward.id}:${leaderboardNotificationReasonKey(reason)}`,
-        leaderboardClaimNotificationText({ ...notificationContext, success: false, reason }, env)
-      );
+      try {
+        await queueLeaderboardStaffNotification(
+          env,
+          `leaderboard-reward-claim-failed:${notificationContext.reward.id}:${leaderboardNotificationReasonKey(reason)}`,
+          leaderboardClaimNotificationText({ ...notificationContext, success: false, reason }, env)
+        );
+      } catch {}
     }
     if (error instanceof ApiError) return jsonResponse({ ok: false, error: error.message }, error.status);
     console.error("claimLeaderboardReward failed", error);
@@ -15909,7 +16484,7 @@ async function deliverQueuedReward(env, row) {
   const rewardDescription = safeRewardDescription({ kind: row.reward_kind, id: row.reward_id, amount });
   await recordPlayerTimeline(env, telegramId, "reward_delivery", cosmeticDuplicate ? `получил дубликат: ${rewardDescription}` : `получил ${rewardDescription}`, { queueId: row.id, sourceType: row.source_type, sourceId: row.source_id, reason: row.reason, duplicate: cosmeticDuplicate }, `queue_${row.id}`, null);
   if (["avatar", "frame", "trail", "skin"].includes(row.reward_kind)) await recordContentAnalyticsEvent(env, telegramId, row.reward_kind, row.reward_id, cosmeticDuplicate ? "duplicate" : "acquired", row.source_type, row.source_id);
-  if (String(row.source_type || "") !== "gift_inbox") {
+  if (!["gift_inbox", "leaderboard"].includes(String(row.source_type || ""))) {
     try {
       const subscriber = await env.DB.prepare(`SELECT chat_id FROM bot_subscribers WHERE telegram_id=? AND active=1 LIMIT 1`).bind(telegramId).first();
       if (subscriber?.chat_id) await sendTelegramMessage(env, subscriber.chat_id, `<b>🎁 Награда доставлена</b>\n\n${escapeHtml(safeRewardDescription({ kind: row.reward_kind, id: row.reward_id, amount }))}\nПричина: ${escapeHtml(row.reason || "Системная выдача")}\n\nНаграда уже записана в профиль. Откройте игру или обновите раздел с кейсами.`, { inline_keyboard: [[{ text: "🎮 Открыть игру", web_app: { url: configuredGameUrl(env) } }], [{ text: "📋 Задания", callback_data: "menu:tasks" }]] });
@@ -17731,9 +18306,13 @@ async function enforceMaintenanceForRequest(request, url, env) {
   const telegramId = await requestTelegramId(request, env);
   const identity = await maintenanceAccessIdentity(telegramId, env);
   const privileged = identity.allowed;
-  if (settings.testersOnly && !privileged) return jsonResponse({ ok: false, maintenance: true, mode: "testers_only", error: settings.message }, 503);
-  if (settings.fullClosed && !privileged) return jsonResponse({ ok: false, maintenance: true, mode: "full", error: settings.message }, 503);
-  if (settings.ratingDisabled && path.startsWith("/api/leaderboard/")) return jsonResponse({ ok: false, maintenance: true, mode: "rating", error: settings.message }, 503);
+  // A run that started before maintenance must still be allowed to settle its
+  // already-earned server-validated economy. New sessions remain blocked by
+  // maintenance because /api/runs/start is not exempted.
+  const protectedRunSettlement = path === "/api/leaderboard/submit";
+  if (settings.testersOnly && !privileged && !protectedRunSettlement) return jsonResponse({ ok: false, maintenance: true, mode: "testers_only", error: settings.message }, 503);
+  if (settings.fullClosed && !privileged && !protectedRunSettlement) return jsonResponse({ ok: false, maintenance: true, mode: "full", error: settings.message }, 503);
+  if (settings.ratingDisabled && path.startsWith("/api/leaderboard/") && path !== "/api/leaderboard/submit") return jsonResponse({ ok: false, maintenance: true, mode: "rating", error: settings.message }, 503);
   if (settings.purchasesDisabled && ["/api/rewards/create", "/api/skins/purchase", "/api/skins/bonus-case", "/api/cases/purchase", "/api/shop/offers/purchase"].includes(path)) return jsonResponse({ ok: false, maintenance: true, mode: "purchases", error: settings.message }, 503);
   if (settings.casesDisabled && ["/api/cases/open", "/api/cases/open-granted", "/api/cases/purchase", "/api/cases/activate"].includes(path)) return jsonResponse({ ok: false, maintenance: true, mode: "cases", error: settings.message }, 503);
   if (settings.physicalRewardsDisabled && path === "/api/rewards/create") return jsonResponse({ ok: false, maintenance: true, mode: "physical", error: settings.message }, 503);
@@ -20902,37 +21481,54 @@ async function purchaseSeasonPassLevel(request,env){
   }catch(error){if(error instanceof ApiError)return jsonResponse({ok:false,error:error.message},error.status);console.error('purchaseSeasonPassLevel failed',error);return jsonResponse({ok:false,error:'Не удалось купить уровень.'},500);}
 }
 
-async function recordSeasonPassRunActivity(env,telegramId,input={},seasonValue=null){
+async function recordSeasonPassRunActivity(env,telegramId,input={},seasonValue=null,options={}){
   await ensureSeasonPassSchema(env);
   const flag=await getFeatureFlag(env,'battle_pass');const access=await battlePassAudienceAccess(env,String(telegramId),flag);
   if(!access.allowed)return {accepted:false,ignored:true,reason:'not_allowed',xpAwarded:0,multiplier:1};
-  const now=Math.floor(Date.now()/1000);const forcedClosure=await getSeasonPassForcedClosure(env,now*1000);
-  if(forcedClosure)return {accepted:false,ignored:true,reason:'forced_closed',xpAwarded:0,multiplier:1};const season=seasonValue||await loadSeasonPassSeason(env,now*1000);
+  const now=Math.floor(Date.now()/1000);
+  const runCreatedAt=Math.max(1,Math.floor(Number(options?.runCreatedAt||now))||now);
+  const forcedClosure=await getSeasonPassForcedClosure(env,runCreatedAt*1000);
+  if(forcedClosure)return {accepted:false,ignored:true,reason:'forced_closed',xpAwarded:0,multiplier:1};
+  const season=seasonValue||await loadSeasonPassSeason(env,runCreatedAt*1000);
   if(season.status!=='active')return {accepted:false,ignored:true,reason:season.status,xpAwarded:0,multiplier:1};
-  await assertSeasonPassNotForceClosed(env);
   const runId=String(input.runId||input.run_id||'').trim();if(!/^[A-Za-z0-9_-]{12,96}$/.test(runId))throw new ApiError(400,'Некорректный идентификатор забега.');
   const score=Math.max(0,Math.floor(Number(input.score)||0));const durationMs=Math.max(0,Math.floor(Number(input.durationMs||input.duration_ms)||0));
   const runTreats=Math.max(0,Math.min(10000,Math.floor(Number(input.runTreats||input.run_treats)||0)));const runCoffee=Math.max(0,Math.min(10000,Math.floor(Number(input.runCoffee||input.run_coffee)||0)));
   const newRecord=Boolean(input.newRecord||input.new_record)?1:0;const minSeconds=positiveInt(env.LEADERBOARD_MIN_RUN_SECONDS,DEFAULT_LEADERBOARD_MIN_RUN_SECONDS);const minScore=positiveInt(env.LEADERBOARD_MIN_SCORE,DEFAULT_LEADERBOARD_MIN_SCORE);const durationSeconds=durationMs/1000;
   if(!Number.isFinite(durationSeconds)||durationSeconds<minSeconds||score<minScore)throw new ApiError(400,`Забег должен длиться от ${minSeconds} секунд и набрать от ${minScore} очков.`);
-  if(score>Math.floor(durationSeconds*90+6000))throw new ApiError(400,'Забег не прошёл серверную проверку.');
-  const seasonStart=Math.floor(Date.parse(season.startsAt)/1000);const seasonEnd=Math.floor(Date.parse(season.endsAt)/1000);if(now<seasonStart||now>=seasonEnd)return {accepted:false,ignored:true,reason:'outside_season',xpAwarded:0,multiplier:1};
-  const inserted=await env.DB.prepare(`INSERT OR IGNORE INTO season_pass_activity_runs(run_id,season_id,telegram_id,score,duration_ms,run_treats,run_coffee,new_record,created_at) VALUES(?,?,?,?,?,?,?,?,?)`).bind(runId,season.id,String(telegramId),score,durationMs,runTreats,runCoffee,newRecord,now).run();
+  // Public callers cannot bypass validation: submitSeasonPassRun below only
+  // reaches this function with a matching authoritative run-ledger row.
+  if(options?.serverValidated!==true&&score>Math.floor(durationSeconds*90+6000))throw new ApiError(400,'Забег не прошёл серверную проверку.');
+  const seasonStart=Math.floor(Date.parse(season.startsAt)/1000);const seasonEnd=Math.floor(Date.parse(season.endsAt)/1000);if(runCreatedAt<seasonStart||runCreatedAt>=seasonEnd)return {accepted:false,ignored:true,reason:'outside_season',xpAwarded:0,multiplier:1};
+  const inserted=await env.DB.prepare(`INSERT OR IGNORE INTO season_pass_activity_runs(run_id,season_id,telegram_id,score,duration_ms,run_treats,run_coffee,new_record,created_at) VALUES(?,?,?,?,?,?,?,?,?)`).bind(runId,season.id,String(telegramId),score,durationMs,runTreats,runCoffee,newRecord,runCreatedAt).run();
   const repeated=Number(inserted.meta?.changes||0)===0;
+  let activityCreatedAt=runCreatedAt;
   if(repeated){
     const existing=await env.DB.prepare(`SELECT season_id,telegram_id,score,duration_ms,run_treats,run_coffee,new_record,created_at FROM season_pass_activity_runs WHERE run_id=? LIMIT 1`).bind(runId).first();
     const same=existing&&String(existing.season_id)===String(season.id)&&String(existing.telegram_id)===String(telegramId)&&Number(existing.score)===score&&Number(existing.duration_ms)===durationMs&&Number(existing.run_treats)===runTreats&&Number(existing.run_coffee)===runCoffee&&Number(existing.new_record)===newRecord;
     if(!same)throw new ApiError(409,'Этот идентификатор забега уже использован.');
+    activityCreatedAt=Math.max(1,Number(existing?.created_at||runCreatedAt));
   }
-  const award=await awardSeasonPassRunXp(env,String(telegramId),runId,repeated?Number((await env.DB.prepare(`SELECT created_at FROM season_pass_activity_runs WHERE run_id=? LIMIT 1`).bind(runId).first())?.created_at||now):now);
+  const award=await awardSeasonPassRunXp(env,String(telegramId),runId,activityCreatedAt);
   const taskNotice=await syncSeasonPassTaskCompletionNotifications(env,String(telegramId),{season,sendBot:true});
   return {accepted:true,repeated,xpAwarded:Number(award?.xpAwarded||0),multiplier:Number(award?.multiplier||1),profileXpMultiplier:Number(award?.multiplier||1),taskNotice};
 }
 
 async function submitSeasonPassRun(request,env){
   try{
-    const ctx=await seasonPassRequestContext(request,env);
-    const result=await recordSeasonPassRunActivity(env,ctx.telegramId,ctx.body,ctx.season);
+    requireDatabase(env);requireBotToken(env);await ensureAuthoritativeEconomySchema(env);await ensureSeasonPassSchema(env);
+    const body=await readJson(request);const auth=await validateTelegramInitData(String(body.initData||body.init_data||''),env);const telegramId=String(auth.user.id);
+    const runId=String(body.runId||body.run_id||'').trim();if(!/^[A-Za-z0-9_-]{12,96}$/.test(runId))throw new ApiError(400,'Некорректный идентификатор забега.');
+    const ledger=await env.DB.prepare(`SELECT * FROM player_economy_run_ledger WHERE run_id=? AND telegram_id=? LIMIT 1`).bind(runId,telegramId).first();
+    if(!ledger)throw new ApiError(409,'Сначала завершите и подтвердите забег через защищённую игровую сессию.');
+    const result=await recordSeasonPassRunActivity(env,telegramId,{
+      runId,
+      score:Number(ledger.raw_score||0),
+      durationMs:Number(ledger.duration_ms||0),
+      runTreats:Number(ledger.raw_treats||0),
+      runCoffee:Number(ledger.raw_coffee||0),
+      newRecord:Number(ledger.new_record||0)===1
+    },null,{serverValidated:true,runCreatedAt:Number(ledger.created_at||Math.floor(Date.now()/1000))});
     return jsonResponse({ok:true,...result});
   }catch(error){if(error instanceof ApiError)return jsonResponse({ok:false,error:error.message},error.status);console.error('submitSeasonPassRun failed',error);return jsonResponse({ok:false,error:'Не удалось сохранить прогресс сезонного пропуска.'},500);}
 }
