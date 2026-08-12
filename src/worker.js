@@ -214,6 +214,82 @@ function season3DraftCasePool() {
   return items;
 }
 
+
+// Ready-to-publish narrative for the second real season. The preset is seeded
+// once into the first season scheduled after the built-in opening season. It is
+// intentionally data-driven: after the initial seed, owner edits/deletes are
+// respected and never restored by later cold starts.
+const SEASON2_STORY_PRESET = Object.freeze({
+  id: "season2-night-cafe-story-v1",
+  marker: "system-season2-story-v1"
+});
+
+function season2StoryPresetEvents(){
+  const asset=(name)=>`/assets/letter/pick/${name}`;
+  return [
+    {
+      key:"chapter-1", sortOrder:10, unlockLevel:1, enabled:true,
+      title:"ГЛАВА I — «После закрытия»",
+      pushText:"После закрытия «Зефирка» выглядит иначе. Открылась первая глава ночной истории.",
+      pages:[
+        {title:"После закрытия",bodyText:"Зеффи оказывается в ночной версии знакомой «Зефирки».\n\nНо сначала всё выглядит скорее удивительно, чем волшебно.\n\nЗа окном ночь. Луна освещает кафе.",imageUrl:asset("season2_pick.png"),buttonText:"Далее",musicId:""},
+        {title:"Необычный свет",bodyText:"Некоторые зефирки начинают слегка светиться.",imageUrl:"",buttonText:"Далее",musicId:""},
+        {title:"Кафе живёт своей жизнью",bodyText:"Кофейная машина сама готовит чашку кофе.\n\nПо полу появляются маленькие золотые звёздочки.",imageUrl:"",buttonText:"Далее",musicId:""},
+        {title:"Путь света",bodyText:"Зеффи замечает, что с каждой собранной зефиркой вокруг становится немного больше света.",imageUrl:"",buttonText:"Завершить главу",musicId:""}
+      ]
+    },
+    {
+      key:"chapter-2", sortOrder:20, unlockLevel:15, enabled:true,
+      title:"ГЛАВА II — «Когда кафе засыпает»",
+      pushText:"Ночная «Зефирка» меняется всё сильнее. Открылась новая глава истории.",
+      pages:[
+        {title:"Когда кафе засыпает",bodyText:"Чем больше Зеффи бегает, тем сильнее меняется «Зефирка».\n\nНочь уже не просто меняет освещение.",imageUrl:asset("Season2_Pick2.png"),buttonText:"Далее",musicId:""},
+        {title:"Другая сторона кафе",bodyText:"Она словно открывает другую сторону кафе, которую невозможно увидеть днём.",imageUrl:"",buttonText:"Далее",musicId:""},
+        {title:"Ночные чудеса",bodyText:"Появляются парящие золотые звёздочки, лунные гирлянды, мерцающие витрины и маленькие светящиеся подарки.",imageUrl:"",buttonText:"Далее",musicId:""},
+        {title:"Лунное кафе",bodyText:"В окне появляется отражение огромного месяца. Появляются необычные ночные десерты.\n\nДаже музыка становится более сказочной.",imageUrl:"",buttonText:"Далее",musicId:""},
+        {title:"Светящиеся зефирки",bodyText:"И Зеффи начинает замечать главное:\n\nСветящиеся зефирки образуют путь.\n\nОни появляются не случайно. Кто-то словно ведёт его куда-то.",imageUrl:"",buttonText:"Завершить главу",musicId:""}
+      ]
+    },
+    {
+      key:"chapter-3", sortOrder:30, unlockLevel:30, enabled:true,
+      title:"ГЛАВА III — «Тайна лунной зефирки»",
+      pushText:"Зеффи нашёл источник необычного света. Продолжение ночной истории уже доступно.",
+      pages:[
+        {title:"Тайна лунной зефирки",bodyText:"Зеффи наконец находит источник необычного света.\n\nНа самой дальней полке кафе стоит маленькая коробочка, которую раньше он никогда не видел.",imageUrl:asset("Season2_Pick3.png"),buttonText:"Далее",musicId:""},
+        {title:"Маленькая коробочка",bodyText:"Она украшена луной и золотыми звёздами.",imageUrl:"",buttonText:"Далее",musicId:""},
+        {title:"Первая лунная зефирка",bodyText:"Внутри лежит первая лунная зефирка.\n\nТа самая, с которой всё началось.",imageUrl:"",buttonText:"Далее",musicId:""},
+        {title:"Новая записка",bodyText:"Под ней новая записка:\n\n«Некоторые чудеса появляются только для тех, кто продолжает идти вперёд.»",imageUrl:"",buttonText:"Далее",musicId:""},
+        {title:"Доброе испытание",bodyText:"И становится понятно:\n\nНочная «Зефирка» появилась не случайно.\n\nОна словно решила устроить Зеффи маленькое испытание.\n\nНе страшное. Не опасное. А доброе.\n\nНочь проверяет, сможет ли он сохранить любопытство и продолжать свой путь даже тогда, когда всё вокруг стало незнакомым.",imageUrl:"",buttonText:"Завершить главу",musicId:""}
+      ]
+    },
+    {
+      key:"chapter-4", sortOrder:40, unlockLevel:40, enabled:true,
+      title:"ГЛАВА IV — «Последняя ночь»",
+      pushText:"До рассвета остаётся всё меньше времени. Открылась предпоследняя глава истории.",
+      pages:[
+        {title:"Последняя ночь",bodyText:"До рассвета остаётся всё меньше времени.\n\nВ кафе начинают постепенно гаснуть звёзды.",imageUrl:asset("Season2_Pick4.png"),buttonText:"Далее",musicId:""},
+        {title:"Перед рассветом",bodyText:"Луна опускается ниже.\n\nЗолотые фонарики один за другим становятся тусклее.",imageUrl:"",buttonText:"Далее",musicId:""},
+        {title:"Волшебная ночь заканчивается",bodyText:"Зеффи понимает:\n\nволшебная ночь скоро закончится.",imageUrl:"",buttonText:"Далее",musicId:""},
+        {title:"Последние забеги",bodyText:"Он совершает последние забеги, собирает лунные зефирки и кофе и пытается увидеть как можно больше, пока ночная «Зефирка» ещё существует.\n\nНо вместо грусти появляется ощущение, что впереди будет что-то ещё.",imageUrl:"",buttonText:"Далее",musicId:""},
+        {title:"Последняя записка",bodyText:"В одной из последних записок всего одна строчка:\n\n«Каждый конец — это дорога куда-то дальше.»",imageUrl:"",buttonText:"Завершить главу",musicId:""}
+      ]
+    },
+    {
+      key:"finale", sortOrder:50, unlockLevel:50, enabled:true,
+      title:"⭐ ФИНАЛ СЕЗОНА",
+      pushText:"Рассвет уже близко. Финал ночной истории сезона открыт.",
+      pages:[
+        {title:"Финал сезона",bodyText:"Зеффи возвращается к стойке.\n\nЗа окном уже начинается рассвет. Огромная луна становится почти прозрачной. Звёзды исчезают.",imageUrl:asset("end_pick.png"),buttonText:"Далее",musicId:""},
+        {title:"Утро возвращается",bodyText:"Кафе постепенно возвращается к привычному розово-кремовому виду.\n\nЛунные украшения пропадают. Обычный утренний свет снова заполняет помещение.\n\nКажется, что всё закончилось.",imageUrl:"",buttonText:"Далее",musicId:""},
+        {title:"У двери",bodyText:"Зеффи смотрит на место, где впервые лежала лунная зефирка.\n\nТам ничего нет.\n\nОн уже собирается уходить… но замечает возле двери конверт.",imageUrl:"",buttonText:"Далее",musicId:""},
+        {title:"Конверт для Зеффи",bodyText:"На этот раз он совсем другой.\n\nНе лунный. Светлый, тёплый, украшенный маленьким зелёным листочком.\n\nНа конверте написано: «Зеффи».",imageUrl:"",buttonText:"Открыть письмо",musicId:""},
+        {title:"Письмо",bodyText:"«Ночь закончилась.\n\nНо мир намного больше, чем кажется из окна кафе.\n\nИногда самое настоящее приключение начинается с обычной прогулки.\n\nДо встречи.»",imageUrl:"",buttonText:"Далее",musicId:""},
+        {title:"До встречи",bodyText:"Рядом с письмом лежит маленький зелёный лист.\n\nЗеффи подходит к двери. За окном уже яркое утро.\n\nОн смотрит наружу.",imageUrl:"",buttonText:"Завершить сезон",musicId:""}
+      ]
+    }
+  ];
+}
+
 const CASE_PHYSICAL_TOTAL_CHANCE = 0.035;
 const CASE_PHYSICAL_REWARDS = Object.freeze({
   zefir: Object.freeze({ id: "zefir", title: PRODUCTS.zefir.title, chance: CASE_PHYSICAL_TOTAL_CHANCE / 3 }),
@@ -20866,6 +20942,9 @@ async function ensureSeasonPassSchema(env) {
         expires_at INTEGER NOT NULL, created_at INTEGER NOT NULL
       )`),
       env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_season_pass_story_tests_player ON season_pass_story_tests(telegram_id,expires_at,event_id)`),
+      env.DB.prepare(`CREATE TABLE IF NOT EXISTS season_pass_story_presets (
+        preset_id TEXT PRIMARY KEY, season_id TEXT NOT NULL, seeded_at INTEGER NOT NULL, updated_by TEXT NOT NULL DEFAULT ''
+      )`),
       env.DB.prepare(`CREATE TABLE IF NOT EXISTS season_pass_case_definitions (
         case_id TEXT PRIMARY KEY, season_id TEXT NOT NULL UNIQUE, title TEXT NOT NULL, description TEXT NOT NULL DEFAULT '',
         closed_image_url TEXT NOT NULL DEFAULT '', open_image_url TEXT NOT NULL DEFAULT '', slots INTEGER NOT NULL DEFAULT 1 CHECK(slots BETWEEN 1 AND 5),
@@ -20979,6 +21058,9 @@ async function ensureSeasonPassSchema(env) {
     // Prepare the next real season's season3-content case as a disabled draft.
     // The seeder is idempotent and will not overwrite a case edited by an owner.
     await ensureSeason3DraftSeasonalCase(env);
+    // Seed the authored Season 2 story once. A separate marker table means that
+    // later owner edits or deletions are respected and never recreated.
+    await ensureSeason2StoryPreset(env);
   })();
   seasonPassSchemaPromise = promise;
   try { await promise; seasonPassSchemaReady = true; } finally { if (seasonPassSchemaPromise === promise) seasonPassSchemaPromise = null; }
@@ -21709,6 +21791,42 @@ async function ensureSeason3DraftSeasonalCase(env){
   }
   await env.DB.batch(statements);
   return {ok:true,seeded:true,seasonId,caseId,itemCount:pool.length};
+}
+
+
+async function ensureSeason2StoryPreset(env){
+  const presetId=SEASON2_STORY_PRESET.id;
+  const markerRow=await env.DB.prepare(`SELECT preset_id,season_id FROM season_pass_story_presets WHERE preset_id=? LIMIT 1`).bind(presetId).first();
+  if(markerRow?.preset_id)return {ok:true,seeded:false,reason:'already-seeded',seasonId:String(markerRow.season_id||'')};
+
+  const base=await env.DB.prepare(`SELECT season_id,starts_at FROM season_pass_seasons WHERE season_id=? LIMIT 1`).bind(DEFAULT_SEASON_PASS_ID).first();
+  let target=null;
+  if(base?.season_id){
+    target=await env.DB.prepare(`SELECT season_id,title,starts_at,ends_at,manual_status FROM season_pass_seasons WHERE season_id<>? AND starts_at>? ORDER BY starts_at ASC,season_id ASC LIMIT 1`).bind(DEFAULT_SEASON_PASS_ID,Number(base.starts_at||0)).first();
+  }else{
+    target=await env.DB.prepare(`SELECT season_id,title,starts_at,ends_at,manual_status FROM season_pass_seasons ORDER BY starts_at ASC,season_id ASC LIMIT 1 OFFSET 1`).first();
+  }
+  if(!target?.season_id)return {ok:true,seeded:false,reason:'season2-not-created'};
+
+  const seasonId=String(target.season_id),safeSeason=seasonId.replace(/[^A-Za-z0-9_-]+/g,'_').slice(0,90)||'season2';
+  const existing=(await env.DB.prepare(`SELECT event_id,title FROM season_pass_story_events WHERE season_id=?`).bind(seasonId).all()).results||[];
+  const existingTitles=new Set(existing.map(row=>String(row.title||'').trim()).filter(Boolean));
+  const existingIds=new Set(existing.map(row=>String(row.event_id||'')).filter(Boolean));
+  const now=Math.floor(Date.now()/1000),statements=[];let inserted=0;
+
+  for(const event of season2StoryPresetEvents()){
+    if(existingTitles.has(event.title))continue;
+    const eventId=`story_${safeSeason}_s2_${event.key}`.slice(0,180);
+    if(existingIds.has(eventId))continue;
+    const pages=event.pages.slice(0,10),first=pages[0]||{};
+    statements.push(env.DB.prepare(`INSERT OR IGNORE INTO season_pass_story_events(event_id,season_id,sort_order,unlock_level,unlock_at,enabled,title,body_text,image_url,button_text,pages_json,push_enabled,push_text,reward_json,created_at,updated_at,updated_by) VALUES(?,?,?,?,0,?,?,?,?,?,?,1,?,'{}',?,?,?)`)
+      .bind(eventId,seasonId,Number(event.sortOrder||0),Math.max(1,Math.min(50,Number(event.unlockLevel)||1)),event.enabled?1:0,String(event.title||''),String(first.bodyText||''),String(first.imageUrl||''),String(first.buttonText||'Продолжить'),JSON.stringify(pages),String(event.pushText||''),now,now,SEASON2_STORY_PRESET.marker));
+    inserted+=1;
+  }
+
+  statements.push(env.DB.prepare(`INSERT OR IGNORE INTO season_pass_story_presets(preset_id,season_id,seeded_at,updated_by) VALUES(?,?,?,?)`).bind(presetId,seasonId,now,SEASON2_STORY_PRESET.marker));
+  for(let index=0;index<statements.length;index+=30)await env.DB.batch(statements.slice(index,index+30));
+  return {ok:true,seeded:true,seasonId,inserted};
 }
 
 async function seasonPassTeaserForPlayer(env,season,telegramId,player){
