@@ -9170,7 +9170,7 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
 
   function liveTimingText(data, requestedMode = mode) {
     const season = data?.season || {};
-    if (requestedMode === "all_time") return "Лучшие результаты игроков за всё время";
+    if (requestedMode === "all_time") return "Лучший личный рекорд каждого игрока за любой сезон";
     const status = String(season.status || "scheduled");
     if (status === "scheduled") return `До начала нового сезона: ${remaining(season.startsAt, data?.serverTime)}`;
     if (status === "active") return `До конца сезона: ${remaining(season.endsAt, data?.serverTime)}`;

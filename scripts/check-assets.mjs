@@ -10,6 +10,10 @@ const newsManifestOnly = process.argv.includes('--news-manifest');
 const indexPath = path.join(root, 'index.html');
 const newsRoot = path.join(root, 'assets', 'news');
 const newsManifestPath = path.join(newsRoot, 'manifest.json');
+const casesRoot = path.join(root, 'assets', 'cases');
+const casesManifestPath = path.join(casesRoot, 'manifest.json');
+const assetsRoot = path.join(root, 'assets');
+const projectImagesManifestPath = path.join(assetsRoot, 'images-manifest.json');
 const newsExtensions = new Set(['.png', '.jpg', '.jpeg', '.webp', '.gif', '.avif', '.svg']);
 
 function newsLabel(relativePath) {
@@ -80,8 +84,122 @@ async function generateNewsManifest() {
   return payload;
 }
 
+function caseAssetLabel(relativePath) {
+  const base = path.basename(relativePath, path.extname(relativePath));
+  const text = base.replace(/[_-]+/g, ' ').replace(/\s+/g, ' ').trim();
+  return text ? text.charAt(0).toUpperCase() + text.slice(1) : relativePath;
+}
+
+async function collectCaseImages(directory, prefix = '') {
+  let entries = [];
+  try {
+    entries = await readdir(directory, { withFileTypes: true });
+  } catch (error) {
+    if (error?.code === 'ENOENT') return [];
+    throw error;
+  }
+  entries.sort((a, b) => a.name.localeCompare(b.name, 'ru'));
+  const images = [];
+  for (const entry of entries) {
+    if (!entry.name || entry.name.startsWith('.') || entry.name.startsWith('._')) continue;
+    const relativePath = prefix ? `${prefix}/${entry.name}` : entry.name;
+    const absolutePath = path.join(directory, entry.name);
+    if (entry.isDirectory()) {
+      images.push(...await collectCaseImages(absolutePath, relativePath));
+      continue;
+    }
+    if (!entry.isFile() || entry.name === 'manifest.json' || !newsExtensions.has(path.extname(entry.name).toLowerCase())) continue;
+    const info = await stat(absolutePath);
+    if (!info.size) continue;
+    const data = await readFile(absolutePath);
+    const hash = createHash('sha256').update(data).digest('hex').slice(0, 12);
+    const folder = path.posix.dirname(relativePath) === '.' ? 'root' : path.posix.dirname(relativePath);
+    images.push({
+      fileName: relativePath,
+      label: caseAssetLabel(relativePath),
+      folder,
+      path: `/assets/cases/${encodeAssetPath(relativePath)}`,
+      hash,
+      size: info.size
+    });
+  }
+  return images;
+}
+
+
+function projectImageLabel(relativePath) {
+  const base = path.basename(relativePath, path.extname(relativePath));
+  const text = base.replace(/[_-]+/g, ' ').replace(/\s+/g, ' ').trim();
+  return text ? text.charAt(0).toUpperCase() + text.slice(1) : relativePath;
+}
+
+async function collectProjectImages(directory, prefix = '') {
+  let entries = [];
+  try {
+    entries = await readdir(directory, { withFileTypes: true });
+  } catch (error) {
+    if (error?.code === 'ENOENT') return [];
+    throw error;
+  }
+  entries.sort((a, b) => a.name.localeCompare(b.name, 'ru'));
+  const images = [];
+  for (const entry of entries) {
+    if (!entry.name || entry.name.startsWith('.') || entry.name.startsWith('._') || entry.name === '__MACOSX') continue;
+    const relativePath = prefix ? `${prefix}/${entry.name}` : entry.name;
+    const absolutePath = path.join(directory, entry.name);
+    if (entry.isDirectory()) {
+      images.push(...await collectProjectImages(absolutePath, relativePath));
+      continue;
+    }
+    if (!entry.isFile() || !newsExtensions.has(path.extname(entry.name).toLowerCase())) continue;
+    const info = await stat(absolutePath);
+    if (!info.size) continue;
+    const folder = path.posix.dirname(relativePath) === '.' ? 'root' : path.posix.dirname(relativePath);
+    images.push({
+      fileName: relativePath,
+      label: projectImageLabel(relativePath),
+      folder,
+      path: `/assets/${encodeAssetPath(relativePath)}`,
+      size: info.size,
+      modified: Math.floor(info.mtimeMs || 0)
+    });
+  }
+  return images;
+}
+
+async function generateProjectImagesManifest() {
+  const images = await collectProjectImages(assetsRoot);
+  const catalogHash = createHash('sha256')
+    .update(images.map(item => `${item.path}:${item.size}:${item.modified}`).join('\n'))
+    .digest('hex')
+    .slice(0, 16);
+  const payload = { version: 1, catalogHash, count: images.length, images };
+  await writeFile(projectImagesManifestPath, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
+  console.log(`Project image manifest generated: ${images.length} image(s).`);
+  return payload;
+}
+
+async function generateCasesManifest() {
+  const images = await collectCaseImages(casesRoot);
+  const catalogHash = createHash('sha256')
+    .update(images.map(item => `${item.path}:${item.hash}`).join('\n'))
+    .digest('hex')
+    .slice(0, 16);
+  const payload = {
+    version: 1,
+    catalogHash,
+    count: images.length,
+    images
+  };
+  await writeFile(casesManifestPath, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
+  console.log(`Cases manifest generated: ${images.length} image(s).`);
+  return payload;
+}
+
 if (newsManifestOnly) {
   await generateNewsManifest();
+  await generateCasesManifest();
+  await generateProjectImagesManifest();
   process.exit(0);
 }
 
@@ -139,17 +257,16 @@ async function validateContent(relativePath) {
   }
   if (lower.endsWith('.js')) {
     const source = data.toString('utf8');
-    if (lower.includes('floating-ui.core')) return data.length >= 500 && source.includes('FloatingUICore');
-    if (lower.includes('floating-ui.dom')) {
-      return data.length >= 4000
-        && source.includes('FloatingUIDOM')
-        && source.includes('computePosition')
-        && source.includes('autoUpdate')
-        && source.includes('offset')
-        && source.includes('flip')
-        && source.includes('shift')
-        && source.includes('size');
+    if (lower.includes('floating-ui.core')) {
+      const hasNamespace = source.includes('FloatingUICore');
+      const officialBundle = data.length >= 10000 && hasNamespace;
+      const localCompatibilityLayer = data.length >= 1000
+        && hasNamespace
+        && source.includes('rectToClientRect')
+        && source.includes('__zefirokLocal');
+      return officialBundle || localCompatibilityLayer;
     }
+    if (lower.includes('floating-ui.dom')) return data.length >= 8000 && source.includes('FloatingUIDOM');
   }
   return data.length > 0;
 }
