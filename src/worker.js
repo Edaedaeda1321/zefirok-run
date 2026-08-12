@@ -28041,6 +28041,7 @@ async function handleOwnerPanelApi(request, env, path, executionCtx = null) {
     if (path === "/api/owner/season-pass/reward") return jsonResponse(await ownerPanelSetSeasonPassReward(env, ctx));
     if (path === "/api/owner/season-pass/story/save") return jsonResponse(await ownerPanelSaveSeasonPassStory(env, ctx));
     if (path === "/api/owner/season-pass/story/delete") return jsonResponse(await ownerPanelDeleteSeasonPassStory(env, ctx));
+    if (path === "/api/owner/season-pass/story/toggle") return jsonResponse(await ownerPanelToggleSeasonPassStory(env, ctx));
     if (path === "/api/owner/season-pass/story/duplicate") return jsonResponse(await ownerPanelDuplicateSeasonPassStory(env, ctx));
     if (path === "/api/owner/season-pass/story/transfer") return jsonResponse(await ownerPanelTransferSeasonPassStory(env, ctx));
     if (path === "/api/owner/season-pass/story/test") return jsonResponse(await ownerPanelTestSeasonPassStory(env, ctx));
@@ -28916,6 +28917,28 @@ async function ownerPanelSaveSeasonPassStory(env,ctx){
     .bind(eventId,seasonId,sortOrder,unlockLevel,unlockAt,enabled?1:0,title,first.bodyText,first.imageUrl,first.buttonText,JSON.stringify(pages),pushEnabled?1:0,pushText,JSON.stringify(reward||{}),before?.created_at||now,now,actor).run();
   await logStaffAction(env,ctx.user,ctx.access,'owner_panel_season_pass_story_save',null,'season_pass_story',eventId,null,{seasonId,before:before||null,after:{unlockLevel,unlockAt,sortOrder,enabled,title,pages:pages.length,pushEnabled,reward:reward||null}});
   return {ok:true,eventId};
+}
+
+async function ownerPanelToggleSeasonPassStory(env,ctx){
+  await ensureSeasonPassSchema(env);
+  const seasonId=String(ctx.body?.seasonId||'').trim(),eventId=String(ctx.body?.eventId||'').trim(),enabled=Boolean(ctx.body?.enabled);
+  if(!seasonId)throw new ApiError(400,'Не выбран сезон.');
+  const season=await loadSeasonPassSeasonById(env,seasonId);if(!season)throw new ApiError(404,'Сезонный пропуск не найден.');
+  const target=enabled?1:0,now=Math.floor(Date.now()/1000),actor=String(ctx.user.id);
+  let changed=0,title='',scope='all';
+  if(eventId){
+    scope='event';
+    const row=await env.DB.prepare(`SELECT event_id,title,enabled FROM season_pass_story_events WHERE event_id=? AND season_id=? LIMIT 1`).bind(eventId,seasonId).first();
+    if(!row)throw new ApiError(404,'Сюжетное событие не найдено.');
+    title=String(row.title||'');
+    if(Number(row.enabled||0)!==target){const result=await env.DB.prepare(`UPDATE season_pass_story_events SET enabled=?,updated_at=?,updated_by=? WHERE event_id=? AND season_id=?`).bind(target,now,actor,eventId,seasonId).run();changed=Number(result?.meta?.changes||0);}
+  }else{
+    const before=await env.DB.prepare(`SELECT COUNT(*) AS count FROM season_pass_story_events WHERE season_id=? AND enabled<>?`).bind(seasonId,target).first();
+    changed=Number(before?.count||0);
+    if(changed>0)await env.DB.prepare(`UPDATE season_pass_story_events SET enabled=?,updated_at=?,updated_by=? WHERE season_id=? AND enabled<>?`).bind(target,now,actor,seasonId,target).run();
+  }
+  await logStaffAction(env,ctx.user,ctx.access,'owner_panel_season_pass_story_toggle',null,'season_pass_story',eventId||null,null,{seasonId,eventId:eventId||'',title,enabled,scope,changed});
+  return {ok:true,seasonId,eventId:eventId||'',enabled,scope,changed};
 }
 
 async function ownerPanelDeleteSeasonPassStory(env,ctx){
