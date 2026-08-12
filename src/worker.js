@@ -215,10 +215,10 @@ function season3DraftCasePool() {
 }
 
 
-// Ready-to-publish narrative for the second real season. The preset is seeded
-// once into the first season scheduled after the built-in opening season. It is
-// intentionally data-driven: after the initial seed, owner edits/deletes are
-// respected and never restored by later cold starts.
+// Ready-to-publish narrative for the next upcoming season. The preset is seeded
+// only into a future season, never into the currently active one. After the
+// initial seed, owner edits/deletes/transfers are respected and never restored
+// by later cold starts.
 const SEASON2_STORY_PRESET = Object.freeze({
   id: "season2-night-cafe-story-v1",
   marker: "system-season2-story-v1"
@@ -21799,20 +21799,15 @@ async function ensureSeason2StoryPreset(env){
   const markerRow=await env.DB.prepare(`SELECT preset_id,season_id FROM season_pass_story_presets WHERE preset_id=? LIMIT 1`).bind(presetId).first();
   if(markerRow?.preset_id)return {ok:true,seeded:false,reason:'already-seeded',seasonId:String(markerRow.season_id||'')};
 
-  const base=await env.DB.prepare(`SELECT season_id,starts_at FROM season_pass_seasons WHERE season_id=? LIMIT 1`).bind(DEFAULT_SEASON_PASS_ID).first();
-  let target=null;
-  if(base?.season_id){
-    target=await env.DB.prepare(`SELECT season_id,title,starts_at,ends_at,manual_status FROM season_pass_seasons WHERE season_id<>? AND starts_at>? ORDER BY starts_at ASC,season_id ASC LIMIT 1`).bind(DEFAULT_SEASON_PASS_ID,Number(base.starts_at||0)).first();
-  }else{
-    target=await env.DB.prepare(`SELECT season_id,title,starts_at,ends_at,manual_status FROM season_pass_seasons ORDER BY starts_at ASC,season_id ASC LIMIT 1 OFFSET 1`).first();
-  }
-  if(!target?.season_id)return {ok:true,seeded:false,reason:'season2-not-created'};
+  const now=Math.floor(Date.now()/1000);
+  const target=await env.DB.prepare(`SELECT season_id,title,starts_at,ends_at,manual_status FROM season_pass_seasons WHERE starts_at>? AND COALESCE(manual_status,'')<>'ended' ORDER BY starts_at ASC,season_id ASC LIMIT 1`).bind(now).first();
+  if(!target?.season_id)return {ok:true,seeded:false,reason:'upcoming-season-not-created'};
 
   const seasonId=String(target.season_id),safeSeason=seasonId.replace(/[^A-Za-z0-9_-]+/g,'_').slice(0,90)||'season2';
   const existing=(await env.DB.prepare(`SELECT event_id,title FROM season_pass_story_events WHERE season_id=?`).bind(seasonId).all()).results||[];
   const existingTitles=new Set(existing.map(row=>String(row.title||'').trim()).filter(Boolean));
   const existingIds=new Set(existing.map(row=>String(row.event_id||'')).filter(Boolean));
-  const now=Math.floor(Date.now()/1000),statements=[];let inserted=0;
+  const statements=[];let inserted=0;
 
   for(const event of season2StoryPresetEvents()){
     if(existingTitles.has(event.title))continue;
@@ -28047,6 +28042,7 @@ async function handleOwnerPanelApi(request, env, path, executionCtx = null) {
     if (path === "/api/owner/season-pass/story/save") return jsonResponse(await ownerPanelSaveSeasonPassStory(env, ctx));
     if (path === "/api/owner/season-pass/story/delete") return jsonResponse(await ownerPanelDeleteSeasonPassStory(env, ctx));
     if (path === "/api/owner/season-pass/story/duplicate") return jsonResponse(await ownerPanelDuplicateSeasonPassStory(env, ctx));
+    if (path === "/api/owner/season-pass/story/transfer") return jsonResponse(await ownerPanelTransferSeasonPassStory(env, ctx));
     if (path === "/api/owner/season-pass/story/test") return jsonResponse(await ownerPanelTestSeasonPassStory(env, ctx));
     if (path === "/api/owner/season-pass/story/launch") return jsonResponse(await ownerPanelLaunchSeasonPassStory(env, ctx));
     if (path === "/api/owner/season-pass/letter/save") return jsonResponse(await ownerPanelSaveSeasonPassTeaser(env, ctx));
@@ -28942,6 +28938,56 @@ async function ownerPanelDuplicateSeasonPassStory(env,ctx){
   await env.DB.prepare(`INSERT INTO season_pass_story_events(event_id,season_id,sort_order,unlock_level,unlock_at,enabled,title,body_text,image_url,button_text,pages_json,push_enabled,push_text,reward_json,created_at,updated_at,updated_by) VALUES(?,?,?,?,?,0,?,?,?,?,?,?,?,?,?,?,?)`)
     .bind(newId,seasonId,Math.min(9999,Math.max(0,Number(row.sort_order)||0)+1),Math.max(1,Math.min(50,Number(row.unlock_level)||1)),Math.max(0,Number(row.unlock_at)||0),title,String(row.body_text||''),String(row.image_url||''),String(row.button_text||'Продолжить'),String(row.pages_json||'[]'),Number(row.push_enabled||0)===1?1:0,String(row.push_text||''),String(row.reward_json||'{}'),now,now,String(ctx.user.id)).run();
   await logStaffAction(env,ctx.user,ctx.access,'owner_panel_season_pass_story_duplicate',null,'season_pass_story',newId,null,{seasonId,sourceEventId:eventId,title});return {ok:true,eventId:newId};
+}
+
+async function ownerPanelTransferSeasonPassStory(env,ctx){
+  await ensureSeasonPassSchema(env);
+  const sourceSeasonId=String(ctx.body?.sourceSeasonId||ctx.body?.seasonId||'').trim();
+  const targetSeasonId=String(ctx.body?.targetSeasonId||'').trim();
+  const requestedEventId=String(ctx.body?.eventId||'').trim();
+  if(!sourceSeasonId||!targetSeasonId)throw new ApiError(400,'Выберите исходный сезон и сезон назначения.');
+  if(sourceSeasonId===targetSeasonId)throw new ApiError(400,'Сюжет уже находится в этом сезоне.');
+  const [sourceSeason,targetSeason]=await Promise.all([loadSeasonPassSeasonById(env,sourceSeasonId),loadSeasonPassSeasonById(env,targetSeasonId)]);
+  if(!sourceSeason)throw new ApiError(404,'Исходный сезонный пропуск не найден.');
+  if(!targetSeason)throw new ApiError(404,'Сезон назначения не найден.');
+  if(targetSeason.status==='ended')throw new ApiError(409,'Нельзя переносить сюжет в завершённый сезон.');
+
+  const sourceRows=requestedEventId
+    ? ((await env.DB.prepare(`SELECT * FROM season_pass_story_events WHERE season_id=? AND event_id=? LIMIT 1`).bind(sourceSeasonId,requestedEventId).all()).results||[])
+    : ((await env.DB.prepare(`SELECT * FROM season_pass_story_events WHERE season_id=? ORDER BY unlock_level,sort_order,created_at,event_id`).bind(sourceSeasonId).all()).results||[]);
+  if(!sourceRows.length)throw new ApiError(404,requestedEventId?'Выбранная глава не найдена.':'В исходном сезоне нет сюжетных событий.');
+
+  const targetRows=(await env.DB.prepare(`SELECT event_id,title FROM season_pass_story_events WHERE season_id=?`).bind(targetSeasonId).all()).results||[];
+  const targetTitles=new Set(targetRows.map(row=>String(row.title||'').trim()).filter(Boolean));
+  const now=Math.floor(Date.now()/1000),actor=String(ctx.user.id),safeTarget=targetSeasonId.replace(/[^A-Za-z0-9_-]+/g,'_').slice(0,70)||'season';
+  const sourceStart=Math.max(0,Math.floor(Date.parse(String(sourceSeason.startsAt||''))/1000)||0),targetStart=Math.max(0,Math.floor(Date.parse(String(targetSeason.startsAt||''))/1000)||0);
+  const statements=[],eventIds=[];let moved=0,deletedSource=0,disabledSource=0,skipped=0;
+
+  for(let index=0;index<sourceRows.length;index+=1){
+    const row=sourceRows[index],title=String(row.title||'').trim();
+    if(title&&targetTitles.has(title)){skipped+=1;continue;}
+    const progress=Number((await env.DB.prepare(`SELECT COUNT(*) AS count FROM season_pass_story_progress WHERE event_id=?`).bind(String(row.event_id)).first())?.count||0);
+    const sourceUnlockAt=Math.max(0,Number(row.unlock_at)||0),relativeUnlock=sourceUnlockAt>0&&sourceStart>0?Math.max(0,sourceUnlockAt-sourceStart):0;
+    const targetUnlockAt=sourceUnlockAt>0?(targetStart>0?targetStart+relativeUnlock:sourceUnlockAt):0;
+    const newId=`story_${safeTarget}_${now}_${index}_${crypto.randomUUID().replaceAll('-','').slice(0,8)}`.slice(0,180),createdAt=now+index;
+    statements.push(env.DB.prepare(`INSERT INTO season_pass_story_events(event_id,season_id,sort_order,unlock_level,unlock_at,enabled,title,body_text,image_url,button_text,pages_json,push_enabled,push_text,reward_json,created_at,updated_at,updated_by) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
+      .bind(newId,targetSeasonId,Math.max(0,Number(row.sort_order)||0),Math.max(1,Math.min(50,Number(row.unlock_level)||1)),targetUnlockAt,Number(row.enabled||0)===1?1:0,title,String(row.body_text||''),String(row.image_url||''),String(row.button_text||'Продолжить'),String(row.pages_json||'[]'),Number(row.push_enabled||0)===1?1:0,String(row.push_text||''),String(row.reward_json||'{}'),createdAt,createdAt,actor));
+    statements.push(env.DB.prepare(`DELETE FROM season_pass_story_tests WHERE event_id=?`).bind(String(row.event_id)));
+    if(progress>0){
+      statements.push(env.DB.prepare(`UPDATE season_pass_story_events SET enabled=0,updated_at=?,updated_by=? WHERE event_id=? AND season_id=?`).bind(now,actor,String(row.event_id),sourceSeasonId));
+      disabledSource+=1;
+    }else{
+      statements.push(env.DB.prepare(`DELETE FROM season_pass_story_manual_unlocks WHERE event_id=?`).bind(String(row.event_id)));
+      statements.push(env.DB.prepare(`DELETE FROM season_pass_story_events WHERE event_id=? AND season_id=?`).bind(String(row.event_id),sourceSeasonId));
+      deletedSource+=1;
+    }
+    targetTitles.add(title);eventIds.push(newId);moved+=1;
+  }
+  if(!moved)throw new ApiError(409,skipped?'В сезоне назначения уже есть главы с такими названиями. Ничего не перенесено.':'Не удалось подготовить перенос сюжета.');
+  if(!requestedEventId&&moved===sourceRows.length)statements.push(env.DB.prepare(`UPDATE season_pass_story_presets SET season_id=? WHERE season_id=?`).bind(targetSeasonId,sourceSeasonId));
+  for(let index=0;index<statements.length;index+=40)await env.DB.batch(statements.slice(index,index+40));
+  await logStaffAction(env,ctx.user,ctx.access,'owner_panel_season_pass_story_transfer',null,'season_pass_story',requestedEventId||null,null,{sourceSeasonId,targetSeasonId,eventId:requestedEventId||'',moved,deletedSource,disabledSource,skipped,eventIds});
+  return {ok:true,sourceSeasonId,targetSeasonId,moved,deletedSource,disabledSource,skipped,eventIds};
 }
 
 async function ownerPanelTestSeasonPassStory(env,ctx){
