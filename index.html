@@ -840,9 +840,24 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
   }
 
   let seasonPassLayer = null;
+  let seasonPassRefreshPending = false;
 
   function seasonPassFrame() {
     return seasonPassLayer?.querySelector?.(".zefirok-season-pass-frame") || null;
+  }
+
+  function requestSeasonPassStateRefresh() {
+    const passFrame = seasonPassFrame();
+    if (!passFrame?.isConnected) return false;
+    try {
+      if (passFrame.contentDocument?.readyState === "complete") {
+        passFrame.contentWindow?.postMessage?.({ type: "zefirok-host-season-pass-refresh" }, "*");
+        seasonPassRefreshPending = false;
+        return true;
+      }
+    } catch {}
+    seasonPassRefreshPending = true;
+    return false;
   }
 
   function openSeasonPassOverlay(initData = "", view = "", offerTier = "") {
@@ -861,13 +876,17 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
     const normalizedOfferTier = ["elite","elite_plus"].includes(String(offerTier || "")) ? String(offerTier) : "";
     const passOffer = normalizedOfferTier ? `&offer=${encodeURIComponent(normalizedOfferTier)}` : "";
     passFrame.src = initData
-      ? `/battle-pass.html?v=1.0.6${passView}${passOffer}#tgInitData=${encodeURIComponent(initData)}`
-      : `/battle-pass.html?v=1.0.6${passView}${passOffer}`;
+      ? `/battle-pass.html?v=1.0.6-runsync1${passView}${passOffer}#tgInitData=${encodeURIComponent(initData)}`
+      : `/battle-pass.html?v=1.0.6-runsync1${passView}${passOffer}`;
     layer.append(passFrame);
     passFrame.addEventListener("load", () => {
       const snapshot = syncTelegramViewport();
       sendViewportSnapshot(passFrame.contentWindow, snapshot);
       try { sendTelegramProfile(passFrame.contentWindow); } catch {}
+      if (seasonPassRefreshPending) {
+        seasonPassRefreshPending = false;
+        try { passFrame.contentWindow?.postMessage?.({ type: "zefirok-host-season-pass-refresh" }, "*"); } catch {}
+      }
     }, { once: true });
     document.body.append(layer);
     document.body.classList.add("zefirok-season-pass-open");
@@ -908,6 +927,7 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
   function closeSeasonPassOverlay() {
     const layer = seasonPassLayer;
     seasonPassLayer = null;
+    seasonPassRefreshPending = false;
     if (layer?.isConnected) layer.remove();
     document.body.classList.remove("zefirok-season-pass-open");
     clearSeasonPassAwayMarker();
@@ -1164,6 +1184,8 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
         if (initData) window.sessionStorage.setItem("zefirok-telegram-init-data", initData);
       } catch (error) {}
       openSeasonPassOverlay(initData, String(message.view || ""));
+    } else if (message.type === "zefirok-refresh-battle-pass") {
+      requestSeasonPassStateRefresh();
     } else if (message.type === "zefirok-open-rating") {
       let initData = "";
       try {
@@ -16599,7 +16621,8 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         return submitLeaderboardRun(Number(run.score || 0), Number(run.durationMs || 0) / 1000, run);
       }
 
-      window.__ZEFIROK_SETTLE_PENDING_RUN__ = async function settlePendingRunBeforeNavigation() {
+      window.__ZEFIROK_SETTLE_PENDING_RUN__ = async function settlePendingRunBeforeNavigation(options = {}) {
+        const silent = Boolean(options &amp;&amp; options.silent === true);
         if (leaderboardRunSubmitInFlightRunId) {
           await new Promise((resolve) =&gt; {
             let done = false;
@@ -16610,7 +16633,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         }
         if (loadPendingLeaderboardRun()) await retryPendingLeaderboardRun();
         const settled = !loadPendingLeaderboardRun();
-        if (!settled) showProfileToast(&quot;Завершённый забег ещё синхронизируется. Повторите через пару секунд.&quot;, &quot;warning&quot;, 2800);
+        if (!settled &amp;&amp; !silent) showProfileToast(&quot;Завершённый забег ещё синхронизируется. Повторите через пару секунд.&quot;, &quot;warning&quot;, 2800);
         return settled;
       };
 
@@ -19113,20 +19136,40 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
   };
   applyFlags(window.__ZEFIROK_FEATURE_FLAGS__ || { battle_pass: false });
   window.addEventListener(&quot;zefirok-feature-flags&quot;, (event) =&gt; applyFlags(event.detail || {}));
-  document.addEventListener(&quot;click&quot;, async (event) =&gt; {
+  document.addEventListener(&quot;click&quot;, (event) =&gt; {
     const button = event.target?.closest?.(&quot;[data-battle-pass-open]&quot;);
     if (!button) return;
     event.preventDefault();
     button.disabled = true;
+
+    // Навигация в сезонный пропуск не должна зависеть от сети или от старого
+    // pending-run. Открываем интерфейс сразу, а settlement продолжаем строго
+    // в фоне через существующий single-flight lock.
+    let settlementPromise = null;
     try {
       if (typeof window.__ZEFIROK_SETTLE_PENDING_RUN__ === &quot;function&quot;) {
-        const settled = await window.__ZEFIROK_SETTLE_PENDING_RUN__();
-        if (!settled) { button.disabled = false; return; }
+        settlementPromise = Promise.resolve(window.__ZEFIROK_SETTLE_PENDING_RUN__({ silent: true }));
       }
-      window.parent.postMessage({ type: &quot;zefirok-open-battle-pass&quot; }, &quot;*&quot;);
-    } finally {
-      window.setTimeout(() =&gt; { button.disabled = false; }, 900);
+    } catch (error) {
+      console.warn(&quot;Pending run settlement before season pass failed to start&quot;, error);
     }
+
+    try {
+      window.parent.postMessage({ type: &quot;zefirok-open-battle-pass&quot; }, &quot;*&quot;);
+    } catch (error) {
+      showProfileToast(&quot;Не удалось открыть сезонный пропуск.&quot;, &quot;warning&quot;, 3200);
+    }
+
+    if (settlementPromise) {
+      settlementPromise.then((settled) =&gt; {
+        if (!settled) return;
+        try { window.parent.postMessage({ type: &quot;zefirok-refresh-battle-pass&quot; }, &quot;*&quot;); } catch (error) {}
+      }).catch((error) =&gt; {
+        console.warn(&quot;Pending run settlement before season pass failed&quot;, error);
+      });
+    }
+
+    window.setTimeout(() =&gt; { button.disabled = false; }, 900);
   });
   window.addEventListener(&quot;pageshow&quot;, () =&gt; {
     document.querySelectorAll(&quot;[data-battle-pass-open]&quot;).forEach((button) =&gt; { button.disabled = false; });
