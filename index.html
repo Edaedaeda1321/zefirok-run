@@ -9025,12 +9025,36 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         setButtonImage(pauseBtnImg, actionButtonAssets.pause[active ? &quot;on&quot; : &quot;off&quot;]);
       }
 
-      function flashStartButtonAndRun() {
+      async function flashStartButtonAndRun() {
         if (startBtn.dataset.locked === &quot;true&quot;) return;
-        const mode = startBtn.dataset.mode || &quot;start&quot;;
         startBtn.dataset.locked = &quot;true&quot;;
+        const mode = startBtn.dataset.mode || &quot;start&quot;;
         clearTimeout(startVisualTimer);
         setStartButtonVisual(mode, true);
+
+        // Never start a new protected session while the previous finish is
+        // still being settled. Starting another run used to supersede the old
+        // run and left a permanent pending retry in Profile/Battle Pass.
+        if (leaderboardRunSubmitInFlightRunId) {
+          showProfileToast(&quot;Сохраняем завершённый забег…&quot;, &quot;warning&quot;, 1800);
+          startVisualTimer = window.setTimeout(() =&gt; {
+            setStartButtonVisual(&quot;restart&quot;, false);
+            startBtn.dataset.locked = &quot;false&quot;;
+          }, 350);
+          return;
+        }
+        if (loadPendingLeaderboardRun()) {
+          showProfileToast(&quot;Синхронизируем предыдущий забег…&quot;, &quot;warning&quot;, 2200);
+          await retryPendingLeaderboardRun();
+          if (loadPendingLeaderboardRun()) {
+            startVisualTimer = window.setTimeout(() =&gt; {
+              setStartButtonVisual(&quot;restart&quot;, false);
+              startBtn.dataset.locked = &quot;false&quot;;
+            }, 350);
+            return;
+          }
+        }
+
         reset(true);
         startVisualTimer = window.setTimeout(() =&gt; {
           setStartButtonVisual(&quot;restart&quot;, false);
@@ -9599,6 +9623,9 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       let purchaseReturnFocus = null;
       let purchaseLimitTimer = 0;
       const assetSources = JSON.parse(root.querySelector(&quot;[data-zefirok-assets]&quot;).textContent);
+      // Для физического товара «Фирменный зефир» используем утверждённое изображение
+      // самого зефира, а не иллюстрацию кремового ассорти. Ресурсный значок остаётся iconTreatPanel.
+      assetSources.shopZefirProduct = &quot;/assets/shop/dessert_marshmallow_256x256.png?v=1.0.6&quot;;
       const ASSET_BUILD_VERSION = &quot;0.79.5&quot;;
       const assetFallbackSources = Object.freeze({&quot;skinDefaultPortrait&quot;:&quot;/assets/optimized/v0.79.5/skinDefaultPortrait.png?v=0.79.5&quot;,&quot;navGameButtonSelected&quot;:&quot;/assets/optimized/v0.79.5/navGameButtonSelected.png?v=0.79.5&quot;,&quot;navGameButtonUnselected&quot;:&quot;/assets/optimized/v0.79.5/navGameButtonUnselected.png?v=0.79.5&quot;,&quot;iconScore&quot;:&quot;/assets/optimized/v0.79.5/iconScore.png?v=0.79.5&quot;,&quot;cafeBackground&quot;:&quot;/assets/optimized/v0.79.5/cafeBackground.png?v=0.79.5&quot;,&quot;skinDefaultAvatar&quot;:&quot;/assets/optimized/v0.79.5/skinDefaultAvatar.png?v=0.79.5&quot;,&quot;shopMarshmallowAssortment&quot;:&quot;/assets/optimized/v0.79.5/shopMarshmallowAssortment.png?v=0.79.5&quot;,&quot;shopMascot&quot;:&quot;/assets/optimized/v0.79.5/shopMascot.png?v=0.79.5&quot;,&quot;pillowObstacle&quot;:&quot;/assets/optimized/v0.79.5/pillowObstacle.png?v=0.79.5&quot;,&quot;coffeePickup&quot;:&quot;/assets/optimized/v0.79.5/coffeePickup.png?v=0.79.5&quot;,&quot;vaseObstacle&quot;:&quot;/assets/optimized/v0.79.5/vaseObstacle.png?v=0.79.5&quot;,&quot;iconCoffee&quot;:&quot;/assets/optimized/v0.79.5/iconCoffee.png?v=0.79.5&quot;,&quot;iconRecord&quot;:&quot;/assets/optimized/v0.79.5/iconRecord.png?v=0.79.5&quot;});
       const assetFallbackByUrl = new Map();
@@ -10745,7 +10772,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           description: &quot;Самый воздушный зефир для гостей кафе «Зефирок».&quot;,
           points: 40000,
           treats: 350,
-          image: &quot;shopMarshmallowAssortment&quot;
+          image: &quot;shopZefirProduct&quot;
         },
         americano: {
           enabled: true,
@@ -10898,6 +10925,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       const leaderboardRequestSerial = { season: 0, all_time: 0 };
       const leaderboardRefreshInFlight = { season: false, all_time: false };
       let pendingLeaderboardRun = null;
+      let leaderboardRunSubmitInFlightRunId = &quot;&quot;;
       let authoritativeRunSessionId = &quot;&quot;;
       let authoritativeRunSessionReadyId = &quot;&quot;;
       let authoritativeRunStartPromise = null;
@@ -15522,7 +15550,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       function flashOfferCostParts(cost) {
         const parts = [];
         if (Number(cost?.points || 0)) parts.push({ key:&quot;points&quot;, amount:Number(cost.points), image:assetSources.iconScore || &quot;&quot; });
-        if (Number(cost?.treats || 0)) parts.push({ key:&quot;treats&quot;, amount:Number(cost.treats), image:assetSources.iconTreat || assetSources.shopMarshmallowAssortment || &quot;&quot; });
+        if (Number(cost?.treats || 0)) parts.push({ key:&quot;treats&quot;, amount:Number(cost.treats), image:assetSources.iconTreatPanel || assetSources.iconTreat || assetSources.shopMarshmallowAssortment || &quot;&quot; });
         if (Number(cost?.coffee || 0)) parts.push({ key:&quot;coffee&quot;, amount:Number(cost.coffee), image:assetSources.iconCoffee || &quot;&quot; });
         return parts;
       }
@@ -15550,6 +15578,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       }
       function flashOfferSuppressed(offer) {
         if (!offer?.id) return true;
+        if (offer.previewOnly) return false;
         if (offer.showFrequency === &quot;every_entry&quot;) return false;
         if (offer.showFrequency === &quot;once_day&quot;) {
           try { return localStorage.getItem(flashOfferDailyKey(offer.id)) === &quot;1&quot;; } catch { return false; }
@@ -15557,14 +15586,14 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         return flashOfferSessionSeen.has(String(offer.id));
       }
       function markFlashOfferSeen(offer) {
-        if (!offer?.id) return;
+        if (!offer?.id || offer.previewOnly) return;
         if (offer.showFrequency === &quot;once_day&quot;) {
           try { localStorage.setItem(flashOfferDailyKey(offer.id), &quot;1&quot;); } catch {}
         } else if (offer.showFrequency !== &quot;every_entry&quot;) flashOfferSessionSeen.add(String(offer.id));
       }
       function recordFlashOfferEvent(eventType, offer = flashOfferCurrent) {
         const initData = String(telegramProfile?.initData || &quot;&quot;);
-        if (!initData || !offer?.id) return;
+        if (!initData || !offer?.id || offer.previewOnly) return;
         const eventId = `offer_evt_${eventType}_${offer.id}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
         void rewardApiRequest(&quot;/api/shop/offers/event&quot;, { initData, offerId: offer.id, eventType, eventId }).catch(() =&gt; {});
       }
@@ -15614,16 +15643,17 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         flashOfferBadge.textContent = `🔥 ${offer.badgeText || &quot;АКЦИЯ&quot;}${Number(offer.discountPercent || 0) &gt; 0 ? ` · −${offer.discountPercent}%` : &quot;&quot;}`;
         flashOfferTitle.textContent = offer.title || &quot;Специальное предложение&quot;;
         const passUpgradeNote = offer.passUpgrade ? &quot;Цена уже учитывает ваш активный «Элитный».&quot; : &quot;&quot;;
-        flashOfferSubtitle.textContent = [offer.subtitle || &quot;&quot;, passUpgradeNote].filter(Boolean).join(&quot; · &quot;);
+        const ownerPreviewNote = offer.previewOnly ? `👑 Предпросмотр владельца: ${offer.previewReason || &quot;этому аккаунту акция недоступна&quot;}` : &quot;&quot;;
+        flashOfferSubtitle.textContent = [offer.subtitle || &quot;&quot;, passUpgradeNote, ownerPreviewNote].filter(Boolean).join(&quot; · &quot;);
         flashOfferRewards.innerHTML = (offer.rewards || []).map((reward) =&gt; { const embeddedAmount = [&quot;points&quot;,&quot;treats&quot;,&quot;coffee&quot;,&quot;case&quot;,&quot;product&quot;,&quot;season_pass_xp&quot;,&quot;season_pass_levels&quot;,&quot;booster_points_runs&quot;,&quot;booster_treats_runs&quot;,&quot;booster_coffee_runs&quot;].includes(String(reward.kind || &quot;&quot;)); return `&lt;span class=&quot;flash-offer-reward&quot;&gt;&lt;img src=&quot;${flashOfferEscape(reward.imageUrl || &quot;&quot;)}&quot; alt=&quot;&quot;&gt;&lt;span&gt;${flashOfferEscape(reward.title || &quot;Награда&quot;)}${Number(reward.amount || 1) &gt; 1 &amp;&amp; !embeddedAmount &amp;&amp; !String(reward.title || &quot;&quot;).startsWith(String(reward.amount)) ? ` × ${formatter.format(reward.amount)}` : &quot;&quot;}&lt;/span&gt;&lt;/span&gt;`; }).join(&quot;&quot;);
         const oldCostText = flashOfferCostText(offer.original), newCostText = flashOfferCostText(offer.price);
         flashOfferOld.innerHTML = Number(offer.discountPercent || 0) &gt; 0 ? flashOfferCostHtml(offer.original) : &quot;&quot;;
         flashOfferNew.innerHTML = flashOfferCostHtml(offer.price);
         const limit = Number(offer.purchaseLimit || 0), count = Number(offer.purchaseCount || 0);
-        flashOfferLimit.textContent = limit &gt; 0 ? `Можно купить ${limit} раз · осталось ${Math.max(0, limit - count)}` : &quot;Количество покупок не ограничено&quot;;
-        flashOfferBuy.innerHTML = `&lt;span&gt;Купить&lt;/span&gt;${flashOfferCostHtml(offer.price)}`;
-        flashOfferBuy.setAttribute(&quot;aria-label&quot;, `Купить · ${newCostText}`);
-        flashOfferBuy.disabled = false;
+        flashOfferLimit.textContent = offer.previewOnly ? `👑 Безопасный предпросмотр · ${offer.previewReason || &quot;покупка недоступна этому аккаунту&quot;}` : (limit &gt; 0 ? `Можно купить ${limit} раз · осталось ${Math.max(0, limit - count)}` : &quot;Количество покупок не ограничено&quot;);
+        flashOfferBuy.innerHTML = offer.previewOnly ? `&lt;span&gt;Предпросмотр&lt;/span&gt;${flashOfferCostHtml(offer.price)}` : `&lt;span&gt;Купить&lt;/span&gt;${flashOfferCostHtml(offer.price)}`;
+        flashOfferBuy.setAttribute(&quot;aria-label&quot;, offer.previewOnly ? &quot;Предпросмотр акции владельцем&quot; : `Купить · ${newCostText}`);
+        flashOfferBuy.disabled = Boolean(offer.previewOnly);
         flashOfferMessage.textContent = &quot;&quot;;
         setFlashOfferScrollLocked(true);
         flashOfferLayer.hidden = false;
@@ -16504,11 +16534,14 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           showProfileToast(&quot;Забег сохранён. Откройте игру через Telegram, чтобы сервер подтвердил результат.&quot;, &quot;warning&quot;, 5200);
           return false;
         }
+        if (leaderboardRunSubmitInFlightRunId === String(run.runId)) return false;
+        leaderboardRunSubmitInFlightRunId = String(run.runId);
         if (!existingRun) {
           const sessionReady = authoritativeRunSessionId === String(run.runId) &amp;&amp; authoritativeRunStartPromise
             ? await authoritativeRunStartPromise
             : await startAuthoritativeRunSession(run.runId);
           if (!sessionReady) {
+            leaderboardRunSubmitInFlightRunId = &quot;&quot;;
             showProfileToast(&quot;Не удалось подтвердить начало забега. Результат сохранён для повторной синхронизации.&quot;, &quot;warning&quot;, 4600);
             return false;
           }
@@ -16547,20 +16580,39 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           return true;
         } catch (error) {
           const errorMessage = String(error?.message || &quot;&quot;);
-          const permanentSessionError = Number(error?.status || 0) === 409 &amp;&amp; /(?:начните новый забег|идентификатор забега уже|сессия забега истекла|проверка забега|контрольн)/i.test(errorMessage);
+          const permanentSessionError = Number(error?.status || 0) === 409 &amp;&amp; /(?:начните новый забег|идентификатор забега уже|сессия забега истекла|проверка забега|контрольн|забег уже заверш|не может быть восстановлен)/i.test(errorMessage);
           if (permanentSessionError) savePendingLeaderboardRun(null);
           console.warn(&quot;Authoritative run submit failed&quot;, error);
           showProfileToast(errorMessage || &quot;Результат сохранён и будет отправлен позже.&quot;, &quot;warning&quot;, 4200);
           window.setTimeout(() =&gt; void syncPlayerProfileFromServer(), 250);
           return false;
+        } finally {
+          if (leaderboardRunSubmitInFlightRunId === String(run.runId)) leaderboardRunSubmitInFlightRunId = &quot;&quot;;
+          try { window.dispatchEvent(new Event(&quot;zefirok-run-settlement-finished&quot;)); } catch (eventError) {}
         }
       }
 
       async function retryPendingLeaderboardRun() {
         const run = loadPendingLeaderboardRun();
         if (!run || !telegramProfile?.initData) return false;
+        if (leaderboardRunSubmitInFlightRunId === String(run.runId)) return false;
         return submitLeaderboardRun(Number(run.score || 0), Number(run.durationMs || 0) / 1000, run);
       }
+
+      window.__ZEFIROK_SETTLE_PENDING_RUN__ = async function settlePendingRunBeforeNavigation() {
+        if (leaderboardRunSubmitInFlightRunId) {
+          await new Promise((resolve) =&gt; {
+            let done = false;
+            const finish = () =&gt; { if (done) return; done = true; window.clearTimeout(timer); resolve(); };
+            const timer = window.setTimeout(finish, 9000);
+            window.addEventListener(&quot;zefirok-run-settlement-finished&quot;, finish, { once: true });
+          });
+        }
+        if (loadPendingLeaderboardRun()) await retryPendingLeaderboardRun();
+        const settled = !loadPendingLeaderboardRun();
+        if (!settled) showProfileToast(&quot;Завершённый забег ещё синхронизируется. Повторите через пару секунд.&quot;, &quot;warning&quot;, 2800);
+        return settled;
+      };
 
       async function claimLeaderboardReward(requestedRewardId = &quot;&quot;) {
         const initData = String(telegramProfile?.initData || &quot;&quot;);
@@ -19061,13 +19113,20 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
   };
   applyFlags(window.__ZEFIROK_FEATURE_FLAGS__ || { battle_pass: false });
   window.addEventListener(&quot;zefirok-feature-flags&quot;, (event) =&gt; applyFlags(event.detail || {}));
-  document.addEventListener(&quot;click&quot;, (event) =&gt; {
+  document.addEventListener(&quot;click&quot;, async (event) =&gt; {
     const button = event.target?.closest?.(&quot;[data-battle-pass-open]&quot;);
     if (!button) return;
     event.preventDefault();
     button.disabled = true;
-    window.parent.postMessage({ type: &quot;zefirok-open-battle-pass&quot; }, &quot;*&quot;);
-    window.setTimeout(() =&gt; { button.disabled = false; }, 900);
+    try {
+      if (typeof window.__ZEFIROK_SETTLE_PENDING_RUN__ === &quot;function&quot;) {
+        const settled = await window.__ZEFIROK_SETTLE_PENDING_RUN__();
+        if (!settled) { button.disabled = false; return; }
+      }
+      window.parent.postMessage({ type: &quot;zefirok-open-battle-pass&quot; }, &quot;*&quot;);
+    } finally {
+      window.setTimeout(() =&gt; { button.disabled = false; }, 900);
+    }
   });
   window.addEventListener(&quot;pageshow&quot;, () =&gt; {
     document.querySelectorAll(&quot;[data-battle-pass-open]&quot;).forEach((button) =&gt; { button.disabled = false; });

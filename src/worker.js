@@ -526,7 +526,7 @@ const LEGAL_DOCUMENTS = Object.freeze({
 });
 const LEGAL_BUILTIN_HASHES = Object.freeze({"agreement":{"version":"2026-08-13.1","sha256Ru":"7b9dad94ff4319c98b5fd01ade558ed3e409db705a8417551f89eb0dc4792c46","sha256En":"3f93d567fefd8e936a7ac8f63a9a5ceefc6bd6ecfcdfaad2e3733cf6e34d02d0","sha256Bundle":"93f28cca0556b480ee44a73ef775187a397dfc61bd4efda1171526a84fa69e84"},"privacy":{"version":"2026-08-13.2","sha256Ru":"687bba9ab60ee35124a17806ba7904870b1a3e09d23610430d45b92cd4719433","sha256En":"e0531d156e2ad0210b16349094499f7560cfca6167d911306926ed8e6ff45cbd","sha256Bundle":"435dd20f418603b3329dd1ab17a5e5ee619eee5341f425a547114fd235d4eee3"},"consent":{"version":"2026-08-13.1","sha256Ru":"10bcaf97ef31fad736f5e4f987ffad94c30c964e759b72c9a49c97738ede48d7","sha256En":"64383734cc3469028242d0c90867ccc42c7605269b187a94056fc963460ddb41","sha256Bundle":"11ebecc6978dac4f887b2ed4316f12f9ebafd4c41d5eeafed331ee12ae2948e0"}});
 
-const WORKER_BUILD = "1.0.6 + player levels + gift inbox + legal evidence archive";
+const WORKER_BUILD = "1.0.6 + offers preview fix + zefir asset fix";
 const V07944_RELEASE_CANDIDATE_AUDIT = Object.freeze({ reset: true, claims: true, purchases: true, xp: true, concurrency: true });
 
 // =============================================================
@@ -3338,7 +3338,7 @@ async function validateAuthoritativeRunProgressCaps(env, session, previous, metr
   return metrics;
 }
 
-async function attestAuthoritativeRunProgress(env, session, rawMetrics) {
+async function attestAuthoritativeRunProgress(env, session, rawMetrics, options = {}) {
   const metrics = normalizeAuthoritativeRunMetrics(rawMetrics);
   const runId = String(session?.run_id || '');
   const telegramId = String(session?.telegram_id || '');
@@ -3350,7 +3350,10 @@ async function attestAuthoritativeRunProgress(env, session, rawMetrics) {
       throw new ApiError(409, 'Контрольная запись забега повреждена. Начните новый забег.');
     }
     const proof = authoritativeRunProofView(proofRow);
-    const nowMs = Date.now();
+    const requestedNowMs = Number(options?.nowMs);
+    const nowMs = Number.isFinite(requestedNowMs) && requestedNowMs > 0
+      ? Math.max(proof.lastServerAtMs, Math.floor(requestedNowMs))
+      : Date.now();
 
     if (sameAuthoritativeRunMetrics(proof, metrics)) {
       const heartbeat = await env.DB.prepare(
@@ -6357,14 +6360,77 @@ async function submitLeaderboardRun(request, env) {
       });
     }
     if (String(session.telegram_id || "") !== telegramId) throw new ApiError(409, "Этот идентификатор забега уже используется.");
-    if (String(session.status || "") !== "started") throw new ApiError(409, "Этот забег уже завершён. Обновите игру и повторите синхронизацию.");
+
+    const sessionStatus = String(session.status || "");
+    const runActivityCreatedAt = Math.max(
+      1,
+      Math.floor(Number(session.created_at || 0)) || Math.floor(Number(session.started_at_ms || 0) / 1000) || Math.floor(Date.now() / 1000)
+    );
+
+    // A finished session without its idempotency ledger should not make the
+    // client retry forever. The session already stores the exact authoritative
+    // amounts that were committed together with the profile update, so rebuild
+    // only the missing ledger and let buildResponse repair Battle Pass activity.
+    if (sessionStatus === "finished") {
+      await env.DB.prepare(
+        `INSERT OR IGNORE INTO player_economy_run_ledger(
+          run_id,telegram_id,points,treats,coffee,profile_xp,raw_score,raw_treats,raw_coffee,duration_ms,
+          booster_type,skin_id,new_record,accepted_rating,season_id,created_at
+        ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
+      ).bind(
+        runId, telegramId,
+        Math.max(0, Number(session.economy_points || 0)),
+        Math.max(0, Number(session.economy_treats || 0)),
+        Math.max(0, Number(session.economy_coffee || 0)),
+        Math.max(0, Number(session.profile_xp || 0)),
+        Math.max(0, Number(session.score || submittedMetrics.score)),
+        Math.max(0, Number(session.run_treats || submittedMetrics.runTreats)),
+        Math.max(0, Number(session.run_coffee || submittedMetrics.runCoffee)),
+        Math.max(0, Number(session.duration_ms || submittedMetrics.durationMs)),
+        "", "default", Number(session.new_record || 0) ? 1 : 0,
+        Number(session.accepted_rating || 0) ? 1 : 0,
+        String(session.season_id || season.id || ""), runActivityCreatedAt
+      ).run();
+      const recoveredLedger = await env.DB.prepare(`SELECT * FROM player_economy_run_ledger WHERE run_id=? LIMIT 1`).bind(runId).first();
+      if (recoveredLedger) return jsonResponse(await buildResponse(recoveredLedger, true));
+    }
+
+    // A player can tap "Заново" or open another screen while the final request
+    // is still in flight. Older clients could therefore supersede/expire the
+    // just-finished session before settlement. We can safely recover it only
+    // against the already persisted proof chain and the trusted server time at
+    // which the session stopped being active; anti-cheat limits remain intact.
+    const recoverableClosedSession = sessionStatus === "superseded" || sessionStatus === "expired";
+    let settlementSourceStatus = "started";
+    let historicalAttestAtMs = 0;
+    if (sessionStatus !== "started") {
+      if (!recoverableClosedSession) {
+        throw new ApiError(409, "Этот забег уже завершён. Обновите игру и повторите синхронизацию.");
+      }
+      const proofRow = await env.DB.prepare(`SELECT * FROM game_run_live_proofs WHERE run_id=? LIMIT 1`).bind(runId).first();
+      if (!proofRow || String(proofRow.telegram_id || "") !== telegramId) {
+        throw new ApiError(409, "Этот забег уже завершён и не может быть восстановлен.");
+      }
+      const proof = authoritativeRunProofView(proofRow);
+      historicalAttestAtMs = Math.max(
+        proof.lastServerAtMs,
+        Math.floor(Number(session.updated_at || 0) * 1000),
+        Math.floor(Number(session.started_at_ms || 0))
+      );
+      settlementSourceStatus = sessionStatus;
+    }
 
     // The final body is not trusted as a one-shot result. It must continue
     // the live proof chain persisted by /api/runs/checkpoint. A client that
     // waits 12 seconds and then fabricates a full run cannot backfill the
     // missing checkpoints because progress is bounded by server time and the
     // maximum gap between consecutive proofs.
-    const metrics = await attestAuthoritativeRunProgress(env, session, submittedMetrics);
+    const metrics = await attestAuthoritativeRunProgress(
+      env,
+      session,
+      submittedMetrics,
+      historicalAttestAtMs > 0 ? { nowMs: historicalAttestAtMs } : {}
+    );
     const qualifies = metrics.durationMs >= minSeconds * 1000 && metrics.score >= minScore;
     const ensured = await ensureCasePlayerState(env, telegramId, {});
     const profileBefore = await ensureAuthoritativeProfileRow(env, telegramId, `run:${runId}:prepare`);
@@ -6409,14 +6475,14 @@ async function submitLeaderboardRun(request, env) {
 
     const settlementGuardId = `run-settle:${runId}`.slice(0,180);
     const statements = [
-      env.DB.prepare(`UPDATE game_run_sessions SET status='settling',updated_at=? WHERE run_id=? AND telegram_id=? AND status='started'`).bind(now, runId, telegramId),
+      env.DB.prepare(`UPDATE game_run_sessions SET status='settling',updated_at=? WHERE run_id=? AND telegram_id=? AND status=?`).bind(now, runId, telegramId, settlementSourceStatus),
       env.DB.prepare(`INSERT INTO game_run_settlement_guards(guard_id,ok) VALUES(?,COALESCE((SELECT CASE WHEN status='settling' THEN 1 ELSE 0 END FROM game_run_sessions WHERE run_id=? AND telegram_id=? LIMIT 1),0))`).bind(settlementGuardId, runId, telegramId),
       env.DB.prepare(
         `INSERT INTO player_economy_run_ledger(
           run_id,telegram_id,points,treats,coffee,profile_xp,raw_score,raw_treats,raw_coffee,duration_ms,
           booster_type,skin_id,new_record,accepted_rating,season_id,created_at
         ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
-      ).bind(runId, telegramId, economyPoints, economyTreats, economyCoffee, profileXpAwarded, metrics.score, metrics.runTreats, metrics.runCoffee, metrics.durationMs, appliedBoosterType, skinId, newRecord ? 1 : 0, acceptedToRating ? 1 : 0, String(season.id || ""), now),
+      ).bind(runId, telegramId, economyPoints, economyTreats, economyCoffee, profileXpAwarded, metrics.score, metrics.runTreats, metrics.runCoffee, metrics.durationMs, appliedBoosterType, skinId, newRecord ? 1 : 0, acceptedToRating ? 1 : 0, String(season.id || ""), runActivityCreatedAt),
       env.DB.prepare(
         `UPDATE admin_profile_state SET
            wallet=MIN(999999999,wallet+?),treats=MIN(999999999,treats+?),coffee=MIN(999999999,coffee+?),
@@ -6508,7 +6574,7 @@ async function submitLeaderboardRun(request, env) {
           runTreats: metrics.runTreats,
           runCoffee: metrics.runCoffee,
           newRecord
-        }, null, { serverValidated: true, runCreatedAt: now });
+        }, null, { serverValidated: true, runCreatedAt: runActivityCreatedAt });
       } catch (error) { console.error("authoritative season pass activity failed", error); }
     }
     try {
@@ -27145,7 +27211,7 @@ function ownerPanelRewardAsset(kind, itemId = "") {
   const normalized = String(kind || "");
   if (normalized === "case") return ownerPanelCaseAsset(normalizeCaseType(itemId) || "small");
   if (normalized === "points") return "/assets/optimized/v0.79.5/iconScore.png";
-  if (normalized === "treats" || normalized === "zefir") return "/assets/optimized/v0.79.5/shopMarshmallowAssortment.png";
+  if (normalized === "treats" || normalized === "zefir") return "/assets/shop/dessert_marshmallow_256x256.png?v=1.0.6";
   if (normalized === "coffee") return "/assets/optimized/v0.79.5/iconCoffee.png";
   if (SEASON_PASS_COSMETIC_KINDS.includes(normalized)) return seasonPassCosmeticImage(normalized,itemId);
   const encodedCosmetic=seasonPassCosmeticRewardDefinition({item_id:itemId});
@@ -28703,31 +28769,37 @@ async function flashOfferMatchesSegment(env, telegramId, segmentKey) {
   const row = await env.DB.prepare(sql).bind(...binds).first();
   return Boolean(row?.ok);
 }
+async function flashOfferEligibilityContext(env, telegramId, row, cache = {}) {
+  if (!(await flashOfferMatchesSegment(env,telegramId,row.segment_key))) return {eligible:false,reason:"Аккаунт не входит в сегмент этой акции."};
+  let rewards=[];
+  try { rewards=flashOfferNormalizeRewards(ownerV8SafeJson(row.rewards_json,[])); }
+  catch { return {eligible:false,reason:"Награды акции больше не проходят серверную проверку."}; }
+  const cosmeticRewards=rewards.filter((reward)=>flashOfferCosmeticDefinition(reward.kind,reward.id));
+  if(cosmeticRewards.length){
+    if(!cache.caseEligibilityLoaded){
+      cache.caseEligibilityLoaded=true;
+      try{const stateRow=await env.DB.prepare(`SELECT * FROM case_player_state WHERE telegram_id=? LIMIT 1`).bind(String(telegramId)).first();cache.caseEligibilityState=caseStateFromRow(stateRow||{});}catch{cache.caseEligibilityState=caseStateFromRow({});}
+    }
+    const owned=cosmeticRewards.find((reward)=>flashOfferCosmeticOwned(cache.caseEligibilityState,reward.kind,reward.id));
+    if(owned){const cosmetic=flashOfferCosmeticDefinition(owned.kind,owned.id);return {eligible:false,reason:`Предмет «${String(cosmetic?.title||owned.id||"оформление")}» уже есть на аккаунте.`};}
+  }
+  const passContext=await flashOfferSeasonPassContext(env,telegramId,rewards,{createPlayer:false});
+  if(passContext&&!passContext.eligible)return {eligible:false,reason:passContext.reason||"Награда сезонного пропуска недоступна этому аккаунту.",passContext};
+  const completedRow=await env.DB.prepare(`SELECT COUNT(*) AS count FROM shop_flash_offer_purchases WHERE offer_id=? AND telegram_id=? AND status='completed'`).bind(String(row.offer_id),String(telegramId)).first();
+  const completed=Number(completedRow?.count||0), limit=Math.max(0,Number(row.purchase_limit||0));
+  if(limit>0&&completed>=limit)return {eligible:false,reason:`Лимит покупок для этого аккаунта уже исчерпан (${completed}/${limit}).`,completed,passContext};
+  const pricing=flashOfferEffectivePricing(row,passContext);
+  return {eligible:true,reason:"",row,rewards,completed,passContext,pricing};
+}
 async function flashOfferEligibleRows(env, telegramId) {
   await ensureFlashOfferSchema(env);
   const now = Math.floor(Date.now()/1000);
   const result = await env.DB.prepare(`SELECT * FROM shop_flash_offers WHERE status='published' AND enabled=1 AND (starts_at=0 OR starts_at<=?) AND (ends_at=0 OR ends_at>?) ORDER BY priority DESC,updated_at DESC LIMIT 20`).bind(now,now).all();
-  const out=[];
-  let caseEligibilityState=null,caseEligibilityLoaded=false;
+  const out=[],cache={};
   for (const row of result.results||[]) {
-    if (!(await flashOfferMatchesSegment(env,telegramId,row.segment_key))) continue;
-    let rewards=[];
-    try { rewards=flashOfferNormalizeRewards(ownerV8SafeJson(row.rewards_json,[])); } catch { continue; }
-    const cosmeticRewards=rewards.filter((reward)=>flashOfferCosmeticDefinition(reward.kind,reward.id));
-    if(cosmeticRewards.length){
-      if(!caseEligibilityLoaded){
-        caseEligibilityLoaded=true;
-        try{const stateRow=await env.DB.prepare(`SELECT * FROM case_player_state WHERE telegram_id=? LIMIT 1`).bind(String(telegramId)).first();caseEligibilityState=caseStateFromRow(stateRow||{});}catch{caseEligibilityState=caseStateFromRow({});}
-      }
-      if(cosmeticRewards.some((reward)=>flashOfferCosmeticOwned(caseEligibilityState,reward.kind,reward.id)))continue;
-    }
-    const passContext=await flashOfferSeasonPassContext(env,telegramId,rewards,{createPlayer:false});
-    if(passContext&&!passContext.eligible)continue;
-    const completedRow=await env.DB.prepare(`SELECT COUNT(*) AS count FROM shop_flash_offer_purchases WHERE offer_id=? AND telegram_id=? AND status='completed'`).bind(String(row.offer_id),String(telegramId)).first();
-    const completed=Number(completedRow?.count||0), limit=Math.max(0,Number(row.purchase_limit||0));
-    if(limit>0&&completed>=limit)continue;
-    const pricing=flashOfferEffectivePricing(row,passContext);
-    out.push({row,completed,passContext,pricing}); if(out.length>=3)break;
+    const eligibility=await flashOfferEligibilityContext(env,telegramId,row,cache);
+    if(!eligibility.eligible)continue;
+    out.push(eligibility); if(out.length>=3)break;
   }
   return out;
 }
@@ -28736,7 +28808,22 @@ async function getFlashOffersForPlayer(request, env) {
     requireDatabase(env); requireBotToken(env);
     const body=await readJson(request); const auth=await validateTelegramInitData(String(body.initData||""),env); const telegramId=String(auth.user.id);
     const eligible=await flashOfferEligibleRows(env,telegramId);
-    return jsonResponse({ok:true,serverTime:Date.now(),offers:eligible.map(({row,completed,pricing})=>flashOfferRowView(row,{purchaseCount:completed,price:pricing.price,original:pricing.original,discountPercent:flashOfferDiscountPercent({price:pricing.price,original:pricing.original}),passUpgrade:Boolean(pricing.passUpgrade),passUpgradeCredit:pricing.credit}))});
+    const toView=({row,completed,pricing},extra={})=>flashOfferRowView(row,{purchaseCount:completed||0,price:pricing?.price||flashOfferRowPrice(row,"price"),original:pricing?.original||flashOfferRowPrice(row,"original"),discountPercent:flashOfferDiscountPercent({price:pricing?.price||flashOfferRowPrice(row,"price"),original:pricing?.original||flashOfferRowPrice(row,"original")}),passUpgrade:Boolean(pricing?.passUpgrade),passUpgradeCredit:pricing?.credit||{points:0,treats:0,coffee:0},...extra});
+    if(!isBotOwnerTelegramId(auth.user.id,env))return jsonResponse({ok:true,serverTime:Date.now(),offers:eligible.map(item=>toView(item))});
+    // Владелец должен иметь возможность увидеть опубликованную акцию даже если его
+    // собственный аккаунт уже имеет Elite/предмет или не входит в целевой сегмент.
+    // Это только UI-предпросмотр: purchase endpoint по-прежнему применяет все проверки.
+    const now=Math.floor(Date.now()/1000),active=(await env.DB.prepare(`SELECT * FROM shop_flash_offers WHERE status='published' AND enabled=1 AND (starts_at=0 OR starts_at<=?) AND (ends_at=0 OR ends_at>?) ORDER BY priority DESC,updated_at DESC LIMIT 20`).bind(now,now).all()).results||[];
+    const eligibleById=new Map(eligible.map(item=>[String(item.row?.offer_id||""),item])),cache={},views=[];
+    for(const row of active){
+      const id=String(row.offer_id||"");
+      const normal=eligibleById.get(id);
+      if(normal){views.push(toView(normal));continue;}
+      const eligibility=await flashOfferEligibilityContext(env,telegramId,row,cache);
+      const pricing=eligibility.pricing||flashOfferEffectivePricing(row,eligibility.passContext||null);
+      views.push(toView({row,completed:Number(eligibility.completed||0),pricing},{previewOnly:true,previewReason:String(eligibility.reason||"Акция недоступна этому аккаунту по условиям."),showFrequency:"every_entry"}));
+    }
+    return jsonResponse({ok:true,serverTime:Date.now(),offers:views.slice(0,20),ownerPreview:true});
   } catch(error) { if(error instanceof ApiError)return jsonResponse({ok:false,error:error.message},error.status); console.error("flash offer list failed",error); return jsonResponse({ok:false,error:"Не удалось загрузить акции магазина."},500); }
 }
 async function recordFlashOfferEvent(request, env) {
@@ -30739,7 +30826,7 @@ async function ownerPanelTogglePromocode(env, ctx) {
 function ownerPanelShopProductAsset(productId) {
   const id=String(productId||"");
   if(id.startsWith("case-"))return ownerPanelCaseAsset(id.slice(5));
-  if(id==="zefir")return "/assets/optimized/v0.79.5/shopMarshmallowAssortment.png?v=0.79.5";
+  if(id==="zefir")return "/assets/shop/dessert_marshmallow_256x256.png?v=1.0.6";
   if(id==="americano")return "/assets/optimized/v0.79.5/shopAmericano.webp?v=1.0.0";
   if(id==="cappuccino")return "/assets/optimized/v0.79.5/shopCappuccino.webp?v=1.0.0";
   return "/assets/optimized/v0.79.5/shopMascot.webp?v=0.79.5";
