@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "catalogHash": "edd514bf2ab20e35",
-  "count": 289,
+  "catalogHash": "7bb48478ac86d6b1",
+  "count": 290,
   "images": [
     {
       "fileName": "cases/398D69BA-8943-4846-94B3-FC5CB717A67F.PNG",
@@ -570,6 +570,14 @@
       "path": "/assets/news/clear_progress_news.png",
       "size": 2304565,
       "modified": 1786223144793
+    },
+    {
+      "fileName": "news/img_bugs.png",
+      "label": "Img bugs",
+      "folder": "news",
+      "path": "/assets/news/img_bugs.png",
+      "size": 2385433,
+      "modified": 1786610412445
     },
     {
       "fileName": "news/relise_clear_progress_news.png",
