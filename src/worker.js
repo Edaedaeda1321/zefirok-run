@@ -512,7 +512,21 @@ const STAFF_SESSION_TTL_SECONDS = 12 * 60 * 60;
 const SUPPORT_USERNAME = "ve4n0_em";
 const SUPPORT_URL = `https://t.me/${SUPPORT_USERNAME}`;
 const DEFAULT_GAME_URL = "https://zefirok-run.patokad6.workers.dev/";
-const WORKER_BUILD = "1.0.6 + player levels + gift inbox + open-again cases";
+
+// Fallback/seed legal-document versions. After migration 0038 the authoritative
+// version and optional full RU/EN text live in D1 legal_document_registry and can
+// be published from Control Center without a Worker deploy.
+const LEGAL_AGREEMENT_VERSION = "2026-08-13.1";
+const LEGAL_PRIVACY_VERSION = "2026-08-13.2";
+const LEGAL_CONSENT_VERSION = "2026-08-13.1";
+const LEGAL_DOCUMENTS = Object.freeze({
+  agreement: Object.freeze({ key: "agreement", version: LEGAL_AGREEMENT_VERSION, acceptanceKind: "accepted", titleRu: "Лицензионное соглашение", titleEn: "License Agreement and Terms of Use" }),
+  privacy: Object.freeze({ key: "privacy", version: LEGAL_PRIVACY_VERSION, acceptanceKind: "acknowledged", titleRu: "Политика конфиденциальности", titleEn: "Privacy Policy" }),
+  consent: Object.freeze({ key: "consent", version: LEGAL_CONSENT_VERSION, acceptanceKind: "accepted", titleRu: "Согласие на обработку персональных данных", titleEn: "Personal Data Processing Consent" })
+});
+const LEGAL_BUILTIN_HASHES = Object.freeze({"agreement":{"version":"2026-08-13.1","sha256Ru":"7b9dad94ff4319c98b5fd01ade558ed3e409db705a8417551f89eb0dc4792c46","sha256En":"3f93d567fefd8e936a7ac8f63a9a5ceefc6bd6ecfcdfaad2e3733cf6e34d02d0","sha256Bundle":"93f28cca0556b480ee44a73ef775187a397dfc61bd4efda1171526a84fa69e84"},"privacy":{"version":"2026-08-13.2","sha256Ru":"687bba9ab60ee35124a17806ba7904870b1a3e09d23610430d45b92cd4719433","sha256En":"e0531d156e2ad0210b16349094499f7560cfca6167d911306926ed8e6ff45cbd","sha256Bundle":"435dd20f418603b3329dd1ab17a5e5ee619eee5341f425a547114fd235d4eee3"},"consent":{"version":"2026-08-13.1","sha256Ru":"10bcaf97ef31fad736f5e4f987ffad94c30c964e759b72c9a49c97738ede48d7","sha256En":"64383734cc3469028242d0c90867ccc42c7605269b187a94056fc963460ddb41","sha256Bundle":"11ebecc6978dac4f887b2ed4316f12f9ebafd4c41d5eeafed331ee12ae2948e0"}});
+
+const WORKER_BUILD = "1.0.6 + player levels + gift inbox + legal evidence archive";
 const V07944_RELEASE_CANDIDATE_AUDIT = Object.freeze({ reset: true, claims: true, purchases: true, xp: true, concurrency: true });
 
 // =============================================================
@@ -980,6 +994,7 @@ const PLAYER_BOT_COMMANDS = Object.freeze([
   { command: "rewards", description: "Как получить награду" },
   { command: "story", description: "Сюжет игры" },
   { command: "faq", description: "Частые вопросы" },
+  { command: "legal", description: "Документы и конфиденциальность" },
   { command: "update", description: "Обновление и версия игры" },
   { command: "support", description: "Поддержка игры" },
   { command: "help", description: "Как проверить код" },
@@ -1047,7 +1062,7 @@ const LIMITED_ADMINISTRATOR_BOT_COMMANDS = Object.freeze([
 const LIMITED_ADMINISTRATOR_ALLOWED_COMMAND_NAMES = new Set([
   // Public player commands remain available.
   "start", "game", "rating", "top", "tasks", "polls", "news", "promo",
-  "rewards", "story", "faq", "update", "support", "help", "whoami",
+  "rewards", "story", "faq", "legal", "update", "support", "help", "whoami",
   // Session and the eight allowed administrator sections.
   "staff", "adminpanel", "admin", "panel", "training", "staff_me", "cancel",
   "players", "members", "pleyers", "player",
@@ -1269,6 +1284,8 @@ export default {
       // audit. It only reads identity, feature flags and the current season, so a
       // cold Worker must not block the page behind unrelated ALTER/PRAGMA checks.
       if (url.pathname === "/api/battle-pass/access" && request.method === "POST") {
+        const legalGate = await enforceLegalAcceptanceForRequest(request, env);
+        if (legalGate) return legalGate;
         return await getBattlePassAccess(request, env);
       }
       // Telegram service routes must stay independent from D1 schema checks.
@@ -1297,12 +1314,36 @@ export default {
       if (url.pathname === "/api/owner/auth" && request.method === "POST") {
         return await ownerPanelFastAuth(request, env);
       }
+      // Legal acceptance is intentionally independent from the broad runtime
+      // compatibility audit. A player must be able to read/accept the current
+      // documents even if an unrelated admin schema is temporarily unhealthy.
+      if (url.pathname === "/api/legal/status" && request.method === "POST") {
+        return await getLegalAcceptanceStatus(request, env);
+      }
+      if (url.pathname === "/api/legal/accept" && request.method === "POST") {
+        return await acceptLegalDocuments(request, env);
+      }
+      if (url.pathname === "/api/legal/document" && request.method === "GET") {
+        return await getPublishedLegalDocument(request, env);
+      }
       const ownerMediaMatch = request.method === "GET" ? url.pathname.match(/^\/media\/(med_[A-Za-z0-9_-]{12,80})$/) : null;
       if (ownerMediaMatch) {
         return await serveOwnerMediaAsset(env, ownerMediaMatch[1]);
       }
       if (url.pathname.startsWith("/api/") && url.pathname !== "/api/runs/start" && url.pathname !== "/api/runs/checkpoint") {
         await ensureRuntimeCompatibilitySchema(env);
+      }
+      if (url.pathname === "/legal.html" && request.method === "GET") {
+        if (!env.ASSETS) return new Response("Not found", { status: 404 });
+        const asset = await env.ASSETS.fetch(request);
+        const headers = new Headers(asset.headers);
+        // Legal content must not be served from a stale browser cache after a
+        // document-version bump that requires renewed confirmation.
+        headers.set("Cache-Control", "no-store, no-cache, must-revalidate");
+        headers.set("Pragma", "no-cache");
+        headers.set("Referrer-Policy", "no-referrer");
+        headers.set("X-Content-Type-Options", "nosniff");
+        return new Response(asset.body, { status: asset.status, statusText: asset.statusText, headers });
       }
       if (url.pathname === "/staff-qr.html" && request.method === "GET") {
         if (!env.ASSETS) return new Response("Not found", { status: 404 });
@@ -1409,6 +1450,8 @@ export default {
       }
 
       if (url.pathname === "/api/game/startup" && request.method === "POST") {
+        const legalGate = await enforceLegalAcceptanceForRequest(request, env);
+        if (legalGate) return legalGate;
         return await getGameStartupPackage(request, env);
       }
       if (url.pathname === "/api/news/read" && request.method === "POST") {
@@ -1530,6 +1573,8 @@ export default {
       }
 
       if (url.pathname === "/api/runs/start" && request.method === "POST") {
+        const legalGate = await enforceLegalAcceptanceForRequest(request, env);
+        if (legalGate) return legalGate;
         return await startAuthoritativeRunSession(request, env);
       }
 
@@ -1538,6 +1583,8 @@ export default {
       }
 
       if (url.pathname === "/api/leaderboard/submit" && request.method === "POST") {
+        const legalGate = await enforceLegalAcceptanceForRequest(request, env);
+        if (legalGate) return legalGate;
         // Run settlement is also the authoritative wallet/profile persistence
         // path, so it must stay available even when the public rating UI is
         // disabled by a feature flag. submitLeaderboardRun decides separately
@@ -7785,6 +7832,11 @@ Telegram ID можно найти командой <code>/players</code>.`);
     return;
   }
 
+  if (/^\/legal(?:@\w+)?$/i.test(text)) {
+    await sendTelegramMessage(env, chatId, botLegalText(), legalMenuMarkup(env));
+    return;
+  }
+
   if (/^\/support(?:@\w+)?$/i.test(text)) {
     await sendTelegramMessage(env, chatId, botSupportText(user), supportMenuMarkup(env));
     return;
@@ -7836,6 +7888,20 @@ function configuredGameUrl(env) {
   return DEFAULT_GAME_URL;
 }
 
+function configuredLegalUrl(env, documentKey = "hub", language = "ru") {
+  try {
+    const url = new URL(configuredGameUrl(env));
+    url.pathname = "/legal.html";
+    url.search = "";
+    url.hash = "";
+    url.searchParams.set("doc", ["agreement","privacy","consent"].includes(String(documentKey)) ? String(documentKey) : "hub");
+    url.searchParams.set("lang", legalLanguage(language));
+    return url.toString();
+  } catch {
+    return `${DEFAULT_GAME_URL.replace(/\/$/, "")}/legal.html?doc=${encodeURIComponent(String(documentKey || "hub"))}&lang=${encodeURIComponent(legalLanguage(language))}`;
+  }
+}
+
 function configuredStaffQrUrl(env) {
   try {
     const url = new URL(configuredGameUrl(env));
@@ -7866,6 +7932,19 @@ function botMainMenuText() {
 
 function botGameText() {
   return `<b>Сладкий забег</b>\n\nДля запуска используйте системную кнопку <b>«ИГРАТЬ»</b> в профиле бота. Обычная ссылка не используется, потому что через неё Telegram может не передать данные игрока для рейтинга.`;
+}
+
+function botLegalText() {
+  return `<b>📄 Документы и конфиденциальность</b>\n\nЗдесь доступны актуальные редакции документов сервиса «Сладкий Забег». При изменении версии нужного документа игра автоматически запросит повторное подтверждение.\n\nРусская редакция Лицензионного соглашения является официальной; английские версии доступны для удобства.`;
+}
+
+function legalMenuMarkup(env) {
+  return { inline_keyboard: [
+    [{ text: "📜 Лицензионное соглашение", url: configuredLegalUrl(env, "agreement", "ru") }],
+    [{ text: "🔐 Политика конфиденциальности", url: configuredLegalUrl(env, "privacy", "ru") }],
+    [{ text: "✅ Согласие на ПДн", url: configuredLegalUrl(env, "consent", "ru") }],
+    [{ text: "← Главное меню", callback_data: "menu:home" }]
+  ] };
 }
 
 function botStoryText() {
@@ -8050,6 +8129,7 @@ function mainMenuMarkup(env) {
       [{ text: `🆕 Обновление · ${GAME_VERSION}`, callback_data: "menu:update" }],
       [{ text: "🎟 Ввести промокод", callback_data: "menu:promo" }],
       [{ text: "🎁 Как получить награду", callback_data: "menu:rewards" }],
+      [{ text: "📄 Документы и конфиденциальность", callback_data: "menu:legal" }],
       [{ text: "🛟 Поддержка игры", callback_data: "menu:support" }]
     ]
   };
@@ -8083,7 +8163,7 @@ async function handleMenuCallback(query, env) {
     await sendTelegramMessage(env, message.chat.id, botFaqSectionText(faqMatch[1]), faqSectionMenuMarkup(env));
     return true;
   }
-  const match = String(query.data || "").match(/^menu:(home|story|faq|rewards|rating|tasks|polls|news|update|support|promo)$/);
+  const match = String(query.data || "").match(/^menu:(home|story|faq|rewards|rating|tasks|polls|news|update|support|promo|legal)$/);
   if (!match) return false;
   const message = query.message;
   if (!message?.chat?.id) {
@@ -8115,6 +8195,11 @@ async function handleMenuCallback(query, env) {
   if (section === "promo") {
     await answerCallback(env, query.id, "Введите промокод");
     await promptPlayerPromoCode(message.chat.id, query.from, env);
+    return true;
+  }
+  if (section === "legal") {
+    await answerCallback(env, query.id, "Документы открыты");
+    await sendTelegramMessage(env, message.chat.id, botLegalText(), legalMenuMarkup(env));
     return true;
   }
   const text = section === "story"
@@ -18400,6 +18485,456 @@ async function telegramApi(env, method, payload) {
   return data.result;
 }
 
+let legalSchemaReady = false;
+let legalSchemaPromise = null;
+
+const LEGAL_DOCUMENT_KEYS = Object.freeze(["agreement", "privacy", "consent"]);
+const LEGAL_CONFIRMATION_COLUMNS = Object.freeze({
+  agreement: Object.freeze({ version: "agreement_version", acceptedAt: "agreement_accepted_at" }),
+  privacy: Object.freeze({ version: "privacy_version", acceptedAt: "privacy_acknowledged_at" }),
+  consent: Object.freeze({ version: "consent_version", acceptedAt: "consent_accepted_at" })
+});
+
+async function ensureLegalSchema(env) {
+  requireDatabase(env);
+  if (legalSchemaReady) return;
+  if (legalSchemaPromise) return legalSchemaPromise;
+  const now = Math.floor(Date.now() / 1000);
+  const statements = [
+    env.DB.prepare(`CREATE TABLE IF NOT EXISTS legal_acceptance_state (
+      telegram_id TEXT PRIMARY KEY,
+      agreement_version TEXT NOT NULL DEFAULT '',
+      agreement_accepted_at INTEGER NOT NULL DEFAULT 0,
+      privacy_version TEXT NOT NULL DEFAULT '',
+      privacy_acknowledged_at INTEGER NOT NULL DEFAULT 0,
+      consent_version TEXT NOT NULL DEFAULT '',
+      consent_accepted_at INTEGER NOT NULL DEFAULT 0,
+      updated_at INTEGER NOT NULL DEFAULT 0
+    )`),
+    env.DB.prepare(`CREATE TABLE IF NOT EXISTS legal_acceptance_history (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      telegram_id TEXT NOT NULL,
+      document_key TEXT NOT NULL CHECK(document_key IN ('agreement','privacy','consent')),
+      document_version TEXT NOT NULL,
+      acceptance_kind TEXT NOT NULL CHECK(acceptance_kind IN ('accepted','acknowledged')),
+      language TEXT NOT NULL DEFAULT 'ru' CHECK(language IN ('ru','en')),
+      accepted_at INTEGER NOT NULL,
+      ip_address TEXT NOT NULL DEFAULT '',
+      user_agent TEXT NOT NULL DEFAULT '',
+      event_group_id TEXT NOT NULL DEFAULT ''
+    )`),
+    env.DB.prepare(`CREATE TABLE IF NOT EXISTS legal_document_registry (
+      document_key TEXT PRIMARY KEY CHECK(document_key IN ('agreement','privacy','consent')),
+      current_version TEXT NOT NULL,
+      published_ru TEXT NOT NULL DEFAULT '',
+      published_en TEXT NOT NULL DEFAULT '',
+      draft_version TEXT NOT NULL DEFAULT '',
+      draft_ru TEXT NOT NULL DEFAULT '',
+      draft_en TEXT NOT NULL DEFAULT '',
+      required INTEGER NOT NULL DEFAULT 1 CHECK(required IN (0,1)),
+      published_at INTEGER NOT NULL DEFAULT 0,
+      published_by TEXT NOT NULL DEFAULT '',
+      published_by_name TEXT NOT NULL DEFAULT '',
+      updated_at INTEGER NOT NULL DEFAULT 0,
+      updated_by TEXT NOT NULL DEFAULT '',
+      updated_by_name TEXT NOT NULL DEFAULT ''
+    )`),
+    env.DB.prepare(`CREATE TABLE IF NOT EXISTS legal_document_versions (
+      document_key TEXT NOT NULL CHECK(document_key IN ('agreement','privacy','consent')),
+      document_version TEXT NOT NULL,
+      content_ru TEXT NOT NULL,
+      content_en TEXT NOT NULL,
+      sha256_ru TEXT NOT NULL,
+      sha256_en TEXT NOT NULL,
+      sha256_bundle TEXT NOT NULL,
+      published_at INTEGER NOT NULL DEFAULT 0,
+      published_by TEXT NOT NULL DEFAULT '',
+      published_by_name TEXT NOT NULL DEFAULT '',
+      source TEXT NOT NULL DEFAULT 'control_center',
+      PRIMARY KEY(document_key,document_version)
+    )`),
+    env.DB.prepare(`CREATE TABLE IF NOT EXISTS legal_acceptance_evidence (
+      telegram_id TEXT NOT NULL,
+      document_key TEXT NOT NULL CHECK(document_key IN ('agreement','privacy','consent')),
+      document_version TEXT NOT NULL,
+      acceptance_kind TEXT NOT NULL CHECK(acceptance_kind IN ('accepted','acknowledged')),
+      sha256_ru TEXT NOT NULL DEFAULT '',
+      sha256_en TEXT NOT NULL DEFAULT '',
+      sha256_bundle TEXT NOT NULL DEFAULT '',
+      recorded_at INTEGER NOT NULL DEFAULT 0,
+      PRIMARY KEY(telegram_id,document_key,document_version,acceptance_kind)
+    )`),
+    env.DB.prepare(`CREATE TABLE IF NOT EXISTS legal_consent_events (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      telegram_id TEXT NOT NULL,
+      document_version TEXT NOT NULL DEFAULT '',
+      event_kind TEXT NOT NULL CHECK(event_kind IN ('consented','withdrawn')),
+      language TEXT NOT NULL DEFAULT 'ru' CHECK(language IN ('ru','en')),
+      event_at INTEGER NOT NULL,
+      ip_address TEXT NOT NULL DEFAULT '',
+      user_agent TEXT NOT NULL DEFAULT '',
+      reason TEXT NOT NULL DEFAULT '',
+      source TEXT NOT NULL DEFAULT '',
+      actor_id TEXT NOT NULL DEFAULT '',
+      actor_name TEXT NOT NULL DEFAULT '',
+      event_key TEXT NOT NULL UNIQUE
+    )`),
+    env.DB.prepare(`CREATE TABLE IF NOT EXISTS legal_consent_current (
+      telegram_id TEXT PRIMARY KEY,
+      status TEXT NOT NULL CHECK(status IN ('active','revoked')),
+      document_version TEXT NOT NULL DEFAULT '',
+      event_at INTEGER NOT NULL DEFAULT 0,
+      reason TEXT NOT NULL DEFAULT '',
+      source TEXT NOT NULL DEFAULT '',
+      actor_id TEXT NOT NULL DEFAULT '',
+      actor_name TEXT NOT NULL DEFAULT ''
+    )`),
+    env.DB.prepare(`CREATE UNIQUE INDEX IF NOT EXISTS idx_legal_history_unique_version
+      ON legal_acceptance_history(telegram_id,document_key,document_version,acceptance_kind)`),
+    env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_legal_history_player_recent
+      ON legal_acceptance_history(telegram_id,accepted_at DESC,id DESC)`),
+    env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_legal_history_document_recent
+      ON legal_acceptance_history(document_key,document_version,accepted_at DESC,id DESC)`),
+    env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_legal_versions_recent
+      ON legal_document_versions(document_key,published_at DESC)`),
+    env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_legal_evidence_hash
+      ON legal_acceptance_evidence(document_key,document_version,sha256_bundle)`),
+    env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_legal_consent_events_player
+      ON legal_consent_events(telegram_id,event_at DESC,id DESC)`)
+  ];
+  for (const key of LEGAL_DOCUMENT_KEYS) {
+    const doc = LEGAL_DOCUMENTS[key];
+    statements.push(env.DB.prepare(`INSERT OR IGNORE INTO legal_document_registry(
+      document_key,current_version,required,published_at,updated_at
+    ) VALUES(?,?,1,?,?)`).bind(key, doc.version, now, now));
+  }
+  statements.push(
+    env.DB.prepare(`INSERT OR IGNORE INTO legal_acceptance_evidence(
+      telegram_id,document_key,document_version,acceptance_kind,sha256_ru,sha256_en,sha256_bundle,recorded_at
+    ) SELECT h.telegram_id,h.document_key,h.document_version,h.acceptance_kind,v.sha256_ru,v.sha256_en,v.sha256_bundle,h.accepted_at
+      FROM legal_acceptance_history h JOIN legal_document_versions v
+      ON v.document_key=h.document_key AND v.document_version=h.document_version`),
+    env.DB.prepare(`INSERT OR IGNORE INTO legal_consent_events(
+      telegram_id,document_version,event_kind,language,event_at,ip_address,user_agent,reason,source,actor_id,actor_name,event_key
+    ) SELECT h.telegram_id,h.document_version,'consented',h.language,h.accepted_at,h.ip_address,h.user_agent,'','legacy_acceptance','','','legacy_accept_' || h.id
+      FROM legal_acceptance_history h WHERE h.document_key='consent'`),
+    env.DB.prepare(`INSERT OR IGNORE INTO legal_consent_current(telegram_id,status,document_version,event_at,reason,source,actor_id,actor_name)
+      SELECT telegram_id,'active',consent_version,consent_accepted_at,'','legacy_acceptance','',''
+      FROM legal_acceptance_state WHERE COALESCE(consent_version,'')<>'' AND COALESCE(consent_accepted_at,0)>0`)
+  );
+  const promise = env.DB.batch(statements).then(() => undefined);
+  legalSchemaPromise = promise;
+  try {
+    await promise;
+    legalSchemaReady = true;
+  } finally {
+    if (legalSchemaPromise === promise) legalSchemaPromise = null;
+  }
+}
+
+function legalLanguage(value) {
+  return String(value || '').toLowerCase().startsWith('en') ? 'en' : 'ru';
+}
+
+function legalRequestMetadata(request) {
+  const forwarded = String(request.headers.get('CF-Connecting-IP') || request.headers.get('X-Forwarded-For') || '').split(',')[0].trim();
+  return {
+    ipAddress: forwarded.slice(0, 96),
+    userAgent: String(request.headers.get('User-Agent') || '').replace(/[\u0000-\u001f\u007f]/g, ' ').slice(0, 1024)
+  };
+}
+
+async function legalSha256Hex(value) {
+  const digest = await crypto.subtle.digest('SHA-256', encoder.encode(String(value ?? '')));
+  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('');
+}
+
+async function legalDocumentHashes(key, version, contentRu, contentEn) {
+  const ru = String(contentRu || '');
+  const en = String(contentEn || '');
+  const [sha256Ru, sha256En] = await Promise.all([legalSha256Hex(ru), legalSha256Hex(en)]);
+  const sha256Bundle = await legalSha256Hex(`${key}\n${version}\nRU\n${ru}\nEN\n${en}`);
+  return { sha256Ru, sha256En, sha256Bundle };
+}
+
+function legalBuiltinEvidence(key, version) {
+  const item = LEGAL_BUILTIN_HASHES[key];
+  if (!item || String(item.version) !== String(version)) return null;
+  return { sha256Ru: String(item.sha256Ru || ''), sha256En: String(item.sha256En || ''), sha256Bundle: String(item.sha256Bundle || ''), archived: false };
+}
+
+async function legalArchiveEvidence(env, key, version) {
+  await ensureLegalSchema(env);
+  const row = await env.DB.prepare(`SELECT sha256_ru,sha256_en,sha256_bundle FROM legal_document_versions WHERE document_key=? AND document_version=? LIMIT 1`).bind(key, version).first();
+  if (row) return { sha256Ru: String(row.sha256_ru || ''), sha256En: String(row.sha256_en || ''), sha256Bundle: String(row.sha256_bundle || ''), archived: true };
+  const registry = await env.DB.prepare(`SELECT current_version,published_ru,published_en,published_at,published_by,published_by_name FROM legal_document_registry WHERE document_key=? LIMIT 1`).bind(key).first();
+  if (String(registry?.current_version || '') === String(version) && String(registry?.published_ru || '').trim() && String(registry?.published_en || '').trim()) {
+    const contentRu = String(registry.published_ru || '');
+    const contentEn = String(registry.published_en || '');
+    const hashes = await legalDocumentHashes(key, version, contentRu, contentEn);
+    await env.DB.prepare(`INSERT OR IGNORE INTO legal_document_versions(document_key,document_version,content_ru,content_en,sha256_ru,sha256_en,sha256_bundle,published_at,published_by,published_by_name,source)
+      VALUES(?,?,?,?,?,?,?,?,?,?,?)`).bind(key, version, contentRu, contentEn, hashes.sha256Ru, hashes.sha256En, hashes.sha256Bundle, Number(registry.published_at || 0), String(registry.published_by || ''), String(registry.published_by_name || ''), 'registry_backfill').run();
+    return { ...hashes, archived: true };
+  }
+  return legalBuiltinEvidence(key, version) || { sha256Ru: '', sha256En: '', sha256Bundle: '', archived: false };
+}
+
+async function readLegalDocumentRegistry(env) {
+  await ensureLegalSchema(env);
+  const result = await env.DB.prepare(`SELECT * FROM legal_document_registry ORDER BY document_key`).all();
+  const rows = new Map((result.results || []).map((row) => [String(row.document_key || ''), row]));
+  const output = {};
+  for (const key of LEGAL_DOCUMENT_KEYS) {
+    const fallback = LEGAL_DOCUMENTS[key];
+    const row = rows.get(key) || {};
+    output[key] = {
+      key,
+      version: String(row.current_version || fallback.version),
+      acceptanceKind: fallback.acceptanceKind,
+      titleRu: fallback.titleRu,
+      titleEn: fallback.titleEn,
+      required: Number(row.required ?? 1) !== 0,
+      contentRu: String(row.published_ru || ''),
+      contentEn: String(row.published_en || ''),
+      draftVersion: String(row.draft_version || ''),
+      draftRu: String(row.draft_ru || ''),
+      draftEn: String(row.draft_en || ''),
+      publishedAt: Math.max(0, Number(row.published_at || 0)),
+      publishedBy: String(row.published_by || ''),
+      publishedByName: String(row.published_by_name || ''),
+      updatedAt: Math.max(0, Number(row.updated_at || 0)),
+      updatedBy: String(row.updated_by || ''),
+      updatedByName: String(row.updated_by_name || '')
+    };
+  }
+  return output;
+}
+
+function legalDocumentClientState(row, key, doc) {
+  const mapping = LEGAL_CONFIRMATION_COLUMNS[key];
+  const storedVersion = String(row?.[mapping.version] || '');
+  const acceptedAt = Math.max(0, Number(row?.[mapping.acceptedAt] || 0));
+  const confirmed = storedVersion === doc.version && acceptedAt > 0;
+  return {
+    key,
+    version: doc.version,
+    titleRu: doc.titleRu,
+    titleEn: doc.titleEn,
+    required: Boolean(doc.required),
+    accepted: !doc.required || confirmed,
+    confirmed,
+    acceptedVersion: storedVersion,
+    acceptedAt: acceptedAt ? acceptedAt * 1000 : 0,
+    revoked: false,
+    revokedAt: 0,
+    revocationReason: '',
+    revocationSource: ''
+  };
+}
+
+async function legalAcceptanceState(env, telegramId, includeHistory = true) {
+  await ensureLegalSchema(env);
+  const registry = await readLegalDocumentRegistry(env);
+  const id = String(telegramId || '').trim();
+  const [row, consentCurrent] = id ? await Promise.all([
+    env.DB.prepare(`SELECT * FROM legal_acceptance_state WHERE telegram_id=? LIMIT 1`).bind(id).first(),
+    env.DB.prepare(`SELECT * FROM legal_consent_current WHERE telegram_id=? LIMIT 1`).bind(id).first()
+  ]) : [null, null];
+  const agreement = legalDocumentClientState(row, 'agreement', registry.agreement);
+  const privacy = legalDocumentClientState(row, 'privacy', registry.privacy);
+  let consent = legalDocumentClientState(row, 'consent', registry.consent);
+  if (String(consentCurrent?.status || '') === 'revoked') {
+    consent = {
+      ...consent,
+      accepted: false,
+      confirmed: false,
+      revoked: true,
+      revokedAt: Math.max(0, Number(consentCurrent.event_at || 0)) * 1000,
+      revocationReason: String(consentCurrent.reason || ''),
+      revocationSource: String(consentCurrent.source || ''),
+      revocationActor: String(consentCurrent.actor_name || consentCurrent.actor_id || '')
+    };
+  }
+  const complete = agreement.accepted && privacy.accepted && consent.accepted;
+  let history = [];
+  if (includeHistory && id) {
+    const [acceptResult, consentResult] = await Promise.all([
+      env.DB.prepare(`SELECT h.document_key,h.document_version,h.acceptance_kind,h.language,h.accepted_at,e.sha256_bundle
+        FROM legal_acceptance_history h LEFT JOIN legal_acceptance_evidence e
+        ON e.telegram_id=h.telegram_id AND e.document_key=h.document_key AND e.document_version=h.document_version AND e.acceptance_kind=h.acceptance_kind
+        WHERE h.telegram_id=? AND h.document_key<>'consent' ORDER BY h.accepted_at DESC,h.id DESC LIMIT 60`).bind(id).all(),
+      env.DB.prepare(`SELECT c.document_version,c.event_kind,c.language,c.event_at,c.reason,c.source,v.sha256_bundle
+        FROM legal_consent_events c LEFT JOIN legal_document_versions v
+        ON v.document_key='consent' AND v.document_version=c.document_version
+        WHERE c.telegram_id=? ORDER BY c.event_at DESC,c.id DESC LIMIT 60`).bind(id).all()
+    ]);
+    history = [
+      ...(acceptResult.results || []).map((item) => ({
+        documentKey: String(item.document_key || ''), version: String(item.document_version || ''), kind: String(item.acceptance_kind || ''), language: legalLanguage(item.language), acceptedAt: Math.max(0, Number(item.accepted_at || 0)) * 1000, sha256Bundle: String(item.sha256_bundle || '')
+      })),
+      ...(consentResult.results || []).map((item) => ({
+        documentKey: 'consent', version: String(item.document_version || ''), kind: String(item.event_kind || '') === 'withdrawn' ? 'withdrawn' : 'accepted', language: legalLanguage(item.language), acceptedAt: Math.max(0, Number(item.event_at || 0)) * 1000, sha256Bundle: String(item.sha256_bundle || ''), reason: String(item.reason || ''), source: String(item.source || '')
+      }))
+    ].sort((a, b) => b.acceptedAt - a.acceptedAt).slice(0, 60);
+  }
+  return {
+    complete,
+    requiredStep: !agreement.accepted ? 'agreement' : !privacy.accepted ? 'privacy' : !consent.accepted ? 'consent' : '',
+    documents: { agreement, privacy, consent },
+    history
+  };
+}
+
+async function getPublishedLegalDocument(request, env) {
+  try {
+    const url = new URL(request.url);
+    const key = String(url.searchParams.get('doc') || '').trim().toLowerCase();
+    if (!LEGAL_DOCUMENT_KEYS.includes(key)) throw new ApiError(400, 'Неизвестный документ.');
+    const language = legalLanguage(url.searchParams.get('lang') || 'ru');
+    const registry = await readLegalDocumentRegistry(env);
+    const doc = registry[key];
+    const content = language === 'en' ? doc.contentEn : doc.contentRu;
+    const evidence = await legalArchiveEvidence(env, key, doc.version);
+    return jsonResponse({
+      ok: true,
+      documentKey: key,
+      version: doc.version,
+      language,
+      title: language === 'en' ? doc.titleEn : doc.titleRu,
+      content,
+      sha256: language === 'en' ? evidence.sha256En : evidence.sha256Ru,
+      sha256Bundle: evidence.sha256Bundle,
+      source: content ? 'database' : 'builtin'
+    });
+  } catch (error) {
+    if (error instanceof ApiError) return jsonResponse({ ok: false, error: error.message }, error.status);
+    console.error('legal document read failed', error);
+    return jsonResponse({ ok: false, error: 'Не удалось загрузить документ.' }, 500);
+  }
+}
+
+async function getLegalAcceptanceStatus(request, env) {
+  try {
+    const body = await readJson(request);
+    const auth = await validateTelegramInitDataSignature(String(body?.initData || body?.init_data || ''), env);
+    const state = await legalAcceptanceState(env, String(auth.user.id), true);
+    return jsonResponse({ ok: true, telegramId: String(auth.user.id), ...state });
+  } catch (error) {
+    if (error instanceof ApiError) return jsonResponse({ ok: false, error: error.message }, error.status);
+    console.error('legal status failed', error);
+    return jsonResponse({ ok: false, error: 'Не удалось проверить актуальность документов.' }, 500);
+  }
+}
+
+async function acceptLegalDocuments(request, env) {
+  try {
+    const body = await readJson(request);
+    const auth = await validateTelegramInitDataSignature(String(body?.initData || body?.init_data || ''), env);
+    const telegramId = String(auth.user.id);
+    const step = String(body?.step || '').trim().toLowerCase();
+    if (!['agreement', 'privacy', 'consent'].includes(step)) throw new ApiError(400, 'Неизвестный этап принятия документов.');
+    const language = legalLanguage(body?.language || auth.user?.language_code || 'ru');
+    const now = Math.floor(Date.now() / 1000);
+    const meta = legalRequestMetadata(request);
+    const eventGroupId = `legal_${now}_${crypto.randomUUID().replaceAll('-', '').slice(0, 16)}`;
+    const current = await legalAcceptanceState(env, telegramId, false);
+    if (step === 'privacy' && !current.documents.agreement.accepted) throw new ApiError(409, 'Сначала примите Лицензионное соглашение.');
+    if (step === 'consent' && (!current.documents.agreement.accepted || !current.documents.privacy.accepted)) throw new ApiError(409, 'Сначала примите Лицензионное соглашение и ознакомьтесь с Политикой конфиденциальности.');
+    const candidateKeys = step === 'agreement' ? ['agreement', 'privacy'] : [step];
+    const evidencePairs = await Promise.all(candidateKeys.map(async (key) => [key, await legalArchiveEvidence(env, key, current.documents[key]?.version || LEGAL_DOCUMENTS[key].version)]));
+    const evidenceByKey = Object.fromEntries(evidencePairs);
+    const statements = [];
+
+    const pushHistory = (key) => {
+      const doc = LEGAL_DOCUMENTS[key];
+      const version = String(current.documents[key]?.version || doc.version);
+      const evidence = evidenceByKey[key] || {};
+      statements.push(env.DB.prepare(`INSERT OR IGNORE INTO legal_acceptance_history(
+        telegram_id,document_key,document_version,acceptance_kind,language,accepted_at,ip_address,user_agent,event_group_id
+      ) VALUES(?,?,?,?,?,?,?,?,?)`).bind(
+        telegramId, key, version, doc.acceptanceKind, language, now,
+        meta.ipAddress, meta.userAgent, eventGroupId
+      ));
+      statements.push(env.DB.prepare(`INSERT OR IGNORE INTO legal_acceptance_evidence(
+        telegram_id,document_key,document_version,acceptance_kind,sha256_ru,sha256_en,sha256_bundle,recorded_at
+      ) VALUES(?,?,?,?,?,?,?,?)`).bind(
+        telegramId, key, version, doc.acceptanceKind, String(evidence.sha256Ru || ''), String(evidence.sha256En || ''), String(evidence.sha256Bundle || ''), now
+      ));
+    };
+
+    const confirmAgreement = () => {
+      if (current.documents.agreement.accepted) return;
+      pushHistory('agreement');
+      statements.push(env.DB.prepare(`INSERT INTO legal_acceptance_state(telegram_id,agreement_version,agreement_accepted_at,updated_at)
+        VALUES(?,?,?,?) ON CONFLICT(telegram_id) DO UPDATE SET
+        agreement_version=excluded.agreement_version,agreement_accepted_at=excluded.agreement_accepted_at,updated_at=excluded.updated_at`)
+        .bind(telegramId, current.documents.agreement.version, now, now));
+    };
+    const confirmPrivacy = () => {
+      if (current.documents.privacy.accepted) return;
+      pushHistory('privacy');
+      statements.push(env.DB.prepare(`INSERT INTO legal_acceptance_state(telegram_id,privacy_version,privacy_acknowledged_at,updated_at)
+        VALUES(?,?,?,?) ON CONFLICT(telegram_id) DO UPDATE SET
+        privacy_version=excluded.privacy_version,privacy_acknowledged_at=excluded.privacy_acknowledged_at,updated_at=excluded.updated_at`)
+        .bind(telegramId, current.documents.privacy.version, now, now));
+    };
+    const confirmConsent = () => {
+      if (current.documents.consent.accepted) return;
+      pushHistory('consent');
+      const consentEventKey = `consent_${now}_${crypto.randomUUID().replaceAll('-', '').slice(0, 20)}`;
+      statements.push(env.DB.prepare(`INSERT INTO legal_consent_events(
+        telegram_id,document_version,event_kind,language,event_at,ip_address,user_agent,reason,source,actor_id,actor_name,event_key
+      ) VALUES(?,?,'consented',?,?,?,?,?,'mini_app','','',?)`).bind(
+        telegramId, current.documents.consent.version, language, now, meta.ipAddress, meta.userAgent, '', consentEventKey
+      ));
+      statements.push(env.DB.prepare(`INSERT INTO legal_consent_current(telegram_id,status,document_version,event_at,reason,source,actor_id,actor_name)
+        VALUES(?,'active',?,?,?,'mini_app','','') ON CONFLICT(telegram_id) DO UPDATE SET
+        status='active',document_version=excluded.document_version,event_at=excluded.event_at,reason='',source='mini_app',actor_id='',actor_name=''`)
+        .bind(telegramId, current.documents.consent.version, now, ''));
+      statements.push(env.DB.prepare(`INSERT INTO legal_acceptance_state(telegram_id,consent_version,consent_accepted_at,updated_at)
+        VALUES(?,?,?,?) ON CONFLICT(telegram_id) DO UPDATE SET
+        consent_version=excluded.consent_version,consent_accepted_at=excluded.consent_accepted_at,updated_at=excluded.updated_at`)
+        .bind(telegramId, current.documents.consent.version, now, now));
+    };
+
+    if (step === 'agreement') {
+      confirmAgreement();
+      confirmPrivacy();
+    } else if (step === 'privacy') {
+      confirmPrivacy();
+    } else {
+      confirmConsent();
+    }
+
+    if (statements.length) await env.DB.batch(statements);
+    const state = await legalAcceptanceState(env, telegramId, true);
+    return jsonResponse({ ok: true, telegramId, ...state });
+  } catch (error) {
+    if (error instanceof ApiError) return jsonResponse({ ok: false, error: error.message, details: error.details }, error.status);
+    console.error('legal accept failed', error);
+    return jsonResponse({ ok: false, error: 'Не удалось сохранить подтверждение документов.' }, 500);
+  }
+}
+
+async function enforceLegalAcceptanceForRequest(request, env) {
+  try {
+    const body = await readJson(request.clone());
+    const initData = String(body?.initData || body?.init_data || '');
+    const auth = await validateTelegramInitDataSignature(initData, env);
+    const state = await legalAcceptanceState(env, String(auth.user.id), false);
+    if (state.complete) return null;
+    return jsonResponse({
+      ok: false,
+      code: 'LEGAL_ACCEPTANCE_REQUIRED',
+      error: 'Подтвердите актуальные документы перед продолжением использования игры.',
+      ...state
+    }, 428);
+  } catch (error) {
+    if (error instanceof ApiError) return jsonResponse({ ok: false, error: error.message }, error.status);
+    throw error;
+  }
+}
+
 async function validateTelegramInitDataSignature(initData, env) {
   if (!initData) throw new ApiError(401, "Откройте игру внутри Telegram, чтобы получить настоящий код.");
   const params = new URLSearchParams(initData);
@@ -27426,11 +27961,255 @@ async function ownerPanelV85SegmentPreview(env,ctx) {
   return {ok:true,key:key||"draft",title,count,players};
 }
 
+function ownerLegalDocumentLabel(key) {
+  return ({ agreement: 'Лицензионное соглашение', privacy: 'Политика конфиденциальности', consent: 'Согласие на обработку ПДн' })[String(key)] || String(key || '');
+}
+
+function ownerLegalStatusExpression(key) {
+  const mapping = LEGAL_CONFIRMATION_COLUMNS[key];
+  if (!mapping) throw new ApiError(400, 'Неизвестный документ.');
+  return mapping;
+}
+
+async function ownerPanelLegalOverview(env, ctx) {
+  await ensureLegalSchema(env);
+  const registry = await readLegalDocumentRegistry(env);
+  await Promise.all(LEGAL_DOCUMENT_KEYS.map((key) => legalArchiveEvidence(env, key, registry[key].version)));
+  const [totalRow, versionRows] = await Promise.all([
+    env.DB.prepare(`SELECT COUNT(*) AS count FROM admin_profile_state`).first(),
+    env.DB.prepare(`SELECT document_key,document_version,sha256_ru,sha256_en,sha256_bundle,published_at,published_by,published_by_name,source,LENGTH(content_ru) AS ru_chars,LENGTH(content_en) AS en_chars
+      FROM legal_document_versions ORDER BY published_at DESC,document_version DESC`).all()
+  ]);
+  const totalPlayers = Number(totalRow?.count || 0);
+  const archiveByKey = Object.fromEntries(LEGAL_DOCUMENT_KEYS.map((key) => [key, []]));
+  for (const row of versionRows.results || []) {
+    const key = String(row.document_key || '');
+    if (!archiveByKey[key]) continue;
+    archiveByKey[key].push({
+      version: String(row.document_version || ''), sha256Ru: String(row.sha256_ru || ''), sha256En: String(row.sha256_en || ''), sha256Bundle: String(row.sha256_bundle || ''), publishedAt: Number(row.published_at || 0), publishedBy: String(row.published_by_name || row.published_by || ''), source: String(row.source || ''), ruChars: Number(row.ru_chars || 0), enChars: Number(row.en_chars || 0)
+    });
+  }
+  const stats = {};
+  for (const key of LEGAL_DOCUMENT_KEYS) {
+    const doc = registry[key];
+    const columns = ownerLegalStatusExpression(key);
+    let row;
+    if (key === 'consent') {
+      row = await env.DB.prepare(`SELECT
+        COUNT(p.telegram_id) AS total,
+        SUM(CASE WHEN COALESCE(c.status,'')<>'revoked' AND s.${columns.version}=? AND s.${columns.acceptedAt}>0 THEN 1 ELSE 0 END) AS current_count,
+        SUM(CASE WHEN COALESCE(c.status,'')<>'revoked' AND COALESCE(s.${columns.version},'')<>'' AND COALESCE(s.${columns.acceptedAt},0)>0 AND s.${columns.version}<>? THEN 1 ELSE 0 END) AS stale_count,
+        SUM(CASE WHEN COALESCE(c.status,'')<>'revoked' AND (COALESCE(s.${columns.version},'')='' OR COALESCE(s.${columns.acceptedAt},0)=0) THEN 1 ELSE 0 END) AS never_count,
+        SUM(CASE WHEN c.status='revoked' THEN 1 ELSE 0 END) AS revoked_count
+        FROM admin_profile_state p LEFT JOIN legal_acceptance_state s ON s.telegram_id=p.telegram_id LEFT JOIN legal_consent_current c ON c.telegram_id=p.telegram_id`)
+        .bind(doc.version, doc.version).first();
+    } else {
+      row = await env.DB.prepare(`SELECT
+        COUNT(p.telegram_id) AS total,
+        SUM(CASE WHEN s.${columns.version}=? AND s.${columns.acceptedAt}>0 THEN 1 ELSE 0 END) AS current_count,
+        SUM(CASE WHEN COALESCE(s.${columns.version},'')<>'' AND COALESCE(s.${columns.acceptedAt},0)>0 AND s.${columns.version}<>? THEN 1 ELSE 0 END) AS stale_count,
+        SUM(CASE WHEN COALESCE(s.${columns.version},'')='' OR COALESCE(s.${columns.acceptedAt},0)=0 THEN 1 ELSE 0 END) AS never_count
+        FROM admin_profile_state p LEFT JOIN legal_acceptance_state s ON s.telegram_id=p.telegram_id`)
+        .bind(doc.version, doc.version).first();
+    }
+    stats[key] = { current: Number(row?.current_count || 0), stale: Number(row?.stale_count || 0), never: Number(row?.never_count || 0), revoked: Number(row?.revoked_count || 0), total: Number(row?.total || totalPlayers) };
+  }
+  const [acceptRecent, consentRecent] = await Promise.all([
+    env.DB.prepare(`SELECT h.document_key,h.document_version,h.acceptance_kind,h.language,h.accepted_at,h.telegram_id,h.ip_address,h.user_agent,e.sha256_bundle,
+      COALESCE(NULLIF(b.display_name,''),NULLIF(a.display_name,''),h.telegram_id) AS display_name,COALESCE(b.username,a.username,'') AS username
+      FROM legal_acceptance_history h
+      LEFT JOIN legal_acceptance_evidence e ON e.telegram_id=h.telegram_id AND e.document_key=h.document_key AND e.document_version=h.document_version AND e.acceptance_kind=h.acceptance_kind
+      LEFT JOIN bot_subscribers b ON b.telegram_id=h.telegram_id LEFT JOIN leaderboard_all_time a ON a.telegram_id=h.telegram_id
+      WHERE h.document_key<>'consent' ORDER BY h.accepted_at DESC,h.id DESC LIMIT 80`).all(),
+    env.DB.prepare(`SELECT c.telegram_id,c.document_version,c.event_kind,c.language,c.event_at,c.ip_address,c.user_agent,c.reason,c.source,c.actor_name,v.sha256_bundle,
+      COALESCE(NULLIF(b.display_name,''),NULLIF(a.display_name,''),c.telegram_id) AS display_name,COALESCE(b.username,a.username,'') AS username
+      FROM legal_consent_events c
+      LEFT JOIN legal_document_versions v ON v.document_key='consent' AND v.document_version=c.document_version
+      LEFT JOIN bot_subscribers b ON b.telegram_id=c.telegram_id LEFT JOIN leaderboard_all_time a ON a.telegram_id=c.telegram_id
+      ORDER BY c.event_at DESC,c.id DESC LIMIT 80`).all()
+  ]);
+  const recent = [
+    ...(acceptRecent.results || []).map((row) => ({ telegramId:String(row.telegram_id||''),name:String(row.display_name||row.telegram_id||''),username:String(row.username||''),documentKey:String(row.document_key||''),version:String(row.document_version||''),kind:String(row.acceptance_kind||''),language:legalLanguage(row.language),acceptedAt:Number(row.accepted_at||0),ipAddress:String(row.ip_address||''),userAgent:String(row.user_agent||''),sha256Bundle:String(row.sha256_bundle||''),reason:'',source:'' })),
+    ...(consentRecent.results || []).map((row) => ({ telegramId:String(row.telegram_id||''),name:String(row.display_name||row.telegram_id||''),username:String(row.username||''),documentKey:'consent',version:String(row.document_version||''),kind:String(row.event_kind||'')==='withdrawn'?'withdrawn':'accepted',language:legalLanguage(row.language),acceptedAt:Number(row.event_at||0),ipAddress:String(row.ip_address||''),userAgent:String(row.user_agent||''),sha256Bundle:String(row.sha256_bundle||''),reason:String(row.reason||''),source:String(row.source||''),actor:String(row.actor_name||'') }))
+  ].sort((a,b)=>b.acceptedAt-a.acceptedAt).slice(0,80);
+  return {
+    ok: true,
+    totalPlayers,
+    documents: Object.fromEntries(LEGAL_DOCUMENT_KEYS.map((key) => {
+      const doc = registry[key];
+      const archiveVersions = archiveByKey[key] || [];
+      const currentArchive = archiveVersions.find((item) => item.version === doc.version) || null;
+      return [key, {
+        key, title: ownerLegalDocumentLabel(key), currentVersion: doc.version, required: doc.required, dynamicContent: Boolean(doc.contentRu && doc.contentEn), publishedAt: doc.publishedAt, publishedBy: doc.publishedByName || doc.publishedBy, updatedAt: doc.updatedAt, draftVersion: doc.draftVersion, draftRu: doc.draftRu, draftEn: doc.draftEn, stats: stats[key], archiveVersions, currentHashes: currentArchive ? { sha256Ru:currentArchive.sha256Ru,sha256En:currentArchive.sha256En,sha256Bundle:currentArchive.sha256Bundle } : legalBuiltinEvidence(key,doc.version)
+      }];
+    })),
+    recent
+  };
+}
+
+async function ownerPanelLegalPlayers(env, ctx) {
+  await ensureLegalSchema(env);
+  const key = String(ctx.body?.documentKey || 'privacy').trim().toLowerCase();
+  if (!LEGAL_DOCUMENT_KEYS.includes(key)) throw new ApiError(400, 'Неизвестный документ.');
+  const filter = String(ctx.body?.status || 'all').trim().toLowerCase();
+  if (!['all','current','stale','never','revoked'].includes(filter)) throw new ApiError(400, 'Неизвестный фильтр.');
+  if (filter === 'revoked' && key !== 'consent') return { ok:true, documentKey:key, currentVersion:(await readLegalDocumentRegistry(env))[key].version, status:filter, players:[] };
+  const registry = await readLegalDocumentRegistry(env);
+  const doc = registry[key];
+  const columns = ownerLegalStatusExpression(key);
+  const notRevoked = key === 'consent' ? `COALESCE(c.status,'')<>'revoked' AND ` : '';
+  let condition = '1=1';
+  const binds = [];
+  if (filter === 'current') { condition = `${notRevoked}s.${columns.version}=? AND COALESCE(s.${columns.acceptedAt},0)>0`; binds.push(doc.version); }
+  if (filter === 'stale') { condition = `${notRevoked}COALESCE(s.${columns.version},'')<>'' AND COALESCE(s.${columns.acceptedAt},0)>0 AND s.${columns.version}<>?`; binds.push(doc.version); }
+  if (filter === 'never') condition = `${notRevoked}(COALESCE(s.${columns.version},'')='' OR COALESCE(s.${columns.acceptedAt},0)=0)`;
+  if (filter === 'revoked') condition = `c.status='revoked'`;
+  const result = await env.DB.prepare(`SELECT p.telegram_id,
+      COALESCE(NULLIF(b.display_name,''),NULLIF(a.display_name,''),p.telegram_id) AS display_name,
+      COALESCE(b.username,a.username,'') AS username,
+      COALESCE(s.${columns.version},'') AS accepted_version,
+      COALESCE(s.${columns.acceptedAt},0) AS accepted_at,
+      COALESCE(c.status,'') AS consent_status,COALESCE(c.event_at,0) AS consent_event_at,COALESCE(c.reason,'') AS revocation_reason,COALESCE(c.source,'') AS revocation_source
+      FROM admin_profile_state p
+      LEFT JOIN legal_acceptance_state s ON s.telegram_id=p.telegram_id
+      LEFT JOIN legal_consent_current c ON c.telegram_id=p.telegram_id
+      LEFT JOIN bot_subscribers b ON b.telegram_id=p.telegram_id
+      LEFT JOIN leaderboard_all_time a ON a.telegram_id=p.telegram_id
+      WHERE ${condition}
+      ORDER BY CASE WHEN c.status='revoked' THEN c.event_at ELSE COALESCE(s.${columns.acceptedAt},0) END DESC,p.telegram_id DESC LIMIT 120`).bind(...binds).all();
+  return {
+    ok: true, documentKey: key, currentVersion: doc.version, status: filter,
+    players: (result.results || []).map((row) => {
+      const version = String(row.accepted_version || '');
+      const acceptedAt = Number(row.accepted_at || 0);
+      const revoked = key === 'consent' && String(row.consent_status || '') === 'revoked';
+      const status = revoked ? 'revoked' : version === doc.version && acceptedAt > 0 ? 'current' : version && acceptedAt > 0 ? 'stale' : 'never';
+      return { telegramId:String(row.telegram_id||''),name:String(row.display_name||row.telegram_id||''),username:String(row.username||''),acceptedVersion:version,acceptedAt,status,revokedAt:revoked?Number(row.consent_event_at||0):0,revocationReason:revoked?String(row.revocation_reason||''):'',revocationSource:revoked?String(row.revocation_source||''):'' };
+    })
+  };
+}
+
+async function ownerLegalVersionAlreadyUsed(env, key, version) {
+  return await env.DB.prepare(`SELECT 1 AS found FROM legal_document_versions WHERE document_key=? AND document_version=? UNION ALL SELECT 1 AS found FROM legal_acceptance_history WHERE document_key=? AND document_version=? LIMIT 1`).bind(key, version, key, version).first();
+}
+
+async function ownerPanelLegalSaveDraft(env, ctx) {
+  await ensureLegalSchema(env);
+  const key = String(ctx.body?.documentKey || '').trim().toLowerCase();
+  if (!LEGAL_DOCUMENT_KEYS.includes(key)) throw new ApiError(400, 'Выберите документ.');
+  const version = String(ctx.body?.version || '').trim().slice(0, 80);
+  const contentRu = String(ctx.body?.contentRu || '').trim();
+  const contentEn = String(ctx.body?.contentEn || '').trim();
+  if (!version || version.length < 3) throw new ApiError(400, 'Укажите версию новой редакции.');
+  if (contentRu.length < 100 || contentEn.length < 100) throw new ApiError(400, 'Для новой редакции нужен полный текст RU и EN.');
+  if (contentRu.length > 250000 || contentEn.length > 250000) throw new ApiError(413, 'Текст одной языковой версии не должен превышать 250 000 символов.');
+  const registry = await readLegalDocumentRegistry(env);
+  if (version === registry[key].version) throw new ApiError(409, 'Новая редакция должна иметь новую версию.');
+  if (await ownerLegalVersionAlreadyUsed(env, key, version)) throw new ApiError(409, 'Эта версия уже была опубликована или встречалась в истории. Номер версии повторно использовать нельзя.');
+  const now = Math.floor(Date.now() / 1000);
+  const actorName = telegramDisplayName(ctx.user);
+  await env.DB.prepare(`UPDATE legal_document_registry SET draft_version=?,draft_ru=?,draft_en=?,updated_at=?,updated_by=?,updated_by_name=? WHERE document_key=?`)
+    .bind(version, contentRu, contentEn, now, String(ctx.user.id), actorName, key).run();
+  await logStaffAction(env, ctx.user, ctx.access, 'owner_legal_draft_save', null, 'legal_document', null, null, { documentKey:key,title:ownerLegalDocumentLabel(key),previousVersion:registry[key].version,draftVersion:version });
+  return { ok:true,documentKey:key,draftVersion:version };
+}
+
+async function ownerPanelLegalPublish(env, ctx) {
+  await ensureLegalSchema(env);
+  const key = String(ctx.body?.documentKey || '').trim().toLowerCase();
+  if (!LEGAL_DOCUMENT_KEYS.includes(key)) throw new ApiError(400, 'Выберите документ.');
+  if (String(ctx.body?.confirmation || '').trim() !== 'ОПУБЛИКОВАТЬ ДОКУМЕНТ') throw new ApiError(400, 'Введите точное подтверждение: ОПУБЛИКОВАТЬ ДОКУМЕНТ');
+  const row = await env.DB.prepare(`SELECT * FROM legal_document_registry WHERE document_key=? LIMIT 1`).bind(key).first();
+  if (!row) throw new ApiError(404, 'Документ не найден.');
+  const nextVersion = String(row.draft_version || '').trim();
+  const nextRu = String(row.draft_ru || '').trim();
+  const nextEn = String(row.draft_en || '').trim();
+  const previousVersion = String(row.current_version || LEGAL_DOCUMENTS[key].version);
+  await legalArchiveEvidence(env, key, previousVersion);
+  if (!nextVersion || nextRu.length < 100 || nextEn.length < 100) throw new ApiError(409, 'Сначала сохраните полный черновик RU + EN и новую версию.');
+  if (nextVersion === previousVersion) throw new ApiError(409, 'Версия не изменилась.');
+  if (nextRu.length > 250000 || nextEn.length > 250000) throw new ApiError(413, 'Текст одной языковой версии не должен превышать 250 000 символов.');
+  if (await ownerLegalVersionAlreadyUsed(env, key, nextVersion)) throw new ApiError(409, 'Эта версия уже была опубликована или встречалась в истории. Укажите новый уникальный номер версии.');
+  const hashes = await legalDocumentHashes(key, nextVersion, nextRu, nextEn);
+  const now = Math.floor(Date.now() / 1000);
+  const actorName = telegramDisplayName(ctx.user);
+  await env.DB.batch([
+    env.DB.prepare(`INSERT INTO legal_document_versions(document_key,document_version,content_ru,content_en,sha256_ru,sha256_en,sha256_bundle,published_at,published_by,published_by_name,source) VALUES(?,?,?,?,?,?,?,?,?,?,?)`)
+      .bind(key,nextVersion,nextRu,nextEn,hashes.sha256Ru,hashes.sha256En,hashes.sha256Bundle,now,String(ctx.user.id),actorName,'control_center'),
+    env.DB.prepare(`UPDATE legal_document_registry SET current_version=?,published_ru=?,published_en=?,draft_version='',draft_ru='',draft_en='',published_at=?,published_by=?,published_by_name=?,updated_at=?,updated_by=?,updated_by_name=? WHERE document_key=?`)
+      .bind(nextVersion,nextRu,nextEn,now,String(ctx.user.id),actorName,now,String(ctx.user.id),actorName,key)
+  ]);
+  await Promise.all([
+    logStaffAction(env, ctx.user, ctx.access, 'owner_legal_publish', null, 'legal_document', null, null, { documentKey:key,title:ownerLegalDocumentLabel(key),previousVersion,version:nextVersion,sha256Bundle:hashes.sha256Bundle }),
+    recordV67SettingChange(env, ctx.user, 'legal_document', key, 'publish', { version:previousVersion }, { version:nextVersion,sha256Bundle:hashes.sha256Bundle }).catch(() => {})
+  ]);
+  return { ok:true,documentKey:key,previousVersion,version:nextVersion,hashes };
+}
+
+async function ownerPanelLegalVersion(env, ctx) {
+  await ensureLegalSchema(env);
+  const key = String(ctx.body?.documentKey || '').trim().toLowerCase();
+  const version = String(ctx.body?.version || '').trim().slice(0, 80);
+  if (!LEGAL_DOCUMENT_KEYS.includes(key) || !version) throw new ApiError(400, 'Выберите документ и версию.');
+  const row = await env.DB.prepare(`SELECT * FROM legal_document_versions WHERE document_key=? AND document_version=? LIMIT 1`).bind(key,version).first();
+  if (!row) throw new ApiError(404, 'Архивная редакция не найдена.');
+  return { ok:true,documentKey:key,title:ownerLegalDocumentLabel(key),version:String(row.document_version||''),contentRu:String(row.content_ru||''),contentEn:String(row.content_en||''),sha256Ru:String(row.sha256_ru||''),sha256En:String(row.sha256_en||''),sha256Bundle:String(row.sha256_bundle||''),publishedAt:Number(row.published_at||0),publishedBy:String(row.published_by_name||row.published_by||''),source:String(row.source||'') };
+}
+
+async function ownerPanelLegalRevokeConsent(env, ctx) {
+  await ensureLegalSchema(env);
+  const telegramId = String(ctx.body?.telegramId || '').trim();
+  if (!/^\d{4,20}$/.test(telegramId)) throw new ApiError(400, 'Некорректный Telegram ID.');
+  const reason = String(ctx.body?.reason || '').trim().slice(0, 800);
+  if (reason.length < 3) throw new ApiError(400, 'Укажите причину отзыва согласия.');
+  const source = String(ctx.body?.source || 'support').trim().toLowerCase();
+  if (!['email','support','other'].includes(source)) throw new ApiError(400, 'Источник должен быть email, support или other.');
+  if (String(ctx.body?.confirmation || '').trim() !== 'ОТОЗВАТЬ СОГЛАСИЕ') throw new ApiError(400, 'Введите точное подтверждение: ОТОЗВАТЬ СОГЛАСИЕ');
+  const exists = await env.DB.prepare(`SELECT telegram_id FROM admin_profile_state WHERE telegram_id=? LIMIT 1`).bind(telegramId).first();
+  if (!exists) throw new ApiError(404, 'Игрок не найден.');
+  const state = await legalAcceptanceState(env, telegramId, false);
+  if (state.documents.consent.revoked) throw new ApiError(409, 'Согласие этого игрока уже отмечено как отозванное.');
+  const acceptedVersion = String(state.documents.consent.acceptedVersion || '');
+  if (!acceptedVersion || !state.documents.consent.acceptedAt) throw new ApiError(409, 'У игрока нет зафиксированного согласия на обработку ПДн.');
+  const now = Math.floor(Date.now() / 1000);
+  const actorName = telegramDisplayName(ctx.user);
+  const eventKey = `withdraw_${now}_${crypto.randomUUID().replaceAll('-', '').slice(0, 20)}`;
+  await env.DB.batch([
+    env.DB.prepare(`INSERT INTO legal_consent_events(telegram_id,document_version,event_kind,language,event_at,ip_address,user_agent,reason,source,actor_id,actor_name,event_key) VALUES(?,?,'withdrawn','ru',?,'','',?,?,?,?,?)`)
+      .bind(telegramId,acceptedVersion,now,reason,source,String(ctx.user.id),actorName,eventKey),
+    env.DB.prepare(`INSERT INTO legal_consent_current(telegram_id,status,document_version,event_at,reason,source,actor_id,actor_name) VALUES(?,'revoked',?,?,?,?,?,?) ON CONFLICT(telegram_id) DO UPDATE SET status='revoked',document_version=excluded.document_version,event_at=excluded.event_at,reason=excluded.reason,source=excluded.source,actor_id=excluded.actor_id,actor_name=excluded.actor_name`)
+      .bind(telegramId,acceptedVersion,now,reason,source,String(ctx.user.id),actorName)
+  ]);
+  await Promise.all([
+    logStaffAction(env,ctx.user,ctx.access,'owner_legal_consent_withdrawal',telegramId,'legal_consent',null,null,{documentVersion:acceptedVersion,reason,source}),
+    recordV67SettingChange(env,ctx.user,'legal_consent',telegramId,'withdraw',{status:'active',version:acceptedVersion},{status:'revoked',version:acceptedVersion,reason,source}).catch(()=>{})
+  ]);
+  return { ok:true,telegramId,documentVersion:acceptedVersion,revokedAt:now,reason,source };
+}
+
+async function ownerLegalPlayerSnapshot(env, telegramId) {
+  const state = await legalAcceptanceState(env, telegramId, false);
+  const [acceptHistory, consentHistory] = await Promise.all([
+    env.DB.prepare(`SELECT h.document_key,h.document_version,h.acceptance_kind,h.language,h.accepted_at,h.ip_address,h.user_agent,e.sha256_bundle
+      FROM legal_acceptance_history h LEFT JOIN legal_acceptance_evidence e
+      ON e.telegram_id=h.telegram_id AND e.document_key=h.document_key AND e.document_version=h.document_version AND e.acceptance_kind=h.acceptance_kind
+      WHERE h.telegram_id=? AND h.document_key<>'consent' ORDER BY h.accepted_at DESC,h.id DESC LIMIT 40`).bind(telegramId).all(),
+    env.DB.prepare(`SELECT c.document_version,c.event_kind,c.language,c.event_at,c.ip_address,c.user_agent,c.reason,c.source,c.actor_name,v.sha256_bundle
+      FROM legal_consent_events c LEFT JOIN legal_document_versions v ON v.document_key='consent' AND v.document_version=c.document_version
+      WHERE c.telegram_id=? ORDER BY c.event_at DESC,c.id DESC LIMIT 40`).bind(telegramId).all()
+  ]);
+  const history = [
+    ...(acceptHistory.results || []).map((row) => ({ documentKey:String(row.document_key||''),version:String(row.document_version||''),kind:String(row.acceptance_kind||''),language:legalLanguage(row.language),acceptedAt:Number(row.accepted_at||0),ipAddress:String(row.ip_address||''),userAgent:String(row.user_agent||''),sha256Bundle:String(row.sha256_bundle||''),reason:'',source:'',actor:'' })),
+    ...(consentHistory.results || []).map((row) => ({ documentKey:'consent',version:String(row.document_version||''),kind:String(row.event_kind||'')==='withdrawn'?'withdrawn':'accepted',language:legalLanguage(row.language),acceptedAt:Number(row.event_at||0),ipAddress:String(row.ip_address||''),userAgent:String(row.user_agent||''),sha256Bundle:String(row.sha256_bundle||''),reason:String(row.reason||''),source:String(row.source||''),actor:String(row.actor_name||'') }))
+  ].sort((a,b)=>b.acceptedAt-a.acceptedAt).slice(0,50);
+  return { ...state, history };
+}
+
 async function ownerPanelV85Player360(env,ctx){
   await ensureControlCenterV85Schema(env);const telegramId=String(ctx.body?.telegramId||"").trim();if(!/^\d{4,20}$/.test(telegramId))throw new ApiError(400,"Некорректный Telegram ID.");
   const exists=await env.DB.prepare(`SELECT telegram_id FROM admin_profile_state WHERE telegram_id=? LIMIT 1`).bind(telegramId).first();if(!exists)throw new ApiError(404,"Игрок не найден.");
   const now=Math.floor(Date.now()/1000),week=now-7*86400;
-  const [runStats,cases,purchases,promos,physical,rewardQueue,campaigns,notifications,tickets,fraud,notes,timeline,moderation,moderationHistory] = await Promise.all([
+  const [runStats,cases,purchases,promos,physical,rewardQueue,campaigns,notifications,tickets,fraud,notes,timeline,moderation,moderationHistory,legal] = await Promise.all([
     env.DB.prepare(`SELECT COUNT(*) AS total,SUM(CASE WHEN accepted=1 THEN 1 ELSE 0 END) AS accepted,SUM(CASE WHEN accepted=0 THEN 1 ELSE 0 END) AS rejected,ROUND(AVG(CASE WHEN accepted=1 THEN score END),1) AS avg_score,MAX(created_at) AS last_run,MIN(created_at) AS first_run,SUM(CASE WHEN accepted=1 AND created_at>=? THEN 1 ELSE 0 END) AS runs7 FROM leaderboard_runs WHERE telegram_id=?`).bind(week,telegramId).first(),
     env.DB.prepare(`SELECT (SELECT COUNT(*) FROM level_case_openings WHERE telegram_id=?)+(SELECT COUNT(*) FROM granted_cases WHERE telegram_id=? AND status='opened') AS opened`).bind(telegramId,telegramId).first(),
     env.DB.prepare(`SELECT (SELECT COUNT(*) FROM granted_cases WHERE telegram_id=? AND granted_by='shop')+(SELECT COUNT(*) FROM shop_stock_consumptions WHERE telegram_id=? AND category='skins') AS count`).bind(telegramId,telegramId).first(),
@@ -27444,9 +28223,10 @@ async function ownerPanelV85Player360(env,ctx){
     env.DB.prepare(`SELECT id,note_text,created_by,created_by_name,created_at FROM player_notes WHERE telegram_id=? AND deleted_at=0 ORDER BY created_at DESC LIMIT 30`).bind(telegramId).all(),
     env.DB.prepare(`SELECT id,event_type,title,details_json,source_id,actor_name,created_at FROM player_timeline_events WHERE telegram_id=? ORDER BY created_at DESC,id DESC LIMIT 40`).bind(telegramId).all(),
     getPlayerAdminControl(telegramId,env),
-    env.DB.prepare(`SELECT id,action,reason,actor_name,created_at,block_type,blocked_until FROM player_moderation_history WHERE telegram_id=? ORDER BY created_at DESC LIMIT 20`).bind(telegramId).all()
+    env.DB.prepare(`SELECT id,action,reason,actor_name,created_at,block_type,blocked_until FROM player_moderation_history WHERE telegram_id=? ORDER BY created_at DESC LIMIT 20`).bind(telegramId).all(),
+    ownerLegalPlayerSnapshot(env,telegramId)
   ]);
-  return {ok:true,telegramId,stats:{runs:Number(runStats?.total||0),accepted:Number(runStats?.accepted||0),rejected:Number(runStats?.rejected||0),runs7:Number(runStats?.runs7||0),avgScore:Number(runStats?.avg_score||0),firstRunAt:Number(runStats?.first_run||0),lastRunAt:Number(runStats?.last_run||0),casesOpened:Number(cases?.opened||0),purchases:Number(purchases?.count||0),promoUses:(promos.results||[]).length,physicalRewards:(physical.results||[]).length},promos:(promos.results||[]).map(r=>({code:String(r.code||""),status:String(r.status||""),createdAt:Number(r.created_at||0)})),physical:(physical.results||[]).map(r=>({code:String(r.code||""),productId:String(r.product_id||""),productName:String(r.product_name||""),status:String(r.status||""),createdAt:Number(r.created_at||0),redeemedAt:Number(r.redeemed_at||0)})),rewards:(rewardQueue.results||[]).map(r=>({id:Number(r.id||0),sourceType:String(r.source_type||""),sourceId:String(r.source_id||""),kind:String(r.reward_kind||""),rewardId:String(r.reward_id||""),amount:Number(r.amount||0),reason:String(r.reason||""),status:String(r.status||""),attempts:Number(r.attempts||0),error:String(r.last_error||""),createdAt:Number(r.created_at||0),deliveredAt:Number(r.delivered_at||0),claimedAt:Number(r.claimed_at||0)})),campaigns:(campaigns.results||[]).map(r=>({id:String(r.campaign_id||""),title:String(r.title||""),status:String(r.status||""),processedAt:Number(r.processed_at||0),deliveredAt:Number(r.delivered_at||0),error:String(r.delivery_error||""),createdAt:Number(r.created_at||0)})),notifications:(notifications.results||[]).map(r=>({category:String(r.category||""),sentAt:Number(r.sent_at||0)})),tickets:(tickets.results||[]).map(r=>({id:Number(r.id||0),category:String(r.category||""),description:String(r.description||""),status:String(r.status||""),resolution:String(r.resolution||""),createdAt:Number(r.created_at||0),updatedAt:Number(r.updated_at||0),closedAt:Number(r.closed_at||0)})),fraud:(fraud.results||[]).map(r=>({id:Number(r.id||0),type:String(r.alert_type||""),severity:String(r.severity||""),title:String(r.title||""),status:String(r.status||""),resolution:String(r.resolution||""),createdAt:Number(r.created_at||0),updatedAt:Number(r.updated_at||0)})),notes:(notes.results||[]).map(r=>({id:Number(r.id||0),text:String(r.note_text||""),createdBy:String(r.created_by_name||r.created_by||""),createdAt:Number(r.created_at||0)})),timeline:(timeline.results||[]).map(r=>({id:Number(r.id||0),type:String(r.event_type||""),title:String(r.title||""),details:ownerV8SafeJson(r.details_json,{}),sourceId:String(r.source_id||""),actor:String(r.actor_name||""),createdAt:Number(r.created_at||0)})),moderation:{blocked:Boolean(moderation?.blocked),reason:String(moderation?.blockReason||""),type:String(moderation?.blockType||""),until:Number(moderation?.blockedUntil||0)},moderationHistory:(moderationHistory.results||[]).map(r=>({id:Number(r.id||0),action:String(r.action||""),reason:String(r.reason||""),actor:String(r.actor_name||""),createdAt:Number(r.created_at||0),blockType:String(r.block_type||""),blockedUntil:Number(r.blocked_until||0)}))};
+  return {ok:true,telegramId,stats:{runs:Number(runStats?.total||0),accepted:Number(runStats?.accepted||0),rejected:Number(runStats?.rejected||0),runs7:Number(runStats?.runs7||0),avgScore:Number(runStats?.avg_score||0),firstRunAt:Number(runStats?.first_run||0),lastRunAt:Number(runStats?.last_run||0),casesOpened:Number(cases?.opened||0),purchases:Number(purchases?.count||0),promoUses:(promos.results||[]).length,physicalRewards:(physical.results||[]).length},promos:(promos.results||[]).map(r=>({code:String(r.code||""),status:String(r.status||""),createdAt:Number(r.created_at||0)})),physical:(physical.results||[]).map(r=>({code:String(r.code||""),productId:String(r.product_id||""),productName:String(r.product_name||""),status:String(r.status||""),createdAt:Number(r.created_at||0),redeemedAt:Number(r.redeemed_at||0)})),rewards:(rewardQueue.results||[]).map(r=>({id:Number(r.id||0),sourceType:String(r.source_type||""),sourceId:String(r.source_id||""),kind:String(r.reward_kind||""),rewardId:String(r.reward_id||""),amount:Number(r.amount||0),reason:String(r.reason||""),status:String(r.status||""),attempts:Number(r.attempts||0),error:String(r.last_error||""),createdAt:Number(r.created_at||0),deliveredAt:Number(r.delivered_at||0),claimedAt:Number(r.claimed_at||0)})),campaigns:(campaigns.results||[]).map(r=>({id:String(r.campaign_id||""),title:String(r.title||""),status:String(r.status||""),processedAt:Number(r.processed_at||0),deliveredAt:Number(r.delivered_at||0),error:String(r.delivery_error||""),createdAt:Number(r.created_at||0)})),notifications:(notifications.results||[]).map(r=>({category:String(r.category||""),sentAt:Number(r.sent_at||0)})),tickets:(tickets.results||[]).map(r=>({id:Number(r.id||0),category:String(r.category||""),description:String(r.description||""),status:String(r.status||""),resolution:String(r.resolution||""),createdAt:Number(r.created_at||0),updatedAt:Number(r.updated_at||0),closedAt:Number(r.closed_at||0)})),fraud:(fraud.results||[]).map(r=>({id:Number(r.id||0),type:String(r.alert_type||""),severity:String(r.severity||""),title:String(r.title||""),status:String(r.status||""),resolution:String(r.resolution||""),createdAt:Number(r.created_at||0),updatedAt:Number(r.updated_at||0)})),notes:(notes.results||[]).map(r=>({id:Number(r.id||0),text:String(r.note_text||""),createdBy:String(r.created_by_name||r.created_by||""),createdAt:Number(r.created_at||0)})),timeline:(timeline.results||[]).map(r=>({id:Number(r.id||0),type:String(r.event_type||""),title:String(r.title||""),details:ownerV8SafeJson(r.details_json,{}),sourceId:String(r.source_id||""),actor:String(r.actor_name||""),createdAt:Number(r.created_at||0)})),legal,moderation:{blocked:Boolean(moderation?.blocked),reason:String(moderation?.blockReason||""),type:String(moderation?.blockType||""),until:Number(moderation?.blockedUntil||0)},moderationHistory:(moderationHistory.results||[]).map(r=>({id:Number(r.id||0),action:String(r.action||""),reason:String(r.reason||""),actor:String(r.actor_name||""),createdAt:Number(r.created_at||0),blockType:String(r.block_type||""),blockedUntil:Number(r.blocked_until||0)}))};
 }
 async function ownerPanelV85PlayerNoteSave(env,ctx){await ensureControlCenterV85Schema(env);const id=String(ctx.body?.telegramId||"").trim(),text=String(ctx.body?.text||"").trim().slice(0,1200);if(!/^\d{4,20}$/.test(id)||text.length<2)throw new ApiError(400,"Выберите игрока и укажите заметку.");const now=Math.floor(Date.now()/1000);const result=await env.DB.prepare(`INSERT INTO player_notes(telegram_id,note_text,created_by,created_by_name,created_at,deleted_at,deleted_by) VALUES(?,?,?,?,?,0,'')`).bind(id,text,String(ctx.user.id),telegramDisplayName(ctx.user),now).run();await logStaffAction(env,ctx.user,ctx.access,"owner_panel_player_note",id,"player_note",null,Number(result.meta?.last_row_id||0),{text});return {ok:true,id:Number(result.meta?.last_row_id||0)};}
 async function ownerPanelV85PlayerNoteDelete(env,ctx){await ensureControlCenterV85Schema(env);const noteId=ownerPanelInteger(ctx.body?.noteId,1,999999999);if(noteId==null)throw new ApiError(400,"Некорректная заметка.");const row=await env.DB.prepare(`SELECT * FROM player_notes WHERE id=? AND deleted_at=0 LIMIT 1`).bind(noteId).first();if(!row)throw new ApiError(404,"Заметка не найдена.");await env.DB.prepare(`UPDATE player_notes SET deleted_at=?,deleted_by=? WHERE id=? AND deleted_at=0`).bind(Math.floor(Date.now()/1000),String(ctx.user.id),noteId).run();await logStaffAction(env,ctx.user,ctx.access,"owner_panel_player_note_delete",String(row.telegram_id),"player_note",noteId,null,{});return {ok:true};}
@@ -27690,6 +28470,44 @@ function flashOfferPrice(source, prefix = "price") {
   };
   return { points: read("points"), treats: read("treats"), coffee: read("coffee") };
 }
+const FLASH_OFFER_RUN_BOOSTERS = Object.freeze({
+  booster_points_runs:Object.freeze({ baseKind:"booster_points", bucket:"points", title:"×2 очки" }),
+  booster_treats_runs:Object.freeze({ baseKind:"booster_treats", bucket:"treats", title:"×2 зефир" }),
+  booster_coffee_runs:Object.freeze({ baseKind:"booster_coffee", bucket:"coffee", title:"×2 кофе" })
+});
+function flashOfferRunBoosterDefinition(kind) {
+  return FLASH_OFFER_RUN_BOOSTERS[String(kind || "").trim().toLowerCase()] || null;
+}
+function flashOfferCosmeticDefinition(kindValue, itemIdValue) {
+  const kind=String(kindValue||"").trim().toLowerCase();
+  if(!SEASON_PASS_COSMETIC_KINDS.includes(kind))return null;
+  const id=String(itemIdValue||"").trim();
+  const item=seasonPassCosmeticCatalog(kind)?.[id]||null;
+  if(!item||(kind==="music"&&item.defaultOwned))return null;
+  return {kind,id,item,title:String(item.title||id)};
+}
+function flashOfferRuPlural(value, one, few, many) {
+  const n=Math.abs(Math.floor(Number(value)||0))%100,m=n%10;
+  if(n>10&&n<20)return many;
+  if(m===1)return one;
+  if(m>=2&&m<=4)return few;
+  return many;
+}
+function flashOfferCosmeticOwned(state, kind, id) {
+  const key=({avatar:"ownedAvatars",frame:"ownedFrames",trail:"ownedTrails",skin:"ownedSkins",music:"ownedMusicTracks"})[String(kind||"")];
+  return Boolean(key&&Array.isArray(state?.[key])&&state[key].includes(String(id||"")));
+}
+function flashOfferCosmeticGrantStatement(env, telegramId, reward, now) {
+  const field=({avatar:"owned_avatars_json",frame:"owned_frames_json",trail:"owned_trails_json",skin:"owned_skins_json",music:"owned_music_json"})[String(reward?.kind||"")];
+  if(!field)return null;
+  const fallback=String(reward.kind)==="music"?'["cafe_run"]':'[]';
+  const id=String(reward.id||"");
+  return env.DB.prepare(`UPDATE case_player_state SET ${field}=CASE
+      WHEN EXISTS(SELECT 1 FROM json_each(CASE WHEN json_valid(${field}) THEN ${field} ELSE ? END) WHERE CAST(value AS TEXT)=?)
+        THEN CASE WHEN json_valid(${field}) THEN ${field} ELSE ? END
+      ELSE json_insert(CASE WHEN json_valid(${field}) THEN ${field} ELSE ? END,'$[#]',?)
+    END,revision=revision+1,updated_at=? WHERE telegram_id=?`).bind(fallback,id,fallback,fallback,id,now,String(telegramId));
+}
 function flashOfferNormalizeRewards(input) {
   const rows = Array.isArray(input) ? input : [];
   const result = [];
@@ -27711,6 +28529,16 @@ function flashOfferNormalizeRewards(input) {
       result.push({ kind:"product", id, amount });
       continue;
     }
+    const cosmetic=flashOfferCosmeticDefinition(kind,raw?.id||raw?.itemId);
+    if(cosmetic){result.push({kind:cosmetic.kind,id:cosmetic.id,amount:1});continue;}
+    if(SEASON_PASS_COSMETIC_KINDS.includes(kind))throw new ApiError(400,"В акции выбран неизвестный предмет оформления.");
+    const runBooster=flashOfferRunBoosterDefinition(kind);
+    if(runBooster){
+      const runs=Number(raw?.amount);
+      if(!Number.isInteger(runs)||runs<2||runs>40||runs%2!==0)throw new ApiError(400,"Для ×2-бустера укажите чётное количество забегов от 2 до 40.");
+      result.push({kind,amount:runs});continue;
+    }
+    // Старые акции с бустерами по 2 забега продолжают работать без миграции данных.
     if (["booster_points", "booster_treats", "booster_coffee"].includes(kind)) {
       amount = Math.min(20, amount);
       result.push({ kind, amount });
@@ -27732,7 +28560,12 @@ function flashOfferNormalizeRewards(input) {
       result.push({ kind:"season_pass_xp", amount });
       continue;
     }
-    throw new ApiError(400, "Акция поддерживает валюту, кейсы, товары, бусты, сезонный пропуск и XP пропуска.");
+    if(kind==="season_pass_levels"){
+      const levels=Number(raw?.amount);
+      if(!Number.isInteger(levels)||levels<1||levels>25)throw new ApiError(400,"Для акции можно добавить от 1 до 25 уровней сезонного пропуска.");
+      result.push({kind:"season_pass_levels",amount:levels});continue;
+    }
+    throw new ApiError(400, "Акция поддерживает валюту, кейсы, оформление, физические товары, бусты и награды сезонного пропуска.");
   }
   if (!result.length) throw new ApiError(400, "Добавьте хотя бы одну награду в акцию.");
   return result;
@@ -27744,8 +28577,13 @@ function flashOfferRewardTitle(reward) {
   if (reward?.kind === "coffee") return `${amount.toLocaleString("ru-RU")} кофе`;
   if (reward?.kind === "case") return `${amount > 1 ? `${amount} × ` : ""}${LEVEL_CASE_CONFIG[normalizeCaseType(reward.id)]?.title || "Кейс"}`;
   if (reward?.kind === "product") return `${amount > 1 ? `${amount} × ` : ""}${PRODUCTS[reward.id]?.title || reward.id}`;
+  const cosmetic=flashOfferCosmeticDefinition(reward?.kind,reward?.id);
+  if(cosmetic){const label=({avatar:"Аватар",frame:"Рамка",trail:"След",skin:"Скин",music:"Музыка"})[cosmetic.kind]||"Предмет";return `${label} · ${cosmetic.title}`;}
+  const runBooster=flashOfferRunBoosterDefinition(reward?.kind);
+  if(runBooster)return `${runBooster.title} · ${amount} ${flashOfferRuPlural(amount,"забег","забега","забегов")}`;
   if (reward?.kind === "season_pass") return String(reward?.id) === "elite_plus" ? "Элитный+ сезонный пропуск" : "Элитный сезонный пропуск";
-  if (reward?.kind === "season_pass_xp") return "XP сезонного пропуска";
+  if (reward?.kind === "season_pass_xp") return `${amount.toLocaleString("ru-RU")} XP сезонного пропуска`;
+  if (reward?.kind === "season_pass_levels") return `+${amount} ${flashOfferRuPlural(amount,"уровень","уровня","уровней")} сезонного пропуска`;
   if (SEASON_PASS_BOOST_REWARDS[String(reward?.kind || "")]) return SEASON_PASS_BOOST_REWARDS[String(reward.kind)].title;
   return "Награда";
 }
@@ -27753,8 +28591,11 @@ function flashOfferRewardImage(reward) {
   if (!reward) return "/assets/optimized/v0.79.5/shopMascot.webp?v=0.79.5";
   if (reward.kind === "product") return ownerPanelShopProductAsset(reward.id);
   if (reward.kind === "case") return ownerPanelCaseAsset(normalizeCaseType(reward.id) || "small");
+  if (flashOfferCosmeticDefinition(reward.kind,reward.id)) return ownerPanelRewardAsset(reward.kind,reward.id);
+  const runBooster=flashOfferRunBoosterDefinition(reward.kind);
+  if(runBooster)return ownerPanelRewardAsset(runBooster.baseKind,"");
   if (reward.kind === "season_pass") return String(reward.id) === "elite_plus" ? "/assets/season-pass/elite_plus.png?v=07939" : "/assets/season-pass/elite.png?v=07939";
-  if (reward.kind === "season_pass_xp") return "/assets/season-pass/xp.png?v=07939";
+  if (reward.kind === "season_pass_xp" || reward.kind === "season_pass_levels") return "/assets/season-pass/xp.png?v=07939";
   return ownerPanelRewardAsset(reward.kind, reward.id || "");
 }
 function flashOfferAutoImage(rewards) {
@@ -27768,21 +28609,27 @@ function flashOfferSeasonPassRewardInfo(rewards) {
   const list = Array.isArray(rewards) ? rewards : [];
   const tierReward = list.find((item) => item?.kind === "season_pass") || null;
   const xpAmount = list.filter((item) => item?.kind === "season_pass_xp").reduce((sum, item) => sum + Math.max(0, Math.floor(Number(item?.amount) || 0)), 0);
-  return { requestedTier:tierReward ? String(tierReward.id || "") : "", xpAmount };
+  const levelCount = list.filter((item) => item?.kind === "season_pass_levels").reduce((sum, item) => sum + Math.max(0, Math.floor(Number(item?.amount) || 0)), 0);
+  return { requestedTier:tierReward ? String(tierReward.id || "") : "", xpAmount, levelCount };
 }
 async function flashOfferSeasonPassContext(env, telegramId, rewards, options = {}) {
   const info = flashOfferSeasonPassRewardInfo(rewards);
-  if (!info.requestedTier && !info.xpAmount) return null;
+  if (!info.requestedTier && !info.xpAmount && !info.levelCount) return null;
   await ensureSeasonPassSchema(env);
   const season = await loadSeasonPassSeason(env);
-  if (!season || String(season.status || "") !== "active") return { ...info, eligible:false, reason:"Акция с сезонным пропуском доступна только во время активного сезона.", season:null, player:null, currentTier:"none" };
+  if (!season || String(season.status || "") !== "active") return { ...info, eligible:false, reason:"Акция с сезонным пропуском доступна только во время активного сезона.", season:null, player:null, currentTier:"none", currentLevel:1, targetLevel:1, targetXp:0 };
   const id = String(telegramId || "");
   let player = options.createPlayer ? await ensureSeasonPassPlayer(env, season, id) : await env.DB.prepare(`SELECT * FROM season_pass_players WHERE season_id=? AND telegram_id=? LIMIT 1`).bind(String(season.id), id).first();
   if (!player) player = { season_id:String(season.id), telegram_id:id, xp:0, premium_tier:"none", elite_plus_bonus_granted:0, revision:0 };
   const currentTier = ["elite", "elite_plus"].includes(String(player?.premium_tier)) ? String(player.premium_tier) : "none";
-  if (info.requestedTier === "elite" && currentTier !== "none") return { ...info, eligible:false, reason:"Тариф «Элитный» уже доступен на этом аккаунте.", season, player, currentTier };
-  if (info.requestedTier === "elite_plus" && currentTier === "elite_plus") return { ...info, eligible:false, reason:"Тариф «Элитный+» уже доступен на этом аккаунте.", season, player, currentTier };
-  return { ...info, eligible:true, reason:"", season, player, currentTier };
+  const currentXp=Math.max(0,Math.floor(Number(player?.xp)||0));
+  const currentLevel=seasonPassLevelFromXp(currentXp);
+  const targetLevel=info.levelCount>0?currentLevel+info.levelCount:currentLevel;
+  const targetXp=info.levelCount>0&&targetLevel<=SEASON_PASS_MAX_LEVEL?Math.max(currentXp,seasonPassXpForLevel(targetLevel)):currentXp;
+  if (info.requestedTier === "elite" && currentTier !== "none") return { ...info, eligible:false, reason:"Тариф «Элитный» уже доступен на этом аккаунте.", season, player, currentTier, currentLevel, targetLevel, targetXp };
+  if (info.requestedTier === "elite_plus" && currentTier === "elite_plus") return { ...info, eligible:false, reason:"Тариф «Элитный+» уже доступен на этом аккаунте.", season, player, currentTier, currentLevel, targetLevel, targetXp };
+  if(info.levelCount>0&&targetLevel>SEASON_PASS_MAX_LEVEL)return { ...info, eligible:false, reason:`Награда +${info.levelCount} уровней недоступна на текущем уровне ${currentLevel}: итоговый уровень не может быть выше ${SEASON_PASS_MAX_LEVEL}.`, season, player, currentTier, currentLevel, targetLevel, targetXp };
+  return { ...info, eligible:true, reason:"", season, player, currentTier, currentLevel, targetLevel, targetXp };
 }
 function flashOfferRowPrice(row, prefix = "price") {
   return {
@@ -27861,10 +28708,19 @@ async function flashOfferEligibleRows(env, telegramId) {
   const now = Math.floor(Date.now()/1000);
   const result = await env.DB.prepare(`SELECT * FROM shop_flash_offers WHERE status='published' AND enabled=1 AND (starts_at=0 OR starts_at<=?) AND (ends_at=0 OR ends_at>?) ORDER BY priority DESC,updated_at DESC LIMIT 20`).bind(now,now).all();
   const out=[];
+  let caseEligibilityState=null,caseEligibilityLoaded=false;
   for (const row of result.results||[]) {
     if (!(await flashOfferMatchesSegment(env,telegramId,row.segment_key))) continue;
     let rewards=[];
     try { rewards=flashOfferNormalizeRewards(ownerV8SafeJson(row.rewards_json,[])); } catch { continue; }
+    const cosmeticRewards=rewards.filter((reward)=>flashOfferCosmeticDefinition(reward.kind,reward.id));
+    if(cosmeticRewards.length){
+      if(!caseEligibilityLoaded){
+        caseEligibilityLoaded=true;
+        try{const stateRow=await env.DB.prepare(`SELECT * FROM case_player_state WHERE telegram_id=? LIMIT 1`).bind(String(telegramId)).first();caseEligibilityState=caseStateFromRow(stateRow||{});}catch{caseEligibilityState=caseStateFromRow({});}
+      }
+      if(cosmeticRewards.some((reward)=>flashOfferCosmeticOwned(caseEligibilityState,reward.kind,reward.id)))continue;
+    }
     const passContext=await flashOfferSeasonPassContext(env,telegramId,rewards,{createPlayer:false});
     if(passContext&&!passContext.eligible)continue;
     const completedRow=await env.DB.prepare(`SELECT COUNT(*) AS count FROM shop_flash_offer_purchases WHERE offer_id=? AND telegram_id=? AND status='completed'`).bind(String(row.offer_id),String(telegramId)).first();
@@ -27933,13 +28789,16 @@ async function purchaseFlashOffer(request, env) {
     const passContext=await flashOfferSeasonPassContext(env,telegramId,rewards,{createPlayer:true});
     if(passContext&&!passContext.eligible)throw new ApiError(409,passContext.reason||"Сезонный пропуск из этой акции сейчас недоступен.");
     if(passContext?.requestedTier&&limit!==1)throw new ApiError(409,"Акция с сезонным пропуском должна иметь лимит 1 покупка на игрока.");
+    if(rewards.some((reward)=>flashOfferCosmeticDefinition(reward.kind,reward.id))&&limit!==1)throw new ApiError(409,"Акция с уникальным предметом оформления должна иметь лимит 1 покупка на игрока.");
     if(existing?.status==="reserved"&&now-Number(existing.created_at||0)>180){await releaseFlashOfferReservedStock(env,String(existing.purchase_id));await env.DB.prepare(`DELETE FROM shop_flash_offer_purchases WHERE purchase_id=? AND status='reserved' AND created_at<?`).bind(String(existing.purchase_id),now-180).run();}
     const staleReservations=(await env.DB.prepare(`SELECT purchase_id FROM shop_flash_offer_purchases WHERE offer_id=? AND telegram_id=? AND status='reserved' AND created_at<? LIMIT 20`).bind(offerId,telegramId,now-180).all()).results||[];
     for(const stale of staleReservations){await releaseFlashOfferReservedStock(env,String(stale.purchase_id));await env.DB.prepare(`DELETE FROM shop_flash_offer_purchases WHERE purchase_id=? AND status='reserved' AND created_at<?`).bind(String(stale.purchase_id),now-180).run();}
     const completedRow=await env.DB.prepare(`SELECT COUNT(*) AS count FROM shop_flash_offer_purchases WHERE offer_id=? AND telegram_id=? AND status='completed'`).bind(offerId,telegramId).first(); if(limit>0&&Number(completedRow?.count||0)>=limit)throw new ApiError(409,"Лимит покупок этой акции уже исчерпан.");
-    const hasInventoryBoosters=rewards.some(r=>["booster_points","booster_treats","booster_coffee"].includes(String(r.kind)));
+    const hasInventoryBoosters=rewards.some(r=>["booster_points","booster_treats","booster_coffee"].includes(String(r.kind))||Boolean(flashOfferRunBoosterDefinition(r.kind)));
+    const cosmeticRewards=rewards.filter((reward)=>flashOfferCosmeticDefinition(reward.kind,reward.id));
     const hasXpBooster=rewards.some(r=>String(r.kind)==="booster_xp");
-    if(hasInventoryBoosters)await ensureCasePlayerState(env,telegramId,body.current||{});
+    const caseStateContext=(hasInventoryBoosters||cosmeticRewards.length)?await ensureCasePlayerState(env,telegramId,body.current||{}):null;
+    for(const reward of cosmeticRewards){if(flashOfferCosmeticOwned(caseStateContext?.state,reward.kind,reward.id))throw new ApiError(409,`${flashOfferRewardTitle(reward)} уже есть у вас. Эта акция больше недоступна для аккаунта.`);}
     let offerBoostSeason=null;
     if(hasXpBooster){offerBoostSeason=await loadSeasonPassSeason(env);if(String(offerBoostSeason?.status||"")==="ended")throw new ApiError(409,"Буст ×2 XP сейчас недоступен: сезонный пропуск завершён.");}
     const profileSync=await syncAdminProfile(null,env,{raw:true,body:{initData:String(body.initData||""),mode:"read",current:body.current||{}},auth});
@@ -27961,6 +28820,7 @@ async function purchaseFlashOffer(request, env) {
       const plan=await elitePlusBenefitPlan(env,{season:passContext.season,telegramId,player:passContext.player},passContext.player,now,{source:`flash-offer:${offerId}`,bonusAlreadyGranted:Boolean(Number(passContext.player?.elite_plus_bonus_granted||0))});
       passStatements.push(...plan.statements);passReceived=Array.isArray(plan.received)?plan.received:[];
     }
+    if(passContext?.levelCount>0&&passContext?.targetXp>Number(passContext?.player?.xp||0))passStatements.push(env.DB.prepare(`UPDATE season_pass_players SET xp=CASE WHEN xp<? THEN ? ELSE xp END,revision=revision+1,updated_at=? WHERE season_id=? AND telegram_id=?`).bind(passContext.targetXp,passContext.targetXp,now,String(passContext.season.id),telegramId));
     if(passContext?.xpAmount>0)passStatements.push(env.DB.prepare(`UPDATE season_pass_players SET xp=xp+?,revision=revision+1,updated_at=? WHERE season_id=? AND telegram_id=?`).bind(passContext.xpAmount,now,String(passContext.season.id),telegramId));
     const guardId=`flash:${reservedPurchaseId}`.slice(0,180);
     const statements=[
@@ -27976,9 +28836,11 @@ async function purchaseFlashOffer(request, env) {
       else if(reward.kind==="booster_points"){boosterTotals.points+=Number(reward.amount||1);publicRewards.push({...reward,title:flashOfferRewardTitle(reward),imageUrl:flashOfferRewardImage(reward)});}
       else if(reward.kind==="booster_treats"){boosterTotals.treats+=Number(reward.amount||1);publicRewards.push({...reward,title:flashOfferRewardTitle(reward),imageUrl:flashOfferRewardImage(reward)});}
       else if(reward.kind==="booster_coffee"){boosterTotals.coffee+=Number(reward.amount||1);publicRewards.push({...reward,title:flashOfferRewardTitle(reward),imageUrl:flashOfferRewardImage(reward)});}
+      else if(flashOfferRunBoosterDefinition(reward.kind)){const boost=flashOfferRunBoosterDefinition(reward.kind);boosterTotals[boost.bucket]+=Math.max(1,Math.floor(Number(reward.amount||2)/2));publicRewards.push({...reward,title:flashOfferRewardTitle(reward),imageUrl:flashOfferRewardImage(reward)});}
+      else if(flashOfferCosmeticDefinition(reward.kind,reward.id)){const statement=flashOfferCosmeticGrantStatement(env,telegramId,reward,now);if(statement)statements.push(statement);publicRewards.push({...reward,amount:1,title:flashOfferRewardTitle(reward),imageUrl:flashOfferRewardImage(reward)});}
       else if(reward.kind==="booster_xp"){publicRewards.push({...reward,amount:1,title:flashOfferRewardTitle(reward),imageUrl:flashOfferRewardImage(reward)});}
       else if(reward.kind==="season_pass"){publicRewards.push({...reward,amount:1,title:flashOfferRewardTitle(reward),imageUrl:flashOfferRewardImage(reward),received:passReceived});}
-      else if(reward.kind==="season_pass_xp"){publicRewards.push({...reward,title:flashOfferRewardTitle(reward),imageUrl:flashOfferRewardImage(reward)});}
+      else if(reward.kind==="season_pass_xp"||reward.kind==="season_pass_levels"){publicRewards.push({...reward,title:flashOfferRewardTitle(reward),imageUrl:flashOfferRewardImage(reward)});}
     }
     if(virtual.points||virtual.treats||virtual.coffee)statements.push(env.DB.prepare(`UPDATE admin_profile_state SET wallet=wallet+?,treats=treats+?,coffee=coffee+?,revision=revision+1,updated_at=?,updated_by=? WHERE telegram_id=?`).bind(virtual.points,virtual.treats,virtual.coffee,now,`offer:${offerId}`,telegramId));
     if(boosterTotals.points||boosterTotals.treats||boosterTotals.coffee)statements.push(env.DB.prepare(`UPDATE case_player_state SET boosters_points=boosters_points+?,boosters_treats=boosters_treats+?,boosters_coffee=boosters_coffee+?,revision=revision+1,updated_at=? WHERE telegram_id=?`).bind(boosterTotals.points,boosterTotals.treats,boosterTotals.coffee,now,telegramId));
@@ -28000,6 +28862,7 @@ async function purchaseFlashOffer(request, env) {
       env.DB.prepare(`DELETE FROM shop_flash_offer_purchase_guards WHERE guard_id=?`).bind(guardId)
     );
     await env.DB.batch(statements); purchaseCommitted=true;
+    for(const reward of cosmeticRewards){if(["avatar","frame","trail","skin"].includes(String(reward.kind)))await recordContentAnalyticsEvent(env,telegramId,reward.kind,reward.id,"acquired","flash_offer",offerId);}
     if(passContext?.requestedTier==="elite_plus"){
       try{const updatedPass=await env.DB.prepare(`SELECT * FROM season_pass_players WHERE season_id=? AND telegram_id=? LIMIT 1`).bind(String(passContext.season.id),telegramId).first();await reconcileElitePlusTaskXpBoost(env,passContext.season,telegramId,updatedPass);}catch(error){console.error("flash offer elite+ task xp reconciliation failed",error);}
     }
@@ -28029,17 +28892,26 @@ async function ownerPanelFlashOffers(env, ctx) {
     ...media.map(m=>({url:m.url,title:`Медиатека · ${m.fileName}`}))
   ];
   const passPrice=(tier)=>({points:seasonPassInteger(seasonPass?.prices?.[tier]?.points),treats:seasonPassInteger(seasonPass?.prices?.[tier]?.treats),coffee:seasonPassInteger(seasonPass?.prices?.[tier]?.coffee)});
+  const cosmeticRewardCatalog=[];
+  for(const [kind,group,prefix] of [["avatar","Оформление · Аватары","Аватар"],["frame","Оформление · Рамки","Рамка"],["trail","Оформление · Следы","След"],["skin","Оформление · Скины","Скин"],["music","Оформление · Музыка","Музыка"]]){
+    for(const [id,item] of Object.entries(seasonPassCosmeticCatalog(kind)||{})){
+      if(kind==="music"&&item?.defaultOwned)continue;
+      cosmeticRewardCatalog.push({kind,id,group,title:`${prefix} · ${String(item?.title||id)}`,imageUrl:flashOfferRewardImage({kind,id})});
+    }
+  }
   return {ok:true,serverTime:Date.now(),offers:(offersResult.results||[]).map(r=>flashOfferRowView(r,{stats:{impressions:Number(r.impressions||0),clicks:Number(r.clicks||0),purchases:Number(r.purchases||0)}})),segments:[{key:"all",title:"Все игроки",builtin:true},...segments],seasonPass:{title:String(seasonPass?.title||""),status:String(seasonPass?.status||""),prices:{elite:passPrice("elite"),elite_plus:passPrice("elite_plus")}},imagePresets,rewardCatalog:[
-    {kind:"points",id:"",title:"Очки",imageUrl:flashOfferRewardImage({kind:"points"})},{kind:"treats",id:"",title:"Зефир",imageUrl:flashOfferRewardImage({kind:"treats"})},{kind:"coffee",id:"",title:"Кофе",imageUrl:flashOfferRewardImage({kind:"coffee"})},
-    {kind:"season_pass",id:"elite",title:"Элитный сезонный пропуск",imageUrl:flashOfferRewardImage({kind:"season_pass",id:"elite"}),price:passPrice("elite")},
-    {kind:"season_pass",id:"elite_plus",title:"Элитный+ сезонный пропуск",imageUrl:flashOfferRewardImage({kind:"season_pass",id:"elite_plus"}),price:passPrice("elite_plus")},
-    {kind:"season_pass_xp",id:"",title:"XP сезонного пропуска",imageUrl:flashOfferRewardImage({kind:"season_pass_xp"})},
-    {kind:"booster_points",id:"",title:SEASON_PASS_BOOST_REWARDS.booster_points.title,imageUrl:flashOfferRewardImage({kind:"booster_points"})},
-    {kind:"booster_treats",id:"",title:SEASON_PASS_BOOST_REWARDS.booster_treats.title,imageUrl:flashOfferRewardImage({kind:"booster_treats"})},
-    {kind:"booster_coffee",id:"",title:SEASON_PASS_BOOST_REWARDS.booster_coffee.title,imageUrl:flashOfferRewardImage({kind:"booster_coffee"})},
-    {kind:"booster_xp",id:"",title:SEASON_PASS_BOOST_REWARDS.booster_xp.title,imageUrl:flashOfferRewardImage({kind:"booster_xp"})},
-    ...["small","sweet","gold","mythic","legendary"].map(id=>({kind:"case",id,title:LEVEL_CASE_CONFIG[id]?.title||id,imageUrl:flashOfferRewardImage({kind:"case",id})})),
-    ...Object.keys(PRODUCTS).map(id=>({kind:"product",id,title:PRODUCTS[id].title,imageUrl:flashOfferRewardImage({kind:"product",id})}))
+    {kind:"points",id:"",group:"Ресурсы",title:"Очки",imageUrl:flashOfferRewardImage({kind:"points"})},{kind:"treats",id:"",group:"Ресурсы",title:"Зефир",imageUrl:flashOfferRewardImage({kind:"treats"})},{kind:"coffee",id:"",group:"Ресурсы",title:"Кофе",imageUrl:flashOfferRewardImage({kind:"coffee"})},
+    {kind:"season_pass",id:"elite",group:"Сезонный пропуск",title:"Элитный сезонный пропуск",imageUrl:flashOfferRewardImage({kind:"season_pass",id:"elite"}),price:passPrice("elite")},
+    {kind:"season_pass",id:"elite_plus",group:"Сезонный пропуск",title:"Элитный+ сезонный пропуск",imageUrl:flashOfferRewardImage({kind:"season_pass",id:"elite_plus"}),price:passPrice("elite_plus")},
+    {kind:"season_pass_xp",id:"",group:"Сезонный пропуск",title:"XP сезонного пропуска",imageUrl:flashOfferRewardImage({kind:"season_pass_xp"})},
+    {kind:"season_pass_levels",id:"",group:"Сезонный пропуск",title:"+ уровни сезонного пропуска",imageUrl:flashOfferRewardImage({kind:"season_pass_levels"})},
+    {kind:"booster_points_runs",id:"",group:"Усилители",title:"×2 очки · выбрать число забегов",imageUrl:flashOfferRewardImage({kind:"booster_points_runs"})},
+    {kind:"booster_treats_runs",id:"",group:"Усилители",title:"×2 зефир · выбрать число забегов",imageUrl:flashOfferRewardImage({kind:"booster_treats_runs"})},
+    {kind:"booster_coffee_runs",id:"",group:"Усилители",title:"×2 кофе · выбрать число забегов",imageUrl:flashOfferRewardImage({kind:"booster_coffee_runs"})},
+    {kind:"booster_xp",id:"",group:"Усилители",title:SEASON_PASS_BOOST_REWARDS.booster_xp.title,imageUrl:flashOfferRewardImage({kind:"booster_xp"})},
+    ...["small","sweet","gold","mythic","legendary"].map(id=>({kind:"case",id,group:"Кейсы",title:LEVEL_CASE_CONFIG[id]?.title||id,imageUrl:flashOfferRewardImage({kind:"case",id})})),
+    ...cosmeticRewardCatalog,
+    ...Object.keys(PRODUCTS).map(id=>({kind:"product",id,group:"Физические награды",title:PRODUCTS[id].title,imageUrl:flashOfferRewardImage({kind:"product",id})}))
   ]};
 }
 async function ownerPanelSaveFlashOffer(env, ctx) {
@@ -28049,7 +28921,7 @@ async function ownerPanelSaveFlashOffer(env, ctx) {
   const title=String(ctx.body?.title||"").trim().slice(0,100); if(title.length<2)throw new ApiError(400,"Укажите название акции."); const subtitle=String(ctx.body?.subtitle||"").trim().slice(0,220); const badgeText=String(ctx.body?.badgeText||"АКЦИЯ").trim().slice(0,28)||"АКЦИЯ";
   const rawImageUrl=String(ctx.body?.imageUrl||"").trim(); const imageUrl=ownerV8AssetPath(rawImageUrl); if(rawImageUrl&&!imageUrl)throw new ApiError(400,"Картинка акции должна быть из Медиатеки (/media/...), проекта (/assets/...) или HTTPS."); const rewards=flashOfferNormalizeRewards(ctx.body?.rewards); const price=flashOfferPrice(ctx.body,"price"),original=flashOfferPrice(ctx.body,"original");
   const startsAt=flashOfferUnix(ctx.body?.startsAt,0),endsAt=flashOfferUnix(ctx.body?.endsAt,0); if(startsAt&&endsAt&&endsAt<=startsAt)throw new ApiError(400,"Окончание акции должно быть позже начала.");
-  let purchaseLimit=Math.max(0,Math.min(99,Math.floor(Number(ctx.body?.purchaseLimit??1)||0))); if(rewards.some((reward)=>reward.kind==="season_pass"))purchaseLimit=1; const showFrequency=["once_session","once_day","every_entry"].includes(String(ctx.body?.showFrequency))?String(ctx.body.showFrequency):"once_session"; const priority=Math.max(-999,Math.min(999,Math.floor(Number(ctx.body?.priority)||100)));
+  let purchaseLimit=Math.max(0,Math.min(99,Math.floor(Number(ctx.body?.purchaseLimit??1)||0))); if(rewards.some((reward)=>reward.kind==="season_pass"||Boolean(flashOfferCosmeticDefinition(reward.kind,reward.id))))purchaseLimit=1; const showFrequency=["once_session","once_day","every_entry"].includes(String(ctx.body?.showFrequency))?String(ctx.body.showFrequency):"once_session"; const priority=Math.max(-999,Math.min(999,Math.floor(Number(ctx.body?.priority)||100)));
   const segmentKey=String(ctx.body?.segmentKey||"all").trim()||"all"; if(segmentKey!=="all"&&!PLAYER_SEGMENTS[segmentKey]&&!(await ownerV85SavedSegment(env,segmentKey)))throw new ApiError(400,"Выбранный сегмент игроков не найден.");
   const now=Math.floor(Date.now()/1000),offerId=existingId||flashOfferId("offer"),status=String(before?.status||"draft"),enabled=Number(before?.enabled||0),createdAt=Number(before?.created_at||now),createdBy=String(before?.created_by||ctx.user.id),createdByName=String(before?.created_by_name||telegramDisplayName(ctx.user));
   if(status==="published"&&(!endsAt||endsAt<=now))throw new ApiError(409,"У опубликованной акции должно быть будущее время окончания. Чтобы завершить её сейчас, используйте «Завершить».");
@@ -28145,6 +29017,12 @@ async function handleOwnerPanelApi(request, env, path, executionCtx = null) {
     if (path === "/api/owner/staff/update") return jsonResponse(await ownerPanelUpdateStaff(env, ctx));
     if (path === "/api/owner/staff/delete") return jsonResponse(await ownerPanelDeleteStaff(env, ctx));
     if (path === "/api/owner/system") return jsonResponse(await ownerPanelSystem(env, ctx));
+    if (path === "/api/owner/legal") return jsonResponse(await ownerPanelLegalOverview(env, ctx));
+    if (path === "/api/owner/legal/players") return jsonResponse(await ownerPanelLegalPlayers(env, ctx));
+    if (path === "/api/owner/legal/version") return jsonResponse(await ownerPanelLegalVersion(env, ctx));
+    if (path === "/api/owner/legal/consent/revoke") return jsonResponse(await ownerPanelLegalRevokeConsent(env, ctx));
+    if (path === "/api/owner/legal/draft") return jsonResponse(await ownerPanelLegalSaveDraft(env, ctx));
+    if (path === "/api/owner/legal/publish") return jsonResponse(await ownerPanelLegalPublish(env, ctx));
     if (path === "/api/owner/maintenance/update") return jsonResponse(await ownerPanelUpdateMaintenance(env, ctx));
     if (path === "/api/owner/v8/analytics") return jsonResponse(await ownerPanelV8Analytics(env, ctx));
     if (path === "/api/owner/v8/automations") return jsonResponse(await ownerPanelV8Automations(env, ctx));

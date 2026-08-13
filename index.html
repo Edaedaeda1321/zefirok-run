@@ -30,6 +30,7 @@ body.zefirok-season-pass-open>iframe:not(.zefirok-season-pass-frame){visibility:
 @keyframes zefirok-rating-spin{to{transform:rotate(360deg)}}
 body.zefirok-rating-open{overflow:hidden!important;padding:0!important}
 body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!important;pointer-events:none!important}
+.zefirok-legal-gate{position:fixed;inset:0;z-index:2147483400;display:grid;place-items:center;overflow:auto;box-sizing:border-box;padding:max(22px,var(--zefirok-content-safe-top,0px)) max(14px,var(--zefirok-content-safe-right,0px)) max(22px,var(--zefirok-content-safe-bottom,0px)) max(14px,var(--zefirok-content-safe-left,0px));background:linear-gradient(180deg,#fff4f4,#fffaf4);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#4e363d}.zefirok-legal-card{width:min(470px,100%);padding:24px;box-sizing:border-box;border:1px solid #efd5de;border-radius:28px;background:#fffdfb;box-shadow:0 22px 64px rgba(93,53,66,.15)}.zefirok-legal-badge{display:inline-flex;padding:7px 10px;border-radius:999px;background:#fff0d6;color:#93662c;font-size:11px;font-weight:900;letter-spacing:.04em}.zefirok-legal-card h1{margin:13px 0 8px;font-size:24px;line-height:1.1;color:#603d4a}.zefirok-legal-card p{margin:0;color:#806b72;font-size:14px;line-height:1.5}.zefirok-legal-doc-buttons{display:grid;gap:9px;margin:17px 0}.zefirok-legal-doc-button{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;padding:13px 14px;border:1px solid #ead4dc;border-radius:16px;background:#fff7fa;color:#74465a;font:800 14px/1.25 inherit;text-align:left}.zefirok-legal-doc-button span:last-child{font-size:20px;color:#cb668b}.zefirok-legal-check{display:flex;gap:10px;align-items:flex-start;margin:13px 0;padding:12px 13px;border:1px solid #eadbd7;border-radius:15px;background:#fffaf5;color:#674f56;font-size:13px;line-height:1.45}.zefirok-legal-check input{width:20px;height:20px;margin:0;accent-color:#dc6993;flex:0 0 auto}.zefirok-legal-consent-text{margin:15px 0;padding:14px;border-radius:17px;background:#fff6f8;color:#654c55;font-size:13px;line-height:1.5}.zefirok-legal-actions{display:grid;gap:9px;margin-top:16px}.zefirok-legal-primary,.zefirok-legal-secondary{min-height:50px;border-radius:16px;padding:12px 15px;font:900 14px/1.2 inherit}.zefirok-legal-primary{border:1px solid #d86690;background:linear-gradient(180deg,#f19abb,#df6d98);color:#fff;box-shadow:0 10px 22px rgba(209,89,134,.2)}.zefirok-legal-primary:disabled{opacity:.48;box-shadow:none}.zefirok-legal-secondary{border:1px solid #ead8de;background:#fff;color:#80616d}.zefirok-legal-status{min-height:19px;margin-top:11px;color:#9a5b70;font-size:12px;line-height:1.4}.zefirok-legal-lang{display:flex;justify-content:flex-end;gap:6px;margin-top:-2px}.zefirok-legal-lang button{padding:7px 9px;border:1px solid #ead7de;border-radius:11px;background:#fff;color:#806b72;font:900 11px/1 inherit}.zefirok-legal-lang button.is-active{background:#ffe4ee;color:#98405f;border-color:#f0bfd0}.zefirok-legal-layer{position:fixed;inset:0;z-index:2147483500;display:grid;grid-template-rows:auto 1fr;width:100%;height:var(--zefirok-app-height,100dvh);background:#fff5f4;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}.zefirok-legal-layer[hidden]{display:none!important}.zefirok-legal-toolbar{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:max(10px,var(--zefirok-content-safe-top,0px)) 12px 10px;background:#fff7f5;border-bottom:1px solid #efd8df;color:#64434f}.zefirok-legal-toolbar strong{font-size:14px}.zefirok-legal-close{width:40px;height:40px;border:1px solid #ead2da;border-radius:13px;background:#fff;color:#8e4d65;font:900 24px/1 inherit}.zefirok-legal-frame{display:block!important;width:100%!important;max-width:none!important;height:100%!important;margin:0!important;border:0!important;background:#fff5f4}.zefirok-legal-open>iframe:not(.zefirok-legal-frame){visibility:hidden!important;pointer-events:none!important}
 </style>
 <script src="https://telegram.org/js/telegram-web-app.js?63"></script>
 <script>
@@ -53,6 +54,8 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
 
   const frame = () => document.querySelector("iframe");
   const MAINTENANCE_ACCESS_PATH = "/api/maintenance/access";
+  const LEGAL_STATUS_PATH = "/api/legal/status";
+  const LEGAL_ACCEPT_PATH = "/api/legal/accept";
   const SEASON_PASS_AWAY_KEY = "zefirok-season-pass-away";
 
   const TELEGRAM_FULLSCREEN_MIN_VERSION = "8.0";
@@ -269,6 +272,249 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
     if (document.visibilityState === "visible") recoverMainGameAfterSeasonPass();
   });
 
+  let legalStatusSnapshot = null;
+  let legalCheckInFlight = false;
+  let legalLayer = null;
+  let legalGateLanguage = (() => {
+    try {
+      const code = String(window.Telegram?.WebApp?.initDataUnsafe?.user?.language_code || localStorage.getItem("zefirok-legal-lang") || "ru").toLowerCase();
+      return code.startsWith("en") ? "en" : "ru";
+    } catch { return "ru"; }
+  })();
+
+  function legalEscape(value) {
+    return String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]);
+  }
+
+  function legalCopy() {
+    return legalGateLanguage === "en" ? {
+      badge: "LEGAL DOCUMENTS", loadingTitle: "Checking documents", loading: "Verifying the current versions and your confirmations…",
+      agreementTitle: "License Agreement", agreementUpdated: "The License Agreement has been updated. Review the current version before continuing.",
+      privacyTitle: "Privacy Policy updated", privacyUpdated: "Review the current Privacy Policy and confirm that you have read it.",
+      firstCopy: "Before using Sweet Run, review the License Agreement and Privacy Policy. Personal data consent is requested separately on the next screen.",
+      agreement: "Read License Agreement", privacy: "Read Privacy Policy", consent: "Read full consent",
+      privacyCheck: "I have read the Privacy Policy and understand that it describes how my data is processed.",
+      acceptAgreement: "I Accept the Agreement", acknowledgePrivacy: "I have read the Privacy Policy", saving: "Saving confirmation…",
+      consentTitle: "Personal Data Processing Consent", consentIntro: "This is a separate confirmation and is not combined with acceptance of the License Agreement.",
+      consentBody: "I freely and voluntarily consent to Individual Entrepreneur Olga Sergeevna Shepeleva processing my personal data to the extent and for the purposes described in the Sweet Run Privacy Policy, where such processing requires my consent. Consent may be withdrawn by contacting patokad6@gmail.com.",
+      giveConsent: "I Give Consent", decline: "I do not consent", telegramTitle: "Open the game through Telegram", telegramText: "A verified Telegram session is required to record the document version, Telegram ID and acceptance history on the server.",
+      retry: "Try again", error: "Could not save or verify the documents. Please try again.", closeHint: "Without the required confirmation, full use of the game is unavailable.",
+      docsTitle: "Documents & Privacy"
+    } : {
+      badge: "ПРАВОВЫЕ ДОКУМЕНТЫ", loadingTitle: "Проверяем документы", loading: "Сверяем актуальные редакции и ваши подтверждения…",
+      agreementTitle: "Лицензионное соглашение", agreementUpdated: "Лицензионное соглашение обновлено. Ознакомьтесь с актуальной редакцией перед продолжением.",
+      privacyTitle: "Обновлена Политика конфиденциальности", privacyUpdated: "Ознакомьтесь с актуальной Политикой конфиденциальности и подтвердите ознакомление.",
+      firstCopy: "Перед использованием «Сладкого Забега» ознакомьтесь с Лицензионным соглашением и Политикой конфиденциальности. Согласие на обработку персональных данных запрашивается отдельно на следующем экране.",
+      agreement: "Прочитать Лицензионное соглашение", privacy: "Прочитать Политику конфиденциальности", consent: "Открыть полный текст согласия",
+      privacyCheck: "Я ознакомился(ась) с Политикой конфиденциальности и понимаю, как в ней описана обработка моих данных.",
+      acceptAgreement: "Принимаю Соглашение", acknowledgePrivacy: "Подтверждаю ознакомление", saving: "Сохраняем подтверждение…",
+      consentTitle: "Согласие на обработку персональных данных", consentIntro: "Это отдельное подтверждение — оно не объединено с принятием Лицензионного соглашения.",
+      consentBody: "Я свободно и добровольно даю ИП Шепелевой Ольге Сергеевне согласие на обработку моих персональных данных в объёме и для целей, указанных в Политике конфиденциальности сервиса «Сладкий Забег», в тех случаях, когда такая обработка требует моего согласия. Согласие можно отозвать по адресу patokad6@gmail.com.",
+      giveConsent: "Даю согласие", decline: "Не даю согласие", telegramTitle: "Откройте игру через Telegram", telegramText: "Нужна подтверждённая Telegram-сессия, чтобы сервер записал Telegram ID, версию документа и историю принятия.",
+      retry: "Повторить", error: "Не удалось сохранить или проверить документы. Попробуйте ещё раз.", closeHint: "Без необходимого подтверждения полноценное использование игры недоступно.",
+      docsTitle: "Документы и конфиденциальность"
+    };
+  }
+
+  function legalGate() {
+    let gate = document.querySelector(".zefirok-legal-gate");
+    if (gate) return gate;
+    gate = document.createElement("div");
+    gate.className = "zefirok-legal-gate";
+    document.body.append(gate);
+    return gate;
+  }
+
+  function legalLanguageButtons() {
+    return `<div class="zefirok-legal-lang"><button type="button" data-legal-lang="ru" class="${legalGateLanguage === "ru" ? "is-active" : ""}">RU</button><button type="button" data-legal-lang="en" class="${legalGateLanguage === "en" ? "is-active" : ""}">EN</button></div>`;
+  }
+
+  function installLegalLanguageButtons(gate) {
+    for (const button of gate.querySelectorAll("[data-legal-lang]")) {
+      button.addEventListener("click", () => {
+        legalGateLanguage = button.dataset.legalLang === "en" ? "en" : "ru";
+        try { localStorage.setItem("zefirok-legal-lang", legalGateLanguage); } catch {}
+        if (legalStatusSnapshot) renderLegalRequirement(legalStatusSnapshot);
+        else showLegalLoading();
+      });
+    }
+  }
+
+  function showLegalLoading(message = "") {
+    const copy = legalCopy();
+    const gate = legalGate();
+    gate.innerHTML = `<div class="zefirok-legal-card">${legalLanguageButtons()}<span class="zefirok-legal-badge">${copy.badge}</span><h1>${copy.loadingTitle}</h1><p>${legalEscape(message || copy.loading)}</p><div class="zefirok-legal-status">${copy.loading}</div></div>`;
+    installLegalLanguageButtons(gate);
+  }
+
+  function legalDocumentFrame() {
+    return legalLayer?.querySelector(".zefirok-legal-frame") || null;
+  }
+
+  function closeLegalOverlay() {
+    if (!legalLayer) return;
+    legalLayer.remove();
+    legalLayer = null;
+    document.body.classList.remove("zefirok-legal-open");
+    scheduleTelegramViewportSync();
+  }
+
+  function openLegalOverlay(documentKey = "hub") {
+    closeLegalOverlay();
+    const key = ["agreement", "privacy", "consent"].includes(String(documentKey)) ? String(documentKey) : "hub";
+    const copy = legalCopy();
+    const layer = document.createElement("div");
+    layer.className = "zefirok-legal-layer";
+    const toolbar = document.createElement("div");
+    toolbar.className = "zefirok-legal-toolbar";
+    const title = document.createElement("strong");
+    title.textContent = copy.docsTitle;
+    const close = document.createElement("button");
+    close.type = "button";
+    close.className = "zefirok-legal-close";
+    close.setAttribute("aria-label", legalGateLanguage === "en" ? "Close" : "Закрыть");
+    close.textContent = "×";
+    close.addEventListener("click", closeLegalOverlay);
+    toolbar.append(title, close);
+    const legalFrame = document.createElement("iframe");
+    legalFrame.className = "zefirok-legal-frame";
+    legalFrame.referrerPolicy = "no-referrer";
+    legalFrame.setAttribute("sandbox", "allow-scripts allow-same-origin");
+    legalFrame.src = `/legal.html?doc=${encodeURIComponent(key)}&lang=${encodeURIComponent(legalGateLanguage)}&embedded=1`;
+    layer.append(toolbar, legalFrame);
+    document.body.append(layer);
+    legalLayer = layer;
+    document.body.classList.add("zefirok-legal-open");
+    requestTelegramFullscreen();
+    scheduleTelegramViewportSync();
+  }
+
+  async function legalApi(path, payload = {}) {
+    const initData = String(window.Telegram?.WebApp?.initData || "");
+    if (!initData) {
+      const error = new Error("TELEGRAM_REQUIRED");
+      error.code = "TELEGRAM_REQUIRED";
+      throw error;
+    }
+    const response = await fetch(path, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ initData, ...payload }),
+      cache: "no-store",
+      credentials: "same-origin"
+    });
+    const data = await response.json().catch(() => null);
+    if (!response.ok || !data?.ok) {
+      const error = new Error(data?.error || "LEGAL_REQUEST_FAILED");
+      error.status = response.status;
+      error.code = data?.code || "";
+      throw error;
+    }
+    return data;
+  }
+
+  function showLegalTelegramRequired() {
+    const copy = legalCopy();
+    const gate = legalGate();
+    gate.innerHTML = `<div class="zefirok-legal-card">${legalLanguageButtons()}<span class="zefirok-legal-badge">${copy.badge}</span><h1>${copy.telegramTitle}</h1><p>${copy.telegramText}</p><div class="zefirok-legal-actions"><button type="button" class="zefirok-legal-primary" data-legal-retry>${copy.retry}</button></div></div>`;
+    installLegalLanguageButtons(gate);
+    gate.querySelector("[data-legal-retry]")?.addEventListener("click", () => void resolveLegalAccess(true));
+  }
+
+  function renderLegalRequirement(status) {
+    legalStatusSnapshot = status;
+    const copy = legalCopy();
+    const gate = legalGate();
+    const docs = status?.documents || {};
+    const agreementNeeded = !docs.agreement?.accepted;
+    const privacyNeeded = !docs.privacy?.accepted;
+    const consentNeeded = !docs.consent?.accepted;
+    if (!agreementNeeded && !privacyNeeded && !consentNeeded) {
+      finishLegalAccess();
+      return;
+    }
+    if (agreementNeeded || privacyNeeded) {
+      const title = agreementNeeded ? copy.agreementTitle : copy.privacyTitle;
+      const description = agreementNeeded && privacyNeeded ? copy.firstCopy : agreementNeeded ? copy.agreementUpdated : copy.privacyUpdated;
+      const versionLabel = agreementNeeded ? docs.agreement?.version : docs.privacy?.version;
+      gate.innerHTML = `<div class="zefirok-legal-card">${legalLanguageButtons()}<span class="zefirok-legal-badge">${copy.badge} · ${legalEscape(versionLabel || "")}</span><h1>${title}</h1><p>${description}</p><div class="zefirok-legal-doc-buttons"><button type="button" class="zefirok-legal-doc-button" data-legal-doc="agreement"><span>${copy.agreement}</span><span>›</span></button><button type="button" class="zefirok-legal-doc-button" data-legal-doc="privacy"><span>${copy.privacy}</span><span>›</span></button></div>${privacyNeeded ? `<label class="zefirok-legal-check"><input type="checkbox" data-legal-privacy-check><span>${copy.privacyCheck}</span></label>` : ""}<div class="zefirok-legal-actions"><button type="button" class="zefirok-legal-primary" data-legal-accept-agreement ${privacyNeeded ? "disabled" : ""}>${agreementNeeded ? copy.acceptAgreement : copy.acknowledgePrivacy}</button></div><div class="zefirok-legal-status" data-legal-status></div></div>`;
+      installLegalLanguageButtons(gate);
+      for (const button of gate.querySelectorAll("[data-legal-doc]")) button.addEventListener("click", () => openLegalOverlay(button.dataset.legalDoc));
+      const check = gate.querySelector("[data-legal-privacy-check]");
+      const accept = gate.querySelector("[data-legal-accept-agreement]");
+      if (check && accept) check.addEventListener("change", () => { accept.disabled = !check.checked; });
+      accept?.addEventListener("click", () => void submitLegalAcceptance(agreementNeeded ? "agreement" : "privacy", accept));
+      return;
+    }
+    gate.innerHTML = `<div class="zefirok-legal-card">${legalLanguageButtons()}<span class="zefirok-legal-badge">${copy.badge} · ${legalEscape(docs.consent?.version || "")}</span><h1>${copy.consentTitle}</h1><p>${copy.consentIntro}</p><div class="zefirok-legal-consent-text">${legalEscape(copy.consentBody)}</div><div class="zefirok-legal-doc-buttons"><button type="button" class="zefirok-legal-doc-button" data-legal-doc="consent"><span>${copy.consent}</span><span>›</span></button><button type="button" class="zefirok-legal-doc-button" data-legal-doc="privacy"><span>${copy.privacy}</span><span>›</span></button></div><div class="zefirok-legal-actions"><button type="button" class="zefirok-legal-primary" data-legal-accept-consent>${copy.giveConsent}</button><button type="button" class="zefirok-legal-secondary" data-legal-decline>${copy.decline}</button></div><div class="zefirok-legal-status" data-legal-status></div></div>`;
+    installLegalLanguageButtons(gate);
+    for (const button of gate.querySelectorAll("[data-legal-doc]")) button.addEventListener("click", () => openLegalOverlay(button.dataset.legalDoc));
+    gate.querySelector("[data-legal-accept-consent]")?.addEventListener("click", (event) => void submitLegalAcceptance("consent", event.currentTarget));
+    gate.querySelector("[data-legal-decline]")?.addEventListener("click", () => {
+      const statusEl = gate.querySelector("[data-legal-status]");
+      if (statusEl) statusEl.textContent = copy.closeHint;
+      try { window.Telegram?.WebApp?.close?.(); } catch {}
+    });
+  }
+
+  async function submitLegalAcceptance(step, button) {
+    const copy = legalCopy();
+    const gate = legalGate();
+    const statusEl = gate.querySelector("[data-legal-status]");
+    for (const item of gate.querySelectorAll("button,input")) item.disabled = true;
+    if (statusEl) statusEl.textContent = copy.saving;
+    try {
+      const data = await legalApi(LEGAL_ACCEPT_PATH, { step, language: legalGateLanguage });
+      legalStatusSnapshot = data;
+      renderLegalRequirement(data);
+    } catch (error) {
+      if (statusEl) statusEl.textContent = error?.code === "TELEGRAM_REQUIRED" ? copy.telegramText : String(error?.message || copy.error);
+      for (const item of gate.querySelectorAll("button,input")) item.disabled = false;
+      const check = gate.querySelector("[data-legal-privacy-check]");
+      const accept = gate.querySelector("[data-legal-accept-agreement]");
+      if (check && accept) accept.disabled = !check.checked;
+    }
+  }
+
+  function finishLegalAccess() {
+    legalStatusSnapshot = null;
+    document.querySelector(".zefirok-legal-gate")?.remove();
+    const gameFrame = frame();
+    if (gameFrame?.dataset.activated === "1") {
+      // If a document version changed while the Mini App was already open, start
+      // a clean game session after the new confirmation instead of resuming an
+      // unprotected run that was created under the previous legal state.
+      window.location.reload();
+      return;
+    }
+    activateGameFrame();
+  }
+
+  async function resolveLegalAccess(force = false) {
+    if (legalCheckInFlight) return;
+    if (!force && frame()?.dataset.activated === "1") return;
+    legalCheckInFlight = true;
+    const gameFrame = frame();
+    if (gameFrame) gameFrame.classList.remove("is-ready");
+    showLegalLoading();
+    try {
+      const data = await legalApi(LEGAL_STATUS_PATH);
+      legalStatusSnapshot = data;
+      renderLegalRequirement(data);
+    } catch (error) {
+      if (error?.code === "TELEGRAM_REQUIRED" || Number(error?.status || 0) === 401) showLegalTelegramRequired();
+      else {
+        const copy = legalCopy();
+        const gate = legalGate();
+        gate.innerHTML = `<div class="zefirok-legal-card">${legalLanguageButtons()}<span class="zefirok-legal-badge">${copy.badge}</span><h1>${copy.loadingTitle}</h1><p>${legalEscape(error?.message || copy.error)}</p><div class="zefirok-legal-actions"><button type="button" class="zefirok-legal-primary" data-legal-retry>${copy.retry}</button></div></div>`;
+        installLegalLanguageButtons(gate);
+        gate.querySelector("[data-legal-retry]")?.addEventListener("click", () => void resolveLegalAccess(true));
+      }
+    } finally {
+      legalCheckInFlight = false;
+    }
+  }
+
   function maintenanceGate() {
     let gate = document.querySelector(".zefirok-maintenance-gate");
     if (gate) return gate;
@@ -331,6 +577,7 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
     }
     gameFrame.classList.add("is-ready");
     document.querySelector(".zefirok-maintenance-gate")?.remove();
+    document.querySelector(".zefirok-legal-gate")?.remove();
     window.setTimeout(maybeOpenRequestedOverlay, 180);
   }
 
@@ -369,10 +616,10 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
       if (!response.ok || !data || data.allowed === false) {
         console.warn("Maintenance access check returned a non-blocking error; starting the game.", response.status, data);
       }
-      activateGameFrame();
+      await resolveLegalAccess();
     } catch (error) {
-      console.warn("Maintenance access check failed; starting the game in fail-open mode.", error);
-      activateGameFrame();
+      console.warn("Maintenance access check failed; continuing to the legal access check.", error);
+      await resolveLegalAccess();
     } finally {
       window.clearTimeout(timeoutId);
       window.__zefirokMaintenanceCheckActive = false;
@@ -824,12 +1071,18 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
     const gameFrame = frame();
     const passFrame = seasonPassFrame();
     const currentRatingFrame = ratingFrame();
+    const currentLegalFrame = legalDocumentFrame();
     const fromGame = Boolean(gameFrame && event.source === gameFrame.contentWindow);
     const fromSeasonPass = Boolean(passFrame && event.source === passFrame.contentWindow);
     const fromRating = Boolean(currentRatingFrame && event.source === currentRatingFrame.contentWindow);
-    if (!fromGame && !fromSeasonPass && !fromRating) return;
+    const fromLegal = Boolean(currentLegalFrame && event.source === currentLegalFrame.contentWindow);
+    if (!fromGame && !fromSeasonPass && !fromRating && !fromLegal) return;
     const message = event.data;
     if (!message || typeof message !== "object") return;
+    if (fromLegal) {
+      if (message.type === "zefirok-close-legal") closeLegalOverlay();
+      return;
+    }
     if (message.type === "zefirok-haptic") {
       if (fromGame && (seasonPassLayer?.isConnected || ratingLayer?.isConnected)) return;
       if (fromSeasonPass && !seasonPassLayer?.isConnected) return;
@@ -898,6 +1151,11 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
     } else if (message.type === "zefirok-telegram-profile-ready") {
       sendTelegramProfile(event.source);
       sendRequestedScreen(event.source);
+    } else if (message.type === "zefirok-open-legal") {
+      openLegalOverlay(String(message.document || "hub"));
+    } else if (message.type === "zefirok-legal-required") {
+      closeLegalOverlay();
+      void resolveLegalAccess(true);
     } else if (message.type === "zefirok-open-battle-pass") {
       let initData = "";
       try {
@@ -4679,6 +4937,43 @@ html&gt;body{padding:
     box-shadow: 0 0 0 3px rgba(233,65,119,.12);
   }
   #zefirok-maltipoo-runner .release-image-wrap[hidden] { display: none !important; }
+  #zefirok-maltipoo-runner .profile-legal-card {
+    display: grid;
+    gap: 8px;
+    padding: 10px;
+    border: 1px solid rgba(230, 196, 207, .78);
+    border-radius: 20px;
+    background: rgba(255, 250, 248, .88);
+  }
+  #zefirok-maltipoo-runner .profile-legal-row {
+    display: grid;
+    grid-template-columns: 42px minmax(0, 1fr) auto;
+    gap: 11px;
+    align-items: center;
+    width: 100%;
+    padding: 11px 10px;
+    border: 1px solid rgba(231, 207, 214, .84);
+    border-radius: 15px;
+    background: rgba(255,255,255,.76);
+    color: #665158;
+    text-align: left;
+  }
+  #zefirok-maltipoo-runner .profile-legal-row:active { transform: translateY(1px); }
+  #zefirok-maltipoo-runner .profile-legal-icon {
+    display: grid;
+    width: 42px;
+    height: 42px;
+    place-items: center;
+    border-radius: 13px;
+    background: linear-gradient(145deg,#fff0f4,#ffe1ea);
+    font-size: 19px;
+  }
+  #zefirok-maltipoo-runner .profile-legal-row strong,
+  #zefirok-maltipoo-runner .profile-legal-row small { display: block; }
+  #zefirok-maltipoo-runner .profile-legal-row strong { color: #6e4052; font-size: 13px; font-weight: 900; }
+  #zefirok-maltipoo-runner .profile-legal-row small { margin-top: 2px; color: #907984; font-size: 11px; line-height: 1.3; }
+  #zefirok-maltipoo-runner .profile-legal-row b { color: #c96388; font-size: 21px; }
+  #zefirok-maltipoo-runner .profile-legal-history { margin-top: 2px; }
   #zefirok-maltipoo-runner .profile-version-row {
     display: flex;
     align-items: center;
@@ -7628,6 +7923,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 #zefirok-maltipoo-runner .profile-section--leaderboard.is-season-active { order: 10; }
 #zefirok-maltipoo-runner .profile-section--help { order: 40; }
 #zefirok-maltipoo-runner .profile-section--settings { order: 50; }
+#zefirok-maltipoo-runner .profile-section--legal { order: 55; }
 #zefirok-maltipoo-runner .profile-version-row { order: 60; }
 #zefirok-maltipoo-runner .profile-toast { order: 70; }
 #zefirok-maltipoo-runner .leaderboard-profile-copy {
@@ -8577,6 +8873,18 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
     &lt;div class=&quot;profile-section-head&quot;&gt;&lt;h3 id=&quot;profile-help-title&quot;&gt;Полезно знать&lt;/h3&gt;&lt;/div&gt;
     &lt;p class=&quot;profile-help-copy&quot;&gt;Метка «Telegram-профиль» означает, что имя и данные получены из Telegram. Если Telegram не передал фотографию, игра покажет Зефи — это не ошибка. XP начисляется за успешные покупки и только за зачтённые забеги, которые прошли антифарм-порог по времени и счёту.&lt;/p&gt;
   &lt;/section&gt;
+  &lt;section class=&quot;profile-section profile-section--legal&quot; aria-labelledby=&quot;profile-legal-title&quot;&gt;
+    &lt;div class=&quot;profile-section-head&quot;&gt;
+      &lt;div&gt;&lt;h3 id=&quot;profile-legal-title&quot;&gt;Документы и конфиденциальность&lt;/h3&gt;&lt;span&gt;Актуальные редакции и история ваших подтверждений&lt;/span&gt;&lt;/div&gt;
+    &lt;/div&gt;
+    &lt;div class=&quot;profile-legal-card&quot;&gt;
+      &lt;button type=&quot;button&quot; class=&quot;profile-legal-row&quot; data-profile-legal-open=&quot;agreement&quot;&gt;&lt;span class=&quot;profile-legal-icon&quot;&gt;📜&lt;/span&gt;&lt;span&gt;&lt;strong&gt;Лицензионное соглашение&lt;/strong&gt;&lt;small&gt;Условия использования сервиса · RU / EN&lt;/small&gt;&lt;/span&gt;&lt;b&gt;›&lt;/b&gt;&lt;/button&gt;
+      &lt;button type=&quot;button&quot; class=&quot;profile-legal-row&quot; data-profile-legal-open=&quot;privacy&quot;&gt;&lt;span class=&quot;profile-legal-icon&quot;&gt;🔐&lt;/span&gt;&lt;span&gt;&lt;strong&gt;Политика конфиденциальности&lt;/strong&gt;&lt;small&gt;Обработка и защита данных · RU / EN&lt;/small&gt;&lt;/span&gt;&lt;b&gt;›&lt;/b&gt;&lt;/button&gt;
+      &lt;button type=&quot;button&quot; class=&quot;profile-legal-row&quot; data-profile-legal-open=&quot;consent&quot;&gt;&lt;span class=&quot;profile-legal-icon&quot;&gt;✅&lt;/span&gt;&lt;span&gt;&lt;strong&gt;Согласие на обработку ПДн&lt;/strong&gt;&lt;small&gt;Отдельное согласие · RU / EN&lt;/small&gt;&lt;/span&gt;&lt;b&gt;›&lt;/b&gt;&lt;/button&gt;
+      &lt;button type=&quot;button&quot; class=&quot;profile-action profile-action--primary profile-legal-history&quot; data-profile-legal-open=&quot;hub&quot;&gt;Статус и история принятия&lt;/button&gt;
+    &lt;/div&gt;
+  &lt;/section&gt;
+
   &lt;div class=&quot;profile-version-row&quot;&gt;&lt;span&gt;Версия игры&lt;/span&gt;&lt;strong data-profile-game-version&gt;1.0.6&lt;/strong&gt;&lt;/div&gt;
   &lt;div aria-live=&quot;polite&quot; class=&quot;profile-toast&quot; data-profile-toast hidden&gt;&lt;/div&gt;
 &lt;/div&gt;
@@ -15307,7 +15615,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         flashOfferTitle.textContent = offer.title || &quot;Специальное предложение&quot;;
         const passUpgradeNote = offer.passUpgrade ? &quot;Цена уже учитывает ваш активный «Элитный».&quot; : &quot;&quot;;
         flashOfferSubtitle.textContent = [offer.subtitle || &quot;&quot;, passUpgradeNote].filter(Boolean).join(&quot; · &quot;);
-        flashOfferRewards.innerHTML = (offer.rewards || []).map((reward) =&gt; `&lt;span class=&quot;flash-offer-reward&quot;&gt;&lt;img src=&quot;${flashOfferEscape(reward.imageUrl || &quot;&quot;)}&quot; alt=&quot;&quot;&gt;&lt;span&gt;${flashOfferEscape(reward.title || &quot;Награда&quot;)}${Number(reward.amount || 1) &gt; 1 &amp;&amp; !String(reward.title || &quot;&quot;).startsWith(String(reward.amount)) ? ` × ${formatter.format(reward.amount)}` : &quot;&quot;}&lt;/span&gt;&lt;/span&gt;`).join(&quot;&quot;);
+        flashOfferRewards.innerHTML = (offer.rewards || []).map((reward) =&gt; { const embeddedAmount = [&quot;points&quot;,&quot;treats&quot;,&quot;coffee&quot;,&quot;case&quot;,&quot;product&quot;,&quot;season_pass_xp&quot;,&quot;season_pass_levels&quot;,&quot;booster_points_runs&quot;,&quot;booster_treats_runs&quot;,&quot;booster_coffee_runs&quot;].includes(String(reward.kind || &quot;&quot;)); return `&lt;span class=&quot;flash-offer-reward&quot;&gt;&lt;img src=&quot;${flashOfferEscape(reward.imageUrl || &quot;&quot;)}&quot; alt=&quot;&quot;&gt;&lt;span&gt;${flashOfferEscape(reward.title || &quot;Награда&quot;)}${Number(reward.amount || 1) &gt; 1 &amp;&amp; !embeddedAmount &amp;&amp; !String(reward.title || &quot;&quot;).startsWith(String(reward.amount)) ? ` × ${formatter.format(reward.amount)}` : &quot;&quot;}&lt;/span&gt;&lt;/span&gt;`; }).join(&quot;&quot;);
         const oldCostText = flashOfferCostText(offer.original), newCostText = flashOfferCostText(offer.price);
         flashOfferOld.innerHTML = Number(offer.discountPercent || 0) &gt; 0 ? flashOfferCostHtml(offer.original) : &quot;&quot;;
         flashOfferNew.innerHTML = flashOfferCostHtml(offer.price);
@@ -15361,10 +15669,11 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
             saveProgress(); updateHud(); updateShopPreview(); renderProfile();
           });
           const hasCases = (data.rewards || []).some((r) =&gt; r.kind === &quot;case&quot;);
-          const hasInventoryBoosters = (data.rewards || []).some((r) =&gt; [&quot;booster_points&quot;,&quot;booster_treats&quot;,&quot;booster_coffee&quot;].includes(String(r.kind)));
+          const hasInventoryBoosters = (data.rewards || []).some((r) =&gt; [&quot;booster_points&quot;,&quot;booster_treats&quot;,&quot;booster_coffee&quot;,&quot;booster_points_runs&quot;,&quot;booster_treats_runs&quot;,&quot;booster_coffee_runs&quot;].includes(String(r.kind)));
+          const hasCosmetics = (data.rewards || []).some((r) =&gt; [&quot;avatar&quot;,&quot;frame&quot;,&quot;trail&quot;,&quot;skin&quot;,&quot;music&quot;].includes(String(r.kind)));
           const hasXpBooster = (data.rewards || []).some((r) =&gt; String(r.kind) === &quot;booster_xp&quot;);
-          const hasSeasonPassReward = (data.rewards || []).some((r) =&gt; [&quot;season_pass&quot;,&quot;season_pass_xp&quot;].includes(String(r.kind)));
-          if (hasCases || hasInventoryBoosters) await loadCaseState(true).catch(() =&gt; {});
+          const hasSeasonPassReward = (data.rewards || []).some((r) =&gt; [&quot;season_pass&quot;,&quot;season_pass_xp&quot;,&quot;season_pass_levels&quot;].includes(String(r.kind)));
+          if (hasCases || hasInventoryBoosters || hasCosmetics) await loadCaseState(true).catch(() =&gt; {});
           if (hasXpBooster || hasSeasonPassReward) await loadSeasonPassProfileBonus().catch(() =&gt; {});
           if ((data.physicalRewards || []).length) await syncServerRewards(true).catch(() =&gt; {});
           flashOfferMessage.textContent = &quot;✅ Покупка успешна — награды уже начислены&quot;;
@@ -15547,6 +15856,9 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         });
         const data = await response.json().catch(() =&gt; null);
         if (!response.ok || !data?.ok) {
+          if (data?.code === &quot;LEGAL_ACCEPTANCE_REQUIRED&quot;) {
+            try { window.parent.postMessage({ type: &quot;zefirok-legal-required&quot; }, &quot;*&quot;); } catch (bridgeError) {}
+          }
           const error = new Error(data?.error || &quot;Рейтинг временно недоступен.&quot;);
           error.status = response.status;
           throw error;
@@ -17808,6 +18120,13 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         profileMusicListEl.addEventListener(&quot;click&quot;, (event) =&gt; {
           const button = event.target instanceof Element ? event.target.closest(&quot;[data-profile-music-id]&quot;) : null;
           if (button &amp;&amp; !button.disabled) void switchMusicTrackClient(button.dataset.profileMusicId, button);
+        });
+      }
+      for (const legalButton of root.querySelectorAll(&quot;[data-profile-legal-open]&quot;)) {
+        legalButton.addEventListener(&quot;click&quot;, () =&gt; {
+          try {
+            window.parent.postMessage({ type: &quot;zefirok-open-legal&quot;, document: String(legalButton.dataset.profileLegalOpen || &quot;hub&quot;) }, &quot;*&quot;);
+          } catch (error) {}
         });
       }
       if (profileRefreshButton) {

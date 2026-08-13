@@ -717,6 +717,26 @@ button{-webkit-tap-highlight-color:transparent}
   font-weight:850;
   line-height:1.25
 }
+.tier-benefit-star,.purchase-benefit-star{
+  flex:0 0 auto;
+  display:grid;
+  place-items:center;
+  width:34px;
+  height:34px;
+  border-radius:10px;
+  background:#fff0f6;
+  color:#d56f9b;
+  font:950 24px/1 Georgia,"Times New Roman",serif;
+  text-shadow:0 0 4px rgba(213,111,155,.30),0 1px 0 rgba(255,255,255,.95);
+  box-shadow:inset 0 0 0 1px rgba(214,139,171,.24)
+}
+.rating-star-benefit[data-rating-star-tier="elite_plus"] .tier-benefit-star,
+.rating-star-benefit[data-rating-star-tier="elite_plus"] .purchase-benefit-star{
+  background:#fff7d8;
+  color:#d39a13;
+  text-shadow:0 0 4px rgba(232,184,49,.52),0 0 10px rgba(220,157,24,.32),0 1px 0 #fff;
+  box-shadow:inset 0 0 0 1px rgba(215,167,45,.34)
+}
 .tier-price{display:grid;grid-template-columns:repeat(3,1fr);gap:5px}
 .tier-price span{
   padding:7px 4px;
@@ -1525,7 +1545,7 @@ button{-webkit-tap-highlight-color:transparent}
 .reward-cell.locked .reward-status-mark{z-index:4}
 @media(max-width:470px){
   .premium-offer:after{width:72px;height:62px;top:18px}
-  .tier-benefit img,.purchase-benefit img{width:31px;height:31px}
+  .tier-benefit img,.purchase-benefit img,.tier-benefit-star,.purchase-benefit-star{width:31px;height:31px}
 }
 
 
@@ -2593,6 +2613,7 @@ img[src$="/xp.webp"]{
               <div class="tier-benefits">
                 <div class="tier-benefit"><img src="/assets/season-pass/season.png?v=07939" alt=""><span>Открывает премиальную линию наград</span></div>
                 <div class="tier-benefit"><img src="/assets/season-pass/quest.png?v=07939" alt=""><span>Открывает премиальные задания</span></div>
+                <div class="tier-benefit rating-star-benefit" data-rating-star-tier="elite"><span class="tier-benefit-star" aria-hidden="true">✦</span><span>Вы выделяетесь среди игроков — розовая ✦ рядом с именем в рейтинге</span></div>
                 <div class="tier-benefit"><img src="/assets/cases/legendary_closed.png" alt=""><span>Легендарный кейс на 50 уровне</span></div>
               </div>
               <div class="tier-price">
@@ -2613,6 +2634,7 @@ img[src$="/xp.webp"]{
                 <div class="tier-benefit"><img src="/assets/cases/avatars/legendary_avatarka_5.png" alt=""><span>Эксклюзивная аватарка</span></div>
                 <div class="tier-benefit"><img src="/assets/cases/gold_closed.png" alt=""><span>Золотой кейс при открытии</span></div>
                 <div class="tier-benefit"><img src="/assets/season-pass/elite.png?v=07939" alt=""><span>Все преимущества тарифа «Элитный»</span></div>
+                <div class="tier-benefit rating-star-benefit" data-rating-star-tier="elite_plus"><span class="tier-benefit-star" aria-hidden="true">✦</span><span>Золотая ✦ рядом с именем — особое выделение в рейтинге</span></div>
               </div>
               <div class="tier-price">
                 <span><img src="/assets/optimized/v0.79.5/iconScore.png" alt="">Очки<b>0</b></span>
@@ -4081,8 +4103,8 @@ img[src$="/xp.webp"]{
     }
     const eliteBenefitsNode=eliteCard.querySelector(".tier-benefits");
     const elitePlusBenefitsNode=elitePlusCard.querySelector(".tier-benefits");
-    if(eliteBenefitsNode)eliteBenefitsNode.innerHTML=TIER_CONFIG.elite.benefits.map(item=>`<div class="tier-benefit"><img src="${item.image}" alt=""><span>${item.text}</span></div>`).join("");
-    if(elitePlusBenefitsNode)elitePlusBenefitsNode.innerHTML=elitePlusBenefitItems().map(item=>`<div class="tier-benefit"><img src="${item.image}" alt=""><span>${item.text}</span></div>`).join("");
+    if(eliteBenefitsNode)eliteBenefitsNode.innerHTML=TIER_CONFIG.elite.benefits.map(item=>tierBenefitMarkup(item,"tier")).join("");
+    if(elitePlusBenefitsNode)elitePlusBenefitsNode.innerHTML=elitePlusBenefitItems().map(item=>tierBenefitMarkup(item,"tier")).join("");
     for (const [cardId,tierKey] of [["eliteCard","elite"],["elitePlusCard","elite_plus"]]) {
       const values = el(cardId)?.querySelectorAll(".tier-price b") || [];
       const price = tierPriceForDisplay(tierKey);
@@ -4117,6 +4139,17 @@ img[src$="/xp.webp"]{
     if (!pass.entitlements.includes(id)) pass.entitlements.push(id);
   }
 
+  function tierBenefitMarkup(item, context = "tier"){
+    const wrapperClass = context === "purchase" ? "purchase-benefit" : "tier-benefit";
+    const starClass = context === "purchase" ? "purchase-benefit-star" : "tier-benefit-star";
+    const ratingTier = item?.ratingTier === "elite_plus" ? "elite_plus" : item?.ratingTier === "elite" ? "elite" : "";
+    if (ratingTier) {
+      const label = ratingTier === "elite_plus" ? "Золотой знак тарифа Элитный+ в рейтинге" : "Знак тарифа Элитный в рейтинге";
+      return `<div class="${wrapperClass} rating-star-benefit" data-rating-star-tier="${ratingTier}" aria-label="${label}" title="${label}"><span class="${starClass}" aria-hidden="true">✦</span><span>${item.text}</span></div>`;
+    }
+    return `<div class="${wrapperClass}"><img src="${item.image}" alt=""><span>${item.text}</span></div>`;
+  }
+
   const TIER_CONFIG = {
     elite:{
       image:REWARD_ASSETS.eliteBadge,
@@ -4125,6 +4158,7 @@ img[src$="/xp.webp"]{
       benefits:[
         {image:REWARD_ASSETS.premiumReward,text:"Премиальная линия из 50 наград"},
         {image:REWARD_ASSETS.premiumTask,text:"Премиальные ежедневные и недельные задания"},
+        {ratingTier:"elite",text:"Вы выделяетесь среди игроков — розовая ✦ рядом с именем в рейтинге"},
         {image:REWARD_ASSETS.legendaryCase,text:"Легендарный кейс на 50 уровне"}
       ]
     },
@@ -4134,6 +4168,7 @@ img[src$="/xp.webp"]{
       subtitle:"Максимальный тариф со всеми дополнительными бонусами.",
       benefits:[
         {image:REWARD_ASSETS.eliteBadge,text:"Все преимущества тарифа «Элитный»"},
+        {ratingTier:"elite_plus",text:"Золотая ✦ рядом с именем — особое выделение в рейтинге"},
         {image:REWARD_ASSETS.xpBoost,text:"×2 XP профиля за забеги и покупки + ×2 XP сезона"},
         {image:REWARD_ASSETS.levelBoost,text:"Сразу +5 уровней пропуска"},
         {image:REWARD_ASSETS.eliteFrame,text:"Эксклюзивная рамка"},
@@ -4145,7 +4180,10 @@ img[src$="/xp.webp"]{
 
   function elitePlusBenefitItems(){
     const cfg=serverPass?.season?.tierSettings?.elitePlus||{};
-    const items=[{image:REWARD_ASSETS.eliteBadge,text:"Все преимущества тарифа «Элитный»"}];
+    const items=[
+      {image:REWARD_ASSETS.eliteBadge,text:"Все преимущества тарифа «Элитный»"},
+      {ratingTier:"elite_plus",text:"Золотая ✦ рядом с именем — особое выделение в рейтинге"}
+    ];
     if(cfg.xpBoost!==false)items.push({image:REWARD_ASSETS.xpBoost,text:"×2 XP за забеги и задания сезонного пропуска"});
     const levels=Math.max(0,Number(cfg.bonusLevels)||0);if(levels>0)items.push({image:REWARD_ASSETS.levelBoost,text:`Сразу +${levels} ${levels===1?"уровень":"уровней"} пропуска`});
     for(const cosmetic of (Array.isArray(cfg.cosmetics)?cfg.cosmetics:[])){
@@ -4272,7 +4310,7 @@ img[src$="/xp.webp"]{
       ? "Улучшить до «Элитный+»?"
       : `Купить «${config.title}»?`;
     el("purchaseConfirmSubtitle").textContent = config.subtitle;
-    el("purchaseConfirmBenefits").innerHTML = config.benefits.map(item=>`<div class="purchase-benefit"><img src="${item.image}" alt=""><span>${item.text}</span></div>`).join("");
+    el("purchaseConfirmBenefits").innerHTML = config.benefits.map(item=>tierBenefitMarkup(item,"purchase")).join("");
     const tierPrice = tierPriceForDisplay(tier);
     el("purchasePricePoints").textContent = Math.max(0,Number(tierPrice.points||0)).toLocaleString("ru-RU");
     el("purchasePriceMarshmallow").textContent = Math.max(0,Number(tierPrice.treats||0)).toLocaleString("ru-RU");
