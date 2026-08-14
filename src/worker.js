@@ -1589,7 +1589,7 @@ export default {
         // path, so it must stay available even when the public rating UI is
         // disabled by a feature flag. submitLeaderboardRun decides separately
         // whether the validated run may enter the rating.
-        return await submitLeaderboardRun(request, env);
+        return await submitLeaderboardRun(request, env, ctx);
       }
 
       if (url.pathname === "/api/leaderboard/claim" && request.method === "POST") {
@@ -6204,7 +6204,194 @@ async function leaderboardState(request, env) {
   }
 }
 
-async function submitLeaderboardRun(request, env) {
+
+const FAST_RUN_SETTLEMENT_VERSION = 1;
+const FAST_RUN_TASK_NOTIFICATION_FRESH_SECONDS = 15;
+
+function scheduleRunSettlementBackground(executionCtx, promise, label = "run settlement background work") {
+  const task = Promise.resolve(promise).catch((error) => console.error(label, error));
+  if (executionCtx?.waitUntil) executionCtx.waitUntil(task);
+  else void task;
+}
+
+function fastRunSettlementProfileView(profileBefore, deltas, now) {
+  return {
+    wallet: Math.min(999999999, safeAdminNumber(profileBefore?.wallet) + safeAdminNumber(deltas?.points)),
+    best: Math.max(safeAdminNumber(profileBefore?.best_score), safeAdminNumber(deltas?.bestScore)),
+    treats: Math.min(999999999, safeAdminNumber(profileBefore?.treats) + safeAdminNumber(deltas?.treats)),
+    coffee: Math.min(999999999, safeAdminNumber(profileBefore?.coffee) + safeAdminNumber(deltas?.coffee)),
+    profileXp: Math.min(999999999, safeAdminNumber(profileBefore?.profile_xp) + safeAdminNumber(deltas?.profileXp)),
+    authoritativeWallet: true,
+    authoritativeFields: { wallet: true, best: true, treats: true, coffee: true, profileXp: true },
+    revision: safeAdminNumber(profileBefore?.revision) + 1,
+    updatedAt: Math.max(0, Number(now || 0)) * 1000
+  };
+}
+
+async function fastSeasonPassRunTaskCrossings(env, season, telegramId, player, input, runCreatedAt) {
+  const id = String(telegramId || "");
+  const runAt = Math.max(1, Math.floor(Number(runCreatedAt || 0)) || Math.floor(Date.now() / 1000));
+  // Old recovered runs must update durable activity, but must not generate a
+  // confusing "just completed" task notification hours later.
+  if (Math.floor(Date.now() / 1000) - runAt > 10 * 60) return [];
+  const daily = seasonPassMoscowPeriod("daily", runAt * 1000);
+  const weekly = seasonPassMoscowPeriod("weekly", runAt * 1000);
+  const seasonStart = Math.floor(Date.parse(String(season?.startsAt || "")) / 1000);
+  const seasonEnd = Math.floor(Date.parse(String(season?.endsAt || "")) / 1000);
+  const clamp = (bounds) => ({
+    ...bounds,
+    startAt: Number.isFinite(seasonStart) ? Math.max(bounds.startAt, seasonStart) : bounds.startAt,
+    endAt: Number.isFinite(seasonEnd) ? Math.max(Number.isFinite(seasonStart) ? Math.max(bounds.startAt, seasonStart) : bounds.startAt, Math.min(bounds.endAt, seasonEnd)) : bounds.endAt
+  });
+  const d = clamp(daily);
+  const w = clamp(weekly);
+  if (runAt < w.startAt || runAt >= w.endAt) return [];
+  const [definitions, aggregate, claims] = await Promise.all([
+    env.DB.prepare(`SELECT task_id,period,premium,metric,target,xp_reward,title FROM season_pass_tasks WHERE season_id=? AND enabled=1 AND metric IN ('runs','score','treats','coffee') ORDER BY sort_order,task_id`).bind(String(season.id)).all(),
+    env.DB.prepare(`SELECT
+      COALESCE(SUM(CASE WHEN created_at>=? AND created_at<? THEN 1 ELSE 0 END),0) AS daily_runs,
+      COALESCE(SUM(CASE WHEN created_at>=? AND created_at<? THEN score ELSE 0 END),0) AS daily_score,
+      COALESCE(SUM(CASE WHEN created_at>=? AND created_at<? THEN run_treats ELSE 0 END),0) AS daily_treats,
+      COALESCE(SUM(CASE WHEN created_at>=? AND created_at<? THEN run_coffee ELSE 0 END),0) AS daily_coffee,
+      COUNT(*) AS weekly_runs,COALESCE(SUM(score),0) AS weekly_score,COALESCE(SUM(run_treats),0) AS weekly_treats,COALESCE(SUM(run_coffee),0) AS weekly_coffee
+      FROM season_pass_activity_runs WHERE season_id=? AND telegram_id=? AND created_at>=? AND created_at<?`).bind(
+        d.startAt,d.endAt,d.startAt,d.endAt,d.startAt,d.endAt,d.startAt,d.endAt,String(season.id),id,w.startAt,w.endAt
+      ).first(),
+    env.DB.prepare(`SELECT task_id,period_key FROM season_pass_task_claims WHERE season_id=? AND telegram_id=? AND status='delivered' AND period_key IN (?,?)`).bind(String(season.id),id,d.key,w.key).all()
+  ]);
+  const claimSet = new Set((claims?.results || []).map((row) => `${String(row.task_id)}:${String(row.period_key)}`));
+  const taskMultiplier = seasonPassTaskXpMultiplierForPlayer(season, player);
+  const premium = String(player?.premium_tier || "none") !== "none";
+  const contribution = {
+    runs: 1,
+    score: Math.max(0, Number(input?.score || 0)),
+    treats: Math.max(0, Number(input?.runTreats || input?.run_treats || 0)),
+    coffee: Math.max(0, Number(input?.runCoffee || input?.run_coffee || 0))
+  };
+  const rows = [];
+  for (const task of definitions?.results || []) {
+    const period = String(task.period) === "weekly" ? "weekly" : "daily";
+    const bounds = period === "weekly" ? w : d;
+    if (runAt < bounds.startAt || runAt >= bounds.endAt) continue;
+    const metric = ["runs","score","treats","coffee"].includes(String(task.metric)) ? String(task.metric) : "runs";
+    const before = Math.max(0, Number(aggregate?.[`${period}_${metric}`] || 0));
+    const after = before + Math.max(0, Number(contribution[metric] || 0));
+    const target = Math.max(1, Number(task.target || 1));
+    const locked = Number(task.premium || 0) === 1 && !premium;
+    const periodKey = String(bounds.key || "");
+    if (locked || claimSet.has(`${String(task.task_id)}:${periodKey}`) || before >= target || after < target) continue;
+    rows.push({
+      task_id: String(task.task_id), period_key: periodKey,
+      task_title: String(task.title || "Задание").slice(0, 180),
+      xp_reward: Math.max(1, Number(task.xp_reward || 1)) * taskMultiplier
+    });
+  }
+  return rows;
+}
+
+async function prepareFastSeasonPassRunContext(env, telegramId, input, runCreatedAt) {
+  const id = String(telegramId || "");
+  const runAt = Math.max(1, Math.floor(Number(runCreatedAt || 0)) || Math.floor(Date.now() / 1000));
+  const runAtMs = runAt * 1000;
+  const [flag, forcedClosure, season] = await Promise.all([
+    getFeatureFlag(env, "battle_pass"),
+    getSeasonPassForcedClosure(env, runAtMs),
+    loadSeasonPassSeason(env, runAtMs)
+  ]);
+  if (forcedClosure || !season || season.status !== "active" || !seasonPassCapabilities(season).canEarnXp) return null;
+  const mode = String(flag?.mode || "all");
+  if (mode !== "all") {
+    const access = await battlePassAudienceAccess(env, id, flag);
+    if (!access.allowed) return null;
+  }
+  const startAt = Math.floor(Date.parse(String(season.startsAt || "")) / 1000);
+  const endAt = Math.floor(Date.parse(String(season.endsAt || "")) / 1000);
+  if ((Number.isFinite(startAt) && runAt < startAt) || (Number.isFinite(endAt) && runAt >= endAt)) return null;
+  const player = await ensureSeasonPassPlayer(env, season, id);
+  const [hasXpX2, taskRows] = await Promise.all([
+    seasonPassHasXpX2(env, season.id, id, player),
+    fastSeasonPassRunTaskCrossings(env, season, id, player, input, runAt)
+  ]);
+  const premiumMultiplier = hasXpX2 ? 2 : 1;
+  const earned = seasonPassEarnedXpMultiplierView(season, player, premiumMultiplier, runAtMs);
+  const multiplier = Math.max(1, Number(earned.multiplier || 1));
+  const xpAwarded = Math.max(1, Number(season.baseRunXp || 100)) * multiplier;
+  return {
+    season, player, runCreatedAt: runAt, multiplier,
+    premiumMultiplier: Math.max(1, Number(earned.premiumMultiplier || premiumMultiplier)),
+    catchUpActive: Boolean(earned?.catchUp?.active), xpAwarded,
+    taskRows,
+    taskNotice: taskRows.length ? seasonPassTaskNoticePublic(taskRows, season) : null
+  };
+}
+
+async function buildFastRepeatedRunResponse(env, executionCtx, context) {
+  const { ledger, telegramId, runId, submittedMetrics, season, minSeconds, minScore, ratingEntryEnabled, auth } = context;
+  const [profileRow, repeatCaseEnsured] = await Promise.all([
+    ensureAuthoritativeProfileRow(env, telegramId, `run:${runId}:fast-repeat`),
+    ensureCasePlayerState(env, telegramId, {})
+  ]);
+  const repeatCaseState = repeatCaseEnsured.state;
+  const acceptedToRating = Number(ledger?.accepted_rating || 0) === 1;
+  const qualifies = Number(ledger?.duration_ms || submittedMetrics.durationMs) >= minSeconds * 1000
+    && Number(ledger?.raw_score || submittedMetrics.score) >= minScore;
+  const runCreatedAt = Math.max(1, Number(ledger?.created_at || Math.floor(Date.now() / 1000)));
+  if (qualifies) {
+    scheduleRunSettlementBackground(executionCtx, recordSeasonPassRunActivity(env, telegramId, {
+      runId,
+      score: Number(ledger?.raw_score || 0),
+      durationMs: Number(ledger?.duration_ms || 0),
+      runTreats: Number(ledger?.raw_treats || 0),
+      runCoffee: Number(ledger?.raw_coffee || 0),
+      newRecord: Number(ledger?.new_record || 0) === 1
+    }, null, { serverValidated: true, runCreatedAt }), "fast settlement season-pass repeat repair failed");
+  }
+  if (acceptedToRating) {
+    scheduleRunSettlementBackground(executionCtx, (async () => {
+      const tester = await getTesterAccountSafe(telegramId, env);
+      await syncLeaderboardAllTimeFromSeasonEntries(env, {
+        telegramId,
+        displayName: telegramDisplayName(auth.user).slice(0, 120),
+        username: String(auth.user.username || "").slice(0, 64),
+        photoUrl: String(auth.user.photo_url || "").slice(0, 500),
+        level: profileLevelFromXp(Number(profileRow?.profile_xp || 0)),
+        hidden: Number(tester?.exclude_from_rating || 0) === 1 ? 1 : 0,
+        caseAvatarId: repeatCaseState.activeAvatarId,
+        caseFrameId: repeatCaseState.activeFrameId,
+        now: runCreatedAt
+      });
+    })(), "fast settlement all-time repeat sync failed");
+  }
+  return {
+    ok: true,
+    fastSettlement: { version: FAST_RUN_SETTLEMENT_VERSION, repeated: true },
+    profile: authoritativeProfileView(profileRow),
+    authoritativeProfile: true,
+    runSettlement: {
+      accepted: true, repeated: true, acceptedToRating,
+      reason: acceptedToRating ? "accepted" : (!qualifies ? "below_minimum" : (!ratingEntryEnabled ? "rating_disabled" : `season_${String(season.status || "inactive")}`)),
+      raw: {
+        score: Number(ledger?.raw_score || submittedMetrics.score),
+        treats: Number(ledger?.raw_treats || submittedMetrics.runTreats),
+        coffee: Number(ledger?.raw_coffee || submittedMetrics.runCoffee),
+        durationMs: Number(ledger?.duration_ms || submittedMetrics.durationMs)
+      },
+      credited: { points: Number(ledger?.points || 0), treats: Number(ledger?.treats || 0), coffee: Number(ledger?.coffee || 0) },
+      profileXpAwarded: Number(ledger?.profile_xp || 0),
+      newRecord: Number(ledger?.new_record || 0) === 1,
+      boosterType: String(ledger?.booster_type || ""),
+      activeBooster: {
+        type: String(repeatCaseState.activeBooster?.type || ""),
+        runsLeft: safeAdminNumber(repeatCaseState.activeBooster?.runsLeft)
+      },
+      skinId: String(ledger?.skin_id || "default"),
+      seasonId: String(ledger?.season_id || season.id || "")
+    }
+  };
+}
+
+async function submitLeaderboardRun(request, env, executionCtx = null) {
+  const settlementRequestStartedAtMs = Date.now();
   try {
     requireDatabase(env);
     requireBotToken(env);
@@ -6213,10 +6400,6 @@ async function submitLeaderboardRun(request, env) {
     const body = await readJson(request);
     const auth = await validateTelegramInitData(String(body.initData || ""), env);
     const telegramId = String(auth.user.id);
-    const ratingFeatureEnabled = await isFeatureEnabled(env, "rating", telegramId);
-    let ratingMaintenanceEnabled = true;
-    try { ratingMaintenanceEnabled = !(await getMaintenanceSettings(env))?.ratingDisabled; } catch {}
-    const ratingEntryEnabled = ratingFeatureEnabled && ratingMaintenanceEnabled;
     const runId = String(body.runId || "").trim();
     if (!/^[A-Za-z0-9_-]{12,96}$/.test(runId)) throw new ApiError(400, "Некорректный идентификатор забега.");
 
@@ -6226,64 +6409,19 @@ async function submitLeaderboardRun(request, env) {
       runTreats: Math.max(0, Math.floor(Number(body.runTreats || body.run_treats || 0))),
       runCoffee: Math.max(0, Math.floor(Number(body.runCoffee || body.run_coffee || 0)))
     };
-    const season = await ensureSeason(env);
+    const [ratingFeatureEnabled, ratingMaintenanceSettings, season] = await Promise.all([
+      isFeatureEnabled(env, "rating", telegramId),
+      getMaintenanceSettings(env).catch(() => null),
+      ensureSeason(env)
+    ]);
+    const ratingMaintenanceEnabled = !ratingMaintenanceSettings?.ratingDisabled;
+    const ratingEntryEnabled = Boolean(ratingFeatureEnabled && ratingMaintenanceEnabled);
     const minSeconds = positiveInt(env.LEADERBOARD_MIN_RUN_SECONDS, DEFAULT_LEADERBOARD_MIN_RUN_SECONDS);
     const minScore = positiveInt(env.LEADERBOARD_MIN_SCORE, DEFAULT_LEADERBOARD_MIN_SCORE);
 
-    const buildResponse = async (ledger, repeated, seasonPassAward = null) => {
-      await ensureAuthoritativeProfileRow(env, telegramId, `run:${runId}`);
-      const casePayload = await buildCasePayload(env, telegramId, {});
-      const profileRow = await ensureAuthoritativeProfileRow(env, telegramId, `run:${runId}:response`);
-      const leaderboardPayload = await buildLeaderboardPayload(env, season, telegramId, "season");
-      const acceptedToRating = Number(ledger?.accepted_rating || 0) === 1;
-      const ledgerQualifies = Number(ledger?.duration_ms || submittedMetrics.durationMs) >= minSeconds * 1000
-        && Number(ledger?.raw_score || submittedMetrics.score) >= minScore;
-      const runCreatedAt = Math.max(0, Number(ledger?.created_at || Math.floor(Date.now() / 1000)));
-      let passAward = seasonPassAward;
-      if (!passAward && Number(ledger?.raw_score || 0) >= minScore && Number(ledger?.duration_ms || 0) >= minSeconds * 1000) {
-        try {
-          passAward = await recordSeasonPassRunActivity(env, telegramId, {
-            runId,
-            score: Number(ledger.raw_score || 0),
-            durationMs: Number(ledger.duration_ms || 0),
-            runTreats: Number(ledger.raw_treats || 0),
-            runCoffee: Number(ledger.raw_coffee || 0),
-            newRecord: Number(ledger.new_record || 0) === 1
-          }, null, { serverValidated: true, runCreatedAt });
-        } catch (error) {
-          console.error("authoritative season pass retry failed", error);
-        }
-      }
-      if (passAward) leaderboardPayload.seasonPassAward = passAward;
-      return {
-        ...leaderboardPayload,
-        caseState: casePayload.caseState,
-        profile: authoritativeProfileView(profileRow),
-        authoritativeProfile: true,
-        runSettlement: {
-          accepted: true,
-          repeated: Boolean(repeated),
-          acceptedToRating,
-          reason: acceptedToRating ? "accepted" : (!ledgerQualifies ? "below_minimum" : (!ratingEntryEnabled ? "rating_disabled" : `season_${String(season.status || "inactive")}`)),
-          raw: {
-            score: Number(ledger?.raw_score || submittedMetrics.score),
-            treats: Number(ledger?.raw_treats || submittedMetrics.runTreats),
-            coffee: Number(ledger?.raw_coffee || submittedMetrics.runCoffee),
-            durationMs: Number(ledger?.duration_ms || submittedMetrics.durationMs)
-          },
-          credited: {
-            points: Number(ledger?.points || 0),
-            treats: Number(ledger?.treats || 0),
-            coffee: Number(ledger?.coffee || 0)
-          },
-          profileXpAwarded: Number(ledger?.profile_xp || 0),
-          newRecord: Number(ledger?.new_record || 0) === 1,
-          boosterType: String(ledger?.booster_type || ""),
-          skinId: String(ledger?.skin_id || "default"),
-          seasonId: String(ledger?.season_id || season.id || "")
-        }
-      };
-    };
+    const buildResponse = async (ledger, repeated) => buildFastRepeatedRunResponse(env, executionCtx, {
+      ledger, telegramId, runId, submittedMetrics, season, minSeconds, minScore, ratingEntryEnabled, auth
+    });
 
     const existingLedger = await env.DB.prepare(`SELECT * FROM player_economy_run_ledger WHERE run_id=? LIMIT 1`).bind(runId).first();
     if (existingLedger) {
@@ -6293,22 +6431,6 @@ async function submitLeaderboardRun(request, env) {
         && Number(existingLedger.raw_coffee || 0) === submittedMetrics.runCoffee
         && Number(existingLedger.duration_ms || 0) === submittedMetrics.durationMs;
       if (!same) throw new ApiError(409, "Этот идентификатор забега уже использован.");
-      if (Number(existingLedger.accepted_rating || 0) === 1) {
-        try {
-          const caseState = (await ensureCasePlayerState(env, telegramId, {})).state;
-          await syncLeaderboardAllTimeFromSeasonEntries(env, {
-            telegramId,
-            displayName: telegramDisplayName(auth.user).slice(0, 120),
-            username: String(auth.user.username || "").slice(0, 64),
-            photoUrl: String(auth.user.photo_url || "").slice(0, 500),
-            level: profileLevelFromXp(Number((await ensureAuthoritativeProfileRow(env, telegramId, `run:${runId}`))?.profile_xp || 0)),
-            hidden: Number((await getTesterAccountSafe(telegramId, env))?.exclude_from_rating || 0) === 1 ? 1 : 0,
-            caseAvatarId: caseState.activeAvatarId,
-            caseFrameId: caseState.activeFrameId,
-            now: Number(existingLedger.created_at || Math.floor(Date.now()/1000))
-          });
-        } catch (error) { console.error("authoritative all-time retry failed", error); }
-      }
       return jsonResponse(await buildResponse(existingLedger, true));
     }
 
@@ -6437,9 +6559,17 @@ async function submitLeaderboardRun(request, env) {
       historicalAttestAtMs > 0 ? { nowMs: historicalAttestAtMs } : {}
     );
     const qualifies = metrics.durationMs >= minSeconds * 1000 && metrics.score >= minScore;
-    const ensured = await ensureCasePlayerState(env, telegramId, {});
-    const profileBefore = await ensureAuthoritativeProfileRow(env, telegramId, `run:${runId}:prepare`);
-    const consumed = await env.DB.prepare(`SELECT booster_type,telegram_id FROM case_booster_run_consumptions WHERE run_id=? LIMIT 1`).bind(runId).first();
+    const acceptedToRating = ratingEntryEnabled && String(season.status || "") === "active" && qualifies;
+    const [ensured, profileBefore, consumed, fastSeasonPass, testerRow] = await Promise.all([
+      ensureCasePlayerState(env, telegramId, {}),
+      ensureAuthoritativeProfileRow(env, telegramId, `run:${runId}:prepare`),
+      env.DB.prepare(`SELECT booster_type,telegram_id FROM case_booster_run_consumptions WHERE run_id=? LIMIT 1`).bind(runId).first(),
+      qualifies ? prepareFastSeasonPassRunContext(env, telegramId, {
+        runId, score: metrics.score, durationMs: metrics.durationMs,
+        runTreats: metrics.runTreats, runCoffee: metrics.runCoffee
+      }, runActivityCreatedAt) : Promise.resolve(null),
+      acceptedToRating ? getTesterAccountSafe(telegramId, env) : Promise.resolve(null)
+    ]);
     if (consumed && String(consumed.telegram_id || "") !== telegramId) throw new ApiError(409, "Этот идентификатор забега уже использован.");
 
     const caseState = ensured.state;
@@ -6451,15 +6581,14 @@ async function submitLeaderboardRun(request, env) {
     const appliedBoosterType = rewardEligible ? boosterType : "";
     const skinId = normalizeCurrentActiveSkin(caseState.activeSkinId, caseState.ownedSkins);
     const skinBonus = serverRunSkinBonus(skinId);
-    const acceptedToRating = ratingEntryEnabled && String(season.status || "") === "active" && qualifies;
     const boostedPoints = appliedBoosterType === "points" ? metrics.score * 2 : metrics.score;
     const boostedTreats = appliedBoosterType === "treats" ? metrics.runTreats * 2 : metrics.runTreats;
     const boostedCoffee = appliedBoosterType === "coffee" ? metrics.runCoffee * 2 : metrics.runCoffee;
     const economyPoints = rewardEligible ? Math.min(999999999, boostedPoints + (qualifies ? skinBonus.points : 0)) : 0;
     const economyTreats = rewardEligible ? Math.min(999999999, boostedTreats + (qualifies ? skinBonus.treats : 0)) : 0;
     const economyCoffee = rewardEligible ? Math.min(999999999, boostedCoffee + (qualifies ? skinBonus.coffee : 0)) : 0;
-    const profileBonus = qualifies ? await getSeasonPassProfileBonusForUser(env, telegramId) : { multiplier: 1 };
-    const profileXpAwarded = qualifies ? Math.min(999999999, AUTHORITATIVE_PROFILE_RUN_XP * Math.max(1, Number(profileBonus?.multiplier || 1))) : 0;
+    const profileXpMultiplier = qualifies ? Math.max(1, Number(fastSeasonPass?.premiumMultiplier || 1)) : 1;
+    const profileXpAwarded = qualifies ? Math.min(999999999, AUTHORITATIVE_PROFILE_RUN_XP * profileXpMultiplier) : 0;
     const newRecord = rewardEligible && metrics.score > Number(profileBefore?.best_score || 0) && metrics.score > 0;
     const nextProfileXp = Math.min(999999999, Number(profileBefore?.profile_xp || 0) + profileXpAwarded);
     const nextLevel = profileLevelFromXp(nextProfileXp);
@@ -6467,7 +6596,6 @@ async function submitLeaderboardRun(request, env) {
     const displayName = telegramDisplayName(auth.user).slice(0, 120);
     const username = String(auth.user.username || "").slice(0, 64);
     const photoUrl = String(auth.user.photo_url || "").slice(0, 500);
-    const testerRow = await getTesterAccountSafe(telegramId, env);
     const ratingHidden = Number(testerRow?.exclude_from_rating || 0) === 1 ? 1 : 0;
     const rejectionReason = acceptedToRating ? "" : (!qualifies ? "below_minimum" : (!ratingEntryEnabled ? "rating_disabled" : `season_${String(season.status || "inactive")}`));
 
@@ -6528,9 +6656,31 @@ async function submitLeaderboardRun(request, env) {
       ).bind(String(season.id || ""), telegramId, displayName, username, photoUrl, metrics.score, nextLevel, now, now, ratingHidden, caseState.activeAvatarId, caseState.activeFrameId));
     }
 
+    let fastSeasonPassApplyIndex = -1;
+    if (fastSeasonPass) {
+      const passSeasonId = String(fastSeasonPass.season.id);
+      statements.push(env.DB.prepare(
+        `INSERT OR IGNORE INTO season_pass_activity_runs(run_id,season_id,telegram_id,score,duration_ms,run_treats,run_coffee,new_record,created_at) VALUES(?,?,?,?,?,?,?,?,?)`
+      ).bind(runId,passSeasonId,telegramId,metrics.score,metrics.durationMs,metrics.runTreats,metrics.runCoffee,newRecord?1:0,runActivityCreatedAt));
+      statements.push(env.DB.prepare(
+        `INSERT OR IGNORE INTO season_pass_run_xp(run_id,season_id,telegram_id,base_xp,multiplier,xp_awarded,created_at,applied_at) VALUES(?,?,?,?,?,?,?,0)`
+      ).bind(runId,passSeasonId,telegramId,Math.max(1,Number(fastSeasonPass.season.baseRunXp)||100),fastSeasonPass.multiplier,fastSeasonPass.xpAwarded,runActivityCreatedAt));
+      fastSeasonPassApplyIndex = statements.length;
+      statements.push(env.DB.prepare(
+        `UPDATE season_pass_players SET xp=xp+COALESCE((SELECT xp_awarded FROM season_pass_run_xp WHERE run_id=? AND season_id=? AND telegram_id=? AND applied_at=0),0),revision=revision+1,updated_at=? WHERE season_id=? AND telegram_id=? AND EXISTS(SELECT 1 FROM season_pass_run_xp WHERE run_id=? AND season_id=? AND telegram_id=? AND applied_at=0)`
+      ).bind(runId,passSeasonId,telegramId,now,passSeasonId,telegramId,runId,passSeasonId,telegramId));
+      statements.push(env.DB.prepare(`UPDATE season_pass_run_xp SET applied_at=? WHERE run_id=? AND season_id=? AND telegram_id=? AND applied_at=0`).bind(now,runId,passSeasonId,telegramId));
+      for (const task of fastSeasonPass.taskRows || []) {
+        statements.push(env.DB.prepare(
+          `INSERT OR IGNORE INTO season_pass_task_notifications(season_id,telegram_id,task_id,period_key,task_title,xp_reward,completed_at,bot_notified_at,game_read_at) VALUES(?,?,?,?,?,?,?,0,0)`
+        ).bind(passSeasonId,telegramId,String(task.task_id),String(task.period_key),String(task.task_title||"Задание").slice(0,180),Math.max(1,Number(task.xp_reward)||1),now));
+      }
+    }
+
     statements.push(env.DB.prepare(`DELETE FROM game_run_settlement_guards WHERE guard_id=?`).bind(settlementGuardId));
+    let settlementBatchResult = null;
     try {
-      await env.DB.batch(statements);
+      settlementBatchResult = await env.DB.batch(statements);
     } catch (batchError) {
       const text = String(batchError?.message || batchError).toLowerCase();
       if (text.includes('game_run_settlement_guard_ok')) {
@@ -6561,42 +6711,62 @@ async function submitLeaderboardRun(request, env) {
     }
 
     if (acceptedToRating) {
-      try {
-        await syncLeaderboardAllTimeFromSeasonEntries(env, {
-          telegramId, displayName, username, photoUrl, level: nextLevel, hidden: ratingHidden,
-          caseAvatarId: caseState.activeAvatarId, caseFrameId: caseState.activeFrameId, now
-        });
-      } catch (error) { console.error("authoritative all-time sync failed", error); }
+      scheduleRunSettlementBackground(executionCtx, syncLeaderboardAllTimeFromSeasonEntries(env, {
+        telegramId, displayName, username, photoUrl, level: nextLevel, hidden: ratingHidden,
+        caseAvatarId: caseState.activeAvatarId, caseFrameId: caseState.activeFrameId, now
+      }), "authoritative all-time sync failed");
     }
-
-    let seasonPassAward = null;
-    if (qualifies) {
-      try {
-        seasonPassAward = await recordSeasonPassRunActivity(env, telegramId, {
-          runId,
-          score: metrics.score,
-          durationMs: metrics.durationMs,
-          runTreats: metrics.runTreats,
-          runCoffee: metrics.runCoffee,
-          newRecord
-        }, null, { serverValidated: true, runCreatedAt: runActivityCreatedAt });
-      } catch (error) { console.error("authoritative season pass activity failed", error); }
-    }
-    try {
-      await recordPlayerTimeline(
-        env, telegramId, "run",
-        `завершил забег с результатом ${metrics.score.toLocaleString("ru-RU")}`,
-        {
-          runId, score: metrics.score, durationMs: metrics.durationMs, runTreats: metrics.runTreats, runCoffee: metrics.runCoffee,
-          credited: { points: economyPoints, treats: economyTreats, coffee: economyCoffee }, profileXpAwarded,
-          boosterType: appliedBoosterType, skinId, newRecord, accepted: acceptedToRating, excludedFromRating: Boolean(ratingHidden)
-        },
-        `run_${runId}`, auth.user, now
+    if (fastSeasonPass) {
+      // Telegram delivery and full task reconciliation no longer block the game
+      // response. The durable run/task state is already committed above.
+      scheduleRunSettlementBackground(executionCtx,
+        syncSeasonPassTaskCompletionNotifications(env, telegramId, { season: fastSeasonPass.season, sendBot: true }),
+        "fast settlement season-pass notification failed"
       );
-    } catch (error) { console.error("authoritative run timeline failed", error); }
+    }
+    scheduleRunSettlementBackground(executionCtx, recordPlayerTimeline(
+      env, telegramId, "run",
+      `завершил забег с результатом ${metrics.score.toLocaleString("ru-RU")}`,
+      {
+        runId, score: metrics.score, durationMs: metrics.durationMs, runTreats: metrics.runTreats, runCoffee: metrics.runCoffee,
+        credited: { points: economyPoints, treats: economyTreats, coffee: economyCoffee }, profileXpAwarded,
+        boosterType: appliedBoosterType, skinId, newRecord, accepted: acceptedToRating, excludedFromRating: Boolean(ratingHidden)
+      },
+      `run_${runId}`, auth.user, now
+    ), "authoritative run timeline failed");
 
-    const ledger = await env.DB.prepare(`SELECT * FROM player_economy_run_ledger WHERE run_id=? LIMIT 1`).bind(runId).first();
-    return jsonResponse(await buildResponse(ledger, false, seasonPassAward));
+    const seasonPassXpApplied = fastSeasonPass && fastSeasonPassApplyIndex >= 0
+      ? Number(settlementBatchResult?.[fastSeasonPassApplyIndex]?.meta?.changes || 0) > 0
+      : false;
+    const seasonPassAward = fastSeasonPass ? {
+      accepted: true,
+      repeated: false,
+      xpAwarded: seasonPassXpApplied ? Number(fastSeasonPass.xpAwarded || 0) : 0,
+      multiplier: Number(fastSeasonPass.multiplier || 1),
+      profileXpMultiplier: Number(fastSeasonPass.premiumMultiplier || 1),
+      catchUp: Boolean(fastSeasonPass.catchUpActive),
+      taskNotice: fastSeasonPass.taskNotice || null
+    } : null;
+    const profile = fastRunSettlementProfileView(profileBefore, {
+      points: economyPoints, treats: economyTreats, coffee: economyCoffee,
+      profileXp: profileXpAwarded, bestScore: rewardEligible ? metrics.score : Number(profileBefore?.best_score || 0)
+    }, now);
+    return jsonResponse({
+      ok: true,
+      fastSettlement: { version: FAST_RUN_SETTLEMENT_VERSION, serverMs: Math.max(0, Date.now() - settlementRequestStartedAtMs) },
+      profile,
+      authoritativeProfile: true,
+      ...(seasonPassAward ? { seasonPassAward } : {}),
+      runSettlement: {
+        accepted: true, repeated: false, acceptedToRating,
+        reason: acceptedToRating ? "accepted" : (!qualifies ? "below_minimum" : (!ratingEntryEnabled ? "rating_disabled" : `season_${String(season.status || "inactive")}`)),
+        raw: { score: metrics.score, treats: metrics.runTreats, coffee: metrics.runCoffee, durationMs: metrics.durationMs },
+        credited: { points: economyPoints, treats: economyTreats, coffee: economyCoffee },
+        profileXpAwarded, profileXpMultiplier, newRecord,
+        boosterType: appliedBoosterType, activeBooster: { type: String(caseState.activeBooster?.type || ""), runsLeft: safeAdminNumber(caseState.activeBooster?.runsLeft) },
+        skinId, seasonId: String(season.id || "")
+      }
+    });
   } catch (error) {
     if (error instanceof ApiError) return jsonResponse({ ok: false, error: error.message }, error.status);
     console.error("submitLeaderboardRun failed", error);
@@ -22327,7 +22497,7 @@ async function syncSeasonPassTaskCompletionNotifications(env,telegramId,options=
     // a catch-up Telegram push. Bot messages are emitted only by the actual
     // completion event (run settlement or case opening).
     if(options.sendBot===false&&relevant.length){
-      const silentRows=relevant.filter(row=>Number(row.bot_notified_at||0)===0);
+      const silentRows=relevant.filter(row=>Number(row.bot_notified_at||0)===0 && now-Math.max(0,Number(row.completed_at||0))>=FAST_RUN_TASK_NOTIFICATION_FRESH_SECONDS);
       if(silentRows.length){
         const silentBinds=silentRows.flatMap(row=>[String(row.task_id),String(row.period_key)]);
         const silentConditions=silentRows.map(()=>`(task_id=? AND period_key=?)`).join(' OR ');

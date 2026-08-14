@@ -16527,6 +16527,31 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         }
       }
 
+
+      function applyFastRunSettlementPayload(data) {
+        if (!data?.fastSettlement || !data?.runSettlement?.accepted) return false;
+        antiCheatWithTrustedChange(&quot;run-fast-server-settlement&quot;, () =&gt; {
+          const profile = data?.profile &amp;&amp; typeof data.profile === &quot;object&quot; ? data.profile : null;
+          if (profile) {
+            state.wallet = sanitizeProgressNumber(profile.wallet);
+            state.best = sanitizeProgressNumber(profile.best);
+            state.treats = sanitizeProgressNumber(profile.treats);
+            state.coffee = sanitizeProgressNumber(profile.coffee);
+            state.profileXp = sanitizeProgressNumber(profile.profileXp);
+          }
+          const activeBooster = data?.runSettlement?.activeBooster;
+          if (activeBooster &amp;&amp; typeof activeBooster === &quot;object&quot;) {
+            state.activeCaseBooster = normalizeActiveCaseBooster(activeBooster);
+          }
+          saveProgress();
+          updateHud();
+          updateProfileCaseBadges();
+          renderActiveRunBooster();
+          if (isScreenVisible(&quot;profile&quot;)) renderProfile();
+        });
+        return true;
+      }
+
       async function submitLeaderboardRun(scoreValue, durationSeconds, existingRun = null, runMetrics = null) {
         const score = Math.max(0, Math.floor(Number(scoreValue || 0)));
         const durationMs = Math.max(0, Math.floor(Number(durationSeconds || 0) * 1000));
@@ -16570,7 +16595,8 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         }
         try {
           const loaded = await leaderboardApiRequest(LEADERBOARD_API_SUBMIT_PATH, { initData, ...run });
-          if (loaded?.caseState) applyServerCasePayload(loaded);
+          const fastSettlementApplied = applyFastRunSettlementPayload(loaded);
+          if (!fastSettlementApplied && loaded?.caseState) applyServerCasePayload(loaded);
           antiCheatWithTrustedChange(&quot;run-server-settlement&quot;, () =&gt; {
             state.pendingBoosterRuns = normalizePendingBoosterRuns(state.pendingBoosterRuns).filter((id) =&gt; id !== String(run.runId));
             saveProgress();
@@ -16580,23 +16606,33 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
             : null;
           if (seasonPassAward) {
             if (seasonPassAward.taskNotice) applySeasonTaskNotice(seasonPassAward.taskNotice);
-            window.setTimeout(() =&gt; void refreshSeasonTaskNotice(true), 180);
+            window.setTimeout(() =&gt; void refreshSeasonTaskNotice(true), loaded?.fastSettlement ? 1200 : 180);
             if (Number(seasonPassAward.xpAwarded || 0) &gt; 0) {
               showProfileToast(`Сезонный пропуск: +${formatter.format(Number(seasonPassAward.xpAwarded || 0))} XP`, &quot;success&quot;, 2600);
               try { window.parent.postMessage({ type: &quot;zefirok-season-pass-updated&quot;, xpAwarded: Number(seasonPassAward.xpAwarded || 0) }, &quot;*&quot;); } catch (error) {}
             }
             window.setTimeout(() =&gt; void loadSeasonPassProfileBonus(), 420);
           }
-          loaded._loadedAt = Date.now();
-          leaderboardCache.season = loaded;
-          leaderboardCache.all_time = null;
-          if (leaderboardMode === &quot;season&quot;) leaderboardData = loaded;
-          leaderboardLastRefreshAt = Date.now();
+          if (loaded?.fastSettlement) {
+            leaderboardCache.season = null;
+            leaderboardCache.all_time = null;
+            leaderboardLastRefreshAt = 0;
+            window.setTimeout(() =&gt; void prefetchLeaderboard(&quot;season&quot;, true), 350);
+            window.setTimeout(() =&gt; void prefetchLeaderboard(&quot;all_time&quot;, true), 700);
+          } else {
+            loaded._loadedAt = Date.now();
+            leaderboardCache.season = loaded;
+            leaderboardCache.all_time = null;
+            if (leaderboardMode === &quot;season&quot;) leaderboardData = loaded;
+            leaderboardLastRefreshAt = Date.now();
+            renderLeaderboardSummary();
+            void prefetchLeaderboard(&quot;all_time&quot;, true);
+          }
           if (loaded?.runSettlement?.accepted) savePendingLeaderboardRun(null);
-          renderLeaderboardSummary();
-          void prefetchLeaderboard(&quot;all_time&quot;, true);
           if (loaded?.runSettlement?.acceptedToRating) {
-            showProfileToast(&quot;Результат добавлен в рейтинг.&quot;, &quot;success&quot;, 2600);
+            showProfileToast(&quot;Результат сохранён и добавлен в рейтинг.&quot;, &quot;success&quot;, 2200);
+          } else if (loaded?.runSettlement?.accepted) {
+            showProfileToast(&quot;Результат сохранён.&quot;, &quot;success&quot;, 1800);
           }
           try { window.parent.postMessage({ type: &quot;zefirok-run-completed&quot;, accepted: Boolean(loaded?.runSettlement?.acceptedToRating), runId: String(run.runId || &quot;&quot;) }, &quot;*&quot;); } catch (error) {}
           return true;
