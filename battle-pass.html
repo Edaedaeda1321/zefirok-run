@@ -3132,35 +3132,6 @@ img[src$="/xp.webp"]{
     finally { serverLoading = false; }
   }
 
-  let hostAccountRefreshInFlight = false;
-  async function refreshSeasonPassFromHost() {
-    if (hostAccountRefreshInFlight) return;
-    hostAccountRefreshInFlight = true;
-    try {
-      // Если первичная загрузка состояния ещё идёт, ждём её завершения и
-      // выполняем именно новый запрос уже после settlement забега.
-      for (let attempt = 0; attempt < 40 && serverLoading; attempt += 1) {
-        await new Promise((resolve) => window.setTimeout(resolve, 100));
-      }
-      if (serverLoading) return;
-      await loadServerPass();
-      selectedLevel = currentLevel();
-      render();
-      updateSeasonBadges();
-    } catch (error) {
-      console.warn("Season pass host refresh failed", error);
-    } finally {
-      hostAccountRefreshInFlight = false;
-    }
-  }
-
-  window.addEventListener("message", (event) => {
-    if (event.source !== window.parent) return;
-    const message = event.data;
-    if (!message || typeof message !== "object" || message.type !== "zefirok-host-season-pass-refresh") return;
-    void refreshSeasonPassFromHost();
-  });
-
   function notifyAccountChanged() {
     try { window.parent?.postMessage?.({type:"zefirok-season-pass-account-updated"},"*"); } catch {}
   }
@@ -3752,7 +3723,14 @@ img[src$="/xp.webp"]{
     }
 
     const list = activeTasks();
-    const visible = list.filter(task=>activeTaskFilter==="all" || task.period===activeTaskFilter);
+    const visible = list
+      .filter(task=>activeTaskFilter==="all" || task.period===activeTaskFilter)
+      .map((task,index)=>({task,index}))
+      .sort((a,b)=>{
+        const rank = task=>taskClaimed(task) ? 2 : taskComplete(task) ? 1 : 0;
+        return rank(a.task)-rank(b.task) || a.index-b.index;
+      })
+      .map(entry=>entry.task);
     const readyTasks = claimableTasks();
     const readyXp = readyTasks.reduce((sum,task)=>sum+taskXpDisplay(task),0);
     el("taskList").innerHTML = visible.map(taskMarkup).join("");

@@ -876,8 +876,8 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
     const normalizedOfferTier = ["elite","elite_plus"].includes(String(offerTier || "")) ? String(offerTier) : "";
     const passOffer = normalizedOfferTier ? `&offer=${encodeURIComponent(normalizedOfferTier)}` : "";
     passFrame.src = initData
-      ? `/battle-pass.html?v=1.0.6-runsync1${passView}${passOffer}#tgInitData=${encodeURIComponent(initData)}`
-      : `/battle-pass.html?v=1.0.6-runsync1${passView}${passOffer}`;
+      ? `/battle-pass.html?v=1.0.6-runsync1-taskorder1${passView}${passOffer}#tgInitData=${encodeURIComponent(initData)}`
+      : `/battle-pass.html?v=1.0.6-runsync1-taskorder1${passView}${passOffer}`;
     layer.append(passFrame);
     passFrame.addEventListener("load", () => {
       const snapshot = syncTelegramViewport();
