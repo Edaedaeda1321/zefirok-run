@@ -526,7 +526,7 @@ const LEGAL_DOCUMENTS = Object.freeze({
 });
 const LEGAL_BUILTIN_HASHES = Object.freeze({"agreement":{"version":"2026-08-13.1","sha256Ru":"7b9dad94ff4319c98b5fd01ade558ed3e409db705a8417551f89eb0dc4792c46","sha256En":"3f93d567fefd8e936a7ac8f63a9a5ceefc6bd6ecfcdfaad2e3733cf6e34d02d0","sha256Bundle":"93f28cca0556b480ee44a73ef775187a397dfc61bd4efda1171526a84fa69e84"},"privacy":{"version":"2026-08-13.2","sha256Ru":"687bba9ab60ee35124a17806ba7904870b1a3e09d23610430d45b92cd4719433","sha256En":"e0531d156e2ad0210b16349094499f7560cfca6167d911306926ed8e6ff45cbd","sha256Bundle":"435dd20f418603b3329dd1ab17a5e5ee619eee5341f425a547114fd235d4eee3"},"consent":{"version":"2026-08-13.1","sha256Ru":"10bcaf97ef31fad736f5e4f987ffad94c30c964e759b72c9a49c97738ede48d7","sha256En":"64383734cc3469028242d0c90867ccc42c7605269b187a94056fc963460ddb41","sha256Bundle":"11ebecc6978dac4f887b2ed4316f12f9ebafd4c41d5eeafed331ee12ae2948e0"}});
 
-const WORKER_BUILD = "1.0.6 + offers preview fix + zefir asset fix";
+const WORKER_BUILD = "1.0.6 + offers preview fix + zefir asset fix + instant season task notifications";
 const V07944_RELEASE_CANDIDATE_AUDIT = Object.freeze({ reset: true, claims: true, purchases: true, xp: true, concurrency: true });
 
 // =============================================================
@@ -2395,7 +2395,7 @@ async function getGameStartupPackage(request, env) {
     // Sync completed tasks first so the lightweight claimable badge can count
     // the already-maintained notification rows instead of rebuilding all task metrics twice.
     let seasonPassTaskNotice = null;
-    try { seasonPassTaskNotice = await syncSeasonPassTaskCompletionNotifications(env, String(auth.user.id), { sendBot:true }); }
+    try { seasonPassTaskNotice = await syncSeasonPassTaskCompletionNotifications(env, String(auth.user.id), { sendBot:false }); }
     catch (error) { errors.seasonPassTaskNotice = startupSectionError(error); }
     let seasonPassBonus = { active:false, multiplier:1, claimableCount:0 };
     try { seasonPassBonus = await getSeasonPassProfileBonusForUser(env, String(auth.user.id)); }
@@ -5702,10 +5702,14 @@ async function openLevelCase(request, env, ctx = null) {
     const finalProfile = await ensureAuthoritativeProfileRow(env, telegramId, `case:${requestedLevel}:response`);
     const nextProfile = authoritativeProfileView(finalProfile);
     const inventory = await readFastCaseInventory(env, telegramId);
+    // Task completion is part of the case-opening event. Await it here so a
+    // client refresh cannot silently mark the new task as "read-only" before
+    // the realtime Telegram notification is emitted.
+    try { await syncSeasonPassTaskCompletionNotifications(env, telegramId, { sendBot:true }); }
+    catch (error) { console.error('level case season task notification failed', error); }
     const background = Promise.allSettled([
       recordCaseRewardsAnalytics(env, telegramId, rolled.rewards, "level_case", `level_${requestedLevel}`, now),
-      recordPlayerTimeline(env, telegramId, "case_open", `открыл ${LEVEL_CASE_CONFIG[caseType]?.title || caseType} за уровень ${requestedLevel}`, { caseType, level: requestedLevel, rewards: rolled.rewards }, `level_case_${requestedLevel}`, auth.user, now),
-      syncSeasonPassTaskCompletionNotifications(env, telegramId, { sendBot:true })
+      recordPlayerTimeline(env, telegramId, "case_open", `открыл ${LEVEL_CASE_CONFIG[caseType]?.title || caseType} за уровень ${requestedLevel}`, { caseType, level: requestedLevel, rewards: rolled.rewards }, `level_case_${requestedLevel}`, auth.user, now)
     ]);
     if (ctx?.waitUntil) ctx.waitUntil(background); else void background;
     return jsonResponse(buildFastCaseOpenPayload({
@@ -5914,10 +5918,11 @@ async function openGrantedCase(request, env, ctx = null) {
     const finalProfile = await ensureAuthoritativeProfileRow(env, telegramId, `gift-case:${caseType}:response`);
     const nextProfile = authoritativeProfileView(finalProfile);
     const inventory = await readFastCaseInventory(env, telegramId);
+    try { await syncSeasonPassTaskCompletionNotifications(env, telegramId, { sendBot:true }); }
+    catch (error) { console.error('granted case season task notification failed', error); }
     const background = Promise.allSettled([
       recordCaseRewardsAnalytics(env, telegramId, rolled.rewards, "granted_case", claimedId, now),
-      recordPlayerTimeline(env, telegramId, "case_open", `открыл ${LEVEL_CASE_CONFIG[caseType]?.title || caseType}`, { caseType, grantId: claimedId, rewards: rolled.rewards }, `grant_case_${claimedId}`, auth.user, now),
-      syncSeasonPassTaskCompletionNotifications(env, telegramId, { sendBot:true })
+      recordPlayerTimeline(env, telegramId, "case_open", `открыл ${LEVEL_CASE_CONFIG[caseType]?.title || caseType}`, { caseType, grantId: claimedId, rewards: rolled.rewards }, `grant_case_${claimedId}`, auth.user, now)
     ]);
     if (ctx?.waitUntil) ctx.waitUntil(background); else void background;
     return jsonResponse(buildFastCaseOpenPayload({
@@ -22288,6 +22293,16 @@ function seasonPassTaskNoticePublic(rows,season){
   return {seasonId:String(season?.id||''),seasonTitle:String(season?.title||'Сезонный пропуск'),tasks,count:tasks.length};
 }
 
+async function cancelQueuedSeasonPassTaskNotifications(env,telegramId,reason='season-task-stale'){
+  try{
+    const id=String(telegramId||'').trim();if(!id)return 0;
+    await ensureV77Schema(env);
+    const now=Math.floor(Date.now()/1000);
+    const result=await env.DB.prepare(`UPDATE player_notification_queue SET status='cancelled',last_error=?,updated_at=?,lease_token='',lease_until=0 WHERE telegram_id=? AND category='season_pass_task' AND status IN ('pending','failed')`).bind(String(reason||'season-task-stale').slice(0,120),now,id).run();
+    return Number(result.meta?.changes||0);
+  }catch(error){console.error('cancelQueuedSeasonPassTaskNotifications failed',error);return 0;}
+}
+
 async function syncSeasonPassTaskCompletionNotifications(env,telegramId,options={}){
   try{
     await ensureSeasonPassSchema(env);
@@ -22308,23 +22323,50 @@ async function syncSeasonPassTaskCompletionNotifications(env,telegramId,options=
     const allRows=(await env.DB.prepare(`SELECT task_id,period_key,task_title,xp_reward,completed_at,bot_notified_at,game_read_at FROM season_pass_task_notifications WHERE season_id=? AND telegram_id=? ORDER BY completed_at,task_id`).bind(season.id,id).all()).results||[];
     const readyKeys=new Set(ready.map(task=>`${String(task.id)}:${String(task.periodKey)}`));
     const relevant=allRows.filter(row=>readyKeys.has(`${String(row.task_id)}:${String(row.period_key)}`));
-    const pendingBot=relevant.filter(row=>Number(row.bot_notified_at||0)===0);
+    // Read/startup sync keeps the in-game notice accurate but must never create
+    // a catch-up Telegram push. Bot messages are emitted only by the actual
+    // completion event (run settlement or case opening).
+    if(options.sendBot===false&&relevant.length){
+      const silentRows=relevant.filter(row=>Number(row.bot_notified_at||0)===0);
+      if(silentRows.length){
+        const silentBinds=silentRows.flatMap(row=>[String(row.task_id),String(row.period_key)]);
+        const silentConditions=silentRows.map(()=>`(task_id=? AND period_key=?)`).join(' OR ');
+        await env.DB.prepare(`UPDATE season_pass_task_notifications SET bot_notified_at=? WHERE season_id=? AND telegram_id=? AND bot_notified_at=0 AND (${silentConditions})`).bind(now,season.id,id,...silentBinds).run();
+      }
+    }
+    const pendingBot=options.sendBot===false?[]:relevant.filter(row=>Number(row.bot_notified_at||0)===0);
     if(options.sendBot!==false&&pendingBot.length){
       const subscriber=await env.DB.prepare(`SELECT chat_id FROM bot_subscribers WHERE telegram_id=? AND active=1 LIMIT 1`).bind(id).first();
       if(subscriber?.chat_id){
-        const binds=pendingBot.flatMap(row=>[String(row.task_id),String(row.period_key)]);const conditions=pendingBot.map(()=>`(task_id=? AND period_key=?)`).join(' OR ');
+        const binds=pendingBot.flatMap(row=>[String(row.task_id),String(row.period_key)]);
+        const conditions=pendingBot.map(()=>`(task_id=? AND period_key=?)`).join(' OR ');
+        const aliasedConditions=pendingBot.map(()=>`(n.task_id=? AND n.period_key=?)`).join(' OR ');
         const botClaimMarker=-(now*1000+Math.floor(Math.random()*1000));
         const claim=await env.DB.prepare(`UPDATE season_pass_task_notifications SET bot_notified_at=? WHERE season_id=? AND telegram_id=? AND bot_notified_at=0 AND (${conditions})`).bind(botClaimMarker,season.id,id,...binds).run();
         if(Number(claim.meta?.changes||0)>0){
-          const claimedBot=(await env.DB.prepare(`SELECT task_id,period_key,task_title,xp_reward FROM season_pass_task_notifications WHERE season_id=? AND telegram_id=? AND bot_notified_at=? AND (${conditions}) ORDER BY completed_at,task_id`).bind(season.id,id,botClaimMarker,...binds).all()).results||[];
+          // Re-check claims after taking the delivery lease. A player can tap "Claim"
+          // while the completion notification is being prepared; in that case no
+          // Telegram message should be sent for the already collected XP.
+          const claimedBot=(await env.DB.prepare(`SELECT n.task_id,n.period_key,n.task_title,n.xp_reward FROM season_pass_task_notifications n WHERE n.season_id=? AND n.telegram_id=? AND n.bot_notified_at=? AND (${aliasedConditions}) AND NOT EXISTS(SELECT 1 FROM season_pass_task_claims c WHERE c.season_id=n.season_id AND c.telegram_id=n.telegram_id AND c.task_id=n.task_id AND c.period_key=n.period_key AND c.status='delivered') ORDER BY n.completed_at,n.task_id`).bind(season.id,id,botClaimMarker,...binds).all()).results||[];
           if(claimedBot.length){
             const list=claimedBot.slice(0,20).map(row=>`• <b>${escapeHtml(String(row.task_title||'Задание').slice(0,100))}</b> · +${Math.max(0,Number(row.xp_reward)||0).toLocaleString('ru-RU')} XP`).join('\n');
             try{
               await v77DeliverPlayerNotification(env,id,String(subscriber.chat_id),'season_pass_task',`✅ <b>${claimedBot.length===1?'Задание сезонного пропуска выполнено':'Задания сезонного пропуска выполнены'}</b>\n\n${list}\n\nXP за задания уже можно забрать в сезонном пропуске.`,{inline_keyboard:[[{text:'🎁 Забрать',web_app:{url:configuredSeasonPassTasksUrl(env)}}],[{text:'⬅️ Назад в меню',callback_data:'menu:home'}]]});
               await env.DB.prepare(`UPDATE season_pass_task_notifications SET bot_notified_at=? WHERE season_id=? AND telegram_id=? AND bot_notified_at=?`).bind(now,season.id,id,botClaimMarker).run();
             }catch(error){await env.DB.prepare(`UPDATE season_pass_task_notifications SET bot_notified_at=0 WHERE season_id=? AND telegram_id=? AND bot_notified_at=?`).bind(season.id,id,botClaimMarker).run();console.error('season pass task bot notification failed',error);}
+          }else{
+            // All leased tasks were claimed before the Telegram send. Mark the
+            // lease finished without sending anything so it can never reappear later.
+            await env.DB.prepare(`UPDATE season_pass_task_notifications SET bot_notified_at=? WHERE season_id=? AND telegram_id=? AND bot_notified_at=?`).bind(now,season.id,id,botClaimMarker).run();
           }
         }
+      }else{
+        // Realtime-only semantics: if the bot has no active chat at the moment
+        // of completion, do not turn this into a delayed push when the user
+        // subscribes again later. The in-game claim state remains available.
+        const binds=pendingBot.flatMap(row=>[String(row.task_id),String(row.period_key)]);
+        const conditions=pendingBot.map(()=>`(task_id=? AND period_key=?)`).join(' OR ');
+        await env.DB.prepare(`UPDATE season_pass_task_notifications SET bot_notified_at=? WHERE season_id=? AND telegram_id=? AND bot_notified_at=0 AND (${conditions})`).bind(now,season.id,id,...binds).run();
       }
     }
     return seasonPassTaskNoticePublic(relevant.filter(row=>Number(row.game_read_at||0)===0),season);
@@ -22337,7 +22379,7 @@ async function getSeasonPassTaskNotices(request,env){
     const body=await readJson(request);const initData=String(body.initData||body.init_data||'');
     if(!initData)throw new ApiError(401,'Откройте игру через Telegram.');
     const auth=await validateTelegramInitData(initData,env);const telegramId=String(auth.user.id);
-    const notice=await syncSeasonPassTaskCompletionNotifications(env,telegramId,{sendBot:true});
+    const notice=await syncSeasonPassTaskCompletionNotifications(env,telegramId,{sendBot:false});
     return jsonResponse({ok:true,notice});
   }catch(error){
     if(error instanceof ApiError)return jsonResponse({ok:false,error:error.message},error.status);
@@ -22705,6 +22747,10 @@ async function openSeasonPassSeasonalCase(request,env,executionCtx=null){
     const batch=await env.DB.batch(statements);const finalized=Number(batch?.[batch.length-1]?.meta?.changes||0)>0;if(!finalized)throw new ApiError(409,'Состояние кейса изменилось. Повторите открытие.');
     const inventory=await seasonPassSeasonalCaseInventory(env,ctx.telegramId);
     seasonPassBackgroundWork(executionCtx,recordPlayerTimeline(env,ctx.telegramId,'seasonal_case_open',`открыл сезонный кейс «${String(definition.title||caseId)}»`,{caseId,grantId,rewards},`seasonal_case_${grantId}`,ctx.auth.user,now),'seasonal case timeline failed');
+    // Seasonal cases participate in cases_opened as well; notify before returning
+    // so the completion event cannot be overtaken by a read-only client refresh.
+    try{await syncSeasonPassTaskCompletionNotifications(env,ctx.telegramId,{season:ctx.season,sendBot:true});}
+    catch(error){console.error('seasonal case task notification failed',error);}
     return jsonResponse({ok:true,case:{caseId,grantId,title:String(snapshot?.title||definition.title||'Сезонный кейс'),imageUrl:String(snapshot?.openImageUrl||snapshot?.imageUrl||definition.open_image_url||definition.closed_image_url||''),rewards},seasonalCases:inventory});
   }catch(error){if(grantId&&token){try{await env.DB.prepare(`UPDATE season_pass_case_grants SET status='pending',opening_started_at=0,opening_token='' WHERE grant_id=? AND status='opening' AND opening_token=?`).bind(grantId,token).run();}catch{}}if(error instanceof ApiError)return jsonResponse({ok:false,error:error.message},error.status);console.error('openSeasonPassSeasonalCase failed',error);return jsonResponse({ok:false,error:'Не удалось открыть сезонный кейс.'},500);}
 }
@@ -23126,7 +23172,8 @@ async function grantSeasonPassTaskXp(env,ctx,task,executionCtx=null){
     env.DB.prepare(`INSERT OR IGNORE INTO season_pass_task_claims(season_id,telegram_id,task_id,period_key,status,xp_awarded,claimed_at) VALUES(?,?,?,?,'pending',?,?)`).bind(...key,taskXp,now),
     env.DB.prepare(`UPDATE season_pass_task_claims SET status='pending',xp_awarded=?,claimed_at=?,error_text='' WHERE season_id=? AND telegram_id=? AND task_id=? AND period_key=? AND status='failed'`).bind(taskXp,now,...key),
     env.DB.prepare(`UPDATE season_pass_players SET xp=xp+?,revision=revision+1,updated_at=? WHERE season_id=? AND telegram_id=? AND EXISTS(SELECT 1 FROM season_pass_task_claims WHERE season_id=? AND telegram_id=? AND task_id=? AND period_key=? AND status='pending')`).bind(taskXp,now,ctx.season.id,ctx.telegramId,...key),
-    env.DB.prepare(`UPDATE season_pass_task_claims SET status='delivered',delivered_at=?,error_text='' WHERE season_id=? AND telegram_id=? AND task_id=? AND period_key=? AND status='pending'`).bind(now,...key)
+    env.DB.prepare(`UPDATE season_pass_task_claims SET status='delivered',delivered_at=?,error_text='' WHERE season_id=? AND telegram_id=? AND task_id=? AND period_key=? AND status='pending'`).bind(now,...key),
+    env.DB.prepare(`UPDATE season_pass_task_notifications SET bot_notified_at=CASE WHEN bot_notified_at<=0 THEN ? ELSE bot_notified_at END WHERE season_id=? AND telegram_id=? AND task_id=? AND period_key=?`).bind(now,...key)
   ]);
   const awarded=Number(batchResult?.[2]?.meta?.changes||0)>0;
   if(awarded)seasonPassTaskTimelineLater(executionCtx,recordPlayerTimeline(env,ctx.telegramId,'season_pass_task',`получил ${taskXp.toLocaleString('ru-RU')} XP за задание «${String(task.title||'Задание')}»`,{seasonId:ctx.season.id,taskId:task.id,periodKey:task.periodKey,xp:taskXp,multiplier},`season_pass_task_${ctx.season.id}_${task.id}_${task.periodKey}`,ctx.auth.user,now));
@@ -23150,6 +23197,9 @@ async function claimSeasonPassTask(request,env,executionCtx=null){
     const task=await seasonPassTaskForClaim(env,ctx.season,ctx.telegramId,ctx.player.premium_tier,taskId);if(!task)throw new ApiError(404,'Задание не найдено.');
     if(task.locked)throw new ApiError(403,'Для этого задания нужен платный тариф.');if(!task.complete)throw new ApiError(409,'Задание ещё не выполнено.');
     const result=await grantSeasonPassTaskXp(env,ctx,task,executionCtx);
+    // Season-task pushes are realtime now. Any legacy delayed message for this
+    // player is stale as soon as XP has been collected and must never arrive later.
+    await cancelQueuedSeasonPassTaskNotifications(env,ctx.telegramId,'season-task-claimed');
     const fastState=await seasonPassTaskFastMutationState(env,ctx.season,ctx.telegramId);
     return jsonResponse({
       ok:true,
@@ -23169,7 +23219,7 @@ async function claimAllSeasonPassTasks(request,env,executionCtx=null){
     const tasksPayload=await buildSeasonPassTasksPayload(env,ctx.season,ctx.telegramId,ctx.player.premium_tier);const ready=tasksPayload.tasks.filter(task=>task.complete&&!task.claimed&&!task.locked);const now=Math.floor(Date.now()/1000);
     const taskPremiumMultiplier=await seasonPassHasXpX2(env,ctx.season.id,ctx.telegramId,ctx.player)?2:seasonPassTaskXpMultiplierForPlayer(ctx.season,ctx.player);
     const taskXpMultiplier=seasonPassEarnedXpMultiplierView(ctx.season,ctx.player,taskPremiumMultiplier,now*1000).multiplier;
-    if(!ready.length){const fastState=await seasonPassTaskFastMutationState(env,ctx.season,ctx.telegramId);return jsonResponse({ok:true,season:{id:ctx.season.id,status:ctx.season.status,claimWindowOpen:ctx.season.claimWindowOpen,progression:seasonPassProgressionView(),capabilities:seasonPassCapabilities(ctx.season)},player:fastState.player,overflow:fastState.overflow,catchUp:fastState.catchUp,...(fastState.finale?{finale:fastState.finale}:{}),receivedTasks:[],taskUpdates:[],taskClaimableDelta:0,totalXp:0,stale:true});}
+    if(!ready.length){await cancelQueuedSeasonPassTaskNotifications(env,ctx.telegramId,'season-task-already-claimed');const fastState=await seasonPassTaskFastMutationState(env,ctx.season,ctx.telegramId);return jsonResponse({ok:true,season:{id:ctx.season.id,status:ctx.season.status,claimWindowOpen:ctx.season.claimWindowOpen,progression:seasonPassProgressionView(),capabilities:seasonPassCapabilities(ctx.season)},player:fastState.player,overflow:fastState.overflow,catchUp:fastState.catchUp,...(fastState.finale?{finale:fastState.finale}:{}),receivedTasks:[],taskUpdates:[],taskClaimableDelta:0,totalXp:0,stale:true});}
     const predicates=ready.map(()=>`(task_id=? AND period_key=?)`).join(' OR ');const pairBinds=ready.flatMap(task=>[String(task.id),String(task.periodKey)]);
     const valueSql=ready.map(()=>`(?,?,?,?,?,'pending',?)`).join(',');
     const valueBinds=ready.flatMap(task=>[ctx.season.id,ctx.telegramId,String(task.id),String(task.periodKey),Math.max(1,Number(task.xp)||1)*taskXpMultiplier,now]);
@@ -23178,10 +23228,12 @@ async function claimAllSeasonPassTasks(request,env,executionCtx=null){
       env.DB.prepare(`UPDATE season_pass_task_claims SET status='pending',claimed_at=?,error_text='' WHERE season_id=? AND telegram_id=? AND status='failed' AND (${predicates})`).bind(now,ctx.season.id,ctx.telegramId,...pairBinds),
       env.DB.prepare(`SELECT COALESCE(SUM(xp_awarded),0) AS total FROM season_pass_task_claims WHERE season_id=? AND telegram_id=? AND status='pending' AND (${predicates})`).bind(ctx.season.id,ctx.telegramId,...pairBinds),
       env.DB.prepare(`UPDATE season_pass_players SET xp=xp+COALESCE((SELECT SUM(xp_awarded) FROM season_pass_task_claims WHERE season_id=? AND telegram_id=? AND status='pending' AND (${predicates})),0),revision=revision+1,updated_at=? WHERE season_id=? AND telegram_id=? AND EXISTS(SELECT 1 FROM season_pass_task_claims WHERE season_id=? AND telegram_id=? AND status='pending' AND (${predicates}))`).bind(ctx.season.id,ctx.telegramId,...pairBinds,now,ctx.season.id,ctx.telegramId,ctx.season.id,ctx.telegramId,...pairBinds),
-      env.DB.prepare(`UPDATE season_pass_task_claims SET status='delivered',delivered_at=?,error_text='' WHERE season_id=? AND telegram_id=? AND status='pending' AND (${predicates})`).bind(now,ctx.season.id,ctx.telegramId,...pairBinds)
+      env.DB.prepare(`UPDATE season_pass_task_claims SET status='delivered',delivered_at=?,error_text='' WHERE season_id=? AND telegram_id=? AND status='pending' AND (${predicates})`).bind(now,ctx.season.id,ctx.telegramId,...pairBinds),
+      env.DB.prepare(`UPDATE season_pass_task_notifications SET bot_notified_at=CASE WHEN bot_notified_at<=0 THEN ? ELSE bot_notified_at END WHERE season_id=? AND telegram_id=? AND (${predicates})`).bind(now,ctx.season.id,ctx.telegramId,...pairBinds)
     ]);
     const awardedXp=Math.max(0,Number(batch?.[2]?.results?.[0]?.total||batch?.[2]?.results?.[0]?.TOTAL||0));
     const awarded=Number(batch?.[3]?.meta?.changes||0)>0&&awardedXp>0;
+    await cancelQueuedSeasonPassTaskNotifications(env,ctx.telegramId,'season-task-claimed-all');
     const receivedTasks=awarded?ready.map(task=>({id:task.id,periodKey:task.periodKey,title:task.title,xp:Math.max(1,Number(task.xp)||1)*taskXpMultiplier})):[];
     if(awarded)seasonPassTaskTimelineLater(executionCtx,recordPlayerTimeline(env,ctx.telegramId,'season_pass_task_bulk',`получил ${awardedXp.toLocaleString('ru-RU')} XP за задания`,{seasonId:ctx.season.id,count:receivedTasks.length,xp:awardedXp},`season_pass_tasks_bulk_${ctx.season.id}_${now}`,ctx.auth.user,now));
     const fastState=await seasonPassTaskFastMutationState(env,ctx.season,ctx.telegramId);
@@ -26518,8 +26570,20 @@ async function v77NotificationDecision(env,telegramId,now=Math.floor(Date.now()/
 }
 
 async function v77DeliverPlayerNotification(env,telegramId,chatId,category,messageHtml,replyMarkup={}){
-  const now=Math.floor(Date.now()/1000);const decision=await v77NotificationDecision(env,telegramId,now);if(decision.allowed){await sendTelegramMessage(env,chatId,messageHtml,replyMarkup);await env.DB.prepare(`INSERT INTO player_notification_log(telegram_id,category,sent_at) VALUES(?,?,?)`).bind(String(telegramId),String(category),now).run();return {status:"sent"};}
-  const result=await env.DB.prepare(`INSERT INTO player_notification_queue(telegram_id,chat_id,category,message_html,reply_markup_json,status,attempts,last_error,available_at,created_at,updated_at) VALUES(?,?,?,?,?,'pending',0,'',?,?,?)`).bind(String(telegramId),String(chatId),String(category),String(messageHtml),JSON.stringify(replyMarkup||{}),now+Math.max(60,decision.delay),now,now).run();return {status:"queued",id:Number(result.meta?.last_row_id||0),reason:decision.reason};
+  const now=Math.floor(Date.now()/1000);
+  const normalizedCategory=String(category||'');
+  // Completed season-pass tasks are actionable state, not a marketing push.
+  // Delaying them behind quiet hours / daily caps makes the "Claim" button stale,
+  // so this category is delivered immediately and never enters the delayed queue.
+  if(normalizedCategory==='season_pass_task'){
+    await ensureV77Schema(env);
+    await sendTelegramMessage(env,chatId,messageHtml,replyMarkup);
+    try{await env.DB.prepare(`INSERT INTO player_notification_log(telegram_id,category,sent_at) VALUES(?,?,?)`).bind(String(telegramId),normalizedCategory,now).run();}
+    catch(error){console.error('season task notification log failed',error);}
+    return {status:'sent',immediate:true};
+  }
+  const decision=await v77NotificationDecision(env,telegramId,now);if(decision.allowed){await sendTelegramMessage(env,chatId,messageHtml,replyMarkup);await env.DB.prepare(`INSERT INTO player_notification_log(telegram_id,category,sent_at) VALUES(?,?,?)`).bind(String(telegramId),normalizedCategory,now).run();return {status:"sent"};}
+  const result=await env.DB.prepare(`INSERT INTO player_notification_queue(telegram_id,chat_id,category,message_html,reply_markup_json,status,attempts,last_error,available_at,created_at,updated_at) VALUES(?,?,?,?,?,'pending',0,'',?,?,?)`).bind(String(telegramId),String(chatId),normalizedCategory,String(messageHtml),JSON.stringify(replyMarkup||{}),now+Math.max(60,decision.delay),now,now).run();return {status:"queued",id:Number(result.meta?.last_row_id||0),reason:decision.reason};
 }
 
 async function processV77NotificationQueue(env,limit=24){
@@ -26534,6 +26598,13 @@ async function processV77NotificationQueue(env,limit=24){
     const claim=await env.DB.prepare(`UPDATE player_notification_queue SET lease_token=?,lease_until=?,updated_at=? WHERE id=? AND status IN ('pending','failed') AND attempts<5 AND available_at<=? AND (lease_until=0 OR lease_until<?)`).bind(token,claimAt+SERVER_NOTIFICATION_LEASE_SECONDS,claimAt,row.id,claimAt,claimAt).run();
     if(Number(claim.meta?.changes||0)<1){skipped+=1;continue;}
     try{
+      // Old builds could postpone season-task completion pushes until morning.
+      // Realtime delivery no longer uses this queue, so every legacy queued row
+      // of this category is stale and must be cancelled instead of delivered.
+      if(String(row.category||'')==='season_pass_task'){
+        await env.DB.prepare(`UPDATE player_notification_queue SET status='cancelled',last_error='realtime-season-task-superseded',updated_at=?,lease_token='',lease_until=0 WHERE id=? AND lease_token=?`).bind(claimAt,row.id,token).run();
+        skipped+=1;continue;
+      }
       const decision=await v77NotificationDecision(env,row.telegram_id,claimAt);
       if(!decision.allowed){
         await env.DB.prepare(`UPDATE player_notification_queue SET available_at=?,updated_at=?,lease_token='',lease_until=0 WHERE id=? AND lease_token=?`).bind(claimAt+Math.max(60,decision.delay),claimAt,row.id,token).run();
