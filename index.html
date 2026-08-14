@@ -9645,9 +9645,9 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       let purchaseReturnFocus = null;
       let purchaseLimitTimer = 0;
       const assetSources = JSON.parse(root.querySelector(&quot;[data-zefirok-assets]&quot;).textContent);
-      // Для физического товара «Фирменный зефир» используем утверждённое изображение
-      // самого зефира, а не иллюстрацию кремового ассорти. Ресурсный значок остаётся iconTreatPanel.
-      assetSources.shopZefirProduct = &quot;/assets/shop/dessert_marshmallow_256x256.png?v=1.0.6&quot;;
+      // Физический товар «Фирменный зефир» во всех экранах использует тот же арт,
+      // что и основная карточка магазина: параметры, подтверждение, успех и склад.
+      assetSources.shopZefirProduct = assetSources.shopMarshmallowAssortment || &quot;/assets/optimized/v0.79.5/shopMarshmallowAssortment.png?v=0.79.5&quot;;
       const ASSET_BUILD_VERSION = &quot;0.79.5&quot;;
       const assetFallbackSources = Object.freeze({&quot;skinDefaultPortrait&quot;:&quot;/assets/optimized/v0.79.5/skinDefaultPortrait.png?v=0.79.5&quot;,&quot;navGameButtonSelected&quot;:&quot;/assets/optimized/v0.79.5/navGameButtonSelected.png?v=0.79.5&quot;,&quot;navGameButtonUnselected&quot;:&quot;/assets/optimized/v0.79.5/navGameButtonUnselected.png?v=0.79.5&quot;,&quot;iconScore&quot;:&quot;/assets/optimized/v0.79.5/iconScore.png?v=0.79.5&quot;,&quot;cafeBackground&quot;:&quot;/assets/optimized/v0.79.5/cafeBackground.png?v=0.79.5&quot;,&quot;skinDefaultAvatar&quot;:&quot;/assets/optimized/v0.79.5/skinDefaultAvatar.png?v=0.79.5&quot;,&quot;shopMarshmallowAssortment&quot;:&quot;/assets/optimized/v0.79.5/shopMarshmallowAssortment.png?v=0.79.5&quot;,&quot;shopMascot&quot;:&quot;/assets/optimized/v0.79.5/shopMascot.png?v=0.79.5&quot;,&quot;pillowObstacle&quot;:&quot;/assets/optimized/v0.79.5/pillowObstacle.png?v=0.79.5&quot;,&quot;coffeePickup&quot;:&quot;/assets/optimized/v0.79.5/coffeePickup.png?v=0.79.5&quot;,&quot;vaseObstacle&quot;:&quot;/assets/optimized/v0.79.5/vaseObstacle.png?v=0.79.5&quot;,&quot;iconCoffee&quot;:&quot;/assets/optimized/v0.79.5/iconCoffee.png?v=0.79.5&quot;,&quot;iconRecord&quot;:&quot;/assets/optimized/v0.79.5/iconRecord.png?v=0.79.5&quot;});
       const assetFallbackByUrl = new Map();
