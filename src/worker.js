@@ -27452,7 +27452,7 @@ function ownerPanelRewardAsset(kind, itemId = "") {
   const normalized = String(kind || "");
   if (normalized === "case") return ownerPanelCaseAsset(normalizeCaseType(itemId) || "small");
   if (normalized === "points") return "/assets/optimized/v0.79.5/iconScore.png";
-  if (normalized === "treats" || normalized === "zefir") return "/assets/shop/dessert_marshmallow_256x256.png?v=1.0.6";
+  if (normalized === "treats" || normalized === "zefir") return "/assets/optimized/v0.79.5/shopMarshmallowAssortment.png?v=0.79.5";
   if (normalized === "coffee") return "/assets/optimized/v0.79.5/iconCoffee.png";
   if (SEASON_PASS_COSMETIC_KINDS.includes(normalized)) return seasonPassCosmeticImage(normalized,itemId);
   const encodedCosmetic=seasonPassCosmeticRewardDefinition({item_id:itemId});
@@ -30180,22 +30180,34 @@ async function seasonPassReadinessReport(env, seasonIdValue, options={}){
     addAsset(teaserRow.image_url,'Письмо 50 уровня',false);
   }else add('letter','Письмо 50 уровня','warning','Письмо выключено. Это допустимо, если тизер следующего сезона пока не готов.');
 
-  const itemCountByCase=new Map();for(const item of caseItems){if(Number(item.enabled||0)!==1)continue;const id=String(item.case_id),count=itemCountByCase.get(id)||0;itemCountByCase.set(id,count+1);}
+  const itemCountByCase=new Map();for(const item of caseItems){if(Number(item.enabled||0)!==1||Number(item.weight||0)<=0)continue;const id=String(item.case_id),count=itemCountByCase.get(id)||0;itemCountByCase.set(id,count+1);}
   const caseMap=new Map(caseDefs.map(def=>[String(def.case_id),def]));
   for(const ref of storyRewardRefs)seasonalCaseRefs.add(ref);
   const selectedCases=caseDefs.filter(def=>String(def.season_id)===seasonId);
   const enabledSelectedCases=selectedCases.filter(def=>Number(def.enabled||0)===1);
-  const brokenCases=[];
-  for(const caseId of seasonalCaseRefs){const def=caseMap.get(caseId);if(!def||Number(def.enabled||0)!==1||Number(itemCountByCase.get(caseId)||0)<=0||!String(def.closed_image_url||'').trim()||!String(def.open_image_url||'').trim()||Number(def.release_at||0)>endsAt)brokenCases.push(caseId);}
+  const caseIssues=new Map(),openImageFallbackCases=new Set();
+  const inspectSeasonalCase=(caseId,def,{mustBeEnabled=false}={})=>{
+    const id=String(caseId||'').trim();if(!id)return;const issues=[];
+    if(!def){issues.push('кейс не найден');caseIssues.set(id,issues);return;}
+    if(mustBeEnabled&&Number(def.enabled||0)!==1)issues.push('кейс выключен');
+    if(Number(itemCountByCase.get(id)||0)<=0)issues.push('нет включённых наград с положительным весом');
+    if(!String(def.closed_image_url||'').trim())issues.push('не задана картинка закрытого кейса');
+    if(!String(def.open_image_url||'').trim()&&String(def.closed_image_url||'').trim())openImageFallbackCases.add(id);
+    if(Number(def.release_at||0)>endsAt)issues.push('дата выпуска позже окончания сезона');
+    if(issues.length)caseIssues.set(id,issues);
+  };
+  for(const caseId of seasonalCaseRefs)inspectSeasonalCase(caseId,caseMap.get(caseId),{mustBeEnabled:true});
   for(const def of enabledSelectedCases){
-    if(Number(itemCountByCase.get(String(def.case_id))||0)<=0||!String(def.closed_image_url||'').trim()||!String(def.open_image_url||'').trim()||Number(def.release_at||0)>endsAt)brokenCases.push(String(def.case_id));
+    inspectSeasonalCase(String(def.case_id),def);
     addAsset(def.closed_image_url,`Сезонный кейс: ${String(def.title||def.case_id)} · закрытый`,true);
     addAsset(def.open_image_url,`Сезонный кейс: ${String(def.title||def.case_id)} · открытый`,true);
   }
-  for(const caseId of seasonalCaseRefs){const def=caseMap.get(caseId);if(def&&!enabledSelectedCases.includes(def)){addAsset(def.closed_image_url,`Кейс награды: ${String(def.title||def.case_id)}`,true);addAsset(def.open_image_url,`Кейс награды: ${String(def.title||def.case_id)}`,true);}}
-  if(brokenCases.length)add('seasonal_case','Сезонный кейс','error',`Используемые/включённые кейсы не готовы: ${[...new Set(brokenCases)].join(', ')}.`,true,{caseIds:[...new Set(brokenCases)]});
+  for(const caseId of seasonalCaseRefs){const def=caseMap.get(caseId);if(def&&!enabledSelectedCases.includes(def)){addAsset(def.closed_image_url,`Кейс награды: ${String(def.title||def.case_id)}`,true);addAsset(def.open_image_url,`Кейс награды: ${String(def.title||def.case_id)} · открытый`,true);}}
+  const brokenCases=[...caseIssues.keys()];
+  if(brokenCases.length){const detail=brokenCases.slice(0,4).map(id=>`${id}: ${(caseIssues.get(id)||[]).join(', ')}`).join('; ');add('seasonal_case','Сезонный кейс','error',`Кейс не готов: ${detail}${brokenCases.length>4?'…':''}.`,true,{caseIds:brokenCases,issues:Object.fromEntries(caseIssues)});}
   else if(!selectedCases.length)add('seasonal_case','Сезонный кейс','warning','Для сезона кейс не создан. Это допустимо, если он не используется в наградах.');
   else if(!enabledSelectedCases.length)add('seasonal_case','Сезонный кейс','warning',`Есть ${selectedCases.length} кейс(а), но все выключены.`);
+  else if(openImageFallbackCases.size)add('seasonal_case','Сезонный кейс','pass',`Включено ${enabledSelectedCases.length}; предметов: ${enabledSelectedCases.reduce((sum,def)=>sum+Number(itemCountByCase.get(String(def.case_id))||0),0)}. Для ${openImageFallbackCases.size} кейса(ов) открытая картинка не задана — игра безопасно использует закрытый арт.`);
   else add('seasonal_case','Сезонный кейс','pass',`Включено ${enabledSelectedCases.length}; предметов: ${enabledSelectedCases.reduce((sum,def)=>sum+Number(itemCountByCase.get(String(def.case_id))||0),0)}.`);
 
   const prices=season.prices||{};const eliteSum=Object.values(prices.elite||{}).reduce((s,v)=>s+Math.max(0,Number(v)||0),0),plusSum=Object.values(prices.elite_plus||{}).reduce((s,v)=>s+Math.max(0,Number(v)||0),0);
@@ -31067,7 +31079,7 @@ async function ownerPanelTogglePromocode(env, ctx) {
 function ownerPanelShopProductAsset(productId) {
   const id=String(productId||"");
   if(id.startsWith("case-"))return ownerPanelCaseAsset(id.slice(5));
-  if(id==="zefir")return "/assets/shop/dessert_marshmallow_256x256.png?v=1.0.6";
+  if(id==="zefir")return "/assets/optimized/v0.79.5/shopMarshmallowAssortment.png?v=0.79.5";
   if(id==="americano")return "/assets/optimized/v0.79.5/shopAmericano.webp?v=1.0.0";
   if(id==="cappuccino")return "/assets/optimized/v0.79.5/shopCappuccino.webp?v=1.0.0";
   return "/assets/optimized/v0.79.5/shopMascot.webp?v=0.79.5";
