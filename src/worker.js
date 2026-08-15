@@ -451,6 +451,118 @@ const SUPPORT_TICKETS_SCHEMA_SQL = `CREATE TABLE IF NOT EXISTS support_tickets (
   closed_at INTEGER NOT NULL DEFAULT 0
 )`;
 
+const SUPPORT_TICKET_META_SCHEMA_SQL = `CREATE TABLE IF NOT EXISTS support_ticket_meta (
+  ticket_id INTEGER PRIMARY KEY,
+  source TEXT NOT NULL DEFAULT 'staff' CHECK(source IN ('staff','player')),
+  subject TEXT NOT NULL DEFAULT '',
+  request_id TEXT UNIQUE,
+  client_json TEXT NOT NULL DEFAULT '{}',
+  player_last_read_at INTEGER NOT NULL DEFAULT 0,
+  staff_last_read_at INTEGER NOT NULL DEFAULT 0,
+  last_player_message_at INTEGER NOT NULL DEFAULT 0,
+  last_staff_message_at INTEGER NOT NULL DEFAULT 0,
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL
+)`;
+
+const SUPPORT_MESSAGES_SCHEMA_SQL = `CREATE TABLE IF NOT EXISTS support_messages (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  ticket_id INTEGER NOT NULL,
+  author_kind TEXT NOT NULL CHECK(author_kind IN ('player','staff','system')),
+  author_telegram_id TEXT NOT NULL DEFAULT '',
+  author_name TEXT NOT NULL DEFAULT '',
+  message_text TEXT NOT NULL DEFAULT '',
+  request_id TEXT,
+  client_json TEXT NOT NULL DEFAULT '{}',
+  created_at INTEGER NOT NULL,
+  telegram_delivered_at INTEGER NOT NULL DEFAULT 0,
+  telegram_error TEXT NOT NULL DEFAULT '',
+  UNIQUE(ticket_id, request_id)
+)`;
+
+const SUPPORT_ATTACHMENTS_SCHEMA_SQL = `CREATE TABLE IF NOT EXISTS support_attachments (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  ticket_id INTEGER NOT NULL,
+  message_id INTEGER NOT NULL DEFAULT 0,
+  uploader_kind TEXT NOT NULL DEFAULT 'player' CHECK(uploader_kind IN ('player','staff')),
+  mime_type TEXT NOT NULL DEFAULT '',
+  file_name TEXT NOT NULL DEFAULT '',
+  size_bytes INTEGER NOT NULL DEFAULT 0 CHECK(size_bytes >= 0),
+  telegram_file_id TEXT NOT NULL DEFAULT '',
+  telegram_file_unique_id TEXT NOT NULL DEFAULT '',
+  telegram_message_id INTEGER NOT NULL DEFAULT 0,
+  status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','uploaded','failed')),
+  error_text TEXT NOT NULL DEFAULT '',
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL
+)`;
+
+const SUPPORT_TICKET_CHANNELS_SCHEMA_SQL = `CREATE TABLE IF NOT EXISTS support_ticket_channels (
+  ticket_id INTEGER PRIMARY KEY,
+  channel TEXT NOT NULL DEFAULT 'game' CHECK(channel IN ('game','bot','staff')),
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL
+)`;
+
+const BOT_PLAYER_SUPPORT_WORKFLOWS_SCHEMA_SQL = `CREATE TABLE IF NOT EXISTS bot_player_support_workflows (
+  telegram_id TEXT PRIMARY KEY,
+  chat_id TEXT NOT NULL,
+  step TEXT NOT NULL,
+  data_json TEXT NOT NULL DEFAULT '{}',
+  expires_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL
+)`;
+
+
+const SUPPORT_TICKET_OPERATIONS_SCHEMA_SQL = `CREATE TABLE IF NOT EXISTS support_ticket_operations (
+  ticket_id INTEGER PRIMARY KEY,
+  priority TEXT NOT NULL DEFAULT 'normal' CHECK(priority IN ('normal','important','critical')),
+  priority_source TEXT NOT NULL DEFAULT 'auto' CHECK(priority_source IN ('auto','manual')),
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL,
+  updated_by TEXT NOT NULL DEFAULT ''
+)`;
+
+const SUPPORT_TICKET_TAGS_SCHEMA_SQL = `CREATE TABLE IF NOT EXISTS support_ticket_tags (
+  ticket_id INTEGER NOT NULL,
+  tag TEXT NOT NULL,
+  created_at INTEGER NOT NULL,
+  created_by TEXT NOT NULL DEFAULT '',
+  PRIMARY KEY(ticket_id, tag)
+)`;
+
+const SUPPORT_INTERNAL_NOTES_SCHEMA_SQL = `CREATE TABLE IF NOT EXISTS support_internal_notes (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  ticket_id INTEGER NOT NULL,
+  note_text TEXT NOT NULL,
+  created_by TEXT NOT NULL DEFAULT '',
+  created_by_name TEXT NOT NULL DEFAULT '',
+  created_at INTEGER NOT NULL
+)`;
+
+const SUPPORT_REPLY_TEMPLATES_SCHEMA_SQL = `CREATE TABLE IF NOT EXISTS support_reply_templates (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  template_key TEXT NOT NULL UNIQUE,
+  title TEXT NOT NULL,
+  body TEXT NOT NULL,
+  active INTEGER NOT NULL DEFAULT 1 CHECK(active IN (0,1)),
+  sort_order INTEGER NOT NULL DEFAULT 100,
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL,
+  updated_by TEXT NOT NULL DEFAULT ''
+)`;
+
+const SUPPORT_TICKET_FEEDBACK_SCHEMA_SQL = `CREATE TABLE IF NOT EXISTS support_ticket_feedback (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  ticket_id INTEGER NOT NULL,
+  close_token TEXT NOT NULL,
+  rating TEXT NOT NULL CHECK(rating IN ('up','down')),
+  source TEXT NOT NULL DEFAULT 'bot' CHECK(source IN ('bot','game')),
+  player_telegram_id TEXT NOT NULL DEFAULT '',
+  created_at INTEGER NOT NULL,
+  UNIQUE(ticket_id, close_token)
+)`;
+
 const PLAYER_ADMIN_CONTROLS_SCHEMA_SQL = `CREATE TABLE IF NOT EXISTS player_admin_controls (
   telegram_id TEXT PRIMARY KEY,
   custom_name TEXT NOT NULL DEFAULT '',
@@ -526,7 +638,7 @@ const LEGAL_DOCUMENTS = Object.freeze({
 });
 const LEGAL_BUILTIN_HASHES = Object.freeze({"agreement":{"version":"2026-08-13.1","sha256Ru":"7b9dad94ff4319c98b5fd01ade558ed3e409db705a8417551f89eb0dc4792c46","sha256En":"3f93d567fefd8e936a7ac8f63a9a5ceefc6bd6ecfcdfaad2e3733cf6e34d02d0","sha256Bundle":"93f28cca0556b480ee44a73ef775187a397dfc61bd4efda1171526a84fa69e84"},"privacy":{"version":"2026-08-13.2","sha256Ru":"687bba9ab60ee35124a17806ba7904870b1a3e09d23610430d45b92cd4719433","sha256En":"e0531d156e2ad0210b16349094499f7560cfca6167d911306926ed8e6ff45cbd","sha256Bundle":"435dd20f418603b3329dd1ab17a5e5ee619eee5341f425a547114fd235d4eee3"},"consent":{"version":"2026-08-13.1","sha256Ru":"10bcaf97ef31fad736f5e4f987ffad94c30c964e759b72c9a49c97738ede48d7","sha256En":"64383734cc3469028242d0c90867ccc42c7605269b187a94056fc963460ddb41","sha256Bundle":"11ebecc6978dac4f887b2ed4316f12f9ebafd4c41d5eeafed331ee12ae2948e0"}});
 
-const WORKER_BUILD = "1.0.6 + critical performance 1.2";
+const WORKER_BUILD = "1.0.7";
 const V07944_RELEASE_CANDIDATE_AUDIT = Object.freeze({ reset: true, claims: true, purchases: true, xp: true, concurrency: true });
 
 // =============================================================
@@ -886,28 +998,34 @@ const REWARD_LIMIT_RESET_AT_SECONDS = 1784805300; // 23.07.2026 11:15 UTC
 // НАСТРОЙКИ ВЕРСИИ И РАЗДЕЛА «ОБНОВЛЕНИЕ» В БОТЕ.
 // Схема версии: первая цифра — год игры, вторая — сезонное обновление, третья — исправление.
 // Примеры: 1.0.1 — фикс, 1.2.0 — сезонное обновление, 2.0.0 — второй год игры.
-const GAME_VERSION = "1.0.6";
-const GAME_UPDATE_DATE = "11 августа 2026";
-const GAME_UPDATE_TITLE = "Сладкий Забег 1.0.6 — большое обновление первого сезона";
-const GAME_UPDATE_TYPE = "Исправления и улучшения";
+const GAME_VERSION = "1.0.7";
+const GAME_UPDATE_DATE = "15 августа 2026";
+const GAME_UPDATE_TITLE = "Сладкий Забег 1.0.7 — быстрее, удобнее, ближе к игрокам";
+const GAME_UPDATE_TYPE = "Скорость, поддержка и улучшения";
 
 // Что произошло с прогрессом в этом релизе:
 // "reset" — крупное обновление с обнулением прогресса;
 // "keep" — обычное обновление с сохранением прогресса.
 const GAME_UPDATE_PROGRESS_MODE = "keep";
-const GAME_UPDATE_RESET_REASON = "Прогресс сохраняется. Уже заработанный XP сезонного пропуска пересчитывается по новой шкале без потерь.";
+const GAME_UPDATE_RESET_REASON = "Прогресс сохраняется. Обновление не сбрасывает валюты, XP, покупки, рейтинг за всё время или коллекцию.";
 
 const GAME_UPDATE_NOTES = Object.freeze([
-  "Перебалансирована XP-прогрессия сезонного пропуска 1–50; уже заработанный XP пересчитывается по новой шкале без потери прогресса.",
-  "После полного 50 уровня всем игрокам доступна бесконечная дорожка 50+ / ∞: каждые 5 000 XP дают Золотой кейс.",
-  "Элитный+ корректно даёт ×2 XP за задания; улучшение до Элитного+ показывает реальную стоимость доплаты; премиальные задания открываются сразу.",
-  "Расширены сезонные задания и ускорено получение XP, одиночных наград, всех доступных наград и открытие самого пропуска.",
-  "В рейтинге появились ✦ статусы Элитного/Элитного+, а по кейсу-награде теперь можно открыть информацию.",
-  "Ускорено открытие кейсов, исправлено обновление склада и добавлен счётчик доступных кейсов в профиле.",
-  "Добавлены уведомления о выполненных заданиях в игре и Telegram, а в боте — возврат в главное меню.",
-  "Исправлены смещение Mini App свайпом, мерцание игрового поля и бесконечная вибрация после возврата из сезонного пропуска.",
-  "Компенсация за некорректную информацию о количестве XP: каждому игроку начисляются 2 Серебряных кейса.",
-  "Внутреннее исправления для корректной работы команды."
+  "В профиле появился полноценный центр поддержки с обращениями, перепиской, историей и прикреплением скриншота.",
+  "Поддержка в Telegram-боте стала пошаговой: помощь, ошибки, идеи, отзывы, фото, «Мои обращения» и продолжение диалога.",
+  "После закрытия обращения можно поставить 👍/👎; если проблема не решена, обращение автоматически возвращается в работу.",
+  "Ускорены запуск игры, возврат после сворачивания, кейсы, сезонный пропуск, получение XP/наград, покупки и награды рейтинга.",
+  "Убраны долгие зависания действий при плохой сети; фоновые синхронизации больше не блокируют переходы между разделами.",
+  "После забега баланс, XP, усилители и сезонные задания обновляются быстрее; редкая повторная обработка результата устранена.",
+  "Результат открытия кейса после серверного подтверждения показывается примерно за секунду, а склад обновляется без лишнего ожидания.",
+  "Задания пропуска сортируются понятнее, уведомления приходят сразу, а баннер исчезает сразу после получения XP.",
+  "В рейтинге заметнее статусы Элитного/Элитного+, доступна информация по кейсу-награде, а получение сезонной награды стало быстрее.",
+  "Графическая нагрузка теперь адаптируется к устройству, чтобы уменьшить просадки кадров на тяжёлых экранах.",
+  "«Подарки и компенсации» показывают до трёх записей сразу и сворачивают длинную историю.",
+  "«Все уровни и звания» открываются на текущем уровне игрока; фон профиля больше не прокручивается под окном.",
+  "Специальные предложения поддерживают расширенный набор игровых и физических наград и не предлагают уже полученные уникальные предметы.",
+  "Исправлено изображение зефира во всех основных экранах покупки и склада.",
+  "В профиле появился раздел документов и конфиденциальности с актуальными версиями и историей подтверждений.",
+  "Улучшена работа команды поддержки и диагностики, чтобы быстрее обрабатывать обращения игроков.",
 ]);
 
 
@@ -963,24 +1081,52 @@ const DEFAULT_SEASON_RESET_PLAN = Object.freeze({
 });
 
 // Встроенная релизная новость. BOT_NEWS_IMAGE_URL в Cloudflare может переопределить картинку.
-const DEFAULT_BOT_NEWS_IMAGE_URL = `${DEFAULT_GAME_URL.replace(/\/$/, "")}/assets/news/relise_game_news.png?v=1.0.6`;
-const BOT_NEWS_TITLE = "Сладкий Забег 1.0.6 — большое обновление первого сезона";
-const BOT_NEWS_TEXT = `Версия 1.0.6 уже доступна!
+const DEFAULT_BOT_NEWS_IMAGE_URL = `${DEFAULT_GAME_URL.replace(/\/$/, "")}/assets/news/relise_game_news.png?v=1.0.7`;
+const BOT_NEWS_TITLE = "Сладкий Забег 1.0.7 — быстрее, удобнее, ближе к игрокам";
+const BOT_NEWS_TEXT = `Версия 1.0.7 уже доступна! Это большое обновление скорости, поддержки и повседневного удобства. Весь игровой прогресс сохраняется.
 
-🎟 Перебалансирована XP-прогрессия сезонного пропуска. Уже заработанный XP пересчитывается без потерь. После 50 уровня всем игрокам открывается 50+ / ∞: каждые 5 000 XP — Золотой кейс. Элитный+ корректно получает ×2 XP за задания, а цена улучшения с Элитного показывает реальную доплату.
+🛟 ПОДДЕРЖКА И ОБРАТНАЯ СВЯЗЬ
+• В профиле появился полноценный раздел «Поддержка»: можно создать обращение, выбрать тему, описать проблему или идею, приложить скриншот и видеть всю переписку.
+• Ответ команды сохраняется внутри игры и одновременно приходит в Telegram-бот.
+• В боте поддержка теперь работает пошагово: помощь, ошибка, идея или отзыв, фото, «Мои обращения» и продолжение уже открытого диалога.
+• После решения обращения можно отметить 👍 «Помогло» или 👎 «Не помогло». Если проблема осталась, обращение автоматически возвращается в работу.
 
-🎁 Исправлено и ускорено получение XP, одиночных и массовых наград, открытие кейсов и обновление их количества в профиле.
+⚡ СКОРОСТЬ И СТАБИЛЬНОСТЬ
+• Ускорены запуск игры и возвращение после сворачивания, открытие кейсов, сезонного пропуска, получение XP и наград, покупки и награды рейтинга.
+• Убраны ситуации, когда кнопка могла надолго зависнуть на «Открываем…» или «Получаем…» при плохом соединении: интерфейс корректно возвращает управление игроку.
+• После забега баланс, XP, усилители и прогресс сезонных заданий обновляются быстрее.
+• Фоновые синхронизации больше не заставляют ждать перед переходом между разделами.
+• Короткое сворачивание Telegram больше не запускает тяжёлую полную перезагрузку профиля.
+• После подтверждения сервером результат открытия кейса показывается примерно за секунду вместо долгой дополнительной прокрутки.
+• Графика автоматически подстраивает нагрузку под устройство: на тяжёлых экранах уменьшается лишняя отрисовка, а декоративные частицы облегчаются только при просадке кадров.
 
-🏆 В рейтинге появились ✦ статусы Элитного/Элитного+ и информация по кейсам-наградам.
+🎟 ЗАДАНИЯ И СЕЗОННЫЙ ПРОПУСК
+• Задания теперь расположены понятнее: активные — выше, затем выполненные, а уже полученный XP уходит вниз списка.
+• Выполненные задания появляются сразу в игре и Telegram без необходимости сначала открывать сезонный пропуск.
+• Исправлен залипающий баннер заданий: после получения XP уведомление и счётчик исчезают сразу.
+• Переход в сезонный пропуск больше не ждёт фонового завершения предыдущего забега.
+• Отображение дорожки 50+ стало компактнее и удобнее.
 
-🔔 Улучшены уведомления о заданиях сезонного пропуска и добавлен возврат в главное меню бота.
+🏆 РЕЙТИНГ
+• Статусы Элитного и Элитного+ отображаются заметной ✦ рядом с игроком, а по наградному кейсу можно открыть информацию.
+• Получение сезонной награды стало быстрее и больше не ждёт лишней повторной загрузки рейтинга и склада.
 
-🎮 Исправлены мерцание игры, случайное смещение Mini App свайпом и бесконечная вибрация после возврата из сезонного пропуска.
+🎁 ПРОФИЛЬ, КЕЙСЫ И НАГРАДЫ
+• «Подарки и компенсации» больше не превращаются в бесконечную ленту: до трёх записей видны сразу, а при большой истории показываются три последних и кнопка «Показать ещё».
+• «Все уровни и звания» теперь открываются сразу на текущем уровне игрока. Пока окно открыто, фон профиля не прокручивается.
+• Исправлено изображение зефира в карточках товара, подтверждении покупки, успешной покупке и на складе.
+• Открытие кейсов и обновление склада стали быстрее; сезонные задания за открытие кейсов обновляются без лишнего ожидания.
+• Специальные предложения теперь поддерживают больше наград: кейсы, аватары, рамки, следы, скины, музыку, XP и уровни пропуска, Элитный/Элитный+, игровые ресурсы, временное ×2 и физические подарки. Уже полученные уникальные награды не предлагаются повторно.
+• Исправлены редкие случаи повторной обработки завершённого забега: результат, награды и прогресс остаются едиными и корректными.
 
-🎁 Компенсация: за некорректную информацию о количестве XP всем игрокам начисляются 2 Серебряных кейса.
+🔐 ДОКУМЕНТЫ И КОНФИДЕНЦИАЛЬНОСТЬ
+• В профиле появился раздел «Документы и конфиденциальность» с Лицензионным соглашением, Политикой конфиденциальности, отдельным согласием на обработку персональных данных и историей подтверждений.
 
-Внутреннее исправления для корректной работы команды.`;
-const BOT_NEWS_PUBLISHED_AT = 1786443300;
+🤝 УЛУЧШЕНИЕ РАБОТЫ КОМАНДЫ
+• Обновлены внутренние инструменты поддержки, диагностики и обработки обращений, чтобы быстрее находить проблемы и отвечать игрокам.
+
+Спасибо, что помогаете делать «Сладкий Забег» лучше!`;
+const BOT_NEWS_PUBLISHED_AT = 1786799460;
 // =============================================================
 
 const PLAYER_BOT_COMMANDS = Object.freeze([
@@ -996,7 +1142,7 @@ const PLAYER_BOT_COMMANDS = Object.freeze([
   { command: "faq", description: "Частые вопросы" },
   { command: "legal", description: "Документы и конфиденциальность" },
   { command: "update", description: "Обновление и версия игры" },
-  { command: "support", description: "Поддержка игры" },
+  { command: "support", description: "Поддержка и обратная связь" },
   { command: "help", description: "Как проверить код" },
   { command: "whoami", description: "Показать мой Telegram ID" }
 ]);
@@ -1314,6 +1460,11 @@ export default {
       if (url.pathname === "/api/owner/auth" && request.method === "POST") {
         return await ownerPanelFastAuth(request, env);
       }
+      // Cold-start access bootstrap combines maintenance + legal in one round trip.
+      // It intentionally runs before the broad runtime compatibility audit.
+      if (url.pathname === "/api/access/bootstrap" && request.method === "POST") {
+        return await getAccessBootstrap(request, env);
+      }
       // Legal acceptance is intentionally independent from the broad runtime
       // compatibility audit. A player must be able to read/accept the current
       // documents even if an unrelated admin schema is temporarily unhealthy.
@@ -1366,7 +1517,7 @@ export default {
         headers.set("X-Frame-Options", "DENY");
         headers.set("Cross-Origin-Resource-Policy", "same-origin");
         headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=()");
-        headers.set("Content-Security-Policy", "default-src 'self'; script-src 'self' 'unsafe-inline' https://telegram.org; style-src 'self' 'unsafe-inline'; img-src 'self' https: data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'");
+        headers.set("Content-Security-Policy", "default-src 'self'; script-src 'self' 'unsafe-inline' https://telegram.org; style-src 'self' 'unsafe-inline'; img-src 'self' https: data: blob:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'");
         return new Response(asset.body, { status: asset.status, statusText: asset.statusText, headers });
       }
       if (url.pathname === "/api/staff/qr/access" && request.method === "POST") {
@@ -1447,6 +1598,19 @@ export default {
       }
       if (url.pathname === "/api/gifts/claim" && request.method === "POST") {
         return await claimPlayerGift(request, env, ctx);
+      }
+
+      if (url.pathname === "/api/support/state" && request.method === "POST") {
+        return await getPlayerSupportState(request, env);
+      }
+      if (url.pathname === "/api/support/create" && request.method === "POST") {
+        return await createPlayerSupportTicket(request, env, ctx);
+      }
+      if (url.pathname === "/api/support/reply" && request.method === "POST") {
+        return await replyPlayerSupportTicket(request, env, ctx);
+      }
+      if (url.pathname === "/api/support/read" && request.method === "POST") {
+        return await markPlayerSupportTicketRead(request, env);
       }
 
       if (url.pathname === "/api/game/startup" && request.method === "POST") {
@@ -7405,11 +7569,12 @@ async function handleTelegramUpdate(update, env, runtime = {}) {
     if (env.DB) {
       try { await processPlayerRewardDeliveryQueue(env, String(user.id), 10); } catch (error) { console.error("Player pending reward refresh failed", error); }
     }
+    const supportMenuState = await botMainMenuSupportState(env, user);
     await sendTelegramMessage(
       env,
       chatId,
-      botMainMenuText(),
-      mainMenuMarkup(env),
+      supportMenuState.text,
+      mainMenuMarkup(env, supportMenuState.unreadCount),
       { cleanChat: false, preferEdit: false, adminBack: false }
     );
     return;
@@ -7449,7 +7614,12 @@ async function handleTelegramUpdate(update, env, runtime = {}) {
 
   if (/^\/cancel(?:@\w+)?$/i.test(text)) {
     await clearStaffWorkflow(user.id, env);
+    await clearBotPlayerSupportWorkflow(user.id, env).catch(() => {});
     await sendTelegramMessage(env, chatId, "Текущее действие отменено.");
+    return;
+  }
+
+  if (!text.startsWith("/") && await handleBotPlayerSupportWorkflowMessage(message, env, runtime)) {
     return;
   }
 
@@ -8079,7 +8249,7 @@ Telegram ID можно найти командой <code>/players</code>.`);
   }
 
   if (/^\/support(?:@\w+)?$/i.test(text)) {
-    await sendTelegramMessage(env, chatId, botSupportText(user), supportMenuMarkup(env));
+    await showBotSupportHome(chatId, user, env);
     return;
   }
 
@@ -8159,11 +8329,11 @@ function configuredOwnerPanelUrl(env) {
   try {
     const url = new URL(configuredGameUrl(env));
     url.pathname = "/owner.html";
-    url.search = "?v=owner-1.0.0-7";
+    url.search = "?v=owner-1.0.0-10";
     url.hash = "";
     return url.toString();
   } catch {
-    return `${DEFAULT_GAME_URL.replace(/\/$/, "")}/owner.html?v=owner-1.0.0-7`;
+    return `${DEFAULT_GAME_URL.replace(/\/$/, "")}/owner.html?v=owner-1.0.0-8`;
   }
 }
 
@@ -8293,13 +8463,16 @@ ${escapeHtml(body)}
   const imageUrl = String(useBuiltInRelease ? DEFAULT_BOT_NEWS_IMAGE_URL : (news.image_url || env.BOT_NEWS_IMAGE_URL || DEFAULT_BOT_NEWS_IMAGE_URL)).trim();
   if (imageUrl) {
     try {
+      const compactCaption = `<b>📰 ${escapeHtml(title)}</b>\n\nВерсия <b>${escapeHtml(GAME_VERSION)}</b> уже доступна. Подробный список изменений — следующим сообщением.`;
+      const fitsPhotoCaption = text.length <= 900;
       await telegramApi(env, "sendPhoto", {
         chat_id: chatId,
         photo: imageUrl,
-        caption: text,
+        caption: fitsPhotoCaption ? text : compactCaption,
         parse_mode: "HTML",
-        reply_markup: sectionMenuMarkup(env)
+        reply_markup: fitsPhotoCaption ? sectionMenuMarkup(env) : undefined
       });
+      if (!fitsPhotoCaption) await sendTelegramMessage(env, chatId, text, sectionMenuMarkup(env));
       return;
     } catch (error) {
       console.error("News image failed; falling back to text", error);
@@ -8324,41 +8497,14 @@ function botHelpText() {
 }
 
 function botSupportText(user = null) {
-  const telegramId = user?.id ? String(user.id) : "укажите ваш Telegram ID";
-  const username = user?.username ? `@${user.username}` : "не указан";
-  const template = [
-    "Тип обращения: баг / предложение",
-    "Где возникло: игра / бот / магазин / профиль / рейтинг",
-    `Версия игры: ${GAME_VERSION}`,
-    `Ваш Telegram ID: ${telegramId}`,
-    `Ваш username: ${username}`,
-    "Что произошло или что предлагаете:",
-    "",
-    "Как повторить проблему по шагам:",
-    "1. ",
-    "2. ",
-    "3. ",
-    "",
-    "Что ожидали увидеть:",
-    "",
-    "Устройство и версия ОС:",
-    "",
-    "Скриншот или видео: приложено / нет"
-  ].join("\n");
-
-  return `<b>🛟 Поддержка игры</b>\n\nПо багам и предложениям пишите разработчику: <a href="${SUPPORT_URL}">@${SUPPORT_USERNAME}</a>.\n\nСкопируйте форму ниже, заполните пустые строки и отправьте одним сообщением:\n\n<pre>${escapeHtml(template)}</pre>`;
+  return `\u{1F6DF} <b>\u041f\u043e\u0434\u0434\u0435\u0440\u0436\u043a\u0430 \u0438 \u043e\u0431\u0440\u0430\u0442\u043d\u0430\u044f \u0441\u0432\u044f\u0437\u044c</b>\n\n\u0421\u043e\u0437\u0434\u0430\u0439\u0442\u0435 \u043e\u0431\u0440\u0430\u0449\u0435\u043d\u0438\u0435 \u043f\u043e \u0448\u0430\u0433\u0430\u043c, \u043f\u0440\u0438\u043a\u0440\u0435\u043f\u0438\u0442\u0435 \u0441\u043a\u0440\u0438\u043d\u0448\u043e\u0442 \u0438 \u043f\u043e\u043b\u0443\u0447\u0430\u0439\u0442\u0435 \u043e\u0442\u0432\u0435\u0442\u044b \u043f\u0440\u044f\u043c\u043e \u0432 \u044d\u0442\u043e\u043c \u0431\u043e\u0442\u0435.`;
 }
 
 function supportMenuMarkup(env) {
-  return {
-    inline_keyboard: [
-      [{ text: "💬 Написать разработчику", url: SUPPORT_URL }],
-      [{ text: "← Главное меню", callback_data: "menu:home" }]
-    ]
-  };
+  return botSupportHomeMarkup(env, {});
 }
 
-function mainMenuMarkup(env) {
+function mainMenuMarkup(env, supportUnread = 0) {
   return {
     inline_keyboard: [
       [
@@ -8371,7 +8517,7 @@ function mainMenuMarkup(env) {
       [{ text: "🎟 Ввести промокод", callback_data: "menu:promo" }],
       [{ text: "🎁 Как получить награду", callback_data: "menu:rewards" }],
       [{ text: "📄 Документы и конфиденциальность", callback_data: "menu:legal" }],
-      [{ text: "🛟 Поддержка игры", callback_data: "menu:support" }]
+      [{ text: `🛟 Поддержка игры${Number(supportUnread||0)>0?` · ${Number(supportUnread||0)}`:''}`, callback_data: "menu:support" }]
     ]
   };
 }
@@ -8443,6 +8589,17 @@ async function handleMenuCallback(query, env) {
     await sendTelegramMessage(env, message.chat.id, botLegalText(), legalMenuMarkup(env));
     return true;
   }
+  if (section === "support") {
+    await answerCallback(env, query.id, "Поддержка открыта");
+    await showBotSupportHome(message.chat.id, query.from, env);
+    return true;
+  }
+  if (section === "home") {
+    const supportMenuState = await botMainMenuSupportState(env, query.from);
+    await answerCallback(env, query.id, "Главное меню");
+    await sendTelegramMessage(env, message.chat.id, supportMenuState.text, mainMenuMarkup(env, supportMenuState.unreadCount));
+    return true;
+  }
   const text = section === "story"
     ? botStoryText()
     : section === "faq"
@@ -8451,14 +8608,10 @@ async function handleMenuCallback(query, env) {
         ? botRewardsText()
         : section === "update"
           ? botUpdateText()
-          : section === "support"
-            ? botSupportText(query.from)
-            : botMainMenuText();
+          : botMainMenuText();
   const replyMarkup = section === "home"
     ? mainMenuMarkup(env)
-    : section === "support"
-      ? supportMenuMarkup(env)
-      : section === "faq"
+    : section === "faq"
         ? faqMenuMarkup(env)
         : section === "story"
           ? storyMenuMarkup(env)
@@ -11191,6 +11344,7 @@ async function handleCallbackQueryAction(query, env, runtime = {}) {
     }
   };
 
+  if (await runPublicCallback(() => handleBotSupportCallback(query, env, runtime))) return;
   if (await runPublicCallback(() => handleMenuCallback(query, env))) return;
   if (await runPublicCallback(() => handlePlayerTaskCallback(query, env))) return;
 
@@ -11789,9 +11943,69 @@ function sleep(milliseconds) {
   return new Promise((resolve) => setTimeout(resolve, Math.max(0, Number(milliseconds) || 0)));
 }
 
+let playerSupportSchemaPromise = null;
+
+async function ensurePlayerSupportSchema(env) {
+  if (!playerSupportSchemaPromise) {
+    playerSupportSchemaPromise = (async () => {
+      await env.DB.batch([
+        env.DB.prepare(SUPPORT_TICKETS_SCHEMA_SQL),
+        env.DB.prepare(SUPPORT_TICKET_META_SCHEMA_SQL),
+        env.DB.prepare(SUPPORT_MESSAGES_SCHEMA_SQL),
+        env.DB.prepare(SUPPORT_ATTACHMENTS_SCHEMA_SQL),
+        env.DB.prepare(SUPPORT_TICKET_CHANNELS_SCHEMA_SQL),
+        env.DB.prepare(BOT_PLAYER_SUPPORT_WORKFLOWS_SCHEMA_SQL),
+        env.DB.prepare(SUPPORT_TICKET_OPERATIONS_SCHEMA_SQL),
+        env.DB.prepare(SUPPORT_TICKET_TAGS_SCHEMA_SQL),
+        env.DB.prepare(SUPPORT_INTERNAL_NOTES_SCHEMA_SQL),
+        env.DB.prepare(SUPPORT_REPLY_TEMPLATES_SCHEMA_SQL),
+        env.DB.prepare(SUPPORT_TICKET_FEEDBACK_SCHEMA_SQL),
+        env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_support_tickets_status_updated ON support_tickets(status, updated_at DESC)`),
+        env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_support_tickets_creator ON support_tickets(created_by, created_at DESC)`),
+        env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_support_tickets_player ON support_tickets(player_telegram_id, created_at DESC)`),
+        env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_support_ticket_meta_source_updated ON support_ticket_meta(source, updated_at DESC)`),
+        env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_support_messages_ticket_created ON support_messages(ticket_id, created_at ASC, id ASC)`),
+        env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_support_attachments_ticket ON support_attachments(ticket_id, created_at ASC, id ASC)`),
+        env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_support_ticket_channels_channel_updated ON support_ticket_channels(channel, updated_at DESC)`),
+        env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_bot_player_support_workflows_expiry ON bot_player_support_workflows(expires_at)`),
+        env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_support_ticket_operations_priority ON support_ticket_operations(priority, updated_at DESC)`),
+        env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_support_ticket_tags_tag ON support_ticket_tags(tag, ticket_id)`),
+        env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_support_internal_notes_ticket ON support_internal_notes(ticket_id, created_at DESC, id DESC)`),
+        env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_support_reply_templates_active ON support_reply_templates(active, sort_order, title)`),
+        env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_support_ticket_feedback_ticket ON support_ticket_feedback(ticket_id, created_at DESC, id DESC)`)
+      ]);
+      await env.DB.prepare(`INSERT OR IGNORE INTO support_ticket_meta(ticket_id,source,subject,request_id,client_json,player_last_read_at,staff_last_read_at,last_player_message_at,last_staff_message_at,created_at,updated_at)
+        SELECT id,'staff','',NULL,'{}',0,0,0,created_at,created_at,updated_at FROM support_tickets`).run();
+      await env.DB.prepare(`INSERT OR IGNORE INTO support_messages(ticket_id,author_kind,author_telegram_id,author_name,message_text,request_id,client_json,created_at,telegram_delivered_at,telegram_error)
+        SELECT t.id,'staff',t.created_by,t.created_by_name,t.description,'legacy-initial','{}',t.created_at,0,''
+        FROM support_tickets t JOIN support_ticket_meta m ON m.ticket_id=t.id
+        WHERE m.source='staff' AND TRIM(COALESCE(t.description,''))<>''`).run();
+      await env.DB.prepare(`INSERT OR IGNORE INTO support_ticket_channels(ticket_id,channel,created_at,updated_at)
+        SELECT ticket_id,CASE WHEN source='staff' THEN 'staff' ELSE 'game' END,created_at,updated_at FROM support_ticket_meta`).run();
+      await env.DB.prepare(`INSERT OR IGNORE INTO support_ticket_operations(ticket_id,priority,priority_source,created_at,updated_at,updated_by)
+        SELECT id,CASE WHEN category IN ('purchase','reward','account','reward_missing','code_problem','item_missing','balance_problem') THEN 'important' ELSE 'normal' END,'auto',created_at,updated_at,'schema-backfill' FROM support_tickets`).run();
+      await env.DB.prepare(`INSERT OR IGNORE INTO support_ticket_tags(ticket_id,tag,created_at,created_by)
+        SELECT id,CASE category WHEN 'bug' THEN 'bug' WHEN 'purchase' THEN 'purchase' WHEN 'reward' THEN 'reward' WHEN 'account' THEN 'account' WHEN 'suggestion' THEN 'idea' WHEN 'feedback' THEN 'feedback' WHEN 'reward_missing' THEN 'reward' WHEN 'code_problem' THEN 'code' WHEN 'item_missing' THEN 'reward' WHEN 'balance_problem' THEN 'account' WHEN 'rating_problem' THEN 'rating' ELSE 'other' END,created_at,'schema-backfill' FROM support_tickets`).run();
+      const supportTemplateNow = Math.floor(Date.now()/1000);
+      await env.DB.batch([
+        env.DB.prepare(`INSERT OR IGNORE INTO support_reply_templates(template_key,title,body,active,sort_order,created_at,updated_at,updated_by) VALUES('checking','Спасибо, проверяем','Спасибо за обращение. Мы получили информацию и проверяем ситуацию. Если понадобятся дополнительные данные, напишем в этом обращении.',1,10,?,?, 'system')`).bind(supportTemplateNow,supportTemplateNow),
+        env.DB.prepare(`INSERT OR IGNORE INTO support_reply_templates(template_key,title,body,active,sort_order,created_at,updated_at,updated_by) VALUES('need_details','Нужны дополнительные данные','Спасибо. Чтобы точнее разобраться, пожалуйста, пришлите дополнительные детали: что вы делали перед проблемой, что ожидали увидеть и, если возможно, скриншот.',1,20,?,?, 'system')`).bind(supportTemplateNow,supportTemplateNow),
+        env.DB.prepare(`INSERT OR IGNORE INTO support_reply_templates(template_key,title,body,active,sort_order,created_at,updated_at,updated_by) VALUES('known_issue','Проблема известна','Спасибо за сообщение. Мы уже знаем об этой проблеме и работаем над исправлением. Дополнительных действий с вашей стороны пока не требуется.',1,30,?,?, 'system')`).bind(supportTemplateNow,supportTemplateNow),
+        env.DB.prepare(`INSERT OR IGNORE INTO support_reply_templates(template_key,title,body,active,sort_order,created_at,updated_at,updated_by) VALUES('fixed','Проблема исправлена','Проблема исправлена. Пожалуйста, полностью закройте Mini App и откройте игру заново через Telegram-бота. Если ситуация повторится, ответьте в этом обращении.',1,40,?,?, 'system')`).bind(supportTemplateNow,supportTemplateNow),
+        env.DB.prepare(`INSERT OR IGNORE INTO support_reply_templates(template_key,title,body,active,sort_order,created_at,updated_at,updated_by) VALUES('compensation','Компенсация выдана','Мы проверили обращение и выдали компенсацию. Начисление появится в аккаунте автоматически. Спасибо, что сообщили о ситуации.',1,50,?,?, 'system')`).bind(supportTemplateNow,supportTemplateNow)
+      ]);
+    })().catch((error) => {
+      playerSupportSchemaPromise = null;
+      throw error;
+    });
+  }
+  await playerSupportSchemaPromise;
+}
+
 let staffOperationsSchemaPromise = null;
 
 async function ensureStaffOperationsSchema(env) {
+  await ensurePlayerSupportSchema(env);
   if (!staffOperationsSchemaPromise) {
     staffOperationsSchemaPromise = env.DB.batch([
       env.DB.prepare(BOT_STAFF_WORKFLOWS_SCHEMA_SQL),
@@ -13233,6 +13447,12 @@ async function showAdvancedAuditLog(chatId, user, rawFilter, env) {
   await sendTelegramListChunks(env, chatId, `Журнал действий · ${rows.length}`, entries, "По заданному фильтру записей нет.");
 }
 const SUPPORT_TICKET_CATEGORIES = Object.freeze({
+  bug: "Ошибка в игре",
+  purchase: "Покупка",
+  reward: "Награда",
+  account: "Аккаунт",
+  suggestion: "Предложение",
+  feedback: "Отзыв",
   reward_missing: "Не начислилась награда",
   code_problem: "Не работает код",
   item_missing: "Пропал предмет",
@@ -13240,13 +13460,700 @@ const SUPPORT_TICKET_CATEGORIES = Object.freeze({
   rating_problem: "Проблема с рейтингом",
   other: "Другое"
 });
+const PLAYER_SUPPORT_CATEGORIES = Object.freeze(["bug","purchase","reward","account","suggestion","other"]);
+const STAFF_SUPPORT_CATEGORIES = Object.freeze(["reward_missing","code_problem","item_missing","balance_problem","rating_problem","other"]);
+const SUPPORT_MAX_OPEN_TICKETS = 3;
+const SUPPORT_MAX_DAILY_TICKETS = 6;
+const SUPPORT_MAX_MESSAGE_LENGTH = 4000;
+const SUPPORT_MAX_ATTACHMENT_BYTES = 2 * 1024 * 1024;
+const SUPPORT_ALLOWED_IMAGE_TYPES = new Set(["image/jpeg","image/png","image/webp"]);
+const SUPPORT_PRIORITY_LABELS = Object.freeze({ normal: "Обычный", important: "Важный", critical: "Критический" });
+const SUPPORT_TAG_LABELS = Object.freeze({
+  bug: "Ошибка",
+  purchase: "Покупка",
+  reward: "Награда",
+  account: "Аккаунт",
+  cases: "Кейсы",
+  pass: "Пропуск",
+  shop: "Магазин",
+  rating: "Рейтинг",
+  bot: "Бот",
+  performance: "Производительность",
+  ui: "Интерфейс",
+  code: "Код / промокод",
+  idea: "Идея",
+  feedback: "Отзыв",
+  other: "Другое"
+});
+
+function supportAutoPriority(category) {
+  return new Set(["purchase","reward","account","reward_missing","code_problem","item_missing","balance_problem"]).has(String(category || "")) ? "important" : "normal";
+}
+
+function supportAutoTags(category, area = "") {
+  const categoryTag = ({
+    bug: "bug", purchase: "purchase", reward: "reward", account: "account",
+    suggestion: "idea", feedback: "feedback", reward_missing: "reward",
+    code_problem: "code", item_missing: "reward", balance_problem: "account",
+    rating_problem: "rating", other: "other"
+  })[String(category || "")] || "other";
+  const areaTag = ({ shop: "shop", pass: "pass", cases: "cases", rating: "rating", bot: "bot" })[String(area || "")] || "";
+  return [...new Set([categoryTag, areaTag].filter((tag) => Object.prototype.hasOwnProperty.call(SUPPORT_TAG_LABELS, tag)))];
+}
+
+function supportNormalizeTags(values) {
+  const source = Array.isArray(values) ? values : [];
+  return [...new Set(source.map((value) => String(value || "").trim()).filter((tag) => Object.prototype.hasOwnProperty.call(SUPPORT_TAG_LABELS, tag)))].slice(0, 12);
+}
+
+async function ensureSupportOperationsForTicket(env, ticketId, category, area = "", actor = "auto", now = Math.floor(Date.now()/1000)) {
+  const id = Number(ticketId || 0);
+  if (!id) return;
+  const priority = supportAutoPriority(category);
+  const tags = supportAutoTags(category, area);
+  const statements = [
+    env.DB.prepare(`INSERT OR IGNORE INTO support_ticket_operations(ticket_id,priority,priority_source,created_at,updated_at,updated_by) VALUES(?,?,'auto',?,?,?)`).bind(id, priority, now, now, String(actor || "auto").slice(0,96))
+  ];
+  for (const tag of tags) statements.push(env.DB.prepare(`INSERT OR IGNORE INTO support_ticket_tags(ticket_id,tag,created_at,created_by) VALUES(?,?,?,?)`).bind(id, tag, now, String(actor || "auto").slice(0,96)));
+  await env.DB.batch(statements);
+}
 
 function ticketStatusLabel(status) {
   return ({ new: "новое", working: "в работе", resolved: "решено", rejected: "отклонено" })[String(status || "")] || String(status || "");
 }
 
+function supportChannelLabel(channel) {
+  return ({ game: "из игры", bot: "из бота", staff: "служебное" })[String(channel || "")] || "из игры";
+}
+
+function supportRequestId(value, prefix = "support") {
+  const raw = String(value || "").trim();
+  if (/^[A-Za-z0-9_-]{8,96}$/.test(raw)) return raw;
+  return `${prefix}_${caseGrantId("req").replace(/^req_/,"")}`.slice(0,96);
+}
+
+function supportSafeClientJson(value) {
+  let parsed = value;
+  if (typeof parsed === "string") {
+    try { parsed = JSON.parse(parsed); } catch { parsed = {}; }
+  }
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) parsed = {};
+  const out = {};
+  for (const [key, raw] of Object.entries(parsed)) {
+    const safeKey = String(key || "").replace(/[^A-Za-z0-9_.-]/g, "").slice(0,48);
+    if (!safeKey || Object.keys(out).length >= 40) continue;
+    if (typeof raw === "number" || typeof raw === "boolean") out[safeKey] = raw;
+    else if (raw != null) out[safeKey] = String(raw).slice(0,500);
+  }
+  return out;
+}
+
+async function supportPlayerDiagnostics(request, env, auth, clientInput = {}) {
+  const telegramId = String(auth?.user?.id || "");
+  const [profileResult, caseResult, runResult, passResult] = await Promise.allSettled([
+    env.DB.prepare(`SELECT wallet,best_score,treats,coffee,profile_xp,revision,updated_at FROM admin_profile_state WHERE telegram_id=? LIMIT 1`).bind(telegramId).first(),
+    env.DB.prepare(`SELECT active_skin_id,active_avatar_id,active_frame_id,active_trail_id,active_music_id,revision,updated_at FROM case_player_state WHERE telegram_id=? LIMIT 1`).bind(telegramId).first(),
+    env.DB.prepare(`SELECT run_id,score,duration_ms,accepted,rejection_reason,created_at FROM leaderboard_runs WHERE telegram_id=? ORDER BY created_at DESC LIMIT 1`).bind(telegramId).first(),
+    env.DB.prepare(`SELECT p.season_id,p.xp,p.premium_tier,p.revision,p.updated_at FROM season_pass_players p WHERE p.telegram_id=? ORDER BY p.updated_at DESC LIMIT 1`).bind(telegramId).first()
+  ]);
+  const client = supportSafeClientJson(clientInput);
+  const headerUa = String(request.headers.get("User-Agent") || "").slice(0,700);
+  const cf = request.cf || {};
+  return {
+    client,
+    server: {
+      gameVersion: GAME_VERSION,
+      workerBuild: WORKER_BUILD,
+      userAgent: headerUa,
+      acceptLanguage: String(request.headers.get("Accept-Language") || "").slice(0,180),
+      country: String(request.headers.get("CF-IPCountry") || cf.country || "").slice(0,8),
+      colo: String(cf.colo || "").slice(0,16)
+    },
+    telegram: {
+      id: telegramId,
+      username: String(auth?.user?.username || "").slice(0,64),
+      firstName: String(auth?.user?.first_name || "").slice(0,100),
+      lastName: String(auth?.user?.last_name || "").slice(0,100),
+      languageCode: String(auth?.user?.language_code || "").slice(0,24),
+      premium: Boolean(auth?.user?.is_premium)
+    },
+    profile: profileResult.status === "fulfilled" && profileResult.value ? profileResult.value : null,
+    cosmetics: caseResult.status === "fulfilled" && caseResult.value ? caseResult.value : null,
+    lastRun: runResult.status === "fulfilled" && runResult.value ? runResult.value : null,
+    seasonPass: passResult.status === "fulfilled" && passResult.value ? passResult.value : null
+  };
+}
+
+function supportTicketPublicView(row, messages = [], attachments = []) {
+  const lastStaff = Number(row?.last_staff_message_at || 0);
+  const playerRead = Number(row?.player_last_read_at || 0);
+  return {
+    id: Number(row?.id || row?.ticket_id || 0),
+    subject: String(row?.subject || row?.description || "Обращение").slice(0,120),
+    category: String(row?.category || "other"),
+    categoryLabel: String(SUPPORT_TICKET_CATEGORIES[row?.category] || row?.category || "Другое"),
+    channel: String(row?.channel || (row?.source === "staff" ? "staff" : "game")),
+    status: String(row?.status || "new"),
+    statusLabel: ticketStatusLabel(row?.status),
+    assignedToName: String(row?.assigned_to_name || ""),
+    createdAt: Number(row?.created_at || 0),
+    updatedAt: Number(row?.updated_at || 0),
+    closedAt: Number(row?.closed_at || 0),
+    unread: lastStaff > playerRead,
+    messages: messages.map((item) => ({
+      id: Number(item.id || 0),
+      authorKind: String(item.author_kind || "system"),
+      authorName: String(item.author_name || ""),
+      text: String(item.message_text || ""),
+      createdAt: Number(item.created_at || 0)
+    })),
+    attachments: attachments.map((item) => ({
+      id: Number(item.id || 0),
+      messageId: Number(item.message_id || 0),
+      mimeType: String(item.mime_type || ""),
+      fileName: String(item.file_name || "Скриншот"),
+      sizeBytes: Number(item.size_bytes || 0),
+      status: String(item.status || "pending")
+    }))
+  };
+}
+
+async function playerSupportStateData(env, telegramId) {
+  await ensurePlayerSupportSchema(env);
+  const ticketRows = (await env.DB.prepare(`SELECT t.*,m.subject,m.player_last_read_at,m.last_staff_message_at,m.source,COALESCE(c.channel,'game') AS channel
+    FROM support_tickets t JOIN support_ticket_meta m ON m.ticket_id=t.id LEFT JOIN support_ticket_channels c ON c.ticket_id=t.id
+    WHERE t.player_telegram_id=? AND m.source='player'
+    ORDER BY t.updated_at DESC,t.id DESC LIMIT 20`).bind(String(telegramId)).all()).results || [];
+  const ids = ticketRows.map((row) => Number(row.id || 0)).filter(Boolean);
+  if (!ids.length) return { tickets: [], openCount: 0, unreadCount: 0 };
+  const placeholders = ids.map(() => "?").join(",");
+  const [messagesResult, attachmentsResult] = await Promise.all([
+    env.DB.prepare(`SELECT id,ticket_id,author_kind,author_name,message_text,created_at FROM support_messages WHERE ticket_id IN (${placeholders}) ORDER BY created_at ASC,id ASC`).bind(...ids).all(),
+    env.DB.prepare(`SELECT id,ticket_id,message_id,mime_type,file_name,size_bytes,status,created_at FROM support_attachments WHERE ticket_id IN (${placeholders}) ORDER BY created_at ASC,id ASC`).bind(...ids).all()
+  ]);
+  const messageMap = new Map(), attachmentMap = new Map();
+  for (const item of messagesResult.results || []) { const key=Number(item.ticket_id); if(!messageMap.has(key)) messageMap.set(key,[]); messageMap.get(key).push(item); }
+  for (const item of attachmentsResult.results || []) { const key=Number(item.ticket_id); if(!attachmentMap.has(key)) attachmentMap.set(key,[]); attachmentMap.get(key).push(item); }
+  const tickets = ticketRows.map((row) => supportTicketPublicView(row, messageMap.get(Number(row.id)) || [], attachmentMap.get(Number(row.id)) || []));
+  return { tickets, openCount: tickets.filter((item) => ["new","working"].includes(item.status)).length, unreadCount: tickets.filter((item) => item.unread).length };
+}
+
+async function getPlayerSupportState(request, env) {
+  try {
+    const body = await readJson(request);
+    const auth = await validateTelegramInitData(String(body.initData || ""), env);
+    return jsonResponse({ ok:true, ...(await playerSupportStateData(env, String(auth.user.id))) });
+  } catch (error) {
+    if (error instanceof ApiError) return jsonResponse({ ok:false,error:error.message }, error.status);
+    console.error("player support state failed", error);
+    return jsonResponse({ ok:false,error:"Не удалось загрузить обращения." }, 500);
+  }
+}
+
+async function createPlayerSupportTicket(request, env, executionCtx) {
+  try {
+    await ensurePlayerSupportSchema(env);
+    const form = await request.formData();
+    const auth = await validateTelegramInitData(String(form.get("initData") || ""), env);
+    const telegramId = String(auth.user.id);
+    const category = String(form.get("category") || "other").trim();
+    if (!PLAYER_SUPPORT_CATEGORIES.includes(category)) throw new ApiError(400,"Выберите категорию обращения.");
+    const subject = String(form.get("subject") || "").trim().replace(/\s+/g," ").slice(0,120);
+    const message = String(form.get("message") || "").trim().slice(0,SUPPORT_MAX_MESSAGE_LENGTH);
+    if (subject.length < 3) throw new ApiError(400,"Укажите тему обращения.");
+    if (message.length < 10) throw new ApiError(400,"Опишите вопрос чуть подробнее.");
+    const requestId = supportRequestId(form.get("requestId"),"ticket");
+    const repeated = await env.DB.prepare(`SELECT t.id FROM support_ticket_meta m JOIN support_tickets t ON t.id=m.ticket_id WHERE m.source='player' AND m.request_id=? AND t.player_telegram_id=? LIMIT 1`).bind(requestId,telegramId).first();
+    if (repeated) return jsonResponse({ ok:true,repeated:true,ticketId:Number(repeated.id),...(await playerSupportStateData(env,telegramId)) });
+    const [openRow, dailyRow] = await Promise.all([
+      env.DB.prepare(`SELECT COUNT(*) AS count FROM support_tickets t JOIN support_ticket_meta m ON m.ticket_id=t.id WHERE t.player_telegram_id=? AND m.source='player' AND t.status IN ('new','working')`).bind(telegramId).first(),
+      env.DB.prepare(`SELECT COUNT(*) AS count FROM support_tickets t JOIN support_ticket_meta m ON m.ticket_id=t.id WHERE t.player_telegram_id=? AND m.source='player' AND t.created_at>=?`).bind(telegramId,Math.floor(Date.now()/1000)-86400).first()
+    ]);
+    if (Number(openRow?.count || 0) >= SUPPORT_MAX_OPEN_TICKETS) throw new ApiError(429,`Одновременно можно держать не более ${SUPPORT_MAX_OPEN_TICKETS} открытых обращений.`);
+    if (Number(dailyRow?.count || 0) >= SUPPORT_MAX_DAILY_TICKETS) throw new ApiError(429,"Лимит новых обращений на сегодня исчерпан. Ответьте в уже открытом обращении.");
+    const file = form.get("photo");
+    const hasFile = file && typeof file.arrayBuffer === "function" && Number(file.size || 0) > 0;
+    let attachmentPayload = null;
+    if (hasFile) {
+      const type = String(file.type || "").toLowerCase();
+      if (!SUPPORT_ALLOWED_IMAGE_TYPES.has(type)) throw new ApiError(400,"Можно прикрепить JPG, PNG или WebP.");
+      if (Number(file.size || 0) > SUPPORT_MAX_ATTACHMENT_BYTES) throw new ApiError(413,"Скриншот слишком большой. Максимум 2 МБ после сжатия.");
+      attachmentPayload = {
+        bytes: await file.arrayBuffer(),
+        type,
+        name: String(file.name || "screenshot.jpg").slice(0,120),
+        size: Number(file.size || 0)
+      };
+    }
+    const diagnostics = await supportPlayerDiagnostics(request,env,auth,form.get("clientJson") || "{}");
+    const now = Math.floor(Date.now()/1000), playerName = telegramDisplayName(auth.user);
+    const insert = await env.DB.prepare(`INSERT INTO support_tickets(created_by,created_by_name,player_telegram_id,player_name,category,description,status,assigned_to,assigned_to_name,resolution,created_at,updated_at,closed_at)
+      VALUES(?,?,?,?,?,?,'new','','','',?,?,0)`).bind(telegramId,playerName,telegramId,playerName,category,message,now,now).run();
+    let ticketId = Number(insert.meta?.last_row_id || 0);
+    if (!ticketId) ticketId = Number((await env.DB.prepare(`SELECT id FROM support_tickets WHERE player_telegram_id=? AND created_at=? ORDER BY id DESC LIMIT 1`).bind(telegramId,now).first())?.id || 0);
+    if (!ticketId) throw new ApiError(500,"Не удалось создать обращение.");
+    const messageInsert = await env.DB.prepare(`INSERT INTO support_messages(ticket_id,author_kind,author_telegram_id,author_name,message_text,request_id,client_json,created_at,telegram_delivered_at,telegram_error)
+      VALUES(?,'player',?,?,?,?,?,?,0,'')`).bind(ticketId,telegramId,playerName,message,`${requestId}:initial`,JSON.stringify(diagnostics.client || {}),now).run();
+    const messageId = Number(messageInsert.meta?.last_row_id || 0);
+    await env.DB.prepare(`INSERT INTO support_ticket_meta(ticket_id,source,subject,request_id,client_json,player_last_read_at,staff_last_read_at,last_player_message_at,last_staff_message_at,created_at,updated_at)
+      VALUES(?,'player',?,?,?,?,0,?,0,?,?)`).bind(ticketId,subject,requestId,JSON.stringify(diagnostics),now,now,now,now).run();
+    await env.DB.prepare(`INSERT OR REPLACE INTO support_ticket_channels(ticket_id,channel,created_at,updated_at) VALUES(?,'game',?,?)`).bind(ticketId,now,now).run();
+    await ensureSupportOperationsForTicket(env,ticketId,category,"","game",now);
+    let attachmentId = 0;
+    if (hasFile) {
+      const attachment = await env.DB.prepare(`INSERT INTO support_attachments(ticket_id,message_id,uploader_kind,mime_type,file_name,size_bytes,telegram_file_id,telegram_file_unique_id,telegram_message_id,status,error_text,created_at,updated_at)
+        VALUES(?,?,'player',?,?,?,'','',0,'pending','',?,?)`).bind(ticketId,messageId,String(attachmentPayload?.type||"image/jpeg"),String(attachmentPayload?.name||"screenshot.jpg"),Number(attachmentPayload?.size||0),now,now).run();
+      attachmentId = Number(attachment.meta?.last_row_id || 0);
+    }
+    const notification = supportNewTicketNotification({ticketId,subject,category,message,diagnostics,playerName,telegramId});
+    const background = (async () => {
+      await notifySubscribedStaff(env,"new_tickets",notification);
+      await processPendingLeaderboardStaffNotifications(env,20).catch((error)=>console.error("support instant staff notification failed",error));
+      if (attachmentPayload && attachmentId) await uploadPlayerSupportAttachment(env,{attachmentId,ticketId,subject,attachment:attachmentPayload});
+      try { await recordPlayerTimeline(env,telegramId,"support",`создал обращение #${ticketId}`,{ticketId,category,subject},`support_${ticketId}`,auth.user,now); } catch (error) { console.error("support timeline failed",error); }
+    })();
+    if (executionCtx?.waitUntil) executionCtx.waitUntil(background.catch((error)=>console.error("support create background failed",error))); else void background.catch((error)=>console.error("support create background failed",error));
+    return jsonResponse({ ok:true,ticketId,attachmentPending:Boolean(attachmentId),...(await playerSupportStateData(env,telegramId)) });
+  } catch (error) {
+    if (error instanceof ApiError) return jsonResponse({ ok:false,error:error.message }, error.status);
+    console.error("create player support ticket failed",error);
+    return jsonResponse({ ok:false,error:"Не удалось отправить обращение." },500);
+  }
+}
+
+async function replyPlayerSupportTicket(request, env, executionCtx) {
+  try {
+    await ensurePlayerSupportSchema(env);
+    const body=await readJson(request),auth=await validateTelegramInitData(String(body.initData||""),env),telegramId=String(auth.user.id);
+    const ticketId=Math.floor(Number(body.ticketId)||0),message=String(body.message||"").trim().slice(0,SUPPORT_MAX_MESSAGE_LENGTH),requestId=supportRequestId(body.requestId,"reply");
+    if(!ticketId||message.length<2)throw new ApiError(400,"Введите сообщение.");
+    const ticket=await env.DB.prepare(`SELECT t.*,m.source FROM support_tickets t JOIN support_ticket_meta m ON m.ticket_id=t.id WHERE t.id=? AND t.player_telegram_id=? AND m.source='player' LIMIT 1`).bind(ticketId,telegramId).first();
+    if(!ticket)throw new ApiError(404,"Обращение не найдено.");
+    if(!["new","working"].includes(String(ticket.status)))throw new ApiError(409,"Это обращение уже закрыто. Создайте новое, если вопрос остался.");
+    const repeated=await env.DB.prepare(`SELECT id FROM support_messages WHERE ticket_id=? AND request_id=? LIMIT 1`).bind(ticketId,requestId).first();
+    if(!repeated){
+      const now=Math.floor(Date.now()/1000),name=telegramDisplayName(auth.user),client=supportSafeClientJson(body.client||{});
+      await env.DB.batch([
+        env.DB.prepare(`INSERT INTO support_messages(ticket_id,author_kind,author_telegram_id,author_name,message_text,request_id,client_json,created_at,telegram_delivered_at,telegram_error) VALUES(?,'player',?,?,?,?,?,?,0,'')`).bind(ticketId,telegramId,name,message,requestId,JSON.stringify(client),now),
+        env.DB.prepare(`UPDATE support_tickets SET updated_at=? WHERE id=?`).bind(now,ticketId),
+        env.DB.prepare(`UPDATE support_ticket_meta SET last_player_message_at=?,updated_at=? WHERE ticket_id=?`).bind(now,now,ticketId)
+      ]);
+      const task=(async()=>{
+        await notifySubscribedStaff(env,"new_tickets",`💬 <b>Ответ игрока в обращении #${ticketId}</b>
+
+Игрок: <b>${escapeHtml(name)}</b> · <code>${escapeHtml(telegramId)}</code>
+
+${escapeHtml(message.slice(0,1800))}`);
+        await processPendingLeaderboardStaffNotifications(env,20).catch((error)=>console.error("support instant reply notification failed",error));
+      })();
+      if(executionCtx?.waitUntil)executionCtx.waitUntil(task);else void task;
+    }
+    return jsonResponse({ok:true,repeated:Boolean(repeated),...(await playerSupportStateData(env,telegramId))});
+  }catch(error){if(error instanceof ApiError)return jsonResponse({ok:false,error:error.message},error.status);console.error("player support reply failed",error);return jsonResponse({ok:false,error:"Не удалось отправить сообщение."},500);}
+}
+
+async function markPlayerSupportTicketRead(request,env){
+  try{await ensurePlayerSupportSchema(env);const body=await readJson(request),auth=await validateTelegramInitData(String(body.initData||""),env),ticketId=Math.floor(Number(body.ticketId)||0),telegramId=String(auth.user.id);if(!ticketId)throw new ApiError(400,"Некорректное обращение.");const row=await env.DB.prepare(`SELECT t.id FROM support_tickets t JOIN support_ticket_meta m ON m.ticket_id=t.id WHERE t.id=? AND t.player_telegram_id=? AND m.source='player' LIMIT 1`).bind(ticketId,telegramId).first();if(!row)throw new ApiError(404,"Обращение не найдено.");const now=Math.floor(Date.now()/1000);await env.DB.prepare(`UPDATE support_ticket_meta SET player_last_read_at=?,updated_at=MAX(updated_at,?) WHERE ticket_id=?`).bind(now,now,ticketId).run();return jsonResponse({ok:true,ticketId,readAt:now});}catch(error){if(error instanceof ApiError)return jsonResponse({ok:false,error:error.message},error.status);return jsonResponse({ok:false,error:"Не удалось отметить ответ прочитанным."},500);}
+}
+
+function supportNewTicketNotification({ticketId,subject,category,message,diagnostics,playerName,telegramId}){
+  const client=diagnostics?.client||{},server=diagnostics?.server||{},profile=diagnostics?.profile||{},lastRun=diagnostics?.lastRun||{},pass=diagnostics?.seasonPass||{},tg=diagnostics?.telegram||{};
+  const username=tg.username?`@${tg.username}`:"без username";
+  const device=[client.telegramPlatform||client.platform||"",client.os||"",client.telegramVersion?`Telegram ${client.telegramVersion}`:""].filter(Boolean).join(" · ")||"не определено";
+  const display=[client.viewport?`viewport ${client.viewport}`:"",client.screen?`screen ${client.screen}`:"",client.devicePixelRatio?`DPR ${client.devicePixelRatio}`:""].filter(Boolean).join(" · ")||"нет данных";
+  const network=[client.network||"",client.online===false?"offline":"",client.language||tg.languageCode||"",server.country||"",server.colo||""].filter(Boolean).join(" · ")||"нет данных";
+  const level=Number(client.profileLevel||0),profileXp=Number(profile.profile_xp||0),best=Number(profile.best_score||client.localBest||0);
+  const passLine=pass?.season_id?`${escapeHtml(String(pass.season_id))} · ${Number(pass.xp||0).toLocaleString("ru-RU")} XP · ${escapeHtml(String(pass.premium_tier||"none"))}`:"нет данных";
+  const body=String(message||"");
+  return `🛟 <b>Новое обращение #${ticketId}</b>
+
+<b>${escapeHtml(subject)}</b>
+Категория: <b>${escapeHtml(SUPPORT_TICKET_CATEGORIES[category]||category)}</b>
+
+👤 ${escapeHtml(playerName)} · ${escapeHtml(username)}${tg.premium?" · Premium":""}
+🆔 <code>${escapeHtml(telegramId)}</code>
+🎮 ${escapeHtml(String(server.gameVersion||GAME_VERSION))} · ${escapeHtml(String(server.workerBuild||WORKER_BUILD))}
+📱 ${escapeHtml(device)}
+🖥 ${escapeHtml(display)}
+🌐 ${escapeHtml(network)}
+⭐ Уровень ${level||"?"} · ${profileXp.toLocaleString("ru-RU")} XP · рекорд ${best.toLocaleString("ru-RU")}
+💰 ${Number(profile.wallet||0).toLocaleString("ru-RU")} очков · ${Number(profile.treats||0).toLocaleString("ru-RU")} зефира · ${Number(profile.coffee||0).toLocaleString("ru-RU")} кофе
+🎟 ${passLine}
+🏁 Последний забег: ${lastRun.run_id?`${escapeHtml(String(lastRun.run_id))} · ${Number(lastRun.score||0).toLocaleString("ru-RU")} очков · ${(Number(lastRun.duration_ms||0)/1000).toFixed(1)} сек` : "нет данных"}
+
+${escapeHtml(body.slice(0,1800))}${body.length>1800?"…":""}`;
+}
+
+async function uploadPlayerSupportAttachment(env,{attachmentId,ticketId,subject,attachment}){
+  try{
+    const owners=[...new Set([...botOwnerTelegramIds(env),...botAdminTelegramIds(env)].map(String).filter(Boolean))];if(!owners.length)throw new Error("Владелец Telegram не настроен");
+    const blob=new Blob([attachment?.bytes||new ArrayBuffer(0)],{type:String(attachment?.type||"image/jpeg")});
+    const form=new FormData();form.append("chat_id",owners[0]);form.append("caption",`📷 <b>Скриншот к обращению #${ticketId}</b>
+${escapeHtml(subject)}`);form.append("parse_mode","HTML");form.append("photo",blob,String(attachment?.name||`support-${ticketId}.jpg`));
+    const sent=await telegramMultipartApi(env,"sendPhoto",form);const photos=Array.isArray(sent?.photo)?sent.photo:[],best=photos[photos.length-1]||{};const now=Math.floor(Date.now()/1000);
+    await env.DB.prepare(`UPDATE support_attachments SET telegram_file_id=?,telegram_file_unique_id=?,telegram_message_id=?,status='uploaded',error_text='',updated_at=? WHERE id=?`).bind(String(best.file_id||""),String(best.file_unique_id||""),Number(sent?.message_id||0),now,attachmentId).run();
+  }catch(error){const now=Math.floor(Date.now()/1000);await env.DB.prepare(`UPDATE support_attachments SET status='failed',error_text=?,updated_at=? WHERE id=?`).bind(String(error?.message||error).slice(0,500),now,attachmentId).run().catch(()=>{});console.error("support attachment upload failed",error);}
+}
+
+const BOT_PLAYER_SUPPORT_WORKFLOW_TTL = 30 * 60;
+const BOT_SUPPORT_AREA_LABELS = Object.freeze({
+  game: "\u0418\u0433\u0440\u0430",
+  shop: "\u041c\u0430\u0433\u0430\u0437\u0438\u043d",
+  pass: "\u0421\u0435\u0437\u043e\u043d\u043d\u044b\u0439 \u043f\u0440\u043e\u043f\u0443\u0441\u043a",
+  cases: "\u041a\u0435\u0439\u0441\u044b",
+  rating: "\u0420\u0435\u0439\u0442\u0438\u043d\u0433",
+  bot: "Telegram-\u0431\u043e\u0442",
+  other: "\u0414\u0440\u0443\u0433\u043e\u0435"
+});
+
+async function setBotPlayerSupportWorkflow(userId, chatId, step, data, env) {
+  await ensurePlayerSupportSchema(env);
+  const now = Math.floor(Date.now() / 1000);
+  await env.DB.prepare(`INSERT INTO bot_player_support_workflows(telegram_id,chat_id,step,data_json,expires_at,updated_at)
+    VALUES(?,?,?,?,?,?) ON CONFLICT(telegram_id) DO UPDATE SET chat_id=excluded.chat_id,step=excluded.step,data_json=excluded.data_json,expires_at=excluded.expires_at,updated_at=excluded.updated_at`)
+    .bind(String(userId), String(chatId), String(step), JSON.stringify(data || {}), now + BOT_PLAYER_SUPPORT_WORKFLOW_TTL, now).run();
+}
+
+async function getBotPlayerSupportWorkflow(userId, env) {
+  await ensurePlayerSupportSchema(env);
+  const now = Math.floor(Date.now() / 1000);
+  const row = await env.DB.prepare(`SELECT * FROM bot_player_support_workflows WHERE telegram_id=? LIMIT 1`).bind(String(userId)).first();
+  if (!row) return null;
+  if (Number(row.expires_at || 0) <= now) {
+    await env.DB.prepare(`DELETE FROM bot_player_support_workflows WHERE telegram_id=?`).bind(String(userId)).run().catch(() => {});
+    return null;
+  }
+  return { telegramId: String(row.telegram_id), chatId: String(row.chat_id), step: String(row.step), data: parseJsonObject(row.data_json, {}), expiresAt: Number(row.expires_at || 0) };
+}
+
+async function updateBotPlayerSupportWorkflow(userId, patch, env) {
+  const current = await getBotPlayerSupportWorkflow(userId, env);
+  if (!current) return null;
+  const nextData = { ...(current.data || {}), ...((patch && patch.data) || {}) };
+  const nextStep = String((patch && patch.step) || current.step);
+  await setBotPlayerSupportWorkflow(userId, current.chatId, nextStep, nextData, env);
+  return { ...current, step: nextStep, data: nextData };
+}
+
+async function clearBotPlayerSupportWorkflow(userId, env) {
+  if (!env.DB) return;
+  await ensurePlayerSupportSchema(env);
+  await env.DB.prepare(`DELETE FROM bot_player_support_workflows WHERE telegram_id=?`).bind(String(userId)).run().catch(() => {});
+}
+
+function botSupportHomeText(state = {}) {
+  const unread = Number(state.unreadCount || 0);
+  const open = Number(state.openCount || 0);
+  const notice = unread ? `\n\n\u{1F534} <b>\u041d\u043e\u0432\u044b\u0445 \u043e\u0442\u0432\u0435\u0442\u043e\u0432: ${unread}</b>` : "";
+  return `\u{1F6DF} <b>\u041f\u043e\u0434\u0434\u0435\u0440\u0436\u043a\u0430 \u0438 \u043e\u0431\u0440\u0430\u0442\u043d\u0430\u044f \u0441\u0432\u044f\u0437\u044c</b>\n\n\u0417\u0434\u0435\u0441\u044c \u043c\u043e\u0436\u043d\u043e \u0441\u043e\u043e\u0431\u0449\u0438\u0442\u044c \u043e\u0431 \u043e\u0448\u0438\u0431\u043a\u0435, \u0437\u0430\u0434\u0430\u0442\u044c \u0432\u043e\u043f\u0440\u043e\u0441, \u043f\u0440\u0435\u0434\u043b\u043e\u0436\u0438\u0442\u044c \u0438\u0434\u0435\u044e \u0438\u043b\u0438 \u043e\u0441\u0442\u0430\u0432\u0438\u0442\u044c \u043e\u0442\u0437\u044b\u0432.\n\n\u041e\u0442\u043a\u0440\u044b\u0442\u044b\u0445 \u043e\u0431\u0440\u0430\u0449\u0435\u043d\u0438\u0439: <b>${open}</b>${notice}`;
+}
+
+function botSupportHomeMarkup(env, state = {}) {
+  const unread = Number(state.unreadCount || 0);
+  return { inline_keyboard: [
+    [{ text: "\u{1F198} \u041d\u0443\u0436\u043d\u0430 \u043f\u043e\u043c\u043e\u0449\u044c", callback_data: "support:new:help" }, { text: "\u{1F41E} \u0421\u043e\u043e\u0431\u0449\u0438\u0442\u044c \u043e\u0431 \u043e\u0448\u0438\u0431\u043a\u0435", callback_data: "support:new:bug" }],
+    [{ text: "\u{1F4A1} \u041f\u0440\u0435\u0434\u043b\u043e\u0436\u0438\u0442\u044c \u0438\u0434\u0435\u044e", callback_data: "support:new:idea" }, { text: "\u2B50 \u041e\u0441\u0442\u0430\u0432\u0438\u0442\u044c \u043e\u0442\u0437\u044b\u0432", callback_data: "support:new:feedback" }],
+    [{ text: `${unread ? "\u{1F534} " : "\u{1F4C2} "}\u041c\u043e\u0438 \u043e\u0431\u0440\u0430\u0449\u0435\u043d\u0438\u044f${unread ? ` \u00b7 ${unread}` : ""}`, callback_data: "support:my" }],
+    [{ text: "\u2753 FAQ", callback_data: "menu:faq" }, { text: "\u{1F3AE} \u041e\u0442\u043a\u0440\u044b\u0442\u044c \u0438\u0433\u0440\u0443", web_app: { url: configuredGameUrl(env) } }],
+    [{ text: "\u2190 \u0413\u043b\u0430\u0432\u043d\u043e\u0435 \u043c\u0435\u043d\u044e", callback_data: "menu:home" }]
+  ] };
+}
+
+async function showBotSupportHome(chatId, user, env) {
+  let state = { tickets: [], openCount: 0, unreadCount: 0 };
+  try { state = await playerSupportStateData(env, String(user.id)); } catch (error) { console.error("bot support state failed", error); }
+  await sendTelegramMessage(env, chatId, botSupportHomeText(state), botSupportHomeMarkup(env, state));
+}
+
+async function botMainMenuSupportState(env, user) {
+  try {
+    const state = await playerSupportStateData(env, String(user?.id || ""));
+    const unread = Number(state.unreadCount || 0);
+    return { unreadCount: unread, text: unread ? `\u{1F6DF} <b>\u0423 \u0432\u0430\u0441 ${unread} ${unread === 1 ? "\u043d\u043e\u0432\u044b\u0439 \u043e\u0442\u0432\u0435\u0442" : "\u043d\u043e\u0432\u044b\u0445 \u043e\u0442\u0432\u0435\u0442\u0430"} \u043f\u043e\u0434\u0434\u0435\u0440\u0436\u043a\u0438.</b>\n\n${botMainMenuText()}` : botMainMenuText() };
+  } catch (error) {
+    console.error("bot main menu support summary failed", error);
+    return { unreadCount: 0, text: botMainMenuText() };
+  }
+}
+
+function botSupportHelpCategoryMarkup() {
+  return { inline_keyboard: [
+    [{ text: "\u{1F6D2} \u041f\u043e\u043a\u0443\u043f\u043a\u0430", callback_data: "support:help:purchase" }, { text: "\u{1F381} \u041d\u0430\u0433\u0440\u0430\u0434\u0430", callback_data: "support:help:reward" }],
+    [{ text: "\u{1F464} \u0410\u043a\u043a\u0430\u0443\u043d\u0442", callback_data: "support:help:account" }, { text: "\u{1F4AC} \u0414\u0440\u0443\u0433\u043e\u0435", callback_data: "support:help:other" }],
+    [{ text: "\u2753 \u0421\u043d\u0430\u0447\u0430\u043b\u0430 \u043f\u0440\u043e\u0432\u0435\u0440\u0438\u0442\u044c FAQ", callback_data: "menu:faq" }],
+    [{ text: "\u2190 \u041f\u043e\u0434\u0434\u0435\u0440\u0436\u043a\u0430", callback_data: "support:home" }]
+  ] };
+}
+
+function botSupportAreaMarkup() {
+  return { inline_keyboard: [
+    [{ text: "\u{1F3AE} \u0418\u0433\u0440\u0430", callback_data: "support:area:game" }, { text: "\u{1F6D2} \u041c\u0430\u0433\u0430\u0437\u0438\u043d", callback_data: "support:area:shop" }],
+    [{ text: "\u{1F39F} \u041f\u0440\u043e\u043f\u0443\u0441\u043a", callback_data: "support:area:pass" }, { text: "\u{1F4E6} \u041a\u0435\u0439\u0441\u044b", callback_data: "support:area:cases" }],
+    [{ text: "\u{1F3C6} \u0420\u0435\u0439\u0442\u0438\u043d\u0433", callback_data: "support:area:rating" }, { text: "\u{1F916} \u0411\u043e\u0442", callback_data: "support:area:bot" }],
+    [{ text: "\u{1F4AC} \u0414\u0440\u0443\u0433\u043e\u0435", callback_data: "support:area:other" }],
+    [{ text: "\u2716 \u041e\u0442\u043c\u0435\u043d\u0430", callback_data: "support:cancel" }]
+  ] };
+}
+
+function botSupportPhotoChoiceMarkup() {
+  return { inline_keyboard: [
+    [{ text: "\u{1F4F7} \u0414\u043e\u0431\u0430\u0432\u0438\u0442\u044c \u0444\u043e\u0442\u043e", callback_data: "support:photo:add" }, { text: "\u2705 \u0411\u0435\u0437 \u0444\u043e\u0442\u043e", callback_data: "support:photo:skip" }],
+    [{ text: "\u2716 \u041e\u0442\u043c\u0435\u043d\u0430", callback_data: "support:cancel" }]
+  ] };
+}
+
+function botSupportDraftPreviewText(data) {
+  const area = data.area ? `\n\u0413\u0434\u0435: <b>${escapeHtml(BOT_SUPPORT_AREA_LABELS[data.area] || data.area)}</b>` : "";
+  return `\u{1F4CB} <b>\u041f\u0440\u043e\u0432\u0435\u0440\u044c\u0442\u0435 \u043e\u0431\u0440\u0430\u0449\u0435\u043d\u0438\u0435</b>\n\n\u041a\u0430\u0442\u0435\u0433\u043e\u0440\u0438\u044f: <b>${escapeHtml(SUPPORT_TICKET_CATEGORIES[data.category] || data.category || "other")}</b>${area}\n\u0422\u0435\u043c\u0430: <b>${escapeHtml(String(data.subject || ""))}</b>\n\u0424\u043e\u0442\u043e: <b>${data.photo ? "\u043f\u0440\u0438\u043a\u0440\u0435\u043f\u043b\u0435\u043d\u043e" : "\u043d\u0435\u0442"}</b>\n\n${escapeHtml(String(data.message || "").slice(0,2400))}`;
+}
+
+function botSupportDraftConfirmMarkup() {
+  return { inline_keyboard: [
+    [{ text: "\u2705 \u041e\u0442\u043f\u0440\u0430\u0432\u0438\u0442\u044c", callback_data: "support:send" }],
+    [{ text: "\u2716 \u041e\u0442\u043c\u0435\u043d\u0430", callback_data: "support:cancel" }]
+  ] };
+}
+
+function botSupportPhotoFromMessage(message) {
+  const photos = Array.isArray(message?.photo) ? message.photo : [];
+  if (photos.length) {
+    const photo = photos[photos.length - 1] || {};
+    return { fileId: String(photo.file_id || ""), fileUniqueId: String(photo.file_unique_id || ""), mimeType: "image/jpeg", fileName: `telegram-photo-${Number(message.message_id || 0)}.jpg`, sizeBytes: Number(photo.file_size || 0), telegramMessageId: Number(message.message_id || 0), width: Number(photo.width || 0), height: Number(photo.height || 0) };
+  }
+  const doc = message?.document || null;
+  if (doc && /^image\//i.test(String(doc.mime_type || "")) && String(doc.file_id || "")) {
+    return { fileId: String(doc.file_id), fileUniqueId: String(doc.file_unique_id || ""), mimeType: String(doc.mime_type || "image/jpeg"), fileName: String(doc.file_name || `telegram-image-${Number(message.message_id || 0)}`).slice(0,120), sizeBytes: Number(doc.file_size || 0), telegramMessageId: Number(message.message_id || 0), width: 0, height: 0 };
+  }
+  return null;
+}
+
+async function botSupportDiagnostics(env, user, data = {}) {
+  const telegramId = String(user?.id || "");
+  const [profileResult, caseResult, runResult, passResult] = await Promise.allSettled([
+    env.DB.prepare(`SELECT wallet,best_score,treats,coffee,profile_xp,revision,updated_at FROM admin_profile_state WHERE telegram_id=? LIMIT 1`).bind(telegramId).first(),
+    env.DB.prepare(`SELECT active_skin_id,active_avatar_id,active_frame_id,active_trail_id,active_music_id,revision,updated_at FROM case_player_state WHERE telegram_id=? LIMIT 1`).bind(telegramId).first(),
+    env.DB.prepare(`SELECT run_id,score,duration_ms,accepted,rejection_reason,created_at FROM leaderboard_runs WHERE telegram_id=? ORDER BY created_at DESC LIMIT 1`).bind(telegramId).first(),
+    env.DB.prepare(`SELECT p.season_id,p.xp,p.premium_tier,p.revision,p.updated_at FROM season_pass_players p WHERE p.telegram_id=? ORDER BY p.updated_at DESC LIMIT 1`).bind(telegramId).first()
+  ]);
+  return {
+    client: { channel: "telegram_bot", area: String(data.area || ""), chatType: String(data.chatType || "private") },
+    server: { gameVersion: GAME_VERSION, workerBuild: WORKER_BUILD },
+    telegram: { id: telegramId, username: String(user?.username || "").slice(0,64), firstName: String(user?.first_name || "").slice(0,100), lastName: String(user?.last_name || "").slice(0,100), languageCode: String(user?.language_code || "").slice(0,24), premium: Boolean(user?.is_premium) },
+    profile: profileResult.status === "fulfilled" && profileResult.value ? profileResult.value : null,
+    cosmetics: caseResult.status === "fulfilled" && caseResult.value ? caseResult.value : null,
+    lastRun: runResult.status === "fulfilled" && runResult.value ? runResult.value : null,
+    seasonPass: passResult.status === "fulfilled" && passResult.value ? passResult.value : null
+  };
+}
+
+async function notifyBotSupportPhotoOwners(env, ticketId, subject, photo) {
+  if (!photo?.fileId) return;
+  const owners = [...new Set([...botOwnerTelegramIds(env), ...botAdminTelegramIds(env)].map(String).filter(Boolean))];
+  for (const chatId of owners) {
+    try {
+      await telegramApi(env, "sendPhoto", { chat_id: chatId, photo: photo.fileId, caption: `\u{1F4F7} <b>\u0424\u043e\u0442\u043e \u043a \u043e\u0431\u0440\u0430\u0449\u0435\u043d\u0438\u044e #${ticketId}</b>\n${escapeHtml(String(subject || ""))}`, parse_mode: "HTML" });
+    } catch (error) { console.error("bot support photo owner notification failed", error); }
+  }
+}
+
+async function createBotPlayerSupportTicket(env, user, chatId, data, runtime = {}) {
+  await ensurePlayerSupportSchema(env);
+  const telegramId = String(user.id), category = String(data.category || "other"), subject = String(data.subject || "").trim().replace(/\s+/g, " ").slice(0,120), message = String(data.message || "").trim().slice(0,SUPPORT_MAX_MESSAGE_LENGTH);
+  if (![...PLAYER_SUPPORT_CATEGORIES, "feedback"].includes(category)) throw new ApiError(400, "\u041d\u0435\u043a\u043e\u0440\u0440\u0435\u043a\u0442\u043d\u0430\u044f \u043a\u0430\u0442\u0435\u0433\u043e\u0440\u0438\u044f.");
+  if (subject.length < 3 || message.length < 5) throw new ApiError(400, "\u0417\u0430\u043f\u043e\u043b\u043d\u0438\u0442\u0435 \u0442\u0435\u043c\u0443 \u0438 \u043e\u043f\u0438\u0441\u0430\u043d\u0438\u0435.");
+  const requestId = supportRequestId(data.requestId, "bot_ticket");
+  const repeated = await env.DB.prepare(`SELECT t.id FROM support_ticket_meta m JOIN support_tickets t ON t.id=m.ticket_id WHERE m.source='player' AND m.request_id=? AND t.player_telegram_id=? LIMIT 1`).bind(requestId, telegramId).first();
+  if (repeated) return { ticketId: Number(repeated.id), repeated: true };
+  const now = Math.floor(Date.now() / 1000);
+  const [openRow, dailyRow] = await Promise.all([
+    env.DB.prepare(`SELECT COUNT(*) AS count FROM support_tickets t JOIN support_ticket_meta m ON m.ticket_id=t.id WHERE t.player_telegram_id=? AND m.source='player' AND t.status IN ('new','working')`).bind(telegramId).first(),
+    env.DB.prepare(`SELECT COUNT(*) AS count FROM support_tickets t JOIN support_ticket_meta m ON m.ticket_id=t.id WHERE t.player_telegram_id=? AND m.source='player' AND t.created_at>=?`).bind(telegramId, now - 86400).first()
+  ]);
+  if (Number(openRow?.count || 0) >= SUPPORT_MAX_OPEN_TICKETS) throw new ApiError(429, `\u041e\u0434\u043d\u043e\u0432\u0440\u0435\u043c\u0435\u043d\u043d\u043e \u043c\u043e\u0436\u043d\u043e \u0434\u0435\u0440\u0436\u0430\u0442\u044c \u043d\u0435 \u0431\u043e\u043b\u0435\u0435 ${SUPPORT_MAX_OPEN_TICKETS} \u043e\u0442\u043a\u0440\u044b\u0442\u044b\u0445 \u043e\u0431\u0440\u0430\u0449\u0435\u043d\u0438\u0439.`);
+  if (Number(dailyRow?.count || 0) >= SUPPORT_MAX_DAILY_TICKETS) throw new ApiError(429, "\u041b\u0438\u043c\u0438\u0442 \u043d\u043e\u0432\u044b\u0445 \u043e\u0431\u0440\u0430\u0449\u0435\u043d\u0438\u0439 \u043d\u0430 \u0441\u0435\u0433\u043e\u0434\u043d\u044f \u0438\u0441\u0447\u0435\u0440\u043f\u0430\u043d.");
+  const playerName = telegramDisplayName(user), diagnostics = await botSupportDiagnostics(env, user, { area: data.area || "", chatType: "private" });
+  const insert = await env.DB.prepare(`INSERT INTO support_tickets(created_by,created_by_name,player_telegram_id,player_name,category,description,status,assigned_to,assigned_to_name,resolution,created_at,updated_at,closed_at) VALUES(?,?,?,?,?,?,'new','','','',?,?,0)`).bind(telegramId, playerName, telegramId, playerName, category, message, now, now).run();
+  let ticketId = Number(insert.meta?.last_row_id || 0);
+  if (!ticketId) ticketId = Number((await env.DB.prepare(`SELECT id FROM support_tickets WHERE player_telegram_id=? AND created_at=? ORDER BY id DESC LIMIT 1`).bind(telegramId, now).first())?.id || 0);
+  if (!ticketId) throw new ApiError(500, "\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u0441\u043e\u0437\u0434\u0430\u0442\u044c \u043e\u0431\u0440\u0430\u0449\u0435\u043d\u0438\u0435.");
+  const msgInsert = await env.DB.prepare(`INSERT INTO support_messages(ticket_id,author_kind,author_telegram_id,author_name,message_text,request_id,client_json,created_at,telegram_delivered_at,telegram_error) VALUES(?,'player',?,?,?,?,?,?,0,'')`).bind(ticketId, telegramId, playerName, message, `${requestId}:initial`, JSON.stringify({ channel: "telegram_bot", area: String(data.area || "") }), now).run();
+  const messageId = Number(msgInsert.meta?.last_row_id || 0);
+  await env.DB.batch([
+    env.DB.prepare(`INSERT INTO support_ticket_meta(ticket_id,source,subject,request_id,client_json,player_last_read_at,staff_last_read_at,last_player_message_at,last_staff_message_at,created_at,updated_at) VALUES(?,'player',?,?,?,?,0,?,0,?,?)`).bind(ticketId, subject, requestId, JSON.stringify(diagnostics), now, now, now, now),
+    env.DB.prepare(`INSERT OR REPLACE INTO support_ticket_channels(ticket_id,channel,created_at,updated_at) VALUES(?,'bot',?,?)`).bind(ticketId, now, now)
+  ]);
+  await ensureSupportOperationsForTicket(env,ticketId,category,String(data.area || ""),"bot",now);
+  const photo = data.photo && data.photo.fileId ? data.photo : null;
+  if (photo) {
+    await env.DB.prepare(`INSERT INTO support_attachments(ticket_id,message_id,uploader_kind,mime_type,file_name,size_bytes,telegram_file_id,telegram_file_unique_id,telegram_message_id,status,error_text,created_at,updated_at) VALUES(?,?,'player',?,?,?,?,?,?, 'uploaded','',?,?)`)
+      .bind(ticketId, messageId, String(photo.mimeType || "image/jpeg"), String(photo.fileName || `support-${ticketId}.jpg`).slice(0,120), Number(photo.sizeBytes || 0), String(photo.fileId), String(photo.fileUniqueId || ""), Number(photo.telegramMessageId || 0), now, now).run();
+  }
+  const notification = supportNewTicketNotification({ ticketId, subject, category, message, diagnostics, playerName, telegramId });
+  const background = (async () => {
+    await notifySubscribedStaff(env, "new_tickets", `${notification}\n\n\u{1F916} \u041a\u0430\u043d\u0430\u043b: <b>Telegram-\u0431\u043e\u0442</b>`);
+    await processPendingLeaderboardStaffNotifications(env, 20).catch((error) => console.error("bot support instant staff notification failed", error));
+    if (photo) await notifyBotSupportPhotoOwners(env, ticketId, subject, photo);
+    try { await recordPlayerTimeline(env, telegramId, "support", `\u0441\u043e\u0437\u0434\u0430\u043b \u043e\u0431\u0440\u0430\u0449\u0435\u043d\u0438\u0435 #${ticketId} \u0447\u0435\u0440\u0435\u0437 \u0431\u043e\u0442`, { ticketId, category, subject, channel: "bot" }, `support_bot_${ticketId}`, user, now); } catch (error) { console.error("bot support timeline failed", error); }
+  })();
+  if (!runWorkerBackground(runtime, background, "bot support create background")) void background.catch((error) => console.error("bot support create background failed", error));
+  return { ticketId, repeated: false };
+}
+
+async function botSupportAppendReply(env, user, ticketId, text, messageId, runtime = {}) {
+  await ensurePlayerSupportSchema(env);
+  const telegramId = String(user.id), body = String(text || "").trim().slice(0, SUPPORT_MAX_MESSAGE_LENGTH);
+  if (body.length < 1) throw new ApiError(400, "\u0412\u0432\u0435\u0434\u0438\u0442\u0435 \u0441\u043e\u043e\u0431\u0449\u0435\u043d\u0438\u0435.");
+  const ticket = await env.DB.prepare(`SELECT t.*,m.source FROM support_tickets t JOIN support_ticket_meta m ON m.ticket_id=t.id WHERE t.id=? AND t.player_telegram_id=? AND m.source='player' LIMIT 1`).bind(Number(ticketId), telegramId).first();
+  if (!ticket) throw new ApiError(404, "\u041e\u0431\u0440\u0430\u0449\u0435\u043d\u0438\u0435 \u043d\u0435 \u043d\u0430\u0439\u0434\u0435\u043d\u043e.");
+  if (!["new", "working"].includes(String(ticket.status))) throw new ApiError(409, "\u041e\u0431\u0440\u0430\u0449\u0435\u043d\u0438\u0435 \u0443\u0436\u0435 \u0437\u0430\u043a\u0440\u044b\u0442\u043e.");
+  const req = `botmsg_${String(user.id)}_${Number(messageId || Date.now())}`.slice(0,96), now = Math.floor(Date.now() / 1000), name = telegramDisplayName(user);
+  const existing = await env.DB.prepare(`SELECT id FROM support_messages WHERE ticket_id=? AND request_id=? LIMIT 1`).bind(Number(ticketId), req).first();
+  if (!existing) {
+    await env.DB.batch([
+      env.DB.prepare(`INSERT INTO support_messages(ticket_id,author_kind,author_telegram_id,author_name,message_text,request_id,client_json,created_at,telegram_delivered_at,telegram_error) VALUES(?,'player',?,?,?,?,?,?,0,'')`).bind(Number(ticketId), telegramId, name, body, req, JSON.stringify({ channel: "telegram_bot" }), now),
+      env.DB.prepare(`UPDATE support_tickets SET updated_at=? WHERE id=?`).bind(now, Number(ticketId)),
+      env.DB.prepare(`UPDATE support_ticket_meta SET last_player_message_at=?,updated_at=? WHERE ticket_id=?`).bind(now, now, Number(ticketId))
+    ]);
+    const task = (async () => {
+      await notifySubscribedStaff(env, "new_tickets", `\u{1F4AC} <b>\u041e\u0442\u0432\u0435\u0442 \u0438\u0433\u0440\u043e\u043a\u0430 \u0432 \u043e\u0431\u0440\u0430\u0449\u0435\u043d\u0438\u0438 #${Number(ticketId)}</b>\n\n\u0418\u0433\u0440\u043e\u043a: <b>${escapeHtml(name)}</b> \u00b7 <code>${escapeHtml(telegramId)}</code>\n\u041a\u0430\u043d\u0430\u043b: <b>Telegram-\u0431\u043e\u0442</b>\n\n${escapeHtml(body.slice(0,1800))}`);
+      await processPendingLeaderboardStaffNotifications(env,20).catch((error)=>console.error("bot support reply notification failed",error));
+    })();
+    if (!runWorkerBackground(runtime, task, "bot support reply background")) void task.catch(() => {});
+  }
+  return { ticketId: Number(ticketId), repeated: Boolean(existing) };
+}
+
+async function resolveBotPlayerSupportTicket(env, user, ticketId, runtime = {}) {
+  await ensurePlayerSupportSchema(env);
+  const telegramId = String(user.id), id = Number(ticketId), row = await env.DB.prepare(`SELECT t.id,t.status FROM support_tickets t JOIN support_ticket_meta m ON m.ticket_id=t.id WHERE t.id=? AND t.player_telegram_id=? AND m.source='player' LIMIT 1`).bind(id, telegramId).first();
+  if (!row) throw new ApiError(404, "\u041e\u0431\u0440\u0430\u0449\u0435\u043d\u0438\u0435 \u043d\u0435 \u043d\u0430\u0439\u0434\u0435\u043d\u043e.");
+  if (["resolved","rejected"].includes(String(row.status))) return { ticketId:id,repeated:true };
+  const now = Math.floor(Date.now()/1000), req = `player_resolve_${id}`;
+  await env.DB.batch([
+    env.DB.prepare(`UPDATE support_tickets SET status='resolved',resolution=CASE WHEN TRIM(resolution)='' THEN ? ELSE resolution END,updated_at=?,closed_at=? WHERE id=?`).bind("\u0418\u0433\u0440\u043e\u043a \u043e\u0442\u043c\u0435\u0442\u0438\u043b \u0432\u043e\u043f\u0440\u043e\u0441 \u0440\u0435\u0448\u0451\u043d\u043d\u044b\u043c.",now,now,id),
+    env.DB.prepare(`INSERT OR IGNORE INTO support_messages(ticket_id,author_kind,author_telegram_id,author_name,message_text,request_id,client_json,created_at,telegram_delivered_at,telegram_error) VALUES(?,'system','','',?,?,'{}',?,0,'')`).bind(id,"\u0418\u0433\u0440\u043e\u043a \u043e\u0442\u043c\u0435\u0442\u0438\u043b \u0432\u043e\u043f\u0440\u043e\u0441 \u0440\u0435\u0448\u0451\u043d\u043d\u044b\u043c.",req,now),
+    env.DB.prepare(`UPDATE support_ticket_meta SET player_last_read_at=?,updated_at=? WHERE ticket_id=?`).bind(now,now,id)
+  ]);
+  const task = notifySubscribedStaff(env,"new_tickets",`\u2705 <b>\u0418\u0433\u0440\u043e\u043a \u043e\u0442\u043c\u0435\u0442\u0438\u043b \u043e\u0431\u0440\u0430\u0449\u0435\u043d\u0438\u0435 #${id} \u0440\u0435\u0448\u0451\u043d\u043d\u044b\u043c</b>\n\n<code>${escapeHtml(telegramId)}</code>`);
+  if (!runWorkerBackground(runtime, task, "bot support resolved notification")) void task.catch(() => {});
+  return { ticketId:id,repeated:false };
+}
+
+async function recordPlayerSupportFeedback(env, user, ticketId, closeToken, rating, runtime = {}) {
+  await ensurePlayerSupportSchema(env);
+  const telegramId = String(user?.id || ""), id = Number(ticketId || 0), token = String(closeToken || ""), value = String(rating || "");
+  if (!id || !/^\d{8,12}$/.test(token) || !["up","down"].includes(value)) throw new ApiError(400,"Некорректная оценка обращения.");
+  const row = await env.DB.prepare(`SELECT t.id,t.status,t.closed_at,t.player_telegram_id,t.assigned_to,t.assigned_to_name,m.source FROM support_tickets t JOIN support_ticket_meta m ON m.ticket_id=t.id WHERE t.id=? AND t.player_telegram_id=? AND m.source='player' LIMIT 1`).bind(id,telegramId).first();
+  if (!row) throw new ApiError(404,"Обращение не найдено.");
+  if (String(row.status)!=='resolved' || String(Number(row.closed_at||0))!==token) throw new ApiError(409,"Эта оценка уже не относится к текущему закрытию обращения.");
+  const existing = await env.DB.prepare(`SELECT id,rating FROM support_ticket_feedback WHERE ticket_id=? AND close_token=? LIMIT 1`).bind(id,token).first();
+  if (existing) return {ticketId:id,rating:String(existing.rating||value),repeated:true,reopened:false};
+  const now=Math.floor(Date.now()/1000),systemText=value==='up'?'Игрок оценил ответ поддержки: 👍 помогло.':'Игрок оценил ответ поддержки: 👎 не помогло. Обращение автоматически возвращено в работу.';
+  const feedbackInsert=env.DB.prepare(`INSERT OR IGNORE INTO support_ticket_feedback(ticket_id,close_token,rating,source,player_telegram_id,created_at) VALUES(?,?,?,'bot',?,?)`).bind(id,token,value,telegramId,now);
+  const messageInsert=env.DB.prepare(`INSERT OR IGNORE INTO support_messages(ticket_id,author_kind,author_telegram_id,author_name,message_text,request_id,client_json,created_at,telegram_delivered_at,telegram_error) VALUES(?,'system','','',?,?,'{}',?,0,'')`).bind(id,systemText,`feedback_${id}_${token}`,now);
+  if(value==='down'){
+    const results=await env.DB.batch([
+      feedbackInsert,
+      messageInsert,
+      env.DB.prepare(`UPDATE support_tickets SET status='working',resolution='',updated_at=?,closed_at=0 WHERE id=? AND status='resolved' AND closed_at=?`).bind(now,id,Number(token)),
+      env.DB.prepare(`UPDATE support_ticket_meta SET last_player_message_at=?,player_last_read_at=?,updated_at=? WHERE ticket_id=?`).bind(now,now,now,id)
+    ]);
+    const inserted=Number(results?.[0]?.meta?.changes||0)>0;
+    if(!inserted)return {ticketId:id,rating:value,repeated:true,reopened:String(row.status)==='resolved'};
+    const task=(async()=>{await notifySubscribedStaff(env,'new_tickets',`👎 <b>Игроку не помог ответ по обращению #${id}</b>
+
+Игрок: <code>${escapeHtml(telegramId)}</code>
+Обращение автоматически возвращено в работу.`);await processPendingLeaderboardStaffNotifications(env,20).catch((error)=>console.error('support negative feedback notification failed',error));})();
+    if(!runWorkerBackground(runtime,task,'support negative feedback'))void task.catch(()=>{});
+    return {ticketId:id,rating:value,repeated:false,reopened:true};
+  }
+  const results=await env.DB.batch([
+    feedbackInsert,
+    messageInsert,
+    env.DB.prepare(`UPDATE support_ticket_meta SET player_last_read_at=?,updated_at=? WHERE ticket_id=?`).bind(now,now,id)
+  ]);
+  const inserted=Number(results?.[0]?.meta?.changes||0)>0;
+  return {ticketId:id,rating:value,repeated:!inserted,reopened:false};
+}
+
+async function showBotSupportTickets(chatId, user, env) {
+  const state = await playerSupportStateData(env, String(user.id));
+  const tickets = (state.tickets || []).slice(0,5);
+  const lines = tickets.map((t) => `${t.unread ? "\u{1F534}" : "\u{1F39F}"} #${t.id} \u00b7 <b>${escapeHtml(t.categoryLabel)}</b> \u00b7 ${escapeHtml(t.statusLabel)}\n${escapeHtml(String(t.subject || "").slice(0,90))}`).join("\n\n") || "\u041e\u0431\u0440\u0430\u0449\u0435\u043d\u0438\u0439 \u043f\u043e\u043a\u0430 \u043d\u0435\u0442.";
+  const buttons = tickets.map((t) => [{ text: `${t.unread ? "\u{1F534} " : ""}#${t.id} \u00b7 ${String(t.categoryLabel).slice(0,22)}`, callback_data: `support:ticket:${t.id}` }]);
+  buttons.push([{text:"\u2795 \u041d\u043e\u0432\u043e\u0435 \u043e\u0431\u0440\u0430\u0449\u0435\u043d\u0438\u0435",callback_data:"support:home"}],[{text:"\u2190 \u041f\u043e\u0434\u0434\u0435\u0440\u0436\u043a\u0430",callback_data:"support:home"}]);
+  await sendTelegramMessage(env, chatId, `\u{1F4C2} <b>\u041c\u043e\u0438 \u043e\u0431\u0440\u0430\u0449\u0435\u043d\u0438\u044f</b>\n\n\u041e\u0442\u043a\u0440\u044b\u0442\u043e: <b>${state.openCount}</b> \u00b7 \u043d\u043e\u0432\u044b\u0445 \u043e\u0442\u0432\u0435\u0442\u043e\u0432: <b>${state.unreadCount}</b>\n\n${lines}`, {inline_keyboard:buttons});
+}
+
+async function showBotSupportTicketDetail(chatId, user, ticketId, env) {
+  const state = await playerSupportStateData(env, String(user.id));
+  const ticket = (state.tickets || []).find((t) => Number(t.id) === Number(ticketId));
+  if (!ticket) { await sendTelegramMessage(env,chatId,"\u041e\u0431\u0440\u0430\u0449\u0435\u043d\u0438\u0435 \u043d\u0435 \u043d\u0430\u0439\u0434\u0435\u043d\u043e.",botSupportHomeMarkup(env,state)); return; }
+  const now=Math.floor(Date.now()/1000);await env.DB.prepare(`UPDATE support_ticket_meta SET player_last_read_at=?,updated_at=MAX(updated_at,?) WHERE ticket_id=?`).bind(now,now,Number(ticket.id)).run().catch(()=>{});
+  const messages=(ticket.messages||[]).slice(-8).map((m)=>{const who=m.authorKind==='staff'?"\u041f\u043e\u0434\u0434\u0435\u0440\u0436\u043a\u0430":m.authorKind==='player'?"\u0412\u044b":"\u0421\u0438\u0441\u0442\u0435\u043c\u0430";return `<b>${who}</b> \u00b7 ${escapeHtml(formatUtcDate(m.createdAt))}\n${escapeHtml(String(m.text||"").slice(0,700))}`;}).join("\n\n")||"\u0418\u0441\u0442\u043e\u0440\u0438\u044f \u043f\u0443\u0441\u0442\u0430.";
+  const open=["new","working"].includes(ticket.status);const buttons=[];if(open)buttons.push([{text:"\u{1F4AC} \u041e\u0442\u0432\u0435\u0442\u0438\u0442\u044c",callback_data:`support:reply:${ticket.id}`},{text:"\u2705 \u0412\u043e\u043f\u0440\u043e\u0441 \u0440\u0435\u0448\u0451\u043d",callback_data:`support:resolve:${ticket.id}`}]);buttons.push([{text:"\u2190 \u041c\u043e\u0438 \u043e\u0431\u0440\u0430\u0449\u0435\u043d\u0438\u044f",callback_data:"support:my"}]);
+  await sendTelegramMessage(env,chatId,`\u{1F39F} <b>\u041e\u0431\u0440\u0430\u0449\u0435\u043d\u0438\u0435 #${ticket.id}</b>\n${escapeHtml(ticket.categoryLabel)} \u00b7 <b>${escapeHtml(ticket.statusLabel)}</b> \u00b7 ${escapeHtml(supportChannelLabel(ticket.channel))}\n<b>${escapeHtml(ticket.subject)}</b>\n\n${messages}${(ticket.attachments||[]).length?`\n\n\u{1F4CE} \u0412\u043b\u043e\u0436\u0435\u043d\u0438\u0439: ${ticket.attachments.length}`:""}`,{inline_keyboard:buttons});
+}
+
+async function beginBotSupportDraft(query, mode, env) {
+  const chatId=query.message?.chat?.id;if(!chatId)return;
+  await clearStaffWorkflow(query.from.id,env).catch(()=>{});await clearBotPlayerSupportWorkflow(query.from.id,env).catch(()=>{});
+  const requestId=supportRequestId("","bot_ticket");
+  if(mode==="help"){await setBotPlayerSupportWorkflow(query.from.id,chatId,"help_category",{requestId,mode},env);await answerCallback(env,query.id,"\u0412\u044b\u0431\u0435\u0440\u0438\u0442\u0435 \u0442\u0435\u043c\u0443.");await sendTelegramMessage(env,chatId,"\u{1F198} <b>\u0421 \u0447\u0435\u043c \u043d\u0443\u0436\u043d\u0430 \u043f\u043e\u043c\u043e\u0449\u044c?</b>\n\n\u0415\u0441\u043b\u0438 \u043e\u0442\u0432\u0435\u0442 \u0443\u0436\u0435 \u0435\u0441\u0442\u044c \u0432 FAQ, \u043c\u043e\u0436\u043d\u043e \u043f\u0440\u043e\u0432\u0435\u0440\u0438\u0442\u044c \u0435\u0433\u043e \u0434\u043e \u0441\u043e\u0437\u0434\u0430\u043d\u0438\u044f \u043e\u0431\u0440\u0430\u0449\u0435\u043d\u0438\u044f.",botSupportHelpCategoryMarkup());return;}
+  const category=mode==="bug"?"bug":mode==="idea"?"suggestion":"feedback";
+  if(mode==="bug"){await setBotPlayerSupportWorkflow(query.from.id,chatId,"area",{requestId,mode,category},env);await answerCallback(env,query.id,"\u0412\u044b\u0431\u0435\u0440\u0438\u0442\u0435 \u0440\u0430\u0437\u0434\u0435\u043b.");await sendTelegramMessage(env,chatId,"\u{1F41E} <b>\u0413\u0434\u0435 \u0432\u043e\u0437\u043d\u0438\u043a\u043b\u0430 \u043e\u0448\u0438\u0431\u043a\u0430?</b>",botSupportAreaMarkup());return;}
+  await setBotPlayerSupportWorkflow(query.from.id,chatId,"subject",{requestId,mode,category},env);await answerCallback(env,query.id,"\u041d\u0430\u0447\u0438\u043d\u0430\u0435\u043c.");await sendTelegramMessage(env,chatId,"<b>\u041a\u043e\u0440\u043e\u0442\u043a\u043e \u043d\u0430\u043f\u0438\u0448\u0438\u0442\u0435 \u0442\u0435\u043c\u0443</b>\n\n\u041e\u0434\u043d\u0430 \u0441\u0442\u0440\u043e\u043a\u0430, \u043d\u0430\u043f\u0440\u0438\u043c\u0435\u0440: \u00ab\u0418\u0434\u0435\u044f \u0434\u043b\u044f \u043d\u043e\u0432\u043e\u0433\u043e \u043a\u0435\u0439\u0441\u0430\u00bb.");
+}
+
+async function handleBotSupportCallback(query, env, runtime = {}) {
+  const data=String(query.data||"");if(!data.startsWith("support:"))return false;const chatId=query.message?.chat?.id;if(!chatId)return true;
+  if(data==="support:home"){await answerCallback(env,query.id,"\u041f\u043e\u0434\u0434\u0435\u0440\u0436\u043a\u0430");await showBotSupportHome(chatId,query.from,env);return true;}
+  if(data==="support:my"){await answerCallback(env,query.id,"\u041c\u043e\u0438 \u043e\u0431\u0440\u0430\u0449\u0435\u043d\u0438\u044f");await showBotSupportTickets(chatId,query.from,env);return true;}
+  const start=data.match(/^support:new:(help|bug|idea|feedback)$/);if(start){await beginBotSupportDraft(query,start[1],env);return true;}
+  const help=data.match(/^support:help:(purchase|reward|account|other)$/);if(help){let wf=await getBotPlayerSupportWorkflow(query.from.id,env);const requestId=wf?.data?.requestId||supportRequestId("","bot_ticket");await setBotPlayerSupportWorkflow(query.from.id,chatId,"subject",{requestId,mode:"help",category:help[1]},env);await answerCallback(env,query.id,"\u0422\u0435\u043c\u0430 \u0432\u044b\u0431\u0440\u0430\u043d\u0430.");await sendTelegramMessage(env,chatId,"<b>\u041a\u043e\u0440\u043e\u0442\u043a\u043e \u043d\u0430\u043f\u0438\u0448\u0438\u0442\u0435 \u0442\u0435\u043c\u0443 \u0432\u043e\u043f\u0440\u043e\u0441\u0430</b>");return true;}
+  const area=data.match(/^support:area:(game|shop|pass|cases|rating|bot|other)$/);if(area){const wf=await getBotPlayerSupportWorkflow(query.from.id,env);if(!wf){await answerCallback(env,query.id,"\u0414\u0435\u0439\u0441\u0442\u0432\u0438\u0435 \u0443\u0441\u0442\u0430\u0440\u0435\u043b\u043e.",true);return true;}await updateBotPlayerSupportWorkflow(query.from.id,{step:"subject",data:{area:area[1]}},env);await answerCallback(env,query.id,"\u0420\u0430\u0437\u0434\u0435\u043b \u0432\u044b\u0431\u0440\u0430\u043d.");await sendTelegramMessage(env,chatId,"<b>\u041a\u043e\u0440\u043e\u0442\u043a\u043e \u043d\u0430\u043f\u0438\u0448\u0438\u0442\u0435 \u0442\u0435\u043c\u0443 \u043e\u0448\u0438\u0431\u043a\u0438</b>");return true;}
+  if(data==="support:photo:add"){const wf=await getBotPlayerSupportWorkflow(query.from.id,env);if(!wf||wf.step!=="photo_choice"){await answerCallback(env,query.id,"\u0414\u0435\u0439\u0441\u0442\u0432\u0438\u0435 \u0443\u0441\u0442\u0430\u0440\u0435\u043b\u043e.",true);return true;}await updateBotPlayerSupportWorkflow(query.from.id,{step:"photo"},env);await answerCallback(env,query.id,"\u041f\u0440\u0438\u0448\u043b\u0438\u0442\u0435 \u0444\u043e\u0442\u043e.");await sendTelegramMessage(env,chatId,"\u{1F4F7} \u041e\u0442\u043f\u0440\u0430\u0432\u044c\u0442\u0435 <b>\u043e\u0434\u043d\u0443 \u0444\u043e\u0442\u043e\u0433\u0440\u0430\u0444\u0438\u044e</b> \u043e\u0431\u044b\u0447\u043d\u044b\u043c \u0441\u043e\u043e\u0431\u0449\u0435\u043d\u0438\u0435\u043c. \u041e\u043d\u0430 \u0431\u0443\u0434\u0435\u0442 \u043f\u0440\u0438\u043a\u0440\u0435\u043f\u043b\u0435\u043d\u0430 \u043a \u043e\u0431\u0440\u0430\u0449\u0435\u043d\u0438\u044e.",{inline_keyboard:[[{text:"\u0411\u0435\u0437 \u0444\u043e\u0442\u043e",callback_data:"support:photo:skip"}],[{text:"\u2716 \u041e\u0442\u043c\u0435\u043d\u0430",callback_data:"support:cancel"}]]});return true;}
+  if(data==="support:photo:skip"){const wf=await getBotPlayerSupportWorkflow(query.from.id,env);if(!wf||!["photo_choice","photo"].includes(wf.step)){await answerCallback(env,query.id,"\u0414\u0435\u0439\u0441\u0442\u0432\u0438\u0435 \u0443\u0441\u0442\u0430\u0440\u0435\u043b\u043e.",true);return true;}const next=await updateBotPlayerSupportWorkflow(query.from.id,{step:"confirm",data:{photo:null}},env);await answerCallback(env,query.id,"\u0411\u0435\u0437 \u0444\u043e\u0442\u043e.");await sendTelegramMessage(env,chatId,botSupportDraftPreviewText(next.data),botSupportDraftConfirmMarkup());return true;}
+  if(data==="support:send"){const wf=await getBotPlayerSupportWorkflow(query.from.id,env);if(!wf||wf.step!=="confirm"){await answerCallback(env,query.id,"\u0414\u0435\u0439\u0441\u0442\u0432\u0438\u0435 \u0443\u0441\u0442\u0430\u0440\u0435\u043b\u043e.",true);return true;}try{const created=await createBotPlayerSupportTicket(env,query.from,chatId,wf.data,runtime);await clearBotPlayerSupportWorkflow(query.from.id,env);await answerCallback(env,query.id,"\u041e\u0431\u0440\u0430\u0449\u0435\u043d\u0438\u0435 \u043e\u0442\u043f\u0440\u0430\u0432\u043b\u0435\u043d\u043e.");await sendTelegramMessage(env,chatId,`\u2705 <b>\u041e\u0431\u0440\u0430\u0449\u0435\u043d\u0438\u0435 #${created.ticketId} \u0441\u043e\u0437\u0434\u0430\u043d\u043e</b>\n\n\u041e\u0442\u0432\u0435\u0442 \u043f\u043e\u0434\u0434\u0435\u0440\u0436\u043a\u0438 \u043f\u0440\u0438\u0434\u0451\u0442 \u0441\u044e\u0434\u0430 \u0432 \u0431\u043e\u0442 \u0438 \u043e\u0441\u0442\u0430\u043d\u0435\u0442\u0441\u044f \u0432 \u0438\u0441\u0442\u043e\u0440\u0438\u0438 \u0432 \u0438\u0433\u0440\u0435.`,{inline_keyboard:[[{text:`\u{1F39F} \u041e\u0442\u043a\u0440\u044b\u0442\u044c #${created.ticketId}`,callback_data:`support:ticket:${created.ticketId}`}],[{text:"\u2190 \u041f\u043e\u0434\u0434\u0435\u0440\u0436\u043a\u0430",callback_data:"support:home"}]]});}catch(error){await answerCallback(env,query.id,"\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u043e\u0442\u043f\u0440\u0430\u0432\u0438\u0442\u044c.",true);await sendTelegramMessage(env,chatId,escapeHtml(String(error?.message||"\u041e\u0448\u0438\u0431\u043a\u0430 \u043e\u0442\u043f\u0440\u0430\u0432\u043a\u0438.")),{inline_keyboard:[[{text:"\u2190 \u041f\u043e\u0434\u0434\u0435\u0440\u0436\u043a\u0430",callback_data:"support:home"}]]});}return true;}
+  const open=data.match(/^support:ticket:(\d+)$/);if(open){await answerCallback(env,query.id,"\u041e\u0442\u043a\u0440\u044b\u0432\u0430\u044e.");await showBotSupportTicketDetail(chatId,query.from,Number(open[1]),env);return true;}
+  const reply=data.match(/^support:reply:(\d+)$/);if(reply){const state=await playerSupportStateData(env,String(query.from.id));const t=(state.tickets||[]).find(x=>Number(x.id)===Number(reply[1])&&["new","working"].includes(x.status));if(!t){await answerCallback(env,query.id,"\u041e\u0431\u0440\u0430\u0449\u0435\u043d\u0438\u0435 \u0437\u0430\u043a\u0440\u044b\u0442\u043e.",true);return true;}await setBotPlayerSupportWorkflow(query.from.id,chatId,"reply_existing",{ticketId:Number(reply[1])},env);await answerCallback(env,query.id,"\u041d\u0430\u043f\u0438\u0448\u0438\u0442\u0435 \u043e\u0442\u0432\u0435\u0442.");await sendTelegramMessage(env,chatId,`\u{1F4AC} <b>\u041e\u0442\u0432\u0435\u0442 \u0432 \u043e\u0431\u0440\u0430\u0449\u0435\u043d\u0438\u0435 #${Number(reply[1])}</b>\n\n\u041e\u0442\u043f\u0440\u0430\u0432\u044c\u0442\u0435 \u0441\u043b\u0435\u0434\u0443\u044e\u0449\u0435\u0435 \u0442\u0435\u043a\u0441\u0442\u043e\u0432\u043e\u0435 \u0441\u043e\u043e\u0431\u0449\u0435\u043d\u0438\u0435.`,{inline_keyboard:[[{text:"\u2716 \u041e\u0442\u043c\u0435\u043d\u0430",callback_data:"support:cancel"}]]});return true;}
+  const resolved=data.match(/^support:resolve:(\d+)$/);if(resolved){try{await resolveBotPlayerSupportTicket(env,query.from,Number(resolved[1]),runtime);await answerCallback(env,query.id,"\u041e\u0442\u043c\u0435\u0447\u0435\u043d\u043e \u0440\u0435\u0448\u0451\u043d\u043d\u044b\u043c.");await showBotSupportTicketDetail(chatId,query.from,Number(resolved[1]),env);}catch(error){await answerCallback(env,query.id,String(error?.message||"\u041e\u0448\u0438\u0431\u043a\u0430"),true);}return true;}
+  const feedback=data.match(/^support:fb:(\d+):(\d+):(up|down)$/);if(feedback){try{const result=await recordPlayerSupportFeedback(env,query.from,Number(feedback[1]),feedback[2],feedback[3],runtime);if(result.rating==='down'){await answerCallback(env,query.id,'Спасибо. Обращение возвращено в работу.');await sendTelegramMessage(env,chatId,`👎 <b>Спасибо за оценку</b>
+
+Обращение #${Number(feedback[1])} снова открыто. Напишите, что осталось нерешённым — поддержка продолжит работу.`,{inline_keyboard:[[{text:'💬 Дополнить обращение',callback_data:`support:reply:${Number(feedback[1])}`}],[{text:'📂 Мои обращения',callback_data:'support:my'}]]});}else{await answerCallback(env,query.id,'Спасибо за оценку!');await sendTelegramMessage(env,chatId,`👍 <b>Спасибо за обратную связь!</b>
+
+Рады, что смогли помочь с обращением #${Number(feedback[1])}.`,{inline_keyboard:[[{text:'📂 Мои обращения',callback_data:'support:my'}],[{text:'🎮 Открыть игру',web_app:{url:configuredGameUrl(env)}}]]});}}catch(error){await answerCallback(env,query.id,String(error?.message||'Не удалось сохранить оценку.'),true);}return true;}
+  if(data==="support:cancel"){await clearBotPlayerSupportWorkflow(query.from.id,env);await answerCallback(env,query.id,"\u041e\u0442\u043c\u0435\u043d\u0435\u043d\u043e.");await showBotSupportHome(chatId,query.from,env);return true;}
+  return false;
+}
+
+async function handleBotPlayerSupportWorkflowMessage(message, env, runtime = {}) {
+  const workflow=await getBotPlayerSupportWorkflow(message.from.id,env);if(!workflow||String(workflow.chatId)!==String(message.chat.id))return false;
+  const text=String(message.text||message.caption||"").trim(),data=workflow.data||{};
+  if(workflow.step==="subject"){
+    if(!message.text||text.length<3||text.length>120){await sendTelegramMessage(env,message.chat.id,"\u0422\u0435\u043c\u0430 \u0434\u043e\u043b\u0436\u043d\u0430 \u0441\u043e\u0434\u0435\u0440\u0436\u0430\u0442\u044c \u043e\u0442 3 \u0434\u043e 120 \u0441\u0438\u043c\u0432\u043e\u043b\u043e\u0432.");return true;}
+    await updateBotPlayerSupportWorkflow(message.from.id,{step:"description",data:{subject:text}},env);await sendTelegramMessage(env,message.chat.id,"<b>\u041e\u043f\u0438\u0448\u0438\u0442\u0435 \u0432\u043e\u043f\u0440\u043e\u0441 \u043f\u043e\u0434\u0440\u043e\u0431\u043d\u0435\u0435</b>\n\n\u0427\u0442\u043e \u043f\u0440\u043e\u0438\u0437\u043e\u0448\u043b\u043e, \u043a\u0430\u043a \u043f\u043e\u0432\u0442\u043e\u0440\u0438\u0442\u044c \u043f\u0440\u043e\u0431\u043b\u0435\u043c\u0443 \u0438\u043b\u0438 \u0447\u0442\u043e \u0432\u044b \u043f\u0440\u0435\u0434\u043b\u0430\u0433\u0430\u0435\u0442\u0435.");return true;
+  }
+  if(workflow.step==="description"){
+    if(!message.text||text.length<5){await sendTelegramMessage(env,message.chat.id,"\u041e\u043f\u0438\u0448\u0438\u0442\u0435 \u0432\u043e\u043f\u0440\u043e\u0441 \u0447\u0443\u0442\u044c \u043f\u043e\u0434\u0440\u043e\u0431\u043d\u0435\u0435.");return true;}
+    await updateBotPlayerSupportWorkflow(message.from.id,{step:"photo_choice",data:{message:text.slice(0,SUPPORT_MAX_MESSAGE_LENGTH)}},env);await sendTelegramMessage(env,message.chat.id,"\u{1F4F7} <b>\u041f\u0440\u0438\u043a\u0440\u0435\u043f\u0438\u0442\u044c \u0444\u043e\u0442\u043e?</b>\n\n\u0415\u0441\u043b\u0438 \u0441\u043a\u0440\u0438\u043d\u0448\u043e\u0442 \u043d\u0435 \u043d\u0443\u0436\u0435\u043d, \u043c\u043e\u0436\u043d\u043e \u0441\u0440\u0430\u0437\u0443 \u043f\u0440\u043e\u0434\u043e\u043b\u0436\u0438\u0442\u044c.",botSupportPhotoChoiceMarkup());return true;
+  }
+  if(workflow.step==="photo"){
+    const photo=botSupportPhotoFromMessage(message);if(!photo){await sendTelegramMessage(env,message.chat.id,"\u041f\u0440\u0438\u0448\u043b\u0438\u0442\u0435 \u0444\u043e\u0442\u043e\u0433\u0440\u0430\u0444\u0438\u044e \u0438\u043b\u0438 \u043d\u0430\u0436\u043c\u0438\u0442\u0435 \u00ab\u0411\u0435\u0437 \u0444\u043e\u0442\u043e\u00bb.",{inline_keyboard:[[{text:"\u0411\u0435\u0437 \u0444\u043e\u0442\u043e",callback_data:"support:photo:skip"}],[{text:"\u2716 \u041e\u0442\u043c\u0435\u043d\u0430",callback_data:"support:cancel"}]]});return true;}
+    if(photo.sizeBytes>10*1024*1024){await sendTelegramMessage(env,message.chat.id,"\u0424\u0430\u0439\u043b \u0441\u043b\u0438\u0448\u043a\u043e\u043c \u0431\u043e\u043b\u044c\u0448\u043e\u0439. \u041f\u0440\u0438\u0448\u043b\u0438\u0442\u0435 \u0438\u0437\u043e\u0431\u0440\u0430\u0436\u0435\u043d\u0438\u0435 \u0434\u043e 10 \u041c\u0411.");return true;}
+    const next=await updateBotPlayerSupportWorkflow(message.from.id,{step:"confirm",data:{photo}},env);await sendTelegramMessage(env,message.chat.id,botSupportDraftPreviewText(next.data),botSupportDraftConfirmMarkup());return true;
+  }
+  if(workflow.step==="reply_existing"){
+    if(!message.text||text.length<1){await sendTelegramMessage(env,message.chat.id,"\u041e\u0442\u043f\u0440\u0430\u0432\u044c\u0442\u0435 \u0442\u0435\u043a\u0441\u0442\u043e\u0432\u043e\u0435 \u0441\u043e\u043e\u0431\u0449\u0435\u043d\u0438\u0435.");return true;}
+    try{await botSupportAppendReply(env,message.from,Number(data.ticketId),text,Number(message.message_id||0),runtime);await clearBotPlayerSupportWorkflow(message.from.id,env);await sendTelegramMessage(env,message.chat.id,`\u2705 \u0421\u043e\u043e\u0431\u0449\u0435\u043d\u0438\u0435 \u0434\u043e\u0431\u0430\u0432\u043b\u0435\u043d\u043e \u0432 \u043e\u0431\u0440\u0430\u0449\u0435\u043d\u0438\u0435 #${Number(data.ticketId)}.`);await showBotSupportTicketDetail(message.chat.id,message.from,Number(data.ticketId),env);}catch(error){await sendTelegramMessage(env,message.chat.id,escapeHtml(String(error?.message||"\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u043e\u0442\u043f\u0440\u0430\u0432\u0438\u0442\u044c \u0441\u043e\u043e\u0431\u0449\u0435\u043d\u0438\u0435.")));}return true;
+  }
+  if(["help_category","area","photo_choice","confirm"].includes(workflow.step)){await sendTelegramMessage(env,message.chat.id,"\u041f\u0440\u043e\u0434\u043e\u043b\u0436\u0438\u0442\u0435 \u043a\u043d\u043e\u043f\u043a\u0430\u043c\u0438 \u0432 \u043f\u0440\u0435\u0434\u044b\u0434\u0443\u0449\u0435\u043c \u0441\u043e\u043e\u0431\u0449\u0435\u043d\u0438\u0438 \u0438\u043b\u0438 \u043e\u0442\u043c\u0435\u043d\u0438\u0442\u0435 \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u0435.",{inline_keyboard:[[{text:"\u2716 \u041e\u0442\u043c\u0435\u043d\u0430",callback_data:"support:cancel"}]]});return true;}
+  return false;
+}
+
+
 function ticketCategoryMarkup() {
-  const entries = Object.entries(SUPPORT_TICKET_CATEGORIES);
+  const entries = STAFF_SUPPORT_CATEGORIES.map((id) => [id, SUPPORT_TICKET_CATEGORIES[id]]);
   const rows = [];
   for (let index = 0; index < entries.length; index += 2) {
     rows.push(entries.slice(index, index + 2).map(([id, title]) => ({
@@ -13280,7 +14187,7 @@ async function beginTicketCategory(query, category, env) {
     await answerCallback(env, query.id, "Сначала выполните /staff.", true);
     return;
   }
-  if (!SUPPORT_TICKET_CATEGORIES[category]) {
+  if (!STAFF_SUPPORT_CATEGORIES.includes(category)) {
     await answerCallback(env, query.id, "Неизвестная категория.", true);
     return;
   }
@@ -13339,6 +14246,12 @@ async function handleTicketWorkflowMessage(message, workflow, env) {
       ticketId = Number(inserted?.id || 0);
     }
     if (!ticketId) throw new ApiError(500, "Не удалось определить номер обращения.");
+    await env.DB.batch([
+      env.DB.prepare(`INSERT OR IGNORE INTO support_ticket_meta(ticket_id,source,subject,request_id,client_json,player_last_read_at,staff_last_read_at,last_player_message_at,last_staff_message_at,created_at,updated_at) VALUES(?,'staff','',NULL,'{}',0,?,0,?,?,?)`).bind(ticketId,now,now,now,now),
+      env.DB.prepare(`INSERT OR IGNORE INTO support_messages(ticket_id,author_kind,author_telegram_id,author_name,message_text,request_id,client_json,created_at,telegram_delivered_at,telegram_error) VALUES(?,'staff',?,?,?,'legacy-initial','{}',?,0,'')`).bind(ticketId,String(user.id),telegramDisplayName(user),description,now),
+      env.DB.prepare(`INSERT OR REPLACE INTO support_ticket_channels(ticket_id,channel,created_at,updated_at) VALUES(?,'staff',?,?)`).bind(ticketId,now,now)
+    ]);
+    await ensureSupportOperationsForTicket(env,ticketId,String(data.category || "other"),"","staff",now);
     await clearStaffWorkflow(user.id, env);
     await logStaffAction(env, user, access, "ticket_create", String(data.targetId || ""), "ticket", null, ticketId, {
       category: data.category,
@@ -15551,6 +16464,7 @@ function adminMainMenuMarkup(access, overview = {}, env = {}) {
   return { inline_keyboard: rows };
 }
 async function showAdminMainMenu(chatId, user, env, options = {}) {
+  await clearBotPlayerSupportWorkflow(user?.id, env).catch(() => {});
   const access = await getTeamAccess(user, env);
   if (!access.authorized) {
     await sendTelegramMessage(env, chatId, access.reason === "expired" ? "Сессия истекла. Выполните <code>/staff</code>." : "Доступно только сотрудникам.");
@@ -18727,6 +19641,20 @@ async function telegramApi(env, method, payload) {
   return data.result;
 }
 
+
+async function telegramMultipartApi(env, method, formData) {
+  requireBotToken(env);
+  const response = await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/${method}`, { method:"POST", body:formData });
+  const data = await response.json().catch(() => null);
+  if (!response.ok || !data?.ok) {
+    const error = new Error(`Telegram ${method} failed: ${data?.description || response.status}`);
+    error.status = Number(data?.error_code || response.status || 0);
+    error.description = String(data?.description || "");
+    throw error;
+  }
+  return data.result;
+}
+
 let legalSchemaReady = false;
 let legalSchemaPromise = null;
 
@@ -19943,13 +20871,73 @@ async function getMaintenanceAccess(request, env) {
   return jsonResponse(payload, allowed ? 200 : 503);
 }
 
+async function getAccessBootstrap(request, env) {
+  try {
+    const body = await readJson(request);
+    const initData = String(body?.initData || body?.init_data || '');
+    const [settings, authResult] = await Promise.all([
+      getMaintenanceSettings(env),
+      initData
+        ? validateTelegramInitDataSignature(initData, env).then((auth) => ({ ok:true, auth })).catch((error) => ({ ok:false, error }))
+        : Promise.resolve({ ok:false, error:new ApiError(401, 'Откройте игру внутри Telegram.') })
+    ]);
+
+    const restricted = settings.fullClosed || settings.testersOnly;
+    const telegramId = authResult.ok ? String(authResult.auth?.user?.id || '') : '';
+    const identityPromise = restricted
+      ? maintenanceAccessIdentity(telegramId, env)
+      : Promise.resolve({ allowed:true, owner:false, administrator:false, tester:false, accessRole:'player' });
+    const legalPromise = authResult.ok
+      ? legalAcceptanceState(env, telegramId, false)
+      : Promise.resolve(null);
+    const [identity, legalState] = await Promise.all([identityPromise, legalPromise]);
+
+    const allowed = restricted ? Boolean(identity.allowed) : true;
+    const maintenance = restricted ? {
+      ok: allowed,
+      allowed,
+      maintenance: true,
+      mode: settings.fullClosed ? 'full' : 'testers_only',
+      accessRole: identity.accessRole,
+      error: allowed ? '' : settings.message,
+      message: settings.message
+    } : {
+      ok: true,
+      allowed: true,
+      maintenance: false,
+      mode: 'open',
+      accessRole: identity.accessRole || 'player',
+      error: '',
+      message: settings.message
+    };
+
+    let legal;
+    if (authResult.ok) {
+      legal = { ok:true, telegramId, ...legalState };
+    } else {
+      const error = authResult.error;
+      legal = {
+        ok:false,
+        status:error instanceof ApiError ? error.status : 401,
+        code:'TELEGRAM_REQUIRED',
+        error:String(error?.message || 'Откройте игру внутри Telegram.')
+      };
+    }
+    return jsonResponse({ ok:true, maintenance, legal });
+  } catch (error) {
+    if (error instanceof ApiError) return jsonResponse({ ok:false, error:error.message }, error.status);
+    console.error('access bootstrap failed', error);
+    return jsonResponse({ ok:false, error:'Не удалось проверить доступ к игре.' }, 500);
+  }
+}
+
 function maintenanceHtml(message) {
   return `<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Сладкий Забег — технические работы</title><style>html,body{margin:0;min-height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#fff5f5;color:#4e3a42}body{display:grid;place-items:center;padding:24px;box-sizing:border-box}.card{max-width:430px;padding:28px;border:1px solid #efd0d9;border-radius:28px;background:#fff;box-shadow:0 18px 50px rgba(91,54,68,.13);text-align:center}.icon{font-size:54px}h1{font-size:25px;margin:12px 0}p{font-size:16px;line-height:1.5;color:#786870;margin:0}</style></head><body><div class="card"><div class="icon">🛠</div><h1>Технические работы</h1><p>${escapeHtml(message)}</p></div></body></html>`;
 }
 
 async function enforceMaintenanceForRequest(request, url, env) {
   const path = String(url.pathname || "");
-  if (path === "/api/health" || path === "/api/maintenance/access" || path === "/api/shop/config" || path === "/api/skins/config" || path === "/api/features" || path === "/owner.html" || path.startsWith("/api/owner/") || path.startsWith("/api/admin/") || path.startsWith("/api/bot/") || path === "/telegram/webhook") return null;
+  if (path === "/api/health" || path === "/api/access/bootstrap" || path === "/api/maintenance/access" || path === "/api/shop/config" || path === "/api/skins/config" || path === "/api/features" || path === "/owner.html" || path.startsWith("/api/owner/") || path.startsWith("/api/admin/") || path.startsWith("/api/bot/") || path === "/telegram/webhook") return null;
   let settings;
   try { settings = await getMaintenanceSettings(env); } catch { return null; }
   if (!settings.fullClosed && !settings.ratingDisabled && !settings.purchasesDisabled && !settings.casesDisabled && !settings.physicalRewardsDisabled && !settings.testersOnly) return null;
@@ -20913,7 +21901,7 @@ async function notificationPreferences(telegramId,env){
   const id=String(telegramId);
   const existing=await env.DB.prepare(`SELECT * FROM staff_notification_preferences WHERE telegram_id=? LIMIT 1`).bind(id).first();
   if(existing)return existing;
-  const owner=botAdminTelegramIds(env).includes(id);
+  const owner=isBotOwnerTelegramId(id,env)||botAdminTelegramIds(env).includes(id);
   const staff=owner?null:await env.DB.prepare(`SELECT role FROM staff_users WHERE telegram_id=? LIMIT 1`).bind(id).first();
   const preset=notificationPresetForRole(staff?.role||"cashier",owner);
   const now=Math.floor(Date.now()/1000);
@@ -20942,7 +21930,7 @@ async function setNotificationPreference(chatId,user,key,enabled,env){
 async function staffNotificationRecipientIds(env,category){
   await ensureOperationsSecuritySchema(env);
   if(!NOTIFICATION_KEYS.includes(String(category)))category="bot_errors";
-  const ownerIds=new Set(botAdminTelegramIds(env).map(String));
+  const ownerIds=new Set([...botOwnerTelegramIds(env),...botAdminTelegramIds(env)].map(String));
   const recipients=new Set(ownerIds);
   const rows=(await env.DB.prepare(`SELECT s.telegram_id,s.role,p.${category} AS preference
     FROM staff_users s
@@ -22680,10 +23668,10 @@ function configuredSeasonPassTasksUrl(env){
   try{
     const url=new URL(configuredGameUrl(env));
     url.pathname='/battle-pass.html';
-    url.search='?v=1.0.6-criticalperf1&view=tasks';
+    url.search='?v=1.0.7&view=tasks';
     url.hash='';
     return url.toString();
-  }catch{return `${DEFAULT_GAME_URL.replace(/\/$/,'')}/battle-pass.html?v=1.0.6-criticalperf1&view=tasks`;}
+  }catch{return `${DEFAULT_GAME_URL.replace(/\/$/,'')}/battle-pass.html?v=1.0.7&view=tasks`;}
 }
 
 function seasonPassTaskNoticePublic(rows,season){
@@ -29516,7 +30504,14 @@ async function handleOwnerPanelApi(request, env, path, executionCtx = null) {
     if (path === "/api/owner/control/issue/update") return jsonResponse(await ownerPanelUpdateIssue(env, ctx));
     if (path === "/api/owner/control/moderation/block") return jsonResponse(await ownerPanelModerationBlock(env, ctx));
     if (path === "/api/owner/control/moderation/unblock") return jsonResponse(await ownerPanelModerationUnblock(env, ctx));
+    if (path === "/api/owner/control/ticket/detail") return jsonResponse(await ownerPanelTicketDetail(env, ctx));
+    if (path === "/api/owner/control/ticket/reply") return jsonResponse(await ownerPanelTicketReply(env, ctx));
+    if (path === "/api/owner/control/ticket/attachment") return await ownerPanelTicketAttachment(env, ctx);
     if (path === "/api/owner/control/ticket/update") return jsonResponse(await ownerPanelTicketUpdate(env, ctx));
+    if (path === "/api/owner/control/ticket/operations") return jsonResponse(await ownerPanelTicketOperationsUpdate(env, ctx));
+    if (path === "/api/owner/control/ticket/note") return jsonResponse(await ownerPanelTicketNoteAdd(env, ctx));
+    if (path === "/api/owner/control/support-template/save") return jsonResponse(await ownerPanelSupportTemplateSave(env, ctx));
+    if (path === "/api/owner/control/support-template/delete") return jsonResponse(await ownerPanelSupportTemplateDelete(env, ctx));
     if (path === "/api/owner/rating") return jsonResponse(await ownerPanelRating(env, ctx));
     if (path === "/api/owner/rating/create") return jsonResponse(await ownerPanelCreateRatingSeason(env, ctx));
     if (path === "/api/owner/rating/start") return jsonResponse(await ownerPanelStartRatingSeason(env, ctx));
@@ -31011,7 +32006,7 @@ async function ownerPanelDeleteSeasonPassSeason(env, ctx) {
 function ownerPanelNewsFallbackPresets(base) {
   return [
     {label:"Кейсы 5.0.1",url:`${base}/assets/news/cases-5.0.1.png`,path:"/assets/news/cases-5.0.1.png",group:"Новости"},
-    {label:"Релиз игры",url:`${base}/assets/news/relise_game_news.png?v=1.0.6`,path:"/assets/news/relise_game_news.png",group:"Новости"}
+    {label:"Релиз игры",url:`${base}/assets/news/relise_game_news.png?v=1.0.7`,path:"/assets/news/relise_game_news.png",group:"Новости"}
   ];
 }
 
@@ -31066,7 +32061,7 @@ async function ownerPanelNews(env, ctx) {
   const published=rows.find((row)=>String(row.status||"")==="published")||null;
   return {ok:true,
     channelHelp:{bot:"Публикация сохраняет пост в разделе «Новости» бота и запускает массовую доставку активным подписчикам через безопасную очередь/Cron.",game:"Та же опубликованная новость автоматически становится текущей новостью внутри игры. Непрочитавшие игроки увидят индикатор «Новая новость» при входе; отметка прочтения хранится на сервере."},
-    gameNews:published?{id:Number(published.id||0),title:String(published.title||""),body:String(published.body||""),imageUrl:String(published.image_url||""),version:GAME_VERSION,source:"Control Center · уведомление внутри игры",publishedAt:Number(published.published_at||0)}:{title:BOT_NEWS_TITLE,body:BOT_NEWS_TEXT,imageUrl:`${base}/assets/news/relise_game_news.png?v=1.0.6`,version:GAME_VERSION,source:"встроенное релизное окно"},
+    gameNews:published?{id:Number(published.id||0),title:String(published.title||""),body:String(published.body||""),imageUrl:String(published.image_url||""),version:GAME_VERSION,source:"Control Center · уведомление внутри игры",publishedAt:Number(published.published_at||0)}:{title:BOT_NEWS_TITLE,body:BOT_NEWS_TEXT,imageUrl:`${base}/assets/news/relise_game_news.png?v=1.0.7`,version:GAME_VERSION,source:"встроенное релизное окно"},
     news:rows.map(row=>({id:Number(row.id||0),title:String(row.title||""),body:String(row.body||""),imageUrl:String(row.image_url||""),status:String(row.status||""),publishedAt:Number(row.published_at||0),createdByName:String(row.created_by_name||""),delivery:ownerPanelNewsBroadcastState(row)})),
     assetCatalog:{source:assetCatalog.source,catalogHash:assetCatalog.catalogHash||"",count:assetCatalog.count},
     presets:[...mediaPresets,...assetCatalog.presets]
@@ -31480,7 +32475,7 @@ async function ownerPanelControl(env, ctx) {
     try{await ensureOperationalProblemsFresh(env,{checkWebhook:false});}catch(error){console.error('owner control refresh failed',error);}
   }
   const now=Math.floor(Date.now()/1000),day=moscowDayStartUnix(),week=now-7*86400;
-  const [issues,totals,allTimeRuns,dayRuns,weekRuns,casesDay,grantsDay,physicalPending,topWallet,queue,queueItems,blocked,tickets]=await Promise.all([
+  const [issues,totals,allTimeRuns,dayRuns,weekRuns,casesDay,grantsDay,physicalPending,topWallet,queue,queueItems,blocked,tickets,supportTemplates]=await Promise.all([
     env.DB.prepare(`SELECT * FROM admin_operational_issues ORDER BY CASE WHEN status='resolved' THEN 2 ELSE 1 END,CASE severity WHEN 'critical' THEN 1 WHEN 'high' THEN 2 WHEN 'warning' THEN 3 ELSE 4 END,updated_at DESC LIMIT 40`).all(),
     env.DB.prepare(`SELECT COUNT(*) AS players,SUM(wallet) AS wallet,SUM(treats) AS treats,SUM(coffee) AS coffee,SUM(pending_wallet) AS pending_wallet,SUM(pending_treats) AS pending_treats,SUM(pending_coffee) AS pending_coffee FROM admin_profile_state`).first(),
     env.DB.prepare(`SELECT COUNT(*) AS total,SUM(CASE WHEN accepted=1 THEN 1 ELSE 0 END) AS accepted,COALESCE(SUM(CASE WHEN accepted=1 THEN score ELSE 0 END),0) AS score FROM leaderboard_runs`).first(),
@@ -31493,9 +32488,18 @@ async function ownerPanelControl(env, ctx) {
     env.DB.prepare(`SELECT SUM(CASE WHEN status='pending' THEN 1 ELSE 0 END) AS pending,SUM(CASE WHEN status='failed' THEN 1 ELSE 0 END) AS failed,SUM(CASE WHEN status='delivered' THEN 1 ELSE 0 END) AS delivered FROM reward_delivery_queue`).first(),
     env.DB.prepare(`SELECT q.id,q.telegram_id,q.source_type,q.source_id,q.reward_kind,q.reward_id,q.amount,q.reason,q.status,q.attempts,q.last_error,q.created_at,q.updated_at,COALESCE(NULLIF(b.display_name,''),NULLIF(b.username,''),q.telegram_id) AS name,b.username FROM reward_delivery_queue q LEFT JOIN bot_subscribers b ON b.telegram_id=q.telegram_id WHERE q.status IN ('pending','failed','delivering') ORDER BY CASE q.status WHEN 'failed' THEN 0 WHEN 'delivering' THEN 1 ELSE 2 END,q.created_at ASC LIMIT 30`).all(),
     env.DB.prepare(`SELECT c.telegram_id,c.block_reason,c.block_type,c.blocked_until,c.updated_at,COALESCE(NULLIF(b.display_name,''),NULLIF(b.username,''),c.telegram_id) AS name,b.username FROM player_admin_controls c LEFT JOIN bot_subscribers b ON b.telegram_id=c.telegram_id WHERE c.blocked=1 ORDER BY CASE WHEN c.block_type='permanent' THEN 0 ELSE 1 END,c.updated_at DESC LIMIT 50`).all(),
-    env.DB.prepare(`SELECT id,created_by,created_by_name,player_telegram_id,player_name,category,description,status,assigned_to,assigned_to_name,resolution,created_at,updated_at,closed_at FROM support_tickets ORDER BY CASE status WHEN 'new' THEN 0 WHEN 'working' THEN 1 WHEN 'resolved' THEN 2 ELSE 3 END,updated_at DESC LIMIT 60`).all()
+    env.DB.prepare(`SELECT t.id,t.created_by,t.created_by_name,t.player_telegram_id,t.player_name,t.category,t.description,t.status,t.assigned_to,t.assigned_to_name,t.resolution,t.created_at,t.updated_at,t.closed_at,
+      COALESCE(m.source,'staff') AS source,COALESCE(m.subject,'') AS subject,COALESCE(m.last_player_message_at,0) AS last_player_message_at,COALESCE(m.last_staff_message_at,0) AS last_staff_message_at,COALESCE(m.staff_last_read_at,0) AS staff_last_read_at,
+      COALESCE(c.channel,CASE WHEN COALESCE(m.source,'staff')='staff' THEN 'staff' ELSE 'game' END) AS channel,
+      COALESCE(o.priority,'normal') AS priority,COALESCE(o.priority_source,'auto') AS priority_source,
+      COALESCE((SELECT GROUP_CONCAT(tag,'|') FROM support_ticket_tags st WHERE st.ticket_id=t.id),'') AS tags_text,
+      COALESCE((SELECT rating FROM support_ticket_feedback sf WHERE sf.ticket_id=t.id ORDER BY sf.id DESC LIMIT 1),'') AS feedback_rating,
+      EXISTS(SELECT 1 FROM support_attachments a WHERE a.ticket_id=t.id) AS has_attachment
+      FROM support_tickets t LEFT JOIN support_ticket_meta m ON m.ticket_id=t.id LEFT JOIN support_ticket_channels c ON c.ticket_id=t.id LEFT JOIN support_ticket_operations o ON o.ticket_id=t.id
+      ORDER BY CASE COALESCE(o.priority,'normal') WHEN 'critical' THEN 0 WHEN 'important' THEN 1 ELSE 2 END,CASE t.status WHEN 'new' THEN 0 WHEN 'working' THEN 1 WHEN 'resolved' THEN 2 ELSE 3 END,t.updated_at DESC LIMIT 60`).all(),
+    env.DB.prepare(`SELECT id,template_key,title,body,sort_order FROM support_reply_templates WHERE active=1 ORDER BY sort_order ASC,title ASC LIMIT 50`).all()
   ]);
-  return {ok:true,serverTime:new Date(now*1000).toISOString(),issues:(issues.results||[]).map(r=>({id:Number(r.id),title:String(r.title||''),severity:String(r.severity||'warning'),status:String(r.status||'open'),sourceType:String(r.source_type||''),sourceId:String(r.source_id||''),assignedToName:String(r.assigned_to_name||''),firstSeenAt:Number(r.first_seen_at||0),lastSeenAt:Number(r.last_seen_at||0),snoozedUntil:Number(r.snoozed_until||0),details:safeJson(r.details_json,{})})),economy:{players:Number(totals?.players||0),points:Number(totals?.wallet||0),treats:Number(totals?.treats||0),coffee:Number(totals?.coffee||0),allTimeRuns:Number(allTimeRuns?.total||0),allTimeAcceptedRuns:Number(allTimeRuns?.accepted||0),allTimeRunScore:Number(allTimeRuns?.score||0),pendingPoints:Number(totals?.pending_wallet||0),pendingTreats:Number(totals?.pending_treats||0),pendingCoffee:Number(totals?.pending_coffee||0),runsToday:Number(dayRuns?.total||0),acceptedRunsToday:Number(dayRuns?.accepted||0),runs7d:Number(weekRuns?.total||0),score7d:Number(weekRuns?.score||0),casesToday:Number(casesDay?.total||0),manualGrantsToday:Number(grantsDay?.count||0),activePhysicalCodes:Number(physicalPending?.count||0),queue:{pending:Number(queue?.pending||0),failed:Number(queue?.failed||0),delivered:Number(queue?.delivered||0)},queueItems:(queueItems.results||[]).map(r=>({id:Number(r.id||0),telegramId:String(r.telegram_id||''),name:String(r.name||r.telegram_id||''),username:String(r.username||''),sourceType:String(r.source_type||''),sourceId:String(r.source_id||''),rewardKind:String(r.reward_kind||''),rewardId:String(r.reward_id||''),amount:Number(r.amount||0),reason:String(r.reason||''),status:String(r.status||''),attempts:Number(r.attempts||0),lastError:String(r.last_error||''),createdAt:Number(r.created_at||0),updatedAt:Number(r.updated_at||0),description:safeRewardDescription({kind:r.reward_kind,id:r.reward_id,amount:r.amount})})),topWallet:(topWallet.results||[]).map(r=>({telegramId:String(r.telegram_id),name:String(r.name||r.telegram_id),username:String(r.username||''),points:Number(r.wallet||0),treats:Number(r.treats||0),coffee:Number(r.coffee||0)}))},moderation:{blocked:(blocked.results||[]).map(r=>({telegramId:String(r.telegram_id),name:String(r.name||r.telegram_id),username:String(r.username||''),reason:String(r.block_reason||''),blockType:String(r.block_type||'permanent'),blockedUntil:Number(r.blocked_until||0),updatedAt:Number(r.updated_at||0)}))},tickets:(tickets.results||[]).map(r=>({id:Number(r.id),createdBy:String(r.created_by||''),createdByName:String(r.created_by_name||''),playerTelegramId:String(r.player_telegram_id||''),playerName:String(r.player_name||''),category:String(r.category||''),categoryLabel:String(SUPPORT_TICKET_CATEGORIES[r.category]||r.category||''),description:String(r.description||''),status:String(r.status||'new'),statusLabel:ticketStatusLabel(r.status),assignedTo:String(r.assigned_to||''),assignedToName:String(r.assigned_to_name||''),resolution:String(r.resolution||''),createdAt:Number(r.created_at||0),updatedAt:Number(r.updated_at||0),closedAt:Number(r.closed_at||0)}))};
+  return {ok:true,serverTime:new Date(now*1000).toISOString(),issues:(issues.results||[]).map(r=>({id:Number(r.id),title:String(r.title||''),severity:String(r.severity||'warning'),status:String(r.status||'open'),sourceType:String(r.source_type||''),sourceId:String(r.source_id||''),assignedToName:String(r.assigned_to_name||''),firstSeenAt:Number(r.first_seen_at||0),lastSeenAt:Number(r.last_seen_at||0),snoozedUntil:Number(r.snoozed_until||0),details:safeJson(r.details_json,{})})),economy:{players:Number(totals?.players||0),points:Number(totals?.wallet||0),treats:Number(totals?.treats||0),coffee:Number(totals?.coffee||0),allTimeRuns:Number(allTimeRuns?.total||0),allTimeAcceptedRuns:Number(allTimeRuns?.accepted||0),allTimeRunScore:Number(allTimeRuns?.score||0),pendingPoints:Number(totals?.pending_wallet||0),pendingTreats:Number(totals?.pending_treats||0),pendingCoffee:Number(totals?.pending_coffee||0),runsToday:Number(dayRuns?.total||0),acceptedRunsToday:Number(dayRuns?.accepted||0),runs7d:Number(weekRuns?.total||0),score7d:Number(weekRuns?.score||0),casesToday:Number(casesDay?.total||0),manualGrantsToday:Number(grantsDay?.count||0),activePhysicalCodes:Number(physicalPending?.count||0),queue:{pending:Number(queue?.pending||0),failed:Number(queue?.failed||0),delivered:Number(queue?.delivered||0)},queueItems:(queueItems.results||[]).map(r=>({id:Number(r.id||0),telegramId:String(r.telegram_id||''),name:String(r.name||r.telegram_id||''),username:String(r.username||''),sourceType:String(r.source_type||''),sourceId:String(r.source_id||''),rewardKind:String(r.reward_kind||''),rewardId:String(r.reward_id||''),amount:Number(r.amount||0),reason:String(r.reason||''),status:String(r.status||''),attempts:Number(r.attempts||0),lastError:String(r.last_error||''),createdAt:Number(r.created_at||0),updatedAt:Number(r.updated_at||0),description:safeRewardDescription({kind:r.reward_kind,id:r.reward_id,amount:r.amount})})),topWallet:(topWallet.results||[]).map(r=>({telegramId:String(r.telegram_id),name:String(r.name||r.telegram_id),username:String(r.username||''),points:Number(r.wallet||0),treats:Number(r.treats||0),coffee:Number(r.coffee||0)}))},moderation:{blocked:(blocked.results||[]).map(r=>({telegramId:String(r.telegram_id),name:String(r.name||r.telegram_id),username:String(r.username||''),reason:String(r.block_reason||''),blockType:String(r.block_type||'permanent'),blockedUntil:Number(r.blocked_until||0),updatedAt:Number(r.updated_at||0)}))},tickets:(tickets.results||[]).map(r=>({id:Number(r.id),createdBy:String(r.created_by||''),createdByName:String(r.created_by_name||''),playerTelegramId:String(r.player_telegram_id||''),playerName:String(r.player_name||''),category:String(r.category||''),categoryLabel:String(SUPPORT_TICKET_CATEGORIES[r.category]||r.category||''),description:String(r.description||''),subject:String(r.subject||''),source:String(r.source||'staff'),channel:String(r.channel||(String(r.source||'staff')==='staff'?'staff':'game')),priority:String(r.priority||'normal'),priorityLabel:String(SUPPORT_PRIORITY_LABELS[r.priority]||SUPPORT_PRIORITY_LABELS.normal),prioritySource:String(r.priority_source||'auto'),tags:String(r.tags_text||'').split('|').map(x=>String(x||'').trim()).filter(Boolean),feedbackRating:String(r.feedback_rating||''),hasAttachment:Boolean(r.has_attachment),unreadForStaff:Number(r.last_player_message_at||0)>Number(r.staff_last_read_at||0),status:String(r.status||'new'),statusLabel:ticketStatusLabel(r.status),assignedTo:String(r.assigned_to||''),assignedToName:String(r.assigned_to_name||''),resolution:String(r.resolution||''),createdAt:Number(r.created_at||0),updatedAt:Number(r.updated_at||0),closedAt:Number(r.closed_at||0)})),supportTemplates:(supportTemplates.results||[]).map(r=>({id:Number(r.id||0),key:String(r.template_key||''),title:String(r.title||''),body:String(r.body||''),sortOrder:Number(r.sort_order||0)})),supportTagLabels:SUPPORT_TAG_LABELS,supportPriorityLabels:SUPPORT_PRIORITY_LABELS};
 }
 
 async function ownerPanelUpdateRewardQueue(env, ctx) {
@@ -31566,17 +32570,98 @@ async function ownerPanelModerationUnblock(env, ctx) {
   return {ok:true,telegramId:targetId,name:await playerDisplayNameById(targetId,env)};
 }
 
+async function ownerPanelTicketDetail(env,ctx){
+  await ensurePlayerSupportSchema(env);const ticketId=ownerPanelInteger(ctx.body?.ticketId,1,999999999);if(ticketId==null)throw new ApiError(400,'Некорректный номер обращения.');
+  const row=await env.DB.prepare(`SELECT t.*,COALESCE(m.source,'staff') AS source,COALESCE(m.subject,'') AS subject,COALESCE(m.client_json,'{}') AS client_json,COALESCE(m.last_player_message_at,0) AS last_player_message_at,COALESCE(m.last_staff_message_at,0) AS last_staff_message_at,COALESCE(c.channel,CASE WHEN COALESCE(m.source,'staff')='staff' THEN 'staff' ELSE 'game' END) AS channel,COALESCE(o.priority,'normal') AS priority,COALESCE(o.priority_source,'auto') AS priority_source FROM support_tickets t LEFT JOIN support_ticket_meta m ON m.ticket_id=t.id LEFT JOIN support_ticket_channels c ON c.ticket_id=t.id LEFT JOIN support_ticket_operations o ON o.ticket_id=t.id WHERE t.id=? LIMIT 1`).bind(ticketId).first();if(!row)throw new ApiError(404,'Обращение не найдено.');
+  const [messages,attachments,notes,tags,feedback]=await Promise.all([
+    env.DB.prepare(`SELECT id,author_kind,author_telegram_id,author_name,message_text,created_at,telegram_delivered_at,telegram_error FROM support_messages WHERE ticket_id=? ORDER BY created_at ASC,id ASC`).bind(ticketId).all(),
+    env.DB.prepare(`SELECT id,message_id,uploader_kind,mime_type,file_name,size_bytes,status,error_text,created_at FROM support_attachments WHERE ticket_id=? ORDER BY created_at ASC,id ASC`).bind(ticketId).all(),
+    env.DB.prepare(`SELECT id,note_text,created_by,created_by_name,created_at FROM support_internal_notes WHERE ticket_id=? ORDER BY created_at DESC,id DESC LIMIT 50`).bind(ticketId).all(),
+    env.DB.prepare(`SELECT tag,created_at,created_by FROM support_ticket_tags WHERE ticket_id=? ORDER BY tag ASC`).bind(ticketId).all(),
+    env.DB.prepare(`SELECT id,close_token,rating,source,player_telegram_id,created_at FROM support_ticket_feedback WHERE ticket_id=? ORDER BY created_at DESC,id DESC LIMIT 20`).bind(ticketId).all()
+  ]);const now=Math.floor(Date.now()/1000);await env.DB.prepare(`UPDATE support_ticket_meta SET staff_last_read_at=?,updated_at=MAX(updated_at,?) WHERE ticket_id=?`).bind(now,now,ticketId).run().catch(()=>{});
+  const feedbackRows=(feedback.results||[]).map(f=>({id:Number(f.id||0),closeToken:String(f.close_token||''),rating:String(f.rating||''),source:String(f.source||''),playerTelegramId:String(f.player_telegram_id||''),createdAt:Number(f.created_at||0)}));
+  return {ok:true,ticket:{id:ticketId,subject:String(row.subject||row.description||''),source:String(row.source||'staff'),channel:String(row.channel||(String(row.source||'staff')==='staff'?'staff':'game')),category:String(row.category||''),categoryLabel:String(SUPPORT_TICKET_CATEGORIES[row.category]||row.category||''),status:String(row.status||'new'),statusLabel:ticketStatusLabel(row.status),priority:String(row.priority||'normal'),priorityLabel:String(SUPPORT_PRIORITY_LABELS[row.priority]||SUPPORT_PRIORITY_LABELS.normal),prioritySource:String(row.priority_source||'auto'),tags:(tags.results||[]).map(x=>String(x.tag||'')).filter(Boolean),feedbackRating:String(feedbackRows[0]?.rating||''),playerTelegramId:String(row.player_telegram_id||''),playerName:String(row.player_name||''),assignedToName:String(row.assigned_to_name||''),resolution:String(row.resolution||''),createdAt:Number(row.created_at||0),updatedAt:Number(row.updated_at||0),closedAt:Number(row.closed_at||0),client:safeJson(row.client_json,{})},messages:(messages.results||[]).map(m=>({id:Number(m.id),authorKind:String(m.author_kind||''),authorTelegramId:String(m.author_telegram_id||''),authorName:String(m.author_name||''),text:String(m.message_text||''),createdAt:Number(m.created_at||0),telegramDeliveredAt:Number(m.telegram_delivered_at||0),telegramError:String(m.telegram_error||'')})),attachments:(attachments.results||[]).map(a=>({id:Number(a.id),messageId:Number(a.message_id||0),uploaderKind:String(a.uploader_kind||''),mimeType:String(a.mime_type||''),fileName:String(a.file_name||''),sizeBytes:Number(a.size_bytes||0),status:String(a.status||''),error:String(a.error_text||''),createdAt:Number(a.created_at||0)})),internalNotes:(notes.results||[]).map(n=>({id:Number(n.id||0),text:String(n.note_text||''),createdBy:String(n.created_by||''),createdByName:String(n.created_by_name||n.created_by||''),createdAt:Number(n.created_at||0)})),feedback:feedbackRows};
+}
+
+async function deliverSupportReplyToPlayer(env,{ticketId,messageId,telegramId,text,status,statusLabel,closedAt=0}){
+  let deliveredAt=0,errorText='';try{const subscriber=await env.DB.prepare(`SELECT chat_id FROM bot_subscribers WHERE telegram_id=? AND active=1 LIMIT 1`).bind(String(telegramId)).first();const chatId=String(subscriber?.chat_id||telegramId);const normalizedStatus=String(status||'');const openStatus=!['resolved','rejected'].includes(normalizedStatus);const buttons=[];if(openStatus)buttons.push([{text:'\u{1F4AC} \u041e\u0442\u0432\u0435\u0442\u0438\u0442\u044c',callback_data:`support:reply:${ticketId}`},{text:'\u2705 \u0412\u043e\u043f\u0440\u043e\u0441 \u0440\u0435\u0448\u0451\u043d',callback_data:`support:resolve:${ticketId}`}]);if(normalizedStatus==='resolved'&&Number(closedAt||0)>0)buttons.push([{text:'\u{1F44D} \u041f\u043e\u043c\u043e\u0433\u043b\u043e',callback_data:`support:fb:${ticketId}:${Number(closedAt)}:up`},{text:'\u{1F44E} \u041d\u0435 \u043f\u043e\u043c\u043e\u0433\u043b\u043e',callback_data:`support:fb:${ticketId}:${Number(closedAt)}:down`}]);buttons.push([{text:'\u{1F4C2} \u041c\u043e\u0438 \u043e\u0431\u0440\u0430\u0449\u0435\u043d\u0438\u044f',callback_data:'support:my'}],[{text:'\u{1F3AE} \u041e\u0442\u043a\u0440\u044b\u0442\u044c \u0438\u0433\u0440\u0443',web_app:{url:configuredGameUrl(env)}}]);await sendTelegramMessage(env,chatId,`\u{1F6DF} <b>\u041e\u0442\u0432\u0435\u0442 \u043f\u043e\u0434\u0434\u0435\u0440\u0436\u043a\u0438</b>\n\u041e\u0431\u0440\u0430\u0449\u0435\u043d\u0438\u0435 #${ticketId}${statusLabel?` \u00b7 ${escapeHtml(statusLabel)}`:''}\n\n${escapeHtml(text)}${normalizedStatus==='resolved'?'\n\n<b>\u041f\u043e\u043c\u043e\u0433 \u043b\u0438 \u043e\u0442\u0432\u0435\u0442?</b>':''}`,{inline_keyboard:buttons});deliveredAt=Math.floor(Date.now()/1000);}catch(error){errorText=String(error?.message||error).slice(0,500);console.error('support reply telegram failed',error);}if(messageId)await env.DB.prepare(`UPDATE support_messages SET telegram_delivered_at=?,telegram_error=? WHERE id=?`).bind(deliveredAt,errorText,messageId).run().catch(()=>{});
+}
+async function ownerPanelTicketReply(env,ctx){
+  await ensurePlayerSupportSchema(env);const ticketId=ownerPanelInteger(ctx.body?.ticketId,1,999999999);if(ticketId==null)throw new ApiError(400,'Некорректный номер обращения.');const text=String(ctx.body?.message||'').trim().slice(0,3000);if(text.length<1)throw new ApiError(400,'Введите ответ игроку.');
+  const row=await env.DB.prepare(`SELECT t.*,COALESCE(m.source,'staff') AS source FROM support_tickets t LEFT JOIN support_ticket_meta m ON m.ticket_id=t.id WHERE t.id=? LIMIT 1`).bind(ticketId).first();if(!row)throw new ApiError(404,'Обращение не найдено.');if(String(row.source||'staff')!=='player')throw new ApiError(409,'Это служебное обращение. Для него доступно изменение статуса без сообщения игроку.');if(!String(row.player_telegram_id||''))throw new ApiError(409,'У обращения нет привязанного игрока.');
+  const now=Math.floor(Date.now()/1000),actor=telegramDisplayName(ctx.user),requestId=supportRequestId(ctx.body?.requestId,'staffreply'),resolveAfter=ctx.body?.resolveAfter===true;
+  const existing=await env.DB.prepare(`SELECT id FROM support_messages WHERE ticket_id=? AND request_id=? LIMIT 1`).bind(ticketId,requestId).first();
+  let messageId=Number(existing?.id||0),repeated=Boolean(messageId);
+  if(!messageId){const insert=await env.DB.prepare(`INSERT OR IGNORE INTO support_messages(ticket_id,author_kind,author_telegram_id,author_name,message_text,request_id,client_json,created_at,telegram_delivered_at,telegram_error) VALUES(?,'staff',?,?,?,?,?, ?,0,'')`).bind(ticketId,String(ctx.user.id),actor,text,requestId,'{}',now).run();messageId=Number(insert.meta?.last_row_id||0);if(!messageId){messageId=Number((await env.DB.prepare(`SELECT id FROM support_messages WHERE ticket_id=? AND request_id=? LIMIT 1`).bind(ticketId,requestId).first())?.id||0);repeated=Boolean(messageId);}}
+  const nextStatus=resolveAfter?'resolved':(String(row.status||'new')==='new'?'working':String(row.status||'working'));
+  const closedAt=resolveAfter?now:Number(row.closed_at||0),resolution=resolveAfter?text:String(row.resolution||'');
+  await env.DB.batch([env.DB.prepare(`UPDATE support_tickets SET status=?,assigned_to=?,assigned_to_name=?,resolution=?,updated_at=?,closed_at=? WHERE id=?`).bind(nextStatus,String(ctx.user.id),actor,resolution,now,closedAt,ticketId),env.DB.prepare(`UPDATE support_ticket_meta SET last_staff_message_at=MAX(last_staff_message_at,?),staff_last_read_at=?,updated_at=? WHERE ticket_id=?`).bind(now,now,now,ticketId)]);
+  if(!repeated){await logStaffAction(env,ctx.user,ctx.access,'owner_panel_ticket_reply',String(row.player_telegram_id||''),'ticket',null,ticketId,{ticketId,source:'owner_panel',resolveAfter,status:nextStatus});const task=deliverSupportReplyToPlayer(env,{ticketId,messageId,telegramId:String(row.player_telegram_id),text,status:nextStatus,statusLabel:ticketStatusLabel(nextStatus),closedAt});if(ctx.executionCtx?.waitUntil)ctx.executionCtx.waitUntil(task);else void task;}
+  return {ok:true,ticketId,messageId,status:nextStatus,repeated};
+}
+
+async function ownerPanelTicketAttachment(env,ctx){
+  await ensurePlayerSupportSchema(env);const attachmentId=ownerPanelInteger(ctx.body?.attachmentId,1,999999999);if(attachmentId==null)return jsonResponse({ok:false,error:'Некорректное вложение.'},400);const row=await env.DB.prepare(`SELECT * FROM support_attachments WHERE id=? LIMIT 1`).bind(attachmentId).first();if(!row)return jsonResponse({ok:false,error:'Вложение не найдено.'},404);if(String(row.status)!=='uploaded'||!String(row.telegram_file_id||''))return jsonResponse({ok:false,error:String(row.error_text||'Скриншот ещё загружается.')},409);
+  try{const info=await telegramApi(env,'getFile',{file_id:String(row.telegram_file_id)});const filePath=String(info?.file_path||'');if(!filePath)throw new Error('Telegram не вернул путь к файлу');const remote=await fetch(`https://api.telegram.org/file/bot${env.TELEGRAM_BOT_TOKEN}/${filePath}`);if(!remote.ok)throw new Error(`Telegram file ${remote.status}`);const headers=new Headers();headers.set('Content-Type',String(row.mime_type||remote.headers.get('content-type')||'image/jpeg'));headers.set('Cache-Control','private,max-age=300');headers.set('Content-Disposition',`inline; filename="support-${attachmentId}"`);headers.set('X-Content-Type-Options','nosniff');return new Response(remote.body,{status:200,headers});}catch(error){console.error('support attachment proxy failed',error);return jsonResponse({ok:false,error:'Не удалось загрузить скриншот.'},502);}
+}
+
 async function ownerPanelTicketUpdate(env, ctx) {
-  await ensureStaffOperationsSchema(env);
+  await ensurePlayerSupportSchema(env);
   const ticketId=ownerPanelInteger(ctx.body?.ticketId,1,999999999);if(ticketId==null)throw new ApiError(400,'Некорректный номер обращения.');
   const status=String(ctx.body?.status||'');if(!['new','working','resolved','rejected'].includes(status))throw new ApiError(400,'Некорректный статус обращения.');
-  const row=await env.DB.prepare(`SELECT * FROM support_tickets WHERE id=? LIMIT 1`).bind(ticketId).first();if(!row)throw new ApiError(404,'Обращение не найдено.');
+  const row=await env.DB.prepare(`SELECT t.*,COALESCE(m.source,'staff') AS source FROM support_tickets t LEFT JOIN support_ticket_meta m ON m.ticket_id=t.id WHERE t.id=? LIMIT 1`).bind(ticketId).first();if(!row)throw new ApiError(404,'Обращение не найдено.');
   const resolution=String(ctx.body?.resolution||'').trim().slice(0,1500),now=Math.floor(Date.now()/1000),actor=telegramDisplayName(ctx.user);
   const assignee=status==='new'?'':String(ctx.user.id),assigneeName=status==='new'?'':actor,closed=['resolved','rejected'].includes(status)?now:0;
   await env.DB.prepare(`UPDATE support_tickets SET status=?,assigned_to=?,assigned_to_name=?,resolution=?,updated_at=?,closed_at=? WHERE id=?`).bind(status,assignee,assigneeName,resolution,now,closed,ticketId).run();
+  const isPlayerTicket=String(row.source||'staff')==='player';
+  let resolutionMessageId=0;if(isPlayerTicket&&resolution&&String(row.player_telegram_id||'')){const req=`status_${ticketId}_${status}_${now}`;const ins=await env.DB.prepare(`INSERT OR IGNORE INTO support_messages(ticket_id,author_kind,author_telegram_id,author_name,message_text,request_id,client_json,created_at,telegram_delivered_at,telegram_error) VALUES(?,'staff',?,?,?,?,?, ?,0,'')`).bind(ticketId,String(ctx.user.id),actor,resolution,req,'{}',now).run();resolutionMessageId=Number(ins.meta?.last_row_id||0);await env.DB.prepare(`UPDATE support_ticket_meta SET last_staff_message_at=?,staff_last_read_at=?,updated_at=? WHERE ticket_id=?`).bind(now,now,now,ticketId).run().catch(()=>{});}
   await logStaffAction(env,ctx.user,ctx.access,'ticket_status',String(row.player_telegram_id||''),'ticket',null,ticketId,{ticketId,oldStatus:String(row.status),newStatus:status,resolution,source:'owner_panel'});
-  if(String(row.created_by||'')&&String(row.created_by)!==String(ctx.user.id)){try{await sendTelegramMessage(env,String(row.created_by),`<b>Обращение #${ticketId} обновлено</b>\n\nСтатус: <b>${escapeHtml(ticketStatusLabel(status))}</b>\nОтветственный: <b>${escapeHtml(actor)}</b>${resolution?`\n\n${escapeHtml(resolution)}`:''}`);}catch(error){console.error('owner ticket notification failed',error);}}
+  if(isPlayerTicket&&String(row.player_telegram_id||'')){const text=resolution||`Статус обращения изменён: ${ticketStatusLabel(status)}.`;const task=deliverSupportReplyToPlayer(env,{ticketId,messageId:resolutionMessageId,telegramId:String(row.player_telegram_id),text,status,statusLabel:ticketStatusLabel(status),closedAt:closed});if(ctx.executionCtx?.waitUntil)ctx.executionCtx.waitUntil(task);else void task;}
   return {ok:true,ticketId,status};
+}
+
+
+async function ownerPanelTicketOperationsUpdate(env,ctx){
+  await ensurePlayerSupportSchema(env);
+  const ticketId=ownerPanelInteger(ctx.body?.ticketId,1,999999999);if(ticketId==null)throw new ApiError(400,'Некорректный номер обращения.');
+  const priority=String(ctx.body?.priority||'normal');if(!Object.prototype.hasOwnProperty.call(SUPPORT_PRIORITY_LABELS,priority))throw new ApiError(400,'Некорректный приоритет.');
+  const tags=supportNormalizeTags(ctx.body?.tags);const row=await env.DB.prepare(`SELECT id,player_telegram_id FROM support_tickets WHERE id=? LIMIT 1`).bind(ticketId).first();if(!row)throw new ApiError(404,'Обращение не найдено.');
+  const now=Math.floor(Date.now()/1000),actor=telegramDisplayName(ctx.user),actorId=String(ctx.user.id);const statements=[
+    env.DB.prepare(`INSERT INTO support_ticket_operations(ticket_id,priority,priority_source,created_at,updated_at,updated_by) VALUES(?,?,'manual',?,?,?) ON CONFLICT(ticket_id) DO UPDATE SET priority=excluded.priority,priority_source='manual',updated_at=excluded.updated_at,updated_by=excluded.updated_by`).bind(ticketId,priority,now,now,actorId),
+    env.DB.prepare(`DELETE FROM support_ticket_tags WHERE ticket_id=?`).bind(ticketId)
+  ];
+  for(const tag of tags)statements.push(env.DB.prepare(`INSERT INTO support_ticket_tags(ticket_id,tag,created_at,created_by) VALUES(?,?,?,?)`).bind(ticketId,tag,now,actorId));
+  await env.DB.batch(statements);
+  await logStaffAction(env,ctx.user,ctx.access,'owner_panel_ticket_operations',String(row.player_telegram_id||''),'ticket',null,ticketId,{ticketId,priority,tags,actor});
+  return {ok:true,ticketId,priority,priorityLabel:SUPPORT_PRIORITY_LABELS[priority],tags};
+}
+
+async function ownerPanelTicketNoteAdd(env,ctx){
+  await ensurePlayerSupportSchema(env);
+  const ticketId=ownerPanelInteger(ctx.body?.ticketId,1,999999999);if(ticketId==null)throw new ApiError(400,'Некорректный номер обращения.');
+  const text=String(ctx.body?.text||'').trim().slice(0,2000);if(text.length<2)throw new ApiError(400,'Введите внутреннюю заметку.');
+  const row=await env.DB.prepare(`SELECT id,player_telegram_id FROM support_tickets WHERE id=? LIMIT 1`).bind(ticketId).first();if(!row)throw new ApiError(404,'Обращение не найдено.');
+  const now=Math.floor(Date.now()/1000),actor=telegramDisplayName(ctx.user);const ins=await env.DB.prepare(`INSERT INTO support_internal_notes(ticket_id,note_text,created_by,created_by_name,created_at) VALUES(?,?,?,?,?)`).bind(ticketId,text,String(ctx.user.id),actor,now).run();
+  await logStaffAction(env,ctx.user,ctx.access,'owner_panel_ticket_note',String(row.player_telegram_id||''),'ticket',null,ticketId,{ticketId,note:text.slice(0,300)});
+  return {ok:true,ticketId,note:{id:Number(ins.meta?.last_row_id||0),text,createdBy:String(ctx.user.id),createdByName:actor,createdAt:now}};
+}
+
+async function ownerPanelSupportTemplateSave(env,ctx){
+  await ensurePlayerSupportSchema(env);
+  const id=ownerPanelInteger(ctx.body?.id??0,0,999999999);if(id==null)throw new ApiError(400,'Некорректный шаблон.');
+  const title=String(ctx.body?.title||'').trim().replace(/\s+/g,' ').slice(0,80),body=String(ctx.body?.body||'').trim().slice(0,3000);if(title.length<2||body.length<2)throw new ApiError(400,'Заполните название и текст шаблона.');
+  const now=Math.floor(Date.now()/1000),actorId=String(ctx.user.id),actor=telegramDisplayName(ctx.user);let templateId=Number(id||0),key='';
+  if(templateId){const row=await env.DB.prepare(`SELECT id,template_key FROM support_reply_templates WHERE id=? LIMIT 1`).bind(templateId).first();if(!row)throw new ApiError(404,'Шаблон не найден.');key=String(row.template_key||'');await env.DB.prepare(`UPDATE support_reply_templates SET title=?,body=?,active=1,updated_at=?,updated_by=? WHERE id=?`).bind(title,body,now,actorId,templateId).run();}
+  else{key=`custom_${now}_${crypto.randomUUID().replace(/-/g,'').slice(0,8)}`;const maxRow=await env.DB.prepare(`SELECT COALESCE(MAX(sort_order),100) AS max_sort FROM support_reply_templates`).first();const order=Math.max(100,Number(maxRow?.max_sort||100)+10);const ins=await env.DB.prepare(`INSERT INTO support_reply_templates(template_key,title,body,active,sort_order,created_at,updated_at,updated_by) VALUES(?,?,?,1,?,?,?,?)`).bind(key,title,body,order,now,now,actorId).run();templateId=Number(ins.meta?.last_row_id||0);}
+  await logStaffAction(env,ctx.user,ctx.access,'owner_panel_support_template_save',null,'support_template',null,templateId,{templateId,key,title,actor});
+  return {ok:true,template:{id:templateId,key,title,body}};
+}
+
+async function ownerPanelSupportTemplateDelete(env,ctx){
+  await ensurePlayerSupportSchema(env);
+  const id=ownerPanelInteger(ctx.body?.id,1,999999999);if(id==null)throw new ApiError(400,'Некорректный шаблон.');const row=await env.DB.prepare(`SELECT id,title,template_key FROM support_reply_templates WHERE id=? LIMIT 1`).bind(id).first();if(!row)throw new ApiError(404,'Шаблон не найден.');
+  const now=Math.floor(Date.now()/1000);await env.DB.prepare(`UPDATE support_reply_templates SET active=0,updated_at=?,updated_by=? WHERE id=?`).bind(now,String(ctx.user.id),id).run();await logStaffAction(env,ctx.user,ctx.access,'owner_panel_support_template_delete',null,'support_template',id,null,{templateId:id,key:String(row.template_key||''),title:String(row.title||'')});return {ok:true,id};
 }
 
 // ================= /OWNER CONTROL CENTER =================

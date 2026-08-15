@@ -53,7 +53,7 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
   window.__zefirokCloudSaveMetrics = cloudSaveMetrics;
 
   const frame = () => document.querySelector("iframe");
-  const MAINTENANCE_ACCESS_PATH = "/api/maintenance/access";
+  const ACCESS_BOOTSTRAP_PATH = "/api/access/bootstrap";
   const LEGAL_STATUS_PATH = "/api/legal/status";
   const LEGAL_ACCEPT_PATH = "/api/legal/accept";
   const SEASON_PASS_AWAY_KEY = "zefirok-season-pass-away";
@@ -605,41 +605,59 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
     const gameFrame = frame();
     if (gameFrame) gameFrame.classList.remove("is-ready");
     showMaintenanceGate("Проверяем доступ и загружаем данные…", { title: "Загрузка игры", icon: "🍬" });
-    const controller = new AbortController();
-    const timeoutId = window.setTimeout(() => controller.abort(), 4500);
     try {
       const initData = String(window.Telegram?.WebApp?.initData || "");
-      const response = await fetch(MAINTENANCE_ACCESS_PATH, {
+      const response = await hostFetchWithTimeout(ACCESS_BOOTSTRAP_PATH, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ initData }),
         cache: "no-store",
-        credentials: "same-origin",
-        signal: controller.signal
-      });
+        credentials: "same-origin"
+      }, 5500);
       const data = await response.json().catch(() => null);
+      const maintenance = data?.maintenance && typeof data.maintenance === "object" ? data.maintenance : null;
       const explicitlyClosed = Boolean(
-        data?.maintenance === true &&
-        data?.allowed === false &&
-        (data?.mode === "full" || data?.mode === "testers_only")
+        maintenance?.maintenance === true &&
+        maintenance?.allowed === false &&
+        (maintenance?.mode === "full" || maintenance?.mode === "testers_only")
       );
       if (explicitlyClosed) {
         showMaintenanceGate(
-          data?.error || data?.message || "Игра временно закрыта для игроков.",
+          maintenance?.error || maintenance?.message || "Игра временно закрыта для игроков.",
           { title: "Технические работы", icon: "🛠" }
         );
         return;
       }
 
-      if (!response.ok || !data || data.allowed === false) {
-        console.warn("Maintenance access check returned a non-blocking error; starting the game.", response.status, data);
+      if (!response.ok || !data?.ok) {
+        console.warn("Access bootstrap returned a non-blocking error; using legal fallback.", response.status, data);
+        await resolveLegalAccess();
+        return;
+      }
+
+      const legal = data?.legal && typeof data.legal === "object" ? data.legal : null;
+      if (legal?.ok) {
+        legalStatusSnapshot = legal;
+        renderLegalRequirement(legal);
+        return;
+      }
+      if (legal?.code === "TELEGRAM_REQUIRED" || Number(legal?.status || 0) === 401) {
+        showLegalTelegramRequired();
+        return;
+      }
+      if (legal?.error) {
+        const copy = legalCopy();
+        const gate = legalGate();
+        gate.innerHTML = `<div class="zefirok-legal-card">${legalLanguageButtons()}<span class="zefirok-legal-badge">${copy.badge}</span><h1>${copy.loadingTitle}</h1><p>${legalEscape(legal.error || copy.error)}</p><div class="zefirok-legal-actions"><button type="button" class="zefirok-legal-primary" data-legal-retry>${copy.retry}</button></div></div>`;
+        installLegalLanguageButtons(gate);
+        gate.querySelector("[data-legal-retry]")?.addEventListener("click", () => void resolveMaintenanceAccess());
+        return;
       }
       await resolveLegalAccess();
     } catch (error) {
-      console.warn("Maintenance access check failed; continuing to the legal access check.", error);
+      console.warn("Access bootstrap failed; continuing to the legal fallback.", error);
       await resolveLegalAccess();
     } finally {
-      window.clearTimeout(timeoutId);
       window.__zefirokMaintenanceCheckActive = false;
     }
   }
@@ -811,6 +829,8 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
         photoUrl: String(user.photo_url || ""),
         languageCode: String(user.language_code || ""),
         isPremium: Boolean(user.is_premium),
+        telegramPlatform: String(window.Telegram?.WebApp?.platform || ""),
+        telegramVersion: String(window.Telegram?.WebApp?.version || ""),
         initData: String(window.Telegram?.WebApp?.initData || "")
       };
     } catch (error) {
@@ -894,8 +914,8 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
     const normalizedOfferTier = ["elite","elite_plus"].includes(String(offerTier || "")) ? String(offerTier) : "";
     const passOffer = normalizedOfferTier ? `&offer=${encodeURIComponent(normalizedOfferTier)}` : "";
     passFrame.src = initData
-      ? `/battle-pass.html?v=1.0.6-runsync1-taskorder1-overflowui1-criticalperf1${passView}${passOffer}#tgInitData=${encodeURIComponent(initData)}`
-      : `/battle-pass.html?v=1.0.6-runsync1-taskorder1-overflowui1-criticalperf1${passView}${passOffer}`;
+      ? `/battle-pass.html?v=1.0.7${passView}${passOffer}#tgInitData=${encodeURIComponent(initData)}`
+      : `/battle-pass.html?v=1.0.7${passView}${passOffer}`;
     layer.append(passFrame);
     passFrame.addEventListener("load", () => {
       const snapshot = syncTelegramViewport();
@@ -963,7 +983,7 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
 
   let ratingLayer = null;
   let ratingReadyTimer = 0;
-  const RATING_RELEASE_BUILD = "1.0.1-rating-elite-badges";
+  const RATING_RELEASE_BUILD = "1.0.7-rating";
   const RATING_READY_TIMEOUT_MS = 16000;
 
   function ratingFrame() {
@@ -1133,6 +1153,9 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
       else if (message.type === "zefirok-season-pass-account-updated") {
         const target = gameFrame?.contentWindow;
         try { target?.postMessage?.({ type: "zefirok-season-pass-account-updated" }, "*"); } catch {}
+      } else if (message.type === "zefirok-season-pass-tasks-claimed") {
+        const target = gameFrame?.contentWindow;
+        try { target?.postMessage?.({ type: "zefirok-season-pass-tasks-claimed", tasks: Array.isArray(message.tasks) ? message.tasks : [] }, "*"); } catch {}
       } else if (message.type === "zefirok-request-fullscreen") {
         requestTelegramFullscreen();
         scheduleTelegramViewportSync();
@@ -1231,6 +1254,9 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
     } else if (message.type === "zefirok-progress-save") {
       storeProgress(message.payload);
     } else if (message.type === "zefirok-run-completed") {
+      // Settlement is background-only for navigation. If the seasonal pass is
+      // already open, refresh it exactly when the server confirms the run.
+      requestSeasonPassStateRefresh();
       window.setTimeout(checkGamePollAfterOpen, 450);
     } else if (message.type === "zefirok-open-telegram") {
       const username = String(message.username || "").trim().replace(/^@/, "");
@@ -2253,6 +2279,7 @@ html&gt;body{padding:
       backdrop-filter: blur(7px);
       -webkit-backdrop-filter: blur(7px);
       overflow-y: auto;
+      overscroll-behavior: contain;
     }
 
     #zefirok-maltipoo-runner .purchase-dialog {
@@ -4721,6 +4748,8 @@ html&gt;body{padding:
     padding-right: 3px;
     overflow-y: auto;
     overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: auto;
     text-align: left;
   }
   #zefirok-maltipoo-runner .level-guide-item {
@@ -5014,6 +5043,136 @@ html&gt;body{padding:
   #zefirok-maltipoo-runner .profile-legal-row small { margin-top: 2px; color: #907984; font-size: 11px; line-height: 1.3; }
   #zefirok-maltipoo-runner .profile-legal-row b { color: #c96388; font-size: 21px; }
   #zefirok-maltipoo-runner .profile-legal-history { margin-top: 2px; }
+
+  #zefirok-maltipoo-runner .profile-support-card {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 48px minmax(0,1fr) auto;
+    align-items: center;
+    gap: 12px;
+    padding: 13px;
+    border: 1px solid rgba(224, 160, 185, .72);
+    border-radius: 19px;
+    background: linear-gradient(145deg, rgba(255,247,250,.98), rgba(255,232,241,.94));
+    color: #765161;
+    text-align: left;
+    box-shadow: 0 8px 20px rgba(174, 91, 124, .08);
+  }
+  #zefirok-maltipoo-runner .profile-support-card:active { transform: translateY(1px) scale(.995); }
+  #zefirok-maltipoo-runner .profile-support-icon {
+    width: 48px; height: 48px; display: grid; place-items: center;
+    border-radius: 15px; background: linear-gradient(145deg,#fff,#ffe4ee);
+    box-shadow: inset 0 0 0 1px rgba(229,155,183,.3); font-size: 23px;
+  }
+  #zefirok-maltipoo-runner .profile-support-copy { min-width: 0; display: grid; gap: 3px; }
+  #zefirok-maltipoo-runner .profile-support-copy strong { color: #753d55; font-size: 14px; font-weight: 900; }
+  #zefirok-maltipoo-runner .profile-support-copy span { color: #8c727c; font-size: 11px; line-height: 1.35; }
+  #zefirok-maltipoo-runner .profile-support-arrow { color: #c76287; font-size: 22px; }
+  #zefirok-maltipoo-runner .profile-support-meta { display: block; margin-top: 8px; color: #967b85; font-size: 11px; font-weight: 750; }
+  #zefirok-maltipoo-runner .profile-support-badge {
+    min-width: 24px; height: 24px; display: inline-grid; place-items: center;
+    padding: 0 7px; border-radius: 999px; background: #e96596; color: #fff;
+    font-size: 11px; font-weight: 900; box-shadow: 0 4px 12px rgba(207,76,126,.18);
+  }
+  #zefirok-maltipoo-runner .profile-support-badge[hidden] { display: none !important; }
+
+  #zefirok-maltipoo-runner .support-layer[hidden] { display: none !important; }
+  #zefirok-maltipoo-runner .support-layer {
+    position: fixed; inset: 0; z-index: 1120; display: grid; place-items: center;
+    padding: max(14px, env(safe-area-inset-top)) 14px max(14px, env(safe-area-inset-bottom));
+    background: rgba(49,35,42,.52); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  }
+  #zefirok-maltipoo-runner .support-dialog {
+    width: min(100%, 410px); max-height: calc(100dvh - 28px); overflow: hidden;
+    display: grid; grid-template-rows: auto minmax(0,1fr);
+    border: 1px solid rgba(228,188,203,.94); border-radius: 27px;
+    background: linear-gradient(165deg,#fffdfb,#fff1f6 78%);
+    box-shadow: 0 24px 72px rgba(54,34,43,.3), inset 0 1px 0 rgba(255,255,255,.96);
+  }
+  #zefirok-maltipoo-runner .support-head {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 15px 15px 12px; border-bottom: 1px solid rgba(230,202,211,.7);
+    background: rgba(255,250,251,.92);
+  }
+  #zefirok-maltipoo-runner .support-head-copy { min-width: 0; display: grid; gap: 2px; }
+  #zefirok-maltipoo-runner .support-head-copy strong { color: #6f3c50; font-size: 18px; font-weight: 950; }
+  #zefirok-maltipoo-runner .support-head-copy span { color: #9a7e89; font-size: 10px; font-weight: 750; }
+  #zefirok-maltipoo-runner .support-close {
+    width: 38px; height: 38px; display: grid; place-items: center; flex: 0 0 auto;
+    border: 1px solid rgba(224,183,199,.8); border-radius: 13px; background: #fff;
+    color: #99566f; font-size: 22px; font-weight: 700;
+  }
+  #zefirok-maltipoo-runner .support-content { overflow-y: auto; overscroll-behavior: contain; padding: 14px; }
+  #zefirok-maltipoo-runner .support-intro {
+    display: grid; gap: 7px; padding: 13px; border: 1px solid rgba(231,196,209,.76);
+    border-radius: 18px; background: rgba(255,255,255,.74); color: #826776;
+  }
+  #zefirok-maltipoo-runner .support-intro strong { color: #724357; font-size: 14px; }
+  #zefirok-maltipoo-runner .support-intro span { font-size: 11px; line-height: 1.45; }
+  #zefirok-maltipoo-runner .support-primary,
+  #zefirok-maltipoo-runner .support-secondary {
+    width: 100%; min-height: 48px; border-radius: 16px; padding: 10px 13px;
+    font-size: 13px; font-weight: 900;
+  }
+  #zefirok-maltipoo-runner .support-primary {
+    border: 1px solid rgba(218,92,143,.66); background: linear-gradient(180deg,#f5a4c2,#e978a2); color: #fff;
+    box-shadow: 0 8px 18px rgba(196,74,121,.16);
+  }
+  #zefirok-maltipoo-runner .support-secondary { border: 1px solid rgba(225,188,202,.85); background: #fffafd; color: #8a556a; }
+  #zefirok-maltipoo-runner .support-primary:disabled,
+  #zefirok-maltipoo-runner .support-secondary:disabled { opacity: .55; box-shadow: none; }
+  #zefirok-maltipoo-runner .support-section-title { margin: 15px 1px 8px; color: #74495a; font-size: 13px; font-weight: 950; }
+  #zefirok-maltipoo-runner .support-ticket-list { display: grid; gap: 9px; }
+  #zefirok-maltipoo-runner .support-ticket-card {
+    width: 100%; display: grid; gap: 6px; padding: 12px; border: 1px solid rgba(228,198,210,.82);
+    border-radius: 17px; background: rgba(255,255,255,.82); color: #795d69; text-align: left;
+  }
+  #zefirok-maltipoo-runner .support-ticket-card.is-unread { border-color: rgba(224,99,147,.72); box-shadow: 0 0 0 2px rgba(230,106,154,.08); }
+  #zefirok-maltipoo-runner .support-ticket-card-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 9px; }
+  #zefirok-maltipoo-runner .support-ticket-card strong { color: #6f4053; font-size: 13px; line-height: 1.3; }
+  #zefirok-maltipoo-runner .support-ticket-card small { color: #a18791; font-size: 10px; line-height: 1.35; }
+  #zefirok-maltipoo-runner .support-ticket-status {
+    display: inline-flex; align-items: center; width: fit-content; min-height: 23px; padding: 3px 8px;
+    border-radius: 999px; background: #fff0f5; color: #b95c7e; font-size: 9px; font-weight: 900; white-space: nowrap;
+  }
+  #zefirok-maltipoo-runner .support-ticket-status.is-working { background:#fff4d8; color:#9b6b20; }
+  #zefirok-maltipoo-runner .support-ticket-status.is-resolved { background:#e9f7ef; color:#4c8a69; }
+  #zefirok-maltipoo-runner .support-ticket-status.is-rejected { background:#eee9e7; color:#786b66; }
+  #zefirok-maltipoo-runner .support-unread-pill { color:#d94c83; font-size:10px; font-weight:900; }
+  #zefirok-maltipoo-runner .support-empty { padding: 20px 14px; border: 1px dashed rgba(221,177,195,.82); border-radius: 18px; color:#947b85; text-align:center; font-size:12px; line-height:1.45; background:rgba(255,255,255,.5); }
+  #zefirok-maltipoo-runner .support-form { display:grid; gap:11px; }
+  #zefirok-maltipoo-runner .support-field { display:grid; gap:5px; text-align:left; }
+  #zefirok-maltipoo-runner .support-field label { color:#76515f; font-size:11px; font-weight:900; }
+  #zefirok-maltipoo-runner .support-field input,
+  #zefirok-maltipoo-runner .support-field select,
+  #zefirok-maltipoo-runner .support-field textarea {
+    width:100%; border:1px solid rgba(222,181,198,.9); border-radius:14px; background:#fff;
+    color:#614d55; padding:11px 12px; font-size:13px; outline:none;
+  }
+  #zefirok-maltipoo-runner .support-field textarea { min-height:122px; resize:vertical; line-height:1.45; }
+  #zefirok-maltipoo-runner .support-field input:focus,
+  #zefirok-maltipoo-runner .support-field select:focus,
+  #zefirok-maltipoo-runner .support-field textarea:focus { border-color:#df7ba2; box-shadow:0 0 0 3px rgba(225,105,151,.1); }
+  #zefirok-maltipoo-runner .support-photo-box { display:grid; gap:7px; padding:11px; border:1px dashed rgba(218,160,183,.9); border-radius:15px; background:#fff9fb; }
+  #zefirok-maltipoo-runner .support-photo-box input { padding:7px; font-size:11px; }
+  #zefirok-maltipoo-runner .support-hint { color:#9b838c; font-size:10px; line-height:1.4; }
+  #zefirok-maltipoo-runner .support-error { min-height:16px; color:#b84c5e; font-size:11px; font-weight:800; text-align:center; }
+  #zefirok-maltipoo-runner .support-thread { display:grid; gap:9px; margin-top:11px; }
+  #zefirok-maltipoo-runner .support-message { max-width:89%; display:grid; gap:4px; padding:10px 11px; border-radius:16px; font-size:12px; line-height:1.45; white-space:pre-wrap; overflow-wrap:anywhere; }
+  #zefirok-maltipoo-runner .support-message.is-player { justify-self:end; background:#f6d8e5; color:#704d5b; border-bottom-right-radius:6px; }
+  #zefirok-maltipoo-runner .support-message.is-staff { justify-self:start; background:#fff; color:#654f58; border:1px solid rgba(226,194,206,.85); border-bottom-left-radius:6px; }
+  #zefirok-maltipoo-runner .support-message.is-system { justify-self:center; max-width:100%; background:#f4efed; color:#7a706c; text-align:center; }
+  #zefirok-maltipoo-runner .support-message small { font-size:9px; color:#a17f8c; font-weight:800; }
+  #zefirok-maltipoo-runner .support-ticket-detail-head { display:grid; gap:6px; padding:12px; border:1px solid rgba(226,190,204,.82); border-radius:17px; background:rgba(255,255,255,.72); }
+  #zefirok-maltipoo-runner .support-ticket-detail-head strong { color:#6f4053; font-size:15px; }
+  #zefirok-maltipoo-runner .support-ticket-detail-head span { color:#927782; font-size:10px; }
+  #zefirok-maltipoo-runner .support-attachment-note { margin-top:8px; padding:9px 10px; border-radius:13px; background:#fff8e9; color:#8a6a37; font-size:10px; font-weight:800; }
+  #zefirok-maltipoo-runner .support-row-actions { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:11px; }
+  @media (max-width: 380px) {
+    #zefirok-maltipoo-runner .support-dialog { border-radius:23px; }
+    #zefirok-maltipoo-runner .support-content { padding:11px; }
+    #zefirok-maltipoo-runner .support-row-actions { grid-template-columns:1fr; }
+  }
   #zefirok-maltipoo-runner .profile-version-row {
     display: flex;
     align-items: center;
@@ -6295,8 +6454,17 @@ html&gt;body{padding:
 &lt;/style&gt;
 
 &lt;style id=&quot;zefirok-1-0-6-player-gifts-open-again&quot;&gt;
-#zefirok-maltipoo-runner .player-gift-inbox{display:grid;gap:9px;margin-bottom:10px;padding:11px;border:1px solid rgba(225,153,183,.42);border-radius:17px;background:linear-gradient(145deg,#fff7fb,#fffaf0)}
-#zefirok-maltipoo-runner .player-gift-inbox-list{display:grid;gap:9px}
+#zefirok-maltipoo-runner .player-gift-inbox{display:block;margin-bottom:10px;border:1px solid rgba(225,153,183,.42);border-radius:17px;background:linear-gradient(145deg,#fff7fb,#fffaf0);overflow:hidden}
+#zefirok-maltipoo-runner .player-gift-inbox-head{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:9px;padding:12px 11px 10px;color:#714559;border-bottom:1px solid rgba(225,153,183,.22)}
+#zefirok-maltipoo-runner .player-gift-inbox-summary-copy{display:grid;gap:3px;min-width:0}
+#zefirok-maltipoo-runner .player-gift-inbox-summary-copy strong{font-size:13px;font-weight:950}
+#zefirok-maltipoo-runner .player-gift-inbox-summary-copy span{font-size:9px;line-height:1.35;color:#9a7585}
+#zefirok-maltipoo-runner .player-gift-inbox-meta{justify-self:end;white-space:nowrap;padding:5px 8px;border-radius:999px;background:#fff;color:#b64e79;font-size:9px;font-weight:950;box-shadow:inset 0 0 0 1px rgba(225,143,174,.24)}
+#zefirok-maltipoo-runner .player-gift-inbox-list{display:grid;gap:9px;padding:10px 11px 11px}
+#zefirok-maltipoo-runner .player-gift-inbox-more{display:block;width:calc(100% - 22px);min-height:38px;margin:-1px 11px 11px;border:1px solid rgba(225,143,174,.34);border-radius:12px;background:rgba(255,255,255,.86);color:#b3567b;font-size:10px;font-weight:950;-webkit-tap-highlight-color:transparent}
+#zefirok-maltipoo-runner .player-gift-inbox-more:active{transform:scale(.985)}
+#zefirok-maltipoo-runner .player-gift-inbox-more[hidden]{display:none!important}
+@media(max-width:390px){#zefirok-maltipoo-runner .player-gift-inbox-head{grid-template-columns:1fr}#zefirok-maltipoo-runner .player-gift-inbox-meta{justify-self:start}}
 #zefirok-maltipoo-runner .player-gift-card{display:grid;gap:9px;padding:12px;border:1px solid rgba(227,188,204,.64);border-radius:16px;background:rgba(255,255,255,.94);box-shadow:0 6px 17px rgba(105,65,78,.07);text-align:left}
 #zefirok-maltipoo-runner .player-gift-card.is-claimed{opacity:.72;background:rgba(252,249,247,.82)}
 #zefirok-maltipoo-runner .player-gift-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
@@ -7964,6 +8132,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 #zefirok-maltipoo-runner .profile-section--help { order: 40; }
 #zefirok-maltipoo-runner .profile-section--settings { order: 50; }
 #zefirok-maltipoo-runner .profile-section--legal { order: 55; }
+#zefirok-maltipoo-runner .profile-section--support { order: 58; }
 #zefirok-maltipoo-runner .profile-version-row { order: 60; }
 #zefirok-maltipoo-runner .profile-toast { order: 70; }
 #zefirok-maltipoo-runner .leaderboard-profile-copy {
@@ -8810,8 +8979,12 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       &lt;/div&gt;
     &lt;/div&gt;
     &lt;div class=&quot;player-gift-inbox&quot; data-player-gift-inbox&gt;
-      &lt;div class=&quot;case-subsection-title player-gift-inbox-title&quot;&gt;&lt;strong&gt;Подарки и компенсации&lt;/strong&gt;&lt;span&gt;Здесь видно, за что выдан подарок и что входит в награду&lt;/span&gt;&lt;/div&gt;
+      &lt;div class=&quot;player-gift-inbox-head&quot;&gt;
+        &lt;span class=&quot;player-gift-inbox-summary-copy&quot;&gt;&lt;strong&gt;Подарки и компенсации&lt;/strong&gt;&lt;span&gt;Что именно выдавалось и по какой причине&lt;/span&gt;&lt;/span&gt;
+        &lt;span class=&quot;player-gift-inbox-meta&quot; data-player-gift-inbox-meta&gt;Нет новых&lt;/span&gt;
+      &lt;/div&gt;
       &lt;div class=&quot;player-gift-inbox-list&quot; data-player-gift-inbox-list&gt;&lt;/div&gt;
+      &lt;button class=&quot;player-gift-inbox-more&quot; data-player-gift-inbox-more type=&quot;button&quot; hidden aria-expanded=&quot;false&quot;&gt;Показать ещё&lt;/button&gt;
     &lt;/div&gt;
     &lt;div class=&quot;case-gifted-wrap&quot; data-case-gifted-wrap&gt;
       &lt;div class=&quot;case-subsection-title&quot;&gt;&lt;strong&gt;Склад кейсов&lt;/strong&gt;&lt;span&gt;Здесь хранятся кейсы за уровни и уже полученные подарки&lt;/span&gt;&lt;/div&gt;
@@ -8925,10 +9098,35 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
     &lt;/div&gt;
   &lt;/section&gt;
 
-  &lt;div class=&quot;profile-version-row&quot;&gt;&lt;span&gt;Версия игры&lt;/span&gt;&lt;strong data-profile-game-version&gt;1.0.6&lt;/strong&gt;&lt;/div&gt;
+
+  &lt;section class=&quot;profile-section profile-section--support&quot; aria-labelledby=&quot;profile-support-title&quot;&gt;
+    &lt;div class=&quot;profile-section-head&quot;&gt;
+      &lt;div&gt;&lt;h3 id=&quot;profile-support-title&quot;&gt;Поддержка&lt;/h3&gt;&lt;span&gt;Связь с командой «Сладкого Забега»&lt;/span&gt;&lt;/div&gt;
+      &lt;span class=&quot;profile-support-badge&quot; data-profile-support-badge hidden&gt;0&lt;/span&gt;
+    &lt;/div&gt;
+    &lt;button class=&quot;profile-support-card&quot; data-profile-support-open type=&quot;button&quot;&gt;
+      &lt;span class=&quot;profile-support-icon&quot; aria-hidden=&quot;true&quot;&gt;🛟&lt;/span&gt;
+      &lt;span class=&quot;profile-support-copy&quot;&gt;&lt;strong&gt;Написать в поддержку&lt;/strong&gt;&lt;span&gt;Сообщить о проблеме, задать вопрос или предложить идею. Ответ сохранится в игре и придёт от бота.&lt;/span&gt;&lt;/span&gt;
+      &lt;b class=&quot;profile-support-arrow&quot; aria-hidden=&quot;true&quot;&gt;›&lt;/b&gt;
+    &lt;/button&gt;
+    &lt;span class=&quot;profile-support-meta&quot; data-profile-support-meta&gt;Обращения ещё не загружены&lt;/span&gt;
+  &lt;/section&gt;
+
+  &lt;div class=&quot;profile-version-row&quot;&gt;&lt;span&gt;Версия игры&lt;/span&gt;&lt;strong data-profile-game-version&gt;1.0.7&lt;/strong&gt;&lt;/div&gt;
   &lt;div aria-live=&quot;polite&quot; class=&quot;profile-toast&quot; data-profile-toast hidden&gt;&lt;/div&gt;
 &lt;/div&gt;
 &lt;/section&gt;
+&lt;/div&gt;
+
+
+&lt;div aria-hidden=&quot;true&quot; class=&quot;support-layer&quot; data-support-layer hidden&gt;
+  &lt;div aria-labelledby=&quot;support-dialog-title&quot; aria-modal=&quot;true&quot; class=&quot;support-dialog&quot; role=&quot;dialog&quot;&gt;
+    &lt;div class=&quot;support-head&quot;&gt;
+      &lt;div class=&quot;support-head-copy&quot;&gt;&lt;strong id=&quot;support-dialog-title&quot; data-support-title&gt;Поддержка&lt;/strong&gt;&lt;span data-support-subtitle&gt;Ваши обращения и ответы команды&lt;/span&gt;&lt;/div&gt;
+      &lt;button class=&quot;support-close&quot; data-support-close type=&quot;button&quot; aria-label=&quot;Закрыть поддержку&quot;&gt;×&lt;/button&gt;
+    &lt;/div&gt;
+    &lt;div class=&quot;support-content&quot; data-support-content&gt;&lt;/div&gt;
+  &lt;/div&gt;
 &lt;/div&gt;
 
 &lt;div aria-hidden=&quot;true&quot; class=&quot;purchase-layer&quot; data-purchase-layer=&quot;&quot; hidden=&quot;&quot;&gt;
@@ -8966,7 +9164,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 &lt;div aria-hidden=&quot;true&quot; class=&quot;release-layer&quot; data-release-layer hidden&gt;
   &lt;div aria-labelledby=&quot;release-dialog-title&quot; aria-modal=&quot;true&quot; class=&quot;release-dialog&quot; role=&quot;dialog&quot; tabindex=&quot;-1&quot;&gt;
     &lt;div class=&quot;release-image-wrap&quot; data-release-image-wrap aria-hidden=&quot;true&quot;&gt;
-      &lt;img class=&quot;release-image&quot; data-release-image src=&quot;/assets/news/relise_game_news.png?v=1.0.6&quot; alt=&quot;Обновление Сладкого Забега 1.0.6&quot; width=&quot;1254&quot; height=&quot;1254&quot; decoding=&quot;async&quot; loading=&quot;lazy&quot; fetchpriority=&quot;low&quot;/&gt;
+      &lt;img class=&quot;release-image&quot; data-release-image src=&quot;/assets/news/relise_game_news.png?v=1.0.7&quot; alt=&quot;Обновление Сладкого Забега 1.0.7&quot; width=&quot;1254&quot; height=&quot;1254&quot; decoding=&quot;async&quot; loading=&quot;lazy&quot; fetchpriority=&quot;low&quot;/&gt;
     &lt;/div&gt;
     &lt;div class=&quot;release-kicker&quot; data-release-kicker&gt;Релиз игры&lt;/div&gt;
     &lt;h2 id=&quot;release-dialog-title&quot; data-release-title&gt;Обновление&lt;/h2&gt;
@@ -9171,6 +9369,42 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       const skinsMessageEl = root.querySelector(&quot;[data-skins-message]&quot;);
       const purchaseLayer = root.querySelector(&quot;[data-purchase-layer]&quot;);
       const purchaseContent = root.querySelector(&quot;[data-purchase-content]&quot;);
+      let purchaseLayerScrollLock = null;
+      function setPurchaseLayerScrollLocked(locked) {
+        const html = document.documentElement;
+        const body = document.body;
+        if (!html || !body) return;
+        if (locked) {
+          if (purchaseLayerScrollLock) return;
+          const y = Math.max(0, Number(window.scrollY || html.scrollTop || body.scrollTop || 0));
+          purchaseLayerScrollLock = {
+            y, position: body.style.position, top: body.style.top, left: body.style.left, right: body.style.right,
+            width: body.style.width, overflow: body.style.overflow, htmlOverflow: html.style.overflow,
+            rootOverflow: root.style.overflow
+          };
+          body.style.position = &quot;fixed&quot;;
+          body.style.top = `-${y}px`;
+          body.style.left = &quot;0&quot;;
+          body.style.right = &quot;0&quot;;
+          body.style.width = &quot;100%&quot;;
+          body.style.overflow = &quot;hidden&quot;;
+          html.style.overflow = &quot;hidden&quot;;
+          root.style.overflow = &quot;hidden&quot;;
+          return;
+        }
+        const saved = purchaseLayerScrollLock;
+        if (!saved) return;
+        purchaseLayerScrollLock = null;
+        body.style.position = saved.position;
+        body.style.top = saved.top;
+        body.style.left = saved.left;
+        body.style.right = saved.right;
+        body.style.width = saved.width;
+        body.style.overflow = saved.overflow;
+        html.style.overflow = saved.htmlOverflow;
+        root.style.overflow = saved.rootOverflow;
+        window.scrollTo(0, saved.y || 0);
+      }
       const tutorialLayer = root.querySelector(&quot;[data-tutorial-layer]&quot;);
       const tutorialContent = root.querySelector(&quot;[data-tutorial-content]&quot;);
       const tutorialOpenButton = root.querySelector(&quot;[data-tutorial-open]&quot;);
@@ -9226,7 +9460,21 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       const caseNextSummaryEl = root.querySelector(&quot;[data-case-next-summary]&quot;);
       const levelCasesListEl = root.querySelector(&quot;[data-level-cases-list]&quot;);
       const playerGiftInboxEl = root.querySelector(&quot;[data-player-gift-inbox]&quot;);
+      const playerGiftInboxMetaEl = root.querySelector(&quot;[data-player-gift-inbox-meta]&quot;);
       const playerGiftInboxListEl = root.querySelector(&quot;[data-player-gift-inbox-list]&quot;);
+      const playerGiftInboxMoreEl = root.querySelector(&quot;[data-player-gift-inbox-more]&quot;);
+      const profileSupportButton = root.querySelector(&quot;[data-profile-support-open]&quot;);
+      const profileSupportMetaEl = root.querySelector(&quot;[data-profile-support-meta]&quot;);
+      const profileSupportBadgeEl = root.querySelector(&quot;[data-profile-support-badge]&quot;);
+      const supportLayer = root.querySelector(&quot;[data-support-layer]&quot;);
+      const supportContentEl = root.querySelector(&quot;[data-support-content]&quot;);
+      const supportTitleEl = root.querySelector(&quot;[data-support-title]&quot;);
+      const supportSubtitleEl = root.querySelector(&quot;[data-support-subtitle]&quot;);
+      const supportCloseButton = root.querySelector(&quot;[data-support-close]&quot;);
+      let playerSupportState = { tickets: [], openCount: 0, unreadCount: 0 };
+      let playerSupportStateLoading = false;
+      let playerSupportStateLoadedAt = 0;
+      let playerSupportSelectedTicketId = 0;
       const caseGiftedWrapEl = root.querySelector(&quot;[data-case-gifted-wrap]&quot;);
       const caseGiftedListEl = root.querySelector(&quot;[data-case-gifted-list]&quot;);
       const caseBoostersListEl = root.querySelector(&quot;[data-case-boosters-list]&quot;);
@@ -9331,50 +9579,54 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       // Заголовок, текст и кнопку ниже можно свободно редактировать.
       // Переносы строк внутри UPDATE_NOTICE_TEXT сохраняются.
       // Версия: год игры.сезонное обновление.исправление.
-      const GAME_VERSION = &quot;1.0.6&quot;;
+      const GAME_VERSION = &quot;1.0.7&quot;;
       const ECONOMY_RESET_KEY = &quot;economy-reset-0.1.1-beta-purchase-limit-fix-2026-07-23&quot;;
-      const UPDATE_NOTICE_KEY = &quot;release-1-0-6-player-fixes-2026-08-11&quot;;
+      const UPDATE_NOTICE_KEY = &quot;release-1-0-7-support-speed-2026-08-15&quot;;
       const UPDATE_NOTICE_ENABLED = true;
-      const UPDATE_NOTICE_TITLE = &quot;Сладкий Забег 1.0.6 — большое обновление первого сезона&quot;;
-      const UPDATE_NOTICE_TEXT = `Версия 1.0.6 уже доступна! Мы собрали большое обновление первого сезона и исправили проблемы, с которыми игроки могли столкнуться после релиза.
+      const UPDATE_NOTICE_TITLE = &quot;Сладкий Забег 1.0.7 — быстрее, удобнее, ближе к игрокам&quot;;
+      const UPDATE_NOTICE_TEXT = `Версия 1.0.7 уже доступна! Это большое обновление скорости, поддержки и повседневного удобства. Весь игровой прогресс сохраняется.
 
-🎟 СЕЗОННЫЙ ПРОПУСК
-• Перебалансирована XP-прогрессия уровней 1–50. Уже заработанный XP пересчитывается по новой шкале без потери прогресса.
-• После полного 50 уровня открывается бесконечная дорожка 50+ / ∞ для всех игроков — бесплатных, Элитных и Элитных+. Каждые 5 000 XP дают Золотой кейс.
-• Элитный+ теперь корректно даёт ×2 XP за задания сезонного пропуска.
-• Улучшение с Элитного до Элитного+ сразу показывает реальную стоимость доплаты.
-• Премиальные задания после покупки открываются сразу, без перезахода.
-• Расширен набор ежедневных и недельных заданий.
-• Ускорено открытие сезонного пропуска и получение XP за задания.
-• Исправлено получение одиночных наград, «Забрать весь XP» и «Получить все доступные награды».
+🛟 ПОДДЕРЖКА И ОБРАТНАЯ СВЯЗЬ
+• В профиле появился полноценный раздел «Поддержка»: можно создать обращение, выбрать тему, описать проблему или идею, приложить скриншот и видеть всю переписку.
+• Ответ команды сохраняется внутри игры и одновременно приходит в Telegram-бот.
+• В боте поддержка теперь работает пошагово: помощь, ошибка, идея или отзыв, фото, «Мои обращения» и продолжение уже открытого диалога.
+• После решения обращения можно отметить 👍 «Помогло» или 👎 «Не помогло». Если проблема осталась, обращение автоматически возвращается в работу.
+
+⚡ СКОРОСТЬ И СТАБИЛЬНОСТЬ
+• Ускорены запуск игры и возвращение после сворачивания, открытие кейсов, сезонного пропуска, получение XP и наград, покупки и награды рейтинга.
+• Убраны ситуации, когда кнопка могла надолго зависнуть на «Открываем…» или «Получаем…» при плохом соединении: интерфейс корректно возвращает управление игроку.
+• После забега баланс, XP, усилители и прогресс сезонных заданий обновляются быстрее.
+• Фоновые синхронизации больше не заставляют ждать перед переходом между разделами.
+• Короткое сворачивание Telegram больше не запускает тяжёлую полную перезагрузку профиля.
+• После подтверждения сервером результат открытия кейса показывается примерно за секунду вместо долгой дополнительной прокрутки.
+• Графика автоматически подстраивает нагрузку под устройство: на тяжёлых экранах уменьшается лишняя отрисовка, а декоративные частицы облегчаются только при просадке кадров.
+
+🎟 ЗАДАНИЯ И СЕЗОННЫЙ ПРОПУСК
+• Задания теперь расположены понятнее: активные — выше, затем выполненные, а уже полученный XP уходит вниз списка.
+• Выполненные задания появляются сразу в игре и Telegram без необходимости сначала открывать сезонный пропуск.
+• Исправлен залипающий баннер заданий: после получения XP уведомление и счётчик исчезают сразу.
+• Переход в сезонный пропуск больше не ждёт фонового завершения предыдущего забега.
+• Отображение дорожки 50+ стало компактнее и удобнее.
 
 🏆 РЕЙТИНГ
-• Владельцы Элитного и Элитного+ теперь отмечаются ✦ рядом с именем. Золотая ✦ означает Элитный+.
-• По нажатию на ✦ можно узнать о тарифе и перейти к нему.
-• Если награда рейтинга — кейс, на него теперь можно нажать и посмотреть информацию.
-• Исправлено мерцание изображения награды рейтинга.
+• Статусы Элитного и Элитного+ отображаются заметной ✦ рядом с игроком, а по наградному кейсу можно открыть информацию.
+• Получение сезонной награды стало быстрее и больше не ждёт лишней повторной загрузки рейтинга и склада.
 
-🎁 КЕЙСЫ И ПРОФИЛЬ
-• Открытие кейсов начинается заметно быстрее.
-• После открытия кейса склад и количество доступных кейсов обновляются сразу.
-• В профиле появился счётчик доступных кейсов.
-• Пока окно кейса открыто, профиль под ним больше не прокручивается.
+🎁 ПРОФИЛЬ, КЕЙСЫ И НАГРАДЫ
+• «Подарки и компенсации» больше не превращаются в бесконечную ленту: до трёх записей видны сразу, а при большой истории показываются три последних и кнопка «Показать ещё».
+• «Все уровни и звания» теперь открываются сразу на текущем уровне игрока. Пока окно открыто, фон профиля не прокручивается.
+• Исправлено изображение зефира в карточках товара, подтверждении покупки, успешной покупке и на складе.
+• Открытие кейсов и обновление склада стали быстрее; сезонные задания за открытие кейсов обновляются без лишнего ожидания.
+• Специальные предложения теперь поддерживают больше наград: кейсы, аватары, рамки, следы, скины, музыку, XP и уровни пропуска, Элитный/Элитный+, игровые ресурсы, временное ×2 и физические подарки. Уже полученные уникальные награды не предлагаются повторно.
+• Исправлены редкие случаи повторной обработки завершённого забега: результат, награды и прогресс остаются едиными и корректными.
 
-🔔 УВЕДОМЛЕНИЯ
-• При выполнении заданий сезонного пропуска приходят уведомления в игре и в Telegram с точным списком выполненных заданий и XP.
-• Исправлена задержка уведомлений: для их появления больше не нужно сначала открывать сезонный пропуск.
-• В уведомлениях бота добавлена кнопка возврата в главное меню.
+🔐 ДОКУМЕНТЫ И КОНФИДЕНЦИАЛЬНОСТЬ
+• В профиле появился раздел «Документы и конфиденциальность» с Лицензионным соглашением, Политикой конфиденциальности, отдельным согласием на обработку персональных данных и историей подтверждений.
 
-🎮 СТАБИЛЬНОСТЬ И ИНТЕРФЕЙС
-• Исправлено случайное смещение Mini App свайпом.
-• Устранено периодическое мерцание игрового поля.
-• Исправлена бесконечная вибрация после перехода из Telegram-уведомления в сезонный пропуск и возврата в игру.
-• Улучшена скорость и стабильность получения сезонных наград.
+🤝 УЛУЧШЕНИЕ РАБОТЫ КОМАНДЫ
+• Обновлены внутренние инструменты поддержки, диагностики и обработки обращений, чтобы быстрее находить проблемы и отвечать игрокам.
 
-🎁 КОМПЕНСАЦИЯ
-За некорректно отображавшуюся информацию о количестве XP всем игрокам начисляется по 2 Серебряных кейса. Кейсы появятся в профиле автоматически.
-
-Внутреннее исправления для корректной работы команды.`;
+Спасибо, что помогаете делать «Сладкий Забег» лучше!`;
       const UPDATE_NOTICE_BUTTON = &quot;Продолжить&quot;;
       const CASE_TUTORIAL_KEY = &quot;cases-tutorial-1-2026-07-25&quot;;
       const RATING_TUTORIAL_KEY = &quot;rating-tutorial-1-2026-07-25&quot;;
@@ -9417,6 +9669,10 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       const CLIENT_MAX_FRAME_DELTA_SECONDS = 0.1;
       const CLIENT_MAX_FIXED_STEPS_PER_FRAME = 5;
       const CLIENT_MAX_VISUAL_PARTICLES = 72;
+      const CLIENT_MIN_VISUAL_PARTICLES = 36;
+      const CLIENT_MOBILE_CANVAS_DPR = 1.5;
+      const CLIENT_LOW_POWER_CANVAS_DPR = 1.25;
+      const CLIENT_DETAILED_DRAW_SAMPLE_EVERY_FRAMES = 8;
       const CLIENT_MAX_SCALED_SPRITE_CACHE_ENTRIES = 48;
       const CLIENT_MAX_CRUMB_POOL_SIZE = 96;
       const CLIENT_RENDER_SPEED_SMOOTHING_RATE = 18;
@@ -9425,6 +9681,8 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       const CLIENT_HIGH_SPEED_METRIC_THRESHOLD = 300;
       const CLIENT_PERFORMANCE_SAMPLE_LIMIT = 240;
       const CLIENT_PERFORMANCE_PUBLISH_INTERVAL_MS = 30000;
+      let clientAdaptiveFrameMs = 16.7;
+      let clientDetailedDrawFrameCounter = 0;
 
       // Не используйте эту строку как серверный секрет. Она нужна только
       // для усложнения простой ручной правки сохранения в браузере.
@@ -9610,6 +9868,8 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
             clientPerformance.frameTimeTotalMs += frameMs;
             clientPerformance.maxFrameTimeMs = Math.max(clientPerformance.maxFrameTimeMs, frameMs);
             pushClientPerformanceSample(clientFrameTimeSamples, frameMs);
+            const adaptiveSampleMs = Math.min(50, frameMs);
+            clientAdaptiveFrameMs += (adaptiveSampleMs - clientAdaptiveFrameMs) * 0.08;
             if (CLIENT_OPT_SPEED_JITTER_METRICS &amp;&amp; clientPerformanceLastFrameDurationMs &gt; 0) {
               const jitterMs = Math.abs(frameMs - clientPerformanceLastFrameDurationMs);
               clientPerformance.frameJitterTotalMs += jitterMs;
@@ -10923,6 +11183,10 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       const GAME_STARTUP_API_PATH = &quot;/api/game/startup&quot;;
       const PLAYER_GIFTS_STATE_PATH = &quot;/api/gifts/state&quot;;
       const PLAYER_GIFTS_CLAIM_PATH = &quot;/api/gifts/claim&quot;;
+      const PLAYER_SUPPORT_STATE_PATH = &quot;/api/support/state&quot;;
+      const PLAYER_SUPPORT_CREATE_PATH = &quot;/api/support/create&quot;;
+      const PLAYER_SUPPORT_REPLY_PATH = &quot;/api/support/reply&quot;;
+      const PLAYER_SUPPORT_READ_PATH = &quot;/api/support/read&quot;;
       const GAME_NEWS_READ_API_PATH = &quot;/api/news/read&quot;;
       const SEASON_PASS_TASK_NOTICE_PENDING_PATH = &quot;/api/battle-pass/task-notices/pending&quot;;
       const SEASON_PASS_TASK_NOTICE_READ_PATH = &quot;/api/battle-pass/task-notices/read&quot;;
@@ -11613,6 +11877,38 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         }
       }
 
+      function reconcileClaimedSeasonTaskNotices(payload) {
+        const tasks = Array.isArray(payload?.tasks) ? payload.tasks : [];
+        if (!tasks.length) return false;
+        const claimedKeys = new Set();
+        for (const task of tasks) {
+          const id = String(task?.id || &quot;&quot;).trim();
+          const periodKey = String(task?.periodKey || &quot;&quot;).trim();
+          if (!id || !periodKey) continue;
+          const key = `${id}:${periodKey}`;
+          claimedKeys.add(key);
+          sessionReadSeasonTaskKeys.add(key);
+        }
+        if (!claimedKeys.size) return false;
+        if (activeSeasonTaskNotice?.tasks?.length) {
+          const remaining = activeSeasonTaskNotice.tasks.filter((task) =&gt; !claimedKeys.has(`${task.id}:${task.periodKey}`));
+          activeSeasonTaskNotice = remaining.length ? { ...activeSeasonTaskNotice, tasks: remaining } : null;
+          lastSeasonTaskNoticeKey = remaining.map((task) =&gt; `${task.id}:${task.periodKey}`).sort().join(&quot;|&quot;);
+          renderSeasonTaskNoticeButton();
+          if (!remaining.length &amp;&amp; releaseNoticeMode === &quot;season_tasks&quot; &amp;&amp; releaseLayer &amp;&amp; !releaseLayer.hidden) {
+            releaseLayer.hidden = true;
+            releaseLayer.setAttribute(&quot;aria-hidden&quot;,&quot;true&quot;);
+            if (releaseCloseButton) releaseCloseButton.hidden = false;
+            if (seasonTaskActionsEl) seasonTaskActionsEl.hidden = true;
+            releaseNoticeMode = &quot;update&quot;;
+          }
+        }
+        // Task XP may unlock a new season reward. Refresh only the compact attention
+        // count in background; do not trigger the heavy startup/case chain.
+        void loadSeasonPassProfileBonus();
+        return true;
+      }
+
       async function refreshSeasonTaskNotice(force = false) {
         const initData = String(telegramProfile?.initData || &quot;&quot;);
         if (!initData || seasonTaskNoticeSyncInFlight) return activeSeasonTaskNotice;
@@ -12101,6 +12397,18 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         scaledSpriteCache.clear();
       }
 
+      function adaptiveCanvasPixelRatio(width, height) {
+        const nativeDpr = Math.min(2, Math.max(1, Number(window.devicePixelRatio) || 1));
+        const shortSide = Math.min(Number(width || 0), Number(height || 0));
+        const longSide = Math.max(Number(width || 0), Number(height || 0));
+        const mobileViewport = shortSide > 0 &amp;&amp; shortSide &lt;= 600 &amp;&amp; longSide &lt;= 1000;
+        if (!mobileViewport) return nativeDpr;
+        const cores = Math.max(0, Number(navigator.hardwareConcurrency) || 0);
+        const memory = Math.max(0, Number(navigator.deviceMemory) || 0);
+        const constrainedDevice = (cores &gt; 0 &amp;&amp; cores &lt;= 4) || (memory &gt; 0 &amp;&amp; memory &lt;= 4);
+        return Math.min(nativeDpr, constrainedDevice ? CLIENT_LOW_POWER_CANVAS_DPR : CLIENT_MOBILE_CANVAS_DPR);
+      }
+
       function resize() {
         const rect = canvas.getBoundingClientRect();
         const rectWidth = Number(rect.width || canvas.clientWidth || 0);
@@ -12109,7 +12417,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         // renderer forced a 320x270 backing canvas into a narrower CSS box, which
         // visibly flattened the dog after returning from the season pass.
         if (!Number.isFinite(rectWidth) || !Number.isFinite(rectHeight) || rectWidth &lt; 220 || rectHeight &lt; 180) return;
-        const scale = Math.min(2, Math.max(1, Number(window.devicePixelRatio) || 1));
+        const scale = adaptiveCanvasPixelRatio(rectWidth, rectHeight);
         // Assigning canvas.width/height clears the backing buffer. Telegram can emit
         // several identical viewport events during fullscreen/header gestures, and
         // clearing the same-sized canvas on every event produced a visible flash.
@@ -12335,7 +12643,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           const previousLevel = profileLevelState(state.profileXp).level;
           const isNewRecord = state.score &gt; previousBest &amp;&amp; earned &gt; 0;
           hapticImpact(&quot;heavy&quot;);
-          if (isNewRecord) window.setTimeout(() =&gt; hapticNotify(&quot;success&quot;), 420);
+          if (isNewRecord) window.setTimeout(() =&gt; hapticNotify(&quot;success&quot;), 160);
           state.best = Math.max(state.best, state.score);
           state.wallet += credited.points;
           state.treats += credited.treats;
@@ -13336,6 +13644,10 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           }
           return;
         }
+        if (message.type === &quot;zefirok-season-pass-tasks-claimed&quot;) {
+          reconcileClaimedSeasonTaskNotices(message);
+          return;
+        }
         if (message.type === &quot;zefirok-season-pass-account-updated&quot;) {
           // The startup package can be coalesced with an older in-flight request.
           // Always follow it with a direct case-state read so a newly claimed case
@@ -13514,12 +13826,31 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           const current = levelState.level === requiredLevel;
           const title = profileTitleForLevel(requiredLevel);
           const status = current ? &quot;Текущий уровень&quot; : achieved ? &quot;Пройден&quot; : `Нужно ещё ${formatter.format(Math.max(0, requiredXp - levelState.totalXp))} XP`;
-          return `&lt;div class=&quot;level-guide-item${current ? &quot; is-current&quot; : achieved ? &quot; is-achieved&quot; : &quot;&quot;}&quot;&gt;
+          return `&lt;div class=&quot;level-guide-item${current ? &quot; is-current&quot; : achieved ? &quot; is-achieved&quot; : &quot;&quot;}&quot;${current ? ' tabindex=&quot;-1&quot; aria-current=&quot;step&quot;' : &quot;&quot;}&gt;
             &lt;span class=&quot;level-guide-number&quot;&gt;${requiredLevel}&lt;/span&gt;
             &lt;span class=&quot;level-guide-copy&quot;&gt;&lt;strong&gt;${escapePurchaseText(title)}&lt;/strong&gt;&lt;span&gt;Уровень ${requiredLevel} · всего ${formatter.format(requiredXp)} XP&lt;/span&gt;${levelCaseRewardMarkup(requiredLevel)}&lt;/span&gt;
             &lt;span class=&quot;level-guide-status&quot;&gt;${status}&lt;/span&gt;
           &lt;/div&gt;`;
         }).join(&quot;&quot;);
+      }
+
+      function scrollProfileLevelGuideToCurrent() {
+        const list = purchaseContent?.querySelector(&quot;.level-guide-list&quot;);
+        const current = list?.querySelector(&quot;.level-guide-item.is-current&quot;);
+        if (!list || !current) return;
+        const placeCurrentLevel = () =&gt; {
+          if (!list.isConnected || !current.isConnected) return;
+          const listRect = list.getBoundingClientRect();
+          const currentRect = current.getBoundingClientRect();
+          const centeredOffset = Math.max(0, (list.clientHeight - current.offsetHeight) / 2);
+          const nextScrollTop = list.scrollTop + (currentRect.top - listRect.top) - centeredOffset;
+          const maxScrollTop = Math.max(0, list.scrollHeight - list.clientHeight);
+          list.scrollTop = Math.max(0, Math.min(maxScrollTop, nextScrollTop));
+        };
+        window.requestAnimationFrame(() =&gt; {
+          placeCurrentLevel();
+          window.requestAnimationFrame(placeCurrentLevel);
+        });
       }
 
       function showProfileLevelGuide() {
@@ -13535,7 +13866,8 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           &lt;div class=&quot;level-guide-list&quot;&gt;${profileLevelGuideMarkup()}&lt;/div&gt;
           &lt;div class=&quot;purchase-warning&quot;&gt;&lt;strong&gt;Как получать XP&lt;/strong&gt;&lt;span&gt;+${profileRunXpReward()} XP за зачтённый забег и +${profilePurchaseXpReward()} XP за успешную покупку. ${escapePurchaseText(profileRunRequirementText())}&lt;/span&gt;&lt;/div&gt;
           &lt;button class=&quot;purchase-action purchase-action--done&quot; data-purchase-close type=&quot;button&quot;&gt;Понятно&lt;/button&gt;
-        `, &quot;[data-purchase-close]&quot;);
+        `, &quot;.level-guide-item.is-current&quot;);
+        scrollProfileLevelGuideToCurrent();
       }
 
       function profileXpNeededForLevel(levelValue) {
@@ -13678,6 +14010,8 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         }
         renderCaseHub();
         renderActiveRunBooster();
+        renderPlayerSupportSummary();
+        if (profile &amp;&amp; isScreenVisible(&quot;profile&quot;) &amp;&amp; Date.now() - playerSupportStateLoadedAt &gt; 15000) void loadPlayerSupportState(false);
       }
 
 
@@ -14658,10 +14992,10 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           const finalCard = track?.querySelector(&quot;.case-roulette-card.is-final&quot;);
           const windowEl = row.querySelector(&quot;.case-roulette-window&quot;);
           if (!track || !finalCard || !windowEl) return;
-          const delay = 160 + index * 260;
+          const delay = 60 + index * 80;
           window.setTimeout(() =&gt; {
             const targetX = Math.max(0, finalCard.offsetLeft - (windowEl.clientWidth - finalCard.offsetWidth) / 2);
-            const duration = 3500 + index * 120;
+            const duration = 900 + index * 60;
             row.classList.add(&quot;is-spinning&quot;);
             const slowTimer = window.setTimeout(() =&gt; row.classList.add(&quot;is-slowing&quot;), Math.round(duration * .66));
 
@@ -14758,17 +15092,36 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         try { return new Date(timestamp * 1000).toLocaleDateString(&quot;ru-RU&quot;, { day:&quot;numeric&quot;, month:&quot;long&quot; }); } catch { return &quot;&quot;; }
       }
 
+      let playerGiftInboxExpanded = false;
+
       function renderPlayerGiftInbox() {
         if (!playerGiftInboxListEl) return;
         const allItems = Array.isArray(state.playerGifts) ? state.playerGifts : [];
-        const pendingItems = allItems.filter((item) =&gt; item.status !== &quot;claimed&quot;);
-        const claimedItems = allItems.filter((item) =&gt; item.status === &quot;claimed&quot;).slice(0, 5);
+        const newestFirst = (a, b) =&gt; Number(b?.claimedAt || b?.createdAt || 0) - Number(a?.claimedAt || a?.createdAt || 0);
+        const pendingItems = allItems.filter((item) =&gt; item.status !== &quot;claimed&quot;).sort(newestFirst);
+        const claimedItems = allItems.filter((item) =&gt; item.status === &quot;claimed&quot;).sort(newestFirst);
         const items = [...pendingItems, ...claimedItems];
+        const shouldCollapse = items.length &gt; 3;
+        if (!shouldCollapse) playerGiftInboxExpanded = false;
+        const visibleItems = shouldCollapse &amp;&amp; !playerGiftInboxExpanded ? items.slice(0, 3) : items;
+        if (playerGiftInboxMetaEl) {
+          const pendingCount = Math.max(pendingItems.length, Math.floor(Number(state.playerGiftPendingCount || 0)));
+          const historyCount = claimedItems.length;
+          playerGiftInboxMetaEl.textContent = pendingCount &gt; 0
+            ? `Новых: ${formatter.format(pendingCount)} · История: ${formatter.format(historyCount)}`
+            : historyCount &gt; 0 ? `История: ${formatter.format(historyCount)}` : &quot;Нет новых&quot;;
+        }
+        if (playerGiftInboxMoreEl) {
+          const hiddenCount = Math.max(0, items.length - 3);
+          playerGiftInboxMoreEl.hidden = !shouldCollapse;
+          playerGiftInboxMoreEl.textContent = playerGiftInboxExpanded ? &quot;Свернуть&quot; : `Показать ещё ${formatter.format(hiddenCount)}`;
+          playerGiftInboxMoreEl.setAttribute(&quot;aria-expanded&quot;, playerGiftInboxExpanded ? &quot;true&quot; : &quot;false&quot;);
+        }
         if (!items.length) {
           setStableMarkup(playerGiftInboxListEl, `&lt;div class=&quot;player-gift-empty&quot;&gt;Новых подарков нет. Если команда выдаст компенсацию или подарок, он появится здесь.&lt;/div&gt;`, &quot;gift-inbox-empty&quot;);
           return;
         }
-        const markup = items.map((item) =&gt; {
+        const markup = visibleItems.map((item) =&gt; {
           const claimed = item.status === &quot;claimed&quot;;
           const pending = !claimed;
           const rewardMarkup = (Array.isArray(item.rewards) ? item.rewards : []).map((reward) =&gt; `&lt;span class=&quot;player-gift-reward&quot;&gt;${giftRewardVisualMarkup(reward)}&lt;span&gt;${escapePurchaseText(reward?.label || &quot;Награда&quot;)}&lt;/span&gt;&lt;/span&gt;`).join(&quot;&quot;);
@@ -14778,7 +15131,8 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           const when = playerGiftDate(claimed ? item.claimedAt : item.createdAt);
           return `&lt;article class=&quot;player-gift-card${claimed ? &quot; is-claimed&quot; : &quot;&quot;}&quot;&gt;&lt;div class=&quot;player-gift-card-head&quot;&gt;&lt;span&gt;&lt;strong&gt;${escapePurchaseText(item.title)}&lt;/strong&gt;&lt;small&gt;${when ? escapePurchaseText(when) : &quot;Подарок от команды&quot;}&lt;/small&gt;&lt;/span&gt;&lt;em class=&quot;player-gift-status&quot;&gt;${claimed ? &quot;Получено&quot; : item.status === &quot;claiming&quot; ? &quot;Получаем…&quot; : &quot;Можно забрать&quot;}&lt;/em&gt;&lt;/div&gt;&lt;p class=&quot;player-gift-reason&quot;&gt;${copyMarkup}&lt;/p&gt;&lt;div class=&quot;player-gift-rewards&quot;&gt;${rewardMarkup}&lt;/div&gt;${pending ? `&lt;button class=&quot;player-gift-claim&quot; data-player-gift-claim=&quot;${escapePurchaseText(item.id)}&quot; type=&quot;button&quot; ${item.status===&quot;claiming&quot;?&quot;disabled&quot;:&quot;&quot;}&gt;🎁 Забрать&lt;/button&gt;` : &quot;&quot;}&lt;/article&gt;`;
         }).join(&quot;&quot;);
-        setStableMarkup(playerGiftInboxListEl, markup, `gift-inbox:${items.map((item)=&gt;`${item.id}:${item.status}`).join(&quot;|&quot;)}`);
+        const viewKey = shouldCollapse ? (playerGiftInboxExpanded ? &quot;all&quot; : &quot;preview3&quot;) : &quot;all&quot;;
+        setStableMarkup(playerGiftInboxListEl, markup, `gift-inbox:${viewKey}:${visibleItems.map((item)=&gt;`${item.id}:${item.status}`).join(&quot;|&quot;)}`);
       }
 
       function applyPlayerGiftPayload(data) {
@@ -14815,7 +15169,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           if (!response.ok || !data?.ok) throw new Error(data?.error || &quot;Не удалось получить подарок.&quot;);
           if (data.profile) applyServerProfilePayload(data.profile);
           if (data.cases) applyServerCasePayload(data.cases);
-          if (data.gifts) applyPlayerGiftPayload(data.gifts); else await loadPlayerGiftInbox(true);
+          if (data.gifts) applyPlayerGiftPayload(data.gifts); else void loadPlayerGiftInbox(true);
           renderCaseHub();
           showProfileToast(&quot;🎁 Подарок получен&quot;, &quot;success&quot;);
           hapticNotify(&quot;success&quot;);
@@ -14823,8 +15177,262 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           showProfileToast(error?.message || &quot;Не удалось получить подарок.&quot;, &quot;warning&quot;);
           hapticNotify(&quot;error&quot;);
           if (button) { button.disabled = false; button.textContent = oldText; }
-          await loadPlayerGiftInbox(true);
+          void loadPlayerGiftInbox(true);
         }
+      }
+
+
+      function supportRequestId(prefix = &quot;support&quot;) {
+        try { return `${prefix}_${crypto.randomUUID().replace(/-/g, &quot;&quot;)}`; }
+        catch { return `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2,14)}`; }
+      }
+
+      function supportClientSnapshot() {
+        const ua = String(navigator.userAgent || &quot;&quot;);
+        const isiOS = /iPhone|iPad|iPod/i.test(ua);
+        const isAndroid = /Android/i.test(ua);
+        const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection || null;
+        return {
+          gameVersion: GAME_VERSION,
+          telegramPlatform: String(telegramProfile?.telegramPlatform || &quot;&quot;),
+          telegramVersion: String(telegramProfile?.telegramVersion || &quot;&quot;),
+          platform: String(navigator.platform || &quot;&quot;),
+          os: isiOS ? &quot;iOS&quot; : isAndroid ? &quot;Android&quot; : &quot;&quot;,
+          language: String(navigator.language || &quot;&quot;),
+          viewport: `${Math.round(window.innerWidth || 0)}x${Math.round(window.innerHeight || 0)}`,
+          screen: `${Math.round(window.screen?.width || 0)}x${Math.round(window.screen?.height || 0)}`,
+          devicePixelRatio: Number(window.devicePixelRatio || 1).toFixed(2),
+          online: navigator.onLine !== false,
+          network: String(connection?.effectiveType || &quot;&quot;),
+          activeScreen: screens.find((screen) =&gt; !screen.hidden)?.dataset?.screen || &quot;&quot;,
+          profileLevel: profileLevelState(state.profileXp).level,
+          localBest: Math.floor(Number(state.best || 0)),
+          localWallet: Math.floor(Number(state.wallet || 0)),
+          localTreats: Math.floor(Number(state.treats || 0)),
+          localCoffee: Math.floor(Number(state.coffee || 0))
+        };
+      }
+
+      function supportStatusClass(status) {
+        const value = String(status || &quot;new&quot;);
+        return [&quot;working&quot;,&quot;resolved&quot;,&quot;rejected&quot;].includes(value) ? ` is-${value}` : &quot;&quot;;
+      }
+
+      function supportDate(value, withTime = false) {
+        const timestamp = Number(value || 0);
+        if (!timestamp) return &quot;&quot;;
+        try {
+          return new Date(timestamp * 1000).toLocaleString(&quot;ru-RU&quot;, withTime
+            ? { day:&quot;numeric&quot;, month:&quot;short&quot;, hour:&quot;2-digit&quot;, minute:&quot;2-digit&quot; }
+            : { day:&quot;numeric&quot;, month:&quot;short&quot; });
+        } catch { return &quot;&quot;; }
+      }
+
+      function normalizePlayerSupportState(data) {
+        const tickets = Array.isArray(data?.tickets) ? data.tickets.map((ticket) =&gt; ({
+          ...ticket,
+          id: Math.floor(Number(ticket?.id || 0)),
+          subject: String(ticket?.subject || &quot;Обращение&quot;),
+          category: String(ticket?.category || &quot;other&quot;),
+          categoryLabel: String(ticket?.categoryLabel || &quot;Другое&quot;),
+          status: String(ticket?.status || &quot;new&quot;),
+          statusLabel: String(ticket?.statusLabel || &quot;новое&quot;),
+          unread: Boolean(ticket?.unread),
+          messages: Array.isArray(ticket?.messages) ? ticket.messages : [],
+          attachments: Array.isArray(ticket?.attachments) ? ticket.attachments : []
+        })).filter((ticket) =&gt; ticket.id &gt; 0) : [];
+        return {
+          tickets,
+          openCount: Math.max(0, Math.floor(Number(data?.openCount ?? tickets.filter((ticket) =&gt; [&quot;new&quot;,&quot;working&quot;].includes(ticket.status)).length))),
+          unreadCount: Math.max(0, Math.floor(Number(data?.unreadCount ?? tickets.filter((ticket) =&gt; ticket.unread).length)))
+        };
+      }
+
+      function applyPlayerSupportState(data) {
+        playerSupportState = normalizePlayerSupportState(data);
+        playerSupportStateLoadedAt = Date.now();
+        renderPlayerSupportSummary();
+      }
+
+      function renderPlayerSupportSummary() {
+        if (profileSupportBadgeEl) {
+          const unread = Math.max(0, Number(playerSupportState?.unreadCount || 0));
+          profileSupportBadgeEl.hidden = unread &lt;= 0;
+          profileSupportBadgeEl.textContent = unread &gt; 99 ? &quot;99+&quot; : formatter.format(unread);
+        }
+        if (profileSupportMetaEl) {
+          if (!telegramProfile?.available) profileSupportMetaEl.textContent = &quot;Доступно после входа через Telegram&quot;;
+          else if (!playerSupportStateLoadedAt) profileSupportMetaEl.textContent = &quot;Нажмите, чтобы открыть обращения&quot;;
+          else if (playerSupportState.unreadCount &gt; 0) profileSupportMetaEl.textContent = `Новых ответов: ${formatter.format(playerSupportState.unreadCount)} · открытых: ${formatter.format(playerSupportState.openCount)}`;
+          else if (playerSupportState.tickets.length) profileSupportMetaEl.textContent = `Обращений: ${formatter.format(playerSupportState.tickets.length)} · открытых: ${formatter.format(playerSupportState.openCount)}`;
+          else profileSupportMetaEl.textContent = &quot;Обращений пока нет&quot;;
+        }
+      }
+
+      async function loadPlayerSupportState(force = false) {
+        if (!telegramProfile?.initData || playerSupportStateLoading) return false;
+        if (!force &amp;&amp; playerSupportStateLoadedAt &amp;&amp; Date.now() - playerSupportStateLoadedAt &lt; 15000) return true;
+        playerSupportStateLoading = true;
+        try {
+          const response = await gameFetchWithTimeout(PLAYER_SUPPORT_STATE_PATH, {
+            method:&quot;POST&quot;, headers:{ &quot;Content-Type&quot;:&quot;application/json&quot; },
+            body:JSON.stringify({ initData:String(telegramProfile.initData) }), cache:&quot;no-store&quot;, credentials:&quot;same-origin&quot;
+          }, 6500);
+          const data = await response.json().catch(() =&gt; null);
+          if (!response.ok || !data?.ok) throw new Error(data?.error || &quot;Не удалось загрузить обращения.&quot;);
+          applyPlayerSupportState(data);
+          if (supportLayer &amp;&amp; !supportLayer.hidden &amp;&amp; !playerSupportSelectedTicketId) renderPlayerSupportHub();
+          return true;
+        } catch (error) {
+          console.warn(&quot;Support state sync failed&quot;, error);
+          return false;
+        } finally { playerSupportStateLoading = false; }
+      }
+
+      function openSupportLayer() {
+        if (!supportLayer) return;
+        supportLayer.hidden = false;
+        supportLayer.setAttribute(&quot;aria-hidden&quot;, &quot;false&quot;);
+        playerSupportSelectedTicketId = 0;
+        renderPlayerSupportHub();
+        void loadPlayerSupportState(true).then(() =&gt; { if (!playerSupportSelectedTicketId) renderPlayerSupportHub(); });
+      }
+
+      function closeSupportLayer() {
+        if (!supportLayer) return;
+        supportLayer.hidden = true;
+        supportLayer.setAttribute(&quot;aria-hidden&quot;, &quot;true&quot;);
+        playerSupportSelectedTicketId = 0;
+      }
+
+      function renderPlayerSupportHub() {
+        if (!supportContentEl) return;
+        if (supportTitleEl) supportTitleEl.textContent = &quot;Поддержка&quot;;
+        if (supportSubtitleEl) supportSubtitleEl.textContent = &quot;Ваши обращения и ответы команды&quot;;
+        if (!telegramProfile?.initData) {
+          supportContentEl.innerHTML = `&lt;div class=&quot;support-empty&quot;&gt;Откройте игру через Telegram-бота, чтобы отправлять обращения и получать ответы поддержки.&lt;/div&gt;`;
+          return;
+        }
+        const tickets = Array.isArray(playerSupportState.tickets) ? playerSupportState.tickets : [];
+        const cards = tickets.map((ticket) =&gt; `&lt;button class=&quot;support-ticket-card${ticket.unread ? &quot; is-unread&quot; : &quot;&quot;}&quot; data-support-ticket=&quot;${ticket.id}&quot; type=&quot;button&quot;&gt;&lt;span class=&quot;support-ticket-card-head&quot;&gt;&lt;span&gt;&lt;strong&gt;${escapePurchaseText(ticket.subject)}&lt;/strong&gt;&lt;small&gt;${escapePurchaseText(ticket.categoryLabel)} · ${escapePurchaseText(supportDate(ticket.updatedAt || ticket.createdAt, true))}&lt;/small&gt;&lt;/span&gt;&lt;span class=&quot;support-ticket-status${supportStatusClass(ticket.status)}&quot;&gt;${escapePurchaseText(ticket.statusLabel)}&lt;/span&gt;&lt;/span&gt;${ticket.unread ? `&lt;span class=&quot;support-unread-pill&quot;&gt;● Новый ответ поддержки&lt;/span&gt;` : &quot;&quot;}&lt;/button&gt;`).join(&quot;&quot;);
+        supportContentEl.innerHTML = `&lt;div class=&quot;support-intro&quot;&gt;&lt;strong&gt;🛟 Мы на связи&lt;/strong&gt;&lt;span&gt;Опишите проблему или вопрос. Информация об аккаунте, версии игры и устройстве прикрепится автоматически. Ответ появится здесь и придёт от Telegram-бота.&lt;/span&gt;&lt;button class=&quot;support-primary&quot; data-support-new type=&quot;button&quot;&gt;Новое обращение&lt;/button&gt;&lt;/div&gt;&lt;div class=&quot;support-section-title&quot;&gt;Мои обращения${tickets.length ? ` · ${formatter.format(tickets.length)}` : &quot;&quot;}&lt;/div&gt;&lt;div class=&quot;support-ticket-list&quot;&gt;${cards || `&lt;div class=&quot;support-empty&quot;&gt;Обращений пока нет. Если что-то не работает или есть идея — напишите нам.&lt;/div&gt;`}&lt;/div&gt;`;
+      }
+
+      function renderPlayerSupportNew() {
+        if (!supportContentEl) return;
+        if (supportTitleEl) supportTitleEl.textContent = &quot;Новое обращение&quot;;
+        if (supportSubtitleEl) supportSubtitleEl.textContent = &quot;Ответ придёт в игру и от Telegram-бота&quot;;
+        const requestId = supportRequestId(&quot;ticket&quot;);
+        supportContentEl.innerHTML = `&lt;form class=&quot;support-form&quot; data-support-form data-request-id=&quot;${requestId}&quot;&gt;&lt;div class=&quot;support-field&quot;&gt;&lt;label&gt;Категория&lt;/label&gt;&lt;select name=&quot;category&quot; required&gt;&lt;option value=&quot;bug&quot;&gt;Ошибка в игре&lt;/option&gt;&lt;option value=&quot;purchase&quot;&gt;Покупка&lt;/option&gt;&lt;option value=&quot;reward&quot;&gt;Награда&lt;/option&gt;&lt;option value=&quot;account&quot;&gt;Аккаунт&lt;/option&gt;&lt;option value=&quot;suggestion&quot;&gt;Предложение&lt;/option&gt;&lt;option value=&quot;other&quot;&gt;Другое&lt;/option&gt;&lt;/select&gt;&lt;/div&gt;&lt;div class=&quot;support-field&quot;&gt;&lt;label&gt;Тема&lt;/label&gt;&lt;input name=&quot;subject&quot; maxlength=&quot;120&quot; autocomplete=&quot;off&quot; placeholder=&quot;Коротко: что случилось?&quot; required&gt;&lt;/div&gt;&lt;div class=&quot;support-field&quot;&gt;&lt;label&gt;Сообщение&lt;/label&gt;&lt;textarea name=&quot;message&quot; maxlength=&quot;4000&quot; placeholder=&quot;Опишите, что произошло, что ожидали увидеть и как повторить проблему.&quot; required&gt;&lt;/textarea&gt;&lt;/div&gt;&lt;div class=&quot;support-photo-box&quot;&gt;&lt;div class=&quot;support-field&quot;&gt;&lt;label&gt;Скриншот — необязательно&lt;/label&gt;&lt;input name=&quot;photo&quot; type=&quot;file&quot; accept=&quot;image/*&quot;&gt;&lt;/div&gt;&lt;span class=&quot;support-hint&quot; data-support-photo-hint&gt;Фото будет уменьшено до безопасного размера и переупаковано в JPEG — метаданные исходного файла не отправляются.&lt;/span&gt;&lt;/div&gt;&lt;span class=&quot;support-hint&quot;&gt;Диагностика устройства и игрового профиля прикрепится автоматически. Секреты Telegram и античит-данные не отправляются.&lt;/span&gt;&lt;div class=&quot;support-error&quot; data-support-error&gt;&lt;/div&gt;&lt;div class=&quot;support-row-actions&quot;&gt;&lt;button class=&quot;support-secondary&quot; data-support-back type=&quot;button&quot;&gt;Назад&lt;/button&gt;&lt;button class=&quot;support-primary&quot; type=&quot;submit&quot;&gt;Отправить&lt;/button&gt;&lt;/div&gt;&lt;/form&gt;`;
+      }
+
+      async function supportImageFromFile(file) {
+        if (!file || !Number(file.size || 0)) return null;
+        if (Number(file.size || 0) &gt; 14 * 1024 * 1024) throw new Error(&quot;Исходное изображение слишком большое. Выберите файл до 14 МБ.&quot;);
+        const url = URL.createObjectURL(file);
+        try {
+          const image = await new Promise((resolve, reject) =&gt; {
+            const img = new Image(); img.onload = () =&gt; resolve(img); img.onerror = () =&gt; reject(new Error(&quot;Не удалось прочитать изображение. Лучше приложить обычный скриншот JPG или PNG.&quot;)); img.src = url;
+          });
+          const maxSide = 1600;
+          const scale = Math.min(1, maxSide / Math.max(1, Number(image.naturalWidth || image.width || 1), Number(image.naturalHeight || image.height || 1)));
+          const canvas = document.createElement(&quot;canvas&quot;);
+          canvas.width = Math.max(1, Math.round(Number(image.naturalWidth || image.width || 1) * scale));
+          canvas.height = Math.max(1, Math.round(Number(image.naturalHeight || image.height || 1) * scale));
+          const ctx = canvas.getContext(&quot;2d&quot;, { alpha:false });
+          if (!ctx) throw new Error(&quot;Не удалось подготовить скриншот.&quot;);
+          ctx.fillStyle = &quot;#ffffff&quot;; ctx.fillRect(0,0,canvas.width,canvas.height); ctx.drawImage(image,0,0,canvas.width,canvas.height);
+          const makeBlob = (quality) =&gt; new Promise((resolve) =&gt; canvas.toBlob(resolve,&quot;image/jpeg&quot;,quality));
+          let blob = await makeBlob(.84);
+          if (blob &amp;&amp; blob.size &gt; 2 * 1024 * 1024) blob = await makeBlob(.70);
+          if (blob &amp;&amp; blob.size &gt; 2 * 1024 * 1024) blob = await makeBlob(.58);
+          if (!blob || blob.size &gt; 2 * 1024 * 1024) throw new Error(&quot;Не удалось сжать изображение до 2 МБ. Сделайте скриншот меньшего размера.&quot;);
+          return new File([blob], `support-${Date.now()}.jpg`, { type:&quot;image/jpeg&quot;, lastModified:Date.now() });
+        } finally { URL.revokeObjectURL(url); }
+      }
+
+      async function submitPlayerSupportForm(form) {
+        if (!form || !telegramProfile?.initData) return;
+        const submit = form.querySelector(&#x27;button[type=&quot;submit&quot;]&#x27;);
+        const errorEl = form.querySelector(&quot;[data-support-error]&quot;);
+        const photoInput = form.querySelector(&#x27;input[name=&quot;photo&quot;]&#x27;);
+        const hint = form.querySelector(&quot;[data-support-photo-hint]&quot;);
+        const oldText = submit?.textContent || &quot;Отправить&quot;;
+        if (submit) { submit.disabled = true; submit.textContent = &quot;Отправляем…&quot;; }
+        if (errorEl) errorEl.textContent = &quot;&quot;;
+        try {
+          let photo = null;
+          if (photoInput?.files?.[0]) {
+            if (hint) hint.textContent = &quot;Подготавливаем скриншот…&quot;;
+            photo = await supportImageFromFile(photoInput.files[0]);
+            if (hint &amp;&amp; photo) hint.textContent = `Скриншот готов · ${Math.max(1,Math.round(photo.size/1024))} КБ`;
+          }
+          const body = new FormData();
+          body.append(&quot;initData&quot;, String(telegramProfile.initData));
+          body.append(&quot;category&quot;, String(form.elements.category?.value || &quot;other&quot;));
+          body.append(&quot;subject&quot;, String(form.elements.subject?.value || &quot;&quot;));
+          body.append(&quot;message&quot;, String(form.elements.message?.value || &quot;&quot;));
+          body.append(&quot;requestId&quot;, String(form.dataset.requestId || supportRequestId(&quot;ticket&quot;)));
+          body.append(&quot;clientJson&quot;, JSON.stringify(supportClientSnapshot()));
+          if (photo) body.append(&quot;photo&quot;, photo, photo.name);
+          const response = await gameFetchWithTimeout(PLAYER_SUPPORT_CREATE_PATH, { method:&quot;POST&quot;, body, cache:&quot;no-store&quot;, credentials:&quot;same-origin&quot; }, 9000);
+          const data = await response.json().catch(() =&gt; null);
+          if (!response.ok || !data?.ok) throw new Error(data?.error || &quot;Не удалось отправить обращение.&quot;);
+          applyPlayerSupportState(data);
+          showProfileToast(data.repeated ? &quot;Обращение уже было отправлено.&quot; : `🛟 Обращение #${data.ticketId} отправлено`, &quot;success&quot;, 3200);
+          hapticNotify(&quot;success&quot;);
+          openPlayerSupportTicket(Number(data.ticketId || 0));
+        } catch (error) {
+          const message = error?.message || &quot;Не удалось отправить обращение.&quot;;
+          if (errorEl) errorEl.textContent = message;
+          hapticNotify(&quot;error&quot;);
+        } finally { if (submit?.isConnected) { submit.disabled = false; submit.textContent = oldText; } }
+      }
+
+      function findPlayerSupportTicket(ticketId) {
+        const id = Math.floor(Number(ticketId || 0));
+        return (playerSupportState.tickets || []).find((ticket) =&gt; Number(ticket.id) === id) || null;
+      }
+
+      function openPlayerSupportTicket(ticketId) {
+        const ticket = findPlayerSupportTicket(ticketId);
+        if (!ticket || !supportContentEl) { renderPlayerSupportHub(); return; }
+        playerSupportSelectedTicketId = Number(ticket.id);
+        if (supportTitleEl) supportTitleEl.textContent = `Обращение #${ticket.id}`;
+        if (supportSubtitleEl) supportSubtitleEl.textContent = ticket.categoryLabel;
+        if (ticket.unread) {
+          ticket.unread = false;
+          playerSupportState.unreadCount = Math.max(0, Number(playerSupportState.unreadCount || 0) - 1);
+          renderPlayerSupportSummary();
+          void gameFetchWithTimeout(PLAYER_SUPPORT_READ_PATH, { method:&quot;POST&quot;, headers:{&quot;Content-Type&quot;:&quot;application/json&quot;}, body:JSON.stringify({initData:String(telegramProfile.initData),ticketId:ticket.id}), cache:&quot;no-store&quot;, credentials:&quot;same-origin&quot; }, 5000).catch(() =&gt; {});
+        }
+        const messages = (ticket.messages || []).map((message) =&gt; `&lt;div class=&quot;support-message is-${escapePurchaseText(message.authorKind || &quot;system&quot;)}&quot;&gt;&lt;small&gt;${message.authorKind === &quot;staff&quot; ? &quot;Поддержка&quot; : message.authorKind === &quot;player&quot; ? &quot;Вы&quot; : &quot;Система&quot;} · ${escapePurchaseText(supportDate(message.createdAt,true))}&lt;/small&gt;${escapePurchaseText(message.text || &quot;&quot;)}&lt;/div&gt;`).join(&quot;&quot;);
+        const attachments = (ticket.attachments || []).map((attachment) =&gt; `&lt;div class=&quot;support-attachment-note&quot;&gt;📷 ${escapePurchaseText(attachment.fileName || &quot;Скриншот&quot;)} · ${attachment.status === &quot;uploaded&quot; ? &quot;прикреплён&quot; : attachment.status === &quot;failed&quot; ? &quot;не удалось загрузить&quot; : &quot;загружается&quot;}&lt;/div&gt;`).join(&quot;&quot;);
+        const canReply = [&quot;new&quot;,&quot;working&quot;].includes(ticket.status);
+        supportContentEl.innerHTML = `&lt;div class=&quot;support-ticket-detail-head&quot;&gt;&lt;span class=&quot;support-ticket-card-head&quot;&gt;&lt;strong&gt;${escapePurchaseText(ticket.subject)}&lt;/strong&gt;&lt;span class=&quot;support-ticket-status${supportStatusClass(ticket.status)}&quot;&gt;${escapePurchaseText(ticket.statusLabel)}&lt;/span&gt;&lt;/span&gt;&lt;span&gt;${escapePurchaseText(ticket.categoryLabel)} · создано ${escapePurchaseText(supportDate(ticket.createdAt,true))}&lt;/span&gt;&lt;/div&gt;${attachments}&lt;div class=&quot;support-thread&quot;&gt;${messages || `&lt;div class=&quot;support-empty&quot;&gt;Сообщений пока нет.&lt;/div&gt;`}&lt;/div&gt;${canReply ? `&lt;form class=&quot;support-form&quot; data-support-reply-form data-ticket-id=&quot;${ticket.id}&quot; data-request-id=&quot;${supportRequestId(&quot;reply&quot;)}&quot; style=&quot;margin-top:13px&quot;&gt;&lt;div class=&quot;support-field&quot;&gt;&lt;label&gt;Дополнить обращение&lt;/label&gt;&lt;textarea name=&quot;message&quot; maxlength=&quot;4000&quot; placeholder=&quot;Напишите дополнительную информацию или ответ поддержке.&quot;&gt;&lt;/textarea&gt;&lt;/div&gt;&lt;div class=&quot;support-error&quot; data-support-error&gt;&lt;/div&gt;&lt;div class=&quot;support-row-actions&quot;&gt;&lt;button class=&quot;support-secondary&quot; data-support-back type=&quot;button&quot;&gt;К обращениям&lt;/button&gt;&lt;button class=&quot;support-primary&quot; type=&quot;submit&quot;&gt;Отправить&lt;/button&gt;&lt;/div&gt;&lt;/form&gt;` : `&lt;div class=&quot;support-intro&quot; style=&quot;margin-top:13px&quot;&gt;&lt;strong&gt;Обращение закрыто&lt;/strong&gt;&lt;span&gt;Если вопрос остался, создайте новое обращение — история этого тикета сохранится.&lt;/span&gt;&lt;div class=&quot;support-row-actions&quot;&gt;&lt;button class=&quot;support-secondary&quot; data-support-back type=&quot;button&quot;&gt;К обращениям&lt;/button&gt;&lt;button class=&quot;support-primary&quot; data-support-new type=&quot;button&quot;&gt;Новое обращение&lt;/button&gt;&lt;/div&gt;&lt;/div&gt;`}`;
+      }
+
+      async function submitPlayerSupportReply(form) {
+        const ticketId = Math.floor(Number(form?.dataset.ticketId || 0));
+        const message = String(form?.elements?.message?.value || &quot;&quot;).trim();
+        const submit = form?.querySelector(&#x27;button[type=&quot;submit&quot;]&#x27;);
+        const errorEl = form?.querySelector(&quot;[data-support-error]&quot;);
+        if (!ticketId || !message) { if (errorEl) errorEl.textContent = &quot;Введите сообщение.&quot;; return; }
+        const oldText = submit?.textContent || &quot;Отправить&quot;;
+        if (submit) { submit.disabled = true; submit.textContent = &quot;Отправляем…&quot;; }
+        if (errorEl) errorEl.textContent = &quot;&quot;;
+        try {
+          const response = await gameFetchWithTimeout(PLAYER_SUPPORT_REPLY_PATH, { method:&quot;POST&quot;, headers:{&quot;Content-Type&quot;:&quot;application/json&quot;}, body:JSON.stringify({initData:String(telegramProfile.initData),ticketId,message,requestId:String(form.dataset.requestId||supportRequestId(&quot;reply&quot;)),client:supportClientSnapshot()}), cache:&quot;no-store&quot;, credentials:&quot;same-origin&quot; }, 6500);
+          const data = await response.json().catch(() =&gt; null);
+          if (!response.ok || !data?.ok) throw new Error(data?.error || &quot;Не удалось отправить сообщение.&quot;);
+          applyPlayerSupportState(data);
+          showProfileToast(&quot;Сообщение отправлено в поддержку&quot;, &quot;success&quot;, 2600);
+          hapticNotify(&quot;success&quot;);
+          openPlayerSupportTicket(ticketId);
+        } catch (error) {
+          if (errorEl) errorEl.textContent = error?.message || &quot;Не удалось отправить сообщение.&quot;;
+          hapticNotify(&quot;error&quot;);
+        } finally { if (submit?.isConnected) { submit.disabled = false; submit.textContent = oldText; } }
       }
 
       function renderCaseHub() {
@@ -15763,12 +16371,14 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           const hasCosmetics = (data.rewards || []).some((r) =&gt; [&quot;avatar&quot;,&quot;frame&quot;,&quot;trail&quot;,&quot;skin&quot;,&quot;music&quot;].includes(String(r.kind)));
           const hasXpBooster = (data.rewards || []).some((r) =&gt; String(r.kind) === &quot;booster_xp&quot;);
           const hasSeasonPassReward = (data.rewards || []).some((r) =&gt; [&quot;season_pass&quot;,&quot;season_pass_xp&quot;,&quot;season_pass_levels&quot;].includes(String(r.kind)));
-          if (hasCases || hasInventoryBoosters || hasCosmetics) await loadCaseState(true).catch(() =&gt; {});
-          if (hasXpBooster || hasSeasonPassReward) await loadSeasonPassProfileBonus().catch(() =&gt; {});
-          if ((data.physicalRewards || []).length) await syncServerRewards(true).catch(() =&gt; {});
           flashOfferMessage.textContent = &quot;✅ Покупка успешна — награды уже начислены&quot;;
           hapticNotify(&quot;success&quot;);
-          window.setTimeout(() =&gt; closeFlashOffer(&quot;purchase&quot;), 1050);
+          const postPurchaseSync = [];
+          if (hasCases || hasInventoryBoosters || hasCosmetics) postPurchaseSync.push(loadCaseState(true));
+          if (hasXpBooster || hasSeasonPassReward) postPurchaseSync.push(loadSeasonPassProfileBonus());
+          if ((data.physicalRewards || []).length) postPurchaseSync.push(syncServerRewards(true));
+          if (postPurchaseSync.length) void Promise.allSettled(postPurchaseSync);
+          window.setTimeout(() =&gt; closeFlashOffer(&quot;purchase&quot;), 420);
         } catch (error) {
           flashOfferMessage.textContent = error?.message || &quot;Не удалось выполнить покупку.&quot;;
           flashOfferBuy.disabled = false;
@@ -16177,24 +16787,61 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 
       let serverAccountResumeSyncTimer = 0;
       let serverAccountResumeSyncAt = 0;
+      let serverAccountHiddenAt = 0;
+      let serverAccountResumeInFlight = false;
 
-      function scheduleServerAccountResumeSync(delay = 180) {
+      function scheduleServerAccountResumeSync(delay = 160, options = {}) {
         if (!telegramProfile?.initData || document.visibilityState === &quot;hidden&quot;) return;
-        const now = Date.now();
-        if (now - serverAccountResumeSyncAt &lt; 4500) return;
+        const forceFull = options?.forceFull === true;
+        const hiddenFor = serverAccountHiddenAt &gt; 0 ? Math.max(0, Date.now() - serverAccountHiddenAt) : 0;
+        // Very short Telegram/UI focus changes do not justify any server request.
+        if (!forceFull &amp;&amp; hiddenFor &gt; 0 &amp;&amp; hiddenFor &lt; 10000) {
+          serverAccountHiddenAt = 0;
+          if (loadPendingLeaderboardRun()) void retryPendingLeaderboardRun();
+          return;
+        }
+        // A focus/pageshow event without an actual hidden interval is only UI noise.
+        if (!forceFull &amp;&amp; hiddenFor === 0) return;
         window.clearTimeout(serverAccountResumeSyncTimer);
-        serverAccountResumeSyncTimer = window.setTimeout(() =&gt; {
-          if (!telegramProfile?.initData || document.visibilityState === &quot;hidden&quot;) return;
-          serverAccountResumeSyncAt = Date.now();
-          void syncGameStartupPackage(true);
+        serverAccountResumeSyncTimer = window.setTimeout(async () =&gt; {
+          if (!telegramProfile?.initData || document.visibilityState === &quot;hidden&quot; || serverAccountResumeInFlight) return;
+          const now = Date.now();
+          const awayMs = serverAccountHiddenAt &gt; 0 ? Math.max(0, now - serverAccountHiddenAt) : hiddenFor;
+          serverAccountHiddenAt = 0;
+          if (!forceFull &amp;&amp; now - serverAccountResumeSyncAt &lt; 4500) return;
+          serverAccountResumeSyncAt = now;
+          serverAccountResumeInFlight = true;
+          try {
+            if (forceFull || awayMs &gt;= 60000) {
+              await syncGameStartupPackage(true);
+            } else if (awayMs &gt;= 10000) {
+              // Medium-length resume: refresh only account values and any pending
+              // task notice. Full cases/news/gifts startup is unnecessary here.
+              await Promise.allSettled([
+                syncPlayerProfileFromServer(),
+                refreshSeasonTaskNotice(false)
+              ]);
+            }
+            if (loadPendingLeaderboardRun()) void retryPendingLeaderboardRun();
+          } finally {
+            serverAccountResumeInFlight = false;
+          }
         }, Math.max(0, Number(delay) || 0));
       }
 
       document.addEventListener(&quot;visibilitychange&quot;, () =&gt; {
-        if (document.visibilityState === &quot;visible&quot;) scheduleServerAccountResumeSync(140);
+        if (document.visibilityState === &quot;hidden&quot;) {
+          serverAccountHiddenAt = Date.now();
+          return;
+        }
+        scheduleServerAccountResumeSync(120);
       });
-      window.addEventListener(&quot;pageshow&quot;, () =&gt; scheduleServerAccountResumeSync(180));
-      window.addEventListener(&quot;focus&quot;, () =&gt; scheduleServerAccountResumeSync(220));
+      window.addEventListener(&quot;pageshow&quot;, (event) =&gt; {
+        if (event.persisted) scheduleServerAccountResumeSync(100, { forceFull: true });
+      });
+      window.addEventListener(&quot;focus&quot;, () =&gt; {
+        if (serverAccountHiddenAt &gt; 0) scheduleServerAccountResumeSync(160);
+      });
       // Server-side grants from the owner panel and Telegram bot are queued centrally.
       // Pull the lightweight profile endpoint while the mini app stays open so an
       // player does not have to reload the whole game to see the grant.
@@ -16393,6 +17040,19 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         return refreshLeaderboard(force, requestedMode, false);
       }
 
+      function scheduleVisibleProfileLeaderboardRefresh() {
+        if (!isScreenVisible(&quot;profile&quot;)) return;
+        const refresh = () =&gt; {
+          if (!isScreenVisible(&quot;profile&quot;)) return;
+          void prefetchLeaderboard(&quot;season&quot;, true);
+        };
+        if (typeof window.requestIdleCallback === &quot;function&quot;) {
+          window.requestIdleCallback(refresh, { timeout: 900 });
+        } else {
+          window.setTimeout(refresh, 260);
+        }
+      }
+
       function openLeaderboard() {
         saveProgress();
         try {
@@ -16560,7 +17220,6 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           if (!response.ok || data?.ok === false) throw new Error(data?.error || &quot;Не удалось сохранить XP сезона.&quot;);
           reconcileSeasonProfileXpForRun(run, data);
           if (data?.taskNotice) applySeasonTaskNotice(data.taskNotice);
-          window.setTimeout(() =&gt; void refreshSeasonTaskNotice(true), 180);
           if (Number(data?.xpAwarded || 0) &gt; 0) {
             showProfileToast(`Сезонный пропуск: +${formatter.format(Number(data.xpAwarded || 0))} XP`, &quot;success&quot;, 2600);
             try { window.parent.postMessage({ type: &quot;zefirok-season-pass-updated&quot;, xpAwarded: Number(data.xpAwarded || 0) }, &quot;*&quot;); } catch (error) {}
@@ -16652,7 +17311,6 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
             : null;
           if (seasonPassAward) {
             if (seasonPassAward.taskNotice) applySeasonTaskNotice(seasonPassAward.taskNotice);
-            window.setTimeout(() =&gt; void refreshSeasonTaskNotice(true), loaded?.fastSettlement ? 1200 : 180);
             if (Number(seasonPassAward.xpAwarded || 0) &gt; 0) {
               showProfileToast(`Сезонный пропуск: +${formatter.format(Number(seasonPassAward.xpAwarded || 0))} XP`, &quot;success&quot;, 2600);
               try { window.parent.postMessage({ type: &quot;zefirok-season-pass-updated&quot;, xpAwarded: Number(seasonPassAward.xpAwarded || 0) }, &quot;*&quot;); } catch (error) {}
@@ -16663,8 +17321,9 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
             leaderboardCache.season = null;
             leaderboardCache.all_time = null;
             leaderboardLastRefreshAt = 0;
-            window.setTimeout(() =&gt; void prefetchLeaderboard(&quot;season&quot;, true), 350);
-            window.setTimeout(() =&gt; void prefetchLeaderboard(&quot;all_time&quot;, true), 700);
+            // Do not compete with settlement/task UI for network bandwidth. The
+            // seasonal summary is refreshed only when the profile is actually open.
+            scheduleVisibleProfileLeaderboardRefresh();
           } else {
             loaded._loadedAt = Date.now();
             leaderboardCache.season = loaded;
@@ -16672,7 +17331,6 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
             if (leaderboardMode === &quot;season&quot;) leaderboardData = loaded;
             leaderboardLastRefreshAt = Date.now();
             renderLeaderboardSummary();
-            void prefetchLeaderboard(&quot;all_time&quot;, true);
           }
           if (loaded?.runSettlement?.accepted) savePendingLeaderboardRun(null);
           if (loaded?.runSettlement?.acceptedToRating) {
@@ -16705,17 +17363,12 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 
       window.__ZEFIROK_SETTLE_PENDING_RUN__ = async function settlePendingRunBeforeNavigation(options = {}) {
         const silent = Boolean(options &amp;&amp; options.silent === true);
-        if (leaderboardRunSubmitInFlightRunId) {
-          await new Promise((resolve) =&gt; {
-            let done = false;
-            const finish = () =&gt; { if (done) return; done = true; window.clearTimeout(timer); resolve(); };
-            const timer = window.setTimeout(finish, 9000);
-            window.addEventListener(&quot;zefirok-run-settlement-finished&quot;, finish, { once: true });
-          });
+        const pending = loadPendingLeaderboardRun();
+        if (pending &amp;&amp; leaderboardRunSubmitInFlightRunId !== String(pending.runId || &quot;&quot;)) {
+          void retryPendingLeaderboardRun();
         }
-        if (loadPendingLeaderboardRun()) await retryPendingLeaderboardRun();
-        const settled = !loadPendingLeaderboardRun();
-        if (!settled &amp;&amp; !silent) showProfileToast(&quot;Завершённый забег ещё синхронизируется. Повторите через пару секунд.&quot;, &quot;warning&quot;, 2800);
+        const settled = !pending &amp;&amp; !leaderboardRunSubmitInFlightRunId;
+        if (!settled &amp;&amp; !silent) showProfileToast(&quot;Завершённый забег синхронизируется в фоне.&quot;, &quot;warning&quot;, 2200);
         return settled;
       };
 
@@ -16742,13 +17395,13 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
               }
             });
             const rewardType = String(reward.type || &quot;coffee&quot;).toLowerCase();
-            if (rewardType === &quot;case&quot;) await loadCaseState(true);
+            if (rewardType === &quot;case&quot; &amp;&amp; !result?.caseState) void loadCaseState(true);
             playGameSound(rewardType === &quot;skin&quot; ? &quot;unlockSkin&quot; : &quot;purchaseReward&quot;);
             showProfileToast(`Награда получена: ${reward.title || `${reward.amount} кофе`}`, &quot;success&quot;, 4200);
           } else if (result.alreadyClaimed) {
             showProfileToast(&quot;Эта награда уже была получена.&quot;, &quot;warning&quot;);
           }
-          await refreshLeaderboard(true, &quot;season&quot;, false);
+          void refreshLeaderboard(true, &quot;season&quot;, false);
           return { ok: true, ...result };
         } catch (error) {
           const message = error.message || &quot;Не удалось получить награду.&quot;;
@@ -16960,6 +17613,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         if (!purchaseLayer || !purchaseContent) return;
         clearPurchaseLimitTimer();
         if (purchaseLayer.hidden) purchaseReturnFocus = document.activeElement;
+        setPurchaseLayerScrollLocked(true);
         purchaseContent.innerHTML = markup;
         tuneRuntimeImages(purchaseContent);
         renderRewardQrCodes(purchaseContent);
@@ -16990,7 +17644,10 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         purchaseLayer.setAttribute(&quot;aria-hidden&quot;, &quot;true&quot;);
         purchaseContent.innerHTML = &quot;&quot;;
         pendingPurchase = null;
-        if (purchaseReturnFocus?.isConnected) purchaseReturnFocus.focus();
+        setPurchaseLayerScrollLocked(false);
+        if (purchaseReturnFocus?.isConnected) {
+          try { purchaseReturnFocus.focus({ preventScroll: true }); } catch { purchaseReturnFocus.focus(); }
+        }
         purchaseReturnFocus = null;
       }
 
@@ -17415,10 +18072,18 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         );
       }
 
+      function currentVisualParticleLimit() {
+        if (!CLIENT_OPT_PARTICLE_LIMIT) return CLIENT_MAX_VISUAL_PARTICLES;
+        if (clientAdaptiveFrameMs &gt;= 25) return CLIENT_MIN_VISUAL_PARTICLES;
+        if (clientAdaptiveFrameMs &gt;= 20) return 48;
+        if (clientAdaptiveFrameMs &gt;= 17.5) return 60;
+        return CLIENT_MAX_VISUAL_PARTICLES;
+      }
+
       function puff(x, y, count) {
         const requested = Math.max(0, Math.floor(Number(count || 0)));
         const available = CLIENT_OPT_PARTICLE_LIMIT
-          ? Math.max(0, CLIENT_MAX_VISUAL_PARTICLES - state.crumbs.length)
+          ? Math.max(0, currentVisualParticleLimit() - state.crumbs.length)
           : requested;
         const particleCount = Math.min(requested, available);
         if (particleCount &lt; requested) clientPerformance.particlesDropped += requested - particleCount;
@@ -17445,18 +18110,23 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         const h = canvasViewHeight;
         ctx.clearRect(0, 0, w, h);
         drawCafe(w, h);
-        const roadStartedAt = CLIENT_OPT_PERFORMANCE_METRICS ? performance.now() : 0;
+        clientDetailedDrawFrameCounter += 1;
+        const sampleDetailedDraw = CLIENT_OPT_PERFORMANCE_METRICS
+          &amp;&amp; clientDetailedDrawFrameCounter % CLIENT_DETAILED_DRAW_SAMPLE_EVERY_FRAMES === 0;
+        const roadStartedAt = sampleDetailedDraw ? performance.now() : 0;
         drawRoad(w);
-        const roadMs = CLIENT_OPT_PERFORMANCE_METRICS ? performance.now() - roadStartedAt : 0;
-        const objectsStartedAt = CLIENT_OPT_PERFORMANCE_METRICS ? performance.now() : 0;
+        const roadMs = sampleDetailedDraw ? performance.now() - roadStartedAt : 0;
+        const objectsStartedAt = sampleDetailedDraw ? performance.now() : 0;
         drawCaseTrailImage();
         for (const pickup of state.pickups) drawMarshmallow(pickup);
         for (const item of state.obstacles) drawObstacle(item);
         for (const crumb of state.crumbs) drawCrumb(crumb);
         drawDog();
         drawForeground(w, h);
-        const objectsMs = CLIENT_OPT_PERFORMANCE_METRICS ? performance.now() - objectsStartedAt : 0;
-        recordDetailedDrawTimings(roadMs, objectsMs);
+        if (sampleDetailedDraw) {
+          const objectsMs = performance.now() - objectsStartedAt;
+          recordDetailedDrawTimings(roadMs, objectsMs);
+        }
       }
 
       function staticCafeScene(w, h) {
@@ -18212,6 +18882,29 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         const button = event.target instanceof Element ? event.target.closest(&quot;[data-player-gift-claim]&quot;) : null;
         if (button &amp;&amp; !button.disabled) void claimPlayerGiftClient(button.dataset.playerGiftClaim, button);
       });
+      if (playerGiftInboxMoreEl) playerGiftInboxMoreEl.addEventListener(&quot;click&quot;, () =&gt; {
+        playerGiftInboxExpanded = !playerGiftInboxExpanded;
+        renderPlayerGiftInbox();
+      });
+
+      if (profileSupportButton) profileSupportButton.addEventListener(&quot;click&quot;, openSupportLayer);
+      if (supportCloseButton) supportCloseButton.addEventListener(&quot;click&quot;, closeSupportLayer);
+      if (supportLayer) supportLayer.addEventListener(&quot;click&quot;, (event) =&gt; {
+        const target = event.target instanceof Element ? event.target : null;
+        if (target === supportLayer) { closeSupportLayer(); return; }
+        if (target?.closest(&quot;[data-support-close]&quot;)) { closeSupportLayer(); return; }
+        if (target?.closest(&quot;[data-support-new]&quot;)) { playerSupportSelectedTicketId = 0; renderPlayerSupportNew(); return; }
+        if (target?.closest(&quot;[data-support-back]&quot;)) { playerSupportSelectedTicketId = 0; renderPlayerSupportHub(); return; }
+        const ticketButton = target?.closest(&quot;[data-support-ticket]&quot;);
+        if (ticketButton) { openPlayerSupportTicket(ticketButton.dataset.supportTicket); return; }
+      });
+      if (supportContentEl) supportContentEl.addEventListener(&quot;submit&quot;, (event) =&gt; {
+        const form = event.target instanceof HTMLFormElement ? event.target : null;
+        if (!form) return;
+        if (form.matches(&quot;[data-support-form]&quot;)) { event.preventDefault(); void submitPlayerSupportForm(form); return; }
+        if (form.matches(&quot;[data-support-reply-form]&quot;)) { event.preventDefault(); void submitPlayerSupportReply(form); }
+      });
+
       if (caseGiftedListEl) caseGiftedListEl.addEventListener(&quot;click&quot;, (event) =&gt; {
         const target = event.target instanceof Element ? event.target : null;
         const levelButton = target?.closest(&quot;[data-open-level-case]&quot;);
@@ -18486,12 +19179,6 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       }, 1000);
       if (pendingReleaseNotice) scheduleReleaseNotice();
       else scheduleTutorialAutoOpen();
-      document.addEventListener(&quot;visibilitychange&quot;, () =&gt; {
-        if (document.visibilityState === &quot;visible&quot;) window.setTimeout(() =&gt; void refreshSeasonTaskNotice(false), 180);
-      });
-      window.setInterval(() =&gt; {
-        if (document.visibilityState === &quot;visible&quot; &amp;&amp; telegramProfile?.initData) void refreshSeasonTaskNotice(false);
-      }, 30000);
       let lastWarehouseServerSyncAt = 0;
       window.setInterval(() =&gt; {
         const warehouseScreen = CLIENT_OPT_DOM_CACHE

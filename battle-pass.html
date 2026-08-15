@@ -3146,6 +3146,15 @@ img[src$="/xp.webp"]{
     try { window.parent?.postMessage?.({type:"zefirok-season-pass-account-updated"},"*"); } catch {}
   }
 
+  function notifyTasksClaimed(taskItems) {
+    const tasks=(Array.isArray(taskItems)?taskItems:[]).map(task=>({
+      id:String(task?.id||"").trim(),
+      periodKey:String(task?.periodKey||"").trim()
+    })).filter(task=>task.id&&task.periodKey);
+    if(!tasks.length)return;
+    try{window.parent?.postMessage?.({type:"zefirok-season-pass-tasks-claimed",tasks},"*");}catch{}
+  }
+
   function safeJson(raw, fallback) {
     try {
       const value = JSON.parse(raw);
@@ -3771,7 +3780,7 @@ img[src$="/xp.webp"]{
       const rect = card.getBoundingClientRect();
       const style = getComputedStyle(card);
       const height = Math.max(1,Math.round(rect.height));
-      const delay = reducedMotion ? 0 : Math.min(index,7)*70;
+      const delay = reducedMotion ? 0 : Math.min(index,7)*35;
 
       card.classList.add("collecting");
       card.style.height = `${height}px`;
@@ -3796,7 +3805,7 @@ img[src$="/xp.webp"]{
       setTimeout(()=>{
         if (reducedMotion || typeof card.animate !== "function") {
           card.classList.add("fallback-flip");
-          setTimeout(finish,reducedMotion?90:430);
+          setTimeout(finish,reducedMotion?40:180);
           return;
         }
 
@@ -3806,7 +3815,7 @@ img[src$="/xp.webp"]{
           {opacity:.96,transform:"perspective(900px) rotateX(-72deg) translateY(-2px) scale(.995)",offset:.78},
           {opacity:.18,transform:"perspective(900px) rotateX(-88deg) translateY(-3px) scale(.99)",offset:1}
         ],{
-          duration:520,
+          duration:260,
           easing:"cubic-bezier(.22,.75,.18,1)",
           fill:"forwards"
         });
@@ -3834,7 +3843,7 @@ img[src$="/xp.webp"]{
               marginBottom:"0px"
             }
           ],{
-            duration:280,
+            duration:140,
             easing:"cubic-bezier(.4,0,.2,1)",
             fill:"forwards"
           });
@@ -3856,18 +3865,16 @@ img[src$="/xp.webp"]{
     el("claimAllTasks").disabled = true;
 
     const totalXp = readyTasks.reduce((sum,task)=>sum+taskXpDisplay(task),0);
-    const animations = cards.map((card,index)=>animateCollectedTaskCard(card,index));
-    const waitForCards = animations.length ? Promise.all(animations) : new Promise(resolve=>setTimeout(resolve,120));
-
-    waitForCards.then(()=>{
-      readyTasks.forEach(task=>{
-        if (!taskClaimed(task)) pass.claimedTasks.push(task.id);
-      });
-      addBonusXp(totalXp);
-      savePass();
-      render();
-      showToast(`Получено ${totalXp.toLocaleString("ru-RU")} XP за ${readyTasks.length} заданий`);
+    readyTasks.forEach(task=>{
+      if (!taskClaimed(task)) pass.claimedTasks.push(task.id);
     });
+    addBonusXp(totalXp);
+    savePass();
+    passNotifyHaptic("success");
+    showToast(`Получено ${totalXp.toLocaleString("ru-RU")} XP за ${readyTasks.length} заданий`);
+    const animations = cards.map((card,index)=>animateCollectedTaskCard(card,index));
+    if (animations.length) void Promise.all(animations).finally(()=>render());
+    else render();
   }
 
   let renderedProgressState = null;
@@ -4581,10 +4588,11 @@ img[src$="/xp.webp"]{
             if (Number.isFinite(Number(data?.taskClaimableDelta))) serverPass.taskClaimableCount = Math.max(0,Number(serverPass.taskClaimableCount||0)+Number(data.taskClaimableDelta));
             savePass();
           }
-          await animateCollectedTaskCard(card,0);
-          render();
+          notifyTasksClaimed(update ? [update] : [{id:task.id,periodKey:task.periodKey}]);
           passNotifyHaptic(data?.repeated?"warning":"success");
           showToast(data?.repeated?"XP уже был получен":`Получено ${Number(data?.receivedTask?.xp||task.xp).toLocaleString("ru-RU")} XP`);
+          const animation=animateCollectedTaskCard(card,0);
+          void animation.finally(()=>render());
         }).catch(async error=>{
           passNotifyHaptic("error");
           showToast(error.message||"Не удалось получить XP");
@@ -4656,6 +4664,7 @@ img[src$="/xp.webp"]{
         savePass();
       }
       if(data?.stale){try{await loadServerPass();}catch{}}
+      notifyTasksClaimed(updates.length ? updates : ready);
       passNotifyHaptic(data.totalXp>0?"success":"warning");showToast(data.totalXp>0?`Получено ${Number(data.totalXp||0).toLocaleString("ru-RU")} XP`:"XP уже был получен");
       const animation=Promise.all(cards.map((card,index)=>animateCollectedTaskCard(card,index)));void animation.finally(()=>render());
     }).catch(error=>{passNotifyHaptic("error");showToast(error.message||"Не удалось получить XP");}).finally(()=>{button.innerHTML=oldHtml;renderTasks();});
