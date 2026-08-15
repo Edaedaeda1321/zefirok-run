@@ -389,6 +389,24 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
     scheduleTelegramViewportSync();
   }
 
+  async function hostFetchWithTimeout(path, init = {}, timeoutMs = 6500) {
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => controller.abort(), Math.max(1000, Number(timeoutMs || 6500)));
+    try {
+      return await fetch(path, { ...init, signal: controller.signal });
+    } catch (error) {
+      if (error?.name === "AbortError") {
+        const timeoutError = new Error("Сервер отвечает слишком долго. Повторите действие.");
+        timeoutError.code = "REQUEST_TIMEOUT";
+        timeoutError.timeout = true;
+        throw timeoutError;
+      }
+      throw error;
+    } finally {
+      window.clearTimeout(timer);
+    }
+  }
+
   async function legalApi(path, payload = {}) {
     const initData = String(window.Telegram?.WebApp?.initData || "");
     if (!initData) {
@@ -396,13 +414,13 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
       error.code = "TELEGRAM_REQUIRED";
       throw error;
     }
-    const response = await fetch(path, {
+    const response = await hostFetchWithTimeout(path, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ initData, ...payload }),
       cache: "no-store",
       credentials: "same-origin"
-    });
+    }, 6500);
     const data = await response.json().catch(() => null);
     if (!response.ok || !data?.ok) {
       const error = new Error(data?.error || "LEGAL_REQUEST_FAILED");
@@ -876,8 +894,8 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
     const normalizedOfferTier = ["elite","elite_plus"].includes(String(offerTier || "")) ? String(offerTier) : "";
     const passOffer = normalizedOfferTier ? `&offer=${encodeURIComponent(normalizedOfferTier)}` : "";
     passFrame.src = initData
-      ? `/battle-pass.html?v=1.0.6-runsync1-taskorder1-overflowui1${passView}${passOffer}#tgInitData=${encodeURIComponent(initData)}`
-      : `/battle-pass.html?v=1.0.6-runsync1-taskorder1-overflowui1${passView}${passOffer}`;
+      ? `/battle-pass.html?v=1.0.6-runsync1-taskorder1-overflowui1-criticalperf1${passView}${passOffer}#tgInitData=${encodeURIComponent(initData)}`
+      : `/battle-pass.html?v=1.0.6-runsync1-taskorder1-overflowui1-criticalperf1${passView}${passOffer}`;
     layer.append(passFrame);
     passFrame.addEventListener("load", () => {
       const snapshot = syncTelegramViewport();
@@ -1244,13 +1262,13 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
   async function gamePollApi(path, payload = {}) {
     const initData = String(window.Telegram?.WebApp?.initData || "");
     if (!initData) return null;
-    const response = await fetch(path, {
+    const response = await hostFetchWithTimeout(path, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ initData, ...payload }),
       cache: "no-store",
       credentials: "same-origin"
-    });
+    }, 6500);
     const data = await response.json().catch(() => null);
     if (!response.ok || !data?.ok) throw new Error(data?.error || "Опрос временно недоступен.");
     return data;
@@ -13799,22 +13817,41 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         };
       }
 
+      async function gameFetchWithTimeout(path, init = {}, timeoutMs = 6500) {
+        const controller = new AbortController();
+        const timeout = window.setTimeout(() =&gt; controller.abort(), Math.max(1000, Number(timeoutMs || 6500)));
+        try {
+          return await fetch(path, { ...init, signal: controller.signal });
+        } catch (error) {
+          if (error?.name === &quot;AbortError&quot;) {
+            const timeoutError = new Error(&quot;Сервер отвечает слишком долго. Повторите действие.&quot;);
+            timeoutError.code = &quot;REQUEST_TIMEOUT&quot;;
+            timeoutError.timeout = true;
+            throw timeoutError;
+          }
+          throw error;
+        } finally {
+          window.clearTimeout(timeout);
+        }
+      }
+
       async function caseApiRequest(path, payload = {}) {
         const initData = String(telegramProfile?.initData || &quot;&quot;);
         if (!initData) throw Object.assign(new Error(&quot;Откройте игру через Telegram-бота, чтобы получать кейсы.&quot;), { status: 401 });
-        const response = await fetch(path, {
+        const response = await gameFetchWithTimeout(path, {
           method: &quot;POST&quot;, headers: { &quot;Content-Type&quot;: &quot;application/json&quot; },
           body: JSON.stringify({ initData, current: caseCurrentSnapshot(), ...payload }),
           cache: &quot;no-store&quot;, credentials: &quot;same-origin&quot;
-        });
+        }, 6500);
         const data = await response.json().catch(() =&gt; null);
         if (!response.ok || !data?.ok) throw Object.assign(new Error(data?.error || &quot;Сервис кейсов временно недоступен.&quot;), { status: response.status });
         return data;
       }
 
       function applyServerCasePayload(data, openedRewards = null) {
+        const hasAuthoritativeTaskNotice = Object.prototype.hasOwnProperty.call(data || {}, &quot;seasonPassTaskNotice&quot;);
         if (data?.seasonPassTaskNotice) applySeasonTaskNotice(data.seasonPassTaskNotice);
-        if (data?.opened || (Array.isArray(openedRewards) &amp;&amp; openedRewards.length)) window.setTimeout(() =&gt; void refreshSeasonTaskNotice(true), 180);
+        if (!hasAuthoritativeTaskNotice &amp;&amp; (data?.opened || (Array.isArray(openedRewards) &amp;&amp; openedRewards.length))) window.setTimeout(() =&gt; void refreshSeasonTaskNotice(true), 180);
         if (data?.liveops) applyCaseLiveOpsConfig(data.liveops);
         if (!data?.caseState) return;
         antiCheatWithTrustedChange(&quot;case-server-sync&quot;, () =&gt; {
@@ -13951,7 +13988,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           hideCaseLayerShell();
           hapticNotify(&quot;error&quot;);
           showProfileToast(error?.message || &quot;Не удалось открыть кейс.&quot;, &quot;warning&quot;);
-          await loadCaseState(true);
+          void loadCaseState(true);
         } finally { renderCaseHub(); }
       }
 
@@ -13992,7 +14029,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           hideCaseLayerShell();
           hapticNotify(&quot;error&quot;);
           showProfileToast(error?.message || &quot;Не удалось открыть подарочный кейс.&quot;, &quot;warning&quot;);
-          await loadCaseState(true);
+          void loadCaseState(true);
         } finally { renderCaseHub(); }
       }
 
@@ -14773,7 +14810,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         const oldText = button?.textContent || &quot;🎁 Забрать&quot;;
         if (button) { button.disabled = true; button.textContent = &quot;Получаем…&quot;; }
         try {
-          const response = await fetch(PLAYER_GIFTS_CLAIM_PATH, { method:&quot;POST&quot;, headers:{ &quot;Content-Type&quot;:&quot;application/json&quot; }, body:JSON.stringify({ initData:String(telegramProfile.initData), giftId:id, current:caseCurrentSnapshot() }), cache:&quot;no-store&quot;, credentials:&quot;same-origin&quot; });
+          const response = await gameFetchWithTimeout(PLAYER_GIFTS_CLAIM_PATH, { method:&quot;POST&quot;, headers:{ &quot;Content-Type&quot;:&quot;application/json&quot; }, body:JSON.stringify({ initData:String(telegramProfile.initData), giftId:id, current:caseCurrentSnapshot() }), cache:&quot;no-store&quot;, credentials:&quot;same-origin&quot; }, 6500);
           const data = await response.json().catch(()=&gt;null);
           if (!response.ok || !data?.ok) throw new Error(data?.error || &quot;Не удалось получить подарок.&quot;);
           if (data.profile) applyServerProfilePayload(data.profile);
@@ -15529,13 +15566,13 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       }
 
       async function rewardApiRequest(path, payload) {
-        const response = await fetch(path, {
+        const response = await gameFetchWithTimeout(path, {
           method: &quot;POST&quot;,
           headers: { &quot;Content-Type&quot;: &quot;application/json&quot; },
           body: JSON.stringify(payload),
           cache: &quot;no-store&quot;,
           credentials: &quot;same-origin&quot;
-        });
+        }, 6500);
         const data = await response.json().catch(() =&gt; null);
         if (!response.ok || !data?.ok) {
           const error = new Error(data?.error || &quot;Сервис проверки кодов временно недоступен.&quot;);
@@ -15883,7 +15920,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         }
         if (key &amp;&amp; sharedApiInFlight.has(key)) return sharedApiInFlight.get(key);
         const task = (async () =&gt; {
-          const response = await fetch(path, init);
+          const response = await gameFetchWithTimeout(path, init, Math.max(1000, Number(options.timeoutMs || 8000)));
           const data = await response.json().catch(() =&gt; null);
           const value = { response, data };
           if (key &amp;&amp; ttlMs &gt; 0 &amp;&amp; response.ok &amp;&amp; data?.ok) {
@@ -15900,13 +15937,13 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       }
 
       async function leaderboardApiRequest(path, payload) {
-        const response = await fetch(path, {
+        const response = await gameFetchWithTimeout(path, {
           method: &quot;POST&quot;,
           headers: { &quot;Content-Type&quot;: &quot;application/json&quot; },
           body: JSON.stringify(payload),
           cache: &quot;no-store&quot;,
           credentials: &quot;same-origin&quot;
-        });
+        }, 6500);
         const data = await response.json().catch(() =&gt; null);
         if (!response.ok || !data?.ok) {
           if (data?.code === &quot;LEGAL_ACCEPTANCE_REQUIRED&quot;) {
@@ -15925,13 +15962,13 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           requestTelegramProfile();
           throw new Error(&quot;Откройте игру внутри Telegram и повторите действие.&quot;);
         }
-        const response = await fetch(PROFILE_SYNC_PATH, {
+        const response = await gameFetchWithTimeout(PROFILE_SYNC_PATH, {
           method: &quot;POST&quot;,
           headers: { &quot;Content-Type&quot;: &quot;application/json&quot; },
           body: JSON.stringify({ initData, ...payload }),
           cache: &quot;no-store&quot;,
           credentials: &quot;same-origin&quot;
-        });
+        }, 6500);
         const data = await response.json().catch(() =&gt; null);
         if (!response.ok || !data?.ok) {
           const error = new Error(data?.error || &quot;Не удалось синхронизировать профиль игрока.&quot;);

@@ -526,7 +526,7 @@ const LEGAL_DOCUMENTS = Object.freeze({
 });
 const LEGAL_BUILTIN_HASHES = Object.freeze({"agreement":{"version":"2026-08-13.1","sha256Ru":"7b9dad94ff4319c98b5fd01ade558ed3e409db705a8417551f89eb0dc4792c46","sha256En":"3f93d567fefd8e936a7ac8f63a9a5ceefc6bd6ecfcdfaad2e3733cf6e34d02d0","sha256Bundle":"93f28cca0556b480ee44a73ef775187a397dfc61bd4efda1171526a84fa69e84"},"privacy":{"version":"2026-08-13.2","sha256Ru":"687bba9ab60ee35124a17806ba7904870b1a3e09d23610430d45b92cd4719433","sha256En":"e0531d156e2ad0210b16349094499f7560cfca6167d911306926ed8e6ff45cbd","sha256Bundle":"435dd20f418603b3329dd1ab17a5e5ee619eee5341f425a547114fd235d4eee3"},"consent":{"version":"2026-08-13.1","sha256Ru":"10bcaf97ef31fad736f5e4f987ffad94c30c964e759b72c9a49c97738ede48d7","sha256En":"64383734cc3469028242d0c90867ccc42c7605269b187a94056fc963460ddb41","sha256Bundle":"11ebecc6978dac4f887b2ed4316f12f9ebafd4c41d5eeafed331ee12ae2948e0"}});
 
-const WORKER_BUILD = "1.0.6 + offers preview fix + zefir asset fix + instant season task notifications";
+const WORKER_BUILD = "1.0.6 + critical performance 1.2";
 const V07944_RELEASE_CANDIDATE_AUDIT = Object.freeze({ reset: true, claims: true, purchases: true, xp: true, concurrency: true });
 
 // =============================================================
@@ -1452,7 +1452,7 @@ export default {
       if (url.pathname === "/api/game/startup" && request.method === "POST") {
         const legalGate = await enforceLegalAcceptanceForRequest(request, env);
         if (legalGate) return legalGate;
-        return await getGameStartupPackage(request, env);
+        return await getGameStartupPackage(request, env, ctx);
       }
       if (url.pathname === "/api/news/read" && request.method === "POST") {
         return await markGameNewsRead(request, env);
@@ -1506,7 +1506,7 @@ export default {
       }
 
       if (url.pathname === "/api/cases/state" && request.method === "POST") {
-        return await getLevelCaseState(request, env);
+        return await getLevelCaseState(request, env, null, ctx);
       }
 
       if (url.pathname === "/api/cases/open" && request.method === "POST") {
@@ -2351,7 +2351,7 @@ function startupSectionError(error) {
   };
 }
 
-async function getGameStartupPackage(request, env) {
+async function getGameStartupPackage(request, env, ctx = null) {
   try {
     const body = await readJson(request);
     let publicConfig;
@@ -2381,16 +2381,24 @@ async function getGameStartupPackage(request, env) {
       current: body.current && typeof body.current === "object" ? body.current : {}
     };
     const shared = { caseEnsured: null, skipRewardQueue: true };
-    try { await processPlayerRewardDeliveryQueue(env, String(auth.user.id), 10); }
-    catch (error) { console.error("startup reward queue refresh failed", error); }
     const errors = {};
     const telegramId = String(auth.user.id);
+    // Pending reward delivery is maintenance work, not part of the startup response.
+    // Cron remains the durable fallback when the isolate is stopped before waitUntil finishes.
+    scheduleRunSettlementBackground(ctx,
+      processPlayerRewardDeliveryQueue(env, telegramId, 10),
+      "startup reward queue refresh failed"
+    );
+    scheduleRunSettlementBackground(ctx,
+      primeSeasonPassTaskProgress(env, telegramId),
+      "startup season task progress prime failed"
+    );
 
     // These sections do not depend on the profile/case-state reconciliation.
     // Start them immediately and attach allSettled now so a slow profile read
     // does not serialize unrelated startup work or create unhandled rejections.
     const startupSideSections = Promise.allSettled([
-      syncSeasonPassTaskCompletionNotifications(env, telegramId, { sendBot:false }),
+      readSeasonPassTaskNoticeState(env, telegramId),
       getSeasonPassProfileBonusForUser(env, telegramId),
       listMyRewards(null, env, { raw: true, body: internalBody, auth }),
       publicFeatureFlags(env, telegramId, { trustedIdentity: true }),
@@ -3870,7 +3878,7 @@ async function syncAdminProfile(request, env, internal = null) {
     // IMPORTANT: normal player sync never imports wallet / XP / ownership from
     // the browser. Only authenticated admin write/set operations may mutate
     // these values directly.
-    await ensureAuthoritativeProfileRow(env, telegramId, `sync:${telegramId}`);
+    let authoritativeRow = await ensureAuthoritativeProfileRow(env, telegramId, `sync:${telegramId}`);
     if (mode === "write") {
       const next = normalizeAdminProfile(body.next || {});
       await env.DB.prepare(
@@ -3897,7 +3905,18 @@ async function syncAdminProfile(request, env, internal = null) {
       const previousSkinRow = await env.DB.prepare(`SELECT active_skin_id FROM case_player_state WHERE telegram_id=? LIMIT 1`).bind(telegramId).first();
       previousActiveSkin = String(previousSkinRow?.active_skin_id || "default");
     } catch {}
-    const ensuredCaseState = await ensureCasePlayerState(env, telegramId, requestedActiveSkin === undefined ? {} : { activeSkin: requestedActiveSkin });
+    if (mode === "write" || mode === "set") {
+      // A real mutation needs one post-write authoritative fold so pending grants/
+      // overrides keep exactly the same semantics as before this optimization.
+      // Read-only syncs still use the single request-scoped row loaded above.
+      authoritativeRow = await ensureAuthoritativeProfileRow(env, telegramId, `sync:${telegramId}:after-write`);
+    }
+    const ensuredCaseState = await ensureCasePlayerState(
+      env,
+      telegramId,
+      requestedActiveSkin === undefined ? {} : { activeSkin: requestedActiveSkin },
+      { profile: authoritativeRow }
+    );
     if (internal?.shared) internal.shared.caseEnsured = ensuredCaseState;
     const nextActiveSkin = String(ensuredCaseState?.state?.activeSkinId || "default");
     if (requestedActiveSkin !== undefined && previousActiveSkin !== nextActiveSkin) {
@@ -3907,7 +3926,7 @@ async function syncAdminProfile(request, env, internal = null) {
       if (nextActiveSkin !== "default") await recordContentAnalyticsEvent(env, telegramId, "skin", nextActiveSkin, "equipped", "profile", eventId);
     }
 
-    const row = await ensureAuthoritativeProfileRow(env, telegramId, `sync:${telegramId}`);
+    const row = authoritativeRow || ensuredCaseState?.profile;
     const payload = { ok:true, resetPlan:activeResetPlan, profile:authoritativeProfileView(row) };
     if (internal?.shared?.caseEnsured) {
       internal.shared.caseEnsured.profile = {
@@ -5141,11 +5160,11 @@ function caseStateUpdateStatement(env, telegramId, caseState, now) {
   );
 }
 
-async function ensureCasePlayerState(env, telegramId, currentProfile = {}) {
+async function ensureCasePlayerState(env, telegramId, currentProfile = {}, options = {}) {
   await ensureAuthoritativeEconomySchema(env);
   const now = Math.floor(Date.now() / 1000);
   const id = String(telegramId);
-  let profile = await ensureAuthoritativeProfileRow(env, id, `case-sync:${id}`);
+  let profile = options?.profile || (options?.profilePromise ? await options.profilePromise : await ensureAuthoritativeProfileRow(env, id, `case-sync:${id}`));
   await env.DB.prepare(
     `INSERT OR IGNORE INTO case_player_state (telegram_id,created_at,updated_at) VALUES (?,?,?)`
   ).bind(id, now, now).run();
@@ -5164,7 +5183,6 @@ async function ensureCasePlayerState(env, telegramId, currentProfile = {}) {
       row = await env.DB.prepare(`SELECT * FROM case_player_state WHERE telegram_id=? LIMIT 1`).bind(id).first();
     }
   }
-  profile = await ensureAuthoritativeProfileRow(env, id, `case-sync:${id}`);
   return { now, profile, row, state:caseStateFromRow(row) };
 }
 
@@ -5267,7 +5285,7 @@ async function readFastCaseInventory(env, telegramId) {
   return { openedLevels, giftedCases };
 }
 
-function buildFastCaseOpenPayload({ state, liveops, profile, opened, caseDelta = null, inventory = null }) {
+function buildFastCaseOpenPayload({ state, liveops, profile, opened, caseDelta = null, inventory = null, seasonPassTaskNotice = undefined }) {
   return {
     ok: true,
     authoritativeProfile: true,
@@ -5287,7 +5305,8 @@ function buildFastCaseOpenPayload({ state, liveops, profile, opened, caseDelta =
     opened,
     ...(inventory?.openedLevels ? { openedLevels: inventory.openedLevels } : {}),
     ...(inventory?.giftedCases ? { giftedCases: inventory.giftedCases } : {}),
-    ...(caseDelta ? { caseDelta } : {})
+    ...(caseDelta ? { caseDelta } : {}),
+    ...(seasonPassTaskNotice !== undefined ? { seasonPassTaskNotice: seasonPassTaskNotice || null } : {})
   };
 }
 
@@ -5629,15 +5648,20 @@ async function releaseCasePhysicalStock(env, consumptionIds) {
   }
 }
 
-async function getLevelCaseState(request, env, internal = null) {
+async function getLevelCaseState(request, env, internal = null, ctx = null) {
   try {
     requireDatabase(env);
     requireBotToken(env);
     const body = internal?.body || await readJson(request);
     const auth = internal?.auth || await validateTelegramInitData(String(body.initData || ""), env);
-    const payload = await buildCasePayload(env, String(auth.user.id), body.current || {}, {}, {
+    const telegramId = String(auth.user.id);
+    scheduleRunSettlementBackground(ctx,
+      processPlayerRewardDeliveryQueue(env, telegramId, 10),
+      "case state reward queue refresh failed"
+    );
+    const payload = await buildCasePayload(env, telegramId, body.current || {}, {}, {
       ensured: internal?.shared?.caseEnsured || null,
-      skipRewardQueue: Boolean(internal?.shared?.skipRewardQueue)
+      skipRewardQueue: true
     });
     return internal?.raw ? payload : jsonResponse(payload);
   } catch (error) {
@@ -5658,8 +5682,12 @@ async function openLevelCase(request, env, ctx = null) {
     const requestedLevel = Math.floor(Number(body.level || 0));
     const caseType = LEVEL_CASE_SCHEDULE[requestedLevel];
     if (!caseType) throw new ApiError(400, "На этом уровне кейс не выдаётся.");
-    const ensured = await ensureCasePlayerState(env, telegramId, {});
-    const liveops = await readLiveOpsConfig(env);
+    const now = Math.floor(Date.now() / 1000);
+    const [ensured, liveops, taskEvent] = await Promise.all([
+      ensureCasePlayerState(env, telegramId, {}),
+      readLiveOpsConfig(env),
+      prepareSeasonPassTaskProgressEvent(env, telegramId, { cases_opened:1 }, now).catch((error) => { console.error("level case task progress prepare failed", error); return null; })
+    ]);
     if (liveOpsCaseConfig(liveops, caseType)?.enabled === false) throw new ApiError(409, "Этот кейс временно отключён администратором.");
     const playerLevel = caseProfileLevel(safeAdminNumber(ensured.profile?.profile_xp));
     if (playerLevel < requestedLevel) throw new ApiError(403, `Кейс откроется на ${requestedLevel} уровне.`);
@@ -5669,7 +5697,6 @@ async function openLevelCase(request, env, ctx = null) {
     if (existing) throw new ApiError(409, "Этот кейс уже открыт.");
 
     const rolled = rollLevelCase(caseType, ensured.state, ensured.state.ownedSkins, liveops);
-    const now = Math.floor(Date.now() / 1000);
     const physicalRewards = await prepareCasePhysicalRewards(env, {
       rolled,
       telegramId,
@@ -5697,6 +5724,8 @@ async function openLevelCase(request, env, ctx = null) {
           telegramId
         ),
         caseStateUpdateStatement(env, telegramId, rolled.state, now),
+        ...(taskEvent?.progressStatements || []),
+        ...(taskEvent?.notificationStatements || []),
         ...physicalRewards.statements
       ]);
     } catch (error) {
@@ -5720,7 +5749,7 @@ async function openLevelCase(request, env, ctx = null) {
     // a read-only refresh cannot suppress the realtime notification meanwhile.
     scheduleRunSettlementBackground(
       ctx,
-      syncSeasonPassTaskCompletionNotifications(env, telegramId, { sendBot:true }),
+      deliverSeasonPassTaskNotificationsForRows(env, telegramId, taskEvent?.season, taskEvent?.taskRows || []),
       'level case season task notification failed'
     );
     const background = Promise.allSettled([
@@ -5734,7 +5763,8 @@ async function openLevelCase(request, env, ctx = null) {
       profile: nextProfile,
       opened,
       inventory,
-      caseDelta: { openedLevel: requestedLevel }
+      caseDelta: { openedLevel: requestedLevel },
+      seasonPassTaskNotice: taskEvent ? seasonPassTaskNoticePublic(taskEvent.taskRows || [], taskEvent.season) : undefined
     }));
   } catch (error) {
     if (error instanceof ApiError) return jsonResponse({ ok: false, error: error.message }, error.status);
@@ -5873,8 +5903,11 @@ async function openGrantedCase(request, env, ctx = null) {
     const telegramId = String(auth.user.id);
     const caseType = normalizeCaseType(body.caseType);
     if (!caseType) throw new ApiError(400, "Неизвестный тип кейса.");
-    const ensured = await ensureCasePlayerState(env, telegramId, {});
     const now = Math.floor(Date.now() / 1000);
+    const [ensured, taskEvent] = await Promise.all([
+      ensureCasePlayerState(env, telegramId, {}),
+      prepareSeasonPassTaskProgressEvent(env, telegramId, { cases_opened:1 }, now).catch((error) => { console.error("granted case task progress prepare failed", error); return null; })
+    ]);
     openingClaimAt = now;
     openingClaimToken = crypto.randomUUID().replace(/-/g, '');
     await recoverStaleGrantedCaseOpenings(env, telegramId, now);
@@ -5922,6 +5955,8 @@ async function openGrantedCase(request, env, ctx = null) {
          WHERE id = ? AND telegram_id = ? AND status = 'opening'`
       ).bind(JSON.stringify(rolled.rewards), now, claimedId, telegramId),
       ...physicalRewards.statements,
+      ...(taskEvent?.progressStatements || []),
+      ...(taskEvent?.notificationStatements || []),
       env.DB.prepare(`DELETE FROM granted_case_opening_guards WHERE guard_id=?`).bind(openingGuardId)
     ]);
     const opened = {
@@ -5936,7 +5971,7 @@ async function openGrantedCase(request, env, ctx = null) {
     const inventory = await readFastCaseInventory(env, telegramId);
     scheduleRunSettlementBackground(
       ctx,
-      syncSeasonPassTaskCompletionNotifications(env, telegramId, { sendBot:true }),
+      deliverSeasonPassTaskNotificationsForRows(env, telegramId, taskEvent?.season, taskEvent?.taskRows || []),
       'granted case season task notification failed'
     );
     const background = Promise.allSettled([
@@ -5950,7 +5985,8 @@ async function openGrantedCase(request, env, ctx = null) {
       profile: nextProfile,
       opened,
       inventory,
-      caseDelta: { giftedCaseType: caseType, giftedCaseDelta: -1 }
+      caseDelta: { giftedCaseType: caseType, giftedCaseDelta: -1 },
+      seasonPassTaskNotice: taskEvent ? seasonPassTaskNoticePublic(taskEvent.taskRows || [], taskEvent.season) : undefined
     }));
   } catch (error) {
     await releaseCasePhysicalStock(env, physicalStockConsumptionIds);
@@ -6247,67 +6283,6 @@ function fastRunSettlementProfileView(profileBefore, deltas, now) {
   };
 }
 
-async function fastSeasonPassRunTaskCrossings(env, season, telegramId, player, input, runCreatedAt) {
-  const id = String(telegramId || "");
-  const runAt = Math.max(1, Math.floor(Number(runCreatedAt || 0)) || Math.floor(Date.now() / 1000));
-  // Old recovered runs must update durable activity, but must not generate a
-  // confusing "just completed" task notification hours later.
-  if (Math.floor(Date.now() / 1000) - runAt > 10 * 60) return [];
-  const daily = seasonPassMoscowPeriod("daily", runAt * 1000);
-  const weekly = seasonPassMoscowPeriod("weekly", runAt * 1000);
-  const seasonStart = Math.floor(Date.parse(String(season?.startsAt || "")) / 1000);
-  const seasonEnd = Math.floor(Date.parse(String(season?.endsAt || "")) / 1000);
-  const clamp = (bounds) => ({
-    ...bounds,
-    startAt: Number.isFinite(seasonStart) ? Math.max(bounds.startAt, seasonStart) : bounds.startAt,
-    endAt: Number.isFinite(seasonEnd) ? Math.max(Number.isFinite(seasonStart) ? Math.max(bounds.startAt, seasonStart) : bounds.startAt, Math.min(bounds.endAt, seasonEnd)) : bounds.endAt
-  });
-  const d = clamp(daily);
-  const w = clamp(weekly);
-  if (runAt < w.startAt || runAt >= w.endAt) return [];
-  const [definitions, aggregate, claims] = await Promise.all([
-    env.DB.prepare(`SELECT task_id,period,premium,metric,target,xp_reward,title FROM season_pass_tasks WHERE season_id=? AND enabled=1 AND metric IN ('runs','score','treats','coffee') ORDER BY sort_order,task_id`).bind(String(season.id)).all(),
-    env.DB.prepare(`SELECT
-      COALESCE(SUM(CASE WHEN created_at>=? AND created_at<? THEN 1 ELSE 0 END),0) AS daily_runs,
-      COALESCE(SUM(CASE WHEN created_at>=? AND created_at<? THEN score ELSE 0 END),0) AS daily_score,
-      COALESCE(SUM(CASE WHEN created_at>=? AND created_at<? THEN run_treats ELSE 0 END),0) AS daily_treats,
-      COALESCE(SUM(CASE WHEN created_at>=? AND created_at<? THEN run_coffee ELSE 0 END),0) AS daily_coffee,
-      COUNT(*) AS weekly_runs,COALESCE(SUM(score),0) AS weekly_score,COALESCE(SUM(run_treats),0) AS weekly_treats,COALESCE(SUM(run_coffee),0) AS weekly_coffee
-      FROM season_pass_activity_runs WHERE season_id=? AND telegram_id=? AND created_at>=? AND created_at<?`).bind(
-        d.startAt,d.endAt,d.startAt,d.endAt,d.startAt,d.endAt,d.startAt,d.endAt,String(season.id),id,w.startAt,w.endAt
-      ).first(),
-    env.DB.prepare(`SELECT task_id,period_key FROM season_pass_task_claims WHERE season_id=? AND telegram_id=? AND status='delivered' AND period_key IN (?,?)`).bind(String(season.id),id,d.key,w.key).all()
-  ]);
-  const claimSet = new Set((claims?.results || []).map((row) => `${String(row.task_id)}:${String(row.period_key)}`));
-  const taskMultiplier = seasonPassTaskXpMultiplierForPlayer(season, player);
-  const premium = String(player?.premium_tier || "none") !== "none";
-  const contribution = {
-    runs: 1,
-    score: Math.max(0, Number(input?.score || 0)),
-    treats: Math.max(0, Number(input?.runTreats || input?.run_treats || 0)),
-    coffee: Math.max(0, Number(input?.runCoffee || input?.run_coffee || 0))
-  };
-  const rows = [];
-  for (const task of definitions?.results || []) {
-    const period = String(task.period) === "weekly" ? "weekly" : "daily";
-    const bounds = period === "weekly" ? w : d;
-    if (runAt < bounds.startAt || runAt >= bounds.endAt) continue;
-    const metric = ["runs","score","treats","coffee"].includes(String(task.metric)) ? String(task.metric) : "runs";
-    const before = Math.max(0, Number(aggregate?.[`${period}_${metric}`] || 0));
-    const after = before + Math.max(0, Number(contribution[metric] || 0));
-    const target = Math.max(1, Number(task.target || 1));
-    const locked = Number(task.premium || 0) === 1 && !premium;
-    const periodKey = String(bounds.key || "");
-    if (locked || claimSet.has(`${String(task.task_id)}:${periodKey}`) || before >= target || after < target) continue;
-    rows.push({
-      task_id: String(task.task_id), period_key: periodKey,
-      task_title: String(task.title || "Задание").slice(0, 180),
-      xp_reward: Math.max(1, Number(task.xp_reward || 1)) * taskMultiplier
-    });
-  }
-  return rows;
-}
-
 async function prepareFastSeasonPassRunContext(env, telegramId, input, runCreatedAt) {
   const id = String(telegramId || "");
   const runAt = Math.max(1, Math.floor(Number(runCreatedAt || 0)) || Math.floor(Date.now() / 1000));
@@ -6327,9 +6302,14 @@ async function prepareFastSeasonPassRunContext(env, telegramId, input, runCreate
   const endAt = Math.floor(Date.parse(String(season.endsAt || "")) / 1000);
   if ((Number.isFinite(startAt) && runAt < startAt) || (Number.isFinite(endAt) && runAt >= endAt)) return null;
   const player = await ensureSeasonPassPlayer(env, season, id);
-  const [hasXpX2, taskRows] = await Promise.all([
+  const [hasXpX2, taskEvent] = await Promise.all([
     seasonPassHasXpX2(env, season.id, id, player),
-    fastSeasonPassRunTaskCrossings(env, season, id, player, input, runAt)
+    prepareSeasonPassTaskProgressEvent(env, id, {
+      runs:1,
+      score:Math.max(0,Number(input?.score||0)),
+      treats:Math.max(0,Number(input?.runTreats||input?.run_treats||0)),
+      coffee:Math.max(0,Number(input?.runCoffee||input?.run_coffee||0))
+    }, runAt, { season, player })
   ]);
   const premiumMultiplier = hasXpX2 ? 2 : 1;
   const earned = seasonPassEarnedXpMultiplierView(season, player, premiumMultiplier, runAtMs);
@@ -6339,16 +6319,19 @@ async function prepareFastSeasonPassRunContext(env, telegramId, input, runCreate
     season, player, runCreatedAt: runAt, multiplier,
     premiumMultiplier: Math.max(1, Number(earned.premiumMultiplier || premiumMultiplier)),
     catchUpActive: Boolean(earned?.catchUp?.active), xpAwarded,
-    taskRows,
-    taskNotice: taskRows.length ? seasonPassTaskNoticePublic(taskRows, season) : null
+    taskRows: taskEvent?.taskRows || [],
+    taskNotice: taskEvent?.taskRows?.length ? seasonPassTaskNoticePublic(taskEvent.taskRows, season) : null,
+    taskProgressStatements: taskEvent?.progressStatements || [],
+    taskNotificationStatements: taskEvent?.notificationStatements || []
   };
 }
 
 async function buildFastRepeatedRunResponse(env, executionCtx, context) {
   const { ledger, telegramId, runId, submittedMetrics, season, minSeconds, minScore, ratingEntryEnabled, auth } = context;
+  const profilePromise = ensureAuthoritativeProfileRow(env, telegramId, `run:${runId}:fast-repeat`);
   const [profileRow, repeatCaseEnsured] = await Promise.all([
-    ensureAuthoritativeProfileRow(env, telegramId, `run:${runId}:fast-repeat`),
-    ensureCasePlayerState(env, telegramId, {})
+    profilePromise,
+    ensureCasePlayerState(env, telegramId, {}, { profilePromise })
   ]);
   const repeatCaseState = repeatCaseEnsured.state;
   const acceptedToRating = Number(ledger?.accepted_rating || 0) === 1;
@@ -6579,9 +6562,10 @@ async function submitLeaderboardRun(request, env, executionCtx = null) {
     );
     const qualifies = metrics.durationMs >= minSeconds * 1000 && metrics.score >= minScore;
     const acceptedToRating = ratingEntryEnabled && String(season.status || "") === "active" && qualifies;
+    const profileBeforePromise = ensureAuthoritativeProfileRow(env, telegramId, `run:${runId}:prepare`);
     const [ensured, profileBefore, consumed, fastSeasonPass, testerRow] = await Promise.all([
-      ensureCasePlayerState(env, telegramId, {}),
-      ensureAuthoritativeProfileRow(env, telegramId, `run:${runId}:prepare`),
+      ensureCasePlayerState(env, telegramId, {}, { profilePromise: profileBeforePromise }),
+      profileBeforePromise,
       env.DB.prepare(`SELECT booster_type,telegram_id FROM case_booster_run_consumptions WHERE run_id=? LIMIT 1`).bind(runId).first(),
       qualifies ? prepareFastSeasonPassRunContext(env, telegramId, {
         runId, score: metrics.score, durationMs: metrics.durationMs,
@@ -6681,6 +6665,7 @@ async function submitLeaderboardRun(request, env, executionCtx = null) {
       statements.push(env.DB.prepare(
         `INSERT OR IGNORE INTO season_pass_activity_runs(run_id,season_id,telegram_id,score,duration_ms,run_treats,run_coffee,new_record,created_at) VALUES(?,?,?,?,?,?,?,?,?)`
       ).bind(runId,passSeasonId,telegramId,metrics.score,metrics.durationMs,metrics.runTreats,metrics.runCoffee,newRecord?1:0,runActivityCreatedAt));
+      if (fastSeasonPass.taskProgressStatements?.length) statements.push(...fastSeasonPass.taskProgressStatements);
       statements.push(env.DB.prepare(
         `INSERT OR IGNORE INTO season_pass_run_xp(run_id,season_id,telegram_id,base_xp,multiplier,xp_awarded,created_at,applied_at) VALUES(?,?,?,?,?,?,?,0)`
       ).bind(runId,passSeasonId,telegramId,Math.max(1,Number(fastSeasonPass.season.baseRunXp)||100),fastSeasonPass.multiplier,fastSeasonPass.xpAwarded,runActivityCreatedAt));
@@ -6689,11 +6674,7 @@ async function submitLeaderboardRun(request, env, executionCtx = null) {
         `UPDATE season_pass_players SET xp=xp+COALESCE((SELECT xp_awarded FROM season_pass_run_xp WHERE run_id=? AND season_id=? AND telegram_id=? AND applied_at=0),0),revision=revision+1,updated_at=? WHERE season_id=? AND telegram_id=? AND EXISTS(SELECT 1 FROM season_pass_run_xp WHERE run_id=? AND season_id=? AND telegram_id=? AND applied_at=0)`
       ).bind(runId,passSeasonId,telegramId,now,passSeasonId,telegramId,runId,passSeasonId,telegramId));
       statements.push(env.DB.prepare(`UPDATE season_pass_run_xp SET applied_at=? WHERE run_id=? AND season_id=? AND telegram_id=? AND applied_at=0`).bind(now,runId,passSeasonId,telegramId));
-      for (const task of fastSeasonPass.taskRows || []) {
-        statements.push(env.DB.prepare(
-          `INSERT OR IGNORE INTO season_pass_task_notifications(season_id,telegram_id,task_id,period_key,task_title,xp_reward,completed_at,bot_notified_at,game_read_at) VALUES(?,?,?,?,?,?,?,0,0)`
-        ).bind(passSeasonId,telegramId,String(task.task_id),String(task.period_key),String(task.task_title||"Задание").slice(0,180),Math.max(1,Number(task.xp_reward)||1),now));
-      }
+      if (fastSeasonPass.taskNotificationStatements?.length) statements.push(...fastSeasonPass.taskNotificationStatements);
     }
 
     statements.push(env.DB.prepare(`DELETE FROM game_run_settlement_guards WHERE guard_id=?`).bind(settlementGuardId));
@@ -6739,7 +6720,7 @@ async function submitLeaderboardRun(request, env, executionCtx = null) {
       // Telegram delivery and full task reconciliation no longer block the game
       // response. The durable run/task state is already committed above.
       scheduleRunSettlementBackground(executionCtx,
-        syncSeasonPassTaskCompletionNotifications(env, telegramId, { season: fastSeasonPass.season, sendBot: true }),
+        deliverSeasonPassTaskNotificationsForRows(env, telegramId, fastSeasonPass.season, fastSeasonPass.taskRows),
         "fast settlement season-pass notification failed"
       );
     }
@@ -14560,6 +14541,7 @@ async function blockPlayerAndWipeProgress(env, options) {
     env.DB.prepare(`DELETE FROM season_pass_task_notifications WHERE telegram_id=?`).bind(telegramId),
     env.DB.prepare(`DELETE FROM season_pass_run_xp WHERE telegram_id=?`).bind(telegramId),
     env.DB.prepare(`DELETE FROM season_pass_activity_runs WHERE telegram_id=?`).bind(telegramId),
+    env.DB.prepare(`DELETE FROM season_pass_task_progress WHERE telegram_id=?`).bind(telegramId),
     env.DB.prepare(`DELETE FROM season_pass_entitlements WHERE telegram_id=?`).bind(telegramId),
     env.DB.prepare(`DELETE FROM season_pass_purchases WHERE telegram_id=?`).bind(telegramId),
     env.DB.prepare(`DELETE FROM season_pass_players WHERE telegram_id=?`).bind(telegramId),
@@ -19819,7 +19801,15 @@ const DEFAULT_MAINTENANCE_SETTINGS = Object.freeze({
   updatedBy: ""
 });
 let maintenanceSchemaPromise = null;
-let maintenanceSettingsMemory = { value: null };
+const MAINTENANCE_SETTINGS_CACHE_MS = 2000;
+let maintenanceSettingsMemory = { value: null, expiresAt: 0 };
+let maintenanceSettingsReadPromise = null;
+let maintenanceSettingsCacheGeneration = 0;
+function invalidateMaintenanceSettingsCache() {
+  maintenanceSettingsCacheGeneration += 1;
+  maintenanceSettingsMemory = { value: maintenanceSettingsMemory.value, expiresAt: 0 };
+  maintenanceSettingsReadPromise = null;
+}
 
 async function ensureMaintenanceSchema(env) {
   if (!maintenanceSchemaPromise) {
@@ -19834,27 +19824,44 @@ async function ensureMaintenanceSchema(env) {
   await maintenanceSchemaPromise;
 }
 
-async function getMaintenanceSettings(env) {
+async function getMaintenanceSettings(env, options = {}) {
+  const force = Boolean(options?.force);
+  const nowMs = Date.now();
+  if (!force && maintenanceSettingsMemory.value && maintenanceSettingsMemory.expiresAt > nowMs) {
+    return maintenanceSettingsMemory.value;
+  }
+  if (!force && maintenanceSettingsReadPromise) return maintenanceSettingsReadPromise;
+  const generation = maintenanceSettingsCacheGeneration;
+  const task = (async () => {
+    try {
+      await ensureMaintenanceSchema(env);
+      const row = await env.DB.prepare(`SELECT * FROM maintenance_settings WHERE id=1 LIMIT 1`).first();
+      const value = {
+        fullClosed: Number(row?.full_closed || 0) === 1,
+        ratingDisabled: Number(row?.rating_disabled || 0) === 1,
+        purchasesDisabled: Number(row?.purchases_disabled || 0) === 1,
+        casesDisabled: Number(row?.cases_disabled || 0) === 1,
+        physicalRewardsDisabled: Number(row?.physical_rewards_disabled || 0) === 1,
+        testersOnly: Number(row?.testers_only || 0) === 1,
+        message: String(row?.message || DEFAULT_MAINTENANCE_SETTINGS.message),
+        updatedAt: Number(row?.updated_at || 0),
+        updatedBy: String(row?.updated_by || "")
+      };
+      if (generation === maintenanceSettingsCacheGeneration) {
+        maintenanceSettingsMemory = { value, expiresAt: Date.now() + MAINTENANCE_SETTINGS_CACHE_MS };
+      }
+      return value;
+    } catch (error) {
+      console.error("maintenance settings read failed; using safe fallback", error);
+      if (maintenanceSettingsMemory.value) return { ...maintenanceSettingsMemory.value, degraded: true };
+      return { ...DEFAULT_MAINTENANCE_SETTINGS, degraded: true };
+    }
+  })();
+  if (!force) maintenanceSettingsReadPromise = task;
   try {
-    await ensureMaintenanceSchema(env);
-    const row = await env.DB.prepare(`SELECT * FROM maintenance_settings WHERE id=1 LIMIT 1`).first();
-    const value = {
-      fullClosed: Number(row?.full_closed || 0) === 1,
-      ratingDisabled: Number(row?.rating_disabled || 0) === 1,
-      purchasesDisabled: Number(row?.purchases_disabled || 0) === 1,
-      casesDisabled: Number(row?.cases_disabled || 0) === 1,
-      physicalRewardsDisabled: Number(row?.physical_rewards_disabled || 0) === 1,
-      testersOnly: Number(row?.testers_only || 0) === 1,
-      message: String(row?.message || DEFAULT_MAINTENANCE_SETTINGS.message),
-      updatedAt: Number(row?.updated_at || 0),
-      updatedBy: String(row?.updated_by || "")
-    };
-    maintenanceSettingsMemory = { value };
-    return value;
-  } catch (error) {
-    console.error("maintenance settings read failed; using safe fallback", error);
-    if (maintenanceSettingsMemory.value) return { ...maintenanceSettingsMemory.value, degraded: true };
-    return { ...DEFAULT_MAINTENANCE_SETTINGS, degraded: true };
+    return await task;
+  } finally {
+    if (!force && maintenanceSettingsReadPromise === task) maintenanceSettingsReadPromise = null;
   }
 }
 
@@ -20002,6 +20009,7 @@ async function changeMaintenanceMode(chatId, user, mode, onOff, message, env, ru
     if (text.length < 10) return sendTelegramMessage(env, chatId, "Сообщение должно содержать не менее 10 символов.");
     const beforeSettings = await getMaintenanceSettings(env);
     await env.DB.prepare(`UPDATE maintenance_settings SET message=?,updated_at=?,updated_by=? WHERE id=1`).bind(text, Math.floor(Date.now()/1000), String(user.id)).run();
+    invalidateMaintenanceSettingsCache();
     await recordV67SettingChange(env,user,"maintenance","message","change",{message:beforeSettings.message},{message:text});
     await sendTelegramMessage(env, chatId, "Сообщение технических работ обновлено.");
     return showMaintenanceDashboard(chatId, user, env);
@@ -20009,6 +20017,7 @@ async function changeMaintenanceMode(chatId, user, mode, onOff, message, env, ru
   if (mode === "off") {
     const beforeSettings = await getMaintenanceSettings(env);
     await env.DB.prepare(`UPDATE maintenance_settings SET full_closed=0,rating_disabled=0,purchases_disabled=0,cases_disabled=0,physical_rewards_disabled=0,testers_only=0,updated_at=?,updated_by=? WHERE id=1`).bind(Math.floor(Date.now()/1000),String(user.id)).run();
+    invalidateMaintenanceSettingsCache();
     await Promise.all([
       recordV67SettingChange(env,user,"maintenance","all","disable_all",beforeSettings,{fullClosed:false,ratingDisabled:false,purchasesDisabled:false,casesDisabled:false,physicalRewardsDisabled:false,testersOnly:false,message:beforeSettings.message}),
       logStaffAction(env,user,access,"maintenance_disable_all",null,"system",1,0,{})
@@ -20028,6 +20037,7 @@ async function changeMaintenanceMode(chatId, user, mode, onOff, message, env, ru
   }
   const beforeSettings = await getMaintenanceSettings(env);
   await env.DB.prepare(`UPDATE maintenance_settings SET ${column}=?,updated_at=?,updated_by=? WHERE id=1`).bind(enabled?1:0,Math.floor(Date.now()/1000),String(user.id)).run();
+    invalidateMaintenanceSettingsCache();
   await Promise.all([
     logStaffAction(env,user,access,"maintenance_change",null,"system",enabled?0:1,enabled?1:0,{mode,ownerDirect:Boolean(access.owner && mode === "full")}),
     recordV67SettingChange(env,user,"maintenance",mode,"change",beforeSettings,{...beforeSettings,[({full:"fullClosed",rating:"ratingDisabled",purchases:"purchasesDisabled",cases:"casesDisabled",physical:"physicalRewardsDisabled",testers:"testersOnly"})[mode]]:enabled})
@@ -20098,6 +20108,7 @@ async function executeDangerousAction(row,env,approver) {
   if(row.action_type==="maintenance_full"){
     const beforeSettings=await getMaintenanceSettings(env);
     await env.DB.prepare(`UPDATE maintenance_settings SET full_closed=?,updated_at=?,updated_by=? WHERE id=1`).bind(payload.enabled?1:0,Math.floor(Date.now()/1000),String(approver.id)).run();
+    invalidateMaintenanceSettingsCache();
     await recordV67SettingChange(env,approver,"maintenance","full","approved_change",{enabled:beforeSettings.fullClosed},{enabled:Boolean(payload.enabled)});
     return;
   }
@@ -21070,6 +21081,7 @@ async function restoreSnapshotById(snapshotId, user, env) {
 
   try {
     if (statements.length) await env.DB.batch(statements);
+    if (data.maintenance && typeof data.maintenance === "object") invalidateMaintenanceSettingsCache();
     await env.DB.prepare(`UPDATE config_snapshots SET restored_at=?,restored_by=?,restore_status='restored' WHERE snapshot_id=?`).bind(now,String(user.id),String(snapshotId)).run();
   } catch (error) {
     await env.DB.prepare(`UPDATE config_snapshots SET restore_status=? WHERE snapshot_id=?`).bind(`failed:${String(error?.message||error).slice(0,180)}`,String(snapshotId)).run().catch(() => {});
@@ -21726,6 +21738,15 @@ async function ensureSeasonPassSchema(env) {
         PRIMARY KEY(season_id,telegram_id,task_id,period_key)
       )`),
       env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_season_pass_task_claims_player ON season_pass_task_claims(season_id,telegram_id,status,claimed_at DESC)`),
+      env.DB.prepare(`CREATE TABLE IF NOT EXISTS season_pass_task_progress (
+        season_id TEXT NOT NULL, telegram_id TEXT NOT NULL, period_key TEXT NOT NULL,
+        period TEXT NOT NULL CHECK(period IN ('daily','weekly')),
+        runs INTEGER NOT NULL DEFAULT 0 CHECK(runs>=0), score INTEGER NOT NULL DEFAULT 0 CHECK(score>=0),
+        treats INTEGER NOT NULL DEFAULT 0 CHECK(treats>=0), coffee INTEGER NOT NULL DEFAULT 0 CHECK(coffee>=0),
+        cases_opened INTEGER NOT NULL DEFAULT 0 CHECK(cases_opened>=0), initialized_at INTEGER NOT NULL DEFAULT 0, updated_at INTEGER NOT NULL DEFAULT 0,
+        PRIMARY KEY(season_id,telegram_id,period_key)
+      )`),
+      env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_season_pass_task_progress_player ON season_pass_task_progress(season_id,telegram_id,period,period_key)`),
       env.DB.prepare(`CREATE TABLE IF NOT EXISTS season_pass_task_notifications (
         season_id TEXT NOT NULL, telegram_id TEXT NOT NULL, task_id TEXT NOT NULL, period_key TEXT NOT NULL,
         task_title TEXT NOT NULL DEFAULT '', xp_reward INTEGER NOT NULL DEFAULT 0, completed_at INTEGER NOT NULL,
@@ -22071,6 +22092,7 @@ async function resetSeasonPassDataForSeason(env, season, options = {}) {
     env.DB.prepare(`SELECT telegram_id FROM season_pass_claims WHERE season_id=?`).bind(seasonId).all(),
     env.DB.prepare(`SELECT telegram_id FROM season_pass_task_claims WHERE season_id=?`).bind(seasonId).all(),
     env.DB.prepare(`SELECT telegram_id FROM season_pass_activity_runs WHERE season_id=?`).bind(seasonId).all(),
+    env.DB.prepare(`SELECT telegram_id FROM season_pass_task_progress WHERE season_id=?`).bind(seasonId).all(),
     env.DB.prepare(`SELECT telegram_id FROM season_pass_run_xp WHERE season_id=?`).bind(seasonId).all()
   ]);
   const telegramIds = [...new Set(playerIdResults.flatMap((result) =>
@@ -22085,6 +22107,7 @@ async function resetSeasonPassDataForSeason(env, season, options = {}) {
     env.DB.prepare(`DELETE FROM season_pass_task_claims WHERE season_id=?`).bind(seasonId),
     env.DB.prepare(`DELETE FROM season_pass_run_xp WHERE season_id=?`).bind(seasonId),
     env.DB.prepare(`DELETE FROM season_pass_activity_runs WHERE season_id=?`).bind(seasonId),
+    env.DB.prepare(`DELETE FROM season_pass_task_progress WHERE season_id=?`).bind(seasonId),
     env.DB.prepare(`DELETE FROM season_pass_entitlements WHERE season_id=?`).bind(seasonId),
     env.DB.prepare(`DELETE FROM season_pass_purchases WHERE season_id=?`).bind(seasonId),
     env.DB.prepare(`DELETE FROM season_pass_purchase_guards WHERE (substr(guard_id,1,length(?))=?) OR (substr(guard_id,1,length(?))=?)`).bind(tierGuardPrefix,tierGuardPrefix,levelGuardPrefix,levelGuardPrefix),
@@ -22092,12 +22115,12 @@ async function resetSeasonPassDataForSeason(env, season, options = {}) {
     env.DB.prepare(`DELETE FROM season_pass_players WHERE season_id=?`).bind(seasonId)
   ]);
   return {
-    playersReset:Number(result?.[8]?.meta?.changes || 0),
+    playersReset:Number(result?.[9]?.meta?.changes || 0),
     boostsRemoved,
     claimsRemoved:Number(result?.[0]?.meta?.changes || 0),
     tasksRemoved:Number(result?.[1]?.meta?.changes || 0),
     runsRemoved:Number(result?.[2]?.meta?.changes || 0) + Number(result?.[3]?.meta?.changes || 0),
-    purchasesRemoved:Number(result?.[5]?.meta?.changes || 0),
+    purchasesRemoved:Number(result?.[6]?.meta?.changes || 0),
     pendingCasesRemoved:0,
     reason:String(options.reason || '')
   };
@@ -22412,9 +22435,9 @@ async function seasonPassPeriodMetrics(env,telegramId,period,season=null){
   return {bounds:{...bounds,startAt,endAt},runs:Number(runs?.runs||0),score:Number(runs?.score||0),treats:Number(runs?.treats||0),coffee:Number(runs?.coffee||0),cases_opened:Number(casesA?.count||0)+Number(casesB?.count||0)+Number(casesSeasonal?.count||0)};
 }
 
-async function seasonPassPeriodMetricsPair(env,telegramId,season){
-  const dailyBounds=seasonPassMoscowPeriod('daily');
-  const weeklyBounds=seasonPassMoscowPeriod('weekly');
+async function seasonPassHistoricalMetricsPair(env,telegramId,season,nowMs=Date.now()){
+  const dailyBounds=seasonPassMoscowPeriod('daily',nowMs);
+  const weeklyBounds=seasonPassMoscowPeriod('weekly',nowMs);
   const seasonStart=Math.floor(Date.parse(String(season?.startsAt||''))/1000);
   const seasonEnd=Math.floor(Date.parse(String(season?.endsAt||''))/1000);
   const clamp=(bounds)=>{
@@ -22443,11 +22466,198 @@ async function seasonPassPeriodMetricsPair(env,telegramId,season){
   };
 }
 
+
+function seasonPassTaskProgressBounds(season,nowMs=Date.now()){
+  const seasonStart=Math.floor(Date.parse(String(season?.startsAt||''))/1000);
+  const seasonEnd=Math.floor(Date.parse(String(season?.endsAt||''))/1000);
+  const clamp=(bounds)=>{
+    const startAt=Number.isFinite(seasonStart)?Math.max(bounds.startAt,seasonStart):bounds.startAt;
+    const endAt=Number.isFinite(seasonEnd)?Math.max(startAt,Math.min(bounds.endAt,seasonEnd)):bounds.endAt;
+    return {...bounds,startAt,endAt};
+  };
+  return {daily:clamp(seasonPassMoscowPeriod('daily',nowMs)),weekly:clamp(seasonPassMoscowPeriod('weekly',nowMs))};
+}
+
+function seasonPassTaskProgressMetricView(row,bounds){
+  return {
+    bounds,
+    runs:Math.max(0,Number(row?.runs||0)),score:Math.max(0,Number(row?.score||0)),
+    treats:Math.max(0,Number(row?.treats||0)),coffee:Math.max(0,Number(row?.coffee||0)),
+    cases_opened:Math.max(0,Number(row?.cases_opened||0))
+  };
+}
+
+async function ensureSeasonPassTaskProgressPair(env,telegramId,season,nowMs=Date.now()){
+  await ensureSeasonPassSchema(env);
+  const id=String(telegramId),seasonId=String(season?.id||DEFAULT_SEASON_PASS_ID);
+  const bounds=seasonPassTaskProgressBounds(season,nowMs);
+  const readRows=async()=>{
+    const result=await env.DB.prepare(`SELECT period_key,period,runs,score,treats,coffee,cases_opened FROM season_pass_task_progress WHERE season_id=? AND telegram_id=? AND period_key IN (?,?)`).bind(seasonId,id,bounds.daily.key,bounds.weekly.key).all();
+    return new Map((result.results||[]).map(row=>[String(row.period_key),row]));
+  };
+  let rows=await readRows();
+  if(!rows.has(bounds.daily.key)||!rows.has(bounds.weekly.key)){
+    const historical=await seasonPassHistoricalMetricsPair(env,id,season,nowMs);
+    const now=Math.floor(Date.now()/1000);const inserts=[];
+    for(const [period,key] of [['daily',bounds.daily.key],['weekly',bounds.weekly.key]]){
+      if(rows.has(key))continue;
+      const metrics=historical[period];
+      inserts.push(env.DB.prepare(`INSERT OR IGNORE INTO season_pass_task_progress(season_id,telegram_id,period_key,period,runs,score,treats,coffee,cases_opened,initialized_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?)`).bind(
+        seasonId,id,key,period,Math.max(0,Number(metrics?.runs||0)),Math.max(0,Number(metrics?.score||0)),Math.max(0,Number(metrics?.treats||0)),Math.max(0,Number(metrics?.coffee||0)),Math.max(0,Number(metrics?.cases_opened||0)),now,now
+      ));
+    }
+    if(inserts.length)await env.DB.batch(inserts);
+    rows=await readRows();
+  }
+  return {
+    daily:seasonPassTaskProgressMetricView(rows.get(bounds.daily.key),bounds.daily),
+    weekly:seasonPassTaskProgressMetricView(rows.get(bounds.weekly.key),bounds.weekly)
+  };
+}
+
+const SEASON_PASS_TASK_PROGRESS_PRIME_TTL_MS=30000;
+const seasonPassTaskProgressPrimeAt=new Map();
+
+async function reconcileSeasonPassTaskProgressFromHistory(env,telegramId,season,nowMs=Date.now()){
+  const id=String(telegramId||'').trim();if(!id||!season?.id)return false;
+  const historical=await seasonPassHistoricalMetricsPair(env,id,season,nowMs);
+  const now=Math.floor(Date.now()/1000);const statements=[];
+  for(const period of ['daily','weekly']){
+    const metrics=historical[period];const bounds=metrics?.bounds;if(!bounds?.key)continue;
+    statements.push(env.DB.prepare(`INSERT INTO season_pass_task_progress(season_id,telegram_id,period_key,period,runs,score,treats,coffee,cases_opened,initialized_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(season_id,telegram_id,period_key) DO UPDATE SET runs=MAX(runs,excluded.runs),score=MAX(score,excluded.score),treats=MAX(treats,excluded.treats),coffee=MAX(coffee,excluded.coffee),cases_opened=MAX(cases_opened,excluded.cases_opened),updated_at=excluded.updated_at`).bind(
+      String(season.id),id,String(bounds.key),period,Math.max(0,Number(metrics.runs||0)),Math.max(0,Number(metrics.score||0)),Math.max(0,Number(metrics.treats||0)),Math.max(0,Number(metrics.coffee||0)),Math.max(0,Number(metrics.cases_opened||0)),now,now
+    ));
+  }
+  if(statements.length)await env.DB.batch(statements);
+  return true;
+}
+
+async function primeSeasonPassTaskProgress(env,telegramId){
+  try{
+    await ensureSeasonPassSchema(env);
+    const id=String(telegramId||'').trim();if(!id)return false;
+    const [flag,forcedClosure,season]=await Promise.all([getFeatureFlag(env,'battle_pass'),getSeasonPassForcedClosure(env),loadSeasonPassSeason(env)]);
+    if(forcedClosure||!season||season.status!=='active')return false;
+    const mode=String(flag?.mode||'all');
+    if(mode!=='all'){const access=await battlePassAudienceAccess(env,id,flag);if(!access.allowed)return false;}
+    const primeKey=`${String(season.id)}:${id}`;const nowMs=Date.now();const lastPrime=Number(seasonPassTaskProgressPrimeAt.get(primeKey)||0);
+    if(lastPrime>0&&nowMs-lastPrime<SEASON_PASS_TASK_PROGRESS_PRIME_TTL_MS)return true;
+    seasonPassTaskProgressPrimeAt.set(primeKey,nowMs);
+    if(seasonPassTaskProgressPrimeAt.size>500){
+      for(const [key,at] of seasonPassTaskProgressPrimeAt){if(nowMs-Number(at||0)>SEASON_PASS_TASK_PROGRESS_PRIME_TTL_MS*2)seasonPassTaskProgressPrimeAt.delete(key);if(seasonPassTaskProgressPrimeAt.size<=450)break;}
+      while(seasonPassTaskProgressPrimeAt.size>500){const firstKey=seasonPassTaskProgressPrimeAt.keys().next().value;if(firstKey===undefined)break;seasonPassTaskProgressPrimeAt.delete(firstKey);}
+    }
+    // Background-only authoritative max reconciliation repairs any rare event that
+    // could not update the incremental counters, without ever subtracting progress.
+    try{await reconcileSeasonPassTaskProgressFromHistory(env,id,season,nowMs);}
+    catch(error){seasonPassTaskProgressPrimeAt.delete(primeKey);throw error;}
+    return true;
+  }catch(error){console.error('primeSeasonPassTaskProgress failed',error);return false;}
+}
+
+function normalizedSeasonPassTaskContribution(input={}){
+  return {
+    runs:Math.max(0,Math.floor(Number(input.runs||0))),score:Math.max(0,Math.floor(Number(input.score||0))),
+    treats:Math.max(0,Math.floor(Number(input.treats||0))),coffee:Math.max(0,Math.floor(Number(input.coffee||0))),
+    cases_opened:Math.max(0,Math.floor(Number(input.cases_opened||0)))
+  };
+}
+
+async function prepareSeasonPassTaskProgressEvent(env,telegramId,contributionInput,eventAtSeconds,options={}){
+  await ensureSeasonPassSchema(env);
+  const id=String(telegramId||'').trim();if(!id)return null;
+  const eventAt=Math.max(1,Math.floor(Number(eventAtSeconds||0))||Math.floor(Date.now()/1000));
+  let season=options.season||null,player=options.player||null;
+  if(!season){
+    const [flag,forcedClosure,loaded]=await Promise.all([getFeatureFlag(env,'battle_pass'),getSeasonPassForcedClosure(env,eventAt*1000),loadSeasonPassSeason(env,eventAt*1000)]);
+    if(forcedClosure||!loaded||loaded.status!=='active'||!seasonPassCapabilities(loaded).canClaimTasks)return null;
+    const mode=String(flag?.mode||'all');if(mode!=='all'){const access=await battlePassAudienceAccess(env,id,flag);if(!access.allowed)return null;}
+    season=loaded;
+  }
+  if(season.status!=='active'||!seasonPassCapabilities(season).canClaimTasks)return null;
+  if(!player)player=await ensureSeasonPassPlayer(env,season,id);
+  const contribution=normalizedSeasonPassTaskContribution(contributionInput);
+  const progress=await ensureSeasonPassTaskProgressPair(env,id,season,eventAt*1000);
+  const [definitions,claims]=await Promise.all([
+    env.DB.prepare(`SELECT task_id,period,premium,metric,target,xp_reward,title FROM season_pass_tasks WHERE season_id=? AND enabled=1 ORDER BY sort_order,task_id`).bind(String(season.id)).all(),
+    env.DB.prepare(`SELECT task_id,period_key FROM season_pass_task_claims WHERE season_id=? AND telegram_id=? AND status='delivered' AND period_key IN (?,?)`).bind(String(season.id),id,progress.daily.bounds.key,progress.weekly.bounds.key).all()
+  ]);
+  const claimSet=new Set((claims.results||[]).map(row=>`${String(row.task_id)}:${String(row.period_key)}`));
+  const premium=String(player?.premium_tier||'none')!=='none';
+  const taskMultiplier=seasonPassTaskXpMultiplierForPlayer(season,player);
+  const fresh=Math.floor(Date.now()/1000)-eventAt<=10*60;
+  const taskRows=[];
+  for(const task of definitions.results||[]){
+    const period=String(task.period)==='weekly'?'weekly':'daily';const metrics=progress[period];
+    if(eventAt<metrics.bounds.startAt||eventAt>=metrics.bounds.endAt)continue;
+    const metric=['runs','score','treats','coffee','cases_opened'].includes(String(task.metric))?String(task.metric):'runs';
+    const before=Math.max(0,Number(metrics[metric]||0)),after=before+Math.max(0,Number(contribution[metric]||0)),target=Math.max(1,Number(task.target||1));
+    const periodKey=String(metrics.bounds.key||'');const locked=Number(task.premium||0)===1&&!premium;
+    if(!fresh||locked||claimSet.has(`${String(task.task_id)}:${periodKey}`)||before>=target||after<target)continue;
+    taskRows.push({task_id:String(task.task_id),period_key:periodKey,task_title:String(task.title||'Задание').slice(0,180),xp_reward:Math.max(1,Number(task.xp_reward||1))*taskMultiplier});
+  }
+  const now=Math.floor(Date.now()/1000);const progressStatements=[];
+  for(const period of ['daily','weekly']){
+    const bounds=progress[period].bounds;
+    progressStatements.push(env.DB.prepare(`INSERT INTO season_pass_task_progress(season_id,telegram_id,period_key,period,runs,score,treats,coffee,cases_opened,initialized_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(season_id,telegram_id,period_key) DO UPDATE SET runs=runs+excluded.runs,score=score+excluded.score,treats=treats+excluded.treats,coffee=coffee+excluded.coffee,cases_opened=cases_opened+excluded.cases_opened,updated_at=excluded.updated_at`).bind(
+      String(season.id),id,String(bounds.key),period,contribution.runs,contribution.score,contribution.treats,contribution.coffee,contribution.cases_opened,now,now
+    ));
+  }
+  const notificationStatements=taskRows.map(task=>env.DB.prepare(`INSERT OR IGNORE INTO season_pass_task_notifications(season_id,telegram_id,task_id,period_key,task_title,xp_reward,completed_at,bot_notified_at,game_read_at) VALUES(?,?,?,?,?,?,?,0,0)`).bind(String(season.id),id,task.task_id,task.period_key,task.task_title,task.xp_reward,now));
+  return {season,player,progress,contribution,taskRows,progressStatements,notificationStatements};
+}
+
+function seasonPassCaseProgressReconcileStatements(env,telegramId,taskEvent,nowSeconds=Math.floor(Date.now()/1000)){
+  if(!taskEvent?.season?.id||!taskEvent?.progress)return [];
+  const id=String(telegramId||'').trim();if(!id)return [];
+  const seasonId=String(taskEvent.season.id);const now=Math.max(0,Math.floor(Number(nowSeconds||0)));const statements=[];
+  for(const period of ['daily','weekly']){
+    const bounds=taskEvent.progress?.[period]?.bounds;if(!bounds?.key)continue;
+    statements.push(env.DB.prepare(`UPDATE season_pass_task_progress SET cases_opened=MAX(cases_opened,
+      (SELECT COUNT(*) FROM level_case_openings WHERE telegram_id=? AND opened_at>=? AND opened_at<?)
+      +(SELECT COUNT(*) FROM granted_cases WHERE telegram_id=? AND status='opened' AND opened_at>=? AND opened_at<?)
+      +(SELECT COUNT(*) FROM season_pass_case_grants WHERE telegram_id=? AND status='opened' AND opened_at>=? AND opened_at<?)
+      ),updated_at=? WHERE season_id=? AND telegram_id=? AND period_key=?`).bind(
+        id,bounds.startAt,bounds.endAt,id,bounds.startAt,bounds.endAt,id,bounds.startAt,bounds.endAt,now,seasonId,id,String(bounds.key)
+      ));
+  }
+  return statements;
+}
+
+async function deliverSeasonPassTaskNotificationsForRows(env,telegramId,season,taskRows){
+  const id=String(telegramId||'').trim();
+  const rows=Array.isArray(taskRows)?taskRows:[];
+  let lease=0;
+  try{
+    if(!id||!season||!rows.length)return null;
+    const now=Math.floor(Date.now()/1000);const pairs=rows.flatMap(row=>[String(row.task_id),String(row.period_key)]);const predicates=rows.map(()=>`(task_id=? AND period_key=?)`).join(' OR ');
+    const subscriber=await env.DB.prepare(`SELECT chat_id FROM bot_subscribers WHERE telegram_id=? AND active=1 LIMIT 1`).bind(id).first();
+    if(!subscriber?.chat_id){await env.DB.prepare(`UPDATE season_pass_task_notifications SET bot_notified_at=? WHERE season_id=? AND telegram_id=? AND bot_notified_at=0 AND (${predicates})`).bind(now,String(season.id),id,...pairs).run();return null;}
+    lease=-(now*1000+Math.floor(Math.random()*1000));
+    const claim=await env.DB.prepare(`UPDATE season_pass_task_notifications SET bot_notified_at=? WHERE season_id=? AND telegram_id=? AND bot_notified_at=0 AND (${predicates})`).bind(lease,String(season.id),id,...pairs).run();
+    if(Number(claim.meta?.changes||0)<1){lease=0;return null;}
+    const selected=(await env.DB.prepare(`SELECT n.task_id,n.period_key,n.task_title,n.xp_reward,n.game_read_at FROM season_pass_task_notifications n WHERE n.season_id=? AND n.telegram_id=? AND n.bot_notified_at=? AND NOT EXISTS(SELECT 1 FROM season_pass_task_claims c WHERE c.season_id=n.season_id AND c.telegram_id=n.telegram_id AND c.task_id=n.task_id AND c.period_key=n.period_key AND c.status='delivered') ORDER BY n.completed_at,n.task_id`).bind(String(season.id),id,lease).all()).results||[];
+    if(selected.length){
+      const list=selected.slice(0,20).map(row=>`• <b>${escapeHtml(String(row.task_title||'Задание').slice(0,100))}</b> · +${Math.max(0,Number(row.xp_reward)||0).toLocaleString('ru-RU')} XP`).join('\n');
+      await v77DeliverPlayerNotification(env,id,String(subscriber.chat_id),'season_pass_task',`✅ <b>${selected.length===1?'Задание сезонного пропуска выполнено':'Задания сезонного пропуска выполнены'}</b>\n\n${list}\n\nXP за задания уже можно забрать в сезонном пропуске.`,{inline_keyboard:[[{text:'🎁 Забрать',web_app:{url:configuredSeasonPassTasksUrl(env)}}],[{text:'⬅️ Назад в меню',callback_data:'menu:home'}]]});
+    }
+    await env.DB.prepare(`UPDATE season_pass_task_notifications SET bot_notified_at=? WHERE season_id=? AND telegram_id=? AND bot_notified_at=?`).bind(now,String(season.id),id,lease).run();
+    lease=0;
+    return seasonPassTaskNoticePublic(selected.filter(row=>Number(row.game_read_at||0)===0),season);
+  }catch(error){
+    console.error('deliverSeasonPassTaskNotificationsForRows failed',error);
+    if(lease<0&&id&&season?.id){
+      try{await env.DB.prepare(`UPDATE season_pass_task_notifications SET bot_notified_at=0 WHERE season_id=? AND telegram_id=? AND bot_notified_at=?`).bind(String(season.id),id,lease).run();}catch{}
+    }
+    return null;
+  }
+}
+
 async function buildSeasonPassTasksPayload(env,season,telegramId,premiumTier){
   const dailyKey=seasonPassMoscowPeriod('daily').key,weeklyKey=seasonPassMoscowPeriod('weekly').key;
   const [definitions,metricsPair,claimResult] = await Promise.all([
     env.DB.prepare(`SELECT task_id,period,premium,metric,target,xp_reward,title,description,enabled,sort_order FROM season_pass_tasks WHERE season_id=? AND enabled=1 ORDER BY sort_order,task_id`).bind(season.id).all(),
-    seasonPassPeriodMetricsPair(env,telegramId,season),
+    ensureSeasonPassTaskProgressPair(env,telegramId,season),
     env.DB.prepare(`SELECT task_id,period_key,status,xp_awarded FROM season_pass_task_claims WHERE season_id=? AND telegram_id=? AND status='delivered' AND period_key IN (?,?)`).bind(season.id,String(telegramId),dailyKey,weeklyKey).all()
   ]);
   const daily=metricsPair.daily,weekly=metricsPair.weekly;
@@ -22470,16 +22680,32 @@ function configuredSeasonPassTasksUrl(env){
   try{
     const url=new URL(configuredGameUrl(env));
     url.pathname='/battle-pass.html';
-    url.search='?v=1.0.6&view=tasks';
+    url.search='?v=1.0.6-criticalperf1&view=tasks';
     url.hash='';
     return url.toString();
-  }catch{return `${DEFAULT_GAME_URL.replace(/\/$/,'')}/battle-pass.html?v=1.0.6&view=tasks`;}
+  }catch{return `${DEFAULT_GAME_URL.replace(/\/$/,'')}/battle-pass.html?v=1.0.6-criticalperf1&view=tasks`;}
 }
 
 function seasonPassTaskNoticePublic(rows,season){
   const tasks=(rows||[]).map(row=>({id:String(row.task_id||''),periodKey:String(row.period_key||''),title:String(row.task_title||'Задание'),xp:Math.max(0,Number(row.xp_reward)||0)}));
   if(!tasks.length)return null;
   return {seasonId:String(season?.id||''),seasonTitle:String(season?.title||'Сезонный пропуск'),tasks,count:tasks.length};
+}
+
+async function readSeasonPassTaskNoticeState(env,telegramId,seasonValue=null){
+  try{
+    await ensureSeasonPassSchema(env);
+    const id=String(telegramId||'').trim();if(!id)return null;
+    const [flag,forcedClosure,season]=await Promise.all([
+      getFeatureFlag(env,'battle_pass'),
+      getSeasonPassForcedClosure(env),
+      seasonValue?Promise.resolve(seasonValue):loadSeasonPassSeason(env)
+    ]);
+    if(forcedClosure||!season||season.status!=='active'||!seasonPassCapabilities(season).canClaimTasks)return null;
+    const mode=String(flag?.mode||'all');if(mode!=='all'){const access=await battlePassAudienceAccess(env,id,flag);if(!access.allowed)return null;}
+    const rows=(await env.DB.prepare(`SELECT n.task_id,n.period_key,n.task_title,n.xp_reward,n.completed_at,n.bot_notified_at,n.game_read_at FROM season_pass_task_notifications n WHERE n.season_id=? AND n.telegram_id=? AND n.game_read_at=0 AND NOT EXISTS(SELECT 1 FROM season_pass_task_claims c WHERE c.season_id=n.season_id AND c.telegram_id=n.telegram_id AND c.task_id=n.task_id AND c.period_key=n.period_key AND c.status='delivered') ORDER BY n.completed_at,n.task_id LIMIT 30`).bind(String(season.id),id).all()).results||[];
+    return seasonPassTaskNoticePublic(rows,season);
+  }catch(error){console.error('readSeasonPassTaskNoticeState failed',error);return null;}
 }
 
 async function cancelQueuedSeasonPassTaskNotifications(env,telegramId,reason='season-task-stale'){
@@ -22492,83 +22718,13 @@ async function cancelQueuedSeasonPassTaskNotifications(env,telegramId,reason='se
   }catch(error){console.error('cancelQueuedSeasonPassTaskNotifications failed',error);return 0;}
 }
 
-async function syncSeasonPassTaskCompletionNotifications(env,telegramId,options={}){
-  try{
-    await ensureSeasonPassSchema(env);
-    const id=String(telegramId||'').trim();if(!id)return null;
-    const flag=await getFeatureFlag(env,'battle_pass');const access=await battlePassAudienceAccess(env,id,flag);if(!access.allowed)return null;
-    const forcedClosure=await getSeasonPassForcedClosure(env);if(forcedClosure)return null;
-    const season=options.season||await loadSeasonPassSeason(env);if(!season||season.status!=='active'||!seasonPassCapabilities(season).canClaimTasks)return null;
-    const player=options.player||await ensureSeasonPassPlayer(env,season,id);
-    const payload=await buildSeasonPassTasksPayload(env,season,id,player?.premium_tier);
-    const ready=payload.tasks.filter(task=>task.complete&&!task.claimed&&!task.locked);
-    if(!ready.length)return null;
-    const now=Math.floor(Date.now()/1000);
-    const taskXpMultiplier=seasonPassTaskXpMultiplierForPlayer(season,player);
-    const inserts=ready.map(task=>env.DB.prepare(`INSERT OR IGNORE INTO season_pass_task_notifications(season_id,telegram_id,task_id,period_key,task_title,xp_reward,completed_at,bot_notified_at,game_read_at) VALUES(?,?,?,?,?,?,?,0,0)`).bind(season.id,id,String(task.id),String(task.periodKey),String(task.title||'Задание').slice(0,180),Math.max(1,Number(task.xp)||1)*taskXpMultiplier,now));
-    for(let i=0;i<inserts.length;i+=40)await env.DB.batch(inserts.slice(i,i+40));
-    const staleBotClaimThreshold=-Math.max(1,(now-600)*1000);
-    await env.DB.prepare(`UPDATE season_pass_task_notifications SET bot_notified_at=0 WHERE season_id=? AND telegram_id=? AND bot_notified_at<0 AND bot_notified_at>?`).bind(season.id,id,staleBotClaimThreshold).run();
-    const allRows=(await env.DB.prepare(`SELECT task_id,period_key,task_title,xp_reward,completed_at,bot_notified_at,game_read_at FROM season_pass_task_notifications WHERE season_id=? AND telegram_id=? ORDER BY completed_at,task_id`).bind(season.id,id).all()).results||[];
-    const readyKeys=new Set(ready.map(task=>`${String(task.id)}:${String(task.periodKey)}`));
-    const relevant=allRows.filter(row=>readyKeys.has(`${String(row.task_id)}:${String(row.period_key)}`));
-    // Read/startup sync keeps the in-game notice accurate but must never create
-    // a catch-up Telegram push. Bot messages are emitted only by the actual
-    // completion event (run settlement or case opening).
-    if(options.sendBot===false&&relevant.length){
-      const silentRows=relevant.filter(row=>Number(row.bot_notified_at||0)===0 && now-Math.max(0,Number(row.completed_at||0))>=FAST_RUN_TASK_NOTIFICATION_FRESH_SECONDS);
-      if(silentRows.length){
-        const silentBinds=silentRows.flatMap(row=>[String(row.task_id),String(row.period_key)]);
-        const silentConditions=silentRows.map(()=>`(task_id=? AND period_key=?)`).join(' OR ');
-        await env.DB.prepare(`UPDATE season_pass_task_notifications SET bot_notified_at=? WHERE season_id=? AND telegram_id=? AND bot_notified_at=0 AND (${silentConditions})`).bind(now,season.id,id,...silentBinds).run();
-      }
-    }
-    const pendingBot=options.sendBot===false?[]:relevant.filter(row=>Number(row.bot_notified_at||0)===0);
-    if(options.sendBot!==false&&pendingBot.length){
-      const subscriber=await env.DB.prepare(`SELECT chat_id FROM bot_subscribers WHERE telegram_id=? AND active=1 LIMIT 1`).bind(id).first();
-      if(subscriber?.chat_id){
-        const binds=pendingBot.flatMap(row=>[String(row.task_id),String(row.period_key)]);
-        const conditions=pendingBot.map(()=>`(task_id=? AND period_key=?)`).join(' OR ');
-        const aliasedConditions=pendingBot.map(()=>`(n.task_id=? AND n.period_key=?)`).join(' OR ');
-        const botClaimMarker=-(now*1000+Math.floor(Math.random()*1000));
-        const claim=await env.DB.prepare(`UPDATE season_pass_task_notifications SET bot_notified_at=? WHERE season_id=? AND telegram_id=? AND bot_notified_at=0 AND (${conditions})`).bind(botClaimMarker,season.id,id,...binds).run();
-        if(Number(claim.meta?.changes||0)>0){
-          // Re-check claims after taking the delivery lease. A player can tap "Claim"
-          // while the completion notification is being prepared; in that case no
-          // Telegram message should be sent for the already collected XP.
-          const claimedBot=(await env.DB.prepare(`SELECT n.task_id,n.period_key,n.task_title,n.xp_reward FROM season_pass_task_notifications n WHERE n.season_id=? AND n.telegram_id=? AND n.bot_notified_at=? AND (${aliasedConditions}) AND NOT EXISTS(SELECT 1 FROM season_pass_task_claims c WHERE c.season_id=n.season_id AND c.telegram_id=n.telegram_id AND c.task_id=n.task_id AND c.period_key=n.period_key AND c.status='delivered') ORDER BY n.completed_at,n.task_id`).bind(season.id,id,botClaimMarker,...binds).all()).results||[];
-          if(claimedBot.length){
-            const list=claimedBot.slice(0,20).map(row=>`• <b>${escapeHtml(String(row.task_title||'Задание').slice(0,100))}</b> · +${Math.max(0,Number(row.xp_reward)||0).toLocaleString('ru-RU')} XP`).join('\n');
-            try{
-              await v77DeliverPlayerNotification(env,id,String(subscriber.chat_id),'season_pass_task',`✅ <b>${claimedBot.length===1?'Задание сезонного пропуска выполнено':'Задания сезонного пропуска выполнены'}</b>\n\n${list}\n\nXP за задания уже можно забрать в сезонном пропуске.`,{inline_keyboard:[[{text:'🎁 Забрать',web_app:{url:configuredSeasonPassTasksUrl(env)}}],[{text:'⬅️ Назад в меню',callback_data:'menu:home'}]]});
-              await env.DB.prepare(`UPDATE season_pass_task_notifications SET bot_notified_at=? WHERE season_id=? AND telegram_id=? AND bot_notified_at=?`).bind(now,season.id,id,botClaimMarker).run();
-            }catch(error){await env.DB.prepare(`UPDATE season_pass_task_notifications SET bot_notified_at=0 WHERE season_id=? AND telegram_id=? AND bot_notified_at=?`).bind(season.id,id,botClaimMarker).run();console.error('season pass task bot notification failed',error);}
-          }else{
-            // All leased tasks were claimed before the Telegram send. Mark the
-            // lease finished without sending anything so it can never reappear later.
-            await env.DB.prepare(`UPDATE season_pass_task_notifications SET bot_notified_at=? WHERE season_id=? AND telegram_id=? AND bot_notified_at=?`).bind(now,season.id,id,botClaimMarker).run();
-          }
-        }
-      }else{
-        // Realtime-only semantics: if the bot has no active chat at the moment
-        // of completion, do not turn this into a delayed push when the user
-        // subscribes again later. The in-game claim state remains available.
-        const binds=pendingBot.flatMap(row=>[String(row.task_id),String(row.period_key)]);
-        const conditions=pendingBot.map(()=>`(task_id=? AND period_key=?)`).join(' OR ');
-        await env.DB.prepare(`UPDATE season_pass_task_notifications SET bot_notified_at=? WHERE season_id=? AND telegram_id=? AND bot_notified_at=0 AND (${conditions})`).bind(now,season.id,id,...binds).run();
-      }
-    }
-    return seasonPassTaskNoticePublic(relevant.filter(row=>Number(row.game_read_at||0)===0),season);
-  }catch(error){console.error('syncSeasonPassTaskCompletionNotifications failed',error);return null;}
-}
-
 async function getSeasonPassTaskNotices(request,env){
   try{
     requireDatabase(env);requireBotToken(env);await ensureSeasonPassSchema(env);
     const body=await readJson(request);const initData=String(body.initData||body.init_data||'');
     if(!initData)throw new ApiError(401,'Откройте игру через Telegram.');
     const auth=await validateTelegramInitData(initData,env);const telegramId=String(auth.user.id);
-    const notice=await syncSeasonPassTaskCompletionNotifications(env,telegramId,{sendBot:false});
+    const notice=await readSeasonPassTaskNoticeState(env,telegramId);
     return jsonResponse({ok:true,notice});
   }catch(error){
     if(error instanceof ApiError)return jsonResponse({ok:false,error:error.message},error.status);
@@ -22907,6 +23063,7 @@ async function openSeasonPassSeasonalCase(request,env,executionCtx=null){
   try{
     const ctx=await seasonPassRequestContext(request,env);const caseId=String(ctx.body?.caseId||'').trim();if(!caseId)throw new ApiError(400,'Не выбран сезонный кейс.');
     const now=Math.floor(Date.now()/1000);
+    const taskEventPromise=prepareSeasonPassTaskProgressEvent(env,ctx.telegramId,{cases_opened:1},now,{season:ctx.season,player:ctx.player}).catch((error)=>{console.error('seasonal case task progress prepare failed',error);return null;});
     const definition=await env.DB.prepare(`SELECT d.*,s.title AS season_title FROM season_pass_case_definitions d LEFT JOIN season_pass_seasons s ON s.season_id=d.season_id WHERE d.case_id=? LIMIT 1`).bind(caseId).first();
     if(!definition||!Number(definition.enabled||0)||Number(definition.release_at||0)>now)throw new ApiError(409,'Этот сезонный кейс пока недоступен.');
     const staleCutoff=now-120;await env.DB.prepare(`UPDATE season_pass_case_grants SET status='pending',opening_started_at=0,opening_token='' WHERE telegram_id=? AND case_id=? AND status='opening' AND opening_started_at<=?`).bind(ctx.telegramId,caseId,staleCutoff).run();
@@ -22915,7 +23072,7 @@ async function openSeasonPassSeasonalCase(request,env,executionCtx=null){
     grantId=String(grant.grant_id);token=crypto.randomUUID().replace(/-/g,'');
     const claim=await env.DB.prepare(`UPDATE season_pass_case_grants SET status='opening',opening_started_at=?,opening_token=? WHERE grant_id=? AND telegram_id=? AND status='pending'`).bind(now,token,grantId,ctx.telegramId).run();
     if(Number(claim?.meta?.changes||0)<1)throw new ApiError(409,'Этот сезонный кейс уже открывается.');
-    const [itemsResult,ensured]=await Promise.all([env.DB.prepare(`SELECT * FROM season_pass_case_items WHERE case_id=? AND enabled=1 AND weight>0 ORDER BY item_key`).bind(caseId).all(),ensureCasePlayerState(env,ctx.telegramId,{})]);
+    const [itemsResult,ensured,taskEvent]=await Promise.all([env.DB.prepare(`SELECT * FROM season_pass_case_items WHERE case_id=? AND enabled=1 AND weight>0 ORDER BY item_key`).bind(caseId).all(),ensureCasePlayerState(env,ctx.telegramId,{}),taskEventPromise]);
     const snapshot=safeJson(grant.snapshot_json,{});const snapshotItems=Array.isArray(snapshot?.items)?snapshot.items:[];
     const sourceItems=snapshotItems.length?snapshotItems:(itemsResult.results||[]);
     let candidates=sourceItems.filter(row=>SEASON_PASS_COSMETIC_KINDS.includes(String(row.reward_kind||row.kind))&&seasonPassAnyCosmeticCatalog(String(row.reward_kind||row.kind))?.[String(row.item_id||row.itemId)]).map(row=>({item_key:String(row.item_key||row.key||`${row.reward_kind||row.kind}:${row.item_id||row.itemId}`),reward_kind:String(row.reward_kind||row.kind),item_id:String(row.item_id||row.itemId),weight:Number(row.weight||1),rarity:String(row.rarity||'seasonal'),title:String(row.title||''),image_url:String(row.image_url||row.imageUrl||'')}));
@@ -22934,12 +23091,22 @@ async function openSeasonPassSeasonalCase(request,env,executionCtx=null){
     statements.push(caseStateUpdateStatement(env,ctx.telegramId,ensured.state,now));
     statements.push(env.DB.prepare(`UPDATE season_pass_case_grants SET status='opened',rewards_json=?,opened_at=?,opening_started_at=0,opening_token='' WHERE grant_id=? AND telegram_id=? AND status='opening' AND opening_token=?`).bind(JSON.stringify(rewards),now,grantId,ctx.telegramId,token));
     const batch=await env.DB.batch(statements);const finalized=Number(batch?.[batch.length-1]?.meta?.changes||0)>0;if(!finalized)throw new ApiError(409,'Состояние кейса изменилось. Повторите открытие.');
-    const inventory=await seasonPassSeasonalCaseInventory(env,ctx.telegramId);
+    // The grant is now durably opened. Reconcile case counters to the authoritative
+    // opening history instead of blindly adding +1. This prevents a lazy task-progress
+    // backfill racing between grant finalization and this task update from double-counting
+    // the same seasonal case.
+    const caseTaskStatements=taskEvent
+      ? [...seasonPassCaseProgressReconcileStatements(env,ctx.telegramId,taskEvent,now),...(taskEvent.notificationStatements||[])]
+      : [];
+    const [inventory]=await Promise.all([
+      seasonPassSeasonalCaseInventory(env,ctx.telegramId),
+      caseTaskStatements.length ? env.DB.batch(caseTaskStatements) : Promise.resolve([])
+    ]);
     seasonPassBackgroundWork(executionCtx,recordPlayerTimeline(env,ctx.telegramId,'seasonal_case_open',`открыл сезонный кейс «${String(definition.title||caseId)}»`,{caseId,grantId,rewards},`seasonal_case_${grantId}`,ctx.auth.user,now),'seasonal case timeline failed');
     // Seasonal cases follow the same fast-response rule as normal/gift cases.
     seasonPassBackgroundWork(
       executionCtx,
-      syncSeasonPassTaskCompletionNotifications(env,ctx.telegramId,{season:ctx.season,sendBot:true}),
+      deliverSeasonPassTaskNotificationsForRows(env,ctx.telegramId,taskEvent?.season||ctx.season,taskEvent?.taskRows||[]),
       'seasonal case task notification failed'
     );
     return jsonResponse({ok:true,case:{caseId,grantId,title:String(snapshot?.title||definition.title||'Сезонный кейс'),imageUrl:String(snapshot?.openImageUrl||snapshot?.imageUrl||definition.open_image_url||definition.closed_image_url||''),rewards},seasonalCases:inventory});
@@ -23747,17 +23914,46 @@ async function recordSeasonPassRunActivity(env,telegramId,input={},seasonValue=n
   // reaches this function with a matching authoritative run-ledger row.
   if(options?.serverValidated!==true&&score>Math.floor(durationSeconds*90+6000))throw new ApiError(400,'Забег не прошёл серверную проверку.');
   const seasonStart=Math.floor(Date.parse(season.startsAt)/1000);const seasonEnd=Math.floor(Date.parse(season.endsAt)/1000);if(runCreatedAt<seasonStart||runCreatedAt>=seasonEnd)return {accepted:false,ignored:true,reason:'outside_season',xpAwarded:0,multiplier:1};
-  const inserted=await env.DB.prepare(`INSERT OR IGNORE INTO season_pass_activity_runs(run_id,season_id,telegram_id,score,duration_ms,run_treats,run_coffee,new_record,created_at) VALUES(?,?,?,?,?,?,?,?,?)`).bind(runId,season.id,String(telegramId),score,durationMs,runTreats,runCoffee,newRecord,runCreatedAt).run();
-  const repeated=Number(inserted.meta?.changes||0)===0;
+
+  const id=String(telegramId);
+  const sameActivity=(row)=>row&&String(row.season_id)===String(season.id)&&String(row.telegram_id)===id&&Number(row.score)===score&&Number(row.duration_ms)===durationMs&&Number(row.run_treats)===runTreats&&Number(row.run_coffee)===runCoffee&&Number(row.new_record)===newRecord;
+  let repeated=false;
   let activityCreatedAt=runCreatedAt;
-  if(repeated){
-    const existing=await env.DB.prepare(`SELECT season_id,telegram_id,score,duration_ms,run_treats,run_coffee,new_record,created_at FROM season_pass_activity_runs WHERE run_id=? LIMIT 1`).bind(runId).first();
-    const same=existing&&String(existing.season_id)===String(season.id)&&String(existing.telegram_id)===String(telegramId)&&Number(existing.score)===score&&Number(existing.duration_ms)===durationMs&&Number(existing.run_treats)===runTreats&&Number(existing.run_coffee)===runCoffee&&Number(existing.new_record)===newRecord;
-    if(!same)throw new ApiError(409,'Этот идентификатор забега уже использован.');
-    activityCreatedAt=Math.max(1,Number(existing?.created_at||runCreatedAt));
+  let taskEvent=null;
+  const existingBefore=await env.DB.prepare(`SELECT season_id,telegram_id,score,duration_ms,run_treats,run_coffee,new_record,created_at FROM season_pass_activity_runs WHERE run_id=? LIMIT 1`).bind(runId).first();
+  if(existingBefore){
+    if(!sameActivity(existingBefore))throw new ApiError(409,'Этот идентификатор забега уже использован.');
+    repeated=true;
+    activityCreatedAt=Math.max(1,Number(existingBefore.created_at||runCreatedAt));
+  }else{
+    // Prepare task crossings before the run is inserted so the lazy backfill sees
+    // only historical activity. The insert + counters + notification rows are
+    // committed atomically below, so a repeated run cannot increment progress twice.
+    taskEvent=await prepareSeasonPassTaskProgressEvent(env,id,{runs:1,score,treats:runTreats,coffee:runCoffee},runCreatedAt,{season});
+    const statements=[
+      env.DB.prepare(`INSERT INTO season_pass_activity_runs(run_id,season_id,telegram_id,score,duration_ms,run_treats,run_coffee,new_record,created_at) VALUES(?,?,?,?,?,?,?,?,?)`).bind(runId,season.id,id,score,durationMs,runTreats,runCoffee,newRecord,runCreatedAt),
+      ...(taskEvent?.progressStatements||[]),
+      ...(taskEvent?.notificationStatements||[])
+    ];
+    try{
+      await env.DB.batch(statements);
+    }catch(error){
+      const text=String(error?.message||error).toLowerCase();
+      if(text.includes('unique')||text.includes('primary key')){
+        const raced=await env.DB.prepare(`SELECT season_id,telegram_id,score,duration_ms,run_treats,run_coffee,new_record,created_at FROM season_pass_activity_runs WHERE run_id=? LIMIT 1`).bind(runId).first();
+        if(!sameActivity(raced))throw new ApiError(409,'Этот идентификатор забега уже использован.');
+        repeated=true;
+        activityCreatedAt=Math.max(1,Number(raced?.created_at||runCreatedAt));
+        taskEvent=null;
+      }else throw error;
+    }
   }
-  const award=await awardSeasonPassRunXp(env,String(telegramId),runId,activityCreatedAt);
-  const taskNotice=await syncSeasonPassTaskCompletionNotifications(env,String(telegramId),{season,sendBot:true});
+
+  const award=await awardSeasonPassRunXp(env,id,runId,activityCreatedAt);
+  const taskNotice=!repeated&&taskEvent?.taskRows?.length?seasonPassTaskNoticePublic(taskEvent.taskRows,season):null;
+  if(!repeated&&taskEvent?.taskRows?.length){
+    scheduleRunSettlementBackground(null,deliverSeasonPassTaskNotificationsForRows(env,id,season,taskEvent.taskRows),'season pass fallback notification failed');
+  }
   return {accepted:true,repeated,xpAwarded:Number(award?.xpAwarded||0),multiplier:Number(award?.multiplier||1),profileXpMultiplier:Number(award?.premiumMultiplier||1),catchUp:Boolean(award?.catchUpActive),taskNotice};
 }
 
@@ -26412,6 +26608,7 @@ async function changeV67ReleaseState(query,releaseId,state,env){
     const maintenanceRow=await env.DB.prepare(`SELECT full_closed,updated_by FROM maintenance_settings WHERE id=1 LIMIT 1`).first();
     if(Number(maintenanceRow?.full_closed||0)===1 && String(maintenanceRow?.updated_by||'')===`release:${releaseId}`){
       await env.DB.prepare(`UPDATE maintenance_settings SET full_closed=0,updated_at=?,updated_by=? WHERE id=1`).bind(now,String(query.from.id)).run();
+    invalidateMaintenanceSettingsCache();
       await recordV67SettingChange(env,query.from,"maintenance","full_closed","release_cancel_open",{enabled:true},{enabled:false});
     }
   }
@@ -26452,14 +26649,14 @@ async function publishV67ReadyDrafts(plan,env){
 async function executeV67ReleaseStep(plan,step,env){
   const now=Math.floor(Date.now()/1000);const systemUser={id:String(plan.created_by||"release"),first_name:"Планировщик релиза"};
   if(step.action_type==="maintenance_on"){
-    const old=await getMaintenanceSettings(env);await env.DB.prepare(`UPDATE maintenance_settings SET full_closed=1,updated_at=?,updated_by=? WHERE id=1`).bind(now,`release:${plan.release_id}`).run();await recordV67SettingChange(env,systemUser,"maintenance","full_closed","release_enable",{enabled:old.fullClosed},{enabled:true});return {closed:true};
+    const old=await getMaintenanceSettings(env);await env.DB.prepare(`UPDATE maintenance_settings SET full_closed=1,updated_at=?,updated_by=? WHERE id=1`).bind(now,`release:${plan.release_id}`).run();invalidateMaintenanceSettingsCache();await recordV67SettingChange(env,systemUser,"maintenance","full_closed","release_enable",{enabled:old.fullClosed},{enabled:true});return {closed:true};
   }
   if(step.action_type==="integrity_check"){
     const result=await runGameIntegrityCheck(env);await env.DB.prepare(`INSERT INTO integrity_check_runs(status,result_json,created_by,created_at) VALUES(?,?,?,?)`).bind(result.ok?"ok":"failed",JSON.stringify(result),`release:${plan.release_id}`,result.createdAt).run();if(!result.ok)throw new Error(`Проверка не пройдена: ${result.errors} ошибок`);return {errors:result.errors,warnings:result.warnings};
   }
   if(step.action_type==="publish_ready_drafts")return publishV67ReadyDrafts(plan,env);
   if(step.action_type==="maintenance_off"){
-    const old=await getMaintenanceSettings(env);await env.DB.prepare(`UPDATE maintenance_settings SET full_closed=0,updated_at=?,updated_by=? WHERE id=1`).bind(now,`release:${plan.release_id}`).run();await recordV67SettingChange(env,systemUser,"maintenance","full_closed","release_disable",{enabled:old.fullClosed},{enabled:false});return {opened:true};
+    const old=await getMaintenanceSettings(env);await env.DB.prepare(`UPDATE maintenance_settings SET full_closed=0,updated_at=?,updated_by=? WHERE id=1`).bind(now,`release:${plan.release_id}`).run();invalidateMaintenanceSettingsCache();await recordV67SettingChange(env,systemUser,"maintenance","full_closed","release_disable",{enabled:old.fullClosed},{enabled:false});return {opened:true};
   }
   if(step.action_type==="notify_staff"){
     await notifySubscribedStaff(env,"bot_errors",`✅ <b>Релиз завершён</b>\n\n${escapeHtml(plan.title)}\nВремя: ${escapeHtml(formatUtcDate(now))}`);return {notified:true};
@@ -27826,7 +28023,7 @@ async function ownerPanelV8CreateRelease(env, ctx) {
 async function ownerPanelV8ReleaseState(env, ctx) {
   await ensureV67Schema(env);const releaseId=String(ctx.body?.releaseId||"").trim();const state=String(ctx.body?.state||"");if(!["paused","running","cancelled"].includes(state))throw new ApiError(400,"Неизвестный статус релиза.");const old=await env.DB.prepare(`SELECT * FROM release_plans WHERE release_id=? LIMIT 1`).bind(releaseId).first();if(!old)throw new ApiError(404,"План релиза не найден.");const now=Math.floor(Date.now()/1000);
   if(state==='running')await env.DB.prepare(`UPDATE release_steps SET status='pending',started_at=0,completed_at=0,error_text='' WHERE release_id=? AND status='failed'`).bind(releaseId).run();
-  if(state==='cancelled'){const m=await env.DB.prepare(`SELECT full_closed,updated_by FROM maintenance_settings WHERE id=1 LIMIT 1`).first();if(Number(m?.full_closed||0)===1&&String(m?.updated_by||'')===`release:${releaseId}`)await env.DB.prepare(`UPDATE maintenance_settings SET full_closed=0,updated_at=?,updated_by=? WHERE id=1`).bind(now,String(ctx.user.id)).run();}
+  if(state==='cancelled'){const m=await env.DB.prepare(`SELECT full_closed,updated_by FROM maintenance_settings WHERE id=1 LIMIT 1`).first();if(Number(m?.full_closed||0)===1&&String(m?.updated_by||'')===`release:${releaseId}`){await env.DB.prepare(`UPDATE maintenance_settings SET full_closed=0,updated_at=?,updated_by=? WHERE id=1`).bind(now,String(ctx.user.id)).run();invalidateMaintenanceSettingsCache();}}
   await env.DB.prepare(`UPDATE release_plans SET status=?,updated_at=?,last_error=CASE WHEN ?='running' THEN '' ELSE last_error END WHERE release_id=?`).bind(state,now,state,releaseId).run();await recordV67SettingChange(env,ctx.user,"release",releaseId,"state",{status:old.status},{status:state});await logStaffAction(env,ctx.user,ctx.access,"owner_panel_release_state",null,"release",null,null,{releaseId,before:old.status,after:state});return {ok:true};
 }
 
@@ -30804,7 +31001,8 @@ async function ownerPanelDeleteSeasonPassSeason(env, ctx) {
   if(ownedCase?.case_id){const ref=`${SEASON_PASS_SEASONAL_CASE_PREFIX}${String(ownedCase.case_id)}`;const rewardRefs=Number((await env.DB.prepare(`SELECT COUNT(*) AS count FROM season_pass_rewards WHERE season_id<>? AND reward_type='case' AND item_id=?`).bind(seasonId,ref).first())?.count||0);const grantRefs=Number((await env.DB.prepare(`SELECT COUNT(*) AS count FROM season_pass_case_grants WHERE case_id=?`).bind(String(ownedCase.case_id)).first())?.count||0);if(rewardRefs||grantRefs)throw new ApiError(409,"Сезонный кейс этого сезона уже используется в другом пропуске или выдан игрокам. Сначала уберите ссылки; выданные кейсы удалять нельзя.");}
   const playerCount=Number((await env.DB.prepare(`SELECT COUNT(*) AS count FROM season_pass_players WHERE season_id=?`).bind(seasonId).first())?.count||0);if(playerCount)throw new ApiError(409,"У сезона уже есть данные игроков, удаление запрещено.");
   await env.DB.batch([
-    env.DB.prepare(`DELETE FROM season_pass_task_claims WHERE season_id=?`).bind(seasonId),env.DB.prepare(`DELETE FROM season_pass_task_notifications WHERE season_id=?`).bind(seasonId),env.DB.prepare(`DELETE FROM season_pass_tasks WHERE season_id=?`).bind(seasonId),env.DB.prepare(`DELETE FROM season_pass_claims WHERE season_id=?`).bind(seasonId),env.DB.prepare(`DELETE FROM season_pass_rewards WHERE season_id=?`).bind(seasonId),env.DB.prepare(`DELETE FROM season_pass_entitlements WHERE season_id=?`).bind(seasonId),env.DB.prepare(`DELETE FROM season_pass_purchases WHERE season_id=?`).bind(seasonId),env.DB.prepare(`DELETE FROM season_pass_run_xp WHERE season_id=?`).bind(seasonId),env.DB.prepare(`DELETE FROM season_pass_activity_runs WHERE season_id=?`).bind(seasonId),env.DB.prepare(`DELETE FROM season_pass_story_progress WHERE season_id=?`).bind(seasonId),env.DB.prepare(`DELETE FROM season_pass_story_events WHERE season_id=?`).bind(seasonId),env.DB.prepare(`DELETE FROM season_pass_teaser_deliveries WHERE season_id=?`).bind(seasonId),env.DB.prepare(`DELETE FROM season_pass_teasers WHERE season_id=? OR target_season_id=?`).bind(seasonId,seasonId),env.DB.prepare(`DELETE FROM season_pass_case_items WHERE case_id IN (SELECT case_id FROM season_pass_case_definitions WHERE season_id=?)`).bind(seasonId),env.DB.prepare(`DELETE FROM season_pass_case_definitions WHERE season_id=?`).bind(seasonId),env.DB.prepare(`DELETE FROM season_pass_seasons WHERE season_id=?`).bind(seasonId)
+    env.DB.prepare(`DELETE FROM season_pass_task_claims WHERE season_id=?`).bind(seasonId),env.DB.prepare(`DELETE FROM season_pass_task_notifications WHERE season_id=?`).bind(seasonId),env.DB.prepare(`DELETE FROM season_pass_tasks WHERE season_id=?`).bind(seasonId),env.DB.prepare(`DELETE FROM season_pass_claims WHERE season_id=?`).bind(seasonId),env.DB.prepare(`DELETE FROM season_pass_rewards WHERE season_id=?`).bind(seasonId),env.DB.prepare(`DELETE FROM season_pass_entitlements WHERE season_id=?`).bind(seasonId),env.DB.prepare(`DELETE FROM season_pass_purchases WHERE season_id=?`).bind(seasonId),env.DB.prepare(`DELETE FROM season_pass_run_xp WHERE season_id=?`).bind(seasonId),env.DB.prepare(`DELETE FROM season_pass_activity_runs WHERE season_id=?`).bind(seasonId),
+    env.DB.prepare(`DELETE FROM season_pass_task_progress WHERE season_id=?`).bind(seasonId),env.DB.prepare(`DELETE FROM season_pass_story_progress WHERE season_id=?`).bind(seasonId),env.DB.prepare(`DELETE FROM season_pass_story_events WHERE season_id=?`).bind(seasonId),env.DB.prepare(`DELETE FROM season_pass_teaser_deliveries WHERE season_id=?`).bind(seasonId),env.DB.prepare(`DELETE FROM season_pass_teasers WHERE season_id=? OR target_season_id=?`).bind(seasonId,seasonId),env.DB.prepare(`DELETE FROM season_pass_case_items WHERE case_id IN (SELECT case_id FROM season_pass_case_definitions WHERE season_id=?)`).bind(seasonId),env.DB.prepare(`DELETE FROM season_pass_case_definitions WHERE season_id=?`).bind(seasonId),env.DB.prepare(`DELETE FROM season_pass_seasons WHERE season_id=?`).bind(seasonId)
   ]);
   await logStaffAction(env,ctx.user,ctx.access,"owner_panel_season_pass_delete",null,"season_pass",null,null,{seasonId,title:season.title});
   return {ok:true};
@@ -31029,7 +31227,8 @@ async function ownerPanelUpdateMaintenance(env, ctx) {
   const message=String(payload.message??before.message).trim().slice(0,500)||DEFAULT_MAINTENANCE_SETTINGS.message;
   const next={fullClosed:Boolean(payload.fullClosed),ratingDisabled:Boolean(payload.ratingDisabled),purchasesDisabled:Boolean(payload.purchasesDisabled),casesDisabled:Boolean(payload.casesDisabled),physicalRewardsDisabled:Boolean(payload.physicalRewardsDisabled),testersOnly:Boolean(payload.testersOnly),message};const now=Math.floor(Date.now()/1000);
   await env.DB.prepare(`UPDATE maintenance_settings SET full_closed=?,rating_disabled=?,purchases_disabled=?,cases_disabled=?,physical_rewards_disabled=?,testers_only=?,message=?,updated_at=?,updated_by=? WHERE id=1`).bind(next.fullClosed?1:0,next.ratingDisabled?1:0,next.purchasesDisabled?1:0,next.casesDisabled?1:0,next.physicalRewardsDisabled?1:0,next.testersOnly?1:0,next.message,now,String(ctx.user.id)).run();
-  maintenanceSettingsMemory={value:{...next,updatedAt:now,updatedBy:String(ctx.user.id)}};
+    invalidateMaintenanceSettingsCache();
+  maintenanceSettingsMemory={value:{...next,updatedAt:now,updatedBy:String(ctx.user.id)},expiresAt:Date.now()+MAINTENANCE_SETTINGS_CACHE_MS};
   try{await recordV67SettingChange(env,ctx.user,"maintenance","owner_panel","change",before,next);}catch(error){console.error("owner maintenance history failed",error);}
   await logStaffAction(env,ctx.user,ctx.access,"owner_panel_maintenance",null,"system",null,null,{before,after:next});
   return {ok:true,maintenance:{...next,updatedAt:now,updatedBy:String(ctx.user.id)}};

@@ -2893,7 +2893,16 @@ img[src$="/xp.webp"]{
     window.addEventListener("message", (event) => {
       if (event.source !== window.parent) return;
       const message = event.data;
-      if (!message || typeof message !== "object" || message.type !== "zefirok-host-viewport-changed") return;
+      if (!message || typeof message !== "object") return;
+      if (message.type === "zefirok-telegram-profile-data") {
+        const nextInitData = String(message.payload?.initData || "");
+        if (nextInitData) {
+          hostTelegramInitData = nextInitData;
+          try { sessionStorage.setItem("zefirok-telegram-init-data", nextInitData); } catch {}
+        }
+        return;
+      }
+      if (message.type !== "zefirok-host-viewport-changed") return;
       scheduleSeasonPassViewport(message.payload);
     });
     if (webApp?.onEvent) {
@@ -3045,12 +3054,13 @@ img[src$="/xp.webp"]{
 
   let serverPass = null;
   let serverLoading = false;
+  let hostTelegramInitData = "";
 
   async function seasonPassApi(path,payload={}) {
     const initData = await waitForTelegramInitData();
     if (!initData) throw new Error("Telegram не передал данные входа.");
     const controller = new AbortController();
-    const timer = setTimeout(()=>controller.abort(),20000);
+    const timer = setTimeout(()=>controller.abort(),7000);
     try {
       const response = await fetch(path,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({initData,...payload}),cache:"no-store",credentials:"same-origin",signal:controller.signal});
       const data = await response.json().catch(()=>({}));
@@ -3151,6 +3161,11 @@ img[src$="/xp.webp"]{
       try { sessionStorage.setItem("zefirok-telegram-init-data", direct); } catch {}
       return direct;
     }
+    const fromHost = String(hostTelegramInitData || "");
+    if (fromHost) {
+      try { sessionStorage.setItem("zefirok-telegram-init-data", fromHost); } catch {}
+      return fromHost;
+    }
 
     try {
       const hashParams = new URLSearchParams(String(location.hash || "").replace(/^#/, ""));
@@ -3166,7 +3181,7 @@ img[src$="/xp.webp"]{
     catch { return ""; }
   }
 
-  async function waitForTelegramInitData(timeoutMs = 1600) {
+  async function waitForTelegramInitData(timeoutMs = 650) {
     const startedAt = Date.now();
     let value = telegramInitData();
     while (!value && Date.now() - startedAt < timeoutMs) {
@@ -3307,7 +3322,7 @@ img[src$="/xp.webp"]{
     if (!initData) return {allowed:false,kind:"auth",error:"Telegram не передал данные входа. Закройте страницу и снова откройте сезонный пропуск из профиля."};
 
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 16000);
+    const timer = setTimeout(() => controller.abort(), 7000);
     try {
       const response = await fetch(ACCESS_PATH,{
         method:"POST",
