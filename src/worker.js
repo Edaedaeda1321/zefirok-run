@@ -24027,28 +24027,36 @@ function seasonPassSeasonalCaseStatus(definition, season, now=Math.floor(Date.no
 }
 
 async function ensureSeason3DraftSeasonalCase(env){
-  const now=Math.floor(Date.now()/1000);
-  const current=await env.DB.prepare(`SELECT season_id,title,starts_at,ends_at,manual_status FROM season_pass_seasons
-    WHERE manual_status='active' OR (manual_status='' AND starts_at<=? AND ends_at>?)
-    ORDER BY CASE WHEN manual_status='active' THEN 0 ELSE 1 END,starts_at DESC LIMIT 1`).bind(now,now).first();
-  const after=Number(current?.starts_at||now);
-  const target=await env.DB.prepare(`SELECT season_id,title,starts_at,ends_at,manual_status FROM season_pass_seasons
-    WHERE starts_at>? AND manual_status!='ended' ORDER BY starts_at ASC LIMIT 1`).bind(after).first();
-  if(!target?.season_id) return {ok:true,seeded:false,reason:'no-next-season'};
-
+  await env.DB.prepare(`CREATE TABLE IF NOT EXISTS season_pass_case_presets (preset_id TEXT PRIMARY KEY,season_id TEXT NOT NULL,seeded_at INTEGER NOT NULL,updated_by TEXT NOT NULL DEFAULT '')`).run();
+  const now=Math.floor(Date.now()/1000),presetId='season3_belkino_case_v1',marker=SEASON3_DRAFT_CASE_PRESET.marker;
+  let markerRow=await env.DB.prepare(`SELECT preset_id,season_id FROM season_pass_case_presets WHERE preset_id=? LIMIT 1`).bind(presetId).first();
+  if(!markerRow?.season_id){
+    const legacy=await env.DB.prepare(`SELECT season_id FROM season_pass_case_definitions WHERE updated_by=? ORDER BY updated_at ASC LIMIT 1`).bind(marker).first();
+    if(legacy?.season_id){
+      await env.DB.prepare(`INSERT OR IGNORE INTO season_pass_case_presets(preset_id,season_id,seeded_at,updated_by) VALUES(?,?,?,?)`).bind(presetId,String(legacy.season_id),now,marker).run();
+      markerRow={preset_id:presetId,season_id:String(legacy.season_id)};
+    }
+  }
+  let target=null;
+  if(markerRow?.season_id){
+    target=await env.DB.prepare(`SELECT season_id,title,starts_at,ends_at,manual_status FROM season_pass_seasons WHERE season_id=? LIMIT 1`).bind(String(markerRow.season_id)).first();
+    if(!target)return {ok:true,seeded:false,reason:'mapped-season-missing',seasonId:String(markerRow.season_id)};
+  }else{
+    const candidates=(await env.DB.prepare(`SELECT season_id,title,starts_at,ends_at,manual_status FROM season_pass_seasons ORDER BY starts_at ASC,season_id ASC LIMIT 50`).all()).results||[];
+    const norm=value=>String(value||'').trim().toLocaleLowerCase('ru-RU').replaceAll('ё','е');
+    target=candidates.find(row=>norm(row.title).includes(norm(FUTURE_SEASON_CONTENT_LABEL)))||null;
+    if(!target?.season_id)return {ok:true,seeded:false,reason:'belkino-season-not-created'};
+    await env.DB.prepare(`INSERT OR IGNORE INTO season_pass_case_presets(preset_id,season_id,seeded_at,updated_by) VALUES(?,?,?,?)`).bind(presetId,String(target.season_id),now,marker).run();
+  }
   const seasonId=String(target.season_id);
+  if(String(target.manual_status||'')==='ended')return {ok:true,seeded:false,reason:'mapped-season-ended',seasonId};
   await env.DB.prepare(`UPDATE season_pass_case_definitions SET title=?,description=CASE WHEN description='' OR description=? THEN ? ELSE description END,updated_at=? WHERE season_id=? AND title=?`)
     .bind(SEASON3_DRAFT_CASE_PRESET.title,'Косметика и музыка сезона «Лунный забег».',SEASON3_DRAFT_CASE_PRESET.description,now,seasonId,'Сезонный кейс · Лунный забег').run();
   const existing=await env.DB.prepare(`SELECT * FROM season_pass_case_definitions WHERE season_id=? LIMIT 1`).bind(seasonId).first();
   const existingCount=existing?.case_id?Number((await env.DB.prepare(`SELECT (SELECT COUNT(*) FROM season_pass_case_items WHERE case_id=?) + (SELECT COUNT(*) FROM season_pass_case_resource_items WHERE case_id=?) AS count`).bind(String(existing.case_id),String(existing.case_id)).first())?.count||0):0;
-  const marker=SEASON3_DRAFT_CASE_PRESET.marker;
-  // Never overwrite an owner-maintained case. An empty disabled placeholder is safe
-  // to fill, and our own preset can be refreshed idempotently on a cold start.
   const canSeed=!existing || String(existing.updated_by||'')===marker || (!Number(existing.enabled||0)&&existingCount===0);
-  if(!canSeed) return {ok:true,seeded:false,reason:'owner-case-exists',seasonId};
-
-  const caseId=String(existing?.case_id||seasonPassSeasonalCaseIdForSeason(seasonId));
-  const pool=season3DraftCasePool();
+  if(!canSeed)return {ok:true,seeded:false,reason:'owner-case-exists',seasonId};
+  const caseId=String(existing?.case_id||seasonPassSeasonalCaseIdForSeason(seasonId)),pool=season3DraftCasePool();
   const statements=[
     env.DB.prepare(`INSERT INTO season_pass_case_definitions(case_id,season_id,title,description,closed_image_url,open_image_url,slots,duplicate_points,enabled,release_at,updated_at,updated_by)
       VALUES(?,?,?,?,?,?,?,?,0,?,?,?)
@@ -24057,14 +24065,10 @@ async function ensureSeason3DraftSeasonalCase(env){
     env.DB.prepare(`DELETE FROM season_pass_case_items WHERE case_id=?`).bind(caseId),
     env.DB.prepare(`DELETE FROM season_pass_case_resource_items WHERE case_id=?`).bind(caseId)
   ];
-  for(const item of pool){
-    statements.push(env.DB.prepare(`INSERT INTO season_pass_case_items(case_id,item_key,reward_kind,item_id,weight,rarity,title,image_url,enabled) VALUES(?,?,?,?,?,?,?,?,1)`)
-      .bind(caseId,item.key,item.kind,item.itemId,item.weight,item.rarity,item.title,item.imageUrl));
-  }
+  for(const item of pool)statements.push(env.DB.prepare(`INSERT INTO season_pass_case_items(case_id,item_key,reward_kind,item_id,weight,rarity,title,image_url,enabled) VALUES(?,?,?,?,?,?,?,?,1)`).bind(caseId,item.key,item.kind,item.itemId,item.weight,item.rarity,item.title,item.imageUrl));
   await env.DB.batch(statements);
-  return {ok:true,seeded:true,seasonId,caseId,itemCount:pool.length};
+  return {ok:true,seeded:true,seasonId,caseId,itemCount:pool.length,presetId};
 }
-
 
 async function ensureSeason2StoryPreset(env){
   const presetId=SEASON2_STORY_PRESET.id;
@@ -30740,7 +30744,7 @@ async function ownerPanelFlashOfferAction(env, ctx) {
 
 
 
-// =================== TP 5.2 · QA REPRO & RELEASE REPORT ===================
+// =================== TP 5.3 · HIGH SAFETY ===================
 let ownerStagingSchemaPromise = null;
 const OWNER_STAGING_STAGEABLE = Object.freeze({
   "/api/owner/v9/game-config/draft":"game_config",
@@ -30781,6 +30785,9 @@ async function ensureOwnerStagingSchema(env){
         env.DB.prepare(`CREATE TABLE IF NOT EXISTS owner_staging_preferences (
           owner_telegram_id TEXT PRIMARY KEY,active_change_set_id TEXT NOT NULL DEFAULT '',staging_enabled INTEGER NOT NULL DEFAULT 0,updated_at INTEGER NOT NULL DEFAULT 0
         )`),
+        env.DB.prepare(`CREATE TABLE IF NOT EXISTS owner_staging_locks (
+          owner_telegram_id TEXT PRIMARY KEY,change_set_id TEXT NOT NULL,lock_token TEXT NOT NULL,lock_kind TEXT NOT NULL,acquired_at INTEGER NOT NULL,expires_at INTEGER NOT NULL
+        )`),
         env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_owner_staging_sets_owner ON owner_staging_change_sets(owner_telegram_id,updated_at DESC)`),
         env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_owner_staging_items_set ON owner_staging_items(change_set_id,status,updated_at DESC)`),
         env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_owner_staging_releases_set ON owner_staging_releases(change_set_id,created_at DESC)`)
@@ -30801,6 +30808,10 @@ function ownerStagingReleaseView(row){return {id:String(row?.release_id||''),cha
 async function ownerStagingPreference(env,ownerId){await ensureOwnerStagingSchema(env);let row=await env.DB.prepare(`SELECT * FROM owner_staging_preferences WHERE owner_telegram_id=? LIMIT 1`).bind(String(ownerId)).first();if(!row){await env.DB.prepare(`INSERT INTO owner_staging_preferences(owner_telegram_id,active_change_set_id,staging_enabled,updated_at) VALUES(?,'',0,?)`).bind(String(ownerId),Math.floor(Date.now()/1000)).run();row={owner_telegram_id:String(ownerId),active_change_set_id:'',staging_enabled:0};}return row;}
 async function ownerStagingSetCounts(env,setId){const rows=(await env.DB.prepare(`SELECT status,COUNT(*) AS count FROM owner_staging_items WHERE change_set_id=? GROUP BY status`).bind(String(setId)).all()).results||[];const counts={sandbox:0,ready:0,production:0,rolled_back:0,total:0};for(const row of rows){const key=ownerStagingStatus(row.status);counts[key]=Number(row.count||0);counts.total+=Number(row.count||0);}return counts;}
 async function ownerStagingLoadSet(env,ownerId,setId){const row=await env.DB.prepare(`SELECT * FROM owner_staging_change_sets WHERE change_set_id=? AND owner_telegram_id=? LIMIT 1`).bind(String(setId),String(ownerId)).first();if(!row)throw new ApiError(404,'Change Set не найден.');return row;}
+async function ownerStagingActiveLock(env,ownerId){await ensureOwnerStagingSchema(env);const now=Math.floor(Date.now()/1000);const row=await env.DB.prepare(`SELECT * FROM owner_staging_locks WHERE owner_telegram_id=? LIMIT 1`).bind(String(ownerId)).first();if(!row)return null;if(Number(row.expires_at||0)<=now){await env.DB.prepare(`DELETE FROM owner_staging_locks WHERE owner_telegram_id=? AND expires_at<=?`).bind(String(ownerId),now).run().catch(()=>{});return null;}return row;}
+async function ownerStagingAssertUnlocked(env,ownerId){const row=await ownerStagingActiveLock(env,ownerId);if(row)throw new ApiError(409,`Staging занят операцией ${String(row.lock_kind||'release')} для Change Set ${String(row.change_set_id||'')}. Дождитесь её завершения и обновите панель.`);}
+async function ownerStagingAcquireLock(env,ownerId,setId,kind='promote',ttlSeconds=240){await ensureOwnerStagingSchema(env);const now=Math.floor(Date.now()/1000),token=ownerStagingId('lock'),expiresAt=now+Math.max(30,Math.min(600,Math.floor(Number(ttlSeconds)||240)));await env.DB.prepare(`INSERT INTO owner_staging_locks(owner_telegram_id,change_set_id,lock_token,lock_kind,acquired_at,expires_at) VALUES(?,?,?,?,?,?) ON CONFLICT(owner_telegram_id) DO UPDATE SET change_set_id=excluded.change_set_id,lock_token=excluded.lock_token,lock_kind=excluded.lock_kind,acquired_at=excluded.acquired_at,expires_at=excluded.expires_at WHERE owner_staging_locks.expires_at<=excluded.acquired_at`).bind(String(ownerId),String(setId),token,String(kind),now,expiresAt).run();const row=await env.DB.prepare(`SELECT change_set_id,lock_token,lock_kind,expires_at FROM owner_staging_locks WHERE owner_telegram_id=? LIMIT 1`).bind(String(ownerId)).first();if(String(row?.lock_token||'')!==token)throw new ApiError(409,`Staging уже занят операцией ${String(row?.lock_kind||'release')} в другой вкладке. Повторите после её завершения.`);return token;}
+async function ownerStagingReleaseLock(env,ownerId,token){if(!token)return;await env.DB.prepare(`DELETE FROM owner_staging_locks WHERE owner_telegram_id=? AND lock_token=?`).bind(String(ownerId),String(token)).run().catch(()=>{});}
 
 function ownerStagingCanonical(value){
   const sortValue=(input)=>{
@@ -30858,10 +30869,10 @@ async function ownerStagingDescribe(env,endpoint,payload){
 }
 
 async function ownerPanelStagingBootstrap(env,ctx){await ensureOwnerStagingSchema(env);const ownerId=String(ctx.user.id),pref=await ownerStagingPreference(env,ownerId);const sets=(await env.DB.prepare(`SELECT * FROM owner_staging_change_sets WHERE owner_telegram_id=? ORDER BY CASE status WHEN 'sandbox' THEN 0 WHEN 'ready' THEN 1 WHEN 'partially_published' THEN 2 WHEN 'published' THEN 3 ELSE 4 END,updated_at DESC LIMIT 30`).bind(ownerId).all()).results||[];const views=[];for(const row of sets)views.push(ownerStagingSetView(row,await ownerStagingSetCounts(env,row.change_set_id)));let activeId=String(pref.active_change_set_id||'');if(activeId&&!sets.some(x=>String(x.change_set_id)===activeId))activeId='';const active=activeId?sets.find(x=>String(x.change_set_id)===activeId):null;const items=activeId?(await env.DB.prepare(`SELECT * FROM owner_staging_items WHERE change_set_id=? ORDER BY CASE status WHEN 'ready' THEN 0 WHEN 'sandbox' THEN 1 WHEN 'production' THEN 2 ELSE 3 END,updated_at DESC`).bind(activeId).all()).results||[]:[];const releases=activeId?(await env.DB.prepare(`SELECT * FROM owner_staging_releases WHERE change_set_id=? ORDER BY created_at DESC LIMIT 20`).bind(activeId).all()).results||[]:[];return {ok:true,enabled:Boolean(pref.staging_enabled),activeChangeSetId:activeId,activeChangeSet:active?ownerStagingSetView(active,await ownerStagingSetCounts(env,activeId)):null,changeSets:views,items:items.map(ownerStagingItemView),releases:releases.map(ownerStagingReleaseView),stageableEndpoints:Object.keys(OWNER_STAGING_STAGEABLE)};}
-async function ownerPanelStagingCreate(env,ctx){await ensureOwnerStagingSchema(env);const ownerId=String(ctx.user.id),title=String(ctx.body?.title||'').trim().slice(0,120);if(title.length<2)throw new ApiError(400,'Укажите название Change Set.');const now=Math.floor(Date.now()/1000),id=ownerStagingId('chg');await env.DB.batch([env.DB.prepare(`INSERT INTO owner_staging_change_sets(change_set_id,title,note,status,owner_telegram_id,base_captured_at,created_at,updated_at) VALUES(?,?,?,'sandbox',?,?,?,?)`).bind(id,title,String(ctx.body?.note||'').trim().slice(0,500),ownerId,now,now,now),env.DB.prepare(`INSERT INTO owner_staging_preferences(owner_telegram_id,active_change_set_id,staging_enabled,updated_at) VALUES(?,?,1,?) ON CONFLICT(owner_telegram_id) DO UPDATE SET active_change_set_id=excluded.active_change_set_id,staging_enabled=1,updated_at=excluded.updated_at`).bind(ownerId,id,now)]);await ownerPanelTestProjectAction(env,{...ctx,body:{action:'draft_clear'}});await logStaffAction(env,ctx.user,ctx.access,'owner_staging_create',null,'staging',null,null,{changeSetId:id,title});return ownerPanelStagingBootstrap(env,ctx);}
-async function ownerPanelStagingSelect(env,ctx){await ensureOwnerStagingSchema(env);const ownerId=String(ctx.user.id),id=String(ctx.body?.changeSetId||'');if(id)await ownerStagingLoadSet(env,ownerId,id);const now=Math.floor(Date.now()/1000),enabled=ctx.body?.enabled!==false;await env.DB.prepare(`INSERT INTO owner_staging_preferences(owner_telegram_id,active_change_set_id,staging_enabled,updated_at) VALUES(?,?,?,?) ON CONFLICT(owner_telegram_id) DO UPDATE SET active_change_set_id=excluded.active_change_set_id,staging_enabled=excluded.staging_enabled,updated_at=excluded.updated_at`).bind(ownerId,id,enabled?1:0,now).run();if(id)return ownerPanelStagingApplyToTest(env,{...ctx,body:{changeSetId:id}});await ownerPanelTestProjectAction(env,{...ctx,body:{action:'draft_clear'}});return ownerPanelStagingBootstrap(env,ctx);}
-async function ownerPanelStagingToggle(env,ctx){await ensureOwnerStagingSchema(env);const ownerId=String(ctx.user.id),pref=await ownerStagingPreference(env,ownerId),enabled=Boolean(ctx.body?.enabled);if(enabled&&!String(pref.active_change_set_id||''))throw new ApiError(409,'Сначала создайте или выберите Change Set.');await env.DB.prepare(`UPDATE owner_staging_preferences SET staging_enabled=?,updated_at=? WHERE owner_telegram_id=?`).bind(enabled?1:0,Math.floor(Date.now()/1000),ownerId).run();return ownerPanelStagingBootstrap(env,ctx);}
-async function ownerPanelStagingStage(env,ctx){await ensureOwnerStagingSchema(env);const ownerId=String(ctx.user.id),setId=String(ctx.body?.changeSetId||'').trim(),endpoint=String(ctx.body?.endpoint||'').trim();if(!setId)throw new ApiError(409,'Change Set не выбран.');const setRow=await ownerStagingLoadSet(env,ownerId,setId);if(['published','archived'].includes(String(setRow.status)))throw new ApiError(409,'Этот Change Set уже закрыт для новых изменений.');const desc=await ownerStagingDescribe(env,endpoint,ctx.body?.payload||{});const now=Math.floor(Date.now()/1000),existing=await env.DB.prepare(`SELECT * FROM owner_staging_items WHERE change_set_id=? AND item_key=? LIMIT 1`).bind(setId,desc.key).first(),id=String(existing?.item_id||ownerStagingId('sti')),refreshBaseline=!existing||['production','rolled_back'].includes(String(existing?.status||'')),before=refreshBaseline?JSON.stringify(desc.before):String(existing.before_json||'{}');await env.DB.prepare(`INSERT INTO owner_staging_items(item_id,change_set_id,item_key,kind,title,endpoint,payload_json,before_json,after_json,tp_kind,status,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?, 'sandbox',?,?) ON CONFLICT(change_set_id,item_key) DO UPDATE SET kind=excluded.kind,title=excluded.title,endpoint=excluded.endpoint,payload_json=excluded.payload_json,before_json=CASE WHEN owner_staging_items.status IN ('production','rolled_back') THEN excluded.before_json ELSE owner_staging_items.before_json END,after_json=excluded.after_json,tp_kind=excluded.tp_kind,status=CASE WHEN owner_staging_items.status IN ('production','rolled_back') THEN 'sandbox' ELSE owner_staging_items.status END,updated_at=excluded.updated_at,rolled_back_at=0,published_at=CASE WHEN owner_staging_items.status IN ('production','rolled_back') THEN 0 ELSE owner_staging_items.published_at END,release_id=CASE WHEN owner_staging_items.status IN ('production','rolled_back') THEN '' ELSE owner_staging_items.release_id END`).bind(id,setId,desc.key,desc.tpKind,desc.title,endpoint,JSON.stringify(desc.payload),before,JSON.stringify(desc.after),desc.tpKind,Number(existing?.created_at||now),now).run();await env.DB.prepare(`UPDATE owner_staging_change_sets SET status='sandbox',updated_at=?,published_at=CASE WHEN status='published' THEN published_at ELSE published_at END WHERE change_set_id=?`).bind(now,setId).run();await ownerPanelStagingApplyToTest(env,{...ctx,body:{changeSetId:setId}});await logStaffAction(env,ctx.user,ctx.access,'owner_staging_item_stage',null,'staging',null,null,{changeSetId:setId,itemId:id,key:desc.key,title:desc.title,endpoint});const result=await ownerPanelStagingBootstrap(env,ctx);return {...result,staged:true,itemId:id,itemTitle:desc.title,changeSetTitle:String(setRow.title||'Change Set')};}
+async function ownerPanelStagingCreate(env,ctx){await ensureOwnerStagingSchema(env);const ownerId=String(ctx.user.id);await ownerStagingAssertUnlocked(env,ownerId);const title=String(ctx.body?.title||'').trim().slice(0,120);if(title.length<2)throw new ApiError(400,'Укажите название Change Set.');const now=Math.floor(Date.now()/1000),id=ownerStagingId('chg');await env.DB.batch([env.DB.prepare(`INSERT INTO owner_staging_change_sets(change_set_id,title,note,status,owner_telegram_id,base_captured_at,created_at,updated_at) VALUES(?,?,?,'sandbox',?,?,?,?)`).bind(id,title,String(ctx.body?.note||'').trim().slice(0,500),ownerId,now,now,now),env.DB.prepare(`INSERT INTO owner_staging_preferences(owner_telegram_id,active_change_set_id,staging_enabled,updated_at) VALUES(?,?,1,?) ON CONFLICT(owner_telegram_id) DO UPDATE SET active_change_set_id=excluded.active_change_set_id,staging_enabled=1,updated_at=excluded.updated_at`).bind(ownerId,id,now)]);await ownerPanelTestProjectAction(env,{...ctx,body:{action:'draft_clear'}});await logStaffAction(env,ctx.user,ctx.access,'owner_staging_create',null,'staging',null,null,{changeSetId:id,title});return ownerPanelStagingBootstrap(env,ctx);}
+async function ownerPanelStagingSelect(env,ctx){await ensureOwnerStagingSchema(env);const ownerId=String(ctx.user.id);await ownerStagingAssertUnlocked(env,ownerId);const id=String(ctx.body?.changeSetId||'');if(id)await ownerStagingLoadSet(env,ownerId,id);const now=Math.floor(Date.now()/1000),enabled=ctx.body?.enabled!==false;await env.DB.prepare(`INSERT INTO owner_staging_preferences(owner_telegram_id,active_change_set_id,staging_enabled,updated_at) VALUES(?,?,?,?) ON CONFLICT(owner_telegram_id) DO UPDATE SET active_change_set_id=excluded.active_change_set_id,staging_enabled=excluded.staging_enabled,updated_at=excluded.updated_at`).bind(ownerId,id,enabled?1:0,now).run();if(id)return ownerPanelStagingApplyToTest(env,{...ctx,body:{changeSetId:id}});await ownerPanelTestProjectAction(env,{...ctx,body:{action:'draft_clear'}});return ownerPanelStagingBootstrap(env,ctx);}
+async function ownerPanelStagingToggle(env,ctx){await ensureOwnerStagingSchema(env);const ownerId=String(ctx.user.id);await ownerStagingAssertUnlocked(env,ownerId);const pref=await ownerStagingPreference(env,ownerId),enabled=Boolean(ctx.body?.enabled);if(enabled&&!String(pref.active_change_set_id||''))throw new ApiError(409,'Сначала создайте или выберите Change Set.');await env.DB.prepare(`UPDATE owner_staging_preferences SET staging_enabled=?,updated_at=? WHERE owner_telegram_id=?`).bind(enabled?1:0,Math.floor(Date.now()/1000),ownerId).run();return ownerPanelStagingBootstrap(env,ctx);}
+async function ownerPanelStagingStage(env,ctx){await ensureOwnerStagingSchema(env);const ownerId=String(ctx.user.id),setId=String(ctx.body?.changeSetId||'').trim(),endpoint=String(ctx.body?.endpoint||'').trim();if(!setId)throw new ApiError(409,'Change Set не выбран.');const setRow=await ownerStagingLoadSet(env,ownerId,setId);await ownerStagingAssertUnlocked(env,ownerId);if(['published','archived'].includes(String(setRow.status)))throw new ApiError(409,'Этот Change Set уже закрыт для новых изменений.');const desc=await ownerStagingDescribe(env,endpoint,ctx.body?.payload||{});const now=Math.floor(Date.now()/1000),existing=await env.DB.prepare(`SELECT * FROM owner_staging_items WHERE change_set_id=? AND item_key=? LIMIT 1`).bind(setId,desc.key).first(),id=String(existing?.item_id||ownerStagingId('sti')),refreshBaseline=!existing||['production','rolled_back'].includes(String(existing?.status||'')),before=refreshBaseline?JSON.stringify(desc.before):String(existing.before_json||'{}');await env.DB.prepare(`INSERT INTO owner_staging_items(item_id,change_set_id,item_key,kind,title,endpoint,payload_json,before_json,after_json,tp_kind,status,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?, 'sandbox',?,?) ON CONFLICT(change_set_id,item_key) DO UPDATE SET kind=excluded.kind,title=excluded.title,endpoint=excluded.endpoint,payload_json=excluded.payload_json,before_json=CASE WHEN owner_staging_items.status IN ('production','rolled_back') THEN excluded.before_json ELSE owner_staging_items.before_json END,after_json=excluded.after_json,tp_kind=excluded.tp_kind,status=CASE WHEN owner_staging_items.status IN ('production','rolled_back','ready') THEN 'sandbox' ELSE owner_staging_items.status END,updated_at=excluded.updated_at,rolled_back_at=0,published_at=CASE WHEN owner_staging_items.status IN ('production','rolled_back') THEN 0 ELSE owner_staging_items.published_at END,release_id=CASE WHEN owner_staging_items.status IN ('production','rolled_back') THEN '' ELSE owner_staging_items.release_id END`).bind(id,setId,desc.key,desc.tpKind,desc.title,endpoint,JSON.stringify(desc.payload),before,JSON.stringify(desc.after),desc.tpKind,Number(existing?.created_at||now),now).run();await env.DB.prepare(`UPDATE owner_staging_change_sets SET status='sandbox',ready_at=0,updated_at=? WHERE change_set_id=?`).bind(now,setId).run();await ownerPanelStagingApplyToTest(env,{...ctx,body:{changeSetId:setId}});await logStaffAction(env,ctx.user,ctx.access,'owner_staging_item_stage',null,'staging',null,null,{changeSetId:setId,itemId:id,key:desc.key,title:desc.title,endpoint,readyReset:Boolean(existing&&String(existing.status)==='ready')});const result=await ownerPanelStagingBootstrap(env,ctx);return {...result,staged:true,itemId:id,itemTitle:desc.title,changeSetTitle:String(setRow.title||'Change Set'),readyReset:Boolean(existing&&String(existing.status)==='ready')};}
 async function ownerPanelStagingItemStatus(env,ctx){
   await ensureOwnerStagingSchema(env);
   const ownerId=String(ctx.user.id),ids=testProjectArray(ctx.body?.itemIds,100),status=String(ctx.body?.status)==='ready'?'ready':'sandbox';
@@ -30871,6 +30882,7 @@ async function ownerPanelStagingItemStatus(env,ctx){
     const row=await env.DB.prepare(`SELECT i.* FROM owner_staging_items i JOIN owner_staging_change_sets s ON s.change_set_id=i.change_set_id WHERE i.item_id=? AND s.owner_telegram_id=? LIMIT 1`).bind(id,ownerId).first();
     if(row&&!['production','rolled_back'].includes(String(row.status)))rows.push(row);
   }
+  await ownerStagingAssertUnlocked(env,ownerId);
   if(status==='ready'){
     const conflicts=[];
     for(const row of rows){const check=await ownerStagingConflict(env,row);if(check.conflict)conflicts.push(check);}
@@ -30882,35 +30894,60 @@ async function ownerPanelStagingItemStatus(env,ctx){
   if(pref.active_change_set_id){const counts=await ownerStagingSetCounts(env,pref.active_change_set_id),setStatus=counts.ready>0&&counts.sandbox===0?'ready':'sandbox';await env.DB.prepare(`UPDATE owner_staging_change_sets SET status=?,ready_at=?,updated_at=? WHERE change_set_id=?`).bind(setStatus,setStatus==='ready'?now:0,now,String(pref.active_change_set_id)).run();}
   return ownerPanelStagingBootstrap(env,ctx);
 }
-async function ownerPanelStagingItemDelete(env,ctx){await ensureOwnerStagingSchema(env);const ownerId=String(ctx.user.id),itemId=String(ctx.body?.itemId||'');const row=await env.DB.prepare(`SELECT i.* FROM owner_staging_items i JOIN owner_staging_change_sets s ON s.change_set_id=i.change_set_id WHERE i.item_id=? AND s.owner_telegram_id=? LIMIT 1`).bind(itemId,ownerId).first();if(!row)throw new ApiError(404,'Изменение не найдено.');if(String(row.status)==='production')throw new ApiError(409,'Опубликованное изменение сначала нужно откатить.');await env.DB.prepare(`DELETE FROM owner_staging_items WHERE item_id=?`).bind(itemId).run();const counts=await ownerStagingSetCounts(env,String(row.change_set_id)),setStatus=counts.total>0&&counts.production===counts.total?'published':counts.production>0?'partially_published':counts.ready>0&&counts.sandbox===0?'ready':'sandbox';await env.DB.prepare(`UPDATE owner_staging_change_sets SET status=?,updated_at=? WHERE change_set_id=?`).bind(setStatus,Math.floor(Date.now()/1000),String(row.change_set_id)).run();await ownerPanelStagingApplyToTest(env,{...ctx,body:{changeSetId:String(row.change_set_id)}});return ownerPanelStagingBootstrap(env,ctx);}
+async function ownerPanelStagingItemDelete(env,ctx){await ensureOwnerStagingSchema(env);const ownerId=String(ctx.user.id),itemId=String(ctx.body?.itemId||'');const row=await env.DB.prepare(`SELECT i.* FROM owner_staging_items i JOIN owner_staging_change_sets s ON s.change_set_id=i.change_set_id WHERE i.item_id=? AND s.owner_telegram_id=? LIMIT 1`).bind(itemId,ownerId).first();if(!row)throw new ApiError(404,'Изменение не найдено.');await ownerStagingAssertUnlocked(env,ownerId);if(String(row.status)==='production')throw new ApiError(409,'Опубликованное изменение сначала нужно откатить.');await env.DB.prepare(`DELETE FROM owner_staging_items WHERE item_id=?`).bind(itemId).run();const counts=await ownerStagingSetCounts(env,String(row.change_set_id)),setStatus=counts.total>0&&counts.production===counts.total?'published':counts.production>0?'partially_published':counts.ready>0&&counts.sandbox===0?'ready':'sandbox';await env.DB.prepare(`UPDATE owner_staging_change_sets SET status=?,updated_at=? WHERE change_set_id=?`).bind(setStatus,Math.floor(Date.now()/1000),String(row.change_set_id)).run();await ownerPanelStagingApplyToTest(env,{...ctx,body:{changeSetId:String(row.change_set_id)}});return ownerPanelStagingBootstrap(env,ctx);}
 async function ownerPanelStagingApplyToTest(env,ctx){await ensureOwnerStagingSchema(env);const ownerId=String(ctx.user.id),setId=String(ctx.body?.changeSetId||'').trim();await ownerStagingLoadSet(env,ownerId,setId);const rows=(await env.DB.prepare(`SELECT * FROM owner_staging_items WHERE change_set_id=? AND status IN ('sandbox','ready') ORDER BY created_at,item_id`).bind(setId).all()).results||[];await ownerPanelTestProjectAction(env,{...ctx,body:{action:'draft_clear'}});for(const row of rows){await ownerPanelTestProjectStageDraft(env,{...ctx,body:{kind:String(row.tp_kind||row.kind),payload:ownerStagingJson(row.payload_json,{})}});}return {ok:true,applied:rows.length,...await ownerPanelStagingBootstrap(env,ctx)};}
+
+async function ownerStagingAffectedSeasonIds(env,rows){
+  const ids=new Set(),caseToSeason=new Map();
+  for(const row of rows||[]){
+    const value=ownerStagingJson(row?.payload_json,{}),kind=String(row?.kind||row?.tp_kind||'');
+    const direct=String(value.seasonId||'').trim();if(direct)ids.add(direct);
+    if(kind==='live_content'&&String(value.destinationType||'')==='season_pass'&&String(value.destinationId||''))ids.add(String(value.destinationId));
+    if(kind==='seasonal_case'&&String(value.caseId||''))caseToSeason.set(String(value.caseId),String(value.seasonId||''));
+  }
+  for(const row of rows||[]){
+    const value=ownerStagingJson(row?.payload_json,{}),kind=String(row?.kind||row?.tp_kind||'');
+    if(kind!=='live_content'||String(value.destinationType||'')!=='seasonal_case'||!String(value.destinationId||''))continue;
+    const caseId=String(value.destinationId),staged=caseToSeason.get(caseId);if(staged){ids.add(staged);continue;}
+    const found=await env.DB.prepare(`SELECT season_id FROM season_pass_case_definitions WHERE case_id=? LIMIT 1`).bind(caseId).first().catch(()=>null);if(found?.season_id)ids.add(String(found.season_id));
+  }
+  return [...ids].filter(Boolean);
+}
+function ownerStagingCombinedGate(gates){
+  const list=(gates||[]).filter(Boolean),checks=[],summary={pass:0,warn:0,fail:0,total:0};
+  for(const entry of list){const gate=entry.gate||{},label=entry.seasonId?` · ${entry.seasonTitle||entry.seasonId}`:'';for(const check of gate.checks||[])checks.push({...check,title:`${check.title}${label}`,seasonId:entry.seasonId||''});const s=gate.summary||{};summary.pass+=Number(s.pass||0);summary.warn+=Number(s.warn||0);summary.fail+=Number(s.fail||0);summary.total+=Number(s.total||0);}
+  const status=summary.fail?'fail':summary.warn?'review':'pass';return {ok:true,status,ready:summary.fail===0,summary,checks,multiSeason:list.length>1,seasons:list.map(entry=>({seasonId:entry.seasonId||'',seasonTitle:entry.seasonTitle||'',status:String(entry.gate?.status||'review'),summary:entry.gate?.summary||{}})),checkedAt:Date.now(),fullAssets:list.some(entry=>Boolean(entry.gate?.fullAssets))};
+}
 
 async function ownerStagingDryRunCore(env,ctx,{changeSetId='',itemIds=[],fullAssets=true,seasonId=''}={}){
   const started=Date.now();
   await ensureOwnerStagingSchema(env);
-  const ownerId=String(ctx.user.id),setId=String(changeSetId||'').trim(),ids=testProjectArray(itemIds,100);
-  const setRow=await ownerStagingLoadSet(env,ownerId,setId);
+  const ownerId=String(ctx.user.id),setId=String(changeSetId||'').trim(),ids=testProjectArray(itemIds,100),setRow=await ownerStagingLoadSet(env,ownerId,setId);
   let rows=[];
   if(ids.length){const placeholders=ids.map(()=>'?').join(',');rows=(await env.DB.prepare(`SELECT * FROM owner_staging_items WHERE change_set_id=? AND item_id IN (${placeholders}) ORDER BY created_at,item_id`).bind(setId,...ids).all()).results||[];}
   else rows=(await env.DB.prepare(`SELECT * FROM owner_staging_items WHERE change_set_id=? AND status='ready' ORDER BY created_at,item_id`).bind(setId).all()).results||[];
-  const checks=[],conflicts=[];
-  const requested=ids.length?ids.length:rows.length;
-  const selectionOk=rows.length===requested&&rows.length>0;
+  const checks=[],conflicts=[],requested=ids.length?ids.length:rows.length,selectionOk=rows.length===requested&&rows.length>0;
   checks.push({key:'selection',status:selectionOk?'pass':'fail',title:'Выбор изменений',message:selectionOk?`${rows.length} изменений найдено.`:'Часть выбранных изменений не найдена или список пуст.'});
-  const notReady=rows.filter(r=>String(r.status)!=='ready');
-  checks.push({key:'ready',status:notReady.length?'fail':'pass',title:'Статус READY',message:notReady.length?`${notReady.length} изменений ещё не READY.`:'Все выбранные изменения имеют READY.'});
+  const notReady=rows.filter(r=>String(r.status)!=='ready');checks.push({key:'ready',status:notReady.length?'fail':'pass',title:'Статус READY',message:notReady.length?`${notReady.length} изменений ещё не READY.`:'Все выбранные изменения имеют READY.'});
   for(const row of rows){const c=await ownerStagingConflict(env,row);if(c.conflict)conflicts.push(c);}
   checks.push({key:'stale',status:conflicts.length?'fail':'pass',title:'Production baseline',message:conflicts.length?`Production изменился для ${conflicts.length} пунктов после фиксации baseline.`:'Конфликтов с текущим Production нет.'});
-  let hardFail=!selectionOk||notReady.length>0||conflicts.length>0,gate={status:'skipped',checks:[]};
+  let hardFail=!selectionOk||notReady.length>0||conflicts.length>0,gate={status:'skipped',checks:[]},seasonIds=[];
   if(!hardFail){
     await ownerPanelStagingApplyToTest(env,{...ctx,body:{changeSetId:setId}});
-    gate=await ownerPanelTestProjectReleaseGate(env,{...ctx,body:{fullAssets:fullAssets!==false,seasonId:String(seasonId||'')}});
-    const gs=String(gate?.status||'review').toLowerCase();
-    checks.push({key:'release_gate',status:gs==='pass'?'pass':gs==='fail'?'fail':'warn',title:'Release Gate',message:gs==='pass'?'Release Gate пройден.':`Release Gate: ${gs.toUpperCase()}.`});
+    seasonIds=await ownerStagingAffectedSeasonIds(env,rows);
+    if(!seasonIds.length&&String(seasonId||'').trim())seasonIds=[String(seasonId).trim()];
+    if(seasonIds.length){
+      const gates=[];
+      for(let index=0;index<seasonIds.length;index+=1){const id=seasonIds[index],single=await ownerPanelTestProjectReleaseGate(env,{...ctx,body:{fullAssets:fullAssets!==false,seasonId:id}});gates.push({seasonId:id,seasonTitle:String(single?.seasonTitle||single?.groups?.season?.title||''),gate:single});}
+      gate=ownerStagingCombinedGate(gates);
+      checks.push({key:'release_gate',status:gate.status==='pass'?'pass':gate.status==='fail'?'fail':'warn',title:'Release Gate',message:gate.status==='pass'?`Release Gate пройден для ${seasonIds.length} сезон(ов).`:`Release Gate ${String(gate.status).toUpperCase()} для ${seasonIds.length} сезон(ов): ${gate.seasons.map(x=>`${x.seasonTitle||x.seasonId}=${String(x.status).toUpperCase()}`).join(' · ')}`});
+    }else{
+      gate=await ownerPanelTestProjectReleaseGate(env,{...ctx,body:{fullAssets:fullAssets!==false,seasonId:''}});
+      const gs=String(gate?.status||'review').toLowerCase();checks.push({key:'release_gate',status:gs==='pass'?'pass':gs==='fail'?'fail':'warn',title:'Release Gate',message:gs==='pass'?'Release Gate пройден.':`Release Gate: ${gs.toUpperCase()}.`});
+    }
   }else checks.push({key:'release_gate',status:'skip',title:'Release Gate',message:'Не запускался: сначала устраните блокирующие конфликты.'});
-  const gateStatus=String(gate?.status||'skipped').toLowerCase();
-  const status=hardFail?'fail':gateStatus==='pass'?'pass':gateStatus==='fail'?'fail':'warn';
-  return {ok:true,dryRun:true,productionUntouched:true,status,hardFail,overrideAllowed:!hardFail&&gateStatus!=='pass',canPromote:!hardFail&&gateStatus==='pass',changeSet:{id:setId,title:String(setRow.title||'')},selected:rows.map(r=>({id:String(r.item_id),title:String(r.title||''),key:String(r.item_key||''),kind:String(r.kind||''),status:String(r.status||'')})),checks,conflicts,gate,durationMs:Date.now()-started};
+  const gateStatus=String(gate?.status||'skipped').toLowerCase(),status=hardFail?'fail':gateStatus==='pass'?'pass':gateStatus==='fail'?'fail':'warn';
+  return {ok:true,dryRun:true,productionUntouched:true,status,hardFail,overrideAllowed:!hardFail&&gateStatus!=='pass',canPromote:!hardFail&&gateStatus==='pass',changeSet:{id:setId,title:String(setRow.title||'')},selected:rows.map(r=>({id:String(r.item_id),title:String(r.title||''),key:String(r.item_key||''),kind:String(r.kind||''),status:String(r.status||'')})),checks,conflicts,gate,seasonIds,durationMs:Date.now()-started};
 }
 async function ownerPanelStagingDryRun(env,ctx){return ownerStagingDryRunCore(env,ctx,{changeSetId:String(ctx.body?.changeSetId||''),itemIds:ctx.body?.itemIds,fullAssets:ctx.body?.fullAssets!==false,seasonId:String(ctx.body?.seasonId||'')});}
 async function ownerStagingRollbackApplied(env,ctx,applied){
@@ -30923,7 +30960,7 @@ async function ownerStagingRollbackApplied(env,ctx,applied){
 }
 
 async function ownerStagingDispatchProduction(env,ctx,endpoint,payload){
-  if(endpoint==='/api/owner/v9/game-config/draft'){await ownerPanelV9GameConfigDraft(env,{...ctx,body:{config:payload.config||payload}});return ownerPanelV9GameConfigPublish(env,{...ctx,body:{reason:'TP 5.2 · Safe Promote from Change Set'}});}
+  if(endpoint==='/api/owner/v9/game-config/draft'){await ownerPanelV9GameConfigDraft(env,{...ctx,body:{config:payload.config||payload}});return ownerPanelV9GameConfigPublish(env,{...ctx,body:{reason:'TP 5.3 · Safe Promote from Change Set'}});}
   if(endpoint==='/api/owner/cases/save')return ownerPanelSaveCase(env,{...ctx,body:payload});
   if(endpoint==='/api/owner/cases/content/save')return ownerPanelSaveCaseContent(env,{...ctx,body:payload});
   if(endpoint==='/api/owner/season-pass/reward')return ownerPanelSetSeasonPassReward(env,{...ctx,body:payload});
@@ -30949,51 +30986,63 @@ async function ownerPanelStagingPromote(env,ctx){
   await ensureOwnerStagingSchema(env);
   const ownerId=String(ctx.user.id),setId=String(ctx.body?.changeSetId||''),ids=testProjectArray(ctx.body?.itemIds,100);
   if(!ids.length)throw new ApiError(400,'Выберите изменение для Production.');
-  if(ids.length!==1)throw new ApiError(409,'Safe Promote теперь выполняет ровно одно изменение за раз. Это убирает риск частично опубликованного пакета. Опубликуйте READY-пункты по одному.');
-  const setRow=await ownerStagingLoadSet(env,ownerId,setId);
-  const dry=await ownerStagingDryRunCore(env,ctx,{changeSetId:setId,itemIds:ids,fullAssets:ctx.body?.fullAssets!==false,seasonId:String(ctx.body?.seasonId||'')});
-  if(dry.hardFail){const titles=(dry.conflicts||[]).slice(0,3).map(x=>x.title).join(', ');throw new ApiError(409,`Safe Promotion заблокирован: Production изменился или набор READY некорректен.${titles?` Конфликты: ${titles}.`:''} Запусти Dry Run и пересобери конфликтующие пункты на свежем Production.`);}
-  if(String(dry.gate?.status||'review')!=='pass'&&!ctx.body?.override)throw new ApiError(409,`Release Gate: ${String(dry.gate?.status||'review').toUpperCase()}. Исправьте замечания или подтвердите ручной owner override.`);
-  const placeholders=ids.map(()=>'?').join(','),rows=(await env.DB.prepare(`SELECT * FROM owner_staging_items WHERE change_set_id=? AND item_id IN (${placeholders}) ORDER BY created_at,item_id`).bind(setId,...ids).all()).results||[];
-  if(rows.length!==ids.length||rows.some(r=>String(r.status)!=='ready'))throw new ApiError(409,'Состав Change Set изменился после Dry Run. Обновите Staging и повторите.');
-  const releaseId=ownerStagingId('rel'),now=Math.floor(Date.now()/1000),applied=[];let releaseReport=null;
+  if(ids.length!==1)throw new ApiError(409,'Safe Promote выполняет ровно одно изменение за раз. Опубликуйте READY-пункты по одному.');
+  const setRow=await ownerStagingLoadSet(env,ownerId,setId),lockToken=await ownerStagingAcquireLock(env,ownerId,setId,'promote',300);
   try{
-    for(const row of rows){
-      const entry={row,beforeJson:String(row.before_json||'{}')};
-      applied.push(entry);
-      const prodResult=await ownerStagingDispatchProduction(env,ctx,String(row.endpoint),ownerStagingJson(row.payload_json,{}));
-      const beforeObj=ownerStagingJson(entry.beforeJson,{});
+    const dry=await ownerStagingDryRunCore(env,ctx,{changeSetId:setId,itemIds:ids,fullAssets:ctx.body?.fullAssets!==false,seasonId:String(ctx.body?.seasonId||'')});
+    if(dry.hardFail){const titles=(dry.conflicts||[]).slice(0,3).map(x=>x.title).join(', ');throw new ApiError(409,`Safe Promotion заблокирован: Production изменился или набор READY некорректен.${titles?` Конфликты: ${titles}.`:''} Запусти Dry Run и пересобери конфликтующие пункты на свежем Production.`);}
+    if(String(dry.gate?.status||'review')!=='pass'&&!ctx.body?.override)throw new ApiError(409,`Release Gate: ${String(dry.gate?.status||'review').toUpperCase()}. Исправьте замечания или подтвердите ручной owner override.`);
+    const rows=(await env.DB.prepare(`SELECT * FROM owner_staging_items WHERE change_set_id=? AND item_id=? LIMIT 1`).bind(setId,String(ids[0])).all()).results||[];
+    if(rows.length!==1||String(rows[0].status)!=='ready')throw new ApiError(409,'Состав Change Set изменился после Dry Run. Обновите Staging и повторите.');
+    const finalConflict=await ownerStagingConflict(env,rows[0]);if(finalConflict.conflict)throw new ApiError(409,'Production изменился после Dry Run. Promote остановлен до повторной проверки на свежем baseline.');
+    const releaseId=ownerStagingId('rel'),now=Math.floor(Date.now()/1000),applied=[];let releaseReport=null;
+    try{
+      const row=rows[0],entry={row,beforeJson:String(row.before_json||'{}')};applied.push(entry);
+      const prodResult=await ownerStagingDispatchProduction(env,ctx,String(row.endpoint),ownerStagingJson(row.payload_json,{})),beforeObj=ownerStagingJson(entry.beforeJson,{});
       if(beforeObj?._missing&&String(row.endpoint)==='/api/owner/season-pass/task/save'&&prodResult?.task?.id)entry.beforeJson=JSON.stringify({...beforeObj,taskId:String(prodResult.task.id)});
       if(beforeObj?._missing&&String(row.endpoint)==='/api/owner/offers/save'&&prodResult?.offerId)entry.beforeJson=JSON.stringify({...beforeObj,offerId:String(prodResult.offerId)});
       if(beforeObj?._missing&&String(row.endpoint)==='/api/owner/season-pass/create'&&prodResult?.season?.id)entry.beforeJson=JSON.stringify({...beforeObj,seasonId:String(prodResult.season.id)});
+      const all=(await env.DB.prepare(`SELECT item_id,status FROM owner_staging_items WHERE change_set_id=?`).bind(setId).all()).results||[],selected=new Set(ids);let sandbox=0,ready=0,production=0;
+      for(const item of all){const st=selected.has(String(item.item_id))?'production':ownerStagingStatus(item.status);if(st==='sandbox')sandbox++;else if(st==='ready')ready++;else if(st==='production')production++;}
+      const total=all.length,setStatus=total>0&&production===total?'published':production>0?'partially_published':ready>0&&sandbox===0?'ready':'sandbox';
+      releaseReport=ownerStagingReleaseReport(setRow,rows,dry,releaseId,now);
+      const gateRecord={status:String(dry.status||'pass'),releaseGate:dry.gate,checks:dry.checks,conflicts:[],seasonIds:dry.seasonIds||[],safeSingleItem:true,atomicScope:'single_item',dryRunDurationMs:Number(dry.durationMs||0),releaseReport};
+      await env.DB.batch([
+        env.DB.prepare(`UPDATE owner_staging_items SET status='production',published_at=?,updated_at=?,release_id=?,before_json=? WHERE item_id=? AND status='ready'`).bind(now,now,releaseId,entry.beforeJson,String(row.item_id)),
+        env.DB.prepare(`INSERT INTO owner_staging_releases(release_id,change_set_id,item_ids_json,status,gate_json,note,created_at,created_by,created_by_name) VALUES(?,?,?,?,?,?,?,?,?)`).bind(releaseId,setId,JSON.stringify(ids),'completed',JSON.stringify(gateRecord),String(ctx.body?.note||'').slice(0,300),now,ownerId,telegramDisplayName(ctx.user)),
+        env.DB.prepare(`UPDATE owner_staging_change_sets SET status=?,published_at=CASE WHEN ?='published' THEN ? ELSE published_at END,updated_at=? WHERE change_set_id=?`).bind(setStatus,setStatus,now,now,setId)
+      ]);
+    }catch(error){
+      const rollbackFailures=await ownerStagingRollbackApplied(env,ctx,applied),abortStatus=rollbackFailures.length?'rollback_failed':'aborted',abortNote=rollbackFailures.length?`CRITICAL: rollback failed for ${rollbackFailures.length} item(s). ${String(error?.message||error)}`:`Safe Promote aborted and Production restored. ${String(error?.message||error)}`;
+      try{await env.DB.prepare(`INSERT INTO owner_staging_releases(release_id,change_set_id,item_ids_json,status,gate_json,note,created_at,created_by,created_by_name) VALUES(?,?,?,?,?,?,?,?,?)`).bind(releaseId,setId,'[]',abortStatus,JSON.stringify({status:'fail',releaseGate:dry.gate,checks:dry.checks,seasonIds:dry.seasonIds||[],safeSingleItem:true,atomicScope:'single_item',rollbackFailures}),abortNote.slice(0,300),Math.floor(Date.now()/1000),ownerId,telegramDisplayName(ctx.user)).run();}catch{}
+      await logStaffAction(env,ctx.user,ctx.access,'owner_staging_promote_aborted',null,'staging',null,null,{changeSetId:setId,releaseId,error:String(error?.message||error),rollbackFailures,attempted:applied.map(x=>String(x.row.item_id))}).catch(()=>{});
+      if(rollbackFailures.length)throw new ApiError(500,`КРИТИЧЕСКИ: Promote остановлен, но автоматический rollback не смог восстановить изменение. Production требует ручной проверки.`);
+      throw new ApiError(500,`Safe Promote отменён: изменение не применилось и было возвращено к исходному Production. Причина: ${String(error?.message||error)}`);
     }
-    const all=(await env.DB.prepare(`SELECT item_id,status FROM owner_staging_items WHERE change_set_id=?`).bind(setId).all()).results||[],selected=new Set(ids);let sandbox=0,ready=0,production=0,rolled=0;
-    for(const row of all){const st=selected.has(String(row.item_id))?'production':ownerStagingStatus(row.status);if(st==='sandbox')sandbox++;else if(st==='ready')ready++;else if(st==='production')production++;else rolled++;}
-    const total=all.length,setStatus=total>0&&production===total?'published':production>0?'partially_published':ready>0&&sandbox===0?'ready':'sandbox';
-    releaseReport=ownerStagingReleaseReport(setRow,rows,dry,releaseId,now);
-    const gateRecord={status:String(dry.status||'pass'),releaseGate:dry.gate,checks:dry.checks,conflicts:[],safeSingleItem:true,atomicScope:'single_item',dryRunDurationMs:Number(dry.durationMs||0),releaseReport};
-    const statements=applied.map(entry=>env.DB.prepare(`UPDATE owner_staging_items SET status='production',published_at=?,updated_at=?,release_id=?,before_json=? WHERE item_id=?`).bind(now,now,releaseId,entry.beforeJson,String(entry.row.item_id)));
-    statements.push(env.DB.prepare(`INSERT INTO owner_staging_releases(release_id,change_set_id,item_ids_json,status,gate_json,note,created_at,created_by,created_by_name) VALUES(?,?,?,?,?,?,?,?,?)`).bind(releaseId,setId,JSON.stringify(ids),'completed',JSON.stringify(gateRecord),String(ctx.body?.note||'').slice(0,300),now,ownerId,telegramDisplayName(ctx.user)));
-    statements.push(env.DB.prepare(`UPDATE owner_staging_change_sets SET status=?,published_at=CASE WHEN ?='published' THEN ? ELSE published_at END,updated_at=? WHERE change_set_id=?`).bind(setStatus,setStatus,now,now,setId));
-    await env.DB.batch(statements);
-  }catch(error){
-    const rollbackFailures=await ownerStagingRollbackApplied(env,ctx,applied),abortStatus=rollbackFailures.length?'rollback_failed':'aborted',abortNote=rollbackFailures.length?`CRITICAL: rollback failed for ${rollbackFailures.length} item(s). ${String(error?.message||error)}`:`Safe Promote aborted and Production restored. ${String(error?.message||error)}`;
-    try{await env.DB.prepare(`INSERT INTO owner_staging_releases(release_id,change_set_id,item_ids_json,status,gate_json,note,created_at,created_by,created_by_name) VALUES(?,?,?,?,?,?,?,?,?)`).bind(releaseId,setId,'[]',abortStatus,JSON.stringify({status:'fail',releaseGate:dry.gate,checks:dry.checks,safeSingleItem:true,atomicScope:'single_item',rollbackFailures}),abortNote.slice(0,300),Math.floor(Date.now()/1000),ownerId,telegramDisplayName(ctx.user)).run();}catch{}
-    await logStaffAction(env,ctx.user,ctx.access,'owner_staging_promote_aborted',null,'staging',null,null,{changeSetId:setId,releaseId,error:String(error?.message||error),rollbackFailures,attempted:applied.map(x=>String(x.row.item_id))}).catch(()=>{});
-    if(rollbackFailures.length)throw new ApiError(500,`КРИТИЧЕСКИ: Promote остановлен, но автоматический rollback не смог восстановить ${rollbackFailures.length} пунктов. Production требует ручной проверки.`);
-    throw new ApiError(500,`Safe Promote отменён: изменение не применилось и было возвращено к исходному Production. Причина: ${String(error?.message||error)}`);
-  }
-  await ownerPanelTestProjectRefreshSnapshot(env,ctx).catch(()=>{});
-  await ownerPanelStagingApplyToTest(env,{...ctx,body:{changeSetId:setId}}).catch(()=>{});
-  await logStaffAction(env,ctx.user,ctx.access,'owner_staging_promote',null,'staging',null,null,{changeSetId:setId,releaseId,done:ids,gateStatus:dry.gate?.status,override:Boolean(ctx.body?.override),safeSingleItem:true,atomicScope:'single_item',dryRunStatus:dry.status});
-  return {ok:true,releaseId,promoted:ids.length,safeSingleItem:true,atomicScope:'single_item',dryRun:dry,releaseReport,...await ownerPanelStagingBootstrap(env,ctx)};
+    await ownerPanelTestProjectRefreshSnapshot(env,ctx).catch(()=>{});await ownerPanelStagingApplyToTest(env,{...ctx,body:{changeSetId:setId}}).catch(()=>{});
+    await logStaffAction(env,ctx.user,ctx.access,'owner_staging_promote',null,'staging',null,null,{changeSetId:setId,releaseId,done:ids,gateStatus:dry.gate?.status,seasonIds:dry.seasonIds||[],override:Boolean(ctx.body?.override),safeSingleItem:true,atomicScope:'single_item',dryRunStatus:dry.status});
+    return {ok:true,releaseId,promoted:1,safeSingleItem:true,atomicScope:'single_item',dryRun:dry,releaseReport,...await ownerPanelStagingBootstrap(env,ctx)};
+  }finally{await ownerStagingReleaseLock(env,ownerId,lockToken);}
 }
-async function ownerPanelStagingRollback(env,ctx){await ensureOwnerStagingSchema(env);const ownerId=String(ctx.user.id),ids=testProjectArray(ctx.body?.itemIds,100);if(!ids.length)throw new ApiError(400,'Выберите опубликованные изменения.');const done=[];for(const id of ids){const row=await env.DB.prepare(`SELECT i.* FROM owner_staging_items i JOIN owner_staging_change_sets s ON s.change_set_id=i.change_set_id WHERE i.item_id=? AND s.owner_telegram_id=? LIMIT 1`).bind(id,ownerId).first();if(!row||String(row.status)!=='production')continue;await ownerStagingRollbackProduction(env,ctx,row);const before=ownerStagingJson(row.before_json,{});if(String(row.endpoint)==='/api/owner/season-pass/reward'&&!before?._missing&&before.enabled===false){await env.DB.prepare(`UPDATE season_pass_rewards SET enabled=0 WHERE season_id=? AND level=? AND lane=?`).bind(String(before.seasonId||''),Number(before.level||0),String(before.lane||'free')).run();}const now=Math.floor(Date.now()/1000);await env.DB.prepare(`UPDATE owner_staging_items SET status='rolled_back',rolled_back_at=?,updated_at=? WHERE item_id=?`).bind(now,now,id).run();done.push(id);}const touchedSets=[...new Set((await Promise.all(done.map(async id=>{const r=await env.DB.prepare(`SELECT change_set_id FROM owner_staging_items WHERE item_id=? LIMIT 1`).bind(id).first();return String(r?.change_set_id||'')}))).filter(Boolean))];for(const setId of touchedSets){const counts=await ownerStagingSetCounts(env,setId),setStatus=counts.production>0?'partially_published':counts.ready>0?'ready':'sandbox';await env.DB.prepare(`UPDATE owner_staging_change_sets SET status=?,updated_at=? WHERE change_set_id=?`).bind(setStatus,Math.floor(Date.now()/1000),setId).run();}await ownerPanelTestProjectRefreshSnapshot(env,ctx).catch(()=>{});const pref=await ownerStagingPreference(env,ownerId);if(pref.active_change_set_id)await ownerPanelStagingApplyToTest(env,{...ctx,body:{changeSetId:String(pref.active_change_set_id)}}).catch(()=>{});await logStaffAction(env,ctx.user,ctx.access,'owner_staging_rollback',null,'staging',null,null,{items:done});return {ok:true,rolledBack:done.length,...await ownerPanelStagingBootstrap(env,ctx)};}
-// ================= END TP 5.2 · QA REPRO & RELEASE REPORT =================
+async function ownerPanelStagingRollback(env,ctx){
+  await ensureOwnerStagingSchema(env);
+  const ownerId=String(ctx.user.id),ids=testProjectArray(ctx.body?.itemIds,100);if(!ids.length)throw new ApiError(400,'Выберите опубликованное изменение.');if(ids.length!==1)throw new ApiError(409,'Safe Rollback выполняет ровно одно Production-изменение за раз. Откатывайте пункты по одному.');
+  const id=String(ids[0]),row=await env.DB.prepare(`SELECT i.* FROM owner_staging_items i JOIN owner_staging_change_sets s ON s.change_set_id=i.change_set_id WHERE i.item_id=? AND s.owner_telegram_id=? LIMIT 1`).bind(id,ownerId).first();if(!row||String(row.status)!=='production')throw new ApiError(409,'Выбранный пункт уже не находится в Production-статусе.');
+  const setId=String(row.change_set_id||''),lockToken=await ownerStagingAcquireLock(env,ownerId,setId,'rollback',180);
+  try{
+    await ownerStagingRollbackProduction(env,ctx,row);const before=ownerStagingJson(row.before_json,{});
+    if(String(row.endpoint)==='/api/owner/season-pass/reward'&&!before?._missing&&before.enabled===false)await env.DB.prepare(`UPDATE season_pass_rewards SET enabled=0 WHERE season_id=? AND level=? AND lane=?`).bind(String(before.seasonId||''),Number(before.level||0),String(before.lane||'free')).run();
+    const now=Math.floor(Date.now()/1000);await env.DB.prepare(`UPDATE owner_staging_items SET status='rolled_back',rolled_back_at=?,updated_at=? WHERE item_id=? AND status='production'`).bind(now,now,id).run();
+    const counts=await ownerStagingSetCounts(env,setId),setStatus=counts.production>0?'partially_published':counts.ready>0?'ready':'sandbox';await env.DB.prepare(`UPDATE owner_staging_change_sets SET status=?,updated_at=? WHERE change_set_id=?`).bind(setStatus,now,setId).run();
+    await ownerPanelTestProjectRefreshSnapshot(env,ctx).catch(()=>{});const pref=await ownerStagingPreference(env,ownerId);if(pref.active_change_set_id)await ownerPanelStagingApplyToTest(env,{...ctx,body:{changeSetId:String(pref.active_change_set_id)}}).catch(()=>{});
+    await logStaffAction(env,ctx.user,ctx.access,'owner_staging_rollback',null,'staging',null,null,{items:[id],safeSingleItem:true});return {ok:true,rolledBack:1,safeSingleItem:true,...await ownerPanelStagingBootstrap(env,ctx)};
+  }finally{await ownerStagingReleaseLock(env,ownerId,lockToken);}
+}
+// ================= END TP 5.3 · HIGH SAFETY =================
 
 
-// =================== TEST PROJECT 5.1 · QA LAB · OWNER-ONLY ISOLATED SANDBOX ===================
-const TEST_PROJECT_VERSION = "5.2";
+// =================== TEST PROJECT 5.3 · QA LAB · OWNER-ONLY ISOLATED SANDBOX ===================
+const TEST_PROJECT_VERSION = "5.3";
 const TEST_PROJECT_SNAPSHOT_SCHEMA = 6;
 const TEST_PROJECT_MAX_CASE_SIMULATIONS = 2000;
 const TEST_PROJECT_MAX_ACTIVITY_LOG = 80;
@@ -32484,8 +32533,9 @@ async function ownerPanelTestProjectStageDraft(env, ctx) {
   } else throw new ApiError(400,"Этот тип черновика пока не поддерживается Test Project.");
   patch.updatedAt=Date.now();state.tpDrafts=testProjectMergeDraftLayers(state.tpDrafts,patch);state.draftMode="draft";
   if(selectedSeasonId)state.selectedSeasonId=selectedSeasonId;
-  const productionSnapshot=await testProjectCaptureProductionSnapshot(env,state.selectedSeasonId);
-  if(selectedSeasonId&&String(productionSnapshot?.season?.id||"")!==selectedSeasonId)throw new ApiError(404,"Выбранный сезонный пропуск не найден.");
+  const normalizedLayer=testProjectNormalizeDraftLayer(state.tpDrafts),selectedDefinition=normalizedLayer.seasonDefinitions?.[String(state.selectedSeasonId||"")],captureSeasonId=selectedDefinition?.virtual?String(selectedDefinition.sourceSeasonId||""):String(state.selectedSeasonId||"");
+  const productionSnapshot=await testProjectCaptureProductionSnapshot(env,captureSeasonId);
+  if(selectedSeasonId&&!selectedDefinition?.virtual&&String(productionSnapshot?.season?.id||"")!==selectedSeasonId)throw new ApiError(404,"Выбранный сезонный пропуск не найден.");
   testProjectLogAction(state,productionSnapshot,"draft_stage",`В Draft Layer добавлен: ${title}`,[]);const now=Math.floor(Date.now()/1000);await env.DB.prepare(`UPDATE test_project_workspaces SET state_json=?,snapshot_json=?,snapshot_at=?,revision=revision+1,updated_at=? WHERE owner_telegram_id=?`).bind(JSON.stringify(testProjectNormalizePlayerState(state)),JSON.stringify(productionSnapshot),Number(productionSnapshot.capturedAt||now),now,ownerId).run();
   await logStaffAction(env,ctx.user,ctx.access,"owner_test_project_draft_stage",null,"test_project",null,null,{kind,title,selectedSeasonId:selectedSeasonId||null});
   return {ok:true,kind,title,...testProjectClientPayload(testProjectRequireWorkspaceRow(await testProjectReadWorkspace(env,ownerId)))};
@@ -32735,10 +32785,11 @@ async function testProjectQaLoad(env, ctx) {
   const loaded=await testProjectSandboxLoad(env,ctx);
   const requestedSeasonId=String(ctx.body?.seasonId||ctx.body?.season_id||"").trim();
   if(!requestedSeasonId||requestedSeasonId===String(loaded.snapshot?.season?.id||""))return loaded;
-  const raw=await testProjectCaptureProductionSnapshot(env,requestedSeasonId);
-  const productionSnapshot=await testProjectSandboxHydrateFutureContent(env,raw);
-  const snapshot=testProjectApplyDraftLayer(loaded.state,productionSnapshot);
-  return {...loaded,productionSnapshot,snapshot,nowMs:testProjectEffectiveNow(loaded.state,productionSnapshot),qaSeasonOverride:true};
+  const layer=testProjectNormalizeDraftLayer(loaded.state?.tpDrafts),definition=layer.seasonDefinitions?.[requestedSeasonId],captureSeasonId=definition?.virtual?String(definition.sourceSeasonId||""):requestedSeasonId;
+  const raw=await testProjectCaptureProductionSnapshot(env,captureSeasonId);
+  const productionSnapshot=await testProjectSandboxHydrateFutureContent(env,raw),qaState=testProjectNormalizePlayerState({...loaded.state,selectedSeasonId:requestedSeasonId});
+  const snapshot=testProjectApplyDraftLayer(qaState,productionSnapshot);
+  return {...loaded,state:qaState,productionSnapshot,snapshot,nowMs:testProjectEffectiveNow(qaState,productionSnapshot),qaSeasonOverride:true};
 }
 
 async function testProjectSandboxSave(env, ownerId, state, snapshot, before, action, title) {
