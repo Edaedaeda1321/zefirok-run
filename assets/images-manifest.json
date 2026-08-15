@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "catalogHash": "9a23c261c65be513",
-  "count": 320,
+  "catalogHash": "ab49623e772007c4",
+  "count": 321,
   "images": [
     {
       "fileName": "cases/398D69BA-8943-4846-94B3-FC5CB717A67F.PNG",
@@ -105,7 +105,7 @@
       "folder": "cases/avatars",
       "path": "/assets/cases/avatars/avatrs_season3Elit.png",
       "size": 2584574,
-      "modified": 1786299951365
+      "modified": 1786299951000
     },
     {
       "fileName": "cases/avatars/avatrs_season3Epik.png",
@@ -113,7 +113,7 @@
       "folder": "cases/avatars",
       "path": "/assets/cases/avatars/avatrs_season3Epik.png",
       "size": 2314937,
-      "modified": 1786299964718
+      "modified": 1786299964000
     },
     {
       "fileName": "cases/avatars/avatrs_season3Epik2.png",
@@ -121,7 +121,7 @@
       "folder": "cases/avatars",
       "path": "/assets/cases/avatars/avatrs_season3Epik2.png",
       "size": 2183720,
-      "modified": 1786299972682
+      "modified": 1786299972000
     },
     {
       "fileName": "cases/avatars/avatrs_season3Mifik.png",
@@ -129,7 +129,7 @@
       "folder": "cases/avatars",
       "path": "/assets/cases/avatars/avatrs_season3Mifik.png",
       "size": 2561068,
-      "modified": 1786299957669
+      "modified": 1786299957000
     },
     {
       "fileName": "cases/avatars/E74178F8-3156-4301-8559-D818D85404DA.PNG",
@@ -441,7 +441,7 @@
       "folder": "cases/seasonal",
       "path": "/assets/cases/seasonal/season_case_s3_closed.png",
       "size": 1844003,
-      "modified": 1786807738791
+      "modified": 1786807738000
     },
     {
       "fileName": "cases/seasonal/season_case_s3_open.png",
@@ -449,7 +449,7 @@
       "folder": "cases/seasonal",
       "path": "/assets/cases/seasonal/season_case_s3_open.png",
       "size": 2046991,
-      "modified": 1786807755097
+      "modified": 1786807755000
     },
     {
       "fileName": "cases/standart_closed.png",
@@ -513,7 +513,7 @@
       "folder": "cases/trails",
       "path": "/assets/cases/trails/Epik_sled_season3_2.png",
       "size": 1037357,
-      "modified": 1786300000801
+      "modified": 1786300000000
     },
     {
       "fileName": "cases/trails/Epik_sled_season3.png",
@@ -521,7 +521,7 @@
       "folder": "cases/trails",
       "path": "/assets/cases/trails/Epik_sled_season3.png",
       "size": 1509334,
-      "modified": 1786299984314
+      "modified": 1786299984000
     },
     {
       "fileName": "cases/trails/Legendary_sled_season3.png",
@@ -529,7 +529,7 @@
       "folder": "cases/trails",
       "path": "/assets/cases/trails/Legendary_sled_season3.png",
       "size": 929088,
-      "modified": 1786300037379
+      "modified": 1786300037000
     },
     {
       "fileName": "cases/trails/legendary_trail_1.png",
@@ -577,7 +577,7 @@
       "folder": "cases/trails",
       "path": "/assets/cases/trails/legendary%2B_sled_season_3.png",
       "size": 1850613,
-      "modified": 1786300046368
+      "modified": 1786300046000
     },
     {
       "fileName": "cases/trails/mifik_sled_season3.png",
@@ -585,7 +585,7 @@
       "folder": "cases/trails",
       "path": "/assets/cases/trails/mifik_sled_season3.png",
       "size": 1761299,
-      "modified": 1786300027808
+      "modified": 1786300027000
     },
     {
       "fileName": "cases/trails/sled_s3_epick1.png",
@@ -665,7 +665,7 @@
       "folder": "letter",
       "path": "/assets/letter/letter_season_3.png",
       "size": 2096145,
-      "modified": 1786557120716
+      "modified": 1786557120000
     },
     {
       "fileName": "letter/pick/end_pick.png",
@@ -673,7 +673,7 @@
       "folder": "letter/pick",
       "path": "/assets/letter/pick/end_pick.png",
       "size": 2271276,
-      "modified": 1786561799743
+      "modified": 1786561799000
     },
     {
       "fileName": "letter/pick/season2_pick.png",
@@ -681,7 +681,7 @@
       "folder": "letter/pick",
       "path": "/assets/letter/pick/season2_pick.png",
       "size": 2009050,
-      "modified": 1786560267128
+      "modified": 1786560267000
     },
     {
       "fileName": "letter/pick/Season2_Pick2.png",
@@ -689,7 +689,7 @@
       "folder": "letter/pick",
       "path": "/assets/letter/pick/Season2_Pick2.png",
       "size": 2075750,
-      "modified": 1786560530645
+      "modified": 1786560530000
     },
     {
       "fileName": "letter/pick/Season2_Pick3.png",
@@ -697,7 +697,7 @@
       "folder": "letter/pick",
       "path": "/assets/letter/pick/Season2_Pick3.png",
       "size": 2247418,
-      "modified": 1786560754397
+      "modified": 1786560754000
     },
     {
       "fileName": "letter/pick/Season2_Pick4.png",
@@ -705,7 +705,7 @@
       "folder": "letter/pick",
       "path": "/assets/letter/pick/Season2_Pick4.png",
       "size": 2423567,
-      "modified": 1786561082467
+      "modified": 1786561082000
     },
     {
       "fileName": "news/cases-5.0.1.png",
@@ -721,7 +721,7 @@
       "folder": "news",
       "path": "/assets/news/clear_progress_news.png",
       "size": 2304565,
-      "modified": 1786223144793
+      "modified": 1786223144000
     },
     {
       "fileName": "news/img_bugs.png",
@@ -729,7 +729,7 @@
       "folder": "news",
       "path": "/assets/news/img_bugs.png",
       "size": 2385433,
-      "modified": 1786610412445
+      "modified": 1786610412000
     },
     {
       "fileName": "news/relise_clear_progress_news.png",
@@ -737,7 +737,7 @@
       "folder": "news",
       "path": "/assets/news/relise_clear_progress_news.png",
       "size": 2249721,
-      "modified": 1786223157028
+      "modified": 1786223157000
     },
     {
       "fileName": "news/relise_game_news.png",
@@ -753,7 +753,7 @@
       "folder": "news",
       "path": "/assets/news/tex_raboty_news.png",
       "size": 2644033,
-      "modified": 1786223132614
+      "modified": 1786223132000
     },
     {
       "fileName": "optimized/v0.79.5/background_season2.png",
@@ -761,7 +761,7 @@
       "folder": "optimized/v0.79.5",
       "path": "/assets/optimized/v0.79.5/background_season2.png",
       "size": 2155703,
-      "modified": 1786316522813
+      "modified": 1786316522000
     },
     {
       "fileName": "optimized/v0.79.5/belkina_background_season3.png",
@@ -769,7 +769,7 @@
       "folder": "optimized/v0.79.5",
       "path": "/assets/optimized/v0.79.5/belkina_background_season3.png",
       "size": 2387499,
-      "modified": 1786489019746
+      "modified": 1786489019000
     },
     {
       "fileName": "optimized/v0.79.5/cafeBackground.png",
@@ -1001,7 +1001,7 @@
       "folder": "optimized/v0.79.5",
       "path": "/assets/optimized/v0.79.5/white_rabbit_background_season4.png",
       "size": 1567077,
-      "modified": 1786489107260
+      "modified": 1786489107000
     },
     {
       "fileName": "rating/avatars/avatar-bear-bow.png",
@@ -1225,7 +1225,7 @@
       "folder": "rating/frames/profile",
       "path": "/assets/rating/frames/profile/Elit%2Bavatrs_season3.png",
       "size": 2469298,
-      "modified": 1786299930945
+      "modified": 1786299930000
     },
     {
       "fileName": "rating/frames/profile/Elit+ramka_season3_5.png",
@@ -1233,7 +1233,7 @@
       "folder": "rating/frames/profile",
       "path": "/assets/rating/frames/profile/Elit%2Bramka_season3_5.png",
       "size": 2029796,
-      "modified": 1786299785558
+      "modified": 1786299785000
     },
     {
       "fileName": "rating/frames/profile/Elitramka_season3_1.png",
@@ -1241,7 +1241,7 @@
       "folder": "rating/frames/profile",
       "path": "/assets/rating/frames/profile/Elitramka_season3_1.png",
       "size": 2348842,
-      "modified": 1786299701156
+      "modified": 1786299701000
     },
     {
       "fileName": "rating/frames/profile/Elitramka_season3_4.png",
@@ -1249,7 +1249,7 @@
       "folder": "rating/frames/profile",
       "path": "/assets/rating/frames/profile/Elitramka_season3_4.png",
       "size": 2009601,
-      "modified": 1786299730020
+      "modified": 1786299730000
     },
     {
       "fileName": "rating/frames/profile/epickramka_season3_2.png",
@@ -1257,7 +1257,7 @@
       "folder": "rating/frames/profile",
       "path": "/assets/rating/frames/profile/epickramka_season3_2.png",
       "size": 2029905,
-      "modified": 1786299719008
+      "modified": 1786299719000
     },
     {
       "fileName": "rating/frames/profile/legendary_ramka_1.png",
@@ -1305,7 +1305,7 @@
       "folder": "rating/frames/profile",
       "path": "/assets/rating/frames/profile/mifikramka_season3_3.png",
       "size": 1881684,
-      "modified": 1786299723124
+      "modified": 1786299723000
     },
     {
       "fileName": "rating/frames/profile/ramka_profile_coffie.png",
@@ -1737,7 +1737,7 @@
       "folder": "rating/v8",
       "path": "/assets/rating/v8/season_3_reiting.png",
       "size": 1003959,
-      "modified": 1786298264467
+      "modified": 1786298264000
     },
     {
       "fileName": "rating/v8/season-1-cafe-opening.png",
@@ -1761,7 +1761,7 @@
       "folder": "rating/v8",
       "path": "/assets/rating/v8/season3_reiting_all.png",
       "size": 960817,
-      "modified": 1786298246142
+      "modified": 1786298246000
     },
     {
       "fileName": "season-pass/avatars_season_pass3.png",
@@ -1769,7 +1769,7 @@
       "folder": "season-pass",
       "path": "/assets/season-pass/avatars_season_pass3.png",
       "size": 2424598,
-      "modified": 1786298984965
+      "modified": 1786298984000
     },
     {
       "fileName": "season-pass/elite_plus.png",
@@ -1833,7 +1833,7 @@
       "folder": "season-pass",
       "path": "/assets/season-pass/season_3_pass.png",
       "size": 2315163,
-      "modified": 1786298639374
+      "modified": 1786298639000
     },
     {
       "fileName": "season-pass/season_pass1.png",
@@ -1849,7 +1849,7 @@
       "folder": "season-pass",
       "path": "/assets/season-pass/season_pass3_2xp.png",
       "size": 2267234,
-      "modified": 1786299074431
+      "modified": 1786299074000
     },
     {
       "fileName": "season-pass/season_pass3_5levels.png",
@@ -1857,7 +1857,7 @@
       "folder": "season-pass",
       "path": "/assets/season-pass/season_pass3_5levels.png",
       "size": 2450516,
-      "modified": 1786299082836
+      "modified": 1786299082000
     },
     {
       "fileName": "season-pass/season_pass3_prize.png",
@@ -1865,7 +1865,7 @@
       "folder": "season-pass",
       "path": "/assets/season-pass/season_pass3_prize.png",
       "size": 2192714,
-      "modified": 1786298999583
+      "modified": 1786298999000
     },
     {
       "fileName": "season-pass/season_pass3_quest.png",
@@ -1873,7 +1873,7 @@
       "folder": "season-pass",
       "path": "/assets/season-pass/season_pass3_quest.png",
       "size": 2339238,
-      "modified": 1786299028307
+      "modified": 1786299028000
     },
     {
       "fileName": "season-pass/season_pass3_xp.png",
@@ -1881,7 +1881,7 @@
       "folder": "season-pass",
       "path": "/assets/season-pass/season_pass3_xp.png",
       "size": 2604608,
-      "modified": 1786299034732
+      "modified": 1786299034000
     },
     {
       "fileName": "season-pass/Season_pass3.png",
@@ -1889,7 +1889,7 @@
       "folder": "season-pass",
       "path": "/assets/season-pass/Season_pass3.png",
       "size": 2011846,
-      "modified": 1786298974025
+      "modified": 1786298974000
     },
     {
       "fileName": "season-pass/season.png",
@@ -1922,6 +1922,14 @@
       "path": "/assets/season-pass/zaglyshka_season.png",
       "size": 3565282,
       "modified": 1785367641000
+    },
+    {
+      "fileName": "season-pass/zefir_currency.png",
+      "label": "Zefir currency",
+      "folder": "season-pass",
+      "path": "/assets/season-pass/zefir_currency.png",
+      "size": 9857,
+      "modified": 1786832407851
     },
     {
       "fileName": "shop/currency_star_256x256.png",
@@ -2505,7 +2513,7 @@
       "folder": "sounds/covers",
       "path": "/assets/sounds/covers/music_cafe_dash_1.png",
       "size": 3151710,
-      "modified": 1786307011849
+      "modified": 1786307011000
     },
     {
       "fileName": "sounds/covers/music_cafe_dash_2.png",
@@ -2513,7 +2521,7 @@
       "folder": "sounds/covers",
       "path": "/assets/sounds/covers/music_cafe_dash_2.png",
       "size": 2968402,
-      "modified": 1786307011851
+      "modified": 1786307011000
     },
     {
       "fileName": "sounds/covers/music_legendary_cafe_run.png",
@@ -2521,7 +2529,7 @@
       "folder": "sounds/covers",
       "path": "/assets/sounds/covers/music_legendary_cafe_run.png",
       "size": 3193568,
-      "modified": 1786307011854
+      "modified": 1786307011000
     },
     {
       "fileName": "sounds/covers/music_marshmallow_dash_1.png",
@@ -2529,7 +2537,7 @@
       "folder": "sounds/covers",
       "path": "/assets/sounds/covers/music_marshmallow_dash_1.png",
       "size": 3253636,
-      "modified": 1786307011857
+      "modified": 1786307011000
     },
     {
       "fileName": "sounds/covers/music_marshmallow_dash_2.png",
@@ -2537,7 +2545,7 @@
       "folder": "sounds/covers",
       "path": "/assets/sounds/covers/music_marshmallow_dash_2.png",
       "size": 3113535,
-      "modified": 1786307011859
+      "modified": 1786307011000
     },
     {
       "fileName": "sounds/covers/music_marshmallow_dash_3.png",
@@ -2545,7 +2553,7 @@
       "folder": "sounds/covers",
       "path": "/assets/sounds/covers/music_marshmallow_dash_3.png",
       "size": 3368856,
-      "modified": 1786307011862
+      "modified": 1786307011000
     },
     {
       "fileName": "sounds/covers/music_marshmallow_dash_4.png",
@@ -2553,7 +2561,7 @@
       "folder": "sounds/covers",
       "path": "/assets/sounds/covers/music_marshmallow_dash_4.png",
       "size": 3198814,
-      "modified": 1786307011863
+      "modified": 1786307011000
     },
     {
       "fileName": "sounds/covers/season3_lunar_music.png",
@@ -2561,7 +2569,7 @@
       "folder": "sounds/covers",
       "path": "/assets/sounds/covers/season3_lunar_music.png",
       "size": 3133390,
-      "modified": 1786307011867
+      "modified": 1786307011000
     }
   ]
 }
