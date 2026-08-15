@@ -1,33 +1,20 @@
-Сладкий Забег — исправление возврата Test Project → Control Center
+Сладкий Забег — сезонный кейс: рулетка стартует сразу
 Дата: 2026-08-16
 
-ИСПРАВЛЕНО
-1. После выхода из Test Project Telegram BackButton больше не остаётся включённым в Control Center.
-2. Перед переходом TP → CC Test Project снимает свой обработчик BackButton, скрывает BackButton и делает location.replace в owner.html.
-3. Control Center при входе, pageshow, возврате приложения из background и повторном fullscreen-sync принудительно восстанавливает штатный режим Telegram без BackButton.
-4. В результате в верхней панели Telegram снова отображается обычная кнопка закрытия Mini App, а не неработающая «Назад».
-5. Все кнопки возврата из Test Project, включая Release Gate, используют один безопасный returnToCc.
+Изменённые файлы:
+- battle-pass.html
 
-СОХРАНЕНО
-- Сворачиваемая панель Staging и её локальное состояние.
-- Staging/Change Set/Promote/Release Gate логика не менялась.
-- Предыдущее исправление изображения валюты «Зефир» в редакторе награды Control Center сохранено.
-- Backend и D1 не менялись.
+Что исправлено:
+- Рулетка сезонного кейса запускается визуально сразу после нажатия «Открыть кейс».
+- API-запрос выполняется параллельно уже движущейся рулетке.
+- Пока серверный ответ не получен, крутится нейтральная непрерывная лента без заранее показанного победителя.
+- После ответа сервера интерфейс переходит к реальному пулу и плавно тормозит на фактически выданной награде.
+- Для очень быстрого ответа добавлен короткий минимальный pre-spin, чтобы открытие не выглядело мгновенно предопределённым.
+- Убраны технические подписи «сервер определяет награду» и «награда уже подтверждена сервером» из пользовательского окна.
+- Серверная выдача, D1, opening_token, защита от повторного открытия и экономика не изменялись.
+- Math.random на клиенте не используется для выбора победителя.
 
-ИЗМЕНЕННЫЕ ФАЙЛЫ
-- owner.html
-- test-project.html
-
-ПРОВЕРКИ
-- inline JavaScript owner.html: PASS (node --check)
-- inline JavaScript test-project.html: PASS (node --check)
-- literal DOM id duplicates: 0 / 0
-- TP direct owner href bypasses: 0
-- owner BackButton reset on initial load/pageshow/visibility/fullscreen: PASS
-- staging collapse preserved: PASS
-- zefir currency preview fix preserved: PASS
-
-ДЕПЛОЙ
+Деплой:
 npx wrangler deploy
 
 D1 migration не требуется.

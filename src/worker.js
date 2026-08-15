@@ -24369,6 +24369,19 @@ function seasonPassSeasonalCaseWeightedPick(items,groupChances=null,rng=Math.ran
   return seasonPassWeightedPick(pickedGroup.items,rng);
 }
 
+function seasonPassSeasonalCaseRouletteItemView(row){
+  const kind=String(row?.reward_kind||row?.kind||'').trim(),itemId=String(row?.item_id||row?.itemId||'').trim(),amount=Math.max(1,Math.floor(Number(row?.amount)||1));
+  if(SEASON_PASS_COSMETIC_KINDS.includes(kind)){
+    const item=seasonPassAnyCosmeticCatalog(kind)?.[itemId]||null;if(!item)return null;
+    return {kind,itemId,amount:1,title:String(row?.title||item.title||itemId),imageUrl:String(row?.image_url||row?.imageUrl||seasonPassCosmeticImage(kind,itemId)||''),rarity:String(row?.rarity||item.rarity||'seasonal')};
+  }
+  const presentation=seasonPassSeasonalCaseResourcePresentation(kind,itemId,amount);if(!presentation)return null;
+  return {...presentation,title:String(row?.title||presentation.title||'Награда'),imageUrl:String(presentation.imageUrl||row?.image_url||row?.imageUrl||''),rarity:String(row?.rarity||presentation.rarity||'resource')};
+}
+function seasonPassSeasonalCaseRouletteItems(rows){
+  return (Array.isArray(rows)?rows:[]).map(seasonPassSeasonalCaseRouletteItemView).filter(Boolean).slice(0,160);
+}
+
 async function openSeasonPassSeasonalCase(request,env,executionCtx=null){
   let grantId='',token='';
   try{
@@ -24385,7 +24398,7 @@ async function openSeasonPassSeasonalCase(request,env,executionCtx=null){
     if(Number(claim?.meta?.changes||0)<1)throw new ApiError(409,'Этот сезонный кейс уже открывается.');
     const [effectiveItems,ensured,taskEvent]=await Promise.all([seasonPassEffectiveCaseItems(env,caseId),ensureCasePlayerState(env,ctx.telegramId,{}),taskEventPromise]);
     const snapshot=safeJson(grant.snapshot_json,{});const snapshotItems=Array.isArray(snapshot?.items)?snapshot.items:[];
-    const sourceItems=snapshotItems.length?snapshotItems:effectiveItems;
+    const sourceItems=snapshotItems.length?snapshotItems:effectiveItems;const rouletteItems=seasonPassSeasonalCaseRouletteItems(sourceItems);
     let candidates=sourceItems.filter((row)=>{
       const kind=String(row.reward_kind||row.kind||''),itemId=String(row.item_id||row.itemId||'');
       if(SEASON_PASS_COSMETIC_KINDS.includes(kind))return Boolean(seasonPassAnyCosmeticCatalog(kind)?.[itemId]);
@@ -24398,17 +24411,17 @@ async function openSeasonPassSeasonalCase(request,env,executionCtx=null){
     const slots=Math.max(1,Math.min(5,Number(snapshot?.slots??definition.slots)||1));const duplicateValue=Math.max(0,Number(snapshot?.duplicatePoints??definition.duplicate_points)||0);const groupChances=seasonPassSeasonalCaseGroupChances(snapshot?.groupChances)||seasonPassSeasonalCaseGroupChances(definition.reward_groups_json);const rewards=[];let duplicatePoints=0;
     const walletTotals={points:0,treats:0,coffee:0};const normalCaseRewards=[];
     for(let slot=0;slot<slots;slot+=1){
-      const pick=seasonPassSeasonalCaseWeightedPick(candidates,groupChances);if(!pick){duplicatePoints+=duplicateValue;walletTotals.points+=duplicateValue;if(duplicateValue>0)rewards.push({kind:'points',amount:duplicateValue,title:'Компенсация за дубликат'});continue;}
+      const pick=seasonPassSeasonalCaseWeightedPick(candidates,groupChances);if(!pick){duplicatePoints+=duplicateValue;walletTotals.points+=duplicateValue;if(duplicateValue>0)rewards.push({kind:'points',itemId:'',amount:duplicateValue,title:'Компенсация за дубликат',imageUrl:seasonPassResourceRewardAsset('points'),rarity:'resource',duplicate:true});continue;}
       const kind=String(pick.reward_kind);
       if(SEASON_PASS_COSMETIC_KINDS.includes(kind)){
-        if(owned(pick)){duplicatePoints+=duplicateValue;walletTotals.points+=duplicateValue;if(duplicateValue>0)rewards.push({kind:'points',amount:duplicateValue,title:'Компенсация за дубликат'});candidates=candidates.filter(row=>String(row.item_key)!==String(pick.item_key));continue;}
+        if(owned(pick)){duplicatePoints+=duplicateValue;walletTotals.points+=duplicateValue;if(duplicateValue>0)rewards.push({kind:'points',itemId:'',amount:duplicateValue,title:'Компенсация за дубликат',imageUrl:seasonPassResourceRewardAsset('points'),rarity:'resource',duplicate:true});candidates=candidates.filter(row=>String(row.item_key)!==String(pick.item_key));continue;}
         const cosmetic={kind,itemId:String(pick.item_id)};seasonPassApplyCosmeticToState(ensured.state,cosmetic);
         rewards.push({kind:cosmetic.kind,itemId:cosmetic.itemId,amount:1,title:String(pick.title||seasonPassAnyCosmeticCatalog(cosmetic.kind)?.[cosmetic.itemId]?.title||cosmetic.itemId),imageUrl:String(pick.image_url||seasonPassCosmeticImage(cosmetic.kind,cosmetic.itemId)),rarity:String(pick.rarity||'seasonal')});
       }else{
         const amount=Math.max(1,Math.floor(Number(pick.amount)||1));
         if(kind==='points'||kind==='treats'||kind==='coffee')walletTotals[kind]+=amount;
         else if(kind==='case'){const caseType=normalizeCaseType(pick.item_id);if(caseType)normalCaseRewards.push({caseType,amount,slot});}
-        rewards.push({kind,itemId:String(pick.item_id||''),amount,title:String(pick.title||seasonPassSeasonalCaseResourcePresentation(kind,pick.item_id,amount)?.title||'Награда'),imageUrl:String(pick.image_url||seasonPassSeasonalCaseResourcePresentation(kind,pick.item_id,amount)?.imageUrl||''),rarity:String(pick.rarity||'resource')});
+        rewards.push({kind,itemId:String(pick.item_id||''),amount,title:String(pick.title||seasonPassSeasonalCaseResourcePresentation(kind,pick.item_id,amount)?.title||'Награда'),imageUrl:String(seasonPassSeasonalCaseResourcePresentation(kind,pick.item_id,amount)?.imageUrl||pick.image_url||''),rarity:String(pick.rarity||'resource')});
       }
       candidates=candidates.filter(row=>String(row.item_key)!==String(pick.item_key));if(!candidates.length&&slot+1<slots)break;
     }
@@ -24422,7 +24435,7 @@ async function openSeasonPassSeasonalCase(request,env,executionCtx=null){
     const [inventory]=await Promise.all([seasonPassSeasonalCaseInventory(env,ctx.telegramId),caseTaskStatements.length?env.DB.batch(caseTaskStatements):Promise.resolve([])]);
     seasonPassBackgroundWork(executionCtx,recordPlayerTimeline(env,ctx.telegramId,'seasonal_case_open',`открыл сезонный кейс «${String(definition.title||caseId)}»`,{caseId,grantId,rewards},`seasonal_case_${grantId}`,ctx.auth.user,now),'seasonal case timeline failed');
     seasonPassBackgroundWork(executionCtx,deliverSeasonPassTaskNotificationsForRows(env,ctx.telegramId,taskEvent?.season||ctx.season,taskEvent?.taskRows||[]),'seasonal case task notification failed');
-    return jsonResponse({ok:true,case:{caseId,grantId,title:String(snapshot?.title||definition.title||'Сезонный кейс'),imageUrl:String(snapshot?.openImageUrl||snapshot?.imageUrl||definition.open_image_url||definition.closed_image_url||''),rewards},seasonalCases:inventory});
+    return jsonResponse({ok:true,case:{caseId,grantId,title:String(snapshot?.title||definition.title||'Сезонный кейс'),closedImageUrl:String(snapshot?.imageUrl||definition.closed_image_url||''),openImageUrl:String(snapshot?.openImageUrl||definition.open_image_url||snapshot?.imageUrl||definition.closed_image_url||''),imageUrl:String(snapshot?.openImageUrl||snapshot?.imageUrl||definition.open_image_url||definition.closed_image_url||''),rouletteItems,rewards},seasonalCases:inventory});
   }catch(error){if(grantId&&token){try{await env.DB.prepare(`UPDATE season_pass_case_grants SET status='pending',opening_started_at=0,opening_token='' WHERE grant_id=? AND status='opening' AND opening_token=?`).bind(grantId,token).run();}catch{}}if(error instanceof ApiError)return jsonResponse({ok:false,error:error.message},error.status);console.error('openSeasonPassSeasonalCase failed',error);return jsonResponse({ok:false,error:'Не удалось открыть сезонный кейс.'},500);}
 }
 
@@ -32649,7 +32662,7 @@ function testProjectRollSeasonalCase(state, definition, options = {}) {
     const pick=seasonPassSeasonalCaseWeightedPick(candidates,groupChances,rng);if(!pick)break;
     if(SEASON_PASS_COSMETIC_KINDS.includes(pick.kind)){
       if(testProjectSeasonalCaseOwned(target,pick)){
-        duplicatePoints+=duplicateValue;if(duplicateValue>0){target.points=Math.min(999999999,Number(target.points||0)+duplicateValue);rewards.push({kind:"points",rewardType:"points",amount:duplicateValue,title:"Компенсация за дубликат",duplicate:true});}
+        duplicatePoints+=duplicateValue;if(duplicateValue>0){target.points=Math.min(999999999,Number(target.points||0)+duplicateValue);rewards.push({kind:"points",rewardType:"points",itemId:"",amount:duplicateValue,title:"Компенсация за дубликат",imageUrl:seasonPassResourceRewardAsset("points"),rarity:"resource",duplicate:true});}
       }else{
         testProjectGrantCosmetic(target,pick.kind,pick.itemId);
         rewards.push({kind:pick.kind,rewardType:pick.kind,itemId:pick.itemId,amount:1,title:pick.title||seasonPassAnyCosmeticCatalog(pick.kind)?.[pick.itemId]?.title||pick.itemId,imageUrl:pick.imageUrl||seasonPassCosmeticImage(pick.kind,pick.itemId),rarity:pick.rarity});
@@ -32657,7 +32670,7 @@ function testProjectRollSeasonalCase(state, definition, options = {}) {
     }else{
       testProjectApplyReward(target,{rewardType:pick.kind,itemId:pick.itemId,amount:pick.amount},definition);
       const presentation=seasonPassSeasonalCaseResourcePresentation(pick.kind,pick.itemId,pick.amount);
-      rewards.push({kind:pick.kind,rewardType:pick.kind,itemId:pick.itemId,amount:pick.amount,title:pick.title||presentation?.title||"Награда",imageUrl:pick.imageUrl||presentation?.imageUrl||"",rarity:pick.rarity||"resource"});
+      rewards.push({kind:pick.kind,rewardType:pick.kind,itemId:pick.itemId,amount:pick.amount,title:pick.title||presentation?.title||"Награда",imageUrl:presentation?.imageUrl||pick.imageUrl||"",rarity:pick.rarity||"resource"});
     }
     candidates=candidates.filter((item)=>item.key!==pick.key);
   }
@@ -33384,7 +33397,7 @@ async function testProjectSandboxGameData(env, ctx) {
     if(!caseId||Number(state.seasonalCaseInventory?.[caseId]||0)<1)throw new ApiError(409,"Нет сезонного кейса в Test Project.");
     const before=testProjectClone(state);state.seasonalCaseInventory[caseId]=Math.max(0,Number(state.seasonalCaseInventory[caseId]||0)-1);const rolled=testProjectRollSeasonalCase(state,definition,{apply:true,rng:testProjectCaseRng(state,`seasonal:${caseId}`)});
     await testProjectSandboxSave(env,ownerId,state,snapshot,before,"game_seasonal_case_open",`Игра · открыт ${String(definition.title||"сезонный кейс")}`);await reload();
-    const pass=testProjectSandboxPassPayload(state,snapshot),casePayload={caseId,grantId:`tp_${crypto.randomUUID().replaceAll("-","").slice(0,16)}`,title:String(definition.title||"Сезонный кейс"),imageUrl:String(definition.openImageUrl||definition.imageUrl||""),rewards:rolled.rewards};
+    const pass=testProjectSandboxPassPayload(state,snapshot),casePayload={caseId,grantId:`tp_${crypto.randomUUID().replaceAll("-","").slice(0,16)}`,title:String(definition.title||"Сезонный кейс"),closedImageUrl:String(definition.imageUrl||""),openImageUrl:String(definition.openImageUrl||definition.imageUrl||""),imageUrl:String(definition.openImageUrl||definition.imageUrl||""),rouletteItems:seasonPassSeasonalCaseRouletteItems(definition.items||[]),rewards:rolled.rewards};
     return response({...pass,case:casePayload,opened:casePayload});
   }
   if(path==="/api/battle-pass/letter/state")return response({ok:true,letter:null});
