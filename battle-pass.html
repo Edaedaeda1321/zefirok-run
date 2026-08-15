@@ -7,6 +7,50 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' https://telegram.org; style-src 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'">
 <title>Сезонный пропуск — Зефирок</title>
 <script src="https://telegram.org/js/telegram-web-app.js?63"></script>
+<script>
+(()=>{
+  let testProjectActive=new URLSearchParams(location.search).get("test_project")==="1";
+  if(!testProjectActive&&window.parent&&window.parent!==window){try{testProjectActive=new URLSearchParams(window.parent.location.search).get("test_project")==="1"}catch{}}
+  if(!testProjectActive)return;
+  const nativeFetch=window.fetch.bind(window),SESSION_KEY="zefirok-owner-session-v1",PROXY="/api/owner/test-project/game",STORAGE_PREFIX="zefirok-tp3:";
+  const baseUrl=(()=>{const direct=String(document.baseURI||"");if(/^https?:/i.test(direct))return direct;try{if(window.parent&&window.parent!==window&&/^https?:/i.test(String(window.parent.location.href||"")))return String(window.parent.location.href)}catch{}return String(location.href||direct)})(),sandboxOrigin=(()=>{try{return new URL(baseUrl).origin}catch{return location.origin}})(),proxyUrl=(()=>{try{return new URL(PROXY,baseUrl).toString()}catch{return PROXY}})();
+  const storage=window.localStorage;
+  try{
+    const proto=Object.getPrototypeOf(storage),nativeGet=proto.getItem,nativeSet=proto.setItem,nativeRemove=proto.removeItem,nativeClear=proto.clear;
+    const scopedKey=(key)=>String(key)===SESSION_KEY?SESSION_KEY:`${STORAGE_PREFIX}${String(key)}`;
+    proto.getItem=function(key){return this===storage?nativeGet.call(this,scopedKey(key)):nativeGet.call(this,key)};
+    proto.setItem=function(key,value){return this===storage?nativeSet.call(this,scopedKey(key),value):nativeSet.call(this,key,value)};
+    proto.removeItem=function(key){return this===storage?nativeRemove.call(this,scopedKey(key)):nativeRemove.call(this,key)};
+    proto.clear=function(){if(this!==storage)return nativeClear.call(this);const remove=[];for(let i=0;i<this.length;i+=1){const key=this.key(i);if(String(key||"").startsWith(STORAGE_PREFIX))remove.push(key)}for(const key of remove)nativeRemove.call(this,key)};
+  }catch{}
+  async function bodyValue(body){
+    if(body==null)return {};
+    if(typeof body==="string"){try{return JSON.parse(body)}catch{return {raw:body.slice(0,12000)}}}
+    if(body instanceof URLSearchParams)return Object.fromEntries(body.entries());
+    if(typeof FormData!=="undefined"&&body instanceof FormData){const out={};for(const [key,value] of body.entries()){if(typeof value==="string")out[key]=value;else out[key]={name:String(value?.name||"file"),type:String(value?.type||""),size:Number(value?.size||0),testProjectFileBlocked:true};}return out;}
+    if(typeof body==="object")return body;
+    return {};
+  }
+  window.__TEST_PROJECT_SANDBOX__={active:true,version:"3.0",storagePrefix:STORAGE_PREFIX};
+  window.fetch=async(input,init={})=>{
+    const original=input instanceof Request?input.url:String(input||"");let url;
+    try{url=new URL(original,baseUrl)}catch{return nativeFetch(input,init)}
+    if(url.origin!==sandboxOrigin||!url.pathname.startsWith("/api/")||url.pathname.startsWith("/api/owner/"))return nativeFetch(input,init);
+    const sourceRequest=input instanceof Request?input:null;
+    const method=String(init.method||sourceRequest?.method||"GET").toUpperCase();
+    let requestBody=init.body;
+    if(requestBody==null&&sourceRequest&&method!=="GET"&&method!=="HEAD"){try{requestBody=await sourceRequest.clone().text()}catch{requestBody=null}}
+    const payload=await bodyValue(requestBody);
+    let ownerSession="";try{ownerSession=String(localStorage.getItem(SESSION_KEY)||"")}catch{}
+    const initData=String(payload?.initData||window.Telegram?.WebApp?.initData||"");
+    const controllerSignal=init.signal||sourceRequest?.signal;
+    const proxyResponse=await nativeFetch(proxyUrl,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({initData,ownerSession,path:url.pathname,method,query:Object.fromEntries(url.searchParams.entries()),payload}),cache:"no-store",credentials:"same-origin",signal:controllerSignal});
+    const envelope=await proxyResponse.json().catch(()=>({ok:false,error:"Test Project proxy вернул некорректный ответ."}));
+    if(!proxyResponse.ok||!envelope?.ok||!("data" in envelope))return new Response(JSON.stringify(envelope||{ok:false,error:"Test Project proxy error"}),{status:proxyResponse.status||500,headers:{"Content-Type":"application/json","Cache-Control":"no-store"}});
+    return new Response(JSON.stringify(envelope.data),{status:Number(envelope.proxyStatus||200),headers:{"Content-Type":"application/json","Cache-Control":"no-store","X-Test-Project":"3.0"}});
+  };
+})();
+</script>
 <style>
 :root{
   color-scheme:light;
@@ -2747,10 +2791,11 @@ img[src$="/xp.webp"]{
 
 <script>
 (() => {
-  const PROGRESS_KEY = "zefirok-runner-progress-v2";
-  const LEGACY_PROGRESS_KEY = "zefirok-runner-progress-v1";
-  const PASS_KEY = "zefirok-season-pass-client-cache-v1";
-  const OLD_PASS_KEYS = ["zefirok-season-pass-test-v3","zefirok-season-pass-test-v2","zefirok-season-pass-test-v1","zefirok-battle-pass-test-v1"];
+  const TEST_PROJECT_MODE = new URLSearchParams(location.search).get("test_project") === "1";
+  const PROGRESS_KEY = TEST_PROJECT_MODE ? "zefirok-test-project-runner-progress-v3" : "zefirok-runner-progress-v2";
+  const LEGACY_PROGRESS_KEY = TEST_PROJECT_MODE ? "" : "zefirok-runner-progress-v1";
+  const PASS_KEY = TEST_PROJECT_MODE ? "zefirok-test-project-season-pass-cache-v3" : "zefirok-season-pass-client-cache-v1";
+  const OLD_PASS_KEYS = TEST_PROJECT_MODE ? [] : ["zefirok-season-pass-test-v3","zefirok-season-pass-test-v2","zefirok-season-pass-test-v1","zefirok-battle-pass-test-v1"];
   const ACCESS_PATH = "/api/battle-pass/access";
   const STATE_PATH = "/api/battle-pass/state";
   const CLAIM_PATH = "/api/battle-pass/claim";
@@ -3366,7 +3411,7 @@ img[src$="/xp.webp"]{
   }
 
   function readProgress() {
-    return safeJson(localStorage.getItem(PROGRESS_KEY) || localStorage.getItem(LEGACY_PROGRESS_KEY),{});
+    return safeJson(localStorage.getItem(PROGRESS_KEY) || (LEGACY_PROGRESS_KEY ? localStorage.getItem(LEGACY_PROGRESS_KEY) : ""),{});
   }
 
   function readLegacyPass() {
@@ -4035,7 +4080,7 @@ img[src$="/xp.webp"]{
   function renderCatchUpCard(){const data=catchUpData(),card=el("catchUpCard");if(!card)return;const active=Boolean(data?.active);card.hidden=!active;if(!active)return;const days=Math.max(1,Number(data.daysLeft)||1),limit=Math.max(2,Number(data.eligibleBelowLevel)||35),mult=Math.max(2,Number(data.multiplier)||2);el("catchUpMultiplier").textContent=`×${mult} XP`;el("catchUpCopy").textContent=`Ещё ${days} дн. · пока уровень ниже ${limit}, XP за забеги и задания умножается на ${mult}. С Элитным+ бонус не складывается.`;}
 
   function finaleData(){return serverPass?.finale&&typeof serverPass.finale==="object"?serverPass.finale:null;}
-  function finaleSeenKey(){return `zefirok-season-finale-seen:${String(serverPass?.season?.id||"season")}`;}
+  function finaleSeenKey(){return `${TEST_PROJECT_MODE?"zefirok-test-project-season-finale-seen":"zefirok-season-finale-seen"}:${String(serverPass?.season?.id||"season")}`;}
   function renderFinalMilestone(){const card=el("finalMilestone"),button=el("seasonFinaleOpen");if(!card||!button)return;const xp=totalXp(),level=currentLevel(),complete=xp>=Math.max(LEVEL_50_COMPLETE_XP,Number(serverPass?.season?.progression?.level50CompleteXp||0)||0);const reward50=rewards[MAX_LEVEL-1]?.[pass.premiumTier!=="none"?"premium":"free"]||rewards[MAX_LEVEL-1]?.free||null;if(reward50){el("finalMilestoneArt").src=String(reward50[3]||rewardAssetFor(reward50[1])||"/assets/season-pass/season.png?v=07939");el("finalMilestoneRewardTag").textContent=`🎁 ${String(reward50[1]||"Награда 50 уровня")}`;}else{el("finalMilestoneArt").src="/assets/season-pass/season.png?v=07939";el("finalMilestoneRewardTag").textContent="🎁 Награда 50 уровня";}el("finalMilestoneStoryTag").textContent=serverPass?.story?.pending&&Number(serverPass.story.pending.unlockLevel||0)>=MAX_LEVEL?"📖 Финальная глава":"📖 Сюжет сезона";el("finalMilestoneLetterTag").textContent=serverPass?.letter?.available?(serverPass.letter.unread?"💌 Новое письмо":"💌 Письмо прочитано"):"💌 Письмо";card.classList.toggle("is-locked",level<MAX_LEVEL);card.classList.toggle("is-complete",complete);if(complete){el("finalMilestoneTitle").textContent="Финал сезона пройден";el("finalMilestoneCopy").textContent="Полный 50 уровень завершён. Открой итоги сезона и загляни в тизер следующего приключения.";button.disabled=false;button.textContent="⭐ Итоги сезона";}else if(level>=MAX_LEVEL){el("finalMilestoneTitle").textContent="Финальный уровень открыт";el("finalMilestoneCopy").textContent="Ты уже на 50 уровне. Заполни последнюю шкалу XP, чтобы открыть экран финала сезона.";button.disabled=true;button.textContent="Заверши 50 уровень";}else{el("finalMilestoneTitle").textContent="Финал сезона впереди";el("finalMilestoneCopy").textContent=`Откроется на 50 уровне · осталось ${Math.max(0,MAX_LEVEL-level)} ур.`;button.disabled=true;button.textContent="Откроется позже";}}
 
   function showSeasonFinale(){const data=finaleData();if(!data?.unlocked){showToast("Сначала полностью заверши 50 уровень");return;}el("seasonFinaleTitle").textContent=`${serverPass?.season?.title||"Сезон"} · финал`;el("seasonFinaleSubtitle").textContent=`Полный путь пройден · ${Number(data.runs||0).toLocaleString("ru-RU")} забегов · ${Number(data.tasksClaimed||0).toLocaleString("ru-RU")} заданий с XP`;el("seasonFinaleLevel").textContent="50";el("seasonFinaleRewards").textContent=Number(data.rewardsClaimed||0).toLocaleString("ru-RU");el("seasonFinaleStory").textContent=`${Number(data.storyCompleted||0)} / ${Number(data.storyTotal||0)}`;el("seasonFinaleBest").textContent=Number(data.bestScore||0).toLocaleString("ru-RU");const teaser=data.teaser||null,box=el("seasonFinaleTeaser");const title=String(teaser?.title||data?.nextSeason?.title||"").trim(),text=String(teaser?.previewText||"").trim(),startsAt=Number(teaser?.startsAt||data?.nextSeason?.startsAt||0);box.hidden=!(title||text||startsAt);if(!box.hidden){el("seasonFinaleTeaserTitle").textContent=title?`Дальше: ${title}`:"Что дальше?";el("seasonFinaleTeaserText").textContent=text||"Следующее приключение уже готовится.";el("seasonFinaleTeaserDate").textContent=startsAt?`Старт: ${new Intl.DateTimeFormat("ru-RU",{day:"numeric",month:"long",year:"numeric",timeZone:"Europe/Moscow"}).format(new Date(startsAt*1000))}`:"";}const letterButton=el("seasonFinaleLetter");letterButton.hidden=!Boolean(serverPass?.letter?.available);el("seasonFinaleOverlay").hidden=false;document.body.style.overflow="hidden";passNotifyHaptic("success");}

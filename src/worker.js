@@ -142,37 +142,69 @@ const CASE_MUSIC_TRACKS = Object.freeze({
   legendary_marshmallow_dash_4: Object.freeze({ id: "legendary_marshmallow_dash_4", title: "Зефирный рывок IV", rarity: "legendary", weight: 1, legendaryOnly: true, isNew: true, src: "/assets/sounds/marshmallow_dash_4.ogg?v=0.79.8", imageUrl: "/assets/sounds/covers/music_marshmallow_dash_4.png" })
 });
 
-// Будущий контент сезона «Лунный забег». Он доступен только владельцу
-// при подготовке будущего сезонного пропуска и намеренно НЕ входит
-// в игровые каталоги кейсов/коллекции до отдельного релизного обновления.
+// Будущий контент сезона «Лунный забег». Файлы лежат в проекте заранее,
+// но публичная доступность управляется Live Content Manager из Control Center.
+// Пока предмет не выпущен в D1, обычная игра его не видит.
 const FUTURE_SEASON_CONTENT = Object.freeze({
   avatar: Object.freeze({
     season3_avatar_elite: Object.freeze({ id:"season3_avatar_elite", title:"Лунная принцесса", rarity:"mythic", imageUrl:"/assets/cases/avatars/avatrs_season3Elit.png" }),
     season3_avatar_epic: Object.freeze({ id:"season3_avatar_epic", title:"Вечерняя бариста", rarity:"epic", imageUrl:"/assets/cases/avatars/avatrs_season3Epik.png" }),
     season3_avatar_epic_2: Object.freeze({ id:"season3_avatar_epic_2", title:"Бариста на прогулке", rarity:"epic", imageUrl:"/assets/cases/avatars/avatrs_season3Epik2.png" }),
     season3_avatar_mythic: Object.freeze({ id:"season3_avatar_mythic", title:"Кофе под луной", rarity:"mythic", imageUrl:"/assets/cases/avatars/avatrs_season3Mifik.png" }),
-    season3_avatar_elite_plus: Object.freeze({ id:"season3_avatar_elite_plus", title:"Ночная королева", rarity:"legendary", imageUrl:"/assets/rating/frames/profile/Elit+avatrs_season3.png" })
+    season3_avatar_elite_plus: Object.freeze({ id:"season3_avatar_elite_plus", title:"Ночная королева", rarity:"legendary", imageUrl:"/assets/rating/frames/profile/Elit+avatrs_season3.png" }),
+    season3_avatar_standard_1: Object.freeze({ id:"season3_avatar_standard_1", title:"Прогулка в саду", rarity:"common", imageUrl:"/assets/cases/avatars/season3_avatar_standard_1.png" }),
+    season3_avatar_standard_2: Object.freeze({ id:"season3_avatar_standard_2", title:"У канала", rarity:"common", imageUrl:"/assets/cases/avatars/season3_avatar_standard_2.png" }),
+    season3_avatar_standard_3: Object.freeze({ id:"season3_avatar_standard_3", title:"Ягодный пикник", rarity:"common", imageUrl:"/assets/cases/avatars/season3_avatar_standard_3.png" }),
+    season3_avatar_epic_new_1: Object.freeze({ id:"season3_avatar_epic_new_1", title:"Цветочная корона", rarity:"epic", imageUrl:"/assets/cases/avatars/season3_avatar_epic_new_1.png" }),
+    season3_avatar_epic_new_2: Object.freeze({ id:"season3_avatar_epic_new_2", title:"Бариста в саду", rarity:"epic", imageUrl:"/assets/cases/avatars/season3_avatar_epic_new_2.png" }),
+    season3_avatar_epic_new_3: Object.freeze({ id:"season3_avatar_epic_new_3", title:"Розовая лапка", rarity:"epic", imageUrl:"/assets/cases/avatars/season3_avatar_epic_new_3.png" }),
+    season3_avatar_mythic_new_1: Object.freeze({ id:"season3_avatar_mythic_new_1", title:"Хрустальная фея", rarity:"mythic", imageUrl:"/assets/cases/avatars/season3_avatar_mythic_new_1.png" }),
+    season3_avatar_mythic_new_2: Object.freeze({ id:"season3_avatar_mythic_new_2", title:"Хрустальное сияние", rarity:"mythic", imageUrl:"/assets/cases/avatars/season3_avatar_mythic_new_2.png" }),
+    season3_avatar_legendary_new_1: Object.freeze({ id:"season3_avatar_legendary_new_1", title:"Золотая корона", rarity:"legendary", imageUrl:"/assets/cases/avatars/season3_avatar_legendary_new_1.png" }),
+    season3_avatar_legendary_new_2: Object.freeze({ id:"season3_avatar_legendary_new_2", title:"Золотое сердце", rarity:"legendary", imageUrl:"/assets/cases/avatars/season3_avatar_legendary_new_2.png" })
   }),
   frame: Object.freeze({
     season3_frame_elite_plus: Object.freeze({ id:"season3_frame_elite_plus", title:"Ночная Королева", rarity:"legendary", imageUrl:"/assets/rating/frames/profile/Elit+ramka_season3_5.png" }),
     season3_frame_elite_1: Object.freeze({ id:"season3_frame_elite_1", title:"Ночная принцесса", rarity:"legendary", imageUrl:"/assets/rating/frames/profile/Elitramka_season3_1.png" }),
     season3_frame_elite_4: Object.freeze({ id:"season3_frame_elite_4", title:"Премиальные сладости", rarity:"legendary", imageUrl:"/assets/rating/frames/profile/Elitramka_season3_4.png" }),
     season3_frame_epic: Object.freeze({ id:"season3_frame_epic", title:"Ночная смена", rarity:"epic", imageUrl:"/assets/rating/frames/profile/epickramka_season3_2.png" }),
-    season3_frame_mythic: Object.freeze({ id:"season3_frame_mythic", title:"Ночные сладости", rarity:"mythic", imageUrl:"/assets/rating/frames/profile/mifikramka_season3_3.png" })
+    season3_frame_mythic: Object.freeze({ id:"season3_frame_mythic", title:"Ночные сладости", rarity:"mythic", imageUrl:"/assets/rating/frames/profile/mifikramka_season3_3.png" }),
+    season3_frame_standard_new_1: Object.freeze({ id:"season3_frame_standard_new_1", title:"Розовый сад", rarity:"common", imageUrl:"/assets/rating/frames/profile/ramka_s3_standart1.png" }),
+    season3_frame_standard_new_2: Object.freeze({ id:"season3_frame_standard_new_2", title:"Садовый бант", rarity:"common", imageUrl:"/assets/rating/frames/profile/ramka_s3_standart2.png" }),
+    season3_frame_standard_new_3: Object.freeze({ id:"season3_frame_standard_new_3", title:"Лунный пруд", rarity:"common", imageUrl:"/assets/rating/frames/profile/ramka_s3_standart3.png" }),
+    season3_frame_epic_new_1: Object.freeze({ id:"season3_frame_epic_new_1", title:"Сакура и фонари", rarity:"epic", imageUrl:"/assets/rating/frames/profile/ramka_s3_epick1.png" }),
+    season3_frame_epic_new_2: Object.freeze({ id:"season3_frame_epic_new_2", title:"Ночной павильон", rarity:"epic", imageUrl:"/assets/rating/frames/profile/ramka_s3_epick2.png" }),
+    season3_frame_epic_new_3: Object.freeze({ id:"season3_frame_epic_new_3", title:"Сердце сада", rarity:"epic", imageUrl:"/assets/rating/frames/profile/ramka_s3_epick3.png" }),
+    season3_frame_mythic_new_1: Object.freeze({ id:"season3_frame_mythic_new_1", title:"Лотосовый сад", rarity:"mythic", imageUrl:"/assets/rating/frames/profile/ramka_s3_mifik1.png" }),
+    season3_frame_mythic_new_2: Object.freeze({ id:"season3_frame_mythic_new_2", title:"Королевская сакура", rarity:"mythic", imageUrl:"/assets/rating/frames/profile/ramka_s3_mifik2.png" }),
+    season3_frame_legendary_new_1: Object.freeze({ id:"season3_frame_legendary_new_1", title:"Золотой сад", rarity:"legendary", imageUrl:"/assets/rating/frames/profile/ramka_s3_legendary1.png" }),
+    season3_frame_legendary_new_2: Object.freeze({ id:"season3_frame_legendary_new_2", title:"Королевский сад", rarity:"legendary", imageUrl:"/assets/rating/frames/profile/ramka_s3_legendary2.png" })
   }),
   trail: Object.freeze({
     season3_trail_epic: Object.freeze({ id:"season3_trail_epic", title:"Ночной Волшебный след", rarity:"epic", imageUrl:"/assets/cases/trails/Epik_sled_season3.png" }),
     season3_trail_epic_2: Object.freeze({ id:"season3_trail_epic_2", title:"Ночной кофейный след", rarity:"epic", imageUrl:"/assets/cases/trails/Epik_sled_season3_2.png" }),
     season3_trail_legendary_plus: Object.freeze({ id:"season3_trail_legendary_plus", title:"Ночная королева", rarity:"legendary", imageUrl:"/assets/cases/trails/legendary+_sled_season_3.png" }),
     season3_trail_legendary: Object.freeze({ id:"season3_trail_legendary", title:"Воздушные сны", rarity:"legendary", imageUrl:"/assets/cases/trails/Legendary_sled_season3.png" }),
-    season3_trail_mythic: Object.freeze({ id:"season3_trail_mythic", title:"Ночная принцесса", rarity:"mythic", imageUrl:"/assets/cases/trails/mifik_sled_season3.png" })
+    season3_trail_mythic: Object.freeze({ id:"season3_trail_mythic", title:"Ночная принцесса", rarity:"mythic", imageUrl:"/assets/cases/trails/mifik_sled_season3.png" }),
+    season3_trail_standard_new_1: Object.freeze({ id:"season3_trail_standard_new_1", title:"Цветочная лапка", rarity:"common", imageUrl:"/assets/cases/trails/sled_s3_standart1.png" }),
+    season3_trail_standard_new_2: Object.freeze({ id:"season3_trail_standard_new_2", title:"Зелёный сад", rarity:"common", imageUrl:"/assets/cases/trails/sled_s3_standart2.png" }),
+    season3_trail_standard_new_3: Object.freeze({ id:"season3_trail_standard_new_3", title:"Золотая лапка", rarity:"common", imageUrl:"/assets/cases/trails/sled_s3_standart3.png" }),
+    season3_trail_epic_new_1: Object.freeze({ id:"season3_trail_epic_new_1", title:"Розовый след", rarity:"epic", imageUrl:"/assets/cases/trails/sled_s3_epick1.png" }),
+    season3_trail_epic_new_2: Object.freeze({ id:"season3_trail_epic_new_2", title:"Лунная роса", rarity:"epic", imageUrl:"/assets/cases/trails/sled_s3_epick2.png" }),
+    season3_trail_epic_new_3: Object.freeze({ id:"season3_trail_epic_new_3", title:"Садовый след", rarity:"epic", imageUrl:"/assets/cases/trails/sled_s3_epick3.png" }),
+    season3_trail_mythic_new_1: Object.freeze({ id:"season3_trail_mythic_new_1", title:"Изумрудная лапка", rarity:"mythic", imageUrl:"/assets/cases/trails/sled_s3_mifik1.png" }),
+    season3_trail_mythic_new_2: Object.freeze({ id:"season3_trail_mythic_new_2", title:"Хрустальная лапка", rarity:"mythic", imageUrl:"/assets/cases/trails/sled_s3_mifik2.png" }),
+    season3_trail_legendary_new_1: Object.freeze({ id:"season3_trail_legendary_new_1", title:"Королевская лапка", rarity:"legendary", imageUrl:"/assets/cases/trails/sled_s3_legendary1.png" })
   }),
   skin: Object.freeze({}),
   music: Object.freeze({
-    season3_music_moon_cafe_epic: Object.freeze({ id:"season3_music_moon_cafe_epic", title:"Лунное зефирное кафе", rarity:"epic", imageUrl:"/assets/sounds/covers/season3_lunar_music.png", audioUrl:"/assets/sounds/Moon Marshmallow Café(Epik).mp3" }),
-    season3_music_moon_cafe_epic_2: Object.freeze({ id:"season3_music_moon_cafe_epic_2", title:"Лунное зефирное кафе II", rarity:"epic", imageUrl:"/assets/sounds/covers/season3_lunar_music.png", audioUrl:"/assets/sounds/Moon Marshmallow Café_2(epik).mp3" }),
-    season3_music_lunar_run_legendary: Object.freeze({ id:"season3_music_lunar_run_legendary", title:"Лунный забег", rarity:"legendary", imageUrl:"/assets/sounds/covers/season3_lunar_music.png", audioUrl:"/assets/sounds/new_song_season3(Legendary).mp3" }),
-    season3_music_lunar_run_mythic: Object.freeze({ id:"season3_music_lunar_run_mythic", title:"Лунный забег II", rarity:"mythic", imageUrl:"/assets/sounds/covers/season3_lunar_music.png", audioUrl:"/assets/sounds/new_song_season3_2(Mifik).mp3" })
+    season3_music_moon_cafe_epic: Object.freeze({ id:"season3_music_moon_cafe_epic", title:"Лунное зефирное кафе", rarity:"epic", imageUrl:"/assets/sounds/covers/img_sound_s3.png", audioUrl:"/assets/sounds/Moon Marshmallow Café(Epik).mp3" }),
+    season3_music_moon_cafe_epic_2: Object.freeze({ id:"season3_music_moon_cafe_epic_2", title:"Лунное зефирное кафе II", rarity:"epic", imageUrl:"/assets/sounds/covers/img_sound_s3.png", audioUrl:"/assets/sounds/Moon Marshmallow Café_2(epik).mp3" }),
+    season3_music_lunar_run_legendary: Object.freeze({ id:"season3_music_lunar_run_legendary", title:"Лунный забег", rarity:"legendary", imageUrl:"/assets/sounds/covers/img_sound_s3.png", audioUrl:"/assets/sounds/new_song_season3(Legendary).mp3" }),
+    season3_music_lunar_run_mythic: Object.freeze({ id:"season3_music_lunar_run_mythic", title:"Лунный забег II", rarity:"mythic", imageUrl:"/assets/sounds/covers/img_sound_s3.png", audioUrl:"/assets/sounds/new_song_season3_2(Mifik).mp3" }),
+    season3_music_puppy_parade_epic: Object.freeze({ id:"season3_music_puppy_parade_epic", title:"Belkino Puppy Parade", rarity:"epic", imageUrl:"/assets/sounds/covers/img_sound_s3.png", audioUrl:"/assets/sounds/season3/belkino_puppy_parade.mp3" }),
+    season3_music_puppy_trails_mythic: Object.freeze({ id:"season3_music_puppy_trails_mythic", title:"Belkino Puppy Trails I", rarity:"mythic", imageUrl:"/assets/sounds/covers/img_sound_s3.png", audioUrl:"/assets/sounds/season3/belkino_puppy_trails_1.mp3" }),
+    season3_music_puppy_trails_legendary: Object.freeze({ id:"season3_music_puppy_trails_legendary", title:"Belkino Puppy Trails II", rarity:"legendary", imageUrl:"/assets/sounds/covers/img_sound_s3.png", audioUrl:"/assets/sounds/season3/belkino_puppy_trails_2.mp3" })
   })
 });
 
@@ -195,7 +227,7 @@ const SEASON3_DRAFT_CASE_PRESET = Object.freeze({
 });
 
 function season3DraftCasePool() {
-  const rarityWeights = Object.freeze({ epic:10, mythic:5, legendary:2 });
+  const rarityWeights = Object.freeze({ common:20, rare:15, superrare:12, epic:10, mythic:5, legendary:2 });
   const items = [];
   for (const kind of SEASON_PASS_COSMETIC_KINDS) {
     for (const [itemId,item] of Object.entries(futureSeasonContentCatalog(kind))) {
@@ -863,7 +895,8 @@ function seasonPassElitePlusBenefitsView(rawValue, options = {}) {
   const cosmetics = config.cosmetics.map(({kind,itemId}) => {
     const item = seasonPassAnyCosmeticCatalog(kind)?.[itemId];
     const future = Boolean(futureSeasonContentItem(kind,itemId));
-    if (publicView && future) {
+    const released = !future || isFutureContentReleasedCached(kind,itemId);
+    if (publicView && future && !released) {
       return { kind:"secret", itemId:"", title:"Секретная награда сезона", imageUrl:"/assets/season-pass/season.png?v=07939", future:true, released:false };
     }
     return {
@@ -871,7 +904,7 @@ function seasonPassElitePlusBenefitsView(rawValue, options = {}) {
       title:String(item?.title || itemId),
       imageUrl:seasonPassCosmeticImage(kind,itemId),
       future,
-      released:!future
+      released
     };
   });
   return {
@@ -916,7 +949,8 @@ function seasonPassCosmeticRewardDefinition(value) {
   const item=catalog?.[itemId];
   if (!item) return null;
   const future=Boolean(futureSeasonContentItem(kind,itemId));
-  return { publicType:kind, storedType:"points", kind, itemId, storedItemId:`${SEASON_PASS_COSMETIC_PREFIX}${kind}:${itemId}`, title:String(item.title||itemId), imageUrl:seasonPassCosmeticImage(kind,itemId), future, released:!future, seasonLabel:future?FUTURE_SEASON_CONTENT_LABEL:"", audioUrl:String(item.audioUrl||item.src||"") };
+  const released=!future || isFutureContentReleasedCached(kind,itemId);
+  return { publicType:kind, storedType:"points", kind, itemId, storedItemId:`${SEASON_PASS_COSMETIC_PREFIX}${kind}:${itemId}`, title:String(item.title||itemId), imageUrl:seasonPassCosmeticImage(kind,itemId), future, released, seasonLabel:future?FUTURE_SEASON_CONTENT_LABEL:"", audioUrl:String(item.audioUrl||item.src||"") };
 }
 
 function seasonPassPublicRewardType(row) {
@@ -1481,6 +1515,9 @@ export default {
       if (ownerMediaMatch) {
         return await serveOwnerMediaAsset(env, ownerMediaMatch[1]);
       }
+      if (url.pathname.startsWith("/api/owner/test-project/") && request.method === "POST") {
+        return await handleOwnerPanelApi(request, env, url.pathname, ctx);
+      }
       if (url.pathname.startsWith("/api/") && url.pathname !== "/api/runs/start" && url.pathname !== "/api/runs/checkpoint") {
         await ensureRuntimeCompatibilitySchema(env);
       }
@@ -1507,6 +1544,20 @@ export default {
         return new Response(asset.body, { status: asset.status, statusText: asset.statusText, headers });
       }
       if (url.pathname === "/owner.html" && request.method === "GET") {
+        if (!env.ASSETS) return new Response("Not found", { status: 404 });
+        const asset = await env.ASSETS.fetch(request);
+        const headers = new Headers(asset.headers);
+        headers.set("Cache-Control", "no-store, no-cache, must-revalidate, private");
+        headers.set("Pragma", "no-cache");
+        headers.set("X-Robots-Tag", "noindex, nofollow, noarchive");
+        headers.set("Referrer-Policy", "no-referrer");
+        headers.set("X-Frame-Options", "DENY");
+        headers.set("Cross-Origin-Resource-Policy", "same-origin");
+        headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=()");
+        headers.set("Content-Security-Policy", "default-src 'self'; script-src 'self' 'unsafe-inline' https://telegram.org; style-src 'self' 'unsafe-inline'; img-src 'self' https: data: blob:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'");
+        return new Response(asset.body, { status: asset.status, statusText: asset.statusText, headers });
+      }
+      if (url.pathname === "/test-project.html" && request.method === "GET") {
         if (!env.ASSETS) return new Response("Not found", { status: 404 });
         const asset = await env.ASSETS.fetch(request);
         const headers = new Headers(asset.headers);
@@ -1659,6 +1710,11 @@ export default {
 
       if (url.pathname === "/api/skins/config" && request.method === "GET") {
         return await getSkinConfig(env);
+      }
+
+      if (url.pathname === "/api/live-content/shop/buy" && request.method === "POST") {
+        const gate = await enforceFeatureFlagForRequest(request, env, "shop"); if (gate) return gate;
+        return await purchaseLiveContentShopItem(request, env);
       }
 
       if (url.pathname === "/api/skins/bonus-case" && request.method === "POST") {
@@ -2712,7 +2768,8 @@ async function ensureGamePublicSchemas(env) {
   const promise = Promise.all([
     ensureShopAssortmentSchema(env),
     ensureSkinPriceSchema(env),
-    ensureShopStockSchema(env)
+    ensureShopStockSchema(env),
+    ensureLiveContentReleaseSchema(env)
   ]).then(() => { gamePublicSchemaReady = true; });
   gamePublicSchemaPromise = promise;
   try {
@@ -2729,6 +2786,7 @@ function fallbackGamePublicConfig() {
       products: cloneDefaultShopProducts(),
       assortment: cloneDefaultShopAssortment(),
       stock: {},
+      liveContent: [],
       defaults: DEFAULT_SHOP_PRODUCTS,
       source: "fallback"
     },
@@ -2752,7 +2810,7 @@ async function readGamePublicConfig(env, force = false) {
   const promise = (async () => {
     requireDatabase(env);
     await ensureGamePublicSchemas(env);
-    const [products, assortment, skins, stockResult, gameplay] = await Promise.all([
+    const [products, assortment, skins, stockResult, gameplay, liveContentShop] = await Promise.all([
       readShopPrices(env),
       readShopAssortment(env),
       readSkinPrices(env),
@@ -2760,7 +2818,8 @@ async function readGamePublicConfig(env, force = false) {
         `SELECT scope_key, category, product_id, configured_limit, remaining, updated_at
          FROM shop_stock_limits ORDER BY category ASC, product_id ASC`
       ).all(),
-      readPublishedGameRuntimeConfig(env)
+      readPublishedGameRuntimeConfig(env),
+      readLiveContentShopCatalog(env)
     ]);
     const stockRows = stockResult.results || [];
     const value = {
@@ -2772,6 +2831,7 @@ async function readGamePublicConfig(env, force = false) {
           productId,
           shopStockAvailabilityFromRows(stockRows, "prize", productId)
         ])),
+        liveContent: liveContentShop,
         defaults: DEFAULT_SHOP_PRODUCTS,
         source: "d1"
       },
@@ -3914,6 +3974,23 @@ async function purchaseSkinWithStock(request, env) {
     console.error("purchaseSkinWithStock failed", error);
     return jsonResponse({ ok:false,error:"Не удалось подтвердить покупку скина." }, 500);
   }
+}
+
+function liveContentOwnedStateKey(kind){return ({avatar:"ownedAvatars",frame:"ownedFrames",trail:"ownedTrails",music:"ownedMusicTracks",skin:"ownedSkins"})[String(kind||"")]||"";}
+function liveContentOwnedDbColumn(kind){return ({avatar:"owned_avatars_json",frame:"owned_frames_json",trail:"owned_trails_json",music:"owned_music_json",skin:"owned_skins_json"})[String(kind||"")]||"";}
+
+async function purchaseLiveContentShopItem(request,env){
+  try{
+    requireDatabase(env);requireBotToken(env);await ensureAuthoritativeEconomySchema(env);await ensureLiveContentReleaseSchema(env);
+    const body=await readJson(request),auth=await validateTelegramInitData(String(body.initData||""),env),telegramId=String(auth.user.id),kind=String(body.kind||"").trim(),itemId=String(body.itemId||"").trim();const item=futureSeasonContentItem(kind,itemId);if(!item)throw new ApiError(404,"Предмет не найден.");
+    const rules=await readLiveContentReleaseRules(env,true),rule=rules.get(liveContentReleaseKey(kind,itemId));if(!rule?.released||rule.destinationType!=="shop")throw new ApiError(409,"Этот предмет сейчас не продаётся.");const price={points:Math.max(0,Math.floor(Number(rule.destinationConfig?.points)||0)),treats:Math.max(0,Math.floor(Number(rule.destinationConfig?.treats)||0)),coffee:Math.max(0,Math.floor(Number(rule.destinationConfig?.coffee)||0))};if(price.points+price.treats+price.coffee<=0)throw new ApiError(409,"Цена предмета не настроена.");
+    const ownedKey=liveContentOwnedStateKey(kind),column=liveContentOwnedDbColumn(kind);if(!ownedKey||!column)throw new ApiError(400,"Этот тип контента пока нельзя купить.");let ensured=await ensureCasePlayerState(env,telegramId,{});if((ensured.state?.[ownedKey]||[]).includes(itemId))return jsonResponse(await buildCasePayload(env,telegramId,{}, {repeated:true,purchase:{kind,itemId,title:String(item.title||itemId),cost:price}}, {ensured}));
+    const profile=await ensureAuthoritativeProfileRow(env,telegramId,`live-content:${kind}:${itemId}:precheck`),missing=[];if(safeAdminNumber(profile?.wallet)<price.points)missing.push(`${price.points-safeAdminNumber(profile?.wallet)} очков`);if(safeAdminNumber(profile?.treats)<price.treats)missing.push(`${price.treats-safeAdminNumber(profile?.treats)} зефира`);if(safeAdminNumber(profile?.coffee)<price.coffee)missing.push(`${price.coffee-safeAdminNumber(profile?.coffee)} кофе`);if(missing.length)throw new ApiError(400,`Не хватает ${missing.join(" и ")}.`);
+    const marker=`live-content:${kind}:${itemId}:${caseGrantId("txn")}`.slice(0,180),now=Math.floor(Date.now()/1000);const charge=env.DB.prepare(`UPDATE admin_profile_state SET wallet=wallet-?,treats=treats-?,coffee=coffee-?,revision=revision+1,updated_at=?,updated_by=? WHERE telegram_id=? AND wallet>=? AND treats>=? AND coffee>=? AND NOT EXISTS(SELECT 1 FROM case_player_state c,json_each(CASE WHEN json_valid(c.${column}) THEN c.${column} ELSE '[]' END) j WHERE c.telegram_id=? AND CAST(j.value AS TEXT)=?)`).bind(price.points,price.treats,price.coffee,now,marker,telegramId,price.points,price.treats,price.coffee,telegramId,itemId);
+    const grant=env.DB.prepare(`UPDATE case_player_state SET ${column}=CASE WHEN EXISTS(SELECT 1 FROM json_each(CASE WHEN json_valid(${column}) THEN ${column} ELSE '[]' END) WHERE CAST(value AS TEXT)=?) THEN CASE WHEN json_valid(${column}) THEN ${column} ELSE '[]' END ELSE json_insert(CASE WHEN json_valid(${column}) THEN ${column} ELSE '[]' END,'$[#]',?) END,revision=revision+1,updated_at=? WHERE telegram_id=? AND EXISTS(SELECT 1 FROM admin_profile_state WHERE telegram_id=? AND updated_by=?)`).bind(itemId,itemId,now,telegramId,telegramId,marker);
+    const results=await env.DB.batch([charge,grant]);if(Number(results?.[0]?.meta?.changes||0)!==1||Number(results?.[1]?.meta?.changes||0)!==1){ensured=await ensureCasePlayerState(env,telegramId,{});if((ensured.state?.[ownedKey]||[]).includes(itemId))return jsonResponse(await buildCasePayload(env,telegramId,{}, {repeated:true,purchase:{kind,itemId,title:String(item.title||itemId),cost:price}}, {ensured}));throw new ApiError(409,"Баланс изменился или покупка уже обрабатывается. Обновите магазин и повторите.");}
+    ensured=await ensureCasePlayerState(env,telegramId,{});await recordPlayerTimeline(env,telegramId,"live_content_purchase",`купил «${String(item.title||itemId)}»`,{kind,itemId,cost:price},`live_content_${kind}_${itemId}`,auth.user);await recordContentAnalyticsEvent(env,telegramId,kind,itemId,"acquired","live_content_shop",`live-content:${kind}:${itemId}`);return jsonResponse(await buildCasePayload(env,telegramId,{}, {purchase:{kind,itemId,title:String(item.title||itemId),cost:price}}, {ensured}));
+  }catch(error){if(error instanceof ApiError)return jsonResponse({ok:false,error:error.message},error.status);console.error("purchaseLiveContentShopItem failed",error);return jsonResponse({ok:false,error:"Не удалось купить предмет."},500);}
 }
 
 async function getSkinConfig(env) {
@@ -5083,6 +5160,7 @@ function normalizeCaseCosmeticId(kind, value) {
   if (kind === "frame") return (CASE_FRAMES[id] || future[id]) ? id : "";
   if (kind === "trail") return (CASE_TRAILS[id] || future[id]) ? id : "";
   if (kind === "music") return (CASE_MUSIC_TRACKS[id] || future[id]) ? id : "";
+  if (kind === "skin") return (CASE_SKINS[id] || future[id]) ? id : "";
   return "";
 }
 
@@ -5155,11 +5233,11 @@ function caseWeightedKind(caseType, state = null, liveops = null, catalogs = nul
   const caseConfig = liveOpsCaseConfig(liveops, caseType);
   const chances = { ...(caseConfig?.chances || LIVEOPS_CASE_DEFAULTS[caseType]?.chances || {}) };
   const runtimeCatalogs = catalogs || {
-    avatar: runtimeCaseCatalog("avatar", CASE_AVATARS, liveops),
-    frame: runtimeCaseCatalog("frame", CASE_FRAMES, liveops),
-    trail: runtimeCaseCatalog("trail", CASE_TRAILS, liveops),
-    skin: runtimeCaseCatalog("skin", CASE_SKINS, liveops),
-    music: CASE_MUSIC_TRACKS
+    avatar: runtimeCaseCatalog("avatar", CASE_AVATARS, liveops, caseType),
+    frame: runtimeCaseCatalog("frame", CASE_FRAMES, liveops, caseType),
+    trail: runtimeCaseCatalog("trail", CASE_TRAILS, liveops, caseType),
+    skin: runtimeCaseCatalog("skin", CASE_SKINS, liveops, caseType),
+    music: runtimeCaseCatalog("music", CASE_MUSIC_TRACKS, liveops, caseType)
   };
   const ownedMap = {
     avatar: state?.ownedAvatars,
@@ -5352,13 +5430,15 @@ async function ensureCasePlayerState(env, telegramId, currentProfile = {}, optio
 
 function normalizeCurrentOwnedSkins(value) {
   const ids = Array.isArray(value) ? value : [];
-  return [...new Set(ids.map((item) => String(item || "").trim()).filter((item) => item && item !== "default" && Object.prototype.hasOwnProperty.call(CASE_SKINS, item)))];
+  const future = futureSeasonContentCatalog("skin");
+  return [...new Set(ids.map((item) => String(item || "").trim()).filter((item) => item && item !== "default" && (Object.prototype.hasOwnProperty.call(CASE_SKINS, item) || Object.prototype.hasOwnProperty.call(future, item))))];
 }
 
 function normalizeCurrentActiveSkin(value, ownedSkins = []) {
   const id = String(value || "").trim();
   if (!id || id === "default") return "default";
-  return Array.isArray(ownedSkins) && ownedSkins.includes(id) && Object.prototype.hasOwnProperty.call(CASE_SKINS, id) ? id : "default";
+  const known = Object.prototype.hasOwnProperty.call(CASE_SKINS, id) || Object.prototype.hasOwnProperty.call(futureSeasonContentCatalog("skin"), id);
+  return Array.isArray(ownedSkins) && ownedSkins.includes(id) && known ? id : "default";
 }
 
 async function buildCasePayload(env, telegramId, currentProfile, extra = {}, options = {}) {
@@ -5479,11 +5559,11 @@ function rollLevelCase(caseType, sourceState, currentOwnedSkins = [], liveops = 
   const caseConfig = liveOpsCaseConfig(liveops, caseType);
   if (caseConfig?.enabled === false) throw new ApiError(409, "Этот кейс временно отключён администратором.");
   const catalogs = {
-    avatar: runtimeCaseCatalog("avatar", CASE_AVATARS, liveops),
-    frame: runtimeCaseCatalog("frame", CASE_FRAMES, liveops),
-    trail: runtimeCaseCatalog("trail", CASE_TRAILS, liveops),
-    skin: runtimeCaseCatalog("skin", CASE_SKINS, liveops),
-    music: CASE_MUSIC_TRACKS
+    avatar: runtimeCaseCatalog("avatar", CASE_AVATARS, liveops, caseType),
+    frame: runtimeCaseCatalog("frame", CASE_FRAMES, liveops, caseType),
+    trail: runtimeCaseCatalog("trail", CASE_TRAILS, liveops, caseType),
+    skin: runtimeCaseCatalog("skin", CASE_SKINS, liveops, caseType),
+    music: runtimeCaseCatalog("music", CASE_MUSIC_TRACKS, liveops, caseType)
   };
   const guaranteeCount = caseType === "legendary"
     ? Math.max(0, Math.min(50, Math.floor(Number(caseConfig?.guaranteeCount ?? 50))))
@@ -6234,18 +6314,34 @@ async function equipCaseCosmetic(request, env) {
     if (requestedId && !id) throw new ApiError(400, "Неизвестный косметический предмет.");
     const ensured = await ensureCasePlayerState(env, telegramId, body.current || {});
     const state = ensured.state;
+    const liveRules = requestedId ? await readLiveContentReleaseRules(env) : new Map();
+    const liveRule = requestedId ? liveRules.get(liveContentReleaseKey(kind, id)) : null;
+    const nativeFree = Boolean(id && liveRule?.released && liveRule.destinationType === "native");
+    let nativeClaimed = false;
     if (kind === "avatar") {
-      if (id && !state.ownedAvatars.includes(id)) throw new ApiError(403, "Эта аватарка ещё не получена.");
+      if (id && !state.ownedAvatars.includes(id)) {
+        if (!nativeFree) throw new ApiError(403, "Эта аватарка ещё не получена.");
+        state.ownedAvatars = [...state.ownedAvatars, id]; nativeClaimed = true;
+      }
       state.activeAvatarId = id;
     } else if (kind === "frame") {
-      if (id && !state.ownedFrames.includes(id)) throw new ApiError(403, "Эта рамка ещё не получена.");
+      if (id && !state.ownedFrames.includes(id)) {
+        if (!nativeFree) throw new ApiError(403, "Эта рамка ещё не получена.");
+        state.ownedFrames = [...state.ownedFrames, id]; nativeClaimed = true;
+      }
       state.activeFrameId = id;
     } else if (kind === "trail") {
-      if (id && !state.ownedTrails.includes(id)) throw new ApiError(403, "Этот след ещё не получен.");
+      if (id && !state.ownedTrails.includes(id)) {
+        if (!nativeFree) throw new ApiError(403, "Этот след ещё не получен.");
+        state.ownedTrails = [...state.ownedTrails, id]; nativeClaimed = true;
+      }
       state.activeTrailId = id;
     } else {
       const musicId = id || "cafe_run";
-      if (!state.ownedMusicTracks.includes(musicId)) throw new ApiError(403, "Эта мелодия ещё не получена.");
+      if (!state.ownedMusicTracks.includes(musicId)) {
+        if (!nativeFree) throw new ApiError(403, "Эта мелодия ещё не получена.");
+        state.ownedMusicTracks = [...state.ownedMusicTracks, musicId]; nativeClaimed = true;
+      }
       state.activeMusicTrackId = musicId;
     }
     const now = Math.floor(Date.now() / 1000);
@@ -6262,11 +6358,15 @@ async function equipCaseCosmetic(request, env) {
     ]);
     const catalog = ({ avatar: CASE_AVATARS, frame: CASE_FRAMES, trail: CASE_TRAILS, music: CASE_MUSIC_TRACKS })[kind] || {};
     const effectiveId = kind === "music" ? (id || "cafe_run") : id;
-    const title = effectiveId ? (catalog[effectiveId]?.title || effectiveId) : "без оформления";
+    const futureItem = effectiveId ? futureSeasonContentItem(kind, effectiveId) : null;
+    const title = effectiveId ? (catalog[effectiveId]?.title || futureItem?.title || effectiveId) : "без оформления";
     const noun = kind === "frame" ? "рамку" : kind === "avatar" ? "аватарку" : kind === "trail" ? "след" : "мелодию";
     const action = kind === "music" ? "выбрал" : effectiveId ? "установил" : "снял";
-    await recordPlayerTimeline(env, telegramId, "cosmetic_equip", `${action} ${noun} «${title}»`, { kind, id: effectiveId }, `equip_${kind}_${now}`, auth.user, now);
-    if (effectiveId) await recordContentAnalyticsEvent(env, telegramId, kind, effectiveId, "equipped", "profile", `equip:${now}`);
+    await recordPlayerTimeline(env, telegramId, "cosmetic_equip", `${action} ${noun} «${title}»`, { kind, id: effectiveId, nativeClaimed }, `equip_${kind}_${now}`, auth.user, now);
+    if (effectiveId) {
+      if (nativeClaimed) await recordContentAnalyticsEvent(env, telegramId, kind, effectiveId, "acquired", "native_collection", `native:${telegramId}:${kind}:${effectiveId}`);
+      await recordContentAnalyticsEvent(env, telegramId, kind, effectiveId, "equipped", "profile", `equip:${now}`);
+    }
     return jsonResponse(await buildCasePayload(env, telegramId, body.current || {}));
   } catch (error) {
     if (error instanceof ApiError) return jsonResponse({ ok: false, error: error.message }, error.status);
@@ -7268,14 +7368,18 @@ async function buildLeaderboardPayload(env, season, telegramId, mode = "season")
 }
 
 function leaderboardRowToClient(row, place) {
+  const caseAvatarId = normalizeCaseCosmeticId("avatar", row.case_avatar_id);
+  const caseFrameId = normalizeCaseCosmeticId("frame", row.case_frame_id);
   return {
     place: Number(place || 0),
     telegramId: String(row.telegram_id || ""),
     name: String(row.display_name || "Гость кафе"),
     username: String(row.username || ""),
     photoUrl: String(row.photo_url || ""),
-    caseAvatarId: normalizeCaseCosmeticId("avatar", row.case_avatar_id),
-    caseFrameId: normalizeCaseCosmeticId("frame", row.case_frame_id),
+    caseAvatarId,
+    caseAvatarUrl: caseAvatarId ? seasonPassCosmeticImage("avatar", caseAvatarId) : "",
+    caseFrameId,
+    caseFrameUrl: caseFrameId ? seasonPassCosmeticImage("frame", caseFrameId) : "",
     score: Number(row.best_score || 0),
     level: Number(row.level || 1),
     achievedAt: Number(row.achieved_at || 0) * 1000
@@ -8333,7 +8437,7 @@ function configuredOwnerPanelUrl(env) {
     url.hash = "";
     return url.toString();
   } catch {
-    return `${DEFAULT_GAME_URL.replace(/\/$/, "")}/owner.html?v=owner-1.0.0-8`;
+    return `${DEFAULT_GAME_URL.replace(/\/$/, "")}/owner.html?v=owner-1.0.7-cc925-tp1`;
   }
 }
 
@@ -16091,10 +16195,86 @@ const LIVEOPS_CONTENT_IMAGES = Object.freeze({
   })
 });
 
+const LIVE_CONTENT_DESTINATIONS = Object.freeze(["native","case","seasonal_case","shop","season_pass"]);
+const LIVE_CONTENT_RELEASE_CACHE_TTL_MS = 5000;
+let liveContentReleaseSchemaPromise = null;
+let liveContentReleaseCache = { expiresAt:0, rows:new Map() };
+
+function liveContentReleaseKey(kind,itemId){ return `${String(kind||"")}:${String(itemId||"")}`; }
+function liveContentRuleFromRow(row){
+  let config={};try{config=JSON.parse(String(row?.destination_config_json||"{}"))||{};}catch{}
+  return {
+    kind:String(row?.item_kind||""), itemId:String(row?.item_id||""), released:Number(row?.released||0)===1, everReleased:Number(row?.ever_released||0)===1,
+    destinationType:LIVE_CONTENT_DESTINATIONS.includes(String(row?.destination_type||""))?String(row.destination_type):"native",
+    destinationId:String(row?.destination_id||""), destinationConfig:config&&typeof config==="object"&&!Array.isArray(config)?config:{},
+    updatedAt:Number(row?.updated_at||0), updatedBy:String(row?.updated_by||"")
+  };
+}
+
+async function ensureLiveContentReleaseSchema(env){
+  requireDatabase(env);
+  if(!liveContentReleaseSchemaPromise){
+    liveContentReleaseSchemaPromise=(async()=>{
+      await env.DB.prepare(`CREATE TABLE IF NOT EXISTS live_content_release_rules (
+        item_kind TEXT NOT NULL,item_id TEXT NOT NULL,released INTEGER NOT NULL DEFAULT 0,ever_released INTEGER NOT NULL DEFAULT 0,
+        destination_type TEXT NOT NULL DEFAULT 'native',destination_id TEXT NOT NULL DEFAULT '',destination_config_json TEXT NOT NULL DEFAULT '{}',
+        updated_at INTEGER NOT NULL DEFAULT 0,updated_by TEXT NOT NULL DEFAULT '',PRIMARY KEY(item_kind,item_id)
+      )`).run();
+      const now=Math.floor(Date.now()/1000),statements=[];
+      for(const [kind,catalog] of Object.entries(FUTURE_SEASON_CONTENT)){
+        for(const itemId of Object.keys(catalog||{})){
+          statements.push(env.DB.prepare(`INSERT OR IGNORE INTO live_content_release_rules(item_kind,item_id,released,ever_released,destination_type,destination_id,destination_config_json,updated_at,updated_by) VALUES(?,?,0,0,'native','','{}',?,'system')`).bind(kind,itemId,now));
+        }
+      }
+      for(let i=0;i<statements.length;i+=40)await env.DB.batch(statements.slice(i,i+40));
+    })().catch(error=>{liveContentReleaseSchemaPromise=null;throw error;});
+  }
+  await liveContentReleaseSchemaPromise;
+}
+
+async function readLiveContentReleaseRules(env,force=false){
+  const now=Date.now();
+  if(!force&&liveContentReleaseCache.expiresAt>now&&liveContentReleaseCache.rows.size)return liveContentReleaseCache.rows;
+  await ensureLiveContentReleaseSchema(env);
+  const result=await env.DB.prepare(`SELECT * FROM live_content_release_rules ORDER BY item_kind,item_id`).all();
+  const rows=new Map();for(const row of result.results||[]){const rule=liveContentRuleFromRow(row);rows.set(liveContentReleaseKey(rule.kind,rule.itemId),rule);}
+  liveContentReleaseCache={expiresAt:Date.now()+LIVE_CONTENT_RELEASE_CACHE_TTL_MS,rows};
+  return rows;
+}
+
+function liveContentReleaseRuleCached(kind,itemId){ return liveContentReleaseCache.rows.get(liveContentReleaseKey(kind,itemId))||null; }
+function isFutureContentReleasedCached(kind,itemId){ return Boolean(liveContentReleaseRuleCached(kind,itemId)?.released); }
+function invalidateLiveContentReleaseCache(){ liveContentReleaseCache={expiresAt:0,rows:new Map()}; }
+
+async function readLiveContentShopCatalog(env){
+  const rules=await readLiveContentReleaseRules(env);const items=[];
+  for(const rule of rules.values()){
+    if(!rule.released||rule.destinationType!=="shop")continue;
+    const item=futureSeasonContentItem(rule.kind,rule.itemId);if(!item)continue;
+    const cfg=rule.destinationConfig||{};
+    items.push({kind:rule.kind,itemId:rule.itemId,title:String(item.title||rule.itemId),rarity:String(item.rarity||"common"),imageUrl:String(item.imageUrl||""),audioUrl:String(item.audioUrl||item.src||""),price:{points:Math.max(0,Math.floor(Number(cfg.points)||0)),treats:Math.max(0,Math.floor(Number(cfg.treats)||0)),coffee:Math.max(0,Math.floor(Number(cfg.coffee)||0))},seasonLabel:FUTURE_SEASON_CONTENT_LABEL});
+  }
+  return items.sort((a,b)=>String(a.kind).localeCompare(String(b.kind))||String(a.title).localeCompare(String(b.title),"ru"));
+}
+
+async function seasonPassEffectiveCaseItems(env,caseIdValue,baseRows=null){
+  const caseId=String(caseIdValue||"").trim();if(!caseId)return [];
+  const rows=Array.isArray(baseRows)?baseRows.slice():((await env.DB.prepare(`SELECT item_key,reward_kind,item_id,weight,rarity,title,image_url,enabled FROM season_pass_case_items WHERE case_id=? AND enabled=1 AND weight>0 ORDER BY item_key`).bind(caseId).all()).results||[]);
+  const known=new Set(rows.map(row=>`${String(row.reward_kind)}:${String(row.item_id)}`));const rules=await readLiveContentReleaseRules(env);
+  for(const rule of rules.values()){
+    if(!rule.released||rule.destinationType!=="seasonal_case"||rule.destinationId!==caseId)continue;
+    const item=futureSeasonContentItem(rule.kind,rule.itemId);if(!item)continue;const key=`${rule.kind}:${rule.itemId}`;if(known.has(key))continue;
+    const weight=Math.max(.01,Math.min(100000,Number(rule.destinationConfig?.weight)||1));
+    rows.push({item_key:`live:${key}`,reward_kind:rule.kind,item_id:rule.itemId,weight,rarity:String(item.rarity||"epic"),title:String(item.title||rule.itemId),image_url:String(item.imageUrl||""),enabled:1,live_content:1});known.add(key);
+  }
+  return rows;
+}
+
 let liveOpsAdminSchemaPromise = null;
 async function ensureLiveOpsAdminSchema(env) {
   if (!liveOpsAdminSchemaPromise) {
     liveOpsAdminSchemaPromise = (async () => {
+      await ensureLiveContentReleaseSchema(env);
       await env.DB.batch([
         env.DB.prepare(`CREATE TABLE IF NOT EXISTS player_moderation_history (id INTEGER PRIMARY KEY AUTOINCREMENT, telegram_id TEXT NOT NULL, action TEXT NOT NULL, block_type TEXT NOT NULL DEFAULT '', reason TEXT NOT NULL DEFAULT '', blocked_until INTEGER NOT NULL DEFAULT 0, actor_telegram_id TEXT NOT NULL DEFAULT '', actor_name TEXT NOT NULL DEFAULT '', created_at INTEGER NOT NULL)`),
         env.DB.prepare(`CREATE TABLE IF NOT EXISTS player_notes (id INTEGER PRIMARY KEY AUTOINCREMENT, telegram_id TEXT NOT NULL, note_text TEXT NOT NULL, created_by TEXT NOT NULL, created_by_name TEXT NOT NULL DEFAULT '', created_at INTEGER NOT NULL, deleted_at INTEGER NOT NULL DEFAULT 0, deleted_by TEXT NOT NULL DEFAULT '')`),
@@ -16190,11 +16370,12 @@ function liveOpsCaseConfigFromRow(row) {
 
 async function readLiveOpsConfig(env) {
   await ensureLiveOpsAdminSchema(env);
-  const [contentResult, caseResult] = await Promise.all([
+  const [contentResult, caseResult, releaseRules] = await Promise.all([
     env.DB.prepare(`SELECT * FROM liveops_content_items ORDER BY item_kind, title`).all(),
-    env.DB.prepare(`SELECT * FROM liveops_case_configs ORDER BY CASE case_id WHEN 'small' THEN 1 WHEN 'sweet' THEN 2 WHEN 'gold' THEN 3 WHEN 'mythic' THEN 4 ELSE 5 END`).all()
+    env.DB.prepare(`SELECT * FROM liveops_case_configs ORDER BY CASE case_id WHEN 'small' THEN 1 WHEN 'sweet' THEN 2 WHEN 'gold' THEN 3 WHEN 'mythic' THEN 4 ELSE 5 END`).all(),
+    readLiveContentReleaseRules(env)
   ]);
-  const content = { avatar: {}, frame: {}, trail: {}, skin: {} };
+  const content = { avatar: {}, frame: {}, trail: {}, skin: {}, music: {} };
   for (const row of contentResult.results || []) {
     const kind = String(row.item_kind || "");
     if (!content[kind]) continue;
@@ -16208,13 +16389,22 @@ async function readLiveOpsConfig(env) {
       imageUrl: String(row.image_url || "")
     };
   }
+  for(const rule of releaseRules.values()){
+    if(!rule.released&&!rule.everReleased)continue;
+    const item=futureSeasonContentItem(rule.kind,rule.itemId);if(!item||!content[rule.kind])continue;
+    content[rule.kind][rule.itemId]={
+      title:String(item.title||rule.itemId),rarity:String(item.rarity||"common"),weight:Math.max(0,Number(rule.destinationConfig?.weight)||1),
+      enabled:Boolean(rule.released),isNew:true,legendaryOnly:false,imageUrl:String(item.imageUrl||""),audioUrl:String(item.audioUrl||item.src||""),
+      future:true,released:Boolean(rule.released),everReleased:Boolean(rule.everReleased),destinationType:rule.destinationType,destinationId:rule.destinationId,destinationConfig:rule.destinationConfig||{},seasonLabel:FUTURE_SEASON_CONTENT_LABEL
+    };
+  }
   const cases = {};
   for (const row of caseResult.results || []) cases[String(row.case_id)] = liveOpsCaseConfigFromRow(row);
   for (const caseId of LIVEOPS_CASE_IDS) if (!cases[caseId]) cases[caseId] = { id: caseId, ...LIVEOPS_CASE_DEFAULTS[caseId] };
-  return { content, cases, version: 1 };
+  return { content, cases, version: 2 };
 }
 
-function runtimeCaseCatalog(kind, baseCatalog, liveops) {
+function runtimeCaseCatalog(kind, baseCatalog, liveops, caseType = "") {
   const overrides = liveops?.content?.[kind] || {};
   const result = {};
   for (const [id, item] of Object.entries(baseCatalog || {})) {
@@ -16226,8 +16416,14 @@ function runtimeCaseCatalog(kind, baseCatalog, liveops) {
       rarity: String(override?.rarity || item.rarity || "common"),
       weight: Math.max(0, Number(override?.weight ?? item.weight ?? 1)),
       isNew: override?.isNew == null ? Boolean(item.isNew) : Boolean(override.isNew),
-      legendaryOnly: override?.legendaryOnly == null ? Boolean(item.legendaryOnly) : Boolean(override.legendaryOnly)
+      legendaryOnly: override?.legendaryOnly == null ? Boolean(item.legendaryOnly) : Boolean(override.legendaryOnly),
+      imageUrl:String(override?.imageUrl||item.imageUrl||""),audioUrl:String(override?.audioUrl||item.audioUrl||item.src||"")
     };
+  }
+  for(const [id,override] of Object.entries(overrides)){
+    if(Object.prototype.hasOwnProperty.call(baseCatalog||{},id)||override?.enabled===false)continue;
+    if(caseType&&(String(override?.destinationType||"")!=="case"||String(override?.destinationId||"")!==String(caseType)))continue;
+    result[id]={id,title:String(override?.title||id),rarity:String(override?.rarity||"common"),weight:Math.max(0,Number(override?.weight)||1),isNew:Boolean(override?.isNew),legendaryOnly:Boolean(override?.legendaryOnly),imageUrl:String(override?.imageUrl||""),src:kind==="music"?String(override?.audioUrl||""):String(override?.imageUrl||""),audioUrl:String(override?.audioUrl||""),future:Boolean(override?.future)};
   }
   return result;
 }
@@ -18475,17 +18671,18 @@ async function deliverQueuedReward(env, row, leaseToken) {
     await ensureCasePlayerState(env, telegramId, {});
     if (row.reward_kind === "skin") {
       cosmeticId = String(row.reward_id || "").trim().toLowerCase();
-      if (!SKINS[cosmeticId] || cosmeticId === "default") throw new Error("Неизвестный косметический предмет");
+      if (!(SKINS[cosmeticId] || futureSeasonContentItem("skin",cosmeticId)) || cosmeticId === "default") throw new Error("Неизвестный косметический предмет");
       cosmeticColumn = "owned_skins_json";
     } else if (row.reward_kind === "music") {
       cosmeticId = String(row.reward_id || "").trim();
       const music=seasonPassAnyCosmeticCatalog("music")?.[cosmeticId];
       if (!music) throw new Error("Неизвестный музыкальный трек");
-      if (futureSeasonContentItem("music",cosmeticId)) throw new Error("Музыкальный трек ещё не выпущен");
+      if (futureSeasonContentItem("music",cosmeticId)&&!isFutureContentReleasedCached("music",cosmeticId)) throw new Error("Музыкальный трек ещё не выпущен");
       cosmeticColumn = "owned_music_json";
     } else {
       cosmeticId = normalizeCaseCosmeticId(row.reward_kind, row.reward_id);
       if (!cosmeticId) throw new Error("Неизвестный косметический предмет");
+      if(futureSeasonContentItem(row.reward_kind,cosmeticId)&&!isFutureContentReleasedCached(row.reward_kind,cosmeticId))throw new Error("Косметический предмет ещё не выпущен");
       cosmeticColumn = ({ avatar:"owned_avatars_json", frame:"owned_frames_json", trail:"owned_trails_json" })[row.reward_kind];
     }
     const current = await env.DB.prepare(`SELECT ${cosmeticColumn} AS owned FROM case_player_state WHERE telegram_id=? LIMIT 1`).bind(telegramId).first();
@@ -18498,7 +18695,7 @@ async function deliverQueuedReward(env, row, leaseToken) {
     const definition=await env.DB.prepare(`SELECT case_id,season_id,title,description,closed_image_url,open_image_url,slots,duplicate_points,enabled,release_at FROM season_pass_case_definitions WHERE case_id=? LIMIT 1`).bind(caseId).first();
     if(!definition||!Number(definition.enabled||0))throw new Error("Сезонный кейс отключён");
     if(Number(definition.release_at||0)>now)throw new Error("Сезонный кейс ещё не выпущен");
-    const caseItems=(await env.DB.prepare(`SELECT item_key,reward_kind,item_id,weight,rarity,title,image_url FROM season_pass_case_items WHERE case_id=? AND enabled=1 AND weight>0 ORDER BY item_key`).bind(caseId).all()).results||[];
+    const caseItems=await seasonPassEffectiveCaseItems(env,caseId);
     if(!caseItems.length)throw new Error("В сезонном кейсе пока нет наград");
     row.__seasonalCase={definition,caseItems};
   } else if (row.reward_kind === "physical_restore") {
@@ -20952,7 +21149,7 @@ async function enforceMaintenanceForRequest(request, url, env) {
   if (settings.testersOnly && !privileged && !protectedRunSettlement) return jsonResponse({ ok: false, maintenance: true, mode: "testers_only", error: settings.message }, 503);
   if (settings.fullClosed && !privileged && !protectedRunSettlement) return jsonResponse({ ok: false, maintenance: true, mode: "full", error: settings.message }, 503);
   if (settings.ratingDisabled && path.startsWith("/api/leaderboard/") && path !== "/api/leaderboard/submit") return jsonResponse({ ok: false, maintenance: true, mode: "rating", error: settings.message }, 503);
-  if (settings.purchasesDisabled && ["/api/rewards/create", "/api/skins/purchase", "/api/skins/bonus-case", "/api/cases/purchase", "/api/shop/offers/purchase"].includes(path)) return jsonResponse({ ok: false, maintenance: true, mode: "purchases", error: settings.message }, 503);
+  if (settings.purchasesDisabled && ["/api/rewards/create", "/api/skins/purchase", "/api/skins/bonus-case", "/api/cases/purchase", "/api/shop/offers/purchase", "/api/live-content/shop/buy"].includes(path)) return jsonResponse({ ok: false, maintenance: true, mode: "purchases", error: settings.message }, 503);
   if (settings.casesDisabled && ["/api/cases/open", "/api/cases/open-granted", "/api/cases/purchase", "/api/cases/activate"].includes(path)) return jsonResponse({ ok: false, maintenance: true, mode: "cases", error: settings.message }, 503);
   if (settings.physicalRewardsDisabled && path === "/api/rewards/create") return jsonResponse({ ok: false, maintenance: true, mode: "physical", error: settings.message }, 503);
   return null;
@@ -22078,9 +22275,9 @@ async function restoreSnapshotById(snapshotId, user, env) {
   await notifySubscribedStaff(env,"case_changes",`♻️ <b>Настройки восстановлены из снимка</b>\n\n${escapeHtml(row.title)}\nСотрудник: ${escapeHtml(telegramDisplayName(user))}`);
 }
 
-function contentCatalog(kind){return ({avatar:CASE_AVATARS,frame:CASE_FRAMES,trail:CASE_TRAILS,skin:SKINS})[kind]||{};}
-function contentOwnedColumn(kind){return ({avatar:"owned_avatars_json",frame:"owned_frames_json",trail:"owned_trails_json",skin:"owned_skins_json"})[kind]||"";}
-function contentActiveColumn(kind){return ({avatar:"active_avatar_id",frame:"active_frame_id",trail:"active_trail_id",skin:"active_skin_id"})[kind]||"";}
+function contentCatalog(kind){return ({avatar:{...CASE_AVATARS,...futureSeasonContentCatalog("avatar")},frame:{...CASE_FRAMES,...futureSeasonContentCatalog("frame")},trail:{...CASE_TRAILS,...futureSeasonContentCatalog("trail")},skin:{...SKINS,...futureSeasonContentCatalog("skin")},music:{...CASE_MUSIC_TRACKS,...futureSeasonContentCatalog("music")}})[kind]||{};}
+function contentOwnedColumn(kind){return ({avatar:"owned_avatars_json",frame:"owned_frames_json",trail:"owned_trails_json",skin:"owned_skins_json",music:"owned_music_json"})[kind]||"";}
+function contentActiveColumn(kind){return ({avatar:"active_avatar_id",frame:"active_frame_id",trail:"active_trail_id",skin:"active_skin_id",music:"active_music_id"})[kind]||"";}
 
 async function contentItemAnalytics(kind, itemId, env) {
   await ensureOperationsSecuritySchema(env);
@@ -22900,7 +23097,7 @@ async function ensureSeasonPassSchema(env) {
     await ensureSeason2StoryPreset(env);
   })();
   seasonPassSchemaPromise = promise;
-  try { await promise; seasonPassSchemaReady = true; } finally { if (seasonPassSchemaPromise === promise) seasonPassSchemaPromise = null; }
+  try { await promise; seasonPassSchemaReady = true; await readLiveContentReleaseRules(env,true); } finally { if (seasonPassSchemaPromise === promise) seasonPassSchemaPromise = null; }
 }
 
 function defaultSeasonPassTasks(){
@@ -24060,9 +24257,9 @@ async function openSeasonPassSeasonalCase(request,env,executionCtx=null){
     grantId=String(grant.grant_id);token=crypto.randomUUID().replace(/-/g,'');
     const claim=await env.DB.prepare(`UPDATE season_pass_case_grants SET status='opening',opening_started_at=?,opening_token=? WHERE grant_id=? AND telegram_id=? AND status='pending'`).bind(now,token,grantId,ctx.telegramId).run();
     if(Number(claim?.meta?.changes||0)<1)throw new ApiError(409,'Этот сезонный кейс уже открывается.');
-    const [itemsResult,ensured,taskEvent]=await Promise.all([env.DB.prepare(`SELECT * FROM season_pass_case_items WHERE case_id=? AND enabled=1 AND weight>0 ORDER BY item_key`).bind(caseId).all(),ensureCasePlayerState(env,ctx.telegramId,{}),taskEventPromise]);
+    const [effectiveItems,ensured,taskEvent]=await Promise.all([seasonPassEffectiveCaseItems(env,caseId),ensureCasePlayerState(env,ctx.telegramId,{}),taskEventPromise]);
     const snapshot=safeJson(grant.snapshot_json,{});const snapshotItems=Array.isArray(snapshot?.items)?snapshot.items:[];
-    const sourceItems=snapshotItems.length?snapshotItems:(itemsResult.results||[]);
+    const sourceItems=snapshotItems.length?snapshotItems:effectiveItems;
     let candidates=sourceItems.filter(row=>SEASON_PASS_COSMETIC_KINDS.includes(String(row.reward_kind||row.kind))&&seasonPassAnyCosmeticCatalog(String(row.reward_kind||row.kind))?.[String(row.item_id||row.itemId)]).map(row=>({item_key:String(row.item_key||row.key||`${row.reward_kind||row.kind}:${row.item_id||row.itemId}`),reward_kind:String(row.reward_kind||row.kind),item_id:String(row.item_id||row.itemId),weight:Number(row.weight||1),rarity:String(row.rarity||'seasonal'),title:String(row.title||''),image_url:String(row.image_url||row.imageUrl||'')}));
     if(!candidates.length)throw new ApiError(409,'В сезонном кейсе пока нет доступных наград.');
     const owned=(row)=>{const id=String(row.item_id),kind=String(row.reward_kind);if(kind==='avatar')return ensured.state.ownedAvatars?.includes(id);if(kind==='frame')return ensured.state.ownedFrames?.includes(id);if(kind==='trail')return ensured.state.ownedTrails?.includes(id);if(kind==='skin')return ensured.state.ownedSkins?.includes(id);if(kind==='music')return ensured.state.ownedMusicTracks?.includes(id);return false;};
@@ -24366,7 +24563,7 @@ async function grantSeasonPassReward(env,ctx,reward,executionCtx=null){
       const definition=await env.DB.prepare(`SELECT case_id,title,description,closed_image_url,open_image_url,slots,duplicate_points,enabled,release_at FROM season_pass_case_definitions WHERE case_id=? LIMIT 1`).bind(seasonalCase.caseId).first();
       if(!definition||!Number(definition.enabled||0))throw new ApiError(409,'Этот сезонный кейс отключён.');
       if(Number(definition.release_at||0)>now)throw new ApiError(409,'Этот сезонный кейс ещё не выпущен.');
-      const caseItems=(await env.DB.prepare(`SELECT item_key,reward_kind,item_id,weight,rarity,title,image_url FROM season_pass_case_items WHERE case_id=? AND enabled=1 AND weight>0 ORDER BY item_key`).bind(seasonalCase.caseId).all()).results||[];
+      const caseItems=await seasonPassEffectiveCaseItems(env,seasonalCase.caseId);
       if(!caseItems.length)throw new ApiError(409,'В сезонном кейсе пока нет наград.');
       const caseSnapshot=JSON.stringify({title:String(definition.title||'Сезонный кейс'),description:String(definition.description||''),imageUrl:String(definition.closed_image_url||''),openImageUrl:String(definition.open_image_url||''),slots:Math.max(1,Math.min(5,Number(definition.slots)||1)),duplicatePoints:Math.max(0,Number(definition.duplicate_points)||0),items:caseItems.map(item=>({key:String(item.item_key),kind:String(item.reward_kind),itemId:String(item.item_id),weight:Number(item.weight||1),rarity:String(item.rarity||'seasonal'),title:String(item.title||''),imageUrl:String(item.image_url||'')}))});
       const amount=Math.max(1,Math.min(20,Number(reward.amount)||1));
@@ -30476,9 +30673,1790 @@ async function ownerPanelFlashOfferAction(env, ctx) {
 // =================== END FLASH OFFERS / SHOP PROMOTIONS ===================
 
 
+// =================== TEST PROJECT 3.0 · OWNER-ONLY ISOLATED SANDBOX ===================
+const TEST_PROJECT_VERSION = "3.1";
+const TEST_PROJECT_SNAPSHOT_SCHEMA = 5;
+const TEST_PROJECT_MAX_CASE_SIMULATIONS = 2000;
+const TEST_PROJECT_MAX_ACTIVITY_LOG = 80;
+const TEST_PROJECT_MAX_SCENARIOS = 8;
+const TEST_PROJECT_CASE_PRICES = Object.freeze(Object.fromEntries(LIVEOPS_CASE_IDS.map((caseType) => {
+  const product = CASE_SHOP_PRODUCTS[caseType] || {};
+  return [caseType, Object.freeze({ points:Number(product.points||0), treats:Number(product.treats||0), coffee:Number(product.coffee||0) })];
+})));
+
+function testProjectParseJson(value, fallback) {
+  if (value && typeof value === "object") return value;
+  try {
+    const parsed = JSON.parse(String(value || ""));
+    return parsed == null ? fallback : parsed;
+  } catch {
+    return fallback;
+  }
+}
+
+function testProjectClone(value) {
+  try { return JSON.parse(JSON.stringify(value)); } catch { return value; }
+}
+
+function testProjectDefaultCaseState() {
+  return caseStateFromRow({});
+}
+
+function testProjectArray(value, max = 200) {
+  return [...new Set((Array.isArray(value) ? value : []).map((item) => String(item || "").trim()).filter(Boolean))].slice(0, max);
+}
+
+function testProjectIntMap(value, keys = [], max = 999, defaults = {}) {
+  const source = value && typeof value === "object" && !Array.isArray(value) ? value : {};
+  const result = {};
+  for (const key of keys) result[key] = Math.max(0, Math.min(max, Math.floor(Number(source[key] ?? defaults[key] ?? 0) || 0)));
+  return result;
+}
+
+function testProjectLooseIntMap(value, maxKeys = 100, maxValue = 999999999) {
+  const source = value && typeof value === "object" && !Array.isArray(value) ? value : {};
+  const result = {};
+  for (const [rawKey, rawValue] of Object.entries(source).slice(0, maxKeys)) {
+    const key = String(rawKey || "").trim().slice(0, 160);
+    if (!key) continue;
+    result[key] = Math.max(0, Math.min(maxValue, Math.floor(Number(rawValue) || 0)));
+  }
+  return result;
+}
+
+function testProjectNormalizeActivityLog(value) {
+  return (Array.isArray(value) ? value : []).slice(0, TEST_PROJECT_MAX_ACTIVITY_LOG).map((item) => ({
+    id:String(item?.id || "").slice(0, 80),
+    at:Math.max(0, Math.floor(Number(item?.at) || 0)),
+    virtualAt:Math.max(0, Math.floor(Number(item?.virtualAt) || 0)),
+    action:String(item?.action || "action").slice(0, 80),
+    title:String(item?.title || "Тестовое действие").slice(0, 180),
+    diff:(Array.isArray(item?.diff) ? item.diff : []).slice(0, 20).map((row) => ({
+      label:String(row?.label || "").slice(0, 100), before:String(row?.before ?? "").slice(0, 120), after:String(row?.after ?? "").slice(0, 120)
+    }))
+  }));
+}
+
+function testProjectDraftPrice(value = {}) {
+  return {
+    points:Math.max(0, Math.min(999999999, Math.floor(Number(value?.points) || 0))),
+    treats:Math.max(0, Math.min(9999999, Math.floor(Number(value?.treats) || 0))),
+    coffee:Math.max(0, Math.min(9999999, Math.floor(Number(value?.coffee) || 0)))
+  };
+}
+
+function testProjectNormalizeDraftLayer(raw = {}) {
+  const source = raw && typeof raw === "object" && !Array.isArray(raw) ? raw : {};
+  const cases = {};
+  for (const [rawId, value] of Object.entries(source.cases || {}).slice(0, LIVEOPS_CASE_IDS.length)) {
+    const id = normalizeCaseType(rawId || value?.id);
+    if (!id || !LIVEOPS_CASE_IDS.includes(id)) continue;
+    const chances = {};
+    const inputChances = value?.chances && typeof value.chances === "object" ? value.chances : {};
+    for (const key of Object.keys(ownerPanelCaseCategoryLabels())) chances[key] = Math.max(0, Math.min(100, Number(inputChances[key]) || 0));
+    const ranges = {};
+    for (const key of ["points","treats","coffee"]) {
+      const pair = Array.isArray(value?.ranges?.[key]) ? value.ranges[key] : [0,0];
+      const min = Math.max(0, Math.floor(Number(pair[0]) || 0));
+      const max = Math.max(min, Math.floor(Number(pair[1]) || min));
+      ranges[key] = [min,max];
+    }
+    cases[id] = {
+      id, title:String(value?.title || id).slice(0,100), enabled:value?.enabled !== false,
+      guaranteeCount:Math.max(0, Math.min(50, Math.floor(Number(value?.guaranteeCount ?? value?.guarantee_count) || 0))),
+      chances, ranges, testDraft:true, draftSource:String(value?.draftSource || "test_project").slice(0,40)
+    };
+  }
+  const content = {};
+  for (const [rawKey, value] of Object.entries(source.content || {}).slice(0, 250)) {
+    const kind = String(value?.kind || rawKey.split(":")[0] || "").trim();
+    const id = String(value?.id || rawKey.split(":").slice(1).join(":") || "").trim();
+    if (!["avatar","frame","trail","skin"].includes(kind) || !id) continue;
+    const key = `${kind}:${id}`;
+    content[key] = {kind,id,title:String(value?.title || id).slice(0,120),rarity:String(value?.rarity || "common").slice(0,40),weight:Math.max(0,Number(value?.weight)||0),enabled:value?.enabled !== false,isNew:Boolean(value?.isNew ?? value?.is_new),legendaryOnly:Boolean(value?.legendaryOnly ?? value?.legendary_only),imageUrl:String(value?.imageUrl || value?.image_url || "").slice(0,500),testDraft:true,draftSource:String(value?.draftSource || "test_project").slice(0,40)};
+  }
+  const seasonRewards = {};
+  for (const [rawKey, value] of Object.entries(source.seasonRewards || {}).slice(0, 120)) {
+    const seasonId = String(value?.seasonId || "").trim().slice(0,120);
+    const level = Math.max(1, Math.min(50, Math.floor(Number(value?.level) || 1)));
+    const lane = String(value?.lane) === "premium" ? "premium" : "free";
+    if (!seasonId) continue;
+    const key = `${seasonId}:${level}:${lane}`;
+    seasonRewards[key] = {seasonId,level,lane,rewardType:String(value?.rewardType || "points").slice(0,60),amount:Math.max(1,Math.floor(Number(value?.amount)||1)),itemId:String(value?.itemId || "").slice(0,180),title:String(value?.title || "Тестовая награда").slice(0,160),imageUrl:String(value?.imageUrl || "").slice(0,500),enabled:value?.enabled !== false,testDraft:true,draftSource:String(value?.draftSource || "test_project").slice(0,40)};
+  }
+  const seasonTariffs = {};
+  for (const [rawId, value] of Object.entries(source.seasonTariffs || {}).slice(0, 12)) {
+    const seasonId = String(value?.seasonId || rawId || "").trim().slice(0,120);
+    if (!seasonId) continue;
+    const benefits = value?.benefits && typeof value.benefits === "object" ? value.benefits : {};
+    seasonTariffs[seasonId] = {
+      seasonId,
+      prices:{elite:testProjectDraftPrice(value?.prices?.elite), elite_plus:testProjectDraftPrice(value?.prices?.elite_plus)},
+      benefits:{
+        xpBoost:benefits?.xpBoost !== false,
+        bonusLevels:Math.max(0,Math.min(25,Math.floor(Number(benefits?.bonusLevels)||0))),
+        caseType:normalizeCaseType(benefits?.caseType || "") || "",
+        caseCount:Math.max(0,Math.min(10,Math.floor(Number(benefits?.caseCount)||0))),
+        cosmetics:(Array.isArray(benefits?.cosmetics)?benefits.cosmetics:[]).slice(0,2).map((item)=>({kind:String(item?.kind||"").slice(0,30),itemId:String(item?.itemId||"").slice(0,160)})).filter((item)=>item.kind&&item.itemId)
+      },
+      testDraft:true,
+      draftSource:String(value?.draftSource || "test_project").slice(0,40)
+    };
+  }
+  const offers = {};
+  for (const [rawId, value] of Object.entries(source.offers || {}).slice(0, 40)) {
+    const id = String(value?.id || rawId || "").trim().slice(0,160);
+    if (!id) continue;
+    offers[id] = {...testProjectClone(value),id,testDraft:true,draftSource:String(value?.draftSource || "test_project").slice(0,40)};
+  }
+  let gameConfig = null;
+  if (source.gameConfig?.config && typeof source.gameConfig.config === "object") {
+    gameConfig = {config:normalizeGameRuntimeConfig(source.gameConfig.config),title:String(source.gameConfig.title || "Баланс игры").slice(0,120),draftSource:String(source.gameConfig.draftSource || "test_project").slice(0,40),stagedAt:Math.max(0,Math.floor(Number(source.gameConfig.stagedAt)||0))};
+  }
+  return {updatedAt:Math.max(0,Math.floor(Number(source.updatedAt)||0)),gameConfig,cases,content,seasonRewards,seasonTariffs,offers};
+}
+
+function testProjectScenarioSnapshot(value) {
+  const normalized = testProjectNormalizePlayerState({ ...(value || {}), savedScenarios:[], activityLog:[] });
+  const { savedScenarios, activityLog, tpDrafts, draftMode, selectedSeasonId, ...snapshot } = normalized;
+  return snapshot;
+}
+
+function testProjectNormalizeSavedScenarios(value) {
+  const source = Array.isArray(value) ? value : [];
+  const result = [];
+  const seen = new Set();
+  for (const item of source.slice(0, TEST_PROJECT_MAX_SCENARIOS)) {
+    let id = String(item?.id || "").trim().replace(/[^A-Za-z0-9_-]/g, "").slice(0, 80);
+    if (!id || seen.has(id)) id = `scn_${crypto.randomUUID().replaceAll("-", "").slice(0, 18)}`;
+    seen.add(id);
+    result.push({
+      id,
+      name:String(item?.name || "Сценарий").trim().slice(0, 80) || "Сценарий",
+      updatedAt:Math.max(0, Math.floor(Number(item?.updatedAt) || 0)),
+      snapshot:testProjectScenarioSnapshot(item?.snapshot || {})
+    });
+  }
+  return result;
+}
+
+function testProjectNormalizeCaseState(raw = {}) {
+  const base = testProjectDefaultCaseState();
+  const boosters = raw?.boosters || {};
+  const ownedAvatars = testProjectArray(raw?.ownedAvatars).filter((id) => Boolean(CASE_AVATARS[id]));
+  const ownedFrames = testProjectArray(raw?.ownedFrames).filter((id) => Boolean(CASE_FRAMES[id]));
+  const ownedTrails = testProjectArray(raw?.ownedTrails).filter((id) => Boolean(CASE_TRAILS[id]));
+  const ownedMusicTracks = testProjectArray(raw?.ownedMusicTracks).filter((id) => Boolean(CASE_MUSIC_TRACKS[id]));
+  if (!ownedMusicTracks.includes("cafe_run") && CASE_MUSIC_TRACKS.cafe_run) ownedMusicTracks.unshift("cafe_run");
+  const ownedSkins = normalizeCurrentOwnedSkins(testProjectArray(raw?.ownedSkins));
+  return {
+    boosters: {
+      points: Math.max(0, Math.min(999, Math.floor(Number(boosters.points) || 0))),
+      treats: Math.max(0, Math.min(999, Math.floor(Number(boosters.treats) || 0))),
+      coffee: Math.max(0, Math.min(999, Math.floor(Number(boosters.coffee) || 0)))
+    },
+    activeBooster: {
+      type:["points","treats","coffee"].includes(String(raw?.activeBooster?.type||"")) ? String(raw.activeBooster.type) : "",
+      runsLeft:Math.max(0,Math.min(2,Math.floor(Number(raw?.activeBooster?.runsLeft)||0)))
+    },
+    ownedAvatars,
+    activeAvatarId: ownedAvatars.includes(String(raw?.activeAvatarId || "")) ? String(raw.activeAvatarId) : "",
+    ownedFrames,
+    activeFrameId: ownedFrames.includes(String(raw?.activeFrameId || "")) ? String(raw.activeFrameId) : "",
+    ownedTrails,
+    activeTrailId: ownedTrails.includes(String(raw?.activeTrailId || "")) ? String(raw.activeTrailId) : "",
+    ownedMusicTracks,
+    activeMusicTrackId: ownedMusicTracks.includes(String(raw?.activeMusicTrackId || "")) ? String(raw.activeMusicTrackId) : "cafe_run",
+    ownedSpecials: testProjectArray(raw?.ownedSpecials),
+    ownedSkins,
+    activeSkinId: normalizeCurrentActiveSkin(raw?.activeSkinId, ownedSkins),
+    mythicPityCounter: Math.max(0, Math.min(49, Math.floor(Number(raw?.mythicPityCounter) || 0))),
+    mythicGuaranteedEvery: Math.max(0, Math.min(50, Math.floor(Number(raw?.mythicGuaranteedEvery) || 25))),
+    legendaryPityCounter: Math.max(0, Math.min(49, Math.floor(Number(raw?.legendaryPityCounter) || 0))),
+    legendaryGuaranteedEvery: Math.max(0, Math.min(50, Math.floor(Number(raw?.legendaryGuaranteedEvery) || 50))),
+    revision: Math.max(1, Math.floor(Number(raw?.revision) || Number(base.revision) || 1)),
+    updatedAt: Date.now()
+  };
+}
+
+function testProjectNormalizeSandboxState(raw = {}) {
+  const source = raw && typeof raw === "object" && !Array.isArray(raw) ? raw : {};
+  const activeRunValue = source.activeRun && typeof source.activeRun === "object" ? source.activeRun : null;
+  const activeRun = activeRunValue && String(activeRunValue.id || "").trim() ? {
+    id:String(activeRunValue.id || "").trim().replace(/[^A-Za-z0-9_-]/g, "").slice(0,96),
+    startedAt:Math.max(0, Math.floor(Number(activeRunValue.startedAt) || 0))
+  } : null;
+  const normalizeObjects = (value, max, mapper) => (Array.isArray(value) ? value : []).slice(0,max).map(mapper).filter(Boolean);
+  return {
+    activeRun,
+    completedRuns:Math.max(0, Math.min(999999, Math.floor(Number(source.completedRuns) || 0))),
+    lastRun:source.lastRun && typeof source.lastRun === "object" ? {
+      id:String(source.lastRun.id || "").slice(0,96),
+      score:Math.max(0,Math.min(999999999,Math.floor(Number(source.lastRun.score)||0))),
+      durationMs:Math.max(0,Math.min(86400000,Math.floor(Number(source.lastRun.durationMs)||0))),
+      acceptedAt:Math.max(0,Math.floor(Number(source.lastRun.acceptedAt)||0))
+    } : null,
+    mockRewards:normalizeObjects(source.mockRewards,40,(item)=>{
+      const code=String(item?.code||"").trim().slice(0,80); if(!code)return null;
+      return {code,title:String(item?.title||"Тестовая физическая награда").slice(0,160),productId:String(item?.productId||"").slice(0,160),createdAt:Math.max(0,Math.floor(Number(item?.createdAt)||0)),status:"test_only"};
+    }),
+    supportTickets:normalizeObjects(source.supportTickets,20,(item)=>{
+      const id=String(item?.id||"").trim().slice(0,80); if(!id)return null;
+      return {id,subject:String(item?.subject||"Тестовое обращение").slice(0,160),category:String(item?.category||"other").slice(0,30),message:String(item?.message||"").slice(0,2000),status:String(item?.status||"open").slice(0,30),createdAt:Math.max(0,Math.floor(Number(item?.createdAt)||0)),replies:(Array.isArray(item?.replies)?item.replies:[]).slice(-20).map((reply)=>({message:String(reply?.message||"").slice(0,2000),createdAt:Math.max(0,Math.floor(Number(reply?.createdAt)||0)),from:"player"}))};
+    }),
+    externalEvents:normalizeObjects(source.externalEvents,40,(item)=>({type:String(item?.type||"event").slice(0,80),title:String(item?.title||"Тестовое внешнее действие").slice(0,180),createdAt:Math.max(0,Math.floor(Number(item?.createdAt)||0))})),
+    skinBonusClaims:testProjectArray(source.skinBonusClaims,200),
+    leaderboardClaimed:testProjectArray(source.leaderboardClaimed,100),
+    pollSnoozedUntil:Math.max(0,Math.floor(Number(source.pollSnoozedUntil)||0)),
+    pollVote:source.pollVote&&typeof source.pollVote==="object"?{pollId:String(source.pollVote.pollId||"").slice(0,80),optionIds:testProjectArray(source.pollVote.optionIds,10),comment:String(source.pollVote.comment||"").slice(0,1200),votedAt:Math.max(0,Math.floor(Number(source.pollVote.votedAt)||0))}:null
+  };
+}
+
+function testProjectDefaultPlayerState() {
+  const passXp = seasonPassXpForLevel(10);
+  return {
+    name: "Тестовый игрок",
+    profileLevel: 10,
+    profileXp: 568,
+    points: 250000,
+    treats: 1200,
+    coffee: 800,
+    bestScore: 25000,
+    passTier: "elite_plus",
+    passXp,
+    passLevel: seasonPassLevelFromXp(passXp),
+    passOverflow: 0,
+    passOverflowClaimed: 0,
+    passClaims: [],
+    passTaskProgress: {},
+    passTaskClaims: [],
+    simulatedSegment: "all",
+    selectedSeasonId: "",
+    virtualNow: 0,
+    draftMode: "production",
+    tpDrafts: testProjectNormalizeDraftLayer({}),
+    caseInventory: { small:2, sweet:1, gold:1, mythic:0, legendary:0 },
+    seasonalCaseInventory: {},
+    offerPurchases: {},
+    testPhysicalRewards: {},
+    seasonXpBoosts: 0,
+    openedLevelCases: [],
+    savedScenarios: [],
+    activityLog: [],
+    sandbox: testProjectNormalizeSandboxState({}),
+    caseState: testProjectDefaultCaseState()
+  };
+}
+
+function testProjectNormalizePlayerState(raw = {}) {
+  const base = testProjectDefaultPlayerState();
+  const passTier = ["none", "elite", "elite_plus"].includes(String(raw?.passTier || "")) ? String(raw.passTier) : base.passTier;
+  const segment = String(raw?.simulatedSegment || "all").trim().slice(0, 80) || "all";
+  const legacyLevel = Math.max(1, Math.min(50, Math.floor(Number(raw?.passLevel) || base.passLevel)));
+  const legacyOverflow = legacyLevel === 50 ? Math.max(0, Math.min(99, Math.floor(Number(raw?.passOverflow) || 0))) : 0;
+  const rawPassXp = Number(raw?.passXp);
+  const passXp = Math.max(0, Math.min(999999999, Math.floor(Number.isFinite(rawPassXp) ? rawPassXp : seasonPassXpForLevel(legacyLevel) + legacyOverflow * SEASON_PASS_OVERFLOW_LEVEL_XP)));
+  const overflow = seasonPassOverflowView(passXp, Math.max(0, Math.floor(Number(raw?.passOverflowClaimed) || 0)));
+  return {
+    name: String(raw?.name || base.name).trim().slice(0, 60) || base.name,
+    profileLevel: Math.max(1, Math.min(50, Math.floor(Number(raw?.profileLevel) || base.profileLevel))),
+    profileXp: Math.max(0, Math.min(999999999, Math.floor(Number(raw?.profileXp) || 0))),
+    points: Math.max(0, Math.min(999999999, Math.floor(Number(raw?.points) || 0))),
+    treats: Math.max(0, Math.min(9999999, Math.floor(Number(raw?.treats) || 0))),
+    coffee: Math.max(0, Math.min(9999999, Math.floor(Number(raw?.coffee) || 0))),
+    bestScore: Math.max(0, Math.min(999999999, Math.floor(Number(raw?.bestScore) || 0))),
+    passTier,
+    passXp,
+    passLevel: seasonPassLevelFromXp(passXp),
+    passOverflow: overflow.earned,
+    passOverflowClaimed: Math.min(overflow.earned, Math.max(0, Math.floor(Number(raw?.passOverflowClaimed) || 0))),
+    passClaims: testProjectArray(raw?.passClaims, 500),
+    passTaskProgress: testProjectLooseIntMap(raw?.passTaskProgress, 400, 999999999),
+    passTaskClaims: testProjectArray(raw?.passTaskClaims, 500),
+    simulatedSegment: segment,
+    selectedSeasonId: String(raw?.selectedSeasonId || "").trim().slice(0, 120),
+    virtualNow: Math.max(0, Math.min(4102444800000, Math.floor(Number(raw?.virtualNow) || 0))),
+    draftMode: String(raw?.draftMode || "production") === "draft" ? "draft" : "production",
+    tpDrafts: testProjectNormalizeDraftLayer(raw?.tpDrafts),
+    caseInventory: testProjectIntMap(raw?.caseInventory, LIVEOPS_CASE_IDS, 999, base.caseInventory),
+    seasonalCaseInventory: testProjectLooseIntMap(raw?.seasonalCaseInventory, 50, 999),
+    offerPurchases: testProjectLooseIntMap(raw?.offerPurchases, 100, 99),
+    testPhysicalRewards: testProjectLooseIntMap(raw?.testPhysicalRewards, 100, 999),
+    seasonXpBoosts: Math.max(0, Math.min(99, Math.floor(Number(raw?.seasonXpBoosts) || 0))),
+    openedLevelCases: [...new Set((Array.isArray(raw?.openedLevelCases) ? raw.openedLevelCases : []).map((value)=>Math.max(0,Math.floor(Number(value)||0))).filter((value)=>value>0&&value<=50))].slice(0,50),
+    savedScenarios: testProjectNormalizeSavedScenarios(raw?.savedScenarios),
+    activityLog: testProjectNormalizeActivityLog(raw?.activityLog),
+    sandbox: testProjectNormalizeSandboxState(raw?.sandbox || base.sandbox),
+    caseState: testProjectNormalizeCaseState(raw?.caseState || base.caseState)
+  };
+}
+
+function testProjectRequireWorkspaceRow(row) {
+  if (!row) throw new ApiError(503, "Тестовый проект не инициализирован. Примените миграцию 0045_test_project.sql.");
+  return row;
+}
+
+async function testProjectReadWorkspace(env, ownerId) {
+  try {
+    return await env.DB.prepare(`SELECT * FROM test_project_workspaces WHERE owner_telegram_id=? LIMIT 1`).bind(String(ownerId)).first();
+  } catch (error) {
+    if (String(error?.message || error).toLowerCase().includes("no such table")) throw new ApiError(503, "Примените D1-миграцию 0045_test_project.sql.");
+    throw error;
+  }
+}
+
+async function testProjectEnsureWorkspace(env, ownerId) {
+  let row = await testProjectReadWorkspace(env, ownerId);
+  if (row) return row;
+  const now = Math.floor(Date.now() / 1000);
+  const state = testProjectDefaultPlayerState();
+  await env.DB.prepare(`INSERT INTO test_project_workspaces(owner_telegram_id,state_json,snapshot_json,snapshot_at,revision,created_at,updated_at) VALUES(?,?,?,0,1,?,?)`)
+    .bind(String(ownerId), JSON.stringify(state), "{}", now, now).run();
+  row = await testProjectReadWorkspace(env, ownerId);
+  return testProjectRequireWorkspaceRow(row);
+}
+
+function testProjectWorkspaceState(row) {
+  return testProjectNormalizePlayerState(testProjectParseJson(row?.state_json, {}));
+}
+
+function testProjectWorkspaceSnapshot(row) {
+  const parsed = testProjectParseJson(row?.snapshot_json, {});
+  return parsed && typeof parsed === "object" ? parsed : {};
+}
+
+function testProjectEffectiveNow(state, snapshot) {
+  const custom = Math.floor(Number(state?.virtualNow) || 0);
+  if (custom > 0) return custom;
+  const captured = Math.floor(Number(snapshot?.capturedAt) || 0) * 1000;
+  return captured > 0 ? captured : Date.now();
+}
+
+function testProjectDynamicSeason(seasonValue, nowMs) {
+  const season = testProjectClone(seasonValue || {});
+  if (!season?.id) return season;
+  const startsAt = Date.parse(String(season.startsAt || ""));
+  const endsAt = Date.parse(String(season.endsAt || ""));
+  const graceAt = Date.parse(String(season.claimGraceEndsAt || ""));
+  const manual = String(season.manualStatus || "");
+  let status = Number.isFinite(startsAt) && nowMs < startsAt ? "upcoming" : Number.isFinite(endsAt) && nowMs >= endsAt ? "ended" : "active";
+  if (manual === "active") status = Number.isFinite(endsAt) && nowMs >= endsAt ? "ended" : "active";
+  if (manual === "ended") status = "ended";
+  season.status = status;
+  season.claimWindowOpen = status === "ended" && Number.isFinite(graceAt) && nowMs < graceAt;
+  season.serverTime = new Date(nowMs).toISOString();
+  return season;
+}
+
+async function testProjectReadLiveOpsSnapshot(env) {
+  const content = { avatar: {}, frame: {}, trail: {}, skin: {}, music: {} };
+  const cases = {};
+  try {
+    const [contentResult, caseResult, releaseRules] = await Promise.all([
+      env.DB.prepare(`SELECT * FROM liveops_content_items ORDER BY item_kind,item_id`).all(),
+      env.DB.prepare(`SELECT * FROM liveops_case_configs ORDER BY case_id`).all(),
+      readLiveContentReleaseRules(env, true)
+    ]);
+    for (const row of contentResult.results || []) {
+      const kind = String(row.item_kind || "");
+      if (!content[kind]) continue;
+      content[kind][String(row.item_id)] = {
+        title: String(row.title || row.item_id), rarity: String(row.rarity || "common"),
+        weight: Math.max(0, Number(row.weight || 0)), enabled: Number(row.enabled || 0) === 1,
+        isNew: Number(row.is_new || 0) === 1, legendaryOnly: Number(row.legendary_only || 0) === 1,
+        imageUrl: String(row.image_url || "")
+      };
+    }
+    // Test Project intentionally receives the whole future catalog. Hidden items stay
+    // disabled for reward rolls, but the real game UI can render/equip them with the
+    // sandboxHidden marker. Production readLiveOpsConfig still filters them normally.
+    for (const [kind, catalog] of Object.entries(FUTURE_SEASON_CONTENT)) {
+      if (!content[kind]) content[kind] = {};
+      for (const [itemId, item] of Object.entries(catalog || {})) {
+        const rule = releaseRules.get(liveContentReleaseKey(kind, itemId)) || {
+          released:false, everReleased:false, destinationType:"native", destinationId:"", destinationConfig:{}
+        };
+        const cfg = rule.destinationConfig && typeof rule.destinationConfig === "object" ? rule.destinationConfig : {};
+        const weightValue = Number(cfg.weight);
+        content[kind][itemId] = {
+          title:String(item?.title || itemId), rarity:String(item?.rarity || "common"),
+          weight:Number.isFinite(weightValue) ? Math.max(0, weightValue) : 1,
+          enabled:Boolean(rule.released), isNew:true, legendaryOnly:false,
+          imageUrl:String(item?.imageUrl || ""), audioUrl:String(item?.audioUrl || item?.src || ""),
+          future:true, released:Boolean(rule.released), everReleased:Boolean(rule.everReleased),
+          destinationType:LIVE_CONTENT_DESTINATIONS.includes(String(rule.destinationType || "")) ? String(rule.destinationType) : "native",
+          destinationId:String(rule.destinationId || ""), destinationConfig:testProjectClone(cfg),
+          seasonLabel:FUTURE_SEASON_CONTENT_LABEL,
+          sandboxVisible:true, sandboxHidden:!rule.released, testOnly:!rule.released
+        };
+      }
+    }
+    for (const row of caseResult.results || []) cases[String(row.case_id)] = liveOpsCaseConfigFromRow(row);
+  } catch (error) {
+    console.error("test project liveops snapshot fallback", error);
+  }
+  for (const caseId of LIVEOPS_CASE_IDS) if (!cases[caseId]) cases[caseId] = { id: caseId, ...testProjectClone(LIVEOPS_CASE_DEFAULTS[caseId]) };
+  return { content, cases, version: 3, sandboxHiddenContent:true };
+}
+
+async function testProjectReadSeasonSnapshot(env, nowMs = Date.now(), requestedSeasonId = "") {
+  const fallback = configuredSeasonPassState(env, nowMs);
+  let row = null;
+  try {
+    await ensureSeasonPassSchema(env);
+    const seasonId=String(requestedSeasonId||"").trim();
+    row = seasonId ? await env.DB.prepare(`SELECT * FROM season_pass_seasons WHERE season_id=? LIMIT 1`).bind(seasonId).first() : await selectSeasonPassSeasonRow(env, nowMs);
+  } catch (error) { console.error("test project season snapshot fallback", error); }
+  const season = row ? seasonPassSeasonFromRow(row, fallback, nowMs) : fallback;
+  let rewards = [], tasks = [], seasonalCases = [];
+  if (row?.season_id) {
+    try {
+      const seasonId=String(row.season_id);
+      const [rewardResult, taskResult, caseDefinitionsResult, caseItemsResult] = await Promise.all([
+        env.DB.prepare(`SELECT level,lane,reward_type,amount,item_id,title,image_url,enabled FROM season_pass_rewards WHERE season_id=? ORDER BY level,lane`).bind(seasonId).all(),
+        env.DB.prepare(`SELECT task_id,period,premium,metric,target,xp_reward,title,description,enabled,sort_order FROM season_pass_tasks WHERE season_id=? ORDER BY sort_order,task_id`).bind(seasonId).all(),
+        env.DB.prepare(`SELECT * FROM season_pass_case_definitions WHERE season_id=? ORDER BY release_at DESC,updated_at DESC,case_id`).bind(seasonId).all(),
+        env.DB.prepare(`SELECT i.* FROM season_pass_case_items i JOIN season_pass_case_definitions d ON d.case_id=i.case_id WHERE d.season_id=? ORDER BY i.case_id,i.reward_kind,i.item_key`).bind(seasonId).all()
+      ]);
+      rewards = (rewardResult.results || []).map(ownerPanelSeasonPassRewardView);
+      tasks = (taskResult.results || []).map((item) => ({
+        id: String(item.task_id || ""), period: String(item.period || ""), premium: Number(item.premium || 0) === 1,
+        metric: String(item.metric || ""), target: Number(item.target || 0), xp: Number(item.xp_reward || 0),
+        title: String(item.title || ""), description: String(item.description || ""), enabled: Number(item.enabled || 0) === 1
+      }));
+      const seasonMap=new Map([[seasonId,season]]),itemsByCase=new Map();
+      for(const item of caseItemsResult.results||[]){
+        const caseId=String(item.case_id||"");if(!caseId)continue;
+        const list=itemsByCase.get(caseId)||[];
+        list.push({key:String(item.item_key||""),kind:String(item.reward_kind||""),itemId:String(item.item_id||""),weight:Number(item.weight||1),rarity:String(item.rarity||""),title:String(item.title||""),imageUrl:String(item.image_url||""),enabled:Number(item.enabled||0)===1});
+        itemsByCase.set(caseId,list);
+      }
+      seasonalCases=(caseDefinitionsResult.results||[]).map((definition)=>{
+        const view=ownerPanelSeasonalCaseView(definition,seasonMap);
+        view.items=itemsByCase.get(view.caseId)||[];
+        return view;
+      });
+    } catch (error) { console.error("test project season content snapshot fallback", error); }
+  }
+  return { ...season, manualStatus:String(row?.manual_status || ""), rewards, tasks, seasonalCase:seasonalCases[0]||null, seasonalCases, progression: seasonPassProgressionView() };
+}
+
+async function testProjectReadOffersSnapshot(env) {
+  try {
+    const result = await env.DB.prepare(`SELECT * FROM shop_flash_offers WHERE status='published' ORDER BY priority DESC,updated_at DESC LIMIT 60`).all();
+    return (result.results || []).map((row) => flashOfferRowView(row));
+  } catch (error) {
+    console.error("test project offers snapshot unavailable", error);
+    return [];
+  }
+}
+
+async function testProjectReadGameConfigSnapshot(env) {
+  try {
+    await ensureOwnerV9Schema(env);
+    const row = await env.DB.prepare(`SELECT published_json,version,published_at FROM game_runtime_config WHERE id=1 LIMIT 1`).first();
+    return {published:normalizeGameRuntimeConfig(safeJson(row?.published_json,DEFAULT_GAME_RUNTIME_CONFIG)),version:Math.max(1,Number(row?.version||1)),publishedAt:Number(row?.published_at||0)*1000};
+  } catch (error) {
+    console.error("test project game config snapshot fallback", error);
+    return {published:normalizeGameRuntimeConfig(DEFAULT_GAME_RUNTIME_CONFIG),version:1,publishedAt:0};
+  }
+}
+
+async function testProjectReadEconomySnapshot(env) {
+  const caseProducts = {};
+  for (const caseType of LIVEOPS_CASE_IDS) {
+    const product = CASE_SHOP_PRODUCTS[caseType] || {};
+    caseProducts[caseType] = {
+      productId:String(product.id || `case-${caseType}`),
+      enabled:true,
+      points:Number(product.points||0), treats:Number(product.treats||0), coffee:Number(product.coffee||0)
+    };
+  }
+  try {
+    const assortment = await readShopAssortment(env);
+    for (const caseType of LIVEOPS_CASE_IDS) {
+      const productId = String(CASE_SHOP_PRODUCTS[caseType]?.id || `case-${caseType}`);
+      const current = assortment?.[productId];
+      if (!current) continue;
+      caseProducts[caseType] = {
+        productId, enabled:Boolean(current.enabled),
+        points:Number(current.points||0), treats:Number(current.treats||0), coffee:Number(current.coffee||0)
+      };
+    }
+  } catch (error) {
+    console.error("test project economy snapshot fallback", error);
+  }
+  return {
+    caseProducts,
+    casePrices:Object.fromEntries(Object.entries(caseProducts).map(([caseType, product]) => [caseType, { points:product.points, treats:product.treats, coffee:product.coffee }]))
+  };
+}
+
+async function testProjectReadSeasonCatalog(env, nowMs = Date.now()) {
+  try {
+    await ensureSeasonPassSchema(env);
+    const result=await env.DB.prepare(`SELECT * FROM season_pass_seasons ORDER BY starts_at DESC,updated_at DESC LIMIT 30`).all();
+    const fallback=configuredSeasonPassState(env,nowMs);
+    return (result.results||[]).map((row)=>seasonPassSeasonFromRow(row,fallback,nowMs));
+  } catch(error) {
+    console.error("test project season catalog fallback",error);
+    return [];
+  }
+}
+
+async function testProjectCaptureProductionSnapshot(env, requestedSeasonId = "") {
+  await ensureSeasonPassSchema(env);
+  await ensureSeason3DraftSeasonalCase(env);
+  const capturedAt = Math.floor(Date.now() / 1000);
+  const [liveops, seasons, season, offers, economy, gameConfig, publicConfig, featureFlags] = await Promise.all([
+    testProjectReadLiveOpsSnapshot(env),
+    testProjectReadSeasonCatalog(env, capturedAt * 1000),
+    testProjectReadSeasonSnapshot(env, capturedAt * 1000, requestedSeasonId),
+    testProjectReadOffersSnapshot(env),
+    testProjectReadEconomySnapshot(env),
+    testProjectReadGameConfigSnapshot(env),
+    readGamePublicConfig(env, true).catch((error) => { console.error("test project public config snapshot fallback", error); return fallbackGamePublicConfig(); }),
+    publicFeatureFlags(env, "", {}).catch((error) => { console.error("test project feature flags snapshot fallback", error); return {}; })
+  ]);
+  const segmentMap = new Map([["all", "Все игроки"], ...Object.entries(PLAYER_SEGMENTS)]);
+  for (const offer of offers) {
+    const key = String(offer?.segmentKey || "all").trim() || "all";
+    if (!segmentMap.has(key)) segmentMap.set(key, `Сегмент · ${key}`);
+  }
+  return {
+    schema: TEST_PROJECT_SNAPSHOT_SCHEMA,
+    capturedAt,
+    gameVersion: GAME_VERSION,
+    workerBuild: WORKER_BUILD,
+    liveops,
+    seasons,
+    season,
+    offers,
+    economy,
+    gameConfig,
+    publicConfig:testProjectClone(publicConfig),
+    featureFlags:testProjectClone(featureFlags),
+    segments: [...segmentMap.entries()].map(([key, title]) => ({ key, title }))
+  };
+}
+
+async function testProjectReadControlCenterDraftLayer(env) {
+  const layer = testProjectNormalizeDraftLayer({});
+  const now = Date.now();
+  try {
+    await ensureOwnerV9Schema(env);
+    const row = await env.DB.prepare(`SELECT draft_json,published_json,updated_at FROM game_runtime_config WHERE id=1 LIMIT 1`).first();
+    const published = normalizeGameRuntimeConfig(safeJson(row?.published_json,DEFAULT_GAME_RUNTIME_CONFIG));
+    const draft = normalizeGameRuntimeConfig(safeJson(row?.draft_json,published));
+    if (JSON.stringify(draft) !== JSON.stringify(published)) layer.gameConfig = {config:draft,title:"Баланс игры · черновик CC",draftSource:"control_center",stagedAt:Number(row?.updated_at||0)*1000};
+  } catch (error) { console.error("test project game config draft import failed", error); }
+  try {
+    await ensureSafeControlCenterSchema(env);
+    const result = await env.DB.prepare(`SELECT entity_type,entity_id,title,draft_json,updated_at FROM liveops_drafts WHERE status='draft' ORDER BY updated_at ASC,id ASC LIMIT 80`).all();
+    for (const row of result.results || []) {
+      const value = safeJson(row.draft_json,{});
+      if (String(row.entity_type) === "case") {
+        const id = normalizeCaseType(row.entity_id);
+        if (!id) continue;
+        layer.cases[id] = {id,title:String(value.title||row.title||id),enabled:value.enabled!==false,guaranteeCount:Number(value.guarantee_count||0),chances:safeJson(value.chances_json??value.chances,{}),ranges:safeJson(value.ranges_json??value.ranges,{}),testDraft:true,draftSource:"safe_draft"};
+      } else if (String(row.entity_type) === "content") {
+        const [kind,...rest] = String(row.entity_id||"").split(":"); const id=rest.join(":");
+        if (!["avatar","frame","trail","skin"].includes(kind)||!id) continue;
+        layer.content[`${kind}:${id}`]={kind,id,title:String(value.title||id),rarity:String(value.rarity||"common"),weight:Number(value.weight||0),enabled:value.enabled!==false,isNew:Boolean(value.is_new),legendaryOnly:Boolean(value.legendary_only),imageUrl:String(value.image_url||""),testDraft:true,draftSource:"safe_draft"};
+      }
+    }
+  } catch (error) { console.error("test project safe drafts import failed", error); }
+  try {
+    await ensureFlashOfferSchema(env);
+    const result = await env.DB.prepare(`SELECT * FROM shop_flash_offers WHERE status='draft' ORDER BY updated_at DESC LIMIT 30`).all();
+    for (const row of result.results || []) { const view=flashOfferRowView(row,{testDraft:true,draftSource:"control_center"}); layer.offers[view.id]=view; }
+  } catch (error) { console.error("test project offer drafts import failed", error); }
+  layer.updatedAt = now;
+  return testProjectNormalizeDraftLayer(layer);
+}
+
+function testProjectMergeDraftLayers(baseValue, nextValue) {
+  const base = testProjectNormalizeDraftLayer(baseValue), next = testProjectNormalizeDraftLayer(nextValue);
+  return testProjectNormalizeDraftLayer({
+    updatedAt:Math.max(base.updatedAt,next.updatedAt,Date.now()),
+    gameConfig:next.gameConfig || base.gameConfig,
+    cases:{...base.cases,...next.cases}, content:{...base.content,...next.content}, seasonRewards:{...base.seasonRewards,...next.seasonRewards}, seasonTariffs:{...base.seasonTariffs,...next.seasonTariffs}, offers:{...base.offers,...next.offers}
+  });
+}
+
+function testProjectApplyDraftLayer(state, snapshot) {
+  const base = testProjectClone(snapshot || {});
+  if (String(state?.draftMode || "production") !== "draft") {
+    base.draftApplied=false;
+    base.publicConfig=base.publicConfig||fallbackGamePublicConfig();
+    const gameplay=base.gameConfig?.published || base.publicConfig?.gameplay || DEFAULT_GAME_RUNTIME_CONFIG;
+    base.publicConfig.gameplay={...testProjectClone(gameplay),source:"test_project_production_snapshot",version:Math.max(1,Number(base.gameConfig?.version||base.publicConfig?.gameplay?.version||1))};
+    return base;
+  }
+  const layer = testProjectNormalizeDraftLayer(state?.tpDrafts);
+  base.draftApplied=true;
+  base.draftUpdatedAt=layer.updatedAt;
+  if (layer.gameConfig?.config) base.gameConfig={...(base.gameConfig||{}),active:testProjectClone(layer.gameConfig.config),testDraft:true};
+  else if (base.gameConfig?.published) base.gameConfig={...(base.gameConfig||{}),active:testProjectClone(base.gameConfig.published)};
+  base.liveops=base.liveops||{content:{avatar:{},frame:{},trail:{},skin:{}},cases:{}};
+  base.liveops.cases=base.liveops.cases||{}; base.liveops.content=base.liveops.content||{};
+  for (const [id,value] of Object.entries(layer.cases)) base.liveops.cases[id]={...(base.liveops.cases[id]||{}),...testProjectClone(value),testDraft:true};
+  for (const value of Object.values(layer.content)) { base.liveops.content[value.kind]=base.liveops.content[value.kind]||{}; base.liveops.content[value.kind][value.id]={...(base.liveops.content[value.kind][value.id]||{}),...testProjectClone(value),testDraft:true}; }
+  if (base.season?.id) {
+    const seasonId=String(base.season.id);
+    const rewards = Array.isArray(base.season.rewards) ? base.season.rewards.slice() : [];
+    for (const value of Object.values(layer.seasonRewards).filter((item)=>String(item.seasonId)===seasonId)) {
+      const index=rewards.findIndex((row)=>Number(row.level)===Number(value.level)&&String(row.lane)===String(value.lane));
+      if(index>=0)rewards[index]={...rewards[index],...testProjectClone(value),testDraft:true}; else rewards.push(testProjectClone(value));
+    }
+    base.season={...base.season,rewards};
+    const tariff=layer.seasonTariffs[seasonId];
+    if(tariff){
+      const oldPlus=base.season.tierSettings?.elitePlus||{},benefits=tariff.benefits||{};
+      base.season.prices={...(base.season.prices||{}),elite:testProjectClone(tariff.prices.elite),elite_plus:testProjectClone(tariff.prices.elite_plus)};
+      base.season.tierSettings={...(base.season.tierSettings||{}),elitePlus:{...oldPlus,xpBoost:benefits.xpBoost!==false,bonusLevels:Number(benefits.bonusLevels||0),case:{...(oldPlus.case||{}),type:String(benefits.caseType||''),count:Number(benefits.caseCount||0)},cosmetics:testProjectClone(benefits.cosmetics||[])}};
+      base.season.testDraftTariffs=true;
+    }
+  }
+  const offers = Array.isArray(base.offers) ? base.offers.slice() : [];
+  for (const value of Object.values(layer.offers)) {
+    const index=offers.findIndex((row)=>String(row.id)===String(value.id));
+    const draft={...testProjectClone(value),testDraft:true,enabled:true};
+    if(index>=0)offers[index]={...offers[index],...draft}; else offers.push(draft);
+  }
+  base.offers=offers;
+  base.publicConfig=base.publicConfig||fallbackGamePublicConfig();
+  const activeGameplay=base.gameConfig?.active || base.gameConfig?.published || base.publicConfig?.gameplay || DEFAULT_GAME_RUNTIME_CONFIG;
+  base.publicConfig.gameplay={...testProjectClone(activeGameplay),source:base.gameConfig?.testDraft?"test_project_draft":"test_project_production_snapshot",version:Math.max(1,Number(base.gameConfig?.version||base.publicConfig?.gameplay?.version||1))};
+  return base;
+}
+
+function testProjectDraftLayerView(state, snapshot) {
+  const layer=testProjectNormalizeDraftLayer(state?.tpDrafts),items=[];
+  const push=(type,key,title,before,after,source="test_project")=>items.push({type,key,title,source,before,after});
+  if(layer.gameConfig?.config){
+    const base=snapshot?.gameConfig?.published||{};const changes={};for(const key of Object.keys(layer.gameConfig.config)){if(String(base[key])!==String(layer.gameConfig.config[key]))changes[key]={before:base[key],after:layer.gameConfig.config[key]};}
+    push("game_config","runtime",layer.gameConfig.title||"Баланс игры",Object.fromEntries(Object.entries(changes).map(([k,v])=>[k,v.before])),Object.fromEntries(Object.entries(changes).map(([k,v])=>[k,v.after])),layer.gameConfig.draftSource);
+  }
+  for(const [id,value] of Object.entries(layer.cases)){const base=snapshot?.liveops?.cases?.[id]||{};push("case",id,`Кейс · ${value.title||id}`,{enabled:base.enabled,guaranteeCount:base.guaranteeCount,chances:base.chances},{enabled:value.enabled,guaranteeCount:value.guaranteeCount,chances:value.chances},value.draftSource);}
+  for(const [key,value] of Object.entries(layer.content)){const base=snapshot?.liveops?.content?.[value.kind]?.[value.id]||{};push("content",key,`Награда кейса · ${value.title||value.id}`,{rarity:base.rarity,weight:base.weight,enabled:base.enabled},{rarity:value.rarity,weight:value.weight,enabled:value.enabled},value.draftSource);}
+  for(const [key,value] of Object.entries(layer.seasonRewards)){const base=(snapshot?.season?.rewards||[]).find((row)=>String(snapshot?.season?.id)===String(value.seasonId)&&Number(row.level)===Number(value.level)&&String(row.lane)===String(value.lane))||{};push("season_reward",key,`Season Pass · ур. ${value.level} · ${value.lane}`,{title:base.title,rewardType:base.rewardType,amount:base.amount,itemId:base.itemId},{title:value.title,rewardType:value.rewardType,amount:value.amount,itemId:value.itemId},value.draftSource||"test_project");}
+  for(const [seasonId,value] of Object.entries(layer.seasonTariffs)){push("season_tariffs",seasonId,`Season Pass · тарифы · ${seasonId}`,snapshot?.season?.id===seasonId?{prices:snapshot.season.prices,benefits:snapshot.season.tierSettings?.elitePlus}:{}, {prices:value.prices,benefits:value.benefits},value.draftSource||"test_project");}
+  for(const [id,value] of Object.entries(layer.offers)){const base=(snapshot?.offers||[]).find((row)=>String(row.id)===id)||{};push("offer",id,`Акция · ${value.title||id}`,base.id?{title:base.title,price:base.price,rewards:base.rewards,status:base.status}:{status:"нет в Production"},{title:value.title,price:value.price,rewards:value.rewards,status:"draft"},value.draftSource);}
+  return {mode:String(state?.draftMode||"production"),active:String(state?.draftMode||"production")==="draft",updatedAt:layer.updatedAt,count:items.length,items};
+}
+
+function testProjectOfferOwned(state, reward) {
+  const caseState = state?.caseState || {};
+  const id = String(reward?.id || "");
+  if (!id) return false;
+  if (reward?.kind === "avatar") return (caseState.ownedAvatars || []).includes(id);
+  if (reward?.kind === "frame") return (caseState.ownedFrames || []).includes(id);
+  if (reward?.kind === "trail") return (caseState.ownedTrails || []).includes(id);
+  if (reward?.kind === "skin") return (caseState.ownedSkins || []).includes(id);
+  if (reward?.kind === "music") return (caseState.ownedMusicTracks || []).includes(id);
+  return false;
+}
+
+function testProjectOfferPricing(offer, state, snapshot) {
+  const price = { ...(offer?.price || { points:0,treats:0,coffee:0 }) };
+  const original = { ...(offer?.original || { points:0,treats:0,coffee:0 }) };
+  const passReward = (offer?.rewards || []).find((reward) => reward?.kind === "season_pass");
+  let upgradeCredit = null;
+  if (passReward?.id === "elite_plus" && state?.passTier === "elite") {
+    const credit = snapshot?.season?.prices?.elite || { points:0,treats:0,coffee:0 };
+    upgradeCredit = { points:Number(credit.points||0), treats:Number(credit.treats||0), coffee:Number(credit.coffee||0) };
+    for (const key of ["points", "treats", "coffee"]) {
+      price[key] = Math.max(0, Number(price[key] || 0) - upgradeCredit[key]);
+      original[key] = Math.max(0, Number(original[key] || 0) - upgradeCredit[key]);
+    }
+  }
+  return { price, original, upgradeCredit };
+}
+
+function testProjectOfferPreview(offer, state, snapshot, nowMs = null) {
+  const now = Number(nowMs || testProjectEffectiveNow(state, snapshot));
+  const pricing = testProjectOfferPricing(offer, state, snapshot);
+  let eligible = true, reason = "Доступно в тестовом состоянии";
+  const completed = Math.max(0, Number(state?.offerPurchases?.[String(offer?.id || "")] || 0));
+  const limit = Math.max(0, Number(offer?.purchaseLimit || 0));
+  if (!offer?.testDraft && (String(offer?.status || "") !== "published" || !offer?.enabled)) { eligible = false; reason = "Акция не опубликована или выключена"; }
+  else if (Number(offer?.startsAt || 0) > 0 && Number(offer.startsAt) > now) { eligible = false; reason = "Акция ещё не началась"; }
+  else if (Number(offer?.endsAt || 0) > 0 && Number(offer.endsAt) <= now) { eligible = false; reason = "Акция уже завершилась"; }
+  else if (limit > 0 && completed >= limit) { eligible = false; reason = `Лимит покупок исчерпан (${completed}/${limit})`; }
+  else if (String(offer?.segmentKey || "all") !== "all" && String(state?.simulatedSegment || "all") !== String(offer.segmentKey)) { eligible = false; reason = `Нужен сегмент «${String(offer.segmentKey)}»`; }
+  if (eligible) {
+    const duplicate = (offer?.rewards || []).find((reward) => testProjectOfferOwned(state, reward));
+    if (duplicate) { eligible = false; reason = "Уникальная награда уже есть у тестового игрока"; }
+  }
+  if (eligible) {
+    const tierReward = (offer?.rewards || []).find((reward) => reward?.kind === "season_pass");
+    if (tierReward?.id === "elite" && state?.passTier !== "none") { eligible = false; reason = "Elite уже активирован"; }
+    if (tierReward?.id === "elite_plus" && state?.passTier === "elite_plus") { eligible = false; reason = "Elite+ уже активирован"; }
+  }
+  if (eligible) {
+    const levels = (offer?.rewards || []).filter((reward) => reward?.kind === "season_pass_levels").reduce((sum, reward) => sum + Math.max(0, Number(reward.amount || 0)), 0);
+    if (levels > 0 && Number(state?.passLevel || 1) + levels > 50) { eligible = false; reason = "Полная награда +уровни не помещается до 50 уровня"; }
+  }
+  if (eligible) {
+    const p = pricing.price;
+    if (Number(state?.points || 0) < Number(p.points || 0) || Number(state?.treats || 0) < Number(p.treats || 0) || Number(state?.coffee || 0) < Number(p.coffee || 0)) {
+      eligible = false; reason = "Недостаточно тестовых ресурсов";
+    }
+  }
+  return { ...offer, testEligibility: { eligible, reason }, testPricing: pricing, testPurchases:completed };
+}
+
+function testProjectTaskKey(seasonId, task, nowMs) {
+  const period = String(task?.period || "") === "weekly" ? "weekly" : "daily";
+  const bounds = seasonPassMoscowPeriod(period, nowMs);
+  return `${String(seasonId || "season")}:${String(task?.id || "task")}:${bounds.key}`;
+}
+
+function testProjectPassEarnedMultiplier(state, season, nowMs) {
+  const elitePlusBoost = String(state?.passTier || "none") === "elite_plus" && season?.tierSettings?.elitePlus?.xpBoost !== false;
+  const entitlementBoost = Number(state?.seasonXpBoosts || 0) > 0;
+  const premiumMultiplier = elitePlusBoost || entitlementBoost ? 2 : 1;
+  const player = { xp:Math.max(0,Number(state?.passXp||0)), premium_tier:String(state?.passTier||"none") };
+  return seasonPassEarnedXpMultiplierView(season, player, premiumMultiplier, nowMs);
+}
+
+function testProjectPassLabView(state, snapshot, nowMs) {
+  const season = testProjectDynamicSeason(snapshot?.season || {}, nowMs);
+  const xp = Math.max(0, Number(state?.passXp || 0));
+  const level = seasonPassLevelFromXp(xp);
+  const overflow = seasonPassOverflowView(xp, state?.passOverflowClaimed || 0);
+  const earned = testProjectPassEarnedMultiplier(state, season, nowMs);
+  const tasks = (season?.tasks || []).filter((task) => task?.enabled).map((task) => {
+    const key = testProjectTaskKey(season.id, task, nowMs);
+    const progress = Math.max(0, Number(state?.passTaskProgress?.[key] || 0));
+    const target = Math.max(0, Number(task?.target || 0));
+    const locked = Boolean(task?.premium && state?.passTier === "none");
+    return { ...task, key, progress, complete:target > 0 && progress >= target, claimed:(state?.passTaskClaims || []).includes(key), locked };
+  });
+  return {
+    xp, level, displayLevel:overflow.unlocked ? (overflow.earned > 0 ? `50+${overflow.earned}` : "50+") : String(level),
+    overflow, tier:String(state?.passTier || "none"), season, tasks,
+    earnedMultiplier:earned.multiplier, premiumMultiplier:earned.premiumMultiplier, xpBoostActive:Number(earned.premiumMultiplier||1)>1, catchUp:earned.catchUp
+  };
+}
+
+function testProjectClientPayload(row) {
+  const state = testProjectWorkspaceState(row);
+  const productionSnapshot = testProjectWorkspaceSnapshot(row);
+  const snapshot = testProjectApplyDraftLayer(state, productionSnapshot);
+  const effectiveNow = testProjectEffectiveNow(state, productionSnapshot);
+  const season = testProjectDynamicSeason(snapshot?.season || {}, effectiveNow);
+  const dynamicSnapshot = {
+    ...snapshot,
+    effectiveNow,
+    season,
+    seasons:(snapshot?.seasons||[]).map((item)=>testProjectDynamicSeason(item,effectiveNow)),
+    offers: (snapshot?.offers || []).map((offer) => testProjectOfferPreview(offer, state, { ...snapshot, season }, effectiveNow))
+  };
+  return {
+    isolated: true,
+    productionWrites: false,
+    testProjectVersion: TEST_PROJECT_VERSION,
+    revision: Math.max(1, Number(row?.revision || 1)),
+    updatedAt: Number(row?.updated_at || 0) * 1000,
+    snapshotAt: Number(row?.snapshot_at || 0) * 1000,
+    effectiveNow,
+    timeMode:state.virtualNow > 0 ? "virtual" : "snapshot",
+    state,
+    snapshot: dynamicSnapshot,
+    draftLayer:testProjectDraftLayerView(state, productionSnapshot),
+    passLab:testProjectPassLabView(state, dynamicSnapshot, effectiveNow)
+  };
+}
+
+async function ownerPanelTestProjectBootstrap(env, ctx) {
+  const ownerId = String(ctx.user.id);
+  let row = await testProjectEnsureWorkspace(env, ownerId);
+  const workspaceState = testProjectWorkspaceState(row);
+  let snapshot = testProjectWorkspaceSnapshot(row);
+  if (!snapshot?.capturedAt || Number(snapshot?.schema||0) < TEST_PROJECT_SNAPSHOT_SCHEMA || (workspaceState.selectedSeasonId && String(snapshot?.season?.id||"") !== workspaceState.selectedSeasonId)) {
+    snapshot = await testProjectCaptureProductionSnapshot(env, workspaceState.selectedSeasonId);
+    const now = Math.floor(Date.now() / 1000);
+    await env.DB.prepare(`UPDATE test_project_workspaces SET snapshot_json=?,snapshot_at=?,revision=revision+1,updated_at=? WHERE owner_telegram_id=?`)
+      .bind(JSON.stringify(snapshot), Number(snapshot.capturedAt || now), now, ownerId).run();
+    row = await testProjectReadWorkspace(env, ownerId);
+  }
+  let history = [];
+  try {
+    const result = await env.DB.prepare(`SELECT id,case_type,rewards_json,points_delta,treats_delta,coffee_delta,created_at FROM test_project_case_runs WHERE owner_telegram_id=? ORDER BY id DESC LIMIT 12`).bind(ownerId).all();
+    history = (result.results || []).map((item) => ({ id:Number(item.id),caseType:String(item.case_type),rewards:testProjectParseJson(item.rewards_json,[]),points:Number(item.points_delta||0),treats:Number(item.treats_delta||0),coffee:Number(item.coffee_delta||0),createdAt:Number(item.created_at||0)*1000 }));
+  } catch {}
+  return { ok:true, ...testProjectClientPayload(testProjectRequireWorkspaceRow(row)), caseHistory:history };
+}
+
+async function ownerPanelTestProjectSaveState(env, ctx) {
+  const ownerId = String(ctx.user.id);
+  const row = await testProjectEnsureWorkspace(env, ownerId);
+  const current = testProjectWorkspaceState(row);
+  const requested = ctx.body?.state && typeof ctx.body.state === "object" ? ctx.body.state : {};
+  const next = testProjectNormalizePlayerState({ ...current, ...requested, caseState: requested.caseState || current.caseState });
+  const now = Math.floor(Date.now() / 1000);
+  await env.DB.prepare(`UPDATE test_project_workspaces SET state_json=?,revision=revision+1,updated_at=? WHERE owner_telegram_id=?`).bind(JSON.stringify(next), now, ownerId).run();
+  return { ok:true, ...testProjectClientPayload(testProjectRequireWorkspaceRow(await testProjectReadWorkspace(env, ownerId))) };
+}
+
+async function ownerPanelTestProjectReset(env, ctx) {
+  const ownerId = String(ctx.user.id);
+  await testProjectEnsureWorkspace(env, ownerId);
+  const state=testProjectDefaultPlayerState(),snapshot=await testProjectCaptureProductionSnapshot(env, ""),now = Math.floor(Date.now() / 1000);
+  await env.DB.batch([
+    env.DB.prepare(`UPDATE test_project_workspaces SET state_json=?,snapshot_json=?,snapshot_at=?,revision=revision+1,updated_at=? WHERE owner_telegram_id=?`).bind(JSON.stringify(state),JSON.stringify(snapshot),Number(snapshot.capturedAt||now),now,ownerId),
+    env.DB.prepare(`DELETE FROM test_project_case_runs WHERE owner_telegram_id=?`).bind(ownerId)
+  ]);
+  return { ok:true, ...testProjectClientPayload(testProjectRequireWorkspaceRow(await testProjectReadWorkspace(env, ownerId))), caseHistory:[] };
+}
+
+async function ownerPanelTestProjectRefreshSnapshot(env, ctx) {
+  const ownerId = String(ctx.user.id);
+  const row = await testProjectEnsureWorkspace(env, ownerId);
+  const state = testProjectWorkspaceState(row);
+  const snapshot = await testProjectCaptureProductionSnapshot(env, state.selectedSeasonId);
+  const now = Math.floor(Date.now() / 1000);
+  await env.DB.prepare(`UPDATE test_project_workspaces SET snapshot_json=?,snapshot_at=?,revision=revision+1,updated_at=? WHERE owner_telegram_id=?`)
+    .bind(JSON.stringify(snapshot), Number(snapshot.capturedAt || now), now, ownerId).run();
+  return { ok:true, ...testProjectClientPayload(testProjectRequireWorkspaceRow(await testProjectReadWorkspace(env, ownerId))) };
+}
+
+function testProjectAggregateRewards(target, rewards = []) {
+  for (const reward of rewards) {
+    const key = String(reward?.kind || "unknown");
+    target[key] = (target[key] || 0) + 1;
+    if (reward?.rarity) {
+      const rarityKey = `rarity:${String(reward.rarity)}`;
+      target[rarityKey] = (target[rarityKey] || 0) + 1;
+    }
+    if (reward?.guaranteed) target.guaranteed = (target.guaranteed || 0) + 1;
+    if (reward?.duplicate) target.duplicates = (target.duplicates || 0) + 1;
+  }
+}
+
+function testProjectTrackedState(state) {
+  const cs = state?.caseState || {};
+  return {
+    points:Number(state?.points||0), treats:Number(state?.treats||0), coffee:Number(state?.coffee||0),
+    profileLevel:Number(state?.profileLevel||1), profileXp:Number(state?.profileXp||0), bestScore:Number(state?.bestScore||0),
+    passTier:String(state?.passTier||"none"), passXp:Number(state?.passXp||0), passLevel:Number(state?.passLevel||1), passOverflow:Number(state?.passOverflow||0), passOverflowClaimed:Number(state?.passOverflowClaimed||0),
+    seasonId:String(state?.selectedSeasonId||"auto"), seasonalCases:Object.values(state?.seasonalCaseInventory||{}).reduce((a,b)=>a+Number(b||0),0),
+    claims:(state?.passClaims||[]).length, taskClaims:(state?.passTaskClaims||[]).length, seasonXpBoosts:Number(state?.seasonXpBoosts||0), scenarios:(state?.savedScenarios||[]).length,
+    avatars:(cs.ownedAvatars||[]).length, frames:(cs.ownedFrames||[]).length, trails:(cs.ownedTrails||[]).length, skins:(cs.ownedSkins||[]).length, music:(cs.ownedMusicTracks||[]).length,
+    physical:Object.values(state?.testPhysicalRewards||{}).reduce((a,b)=>a+Number(b||0),0),
+    ...Object.fromEntries(LIVEOPS_CASE_IDS.map((id)=>[`case:${id}`,Number(state?.caseInventory?.[id]||0)]))
+  };
+}
+
+function testProjectStateDiff(before, after) {
+  const a = testProjectTrackedState(before), b = testProjectTrackedState(after);
+  const labels = {
+    points:"Очки ⭐",treats:"Зефир 🍥",coffee:"Кофе ☕",profileLevel:"Уровень профиля",profileXp:"XP профиля",bestScore:"Рекорд",
+    passTier:"Тариф",passXp:"XP пропуска",passLevel:"Уровень пропуска",passOverflow:"50+ заработано",passOverflowClaimed:"50+ получено",seasonId:"Выбранный сезон",seasonalCases:"Сезонные кейсы",
+    claims:"Награды пропуска",taskClaims:"Задания получены",seasonXpBoosts:"×2 XP entitlement",scenarios:"Сохранённые сценарии",avatars:"Аватары",frames:"Рамки",trails:"Следы",skins:"Скины",music:"Музыка",physical:"Физ. награды (тест)"
+  };
+  const result = [];
+  for (const key of Object.keys(a)) {
+    if (String(a[key]) === String(b[key])) continue;
+    const label = key.startsWith("case:") ? `Кейс · ${key.slice(5)}` : labels[key] || key;
+    result.push({ label, before:String(a[key]), after:String(b[key]) });
+  }
+  return result.slice(0, 20);
+}
+
+function testProjectLogAction(state, snapshot, action, title, diff = []) {
+  const actualAt = Date.now();
+  const entry = {
+    id:`tp_${actualAt.toString(36)}_${Math.random().toString(36).slice(2,8)}`,
+    at:actualAt,
+    virtualAt:testProjectEffectiveNow(state, snapshot),
+    action:String(action||"action"), title:String(title||"Тестовое действие"), diff
+  };
+  state.activityLog = [entry, ...(state.activityLog || [])].slice(0, TEST_PROJECT_MAX_ACTIVITY_LOG);
+  return entry;
+}
+
+function testProjectRequireBalance(state, price) {
+  const p = price || {};
+  if (state.points < Number(p.points||0) || state.treats < Number(p.treats||0) || state.coffee < Number(p.coffee||0)) throw new ApiError(409, "Недостаточно тестовых ресурсов для этой операции.");
+}
+
+function testProjectCharge(state, price) {
+  testProjectRequireBalance(state, price);
+  state.points -= Math.max(0, Number(price?.points||0));
+  state.treats -= Math.max(0, Number(price?.treats||0));
+  state.coffee -= Math.max(0, Number(price?.coffee||0));
+}
+
+function testProjectGrantCosmetic(state, kind, id) {
+  const key = ({avatar:"ownedAvatars",frame:"ownedFrames",trail:"ownedTrails",skin:"ownedSkins",music:"ownedMusicTracks"})[String(kind||"")];
+  if (!key || !id) return false;
+  state.caseState[key] = testProjectArray([...(state.caseState[key] || []), String(id)]);
+  if (kind === "skin") state.caseState.ownedSkins = normalizeCurrentOwnedSkins(state.caseState.ownedSkins);
+  if (kind === "music" && !state.caseState.ownedMusicTracks.includes("cafe_run")) state.caseState.ownedMusicTracks.unshift("cafe_run");
+  return true;
+}
+
+function testProjectGrantElitePlusBenefits(state, season) {
+  const benefits = season?.tierSettings?.elitePlus || {};
+  const received = [];
+  if (benefits?.xpBoost !== false) {
+    state.seasonXpBoosts = Math.max(1, Number(state.seasonXpBoosts||0));
+    state.caseState.ownedSpecials = testProjectArray([...(state.caseState.ownedSpecials || []), SEASON_PASS_SPECIAL_XP_X2]);
+    received.push("×2 XP сезонного пропуска");
+  }
+  const bonusLevels = Math.max(0, Math.min(25, Number(benefits?.bonusLevels || 0)));
+  if (bonusLevels > 0) {
+    const current = seasonPassLevelFromXp(state.passXp);
+    const target = Math.min(50, current + bonusLevels);
+    if (target > current) {
+      state.passXp = Math.max(state.passXp, seasonPassXpForLevel(target));
+      received.push(`+${target-current} ур. пропуска`);
+    }
+  }
+  const caseType = normalizeCaseType(benefits?.case?.type || "");
+  const caseCount = Math.max(0, Math.min(10, Number(benefits?.case?.count || 0)));
+  if (caseType && caseCount > 0) {
+    state.caseInventory[caseType] = Math.min(999, Number(state.caseInventory[caseType]||0) + caseCount);
+    received.push(`${caseCount} × ${caseType}`);
+  }
+  for (const cosmetic of benefits?.cosmetics || []) {
+    if (testProjectGrantCosmetic(state, cosmetic?.kind, cosmetic?.itemId)) received.push(String(cosmetic?.title || cosmetic?.itemId || cosmetic?.kind));
+  }
+  return received;
+}
+
+function testProjectApplyReward(state, reward, season) {
+  const kind = String(reward?.rewardType || reward?.kind || "").trim();
+  const itemId = String(reward?.itemId || reward?.id || "").trim();
+  const amount = Math.max(1, Math.floor(Number(reward?.amount) || 1));
+  if (kind === "points") state.points = Math.min(999999999, state.points + amount);
+  else if (kind === "treats") state.treats = Math.min(9999999, state.treats + amount);
+  else if (kind === "coffee") state.coffee = Math.min(9999999, state.coffee + amount);
+  else if (kind === "case") {
+    const caseType = normalizeCaseType(itemId || "gold");
+    if (caseType) state.caseInventory[caseType] = Math.min(999, Number(state.caseInventory[caseType]||0) + amount);
+  } else if (kind === "seasonal_case") state.seasonalCaseInventory[itemId || "seasonal"] = Math.min(999, Number(state.seasonalCaseInventory[itemId || "seasonal"]||0) + amount);
+  else if (["avatar","frame","trail","skin","music"].includes(kind)) testProjectGrantCosmetic(state, kind, itemId);
+  else if (["booster_points","booster_treats","booster_coffee"].includes(kind)) {
+    const bucket = kind.replace("booster_", "");
+    state.caseState.boosters[bucket] = Math.min(999, Number(state.caseState.boosters[bucket]||0) + amount);
+  } else if (flashOfferRunBoosterDefinition(kind)) {
+    const bucket = flashOfferRunBoosterDefinition(kind).bucket;
+    state.caseState.boosters[bucket] = Math.min(999, Number(state.caseState.boosters[bucket]||0) + Math.max(1, Math.ceil(amount / 2)));
+  } else if (kind === "booster_xp") {
+    state.seasonXpBoosts = Math.min(99, Number(state.seasonXpBoosts||0) + amount);
+    state.caseState.ownedSpecials = testProjectArray([...(state.caseState.ownedSpecials || []), SEASON_PASS_SPECIAL_XP_X2]);
+  }
+  else if (kind === "season_pass_xp") state.passXp = Math.min(999999999, state.passXp + amount);
+  else if (kind === "season_pass_levels") {
+    const current = seasonPassLevelFromXp(state.passXp);
+    const target = Math.min(50, current + amount);
+    state.passXp = Math.max(state.passXp, seasonPassXpForLevel(target));
+  } else if (kind === "season_pass") {
+    if (itemId === "elite_plus") {
+      const wasPlus = state.passTier === "elite_plus";
+      state.passTier = "elite_plus";
+      if (!wasPlus) testProjectGrantElitePlusBenefits(state, season);
+    } else if (itemId === "elite" && state.passTier === "none") state.passTier = "elite";
+  } else if (kind === "product" || kind === "physical") state.testPhysicalRewards[itemId || "physical"] = Math.min(999, Number(state.testPhysicalRewards[itemId || "physical"]||0) + amount);
+}
+
+function testProjectSeasonalCaseDefinition(snapshot, caseId = "") {
+  const season=snapshot?.season||{};
+  const cases=Array.isArray(season.seasonalCases)?season.seasonalCases:season.seasonalCase?[season.seasonalCase]:[];
+  const requested=String(caseId||"").trim();
+  if(requested)return cases.find((item)=>String(item?.caseId||"")===requested)||null;
+  return season.seasonalCase||cases[0]||null;
+}
+
+function testProjectSeasonalCaseOwned(state, item) {
+  const id=String(item?.itemId||item?.item_id||"").trim(),kind=String(item?.kind||item?.reward_kind||"").trim();
+  if(!id)return false;
+  const key=({avatar:"ownedAvatars",frame:"ownedFrames",trail:"ownedTrails",skin:"ownedSkins",music:"ownedMusicTracks"})[kind];
+  return Boolean(key&&(state?.caseState?.[key]||[]).includes(id));
+}
+
+function testProjectRollSeasonalCase(state, definition, options = {}) {
+  if(!definition?.caseId)throw new ApiError(404,"Сезонный кейс выбранного сезона не найден.");
+  const apply=options.apply!==false,target=apply?state:testProjectNormalizePlayerState(testProjectClone(state));
+  let candidates=(Array.isArray(definition.items)?definition.items:[]).filter((item)=>item?.enabled!==false&&Number(item?.weight)>0&&SEASON_PASS_COSMETIC_KINDS.includes(String(item?.kind||item?.reward_kind||""))&&seasonPassAnyCosmeticCatalog(String(item?.kind||item?.reward_kind||""))?.[String(item?.itemId||item?.item_id||"")]).map((item)=>({key:String(item.key||item.item_key||`${item.kind||item.reward_kind}:${item.itemId||item.item_id}`),kind:String(item.kind||item.reward_kind),itemId:String(item.itemId||item.item_id),weight:Number(item.weight||1),rarity:String(item.rarity||"seasonal"),title:String(item.title||""),imageUrl:String(item.imageUrl||item.image_url||"")}));
+  if(!candidates.length)throw new ApiError(409,"В сезонном кейсе пока нет доступных наград.");
+  const slots=Math.max(1,Math.min(5,Math.floor(Number(definition.slots)||1))),duplicateValue=Math.max(0,Math.floor(Number(definition.duplicatePoints)||0));
+  const rewards=[];let duplicatePoints=0;
+  for(let slot=0;slot<slots&&candidates.length;slot+=1){
+    const fresh=candidates.filter((item)=>!testProjectSeasonalCaseOwned(target,item)),pool=fresh.length?fresh:candidates,pick=seasonPassWeightedPick(pool);if(!pick)break;
+    if(testProjectSeasonalCaseOwned(target,pick)){
+      duplicatePoints+=duplicateValue;if(duplicateValue>0){target.points=Math.min(999999999,Number(target.points||0)+duplicateValue);rewards.push({kind:"points",rewardType:"points",amount:duplicateValue,title:"Компенсация за дубликат",duplicate:true});}
+    }else{
+      testProjectGrantCosmetic(target,pick.kind,pick.itemId);
+      rewards.push({kind:pick.kind,rewardType:pick.kind,itemId:pick.itemId,amount:1,title:pick.title||seasonPassAnyCosmeticCatalog(pick.kind)?.[pick.itemId]?.title||pick.itemId,imageUrl:pick.imageUrl||seasonPassCosmeticImage(pick.kind,pick.itemId),rarity:pick.rarity});
+    }
+    candidates=candidates.filter((item)=>item.key!==pick.key);
+  }
+  return {state:target,rewards,duplicatePoints,slots};
+}
+
+function testProjectPresetState(presetId, current = null) {
+  const id = String(presetId || "active");
+  const state = testProjectDefaultPlayerState();
+  if (id === "fresh") {
+    state.name="Новый игрок"; state.profileLevel=1; state.profileXp=0; state.points=0; state.treats=0; state.coffee=0; state.bestScore=0;
+    state.passTier="none"; state.passXp=0; state.caseInventory={small:0,sweet:0,gold:0,mythic:0,legendary:0}; state.caseState=testProjectDefaultCaseState();
+  } else if (id === "poor") {
+    state.name="Без ресурсов"; state.points=500; state.treats=5; state.coffee=5; state.passTier="none"; state.passXp=seasonPassXpForLevel(5); state.caseInventory={small:0,sweet:0,gold:0,mythic:0,legendary:0};
+  } else if (id === "rich") {
+    state.name="Богатый тестер"; state.profileLevel=50; state.profileXp=500000; state.points=900000000; state.treats=9000000; state.coffee=9000000; state.bestScore=999999;
+    state.passTier="elite_plus"; state.passXp=seasonPassXpForLevel(35); state.caseInventory={small:25,sweet:25,gold:25,mythic:25,legendary:25};
+  } else if (id === "pass49") {
+    state.name="Pass 49 → 50"; state.passTier="elite"; state.passXp=Math.max(0,seasonPassXpForLevel(50)-50); state.points=100000; state.treats=1000; state.coffee=1000;
+  } else if (id === "pass50plus") {
+    state.name="Pass 50+"; state.passTier="elite_plus"; state.passXp=SEASON_PASS_LEVEL_50_COMPLETE_XP + SEASON_PASS_OVERFLOW_LEVEL_XP - 100; state.points=100000; state.treats=1000; state.coffee=1000;
+  } else if (id === "pity") {
+    state.name="До гаранта 1 открытие"; state.points=900000000; state.treats=9000000; state.coffee=9000000; state.caseInventory={small:2,sweet:2,gold:2,mythic:5,legendary:5};
+    state.caseState=testProjectNormalizeCaseState({...state.caseState,mythicPityCounter:24,legendaryPityCounter:49});
+  }
+  if (current) {
+    state.virtualNow = Number(current.virtualNow||0);
+    state.selectedSeasonId = String(current.selectedSeasonId||"");
+    state.tpDrafts = testProjectNormalizeDraftLayer(current.tpDrafts);
+    state.draftMode = String(current.draftMode||"production")==="draft"?"draft":"production";
+    state.savedScenarios = testProjectNormalizeSavedScenarios(current.savedScenarios);
+    state.activityLog = testProjectNormalizeActivityLog(current.activityLog);
+  }
+  return testProjectNormalizePlayerState(state);
+}
+
+async function testProjectPersistAction(env, ownerId, state, snapshot, before, action, title, result = {}) {
+  const normalized = testProjectNormalizePlayerState(state);
+  const diff = testProjectStateDiff(before, normalized);
+  testProjectLogAction(normalized, snapshot, action, title, diff);
+  const now = Math.floor(Date.now() / 1000);
+  await env.DB.prepare(`UPDATE test_project_workspaces SET state_json=?,revision=revision+1,updated_at=? WHERE owner_telegram_id=?`).bind(JSON.stringify(normalized), now, ownerId).run();
+  return { ok:true, isolated:true, action, diff, result, ...testProjectClientPayload(testProjectRequireWorkspaceRow(await testProjectReadWorkspace(env, ownerId))) };
+}
+
+async function ownerPanelTestProjectAction(env, ctx) {
+  const ownerId = String(ctx.user.id);
+  const row = await testProjectEnsureWorkspace(env, ownerId);
+  const productionSnapshot = testProjectWorkspaceSnapshot(row);
+  let state = testProjectWorkspaceState(row);
+  const before = testProjectClone(state);
+  const action = String(ctx.body?.action || "").trim();
+  if (action === "season_select") {
+    const requestedSeasonId=String(ctx.body?.seasonId||"").trim().slice(0,120);
+    const nextSnapshot=await testProjectCaptureProductionSnapshot(env,requestedSeasonId);
+    const selected=nextSnapshot?.season||{};
+    if(requestedSeasonId&&String(selected?.id||"")!==requestedSeasonId)throw new ApiError(404,"Выбранный сезонный пропуск не найден.");
+    state.selectedSeasonId=requestedSeasonId;
+    if(ctx.body?.activate===true){
+      const startMs=Date.parse(String(selected?.startsAt||""));
+      if(!Number.isFinite(startMs))throw new ApiError(409,"У выбранного сезона не настроена дата старта.");
+      state.virtualNow=Math.max(946684800000,Math.min(4102444800000,startMs+60000));
+    }
+    const normalized=testProjectNormalizePlayerState(state),diff=testProjectStateDiff(before,normalized);
+    testProjectLogAction(normalized,nextSnapshot,"season_select",`Выбран сезон · ${String(selected?.title||selected?.id||"автоматически")}${ctx.body?.activate===true?" · время переведено к старту":""}`,diff);
+    const now=Math.floor(Date.now()/1000);
+    await env.DB.prepare(`UPDATE test_project_workspaces SET state_json=?,snapshot_json=?,snapshot_at=?,revision=revision+1,updated_at=? WHERE owner_telegram_id=?`).bind(JSON.stringify(normalized),JSON.stringify(nextSnapshot),Number(nextSnapshot.capturedAt||now),now,ownerId).run();
+    return {ok:true,isolated:true,action,diff,result:{seasonId:String(selected?.id||""),activated:ctx.body?.activate===true},...testProjectClientPayload(testProjectRequireWorkspaceRow(await testProjectReadWorkspace(env,ownerId)))};
+  }
+  const snapshot = testProjectApplyDraftLayer(state, productionSnapshot);
+  const nowMs = testProjectEffectiveNow(state, productionSnapshot);
+  const season = testProjectDynamicSeason(snapshot?.season || {}, nowMs);
+  let title = "Тестовое действие", result = {};
+
+  if (action === "preset") {
+    const presetId = String(ctx.body?.presetId || "active");
+    state = testProjectPresetState(presetId, state);
+    title = `Пресет: ${presetId}`;
+    result = { presetId };
+  } else if (action === "scenario_save") {
+    const name = String(ctx.body?.name || "").trim().slice(0, 80) || `Сценарий ${(state.savedScenarios||[]).length + 1}`;
+    const requestedId = String(ctx.body?.scenarioId || "").trim();
+    let scenario = requestedId ? (state.savedScenarios||[]).find((item) => item.id === requestedId) : null;
+    const now = Date.now();
+    if (!scenario && (state.savedScenarios||[]).length >= TEST_PROJECT_MAX_SCENARIOS) throw new ApiError(409, `Можно сохранить не больше ${TEST_PROJECT_MAX_SCENARIOS} сценариев.`);
+    const saved = { id:scenario?.id || `scn_${crypto.randomUUID().replaceAll("-", "").slice(0, 18)}`, name, updatedAt:now, snapshot:testProjectScenarioSnapshot(state) };
+    state.savedScenarios = scenario ? state.savedScenarios.map((item) => item.id === scenario.id ? saved : item) : [saved, ...(state.savedScenarios||[])];
+    title = `Сохранён сценарий «${name}»`;
+    result = { scenarioId:saved.id, name };
+  } else if (action === "scenario_load") {
+    const scenarioId = String(ctx.body?.scenarioId || "").trim();
+    const scenario = (state.savedScenarios||[]).find((item) => item.id === scenarioId);
+    if (!scenario) throw new ApiError(404, "Сохранённый сценарий не найден.");
+    const savedScenarios = state.savedScenarios;
+    const activityLog = state.activityLog;
+    const tpDrafts = state.tpDrafts, draftMode = state.draftMode, selectedSeasonId = state.selectedSeasonId;
+    state = testProjectNormalizePlayerState({ ...scenario.snapshot, savedScenarios, activityLog, tpDrafts, draftMode, selectedSeasonId });
+    title = `Загружен сценарий «${scenario.name}»`;
+    result = { scenarioId, name:scenario.name };
+  } else if (action === "scenario_delete") {
+    const scenarioId = String(ctx.body?.scenarioId || "").trim();
+    const scenario = (state.savedScenarios||[]).find((item) => item.id === scenarioId);
+    if (!scenario) throw new ApiError(404, "Сохранённый сценарий не найден.");
+    state.savedScenarios = state.savedScenarios.filter((item) => item.id !== scenarioId);
+    title = `Удалён сценарий «${scenario.name}»`;
+    result = { scenarioId, name:scenario.name };
+  } else if (action === "draft_mode") {
+    const mode=String(ctx.body?.mode||"").trim();
+    if(!["production","draft"].includes(mode))throw new ApiError(400,"Неизвестный режим Test Project.");
+    state.draftMode=mode;
+    title=mode==="draft"?"Включён Draft Layer":"Включён Production snapshot";
+    result={mode};
+  } else if (action === "draft_clear") {
+    state.tpDrafts=testProjectNormalizeDraftLayer({});
+    state.draftMode="production";
+    title="Draft Layer очищен";
+    result={cleared:true};
+  } else if (action === "draft_import_cc") {
+    const imported=await testProjectReadControlCenterDraftLayer(env);
+    state.tpDrafts=testProjectMergeDraftLayers(state.tpDrafts,imported);
+    state.draftMode="draft";
+    const view=testProjectDraftLayerView(state,productionSnapshot);
+    title=`Импортированы черновики CC: ${view.count}`;
+    result={imported:view.count};
+  } else if (action === "time_shift") {
+    const seconds = Math.max(-365*86400, Math.min(365*86400, Math.floor(Number(ctx.body?.seconds) || 0)));
+    state.virtualNow = Math.max(946684800000, Math.min(4102444800000, nowMs + seconds * 1000));
+    title = `Время ${seconds >= 0 ? "+" : ""}${seconds} сек.`;
+  } else if (action === "time_set") {
+    const value = Math.floor(Number(ctx.body?.timestampMs) || 0);
+    if (value < 946684800000 || value > 4102444800000) throw new ApiError(400, "Некорректная тестовая дата.");
+    state.virtualNow = value;
+    title = `Виртуальное время: ${new Date(value).toISOString()}`;
+  } else if (action === "time_reset") {
+    state.virtualNow = 0;
+    title = "Время возвращено к снимку Production";
+  } else if (action === "seasonal_case_grant") {
+    const definition=testProjectSeasonalCaseDefinition(snapshot,String(ctx.body?.caseId||""));
+    if(!definition)throw new ApiError(404,"У выбранного сезона нет подготовленного сезонного кейса.");
+    const count=Math.max(1,Math.min(99,Math.floor(Number(ctx.body?.count)||1)));
+    const caseId=String(definition.caseId);state.seasonalCaseInventory[caseId]=Math.min(999,Number(state.seasonalCaseInventory?.[caseId]||0)+count);
+    title=`Добавлен сезонный кейс «${String(definition.title||caseId)}» ×${count}`;result={caseId,count,definition:testProjectClone(definition)};
+  } else if (action === "seasonal_case_open") {
+    const definition=testProjectSeasonalCaseDefinition(snapshot,String(ctx.body?.caseId||""));
+    if(!definition)throw new ApiError(404,"У выбранного сезона нет подготовленного сезонного кейса.");
+    const caseId=String(definition.caseId);if(Number(state.seasonalCaseInventory?.[caseId]||0)<1)throw new ApiError(409,"Сначала добавьте сезонный кейс в тестовый инвентарь.");
+    state.seasonalCaseInventory[caseId]=Math.max(0,Number(state.seasonalCaseInventory[caseId]||0)-1);
+    const rolled=testProjectRollSeasonalCase(state,definition,{apply:true});
+    title=`Открыт сезонный кейс «${String(definition.title||caseId)}»`;result={caseId,rewards:rolled.rewards,duplicatePoints:rolled.duplicatePoints};
+  } else if (action === "case_buy") {
+    const caseType = normalizeCaseType(ctx.body?.caseType);
+    if (!caseType) throw new ApiError(400, "Выберите существующий кейс.");
+    if (snapshot?.liveops?.cases?.[caseType]?.enabled === false) throw new ApiError(409, "Этот кейс выключен в снимке LiveOps.");
+    const product = snapshot?.economy?.caseProducts?.[caseType] || { enabled:true, ...(TEST_PROJECT_CASE_PRICES[caseType]||{}) };
+    if (product.enabled === false) throw new ApiError(409, "Этот кейс убран из ассортимента в снимке Production.");
+    const price = { points:Number(product.points||0), treats:Number(product.treats||0), coffee:Number(product.coffee||0) };
+    testProjectCharge(state, price);
+    state.caseInventory[caseType] = Math.min(999, Number(state.caseInventory[caseType]||0) + 1);
+    title = `Куплен ${snapshot?.liveops?.cases?.[caseType]?.title || caseType}`;
+    result = { caseType, price };
+  } else if (action === "pass_add_xp") {
+    if (season.status !== "active") throw new ApiError(409, "XP начисляется только в активном тестовом сезоне.");
+    const baseXp = Math.max(1, Math.min(5000000, Math.floor(Number(ctx.body?.amount) || 250)));
+    const earned = testProjectPassEarnedMultiplier(state, season, nowMs);
+    const multiplier = ctx.body?.applyMultiplier === false ? 1 : Math.max(1, Number(earned.multiplier || 1));
+    const awarded = Math.floor(baseXp * multiplier);
+    state.passXp = Math.min(999999999, state.passXp + awarded);
+    title = `Сезонный пропуск +${awarded} XP`;
+    result = { baseXp, awarded, multiplier };
+  } else if (action === "pass_buy_level") {
+    if (season.status !== "active") throw new ApiError(409, "Покупка уровней доступна только в активном сезоне.");
+    if (state.passTier === "none") throw new ApiError(403, "Покупка уровня доступна только Elite / Elite+.");
+    const currentLevel = seasonPassLevelFromXp(state.passXp);
+    if (currentLevel >= 50) throw new ApiError(409, "Уже достигнут 50 уровень.");
+    const price = {points:Math.max(0,Number(season?.levelPricePoints || DEFAULT_SEASON_PASS_LEVEL_PRICE_POINTS)),treats:0,coffee:0};
+    testProjectCharge(state, price);
+    state.passXp = Math.max(state.passXp, seasonPassXpForLevel(currentLevel + 1));
+    title = `Куплен ${currentLevel + 1} уровень пропуска`;
+    result = { targetLevel:currentLevel+1, price };
+  } else if (action === "pass_buy_tier") {
+    if (season.status !== "active") throw new ApiError(409, "Тариф можно активировать только в активном сезоне.");
+    const target = String(ctx.body?.tier || "");
+    if (!["elite","elite_plus"].includes(target)) throw new ApiError(400, "Неизвестный тариф.");
+    if (state.passTier === target || (state.passTier === "elite_plus" && target === "elite")) throw new ApiError(409, "Этот тариф уже активирован.");
+    const price = seasonPassTierCharge(season, target, state.passTier);
+    testProjectCharge(state, price);
+    const wasPlus = state.passTier === "elite_plus";
+    state.passTier = target;
+    const received = target === "elite_plus" && !wasPlus ? testProjectGrantElitePlusBenefits(state, season) : [];
+    title = `Активирован ${target === "elite_plus" ? "Elite+" : "Elite"}`;
+    result = { tier:target, price, received };
+  } else if (action === "pass_claim_reward") {
+    if (!(season.status === "active" || season.claimWindowOpen)) throw new ApiError(409, "Окно получения наград закрыто.");
+    const level = Math.max(1, Math.min(50, Math.floor(Number(ctx.body?.level) || state.passLevel)));
+    const lane = String(ctx.body?.lane || "free") === "premium" ? "premium" : "free";
+    if (level > seasonPassLevelFromXp(state.passXp)) throw new ApiError(409, "Этот уровень ещё не открыт.");
+    if (lane === "premium" && state.passTier === "none") throw new ApiError(403, "Для премиальной награды нужен Elite / Elite+.");
+    const key = `${String(season.id||"season")}:${level}:${lane}`;
+    if (state.passClaims.includes(key)) throw new ApiError(409, "Эта награда уже получена в песочнице.");
+    const reward = (season.rewards || []).find((item) => Number(item.level) === level && String(item.lane) === lane && item.enabled !== false);
+    if (!reward) throw new ApiError(404, "Награда этого уровня не настроена.");
+    testProjectApplyReward(state, reward, season);
+    state.passClaims.push(key);
+    title = `Получена награда ${level} уровня · ${lane === "premium" ? "Elite" : "Free"}`;
+    result = { reward };
+  } else if (action === "pass_claim_all") {
+    if (!(season.status === "active" || season.claimWindowOpen)) throw new ApiError(409, "Окно получения наград закрыто.");
+    const playerLevel = seasonPassLevelFromXp(state.passXp);
+    const received = [];
+    for (const reward of season.rewards || []) {
+      const level = Number(reward.level || 0), lane = String(reward.lane || "free");
+      if (!reward.enabled || level < 1 || level > playerLevel) continue;
+      if (lane === "premium" && state.passTier === "none") continue;
+      const key = `${String(season.id||"season")}:${level}:${lane}`;
+      if (state.passClaims.includes(key)) continue;
+      testProjectApplyReward(state, reward, season); state.passClaims.push(key); received.push(reward);
+    }
+    title = `Получить всё: ${received.length} нагр.`;
+    result = { received };
+  } else if (action === "pass_overflow_claim") {
+    const overflow = seasonPassOverflowView(state.passXp, state.passOverflowClaimed);
+    if (!overflow.unlocked || overflow.available < 1) throw new ApiError(409, "Нет доступных наград 50+.");
+    state.caseInventory.gold = Math.min(999, Number(state.caseInventory.gold||0) + overflow.available);
+    state.passOverflowClaimed += overflow.available;
+    title = `50+ · получено ${overflow.available} золотых кейсов`;
+    result = { count:overflow.available };
+  } else if (action === "pass_tasks_complete") {
+    if (season.status !== "active") throw new ApiError(409, "Задания активны только во время сезона.");
+    const period = String(ctx.body?.period || "daily") === "weekly" ? "weekly" : "daily";
+    let count = 0;
+    for (const task of season.tasks || []) {
+      if (!task.enabled || String(task.period) !== period || (task.premium && state.passTier === "none")) continue;
+      const key = testProjectTaskKey(season.id, task, nowMs);
+      state.passTaskProgress[key] = Math.max(Number(state.passTaskProgress[key]||0), Number(task.target||0)); count += 1;
+    }
+    title = `Выполнены ${period === "weekly" ? "weekly" : "daily"} задания: ${count}`;
+    result = { period, count };
+  } else if (action === "pass_tasks_claim") {
+    if (season.status !== "active") throw new ApiError(409, "XP за задания выдаётся только во время активного сезона.");
+    const period = String(ctx.body?.period || "daily") === "weekly" ? "weekly" : "daily";
+    const earned = testProjectPassEarnedMultiplier(state, season, nowMs);
+    const multiplier = Math.max(1, Number(earned.multiplier||1));
+    let baseXp = 0, count = 0;
+    for (const task of season.tasks || []) {
+      if (!task.enabled || String(task.period) !== period || (task.premium && state.passTier === "none")) continue;
+      const key = testProjectTaskKey(season.id, task, nowMs);
+      if (state.passTaskClaims.includes(key)) continue;
+      if (Number(state.passTaskProgress[key]||0) < Number(task.target||0)) continue;
+      state.passTaskClaims.push(key); baseXp += Math.max(0,Number(task.xp||0)); count += 1;
+    }
+    const awarded = Math.floor(baseXp * multiplier);
+    state.passXp = Math.min(999999999, state.passXp + awarded);
+    title = `Получено ${count} заданий · +${awarded} XP`;
+    result = { period, count, baseXp, awarded, multiplier };
+  } else if (action === "offer_buy") {
+    const offerId = String(ctx.body?.offerId || "");
+    const offer = (snapshot?.offers || []).find((item) => String(item?.id || "") === offerId);
+    if (!offer) throw new ApiError(404, "Акция не найдена в снимке.");
+    const preview = testProjectOfferPreview(offer, state, { ...snapshot, season }, nowMs);
+    if (!preview.testEligibility?.eligible) throw new ApiError(409, preview.testEligibility?.reason || "Акция недоступна.");
+    testProjectCharge(state, preview.testPricing?.price || {});
+    for (const reward of offer.rewards || []) testProjectApplyReward(state, reward, season);
+    state.offerPurchases[offerId] = Math.min(99, Number(state.offerPurchases[offerId]||0) + 1);
+    title = `Куплена акция «${String(offer.title||offerId)}»`;
+    result = { offerId, price:preview.testPricing?.price || {}, rewards:offer.rewards || [] };
+  } else {
+    throw new ApiError(400, "Неизвестное действие Test Project.");
+  }
+
+  state = testProjectNormalizePlayerState(state);
+  return testProjectPersistAction(env, ownerId, state, snapshot, before, action, title, result);
+}
+
+async function ownerPanelTestProjectStageDraft(env, ctx) {
+  const ownerId=String(ctx.user.id),kind=String(ctx.body?.kind||"").trim(),payload=ctx.body?.payload&&typeof ctx.body.payload==="object"?ctx.body.payload:{};
+  const row=await testProjectEnsureWorkspace(env,ownerId),state=testProjectWorkspaceState(row);let patch=testProjectNormalizeDraftLayer({}),title="Черновик",selectedSeasonId="";
+  if(kind==="game_config") {
+    patch.gameConfig={config:normalizeGameRuntimeConfig(payload.config||payload),title:"Баланс игры · из формы CC",draftSource:"control_center_form",stagedAt:Date.now()}; title="Баланс игры";
+  } else if(kind==="case") {
+    const caseId=normalizeCaseType(payload.caseId); if(!caseId||!LIVEOPS_CASE_IDS.includes(caseId))throw new ApiError(400,"Выберите существующий кейс.");
+    const current=(await readLiveOpsConfig(env))?.cases?.[caseId]||LIVEOPS_CASE_DEFAULTS[caseId]; const chances={};
+    for(const key of Object.keys(ownerPanelCaseCategoryLabels())){const value=Number(payload?.chances?.[key]??current?.chances?.[key]??0);if(!Number.isFinite(value)||value<0||value>100)throw new ApiError(400,`Шанс «${key}» должен быть от 0 до 100.`);chances[key]=Number(value.toFixed(6));}
+    const total=Object.values(chances).reduce((a,b)=>a+b,0);if(Math.abs(total-100)>0.001)throw new ApiError(400,`Сумма шансов должна быть ровно 100%. Сейчас ${total.toFixed(3)}%.`);
+    const ranges={};for(const key of ["points","treats","coffee"]){const pair=payload?.ranges?.[key]||current?.ranges?.[key]||[0,0],min=ownerPanelInteger(pair?.[0],0,999999999),max=ownerPanelInteger(pair?.[1],0,999999999);if(min==null||max==null||max<min)throw new ApiError(400,`Проверьте диапазон «${key}».`);ranges[key]=[min,max];}
+    const guarantee=ownerPanelInteger(payload.guaranteeCount,0,50);if(guarantee==null)throw new ApiError(400,"Гарант должен быть от 0 до 50.");
+    patch.cases[caseId]={id:caseId,title:String(current?.title||caseId),enabled:payload.enabled!==false,guaranteeCount:guarantee,chances,ranges,testDraft:true,draftSource:"control_center_form"};title=`Кейс · ${current?.title||caseId}`;
+  } else if(kind==="content") {
+    await ensureLiveOpsAdminSchema(env);const itemKind=String(payload.kind||"").trim(),itemId=String(payload.itemId||"").trim();if(!["avatar","frame","trail","skin"].includes(itemKind)||!itemId)throw new ApiError(400,"Неизвестный предмет кейса.");
+    const rowItem=await env.DB.prepare(`SELECT * FROM liveops_content_items WHERE item_kind=? AND item_id=? LIMIT 1`).bind(itemKind,itemId).first();if(!rowItem)throw new ApiError(404,"Предмет не найден.");const rarity=String(payload.rarity||rowItem.rarity);if(!LIVEOPS_RARITIES.includes(rarity))throw new ApiError(400,"Некорректная редкость.");const weight=Number(payload.weight);if(!Number.isFinite(weight)||weight<0||weight>100000)throw new ApiError(400,"Вес предмета должен быть от 0 до 100000.");
+    const key=`${itemKind}:${itemId}`;patch.content[key]={kind:itemKind,id:itemId,title:String(rowItem.title||itemId),rarity,weight:Number(weight.toFixed(6)),enabled:payload.enabled!==false,isNew:Number(rowItem.is_new||0)===1,legendaryOnly:Boolean(payload.legendaryOnly),imageUrl:String(rowItem.image_url||""),testDraft:true,draftSource:"control_center_form"};title=`Награда кейса · ${String(rowItem.title||itemId)}`;
+  } else if(kind==="season_reward") {
+    await ensureSeasonPassSchema(env);
+    const seasonId=String(payload.seasonId||"").trim(),level=ownerPanelInteger(payload.level,1,50),lane=String(payload.lane)==="premium"?"premium":String(payload.lane)==="free"?"free":"";if(!seasonId||level==null||!lane)throw new ApiError(400,"Не выбран сезон, уровень или линия.");selectedSeasonId=seasonId;
+    const season=await loadSeasonPassSeasonById(env,seasonId);if(!season)throw new ApiError(404,"Сезонный пропуск не найден.");if(season.status==="ended")throw new ApiError(409,"Награды завершённого сезона изменять нельзя.");
+    let reward;if(String(payload.rewardType||"")==="seasonal_case"){const caseId=String(payload.itemId||"").trim(),definition=await env.DB.prepare(`SELECT * FROM season_pass_case_definitions WHERE case_id=? LIMIT 1`).bind(caseId).first();if(!definition)throw new ApiError(400,"Выберите существующий сезонный кейс.");const amount=ownerPanelInteger(payload.amount,1,20);if(amount==null)throw new ApiError(400,"Количество сезонных кейсов должно быть от 1 до 20.");reward={rewardType:"seasonal_case",amount,itemId:caseId,title:amount===1?String(definition.title||"Сезонный кейс"):`${String(definition.title||"Сезонный кейс")} ×${amount}`,imageUrl:String(definition.closed_image_url||"/assets/season-pass/season.png?v=07939")};}else{const r=ownerPanelSeasonPassRewardPresentation(payload.rewardType,payload.amount,payload.itemId);reward={rewardType:r.publicRewardType||r.rewardType,amount:r.amount,itemId:r.publicItemId||r.itemId,title:r.title,imageUrl:r.imageUrl};}
+    const key=`${seasonId}:${level}:${lane}`;patch.seasonRewards[key]={seasonId,level,lane,...reward,enabled:true,testDraft:true,draftSource:"control_center_form"};title=`Season Pass · уровень ${level} · ${lane}`;
+  } else if(kind==="season_tariffs") {
+    await ensureSeasonPassSchema(env);
+    const seasonId=String(payload.seasonId||"").trim();if(!seasonId)throw new ApiError(400,"Не выбран сезон.");selectedSeasonId=seasonId;
+    const season=await loadSeasonPassSeasonById(env,seasonId);if(!season)throw new ApiError(404,"Сезонный пропуск не найден.");if(season.status==="ended")throw new ApiError(409,"Тарифы завершённого сезона изменять нельзя.");
+    const price=(value,label)=>{const n=ownerPanelInteger(value,0,999999999);if(n==null)throw new ApiError(400,`${label}: укажите целое число от 0.`);return n;};
+    const prices={elite:{points:price(payload?.elite?.points,"Элитный · очки"),treats:price(payload?.elite?.treats,"Элитный · зефир"),coffee:price(payload?.elite?.coffee,"Элитный · кофе")},elite_plus:{points:price(payload?.elitePlus?.points,"Элитный+ · очки"),treats:price(payload?.elitePlus?.treats,"Элитный+ · зефир"),coffee:price(payload?.elitePlus?.coffee,"Элитный+ · кофе")}};
+    if(Object.values(prices.elite).reduce((a,b)=>a+b,0)<=0||Object.values(prices.elite_plus).reduce((a,b)=>a+b,0)<=0)throw new ApiError(400,"Стоимость платных тарифов не может быть полностью нулевой.");for(const key of ["points","treats","coffee"])if(prices.elite_plus[key]<prices.elite[key])throw new ApiError(400,"Каждая часть стоимости «Элитный+» должна быть не ниже «Элитный».");
+    const input=payload.elitePlusBenefits||{},bonusLevels=ownerPanelInteger(input.bonusLevels,0,25),caseCount=ownerPanelInteger(input.caseCount,0,10);if(bonusLevels==null||caseCount==null)throw new ApiError(400,"Проверьте количество бонусных уровней и кейсов.");
+    const rawCaseType=String(input.caseType||"").trim(),caseType=rawCaseType&&rawCaseType!=="none"?normalizeCaseType(rawCaseType):"";if(rawCaseType&&rawCaseType!=="none"&&!caseType)throw new ApiError(400,"Неизвестный тип бонусного кейса.");
+    const cosmetics=[];for(const entry of (Array.isArray(input.cosmetics)?input.cosmetics:[]).slice(0,2)){const cosmeticKind=String(entry?.kind||"").trim(),itemId=String(entry?.itemId||"").trim();if(!cosmeticKind||cosmeticKind==="none")continue;if(!SEASON_PASS_COSMETIC_KINDS.includes(cosmeticKind))throw new ApiError(400,"Неизвестный тип эксклюзивной награды.");const item=seasonPassAnyCosmeticCatalog(cosmeticKind)?.[itemId];if(!item)throw new ApiError(400,"Выберите существующую эксклюзивную награду.");if(season.status==="active"&&futureSeasonContentItem(cosmeticKind,itemId))throw new ApiError(409,"Скрытый контент будущего сезона нельзя назначить уже активному тарифу.");if(!cosmetics.some((value)=>value.kind===cosmeticKind&&value.itemId===itemId))cosmetics.push({kind:cosmeticKind,itemId});}
+    const benefits={xpBoost:input.xpBoost!==false,bonusLevels,caseType:caseCount>0?caseType:"",caseCount:caseType?caseCount:0,cosmetics};
+    patch.seasonTariffs[seasonId]={seasonId,prices,benefits,testDraft:true,draftSource:"control_center_form"};title=`Season Pass · тарифы`;
+  } else if(kind==="offer") {
+    const titleValue=String(payload.title||"").trim().slice(0,100);if(titleValue.length<2)throw new ApiError(400,"Укажите название акции.");const rewards=flashOfferNormalizeRewards(payload.rewards),price=flashOfferPrice(payload,"price"),original=flashOfferPrice(payload,"original"),startsAt=flashOfferUnix(payload.startsAt,0),endsAt=flashOfferUnix(payload.endsAt,0);if(startsAt&&endsAt&&endsAt<=startsAt)throw new ApiError(400,"Окончание акции должно быть позже начала.");
+    const rawImage=String(payload.imageUrl||"").trim(),imageUrl=ownerV8AssetPath(rawImage);if(rawImage&&!imageUrl)throw new ApiError(400,"Картинка акции должна быть из проекта, Медиатеки или HTTPS.");const segmentKey=String(payload.segmentKey||"all").trim()||"all";if(segmentKey!=="all"&&!PLAYER_SEGMENTS[segmentKey]&&!(await ownerV85SavedSegment(env,segmentKey)))throw new ApiError(400,"Выбранный сегмент не найден.");
+    const id=String(payload.offerId||`tp_offer_${crypto.randomUUID().replaceAll("-","").slice(0,12)}`).trim().slice(0,160),now=Math.floor(Date.now()/1000),rowLike={offer_id:id,title:titleValue,subtitle:String(payload.subtitle||"").slice(0,220),badge_text:String(payload.badgeText||"АКЦИЯ").slice(0,28),image_url:imageUrl,rewards_json:JSON.stringify(rewards),price_points:price.points,price_treats:price.treats,price_coffee:price.coffee,original_points:original.points,original_treats:original.treats,original_coffee:original.coffee,starts_at:startsAt,ends_at:endsAt,enabled:1,status:"draft",segment_key:segmentKey,purchase_limit:Math.max(0,Math.min(99,Math.floor(Number(payload.purchaseLimit??1)||0))),show_frequency:["once_session","once_day","every_entry"].includes(String(payload.showFrequency))?String(payload.showFrequency):"once_session",priority:Math.max(-999,Math.min(999,Math.floor(Number(payload.priority)||100))),created_at:now,updated_at:now,published_at:0,ended_at:0};
+    patch.offers[id]=flashOfferRowView(rowLike,{testDraft:true,draftSource:"control_center_form"});title=`Акция · ${titleValue}`;
+  } else throw new ApiError(400,"Этот тип черновика пока не поддерживается Test Project.");
+  patch.updatedAt=Date.now();state.tpDrafts=testProjectMergeDraftLayers(state.tpDrafts,patch);state.draftMode="draft";
+  if(selectedSeasonId)state.selectedSeasonId=selectedSeasonId;
+  const productionSnapshot=await testProjectCaptureProductionSnapshot(env,state.selectedSeasonId);
+  if(selectedSeasonId&&String(productionSnapshot?.season?.id||"")!==selectedSeasonId)throw new ApiError(404,"Выбранный сезонный пропуск не найден.");
+  testProjectLogAction(state,productionSnapshot,"draft_stage",`В Draft Layer добавлен: ${title}`,[]);const now=Math.floor(Date.now()/1000);await env.DB.prepare(`UPDATE test_project_workspaces SET state_json=?,snapshot_json=?,snapshot_at=?,revision=revision+1,updated_at=? WHERE owner_telegram_id=?`).bind(JSON.stringify(testProjectNormalizePlayerState(state)),JSON.stringify(productionSnapshot),Number(productionSnapshot.capturedAt||now),now,ownerId).run();
+  await logStaffAction(env,ctx.user,ctx.access,"owner_test_project_draft_stage",null,"test_project",null,null,{kind,title,selectedSeasonId:selectedSeasonId||null});
+  return {ok:true,kind,title,...testProjectClientPayload(testProjectRequireWorkspaceRow(await testProjectReadWorkspace(env,ownerId)))};
+}
+
+async function ownerPanelTestProjectCaseOpen(env, ctx) {
+  const ownerId = String(ctx.user.id);
+  const row = await testProjectEnsureWorkspace(env, ownerId);
+  const state = testProjectWorkspaceState(row);
+  const before = testProjectClone(state);
+  const productionSnapshot = testProjectWorkspaceSnapshot(row);
+  const snapshot = testProjectApplyDraftLayer(state, productionSnapshot);
+  const caseType = normalizeCaseType(ctx.body?.caseType);
+  if (!caseType || !LIVEOPS_CASE_IDS.includes(caseType)) throw new ApiError(400, "Выберите существующий кейс.");
+  const mode = String(ctx.body?.mode || "open") === "simulate" ? "simulate" : "open";
+  const liveops = snapshot?.liveops || { content:{}, cases:{} };
+  if (mode === "simulate") {
+    const samples = Math.max(1, Math.min(TEST_PROJECT_MAX_CASE_SIMULATIONS, Math.floor(Number(ctx.body?.samples) || 100)));
+    let virtual = testProjectNormalizeCaseState(state.caseState);
+    const totals = { points:0,treats:0,coffee:0,rewards:0,byKind:{} };
+    const examples = [];
+    for (let i=0; i<samples; i+=1) {
+      const rolled = rollLevelCase(caseType, virtual, virtual.ownedSkins, liveops);
+      virtual = testProjectNormalizeCaseState(rolled.state);
+      totals.points += Number(rolled.points || 0); totals.treats += Number(rolled.treats || 0); totals.coffee += Number(rolled.coffee || 0);
+      totals.rewards += rolled.rewards.length; testProjectAggregateRewards(totals.byKind, rolled.rewards);
+      if (examples.length < 3) examples.push(rolled.rewards);
+    }
+    return { ok:true, isolated:true, persisted:false, caseType, samples, totals, examples };
+  }
+  const consume = ctx.body?.consume !== false;
+  if (consume && Number(state.caseInventory?.[caseType] || 0) < 1) throw new ApiError(409, "В тестовом инвентаре нет этого кейса. Сначала купите или добавьте его пресетом.");
+  if (consume) state.caseInventory[caseType] -= 1;
+  const rolled = rollLevelCase(caseType, state.caseState, state.caseState.ownedSkins, liveops);
+  state.caseState = testProjectNormalizeCaseState(rolled.state);
+  for (const reward of rolled.rewards || []) {
+    if (!["physical","product"].includes(String(reward?.kind||reward?.rewardType||""))) continue;
+    const itemId = String(reward?.id || reward?.itemId || reward?.productId || "physical");
+    state.testPhysicalRewards[itemId] = Math.min(999, Number(state.testPhysicalRewards[itemId]||0) + Math.max(1,Number(reward?.amount||1)));
+  }
+  state.points = Math.max(0, Math.min(999999999, state.points + Number(rolled.points || 0)));
+  state.treats = Math.max(0, Math.min(9999999, state.treats + Number(rolled.treats || 0)));
+  state.coffee = Math.max(0, Math.min(9999999, state.coffee + Number(rolled.coffee || 0)));
+  const now = Math.floor(Date.now() / 1000);
+  const normalized = testProjectNormalizePlayerState(state);
+  const diff = testProjectStateDiff(before, normalized);
+  testProjectLogAction(normalized, snapshot, "case_open", `Открыт ${snapshot?.liveops?.cases?.[caseType]?.title || caseType}`, diff);
+  await env.DB.batch([
+    env.DB.prepare(`UPDATE test_project_workspaces SET state_json=?,revision=revision+1,updated_at=? WHERE owner_telegram_id=?`).bind(JSON.stringify(normalized), now, ownerId),
+    env.DB.prepare(`INSERT INTO test_project_case_runs(owner_telegram_id,case_type,rewards_json,points_delta,treats_delta,coffee_delta,created_at) VALUES(?,?,?,?,?,?,?)`).bind(ownerId,caseType,JSON.stringify(rolled.rewards),Number(rolled.points||0),Number(rolled.treats||0),Number(rolled.coffee||0),now)
+  ]);
+  try {
+    await env.DB.prepare(`DELETE FROM test_project_case_runs WHERE owner_telegram_id=? AND id NOT IN (SELECT id FROM test_project_case_runs WHERE owner_telegram_id=? ORDER BY id DESC LIMIT 50)`).bind(ownerId,ownerId).run();
+  } catch {}
+  return { ok:true, isolated:true, persisted:true, caseType, rewards:rolled.rewards, deltas:{points:Number(rolled.points||0),treats:Number(rolled.treats||0),coffee:Number(rolled.coffee||0)}, diff, ...testProjectClientPayload(testProjectRequireWorkspaceRow(await testProjectReadWorkspace(env, ownerId))) };
+}
+
+const TEST_PROJECT_SANDBOX_API_PATHS = Object.freeze([
+  "/api/game/startup","/api/features","/api/profile/sync","/api/shop/config","/api/skins/config",
+  "/api/runs/start","/api/runs/checkpoint","/api/leaderboard/state","/api/leaderboard/submit","/api/leaderboard/claim",
+  "/api/cases/state","/api/cases/open","/api/cases/open-granted","/api/cases/purchase","/api/cases/activate","/api/cases/equip","/api/cases/consume-run",
+  "/api/skins/purchase","/api/skins/bonus-case","/api/live-content/shop/buy","/api/rewards/create","/api/rewards/mine",
+  "/api/gifts/state","/api/gifts/claim","/api/support/state","/api/support/create","/api/support/reply","/api/support/read","/api/news/read",
+  "/api/polls/game/next","/api/polls/game/vote","/api/polls/game/snooze",
+  "/api/shop/offers","/api/shop/offers/event","/api/shop/offers/purchase",
+  "/api/battle-pass/access","/api/battle-pass/state","/api/battle-pass/run","/api/battle-pass/profile-bonus","/api/battle-pass/task-notices/pending","/api/battle-pass/task-notices/read",
+  "/api/battle-pass/claim","/api/battle-pass/claim-all","/api/battle-pass/purchase-tier","/api/battle-pass/purchase-level",
+  "/api/battle-pass/tasks/claim","/api/battle-pass/tasks/claim-all","/api/battle-pass/overflow/claim","/api/battle-pass/seasonal-case/open",
+  "/api/battle-pass/letter/state","/api/battle-pass/letter/open","/api/battle-pass/story/open","/api/battle-pass/story/complete","/api/battle-pass/story/test/open"
+]);
+const TEST_PROJECT_SANDBOX_API_SET = new Set(TEST_PROJECT_SANDBOX_API_PATHS);
+
+function testProjectSandboxProfile(state) {
+  return {
+    wallet:Math.max(0,Number(state?.points||0)),
+    best:Math.max(0,Number(state?.bestScore||0)),
+    treats:Math.max(0,Number(state?.treats||0)),
+    coffee:Math.max(0,Number(state?.coffee||0)),
+    profileXp:Math.max(0,Number(state?.profileXp||0)),
+    authoritativeWallet:true,
+    authoritativeFields:{wallet:true,best:true,treats:true,coffee:true,profileXp:true},
+    revision:1,
+    updatedAt:Date.now()
+  };
+}
+
+function testProjectSandboxCasePayload(state, snapshot, extra = {}) {
+  const liveops=snapshot?.liveops||{content:{},cases:{}};
+  const openedLevels=[...(state?.openedLevelCases||[])].map(Number).filter((value)=>value>0);
+  const profileLevel=Math.max(1,Math.min(50,caseProfileLevel(Number(state?.profileXp||0))));
+  const schedule=Object.entries(LEVEL_CASE_SCHEDULE).map(([level,caseType])=>({
+    level:Number(level),caseType,title:LEVEL_CASE_CONFIG[caseType]?.title||liveops?.cases?.[caseType]?.title||"Кейс"
+  }));
+  const eligibleCases=schedule.filter((entry)=>entry.level<=profileLevel&&!openedLevels.includes(entry.level));
+  const cs=testProjectNormalizeCaseState(state?.caseState||{});
+  const caseState={
+    ...cs,
+    mythicGuaranteedEvery:Math.max(0,Math.min(50,Number(liveops?.cases?.mythic?.guaranteeCount??cs.mythicGuaranteedEvery??25))),
+    legendaryGuaranteedEvery:Math.max(0,Math.min(50,Number(liveops?.cases?.legendary?.guaranteeCount??cs.legendaryGuaranteedEvery??50)))
+  };
+  return {
+    ok:true,testProject:true,isolated:true,authoritativeProfile:true,profileLevel,schedule,eligibleCases,
+    openedLevels,openedCases:[],giftedCases:{...testProjectIntMap(state?.caseInventory,LIVEOPS_CASE_IDS,999)},
+    caseState,liveops,profile:testProjectSandboxProfile(state),...extra
+  };
+}
+
+function testProjectSandboxTaskPeriods(nowMs) {
+  const daily=seasonPassMoscowPeriod("daily",nowMs),weekly=seasonPassMoscowPeriod("weekly",nowMs);
+  return {
+    daily:{key:daily.key,periodKey:daily.key,startsAt:Number(daily.startsAt||0),endsAt:Number(daily.endsAt||0),resetAt:Number(daily.endsAt||0)},
+    weekly:{key:weekly.key,periodKey:weekly.key,startsAt:Number(weekly.startsAt||0),endsAt:Number(weekly.endsAt||0),resetAt:Number(weekly.endsAt||0)}
+  };
+}
+
+function testProjectSandboxPassPayload(state, snapshot) {
+  const nowMs=testProjectEffectiveNow(state,snapshot);
+  const lab=testProjectPassLabView(state,snapshot,nowMs);
+  const season=lab.season||{};
+  const player=seasonPassPlayerView({xp:Number(state?.passXp||0),premium_tier:String(state?.passTier||"none"),elite_plus_bonus_granted:String(state?.passTier||"")==="elite_plus"?1:0,revision:1});
+  const prefix=`${String(season.id||"season")}:`;
+  const claimed=(state?.passClaims||[]).filter((key)=>String(key).startsWith(prefix)).map((key)=>String(key).slice(prefix.length));
+  const periods=testProjectSandboxTaskPeriods(nowMs);
+  const tasks=(lab.tasks||[]).map((task)=>({
+    ...testProjectClone(task),
+    periodKey:String(task?.period)==="weekly"?periods.weekly.key:periods.daily.key,
+    xpReward:Number(task?.xp||task?.xpReward||0),
+    complete:Boolean(task?.complete),claimed:Boolean(task?.claimed),locked:Boolean(task?.locked)
+  }));
+  const entitlements=[];
+  if(Number(state?.seasonXpBoosts||0)>0||String(state?.passTier||"")==="elite_plus")entitlements.push(SEASON_PASS_SPECIAL_XP_X2);
+  const caseDefinitions=Array.isArray(season?.seasonalCases)?season.seasonalCases:season?.seasonalCase?[season.seasonalCase]:[];
+  const seasonalCases=caseDefinitions.map((definition)=>{
+    const caseId=String(definition?.caseId||"");const pending=Math.max(0,Number(state?.seasonalCaseInventory?.[caseId]||0));
+    const releaseMs=Math.max(0,Number(definition?.releaseAt||0))*1000;
+    return {caseId,id:caseId,title:String(definition?.title||"Сезонный кейс"),description:String(definition?.description||""),imageUrl:String(definition?.imageUrl||""),openImageUrl:String(definition?.openImageUrl||""),seasonTitle:String(season?.title||""),released:!releaseMs||nowMs>=releaseMs,pending,opening:0,opened:0,testProject:true,draftCase:definition?.enabled===false,status:String(definition?.status||"")};
+  }).filter((item)=>item.caseId&&item.pending>0);
+  return {
+    ok:true,testProject:true,isolated:true,
+    season:{...testProjectClone(season),progression:season?.progression||seasonPassProgressionView(),tierSettings:seasonPassPublicTierSettings(season),capabilities:seasonPassCapabilities(season)},
+    player,overflow:seasonPassOverflowView(Number(state?.passXp||0),Number(state?.passOverflowClaimed||0)),catchUp:lab.catchUp||{active:false,multiplier:1},
+    finale:{unlocked:Number(player.level||1)>=50,level:Number(player.level||1),displayLevel:String(player.displayLevel||player.level||1),xp:Number(player.xp||0),rewardsClaimed:claimed.length,tasksClaimed:(state?.passTaskClaims||[]).length,runs:Number(state?.sandbox?.completedRuns||0),bestScore:Number(state?.bestScore||0),storyCompleted:0,storyTotal:0,nextSeason:null,teaser:null},
+    letter:null,seasonalCases,story:null,
+    rewards:(season?.rewards||[]).map((reward)=>({...testProjectClone(reward),rewardType:String(reward?.rewardType||reward?.kind||""),itemId:String(reward?.itemId||reward?.id||"")})),
+    claimed,entitlements,tasks,taskPeriods:periods,taskClaimableCount:tasks.filter((task)=>task.complete&&!task.claimed&&!task.locked).length,
+    summary:{runs:Number(state?.sandbox?.completedRuns||0),bestScore:Number(state?.bestScore||0),tasksClaimed:(state?.passTaskClaims||[]).length,rewardsClaimed:claimed.length},
+    balance:{points:Number(state?.points||0),treats:Number(state?.treats||0),coffee:Number(state?.coffee||0)}
+  };
+}
+
+
+function testProjectSandboxPassReceived(reward) {
+  const item=reward&&typeof reward==="object"?reward:{};
+  return {level:Number(item.level||0),lane:String(item.lane||"free"),title:String(item.title||"Награда"),rewardType:String(item.rewardType||item.kind||""),amount:Math.max(1,Number(item.amount||1)),itemId:String(item.itemId||item.id||""),imageUrl:String(item.imageUrl||item.image_url||"")};
+}
+
+function testProjectSandboxLeaderboardPayload(state, mode, nowMs, snapshot = null) {
+  const fakeId="tp-player";
+  const templates=[
+    ["Карамелька",128400,"tp-bot-1"],["Капучино",97200,"tp-bot-2"],["Пончик",71500,"tp-bot-3"],["Маршмеллоу",52600,"tp-bot-4"],
+    ["Булочка",38800,"tp-bot-5"],["Мокко",27400,"tp-bot-6"],["Клубничка",16900,"tp-bot-7"],["Круассан",8400,"tp-bot-8"]
+  ];
+  const rows=templates.map(([name,score,telegramId])=>({telegramId,name,firstName:name,lastName:"",username:"",score:Number(score),premiumTier:"none",avatarId:"",frameId:"",caseAvatarId:"",caseFrameId:"",caseAvatarUrl:"",caseFrameUrl:"",place:0}));
+  if(Number(state?.bestScore||0)>0){
+    const caseAvatarId=String(state?.caseState?.activeAvatarId||""),caseFrameId=String(state?.caseState?.activeFrameId||"");
+    const avatarItem=caseAvatarId?snapshot?.liveops?.content?.avatar?.[caseAvatarId]:null,frameItem=caseFrameId?snapshot?.liveops?.content?.frame?.[caseFrameId]:null;
+    rows.push({telegramId:fakeId,name:String(state?.name||"Тестовый игрок"),firstName:String(state?.name||"Тестовый игрок"),lastName:"",username:"test_project",score:Number(state.bestScore||0),premiumTier:String(state?.passTier||"none"),avatarId:caseAvatarId,frameId:caseFrameId,caseAvatarId,caseFrameId,caseAvatarUrl:String(avatarItem?.imageUrl||""),caseFrameUrl:String(frameItem?.imageUrl||""),place:0});
+  }
+  rows.sort((a,b)=>b.score-a.score||a.name.localeCompare(b.name,"ru")); rows.forEach((row,index)=>row.place=index+1);
+  const me=rows.find((row)=>row.telegramId===fakeId)||null;
+  const top=rows.slice(0,50);
+  const startsAt=nowMs-7*86400000,endsAt=nowMs+23*86400000;
+  return {ok:true,testProject:true,isolated:true,mode:mode==="all_time"?"all_time":"season",serverTime:nowMs,season:{id:"tp-rating",title:"Test Project · тестовый рейтинг",status:"active",startsAt,endsAt,claimGraceEndsAt:endsAt+7*86400000,resetPlan:null},top,me,gapToFirst:me?Math.max(0,Number(top[0]?.score||0)-Number(me.score||0)):0,reward:null,nextSeason:null};
+}
+
+function testProjectSandboxSupportPayload(state) {
+  const categoryLabels={bug:"Ошибка в игре",purchase:"Покупка",reward:"Награда",account:"Аккаунт",suggestion:"Предложение",other:"Другое"};
+  const tickets=(state?.sandbox?.supportTickets||[]).map((ticket)=>{
+    const id=Math.max(1,Math.floor(Number(ticket.id)||1));
+    const messages=[{id:id*100+1,sender:"player",senderType:"player",message:String(ticket.message||""),text:String(ticket.message||""),createdAt:Number(ticket.createdAt||Date.now()),attachments:[]}];
+    for(const [index,reply] of (ticket.replies||[]).entries())messages.push({id:id*100+2+index,sender:"player",senderType:"player",message:String(reply.message||""),text:String(reply.message||""),createdAt:Number(reply.createdAt||Date.now()),attachments:[]});
+    return {id,subject:String(ticket.subject||"Тестовое обращение"),category:String(ticket.category||"other"),categoryLabel:categoryLabels[String(ticket.category||"other")]||"Другое",status:String(ticket.status||"new"),statusLabel:String(ticket.status||"new")==="closed"?"закрыто":"новое",unread:false,createdAt:Number(ticket.createdAt||Date.now()),updatedAt:Number(ticket.createdAt||Date.now()),messages,attachments:[]};
+  });
+  return {ok:true,testProject:true,tickets,openCount:tickets.filter((ticket)=>ticket.status!=="closed").length,unreadCount:0};
+}
+
+function testProjectSandboxRewardView(item) {
+  return {code:String(item?.code||""),productId:String(item?.productId||"test_product"),productName:String(item?.title||"Тестовая награда"),issuedAt:Number(item?.createdAt||Date.now()),expiresAt:Number(item?.createdAt||Date.now())+30*86400000,status:"active",redeemedAt:0,testProject:true};
+}
+
+function testProjectSandboxOfferList(state,snapshot) {
+  const nowMs=testProjectEffectiveNow(state,snapshot);
+  return (snapshot?.offers||[]).map((offer)=>testProjectOfferPreview(offer,state,snapshot,nowMs)).filter((offer)=>offer?.testEligibility?.eligible).map((offer)=>({
+    ...testProjectClone(offer),price:testProjectClone(offer?.testPricing?.price||offer?.price||{}),original:testProjectClone(offer?.testPricing?.original||offer?.original||{}),purchaseCount:Number(state?.offerPurchases?.[String(offer?.id||"")]||0),previewOnly:false,testProject:true
+  }));
+}
+
+function testProjectSandboxPollDefinition() {
+  return {
+    id:"tp-poll-3",question:"Как работает Test Project 3.1?",description:"Этот опрос существует только внутри песочницы. Ответ не попадёт в Production.",
+    rewardText:"100 ⭐ тестовых очков",answerType:"choice",responseMode:"single",commentMode:"optional",commentMin:3,commentMax:400,maxChoices:1,
+    options:[{id:"useful",text:"Полезно"},{id:"needs_work",text:"Нужно доработать"},{id:"found_bug",text:"Нашёл баг"}]
+  };
+}
+
+function testProjectSandboxPollResults(state) {
+  const poll=testProjectSandboxPollDefinition(),selected=new Set(state?.sandbox?.pollVote?.optionIds||[]);
+  const base={useful:18,needs_work:7,found_bug:3};
+  const rows=poll.options.map((option)=>({option_text:option.text,votes:Number(base[option.id]||0)+(selected.has(option.id)?1:0)}));
+  const total=rows.reduce((sum,item)=>sum+item.votes,0);
+  return {total,options:rows.map((item)=>({...item,percent:total?Math.round(item.votes/total*100):0}))};
+}
+
+function testProjectSandboxPollNext(state, nowMs) {
+  const poll=testProjectSandboxPollDefinition();
+  if(String(state?.sandbox?.pollVote?.pollId||"")===poll.id)return {ok:true,poll:null,testOnly:true};
+  if(Number(state?.sandbox?.pollSnoozedUntil||0)>nowMs)return {ok:true,poll:null,snoozedUntil:Number(state.sandbox.pollSnoozedUntil),testOnly:true};
+  return {ok:true,poll,testOnly:true};
+}
+
+async function testProjectSandboxHydrateFutureContent(env, snapshotValue) {
+  const snapshot=testProjectClone(snapshotValue||{});
+  snapshot.liveops=snapshot.liveops&&typeof snapshot.liveops==="object"?snapshot.liveops:{content:{},cases:{},version:1};
+  snapshot.liveops.content=snapshot.liveops.content&&typeof snapshot.liveops.content==="object"?snapshot.liveops.content:{};
+  let rules=new Map();try{rules=await readLiveContentReleaseRules(env);}catch(error){console.error("test project hidden content hydrate fallback",error);}
+  for(const [kind,catalog] of Object.entries(FUTURE_SEASON_CONTENT)){
+    snapshot.liveops.content[kind]=snapshot.liveops.content[kind]&&typeof snapshot.liveops.content[kind]==="object"?snapshot.liveops.content[kind]:{};
+    for(const [itemId,item] of Object.entries(catalog||{})){
+      if(snapshot.liveops.content[kind][itemId])continue;
+      const rule=rules.get(liveContentReleaseKey(kind,itemId))||{released:false,everReleased:false,destinationType:"native",destinationId:"",destinationConfig:{}};
+      const cfg=rule.destinationConfig&&typeof rule.destinationConfig==="object"?rule.destinationConfig:{};const weightValue=Number(cfg.weight);
+      snapshot.liveops.content[kind][itemId]={title:String(item?.title||itemId),rarity:String(item?.rarity||"common"),weight:Number.isFinite(weightValue)?Math.max(0,weightValue):1,enabled:Boolean(rule.released),isNew:true,legendaryOnly:false,imageUrl:String(item?.imageUrl||""),audioUrl:String(item?.audioUrl||item?.src||""),future:true,released:Boolean(rule.released),everReleased:Boolean(rule.everReleased),destinationType:LIVE_CONTENT_DESTINATIONS.includes(String(rule.destinationType||""))?String(rule.destinationType):"native",destinationId:String(rule.destinationId||""),destinationConfig:testProjectClone(cfg),seasonLabel:FUTURE_SEASON_CONTENT_LABEL,sandboxVisible:true,sandboxHidden:!rule.released,testOnly:!rule.released};
+    }
+  }
+  snapshot.liveops.sandboxHiddenContent=true;
+  return snapshot;
+}
+
+async function testProjectSandboxLoad(env, ctx) {
+  const ownerId=String(ctx.user.id); const row=await testProjectEnsureWorkspace(env,ownerId);
+  const state=testProjectWorkspaceState(row),storedProductionSnapshot=testProjectWorkspaceSnapshot(row),productionSnapshot=await testProjectSandboxHydrateFutureContent(env,storedProductionSnapshot),snapshot=testProjectApplyDraftLayer(state,productionSnapshot);
+  return {ownerId,row,state,productionSnapshot,snapshot,nowMs:testProjectEffectiveNow(state,productionSnapshot)};
+}
+
+async function testProjectSandboxSave(env, ownerId, state, snapshot, before, action, title) {
+  return testProjectPersistAction(env,ownerId,state,snapshot,before,action,title,{});
+}
+
+async function testProjectSandboxCaseOpenLevel(env, ctx, loaded, payload) {
+  const {ownerId,state,snapshot}=loaded; const before=testProjectClone(state);
+  const level=Math.max(1,Math.min(50,Math.floor(Number(payload?.level)||0)));
+  const caseType=normalizeCaseType(payload?.caseType||LEVEL_CASE_SCHEDULE[level]);
+  if(!level||!caseType||String(LEVEL_CASE_SCHEDULE[level]||"")!==caseType)throw new ApiError(400,"Некорректный уровневый кейс.");
+  const profileLevel=Math.max(1,Math.min(50,caseProfileLevel(Number(state.profileXp||0))));
+  if(level>profileLevel)throw new ApiError(409,"Этот уровневый кейс ещё не открыт.");
+  if((state.openedLevelCases||[]).includes(level))throw new ApiError(409,"Этот уровневый кейс уже открыт в Test Project.");
+  const rolled=rollLevelCase(caseType,state.caseState,state.caseState.ownedSkins,snapshot?.liveops||{content:{},cases:{}});
+  state.caseState=testProjectNormalizeCaseState(rolled.state); state.openedLevelCases=[...(state.openedLevelCases||[]),level];
+  state.points=Math.min(999999999,Number(state.points||0)+Number(rolled.points||0));state.treats=Math.min(9999999,Number(state.treats||0)+Number(rolled.treats||0));state.coffee=Math.min(9999999,Number(state.coffee||0)+Number(rolled.coffee||0));
+  const persisted=await testProjectSandboxSave(env,ownerId,state,snapshot,before,"game_case_level_open",`Игра · открыт кейс уровня ${level}`);
+  const current=persisted.state;
+  return testProjectSandboxCasePayload(current,persisted.snapshot,{opened:{level,caseType,rewards:rolled.rewards,points:Number(rolled.points||0),treats:Number(rolled.treats||0),coffee:Number(rolled.coffee||0)}});
+}
+
+async function testProjectSandboxRunSubmit(env, loaded, payload) {
+  const {ownerId,state,snapshot,nowMs}=loaded; const before=testProjectClone(state);
+  const runId=String(payload?.runId||state?.sandbox?.activeRun?.id||"").trim(); if(!/^[A-Za-z0-9_-]{12,96}$/.test(runId))throw new ApiError(400,"Некорректный тестовый runId.");
+  const score=Math.max(0,Math.min(999999999,Math.floor(Number(payload?.score)||0))),durationMs=Math.max(0,Math.min(86400000,Math.floor(Number(payload?.durationMs)||0)));
+  const runTreats=Math.max(0,Math.min(9999999,Math.floor(Number(payload?.runTreats)||0))),runCoffee=Math.max(0,Math.min(9999999,Math.floor(Number(payload?.runCoffee)||0)));
+  state.points=Math.min(999999999,Number(state.points||0)+score);state.treats=Math.min(9999999,Number(state.treats||0)+runTreats);state.coffee=Math.min(9999999,Number(state.coffee||0)+runCoffee);state.bestScore=Math.max(Number(state.bestScore||0),score);
+  const profileXpAwarded=score>0?AUTHORITATIVE_PROFILE_RUN_XP:0;state.profileXp=Math.min(999999999,Number(state.profileXp||0)+profileXpAwarded);
+  let seasonPassXpAwarded=0; const season=testProjectDynamicSeason(snapshot?.season||{},nowMs);
+  if(season?.status==="active"&&score>0){const base=Math.max(0,Math.floor(Number(season?.baseRunXp||0)));const earned=testProjectPassEarnedMultiplier(state,season,nowMs);seasonPassXpAwarded=Math.floor(base*Math.max(1,Number(earned?.multiplier||1)));state.passXp=Math.min(999999999,Number(state.passXp||0)+seasonPassXpAwarded);
+    for(const task of season?.tasks||[]){if(!task?.enabled)continue;const key=testProjectTaskKey(season.id,task,nowMs);let delta=0;const metric=String(task.metric||"");if(metric==="runs")delta=1;else if(metric==="score")delta=score;else if(metric==="treats")delta=runTreats;else if(metric==="coffee")delta=runCoffee;if(delta>0)state.passTaskProgress[key]=Math.min(999999999,Number(state.passTaskProgress[key]||0)+delta);}
+  }
+  state.sandbox=testProjectNormalizeSandboxState({...state.sandbox,activeRun:null,completedRuns:Number(state.sandbox?.completedRuns||0)+1,lastRun:{id:runId,score,durationMs,acceptedAt:Date.now()}});
+  const persisted=await testProjectSandboxSave(env,ownerId,state,snapshot,before,"game_run_submit",`Игра · забег ${score.toLocaleString("ru-RU")} очков`);
+  const current=persisted.state;
+  return {ok:true,testProject:true,fastSettlement:true,runSettlement:{accepted:true,acceptedToRating:score>0,activeBooster:current.caseState?.activeBooster||{type:"",runsLeft:0}},profile:testProjectSandboxProfile(current),profileXpAwarded,seasonPassAward:{xpAwarded:seasonPassXpAwarded,taskNotice:null},serverTime:Date.now()};
+}
+
+async function testProjectSandboxGameData(env, ctx) {
+  const envelope=ctx.body&&typeof ctx.body==="object"?ctx.body:{}; const path=String(envelope.path||"").split("?")[0];
+  if(!TEST_PROJECT_SANDBOX_API_SET.has(path))throw new ApiError(418,`API «${path||"неизвестно"}» заблокирован Test Project. Production-запрос не выполнен.`);
+  const payload=envelope.payload&&typeof envelope.payload==="object"?envelope.payload:{}; const query=envelope.query&&typeof envelope.query==="object"?envelope.query:{};
+  let loaded=await testProjectSandboxLoad(env,ctx); let {ownerId,state,productionSnapshot,snapshot,nowMs}=loaded;
+  const response=(data,status=200)=>({ok:true,proxyStatus:status,data:{...data,testProject:true,productionWrites:false}});
+  const reload=async()=>{loaded=await testProjectSandboxLoad(env,ctx);({ownerId,state,productionSnapshot,snapshot,nowMs}=loaded);return loaded;};
+
+  if(path==="/api/game/startup")return response({ok:true,authenticated:true,workerBuild:WORKER_BUILD,generatedAt:nowMs,publicConfig:testProjectClone(snapshot?.publicConfig||fallbackGamePublicConfig()),profile:testProjectSandboxProfile(state),cases:testProjectSandboxCasePayload(state,snapshot),rewards:{ok:true,rewards:(state.sandbox?.mockRewards||[]).map(testProjectSandboxRewardView),limitStatus:null},flags:{...(snapshot?.featureFlags||{}),battle_pass:true,shop:true,rating:true},seasonPassBonus:{active:Number(state.seasonXpBoosts||0)>0||state.passTier==="elite_plus",multiplier:(Number(state.seasonXpBoosts||0)>0||state.passTier==="elite_plus")?2:1,claimableCount:testProjectSandboxPassPayload(state,snapshot).taskClaimableCount},seasonPassTaskNotice:{ok:true,pending:false,notice:null},news:{ok:true,items:[],unreadCount:0},gifts:{ok:true,pendingCount:0,items:[]},errors:{}});
+  if(path==="/api/features")return response({ok:true,flags:{...(snapshot?.featureFlags||{}),battle_pass:true,shop:true,rating:true}});
+  if(path==="/api/profile/sync")return response({ok:true,profile:testProjectSandboxProfile(state)});
+  if(path==="/api/shop/config")return response({ok:true,...testProjectClone(snapshot?.publicConfig?.shop||fallbackGamePublicConfig().shop)});
+  if(path==="/api/skins/config")return response({ok:true,...testProjectClone(snapshot?.publicConfig?.skins||fallbackGamePublicConfig().skins)});
+
+  if(path==="/api/runs/start"){
+    const runId=String(payload?.runId||"").trim();if(!/^[A-Za-z0-9_-]{12,96}$/.test(runId))throw new ApiError(400,"Некорректный test runId.");
+    const before=testProjectClone(state);state.sandbox=testProjectNormalizeSandboxState({...state.sandbox,activeRun:{id:runId,startedAt:nowMs}});await testProjectSandboxSave(env,ownerId,state,snapshot,before,"game_run_start","Игра · старт тестового забега");return response({ok:true,runId,startedAt:nowMs,expiresAt:nowMs+2*60*60*1000});
+  }
+  if(path==="/api/runs/checkpoint")return response({ok:true,checkpoint:{runId:String(payload?.runId||""),durationMs:Math.max(0,Math.floor(Number(payload?.durationMs)||0)),score:Math.max(0,Math.floor(Number(payload?.score)||0)),accepted:true}});
+  if(path==="/api/leaderboard/submit")return response(await testProjectSandboxRunSubmit(env,loaded,payload));
+  if(path==="/api/leaderboard/state")return response(testProjectSandboxLeaderboardPayload(state,String(payload?.mode||query?.mode||"season"),nowMs,snapshot));
+  if(path==="/api/leaderboard/claim"){
+    const claimKey="tp-rating",already=(state.sandbox?.leaderboardClaimed||[]).includes(claimKey),reward={id:"tp-rating-reward",title:"Тестовый Золотой кейс",status:"claimed",type:"case",kind:"case",amount:1,itemId:"gold"};
+    if(!already){const before=testProjectClone(state);state.caseInventory.gold=Math.min(999,Number(state.caseInventory.gold||0)+1);state.sandbox=testProjectNormalizeSandboxState({...state.sandbox,leaderboardClaimed:[...(state.sandbox?.leaderboardClaimed||[]),claimKey]});await testProjectSandboxSave(env,ownerId,state,snapshot,before,"game_rating_claim","Игра · награда тестового рейтинга");await reload();}
+    return response({...testProjectSandboxCasePayload(state,snapshot),claimed:!already,alreadyClaimed:already,repeated:already,reward,profile:testProjectSandboxProfile(state)});
+  }
+
+  if(path==="/api/cases/state")return response(testProjectSandboxCasePayload(state,snapshot));
+  if(path==="/api/cases/open")return response(await testProjectSandboxCaseOpenLevel(env,ctx,loaded,payload));
+  if(path==="/api/cases/open-granted"){
+    const caseType=normalizeCaseType(payload?.caseType);if(!caseType)throw new ApiError(400,"Выберите тестовый кейс.");const result=await ownerPanelTestProjectCaseOpen(env,{...ctx,body:{caseType,mode:"open",consume:true}});await reload();return response(testProjectSandboxCasePayload(state,snapshot,{opened:{caseType,rewards:result.rewards,points:Number(result.deltas?.points||0),treats:Number(result.deltas?.treats||0),coffee:Number(result.deltas?.coffee||0)}}));
+  }
+  if(path==="/api/cases/purchase"){
+    const caseType=normalizeCaseType(payload?.caseType);if(!caseType)throw new ApiError(400,"Выберите тестовый кейс.");const result=await ownerPanelTestProjectAction(env,{...ctx,body:{action:"case_buy",caseType}});await reload();return response(testProjectSandboxCasePayload(state,snapshot,{purchase:{caseType,cost:result.result?.price||{}}}));
+  }
+  if(path==="/api/cases/activate"){
+    const type=["points","treats","coffee"].includes(String(payload?.type||payload?.boosterType||""))?String(payload?.type||payload?.boosterType):"";if(!type)throw new ApiError(400,"Неизвестный усилитель.");if(Number(state.caseState?.boosters?.[type]||0)<1)throw new ApiError(409,"Усилителя нет в тестовом инвентаре.");const before=testProjectClone(state);state.caseState.boosters[type]-=1;state.caseState.activeBooster={type,runsLeft:2};await testProjectSandboxSave(env,ownerId,state,snapshot,before,"game_booster_activate",`Игра · активирован ${type}`);await reload();return response(testProjectSandboxCasePayload(state,snapshot));
+  }
+  if(path==="/api/cases/consume-run"){
+    const before=testProjectClone(state),active=state.caseState?.activeBooster||{type:"",runsLeft:0};if(active.type&&Number(active.runsLeft)>0){active.runsLeft=Math.max(0,Number(active.runsLeft)-1);if(active.runsLeft<=0)active.type="";state.caseState.activeBooster=active;await testProjectSandboxSave(env,ownerId,state,snapshot,before,"game_booster_consume","Игра · расход усилителя");await reload();}return response(testProjectSandboxCasePayload(state,snapshot));
+  }
+  if(path==="/api/cases/equip"){
+    const kind=String(payload?.kind||payload?.type||""),id=String(payload?.id||payload?.itemId||"");const key={avatar:"activeAvatarId",frame:"activeFrameId",trail:"activeTrailId",music:"activeMusicTrackId",skin:"activeSkinId"}[kind];const ownedKey={avatar:"ownedAvatars",frame:"ownedFrames",trail:"ownedTrails",music:"ownedMusicTracks",skin:"ownedSkins"}[kind];if(!key||!ownedKey)throw new ApiError(400,"Неизвестный тип предмета.");const liveItem=id?snapshot?.liveops?.content?.[kind]?.[id]:null;const nativeFree=Boolean(liveItem?.future&&liveItem?.released&&String(liveItem?.destinationType||"")==="native");const sandboxHidden=Boolean(liveItem?.future&&liveItem?.sandboxHidden);const before=testProjectClone(state);if(id&&!(state.caseState?.[ownedKey]||[]).includes(id)){if(!nativeFree&&!sandboxHidden)throw new ApiError(409,"Этого предмета нет у тестового игрока.");testProjectGrantCosmetic(state,kind,id);}state.caseState[key]=id;await testProjectSandboxSave(env,ownerId,state,snapshot,before,"game_cosmetic_equip",`Игра · экипирован ${kind}${sandboxHidden?" · скрытый TP-контент":""}`);await reload();return response(testProjectSandboxCasePayload(state,snapshot));
+  }
+
+  if(path==="/api/live-content/shop/buy"){
+    const kind=String(payload?.kind||"").trim(),itemId=String(payload?.itemId||"").trim(),items=Array.isArray(snapshot?.publicConfig?.shop?.liveContent)?snapshot.publicConfig.shop.liveContent:[],item=items.find(entry=>String(entry?.kind||"")===kind&&String(entry?.itemId||"")===itemId);if(!item)throw new ApiError(404,"Предмет не найден в тестовом снимке магазина.");const ownedKey={avatar:"ownedAvatars",frame:"ownedFrames",trail:"ownedTrails",music:"ownedMusicTracks",skin:"ownedSkins"}[kind];if(!ownedKey)throw new ApiError(400,"Неизвестный тип контента.");if((state.caseState?.[ownedKey]||[]).includes(itemId))return response(testProjectSandboxCasePayload(state,snapshot,{repeated:true,purchase:{kind,itemId,title:String(item.title||itemId),cost:item.price||{}}}));const before=testProjectClone(state);testProjectCharge(state,item.price||{});testProjectGrantCosmetic(state,kind,itemId);await testProjectSandboxSave(env,ownerId,state,snapshot,before,"game_live_content_purchase",`Игра · куплен скрытый контент ${kind}:${itemId}`);await reload();return response(testProjectSandboxCasePayload(state,snapshot,{purchase:{kind,itemId,title:String(item.title||itemId),cost:item.price||{}}}));
+  }
+
+  if(path==="/api/skins/purchase"){
+    const skinId=String(payload?.skinId||payload?.id||"").trim();const skin=snapshot?.publicConfig?.skins?.skins?.[skinId];if(!skin)throw new ApiError(404,"Скин не найден в снимке магазина.");if((state.caseState?.ownedSkins||[]).includes(skinId))throw new ApiError(409,"Скин уже куплен в Test Project.");const price={points:Number(skin.points||0),treats:Number(skin.treats||0),coffee:Number(skin.coffee||0)};const before=testProjectClone(state);testProjectCharge(state,price);testProjectGrantCosmetic(state,"skin",skinId);state.caseState.activeSkinId=skinId;await testProjectSandboxSave(env,ownerId,state,snapshot,before,"game_skin_purchase",`Игра · куплен скин ${skinId}`);await reload();return response(testProjectSandboxCasePayload(state,snapshot,{purchase:{skinId,title:String(skin.title||skinId),cost:price,stock:{testProject:true}}}));
+  }
+  if(path==="/api/skins/bonus-case"){
+    const skinId=String(payload?.skinId||payload?.id||"").trim();if(!skinId)throw new ApiError(400,"Скин не выбран.");const claimKey=`skin:${skinId}`;const repeated=(state.sandbox?.skinBonusClaims||[]).includes(claimKey);let caseType=normalizeCaseType(snapshot?.publicConfig?.skins?.skins?.[skinId]?.bonusCase?.caseType||snapshot?.publicConfig?.skins?.skins?.[skinId]?.bonusCase||"gold")||"gold";if(!repeated){const before=testProjectClone(state);state.caseInventory[caseType]=Math.min(999,Number(state.caseInventory[caseType]||0)+1);state.sandbox.skinBonusClaims=[...(state.sandbox?.skinBonusClaims||[]),claimKey];await testProjectSandboxSave(env,ownerId,state,snapshot,before,"game_skin_bonus",`Игра · бонус скина ${skinId}`);await reload();}return response(testProjectSandboxCasePayload(state,snapshot,{bonusCase:{granted:!repeated,repeated,caseType,title:snapshot?.liveops?.cases?.[caseType]?.title||caseType}}));
+  }
+
+  if(path==="/api/rewards/create"){
+    const before=testProjectClone(state),code=`TP-${crypto.randomUUID().replaceAll("-","").slice(0,12).toUpperCase()}`,productId=String(payload?.productId||"test_product");const item={code,productId,title:"Тестовая физическая награда",createdAt:nowMs,status:"test_only"};state.sandbox.mockRewards=[item,...(state.sandbox?.mockRewards||[])].slice(0,40);state.sandbox.externalEvents=[{type:"reward_code",title:`Заблокирована реальная выдача: ${code}`,createdAt:nowMs},...(state.sandbox?.externalEvents||[])].slice(0,40);await testProjectSandboxSave(env,ownerId,state,snapshot,before,"game_reward_create","Игра · создан тестовый код награды");await reload();return response({ok:true,reward:testProjectSandboxRewardView(item),limitStatus:null,profile:testProjectSandboxProfile(state),profileXpAwarded:0,repeated:false});
+  }
+  if(path==="/api/rewards/mine")return response({ok:true,rewards:(state.sandbox?.mockRewards||[]).map(testProjectSandboxRewardView),limitStatus:null});
+
+  if(path==="/api/gifts/state")return response({ok:true,pendingCount:0,items:[]});
+  if(path==="/api/gifts/claim")throw new ApiError(404,"Production-подарки в Test Project не выдаются.");
+  if(path==="/api/news/read")return response({ok:true});
+  if(path==="/api/polls/game/next")return response(testProjectSandboxPollNext(state,nowMs));
+  if(path==="/api/polls/game/snooze"){
+    const before=testProjectClone(state);state.sandbox=testProjectNormalizeSandboxState({...state.sandbox,pollSnoozedUntil:nowMs+60*60*1000});await testProjectSandboxSave(env,ownerId,state,snapshot,before,"game_poll_snooze","Игра · тестовый опрос отложен");await reload();return response({ok:true,snoozedUntil:Number(state.sandbox.pollSnoozedUntil||0),testOnly:true});
+  }
+  if(path==="/api/polls/game/vote"){
+    const poll=testProjectSandboxPollDefinition(),before=testProjectClone(state),already=String(state?.sandbox?.pollVote?.pollId||"")===poll.id;
+    const optionIds=testProjectArray(payload?.optionIds,10).filter((id)=>poll.options.some((option)=>option.id===id)).slice(0,1),comment=String(payload?.comment||"").trim().slice(0,poll.commentMax);
+    if(!already&&!optionIds.length)throw new ApiError(400,"Выберите вариант тестового опроса.");
+    if(!already){state.sandbox=testProjectNormalizeSandboxState({...state.sandbox,pollSnoozedUntil:0,pollVote:{pollId:poll.id,optionIds,comment,votedAt:nowMs}});state.points=Math.min(999999999,Number(state.points||0)+100);await testProjectSandboxSave(env,ownerId,state,snapshot,before,"game_poll_vote","Игра · ответ на тестовый опрос +100 очков");await reload();}
+    return response({ok:true,already,rewardQueued:!already,rewardText:poll.rewardText,results:testProjectSandboxPollResults(state),testOnly:true});
+  }
+  if(path==="/api/support/state")return response(testProjectSandboxSupportPayload(state));
+  if(path==="/api/support/create"){
+    const before=testProjectClone(state),id=String(Date.now()%2000000000),category=String(payload?.category||"other"),subject=String(payload?.subject||"Тестовое обращение").slice(0,120),message=String(payload?.message||"").slice(0,4000);state.sandbox.supportTickets=[{id,category,subject,message,status:"new",createdAt:nowMs,replies:[]},...(state.sandbox?.supportTickets||[])].slice(0,20);state.sandbox.externalEvents=[{type:"support",title:"Реальная отправка в поддержку заблокирована",createdAt:nowMs},...(state.sandbox?.externalEvents||[])].slice(0,40);await testProjectSandboxSave(env,ownerId,state,snapshot,before,"game_support_create","Игра · тестовое обращение");await reload();return response(testProjectSandboxSupportPayload(state));
+  }
+  if(path==="/api/support/reply"){
+    const ticketId=String(payload?.ticketId||payload?.id||"");const ticket=(state.sandbox?.supportTickets||[]).find((item)=>String(item.id)===ticketId);if(!ticket)throw new ApiError(404,"Тестовое обращение не найдено.");const before=testProjectClone(state);ticket.replies=[...(ticket.replies||[]),{message:String(payload?.message||"").slice(0,4000),createdAt:nowMs,from:"player"}];await testProjectSandboxSave(env,ownerId,state,snapshot,before,"game_support_reply","Игра · ответ в тестовую поддержку");await reload();return response(testProjectSandboxSupportPayload(state));
+  }
+  if(path==="/api/support/read")return response(testProjectSandboxSupportPayload(state));
+
+  if(path==="/api/shop/offers")return response({ok:true,serverTime:nowMs,offers:testProjectSandboxOfferList(state,snapshot)});
+  if(path==="/api/shop/offers/event")return response({ok:true,recorded:false,testOnly:true});
+  if(path==="/api/shop/offers/purchase"){
+    const offerId=String(payload?.offerId||"");const result=await ownerPanelTestProjectAction(env,{...ctx,body:{action:"offer_buy",offerId}});await reload();const offer=(snapshot?.offers||[]).find((item)=>String(item.id)===offerId);return response({ok:true,repeated:false,offerId,profile:testProjectSandboxProfile(state),rewards:testProjectClone(offer?.rewards||[]),physicalRewards:[],purchaseCount:Number(state.offerPurchases?.[offerId]||0),result:result.result||{}});
+  }
+
+  if(path==="/api/battle-pass/access")return response({ok:true,allowed:true,canPreviewUpcoming:true,accessRole:"owner_test_project",season:testProjectSandboxPassPayload(state,snapshot).season,state:testProjectSandboxPassPayload(state,snapshot)});
+  if(path==="/api/battle-pass/state")return response(testProjectSandboxPassPayload(state,snapshot));
+  if(path==="/api/battle-pass/profile-bonus"){const active=Number(state.seasonXpBoosts||0)>0||state.passTier==="elite_plus";return response({ok:true,active,multiplier:active?2:1,claimableCount:testProjectSandboxPassPayload(state,snapshot).taskClaimableCount});}
+  if(path==="/api/battle-pass/task-notices/pending")return response({ok:true,pending:false,notice:null});
+  if(path==="/api/battle-pass/task-notices/read")return response({ok:true});
+  if(path==="/api/battle-pass/run")return response({ok:true,xpAwarded:0,profileXpAwarded:0,repeated:true,taskNotice:null});
+  if(path==="/api/battle-pass/purchase-tier"){
+    const tier=String(payload?.tier||payload?.premiumTier||""),mutation=await ownerPanelTestProjectAction(env,{...ctx,body:{action:"pass_buy_tier",tier}});await reload();const result=mutation?.result||{};return response({...testProjectSandboxPassPayload(state,snapshot),received:(result.received||[]).map(testProjectSandboxPassReceived),pricePaid:result.price||{},repeated:false,purchasedTier:result.tier||tier});
+  }
+  if(path==="/api/battle-pass/purchase-level"){const mutation=await ownerPanelTestProjectAction(env,{...ctx,body:{action:"pass_buy_level"}});await reload();const result=mutation?.result||{};return response({...testProjectSandboxPassPayload(state,snapshot),purchasedLevel:Number(result.targetLevel||seasonPassLevelFromXp(state.passXp)),pricePoints:Number(result.price?.points||0),repeated:false});}
+  if(path==="/api/battle-pass/claim"){
+    const level=Math.floor(Number(payload?.level)||0),lane=String(payload?.lane||payload?.type||"free")==="premium"?"premium":"free",mutation=await ownerPanelTestProjectAction(env,{...ctx,body:{action:"pass_claim_reward",level,lane}});await reload();const reward=mutation?.result?.reward;return response({...testProjectSandboxPassPayload(state,snapshot),claimedAdded:[`${level}:${lane}`],received:reward?[testProjectSandboxPassReceived({...reward,level,lane})]:[],repeated:false});
+  }
+  if(path==="/api/battle-pass/claim-all"){const mutation=await ownerPanelTestProjectAction(env,{...ctx,body:{action:"pass_claim_all"}});await reload();const received=(mutation?.result?.received||[]).map(testProjectSandboxPassReceived);return response({...testProjectSandboxPassPayload(state,snapshot),received,failedRewards:[],partial:false,repeated:received.length===0});}
+  if(path==="/api/battle-pass/overflow/claim"){const mutation=await ownerPanelTestProjectAction(env,{...ctx,body:{action:"pass_overflow_claim"}});await reload();const count=Math.max(0,Number(mutation?.result?.count||0)),received=Array.from({length:count},(_,index)=>({level:51+index,lane:"overflow",title:"Золотой кейс",rewardType:"case",amount:1,itemId:"gold",imageUrl:"/assets/cases/gold_closed.png"}));return response({...testProjectSandboxPassPayload(state,snapshot),received,repeated:received.length===0});}
+  if(path==="/api/battle-pass/tasks/claim-all"){
+    const beforeLab=testProjectPassLabView(state,snapshot,nowMs),ready=(beforeLab.tasks||[]).filter((task)=>task.complete&&!task.claimed&&!task.locked);let totalXp=0;
+    for(const period of ["daily","weekly"]){try{const mutation=await ownerPanelTestProjectAction(env,{...ctx,body:{action:"pass_tasks_claim",period}});totalXp+=Math.max(0,Number(mutation?.result?.awarded||0));}catch(error){if(!(error instanceof ApiError)||error.status<400||error.status>=500)throw error;}}
+    await reload();const periods=testProjectSandboxTaskPeriods(nowMs),periodKeyFor=(task)=>String(task?.period)==="weekly"?periods.weekly.key:periods.daily.key,taskUpdates=ready.map((task)=>({id:task.id,periodKey:task.periodKey||periodKeyFor(task),claimed:true,complete:true})),receivedTasks=ready.map((task)=>({id:task.id,periodKey:task.periodKey||periodKeyFor(task),title:task.title,xp:Math.max(0,Number(task.xp||0))}));return response({...testProjectSandboxPassPayload(state,snapshot),receivedTasks,taskUpdates,taskClaimableDelta:-ready.length,totalXp,stale:ready.length===0});
+  }
+  if(path==="/api/battle-pass/tasks/claim"){
+    const before=testProjectClone(state);const taskId=String(payload?.taskId||payload?.id||"");const lab=testProjectPassLabView(state,snapshot,nowMs);const task=(lab.tasks||[]).find((item)=>String(item.id)===taskId||String(item.key)===taskId);if(!task)throw new ApiError(404,"Тестовое задание не найдено.");if(task.locked)throw new ApiError(403,"Для этого задания нужен Elite / Elite+.");if(!task.complete)throw new ApiError(409,"Задание ещё не выполнено.");if(task.claimed)throw new ApiError(409,"Награда задания уже получена.");state.passTaskClaims=[...(state.passTaskClaims||[]),task.key];const earned=testProjectPassEarnedMultiplier(state,lab.season,nowMs),xpAwarded=Math.floor(Number(task.xp||0)*Math.max(1,Number(earned.multiplier||1)));state.passXp=Math.min(999999999,Number(state.passXp||0)+xpAwarded);await testProjectSandboxSave(env,ownerId,state,snapshot,before,"game_pass_task_claim",`Игра · задание +${xpAwarded} XP`);await reload();return response({...testProjectSandboxPassPayload(state,snapshot),taskUpdate:{id:task.id,periodKey:task.periodKey||"",claimed:true,complete:true,progress:Math.max(Number(task.progress||0),Number(task.target||1))},taskClaimableDelta:-1,receivedTask:{id:task.id,title:task.title,xp:xpAwarded},repeated:false,xpAwarded});
+  }
+  if(path==="/api/battle-pass/seasonal-case/open"){
+    const caseId=String(payload?.caseId||Object.keys(state.seasonalCaseInventory||{}).find((id)=>Number(state.seasonalCaseInventory[id])>0)||"");
+    const definition=testProjectSeasonalCaseDefinition(snapshot,caseId);if(!definition)throw new ApiError(404,"Этот сезонный кейс не относится к выбранному сезону Test Project.");
+    if(!caseId||Number(state.seasonalCaseInventory?.[caseId]||0)<1)throw new ApiError(409,"Нет сезонного кейса в Test Project.");
+    const before=testProjectClone(state);state.seasonalCaseInventory[caseId]=Math.max(0,Number(state.seasonalCaseInventory[caseId]||0)-1);const rolled=testProjectRollSeasonalCase(state,definition,{apply:true});
+    await testProjectSandboxSave(env,ownerId,state,snapshot,before,"game_seasonal_case_open",`Игра · открыт ${String(definition.title||"сезонный кейс")}`);await reload();
+    const pass=testProjectSandboxPassPayload(state,snapshot),casePayload={caseId,grantId:`tp_${crypto.randomUUID().replaceAll("-","").slice(0,16)}`,title:String(definition.title||"Сезонный кейс"),imageUrl:String(definition.openImageUrl||definition.imageUrl||""),rewards:rolled.rewards};
+    return response({...pass,case:casePayload,opened:casePayload});
+  }
+  if(path==="/api/battle-pass/letter/state")return response({ok:true,letter:null});
+  if(path==="/api/battle-pass/letter/open")return response({ok:true,letter:null});
+  if(path==="/api/battle-pass/story/open"||path==="/api/battle-pass/story/test/open")return response({ok:true,story:null,event:null});
+  if(path==="/api/battle-pass/story/complete")return response({ok:true,story:null,reward:null});
+
+  throw new ApiError(418,`API «${path}» не реализован в Test Project ${TEST_PROJECT_VERSION}.`);
+}
+
+async function ownerPanelTestProjectGame(env, ctx) {
+  return testProjectSandboxGameData(env,ctx);
+}
+
+async function ownerPanelTestProjectQa(env, ctx) {
+  const {state,productionSnapshot,snapshot}=await testProjectSandboxLoad(env,ctx);const checks=[];
+  const add=(id,title,status,detail)=>checks.push({id,title,status,detail});
+  add("snapshot_schema","Snapshot schema",Number(productionSnapshot?.schema||0)>=TEST_PROJECT_SNAPSHOT_SCHEMA?"pass":"fail",`schema ${Number(productionSnapshot?.schema||0)} / ${TEST_PROJECT_SNAPSHOT_SCHEMA}`);
+  add("public_config","Public config",snapshot?.publicConfig?.gameplay&&snapshot?.publicConfig?.shop&&snapshot?.publicConfig?.skins?"pass":"fail","gameplay + shop + skins должны быть в снимке");
+  add("sandbox_routes","Sandbox API",TEST_PROJECT_SANDBOX_API_PATHS.length>=40?"pass":"warn",`${TEST_PROJECT_SANDBOX_API_PATHS.length} перехваченных API маршрутов`);
+  add("production_writes","Изоляция Production","pass","Реальная игра в TP обращается только к /api/owner/test-project/game; неподдерживаемые /api/* блокируются.");
+  add("draft_gameplay","Draft gameplay",state.draftMode!=="draft"||!state.tpDrafts?.gameConfig||String(snapshot?.publicConfig?.gameplay?.source)==="test_project_draft"?"pass":"fail",`source: ${String(snapshot?.publicConfig?.gameplay?.source||"—")}`);
+  const cases=Object.keys(snapshot?.liveops?.cases||{});add("cases","Кейсы",LIVEOPS_CASE_IDS.every((id)=>cases.includes(id))?"pass":"fail",`${cases.length}/${LIVEOPS_CASE_IDS.length} типов доступны`);
+  const season=snapshot?.season||{},seasons=Array.isArray(snapshot?.seasons)?snapshot.seasons:[];add("season_catalog","Список сезонов",seasons.length?"pass":"fail",`${seasons.length} сезонов доступно для выбора`);add("season","Season Pass",season?.id&&Array.isArray(season?.rewards)?"pass":"warn",season?.id?`${season.title||season.id} · наград ${season.rewards?.length||0}`:"Активный/выбранный сезон отсутствует");
+  const seasonalCases=Array.isArray(season?.seasonalCases)?season.seasonalCases:[];const caseItems=seasonalCases.reduce((sum,item)=>sum+(Array.isArray(item?.items)?item.items.filter((entry)=>entry.enabled!==false).length:0),0);add("seasonal_cases","Сезонные кейсы",seasonalCases.length?(caseItems>0?"pass":"warn"):"warn",seasonalCases.length?`${seasonalCases.length} кейс(ов) · ${caseItems} включённых наград`:"У выбранного сезона нет сезонного кейса");
+  const gameplay=snapshot?.publicConfig?.gameplay||{};const finiteKeys=Object.entries(gameplay).filter(([key])=>!['source','version'].includes(key)).every(([,value])=>Number.isFinite(Number(value)));add("gameplay_numbers","Числа баланса",finiteKeys?"pass":"fail","Runtime gameplay config должен содержать конечные числовые значения");
+  const fail=checks.filter((item)=>item.status==="fail").length,warn=checks.filter((item)=>item.status==="warn").length,pass=checks.filter((item)=>item.status==="pass").length;
+  return {ok:true,isolated:true,testProjectVersion:TEST_PROJECT_VERSION,summary:{pass,warn,fail,total:checks.length},checks,coverage:{routes:TEST_PROJECT_SANDBOX_API_PATHS},draftMode:state.draftMode};
+}
+
+// =================== END TEST PROJECT 3.1 ===================
+
+
 async function handleOwnerPanelApi(request, env, path, executionCtx = null) {
   try {
     const ctx = { ...(await requireOwnerPanelContext(request, env)), executionCtx };
+    if (path === "/api/owner/test-project/bootstrap") return jsonResponse(await ownerPanelTestProjectBootstrap(env, ctx));
+    if (path === "/api/owner/test-project/state/save") return jsonResponse(await ownerPanelTestProjectSaveState(env, ctx));
+    if (path === "/api/owner/test-project/reset") return jsonResponse(await ownerPanelTestProjectReset(env, ctx));
+    if (path === "/api/owner/test-project/snapshot/refresh") return jsonResponse(await ownerPanelTestProjectRefreshSnapshot(env, ctx));
+    if (path === "/api/owner/test-project/draft/stage") return jsonResponse(await ownerPanelTestProjectStageDraft(env, ctx));
+    if (path === "/api/owner/test-project/case/open") return jsonResponse(await ownerPanelTestProjectCaseOpen(env, ctx));
+    if (path === "/api/owner/test-project/action") return jsonResponse(await ownerPanelTestProjectAction(env, ctx));
+    if (path === "/api/owner/test-project/game") return jsonResponse(await ownerPanelTestProjectGame(env, ctx));
+    if (path === "/api/owner/test-project/qa") return jsonResponse(await ownerPanelTestProjectQa(env, ctx));
     if (path === "/api/owner/bootstrap") return jsonResponse(await ownerPanelBootstrap(env, ctx));
     if (path === "/api/owner/v9/game-config") return jsonResponse(await ownerPanelV9GameConfig(env, ctx));
     if (path === "/api/owner/v9/game-config/draft") return jsonResponse(await ownerPanelV9GameConfigDraft(env, ctx));
@@ -30519,6 +32497,7 @@ async function handleOwnerPanelApi(request, env, path, executionCtx = null) {
     if (path === "/api/owner/rating/end") return jsonResponse(await ownerPanelEndRatingSeason(env, ctx));
     if (path === "/api/owner/rating/cancel") return jsonResponse(await ownerPanelCancelRatingSeason(env, ctx));
     if (path === "/api/owner/season-pass") return jsonResponse(await ownerPanelSeasonPass(env, ctx));
+    if (path === "/api/owner/live-content/save") return jsonResponse(await ownerPanelSaveLiveContentRelease(env, ctx));
     if (path === "/api/owner/season-pass/readiness") return jsonResponse(await ownerPanelSeasonPassReadiness(env, ctx));
     if (path === "/api/owner/season-pass/reward") return jsonResponse(await ownerPanelSetSeasonPassReward(env, ctx));
     if (path === "/api/owner/season-pass/story/save") return jsonResponse(await ownerPanelSaveSeasonPassStory(env, ctx));
@@ -31270,7 +33249,9 @@ function ownerPanelSeasonPassCosmeticCatalogs(liveops={content:{}}) {
       return {
         id,title:String(overrides?.[id]?.title||item.title||id),rarity:String(overrides?.[id]?.rarity||item.rarity||"common"),
         imageUrl:String(overrides?.[id]?.imageUrl||item.imageUrl||seasonPassCosmeticImage(kind,id)),
-        audioUrl:String(item.audioUrl||item.src||""),future:isFuture,released:!isFuture,seasonLabel:isFuture?FUTURE_SEASON_CONTENT_LABEL:""
+        audioUrl:String(item.audioUrl||item.src||""),future:isFuture,released:isFuture?Boolean(overrides?.[id]?.released):true,everReleased:isFuture?Boolean(overrides?.[id]?.everReleased):true,
+        destinationType:isFuture?String(overrides?.[id]?.destinationType||"native"):"native",destinationId:isFuture?String(overrides?.[id]?.destinationId||""):"",destinationConfig:isFuture?(overrides?.[id]?.destinationConfig||{}):{},
+        seasonLabel:isFuture?FUTURE_SEASON_CONTENT_LABEL:""
       };
     });
   }
@@ -31448,6 +33429,47 @@ async function ownerPanelSeasonPassReadiness(env,ctx){
 }
 
 
+function liveContentRulePublicView(kind,itemId,rule){
+  const item=futureSeasonContentItem(kind,itemId);if(!item)return null;const r=rule||{released:false,everReleased:false,destinationType:"native",destinationId:"",destinationConfig:{},updatedAt:0,updatedBy:""};
+  return {kind,itemId,title:String(item.title||itemId),rarity:String(item.rarity||"common"),imageUrl:String(item.imageUrl||""),audioUrl:String(item.audioUrl||item.src||""),seasonLabel:FUTURE_SEASON_CONTENT_LABEL,released:Boolean(r.released),everReleased:Boolean(r.everReleased),destinationType:String(r.destinationType||"native"),destinationId:String(r.destinationId||""),destinationConfig:r.destinationConfig||{},updatedAt:Number(r.updatedAt||0),updatedBy:String(r.updatedBy||"")};
+}
+
+async function restoreLiveContentPassSlotIfNeeded(env,rule,kind,itemId,actor){
+  if(!rule||rule.destinationType!=="season_pass")return false;const cfg=rule.destinationConfig||{},seasonId=String(rule.destinationId||""),level=Math.max(1,Math.min(50,Math.floor(Number(cfg.level)||0))),lane=String(cfg.lane||"")==="premium"?"premium":"free";if(!seasonId||!level)return false;
+  const current=await env.DB.prepare(`SELECT * FROM season_pass_rewards WHERE season_id=? AND level=? AND lane=? LIMIT 1`).bind(seasonId,level,lane).first();
+  const expected=`${SEASON_PASS_COSMETIC_PREFIX}${kind}:${itemId}`;if(String(current?.item_id||"")!==expected)return false;const previous=cfg.previousReward&&typeof cfg.previousReward==="object"?cfg.previousReward:null;
+  if(previous){await env.DB.prepare(`INSERT INTO season_pass_rewards(season_id,level,lane,reward_type,amount,item_id,title,image_url,enabled,updated_at,updated_by) VALUES(?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(season_id,level,lane) DO UPDATE SET reward_type=excluded.reward_type,amount=excluded.amount,item_id=excluded.item_id,title=excluded.title,image_url=excluded.image_url,enabled=excluded.enabled,updated_at=excluded.updated_at,updated_by=excluded.updated_by`).bind(seasonId,level,lane,String(previous.reward_type||"points"),Math.max(0,Number(previous.amount)||0),String(previous.item_id||""),String(previous.title||""),String(previous.image_url||""),Number(previous.enabled||0)===1?1:0,Math.floor(Date.now()/1000),String(actor||"live-content")).run();}
+  else await env.DB.prepare(`DELETE FROM season_pass_rewards WHERE season_id=? AND level=? AND lane=?`).bind(seasonId,level,lane).run();return true;
+}
+
+async function ownerPanelSaveLiveContentRelease(env,ctx){
+  await ensureSeasonPassSchema(env);await ensureLiveContentReleaseSchema(env);
+  const kind=String(ctx.body?.kind||"").trim(),itemId=String(ctx.body?.itemId||"").trim();const item=futureSeasonContentItem(kind,itemId);if(!item)throw new ApiError(404,"Скрытый контент не найден.");
+  const released=Boolean(ctx.body?.released),destinationType=LIVE_CONTENT_DESTINATIONS.includes(String(ctx.body?.destinationType||""))?String(ctx.body.destinationType):"native";let destinationId=String(ctx.body?.destinationId||"").trim();const currentRows=await readLiveContentReleaseRules(env,true),before=currentRows.get(liveContentReleaseKey(kind,itemId))||{released:false,everReleased:false,destinationType:"native",destinationId:"",destinationConfig:{}};let destinationConfig={};
+  if(destinationType==="case"){destinationId=normalizeCaseType(destinationId);if(!destinationId)throw new ApiError(400,"Выберите постоянный кейс.");destinationConfig={weight:Math.max(.01,Math.min(100000,Number(ctx.body?.weight)||1))};}
+  else if(destinationType==="seasonal_case"){const definition=await env.DB.prepare(`SELECT case_id,title,season_id FROM season_pass_case_definitions WHERE case_id=? LIMIT 1`).bind(destinationId).first();if(!definition)throw new ApiError(400,"Выберите существующий сезонный кейс.");destinationConfig={weight:Math.max(.01,Math.min(100000,Number(ctx.body?.weight)||1))};}
+  else if(destinationType==="shop"){destinationId="";const points=Math.max(0,Math.min(999999999,Math.floor(Number(ctx.body?.points)||0))),treats=Math.max(0,Math.min(999999999,Math.floor(Number(ctx.body?.treats)||0))),coffee=Math.max(0,Math.min(999999999,Math.floor(Number(ctx.body?.coffee)||0)));if(released&&points+treats+coffee<=0)throw new ApiError(400,"Для магазина укажите стоимость хотя бы в одной валюте.");destinationConfig={points,treats,coffee};}
+  else if(destinationType==="season_pass"){const season=await loadSeasonPassSeasonById(env,destinationId);if(!season)throw new ApiError(400,"Выберите сезонный пропуск.");if(season.status==="ended")throw new ApiError(409,"Нельзя добавлять контент в завершённый сезон.");const level=Math.max(1,Math.min(50,Math.floor(Number(ctx.body?.level)||0))),lane=String(ctx.body?.lane||"")==="premium"?"premium":"free";if(!level)throw new ApiError(400,"Выберите уровень сезонного пропуска.");destinationConfig={level,lane};}
+  else{destinationId="";destinationConfig={};}
+
+  const oldPassRoute=before.destinationType==="season_pass";const samePassRoute=oldPassRoute&&destinationType==="season_pass"&&String(before.destinationId||"")===destinationId&&Number(before.destinationConfig?.level||0)===Number(destinationConfig.level||0)&&String(before.destinationConfig?.lane||"free")===String(destinationConfig.lane||"free");
+  if(oldPassRoute&&(!released||!samePassRoute))await restoreLiveContentPassSlotIfNeeded(env,before,kind,itemId,String(ctx.user.id));
+
+  if(released&&destinationType==="season_pass"){
+    const level=destinationConfig.level,lane=destinationConfig.lane;const existing=await env.DB.prepare(`SELECT * FROM season_pass_rewards WHERE season_id=? AND level=? AND lane=? LIMIT 1`).bind(destinationId,level,lane).first();const expected=`${SEASON_PASS_COSMETIC_PREFIX}${kind}:${itemId}`;
+    if(String(existing?.item_id||"")!==expected){
+      const existingCosmetic=seasonPassCosmeticRewardDefinition(existing);if(existingCosmetic?.future&&existingCosmetic?.itemId!==itemId&&isFutureContentReleasedCached(existingCosmetic.kind,existingCosmetic.itemId))throw new ApiError(409,"Этот слот уже занят другим выпущенным скрытым предметом. Сначала перенесите или скройте его.");
+      destinationConfig.previousReward=existing?{reward_type:String(existing.reward_type||"points"),amount:Number(existing.amount||0),item_id:String(existing.item_id||""),title:String(existing.title||""),image_url:String(existing.image_url||""),enabled:Number(existing.enabled||0)}:(samePassRoute?before.destinationConfig?.previousReward||null:null);
+    }else if(before.destinationConfig?.previousReward)destinationConfig.previousReward=before.destinationConfig.previousReward;
+    const reward=ownerPanelSeasonPassRewardPresentation(kind,1,itemId),now=Math.floor(Date.now()/1000);await env.DB.prepare(`INSERT INTO season_pass_rewards(season_id,level,lane,reward_type,amount,item_id,title,image_url,enabled,updated_at,updated_by) VALUES(?,?,?,?,?,?,?,?,1,?,?) ON CONFLICT(season_id,level,lane) DO UPDATE SET reward_type=excluded.reward_type,amount=excluded.amount,item_id=excluded.item_id,title=excluded.title,image_url=excluded.image_url,enabled=1,updated_at=excluded.updated_at,updated_by=excluded.updated_by`).bind(destinationId,level,lane,reward.rewardType,reward.amount,reward.itemId,reward.title,reward.imageUrl,now,String(ctx.user.id)).run();
+  }else if(!released&&destinationType==="season_pass"&&before.destinationType==="season_pass"){destinationConfig={...before.destinationConfig,...destinationConfig,previousReward:before.destinationConfig?.previousReward||null};}
+
+  const now=Math.floor(Date.now()/1000),everReleased=released?1:(before.everReleased?1:0);await env.DB.prepare(`INSERT INTO live_content_release_rules(item_kind,item_id,released,ever_released,destination_type,destination_id,destination_config_json,updated_at,updated_by) VALUES(?,?,?,?,?,?,?,?,?) ON CONFLICT(item_kind,item_id) DO UPDATE SET released=excluded.released,ever_released=MAX(live_content_release_rules.ever_released,excluded.ever_released),destination_type=excluded.destination_type,destination_id=excluded.destination_id,destination_config_json=excluded.destination_config_json,updated_at=excluded.updated_at,updated_by=excluded.updated_by`).bind(kind,itemId,released?1:0,everReleased,destinationType,destinationId,JSON.stringify(destinationConfig),now,String(ctx.user.id)).run();
+  invalidateLiveContentReleaseCache();await readLiveContentReleaseRules(env,true);invalidateGamePublicConfigCache();
+  const after=liveContentReleaseRuleCached(kind,itemId);await logLiveOpsConfigChange(env,ctx.user,"live_content_release",`${kind}:${itemId}`,released?"release":"hide",before,after,String(ctx.body?.reason||"").slice(0,300));await logStaffAction(env,ctx.user,ctx.access,released?"owner_panel_live_content_release":"owner_panel_live_content_hide",null,"live_content",null,null,{kind,itemId,title:String(item.title||itemId),before,after});
+  return {ok:true,item:liveContentRulePublicView(kind,itemId,after)};
+}
+
 async function ownerPanelSeasonPass(env, ctx) {
   await ensureSeasonPassSchema(env);
   await ensureSeason3DraftSeasonalCase(env);
@@ -31471,7 +33493,11 @@ async function ownerPanelSeasonPass(env, ctx) {
   const nowMs = Date.now();const seasonRows=seasonsResult.results||[];
   const seasonMap=new Map(seasonRows.map(row=>[String(row.season_id),seasonPassSeasonFromRow(row,configuredSeasonPassState(env,nowMs),nowMs)]));
   const caseItemsById=new Map();for(const row of caseItemsResult.results||[]){const id=String(row.case_id);const list=caseItemsById.get(id)||[];list.push({key:String(row.item_key),kind:String(row.reward_kind),itemId:String(row.item_id),weight:Number(row.weight||1),rarity:String(row.rarity||''),title:String(row.title||''),imageUrl:String(row.image_url||''),enabled:Number(row.enabled||0)===1});caseItemsById.set(id,list);}
-  const seasonalCases=(caseDefinitionsResult.results||[]).map(row=>{const view=ownerPanelSeasonalCaseView(row,seasonMap);view.items=caseItemsById.get(view.caseId)||[];return view;});
+  const seasonalCases=(caseDefinitionsResult.results||[]).map(row=>{
+    const view=ownerPanelSeasonalCaseView(row,seasonMap);const items=(caseItemsById.get(view.caseId)||[]).slice();const known=new Set(items.map(item=>`${item.kind}:${item.itemId}`));
+    for(const [kind,catalog] of Object.entries(liveops?.content||{})){for(const [itemId,item] of Object.entries(catalog||{})){if(item?.enabled!==true||String(item?.destinationType||"")!=="seasonal_case"||String(item?.destinationId||"")!==view.caseId)continue;const key=`${kind}:${itemId}`;if(known.has(key))continue;items.push({key:`live:${key}`,kind,itemId,weight:Math.max(.01,Number(item?.destinationConfig?.weight)||1),rarity:String(item.rarity||""),title:String(item.title||itemId),imageUrl:String(item.imageUrl||""),enabled:true,liveContent:true});known.add(key);}}
+    view.items=items;return view;
+  });
   const selectedSeasonalCase=seasonalCases.find(item=>item.seasonId===selected.id)||null;
   const storyStatsMap=new Map((storyStatsResult.results||[]).map(row=>[String(row.event_id),{seen:Number(row.seen||0),completed:Number(row.completed||0),notified:Number(row.notified||0)}]));
   const storyEvents=(storyEventsResult.results||[]).map(row=>({...seasonPassStoryEventView(row),reward:seasonPassStoryRewardConfig(row),stats:storyStatsMap.get(String(row.event_id))||{seen:0,completed:0,notified:0}}));

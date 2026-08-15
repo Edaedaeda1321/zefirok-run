@@ -7,6 +7,50 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' https://telegram.org; style-src 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; font-src 'self' data:; base-uri 'none'; form-action 'none'; object-src 'none'">
 <title>Рейтинг игроков — Сладкий Забег</title>
 <script src="https://telegram.org/js/telegram-web-app.js?63"></script>
+<script>
+(()=>{
+  let testProjectActive=new URLSearchParams(location.search).get("test_project")==="1";
+  if(!testProjectActive&&window.parent&&window.parent!==window){try{testProjectActive=new URLSearchParams(window.parent.location.search).get("test_project")==="1"}catch{}}
+  if(!testProjectActive)return;
+  const nativeFetch=window.fetch.bind(window),SESSION_KEY="zefirok-owner-session-v1",PROXY="/api/owner/test-project/game",STORAGE_PREFIX="zefirok-tp3:";
+  const baseUrl=(()=>{const direct=String(document.baseURI||"");if(/^https?:/i.test(direct))return direct;try{if(window.parent&&window.parent!==window&&/^https?:/i.test(String(window.parent.location.href||"")))return String(window.parent.location.href)}catch{}return String(location.href||direct)})(),sandboxOrigin=(()=>{try{return new URL(baseUrl).origin}catch{return location.origin}})(),proxyUrl=(()=>{try{return new URL(PROXY,baseUrl).toString()}catch{return PROXY}})();
+  const storage=window.localStorage;
+  try{
+    const proto=Object.getPrototypeOf(storage),nativeGet=proto.getItem,nativeSet=proto.setItem,nativeRemove=proto.removeItem,nativeClear=proto.clear;
+    const scopedKey=(key)=>String(key)===SESSION_KEY?SESSION_KEY:`${STORAGE_PREFIX}${String(key)}`;
+    proto.getItem=function(key){return this===storage?nativeGet.call(this,scopedKey(key)):nativeGet.call(this,key)};
+    proto.setItem=function(key,value){return this===storage?nativeSet.call(this,scopedKey(key),value):nativeSet.call(this,key,value)};
+    proto.removeItem=function(key){return this===storage?nativeRemove.call(this,scopedKey(key)):nativeRemove.call(this,key)};
+    proto.clear=function(){if(this!==storage)return nativeClear.call(this);const remove=[];for(let i=0;i<this.length;i+=1){const key=this.key(i);if(String(key||"").startsWith(STORAGE_PREFIX))remove.push(key)}for(const key of remove)nativeRemove.call(this,key)};
+  }catch{}
+  async function bodyValue(body){
+    if(body==null)return {};
+    if(typeof body==="string"){try{return JSON.parse(body)}catch{return {raw:body.slice(0,12000)}}}
+    if(body instanceof URLSearchParams)return Object.fromEntries(body.entries());
+    if(typeof FormData!=="undefined"&&body instanceof FormData){const out={};for(const [key,value] of body.entries()){if(typeof value==="string")out[key]=value;else out[key]={name:String(value?.name||"file"),type:String(value?.type||""),size:Number(value?.size||0),testProjectFileBlocked:true};}return out;}
+    if(typeof body==="object")return body;
+    return {};
+  }
+  window.__TEST_PROJECT_SANDBOX__={active:true,version:"3.0",storagePrefix:STORAGE_PREFIX};
+  window.fetch=async(input,init={})=>{
+    const original=input instanceof Request?input.url:String(input||"");let url;
+    try{url=new URL(original,baseUrl)}catch{return nativeFetch(input,init)}
+    if(url.origin!==sandboxOrigin||!url.pathname.startsWith("/api/")||url.pathname.startsWith("/api/owner/"))return nativeFetch(input,init);
+    const sourceRequest=input instanceof Request?input:null;
+    const method=String(init.method||sourceRequest?.method||"GET").toUpperCase();
+    let requestBody=init.body;
+    if(requestBody==null&&sourceRequest&&method!=="GET"&&method!=="HEAD"){try{requestBody=await sourceRequest.clone().text()}catch{requestBody=null}}
+    const payload=await bodyValue(requestBody);
+    let ownerSession="";try{ownerSession=String(localStorage.getItem(SESSION_KEY)||"")}catch{}
+    const initData=String(payload?.initData||window.Telegram?.WebApp?.initData||"");
+    const controllerSignal=init.signal||sourceRequest?.signal;
+    const proxyResponse=await nativeFetch(proxyUrl,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({initData,ownerSession,path:url.pathname,method,query:Object.fromEntries(url.searchParams.entries()),payload}),cache:"no-store",credentials:"same-origin",signal:controllerSignal});
+    const envelope=await proxyResponse.json().catch(()=>({ok:false,error:"Test Project proxy вернул некорректный ответ."}));
+    if(!proxyResponse.ok||!envelope?.ok||!("data" in envelope))return new Response(JSON.stringify(envelope||{ok:false,error:"Test Project proxy error"}),{status:proxyResponse.status||500,headers:{"Content-Type":"application/json","Cache-Control":"no-store"}});
+    return new Response(JSON.stringify(envelope.data),{status:Number(envelope.proxyStatus||200),headers:{"Content-Type":"application/json","Cache-Control":"no-store","X-Test-Project":"3.0"}});
+  };
+})();
+</script>
 <style>:root {
   color-scheme: light dark;
   background-color: var(--background) !important;
@@ -8719,6 +8763,11 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
 </style>
 <script type="application/json" id="zefirok-rating-release-audit">{"build":"1.0.0-no-close-fix","ratingPage":"universal-season-scheduler","standalone":true,"features":["season-1-cafe-opening","all-time-banner","legendary-case-reward","reward-claim-bridge","reset-plan-bridge","privacy-safe-game-avatars","lifecycle-refresh","safe-area"]}</script>
 <script type="application/json" id="zefirok-rating-avatar-privacy">{"telegramPhotos":false,"priority":["equipped-game-avatar","deterministic-game-placeholder"],"externalAvatarImages":false}</script>
+
+<style id="zefirok-live-content-rating-v1">
+#zefirok-maltipoo-runner .leaderboard-avatar-frame.has-live-frame{overflow:visible!important;box-shadow:none!important}
+#zefirok-maltipoo-runner .leaderboard-live-frame{position:absolute;inset:-12%;z-index:5;width:124%;height:124%;max-width:none;object-fit:contain;object-position:center;pointer-events:none;filter:drop-shadow(0 3px 5px rgba(85,50,38,.16))}
+</style>
 </head>
 <body>
 <div id="zefirok-maltipoo-runner">
@@ -8985,11 +9034,13 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
   }
 
   function avatarData(entry) {
-    const custom = CASE_AVATARS[String(entry?.caseAvatarId || "")] || "";
+    const avatarId = String(entry?.caseAvatarId || "").trim();
+    const liveCustom = avatarId ? String(entry?.caseAvatarUrl || "").trim() : "";
+    const custom = liveCustom || CASE_AVATARS[avatarId] || "";
     const fallback = fallbackAvatar(entry);
     return {
       src: custom || fallback,
-      fallback: custom || fallback,
+      fallback,
       isCustom: Boolean(custom)
     };
   }
@@ -9007,9 +9058,12 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
 
   function avatarMarkup(entry, compact = false, eager = false) {
     const avatar = avatarData(entry);
-    const frame = normalizeFrame(entry?.caseFrameId);
-    const classes = `${compact ? "leaderboard-avatar-frame is-compact" : "leaderboard-avatar-frame"}${frame ? ` case-frame-${frame}` : ""}`;
-    return `<span class="${classes}"><img class="leaderboard-avatar${avatar.isCustom ? "" : " is-fallback"}" src="${escapeHtml(avatar.src)}" data-leaderboard-avatar data-avatar-fallback="${escapeHtml(avatar.fallback)}" alt="${escapeHtml(entry?.name || "Игрок")}" width="96" height="96" loading="${eager ? "eager" : "lazy"}" fetchpriority="${eager ? "high" : "auto"}" decoding="async" referrerpolicy="no-referrer">${playerLevelBadgeMarkup(entry)}</span>`;
+    const frameId = String(entry?.caseFrameId || "").trim();
+    const frame = normalizeFrame(frameId);
+    const liveFrameUrl = frame || !frameId ? "" : String(entry?.caseFrameUrl || "").trim();
+    const classes = `${compact ? "leaderboard-avatar-frame is-compact" : "leaderboard-avatar-frame"}${frame ? ` case-frame-${frame}` : ""}${liveFrameUrl ? " has-live-frame" : ""}`;
+    const liveFrame = liveFrameUrl ? `<img class="leaderboard-live-frame" src="${escapeHtml(liveFrameUrl)}" alt="" loading="${eager ? "eager" : "lazy"}" decoding="async">` : "";
+    return `<span class="${classes}"><img class="leaderboard-avatar${avatar.isCustom ? "" : " is-fallback"}" src="${escapeHtml(avatar.src)}" data-leaderboard-avatar data-avatar-fallback="${escapeHtml(avatar.fallback)}" alt="${escapeHtml(entry?.name || "Игрок")}" width="96" height="96" loading="${eager ? "eager" : "lazy"}" fetchpriority="${eager ? "high" : "auto"}" decoding="async" referrerpolicy="no-referrer">${liveFrame}${playerLevelBadgeMarkup(entry)}</span>`;
   }
 
   const RATING_CASE_META = Object.freeze({

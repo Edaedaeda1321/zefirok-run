@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "catalogHash": "7bb48478ac86d6b1",
-  "count": 290,
+  "catalogHash": "9a23c261c65be513",
+  "count": 320,
   "images": [
     {
       "fileName": "cases/398D69BA-8943-4846-94B3-FC5CB717A67F.PNG",
@@ -196,6 +196,86 @@
       "modified": 1785167209000
     },
     {
+      "fileName": "cases/avatars/season3_avatar_epic_new_1.png",
+      "label": "Season3 avatar epic new 1",
+      "folder": "cases/avatars",
+      "path": "/assets/cases/avatars/season3_avatar_epic_new_1.png",
+      "size": 2418561,
+      "modified": 1786809430000
+    },
+    {
+      "fileName": "cases/avatars/season3_avatar_epic_new_2.png",
+      "label": "Season3 avatar epic new 2",
+      "folder": "cases/avatars",
+      "path": "/assets/cases/avatars/season3_avatar_epic_new_2.png",
+      "size": 2314388,
+      "modified": 1786809430000
+    },
+    {
+      "fileName": "cases/avatars/season3_avatar_epic_new_3.png",
+      "label": "Season3 avatar epic new 3",
+      "folder": "cases/avatars",
+      "path": "/assets/cases/avatars/season3_avatar_epic_new_3.png",
+      "size": 2015022,
+      "modified": 1786809430000
+    },
+    {
+      "fileName": "cases/avatars/season3_avatar_legendary_new_1.png",
+      "label": "Season3 avatar legendary new 1",
+      "folder": "cases/avatars",
+      "path": "/assets/cases/avatars/season3_avatar_legendary_new_1.png",
+      "size": 2752622,
+      "modified": 1786809430000
+    },
+    {
+      "fileName": "cases/avatars/season3_avatar_legendary_new_2.png",
+      "label": "Season3 avatar legendary new 2",
+      "folder": "cases/avatars",
+      "path": "/assets/cases/avatars/season3_avatar_legendary_new_2.png",
+      "size": 2567343,
+      "modified": 1786809430000
+    },
+    {
+      "fileName": "cases/avatars/season3_avatar_mythic_new_1.png",
+      "label": "Season3 avatar mythic new 1",
+      "folder": "cases/avatars",
+      "path": "/assets/cases/avatars/season3_avatar_mythic_new_1.png",
+      "size": 2378822,
+      "modified": 1786809430000
+    },
+    {
+      "fileName": "cases/avatars/season3_avatar_mythic_new_2.png",
+      "label": "Season3 avatar mythic new 2",
+      "folder": "cases/avatars",
+      "path": "/assets/cases/avatars/season3_avatar_mythic_new_2.png",
+      "size": 2582223,
+      "modified": 1786809430000
+    },
+    {
+      "fileName": "cases/avatars/season3_avatar_standard_1.png",
+      "label": "Season3 avatar standard 1",
+      "folder": "cases/avatars",
+      "path": "/assets/cases/avatars/season3_avatar_standard_1.png",
+      "size": 2032507,
+      "modified": 1786809430000
+    },
+    {
+      "fileName": "cases/avatars/season3_avatar_standard_2.png",
+      "label": "Season3 avatar standard 2",
+      "folder": "cases/avatars",
+      "path": "/assets/cases/avatars/season3_avatar_standard_2.png",
+      "size": 2122304,
+      "modified": 1786809430000
+    },
+    {
+      "fileName": "cases/avatars/season3_avatar_standard_3.png",
+      "label": "Season3 avatar standard 3",
+      "folder": "cases/avatars",
+      "path": "/assets/cases/avatars/season3_avatar_standard_3.png",
+      "size": 2194392,
+      "modified": 1786809430000
+    },
+    {
       "fileName": "cases/boosters/11FDBEBF-D838-4DA5-AA57-9DE0E4BA26AE.PNG",
       "label": "11FDBEBF D838 4DA5 AA57 9DE0E4BA26AE",
       "folder": "cases/boosters",
@@ -340,22 +420,6 @@
       "modified": 1786309211000
     },
     {
-      "fileName": "cases/seasonal/case_closed_season_3.png",
-      "label": "Case closed season 3",
-      "folder": "cases/seasonal",
-      "path": "/assets/cases/seasonal/case_closed_season_3.png",
-      "size": 1735081,
-      "modified": 1786528722000
-    },
-    {
-      "fileName": "cases/seasonal/case_open_season_3.png",
-      "label": "Case open season 3",
-      "folder": "cases/seasonal",
-      "path": "/assets/cases/seasonal/case_open_season_3.png",
-      "size": 2099207,
-      "modified": 1786528722000
-    },
-    {
       "fileName": "cases/seasonal/season_2_closed.png",
       "label": "Season 2 closed",
       "folder": "cases/seasonal",
@@ -370,6 +434,22 @@
       "path": "/assets/cases/seasonal/season_2_open.png",
       "size": 1877132,
       "modified": 1786528052000
+    },
+    {
+      "fileName": "cases/seasonal/season_case_s3_closed.png",
+      "label": "Season case s3 closed",
+      "folder": "cases/seasonal",
+      "path": "/assets/cases/seasonal/season_case_s3_closed.png",
+      "size": 1844003,
+      "modified": 1786807738791
+    },
+    {
+      "fileName": "cases/seasonal/season_case_s3_open.png",
+      "label": "Season case s3 open",
+      "folder": "cases/seasonal",
+      "path": "/assets/cases/seasonal/season_case_s3_open.png",
+      "size": 2046991,
+      "modified": 1786807755097
     },
     {
       "fileName": "cases/standart_closed.png",
@@ -506,6 +586,78 @@
       "path": "/assets/cases/trails/mifik_sled_season3.png",
       "size": 1761299,
       "modified": 1786300027808
+    },
+    {
+      "fileName": "cases/trails/sled_s3_epick1.png",
+      "label": "Sled s3 epick1",
+      "folder": "cases/trails",
+      "path": "/assets/cases/trails/sled_s3_epick1.png",
+      "size": 1176551,
+      "modified": 1786811995000
+    },
+    {
+      "fileName": "cases/trails/sled_s3_epick2.png",
+      "label": "Sled s3 epick2",
+      "folder": "cases/trails",
+      "path": "/assets/cases/trails/sled_s3_epick2.png",
+      "size": 1343110,
+      "modified": 1786811995000
+    },
+    {
+      "fileName": "cases/trails/sled_s3_epick3.png",
+      "label": "Sled s3 epick3",
+      "folder": "cases/trails",
+      "path": "/assets/cases/trails/sled_s3_epick3.png",
+      "size": 1340807,
+      "modified": 1786811995000
+    },
+    {
+      "fileName": "cases/trails/sled_s3_legendary1.png",
+      "label": "Sled s3 legendary1",
+      "folder": "cases/trails",
+      "path": "/assets/cases/trails/sled_s3_legendary1.png",
+      "size": 1597888,
+      "modified": 1786811995000
+    },
+    {
+      "fileName": "cases/trails/sled_s3_mifik1.png",
+      "label": "Sled s3 mifik1",
+      "folder": "cases/trails",
+      "path": "/assets/cases/trails/sled_s3_mifik1.png",
+      "size": 1570268,
+      "modified": 1786811995000
+    },
+    {
+      "fileName": "cases/trails/sled_s3_mifik2.png",
+      "label": "Sled s3 mifik2",
+      "folder": "cases/trails",
+      "path": "/assets/cases/trails/sled_s3_mifik2.png",
+      "size": 1514224,
+      "modified": 1786811995000
+    },
+    {
+      "fileName": "cases/trails/sled_s3_standart1.png",
+      "label": "Sled s3 standart1",
+      "folder": "cases/trails",
+      "path": "/assets/cases/trails/sled_s3_standart1.png",
+      "size": 827402,
+      "modified": 1786811995000
+    },
+    {
+      "fileName": "cases/trails/sled_s3_standart2.png",
+      "label": "Sled s3 standart2",
+      "folder": "cases/trails",
+      "path": "/assets/cases/trails/sled_s3_standart2.png",
+      "size": 893649,
+      "modified": 1786811995000
+    },
+    {
+      "fileName": "cases/trails/sled_s3_standart3.png",
+      "label": "Sled s3 standart3",
+      "folder": "cases/trails",
+      "path": "/assets/cases/trails/sled_s3_standart3.png",
+      "size": 786545,
+      "modified": 1786811995000
     },
     {
       "fileName": "letter/letter_season_3.png",
@@ -1226,6 +1378,86 @@
       "path": "/assets/rating/frames/profile/ramka_profile_zima.png",
       "size": 1802589,
       "modified": 1785167209000
+    },
+    {
+      "fileName": "rating/frames/profile/ramka_s3_epick1.png",
+      "label": "Ramka s3 epick1",
+      "folder": "rating/frames/profile",
+      "path": "/assets/rating/frames/profile/ramka_s3_epick1.png",
+      "size": 1711836,
+      "modified": 1786811995000
+    },
+    {
+      "fileName": "rating/frames/profile/ramka_s3_epick2.png",
+      "label": "Ramka s3 epick2",
+      "folder": "rating/frames/profile",
+      "path": "/assets/rating/frames/profile/ramka_s3_epick2.png",
+      "size": 1659471,
+      "modified": 1786811995000
+    },
+    {
+      "fileName": "rating/frames/profile/ramka_s3_epick3.png",
+      "label": "Ramka s3 epick3",
+      "folder": "rating/frames/profile",
+      "path": "/assets/rating/frames/profile/ramka_s3_epick3.png",
+      "size": 1478930,
+      "modified": 1786811995000
+    },
+    {
+      "fileName": "rating/frames/profile/ramka_s3_legendary1.png",
+      "label": "Ramka s3 legendary1",
+      "folder": "rating/frames/profile",
+      "path": "/assets/rating/frames/profile/ramka_s3_legendary1.png",
+      "size": 1986022,
+      "modified": 1786811995000
+    },
+    {
+      "fileName": "rating/frames/profile/ramka_s3_legendary2.png",
+      "label": "Ramka s3 legendary2",
+      "folder": "rating/frames/profile",
+      "path": "/assets/rating/frames/profile/ramka_s3_legendary2.png",
+      "size": 1993631,
+      "modified": 1786811995000
+    },
+    {
+      "fileName": "rating/frames/profile/ramka_s3_mifik1.png",
+      "label": "Ramka s3 mifik1",
+      "folder": "rating/frames/profile",
+      "path": "/assets/rating/frames/profile/ramka_s3_mifik1.png",
+      "size": 2112998,
+      "modified": 1786811995000
+    },
+    {
+      "fileName": "rating/frames/profile/ramka_s3_mifik2.png",
+      "label": "Ramka s3 mifik2",
+      "folder": "rating/frames/profile",
+      "path": "/assets/rating/frames/profile/ramka_s3_mifik2.png",
+      "size": 2030604,
+      "modified": 1786811995000
+    },
+    {
+      "fileName": "rating/frames/profile/ramka_s3_standart1.png",
+      "label": "Ramka s3 standart1",
+      "folder": "rating/frames/profile",
+      "path": "/assets/rating/frames/profile/ramka_s3_standart1.png",
+      "size": 1111680,
+      "modified": 1786811995000
+    },
+    {
+      "fileName": "rating/frames/profile/ramka_s3_standart2.png",
+      "label": "Ramka s3 standart2",
+      "folder": "rating/frames/profile",
+      "path": "/assets/rating/frames/profile/ramka_s3_standart2.png",
+      "size": 1076513,
+      "modified": 1786811995000
+    },
+    {
+      "fileName": "rating/frames/profile/ramka_s3_standart3.png",
+      "label": "Ramka s3 standart3",
+      "folder": "rating/frames/profile",
+      "path": "/assets/rating/frames/profile/ramka_s3_standart3.png",
+      "size": 1081952,
+      "modified": 1786811995000
     },
     {
       "fileName": "rating/frames/ramka_coffe.png",
@@ -2258,6 +2490,14 @@
       "path": "/assets/skins/shop/strawberry.png",
       "size": 378306,
       "modified": 1784884216000
+    },
+    {
+      "fileName": "sounds/covers/img_sound_s3.png",
+      "label": "Img sound s3",
+      "folder": "sounds/covers",
+      "path": "/assets/sounds/covers/img_sound_s3.png",
+      "size": 3415009,
+      "modified": 1786812323000
     },
     {
       "fileName": "sounds/covers/music_cafe_dash_1.png",

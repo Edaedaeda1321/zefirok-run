@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "catalogHash": "66aee2e25631df8b",
-  "count": 63,
+  "catalogHash": "d77c625a6a45016b",
+  "count": 82,
   "images": [
     {
       "fileName": "398D69BA-8943-4846-94B3-FC5CB717A67F.PNG",
@@ -196,6 +196,86 @@
       "size": 1562218
     },
     {
+      "fileName": "avatars/season3_avatar_epic_new_1.png",
+      "label": "Season3 avatar epic new 1",
+      "folder": "avatars",
+      "path": "/assets/cases/avatars/season3_avatar_epic_new_1.png",
+      "hash": "8dba57918682",
+      "size": 2418561
+    },
+    {
+      "fileName": "avatars/season3_avatar_epic_new_2.png",
+      "label": "Season3 avatar epic new 2",
+      "folder": "avatars",
+      "path": "/assets/cases/avatars/season3_avatar_epic_new_2.png",
+      "hash": "218dc883ef9c",
+      "size": 2314388
+    },
+    {
+      "fileName": "avatars/season3_avatar_epic_new_3.png",
+      "label": "Season3 avatar epic new 3",
+      "folder": "avatars",
+      "path": "/assets/cases/avatars/season3_avatar_epic_new_3.png",
+      "hash": "8946d59c2298",
+      "size": 2015022
+    },
+    {
+      "fileName": "avatars/season3_avatar_legendary_new_1.png",
+      "label": "Season3 avatar legendary new 1",
+      "folder": "avatars",
+      "path": "/assets/cases/avatars/season3_avatar_legendary_new_1.png",
+      "hash": "4184f7631e1f",
+      "size": 2752622
+    },
+    {
+      "fileName": "avatars/season3_avatar_legendary_new_2.png",
+      "label": "Season3 avatar legendary new 2",
+      "folder": "avatars",
+      "path": "/assets/cases/avatars/season3_avatar_legendary_new_2.png",
+      "hash": "9e0810d1bf43",
+      "size": 2567343
+    },
+    {
+      "fileName": "avatars/season3_avatar_mythic_new_1.png",
+      "label": "Season3 avatar mythic new 1",
+      "folder": "avatars",
+      "path": "/assets/cases/avatars/season3_avatar_mythic_new_1.png",
+      "hash": "d719bb85d3b4",
+      "size": 2378822
+    },
+    {
+      "fileName": "avatars/season3_avatar_mythic_new_2.png",
+      "label": "Season3 avatar mythic new 2",
+      "folder": "avatars",
+      "path": "/assets/cases/avatars/season3_avatar_mythic_new_2.png",
+      "hash": "a5e97553b565",
+      "size": 2582223
+    },
+    {
+      "fileName": "avatars/season3_avatar_standard_1.png",
+      "label": "Season3 avatar standard 1",
+      "folder": "avatars",
+      "path": "/assets/cases/avatars/season3_avatar_standard_1.png",
+      "hash": "f5cbb57cd40f",
+      "size": 2032507
+    },
+    {
+      "fileName": "avatars/season3_avatar_standard_2.png",
+      "label": "Season3 avatar standard 2",
+      "folder": "avatars",
+      "path": "/assets/cases/avatars/season3_avatar_standard_2.png",
+      "hash": "9777a5cdc937",
+      "size": 2122304
+    },
+    {
+      "fileName": "avatars/season3_avatar_standard_3.png",
+      "label": "Season3 avatar standard 3",
+      "folder": "avatars",
+      "path": "/assets/cases/avatars/season3_avatar_standard_3.png",
+      "hash": "fa2950207a11",
+      "size": 2194392
+    },
+    {
       "fileName": "boosters/11FDBEBF-D838-4DA5-AA57-9DE0E4BA26AE.PNG",
       "label": "11FDBEBF D838 4DA5 AA57 9DE0E4BA26AE",
       "folder": "boosters",
@@ -340,22 +420,6 @@
       "size": 2180460
     },
     {
-      "fileName": "seasonal/case_closed_season_3.png",
-      "label": "Case closed season 3",
-      "folder": "seasonal",
-      "path": "/assets/cases/seasonal/case_closed_season_3.png",
-      "hash": "95c0a93ec953",
-      "size": 1735081
-    },
-    {
-      "fileName": "seasonal/case_open_season_3.png",
-      "label": "Case open season 3",
-      "folder": "seasonal",
-      "path": "/assets/cases/seasonal/case_open_season_3.png",
-      "hash": "34293990d819",
-      "size": 2099207
-    },
-    {
       "fileName": "seasonal/season_2_closed.png",
       "label": "Season 2 closed",
       "folder": "seasonal",
@@ -370,6 +434,22 @@
       "path": "/assets/cases/seasonal/season_2_open.png",
       "hash": "a65bc5496c76",
       "size": 1877132
+    },
+    {
+      "fileName": "seasonal/season_case_s3_closed.png",
+      "label": "Season case s3 closed",
+      "folder": "seasonal",
+      "path": "/assets/cases/seasonal/season_case_s3_closed.png",
+      "hash": "26a468587594",
+      "size": 1844003
+    },
+    {
+      "fileName": "seasonal/season_case_s3_open.png",
+      "label": "Season case s3 open",
+      "folder": "seasonal",
+      "path": "/assets/cases/seasonal/season_case_s3_open.png",
+      "hash": "b91166a7c9c1",
+      "size": 2046991
     },
     {
       "fileName": "standart_closed.png",
@@ -506,6 +586,78 @@
       "path": "/assets/cases/trails/mifik_sled_season3.png",
       "hash": "bb03256dcdbc",
       "size": 1761299
+    },
+    {
+      "fileName": "trails/sled_s3_epick1.png",
+      "label": "Sled s3 epick1",
+      "folder": "trails",
+      "path": "/assets/cases/trails/sled_s3_epick1.png",
+      "hash": "59a3867fcc4f",
+      "size": 1176551
+    },
+    {
+      "fileName": "trails/sled_s3_epick2.png",
+      "label": "Sled s3 epick2",
+      "folder": "trails",
+      "path": "/assets/cases/trails/sled_s3_epick2.png",
+      "hash": "87a472125f43",
+      "size": 1343110
+    },
+    {
+      "fileName": "trails/sled_s3_epick3.png",
+      "label": "Sled s3 epick3",
+      "folder": "trails",
+      "path": "/assets/cases/trails/sled_s3_epick3.png",
+      "hash": "6c9f6c590491",
+      "size": 1340807
+    },
+    {
+      "fileName": "trails/sled_s3_legendary1.png",
+      "label": "Sled s3 legendary1",
+      "folder": "trails",
+      "path": "/assets/cases/trails/sled_s3_legendary1.png",
+      "hash": "0e8db2cfcc19",
+      "size": 1597888
+    },
+    {
+      "fileName": "trails/sled_s3_mifik1.png",
+      "label": "Sled s3 mifik1",
+      "folder": "trails",
+      "path": "/assets/cases/trails/sled_s3_mifik1.png",
+      "hash": "2d776d89805f",
+      "size": 1570268
+    },
+    {
+      "fileName": "trails/sled_s3_mifik2.png",
+      "label": "Sled s3 mifik2",
+      "folder": "trails",
+      "path": "/assets/cases/trails/sled_s3_mifik2.png",
+      "hash": "2236975bbf6e",
+      "size": 1514224
+    },
+    {
+      "fileName": "trails/sled_s3_standart1.png",
+      "label": "Sled s3 standart1",
+      "folder": "trails",
+      "path": "/assets/cases/trails/sled_s3_standart1.png",
+      "hash": "625cd72271e5",
+      "size": 827402
+    },
+    {
+      "fileName": "trails/sled_s3_standart2.png",
+      "label": "Sled s3 standart2",
+      "folder": "trails",
+      "path": "/assets/cases/trails/sled_s3_standart2.png",
+      "hash": "9450ce823255",
+      "size": 893649
+    },
+    {
+      "fileName": "trails/sled_s3_standart3.png",
+      "label": "Sled s3 standart3",
+      "folder": "trails",
+      "path": "/assets/cases/trails/sled_s3_standart3.png",
+      "hash": "298cacfafd26",
+      "size": 786545
     }
   ]
 }
