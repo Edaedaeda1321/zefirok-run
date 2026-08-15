@@ -1,35 +1,33 @@
-Сладкий Забег — исправление изображения валюты «Зефир» в Season Pass
+Сладкий Забег — исправление возврата Test Project → Control Center
 Дата: 2026-08-16
 
-Что исправлено
-1. Control Center → Season Pass → редактор награды «Зефир» теперь использует каноническую картинку валюты, а не изображение физического зефира.
-2. Основной battle-pass.html использует ту же картинку валюты для:
-   - наград уровней;
-   - баланса зефира;
-   - цены тарифов в зефире;
-   - fallback-отображения валютной награды.
-3. Worker использует один канонический asset для reward_type=treats / zefir.
-4. Существующие строки season_pass_rewards и season_pass_case_resource_items с неправильной старой картинкой автоматически нормализуются при обычной инициализации Season Pass schema.
-5. Физический товар/приз «зефир» в магазине НЕ изменён и продолжает использовать товарный арт.
-6. Картинка не перерисовывалась и не генерировалась: assets/season-pass/zefir_currency.png — точная byte-for-byte копия уже существующего игрового iconTreatPanel из index.html.
-7. assets/images-manifest.json обновлён, чтобы новый путь корректно проходил Season Pass readiness / asset checks.
+ИСПРАВЛЕНО
+1. После выхода из Test Project Telegram BackButton больше не остаётся включённым в Control Center.
+2. Перед переходом TP → CC Test Project снимает свой обработчик BackButton, скрывает BackButton и делает location.replace в owner.html.
+3. Control Center при входе, pageshow, возврате приложения из background и повторном fullscreen-sync принудительно восстанавливает штатный режим Telegram без BackButton.
+4. В результате в верхней панели Telegram снова отображается обычная кнопка закрытия Mini App, а не неработающая «Назад».
+5. Все кнопки возврата из Test Project, включая Release Gate, используют один безопасный returnToCc.
 
-Изменённые файлы
-- src/worker.js
+СОХРАНЕНО
+- Сворачиваемая панель Staging и её локальное состояние.
+- Staging/Change Set/Promote/Release Gate логика не менялась.
+- Предыдущее исправление изображения валюты «Зефир» в редакторе награды Control Center сохранено.
+- Backend и D1 не менялись.
+
+ИЗМЕНЕННЫЕ ФАЙЛЫ
 - owner.html
-- battle-pass.html
-- assets/season-pass/zefir_currency.png
-- assets/images-manifest.json
+- test-project.html
 
-Проверки
-- node --check src/worker.js: PASS
-- owner.html inline JS: PASS
-- battle-pass.html inline JS: PASS
-- targeted currency mapping checks: 13/13 PASS
-- assets check: 176/176 PASS
-- zefir_currency.png byte-identical existing iconTreatPanel: PASS
+ПРОВЕРКИ
+- inline JavaScript owner.html: PASS (node --check)
+- inline JavaScript test-project.html: PASS (node --check)
+- literal DOM id duplicates: 0 / 0
+- TP direct owner href bypasses: 0
+- owner BackButton reset on initial load/pageshow/visibility/fullscreen: PASS
+- staging collapse preserved: PASS
+- zefir currency preview fix preserved: PASS
+
+ДЕПЛОЙ
+npx wrangler deploy
 
 D1 migration не требуется.
-
-Деплой
-npx wrangler deploy
