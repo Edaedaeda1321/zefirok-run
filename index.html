@@ -13297,7 +13297,8 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           if (isScreenVisible(&quot;shop&quot;)) window.setTimeout(() =&gt; void maybeShowFlashOffer(), 120);
           void syncGameStartupPackage(true);
           if (state.running &amp;&amp; state.caseRunId) void startAuthoritativeRunSession(state.caseRunId);
-          window.setTimeout(() =&gt; void refreshSeasonTaskNotice(true), 80);
+          // The consolidated startup package already carries task-notice state.
+          // Avoid a duplicate request 80 ms later.
           void (async () =&gt; {
             await retryPendingLeaderboardRun();
             if (isScreenVisible(&quot;profile&quot;)) {
@@ -16058,7 +16059,9 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 
       async function syncGameStartupPackage(force = false) {
         const initData = String(telegramProfile?.initData || &quot;&quot;);
-        if (initData) await flushPendingCaseBoosterRuns();
+        // Legacy booster-run cleanup is idempotent and no longer blocks startup.
+        // Current clients consume boosters inside authoritative run settlement.
+        if (initData) void flushPendingCaseBoosterRuns();
         const current = {
           ...caseCurrentSnapshot(),
           appliedResetPlanIds: Array.isArray(state.appliedResetPlanIds)
@@ -16097,17 +16100,23 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           else void loadCaseState(true);
           if (data.seasonPassBonus) applySeasonPassProfileBonus(data.seasonPassBonus);
           else void loadSeasonPassProfileBonus();
-          if (Object.prototype.hasOwnProperty.call(data, &quot;seasonPassTaskNotice&quot;)) applySeasonTaskNotice(data.seasonPassTaskNotice);
+          if (Object.prototype.hasOwnProperty.call(data, &quot;seasonPassTaskNotice&quot;)) {
+            applySeasonTaskNotice(data.seasonPassTaskNotice);
+          } else {
+            // Compatibility fallback only. Normal startup already includes this state.
+            window.setTimeout(() =&gt; void refreshSeasonTaskNotice(true), 120);
+          }
           if (Object.prototype.hasOwnProperty.call(data, &quot;news&quot;)) applyGameNewsPayload(data.news);
           if (data.gifts) applyPlayerGiftPayload(data.gifts); else void loadPlayerGiftInbox(true);
-          window.setTimeout(() =&gt; void refreshSeasonTaskNotice(true), 120);
           if (data.rewards) {
             applyServerRewardsPayload(data.rewards);
             rewardLastSyncAt = Date.now();
           } else {
             void syncServerRewards(true);
           }
-          await syncOwnedSkinBonusCases({ notify: true });
+          // Bonus-case entitlement repair updates the UI itself and is not required
+          // before the game becomes interactive.
+          void syncOwnedSkinBonusCases({ notify: true });
           return true;
         } catch (error) {
           console.warn(&quot;Game startup package failed, using compatible API fallback&quot;, error);
@@ -16123,7 +16132,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
               loadSeasonPassProfileBonus(),
               loadPlayerGiftInbox(true)
             ]);
-            await syncOwnedSkinBonusCases({ notify: true });
+            void syncOwnedSkinBonusCases({ notify: true });
           }
           return false;
         }

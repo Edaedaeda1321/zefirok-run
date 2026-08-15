@@ -2384,6 +2384,20 @@ async function getGameStartupPackage(request, env) {
     try { await processPlayerRewardDeliveryQueue(env, String(auth.user.id), 10); }
     catch (error) { console.error("startup reward queue refresh failed", error); }
     const errors = {};
+    const telegramId = String(auth.user.id);
+
+    // These sections do not depend on the profile/case-state reconciliation.
+    // Start them immediately and attach allSettled now so a slow profile read
+    // does not serialize unrelated startup work or create unhandled rejections.
+    const startupSideSections = Promise.allSettled([
+      syncSeasonPassTaskCompletionNotifications(env, telegramId, { sendBot:false }),
+      getSeasonPassProfileBonusForUser(env, telegramId),
+      listMyRewards(null, env, { raw: true, body: internalBody, auth }),
+      publicFeatureFlags(env, telegramId, { trustedIdentity: true }),
+      getGameNewsForPlayer(env, telegramId),
+      playerGiftInboxPayload(env, telegramId)
+    ]);
+
     let profile = null;
     try {
       profile = await syncAdminProfile(null, env, { raw: true, body: internalBody, auth, shared });
@@ -2392,27 +2406,26 @@ async function getGameStartupPackage(request, env) {
       errors.profile = startupSectionError(error);
     }
 
-    // Sync completed tasks first so the lightweight claimable badge can count
-    // the already-maintained notification rows instead of rebuilding all task metrics twice.
-    let seasonPassTaskNotice = null;
-    try { seasonPassTaskNotice = await syncSeasonPassTaskCompletionNotifications(env, String(auth.user.id), { sendBot:false }); }
-    catch (error) { errors.seasonPassTaskNotice = startupSectionError(error); }
-    let seasonPassBonus = { active:false, multiplier:1, claimableCount:0 };
-    try { seasonPassBonus = await getSeasonPassProfileBonusForUser(env, String(auth.user.id)); }
-    catch (error) { errors.seasonPassBonus = startupSectionError(error); }
-    const [casesResult, rewardsResult, flagsResult, newsResult, giftsResult] = await Promise.allSettled([
-      getLevelCaseState(null, env, { raw: true, body: internalBody, auth, shared }),
-      listMyRewards(null, env, { raw: true, body: internalBody, auth }),
-      publicFeatureFlags(env, String(auth.user.id), { trustedIdentity: true }),
-      getGameNewsForPlayer(env, String(auth.user.id)),
-      playerGiftInboxPayload(env, String(auth.user.id))
+    // Cases reuse the case state prepared by profile sync, so keep that dependency,
+    // while the other startup sections have already been running in parallel.
+    const [casesSettled, sideSettled] = await Promise.all([
+      Promise.allSettled([getLevelCaseState(null, env, { raw: true, body: internalBody, auth, shared })]),
+      startupSideSections
     ]);
+    const casesResult = casesSettled[0];
+    const [taskNoticeResult, seasonPassBonusResult, rewardsResult, flagsResult, newsResult, giftsResult] = sideSettled;
     const cases = casesResult.status === "fulfilled" ? casesResult.value : null;
     const rewards = rewardsResult.status === "fulfilled" ? rewardsResult.value : null;
     const flags = flagsResult.status === "fulfilled" ? flagsResult.value : null;
     const news = newsResult.status === "fulfilled" ? newsResult.value : null;
     const gifts = giftsResult.status === "fulfilled" ? giftsResult.value : null;
+    const seasonPassTaskNotice = taskNoticeResult.status === "fulfilled" ? taskNoticeResult.value : null;
+    const seasonPassBonus = seasonPassBonusResult.status === "fulfilled"
+      ? seasonPassBonusResult.value
+      : { active:false, multiplier:1, claimableCount:0 };
     if (casesResult.status === "rejected") errors.cases = startupSectionError(casesResult.reason);
+    if (taskNoticeResult.status === "rejected") errors.seasonPassTaskNotice = startupSectionError(taskNoticeResult.reason);
+    if (seasonPassBonusResult.status === "rejected") errors.seasonPassBonus = startupSectionError(seasonPassBonusResult.reason);
     if (rewardsResult.status === "rejected") errors.rewards = startupSectionError(rewardsResult.reason);
     if (flagsResult.status === "rejected") errors.flags = startupSectionError(flagsResult.reason);
     if (newsResult.status === "rejected") errors.news = startupSectionError(newsResult.reason);
@@ -5702,11 +5715,14 @@ async function openLevelCase(request, env, ctx = null) {
     const finalProfile = await ensureAuthoritativeProfileRow(env, telegramId, `case:${requestedLevel}:response`);
     const nextProfile = authoritativeProfileView(finalProfile);
     const inventory = await readFastCaseInventory(env, telegramId);
-    // Task completion is part of the case-opening event. Await it here so a
-    // client refresh cannot silently mark the new task as "read-only" before
-    // the realtime Telegram notification is emitted.
-    try { await syncSeasonPassTaskCompletionNotifications(env, telegramId, { sendBot:true }); }
-    catch (error) { console.error('level case season task notification failed', error); }
+    // Telegram delivery and full task reconciliation are not part of the
+    // case-opening critical path. Fresh completions have a 15-second lease, so
+    // a read-only refresh cannot suppress the realtime notification meanwhile.
+    scheduleRunSettlementBackground(
+      ctx,
+      syncSeasonPassTaskCompletionNotifications(env, telegramId, { sendBot:true }),
+      'level case season task notification failed'
+    );
     const background = Promise.allSettled([
       recordCaseRewardsAnalytics(env, telegramId, rolled.rewards, "level_case", `level_${requestedLevel}`, now),
       recordPlayerTimeline(env, telegramId, "case_open", `открыл ${LEVEL_CASE_CONFIG[caseType]?.title || caseType} за уровень ${requestedLevel}`, { caseType, level: requestedLevel, rewards: rolled.rewards }, `level_case_${requestedLevel}`, auth.user, now)
@@ -5918,8 +5934,11 @@ async function openGrantedCase(request, env, ctx = null) {
     const finalProfile = await ensureAuthoritativeProfileRow(env, telegramId, `gift-case:${caseType}:response`);
     const nextProfile = authoritativeProfileView(finalProfile);
     const inventory = await readFastCaseInventory(env, telegramId);
-    try { await syncSeasonPassTaskCompletionNotifications(env, telegramId, { sendBot:true }); }
-    catch (error) { console.error('granted case season task notification failed', error); }
+    scheduleRunSettlementBackground(
+      ctx,
+      syncSeasonPassTaskCompletionNotifications(env, telegramId, { sendBot:true }),
+      'granted case season task notification failed'
+    );
     const background = Promise.allSettled([
       recordCaseRewardsAnalytics(env, telegramId, rolled.rewards, "granted_case", claimedId, now),
       recordPlayerTimeline(env, telegramId, "case_open", `открыл ${LEVEL_CASE_CONFIG[caseType]?.title || caseType}`, { caseType, grantId: claimedId, rewards: rolled.rewards }, `grant_case_${claimedId}`, auth.user, now)
@@ -22917,10 +22936,12 @@ async function openSeasonPassSeasonalCase(request,env,executionCtx=null){
     const batch=await env.DB.batch(statements);const finalized=Number(batch?.[batch.length-1]?.meta?.changes||0)>0;if(!finalized)throw new ApiError(409,'Состояние кейса изменилось. Повторите открытие.');
     const inventory=await seasonPassSeasonalCaseInventory(env,ctx.telegramId);
     seasonPassBackgroundWork(executionCtx,recordPlayerTimeline(env,ctx.telegramId,'seasonal_case_open',`открыл сезонный кейс «${String(definition.title||caseId)}»`,{caseId,grantId,rewards},`seasonal_case_${grantId}`,ctx.auth.user,now),'seasonal case timeline failed');
-    // Seasonal cases participate in cases_opened as well; notify before returning
-    // so the completion event cannot be overtaken by a read-only client refresh.
-    try{await syncSeasonPassTaskCompletionNotifications(env,ctx.telegramId,{season:ctx.season,sendBot:true});}
-    catch(error){console.error('seasonal case task notification failed',error);}
+    // Seasonal cases follow the same fast-response rule as normal/gift cases.
+    seasonPassBackgroundWork(
+      executionCtx,
+      syncSeasonPassTaskCompletionNotifications(env,ctx.telegramId,{season:ctx.season,sendBot:true}),
+      'seasonal case task notification failed'
+    );
     return jsonResponse({ok:true,case:{caseId,grantId,title:String(snapshot?.title||definition.title||'Сезонный кейс'),imageUrl:String(snapshot?.openImageUrl||snapshot?.imageUrl||definition.open_image_url||definition.closed_image_url||''),rewards},seasonalCases:inventory});
   }catch(error){if(grantId&&token){try{await env.DB.prepare(`UPDATE season_pass_case_grants SET status='pending',opening_started_at=0,opening_token='' WHERE grant_id=? AND status='opening' AND opening_token=?`).bind(grantId,token).run();}catch{}}if(error instanceof ApiError)return jsonResponse({ok:false,error:error.message},error.status);console.error('openSeasonPassSeasonalCase failed',error);return jsonResponse({ok:false,error:'Не удалось открыть сезонный кейс.'},500);}
 }
