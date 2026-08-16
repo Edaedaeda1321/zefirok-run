@@ -11714,6 +11714,8 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         for (const node of scope.querySelectorAll(&quot;button,strong&quot;)) {
           if (node.matches?.(&quot;[data-stock-view]&quot;)) continue;
           if (node.querySelector?.(&quot;img.stock-section-icon&quot;)) continue;
+          const tutorialVisual = node.closest?.(&quot;.tutorial-reward,.tutorial-profile-feature,.tutorial-case-source,.tutorial-case-card&quot;);
+          if (tutorialVisual?.querySelector?.(&quot;img&quot;)) continue;
           const label = stockUiCleanLabel(node.textContent);
           const def = defs.find((entry) =&gt; entry.labels.has(label));
           if (def) stockUiEnsureImage(node, def.src, &quot;stock-action-icon&quot;);
@@ -11728,6 +11730,8 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         ];
         for (const node of scope.querySelectorAll(&quot;button,strong,span&quot;)) {
           if (node.children.length &gt; 2) continue;
+          const tutorialVisual = node.closest?.(&quot;.tutorial-reward,.tutorial-profile-feature,.tutorial-case-source,.tutorial-case-card&quot;);
+          if (tutorialVisual?.querySelector?.(&quot;img&quot;)) continue;
           const label = stockUiCleanLabel(node.textContent).replace(/\s+/g, &quot;&quot;).toLowerCase();
           const def = defs.find((entry) =&gt; label.startsWith(entry.key));
           if (!def) continue;
@@ -12525,7 +12529,6 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 
       function openStockTutorial(automatic = false, startIndex = 0) {
         tutorialMode = &quot;stock&quot;;
-        if (warehouseScreenEl?.hidden) switchScreen(&quot;warehouse&quot;);
         openTutorialMode(automatic, startIndex);
       }
 
@@ -12627,7 +12630,6 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         if (!tutorialLayer) return;
         if (markCompleted) {
           if (tutorialMode === &quot;profile&quot;) state.profileTutorialCompleted = true;
-          else if (tutorialMode === &quot;stock&quot;) { /* manual stock guide has no completion flag */ }
           else if (tutorialMode === &quot;cases&quot;) state.caseTutorialSeenKey = CASE_TUTORIAL_KEY;
           else if (tutorialMode === &quot;rating&quot;) state.ratingTutorialSeenKey = RATING_TUTORIAL_KEY;
           else state.tutorialCompleted = true;
