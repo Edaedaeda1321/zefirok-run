@@ -734,7 +734,7 @@ const SEASON_PASS_LEVEL_START_XP = Object.freeze((() => {
   return values;
 })());
 const SEASON_PASS_LEVEL_50_COMPLETE_XP = SEASON_PASS_LEVEL_START_XP[SEASON_PASS_MAX_LEVEL];
-const SEASON_PASS_OVERFLOW_LEVEL_XP = 5000;
+const SEASON_PASS_OVERFLOW_LEVEL_XP = 1500;
 const SEASON_PASS_BALANCE_V2_MARKER = "__system:season_pass_balance_v2";
 const SEASON_PASS_BALANCE_V3_GLOBAL_MARKER = "__system:season_pass_balance_v3_fair_recalc";
 const SEASON_PASS_BALANCE_V3_PLAYER_MARKER = "__system:season_pass_balance_v3_player";
@@ -1658,6 +1658,9 @@ export default {
       }
       if (url.pathname === "/api/battle-pass/story/test/open" && request.method === "POST") {
         return await openSeasonPassStoryTest(request, env);
+      }
+      if (url.pathname === "/api/battle-pass/seasonal-case/info" && request.method === "POST") {
+        return await getSeasonPassSeasonalCaseInfo(request, env);
       }
       if (url.pathname === "/api/battle-pass/seasonal-case/open" && request.method === "POST") {
         return await openSeasonPassSeasonalCase(request, env, ctx);
@@ -24380,6 +24383,32 @@ function seasonPassSeasonalCaseRouletteItemView(row){
 }
 function seasonPassSeasonalCaseRouletteItems(rows){
   return (Array.isArray(rows)?rows:[]).map(seasonPassSeasonalCaseRouletteItemView).filter(Boolean).slice(0,160);
+}
+function seasonPassSeasonalCaseContentsView(rows,groupChancesValue=null,slotsValue=1,duplicatePointsValue=0){
+  const entries=(Array.isArray(rows)?rows:[]).map((row,index)=>{
+    const view=seasonPassSeasonalCaseRouletteItemView(row),weight=Number(row?.weight||1);if(!view||!Number.isFinite(weight)||weight<=0)return null;
+    const group=seasonPassSeasonalCaseRewardGroup(row);if(!group)return null;
+    return {...view,key:String(row?.item_key||row?.key||`${view.kind}:${view.itemId||index}`),group,weight};
+  }).filter(Boolean);
+  const groupTitles={currency:'Валюта',cosmetic:'Косметика',case:'Кейсы'},configured=seasonPassSeasonalCaseGroupChances(groupChancesValue);
+  const groupRows=['currency','cosmetic','case'].map(group=>{const items=entries.filter(item=>item.group===group),itemWeight=items.reduce((sum,item)=>sum+item.weight,0),configuredWeight=configured?Math.max(0,Number(configured[group]||0)):itemWeight;return {group,items,itemWeight,configuredWeight};}).filter(entry=>entry.items.length&&entry.itemWeight>0&&entry.configuredWeight>0);
+  const activeGroupTotal=groupRows.reduce((sum,entry)=>sum+entry.configuredWeight,0),chanceByKey=new Map(),groups=[];
+  for(const entry of groupRows){const groupChance=activeGroupTotal>0?entry.configuredWeight/activeGroupTotal*100:0;groups.push({id:entry.group,title:groupTitles[entry.group]||entry.group,chance:Number(groupChance.toFixed(4))});for(const item of entry.items){const chance=entry.itemWeight>0?groupChance*item.weight/entry.itemWeight:0;chanceByKey.set(item.key,Number(chance.toFixed(4)));}}
+  return {slots:Math.max(1,Math.min(5,Math.floor(Number(slotsValue)||1))),duplicatePoints:Math.max(0,Math.floor(Number(duplicatePointsValue)||0)),chanceMode:'per_slot',groups,items:entries.map(({key,group,weight,...view})=>({...view,group,chance:chanceByKey.get(key)||0})).sort((a,b)=>Number(b.chance||0)-Number(a.chance||0)||String(a.title||'').localeCompare(String(b.title||''),'ru'))};
+}
+async function getSeasonPassSeasonalCaseInfo(request,env){
+  try{
+    const ctx=await seasonPassRequestContext(request,env),caseId=String(ctx.body?.caseId||'').trim();if(!caseId)throw new ApiError(400,'Не выбран сезонный кейс.');
+    const [definition,grant]=await Promise.all([
+      env.DB.prepare(`SELECT d.*,s.title AS season_title FROM season_pass_case_definitions d LEFT JOIN season_pass_seasons s ON s.season_id=d.season_id WHERE d.case_id=? LIMIT 1`).bind(caseId).first(),
+      env.DB.prepare(`SELECT grant_id,snapshot_json,status FROM season_pass_case_grants WHERE telegram_id=? AND case_id=? AND status IN ('pending','opening') ORDER BY CASE status WHEN 'pending' THEN 0 ELSE 1 END,created_at,grant_id LIMIT 1`).bind(ctx.telegramId,caseId).first()
+    ]);
+    if(!definition||!Number(definition.enabled||0))throw new ApiError(404,'Сезонный кейс не найден.');
+    if(!grant?.grant_id)throw new ApiError(409,'Сезонных кейсов этого типа нет.');
+    const snapshot=safeJson(grant.snapshot_json,{}),snapshotItems=Array.isArray(snapshot?.items)?snapshot.items:[],sourceItems=snapshotItems.length?snapshotItems:await seasonPassEffectiveCaseItems(env,caseId);
+    const slots=Math.max(1,Math.min(5,Number(snapshot?.slots??definition.slots)||1)),duplicatePoints=Math.max(0,Number(snapshot?.duplicatePoints??definition.duplicate_points)||0),groupChances=seasonPassSeasonalCaseGroupChances(snapshot?.groupChances)||seasonPassSeasonalCaseGroupChances(definition.reward_groups_json);
+    return jsonResponse({ok:true,case:{caseId,title:String(snapshot?.title||definition.title||'Сезонный кейс'),description:String(snapshot?.description||definition.description||''),imageUrl:String(snapshot?.imageUrl||definition.closed_image_url||''),openImageUrl:String(snapshot?.openImageUrl||definition.open_image_url||''),seasonTitle:String(definition.season_title||''),released:Number(definition.release_at||0)<=Math.floor(Date.now()/1000),contents:seasonPassSeasonalCaseContentsView(sourceItems,groupChances,slots,duplicatePoints)}});
+  }catch(error){if(error instanceof ApiError)return jsonResponse({ok:false,error:error.message},error.status);console.error('getSeasonPassSeasonalCaseInfo failed',error);return jsonResponse({ok:false,error:'Не удалось загрузить содержимое сезонного кейса.'},500);}
 }
 
 async function openSeasonPassSeasonalCase(request,env,executionCtx=null){

@@ -2546,6 +2546,8 @@ img[src$="/xp.webp"]{
 .season-pass-tutorial-prev{border:1px solid #ecd5db;background:#fff;color:#744755}
 .season-pass-tutorial-next{border:0;background:linear-gradient(145deg,#e45285,#c3386b);color:#fff;box-shadow:0 8px 18px rgba(194,55,105,.18)}
 .season-pass-tutorial-actions button:disabled{opacity:.45;box-shadow:none}
+.season-pass-tutorial-actions.is-final{grid-template-columns:repeat(2,minmax(0,160px));justify-content:center}
+.season-pass-tutorial-actions.is-final .season-pass-tutorial-prev,.season-pass-tutorial-actions.is-final .season-pass-tutorial-next{width:100%}
 @media(max-width:430px){.pass-help{width:38px;height:38px;border-radius:12px}.season-pass-tutorial-overlay{align-items:end;padding:10px}.season-pass-tutorial-sheet{width:100%;max-height:88vh;border-radius:26px 26px 20px 20px;padding:16px}.season-pass-tutorial-hero{grid-template-columns:68px minmax(0,1fr);gap:10px}.season-pass-tutorial-art{width:68px;height:68px}.season-pass-tutorial-art img{width:62px;height:62px}.season-pass-tutorial-copy h2{font-size:18px}.season-pass-tutorial-actions{grid-template-columns:1fr 1fr}.season-pass-tutorial-skip{grid-column:1/-1;grid-row:2}}
 @media(prefers-reduced-motion:reduce){.season-pass-tutorial-dots i,.pass-help{transition:none!important}}
 </style>
@@ -2634,9 +2636,9 @@ img[src$="/xp.webp"]{
         <img class="overflow-art" src="/assets/cases/gold_closed.png" alt="Золотой кейс">
         <div class="overflow-copy">
           <strong>50+ / ∞ · Бесконечная дорожка</strong>
-          <p><b>Доступна всем игрокам:</b> бесплатному тарифу, Элитному и Элитному+. После полного 50 уровня каждые <b id="overflowStepLabel">5 000 XP</b> открывают ещё один Золотой кейс.</p>
+          <p><b>Доступна всем игрокам:</b> бесплатному тарифу, Элитному и Элитному+. После полного 50 уровня каждые <b id="overflowStepLabel">1 500 XP</b> открывают ещё один Золотой кейс.</p>
           <div class="overflow-track"><i id="overflowFill"></i></div>
-          <div class="overflow-meta"><span id="overflowProgress">Откроется после 50 уровня</span><span id="overflowEarned">5 000 XP за кейс</span></div>
+          <div class="overflow-meta"><span id="overflowProgress">Откроется после 50 уровня</span><span id="overflowEarned">1 500 XP за кейс</span></div>
         </div>
         <button class="overflow-claim" id="claimOverflow" type="button" disabled>Откроется после полного 50 уровня</button>
       </section>
@@ -2769,7 +2771,7 @@ img[src$="/xp.webp"]{
     <button class="season-pass-tutorial-close" id="seasonPassTutorialClose" type="button" aria-label="Закрыть обучение">×</button>
     <div class="season-pass-tutorial-progress"><span id="seasonPassTutorialStepLabel">Шаг 1</span><div class="season-pass-tutorial-dots" id="seasonPassTutorialDots" aria-hidden="true"></div></div>
     <div id="seasonPassTutorialContent"></div>
-    <div class="season-pass-tutorial-actions">
+    <div class="season-pass-tutorial-actions" id="seasonPassTutorialActions">
       <button class="season-pass-tutorial-skip" id="seasonPassTutorialSkip" type="button">Пропустить</button>
       <button class="season-pass-tutorial-prev" id="seasonPassTutorialPrev" type="button">Назад</button>
       <button class="season-pass-tutorial-next" id="seasonPassTutorialNext" type="button">Далее</button>
@@ -2868,7 +2870,7 @@ img[src$="/xp.webp"]{
   const STORY_TEST_OPEN_PATH = "/api/battle-pass/story/test/open";
   const SEASONAL_CASE_OPEN_PATH = "/api/battle-pass/seasonal-case/open";
   const MAX_LEVEL = 50;
-  const DEFAULT_OVERFLOW_STEP_XP = 5000;
+  const DEFAULT_OVERFLOW_STEP_XP = 1500;
   const SEASON_PASS_TUTORIAL_SEEN_KEY = TEST_PROJECT_MODE ? "zefirok-test-project-season-pass-tutorial-v1" : "zefirok-season-pass-tutorial-v1";
 
   let lastPassHapticAt = 0;
@@ -3484,7 +3486,7 @@ img[src$="/xp.webp"]{
     el("seasonPassTutorialDots").innerHTML=slides.map((_,index)=>`<i class="${index===seasonPassTutorialStep?"active":""}"></i>`).join("");
     el("seasonPassTutorialPrev").disabled=seasonPassTutorialStep===0;
     el("seasonPassTutorialNext").textContent=seasonPassTutorialStep===slides.length-1?"Готово":"Далее";
-    el("seasonPassTutorialSkip").hidden=seasonPassTutorialStep===slides.length-1;
+    const tutorialFinal=seasonPassTutorialStep===slides.length-1;el("seasonPassTutorialSkip").hidden=tutorialFinal;el("seasonPassTutorialActions")?.classList.toggle("is-final",tutorialFinal);
     const sheet=el("seasonPassTutorialSheet");if(sheet)sheet.scrollTop=0;
   }
 
@@ -5048,7 +5050,7 @@ img[src$="/xp.webp"]{
 <script type="application/json" id="zefirok-v060-ended-task-state">{"version":"6.0 RC.1","changes":["ended_season_tasks_hidden","claim_window_explanation","task_claim_badge_suppressed"]}</script>
 <script type="application/json" id="zefirok-v060-season-force-close">{"version":"6.0 RC.1","changes":["forced_season_close_gate","next_season_countdown_lock","no_claim_grace","immediate_progress_and_purchase_reset","owner_preview_block","no_manual_unlock"]}</script>
 <script type="application/json" id="zefirok-v1001-season-pass-fast-open-audit">{"build":"1.0.6","fixes":["single-request-access-state-bootstrap","skip-duplicate-state-roundtrip"]}</script>
-<script type="application/json" id="zefirok-season-pass-balance-v2">{"version":"1.3.0","level50StartXp":123000,"level50CompleteXp":132550,"overflowStepXp":5000,"overflowAvailableToAll":true,"fairEarnedXpRecalc":"v3","elitePlusTaskXpMultiplier":2,"catchUp":{"windowDays":7,"belowLevel":35,"multiplier":2,"stacksWithPremium":false}}</script>
+<script type="application/json" id="zefirok-season-pass-balance-v2">{"version":"1.3.1","level50StartXp":123000,"level50CompleteXp":132550,"overflowStepXp":1500,"overflowAvailableToAll":true,"fairEarnedXpRecalc":"v3","elitePlusTaskXpMultiplier":2,"catchUp":{"windowDays":7,"belowLevel":35,"multiplier":2,"stacksWithPremium":false}}</script>
 <script type="application/json" id="zefirok-season-pass-letter-case-v1">{"version":"1.0","features":["level_letter","seasonal_case_inventory","seasonal_case_open"]}</script>
 <script type="application/json" id="zefirok-season-pass-tutorial-v1-meta">{"version":"1.0","features":["first_open_tutorial","persistent_help_button","season_xp_rewards_tiers_tasks_overflow_cases_story_end_explainer"]}</script>
 <!-- zefirok-season-story-player-v1 -->
