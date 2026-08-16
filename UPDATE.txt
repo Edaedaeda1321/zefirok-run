@@ -1,20 +1,36 @@
-UPDATE - TEST PROJECT ONLY
+Сладкий Забег 1.0.8 — MAIN
+Дата: 16 августа 2026
 
-1. Izmenen tolko test-project.html. Osnovnye index.html, profile.html, owner.html i Worker ne menyalis.
-2. V Test Project nagrady x2 points/treats/coffee vmesto emoji pokazyvayut sushchestvuyushchie booster PNG iz assets/cases/boosters.
-3. Device Lab poluchaet TP-only preview ikonok sklada bez izmeneniya index.html na diske:
-   - Pokupki: assets/test-project/icon_shopping.png
-   - Usiliteli: assets/test-project/icon_busters.png
-   - Keysy: assets/test-project/icone_cases.png
-   - Podarki: assets/test-project/icone_prize.png
-4. Preview prokhodit vnutr nested iframe realnoy igry i povtorno primenyaetsya posle dinamicheskogo rerender.
-5. Vse 4 PNG skopirovany byte-for-byte bez pererisovki i obrabotki.
+Изменено:
+1. Основная версия игры и Worker подняты до 1.0.8.
+2. Обновлено одноразовое релизное окно внутри игры и встроенная новость Telegram-бота в том же стиле, что 1.0.7.
+3. В новости 1.0.8 описаны только изменения, с которыми взаимодействует игрок:
+   - перебалансировка наград сезонного пропуска;
+   - единое изображение зефира как игровой валюты;
+   - изображения усилителей ×2 вместо эмоджи;
+   - обновлённое оформление «Моих покупок» / склада;
+   - отдельные изображения для покупок, усилителей, кейсов и подарков;
+   - «Улучшена работа проекта».
+4. Основная игра использует уже лежащие в проекте файлы:
+   /assets/ui/icon_shopping.png
+   /assets/ui/icon_busters.png
+   /assets/ui/icone_cases.png
+   /assets/ui/icone_prize.png
+5. Для ×2 очков / зефира / кофе используются существующие игровые изображения из assets/cases/boosters.
 
-PROVERKI:
-- test-project inline JS: node --check PASS
-- 17/17 target invariants PASS
-- duplicate literal DOM id: 0
-- hashes uploaded/copy: identical
+Изменённые файлы:
+- index.html
+- src/worker.js
 
-DEPLOY:
+Не изменялись:
+- profile.html
+- test-project.html
+- owner.html
+- battle-pass.html
+- D1 schema / migrations
+
+Важно:
+Иконки assets/ui в архив не включены, потому что они уже добавлены в текущий проект пользователем по указанным путям.
+
+Деплой:
 npx wrangler deploy

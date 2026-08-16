@@ -39,7 +39,7 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
   const TEST_PROJECT_MODE = TEST_PROJECT_QUERY.get("test_project") === "1";
   const TEST_PROJECT_DEVICE_LAB = TEST_PROJECT_MODE && TEST_PROJECT_QUERY.get("device_lab") === "1";
   const TEST_PROJECT_OWNER_SESSION_KEY = "zefirok-owner-session-v1";
-  const TEST_PROJECT_BRIDGE_JS = "(()=>{\n  let testProjectActive=new URLSearchParams(location.search).get(\"test_project\")===\"1\";\n  if(!testProjectActive&&window.parent&&window.parent!==window){try{testProjectActive=new URLSearchParams(window.parent.location.search).get(\"test_project\")===\"1\"}catch{}}\n  if(!testProjectActive)return;\n  const nativeFetch=window.fetch.bind(window),SESSION_KEY=\"zefirok-owner-session-v1\",PROXY=\"/api/owner/test-project/game\",STORAGE_PREFIX=\"zefirok-tp3:\";\n  const baseUrl=(()=>{const direct=String(document.baseURI||\"\");if(/^https?:/i.test(direct))return direct;try{if(window.parent&&window.parent!==window&&/^https?:/i.test(String(window.parent.location.href||\"\")))return String(window.parent.location.href)}catch{}return String(location.href||direct)})(),sandboxOrigin=(()=>{try{return new URL(baseUrl).origin}catch{return location.origin}})(),proxyUrl=(()=>{try{return new URL(PROXY,baseUrl).toString()}catch{return PROXY}})();\n  const storage=window.localStorage;\n  try{\n    const proto=Object.getPrototypeOf(storage),nativeGet=proto.getItem,nativeSet=proto.setItem,nativeRemove=proto.removeItem,nativeClear=proto.clear;\n    const scopedKey=(key)=>String(key)===SESSION_KEY?SESSION_KEY:`${STORAGE_PREFIX}${String(key)}`;\n    proto.getItem=function(key){return this===storage?nativeGet.call(this,scopedKey(key)):nativeGet.call(this,key)};\n    proto.setItem=function(key,value){return this===storage?nativeSet.call(this,scopedKey(key),value):nativeSet.call(this,key,value)};\n    proto.removeItem=function(key){return this===storage?nativeRemove.call(this,scopedKey(key)):nativeRemove.call(this,key)};\n    proto.clear=function(){if(this!==storage)return nativeClear.call(this);const remove=[];for(let i=0;i<this.length;i+=1){const key=this.key(i);if(String(key||\"\").startsWith(STORAGE_PREFIX))remove.push(key)}for(const key of remove)nativeRemove.call(this,key)};\n  }catch{}\n  async function bodyValue(body){\n    if(body==null)return {};\n    if(typeof body===\"string\"){try{return JSON.parse(body)}catch{return {raw:body.slice(0,12000)}}}\n    if(body instanceof URLSearchParams)return Object.fromEntries(body.entries());\n    if(typeof FormData!==\"undefined\"&&body instanceof FormData){const out={};for(const [key,value] of body.entries()){if(typeof value===\"string\")out[key]=value;else out[key]={name:String(value?.name||\"file\"),type:String(value?.type||\"\"),size:Number(value?.size||0),testProjectFileBlocked:true};}return out;}\n    if(typeof body===\"object\")return body;\n    return {};\n  }\n  window.__TEST_PROJECT_SANDBOX__={active:true,version:\"4.0\",storagePrefix:STORAGE_PREFIX};\n  window.fetch=async(input,init={})=>{\n    const original=input instanceof Request?input.url:String(input||\"\");let url;\n    try{url=new URL(original,baseUrl)}catch{return nativeFetch(input,init)}\n    if(url.origin!==sandboxOrigin||!url.pathname.startsWith(\"/api/\")||url.pathname.startsWith(\"/api/owner/\"))return nativeFetch(input,init);\n    const sourceRequest=input instanceof Request?input:null;\n    const method=String(init.method||sourceRequest?.method||\"GET\").toUpperCase();\n    let requestBody=init.body;\n    if(requestBody==null&&sourceRequest&&method!==\"GET\"&&method!==\"HEAD\"){try{requestBody=await sourceRequest.clone().text()}catch{requestBody=null}}\n    const payload=await bodyValue(requestBody);\n    let ownerSession=\"\";try{ownerSession=String(localStorage.getItem(SESSION_KEY)||\"\")}catch{}\n    const initData=String(payload?.initData||window.Telegram?.WebApp?.initData||\"\");\n    const controllerSignal=init.signal||sourceRequest?.signal;\n    const proxyResponse=await nativeFetch(proxyUrl,{method:\"POST\",headers:{\"Content-Type\":\"application/json\"},body:JSON.stringify({initData,ownerSession,path:url.pathname,method,query:Object.fromEntries(url.searchParams.entries()),payload}),cache:\"no-store\",credentials:\"same-origin\",signal:controllerSignal});\n    const envelope=await proxyResponse.json().catch(()=>({ok:false,error:\"Test Project proxy вернул некорректный ответ.\"}));\n    if(!proxyResponse.ok||!envelope?.ok||!(\"data\" in envelope))return new Response(JSON.stringify(envelope||{ok:false,error:\"Test Project proxy error\"}),{status:proxyResponse.status||500,headers:{\"Content-Type\":\"application/json\",\"Cache-Control\":\"no-store\"}});\n    return new Response(JSON.stringify(envelope.data),{status:Number(envelope.proxyStatus||200),headers:{\"Content-Type\":\"application/json\",\"Cache-Control\":\"no-store\",\"X-Test-Project\":\"4.0\"}});\n  };\n})();\n";
+  const TEST_PROJECT_BRIDGE_JS = "(()=>{\n  let testProjectActive=new URLSearchParams(location.search).get(\"test_project\")===\"1\";\n  if(!testProjectActive&&window.parent&&window.parent!==window){try{testProjectActive=new URLSearchParams(window.parent.location.search).get(\"test_project\")===\"1\"}catch{}}\n  if(!testProjectActive)return;\n  const nativeFetch=window.fetch.bind(window),SESSION_KEY=\"zefirok-owner-session-v1\",PROXY=\"/api/owner/test-project/game\",STORAGE_PREFIX=\"zefirok-tp3:\";\n  const baseUrl=(()=>{const direct=String(document.baseURI||\"\");if(/^https?:/i.test(direct))return direct;try{if(window.parent&&window.parent!==window&&/^https?:/i.test(String(window.parent.location.href||\"\")))return String(window.parent.location.href)}catch{}return String(location.href||direct)})(),sandboxOrigin=(()=>{try{return new URL(baseUrl).origin}catch{return location.origin}})(),proxyUrl=(()=>{try{return new URL(PROXY,baseUrl).toString()}catch{return PROXY}})();\n  const storage=window.localStorage;\n  try{\n    const proto=Object.getPrototypeOf(storage),nativeGet=proto.getItem,nativeSet=proto.setItem,nativeRemove=proto.removeItem,nativeClear=proto.clear;\n    const scopedKey=(key)=>String(key)===SESSION_KEY?SESSION_KEY:`${STORAGE_PREFIX}${String(key)}`;\n    proto.getItem=function(key){return this===storage?nativeGet.call(this,scopedKey(key)):nativeGet.call(this,key)};\n    proto.setItem=function(key,value){return this===storage?nativeSet.call(this,scopedKey(key),value):nativeSet.call(this,key,value)};\n    proto.removeItem=function(key){return this===storage?nativeRemove.call(this,scopedKey(key)):nativeRemove.call(this,key)};\n    proto.clear=function(){if(this!==storage)return nativeClear.call(this);const remove=[];for(let i=0;i<this.length;i+=1){const key=this.key(i);if(String(key||\"\").startsWith(STORAGE_PREFIX))remove.push(key)}for(const key of remove)nativeRemove.call(this,key)};\n  }catch{}\n  async function bodyValue(body){\n    if(body==null)return {};\n    if(typeof body===\"string\"){try{return JSON.parse(body)}catch{return {raw:body.slice(0,12000)}}}\n    if(body instanceof URLSearchParams)return Object.fromEntries(body.entries());\n    if(typeof FormData!==\"undefined\"&&body instanceof FormData){const out={};for(const [key,value] of body.entries()){if(typeof value===\"string\")out[key]=value;else out[key]={name:String(value?.name||\"file\"),type:String(value?.type||\"\"),size:Number(value?.size||0),testProjectFileBlocked:true};}return out;}\n    if(typeof body===\"object\")return body;\n    return {};\n  }\n  window.__TEST_PROJECT_SANDBOX__={active:true,version:\"5.2\",storagePrefix:STORAGE_PREFIX};\n  window.fetch=async(input,init={})=>{\n    const original=input instanceof Request?input.url:String(input||\"\");let url;\n    try{url=new URL(original,baseUrl)}catch{return nativeFetch(input,init)}\n    if(url.origin!==sandboxOrigin||!url.pathname.startsWith(\"/api/\")||url.pathname.startsWith(\"/api/owner/\"))return nativeFetch(input,init);\n    const sourceRequest=input instanceof Request?input:null;\n    const method=String(init.method||sourceRequest?.method||\"GET\").toUpperCase();\n    let requestBody=init.body;\n    if(requestBody==null&&sourceRequest&&method!==\"GET\"&&method!==\"HEAD\"){try{requestBody=await sourceRequest.clone().text()}catch{requestBody=null}}\n    const payload=await bodyValue(requestBody);\n    let ownerSession=\"\";try{ownerSession=String(localStorage.getItem(SESSION_KEY)||\"\")}catch{}\n    const initData=String(payload?.initData||window.Telegram?.WebApp?.initData||\"\");\n    const controllerSignal=init.signal||sourceRequest?.signal;\n    const proxyResponse=await nativeFetch(proxyUrl,{method:\"POST\",headers:{\"Content-Type\":\"application/json\"},body:JSON.stringify({initData,ownerSession,path:url.pathname,method,query:Object.fromEntries(url.searchParams.entries()),payload}),cache:\"no-store\",credentials:\"same-origin\",signal:controllerSignal});\n    const envelope=await proxyResponse.json().catch(()=>({ok:false,error:\"Test Project proxy вернул некорректный ответ.\"}));\n    if(!proxyResponse.ok||!envelope?.ok||!(\"data\" in envelope))return new Response(JSON.stringify(envelope||{ok:false,error:\"Test Project proxy error\"}),{status:proxyResponse.status||500,headers:{\"Content-Type\":\"application/json\",\"Cache-Control\":\"no-store\"}});\n    return new Response(JSON.stringify(envelope.data),{status:Number(envelope.proxyStatus||200),headers:{\"Content-Type\":\"application/json\",\"Cache-Control\":\"no-store\",\"X-Test-Project\":\"5.2\"}});\n  };\n})();\n";
   let testProjectBootstrapPayload = null;
   const CLOUD_KEY = TEST_PROJECT_MODE ? "zefirok_test_project_progress_v3" : "zefirok_runner_progress_v2";
   const LOCAL_KEY = TEST_PROJECT_MODE ? "zefirok-test-project-runner-progress-v3" : "zefirok-runner-progress-v2";
@@ -747,10 +747,10 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
     const badge=document.createElement("div");badge.className="zefirok-test-project-badge";
     const mode=testProjectBootstrapPayload?.draftLayer?.active ? "DRAFT" : "PROD";
     const seasonTitle=String(testProjectBootstrapPayload?.snapshot?.season?.title || testProjectBootstrapPayload?.snapshot?.season?.id || "").trim();
-    badge.innerHTML=`<button type="button" data-tp-back>← TP</button><span>🧪 TP 5.0 · ${mode}${seasonTitle?` · ${seasonTitle}`:""}</span>`;
+    badge.innerHTML=`<button type="button" data-tp-back>← TP</button><span>🧪 TP 5.2 · ${mode}${seasonTitle?` · ${seasonTitle}`:""}</span>`;
     Object.assign(badge.style,{position:"fixed",left:"max(8px,var(--zefirok-content-safe-left,0px))",bottom:"max(8px,var(--zefirok-content-safe-bottom,0px))",zIndex:"2147483600",display:"flex",gap:"6px",alignItems:"center",fontFamily:"-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif",fontSize:"10px",fontWeight:"900",pointerEvents:"auto"});
     const span=badge.querySelector("span");Object.assign(span.style,{padding:"7px 9px",borderRadius:"999px",background:mode==="DRAFT"?"#7b4517":"#271d3e",color:mode==="DRAFT"?"#ffe1ad":"#eadfff",border:"1px solid rgba(255,255,255,.22)",boxShadow:"0 8px 24px rgba(0,0,0,.22)"});
-    const button=badge.querySelector("button");Object.assign(button.style,{border:"1px solid rgba(255,255,255,.22)",background:"#17131f",color:"#fff",borderRadius:"999px",padding:"7px 9px",font:"inherit"});button.addEventListener("click",()=>{location.href="/test-project.html?v=tp-5.0.0&view=game"});
+    const button=badge.querySelector("button");Object.assign(button.style,{border:"1px solid rgba(255,255,255,.22)",background:"#17131f",color:"#fff",borderRadius:"999px",padding:"7px 9px",font:"inherit"});button.addEventListener("click",()=>{location.href="/test-project.html?v=tp-5.2.0&view=game"});
     document.body.append(badge);
   }
 
@@ -758,7 +758,7 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
     if (window.__zefirokTestProjectCheckActive) return;
     window.__zefirokTestProjectCheckActive = true;
     const gameFrame = frame(); if (gameFrame) gameFrame.classList.remove("is-ready");
-    showMaintenanceGate("Проверяем owner-сессию и загружаем изолированного виртуального игрока…", { title:"Test Project 5.0", icon:"🧪" });
+    showMaintenanceGate("Проверяем owner-сессию и загружаем изолированного виртуального игрока…", { title:"Test Project 5.2", icon:"🧪" });
     try {
       await testProjectOwnerRequest("/api/owner/auth");
       testProjectBootstrapPayload = await testProjectOwnerRequest("/api/owner/test-project/bootstrap");
@@ -1028,8 +1028,8 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
     const passOffer = normalizedOfferTier ? `&offer=${encodeURIComponent(normalizedOfferTier)}` : "";
     const passTest = TEST_PROJECT_MODE ? "&test_project=1" : "";
     passFrame.src = initData
-      ? `/battle-pass.html?v=1.0.7${passView}${passOffer}${passTest}#tgInitData=${encodeURIComponent(initData)}`
-      : `/battle-pass.html?v=1.0.7${passView}${passOffer}${passTest}`;
+      ? `/battle-pass.html?v=1.0.8${passView}${passOffer}${passTest}#tgInitData=${encodeURIComponent(initData)}`
+      : `/battle-pass.html?v=1.0.8${passView}${passOffer}${passTest}`;
     layer.append(passFrame);
     passFrame.addEventListener("load", () => {
       const snapshot = syncTelegramViewport();
@@ -1097,7 +1097,7 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
 
   let ratingLayer = null;
   let ratingReadyTimer = 0;
-  const RATING_RELEASE_BUILD = "1.0.7-rating";
+  const RATING_RELEASE_BUILD = "1.0.8-rating";
   const RATING_READY_TIMEOUT_MS = 16000;
 
   function ratingFrame() {
@@ -1377,7 +1377,7 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
       const username = String(message.username || "").trim().replace(/^@/, "");
       if (!username) return;
       if (TEST_PROJECT_MODE) {
-        try { window.Telegram?.WebApp?.showAlert?.(`Test Project 5.0: внешний переход @${username} заблокирован.`); } catch {}
+        try { window.Telegram?.WebApp?.showAlert?.(`Test Project 5.2: внешний переход @${username} заблокирован.`); } catch {}
         console.info("Test Project blocked Telegram navigation", { username, start: String(message.start || "") });
         return;
       }
@@ -8847,6 +8847,14 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 }
 
 &lt;/style&gt;
+&lt;style id=&quot;zefirok-stock-art-icons-v1&quot;&gt;
+#zefirok-maltipoo-runner .stock-label-with-icon{display:inline-flex;align-items:center;gap:8px;min-width:0}
+#zefirok-maltipoo-runner .stock-section-icon{display:block;width:32px;height:32px;object-fit:contain;object-position:center;flex:0 0 32px;background:transparent!important;border:0!important;box-shadow:none!important}
+#zefirok-maltipoo-runner .profile-stat&gt;img.stock-section-icon{width:34px;height:34px;flex-basis:34px}
+#zefirok-maltipoo-runner .warehouse-head .stock-section-icon{width:34px;height:34px;flex-basis:34px}
+#zefirok-maltipoo-runner .booster-inline-art{display:inline-block;width:38px;height:38px;object-fit:contain;vertical-align:middle;flex:0 0 38px;margin-right:7px;background:transparent!important;border:0!important;box-shadow:none!important}
+#zefirok-maltipoo-runner button&gt;.booster-inline-art{pointer-events:none}
+&lt;/style&gt;
 &lt;div class=&quot;phone&quot;&gt;
 &lt;div class=&quot;brand&quot;&gt;
 &lt;div aria-hidden=&quot;true&quot; class=&quot;avatar&quot;&gt;&lt;img alt=&quot;&quot; data-avatar-sprite=&quot;&quot;/&gt;&lt;/div&gt;
@@ -8860,7 +8868,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 &lt;button aria-label=&quot;Играть&quot; aria-selected=&quot;true&quot; data-tab=&quot;game&quot; role=&quot;tab&quot; type=&quot;button&quot;&gt;&lt;img alt=&quot;&quot; data-shop-img=&quot;navGameButton&quot;/&gt;&lt;/button&gt;
 &lt;button aria-label=&quot;Магазин&quot; aria-selected=&quot;false&quot; data-tab=&quot;shop&quot; role=&quot;tab&quot; type=&quot;button&quot;&gt;&lt;img alt=&quot;&quot; data-shop-img=&quot;navShopButton&quot;/&gt;&lt;/button&gt;
 &lt;button aria-label=&quot;Мои покупки&quot; aria-selected=&quot;false&quot; class=&quot;warehouse-tab&quot; data-tab=&quot;warehouse&quot; role=&quot;tab&quot; type=&quot;button&quot;&gt;
-&lt;img alt=&quot;&quot; data-shop-img=&quot;warehouseButtonOff&quot; data-warehouse-tab-image/&gt;
+&lt;img alt=&quot;&quot; src=&quot;/assets/ui/icon_shopping.png&quot; data-warehouse-tab-image/&gt;
 &lt;span class=&quot;warehouse-tab__badge&quot; data-warehouse-tab-count hidden&gt;0&lt;/span&gt;
 &lt;/button&gt;
 &lt;button aria-label=&quot;Профиль&quot; aria-selected=&quot;false&quot; class=&quot;profile-tab&quot; data-tab=&quot;profile&quot; role=&quot;tab&quot; type=&quot;button&quot;&gt;
@@ -9086,7 +9094,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 &lt;section class=&quot;screen&quot; data-screen=&quot;warehouse&quot; hidden=&quot;&quot;&gt;
 &lt;div class=&quot;warehouse-shell&quot;&gt;
 &lt;div class=&quot;warehouse-head&quot;&gt;
-&lt;strong&gt;Склад кодов&lt;/strong&gt;
+&lt;strong class=&quot;stock-label-with-icon&quot;&gt;&lt;img class=&quot;stock-section-icon&quot; src=&quot;/assets/ui/icon_shopping.png&quot; alt=&quot;&quot;&gt;Склад кодов&lt;/strong&gt;
 &lt;span&gt;Все купленные награды хранятся здесь. Активный код можно открыть повторно в течение 24 часов.&lt;/span&gt;
 &lt;/div&gt;
 &lt;div aria-label=&quot;Фильтр покупок&quot; class=&quot;warehouse-summary&quot;&gt;
@@ -9127,7 +9135,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       &lt;div class=&quot;profile-stat&quot;&gt;&lt;img alt=&quot;&quot; data-shop-img=&quot;shopCoffee&quot;/&gt;&lt;div&gt;&lt;span&gt;Кофе&lt;/span&gt;&lt;strong data-profile-coffee&gt;0&lt;/strong&gt;&lt;/div&gt;&lt;/div&gt;
       &lt;div class=&quot;profile-stat&quot;&gt;&lt;img alt=&quot;&quot; data-shop-img=&quot;iconScore&quot;/&gt;&lt;div&gt;&lt;span&gt;Завершено забегов&lt;/span&gt;&lt;strong data-profile-completed-runs&gt;0&lt;/strong&gt;&lt;/div&gt;&lt;/div&gt;
       &lt;div class=&quot;profile-stat&quot;&gt;&lt;img alt=&quot;&quot; data-shop-img=&quot;shopMarshmallowAssortment&quot;/&gt;&lt;div&gt;&lt;span&gt;Успешных покупок&lt;/span&gt;&lt;strong data-profile-completed-purchases&gt;0&lt;/strong&gt;&lt;/div&gt;&lt;/div&gt;
-      &lt;div class=&quot;profile-stat&quot;&gt;&lt;img alt=&quot;&quot; data-shop-img=&quot;shopMarshmallowAssortment&quot;/&gt;&lt;div&gt;&lt;span&gt;Покупки на складе&lt;/span&gt;&lt;strong data-profile-purchases&gt;0&lt;/strong&gt;&lt;/div&gt;&lt;/div&gt;
+      &lt;div class=&quot;profile-stat&quot;&gt;&lt;img alt=&quot;&quot; class=&quot;stock-section-icon&quot; src=&quot;/assets/ui/icon_shopping.png&quot;/&gt;&lt;div&gt;&lt;span&gt;Покупки на складе&lt;/span&gt;&lt;strong data-profile-purchases&gt;0&lt;/strong&gt;&lt;/div&gt;&lt;/div&gt;
       &lt;div class=&quot;profile-stat&quot;&gt;&lt;img alt=&quot;&quot; data-shop-img=&quot;iconScore&quot;/&gt;&lt;div&gt;&lt;span&gt;Игровое звание&lt;/span&gt;&lt;strong data-profile-rank-short&gt;Новичок&lt;/strong&gt;&lt;/div&gt;&lt;/div&gt;
     &lt;/div&gt;
 
@@ -9170,7 +9178,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 
   &lt;section class=&quot;profile-section profile-section--cases&quot; aria-labelledby=&quot;profile-cases-title&quot;&gt;
     &lt;div class=&quot;profile-section-head profile-section-head--cases&quot;&gt;
-      &lt;div&gt;&lt;h3 id=&quot;profile-cases-title&quot;&gt;Подарки и коллекция&lt;/h3&gt;&lt;span data-case-sync-status&gt;Данные загружаются…&lt;/span&gt;&lt;/div&gt;
+      &lt;div&gt;&lt;h3 id=&quot;profile-cases-title&quot; class=&quot;stock-label-with-icon&quot;&gt;&lt;img class=&quot;stock-section-icon&quot; src=&quot;/assets/ui/icone_prize.png&quot; alt=&quot;&quot;&gt;Подарки и коллекция&lt;/h3&gt;&lt;span data-case-sync-status&gt;Данные загружаются…&lt;/span&gt;&lt;/div&gt;
       &lt;div class=&quot;profile-cases-head-actions&quot;&gt;
         &lt;span class=&quot;profile-cases-ready-badge&quot; data-profile-cases-ready hidden&gt;Доступно: 0&lt;/span&gt;
         &lt;button class=&quot;case-refresh-button&quot; data-case-refresh type=&quot;button&quot;&gt;Обновить&lt;/button&gt;
@@ -9178,18 +9186,18 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
     &lt;/div&gt;
     &lt;div class=&quot;player-gift-inbox&quot; data-player-gift-inbox&gt;
       &lt;div class=&quot;player-gift-inbox-head&quot;&gt;
-        &lt;span class=&quot;player-gift-inbox-summary-copy&quot;&gt;&lt;strong&gt;Подарки и компенсации&lt;/strong&gt;&lt;span&gt;Что именно выдавалось и по какой причине&lt;/span&gt;&lt;/span&gt;
+        &lt;span class=&quot;player-gift-inbox-summary-copy&quot;&gt;&lt;strong class=&quot;stock-label-with-icon&quot;&gt;&lt;img class=&quot;stock-section-icon&quot; src=&quot;/assets/ui/icone_prize.png&quot; alt=&quot;&quot;&gt;Подарки и компенсации&lt;/strong&gt;&lt;span&gt;Что именно выдавалось и по какой причине&lt;/span&gt;&lt;/span&gt;
         &lt;span class=&quot;player-gift-inbox-meta&quot; data-player-gift-inbox-meta&gt;Нет новых&lt;/span&gt;
       &lt;/div&gt;
       &lt;div class=&quot;player-gift-inbox-list&quot; data-player-gift-inbox-list&gt;&lt;/div&gt;
       &lt;button class=&quot;player-gift-inbox-more&quot; data-player-gift-inbox-more type=&quot;button&quot; hidden aria-expanded=&quot;false&quot;&gt;Показать ещё&lt;/button&gt;
     &lt;/div&gt;
     &lt;div class=&quot;case-gifted-wrap&quot; data-case-gifted-wrap&gt;
-      &lt;div class=&quot;case-subsection-title&quot;&gt;&lt;strong&gt;Склад кейсов&lt;/strong&gt;&lt;span&gt;Постоянные кейсы из уровней, магазина, подарков и акций. Сезонные открываются в пропуске.&lt;/span&gt;&lt;/div&gt;
+      &lt;div class=&quot;case-subsection-title&quot;&gt;&lt;strong class=&quot;stock-label-with-icon&quot;&gt;&lt;img class=&quot;stock-section-icon&quot; src=&quot;/assets/ui/icone_cases.png&quot; alt=&quot;&quot;&gt;Склад кейсов&lt;/strong&gt;&lt;span&gt;Постоянные кейсы из уровней, магазина, подарков и акций. Сезонные открываются в пропуске.&lt;/span&gt;&lt;/div&gt;
       &lt;div class=&quot;case-gifted-list&quot; data-case-gifted-list&gt;&lt;/div&gt;
     &lt;/div&gt;
     &lt;div class=&quot;case-subsection&quot;&gt;
-      &lt;div class=&quot;case-subsection-title&quot;&gt;&lt;strong&gt;Мои усилители&lt;/strong&gt;&lt;span&gt;Один усилитель работает два завершённых забега&lt;/span&gt;&lt;/div&gt;
+      &lt;div class=&quot;case-subsection-title&quot;&gt;&lt;strong class=&quot;stock-label-with-icon&quot;&gt;&lt;img class=&quot;stock-section-icon&quot; src=&quot;/assets/ui/icon_busters.png&quot; alt=&quot;&quot;&gt;Мои усилители&lt;/strong&gt;&lt;span&gt;Один усилитель работает два завершённых забега&lt;/span&gt;&lt;/div&gt;
       &lt;div class=&quot;case-boosters-list&quot; data-case-boosters-list&gt;&lt;/div&gt;
     &lt;/div&gt;
     &lt;div class=&quot;case-subsection&quot;&gt;
@@ -9310,7 +9318,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
     &lt;span class=&quot;profile-support-meta&quot; data-profile-support-meta&gt;Обращения ещё не загружены&lt;/span&gt;
   &lt;/section&gt;
 
-  &lt;div class=&quot;profile-version-row&quot;&gt;&lt;span&gt;Версия игры&lt;/span&gt;&lt;strong data-profile-game-version&gt;1.0.7&lt;/strong&gt;&lt;/div&gt;
+  &lt;div class=&quot;profile-version-row&quot;&gt;&lt;span&gt;Версия игры&lt;/span&gt;&lt;strong data-profile-game-version&gt;1.0.8&lt;/strong&gt;&lt;/div&gt;
   &lt;div aria-live=&quot;polite&quot; class=&quot;profile-toast&quot; data-profile-toast hidden&gt;&lt;/div&gt;
 &lt;/div&gt;
 &lt;/section&gt;
@@ -9362,7 +9370,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 &lt;div aria-hidden=&quot;true&quot; class=&quot;release-layer&quot; data-release-layer hidden&gt;
   &lt;div aria-labelledby=&quot;release-dialog-title&quot; aria-modal=&quot;true&quot; class=&quot;release-dialog&quot; role=&quot;dialog&quot; tabindex=&quot;-1&quot;&gt;
     &lt;div class=&quot;release-image-wrap&quot; data-release-image-wrap aria-hidden=&quot;true&quot;&gt;
-      &lt;img class=&quot;release-image&quot; data-release-image src=&quot;/assets/news/relise_game_news.png?v=1.0.7&quot; alt=&quot;Обновление Сладкого Забега 1.0.7&quot; width=&quot;1254&quot; height=&quot;1254&quot; decoding=&quot;async&quot; loading=&quot;lazy&quot; fetchpriority=&quot;low&quot;/&gt;
+      &lt;img class=&quot;release-image&quot; data-release-image src=&quot;/assets/news/relise_game_news.png?v=1.0.8&quot; alt=&quot;Обновление Сладкого Забега 1.0.8&quot; width=&quot;1254&quot; height=&quot;1254&quot; decoding=&quot;async&quot; loading=&quot;lazy&quot; fetchpriority=&quot;low&quot;/&gt;
     &lt;/div&gt;
     &lt;div class=&quot;release-kicker&quot; data-release-kicker&gt;Релиз игры&lt;/div&gt;
     &lt;h2 id=&quot;release-dialog-title&quot; data-release-title&gt;Обновление&lt;/h2&gt;
@@ -9779,52 +9787,25 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       // Заголовок, текст и кнопку ниже можно свободно редактировать.
       // Переносы строк внутри UPDATE_NOTICE_TEXT сохраняются.
       // Версия: год игры.сезонное обновление.исправление.
-      const GAME_VERSION = &quot;1.0.7&quot;;
+      const GAME_VERSION = &quot;1.0.8&quot;;
       const ECONOMY_RESET_KEY = &quot;economy-reset-0.1.1-beta-purchase-limit-fix-2026-07-23&quot;;
-      const UPDATE_NOTICE_KEY = &quot;release-1-0-7-support-speed-2026-08-15&quot;;
+      const UPDATE_NOTICE_KEY = &quot;release-1-0-8-pass-stock-2026-08-16&quot;;
       const UPDATE_NOTICE_ENABLED = true;
-      const UPDATE_NOTICE_TITLE = &quot;Сладкий Забег 1.0.7 — быстрее, удобнее, ближе к игрокам&quot;;
-      const UPDATE_NOTICE_TEXT = `Версия 1.0.7 уже доступна! Это большое обновление скорости, поддержки и повседневного удобства. Весь игровой прогресс сохраняется.
+      const UPDATE_NOTICE_TITLE = &quot;Сладкий Забег 1.0.8 — обновлённый пропуск и удобный склад&quot;;
+      const UPDATE_NOTICE_TEXT = `Версия 1.0.8 уже доступна! Обновили сезонный пропуск, «Мои покупки» и отображение наград. Весь игровой прогресс сохраняется.
 
-🛟 ПОДДЕРЖКА И ОБРАТНАЯ СВЯЗЬ
-• В профиле появился полноценный раздел «Поддержка»: можно создать обращение, выбрать тему, описать проблему или идею, приложить скриншот и видеть всю переписку.
-• Ответ команды сохраняется внутри игры и одновременно приходит в Telegram-бот.
-• В боте поддержка теперь работает пошагово: помощь, ошибка, идея или отзыв, фото, «Мои обращения» и продолжение уже открытого диалога.
-• После решения обращения можно отметить 👍 «Помогло» или 👎 «Не помогло». Если проблема осталась, обращение автоматически возвращается в работу.
+🎟 СЕЗОННЫЙ ПРОПУСК
+• Перебалансированы награды сезонного пропуска: распределение наград по уровням стало ровнее, а бесплатная и Элитная линии — понятнее.
+• Награды с зефиром теперь используют единое изображение игровой валюты, а не физического товара.
+• Усилители ×2 для очков, зефира и кофе отображаются своими игровыми изображениями вместо эмоджи.
 
-⚡ СКОРОСТЬ И СТАБИЛЬНОСТЬ
-• Ускорены запуск игры и возвращение после сворачивания, открытие кейсов, сезонного пропуска, получение XP и наград, покупки и награды рейтинга.
-• Убраны ситуации, когда кнопка могла надолго зависнуть на «Открываем…» или «Получаем…» при плохом соединении: интерфейс корректно возвращает управление игроку.
-• После забега баланс, XP, усилители и прогресс сезонных заданий обновляются быстрее.
-• Фоновые синхронизации больше не заставляют ждать перед переходом между разделами.
-• Короткое сворачивание Telegram больше не запускает тяжёлую полную перезагрузку профиля.
-• После подтверждения сервером результат открытия кейса показывается примерно за секунду вместо долгой дополнительной прокрутки.
-• Графика автоматически подстраивает нагрузку под устройство: на тяжёлых экранах уменьшается лишняя отрисовка, а декоративные частицы облегчаются только при просадке кадров.
+🛍 МОИ ПОКУПКИ И СКЛАД
+• Обновлено оформление раздела «Мои покупки» и склада — нужные разделы теперь легче различать визуально.
+• Покупки, усилители, кейсы и подарки получили отдельные изображения в интерфейсе.
+• Купленные награды и активные коды по-прежнему доступны в «Моих покупках».
 
-🎟 ЗАДАНИЯ И СЕЗОННЫЙ ПРОПУСК
-• Задания теперь расположены понятнее: активные — выше, затем выполненные, а уже полученный XP уходит вниз списка.
-• Выполненные задания появляются сразу в игре и Telegram без необходимости сначала открывать сезонный пропуск.
-• Исправлен залипающий баннер заданий: после получения XP уведомление и счётчик исчезают сразу.
-• Переход в сезонный пропуск больше не ждёт фонового завершения предыдущего забега.
-• Отображение дорожки 50+ стало компактнее и удобнее.
-
-🏆 РЕЙТИНГ
-• Статусы Элитного и Элитного+ отображаются заметной ✦ рядом с игроком, а по наградному кейсу можно открыть информацию.
-• Получение сезонной награды стало быстрее и больше не ждёт лишней повторной загрузки рейтинга и склада.
-
-🎁 ПРОФИЛЬ, КЕЙСЫ И НАГРАДЫ
-• «Подарки и компенсации» больше не превращаются в бесконечную ленту: до трёх записей видны сразу, а при большой истории показываются три последних и кнопка «Показать ещё».
-• «Все уровни и звания» теперь открываются сразу на текущем уровне игрока. Пока окно открыто, фон профиля не прокручивается.
-• Исправлено изображение зефира в карточках товара, подтверждении покупки, успешной покупке и на складе.
-• Открытие кейсов и обновление склада стали быстрее; сезонные задания за открытие кейсов обновляются без лишнего ожидания.
-• Специальные предложения теперь поддерживают больше наград: кейсы, аватары, рамки, следы, скины, музыку, XP и уровни пропуска, Элитный/Элитный+, игровые ресурсы, временное ×2 и физические подарки. Уже полученные уникальные награды не предлагаются повторно.
-• Исправлены редкие случаи повторной обработки завершённого забега: результат, награды и прогресс остаются едиными и корректными.
-
-🔐 ДОКУМЕНТЫ И КОНФИДЕНЦИАЛЬНОСТЬ
-• В профиле появился раздел «Документы и конфиденциальность» с Лицензионным соглашением, Политикой конфиденциальности, отдельным согласием на обработку персональных данных и историей подтверждений.
-
-🤝 УЛУЧШЕНИЕ РАБОТЫ КОМАНДЫ
-• Обновлены внутренние инструменты поддержки, диагностики и обработки обращений, чтобы быстрее находить проблемы и отвечать игрокам.
+✨ УЛУЧШЕНИЯ
+• Улучшена работа проекта.
 
 Спасибо, что помогаете делать «Сладкий Забег» лучше!`;
       const UPDATE_NOTICE_BUTTON = &quot;Продолжить&quot;;
@@ -11603,6 +11584,41 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       const CASE_SPECIAL_CATALOG = Object.freeze({
         season_xp_x2: { title: &quot;×2 XP&quot;, src: &quot;/assets/season-pass/xp_x2.png&quot;, description: &quot;Удваивает XP профиля за зачтённые забеги и покупки, а также XP сезона за новые забеги&quot; }
       });
+      const BOOSTER_TEXT_ASSETS = Object.freeze({
+        points: CASE_BOOSTER_CATALOG.points.src,
+        treats: CASE_BOOSTER_CATALOG.treats.src,
+        coffee: CASE_BOOSTER_CATALOG.coffee.src
+      });
+      const BOOSTER_LEADING_EMOJI_RE = /^[\s⭐☕🍥🍬🌀⚡\uFE0F]+/u;
+      function boosterUiCleanLabel(value) { return String(value || &quot;&quot;).replace(BOOSTER_LEADING_EMOJI_RE, &quot;&quot;).trim(); }
+      function boosterUiEnsureImage(node, src) {
+        if (!node || !src || node.querySelector?.(&#x27;:scope &gt; img[data-booster-ui-icon]&#x27;)) return;
+        for (const child of [...node.childNodes]) {
+          if (child.nodeType !== Node.TEXT_NODE) continue;
+          child.nodeValue = String(child.nodeValue || &quot;&quot;).replace(BOOSTER_LEADING_EMOJI_RE, &quot;&quot;);
+          if (String(child.nodeValue || &quot;&quot;).trim()) break;
+        }
+        const image = document.createElement(&quot;img&quot;);
+        image.src = src; image.alt = &quot;&quot;; image.className = &quot;booster-inline-art&quot;; image.dataset.boosterUiIcon = &quot;1&quot;; image.decoding = &quot;async&quot;;
+        node.prepend(image);
+      }
+      function applyBoosterArtIcons(scope = root) {
+        if (!scope?.querySelectorAll) return;
+        const defs = [
+          { key:&quot;×2очки&quot;, src:BOOSTER_TEXT_ASSETS.points },
+          { key:&quot;×2зефир&quot;, src:BOOSTER_TEXT_ASSETS.treats },
+          { key:&quot;×2кофе&quot;, src:BOOSTER_TEXT_ASSETS.coffee }
+        ];
+        for (const node of scope.querySelectorAll(&quot;button,strong,span&quot;)) {
+          if (node.children.length &gt; 2) continue;
+          const label = boosterUiCleanLabel(node.textContent).replace(/\s+/g, &quot;&quot;).toLowerCase();
+          const def = defs.find((entry) =&gt; label.startsWith(entry.key));
+          if (!def) continue;
+          const card = node.closest?.(&quot;.case-booster-card,.case-info-simple-reward&quot;);
+          if (card?.querySelector(&quot;img&quot;)) continue;
+          boosterUiEnsureImage(node, def.src);
+        }
+      }
       const CASE_REWARD_EFFECTS = Object.freeze({
         common: &quot;/assets/cases/effects/effect_standart.png&quot;,
         rare: &quot;/assets/cases/effects/effect_rar.png&quot;,
@@ -14335,6 +14351,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         }
         renderCaseHub();
         renderActiveRunBooster();
+        applyBoosterArtIcons(root);
         renderPlayerSupportSummary();
         if (profile &amp;&amp; isScreenVisible(&quot;profile&quot;) &amp;&amp; Date.now() - playerSupportStateLoadedAt &gt; 15000) void loadPlayerSupportState(false);
       }
@@ -15248,6 +15265,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
             : `&lt;strong&gt;Повтор косметики не пропадает&lt;/strong&gt;&lt;span&gt;За дубликат начисляется компенсация очками.&lt;/span&gt;`;
         caseRouletteBusy = false;
         caseContentEl.innerHTML = `&lt;div class=&quot;case-info-head&quot;&gt;${caseImageMarkup(info.type, false, &quot;case-info-chest&quot;)}&lt;span&gt;&lt;small&gt;Содержимое кейса&lt;/small&gt;&lt;h2 id=&quot;case-dialog-title&quot;&gt;${escapePurchaseText(info.title)}&lt;/h2&gt;&lt;p&gt;При открытии выпадает одна гарантированная награда.&lt;/p&gt;&lt;/span&gt;&lt;/div&gt;${guaranteeProgress}&lt;section class=&quot;case-info-section&quot;&gt;&lt;div class=&quot;case-info-section-title&quot;&gt;&lt;span&gt;&lt;strong&gt;Шансы по категориям&lt;/strong&gt;&lt;small&gt;Вероятность за одно открытие&lt;/small&gt;&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;case-info-category-list&quot;&gt;${categories}&lt;/div&gt;&lt;/section&gt;&lt;section class=&quot;case-info-section&quot;&gt;&lt;div class=&quot;case-info-section-title&quot;&gt;&lt;span&gt;&lt;strong&gt;Ресурсы и усилители&lt;/strong&gt;&lt;small&gt;Точное количество и шанс&lt;/small&gt;&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;case-info-simple-list&quot;&gt;${simpleRewards}&lt;/div&gt;&lt;/section&gt;${physicalSection}${musicSection}${cosmeticSections}&lt;div class=&quot;case-info-note&quot;&gt;${note}&lt;/div&gt;&lt;button class=&quot;case-result-done&quot; data-case-close type=&quot;button&quot;&gt;Понятно&lt;/button&gt;`;
+        applyBoosterArtIcons(caseContentEl);
         openCaseLayerShell();
         caseLayer.querySelector(&quot;.case-dialog&quot;)?.scrollTo({ top: 0, behavior: &quot;auto&quot; });
       }
@@ -15816,6 +15834,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         renderCaseCosmetics(caseAvatarsEl,&quot;avatar&quot;,CASE_AVATAR_CATALOG,state.caseOwnedAvatars,state.caseActiveAvatar);
         renderCaseCosmetics(caseFramesEl,&quot;frame&quot;,CASE_FRAME_CATALOG,state.caseOwnedFrames,state.caseActiveFrame);
         renderCaseCosmetics(caseTrailsEl,&quot;trail&quot;,CASE_TRAIL_CATALOG,state.caseOwnedTrails,state.caseActiveTrail);
+        applyBoosterArtIcons(caseBoostersListEl || root);
         updateProfileCaseBadges();
       }
 
@@ -16182,7 +16201,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         }
         const warehouseTabImage = root.querySelector(&quot;[data-warehouse-tab-image]&quot;);
         if (warehouseTabImage) {
-          warehouseTabImage.src = assetSources[name === &quot;warehouse&quot; ? &quot;warehouseButtonOn&quot; : &quot;warehouseButtonOff&quot;] || &quot;&quot;;
+          warehouseTabImage.src = &quot;/assets/ui/icon_shopping.png&quot;;
         }
         if (profileTabImage) {
           profileTabImage.src = assetSources[name === &quot;profile&quot; ? &quot;profileButtonOn&quot; : &quot;profileButtonOff&quot;] || &quot;&quot;;

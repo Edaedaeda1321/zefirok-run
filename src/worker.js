@@ -688,7 +688,7 @@ const LEGAL_DOCUMENTS = Object.freeze({
 });
 const LEGAL_BUILTIN_HASHES = Object.freeze({"agreement":{"version":"2026-08-13.1","sha256Ru":"7b9dad94ff4319c98b5fd01ade558ed3e409db705a8417551f89eb0dc4792c46","sha256En":"3f93d567fefd8e936a7ac8f63a9a5ceefc6bd6ecfcdfaad2e3733cf6e34d02d0","sha256Bundle":"93f28cca0556b480ee44a73ef775187a397dfc61bd4efda1171526a84fa69e84"},"privacy":{"version":"2026-08-13.2","sha256Ru":"687bba9ab60ee35124a17806ba7904870b1a3e09d23610430d45b92cd4719433","sha256En":"e0531d156e2ad0210b16349094499f7560cfca6167d911306926ed8e6ff45cbd","sha256Bundle":"435dd20f418603b3329dd1ab17a5e5ee619eee5341f425a547114fd235d4eee3"},"consent":{"version":"2026-08-13.1","sha256Ru":"10bcaf97ef31fad736f5e4f987ffad94c30c964e759b72c9a49c97738ede48d7","sha256En":"64383734cc3469028242d0c90867ccc42c7605269b187a94056fc963460ddb41","sha256Bundle":"11ebecc6978dac4f887b2ed4316f12f9ebafd4c41d5eeafed331ee12ae2948e0"}});
 
-const WORKER_BUILD = "1.0.7";
+const WORKER_BUILD = "1.0.8";
 const V07944_RELEASE_CANDIDATE_AUDIT = Object.freeze({ reset: true, claims: true, purchases: true, xp: true, concurrency: true });
 
 // =============================================================
@@ -718,13 +718,13 @@ const DEFAULT_SEASON_PASS_ELITE_PLUS_BENEFITS = Object.freeze({
 });
 const SEASON_PASS_MAX_LEVEL = 50;
 const SEASON_PASS_TREATS_CURRENCY_IMAGE = "/assets/season-pass/zefir_currency.png";
-// Balance v4: keep all 50 levels, but remove the late-season XP wall.
-// The curve starts at 300 XP, grows smoothly to 3 500 XP for level 50 and
-// totals 74 700 XP for a full completion. Existing players are rebased once by
-// preserving their current level and the filled fraction of that level.
+// Balance v2: the first 40 levels are deliberately accessible, while the final
+// ten require steadily more activity. Level 50 starts at ~123k XP instead of
+// the old ~1.04m XP. This keeps free players in the 40-45 range with moderate
+// activity, lets an active free player finish, and makes premium tasks meaningful.
 const SEASON_PASS_LEVEL_XP = Object.freeze(Array.from({ length: SEASON_PASS_MAX_LEVEL }, (_, index) => {
-  const progress = index / Math.max(1, SEASON_PASS_MAX_LEVEL - 1);
-  return Math.max(300, Math.round((300 + 3200 * Math.pow(progress, 1.7)) / 50) * 50);
+  const level = index + 1;
+  return Math.max(300, Math.round((300 + 0.05 * Math.pow(level, 3.1)) / 50) * 50);
 }));
 const SEASON_PASS_LEVEL_START_XP = Object.freeze((() => {
   const values = [0];
@@ -734,21 +734,11 @@ const SEASON_PASS_LEVEL_START_XP = Object.freeze((() => {
   return values;
 })());
 const SEASON_PASS_LEVEL_50_COMPLETE_XP = SEASON_PASS_LEVEL_START_XP[SEASON_PASS_MAX_LEVEL];
-const SEASON_PASS_OVERFLOW_LEVEL_XP = 1500;
+const SEASON_PASS_OVERFLOW_LEVEL_XP = 5000;
 const SEASON_PASS_BALANCE_V2_MARKER = "__system:season_pass_balance_v2";
 const SEASON_PASS_BALANCE_V3_GLOBAL_MARKER = "__system:season_pass_balance_v3_fair_recalc";
 const SEASON_PASS_BALANCE_V3_PLAYER_MARKER = "__system:season_pass_balance_v3_player";
-const SEASON_PASS_BALANCE_V4_MARKER = "__system:season_pass_balance_v4_smooth_50";
 const SEASON_PASS_ELITE_PLUS_TASK_X2_MARKER = "__system:elite_plus_task_x2_v1";
-const LEGACY_SEASON_PASS_LEVEL_XP_V2 = Object.freeze(Array.from({ length: SEASON_PASS_MAX_LEVEL }, (_, index) => {
-  const level = index + 1;
-  return Math.max(300, Math.round((300 + 0.05 * Math.pow(level, 3.1)) / 50) * 50);
-}));
-const LEGACY_SEASON_PASS_LEVEL_START_XP_V2 = Object.freeze((() => {
-  const values=[0];
-  for(let level=1;level<=SEASON_PASS_MAX_LEVEL;level+=1)values[level]=values[level-1]+LEGACY_SEASON_PASS_LEVEL_XP_V2[level-1];
-  return values;
-})());
 const LEGACY_SEASON_PASS_LEVEL_XP_V1 = Object.freeze(Array.from({ length: SEASON_PASS_MAX_LEVEL }, (_, index) => {
   const level = index + 1;
   return 50 + 25 * level * (level + 1);
@@ -846,26 +836,6 @@ function convertLegacySeasonPassXpToBalanceV2(value) {
   const level=legacySeasonPassLevelFromXpV1(xp);
   const oldStart=LEGACY_SEASON_PASS_LEVEL_START_XP_V1[level-1]||0;
   const oldNeed=Math.max(1,LEGACY_SEASON_PASS_LEVEL_XP_V1[level-1]||1);
-  const fraction=Math.max(0,Math.min(1,(xp-oldStart)/oldNeed));
-  const newStart=LEGACY_SEASON_PASS_LEVEL_START_XP_V2[level-1]||0;
-  const newNeed=Math.max(1,LEGACY_SEASON_PASS_LEVEL_XP_V2[level-1]||1);
-  return Math.max(0,Math.floor(newStart+fraction*newNeed));
-}
-
-function legacySeasonPassLevelFromXpV2(value){
-  const xp=Math.max(0,Math.floor(Number(value)||0));
-  let low=1,high=SEASON_PASS_MAX_LEVEL;
-  while(low<high){const mid=Math.ceil((low+high)/2);if(xp>=LEGACY_SEASON_PASS_LEVEL_START_XP_V2[mid-1])low=mid;else high=mid-1;}
-  return low;
-}
-
-function convertSeasonPassXpV2ToBalanceV4(value){
-  const xp=Math.max(0,Math.floor(Number(value)||0));
-  const oldFull=LEGACY_SEASON_PASS_LEVEL_START_XP_V2[SEASON_PASS_MAX_LEVEL];
-  if(xp>=oldFull)return SEASON_PASS_LEVEL_50_COMPLETE_XP+(xp-oldFull);
-  const level=legacySeasonPassLevelFromXpV2(xp);
-  const oldStart=LEGACY_SEASON_PASS_LEVEL_START_XP_V2[level-1]||0;
-  const oldNeed=Math.max(1,LEGACY_SEASON_PASS_LEVEL_XP_V2[level-1]||1);
   const fraction=Math.max(0,Math.min(1,(xp-oldStart)/oldNeed));
   const newStart=SEASON_PASS_LEVEL_START_XP[level-1]||0;
   const newNeed=Math.max(1,SEASON_PASS_LEVEL_XP[level-1]||1);
@@ -1081,10 +1051,10 @@ const REWARD_LIMIT_RESET_AT_SECONDS = 1784805300; // 23.07.2026 11:15 UTC
 // НАСТРОЙКИ ВЕРСИИ И РАЗДЕЛА «ОБНОВЛЕНИЕ» В БОТЕ.
 // Схема версии: первая цифра — год игры, вторая — сезонное обновление, третья — исправление.
 // Примеры: 1.0.1 — фикс, 1.2.0 — сезонное обновление, 2.0.0 — второй год игры.
-const GAME_VERSION = "1.0.7";
-const GAME_UPDATE_DATE = "15 августа 2026";
-const GAME_UPDATE_TITLE = "Сладкий Забег 1.0.7 — быстрее, удобнее, ближе к игрокам";
-const GAME_UPDATE_TYPE = "Скорость, поддержка и улучшения";
+const GAME_VERSION = "1.0.8";
+const GAME_UPDATE_DATE = "16 августа 2026";
+const GAME_UPDATE_TITLE = "Сладкий Забег 1.0.8 — обновлённый пропуск и удобный склад";
+const GAME_UPDATE_TYPE = "Сезонный пропуск, склад и интерфейс";
 
 // Что произошло с прогрессом в этом релизе:
 // "reset" — крупное обновление с обнулением прогресса;
@@ -1093,22 +1063,12 @@ const GAME_UPDATE_PROGRESS_MODE = "keep";
 const GAME_UPDATE_RESET_REASON = "Прогресс сохраняется. Обновление не сбрасывает валюты, XP, покупки, рейтинг за всё время или коллекцию.";
 
 const GAME_UPDATE_NOTES = Object.freeze([
-  "В профиле появился полноценный центр поддержки с обращениями, перепиской, историей и прикреплением скриншота.",
-  "Поддержка в Telegram-боте стала пошаговой: помощь, ошибки, идеи, отзывы, фото, «Мои обращения» и продолжение диалога.",
-  "После закрытия обращения можно поставить 👍/👎; если проблема не решена, обращение автоматически возвращается в работу.",
-  "Ускорены запуск игры, возврат после сворачивания, кейсы, сезонный пропуск, получение XP/наград, покупки и награды рейтинга.",
-  "Убраны долгие зависания действий при плохой сети; фоновые синхронизации больше не блокируют переходы между разделами.",
-  "После забега баланс, XP, усилители и сезонные задания обновляются быстрее; редкая повторная обработка результата устранена.",
-  "Результат открытия кейса после серверного подтверждения показывается примерно за секунду, а склад обновляется без лишнего ожидания.",
-  "Задания пропуска сортируются понятнее, уведомления приходят сразу, а баннер исчезает сразу после получения XP.",
-  "В рейтинге заметнее статусы Элитного/Элитного+, доступна информация по кейсу-награде, а получение сезонной награды стало быстрее.",
-  "Графическая нагрузка теперь адаптируется к устройству, чтобы уменьшить просадки кадров на тяжёлых экранах.",
-  "«Подарки и компенсации» показывают до трёх записей сразу и сворачивают длинную историю.",
-  "«Все уровни и звания» открываются на текущем уровне игрока; фон профиля больше не прокручивается под окном.",
-  "Специальные предложения поддерживают расширенный набор игровых и физических наград и не предлагают уже полученные уникальные предметы.",
-  "Исправлено изображение зефира во всех основных экранах покупки и склада.",
-  "В профиле появился раздел документов и конфиденциальности с актуальными версиями и историей подтверждений.",
-  "Улучшена работа команды поддержки и диагностики, чтобы быстрее обрабатывать обращения игроков.",
+  "Перебалансированы награды сезонного пропуска: распределение по уровням стало ровнее, а бесплатная и Элитная линии — понятнее.",
+  "Награды с зефиром теперь используют единое изображение игровой валюты, а не физического товара.",
+  "Усилители ×2 для очков, зефира и кофе отображаются своими игровыми изображениями вместо эмоджи.",
+  "Обновлено оформление раздела «Мои покупки» и склада; покупки, усилители, кейсы и подарки получили отдельные изображения.",
+  "Купленные награды и активные коды по-прежнему доступны в «Моих покупках».",
+  "Улучшена работа проекта.",
 ]);
 
 
@@ -1164,52 +1124,25 @@ const DEFAULT_SEASON_RESET_PLAN = Object.freeze({
 });
 
 // Встроенная релизная новость. BOT_NEWS_IMAGE_URL в Cloudflare может переопределить картинку.
-const DEFAULT_BOT_NEWS_IMAGE_URL = `${DEFAULT_GAME_URL.replace(/\/$/, "")}/assets/news/relise_game_news.png?v=1.0.7`;
-const BOT_NEWS_TITLE = "Сладкий Забег 1.0.7 — быстрее, удобнее, ближе к игрокам";
-const BOT_NEWS_TEXT = `Версия 1.0.7 уже доступна! Это большое обновление скорости, поддержки и повседневного удобства. Весь игровой прогресс сохраняется.
+const DEFAULT_BOT_NEWS_IMAGE_URL = `${DEFAULT_GAME_URL.replace(/\/$/, "")}/assets/news/relise_game_news.png?v=1.0.8`;
+const BOT_NEWS_TITLE = "Сладкий Забег 1.0.8 — обновлённый пропуск и удобный склад";
+const BOT_NEWS_TEXT = `Версия 1.0.8 уже доступна! Обновили сезонный пропуск, «Мои покупки» и отображение наград. Весь игровой прогресс сохраняется.
 
-🛟 ПОДДЕРЖКА И ОБРАТНАЯ СВЯЗЬ
-• В профиле появился полноценный раздел «Поддержка»: можно создать обращение, выбрать тему, описать проблему или идею, приложить скриншот и видеть всю переписку.
-• Ответ команды сохраняется внутри игры и одновременно приходит в Telegram-бот.
-• В боте поддержка теперь работает пошагово: помощь, ошибка, идея или отзыв, фото, «Мои обращения» и продолжение уже открытого диалога.
-• После решения обращения можно отметить 👍 «Помогло» или 👎 «Не помогло». Если проблема осталась, обращение автоматически возвращается в работу.
+🎟 СЕЗОННЫЙ ПРОПУСК
+• Перебалансированы награды сезонного пропуска: распределение наград по уровням стало ровнее, а бесплатная и Элитная линии — понятнее.
+• Награды с зефиром теперь используют единое изображение игровой валюты, а не физического товара.
+• Усилители ×2 для очков, зефира и кофе отображаются своими игровыми изображениями вместо эмоджи.
 
-⚡ СКОРОСТЬ И СТАБИЛЬНОСТЬ
-• Ускорены запуск игры и возвращение после сворачивания, открытие кейсов, сезонного пропуска, получение XP и наград, покупки и награды рейтинга.
-• Убраны ситуации, когда кнопка могла надолго зависнуть на «Открываем…» или «Получаем…» при плохом соединении: интерфейс корректно возвращает управление игроку.
-• После забега баланс, XP, усилители и прогресс сезонных заданий обновляются быстрее.
-• Фоновые синхронизации больше не заставляют ждать перед переходом между разделами.
-• Короткое сворачивание Telegram больше не запускает тяжёлую полную перезагрузку профиля.
-• После подтверждения сервером результат открытия кейса показывается примерно за секунду вместо долгой дополнительной прокрутки.
-• Графика автоматически подстраивает нагрузку под устройство: на тяжёлых экранах уменьшается лишняя отрисовка, а декоративные частицы облегчаются только при просадке кадров.
+🛍 МОИ ПОКУПКИ И СКЛАД
+• Обновлено оформление раздела «Мои покупки» и склада — нужные разделы теперь легче различать визуально.
+• Покупки, усилители, кейсы и подарки получили отдельные изображения в интерфейсе.
+• Купленные награды и активные коды по-прежнему доступны в «Моих покупках».
 
-🎟 ЗАДАНИЯ И СЕЗОННЫЙ ПРОПУСК
-• Задания теперь расположены понятнее: активные — выше, затем выполненные, а уже полученный XP уходит вниз списка.
-• Выполненные задания появляются сразу в игре и Telegram без необходимости сначала открывать сезонный пропуск.
-• Исправлен залипающий баннер заданий: после получения XP уведомление и счётчик исчезают сразу.
-• Переход в сезонный пропуск больше не ждёт фонового завершения предыдущего забега.
-• Отображение дорожки 50+ стало компактнее и удобнее.
-
-🏆 РЕЙТИНГ
-• Статусы Элитного и Элитного+ отображаются заметной ✦ рядом с игроком, а по наградному кейсу можно открыть информацию.
-• Получение сезонной награды стало быстрее и больше не ждёт лишней повторной загрузки рейтинга и склада.
-
-🎁 ПРОФИЛЬ, КЕЙСЫ И НАГРАДЫ
-• «Подарки и компенсации» больше не превращаются в бесконечную ленту: до трёх записей видны сразу, а при большой истории показываются три последних и кнопка «Показать ещё».
-• «Все уровни и звания» теперь открываются сразу на текущем уровне игрока. Пока окно открыто, фон профиля не прокручивается.
-• Исправлено изображение зефира в карточках товара, подтверждении покупки, успешной покупке и на складе.
-• Открытие кейсов и обновление склада стали быстрее; сезонные задания за открытие кейсов обновляются без лишнего ожидания.
-• Специальные предложения теперь поддерживают больше наград: кейсы, аватары, рамки, следы, скины, музыку, XP и уровни пропуска, Элитный/Элитный+, игровые ресурсы, временное ×2 и физические подарки. Уже полученные уникальные награды не предлагаются повторно.
-• Исправлены редкие случаи повторной обработки завершённого забега: результат, награды и прогресс остаются едиными и корректными.
-
-🔐 ДОКУМЕНТЫ И КОНФИДЕНЦИАЛЬНОСТЬ
-• В профиле появился раздел «Документы и конфиденциальность» с Лицензионным соглашением, Политикой конфиденциальности, отдельным согласием на обработку персональных данных и историей подтверждений.
-
-🤝 УЛУЧШЕНИЕ РАБОТЫ КОМАНДЫ
-• Обновлены внутренние инструменты поддержки, диагностики и обработки обращений, чтобы быстрее находить проблемы и отвечать игрокам.
+✨ УЛУЧШЕНИЯ
+• Улучшена работа проекта.
 
 Спасибо, что помогаете делать «Сладкий Забег» лучше!`;
-const BOT_NEWS_PUBLISHED_AT = 1786799460;
+const BOT_NEWS_PUBLISHED_AT = 1786904700;
 // =============================================================
 
 const PLAYER_BOT_COMMANDS = Object.freeze([
@@ -1512,9 +1445,6 @@ export default {
       // The access gate is intentionally served before the broad compatibility
       // audit. It only reads identity, feature flags and the current season, so a
       // cold Worker must not block the page behind unrelated ALTER/PRAGMA checks.
-      if (url.pathname.startsWith("/api/") && !url.pathname.startsWith("/api/owner/") && requestFromTestingBuild(request)) {
-        return jsonResponse({ ok:false, testProject:true, productionWrites:false, directProductionApiBlocked:true, error:`Testing Build ${TEST_PROJECT_TESTING_BUILD.version} обязан использовать Sandbox proxy. Прямой Production API заблокирован.` }, 409);
-      }
       if (url.pathname === "/api/battle-pass/access" && request.method === "POST") {
         const legalGate = await enforceLegalAcceptanceForRequest(request, env);
         if (legalGate) return legalGate;
@@ -1623,22 +1553,6 @@ export default {
         headers.set("Content-Security-Policy", "default-src 'self'; script-src 'self' 'unsafe-inline' https://telegram.org; style-src 'self' 'unsafe-inline'; img-src 'self' https: data: blob:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'");
         return new Response(asset.body, { status: asset.status, statusText: asset.statusText, headers });
       }
-      if ((request.method === "GET" || request.method === "HEAD") && TEST_PROJECT_TESTING_BUILD.files.includes(url.pathname)) {
-        const validBuild = url.searchParams.get("test_project") === "1" && url.searchParams.get("testing_build") === TEST_PROJECT_TESTING_BUILD.version;
-        if (!validBuild) return new Response("Not found", { status: 404, headers: { "Cache-Control": "no-store", "X-Robots-Tag": "noindex, nofollow, noarchive" } });
-        if (!env.ASSETS) return new Response("Not found", { status: 404 });
-        const asset = await env.ASSETS.fetch(request);
-        const headers = new Headers(asset.headers);
-        headers.set("Cache-Control", "no-store, no-cache, must-revalidate, private");
-        headers.set("Pragma", "no-cache");
-        headers.set("X-Robots-Tag", "noindex, nofollow, noarchive");
-        headers.set("Referrer-Policy", "same-origin");
-        headers.set("X-Frame-Options", "SAMEORIGIN");
-        headers.set("Cross-Origin-Resource-Policy", "same-origin");
-        headers.set("X-Test-Project", TEST_PROJECT_VERSION);
-        headers.set("X-Sweet-Run-Testing-Build", TEST_PROJECT_TESTING_BUILD.version);
-        return new Response(asset.body, { status: asset.status, statusText: asset.statusText, headers });
-      }
       if (url.pathname === "/api/staff/qr/access" && request.method === "POST") {
         return await staffQrAccess(request, env);
       }
@@ -1707,9 +1621,6 @@ export default {
       }
       if (url.pathname === "/api/battle-pass/story/test/open" && request.method === "POST") {
         return await openSeasonPassStoryTest(request, env);
-      }
-      if (url.pathname === "/api/battle-pass/seasonal-case/info" && request.method === "POST") {
-        return await getSeasonPassSeasonalCaseInfo(request, env);
       }
       if (url.pathname === "/api/battle-pass/seasonal-case/open" && request.method === "POST") {
         return await openSeasonPassSeasonalCase(request, env, ctx);
@@ -8512,7 +8423,7 @@ function configuredOwnerPanelUrl(env) {
     url.hash = "";
     return url.toString();
   } catch {
-    return `${DEFAULT_GAME_URL.replace(/\/$/, "")}/owner.html?v=owner-1.0.7-cc925-tp1`;
+    return `${DEFAULT_GAME_URL.replace(/\/$/, "")}/owner.html?v=owner-1.0.8-cc925-tp1`;
   }
 }
 
@@ -23664,19 +23575,6 @@ async function migrateSeasonPassBalanceV2IfNeeded(env,season,telegramId,player){
   return {...player,xp:newXp,revision:Number(player.revision||0)+1,updated_at:now};
 }
 
-async function migrateSeasonPassBalanceV4IfNeeded(env,season,telegramId,player){
-  if(!player)return player;
-  const id=String(telegramId),seasonId=String(season.id);
-  const marker=await env.DB.prepare(`SELECT 1 AS ok FROM season_pass_entitlements WHERE season_id=? AND telegram_id=? AND item_id=? LIMIT 1`).bind(seasonId,id,SEASON_PASS_BALANCE_V4_MARKER).first();
-  if(marker?.ok)return player;
-  const now=Math.floor(Date.now()/1000),oldXp=Math.max(0,Number(player.xp)||0),newXp=convertSeasonPassXpV2ToBalanceV4(oldXp);
-  await env.DB.batch([
-    env.DB.prepare(`UPDATE season_pass_players SET xp=?,revision=revision+1,updated_at=? WHERE season_id=? AND telegram_id=?`).bind(newXp,now,seasonId,id),
-    env.DB.prepare(`INSERT OR IGNORE INTO season_pass_entitlements(season_id,telegram_id,item_id,source,granted_at) VALUES(?,?,?,?,?)`).bind(seasonId,id,SEASON_PASS_BALANCE_V4_MARKER,'balance-v4-smooth-50',now)
-  ]);
-  return {...player,xp:newXp,revision:Number(player.revision||0)+1,updated_at:now};
-}
-
 async function reconcileElitePlusTaskXpBoost(env,season,telegramId,player){
   if(!player||seasonPassTaskXpMultiplierForPlayer(season,player)!==2)return player;
   const id=String(telegramId),seasonId=String(season.id);
@@ -23702,7 +23600,6 @@ async function ensureSeasonPassPlayer(env,season,telegramId){
   await env.DB.prepare(`INSERT OR IGNORE INTO season_pass_players(season_id,telegram_id,xp,premium_tier,elite_plus_bonus_granted,revision,created_at,updated_at) VALUES(?,?,0,'none',0,1,?,?)`).bind(season.id,String(telegramId),now,now).run();
   let player=await env.DB.prepare(`SELECT * FROM season_pass_players WHERE season_id=? AND telegram_id=? LIMIT 1`).bind(season.id,String(telegramId)).first();
   player=await migrateSeasonPassBalanceV2IfNeeded(env,season,telegramId,player);
-  player=await migrateSeasonPassBalanceV4IfNeeded(env,season,telegramId,player);
   player=await reconcileElitePlusTaskXpBoost(env,season,telegramId,player);
   return player;
 }
@@ -24012,10 +23909,10 @@ function configuredSeasonPassTasksUrl(env){
   try{
     const url=new URL(configuredGameUrl(env));
     url.pathname='/battle-pass.html';
-    url.search='?v=1.0.7&view=tasks';
+    url.search='?v=1.0.8&view=tasks';
     url.hash='';
     return url.toString();
-  }catch{return `${DEFAULT_GAME_URL.replace(/\/$/,'')}/battle-pass.html?v=1.0.7&view=tasks`;}
+  }catch{return `${DEFAULT_GAME_URL.replace(/\/$/,'')}/battle-pass.html?v=1.0.8&view=tasks`;}
 }
 
 function seasonPassTaskNoticePublic(rows,season){
@@ -24435,45 +24332,6 @@ function seasonPassSeasonalCaseWeightedPick(items,groupChances=null,rng=Math.ran
   return seasonPassWeightedPick(pickedGroup.items,rng);
 }
 
-function seasonPassSeasonalCaseRouletteItemView(row){
-  const kind=String(row?.reward_kind||row?.kind||'').trim(),itemId=String(row?.item_id||row?.itemId||'').trim(),amount=Math.max(1,Math.floor(Number(row?.amount)||1));
-  if(SEASON_PASS_COSMETIC_KINDS.includes(kind)){
-    const item=seasonPassAnyCosmeticCatalog(kind)?.[itemId]||null;if(!item)return null;
-    return {kind,itemId,amount:1,title:String(row?.title||item.title||itemId),imageUrl:String(row?.image_url||row?.imageUrl||seasonPassCosmeticImage(kind,itemId)||''),rarity:String(row?.rarity||item.rarity||'seasonal')};
-  }
-  const presentation=seasonPassSeasonalCaseResourcePresentation(kind,itemId,amount);if(!presentation)return null;
-  return {...presentation,title:String(row?.title||presentation.title||'Награда'),imageUrl:String(presentation.imageUrl||row?.image_url||row?.imageUrl||''),rarity:String(row?.rarity||presentation.rarity||'resource')};
-}
-function seasonPassSeasonalCaseRouletteItems(rows){
-  return (Array.isArray(rows)?rows:[]).map(seasonPassSeasonalCaseRouletteItemView).filter(Boolean).slice(0,160);
-}
-function seasonPassSeasonalCaseContentsView(rows,groupChancesValue=null,slotsValue=1,duplicatePointsValue=0){
-  const entries=(Array.isArray(rows)?rows:[]).map((row,index)=>{
-    const view=seasonPassSeasonalCaseRouletteItemView(row),weight=Number(row?.weight||1);if(!view||!Number.isFinite(weight)||weight<=0)return null;
-    const group=seasonPassSeasonalCaseRewardGroup(row);if(!group)return null;
-    return {...view,key:String(row?.item_key||row?.key||`${view.kind}:${view.itemId||index}`),group,weight};
-  }).filter(Boolean);
-  const groupTitles={currency:'Валюта',cosmetic:'Косметика',case:'Кейсы'},configured=seasonPassSeasonalCaseGroupChances(groupChancesValue);
-  const groupRows=['currency','cosmetic','case'].map(group=>{const items=entries.filter(item=>item.group===group),itemWeight=items.reduce((sum,item)=>sum+item.weight,0),configuredWeight=configured?Math.max(0,Number(configured[group]||0)):itemWeight;return {group,items,itemWeight,configuredWeight};}).filter(entry=>entry.items.length&&entry.itemWeight>0&&entry.configuredWeight>0);
-  const activeGroupTotal=groupRows.reduce((sum,entry)=>sum+entry.configuredWeight,0),chanceByKey=new Map(),groups=[];
-  for(const entry of groupRows){const groupChance=activeGroupTotal>0?entry.configuredWeight/activeGroupTotal*100:0;groups.push({id:entry.group,title:groupTitles[entry.group]||entry.group,chance:Number(groupChance.toFixed(4))});for(const item of entry.items){const chance=entry.itemWeight>0?groupChance*item.weight/entry.itemWeight:0;chanceByKey.set(item.key,Number(chance.toFixed(4)));}}
-  return {slots:Math.max(1,Math.min(5,Math.floor(Number(slotsValue)||1))),duplicatePoints:Math.max(0,Math.floor(Number(duplicatePointsValue)||0)),chanceMode:'per_slot',groups,items:entries.map(({key,group,weight,...view})=>({...view,group,chance:chanceByKey.get(key)||0})).sort((a,b)=>Number(b.chance||0)-Number(a.chance||0)||String(a.title||'').localeCompare(String(b.title||''),'ru'))};
-}
-async function getSeasonPassSeasonalCaseInfo(request,env){
-  try{
-    const ctx=await seasonPassRequestContext(request,env),caseId=String(ctx.body?.caseId||'').trim();if(!caseId)throw new ApiError(400,'Не выбран сезонный кейс.');
-    const [definition,grant]=await Promise.all([
-      env.DB.prepare(`SELECT d.*,s.title AS season_title FROM season_pass_case_definitions d LEFT JOIN season_pass_seasons s ON s.season_id=d.season_id WHERE d.case_id=? LIMIT 1`).bind(caseId).first(),
-      env.DB.prepare(`SELECT grant_id,snapshot_json,status FROM season_pass_case_grants WHERE telegram_id=? AND case_id=? AND status IN ('pending','opening') ORDER BY CASE status WHEN 'pending' THEN 0 ELSE 1 END,created_at,grant_id LIMIT 1`).bind(ctx.telegramId,caseId).first()
-    ]);
-    if(!definition||!Number(definition.enabled||0))throw new ApiError(404,'Сезонный кейс не найден.');
-    if(!grant?.grant_id)throw new ApiError(409,'Сезонных кейсов этого типа нет.');
-    const snapshot=safeJson(grant.snapshot_json,{}),snapshotItems=Array.isArray(snapshot?.items)?snapshot.items:[],sourceItems=snapshotItems.length?snapshotItems:await seasonPassEffectiveCaseItems(env,caseId);
-    const slots=Math.max(1,Math.min(5,Number(snapshot?.slots??definition.slots)||1)),duplicatePoints=Math.max(0,Number(snapshot?.duplicatePoints??definition.duplicate_points)||0),groupChances=seasonPassSeasonalCaseGroupChances(snapshot?.groupChances)||seasonPassSeasonalCaseGroupChances(definition.reward_groups_json);
-    return jsonResponse({ok:true,case:{caseId,title:String(snapshot?.title||definition.title||'Сезонный кейс'),description:String(snapshot?.description||definition.description||''),imageUrl:String(snapshot?.imageUrl||definition.closed_image_url||''),openImageUrl:String(snapshot?.openImageUrl||definition.open_image_url||''),seasonTitle:String(definition.season_title||''),released:Number(definition.release_at||0)<=Math.floor(Date.now()/1000),contents:seasonPassSeasonalCaseContentsView(sourceItems,groupChances,slots,duplicatePoints)}});
-  }catch(error){if(error instanceof ApiError)return jsonResponse({ok:false,error:error.message},error.status);console.error('getSeasonPassSeasonalCaseInfo failed',error);return jsonResponse({ok:false,error:'Не удалось загрузить содержимое сезонного кейса.'},500);}
-}
-
 async function openSeasonPassSeasonalCase(request,env,executionCtx=null){
   let grantId='',token='';
   try{
@@ -24490,7 +24348,7 @@ async function openSeasonPassSeasonalCase(request,env,executionCtx=null){
     if(Number(claim?.meta?.changes||0)<1)throw new ApiError(409,'Этот сезонный кейс уже открывается.');
     const [effectiveItems,ensured,taskEvent]=await Promise.all([seasonPassEffectiveCaseItems(env,caseId),ensureCasePlayerState(env,ctx.telegramId,{}),taskEventPromise]);
     const snapshot=safeJson(grant.snapshot_json,{});const snapshotItems=Array.isArray(snapshot?.items)?snapshot.items:[];
-    const sourceItems=snapshotItems.length?snapshotItems:effectiveItems;const rouletteItems=seasonPassSeasonalCaseRouletteItems(sourceItems);
+    const sourceItems=snapshotItems.length?snapshotItems:effectiveItems;
     let candidates=sourceItems.filter((row)=>{
       const kind=String(row.reward_kind||row.kind||''),itemId=String(row.item_id||row.itemId||'');
       if(SEASON_PASS_COSMETIC_KINDS.includes(kind))return Boolean(seasonPassAnyCosmeticCatalog(kind)?.[itemId]);
@@ -24503,17 +24361,17 @@ async function openSeasonPassSeasonalCase(request,env,executionCtx=null){
     const slots=Math.max(1,Math.min(5,Number(snapshot?.slots??definition.slots)||1));const duplicateValue=Math.max(0,Number(snapshot?.duplicatePoints??definition.duplicate_points)||0);const groupChances=seasonPassSeasonalCaseGroupChances(snapshot?.groupChances)||seasonPassSeasonalCaseGroupChances(definition.reward_groups_json);const rewards=[];let duplicatePoints=0;
     const walletTotals={points:0,treats:0,coffee:0};const normalCaseRewards=[];
     for(let slot=0;slot<slots;slot+=1){
-      const pick=seasonPassSeasonalCaseWeightedPick(candidates,groupChances);if(!pick){duplicatePoints+=duplicateValue;walletTotals.points+=duplicateValue;if(duplicateValue>0)rewards.push({kind:'points',itemId:'',amount:duplicateValue,title:'Компенсация за дубликат',imageUrl:seasonPassResourceRewardAsset('points'),rarity:'resource',duplicate:true});continue;}
+      const pick=seasonPassSeasonalCaseWeightedPick(candidates,groupChances);if(!pick){duplicatePoints+=duplicateValue;walletTotals.points+=duplicateValue;if(duplicateValue>0)rewards.push({kind:'points',amount:duplicateValue,title:'Компенсация за дубликат'});continue;}
       const kind=String(pick.reward_kind);
       if(SEASON_PASS_COSMETIC_KINDS.includes(kind)){
-        if(owned(pick)){duplicatePoints+=duplicateValue;walletTotals.points+=duplicateValue;if(duplicateValue>0)rewards.push({kind:'points',itemId:'',amount:duplicateValue,title:'Компенсация за дубликат',imageUrl:seasonPassResourceRewardAsset('points'),rarity:'resource',duplicate:true});candidates=candidates.filter(row=>String(row.item_key)!==String(pick.item_key));continue;}
+        if(owned(pick)){duplicatePoints+=duplicateValue;walletTotals.points+=duplicateValue;if(duplicateValue>0)rewards.push({kind:'points',amount:duplicateValue,title:'Компенсация за дубликат'});candidates=candidates.filter(row=>String(row.item_key)!==String(pick.item_key));continue;}
         const cosmetic={kind,itemId:String(pick.item_id)};seasonPassApplyCosmeticToState(ensured.state,cosmetic);
         rewards.push({kind:cosmetic.kind,itemId:cosmetic.itemId,amount:1,title:String(pick.title||seasonPassAnyCosmeticCatalog(cosmetic.kind)?.[cosmetic.itemId]?.title||cosmetic.itemId),imageUrl:String(pick.image_url||seasonPassCosmeticImage(cosmetic.kind,cosmetic.itemId)),rarity:String(pick.rarity||'seasonal')});
       }else{
         const amount=Math.max(1,Math.floor(Number(pick.amount)||1));
         if(kind==='points'||kind==='treats'||kind==='coffee')walletTotals[kind]+=amount;
         else if(kind==='case'){const caseType=normalizeCaseType(pick.item_id);if(caseType)normalCaseRewards.push({caseType,amount,slot});}
-        rewards.push({kind,itemId:String(pick.item_id||''),amount,title:String(pick.title||seasonPassSeasonalCaseResourcePresentation(kind,pick.item_id,amount)?.title||'Награда'),imageUrl:String(seasonPassSeasonalCaseResourcePresentation(kind,pick.item_id,amount)?.imageUrl||pick.image_url||''),rarity:String(pick.rarity||'resource')});
+        rewards.push({kind,itemId:String(pick.item_id||''),amount,title:String(pick.title||seasonPassSeasonalCaseResourcePresentation(kind,pick.item_id,amount)?.title||'Награда'),imageUrl:String(pick.image_url||seasonPassSeasonalCaseResourcePresentation(kind,pick.item_id,amount)?.imageUrl||''),rarity:String(pick.rarity||'resource')});
       }
       candidates=candidates.filter(row=>String(row.item_key)!==String(pick.item_key));if(!candidates.length&&slot+1<slots)break;
     }
@@ -24527,7 +24385,7 @@ async function openSeasonPassSeasonalCase(request,env,executionCtx=null){
     const [inventory]=await Promise.all([seasonPassSeasonalCaseInventory(env,ctx.telegramId),caseTaskStatements.length?env.DB.batch(caseTaskStatements):Promise.resolve([])]);
     seasonPassBackgroundWork(executionCtx,recordPlayerTimeline(env,ctx.telegramId,'seasonal_case_open',`открыл сезонный кейс «${String(definition.title||caseId)}»`,{caseId,grantId,rewards},`seasonal_case_${grantId}`,ctx.auth.user,now),'seasonal case timeline failed');
     seasonPassBackgroundWork(executionCtx,deliverSeasonPassTaskNotificationsForRows(env,ctx.telegramId,taskEvent?.season||ctx.season,taskEvent?.taskRows||[]),'seasonal case task notification failed');
-    return jsonResponse({ok:true,case:{caseId,grantId,title:String(snapshot?.title||definition.title||'Сезонный кейс'),closedImageUrl:String(snapshot?.imageUrl||definition.closed_image_url||''),openImageUrl:String(snapshot?.openImageUrl||definition.open_image_url||snapshot?.imageUrl||definition.closed_image_url||''),imageUrl:String(snapshot?.openImageUrl||snapshot?.imageUrl||definition.open_image_url||definition.closed_image_url||''),rouletteItems,rewards},seasonalCases:inventory});
+    return jsonResponse({ok:true,case:{caseId,grantId,title:String(snapshot?.title||definition.title||'Сезонный кейс'),imageUrl:String(snapshot?.openImageUrl||snapshot?.imageUrl||definition.open_image_url||definition.closed_image_url||''),rewards},seasonalCases:inventory});
   }catch(error){if(grantId&&token){try{await env.DB.prepare(`UPDATE season_pass_case_grants SET status='pending',opening_started_at=0,opening_token='' WHERE grant_id=? AND status='opening' AND opening_token=?`).bind(grantId,token).run();}catch{}}if(error instanceof ApiError)return jsonResponse({ok:false,error:error.message},error.status);console.error('openSeasonPassSeasonalCase failed',error);return jsonResponse({ok:false,error:'Не удалось открыть сезонный кейс.'},500);}
 }
 
@@ -31608,25 +31466,6 @@ async function ownerPanelStagingRollback(env,ctx){
 
 // =================== TEST PROJECT 5.2 · QA LAB · OWNER-ONLY ISOLATED SANDBOX ===================
 const TEST_PROJECT_VERSION = "5.2";
-const TEST_PROJECT_TESTING_BUILD = Object.freeze({
-  channel: "testing",
-  version: "1.0.9",
-  entry: "/index_testing_v1.0.9.html",
-  files: Object.freeze(["/index_testing_v1.0.9.html","/battle-pass_testing_v1.0.9.html","/rating_testing_v1.0.9.html"])
-});
-
-function requestFromTestingBuild(request) {
-  const raw = String(request?.headers?.get?.("Referer") || request?.headers?.get?.("Referrer") || "").trim();
-  if (!raw) return false;
-  try {
-    const ref = new URL(raw);
-    if (TEST_PROJECT_TESTING_BUILD.files.includes(ref.pathname)) return true;
-    return ref.searchParams.get("test_project") === "1" && ref.searchParams.get("testing_build") === TEST_PROJECT_TESTING_BUILD.version;
-  } catch {
-    return false;
-  }
-}
-
 const TEST_PROJECT_SNAPSHOT_SCHEMA = 6;
 const TEST_PROJECT_MAX_CASE_SIMULATIONS = 2000;
 const TEST_PROJECT_MAX_ACTIVITY_LOG = 80;
@@ -32536,7 +32375,6 @@ function testProjectClientPayload(row) {
     isolated: true,
     productionWrites: false,
     testProjectVersion: TEST_PROJECT_VERSION,
-    testingBuild: { channel:TEST_PROJECT_TESTING_BUILD.channel, version:TEST_PROJECT_TESTING_BUILD.version, entry:TEST_PROJECT_TESTING_BUILD.entry, files:[...TEST_PROJECT_TESTING_BUILD.files] },
     revision: Math.max(1, Number(row?.revision || 1)),
     updatedAt: Number(row?.updated_at || 0) * 1000,
     snapshotAt: Number(row?.snapshot_at || 0) * 1000,
@@ -32774,7 +32612,7 @@ function testProjectRollSeasonalCase(state, definition, options = {}) {
     const pick=seasonPassSeasonalCaseWeightedPick(candidates,groupChances,rng);if(!pick)break;
     if(SEASON_PASS_COSMETIC_KINDS.includes(pick.kind)){
       if(testProjectSeasonalCaseOwned(target,pick)){
-        duplicatePoints+=duplicateValue;if(duplicateValue>0){target.points=Math.min(999999999,Number(target.points||0)+duplicateValue);rewards.push({kind:"points",rewardType:"points",itemId:"",amount:duplicateValue,title:"Компенсация за дубликат",imageUrl:seasonPassResourceRewardAsset("points"),rarity:"resource",duplicate:true});}
+        duplicatePoints+=duplicateValue;if(duplicateValue>0){target.points=Math.min(999999999,Number(target.points||0)+duplicateValue);rewards.push({kind:"points",rewardType:"points",amount:duplicateValue,title:"Компенсация за дубликат",duplicate:true});}
       }else{
         testProjectGrantCosmetic(target,pick.kind,pick.itemId);
         rewards.push({kind:pick.kind,rewardType:pick.kind,itemId:pick.itemId,amount:1,title:pick.title||seasonPassAnyCosmeticCatalog(pick.kind)?.[pick.itemId]?.title||pick.itemId,imageUrl:pick.imageUrl||seasonPassCosmeticImage(pick.kind,pick.itemId),rarity:pick.rarity});
@@ -32782,7 +32620,7 @@ function testProjectRollSeasonalCase(state, definition, options = {}) {
     }else{
       testProjectApplyReward(target,{rewardType:pick.kind,itemId:pick.itemId,amount:pick.amount},definition);
       const presentation=seasonPassSeasonalCaseResourcePresentation(pick.kind,pick.itemId,pick.amount);
-      rewards.push({kind:pick.kind,rewardType:pick.kind,itemId:pick.itemId,amount:pick.amount,title:pick.title||presentation?.title||"Награда",imageUrl:presentation?.imageUrl||pick.imageUrl||"",rarity:pick.rarity||"resource"});
+      rewards.push({kind:pick.kind,rewardType:pick.kind,itemId:pick.itemId,amount:pick.amount,title:pick.title||presentation?.title||"Награда",imageUrl:pick.imageUrl||presentation?.imageUrl||"",rarity:pick.rarity||"resource"});
     }
     candidates=candidates.filter((item)=>item.key!==pick.key);
   }
@@ -33165,7 +33003,7 @@ const TEST_PROJECT_SANDBOX_API_PATHS = Object.freeze([
   "/api/shop/offers","/api/shop/offers/event","/api/shop/offers/purchase",
   "/api/battle-pass/access","/api/battle-pass/state","/api/battle-pass/run","/api/battle-pass/profile-bonus","/api/battle-pass/task-notices/pending","/api/battle-pass/task-notices/read",
   "/api/battle-pass/claim","/api/battle-pass/claim-all","/api/battle-pass/purchase-tier","/api/battle-pass/purchase-level",
-  "/api/battle-pass/tasks/claim","/api/battle-pass/tasks/claim-all","/api/battle-pass/overflow/claim","/api/battle-pass/seasonal-case/info","/api/battle-pass/seasonal-case/open",
+  "/api/battle-pass/tasks/claim","/api/battle-pass/tasks/claim-all","/api/battle-pass/overflow/claim","/api/battle-pass/seasonal-case/open",
   "/api/battle-pass/letter/state","/api/battle-pass/letter/open","/api/battle-pass/story/open","/api/battle-pass/story/complete","/api/battle-pass/story/test/open"
 ]);
 const TEST_PROJECT_SANDBOX_API_SET = new Set(TEST_PROJECT_SANDBOX_API_PATHS);
@@ -33503,19 +33341,13 @@ async function testProjectSandboxGameData(env, ctx) {
   if(path==="/api/battle-pass/tasks/claim"){
     const before=testProjectClone(state);const taskId=String(payload?.taskId||payload?.id||"");const lab=testProjectPassLabView(state,snapshot,nowMs);const task=(lab.tasks||[]).find((item)=>String(item.id)===taskId||String(item.key)===taskId);if(!task)throw new ApiError(404,"Тестовое задание не найдено.");if(task.locked)throw new ApiError(403,"Для этого задания нужен Elite / Elite+.");if(!task.complete)throw new ApiError(409,"Задание ещё не выполнено.");if(task.claimed)throw new ApiError(409,"Награда задания уже получена.");state.passTaskClaims=[...(state.passTaskClaims||[]),task.key];const earned=testProjectPassEarnedMultiplier(state,lab.season,nowMs),xpAwarded=Math.floor(Number(task.xp||0)*Math.max(1,Number(earned.multiplier||1)));state.passXp=Math.min(999999999,Number(state.passXp||0)+xpAwarded);await testProjectSandboxSave(env,ownerId,state,snapshot,before,"game_pass_task_claim",`Игра · задание +${xpAwarded} XP`);await reload();return response({...testProjectSandboxPassPayload(state,snapshot),taskUpdate:{id:task.id,periodKey:task.periodKey||"",claimed:true,complete:true,progress:Math.max(Number(task.progress||0),Number(task.target||1))},taskClaimableDelta:-1,receivedTask:{id:task.id,title:task.title,xp:xpAwarded},repeated:false,xpAwarded});
   }
-  if(path==="/api/battle-pass/seasonal-case/info"){
-    const caseId=String(payload?.caseId||Object.keys(state.seasonalCaseInventory||{}).find((id)=>Number(state.seasonalCaseInventory[id])>0)||"");
-    const definition=testProjectSeasonalCaseDefinition(snapshot,caseId);if(!definition)throw new ApiError(404,"Этот сезонный кейс не относится к выбранному сезону Test Project.");
-    if(!caseId||Number(state.seasonalCaseInventory?.[caseId]||0)<1)throw new ApiError(409,"Сезонных кейсов этого типа нет в Test Project.");
-    return response({ok:true,case:{caseId,title:String(definition.title||"Сезонный кейс"),description:String(definition.description||""),imageUrl:String(definition.imageUrl||""),openImageUrl:String(definition.openImageUrl||definition.imageUrl||""),seasonTitle:String(snapshot?.season?.title||""),released:true,contents:seasonPassSeasonalCaseContentsView((definition.items||[]).filter((item)=>item?.enabled!==false),definition.groupChances,definition.slots,definition.duplicatePoints)}});
-  }
   if(path==="/api/battle-pass/seasonal-case/open"){
     const caseId=String(payload?.caseId||Object.keys(state.seasonalCaseInventory||{}).find((id)=>Number(state.seasonalCaseInventory[id])>0)||"");
     const definition=testProjectSeasonalCaseDefinition(snapshot,caseId);if(!definition)throw new ApiError(404,"Этот сезонный кейс не относится к выбранному сезону Test Project.");
     if(!caseId||Number(state.seasonalCaseInventory?.[caseId]||0)<1)throw new ApiError(409,"Нет сезонного кейса в Test Project.");
     const before=testProjectClone(state);state.seasonalCaseInventory[caseId]=Math.max(0,Number(state.seasonalCaseInventory[caseId]||0)-1);const rolled=testProjectRollSeasonalCase(state,definition,{apply:true,rng:testProjectCaseRng(state,`seasonal:${caseId}`)});
     await testProjectSandboxSave(env,ownerId,state,snapshot,before,"game_seasonal_case_open",`Игра · открыт ${String(definition.title||"сезонный кейс")}`);await reload();
-    const pass=testProjectSandboxPassPayload(state,snapshot),casePayload={caseId,grantId:`tp_${crypto.randomUUID().replaceAll("-","").slice(0,16)}`,title:String(definition.title||"Сезонный кейс"),closedImageUrl:String(definition.imageUrl||""),openImageUrl:String(definition.openImageUrl||definition.imageUrl||""),imageUrl:String(definition.openImageUrl||definition.imageUrl||""),rouletteItems:seasonPassSeasonalCaseRouletteItems(definition.items||[]),rewards:rolled.rewards};
+    const pass=testProjectSandboxPassPayload(state,snapshot),casePayload={caseId,grantId:`tp_${crypto.randomUUID().replaceAll("-","").slice(0,16)}`,title:String(definition.title||"Сезонный кейс"),imageUrl:String(definition.openImageUrl||definition.imageUrl||""),rewards:rolled.rewards};
     return response({...pass,case:casePayload,opened:casePayload});
   }
   if(path==="/api/battle-pass/letter/state")return response({ok:true,letter:null});
@@ -33561,11 +33393,9 @@ async function testProjectAppendApiTrace(env,ownerId,entry){
 
 async function ownerPanelTestProjectGame(env, ctx) {
   const ownerId=String(ctx.user.id),path=String(ctx.body?.path||"").split("?")[0],method=String(ctx.body?.method||"GET").toUpperCase(),started=Date.now();
-  const testingBuildVersion=String(ctx.body?.testingBuildVersion||""),testingBuildEntry=String(ctx.body?.testingBuildEntry||"");
   const row=await testProjectEnsureWorkspace(env,ownerId),state=testProjectWorkspaceState(row),profile=testProjectNormalizeFaultProfile(state.sandbox?.faultProfile||{}),matched=testProjectFaultMatches(profile,path);
   let fault="",result=null,error=null,duplicateResult=null;
   try{
-    if(testingBuildVersion!==TEST_PROJECT_TESTING_BUILD.version||!TEST_PROJECT_TESTING_BUILD.files.includes(testingBuildEntry))throw new ApiError(409,`Sandbox принимает только Testing Build ${TEST_PROJECT_TESTING_BUILD.version}. Обновите Test Project и тестовые HTML-файлы целиком.`);
     if(matched&&profile.latencyMs>0){fault=`latency ${profile.latencyMs}ms`;await new Promise((resolve)=>setTimeout(resolve,profile.latencyMs));}
     if(matched&&profile.networkDropNext>0){
       fault=[fault,"network drop"].filter(Boolean).join(" · ");
@@ -33662,24 +33492,10 @@ function testProjectKnownOwned(kind,id){if(!id)return true;const base={avatar:CA
 
 async function ownerPanelTestProjectQa(env, ctx) {
   const {state,productionSnapshot,snapshot}=await testProjectQaLoad(env,ctx);const checks=[],add=(id,title,status,detail)=>checks.push({id,title,status,detail});
-  const testingBuildAssets=[];
-  for(const assetPath of TEST_PROJECT_TESTING_BUILD.files){
-    try{
-      const r=await env.ASSETS?.fetch?.(new Request(`https://zefirok.local${assetPath}`,{method:"GET"}));
-      const ok=Boolean(r?.ok),status=Number(r?.status||0);let text="";
-      if(ok){try{text=String(await r.text())}catch{}}
-      else{try{await r?.body?.cancel?.()}catch{}}
-      testingBuildAssets.push({path:assetPath,ok,status,bridgeReady:text.includes("__ZEFIROK_TP_BRIDGE_INSTALLED_V109__"),failClosed:text.includes("failClosed:true"),unsafeLegacyGate:text.includes('!preparedSource.includes("__TEST_PROJECT_SANDBOX__")')});
-    }catch(error){testingBuildAssets.push({path:assetPath,ok:false,status:0,bridgeReady:false,failClosed:false,error:String(error?.message||error).slice(0,120)});}
-  }
-  const missingTestingBuildAssets=testingBuildAssets.filter((item)=>!item.ok);
-  const brokenBridgeAssets=testingBuildAssets.filter((item)=>item.ok&&(!item.bridgeReady||!item.failClosed||item.unsafeLegacyGate));
-  add("testing_build_assets",`Testing Build ${TEST_PROJECT_TESTING_BUILD.version}`,missingTestingBuildAssets.length?"fail":"pass",missingTestingBuildAssets.length?`Не найдены: ${missingTestingBuildAssets.map((item)=>item.path).join(", ")}`:`${testingBuildAssets.length} versioned HTML-файла доступны`);
-  add("sandbox_bridge_contract","Sandbox Bridge fail-closed",brokenBridgeAssets.length?"fail":"pass",brokenBridgeAssets.length?`Нарушен bridge contract: ${brokenBridgeAssets.map((item)=>item.path).join(", ")}`:"Все TEST HTML содержат уникальный bridge marker и fail-closed защиту.");
   add("snapshot_schema","Snapshot schema",Number(productionSnapshot?.schema||0)>=TEST_PROJECT_SNAPSHOT_SCHEMA?"pass":"fail",`schema ${Number(productionSnapshot?.schema||0)} / ${TEST_PROJECT_SNAPSHOT_SCHEMA}`);
   add("public_config","Public config",snapshot?.publicConfig?.gameplay&&snapshot?.publicConfig?.shop&&snapshot?.publicConfig?.skins?"pass":"fail","gameplay + shop + skins присутствуют в снимке");
   add("sandbox_routes","Sandbox API",TEST_PROJECT_SANDBOX_API_PATHS.length>=50?"pass":"warn",`${TEST_PROJECT_SANDBOX_API_PATHS.length} перехваченных API маршрутов`);
-  add("production_writes","Изоляция Production",brokenBridgeAssets.length?"fail":"pass",brokenBridgeAssets.length?"Sandbox Bridge повреждён — Release Gate должен блокировать публикацию.":"Игровые запросы TP идут через owner-only sandbox proxy; прямой /api/* из TEST referrer дополнительно блокируется Worker-ом.");
+  add("production_writes","Изоляция Production","pass","Игровые запросы TP идут только через owner-only sandbox proxy; неизвестные /api/* блокируются.");
   add("draft_gameplay","Draft gameplay",state.draftMode!=="draft"||!state.tpDrafts?.gameConfig||String(snapshot?.publicConfig?.gameplay?.source)==="test_project_draft"?"pass":"fail",`source: ${String(snapshot?.publicConfig?.gameplay?.source||"—")}`);
   const cases=Object.keys(snapshot?.liveops?.cases||{});add("cases","Кейсы",LIVEOPS_CASE_IDS.every((id)=>cases.includes(id))?"pass":"fail",`${cases.length}/${LIVEOPS_CASE_IDS.length} типов доступны`);
   const season=snapshot?.season||{},seasons=Array.isArray(snapshot?.seasons)?snapshot.seasons:[];add("season_catalog","Список сезонов",seasons.length?"pass":"fail",`${seasons.length} сезонов доступно для выбора`);add("season","Season Pass",season?.id&&Array.isArray(season?.rewards)?"pass":"warn",season?.id?`${season.title||season.id} · наград ${season.rewards?.length||0}`:"Выбранный сезон отсутствует");
@@ -33690,7 +33506,7 @@ async function ownerPanelTestProjectQa(env, ctx) {
   const uniqueOk=[cs.ownedAvatars,cs.ownedFrames,cs.ownedTrails,cs.ownedMusicTracks,cs.ownedSkins,state.passClaims,state.passTaskClaims].every((arr)=>new Set(arr||[]).size===(arr||[]).length);add("unique_inventory","Нет дублей ID",uniqueOk?"pass":"fail","Коллекции и claim-ключи должны быть уникальными.");
   add("pass_level_consistency","Уровень пропуска",Number(state.passLevel)===seasonPassLevelFromXp(state.passXp)?"pass":"fail",`state ${state.passLevel} / XP→${seasonPassLevelFromXp(state.passXp)}`);
   add("pity_bounds","Pity counters",Number(cs.mythicPityCounter||0)<Math.max(1,Number(cs.mythicGuaranteedEvery||25))&&Number(cs.legendaryPityCounter||0)<Math.max(1,Number(cs.legendaryGuaranteedEvery||50))?"pass":"warn",`mythic ${cs.mythicPityCounter}/${cs.mythicGuaranteedEvery} · legendary ${cs.legendaryPityCounter}/${cs.legendaryGuaranteedEvery}`);
-  const summary=testProjectQaSummary(checks);return {ok:true,isolated:true,testProjectVersion:TEST_PROJECT_VERSION,testingBuild:{channel:TEST_PROJECT_TESTING_BUILD.channel,version:TEST_PROJECT_TESTING_BUILD.version,entry:TEST_PROJECT_TESTING_BUILD.entry,files:[...TEST_PROJECT_TESTING_BUILD.files]},summary,checks,coverage:{routes:TEST_PROJECT_SANDBOX_API_PATHS},draftMode:state.draftMode};
+  const summary=testProjectQaSummary(checks);return {ok:true,isolated:true,testProjectVersion:TEST_PROJECT_VERSION,summary,checks,coverage:{routes:TEST_PROJECT_SANDBOX_API_PATHS},draftMode:state.draftMode};
 }
 
 async function ownerPanelTestProjectFault(env,ctx){
@@ -35211,7 +35027,7 @@ async function ownerPanelDeleteSeasonPassSeason(env, ctx) {
 function ownerPanelNewsFallbackPresets(base) {
   return [
     {label:"Кейсы 5.0.1",url:`${base}/assets/news/cases-5.0.1.png`,path:"/assets/news/cases-5.0.1.png",group:"Новости"},
-    {label:"Релиз игры",url:`${base}/assets/news/relise_game_news.png?v=1.0.7`,path:"/assets/news/relise_game_news.png",group:"Новости"}
+    {label:"Релиз игры",url:`${base}/assets/news/relise_game_news.png?v=1.0.8`,path:"/assets/news/relise_game_news.png",group:"Новости"}
   ];
 }
 
@@ -35266,7 +35082,7 @@ async function ownerPanelNews(env, ctx) {
   const published=rows.find((row)=>String(row.status||"")==="published")||null;
   return {ok:true,
     channelHelp:{bot:"Публикация сохраняет пост в разделе «Новости» бота и запускает массовую доставку активным подписчикам через безопасную очередь/Cron.",game:"Та же опубликованная новость автоматически становится текущей новостью внутри игры. Непрочитавшие игроки увидят индикатор «Новая новость» при входе; отметка прочтения хранится на сервере."},
-    gameNews:published?{id:Number(published.id||0),title:String(published.title||""),body:String(published.body||""),imageUrl:String(published.image_url||""),version:GAME_VERSION,source:"Control Center · уведомление внутри игры",publishedAt:Number(published.published_at||0)}:{title:BOT_NEWS_TITLE,body:BOT_NEWS_TEXT,imageUrl:`${base}/assets/news/relise_game_news.png?v=1.0.7`,version:GAME_VERSION,source:"встроенное релизное окно"},
+    gameNews:published?{id:Number(published.id||0),title:String(published.title||""),body:String(published.body||""),imageUrl:String(published.image_url||""),version:GAME_VERSION,source:"Control Center · уведомление внутри игры",publishedAt:Number(published.published_at||0)}:{title:BOT_NEWS_TITLE,body:BOT_NEWS_TEXT,imageUrl:`${base}/assets/news/relise_game_news.png?v=1.0.8`,version:GAME_VERSION,source:"встроенное релизное окно"},
     news:rows.map(row=>({id:Number(row.id||0),title:String(row.title||""),body:String(row.body||""),imageUrl:String(row.image_url||""),status:String(row.status||""),publishedAt:Number(row.published_at||0),createdByName:String(row.created_by_name||""),delivery:ownerPanelNewsBroadcastState(row)})),
     assetCatalog:{source:assetCatalog.source,catalogHash:assetCatalog.catalogHash||"",count:assetCatalog.count},
     presets:[...mediaPresets,...assetCatalog.presets]
