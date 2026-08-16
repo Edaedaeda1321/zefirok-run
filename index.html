@@ -8852,8 +8852,35 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 #zefirok-maltipoo-runner .stock-section-icon{display:block;width:32px;height:32px;object-fit:contain;object-position:center;flex:0 0 32px;background:transparent!important;border:0!important;box-shadow:none!important}
 #zefirok-maltipoo-runner .profile-stat&gt;img.stock-section-icon{width:34px;height:34px;flex-basis:34px}
 #zefirok-maltipoo-runner .warehouse-head .stock-section-icon{width:34px;height:34px;flex-basis:34px}
+#zefirok-maltipoo-runner .stock-action-icon{display:inline-block;width:28px;height:28px;object-fit:contain;vertical-align:middle;flex:0 0 28px;margin-right:6px;background:transparent!important;border:0!important;box-shadow:none!important}
 #zefirok-maltipoo-runner .booster-inline-art{display:inline-block;width:38px;height:38px;object-fit:contain;vertical-align:middle;flex:0 0 38px;margin-right:7px;background:transparent!important;border:0!important;box-shadow:none!important}
-#zefirok-maltipoo-runner button&gt;.booster-inline-art{pointer-events:none}
+#zefirok-maltipoo-runner button&gt;.stock-action-icon,#zefirok-maltipoo-runner button&gt;.booster-inline-art{pointer-events:none}
+&lt;/style&gt;
+&lt;style id=&quot;zefirok-warehouse-hub-v1&quot;&gt;
+#zefirok-maltipoo-runner .warehouse-head-main{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+#zefirok-maltipoo-runner .warehouse-head-main&gt;div:first-child{display:grid;gap:4px;min-width:0}
+#zefirok-maltipoo-runner .warehouse-head-main&gt;div:first-child&gt;strong{font-size:18px;color:#6b354c}
+#zefirok-maltipoo-runner .warehouse-head-main&gt;div:first-child&gt;span{font-size:11px;line-height:1.45;color:#92737f}
+#zefirok-maltipoo-runner .warehouse-head-actions{display:flex;align-items:center;justify-content:flex-end;gap:6px;flex-wrap:wrap}
+#zefirok-maltipoo-runner .warehouse-sync-status{display:block;margin-top:5px;font-size:10px!important;color:#a07686!important}
+#zefirok-maltipoo-runner .stock-hub-tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;margin:12px 0 13px}
+#zefirok-maltipoo-runner .stock-hub-tab{position:relative;display:grid;place-items:center;gap:4px;min-width:0;min-height:76px;padding:8px 3px 7px;border:1px solid rgba(222,155,181,.34);border-radius:17px;background:linear-gradient(180deg,#fff,#fff7fa);color:#7a5261;font:900 9px/1.1 inherit;box-shadow:0 5px 14px rgba(116,65,83,.05);-webkit-tap-highlight-color:transparent}
+#zefirok-maltipoo-runner .stock-hub-tab:active{transform:scale(.975)}
+#zefirok-maltipoo-runner .stock-hub-tab[aria-selected=&quot;true&quot;]{border-color:#e889ad;background:linear-gradient(180deg,#fff0f5,#ffe4ee);color:#a54068;box-shadow:inset 0 0 0 1px rgba(220,100,145,.1),0 7px 18px rgba(183,74,116,.1)}
+#zefirok-maltipoo-runner .stock-hub-tab&gt;img{display:block;width:42px;height:42px;object-fit:contain;object-position:center;background:transparent;border:0;box-shadow:none}
+#zefirok-maltipoo-runner .stock-hub-tab&gt;span:not(.stock-hub-tab-badge){display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#zefirok-maltipoo-runner .stock-hub-tab-badge{position:absolute;top:5px;right:6px;display:grid;place-items:center;min-width:19px;height:19px;padding:0 5px;border:2px solid #fff;border-radius:999px;background:#ef7ca9;color:#fff;font-size:8px;font-weight:950;box-sizing:border-box}
+#zefirok-maltipoo-runner .stock-hub-tab-badge[hidden]{display:none!important}
+#zefirok-maltipoo-runner .stock-hub-panel{display:grid;gap:10px}
+#zefirok-maltipoo-runner .stock-hub-panel[hidden]{display:none!important}
+#zefirok-maltipoo-runner .stock-hub-panel-head{display:grid;gap:3px;padding:2px 2px 1px;color:#684532}
+#zefirok-maltipoo-runner .stock-hub-panel-head strong{font-size:14px}
+#zefirok-maltipoo-runner .stock-hub-panel-head span{font-size:10px;line-height:1.4;color:#987668}
+#zefirok-maltipoo-runner .stock-hub-panel .player-gift-inbox{margin-bottom:0}
+#zefirok-maltipoo-runner .stock-hub-panel .case-gifted-wrap{margin:0}
+#zefirok-maltipoo-runner .stock-hub-panel .case-boosters-list{margin:0}
+#zefirok-maltipoo-runner .profile-section--cases .profile-section-head{margin-bottom:0}
+@media(max-width:390px){#zefirok-maltipoo-runner .stock-hub-tab{min-height:69px;border-radius:15px}#zefirok-maltipoo-runner .stock-hub-tab&gt;img{width:36px;height:36px}#zefirok-maltipoo-runner .stock-hub-tabs{gap:5px}}
 &lt;/style&gt;
 &lt;div class=&quot;phone&quot;&gt;
 &lt;div class=&quot;brand&quot;&gt;
@@ -8868,7 +8895,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 &lt;button aria-label=&quot;Играть&quot; aria-selected=&quot;true&quot; data-tab=&quot;game&quot; role=&quot;tab&quot; type=&quot;button&quot;&gt;&lt;img alt=&quot;&quot; data-shop-img=&quot;navGameButton&quot;/&gt;&lt;/button&gt;
 &lt;button aria-label=&quot;Магазин&quot; aria-selected=&quot;false&quot; data-tab=&quot;shop&quot; role=&quot;tab&quot; type=&quot;button&quot;&gt;&lt;img alt=&quot;&quot; data-shop-img=&quot;navShopButton&quot;/&gt;&lt;/button&gt;
 &lt;button aria-label=&quot;Мои покупки&quot; aria-selected=&quot;false&quot; class=&quot;warehouse-tab&quot; data-tab=&quot;warehouse&quot; role=&quot;tab&quot; type=&quot;button&quot;&gt;
-&lt;img alt=&quot;&quot; src=&quot;/assets/ui/icon_shopping.png&quot; data-warehouse-tab-image/&gt;
+&lt;img alt=&quot;&quot; data-shop-img=&quot;warehouseButtonOff&quot; data-warehouse-tab-image/&gt;
 &lt;span class=&quot;warehouse-tab__badge&quot; data-warehouse-tab-count hidden&gt;0&lt;/span&gt;
 &lt;/button&gt;
 &lt;button aria-label=&quot;Профиль&quot; aria-selected=&quot;false&quot; class=&quot;profile-tab&quot; data-tab=&quot;profile&quot; role=&quot;tab&quot; type=&quot;button&quot;&gt;
@@ -9093,15 +9120,58 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 &lt;/section&gt;
 &lt;section class=&quot;screen&quot; data-screen=&quot;warehouse&quot; hidden=&quot;&quot;&gt;
 &lt;div class=&quot;warehouse-shell&quot;&gt;
-&lt;div class=&quot;warehouse-head&quot;&gt;
-&lt;strong class=&quot;stock-label-with-icon&quot;&gt;&lt;img class=&quot;stock-section-icon&quot; src=&quot;/assets/ui/icon_shopping.png&quot; alt=&quot;&quot;&gt;Склад кодов&lt;/strong&gt;
-&lt;span&gt;Все купленные награды хранятся здесь. Активный код можно открыть повторно в течение 24 часов.&lt;/span&gt;
-&lt;/div&gt;
-&lt;div aria-label=&quot;Фильтр покупок&quot; class=&quot;warehouse-summary&quot;&gt;
-&lt;button aria-pressed=&quot;false&quot; data-warehouse-filter=&quot;active&quot; type=&quot;button&quot;&gt;&lt;span&gt;Активные&lt;/span&gt;&lt;strong data-warehouse-active&gt;0&lt;/strong&gt;&lt;/button&gt;
-&lt;button aria-pressed=&quot;false&quot; data-warehouse-filter=&quot;expired&quot; type=&quot;button&quot;&gt;&lt;span&gt;Сгорели&lt;/span&gt;&lt;strong data-warehouse-expired&gt;0&lt;/strong&gt;&lt;/button&gt;
-&lt;/div&gt;
-&lt;div aria-live=&quot;polite&quot; class=&quot;warehouse-list&quot; data-warehouse-list&gt;&lt;/div&gt;
+  &lt;div class=&quot;warehouse-head&quot;&gt;
+    &lt;div class=&quot;warehouse-head-main&quot;&gt;
+      &lt;div&gt;
+        &lt;strong class=&quot;stock-label-with-icon&quot;&gt;&lt;img class=&quot;stock-section-icon&quot; src=&quot;/assets/ui/icon_shopping.png&quot; alt=&quot;&quot;&gt;Мои покупки&lt;/strong&gt;
+        &lt;span&gt;Покупки, усилители, кейсы и подарки собраны в одном месте.&lt;/span&gt;
+      &lt;/div&gt;
+      &lt;div class=&quot;warehouse-head-actions&quot;&gt;
+        &lt;span class=&quot;profile-cases-ready-badge&quot; data-profile-cases-ready hidden&gt;Доступно: 0&lt;/span&gt;
+        &lt;button class=&quot;case-refresh-button&quot; data-case-refresh type=&quot;button&quot;&gt;Обновить&lt;/button&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+    &lt;span class=&quot;warehouse-sync-status&quot; data-case-sync-status&gt;Данные склада загружаются…&lt;/span&gt;
+  &lt;/div&gt;
+
+  &lt;div class=&quot;stock-hub-tabs&quot; role=&quot;tablist&quot; aria-label=&quot;Разделы склада&quot;&gt;
+    &lt;button class=&quot;stock-hub-tab&quot; data-stock-view=&quot;purchases&quot; role=&quot;tab&quot; aria-selected=&quot;true&quot; type=&quot;button&quot;&gt;&lt;img src=&quot;/assets/ui/icon_shopping.png&quot; alt=&quot;&quot;&gt;&lt;span&gt;Покупки&lt;/span&gt;&lt;b class=&quot;stock-hub-tab-badge&quot; data-stock-tab-badge=&quot;purchases&quot; hidden&gt;0&lt;/b&gt;&lt;/button&gt;
+    &lt;button class=&quot;stock-hub-tab&quot; data-stock-view=&quot;boosters&quot; role=&quot;tab&quot; aria-selected=&quot;false&quot; type=&quot;button&quot;&gt;&lt;img src=&quot;/assets/ui/icon_busters.png&quot; alt=&quot;&quot;&gt;&lt;span&gt;Усилители&lt;/span&gt;&lt;b class=&quot;stock-hub-tab-badge&quot; data-stock-tab-badge=&quot;boosters&quot; hidden&gt;0&lt;/b&gt;&lt;/button&gt;
+    &lt;button class=&quot;stock-hub-tab&quot; data-stock-view=&quot;cases&quot; role=&quot;tab&quot; aria-selected=&quot;false&quot; type=&quot;button&quot;&gt;&lt;img src=&quot;/assets/ui/icone_cases.png&quot; alt=&quot;&quot;&gt;&lt;span&gt;Кейсы&lt;/span&gt;&lt;b class=&quot;stock-hub-tab-badge&quot; data-stock-tab-badge=&quot;cases&quot; hidden&gt;0&lt;/b&gt;&lt;/button&gt;
+    &lt;button class=&quot;stock-hub-tab&quot; data-stock-view=&quot;gifts&quot; role=&quot;tab&quot; aria-selected=&quot;false&quot; type=&quot;button&quot;&gt;&lt;img src=&quot;/assets/ui/icone_prize.png&quot; alt=&quot;&quot;&gt;&lt;span&gt;Подарки&lt;/span&gt;&lt;b class=&quot;stock-hub-tab-badge&quot; data-stock-tab-badge=&quot;gifts&quot; hidden&gt;0&lt;/b&gt;&lt;/button&gt;
+  &lt;/div&gt;
+
+  &lt;div class=&quot;stock-hub-panel&quot; data-stock-panel=&quot;purchases&quot;&gt;
+    &lt;div class=&quot;stock-hub-panel-head&quot;&gt;&lt;strong&gt;Покупки&lt;/strong&gt;&lt;span&gt;Физические награды и проверяемые коды. Активный код можно открыть повторно в течение 24 часов.&lt;/span&gt;&lt;/div&gt;
+    &lt;div aria-label=&quot;Фильтр покупок&quot; class=&quot;warehouse-summary&quot;&gt;
+      &lt;button aria-pressed=&quot;false&quot; data-warehouse-filter=&quot;active&quot; type=&quot;button&quot;&gt;&lt;span&gt;Активные&lt;/span&gt;&lt;strong data-warehouse-active&gt;0&lt;/strong&gt;&lt;/button&gt;
+      &lt;button aria-pressed=&quot;false&quot; data-warehouse-filter=&quot;expired&quot; type=&quot;button&quot;&gt;&lt;span&gt;Сгорели&lt;/span&gt;&lt;strong data-warehouse-expired&gt;0&lt;/strong&gt;&lt;/button&gt;
+    &lt;/div&gt;
+    &lt;div aria-live=&quot;polite&quot; class=&quot;warehouse-list&quot; data-warehouse-list&gt;&lt;/div&gt;
+  &lt;/div&gt;
+
+  &lt;div class=&quot;stock-hub-panel&quot; data-stock-panel=&quot;boosters&quot; hidden&gt;
+    &lt;div class=&quot;stock-hub-panel-head&quot;&gt;&lt;strong&gt;Мои усилители&lt;/strong&gt;&lt;span&gt;Усилители ×2 работают на следующие завершённые забеги.&lt;/span&gt;&lt;/div&gt;
+    &lt;div class=&quot;case-boosters-list&quot; data-case-boosters-list&gt;&lt;/div&gt;
+  &lt;/div&gt;
+
+  &lt;div class=&quot;stock-hub-panel&quot; data-stock-panel=&quot;cases&quot; hidden&gt;
+    &lt;div class=&quot;case-gifted-wrap&quot; data-case-gifted-wrap&gt;
+      &lt;div class=&quot;case-subsection-title&quot;&gt;&lt;strong&gt;Склад кейсов&lt;/strong&gt;&lt;span&gt;Постоянные кейсы из уровней, магазина, подарков и акций. Сезонные открываются в пропуске.&lt;/span&gt;&lt;/div&gt;
+      &lt;div class=&quot;case-gifted-list&quot; data-case-gifted-list&gt;&lt;/div&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+
+  &lt;div class=&quot;stock-hub-panel&quot; data-stock-panel=&quot;gifts&quot; hidden&gt;
+    &lt;div class=&quot;player-gift-inbox&quot; data-player-gift-inbox&gt;
+      &lt;div class=&quot;player-gift-inbox-head&quot;&gt;
+        &lt;span class=&quot;player-gift-inbox-summary-copy&quot;&gt;&lt;strong&gt;Подарки и компенсации&lt;/strong&gt;&lt;span&gt;Что именно выдавалось и по какой причине&lt;/span&gt;&lt;/span&gt;
+        &lt;span class=&quot;player-gift-inbox-meta&quot; data-player-gift-inbox-meta&gt;Нет новых&lt;/span&gt;
+      &lt;/div&gt;
+      &lt;div class=&quot;player-gift-inbox-list&quot; data-player-gift-inbox-list&gt;&lt;/div&gt;
+      &lt;button class=&quot;player-gift-inbox-more&quot; data-player-gift-inbox-more type=&quot;button&quot; hidden aria-expanded=&quot;false&quot;&gt;Показать ещё&lt;/button&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
 &lt;/div&gt;
 &lt;/section&gt;
 
@@ -9176,32 +9246,12 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
     &lt;/div&gt;
   &lt;/section&gt;
 
-  &lt;section class=&quot;profile-section profile-section--cases&quot; aria-labelledby=&quot;profile-cases-title&quot;&gt;
+  &lt;section class=&quot;profile-section profile-section--cases&quot; aria-labelledby=&quot;profile-collection-title&quot;&gt;
     &lt;div class=&quot;profile-section-head profile-section-head--cases&quot;&gt;
-      &lt;div&gt;&lt;h3 id=&quot;profile-cases-title&quot; class=&quot;stock-label-with-icon&quot;&gt;&lt;img class=&quot;stock-section-icon&quot; src=&quot;/assets/ui/icone_prize.png&quot; alt=&quot;&quot;&gt;Подарки и коллекция&lt;/h3&gt;&lt;span data-case-sync-status&gt;Данные загружаются…&lt;/span&gt;&lt;/div&gt;
-      &lt;div class=&quot;profile-cases-head-actions&quot;&gt;
-        &lt;span class=&quot;profile-cases-ready-badge&quot; data-profile-cases-ready hidden&gt;Доступно: 0&lt;/span&gt;
-        &lt;button class=&quot;case-refresh-button&quot; data-case-refresh type=&quot;button&quot;&gt;Обновить&lt;/button&gt;
-      &lt;/div&gt;
-    &lt;/div&gt;
-    &lt;div class=&quot;player-gift-inbox&quot; data-player-gift-inbox&gt;
-      &lt;div class=&quot;player-gift-inbox-head&quot;&gt;
-        &lt;span class=&quot;player-gift-inbox-summary-copy&quot;&gt;&lt;strong class=&quot;stock-label-with-icon&quot;&gt;&lt;img class=&quot;stock-section-icon&quot; src=&quot;/assets/ui/icone_prize.png&quot; alt=&quot;&quot;&gt;Подарки и компенсации&lt;/strong&gt;&lt;span&gt;Что именно выдавалось и по какой причине&lt;/span&gt;&lt;/span&gt;
-        &lt;span class=&quot;player-gift-inbox-meta&quot; data-player-gift-inbox-meta&gt;Нет новых&lt;/span&gt;
-      &lt;/div&gt;
-      &lt;div class=&quot;player-gift-inbox-list&quot; data-player-gift-inbox-list&gt;&lt;/div&gt;
-      &lt;button class=&quot;player-gift-inbox-more&quot; data-player-gift-inbox-more type=&quot;button&quot; hidden aria-expanded=&quot;false&quot;&gt;Показать ещё&lt;/button&gt;
-    &lt;/div&gt;
-    &lt;div class=&quot;case-gifted-wrap&quot; data-case-gifted-wrap&gt;
-      &lt;div class=&quot;case-subsection-title&quot;&gt;&lt;strong class=&quot;stock-label-with-icon&quot;&gt;&lt;img class=&quot;stock-section-icon&quot; src=&quot;/assets/ui/icone_cases.png&quot; alt=&quot;&quot;&gt;Склад кейсов&lt;/strong&gt;&lt;span&gt;Постоянные кейсы из уровней, магазина, подарков и акций. Сезонные открываются в пропуске.&lt;/span&gt;&lt;/div&gt;
-      &lt;div class=&quot;case-gifted-list&quot; data-case-gifted-list&gt;&lt;/div&gt;
+      &lt;div&gt;&lt;h3 id=&quot;profile-collection-title&quot;&gt;Коллекция&lt;/h3&gt;&lt;span&gt;Аватарки, рамки, следы и музыка профиля.&lt;/span&gt;&lt;/div&gt;
     &lt;/div&gt;
     &lt;div class=&quot;case-subsection&quot;&gt;
-      &lt;div class=&quot;case-subsection-title&quot;&gt;&lt;strong class=&quot;stock-label-with-icon&quot;&gt;&lt;img class=&quot;stock-section-icon&quot; src=&quot;/assets/ui/icon_busters.png&quot; alt=&quot;&quot;&gt;Мои усилители&lt;/strong&gt;&lt;span&gt;Один усилитель работает два завершённых забега&lt;/span&gt;&lt;/div&gt;
-      &lt;div class=&quot;case-boosters-list&quot; data-case-boosters-list&gt;&lt;/div&gt;
-    &lt;/div&gt;
-    &lt;div class=&quot;case-subsection&quot;&gt;
-      &lt;div class=&quot;case-subsection-title&quot;&gt;&lt;strong&gt;Коллекция&lt;/strong&gt;&lt;span&gt;Аватарка и рамка видны в рейтинге, след — в забеге, музыка меняет фон игры.&lt;/span&gt;&lt;/div&gt;
+      &lt;div class=&quot;case-subsection-title&quot;&gt;&lt;strong&gt;Оформление профиля&lt;/strong&gt;&lt;span&gt;Аватарка и рамка видны в рейтинге, след — в забеге, музыка меняет фон игры.&lt;/span&gt;&lt;/div&gt;
       &lt;details class=&quot;case-collection-group&quot; data-case-collection&gt;
         &lt;summary&gt;&lt;span&gt;Аватарки&lt;/span&gt;&lt;span class=&quot;case-collection-meta&quot; data-case-collection-count=&quot;avatar&quot;&gt;0 / 0&lt;/span&gt;&lt;i aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;&lt;/summary&gt;
         &lt;div class=&quot;case-collection-panel&quot;&gt;&lt;div class=&quot;case-cosmetic-grid&quot; data-case-avatars&gt;&lt;/div&gt;&lt;/div&gt;
@@ -9621,6 +9671,9 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       const warehouseExpiredEl = root.querySelector(&quot;[data-warehouse-expired]&quot;);
       const warehouseFilterButtons = [...root.querySelectorAll(&quot;[data-warehouse-filter]&quot;)];
       const warehouseTabCountEl = root.querySelector(&quot;[data-warehouse-tab-count]&quot;);
+      const stockHubButtons = [...root.querySelectorAll(&quot;[data-stock-view]&quot;)];
+      const stockHubPanels = [...root.querySelectorAll(&quot;[data-stock-panel]&quot;)];
+      const stockHubBadges = Object.fromEntries([...root.querySelectorAll(&quot;[data-stock-tab-badge]&quot;)].map((node) =&gt; [node.dataset.stockTabBadge, node]));
       const profileAvatarEl = root.querySelector(&quot;[data-profile-avatar]&quot;);
       const profileSourceBadgeEl = root.querySelector(&quot;[data-profile-source-badge]&quot;);
       const profilePremiumBadgeEl = root.querySelector(&quot;[data-profile-premium-badge]&quot;);
@@ -10100,6 +10153,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       let profileToastTimer = 0;
       let profileTutorialAutoTimer = 0;
       let warehouseFilter = &quot;all&quot;;
+      let stockHubView = &quot;purchases&quot;;
       let pendingPurchase = null;
       let purchaseReturnFocus = null;
       let purchaseLimitTimer = 0;
@@ -11584,23 +11638,57 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       const CASE_SPECIAL_CATALOG = Object.freeze({
         season_xp_x2: { title: &quot;×2 XP&quot;, src: &quot;/assets/season-pass/xp_x2.png&quot;, description: &quot;Удваивает XP профиля за зачтённые забеги и покупки, а также XP сезона за новые забеги&quot; }
       });
+      const STOCK_UI_ASSETS = Object.freeze({
+        purchases: &quot;/assets/ui/icon_shopping.png&quot;,
+        boosters: &quot;/assets/ui/icon_busters.png&quot;,
+        cases: &quot;/assets/ui/icone_cases.png&quot;,
+        gifts: &quot;/assets/ui/icone_prize.png&quot;
+      });
       const BOOSTER_TEXT_ASSETS = Object.freeze({
         points: CASE_BOOSTER_CATALOG.points.src,
         treats: CASE_BOOSTER_CATALOG.treats.src,
         coffee: CASE_BOOSTER_CATALOG.coffee.src
       });
-      const BOOSTER_LEADING_EMOJI_RE = /^[\s⭐☕🍥🍬🌀⚡\uFE0F]+/u;
-      function boosterUiCleanLabel(value) { return String(value || &quot;&quot;).replace(BOOSTER_LEADING_EMOJI_RE, &quot;&quot;).trim(); }
-      function boosterUiEnsureImage(node, src) {
-        if (!node || !src || node.querySelector?.(&#x27;:scope &gt; img[data-booster-ui-icon]&#x27;)) return;
+      const STOCK_UI_LEADING_EMOJI_RE = /^[\s⭐☕🍥🍬🌀⚡🎁📦🛍🛒🎀💌🎟\uFE0F]+/u;
+      function stockUiCleanLabel(value) { return String(value || &quot;&quot;).replace(STOCK_UI_LEADING_EMOJI_RE, &quot;&quot;).trim(); }
+      function stockUiStripLeadingEmoji(node) {
+        if (!node) return;
         for (const child of [...node.childNodes]) {
+          if (child.nodeType === Node.ELEMENT_NODE) {
+            const raw = String(child.textContent || &quot;&quot;).trim();
+            if (raw &amp;&amp; !stockUiCleanLabel(raw) &amp;&amp; !child.querySelector?.(&quot;img&quot;)) { child.remove(); continue; }
+          }
           if (child.nodeType !== Node.TEXT_NODE) continue;
-          child.nodeValue = String(child.nodeValue || &quot;&quot;).replace(BOOSTER_LEADING_EMOJI_RE, &quot;&quot;);
-          if (String(child.nodeValue || &quot;&quot;).trim()) break;
+          const current = String(child.nodeValue || &quot;&quot;);
+          const next = current.replace(STOCK_UI_LEADING_EMOJI_RE, &quot;&quot;);
+          if (next !== current) child.nodeValue = next;
+          if (current.trim()) break;
         }
+      }
+      function stockUiEnsureImage(node, src, className) {
+        if (!node || !src) return;
+        const direct = [...node.children].find((child) =&gt; child.matches?.(&#x27;img[data-stock-ui-icon]&#x27;));
+        if (direct) { direct.src = src; direct.className = className; return; }
+        stockUiStripLeadingEmoji(node);
         const image = document.createElement(&quot;img&quot;);
-        image.src = src; image.alt = &quot;&quot;; image.className = &quot;booster-inline-art&quot;; image.dataset.boosterUiIcon = &quot;1&quot;; image.decoding = &quot;async&quot;;
+        image.src = src; image.alt = &quot;&quot;; image.className = className; image.dataset.stockUiIcon = &quot;1&quot;; image.decoding = &quot;async&quot;;
         node.prepend(image);
+      }
+      function applyStockUiIcons(scope = root) {
+        if (!scope?.querySelectorAll) return;
+        const defs = [
+          { labels:new Set([&quot;Покупки&quot;,&quot;Мои покупки&quot;]), src:STOCK_UI_ASSETS.purchases },
+          { labels:new Set([&quot;Усилители&quot;,&quot;Мои усилители&quot;]), src:STOCK_UI_ASSETS.boosters },
+          { labels:new Set([&quot;Кейсы&quot;,&quot;Склад кейсов&quot;]), src:STOCK_UI_ASSETS.cases },
+          { labels:new Set([&quot;Подарки&quot;,&quot;Подарки и компенсации&quot;]), src:STOCK_UI_ASSETS.gifts }
+        ];
+        for (const node of scope.querySelectorAll(&quot;button,strong&quot;)) {
+          if (node.matches?.(&quot;[data-stock-view]&quot;)) continue;
+          if (node.querySelector?.(&quot;img.stock-section-icon&quot;)) continue;
+          const label = stockUiCleanLabel(node.textContent);
+          const def = defs.find((entry) =&gt; entry.labels.has(label));
+          if (def) stockUiEnsureImage(node, def.src, &quot;stock-action-icon&quot;);
+        }
       }
       function applyBoosterArtIcons(scope = root) {
         if (!scope?.querySelectorAll) return;
@@ -11611,12 +11699,12 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         ];
         for (const node of scope.querySelectorAll(&quot;button,strong,span&quot;)) {
           if (node.children.length &gt; 2) continue;
-          const label = boosterUiCleanLabel(node.textContent).replace(/\s+/g, &quot;&quot;).toLowerCase();
+          const label = stockUiCleanLabel(node.textContent).replace(/\s+/g, &quot;&quot;).toLowerCase();
           const def = defs.find((entry) =&gt; label.startsWith(entry.key));
           if (!def) continue;
           const card = node.closest?.(&quot;.case-booster-card,.case-info-simple-reward&quot;);
           if (card?.querySelector(&quot;img&quot;)) continue;
-          boosterUiEnsureImage(node, def.src);
+          stockUiEnsureImage(node, def.src, &quot;booster-inline-art&quot;);
         }
       }
       const CASE_REWARD_EFFECTS = Object.freeze({
@@ -11825,8 +11913,8 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
             &lt;/div&gt;`
         },
         {
-          title: &quot;Подарки, кейсы и коллекция&quot;,
-          description: &quot;В «Подарках и коллекции» видно, что и за что выдала команда, хранятся постоянные кейсы, усилители и собранное оформление.&quot;,
+          title: &quot;Мои покупки и коллекция&quot;,
+          description: &quot;В «Моих покупках» собраны покупки, подарки, постоянные кейсы и усилители. Оформление профиля остаётся в разделе «Профиль».&quot;,
           extra: &quot;Аватарку и рамку можно выбрать для рейтинга, след работает в забеге, а музыку — переключать прямо в профиле. Сезонные кейсы хранятся и открываются отдельно внутри сезонного пропуска.&quot;,
           visual: () =&gt; `
             &lt;div class=&quot;tutorial-profile-feature-grid&quot;&gt;
@@ -11901,11 +11989,11 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         },
         {
           title: &quot;Где открывать и куда идут награды&quot;,
-          description: &quot;Постоянные кейсы открываются в профиле: «Подарки и коллекция» → «Склад кейсов». Сезонные открываются в блоке «Сезонные кейсы» внутри сезонного пропуска.&quot;,
-          extra: &quot;После рулетки награда сразу синхронизируется: ресурсы начисляются на баланс, усилитель появляется в профиле, коллекционные предметы добавляются в соответствующий раздел, а физический код — в «Мои покупки».&quot;,
+          description: &quot;Постоянные кейсы открываются в «Мои покупки» → «Кейсы». Сезонные открываются в блоке «Сезонные кейсы» внутри сезонного пропуска.&quot;,
+          extra: &quot;После рулетки награда сразу синхронизируется: ресурсы начисляются на баланс, усилитель появляется в «Мои покупки» → «Усилители», коллекционные предметы добавляются в профиль, а физический код — в «Покупки».&quot;,
           visual: () =&gt; `
             &lt;div class=&quot;tutorial-case-source-list&quot;&gt;
-              &lt;span class=&quot;tutorial-case-source&quot;&gt;&lt;b&gt;👤&lt;/b&gt;&lt;span&gt;&lt;strong&gt;Постоянный кейс&lt;/strong&gt;&lt;span&gt;Профиль → Подарки и коллекция → Склад кейсов.&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
+              &lt;span class=&quot;tutorial-case-source&quot;&gt;&lt;b&gt;👤&lt;/b&gt;&lt;span&gt;&lt;strong&gt;Постоянный кейс&lt;/strong&gt;&lt;span&gt;Мои покупки → Кейсы.&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
               &lt;span class=&quot;tutorial-case-source&quot;&gt;&lt;b&gt;🎟&lt;/b&gt;&lt;span&gt;&lt;strong&gt;Сезонный кейс&lt;/strong&gt;&lt;span&gt;Сезонный пропуск → Сезонные кейсы.&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
             &lt;/div&gt;`
         }
@@ -14408,12 +14496,11 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         const giftTotal = Math.max(0, Math.floor(Number(state.playerGiftPendingCount || 0)));
         const collectionTotal = caseTotal + giftTotal;
         const seasonPassTotal = Math.max(0, Math.floor(Number(state.seasonPassAttentionCount || 0)));
-        const total = collectionTotal + seasonPassTotal;
-        const compact = total &gt; 99 ? &quot;99+&quot; : String(total);
+        const compact = seasonPassTotal &gt; 99 ? &quot;99+&quot; : String(seasonPassTotal);
         if (profileTabCaseCountEl) {
           profileTabCaseCountEl.textContent = compact;
-          profileTabCaseCountEl.hidden = total === 0;
-          profileTabCaseCountEl.setAttribute(&quot;aria-label&quot;, total ? `Доступно наград: ${total}` : &quot;&quot;);
+          profileTabCaseCountEl.hidden = seasonPassTotal === 0;
+          profileTabCaseCountEl.setAttribute(&quot;aria-label&quot;, seasonPassTotal ? `В сезонном пропуске доступно наград: ${seasonPassTotal}` : &quot;&quot;);
         }
         if (profileCasesReadyEl) {
           profileCasesReadyEl.textContent = collectionTotal &gt; 99 ? &quot;Доступно: 99+&quot; : `Доступно: ${collectionTotal}`;
@@ -14424,7 +14511,8 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           seasonPassAttentionEl.hidden = seasonPassTotal === 0;
           seasonPassAttentionEl.setAttribute(&quot;aria-label&quot;, seasonPassTotal ? `В сезонном пропуске доступно наград: ${seasonPassTotal}` : &quot;&quot;);
         }
-        return total;
+        updateStockHubBadges();
+        return seasonPassTotal;
       }
 
       function normalizeCaseBoosters(value) {
@@ -15834,6 +15922,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         renderCaseCosmetics(caseAvatarsEl,&quot;avatar&quot;,CASE_AVATAR_CATALOG,state.caseOwnedAvatars,state.caseActiveAvatar);
         renderCaseCosmetics(caseFramesEl,&quot;frame&quot;,CASE_FRAME_CATALOG,state.caseOwnedFrames,state.caseActiveFrame);
         renderCaseCosmetics(caseTrailsEl,&quot;trail&quot;,CASE_TRAIL_CATALOG,state.caseOwnedTrails,state.caseActiveTrail);
+        applyStockUiIcons(root);
         applyBoosterArtIcons(caseBoostersListEl || root);
         updateProfileCaseBadges();
       }
@@ -16201,7 +16290,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         }
         const warehouseTabImage = root.querySelector(&quot;[data-warehouse-tab-image]&quot;);
         if (warehouseTabImage) {
-          warehouseTabImage.src = &quot;/assets/ui/icon_shopping.png&quot;;
+          warehouseTabImage.src = assetSources[name === &quot;warehouse&quot; ? &quot;warehouseButtonOn&quot; : &quot;warehouseButtonOff&quot;] || &quot;&quot;;
         }
         if (profileTabImage) {
           profileTabImage.src = assetSources[name === &quot;profile&quot; ? &quot;profileButtonOn&quot; : &quot;profileButtonOff&quot;] || &quot;&quot;;
@@ -16220,8 +16309,11 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         if (name === &quot;warehouse&quot;) {
           warehouseFilter = &quot;all&quot;;
           syncWarehouseFilterButtons();
+          switchStockHubView(stockHubView);
           renderWarehouse();
-          void syncServerRewards(true);
+          renderCaseHub();
+          renderPlayerGiftInbox();
+          void Promise.allSettled([syncServerRewards(true), loadCaseState(true), loadPlayerGiftInbox(true)]).then(() =&gt; updateStockHubBadges());
         }
         if (name === &quot;profile&quot;) {
           renderProfile();
@@ -17851,6 +17943,48 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         }
       }
 
+      function stockHubSetBadge(name, value) {
+        const node = stockHubBadges?.[name];
+        if (!node) return;
+        const count = Math.max(0, Math.floor(Number(value) || 0));
+        node.textContent = count &gt; 99 ? &quot;99+&quot; : String(count);
+        node.hidden = count === 0;
+      }
+
+      function updateStockHubBadges(activePurchaseCountValue = null) {
+        const now = Date.now();
+        const activePurchases = activePurchaseCountValue == null
+          ? (Array.isArray(state.redemptionCodes) ? state.redemptionCodes.filter((entry) =&gt; rewardEntryStatus(entry, now) === &quot;active&quot;).length : 0)
+          : Math.max(0, Math.floor(Number(activePurchaseCountValue) || 0));
+        const boosters = normalizeCaseBoosters(state.caseBoosters);
+        const boosterCount = Math.max(0, Number(boosters.points||0) + Number(boosters.treats||0) + Number(boosters.coffee||0) + normalizeCaseSpecials(state.caseOwnedSpecials).length);
+        const caseCount = profileAvailableCaseCount();
+        const giftCount = Math.max(0, Math.floor(Number(state.playerGiftPendingCount || 0)));
+        stockHubSetBadge(&quot;purchases&quot;, activePurchases);
+        stockHubSetBadge(&quot;boosters&quot;, boosterCount);
+        stockHubSetBadge(&quot;cases&quot;, caseCount);
+        stockHubSetBadge(&quot;gifts&quot;, giftCount);
+        const attention = activePurchases + caseCount + giftCount;
+        if (warehouseTabCountEl) {
+          warehouseTabCountEl.textContent = attention &gt; 99 ? &quot;99+&quot; : String(attention);
+          warehouseTabCountEl.hidden = attention === 0;
+          warehouseTabCountEl.setAttribute(&quot;aria-label&quot;, attention ? `На складе доступно: ${attention}` : &quot;&quot;);
+        }
+        return { activePurchases, boosterCount, caseCount, giftCount, attention };
+      }
+
+      function switchStockHubView(nextView, feedback = false) {
+        const allowed = new Set([&quot;purchases&quot;,&quot;boosters&quot;,&quot;cases&quot;,&quot;gifts&quot;]);
+        stockHubView = allowed.has(String(nextView || &quot;&quot;)) ? String(nextView) : &quot;purchases&quot;;
+        for (const button of stockHubButtons) button.setAttribute(&quot;aria-selected&quot;, String(button.dataset.stockView === stockHubView));
+        for (const panel of stockHubPanels) panel.hidden = panel.dataset.stockPanel !== stockHubView;
+        if (stockHubView === &quot;purchases&quot;) renderWarehouse();
+        if (stockHubView === &quot;boosters&quot; || stockHubView === &quot;cases&quot;) { renderCaseHub(); void loadCaseState(true); }
+        if (stockHubView === &quot;gifts&quot;) { renderPlayerGiftInbox(); void loadPlayerGiftInbox(true); }
+        updateStockHubBadges();
+        if (feedback) hapticImpact(&quot;light&quot;, 25);
+      }
+
       function setWarehouseFilter(nextFilter) {
         const normalized = nextFilter === &quot;active&quot; || nextFilter === &quot;expired&quot; ? nextFilter : &quot;all&quot;;
         warehouseFilter = warehouseFilter === normalized ? &quot;all&quot; : normalized;
@@ -17865,15 +17999,13 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         const expiredCount = Math.max(0, allCodes.length - activeCount);
         if (warehouseActiveEl) warehouseActiveEl.textContent = formatter.format(activeCount);
         if (warehouseExpiredEl) warehouseExpiredEl.textContent = formatter.format(expiredCount);
-        if (warehouseTabCountEl) {
-          warehouseTabCountEl.textContent = activeCount &gt; 99 ? &quot;99+&quot; : String(activeCount);
-          warehouseTabCountEl.hidden = activeCount === 0;
-        }
+        updateStockHubBadges(activeCount);
         return { activeCount, expiredCount };
       }
 
       function renderWarehouse() {
         if (!warehouseListEl) return;
+        applyStockUiIcons(root);
         const now = Date.now();
         const allCodes = Array.isArray(state.redemptionCodes) ? [...state.redemptionCodes] : [];
         allCodes.sort((left, right) =&gt; {
@@ -17900,10 +18032,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         const expiredCount = Math.max(0, allCodes.length - activeCount);
         if (warehouseActiveEl) warehouseActiveEl.textContent = formatter.format(activeCount);
         if (warehouseExpiredEl) warehouseExpiredEl.textContent = formatter.format(expiredCount);
-        if (warehouseTabCountEl) {
-          warehouseTabCountEl.textContent = activeCount &gt; 99 ? &quot;99+&quot; : String(activeCount);
-          warehouseTabCountEl.hidden = activeCount === 0;
-        }
+        updateStockHubBadges(activeCount);
         syncWarehouseFilterButtons();
         if (CLIENT_OPT_RENDER_SIGNATURES &amp;&amp; nextSignature === warehouseRenderSignature) {
           clientPerformance.warehouseRenderSkipped += 1;
@@ -19504,6 +19633,9 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       }
       for (const button of warehouseFilterButtons) {
         button.addEventListener(&quot;click&quot;, () =&gt; setWarehouseFilter(button.dataset.warehouseFilter));
+      }
+      for (const button of stockHubButtons) {
+        button.addEventListener(&quot;click&quot;, () =&gt; switchStockHubView(button.dataset.stockView, true));
       }
       if (warehouseListEl) {
         warehouseListEl.addEventListener(&quot;click&quot;, (event) =&gt; {
