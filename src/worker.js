@@ -8419,11 +8419,11 @@ function configuredOwnerPanelUrl(env) {
   try {
     const url = new URL(configuredGameUrl(env));
     url.pathname = "/owner.html";
-    url.search = "?v=owner-1.0.0-10";
+    url.search = "?v=owner-1.0.8-cc925-health2";
     url.hash = "";
     return url.toString();
   } catch {
-    return `${DEFAULT_GAME_URL.replace(/\/$/, "")}/owner.html?v=owner-1.0.8-cc925-tp1`;
+    return `${DEFAULT_GAME_URL.replace(/\/$/, "")}/owner.html?v=owner-1.0.8-cc925-health2`;
   }
 }
 
@@ -28317,16 +28317,16 @@ async function scanV77SmartAlerts(env){
   const now=Math.floor(Date.now()/1000),activeKeys=new Set();
   const [rewardQueue,playerNotifications,staffNotifications,automationCron]=await Promise.all([
     env.DB.prepare(`SELECT SUM(CASE WHEN status='failed' AND attempts>=5 THEN 1 ELSE 0 END) AS terminal,SUM(CASE WHEN status IN ('pending','failed') AND attempts<5 AND created_at<? THEN 1 ELSE 0 END) AS stale FROM reward_delivery_queue`).bind(now-900).first(),
-    env.DB.prepare(`SELECT SUM(CASE WHEN status='failed' AND attempts>=5 THEN 1 ELSE 0 END) AS terminal FROM player_notification_queue`).first(),
-    env.DB.prepare(`SELECT SUM(CASE WHEN status='failed' AND attempts>=5 THEN 1 ELSE 0 END) AS terminal FROM leaderboard_staff_notifications`).first(),
+    env.DB.prepare(`SELECT SUM(CASE WHEN status='failed' AND attempts>=5 AND updated_at>=? AND NOT (LOWER(COALESCE(last_error,'')) LIKE '%bot was blocked%' OR LOWER(COALESCE(last_error,'')) LIKE '%chat not found%' OR LOWER(COALESCE(last_error,'')) LIKE '%user is deactivated%' OR LOWER(COALESCE(last_error,'')) LIKE '%forbidden%' OR LOWER(COALESCE(last_error,'')) LIKE '%cannot initiate%' OR LOWER(COALESCE(last_error,'')) LIKE '%can''t initiate%') THEN 1 ELSE 0 END) AS terminal FROM player_notification_queue`).bind(now-V67_DAY).first(),
+    env.DB.prepare(`SELECT SUM(CASE WHEN status='failed' AND attempts>=5 AND updated_at>=? AND NOT (LOWER(COALESCE(last_error,'')) LIKE '%bot was blocked%' OR LOWER(COALESCE(last_error,'')) LIKE '%chat not found%' OR LOWER(COALESCE(last_error,'')) LIKE '%user is deactivated%' OR LOWER(COALESCE(last_error,'')) LIKE '%forbidden%' OR LOWER(COALESCE(last_error,'')) LIKE '%cannot initiate%' OR LOWER(COALESCE(last_error,'')) LIKE '%can''t initiate%') THEN 1 ELSE 0 END) AS terminal FROM leaderboard_staff_notifications`).bind(now-V67_DAY).first(),
     env.DB.prepare(`SELECT enabled,interval_seconds,last_success_at,last_status,last_error FROM server_cron_jobs WHERE job_key='automations-five-minutes' LIMIT 1`).first()
   ]);
   const rewardTerminal=Number(rewardQueue?.terminal||0),rewardStale=Number(rewardQueue?.stale||0);
   if(rewardTerminal>0){activeKeys.add('reward-queue-failed');await v77UpsertAlert(env,'reward-queue-failed','reward_queue','critical','Награды окончательно не доставлены',`${rewardTerminal} записей исчерпали все попытки доставки.`);}
   if(rewardStale>0){activeKeys.add('reward-queue-stale');await v77UpsertAlert(env,'reward-queue-stale','reward_queue','warning','Награды долго ожидают',`${rewardStale} записей ожидают доставку или повтор более 15 минут.`);}
   const playerTerminal=Number(playerNotifications?.terminal||0),staffTerminal=Number(staffNotifications?.terminal||0);
-  if(playerTerminal>0){activeKeys.add('player-notification-terminal');await v77UpsertAlert(env,'player-notification-terminal','notification','warning','Уведомления игрокам не доставлены',`${playerTerminal} уведомлений исчерпали все попытки отправки.`);}
-  if(staffTerminal>0){activeKeys.add('staff-notification-terminal');await v77UpsertAlert(env,'staff-notification-terminal','notification','warning','Служебные уведомления не доставлены',`${staffTerminal} уведомлений сотрудникам исчерпали все попытки отправки.`);}
+  if(playerTerminal>0){activeKeys.add('player-notification-terminal');await v77UpsertAlert(env,'player-notification-terminal','notification','warning','Уведомления игрокам не доставлены',`${playerTerminal} уведомлений за последние 24 часа исчерпали все попытки по системной ошибке.`);}
+  if(staffTerminal>0){activeKeys.add('staff-notification-terminal');await v77UpsertAlert(env,'staff-notification-terminal','notification','warning','Служебные уведомления не доставлены',`${staffTerminal} служебных уведомлений за последние 24 часа исчерпали все попытки по системной ошибке.`);}
   const cronInterval=Math.max(60,Number(automationCron?.interval_seconds||300));
   const cronStaleAfter=Math.max(30*60,cronInterval*3);
   const cronEnabled=automationCron?Boolean(automationCron.enabled):false;
@@ -30190,17 +30190,19 @@ async function ownerPanelV85Monitoring(env,ctx){
       env.DB.prepare(`SELECT
         SUM(CASE WHEN status='pending' THEN 1 ELSE 0 END) AS pending,
         SUM(CASE WHEN status='failed' AND attempts<5 THEN 1 ELSE 0 END) AS retrying,
-        SUM(CASE WHEN status='failed' AND attempts>=5 THEN 1 ELSE 0 END) AS terminal,
+        SUM(CASE WHEN status='failed' AND attempts>=5 AND updated_at>=? AND NOT (LOWER(COALESCE(last_error,'')) LIKE '%bot was blocked%' OR LOWER(COALESCE(last_error,'')) LIKE '%chat not found%' OR LOWER(COALESCE(last_error,'')) LIKE '%user is deactivated%' OR LOWER(COALESCE(last_error,'')) LIKE '%forbidden%' OR LOWER(COALESCE(last_error,'')) LIKE '%cannot initiate%' OR LOWER(COALESCE(last_error,'')) LIKE '%can''t initiate%') THEN 1 ELSE 0 END) AS terminal,
+        SUM(CASE WHEN status='failed' AND attempts>=5 AND updated_at>=? AND (LOWER(COALESCE(last_error,'')) LIKE '%bot was blocked%' OR LOWER(COALESCE(last_error,'')) LIKE '%chat not found%' OR LOWER(COALESCE(last_error,'')) LIKE '%user is deactivated%' OR LOWER(COALESCE(last_error,'')) LIKE '%forbidden%' OR LOWER(COALESCE(last_error,'')) LIKE '%cannot initiate%' OR LOWER(COALESCE(last_error,'')) LIKE '%can''t initiate%') THEN 1 ELSE 0 END) AS unreachable,
         MAX(CASE WHEN status='pending' THEN ?-created_at ELSE 0 END) AS pending_max_age,
         MAX(CASE WHEN status='failed' AND attempts<5 THEN ?-created_at ELSE 0 END) AS retry_max_age
-        FROM player_notification_queue WHERE status IN ('pending','failed')`).bind(now,now).first(),
+        FROM player_notification_queue WHERE status IN ('pending','failed')`).bind(since,since,now,now).first(),
       env.DB.prepare(`SELECT
         SUM(CASE WHEN status='pending' THEN 1 ELSE 0 END) AS pending,
         SUM(CASE WHEN status='failed' AND attempts<5 THEN 1 ELSE 0 END) AS retrying,
-        SUM(CASE WHEN status='failed' AND attempts>=5 THEN 1 ELSE 0 END) AS terminal,
+        SUM(CASE WHEN status='failed' AND attempts>=5 AND updated_at>=? AND NOT (LOWER(COALESCE(last_error,'')) LIKE '%bot was blocked%' OR LOWER(COALESCE(last_error,'')) LIKE '%chat not found%' OR LOWER(COALESCE(last_error,'')) LIKE '%user is deactivated%' OR LOWER(COALESCE(last_error,'')) LIKE '%forbidden%' OR LOWER(COALESCE(last_error,'')) LIKE '%cannot initiate%' OR LOWER(COALESCE(last_error,'')) LIKE '%can''t initiate%') THEN 1 ELSE 0 END) AS terminal,
+        SUM(CASE WHEN status='failed' AND attempts>=5 AND updated_at>=? AND (LOWER(COALESCE(last_error,'')) LIKE '%bot was blocked%' OR LOWER(COALESCE(last_error,'')) LIKE '%chat not found%' OR LOWER(COALESCE(last_error,'')) LIKE '%user is deactivated%' OR LOWER(COALESCE(last_error,'')) LIKE '%forbidden%' OR LOWER(COALESCE(last_error,'')) LIKE '%cannot initiate%' OR LOWER(COALESCE(last_error,'')) LIKE '%can''t initiate%') THEN 1 ELSE 0 END) AS unreachable,
         MAX(CASE WHEN status='pending' THEN ?-created_at ELSE 0 END) AS pending_max_age,
         MAX(CASE WHEN status='failed' AND attempts<5 THEN ?-created_at ELSE 0 END) AS retry_max_age
-        FROM leaderboard_staff_notifications WHERE status IN ('pending','failed')`).bind(now,now).first(),
+        FROM leaderboard_staff_notifications WHERE status IN ('pending','failed')`).bind(since,since,now,now).first(),
       env.DB.prepare(`SELECT * FROM server_cron_jobs ORDER BY priority,job_key`).all(),
       env.DB.prepare(`SELECT area,COUNT(*) AS samples,ROUND(AVG(duration_ms),1) AS avg_ms,MAX(duration_ms) AS max_ms,SUM(CASE WHEN success=0 THEN 1 ELSE 0 END) AS errors FROM admin_performance_samples WHERE created_at>=? GROUP BY area ORDER BY avg_ms DESC LIMIT 30`).bind(since).all(),
       env.DB.prepare(`SELECT * FROM smart_alert_events WHERE status='open' ORDER BY CASE severity WHEN 'critical' THEN 0 ELSE 1 END,last_seen_at DESC LIMIT 40`).all(),
@@ -30211,24 +30213,25 @@ async function ownerPanelV85Monitoring(env,ctx){
       active:{count:Number(row?.active||0)},
       retrying:{count:Number(row?.retrying||0),maxAge:Number(row?.retry_max_age||0)},
       terminal:{count:Number(row?.terminal||0)},
+      unreachable:{count:Number(row?.unreachable||0)},
       failed:{count:Number(row?.terminal||0)}
     });
     const rQ=queueStats(rewards),pQ=queueStats(playerNotifications),sQ=queueStats(staffNotifications);
-    const notificationSummary={pending:{count:pQ.pending.count+sQ.pending.count},retrying:{count:pQ.retrying.count+sQ.retrying.count},terminal:{count:pQ.terminal.count+sQ.terminal.count}};
+    const notificationSummary={pending:{count:pQ.pending.count+sQ.pending.count},retrying:{count:pQ.retrying.count+sQ.retrying.count},terminal:{count:pQ.terminal.count+sQ.terminal.count},unreachable:{count:pQ.unreachable.count+sQ.unreachable.count}};
     const cronRows=(cron.results||[]).map(r=>({key:String(r.job_key),enabled:Boolean(r.enabled),interval:Number(r.interval_seconds||0),lastSuccessAt:Number(r.last_success_at||0),lastFinishedAt:Number(r.last_finished_at||0),nextRunAt:Number(r.next_run_at||0),status:String(r.last_status||"never"),duration:Number(r.last_duration_ms||0),error:String(r.last_error||""),failures:Number(r.failures_total||0)}));
     const cronFailures24=(hourly.results||[]).reduce((sum,r)=>sum+Number(r.cron_failures||0),0);
-    const slowAreas=(perf.results||[]).filter(r=>Number(r.avg_ms||0)>=Number(config.slowMs||1200)).length;
+    const slowAreaRows=(perf.results||[]).filter(r=>Number(r.avg_ms||0)>=Number(config.slowMs||1200));const slowAreas=slowAreaRows.length;
     const failedCron=cronRows.filter(r=>r.enabled&&r.status==='failed');
     const staleCron=cronRows.filter(r=>r.enabled&&r.lastSuccessAt&&now-r.lastSuccessAt>Math.max(r.interval*3,Number(config.cronStaleMinutes||20)*60));
     const staleReward=(rQ.pending.maxAge||0)>Number(config.rewardStaleMinutes||15)*60||(rQ.retrying.maxAge||0)>Number(config.rewardStaleMinutes||15)*60;
     const reasons=[];
     if(rQ.terminal.count>=Number(config.rewardFailed||1))reasons.push({level:'critical',text:`не доставлено наград: ${rQ.terminal.count}`});
     if(failedCron.length)reasons.push({level:'critical',text:`Cron с ошибкой: ${failedCron.map(r=>r.key).join(', ')}`});
-    if(notificationSummary.terminal.count>=Number(config.notificationFailed||3))reasons.push({level:'warning',text:`не доставлено уведомлений: ${notificationSummary.terminal.count}`});
+    if(notificationSummary.terminal.count>=Number(config.notificationFailed||3))reasons.push({level:'warning',text:`не доставлено уведомлений за 24ч: ${notificationSummary.terminal.count}`});
     if(staleReward)reasons.push({level:'warning',text:`награды ждут дольше ${Number(config.rewardStaleMinutes||15)} мин.`});
     if(staleCron.length)reasons.push({level:'warning',text:`Cron давно без успеха: ${staleCron.map(r=>r.key).join(', ')}`});
     if(cronFailures24>=Number(config.cronFailures||1))reasons.push({level:'warning',text:`ошибок Cron за 24ч: ${cronFailures24}`});
-    if(slowAreas>0)reasons.push({level:'warning',text:`медленных серверных участков: ${slowAreas}`});
+    if(slowAreas>0){const labels=slowAreaRows.slice(0,2).map(r=>`${String(r.area)} ${Math.round(Number(r.avg_ms||0))} мс`);reasons.push({level:'warning',text:`медленно: ${labels.join(', ')}${slowAreas>2?` и ещё ${slowAreas-2}`:''}`});}
     const critical=reasons.some(r=>r.level==='critical'),warning=reasons.some(r=>r.level==='warning');
     return {ok:true,generatedAt:now,status:critical?'critical':warning?'warning':'healthy',healthReasons:reasons,config,queues:{rewards:rQ,playerNotifications:pQ,staffNotifications:sQ,notifications:notificationSummary},cron:cronRows,cronFailures24,performance:(perf.results||[]).map(r=>({area:String(r.area),samples:Number(r.samples||0),avgMs:Number(r.avg_ms||0),maxMs:Number(r.max_ms||0),errors:Number(r.errors||0)})),alerts:(alerts.results||[]).map(r=>({key:String(r.alert_key),type:String(r.alert_type||""),severity:String(r.severity||""),title:String(r.title||""),details:String(r.details||""),firstSeenAt:Number(r.first_seen_at||0),lastSeenAt:Number(r.last_seen_at||0)})),hourly:(hourly.results||[]).map(r=>({at:Number(r.bucket_at||0),active:Number(r.active_players||0),runs:Number(r.runs_total||0),rewardErrors:Number(r.rewards_failed||0),staffErrors:Number(r.staff_notifications_failed||0),playerErrors:Number(r.player_notifications_failed||0),cronFailures:Number(r.cron_failures||0),cronMs:Number(r.cron_duration_ms||0)}))};
   });
