@@ -3751,11 +3751,6 @@ html&gt;body{padding:
     font-size: 9px;
   }
 
-  #zefirok-maltipoo-runner .tutorial-reward-row--single {
-    grid-template-columns: minmax(0, 180px);
-    justify-content: center;
-  }
-
   #zefirok-maltipoo-runner .tutorial-tab-row img {
     display: block;
     width: 100%;
@@ -8889,6 +8884,8 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 #zefirok-maltipoo-runner .warehouse-head-main&gt;div:first-child&gt;strong{font-size:18px;color:#6b354c}
 #zefirok-maltipoo-runner .warehouse-head-main&gt;div:first-child&gt;span{font-size:11px;line-height:1.45;color:#92737f}
 #zefirok-maltipoo-runner .warehouse-head-actions{display:flex;align-items:center;justify-content:flex-end;gap:6px;flex-wrap:wrap}
+#zefirok-maltipoo-runner .stock-tutorial-button{width:40px;height:40px;min-width:40px;min-height:40px;padding:0;border:1px solid rgba(222,155,181,.48);border-radius:13px;background:#fff;color:#a54068;display:inline-flex;align-items:center;justify-content:center;font:950 22px/1 inherit;box-shadow:0 5px 14px rgba(116,65,83,.06);-webkit-tap-highlight-color:transparent}
+#zefirok-maltipoo-runner .stock-tutorial-button:active{transform:scale(.96);background:#fff1f6}
 #zefirok-maltipoo-runner .warehouse-sync-status{display:block;margin-top:5px;font-size:10px!important;color:#a07686!important}
 #zefirok-maltipoo-runner .stock-hub-tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;margin:12px 0 13px}
 #zefirok-maltipoo-runner .stock-hub-tab{position:relative;display:grid;place-items:center;gap:4px;min-width:0;min-height:76px;padding:8px 3px 7px;border:1px solid rgba(222,155,181,.34);border-radius:17px;background:linear-gradient(180deg,#fff,#fff7fa);color:#7a5261;font:900 9px/1.1 inherit;box-shadow:0 5px 14px rgba(116,65,83,.05);-webkit-tap-highlight-color:transparent}
@@ -9155,7 +9152,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       &lt;/div&gt;
       &lt;div class=&quot;warehouse-head-actions&quot;&gt;
         &lt;span class=&quot;profile-cases-ready-badge&quot; data-profile-cases-ready hidden&gt;Доступно: 0&lt;/span&gt;
-        &lt;button class=&quot;case-refresh-button&quot; data-stock-tutorial type=&quot;button&quot;&gt;Как работает&lt;/button&gt;
+        &lt;button aria-label=&quot;Как работают Мои покупки&quot; class=&quot;stock-tutorial-button&quot; data-stock-tutorial title=&quot;Как работают Мои покупки&quot; type=&quot;button&quot;&gt;?&lt;/button&gt;
         &lt;button class=&quot;case-refresh-button&quot; data-case-refresh type=&quot;button&quot;&gt;Обновить&lt;/button&gt;
       &lt;/div&gt;
     &lt;/div&gt;
@@ -9333,7 +9330,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
     &lt;/div&gt;
     &lt;div class=&quot;profile-actions profile-actions--level&quot;&gt;
       &lt;button class=&quot;profile-action profile-action--primary&quot; data-profile-tutorial type=&quot;button&quot;&gt;Пройти всё обучение&lt;/button&gt;
-      &lt;button class=&quot;profile-action&quot; data-profile-stock-tutorial type=&quot;button&quot;&gt;Гид по Моим покупкам&lt;/button&gt;
+      &lt;button class=&quot;profile-action&quot; data-profile-stock-tutorial type=&quot;button&quot;&gt;Гид по складу «Мои покупки»&lt;/button&gt;
       &lt;button class=&quot;profile-action&quot; data-profile-case-tutorial type=&quot;button&quot;&gt;Актуальный гид по кейсам&lt;/button&gt;
       &lt;button class=&quot;profile-action&quot; data-profile-rating-tutorial type=&quot;button&quot;&gt;Как попасть в рейтинг&lt;/button&gt;
       &lt;button class=&quot;profile-action&quot; data-profile-level-tutorial type=&quot;button&quot;&gt;Гид по профилю&lt;/button&gt;
@@ -9370,7 +9367,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 
   &lt;section class=&quot;profile-section profile-section--help&quot; aria-labelledby=&quot;profile-help-title&quot;&gt;
     &lt;div class=&quot;profile-section-head&quot;&gt;&lt;h3 id=&quot;profile-help-title&quot;&gt;Полезно знать&lt;/h3&gt;&lt;/div&gt;
-    &lt;p class=&quot;profile-help-copy&quot;&gt;Профиль — центр аккаунта: здесь уровень и XP, сезонный пропуск, коллекция, рейтинг, документы и поддержка. Покупки, усилители, постоянные кейсы и подарки собраны во вкладке «Мои покупки», а сезонные кейсы открываются внутри сезонного пропуска. Если Telegram не передал фотографию, игра покажет Зефи — это не ошибка.&lt;/p&gt;
+    &lt;p class=&quot;profile-help-copy&quot;&gt;Профиль — центр аккаунта: здесь уровень и XP, сезонный пропуск, подарки и кейсы, коллекция, рейтинг, документы и поддержка. Постоянные кейсы из уровней, магазина и подарков лежат в «Складе кейсов», а сезонные открываются внутри сезонного пропуска. Если Telegram не передал фотографию, игра покажет Зефи — это не ошибка.&lt;/p&gt;
   &lt;/section&gt;
   &lt;section class=&quot;profile-section profile-section--legal&quot; aria-labelledby=&quot;profile-legal-title&quot;&gt;
     &lt;div class=&quot;profile-section-head&quot;&gt;
@@ -11887,7 +11884,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         },
         {
           title: &quot;Профиль — центр прогресса&quot;,
-          description: &quot;Во вкладке «Профиль» собраны Telegram-данные, уровень и XP, сезонный пропуск, коллекция, рейтинг, настройки, документы и поддержка. Покупки, усилители, постоянные кейсы и подарки находятся в «Моих покупках».&quot;,
+          description: &quot;Во вкладке «Профиль» собраны Telegram-данные, уровень и XP, сезонный пропуск, рейтинг, коллекция оформления, настройки, документы и поддержка. Покупки, усилители, постоянные кейсы и подарки находятся отдельно в «Моих покупках».&quot;,
           extra: `За зачтённый забег начисляется +${profileRunXpReward()} XP, а за успешную покупку — +${profilePurchaseXpReward()} XP. Чтобы забег дал XP, продержись минимум ${PROFILE_XP_MIN_RUN_SECONDS} секунд и набери ${PROFILE_XP_MIN_RUN_SCORE} очков. Все подробные гайды можно повторно открыть в разделе «Настройки и обучение».`,
           visual: () =&gt; `
             &lt;div class=&quot;tutorial-profile-card&quot;&gt;
@@ -11901,7 +11898,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
             &lt;/div&gt;
             &lt;div class=&quot;tutorial-profile-feature-grid&quot;&gt;
               &lt;span class=&quot;tutorial-profile-feature&quot;&gt;&lt;b&gt;🎟&lt;/b&gt;&lt;span&gt;&lt;strong&gt;Сезон&lt;/strong&gt;&lt;span&gt;задания и награды&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
-              &lt;span class=&quot;tutorial-profile-feature&quot;&gt;&lt;b&gt;🎁&lt;/b&gt;&lt;span&gt;&lt;strong&gt;Коллекция&lt;/strong&gt;&lt;span&gt;кейсы и оформление&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
+              &lt;span class=&quot;tutorial-profile-feature&quot;&gt;&lt;b&gt;✨&lt;/b&gt;&lt;span&gt;&lt;strong&gt;Коллекция&lt;/strong&gt;&lt;span&gt;аватарки, рамки, следы и музыка&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
               &lt;span class=&quot;tutorial-profile-feature&quot;&gt;&lt;b&gt;🏆&lt;/b&gt;&lt;span&gt;&lt;strong&gt;Рейтинг&lt;/strong&gt;&lt;span&gt;место и рекорд&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
               &lt;span class=&quot;tutorial-profile-feature&quot;&gt;&lt;b&gt;🛟&lt;/b&gt;&lt;span&gt;&lt;strong&gt;Поддержка&lt;/strong&gt;&lt;span&gt;обращения и ответы&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
             &lt;/div&gt;`
@@ -11925,7 +11922,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           title: &quot;Покупки&quot;,
           description: &quot;Здесь находятся купленные физические награды и их коды. Активный код можно открыть повторно, пока не закончился срок действия.&quot;,
           extra: &quot;После погашения или окончания срока запись остаётся в истории, поэтому всегда видно, что происходило с покупкой.&quot;,
-          visual: () =&gt; `&lt;div class=&quot;tutorial-reward-row tutorial-reward-row--single&quot;&gt;&lt;span class=&quot;tutorial-reward&quot;&gt;&lt;img src=&quot;${STOCK_UI_ASSETS.purchases}&quot; alt=&quot;&quot;&gt;&lt;strong&gt;Покупки&lt;/strong&gt;&lt;/span&gt;&lt;/div&gt;`
+          visual: () =&gt; `&lt;div class=&quot;tutorial-reward-row&quot;&gt;&lt;span class=&quot;tutorial-reward&quot;&gt;&lt;img src=&quot;${STOCK_UI_ASSETS.purchases}&quot; alt=&quot;&quot;&gt;&lt;strong&gt;Покупки&lt;/strong&gt;&lt;/span&gt;&lt;/div&gt;`
         },
         {
           title: &quot;Усилители&quot;,
@@ -11953,7 +11950,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           title: &quot;Подарки и компенсации&quot;,
           description: &quot;Во вкладке «Подарки» хранится история наград от команды: название, дата, причина выдачи и статус получения.&quot;,
           extra: &quot;Если подарок ещё не получен, забери его прямо здесь. Полученные записи не исчезают — они остаются в истории, чтобы было понятно, что и когда было выдано.&quot;,
-          visual: () =&gt; `&lt;div class=&quot;tutorial-reward-row tutorial-reward-row--single&quot;&gt;&lt;span class=&quot;tutorial-reward&quot;&gt;&lt;img src=&quot;${STOCK_UI_ASSETS.gifts}&quot; alt=&quot;&quot;&gt;&lt;strong&gt;Подарки&lt;/strong&gt;&lt;/span&gt;&lt;/div&gt;`
+          visual: () =&gt; `&lt;div class=&quot;tutorial-reward-row&quot;&gt;&lt;span class=&quot;tutorial-reward&quot;&gt;&lt;img src=&quot;${STOCK_UI_ASSETS.gifts}&quot; alt=&quot;&quot;&gt;&lt;strong&gt;Подарки&lt;/strong&gt;&lt;/span&gt;&lt;/div&gt;`
         }
       ];
 
@@ -11996,15 +11993,15 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
             &lt;/div&gt;`
         },
         {
-          title: &quot;Мои покупки и коллекция&quot;,
-          description: &quot;В «Моих покупках» собраны покупки, подарки, постоянные кейсы и усилители. Оформление профиля остаётся в разделе «Профиль».&quot;,
-          extra: &quot;Аватарку и рамку можно выбрать для рейтинга, след работает в забеге, а музыку — переключать прямо в профиле. Сезонные кейсы хранятся и открываются отдельно внутри сезонного пропуска.&quot;,
+          title: &quot;Мои покупки — отдельный склад&quot;,
+          description: &quot;Покупки, усилители, постоянные кейсы и подарки больше не смешиваются с профилем: они собраны в отдельном разделе «Мои покупки» с четырьмя вкладками.&quot;,
+          extra: &quot;В профиле остаётся коллекция оформления: аватарки и рамки для рейтинга, следы для забега и музыка. Сезонные тематические кейсы по-прежнему находятся внутри сезонного пропуска.&quot;,
           visual: () =&gt; `
-            &lt;div class=&quot;tutorial-profile-feature-grid&quot;&gt;
-              &lt;span class=&quot;tutorial-profile-feature&quot;&gt;&lt;b&gt;🎁&lt;/b&gt;&lt;span&gt;&lt;strong&gt;Подарки&lt;/strong&gt;&lt;span&gt;история и причина выдачи&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
-              &lt;span class=&quot;tutorial-profile-feature&quot;&gt;&lt;b&gt;📦&lt;/b&gt;&lt;span&gt;&lt;strong&gt;Склад кейсов&lt;/strong&gt;&lt;span&gt;уровни, магазин и акции&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
-              &lt;span class=&quot;tutorial-profile-feature&quot;&gt;&lt;b&gt;⚡&lt;/b&gt;&lt;span&gt;&lt;strong&gt;Усилители&lt;/strong&gt;&lt;span&gt;бонусы на следующие забеги&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
-              &lt;span class=&quot;tutorial-profile-feature&quot;&gt;&lt;b&gt;✨&lt;/b&gt;&lt;span&gt;&lt;strong&gt;Коллекция&lt;/strong&gt;&lt;span&gt;аватарки, рамки, следы, музыка&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
+            &lt;div class=&quot;tutorial-stock-row&quot;&gt;
+              &lt;span class=&quot;tutorial-reward&quot;&gt;&lt;img src=&quot;${STOCK_UI_ASSETS.purchases}&quot; alt=&quot;&quot;&gt;&lt;strong&gt;Покупки&lt;/strong&gt;&lt;/span&gt;
+              &lt;span class=&quot;tutorial-reward&quot;&gt;&lt;img src=&quot;${STOCK_UI_ASSETS.boosters}&quot; alt=&quot;&quot;&gt;&lt;strong&gt;Усилители&lt;/strong&gt;&lt;/span&gt;
+              &lt;span class=&quot;tutorial-reward&quot;&gt;&lt;img src=&quot;${STOCK_UI_ASSETS.cases}&quot; alt=&quot;&quot;&gt;&lt;strong&gt;Кейсы&lt;/strong&gt;&lt;/span&gt;
+              &lt;span class=&quot;tutorial-reward&quot;&gt;&lt;img src=&quot;${STOCK_UI_ASSETS.gifts}&quot; alt=&quot;&quot;&gt;&lt;strong&gt;Подарки&lt;/strong&gt;&lt;/span&gt;
             &lt;/div&gt;`
         },
         {
@@ -12528,8 +12525,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 
       function openStockTutorial(automatic = false, startIndex = 0) {
         tutorialMode = &quot;stock&quot;;
-        const warehouseScreen = root.querySelector(&#x27;[data-screen=&quot;warehouse&quot;]&#x27;);
-        if (warehouseScreen?.hidden) switchScreen(&quot;warehouse&quot;);
+        if (warehouseScreenEl?.hidden) switchScreen(&quot;warehouse&quot;);
         openTutorialMode(automatic, startIndex);
       }
 
@@ -12548,8 +12544,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         const mode = [&quot;main&quot;, &quot;stock&quot;, &quot;profile&quot;, &quot;cases&quot;, &quot;rating&quot;].includes(String(payload?.mode || &quot;&quot;)) ? String(payload.mode) : &quot;main&quot;;
         const step = Math.max(0, Math.floor(Number(payload?.step || 0)));
         if (payload?.reset) {
-          if (mode === &quot;stock&quot;) { /* manual stock guide has no completion flag */ }
-          else if (mode === &quot;profile&quot;) state.profileTutorialCompleted = false;
+          if (mode === &quot;profile&quot;) state.profileTutorialCompleted = false;
           else if (mode === &quot;cases&quot;) state.caseTutorialSeenKey = &quot;&quot;;
           else if (mode === &quot;rating&quot;) state.ratingTutorialSeenKey = &quot;&quot;;
           else state.tutorialCompleted = false;
@@ -12631,8 +12626,8 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       function closeTutorial(markCompleted = false) {
         if (!tutorialLayer) return;
         if (markCompleted) {
-          if (tutorialMode === &quot;stock&quot;) { /* manual stock guide has no completion flag */ }
-          else if (tutorialMode === &quot;profile&quot;) state.profileTutorialCompleted = true;
+          if (tutorialMode === &quot;profile&quot;) state.profileTutorialCompleted = true;
+          else if (tutorialMode === &quot;stock&quot;) { /* manual stock guide has no completion flag */ }
           else if (tutorialMode === &quot;cases&quot;) state.caseTutorialSeenKey = CASE_TUTORIAL_KEY;
           else if (tutorialMode === &quot;rating&quot;) state.ratingTutorialSeenKey = RATING_TUTORIAL_KEY;
           else state.tutorialCompleted = true;
