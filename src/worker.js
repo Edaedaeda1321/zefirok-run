@@ -28311,11 +28311,53 @@ async function applyV77Bulk(query,env){const workflow=await getStaffWorkflow(que
 }
 
 async function v77UpsertAlert(env,key,type,severity,title,details,open=true){const now=Math.floor(Date.now()/1000);if(open)await env.DB.prepare(`INSERT INTO smart_alert_events(alert_key,alert_type,severity,title,details,status,first_seen_at,last_seen_at,last_notified_at,resolved_at) VALUES(?,?,?,?,?,'open',?,?,0,0) ON CONFLICT(alert_key) DO UPDATE SET severity=excluded.severity,title=excluded.title,details=excluded.details,status='open',last_seen_at=excluded.last_seen_at,resolved_at=0`).bind(key,type,severity,title,details,now,now).run();else await env.DB.prepare(`UPDATE smart_alert_events SET status='resolved',resolved_at=?,last_seen_at=? WHERE alert_key=? AND status='open'`).bind(now,now,key).run();}
-async function scanV77SmartAlerts(env){await ensureV77Schema(env);const now=Math.floor(Date.now()/1000);const activeKeys=new Set();const queue=await env.DB.prepare(`SELECT SUM(CASE WHEN status='failed' THEN 1 ELSE 0 END) AS failed,SUM(CASE WHEN status='pending' AND created_at<? THEN 1 ELSE 0 END) AS stale FROM reward_delivery_queue`).bind(now-900).first();if(Number(queue?.failed||0)>0){activeKeys.add("reward-queue-failed");await v77UpsertAlert(env,"reward-queue-failed","reward_queue","critical","Ошибки доставки наград",`${Number(queue.failed)} записей со статусом failed`);}if(Number(queue?.stale||0)>0){activeKeys.add("reward-queue-stale");await v77UpsertAlert(env,"reward-queue-stale","reward_queue","warning","Награды долго ожидают",`${Number(queue.stale)} записей старше 15 минут`);}const silent=(await env.DB.prepare(`SELECT c.chain_key,c.title FROM automation_chains c WHERE c.enabled=1 AND c.updated_at<? AND NOT EXISTS(SELECT 1 FROM automation_chain_executions e WHERE e.chain_key=c.chain_key AND e.created_at>=?) LIMIT 20`).bind(now-7*V67_DAY,now-7*V67_DAY).all()).results||[];for(const r of silent){const key=`silent-auto:${r.chain_key}`;activeKeys.add(key);await v77UpsertAlert(env,key,"automation","warning",`Автоматизация не срабатывает: ${r.title}`,"За последние 7 дней нет выполнений.");}try{const polls=(await env.DB.prepare(`SELECT p.poll_id,p.question,p.published_at FROM player_polls p WHERE p.status='active' AND p.published_at<? AND NOT EXISTS(SELECT 1 FROM player_poll_responses r WHERE r.poll_id=p.poll_id) LIMIT 10`).bind(now-V67_DAY).all()).results||[];for(const r of polls){const key=`poll-empty:${r.poll_id}`;activeKeys.add(key);await v77UpsertAlert(env,key,"poll","warning",`Опрос без ответов: ${r.question}`,"Опрос активен более суток, но ответов нет.");}}catch{}
-  const existing=(await env.DB.prepare(`SELECT alert_key FROM smart_alert_events WHERE status='open'`).all()).results||[];for(const r of existing)if(!activeKeys.has(r.alert_key)&&(/^(reward-queue|silent-auto|poll-empty)/.test(r.alert_key)))await v77UpsertAlert(env,r.alert_key,"","","","",false);
-  const urgent=(await env.DB.prepare(`SELECT * FROM smart_alert_events WHERE status='open' AND severity='critical' AND (last_notified_at=0 OR last_notified_at<?) LIMIT 5`).bind(now-V67_DAY).all()).results||[];for(const a of urgent){await notifySubscribedStaff(env,"bot_errors",`🔴 <b>${escapeHtml(a.title)}</b>\n\n${escapeHtml(a.details)}`);await env.DB.prepare(`UPDATE smart_alert_events SET last_notified_at=? WHERE alert_key=?`).bind(now,a.alert_key).run();}
+async function scanV77SmartAlerts(env){
+  await ensureV77Schema(env);
+  await ensureServerOptimizationSchema(env);
+  const now=Math.floor(Date.now()/1000),activeKeys=new Set();
+  const [rewardQueue,playerNotifications,staffNotifications,automationCron]=await Promise.all([
+    env.DB.prepare(`SELECT SUM(CASE WHEN status='failed' AND attempts>=5 THEN 1 ELSE 0 END) AS terminal,SUM(CASE WHEN status IN ('pending','failed') AND attempts<5 AND created_at<? THEN 1 ELSE 0 END) AS stale FROM reward_delivery_queue`).bind(now-900).first(),
+    env.DB.prepare(`SELECT SUM(CASE WHEN status='failed' AND attempts>=5 THEN 1 ELSE 0 END) AS terminal FROM player_notification_queue`).first(),
+    env.DB.prepare(`SELECT SUM(CASE WHEN status='failed' AND attempts>=5 THEN 1 ELSE 0 END) AS terminal FROM leaderboard_staff_notifications`).first(),
+    env.DB.prepare(`SELECT enabled,interval_seconds,last_success_at,last_status,last_error FROM server_cron_jobs WHERE job_key='automations-five-minutes' LIMIT 1`).first()
+  ]);
+  const rewardTerminal=Number(rewardQueue?.terminal||0),rewardStale=Number(rewardQueue?.stale||0);
+  if(rewardTerminal>0){activeKeys.add('reward-queue-failed');await v77UpsertAlert(env,'reward-queue-failed','reward_queue','critical','Награды окончательно не доставлены',`${rewardTerminal} записей исчерпали все попытки доставки.`);}
+  if(rewardStale>0){activeKeys.add('reward-queue-stale');await v77UpsertAlert(env,'reward-queue-stale','reward_queue','warning','Награды долго ожидают',`${rewardStale} записей ожидают доставку или повтор более 15 минут.`);}
+  const playerTerminal=Number(playerNotifications?.terminal||0),staffTerminal=Number(staffNotifications?.terminal||0);
+  if(playerTerminal>0){activeKeys.add('player-notification-terminal');await v77UpsertAlert(env,'player-notification-terminal','notification','warning','Уведомления игрокам не доставлены',`${playerTerminal} уведомлений исчерпали все попытки отправки.`);}
+  if(staffTerminal>0){activeKeys.add('staff-notification-terminal');await v77UpsertAlert(env,'staff-notification-terminal','notification','warning','Служебные уведомления не доставлены',`${staffTerminal} уведомлений сотрудникам исчерпали все попытки отправки.`);}
+  const cronInterval=Math.max(60,Number(automationCron?.interval_seconds||300));
+  const cronStaleAfter=Math.max(30*60,cronInterval*3);
+  const cronEnabled=automationCron?Boolean(automationCron.enabled):false;
+  const cronLastSuccess=Number(automationCron?.last_success_at||0);
+  const cronStatus=String(automationCron?.last_status||'never');
+  const cronStale=!automationCron||!cronEnabled||cronLastSuccess<=0||now-cronLastSuccess>cronStaleAfter;
+  if(automationCron&&cronEnabled&&cronStatus==='failed'){
+    activeKeys.add('automation-runner-failed');
+    await v77UpsertAlert(env,'automation-runner-failed','automation','critical','Проверка автоматизаций завершилась с ошибкой',String(automationCron.last_error||'Cron automations-five-minutes завершился с ошибкой.').slice(0,500));
+  }else if(cronStale){
+    activeKeys.add('automation-runner-stale');
+    const detail=!automationCron?'Cron automations-five-minutes не инициализирован.':!cronEnabled?'Cron automations-five-minutes выключен.':cronLastSuccess<=0?'У Cron automations-five-minutes ещё нет успешного запуска.':`Последний успешный запуск был ${Math.max(1,Math.floor((now-cronLastSuccess)/60))} мин. назад.`;
+    await v77UpsertAlert(env,'automation-runner-stale','automation','warning','Автоматизации давно не проверялись',detail);
+  }else{
+    const staleChains=(await env.DB.prepare(`SELECT chain_key,title,last_run_at,updated_at FROM automation_chains WHERE enabled=1 AND COALESCE(show_as_task,0)=0 AND updated_at<? AND (last_run_at=0 OR last_run_at<?) ORDER BY COALESCE(last_run_at,0) ASC LIMIT 20`).bind(now-cronStaleAfter,now-cronStaleAfter).all()).results||[];
+    for(const row of staleChains){const key=`automation-stale:${row.chain_key}`;activeKeys.add(key);const last=Number(row.last_run_at||0);const detail=last?`Последняя проверка была ${Math.max(1,Math.floor((now-last)/60))} мин. назад.`:'После создания цепочка ещё ни разу не была проверена.';await v77UpsertAlert(env,key,'automation','warning',`Автоматизация давно не проверялась: ${row.title}`,detail);}
+  }
+  try{const polls=(await env.DB.prepare(`SELECT p.poll_id,p.question,p.published_at FROM player_polls p WHERE p.status='active' AND p.published_at<? AND NOT EXISTS(SELECT 1 FROM player_poll_responses r WHERE r.poll_id=p.poll_id) LIMIT 10`).bind(now-V67_DAY).all()).results||[];for(const row of polls){const key=`poll-empty:${row.poll_id}`;activeKeys.add(key);await v77UpsertAlert(env,key,'poll','warning',`Опрос без ответов: ${row.question}`,'Опрос активен более суток, но ответов нет.');}}catch{}
+  const existing=(await env.DB.prepare(`SELECT alert_key FROM smart_alert_events WHERE status='open'`).all()).results||[];
+  const managed=/^(reward-queue|silent-auto|automation-stale|automation-runner|player-notification-terminal|staff-notification-terminal|poll-empty)/;
+  for(const row of existing)if(!activeKeys.has(row.alert_key)&&managed.test(row.alert_key))await v77UpsertAlert(env,row.alert_key,'','','','',false);
+  const urgent=(await env.DB.prepare(`SELECT * FROM smart_alert_events WHERE status='open' AND severity='critical' AND (last_notified_at=0 OR last_notified_at<?) LIMIT 5`).bind(now-V67_DAY).all()).results||[];
+  for(const alert of urgent){await notifySubscribedStaff(env,'bot_errors',`🔴 <b>${escapeHtml(alert.title)}</b>
+
+${escapeHtml(alert.details)}`);await env.DB.prepare(`UPDATE smart_alert_events SET last_notified_at=? WHERE alert_key=?`).bind(now,alert.alert_key).run();}
 }
-async function showV77Alerts(chatId,user,env){const access=await requireV77OperationsAccess(chatId,user,env);if(!access)return;await scanV77SmartAlerts(env);const rows=(await env.DB.prepare(`SELECT * FROM smart_alert_events WHERE status='open' ORDER BY CASE severity WHEN 'critical' THEN 0 ELSE 1 END,last_seen_at DESC LIMIT 30`).all()).results||[];const lines=rows.map(r=>`${r.severity==="critical"?"🔴":"🟡"} <b>${escapeHtml(r.title)}</b>\n${escapeHtml(r.details)}\nПоследнее подтверждение: ${escapeHtml(formatUtcDate(r.last_seen_at))}`);await sendTelegramMessage(env,chatId,`<b>🚨 Умные предупреждения</b>\n\n${lines.join("\n\n")||"🟢 Значимых отклонений не обнаружено."}`,{inline_keyboard:[[{text:"🔄 Проверить",callback_data:"v77_alerts"}],[{text:"⬅️ Центр",callback_data:"v77_home"}]]});}
+async function showV77Alerts(chatId,user,env){const access=await requireV77OperationsAccess(chatId,user,env);if(!access)return;await scanV77SmartAlerts(env);const rows=(await env.DB.prepare(`SELECT * FROM smart_alert_events WHERE status='open' ORDER BY CASE severity WHEN 'critical' THEN 0 ELSE 1 END,last_seen_at DESC LIMIT 30`).all()).results||[];const lines=rows.map(r=>`${r.severity==="critical"?"🔴":"🟡"} <b>${escapeHtml(r.title)}</b>
+${escapeHtml(r.details)}
+Проверено: ${escapeHtml(formatUtcDate(r.last_seen_at))}`);await sendTelegramMessage(env,chatId,`<b>🚨 Умные предупреждения</b>
+
+${lines.join("\n\n")||"🟢 Значимых отклонений не обнаружено."}`,{inline_keyboard:[[{text:"🔄 Проверить",callback_data:"v77_alerts"}],[{text:"⬅️ Центр",callback_data:"v77_home"}]]});}
 
 async function processV77Cron(env){await ensureV77Schema(env);await processV77NotificationQueue(env,40);const now=Math.floor(Date.now()/1000);const state=await getSystemState(env,"v77:alerts:last");if(!state||now-Number(state.value||0)>=3600){await scanV77SmartAlerts(env);await setSystemState(env,"v77:alerts:last",String(now));}await env.DB.prepare(`DELETE FROM player_notification_log WHERE sent_at<?`).bind(now-30*V67_DAY).run();}
 
@@ -30132,15 +30174,64 @@ async function ownerPanelV85CompensationSend(env,ctx){
 
 async function ownerV85MonitorConfig(env){const state=await getSystemState(env,V85_MONITOR_STATE_KEY);const raw=state?ownerV8SafeJson(state.value,{}):{};if(raw.rewardStale&&!raw.rewardStaleMinutes)raw.rewardStaleMinutes=Math.max(5,Number(raw.rewardStale)||15);return {...V85_MONITOR_DEFAULTS,...raw};}
 async function ownerPanelV85Monitoring(env,ctx){
-  await ensureControlCenterV85Schema(env);return ownerV85Cached("monitoring",10000,async()=>{const now=Math.floor(Date.now()/1000),since=now-24*3600,config=await ownerV85MonitorConfig(env);const [rewards,playerNotifications,staffNotifications,cron,perf,alerts,hourly]=await Promise.all([
-    env.DB.prepare(`SELECT status,COUNT(*) AS count,MAX(CASE WHEN status='pending' THEN ?-created_at ELSE 0 END) AS max_age FROM reward_delivery_queue WHERE status IN ('pending','delivering','failed') GROUP BY status`).bind(now).all(),
-    env.DB.prepare(`SELECT status,COUNT(*) AS count,MAX(CASE WHEN status='pending' THEN ?-created_at ELSE 0 END) AS max_age FROM player_notification_queue WHERE status IN ('pending','sending','failed') GROUP BY status`).bind(now).all(),
-    env.DB.prepare(`SELECT status,COUNT(*) AS count FROM leaderboard_staff_notifications WHERE status IN ('pending','sending','failed') GROUP BY status`).all(),
-    env.DB.prepare(`SELECT * FROM server_cron_jobs ORDER BY priority,job_key`).all(),
-    env.DB.prepare(`SELECT area,COUNT(*) AS samples,ROUND(AVG(duration_ms),1) AS avg_ms,MAX(duration_ms) AS max_ms,SUM(CASE WHEN success=0 THEN 1 ELSE 0 END) AS errors FROM admin_performance_samples WHERE created_at>=? GROUP BY area ORDER BY avg_ms DESC LIMIT 30`).bind(since).all(),
-    env.DB.prepare(`SELECT * FROM smart_alert_events WHERE status='open' ORDER BY CASE severity WHEN 'critical' THEN 0 ELSE 1 END,last_seen_at DESC LIMIT 40`).all(),
-    env.DB.prepare(`SELECT * FROM server_analytics_hourly WHERE bucket_at>=? ORDER BY bucket_at ASC LIMIT 48`).bind(now-48*3600).all()
-  ]);const queueMap=(rows)=>Object.fromEntries((rows.results||[]).map(r=>[String(r.status),{count:Number(r.count||0),maxAge:Number(r.max_age||0)}]));const rQ=queueMap(rewards),pQ=queueMap(playerNotifications),sQ=queueMap(staffNotifications);const cronRows=(cron.results||[]).map(r=>({key:String(r.job_key),enabled:Boolean(r.enabled),interval:Number(r.interval_seconds||0),lastSuccessAt:Number(r.last_success_at||0),nextRunAt:Number(r.next_run_at||0),status:String(r.last_status||"never"),duration:Number(r.last_duration_ms||0),error:String(r.last_error||""),failures:Number(r.failures_total||0)}));const cronFailures24=(hourly.results||[]).reduce((sum,r)=>sum+Number(r.cron_failures||0),0);const slowAreas=(perf.results||[]).filter(r=>Number(r.avg_ms||0)>=Number(config.slowMs||1200)).length;const critical=(rQ.failed?.count||0)>=config.rewardFailed||cronFailures24>=config.cronFailures||cronRows.some(r=>r.enabled&&r.status==='failed');const warning=(rQ.pending?.maxAge||0)>Number(config.rewardStaleMinutes||15)*60||(pQ.failed?.count||0)>=config.notificationFailed||slowAreas>0||cronRows.some(r=>r.enabled&&r.lastSuccessAt&&now-r.lastSuccessAt>Math.max(r.interval*3,config.cronStaleMinutes*60));return {ok:true,generatedAt:now,status:critical?'critical':warning?'warning':'healthy',config,queues:{rewards:rQ,playerNotifications:pQ,staffNotifications:sQ},cron:cronRows,performance:(perf.results||[]).map(r=>({area:String(r.area),samples:Number(r.samples||0),avgMs:Number(r.avg_ms||0),maxMs:Number(r.max_ms||0),errors:Number(r.errors||0)})),alerts:(alerts.results||[]).map(r=>({key:String(r.alert_key),type:String(r.alert_type||""),severity:String(r.severity||""),title:String(r.title||""),details:String(r.details||""),firstSeenAt:Number(r.first_seen_at||0),lastSeenAt:Number(r.last_seen_at||0)})),hourly:(hourly.results||[]).map(r=>({at:Number(r.bucket_at||0),active:Number(r.active_players||0),runs:Number(r.runs_total||0),rewardErrors:Number(r.rewards_failed||0),staffErrors:Number(r.staff_notifications_failed||0),playerErrors:Number(r.player_notifications_failed||0),cronFailures:Number(r.cron_failures||0),cronMs:Number(r.cron_duration_ms||0)}))};});
+  await ensureControlCenterV85Schema(env);
+  return ownerV85Cached("monitoring",10000,async()=>{
+    const now=Math.floor(Date.now()/1000),since=now-24*3600,config=await ownerV85MonitorConfig(env);
+    try{await scanV77SmartAlerts(env);}catch(error){console.error("Monitoring Smart Alerts refresh failed",error);}
+    const [rewards,playerNotifications,staffNotifications,cron,perf,alerts,hourly]=await Promise.all([
+      env.DB.prepare(`SELECT
+        SUM(CASE WHEN status='pending' THEN 1 ELSE 0 END) AS pending,
+        SUM(CASE WHEN status='delivering' THEN 1 ELSE 0 END) AS active,
+        SUM(CASE WHEN status='failed' AND attempts<5 THEN 1 ELSE 0 END) AS retrying,
+        SUM(CASE WHEN status='failed' AND attempts>=5 THEN 1 ELSE 0 END) AS terminal,
+        MAX(CASE WHEN status='pending' THEN ?-created_at ELSE 0 END) AS pending_max_age,
+        MAX(CASE WHEN status='failed' AND attempts<5 THEN ?-created_at ELSE 0 END) AS retry_max_age
+        FROM reward_delivery_queue WHERE status IN ('pending','delivering','failed')`).bind(now,now).first(),
+      env.DB.prepare(`SELECT
+        SUM(CASE WHEN status='pending' THEN 1 ELSE 0 END) AS pending,
+        SUM(CASE WHEN status='failed' AND attempts<5 THEN 1 ELSE 0 END) AS retrying,
+        SUM(CASE WHEN status='failed' AND attempts>=5 THEN 1 ELSE 0 END) AS terminal,
+        MAX(CASE WHEN status='pending' THEN ?-created_at ELSE 0 END) AS pending_max_age,
+        MAX(CASE WHEN status='failed' AND attempts<5 THEN ?-created_at ELSE 0 END) AS retry_max_age
+        FROM player_notification_queue WHERE status IN ('pending','failed')`).bind(now,now).first(),
+      env.DB.prepare(`SELECT
+        SUM(CASE WHEN status='pending' THEN 1 ELSE 0 END) AS pending,
+        SUM(CASE WHEN status='failed' AND attempts<5 THEN 1 ELSE 0 END) AS retrying,
+        SUM(CASE WHEN status='failed' AND attempts>=5 THEN 1 ELSE 0 END) AS terminal,
+        MAX(CASE WHEN status='pending' THEN ?-created_at ELSE 0 END) AS pending_max_age,
+        MAX(CASE WHEN status='failed' AND attempts<5 THEN ?-created_at ELSE 0 END) AS retry_max_age
+        FROM leaderboard_staff_notifications WHERE status IN ('pending','failed')`).bind(now,now).first(),
+      env.DB.prepare(`SELECT * FROM server_cron_jobs ORDER BY priority,job_key`).all(),
+      env.DB.prepare(`SELECT area,COUNT(*) AS samples,ROUND(AVG(duration_ms),1) AS avg_ms,MAX(duration_ms) AS max_ms,SUM(CASE WHEN success=0 THEN 1 ELSE 0 END) AS errors FROM admin_performance_samples WHERE created_at>=? GROUP BY area ORDER BY avg_ms DESC LIMIT 30`).bind(since).all(),
+      env.DB.prepare(`SELECT * FROM smart_alert_events WHERE status='open' ORDER BY CASE severity WHEN 'critical' THEN 0 ELSE 1 END,last_seen_at DESC LIMIT 40`).all(),
+      env.DB.prepare(`SELECT * FROM server_analytics_hourly WHERE bucket_at>=? ORDER BY bucket_at ASC LIMIT 48`).bind(now-48*3600).all()
+    ]);
+    const queueStats=(row)=>({
+      pending:{count:Number(row?.pending||0),maxAge:Number(row?.pending_max_age||0)},
+      active:{count:Number(row?.active||0)},
+      retrying:{count:Number(row?.retrying||0),maxAge:Number(row?.retry_max_age||0)},
+      terminal:{count:Number(row?.terminal||0)},
+      failed:{count:Number(row?.terminal||0)}
+    });
+    const rQ=queueStats(rewards),pQ=queueStats(playerNotifications),sQ=queueStats(staffNotifications);
+    const notificationSummary={pending:{count:pQ.pending.count+sQ.pending.count},retrying:{count:pQ.retrying.count+sQ.retrying.count},terminal:{count:pQ.terminal.count+sQ.terminal.count}};
+    const cronRows=(cron.results||[]).map(r=>({key:String(r.job_key),enabled:Boolean(r.enabled),interval:Number(r.interval_seconds||0),lastSuccessAt:Number(r.last_success_at||0),lastFinishedAt:Number(r.last_finished_at||0),nextRunAt:Number(r.next_run_at||0),status:String(r.last_status||"never"),duration:Number(r.last_duration_ms||0),error:String(r.last_error||""),failures:Number(r.failures_total||0)}));
+    const cronFailures24=(hourly.results||[]).reduce((sum,r)=>sum+Number(r.cron_failures||0),0);
+    const slowAreas=(perf.results||[]).filter(r=>Number(r.avg_ms||0)>=Number(config.slowMs||1200)).length;
+    const failedCron=cronRows.filter(r=>r.enabled&&r.status==='failed');
+    const staleCron=cronRows.filter(r=>r.enabled&&r.lastSuccessAt&&now-r.lastSuccessAt>Math.max(r.interval*3,Number(config.cronStaleMinutes||20)*60));
+    const staleReward=(rQ.pending.maxAge||0)>Number(config.rewardStaleMinutes||15)*60||(rQ.retrying.maxAge||0)>Number(config.rewardStaleMinutes||15)*60;
+    const reasons=[];
+    if(rQ.terminal.count>=Number(config.rewardFailed||1))reasons.push({level:'critical',text:`не доставлено наград: ${rQ.terminal.count}`});
+    if(failedCron.length)reasons.push({level:'critical',text:`Cron с ошибкой: ${failedCron.map(r=>r.key).join(', ')}`});
+    if(notificationSummary.terminal.count>=Number(config.notificationFailed||3))reasons.push({level:'warning',text:`не доставлено уведомлений: ${notificationSummary.terminal.count}`});
+    if(staleReward)reasons.push({level:'warning',text:`награды ждут дольше ${Number(config.rewardStaleMinutes||15)} мин.`});
+    if(staleCron.length)reasons.push({level:'warning',text:`Cron давно без успеха: ${staleCron.map(r=>r.key).join(', ')}`});
+    if(cronFailures24>=Number(config.cronFailures||1))reasons.push({level:'warning',text:`ошибок Cron за 24ч: ${cronFailures24}`});
+    if(slowAreas>0)reasons.push({level:'warning',text:`медленных серверных участков: ${slowAreas}`});
+    const critical=reasons.some(r=>r.level==='critical'),warning=reasons.some(r=>r.level==='warning');
+    return {ok:true,generatedAt:now,status:critical?'critical':warning?'warning':'healthy',healthReasons:reasons,config,queues:{rewards:rQ,playerNotifications:pQ,staffNotifications:sQ,notifications:notificationSummary},cron:cronRows,cronFailures24,performance:(perf.results||[]).map(r=>({area:String(r.area),samples:Number(r.samples||0),avgMs:Number(r.avg_ms||0),maxMs:Number(r.max_ms||0),errors:Number(r.errors||0)})),alerts:(alerts.results||[]).map(r=>({key:String(r.alert_key),type:String(r.alert_type||""),severity:String(r.severity||""),title:String(r.title||""),details:String(r.details||""),firstSeenAt:Number(r.first_seen_at||0),lastSeenAt:Number(r.last_seen_at||0)})),hourly:(hourly.results||[]).map(r=>({at:Number(r.bucket_at||0),active:Number(r.active_players||0),runs:Number(r.runs_total||0),rewardErrors:Number(r.rewards_failed||0),staffErrors:Number(r.staff_notifications_failed||0),playerErrors:Number(r.player_notifications_failed||0),cronFailures:Number(r.cron_failures||0),cronMs:Number(r.cron_duration_ms||0)}))};
+  });
 }
 async function ownerPanelV85MonitoringConfig(env,ctx){await ensureControlCenterV85Schema(env);const c={rewardFailed:ownerPanelInteger(ctx.body?.rewardFailed,1,1000)||1,rewardStaleMinutes:ownerPanelInteger(ctx.body?.rewardStaleMinutes,5,1440)||15,notificationFailed:ownerPanelInteger(ctx.body?.notificationFailed,1,1000)||3,cronFailures:ownerPanelInteger(ctx.body?.cronFailures,1,100)||1,cronStaleMinutes:ownerPanelInteger(ctx.body?.cronStaleMinutes,5,1440)||20,slowMs:ownerPanelInteger(ctx.body?.slowMs,100,60000)||1200};await setSystemState(env,V85_MONITOR_STATE_KEY,JSON.stringify(c));ownerV85CacheInvalidate("monitoring");await logStaffAction(env,ctx.user,ctx.access,"owner_panel_monitor_config",null,"system",null,null,c);return {ok:true,config:c};}
 
