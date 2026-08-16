@@ -1,28 +1,28 @@
-Сладкий Забег — Season Pass: tutorial buttons + 50+ XP balance
-Дата: 2026-08-16
+Sweet Run · Testing Build 1.0.9
+Date: 2026-08-16
 
-Что изменено
-1. Финальный экран обучения сезонного пропуска:
-   - кнопки «Назад» и «Готово» теперь одинаковой ширины;
-   - пара кнопок центрируется внутри окна;
-   - остальные шаги обучения и кнопка «Пропустить» не изменены.
-
-2. Бесконечная дорожка 50+:
-   - порог за один Золотой кейс изменён с 5 000 XP на 1 500 XP;
-   - Worker использует 1 500 XP при расчёте earned/available наград;
-   - battle-pass.html использует тот же порог и отображает 1 500 XP;
-   - обучение получает значение из серверной progression-конфигурации;
-   - уже накопленный overflow-XP не сбрасывается и автоматически учитывается по новому порогу.
-
-Изменённые файлы
-- battle-pass.html
+Changed / added:
+- index_testing_v1.0.9.html
+- battle-pass_testing_v1.0.9.html
+- rating_testing_v1.0.9.html
+- test-project.html
+- owner.html
 - src/worker.js
 
-Проверки
-- node --check src/worker.js: PASS
-- inline JavaScript battle-pass.html: PASS
-- duplicate DOM IDs: PASS
-- arithmetic 50+ / 1 500 XP: PASS
+What changed:
+1. Added a separate versioned Testing Build 1.0.9. Production index.html is NOT replaced by this package.
+2. Test Project, Device Lab, Tutorial Lab and Fault Lab now launch /index_testing_v1.0.9.html only.
+3. Testing index opens versioned battle-pass_testing_v1.0.9.html and rating_testing_v1.0.9.html, keeping the future UI branch separate from Production HTML.
+4. Every testing URL carries test_project=1&testing_build=1.0.9. Worker returns versioned testing HTML only with that contract and marks it no-store/noindex. The game sandbox proxy also rejects old/non-versioned HTML bridges.
+5. Worker bootstrap returns the active testing-build contract; Test Project refuses to boot on a UI/Worker version mismatch.
+6. Sandbox QA checks that all three versioned HTML files exist before release checks can pass.
+7. The testing UI has a small permanent TEST 1.0.9 badge so it cannot be confused with Production.
+8. Return navigation from the testing Season Pass and Rating stays inside index_testing_v1.0.9.html; standalone fallbacks cannot accidentally jump to Production index.html.
+9. Seasonal-case contents/chances endpoint is now included in the Test Project sandbox coverage, so the versioned Season Pass does not fall through to Production.
+10. Existing owner Telegram BackButton reset, Staging collapse and zefir-currency preview fixes are preserved.
+11. Existing Season Pass XP curve / 1500 XP overflow / tutorial / seasonal-case roulette and chances remain in the current Worker and testing Season Pass baseline.
 
-D1 migration не требуется.
-Деплой: npx wrangler deploy
+Deploy:
+  npx wrangler deploy
+
+D1 migration: not required.

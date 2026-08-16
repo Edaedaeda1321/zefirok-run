@@ -718,13 +718,13 @@ const DEFAULT_SEASON_PASS_ELITE_PLUS_BENEFITS = Object.freeze({
 });
 const SEASON_PASS_MAX_LEVEL = 50;
 const SEASON_PASS_TREATS_CURRENCY_IMAGE = "/assets/season-pass/zefir_currency.png";
-// Balance v2: the first 40 levels are deliberately accessible, while the final
-// ten require steadily more activity. Level 50 starts at ~123k XP instead of
-// the old ~1.04m XP. This keeps free players in the 40-45 range with moderate
-// activity, lets an active free player finish, and makes premium tasks meaningful.
+// Balance v4: keep all 50 levels, but remove the late-season XP wall.
+// The curve starts at 300 XP, grows smoothly to 3 500 XP for level 50 and
+// totals 74 700 XP for a full completion. Existing players are rebased once by
+// preserving their current level and the filled fraction of that level.
 const SEASON_PASS_LEVEL_XP = Object.freeze(Array.from({ length: SEASON_PASS_MAX_LEVEL }, (_, index) => {
-  const level = index + 1;
-  return Math.max(300, Math.round((300 + 0.05 * Math.pow(level, 3.1)) / 50) * 50);
+  const progress = index / Math.max(1, SEASON_PASS_MAX_LEVEL - 1);
+  return Math.max(300, Math.round((300 + 3200 * Math.pow(progress, 1.7)) / 50) * 50);
 }));
 const SEASON_PASS_LEVEL_START_XP = Object.freeze((() => {
   const values = [0];
@@ -738,7 +738,17 @@ const SEASON_PASS_OVERFLOW_LEVEL_XP = 1500;
 const SEASON_PASS_BALANCE_V2_MARKER = "__system:season_pass_balance_v2";
 const SEASON_PASS_BALANCE_V3_GLOBAL_MARKER = "__system:season_pass_balance_v3_fair_recalc";
 const SEASON_PASS_BALANCE_V3_PLAYER_MARKER = "__system:season_pass_balance_v3_player";
+const SEASON_PASS_BALANCE_V4_MARKER = "__system:season_pass_balance_v4_smooth_50";
 const SEASON_PASS_ELITE_PLUS_TASK_X2_MARKER = "__system:elite_plus_task_x2_v1";
+const LEGACY_SEASON_PASS_LEVEL_XP_V2 = Object.freeze(Array.from({ length: SEASON_PASS_MAX_LEVEL }, (_, index) => {
+  const level = index + 1;
+  return Math.max(300, Math.round((300 + 0.05 * Math.pow(level, 3.1)) / 50) * 50);
+}));
+const LEGACY_SEASON_PASS_LEVEL_START_XP_V2 = Object.freeze((() => {
+  const values=[0];
+  for(let level=1;level<=SEASON_PASS_MAX_LEVEL;level+=1)values[level]=values[level-1]+LEGACY_SEASON_PASS_LEVEL_XP_V2[level-1];
+  return values;
+})());
 const LEGACY_SEASON_PASS_LEVEL_XP_V1 = Object.freeze(Array.from({ length: SEASON_PASS_MAX_LEVEL }, (_, index) => {
   const level = index + 1;
   return 50 + 25 * level * (level + 1);
@@ -836,6 +846,26 @@ function convertLegacySeasonPassXpToBalanceV2(value) {
   const level=legacySeasonPassLevelFromXpV1(xp);
   const oldStart=LEGACY_SEASON_PASS_LEVEL_START_XP_V1[level-1]||0;
   const oldNeed=Math.max(1,LEGACY_SEASON_PASS_LEVEL_XP_V1[level-1]||1);
+  const fraction=Math.max(0,Math.min(1,(xp-oldStart)/oldNeed));
+  const newStart=LEGACY_SEASON_PASS_LEVEL_START_XP_V2[level-1]||0;
+  const newNeed=Math.max(1,LEGACY_SEASON_PASS_LEVEL_XP_V2[level-1]||1);
+  return Math.max(0,Math.floor(newStart+fraction*newNeed));
+}
+
+function legacySeasonPassLevelFromXpV2(value){
+  const xp=Math.max(0,Math.floor(Number(value)||0));
+  let low=1,high=SEASON_PASS_MAX_LEVEL;
+  while(low<high){const mid=Math.ceil((low+high)/2);if(xp>=LEGACY_SEASON_PASS_LEVEL_START_XP_V2[mid-1])low=mid;else high=mid-1;}
+  return low;
+}
+
+function convertSeasonPassXpV2ToBalanceV4(value){
+  const xp=Math.max(0,Math.floor(Number(value)||0));
+  const oldFull=LEGACY_SEASON_PASS_LEVEL_START_XP_V2[SEASON_PASS_MAX_LEVEL];
+  if(xp>=oldFull)return SEASON_PASS_LEVEL_50_COMPLETE_XP+(xp-oldFull);
+  const level=legacySeasonPassLevelFromXpV2(xp);
+  const oldStart=LEGACY_SEASON_PASS_LEVEL_START_XP_V2[level-1]||0;
+  const oldNeed=Math.max(1,LEGACY_SEASON_PASS_LEVEL_XP_V2[level-1]||1);
   const fraction=Math.max(0,Math.min(1,(xp-oldStart)/oldNeed));
   const newStart=SEASON_PASS_LEVEL_START_XP[level-1]||0;
   const newNeed=Math.max(1,SEASON_PASS_LEVEL_XP[level-1]||1);
@@ -1588,6 +1618,22 @@ export default {
         headers.set("Cross-Origin-Resource-Policy", "same-origin");
         headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=()");
         headers.set("Content-Security-Policy", "default-src 'self'; script-src 'self' 'unsafe-inline' https://telegram.org; style-src 'self' 'unsafe-inline'; img-src 'self' https: data: blob:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'");
+        return new Response(asset.body, { status: asset.status, statusText: asset.statusText, headers });
+      }
+      if ((request.method === "GET" || request.method === "HEAD") && TEST_PROJECT_TESTING_BUILD.files.includes(url.pathname)) {
+        const validBuild = url.searchParams.get("test_project") === "1" && url.searchParams.get("testing_build") === TEST_PROJECT_TESTING_BUILD.version;
+        if (!validBuild) return new Response("Not found", { status: 404, headers: { "Cache-Control": "no-store", "X-Robots-Tag": "noindex, nofollow, noarchive" } });
+        if (!env.ASSETS) return new Response("Not found", { status: 404 });
+        const asset = await env.ASSETS.fetch(request);
+        const headers = new Headers(asset.headers);
+        headers.set("Cache-Control", "no-store, no-cache, must-revalidate, private");
+        headers.set("Pragma", "no-cache");
+        headers.set("X-Robots-Tag", "noindex, nofollow, noarchive");
+        headers.set("Referrer-Policy", "no-referrer");
+        headers.set("X-Frame-Options", "SAMEORIGIN");
+        headers.set("Cross-Origin-Resource-Policy", "same-origin");
+        headers.set("X-Test-Project", TEST_PROJECT_VERSION);
+        headers.set("X-Sweet-Run-Testing-Build", TEST_PROJECT_TESTING_BUILD.version);
         return new Response(asset.body, { status: asset.status, statusText: asset.statusText, headers });
       }
       if (url.pathname === "/api/staff/qr/access" && request.method === "POST") {
@@ -23615,6 +23661,19 @@ async function migrateSeasonPassBalanceV2IfNeeded(env,season,telegramId,player){
   return {...player,xp:newXp,revision:Number(player.revision||0)+1,updated_at:now};
 }
 
+async function migrateSeasonPassBalanceV4IfNeeded(env,season,telegramId,player){
+  if(!player)return player;
+  const id=String(telegramId),seasonId=String(season.id);
+  const marker=await env.DB.prepare(`SELECT 1 AS ok FROM season_pass_entitlements WHERE season_id=? AND telegram_id=? AND item_id=? LIMIT 1`).bind(seasonId,id,SEASON_PASS_BALANCE_V4_MARKER).first();
+  if(marker?.ok)return player;
+  const now=Math.floor(Date.now()/1000),oldXp=Math.max(0,Number(player.xp)||0),newXp=convertSeasonPassXpV2ToBalanceV4(oldXp);
+  await env.DB.batch([
+    env.DB.prepare(`UPDATE season_pass_players SET xp=?,revision=revision+1,updated_at=? WHERE season_id=? AND telegram_id=?`).bind(newXp,now,seasonId,id),
+    env.DB.prepare(`INSERT OR IGNORE INTO season_pass_entitlements(season_id,telegram_id,item_id,source,granted_at) VALUES(?,?,?,?,?)`).bind(seasonId,id,SEASON_PASS_BALANCE_V4_MARKER,'balance-v4-smooth-50',now)
+  ]);
+  return {...player,xp:newXp,revision:Number(player.revision||0)+1,updated_at:now};
+}
+
 async function reconcileElitePlusTaskXpBoost(env,season,telegramId,player){
   if(!player||seasonPassTaskXpMultiplierForPlayer(season,player)!==2)return player;
   const id=String(telegramId),seasonId=String(season.id);
@@ -23640,6 +23699,7 @@ async function ensureSeasonPassPlayer(env,season,telegramId){
   await env.DB.prepare(`INSERT OR IGNORE INTO season_pass_players(season_id,telegram_id,xp,premium_tier,elite_plus_bonus_granted,revision,created_at,updated_at) VALUES(?,?,0,'none',0,1,?,?)`).bind(season.id,String(telegramId),now,now).run();
   let player=await env.DB.prepare(`SELECT * FROM season_pass_players WHERE season_id=? AND telegram_id=? LIMIT 1`).bind(season.id,String(telegramId)).first();
   player=await migrateSeasonPassBalanceV2IfNeeded(env,season,telegramId,player);
+  player=await migrateSeasonPassBalanceV4IfNeeded(env,season,telegramId,player);
   player=await reconcileElitePlusTaskXpBoost(env,season,telegramId,player);
   return player;
 }
@@ -31545,6 +31605,12 @@ async function ownerPanelStagingRollback(env,ctx){
 
 // =================== TEST PROJECT 5.2 · QA LAB · OWNER-ONLY ISOLATED SANDBOX ===================
 const TEST_PROJECT_VERSION = "5.2";
+const TEST_PROJECT_TESTING_BUILD = Object.freeze({
+  channel: "testing",
+  version: "1.0.9",
+  entry: "/index_testing_v1.0.9.html",
+  files: Object.freeze(["/index_testing_v1.0.9.html","/battle-pass_testing_v1.0.9.html","/rating_testing_v1.0.9.html"])
+});
 const TEST_PROJECT_SNAPSHOT_SCHEMA = 6;
 const TEST_PROJECT_MAX_CASE_SIMULATIONS = 2000;
 const TEST_PROJECT_MAX_ACTIVITY_LOG = 80;
@@ -32454,6 +32520,7 @@ function testProjectClientPayload(row) {
     isolated: true,
     productionWrites: false,
     testProjectVersion: TEST_PROJECT_VERSION,
+    testingBuild: { channel:TEST_PROJECT_TESTING_BUILD.channel, version:TEST_PROJECT_TESTING_BUILD.version, entry:TEST_PROJECT_TESTING_BUILD.entry, files:[...TEST_PROJECT_TESTING_BUILD.files] },
     revision: Math.max(1, Number(row?.revision || 1)),
     updatedAt: Number(row?.updated_at || 0) * 1000,
     snapshotAt: Number(row?.snapshot_at || 0) * 1000,
@@ -33082,7 +33149,7 @@ const TEST_PROJECT_SANDBOX_API_PATHS = Object.freeze([
   "/api/shop/offers","/api/shop/offers/event","/api/shop/offers/purchase",
   "/api/battle-pass/access","/api/battle-pass/state","/api/battle-pass/run","/api/battle-pass/profile-bonus","/api/battle-pass/task-notices/pending","/api/battle-pass/task-notices/read",
   "/api/battle-pass/claim","/api/battle-pass/claim-all","/api/battle-pass/purchase-tier","/api/battle-pass/purchase-level",
-  "/api/battle-pass/tasks/claim","/api/battle-pass/tasks/claim-all","/api/battle-pass/overflow/claim","/api/battle-pass/seasonal-case/open",
+  "/api/battle-pass/tasks/claim","/api/battle-pass/tasks/claim-all","/api/battle-pass/overflow/claim","/api/battle-pass/seasonal-case/info","/api/battle-pass/seasonal-case/open",
   "/api/battle-pass/letter/state","/api/battle-pass/letter/open","/api/battle-pass/story/open","/api/battle-pass/story/complete","/api/battle-pass/story/test/open"
 ]);
 const TEST_PROJECT_SANDBOX_API_SET = new Set(TEST_PROJECT_SANDBOX_API_PATHS);
@@ -33420,6 +33487,12 @@ async function testProjectSandboxGameData(env, ctx) {
   if(path==="/api/battle-pass/tasks/claim"){
     const before=testProjectClone(state);const taskId=String(payload?.taskId||payload?.id||"");const lab=testProjectPassLabView(state,snapshot,nowMs);const task=(lab.tasks||[]).find((item)=>String(item.id)===taskId||String(item.key)===taskId);if(!task)throw new ApiError(404,"Тестовое задание не найдено.");if(task.locked)throw new ApiError(403,"Для этого задания нужен Elite / Elite+.");if(!task.complete)throw new ApiError(409,"Задание ещё не выполнено.");if(task.claimed)throw new ApiError(409,"Награда задания уже получена.");state.passTaskClaims=[...(state.passTaskClaims||[]),task.key];const earned=testProjectPassEarnedMultiplier(state,lab.season,nowMs),xpAwarded=Math.floor(Number(task.xp||0)*Math.max(1,Number(earned.multiplier||1)));state.passXp=Math.min(999999999,Number(state.passXp||0)+xpAwarded);await testProjectSandboxSave(env,ownerId,state,snapshot,before,"game_pass_task_claim",`Игра · задание +${xpAwarded} XP`);await reload();return response({...testProjectSandboxPassPayload(state,snapshot),taskUpdate:{id:task.id,periodKey:task.periodKey||"",claimed:true,complete:true,progress:Math.max(Number(task.progress||0),Number(task.target||1))},taskClaimableDelta:-1,receivedTask:{id:task.id,title:task.title,xp:xpAwarded},repeated:false,xpAwarded});
   }
+  if(path==="/api/battle-pass/seasonal-case/info"){
+    const caseId=String(payload?.caseId||Object.keys(state.seasonalCaseInventory||{}).find((id)=>Number(state.seasonalCaseInventory[id])>0)||"");
+    const definition=testProjectSeasonalCaseDefinition(snapshot,caseId);if(!definition)throw new ApiError(404,"Этот сезонный кейс не относится к выбранному сезону Test Project.");
+    if(!caseId||Number(state.seasonalCaseInventory?.[caseId]||0)<1)throw new ApiError(409,"Сезонных кейсов этого типа нет в Test Project.");
+    return response({ok:true,case:{caseId,title:String(definition.title||"Сезонный кейс"),description:String(definition.description||""),imageUrl:String(definition.imageUrl||""),openImageUrl:String(definition.openImageUrl||definition.imageUrl||""),seasonTitle:String(snapshot?.season?.title||""),released:true,contents:seasonPassSeasonalCaseContentsView((definition.items||[]).filter((item)=>item?.enabled!==false),definition.groupChances,definition.slots,definition.duplicatePoints)}});
+  }
   if(path==="/api/battle-pass/seasonal-case/open"){
     const caseId=String(payload?.caseId||Object.keys(state.seasonalCaseInventory||{}).find((id)=>Number(state.seasonalCaseInventory[id])>0)||"");
     const definition=testProjectSeasonalCaseDefinition(snapshot,caseId);if(!definition)throw new ApiError(404,"Этот сезонный кейс не относится к выбранному сезону Test Project.");
@@ -33472,9 +33545,11 @@ async function testProjectAppendApiTrace(env,ownerId,entry){
 
 async function ownerPanelTestProjectGame(env, ctx) {
   const ownerId=String(ctx.user.id),path=String(ctx.body?.path||"").split("?")[0],method=String(ctx.body?.method||"GET").toUpperCase(),started=Date.now();
+  const testingBuildVersion=String(ctx.body?.testingBuildVersion||""),testingBuildEntry=String(ctx.body?.testingBuildEntry||"");
   const row=await testProjectEnsureWorkspace(env,ownerId),state=testProjectWorkspaceState(row),profile=testProjectNormalizeFaultProfile(state.sandbox?.faultProfile||{}),matched=testProjectFaultMatches(profile,path);
   let fault="",result=null,error=null,duplicateResult=null;
   try{
+    if(testingBuildVersion!==TEST_PROJECT_TESTING_BUILD.version||!TEST_PROJECT_TESTING_BUILD.files.includes(testingBuildEntry))throw new ApiError(409,`Sandbox принимает только Testing Build ${TEST_PROJECT_TESTING_BUILD.version}. Обновите Test Project и тестовые HTML-файлы целиком.`);
     if(matched&&profile.latencyMs>0){fault=`latency ${profile.latencyMs}ms`;await new Promise((resolve)=>setTimeout(resolve,profile.latencyMs));}
     if(matched&&profile.networkDropNext>0){
       fault=[fault,"network drop"].filter(Boolean).join(" · ");
@@ -33571,6 +33646,12 @@ function testProjectKnownOwned(kind,id){if(!id)return true;const base={avatar:CA
 
 async function ownerPanelTestProjectQa(env, ctx) {
   const {state,productionSnapshot,snapshot}=await testProjectQaLoad(env,ctx);const checks=[],add=(id,title,status,detail)=>checks.push({id,title,status,detail});
+  const testingBuildAssets=[];
+  for(const assetPath of TEST_PROJECT_TESTING_BUILD.files){
+    try{let r=await env.ASSETS?.fetch?.(new Request(`https://zefirok.local${assetPath}`,{method:"HEAD"}));if(!r||r.status===405||r.status===501){try{await r?.body?.cancel?.();}catch{}r=await env.ASSETS?.fetch?.(new Request(`https://zefirok.local${assetPath}`,{method:"GET"}));}testingBuildAssets.push({path:assetPath,ok:Boolean(r?.ok),status:Number(r?.status||0)});try{await r?.body?.cancel?.();}catch{}}catch(error){testingBuildAssets.push({path:assetPath,ok:false,status:0,error:String(error?.message||error).slice(0,120)});}
+  }
+  const missingTestingBuildAssets=testingBuildAssets.filter((item)=>!item.ok);
+  add("testing_build_assets",`Testing Build ${TEST_PROJECT_TESTING_BUILD.version}`,missingTestingBuildAssets.length?"fail":"pass",missingTestingBuildAssets.length?`Не найдены: ${missingTestingBuildAssets.map((item)=>item.path).join(", ")}`:`${testingBuildAssets.length} versioned HTML-файла доступны`);
   add("snapshot_schema","Snapshot schema",Number(productionSnapshot?.schema||0)>=TEST_PROJECT_SNAPSHOT_SCHEMA?"pass":"fail",`schema ${Number(productionSnapshot?.schema||0)} / ${TEST_PROJECT_SNAPSHOT_SCHEMA}`);
   add("public_config","Public config",snapshot?.publicConfig?.gameplay&&snapshot?.publicConfig?.shop&&snapshot?.publicConfig?.skins?"pass":"fail","gameplay + shop + skins присутствуют в снимке");
   add("sandbox_routes","Sandbox API",TEST_PROJECT_SANDBOX_API_PATHS.length>=50?"pass":"warn",`${TEST_PROJECT_SANDBOX_API_PATHS.length} перехваченных API маршрутов`);
@@ -33585,7 +33666,7 @@ async function ownerPanelTestProjectQa(env, ctx) {
   const uniqueOk=[cs.ownedAvatars,cs.ownedFrames,cs.ownedTrails,cs.ownedMusicTracks,cs.ownedSkins,state.passClaims,state.passTaskClaims].every((arr)=>new Set(arr||[]).size===(arr||[]).length);add("unique_inventory","Нет дублей ID",uniqueOk?"pass":"fail","Коллекции и claim-ключи должны быть уникальными.");
   add("pass_level_consistency","Уровень пропуска",Number(state.passLevel)===seasonPassLevelFromXp(state.passXp)?"pass":"fail",`state ${state.passLevel} / XP→${seasonPassLevelFromXp(state.passXp)}`);
   add("pity_bounds","Pity counters",Number(cs.mythicPityCounter||0)<Math.max(1,Number(cs.mythicGuaranteedEvery||25))&&Number(cs.legendaryPityCounter||0)<Math.max(1,Number(cs.legendaryGuaranteedEvery||50))?"pass":"warn",`mythic ${cs.mythicPityCounter}/${cs.mythicGuaranteedEvery} · legendary ${cs.legendaryPityCounter}/${cs.legendaryGuaranteedEvery}`);
-  const summary=testProjectQaSummary(checks);return {ok:true,isolated:true,testProjectVersion:TEST_PROJECT_VERSION,summary,checks,coverage:{routes:TEST_PROJECT_SANDBOX_API_PATHS},draftMode:state.draftMode};
+  const summary=testProjectQaSummary(checks);return {ok:true,isolated:true,testProjectVersion:TEST_PROJECT_VERSION,testingBuild:{channel:TEST_PROJECT_TESTING_BUILD.channel,version:TEST_PROJECT_TESTING_BUILD.version,entry:TEST_PROJECT_TESTING_BUILD.entry,files:[...TEST_PROJECT_TESTING_BUILD.files]},summary,checks,coverage:{routes:TEST_PROJECT_SANDBOX_API_PATHS},draftMode:state.draftMode};
 }
 
 async function ownerPanelTestProjectFault(env,ctx){
