@@ -1,53 +1,14 @@
-Сладкий Забег — TP/CC navigation hotfix
-Дата: 17.08.2026
-Игра: 1.0.8
-Control Center: v9.25
-Test Project: 5.2
+Сладкий Забег 1.0.8 — фиксированная позиция рейтинга
 
-ИСПРАВЛЕНО
-1. После выхода из Test Project нативная кнопка Telegram больше не остаётся в состоянии «Назад» в Control Center.
-   owner.html принудительно скрывает Telegram BackButton при загрузке, возврате страницы, активации WebApp и повторном показе окна. В Control Center снова используется штатная Telegram-кнопка «Закрыть».
+Изменено:
+- Рейтинг в профиле теперь всегда находится в верхней позиции независимо от статуса сезона.
+- Удалена динамическая перестановка блока рейтинга после загрузки состояния сезона.
+- Сезонный пропуск продолжает показываться/скрываться по своим правилам, но больше не влияет на позицию рейтинга.
 
-2. Нативная Telegram-кнопка «Назад» внутри Test Project снова работает.
-   Обработчик подключается после инициализации Telegram WebApp, перед переходом очищается и выполняет надёжный возврат в owner.html через location.replace с fallback.
-
-3. Все внутренние кнопки «← CC» Test Project используют один и тот же возврат:
-   - верхняя кнопка;
-   - экран настоящей игры;
-   - виртуальный игрок;
-   - gate ошибки;
-   - Draft Layer;
-   - Staging;
-   - Release.
-
-4. Исправлена верхняя панель Test Project на мобильном Telegram.
-   Test Project теперь учитывает contentSafeAreaInset, safeAreaInset и fullscreen-состояние так же, как Control Center. Заголовок больше не должен попадать под Telegram chrome.
-
-5. На узких экранах шапка Test Project больше не сжимает в одну строку логотип, название, TP badge и «← CC»: кнопка возврата переносится на отдельную строку внутри шапки.
-
-6. Cache-bust Test Project обновлён с tp-5.2.0 на tp-5.2.1. Видимая версия Test Project остаётся 5.2.
-
-НЕ ИЗМЕНЯЛОСЬ
-- src/worker.js
+Изменённые файлы:
 - index.html
-- backend / D1
-- Staging / Promote / Rollback логика
-- мониторинг
-- Season Pass
-- склад и основная игра
 
-ФАЙЛЫ ДЛЯ ЗАМЕНЫ
-- owner.html
-- test-project.html
-
-ПРОВЕРКИ
-- owner inline JavaScript: PASS
-- test-project inline JavaScript: PASS
-- 24/24 navigation/safe-area invariants: PASS
-- DOM id owner.html: уникальны
-- DOM id test-project.html: уникальны
-
-ДЕПЛОЙ
+Деплой:
 npx wrangler deploy
 
 D1 migration не требуется.

@@ -8343,8 +8343,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 #zefirok-maltipoo-runner .battle-pass-profile-copy span { color: #8d6b62; font-size: 11px; line-height: 1.4; }
 #zefirok-maltipoo-runner .battle-pass-profile-card .profile-action { grid-column: 1 / -1; width: 100%; }
 #zefirok-maltipoo-runner .profile-section--progress { order: 20; }
-#zefirok-maltipoo-runner .profile-section--leaderboard { order: 30; }
-#zefirok-maltipoo-runner .profile-section--leaderboard.is-season-active { order: 10; }
+#zefirok-maltipoo-runner .profile-section--leaderboard { order: 10; }
 #zefirok-maltipoo-runner .profile-section--help { order: 40; }
 #zefirok-maltipoo-runner .profile-section--settings { order: 50; }
 #zefirok-maltipoo-runner .profile-section--legal { order: 55; }
@@ -9773,7 +9772,6 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       const caseTrailsEl = root.querySelector(&quot;[data-case-trails]&quot;);
       const caseRefreshButton = root.querySelector(&quot;[data-case-refresh]&quot;);
       const activeRunBoosterEl = root.querySelector(&quot;[data-active-run-booster]&quot;);
-      const profileLeaderboardSectionEl = root.querySelector(&quot;.profile-section--leaderboard&quot;);
       const leaderboardStatusEl = root.querySelector(&quot;[data-leaderboard-status]&quot;);
       const leaderboardSummaryEl = root.querySelector(&quot;[data-leaderboard-summary]&quot;);
       const leaderboardSummaryImageEl = root.querySelector(&quot;[data-leaderboard-summary-image]&quot;);
@@ -17596,11 +17594,6 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         return null;
       }
 
-      function updateProfileLeaderboardPosition(status) {
-        if (!profileLeaderboardSectionEl) return;
-        profileLeaderboardSectionEl.classList.toggle(&quot;is-season-active&quot;, String(status || &quot;&quot;) === &quot;active&quot;);
-      }
-
       function setLeaderboardSummary(title, detail, reward = null, status = &quot;Загрузка&quot;, buttonText = &quot;Открыть рейтинг&quot;, imageSrc = LEADERBOARD_WAITING_IMAGE, place = &quot;—&quot;, score = &quot;—&quot;) {
         if (leaderboardStatusEl) leaderboardStatusEl.textContent = status;
         /* Season title is baked into the selected banner artwork. */
@@ -17625,7 +17618,6 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       }
 
       function renderLeaderboardUnavailable(message) {
-        updateProfileLeaderboardPosition(&quot;unavailable&quot;);
         setLeaderboardSummary(&quot;РЕЙТИНГ НЕДОСТУПЕН&quot;, message, null, &quot;Недоступен&quot;, &quot;Попробовать ещё раз&quot;, LEADERBOARD_MODAL_IMAGE, &quot;—&quot;, &quot;—&quot;);
       }
 
@@ -17634,7 +17626,6 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         if (!data?.season) return;
         const season = data.season;
         const status = String(season.status || &quot;scheduled&quot;);
-        updateProfileLeaderboardPosition(status);
         const statusLabel = status === &quot;active&quot; ? &quot;Идёт&quot; : status === &quot;scheduled&quot; ? &quot;Уже скоро&quot; : status === &quot;ended&quot; ? &quot;Завершён&quot; : &quot;Отменён&quot;;
         const me = data.me;
         const seasonTitle = String(season.title || &quot;Сладкий сезон&quot;).trim();
