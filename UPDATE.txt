@@ -1,22 +1,38 @@
-Sweet Run · Testing Build 1.0.9 · Warehouse refresh
-Date: 2026-08-16
+TESTING BUILD 1.0.9 — Профиль + обучение Склада
 
-Changed:
+Что исправлено
+- Устранён визуальный баг, при котором в игре появлялся хвост HTML: " title="Сладкий Забег.
+- Исправлена граница iframe data-srcdoc: title снова является атрибутом iframe и больше не попадает внутрь игрового HTML.
+
+Профиль
+- Гид по Профилю полностью актуализирован под новую структуру TEST 1.0.9.
+- Теперь 6 шагов: аккаунт/Telegram, XP и уровни, сезон и рейтинг, перенос полученных вещей в Склад, Коллекция, настройки/обучение/поддержка.
+- Обновлённый гид имеет новый version marker и один раз покажется даже игрокам, которые уже проходили старую версию.
+- Убрано автоматическое навязывание отдельного гайда по кейсам при входе в Профиль.
+- В «Настройки и обучение» теперь отдельные кнопки: Основное обучение, Гид по профилю, Гид по Складу, Гид по кейсам, Как попасть в рейтинг.
+
+Склад
+- Добавлено отдельное обучение из 5 шагов.
+- Объясняются разделы Покупки / Кейсы / Усилители / Подарки.
+- Объясняются физические покупки, QR, срок 24 часа, Активные/История.
+- Объясняется разница постоянных и сезонных кейсов.
+- Объясняется активация усилителей ×2 и длительность в 2 завершённых забега.
+- Объясняются подарки, компенсации и общий badge уведомлений Склада.
+- При первом входе в новый Склад обучение открывается автоматически один раз.
+- В шапке Склада добавлена маленькая кнопка «?», через которую обучение можно повторить.
+- Из Профиля кнопка «Гид по Складу» сначала открывает сам Склад, затем запускает обучение.
+
+Test Project
+- В Tutorial Lab добавлен режим «Склад».
+- Reset для Профиля и Склада сбрасывает только соответствующий tutorial marker внутри Sandbox.
+- Testing Build остаётся 1.0.9; Production-файлы не изменялись.
+
+Изменённые файлы
 - index_testing_v1.0.9.html
+- test-project.html
+- UPDATE.txt
 
-TEST-ONLY UX update:
-1. Rebuilt Warehouse into one ownership hub with four sections: Purchases, Cases, Boosters, Gifts.
-2. Moved permanent cases, boosters and gift/compensation inbox out of Profile into Warehouse.
-3. Profile keeps Collection (avatars, frames, trails, music) and gets a compact “My items” shortcut to Warehouse.
-4. Physical purchases now have a local unseen notification: Warehouse tab badge + Profile badge + NEW marker on the card until the Purchases section is actually viewed.
-5. Warehouse main badge now combines actionable items: unseen physical purchases + unopened permanent cases + unclaimed gifts.
-6. Internal Warehouse tiles show counts for active purchases, cases, boosters and gifts.
-7. Existing QR/redemption, case RNG/opening, booster activation, gifts, collection and Sandbox APIs are reused; no economy/backend logic was duplicated.
-8. Case/Profile tutorial copy and purchase messages were updated to the new path: Warehouse → Cases / Purchases.
-9. Seasonal cases remain inside Season Pass; cosmetic collection remains in Profile.
-10. Production index.html is not changed.
+Деплой
+npx wrangler deploy
 
-Deploy:
-  npx wrangler deploy
-
-D1 migration: not required.
+D1 migration не требуется.
