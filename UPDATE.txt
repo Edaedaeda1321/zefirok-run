@@ -1,26 +1,20 @@
-Sweet Run · Testing Build 1.0.9
+Sweet Run · Testing Build 1.0.9 · Warehouse refresh
 Date: 2026-08-16
 
-Changed / added:
+Changed:
 - index_testing_v1.0.9.html
-- battle-pass_testing_v1.0.9.html
-- rating_testing_v1.0.9.html
-- test-project.html
-- owner.html
-- src/worker.js
 
-What changed:
-1. Added a separate versioned Testing Build 1.0.9. Production index.html is NOT replaced by this package.
-2. Test Project, Device Lab, Tutorial Lab and Fault Lab now launch /index_testing_v1.0.9.html only.
-3. Testing index opens versioned battle-pass_testing_v1.0.9.html and rating_testing_v1.0.9.html, keeping the future UI branch separate from Production HTML.
-4. Every testing URL carries test_project=1&testing_build=1.0.9. Worker returns versioned testing HTML only with that contract and marks it no-store/noindex. The game sandbox proxy also rejects old/non-versioned HTML bridges.
-5. Worker bootstrap returns the active testing-build contract; Test Project refuses to boot on a UI/Worker version mismatch.
-6. Sandbox QA checks that all three versioned HTML files exist before release checks can pass.
-7. The testing UI has a small permanent TEST 1.0.9 badge so it cannot be confused with Production.
-8. Return navigation from the testing Season Pass and Rating stays inside index_testing_v1.0.9.html; standalone fallbacks cannot accidentally jump to Production index.html.
-9. Seasonal-case contents/chances endpoint is now included in the Test Project sandbox coverage, so the versioned Season Pass does not fall through to Production.
-10. Existing owner Telegram BackButton reset, Staging collapse and zefir-currency preview fixes are preserved.
-11. Existing Season Pass XP curve / 1500 XP overflow / tutorial / seasonal-case roulette and chances remain in the current Worker and testing Season Pass baseline.
+TEST-ONLY UX update:
+1. Rebuilt Warehouse into one ownership hub with four sections: Purchases, Cases, Boosters, Gifts.
+2. Moved permanent cases, boosters and gift/compensation inbox out of Profile into Warehouse.
+3. Profile keeps Collection (avatars, frames, trails, music) and gets a compact “My items” shortcut to Warehouse.
+4. Physical purchases now have a local unseen notification: Warehouse tab badge + Profile badge + NEW marker on the card until the Purchases section is actually viewed.
+5. Warehouse main badge now combines actionable items: unseen physical purchases + unopened permanent cases + unclaimed gifts.
+6. Internal Warehouse tiles show counts for active purchases, cases, boosters and gifts.
+7. Existing QR/redemption, case RNG/opening, booster activation, gifts, collection and Sandbox APIs are reused; no economy/backend logic was duplicated.
+8. Case/Profile tutorial copy and purchase messages were updated to the new path: Warehouse → Cases / Purchases.
+9. Seasonal cases remain inside Season Pass; cosmetic collection remains in Profile.
+10. Production index.html is not changed.
 
 Deploy:
   npx wrangler deploy

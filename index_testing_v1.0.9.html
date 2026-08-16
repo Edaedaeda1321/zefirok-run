@@ -276,16 +276,7 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
   }
 
   function seasonPassRecoveryUrl() {
-    const query = new URLSearchParams({
-      test_project: "1",
-      testing_build: TESTING_BUILD_VERSION,
-      screen: "profile",
-      from: "season-pass",
-      resume: Date.now().toString(36)
-    });
-    const deviceLab = TEST_PROJECT_QUERY.get("device_lab");
-    if (deviceLab) query.set("device_lab", deviceLab);
-    return `${TESTING_BUILD_ENTRY}?${query.toString()}`;
+    return `/?screen=profile&from=season-pass&resume=${Date.now().toString(36)}`;
   }
 
   function hasSeasonPassAwayMarker() {
@@ -726,7 +717,7 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
     const initData = String(window.Telegram?.WebApp?.initData || "");
     const response = await hostFetchWithTimeout(path, {
       method:"POST", headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({initData,ownerSession:testProjectReadOwnerSession(),testingBuildVersion:TESTING_BUILD_VERSION,testingBuildEntry:TESTING_BUILD_ENTRY,...payload}),
+      body:JSON.stringify({initData,ownerSession:testProjectReadOwnerSession(),...payload}),
       cache:"no-store",credentials:"same-origin"
     }, 9000);
     const data = await response.json().catch(() => null);
@@ -6956,6 +6947,130 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 #zefirok-maltipoo-runner .profile-music-option.is-sandbox-hidden{border-style:dashed!important;border-color:#9b74c8!important;background:linear-gradient(180deg,rgba(247,239,255,.94),rgba(255,250,253,.98))!important}
 #zefirok-maltipoo-runner .profile-music-option.is-sandbox-hidden .profile-music-state{color:#76529f!important;font-weight:950!important}
 &lt;/style&gt;
+
+&lt;style id=&quot;testing-v109-warehouse-refresh&quot;&gt;
+  #zefirok-maltipoo-runner .warehouse-shell.warehouse-shell--hub {
+    gap: 13px;
+    min-height: 470px;
+    padding: 14px;
+    background:
+      radial-gradient(circle at 94% 0%, rgba(255,218,231,.72), transparent 30%),
+      radial-gradient(circle at 4% 100%, rgba(255,238,202,.68), transparent 34%),
+      linear-gradient(180deg,#fffdf9 0%,#fff5ef 100%);
+  }
+  #zefirok-maltipoo-runner .warehouse-hub-head {
+    display:flex;align-items:flex-start;justify-content:space-between;gap:12px;
+    padding:2px 2px 0;
+  }
+  #zefirok-maltipoo-runner .warehouse-hub-copy {display:grid;gap:4px;min-width:0}
+  #zefirok-maltipoo-runner .warehouse-hub-kicker {
+    color:#c45d82;font-size:10px;font-weight:950;letter-spacing:.1em;text-transform:uppercase;
+  }
+  #zefirok-maltipoo-runner .warehouse-hub-copy strong {color:#67414f;font-size:23px;line-height:1.05}
+  #zefirok-maltipoo-runner .warehouse-hub-copy span:last-child {color:#94727f;font-size:12px;line-height:1.4}
+  #zefirok-maltipoo-runner .warehouse-new-pill,
+  #zefirok-maltipoo-runner .profile-warehouse-alert {
+    flex:0 0 auto;min-height:28px;display:inline-flex;align-items:center;justify-content:center;
+    padding:0 9px;border:1px solid rgba(223,101,145,.36);border-radius:999px;
+    background:linear-gradient(180deg,#fff0f5,#ffdce9);color:#b84971;font-size:10px;font-weight:950;
+    box-shadow:0 6px 14px rgba(190,72,112,.12);
+  }
+  #zefirok-maltipoo-runner .warehouse-new-pill[hidden],
+  #zefirok-maltipoo-runner .profile-warehouse-alert[hidden] {display:none!important}
+
+  #zefirok-maltipoo-runner .warehouse-hub-nav {
+    display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;
+  }
+  #zefirok-maltipoo-runner .warehouse-hub-nav button {
+    position:relative;display:grid;grid-template-columns:34px minmax(0,1fr) auto;align-items:center;gap:8px;
+    min-width:0;min-height:67px;padding:10px;border:1px solid #ead0c4;border-radius:18px;
+    background:rgba(255,255,255,.82);color:#75525f;text-align:left;font:inherit;
+    box-shadow:0 7px 16px rgba(116,72,72,.06);-webkit-tap-highlight-color:transparent;
+  }
+  #zefirok-maltipoo-runner .warehouse-hub-nav button:active {transform:scale(.985)}
+  #zefirok-maltipoo-runner .warehouse-hub-nav button[aria-selected=&quot;true&quot;] {
+    border-color:#e69ab5;background:linear-gradient(145deg,#fff0f6,#ffe1ec);color:#9f3f63;
+    box-shadow:inset 0 0 0 1px rgba(222,108,150,.13),0 8px 18px rgba(188,77,116,.1);
+  }
+  #zefirok-maltipoo-runner .warehouse-hub-icon {
+    width:34px;height:34px;display:grid;place-items:center;border-radius:12px;
+    background:#fff8f5;font-size:19px;box-shadow:inset 0 0 0 1px rgba(230,190,176,.58);
+  }
+  #zefirok-maltipoo-runner .warehouse-hub-nav button[aria-selected=&quot;true&quot;] .warehouse-hub-icon {
+    background:#fff;box-shadow:inset 0 0 0 1px rgba(226,136,167,.36);
+  }
+  #zefirok-maltipoo-runner .warehouse-hub-label {display:grid;gap:2px;min-width:0}
+  #zefirok-maltipoo-runner .warehouse-hub-label strong {font-size:13px;line-height:1.15;color:#6b4854}
+  #zefirok-maltipoo-runner .warehouse-hub-label span {font-size:9px;line-height:1.2;color:#a1808b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #zefirok-maltipoo-runner .warehouse-hub-count {
+    min-width:28px;height:28px;padding:0 7px;display:inline-flex;align-items:center;justify-content:center;
+    border-radius:999px;background:#fff4ef;color:#a35a70;font-size:12px;font-weight:950;font-variant-numeric:tabular-nums;
+  }
+  #zefirok-maltipoo-runner .warehouse-hub-nav button[aria-selected=&quot;true&quot;] .warehouse-hub-count {background:#fff;color:#bc4f78}
+  #zefirok-maltipoo-runner .warehouse-hub-badge {
+    position:absolute;top:-5px;right:-4px;min-width:19px;height:19px;padding:0 5px;display:inline-flex;align-items:center;justify-content:center;
+    border:2px solid #fff8f4;border-radius:999px;background:#e35f91;color:#fff;font-size:9px;font-weight:950;line-height:1;
+    box-shadow:0 4px 9px rgba(182,60,105,.19);
+  }
+  #zefirok-maltipoo-runner .warehouse-hub-badge[hidden]{display:none!important}
+
+  #zefirok-maltipoo-runner .warehouse-hub-panel {
+    display:grid;gap:10px;min-width:0;padding:12px;border:1px solid rgba(231,201,188,.88);border-radius:20px;
+    background:rgba(255,255,255,.77);box-shadow:0 8px 20px rgba(114,73,69,.05);
+  }
+  #zefirok-maltipoo-runner .warehouse-hub-panel[hidden]{display:none!important}
+  #zefirok-maltipoo-runner .warehouse-panel-head {display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+  #zefirok-maltipoo-runner .warehouse-panel-copy {display:grid;gap:3px;min-width:0}
+  #zefirok-maltipoo-runner .warehouse-panel-copy strong {color:#714858;font-size:15px}
+  #zefirok-maltipoo-runner .warehouse-panel-copy span {color:#9b7985;font-size:10px;line-height:1.38}
+  #zefirok-maltipoo-runner .warehouse-panel-action {
+    flex:0 0 auto;min-height:34px;padding:0 10px;border:1px solid #e5bdcc;border-radius:12px;background:#fff7fa;color:#b55378;font:900 10px/1 inherit;
+  }
+  #zefirok-maltipoo-runner .warehouse-panel-action:disabled{opacity:.5}
+
+  #zefirok-maltipoo-runner .warehouse-shell--hub .warehouse-summary {margin-top:1px}
+  #zefirok-maltipoo-runner .warehouse-shell--hub .warehouse-list {gap:9px}
+  #zefirok-maltipoo-runner .warehouse-shell--hub .case-gifted-wrap,
+  #zefirok-maltipoo-runner .warehouse-shell--hub .case-subsection,
+  #zefirok-maltipoo-runner .warehouse-shell--hub .player-gift-inbox {margin:0}
+  #zefirok-maltipoo-runner .warehouse-shell--hub .case-gifted-wrap {padding:0;border:0;background:transparent}
+  #zefirok-maltipoo-runner .warehouse-shell--hub .case-subsection {padding:0;border:0;background:transparent}
+  #zefirok-maltipoo-runner .warehouse-shell--hub .player-gift-inbox {border-radius:16px}
+
+  #zefirok-maltipoo-runner .warehouse-card.is-new-purchase {
+    border-color:#df8dad;box-shadow:0 0 0 2px rgba(226,107,151,.10),0 10px 22px rgba(158,64,100,.10);
+  }
+  #zefirok-maltipoo-runner .warehouse-card__new {
+    display:inline-flex;width:max-content;margin-left:5px;padding:2px 6px;border-radius:999px;background:#e36593;color:#fff;font-size:8px;font-weight:950;vertical-align:middle;
+  }
+
+  #zefirok-maltipoo-runner .profile-section--warehouse {order:32;display:grid;gap:11px;background:linear-gradient(160deg,#fffdf9,#fff2f7);border-color:rgba(214,130,160,.22)}
+  #zefirok-maltipoo-runner .profile-warehouse-card {
+    width:100%;display:grid;grid-template-columns:44px minmax(0,1fr) 22px;align-items:center;gap:10px;
+    min-height:86px;padding:12px;border:1px solid #e6c6d1;border-radius:18px;background:rgba(255,255,255,.9);color:#724957;text-align:left;font:inherit;
+    box-shadow:0 8px 19px rgba(122,70,91,.07);-webkit-tap-highlight-color:transparent;
+  }
+  #zefirok-maltipoo-runner .profile-warehouse-card:active{transform:scale(.99)}
+  #zefirok-maltipoo-runner .profile-warehouse-icon {width:44px;height:44px;display:grid;place-items:center;border-radius:14px;background:linear-gradient(145deg,#fff0d8,#ffe2ec);font-size:25px}
+  #zefirok-maltipoo-runner .profile-warehouse-copy {display:grid;gap:3px;min-width:0}
+  #zefirok-maltipoo-runner .profile-warehouse-copy&gt;strong {font-size:15px;color:#6f4554}
+  #zefirok-maltipoo-runner .profile-warehouse-copy&gt;span {font-size:10px;line-height:1.35;color:#997884}
+  #zefirok-maltipoo-runner .profile-warehouse-chips {display:flex;gap:5px;flex-wrap:wrap;margin-top:3px}
+  #zefirok-maltipoo-runner .profile-warehouse-chips i {font-style:normal;padding:4px 7px;border-radius:999px;background:#fff5f0;color:#946475;font-size:9px;font-weight:850}
+  #zefirok-maltipoo-runner .profile-warehouse-arrow {justify-self:end;color:#d2608a;font-size:24px;font-weight:900}
+  #zefirok-maltipoo-runner .profile-section--cases {order:35}
+  #zefirok-maltipoo-runner .profile-section--cases .case-subsection {padding:0;border:0;background:transparent}
+
+  @media(max-width:390px){
+    #zefirok-maltipoo-runner .warehouse-shell.warehouse-shell--hub{padding:11px}
+    #zefirok-maltipoo-runner .warehouse-hub-nav{gap:6px}
+    #zefirok-maltipoo-runner .warehouse-hub-nav button{grid-template-columns:30px minmax(0,1fr) auto;gap:6px;min-height:63px;padding:8px}
+    #zefirok-maltipoo-runner .warehouse-hub-icon{width:30px;height:30px;font-size:17px}
+    #zefirok-maltipoo-runner .warehouse-hub-label span{display:none}
+    #zefirok-maltipoo-runner .warehouse-hub-count{min-width:25px;height:25px;font-size:11px}
+    #zefirok-maltipoo-runner .warehouse-hub-panel{padding:10px}
+  }
+&lt;/style&gt;
 &lt;/head&gt;
 &lt;body&gt;
 &lt;div aria-label=&quot;Мини-игра Сладкий забег&quot; class=&quot;zefirok-runner&quot; id=&quot;zefirok-maltipoo-runner&quot;&gt;
@@ -8876,7 +8991,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 &lt;div aria-label=&quot;Разделы игры&quot; class=&quot;tabs&quot; role=&quot;tablist&quot;&gt;
 &lt;button aria-label=&quot;Играть&quot; aria-selected=&quot;true&quot; data-tab=&quot;game&quot; role=&quot;tab&quot; type=&quot;button&quot;&gt;&lt;img alt=&quot;&quot; data-shop-img=&quot;navGameButton&quot;/&gt;&lt;/button&gt;
 &lt;button aria-label=&quot;Магазин&quot; aria-selected=&quot;false&quot; data-tab=&quot;shop&quot; role=&quot;tab&quot; type=&quot;button&quot;&gt;&lt;img alt=&quot;&quot; data-shop-img=&quot;navShopButton&quot;/&gt;&lt;/button&gt;
-&lt;button aria-label=&quot;Мои покупки&quot; aria-selected=&quot;false&quot; class=&quot;warehouse-tab&quot; data-tab=&quot;warehouse&quot; role=&quot;tab&quot; type=&quot;button&quot;&gt;
+&lt;button aria-label=&quot;Склад&quot; aria-selected=&quot;false&quot; class=&quot;warehouse-tab&quot; data-tab=&quot;warehouse&quot; role=&quot;tab&quot; type=&quot;button&quot;&gt;
 &lt;img alt=&quot;&quot; data-shop-img=&quot;warehouseButtonOff&quot; data-warehouse-tab-image/&gt;
 &lt;span class=&quot;warehouse-tab__badge&quot; data-warehouse-tab-count hidden&gt;0&lt;/span&gt;
 &lt;/button&gt;
@@ -9101,16 +9216,82 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 &lt;/div&gt;
 &lt;/section&gt;
 &lt;section class=&quot;screen&quot; data-screen=&quot;warehouse&quot; hidden=&quot;&quot;&gt;
-&lt;div class=&quot;warehouse-shell&quot;&gt;
-&lt;div class=&quot;warehouse-head&quot;&gt;
-&lt;strong&gt;Склад кодов&lt;/strong&gt;
-&lt;span&gt;Все купленные награды хранятся здесь. Активный код можно открыть повторно в течение 24 часов.&lt;/span&gt;
-&lt;/div&gt;
-&lt;div aria-label=&quot;Фильтр покупок&quot; class=&quot;warehouse-summary&quot;&gt;
-&lt;button aria-pressed=&quot;false&quot; data-warehouse-filter=&quot;active&quot; type=&quot;button&quot;&gt;&lt;span&gt;Активные&lt;/span&gt;&lt;strong data-warehouse-active&gt;0&lt;/strong&gt;&lt;/button&gt;
-&lt;button aria-pressed=&quot;false&quot; data-warehouse-filter=&quot;expired&quot; type=&quot;button&quot;&gt;&lt;span&gt;Сгорели&lt;/span&gt;&lt;strong data-warehouse-expired&gt;0&lt;/strong&gt;&lt;/button&gt;
-&lt;/div&gt;
-&lt;div aria-live=&quot;polite&quot; class=&quot;warehouse-list&quot; data-warehouse-list&gt;&lt;/div&gt;
+&lt;div class=&quot;warehouse-shell warehouse-shell--hub&quot;&gt;
+  &lt;div class=&quot;warehouse-hub-head&quot;&gt;
+    &lt;div class=&quot;warehouse-hub-copy&quot;&gt;
+      &lt;span class=&quot;warehouse-hub-kicker&quot;&gt;МОИ ВЕЩИ&lt;/span&gt;
+      &lt;strong&gt;Склад&lt;/strong&gt;
+      &lt;span&gt;Покупки, постоянные кейсы, усилители и подарки — всё полученное в одном месте.&lt;/span&gt;
+    &lt;/div&gt;
+    &lt;span class=&quot;warehouse-new-pill&quot; data-warehouse-new-purchases hidden&gt;Новая покупка&lt;/span&gt;
+  &lt;/div&gt;
+
+  &lt;div class=&quot;warehouse-hub-nav&quot; role=&quot;tablist&quot; aria-label=&quot;Разделы склада&quot;&gt;
+    &lt;button data-warehouse-section=&quot;purchases&quot; role=&quot;tab&quot; aria-selected=&quot;true&quot; type=&quot;button&quot;&gt;
+      &lt;span class=&quot;warehouse-hub-icon&quot; aria-hidden=&quot;true&quot;&gt;🧾&lt;/span&gt;
+      &lt;span class=&quot;warehouse-hub-label&quot;&gt;&lt;strong&gt;Покупки&lt;/strong&gt;&lt;span&gt;QR и срок получения&lt;/span&gt;&lt;/span&gt;
+      &lt;span class=&quot;warehouse-hub-count&quot; data-warehouse-hub-purchases&gt;0&lt;/span&gt;
+      &lt;span class=&quot;warehouse-hub-badge&quot; data-warehouse-section-badge=&quot;purchases&quot; hidden&gt;0&lt;/span&gt;
+    &lt;/button&gt;
+    &lt;button data-warehouse-section=&quot;cases&quot; role=&quot;tab&quot; aria-selected=&quot;false&quot; type=&quot;button&quot;&gt;
+      &lt;span class=&quot;warehouse-hub-icon&quot; aria-hidden=&quot;true&quot;&gt;🎁&lt;/span&gt;
+      &lt;span class=&quot;warehouse-hub-label&quot;&gt;&lt;strong&gt;Кейсы&lt;/strong&gt;&lt;span&gt;Постоянные кейсы&lt;/span&gt;&lt;/span&gt;
+      &lt;span class=&quot;warehouse-hub-count&quot; data-warehouse-hub-cases&gt;0&lt;/span&gt;
+      &lt;span class=&quot;warehouse-hub-badge&quot; data-warehouse-section-badge=&quot;cases&quot; hidden&gt;0&lt;/span&gt;
+    &lt;/button&gt;
+    &lt;button data-warehouse-section=&quot;boosters&quot; role=&quot;tab&quot; aria-selected=&quot;false&quot; type=&quot;button&quot;&gt;
+      &lt;span class=&quot;warehouse-hub-icon&quot; aria-hidden=&quot;true&quot;&gt;⚡&lt;/span&gt;
+      &lt;span class=&quot;warehouse-hub-label&quot;&gt;&lt;strong&gt;Усилители&lt;/strong&gt;&lt;span&gt;Бонусы на забеги&lt;/span&gt;&lt;/span&gt;
+      &lt;span class=&quot;warehouse-hub-count&quot; data-warehouse-hub-boosters&gt;0&lt;/span&gt;
+    &lt;/button&gt;
+    &lt;button data-warehouse-section=&quot;gifts&quot; role=&quot;tab&quot; aria-selected=&quot;false&quot; type=&quot;button&quot;&gt;
+      &lt;span class=&quot;warehouse-hub-icon&quot; aria-hidden=&quot;true&quot;&gt;💌&lt;/span&gt;
+      &lt;span class=&quot;warehouse-hub-label&quot;&gt;&lt;strong&gt;Подарки&lt;/strong&gt;&lt;span&gt;Выдачи и компенсации&lt;/span&gt;&lt;/span&gt;
+      &lt;span class=&quot;warehouse-hub-count&quot; data-warehouse-hub-gifts&gt;0&lt;/span&gt;
+      &lt;span class=&quot;warehouse-hub-badge&quot; data-warehouse-section-badge=&quot;gifts&quot; hidden&gt;0&lt;/span&gt;
+    &lt;/button&gt;
+  &lt;/div&gt;
+
+  &lt;div class=&quot;warehouse-hub-panel&quot; data-warehouse-panel=&quot;purchases&quot;&gt;
+    &lt;div class=&quot;warehouse-panel-head&quot;&gt;
+      &lt;div class=&quot;warehouse-panel-copy&quot;&gt;&lt;strong&gt;Физические покупки&lt;/strong&gt;&lt;span&gt;Покажи QR сотруднику кафе до окончания срока. Новая покупка отмечается значком на Складе и в Профиле.&lt;/span&gt;&lt;/div&gt;
+    &lt;/div&gt;
+    &lt;div aria-label=&quot;Фильтр покупок&quot; class=&quot;warehouse-summary&quot;&gt;
+      &lt;button aria-pressed=&quot;false&quot; data-warehouse-filter=&quot;active&quot; type=&quot;button&quot;&gt;&lt;span&gt;Активные&lt;/span&gt;&lt;strong data-warehouse-active&gt;0&lt;/strong&gt;&lt;/button&gt;
+      &lt;button aria-pressed=&quot;false&quot; data-warehouse-filter=&quot;expired&quot; type=&quot;button&quot;&gt;&lt;span&gt;История&lt;/span&gt;&lt;strong data-warehouse-expired&gt;0&lt;/strong&gt;&lt;/button&gt;
+    &lt;/div&gt;
+    &lt;div aria-live=&quot;polite&quot; class=&quot;warehouse-list&quot; data-warehouse-list&gt;&lt;/div&gt;
+  &lt;/div&gt;
+
+  &lt;div class=&quot;warehouse-hub-panel&quot; data-warehouse-panel=&quot;cases&quot; hidden&gt;
+    &lt;div class=&quot;warehouse-panel-head&quot;&gt;
+      &lt;div class=&quot;warehouse-panel-copy&quot;&gt;&lt;strong&gt;Постоянные кейсы&lt;/strong&gt;&lt;span data-case-sync-status&gt;Данные загружаются…&lt;/span&gt;&lt;/div&gt;
+      &lt;button class=&quot;warehouse-panel-action case-refresh-button&quot; data-case-refresh type=&quot;button&quot;&gt;Обновить&lt;/button&gt;
+    &lt;/div&gt;
+    &lt;div class=&quot;case-gifted-wrap&quot; data-case-gifted-wrap&gt;
+      &lt;div class=&quot;case-subsection-title&quot;&gt;&lt;strong&gt;Кейсы на складе&lt;/strong&gt;&lt;span&gt;Из уровней, магазина, подарков и акций. Сезонные кейсы по-прежнему открываются внутри сезонного пропуска.&lt;/span&gt;&lt;/div&gt;
+      &lt;div class=&quot;case-gifted-list&quot; data-case-gifted-list&gt;&lt;/div&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+
+  &lt;div class=&quot;warehouse-hub-panel&quot; data-warehouse-panel=&quot;boosters&quot; hidden&gt;
+    &lt;div class=&quot;warehouse-panel-head&quot;&gt;&lt;div class=&quot;warehouse-panel-copy&quot;&gt;&lt;strong&gt;Мои усилители&lt;/strong&gt;&lt;span&gt;Активируй перед забегом. Обычный усилитель работает два завершённых забега.&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;
+    &lt;div class=&quot;case-subsection&quot;&gt;
+      &lt;div class=&quot;case-boosters-list&quot; data-case-boosters-list&gt;&lt;/div&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+
+  &lt;div class=&quot;warehouse-hub-panel&quot; data-warehouse-panel=&quot;gifts&quot; hidden&gt;
+    &lt;div class=&quot;warehouse-panel-head&quot;&gt;&lt;div class=&quot;warehouse-panel-copy&quot;&gt;&lt;strong&gt;Подарки и компенсации&lt;/strong&gt;&lt;span&gt;Здесь видно, что выдала команда, по какой причине и что ещё можно забрать.&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;
+    &lt;div class=&quot;player-gift-inbox&quot; data-player-gift-inbox&gt;
+      &lt;div class=&quot;player-gift-inbox-head&quot;&gt;
+        &lt;span class=&quot;player-gift-inbox-summary-copy&quot;&gt;&lt;strong&gt;История выдач&lt;/strong&gt;&lt;span&gt;Новые подарки идут первыми&lt;/span&gt;&lt;/span&gt;
+        &lt;span class=&quot;player-gift-inbox-meta&quot; data-player-gift-inbox-meta&gt;Нет новых&lt;/span&gt;
+      &lt;/div&gt;
+      &lt;div class=&quot;player-gift-inbox-list&quot; data-player-gift-inbox-list&gt;&lt;/div&gt;
+      &lt;button class=&quot;player-gift-inbox-more&quot; data-player-gift-inbox-more type=&quot;button&quot; hidden aria-expanded=&quot;false&quot;&gt;Показать ещё&lt;/button&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
 &lt;/div&gt;
 &lt;/section&gt;
 
@@ -9185,32 +9366,32 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
     &lt;/div&gt;
   &lt;/section&gt;
 
-  &lt;section class=&quot;profile-section profile-section--cases&quot; aria-labelledby=&quot;profile-cases-title&quot;&gt;
+  &lt;section class=&quot;profile-section profile-section--warehouse&quot; aria-labelledby=&quot;profile-warehouse-title&quot;&gt;
+    &lt;div class=&quot;profile-section-head&quot;&gt;
+      &lt;div&gt;&lt;h3 id=&quot;profile-warehouse-title&quot;&gt;Мои вещи&lt;/h3&gt;&lt;span&gt;Быстрый вход в Склад — покупки и игровые предметы не потеряются среди настроек профиля.&lt;/span&gt;&lt;/div&gt;
+      &lt;span class=&quot;profile-warehouse-alert&quot; data-profile-warehouse-new hidden&gt;Новая покупка&lt;/span&gt;
+    &lt;/div&gt;
+    &lt;button class=&quot;profile-warehouse-card&quot; data-profile-warehouse-open type=&quot;button&quot;&gt;
+      &lt;span class=&quot;profile-warehouse-icon&quot; aria-hidden=&quot;true&quot;&gt;📦&lt;/span&gt;
+      &lt;span class=&quot;profile-warehouse-copy&quot;&gt;
+        &lt;strong&gt;Открыть Склад&lt;/strong&gt;
+        &lt;span data-profile-warehouse-summary&gt;Проверяем покупки и награды…&lt;/span&gt;
+        &lt;span class=&quot;profile-warehouse-chips&quot;&gt;
+          &lt;i&gt;Покупки: &lt;b data-profile-warehouse-purchases&gt;0&lt;/b&gt;&lt;/i&gt;
+          &lt;i&gt;Кейсы: &lt;b data-profile-warehouse-cases&gt;0&lt;/b&gt;&lt;/i&gt;
+          &lt;i&gt;Подарки: &lt;b data-profile-warehouse-gifts&gt;0&lt;/b&gt;&lt;/i&gt;
+        &lt;/span&gt;
+      &lt;/span&gt;
+      &lt;b class=&quot;profile-warehouse-arrow&quot; aria-hidden=&quot;true&quot;&gt;›&lt;/b&gt;
+    &lt;/button&gt;
+  &lt;/section&gt;
+
+  &lt;section class=&quot;profile-section profile-section--cases&quot; aria-labelledby=&quot;profile-collection-title&quot;&gt;
     &lt;div class=&quot;profile-section-head profile-section-head--cases&quot;&gt;
-      &lt;div&gt;&lt;h3 id=&quot;profile-cases-title&quot;&gt;Подарки и коллекция&lt;/h3&gt;&lt;span data-case-sync-status&gt;Данные загружаются…&lt;/span&gt;&lt;/div&gt;
-      &lt;div class=&quot;profile-cases-head-actions&quot;&gt;
-        &lt;span class=&quot;profile-cases-ready-badge&quot; data-profile-cases-ready hidden&gt;Доступно: 0&lt;/span&gt;
-        &lt;button class=&quot;case-refresh-button&quot; data-case-refresh type=&quot;button&quot;&gt;Обновить&lt;/button&gt;
-      &lt;/div&gt;
-    &lt;/div&gt;
-    &lt;div class=&quot;player-gift-inbox&quot; data-player-gift-inbox&gt;
-      &lt;div class=&quot;player-gift-inbox-head&quot;&gt;
-        &lt;span class=&quot;player-gift-inbox-summary-copy&quot;&gt;&lt;strong&gt;Подарки и компенсации&lt;/strong&gt;&lt;span&gt;Что именно выдавалось и по какой причине&lt;/span&gt;&lt;/span&gt;
-        &lt;span class=&quot;player-gift-inbox-meta&quot; data-player-gift-inbox-meta&gt;Нет новых&lt;/span&gt;
-      &lt;/div&gt;
-      &lt;div class=&quot;player-gift-inbox-list&quot; data-player-gift-inbox-list&gt;&lt;/div&gt;
-      &lt;button class=&quot;player-gift-inbox-more&quot; data-player-gift-inbox-more type=&quot;button&quot; hidden aria-expanded=&quot;false&quot;&gt;Показать ещё&lt;/button&gt;
-    &lt;/div&gt;
-    &lt;div class=&quot;case-gifted-wrap&quot; data-case-gifted-wrap&gt;
-      &lt;div class=&quot;case-subsection-title&quot;&gt;&lt;strong&gt;Склад кейсов&lt;/strong&gt;&lt;span&gt;Постоянные кейсы из уровней, магазина, подарков и акций. Сезонные открываются в пропуске.&lt;/span&gt;&lt;/div&gt;
-      &lt;div class=&quot;case-gifted-list&quot; data-case-gifted-list&gt;&lt;/div&gt;
+      &lt;div&gt;&lt;h3 id=&quot;profile-collection-title&quot;&gt;Коллекция&lt;/h3&gt;&lt;span&gt;Здесь остаётся только оформление игрока: аватарки, рамки, следы и музыка.&lt;/span&gt;&lt;/div&gt;
     &lt;/div&gt;
     &lt;div class=&quot;case-subsection&quot;&gt;
-      &lt;div class=&quot;case-subsection-title&quot;&gt;&lt;strong&gt;Мои усилители&lt;/strong&gt;&lt;span&gt;Один усилитель работает два завершённых забега&lt;/span&gt;&lt;/div&gt;
-      &lt;div class=&quot;case-boosters-list&quot; data-case-boosters-list&gt;&lt;/div&gt;
-    &lt;/div&gt;
-    &lt;div class=&quot;case-subsection&quot;&gt;
-      &lt;div class=&quot;case-subsection-title&quot;&gt;&lt;strong&gt;Коллекция&lt;/strong&gt;&lt;span&gt;Аватарка и рамка видны в рейтинге, след — в забеге, музыка меняет фон игры.&lt;/span&gt;&lt;/div&gt;
+      &lt;div class=&quot;case-subsection-title&quot;&gt;&lt;strong&gt;Моё оформление&lt;/strong&gt;&lt;span&gt;Аватарка и рамка видны в рейтинге, след — в забеге, музыка меняет фон игры.&lt;/span&gt;&lt;/div&gt;
       &lt;details class=&quot;case-collection-group&quot; data-case-collection&gt;
         &lt;summary&gt;&lt;span&gt;Аватарки&lt;/span&gt;&lt;span class=&quot;case-collection-meta&quot; data-case-collection-count=&quot;avatar&quot;&gt;0 / 0&lt;/span&gt;&lt;i aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;&lt;/summary&gt;
         &lt;div class=&quot;case-collection-panel&quot;&gt;&lt;div class=&quot;case-cosmetic-grid&quot; data-case-avatars&gt;&lt;/div&gt;&lt;/div&gt;
@@ -9299,7 +9480,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 
   &lt;section class=&quot;profile-section profile-section--help&quot; aria-labelledby=&quot;profile-help-title&quot;&gt;
     &lt;div class=&quot;profile-section-head&quot;&gt;&lt;h3 id=&quot;profile-help-title&quot;&gt;Полезно знать&lt;/h3&gt;&lt;/div&gt;
-    &lt;p class=&quot;profile-help-copy&quot;&gt;Профиль — центр аккаунта: здесь уровень и XP, сезонный пропуск, подарки и кейсы, коллекция, рейтинг, документы и поддержка. Постоянные кейсы из уровней, магазина и подарков лежат в «Складе кейсов», а сезонные открываются внутри сезонного пропуска. Если Telegram не передал фотографию, игра покажет Зефи — это не ошибка.&lt;/p&gt;
+    &lt;p class=&quot;profile-help-copy&quot;&gt;Профиль — центр аккаунта: здесь уровень и XP, сезонный пропуск, коллекция, рейтинг, настройки, документы и поддержка. Все уже полученные вещи вынесены в «Склад»: физические покупки, постоянные кейсы, усилители, подарки и компенсации. Сезонные кейсы открываются внутри сезонного пропуска. Если Telegram не передал фотографию, игра покажет Зефи — это не ошибка.&lt;/p&gt;
   &lt;/section&gt;
   &lt;section class=&quot;profile-section profile-section--legal&quot; aria-labelledby=&quot;profile-legal-title&quot;&gt;
     &lt;div class=&quot;profile-section-head&quot;&gt;
@@ -9630,6 +9811,22 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       const warehouseExpiredEl = root.querySelector(&quot;[data-warehouse-expired]&quot;);
       const warehouseFilterButtons = [...root.querySelectorAll(&quot;[data-warehouse-filter]&quot;)];
       const warehouseTabCountEl = root.querySelector(&quot;[data-warehouse-tab-count]&quot;);
+      const warehouseSectionButtons = [...root.querySelectorAll(&quot;[data-warehouse-section]&quot;)];
+      const warehousePanels = [...root.querySelectorAll(&quot;[data-warehouse-panel]&quot;)];
+      const warehouseNewPurchasesEl = root.querySelector(&quot;[data-warehouse-new-purchases]&quot;);
+      const warehouseHubPurchasesEl = root.querySelector(&quot;[data-warehouse-hub-purchases]&quot;);
+      const warehouseHubCasesEl = root.querySelector(&quot;[data-warehouse-hub-cases]&quot;);
+      const warehouseHubBoostersEl = root.querySelector(&quot;[data-warehouse-hub-boosters]&quot;);
+      const warehouseHubGiftsEl = root.querySelector(&quot;[data-warehouse-hub-gifts]&quot;);
+      const warehousePurchasesBadgeEl = root.querySelector(&#x27;[data-warehouse-section-badge=&quot;purchases&quot;]&#x27;);
+      const warehouseCasesBadgeEl = root.querySelector(&#x27;[data-warehouse-section-badge=&quot;cases&quot;]&#x27;);
+      const warehouseGiftsBadgeEl = root.querySelector(&#x27;[data-warehouse-section-badge=&quot;gifts&quot;]&#x27;);
+      const profileWarehouseOpenButton = root.querySelector(&quot;[data-profile-warehouse-open]&quot;);
+      const profileWarehouseNewEl = root.querySelector(&quot;[data-profile-warehouse-new]&quot;);
+      const profileWarehouseSummaryEl = root.querySelector(&quot;[data-profile-warehouse-summary]&quot;);
+      const profileWarehousePurchasesEl = root.querySelector(&quot;[data-profile-warehouse-purchases]&quot;);
+      const profileWarehouseCasesEl = root.querySelector(&quot;[data-profile-warehouse-cases]&quot;);
+      const profileWarehouseGiftsEl = root.querySelector(&quot;[data-profile-warehouse-gifts]&quot;);
       const profileAvatarEl = root.querySelector(&quot;[data-profile-avatar]&quot;);
       const profileSourceBadgeEl = root.querySelector(&quot;[data-profile-source-badge]&quot;);
       const profilePremiumBadgeEl = root.querySelector(&quot;[data-profile-premium-badge]&quot;);
@@ -10136,6 +10333,14 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       let profileToastTimer = 0;
       let profileTutorialAutoTimer = 0;
       let warehouseFilter = &quot;all&quot;;
+      let warehouseSection = &quot;purchases&quot;;
+      const WAREHOUSE_SEEN_PURCHASES_KEY = &quot;zefirok-warehouse-seen-purchases-v1&quot;;
+      let warehouseSeenPurchaseCodes = new Set();
+      let warehouseSeenTimer = 0;
+      try {
+        const savedSeenCodes = JSON.parse(localStorage.getItem(WAREHOUSE_SEEN_PURCHASES_KEY) || &quot;[]&quot;);
+        warehouseSeenPurchaseCodes = new Set((Array.isArray(savedSeenCodes) ? savedSeenCodes : []).map(String).filter(Boolean).slice(-80));
+      } catch (error) { warehouseSeenPurchaseCodes = new Set(); }
       let pendingPurchase = null;
       let purchaseReturnFocus = null;
       let purchaseLimitTimer = 0;
@@ -11319,7 +11524,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         &quot;case-small&quot;: {
           enabled: true,
           title: &quot;Обычный кейс&quot;,
-          description: &quot;Одна случайная награда. Кейс сразу попадёт в профиль, в раздел «Склад кейсов».&quot;,
+          description: &quot;Одна случайная награда. Кейс сразу попадёт во вкладку «Склад» → «Кейсы».&quot;,
           points: 10000,
           treats: 100,
           coffee: 100,
@@ -11756,8 +11961,8 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         },
         {
           title: &quot;Обменивай награды&quot;,
-          description: &quot;Покупай товары в магазине. Полученный код всегда можно повторно открыть во вкладке «Мои покупки».&quot;,
-          extra: &quot;Код действует 24 часа. Сделай скриншот или вернись к нему на складе до окончания таймера.&quot;,
+          description: &quot;Покупай товары в магазине. Полученный QR и срок получения всегда доступны во вкладке «Склад» → «Покупки».&quot;,
+          extra: &quot;Код действует 24 часа. После покупки на Складе и в Профиле появится уведомление, пока ты не откроешь раздел с покупкой.&quot;,
           visual: () =&gt; `
             &lt;div class=&quot;tutorial-tab-row&quot;&gt;
               &lt;img src=&quot;${assetSources.navShopButtonSelected || assetSources.navShopButton || &quot;&quot;}&quot; alt=&quot;&quot;&gt;
@@ -11766,7 +11971,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         },
         {
           title: &quot;Профиль — центр прогресса&quot;,
-          description: &quot;Во вкладке «Профиль» собраны Telegram-данные, уровень и XP, сезонный пропуск, кейсы и коллекция, рейтинг, настройки, документы и поддержка.&quot;,
+          description: &quot;Во вкладке «Профиль» собраны Telegram-данные, уровень и XP, сезонный пропуск, коллекция, рейтинг, настройки, документы и поддержка. Полученные вещи вынесены в отдельный Склад.&quot;,
           extra: `За зачтённый забег начисляется +${profileRunXpReward()} XP, а за успешную покупку — +${profilePurchaseXpReward()} XP. Чтобы забег дал XP, продержись минимум ${PROFILE_XP_MIN_RUN_SECONDS} секунд и набери ${PROFILE_XP_MIN_RUN_SCORE} очков. Все подробные гайды можно повторно открыть в разделе «Настройки и обучение».`,
           visual: () =&gt; `
             &lt;div class=&quot;tutorial-profile-card&quot;&gt;
@@ -11780,7 +11985,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
             &lt;/div&gt;
             &lt;div class=&quot;tutorial-profile-feature-grid&quot;&gt;
               &lt;span class=&quot;tutorial-profile-feature&quot;&gt;&lt;b&gt;🎟&lt;/b&gt;&lt;span&gt;&lt;strong&gt;Сезон&lt;/strong&gt;&lt;span&gt;задания и награды&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
-              &lt;span class=&quot;tutorial-profile-feature&quot;&gt;&lt;b&gt;🎁&lt;/b&gt;&lt;span&gt;&lt;strong&gt;Коллекция&lt;/strong&gt;&lt;span&gt;кейсы и оформление&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
+              &lt;span class=&quot;tutorial-profile-feature&quot;&gt;&lt;b&gt;📦&lt;/b&gt;&lt;span&gt;&lt;strong&gt;Склад&lt;/strong&gt;&lt;span&gt;покупки, кейсы и подарки&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
               &lt;span class=&quot;tutorial-profile-feature&quot;&gt;&lt;b&gt;🏆&lt;/b&gt;&lt;span&gt;&lt;strong&gt;Рейтинг&lt;/strong&gt;&lt;span&gt;место и рекорд&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
               &lt;span class=&quot;tutorial-profile-feature&quot;&gt;&lt;b&gt;🛟&lt;/b&gt;&lt;span&gt;&lt;strong&gt;Поддержка&lt;/strong&gt;&lt;span&gt;обращения и ответы&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
             &lt;/div&gt;`
@@ -11826,15 +12031,15 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
             &lt;/div&gt;`
         },
         {
-          title: &quot;Подарки, кейсы и коллекция&quot;,
-          description: &quot;В «Подарках и коллекции» видно, что и за что выдала команда, хранятся постоянные кейсы, усилители и собранное оформление.&quot;,
-          extra: &quot;Аватарку и рамку можно выбрать для рейтинга, след работает в забеге, а музыку — переключать прямо в профиле. Сезонные кейсы хранятся и открываются отдельно внутри сезонного пропуска.&quot;,
+          title: &quot;Склад и коллекция&quot;,
+          description: &quot;Физические покупки, постоянные кейсы, усилители, подарки и компенсации теперь собраны во вкладке «Склад». В Профиле остаётся личная коллекция оформления.&quot;,
+          extra: &quot;Профиль показывает быстрый переход в Склад и уведомление о новой физической покупке. Аватарку, рамку, след и музыку по-прежнему можно выбирать в коллекции Профиля. Сезонные кейсы остаются внутри сезонного пропуска.&quot;,
           visual: () =&gt; `
             &lt;div class=&quot;tutorial-profile-feature-grid&quot;&gt;
-              &lt;span class=&quot;tutorial-profile-feature&quot;&gt;&lt;b&gt;🎁&lt;/b&gt;&lt;span&gt;&lt;strong&gt;Подарки&lt;/strong&gt;&lt;span&gt;история и причина выдачи&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
-              &lt;span class=&quot;tutorial-profile-feature&quot;&gt;&lt;b&gt;📦&lt;/b&gt;&lt;span&gt;&lt;strong&gt;Склад кейсов&lt;/strong&gt;&lt;span&gt;уровни, магазин и акции&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
-              &lt;span class=&quot;tutorial-profile-feature&quot;&gt;&lt;b&gt;⚡&lt;/b&gt;&lt;span&gt;&lt;strong&gt;Усилители&lt;/strong&gt;&lt;span&gt;бонусы на следующие забеги&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
-              &lt;span class=&quot;tutorial-profile-feature&quot;&gt;&lt;b&gt;✨&lt;/b&gt;&lt;span&gt;&lt;strong&gt;Коллекция&lt;/strong&gt;&lt;span&gt;аватарки, рамки, следы, музыка&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
+              &lt;span class=&quot;tutorial-profile-feature&quot;&gt;&lt;b&gt;🧾&lt;/b&gt;&lt;span&gt;&lt;strong&gt;Покупки&lt;/strong&gt;&lt;span&gt;QR и срок получения на Складе&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
+              &lt;span class=&quot;tutorial-profile-feature&quot;&gt;&lt;b&gt;🎁&lt;/b&gt;&lt;span&gt;&lt;strong&gt;Кейсы&lt;/strong&gt;&lt;span&gt;постоянные кейсы на Складе&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
+              &lt;span class=&quot;tutorial-profile-feature&quot;&gt;&lt;b&gt;⚡&lt;/b&gt;&lt;span&gt;&lt;strong&gt;Усилители&lt;/strong&gt;&lt;span&gt;активация на Складе&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
+              &lt;span class=&quot;tutorial-profile-feature&quot;&gt;&lt;b&gt;✨&lt;/b&gt;&lt;span&gt;&lt;strong&gt;Коллекция&lt;/strong&gt;&lt;span&gt;оформление остаётся в Профиле&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
             &lt;/div&gt;`
         },
         {
@@ -11855,7 +12060,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         {
           title: &quot;Постоянные и сезонные кейсы&quot;,
           description: &quot;В основной игре есть пять постоянных типов: Обычный, Серебряный, Золотой, Мифический и Легендарный. Сезонный пропуск может выдавать отдельные тематические кейсы.&quot;,
-          extra: &quot;Постоянные кейсы лежат в профиле в «Складе кейсов». Сезонные кейсы открываются внутри сезонного пропуска и сохраняются там даже после завершения сезона, если уже были получены.&quot;,
+          extra: &quot;Постоянные кейсы лежат во вкладке «Склад» → «Кейсы». Сезонные кейсы открываются внутри сезонного пропуска и сохраняются там даже после завершения сезона, если уже были получены.&quot;,
           visual: () =&gt; `
             &lt;div class=&quot;tutorial-case-row&quot;&gt;
               &lt;span class=&quot;tutorial-case-card&quot;&gt;&lt;img src=&quot;${CASE_IMAGE_CATALOG.small.closed}&quot; alt=&quot;&quot;&gt;&lt;strong&gt;Обычный&lt;/strong&gt;&lt;small&gt;базовый&lt;/small&gt;&lt;/span&gt;
@@ -11868,7 +12073,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         {
           title: &quot;Где получать кейсы&quot;,
           description: &quot;Кейсы больше не привязаны только к уровням: постоянные типы можно получать несколькими способами, а сезонные — через механики сезонного пропуска.&quot;,
-          extra: &quot;После покупки или выдачи постоянный кейс синхронизируется с сервером и появляется в профиле. Историю подарков и компенсаций можно посмотреть рядом со складом.&quot;,
+          extra: &quot;После покупки или выдачи постоянный кейс синхронизируется с сервером и появляется во вкладке «Склад» → «Кейсы». История подарков и компенсаций находится в соседнем разделе «Подарки».&quot;,
           visual: () =&gt; `
             &lt;div class=&quot;tutorial-case-source-list&quot;&gt;
               &lt;span class=&quot;tutorial-case-source&quot;&gt;&lt;b&gt;⬆&lt;/b&gt;&lt;span&gt;&lt;strong&gt;Уровни профиля&lt;/strong&gt;&lt;span&gt;Обычные, Серебряные и Золотые кейсы выдаются по лестнице уровней.&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
@@ -11889,7 +12094,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         {
           title: &quot;Что может выпасть&quot;,
           description: &quot;Награда зависит от типа кейса: очки, зефир, кофе, усилители ×2 и коллекционные предметы. Продвинутые кейсы также открывают редкую косметику и музыку.&quot;,
-          extra: &quot;Коллекционные награды включают скины, аватарки, рамки, следы и мелодии. В Легендарном кейсе также может быть физическая награда — проверяемый код автоматически попадёт в «Мои покупки». Повторы, где они разрешены, компенсируются очками.&quot;,
+          extra: &quot;Коллекционные награды включают скины, аватарки, рамки, следы и мелодии. В Легендарном кейсе также может быть физическая награда — проверяемый код автоматически попадёт в «Склад» → «Покупки». Повторы, где они разрешены, компенсируются очками.&quot;,
           visual: () =&gt; `
             &lt;div class=&quot;tutorial-case-rewards tutorial-case-rewards--six&quot;&gt;
               &lt;span class=&quot;tutorial-case-reward&quot;&gt;&lt;img src=&quot;${assetSources.shopStar || assetSources.iconScore || &quot;&quot;}&quot; alt=&quot;&quot;&gt;&lt;strong&gt;Ресурсы&lt;/strong&gt;&lt;/span&gt;
@@ -11902,11 +12107,11 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         },
         {
           title: &quot;Где открывать и куда идут награды&quot;,
-          description: &quot;Постоянные кейсы открываются в профиле: «Подарки и коллекция» → «Склад кейсов». Сезонные открываются в блоке «Сезонные кейсы» внутри сезонного пропуска.&quot;,
-          extra: &quot;После рулетки награда сразу синхронизируется: ресурсы начисляются на баланс, усилитель появляется в профиле, коллекционные предметы добавляются в соответствующий раздел, а физический код — в «Мои покупки».&quot;,
+          description: &quot;Постоянные кейсы открываются во вкладке «Склад» → «Кейсы». Сезонные открываются в блоке «Сезонные кейсы» внутри сезонного пропуска.&quot;,
+          extra: &quot;После рулетки награда сразу синхронизируется: ресурсы начисляются на баланс, усилитель появляется на Складе, коллекционные предметы добавляются в Профиль → Коллекция, а физический код — в Склад → Покупки.&quot;,
           visual: () =&gt; `
             &lt;div class=&quot;tutorial-case-source-list&quot;&gt;
-              &lt;span class=&quot;tutorial-case-source&quot;&gt;&lt;b&gt;👤&lt;/b&gt;&lt;span&gt;&lt;strong&gt;Постоянный кейс&lt;/strong&gt;&lt;span&gt;Профиль → Подарки и коллекция → Склад кейсов.&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
+              &lt;span class=&quot;tutorial-case-source&quot;&gt;&lt;b&gt;📦&lt;/b&gt;&lt;span&gt;&lt;strong&gt;Постоянный кейс&lt;/strong&gt;&lt;span&gt;Склад → Кейсы.&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
               &lt;span class=&quot;tutorial-case-source&quot;&gt;&lt;b&gt;🎟&lt;/b&gt;&lt;span&gt;&lt;strong&gt;Сезонный кейс&lt;/strong&gt;&lt;span&gt;Сезонный пропуск → Сезонные кейсы.&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
             &lt;/div&gt;`
         }
@@ -14406,25 +14611,20 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       function updateProfileCaseBadges() {
         const caseTotal = profileAvailableCaseCount();
         const giftTotal = Math.max(0, Math.floor(Number(state.playerGiftPendingCount || 0)));
-        const collectionTotal = caseTotal + giftTotal;
         const seasonPassTotal = Math.max(0, Math.floor(Number(state.seasonPassAttentionCount || 0)));
-        const total = collectionTotal + seasonPassTotal;
-        const compact = total &gt; 99 ? &quot;99+&quot; : String(total);
         if (profileTabCaseCountEl) {
-          profileTabCaseCountEl.textContent = compact;
-          profileTabCaseCountEl.hidden = total === 0;
-          profileTabCaseCountEl.setAttribute(&quot;aria-label&quot;, total ? `Доступно наград: ${total}` : &quot;&quot;);
+          profileTabCaseCountEl.textContent = seasonPassTotal &gt; 99 ? &quot;99+&quot; : String(seasonPassTotal);
+          profileTabCaseCountEl.hidden = seasonPassTotal === 0;
+          profileTabCaseCountEl.setAttribute(&quot;aria-label&quot;, seasonPassTotal ? `В профиле доступно сезонных наград: ${seasonPassTotal}` : &quot;&quot;);
         }
-        if (profileCasesReadyEl) {
-          profileCasesReadyEl.textContent = collectionTotal &gt; 99 ? &quot;Доступно: 99+&quot; : `Доступно: ${collectionTotal}`;
-          profileCasesReadyEl.hidden = collectionTotal === 0;
-        }
+        if (profileCasesReadyEl) profileCasesReadyEl.hidden = true;
         if (seasonPassAttentionEl) {
           seasonPassAttentionEl.textContent = seasonPassTotal &gt; 99 ? &quot;99+&quot; : String(seasonPassTotal);
           seasonPassAttentionEl.hidden = seasonPassTotal === 0;
           seasonPassAttentionEl.setAttribute(&quot;aria-label&quot;, seasonPassTotal ? `В сезонном пропуске доступно наград: ${seasonPassTotal}` : &quot;&quot;);
         }
-        return total;
+        updateWarehouseHubSummary();
+        return caseTotal + giftTotal + seasonPassTotal;
       }
 
       function normalizeCaseBoosters(value) {
@@ -14895,7 +15095,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           return {
             src: casePhysicalRewardImage(reward.productId),
             title: physical?.title || reward.productName || &quot;Физическая награда&quot;,
-            detail: reward.code ? `Код ${reward.code} добавлен в «Мои покупки»` : &quot;Код добавлен в «Мои покупки»&quot;,
+            detail: reward.code ? `Код ${reward.code} добавлен в «Склад» → «Покупки»` : &quot;Код добавлен в «Склад» → «Покупки»&quot;,
             badge: &quot;Физическая награда&quot;,
             rarityClass: &quot;legendary&quot;,
             kind: &quot;physical&quot;
@@ -15228,7 +15428,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           : &quot;&quot;;
         const physicalRewards = info.type === &quot;legendary&quot;
           ? Object.entries(CASE_PHYSICAL_REWARD_CATALOG)
-            .map(([id, item]) =&gt; caseInfoSimpleReward(item.title, &quot;Проверяемый код в разделе «Мои покупки»&quot;, chances.physical / Math.max(1, Object.keys(CASE_PHYSICAL_REWARD_CATALOG).length), casePhysicalRewardImage(id)))
+            .map(([id, item]) =&gt; caseInfoSimpleReward(item.title, &quot;Проверяемый код в «Склад» → «Покупки»&quot;, chances.physical / Math.max(1, Object.keys(CASE_PHYSICAL_REWARD_CATALOG).length), casePhysicalRewardImage(id)))
             .join(&quot;&quot;)
           : &quot;&quot;;
         const physicalSection = physicalRewards
@@ -16051,7 +16251,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           &lt;img class=&quot;purchase-product-image&quot; alt=&quot;${escapePurchaseText(skin.title)}&quot; src=&quot;${escapePurchaseText(skin.image)}&quot;&gt;
           &lt;h2 id=&quot;purchase-dialog-title&quot;&gt;${escapePurchaseText(skin.title)}&lt;/h2&gt;
           &lt;p&gt;Подтвердите покупку образа. Купленный скин останется на аккаунте навсегда и сразу будет надет.&lt;/p&gt;
-          ${skin.bonusCase ? `&lt;div class=&quot;purchase-warning&quot;&gt;&lt;strong&gt;Подарок при покупке&lt;/strong&gt;&lt;span&gt;${escapePurchaseText(skin.bonusCase.title)} сразу появится в профиле, на складе кейсов.&lt;/span&gt;&lt;/div&gt;` : &quot;&quot;}
+          ${skin.bonusCase ? `&lt;div class=&quot;purchase-warning&quot;&gt;&lt;strong&gt;Подарок при покупке&lt;/strong&gt;&lt;span&gt;${escapePurchaseText(skin.bonusCase.title)} сразу появится во вкладке «Склад» → «Кейсы».&lt;/span&gt;&lt;/div&gt;` : &quot;&quot;}
           &lt;div class=&quot;purchase-costs&quot;&gt;${purchaseCostRowsMarkup(purchase)}&lt;/div&gt;
           &lt;div class=&quot;purchase-warning&quot;&gt;
             &lt;strong&gt;Не занимает лимит наград&lt;/strong&gt;
@@ -16217,8 +16417,10 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         if ((name === &quot;shop&quot; || name === &quot;warehouse&quot; || name === &quot;profile&quot;) &amp;&amp; state.running) togglePause();
         if (name === &quot;warehouse&quot;) {
           warehouseFilter = &quot;all&quot;;
+          setWarehouseSection(&quot;purchases&quot;, { silent:true });
           syncWarehouseFilterButtons();
           renderWarehouse();
+          renderCaseHub();
           void syncServerRewards(true);
         }
         if (name === &quot;profile&quot;) {
@@ -17835,6 +18037,130 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         }
       }
 
+
+      function warehouseActivePhysicalEntries(now = Date.now()) {
+        return (Array.isArray(state.redemptionCodes) ? state.redemptionCodes : []).filter((entry) =&gt; rewardEntryStatus(entry, now) === &quot;active&quot;);
+      }
+
+      function warehouseUnseenPhysicalEntries(now = Date.now()) {
+        return warehouseActivePhysicalEntries(now).filter((entry) =&gt; {
+          const code = String(entry?.code || &quot;&quot;);
+          return code &amp;&amp; !warehouseSeenPurchaseCodes.has(code);
+        });
+      }
+
+      function persistWarehouseSeenPurchases() {
+        try { localStorage.setItem(WAREHOUSE_SEEN_PURCHASES_KEY, JSON.stringify([...warehouseSeenPurchaseCodes].slice(-80))); } catch (error) {}
+      }
+
+      function warehouseBoosterCount() {
+        const boosters = normalizeCaseBoosters(state.caseBoosters);
+        const stock = Number(boosters.points || 0) + Number(boosters.treats || 0) + Number(boosters.coffee || 0);
+        const specials = normalizeCaseSpecials(state.caseOwnedSpecials).length;
+        const active = normalizeActiveCaseBooster(state.activeCaseBooster).type ? 1 : 0;
+        return Math.max(0, stock + specials + active);
+      }
+
+      function setCompactCounter(element, value) {
+        if (!element) return;
+        const count = Math.max(0, Math.floor(Number(value || 0)));
+        element.textContent = count &gt; 99 ? &quot;99+&quot; : String(count);
+      }
+
+      function setWarehouseNoticeBadge(element, value) {
+        if (!element) return;
+        const count = Math.max(0, Math.floor(Number(value || 0)));
+        element.textContent = count &gt; 99 ? &quot;99+&quot; : String(count);
+        element.hidden = count === 0;
+      }
+
+      function updateWarehouseHubSummary(now = Date.now()) {
+        const allCodes = Array.isArray(state.redemptionCodes) ? state.redemptionCodes : [];
+        const activeCount = allCodes.filter((entry) =&gt; rewardEntryStatus(entry, now) === &quot;active&quot;).length;
+        const caseTotal = profileAvailableCaseCount();
+        const giftTotal = Math.max(0, Math.floor(Number(state.playerGiftPendingCount || 0)));
+        const boosterTotal = warehouseBoosterCount();
+        const unseenPhysical = warehouseUnseenPhysicalEntries(now).length;
+        const attentionTotal = unseenPhysical + caseTotal + giftTotal;
+
+        setCompactCounter(warehouseHubPurchasesEl, activeCount);
+        setCompactCounter(warehouseHubCasesEl, caseTotal);
+        setCompactCounter(warehouseHubBoostersEl, boosterTotal);
+        setCompactCounter(warehouseHubGiftsEl, giftTotal);
+        setWarehouseNoticeBadge(warehousePurchasesBadgeEl, unseenPhysical);
+        setWarehouseNoticeBadge(warehouseCasesBadgeEl, caseTotal);
+        setWarehouseNoticeBadge(warehouseGiftsBadgeEl, giftTotal);
+
+        if (warehouseNewPurchasesEl) {
+          warehouseNewPurchasesEl.textContent = unseenPhysical &gt; 1 ? `Новых покупок: ${unseenPhysical}` : &quot;Новая покупка&quot;;
+          warehouseNewPurchasesEl.hidden = unseenPhysical === 0;
+        }
+        if (warehouseTabCountEl) {
+          warehouseTabCountEl.textContent = attentionTotal &gt; 99 ? &quot;99+&quot; : String(attentionTotal);
+          warehouseTabCountEl.hidden = attentionTotal === 0;
+          warehouseTabCountEl.setAttribute(&quot;aria-label&quot;, attentionTotal ? `На складе требует внимания: ${attentionTotal}` : &quot;&quot;);
+        }
+        if (profileWarehouseNewEl) {
+          profileWarehouseNewEl.textContent = unseenPhysical &gt; 1 ? `Новых покупок: ${unseenPhysical}` : &quot;Новая покупка&quot;;
+          profileWarehouseNewEl.hidden = unseenPhysical === 0;
+        }
+        if (profileWarehousePurchasesEl) profileWarehousePurchasesEl.textContent = formatter.format(activeCount);
+        if (profileWarehouseCasesEl) profileWarehouseCasesEl.textContent = formatter.format(caseTotal);
+        if (profileWarehouseGiftsEl) profileWarehouseGiftsEl.textContent = formatter.format(giftTotal);
+        if (profileWarehouseSummaryEl) {
+          profileWarehouseSummaryEl.textContent = unseenPhysical &gt; 0
+            ? unseenPhysical &gt; 1 ? `${unseenPhysical} новые покупки ждут получения` : &quot;Новая покупка ждёт получения&quot;
+            : giftTotal &gt; 0 ? `Подарков к получению: ${giftTotal} · кейсов: ${caseTotal}`
+              : caseTotal &gt; 0 ? `Кейсов готово к открытию: ${caseTotal}`
+                : activeCount &gt; 0 ? `Активных физических покупок: ${activeCount}`
+                  : &quot;Покупки, кейсы, усилители и подарки в одном месте&quot;;
+        }
+        return { activeCount, caseTotal, giftTotal, boosterTotal, unseenPhysical, attentionTotal };
+      }
+
+      function syncWarehouseSection() {
+        for (const button of warehouseSectionButtons) button.setAttribute(&quot;aria-selected&quot;, String(button.dataset.warehouseSection === warehouseSection));
+        for (const panel of warehousePanels) panel.hidden = panel.dataset.warehousePanel !== warehouseSection;
+      }
+
+      function setWarehouseSection(nextSection, options = {}) {
+        const allowed = new Set([&quot;purchases&quot;,&quot;cases&quot;,&quot;boosters&quot;,&quot;gifts&quot;]);
+        warehouseSection = allowed.has(String(nextSection || &quot;&quot;)) ? String(nextSection) : &quot;purchases&quot;;
+        syncWarehouseSection();
+        if (!options.silent) {
+          if (warehouseSection === &quot;purchases&quot;) renderWarehouse();
+          else renderCaseHub();
+        }
+        if (warehouseSection === &quot;purchases&quot;) scheduleWarehousePurchasesSeen();
+      }
+
+      function markVisibleWarehousePurchasesSeen() {
+        if (!isScreenVisible(&quot;warehouse&quot;) || warehouseSection !== &quot;purchases&quot;) return false;
+        let changed = false;
+        for (const entry of warehouseActivePhysicalEntries()) {
+          const code = String(entry?.code || &quot;&quot;);
+          if (!code || warehouseSeenPurchaseCodes.has(code)) continue;
+          warehouseSeenPurchaseCodes.add(code);
+          changed = true;
+        }
+        if (!changed) return false;
+        persistWarehouseSeenPurchases();
+        updateWarehouseHubSummary();
+        if (warehouseListEl) {
+          for (const card of warehouseListEl.querySelectorAll(&quot;.warehouse-card.is-new-purchase&quot;)) {
+            card.classList.remove(&quot;is-new-purchase&quot;);
+            card.querySelector(&quot;.warehouse-card__new&quot;)?.remove();
+          }
+        }
+        return true;
+      }
+
+      function scheduleWarehousePurchasesSeen() {
+        window.clearTimeout(warehouseSeenTimer);
+        if (!isScreenVisible(&quot;warehouse&quot;) || warehouseSection !== &quot;purchases&quot; || warehouseUnseenPhysicalEntries().length === 0) return;
+        warehouseSeenTimer = window.setTimeout(() =&gt; markVisibleWarehousePurchasesSeen(), 850);
+      }
+
       function warehouseProduct(entry) {
         const product = shopProducts[entry?.productId];
         return {
@@ -17858,15 +18184,11 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 
       function updateWarehouseSummary(now = Date.now()) {
         const allCodes = Array.isArray(state.redemptionCodes) ? state.redemptionCodes : [];
-        let activeCount = 0;
-        for (const entry of allCodes) if (rewardEntryStatus(entry, now) === &quot;active&quot;) activeCount += 1;
+        const activeCount = allCodes.filter((entry) =&gt; rewardEntryStatus(entry, now) === &quot;active&quot;).length;
         const expiredCount = Math.max(0, allCodes.length - activeCount);
         if (warehouseActiveEl) warehouseActiveEl.textContent = formatter.format(activeCount);
         if (warehouseExpiredEl) warehouseExpiredEl.textContent = formatter.format(expiredCount);
-        if (warehouseTabCountEl) {
-          warehouseTabCountEl.textContent = activeCount &gt; 99 ? &quot;99+&quot; : String(activeCount);
-          warehouseTabCountEl.hidden = activeCount === 0;
-        }
+        updateWarehouseHubSummary(now);
         return { activeCount, expiredCount };
       }
 
@@ -17883,6 +18205,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 
         const nextSignature = JSON.stringify({
           filter: warehouseFilter,
+          section: warehouseSection,
           entries: allCodes.map((entry) =&gt; [
             String(entry?.code || &quot;&quot;),
             String(entry?.productId || &quot;&quot;),
@@ -17898,10 +18221,8 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         const expiredCount = Math.max(0, allCodes.length - activeCount);
         if (warehouseActiveEl) warehouseActiveEl.textContent = formatter.format(activeCount);
         if (warehouseExpiredEl) warehouseExpiredEl.textContent = formatter.format(expiredCount);
-        if (warehouseTabCountEl) {
-          warehouseTabCountEl.textContent = activeCount &gt; 99 ? &quot;99+&quot; : String(activeCount);
-          warehouseTabCountEl.hidden = activeCount === 0;
-        }
+        updateWarehouseHubSummary(now);
+        syncWarehouseSection();
         syncWarehouseFilterButtons();
         if (CLIENT_OPT_RENDER_SIGNATURES &amp;&amp; nextSignature === warehouseRenderSignature) {
           clientPerformance.warehouseRenderSkipped += 1;
@@ -17951,6 +18272,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           const used = status === &quot;used&quot;;
           const product = warehouseProduct(entry);
           const image = assetSources[product.image] || &quot;&quot;;
+          const unseen = active &amp;&amp; Boolean(entry?.code) &amp;&amp; !warehouseSeenPurchaseCodes.has(String(entry.code));
           const remaining = active
             ? formatWarehouseRemaining(expiresAt - now)
             : used
@@ -17963,11 +18285,11 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
               ? `Списан ${entry.redeemedAt ? escapePurchaseText(formatPurchaseExpiry(entry.redeemedAt)) : &quot;сотрудником кафе&quot;}`
               : &quot;Код больше нельзя использовать&quot;;
           return `
-            &lt;article class=&quot;warehouse-card${active ? &quot;&quot; : &quot; is-expired&quot;}&quot;&gt;
+            &lt;article class=&quot;warehouse-card${active ? &quot;&quot; : &quot; is-expired&quot;}${unseen ? &quot; is-new-purchase&quot; : &quot;&quot;}&quot;&gt;
               &lt;div class=&quot;warehouse-card__image&quot;&gt;&lt;img alt=&quot;${escapePurchaseText(product.title)}&quot; src=&quot;${image}&quot; loading=&quot;lazy&quot; decoding=&quot;async&quot; fetchpriority=&quot;low&quot;&gt;&lt;/div&gt;
               &lt;div class=&quot;warehouse-card__body&quot;&gt;
                 &lt;span class=&quot;warehouse-card__status&quot;&gt;${statusLabel}&lt;/span&gt;
-                &lt;strong&gt;${escapePurchaseText(product.title)}&lt;/strong&gt;
+                &lt;strong&gt;${escapePurchaseText(product.title)}${unseen ? `&lt;span class=&quot;warehouse-card__new&quot;&gt;НОВОЕ&lt;/span&gt;` : &quot;&quot;}&lt;/strong&gt;
                 &lt;span&gt;${description}&lt;/span&gt;
                 &lt;div class=&quot;warehouse-card__timer&quot; data-warehouse-timer data-warehouse-expires-at=&quot;${expiresAt}&quot; data-warehouse-status=&quot;${status}&quot;&gt;${remaining}&lt;/div&gt;
               &lt;/div&gt;
@@ -17975,6 +18297,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
             &lt;/article&gt;`;
         }).join(&quot;&quot;);
         tuneRuntimeImages(warehouseListEl);
+        scheduleWarehousePurchasesSeen();
       }
 
       function updateWarehouseTimers(now = Date.now()) {
@@ -18095,7 +18418,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           : &quot;&quot;;
         const disabledAttribute = missing.length &gt; 0 ? &#x27; disabled aria-disabled=&quot;true&quot;&#x27; : &quot;&quot;;
         const warningMarkup = isCasePurchase
-          ? `&lt;div class=&quot;purchase-warning&quot;&gt;&lt;strong&gt;Кейс появится сразу&lt;/strong&gt;&lt;span&gt;После покупки он будет добавлен в профиль, в раздел «Склад кейсов».&lt;/span&gt;&lt;/div&gt;`
+          ? `&lt;div class=&quot;purchase-warning&quot;&gt;&lt;strong&gt;Кейс появится сразу&lt;/strong&gt;&lt;span&gt;После покупки он будет добавлен во вкладку «Склад» → «Кейсы».&lt;/span&gt;&lt;/div&gt;`
           : `&lt;div class=&quot;purchase-warning&quot;&gt;&lt;strong&gt;Код действует 24 часа&lt;/strong&gt;&lt;span&gt;После подтверждения вы получите одноразовый код для этой покупки.&lt;/span&gt;&lt;/div&gt;`;
         openPurchaseLayer(`
           &lt;span class=&quot;purchase-kicker&quot;&gt;Подтверждение покупки&lt;/span&gt;
@@ -18118,7 +18441,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           &lt;span class=&quot;purchase-kicker&quot;&gt;Покупка выполнена&lt;/span&gt;
           &lt;img class=&quot;purchase-product-image&quot; alt=&quot;${escapePurchaseText(purchase.product.title)}&quot; src=&quot;${productImage}&quot;&gt;
           &lt;h2 id=&quot;purchase-dialog-title&quot;&gt;${escapePurchaseText(purchase.product.title)}&lt;/h2&gt;
-          &lt;p&gt;Кейс добавлен в профиль и уже находится в разделе «Склад кейсов».&lt;/p&gt;
+          &lt;p&gt;Кейс добавлен и уже находится во вкладке «Склад» → «Кейсы».&lt;/p&gt;
           &lt;div class=&quot;purchase-warning&quot;&gt;&lt;strong&gt;Можно открыть в любое время&lt;/strong&gt;&lt;span&gt;Нажмите на изображение кейса в профиле, чтобы ещё раз посмотреть награды и шансы.&lt;/span&gt;&lt;/div&gt;
           &lt;div class=&quot;purchase-actions&quot;&gt;
             &lt;button class=&quot;purchase-action&quot; data-case-info-type=&quot;${escapePurchaseText(purchase.product.caseType || &quot;small&quot;)}&quot; type=&quot;button&quot;&gt;Награды и шансы&lt;/button&gt;
@@ -19500,6 +19823,12 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       for (const button of shopSelectButtons) {
         button.addEventListener(&quot;click&quot;, () =&gt; selectProduct(button.dataset.shopSelect));
       }
+      for (const button of warehouseSectionButtons) {
+        button.addEventListener(&quot;click&quot;, () =&gt; setWarehouseSection(button.dataset.warehouseSection));
+      }
+      if (profileWarehouseOpenButton) {
+        profileWarehouseOpenButton.addEventListener(&quot;click&quot;, () =&gt; switchScreen(&quot;warehouse&quot;));
+      }
       for (const button of warehouseFilterButtons) {
         button.addEventListener(&quot;click&quot;, () =&gt; setWarehouseFilter(button.dataset.warehouseFilter));
       }
@@ -20403,7 +20732,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 #zefirok-maltipoo-runner .profile-avatar-wrap.case-frame-live::after{background-image:var(--case-live-frame-image)!important}
 &lt;/style&gt;
 &lt;/body&gt;
-&lt;/html&gt;" title="Сладкий Забег"></iframe>
+&lt;/html&gt;&quot; title=&quot;Сладкий Забег"></iframe>
 <script id="zefirok-v07934-season-pass-overlay-audit" type="application/json">{"version":"0.79.34","scope":"outer-app-return-recovery","samePageOverlay":true,"mainGamePreserved":true,"restores":["telegram_profile","rating","balances","cases","notifications","feature_flags"]}</script>
 <script type="application/json" id="zefirok-v07944-outer-audit">{"build":"0.79.44","fixes":["season-pass-cache-version","return-refresh"]}</script>
 
