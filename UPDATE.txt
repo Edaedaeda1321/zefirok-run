@@ -1,56 +1,20 @@
-Sweet Run / Сладкий Забег
-TEST 1.0.9 · Sandbox isolation hotfix
-Date: 2026-08-16
+UPDATE - TEST PROJECT ONLY
 
-CRITICAL FIX
-- Исправлена реальная утечка запросов из Testing Build в Production.
-- Старый index_testing_v1.0.9.html пропускал установку Sandbox Bridge, потому что проверял наличие строки __TEST_PROJECT_SANDBOX__ в игровом HTML. Эта строка уже использовалась обычным кодом игры, поэтому bridge ошибочно считался установленным.
-- Из-за этого /api/rewards/create и другие /api/* могли выполняться как Production-запросы.
+1. Izmenen tolko test-project.html. Osnovnye index.html, profile.html, owner.html i Worker ne menyalis.
+2. V Test Project nagrady x2 points/treats/coffee vmesto emoji pokazyvayut sushchestvuyushchie booster PNG iz assets/cases/boosters.
+3. Device Lab poluchaet TP-only preview ikonok sklada bez izmeneniya index.html na diske:
+   - Pokupki: assets/test-project/icon_shopping.png
+   - Usiliteli: assets/test-project/icon_busters.png
+   - Keysy: assets/test-project/icone_cases.png
+   - Podarki: assets/test-project/icone_prize.png
+4. Preview prokhodit vnutr nested iframe realnoy igry i povtorno primenyaetsya posle dinamicheskogo rerender.
+5. Vse 4 PNG skopirovany byte-for-byte bez pererisovki i obrabotki.
 
-WHAT CHANGED
-1. index_testing_v1.0.9.html
-   - Sandbox Bridge теперь вставляется без небезопасной проверки по общей строке.
-   - Добавлен уникальный runtime marker __ZEFIROK_TP_BRIDGE_INSTALLED_V109__.
-   - TEST-игра показывается только после проверки marker + failClosed.
-   - Если bridge не запустился, игра останавливается и Production API не должен использоваться.
-   - localStorage остаётся в zefirok-tp3:, Telegram CloudStorage в TEST отключён.
-   - XMLHttpRequest к /api/* заблокирован; sendBeacon к /api/* заблокирован.
-   - Прямой owner API из игрового iframe заблокирован.
-   - Восстановлена маршрутизация Tutorial Lab для режима warehouse.
-   - Сохранены новый Склад, уведомления, обучение Профиля и Склада, исправление data-srcdoc/title.
+PROVERKI:
+- test-project inline JS: node --check PASS
+- 17/17 target invariants PASS
+- duplicate literal DOM id: 0
+- hashes uploaded/copy: identical
 
-2. battle-pass_testing_v1.0.9.html / rating_testing_v1.0.9.html
-   - Тот же уникальный Sandbox marker и fail-closed bridge.
-   - Прямые XHR/sendBeacon к /api/* заблокированы.
-   - Referrer policy для TEST изменён на same-origin для дополнительной server-side защиты.
-
-3. src/worker.js
-   - Sandbox proxy по-прежнему принимает только известные TEST API (55 маршрутов); неизвестные блокируются.
-   - Добавлена дополнительная server-side защита: прямой /api/* с TEST referrer отклоняется до Production handlers.
-   - /api/owner/* не подпадает под этот общий guard; owner-only auth остаётся отдельным.
-   - QA теперь проверяет наличие unique bridge marker + failClosed во всех трёх TEST HTML.
-   - Release/QA больше не показывает ложный PASS изоляции при сломанном bridge.
-
-4. test-project.html
-   - Перед запуском TEST 1.0.9 выполняется QA изоляции.
-   - Запуск блокируется, если testing_build_assets, sandbox_bridge_contract или production_writes имеют FAIL.
-
-SECURITY AUDIT
-- 55/55 Sandbox API routes имеют обработчик.
-- Все API literals TEST game/pass/rating покрыты Sandbox allowlist.
-- Все SQL writes функций Test Project проверены: 15 writes, 0 writes в Production tables.
-- Test Project пишет только в test_project_workspaces и test_project_case_runs.
-- /api/rewards/create в Sandbox создаёт только код TP-* и mockRewards.
-- Runtime test: покупка productId=zefir отправляется только в /api/owner/test-project/game, прямого /api/rewards/create вызова нет.
-- Inline JS: PASS.
-- Worker node --check: PASS.
-- DOM duplicate IDs: PASS.
-- data-srcdoc structure/title leak: PASS.
-
-IMPORTANT
-Уже созданная до этого hotfix реальная Production-покупка/код не удаляется этим обновлением автоматически.
-
-DEPLOY
+DEPLOY:
 npx wrangler deploy
-
-D1 migration: NOT REQUIRED

@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "catalogHash": "d8f624d6e56553e7",
-  "count": 321,
+  "catalogHash": "eefb6b9aa73f99ff",
+  "count": 325,
   "images": [
     {
       "fileName": "cases/398D69BA-8943-4846-94B3-FC5CB717A67F.PNG",
@@ -2570,6 +2570,38 @@
       "path": "/assets/sounds/covers/season3_lunar_music.png",
       "size": 3133390,
       "modified": 1786307011867
+    },
+    {
+      "fileName": "ui/icon_busters.png",
+      "label": "Icon busters",
+      "folder": "ui",
+      "path": "/assets/ui/icon_busters.png",
+      "size": 1259616,
+      "modified": 1786903690000
+    },
+    {
+      "fileName": "ui/icon_shopping.png",
+      "label": "Icon shopping",
+      "folder": "ui",
+      "path": "/assets/ui/icon_shopping.png",
+      "size": 940024,
+      "modified": 1786903690000
+    },
+    {
+      "fileName": "ui/icone_cases.png",
+      "label": "Icone cases",
+      "folder": "ui",
+      "path": "/assets/ui/icone_cases.png",
+      "size": 830097,
+      "modified": 1786903690000
+    },
+    {
+      "fileName": "ui/icone_prize.png",
+      "label": "Icone prize",
+      "folder": "ui",
+      "path": "/assets/ui/icone_prize.png",
+      "size": 705491,
+      "modified": 1786903690000
     }
   ]
 }
