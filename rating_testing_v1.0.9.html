@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<meta name="referrer" content="no-referrer">
+<meta name="referrer" content="same-origin">
 <meta name="zefirok-testing-build" content="1.0.9">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' https://telegram.org; style-src 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; font-src 'self' data:; base-uri 'none'; form-action 'none'; object-src 'none'">
 <title>Рейтинг игроков — Сладкий Забег · TEST 1.0.9</title>
@@ -13,8 +13,12 @@
   let testProjectActive=new URLSearchParams(location.search).get("test_project")==="1";
   if(!testProjectActive&&window.parent&&window.parent!==window){try{testProjectActive=new URLSearchParams(window.parent.location.search).get("test_project")==="1"}catch{}}
   if(!testProjectActive)return;
+  if(window.__ZEFIROK_TP_BRIDGE_INSTALLED_V109__===true)return;
+  window.__ZEFIROK_TP_BRIDGE_INSTALLED_V109__=true;
   const nativeFetch=window.fetch.bind(window),SESSION_KEY="zefirok-owner-session-v1",PROXY="/api/owner/test-project/game",STORAGE_PREFIX="zefirok-tp3:",TESTING_BUILD_VERSION="1.0.9",TESTING_BUILD_ENTRY="/rating_testing_v1.0.9.html";
   const baseUrl=(()=>{const direct=String(document.baseURI||"");if(/^https?:/i.test(direct))return direct;try{if(window.parent&&window.parent!==window&&/^https?:/i.test(String(window.parent.location.href||"")))return String(window.parent.location.href)}catch{}return String(location.href||direct)})(),sandboxOrigin=(()=>{try{return new URL(baseUrl).origin}catch{return location.origin}})(),proxyUrl=(()=>{try{return new URL(PROXY,baseUrl).toString()}catch{return PROXY}})();
+  const sandboxBlockedResponse=(message,status=403)=>new Response(JSON.stringify({ok:false,testProject:true,productionWrites:false,error:message}),{status,headers:{"Content-Type":"application/json","Cache-Control":"no-store","X-Test-Project":"5.2"}});
+  const isSameOriginApi=(value)=>{try{const parsed=new URL(String(value||""),baseUrl);return parsed.origin===sandboxOrigin&&parsed.pathname.startsWith("/api/")}catch{return false}};
   const storage=window.localStorage;
   try{
     const proto=Object.getPrototypeOf(storage),nativeGet=proto.getItem,nativeSet=proto.setItem,nativeRemove=proto.removeItem,nativeClear=proto.clear;
@@ -32,11 +36,12 @@
     if(typeof body==="object")return body;
     return {};
   }
-  window.__TEST_PROJECT_SANDBOX__={active:true,version:"5.2",storagePrefix:STORAGE_PREFIX,testingBuildVersion:TESTING_BUILD_VERSION,testingBuildEntry:TESTING_BUILD_ENTRY};
+  window.__TEST_PROJECT_SANDBOX__={active:true,version:"5.2",storagePrefix:STORAGE_PREFIX,testingBuildVersion:TESTING_BUILD_VERSION,testingBuildEntry:TESTING_BUILD_ENTRY,failClosed:true};
   window.fetch=async(input,init={})=>{
     const original=input instanceof Request?input.url:String(input||"");let url;
-    try{url=new URL(original,baseUrl)}catch{return nativeFetch(input,init)}
-    if(url.origin!==sandboxOrigin||!url.pathname.startsWith("/api/")||url.pathname.startsWith("/api/owner/"))return nativeFetch(input,init);
+    try{url=new URL(original,baseUrl)}catch{return String(original).startsWith("/api/")?sandboxBlockedResponse("Test Project заблокировал нераспознанный API-запрос.",418):nativeFetch(input,init)}
+    if(url.origin!==sandboxOrigin||!url.pathname.startsWith("/api/"))return nativeFetch(input,init);
+    if(url.pathname.startsWith("/api/owner/"))return sandboxBlockedResponse("Игровой клиент Test Project не может обращаться к owner API напрямую.",403);
     const sourceRequest=input instanceof Request?input:null;
     const method=String(init.method||sourceRequest?.method||"GET").toUpperCase();
     let requestBody=init.body;
@@ -45,11 +50,19 @@
     let ownerSession="";try{ownerSession=String(localStorage.getItem(SESSION_KEY)||"")}catch{}
     const initData=String(payload?.initData||window.Telegram?.WebApp?.initData||"");
     const controllerSignal=init.signal||sourceRequest?.signal;
-    const proxyResponse=await nativeFetch(proxyUrl,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({initData,ownerSession,testingBuildVersion:TESTING_BUILD_VERSION,testingBuildEntry:TESTING_BUILD_ENTRY,path:url.pathname,method,query:Object.fromEntries(url.searchParams.entries()),payload}),cache:"no-store",credentials:"same-origin",signal:controllerSignal});
+    const proxyResponse=await nativeFetch(proxyUrl,{method:"POST",headers:{"Content-Type":"application/json","X-Test-Project-Proxy":"5.2","X-Sweet-Run-Testing-Build":TESTING_BUILD_VERSION},body:JSON.stringify({initData,ownerSession,testingBuildVersion:TESTING_BUILD_VERSION,testingBuildEntry:TESTING_BUILD_ENTRY,path:url.pathname,method,query:Object.fromEntries(url.searchParams.entries()),payload}),cache:"no-store",credentials:"same-origin",signal:controllerSignal});
     const envelope=await proxyResponse.json().catch(()=>({ok:false,error:"Test Project proxy вернул некорректный ответ."}));
-    if(!proxyResponse.ok||!envelope?.ok||!("data" in envelope))return new Response(JSON.stringify(envelope||{ok:false,error:"Test Project proxy error"}),{status:proxyResponse.status||500,headers:{"Content-Type":"application/json","Cache-Control":"no-store"}});
+    if(!proxyResponse.ok||!envelope?.ok||!("data" in envelope))return new Response(JSON.stringify(envelope||{ok:false,error:"Test Project proxy error"}),{status:proxyResponse.status||500,headers:{"Content-Type":"application/json","Cache-Control":"no-store","X-Test-Project":"5.2"}});
     return new Response(JSON.stringify(envelope.data),{status:Number(envelope.proxyStatus||200),headers:{"Content-Type":"application/json","Cache-Control":"no-store","X-Test-Project":"5.2"}});
   };
+  try{
+    const Xhr=window.XMLHttpRequest,nativeOpen=Xhr?.prototype?.open;
+    if(nativeOpen)Xhr.prototype.open=function(method,url,...rest){if(isSameOriginApi(url))throw new Error("Test Project: XMLHttpRequest к /api/* заблокирован. Используйте sandbox fetch proxy.");return nativeOpen.call(this,method,url,...rest)};
+  }catch{}
+  try{
+    const nativeBeacon=navigator.sendBeacon?.bind(navigator);
+    if(nativeBeacon)navigator.sendBeacon=(url,data)=>isSameOriginApi(url)?false:nativeBeacon(url,data);
+  }catch{}
 })();
 </script>
 <style>:root {
@@ -8815,8 +8828,6 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
   "use strict";
 
   const BUILD = "1.0.6 · player-level-badges";
-  const TESTING_BUILD_VERSION = "1.0.9";
-  const TESTING_GAME_ENTRY = "/index_testing_v1.0.9.html";
   const tg = window.Telegram?.WebApp;
   const embedded = window.parent !== window;
   let lastHapticAt = 0;
@@ -8992,8 +9003,7 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
         return;
       }
     } catch {}
-    const query = new URLSearchParams({ test_project:"1", testing_build:TESTING_BUILD_VERSION, screen:"profile" });
-    location.replace(`${TESTING_GAME_ENTRY}?${query.toString()}`);
+    location.replace("/?screen=profile");
   }
 
   function dateText(value) {

@@ -46,7 +46,7 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
   window.__SWEET_RUN_TESTING_BUILD__ = Object.freeze({ channel:"testing", version:TESTING_BUILD_VERSION, entry:TESTING_BUILD_ENTRY });
   const TEST_PROJECT_DEVICE_LAB = TEST_PROJECT_MODE && TEST_PROJECT_QUERY.get("device_lab") === "1";
   const TEST_PROJECT_OWNER_SESSION_KEY = "zefirok-owner-session-v1";
-  const TEST_PROJECT_BRIDGE_JS = "(()=>{\n  let testProjectActive=new URLSearchParams(location.search).get(\"test_project\")===\"1\";\n  if(!testProjectActive&&window.parent&&window.parent!==window){try{testProjectActive=new URLSearchParams(window.parent.location.search).get(\"test_project\")===\"1\"}catch{}}\n  if(!testProjectActive)return;\n  const nativeFetch=window.fetch.bind(window),SESSION_KEY=\"zefirok-owner-session-v1\",PROXY=\"/api/owner/test-project/game\",STORAGE_PREFIX=\"zefirok-tp3:\",TESTING_BUILD_VERSION=\"1.0.9\",TESTING_BUILD_ENTRY=\"/index_testing_v1.0.9.html\";\n  const baseUrl=(()=>{const direct=String(document.baseURI||\"\");if(/^https?:/i.test(direct))return direct;try{if(window.parent&&window.parent!==window&&/^https?:/i.test(String(window.parent.location.href||\"\")))return String(window.parent.location.href)}catch{}return String(location.href||direct)})(),sandboxOrigin=(()=>{try{return new URL(baseUrl).origin}catch{return location.origin}})(),proxyUrl=(()=>{try{return new URL(PROXY,baseUrl).toString()}catch{return PROXY}})();\n  const storage=window.localStorage;\n  try{\n    const proto=Object.getPrototypeOf(storage),nativeGet=proto.getItem,nativeSet=proto.setItem,nativeRemove=proto.removeItem,nativeClear=proto.clear;\n    const scopedKey=(key)=>String(key)===SESSION_KEY?SESSION_KEY:`${STORAGE_PREFIX}${String(key)}`;\n    proto.getItem=function(key){return this===storage?nativeGet.call(this,scopedKey(key)):nativeGet.call(this,key)};\n    proto.setItem=function(key,value){return this===storage?nativeSet.call(this,scopedKey(key),value):nativeSet.call(this,key,value)};\n    proto.removeItem=function(key){return this===storage?nativeRemove.call(this,scopedKey(key)):nativeRemove.call(this,key)};\n    proto.clear=function(){if(this!==storage)return nativeClear.call(this);const remove=[];for(let i=0;i<this.length;i+=1){const key=this.key(i);if(String(key||\"\").startsWith(STORAGE_PREFIX))remove.push(key)}for(const key of remove)nativeRemove.call(this,key)};\n  }catch{}\n  async function bodyValue(body){\n    if(body==null)return {};\n    if(typeof body===\"string\"){try{return JSON.parse(body)}catch{return {raw:body.slice(0,12000)}}}\n    if(body instanceof URLSearchParams)return Object.fromEntries(body.entries());\n    if(typeof FormData!==\"undefined\"&&body instanceof FormData){const out={};for(const [key,value] of body.entries()){if(typeof value===\"string\")out[key]=value;else out[key]={name:String(value?.name||\"file\"),type:String(value?.type||\"\"),size:Number(value?.size||0),testProjectFileBlocked:true};}return out;}\n    if(typeof body===\"object\")return body;\n    return {};\n  }\n  window.__TEST_PROJECT_SANDBOX__={active:true,version:\"5.2\",storagePrefix:STORAGE_PREFIX,testingBuildVersion:TESTING_BUILD_VERSION,testingBuildEntry:TESTING_BUILD_ENTRY};\n  window.fetch=async(input,init={})=>{\n    const original=input instanceof Request?input.url:String(input||\"\");let url;\n    try{url=new URL(original,baseUrl)}catch{return nativeFetch(input,init)}\n    if(url.origin!==sandboxOrigin||!url.pathname.startsWith(\"/api/\")||url.pathname.startsWith(\"/api/owner/\"))return nativeFetch(input,init);\n    const sourceRequest=input instanceof Request?input:null;\n    const method=String(init.method||sourceRequest?.method||\"GET\").toUpperCase();\n    let requestBody=init.body;\n    if(requestBody==null&&sourceRequest&&method!==\"GET\"&&method!==\"HEAD\"){try{requestBody=await sourceRequest.clone().text()}catch{requestBody=null}}\n    const payload=await bodyValue(requestBody);\n    let ownerSession=\"\";try{ownerSession=String(localStorage.getItem(SESSION_KEY)||\"\")}catch{}\n    const initData=String(payload?.initData||window.Telegram?.WebApp?.initData||\"\");\n    const controllerSignal=init.signal||sourceRequest?.signal;\n    const proxyResponse=await nativeFetch(proxyUrl,{method:\"POST\",headers:{\"Content-Type\":\"application/json\"},body:JSON.stringify({initData,ownerSession,testingBuildVersion:TESTING_BUILD_VERSION,testingBuildEntry:TESTING_BUILD_ENTRY,path:url.pathname,method,query:Object.fromEntries(url.searchParams.entries()),payload}),cache:\"no-store\",credentials:\"same-origin\",signal:controllerSignal});\n    const envelope=await proxyResponse.json().catch(()=>({ok:false,error:\"Test Project proxy вернул некорректный ответ.\"}));\n    if(!proxyResponse.ok||!envelope?.ok||!(\"data\" in envelope))return new Response(JSON.stringify(envelope||{ok:false,error:\"Test Project proxy error\"}),{status:proxyResponse.status||500,headers:{\"Content-Type\":\"application/json\",\"Cache-Control\":\"no-store\"}});\n    return new Response(JSON.stringify(envelope.data),{status:Number(envelope.proxyStatus||200),headers:{\"Content-Type\":\"application/json\",\"Cache-Control\":\"no-store\",\"X-Test-Project\":\"5.2\"}});\n  };\n})();\n";
+  const TEST_PROJECT_BRIDGE_JS = "(()=>{\n  let testProjectActive=new URLSearchParams(location.search).get(\"test_project\")===\"1\";\n  if(!testProjectActive&&window.parent&&window.parent!==window){try{testProjectActive=new URLSearchParams(window.parent.location.search).get(\"test_project\")===\"1\"}catch{}}\n  if(!testProjectActive)return;\n  if(window.__ZEFIROK_TP_BRIDGE_INSTALLED_V109__===true)return;\n  window.__ZEFIROK_TP_BRIDGE_INSTALLED_V109__=true;\n  const nativeFetch=window.fetch.bind(window),SESSION_KEY=\"zefirok-owner-session-v1\",PROXY=\"/api/owner/test-project/game\",STORAGE_PREFIX=\"zefirok-tp3:\",TESTING_BUILD_VERSION=\"1.0.9\",TESTING_BUILD_ENTRY=\"/index_testing_v1.0.9.html\";\n  const baseUrl=(()=>{const direct=String(document.baseURI||\"\");if(/^https?:/i.test(direct))return direct;try{if(window.parent&&window.parent!==window&&/^https?:/i.test(String(window.parent.location.href||\"\")))return String(window.parent.location.href)}catch{}return String(location.href||direct)})(),sandboxOrigin=(()=>{try{return new URL(baseUrl).origin}catch{return location.origin}})(),proxyUrl=(()=>{try{return new URL(PROXY,baseUrl).toString()}catch{return PROXY}})();\n  const sandboxBlockedResponse=(message,status=403)=>new Response(JSON.stringify({ok:false,testProject:true,productionWrites:false,error:message}),{status,headers:{\"Content-Type\":\"application/json\",\"Cache-Control\":\"no-store\",\"X-Test-Project\":\"5.2\"}});\n  const isSameOriginApi=(value)=>{try{const parsed=new URL(String(value||\"\"),baseUrl);return parsed.origin===sandboxOrigin&&parsed.pathname.startsWith(\"/api/\")}catch{return false}};\n  const storage=window.localStorage;\n  try{\n    const proto=Object.getPrototypeOf(storage),nativeGet=proto.getItem,nativeSet=proto.setItem,nativeRemove=proto.removeItem,nativeClear=proto.clear;\n    const scopedKey=(key)=>String(key)===SESSION_KEY?SESSION_KEY:`${STORAGE_PREFIX}${String(key)}`;\n    proto.getItem=function(key){return this===storage?nativeGet.call(this,scopedKey(key)):nativeGet.call(this,key)};\n    proto.setItem=function(key,value){return this===storage?nativeSet.call(this,scopedKey(key),value):nativeSet.call(this,key,value)};\n    proto.removeItem=function(key){return this===storage?nativeRemove.call(this,scopedKey(key)):nativeRemove.call(this,key)};\n    proto.clear=function(){if(this!==storage)return nativeClear.call(this);const remove=[];for(let i=0;i<this.length;i+=1){const key=this.key(i);if(String(key||\"\").startsWith(STORAGE_PREFIX))remove.push(key)}for(const key of remove)nativeRemove.call(this,key)};\n  }catch{}\n  async function bodyValue(body){\n    if(body==null)return {};\n    if(typeof body===\"string\"){try{return JSON.parse(body)}catch{return {raw:body.slice(0,12000)}}}\n    if(body instanceof URLSearchParams)return Object.fromEntries(body.entries());\n    if(typeof FormData!==\"undefined\"&&body instanceof FormData){const out={};for(const [key,value] of body.entries()){if(typeof value===\"string\")out[key]=value;else out[key]={name:String(value?.name||\"file\"),type:String(value?.type||\"\"),size:Number(value?.size||0),testProjectFileBlocked:true};}return out;}\n    if(typeof body===\"object\")return body;\n    return {};\n  }\n  window.__TEST_PROJECT_SANDBOX__={active:true,version:\"5.2\",storagePrefix:STORAGE_PREFIX,testingBuildVersion:TESTING_BUILD_VERSION,testingBuildEntry:TESTING_BUILD_ENTRY,failClosed:true};\n  window.fetch=async(input,init={})=>{\n    const original=input instanceof Request?input.url:String(input||\"\");let url;\n    try{url=new URL(original,baseUrl)}catch{return String(original).startsWith(\"/api/\")?sandboxBlockedResponse(\"Test Project заблокировал нераспознанный API-запрос.\",418):nativeFetch(input,init)}\n    if(url.origin!==sandboxOrigin||!url.pathname.startsWith(\"/api/\"))return nativeFetch(input,init);\n    if(url.pathname.startsWith(\"/api/owner/\"))return sandboxBlockedResponse(\"Игровой клиент Test Project не может обращаться к owner API напрямую.\",403);\n    const sourceRequest=input instanceof Request?input:null;\n    const method=String(init.method||sourceRequest?.method||\"GET\").toUpperCase();\n    let requestBody=init.body;\n    if(requestBody==null&&sourceRequest&&method!==\"GET\"&&method!==\"HEAD\"){try{requestBody=await sourceRequest.clone().text()}catch{requestBody=null}}\n    const payload=await bodyValue(requestBody);\n    let ownerSession=\"\";try{ownerSession=String(localStorage.getItem(SESSION_KEY)||\"\")}catch{}\n    const initData=String(payload?.initData||window.Telegram?.WebApp?.initData||\"\");\n    const controllerSignal=init.signal||sourceRequest?.signal;\n    const proxyResponse=await nativeFetch(proxyUrl,{method:\"POST\",headers:{\"Content-Type\":\"application/json\",\"X-Test-Project-Proxy\":\"5.2\",\"X-Sweet-Run-Testing-Build\":TESTING_BUILD_VERSION},body:JSON.stringify({initData,ownerSession,testingBuildVersion:TESTING_BUILD_VERSION,testingBuildEntry:TESTING_BUILD_ENTRY,path:url.pathname,method,query:Object.fromEntries(url.searchParams.entries()),payload}),cache:\"no-store\",credentials:\"same-origin\",signal:controllerSignal});\n    const envelope=await proxyResponse.json().catch(()=>({ok:false,error:\"Test Project proxy вернул некорректный ответ.\"}));\n    if(!proxyResponse.ok||!envelope?.ok||!(\"data\" in envelope))return new Response(JSON.stringify(envelope||{ok:false,error:\"Test Project proxy error\"}),{status:proxyResponse.status||500,headers:{\"Content-Type\":\"application/json\",\"Cache-Control\":\"no-store\",\"X-Test-Project\":\"5.2\"}});\n    return new Response(JSON.stringify(envelope.data),{status:Number(envelope.proxyStatus||200),headers:{\"Content-Type\":\"application/json\",\"Cache-Control\":\"no-store\",\"X-Test-Project\":\"5.2\"}});\n  };\n  try{\n    const Xhr=window.XMLHttpRequest,nativeOpen=Xhr?.prototype?.open;\n    if(nativeOpen)Xhr.prototype.open=function(method,url,...rest){if(isSameOriginApi(url))throw new Error(\"Test Project: XMLHttpRequest к /api/* заблокирован. Используйте sandbox fetch proxy.\");return nativeOpen.call(this,method,url,...rest)};\n  }catch{}\n  try{\n    const nativeBeacon=navigator.sendBeacon?.bind(navigator);\n    if(nativeBeacon)navigator.sendBeacon=(url,data)=>isSameOriginApi(url)?false:nativeBeacon(url,data);\n  }catch{}\n})();";
   let testProjectBootstrapPayload = null;
   const CLOUD_KEY = TEST_PROJECT_MODE ? "zefirok_test_project_progress_v3" : "zefirok_runner_progress_v2";
   const LOCAL_KEY = TEST_PROJECT_MODE ? "zefirok-test-project-runner-progress-v3" : "zefirok-runner-progress-v2";
@@ -144,7 +144,7 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
   function testProjectTutorialPayload() {
     if (!TEST_PROJECT_MODE) return null;
     const mode = String(TEST_PROJECT_QUERY.get("tp_tutorial") || "").trim();
-    if (!["main","profile","cases","rating"].includes(mode)) return null;
+    if (!["main","profile","warehouse","cases","rating"].includes(mode)) return null;
     return {
       mode,
       step: Math.max(0, Math.floor(Number(TEST_PROJECT_QUERY.get("tp_tutorial_step") || 1)) - 1),
@@ -601,12 +601,39 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
     gate.append(card);
   }
 
+  function testProjectGameBridgeReady(gameFrame) {
+    if (!TEST_PROJECT_MODE) return true;
+    try {
+      const win = gameFrame?.contentWindow;
+      return Boolean(win?.__ZEFIROK_TP_BRIDGE_INSTALLED_V109__ === true && win?.__TEST_PROJECT_SANDBOX__?.active === true && win?.__TEST_PROJECT_SANDBOX__?.failClosed === true);
+    } catch {
+      return false;
+    }
+  }
+
+  function finishGameFrameActivation(gameFrame) {
+    gameFrame.classList.add("is-ready");
+    document.querySelector(".zefirok-maintenance-gate")?.remove();
+    document.querySelector(".zefirok-legal-gate")?.remove();
+    window.setTimeout(maybeOpenRequestedOverlay, 180);
+  }
+
+  function failTestProjectGameBridge(gameFrame) {
+    gameFrame?.classList?.remove("is-ready");
+    showMaintenanceGate("Защитный Sandbox Bridge не запустился. Игровые API заблокированы, чтобы TEST 1.0.9 не мог обратиться к Production. Обновите все файлы тестовой сборки и повторите запуск.", { title:"Test Project остановлен", icon:"🛡️", retry:true });
+  }
+
   function activateGameFrame() {
     const gameFrame = frame();
     if (!gameFrame) return;
     if (gameFrame.dataset.viewportBridgeInstalled !== "1") {
       gameFrame.dataset.viewportBridgeInstalled = "1";
       gameFrame.addEventListener("load", () => {
+        if (TEST_PROJECT_MODE && !testProjectGameBridgeReady(gameFrame)) {
+          failTestProjectGameBridge(gameFrame);
+          return;
+        }
+        finishGameFrameActivation(gameFrame);
         const restoreViewport = () => {
           const snapshot = syncTelegramViewport();
           sendViewportSnapshot(gameFrame.contentWindow, snapshot);
@@ -627,18 +654,17 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
       let preparedSource = /<base\s/i.test(source)
         ? source
         : source.replace(/<head([^>]*)>/i, '<head$1><base href="/">');
-      if (TEST_PROJECT_MODE && !preparedSource.includes("__TEST_PROJECT_SANDBOX__")) {
-        const bridgeTag = "<scr" + "ipt>" + TEST_PROJECT_BRIDGE_JS + "</scr" + "ipt>";
+      if (TEST_PROJECT_MODE) {
+        preparedSource = preparedSource.replace(/<meta\b[^>]*name=["']referrer["'][^>]*>/i, '<meta name="referrer" content="same-origin">');
+        const bridgeTag = '<scr' + 'ipt data-zefirok-tp-bridge="1">' + TEST_PROJECT_BRIDGE_JS + '</scr' + 'ipt>';
         preparedSource = preparedSource.includes("</head>") ? preparedSource.replace("</head>", bridgeTag + "</head>") : bridgeTag + preparedSource;
       }
       gameFrame.srcdoc = preparedSource;
       gameFrame.removeAttribute("data-srcdoc");
       gameFrame.dataset.activated = "1";
     }
-    gameFrame.classList.add("is-ready");
-    document.querySelector(".zefirok-maintenance-gate")?.remove();
-    document.querySelector(".zefirok-legal-gate")?.remove();
-    window.setTimeout(maybeOpenRequestedOverlay, 180);
+    if (TEST_PROJECT_MODE) gameFrame.classList.remove("is-ready");
+    else finishGameFrameActivation(gameFrame);
   }
 
   async function resolveMaintenanceAccess() {
@@ -1039,6 +1065,15 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
       : `${TESTING_BATTLE_PASS_ENTRY}?v=1.0.7${passView}${passOffer}${passTest}`;
     layer.append(passFrame);
     passFrame.addEventListener("load", () => {
+      if (TEST_PROJECT_MODE) {
+        let bridgeOk = false;
+        try { bridgeOk = Boolean(passFrame.contentWindow?.__ZEFIROK_TP_BRIDGE_INSTALLED_V109__ === true && passFrame.contentWindow?.__TEST_PROJECT_SANDBOX__?.failClosed === true); } catch {}
+        if (!bridgeOk) {
+          closeSeasonPassOverlay();
+          try { window.Telegram?.WebApp?.showAlert?.("Test Project остановил Season Pass: Sandbox Bridge не запустился. Production API не использованы."); } catch {}
+          return;
+        }
+      }
       const snapshot = syncTelegramViewport();
       sendViewportSnapshot(passFrame.contentWindow, snapshot);
       try { sendTelegramProfile(passFrame.contentWindow); } catch {}
@@ -1213,6 +1248,15 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
       loadRatingFrame(initData, true);
     });
     rating.addEventListener("load", () => {
+      if (TEST_PROJECT_MODE) {
+        let bridgeOk = false;
+        try { bridgeOk = Boolean(rating.contentWindow?.__ZEFIROK_TP_BRIDGE_INSTALLED_V109__ === true && rating.contentWindow?.__TEST_PROJECT_SANDBOX__?.failClosed === true); } catch {}
+        if (!bridgeOk) {
+          clearRatingReadyTimer();
+          setRatingOverlayState("error", "Sandbox Bridge не запустился. Рейтинг остановлен до обращения к Production API.");
+          return;
+        }
+      }
       const snapshot = syncTelegramViewport();
       sendViewportSnapshot(rating.contentWindow, snapshot);
       try { sendTelegramProfile(rating.contentWindow); } catch {}
@@ -12825,11 +12869,16 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 
       function scheduleProfileTutorialAutoOpen(delay = 300) {
         window.clearTimeout(profileTutorialAutoTimer);
+        const caseTutorialPending = String(state.caseTutorialSeenKey || &quot;&quot;) !== CASE_TUTORIAL_KEY;
         const profileTutorialPending = String(state.profileTutorialSeenKey || &quot;&quot;) !== PROFILE_TUTORIAL_KEY;
-        if (!profileTutorialPending || pendingReleaseNotice || (releaseLayer &amp;&amp; !releaseLayer.hidden)) return;
+        if ((!caseTutorialPending &amp;&amp; !profileTutorialPending) || pendingReleaseNotice || (releaseLayer &amp;&amp; !releaseLayer.hidden)) return;
         profileTutorialAutoTimer = window.setTimeout(() =&gt; {
           const profileScreen = root.querySelector(&#x27;[data-screen=&quot;profile&quot;]&#x27;);
           if (!profileScreen || profileScreen.hidden || (tutorialLayer &amp;&amp; !tutorialLayer.hidden)) return;
+          if (String(state.caseTutorialSeenKey || &quot;&quot;) !== CASE_TUTORIAL_KEY) {
+            openCaseTutorial(true);
+            return;
+          }
           if (String(state.profileTutorialSeenKey || &quot;&quot;) !== PROFILE_TUTORIAL_KEY) openProfileTutorial(true);
         }, delay);
       }
@@ -19967,10 +20016,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         profileWarehouseOpenButton.addEventListener(&quot;click&quot;, () =&gt; switchScreen(&quot;warehouse&quot;));
       }
       if (profileWarehouseTutorialButton) {
-        profileWarehouseTutorialButton.addEventListener(&quot;click&quot;, () =&gt; {
-          switchScreen(&quot;warehouse&quot;);
-          window.setTimeout(() =&gt; openWarehouseTutorial(false), 60);
-        });
+        profileWarehouseTutorialButton.addEventListener(&quot;click&quot;, () =&gt; openWarehouseTutorial(false));
       }
       for (const button of warehouseFilterButtons) {
         button.addEventListener(&quot;click&quot;, () =&gt; setWarehouseFilter(button.dataset.warehouseFilter));

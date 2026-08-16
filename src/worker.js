@@ -1512,6 +1512,9 @@ export default {
       // The access gate is intentionally served before the broad compatibility
       // audit. It only reads identity, feature flags and the current season, so a
       // cold Worker must not block the page behind unrelated ALTER/PRAGMA checks.
+      if (url.pathname.startsWith("/api/") && !url.pathname.startsWith("/api/owner/") && requestFromTestingBuild(request)) {
+        return jsonResponse({ ok:false, testProject:true, productionWrites:false, directProductionApiBlocked:true, error:`Testing Build ${TEST_PROJECT_TESTING_BUILD.version} обязан использовать Sandbox proxy. Прямой Production API заблокирован.` }, 409);
+      }
       if (url.pathname === "/api/battle-pass/access" && request.method === "POST") {
         const legalGate = await enforceLegalAcceptanceForRequest(request, env);
         if (legalGate) return legalGate;
@@ -1629,7 +1632,7 @@ export default {
         headers.set("Cache-Control", "no-store, no-cache, must-revalidate, private");
         headers.set("Pragma", "no-cache");
         headers.set("X-Robots-Tag", "noindex, nofollow, noarchive");
-        headers.set("Referrer-Policy", "no-referrer");
+        headers.set("Referrer-Policy", "same-origin");
         headers.set("X-Frame-Options", "SAMEORIGIN");
         headers.set("Cross-Origin-Resource-Policy", "same-origin");
         headers.set("X-Test-Project", TEST_PROJECT_VERSION);
@@ -31611,6 +31614,19 @@ const TEST_PROJECT_TESTING_BUILD = Object.freeze({
   entry: "/index_testing_v1.0.9.html",
   files: Object.freeze(["/index_testing_v1.0.9.html","/battle-pass_testing_v1.0.9.html","/rating_testing_v1.0.9.html"])
 });
+
+function requestFromTestingBuild(request) {
+  const raw = String(request?.headers?.get?.("Referer") || request?.headers?.get?.("Referrer") || "").trim();
+  if (!raw) return false;
+  try {
+    const ref = new URL(raw);
+    if (TEST_PROJECT_TESTING_BUILD.files.includes(ref.pathname)) return true;
+    return ref.searchParams.get("test_project") === "1" && ref.searchParams.get("testing_build") === TEST_PROJECT_TESTING_BUILD.version;
+  } catch {
+    return false;
+  }
+}
+
 const TEST_PROJECT_SNAPSHOT_SCHEMA = 6;
 const TEST_PROJECT_MAX_CASE_SIMULATIONS = 2000;
 const TEST_PROJECT_MAX_ACTIVITY_LOG = 80;
@@ -33648,14 +33664,22 @@ async function ownerPanelTestProjectQa(env, ctx) {
   const {state,productionSnapshot,snapshot}=await testProjectQaLoad(env,ctx);const checks=[],add=(id,title,status,detail)=>checks.push({id,title,status,detail});
   const testingBuildAssets=[];
   for(const assetPath of TEST_PROJECT_TESTING_BUILD.files){
-    try{let r=await env.ASSETS?.fetch?.(new Request(`https://zefirok.local${assetPath}`,{method:"HEAD"}));if(!r||r.status===405||r.status===501){try{await r?.body?.cancel?.();}catch{}r=await env.ASSETS?.fetch?.(new Request(`https://zefirok.local${assetPath}`,{method:"GET"}));}testingBuildAssets.push({path:assetPath,ok:Boolean(r?.ok),status:Number(r?.status||0)});try{await r?.body?.cancel?.();}catch{}}catch(error){testingBuildAssets.push({path:assetPath,ok:false,status:0,error:String(error?.message||error).slice(0,120)});}
+    try{
+      const r=await env.ASSETS?.fetch?.(new Request(`https://zefirok.local${assetPath}`,{method:"GET"}));
+      const ok=Boolean(r?.ok),status=Number(r?.status||0);let text="";
+      if(ok){try{text=String(await r.text())}catch{}}
+      else{try{await r?.body?.cancel?.()}catch{}}
+      testingBuildAssets.push({path:assetPath,ok,status,bridgeReady:text.includes("__ZEFIROK_TP_BRIDGE_INSTALLED_V109__"),failClosed:text.includes("failClosed:true"),unsafeLegacyGate:text.includes('!preparedSource.includes("__TEST_PROJECT_SANDBOX__")')});
+    }catch(error){testingBuildAssets.push({path:assetPath,ok:false,status:0,bridgeReady:false,failClosed:false,error:String(error?.message||error).slice(0,120)});}
   }
   const missingTestingBuildAssets=testingBuildAssets.filter((item)=>!item.ok);
+  const brokenBridgeAssets=testingBuildAssets.filter((item)=>item.ok&&(!item.bridgeReady||!item.failClosed||item.unsafeLegacyGate));
   add("testing_build_assets",`Testing Build ${TEST_PROJECT_TESTING_BUILD.version}`,missingTestingBuildAssets.length?"fail":"pass",missingTestingBuildAssets.length?`Не найдены: ${missingTestingBuildAssets.map((item)=>item.path).join(", ")}`:`${testingBuildAssets.length} versioned HTML-файла доступны`);
+  add("sandbox_bridge_contract","Sandbox Bridge fail-closed",brokenBridgeAssets.length?"fail":"pass",brokenBridgeAssets.length?`Нарушен bridge contract: ${brokenBridgeAssets.map((item)=>item.path).join(", ")}`:"Все TEST HTML содержат уникальный bridge marker и fail-closed защиту.");
   add("snapshot_schema","Snapshot schema",Number(productionSnapshot?.schema||0)>=TEST_PROJECT_SNAPSHOT_SCHEMA?"pass":"fail",`schema ${Number(productionSnapshot?.schema||0)} / ${TEST_PROJECT_SNAPSHOT_SCHEMA}`);
   add("public_config","Public config",snapshot?.publicConfig?.gameplay&&snapshot?.publicConfig?.shop&&snapshot?.publicConfig?.skins?"pass":"fail","gameplay + shop + skins присутствуют в снимке");
   add("sandbox_routes","Sandbox API",TEST_PROJECT_SANDBOX_API_PATHS.length>=50?"pass":"warn",`${TEST_PROJECT_SANDBOX_API_PATHS.length} перехваченных API маршрутов`);
-  add("production_writes","Изоляция Production","pass","Игровые запросы TP идут только через owner-only sandbox proxy; неизвестные /api/* блокируются.");
+  add("production_writes","Изоляция Production",brokenBridgeAssets.length?"fail":"pass",brokenBridgeAssets.length?"Sandbox Bridge повреждён — Release Gate должен блокировать публикацию.":"Игровые запросы TP идут через owner-only sandbox proxy; прямой /api/* из TEST referrer дополнительно блокируется Worker-ом.");
   add("draft_gameplay","Draft gameplay",state.draftMode!=="draft"||!state.tpDrafts?.gameConfig||String(snapshot?.publicConfig?.gameplay?.source)==="test_project_draft"?"pass":"fail",`source: ${String(snapshot?.publicConfig?.gameplay?.source||"—")}`);
   const cases=Object.keys(snapshot?.liveops?.cases||{});add("cases","Кейсы",LIVEOPS_CASE_IDS.every((id)=>cases.includes(id))?"pass":"fail",`${cases.length}/${LIVEOPS_CASE_IDS.length} типов доступны`);
   const season=snapshot?.season||{},seasons=Array.isArray(snapshot?.seasons)?snapshot.seasons:[];add("season_catalog","Список сезонов",seasons.length?"pass":"fail",`${seasons.length} сезонов доступно для выбора`);add("season","Season Pass",season?.id&&Array.isArray(season?.rewards)?"pass":"warn",season?.id?`${season.title||season.id} · наград ${season.rewards?.length||0}`:"Выбранный сезон отсутствует");
