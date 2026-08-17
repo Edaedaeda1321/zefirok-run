@@ -750,7 +750,7 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
     badge.innerHTML=`<button type="button" data-tp-back>← TP</button><span>🧪 TP 5.2 · ${mode}${seasonTitle?` · ${seasonTitle}`:""}</span>`;
     Object.assign(badge.style,{position:"fixed",left:"max(8px,var(--zefirok-content-safe-left,0px))",bottom:"max(8px,var(--zefirok-content-safe-bottom,0px))",zIndex:"2147483600",display:"flex",gap:"6px",alignItems:"center",fontFamily:"-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif",fontSize:"10px",fontWeight:"900",pointerEvents:"auto"});
     const span=badge.querySelector("span");Object.assign(span.style,{padding:"7px 9px",borderRadius:"999px",background:mode==="DRAFT"?"#7b4517":"#271d3e",color:mode==="DRAFT"?"#ffe1ad":"#eadfff",border:"1px solid rgba(255,255,255,.22)",boxShadow:"0 8px 24px rgba(0,0,0,.22)"});
-    const button=badge.querySelector("button");Object.assign(button.style,{border:"1px solid rgba(255,255,255,.22)",background:"#17131f",color:"#fff",borderRadius:"999px",padding:"7px 9px",font:"inherit"});button.addEventListener("click",()=>{location.href="/test-project.html?v=tp-5.2.0&view=game"});
+    const button=badge.querySelector("button");Object.assign(button.style,{border:"1px solid rgba(255,255,255,.22)",background:"#17131f",color:"#fff",borderRadius:"999px",padding:"7px 9px",font:"inherit"});button.addEventListener("click",()=>{location.href="/test-project.html?v=tp-5.2.4&view=game"});
     document.body.append(badge);
   }
 
@@ -1342,6 +1342,8 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
       openSeasonPassOverlay(initData, String(message.view || ""));
     } else if (message.type === "zefirok-refresh-battle-pass") {
       requestSeasonPassStateRefresh();
+    } else if (message.type === "zefirok-minigame-visual") {
+      try { frame()?.contentWindow?.postMessage?.({ type: "zefirok-minigame-visual", visual: message.visual || null, visuals: message.visuals || null }, "*"); } catch (error) {}
     } else if (message.type === "zefirok-open-rating") {
       let initData = "";
       try {
@@ -4937,6 +4939,13 @@ html&gt;body{padding:
     border-color: rgba(225, 169, 92, .55);
     background: rgba(255, 249, 235, .98);
     color: #8b6940;
+  }
+  #zefirok-maltipoo-runner .story-visual-toast {
+    bottom: max(96px, calc(env(safe-area-inset-bottom) + 82px));
+    border-color: rgba(213, 158, 70, .62);
+    background: rgba(255, 250, 232, .985);
+    color: #75551e;
+    box-shadow: 0 18px 42px rgba(72, 42, 20, .22);
   }
   #zefirok-maltipoo-runner .level-guide-current {
     display: grid;
@@ -9400,6 +9409,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 &lt;/section&gt;
 &lt;/div&gt;
 
+&lt;div aria-live=&quot;polite&quot; class=&quot;profile-toast story-visual-toast&quot; data-story-visual-toast hidden&gt;&lt;/div&gt;
 
 &lt;div aria-hidden=&quot;true&quot; class=&quot;support-layer&quot; data-support-layer hidden&gt;
   &lt;div aria-labelledby=&quot;support-dialog-title&quot; aria-modal=&quot;true&quot; class=&quot;support-dialog&quot; role=&quot;dialog&quot;&gt;
@@ -9735,6 +9745,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       const seasonPassAttentionEl = root.querySelector(&quot;[data-season-pass-attention]&quot;);
       const profileCasesReadyEl = root.querySelector(&quot;[data-profile-cases-ready]&quot;);
       const profileToastEl = root.querySelector(&quot;[data-profile-toast]&quot;);
+      const storyVisualToastEl = root.querySelector(&quot;[data-story-visual-toast]&quot;);
       const profileRunRuleEl = root.querySelector(&quot;[data-profile-run-rule]&quot;);
       const profileGameVersionEl = root.querySelector(&quot;[data-profile-game-version]&quot;);
       const profileSoundToggle = root.querySelector(&quot;[data-profile-sound-toggle]&quot;);
@@ -9772,6 +9783,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       const caseTrailsEl = root.querySelector(&quot;[data-case-trails]&quot;);
       const caseRefreshButton = root.querySelector(&quot;[data-case-refresh]&quot;);
       const activeRunBoosterEl = root.querySelector(&quot;[data-active-run-booster]&quot;);
+      const profileLeaderboardSectionEl = root.querySelector(&quot;.profile-section--leaderboard&quot;);
       const leaderboardStatusEl = root.querySelector(&quot;[data-leaderboard-status]&quot;);
       const leaderboardSummaryEl = root.querySelector(&quot;[data-leaderboard-summary]&quot;);
       const leaderboardSummaryImageEl = root.querySelector(&quot;[data-leaderboard-summary-image]&quot;);
@@ -10529,6 +10541,157 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           if (gameplayStateReady &amp;&amp; !state.running) draw();
         });
       }
+      const MINI_GAME_VISUAL_TARGETS = Object.freeze({
+        treats: Object.freeze({ assetKey: &quot;marshmallow&quot;, defaultImage: assets.marshmallow || null, title: &quot;Зефир&quot;, sameText: &quot;Это всё та же валюта — изменился только её вид.&quot; }),
+        coffee: Object.freeze({ assetKey: &quot;coffeePickup&quot;, defaultImage: assets.coffeePickup || null, title: &quot;Кофе&quot;, sameText: &quot;Это всё тот же кофе — изменился только его вид.&quot; })
+      });
+      const miniGameVisualRequests = { treats: 0, coffee: 0 };
+      const activeMiniGameVisuals = {
+        treats: Object.freeze({ target: &quot;treats&quot;, assetPath: &quot;&quot;, isDefault: true, seasonId: &quot;&quot;, sourceEventId: &quot;&quot;, noticePending: false }),
+        coffee: Object.freeze({ target: &quot;coffee&quot;, assetPath: &quot;&quot;, isDefault: true, seasonId: &quot;&quot;, sourceEventId: &quot;&quot;, noticePending: false })
+      };
+      let pendingMiniGameVisualNotices = [];
+      const shownMiniGameVisualNoticeKeys = new Set();
+      let storyVisualToastTimer = 0;
+      const storyVisualNoticeAckInFlight = new Set();
+      function validMiniGameVisualAssetPath(value) {
+        return /^\/assets\/[A-Za-z0-9%_().+\-\/]+\.(?:png|jpe?g|webp|gif|avif|svg)$/i.test(String(value || &quot;&quot;).trim());
+      }
+      function normalizedMiniGameVisualTarget(value) {
+        const target = String(value || &quot;&quot;);
+        return target === &quot;coffee&quot; || target === &quot;treats&quot; ? target : &quot;&quot;;
+      }
+      function miniGameVisualNoticeKey(visual) {
+        return `zefirok-story-visual-notice:${String(visual?.seasonId || &quot;&quot;)}:${String(visual?.noticeEventId || visual?.sourceEventId || &quot;&quot;)}`;
+      }
+      function sandboxMiniGameVisualNoticeSeen(visual) {
+        if (!window.__TEST_PROJECT_SANDBOX__?.active) return false;
+        try { return sessionStorage.getItem(miniGameVisualNoticeKey(visual)) === &quot;1&quot;; } catch (error) { return false; }
+      }
+      function markSandboxMiniGameVisualNoticeSeen(visual) {
+        if (!window.__TEST_PROJECT_SANDBOX__?.active) return;
+        try { sessionStorage.setItem(miniGameVisualNoticeKey(visual), &quot;1&quot;); } catch (error) {}
+      }
+      function markActiveMiniGameVisualNoticeRead(eventId) {
+        const id = String(eventId || &quot;&quot;).trim();
+        if (!id) return;
+        for (const target of Object.keys(activeMiniGameVisuals)) {
+          const current = activeMiniGameVisuals[target];
+          if (String(current?.sourceEventId || &quot;&quot;) !== id) continue;
+          activeMiniGameVisuals[target] = Object.freeze({ ...current, noticePending: false });
+        }
+      }
+      async function acknowledgeMiniGameVisualNotice(visual) {
+        const eventId = String(visual?.noticeEventId || visual?.sourceEventId || &quot;&quot;).trim();
+        if (!eventId) return false;
+        if (window.__TEST_PROJECT_SANDBOX__?.active) {
+          markSandboxMiniGameVisualNoticeSeen(visual);
+          markActiveMiniGameVisualNoticeRead(eventId);
+          return true;
+        }
+        const initData = String(telegramProfile?.initData || &quot;&quot;);
+        if (!initData || storyVisualNoticeAckInFlight.has(eventId)) return false;
+        storyVisualNoticeAckInFlight.add(eventId);
+        try {
+          const { response, data } = await sharedJsonApiRequest(SEASON_PASS_STORY_VISUAL_NOTICE_READ_PATH, {
+            method: &quot;POST&quot;,
+            headers: { &quot;Content-Type&quot;: &quot;application/json&quot; },
+            body: JSON.stringify({ initData, eventId }),
+            cache: &quot;no-store&quot;,
+            credentials: &quot;same-origin&quot;
+          }, { key: `POST:${SEASON_PASS_STORY_VISUAL_NOTICE_READ_PATH}:${eventId}` });
+          if (!response.ok || !data?.ok) return false;
+          markActiveMiniGameVisualNoticeRead(eventId);
+          return true;
+        } catch (error) {
+          console.warn(&quot;Story mini-game visual notice acknowledgement failed.&quot;, error);
+          return false;
+        } finally {
+          storyVisualNoticeAckInFlight.delete(eventId);
+        }
+      }
+      function maybeShowMiniGameVisualNotice() {
+        if (!storyVisualToastEl || !isScreenVisible(&quot;game&quot;) || state.running) return false;
+        while (pendingMiniGameVisualNotices.length) {
+          const visual = pendingMiniGameVisualNotices.shift();
+          const key = miniGameVisualNoticeKey(visual);
+          if (!visual || shownMiniGameVisualNoticeKeys.has(key) || sandboxMiniGameVisualNoticeSeen(visual)) continue;
+          shownMiniGameVisualNoticeKeys.add(key);
+          const target = normalizedMiniGameVisualTarget(visual.target);
+          const config = MINI_GAME_VISUAL_TARGETS[target];
+          const title = String(visual.sourceTitle || &quot;новой главы&quot;).trim();
+          storyVisualToastEl.textContent = `✨ ${config.title} изменился. После событий главы «${title}» он теперь выглядит иначе в забеге. ${config.sameText}`;
+          storyVisualToastEl.hidden = false;
+          window.clearTimeout(storyVisualToastTimer);
+          storyVisualToastTimer = window.setTimeout(() =&gt; {
+            storyVisualToastEl.hidden = true;
+            if (pendingMiniGameVisualNotices.length) window.setTimeout(maybeShowMiniGameVisualNotice, 160);
+          }, 6200);
+          void acknowledgeMiniGameVisualNotice(visual);
+          return true;
+        }
+        return false;
+      }
+      function queueMiniGameVisualNotice(visual) {
+        const shouldShow = Boolean(visual &amp;&amp; !visual.isDefault &amp;&amp; visual.noticePending &amp;&amp; String(visual.noticeEventId || visual.sourceEventId || &quot;&quot;).trim());
+        if (!shouldShow || sandboxMiniGameVisualNoticeSeen(visual)) return;
+        const key = miniGameVisualNoticeKey(visual);
+        if (shownMiniGameVisualNoticeKeys.has(key) || pendingMiniGameVisualNotices.some(item =&gt; miniGameVisualNoticeKey(item) === key)) return;
+        pendingMiniGameVisualNotices.push({ ...visual });
+        window.setTimeout(maybeShowMiniGameVisualNotice, 80);
+      }
+      function clearPendingMiniGameVisualNotice(target) {
+        const normalizedTarget = normalizedMiniGameVisualTarget(target);
+        pendingMiniGameVisualNotices = pendingMiniGameVisualNotices.filter(item =&gt; normalizedMiniGameVisualTarget(item?.target) !== normalizedTarget);
+      }
+      function applyMiniGameVisual(rawValue) {
+        const raw = rawValue &amp;&amp; typeof rawValue === &quot;object&quot; ? rawValue : {};
+        const target = normalizedMiniGameVisualTarget(raw.target);
+        if (!target) return;
+        const config = MINI_GAME_VISUAL_TARGETS[target];
+        const requested = raw.isDefault !== true &amp;&amp; raw.target === target &amp;&amp; validMiniGameVisualAssetPath(raw.assetPath)
+          ? String(raw.assetPath).trim()
+          : &quot;&quot;;
+        const requestId = ++miniGameVisualRequests[target];
+        const applyDefault = () =&gt; {
+          if (requestId !== miniGameVisualRequests[target]) return;
+          clearPendingMiniGameVisualNotice(target);
+          activeMiniGameVisuals[target] = Object.freeze({ ...raw, target, assetPath: &quot;&quot;, isDefault: true, seasonId: String(raw.seasonId || &quot;&quot;), sourceEventId: String(raw.sourceEventId || &quot;&quot;), noticePending: false });
+          if (config.defaultImage) assets[config.assetKey] = config.defaultImage;
+          if (gameplayStateReady &amp;&amp; !state.running) draw();
+        };
+        if (!requested) { applyDefault(); return; }
+        const probe = new Image();
+        probe.decoding = &quot;async&quot;;
+        probe.onload = async () =&gt; {
+          if (requestId !== miniGameVisualRequests[target]) return;
+          try {
+            if (typeof probe.decode === &quot;function&quot;) await probe.decode();
+            if (!probe.naturalWidth || !probe.naturalHeight) throw new Error(&quot;decoded image has no dimensions&quot;);
+          } catch (error) {
+            if (requestId !== miniGameVisualRequests[target]) return;
+            console.warn(`Story mini-game ${target} visual failed to decode; default restored.`, requested, error);
+            applyDefault();
+            return;
+          }
+          if (requestId !== miniGameVisualRequests[target]) return;
+          activeMiniGameVisuals[target] = Object.freeze({ ...raw, target, assetPath: requested, isDefault: false });
+          assets[config.assetKey] = probe;
+          queueMiniGameVisualNotice(activeMiniGameVisuals[target]);
+          if (gameplayStateReady &amp;&amp; !state.running) draw();
+        };
+        probe.onerror = () =&gt; {
+          console.warn(`Story mini-game ${target} visual failed to load; default restored.`, requested);
+          applyDefault();
+        };
+        probe.src = requested;
+      }
+      function applyMiniGameVisuals(rawValue) {
+        const bundle = rawValue &amp;&amp; typeof rawValue === &quot;object&quot; ? rawValue : {};
+        if (Object.prototype.hasOwnProperty.call(bundle, &quot;treats&quot;)) applyMiniGameVisual(bundle.treats);
+        if (Object.prototype.hasOwnProperty.call(bundle, &quot;coffee&quot;)) applyMiniGameVisual(bundle.coffee);
+      }
+      function applyMiniGameTreatVisual(rawValue) { applyMiniGameVisual(rawValue); }
       const GAMEPLAY_SKIN_SPRITES = Object.freeze({
         default: Object.freeze({ stand: &quot;/assets/skins/gameplay/default/stand.png&quot;, run1: &quot;/assets/skins/gameplay/default/run1.png&quot;, run2: &quot;/assets/skins/gameplay/default/run2.png&quot;, run3: &quot;/assets/skins/gameplay/default/run3.png&quot;, run4: &quot;/assets/skins/gameplay/default/run4.png&quot;, jump: &quot;/assets/skins/gameplay/default/jump.png&quot; }),
         barista: Object.freeze({ stand: &quot;/assets/skins/gameplay/barista/stand.png&quot;, run1: &quot;/assets/skins/gameplay/barista/run1.png&quot;, run2: &quot;/assets/skins/gameplay/barista/run2.png&quot;, run3: &quot;/assets/skins/gameplay/barista/run3.png&quot;, run4: &quot;/assets/skins/gameplay/barista/run4.png&quot;, jump: &quot;/assets/skins/gameplay/barista/jump.png&quot; }),
@@ -11461,6 +11624,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       const GAME_NEWS_READ_API_PATH = &quot;/api/news/read&quot;;
       const SEASON_PASS_TASK_NOTICE_PENDING_PATH = &quot;/api/battle-pass/task-notices/pending&quot;;
       const SEASON_PASS_TASK_NOTICE_READ_PATH = &quot;/api/battle-pass/task-notices/read&quot;;
+      const SEASON_PASS_STORY_VISUAL_NOTICE_READ_PATH = &quot;/api/battle-pass/story/visual-notice/read&quot;;
       const SEASON_PASS_PROFILE_BONUS_PATH = &quot;/api/battle-pass/profile-bonus&quot;;
       const REWARD_SYNC_INTERVAL_MS = 10000;
       let rewardSyncInFlight = false;
@@ -14156,6 +14320,11 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           }
           return;
         }
+        if (message.type === &quot;zefirok-minigame-visual&quot;) {
+          if (message.visuals &amp;&amp; typeof message.visuals === &quot;object&quot;) applyMiniGameVisuals(message.visuals);
+          else applyMiniGameTreatVisual(message.visual);
+          return;
+        }
         if (message.type === &quot;zefirok-season-pass-tasks-claimed&quot;) {
           reconcileClaimedSeasonTaskNotices(message);
           return;
@@ -16420,7 +16589,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           window.clearTimeout(profileTutorialAutoTimer);
         }
         updateHud();
-        if (name === &quot;game&quot;) requestAnimationFrame(draw);
+        if (name === &quot;game&quot;) { requestAnimationFrame(draw); window.setTimeout(maybeShowMiniGameVisualNotice, 160); }
       }
 
       function liveContentOwned(kind, itemId) {
@@ -17354,6 +17523,8 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           const skinsLoaded = applyRemoteSkinConfig(publicConfig.skins);
           if (!shopLoaded) void loadRemoteShopPrices(force);
           if (!skinsLoaded) void loadRemoteSkinPrices(force);
+          if (data.miniGameVisuals &amp;&amp; typeof data.miniGameVisuals === &quot;object&quot;) applyMiniGameVisuals(data.miniGameVisuals);
+          else if (Object.prototype.hasOwnProperty.call(data, &quot;miniGameVisual&quot;)) applyMiniGameTreatVisual(data.miniGameVisual);
 
           if (!initData) return true;
           if (data.profile) applyServerProfilePayload(data.profile);
@@ -17594,6 +17765,10 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         return null;
       }
 
+      function updateProfileLeaderboardPosition() {
+        // Rating position is fixed. Season state must never reorder the profile after first render.
+      }
+
       function setLeaderboardSummary(title, detail, reward = null, status = &quot;Загрузка&quot;, buttonText = &quot;Открыть рейтинг&quot;, imageSrc = LEADERBOARD_WAITING_IMAGE, place = &quot;—&quot;, score = &quot;—&quot;) {
         if (leaderboardStatusEl) leaderboardStatusEl.textContent = status;
         /* Season title is baked into the selected banner artwork. */
@@ -17618,6 +17793,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       }
 
       function renderLeaderboardUnavailable(message) {
+        updateProfileLeaderboardPosition(&quot;unavailable&quot;);
         setLeaderboardSummary(&quot;РЕЙТИНГ НЕДОСТУПЕН&quot;, message, null, &quot;Недоступен&quot;, &quot;Попробовать ещё раз&quot;, LEADERBOARD_MODAL_IMAGE, &quot;—&quot;, &quot;—&quot;);
       }
 
@@ -17626,6 +17802,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         if (!data?.season) return;
         const season = data.season;
         const status = String(season.status || &quot;scheduled&quot;);
+        updateProfileLeaderboardPosition(status);
         const statusLabel = status === &quot;active&quot; ? &quot;Идёт&quot; : status === &quot;scheduled&quot; ? &quot;Уже скоро&quot; : status === &quot;ended&quot; ? &quot;Завершён&quot; : &quot;Отменён&quot;;
         const me = data.me;
         const seasonTitle = String(season.title || &quot;Сладкий сезон&quot;).trim();

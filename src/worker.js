@@ -1619,6 +1619,9 @@ export default {
       if (url.pathname === "/api/battle-pass/story/complete" && request.method === "POST") {
         return await completeSeasonPassStory(request, env);
       }
+      if (url.pathname === "/api/battle-pass/story/visual-notice/read" && request.method === "POST") {
+        return await markSeasonPassMiniGameVisualNoticeRead(request, env);
+      }
       if (url.pathname === "/api/battle-pass/story/test/open" && request.method === "POST") {
         return await openSeasonPassStoryTest(request, env);
       }
@@ -2605,7 +2608,8 @@ async function getGameStartupPackage(request, env, ctx = null) {
       listMyRewards(null, env, { raw: true, body: internalBody, auth }),
       publicFeatureFlags(env, telegramId, { trustedIdentity: true }),
       getGameNewsForPlayer(env, telegramId),
-      playerGiftInboxPayload(env, telegramId)
+      playerGiftInboxPayload(env, telegramId),
+      seasonPassMiniGameVisualsForPlayer(env, telegramId)
     ]);
 
     let profile = null;
@@ -2623,12 +2627,14 @@ async function getGameStartupPackage(request, env, ctx = null) {
       startupSideSections
     ]);
     const casesResult = casesSettled[0];
-    const [taskNoticeResult, seasonPassBonusResult, rewardsResult, flagsResult, newsResult, giftsResult] = sideSettled;
+    const [taskNoticeResult, seasonPassBonusResult, rewardsResult, flagsResult, newsResult, giftsResult, miniGameVisualResult] = sideSettled;
     const cases = casesResult.status === "fulfilled" ? casesResult.value : null;
     const rewards = rewardsResult.status === "fulfilled" ? rewardsResult.value : null;
     const flags = flagsResult.status === "fulfilled" ? flagsResult.value : null;
     const news = newsResult.status === "fulfilled" ? newsResult.value : null;
     const gifts = giftsResult.status === "fulfilled" ? giftsResult.value : null;
+    const miniGameVisuals = miniGameVisualResult.status === "fulfilled" ? miniGameVisualResult.value : seasonPassResolveMiniGameVisuals([], '');
+    const miniGameVisual = miniGameVisuals.treats;
     const seasonPassTaskNotice = taskNoticeResult.status === "fulfilled" ? taskNoticeResult.value : null;
     const seasonPassBonus = seasonPassBonusResult.status === "fulfilled"
       ? seasonPassBonusResult.value
@@ -2640,6 +2646,7 @@ async function getGameStartupPackage(request, env, ctx = null) {
     if (flagsResult.status === "rejected") errors.flags = startupSectionError(flagsResult.reason);
     if (newsResult.status === "rejected") errors.news = startupSectionError(newsResult.reason);
     if (giftsResult.status === "rejected") errors.gifts = startupSectionError(giftsResult.reason);
+    if (miniGameVisualResult.status === "rejected") errors.miniGameVisual = startupSectionError(miniGameVisualResult.reason);
 
     return jsonResponse({
       ok: true,
@@ -2655,6 +2662,8 @@ async function getGameStartupPackage(request, env, ctx = null) {
       seasonPassTaskNotice,
       news,
       gifts,
+      miniGameVisual,
+      miniGameVisuals,
       errors
     });
   } catch (error) {
@@ -22965,13 +22974,13 @@ async function ensureSeasonPassSchema(env) {
         unlock_level INTEGER NOT NULL DEFAULT 1 CHECK(unlock_level BETWEEN 1 AND 50), unlock_at INTEGER NOT NULL DEFAULT 0, enabled INTEGER NOT NULL DEFAULT 1 CHECK(enabled IN (0,1)),
         title TEXT NOT NULL DEFAULT '', body_text TEXT NOT NULL DEFAULT '', image_url TEXT NOT NULL DEFAULT '', button_text TEXT NOT NULL DEFAULT 'Продолжить',
         pages_json TEXT NOT NULL DEFAULT '[]', push_enabled INTEGER NOT NULL DEFAULT 0 CHECK(push_enabled IN (0,1)), push_text TEXT NOT NULL DEFAULT '',
-        reward_json TEXT NOT NULL DEFAULT '{}',
+        reward_json TEXT NOT NULL DEFAULT '{}', actions_json TEXT NOT NULL DEFAULT '[]',
         created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL, updated_by TEXT NOT NULL DEFAULT ''
       )`),
       env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_season_pass_story_events_order ON season_pass_story_events(season_id,enabled,unlock_level,sort_order,event_id)`),
       env.DB.prepare(`CREATE TABLE IF NOT EXISTS season_pass_story_progress (
         event_id TEXT NOT NULL, season_id TEXT NOT NULL, telegram_id TEXT NOT NULL,
-        seen_at INTEGER NOT NULL DEFAULT 0, completed_at INTEGER NOT NULL DEFAULT 0, notified_at INTEGER NOT NULL DEFAULT 0,
+        seen_at INTEGER NOT NULL DEFAULT 0, completed_at INTEGER NOT NULL DEFAULT 0, notified_at INTEGER NOT NULL DEFAULT 0, visual_notice_at INTEGER NOT NULL DEFAULT 0,
         PRIMARY KEY(event_id,telegram_id)
       )`),
       env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_season_pass_story_progress_player ON season_pass_story_progress(season_id,telegram_id,completed_at,seen_at,event_id)`),
@@ -23026,7 +23035,9 @@ async function ensureSeasonPassSchema(env) {
     await addRuntimeColumnIfMissing(env, 'season_pass_story_events', 'push_enabled', 'INTEGER NOT NULL DEFAULT 0');
     await addRuntimeColumnIfMissing(env, 'season_pass_story_events', 'push_text', "TEXT NOT NULL DEFAULT ''");
     await addRuntimeColumnIfMissing(env, 'season_pass_story_events', 'reward_json', "TEXT NOT NULL DEFAULT '{}'");
+    await addRuntimeColumnIfMissing(env, 'season_pass_story_events', 'actions_json', "TEXT NOT NULL DEFAULT '[]'");
     await addRuntimeColumnIfMissing(env, 'season_pass_story_progress', 'notified_at', 'INTEGER NOT NULL DEFAULT 0');
+    await addRuntimeColumnIfMissing(env, 'season_pass_story_progress', 'visual_notice_at', 'INTEGER NOT NULL DEFAULT 0');
     const info = await env.DB.prepare(`PRAGMA table_info(case_player_state)`).all();
     const columns = new Set((info.results || []).map((row) => String(row.name || '')));
     if (!columns.has('owned_specials_json')) {
@@ -24164,6 +24175,73 @@ function seasonPassStoryPagesFromRow(row){
   return [{index:0,title:'',bodyText:String(row?.body_text||''),imageUrl:String(row?.image_url||''),buttonText:String(row?.button_text||'Продолжить')||'Продолжить',musicId:'',musicTitle:'',musicUrl:''}];
 }
 
+function normalizeSeasonPassStoryActions(rawValue,seasonId,{strict=false}={}){
+  let source=Array.isArray(rawValue)?rawValue:safeJson(rawValue,[]);
+  if(!Array.isArray(source)){if(strict)throw new ApiError(400,'Сюжетные действия должны быть списком.');return[];}
+  if(source.length>8){if(strict)throw new ApiError(400,'В одной главе можно сохранить максимум 8 сюжетных действий.');source=source.slice(0,8);}
+  const out=[],seen=new Set(),boundSeasonId=String(seasonId||'').trim(),targetLabels={treats:'зефира',coffee:'кофе'};
+  for(let index=0;index<source.length;index+=1){
+    try{
+      const raw=source[index]&&typeof source[index]==='object'&&!Array.isArray(source[index])?source[index]:{};
+      const type=String(raw.type||'').trim(),trigger=String(raw.trigger||'opened').trim(),target=String(raw.target||'').trim(),operation=String(raw.operation||'set').trim();
+      const actionSeasonId=String(raw.seasonId||boundSeasonId).trim(),targetLabel=targetLabels[target]||'объекта';
+      if(type!=='minigame_visual')throw new ApiError(400,`Действие ${index+1}: неизвестный тип.`);
+      if(trigger!=='opened')throw new ApiError(400,`Действие ${index+1}: пока поддерживается только запуск при открытии главы.`);
+      if(!['treats','coffee'].includes(target))throw new ApiError(400,`Действие ${index+1}: можно менять только визуал зефира или кофе.`);
+      if(!['set','reset'].includes(operation))throw new ApiError(400,`Действие ${index+1}: неизвестная операция.`);
+      if(!boundSeasonId||actionSeasonId!==boundSeasonId)throw new ApiError(400,`Действие ${index+1}: seasonId должен совпадать с сезоном главы.`);
+      const key=`${trigger}:${type}:${target}`;if(seen.has(key))throw new ApiError(400,`Действие ${index+1}: визуал ${targetLabel} уже настроен для этой главы.`);seen.add(key);
+      let assetPath=String(raw.assetPath||raw.imageUrl||'').trim().slice(0,500);
+      if(operation==='set'){
+        if(!assetPath)throw new ApiError(400,`Действие ${index+1}: выберите изображение ${targetLabel}.`);
+        if(!/^\/assets\/[A-Za-z0-9%_().+\-\/]+\.(?:png|jpe?g|webp|gif|avif|svg)$/i.test(assetPath))throw new ApiError(400,`Действие ${index+1}: выберите изображение из assets/.`);
+      }else assetPath='';
+      out.push({type,trigger,target,operation,assetPath,seasonId:boundSeasonId});
+    }catch(error){if(strict)throw error;}
+  }
+  return out;
+}
+function seasonPassStoryActionsConfig(row){return normalizeSeasonPassStoryActions(row?.actions_json,String(row?.season_id||''),{strict:false});}
+function seasonPassStoryActionsForSeason(row,targetSeasonId){return normalizeSeasonPassStoryActions(row?.actions_json,String(row?.season_id||''),{strict:true}).map(action=>({...action,seasonId:String(targetSeasonId||'')}));}
+
+function seasonPassDefaultMiniGameVisual(seasonId='',target='treats'){
+  const normalizedTarget=String(target||'')==='coffee'?'coffee':'treats';
+  return {target:normalizedTarget,assetPath:'',isDefault:true,seasonId:String(seasonId||''),sourceEventId:'',sourceTitle:'',sourceUpdatedAt:0,seenAt:0,noticePending:false,noticeEventId:'',policy:'live_story_source',reason:'default'};
+}
+function seasonPassResolveMiniGameVisual(rows,seasonId,target='treats',seenEventIds=null){
+  const boundSeasonId=String(seasonId||'').trim(),boundTarget=String(target||'')==='coffee'?'coffee':'treats',seenSet=Array.isArray(seenEventIds)?new Set(seenEventIds.map(value=>String(value||'').trim()).filter(Boolean)):null;
+  let visual=seasonPassDefaultMiniGameVisual(boundSeasonId,boundTarget);
+  for(const row of Array.isArray(rows)?rows:[]){
+    const eventId=String(row?.event_id||row?.eventId||'').trim();if(!eventId)continue;
+    const seenAt=Math.max(0,Number(row?.seen_at||row?.seenAt||0));
+    if(seenSet?!seenSet.has(eventId):seenAt<=0)continue;
+    const actionSource=Array.isArray(row?.actions)?row.actions:row?.actions_json;
+    const actions=normalizeSeasonPassStoryActions(actionSource,boundSeasonId,{strict:false});
+    for(const action of actions){
+      if(action.type!=='minigame_visual'||action.trigger!=='opened'||action.target!==boundTarget)continue;
+      const visualNoticeAt=Math.max(0,Number(row?.visual_notice_at||row?.visualNoticeAt||0));
+      const meta={target:boundTarget,seasonId:boundSeasonId,sourceEventId:eventId,sourceTitle:String(row?.title||'').slice(0,120),sourceUpdatedAt:Math.max(0,Number(row?.updated_at||row?.updatedAt||0)),seenAt,noticePending:action.operation==='set'&&visualNoticeAt<=0,noticeEventId:action.operation==='set'?eventId:'',policy:'live_story_source',reason:action.operation==='reset'?'story_reset':'story_set'};
+      visual=action.operation==='reset'?{...seasonPassDefaultMiniGameVisual(boundSeasonId,boundTarget),...meta,isDefault:true,noticePending:false,noticeEventId:''}:{...meta,assetPath:String(action.assetPath||''),isDefault:false};
+    }
+  }
+  return visual;
+}
+function seasonPassResolveMiniGameTreatVisual(rows,seasonId,seenEventIds=null){return seasonPassResolveMiniGameVisual(rows,seasonId,'treats',seenEventIds);}
+function seasonPassResolveMiniGameVisuals(rows,seasonId,seenEventIds=null){return {treats:seasonPassResolveMiniGameVisual(rows,seasonId,'treats',seenEventIds),coffee:seasonPassResolveMiniGameVisual(rows,seasonId,'coffee',seenEventIds)};}
+async function seasonPassMiniGameVisualsForPlayer(env,telegramId,nowMs=Date.now()){
+  requireDatabase(env);await ensureSeasonPassSchema(env);
+  const row=await selectSeasonPassSeasonRow(env,nowMs);
+  if(!row)return seasonPassResolveMiniGameVisuals([],'');
+  const fallback=configuredSeasonPassState(env,nowMs),season=seasonPassSeasonFromRow(row,fallback,nowMs),seasonId=String(season?.id||row?.season_id||'');
+  if(String(season?.status||'')!=='active')return seasonPassResolveMiniGameVisuals([],seasonId);
+  const result=await env.DB.prepare(`SELECT e.event_id,e.season_id,e.title,e.actions_json,e.unlock_level,e.sort_order,e.created_at,e.updated_at,p.seen_at,p.visual_notice_at
+    FROM season_pass_story_events e JOIN season_pass_story_progress p ON p.event_id=e.event_id AND p.telegram_id=?
+    WHERE e.season_id=? AND p.seen_at>0
+    ORDER BY p.seen_at,e.unlock_level,e.sort_order,e.created_at,e.event_id`).bind(String(telegramId),seasonId).all();
+  return seasonPassResolveMiniGameVisuals(result.results||[],seasonId);
+}
+async function seasonPassMiniGameVisualForPlayer(env,telegramId,nowMs=Date.now()){return (await seasonPassMiniGameVisualsForPlayer(env,telegramId,nowMs)).treats;}
+
 function seasonPassStoryRewardConfig(row){
   const raw=safeJson(row?.reward_json,{});if(!raw||typeof raw!=='object'||Array.isArray(raw))return null;
   const kind=String(raw.kind||'').trim();if(!kind||kind==='none')return null;
@@ -24189,7 +24267,7 @@ function seasonPassStoryEventView(row){
   return {
     eventId:String(row.event_id||''),seasonId:String(row.season_id||''),sortOrder:Number(row.sort_order||0),unlockLevel:Math.max(1,Math.min(50,Number(row.unlock_level)||1)),unlockAt:Math.max(0,Number(row.unlock_at)||0),
     enabled:Number(row.enabled||0)===1,title:String(row.title||''),pages,bodyText:String(first.bodyText||row.body_text||''),imageUrl:String(first.imageUrl||row.image_url||''),buttonText:String(first.buttonText||row.button_text||'Продолжить'),
-    pushEnabled:Number(row.push_enabled||0)===1,pushText:String(row.push_text||''),reward:seasonPassStoryRewardView(row),seenAt:Number(row.seen_at||0),completedAt:Number(row.completed_at||0),notifiedAt:Number(row.notified_at||0),manualUnlockedAt:Number(row.manual_unlocked_at||0)
+    pushEnabled:Number(row.push_enabled||0)===1,pushText:String(row.push_text||''),reward:seasonPassStoryRewardView(row),actions:seasonPassStoryActionsConfig(row),seenAt:Number(row.seen_at||0),completedAt:Number(row.completed_at||0),notifiedAt:Number(row.notified_at||0),manualUnlockedAt:Number(row.manual_unlocked_at||0)
   };
 }
 
@@ -24218,8 +24296,22 @@ async function openSeasonPassStory(request,env){
     await env.DB.prepare(`INSERT INTO season_pass_story_progress(event_id,season_id,telegram_id,seen_at,completed_at) VALUES(?,?,?,?,0)
       ON CONFLICT(event_id,telegram_id) DO UPDATE SET seen_at=CASE WHEN season_pass_story_progress.seen_at=0 THEN excluded.seen_at ELSE season_pass_story_progress.seen_at END`)
       .bind(eventId,String(ctx.season.id),ctx.telegramId,now).run();
-    return jsonResponse({ok:true,story:await seasonPassStoryForPlayer(env,ctx.season,ctx.telegramId,ctx.player)});
+    const [nextStory,miniGameVisuals]=await Promise.all([seasonPassStoryForPlayer(env,ctx.season,ctx.telegramId,ctx.player),seasonPassMiniGameVisualsForPlayer(env,ctx.telegramId)]);
+    return jsonResponse({ok:true,story:nextStory,minigameVisual:miniGameVisuals.treats,miniGameVisuals});
   }catch(error){if(error instanceof ApiError)return jsonResponse({ok:false,error:error.message},error.status);console.error('openSeasonPassStory failed',error);return jsonResponse({ok:false,error:'Не удалось открыть сюжетное событие.'},500);}
+}
+
+async function markSeasonPassMiniGameVisualNoticeRead(request,env){
+  try{
+    const ctx=await seasonPassRequestContext(request,env);const eventId=String(ctx.body?.eventId||'').trim();if(!eventId)throw new ApiError(400,'Не выбрана сюжетная глава.');
+    const currentVisuals=await seasonPassMiniGameVisualsForPlayer(env,ctx.telegramId),current=Object.values(currentVisuals).find(visual=>visual&&!visual.isDefault&&String(visual.sourceEventId||'')===eventId&&visual.noticePending)||null;
+    if(!current)return jsonResponse({ok:true,read:false,eventId,miniGameVisual:currentVisuals.treats,miniGameVisuals:currentVisuals});
+    const now=Math.floor(Date.now()/1000);
+    const result=await env.DB.prepare(`UPDATE season_pass_story_progress SET visual_notice_at=CASE WHEN visual_notice_at=0 THEN ? ELSE visual_notice_at END WHERE event_id=? AND season_id=? AND telegram_id=? AND seen_at>0`)
+      .bind(now,eventId,String(ctx.season.id),ctx.telegramId).run();
+    const miniGameVisuals=await seasonPassMiniGameVisualsForPlayer(env,ctx.telegramId);
+    return jsonResponse({ok:true,read:Number(result?.meta?.changes||0)>0,eventId,miniGameVisual:miniGameVisuals.treats,miniGameVisuals});
+  }catch(error){if(error instanceof ApiError)return jsonResponse({ok:false,error:error.message},error.status);console.error('markSeasonPassMiniGameVisualNoticeRead failed',error);return jsonResponse({ok:false,error:'Не удалось сохранить показ сюжетного визуала.'},500);}
 }
 
 async function completeSeasonPassStory(request,env){
@@ -31560,7 +31652,7 @@ async function ownerPanelStagingRollback(env,ctx){
 
 // =================== TEST PROJECT 5.2 · QA LAB · OWNER-ONLY ISOLATED SANDBOX ===================
 const TEST_PROJECT_VERSION = "5.2";
-const TEST_PROJECT_SNAPSHOT_SCHEMA = 6;
+const TEST_PROJECT_SNAPSHOT_SCHEMA = 7;
 const TEST_PROJECT_MAX_CASE_SIMULATIONS = 2000;
 const TEST_PROJECT_MAX_ACTIVITY_LOG = 80;
 const TEST_PROJECT_MAX_SCENARIOS = 8;
@@ -31911,6 +32003,7 @@ function testProjectDefaultPlayerState() {
     passClaims: [],
     passTaskProgress: {},
     passTaskClaims: [],
+    storySeenEventIds: [],
     simulatedSegment: "all",
     selectedSeasonId: "",
     rngSeed: "",
@@ -31957,6 +32050,7 @@ function testProjectNormalizePlayerState(raw = {}) {
     passClaims: testProjectArray(raw?.passClaims, 500),
     passTaskProgress: testProjectLooseIntMap(raw?.passTaskProgress, 400, 999999999),
     passTaskClaims: testProjectArray(raw?.passTaskClaims, 500),
+    storySeenEventIds: testProjectArray(raw?.storySeenEventIds, 200),
     simulatedSegment: segment,
     selectedSeasonId: String(raw?.selectedSeasonId || "").trim().slice(0, 120),
     rngSeed: testProjectNormalizeRngSeed(raw?.rngSeed),
@@ -32095,16 +32189,17 @@ async function testProjectReadSeasonSnapshot(env, nowMs = Date.now(), requestedS
     row = seasonId ? await env.DB.prepare(`SELECT * FROM season_pass_seasons WHERE season_id=? LIMIT 1`).bind(seasonId).first() : await selectSeasonPassSeasonRow(env, nowMs);
   } catch (error) { console.error("test project season snapshot fallback", error); }
   const season = row ? seasonPassSeasonFromRow(row, fallback, nowMs) : fallback;
-  let rewards = [], tasks = [], seasonalCases = [];
+  let rewards = [], tasks = [], seasonalCases = [], storyEvents = [];
   if (row?.season_id) {
     try {
       const seasonId=String(row.season_id);
-      const [rewardResult, taskResult, caseDefinitionsResult, caseItemsResult, caseResourceItemsResult] = await Promise.all([
+      const [rewardResult, taskResult, caseDefinitionsResult, caseItemsResult, caseResourceItemsResult, storyResult] = await Promise.all([
         env.DB.prepare(`SELECT level,lane,reward_type,amount,item_id,title,image_url,enabled FROM season_pass_rewards WHERE season_id=? ORDER BY level,lane`).bind(seasonId).all(),
         env.DB.prepare(`SELECT task_id,period,premium,metric,target,xp_reward,title,description,enabled,sort_order FROM season_pass_tasks WHERE season_id=? ORDER BY sort_order,task_id`).bind(seasonId).all(),
         env.DB.prepare(`SELECT * FROM season_pass_case_definitions WHERE season_id=? ORDER BY release_at DESC,updated_at DESC,case_id`).bind(seasonId).all(),
         env.DB.prepare(`SELECT i.* FROM season_pass_case_items i JOIN season_pass_case_definitions d ON d.case_id=i.case_id WHERE d.season_id=? ORDER BY i.case_id,i.reward_kind,i.item_key`).bind(seasonId).all(),
-        env.DB.prepare(`SELECT i.* FROM season_pass_case_resource_items i JOIN season_pass_case_definitions d ON d.case_id=i.case_id WHERE d.season_id=? ORDER BY i.case_id,i.reward_kind,i.item_key`).bind(seasonId).all()
+        env.DB.prepare(`SELECT i.* FROM season_pass_case_resource_items i JOIN season_pass_case_definitions d ON d.case_id=i.case_id WHERE d.season_id=? ORDER BY i.case_id,i.reward_kind,i.item_key`).bind(seasonId).all(),
+        env.DB.prepare(`SELECT event_id,season_id,sort_order,unlock_level,unlock_at,enabled,title,actions_json,created_at,updated_at FROM season_pass_story_events WHERE season_id=? ORDER BY unlock_level,sort_order,created_at,event_id`).bind(seasonId).all()
       ]);
       rewards = (rewardResult.results || []).map(ownerPanelSeasonPassRewardView);
       tasks = (taskResult.results || []).map((item) => ({
@@ -32112,6 +32207,7 @@ async function testProjectReadSeasonSnapshot(env, nowMs = Date.now(), requestedS
         metric: String(item.metric || ""), target: Number(item.target || 0), xp: Number(item.xp_reward || 0),
         title: String(item.title || ""), description: String(item.description || ""), enabled: Number(item.enabled || 0) === 1
       }));
+      storyEvents=(storyResult.results||[]).map((item)=>({eventId:String(item.event_id||''),seasonId:String(item.season_id||seasonId),sortOrder:Number(item.sort_order||0),unlockLevel:Math.max(1,Math.min(50,Number(item.unlock_level)||1)),unlockAt:Math.max(0,Number(item.unlock_at)||0),enabled:Number(item.enabled||0)===1,title:String(item.title||''),createdAt:Number(item.created_at||0),updatedAt:Number(item.updated_at||0),actions:seasonPassStoryActionsConfig(item)}));
       const seasonMap=new Map([[seasonId,season]]),itemsByCase=new Map();
       for(const item of [...(caseItemsResult.results||[]),...(caseResourceItemsResult.results||[])]){
         const caseId=String(item.case_id||"");if(!caseId)continue;
@@ -32126,7 +32222,7 @@ async function testProjectReadSeasonSnapshot(env, nowMs = Date.now(), requestedS
       });
     } catch (error) { console.error("test project season content snapshot fallback", error); }
   }
-  return { ...season, manualStatus:String(row?.manual_status || ""), rewards, tasks, seasonalCase:seasonalCases[0]||null, seasonalCases, progression: seasonPassProgressionView() };
+  return { ...season, manualStatus:String(row?.manual_status || ""), rewards, tasks, storyEvents, seasonalCase:seasonalCases[0]||null, seasonalCases, progression: seasonPassProgressionView() };
 }
 
 async function testProjectReadOffersSnapshot(env) {
@@ -32452,6 +32548,12 @@ function testProjectPassLabView(state, snapshot, nowMs) {
   };
 }
 
+function testProjectMiniGameVisuals(state,snapshot){
+  const season=snapshot?.season||{},seasonId=String(season?.id||state?.selectedSeasonId||'');
+  return seasonPassResolveMiniGameVisuals(Array.isArray(season?.storyEvents)?season.storyEvents:[],seasonId,state?.storySeenEventIds||[]);
+}
+function testProjectMiniGameVisual(state,snapshot){return testProjectMiniGameVisuals(state,snapshot).treats;}
+
 function testProjectClientPayload(row) {
   const state = testProjectWorkspaceState(row);
   const productionSnapshot = testProjectWorkspaceSnapshot(row);
@@ -32476,6 +32578,8 @@ function testProjectClientPayload(row) {
     timeMode:state.virtualNow > 0 ? "virtual" : "snapshot",
     state,
     snapshot: dynamicSnapshot,
+    miniGameVisual:testProjectMiniGameVisual(state,dynamicSnapshot),
+    miniGameVisuals:testProjectMiniGameVisuals(state,dynamicSnapshot),
     draftLayer:testProjectDraftLayerView(state, productionSnapshot),
     passLab:testProjectPassLabView(state, dynamicSnapshot, effectiveNow)
   };
@@ -32775,6 +32879,7 @@ async function ownerPanelTestProjectAction(env, ctx) {
     const selected=nextSnapshot?.season||{};
     if(requestedSeasonId&&String(selected?.id||"")!==requestedSeasonId)throw new ApiError(404,"Выбранный сезонный пропуск не найден.");
     state.selectedSeasonId=requestedSeasonId;
+    state.storySeenEventIds=[];
     if(ctx.body?.activate===true){
       const startMs=Date.parse(String(selected?.startsAt||""));
       if(!Number.isFinite(startMs))throw new ApiError(409,"У выбранного сезона не настроена дата старта.");
@@ -33330,7 +33435,7 @@ async function testProjectSandboxGameData(env, ctx) {
   const response=(data,status=200)=>({ok:true,proxyStatus:status,data:{...data,testProject:true,productionWrites:false}});
   const reload=async()=>{loaded=await testProjectSandboxLoad(env,ctx);({ownerId,state,productionSnapshot,snapshot,nowMs}=loaded);return loaded;};
 
-  if(path==="/api/game/startup")return response({ok:true,authenticated:true,workerBuild:WORKER_BUILD,generatedAt:nowMs,publicConfig:testProjectClone(snapshot?.publicConfig||fallbackGamePublicConfig()),profile:testProjectSandboxProfile(state),cases:testProjectSandboxCasePayload(state,snapshot),rewards:{ok:true,rewards:(state.sandbox?.mockRewards||[]).map(testProjectSandboxRewardView),limitStatus:null},flags:{...(snapshot?.featureFlags||{}),battle_pass:true,shop:true,rating:true},seasonPassBonus:{active:Number(state.seasonXpBoosts||0)>0||state.passTier==="elite_plus",multiplier:(Number(state.seasonXpBoosts||0)>0||state.passTier==="elite_plus")?2:1,claimableCount:testProjectSandboxPassPayload(state,snapshot).taskClaimableCount},seasonPassTaskNotice:{ok:true,pending:false,notice:null},news:{ok:true,items:[],unreadCount:0},gifts:{ok:true,pendingCount:0,items:[]},errors:{}});
+  if(path==="/api/game/startup")return response({ok:true,authenticated:true,workerBuild:WORKER_BUILD,generatedAt:nowMs,publicConfig:testProjectClone(snapshot?.publicConfig||fallbackGamePublicConfig()),profile:testProjectSandboxProfile(state),cases:testProjectSandboxCasePayload(state,snapshot),rewards:{ok:true,rewards:(state.sandbox?.mockRewards||[]).map(testProjectSandboxRewardView),limitStatus:null},flags:{...(snapshot?.featureFlags||{}),battle_pass:true,shop:true,rating:true},seasonPassBonus:{active:Number(state.seasonXpBoosts||0)>0||state.passTier==="elite_plus",multiplier:(Number(state.seasonXpBoosts||0)>0||state.passTier==="elite_plus")?2:1,claimableCount:testProjectSandboxPassPayload(state,snapshot).taskClaimableCount},seasonPassTaskNotice:{ok:true,pending:false,notice:null},news:{ok:true,items:[],unreadCount:0},gifts:{ok:true,pendingCount:0,items:[]},miniGameVisual:testProjectMiniGameVisual(state,snapshot),miniGameVisuals:testProjectMiniGameVisuals(state,snapshot),errors:{}});
   if(path==="/api/features")return response({ok:true,flags:{...(snapshot?.featureFlags||{}),battle_pass:true,shop:true,rating:true}});
   if(path==="/api/profile/sync")return response({ok:true,profile:testProjectSandboxProfile(state)});
   if(path==="/api/shop/config")return response({ok:true,...testProjectClone(snapshot?.publicConfig?.shop||fallbackGamePublicConfig().shop)});
@@ -33530,7 +33635,7 @@ function testProjectCaseStateFromProductionRow(row={}){
 }
 
 function testProjectCloneBaseline(state){
-  return {points:state.points,treats:state.treats,coffee:state.coffee,profileXp:state.profileXp,profileLevel:state.profileLevel,bestScore:state.bestScore,passTier:state.passTier,passXp:state.passXp,passOverflowClaimed:state.passOverflowClaimed,passClaims:testProjectClone(state.passClaims||[]),passTaskClaims:testProjectClone(state.passTaskClaims||[]),passTaskProgress:testProjectClone(state.passTaskProgress||{}),caseInventory:testProjectClone(state.caseInventory||{}),seasonalCaseInventory:testProjectClone(state.seasonalCaseInventory||{}),offerPurchases:testProjectClone(state.offerPurchases||{}),openedLevelCases:testProjectClone(state.openedLevelCases||[]),caseState:testProjectClone(state.caseState||{})};
+  return {points:state.points,treats:state.treats,coffee:state.coffee,profileXp:state.profileXp,profileLevel:state.profileLevel,bestScore:state.bestScore,passTier:state.passTier,passXp:state.passXp,passOverflowClaimed:state.passOverflowClaimed,passClaims:testProjectClone(state.passClaims||[]),passTaskClaims:testProjectClone(state.passTaskClaims||[]),passTaskProgress:testProjectClone(state.passTaskProgress||{}),storySeenEventIds:testProjectClone(state.storySeenEventIds||[]),caseInventory:testProjectClone(state.caseInventory||{}),seasonalCaseInventory:testProjectClone(state.seasonalCaseInventory||{}),offerPurchases:testProjectClone(state.offerPurchases||{}),openedLevelCases:testProjectClone(state.openedLevelCases||[]),caseState:testProjectClone(state.caseState||{})};
 }
 
 async function ownerPanelTestProjectClonePlayer(env,ctx){
@@ -33558,9 +33663,10 @@ async function ownerPanelTestProjectClonePlayer(env,ctx){
   const seasonalCaseInventory={};for(const r of seasonCaseRows)seasonalCaseInventory[String(r.case_id||"")]=Math.max(0,Number(r.count)||0);const offerPurchases={};for(const r of offerRows)offerPurchases[String(r.offer_id||"")]=Math.max(0,Number(r.count)||0);
   const actualSeasonId=String(passRow?.season_id||seasonId||"");const passClaims=claimRows.filter((r)=>String(r.lane)!=="overflow").map((r)=>`${actualSeasonId}:${Number(r.level)}:${String(r.lane)}`),passOverflowClaimed=claimRows.filter((r)=>String(r.lane)==="overflow").length,passTaskClaims=taskClaimRows.map((r)=>`${actualSeasonId}:${String(r.task_id)}:${String(r.period_key)}`);
   let snapshot=productionSnapshot;if(actualSeasonId&&String(snapshot?.season?.id||"")!==actualSeasonId){snapshot=await testProjectCaptureProductionSnapshot(env,actualSeasonId);}
+  const storySeenRows=actualSeasonId?await safeAll(`SELECT event_id FROM season_pass_story_progress WHERE season_id=? AND telegram_id=? AND seen_at>0 ORDER BY seen_at,event_id`,actualSeasonId,telegramId):[];
   const passTaskProgress={};for(const row of progressRows){for(const task of snapshot?.season?.tasks||[]){if(String(task.period)!==String(row.period))continue;const metric=String(task.metric||""),value=Number(row?.[metric]||0);passTaskProgress[`${actualSeasonId}:${String(task.id)}:${String(row.period_key)}`]=Math.max(0,value||0);}}
   const name=String(identityAll?.display_name||subscriber?.display_name||identityAll?.username||subscriber?.username||`Telegram ${telegramId}`).slice(0,60),username=String(identityAll?.username||subscriber?.username||"");
-  let next=testProjectNormalizePlayerState({...current,name,profileXp:xp,profileLevel:profileLevelFromXp(xp),points,treats,coffee,bestScore:best,selectedSeasonId:actualSeasonId||current.selectedSeasonId,passTier:["elite","elite_plus"].includes(String(passRow?.premium_tier))?String(passRow.premium_tier):"none",passXp:Math.max(0,Number(passRow?.xp)||0),passOverflowClaimed,passClaims,passTaskClaims,passTaskProgress,caseInventory,seasonalCaseInventory,offerPurchases,openedLevelCases:levelRows.map((r)=>Number(r.level)).filter((n)=>n>0),caseState:testProjectCaseStateFromProductionRow(caseRow||{}),sandbox:{...current.sandbox,activeRun:null,lastRun:null,completedRuns:0,mockRewards:[],supportTickets:[],externalEvents:[]}});
+  let next=testProjectNormalizePlayerState({...current,name,profileXp:xp,profileLevel:profileLevelFromXp(xp),points,treats,coffee,bestScore:best,selectedSeasonId:actualSeasonId||current.selectedSeasonId,passTier:["elite","elite_plus"].includes(String(passRow?.premium_tier))?String(passRow.premium_tier):"none",passXp:Math.max(0,Number(passRow?.xp)||0),passOverflowClaimed,passClaims,passTaskClaims,passTaskProgress,storySeenEventIds:storySeenRows.map((row)=>String(row.event_id||'')).filter(Boolean),caseInventory,seasonalCaseInventory,offerPurchases,openedLevelCases:levelRows.map((r)=>Number(r.level)).filter((n)=>n>0),caseState:testProjectCaseStateFromProductionRow(caseRow||{}),sandbox:{...current.sandbox,activeRun:null,lastRun:null,completedRuns:0,mockRewards:[],supportTickets:[],externalEvents:[]}});
   next.cloneSource=testProjectNormalizeCloneSource({telegramId,name,username,seasonId:actualSeasonId,clonedAt:Date.now(),sourceUpdatedAt:Math.max(Number(profile.updated_at||0),Number(caseRow?.updated_at||0),Number(passRow?.updated_at||0))*1000,baseline:testProjectCloneBaseline(next)});
   const now=Math.floor(Date.now()/1000);await env.DB.prepare(`UPDATE test_project_workspaces SET state_json=?,snapshot_json=?,snapshot_at=?,revision=revision+1,updated_at=? WHERE owner_telegram_id=?`).bind(JSON.stringify(next),JSON.stringify(snapshot),Number(snapshot?.capturedAt||now),now,ownerId).run();
   await logStaffAction(env,ctx.user,ctx.access,"owner_test_project_clone_player",telegramId,"test_project",null,null,{name,seasonId:actualSeasonId,readOnlyProduction:true});
@@ -33573,7 +33679,7 @@ function testProjectObjectDiff(rows,label,before,after,section="Игрок") {co
 
 async function ownerPanelTestProjectDiff(env,ctx){
   const loaded=await testProjectSandboxLoad(env,ctx),{state,productionSnapshot,snapshot}=loaded,rows=[];const base=state.cloneSource?.baseline||null;
-  if(base){for(const [label,key] of [["Очки","points"],["Зефир","treats"],["Кофе","coffee"],["XP профиля","profileXp"],["Уровень профиля","profileLevel"],["Рекорд","bestScore"],["Тариф","passTier"],["XP пропуска","passXp"],["Получено overflow","passOverflowClaimed"]])testProjectScalarDiff(rows,label,base[key],state[key]);testProjectObjectDiff(rows,"Кейсы",base.caseInventory,state.caseInventory);testProjectObjectDiff(rows,"Сезонные кейсы",base.seasonalCaseInventory,state.seasonalCaseInventory);testProjectObjectDiff(rows,"Покупки акций",base.offerPurchases,state.offerPurchases);testProjectArrayDiff(rows,"Открытые уровневые кейсы",base.openedLevelCases,state.openedLevelCases);testProjectArrayDiff(rows,"Полученные награды пропуска",base.passClaims,state.passClaims);testProjectArrayDiff(rows,"Полученные задания",base.passTaskClaims,state.passTaskClaims);testProjectObjectDiff(rows,"Прогресс заданий",base.passTaskProgress,state.passTaskProgress);for(const [label,key] of [["Аватары","ownedAvatars"],["Рамки","ownedFrames"],["Следы","ownedTrails"],["Музыка","ownedMusicTracks"],["Скины","ownedSkins"],["Особые предметы","ownedSpecials"]])testProjectArrayDiff(rows,label,base.caseState?.[key],state.caseState?.[key]);for(const [label,key] of [["Активный аватар","activeAvatarId"],["Активная рамка","activeFrameId"],["Активный след","activeTrailId"],["Активная музыка","activeMusicTrackId"],["Активный скин","activeSkinId"],["Mythic pity","mythicPityCounter"],["Legendary pity","legendaryPityCounter"]])testProjectScalarDiff(rows,label,base.caseState?.[key],state.caseState?.[key]);testProjectObjectDiff(rows,"Усилители",base.caseState?.boosters,state.caseState?.boosters);testProjectScalarDiff(rows,"Активный усилитель",testProjectCompactJson(base.caseState?.activeBooster||{},300),testProjectCompactJson(state.caseState?.activeBooster||{},300));}
+  if(base){for(const [label,key] of [["Очки","points"],["Зефир","treats"],["Кофе","coffee"],["XP профиля","profileXp"],["Уровень профиля","profileLevel"],["Рекорд","bestScore"],["Тариф","passTier"],["XP пропуска","passXp"],["Получено overflow","passOverflowClaimed"]])testProjectScalarDiff(rows,label,base[key],state[key]);testProjectObjectDiff(rows,"Кейсы",base.caseInventory,state.caseInventory);testProjectObjectDiff(rows,"Сезонные кейсы",base.seasonalCaseInventory,state.seasonalCaseInventory);testProjectObjectDiff(rows,"Покупки акций",base.offerPurchases,state.offerPurchases);testProjectArrayDiff(rows,"Открытые уровневые кейсы",base.openedLevelCases,state.openedLevelCases);testProjectArrayDiff(rows,"Полученные награды пропуска",base.passClaims,state.passClaims);testProjectArrayDiff(rows,"Полученные задания",base.passTaskClaims,state.passTaskClaims);testProjectObjectDiff(rows,"Прогресс заданий",base.passTaskProgress,state.passTaskProgress);testProjectArrayDiff(rows,"Открытые главы сюжета",base.storySeenEventIds,state.storySeenEventIds);for(const [label,key] of [["Аватары","ownedAvatars"],["Рамки","ownedFrames"],["Следы","ownedTrails"],["Музыка","ownedMusicTracks"],["Скины","ownedSkins"],["Особые предметы","ownedSpecials"]])testProjectArrayDiff(rows,label,base.caseState?.[key],state.caseState?.[key]);for(const [label,key] of [["Активный аватар","activeAvatarId"],["Активная рамка","activeFrameId"],["Активный след","activeTrailId"],["Активная музыка","activeMusicTrackId"],["Активный скин","activeSkinId"],["Mythic pity","mythicPityCounter"],["Legendary pity","legendaryPityCounter"]])testProjectScalarDiff(rows,label,base.caseState?.[key],state.caseState?.[key]);testProjectObjectDiff(rows,"Усилители",base.caseState?.boosters,state.caseState?.boosters);testProjectScalarDiff(rows,"Активный усилитель",testProjectCompactJson(base.caseState?.activeBooster||{},300),testProjectCompactJson(state.caseState?.activeBooster||{},300));}
   else rows.push({section:"Игрок",label:"Production baseline",before:"—",after:"Сначала клонируйте реального игрока"});
   const prodGame=productionSnapshot?.publicConfig?.gameplay||{},tpGame=snapshot?.publicConfig?.gameplay||{};for(const key of [...new Set([...Object.keys(prodGame),...Object.keys(tpGame)])].sort()){if(["source"].includes(key))continue;testProjectScalarDiff(rows,key,prodGame[key],tpGame[key],"Баланс игры");}
   for(const id of LIVEOPS_CASE_IDS){const a=productionSnapshot?.liveops?.cases?.[id]||{},b=snapshot?.liveops?.cases?.[id]||{};if(testProjectCompactJson(a,2000)!==testProjectCompactJson(b,2000))rows.push({section:"Кейсы",label:id,before:testProjectCompactJson(a,400),after:testProjectCompactJson(b,400)});}
@@ -34592,7 +34698,7 @@ async function seasonPassReadinessReport(env, seasonIdValue, options={}){
   else if(!daily.length||!weekly.length)add('tasks','Задания сезона','warning',`Включено ${daily.length} ежедневных и ${weekly.length} недельных. Желательно иметь оба типа.`);
   else add('tasks','Задания сезона','pass',`Включено ${daily.length} ежедневных и ${weekly.length} недельных заданий.`);
 
-  const enabledStory=storyRows.filter(r=>Number(r.enabled||0)===1),draftStory=storyRows.filter(r=>Number(r.enabled||0)!==1),emptyStory=[],storyRewardRefs=new Set();
+  const enabledStory=storyRows.filter(r=>Number(r.enabled||0)===1),draftStory=storyRows.filter(r=>Number(r.enabled||0)!==1),emptyStory=[],storyRewardRefs=new Set(),storyActionErrors=[];let storyActionCount=0;
   const assetRefs=[];const addAsset=(value,source,blocking=true)=>{const path=seasonPassReadinessAssetPath(value);if(path)assetRefs.push({path,source:String(source),blocking:Boolean(blocking)});};
   for(const storyRow of enabledStory){
     const pages=seasonPassStoryPagesFromRow(storyRow);
@@ -34603,10 +34709,13 @@ async function seasonPassReadinessReport(env, seasonIdValue, options={}){
     if(storyReward?.kind==='seasonal_case'&&storyReward.itemId)storyRewardRefs.add(String(storyReward.itemId));
     if(storyReward?.kind==='case'&&!normalizeCaseType(storyReward.itemId))invalidRewardRefs.push(`story ${String(storyRow.event_id)}: case:${storyReward.itemId||'empty'}`);
     if(SEASON_PASS_COSMETIC_KINDS.includes(String(storyReward?.kind||''))&&!seasonPassAnyCosmeticCatalog(storyReward.kind)?.[storyReward.itemId])invalidRewardRefs.push(`story ${String(storyRow.event_id)}: ${storyReward.kind}:${storyReward.itemId}`);
+    try{const actions=normalizeSeasonPassStoryActions(storyRow.actions_json,String(storyRow.season_id||''),{strict:true});storyActionCount+=actions.length;for(const action of actions)if(action.type==='minigame_visual'&&action.operation==='set')addAsset(action.assetPath,`Сюжетное действие: ${String(storyRow.title||storyRow.event_id)}`,true);}catch(error){storyActionErrors.push(`${String(storyRow.event_id)}: ${String(error?.message||error)}`);}
   }
   if(emptyStory.length)add('story','Сюжет сезона','error',`${emptyStory.length} опубликованных глав не имеют полноценного содержимого.`,true,{eventIds:emptyStory});
   else if(!enabledStory.length)add('story','Сюжет сезона','warning',`Опубликованных глав нет${draftStory.length?`; черновиков: ${draftStory.length}`:''}.`);
   else add('story','Сюжет сезона','pass',`Опубликовано ${enabledStory.length} глав${draftStory.length?` · черновиков ${draftStory.length}`:''}.`);
+  if(storyActionErrors.length)add('story_actions','Сюжетные действия','error',`Некорректные действия: ${storyActionErrors.slice(0,3).join('; ')}${storyActionErrors.length>3?'…':''}`,true,{items:storyActionErrors});
+  else if(storyActionCount)add('story_actions','Сюжетные действия','pass',`Проверено действий после открытия главы: ${storyActionCount}.`);
   const finalStory=enabledStory.filter(r=>Number(r.unlock_level||1)===50);
   if(finalStory.length)add('story_final','Сюжетный финал','pass',`${finalStory.length} глава(ы) открывается на 50 уровне.`);
   else add('story_final','Сюжетный финал','warning','Нет опубликованной главы на 50 уровне. Финальная карточка пропуска будет работать, но без сюжетного финала.');
@@ -34807,6 +34916,20 @@ async function ownerPanelSeasonPassStoryRewardConfig(env,ctx){
   return {kind:String(presentation.publicRewardType||presentation.rewardType),itemId:String(presentation.publicItemId||presentation.itemId||''),amount:Number(presentation.amount||1),title:String(presentation.title||'Награда'),imageUrl:String(presentation.imageUrl||'')};
 }
 
+async function assertSeasonPassStoryVisualAssetsAvailable(env,seasonId,rows){
+  const refs=[];
+  for(const row of Array.isArray(rows)?rows:[]){
+    const actions=normalizeSeasonPassStoryActions(Array.isArray(row?.actions)?row.actions:row?.actions_json,String(seasonId||row?.season_id||''),{strict:true});
+    for(const action of actions)if(action.type==='minigame_visual'&&['treats','coffee'].includes(action.target)&&action.operation==='set'&&action.assetPath)refs.push({path:String(action.assetPath),title:String(row?.title||row?.event_id||'Глава'),target:action.target});
+  }
+  if(!refs.length)return {ok:true,checked:0};
+  const manifest=await seasonPassReadinessImageManifest(env);
+  if(!manifest.available)throw new ApiError(503,`Не удалось проверить каталог картинок (${manifest.error||'manifest unavailable'}). Повторите сохранение после обновления assets.`);
+  const missing=refs.filter(ref=>!manifest.paths.has(ref.path));
+  if(missing.length)throw new ApiError(409,`Нельзя опубликовать сюжет: отсутствует ${missing[0].path}${missing.length>1?` и ещё ${missing.length-1}`:''}. Добавьте файл и выполните deploy.`);
+  return {ok:true,checked:refs.length};
+}
+
 async function ownerPanelSaveSeasonPassStory(env,ctx){
   await ensureSeasonPassSchema(env);
   const seasonId=String(ctx.body?.seasonId||'').trim();const season=await loadSeasonPassSeasonById(env,seasonId);if(!season)throw new ApiError(404,'Сезонный пропуск не найден.');
@@ -34818,11 +34941,13 @@ async function ownerPanelSaveSeasonPassStory(env,ctx){
   const musicCatalog=seasonPassAnyCosmeticCatalog('music')||{};
   const pages=rawPages.map((page,index)=>{const imageUrl=String(page?.imageUrl||'').trim().slice(0,500);if(imageUrl&&!/^\/assets\/[A-Za-z0-9%_().+\-\/]+$/i.test(imageUrl))throw new ApiError(400,`Страница ${index+1}: выберите картинку из файлов проекта.`);const bodyText=String(page?.bodyText||'').trim().slice(0,5000);const pageTitle=String(page?.title||'').trim().slice(0,120);const buttonText=String(page?.buttonText||'').trim().slice(0,40)||(index===rawPages.length-1?'Завершить':'Далее');const musicId=String(page?.musicId||'').trim();if(musicId&&!musicCatalog[musicId])throw new ApiError(400,`Страница ${index+1}: выбран неизвестный музыкальный трек.`);if(!bodyText)throw new ApiError(400,`Добавьте текст на странице ${index+1}.`);return {title:pageTitle,bodyText,imageUrl,buttonText,musicId};});
   const reward=await ownerPanelSeasonPassStoryRewardConfig(env,ctx);
+  const actions=normalizeSeasonPassStoryActions(Array.isArray(ctx.body?.actions)?ctx.body.actions:[],seasonId,{strict:true});
+  if(enabled)await assertSeasonPassStoryVisualAssetsAvailable(env,seasonId,[{title,actions}]);
   const first=pages[0],now=Math.floor(Date.now()/1000),actor=String(ctx.user.id);const safeSeason=seasonId.replace(/[^A-Za-z0-9_-]+/g,'_').slice(0,70)||'season';const eventId=requestedId||`story_${safeSeason}_${now}_${crypto.randomUUID().replaceAll('-','').slice(0,8)}`.slice(0,180);
-  await env.DB.prepare(`INSERT INTO season_pass_story_events(event_id,season_id,sort_order,unlock_level,unlock_at,enabled,title,body_text,image_url,button_text,pages_json,push_enabled,push_text,reward_json,created_at,updated_at,updated_by) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-    ON CONFLICT(event_id) DO UPDATE SET sort_order=excluded.sort_order,unlock_level=excluded.unlock_level,unlock_at=excluded.unlock_at,enabled=excluded.enabled,title=excluded.title,body_text=excluded.body_text,image_url=excluded.image_url,button_text=excluded.button_text,pages_json=excluded.pages_json,push_enabled=excluded.push_enabled,push_text=excluded.push_text,reward_json=excluded.reward_json,updated_at=excluded.updated_at,updated_by=excluded.updated_by`)
-    .bind(eventId,seasonId,sortOrder,unlockLevel,unlockAt,enabled?1:0,title,first.bodyText,first.imageUrl,first.buttonText,JSON.stringify(pages),pushEnabled?1:0,pushText,JSON.stringify(reward||{}),before?.created_at||now,now,actor).run();
-  await logStaffAction(env,ctx.user,ctx.access,'owner_panel_season_pass_story_save',null,'season_pass_story',eventId,null,{seasonId,before:before||null,after:{unlockLevel,unlockAt,sortOrder,enabled,title,pages:pages.length,pushEnabled,reward:reward||null}});
+  await env.DB.prepare(`INSERT INTO season_pass_story_events(event_id,season_id,sort_order,unlock_level,unlock_at,enabled,title,body_text,image_url,button_text,pages_json,push_enabled,push_text,reward_json,actions_json,created_at,updated_at,updated_by) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+    ON CONFLICT(event_id) DO UPDATE SET sort_order=excluded.sort_order,unlock_level=excluded.unlock_level,unlock_at=excluded.unlock_at,enabled=excluded.enabled,title=excluded.title,body_text=excluded.body_text,image_url=excluded.image_url,button_text=excluded.button_text,pages_json=excluded.pages_json,push_enabled=excluded.push_enabled,push_text=excluded.push_text,reward_json=excluded.reward_json,actions_json=excluded.actions_json,updated_at=excluded.updated_at,updated_by=excluded.updated_by`)
+    .bind(eventId,seasonId,sortOrder,unlockLevel,unlockAt,enabled?1:0,title,first.bodyText,first.imageUrl,first.buttonText,JSON.stringify(pages),pushEnabled?1:0,pushText,JSON.stringify(reward||{}),JSON.stringify(actions),before?.created_at||now,now,actor).run();
+  await logStaffAction(env,ctx.user,ctx.access,'owner_panel_season_pass_story_save',null,'season_pass_story',eventId,null,{seasonId,before:before||null,after:{unlockLevel,unlockAt,sortOrder,enabled,title,pages:pages.length,pushEnabled,reward:reward||null,actions}});
   return {ok:true,eventId};
 }
 
@@ -34835,11 +34960,13 @@ async function ownerPanelToggleSeasonPassStory(env,ctx){
   let changed=0,title='',scope='all';
   if(eventId){
     scope='event';
-    const row=await env.DB.prepare(`SELECT event_id,title,enabled FROM season_pass_story_events WHERE event_id=? AND season_id=? LIMIT 1`).bind(eventId,seasonId).first();
+    const row=await env.DB.prepare(`SELECT event_id,season_id,title,enabled,actions_json FROM season_pass_story_events WHERE event_id=? AND season_id=? LIMIT 1`).bind(eventId,seasonId).first();
     if(!row)throw new ApiError(404,'Сюжетное событие не найдено.');
     title=String(row.title||'');
+    if(target===1)await assertSeasonPassStoryVisualAssetsAvailable(env,seasonId,[row]);
     if(Number(row.enabled||0)!==target){const result=await env.DB.prepare(`UPDATE season_pass_story_events SET enabled=?,updated_at=?,updated_by=? WHERE event_id=? AND season_id=?`).bind(target,now,actor,eventId,seasonId).run();changed=Number(result?.meta?.changes||0);}
   }else{
+    if(target===1){const rows=(await env.DB.prepare(`SELECT event_id,season_id,title,actions_json FROM season_pass_story_events WHERE season_id=?`).bind(seasonId).all()).results||[];await assertSeasonPassStoryVisualAssetsAvailable(env,seasonId,rows);}
     const before=await env.DB.prepare(`SELECT COUNT(*) AS count FROM season_pass_story_events WHERE season_id=? AND enabled<>?`).bind(seasonId,target).first();
     changed=Number(before?.count||0);
     if(changed>0)await env.DB.prepare(`UPDATE season_pass_story_events SET enabled=?,updated_at=?,updated_by=? WHERE season_id=? AND enabled<>?`).bind(target,now,actor,seasonId,target).run();
@@ -34865,8 +34992,8 @@ async function ownerPanelDuplicateSeasonPassStory(env,ctx){
   await ensureSeasonPassSchema(env);const seasonId=String(ctx.body?.seasonId||'').trim(),eventId=String(ctx.body?.eventId||'').trim();if(!seasonId||!eventId)throw new ApiError(400,'Не выбрано сюжетное событие.');
   const row=await env.DB.prepare(`SELECT * FROM season_pass_story_events WHERE event_id=? AND season_id=? LIMIT 1`).bind(eventId,seasonId).first();if(!row)throw new ApiError(404,'Сюжетное событие не найдено.');
   const now=Math.floor(Date.now()/1000),safeSeason=seasonId.replace(/[^A-Za-z0-9_-]+/g,'_').slice(0,70)||'season',newId=`story_${safeSeason}_${now}_${crypto.randomUUID().replaceAll('-','').slice(0,8)}`.slice(0,180),title=`${String(row.title||'Сюжетное событие').slice(0,108)} · копия`.slice(0,120);
-  await env.DB.prepare(`INSERT INTO season_pass_story_events(event_id,season_id,sort_order,unlock_level,unlock_at,enabled,title,body_text,image_url,button_text,pages_json,push_enabled,push_text,reward_json,created_at,updated_at,updated_by) VALUES(?,?,?,?,?,0,?,?,?,?,?,?,?,?,?,?,?)`)
-    .bind(newId,seasonId,Math.min(9999,Math.max(0,Number(row.sort_order)||0)+1),Math.max(1,Math.min(50,Number(row.unlock_level)||1)),Math.max(0,Number(row.unlock_at)||0),title,String(row.body_text||''),String(row.image_url||''),String(row.button_text||'Продолжить'),String(row.pages_json||'[]'),Number(row.push_enabled||0)===1?1:0,String(row.push_text||''),String(row.reward_json||'{}'),now,now,String(ctx.user.id)).run();
+  await env.DB.prepare(`INSERT INTO season_pass_story_events(event_id,season_id,sort_order,unlock_level,unlock_at,enabled,title,body_text,image_url,button_text,pages_json,push_enabled,push_text,reward_json,actions_json,created_at,updated_at,updated_by) VALUES(?,?,?,?,?,0,?,?,?,?,?,?,?,?,?,?,?,?)`)
+    .bind(newId,seasonId,Math.min(9999,Math.max(0,Number(row.sort_order)||0)+1),Math.max(1,Math.min(50,Number(row.unlock_level)||1)),Math.max(0,Number(row.unlock_at)||0),title,String(row.body_text||''),String(row.image_url||''),String(row.button_text||'Продолжить'),String(row.pages_json||'[]'),Number(row.push_enabled||0)===1?1:0,String(row.push_text||''),String(row.reward_json||'{}'),JSON.stringify(seasonPassStoryActionsForSeason(row,seasonId)),now,now,String(ctx.user.id)).run();
   await logStaffAction(env,ctx.user,ctx.access,'owner_panel_season_pass_story_duplicate',null,'season_pass_story',newId,null,{seasonId,sourceEventId:eventId,title});return {ok:true,eventId:newId};
 }
 
@@ -34900,8 +35027,8 @@ async function ownerPanelTransferSeasonPassStory(env,ctx){
     const sourceUnlockAt=Math.max(0,Number(row.unlock_at)||0),relativeUnlock=sourceUnlockAt>0&&sourceStart>0?Math.max(0,sourceUnlockAt-sourceStart):0;
     const targetUnlockAt=sourceUnlockAt>0?(targetStart>0?targetStart+relativeUnlock:sourceUnlockAt):0;
     const newId=`story_${safeTarget}_${now}_${index}_${crypto.randomUUID().replaceAll('-','').slice(0,8)}`.slice(0,180),createdAt=now+index;
-    statements.push(env.DB.prepare(`INSERT INTO season_pass_story_events(event_id,season_id,sort_order,unlock_level,unlock_at,enabled,title,body_text,image_url,button_text,pages_json,push_enabled,push_text,reward_json,created_at,updated_at,updated_by) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
-      .bind(newId,targetSeasonId,Math.max(0,Number(row.sort_order)||0),Math.max(1,Math.min(50,Number(row.unlock_level)||1)),targetUnlockAt,Number(row.enabled||0)===1?1:0,title,String(row.body_text||''),String(row.image_url||''),String(row.button_text||'Продолжить'),String(row.pages_json||'[]'),Number(row.push_enabled||0)===1?1:0,String(row.push_text||''),String(row.reward_json||'{}'),createdAt,createdAt,actor));
+    statements.push(env.DB.prepare(`INSERT INTO season_pass_story_events(event_id,season_id,sort_order,unlock_level,unlock_at,enabled,title,body_text,image_url,button_text,pages_json,push_enabled,push_text,reward_json,actions_json,created_at,updated_at,updated_by) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
+      .bind(newId,targetSeasonId,Math.max(0,Number(row.sort_order)||0),Math.max(1,Math.min(50,Number(row.unlock_level)||1)),targetUnlockAt,Number(row.enabled||0)===1?1:0,title,String(row.body_text||''),String(row.image_url||''),String(row.button_text||'Продолжить'),String(row.pages_json||'[]'),Number(row.push_enabled||0)===1?1:0,String(row.push_text||''),String(row.reward_json||'{}'),JSON.stringify(seasonPassStoryActionsForSeason(row,targetSeasonId)),createdAt,createdAt,actor));
     statements.push(env.DB.prepare(`DELETE FROM season_pass_story_tests WHERE event_id=?`).bind(String(row.event_id)));
     if(progress>0){
       statements.push(env.DB.prepare(`UPDATE season_pass_story_events SET enabled=0,updated_at=?,updated_by=? WHERE event_id=? AND season_id=?`).bind(now,actor,String(row.event_id),sourceSeasonId));
