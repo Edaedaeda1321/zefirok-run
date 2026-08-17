@@ -1,36 +1,67 @@
-Сладкий Забег 1.0.8 — hotfix сезонных папок Story Visual
-Дата: 17.08.2026
+Сладкий Забег 1.0.8 — явная привязка папки сезонных ассетов
+Дата: 2026-08-17
 
-Исправлено:
-- CC больше не использует внутренний runtime season_id как основное имя папки сезонных visual-assets.
-- Каноническая папка определяется как s1 / s2 / s3 / ... по номеру сезона.
-- Если номер явно указан в названии сезона (например «Сезон 3»), используется он.
-- Если номер в названии не указан, используется хронологический номер сезона по startsAt.
-- Для текущего третьего сезона picker теперь ищет:
-  /assets/seasons/s3/minigame/currency/
-  /assets/seasons/s3/minigame/coffee/
-- Старые пути вида /assets/seasons/<runtime-season-id>/... остаются доступными как legacy и не ломаются.
-- Фикс применяется одновременно к зефиру и кофе.
-- Проверка «путь вне папки сезона» теперь принимает и канонический, и legacy-путь.
-- Manifest не менялся: assets/images-manifest.json по-прежнему создаётся штатным custom build при npx wrangler deploy.
+Причина исправления
+- В проекте сезонные файлы лежат в assets/season/ (singular), а Story Visual picker был построен на assets/seasons/ (plural).
+- Дополнительно CC пытался вычислять s2/s3 из названия, порядка или технического season_id. Такая схема ненадёжна и удалена.
 
-Не изменено:
+Что изменено
+1. У каждого Season Pass сезона появился явный assetKey.
+   Пример: assetKey=s2 означает канонический root /assets/season/s2/.
+   Папка больше НЕ вычисляется по названию сезона, дате, порядку или runtime season_id.
+
+2. Control Center → Сезонный пропуск → Сюжет:
+   - добавлен блок «Папка ассетов сезона»;
+   - CC читает assets/images-manifest.json и показывает реально найденные ключи папок, например s2, s3;
+   - для каждого ключа показывает количество картинок зефира и кофе;
+   - выбранный ключ сохраняется у конкретного сезона в D1 кнопкой «Привязать папку»;
+   - одна папка не может быть привязана к двум сезонам одновременно.
+
+3. Канонические пути Story Visual:
+   - зефир: /assets/season/<assetKey>/minigame/currency/
+   - кофе:  /assets/season/<assetKey>/minigame/coffee/
+   Старый root /assets/seasons/<assetKey>/... поддерживается только как legacy для уже сохранённых ссылок.
+
+4. Picker картинок:
+   - открывается только после явной привязки assetKey;
+   - фильтрует manifest по сохранённой папке сезона;
+   - больше не может сам переключиться с s3 на s2 или на season-2026...;
+   - кнопка «Обновить» перечитывает manifest без кеша.
+
+5. Новые сезоны:
+   - при создании сезон получает обязательное поле «Папка ассетов»;
+   - CC предлагает следующий свободный sN только как стартовое значение формы;
+   - после создания сохранённый assetKey является источником истины.
+
+6. Backend / Readiness:
+   - season_pass_seasons расширяется колонкой asset_key автоматически;
+   - сохранение Story Visual set проверяет, что файл относится к assetKey выбранного сезона;
+   - Readiness блокирует запуск, если у опубликованного Story Visual нет привязанной папки или путь относится к другому assetKey;
+   - существующая логика treats/coffee, resolver, preload, set/reset и экономика мини-игры не изменены.
+
+Важно после deploy
+Для уже существующих сезонов assetKey изначально пустой. Один раз открой:
+CC → Сезонный пропуск → Сюжет → «Папка ассетов сезона»
+и выбери реальную папку этого сезона (s2, s3 и т.д.), затем нажми «Привязать папку».
+После этого CC всегда будет использовать только эту привязку.
+
+Изменённые файлы
+- owner.html
 - src/worker.js
-- index.html
-- test-project.html
-- battle-pass.html
-- resolver сюжетных визуалов
-- экономика, баланс, спавн и коллизии мини-игры
-- Staging / Monitoring / рейтинг / профиль
+- UPDATE.txt
 
-Проверки:
-- owner.html inline JavaScript: PASS
-- DOM IDs: PASS, дублей нет
-- mapping runtime season id -> s3: PASS
-- fallback по хронологии -> s3: PASS
-- picker находит /assets/seasons/s3/minigame/currency/*.png: PASS
-- canonical + legacy roots: PASS
-- coffee path /assets/seasons/s3/minigame/coffee/: PASS
+Проверено
+- node --check src/worker.js — PASS
+- inline JS owner.html — PASS
+- DOM id owner.html — без дублей
+- обнаружение /assets/season/s2 и /assets/season/s3 из manifest — PASS
+- раздельные пути currency/coffee — PASS
+- legacy /assets/seasons/... — PASS
+- guess-функции определения sN удалены — PASS
+- ZIP integrity — PASS
 
-Миграция D1 не нужна.
-Деплой: npx wrangler deploy
+D1
+Отдельная migration не требуется: asset_key добавляется существующим ensureSeasonPassSchema через addRuntimeColumnIfMissing.
+
+Deploy
+npx wrangler deploy
