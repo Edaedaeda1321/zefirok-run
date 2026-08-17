@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "catalogHash": "231ba0a8d9b56b65",
+  "catalogHash": "73defc4e2008f3c4",
   "count": 327,
   "images": [
     {
@@ -1748,6 +1748,22 @@
       "modified": 1786298246142
     },
     {
+      "fileName": "season/s2/minigame/currency/background_season2.png",
+      "label": "Background season2",
+      "folder": "season/s2/minigame/currency",
+      "path": "/assets/season/s2/minigame/currency/background_season2.png",
+      "size": 2155703,
+      "modified": 1786316522813
+    },
+    {
+      "fileName": "season/s2/minigame/currency/treats.png",
+      "label": "Treats",
+      "folder": "season/s2/minigame/currency",
+      "path": "/assets/season/s2/minigame/currency/treats.png",
+      "size": 1192912,
+      "modified": 1786951016532
+    },
+    {
       "fileName": "season/s3/minigame/currency/belkina_background_season3.png",
       "label": "Belkina background season3",
       "folder": "season/s3/minigame/currency",
@@ -1762,22 +1778,6 @@
       "path": "/assets/season/s3/minigame/currency/coffe.png",
       "size": 937703,
       "modified": 1786952222651
-    },
-    {
-      "fileName": "season/season-20260913-1n6ow/minigame/currency/background_season2.png",
-      "label": "Background season2",
-      "folder": "season/season-20260913-1n6ow/minigame/currency",
-      "path": "/assets/season/season-20260913-1n6ow/minigame/currency/background_season2.png",
-      "size": 2155703,
-      "modified": 1786316522813
-    },
-    {
-      "fileName": "season/season-20260913-1n6ow/minigame/currency/treats.png",
-      "label": "Treats",
-      "folder": "season/season-20260913-1n6ow/minigame/currency",
-      "path": "/assets/season/season-20260913-1n6ow/minigame/currency/treats.png",
-      "size": 1192912,
-      "modified": 1786951016532
     },
     {
       "fileName": "season-pass/avatars_season_pass3.png",
