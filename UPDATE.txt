@@ -1,80 +1,36 @@
-Сладкий Забег 1.0.8 — Story Visual: кофе
-Дата: 2026-08-17
+Сладкий Забег 1.0.8 — hotfix сезонных папок Story Visual
+Дата: 17.08.2026
 
-Что изменено
-1. Сюжетные действия мини-игры теперь поддерживают два независимых объекта:
-   - treats — зефир;
-   - coffee — кофе.
+Исправлено:
+- CC больше не использует внутренний runtime season_id как основное имя папки сезонных visual-assets.
+- Каноническая папка определяется как s1 / s2 / s3 / ... по номеру сезона.
+- Если номер явно указан в названии сезона (например «Сезон 3»), используется он.
+- Если номер в названии не указан, используется хронологический номер сезона по startsAt.
+- Для текущего третьего сезона picker теперь ищет:
+  /assets/seasons/s3/minigame/currency/
+  /assets/seasons/s3/minigame/coffee/
+- Старые пути вида /assets/seasons/<runtime-season-id>/... остаются доступными как legacy и не ломаются.
+- Фикс применяется одновременно к зефиру и кофе.
+- Проверка «путь вне папки сезона» теперь принимает и канонический, и legacy-путь.
+- Manifest не менялся: assets/images-manifest.json по-прежнему создаётся штатным custom build при npx wrangler deploy.
 
-2. Control Center → Сезонный пропуск → Сюжет → «После открытия главы»:
-   - добавлен пункт «Мини-игра · изменить визуал кофе»;
-   - для кофе доступны те же операции «Заменить изображение» и «Вернуть обычный визуал»;
-   - picker кофе показывает только сезонные изображения из:
-     /assets/seasons/<season-id>/minigame/coffee/
-   - существующий picker зефира остаётся в:
-     /assets/seasons/<season-id>/minigame/currency/
-   - preview, диагностика resolver и отметка «Используется» работают для обоих типов.
-
-3. Backend / Story Actions:
-   - minigame_visual принимает target=treats и target=coffee;
-   - один target нельзя продублировать дважды в одной главе;
-   - разные targets разрешены и рассчитываются независимо;
-   - seasonId по-прежнему обязан совпадать с сезоном главы;
-   - Readiness / Release Gate проверяет картинки и зефира, и кофе.
-
-4. Production resolver:
-   - сервер возвращает miniGameVisuals = { treats, coffee };
-   - старый miniGameVisual сохранён как совместимый alias для treats;
-   - активный визуал каждого объекта вычисляется отдельно по реально открытым главам игрока;
-   - reset кофе не сбрасывает зефир, reset зефира не сбрасывает кофе;
-   - изменения уже пройденных глав продолжают работать по политике live_story_source.
-
-5. Мини-игра:
-   - зефир меняет assets.marshmallow;
-   - кофе меняет assets.coffeePickup;
-   - спавн, коллизии, количество и начисление валют не изменены;
-   - изображение сначала полностью загружается и decode() проходит успешно, только затем применяется;
-   - при ошибке загрузки/декодирования конкретный объект остаётся стандартным;
-   - одноразовое сюжетное пояснение теперь умеет корректно называть и зефир, и кофе.
-
-6. Battle Pass:
-   - после первого открытия главы отправляет в основную игру сразу bundle visual-эффектов;
-   - визуал кофе может измениться сразу после сюжетной главы без перезапуска игры.
-
-7. Test Project:
-   - блок Story Visual показывает отдельный preview зефира и кофе;
-   - показывает текущий источник resolver для каждого объекта;
-   - timeline отображает set/reset для обоих targets;
-   - при запуске настоящей sandbox-игры применяются оба визуала одновременно;
-   - cache-bust обновлён до tp-5.2.4, видимая версия остаётся TP 5.2.
-
-Совместимость
-- Game: 1.0.8
-- Worker: 1.0.8
-- CC: v9.25
-- TP: 5.2
-- Существующие сюжетные действия зефира продолжают работать без изменений.
-- Новая валюта не создаётся.
-- Балансы зефира/кофе и экономика не изменяются.
-- D1 migration не требуется.
-
-Проверено
-- node --check src/worker.js — PASS
-- inline JS owner.html / test-project.html / battle-pass.html / index.html — 10/10 PASS
-- DOM ID — без дублей
-- dual resolver: treats set + coffee set одновременно — PASS
-- независимый reset treats/coffee — PASS
-- duplicate target guard — PASS
-- изоляция seasonId — PASS
-- статические проверки новой связки — 33/33 PASS
-
-Изменённые файлы
-- owner.html
-- index.html
-- battle-pass.html
-- test-project.html
+Не изменено:
 - src/worker.js
-- UPDATE.txt
+- index.html
+- test-project.html
+- battle-pass.html
+- resolver сюжетных визуалов
+- экономика, баланс, спавн и коллизии мини-игры
+- Staging / Monitoring / рейтинг / профиль
 
-Deploy
-npx wrangler deploy
+Проверки:
+- owner.html inline JavaScript: PASS
+- DOM IDs: PASS, дублей нет
+- mapping runtime season id -> s3: PASS
+- fallback по хронологии -> s3: PASS
+- picker находит /assets/seasons/s3/minigame/currency/*.png: PASS
+- canonical + legacy roots: PASS
+- coffee path /assets/seasons/s3/minigame/coffee/: PASS
+
+Миграция D1 не нужна.
+Деплой: npx wrangler deploy
