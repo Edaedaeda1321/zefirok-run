@@ -44,7 +44,12 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
   const TEST_PROJECT_MODE = TEST_PROJECT_QUERY.get("test_project") === "1";
   const TEST_PROJECT_DEVICE_LAB = TEST_PROJECT_MODE && TEST_PROJECT_QUERY.get("device_lab") === "1";
   const TEST_PROJECT_OWNER_SESSION_KEY = "zefirok-owner-session-v1";
-  const TEST_PROJECT_BRIDGE_JS = "(()=>{\n  let testProjectActive=new URLSearchParams(location.search).get(\"test_project\")===\"1\";\n  if(!testProjectActive&&window.parent&&window.parent!==window){try{testProjectActive=new URLSearchParams(window.parent.location.search).get(\"test_project\")===\"1\"}catch{}}\n  if(!testProjectActive)return;\n  const nativeFetch=window.fetch.bind(window),SESSION_KEY=\"zefirok-owner-session-v1\",PROXY=\"/api/owner/test-project/game\",STORAGE_PREFIX=\"zefirok-tp3:\";\n  const baseUrl=(()=>{const direct=String(document.baseURI||\"\");if(/^https?:/i.test(direct))return direct;try{if(window.parent&&window.parent!==window&&/^https?:/i.test(String(window.parent.location.href||\"\")))return String(window.parent.location.href)}catch{}return String(location.href||direct)})(),sandboxOrigin=(()=>{try{return new URL(baseUrl).origin}catch{return location.origin}})(),proxyUrl=(()=>{try{return new URL(PROXY,baseUrl).toString()}catch{return PROXY}})();\n  const storage=window.localStorage;\n  try{\n    const proto=Object.getPrototypeOf(storage),nativeGet=proto.getItem,nativeSet=proto.setItem,nativeRemove=proto.removeItem,nativeClear=proto.clear;\n    const scopedKey=(key)=>String(key)===SESSION_KEY?SESSION_KEY:`${STORAGE_PREFIX}${String(key)}`;\n    proto.getItem=function(key){return this===storage?nativeGet.call(this,scopedKey(key)):nativeGet.call(this,key)};\n    proto.setItem=function(key,value){return this===storage?nativeSet.call(this,scopedKey(key),value):nativeSet.call(this,key,value)};\n    proto.removeItem=function(key){return this===storage?nativeRemove.call(this,scopedKey(key)):nativeRemove.call(this,key)};\n    proto.clear=function(){if(this!==storage)return nativeClear.call(this);const remove=[];for(let i=0;i<this.length;i+=1){const key=this.key(i);if(String(key||\"\").startsWith(STORAGE_PREFIX))remove.push(key)}for(const key of remove)nativeRemove.call(this,key)};\n  }catch{}\n  async function bodyValue(body){\n    if(body==null)return {};\n    if(typeof body===\"string\"){try{return JSON.parse(body)}catch{return {raw:body.slice(0,12000)}}}\n    if(body instanceof URLSearchParams)return Object.fromEntries(body.entries());\n    if(typeof FormData!==\"undefined\"&&body instanceof FormData){const out={};for(const [key,value] of body.entries()){if(typeof value===\"string\")out[key]=value;else out[key]={name:String(value?.name||\"file\"),type:String(value?.type||\"\"),size:Number(value?.size||0),testProjectFileBlocked:true};}return out;}\n    if(typeof body===\"object\")return body;\n    return {};\n  }\n  window.__TEST_PROJECT_SANDBOX__={active:true,version:\"5.2\",storagePrefix:STORAGE_PREFIX};\n  window.fetch=async(input,init={})=>{\n    const original=input instanceof Request?input.url:String(input||\"\");let url;\n    try{url=new URL(original,baseUrl)}catch{return nativeFetch(input,init)}\n    if(url.origin!==sandboxOrigin||!url.pathname.startsWith(\"/api/\")||url.pathname.startsWith(\"/api/owner/\"))return nativeFetch(input,init);\n    const sourceRequest=input instanceof Request?input:null;\n    const method=String(init.method||sourceRequest?.method||\"GET\").toUpperCase();\n    let requestBody=init.body;\n    if(requestBody==null&&sourceRequest&&method!==\"GET\"&&method!==\"HEAD\"){try{requestBody=await sourceRequest.clone().text()}catch{requestBody=null}}\n    const payload=await bodyValue(requestBody);\n    let ownerSession=\"\";try{ownerSession=String(localStorage.getItem(SESSION_KEY)||\"\")}catch{}\n    const initData=String(payload?.initData||window.Telegram?.WebApp?.initData||\"\");\n    const controllerSignal=init.signal||sourceRequest?.signal;\n    const proxyResponse=await nativeFetch(proxyUrl,{method:\"POST\",headers:{\"Content-Type\":\"application/json\"},body:JSON.stringify({initData,ownerSession,path:url.pathname,method,query:Object.fromEntries(url.searchParams.entries()),payload}),cache:\"no-store\",credentials:\"same-origin\",signal:controllerSignal});\n    const envelope=await proxyResponse.json().catch(()=>({ok:false,error:\"Test Project proxy вернул некорректный ответ.\"}));\n    if(!proxyResponse.ok||!envelope?.ok||!(\"data\" in envelope))return new Response(JSON.stringify(envelope||{ok:false,error:\"Test Project proxy error\"}),{status:proxyResponse.status||500,headers:{\"Content-Type\":\"application/json\",\"Cache-Control\":\"no-store\"}});\n    return new Response(JSON.stringify(envelope.data),{status:Number(envelope.proxyStatus||200),headers:{\"Content-Type\":\"application/json\",\"Cache-Control\":\"no-store\",\"X-Test-Project\":\"5.2\"}});\n  };\n})();\n";
+  const TEST_PROJECT_BRIDGE_JS = "(()=>{\n  let testProjectActive=new URLSearchParams(location.search).get(\"test_project\")===\"1\";\n  if(!testProjectActive&&window.parent&&window.parent!==window){try{testProjectActive=new URLSearchParams(window.parent.location.search).get(\"test_project\")===\"1\"}catch{}}\n  if(!testProjectActive)return;\n  if(window.__ZEFIROK_TP_BRIDGE_INSTALLED_V53__===true)return;\n  window.__ZEFIROK_TP_BRIDGE_INSTALLED_V53__=true;\n  const nativeFetch=window.fetch.bind(window),SESSION_KEY=\"zefirok-owner-session-v1\",PROXY=\"/api/owner/test-project/game\",STORAGE_PREFIX=\"zefirok-tp5.3:\";\n  const baseUrl=(()=>{const direct=String(document.baseURI||\"\");if(/^https?:/i.test(direct))return direct;try{if(window.parent&&window.parent!==window&&/^https?:/i.test(String(window.parent.location.href||\"\")))return String(window.parent.location.href)}catch{}return String(location.href||direct)})(),sandboxOrigin=(()=>{try{return new URL(baseUrl).origin}catch{return location.origin}})(),proxyUrl=(()=>{try{return new URL(PROXY,baseUrl).toString()}catch{return PROXY}})();\n  const blocked=(message,status=403)=>new Response(JSON.stringify({ok:false,testProject:true,productionWrites:false,error:message}),{status,headers:{\"Content-Type\":\"application/json\",\"Cache-Control\":\"no-store\",\"X-Test-Project\":\"5.3\"}});\n  const isSameOriginApi=(value)=>{try{const parsed=new URL(String(value||\"\"),baseUrl);return parsed.origin===sandboxOrigin&&parsed.pathname.startsWith(\"/api/\")}catch{return false}};\n  try{\n    const local=window.localStorage,session=window.sessionStorage,proto=Object.getPrototypeOf(local),nativeGet=proto.getItem,nativeSet=proto.setItem,nativeRemove=proto.removeItem,nativeClear=proto.clear,nativeKey=proto.key;\n    const scopedKey=(store,key)=>{const raw=String(key);if(raw===SESSION_KEY)return raw;return `${STORAGE_PREFIX}${store===session?\"session\":\"local\"}:${raw}`};\n    const prefixFor=(store)=>`${STORAGE_PREFIX}${store===session?\"session\":\"local\"}:`;\n    proto.getItem=function(key){return this===local||this===session?nativeGet.call(this,scopedKey(this,key)):nativeGet.call(this,key)};\n    proto.setItem=function(key,value){return this===local||this===session?nativeSet.call(this,scopedKey(this,key),value):nativeSet.call(this,key,value)};\n    proto.removeItem=function(key){return this===local||this===session?nativeRemove.call(this,scopedKey(this,key)):nativeRemove.call(this,key)};\n    proto.clear=function(){if(this!==local&&this!==session)return nativeClear.call(this);const prefix=prefixFor(this),remove=[];for(let i=0;i<this.length;i+=1){const key=nativeKey.call(this,i);if(String(key||\"\").startsWith(prefix))remove.push(key)}for(const key of remove)nativeRemove.call(this,key)};\n    proto.key=function(index){if(this!==local&&this!==session)return nativeKey.call(this,index);const prefix=prefixFor(this),keys=[];for(let i=0;i<this.length;i+=1){const key=nativeKey.call(this,i);if(String(key||\"\").startsWith(prefix))keys.push(String(key).slice(prefix.length))}return keys[Math.max(0,Number(index)||0)]??null};\n  }catch(error){console.warn(\"TP storage isolation fallback\",error)}\n  async function bodyValue(body){\n    if(body==null)return {};\n    if(typeof body===\"string\"){try{return JSON.parse(body)}catch{return {raw:body.slice(0,12000)}}}\n    if(body instanceof URLSearchParams)return Object.fromEntries(body.entries());\n    if(typeof FormData!==\"undefined\"&&body instanceof FormData){const out={};for(const [key,value] of body.entries()){if(typeof value===\"string\")out[key]=value;else out[key]={name:String(value?.name||\"file\"),type:String(value?.type||\"\"),size:Number(value?.size||0),testProjectFileBlocked:true};}return out;}\n    if(typeof body===\"object\")return body;\n    return {};\n  }\n  window.__TEST_PROJECT_SANDBOX__={active:true,version:\"5.3\",storagePrefix:STORAGE_PREFIX,localStorageIsolated:true,sessionStorageIsolated:true,failClosed:true};\n  window.fetch=async(input,init={})=>{\n    const original=input instanceof Request?input.url:String(input||\"\");let url;\n    try{url=new URL(original,baseUrl)}catch{return String(original).startsWith(\"/api/\")?blocked(\"Test Project заблокировал нераспознанный API-запрос.\",418):nativeFetch(input,init)}\n    if(url.origin!==sandboxOrigin||!url.pathname.startsWith(\"/api/\"))return nativeFetch(input,init);\n    if(url.pathname.startsWith(\"/api/owner/\"))return blocked(\"Игровой клиент Test Project не может обращаться к owner API напрямую.\",403);\n    const sourceRequest=input instanceof Request?input:null,method=String(init.method||sourceRequest?.method||\"GET\").toUpperCase();\n    let requestBody=init.body;if(requestBody==null&&sourceRequest&&method!==\"GET\"&&method!==\"HEAD\"){try{requestBody=await sourceRequest.clone().text()}catch{requestBody=null}}\n    const payload=await bodyValue(requestBody);let ownerSession=\"\";try{ownerSession=String(localStorage.getItem(SESSION_KEY)||\"\")}catch{}\n    const initData=String(payload?.initData||window.Telegram?.WebApp?.initData||\"\"),controllerSignal=init.signal||sourceRequest?.signal;\n    const proxyResponse=await nativeFetch(proxyUrl,{method:\"POST\",headers:{\"Content-Type\":\"application/json\",\"X-Test-Project-Proxy\":\"5.3\"},body:JSON.stringify({initData,ownerSession,path:url.pathname,method,query:Object.fromEntries(url.searchParams.entries()),payload}),cache:\"no-store\",credentials:\"same-origin\",signal:controllerSignal});\n    const envelope=await proxyResponse.json().catch(()=>({ok:false,error:\"Test Project proxy вернул некорректный ответ.\"}));\n    if(!proxyResponse.ok||!envelope?.ok||!(\"data\" in envelope))return new Response(JSON.stringify(envelope||{ok:false,error:\"Test Project proxy error\"}),{status:proxyResponse.status||500,headers:{\"Content-Type\":\"application/json\",\"Cache-Control\":\"no-store\",\"X-Test-Project\":\"5.3\"}});\n    return new Response(JSON.stringify(envelope.data),{status:Number(envelope.proxyStatus||200),headers:{\"Content-Type\":\"application/json\",\"Cache-Control\":\"no-store\",\"X-Test-Project\":\"5.3\"}});\n  };\n  try{const Xhr=window.XMLHttpRequest,nativeOpen=Xhr?.prototype?.open;if(nativeOpen)Xhr.prototype.open=function(method,url,...rest){if(isSameOriginApi(url))throw new Error(\"Test Project: XMLHttpRequest к /api/* заблокирован. Используйте sandbox fetch proxy.\");return nativeOpen.call(this,method,url,...rest)}}catch{}\n  try{const nativeBeacon=navigator.sendBeacon?.bind(navigator);if(nativeBeacon)navigator.sendBeacon=(url,data)=>isSameOriginApi(url)?false:nativeBeacon(url,data)}catch{}\n})();\n";
+  const TEST_PROJECT_HOST_STORAGE_PREFIX = "zefirok-tp5.3-host:";
+  const tpHostStorageKey = (key) => TEST_PROJECT_MODE ? `${TEST_PROJECT_HOST_STORAGE_PREFIX}${String(key)}` : String(key);
+  const tpHostSessionGet = (key) => { try { return window.sessionStorage.getItem(tpHostStorageKey(key)); } catch { return null; } };
+  const tpHostSessionSet = (key, value) => { try { window.sessionStorage.setItem(tpHostStorageKey(key), String(value)); } catch {} };
+  const tpHostSessionRemove = (key) => { try { window.sessionStorage.removeItem(tpHostStorageKey(key)); } catch {} };
   let testProjectBootstrapPayload = null;
   const CLOUD_KEY = TEST_PROJECT_MODE ? "zefirok_test_project_progress_v3" : "zefirok_runner_progress_v2";
   const LOCAL_KEY = TEST_PROJECT_MODE ? "zefirok-test-project-runner-progress-v3" : "zefirok-runner-progress-v2";
@@ -280,14 +285,14 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
   }
 
   function hasSeasonPassAwayMarker() {
-    try { return window.sessionStorage.getItem(SEASON_PASS_AWAY_KEY) === "1"; }
+    try { return tpHostSessionGet(SEASON_PASS_AWAY_KEY) === "1"; }
     catch { return false; }
   }
 
   function clearSeasonPassAwayMarker() {
     try {
-      window.sessionStorage.removeItem(SEASON_PASS_AWAY_KEY);
-      window.sessionStorage.removeItem("zefirok-season-pass-returning");
+      tpHostSessionRemove(SEASON_PASS_AWAY_KEY);
+      tpHostSessionRemove("zefirok-season-pass-returning");
     } catch {}
   }
 
@@ -730,7 +735,7 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
     if (!TEST_PROJECT_MODE || !payload?.state) return;
     const state = payload.state, cs = state.caseState || {};
     let current = null;
-    try { current = parseProgress(localStorage.getItem(LOCAL_KEY) || ""); } catch {}
+    try { current = readLocal(); } catch {}
     const next = {
       ...(current || {}),
       wallet:Number(state.points || 0), best:Number(state.bestScore || 0), treats:Number(state.treats || 0), coffee:Number(state.coffee || 0), profileXp:Number(state.profileXp || 0),
@@ -754,10 +759,10 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
     const badge=document.createElement("div");badge.className="zefirok-test-project-badge";
     const mode=testProjectBootstrapPayload?.draftLayer?.active ? "DRAFT" : "PROD";
     const seasonTitle=String(testProjectBootstrapPayload?.snapshot?.season?.title || testProjectBootstrapPayload?.snapshot?.season?.id || "").trim();
-    badge.innerHTML=`<button type="button" data-tp-back>← TP</button><span>🧪 TP 5.2 · ${mode}${seasonTitle?` · ${seasonTitle}`:""}</span>`;
+    badge.innerHTML=`<button type="button" data-tp-back>← TP</button><span>🧪 TP 5.3 · ${mode}${seasonTitle?` · ${seasonTitle}`:""}</span>`;
     Object.assign(badge.style,{position:"fixed",left:"max(8px,var(--zefirok-content-safe-left,0px))",bottom:"max(8px,var(--zefirok-content-safe-bottom,0px))",zIndex:"2147483600",display:"flex",gap:"6px",alignItems:"center",fontFamily:"-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif",fontSize:"10px",fontWeight:"900",pointerEvents:"auto"});
     const span=badge.querySelector("span");Object.assign(span.style,{padding:"7px 9px",borderRadius:"999px",background:mode==="DRAFT"?"#7b4517":"#271d3e",color:mode==="DRAFT"?"#ffe1ad":"#eadfff",border:"1px solid rgba(255,255,255,.22)",boxShadow:"0 8px 24px rgba(0,0,0,.22)"});
-    const button=badge.querySelector("button");Object.assign(button.style,{border:"1px solid rgba(255,255,255,.22)",background:"#17131f",color:"#fff",borderRadius:"999px",padding:"7px 9px",font:"inherit"});button.addEventListener("click",()=>{location.href="/test-project.html?v=tp-5.2.4&view=game"});
+    const button=badge.querySelector("button");Object.assign(button.style,{border:"1px solid rgba(255,255,255,.22)",background:"#17131f",color:"#fff",borderRadius:"999px",padding:"7px 9px",font:"inherit"});button.addEventListener("click",()=>{location.href="/test-project.html?v=tp-5.3&view=game"});
     document.body.append(badge);
   }
 
@@ -765,7 +770,7 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
     if (window.__zefirokTestProjectCheckActive) return;
     window.__zefirokTestProjectCheckActive = true;
     const gameFrame = frame(); if (gameFrame) gameFrame.classList.remove("is-ready");
-    showMaintenanceGate("Проверяем owner-сессию и загружаем изолированного виртуального игрока…", { title:"Test Project 5.2", icon:"🧪" });
+    showMaintenanceGate("Проверяем owner-сессию и загружаем изолированного виртуального игрока…", { title:"Test Project 5.3", icon:"🧪" });
     try {
       await testProjectOwnerRequest("/api/owner/auth");
       testProjectBootstrapPayload = await testProjectOwnerRequest("/api/owner/test-project/bootstrap");
@@ -804,7 +809,8 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
 
   function readLocal() {
     try {
-      return parseProgress(localStorage.getItem(LOCAL_KEY) || (LEGACY_LOCAL_KEY ? localStorage.getItem(LEGACY_LOCAL_KEY) : ""));
+      const key=tpHostStorageKey(LOCAL_KEY),legacy=LEGACY_LOCAL_KEY?tpHostStorageKey(LEGACY_LOCAL_KEY):"";
+      return parseProgress(localStorage.getItem(key) || (legacy ? localStorage.getItem(legacy) : ""));
     } catch (error) {
       return null;
     }
@@ -812,8 +818,8 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
 
   function writeLocal(serialized) {
     try {
-      localStorage.setItem(LOCAL_KEY, serialized);
-      if (LEGACY_LOCAL_KEY) localStorage.removeItem(LEGACY_LOCAL_KEY);
+      localStorage.setItem(tpHostStorageKey(LOCAL_KEY), serialized);
+      if (LEGACY_LOCAL_KEY) localStorage.removeItem(tpHostStorageKey(LEGACY_LOCAL_KEY));
     } catch (error) {
       // localStorage can be unavailable in restrictive browser modes.
     }
@@ -971,9 +977,9 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
   function sendRequestedScreen(targetWindow) {
     if (!targetWindow || initialRequestedScreenDelivered) return;
     try {
-      const screen = new URLSearchParams(window.location.search).get("screen");
-      if (screen === "profile") {
-        targetWindow.postMessage({ type: "zefirok-open-screen", screen: "profile" }, "*");
+      const query = new URLSearchParams(window.location.search), screen = String(query.get("screen") || "");
+      if (screen === "profile" || screen === "warehouse") {
+        targetWindow.postMessage({ type:"zefirok-open-screen", screen, stockView:String(query.get("stock") || ""), caseType:String(query.get("tp_case") || "") }, "*");
         initialRequestedScreenDelivered = true;
       }
     } catch (error) {
@@ -1389,8 +1395,8 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
         if (!requestedTier) return;
         let initData = "";
         try {
-          initData = String(window.Telegram?.WebApp?.initData || window.sessionStorage.getItem("zefirok-telegram-init-data") || "");
-          if (initData) window.sessionStorage.setItem("zefirok-telegram-init-data", initData);
+          initData = String(window.Telegram?.WebApp?.initData || tpHostSessionGet("zefirok-telegram-init-data") || "");
+          if (initData) tpHostSessionSet("zefirok-telegram-init-data", initData);
         } catch {}
         closeRatingOverlay();
         window.setTimeout(() => openSeasonPassOverlay(initData, "", requestedTier), 80);
@@ -1415,17 +1421,17 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
     } else if (message.type === "zefirok-open-referrals") {
       let initData = "";
       try {
-        window.sessionStorage.setItem("zefirok-return-screen", "profile");
-        initData = String(window.Telegram?.WebApp?.initData || window.sessionStorage.getItem("zefirok-telegram-init-data") || "");
-        if (initData) window.sessionStorage.setItem("zefirok-telegram-init-data", initData);
+        tpHostSessionSet("zefirok-return-screen", "profile");
+        initData = String(window.Telegram?.WebApp?.initData || tpHostSessionGet("zefirok-telegram-init-data") || "");
+        if (initData) tpHostSessionSet("zefirok-telegram-init-data", initData);
       } catch (error) {}
       openReferralsOverlay(initData);
     } else if (message.type === "zefirok-open-battle-pass") {
       let initData = "";
       try {
-        window.sessionStorage.setItem("zefirok-return-screen", "profile");
+        tpHostSessionSet("zefirok-return-screen", "profile");
         initData = String(window.Telegram?.WebApp?.initData || "");
-        if (initData) window.sessionStorage.setItem("zefirok-telegram-init-data", initData);
+        if (initData) tpHostSessionSet("zefirok-telegram-init-data", initData);
       } catch (error) {}
       openSeasonPassOverlay(initData, String(message.view || ""));
     } else if (message.type === "zefirok-refresh-battle-pass") {
@@ -1435,9 +1441,9 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
     } else if (message.type === "zefirok-open-rating") {
       let initData = "";
       try {
-        window.sessionStorage.setItem("zefirok-return-screen", "profile");
+        tpHostSessionSet("zefirok-return-screen", "profile");
         initData = String(window.Telegram?.WebApp?.initData || "");
-        if (initData) window.sessionStorage.setItem("zefirok-telegram-init-data", initData);
+        if (initData) tpHostSessionSet("zefirok-telegram-init-data", initData);
       } catch (error) {}
       openRatingOverlay(initData);
     } else if (message.type === "zefirok-rating-claim-result") {
@@ -1467,7 +1473,7 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
       const username = String(message.username || "").trim().replace(/^@/, "");
       if (!username) return;
       if (TEST_PROJECT_MODE) {
-        try { window.Telegram?.WebApp?.showAlert?.(`Test Project 5.2: внешний переход @${username} заблокирован.`); } catch {}
+        try { window.Telegram?.WebApp?.showAlert?.(`Test Project 5.3: внешний переход @${username} заблокирован.`); } catch {}
         console.info("Test Project blocked Telegram navigation", { username, start: String(message.start || "") });
         return;
       }
@@ -21839,11 +21845,30 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
   });
   window.addEventListener(&quot;message&quot;, (event) =&gt; {
     const message = event.data;
-    if (!message || message.type !== &quot;zefirok-open-screen&quot; || message.screen !== &quot;profile&quot;) return;
-    const profileTab = document.querySelector(&#x27;[data-tab=&quot;profile&quot;]&#x27;);
-    const profileScreen = document.querySelector(&#x27;[data-screen=&quot;profile&quot;]&#x27;);
-    if (profileTab?.getAttribute(&quot;aria-selected&quot;) === &quot;true&quot; &amp;&amp; profileScreen &amp;&amp; !profileScreen.hidden) return;
-    if (profileTab) profileTab.click();
+    if (!message || message.type !== &quot;zefirok-open-screen&quot;) return;
+    if (message.screen === &quot;profile&quot;) {
+      const profileTab = document.querySelector(&#x27;[data-tab=&quot;profile&quot;]&#x27;);
+      const profileScreen = document.querySelector(&#x27;[data-screen=&quot;profile&quot;]&#x27;);
+      if (!(profileTab?.getAttribute(&quot;aria-selected&quot;) === &quot;true&quot; &amp;&amp; profileScreen &amp;&amp; !profileScreen.hidden) &amp;&amp; profileTab) profileTab.click();
+      return;
+    }
+    if (message.screen === &quot;warehouse&quot;) {
+      const warehouseTab = document.querySelector(&#x27;[data-tab=&quot;warehouse&quot;]&#x27;);
+      if (warehouseTab) warehouseTab.click();
+      const requested = [&quot;purchases&quot;,&quot;boosters&quot;,&quot;cases&quot;,&quot;gifts&quot;].includes(String(message.stockView||&quot;&quot;)) ? String(message.stockView) : &quot;cases&quot;;
+      const preferredCase = String(message.caseType || &quot;&quot;).replace(/[^a-z0-9_-]/gi, &quot;&quot;).toLowerCase();
+      window.setTimeout(() =&gt; { try { switchStockHubView(requested, false); } catch {} }, 0);
+      if (requested === &quot;cases&quot; &amp;&amp; preferredCase) {
+        let attempts = 0;
+        const openPreferredCase = () =&gt; {
+          attempts += 1;
+          const button = root.querySelector(`[data-open-gifted-case=&quot;${preferredCase}&quot;]`);
+          if (button &amp;&amp; !button.disabled) { button.click(); return; }
+          if (attempts &lt; 120) window.setTimeout(openPreferredCase, 200);
+        };
+        window.setTimeout(openPreferredCase, 120);
+      }
+    }
   });
 })();
 &lt;/script&gt;

@@ -31661,7 +31661,7 @@ async function ownerPanelFlashOfferAction(env, ctx) {
 
 
 
-// =================== TP 5.2 · HIGH SAFETY ===================
+// =================== TP 5.3 · HIGH SAFETY ===================
 let ownerStagingSchemaPromise = null;
 const OWNER_STAGING_STAGEABLE = Object.freeze({
   "/api/owner/v9/game-config/draft":"game_config",
@@ -32004,7 +32004,7 @@ async function ownerStagingRollbackApplied(env,ctx,applied){
 }
 
 async function ownerStagingDispatchProduction(env,ctx,endpoint,payload){
-  if(endpoint==='/api/owner/v9/game-config/draft'){await ownerPanelV9GameConfigDraft(env,{...ctx,body:{config:payload.config||payload}});return ownerPanelV9GameConfigPublish(env,{...ctx,body:{reason:'TP 5.2 · Safe Promote from Change Set'}});}
+  if(endpoint==='/api/owner/v9/game-config/draft'){await ownerPanelV9GameConfigDraft(env,{...ctx,body:{config:payload.config||payload}});return ownerPanelV9GameConfigPublish(env,{...ctx,body:{reason:'TP 5.3 · Safe Promote from Change Set'}});}
   if(endpoint==='/api/owner/cases/save')return ownerPanelSaveCase(env,{...ctx,body:payload});
   if(endpoint==='/api/owner/cases/content/save')return ownerPanelSaveCaseContent(env,{...ctx,body:payload});
   if(endpoint==='/api/owner/season-pass/reward')return ownerPanelSetSeasonPassReward(env,{...ctx,body:payload});
@@ -32220,16 +32220,20 @@ async function ownerPanelStagingRollback(env,ctx){
     await ownerStagingReleaseLock(env,setId,lockToken);
   }
 }
-// ================= END TP 5.2 · HIGH SAFETY =================
+// ================= END TP 5.3 · HIGH SAFETY =================
 
 
-// =================== TEST PROJECT 5.2 · QA LAB · OWNER-ONLY ISOLATED SANDBOX ===================
-const TEST_PROJECT_VERSION = "5.2";
-const TEST_PROJECT_SNAPSHOT_SCHEMA = 7;
+// =================== TEST PROJECT 5.3 · QA LAB · OWNER-ONLY ISOLATED SANDBOX ===================
+const TEST_PROJECT_VERSION = "5.3";
+const TEST_PROJECT_SNAPSHOT_SCHEMA = 8;
 const TEST_PROJECT_MAX_CASE_SIMULATIONS = 2000;
 const TEST_PROJECT_MAX_ACTIVITY_LOG = 80;
 const TEST_PROJECT_MAX_SCENARIOS = 8;
-const TEST_PROJECT_CASE_PRICES = Object.freeze(Object.fromEntries(LIVEOPS_CASE_IDS.map((caseType) => {
+// LiveOps editing intentionally remains limited to LIVEOPS_CASE_IDS.
+// Test Project can additionally exercise special server-owned cases such as Alex.
+const TEST_PROJECT_CASE_IDS = Object.freeze([...LIVEOPS_CASE_IDS, "alex"]);
+const TEST_PROJECT_ALEX_FORCE_REWARDS = Object.freeze(["alex","alex_trail","alex_frame_1","alex_frame_2","alex_avatar_1","alex_avatar_2"]);
+const TEST_PROJECT_CASE_PRICES = Object.freeze(Object.fromEntries(TEST_PROJECT_CASE_IDS.map((caseType) => {
   const product = CASE_SHOP_PRODUCTS[caseType] || {};
   return [caseType, Object.freeze({ points:Number(product.points||0), treats:Number(product.treats||0), coffee:Number(product.coffee||0) })];
 })));
@@ -32464,7 +32468,7 @@ function testProjectNormalizeCloneSource(raw = {}) {
       profileXp:Math.max(0,Math.floor(Number(baseline.profileXp)||0)), profileLevel:Math.max(1,Math.min(50,Math.floor(Number(baseline.profileLevel)||1))), bestScore:Math.max(0,Math.floor(Number(baseline.bestScore)||0)),
       passTier:["none","elite","elite_plus"].includes(String(baseline.passTier||""))?String(baseline.passTier):"none", passXp:Math.max(0,Math.floor(Number(baseline.passXp)||0)),
       passClaims:testProjectArray(baseline.passClaims,500), passTaskClaims:testProjectArray(baseline.passTaskClaims,500), passTaskProgress:testProjectLooseIntMap(baseline.passTaskProgress,400,999999999),
-      caseInventory:testProjectIntMap(baseline.caseInventory,LIVEOPS_CASE_IDS,999,{}), seasonalCaseInventory:testProjectLooseIntMap(baseline.seasonalCaseInventory,50,999),
+      caseInventory:testProjectIntMap(baseline.caseInventory,TEST_PROJECT_CASE_IDS,999,{}), seasonalCaseInventory:testProjectLooseIntMap(baseline.seasonalCaseInventory,50,999),
       openedLevelCases:[...new Set((Array.isArray(baseline.openedLevelCases)?baseline.openedLevelCases:[]).map((v)=>Math.floor(Number(v)||0)).filter((v)=>v>0&&v<=50))],
       caseState:baselineCase || testProjectDefaultCaseState()
     } : null
@@ -32492,6 +32496,14 @@ function testProjectNormalizeApiTrace(value) {
     status:Math.max(0,Math.min(599,Math.floor(Number(item?.status)||0))), durationMs:Math.max(0,Math.min(120000,Math.floor(Number(item?.durationMs)||0))),
     at:Math.max(0,Math.floor(Number(item?.at)||0)), fault:String(item?.fault||"").slice(0,120), request:String(item?.request||"").slice(0,1200), response:String(item?.response||"").slice(0,1200)
   })).filter((item)=>item.path);
+}
+
+function testProjectNormalizeForcedCaseDrop(raw = {}) {
+  const source = raw && typeof raw === "object" && !Array.isArray(raw) ? raw : {};
+  const caseType = normalizeCaseType(source.caseType);
+  const rewardId = String(source.rewardId || "").trim();
+  if (caseType !== "alex" || !TEST_PROJECT_ALEX_FORCE_REWARDS.includes(rewardId)) return null;
+  return { caseType:"alex", rewardId, ensureNew:source.ensureNew !== false, armedAt:Math.max(0,Math.floor(Number(source.armedAt)||0)) };
 }
 
 function testProjectNormalizeSandboxState(raw = {}) {
@@ -32524,6 +32536,8 @@ function testProjectNormalizeSandboxState(raw = {}) {
     leaderboardClaimed:testProjectArray(source.leaderboardClaimed,100),
     pollSnoozedUntil:Math.max(0,Math.floor(Number(source.pollSnoozedUntil)||0)),
     pollVote:source.pollVote&&typeof source.pollVote==="object"?{pollId:String(source.pollVote.pollId||"").slice(0,80),optionIds:testProjectArray(source.pollVote.optionIds,10),comment:String(source.pollVote.comment||"").slice(0,1200),votedAt:Math.max(0,Math.floor(Number(source.pollVote.votedAt)||0))}:null,
+    forcedCaseDrop:testProjectNormalizeForcedCaseDrop(source.forcedCaseDrop||{}),
+    alexCollectionRewardClaimed:Boolean(source.alexCollectionRewardClaimed),
     faultProfile:testProjectNormalizeFaultProfile(source.faultProfile||{}),
     apiTrace:testProjectNormalizeApiTrace(source.apiTrace||[])
   };
@@ -32676,7 +32690,7 @@ function testProjectDefaultPlayerState() {
     virtualNow: 0,
     draftMode: "production",
     tpDrafts: testProjectNormalizeDraftLayer({}),
-    caseInventory: { small:2, sweet:1, gold:1, mythic:0, legendary:0 },
+    caseInventory: { small:2, sweet:1, gold:1, mythic:0, legendary:0, alex:1 },
     seasonalCaseInventory: {},
     offerPurchases: {},
     testPhysicalRewards: {},
@@ -32723,7 +32737,7 @@ function testProjectNormalizePlayerState(raw = {}) {
     virtualNow: Math.max(0, Math.min(4102444800000, Math.floor(Number(raw?.virtualNow) || 0))),
     draftMode: String(raw?.draftMode || "production") === "draft" ? "draft" : "production",
     tpDrafts: testProjectNormalizeDraftLayer(raw?.tpDrafts),
-    caseInventory: testProjectIntMap(raw?.caseInventory, LIVEOPS_CASE_IDS, 999, base.caseInventory),
+    caseInventory: testProjectIntMap(raw?.caseInventory, TEST_PROJECT_CASE_IDS, 999, base.caseInventory),
     seasonalCaseInventory: testProjectLooseIntMap(raw?.seasonalCaseInventory, 50, 999),
     offerPurchases: testProjectLooseIntMap(raw?.offerPurchases, 100, 99),
     testPhysicalRewards: testProjectLooseIntMap(raw?.testPhysicalRewards, 100, 999),
@@ -32841,7 +32855,14 @@ async function testProjectReadLiveOpsSnapshot(env) {
     console.error("test project liveops snapshot fallback", error);
   }
   for (const caseId of LIVEOPS_CASE_IDS) if (!cases[caseId]) cases[caseId] = { id: caseId, ...testProjectClone(LIVEOPS_CASE_DEFAULTS[caseId]) };
-  return { content, cases, version: 3, sandboxHiddenContent:true };
+  // Alex is a server-owned thematic case, not an editable LiveOps case. It is
+  // exposed to TP explicitly so QA can buy/grant/open it without widening CC permissions.
+  cases.alex = {
+    id:"alex", title:ALEX_CASE_DEFINITION.title, enabled:true, guaranteeCount:0,
+    chances:testProjectClone(ALEX_CASE_DEFINITION.chances), ranges:testProjectClone(ALEX_CASE_DEFINITION.ranges),
+    duplicatePoints:ALEX_CASE_DUPLICATE_POINTS, specialCase:true, testProjectSpecial:true
+  };
+  return { content, cases, version: 4, sandboxHiddenContent:true };
 }
 
 async function testProjectReadSeasonSnapshot(env, nowMs = Date.now(), requestedSeasonId = "") {
@@ -32912,7 +32933,7 @@ async function testProjectReadGameConfigSnapshot(env) {
 
 async function testProjectReadEconomySnapshot(env) {
   const caseProducts = {};
-  for (const caseType of LIVEOPS_CASE_IDS) {
+  for (const caseType of TEST_PROJECT_CASE_IDS) {
     const product = CASE_SHOP_PRODUCTS[caseType] || {};
     caseProducts[caseType] = {
       productId:String(product.id || `case-${caseType}`),
@@ -32922,7 +32943,7 @@ async function testProjectReadEconomySnapshot(env) {
   }
   try {
     const assortment = await readShopAssortment(env);
-    for (const caseType of LIVEOPS_CASE_IDS) {
+    for (const caseType of TEST_PROJECT_CASE_IDS) {
       const productId = String(CASE_SHOP_PRODUCTS[caseType]?.id || `case-${caseType}`);
       const current = assortment?.[productId];
       if (!current) continue;
@@ -33328,7 +33349,7 @@ function testProjectTrackedState(state) {
     claims:(state?.passClaims||[]).length, taskClaims:(state?.passTaskClaims||[]).length, seasonXpBoosts:Number(state?.seasonXpBoosts||0), scenarios:(state?.savedScenarios||[]).length,
     avatars:(cs.ownedAvatars||[]).length, frames:(cs.ownedFrames||[]).length, trails:(cs.ownedTrails||[]).length, skins:(cs.ownedSkins||[]).length, music:(cs.ownedMusicTracks||[]).length,
     physical:Object.values(state?.testPhysicalRewards||{}).reduce((a,b)=>a+Number(b||0),0),
-    ...Object.fromEntries(LIVEOPS_CASE_IDS.map((id)=>[`case:${id}`,Number(state?.caseInventory?.[id]||0)]))
+    ...Object.fromEntries(TEST_PROJECT_CASE_IDS.map((id)=>[`case:${id}`,Number(state?.caseInventory?.[id]||0)]))
   };
 }
 
@@ -33496,18 +33517,18 @@ function testProjectPresetState(presetId, current = null) {
   const state = testProjectDefaultPlayerState();
   if (id === "fresh") {
     state.name="Новый игрок"; state.profileLevel=1; state.profileXp=0; state.points=0; state.treats=0; state.coffee=0; state.bestScore=0;
-    state.passTier="none"; state.passXp=0; state.caseInventory={small:0,sweet:0,gold:0,mythic:0,legendary:0}; state.caseState=testProjectDefaultCaseState();
+    state.passTier="none"; state.passXp=0; state.caseInventory={small:0,sweet:0,gold:0,mythic:0,legendary:0,alex:0}; state.caseState=testProjectDefaultCaseState();
   } else if (id === "poor") {
-    state.name="Без ресурсов"; state.points=500; state.treats=5; state.coffee=5; state.passTier="none"; state.passXp=testProjectSeasonPassXpForLevel(5); state.caseInventory={small:0,sweet:0,gold:0,mythic:0,legendary:0};
+    state.name="Без ресурсов"; state.points=500; state.treats=5; state.coffee=5; state.passTier="none"; state.passXp=testProjectSeasonPassXpForLevel(5); state.caseInventory={small:0,sweet:0,gold:0,mythic:0,legendary:0,alex:0};
   } else if (id === "rich") {
     state.name="Богатый тестер"; state.profileLevel=50; state.profileXp=500000; state.points=900000000; state.treats=9000000; state.coffee=9000000; state.bestScore=999999;
-    state.passTier="elite_plus"; state.passXp=testProjectSeasonPassXpForLevel(35); state.caseInventory={small:25,sweet:25,gold:25,mythic:25,legendary:25};
+    state.passTier="elite_plus"; state.passXp=testProjectSeasonPassXpForLevel(35); state.caseInventory={small:25,sweet:25,gold:25,mythic:25,legendary:25,alex:25};
   } else if (id === "pass49") {
     state.name="Pass 49 → 50"; state.passTier="elite"; state.passXp=Math.max(0,testProjectSeasonPassXpForLevel(50)-50); state.points=100000; state.treats=1000; state.coffee=1000;
   } else if (id === "pass50plus") {
     state.name="Pass 50+"; state.passTier="elite_plus"; state.passXp=TEST_PROJECT_SEASON_PASS_LEVEL_50_COMPLETE_XP_V4 + TEST_PROJECT_SEASON_PASS_OVERFLOW_LEVEL_XP_V4 - 100; state.points=100000; state.treats=1000; state.coffee=1000;
   } else if (id === "pity") {
-    state.name="До гаранта 1 открытие"; state.points=900000000; state.treats=9000000; state.coffee=9000000; state.caseInventory={small:2,sweet:2,gold:2,mythic:5,legendary:5};
+    state.name="До гаранта 1 открытие"; state.points=900000000; state.treats=9000000; state.coffee=9000000; state.caseInventory={small:2,sweet:2,gold:2,mythic:5,legendary:5,alex:2};
     state.caseState=testProjectNormalizeCaseState({...state.caseState,mythicPityCounter:24,legendaryPityCounter:49});
   }
   if (current) {
@@ -33521,6 +33542,37 @@ function testProjectPresetState(presetId, current = null) {
     state.activityLog = testProjectNormalizeActivityLog(current.activityLog);
   }
   return testProjectNormalizePlayerState(state);
+}
+
+function testProjectRemoveForcedUnique(state, rewardId) {
+  const cs = testProjectNormalizeCaseState(state?.caseState || {});
+  if (rewardId === "alex") {
+    cs.ownedSkins = (cs.ownedSkins || []).filter((id)=>id !== "alex");
+    if (cs.activeSkinId === "alex") cs.activeSkinId = "default";
+  } else if (rewardId === "alex_trail") {
+    cs.ownedTrails = (cs.ownedTrails || []).filter((id)=>id !== "alex_trail");
+    if (cs.activeTrailId === "alex_trail") cs.activeTrailId = "";
+  } else if (rewardId === "alex_frame_1" || rewardId === "alex_frame_2") {
+    cs.ownedFrames = (cs.ownedFrames || []).filter((id)=>id !== rewardId);
+    if (cs.activeFrameId === rewardId) cs.activeFrameId = "";
+  } else if (rewardId === "alex_avatar_1" || rewardId === "alex_avatar_2") {
+    cs.ownedAvatars = (cs.ownedAvatars || []).filter((id)=>id !== rewardId);
+    if (cs.activeAvatarId === rewardId) cs.activeAvatarId = "";
+  }
+  state.caseState = cs;
+}
+
+function testProjectForcedAlexRng(rewardId) {
+  let values;
+  if (rewardId === "alex") values=[0.0005];
+  else if (rewardId === "alex_trail") values=[0.0020];
+  else if (rewardId === "alex_frame_1") values=[0.0035,0.25];
+  else if (rewardId === "alex_frame_2") values=[0.0035,0.75];
+  else if (rewardId === "alex_avatar_1") values=[0.0050,0.25];
+  else if (rewardId === "alex_avatar_2") values=[0.0050,0.75];
+  else return null;
+  let index=0;
+  return ()=>index<values.length?values[index++]:0.5;
 }
 
 async function testProjectPersistAction(env, ownerId, state, snapshot, before, action, title, result = {}) {
@@ -33562,7 +33614,37 @@ async function ownerPanelTestProjectAction(env, ctx) {
   const season = testProjectDynamicSeason(snapshot?.season || {}, nowMs);
   let title = "Тестовое действие", result = {};
 
-  if (action === "preset") {
+  if (action === "isolate_player") {
+    state = testProjectPresetState("active", state);
+    state.cloneSource = testProjectNormalizeCloneSource({});
+    state.sandbox = testProjectNormalizeSandboxState({...state.sandbox, forcedCaseDrop:null, activeRun:null, lastRun:null});
+    title = "Создан новый полностью изолированный виртуальный игрок";
+    result = { isolated:true, cloneDetached:true };
+  } else if (action === "case_grant") {
+    const caseType=normalizeCaseType(ctx.body?.caseType);
+    if(!caseType || !TEST_PROJECT_CASE_IDS.includes(caseType))throw new ApiError(400,"Выберите существующий тестовый кейс.");
+    const count=Math.max(1,Math.min(99,Math.floor(Number(ctx.body?.count)||1)));
+    state.caseInventory[caseType]=Math.min(999,Number(state.caseInventory?.[caseType]||0)+count);
+    title=`Выдан ${snapshot?.liveops?.cases?.[caseType]?.title||LEVEL_CASE_CONFIG[caseType]?.title||caseType} ×${count}`;
+    result={caseType,count};
+  } else if (action === "case_grant_all") {
+    const count=Math.max(1,Math.min(99,Math.floor(Number(ctx.body?.count)||1)));
+    for(const caseType of TEST_PROJECT_CASE_IDS)state.caseInventory[caseType]=Math.min(999,Number(state.caseInventory?.[caseType]||0)+count);
+    title=`Выданы все тестовые кейсы ×${count}`;
+    result={caseTypes:[...TEST_PROJECT_CASE_IDS],count};
+  } else if (action === "case_force_reward") {
+    const rewardId=String(ctx.body?.rewardId||"").trim();
+    if(!rewardId){state.sandbox=testProjectNormalizeSandboxState({...state.sandbox,forcedCaseDrop:null});title="Принудительный дроп отключён";result={armed:false};}
+    else {
+      if(!TEST_PROJECT_ALEX_FORCE_REWARDS.includes(rewardId))throw new ApiError(400,"Неизвестная тестовая награда Кейса Алекса.");
+      const ensureNew=ctx.body?.ensureNew!==false;
+      if(ensureNew)testProjectRemoveForcedUnique(state,rewardId);
+      if(ctx.body?.grantCase!==false)state.caseInventory.alex=Math.min(999,Number(state.caseInventory?.alex||0)+1);
+      state.sandbox=testProjectNormalizeSandboxState({...state.sandbox,forcedCaseDrop:{caseType:"alex",rewardId,ensureNew,armedAt:Date.now()}});
+      title=`Следующий Кейс Алекса: ${rewardId}${ensureNew?" · как новая награда":" · с текущим владением"}`;
+      result={armed:true,caseType:"alex",rewardId,ensureNew,caseGranted:ctx.body?.grantCase!==false};
+    }
+  } else if (action === "preset") {
     const presetId = String(ctx.body?.presetId || "active");
     state = testProjectPresetState(presetId, state);
     title = `Пресет: ${presetId}`;
@@ -33644,7 +33726,7 @@ async function ownerPanelTestProjectAction(env, ctx) {
     title=`Открыт сезонный кейс «${String(definition.title||caseId)}»`;result={caseId,rewards:rolled.rewards,duplicatePoints:rolled.duplicatePoints};
   } else if (action === "case_buy") {
     const caseType = normalizeCaseType(ctx.body?.caseType);
-    if (!caseType) throw new ApiError(400, "Выберите существующий кейс.");
+    if (!caseType || !TEST_PROJECT_CASE_IDS.includes(caseType)) throw new ApiError(400, "Выберите существующий тестовый кейс.");
     if (snapshot?.liveops?.cases?.[caseType]?.enabled === false) throw new ApiError(409, "Этот кейс выключен в снимке LiveOps.");
     const product = snapshot?.economy?.caseProducts?.[caseType] || { enabled:true, ...(TEST_PROJECT_CASE_PRICES[caseType]||{}) };
     if (product.enabled === false) throw new ApiError(409, "Этот кейс убран из ассортимента в снимке Production.");
@@ -33813,7 +33895,7 @@ async function ownerPanelTestProjectCaseOpen(env, ctx) {
   const productionSnapshot = testProjectWorkspaceSnapshot(row);
   const snapshot = testProjectApplyDraftLayer(state, productionSnapshot);
   const caseType = normalizeCaseType(ctx.body?.caseType);
-  if (!caseType || !LIVEOPS_CASE_IDS.includes(caseType)) throw new ApiError(400, "Выберите существующий кейс.");
+  if (!caseType || !TEST_PROJECT_CASE_IDS.includes(caseType)) throw new ApiError(400, "Выберите существующий тестовый кейс.");
   const mode = String(ctx.body?.mode || "open") === "simulate" ? "simulate" : "open";
   const liveops = snapshot?.liveops || { content:{}, cases:{} };
   if (mode === "simulate") {
@@ -33823,7 +33905,9 @@ async function ownerPanelTestProjectCaseOpen(env, ctx) {
     const examples = [];
     const rng=testProjectCaseRng(state,`case-sim:${caseType}:${samples}`);
     for (let i=0; i<samples; i+=1) {
-      const rolled = rollLevelCase(caseType, virtual, virtual.ownedSkins, liveops, rng);
+      const rolled = caseType === "alex"
+        ? rollAlexCase(virtual, virtual.ownedSkins, rng)
+        : rollLevelCase(caseType, virtual, virtual.ownedSkins, liveops, rng);
       virtual = testProjectNormalizeCaseState(rolled.state);
       totals.points += Number(rolled.points || 0); totals.treats += Number(rolled.treats || 0); totals.coffee += Number(rolled.coffee || 0);
       totals.rewards += rolled.rewards.length; testProjectAggregateRewards(totals.byKind, rolled.rewards);
@@ -33834,8 +33918,20 @@ async function ownerPanelTestProjectCaseOpen(env, ctx) {
   const consume = ctx.body?.consume !== false;
   if (consume && Number(state.caseInventory?.[caseType] || 0) < 1) throw new ApiError(409, "В тестовом инвентаре нет этого кейса. Сначала купите или добавьте его пресетом.");
   if (consume) state.caseInventory[caseType] -= 1;
-  const rolled = rollLevelCase(caseType, state.caseState, state.caseState.ownedSkins, liveops, testProjectCaseRng(state,`case-open:${caseType}`));
+  const forced = caseType === "alex" ? testProjectNormalizeForcedCaseDrop(state.sandbox?.forcedCaseDrop||{}) : null;
+  const rng = forced ? testProjectForcedAlexRng(forced.rewardId) : testProjectCaseRng(state,`case-open:${caseType}`);
+  const alexCollectionBefore = caseType === "alex" ? alexCaseCollectionStatus(state.caseState) : null;
+  const rolled = caseType === "alex"
+    ? rollAlexCase(state.caseState, state.caseState.ownedSkins, rng || testProjectCaseRng(state,`case-open:${caseType}`))
+    : rollLevelCase(caseType, state.caseState, state.caseState.ownedSkins, liveops, rng);
   state.caseState = testProjectNormalizeCaseState(rolled.state);
+  if (forced) state.sandbox = testProjectNormalizeSandboxState({...state.sandbox,forcedCaseDrop:null});
+  const alexCollection = caseType === "alex" ? alexCaseCollectionStatus(state.caseState) : null;
+  const alexCollectionRewardGranted = Boolean(caseType === "alex" && alexCollection?.complete && !state.sandbox?.alexCollectionRewardClaimed);
+  if (alexCollectionRewardGranted) {
+    state.caseInventory.gold = Math.min(999, Number(state.caseInventory?.gold||0) + 1);
+    state.sandbox = testProjectNormalizeSandboxState({...state.sandbox,alexCollectionRewardClaimed:true});
+  }
   for (const reward of rolled.rewards || []) {
     if (!["physical","product"].includes(String(reward?.kind||reward?.rewardType||""))) continue;
     const itemId = String(reward?.id || reward?.itemId || reward?.productId || "physical");
@@ -33855,7 +33951,16 @@ async function ownerPanelTestProjectCaseOpen(env, ctx) {
   try {
     await env.DB.prepare(`DELETE FROM test_project_case_runs WHERE owner_telegram_id=? AND id NOT IN (SELECT id FROM test_project_case_runs WHERE owner_telegram_id=? ORDER BY id DESC LIMIT 50)`).bind(ownerId,ownerId).run();
   } catch {}
-  return { ok:true, isolated:true, persisted:true, caseType, rewards:rolled.rewards, deltas:{points:Number(rolled.points||0),treats:Number(rolled.treats||0),coffee:Number(rolled.coffee||0)}, diff, ...testProjectClientPayload(testProjectRequireWorkspaceRow(await testProjectReadWorkspace(env, ownerId))) };
+  return {
+    ok:true, isolated:true, persisted:true, caseType, rewards:rolled.rewards,
+    deltas:{points:Number(rolled.points||0),treats:Number(rolled.treats||0),coffee:Number(rolled.coffee||0)}, diff,
+    forcedReward:forced?{rewardId:forced.rewardId,ensureNew:forced.ensureNew}:null,
+    ...(caseType === "alex" ? {
+      alexCollection:{...alexCollection,rewardCaseType:"gold",rewardTitle:"Золотой кейс",rewardClaimed:Boolean(state.sandbox?.alexCollectionRewardClaimed)},
+      alexCollectionRewardGranted, alexCollectionBefore
+    } : {}),
+    ...testProjectClientPayload(testProjectRequireWorkspaceRow(await testProjectReadWorkspace(env, ownerId)))
+  };
 }
 
 const TEST_PROJECT_SANDBOX_API_PATHS = Object.freeze([
@@ -33903,7 +34008,7 @@ function testProjectSandboxCasePayload(state, snapshot, extra = {}) {
   };
   return {
     ok:true,testProject:true,isolated:true,authoritativeProfile:true,profileLevel,schedule,eligibleCases,
-    openedLevels,openedCases:[],giftedCases:{...testProjectIntMap(state?.caseInventory,LIVEOPS_CASE_IDS,999)},
+    openedLevels,openedCases:[],giftedCases:{...testProjectIntMap(state?.caseInventory,TEST_PROJECT_CASE_IDS,999)},
     caseState,liveops,profile:testProjectSandboxProfile(state),...extra
   };
 }
@@ -34000,7 +34105,7 @@ function testProjectSandboxOfferList(state,snapshot) {
 
 function testProjectSandboxPollDefinition() {
   return {
-    id:"tp-poll-3",question:"Как работает Test Project 5.2?",description:"Этот опрос существует только внутри песочницы. Ответ не попадёт в Production.",
+    id:"tp-poll-3",question:"Как работает Test Project 5.3?",description:"Этот опрос существует только внутри песочницы. Ответ не попадёт в Production.",
     rewardText:"100 ⭐ тестовых очков",answerType:"choice",responseMode:"single",commentMode:"optional",commentMin:3,commentMax:400,maxChoices:1,
     options:[{id:"useful",text:"Полезно"},{id:"needs_work",text:"Нужно доработать"},{id:"found_bug",text:"Нашёл баг"}]
   };
@@ -34123,7 +34228,7 @@ async function testProjectSandboxGameData(env, ctx) {
   if(path==="/api/cases/state")return response(testProjectSandboxCasePayload(state,snapshot));
   if(path==="/api/cases/open")return response(await testProjectSandboxCaseOpenLevel(env,ctx,loaded,payload));
   if(path==="/api/cases/open-granted"){
-    const caseType=normalizeCaseType(payload?.caseType);if(!caseType)throw new ApiError(400,"Выберите тестовый кейс.");const result=await ownerPanelTestProjectCaseOpen(env,{...ctx,body:{caseType,mode:"open",consume:true}});await reload();return response(testProjectSandboxCasePayload(state,snapshot,{opened:{caseType,rewards:result.rewards,points:Number(result.deltas?.points||0),treats:Number(result.deltas?.treats||0),coffee:Number(result.deltas?.coffee||0)}}));
+    const caseType=normalizeCaseType(payload?.caseType);if(!caseType||!TEST_PROJECT_CASE_IDS.includes(caseType))throw new ApiError(400,"Выберите тестовый кейс.");const result=await ownerPanelTestProjectCaseOpen(env,{...ctx,body:{caseType,mode:"open",consume:true}});await reload();return response(testProjectSandboxCasePayload(state,snapshot,{opened:{caseType,title:LEVEL_CASE_CONFIG[caseType]?.title||snapshot?.liveops?.cases?.[caseType]?.title||caseType,rewards:result.rewards,points:Number(result.deltas?.points||0),treats:Number(result.deltas?.treats||0),coffee:Number(result.deltas?.coffee||0),...(caseType==="alex"?{alexCollection:result.alexCollection||null,alexCollectionRewardGranted:Boolean(result.alexCollectionRewardGranted),forcedReward:result.forcedReward||null}:{})}}));
   }
   if(path==="/api/cases/purchase"){
     const caseType=normalizeCaseType(payload?.caseType);if(!caseType)throw new ApiError(400,"Выберите тестовый кейс.");const result=await ownerPanelTestProjectAction(env,{...ctx,body:{action:"case_buy",caseType}});await reload();return response(testProjectSandboxCasePayload(state,snapshot,{purchase:{caseType,cost:result.result?.price||{}}}));
@@ -34325,7 +34430,7 @@ async function ownerPanelTestProjectClonePlayer(env,ctx){
     safeAll(`SELECT offer_id,COUNT(*) AS count FROM shop_flash_offer_purchases WHERE telegram_id=? AND status='completed' GROUP BY offer_id`,telegramId)
   ]);
   const points=Math.max(0,Number(profile.wallet_override==null?profile.wallet:profile.wallet_override)||0)+Math.max(0,Number(profile.pending_wallet)||0),treats=Math.max(0,Number(profile.treats_override==null?profile.treats:profile.treats_override)||0)+Math.max(0,Number(profile.pending_treats)||0),coffee=Math.max(0,Number(profile.coffee_override==null?profile.coffee:profile.coffee_override)||0)+Math.max(0,Number(profile.pending_coffee)||0);
-  const xp=Math.max(0,Number(profile.profile_xp_override==null?profile.profile_xp:profile.profile_xp_override)||0),best=Math.max(0,Number(profile.best_score_override==null?profile.best_score:profile.best_score_override)||0),caseInventory=Object.fromEntries(LIVEOPS_CASE_IDS.map((id)=>[id,0]));for(const r of pendingRows){const id=normalizeCaseType(r.case_type);if(id)caseInventory[id]=Math.max(0,Number(r.count)||0);}
+  const xp=Math.max(0,Number(profile.profile_xp_override==null?profile.profile_xp:profile.profile_xp_override)||0),best=Math.max(0,Number(profile.best_score_override==null?profile.best_score:profile.best_score_override)||0),caseInventory=Object.fromEntries(TEST_PROJECT_CASE_IDS.map((id)=>[id,0]));for(const r of pendingRows){const id=normalizeCaseType(r.case_type);if(id)caseInventory[id]=Math.max(0,Number(r.count)||0);}
   const seasonalCaseInventory={};for(const r of seasonCaseRows)seasonalCaseInventory[String(r.case_id||"")]=Math.max(0,Number(r.count)||0);const offerPurchases={};for(const r of offerRows)offerPurchases[String(r.offer_id||"")]=Math.max(0,Number(r.count)||0);
   const actualSeasonId=String(passRow?.season_id||seasonId||"");const passClaims=claimRows.filter((r)=>String(r.lane)!=="overflow").map((r)=>`${actualSeasonId}:${Number(r.level)}:${String(r.lane)}`),passOverflowClaimed=claimRows.filter((r)=>String(r.lane)==="overflow").length,passTaskClaims=taskClaimRows.map((r)=>`${actualSeasonId}:${String(r.task_id)}:${String(r.period_key)}`);
   let snapshot=productionSnapshot;if(actualSeasonId&&String(snapshot?.season?.id||"")!==actualSeasonId){snapshot=await testProjectCaptureProductionSnapshot(env,actualSeasonId);}
@@ -34363,7 +34468,7 @@ async function ownerPanelTestProjectQa(env, ctx) {
   add("sandbox_routes","Sandbox API",TEST_PROJECT_SANDBOX_API_PATHS.length>=50?"pass":"warn",`${TEST_PROJECT_SANDBOX_API_PATHS.length} перехваченных API маршрутов`);
   add("production_writes","Изоляция Production","pass","Игровые запросы TP идут только через owner-only sandbox proxy; неизвестные /api/* блокируются.");
   add("draft_gameplay","Draft gameplay",state.draftMode!=="draft"||!state.tpDrafts?.gameConfig||String(snapshot?.publicConfig?.gameplay?.source)==="test_project_draft"?"pass":"fail",`source: ${String(snapshot?.publicConfig?.gameplay?.source||"—")}`);
-  const cases=Object.keys(snapshot?.liveops?.cases||{});add("cases","Кейсы",LIVEOPS_CASE_IDS.every((id)=>cases.includes(id))?"pass":"fail",`${cases.length}/${LIVEOPS_CASE_IDS.length} типов доступны`);
+  const cases=Object.keys(snapshot?.liveops?.cases||{});add("cases","Кейсы",TEST_PROJECT_CASE_IDS.every((id)=>cases.includes(id))?"pass":"fail",`${TEST_PROJECT_CASE_IDS.filter((id)=>cases.includes(id)).length}/${TEST_PROJECT_CASE_IDS.length} типов доступны`);
   const season=snapshot?.season||{},seasons=Array.isArray(snapshot?.seasons)?snapshot.seasons:[];add("season_catalog","Список сезонов",seasons.length?"pass":"fail",`${seasons.length} сезонов доступно для выбора`);add("season","Season Pass",season?.id&&Array.isArray(season?.rewards)?"pass":"warn",season?.id?`${season.title||season.id} · наград ${season.rewards?.length||0}`:"Выбранный сезон отсутствует");
   const seasonalCases=Array.isArray(season?.seasonalCases)?season.seasonalCases:[],caseItems=seasonalCases.reduce((sum,item)=>sum+(Array.isArray(item?.items)?item.items.filter((entry)=>entry.enabled!==false).length:0),0);add("seasonal_cases","Сезонные кейсы",seasonalCases.length?(caseItems>0?"pass":"warn"):"warn",seasonalCases.length?`${seasonalCases.length} кейс(ов) · ${caseItems} включённых наград`:"У выбранного сезона нет сезонного кейса");
   const gameplay=snapshot?.publicConfig?.gameplay||{},finiteKeys=Object.entries(gameplay).filter(([key])=>!["source","version"].includes(key)).every(([,value])=>Number.isFinite(Number(value)));add("gameplay_numbers","Числа баланса",finiteKeys?"pass":"fail","Runtime gameplay config содержит конечные числовые значения");
@@ -34438,7 +34543,7 @@ async function ownerPanelTestProjectReleaseGate(env,ctx){
   return{ok:true,status,ready:summary.fail===0,summary,checks,groups:{sandbox:qa.summary,season:seasonQa.summary,content:content.summary},requestedSeasonId:String(ctx.body?.seasonId||''),seasonId:String(seasonQa?.seasonId||content?.seasonId||ctx.body?.seasonId||''),seasonTitle:String(seasonQa?.seasonTitle||''),checkedAt:Date.now(),fullAssets:Boolean(ctx.body?.fullAssets)};
 }
 
-// =================== END TEST PROJECT 5.2 ===================
+// =================== END TEST PROJECT 5.3 ===================
 
 
 // ======================= REFERRALS · "ДРУЗЬЯ КАФЕ" =======================
