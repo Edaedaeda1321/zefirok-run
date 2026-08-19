@@ -30467,6 +30467,67 @@ async function ownerV85AllPlayerPreview(env) {
   };
 }
 
+let ownerV85CompConfirmationSchemaPromise = null;
+async function ensureOwnerV85CompConfirmationSchema(env){
+  if(!ownerV85CompConfirmationSchemaPromise){
+    ownerV85CompConfirmationSchemaPromise=env.DB.prepare(`CREATE TABLE IF NOT EXISTS owner_compensation_confirmation_words (
+      owner_telegram_id TEXT PRIMARY KEY,
+      word_salt TEXT NOT NULL,
+      word_hash TEXT NOT NULL,
+      updated_at INTEGER NOT NULL,
+      updated_by TEXT NOT NULL DEFAULT ''
+    )`).run().catch((error)=>{ownerV85CompConfirmationSchemaPromise=null;throw error;});
+  }
+  return ownerV85CompConfirmationSchemaPromise;
+}
+function ownerV85NormalizeCompConfirmationWord(value){
+  const raw=String(value??'');
+  const normalized=typeof raw.normalize==='function'?raw.normalize('NFKC'):raw;
+  return normalized.trim().replace(/\s+/g,' ').toLocaleUpperCase('ru-RU');
+}
+async function ownerV85CompConfirmationHash(ownerId,salt,word){
+  return legalSha256Hex(`owner-compensation-confirmation-v1\n${String(ownerId||'')}\n${String(salt||'')}\n${ownerV85NormalizeCompConfirmationWord(word)}`);
+}
+async function ownerV85CompConfirmationStatus(env,ownerId){
+  await ensureOwnerV85CompConfirmationSchema(env);
+  const row=await env.DB.prepare(`SELECT updated_at FROM owner_compensation_confirmation_words WHERE owner_telegram_id=? LIMIT 1`).bind(String(ownerId)).first();
+  return {configured:Boolean(row),mode:row?'owner_word_plus_count':'system_phrase',updatedAt:Number(row?.updated_at||0)};
+}
+async function ownerPanelV85CompensationConfirmationWord(env,ctx){
+  await ensureOwnerV85CompConfirmationSchema(env);
+  if(!ctx.access?.owner||String(ctx.access?.role||'')!=='owner')throw new ApiError(403,'Контрольное слово может менять только владелец проекта.');
+  const ownerId=String(ctx.user.id),action=String(ctx.body?.action||'save').trim().toLowerCase();
+  if(action==='reset'){
+    await env.DB.prepare(`DELETE FROM owner_compensation_confirmation_words WHERE owner_telegram_id=?`).bind(ownerId).run();
+    await logStaffAction(env,ctx.user,ctx.access,'owner_compensation_confirmation_word_reset',null,'compensation',null,null,{configured:false});
+    return {ok:true,confirmationWord:{configured:false,mode:'system_phrase',updatedAt:Math.floor(Date.now()/1000)}};
+  }
+  const word=ownerV85NormalizeCompConfirmationWord(ctx.body?.word),repeat=ownerV85NormalizeCompConfirmationWord(ctx.body?.repeatWord);
+  if(word.length<4||word.length>64)throw new ApiError(400,'Контрольное слово должно содержать от 4 до 64 символов.');
+  if(word!==repeat)throw new ApiError(400,'Повтор контрольного слова не совпадает.');
+  if(/[\r\n\t]/.test(word))throw new ApiError(400,'Контрольное слово должно быть в одной строке.');
+  const bytes=new Uint8Array(18);crypto.getRandomValues(bytes);const salt=bytesToHex(bytes),hash=await ownerV85CompConfirmationHash(ownerId,salt,word),now=Math.floor(Date.now()/1000);
+  await env.DB.prepare(`INSERT INTO owner_compensation_confirmation_words(owner_telegram_id,word_salt,word_hash,updated_at,updated_by) VALUES(?,?,?,?,?) ON CONFLICT(owner_telegram_id) DO UPDATE SET word_salt=excluded.word_salt,word_hash=excluded.word_hash,updated_at=excluded.updated_at,updated_by=excluded.updated_by`).bind(ownerId,salt,hash,now,ownerId).run();
+  await logStaffAction(env,ctx.user,ctx.access,'owner_compensation_confirmation_word_set',null,'compensation',null,null,{configured:true});
+  return {ok:true,confirmationWord:{configured:true,mode:'owner_word_plus_count',updatedAt:now}};
+}
+async function ownerV85VerifyCompensationConfirmation(env,ownerId,rawConfirmation,count){
+  await ensureOwnerV85CompConfirmationSchema(env);
+  const expectedCount=Math.max(1,Math.floor(Number(count)||0)),confirmation=String(rawConfirmation||'').trim();
+  const row=await env.DB.prepare(`SELECT word_salt,word_hash FROM owner_compensation_confirmation_words WHERE owner_telegram_id=? LIMIT 1`).bind(String(ownerId)).first();
+  if(!row){
+    if(confirmation!==`ВЫДАТЬ ${expectedCount}`)throw new ApiError(400,`Введите подтверждение: ВЫДАТЬ ${expectedCount}`);
+    return true;
+  }
+  const match=confirmation.match(/^([\s\S]*\S)\s+(\d+)$/);
+  if(!match||Number(match[2])!==expectedCount)throw new ApiError(400,`Введите своё контрольное слово и точное число получателей: СЛОВО ${expectedCount}`);
+  const candidate=ownerV85NormalizeCompConfirmationWord(match[1]);
+  if(candidate.length<4||candidate.length>64)throw new ApiError(400,'Неверное контрольное слово.');
+  const candidateHash=await ownerV85CompConfirmationHash(ownerId,String(row.word_salt||''),candidate);
+  if(!timingSafeEqualString(candidateHash,String(row.word_hash||'')))throw new ApiError(400,'Неверное контрольное слово владельца.');
+  return true;
+}
+
 function ownerV85CompensationRewardCatalog(){
   return {
     cases: grantCatalogItems("case").map(item=>({id:String(item.id),title:String(item.title)})),
@@ -30515,16 +30576,17 @@ function ownerV85NormalizeCustomCompensationRewards(input){
 }
 
 async function ownerPanelV85Compensations(env,ctx){
-  await ensureControlCenterV85Schema(env);const [templates,segments,queue,campaigns,notifyQueue]=await Promise.all([
+  await ensureControlCenterV85Schema(env);const [templates,segments,queue,campaigns,notifyQueue,confirmationWord]=await Promise.all([
     env.DB.prepare(`SELECT * FROM compensation_templates WHERE enabled=1 ORDER BY template_id`).all(),ownerV85SegmentCatalog(env,false),
     env.DB.prepare(`SELECT status,COUNT(*) AS count FROM reward_delivery_queue WHERE source_type IN ('compensation','campaign') AND created_at>=? GROUP BY status`).bind(Math.floor(Date.now()/1000)-7*86400).all(),
     env.DB.prepare(`SELECT campaign_id,title,status,total_count,processed_count,failed_count,created_at,completed_at FROM admin_campaigns WHERE title LIKE 'Компенсация:%' ORDER BY created_at DESC LIMIT 24`).all(),
-    env.DB.prepare(`SELECT status,COUNT(*) AS count FROM player_notification_queue GROUP BY status`).all().catch(()=>({results:[]}))
+    env.DB.prepare(`SELECT status,COUNT(*) AS count FROM player_notification_queue GROUP BY status`).all().catch(()=>({results:[]})),
+    ownerV85CompConfirmationStatus(env,ctx.user.id)
   ]);
   const mappedTemplates=(templates.results||[]).filter(r=>!ownerV8SafeJson(r.rewards_json,[]).some(x=>String(x?.kind)==='physical_restore')).map(r=>({id:String(r.template_id),title:String(r.title),description:String(r.description||""),rewards:ownerV8SafeJson(r.rewards_json,[])}));
   mappedTemplates.unshift({id:"__message__",title:"Только уведомление",description:"Сообщение без игровой награды",rewards:[]});
   mappedTemplates.splice(1,0,{id:"__custom__",title:"Своя компенсация",description:"Набор наград задаётся вручную перед отправкой",rewards:[]});
-  return {ok:true,templates:mappedTemplates,rewardCatalog:ownerV85CompensationRewardCatalog(),segments,queue:(queue.results||[]).map(r=>({status:String(r.status),count:Number(r.count||0)})),notificationQueue:(notifyQueue.results||[]).map(r=>({status:String(r.status),count:Number(r.count||0)})),recent:(campaigns.results||[]).map(r=>({id:String(r.campaign_id),title:String(r.title||""),status:String(r.status||""),total:Number(r.total_count||0),processed:Number(r.processed_count||0),failed:Number(r.failed_count||0),createdAt:Number(r.created_at||0),completedAt:Number(r.completed_at||0)}))};
+  return {ok:true,templates:mappedTemplates,rewardCatalog:ownerV85CompensationRewardCatalog(),confirmationWord,segments,queue:(queue.results||[]).map(r=>({status:String(r.status),count:Number(r.count||0)})),notificationQueue:(notifyQueue.results||[]).map(r=>({status:String(r.status),count:Number(r.count||0)})),recent:(campaigns.results||[]).map(r=>({id:String(r.campaign_id),title:String(r.title||""),status:String(r.status||""),total:Number(r.total_count||0),processed:Number(r.processed_count||0),failed:Number(r.failed_count||0),createdAt:Number(r.created_at||0),completedAt:Number(r.completed_at||0)}))};
 }
 async function ownerPanelV85CompensationPreview(env,ctx){const target=String(ctx.body?.target||"segment");if(target==="player"){const id=String(ctx.body?.telegramId||"").trim();if(!/^\d{4,20}$/.test(id)||!(await playerProfileExists(id,env)))throw new ApiError(404,"Игрок не найден.");return {ok:true,count:1,players:[{telegramId:id,name:await playerDisplayNameById(id,env)}]};}if(target==="all")return ownerV85AllPlayerPreview(env);return ownerPanelV85SegmentPreview(env,ctx);}
 async function ownerPanelV85CompensationSend(env,ctx){
@@ -30541,7 +30603,7 @@ async function ownerPanelV85CompensationSend(env,ctx){
   }
   const reason=String(ctx.body?.reason||template.title||"Компенсация").trim().slice(0,300);if(reason.length<3)throw new ApiError(400,"Укажите причину.");const message=String(ctx.body?.message||"").trim().slice(0,2500);if(!rewards.length&&!message)throw new ApiError(400,"Для уведомления укажите текст сообщения.");
   const target=String(ctx.body?.target||"segment");let ids=[],segmentKey="",audienceSnapshotAt=0;if(target==="player"){const id=String(ctx.body?.telegramId||"").trim();if(!/^\d{4,20}$/.test(id)||!(await playerProfileExists(id,env)))throw new ApiError(404,"Игрок не найден.");ids=[id];segmentKey=`player_${id}`;}else if(target==="all"){audienceSnapshotAt=Math.floor(Date.now()/1000);segmentKey="all_players";ids=await ownerV85AllPlayerIds(env,audienceSnapshotAt);}else{segmentKey=String(ctx.body?.segmentKey||"").trim();if(!(await ownerV85SegmentTitle(env,segmentKey)))throw new ApiError(404,"Сегмент не найден.");ids=await segmentPlayerIds(env,segmentKey,10000);}
-  ids=[...new Set(ids)];if(!ids.length)throw new ApiError(409,"Нет получателей.");const confirmation=String(ctx.body?.confirmation||"").trim();if(confirmation!==`ВЫДАТЬ ${ids.length}`)throw new ApiError(400,`Введите подтверждение: ВЫДАТЬ ${ids.length}`);
+  ids=[...new Set(ids)];if(!ids.length)throw new ApiError(409,"Нет получателей.");await ownerV85VerifyCompensationConfirmation(env,ctx.user.id,ctx.body?.confirmation,ids.length);
   const hasLegendary=rewards.some(r=>String(r?.kind)==="case"&&String(r?.id)==="legendary");
   const customHighImpact=templateId==="__custom__"&&rewards.some(r=>{
     const kind=String(r?.kind||""),id=String(r?.id||""),amount=Math.max(1,Number(r?.amount||1));
@@ -35234,6 +35296,7 @@ async function handleOwnerPanelApi(request, env, path, executionCtx = null) {
     if (path === "/api/owner/v85/segments/preview") return jsonResponse(await ownerPanelV85SegmentPreview(env, ctx));
     if (path === "/api/owner/v85/compensations") return jsonResponse(await ownerPanelV85Compensations(env, ctx));
     if (path === "/api/owner/v85/compensations/preview") return jsonResponse(await ownerPanelV85CompensationPreview(env, ctx));
+    if (path === "/api/owner/v85/compensations/confirmation-word") return jsonResponse(await ownerPanelV85CompensationConfirmationWord(env, ctx));
     if (path === "/api/owner/v85/compensations/send") return jsonResponse(await ownerPanelV85CompensationSend(env, ctx));
     if (path === "/api/owner/v85/monitoring") return jsonResponse(await ownerPanelV85Monitoring(env, ctx));
     if (path === "/api/owner/v85/monitoring/config") return jsonResponse(await ownerPanelV85MonitoringConfig(env, ctx));
