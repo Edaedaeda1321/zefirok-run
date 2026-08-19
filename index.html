@@ -8409,13 +8409,15 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 #zefirok-maltipoo-runner .profile-shell &gt; .profile-hero { order: 0; }
 #zefirok-maltipoo-runner .profile-section--battle-pass { order: 15; }
 #zefirok-maltipoo-runner .profile-section--referrals { order: 17; }
-#zefirok-maltipoo-runner .referrals-profile-card{display:grid;grid-template-columns:54px minmax(0,1fr);gap:12px;align-items:center;padding:15px;border:1px solid rgba(204,105,130,.28);border-radius:20px;background:linear-gradient(135deg,#fff3f1,#fff8dc 82%);box-shadow:0 8px 22px rgba(128,82,47,.07)}
+#zefirok-maltipoo-runner .referrals-profile-card{position:relative;display:grid;grid-template-columns:54px minmax(0,1fr);gap:12px;align-items:center;padding:15px;border:1px solid rgba(204,105,130,.28);border-radius:20px;background:linear-gradient(135deg,#fff3f1,#fff8dc 82%);box-shadow:0 8px 22px rgba(128,82,47,.07)}
 #zefirok-maltipoo-runner .referrals-profile-icon{width:54px;height:54px;display:grid;place-items:center;border-radius:17px;background:rgba(255,255,255,.82);box-shadow:inset 0 0 0 1px rgba(204,105,130,.18);overflow:hidden}
 #zefirok-maltipoo-runner .referrals-profile-icon img{width:50px;height:50px;object-fit:contain;display:block}
 #zefirok-maltipoo-runner .referrals-profile-copy{min-width:0;display:grid;gap:4px;text-align:left}
 #zefirok-maltipoo-runner .referrals-profile-copy strong{color:#643744;font-size:14px;font-weight:950}
 #zefirok-maltipoo-runner .referrals-profile-copy span{color:#8c6972;font-size:10px;font-weight:750;line-height:1.42}
 #zefirok-maltipoo-runner .referrals-profile-card .profile-action{grid-column:1/-1;margin-top:1px}
+#zefirok-maltipoo-runner .referrals-profile-badge{position:absolute;right:11px;top:11px;z-index:2;padding:5px 8px;border-radius:999px;background:#d95f8e;color:#fff;font-size:9px;font-weight:950;box-shadow:0 5px 12px rgba(181,63,107,.2)}
+#zefirok-maltipoo-runner .referrals-profile-badge.is-boost{background:linear-gradient(135deg,#e4aa38,#d17671)}
 #zefirok-maltipoo-runner .battle-pass-profile-card {
   display: grid;
   grid-template-columns: 54px minmax(0,1fr);
@@ -9381,6 +9383,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       &lt;div&gt;&lt;h3 id=&quot;profile-referrals-title&quot;&gt;Друзья кафе&lt;/h3&gt;&lt;span&gt;Играйте вместе и открывайте совместные подарки.&lt;/span&gt;&lt;/div&gt;
     &lt;/div&gt;
     &lt;div class=&quot;referrals-profile-card&quot;&gt;
+      &lt;span class=&quot;referrals-profile-badge&quot; data-referrals-badge hidden&gt;&lt;/span&gt;
       &lt;div class=&quot;referrals-profile-icon&quot; aria-hidden=&quot;true&quot;&gt;&lt;img src=&quot;/assets/ui/icon_referals.png&quot; alt=&quot;&quot;&gt;&lt;/div&gt;
       &lt;div class=&quot;referrals-profile-copy&quot;&gt;&lt;strong&gt;Пригласи друзей в кафе&lt;/strong&gt;&lt;span&gt;Награды за старт, уровни 5/10/20 и бонусный XP, когда друг активирует Элитный или Элитный+.&lt;/span&gt;&lt;/div&gt;
       &lt;button class=&quot;profile-action profile-action--primary&quot; data-referrals-open type=&quot;button&quot;&gt;Открыть «Друзья кафе»&lt;/button&gt;
@@ -20857,8 +20860,10 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 &lt;script id=&quot;zefirok-v0798-legendary-music-balance-audit&quot; type=&quot;application/json&quot;&gt;{&quot;version&quot;:&quot;0.79.8&quot;,&quot;scope&quot;:&quot;legendary-case-music-and-balance&quot;,&quot;newMusicTracks&quot;:4,&quot;categoryChances&quot;:{&quot;skin&quot;:0.35,&quot;music&quot;:0.45,&quot;physical&quot;:0.035,&quot;points&quot;:39.665},&quot;totalChance&quot;:100}&lt;/script&gt;
 &lt;script id=&quot;zefirok-v0797-high-speed-smoothness-audit&quot; type=&quot;application/json&quot;&gt;{&quot;version&quot;:&quot;0.79.7&quot;,&quot;scope&quot;:&quot;high-speed-gameplay-smoothness&quot;,&quot;backwardCompatible&quot;:true,&quot;gameplayValuesChanged&quot;:false,&quot;optimizations&quot;:[&quot;speedWeightedHorizontalExtrapolation&quot;,&quot;smoothedRenderVelocity&quot;,&quot;preRenderedRoadTileCache&quot;,&quot;particleObjectPool&quot;,&quot;allocationFreeCollisionChecks&quot;,&quot;highSpeedJitterMetrics&quot;,&quot;cachedCaseTrailSprite&quot;]}&lt;/script&gt;
 
-&lt;script id=&quot;zefirok-referrals-profile-entry-v1&quot;&gt;
+&lt;script id=&quot;zefirok-referrals-profile-entry-v2&quot;&gt;
 (() =&gt; {
+  const referralInitData=()=&gt;{let value=&quot;&quot;;try{value=String(window.Telegram?.WebApp?.initData||sessionStorage.getItem(&quot;zefirok-telegram-init-data&quot;)||&quot;&quot;);}catch{}return value;};
+  const refreshReferralSummary=async()=&gt;{const badge=document.querySelector(&quot;[data-referrals-badge]&quot;);if(!badge)return;const initData=referralInitData();if(!initData){badge.hidden=true;return;}try{const response=await fetch(&quot;/api/referrals/summary&quot;,{method:&quot;POST&quot;,headers:{&quot;Content-Type&quot;:&quot;application/json&quot;},body:JSON.stringify({initData}),cache:&quot;no-store&quot;});const data=await response.json();if(!response.ok||!data?.ok)throw new Error(&quot;summary&quot;);const pending=Math.max(0,Number(data.pendingCount||0));if(pending&gt;0){badge.textContent=`🎁 ${pending}`;badge.classList.remove(&quot;is-boost&quot;);badge.hidden=false;}else if(data?.boost?.active){badge.textContent=`×${Number(data.boost.multiplier||2)}`;badge.classList.add(&quot;is-boost&quot;);badge.hidden=false;}else{badge.hidden=true;}}catch{badge.hidden=true;}};
   document.addEventListener(&quot;click&quot;, (event) =&gt; {
     const button = event.target?.closest?.(&quot;[data-referrals-open]&quot;);
     if (!button) return;
@@ -20868,7 +20873,9 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
     catch (error) { try { window.location.href = &quot;/referrals.html&quot;; } catch {} }
     window.setTimeout(() =&gt; { button.disabled = false; }, 900);
   });
-  window.addEventListener(&quot;pageshow&quot;, () =&gt; document.querySelectorAll(&quot;[data-referrals-open]&quot;).forEach((button) =&gt; { button.disabled = false; }));
+  window.addEventListener(&quot;pageshow&quot;, () =&gt; {document.querySelectorAll(&quot;[data-referrals-open]&quot;).forEach((button) =&gt; { button.disabled = false; });refreshReferralSummary();});
+  window.addEventListener(&quot;message&quot;,(event)=&gt;{if(event.data?.type===&quot;zefirok-referrals-account-updated&quot;)refreshReferralSummary();});
+  window.setTimeout(refreshReferralSummary,700);
 })();
 &lt;/script&gt;
 &lt;script id=&quot;zefirok-v07914-battle-pass-visibility&quot;&gt;

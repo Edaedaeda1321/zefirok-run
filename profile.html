@@ -6776,13 +6776,15 @@ body.zefirok-profile-standalone .release-layer{display:none!important}
 #zefirok-maltipoo-runner .profile-shell > .profile-hero { order: 0; }
 #zefirok-maltipoo-runner .profile-section--battle-pass { order: 15; }
 #zefirok-maltipoo-runner .profile-section--referrals { order: 17; }
-#zefirok-maltipoo-runner .referrals-profile-card{display:grid;grid-template-columns:54px minmax(0,1fr);gap:12px;align-items:center;padding:15px;border:1px solid rgba(204,105,130,.28);border-radius:20px;background:linear-gradient(135deg,#fff3f1,#fff8dc 82%);box-shadow:0 8px 22px rgba(128,82,47,.07)}
+#zefirok-maltipoo-runner .referrals-profile-card{position:relative;display:grid;grid-template-columns:54px minmax(0,1fr);gap:12px;align-items:center;padding:15px;border:1px solid rgba(204,105,130,.28);border-radius:20px;background:linear-gradient(135deg,#fff3f1,#fff8dc 82%);box-shadow:0 8px 22px rgba(128,82,47,.07)}
 #zefirok-maltipoo-runner .referrals-profile-icon{width:54px;height:54px;display:grid;place-items:center;border-radius:17px;background:rgba(255,255,255,.82);box-shadow:inset 0 0 0 1px rgba(204,105,130,.18);overflow:hidden}
 #zefirok-maltipoo-runner .referrals-profile-icon img{width:50px;height:50px;object-fit:contain;display:block}
 #zefirok-maltipoo-runner .referrals-profile-copy{min-width:0;display:grid;gap:4px;text-align:left}
 #zefirok-maltipoo-runner .referrals-profile-copy strong{color:#643744;font-size:14px;font-weight:950}
 #zefirok-maltipoo-runner .referrals-profile-copy span{color:#8c6972;font-size:10px;font-weight:750;line-height:1.42}
 #zefirok-maltipoo-runner .referrals-profile-card .profile-action{grid-column:1/-1;margin-top:1px}
+#zefirok-maltipoo-runner .referrals-profile-badge{position:absolute;right:11px;top:11px;z-index:2;padding:5px 8px;border-radius:999px;background:#d95f8e;color:#fff;font-size:9px;font-weight:950;box-shadow:0 5px 12px rgba(181,63,107,.2)}
+#zefirok-maltipoo-runner .referrals-profile-badge.is-boost{background:linear-gradient(135deg,#e4aa38,#d17671)}
 #zefirok-maltipoo-runner .battle-pass-profile-card {
   display: grid;
   grid-template-columns: 54px minmax(0,1fr);
@@ -7647,6 +7649,7 @@ body.zefirok-profile-standalone .release-layer{display:none!important}
   <section class="profile-section profile-section--referrals" aria-labelledby="profile-referrals-title">
     <div class="profile-section-head"><div><h3 id="profile-referrals-title">Друзья кафе</h3><span>Играйте вместе и открывайте совместные подарки.</span></div></div>
     <div class="referrals-profile-card">
+      <span class="referrals-profile-badge" data-referrals-badge hidden></span>
       <div class="referrals-profile-icon" aria-hidden="true"><img src="/assets/ui/icon_referals.png" alt=""></div>
       <div class="referrals-profile-copy"><strong>Пригласи друзей в кафе</strong><span>Награды за старт, уровни 5/10/20 и бонусный XP, когда друг активирует Элитный или Элитный+.</span></div>
       <button class="profile-action profile-action--primary" data-referrals-open type="button">Открыть «Друзья кафе»</button>
@@ -17831,16 +17834,19 @@ body.zefirok-profile-standalone .release-layer{display:none!important}
 <script id="zefirok-v0798-legendary-music-balance-audit" type="application/json">{"version":"0.79.8","scope":"legendary-case-music-and-balance","newMusicTracks":4,"categoryChances":{"skin":0.35,"music":0.45,"physical":0.035,"points":39.665},"totalChance":100}</script>
 <script id="zefirok-v0797-high-speed-smoothness-audit" type="application/json">{"version":"0.79.7","scope":"high-speed-gameplay-smoothness","backwardCompatible":true,"gameplayValuesChanged":false,"optimizations":["speedWeightedHorizontalExtrapolation","smoothedRenderVelocity","preRenderedRoadTileCache","particleObjectPool","allocationFreeCollisionChecks","highSpeedJitterMetrics","cachedCaseTrailSprite"]}</script>
 
-<script id="zefirok-referrals-profile-entry-v1">
+<script id="zefirok-referrals-profile-entry-v2">
 (() => {
+  const referralInitData=()=>{let value="";try{value=String(window.Telegram?.WebApp?.initData||sessionStorage.getItem("zefirok-telegram-init-data")||"");}catch{}return value;};
   const openReferrals = () => {
-    let initData = "";
-    try { initData = String(window.Telegram?.WebApp?.initData || sessionStorage.getItem("zefirok-telegram-init-data") || ""); } catch {}
+    const initData=referralInitData();
     if (window.parent && window.parent !== window) { try { window.parent.postMessage({type:"zefirok-open-referrals"},"*"); return; } catch {} }
     window.location.href = initData ? `/referrals.html#tgInitData=${encodeURIComponent(initData)}` : "/referrals.html";
   };
+  const refreshReferralSummary=async()=>{const badge=document.querySelector("[data-referrals-badge]");if(!badge)return;const initData=referralInitData();if(!initData){badge.hidden=true;return;}try{const response=await fetch("/api/referrals/summary",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({initData}),cache:"no-store"});const data=await response.json();if(!response.ok||!data?.ok)throw new Error("summary");const pending=Math.max(0,Number(data.pendingCount||0));if(pending>0){badge.textContent=`🎁 ${pending}`;badge.classList.remove("is-boost");badge.hidden=false;}else if(data?.boost?.active){badge.textContent=`×${Number(data.boost.multiplier||2)}`;badge.classList.add("is-boost");badge.hidden=false;}else{badge.hidden=true;}}catch{badge.hidden=true;}};
   document.addEventListener("click", (event) => { const button=event.target?.closest?.("[data-referrals-open]");if(!button)return;event.preventDefault();button.disabled=true;openReferrals();window.setTimeout(()=>{button.disabled=false;},900); });
-  window.addEventListener("pageshow",()=>document.querySelectorAll("[data-referrals-open]").forEach((button)=>{button.disabled=false;}));
+  window.addEventListener("pageshow",()=>{document.querySelectorAll("[data-referrals-open]").forEach((button)=>{button.disabled=false;});refreshReferralSummary();});
+  window.addEventListener("message",(event)=>{if(event.data?.type==="zefirok-referrals-account-updated")refreshReferralSummary();});
+  window.setTimeout(refreshReferralSummary,700);
 })();
 </script>
 <script id="zefirok-v07914-battle-pass-visibility">
