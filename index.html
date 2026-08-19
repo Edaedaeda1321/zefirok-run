@@ -15642,12 +15642,12 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         const items = Object.entries(caseLiveOpsCatalog(kind, catalog, false, caseType))
           .filter(([, item]) =&gt; item.enabled !== false &amp;&amp; (caseType === &quot;legendary&quot; || !item?.legendaryOnly))
           .sort(([firstId, first], [secondId, second]) =&gt; {
-            const firstOwned = ownedIds.has(firstId) ? 0 : 1;
-            const secondOwned = ownedIds.has(secondId) ? 0 : 1;
-            if (firstOwned !== secondOwned) return firstOwned - secondOwned;
-            const firstNew = first?.isNew ? 1 : 0;
-            const secondNew = second?.isNew ? 1 : 0;
-            if (firstNew !== secondNew) return firstNew - secondNew;
+            const firstOwned = ownedIds.has(firstId);
+            const secondOwned = ownedIds.has(secondId);
+            if (firstOwned !== secondOwned) return firstOwned ? 1 : -1;
+            const firstWeight = firstOwned ? 0 : Math.max(0, Number(first?.weight ?? CASE_COSMETIC_WEIGHTS?.[kind]?.[firstId] ?? 0));
+            const secondWeight = secondOwned ? 0 : Math.max(0, Number(second?.weight ?? CASE_COSMETIC_WEIGHTS?.[kind]?.[secondId] ?? 0));
+            if (firstWeight !== secondWeight) return secondWeight - firstWeight;
             const firstOrder = rarityOrder[String(first?.rarityClass || &quot;common&quot;)] ?? 99;
             const secondOrder = rarityOrder[String(second?.rarityClass || &quot;common&quot;)] ?? 99;
             if (firstOrder !== secondOrder) return firstOrder - secondOrder;
