@@ -30610,7 +30610,20 @@ async function ownerPanelV85CompensationSend(env,ctx){
     return kind==="skin"||(kind==="case"&&["mythic","legendary"].includes(id))||(kind==="points"&&amount>=1000000)||(["zefir","coffee"].includes(kind)&&amount>=1000);
   });
   const payload={templateId,templateTitle:String(template.title||"Уведомление"),rewards,reason,message,segmentKey,targetMode:target,audienceSnapshotAt,targetCount:ids.length,targetIds:target==="all"?[]:ids.slice(0,10000),reportChatId:String(ctx.user.id)};
-  if(hasLegendary||ids.length>250||(customHighImpact&&ids.length>1)){const approvalId=await requestDangerousAction(env,ctx.user,"bulk_compensation",`${rewards.length?'Компенсация':'Уведомление'} «${template.title}» · ${ids.length} игроков`,payload);await logStaffAction(env,ctx.user,ctx.access,"owner_panel_bulk_compensation_request",null,"compensation",null,ids.length,{templateId,segmentKey,target,approvalId,customHighImpact});return {ok:true,approvalRequired:true,approvalId,count:ids.length};}
+  if(hasLegendary||ids.length>250||(customHighImpact&&ids.length>1)){
+    // The owner is the final authority for Control Center compensations. The
+    // owner's own typed confirmation above is sufficient; a second staff
+    // member is required only for non-owner administrators.
+    if(ctx.access?.owner){
+      const campaignIds=await ownerV85QueueCompensationCampaigns(env,ctx.user,ids,payload);
+      await logStaffAction(env,ctx.user,ctx.access,"owner_panel_bulk_compensation",null,"compensation",null,ids.length,{campaignIds,templateId,count:ids.length,segmentKey,target,reason,ownerDirect:true,highImpact:true,hasLegendary,customHighImpact});
+      ownerV85CacheInvalidate("compensations");
+      return {ok:true,count:ids.length,campaignIds,ownerDirect:true};
+    }
+    const approvalId=await requestDangerousAction(env,ctx.user,"bulk_compensation",`${rewards.length?'Компенсация':'Уведомление'} «${template.title}» · ${ids.length} игроков`,payload);
+    await logStaffAction(env,ctx.user,ctx.access,"owner_panel_bulk_compensation_request",null,"compensation",null,ids.length,{templateId,segmentKey,target,approvalId,customHighImpact});
+    return {ok:true,approvalRequired:true,approvalId,count:ids.length};
+  }
   const campaignIds=await ownerV85QueueCompensationCampaigns(env,ctx.user,ids,payload);await logStaffAction(env,ctx.user,ctx.access,"owner_panel_bulk_compensation",null,"compensation",null,ids.length,{campaignIds,templateId,count:ids.length,segmentKey,target,reason});ownerV85CacheInvalidate("compensations");return {ok:true,count:ids.length,campaignIds};
 }
 
