@@ -2596,9 +2596,9 @@ img[src$="/xp.webp"]{
         <img class="overflow-art" src="/assets/cases/gold_closed.png" alt="Золотой кейс">
         <div class="overflow-copy">
           <strong>50+ / ∞ · Бесконечная дорожка</strong>
-          <p><b>Доступна всем игрокам:</b> бесплатному тарифу, Элитному и Элитному+. После полного 50 уровня каждые <b id="overflowStepLabel">5 000 XP</b> открывают ещё один Золотой кейс.</p>
+          <p><b>Доступна всем игрокам:</b> бесплатному тарифу, Элитному и Элитному+. После полного 50 уровня каждые <b id="overflowStepLabel">1 500 XP</b> открывают ещё один Золотой кейс.</p>
           <div class="overflow-track"><i id="overflowFill"></i></div>
-          <div class="overflow-meta"><span id="overflowProgress">Откроется после 50 уровня</span><span id="overflowEarned">5 000 XP за кейс</span></div>
+          <div class="overflow-meta"><span id="overflowProgress">Откроется после 50 уровня</span><span id="overflowEarned">1 500 XP за кейс</span></div>
         </div>
         <button class="overflow-claim" id="claimOverflow" type="button" disabled>Откроется после полного 50 уровня</button>
       </section>
@@ -2812,7 +2812,7 @@ img[src$="/xp.webp"]{
   const STORY_TEST_OPEN_PATH = "/api/battle-pass/story/test/open";
   const SEASONAL_CASE_OPEN_PATH = "/api/battle-pass/seasonal-case/open";
   const MAX_LEVEL = 50;
-  const DEFAULT_OVERFLOW_STEP_XP = 5000;
+  const DEFAULT_OVERFLOW_STEP_XP = 1500;
 
   let lastPassHapticAt = 0;
   function passHaptic(kind = "selection", value = "", minInterval = 0) {
@@ -2975,8 +2975,8 @@ img[src$="/xp.webp"]{
     window.setTimeout(applySeasonPassViewport, 650);
   }
   const LEVEL_XP = Array.from({length:MAX_LEVEL},(_,index)=>{
-    const level = index + 1;
-    return Math.max(300,Math.round((300 + 0.05 * Math.pow(level,3.1))/50)*50);
+    const progress = index / Math.max(1,MAX_LEVEL - 1);
+    return Math.max(300,Math.round((300 + 3200 * Math.pow(progress,1.7))/50)*50);
   });
   const LEVEL_START_XP = [0];
   for (let level=1;level<=MAX_LEVEL;level++) {
@@ -4877,7 +4877,7 @@ img[src$="/xp.webp"]{
 <script type="application/json" id="zefirok-v060-ended-task-state">{"version":"6.0 RC.1","changes":["ended_season_tasks_hidden","claim_window_explanation","task_claim_badge_suppressed"]}</script>
 <script type="application/json" id="zefirok-v060-season-force-close">{"version":"6.0 RC.1","changes":["forced_season_close_gate","next_season_countdown_lock","no_claim_grace","immediate_progress_and_purchase_reset","owner_preview_block","no_manual_unlock"]}</script>
 <script type="application/json" id="zefirok-v1001-season-pass-fast-open-audit">{"build":"1.0.6","fixes":["single-request-access-state-bootstrap","skip-duplicate-state-roundtrip"]}</script>
-<script type="application/json" id="zefirok-season-pass-balance-v2">{"version":"1.3.0","level50StartXp":123000,"level50CompleteXp":132550,"overflowStepXp":5000,"overflowAvailableToAll":true,"fairEarnedXpRecalc":"v3","elitePlusTaskXpMultiplier":2,"catchUp":{"windowDays":7,"belowLevel":35,"multiplier":2,"stacksWithPremium":false}}</script>
+<script type="application/json" id="zefirok-season-pass-balance-v4">{"version":"1.4.0","curve":"smooth-50","level1Xp":300,"level50Xp":3500,"level50StartXp":71200,"level50CompleteXp":74700,"overflowStepXp":1500,"overflowAvailableToAll":true,"existingXpPolicy":"keep_raw_xp_never_reduce","fairEarnedXpRecalc":"v3","elitePlusTaskXpMultiplier":2,"catchUp":{"windowDays":7,"belowLevel":35,"multiplier":2,"stacksWithPremium":false}}</script>
 <script type="application/json" id="zefirok-season-pass-letter-case-v1">{"version":"1.0","features":["level_letter","seasonal_case_inventory","seasonal_case_open"]}</script>
 <!-- zefirok-season-story-player-v1 -->
 </body>
