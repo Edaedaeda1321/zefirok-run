@@ -9193,6 +9193,98 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 &lt;button aria-label=&quot;Награды&quot; aria-selected=&quot;true&quot; data-shop-mode=&quot;rewards&quot; role=&quot;tab&quot; type=&quot;button&quot;&gt;&lt;img alt=&quot;&quot; data-shop-img=&quot;rewardsTabButton&quot;/&gt;&lt;/button&gt;
 &lt;button aria-label=&quot;Скины&quot; aria-selected=&quot;false&quot; data-shop-mode=&quot;skins&quot; role=&quot;tab&quot; type=&quot;button&quot;&gt;&lt;img alt=&quot;&quot; data-shop-img=&quot;skinsTabButton&quot;/&gt;&lt;/button&gt;
 &lt;/div&gt;
+&lt;style id=&quot;zefirok-rewards-v2&quot;&gt;
+#zefirok-maltipoo-runner [data-shop-panel=&quot;rewards&quot;] &gt; .shop-list,
+#zefirok-maltipoo-runner [data-shop-panel=&quot;rewards&quot;] &gt; .shop-preview{display:none!important}
+#zefirok-maltipoo-runner .rewards-v2{display:grid;gap:11px}
+#zefirok-maltipoo-runner .rewards-v2-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;padding:2px 2px 0}
+#zefirok-maltipoo-runner .rewards-v2-heading&gt;div{display:grid;gap:3px;min-width:0}
+#zefirok-maltipoo-runner .rewards-v2-heading strong{color:#69364b;font-size:18px;line-height:1.08;font-weight:950}
+#zefirok-maltipoo-runner .rewards-v2-heading span:not(.rewards-v2-kicker){color:#987785;font-size:10px;line-height:1.4}
+#zefirok-maltipoo-runner .rewards-v2-kicker{flex:0 0 auto;padding:6px 8px;border:1px solid rgba(226,120,157,.38);border-radius:999px;background:#ffe8f0;color:#b84d76;font-size:8px;font-weight:950;letter-spacing:.06em;white-space:nowrap}
+#zefirok-maltipoo-runner .rewards-v2-featured{position:relative;display:grid;grid-template-columns:42% minmax(0,1fr);min-height:198px;overflow:hidden;border:1px solid rgba(219,169,69,.66);border-radius:24px;background:linear-gradient(145deg,#fff9ed,#fff0d6 56%,#fff8f2);box-shadow:0 14px 30px rgba(122,77,36,.10)}
+#zefirok-maltipoo-runner .rewards-v2-featured-art{position:relative;display:grid;place-items:center;min-height:198px;overflow:hidden;background:radial-gradient(circle at 50% 42%,rgba(255,255,255,.98),rgba(255,238,184,.78) 38%,rgba(249,194,91,.30) 72%,rgba(226,151,55,.12));border-right:1px solid rgba(227,186,100,.38)}
+#zefirok-maltipoo-runner .rewards-v2-featured-art::before{content:&quot;&quot;;position:absolute;inset:12px;border-radius:999px;background:radial-gradient(circle,rgba(255,255,255,.68),transparent 63%);filter:blur(4px)}
+#zefirok-maltipoo-runner .rewards-v2-featured-art img{position:relative;z-index:1;width:88%;height:176px;object-fit:contain;filter:drop-shadow(0 12px 13px rgba(111,64,35,.18))}
+#zefirok-maltipoo-runner .rewards-v2-featured-copy{padding:13px 12px 12px;display:flex;flex-direction:column;gap:7px;justify-content:center;min-width:0;background:linear-gradient(115deg,rgba(255,255,255,.70),rgba(255,250,239,.94))}
+#zefirok-maltipoo-runner .rewards-v2-featured-badge{align-self:flex-start;padding:5px 8px;border-radius:999px;background:linear-gradient(135deg,#f49bc0,#e5a237);color:#fff;font-size:8px;font-weight:950;letter-spacing:.05em;text-transform:uppercase}
+#zefirok-maltipoo-runner .rewards-v2-featured h3{margin:0;color:#633146;font-size:21px;line-height:1.05}
+#zefirok-maltipoo-runner .rewards-v2-featured-copy&gt;p{margin:0;color:#8f6d79;font-size:9px;line-height:1.42}
+#zefirok-maltipoo-runner .rewards-v2-case-chips{display:flex;flex-wrap:wrap;gap:4px}
+#zefirok-maltipoo-runner .rewards-v2-case-chip{padding:4px 6px;border:1px solid rgba(224,180,87,.38);border-radius:999px;background:rgba(255,255,255,.78);color:#836431;font-size:7.5px;font-weight:900;white-space:nowrap}
+#zefirok-maltipoo-runner .rewards-v2-actions{display:grid;grid-template-columns:minmax(0,.95fr) minmax(0,1.05fr);align-items:stretch;gap:7px;margin-top:1px;width:100%;min-width:0}
+#zefirok-maltipoo-runner .rewards-v2-actions button{width:100%;min-width:0;border-radius:12px;font:900 8.5px/1 inherit;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#zefirok-maltipoo-runner .rewards-v2-actions .rewards-v2-secondary{min-height:38px;padding:7px 8px}
+#zefirok-maltipoo-runner .rewards-v2-actions .rewards-v2-primary{min-height:38px;padding:7px 8px}
+#zefirok-maltipoo-runner .rewards-v2-secondary{border:1px solid rgba(221,173,190,.66);background:#fff;color:#99516b}
+#zefirok-maltipoo-runner .rewards-v2-primary{border:0;background:linear-gradient(180deg,#ed8ab1,#dc5f90);color:#fff;box-shadow:0 8px 17px rgba(206,84,130,.18)}
+#zefirok-maltipoo-runner .rewards-v2-primary.is-unaffordable{background:linear-gradient(180deg,#f3b5cb,#e895b5);box-shadow:none}
+#zefirok-maltipoo-runner .rewards-v2-stock{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+#zefirok-maltipoo-runner .rewards-v2-stock-card{min-width:0;padding:8px 9px;border:1px solid rgba(227,196,180,.72);border-radius:15px;background:rgba(255,255,255,.86);display:grid;gap:2px;color:#896e77}
+#zefirok-maltipoo-runner .rewards-v2-stock-card span{font-size:7.5px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#zefirok-maltipoo-runner .rewards-v2-stock-card strong{color:#6d3d50;font-size:13px;line-height:1.05}
+#zefirok-maltipoo-runner button.rewards-v2-stock-card{cursor:pointer;text-align:left;font-family:inherit}
+#zefirok-maltipoo-runner button.rewards-v2-stock-card strong{color:#bd5079}
+#zefirok-maltipoo-runner .rewards-v2-controls{display:flex;align-items:center;justify-content:space-between;gap:8px}
+#zefirok-maltipoo-runner .rewards-v2-filters{display:flex;gap:6px;overflow:auto;padding:1px 1px 3px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+#zefirok-maltipoo-runner .rewards-v2-filters::-webkit-scrollbar{display:none}
+#zefirok-maltipoo-runner .rewards-v2-filters button{flex:0 0 auto;min-height:31px;padding:6px 11px;border:1px solid rgba(220,174,190,.62);border-radius:999px;background:#fff;color:#946b7a;font:900 9px/1 inherit;white-space:nowrap}
+#zefirok-maltipoo-runner .rewards-v2-filters button[aria-selected=&quot;true&quot;]{border-color:#dc6b97;background:linear-gradient(180deg,#ffeaf2,#ffdce9);color:#ad416b;box-shadow:0 5px 11px rgba(192,74,117,.11)}
+#zefirok-maltipoo-runner .rewards-v2-grid{display:grid;gap:11px}
+#zefirok-maltipoo-runner .rewards-v2-card{position:relative;display:grid;grid-template-columns:112px minmax(0,1fr);gap:10px;min-height:162px;padding:10px;border:1px solid rgba(225,190,178,.80);border-radius:23px;background:rgba(255,255,255,.92);box-shadow:0 9px 21px rgba(109,61,75,.07);overflow:hidden}
+#zefirok-maltipoo-runner .rewards-v2-card.is-case-small{border-color:rgba(224,188,197,.72)}
+#zefirok-maltipoo-runner .rewards-v2-card.is-case-sweet{border-color:rgba(177,190,210,.78);background:linear-gradient(145deg,#fff,#f7f9ff)}
+#zefirok-maltipoo-runner .rewards-v2-card.is-case-gold{border-color:rgba(225,177,72,.74);background:linear-gradient(145deg,#fffdf7,#fff8df)}
+#zefirok-maltipoo-runner .rewards-v2-card.is-case-mythic{border-color:rgba(190,130,211,.72);background:linear-gradient(145deg,#fffafe,#fbf2ff)}
+#zefirok-maltipoo-runner .rewards-v2-card.is-case-legendary{border-color:rgba(219,157,49,.88);background:linear-gradient(145deg,#fffdf4,#fff5d8);box-shadow:0 11px 25px rgba(188,125,29,.12)}
+#zefirok-maltipoo-runner .rewards-v2-art{position:relative;min-height:142px;border-radius:18px;display:grid;place-items:center;overflow:hidden;background:linear-gradient(180deg,#fff7f8,#fff1e5)}
+#zefirok-maltipoo-runner .rewards-v2-card.is-cafe .rewards-v2-art{background:radial-gradient(circle at 50% 42%,#fff,#fff4ee 58%,#ffe9ef)}
+#zefirok-maltipoo-runner .rewards-v2-card.is-case-small .rewards-v2-art{background:radial-gradient(circle,#fff,#ffeef2 65%,#f8dbe4)}
+#zefirok-maltipoo-runner .rewards-v2-card.is-case-sweet .rewards-v2-art{background:radial-gradient(circle,#fff,#eef5ff 62%,#d9e5f6)}
+#zefirok-maltipoo-runner .rewards-v2-card.is-case-gold .rewards-v2-art{background:radial-gradient(circle,#fffdf2,#fff0bc 62%,#efd078)}
+#zefirok-maltipoo-runner .rewards-v2-card.is-case-mythic .rewards-v2-art{background:radial-gradient(circle,#fff,#f7eaff 54%,#e2c3f0)}
+#zefirok-maltipoo-runner .rewards-v2-card.is-case-legendary .rewards-v2-art{background:radial-gradient(circle,#fffdf5,#ffe6a8 50%,#e8b24b)}
+#zefirok-maltipoo-runner .rewards-v2-art::after{content:&quot;&quot;;position:absolute;left:14%;right:14%;bottom:9px;height:20px;border-radius:50%;background:radial-gradient(ellipse,rgba(255,255,255,.9),rgba(222,167,78,.25) 55%,transparent 72%)}
+#zefirok-maltipoo-runner .rewards-v2-card.is-cafe .rewards-v2-art::after{background:radial-gradient(ellipse,rgba(255,255,255,.92),rgba(226,142,171,.17) 55%,transparent 72%)}
+#zefirok-maltipoo-runner .rewards-v2-art img{position:relative;z-index:1;width:92%;height:132px;object-fit:contain;filter:drop-shadow(0 9px 10px rgba(87,53,55,.15))}
+#zefirok-maltipoo-runner .rewards-v2-copy{display:flex;flex-direction:column;gap:6px;min-width:0}
+#zefirok-maltipoo-runner .rewards-v2-title-row{display:flex;align-items:center;justify-content:space-between;gap:7px;min-width:0}
+#zefirok-maltipoo-runner .rewards-v2-title-row h3{margin:0;color:#673448;font-size:17px;line-height:1.05;min-width:0}
+#zefirok-maltipoo-runner .rewards-v2-type{flex:0 0 auto;padding:4px 6px;border-radius:999px;background:#fff0f4;color:#b05274;font-size:7px;font-weight:950;white-space:nowrap}
+#zefirok-maltipoo-runner .is-case-sweet .rewards-v2-type{background:#eef5ff;color:#6382a8}.is-case-gold .rewards-v2-type{background:#fff1c7;color:#987026}.is-case-mythic .rewards-v2-type{background:#f4e8ff;color:#9560aa}.is-case-legendary .rewards-v2-type{background:#fff0bd;color:#946619}
+#zefirok-maltipoo-runner .rewards-v2-description{margin:0;color:#94747f;font-size:8.5px;line-height:1.38}
+#zefirok-maltipoo-runner .rewards-v2-note{display:flex;align-items:center;gap:5px;color:#a36b7f;font-size:8px;font-weight:850;line-height:1.25}
+#zefirok-maltipoo-runner .rewards-v2-note b{font-size:12px}
+#zefirok-maltipoo-runner .rewards-v2-prices{display:flex;flex-wrap:wrap;gap:4px}
+#zefirok-maltipoo-runner .rewards-v2-price{display:inline-flex;align-items:center;gap:3px;padding:4px 6px;border:1px solid rgba(226,196,184,.72);border-radius:999px;background:#fff;color:#785d66;font-size:8px;font-weight:900;white-space:nowrap}
+#zefirok-maltipoo-runner .rewards-v2-price img{width:14px;height:14px;object-fit:contain}
+#zefirok-maltipoo-runner .rewards-v2-progress{display:grid;gap:4px}
+#zefirok-maltipoo-runner .rewards-v2-progress-row{display:grid;grid-template-columns:15px minmax(0,1fr) auto;gap:5px;align-items:center}
+#zefirok-maltipoo-runner .rewards-v2-progress-row&gt;img{width:14px;height:14px;object-fit:contain}
+#zefirok-maltipoo-runner .rewards-v2-progress-track{display:grid;gap:2px;min-width:0}
+#zefirok-maltipoo-runner .rewards-v2-progress-track span{font-size:7px;color:#92717d;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#zefirok-maltipoo-runner .rewards-v2-progress-track i{display:block;height:4px;border-radius:99px;background:#f1e7ea;overflow:hidden}
+#zefirok-maltipoo-runner .rewards-v2-progress-track i b{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#ed8bae,#d85c8c)}
+#zefirok-maltipoo-runner .rewards-v2-progress-row&gt;strong{font-size:7px;color:#b45978;white-space:nowrap}
+#zefirok-maltipoo-runner .rewards-v2-progress-row.is-ready&gt;strong{color:#6f9254}
+#zefirok-maltipoo-runner .rewards-v2-progress-row.is-ready .rewards-v2-progress-track i b{background:linear-gradient(90deg,#b7d47c,#7fb65c)}
+#zefirok-maltipoo-runner .rewards-v2-card-actions{display:flex;align-items:center;gap:6px;margin-top:auto}
+#zefirok-maltipoo-runner .rewards-v2-card-actions button{border-radius:12px;font:900 8.5px/1 inherit}
+#zefirok-maltipoo-runner .rewards-v2-card-actions .rewards-v2-secondary{flex:0 0 auto;min-height:30px;padding:6px 9px;white-space:nowrap}
+#zefirok-maltipoo-runner .rewards-v2-card-actions .rewards-v2-primary{flex:1 1 auto;min-height:35px;padding:6px 9px}
+#zefirok-maltipoo-runner .rewards-v2-card-actions.is-single .rewards-v2-primary{flex:1 1 100%;width:100%}
+#zefirok-maltipoo-runner .rewards-v2-owned{display:inline-flex;align-items:center;gap:4px;color:#8a6a35;font-size:7.5px;font-weight:900}
+#zefirok-maltipoo-runner .rewards-v2-empty{padding:22px 15px;border:1px dashed rgba(218,168,188,.72);border-radius:18px;background:#fffafd;text-align:center;color:#936d7b;font-size:10px;line-height:1.45}
+@media(max-width:390px){
+#zefirok-maltipoo-runner .rewards-v2-featured{grid-template-columns:39% minmax(0,1fr);min-height:188px}
+#zefirok-maltipoo-runner .rewards-v2-featured-art{min-height:188px}
+#zefirok-maltipoo-runner .rewards-v2-featured-art img{height:166px}
+#zefirok-maltipoo-runner .rewards-v2-card{grid-template-columns:102px minmax(0,1fr);padding:9px;gap:8px}
+#zefirok-maltipoo-runner .rewards-v2-art{min-height:138px}
+#zefirok-maltipoo-runner .rewards-v2-art img{height:126px}
+#zefirok-maltipoo-runner .rewards-v2-title-row h3{font-size:16px}
+}
+&lt;/style&gt;
 &lt;div class=&quot;shop-panel&quot; data-shop-panel=&quot;rewards&quot;&gt;
 &lt;div class=&quot;wallet&quot;&gt;
 &lt;div class=&quot;wallet-chip&quot;&gt;
@@ -9207,6 +9299,22 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 &lt;img alt=&quot;&quot; data-shop-img=&quot;shopCoffee&quot;/&gt;
 &lt;div&gt;&lt;span&gt;Кофе&lt;/span&gt;&lt;strong&gt;&lt;span data-coffee-wallet=&quot;&quot;&gt;0&lt;/span&gt; шт.&lt;/strong&gt;&lt;/div&gt;
 &lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;rewards-v2&quot; data-rewards-v2&gt;
+  &lt;div class=&quot;rewards-v2-heading&quot;&gt;
+    &lt;span class=&quot;rewards-v2-kicker&quot;&gt;НАГРАДЫ&lt;/span&gt;
+    &lt;div&gt;&lt;strong&gt;Витрина наград&lt;/strong&gt;&lt;span&gt;Сладости из кафе и постоянные кейсы — теперь в одной понятной витрине.&lt;/span&gt;&lt;/div&gt;
+  &lt;/div&gt;
+  &lt;div class=&quot;rewards-v2-featured&quot; data-rewards-v2-featured aria-live=&quot;polite&quot;&gt;&lt;/div&gt;
+  &lt;div class=&quot;rewards-v2-stock&quot; data-rewards-v2-stock-summary aria-live=&quot;polite&quot;&gt;&lt;/div&gt;
+  &lt;div class=&quot;rewards-v2-controls&quot; data-rewards-v2-controls&gt;
+    &lt;div class=&quot;rewards-v2-filters&quot; role=&quot;tablist&quot; aria-label=&quot;Фильтр наград&quot;&gt;
+      &lt;button type=&quot;button&quot; data-rewards-v2-filter=&quot;all&quot; aria-selected=&quot;true&quot;&gt;Все&lt;/button&gt;
+      &lt;button type=&quot;button&quot; data-rewards-v2-filter=&quot;cafe&quot; aria-selected=&quot;false&quot;&gt;В кафе&lt;/button&gt;
+      &lt;button type=&quot;button&quot; data-rewards-v2-filter=&quot;cases&quot; aria-selected=&quot;false&quot;&gt;Кейсы&lt;/button&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+  &lt;div class=&quot;rewards-v2-grid&quot; data-rewards-v2-grid aria-live=&quot;polite&quot;&gt;&lt;/div&gt;
 &lt;/div&gt;
 &lt;div aria-live=&quot;polite&quot; class=&quot;shop-list&quot;&gt;
 &lt;article class=&quot;shop-card is-active&quot; data-shop-card=&quot;zefir&quot;&gt;
@@ -9891,6 +9999,13 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       const previewHeroEl = root.querySelector(&quot;[data-preview-hero]&quot;);
       const previewCostImageEl = root.querySelector(&quot;[data-preview-cost-image]&quot;);
       const previewCostTitleEl = root.querySelector(&quot;[data-preview-cost-title]&quot;);
+      const rewardsV2RootEl = root.querySelector(&quot;[data-rewards-v2]&quot;);
+      const rewardsV2FeaturedEl = root.querySelector(&quot;[data-rewards-v2-featured]&quot;);
+      const rewardsV2StockSummaryEl = root.querySelector(&quot;[data-rewards-v2-stock-summary]&quot;);
+      const rewardsV2ControlsEl = root.querySelector(&quot;[data-rewards-v2-controls]&quot;);
+      const rewardsV2GridEl = root.querySelector(&quot;[data-rewards-v2-grid]&quot;);
+      let rewardsV2Filter = &quot;all&quot;;
+      let rewardsV2RenderSignature = &quot;&quot;;
       const skinsGridEl = root.querySelector(&quot;[data-skins-grid]&quot;);
       const skinsFeaturedEl = root.querySelector(&quot;[data-skins-featured]&quot;);
       const skinsCollectionEl = root.querySelector(&quot;[data-skins-collection]&quot;);
@@ -13995,7 +14110,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           button.classList.toggle(&quot;is-unaffordable&quot;, enabled &amp;&amp; !affordable);
         }
         const shopScreen = CLIENT_OPT_DOM_CACHE ? shopScreenEl : root.querySelector(&#x27;[data-screen=&quot;shop&quot;]&#x27;);
-        if (shopScreen &amp;&amp; !shopScreen.hidden) updateShopPreview();
+        if (shopScreen &amp;&amp; !shopScreen.hidden) { updateShopPreview(); renderRewardsShopV2(); }
         const profileScreen = CLIENT_OPT_DOM_CACHE ? profileScreenEl : root.querySelector(&#x27;[data-screen=&quot;profile&quot;]&#x27;);
         if (profileScreen &amp;&amp; !profileScreen.hidden) renderProfile();
         else updateProfileCaseBadges();
@@ -18691,7 +18806,8 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       }
 
       function syncWarehouseFilterButtons() {
-        for (const button of warehouseFilterButtons) {
+        if (rewardsV2RootEl) rewardsV2RootEl.addEventListener(&quot;click&quot;, handleRewardsV2Click);
+      for (const button of warehouseFilterButtons) {
           button.setAttribute(&quot;aria-pressed&quot;, String(button.dataset.warehouseFilter === warehouseFilter));
         }
       }
@@ -18974,24 +19090,25 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       function showPurchaseConfirmation(purchase, missing = []) {
         const productImage = assetSources[purchase.product.image] || &quot;&quot;;
         const isCasePurchase = purchase.product.kind === &quot;case&quot;;
+        const isFreePurchase = Number(purchase.cost || 0) &lt;= 0 &amp;&amp; Number(purchase.treatCost || 0) &lt;= 0 &amp;&amp; Number(purchase.coffeeCost || 0) &lt;= 0;
         const missingMarkup = missing.length &gt; 0
           ? `&lt;div class=&quot;purchase-balance-warning&quot;&gt;Не хватает: ${escapePurchaseText(missing.join(&quot; и &quot;))}.&lt;/div&gt;`
           : &quot;&quot;;
         const disabledAttribute = missing.length &gt; 0 ? &#x27; disabled aria-disabled=&quot;true&quot;&#x27; : &quot;&quot;;
         const warningMarkup = isCasePurchase
-          ? `&lt;div class=&quot;purchase-warning&quot;&gt;&lt;strong&gt;Кейс появится сразу&lt;/strong&gt;&lt;span&gt;После покупки он будет добавлен в профиль, в раздел «Склад кейсов».&lt;/span&gt;&lt;/div&gt;`
-          : `&lt;div class=&quot;purchase-warning&quot;&gt;&lt;strong&gt;Код действует 24 часа&lt;/strong&gt;&lt;span&gt;После подтверждения вы получите одноразовый код для этой покупки.&lt;/span&gt;&lt;/div&gt;`;
+          ? `&lt;div class=&quot;purchase-warning&quot;&gt;&lt;strong&gt;Кейс появится сразу&lt;/strong&gt;&lt;span&gt;После ${isFreePurchase ? &quot;получения&quot; : &quot;покупки&quot;} он будет добавлен в профиль, в раздел «Склад кейсов».&lt;/span&gt;&lt;/div&gt;`
+          : `&lt;div class=&quot;purchase-warning&quot;&gt;&lt;strong&gt;Код действует 24 часа&lt;/strong&gt;&lt;span&gt;После подтверждения вы получите одноразовый код для этой награды.&lt;/span&gt;&lt;/div&gt;`;
         openPurchaseLayer(`
-          &lt;span class=&quot;purchase-kicker&quot;&gt;Подтверждение покупки&lt;/span&gt;
+          &lt;span class=&quot;purchase-kicker&quot;&gt;${isFreePurchase ? &quot;Бесплатная награда&quot; : &quot;Подтверждение покупки&quot;}&lt;/span&gt;
           &lt;img class=&quot;purchase-product-image&quot; alt=&quot;${escapePurchaseText(purchase.product.title)}&quot; src=&quot;${productImage}&quot;&gt;
           &lt;h2 id=&quot;purchase-dialog-title&quot;&gt;${escapePurchaseText(purchase.product.title)}&lt;/h2&gt;
-          &lt;p&gt;Подтвердите списание наград с вашего игрового баланса.&lt;/p&gt;
+          &lt;p&gt;${isFreePurchase ? &quot;Подтвердите получение награды. Игровой баланс не изменится.&quot; : &quot;Подтвердите списание наград с вашего игрового баланса.&quot;}&lt;/p&gt;
           &lt;div class=&quot;purchase-costs&quot;&gt;${purchaseCostRowsMarkup(purchase)}&lt;/div&gt;
           ${warningMarkup}
           ${missingMarkup}
           &lt;div class=&quot;purchase-actions&quot;&gt;
             &lt;button class=&quot;purchase-action&quot; data-purchase-cancel type=&quot;button&quot;&gt;Отмена&lt;/button&gt;
-            &lt;button class=&quot;purchase-action purchase-action--confirm&quot; data-purchase-confirm type=&quot;button&quot;${disabledAttribute}&gt;Да, списать&lt;/button&gt;
+            &lt;button class=&quot;purchase-action purchase-action--confirm&quot; data-purchase-confirm type=&quot;button&quot;${disabledAttribute}&gt;${isFreePurchase ? &quot;Получить&quot; : &quot;Да, списать&quot;}&lt;/button&gt;
           &lt;/div&gt;
         `, missing.length &gt; 0 ? &quot;[data-purchase-cancel]&quot; : &quot;[data-purchase-confirm]&quot;);
       }
@@ -19005,7 +19122,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           &lt;p&gt;Кейс добавлен в профиль и уже находится в разделе «Склад кейсов».&lt;/p&gt;
           &lt;div class=&quot;purchase-warning&quot;&gt;&lt;strong&gt;Можно открыть в любое время&lt;/strong&gt;&lt;span&gt;Нажмите на изображение кейса в профиле, чтобы ещё раз посмотреть награды и шансы.&lt;/span&gt;&lt;/div&gt;
           &lt;div class=&quot;purchase-actions&quot;&gt;
-            &lt;button class=&quot;purchase-action&quot; data-case-info-type=&quot;${escapePurchaseText(purchase.product.caseType || &quot;small&quot;)}&quot; type=&quot;button&quot;&gt;Награды и шансы&lt;/button&gt;
+            &lt;button class=&quot;purchase-action&quot; data-case-info-type=&quot;${escapePurchaseText(purchase.product.caseType || &quot;small&quot;)}&quot; type=&quot;button&quot;&gt;Состав и шансы&lt;/button&gt;
             &lt;button class=&quot;purchase-action purchase-action--done&quot; data-purchase-close type=&quot;button&quot;&gt;Готово&lt;/button&gt;
           &lt;/div&gt;
         `, &quot;[data-purchase-close]&quot;);
@@ -19243,6 +19360,205 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           previewBuyBtn.classList.toggle(&quot;is-unaffordable&quot;, enabled &amp;&amp; !affordable);
         }
         fitNumericUI();
+      }
+
+      function rewardsV2ProductGroup(id, product) {
+        return product?.kind === &quot;case&quot; || String(id || &quot;&quot;).startsWith(&quot;case-&quot;) ? &quot;cases&quot; : &quot;cafe&quot;;
+      }
+
+      function rewardsV2CaseMeta(caseType) {
+        const type = String(caseType || &quot;small&quot;);
+        const table = {
+          small: { label: &quot;Обычный&quot;, className: &quot;small&quot;, chips: [&quot;Ресурсы&quot;, &quot;Усилители&quot;, &quot;Косметика&quot;] },
+          sweet: { label: &quot;Серебряный&quot;, className: &quot;sweet&quot;, chips: [&quot;Улучшенные шансы&quot;, &quot;Ресурсы&quot;, &quot;Косметика&quot;] },
+          gold: { label: &quot;Золотой&quot;, className: &quot;gold&quot;, chips: [&quot;Ценные награды&quot;, &quot;Усилители&quot;, &quot;Косметика&quot;] },
+          mythic: { label: &quot;Мифический&quot;, className: &quot;mythic&quot;, chips: [&quot;Эпическая+&quot;, &quot;Мифическая&quot;, &quot;Легендарная&quot;] },
+          legendary: { label: &quot;Легендарный&quot;, className: &quot;legendary&quot;, chips: [&quot;Скины&quot;, &quot;Аватарки&quot;, &quot;Следы&quot;, &quot;Музыка&quot;] }
+        };
+        return table[type] || table.small;
+      }
+
+      function rewardsV2ResourceRows(product) {
+        const rows = [
+          { key: &quot;points&quot;, need: sanitizeGameNumber(product?.points), have: sanitizeGameNumber(state.wallet), image: assetSources.shopStar || &quot;&quot;, label: &quot;очков&quot; },
+          { key: &quot;treats&quot;, need: sanitizeGameNumber(product?.treats), have: sanitizeGameNumber(state.treats), image: assetSources.iconTreatPanel || assetSources.shopMarshmallow || &quot;&quot;, label: &quot;зефира&quot; },
+          { key: &quot;coffee&quot;, need: sanitizeGameNumber(product?.coffee), have: sanitizeGameNumber(state.coffee), image: assetSources.shopCoffee || &quot;&quot;, label: &quot;кофе&quot; }
+        ];
+        return rows.filter((row) =&gt; row.need &gt; 0);
+      }
+
+      function rewardsV2PricesMarkup(product) {
+        const rows = rewardsV2ResourceRows(product);
+        if (!rows.length) return `&lt;span class=&quot;rewards-v2-price&quot;&gt;Бесплатно&lt;/span&gt;`;
+        return rows.map((row) =&gt; `&lt;span class=&quot;rewards-v2-price&quot;&gt;&lt;img src=&quot;${escapePurchaseText(row.image)}&quot; alt=&quot;&quot;&gt;${formatter.format(row.need)} ${row.label}&lt;/span&gt;`).join(&quot;&quot;);
+      }
+
+      function rewardsV2ProgressMarkup(product) {
+        return `&lt;div class=&quot;rewards-v2-progress&quot;&gt;${rewardsV2ResourceRows(product).map((row) =&gt; {
+          const pct = row.need &gt; 0 ? Math.max(0, Math.min(100, Math.floor((row.have / row.need) * 100))) : 100;
+          const ready = row.have &gt;= row.need;
+          return `&lt;div class=&quot;rewards-v2-progress-row${ready ? &quot; is-ready&quot; : &quot;&quot;}&quot;&gt;&lt;img src=&quot;${escapePurchaseText(row.image)}&quot; alt=&quot;&quot;&gt;&lt;div class=&quot;rewards-v2-progress-track&quot;&gt;&lt;span&gt;${formatter.format(Math.min(row.have, row.need))} / ${formatter.format(row.need)} ${row.label}&lt;/span&gt;&lt;i&gt;&lt;b style=&quot;width:${pct}%&quot;&gt;&lt;/b&gt;&lt;/i&gt;&lt;/div&gt;&lt;strong&gt;${ready ? &quot;✓&quot; : `${pct}%`}&lt;/strong&gt;&lt;/div&gt;`;
+        }).join(&quot;&quot;)}&lt;/div&gt;`;
+      }
+
+      function rewardsV2Affordable(product) {
+        return Boolean(product &amp;&amp; product.enabled !== false &amp;&amp; state.wallet &gt;= sanitizeGameNumber(product.points) &amp;&amp; state.treats &gt;= sanitizeGameNumber(product.treats) &amp;&amp; state.coffee &gt;= sanitizeGameNumber(product.coffee));
+      }
+
+      function rewardsV2ActivePurchaseCodes() {
+        const now = Date.now();
+        return (Array.isArray(state.redemptionCodes) ? state.redemptionCodes : []).filter((entry) =&gt; entry &amp;&amp; entry.status === &quot;active&quot; &amp;&amp; (!Number(entry.expiresAt || 0) || Number(entry.expiresAt || 0) &gt; now)).length;
+      }
+
+      function rewardsV2GiftedCaseTotal() {
+        const gifted = state.caseGiftedCases &amp;&amp; typeof state.caseGiftedCases === &quot;object&quot; ? state.caseGiftedCases : {};
+        return [&quot;small&quot;,&quot;sweet&quot;,&quot;gold&quot;,&quot;mythic&quot;,&quot;legendary&quot;].reduce((sum, type) =&gt; sum + sanitizeGameNumber(gifted[type]), 0);
+      }
+
+      function rewardsV2PurchaseData(id, product) {
+        return {
+          id: String(id || &quot;&quot;),
+          product,
+          cost: sanitizeGameNumber(product?.points),
+          treatCost: sanitizeGameNumber(product?.treats),
+          coffeeCost: sanitizeGameNumber(product?.coffee)
+        };
+      }
+
+      function rewardsV2IsFree(product) {
+        const purchase = rewardsV2PurchaseData(&quot;&quot;, product);
+        return purchase.cost &lt;= 0 &amp;&amp; purchase.treatCost &lt;= 0 &amp;&amp; purchase.coffeeCost &lt;= 0;
+      }
+
+      function showRewardsV2ProductDetails(id) {
+        const product = shopProducts[String(id || &quot;&quot;)];
+        if (!product || product.enabled === false) return;
+        const purchase = rewardsV2PurchaseData(id, product);
+        const isCase = rewardsV2ProductGroup(id, product) === &quot;cases&quot;;
+        const isFree = rewardsV2IsFree(product);
+        const image = assetSources[product.image] || (isCase ? caseImageSource(product.caseType, false) : &quot;&quot;);
+        const owned = shopProductOwnedCount(id, product);
+        const contextMarkup = isCase
+          ? `&lt;div class=&quot;purchase-warning&quot;&gt;&lt;strong&gt;После получения — на склад&lt;/strong&gt;&lt;span&gt;${owned &gt; 0 ? `Сейчас у тебя уже ${formatter.format(owned)} шт.` : &quot;Кейс появится в «Моих покупках» → «Кейсы».&quot;}&lt;/span&gt;&lt;/div&gt;`
+          : `&lt;div class=&quot;purchase-warning&quot;&gt;&lt;strong&gt;Физическая награда&lt;/strong&gt;&lt;span&gt;После покупки одноразовый код появится в «Моих покупках» и будет действовать 24 часа.&lt;/span&gt;&lt;/div&gt;`;
+        openPurchaseLayer(`
+          &lt;span class=&quot;purchase-kicker&quot;&gt;${isCase ? &quot;Кейс&quot; : &quot;Награда из кафе&quot;}&lt;/span&gt;
+          &lt;img class=&quot;purchase-product-image&quot; alt=&quot;${escapePurchaseText(product.title)}&quot; src=&quot;${escapePurchaseText(image)}&quot;&gt;
+          &lt;h2 id=&quot;purchase-dialog-title&quot;&gt;${escapePurchaseText(product.title)}&lt;/h2&gt;
+          &lt;p&gt;${escapePurchaseText(product.description || &quot;&quot;)}&lt;/p&gt;
+          &lt;div class=&quot;purchase-costs&quot;&gt;${purchaseCostRowsMarkup(purchase)}&lt;/div&gt;
+          ${contextMarkup}
+          &lt;div class=&quot;purchase-actions purchase-actions--equal&quot;&gt;
+            &lt;button class=&quot;purchase-action&quot; data-purchase-close type=&quot;button&quot;&gt;Закрыть&lt;/button&gt;
+            &lt;button class=&quot;purchase-action purchase-action--confirm&quot; data-rewards-v2-detail-buy=&quot;${escapePurchaseText(id)}&quot; type=&quot;button&quot;&gt;${isFree ? &quot;Получить&quot; : &quot;Купить&quot;}&lt;/button&gt;
+          &lt;/div&gt;
+        `, &quot;[data-rewards-v2-detail-buy]&quot;);
+      }
+
+      function rewardsV2CardMarkup(id, product) {
+        const group = rewardsV2ProductGroup(id, product);
+        const isCase = group === &quot;cases&quot;;
+        const caseMeta = isCase ? rewardsV2CaseMeta(product.caseType) : null;
+        const owned = shopProductOwnedCount(id, product);
+        const affordable = rewardsV2Affordable(product);
+        const image = assetSources[product.image] || (isCase ? caseImageSource(product.caseType, false) : &quot;&quot;);
+        const typeLabel = isCase ? caseMeta.label : &quot;В кафе&quot;;
+        const cardClass = isCase ? `is-case-${caseMeta.className}` : &quot;is-cafe&quot;;
+        const note = isCase
+          ? `&lt;span class=&quot;rewards-v2-note&quot;&gt;&lt;b&gt;🎁&lt;/b&gt;${owned &gt; 0 ? `На складе: ${formatter.format(owned)}` : &quot;После покупки кейс сразу появится на складе&quot;}&lt;/span&gt;`
+          : `&lt;span class=&quot;rewards-v2-note&quot;&gt;&lt;b&gt;🧾&lt;/b&gt;${owned &gt; 0 ? `Куплено: ${formatter.format(owned)} · код ищи в «Моих покупках»` : &quot;После покупки проверяемый код появится в «Моих покупках»&quot;}&lt;/span&gt;`;
+        const secondary = isCase
+          ? `&lt;button class=&quot;rewards-v2-secondary&quot; type=&quot;button&quot; data-rewards-v2-case-info=&quot;${escapePurchaseText(product.caseType || &quot;small&quot;)}&quot;&gt;Состав и шансы&lt;/button&gt;`
+          : owned &gt; 0
+            ? `&lt;button class=&quot;rewards-v2-secondary&quot; type=&quot;button&quot; data-rewards-v2-stock=&quot;purchases&quot;&gt;Мои покупки&lt;/button&gt;`
+            : &quot;&quot;;
+        return `&lt;article class=&quot;rewards-v2-card ${cardClass}&quot; data-rewards-v2-card=&quot;${escapePurchaseText(id)}&quot;&gt;&lt;div class=&quot;rewards-v2-art&quot;&gt;&lt;img src=&quot;${escapePurchaseText(image)}&quot; alt=&quot;${escapePurchaseText(product.title || id)}&quot; loading=&quot;lazy&quot; decoding=&quot;async&quot;&gt;&lt;/div&gt;&lt;div class=&quot;rewards-v2-copy&quot;&gt;&lt;div class=&quot;rewards-v2-title-row&quot;&gt;&lt;h3&gt;${escapePurchaseText(product.title || id)}&lt;/h3&gt;&lt;span class=&quot;rewards-v2-type&quot;&gt;${escapePurchaseText(typeLabel)}&lt;/span&gt;&lt;/div&gt;&lt;p class=&quot;rewards-v2-description&quot;&gt;${escapePurchaseText(product.description || &quot;&quot;)}&lt;/p&gt;${note}&lt;div class=&quot;rewards-v2-prices&quot;&gt;${rewardsV2PricesMarkup(product)}&lt;/div&gt;${rewardsV2ProgressMarkup(product)}&lt;div class=&quot;rewards-v2-card-actions${secondary ? &quot;&quot; : &quot; is-single&quot;}&quot;&gt;${secondary}&lt;button class=&quot;rewards-v2-primary${affordable ? &quot;&quot; : &quot; is-unaffordable&quot;}&quot; type=&quot;button&quot; data-rewards-v2-buy=&quot;${escapePurchaseText(id)}&quot;&gt;${rewardsV2IsFree(product) ? &quot;Получить&quot; : &quot;Купить&quot;}&lt;/button&gt;&lt;/div&gt;&lt;/div&gt;&lt;/article&gt;`;
+      }
+
+      function renderRewardsV2Featured() {
+        if (!rewardsV2FeaturedEl) return;
+        const preferred = [&quot;case-legendary&quot;,&quot;case-mythic&quot;,&quot;case-gold&quot;].find((id) =&gt; shopProducts[id]?.enabled !== false &amp;&amp; shopProducts[id]);
+        if (!preferred) {
+          rewardsV2FeaturedEl.hidden = true;
+          rewardsV2FeaturedEl.innerHTML = &quot;&quot;;
+          return;
+        }
+        const product = shopProducts[preferred];
+        const meta = rewardsV2CaseMeta(product.caseType);
+        const image = assetSources[product.image] || caseImageSource(product.caseType, false);
+        const affordable = rewardsV2Affordable(product);
+        const owned = shopProductOwnedCount(preferred, product);
+        rewardsV2FeaturedEl.hidden = false;
+        rewardsV2FeaturedEl.innerHTML = `&lt;div class=&quot;rewards-v2-featured-art&quot;&gt;&lt;img src=&quot;${escapePurchaseText(image)}&quot; alt=&quot;${escapePurchaseText(product.title)}&quot;&gt;&lt;/div&gt;&lt;div class=&quot;rewards-v2-featured-copy&quot;&gt;&lt;span class=&quot;rewards-v2-featured-badge&quot;&gt;Рекомендуем · ${escapePurchaseText(meta.label)}&lt;/span&gt;&lt;h3&gt;${escapePurchaseText(product.title)}&lt;/h3&gt;&lt;div class=&quot;rewards-v2-case-chips&quot;&gt;${meta.chips.map((chip) =&gt; `&lt;span class=&quot;rewards-v2-case-chip&quot;&gt;${escapePurchaseText(chip)}&lt;/span&gt;`).join(&quot;&quot;)}&lt;/div&gt;&lt;div class=&quot;rewards-v2-prices&quot;&gt;${rewardsV2PricesMarkup(product)}&lt;/div&gt;&lt;p&gt;${owned &gt; 0 ? `У тебя уже есть: ${formatter.format(owned)}. Можно открыть со склада или купить ещё.` : &quot;Самый премиальный постоянный кейс магазина. После покупки сразу попадёт на склад.&quot;}&lt;/p&gt;&lt;div class=&quot;rewards-v2-actions&quot;&gt;&lt;button class=&quot;rewards-v2-secondary&quot; type=&quot;button&quot; data-rewards-v2-case-info=&quot;${escapePurchaseText(product.caseType)}&quot;&gt;Состав и шансы&lt;/button&gt;&lt;button class=&quot;rewards-v2-primary${affordable ? &quot;&quot; : &quot; is-unaffordable&quot;}&quot; type=&quot;button&quot; data-rewards-v2-buy=&quot;${escapePurchaseText(preferred)}&quot;&gt;${rewardsV2IsFree(product) ? &quot;Получить&quot; : &quot;Купить&quot;}&lt;/button&gt;&lt;/div&gt;&lt;/div&gt;`;
+      }
+
+      function renderRewardsV2StockSummary() {
+        if (!rewardsV2StockSummaryEl) return;
+        const totalCases = rewardsV2GiftedCaseTotal();
+        const activeCodes = rewardsV2ActivePurchaseCodes();
+        rewardsV2StockSummaryEl.innerHTML = `&lt;div class=&quot;rewards-v2-stock-card&quot;&gt;&lt;span&gt;Кейсов на складе&lt;/span&gt;&lt;strong&gt;${formatter.format(totalCases)}&lt;/strong&gt;&lt;/div&gt;&lt;div class=&quot;rewards-v2-stock-card&quot;&gt;&lt;span&gt;Активных покупок&lt;/span&gt;&lt;strong&gt;${formatter.format(activeCodes)}&lt;/strong&gt;&lt;/div&gt;&lt;button class=&quot;rewards-v2-stock-card&quot; type=&quot;button&quot; data-rewards-v2-stock=&quot;${totalCases &gt; 0 ? &quot;cases&quot; : &quot;purchases&quot;}&quot;&gt;&lt;span&gt;Перейти в&lt;/span&gt;&lt;strong&gt;Мои покупки →&lt;/strong&gt;&lt;/button&gt;`;
+      }
+
+      function renderRewardsShopV2() {
+        if (!rewardsV2RootEl || !rewardsV2GridEl) return;
+        const products = Object.entries(shopProducts).filter(([, product]) =&gt; product?.enabled !== false);
+        const visible = products.filter(([id, product]) =&gt; rewardsV2Filter === &quot;all&quot; || rewardsV2ProductGroup(id, product) === rewardsV2Filter);
+        const signature = JSON.stringify({
+          filter: rewardsV2Filter,
+          wallet: sanitizeGameNumber(state.wallet), treats: sanitizeGameNumber(state.treats), coffee: sanitizeGameNumber(state.coffee),
+          products: products.map(([id, p]) =&gt; [id, p.enabled !== false, p.points, p.treats, p.coffee, shopProductOwnedCount(id, p)]),
+          codes: rewardsV2ActivePurchaseCodes()
+        });
+        if (signature === rewardsV2RenderSignature) return;
+        rewardsV2RenderSignature = signature;
+        for (const button of rewardsV2ControlsEl?.querySelectorAll(&quot;[data-rewards-v2-filter]&quot;) || []) button.setAttribute(&quot;aria-selected&quot;, String(button.dataset.rewardsV2Filter === rewardsV2Filter));
+        renderRewardsV2Featured();
+        renderRewardsV2StockSummary();
+        rewardsV2GridEl.innerHTML = visible.length ? visible.map(([id, product]) =&gt; rewardsV2CardMarkup(id, product)).join(&quot;&quot;) : `&lt;div class=&quot;rewards-v2-empty&quot;&gt;В этой категории сейчас нет доступных товаров.&lt;/div&gt;`;
+        tuneRuntimeImages(rewardsV2RootEl);
+      }
+
+      function openRewardsV2Stock(view) {
+        switchScreen(&quot;warehouse&quot;);
+        switchStockHubView(view === &quot;cases&quot; ? &quot;cases&quot; : &quot;purchases&quot;);
+      }
+
+      function handleRewardsV2Click(event) {
+        const target = event.target instanceof Element ? event.target : null;
+        if (!target) return;
+        const filterButton = target.closest(&quot;[data-rewards-v2-filter]&quot;);
+        if (filterButton) {
+          const next = String(filterButton.dataset.rewardsV2Filter || &quot;all&quot;);
+          if ([&quot;all&quot;,&quot;cafe&quot;,&quot;cases&quot;].includes(next) &amp;&amp; next !== rewardsV2Filter) {
+            rewardsV2Filter = next;
+            rewardsV2RenderSignature = &quot;&quot;;
+            renderRewardsShopV2();
+          }
+          return;
+        }
+        const caseInfoButton = target.closest(&quot;[data-rewards-v2-case-info]&quot;);
+        if (caseInfoButton) {
+          showCaseRewardsInfo(caseInfoButton.dataset.rewardsV2CaseInfo || &quot;small&quot;);
+          return;
+        }
+        const stockButton = target.closest(&quot;[data-rewards-v2-stock]&quot;);
+        if (stockButton) {
+          openRewardsV2Stock(stockButton.dataset.rewardsV2Stock || &quot;purchases&quot;);
+          return;
+        }
+        const selectButton = target.closest(&quot;[data-rewards-v2-select]&quot;);
+        if (selectButton) {
+          const id = String(selectButton.dataset.rewardsV2Select || &quot;&quot;);
+          selectProduct(id);
+          showRewardsV2ProductDetails(id);
+          return;
+        }
+        const buyButton = target.closest(&quot;[data-rewards-v2-buy]&quot;);
+        if (buyButton) {
+          const id = String(buyButton.dataset.rewardsV2Buy || &quot;&quot;);
+          const legacyBuy = root.querySelector(`[data-buy=&quot;${id}&quot;]`);
+          if (legacyBuy) legacyBuy.click();
+        }
       }
 
       function getDifficulty() {
@@ -20440,6 +20756,14 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
             const skinId = String(detailAction.dataset.skinDetailAction || &quot;&quot;);
             closePurchaseLayer();
             purchaseOrEquipSkin(skinId);
+            return;
+          }
+          const rewardDetailBuy = target.closest(&quot;[data-rewards-v2-detail-buy]&quot;);
+          if (rewardDetailBuy &amp;&amp; !rewardDetailBuy.disabled) {
+            const id = String(rewardDetailBuy.dataset.rewardsV2DetailBuy || &quot;&quot;);
+            closePurchaseLayer();
+            const legacyBuy = root.querySelector(`[data-buy=&quot;${id}&quot;]`);
+            if (legacyBuy) legacyBuy.click();
             return;
           }
           if (target.closest(&quot;[data-purchase-confirm]&quot;)) {
