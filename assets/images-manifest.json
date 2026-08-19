@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "catalogHash": "202fa404cdbd4b4e",
-  "count": 336,
+  "catalogHash": "4b7ad520508ce718",
+  "count": 342,
   "images": [
     {
       "fileName": "cases/398D69BA-8943-4846-94B3-FC5CB717A67F.PNG",
@@ -2522,6 +2522,54 @@
       "path": "/assets/skins/shop/angel.png",
       "size": 335097,
       "modified": 1787158622000
+    },
+    {
+      "fileName": "skins/shop/backgrounds/epick_background_shop.png",
+      "label": "Epick background shop",
+      "folder": "skins/shop/backgrounds",
+      "path": "/assets/skins/shop/backgrounds/epick_background_shop.png",
+      "size": 2637080,
+      "modified": 1787165880000
+    },
+    {
+      "fileName": "skins/shop/backgrounds/legendary_background_shop.png",
+      "label": "Legendary background shop",
+      "folder": "skins/shop/backgrounds",
+      "path": "/assets/skins/shop/backgrounds/legendary_background_shop.png",
+      "size": 2695781,
+      "modified": 1787165880000
+    },
+    {
+      "fileName": "skins/shop/backgrounds/mifik_background_shop.png",
+      "label": "Mifik background shop",
+      "folder": "skins/shop/backgrounds",
+      "path": "/assets/skins/shop/backgrounds/mifik_background_shop.png",
+      "size": 2544103,
+      "modified": 1787165880000
+    },
+    {
+      "fileName": "skins/shop/backgrounds/rare_background_shop.png",
+      "label": "Rare background shop",
+      "folder": "skins/shop/backgrounds",
+      "path": "/assets/skins/shop/backgrounds/rare_background_shop.png",
+      "size": 2258997,
+      "modified": 1787165880000
+    },
+    {
+      "fileName": "skins/shop/backgrounds/standart_background_shop.png",
+      "label": "Standart background shop",
+      "folder": "skins/shop/backgrounds",
+      "path": "/assets/skins/shop/backgrounds/standart_background_shop.png",
+      "size": 2121442,
+      "modified": 1787165880000
+    },
+    {
+      "fileName": "skins/shop/backgrounds/superrare_background_shop.png",
+      "label": "Superrare background shop",
+      "folder": "skins/shop/backgrounds",
+      "path": "/assets/skins/shop/backgrounds/superrare_background_shop.png",
+      "size": 2072337,
+      "modified": 1787165880000
     },
     {
       "fileName": "skins/shop/barista.png",
