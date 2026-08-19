@@ -7,10 +7,15 @@
 <meta content="no-referrer" name="referrer"/>
 <meta content="default-src 'none'; script-src 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com https://telegram.org; style-src 'unsafe-inline' blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; img-src 'self' blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; font-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; media-src 'self' blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; worker-src blob:; connect-src 'self' blob: data:; frame-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'" http-equiv="Content-Security-Policy"/>
 <title>Сладкий Забег</title>
-<style>:root{color-scheme:light dark;background:light-dark(rgb(255 255 255), rgb(24 24 24));--zefirok-app-height:100dvh}html,body{margin:0;width:100%;height:100%;min-height:0;overflow:hidden;overscroll-behavior:none}body{box-sizing:border-box;padding:0;background:inherit}iframe{display:none;height:var(--zefirok-app-height,100dvh);border:0}body>iframe:not(.zefirok-season-pass-frame):not(.zefirok-rating-frame){width:calc(100% - 32px);max-width:736px;margin:0 auto}iframe.is-ready{display:block}.zefirok-maintenance-gate{width:100%;min-height:var(--zefirok-app-height,100dvh);display:grid;background:#fff5f5;place-items:center;padding:max(24px,var(--zefirok-content-safe-top,0px)) max(24px,var(--zefirok-content-safe-right,0px)) max(24px,var(--zefirok-content-safe-bottom,0px)) max(24px,var(--zefirok-content-safe-left,0px));box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#4e3a42}.zefirok-maintenance-card{width:min(430px,100%);box-sizing:border-box;padding:28px;border:1px solid #efd0d9;border-radius:28px;background:#fff;box-shadow:0 18px 50px rgba(91,54,68,.13);text-align:center}.zefirok-maintenance-icon{font-size:54px}.zefirok-maintenance-card h1{font-size:25px;margin:12px 0}.zefirok-maintenance-card p{font-size:16px;line-height:1.5;color:#786870;margin:0}.zefirok-maintenance-card button{margin-top:18px;padding:12px 18px;border:0;border-radius:14px;background:#e56f9b;color:#fff;font-weight:800;font-size:15px}
+<style>:root{color-scheme:light dark;background:light-dark(rgb(255 255 255), rgb(24 24 24));--zefirok-app-height:100dvh}html,body{margin:0;width:100%;height:100%;min-height:0;overflow:hidden;overscroll-behavior:none}body{box-sizing:border-box;padding:0;background:inherit}iframe{display:none;height:var(--zefirok-app-height,100dvh);border:0}body>iframe:not(.zefirok-season-pass-frame):not(.zefirok-rating-frame):not(.zefirok-referrals-frame){width:calc(100% - 32px);max-width:736px;margin:0 auto}iframe.is-ready{display:block}.zefirok-maintenance-gate{width:100%;min-height:var(--zefirok-app-height,100dvh);display:grid;background:#fff5f5;place-items:center;padding:max(24px,var(--zefirok-content-safe-top,0px)) max(24px,var(--zefirok-content-safe-right,0px)) max(24px,var(--zefirok-content-safe-bottom,0px)) max(24px,var(--zefirok-content-safe-left,0px));box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#4e3a42}.zefirok-maintenance-card{width:min(430px,100%);box-sizing:border-box;padding:28px;border:1px solid #efd0d9;border-radius:28px;background:#fff;box-shadow:0 18px 50px rgba(91,54,68,.13);text-align:center}.zefirok-maintenance-icon{font-size:54px}.zefirok-maintenance-card h1{font-size:25px;margin:12px 0}.zefirok-maintenance-card p{font-size:16px;line-height:1.5;color:#786870;margin:0}.zefirok-maintenance-card button{margin-top:18px;padding:12px 18px;border:0;border-radius:14px;background:#e56f9b;color:#fff;font-weight:800;font-size:15px}
 .zefirok-season-pass-layer{position:fixed;inset:0;width:100%;height:var(--zefirok-app-height,100dvh);z-index:2147483000;background:#fff5f4;display:block;overflow:hidden}
 .zefirok-season-pass-layer[hidden]{display:none!important}
 .zefirok-season-pass-frame{display:block!important;width:100%!important;max-width:none!important;height:var(--zefirok-app-height,100dvh)!important;margin:0!important;border:0!important;background:#fff5f4}
+.zefirok-referrals-layer{position:fixed;inset:0;width:100%;height:var(--zefirok-app-height,100dvh);z-index:2147483050;background:#fff7f1;display:block;overflow:hidden}
+.zefirok-referrals-layer[hidden]{display:none!important}
+.zefirok-referrals-frame{display:block!important;width:100%!important;max-width:none!important;height:var(--zefirok-app-height,100dvh)!important;margin:0!important;border:0!important;background:#fff7f1}
+body.zefirok-referrals-open{overflow:hidden!important;padding:0!important}
+body.zefirok-referrals-open>iframe:not(.zefirok-referrals-frame){visibility:hidden!important;pointer-events:none!important}
 body.zefirok-season-pass-open{overflow:hidden!important;padding:0!important}
 body.zefirok-season-pass-open>iframe:not(.zefirok-season-pass-frame){visibility:hidden!important;pointer-events:none!important}
 .zefirok-rating-layer{position:fixed;inset:0;width:100%;height:var(--zefirok-app-height,100dvh);z-index:2147483100;background:#fff5f4;display:block;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
@@ -169,11 +174,13 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
     const gameFrame = frame();
     const passOpen = Boolean(document.body?.classList?.contains("zefirok-season-pass-open"));
     const ratingOpen = Boolean(document.body?.classList?.contains("zefirok-rating-open"));
+    const referralsOpen = Boolean(document.body?.classList?.contains("zefirok-referrals-open"));
     // Freeze the game while a full-screen section is on top. Resizing a hidden iframe
     // in iOS Telegram can return a transient narrow rectangle and distort the canvas.
-    if (!passOpen && !ratingOpen) sendViewportSnapshot(gameFrame?.contentWindow, snapshot);
+    if (!passOpen && !ratingOpen && !referralsOpen) sendViewportSnapshot(gameFrame?.contentWindow, snapshot);
     sendViewportSnapshot(seasonPassFrame()?.contentWindow, snapshot);
     sendViewportSnapshot(ratingFrame()?.contentWindow, snapshot);
+    sendViewportSnapshot(referralsFrame()?.contentWindow, snapshot);
     return snapshot;
   }
 
@@ -987,6 +994,9 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
     } else if (requested === "rating") {
       initialRequestedOverlayDelivered = true;
       openRatingOverlay(initData);
+    } else if (requested === "referrals") {
+      initialRequestedOverlayDelivered = true;
+      openReferralsOverlay(initData);
     }
   }
 
@@ -1090,6 +1100,63 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
       webApp?.BackButton?.hide?.();
     } catch {}
     try { window.scrollTo(0, 0); } catch {}
+    requestTelegramFullscreen();
+    scheduleTelegramViewportSync();
+    refreshMainGameAfterSeasonPass();
+  }
+
+  let referralsLayer = null;
+
+  function referralsFrame() {
+    return referralsLayer?.querySelector?.(".zefirok-referrals-frame") || null;
+  }
+
+  function openReferralsOverlay(initData = "") {
+    if (referralsLayer?.isConnected) return;
+    const layer = document.createElement("div");
+    layer.className = "zefirok-referrals-layer";
+    layer.setAttribute("role", "dialog");
+    layer.setAttribute("aria-label", "Друзья кафе");
+    const referralFrame = document.createElement("iframe");
+    referralFrame.className = "zefirok-referrals-frame";
+    referralFrame.title = "Друзья кафе";
+    referralFrame.allow = "clipboard-write";
+    referralFrame.referrerPolicy = "same-origin";
+    referralFrame.src = initData
+      ? `/referrals.html?v=1.0.0#tgInitData=${encodeURIComponent(initData)}`
+      : `/referrals.html?v=1.0.0`;
+    layer.append(referralFrame);
+    referralFrame.addEventListener("load", () => {
+      const snapshot = syncTelegramViewport();
+      sendViewportSnapshot(referralFrame.contentWindow, snapshot);
+      try { sendTelegramProfile(referralFrame.contentWindow); } catch {}
+    }, { once: true });
+    document.body.append(layer);
+    document.body.classList.add("zefirok-referrals-open");
+    referralsLayer = layer;
+    try {
+      const webApp = window.Telegram?.WebApp;
+      webApp?.disableVerticalSwipes?.();
+      webApp?.enableClosingConfirmation?.();
+      webApp?.BackButton?.offClick?.(closeReferralsOverlay);
+      webApp?.BackButton?.onClick?.(closeReferralsOverlay);
+      webApp?.BackButton?.show?.();
+    } catch {}
+    requestTelegramFullscreen();
+    scheduleTelegramViewportSync();
+  }
+
+  function closeReferralsOverlay() {
+    const layer = referralsLayer;
+    referralsLayer = null;
+    if (layer?.isConnected) layer.remove();
+    document.body.classList.remove("zefirok-referrals-open");
+    try {
+      const webApp = window.Telegram?.WebApp;
+      webApp?.BackButton?.offClick?.(closeReferralsOverlay);
+      webApp?.BackButton?.hide?.();
+      webApp?.disableClosingConfirmation?.();
+    } catch {}
     requestTelegramFullscreen();
     scheduleTelegramViewportSync();
     refreshMainGameAfterSeasonPass();
@@ -1244,12 +1311,14 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
     const gameFrame = frame();
     const passFrame = seasonPassFrame();
     const currentRatingFrame = ratingFrame();
+    const currentReferralsFrame = referralsFrame();
     const currentLegalFrame = legalDocumentFrame();
     const fromGame = Boolean(gameFrame && event.source === gameFrame.contentWindow);
     const fromSeasonPass = Boolean(passFrame && event.source === passFrame.contentWindow);
     const fromRating = Boolean(currentRatingFrame && event.source === currentRatingFrame.contentWindow);
+    const fromReferrals = Boolean(currentReferralsFrame && event.source === currentReferralsFrame.contentWindow);
     const fromLegal = Boolean(currentLegalFrame && event.source === currentLegalFrame.contentWindow);
-    if (!fromGame && !fromSeasonPass && !fromRating && !fromLegal) return;
+    if (!fromGame && !fromSeasonPass && !fromRating && !fromReferrals && !fromLegal) return;
     const message = event.data;
     if (!message || typeof message !== "object") return;
     if (fromLegal) {
@@ -1257,9 +1326,10 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
       return;
     }
     if (message.type === "zefirok-haptic") {
-      if (fromGame && (seasonPassLayer?.isConnected || ratingLayer?.isConnected)) return;
+      if (fromGame && (seasonPassLayer?.isConnected || ratingLayer?.isConnected || referralsLayer?.isConnected)) return;
       if (fromSeasonPass && !seasonPassLayer?.isConnected) return;
       if (fromRating && !ratingLayer?.isConnected) return;
+      if (fromReferrals && !referralsLayer?.isConnected) return;
       performTelegramHaptic(message);
       return;
     }
@@ -1271,6 +1341,16 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
       } else if (message.type === "zefirok-season-pass-tasks-claimed") {
         const target = gameFrame?.contentWindow;
         try { target?.postMessage?.({ type: "zefirok-season-pass-tasks-claimed", tasks: Array.isArray(message.tasks) ? message.tasks : [] }, "*"); } catch {}
+      } else if (message.type === "zefirok-request-fullscreen") {
+        requestTelegramFullscreen();
+        scheduleTelegramViewportSync();
+      }
+      return;
+    }
+    if (fromReferrals) {
+      if (message.type === "zefirok-close-referrals") closeReferralsOverlay();
+      else if (message.type === "zefirok-referrals-account-updated") {
+        try { gameFrame?.contentWindow?.postMessage?.({ type: "zefirok-referrals-account-updated" }, "*"); } catch {}
       } else if (message.type === "zefirok-request-fullscreen") {
         requestTelegramFullscreen();
         scheduleTelegramViewportSync();
@@ -1332,6 +1412,14 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
     } else if (message.type === "zefirok-legal-required") {
       closeLegalOverlay();
       void resolveLegalAccess(true);
+    } else if (message.type === "zefirok-open-referrals") {
+      let initData = "";
+      try {
+        window.sessionStorage.setItem("zefirok-return-screen", "profile");
+        initData = String(window.Telegram?.WebApp?.initData || window.sessionStorage.getItem("zefirok-telegram-init-data") || "");
+        if (initData) window.sessionStorage.setItem("zefirok-telegram-init-data", initData);
+      } catch (error) {}
+      openReferralsOverlay(initData);
     } else if (message.type === "zefirok-open-battle-pass") {
       let initData = "";
       try {
@@ -8320,6 +8408,14 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 
 #zefirok-maltipoo-runner .profile-shell &gt; .profile-hero { order: 0; }
 #zefirok-maltipoo-runner .profile-section--battle-pass { order: 15; }
+#zefirok-maltipoo-runner .profile-section--referrals { order: 17; }
+#zefirok-maltipoo-runner .referrals-profile-card{display:grid;grid-template-columns:54px minmax(0,1fr);gap:12px;align-items:center;padding:15px;border:1px solid rgba(204,105,130,.28);border-radius:20px;background:linear-gradient(135deg,#fff3f1,#fff8dc 82%);box-shadow:0 8px 22px rgba(128,82,47,.07)}
+#zefirok-maltipoo-runner .referrals-profile-icon{width:54px;height:54px;display:grid;place-items:center;border-radius:17px;background:rgba(255,255,255,.82);box-shadow:inset 0 0 0 1px rgba(204,105,130,.18);overflow:hidden}
+#zefirok-maltipoo-runner .referrals-profile-icon img{width:50px;height:50px;object-fit:contain;display:block}
+#zefirok-maltipoo-runner .referrals-profile-copy{min-width:0;display:grid;gap:4px;text-align:left}
+#zefirok-maltipoo-runner .referrals-profile-copy strong{color:#643744;font-size:14px;font-weight:950}
+#zefirok-maltipoo-runner .referrals-profile-copy span{color:#8c6972;font-size:10px;font-weight:750;line-height:1.42}
+#zefirok-maltipoo-runner .referrals-profile-card .profile-action{grid-column:1/-1;margin-top:1px}
 #zefirok-maltipoo-runner .battle-pass-profile-card {
   display: grid;
   grid-template-columns: 54px minmax(0,1fr);
@@ -9277,6 +9373,17 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         &lt;span&gt;50 уровней, ежедневные и недельные задания, кейсы и две линии наград.&lt;/span&gt;
       &lt;/div&gt;
       &lt;button class=&quot;profile-action profile-action--primary&quot; data-battle-pass-open type=&quot;button&quot;&gt;Открыть сезонный пропуск&lt;span class=&quot;season-pass-attention-badge&quot; data-season-pass-attention hidden&gt;0&lt;/span&gt;&lt;/button&gt;
+    &lt;/div&gt;
+  &lt;/section&gt;
+
+  &lt;section class=&quot;profile-section profile-section--referrals&quot; aria-labelledby=&quot;profile-referrals-title&quot;&gt;
+    &lt;div class=&quot;profile-section-head&quot;&gt;
+      &lt;div&gt;&lt;h3 id=&quot;profile-referrals-title&quot;&gt;Друзья кафе&lt;/h3&gt;&lt;span&gt;Играйте вместе и открывайте совместные подарки.&lt;/span&gt;&lt;/div&gt;
+    &lt;/div&gt;
+    &lt;div class=&quot;referrals-profile-card&quot;&gt;
+      &lt;div class=&quot;referrals-profile-icon&quot; aria-hidden=&quot;true&quot;&gt;&lt;img src=&quot;/assets/ui/icon_referals.png&quot; alt=&quot;&quot;&gt;&lt;/div&gt;
+      &lt;div class=&quot;referrals-profile-copy&quot;&gt;&lt;strong&gt;Пригласи друзей в кафе&lt;/strong&gt;&lt;span&gt;Награды за старт, уровни 5/10/20 и бонусный XP, когда друг активирует Элитный или Элитный+.&lt;/span&gt;&lt;/div&gt;
+      &lt;button class=&quot;profile-action profile-action--primary&quot; data-referrals-open type=&quot;button&quot;&gt;Открыть «Друзья кафе»&lt;/button&gt;
     &lt;/div&gt;
   &lt;/section&gt;
 
@@ -20750,6 +20857,20 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 &lt;script id=&quot;zefirok-v0798-legendary-music-balance-audit&quot; type=&quot;application/json&quot;&gt;{&quot;version&quot;:&quot;0.79.8&quot;,&quot;scope&quot;:&quot;legendary-case-music-and-balance&quot;,&quot;newMusicTracks&quot;:4,&quot;categoryChances&quot;:{&quot;skin&quot;:0.35,&quot;music&quot;:0.45,&quot;physical&quot;:0.035,&quot;points&quot;:39.665},&quot;totalChance&quot;:100}&lt;/script&gt;
 &lt;script id=&quot;zefirok-v0797-high-speed-smoothness-audit&quot; type=&quot;application/json&quot;&gt;{&quot;version&quot;:&quot;0.79.7&quot;,&quot;scope&quot;:&quot;high-speed-gameplay-smoothness&quot;,&quot;backwardCompatible&quot;:true,&quot;gameplayValuesChanged&quot;:false,&quot;optimizations&quot;:[&quot;speedWeightedHorizontalExtrapolation&quot;,&quot;smoothedRenderVelocity&quot;,&quot;preRenderedRoadTileCache&quot;,&quot;particleObjectPool&quot;,&quot;allocationFreeCollisionChecks&quot;,&quot;highSpeedJitterMetrics&quot;,&quot;cachedCaseTrailSprite&quot;]}&lt;/script&gt;
 
+&lt;script id=&quot;zefirok-referrals-profile-entry-v1&quot;&gt;
+(() =&gt; {
+  document.addEventListener(&quot;click&quot;, (event) =&gt; {
+    const button = event.target?.closest?.(&quot;[data-referrals-open]&quot;);
+    if (!button) return;
+    event.preventDefault();
+    button.disabled = true;
+    try { window.parent.postMessage({ type:&quot;zefirok-open-referrals&quot; }, &quot;*&quot;); }
+    catch (error) { try { window.location.href = &quot;/referrals.html&quot;; } catch {} }
+    window.setTimeout(() =&gt; { button.disabled = false; }, 900);
+  });
+  window.addEventListener(&quot;pageshow&quot;, () =&gt; document.querySelectorAll(&quot;[data-referrals-open]&quot;).forEach((button) =&gt; { button.disabled = false; }));
+})();
+&lt;/script&gt;
 &lt;script id=&quot;zefirok-v07914-battle-pass-visibility&quot;&gt;
 (() =&gt; {
   let battlePassEnabled = false;

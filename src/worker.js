@@ -1516,6 +1516,21 @@ export default {
         headers.set("X-Content-Type-Options", "nosniff");
         return new Response(asset.body, { status: asset.status, statusText: asset.statusText, headers });
       }
+      if (url.pathname === "/referrals.html" && request.method === "GET") {
+        if (!env.ASSETS) return new Response("Not found", { status: 404 });
+        const asset = await env.ASSETS.fetch(request);
+        const headers = new Headers(asset.headers);
+        headers.set("Cache-Control", "no-store, no-cache, must-revalidate, private");
+        headers.set("Pragma", "no-cache");
+        headers.set("X-Robots-Tag", "noindex, nofollow, noarchive");
+        headers.set("Referrer-Policy", "no-referrer");
+        headers.set("X-Content-Type-Options", "nosniff");
+        headers.set("X-Frame-Options", "SAMEORIGIN");
+        headers.set("Cross-Origin-Resource-Policy", "same-origin");
+        headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=()");
+        headers.set("Content-Security-Policy", "default-src 'self'; script-src 'self' 'unsafe-inline' https://telegram.org; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'self'; base-uri 'none'; form-action 'none'; object-src 'none'");
+        return new Response(asset.body, { status: asset.status, statusText: asset.statusText, headers });
+      }
       if (url.pathname === "/staff-qr.html" && request.method === "GET") {
         if (!env.ASSETS) return new Response("Not found", { status: 404 });
         const asset = await env.ASSETS.fetch(request);
@@ -1572,6 +1587,15 @@ export default {
       const maintenanceResponse = await enforceMaintenanceForRequest(request, url, env);
       if (maintenanceResponse) return maintenanceResponse;
 
+      if (url.pathname === "/api/referrals/state" && request.method === "POST") {
+        return await getReferralState(request, env);
+      }
+      if (url.pathname === "/api/referrals/claim" && request.method === "POST") {
+        return await claimReferralReward(request, env);
+      }
+      if (url.pathname === "/api/referrals/claim-all" && request.method === "POST") {
+        return await claimAllReferralRewards(request, env);
+      }
       if (url.pathname === "/api/battle-pass/run" && request.method === "POST") {
         return await submitSeasonPassRun(request, env);
       }
@@ -7014,6 +7038,10 @@ async function submitLeaderboardRun(request, env, executionCtx = null) {
         "fast settlement season-pass notification failed"
       );
     }
+    scheduleRunSettlementBackground(executionCtx,
+      refreshReferralProgressForInvitee(env, telegramId, { source: "run", runId }),
+      "referral progress refresh failed"
+    );
     scheduleRunSettlementBackground(executionCtx, recordPlayerTimeline(
       env, telegramId, "run",
       `завершил забег с результатом ${metrics.score.toLocaleString("ru-RU")}`,
@@ -21141,6 +21169,19 @@ async function getAccessBootstrap(request, env) {
       : Promise.resolve(null);
     const [identity, legalState] = await Promise.all([identityPromise, legalPromise]);
 
+    // A Telegram startapp referral must be bound during the first ordinary game
+    // bootstrap, not only after the player opens the referrals page later.
+    if (authResult.ok) {
+      const signedReferralCode = referralCodeFromStartParam(initData);
+      if (signedReferralCode) {
+        try {
+          await tryBindReferral(env, telegramId, signedReferralCode, authResult.auth?.user || null);
+        } catch (error) {
+          console.error('referral bootstrap bind failed', error);
+        }
+      }
+    }
+
     const allowed = restricted ? Boolean(identity.allowed) : true;
     const maintenance = restricted ? {
       ok: allowed,
@@ -25320,6 +25361,7 @@ async function purchaseSeasonPassTier(request,env){
       await reconcileElitePlusTaskXpBoost(env,ctx.season,ctx.telegramId,upgradedPlayer);
     }
     try{await recordPlayerTimeline(env,ctx.telegramId,'season_pass_purchase',`активировал тариф «${tier==='elite_plus'?'Элитный+':'Элитный'}»`,{seasonId:ctx.season.id,tier,price},`season_pass_purchase_${ctx.season.id}_${tier}`,ctx.auth.user,now);}catch(error){console.error('season pass purchase timeline failed',error);}
+    try{await refreshReferralProgressForInvitee(env,ctx.telegramId,{source:'season_tier',seasonId:ctx.season.id,tier});}catch(error){console.error('referral season tier refresh failed',error);}
     const received=tier==='elite_plus'?(elitePlusPlan?.received||[]):[];
     return jsonResponse({...await buildSeasonPassMutationPayload(env,ctx.season,ctx.telegramId,{includeEntitlements:true,includeTasks:true,premiumTier:tier}),received,pricePaid:price,repeated:false,purchasedTier:tier});
   }catch(error){if(error instanceof ApiError)return jsonResponse({ok:false,error:error.message},error.status);console.error('purchaseSeasonPassTier failed',error);return jsonResponse({ok:false,error:'Не удалось активировать тариф.'},500);}
@@ -33984,6 +34026,476 @@ async function ownerPanelTestProjectReleaseGate(env,ctx){
 // =================== END TEST PROJECT 5.2 ===================
 
 
+// ======================= REFERRALS · "ДРУЗЬЯ КАФЕ" =======================
+const REFERRAL_DEFAULT_BIND_WINDOW_HOURS = 24;
+const REFERRAL_DEFAULT_BIND_MAX_RUNS = 0;
+const REFERRAL_MAX_STATE_FRIENDS = 60;
+const REFERRAL_STATE_RECONCILE_FRIENDS = 12;
+let referralSchemaReady = false;
+let referralSchemaPromise = null;
+
+async function ensureReferralSchema(env) {
+  requireDatabase(env);
+  if (referralSchemaReady) return;
+  if (referralSchemaPromise) return referralSchemaPromise;
+  const promise = (async () => {
+    await env.DB.batch([
+      env.DB.prepare(`CREATE TABLE IF NOT EXISTS referral_program_config (id INTEGER PRIMARY KEY CHECK(id=1),enabled INTEGER NOT NULL DEFAULT 1 CHECK(enabled IN (0,1)),bind_window_hours INTEGER NOT NULL DEFAULT 24 CHECK(bind_window_hours BETWEEN 1 AND 720),bind_max_runs INTEGER NOT NULL DEFAULT 0 CHECK(bind_max_runs BETWEEN 0 AND 20),updated_at INTEGER NOT NULL,updated_by TEXT NOT NULL DEFAULT '')`),
+      env.DB.prepare(`INSERT OR IGNORE INTO referral_program_config(id,enabled,bind_window_hours,bind_max_runs,updated_at,updated_by) VALUES(1,1,24,0,unixepoch(),'runtime-referrals')`),
+      env.DB.prepare(`CREATE TABLE IF NOT EXISTS referral_codes (telegram_id TEXT PRIMARY KEY,code TEXT NOT NULL UNIQUE,created_at INTEGER NOT NULL,updated_at INTEGER NOT NULL)`),
+      env.DB.prepare(`CREATE UNIQUE INDEX IF NOT EXISTS idx_referral_codes_code ON referral_codes(code)`),
+      env.DB.prepare(`CREATE TABLE IF NOT EXISTS referral_links (invitee_telegram_id TEXT PRIMARY KEY,referrer_telegram_id TEXT NOT NULL,referral_code TEXT NOT NULL,status TEXT NOT NULL DEFAULT 'invited' CHECK(status IN ('invited','active','blocked')),bound_at INTEGER NOT NULL,activated_at INTEGER NOT NULL DEFAULT 0,updated_at INTEGER NOT NULL)`),
+      env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_referral_links_referrer ON referral_links(referrer_telegram_id,status,bound_at DESC)`),
+      env.DB.prepare(`CREATE TABLE IF NOT EXISTS referral_milestones (milestone_key TEXT PRIMARY KEY,title TEXT NOT NULL,description TEXT NOT NULL DEFAULT '',trigger_type TEXT NOT NULL CHECK(trigger_type IN ('accepted_runs','profile_level','season_tier')),trigger_value TEXT NOT NULL,inviter_reward_json TEXT NOT NULL DEFAULT '{"kind":"none"}',invitee_reward_json TEXT NOT NULL DEFAULT '{"kind":"none"}',enabled INTEGER NOT NULL DEFAULT 1 CHECK(enabled IN (0,1)),sort_order INTEGER NOT NULL DEFAULT 0,created_at INTEGER NOT NULL,updated_at INTEGER NOT NULL,updated_by TEXT NOT NULL DEFAULT '')`),
+      env.DB.prepare(`CREATE TABLE IF NOT EXISTS referral_progress (invitee_telegram_id TEXT NOT NULL,milestone_key TEXT NOT NULL,achieved_at INTEGER NOT NULL,source_json TEXT NOT NULL DEFAULT '{}',PRIMARY KEY(invitee_telegram_id,milestone_key))`),
+      env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_referral_progress_achieved ON referral_progress(achieved_at DESC)`),
+      env.DB.prepare(`CREATE TABLE IF NOT EXISTS referral_network_milestones (threshold INTEGER PRIMARY KEY CHECK(threshold BETWEEN 1 AND 10000),title TEXT NOT NULL,reward_json TEXT NOT NULL DEFAULT '{"kind":"none"}',enabled INTEGER NOT NULL DEFAULT 1 CHECK(enabled IN (0,1)),sort_order INTEGER NOT NULL DEFAULT 0,created_at INTEGER NOT NULL,updated_at INTEGER NOT NULL,updated_by TEXT NOT NULL DEFAULT '')`),
+      env.DB.prepare(`CREATE TABLE IF NOT EXISTS referral_network_progress (referrer_telegram_id TEXT NOT NULL,threshold INTEGER NOT NULL,achieved_at INTEGER NOT NULL,PRIMARY KEY(referrer_telegram_id,threshold))`),
+      env.DB.prepare(`CREATE TABLE IF NOT EXISTS referral_rewards (reward_id TEXT PRIMARY KEY,invitee_telegram_id TEXT NOT NULL DEFAULT '',beneficiary_telegram_id TEXT NOT NULL,role TEXT NOT NULL CHECK(role IN ('referrer','invitee')),source_type TEXT NOT NULL CHECK(source_type IN ('milestone','network')),source_key TEXT NOT NULL,reward_json TEXT NOT NULL,status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','processing','delivered','failed')),target_season_id TEXT NOT NULL DEFAULT '',created_at INTEGER NOT NULL,delivered_at INTEGER NOT NULL DEFAULT 0,updated_at INTEGER NOT NULL,error_text TEXT NOT NULL DEFAULT '',UNIQUE(beneficiary_telegram_id,source_type,source_key))`),
+      env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_referral_rewards_beneficiary ON referral_rewards(beneficiary_telegram_id,status,created_at DESC)`),
+      env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_referral_rewards_invitee ON referral_rewards(invitee_telegram_id,created_at DESC)`),
+      env.DB.prepare(`CREATE TABLE IF NOT EXISTS referral_reward_effects (reward_id TEXT PRIMARY KEY,beneficiary_telegram_id TEXT NOT NULL,apply_token TEXT NOT NULL,applied_at INTEGER NOT NULL)`)
+    ]);
+    const now = Math.floor(Date.now() / 1000);
+    const milestoneRows = [
+      ['starter','Стартовые задания','Заверши 3 подтверждённых забега','accepted_runs','3',{kind:'case',id:'small',amount:1},{kind:'booster',id:'points',amount:1},10],
+      ['level_5','5 уровень','Достигни 5 уровня профиля','profile_level','5',{kind:'case',id:'sweet',amount:1},{kind:'case',id:'small',amount:1},20],
+      ['level_10','10 уровень','Достигни 10 уровня профиля','profile_level','10',{kind:'points',amount:1500},{kind:'booster',id:'treats',amount:1},30],
+      ['elite','Элитный','Активируй Элитный сезонный пропуск','season_tier','elite',{kind:'season_pass_xp',amount:1000},{kind:'none'},40],
+      ['elite_plus','Элитный+','Активируй Элитный+ сезонный пропуск','season_tier','elite_plus',{kind:'season_pass_xp',amount:1500},{kind:'none'},50],
+      ['level_20','20 уровень','Достигни 20 уровня профиля','profile_level','20',{kind:'case',id:'gold',amount:1},{kind:'case',id:'sweet',amount:1},60]
+    ];
+    const networkRows = [
+      [1,'Первый друг',{kind:'case',id:'small',amount:1},10],
+      [3,'Компания из 3 друзей',{kind:'case',id:'sweet',amount:1},20],
+      [5,'5 активных друзей',{kind:'points',amount:3000},30],
+      [10,'10 активных друзей',{kind:'case',id:'gold',amount:1},40],
+      [20,'20 активных друзей',{kind:'case',id:'gold',amount:2},50],
+      [50,'50 активных друзей',{kind:'case',id:'legendary',amount:1},60]
+    ];
+    const seed = [];
+    for (const row of milestoneRows) seed.push(env.DB.prepare(`INSERT OR IGNORE INTO referral_milestones(milestone_key,title,description,trigger_type,trigger_value,inviter_reward_json,invitee_reward_json,enabled,sort_order,created_at,updated_at,updated_by) VALUES(?,?,?,?,?,?,?,1,?,?,?,'runtime-referrals')`).bind(row[0],row[1],row[2],row[3],row[4],JSON.stringify(row[5]),JSON.stringify(row[6]),row[7],now,now));
+    for (const row of networkRows) seed.push(env.DB.prepare(`INSERT OR IGNORE INTO referral_network_milestones(threshold,title,reward_json,enabled,sort_order,created_at,updated_at,updated_by) VALUES(?,?,?,1,?,?,?,'runtime-referrals')`).bind(row[0],row[1],JSON.stringify(row[2]),row[3],now,now));
+    if (seed.length) await env.DB.batch(seed);
+  })();
+  referralSchemaPromise = promise;
+  try { await promise; referralSchemaReady = true; }
+  finally { if (referralSchemaPromise === promise) referralSchemaPromise = null; }
+}
+
+function referralSafeReward(raw) {
+  const value = raw && typeof raw === 'object' ? raw : safeJson(raw, {kind:'none'});
+  const kind = String(value?.kind || 'none').trim().toLowerCase();
+  if (kind === 'none') return {kind:'none'};
+  if (['points','zefir','coffee'].includes(kind)) return {kind,amount:Math.max(1,Math.min(kind === 'points' ? 1000000 : 50000,Math.floor(Number(value.amount)||1)))};
+  if (kind === 'case') {
+    const id = normalizeCaseType(value.id || value.itemId);
+    if (!id) return {kind:'none'};
+    return {kind:'case',id,amount:Math.max(1,Math.min(10,Math.floor(Number(value.amount)||1)))};
+  }
+  if (kind === 'booster') {
+    const id = String(value.id || value.itemId || '').trim().toLowerCase();
+    if (!['points','treats','coffee'].includes(id)) return {kind:'none'};
+    return {kind:'booster',id,amount:Math.max(1,Math.min(20,Math.floor(Number(value.amount)||1)))};
+  }
+  if (kind === 'season_pass_xp') return {kind:'season_pass_xp',amount:Math.max(1,Math.min(50000,Math.floor(Number(value.amount)||1)))};
+  return {kind:'none'};
+}
+
+function referralRewardLabel(reward) {
+  const r = referralSafeReward(reward);
+  if (r.kind === 'none') return 'Без награды';
+  if (r.kind === 'points') return `${r.amount.toLocaleString('ru-RU')} очков`;
+  if (r.kind === 'zefir') return `${r.amount.toLocaleString('ru-RU')} зефира`;
+  if (r.kind === 'coffee') return `${r.amount.toLocaleString('ru-RU')} кофе`;
+  if (r.kind === 'season_pass_xp') return `+${r.amount.toLocaleString('ru-RU')} XP сезонного пропуска`;
+  if (r.kind === 'booster') return `Буст ×2 · ${({points:'очки',treats:'зефир',coffee:'кофе'})[r.id] || r.id} ×${r.amount}`;
+  if (r.kind === 'case') return `${r.amount > 1 ? `${r.amount} × ` : ''}${({small:'Обычный кейс',sweet:'Серебряный кейс',gold:'Золотой кейс',mythic:'Мифический кейс',legendary:'Легендарный кейс'})[r.id] || 'Кейс'}`;
+  return 'Награда';
+}
+
+function referralCodeFromStartParam(initData) {
+  try {
+    const params = new URLSearchParams(String(initData || ''));
+    const raw = String(params.get('start_param') || '').trim();
+    const match = raw.match(/^ref[_-]([A-Za-z0-9]{6,24})$/i);
+    return match ? String(match[1]).toUpperCase() : '';
+  } catch { return ''; }
+}
+
+async function referralProgramConfig(env) {
+  await ensureReferralSchema(env);
+  const row = await env.DB.prepare(`SELECT * FROM referral_program_config WHERE id=1 LIMIT 1`).first();
+  return {
+    enabled: Number(row?.enabled ?? 1) === 1,
+    bindWindowHours: Math.max(1,Number(row?.bind_window_hours || REFERRAL_DEFAULT_BIND_WINDOW_HOURS)),
+    bindMaxRuns: Math.max(0,Number(row?.bind_max_runs ?? REFERRAL_DEFAULT_BIND_MAX_RUNS)),
+    updatedAt: Number(row?.updated_at || 0)
+  };
+}
+
+function generateReferralCode() {
+  const bytes = new Uint8Array(7);
+  crypto.getRandomValues(bytes);
+  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let code = '';
+  for (const byte of bytes) code += alphabet[byte % alphabet.length];
+  return code;
+}
+
+async function ensureReferralCode(env, telegramId) {
+  await ensureReferralSchema(env);
+  const id = String(telegramId);
+  const existing = await env.DB.prepare(`SELECT code FROM referral_codes WHERE telegram_id=? LIMIT 1`).bind(id).first();
+  if (existing?.code) return String(existing.code);
+  const now = Math.floor(Date.now()/1000);
+  for (let attempt=0; attempt<6; attempt+=1) {
+    const code = generateReferralCode();
+    try {
+      const result = await env.DB.prepare(`INSERT OR IGNORE INTO referral_codes(telegram_id,code,created_at,updated_at) VALUES(?,?,?,?)`).bind(id,code,now,now).run();
+      if (Number(result?.meta?.changes || 0) > 0) return code;
+      const raced = await env.DB.prepare(`SELECT code FROM referral_codes WHERE telegram_id=? LIMIT 1`).bind(id).first();
+      if (raced?.code) return String(raced.code);
+    } catch (error) {
+      if (!String(error?.message || error).toLowerCase().includes('unique')) throw error;
+    }
+  }
+  throw new ApiError(500,'Не удалось создать код приглашения.');
+}
+
+async function tryBindReferral(env, inviteeId, candidateCode, actor = null) {
+  const code = String(candidateCode || '').trim().toUpperCase();
+  if (!code) return {bound:false,reason:'no_code'};
+  const config = await referralProgramConfig(env);
+  if (!config.enabled) return {bound:false,reason:'disabled'};
+  const invitee = String(inviteeId);
+  const current = await env.DB.prepare(`SELECT * FROM referral_links WHERE invitee_telegram_id=? LIMIT 1`).bind(invitee).first();
+  if (current) return {bound:false,reason:'already_bound',link:current};
+  const owner = await env.DB.prepare(`SELECT telegram_id,code FROM referral_codes WHERE code=? LIMIT 1`).bind(code).first();
+  if (!owner?.telegram_id) return {bound:false,reason:'invalid_code'};
+  const referrer = String(owner.telegram_id);
+  if (referrer === invitee) return {bound:false,reason:'self'};
+  const [referrerControl,inviteeControl] = await Promise.all([
+    env.DB.prepare(`SELECT blocked FROM player_admin_controls WHERE telegram_id=? LIMIT 1`).bind(referrer).first().catch(()=>null),
+    env.DB.prepare(`SELECT blocked FROM player_admin_controls WHERE telegram_id=? LIMIT 1`).bind(invitee).first().catch(()=>null)
+  ]);
+  if (Number(referrerControl?.blocked || 0) === 1) return {bound:false,reason:'referrer_blocked'};
+  if (Number(inviteeControl?.blocked || 0) === 1) return {bound:false,reason:'invitee_blocked'};
+  const reverse = await env.DB.prepare(`SELECT 1 AS ok FROM referral_links WHERE invitee_telegram_id=? AND referrer_telegram_id=? LIMIT 1`).bind(referrer,invitee).first();
+  if (reverse?.ok) return {bound:false,reason:'cycle'};
+
+  await ensureAuthoritativeProfileRow(env, invitee, 'referral-bind');
+  const [profile,subscriber,runs] = await Promise.all([
+    env.DB.prepare(`SELECT created_at FROM admin_profile_state WHERE telegram_id=? LIMIT 1`).bind(invitee).first(),
+    env.DB.prepare(`SELECT first_started_at FROM bot_subscribers WHERE telegram_id=? LIMIT 1`).bind(invitee).first().catch(()=>null),
+    env.DB.prepare(`SELECT COUNT(*) AS count FROM player_economy_run_ledger WHERE telegram_id=?`).bind(invitee).first()
+  ]);
+  const now = Math.floor(Date.now()/1000);
+  const firstCandidates = [Number(profile?.created_at || 0),Number(subscriber?.first_started_at || 0)].filter((value)=>value>0);
+  const firstSeen = firstCandidates.length ? Math.min(...firstCandidates) : now;
+  if (now - firstSeen > config.bindWindowHours * 3600) return {bound:false,reason:'too_old'};
+  if (Number(runs?.count || 0) > config.bindMaxRuns) return {bound:false,reason:'too_many_runs'};
+
+  const inserted = await env.DB.prepare(`INSERT OR IGNORE INTO referral_links(invitee_telegram_id,referrer_telegram_id,referral_code,status,bound_at,activated_at,updated_at) VALUES(?,?,?,'invited',?,0,?)`).bind(invitee,referrer,code,now,now).run();
+  if (Number(inserted?.meta?.changes || 0) < 1) return {bound:false,reason:'race'};
+  recordPlayerTimeline(env,invitee,'referral_join','присоединился к «Друзьям кафе»',{referrerTelegramId:referrer,referralCode:code},`referral_join_${invitee}`,actor,now).catch(()=>{});
+  recordPlayerTimeline(env,referrer,'referral_invite','пригласил нового друга в кафе',{inviteeTelegramId:invitee},`referral_invite_${invitee}`,actor,now).catch(()=>{});
+  return {bound:true,referrerTelegramId:referrer};
+}
+
+function referralRewardId(parts) {
+  return `ref_${parts.map((part)=>String(part||'').replace(/[^A-Za-z0-9_-]/g,'_')).join('_')}`.slice(0,190);
+}
+
+async function createReferralReward(env, {inviteeId='',beneficiaryId,role='referrer',sourceType='milestone',sourceKey,reward,targetSeasonId=''}) {
+  const normalized = referralSafeReward(reward);
+  if (normalized.kind === 'none') return null;
+  const now = Math.floor(Date.now()/1000);
+  const id = referralRewardId([sourceType,beneficiaryId,sourceKey,role]);
+  await env.DB.prepare(`INSERT OR IGNORE INTO referral_rewards(reward_id,invitee_telegram_id,beneficiary_telegram_id,role,source_type,source_key,reward_json,status,target_season_id,created_at,delivered_at,updated_at,error_text) VALUES(?,?,?,?,?,?,?,'pending',?,?,0,?,'')`).bind(id,String(inviteeId||''),String(beneficiaryId),String(role),String(sourceType),String(sourceKey),JSON.stringify(normalized),String(targetSeasonId||''),now,now).run();
+  const row = await env.DB.prepare(`SELECT * FROM referral_rewards WHERE beneficiary_telegram_id=? AND source_type=? AND source_key=? LIMIT 1`).bind(String(beneficiaryId),String(sourceType),String(sourceKey)).first();
+  if (normalized.kind === 'season_pass_xp' && row && String(row.status) !== 'delivered') {
+    try { return await deliverReferralReward(env,row); }
+    catch (error) { console.error('referral auto season xp delivery failed',error); }
+  }
+  return row || null;
+}
+
+async function deliverReferralReward(env, rewardRow) {
+  await ensureReferralSchema(env);
+  let row = rewardRow;
+  if (!row?.reward_id) row = await env.DB.prepare(`SELECT * FROM referral_rewards WHERE reward_id=? LIMIT 1`).bind(String(rewardRow||'')).first();
+  if (!row) throw new ApiError(404,'Реферальная награда не найдена.');
+  if (String(row.status) === 'delivered') return {delivered:true,repeated:true,row};
+  const reward = referralSafeReward(row.reward_json);
+  if (reward.kind === 'none') throw new ApiError(409,'В этой награде нечего получать.');
+  const telegramId = String(row.beneficiary_telegram_id);
+  const now = Math.floor(Date.now()/1000);
+  const recoveredBefore = now - 120;
+  const reserve = await env.DB.prepare(`UPDATE referral_rewards SET status='processing',updated_at=?,error_text='' WHERE reward_id=? AND (status IN ('pending','failed') OR (status='processing' AND updated_at<=?))`).bind(now,String(row.reward_id),recoveredBefore).run();
+  if (Number(reserve?.meta?.changes || 0) < 1) {
+    const fresh = await env.DB.prepare(`SELECT * FROM referral_rewards WHERE reward_id=? LIMIT 1`).bind(String(row.reward_id)).first();
+    if (String(fresh?.status) === 'delivered') return {delivered:true,repeated:true,row:fresh};
+    throw new ApiError(409,'Награда уже обрабатывается. Повторите через несколько секунд.');
+  }
+
+  await ensureAuthoritativeProfileRow(env, telegramId, `referral:${row.reward_id}`);
+  if (reward.kind === 'booster') await ensureCasePlayerState(env, telegramId, {});
+  let targetSeason = null;
+  if (reward.kind === 'season_pass_xp') {
+    await ensureSeasonPassSchema(env);
+    const targetSeasonId = String(row.target_season_id || '');
+    targetSeason = targetSeasonId ? await loadSeasonPassSeasonById(env,targetSeasonId) : await loadSeasonPassSeason(env);
+    if (!targetSeason?.id) throw new Error('Сезон для начисления XP не найден');
+    await ensureSeasonPassPlayer(env,targetSeason,telegramId);
+  }
+
+  const token = `ref_${crypto.randomUUID ? crypto.randomUUID().replace(/-/g,'') : `${Date.now()}_${Math.random()}`}`.slice(0,90);
+  const statements = [
+    env.DB.prepare(`INSERT OR IGNORE INTO referral_reward_effects(reward_id,beneficiary_telegram_id,apply_token,applied_at) SELECT ?,?,?,? WHERE EXISTS(SELECT 1 FROM referral_rewards WHERE reward_id=? AND status='processing')`).bind(String(row.reward_id),telegramId,token,now,String(row.reward_id))
+  ];
+  if (['points','zefir','coffee'].includes(reward.kind)) {
+    const field = ({points:'pending_wallet',zefir:'pending_treats',coffee:'pending_coffee'})[reward.kind];
+    statements.push(env.DB.prepare(`UPDATE admin_profile_state SET ${field}=${field}+?,revision=revision+1,updated_at=?,updated_by=? WHERE telegram_id=? AND EXISTS(SELECT 1 FROM referral_reward_effects WHERE reward_id=? AND apply_token=?)`).bind(reward.amount,now,`referral:${row.reward_id}`,telegramId,String(row.reward_id),token));
+  } else if (reward.kind === 'case') {
+    for (let index=0; index<reward.amount; index+=1) {
+      const grantId = referralRewardId(['case',row.reward_id,index+1]);
+      statements.push(env.DB.prepare(`INSERT OR IGNORE INTO granted_cases(id,telegram_id,case_type,status,granted_by,reason,rewards_json,created_at) SELECT ?,?,?,'pending','referral',?,'[]',? WHERE EXISTS(SELECT 1 FROM referral_reward_effects WHERE reward_id=? AND apply_token=?)`).bind(grantId,telegramId,reward.id,`Друзья кафе · ${referralRewardLabel(reward)}`,now,String(row.reward_id),token));
+    }
+  } else if (reward.kind === 'booster') {
+    const field = `boosters_${reward.id}`;
+    statements.push(env.DB.prepare(`UPDATE case_player_state SET ${field}=MIN(999,${field}+?),revision=revision+1,updated_at=? WHERE telegram_id=? AND EXISTS(SELECT 1 FROM referral_reward_effects WHERE reward_id=? AND apply_token=?)`).bind(reward.amount,now,telegramId,String(row.reward_id),token));
+  } else if (reward.kind === 'season_pass_xp') {
+    statements.push(env.DB.prepare(`UPDATE season_pass_players SET xp=xp+?,revision=revision+1,updated_at=? WHERE season_id=? AND telegram_id=? AND EXISTS(SELECT 1 FROM referral_reward_effects WHERE reward_id=? AND apply_token=?)`).bind(reward.amount,now,String(targetSeason.id),telegramId,String(row.reward_id),token));
+  }
+  statements.push(env.DB.prepare(`UPDATE referral_rewards SET status='delivered',delivered_at=?,updated_at=?,error_text='' WHERE reward_id=? AND status='processing' AND EXISTS(SELECT 1 FROM referral_reward_effects WHERE reward_id=? AND apply_token=?)`).bind(now,now,String(row.reward_id),String(row.reward_id),token));
+  try {
+    await env.DB.batch(statements);
+  } catch (error) {
+    await env.DB.prepare(`UPDATE referral_rewards SET status='failed',updated_at=?,error_text=? WHERE reward_id=? AND status='processing' AND NOT EXISTS(SELECT 1 FROM referral_reward_effects WHERE reward_id=?)`).bind(now,String(error?.message||error).slice(0,500),String(row.reward_id),String(row.reward_id)).run().catch(()=>{});
+    throw error;
+  }
+  const fresh = await env.DB.prepare(`SELECT * FROM referral_rewards WHERE reward_id=? LIMIT 1`).bind(String(row.reward_id)).first();
+  if (String(fresh?.status) !== 'delivered') throw new Error('Награда не была подтверждена сервером');
+  recordPlayerTimeline(env,telegramId,'referral_reward',`получил награду «Друзья кафе»: ${referralRewardLabel(reward)}`,{rewardId:String(row.reward_id),sourceType:row.source_type,sourceKey:row.source_key,reward},`referral_reward_${row.reward_id}`).catch(()=>{});
+  return {delivered:true,repeated:false,row:fresh,reward};
+}
+
+async function evaluateReferralNetwork(env, referrerId) {
+  await ensureReferralSchema(env);
+  const referrer = String(referrerId);
+  const activeRow = await env.DB.prepare(`SELECT COUNT(*) AS count FROM referral_links WHERE referrer_telegram_id=? AND status='active'`).bind(referrer).first();
+  const activeCount = Math.max(0,Number(activeRow?.count || 0));
+  const config = await referralProgramConfig(env);
+  if (!config.enabled) return activeCount;
+  const milestones = (await env.DB.prepare(`SELECT * FROM referral_network_milestones WHERE enabled=1 ORDER BY sort_order,threshold`).all()).results || [];
+  const now = Math.floor(Date.now()/1000);
+  for (const milestone of milestones) {
+    const threshold = Math.max(1,Number(milestone.threshold || 0));
+    if (activeCount < threshold) continue;
+    const inserted = await env.DB.prepare(`INSERT OR IGNORE INTO referral_network_progress(referrer_telegram_id,threshold,achieved_at) VALUES(?,?,?)`).bind(referrer,threshold,now).run();
+    if (Number(inserted?.meta?.changes || 0) < 1) continue;
+    await createReferralReward(env,{beneficiaryId:referrer,role:'referrer',sourceType:'network',sourceKey:`threshold:${threshold}`,reward:milestone.reward_json});
+  }
+  return activeCount;
+}
+
+async function referralMilestoneEvidence(env, inviteeId, milestone, link = null) {
+  const id = String(inviteeId);
+  const type = String(milestone.trigger_type || '');
+  const value = String(milestone.trigger_value || '');
+  const boundAt = Math.max(0, Number(link?.bound_at || 0));
+  if (type === 'accepted_runs') {
+    const row = boundAt > 0
+      ? await env.DB.prepare(`SELECT COUNT(*) AS count FROM player_economy_run_ledger WHERE telegram_id=? AND created_at>=?`).bind(id,boundAt).first()
+      : await env.DB.prepare(`SELECT COUNT(*) AS count FROM player_economy_run_ledger WHERE telegram_id=?`).bind(id).first();
+    const actual = Number(row?.count || 0), target = Math.max(1,Number(value || 1));
+    return {achieved:actual >= target,actual,target,source:{acceptedRuns:actual,boundAt}};
+  }
+  if (type === 'profile_level') {
+    await ensureAuthoritativeProfileRow(env,id,'referral-level');
+    const row = await env.DB.prepare(`SELECT profile_xp FROM admin_profile_state WHERE telegram_id=? LIMIT 1`).bind(id).first();
+    const actual = profileLevelFromXp(Number(row?.profile_xp || 0)), target = Math.max(1,Number(value || 1));
+    return {achieved:actual >= target,actual,target,source:{profileLevel:actual}};
+  }
+  if (type === 'season_tier') {
+    await ensureSeasonPassSchema(env);
+    const tier = value === 'elite_plus' ? 'elite_plus' : 'elite';
+    const row = tier === 'elite_plus'
+      ? (boundAt > 0
+        ? await env.DB.prepare(`SELECT season_id,purchase_key,completed_at FROM season_pass_purchases WHERE telegram_id=? AND purchase_key='elite_plus' AND status='delivered' AND completed_at>=? ORDER BY completed_at DESC LIMIT 1`).bind(id,boundAt).first()
+        : await env.DB.prepare(`SELECT season_id,purchase_key,completed_at FROM season_pass_purchases WHERE telegram_id=? AND purchase_key='elite_plus' AND status='delivered' ORDER BY completed_at DESC LIMIT 1`).bind(id).first())
+      : (boundAt > 0
+        ? await env.DB.prepare(`SELECT season_id,purchase_key,completed_at FROM season_pass_purchases WHERE telegram_id=? AND purchase_key IN ('elite','elite_plus') AND status='delivered' AND completed_at>=? ORDER BY completed_at DESC LIMIT 1`).bind(id,boundAt).first()
+        : await env.DB.prepare(`SELECT season_id,purchase_key,completed_at FROM season_pass_purchases WHERE telegram_id=? AND purchase_key IN ('elite','elite_plus') AND status='delivered' ORDER BY completed_at DESC LIMIT 1`).bind(id).first());
+    return {achieved:Boolean(row?.season_id),actual:row?.season_id ? String(row.purchase_key||tier) : 'none',target:tier,targetSeasonId:String(row?.season_id || ''),source:{seasonId:String(row?.season_id||''),tier:String(row?.purchase_key||tier),completedAt:Number(row?.completed_at||0)}};
+  }
+  return {achieved:false,actual:0,target:value,source:{}};
+}
+
+async function refreshReferralProgressForInvitee(env, inviteeId, source = {}) {
+  await ensureReferralSchema(env);
+  const invitee = String(inviteeId);
+  const link = await env.DB.prepare(`SELECT * FROM referral_links WHERE invitee_telegram_id=? AND status<>'blocked' LIMIT 1`).bind(invitee).first();
+  if (!link) return {linked:false,newMilestones:[]};
+  const config = await referralProgramConfig(env);
+  if (!config.enabled) return {linked:true,paused:true,newMilestones:[]};
+  const milestones = (await env.DB.prepare(`SELECT * FROM referral_milestones WHERE enabled=1 ORDER BY sort_order,milestone_key`).all()).results || [];
+  const existingRows = (await env.DB.prepare(`SELECT milestone_key FROM referral_progress WHERE invitee_telegram_id=?`).bind(invitee).all()).results || [];
+  const existing = new Set(existingRows.map((row)=>String(row.milestone_key)));
+  const now = Math.floor(Date.now()/1000);
+  const newMilestones = [];
+  for (const milestone of milestones) {
+    const key = String(milestone.milestone_key);
+    if (existing.has(key)) continue;
+    const evidence = await referralMilestoneEvidence(env,invitee,milestone,link);
+    if (!evidence.achieved) continue;
+    const sourceJson = {...(evidence.source||{}),boundAt:Number(link.bound_at||0),eventSource:source?.source || '',eventId:source?.runId || source?.seasonId || ''};
+    const inserted = await env.DB.prepare(`INSERT OR IGNORE INTO referral_progress(invitee_telegram_id,milestone_key,achieved_at,source_json) VALUES(?,?,?,?)`).bind(invitee,key,now,JSON.stringify(sourceJson)).run();
+    if (Number(inserted?.meta?.changes || 0) < 1) continue;
+    newMilestones.push(key);
+    if (key === 'starter') {
+      await env.DB.prepare(`UPDATE referral_links SET status='active',activated_at=CASE WHEN activated_at=0 THEN ? ELSE activated_at END,updated_at=? WHERE invitee_telegram_id=? AND status='invited'`).bind(now,now,invitee).run();
+    }
+    const sourceKey = `invitee:${invitee}:${key}`;
+    await createReferralReward(env,{inviteeId:invitee,beneficiaryId:String(link.referrer_telegram_id),role:'referrer',sourceType:'milestone',sourceKey,reward:milestone.inviter_reward_json,targetSeasonId:evidence.targetSeasonId || ''});
+    await createReferralReward(env,{inviteeId:invitee,beneficiaryId:invitee,role:'invitee',sourceType:'milestone',sourceKey,reward:milestone.invitee_reward_json,targetSeasonId:evidence.targetSeasonId || ''});
+    recordPlayerTimeline(env,invitee,'referral_milestone',`достиг этапа «${String(milestone.title||key)}»`,{milestoneKey:key,referrerTelegramId:String(link.referrer_telegram_id)},`referral_milestone_${invitee}_${key}`).catch(()=>{});
+  }
+  if (newMilestones.includes('starter')) await evaluateReferralNetwork(env,String(link.referrer_telegram_id));
+  return {linked:true,newMilestones};
+}
+
+async function referralPlayerIdentityMap(env, ids) {
+  const unique = [...new Set((ids||[]).map(String).filter(Boolean))];
+  const map = new Map();
+  if (!unique.length) return map;
+  for (let offset=0; offset<unique.length; offset+=50) {
+    const chunk = unique.slice(offset,offset+50), placeholders=chunk.map(()=>'?').join(',');
+    try {
+      const rows=(await env.DB.prepare(`SELECT telegram_id,display_name,username FROM bot_subscribers WHERE telegram_id IN (${placeholders})`).bind(...chunk).all()).results||[];
+      for (const row of rows) map.set(String(row.telegram_id),{displayName:String(row.display_name||''),username:String(row.username||'')});
+    } catch {}
+    try {
+      const rows=(await env.DB.prepare(`SELECT telegram_id,display_name,username FROM leaderboard_all_time WHERE telegram_id IN (${placeholders})`).bind(...chunk).all()).results||[];
+      for (const row of rows) {
+        const cur=map.get(String(row.telegram_id))||{};
+        map.set(String(row.telegram_id),{displayName:cur.displayName||String(row.display_name||''),username:cur.username||String(row.username||'')});
+      }
+    } catch {}
+  }
+  return map;
+}
+
+async function buildReferralState(env, telegramId, actor = null) {
+  await ensureReferralSchema(env);
+  const id = String(telegramId);
+  const config = await referralProgramConfig(env);
+  const code = await ensureReferralCode(env,id);
+  if (config.enabled) {
+    const reconcileRows=(await env.DB.prepare(`SELECT invitee_telegram_id FROM referral_links WHERE referrer_telegram_id=? AND status<>'blocked' ORDER BY status='invited' DESC,updated_at DESC LIMIT ?`).bind(id,REFERRAL_STATE_RECONCILE_FRIENDS).all()).results||[];
+    await refreshReferralProgressForInvitee(env,id,{source:'state'}).catch((error)=>console.error('referral self refresh failed',error));
+    for (const friend of reconcileRows) await refreshReferralProgressForInvitee(env,String(friend.invitee_telegram_id),{source:'state'}).catch((error)=>console.error('referral friend refresh failed',error));
+    await evaluateReferralNetwork(env,id).catch((error)=>console.error('referral network refresh failed',error));
+  }
+
+  const freshFriends=(await env.DB.prepare(`SELECT l.*,COALESCE(p.profile_xp,0) AS profile_xp FROM referral_links l LEFT JOIN admin_profile_state p ON p.telegram_id=l.invitee_telegram_id WHERE l.referrer_telegram_id=? ORDER BY l.status='active' DESC,l.bound_at DESC LIMIT ?`).bind(id,REFERRAL_MAX_STATE_FRIENDS).all()).results||[];
+  const milestones=(await env.DB.prepare(`SELECT * FROM referral_milestones WHERE enabled=1 ORDER BY sort_order,milestone_key`).all()).results||[];
+  const progressRows = freshFriends.length ? (await env.DB.prepare(`SELECT invitee_telegram_id,milestone_key,achieved_at FROM referral_progress WHERE invitee_telegram_id IN (${freshFriends.map(()=>'?').join(',')})`).bind(...freshFriends.map((row)=>String(row.invitee_telegram_id))).all()).results||[] : [];
+  const progressMap = new Map();
+  for (const row of progressRows) { const key=String(row.invitee_telegram_id); const value=progressMap.get(key)||new Map(); value.set(String(row.milestone_key),Number(row.achieved_at||0)); progressMap.set(key,value); }
+  const identities = await referralPlayerIdentityMap(env,[id,...freshFriends.map((row)=>row.invitee_telegram_id)]);
+  const activeFriends=freshFriends.filter((row)=>String(row.status)==='active').length;
+  const inviterLink=await env.DB.prepare(`SELECT * FROM referral_links WHERE invitee_telegram_id=? LIMIT 1`).bind(id).first();
+  let inviter=null;
+  if(inviterLink){const m=await referralPlayerIdentityMap(env,[String(inviterLink.referrer_telegram_id)]);const who=m.get(String(inviterLink.referrer_telegram_id))||{};inviter={telegramId:String(inviterLink.referrer_telegram_id),displayName:who.displayName||'Друг',username:who.username||'',status:String(inviterLink.status||'invited'),boundAt:Number(inviterLink.bound_at||0)};}
+  const rewards=(await env.DB.prepare(`SELECT * FROM referral_rewards WHERE beneficiary_telegram_id=? ORDER BY CASE status WHEN 'pending' THEN 0 WHEN 'failed' THEN 1 WHEN 'processing' THEN 2 ELSE 3 END,created_at DESC LIMIT 100`).bind(id).all()).results||[];
+  const networkRows=(await env.DB.prepare(`SELECT n.*,p.achieved_at FROM referral_network_milestones n LEFT JOIN referral_network_progress p ON p.threshold=n.threshold AND p.referrer_telegram_id=? WHERE n.enabled=1 ORDER BY n.sort_order,n.threshold`).bind(id).all()).results||[];
+  const friendViews=freshFriends.map((friend)=>{const friendId=String(friend.invitee_telegram_id),who=identities.get(friendId)||{},achieved=progressMap.get(friendId)||new Map();return {telegramId:friendId,displayName:who.displayName||`Игрок ${friendId.slice(-4)}`,username:who.username||'',status:String(friend.status||'invited'),boundAt:Number(friend.bound_at||0),activatedAt:Number(friend.activated_at||0),profileLevel:profileLevelFromXp(Number(friend.profile_xp||0)),milestones:milestones.map((m)=>({key:String(m.milestone_key),title:String(m.title||''),description:String(m.description||''),triggerType:String(m.trigger_type||''),triggerValue:String(m.trigger_value||''),achieved:achieved.has(String(m.milestone_key)),achievedAt:Number(achieved.get(String(m.milestone_key))||0),inviterReward:referralSafeReward(m.inviter_reward_json),inviterRewardLabel:referralRewardLabel(m.inviter_reward_json),inviteeReward:referralSafeReward(m.invitee_reward_json),inviteeRewardLabel:referralRewardLabel(m.invitee_reward_json)}))};});
+  const nextNetwork=networkRows.find((row)=>Number(row.threshold)>activeFriends)||null;
+  return {ok:true,program:config,self:{telegramId:id,code,displayName:identities.get(id)?.displayName||telegramDisplayName(actor||{})||'Игрок'},inviter,milestoneRules:milestones.map((m)=>({key:String(m.milestone_key),title:String(m.title||''),description:String(m.description||''),triggerType:String(m.trigger_type||''),triggerValue:String(m.trigger_value||'')})),totalInvited:freshFriends.length,activeFriends,nextNetworkMilestone:nextNetwork?{threshold:Number(nextNetwork.threshold),title:String(nextNetwork.title||''),remaining:Math.max(0,Number(nextNetwork.threshold)-activeFriends),reward:referralSafeReward(nextNetwork.reward_json),rewardLabel:referralRewardLabel(nextNetwork.reward_json)}:null,networkMilestones:networkRows.map((row)=>({threshold:Number(row.threshold),title:String(row.title||''),achieved:Number(row.achieved_at||0)>0,achievedAt:Number(row.achieved_at||0),reward:referralSafeReward(row.reward_json),rewardLabel:referralRewardLabel(row.reward_json)})),friends:friendViews,rewards:rewards.map((row)=>({id:String(row.reward_id),inviteeTelegramId:String(row.invitee_telegram_id||''),role:String(row.role||''),sourceType:String(row.source_type||''),sourceKey:String(row.source_key||''),status:String(row.status||''),reward:referralSafeReward(row.reward_json),rewardLabel:referralRewardLabel(row.reward_json),targetSeasonId:String(row.target_season_id||''),createdAt:Number(row.created_at||0),deliveredAt:Number(row.delivered_at||0),error:String(row.error_text||'')})),pendingCount:rewards.filter((row)=>['pending','failed'].includes(String(row.status))).length};
+}
+
+async function getReferralState(request,env){
+  try{
+    const body=await readJson(request);const initData=String(body?.initData||body?.init_data||'');const auth=await validateTelegramInitData(initData,env);const telegramId=String(auth.user.id);
+    await ensureReferralSchema(env);await ensureAuthoritativeProfileRow(env,telegramId,'referrals-state');
+    const signedCode=referralCodeFromStartParam(initData);if(signedCode)await tryBindReferral(env,telegramId,signedCode,auth.user);
+    return jsonResponse(await buildReferralState(env,telegramId,auth.user));
+  }catch(error){if(error instanceof ApiError)return jsonResponse({ok:false,error:error.message},error.status);console.error('getReferralState failed',error);return jsonResponse({ok:false,error:'Не удалось загрузить «Друзей кафе».'},500);}
+}
+
+async function claimReferralReward(request,env){
+  try{
+    const body=await readJson(request);const auth=await validateTelegramInitData(String(body?.initData||body?.init_data||''),env);const telegramId=String(auth.user.id);await ensureReferralSchema(env);
+    const rewardId=String(body?.rewardId||'').trim();if(!rewardId)throw new ApiError(400,'Награда не выбрана.');
+    const row=await env.DB.prepare(`SELECT * FROM referral_rewards WHERE reward_id=? AND beneficiary_telegram_id=? LIMIT 1`).bind(rewardId,telegramId).first();if(!row)throw new ApiError(404,'Награда не найдена.');
+    const delivered=await deliverReferralReward(env,row);return jsonResponse({ok:true,delivered:delivered.delivered,repeated:delivered.repeated,reward:delivered.reward||referralSafeReward(row.reward_json),state:await buildReferralState(env,telegramId,auth.user)});
+  }catch(error){if(error instanceof ApiError)return jsonResponse({ok:false,error:error.message},error.status);console.error('claimReferralReward failed',error);return jsonResponse({ok:false,error:'Не удалось получить награду.'},500);}
+}
+
+async function claimAllReferralRewards(request,env){
+  try{
+    const body=await readJson(request);const auth=await validateTelegramInitData(String(body?.initData||body?.init_data||''),env);const telegramId=String(auth.user.id);await ensureReferralSchema(env);
+    const rows=(await env.DB.prepare(`SELECT * FROM referral_rewards WHERE beneficiary_telegram_id=? AND status IN ('pending','failed') ORDER BY created_at LIMIT 50`).bind(telegramId).all()).results||[];let delivered=0;
+    for(const row of rows){try{const result=await deliverReferralReward(env,row);if(result.delivered&&!result.repeated)delivered+=1;}catch(error){console.error('claim all referral reward failed',row.reward_id,error);}}
+    return jsonResponse({ok:true,delivered,state:await buildReferralState(env,telegramId,auth.user)});
+  }catch(error){if(error instanceof ApiError)return jsonResponse({ok:false,error:error.message},error.status);console.error('claimAllReferralRewards failed',error);return jsonResponse({ok:false,error:'Не удалось получить награды.'},500);}
+}
+
+function ownerReferralRewardInput(kindValue,idValue,amountValue){
+  const kind=String(kindValue||'none').trim().toLowerCase();
+  if(kind==='none')return {kind:'none'};
+  if(['points','zefir','coffee'].includes(kind))return referralSafeReward({kind,amount:amountValue});
+  if(kind==='case'){const caseId=normalizeCaseType(idValue||'small');if(!caseId)throw new ApiError(400,'Для рефералов выберите Обычный, Серебряный, Золотой, Мифический или Легендарный кейс.');return referralSafeReward({kind,id:caseId,amount:amountValue});}
+  if(kind==='booster'){const boosterId=String(idValue||'points').trim().toLowerCase();if(!['points','treats','coffee'].includes(boosterId))throw new ApiError(400,'Неизвестный реферальный бустер.');return referralSafeReward({kind,id:boosterId,amount:amountValue});}
+  if(kind==='season_pass_xp')return referralSafeReward({kind,amount:amountValue});
+  throw new ApiError(400,'Неизвестный тип реферальной награды.');
+}
+
+async function assertReferralProductionEditAllowed(env,ctx){
+  const pref=await ownerStagingPreference(env,String(ctx.user.id)).catch(()=>null);
+  if(pref&&Number(pref.staging_enabled||0)===1&&String(pref.active_change_set_id||''))throw new ApiError(409,'STAGING включён: реферальные правила пока не имеют Sandbox-версии. Выключите Staging Mode осознанно, чтобы изменить Production-настройки «Друзей кафе».');
+}
+
+async function ownerPanelReferrals(env,ctx){
+  await ensureReferralSchema(env);const config=await referralProgramConfig(env);
+  const [stats,milestones,network,recent,rewardStats]=await Promise.all([
+    env.DB.prepare(`SELECT COUNT(*) AS invited,SUM(CASE WHEN status='active' THEN 1 ELSE 0 END) AS active FROM referral_links`).first(),
+    env.DB.prepare(`SELECT * FROM referral_milestones ORDER BY sort_order,milestone_key`).all(),
+    env.DB.prepare(`SELECT * FROM referral_network_milestones ORDER BY sort_order,threshold`).all(),
+    env.DB.prepare(`SELECT l.*,COALESCE(bs.display_name,'') AS invitee_name,COALESCE(br.display_name,'') AS referrer_name FROM referral_links l LEFT JOIN bot_subscribers bs ON bs.telegram_id=l.invitee_telegram_id LEFT JOIN bot_subscribers br ON br.telegram_id=l.referrer_telegram_id ORDER BY l.bound_at DESC LIMIT 80`).all(),
+    env.DB.prepare(`SELECT status,COUNT(*) AS count FROM referral_rewards GROUP BY status`).all()
+  ]);
+  const elite=(await env.DB.prepare(`SELECT COUNT(*) AS count FROM referral_progress WHERE milestone_key='elite'`).first())?.count||0,elitePlus=(await env.DB.prepare(`SELECT COUNT(*) AS count FROM referral_progress WHERE milestone_key='elite_plus'`).first())?.count||0;
+  const invited=Number(stats?.invited||0),active=Number(stats?.active||0);const rewardsByStatus=Object.fromEntries((rewardStats.results||[]).map((row)=>[String(row.status),Number(row.count||0)]));
+  return {ok:true,config,stats:{invited,active,conversion:invited?Math.round(active/invited*1000)/10:0,pendingRewards:Number(rewardsByStatus.pending||0)+Number(rewardsByStatus.failed||0),deliveredRewards:Number(rewardsByStatus.delivered||0),elite:Number(elite),elitePlus:Number(elitePlus)},milestones:(milestones.results||[]).map((row)=>({...row,inviterReward:referralSafeReward(row.inviter_reward_json),inviteeReward:referralSafeReward(row.invitee_reward_json),inviterRewardLabel:referralRewardLabel(row.inviter_reward_json),inviteeRewardLabel:referralRewardLabel(row.invitee_reward_json)})),network:(network.results||[]).map((row)=>({...row,reward:referralSafeReward(row.reward_json),rewardLabel:referralRewardLabel(row.reward_json)})),recent:(recent.results||[]).map((row)=>({inviteeTelegramId:String(row.invitee_telegram_id),referrerTelegramId:String(row.referrer_telegram_id),inviteeName:String(row.invitee_name||''),referrerName:String(row.referrer_name||''),status:String(row.status||''),boundAt:Number(row.bound_at||0),activatedAt:Number(row.activated_at||0)}))};
+}
+
+async function ownerPanelReferralConfigSave(env,ctx){
+  await assertReferralProductionEditAllowed(env,ctx);
+  await ensureReferralSchema(env);const enabled=ctx.body?.enabled===true||Number(ctx.body?.enabled)===1?1:0;const hours=Math.max(1,Math.min(720,Math.floor(Number(ctx.body?.bindWindowHours)||REFERRAL_DEFAULT_BIND_WINDOW_HOURS)));const parsedMaxRuns=Number(ctx.body?.bindMaxRuns);const maxRuns=Math.max(0,Math.min(20,Number.isFinite(parsedMaxRuns)?Math.floor(parsedMaxRuns):REFERRAL_DEFAULT_BIND_MAX_RUNS));const now=Math.floor(Date.now()/1000);
+  const before=await referralProgramConfig(env);await env.DB.prepare(`UPDATE referral_program_config SET enabled=?,bind_window_hours=?,bind_max_runs=?,updated_at=?,updated_by=? WHERE id=1`).bind(enabled,hours,maxRuns,now,String(ctx.user.id)).run();
+  await logStaffAction(env,ctx.user,ctx.access,'owner_referral_config',null,'referrals',before.enabled?1:0,enabled,{bindWindowHours:hours,bindMaxRuns:maxRuns});return ownerPanelReferrals(env,ctx);
+}
+
+async function ownerPanelReferralMilestoneSave(env,ctx){
+  await assertReferralProductionEditAllowed(env,ctx);
+  await ensureReferralSchema(env);const key=String(ctx.body?.milestoneKey||'').trim();const current=await env.DB.prepare(`SELECT * FROM referral_milestones WHERE milestone_key=? LIMIT 1`).bind(key).first();if(!current)throw new ApiError(404,'Этап реферальной программы не найден.');
+  const triggerType=String(ctx.body?.triggerType||current.trigger_type);if(!['accepted_runs','profile_level','season_tier'].includes(triggerType))throw new ApiError(400,'Неизвестное условие этапа.');let triggerValue=String(ctx.body?.triggerValue??current.trigger_value).trim();if(triggerType==='season_tier'){if(!['elite','elite_plus'].includes(triggerValue))throw new ApiError(400,'Допустим только Элитный или Элитный+.');}else{const n=Math.max(1,Math.min(triggerType==='profile_level'?50:10000,Math.floor(Number(triggerValue)||1)));triggerValue=String(n);}
+  const semanticTypes={starter:'accepted_runs',level_5:'profile_level',level_10:'profile_level',elite:'season_tier',elite_plus:'season_tier',level_20:'profile_level'};const expectedType=semanticTypes[key];if(expectedType&&triggerType!==expectedType)throw new ApiError(409,'Тип системного реферального этапа менять нельзя — измените только порог или награду.');if(key==='elite'&&triggerValue!=='elite')throw new ApiError(409,'Этап «Элитный» должен отслеживать тариф Элитный.');if(key==='elite_plus'&&triggerValue!=='elite_plus')throw new ApiError(409,'Этап «Элитный+» должен отслеживать тариф Элитный+.');
+  let title=String(current.title||key),description=String(current.description||'');if(triggerType==='accepted_runs'){description=`Заверши ${triggerValue} подтверждённых забега`;if(key==='starter')title='Стартовые задания';}else if(triggerType==='profile_level'){title=`${triggerValue} уровень`;description=`Достигни ${triggerValue} уровня профиля`;}else if(triggerType==='season_tier'){title=triggerValue==='elite_plus'?'Элитный+':'Элитный';description=`Активируй ${title} сезонный пропуск`;}
+  const inviter=ownerReferralRewardInput(ctx.body?.inviterRewardKind,ctx.body?.inviterRewardId,ctx.body?.inviterRewardAmount);const invitee=ownerReferralRewardInput(ctx.body?.inviteeRewardKind,ctx.body?.inviteeRewardId,ctx.body?.inviteeRewardAmount);const enabled=ctx.body?.enabled===true||Number(ctx.body?.enabled)===1?1:0;if(key==='starter'&&!enabled)throw new ApiError(409,'Стартовый этап нельзя отключить отдельно: он определяет активного друга. При необходимости выключите всю реферальную программу.');const now=Math.floor(Date.now()/1000);
+  await env.DB.prepare(`UPDATE referral_milestones SET title=?,description=?,trigger_type=?,trigger_value=?,inviter_reward_json=?,invitee_reward_json=?,enabled=?,updated_at=?,updated_by=? WHERE milestone_key=?`).bind(title,description,triggerType,triggerValue,JSON.stringify(inviter),JSON.stringify(invitee),enabled,now,String(ctx.user.id),key).run();await logStaffAction(env,ctx.user,ctx.access,'owner_referral_milestone',null,'referrals',null,null,{milestoneKey:key,title,description,triggerType,triggerValue,inviter,invitee,enabled});return ownerPanelReferrals(env,ctx);
+}
+
+async function ownerPanelReferralNetworkSave(env,ctx){
+  await assertReferralProductionEditAllowed(env,ctx);
+  await ensureReferralSchema(env);const threshold=Math.max(1,Math.min(10000,Math.floor(Number(ctx.body?.threshold)||0)));const current=await env.DB.prepare(`SELECT * FROM referral_network_milestones WHERE threshold=? LIMIT 1`).bind(threshold).first();if(!current)throw new ApiError(404,'Порог друзей не найден.');const reward=ownerReferralRewardInput(ctx.body?.rewardKind,ctx.body?.rewardId,ctx.body?.rewardAmount);const enabled=ctx.body?.enabled===true||Number(ctx.body?.enabled)===1?1:0;const now=Math.floor(Date.now()/1000);await env.DB.prepare(`UPDATE referral_network_milestones SET reward_json=?,enabled=?,updated_at=?,updated_by=? WHERE threshold=?`).bind(JSON.stringify(reward),enabled,now,String(ctx.user.id),threshold).run();await logStaffAction(env,ctx.user,ctx.access,'owner_referral_network',null,'referrals',null,null,{threshold,reward,enabled});return ownerPanelReferrals(env,ctx);
+}
+// ===================== END REFERRALS · "ДРУЗЬЯ КАФЕ" =====================
+
+
 async function handleOwnerPanelApi(request, env, path, executionCtx = null) {
   try {
     const ctx = { ...(await requireOwnerPanelContext(request, env)), executionCtx };
@@ -34024,6 +34536,10 @@ async function handleOwnerPanelApi(request, env, path, executionCtx = null) {
     if (path === "/api/owner/v9/media") return jsonResponse(await ownerPanelV9Media(env, ctx));
     if (path === "/api/owner/v9/media/upload") return jsonResponse(await ownerPanelV9MediaUpload(env, ctx));
     if (path === "/api/owner/v9/media/delete") return jsonResponse(await ownerPanelV9MediaDelete(env, ctx));
+    if (path === "/api/owner/referrals") return jsonResponse(await ownerPanelReferrals(env, ctx));
+    if (path === "/api/owner/referrals/config/save") return jsonResponse(await ownerPanelReferralConfigSave(env, ctx));
+    if (path === "/api/owner/referrals/milestone/save") return jsonResponse(await ownerPanelReferralMilestoneSave(env, ctx));
+    if (path === "/api/owner/referrals/network/save") return jsonResponse(await ownerPanelReferralNetworkSave(env, ctx));
     if (path === "/api/owner/players") return jsonResponse(await ownerPanelPlayers(env, ctx));
     if (path === "/api/owner/player") return jsonResponse(await ownerPanelPlayer(env, ctx));
     if (path === "/api/owner/player/grant") return jsonResponse(await ownerPanelGrantPlayer(env, ctx));

@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "catalogHash": "73defc4e2008f3c4",
-  "count": 327,
+  "catalogHash": "304e24026667ac88",
+  "count": 328,
   "images": [
     {
       "fileName": "cases/398D69BA-8943-4846-94B3-FC5CB717A67F.PNG",
@@ -2594,6 +2594,14 @@
       "path": "/assets/ui/icon_busters.png",
       "size": 1259616,
       "modified": 1786903690000
+    },
+    {
+      "fileName": "ui/icon_referals.png",
+      "label": "Icon referals",
+      "folder": "ui",
+      "path": "/assets/ui/icon_referals.png",
+      "size": 891598,
+      "modified": 1787145646000
     },
     {
       "fileName": "ui/icon_shopping.png",
