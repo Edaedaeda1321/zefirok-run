@@ -10,12 +10,30 @@ const DEFAULT_SHOP_PRODUCTS = Object.freeze({
   cappuccino: Object.freeze({ points: 75000, treats: 0, coffee: 450 })
 });
 
+const ALEX_CASE_DUPLICATE_POINTS = 10000;
+const ALEX_CASE_CURRENCY_CHANCE = (100 - 0.12 - 0.15 - 0.15 - 0.15) / 3;
+const ALEX_CASE_DEFINITION = Object.freeze({
+  id: "alex",
+  title: "Кейс Алекса",
+  enabled: true,
+  guaranteeCount: 0,
+  duplicatePoints: ALEX_CASE_DUPLICATE_POINTS,
+  chances: Object.freeze({
+    skin: 0.12, trail: 0.15, frame: 0.15, avatar: 0.15,
+    points: ALEX_CASE_CURRENCY_CHANCE, treats: ALEX_CASE_CURRENCY_CHANCE, coffee: ALEX_CASE_CURRENCY_CHANCE,
+    booster: 0, epicCosmetic: 0, mythicCosmetic: 0, legendaryCosmetic: 0, music: 0, physical: 0
+  }),
+  ranges: Object.freeze({ points:[2000,90000], treats:[50,130], coffee:[50,130] }),
+  collectionRewardCaseType: "gold"
+});
+
 const CASE_SHOP_PRODUCTS = Object.freeze({
   small: Object.freeze({ id: "case-small", title: "Обычный кейс", points: 10000, treats: 100, coffee: 100 }),
   sweet: Object.freeze({ id: "case-sweet", title: "Серебряный кейс", points: 10000, treats: 100, coffee: 100 }),
   gold: Object.freeze({ id: "case-gold", title: "Золотой кейс", points: 10000, treats: 100, coffee: 100 }),
   mythic: Object.freeze({ id: "case-mythic", title: "Мифический кейс", points: 300000, treats: 350, coffee: 350 }),
-  legendary: Object.freeze({ id: "case-legendary", title: "Легендарный кейс", points: 600000, treats: 600, coffee: 600 })
+  legendary: Object.freeze({ id: "case-legendary", title: "Легендарный кейс", points: 600000, treats: 600, coffee: 600 }),
+  alex: Object.freeze({ id: "case-alex", title: "Кейс Алекса", points: 100000, treats: 75, coffee: 75 })
 });
 
 const SHOP_ASSORTMENT_PRODUCTS = Object.freeze({
@@ -26,7 +44,8 @@ const SHOP_ASSORTMENT_PRODUCTS = Object.freeze({
   "case-sweet": Object.freeze({ ...CASE_SHOP_PRODUCTS.sweet, caseType: "sweet" }),
   "case-gold": Object.freeze({ ...CASE_SHOP_PRODUCTS.gold, caseType: "gold" }),
   "case-mythic": Object.freeze({ ...CASE_SHOP_PRODUCTS.mythic, caseType: "mythic" }),
-  "case-legendary": Object.freeze({ ...CASE_SHOP_PRODUCTS.legendary, caseType: "legendary" })
+  "case-legendary": Object.freeze({ ...CASE_SHOP_PRODUCTS.legendary, caseType: "legendary" }),
+  "case-alex": Object.freeze({ ...CASE_SHOP_PRODUCTS.alex, caseType: "alex" })
 });
 
 const SKINS = Object.freeze({
@@ -74,7 +93,8 @@ const LEVEL_CASE_CONFIG = Object.freeze({
   sweet: Object.freeze({ id: "sweet", title: "Серебряный кейс", slots: 1 }),
   gold: Object.freeze({ id: "gold", title: "Золотой кейс", slots: 1 }),
   mythic: Object.freeze({ id: "mythic", title: "Мифический кейс", slots: 1 }),
-  legendary: Object.freeze({ id: "legendary", title: "Легендарный кейс", slots: 1 })
+  legendary: Object.freeze({ id: "legendary", title: "Легендарный кейс", slots: 1 }),
+  alex: Object.freeze({ id: "alex", title: "Кейс Алекса", slots: 1 })
 });
 
 const CASE_AVATARS = Object.freeze({
@@ -92,7 +112,9 @@ const CASE_AVATARS = Object.freeze({
   coffee_barista: Object.freeze({ id: "coffee_barista", title: "Кофейный бариста", rarity: "superrare", weight: 9 }),
   marshmallow_cloud: Object.freeze({ id: "marshmallow_cloud", title: "Зефирное облако", rarity: "epic", weight: 6 }),
   pink_hearts: Object.freeze({ id: "pink_hearts", title: "Розовые сердечки", rarity: "epic", weight: 6 }),
-  sakura: Object.freeze({ id: "sakura", title: "Сакура", rarity: "epic", weight: 6 })
+  sakura: Object.freeze({ id: "sakura", title: "Сакура", rarity: "epic", weight: 6 }),
+  alex_avatar_1: Object.freeze({ id: "alex_avatar_1", title: "Алекс · Портрет I", rarity: "legendary", weight: 0, legendaryOnly: true, alexOnly: true, isNew: true }),
+  alex_avatar_2: Object.freeze({ id: "alex_avatar_2", title: "Алекс · Портрет II", rarity: "legendary", weight: 0, legendaryOnly: true, alexOnly: true, isNew: true })
 });
 
 const CASE_FRAMES = Object.freeze({
@@ -109,7 +131,9 @@ const CASE_FRAMES = Object.freeze({
   legendary_frame_2: Object.freeze({ id: "legendary_frame_2", title: "Лунное Сияние", rarity: "legendary", weight: 2, legendaryOnly: true, isNew: true }),
   legendary_frame_3: Object.freeze({ id: "legendary_frame_3", title: "Клубничный Дворец", rarity: "legendary", weight: 2, legendaryOnly: true, isNew: true }),
   legendary_frame_4: Object.freeze({ id: "legendary_frame_4", title: "Королевское Кафе", rarity: "legendary", weight: 2, legendaryOnly: true, isNew: true }),
-  legendary_frame_5: Object.freeze({ id: "legendary_frame_5", title: "Золотой Бант", rarity: "legendary", weight: 2, legendaryOnly: true, isNew: true })
+  legendary_frame_5: Object.freeze({ id: "legendary_frame_5", title: "Золотой Бант", rarity: "legendary", weight: 2, legendaryOnly: true, isNew: true }),
+  alex_frame_1: Object.freeze({ id: "alex_frame_1", title: "Рамка Алекса I", rarity: "legendary", weight: 0, legendaryOnly: true, alexOnly: true, isNew: true }),
+  alex_frame_2: Object.freeze({ id: "alex_frame_2", title: "Рамка Алекса II", rarity: "legendary", weight: 0, legendaryOnly: true, alexOnly: true, isNew: true })
 });
 
 const CASE_TRAILS = Object.freeze({
@@ -122,7 +146,8 @@ const CASE_TRAILS = Object.freeze({
   legendary_trail_2: Object.freeze({ id: "legendary_trail_2", title: "Облачные Лапки", rarity: "legendary", weight: 2, legendaryOnly: true, isNew: true }),
   legendary_trail_3: Object.freeze({ id: "legendary_trail_3", title: "Золотой Кофейный След", rarity: "legendary", weight: 2, legendaryOnly: true, isNew: true }),
   legendary_trail_4: Object.freeze({ id: "legendary_trail_4", title: "Клубничные Лапки", rarity: "legendary", weight: 2, legendaryOnly: true, isNew: true }),
-  legendary_trail_5: Object.freeze({ id: "legendary_trail_5", title: "Королевские Лапки", rarity: "legendary", weight: 2, legendaryOnly: true, isNew: true })
+  legendary_trail_5: Object.freeze({ id: "legendary_trail_5", title: "Королевские Лапки", rarity: "legendary", weight: 2, legendaryOnly: true, isNew: true }),
+  alex_trail: Object.freeze({ id: "alex_trail", title: "След Алекса", rarity: "legendary", weight: 0, legendaryOnly: true, alexOnly: true, isNew: true })
 });
 
 const CASE_SKINS = Object.freeze({
@@ -915,7 +940,7 @@ function seasonPassElitePlusBenefitsConfig(rawValue) {
 function seasonPassElitePlusBenefitsView(rawValue, options = {}) {
   const config = seasonPassElitePlusBenefitsConfig(rawValue);
   const publicView = Boolean(options.publicView);
-  const caseLabels = { small:"Обычный кейс", sweet:"Серебряный кейс", gold:"Золотой кейс", mythic:"Мифический кейс", legendary:"Легендарный кейс" };
+  const caseLabels = { small:"Обычный кейс", sweet:"Серебряный кейс", gold:"Золотой кейс", mythic:"Мифический кейс", legendary:"Легендарный кейс", alex:"Кейс Алекса" };
   const cosmetics = config.cosmetics.map(({kind,itemId}) => {
     const item = seasonPassAnyCosmeticCatalog(kind)?.[itemId];
     const future = Boolean(futureSeasonContentItem(kind,itemId));
@@ -1103,7 +1128,8 @@ const LEADERBOARD_REWARD_ASSETS = Object.freeze({
     sweet: "/assets/cases/Bronze_close.png",
     gold: "/assets/cases/gold_closed.png",
     mythic: "/assets/cases/Mifik_case_closed.png",
-    legendary: "/assets/cases/legendary_closed.png"
+    legendary: "/assets/cases/legendary_closed.png",
+    alex: "/assets/cases/alex/alex_case_close.png"
   })
 });
 const DEFAULT_SEASON_REWARD_CLAIM_DAYS = 30;
@@ -5138,7 +5164,8 @@ function normalizeCaseType(value) {
     sweet: "sweet", silver: "sweet", "сладкий": "sweet", "средний": "sweet", "серебряный": "sweet",
     gold: "gold", golden: "gold", "золотой": "gold",
     mythic: "mythic", mifik: "mythic", "мифический": "mythic", "мифик": "mythic",
-    legendary: "legendary", legend: "legendary", "легендарный": "legendary", "легенда": "legendary"
+    legendary: "legendary", legend: "legendary", "легендарный": "legendary", "легенда": "legendary",
+    alex: "alex", "алекс": "alex", "кейс алекса": "alex", "кейс-алекса": "alex"
   };
   return aliases[raw] || "";
 }
@@ -5394,7 +5421,7 @@ function caseWeightedKind(caseType, state = null, liveops = null, catalogs = nul
       if (!rarityBucketAvailable(rarityBuckets[kind])) { pointsWeight += weight; continue; }
     } else if (cosmeticKinds.includes(kind)) {
       const catalog = runtimeCatalogs[kind] || {};
-      const predicate = (item) => caseType === "legendary" || !item?.legendaryOnly;
+      const predicate = (item) => !item?.alexOnly && (caseType === "legendary" || !item?.legendaryOnly);
       const available = caseType === "legendary"
         ? caseCatalogHasUnowned(catalog, ownedMap[kind], predicate)
         : Object.values(catalog).some(predicate);
@@ -5600,12 +5627,14 @@ async function buildCasePayload(env, telegramId, currentProfile, extra = {}, opt
     };
   });
   const openedLevels = openedCases.map((entry) => entry.level);
-  const giftedCases = { small: 0, sweet: 0, gold: 0, mythic: 0, legendary: 0 };
+  const giftedCases = { small: 0, sweet: 0, gold: 0, mythic: 0, legendary: 0, alex: 0 };
   for (const row of giftedResult.results || []) {
     const type = normalizeCaseType(row.case_type);
     if (type) giftedCases[type] = safeAdminNumber(row.count);
   }
   const playerLevel = caseProfileLevel(safeAdminNumber(ensured.profile?.profile_xp));
+  const alexCollectionGrant = await env.DB.prepare(`SELECT id FROM granted_cases WHERE id=? AND telegram_id=? LIMIT 1`).bind(alexCaseCollectionGrantId(telegramId),String(telegramId)).first().catch(()=>null);
+  const alexCollection = { ...alexCaseCollectionStatus(ensured.state), rewardCaseType:"gold", rewardTitle:"Золотой кейс", rewardClaimed:Boolean(alexCollectionGrant?.id) };
   const eligibleCases = Object.entries(LEVEL_CASE_SCHEDULE)
     .map(([level, caseType]) => ({
       level: Number(level),
@@ -5632,6 +5661,7 @@ async function buildCasePayload(env, telegramId, currentProfile, extra = {}, opt
       legendaryGuaranteedEvery: Math.max(0, Math.min(50, Number(liveops?.cases?.legendary?.guaranteeCount ?? 50)))
     },
     liveops,
+    alexCollection,
     profile: {
       wallet: safeAdminNumber(ensured.profile?.wallet),
       best: safeAdminNumber(ensured.profile?.best_score),
@@ -5649,7 +5679,7 @@ async function readFastCaseInventory(env, telegramId) {
     env.DB.prepare(`SELECT case_type,COUNT(*) AS count FROM granted_cases WHERE telegram_id=? AND status='pending' GROUP BY case_type`).bind(String(telegramId))
   ]);
   const openedLevels = (openingsResult?.results || []).map((row) => Number(row.level || 0)).filter((level) => level > 0);
-  const giftedCases = { small:0, sweet:0, gold:0, mythic:0, legendary:0 };
+  const giftedCases = { small:0, sweet:0, gold:0, mythic:0, legendary:0, alex:0 };
   for (const row of giftedResult?.results || []) {
     const type = normalizeCaseType(row.case_type);
     if (type) giftedCases[type] = safeAdminNumber(row.count);
@@ -5684,6 +5714,8 @@ async function buildFastCaseRefreshPayload(env, telegramId) {
   }
 
   const caseState = caseStateFromRow(stateRow || {});
+  const alexCollectionGrant = await env.DB.prepare(`SELECT id FROM granted_cases WHERE id=? AND telegram_id=? LIMIT 1`).bind(alexCaseCollectionGrantId(id),id).first().catch(()=>null);
+  const alexCollection = { ...alexCaseCollectionStatus(caseState), rewardCaseType:"gold", rewardTitle:"Золотой кейс", rewardClaimed:Boolean(alexCollectionGrant?.id) };
   // Fast warehouse refresh must not overwrite live-configured pity guarantees
   // with caseStateFromRow fallback constants. The client keeps its current
   // LiveOps values when these fields are omitted.
@@ -5695,6 +5727,7 @@ async function buildFastCaseRefreshPayload(env, telegramId) {
     openedLevels:inventory.openedLevels,
     giftedCases:inventory.giftedCases,
     caseState,
+    alexCollection,
     profile:{
       wallet:safeAdminNumber(profile?.wallet),
       best:safeAdminNumber(profile?.best_score),
@@ -5728,6 +5761,86 @@ function buildFastCaseOpenPayload({ state, liveops, profile, opened, caseDelta =
     ...(caseDelta ? { caseDelta } : {}),
     ...(seasonPassTaskNotice !== undefined ? { seasonPassTaskNotice: seasonPassTaskNotice || null } : {})
   };
+}
+
+function alexCaseCollectionGrantId(telegramId) {
+  return `alex_collection_gold_${String(telegramId || "")}`.slice(0, 180);
+}
+
+function alexCaseCollectionStatus(state) {
+  const ownedSkins = new Set(Array.isArray(state?.ownedSkins) ? state.ownedSkins : []);
+  const ownedTrails = new Set(Array.isArray(state?.ownedTrails) ? state.ownedTrails : []);
+  const ownedFrames = new Set(Array.isArray(state?.ownedFrames) ? state.ownedFrames : []);
+  const ownedAvatars = new Set(Array.isArray(state?.ownedAvatars) ? state.ownedAvatars : []);
+  const slots = {
+    skin: ownedSkins.has("alex"),
+    trail: ownedTrails.has("alex_trail"),
+    frame: ownedFrames.has("alex_frame_1") || ownedFrames.has("alex_frame_2"),
+    avatar: ownedAvatars.has("alex_avatar_1") || ownedAvatars.has("alex_avatar_2")
+  };
+  const count = Object.values(slots).filter(Boolean).length;
+  return { count, total:4, complete:count >= 4, slots };
+}
+
+function rollAlexCase(sourceState, currentOwnedSkins = [], rng = caseSecureFloat) {
+  const state = JSON.parse(JSON.stringify(sourceState || {}));
+  state.ownedSkins = normalizeCurrentOwnedSkins(currentOwnedSkins);
+  state.activeSkinId = normalizeCurrentActiveSkin(state.activeSkinId, state.ownedSkins);
+  state.ownedAvatars = caseParseOwned(JSON.stringify(state.ownedAvatars), "avatar", CASE_AVATARS);
+  state.ownedFrames = caseParseOwned(JSON.stringify(state.ownedFrames), "frame", CASE_FRAMES);
+  state.ownedTrails = caseParseOwned(JSON.stringify(state.ownedTrails), "trail", CASE_TRAILS);
+  const rewards = [];
+  let points = 0, treats = 0, coffee = 0;
+
+  const grantUnique = (kind, id, ownedKey, catalog) => {
+    const owned = Array.isArray(state[ownedKey]) ? state[ownedKey] : [];
+    const item = catalog[id];
+    if (!item) return false;
+    if (owned.includes(id)) {
+      points += ALEX_CASE_DUPLICATE_POINTS;
+      rewards.push({ kind, id, title:item.title, rarity:item.rarity, duplicate:true, compensationPoints:ALEX_CASE_DUPLICATE_POINTS, alexCase:true });
+    } else {
+      state[ownedKey] = [...new Set([...owned,id])];
+      rewards.push({ kind, id, title:item.title, rarity:item.rarity, duplicate:false, isNew:true, alexCase:true });
+    }
+    return true;
+  };
+
+  const roll = Math.max(0, Math.min(0.999999999999, Number((typeof rng === "function" ? rng : caseSecureFloat)()) || 0)) * 100;
+  let cursor = 0;
+  cursor += ALEX_CASE_DEFINITION.chances.skin;
+  if (roll < cursor) grantUnique("skin", "alex", "ownedSkins", CASE_SKINS);
+  else {
+    cursor += ALEX_CASE_DEFINITION.chances.trail;
+    if (roll < cursor) grantUnique("trail", "alex_trail", "ownedTrails", CASE_TRAILS);
+    else {
+      cursor += ALEX_CASE_DEFINITION.chances.frame;
+      if (roll < cursor) {
+        const id = (typeof rng === "function" ? rng : caseSecureFloat)() < 0.5 ? "alex_frame_1" : "alex_frame_2";
+        grantUnique("frame", id, "ownedFrames", CASE_FRAMES);
+      } else {
+        cursor += ALEX_CASE_DEFINITION.chances.avatar;
+        if (roll < cursor) {
+          const id = (typeof rng === "function" ? rng : caseSecureFloat)() < 0.5 ? "alex_avatar_1" : "alex_avatar_2";
+          grantUnique("avatar", id, "ownedAvatars", CASE_AVATARS);
+        } else {
+          const currencyRoll = roll - cursor;
+          const band = ALEX_CASE_CURRENCY_CHANCE;
+          if (currencyRoll < band) {
+            points = caseRandomInt(ALEX_CASE_DEFINITION.ranges.points[0], ALEX_CASE_DEFINITION.ranges.points[1], rng);
+            rewards.push({ kind:"points", amount:points, alexCase:true });
+          } else if (currencyRoll < band * 2) {
+            treats = caseRandomInt(ALEX_CASE_DEFINITION.ranges.treats[0], ALEX_CASE_DEFINITION.ranges.treats[1], rng);
+            rewards.push({ kind:"treats", amount:treats, alexCase:true });
+          } else {
+            coffee = caseRandomInt(ALEX_CASE_DEFINITION.ranges.coffee[0], ALEX_CASE_DEFINITION.ranges.coffee[1], rng);
+            rewards.push({ kind:"coffee", amount:coffee, alexCase:true });
+          }
+        }
+      }
+    }
+  }
+  return { rewards, state, points, treats, coffee, caseConfig:ALEX_CASE_DEFINITION, alexCollection:alexCaseCollectionStatus(state) };
 }
 
 function rollLevelCase(caseType, sourceState, currentOwnedSkins = [], liveops = null, rng = caseSecureFloat) {
@@ -5766,7 +5879,7 @@ function rollLevelCase(caseType, sourceState, currentOwnedSkins = [], liveops = 
 
   const cosmeticKinds = ["skin", "avatar", "frame", "trail", "music"];
   const ownedKeyByKind = { skin:"ownedSkins", avatar:"ownedAvatars", frame:"ownedFrames", trail:"ownedTrails", music:"ownedMusicTracks" };
-  const caseAvailabilityPredicate = (item) => caseType === "legendary" || !item?.legendaryOnly;
+  const caseAvailabilityPredicate = (item) => !item?.alexOnly && (caseType === "legendary" || !item?.legendaryOnly);
   const incrementPity = () => {
     if (caseType === "legendary" && guaranteeCount > 0) state.legendaryPityCounter = Math.min(pityMax, state.legendaryPityCounter + 1);
     if (caseType === "mythic" && guaranteeCount > 0) state.mythicPityCounter = Math.min(pityMax, state.mythicPityCounter + 1);
@@ -5851,14 +5964,14 @@ function rollLevelCase(caseType, sourceState, currentOwnedSkins = [], liveops = 
     const rarityPredicate = caseRarityAtLeast("epic");
     const categoriesWithUnowned = guaranteedCategories.filter(([, , catalog, ownedKey]) => {
       const ownedSet = new Set(Array.isArray(state[ownedKey]) ? state[ownedKey] : []);
-      return Object.entries(catalog || {}).some(([id, item]) => rarityPredicate(item) && !ownedSet.has(id));
+      return Object.entries(catalog || {}).some(([id, item]) => !item?.alexOnly && rarityPredicate(item) && !ownedSet.has(id));
     });
     if (!categoriesWithUnowned.length) return false;
     let roll = rng() * categoriesWithUnowned.reduce((sum, [, weight]) => sum + weight, 0);
     let selected = categoriesWithUnowned[categoriesWithUnowned.length - 1];
     for (const entry of categoriesWithUnowned) { roll -= entry[1]; if (roll < 0) { selected = entry; break; } }
     const [kind, , catalog, ownedKey] = selected;
-    return addCosmetic(kind, catalog, ownedKey, CASE_DUPLICATE_COMPENSATION[kind], rarityPredicate, {preferUnowned:true,allowDuplicate:false});
+    return addCosmetic(kind, catalog, ownedKey, CASE_DUPLICATE_COMPENSATION[kind], (item) => !item?.alexOnly && rarityPredicate(item), {preferUnowned:true,allowDuplicate:false});
   };
 
   const guaranteeMythicReward = () => {
@@ -6356,7 +6469,14 @@ async function openGrantedCase(request, env, ctx = null) {
     ).bind(now, openingClaimToken, claimedId, telegramId).run();
     if (Number(claim?.meta?.changes || 0) < 1) throw new ApiError(409, "Этот кейс уже открывается.");
 
-    const rolled = rollLevelCase(caseType, ensured.state, ensured.state.ownedSkins, liveops);
+    const priorAlexCollectionGrant = caseType === "alex"
+      ? await env.DB.prepare(`SELECT id FROM granted_cases WHERE id=? AND telegram_id=? LIMIT 1`).bind(alexCaseCollectionGrantId(telegramId),telegramId).first().catch(()=>null)
+      : null;
+    const rolled = caseType === "alex"
+      ? rollAlexCase(ensured.state, ensured.state.ownedSkins)
+      : rollLevelCase(caseType, ensured.state, ensured.state.ownedSkins, liveops);
+    const alexCollection = caseType === "alex" ? alexCaseCollectionStatus(rolled.state) : null;
+    const alexCollectionRewardGranted = Boolean(caseType === "alex" && alexCollection?.complete && !priorAlexCollectionGrant?.id);
     const physicalRewards = await prepareCasePhysicalRewards(env, {
       rolled,
       telegramId,
@@ -6382,6 +6502,9 @@ async function openGrantedCase(request, env, ctx = null) {
         `UPDATE granted_cases SET status = 'opened', rewards_json = ?, opened_at = ?, opening_started_at=0, opening_token=''
          WHERE id = ? AND telegram_id = ? AND status = 'opening'`
       ).bind(JSON.stringify(rolled.rewards), now, claimedId, telegramId),
+      ...(alexCollectionRewardGranted ? [env.DB.prepare(
+        `INSERT OR IGNORE INTO granted_cases(id,telegram_id,case_type,status,granted_by,reason,created_at) VALUES(?,?,?,'pending','alex_collection',?,?)`
+      ).bind(alexCaseCollectionGrantId(telegramId),telegramId,"gold","Собрана полная коллекция Алекса",now)] : []),
       ...physicalRewards.statements,
       ...(taskEvent?.progressStatements || []),
       ...(taskEvent?.notificationStatements || []),
@@ -6392,7 +6515,16 @@ async function openGrantedCase(request, env, ctx = null) {
       source: "gift",
       caseType,
       title: LEVEL_CASE_CONFIG[caseType]?.title || "Кейс",
-      rewards: rolled.rewards
+      rewards: rolled.rewards,
+      ...(caseType === "alex" ? {
+        alexCollection: {
+          ...alexCollection,
+          rewardCaseType: "gold",
+          rewardTitle: "Золотой кейс",
+          rewardClaimed: Boolean(priorAlexCollectionGrant?.id || alexCollectionRewardGranted)
+        },
+        alexCollectionRewardGranted
+      } : {})
     };
     const finalProfile = await ensureAuthoritativeProfileRow(env, telegramId, `gift-case:${caseType}:response`);
     const nextProfile = authoritativeProfileView(finalProfile);
@@ -9329,7 +9461,8 @@ const BOT_SHOP_PRODUCT_ALIASES = Object.freeze({
   "case-sweet": "case-sweet",
   "case-gold": "case-gold",
   "case-mythic": "case-mythic",
-  "case-legendary": "case-legendary"
+  "case-legendary": "case-legendary",
+  "case-alex": "case-alex"
 });
 
 const BOT_CASE_TYPE_ALIASES = Object.freeze({
@@ -9353,7 +9486,9 @@ const BOT_CASE_TYPE_ALIASES = Object.freeze({
   legendary: "case-legendary",
   legend: "case-legendary",
   "легендарный": "case-legendary",
-  "легенда": "case-legendary"
+  "легенда": "case-legendary",
+  alex: "case-alex",
+  "алекс": "case-alex"
 });
 
 function normalizeBotShopToken(value) {
@@ -9429,7 +9564,8 @@ const BOT_SHOP_PRODUCT_COMMAND_NAMES = Object.freeze({
   "case-sweet": "case sweet",
   "case-gold": "case gold",
   "case-mythic": "case mythic",
-  "case-legendary": "case legendary"
+  "case-legendary": "case legendary",
+  "case-alex": "case alex"
 });
 
 function botShopProductCommandName(productId) {
@@ -16346,7 +16482,9 @@ const LIVEOPS_CONTENT_IMAGES = Object.freeze({
     coffee_barista: "/assets/cases/avatars/42185960-59F9-4C06-8665-94B0A7621034.PNG",
     marshmallow_cloud: "/assets/cases/avatars/A34D0D9F-4BF6-4618-8E2B-3D4833CED067.PNG",
     pink_hearts: "/assets/cases/avatars/E74178F8-3156-4301-8559-D818D85404DA.PNG",
-    sakura: "/assets/cases/avatars/F1680265-2EC6-4028-9FED-E26997442675.PNG"
+    sakura: "/assets/cases/avatars/F1680265-2EC6-4028-9FED-E26997442675.PNG",
+    alex_avatar_1: "/assets/cases/avatars/alex_avatar_1.png",
+    alex_avatar_2: "/assets/cases/avatars/alex_avatar_2.png"
   }),
   frame: Object.freeze({
     heart: "/assets/rating/frames/profile/ramka_profile_sedce.png",
@@ -16362,7 +16500,9 @@ const LIVEOPS_CONTENT_IMAGES = Object.freeze({
     legendary_frame_2: "/assets/rating/frames/profile/legendary_ramka_2.png",
     legendary_frame_3: "/assets/rating/frames/profile/legendary_ramka_3.png",
     legendary_frame_4: "/assets/rating/frames/profile/legendary_ramka_4.png",
-    legendary_frame_5: "/assets/rating/frames/profile/legendary_ramka_5.png"
+    legendary_frame_5: "/assets/rating/frames/profile/legendary_ramka_5.png",
+    alex_frame_1: "/assets/rating/frames/profile/ramka_alex_1.png",
+    alex_frame_2: "/assets/rating/frames/profile/ramka_alex_2.png"
   }),
   trail: Object.freeze({
     marshmallow: "/assets/cases/trails/BBFD9E7E-393D-4B0A-B990-CC93BFCFB505.PNG",
@@ -16374,7 +16514,8 @@ const LIVEOPS_CONTENT_IMAGES = Object.freeze({
     legendary_trail_2: "/assets/cases/trails/legendary_trail_2.png",
     legendary_trail_3: "/assets/cases/trails/legendary_trail_3.png",
     legendary_trail_4: "/assets/cases/trails/legendary_trail_4.png",
-    legendary_trail_5: "/assets/cases/trails/legendary_trail_5.png?v=45"
+    legendary_trail_5: "/assets/cases/trails/legendary_trail_5.png?v=45",
+    alex_trail: "/assets/cases/trails/sled_alex_collectia.png"
   }),
   skin: Object.freeze({
     barista: "/assets/skins/avatars/barista.png",
@@ -16645,6 +16786,7 @@ function runtimeCaseCatalog(kind, baseCatalog, liveops, caseType = "") {
 }
 
 function liveOpsCaseConfig(liveops, caseType) {
+  if (String(caseType || "") === "alex") return ALEX_CASE_DEFINITION;
   return liveops?.cases?.[caseType] || { id: caseType, ...LIVEOPS_CASE_DEFAULTS[caseType] };
 }
 
@@ -23452,7 +23594,7 @@ function defaultSeasonPassReward(levelValue,laneValue) {
   const level = Math.max(1,Math.min(SEASON_PASS_MAX_LEVEL,Math.floor(Number(levelValue)||1)));
   const lane = laneValue === 'premium' ? 'premium' : 'free';
   const tier = Math.floor((level - 1) / 10);
-  const makeCase = (itemId,title) => ({rewardType:'case',amount:1,itemId,title,imageUrl:({small:'/assets/cases/standart_closed.png',sweet:'/assets/cases/Bronze_close.png',gold:'/assets/cases/gold_closed.png',mythic:'/assets/cases/Mifik_case_closed.png',legendary:'/assets/cases/legendary_closed.png'})[itemId]});
+  const makeCase = (itemId,title) => ({rewardType:'case',amount:1,itemId,title,imageUrl:({small:'/assets/cases/standart_closed.png',sweet:'/assets/cases/Bronze_close.png',gold:'/assets/cases/gold_closed.png',mythic:'/assets/cases/Mifik_case_closed.png',legendary:'/assets/cases/legendary_closed.png',alex:'/assets/cases/alex/alex_case_close.png'})[itemId]});
   if (lane === 'premium') {
     if (level === 50) return makeCase('legendary','Легендарный кейс');
     if (level % 10 === 0) return makeCase('gold','Золотой кейс');
@@ -23485,7 +23627,7 @@ function seasonPassRewardImage(rowOrType, imageUrlValue = '', itemIdValue = '') 
   const resourceAsset = seasonPassResourceRewardAsset(rewardType);
   if (resourceAsset) return resourceAsset;
   if (rewardType === 'case') {
-    return String(imageUrlValue || row?.image_url || ({small:'/assets/cases/standart_closed.png',sweet:'/assets/cases/Bronze_close.png',gold:'/assets/cases/gold_closed.png',mythic:'/assets/cases/Mifik_case_closed.png',legendary:'/assets/cases/legendary_closed.png'})[normalizeCaseType(itemId) || 'small'] || '/assets/cases/standart_closed.png');
+    return String(imageUrlValue || row?.image_url || ({small:'/assets/cases/standart_closed.png',sweet:'/assets/cases/Bronze_close.png',gold:'/assets/cases/gold_closed.png',mythic:'/assets/cases/Mifik_case_closed.png',legendary:'/assets/cases/legendary_closed.png',alex:'/assets/cases/alex/alex_case_close.png'})[normalizeCaseType(itemId) || 'small'] || '/assets/cases/standart_closed.png');
   }
   const cosmetic = row ? seasonPassCosmeticRewardDefinition(row) : null;
   if (cosmetic?.imageUrl) return cosmetic.imageUrl;
@@ -26004,7 +26146,7 @@ async function showSeasonPassRewardTypePicker(chatId,user,env,level,lane){
 }
 async function setSeasonPassRewardFromCallback(query,level,lane,type,value,env){
   const chatId=query.message?.chat?.id;const access=await requireAnySecurityPermission(chatId,query.from,['manageSeasons','manageMaintenance'],env);if(!access)return;const season=await resolveSeasonPassAdminSeason(env,query.from);const now=Math.floor(Date.now()/1000);let reward;
-  if(type==='case'){const item=normalizeCaseType(value)||'small';const names={small:'Обычный кейс',sweet:'Серебряный кейс',gold:'Золотой кейс',mythic:'Мифический кейс',legendary:'Легендарный кейс'};const images={small:'/assets/cases/standart_closed.png',sweet:'/assets/cases/Bronze_close.png',gold:'/assets/cases/gold_closed.png',mythic:'/assets/cases/Mifik_case_closed.png',legendary:'/assets/cases/legendary_closed.png'};reward={amount:1,itemId:item,title:names[item],imageUrl:images[item]};}
+  if(type==='case'){const item=normalizeCaseType(value)||'small';const names={small:'Обычный кейс',sweet:'Серебряный кейс',gold:'Золотой кейс',mythic:'Мифический кейс',legendary:'Легендарный кейс',alex:'Кейс Алекса'};const images={small:'/assets/cases/standart_closed.png',sweet:'/assets/cases/Bronze_close.png',gold:'/assets/cases/gold_closed.png',mythic:'/assets/cases/Mifik_case_closed.png',legendary:'/assets/cases/legendary_closed.png',alex:'/assets/cases/alex/alex_case_close.png'};reward={amount:1,itemId:item,title:names[item],imageUrl:images[item]};}
   else{const amount=Math.max(0,Number(value)||0);const map={points:['очков','/assets/optimized/v0.79.5/iconScore.png'],treats:['зефира',SEASON_PASS_TREATS_CURRENCY_IMAGE],coffee:['кофе','/assets/optimized/v0.79.5/iconCoffee.png']};reward={amount,itemId:'',title:`${amount.toLocaleString('ru-RU')} ${map[type][0]}`,imageUrl:map[type][1]};}
   await env.DB.prepare(`UPDATE season_pass_rewards SET reward_type=?,amount=?,item_id=?,title=?,image_url=?,updated_at=?,updated_by=? WHERE season_id=? AND level=? AND lane=?`).bind(type,reward.amount,reward.itemId,reward.title,reward.imageUrl,now,String(query.from.id),season.id,level,lane).run();await answerCallback(env,query.id,'Награда уровня изменена.');await showSeasonPassLevelCard(chatId,query.from,env,level);
 }
@@ -29359,7 +29501,8 @@ function ownerPanelCaseAsset(caseType) {
     sweet: "/assets/cases/Bronze_close.png",
     gold: "/assets/cases/gold_closed.png",
     mythic: "/assets/cases/Mifik_case_closed.png",
-    legendary: "/assets/cases/legendary_closed.png"
+    legendary: "/assets/cases/legendary_closed.png",
+    alex: "/assets/cases/alex/alex_case_close.png"
   })[String(caseType || "")] || "/assets/cases/standart_closed.png";
 }
 
@@ -34396,7 +34539,7 @@ function referralRewardLabel(reward) {
   if (r.kind === 'coffee') return `${r.amount.toLocaleString('ru-RU')} кофе`;
   if (r.kind === 'season_pass_xp') return `+${r.amount.toLocaleString('ru-RU')} XP сезонного пропуска`;
   if (r.kind === 'booster') return `Буст ×2 · ${({points:'очки',treats:'зефир',coffee:'кофе'})[r.id] || r.id} ×${r.amount}`;
-  if (r.kind === 'case') return `${r.amount > 1 ? `${r.amount} × ` : ''}${({small:'Обычный кейс',sweet:'Серебряный кейс',gold:'Золотой кейс',mythic:'Мифический кейс',legendary:'Легендарный кейс'})[r.id] || 'Кейс'}`;
+  if (r.kind === 'case') return `${r.amount > 1 ? `${r.amount} × ` : ''}${({small:'Обычный кейс',sweet:'Серебряный кейс',gold:'Золотой кейс',mythic:'Мифический кейс',legendary:'Легендарный кейс',alex:'Кейс Алекса'})[r.id] || 'Кейс'}`;
   return 'Награда';
 }
 
@@ -35563,7 +35706,7 @@ async function ownerPanelPlayer(env, ctx) {
   const gameAvatarUrl = activeAvatarId ? String(LIVEOPS_CONTENT_IMAGES.avatar?.[activeAvatarId] || "") : "";
   const photoUrl = String(identity.photo_url || allTime?.photo_url || "");
   const projectRole = isBotOwnerTelegramId(telegramId, env) ? "owner" : String(staffMember?.role || "");
-  const pendingCases = { small: 0, sweet: 0, gold: 0, mythic: 0, legendary: 0 };
+  const pendingCases = { small: 0, sweet: 0, gold: 0, mythic: 0, legendary: 0, alex: 0 };
   for (const row of caseCounts.results || []) if (row.case_type in pendingCases) pendingCases[row.case_type] = Number(row.count || 0);
   const passXp = Math.max(0, Number(passPlayer?.xp || 0));
   return {
@@ -35625,7 +35768,7 @@ async function ownerPanelPlayer(env, ctx) {
     },
     caseAssets: {
       small: ownerPanelCaseAsset("small"), sweet: ownerPanelCaseAsset("sweet"),
-      gold: ownerPanelCaseAsset("gold"), mythic: ownerPanelCaseAsset("mythic"), legendary: ownerPanelCaseAsset("legendary")
+      gold: ownerPanelCaseAsset("gold"), mythic: ownerPanelCaseAsset("mythic"), legendary: ownerPanelCaseAsset("legendary"), alex: ownerPanelCaseAsset("alex")
     }
   };
 }
@@ -36336,7 +36479,7 @@ function ownerPanelSeasonPassRewardPresentation(typeValue, amountValue, itemValu
     if (!itemId) throw new ApiError(400, "Неизвестный тип кейса.");
     const amount = ownerPanelInteger(amountValue, 1, 20);
     if (amount == null) throw new ApiError(400, "Количество кейсов должно быть от 1 до 20.");
-    const label = ({small:"Обычный кейс",sweet:"Серебряный кейс",gold:"Золотой кейс",mythic:"Мифический кейс",legendary:"Легендарный кейс"})[itemId];
+    const label = ({small:"Обычный кейс",sweet:"Серебряный кейс",gold:"Золотой кейс",mythic:"Мифический кейс",legendary:"Легендарный кейс",alex:"Кейс Алекса"})[itemId];
     return { rewardType:"case",publicRewardType:"case",amount,itemId,title:amount===1?label:`${label} ×${amount}`,imageUrl:ownerPanelCaseAsset(itemId) };
   }
   if (!["points","treats","coffee"].includes(type)) throw new ApiError(400, "Неизвестный тип награды.");
