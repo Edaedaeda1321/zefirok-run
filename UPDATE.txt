@@ -1,25 +1,14 @@
-Sweet Run TEST 1.0.9 - Shop v2 / Test Project launcher fix
-Date: 2026-08-19
+Обновление TEST Shop v2.2
 
-CHANGED
-- test-project.html
-  - TP updated to 5.2.5.
-  - Added UI build selector.
-  - Default target: TEST 1.0.9 - Shop v2.
-  - Green launch button opens /index_testing_v1.0.9.html in Test Project sandbox.
-  - Production remains available as a separate comparison button.
-  - Device Lab, Fault Lab and story visual launch use the selected UI build.
-  - Selected build is remembered locally in Test Project.
-- owner.html
-  - Test Project links cache-busted to tp-5.2.5.
+Изменено:
+- Опустил персонажей ниже на фоновых подиумах в карточках магазина.
+- Опустил персонажей ниже во вкладке «Подробнее», чтобы скин визуально стоял на подиуме.
+- Для мифических и легендарных скинов добавлено ещё более низкое позиционирование.
+- Подправлено положение Алекса и Ангелка на легендарных карточках.
+- Во вкладке «Подробнее» кнопки «Закрыть» и «Купить» теперь одинаковой ширины.
+
+Изменённые файлы:
 - index_testing_v1.0.9.html
-  - Shop v2 test build preserved.
-  - Back-to-Test-Project link updated to tp-5.2.5.
 
-NOT CHANGED
-- Production index.html is not included and is not modified.
-- No game economy, prices, rewards, cases or D1 data are changed.
-- Sandbox API isolation remains enabled.
-
-DEPLOY
-npx wrangler deploy
+Деплой:
+- npx wrangler deploy
