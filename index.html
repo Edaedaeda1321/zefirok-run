@@ -10187,6 +10187,9 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       }
 
       let telegramProfile = null;
+      let telegramProfileLastReceivedAt = 0;
+      let telegramProfileStartupSyncAt = 0;
+      let telegramProfileStartupSyncId = &quot;&quot;;
       let telegramProfileRefreshPending = false;
       let telegramProfileRefreshTimer = 0;
       let profileToastTimer = 0;
@@ -11664,6 +11667,8 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       const leaderboardCache = { season: null, all_time: null };
       const leaderboardRequestSerial = { season: 0, all_time: 0 };
       const leaderboardRefreshInFlight = { season: false, all_time: false };
+      const leaderboardRefreshTask = { season: null, all_time: null };
+      const leaderboardRefreshTaskUser = { season: &quot;&quot;, all_time: &quot;&quot; };
       let pendingLeaderboardRun = null;
       let leaderboardRunSubmitInFlightRunId = &quot;&quot;;
       let authoritativeRunSessionId = &quot;&quot;;
@@ -14295,18 +14300,25 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           telegramProfile = message.payload &amp;&amp; typeof message.payload === &quot;object&quot;
             ? message.payload
             : { available: false };
-          if (isScreenVisible(&quot;profile&quot;)) renderProfile();
+          telegramProfileLastReceivedAt = Date.now();
+          const profileVisible = isScreenVisible(&quot;profile&quot;);
+          if (profileVisible) renderProfile();
           if (isScreenVisible(&quot;shop&quot;)) window.setTimeout(() =&gt; void maybeShowFlashOffer(), 120);
-          void syncGameStartupPackage(true);
+          const currentTelegramId = String(telegramProfile?.id || &quot;&quot;);
+          const startupSyncNeeded = !telegramProfileStartupSyncId
+            || telegramProfileStartupSyncId !== currentTelegramId
+            || Date.now() - telegramProfileStartupSyncAt &gt; 60000;
           if (state.running &amp;&amp; state.caseRunId) void startAuthoritativeRunSession(state.caseRunId);
-          // The consolidated startup package already carries task-notice state.
-          // Avoid a duplicate request 80 ms later.
-          void (async () =&gt; {
-            await retryPendingLeaderboardRun();
-            if (isScreenVisible(&quot;profile&quot;)) {
-              await refreshLeaderboard(true, &quot;season&quot;, false);
-            }
-          })();
+          // Rating is the visible profile dependency, so start it before background
+          // package/retry work instead of waiting for an old run submission.
+          if (profileVisible) void refreshLeaderboard(false, &quot;season&quot;, false);
+          void retryPendingLeaderboardRun({ silent: true });
+          if (startupSyncNeeded) {
+            telegramProfileStartupSyncId = currentTelegramId;
+            telegramProfileStartupSyncAt = Date.now();
+            if (profileVisible) window.setTimeout(() =&gt; void syncGameStartupPackage(true), 180);
+            else void syncGameStartupPackage(true);
+          }
           if (telegramProfileRefreshPending) {
             telegramProfileRefreshPending = false;
             window.clearTimeout(telegramProfileRefreshTimer);
@@ -16582,7 +16594,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         }
         if (name === &quot;profile&quot;) {
           renderProfile();
-          requestTelegramProfile();
+          if (!telegramProfile?.available || Date.now() - telegramProfileLastReceivedAt &gt; 300000) requestTelegramProfile();
           void refreshLeaderboard(false, &quot;season&quot;, false);
           scheduleProfileTutorialAutoOpen();
         } else {
@@ -17722,13 +17734,12 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       async function refreshLeaderboard(force = false, mode = leaderboardMode, activate = true) {
         const requestedMode = mode === &quot;all_time&quot; ? &quot;all_time&quot; : &quot;season&quot;;
         const initData = String(telegramProfile?.initData || &quot;&quot;);
+        const requestUser = String(telegramProfile?.id || &quot;guest&quot;);
         if (activate) leaderboardMode = requestedMode;
         const cached = leaderboardCache[requestedMode];
         if (cached) {
           if (requestedMode === &quot;season&quot;) renderLeaderboardSummary();
-          if (requestedMode === leaderboardMode) {
-            leaderboardData = cached;
-          }
+          if (requestedMode === leaderboardMode) leaderboardData = cached;
         }
         if (!initData) {
           renderLeaderboardUnavailable(&quot;Откройте игру системной кнопкой «ИГРАТЬ» в Telegram, чтобы участвовать в рейтинге.&quot;);
@@ -17736,26 +17747,39 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         }
         const now = Date.now();
         if (!force &amp;&amp; cached &amp;&amp; now - Number(cached._loadedAt || 0) &lt; LEADERBOARD_REFRESH_INTERVAL_MS) return cached;
+        const existingTask = leaderboardRefreshTask[requestedMode];
+        if (existingTask &amp;&amp; leaderboardRefreshTaskUser[requestedMode] === requestUser) return existingTask;
+
         const serial = ++leaderboardRequestSerial[requestedMode];
         leaderboardRefreshInFlight[requestedMode] = true;
-        try {
-          const loaded = await leaderboardApiRequest(LEADERBOARD_API_STATE_PATH, { initData, mode: requestedMode });
-          loaded._loadedAt = Date.now();
-          if (serial !== leaderboardRequestSerial[requestedMode]) return loaded;
-          leaderboardCache[requestedMode] = loaded;
-          leaderboardLastRefreshAt = now;
-          applyLeaderboardResetPlan(loaded?.season?.resetPlan, loaded?.serverTime);
-          if (requestedMode === &quot;season&quot;) renderLeaderboardSummary();
-          if (requestedMode === leaderboardMode) {
-            leaderboardData = loaded;
+        const task = (async () =&gt; {
+          try {
+            const loaded = await leaderboardApiRequest(LEADERBOARD_API_STATE_PATH, { initData, mode: requestedMode });
+            loaded._loadedAt = Date.now();
+            if (serial !== leaderboardRequestSerial[requestedMode]) return loaded;
+            leaderboardCache[requestedMode] = loaded;
+            leaderboardLastRefreshAt = now;
+            applyLeaderboardResetPlan(loaded?.season?.resetPlan, loaded?.serverTime);
+            if (requestedMode === &quot;season&quot;) renderLeaderboardSummary();
+            if (requestedMode === leaderboardMode) leaderboardData = loaded;
+            return loaded;
+          } catch (error) {
+            console.warn(&quot;Leaderboard refresh failed&quot;, error);
+            if (!cached &amp;&amp; requestedMode === leaderboardMode) renderLeaderboardUnavailable(error.message || &quot;Не удалось загрузить рейтинг.&quot;);
+            return cached || null;
+          } finally {
+            if (serial === leaderboardRequestSerial[requestedMode]) leaderboardRefreshInFlight[requestedMode] = false;
           }
-          return loaded;
-        } catch (error) {
-          console.warn(&quot;Leaderboard refresh failed&quot;, error);
-          if (!cached &amp;&amp; requestedMode === leaderboardMode) renderLeaderboardUnavailable(error.message || &quot;Не удалось загрузить рейтинг.&quot;);
-          return cached || null;
+        })();
+        leaderboardRefreshTask[requestedMode] = task;
+        leaderboardRefreshTaskUser[requestedMode] = requestUser;
+        try {
+          return await task;
         } finally {
-          if (serial === leaderboardRequestSerial[requestedMode]) leaderboardRefreshInFlight[requestedMode] = false;
+          if (leaderboardRefreshTask[requestedMode] === task) {
+            leaderboardRefreshTask[requestedMode] = null;
+            leaderboardRefreshTaskUser[requestedMode] = &quot;&quot;;
+          }
         }
       }
 
@@ -18042,7 +18066,8 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         return true;
       }
 
-      async function submitLeaderboardRun(scoreValue, durationSeconds, existingRun = null, runMetrics = null) {
+      async function submitLeaderboardRun(scoreValue, durationSeconds, existingRun = null, runMetrics = null, options = {}) {
+        const silent = Boolean(options?.silent);
         const score = Math.max(0, Math.floor(Number(scoreValue || 0)));
         const durationMs = Math.max(0, Math.floor(Number(durationSeconds || 0) * 1000));
         let run = existingRun;
@@ -18068,7 +18093,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         savePendingLeaderboardRun(run);
         const initData = String(telegramProfile?.initData || &quot;&quot;);
         if (!initData) {
-          showProfileToast(&quot;Забег сохранён. Откройте игру через Telegram, чтобы сервер подтвердил результат.&quot;, &quot;warning&quot;, 5200);
+          if (!silent) showProfileToast(&quot;Забег сохранён. Откройте игру через Telegram, чтобы сервер подтвердил результат.&quot;, &quot;warning&quot;, 5200);
           return false;
         }
         if (leaderboardRunSubmitInFlightRunId === String(run.runId)) return false;
@@ -18097,7 +18122,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           if (seasonPassAward) {
             if (seasonPassAward.taskNotice) applySeasonTaskNotice(seasonPassAward.taskNotice);
             if (Number(seasonPassAward.xpAwarded || 0) &gt; 0) {
-              showProfileToast(`Сезонный пропуск: +${formatter.format(Number(seasonPassAward.xpAwarded || 0))} XP`, &quot;success&quot;, 2600);
+              if (!silent) showProfileToast(`Сезонный пропуск: +${formatter.format(Number(seasonPassAward.xpAwarded || 0))} XP`, &quot;success&quot;, 2600);
               try { window.parent.postMessage({ type: &quot;zefirok-season-pass-updated&quot;, xpAwarded: Number(seasonPassAward.xpAwarded || 0) }, &quot;*&quot;); } catch (error) {}
             }
             window.setTimeout(() =&gt; void loadSeasonPassProfileBonus(), 420);
@@ -18118,9 +18143,9 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
             renderLeaderboardSummary();
           }
           if (loaded?.runSettlement?.accepted) savePendingLeaderboardRun(null);
-          if (loaded?.runSettlement?.acceptedToRating) {
+          if (!silent &amp;&amp; loaded?.runSettlement?.acceptedToRating) {
             showProfileToast(&quot;Результат сохранён и добавлен в рейтинг.&quot;, &quot;success&quot;, 2200);
-          } else if (loaded?.runSettlement?.accepted) {
+          } else if (!silent &amp;&amp; loaded?.runSettlement?.accepted) {
             showProfileToast(&quot;Результат сохранён.&quot;, &quot;success&quot;, 1800);
           }
           try { window.parent.postMessage({ type: &quot;zefirok-run-completed&quot;, accepted: Boolean(loaded?.runSettlement?.acceptedToRating), runId: String(run.runId || &quot;&quot;) }, &quot;*&quot;); } catch (error) {}
@@ -18130,7 +18155,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           const permanentSessionError = Number(error?.status || 0) === 409 &amp;&amp; /(?:начните новый забег|идентификатор забега уже|сессия забега истекла|проверка забега|контрольн|забег уже заверш|не может быть восстановлен)/i.test(errorMessage);
           if (permanentSessionError) savePendingLeaderboardRun(null);
           console.warn(&quot;Authoritative run submit failed&quot;, error);
-          showProfileToast(errorMessage || &quot;Результат сохранён и будет отправлен позже.&quot;, &quot;warning&quot;, 4200);
+          if (!silent) showProfileToast(errorMessage || &quot;Результат сохранён и будет отправлен позже.&quot;, &quot;warning&quot;, 4200);
           window.setTimeout(() =&gt; void syncPlayerProfileFromServer(), 250);
           return false;
         } finally {
@@ -18139,11 +18164,11 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         }
       }
 
-      async function retryPendingLeaderboardRun() {
+      async function retryPendingLeaderboardRun(options = {}) {
         const run = loadPendingLeaderboardRun();
         if (!run || !telegramProfile?.initData) return false;
         if (leaderboardRunSubmitInFlightRunId === String(run.runId)) return false;
-        return submitLeaderboardRun(Number(run.score || 0), Number(run.durationMs || 0) / 1000, run);
+        return submitLeaderboardRun(Number(run.score || 0), Number(run.durationMs || 0) / 1000, run, null, { silent: options?.silent !== false });
       }
 
       window.__ZEFIROK_SETTLE_PENDING_RUN__ = async function settlePendingRunBeforeNavigation(options = {}) {

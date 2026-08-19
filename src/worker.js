@@ -4747,6 +4747,36 @@ async function ensureSeason(env, now = Math.floor(Date.now() / 1000)) {
   return row;
 }
 
+async function selectLeaderboardSeasonForState(env, now = Math.floor(Date.now() / 1000)) {
+  requireDatabase(env);
+  let row = await env.DB.prepare(
+    `SELECT * FROM leaderboard_seasons
+     WHERE finalized_at IS NULL AND status <> 'cancelled' AND starts_at <= ? AND ends_at > ?
+     ORDER BY manual_override DESC, starts_at DESC, created_at DESC, id ASC
+     LIMIT 1`
+  ).bind(now, now).first();
+  if (row) return { ...row, status: 'active' };
+
+  row = await env.DB.prepare(
+    `SELECT * FROM leaderboard_seasons
+     WHERE finalized_at IS NULL AND status <> 'cancelled' AND starts_at > ? AND ends_at > ?
+     ORDER BY starts_at ASC, manual_override DESC, created_at ASC, id ASC
+     LIMIT 1`
+  ).bind(now, now).first();
+  if (row) return { ...row, status: 'scheduled' };
+
+  row = await env.DB.prepare(
+    `SELECT * FROM leaderboard_seasons
+     WHERE status <> 'cancelled' AND (status = 'ended' OR ends_at <= ?)
+     ORDER BY ends_at DESC, finalized_at DESC, updated_at DESC, id ASC
+     LIMIT 1`
+  ).bind(now).first();
+  if (row) return { ...row, status: 'ended' };
+
+  // Empty/new database only: fall back to the mutating initializer once.
+  return ensureSeason(env, now);
+}
+
 async function finalizeSeason(env, season, now = Math.floor(Date.now() / 1000)) {
   if (!season || season.finalized_at) return;
   const winner = await env.DB.prepare(
@@ -6508,7 +6538,7 @@ async function leaderboardState(request, env) {
     const body = await readJson(request);
     const auth = await validateTelegramInitData(String(body.initData || ""), env);
     const mode = String(body.mode || "season") === "all_time" ? "all_time" : "season";
-    const season = await ensureSeason(env);
+    const season = await selectLeaderboardSeasonForState(env);
     if (mode === "all_time") await ensureLeaderboardAllTimeBestScoreMode(env);
     return jsonResponse(await buildLeaderboardPayload(env, season, String(auth.user.id), mode));
   } catch (error) {
@@ -7268,14 +7298,32 @@ async function buildLeaderboardPayload(env, season, telegramId, mode = "season")
                         case_avatar_id, case_frame_id
                  FROM ${table} WHERE ${where}
                  ORDER BY best_score DESC, achieved_at ASC, telegram_id ASC LIMIT ?`;
-  const topResult = mode === "all_time"
-    ? await env.DB.prepare(query).bind(topLimit).all()
-    : await env.DB.prepare(query).bind(season.id, topLimit).all();
+  const serverTime = Date.now();
+  const topPromise = mode === "all_time"
+    ? env.DB.prepare(query).bind(topLimit).all()
+    : env.DB.prepare(query).bind(season.id, topLimit).all();
+  const mePromise = mode === "all_time"
+    ? env.DB.prepare(`SELECT * FROM leaderboard_all_time WHERE telegram_id = ? LIMIT 1`).bind(telegramId).first()
+    : env.DB.prepare(`SELECT * FROM leaderboard_entries WHERE season_id = ? AND telegram_id = ? LIMIT 1`).bind(season.id, telegramId).first();
+  const rewardPromise = env.DB.prepare(
+    `SELECT * FROM leaderboard_rewards
+     WHERE telegram_id = ? AND status IN ('pending', 'claimed')
+     ORDER BY CASE WHEN season_id = ? THEN 0 ELSE 1 END,
+              CASE status WHEN 'pending' THEN 0 ELSE 1 END,
+              created_at DESC
+     LIMIT 1`
+  ).bind(telegramId, season.id).first();
+  const nextSeasonPromise = String(season.status) === "active"
+    ? env.DB.prepare(
+        `SELECT id,title,starts_at,ends_at,status FROM leaderboard_seasons
+         WHERE finalized_at IS NULL AND status <> 'cancelled' AND starts_at > ? AND id <> ?
+         ORDER BY starts_at ASC LIMIT 1`
+      ).bind(Math.floor(serverTime / 1000), String(season.id)).first()
+    : Promise.resolve(null);
+
+  const [topResult, me, reward, nextSeasonRow] = await Promise.all([topPromise, mePromise, rewardPromise, nextSeasonPromise]);
   const top = (topResult.results || []).map((row, index) => leaderboardRowToClient(row, index + 1));
 
-  const me = mode === "all_time"
-    ? await env.DB.prepare(`SELECT * FROM leaderboard_all_time WHERE telegram_id = ? LIMIT 1`).bind(telegramId).first()
-    : await env.DB.prepare(`SELECT * FROM leaderboard_entries WHERE season_id = ? AND telegram_id = ? LIMIT 1`).bind(season.id, telegramId).first();
   let myEntry = null;
   if (me && !Number(me.hidden || 0)) {
     const rankQuery = mode === "all_time"
@@ -7293,23 +7341,7 @@ async function buildLeaderboardPayload(env, season, telegramId, mode = "season")
   for (const entry of top) entry.seasonPassTier = passTierMap.get(String(entry.telegramId || "")) || "none";
   if (myEntry) myEntry.seasonPassTier = passTierMap.get(String(myEntry.telegramId || "")) || "none";
 
-  const reward = await env.DB.prepare(
-    `SELECT * FROM leaderboard_rewards
-     WHERE telegram_id = ? AND status IN ('pending', 'claimed')
-     ORDER BY CASE WHEN season_id = ? THEN 0 ELSE 1 END,
-              CASE status WHEN 'pending' THEN 0 ELSE 1 END,
-              created_at DESC
-     LIMIT 1`
-  ).bind(telegramId, season.id).first();
   const firstScore = top.length ? top[0].score : 0;
-  const serverTime = Date.now();
-  const nextSeasonRow = String(season.status) === "active"
-    ? await env.DB.prepare(
-        `SELECT id,title,starts_at,ends_at,status FROM leaderboard_seasons
-         WHERE status = 'scheduled' AND finalized_at IS NULL AND starts_at > ? AND id <> ?
-         ORDER BY starts_at ASC LIMIT 1`
-      ).bind(Math.floor(serverTime / 1000), String(season.id)).first()
-    : null;
   const rewardConfig = configuredSeason(env);
   const seasonReward = leaderboardRewardPresentation(
     season.reward_type || rewardConfig.rewardType,
@@ -22859,6 +22891,71 @@ async function reconcileSeasonPassBalanceV3AllPlayers(env, seasonId) {
   return { ok:true, skipped:false, players:Number(before?.count||0) };
 }
 
+const SEASON_PASS_SCHEMA_RUNTIME_VERSION = '2026-08-18-story-visual-v2';
+const SEASON_PASS_SCHEMA_MARKER_KEY = `season-pass:schema-ready:${SEASON_PASS_SCHEMA_RUNTIME_VERSION}`;
+
+async function seasonPassSchemaMarkerReady(env) {
+  try {
+    const row = await env.DB.prepare(`SELECT state_value FROM bot_system_state WHERE state_key=? LIMIT 1`).bind(SEASON_PASS_SCHEMA_MARKER_KEY).first();
+    return String(row?.state_value || '') === 'ready';
+  } catch (error) {
+    return false;
+  }
+}
+
+async function seasonPassSchemaQuickCheck(env) {
+  try {
+    const requiredTables = [
+      'season_pass_seasons','season_pass_rewards','season_pass_players','season_pass_run_xp','season_pass_activity_runs',
+      'season_pass_claims','season_pass_entitlements','season_pass_purchases','season_pass_purchase_guards',
+      'season_pass_tasks','season_pass_task_claims','season_pass_task_progress','season_pass_task_notifications',
+      'season_pass_teasers','season_pass_teaser_deliveries','season_pass_story_events','season_pass_story_progress',
+      'season_pass_story_manual_unlocks','season_pass_story_tests','season_pass_story_presets',
+      'season_pass_case_definitions','season_pass_case_items','season_pass_case_resource_items','season_pass_case_grants'
+    ];
+    const placeholders = requiredTables.map(() => '?').join(',');
+    const tableRows = (await env.DB.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name IN (${placeholders})`).bind(...requiredTables).all()).results || [];
+    const existingTables = new Set(tableRows.map((row) => String(row.name || '')));
+    if (requiredTables.some((table) => !existingTables.has(table))) return false;
+    const [seasonInfo, storyInfo, progressInfo, runXpInfo, grantInfo, caseDefinitionInfo, casePlayerInfo, leaderboardRunInfo] = await Promise.all([
+      env.DB.prepare(`PRAGMA table_info(season_pass_seasons)`).all(),
+      env.DB.prepare(`PRAGMA table_info(season_pass_story_events)`).all(),
+      env.DB.prepare(`PRAGMA table_info(season_pass_story_progress)`).all(),
+      env.DB.prepare(`PRAGMA table_info(season_pass_run_xp)`).all(),
+      env.DB.prepare(`PRAGMA table_info(season_pass_case_grants)`).all(),
+      env.DB.prepare(`PRAGMA table_info(season_pass_case_definitions)`).all(),
+      env.DB.prepare(`PRAGMA table_info(case_player_state)`).all(),
+      env.DB.prepare(`PRAGMA table_info(leaderboard_runs)`).all()
+    ]);
+    const names = (result) => new Set((result?.results || []).map((row) => String(row.name || '')));
+    const seasonColumns = names(seasonInfo);
+    const storyColumns = names(storyInfo);
+    const progressColumns = names(progressInfo);
+    const runXpColumns = names(runXpInfo);
+    const grantColumns = names(grantInfo);
+    const caseDefinitionColumns = names(caseDefinitionInfo);
+    const casePlayerColumns = names(casePlayerInfo);
+    const leaderboardRunColumns = names(leaderboardRunInfo);
+    return seasonColumns.has('asset_key') && seasonColumns.has('claim_grace_ends_at') && seasonColumns.has('elite_plus_benefits_json')
+      && storyColumns.has('actions_json') && storyColumns.has('pages_json') && storyColumns.has('unlock_at')
+      && storyColumns.has('push_enabled') && storyColumns.has('push_text') && storyColumns.has('reward_json')
+      && progressColumns.has('visual_notice_at') && progressColumns.has('notified_at')
+      && runXpColumns.has('applied_at') && grantColumns.has('snapshot_json') && caseDefinitionColumns.has('reward_groups_json')
+      && casePlayerColumns.has('owned_specials_json') && leaderboardRunColumns.has('run_treats') && leaderboardRunColumns.has('run_coffee');
+  } catch (error) {
+    return false;
+  }
+}
+
+async function markSeasonPassSchemaReady(env) {
+  try {
+    const now = Math.floor(Date.now() / 1000);
+    await env.DB.prepare(`INSERT INTO bot_system_state(state_key,state_value,updated_at) VALUES(?, 'ready', ?) ON CONFLICT(state_key) DO UPDATE SET state_value='ready',updated_at=excluded.updated_at`).bind(SEASON_PASS_SCHEMA_MARKER_KEY, now).run();
+  } catch (error) {
+    // The marker is an optimization only. Schema correctness never depends on it.
+  }
+}
+
 let seasonPassSchemaReady = false;
 let seasonPassSchemaPromise = null;
 async function ensureSeasonPassSchema(env) {
@@ -22866,6 +22963,11 @@ async function ensureSeasonPassSchema(env) {
   if (seasonPassSchemaReady) return;
   if (seasonPassSchemaPromise) return seasonPassSchemaPromise;
   const promise = (async () => {
+    if (await seasonPassSchemaMarkerReady(env)) return;
+    if (await seasonPassSchemaQuickCheck(env)) {
+      await markSeasonPassSchemaReady(env);
+      return;
+    }
     await env.DB.batch([
       env.DB.prepare(`CREATE TABLE IF NOT EXISTS season_pass_seasons (
         season_id TEXT PRIMARY KEY, title TEXT NOT NULL, asset_key TEXT NOT NULL DEFAULT '', starts_at INTEGER NOT NULL, ends_at INTEGER NOT NULL,
@@ -23127,6 +23229,7 @@ async function ensureSeasonPassSchema(env) {
     // Seed the authored Season 2 story once. A separate marker table means that
     // later owner edits or deletions are respected and never recreated.
     await ensureSeason2StoryPreset(env);
+    await markSeasonPassSchemaReady(env);
   })();
   seasonPassSchemaPromise = promise;
   try { await promise; seasonPassSchemaReady = true; await readLiveContentReleaseRules(env,true); } finally { if (seasonPassSchemaPromise === promise) seasonPassSchemaPromise = null; }
