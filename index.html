@@ -1038,8 +1038,8 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
     const passOffer = normalizedOfferTier ? `&offer=${encodeURIComponent(normalizedOfferTier)}` : "";
     const passTest = TEST_PROJECT_MODE ? "&test_project=1" : "";
     passFrame.src = initData
-      ? `/battle-pass.html?v=1.0.8${passView}${passOffer}${passTest}#tgInitData=${encodeURIComponent(initData)}`
-      : `/battle-pass.html?v=1.0.8${passView}${passOffer}${passTest}`;
+      ? `/battle-pass.html?v=1.0.9${passView}${passOffer}${passTest}#tgInitData=${encodeURIComponent(initData)}`
+      : `/battle-pass.html?v=1.0.9${passView}${passOffer}${passTest}`;
     layer.append(passFrame);
     passFrame.addEventListener("load", () => {
       const snapshot = syncTelegramViewport();
@@ -1123,8 +1123,8 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
     referralFrame.allow = "clipboard-write";
     referralFrame.referrerPolicy = "same-origin";
     referralFrame.src = initData
-      ? `/referrals.html?v=1.0.0#tgInitData=${encodeURIComponent(initData)}`
-      : `/referrals.html?v=1.0.0`;
+      ? `/referrals.html?v=1.0.9#tgInitData=${encodeURIComponent(initData)}`
+      : `/referrals.html?v=1.0.9`;
     layer.append(referralFrame);
     referralFrame.addEventListener("load", () => {
       const snapshot = syncTelegramViewport();
@@ -1164,7 +1164,7 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
 
   let ratingLayer = null;
   let ratingReadyTimer = 0;
-  const RATING_RELEASE_BUILD = "1.0.8-rating";
+  const RATING_RELEASE_BUILD = "1.0.9-rating";
   const RATING_READY_TIMEOUT_MS = 16000;
 
   function ratingFrame() {
@@ -9513,7 +9513,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
     &lt;span class=&quot;profile-support-meta&quot; data-profile-support-meta&gt;Обращения ещё не загружены&lt;/span&gt;
   &lt;/section&gt;
 
-  &lt;div class=&quot;profile-version-row&quot;&gt;&lt;span&gt;Версия игры&lt;/span&gt;&lt;strong data-profile-game-version&gt;1.0.8&lt;/strong&gt;&lt;/div&gt;
+  &lt;div class=&quot;profile-version-row&quot;&gt;&lt;span&gt;Версия игры&lt;/span&gt;&lt;strong data-profile-game-version&gt;1.0.9&lt;/strong&gt;&lt;/div&gt;
   &lt;div aria-live=&quot;polite&quot; class=&quot;profile-toast&quot; data-profile-toast hidden&gt;&lt;/div&gt;
 &lt;/div&gt;
 &lt;/section&gt;
@@ -9566,9 +9566,9 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 &lt;div aria-hidden=&quot;true&quot; class=&quot;release-layer&quot; data-release-layer hidden&gt;
   &lt;div aria-labelledby=&quot;release-dialog-title&quot; aria-modal=&quot;true&quot; class=&quot;release-dialog&quot; role=&quot;dialog&quot; tabindex=&quot;-1&quot;&gt;
     &lt;div class=&quot;release-image-wrap&quot; data-release-image-wrap aria-hidden=&quot;true&quot;&gt;
-      &lt;img class=&quot;release-image&quot; data-release-image src=&quot;/assets/news/relise_game_news.png?v=1.0.8&quot; alt=&quot;Обновление Сладкого Забега 1.0.8&quot; width=&quot;1254&quot; height=&quot;1254&quot; decoding=&quot;async&quot; loading=&quot;lazy&quot; fetchpriority=&quot;low&quot;/&gt;
+      &lt;img class=&quot;release-image&quot; data-release-image src=&quot;/assets/news/update_v_1_0_9.png?v=1.0.9&quot; alt=&quot;Обновление Сладкого Забега 1.0.9&quot; width=&quot;1254&quot; height=&quot;1254&quot; decoding=&quot;async&quot; loading=&quot;lazy&quot; fetchpriority=&quot;low&quot;/&gt;
     &lt;/div&gt;
-    &lt;div class=&quot;release-kicker&quot; data-release-kicker&gt;Релиз игры&lt;/div&gt;
+    &lt;div class=&quot;release-kicker&quot; data-release-kicker&gt;Новое обновление&lt;/div&gt;
     &lt;h2 id=&quot;release-dialog-title&quot; data-release-title&gt;Обновление&lt;/h2&gt;
     &lt;p class=&quot;release-copy&quot; data-release-copy&gt;&lt;/p&gt;
     &lt;div class=&quot;release-version&quot; data-release-version&gt;&lt;/div&gt;
@@ -9989,27 +9989,44 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       // Заголовок, текст и кнопку ниже можно свободно редактировать.
       // Переносы строк внутри UPDATE_NOTICE_TEXT сохраняются.
       // Версия: год игры.сезонное обновление.исправление.
-      const GAME_VERSION = &quot;1.0.8&quot;;
+      const GAME_VERSION = &quot;1.0.9&quot;;
       const ECONOMY_RESET_KEY = &quot;economy-reset-0.1.1-beta-purchase-limit-fix-2026-07-23&quot;;
-      const UPDATE_NOTICE_KEY = &quot;release-1-0-8-pass-stock-2026-08-16&quot;;
+      const UPDATE_NOTICE_KEY = &quot;release-1-0-9-2026-08-19&quot;;
       const UPDATE_NOTICE_ENABLED = true;
-      const UPDATE_NOTICE_TITLE = &quot;Сладкий Забег 1.0.8 — обновлённый пропуск и удобный склад&quot;;
-      const UPDATE_NOTICE_TEXT = `Версия 1.0.8 уже доступна! Обновили сезонный пропуск, «Мои покупки» и отображение наград. Весь игровой прогресс сохраняется.
+      const UPDATE_NOTICE_TITLE = &quot;Сладкий Забег 1.0.9 — друзья, новый XP и Алекс&quot;;
+      const UPDATE_NOTICE_TEXT = `Версия 1.0.9 уже доступна! Это большое обновление друзей, сезонного прогресса и удобства. Весь игровой прогресс сохраняется.
+
+👥 ДРУЗЬЯ КАФЕ
+• В профиле появился раздел «Друзья кафе» с персональной Telegram-ссылкой для приглашений. Код уже встроен в ссылку — другу ничего не нужно вводить вручную.
+• Совместные награды открываются за стартовый этап, уровни профиля 5/10/20 и активность приглашённого друга. За Элитный и Элитный+ пригласивший получает дополнительный XP сезонного пропуска.
+• Добавлена общая лестница за 1/3/5/10/20/50 активных друзей, а на крупных целях можно выбрать одну большую награду.
+• Появились лента друзей, бесплатный подарок другу, совместный недельный подарок, награда за возвращение друга и временные события с увеличенными наградами.
+• Карточки друзей теперь показывают точный прогресс и ближайшую цель. Обучение подробно объясняет, что засчитывается, а что нет.
 
 🎟 СЕЗОННЫЙ ПРОПУСК
-• Перебалансированы награды сезонного пропуска: распределение наград по уровням стало ровнее, а бесплатная и Элитная линии — понятнее.
-• Награды с зефиром теперь используют единое изображение игровой валюты, а не физического товара.
-• Усилители ×2 для очков, зефира и кофе отображаются своими игровыми изображениями вместо эмоджи.
+• Полностью переработана кривая XP на 50 уровнях: прогресс стал плавнее и понятнее.
+• Полное прохождение 50 уровней теперь требует 74 700 XP.
+• После 50 уровня работает бесконечная дорожка 50+: каждые 1 500 XP открывают следующий шаг.
+• Уже заработанный XP не уменьшается.
 
-🛍 МОИ ПОКУПКИ И СКЛАД
-• Обновлено оформление раздела «Мои покупки» и склада — нужные разделы теперь легче различать визуально.
-• Покупки, усилители, кейсы и подарки получили отдельные изображения в интерфейсе.
-• Купленные награды и активные коды по-прежнему доступны в «Моих покупках».
+🛍 МОИ ПОКУПКИ
+• «Мои покупки» теперь работают как единый склад — всё нужное собрано в одном месте и разделено на понятные вкладки.
+• «Покупки»: физические награды и проверяемые коды. Активный код можно повторно открыть в течение 24 часов, а использованные и истёкшие покупки остаются в истории.
+• «Усилители»: все доступные ×2-бонусы и их активация перед забегом.
+• «Кейсы»: постоянные кейсы из уровней, магазина, подарков и акций можно открыть прямо здесь. Сезонные кейсы остаются внутри сезонного пропуска.
+• «Подарки»: награды, подарки и компенсации больше не теряются среди других разделов и сохраняют историю получения.
 
-✨ УЛУЧШЕНИЯ
-• Улучшена работа проекта.
+🐱 НОВЫЙ СКИН «АЛЕКС»
+• В магазин добавлен легендарный скин Алекс.
+• Стоимость: 3 000 000 очков, 1 500 зефира и 1 500 кофе.
+• За каждый полноценный забег Алекс даёт +600 очков, +15 зефира и +15 кофе.
+• Алекс также может выпасть из Легендарного кейса и имеет самый маленький шанс среди скинов внутри категории «Скины».
 
-Спасибо, что помогаете делать «Сладкий Забег» лучше!`;
+✨ ЕЩЁ
+• Обновлены обучение, подсказки, отображение наград и переходы между новыми разделами.
+• Сохранены весь прогресс, покупки, коллекция, профиль и рейтинг за всё время.
+
+Спасибо, что играете с нами! Зеффи рада подарить вам ещё больше сладких эмоций!`;
       const UPDATE_NOTICE_BUTTON = &quot;Продолжить&quot;;
       const CASE_TUTORIAL_KEY = &quot;cases-tutorial-2-2026-08-15&quot;;
       const RATING_TUTORIAL_KEY = &quot;rating-tutorial-1-2026-07-25&quot;;
@@ -10414,10 +10431,10 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         },
         alex: {
           id: &quot;alex&quot;, title: &quot;Алекс&quot;, image: &quot;/assets/skins/shop/alex.png&quot;,
-          points: 0, treats: 0, coffee: 0,
-          bonus: Object.freeze({ points: 0, treats: 0, coffee: 0 }),
-          bonusLabel: &quot;Особый образ · без игрового бонуса&quot;,
-          description: &quot;Кот Алекс — особый бесплатный образ. Меняет только внешний вид и не влияет на баланс.&quot;
+          points: 3000000, treats: 1500, coffee: 1500,
+          bonus: Object.freeze({ points: 600, treats: 15, coffee: 15 }),
+          bonusLabel: &quot;+600 очков, +15 зефира и +15 кофе&quot;,
+          description: &quot;Бонус за каждый полноценный забег от 12 секунд и 150 очков.&quot;
         },
         angel: {
           id: &quot;angel&quot;, title: &quot;Ангелок&quot;, image: &quot;/assets/skins/shop/angel.png&quot;,
@@ -12708,7 +12725,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           releaseImageEl.src = builtInReleaseImageSrc;
           releaseImageEl.alt = builtInReleaseImageAlt;
         }
-        if (releaseKickerEl) releaseKickerEl.textContent = &quot;Релиз игры&quot;;
+        if (releaseKickerEl) releaseKickerEl.textContent = &quot;Новое обновление&quot;;
         if (releaseTitleEl) releaseTitleEl.textContent = UPDATE_NOTICE_TITLE;
         if (releaseCopyEl) releaseCopyEl.innerHTML = escapeReleaseText(UPDATE_NOTICE_TEXT).replace(/\n/g, &quot;&lt;br&gt;&quot;);
         if (releaseVersionEl) {

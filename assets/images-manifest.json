@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "catalogHash": "0fbb979b4b996987",
-  "count": 335,
+  "catalogHash": "202fa404cdbd4b4e",
+  "count": 336,
   "images": [
     {
       "fileName": "cases/398D69BA-8943-4846-94B3-FC5CB717A67F.PNG",
@@ -754,6 +754,14 @@
       "path": "/assets/news/tex_raboty_news.png",
       "size": 2644033,
       "modified": 1786223132614
+    },
+    {
+      "fileName": "news/update_v_1_0_9.png",
+      "label": "Update v 1 0 9",
+      "folder": "news",
+      "path": "/assets/news/update_v_1_0_9.png",
+      "size": 3518444,
+      "modified": 1787160610000
     },
     {
       "fileName": "optimized/v0.79.5/cafeBackground.png",
@@ -2088,16 +2096,16 @@
       "label": "Run1",
       "folder": "skins/gameplay/alex",
       "path": "/assets/skins/gameplay/alex/run1.png",
-      "size": 1773011,
-      "modified": 1787158102000
+      "size": 1324392,
+      "modified": 1787158954137
     },
     {
       "fileName": "skins/gameplay/alex/run2.png",
       "label": "Run2",
       "folder": "skins/gameplay/alex",
       "path": "/assets/skins/gameplay/alex/run2.png",
-      "size": 1513334,
-      "modified": 1787158105000
+      "size": 1428750,
+      "modified": 1787158960234
     },
     {
       "fileName": "skins/gameplay/alex/stand.png",

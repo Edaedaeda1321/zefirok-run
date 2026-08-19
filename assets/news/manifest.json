@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "catalogHash": "3977c68d0672330a",
-  "count": 6,
+  "catalogHash": "f4e7d0ae5d70c7dc",
+  "count": 7,
   "images": [
     {
       "fileName": "cases-5.0.1.png",
@@ -44,6 +44,13 @@
       "path": "/assets/news/tex_raboty_news.png",
       "hash": "c51992c8fb04",
       "size": 2644033
+    },
+    {
+      "fileName": "update_v_1_0_9.png",
+      "label": "Update v 1 0 9",
+      "path": "/assets/news/update_v_1_0_9.png",
+      "hash": "32c20276f944",
+      "size": 3518444
     }
   ]
 }

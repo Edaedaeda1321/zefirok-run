@@ -8813,7 +8813,7 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
 <script>(() => {
   "use strict";
 
-  const BUILD = "1.0.6 · player-level-badges";
+  const BUILD = "1.0.9 · player-level-badges";
   const tg = window.Telegram?.WebApp;
   const embedded = window.parent !== window;
   let lastHapticAt = 0;
@@ -9198,7 +9198,7 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
     }
     const auth = currentInitData();
     const hash = auth ? `#tgInitData=${encodeURIComponent(auth)}` : "";
-    location.href = `/battle-pass.html?v=1.0.1&offer=${encodeURIComponent(tier)}${hash}`;
+    location.href = `/battle-pass.html?v=1.0.9&offer=${encodeURIComponent(tier)}${hash}`;
   }
 
   function podium(entry, place) {

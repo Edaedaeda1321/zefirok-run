@@ -36,11 +36,12 @@ const SKINS = Object.freeze({
   bee: Object.freeze({ id: "bee", title: "Пчёлка" }),
   sailor: Object.freeze({ id: "sailor", title: "Морячок" }),
   princess: Object.freeze({ id: "princess", title: "Принцесса" }),
-  alex: Object.freeze({ id: "alex", title: "Алекс" }),
-  angel: Object.freeze({ id: "angel", title: "Ангелок" })
+  angel: Object.freeze({ id: "angel", title: "Ангелок" }),
+  alex: Object.freeze({ id: "alex", title: "Алекс" })
 });
 
 const DEFAULT_SKIN_PRICE_VERSION = 3;
+const ALEX_SKIN_PRICE_VERSION = 4;
 const DEFAULT_SKIN_PRICES = Object.freeze({
   default: Object.freeze({ points: 0, treats: 0, coffee: 0 }),
   barista: Object.freeze({ points: 100000, treats: 0, coffee: 400 }),
@@ -48,8 +49,8 @@ const DEFAULT_SKIN_PRICES = Object.freeze({
   bee: Object.freeze({ points: 350000, treats: 650, coffee: 0 }),
   sailor: Object.freeze({ points: 650000, treats: 0, coffee: 650 }),
   princess: Object.freeze({ points: 1300000, treats: 850, coffee: 850 }),
-  alex: Object.freeze({ points: 0, treats: 0, coffee: 0 }),
-  angel: Object.freeze({ points: 2400000, treats: 1000, coffee: 1000 })
+  angel: Object.freeze({ points: 2400000, treats: 1000, coffee: 1000 }),
+  alex: Object.freeze({ points: 3000000, treats: 1500, coffee: 1500 })
 });
 
 const SKIN_PURCHASE_CASE_BONUSES = Object.freeze({
@@ -130,7 +131,8 @@ const CASE_SKINS = Object.freeze({
   bee: Object.freeze({ id: "bee", title: "Пчёлка", rarity: "superrare", weight: 20 }),
   sailor: Object.freeze({ id: "sailor", title: "Морячок", rarity: "epic", weight: 14 }),
   princess: Object.freeze({ id: "princess", title: "Принцесса", rarity: "mythic", weight: 10 }),
-  angel: Object.freeze({ id: "angel", title: "Ангелок", rarity: "legendary", weight: 6 })
+  angel: Object.freeze({ id: "angel", title: "Ангелок", rarity: "legendary", weight: 6 }),
+  alex: Object.freeze({ id: "alex", title: "Алекс", rarity: "legendary", weight: 1, legendaryOnly: true, isNew: true })
 });
 
 const CASE_MUSIC_TRACKS = Object.freeze({
@@ -690,7 +692,7 @@ const LEGAL_DOCUMENTS = Object.freeze({
 });
 const LEGAL_BUILTIN_HASHES = Object.freeze({"agreement":{"version":"2026-08-13.1","sha256Ru":"7b9dad94ff4319c98b5fd01ade558ed3e409db705a8417551f89eb0dc4792c46","sha256En":"3f93d567fefd8e936a7ac8f63a9a5ceefc6bd6ecfcdfaad2e3733cf6e34d02d0","sha256Bundle":"93f28cca0556b480ee44a73ef775187a397dfc61bd4efda1171526a84fa69e84"},"privacy":{"version":"2026-08-13.2","sha256Ru":"687bba9ab60ee35124a17806ba7904870b1a3e09d23610430d45b92cd4719433","sha256En":"e0531d156e2ad0210b16349094499f7560cfca6167d911306926ed8e6ff45cbd","sha256Bundle":"435dd20f418603b3329dd1ab17a5e5ee619eee5341f425a547114fd235d4eee3"},"consent":{"version":"2026-08-13.1","sha256Ru":"10bcaf97ef31fad736f5e4f987ffad94c30c964e759b72c9a49c97738ede48d7","sha256En":"64383734cc3469028242d0c90867ccc42c7605269b187a94056fc963460ddb41","sha256Bundle":"11ebecc6978dac4f887b2ed4316f12f9ebafd4c41d5eeafed331ee12ae2948e0"}});
 
-const WORKER_BUILD = "1.0.8";
+const WORKER_BUILD = "1.0.9";
 const V07944_RELEASE_CANDIDATE_AUDIT = Object.freeze({ reset: true, claims: true, purchases: true, xp: true, concurrency: true });
 
 // =============================================================
@@ -1054,10 +1056,10 @@ const REWARD_LIMIT_RESET_AT_SECONDS = 1784805300; // 23.07.2026 11:15 UTC
 // НАСТРОЙКИ ВЕРСИИ И РАЗДЕЛА «ОБНОВЛЕНИЕ» В БОТЕ.
 // Схема версии: первая цифра — год игры, вторая — сезонное обновление, третья — исправление.
 // Примеры: 1.0.1 — фикс, 1.2.0 — сезонное обновление, 2.0.0 — второй год игры.
-const GAME_VERSION = "1.0.8";
-const GAME_UPDATE_DATE = "16 августа 2026";
-const GAME_UPDATE_TITLE = "Сладкий Забег 1.0.8 — обновлённый пропуск и удобный склад";
-const GAME_UPDATE_TYPE = "Сезонный пропуск, склад и интерфейс";
+const GAME_VERSION = "1.0.9";
+const GAME_UPDATE_DATE = "19 августа 2026";
+const GAME_UPDATE_TITLE = "Сладкий Забег 1.0.9 — друзья, новый XP и Алекс";
+const GAME_UPDATE_TYPE = "Друзья кафе, сезонный прогресс, покупки и новый скин";
 
 // Что произошло с прогрессом в этом релизе:
 // "reset" — крупное обновление с обнулением прогресса;
@@ -1066,12 +1068,16 @@ const GAME_UPDATE_PROGRESS_MODE = "keep";
 const GAME_UPDATE_RESET_REASON = "Прогресс сохраняется. Обновление не сбрасывает валюты, XP, покупки, рейтинг за всё время или коллекцию.";
 
 const GAME_UPDATE_NOTES = Object.freeze([
-  "Перебалансированы награды сезонного пропуска: распределение по уровням стало ровнее, а бесплатная и Элитная линии — понятнее.",
-  "Награды с зефиром теперь используют единое изображение игровой валюты, а не физического товара.",
-  "Усилители ×2 для очков, зефира и кофе отображаются своими игровыми изображениями вместо эмоджи.",
-  "Обновлено оформление раздела «Мои покупки» и склада; покупки, усилители, кейсы и подарки получили отдельные изображения.",
-  "Купленные награды и активные коды по-прежнему доступны в «Моих покупках».",
-  "Улучшена работа проекта.",
+  "Добавлен раздел «Друзья кафе»: приглашения, совместные подарки, этапы друзей и общая лестница наград.",
+  "Добавлены лента друзей, бесплатные подарки, совместный недельный подарок, награда за возвращение друга и временные события с увеличенными наградами.",
+  "Крупные реферальные цели получили выбор большой награды, а карточки друзей показывают точный прогресс и ближайшую цель.",
+  "Переработана кривая XP сезонного пропуска: полный путь до 50 уровня — 74 700 XP, после 50 уровня шаг дорожки 50+ составляет 1 500 XP.",
+  "Уже заработанный XP сохраняется и не уменьшается.",
+  "«Мои покупки» стали единым складом: покупки и коды, усилители, постоянные кейсы, подарки и компенсации разделены по вкладкам.",
+  "Активный код покупки можно повторно открыть в течение 24 часов; использованные и истёкшие покупки остаются в истории.",
+  "Добавлен легендарный скин «Алекс» с бонусом +600 очков, +15 зефира и +15 кофе за полноценный забег.",
+  "Алекс доступен в магазине и может выпасть из Легендарного кейса с самым маленьким шансом среди скинов.",
+  "Обновлены обучение, подсказки и отображение наград.",
 ]);
 
 
@@ -1127,25 +1133,42 @@ const DEFAULT_SEASON_RESET_PLAN = Object.freeze({
 });
 
 // Встроенная релизная новость. BOT_NEWS_IMAGE_URL в Cloudflare может переопределить картинку.
-const DEFAULT_BOT_NEWS_IMAGE_URL = `${DEFAULT_GAME_URL.replace(/\/$/, "")}/assets/news/relise_game_news.png?v=1.0.8`;
-const BOT_NEWS_TITLE = "Сладкий Забег 1.0.8 — обновлённый пропуск и удобный склад";
-const BOT_NEWS_TEXT = `Версия 1.0.8 уже доступна! Обновили сезонный пропуск, «Мои покупки» и отображение наград. Весь игровой прогресс сохраняется.
+const DEFAULT_BOT_NEWS_IMAGE_URL = `${DEFAULT_GAME_URL.replace(/\/$/, "")}/assets/news/update_v_1_0_9.png?v=1.0.9`;
+const BOT_NEWS_TITLE = "Сладкий Забег 1.0.9 — друзья, новый XP и Алекс";
+const BOT_NEWS_TEXT = `Версия 1.0.9 уже доступна! Это большое обновление друзей, сезонного прогресса и удобства. Весь игровой прогресс сохраняется.
+
+👥 ДРУЗЬЯ КАФЕ
+• В профиле появился раздел «Друзья кафе» с персональной Telegram-ссылкой для приглашений. Код уже встроен в ссылку — другу ничего не нужно вводить вручную.
+• Совместные награды открываются за стартовый этап, уровни профиля 5/10/20 и активность приглашённого друга. За Элитный и Элитный+ пригласивший получает дополнительный XP сезонного пропуска.
+• Добавлена общая лестница за 1/3/5/10/20/50 активных друзей, а на крупных целях можно выбрать одну большую награду.
+• Появились лента друзей, бесплатный подарок другу, совместный недельный подарок, награда за возвращение друга и временные события с увеличенными наградами.
+• Карточки друзей теперь показывают точный прогресс и ближайшую цель. Обучение подробно объясняет, что засчитывается, а что нет.
 
 🎟 СЕЗОННЫЙ ПРОПУСК
-• Перебалансированы награды сезонного пропуска: распределение наград по уровням стало ровнее, а бесплатная и Элитная линии — понятнее.
-• Награды с зефиром теперь используют единое изображение игровой валюты, а не физического товара.
-• Усилители ×2 для очков, зефира и кофе отображаются своими игровыми изображениями вместо эмоджи.
+• Полностью переработана кривая XP на 50 уровнях: прогресс стал плавнее и понятнее.
+• Полное прохождение 50 уровней теперь требует 74 700 XP.
+• После 50 уровня работает бесконечная дорожка 50+: каждые 1 500 XP открывают следующий шаг.
+• Уже заработанный XP не уменьшается.
 
-🛍 МОИ ПОКУПКИ И СКЛАД
-• Обновлено оформление раздела «Мои покупки» и склада — нужные разделы теперь легче различать визуально.
-• Покупки, усилители, кейсы и подарки получили отдельные изображения в интерфейсе.
-• Купленные награды и активные коды по-прежнему доступны в «Моих покупках».
+🛍 МОИ ПОКУПКИ
+• «Мои покупки» теперь работают как единый склад — всё нужное собрано в одном месте и разделено на понятные вкладки.
+• «Покупки»: физические награды и проверяемые коды. Активный код можно повторно открыть в течение 24 часов, а использованные и истёкшие покупки остаются в истории.
+• «Усилители»: все доступные ×2-бонусы и их активация перед забегом.
+• «Кейсы»: постоянные кейсы из уровней, магазина, подарков и акций можно открыть прямо здесь. Сезонные кейсы остаются внутри сезонного пропуска.
+• «Подарки»: награды, подарки и компенсации больше не теряются среди других разделов и сохраняют историю получения.
 
-✨ УЛУЧШЕНИЯ
-• Улучшена работа проекта.
+🐱 НОВЫЙ СКИН «АЛЕКС»
+• В магазин добавлен легендарный скин Алекс.
+• Стоимость: 3 000 000 очков, 1 500 зефира и 1 500 кофе.
+• За каждый полноценный забег Алекс даёт +600 очков, +15 зефира и +15 кофе.
+• Алекс также может выпасть из Легендарного кейса и имеет самый маленький шанс среди скинов внутри категории «Скины».
 
-Спасибо, что помогаете делать «Сладкий Забег» лучше!`;
-const BOT_NEWS_PUBLISHED_AT = 1786904700;
+✨ ЕЩЁ
+• Обновлены обучение, подсказки, отображение наград и переходы между новыми разделами.
+• Сохранены весь прогресс, покупки, коллекция, профиль и рейтинг за всё время.
+
+Спасибо, что играете с нами! Зеффи рада подарить вам ещё больше сладких эмоций!`;
+const BOT_NEWS_PUBLISHED_AT = 1787160120;
 // =============================================================
 
 const PLAYER_BOT_COMMANDS = Object.freeze([
@@ -1882,6 +1905,7 @@ export default {
       try {
         await ensureRuntimeCompatibilitySchema(env);
         await ensureRelease106PlayerFix(env);
+        await ensureRelease109News(env);
         await processServerCron(env, controller);
       } catch (error) {
         console.error("Server Cron dispatcher failed", error);
@@ -2731,6 +2755,7 @@ async function ensureGameNewsReadSchema(env) {
 }
 
 async function getGameNewsForPlayer(env, telegramId) {
+  await ensureRelease109News(env);
   await ensureGameNewsReadSchema(env);
   const id = String(telegramId || "").trim();
   if (!id) return null;
@@ -3244,6 +3269,7 @@ const SERVER_SKIN_RUN_BONUSES = Object.freeze({
   bee: Object.freeze({ points: 0, treats: 8, coffee: 0 }),
   sailor: Object.freeze({ points: 0, treats: 0, coffee: 8 }),
   princess: Object.freeze({ points: 120, treats: 10, coffee: 10 }),
+  alex: Object.freeze({ points: 600, treats: 15, coffee: 15 }),
   angel: Object.freeze({ points: 200, treats: 12, coffee: 12 })
 });
 
@@ -4082,6 +4108,14 @@ async function ensureSkinPriceSchema(env) {
     ).bind(price.points, price.treats, price.coffee, DEFAULT_SKIN_PRICE_VERSION, now, skinId, DEFAULT_SKIN_PRICE_VERSION));
   }
   await env.DB.batch(statements);
+  // Алекс был впервые выпущен с нулевой ценой на версии 3. Обновляем только
+  // его строку до нового баланса, не затрагивая цены остальных скинов,
+  // которые могли быть изменены вручную через Control Center.
+  await env.DB.prepare(
+    `UPDATE skin_prices SET
+      points=?, treats=?, coffee=?, version=?, updated_at=?, updated_by='alex-balance-v1'
+     WHERE skin_id='alex' AND version < ?`
+  ).bind(3000000,1500,1500,ALEX_SKIN_PRICE_VERSION,now,ALEX_SKIN_PRICE_VERSION).run();
 }
 
 async function readSkinPrices(env) {
@@ -5146,6 +5180,32 @@ async function ensureRelease106PlayerFix(env) {
     release106PlayerFixReady = true;
   })().finally(() => { release106PlayerFixPromise = null; });
   return release106PlayerFixPromise;
+}
+
+const RELEASE_109_NEWS_KEY = "release-1.0.9-news-v1";
+let release109NewsReady = false;
+let release109NewsPromise = null;
+
+async function ensureRelease109News(env) {
+  if (release109NewsReady) return;
+  if (release109NewsPromise) return release109NewsPromise;
+  release109NewsPromise = (async () => {
+    requireDatabase(env);
+    const state = await getSystemState(env, RELEASE_109_NEWS_KEY);
+    if (state?.value === "done") { release109NewsReady = true; return; }
+    const now = Math.floor(Date.now() / 1000);
+    await env.DB.batch([
+      env.DB.prepare(`UPDATE bot_news SET status='archived' WHERE status='published' AND published_at<?`).bind(BOT_NEWS_PUBLISHED_AT),
+      env.DB.prepare(`INSERT INTO bot_news(title,body,image_url,status,created_at,published_at,created_by,created_by_name)
+        SELECT ?,?,?,'published',?,?,?,'Система релиза'
+        WHERE NOT EXISTS(SELECT 1 FROM bot_news WHERE title=? AND published_at=? LIMIT 1)`)
+        .bind(BOT_NEWS_TITLE,BOT_NEWS_TEXT,DEFAULT_BOT_NEWS_IMAGE_URL,BOT_NEWS_PUBLISHED_AT,BOT_NEWS_PUBLISHED_AT,'release:1.0.9',BOT_NEWS_TITLE,BOT_NEWS_PUBLISHED_AT),
+      env.DB.prepare(`INSERT INTO bot_system_state(state_key,state_value,updated_at) VALUES(?, 'done', ?)
+        ON CONFLICT(state_key) DO UPDATE SET state_value='done',updated_at=excluded.updated_at`).bind(RELEASE_109_NEWS_KEY,now)
+    ]);
+    release109NewsReady = true;
+  })().finally(() => { release109NewsPromise = null; });
+  return release109NewsPromise;
 }
 
 async function createGrantedCases(env, telegramId, caseTypeValue, quantityValue, grantedBy, reasonValue) {
@@ -8503,11 +8563,11 @@ function configuredOwnerPanelUrl(env) {
   try {
     const url = new URL(configuredGameUrl(env));
     url.pathname = "/owner.html";
-    url.search = "?v=owner-1.0.8-cc925-health2";
+    url.search = "?v=owner-1.0.9-cc925-health2";
     url.hash = "";
     return url.toString();
   } catch {
-    return `${DEFAULT_GAME_URL.replace(/\/$/, "")}/owner.html?v=owner-1.0.8-cc925-health2`;
+    return `${DEFAULT_GAME_URL.replace(/\/$/, "")}/owner.html?v=owner-1.0.9-cc925-health2`;
   }
 }
 
@@ -11272,6 +11332,7 @@ async function publishBotNews(chatId, requester, rawPayload, env) {
 }
 
 async function latestBotNews(env) {
+  await ensureRelease109News(env);
   return env.DB.prepare(
     `SELECT title, body, image_url, published_at FROM bot_news
      WHERE status = 'published' ORDER BY published_at DESC, id DESC LIMIT 1`
@@ -16261,7 +16322,8 @@ const LIVEOPS_CONTENT_IMAGES = Object.freeze({
     bee: "/assets/skins/avatars/bee.png",
     sailor: "/assets/skins/avatars/sailor.png",
     princess: "/assets/skins/avatars/princess.png",
-    angel: "/assets/skins/avatars/angel.png"
+    angel: "/assets/skins/avatars/angel.png",
+    alex: "/assets/skins/avatars/alex.png"
   })
 });
 
@@ -24083,10 +24145,10 @@ function configuredSeasonPassTasksUrl(env){
   try{
     const url=new URL(configuredGameUrl(env));
     url.pathname='/battle-pass.html';
-    url.search='?v=1.0.8&view=tasks';
+    url.search='?v=1.0.9&view=tasks';
     url.hash='';
     return url.toString();
-  }catch{return `${DEFAULT_GAME_URL.replace(/\/$/,'')}/battle-pass.html?v=1.0.8&view=tasks`;}
+  }catch{return `${DEFAULT_GAME_URL.replace(/\/$/,'')}/battle-pass.html?v=1.0.9&view=tasks`;}
 }
 
 function seasonPassTaskNoticePublic(rows,season){
@@ -30405,6 +30467,53 @@ async function ownerV85AllPlayerPreview(env) {
   };
 }
 
+function ownerV85CompensationRewardCatalog(){
+  return {
+    cases: grantCatalogItems("case").map(item=>({id:String(item.id),title:String(item.title)})),
+    skins: grantCatalogItems("skin").map(item=>({id:String(item.id),title:String(item.title)})),
+    avatars: grantCatalogItems("avatar").map(item=>({id:String(item.id),title:String(item.title)})),
+    frames: grantCatalogItems("frame").map(item=>({id:String(item.id),title:String(item.title)})),
+    trails: grantCatalogItems("trail").map(item=>({id:String(item.id),title:String(item.title)}))
+  };
+}
+function ownerV85NormalizeCustomCompensationRewards(input){
+  const raw=Array.isArray(input)?input:[];
+  if(raw.length>8)throw new ApiError(400,"В своей компенсации можно указать максимум 8 строк наград.");
+  const catalog={
+    case:new Set(grantCatalogItems("case").map(item=>String(item.id))),
+    skin:new Set(grantCatalogItems("skin").map(item=>String(item.id))),
+    avatar:new Set(grantCatalogItems("avatar").map(item=>String(item.id))),
+    frame:new Set(grantCatalogItems("frame").map(item=>String(item.id))),
+    trail:new Set(grantCatalogItems("trail").map(item=>String(item.id)))
+  };
+  const checked=[];
+  for(const item of raw){
+    if(!item||typeof item!=="object")throw new ApiError(400,"Некорректная строка награды.");
+    let kind=String(item.kind||"").trim().toLowerCase();
+    if(kind==="treats"||kind==="marshmallow")kind="zefir";
+    const id=String(item.id||item.rewardId||"").trim();
+    let amount=Math.floor(Number(item.amount||1));
+    if(["points","zefir","coffee"].includes(kind)){
+      if(!Number.isFinite(amount)||amount<1||amount>5000000)throw new ApiError(400,`Количество для «${grantRewardTitle(kind)}» должно быть от 1 до 5 000 000.`);
+      checked.push({kind,id:"",amount});
+      continue;
+    }
+    if(kind==="case"){
+      if(!catalog.case.has(id))throw new ApiError(400,"Выбран неизвестный кейс.");
+      if(!Number.isFinite(amount)||amount<1||amount>20)throw new ApiError(400,"За одну компенсацию можно выдать от 1 до 20 кейсов одного типа.");
+      checked.push({kind,id,amount});
+      continue;
+    }
+    if(["skin","avatar","frame","trail"].includes(kind)){
+      if(!catalog[kind].has(id))throw new ApiError(400,`Выбран неизвестный предмет категории «${kind}».`);
+      checked.push({kind,id,amount:1});
+      continue;
+    }
+    throw new ApiError(400,"В своей компенсации указан неподдерживаемый тип награды.");
+  }
+  return normalizePlayerGiftRewards(checked);
+}
+
 async function ownerPanelV85Compensations(env,ctx){
   await ensureControlCenterV85Schema(env);const [templates,segments,queue,campaigns,notifyQueue]=await Promise.all([
     env.DB.prepare(`SELECT * FROM compensation_templates WHERE enabled=1 ORDER BY template_id`).all(),ownerV85SegmentCatalog(env,false),
@@ -30414,17 +30523,32 @@ async function ownerPanelV85Compensations(env,ctx){
   ]);
   const mappedTemplates=(templates.results||[]).filter(r=>!ownerV8SafeJson(r.rewards_json,[]).some(x=>String(x?.kind)==='physical_restore')).map(r=>({id:String(r.template_id),title:String(r.title),description:String(r.description||""),rewards:ownerV8SafeJson(r.rewards_json,[])}));
   mappedTemplates.unshift({id:"__message__",title:"Только уведомление",description:"Сообщение без игровой награды",rewards:[]});
-  return {ok:true,templates:mappedTemplates,segments,queue:(queue.results||[]).map(r=>({status:String(r.status),count:Number(r.count||0)})),notificationQueue:(notifyQueue.results||[]).map(r=>({status:String(r.status),count:Number(r.count||0)})),recent:(campaigns.results||[]).map(r=>({id:String(r.campaign_id),title:String(r.title||""),status:String(r.status||""),total:Number(r.total_count||0),processed:Number(r.processed_count||0),failed:Number(r.failed_count||0),createdAt:Number(r.created_at||0),completedAt:Number(r.completed_at||0)}))};
+  mappedTemplates.splice(1,0,{id:"__custom__",title:"Своя компенсация",description:"Набор наград задаётся вручную перед отправкой",rewards:[]});
+  return {ok:true,templates:mappedTemplates,rewardCatalog:ownerV85CompensationRewardCatalog(),segments,queue:(queue.results||[]).map(r=>({status:String(r.status),count:Number(r.count||0)})),notificationQueue:(notifyQueue.results||[]).map(r=>({status:String(r.status),count:Number(r.count||0)})),recent:(campaigns.results||[]).map(r=>({id:String(r.campaign_id),title:String(r.title||""),status:String(r.status||""),total:Number(r.total_count||0),processed:Number(r.processed_count||0),failed:Number(r.failed_count||0),createdAt:Number(r.created_at||0),completedAt:Number(r.completed_at||0)}))};
 }
 async function ownerPanelV85CompensationPreview(env,ctx){const target=String(ctx.body?.target||"segment");if(target==="player"){const id=String(ctx.body?.telegramId||"").trim();if(!/^\d{4,20}$/.test(id)||!(await playerProfileExists(id,env)))throw new ApiError(404,"Игрок не найден.");return {ok:true,count:1,players:[{telegramId:id,name:await playerDisplayNameById(id,env)}]};}if(target==="all")return ownerV85AllPlayerPreview(env);return ownerPanelV85SegmentPreview(env,ctx);}
 async function ownerPanelV85CompensationSend(env,ctx){
   await ensureControlCenterV85Schema(env);const templateId=String(ctx.body?.templateId||"").trim();let template=null,rewards=[];
-  if(templateId==="__message__"){template={template_id:"__message__",title:"Уведомление"};rewards=[];}else{template=await env.DB.prepare(`SELECT * FROM compensation_templates WHERE template_id=? AND enabled=1 LIMIT 1`).bind(templateId).first();if(!template)throw new ApiError(404,"Шаблон компенсации не найден.");rewards=ownerV8SafeJson(template.rewards_json,[]);if(!Array.isArray(rewards)||!rewards.length)throw new ApiError(409,"В шаблоне нет наград.");if(rewards.some(r=>String(r?.kind)==='physical_restore'))throw new ApiError(409,"Этот шаблон требует ручной проверки физической награды.");}
+  if(templateId==="__message__"){
+    template={template_id:"__message__",title:"Уведомление"};rewards=[];
+  }else if(templateId==="__custom__"){
+    const title=String(ctx.body?.customTitle||"").trim().slice(0,120);
+    if(title.length<3)throw new ApiError(400,"Укажите название своей компенсации.");
+    template={template_id:"__custom__",title};
+    rewards=ownerV85NormalizeCustomCompensationRewards(ctx.body?.customRewards);
+  }else{
+    template=await env.DB.prepare(`SELECT * FROM compensation_templates WHERE template_id=? AND enabled=1 LIMIT 1`).bind(templateId).first();if(!template)throw new ApiError(404,"Шаблон компенсации не найден.");rewards=ownerV8SafeJson(template.rewards_json,[]);if(!Array.isArray(rewards)||!rewards.length)throw new ApiError(409,"В шаблоне нет наград.");if(rewards.some(r=>String(r?.kind)==='physical_restore'))throw new ApiError(409,"Этот шаблон требует ручной проверки физической награды.");
+  }
   const reason=String(ctx.body?.reason||template.title||"Компенсация").trim().slice(0,300);if(reason.length<3)throw new ApiError(400,"Укажите причину.");const message=String(ctx.body?.message||"").trim().slice(0,2500);if(!rewards.length&&!message)throw new ApiError(400,"Для уведомления укажите текст сообщения.");
   const target=String(ctx.body?.target||"segment");let ids=[],segmentKey="",audienceSnapshotAt=0;if(target==="player"){const id=String(ctx.body?.telegramId||"").trim();if(!/^\d{4,20}$/.test(id)||!(await playerProfileExists(id,env)))throw new ApiError(404,"Игрок не найден.");ids=[id];segmentKey=`player_${id}`;}else if(target==="all"){audienceSnapshotAt=Math.floor(Date.now()/1000);segmentKey="all_players";ids=await ownerV85AllPlayerIds(env,audienceSnapshotAt);}else{segmentKey=String(ctx.body?.segmentKey||"").trim();if(!(await ownerV85SegmentTitle(env,segmentKey)))throw new ApiError(404,"Сегмент не найден.");ids=await segmentPlayerIds(env,segmentKey,10000);}
   ids=[...new Set(ids)];if(!ids.length)throw new ApiError(409,"Нет получателей.");const confirmation=String(ctx.body?.confirmation||"").trim();if(confirmation!==`ВЫДАТЬ ${ids.length}`)throw new ApiError(400,`Введите подтверждение: ВЫДАТЬ ${ids.length}`);
-  const hasLegendary=rewards.some(r=>String(r?.kind)==="case"&&String(r?.id)==="legendary");const payload={templateId,templateTitle:String(template.title||"Уведомление"),rewards,reason,message,segmentKey,targetMode:target,audienceSnapshotAt,targetCount:ids.length,targetIds:target==="all"?[]:ids.slice(0,10000),reportChatId:String(ctx.user.id)};
-  if(hasLegendary||ids.length>250){const approvalId=await requestDangerousAction(env,ctx.user,"bulk_compensation",`${rewards.length?'Компенсация':'Уведомление'} «${template.title}» · ${ids.length} игроков`,payload);await logStaffAction(env,ctx.user,ctx.access,"owner_panel_bulk_compensation_request",null,"compensation",null,ids.length,{templateId,segmentKey,target,approvalId});return {ok:true,approvalRequired:true,approvalId,count:ids.length};}
+  const hasLegendary=rewards.some(r=>String(r?.kind)==="case"&&String(r?.id)==="legendary");
+  const customHighImpact=templateId==="__custom__"&&rewards.some(r=>{
+    const kind=String(r?.kind||""),id=String(r?.id||""),amount=Math.max(1,Number(r?.amount||1));
+    return kind==="skin"||(kind==="case"&&["mythic","legendary"].includes(id))||(kind==="points"&&amount>=1000000)||(["zefir","coffee"].includes(kind)&&amount>=1000);
+  });
+  const payload={templateId,templateTitle:String(template.title||"Уведомление"),rewards,reason,message,segmentKey,targetMode:target,audienceSnapshotAt,targetCount:ids.length,targetIds:target==="all"?[]:ids.slice(0,10000),reportChatId:String(ctx.user.id)};
+  if(hasLegendary||ids.length>250||(customHighImpact&&ids.length>1)){const approvalId=await requestDangerousAction(env,ctx.user,"bulk_compensation",`${rewards.length?'Компенсация':'Уведомление'} «${template.title}» · ${ids.length} игроков`,payload);await logStaffAction(env,ctx.user,ctx.access,"owner_panel_bulk_compensation_request",null,"compensation",null,ids.length,{templateId,segmentKey,target,approvalId,customHighImpact});return {ok:true,approvalRequired:true,approvalId,count:ids.length};}
   const campaignIds=await ownerV85QueueCompensationCampaigns(env,ctx.user,ids,payload);await logStaffAction(env,ctx.user,ctx.access,"owner_panel_bulk_compensation",null,"compensation",null,ids.length,{campaignIds,templateId,count:ids.length,segmentKey,target,reason});ownerV85CacheInvalidate("compensations");return {ok:true,count:ids.length,campaignIds};
 }
 
@@ -35604,11 +35728,18 @@ async function ownerPanelGrantPlayer(env, ctx) {
   }
 
   const kind = rawKind === "treats" ? "zefir" : rawKind;
-  if (!["points", "zefir", "coffee", "case"].includes(kind)) throw new ApiError(400, "Неизвестный тип награды.");
-  const amount = ownerPanelInteger(ctx.body?.amount, 1, kind === "case" ? 20 : 10000000);
+  if (!["points", "zefir", "coffee", "case", "skin"].includes(kind)) throw new ApiError(400, "Неизвестный тип награды.");
+  const cosmeticSkin = kind === "skin";
+  const amount = cosmeticSkin ? 1 : ownerPanelInteger(ctx.body?.amount, 1, kind === "case" ? 20 : 10000000);
   if (amount == null) throw new ApiError(400, "Некорректное количество награды.");
-  const itemId = kind === "case" ? normalizeCaseType(ctx.body?.itemId) : "";
-  if (kind === "case" && !itemId) throw new ApiError(400, "Выберите тип кейса.");
+  let itemId = "";
+  if (kind === "case") {
+    itemId = normalizeCaseType(ctx.body?.itemId);
+    if (!itemId) throw new ApiError(400, "Выберите тип кейса.");
+  } else if (cosmeticSkin) {
+    itemId = String(ctx.body?.itemId || "").trim().toLowerCase();
+    if (!SKINS[itemId] || itemId === "default") throw new ApiError(400, "Выберите доступный скин.");
+  }
   const sourceId = `owner_${Date.now()}_${crypto.randomUUID().replaceAll("-", "").slice(0, 10)}`;
   const reward = { kind, id:itemId, amount };
   const gift = await createPlayerGiftInbox(env, telegramId, { giftId:sourceId, kind:"gift", title:"Подарок от команды", message:"Для вас подготовлена награда.", reason, rewards:[reward] });
@@ -36444,7 +36575,7 @@ async function ownerPanelDeleteSeasonPassSeason(env, ctx) {
 function ownerPanelNewsFallbackPresets(base) {
   return [
     {label:"Кейсы 5.0.1",url:`${base}/assets/news/cases-5.0.1.png`,path:"/assets/news/cases-5.0.1.png",group:"Новости"},
-    {label:"Релиз игры",url:`${base}/assets/news/relise_game_news.png?v=1.0.8`,path:"/assets/news/relise_game_news.png",group:"Новости"}
+    {label:"Обновление 1.0.9",url:`${base}/assets/news/update_v_1_0_9.png?v=1.0.9`,path:"/assets/news/update_v_1_0_9.png",group:"Новости"},{label:"Релиз игры",url:`${base}/assets/news/relise_game_news.png`,path:"/assets/news/relise_game_news.png",group:"Новости"}
   ];
 }
 
@@ -36499,7 +36630,7 @@ async function ownerPanelNews(env, ctx) {
   const published=rows.find((row)=>String(row.status||"")==="published")||null;
   return {ok:true,
     channelHelp:{bot:"Публикация сохраняет пост в разделе «Новости» бота и запускает массовую доставку активным подписчикам через безопасную очередь/Cron.",game:"Та же опубликованная новость автоматически становится текущей новостью внутри игры. Непрочитавшие игроки увидят индикатор «Новая новость» при входе; отметка прочтения хранится на сервере."},
-    gameNews:published?{id:Number(published.id||0),title:String(published.title||""),body:String(published.body||""),imageUrl:String(published.image_url||""),version:GAME_VERSION,source:"Control Center · уведомление внутри игры",publishedAt:Number(published.published_at||0)}:{title:BOT_NEWS_TITLE,body:BOT_NEWS_TEXT,imageUrl:`${base}/assets/news/relise_game_news.png?v=1.0.8`,version:GAME_VERSION,source:"встроенное релизное окно"},
+    gameNews:published?{id:Number(published.id||0),title:String(published.title||""),body:String(published.body||""),imageUrl:String(published.image_url||""),version:GAME_VERSION,source:"Control Center · уведомление внутри игры",publishedAt:Number(published.published_at||0)}:{title:BOT_NEWS_TITLE,body:BOT_NEWS_TEXT,imageUrl:`${base}/assets/news/update_v_1_0_9.png?v=1.0.9`,version:GAME_VERSION,source:"встроенное релизное окно"},
     news:rows.map(row=>({id:Number(row.id||0),title:String(row.title||""),body:String(row.body||""),imageUrl:String(row.image_url||""),status:String(row.status||""),publishedAt:Number(row.published_at||0),createdByName:String(row.created_by_name||""),delivery:ownerPanelNewsBroadcastState(row)})),
     assetCatalog:{source:assetCatalog.source,catalogHash:assetCatalog.catalogHash||"",count:assetCatalog.count},
     presets:[...mediaPresets,...assetCatalog.presets]
