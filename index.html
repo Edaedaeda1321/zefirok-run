@@ -6547,9 +6547,10 @@ html&gt;body{padding:
   min-height: 142px;
   overflow: hidden;
   border-radius: 19px;
-  background:
-    radial-gradient(circle at 50% 42%, rgba(255,255,255,.98) 0 38%, transparent 70%),
-    linear-gradient(180deg, #fff7da, #ffe9f2);
+  background-image: var(--skin-shop-background, linear-gradient(180deg, #fff7da, #ffe9f2));
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-position: center;
 }
 #zefirok-maltipoo-runner .skin-card-art img {
   width: 112%;
@@ -6584,6 +6585,24 @@ html&gt;body{padding:
   color: #6e2e49;
   font-size: 20px;
   line-height: 1.05;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+#zefirok-maltipoo-runner .skin-card-new-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 7px;
+  border-radius: 999px;
+  background: linear-gradient(135deg,#ff6e9d,#e5a12d);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 950;
+  line-height: 1;
+  letter-spacing: .06em;
+  box-shadow: 0 2px 7px rgba(201,91,117,.24);
 }
 #zefirok-maltipoo-runner .skin-card-bonus {
   margin: 0;
@@ -10385,28 +10404,28 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       }
       const SKIN_CATALOG = {
         default: {
-          id: &quot;default&quot;, title: &quot;Стандартный&quot;, image: &quot;/assets/skins/shop/default.png&quot;,
+          id: &quot;default&quot;, title: &quot;Стандартный&quot;, image: &quot;/assets/skins/shop/default.png&quot;, background: &quot;/assets/skins/shop/backgrounds/standart_background_shop.png&quot;,
           points: 0, treats: 0, coffee: 0,
           bonus: Object.freeze({ points: 0, treats: 0, coffee: 0 }),
           bonusLabel: &quot;Без бонуса&quot;,
           description: &quot;Классический образ Зефи. Доступен каждому игроку.&quot;
         },
         barista: {
-          id: &quot;barista&quot;, title: &quot;Бариста&quot;, image: &quot;/assets/skins/shop/barista.png&quot;,
+          id: &quot;barista&quot;, title: &quot;Бариста&quot;, image: &quot;/assets/skins/shop/barista.png&quot;, background: &quot;/assets/skins/shop/backgrounds/rare_background_shop.png&quot;,
           points: 100000, treats: 0, coffee: 400,
           bonus: Object.freeze({ points: 0, treats: 0, coffee: 5 }),
           bonusLabel: &quot;+5 кофе за полноценный забег&quot;,
           description: &quot;Начисляет 5 кофе после забега от 12 секунд и 150 очков.&quot;
         },
         strawberry: {
-          id: &quot;strawberry&quot;, title: &quot;Клубничка&quot;, image: &quot;/assets/skins/shop/strawberry.png&quot;,
+          id: &quot;strawberry&quot;, title: &quot;Клубничка&quot;, image: &quot;/assets/skins/shop/strawberry.png&quot;, background: &quot;/assets/skins/shop/backgrounds/rare_background_shop.png&quot;,
           points: 180000, treats: 400, coffee: 0,
           bonus: Object.freeze({ points: 0, treats: 5, coffee: 0 }),
           bonusLabel: &quot;+5 зефира за полноценный забег&quot;,
           description: &quot;Начисляет 5 зефира после забега от 12 секунд и 150 очков.&quot;
         },
         bee: {
-          id: &quot;bee&quot;, title: &quot;Пчёлка&quot;, image: &quot;/assets/skins/shop/bee.png&quot;,
+          id: &quot;bee&quot;, title: &quot;Пчёлка&quot;, image: &quot;/assets/skins/shop/bee.png&quot;, background: &quot;/assets/skins/shop/backgrounds/superrare_background_shop.png&quot;,
           points: 350000, treats: 650, coffee: 0,
           bonus: Object.freeze({ points: 0, treats: 8, coffee: 0 }),
           bonusCase: Object.freeze({ caseType: &quot;small&quot;, title: &quot;Обычный кейс&quot; }),
@@ -10414,7 +10433,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           description: &quot;Начисляет 8 зефира после забега от 12 секунд и 150 очков. При покупке — Обычный кейс.&quot;
         },
         sailor: {
-          id: &quot;sailor&quot;, title: &quot;Морячок&quot;, image: &quot;/assets/skins/shop/sailor.png&quot;,
+          id: &quot;sailor&quot;, title: &quot;Морячок&quot;, image: &quot;/assets/skins/shop/sailor.png&quot;, background: &quot;/assets/skins/shop/backgrounds/epick_background_shop.png&quot;,
           points: 650000, treats: 0, coffee: 650,
           bonus: Object.freeze({ points: 0, treats: 0, coffee: 8 }),
           bonusCase: Object.freeze({ caseType: &quot;sweet&quot;, title: &quot;Серебряный кейс&quot; }),
@@ -10422,27 +10441,28 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           description: &quot;Начисляет 8 кофе после забега от 12 секунд и 150 очков. При покупке — Серебряный кейс.&quot;
         },
         princess: {
-          id: &quot;princess&quot;, title: &quot;Принцесса&quot;, image: &quot;/assets/skins/shop/princess.png&quot;,
+          id: &quot;princess&quot;, title: &quot;Принцесса&quot;, image: &quot;/assets/skins/shop/princess.png&quot;, background: &quot;/assets/skins/shop/backgrounds/mifik_background_shop.png&quot;,
           points: 1300000, treats: 850, coffee: 850,
           bonus: Object.freeze({ points: 120, treats: 10, coffee: 10 }),
           bonusCase: Object.freeze({ caseType: &quot;gold&quot;, title: &quot;Золотой кейс&quot; }),
           bonusLabel: &quot;+120 очков, +10 зефира и +10 кофе&quot;,
           description: &quot;Бонус за каждый полноценный забег. При покупке — Золотой кейс.&quot;
         },
-        alex: {
-          id: &quot;alex&quot;, title: &quot;Алекс&quot;, image: &quot;/assets/skins/shop/alex.png&quot;,
-          points: 3000000, treats: 1500, coffee: 1500,
-          bonus: Object.freeze({ points: 600, treats: 15, coffee: 15 }),
-          bonusLabel: &quot;+600 очков, +15 зефира и +15 кофе&quot;,
-          description: &quot;Бонус за каждый полноценный забег от 12 секунд и 150 очков.&quot;
-        },
         angel: {
-          id: &quot;angel&quot;, title: &quot;Ангелок&quot;, image: &quot;/assets/skins/shop/angel.png&quot;,
+          id: &quot;angel&quot;, title: &quot;Ангелок&quot;, image: &quot;/assets/skins/shop/angel.png&quot;, background: &quot;/assets/skins/shop/backgrounds/legendary_background_shop.png&quot;,
           points: 2400000, treats: 1000, coffee: 1000,
           bonus: Object.freeze({ points: 200, treats: 12, coffee: 12 }),
           bonusCase: Object.freeze({ caseType: &quot;legendary&quot;, title: &quot;Легендарный кейс&quot; }),
           bonusLabel: &quot;+200 очков, +12 зефира и +12 кофе&quot;,
           description: &quot;Максимальный бонус за полноценный забег. При покупке — Легендарный кейс.&quot;
+        },
+        alex: {
+          id: &quot;alex&quot;, title: &quot;Алекс&quot;, image: &quot;/assets/skins/shop/alex.png&quot;, background: &quot;/assets/skins/shop/backgrounds/legendary_background_shop.png&quot;,
+          isNew: true,
+          points: 3000000, treats: 1500, coffee: 1500,
+          bonus: Object.freeze({ points: 600, treats: 15, coffee: 15 }),
+          bonusLabel: &quot;+600 очков, +15 зефира и +15 кофе&quot;,
+          description: &quot;Бонус за каждый полноценный забег от 12 секунд и 150 очков.&quot;
         }
       };
       const defaultSkinPrices = Object.freeze(Object.fromEntries(
@@ -15642,12 +15662,12 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         const items = Object.entries(caseLiveOpsCatalog(kind, catalog, false, caseType))
           .filter(([, item]) =&gt; item.enabled !== false &amp;&amp; (caseType === &quot;legendary&quot; || !item?.legendaryOnly))
           .sort(([firstId, first], [secondId, second]) =&gt; {
-            const firstOwned = ownedIds.has(firstId);
-            const secondOwned = ownedIds.has(secondId);
-            if (firstOwned !== secondOwned) return firstOwned ? 1 : -1;
-            const firstWeight = firstOwned ? 0 : Math.max(0, Number(first?.weight ?? CASE_COSMETIC_WEIGHTS?.[kind]?.[firstId] ?? 0));
-            const secondWeight = secondOwned ? 0 : Math.max(0, Number(second?.weight ?? CASE_COSMETIC_WEIGHTS?.[kind]?.[secondId] ?? 0));
-            if (firstWeight !== secondWeight) return secondWeight - firstWeight;
+            const firstOwned = ownedIds.has(firstId) ? 0 : 1;
+            const secondOwned = ownedIds.has(secondId) ? 0 : 1;
+            if (firstOwned !== secondOwned) return firstOwned - secondOwned;
+            const firstNew = first?.isNew ? 1 : 0;
+            const secondNew = second?.isNew ? 1 : 0;
+            if (firstNew !== secondNew) return firstNew - secondNew;
             const firstOrder = rarityOrder[String(first?.rarityClass || &quot;common&quot;)] ?? 99;
             const secondOrder = rarityOrder[String(second?.rarityClass || &quot;common&quot;)] ?? 99;
             if (firstOrder !== secondOrder) return firstOrder - secondOrder;
@@ -16500,7 +16520,8 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
             Number(skin.points || 0),
             Number(skin.treats || 0),
             Number(skin.coffee || 0),
-            String(skin.image || &quot;&quot;)
+            String(skin.image || &quot;&quot;),
+            String(skin.background || &quot;&quot;)
           ])
         });
         if (CLIENT_OPT_RENDER_SIGNATURES &amp;&amp; nextSignature === skinsRenderSignature) {
@@ -16515,12 +16536,12 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           const buttonText = equipped ? &quot;Надето&quot; : owned ? &quot;Надеть&quot; : &quot;Купить&quot;;
           const buttonClass = equipped ? &quot;is-equipped&quot; : owned ? &quot;is-equip&quot; : (!affordable ? &quot;is-unaffordable&quot; : &quot;&quot;);
           return `&lt;article class=&quot;skin-card${owned ? &quot; is-owned&quot; : &quot;&quot;}${equipped ? &quot; is-equipped&quot; : &quot;&quot;}&quot; data-skin-card=&quot;${skin.id}&quot;&gt;
-            &lt;div class=&quot;skin-card-art&quot;&gt;
+            &lt;div class=&quot;skin-card-art&quot;${skin.background ? ` style=&quot;--skin-shop-background:url('${skin.background}')&quot;` : &quot;&quot;}&gt;
               ${equipped ? `&lt;span class=&quot;skin-card-badge&quot;&gt;Надето&lt;/span&gt;` : owned ? `&lt;span class=&quot;skin-card-badge&quot;&gt;Куплено&lt;/span&gt;` : &quot;&quot;}
               &lt;img src=&quot;${skin.image}&quot; alt=&quot;Скин ${skin.title}&quot; loading=&quot;${equipped ? &quot;eager&quot; : &quot;lazy&quot;}&quot; fetchpriority=&quot;${equipped ? &quot;high&quot; : &quot;low&quot;}&quot; decoding=&quot;async&quot; data-skin-preview=&quot;${skin.id}&quot;&gt;
             &lt;/div&gt;
             &lt;div class=&quot;skin-card-copy&quot;&gt;
-              &lt;h3&gt;${skin.title}&lt;/h3&gt;
+              &lt;h3&gt;${skin.title}${skin.isNew ? ` &lt;span class=&quot;skin-card-new-badge&quot;&gt;NEW&lt;/span&gt;` : &quot;&quot;}&lt;/h3&gt;
               &lt;p class=&quot;skin-card-bonus&quot;&gt;${skin.bonusLabel}&lt;/p&gt;
               &lt;p class=&quot;skin-card-description&quot;&gt;${skin.description}&lt;/p&gt;
               &lt;div class=&quot;skin-card-price&quot;&gt;${skinPriceMarkup(skin)}&lt;/div&gt;
