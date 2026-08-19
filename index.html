@@ -12367,6 +12367,8 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         image.src = src;
       }
       let caseStateLoading = false;
+      let caseStateLastSyncAt = 0;
+      const CASE_STATE_CLIENT_CACHE_MS = 8000;
       let caseRouletteBusy = false;
       // =============================================================
       // НАСТРОЙКИ ПРОФИЛЯ, XP И УРОВНЕЙ.
@@ -15338,20 +15340,21 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         }
       }
 
-      async function caseApiRequest(path, payload = {}) {
+      async function caseApiRequest(path, payload = {}, timeoutMs = 6500) {
         const initData = String(telegramProfile?.initData || &quot;&quot;);
         if (!initData) throw Object.assign(new Error(&quot;Откройте игру через Telegram-бота, чтобы получать кейсы.&quot;), { status: 401 });
         const response = await gameFetchWithTimeout(path, {
           method: &quot;POST&quot;, headers: { &quot;Content-Type&quot;: &quot;application/json&quot; },
           body: JSON.stringify({ initData, current: caseCurrentSnapshot(), ...payload }),
           cache: &quot;no-store&quot;, credentials: &quot;same-origin&quot;
-        }, 6500);
+        }, Math.max(1000, Number(timeoutMs || 6500)));
         const data = await response.json().catch(() =&gt; null);
         if (!response.ok || !data?.ok) throw Object.assign(new Error(data?.error || &quot;Сервис кейсов временно недоступен.&quot;), { status: response.status });
         return data;
       }
 
       function applyServerCasePayload(data, openedRewards = null) {
+        if (data &amp;&amp; typeof data === &quot;object&quot;) caseStateLastSyncAt = Date.now();
         const hasAuthoritativeTaskNotice = Object.prototype.hasOwnProperty.call(data || {}, &quot;seasonPassTaskNotice&quot;);
         if (data?.seasonPassTaskNotice) applySeasonTaskNotice(data.seasonPassTaskNotice);
         if (!hasAuthoritativeTaskNotice &amp;&amp; (data?.opened || (Array.isArray(openedRewards) &amp;&amp; openedRewards.length))) window.setTimeout(() =&gt; void refreshSeasonTaskNotice(true), 180);
@@ -15460,18 +15463,24 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       }
 
       async function loadCaseState(force = false, fast = false) {
-        if (caseStateLoading || !telegramProfile?.initData) return false;
+        if (!telegramProfile?.initData) return false;
+        const now = Date.now();
+        if (!force &amp;&amp; caseStateLastSyncAt &gt; 0 &amp;&amp; now - caseStateLastSyncAt &lt; CASE_STATE_CLIENT_CACHE_MS) {
+          if (caseSyncStatusEl) caseSyncStatusEl.textContent = &quot;Показаны актуальные награды&quot;;
+          return true;
+        }
+        if (caseStateLoading) return false;
         caseStateLoading = true;
-        if (caseSyncStatusEl) caseSyncStatusEl.textContent = fast ? &quot;Обновляем награды…&quot; : &quot;Проверяем награды…&quot;;
+        if (caseSyncStatusEl) caseSyncStatusEl.textContent = fast ? &quot;Показываем сохранённые награды · проверяем обновления…&quot; : &quot;Проверяем награды…&quot;;
         if (caseRefreshButton) caseRefreshButton.disabled = true;
         try {
-          const data = await caseApiRequest(CASE_API_STATE_PATH, { force: Boolean(force), fast: Boolean(fast) });
+          const data = await caseApiRequest(CASE_API_STATE_PATH, { force: Boolean(force), fast: Boolean(fast) }, fast ? 4500 : 6500);
           applyServerCasePayload(data);
           if (data?.gifts) applyPlayerGiftPayload(data.gifts);
           if (caseSyncStatusEl) caseSyncStatusEl.textContent = &quot;Награды синхронизированы&quot;;
           return true;
         } catch (error) {
-          if (caseSyncStatusEl) caseSyncStatusEl.textContent = error?.message || &quot;Не удалось обновить награды&quot;;
+          if (caseSyncStatusEl) caseSyncStatusEl.textContent = fast ? &quot;Показаны сохранённые награды · сервер обновит позже&quot; : (error?.message || &quot;Не удалось обновить награды&quot;);
           renderCaseHub();
           return false;
         } finally {
@@ -17302,11 +17311,12 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         if (name === &quot;warehouse&quot;) {
           warehouseFilter = &quot;all&quot;;
           syncWarehouseFilterButtons();
-          switchStockHubView(stockHubView);
+          // Paint the saved/local snapshot immediately. Network refresh belongs to
+          // the visible stock tab and must never hold the warehouse UI hostage.
           renderWarehouse();
           renderCaseHub();
           renderPlayerGiftInbox();
-          void Promise.allSettled([syncServerRewards(true), loadCaseState(true), loadPlayerGiftInbox(true)]).then(() =&gt; updateStockHubBadges());
+          switchStockHubView(stockHubView);
         }
         if (name === &quot;profile&quot;) {
           renderProfile();
@@ -18945,8 +18955,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       }
 
       function syncWarehouseFilterButtons() {
-        if (rewardsV2RootEl) rewardsV2RootEl.addEventListener(&quot;click&quot;, handleRewardsV2Click);
-      for (const button of warehouseFilterButtons) {
+        for (const button of warehouseFilterButtons) {
           button.setAttribute(&quot;aria-pressed&quot;, String(button.dataset.warehouseFilter === warehouseFilter));
         }
       }
@@ -18986,9 +18995,18 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         stockHubView = allowed.has(String(nextView || &quot;&quot;)) ? String(nextView) : &quot;purchases&quot;;
         for (const button of stockHubButtons) button.setAttribute(&quot;aria-selected&quot;, String(button.dataset.stockView === stockHubView));
         for (const panel of stockHubPanels) panel.hidden = panel.dataset.stockPanel !== stockHubView;
-        if (stockHubView === &quot;purchases&quot;) renderWarehouse();
-        if (stockHubView === &quot;boosters&quot; || stockHubView === &quot;cases&quot;) { renderCaseHub(); void loadCaseState(true); }
-        if (stockHubView === &quot;gifts&quot;) { renderPlayerGiftInbox(); void loadPlayerGiftInbox(true); }
+        if (stockHubView === &quot;purchases&quot;) {
+          renderWarehouse();
+          void syncServerRewards(false).then(() =&gt; updateStockHubBadges());
+        }
+        if (stockHubView === &quot;boosters&quot; || stockHubView === &quot;cases&quot;) {
+          renderCaseHub();
+          void loadCaseState(false, true).then(() =&gt; updateStockHubBadges());
+        }
+        if (stockHubView === &quot;gifts&quot;) {
+          renderPlayerGiftInbox();
+          void loadPlayerGiftInbox(false).then(() =&gt; updateStockHubBadges());
+        }
         updateStockHubBadges();
         if (feedback) hapticImpact(&quot;light&quot;, 25);
       }
@@ -19704,6 +19722,8 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           if (legacyBuy) legacyBuy.click();
         }
       }
+
+      if (rewardsV2RootEl) rewardsV2RootEl.addEventListener(&quot;click&quot;, handleRewardsV2Click);
 
       function getDifficulty() {
         const ramp = Math.max(1, runtimeGameplayConfig.difficultyRampSeconds);

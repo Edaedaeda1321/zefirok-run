@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "catalogHash": "d77c625a6a45016b",
-  "count": 82,
+  "catalogHash": "164a7f0ef771f085",
+  "count": 87,
   "images": [
     {
       "fileName": "398D69BA-8943-4846-94B3-FC5CB717A67F.PNG",
@@ -42,6 +42,22 @@
       "path": "/assets/cases/988D058E-EA15-43EB-8564-AA297CF745B4.PNG",
       "hash": "39719d446b03",
       "size": 2453433
+    },
+    {
+      "fileName": "alex/alex_case_close.png",
+      "label": "Alex case close",
+      "folder": "alex",
+      "path": "/assets/cases/alex/alex_case_close.png",
+      "hash": "4dd372ee5bf0",
+      "size": 2746624
+    },
+    {
+      "fileName": "alex/alex_case_open.png",
+      "label": "Alex case open",
+      "folder": "alex",
+      "path": "/assets/cases/alex/alex_case_open.png",
+      "hash": "d45622878e0b",
+      "size": 2927214
     },
     {
       "fileName": "avatars/1454DD0F-5B8E-4931-99CD-E249D9066526.PNG",
@@ -98,6 +114,22 @@
       "path": "/assets/cases/avatars/AE100D7E-3441-428C-B67F-C7A46B23F712.PNG",
       "hash": "11421f7b88f5",
       "size": 2826717
+    },
+    {
+      "fileName": "avatars/alex_avatar_1.png",
+      "label": "Alex avatar 1",
+      "folder": "avatars",
+      "path": "/assets/cases/avatars/alex_avatar_1.png",
+      "hash": "b9e54324d2ca",
+      "size": 2616692
+    },
+    {
+      "fileName": "avatars/alex_avatar_2.png",
+      "label": "Alex avatar 2",
+      "folder": "avatars",
+      "path": "/assets/cases/avatars/alex_avatar_2.png",
+      "hash": "523346409c5a",
+      "size": 2496056
     },
     {
       "fileName": "avatars/avatrs_season3Elit.png",
@@ -586,6 +618,14 @@
       "path": "/assets/cases/trails/mifik_sled_season3.png",
       "hash": "bb03256dcdbc",
       "size": 1761299
+    },
+    {
+      "fileName": "trails/sled_alex_collectia.png",
+      "label": "Sled alex collectia",
+      "folder": "trails",
+      "path": "/assets/cases/trails/sled_alex_collectia.png",
+      "hash": "88aa4dd4f732",
+      "size": 1031878
     },
     {
       "fileName": "trails/sled_s3_epick1.png",

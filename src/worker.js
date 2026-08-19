@@ -6193,11 +6193,10 @@ async function getLevelCaseState(request, env, internal = null, ctx = null) {
       "case state reward queue refresh failed"
     );
     if (body.fast === true) {
-      const [payload,gifts] = await Promise.all([
-        buildFastCaseRefreshPayload(env,telegramId),
-        playerGiftInboxPayload(env,telegramId)
-      ]);
-      const fastPayload = { ...payload, gifts };
+      // Warehouse/case tabs only need the authoritative case snapshot here.
+      // Gift inbox is fetched by its own tab; waiting for it made a supposedly
+      // fast case refresh as slow as the full startup package.
+      const fastPayload = await buildFastCaseRefreshPayload(env,telegramId);
       return internal?.raw ? fastPayload : jsonResponse(fastPayload);
     }
     const payload = await buildCasePayload(env, telegramId, body.current || {}, {}, {
