@@ -9213,8 +9213,10 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 #zefirok-maltipoo-runner .rewards-v2-featured-copy&gt;p{margin:0;color:#8f6d79;font-size:9px;line-height:1.42}
 #zefirok-maltipoo-runner .rewards-v2-case-chips{display:flex;flex-wrap:wrap;gap:4px}
 #zefirok-maltipoo-runner .rewards-v2-case-chip{padding:4px 6px;border:1px solid rgba(224,180,87,.38);border-radius:999px;background:rgba(255,255,255,.78);color:#836431;font-size:7.5px;font-weight:900;white-space:nowrap}
-#zefirok-maltipoo-runner .rewards-v2-actions{display:grid;grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr);gap:6px;margin-top:1px}
-#zefirok-maltipoo-runner .rewards-v2-actions button{min-height:35px;border-radius:12px;font:900 10px/1 inherit;padding:7px 8px}
+#zefirok-maltipoo-runner .rewards-v2-actions{display:flex;align-items:center;gap:7px;margin-top:1px}
+#zefirok-maltipoo-runner .rewards-v2-actions button{border-radius:12px;font:900 9px/1 inherit}
+#zefirok-maltipoo-runner .rewards-v2-actions .rewards-v2-secondary{flex:0 0 auto;min-height:31px;padding:6px 10px;white-space:nowrap}
+#zefirok-maltipoo-runner .rewards-v2-actions .rewards-v2-primary{flex:1 1 auto;min-height:38px;padding:7px 10px}
 #zefirok-maltipoo-runner .rewards-v2-secondary{border:1px solid rgba(221,173,190,.66);background:#fff;color:#99516b}
 #zefirok-maltipoo-runner .rewards-v2-primary{border:0;background:linear-gradient(180deg,#ed8ab1,#dc5f90);color:#fff;box-shadow:0 8px 17px rgba(206,84,130,.18)}
 #zefirok-maltipoo-runner .rewards-v2-primary.is-unaffordable{background:linear-gradient(180deg,#f3b5cb,#e895b5);box-shadow:none}
@@ -9267,8 +9269,10 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 #zefirok-maltipoo-runner .rewards-v2-progress-row&gt;strong{font-size:7px;color:#b45978;white-space:nowrap}
 #zefirok-maltipoo-runner .rewards-v2-progress-row.is-ready&gt;strong{color:#6f9254}
 #zefirok-maltipoo-runner .rewards-v2-progress-row.is-ready .rewards-v2-progress-track i b{background:linear-gradient(90deg,#b7d47c,#7fb65c)}
-#zefirok-maltipoo-runner .rewards-v2-card-actions{display:grid;grid-template-columns:minmax(0,.86fr) minmax(0,1.14fr);gap:5px;margin-top:auto}
-#zefirok-maltipoo-runner .rewards-v2-card-actions button{min-height:34px;border-radius:12px;padding:6px 7px;font:900 9px/1 inherit}
+#zefirok-maltipoo-runner .rewards-v2-card-actions{display:flex;align-items:center;gap:6px;margin-top:auto}
+#zefirok-maltipoo-runner .rewards-v2-card-actions button{border-radius:12px;font:900 8.5px/1 inherit}
+#zefirok-maltipoo-runner .rewards-v2-card-actions .rewards-v2-secondary{flex:0 0 auto;min-height:30px;padding:6px 9px;white-space:nowrap}
+#zefirok-maltipoo-runner .rewards-v2-card-actions .rewards-v2-primary{flex:1 1 auto;min-height:35px;padding:6px 9px}
 #zefirok-maltipoo-runner .rewards-v2-owned{display:inline-flex;align-items:center;gap:4px;color:#8a6a35;font-size:7.5px;font-weight:900}
 #zefirok-maltipoo-runner .rewards-v2-empty{padding:22px 15px;border:1px dashed rgba(218,168,188,.72);border-radius:18px;background:#fffafd;text-align:center;color:#936d7b;font-size:10px;line-height:1.45}
 @media(max-width:390px){
@@ -19086,24 +19090,25 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       function showPurchaseConfirmation(purchase, missing = []) {
         const productImage = assetSources[purchase.product.image] || &quot;&quot;;
         const isCasePurchase = purchase.product.kind === &quot;case&quot;;
+        const isFreePurchase = Number(purchase.cost || 0) &lt;= 0 &amp;&amp; Number(purchase.treatCost || 0) &lt;= 0 &amp;&amp; Number(purchase.coffeeCost || 0) &lt;= 0;
         const missingMarkup = missing.length &gt; 0
           ? `&lt;div class=&quot;purchase-balance-warning&quot;&gt;Не хватает: ${escapePurchaseText(missing.join(&quot; и &quot;))}.&lt;/div&gt;`
           : &quot;&quot;;
         const disabledAttribute = missing.length &gt; 0 ? &#x27; disabled aria-disabled=&quot;true&quot;&#x27; : &quot;&quot;;
         const warningMarkup = isCasePurchase
-          ? `&lt;div class=&quot;purchase-warning&quot;&gt;&lt;strong&gt;Кейс появится сразу&lt;/strong&gt;&lt;span&gt;После покупки он будет добавлен в профиль, в раздел «Склад кейсов».&lt;/span&gt;&lt;/div&gt;`
-          : `&lt;div class=&quot;purchase-warning&quot;&gt;&lt;strong&gt;Код действует 24 часа&lt;/strong&gt;&lt;span&gt;После подтверждения вы получите одноразовый код для этой покупки.&lt;/span&gt;&lt;/div&gt;`;
+          ? `&lt;div class=&quot;purchase-warning&quot;&gt;&lt;strong&gt;Кейс появится сразу&lt;/strong&gt;&lt;span&gt;После ${isFreePurchase ? &quot;получения&quot; : &quot;покупки&quot;} он будет добавлен в профиль, в раздел «Склад кейсов».&lt;/span&gt;&lt;/div&gt;`
+          : `&lt;div class=&quot;purchase-warning&quot;&gt;&lt;strong&gt;Код действует 24 часа&lt;/strong&gt;&lt;span&gt;После подтверждения вы получите одноразовый код для этой награды.&lt;/span&gt;&lt;/div&gt;`;
         openPurchaseLayer(`
-          &lt;span class=&quot;purchase-kicker&quot;&gt;Подтверждение покупки&lt;/span&gt;
+          &lt;span class=&quot;purchase-kicker&quot;&gt;${isFreePurchase ? &quot;Бесплатная награда&quot; : &quot;Подтверждение покупки&quot;}&lt;/span&gt;
           &lt;img class=&quot;purchase-product-image&quot; alt=&quot;${escapePurchaseText(purchase.product.title)}&quot; src=&quot;${productImage}&quot;&gt;
           &lt;h2 id=&quot;purchase-dialog-title&quot;&gt;${escapePurchaseText(purchase.product.title)}&lt;/h2&gt;
-          &lt;p&gt;Подтвердите списание наград с вашего игрового баланса.&lt;/p&gt;
+          &lt;p&gt;${isFreePurchase ? &quot;Подтвердите получение награды. Игровой баланс не изменится.&quot; : &quot;Подтвердите списание наград с вашего игрового баланса.&quot;}&lt;/p&gt;
           &lt;div class=&quot;purchase-costs&quot;&gt;${purchaseCostRowsMarkup(purchase)}&lt;/div&gt;
           ${warningMarkup}
           ${missingMarkup}
           &lt;div class=&quot;purchase-actions&quot;&gt;
             &lt;button class=&quot;purchase-action&quot; data-purchase-cancel type=&quot;button&quot;&gt;Отмена&lt;/button&gt;
-            &lt;button class=&quot;purchase-action purchase-action--confirm&quot; data-purchase-confirm type=&quot;button&quot;${disabledAttribute}&gt;Да, списать&lt;/button&gt;
+            &lt;button class=&quot;purchase-action purchase-action--confirm&quot; data-purchase-confirm type=&quot;button&quot;${disabledAttribute}&gt;${isFreePurchase ? &quot;Получить&quot; : &quot;Да, списать&quot;}&lt;/button&gt;
           &lt;/div&gt;
         `, missing.length &gt; 0 ? &quot;[data-purchase-cancel]&quot; : &quot;[data-purchase-confirm]&quot;);
       }
@@ -19117,7 +19122,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           &lt;p&gt;Кейс добавлен в профиль и уже находится в разделе «Склад кейсов».&lt;/p&gt;
           &lt;div class=&quot;purchase-warning&quot;&gt;&lt;strong&gt;Можно открыть в любое время&lt;/strong&gt;&lt;span&gt;Нажмите на изображение кейса в профиле, чтобы ещё раз посмотреть награды и шансы.&lt;/span&gt;&lt;/div&gt;
           &lt;div class=&quot;purchase-actions&quot;&gt;
-            &lt;button class=&quot;purchase-action&quot; data-case-info-type=&quot;${escapePurchaseText(purchase.product.caseType || &quot;small&quot;)}&quot; type=&quot;button&quot;&gt;Награды и шансы&lt;/button&gt;
+            &lt;button class=&quot;purchase-action&quot; data-case-info-type=&quot;${escapePurchaseText(purchase.product.caseType || &quot;small&quot;)}&quot; type=&quot;button&quot;&gt;Состав и шансы&lt;/button&gt;
             &lt;button class=&quot;purchase-action purchase-action--done&quot; data-purchase-close type=&quot;button&quot;&gt;Готово&lt;/button&gt;
           &lt;/div&gt;
         `, &quot;[data-purchase-close]&quot;);
@@ -19383,7 +19388,9 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       }
 
       function rewardsV2PricesMarkup(product) {
-        return rewardsV2ResourceRows(product).map((row) =&gt; `&lt;span class=&quot;rewards-v2-price&quot;&gt;&lt;img src=&quot;${escapePurchaseText(row.image)}&quot; alt=&quot;&quot;&gt;${formatter.format(row.need)} ${row.label}&lt;/span&gt;`).join(&quot;&quot;);
+        const rows = rewardsV2ResourceRows(product);
+        if (!rows.length) return `&lt;span class=&quot;rewards-v2-price&quot;&gt;Бесплатно&lt;/span&gt;`;
+        return rows.map((row) =&gt; `&lt;span class=&quot;rewards-v2-price&quot;&gt;&lt;img src=&quot;${escapePurchaseText(row.image)}&quot; alt=&quot;&quot;&gt;${formatter.format(row.need)} ${row.label}&lt;/span&gt;`).join(&quot;&quot;);
       }
 
       function rewardsV2ProgressMarkup(product) {
@@ -19408,6 +19415,46 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         return [&quot;small&quot;,&quot;sweet&quot;,&quot;gold&quot;,&quot;mythic&quot;,&quot;legendary&quot;].reduce((sum, type) =&gt; sum + sanitizeGameNumber(gifted[type]), 0);
       }
 
+      function rewardsV2PurchaseData(id, product) {
+        return {
+          id: String(id || &quot;&quot;),
+          product,
+          cost: sanitizeGameNumber(product?.points),
+          treatCost: sanitizeGameNumber(product?.treats),
+          coffeeCost: sanitizeGameNumber(product?.coffee)
+        };
+      }
+
+      function rewardsV2IsFree(product) {
+        const purchase = rewardsV2PurchaseData(&quot;&quot;, product);
+        return purchase.cost &lt;= 0 &amp;&amp; purchase.treatCost &lt;= 0 &amp;&amp; purchase.coffeeCost &lt;= 0;
+      }
+
+      function showRewardsV2ProductDetails(id) {
+        const product = shopProducts[String(id || &quot;&quot;)];
+        if (!product || product.enabled === false) return;
+        const purchase = rewardsV2PurchaseData(id, product);
+        const isCase = rewardsV2ProductGroup(id, product) === &quot;cases&quot;;
+        const isFree = rewardsV2IsFree(product);
+        const image = assetSources[product.image] || (isCase ? caseImageSource(product.caseType, false) : &quot;&quot;);
+        const owned = shopProductOwnedCount(id, product);
+        const contextMarkup = isCase
+          ? `&lt;div class=&quot;purchase-warning&quot;&gt;&lt;strong&gt;После получения — на склад&lt;/strong&gt;&lt;span&gt;${owned &gt; 0 ? `Сейчас у тебя уже ${formatter.format(owned)} шт.` : &quot;Кейс появится в «Моих покупках» → «Кейсы».&quot;}&lt;/span&gt;&lt;/div&gt;`
+          : `&lt;div class=&quot;purchase-warning&quot;&gt;&lt;strong&gt;Физическая награда&lt;/strong&gt;&lt;span&gt;После покупки одноразовый код появится в «Моих покупках» и будет действовать 24 часа.&lt;/span&gt;&lt;/div&gt;`;
+        openPurchaseLayer(`
+          &lt;span class=&quot;purchase-kicker&quot;&gt;${isCase ? &quot;Кейс&quot; : &quot;Награда из кафе&quot;}&lt;/span&gt;
+          &lt;img class=&quot;purchase-product-image&quot; alt=&quot;${escapePurchaseText(product.title)}&quot; src=&quot;${escapePurchaseText(image)}&quot;&gt;
+          &lt;h2 id=&quot;purchase-dialog-title&quot;&gt;${escapePurchaseText(product.title)}&lt;/h2&gt;
+          &lt;p&gt;${escapePurchaseText(product.description || &quot;&quot;)}&lt;/p&gt;
+          &lt;div class=&quot;purchase-costs&quot;&gt;${purchaseCostRowsMarkup(purchase)}&lt;/div&gt;
+          ${contextMarkup}
+          &lt;div class=&quot;purchase-actions purchase-actions--equal&quot;&gt;
+            &lt;button class=&quot;purchase-action&quot; data-purchase-close type=&quot;button&quot;&gt;Закрыть&lt;/button&gt;
+            &lt;button class=&quot;purchase-action purchase-action--confirm&quot; data-rewards-v2-detail-buy=&quot;${escapePurchaseText(id)}&quot; type=&quot;button&quot;&gt;${isFree ? &quot;Получить&quot; : &quot;Купить&quot;}&lt;/button&gt;
+          &lt;/div&gt;
+        `, &quot;[data-rewards-v2-detail-buy]&quot;);
+      }
+
       function rewardsV2CardMarkup(id, product) {
         const group = rewardsV2ProductGroup(id, product);
         const isCase = group === &quot;cases&quot;;
@@ -19421,11 +19468,11 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           ? `&lt;span class=&quot;rewards-v2-note&quot;&gt;&lt;b&gt;🎁&lt;/b&gt;${owned &gt; 0 ? `На складе: ${formatter.format(owned)}` : &quot;После покупки кейс сразу появится на складе&quot;}&lt;/span&gt;`
           : `&lt;span class=&quot;rewards-v2-note&quot;&gt;&lt;b&gt;🧾&lt;/b&gt;${owned &gt; 0 ? `Куплено: ${formatter.format(owned)} · код ищи в «Моих покупках»` : &quot;После покупки проверяемый код появится в «Моих покупках»&quot;}&lt;/span&gt;`;
         const secondary = isCase
-          ? `&lt;button class=&quot;rewards-v2-secondary&quot; type=&quot;button&quot; data-rewards-v2-case-info=&quot;${escapePurchaseText(product.caseType || &quot;small&quot;)}&quot;&gt;Награды и шансы&lt;/button&gt;`
+          ? `&lt;button class=&quot;rewards-v2-secondary&quot; type=&quot;button&quot; data-rewards-v2-case-info=&quot;${escapePurchaseText(product.caseType || &quot;small&quot;)}&quot;&gt;Состав и шансы&lt;/button&gt;`
           : owned &gt; 0
             ? `&lt;button class=&quot;rewards-v2-secondary&quot; type=&quot;button&quot; data-rewards-v2-stock=&quot;purchases&quot;&gt;Мои покупки&lt;/button&gt;`
-            : `&lt;button class=&quot;rewards-v2-secondary&quot; type=&quot;button&quot; data-rewards-v2-select=&quot;${escapePurchaseText(id)}&quot;&gt;О товаре&lt;/button&gt;`;
-        return `&lt;article class=&quot;rewards-v2-card ${cardClass}&quot; data-rewards-v2-card=&quot;${escapePurchaseText(id)}&quot;&gt;&lt;div class=&quot;rewards-v2-art&quot;&gt;&lt;img src=&quot;${escapePurchaseText(image)}&quot; alt=&quot;${escapePurchaseText(product.title || id)}&quot; loading=&quot;lazy&quot; decoding=&quot;async&quot;&gt;&lt;/div&gt;&lt;div class=&quot;rewards-v2-copy&quot;&gt;&lt;div class=&quot;rewards-v2-title-row&quot;&gt;&lt;h3&gt;${escapePurchaseText(product.title || id)}&lt;/h3&gt;&lt;span class=&quot;rewards-v2-type&quot;&gt;${escapePurchaseText(typeLabel)}&lt;/span&gt;&lt;/div&gt;&lt;p class=&quot;rewards-v2-description&quot;&gt;${escapePurchaseText(product.description || &quot;&quot;)}&lt;/p&gt;${note}&lt;div class=&quot;rewards-v2-prices&quot;&gt;${rewardsV2PricesMarkup(product)}&lt;/div&gt;${rewardsV2ProgressMarkup(product)}&lt;div class=&quot;rewards-v2-card-actions&quot;&gt;${secondary}&lt;button class=&quot;rewards-v2-primary${affordable ? &quot;&quot; : &quot; is-unaffordable&quot;}&quot; type=&quot;button&quot; data-rewards-v2-buy=&quot;${escapePurchaseText(id)}&quot;&gt;Купить&lt;/button&gt;&lt;/div&gt;&lt;/div&gt;&lt;/article&gt;`;
+            : `&lt;button class=&quot;rewards-v2-secondary&quot; type=&quot;button&quot; data-rewards-v2-select=&quot;${escapePurchaseText(id)}&quot;&gt;Подробнее&lt;/button&gt;`;
+        return `&lt;article class=&quot;rewards-v2-card ${cardClass}&quot; data-rewards-v2-card=&quot;${escapePurchaseText(id)}&quot;&gt;&lt;div class=&quot;rewards-v2-art&quot;&gt;&lt;img src=&quot;${escapePurchaseText(image)}&quot; alt=&quot;${escapePurchaseText(product.title || id)}&quot; loading=&quot;lazy&quot; decoding=&quot;async&quot;&gt;&lt;/div&gt;&lt;div class=&quot;rewards-v2-copy&quot;&gt;&lt;div class=&quot;rewards-v2-title-row&quot;&gt;&lt;h3&gt;${escapePurchaseText(product.title || id)}&lt;/h3&gt;&lt;span class=&quot;rewards-v2-type&quot;&gt;${escapePurchaseText(typeLabel)}&lt;/span&gt;&lt;/div&gt;&lt;p class=&quot;rewards-v2-description&quot;&gt;${escapePurchaseText(product.description || &quot;&quot;)}&lt;/p&gt;${note}&lt;div class=&quot;rewards-v2-prices&quot;&gt;${rewardsV2PricesMarkup(product)}&lt;/div&gt;${rewardsV2ProgressMarkup(product)}&lt;div class=&quot;rewards-v2-card-actions&quot;&gt;${secondary}&lt;button class=&quot;rewards-v2-primary${affordable ? &quot;&quot; : &quot; is-unaffordable&quot;}&quot; type=&quot;button&quot; data-rewards-v2-buy=&quot;${escapePurchaseText(id)}&quot;&gt;${rewardsV2IsFree(product) ? &quot;Получить&quot; : &quot;Купить&quot;}&lt;/button&gt;&lt;/div&gt;&lt;/div&gt;&lt;/article&gt;`;
       }
 
       function renderRewardsV2Featured() {
@@ -19442,7 +19489,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         const affordable = rewardsV2Affordable(product);
         const owned = shopProductOwnedCount(preferred, product);
         rewardsV2FeaturedEl.hidden = false;
-        rewardsV2FeaturedEl.innerHTML = `&lt;div class=&quot;rewards-v2-featured-art&quot;&gt;&lt;img src=&quot;${escapePurchaseText(image)}&quot; alt=&quot;${escapePurchaseText(product.title)}&quot;&gt;&lt;/div&gt;&lt;div class=&quot;rewards-v2-featured-copy&quot;&gt;&lt;span class=&quot;rewards-v2-featured-badge&quot;&gt;Рекомендуем · ${escapePurchaseText(meta.label)}&lt;/span&gt;&lt;h3&gt;${escapePurchaseText(product.title)}&lt;/h3&gt;&lt;div class=&quot;rewards-v2-case-chips&quot;&gt;${meta.chips.map((chip) =&gt; `&lt;span class=&quot;rewards-v2-case-chip&quot;&gt;${escapePurchaseText(chip)}&lt;/span&gt;`).join(&quot;&quot;)}&lt;/div&gt;&lt;div class=&quot;rewards-v2-prices&quot;&gt;${rewardsV2PricesMarkup(product)}&lt;/div&gt;&lt;p&gt;${owned &gt; 0 ? `У тебя уже есть: ${formatter.format(owned)}. Можно открыть со склада или купить ещё.` : &quot;Самый премиальный постоянный кейс магазина. После покупки сразу попадёт на склад.&quot;}&lt;/p&gt;&lt;div class=&quot;rewards-v2-actions&quot;&gt;&lt;button class=&quot;rewards-v2-secondary&quot; type=&quot;button&quot; data-rewards-v2-case-info=&quot;${escapePurchaseText(product.caseType)}&quot;&gt;Награды и шансы&lt;/button&gt;&lt;button class=&quot;rewards-v2-primary${affordable ? &quot;&quot; : &quot; is-unaffordable&quot;}&quot; type=&quot;button&quot; data-rewards-v2-buy=&quot;${escapePurchaseText(preferred)}&quot;&gt;Купить&lt;/button&gt;&lt;/div&gt;&lt;/div&gt;`;
+        rewardsV2FeaturedEl.innerHTML = `&lt;div class=&quot;rewards-v2-featured-art&quot;&gt;&lt;img src=&quot;${escapePurchaseText(image)}&quot; alt=&quot;${escapePurchaseText(product.title)}&quot;&gt;&lt;/div&gt;&lt;div class=&quot;rewards-v2-featured-copy&quot;&gt;&lt;span class=&quot;rewards-v2-featured-badge&quot;&gt;Рекомендуем · ${escapePurchaseText(meta.label)}&lt;/span&gt;&lt;h3&gt;${escapePurchaseText(product.title)}&lt;/h3&gt;&lt;div class=&quot;rewards-v2-case-chips&quot;&gt;${meta.chips.map((chip) =&gt; `&lt;span class=&quot;rewards-v2-case-chip&quot;&gt;${escapePurchaseText(chip)}&lt;/span&gt;`).join(&quot;&quot;)}&lt;/div&gt;&lt;div class=&quot;rewards-v2-prices&quot;&gt;${rewardsV2PricesMarkup(product)}&lt;/div&gt;&lt;p&gt;${owned &gt; 0 ? `У тебя уже есть: ${formatter.format(owned)}. Можно открыть со склада или купить ещё.` : &quot;Самый премиальный постоянный кейс магазина. После покупки сразу попадёт на склад.&quot;}&lt;/p&gt;&lt;div class=&quot;rewards-v2-actions&quot;&gt;&lt;button class=&quot;rewards-v2-secondary&quot; type=&quot;button&quot; data-rewards-v2-case-info=&quot;${escapePurchaseText(product.caseType)}&quot;&gt;Состав и шансы&lt;/button&gt;&lt;button class=&quot;rewards-v2-primary${affordable ? &quot;&quot; : &quot; is-unaffordable&quot;}&quot; type=&quot;button&quot; data-rewards-v2-buy=&quot;${escapePurchaseText(preferred)}&quot;&gt;${rewardsV2IsFree(product) ? &quot;Получить&quot; : &quot;Купить&quot;}&lt;/button&gt;&lt;/div&gt;&lt;/div&gt;`;
       }
 
       function renderRewardsV2StockSummary() {
@@ -19503,18 +19550,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         if (selectButton) {
           const id = String(selectButton.dataset.rewardsV2Select || &quot;&quot;);
           selectProduct(id);
-          const legacy = root.querySelector(`[data-shop-card=&quot;${id}&quot;]`);
-          legacy?.scrollIntoView?.({ behavior: &quot;smooth&quot;, block: &quot;nearest&quot; });
-          const product = shopProducts[id];
-          if (product) {
-            const purchase = { id, product };
-            const missing = [];
-            if (state.wallet &lt; sanitizeGameNumber(product.points)) missing.push(`${formatter.format(sanitizeGameNumber(product.points) - state.wallet)} очков`);
-            if (state.treats &lt; sanitizeGameNumber(product.treats)) missing.push(`${formatter.format(sanitizeGameNumber(product.treats) - state.treats)} зефира`);
-            if (state.coffee &lt; sanitizeGameNumber(product.coffee)) missing.push(`${formatter.format(sanitizeGameNumber(product.coffee) - state.coffee)} кофе`);
-            pendingPurchase = purchase;
-            showPurchaseConfirmation(purchase, missing);
-          }
+          showRewardsV2ProductDetails(id);
           return;
         }
         const buyButton = target.closest(&quot;[data-rewards-v2-buy]&quot;);
@@ -20720,6 +20756,14 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
             const skinId = String(detailAction.dataset.skinDetailAction || &quot;&quot;);
             closePurchaseLayer();
             purchaseOrEquipSkin(skinId);
+            return;
+          }
+          const rewardDetailBuy = target.closest(&quot;[data-rewards-v2-detail-buy]&quot;);
+          if (rewardDetailBuy &amp;&amp; !rewardDetailBuy.disabled) {
+            const id = String(rewardDetailBuy.dataset.rewardsV2DetailBuy || &quot;&quot;);
+            closePurchaseLayer();
+            const legacyBuy = root.querySelector(`[data-buy=&quot;${id}&quot;]`);
+            if (legacyBuy) legacyBuy.click();
             return;
           }
           if (target.closest(&quot;[data-purchase-confirm]&quot;)) {
