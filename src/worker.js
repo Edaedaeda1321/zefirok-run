@@ -2592,19 +2592,23 @@ async function claimPlayerGift(request, env, ctx) {
       await env.DB.prepare(`UPDATE player_gift_inbox SET status='claimed',claimed_at=?,updated_at=? WHERE telegram_id=? AND gift_id=? AND status='claiming'`).bind(claimedAt,claimedAt,telegramId,giftId).run();
       try { await recordPlayerTimeline(env,telegramId,"gift_claim",`получил подарок «${String(row.title||"Подарок")}»`,{giftId,rewards,reason:row.reason},`gift_${giftId}`,null); } catch {}
     }
-    const internalBody = { initData:String(body.initData || ""), mode:"read", current:body.current && typeof body.current === "object" ? body.current : {} };
-    const shared = { caseEnsured:null, skipRewardQueue:true };
-    const [profileResult,casesResult,giftsResult] = await Promise.allSettled([
-      syncAdminProfile(null,env,{raw:true,body:internalBody,auth,shared}),
-      getLevelCaseState(null,env,{raw:true,body:internalBody,auth,shared}),
+    // The economic delivery is already committed above. Do not keep the player
+    // waiting for the full profile/case reconciliation: return a lightweight,
+    // authoritative warehouse snapshot immediately and finish maintenance in
+    // the background. This keeps compensation claims responsive on mobile.
+    const [cases,gifts] = await Promise.all([
+      buildFastCaseRefreshPayload(env,telegramId),
       playerGiftInboxPayload(env,telegramId)
     ]);
-    return jsonResponse({
-      ok:true,
-      profile:profileResult.status === "fulfilled" ? profileResult.value : null,
-      cases:casesResult.status === "fulfilled" ? casesResult.value : null,
-      gifts:giftsResult.status === "fulfilled" ? giftsResult.value : null
-    });
+    scheduleRunSettlementBackground(ctx,
+      ensureAuthoritativeProfileRow(env,telegramId,`gift-post-claim:${giftId}`),
+      "gift post-claim profile fold failed"
+    );
+    scheduleRunSettlementBackground(ctx,
+      reconcileDeliveredSeasonPassCasesForPlayer(env,telegramId),
+      "gift post-claim case reconcile failed"
+    );
+    return jsonResponse({ ok:true, profile:{ ok:true, profile:cases.profile }, cases, gifts });
   } catch (error) {
     if (error instanceof ApiError) return jsonResponse({ ok:false, error:error.message }, error.status);
     console.error("claimPlayerGift failed", error);
@@ -5653,6 +5657,54 @@ async function readFastCaseInventory(env, telegramId) {
   return { openedLevels, giftedCases };
 }
 
+async function buildFastCaseRefreshPayload(env, telegramId) {
+  requireDatabase(env);
+  const id = String(telegramId || '');
+  await ensureRuntimeCompatibilitySchema(env);
+  const [profileRow, caseRow, inventory] = await Promise.all([
+    env.DB.prepare(`SELECT
+      MIN(999999999,MAX(0,COALESCE(wallet_override,wallet)+COALESCE(pending_wallet,0))) AS wallet,
+      MIN(999999999,MAX(0,COALESCE(best_score_override,best_score))) AS best_score,
+      MIN(999999999,MAX(0,COALESCE(treats_override,treats)+COALESCE(pending_treats,0))) AS treats,
+      MIN(999999999,MAX(0,COALESCE(coffee_override,coffee)+COALESCE(pending_coffee,0))) AS coffee,
+      MIN(999999999,MAX(0,COALESCE(profile_xp_override,profile_xp))) AS profile_xp,
+      revision,updated_at
+      FROM admin_profile_state WHERE telegram_id=? LIMIT 1`).bind(id).first(),
+    env.DB.prepare(`SELECT * FROM case_player_state WHERE telegram_id=? LIMIT 1`).bind(id).first(),
+    readFastCaseInventory(env,id)
+  ]);
+
+  let profile = profileRow;
+  let stateRow = caseRow;
+  if (!profile || !stateRow) {
+    const durableProfile = await ensureAuthoritativeProfileRow(env,id,`warehouse-fast:${id}`);
+    const ensured = await ensureCasePlayerState(env,id,{}, { profile: durableProfile });
+    profile = durableProfile;
+    stateRow = ensured?.row || {};
+  }
+
+  const caseState = caseStateFromRow(stateRow || {});
+  // Fast warehouse refresh must not overwrite live-configured pity guarantees
+  // with caseStateFromRow fallback constants. The client keeps its current
+  // LiveOps values when these fields are omitted.
+  delete caseState.mythicGuaranteedEvery;
+  delete caseState.legendaryGuaranteedEvery;
+  return {
+    ok:true,
+    authoritativeProfile:true,
+    openedLevels:inventory.openedLevels,
+    giftedCases:inventory.giftedCases,
+    caseState,
+    profile:{
+      wallet:safeAdminNumber(profile?.wallet),
+      best:safeAdminNumber(profile?.best_score),
+      treats:safeAdminNumber(profile?.treats),
+      coffee:safeAdminNumber(profile?.coffee),
+      profileXp:safeAdminNumber(profile?.profile_xp)
+    }
+  };
+}
+
 function buildFastCaseOpenPayload({ state, liveops, profile, opened, caseDelta = null, inventory = null, seasonPassTaskNotice = undefined }) {
   return {
     ok: true,
@@ -6027,6 +6079,14 @@ async function getLevelCaseState(request, env, internal = null, ctx = null) {
       processPlayerRewardDeliveryQueue(env, telegramId, 10),
       "case state reward queue refresh failed"
     );
+    if (body.fast === true) {
+      const [payload,gifts] = await Promise.all([
+        buildFastCaseRefreshPayload(env,telegramId),
+        playerGiftInboxPayload(env,telegramId)
+      ]);
+      const fastPayload = { ...payload, gifts };
+      return internal?.raw ? fastPayload : jsonResponse(fastPayload);
+    }
     const payload = await buildCasePayload(env, telegramId, body.current || {}, {}, {
       ensured: internal?.shared?.caseEnsured || null,
       skipRewardQueue: true

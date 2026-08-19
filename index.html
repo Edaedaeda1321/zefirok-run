@@ -15150,18 +15150,19 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         });
       }
 
-      async function loadCaseState(force = false) {
+      async function loadCaseState(force = false, fast = false) {
         if (caseStateLoading || !telegramProfile?.initData) return false;
         caseStateLoading = true;
-        if (caseSyncStatusEl) caseSyncStatusEl.textContent = &quot;Проверяем награды…&quot;;
+        if (caseSyncStatusEl) caseSyncStatusEl.textContent = fast ? &quot;Обновляем награды…&quot; : &quot;Проверяем награды…&quot;;
         if (caseRefreshButton) caseRefreshButton.disabled = true;
         try {
-          const data = await caseApiRequest(CASE_API_STATE_PATH, { force: Boolean(force) });
+          const data = await caseApiRequest(CASE_API_STATE_PATH, { force: Boolean(force), fast: Boolean(fast) });
           applyServerCasePayload(data);
+          if (data?.gifts) applyPlayerGiftPayload(data.gifts);
           if (caseSyncStatusEl) caseSyncStatusEl.textContent = &quot;Награды синхронизированы&quot;;
           return true;
         } catch (error) {
-          if (caseSyncStatusEl) caseSyncStatusEl.textContent = error?.message || &quot;Не удалось загрузить кейсы&quot;;
+          if (caseSyncStatusEl) caseSyncStatusEl.textContent = error?.message || &quot;Не удалось обновить награды&quot;;
           renderCaseHub();
           return false;
         } finally {
@@ -16067,7 +16068,10 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           showProfileToast(error?.message || &quot;Не удалось получить подарок.&quot;, &quot;warning&quot;);
           hapticNotify(&quot;error&quot;);
           if (button) { button.disabled = false; button.textContent = oldText; }
-          void loadPlayerGiftInbox(true);
+          // A mobile timeout can happen after the server has already committed
+          // the gift. Re-read the lightweight warehouse state so the player
+          // immediately sees the real result and never needs to guess/retry.
+          void loadCaseState(true, true);
         }
       }
 
@@ -19883,7 +19887,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         showCaseRewardsInfo(caseType);
       });
 
-      if (caseRefreshButton) caseRefreshButton.addEventListener(&quot;click&quot;, () =&gt; void loadCaseState(true));
+      if (caseRefreshButton) caseRefreshButton.addEventListener(&quot;click&quot;, () =&gt; void loadCaseState(true, true));
       if (levelCasesListEl) levelCasesListEl.addEventListener(&quot;click&quot;, (event) =&gt; {
         const button = event.target instanceof Element ? event.target.closest(&quot;[data-open-level-case]&quot;) : null;
         if (button &amp;&amp; !button.disabled) void openLevelCaseClient(button.dataset.openLevelCase, button);
