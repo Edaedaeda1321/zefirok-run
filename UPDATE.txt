@@ -1,32 +1,25 @@
-Сладкий Забег · TEST 1.0.9 · Shop v2
+Sweet Run TEST 1.0.9 - Shop v2 / Test Project launcher fix
+Date: 2026-08-19
 
-ТЕСТОВАЯ СБОРКА. Production index.html, backend, D1, цены, бонусы и реальные шансы не изменяются.
-
-Что добавлено в TEST-магазин скинов:
-- большая витрина «Рекомендуем» для нового легендарного скина Алекс;
-- блок «Коллекция скинов»: общий прогресс и отдельный счётчик легендарных;
-- фильтры: Все / Доступные / Купленные / Редкие / Очень редкие / Эпические / Мифические / Легендарные;
-- переключатель «Сначала доступные»;
-- прогресс до покупки по каждому требуемому ресурсу: очки / зефир / кофе;
-- готовый ресурс отмечается галочкой;
-- бонус скина показан отдельным визуальным блоком;
-- карточки стали компактнее, длинное описание перенесено в подробный просмотр;
-- цветовая обводка карточек зависит от редкости;
-- нажатие на изображение или «Подробнее» открывает полную карточку скина;
-- в подробном просмотре можно посмотреть состояния: Стоит / Бежит / Прыжок;
-- подробный просмотр показывает стоимость, прогресс, бонус за забег и подарочный кейс;
-- для скинов из Легендарного кейса показывается текущий индивидуальный шанс;
-- кнопка ведёт в существующее окно «Награды и шансы» Легендарного кейса;
-- купленные скины отображаются как часть коллекции и используют «Надеть / Надето»;
-- Алекс сохраняет NEW, текущую цену, бонусы и место после Ангелка;
-- существующие фоны редкости используются без изменений.
-
-Изменён только:
+CHANGED
+- test-project.html
+  - TP updated to 5.2.5.
+  - Added UI build selector.
+  - Default target: TEST 1.0.9 - Shop v2.
+  - Green launch button opens /index_testing_v1.0.9.html in Test Project sandbox.
+  - Production remains available as a separate comparison button.
+  - Device Lab, Fault Lab and story visual launch use the selected UI build.
+  - Selected build is remembered locally in Test Project.
+- owner.html
+  - Test Project links cache-busted to tp-5.2.5.
 - index_testing_v1.0.9.html
+  - Shop v2 test build preserved.
+  - Back-to-Test-Project link updated to tp-5.2.5.
 
-Проверять через существующий Test Project.
-Не открывать тестовый файл как production entrypoint.
+NOT CHANGED
+- Production index.html is not included and is not modified.
+- No game economy, prices, rewards, cases or D1 data are changed.
+- Sandbox API isolation remains enabled.
 
-D1 migration не нужна.
-Если тестовый файл нужно обновить на сервере:
+DEPLOY
 npx wrangler deploy

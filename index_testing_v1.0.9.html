@@ -783,7 +783,7 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
     badge.innerHTML=`<button type="button" data-tp-back>← TP</button><span>🧪 TP 5.2 · ${mode}${seasonTitle?` · ${seasonTitle}`:""}</span>`;
     Object.assign(badge.style,{position:"fixed",left:"max(8px,var(--zefirok-content-safe-left,0px))",bottom:"max(8px,var(--zefirok-content-safe-bottom,0px))",zIndex:"2147483600",display:"flex",gap:"6px",alignItems:"center",fontFamily:"-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif",fontSize:"10px",fontWeight:"900",pointerEvents:"auto"});
     const span=badge.querySelector("span");Object.assign(span.style,{padding:"7px 9px",borderRadius:"999px",background:mode==="DRAFT"?"#7b4517":"#271d3e",color:mode==="DRAFT"?"#ffe1ad":"#eadfff",border:"1px solid rgba(255,255,255,.22)",boxShadow:"0 8px 24px rgba(0,0,0,.22)"});
-    const button=badge.querySelector("button");Object.assign(button.style,{border:"1px solid rgba(255,255,255,.22)",background:"#17131f",color:"#fff",borderRadius:"999px",padding:"7px 9px",font:"inherit"});button.addEventListener("click",()=>{location.href="/test-project.html?v=tp-5.2.0&view=game"});
+    const button=badge.querySelector("button");Object.assign(button.style,{border:"1px solid rgba(255,255,255,.22)",background:"#17131f",color:"#fff",borderRadius:"999px",padding:"7px 9px",font:"inherit"});button.addEventListener("click",()=>{location.href="/test-project.html?v=tp-5.2.5&view=game"});
     document.body.append(badge);
   }
 
