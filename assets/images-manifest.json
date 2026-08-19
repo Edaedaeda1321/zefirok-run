@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "catalogHash": "304e24026667ac88",
-  "count": 328,
+  "catalogHash": "20d7c692677f0a1d",
+  "count": 329,
   "images": [
     {
       "fileName": "cases/398D69BA-8943-4846-94B3-FC5CB717A67F.PNG",
@@ -2588,6 +2588,14 @@
       "modified": 1786307011867
     },
     {
+      "fileName": "ui/background_referals.png",
+      "label": "Background referals",
+      "folder": "ui",
+      "path": "/assets/ui/background_referals.png",
+      "size": 2184233,
+      "modified": 1787146378000
+    },
+    {
       "fileName": "ui/icon_busters.png",
       "label": "Icon busters",
       "folder": "ui",
@@ -2601,7 +2609,7 @@
       "folder": "ui",
       "path": "/assets/ui/icon_referals.png",
       "size": 891598,
-      "modified": 1787145646000
+      "modified": 1787146378000
     },
     {
       "fileName": "ui/icon_shopping.png",
