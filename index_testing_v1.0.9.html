@@ -9213,10 +9213,10 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 #zefirok-maltipoo-runner .rewards-v2-featured-copy&gt;p{margin:0;color:#8f6d79;font-size:9px;line-height:1.42}
 #zefirok-maltipoo-runner .rewards-v2-case-chips{display:flex;flex-wrap:wrap;gap:4px}
 #zefirok-maltipoo-runner .rewards-v2-case-chip{padding:4px 6px;border:1px solid rgba(224,180,87,.38);border-radius:999px;background:rgba(255,255,255,.78);color:#836431;font-size:7.5px;font-weight:900;white-space:nowrap}
-#zefirok-maltipoo-runner .rewards-v2-actions{display:flex;align-items:center;gap:7px;margin-top:1px}
-#zefirok-maltipoo-runner .rewards-v2-actions button{border-radius:12px;font:900 9px/1 inherit}
-#zefirok-maltipoo-runner .rewards-v2-actions .rewards-v2-secondary{flex:0 0 auto;min-height:31px;padding:6px 10px;white-space:nowrap}
-#zefirok-maltipoo-runner .rewards-v2-actions .rewards-v2-primary{flex:1 1 auto;min-height:38px;padding:7px 10px}
+#zefirok-maltipoo-runner .rewards-v2-actions{display:grid;grid-template-columns:minmax(0,.95fr) minmax(0,1.05fr);align-items:stretch;gap:7px;margin-top:1px;width:100%;min-width:0}
+#zefirok-maltipoo-runner .rewards-v2-actions button{width:100%;min-width:0;border-radius:12px;font:900 8.5px/1 inherit;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#zefirok-maltipoo-runner .rewards-v2-actions .rewards-v2-secondary{min-height:38px;padding:7px 8px}
+#zefirok-maltipoo-runner .rewards-v2-actions .rewards-v2-primary{min-height:38px;padding:7px 8px}
 #zefirok-maltipoo-runner .rewards-v2-secondary{border:1px solid rgba(221,173,190,.66);background:#fff;color:#99516b}
 #zefirok-maltipoo-runner .rewards-v2-primary{border:0;background:linear-gradient(180deg,#ed8ab1,#dc5f90);color:#fff;box-shadow:0 8px 17px rgba(206,84,130,.18)}
 #zefirok-maltipoo-runner .rewards-v2-primary.is-unaffordable{background:linear-gradient(180deg,#f3b5cb,#e895b5);box-shadow:none}
@@ -9273,6 +9273,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 #zefirok-maltipoo-runner .rewards-v2-card-actions button{border-radius:12px;font:900 8.5px/1 inherit}
 #zefirok-maltipoo-runner .rewards-v2-card-actions .rewards-v2-secondary{flex:0 0 auto;min-height:30px;padding:6px 9px;white-space:nowrap}
 #zefirok-maltipoo-runner .rewards-v2-card-actions .rewards-v2-primary{flex:1 1 auto;min-height:35px;padding:6px 9px}
+#zefirok-maltipoo-runner .rewards-v2-card-actions.is-single .rewards-v2-primary{flex:1 1 100%;width:100%}
 #zefirok-maltipoo-runner .rewards-v2-owned{display:inline-flex;align-items:center;gap:4px;color:#8a6a35;font-size:7.5px;font-weight:900}
 #zefirok-maltipoo-runner .rewards-v2-empty{padding:22px 15px;border:1px dashed rgba(218,168,188,.72);border-radius:18px;background:#fffafd;text-align:center;color:#936d7b;font-size:10px;line-height:1.45}
 @media(max-width:390px){
@@ -19471,8 +19472,8 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           ? `&lt;button class=&quot;rewards-v2-secondary&quot; type=&quot;button&quot; data-rewards-v2-case-info=&quot;${escapePurchaseText(product.caseType || &quot;small&quot;)}&quot;&gt;Состав и шансы&lt;/button&gt;`
           : owned &gt; 0
             ? `&lt;button class=&quot;rewards-v2-secondary&quot; type=&quot;button&quot; data-rewards-v2-stock=&quot;purchases&quot;&gt;Мои покупки&lt;/button&gt;`
-            : `&lt;button class=&quot;rewards-v2-secondary&quot; type=&quot;button&quot; data-rewards-v2-select=&quot;${escapePurchaseText(id)}&quot;&gt;Подробнее&lt;/button&gt;`;
-        return `&lt;article class=&quot;rewards-v2-card ${cardClass}&quot; data-rewards-v2-card=&quot;${escapePurchaseText(id)}&quot;&gt;&lt;div class=&quot;rewards-v2-art&quot;&gt;&lt;img src=&quot;${escapePurchaseText(image)}&quot; alt=&quot;${escapePurchaseText(product.title || id)}&quot; loading=&quot;lazy&quot; decoding=&quot;async&quot;&gt;&lt;/div&gt;&lt;div class=&quot;rewards-v2-copy&quot;&gt;&lt;div class=&quot;rewards-v2-title-row&quot;&gt;&lt;h3&gt;${escapePurchaseText(product.title || id)}&lt;/h3&gt;&lt;span class=&quot;rewards-v2-type&quot;&gt;${escapePurchaseText(typeLabel)}&lt;/span&gt;&lt;/div&gt;&lt;p class=&quot;rewards-v2-description&quot;&gt;${escapePurchaseText(product.description || &quot;&quot;)}&lt;/p&gt;${note}&lt;div class=&quot;rewards-v2-prices&quot;&gt;${rewardsV2PricesMarkup(product)}&lt;/div&gt;${rewardsV2ProgressMarkup(product)}&lt;div class=&quot;rewards-v2-card-actions&quot;&gt;${secondary}&lt;button class=&quot;rewards-v2-primary${affordable ? &quot;&quot; : &quot; is-unaffordable&quot;}&quot; type=&quot;button&quot; data-rewards-v2-buy=&quot;${escapePurchaseText(id)}&quot;&gt;${rewardsV2IsFree(product) ? &quot;Получить&quot; : &quot;Купить&quot;}&lt;/button&gt;&lt;/div&gt;&lt;/div&gt;&lt;/article&gt;`;
+            : &quot;&quot;;
+        return `&lt;article class=&quot;rewards-v2-card ${cardClass}&quot; data-rewards-v2-card=&quot;${escapePurchaseText(id)}&quot;&gt;&lt;div class=&quot;rewards-v2-art&quot;&gt;&lt;img src=&quot;${escapePurchaseText(image)}&quot; alt=&quot;${escapePurchaseText(product.title || id)}&quot; loading=&quot;lazy&quot; decoding=&quot;async&quot;&gt;&lt;/div&gt;&lt;div class=&quot;rewards-v2-copy&quot;&gt;&lt;div class=&quot;rewards-v2-title-row&quot;&gt;&lt;h3&gt;${escapePurchaseText(product.title || id)}&lt;/h3&gt;&lt;span class=&quot;rewards-v2-type&quot;&gt;${escapePurchaseText(typeLabel)}&lt;/span&gt;&lt;/div&gt;&lt;p class=&quot;rewards-v2-description&quot;&gt;${escapePurchaseText(product.description || &quot;&quot;)}&lt;/p&gt;${note}&lt;div class=&quot;rewards-v2-prices&quot;&gt;${rewardsV2PricesMarkup(product)}&lt;/div&gt;${rewardsV2ProgressMarkup(product)}&lt;div class=&quot;rewards-v2-card-actions${secondary ? &quot;&quot; : &quot; is-single&quot;}&quot;&gt;${secondary}&lt;button class=&quot;rewards-v2-primary${affordable ? &quot;&quot; : &quot; is-unaffordable&quot;}&quot; type=&quot;button&quot; data-rewards-v2-buy=&quot;${escapePurchaseText(id)}&quot;&gt;${rewardsV2IsFree(product) ? &quot;Получить&quot; : &quot;Купить&quot;}&lt;/button&gt;&lt;/div&gt;&lt;/div&gt;&lt;/article&gt;`;
       }
 
       function renderRewardsV2Featured() {
