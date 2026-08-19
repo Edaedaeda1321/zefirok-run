@@ -36,10 +36,11 @@ const SKINS = Object.freeze({
   bee: Object.freeze({ id: "bee", title: "Пчёлка" }),
   sailor: Object.freeze({ id: "sailor", title: "Морячок" }),
   princess: Object.freeze({ id: "princess", title: "Принцесса" }),
+  alex: Object.freeze({ id: "alex", title: "Алекс" }),
   angel: Object.freeze({ id: "angel", title: "Ангелок" })
 });
 
-const DEFAULT_SKIN_PRICE_VERSION = 2;
+const DEFAULT_SKIN_PRICE_VERSION = 3;
 const DEFAULT_SKIN_PRICES = Object.freeze({
   default: Object.freeze({ points: 0, treats: 0, coffee: 0 }),
   barista: Object.freeze({ points: 100000, treats: 0, coffee: 400 }),
@@ -47,6 +48,7 @@ const DEFAULT_SKIN_PRICES = Object.freeze({
   bee: Object.freeze({ points: 350000, treats: 650, coffee: 0 }),
   sailor: Object.freeze({ points: 650000, treats: 0, coffee: 650 }),
   princess: Object.freeze({ points: 1300000, treats: 850, coffee: 850 }),
+  alex: Object.freeze({ points: 0, treats: 0, coffee: 0 }),
   angel: Object.freeze({ points: 2400000, treats: 1000, coffee: 1000 })
 });
 

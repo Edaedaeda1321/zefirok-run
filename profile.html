@@ -8425,6 +8425,13 @@ body.zefirok-profile-standalone .release-layer{display:none!important}
           bonusLabel: "+120 очков, +10 зефира и +10 кофе",
           description: "Бонус за каждый полноценный забег. При покупке — Золотой кейс."
         },
+        alex: {
+          id: "alex", title: "Алекс", image: "/assets/skins/shop/alex.png",
+          points: 0, treats: 0, coffee: 0,
+          bonus: Object.freeze({ points: 0, treats: 0, coffee: 0 }),
+          bonusLabel: "Особый образ · без игрового бонуса",
+          description: "Кот Алекс — особый бесплатный образ. Меняет только внешний вид и не влияет на баланс."
+        },
         angel: {
           id: "angel", title: "Ангелок", image: "/assets/skins/shop/angel.png",
           points: 2400000, treats: 1000, coffee: 1000,
@@ -8456,6 +8463,7 @@ body.zefirok-profile-standalone .release-layer{display:none!important}
         bee: "/assets/skins/avatars/bee.png",
         sailor: "/assets/skins/avatars/sailor.png",
         princess: "/assets/skins/avatars/princess.png",
+        alex: "/assets/skins/avatars/alex.png",
         angel: "/assets/skins/avatars/angel.png"
       });
       function currentDogPortraitKey() {
@@ -8668,6 +8676,7 @@ body.zefirok-profile-standalone .release-layer{display:none!important}
         bee: Object.freeze({ stand: "/assets/skins/gameplay/bee/stand.png", run1: "/assets/skins/gameplay/bee/run1.png", run2: "/assets/skins/gameplay/bee/run2.png", run3: "/assets/skins/gameplay/bee/run3.png", run4: "/assets/skins/gameplay/bee/run4.png", jump: "/assets/skins/gameplay/bee/jump.png" }),
         sailor: Object.freeze({ stand: "/assets/skins/gameplay/sailor/stand.png", run1: "/assets/skins/gameplay/sailor/run1.png", run2: "/assets/skins/gameplay/sailor/run2.png", run3: "/assets/skins/gameplay/sailor/run3.png", run4: "/assets/skins/gameplay/sailor/run4.png", jump: "/assets/skins/gameplay/sailor/jump.png" }),
         princess: Object.freeze({ stand: "/assets/skins/gameplay/princess/stand.png", run1: "/assets/skins/gameplay/princess/run1.png", run2: "/assets/skins/gameplay/princess/run2.png", run3: "/assets/skins/gameplay/princess/run3.png", run4: "/assets/skins/gameplay/princess/run4.png", jump: "/assets/skins/gameplay/princess/jump.png" }),
+        alex: Object.freeze({ stand: "/assets/skins/gameplay/alex/stand.png", run1: "/assets/skins/gameplay/alex/run1.png", run2: "/assets/skins/gameplay/alex/run2.png", run3: "/assets/skins/gameplay/alex/run1.png", run4: "/assets/skins/gameplay/alex/run2.png", jump: "/assets/skins/gameplay/alex/jump.png" }),
         angel: Object.freeze({ stand: "/assets/skins/gameplay/angel/stand.png", run1: "/assets/skins/gameplay/angel/run1.png", run2: "/assets/skins/gameplay/angel/run2.png", run3: "/assets/skins/gameplay/angel/run3.png", run4: "/assets/skins/gameplay/angel/run4.png", jump: "/assets/skins/gameplay/angel/jump.png" })
       });
       const gameplayDogAssets = {};
@@ -13760,6 +13769,11 @@ body.zefirok-profile-standalone .release-layer{display:none!important}
         return SKIN_CATALOG[currentDogSkin.id] || SKIN_CATALOG.default;
       }
 
+      function skinHasGameplayBonus(skin) {
+        const bonus = skin?.bonus || {};
+        return Number(bonus.points || 0) > 0 || Number(bonus.treats || 0) > 0 || Number(bonus.coffee || 0) > 0;
+      }
+
       function skinRunRewards(points, treats, coffee, durationSeconds = 0) {
         const skin = activeSkinConfig();
         const bonus = skin.bonus || SKIN_CATALOG.default.bonus;
@@ -13796,7 +13810,7 @@ body.zefirok-profile-standalone .release-layer{display:none!important}
       }
 
       function skinRunBonusText(credited) {
-        if (!credited || credited.skin?.id === "default") return "";
+        if (!credited || credited.skin?.id === "default" || !skinHasGameplayBonus(credited.skin)) return "";
         if (!credited.skinBonusEligible) {
           return `Бонус «${credited.skin.title}» не начислен: нужен забег от ${PROFILE_XP_MIN_RUN_SECONDS} секунд и ${PROFILE_XP_MIN_RUN_SCORE} очков`;
         }
@@ -13926,7 +13940,7 @@ body.zefirok-profile-standalone .release-layer{display:none!important}
           <img class="purchase-product-image" alt="${escapePurchaseText(skin.title)}" src="${escapePurchaseText(skin.image)}">
           <h2 id="purchase-dialog-title">${escapePurchaseText(skin.title)}</h2>
           <p>Образ добавлен на аккаунт навсегда и уже надет. Он появится в следующем забеге без перезагрузки страницы.</p>
-          <div class="purchase-warning"><strong>Бонус активирован</strong><span>${escapePurchaseText(skin.bonusLabel)} после полноценного забега от ${PROFILE_XP_MIN_RUN_SECONDS} секунд и ${PROFILE_XP_MIN_RUN_SCORE} очков. Бонусные очки идут только в кошелёк — счёт, рекорд и рейтинг не увеличиваются.</span></div>
+          ${skinHasGameplayBonus(skin) ? `<div class="purchase-warning"><strong>Бонус активирован</strong><span>${escapePurchaseText(skin.bonusLabel)} после полноценного забега от ${PROFILE_XP_MIN_RUN_SECONDS} секунд и ${PROFILE_XP_MIN_RUN_SCORE} очков. Бонусные очки идут только в кошелёк — счёт, рекорд и рейтинг не увеличиваются.</span></div>` : `<div class="purchase-warning"><strong>Только внешний вид</strong><span>Этот образ не меняет награды, счёт, рекорд или рейтинг.</span></div>`}
           ${skin.bonusCase ? `<div class="purchase-warning"><strong>Кейс в подарок</strong><span>${escapePurchaseText(skin.bonusCase.title)} будет добавлен на склад кейсов.</span></div>` : ""}
           <button class="purchase-action purchase-action--done" data-purchase-close type="button">Отлично</button>
         `, "[data-purchase-close]");

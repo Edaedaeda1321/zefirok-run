@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "catalogHash": "20d7c692677f0a1d",
-  "count": 329,
+  "catalogHash": "0fbb979b4b996987",
+  "count": 335,
   "images": [
     {
       "fileName": "cases/398D69BA-8943-4846-94B3-FC5CB717A67F.PNG",
@@ -2012,6 +2012,14 @@
       "modified": 1784884216000
     },
     {
+      "fileName": "skins/avatars/alex.png",
+      "label": "Alex",
+      "folder": "skins/avatars",
+      "path": "/assets/skins/avatars/alex.png",
+      "size": 2082189,
+      "modified": 1787158596372
+    },
+    {
       "fileName": "skins/avatars/angel.png",
       "label": "Angel",
       "folder": "skins/avatars",
@@ -2066,6 +2074,38 @@
       "path": "/assets/skins/avatars/strawberry.png",
       "size": 322128,
       "modified": 1784884216000
+    },
+    {
+      "fileName": "skins/gameplay/alex/jump.png",
+      "label": "Jump",
+      "folder": "skins/gameplay/alex",
+      "path": "/assets/skins/gameplay/alex/jump.png",
+      "size": 1706641,
+      "modified": 1787158102000
+    },
+    {
+      "fileName": "skins/gameplay/alex/run1.png",
+      "label": "Run1",
+      "folder": "skins/gameplay/alex",
+      "path": "/assets/skins/gameplay/alex/run1.png",
+      "size": 1773011,
+      "modified": 1787158102000
+    },
+    {
+      "fileName": "skins/gameplay/alex/run2.png",
+      "label": "Run2",
+      "folder": "skins/gameplay/alex",
+      "path": "/assets/skins/gameplay/alex/run2.png",
+      "size": 1513334,
+      "modified": 1787158105000
+    },
+    {
+      "fileName": "skins/gameplay/alex/stand.png",
+      "label": "Stand",
+      "folder": "skins/gameplay/alex",
+      "path": "/assets/skins/gameplay/alex/stand.png",
+      "size": 1942890,
+      "modified": 1787158102000
     },
     {
       "fileName": "skins/gameplay/angel/jump.png",
@@ -2460,12 +2500,20 @@
       "modified": 1784901266000
     },
     {
+      "fileName": "skins/shop/alex.png",
+      "label": "Alex",
+      "folder": "skins/shop",
+      "path": "/assets/skins/shop/alex.png",
+      "size": 1942890,
+      "modified": 1787158102000
+    },
+    {
       "fileName": "skins/shop/angel.png",
       "label": "Angel",
       "folder": "skins/shop",
       "path": "/assets/skins/shop/angel.png",
       "size": 335097,
-      "modified": 1784884216000
+      "modified": 1787158622000
     },
     {
       "fileName": "skins/shop/barista.png",
@@ -2473,7 +2521,7 @@
       "folder": "skins/shop",
       "path": "/assets/skins/shop/barista.png",
       "size": 377654,
-      "modified": 1784884216000
+      "modified": 1787158622000
     },
     {
       "fileName": "skins/shop/bee.png",
@@ -2481,7 +2529,7 @@
       "folder": "skins/shop",
       "path": "/assets/skins/shop/bee.png",
       "size": 396861,
-      "modified": 1784884216000
+      "modified": 1787158622000
     },
     {
       "fileName": "skins/shop/default.png",
@@ -2489,7 +2537,7 @@
       "folder": "skins/shop",
       "path": "/assets/skins/shop/default.png",
       "size": 376590,
-      "modified": 1784884216000
+      "modified": 1787158622000
     },
     {
       "fileName": "skins/shop/princess.png",
@@ -2497,7 +2545,7 @@
       "folder": "skins/shop",
       "path": "/assets/skins/shop/princess.png",
       "size": 375159,
-      "modified": 1784884216000
+      "modified": 1787158622000
     },
     {
       "fileName": "skins/shop/sailor.png",
@@ -2505,7 +2553,7 @@
       "folder": "skins/shop",
       "path": "/assets/skins/shop/sailor.png",
       "size": 367753,
-      "modified": 1784884216000
+      "modified": 1787158622000
     },
     {
       "fileName": "skins/shop/strawberry.png",
@@ -2513,7 +2561,7 @@
       "folder": "skins/shop",
       "path": "/assets/skins/shop/strawberry.png",
       "size": 378306,
-      "modified": 1784884216000
+      "modified": 1787158622000
     },
     {
       "fileName": "sounds/covers/img_sound_s3.png",

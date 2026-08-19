@@ -33,7 +33,7 @@
   let initData = "";
   let busy = false;
   let tutorialStep = 0;
-  const TUTORIAL_KEY = "zefirok-referrals-tutorial-v3";
+  const TUTORIAL_KEY = "zefirok-referrals-tutorial-v4";
   const tutorialLayer = document.querySelector("[data-tutorial]");
   const tutorialBody = document.querySelector("[data-tutorial-body]");
   const choiceLayer = document.querySelector("[data-choice]");
@@ -152,20 +152,45 @@
     const maxRuns=Math.max(0,Number(state?.program?.bindMaxRuns||0));
     const starter=(state?.milestoneRules||state?.friends?.[0]?.milestones||[]).find(m=>m.key==='starter');
     const starterRuns=Math.max(1,Number(starter?.triggerValue||3));
-    const giftCooldown=Math.max(1,Number(state?.friendGift?.cooldownHours||72));
-    const weeklyTarget=Math.max(1,Number(state?.weeklyProgram?.target||3));
-    return [
-      {title:'Пригласи друга через Telegram',text:'Нажми «Пригласить друга» и отправь персональную ссылку. Друг должен открыть именно эту ссылку и запустить «Сладкий Забег» через Telegram.',note:'Один игрок может быть связан только с одним пригласившим.',visual:'<img src="/assets/ui/icon_referals.png" alt="">'},
-      {title:'Зачем нужен твой личный код',text:`Код ${String(state?.self?.code||'').trim()||'приглашения'} — твой уникальный идентификатор. Игра сама встраивает его в Telegram-ссылку как startapp=ref_КОД, поэтому сервер понимает, кто пригласил нового игрока.`,note:'Вручную вводить код нигде не нужно. «Копировать ссылку» копирует готовое приглашение целиком.',visual:`<div class="mini-path"><span>Твой код<br><b>${esc(state?.self?.code||'КОД')}</b></span><b>→</b><span>Telegram-ссылка</span><b>→</b><span>Друг открывает</span></div>`},
-      {title:'Кого система засчитает',text:`Друг должен быть новым игроком и открыть игру по твоему приглашению в течение ${hours} ч. после появления аккаунта.${maxRuns===0?' До привязки у него не должно быть ни одного зачтённого забега.':` До привязки допускается не больше ${maxRuns} зачтённых забегов.`}`,note:'Старый аккаунт нельзя задним числом превратить в реферала.',visual:'<div class="mini-path"><span>Твоя ссылка</span><b>›</b><span>Первый запуск</span><b>›</b><span>Привязка</span></div>'},
-      {title:'Когда друг становится активным',text:`После привязки друг проходит стартовый этап — сейчас это ${starterRuns} подтверждённых сервером забега. Затем открываются совместные награды за уровни профиля 5, 10 и 20.`,note:'Незачтённые попытки и активность до привязки в реферальный прогресс не входят.',visual:'<div class="mini-path"><span>Старт</span><b>›</b><span>5 уровень</span><b>›</b><span>10</span><b>›</b><span>20</span></div>'},
-      {title:'Элитный и Элитный+',text:'Если уже привязанный друг активирует Элитный или Элитный+ сезонный пропуск, пригласивший получает дополнительный XP именно в сезон покупки.',note:'Покупка, сделанная до реферальной привязки, не выдаёт награду задним числом.',visual:'<div class="mini-path"><span>Элитный</span><b>→</b><span>+ XP</span><span>Элитный+</span><b>→</b><span>+ XP</span></div>'},
-      {title:'Прогресс друга и бесплатный подарок',text:`На карточке каждого друга видно точный прогресс: стартовые забеги, текущий уровень, этапы и недельная активность. Активному приглашённому другу можно бесплатно отправить системный подарок. После отправки действует общий перерыв ${giftCooldown} ч.`,note:'Подарок ничего не списывает с твоего баланса. Отправлять его можно только своему активному приглашённому другу.',visual:'<div class="mini-path"><span>2/3 старта</span><b>→</b><span>4/5 уровня</span><b>+</b><span>🎁</span></div>'},
-      {title:'Совместный недельный подарок',text:`За неделю ты и активный друг должны сделать минимум по ${weeklyTarget} подтверждённых забега. Как только одна пара выполняет условие, сервер открывает подарок обоим.`,note:'У пригласившего только одна недельная коробка на неделю — её открывает первый друг, с которым выполнено условие.',visual:`<div class="mini-path"><span>Ты ${weeklyTarget}/${weeklyTarget}</span><b>+</b><span>Друг ${weeklyTarget}/${weeklyTarget}</span><b>→</b><span>🎁 обоим</span></div>`},
-      {title:'Уведомления — только по желанию',text:`На странице можно включить Telegram-уведомления о важных событиях: готовом совместном подарке, подарке от друга, возвращении и новом этапе.`,note:`Уведомления выключены по умолчанию. Даже после включения сервер отправляет не больше ${Math.max(1,Number(state?.notifications?.dailyCap||2))} важных сообщений в день.`,visual:'<div class="mini-path"><span>Включить</span><b>→</b><span>Telegram</span><b>→</b><span>🎁 важное</span></div>'},
-      {title:'События ×2 и возвращение друга',text:`Иногда включается временное событие ×2–×5: новые реферальные награды, открытые в этот период, умножаются сервером. Если активный друг не играл ${Math.max(3,Number(state?.program?.returnProgram?.afterDays||14))} дней и снова завершил подтверждённый забег, может открыться отдельный подарок.`,note:'Награда за возвращение срабатывает один раз на каждого активного друга.',visual:'<div class="mini-path"><span>×2 событие</span><b>+</b><span>Друг вернулся</span><b>→</b><span>🎁</span></div>'},
-      {title:'Большие награды за компанию',text:'Каждый активный друг двигает общую лестницу 1 / 3 / 5 / 10 / 20 / 50. На крупных вехах вместо одной фиксированной награды может открыться выбор из нескольких подарков.',note:'Если появился выбор, можно забрать только один вариант. После подтверждения изменить его нельзя.',visual:'<div class="mini-path"><span>10 друзей</span><b>→</b><span>🎁</span><span>🎁</span><span>🎁</span><b>→</b><span>выбери 1</span></div>'}
+    const gift=state?.friendGift||{};
+    const giftCooldown=Math.max(1,Number(gift.cooldownHours||72));
+    const weekly=state?.weeklyProgram||{};
+    const weeklyTarget=Math.max(1,Number(weekly.target||3));
+    const notifications=state?.notifications||{};
+    const dailyCap=Math.max(1,Number(notifications.dailyCap||2));
+    const boost=state?.program?.boost||{};
+    const returnProgram=state?.program?.returnProgram||{};
+    const choiceMilestones=(state?.networkMilestones||[]).filter(item=>item?.choice?.enabled);
+    const choiceThresholds=choiceMilestones.map(item=>Number(item.threshold)).filter(Boolean).join(' / ');
+    const steps=[
+      {title:'Что такое «Друзья кафе»',text:'Это ваша общая зона с приглашёнными друзьями: здесь видны их этапы, совместные подарки, недельная активность, лента событий и большие награды за компанию.',note:'Главное правило: награды открываются за реальную активность уже привязанного друга, а не просто за отправленную ссылку.',visual:'<img src="/assets/ui/icon_referals.png" alt="">'},
+      {title:'Приглашение и твой личный код',text:`Нажми «Пригласить друга» или «Копировать ссылку». Код ${String(state?.self?.code||'').trim()||'приглашения'} — твой уникальный идентификатор: игра сама добавляет его в Telegram-ссылку как startapp=ref_КОД.`,note:'Другу нигде не нужно вводить код вручную. Он просто открывает твою персональную ссылку и запускает игру в Telegram.',visual:`<div class="mini-path"><span>Твой код<br><b>${esc(state?.self?.code||'КОД')}</b></span><b>→</b><span>Ссылка Telegram</span><b>→</b><span>Первый запуск</span></div>`},
+      {title:'Кого система засчитает',text:`Рефералом становится новый игрок, который открыл игру по твоей ссылке в течение ${hours} ч. после появления аккаунта.${maxRuns===0?' До привязки у него не должно быть ни одного зачтённого забега.':` До привязки допускается не больше ${maxRuns} зачтённых забегов.`}`,note:'Старый аккаунт нельзя привязать задним числом. Самоприглашение, повторная привязка и связь одного игрока с несколькими пригласившими блокируются сервером.',visual:'<div class="mini-path"><span>Новый игрок</span><b>+</b><span>Твоя ссылка</span><b>→</b><span>Привязан ✓</span></div>'},
+      {title:'Как друг становится активным',text:`После привязки друг проходит стартовый этап — сейчас это ${starterRuns} подтверждённых сервером забега. Потом идут уровни профиля 5, 10 и 20. На карточке друга видно точный прогресс и ближайшую следующую цель.`,note:'Активность до привязки и незачтённые попытки в реферальный прогресс не входят.',visual:`<div class="mini-path"><span>${starterRuns} забега</span><b>›</b><span>5 уровень</span><b>›</b><span>10</span><b>›</b><span>20</span></div>`},
+      {title:'Элитный и Элитный+',text:'Если уже привязанный друг активирует Элитный или Элитный+ сезонный пропуск, пригласивший получает дополнительный XP сезонного пропуска в том сезоне, где произошла покупка.',note:'Покупка до реферальной привязки не засчитывается задним числом. XP сезонного пропуска начисляется сервером автоматически.',visual:'<div class="mini-path"><span>Элитный</span><b>→</b><span>+ XP</span><span>Элитный+</span><b>→</b><span>+ XP</span></div>'},
+      {title:'Лента друзей и уведомления',text:`Лента показывает важные события вашей компании: кто присоединился, стал активным, достиг этапа, вернулся или открыл совместный подарок. ${notifications.available?'Telegram-уведомления о важных событиях можно включить отдельно.':'Telegram-уведомления для рефералов сейчас отключены в настройках игры.'}`,note:notifications.available?`Уведомления добровольные и выключены у игрока по умолчанию. После включения сервер отправляет не больше ${dailyCap} важных сообщений в день.`:'Когда уведомления будут доступны, включать их или нет всё равно решает сам игрок.',visual:'<div class="mini-path"><span>Лента</span><b>+</b><span>Этапы</span><b>→</b><span>Telegram 🔔</span></div>'}
     ];
+
+    if(gift.enabled){
+      steps.push({title:'Бесплатный подарок другу',text:`Активному приглашённому другу можно бесплатно отправить системный подарок «${String(gift.rewardLabel||'подарок')}». Он не списывается из твоего баланса. После отправки действует общий перерыв ${giftCooldown} ч.`,note:'Подарок можно отправлять только своему активному приглашённому другу. Сервер не позволит выдать два подарка одновременно или обойти cooldown.',visual:'<div class="mini-path"><span>Активный друг</span><b>→</b><span>🎁 бесплатно</span><b>→</b><span>Cooldown</span></div>'});
+    }
+
+    if(weekly.enabled){
+      steps.push({title:'Совместный недельный подарок',text:`За одну неделю ты и активный друг должны сделать минимум по ${weeklyTarget} подтверждённых забега. Прогресс каждого показывается отдельно. Когда условие выполнено, сервер открывает награду обоим.`,note:`У пригласившего одна недельная коробка на неделю — её открывает первый друг, с которым выполнено условие. Тебе: ${String(weekly.referrerRewardLabel||'награда')}; другу: ${String(weekly.inviteeRewardLabel||'награда')}.`,visual:`<div class="mini-path"><span>Ты ${weeklyTarget}/${weeklyTarget}</span><b>+</b><span>Друг ${weeklyTarget}/${weeklyTarget}</span><b>→</b><span>🎁 обоим</span></div>`});
+    }
+
+    if(boost.enabled||returnProgram.enabled){
+      const pieces=[];
+      if(boost.enabled)pieces.push(`Временные события могут усиливать новые реферальные награды в ×${Math.max(2,Number(boost.multiplier||2))}${boost.active?' — такое событие активно прямо сейчас':''}.`);
+      if(returnProgram.enabled)pieces.push(`Если активный друг не играл ${Math.max(3,Number(returnProgram.afterDays||14))} дней и затем снова завершил подтверждённый забег, может открыться отдельный совместный подарок.`);
+      const eventVisual=boost.enabled&&returnProgram.enabled?'<div class="mini-path"><span>×N событие</span><b>+</b><span>Друг вернулся</span><b>→</b><span>🎁</span></div>':boost.enabled?'<div class="mini-path"><span>×N событие</span><b>→</b><span>Больше наград 🎁</span></div>':'<div class="mini-path"><span>Долгий перерыв</span><b>→</b><span>Друг вернулся</span><b>→</b><span>🎁</span></div>';
+      steps.push({title:'События и возвращение друзей',text:pieces.join(' '),note:`${boost.enabled?'Множитель применяется только к новым наградам, открытым в период события. ':''}${returnProgram.enabled?'Награда за возвращение выдаётся один раз на каждого активного друга.':''}`.trim(),visual:eventVisual});
+    }
+
+    steps.push({title:'«Моё кафе» — большие вехи',text:`Каждый активный друг двигает общую лестницу 1 / 3 / 5 / 10 / 20 / 50. На плитке сразу показано, какая награда ждёт на конкретной цели.${choiceMilestones.length?` На крупных вехах ${choiceThresholds||'10 / 20 / 50'} может открываться выбор из нескольких больших наград.`:''}`,note:choiceMilestones.length?'Если появился большой выбор, можно получить только один вариант. После подтверждения изменить решение нельзя.':'Награда за каждую общую веху выдаётся сервером только один раз.',visual:choiceMilestones.length?`<div class="mini-path"><span>${esc(choiceThresholds||'Большая веха')}</span><b>→</b><span>🎁</span><span>🎁</span><span>🎁</span><b>→</b><span>выбери 1</span></div>`:'<div class="mini-path"><span>1</span><span>3</span><span>5</span><span>10</span><span>20</span><span>50</span></div>'});
+
+    steps.push({title:'Готовые подарки и получение',text:'Обычные награды появляются в блоке «Готовые подарки» — нажми «Забрать» или «Забрать все». Сервер фиксирует выдачу, поэтому один и тот же подарок нельзя получить повторно.',note:'Для совместных и больших наград появляется отдельный экран получения. На крупных вехах можно поделиться достижением. Обучение всегда можно снова открыть кнопкой «?».',visual:'<div class="mini-path"><span>Готовый подарок</span><b>→</b><span>Забрать</span><b>→</b><span>✨ Получено</span></div>'});
+    return steps;
   }
 
   function renderTutorial(){
