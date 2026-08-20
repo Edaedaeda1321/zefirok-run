@@ -1,34 +1,33 @@
-FIX 1.0.9 / LOCAL 2.2 — Case Reliability + Telegram Touch/Back + Overlay Layout
+СЛАДКИЙ ЗАБЕГ — REPAIR ПОСЛЕ КОММИТА 8745128
+Дата: 20.08.2026
 
-Исправлено в Production:
-- восстановлена отсутствовавшая константа CASE_OPEN_REQUEST_TIMEOUT_MS: из-за неё открытие кейсов могло падать после запуска превью;
-- открытие подарочных/складских кейсов теперь получает уникальный requestId;
-- Worker делает открытие idempotent по requestId: повторный запрос не открывает второй кейс и умеет вернуть уже завершённый результат;
-- если первый запрос на мобильной сети завис/оборвался, клиент не закрывает рулетку сразу, а до 45 секунд безопасно опрашивает тот же requestId;
-- если сервер уже начислил награду, но ответ потерялся, результат восстанавливается из granted_cases.rewards_json;
-- после успешного DB batch физический stock больше не освобождается из-за ошибки только на этапе формирования ответа;
-- окно кейса ограничено реальной высотой viewport, длинный список наград прокручивается внутри и больше не растягивает модалку за экран;
-- на низких экранах арт кейса и заголовок становятся компактнее;
-- окно новостей получает отдельный iOS touch-scroll и реальную высоту Telegram viewport.
+ПРИЧИНА
+Hotfix LOCAL 2.2 / Case Reliability был применён поверх проекта так, что macOS/Finder заменил служебные папки неполным содержимым патча. После git add -A это попало в commit 8745128 как удаления.
 
-Исправлено в LOCAL 2.2 / Candidate V3:
-- Fake Telegram остаётся изолированным по данным/API, но теперь напрямую использует нативный Telegram WebView bridge только для UI-событий;
-- BackButton.show/hide снова управляет настоящей кнопкой «Назад» Telegram вместо постоянного «Закрыть»;
-- back_button_pressed приходит в LOCAL callback без Telegram SDK и без сетевого запроса;
-- disableVerticalSwipes/enableVerticalSwipes проксируются в Telegram native bridge, поэтому «Друзья кафе», новости и другие длинные экраны снова нормально скроллятся на iOS;
-- fullscreen bridge также работает через нативные события, без обращения к Production;
-- LOCAL BUILD обновлён до 2.2;
-- V3 Candidate source синхронизирован с этим hotfix и заново собраны LOCAL/TP варианты.
+СЛУЧАЙНО УДАЛЁННЫЕ ФАЙЛЫ
+- scripts/check-assets.mjs
+- scripts/candidate-tp-bridge.js
+- candidates/V3/source/battle-pass.html
+- candidates/V3/source/legal.html
+- candidates/V3/source/rating.html
 
-Проверки:
-- node --check src/worker.js — OK
-- node --check scripts/local-test-runtime.js — OK
-- node --check scripts/build-local-test.mjs — OK
-- node --check scripts/candidate.mjs — OK
-- inline JS в index/index_test/referrals_test/candidate LOCAL/TP — OK
-- LOCAL Smoke QA — 14/14
-- Native Telegram bridge test: BackButton callback + web_app_setup_back_button + web_app_setup_swipe_behavior — OK
-- external API/network в LOCAL Smoke — 0
+ЧТО СДЕЛАНО
+- восстановлены 5 удалённых файлов байт-в-байт из непосредственного предыдущего commit 158357f064960fa2ea1b2787cf6023f2fbddce8a;
+- новый hotfix 8745128 (case reliability / LOCAL 2.2) НЕ откатывается;
+- в repair намеренно включены ПОЛНЫЕ папки scripts/ и candidates/, чтобы замена папки в Finder больше не удаляла соседние файлы.
 
-Миграций D1 нет.
-Деплой: npx wrangler deploy
+ПРОВЕРКИ
+- scripts/check-assets.mjs blob SHA: 77facf445726f3f48e2f6e8ec002a9b626915e6f
+- scripts/candidate-tp-bridge.js blob SHA: 39de9a6e23364e1c230d687605ed9bf637cf1a0d
+- candidates/V3/source/battle-pass.html blob SHA: d5f7d136b6c31ed79f40708b5a52b8508958ad03
+- candidates/V3/source/legal.html blob SHA: 3d63baa85e9d483d346d4bfa4087e447b0f0b9a7
+- candidates/V3/source/rating.html blob SHA: 1acf1ff8c46d58c35f7d29fea52c43a1cc0eea46
+- node --check всех scripts: OK
+- node scripts/check-assets.mjs --news-manifest: OK
+- node scripts/check-assets.mjs --new-only: Asset check passed: 31 files
+
+МИГРАЦИИ D1
+Нет.
+
+ДЕПЛОЙ
+npx wrangler deploy
