@@ -9449,17 +9449,49 @@ function permissionLabel(permission) {
   })[permission] || permission;
 }
 
-async function getTeamAccess(user, env) {
+const TEAM_ACCESS_CACHE_TTL_MS = 5000;
+const teamAccessMemoryCache = new Map();
+
+function cloneTeamAccess(access) {
+  return access && typeof access === "object"
+    ? { ...access, permissions: { ...(access.permissions || {}) } }
+    : access;
+}
+
+async function getTeamAccess(user, env, options = {}) {
+  const perfPrefix = String(options?.perfPrefix || "").trim();
+  const runtime = options?.runtime || {};
+  const actorId = String(user?.id || user || "");
   const ownerPermissions = completeSecurityPermissions(true);
   if (isBotAdminUser(user, env)) {
+    if (perfPrefix) sampleAdminPerformancePhase(env, runtime, `${perfPrefix}:owner_fast`, Date.now(), true);
     return { authorized: true, owner: true, role: "owner", permissions: { view: true, redeem: true, points: true, products: true, news: true, staff: true, log: true, ...ownerPermissions } };
   }
-  const row = await env.DB.prepare(
-    `SELECT telegram_id, display_name, active, role, session_expires_at,
-            can_redeem_rewards, can_adjust_points, can_manage_products,
-            can_publish_news, can_manage_staff
-     FROM staff_users WHERE telegram_id = ? LIMIT 1`
-  ).bind(String(user?.id || user || "")).first();
+
+  const cacheKey = actorId;
+  const nowMs = Date.now();
+  if (!options?.force && cacheKey) {
+    const cached = teamAccessMemoryCache.get(cacheKey);
+    if (cached && Number(cached.expiresAtMs || 0) > nowMs) {
+      if (perfPrefix) sampleAdminPerformancePhase(env, runtime, `${perfPrefix}:cache_hit`, nowMs, true);
+      return cloneTeamAccess(cached.access);
+    }
+  }
+
+  const staffStartedAt = Date.now();
+  let row;
+  try {
+    row = await env.DB.prepare(
+      `SELECT telegram_id, display_name, active, role, session_expires_at,
+              can_redeem_rewards, can_adjust_points, can_manage_products,
+              can_publish_news, can_manage_staff
+       FROM staff_users WHERE telegram_id = ? LIMIT 1`
+    ).bind(actorId).first();
+    if (perfPrefix) sampleAdminPerformancePhase(env, runtime, `${perfPrefix}:staff_user_d1`, staffStartedAt, true);
+  } catch (error) {
+    if (perfPrefix) sampleAdminPerformancePhase(env, runtime, `${perfPrefix}:staff_user_d1`, staffStartedAt, false, error?.message || error);
+    throw error;
+  }
   if (!row || Number(row.active || 0) !== 1) return { authorized: false, owner: false, reason: "not_staff", permissions: {} };
   const now = Math.floor(Date.now() / 1000);
   const expiresAt = Number(row.session_expires_at || 0);
@@ -9476,27 +9508,28 @@ async function getTeamAccess(user, env) {
   };
   let security = securityPermissionPreset(role, legacy);
   try {
-    // Fast path: the permissions table already exists in a deployed system.
-    // Avoid running the full security schema batch on every cold Worker isolate.
     let override;
+    const overrideStartedAt = Date.now();
     try {
       override = await env.DB.prepare(`SELECT * FROM staff_permission_overrides WHERE telegram_id = ? LIMIT 1`).bind(String(row.telegram_id)).first();
+      if (perfPrefix) sampleAdminPerformancePhase(env, runtime, `${perfPrefix}:permission_override_d1`, overrideStartedAt, true);
     } catch (readError) {
+      if (perfPrefix) sampleAdminPerformancePhase(env, runtime, `${perfPrefix}:permission_override_d1`, overrideStartedAt, false, readError?.message || readError);
+      const schemaStartedAt = Date.now();
       await ensureOperationsSecuritySchema(env);
+      if (perfPrefix) sampleAdminPerformancePhase(env, runtime, `${perfPrefix}:permission_schema`, schemaStartedAt, true);
+      const retryStartedAt = Date.now();
       override = await env.DB.prepare(`SELECT * FROM staff_permission_overrides WHERE telegram_id = ? LIMIT 1`).bind(String(row.telegram_id)).first();
+      if (perfPrefix) sampleAdminPerformancePhase(env, runtime, `${perfPrefix}:permission_override_retry_d1`, retryStartedAt, true);
     }
     if (override) security = securityPermissionsFromRow(override, security);
   } catch (error) {
     console.error("granular permissions fallback", error);
   }
-  // Бариста и повар используют только рабочую панель точки:
-  // доступ к игрокам всегда закрыт, а проверка физических кодов всегда доступна.
   if (role === "cashier" || role === "cook") {
     security.viewPlayers = false;
     security.redeemPhysical = true;
   }
-  // Администратор ограничивается только рабочими разделами из панели.
-  // Ограничение применяется в Worker и не меняет схему или записи D1.
   if (role === "administrator") {
     legacy.redeem = true;
     legacy.points = false;
@@ -9512,7 +9545,7 @@ async function getTeamAccess(user, env) {
       redeemPhysical: true
     };
   }
-  return {
+  const access = {
     authorized: activeSession,
     owner: false,
     reason: activeSession ? "active" : "expired",
@@ -9520,6 +9553,8 @@ async function getTeamAccess(user, env) {
     expiresAt,
     permissions: { ...legacy, ...security }
   };
+  if (activeSession && cacheKey) teamAccessMemoryCache.set(cacheKey, { access: cloneTeamAccess(access), expiresAtMs: Math.min(nowMs + TEAM_ACCESS_CACHE_TTL_MS, Math.max(nowMs, expiresAt * 1000)) });
+  return access;
 }
 async function requireTeamPermission(chatId, user, permission, env) {
   const access = await getTeamAccess(user, env);
@@ -12594,9 +12629,25 @@ async function getStaffWorkflow(userId, env) {
   return { ...row, data: parseJsonObject(row.data_json, {}) };
 }
 
-async function clearStaffWorkflow(userId, env) {
-  await ensureStaffOperationsSchema(env);
-  await env.DB.prepare(`DELETE FROM bot_staff_workflows WHERE telegram_id = ?`).bind(String(userId)).run();
+async function clearStaffWorkflow(userId, env, options = {}) {
+  const runtime = options?.runtime || {};
+  const perfPrefix = String(options?.perfPrefix || "").trim();
+  const remove = () => env.DB.prepare(`DELETE FROM bot_staff_workflows WHERE telegram_id = ?`).bind(String(userId)).run();
+  const directStartedAt = Date.now();
+  try {
+    const result = await remove();
+    if (perfPrefix) sampleAdminPerformancePhase(env, runtime, `${perfPrefix}:delete_d1`, directStartedAt, true);
+    return result;
+  } catch (error) {
+    if (perfPrefix) sampleAdminPerformancePhase(env, runtime, `${perfPrefix}:delete_d1`, directStartedAt, false, error?.message || error);
+    const schemaStartedAt = Date.now();
+    await ensureStaffOperationsSchema(env);
+    if (perfPrefix) sampleAdminPerformancePhase(env, runtime, `${perfPrefix}:schema_fallback`, schemaStartedAt, true);
+    const retryStartedAt = Date.now();
+    const result = await remove();
+    if (perfPrefix) sampleAdminPerformancePhase(env, runtime, `${perfPrefix}:delete_retry_d1`, retryStartedAt, true);
+    return result;
+  }
 }
 
 async function updateStaffWorkflow(userId, patch, env) {
@@ -14358,10 +14409,31 @@ async function updateBotPlayerSupportWorkflow(userId, patch, env) {
   return { ...current, step: nextStep, data: nextData };
 }
 
-async function clearBotPlayerSupportWorkflow(userId, env) {
+async function clearBotPlayerSupportWorkflow(userId, env, options = {}) {
   if (!env.DB) return;
-  await ensurePlayerSupportSchema(env);
-  await env.DB.prepare(`DELETE FROM bot_player_support_workflows WHERE telegram_id=?`).bind(String(userId)).run().catch(() => {});
+  const runtime = options?.runtime || {};
+  const perfPrefix = String(options?.perfPrefix || "").trim();
+  const remove = () => env.DB.prepare(`DELETE FROM bot_player_support_workflows WHERE telegram_id=?`).bind(String(userId)).run();
+  const directStartedAt = Date.now();
+  try {
+    const result = await remove();
+    if (perfPrefix) sampleAdminPerformancePhase(env, runtime, `${perfPrefix}:delete_d1`, directStartedAt, true);
+    return result;
+  } catch (error) {
+    if (perfPrefix) sampleAdminPerformancePhase(env, runtime, `${perfPrefix}:delete_d1`, directStartedAt, false, error?.message || error);
+    const schemaStartedAt = Date.now();
+    await ensurePlayerSupportSchema(env);
+    if (perfPrefix) sampleAdminPerformancePhase(env, runtime, `${perfPrefix}:schema_fallback`, schemaStartedAt, true);
+    const retryStartedAt = Date.now();
+    try {
+      const result = await remove();
+      if (perfPrefix) sampleAdminPerformancePhase(env, runtime, `${perfPrefix}:delete_retry_d1`, retryStartedAt, true);
+      return result;
+    } catch (retryError) {
+      if (perfPrefix) sampleAdminPerformancePhase(env, runtime, `${perfPrefix}:delete_retry_d1`, retryStartedAt, false, retryError?.message || retryError);
+      return null;
+    }
+  }
 }
 
 function botSupportHomeText(state = {}) {
@@ -15252,19 +15324,32 @@ async function buildAdminOverview(env, options = {}) {
   if (options.syncProblems !== false) await syncOperationalProblems(env, { checkWebhook: true });
   const startAt = moscowDayStartUnix();
   const now = Math.floor(Date.now() / 1000);
+  const runtime = options?.runtime || {};
+  const perfPrefix = String(options?.perfPrefix || "").trim();
+  const phase = (label, task) => {
+    if (!perfPrefix) return Promise.resolve().then(task);
+    const startedAt = Date.now();
+    return Promise.resolve().then(task).then((value) => {
+      sampleAdminPerformancePhase(env, runtime, `${perfPrefix}:${label}`, startedAt, true);
+      return value;
+    }, (error) => {
+      sampleAdminPerformancePhase(env, runtime, `${perfPrefix}:${label}`, startedAt, false, error?.message || error);
+      throw error;
+    });
+  };
   const [activePlayers, newPlayers, runs, casesLevel, casesGranted, shopOps, queue, tickets, issues, errors, season, heartbeat] = await Promise.all([
-    env.DB.prepare(`SELECT COUNT(DISTINCT telegram_id) AS count FROM leaderboard_runs WHERE created_at >= ?`).bind(startAt).first(),
-    env.DB.prepare(`SELECT COUNT(*) AS count FROM admin_profile_state WHERE created_at >= ?`).bind(startAt).first(),
-    env.DB.prepare(`SELECT COUNT(*) AS total, SUM(CASE WHEN accepted = 1 THEN 1 ELSE 0 END) AS accepted FROM leaderboard_runs WHERE created_at >= ?`).bind(startAt).first(),
-    env.DB.prepare(`SELECT COUNT(*) AS count FROM level_case_openings WHERE opened_at >= ?`).bind(startAt).first(),
-    env.DB.prepare(`SELECT COUNT(*) AS count FROM granted_cases WHERE opened_at >= ?`).bind(startAt).first(),
-    env.DB.prepare(`SELECT COUNT(*) AS count FROM shop_stock_consumptions WHERE created_at >= ?`).bind(startAt).first(),
-    env.DB.prepare(`SELECT SUM(CASE WHEN status IN ('pending','delivering') THEN 1 ELSE 0 END) AS pending, SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) AS failed FROM reward_delivery_queue`).first(),
-    env.DB.prepare(`SELECT COUNT(*) AS count FROM support_tickets WHERE status IN ('new','working')`).first(),
-    env.DB.prepare(`SELECT COUNT(*) AS count, SUM(CASE WHEN severity IN ('critical','high') THEN 1 ELSE 0 END) AS urgent FROM admin_operational_issues WHERE status != 'resolved' AND (status != 'snoozed' OR snoozed_until <= ?)`).bind(now).first(),
-    env.DB.prepare(`SELECT COUNT(*) AS count FROM staff_action_log WHERE success = 0 AND created_at >= ?`).bind(now - 3600).first(),
-    ensureSeason(env),
-    getSystemState(env, "cron:last_success")
+    phase("active_players_d1", () => env.DB.prepare(`SELECT COUNT(DISTINCT telegram_id) AS count FROM leaderboard_runs WHERE created_at >= ?`).bind(startAt).first()),
+    phase("new_players_d1", () => env.DB.prepare(`SELECT COUNT(*) AS count FROM admin_profile_state WHERE created_at >= ?`).bind(startAt).first()),
+    phase("runs_d1", () => env.DB.prepare(`SELECT COUNT(*) AS total, SUM(CASE WHEN accepted = 1 THEN 1 ELSE 0 END) AS accepted FROM leaderboard_runs WHERE created_at >= ?`).bind(startAt).first()),
+    phase("level_cases_d1", () => env.DB.prepare(`SELECT COUNT(*) AS count FROM level_case_openings WHERE opened_at >= ?`).bind(startAt).first()),
+    phase("granted_cases_d1", () => env.DB.prepare(`SELECT COUNT(*) AS count FROM granted_cases WHERE opened_at >= ?`).bind(startAt).first()),
+    phase("shop_ops_d1", () => env.DB.prepare(`SELECT COUNT(*) AS count FROM shop_stock_consumptions WHERE created_at >= ?`).bind(startAt).first()),
+    phase("reward_queue_d1", () => env.DB.prepare(`SELECT SUM(CASE WHEN status IN ('pending','delivering') THEN 1 ELSE 0 END) AS pending, SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) AS failed FROM reward_delivery_queue`).first()),
+    phase("tickets_d1", () => env.DB.prepare(`SELECT COUNT(*) AS count FROM support_tickets WHERE status IN ('new','working')`).first()),
+    phase("issues_d1", () => env.DB.prepare(`SELECT COUNT(*) AS count, SUM(CASE WHEN severity IN ('critical','high') THEN 1 ELSE 0 END) AS urgent FROM admin_operational_issues WHERE status != 'resolved' AND (status != 'snoozed' OR snoozed_until <= ?)`).bind(now).first()),
+    phase("errors_d1", () => env.DB.prepare(`SELECT COUNT(*) AS count FROM staff_action_log WHERE success = 0 AND created_at >= ?`).bind(now - 3600).first()),
+    phase("season_d1", () => ensureSeason(env)),
+    phase("heartbeat_d1", () => getSystemState(env, "cron:last_success"))
   ]);
   const cronAge = heartbeat?.updatedAt ? now - heartbeat.updatedAt : 0;
   const urgent = Number(issues?.urgent || 0);
@@ -16376,12 +16461,20 @@ async function handleStaffOperationsCallback(query, env) {
   }
   if (data === "grant_home") {
     const accessStartedAt = Date.now();
-    const access = await requireAnySecurityPermission(chatId, query.from, ["grantRewards", "grantLegendaryCases"], env);
+    const access = await requireAnySecurityPermission(
+      chatId,
+      query.from,
+      ["grantRewards", "grantLegendaryCases"],
+      env,
+      { runtime, perfPrefix: "grant_home:access" }
+    );
     sampleAdminPerformancePhase(env, runtime, "grant_home:access", accessStartedAt, Boolean(access));
     if (!access) return true;
+
     const workflowStartedAt = Date.now();
     const callbackStartedAt = Date.now();
-    const workflowPromise = clearStaffWorkflow(query.from.id, env).then((value) => {
+    const telegramStartedAt = Date.now();
+    const workflowPromise = clearStaffWorkflow(query.from.id, env, { runtime, perfPrefix: "grant_home:workflow" }).then((value) => {
       sampleAdminPerformancePhase(env, runtime, "grant_home:workflow", workflowStartedAt, true);
       return value;
     }, (error) => {
@@ -16395,15 +16488,16 @@ async function handleStaffOperationsCallback(query, env) {
       sampleAdminPerformancePhase(env, runtime, "grant_home:callback", callbackStartedAt, false, error?.message || error);
       throw error;
     });
-    await Promise.all([workflowPromise, callbackPromise]);
-    const telegramStartedAt = Date.now();
-    try {
-      await sendTelegramMessage(env, chatId, "<b>Выдача награды</b>\n\nВыберите тип награды.", grantMainMarkup());
+    const telegramPromise = sendTelegramMessage(env, chatId, "<b>Выдача награды</b>\n\nВыберите тип награды.", grantMainMarkup()).then((value) => {
       sampleAdminPerformancePhase(env, runtime, "grant_home:telegram", telegramStartedAt, true);
-    } catch (error) {
+      return value;
+    }, (error) => {
       sampleAdminPerformancePhase(env, runtime, "grant_home:telegram", telegramStartedAt, false, error?.message || error);
       throw error;
-    }
+    });
+
+    // V3.3 Performance Candidate: independent cleanup/callback/Telegram work runs in parallel.
+    await Promise.all([workflowPromise, callbackPromise, telegramPromise]);
     return true;
   }
   const grantCatalog = data.match(/^grant_catalog:(case|avatar|frame|trail|skin)$/);
@@ -17137,14 +17231,14 @@ async function showAdminMainMenu(chatId, user, env, options = {}) {
   const runtime = options?.runtime || {};
   const accessStartedAt = Date.now();
   const supportStartedAt = Date.now();
-  const supportPromise = clearBotPlayerSupportWorkflow(user?.id, env).then((value) => {
+  const supportPromise = clearBotPlayerSupportWorkflow(user?.id, env, { runtime, perfPrefix: "adm_home:support_cleanup" }).then((value) => {
     sampleAdminPerformancePhase(env, runtime, "adm_home:support_cleanup", supportStartedAt, true);
     return value;
   }).catch((error) => {
     sampleAdminPerformancePhase(env, runtime, "adm_home:support_cleanup", supportStartedAt, false, error?.message || error);
     return null;
   });
-  const accessPromise = getTeamAccess(user, env).then((value) => {
+  const accessPromise = getTeamAccess(user, env, { runtime, perfPrefix: "adm_home:access" }).then((value) => {
     sampleAdminPerformancePhase(env, runtime, "adm_home:access", accessStartedAt, Boolean(value?.authorized));
     return value;
   }, (error) => {
@@ -17163,7 +17257,7 @@ async function showAdminMainMenu(chatId, user, env, options = {}) {
   if (!frontline && !limitedAdministrator) {
     const overviewStartedAt = Date.now();
     try {
-      overview = await getAdminOverviewFast(env, Boolean(options.forceRefresh));
+      overview = await getAdminOverviewFast(env, Boolean(options.forceRefresh), { runtime, perfPrefix: "adm_home:overview" });
       sampleAdminPerformancePhase(env, runtime, "adm_home:overview", overviewStartedAt, true);
     } catch (error) {
       sampleAdminPerformancePhase(env, runtime, "adm_home:overview", overviewStartedAt, false, error?.message || error);
@@ -21098,8 +21192,8 @@ function securityPermissionsFromRow(row, fallback = {}) {
   return result;
 }
 
-async function requireSecurityPermission(chatId, user, permission, env) {
-  const access = await getTeamAccess(user, env);
+async function requireSecurityPermission(chatId, user, permission, env, options = {}) {
+  const access = await getTeamAccess(user, env, options);
   if (!access.authorized) {
     await sendTelegramMessage(env, chatId, access.reason === "expired" ? "Сессия истекла. Выполните <code>/staff</code>." : "Доступно только сотрудникам.");
     return null;
@@ -21111,8 +21205,8 @@ async function requireSecurityPermission(chatId, user, permission, env) {
   return access;
 }
 
-async function requireAnySecurityPermission(chatId, user, permissions, env) {
-  const access = await getTeamAccess(user, env);
+async function requireAnySecurityPermission(chatId, user, permissions, env, options = {}) {
+  const access = await getTeamAccess(user, env, options);
   if (!access.authorized) {
     await sendTelegramMessage(env, chatId, access.reason === "expired" ? "Сессия истекла. Выполните <code>/staff</code>." : "Доступно только сотрудникам.");
     return null;
@@ -23120,13 +23214,26 @@ function parseCachedAdminOverview(state) {
   } catch { return null; }
 }
 
-async function readCachedAdminOverview(env, maxAgeSeconds = ADMIN_OVERVIEW_CACHE_TTL_SECONDS) {
+async function readCachedAdminOverview(env, maxAgeSeconds = ADMIN_OVERVIEW_CACHE_TTL_SECONDS, options = {}) {
   const now = Math.floor(Date.now() / 1000);
+  const runtime = options?.runtime || {};
+  const perfPrefix = String(options?.perfPrefix || "").trim();
   if (adminOverviewMemoryCache?.overview) {
     const age = Math.max(0, now - Number(adminOverviewMemoryCache.updatedAt || 0));
-    if (age <= maxAgeSeconds) return { ...adminOverviewMemoryCache.overview, cacheAgeSeconds: age, cacheFresh: true };
+    if (age <= maxAgeSeconds) {
+      if (perfPrefix) sampleAdminPerformancePhase(env, runtime, `${perfPrefix}:memory_cache`, Date.now(), true);
+      return { ...adminOverviewMemoryCache.overview, cacheAgeSeconds: age, cacheFresh: true };
+    }
   }
-  const state = await getSystemState(env, ADMIN_OVERVIEW_CACHE_KEY);
+  const stateStartedAt = Date.now();
+  let state;
+  try {
+    state = await getSystemState(env, ADMIN_OVERVIEW_CACHE_KEY);
+    if (perfPrefix) sampleAdminPerformancePhase(env, runtime, `${perfPrefix}:state_d1`, stateStartedAt, true);
+  } catch (error) {
+    if (perfPrefix) sampleAdminPerformancePhase(env, runtime, `${perfPrefix}:state_d1`, stateStartedAt, false, error?.message || error);
+    throw error;
+  }
   const overview = parseCachedAdminOverview(state);
   if (!overview) return null;
   const age = Math.max(0, now - Number(state.updatedAt || 0));
@@ -23143,18 +23250,27 @@ async function writeCachedAdminOverview(env, overview) {
   await setSystemState(env, ADMIN_OVERVIEW_CACHE_KEY, JSON.stringify({ ...overview, generatedAt: now }));
 }
 
-async function getAdminOverviewFast(env, force = false) {
+async function getAdminOverviewFast(env, force = false, options = {}) {
+  const runtime = options?.runtime || {};
+  const perfPrefix = String(options?.perfPrefix || "").trim();
   if (!force) {
     // The five-minute Cron refreshes this snapshot. A wider read window keeps
     // ordinary navigation instant even after a Worker redeploy or cold start.
-    const cached = await readCachedAdminOverview(env, 30 * 60);
+    const cached = await readCachedAdminOverview(env, 30 * 60, options);
     if (cached) return cached;
   }
   if (!adminOverviewRefreshPromise) {
+    const rebuildStartedAt = Date.now();
     adminOverviewRefreshPromise = (async () => {
-      const overview = await buildAdminOverview(env, { syncProblems: false });
-      await writeCachedAdminOverview(env, overview);
-      return { ...overview, cacheFresh: true, cacheAgeSeconds: 0 };
+      try {
+        const overview = await buildAdminOverview(env, { syncProblems: false, runtime, perfPrefix: perfPrefix ? `${perfPrefix}:rebuild_d1` : "" });
+        await writeCachedAdminOverview(env, overview);
+        if (perfPrefix) sampleAdminPerformancePhase(env, runtime, `${perfPrefix}:rebuild`, rebuildStartedAt, true);
+        return { ...overview, cacheFresh: true, cacheAgeSeconds: 0 };
+      } catch (error) {
+        if (perfPrefix) sampleAdminPerformancePhase(env, runtime, `${perfPrefix}:rebuild`, rebuildStartedAt, false, error?.message || error);
+        throw error;
+      }
     })().finally(() => { adminOverviewRefreshPromise = null; });
   }
   return adminOverviewRefreshPromise;
