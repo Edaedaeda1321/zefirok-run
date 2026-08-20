@@ -1,22 +1,76 @@
-FIX 1.0.9 — Test Project 5.4 · Hard Isolation + Case Sync
+Сладкий Забег — TP 5.5 + локальный Animation Lab
+Дата: 20.08.2026
 
-Исправлено:
-- Test Project больше не использует Telegram initData игрового Production-профиля внутри sandbox.
-- Игровому iframe передаётся только синтетический tp-player-54; реальные игровые API fail-closed.
-- localStorage и sessionStorage переведены на новый TP 5.4 namespace. Старый TP-кеш не подмешивается.
-- При запуске игры локальное состояние полностью пересоздаётся из серверного workspace TP, без merge со старым/боевым прогрессом.
-- Пресеты, включая «Богатый игрок», всегда отвязывают cloneSource и создают виртуальный профиль.
-- Баланс богатого игрока в игре: 900 000 000 очков, 9 000 000 зефира, 9 000 000 кофе.
-- Выдача кейсов в Case Lab теперь использует быстрый серверный ответ и сразу обновляет единый caseInventory workspace.
-- Запуск склада из Case Lab больше не сохраняет поверх него устаревшую форму состояния.
-- Подготовка jackpot-анимации Кейса Алекса больше не ждёт тяжёлый full bootstrap: атомарно выдаёт кейс + фиксирует дроп и сразу запускает игру.
-- В самой игре TP badge показывает виртуального игрока и его тестовый баланс для визуальной проверки изоляции.
+Что исправлено
+1. Исправлен главный рассинхрон Test Project: состояние виртуального игрока теперь передаётся из host-страницы прямо во внутренний игровой iframe ДО загрузки игрового прогресса.
+   - preset «Богатый тестер» больше не должен показывать 900 000 000 в TP и старые 47 676 / пустой склад внутри игры;
+   - caseInventory из TP сразу попадает в реальный state.caseGiftedCases игрового UI;
+   - внутренний localStorage остаётся изолированным отдельным TP 5.5 namespace;
+   - Production localStorage/CloudStorage не используются.
 
-Изменены:
+2. Test Project обновлён до TP 5.5.
+   - client bridge, host storage namespace и diagnostics переведены на 5.5;
+   - Worker TEST_PROJECT_VERSION также переведён на 5.5;
+   - старые TP 5.4 storage keys всё ещё очищаются кнопкой «Очистить локальный кеш Sandbox»;
+   - Production API по-прежнему недоступен игровому клиенту напрямую: интеграционный режим работает только через owner Test Project proxy/workspace.
+
+3. Добавлен новый index_test.html — полностью локальный Animation Lab.
+   - новый файл НЕ заменяет index.html и НЕ меняет Production UI;
+   - при запуске автоматически открывает «Мои покупки → Кейсы»;
+   - локально выдаёт по 25 каждого кейса: Обычный, Серебряный, Золотой, Мифический, Легендарный, Алекс;
+   - использует настоящие функции открытия/рулетки/результата из текущего index.html;
+   - можно выбрать кейс и принудительную награду;
+   - можно включить «Дубликат», «Гарант», «Алекс 4/4»;
+   - кнопка «↺ 25×» восстанавливает локальный склад.
+
+4. Жёсткая изоляция Animation Lab.
+   - /api/* в основном документе и игровом iframe перехватываются локально и не уходят в Worker/D1;
+   - case state/open/activate/equip/consume-run обслуживаются local mock;
+   - неизвестные /api/* получают LOCAL TEST: NETWORK BLOCKED;
+   - XMLHttpRequest, sendBeacon, WebSocket и EventSource для серверных действий заблокированы;
+   - Telegram WebApp script из index_test.html удалён;
+   - переходы из игрового iframe в legal/referrals/battle pass/rating/Telegram в Animation Lab блокируются;
+   - отдельные localStorage/sessionStorage namespace не пересекаются с Production.
+
+5. В test-project.html добавлена сборка:
+   «Animation Lab · полностью локально».
+   Её можно запустить из Test Project, либо открыть /index_test.html напрямую.
+
+Изменённые файлы
 - index.html
-- owner.html
 - test-project.html
 - src/worker.js
 
-D1 migration не требуется.
-Deploy: npx wrangler deploy
+Новый файл
+- index_test.html
+
+Не изменялось
+- index_testing_v1.0.9.html — оставлен архивным без изменений;
+- D1 schema/migrations;
+- Production механика кейсов и шансы;
+- assets.
+
+Проверено
+- синтаксис внешнего JavaScript в index.html;
+- синтаксис внешнего JavaScript в index_test.html;
+- синтаксис test-project.html;
+- синтаксис src/worker.js;
+- TP 5.5 bridge unit-check: parent state 900 000 000 + 25 легендарных действительно записывается во внутренний namespace zefirok-tp5.5:local:zefirok-runner-progress-v2;
+- Animation Lab mock unit-check: 25 → 24 после открытия, forced legendary reward работает, Алекс 4/4 выдаёт локальный золотой кейс, неизвестный /api/* блокируется HTTP 418;
+- все ID принудительных cosmetics/rewards присутствуют в актуальном index.html.
+
+После замены файлов выполнить ОДНУ команду:
+npx wrangler deploy
+
+Как проверить после deploy
+1. Полностью локальная анимация:
+   открыть /index_test.html
+   → выбрать кейс/награду в панели Animation Lab
+   → «Запустить настоящую анимацию».
+
+2. Интеграционный Test Project:
+   открыть test-project.html
+   → применить «Богатый тестер»
+   → запустить «Текущая 1.0.9 · Sandbox»
+   → «Мои покупки → Кейсы».
+   Внутри игрового UI должны быть те же тестовые балансы и кейсы, что и в TP workspace.
