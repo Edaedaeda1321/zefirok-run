@@ -7116,6 +7116,29 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 @media(max-width:430px){#zefirok-maltipoo-runner .flash-offer-layer{padding:11px}#zefirok-maltipoo-runner .flash-offer-dialog{padding:14px;border-radius:25px}#zefirok-maltipoo-runner .flash-offer-hero{height:190px}#zefirok-maltipoo-runner .flash-offer-title{font-size:22px}}
 &lt;/style&gt;
 
+&lt;style id=&quot;zefirok-5-0-3-case-result-art-polish&quot;&gt;
+#zefirok-maltipoo-runner .case-result-head{position:relative;overflow:visible}
+#zefirok-maltipoo-runner .case-result-head .case-chest-visual{position:relative;display:grid;place-items:center;width:146px;height:146px;margin:-2px auto 0;isolation:isolate}
+#zefirok-maltipoo-runner .case-result-head .case-chest-visual.is-open{width:134px;height:134px;margin:0 auto 2px}
+#zefirok-maltipoo-runner .case-result-head.is-alex .case-chest-visual.is-open{width:132px;height:132px}
+#zefirok-maltipoo-runner .case-result-head .case-chest-visual-glow{position:absolute;left:50%;top:50%;width:118%;height:118%;transform:translate(-50%,-50%);border-radius:50%;background:radial-gradient(circle at 50% 42%,rgba(255,255,250,.98) 0%,rgba(255,246,223,.95) 28%,rgba(241,248,220,.84) 52%,rgba(226,244,191,.38) 66%,rgba(226,244,191,0) 78%);filter:blur(2px);opacity:.96;z-index:0;pointer-events:none}
+#zefirok-maltipoo-runner .case-result-head .case-chest-visual.is-closed .case-chest-visual-glow{width:112%;height:112%;background:radial-gradient(circle at 50% 42%,rgba(255,252,245,.96) 0%,rgba(255,240,223,.88) 34%,rgba(248,226,236,.42) 64%,rgba(248,226,236,0) 79%)}
+#zefirok-maltipoo-runner .case-result-head.is-alex .case-chest-visual .case-chest-visual-glow{background:radial-gradient(circle at 50% 42%,rgba(255,254,247,.98) 0%,rgba(255,244,224,.95) 27%,rgba(238,247,213,.9) 50%,rgba(199,225,120,.52) 67%,rgba(199,225,120,0) 80%)}
+#zefirok-maltipoo-runner .case-result-head .case-chest-visual .case-chest-image--roulette{position:relative;z-index:1;display:block!important;width:100%!important;height:100%!important;margin:0!important;object-fit:contain;object-position:center}
+#zefirok-maltipoo-runner .case-result-head .case-chest-visual .case-chest-image--roulette.is-open{transform:scale(.94)}
+#zefirok-maltipoo-runner .case-result-head.is-alex .case-chest-visual .case-chest-image--roulette.is-open{transform:scale(.92)}
+@media(max-width:390px){
+  #zefirok-maltipoo-runner .case-result-head .case-chest-visual{width:132px;height:132px}
+  #zefirok-maltipoo-runner .case-result-head .case-chest-visual.is-open{width:122px;height:122px}
+  #zefirok-maltipoo-runner .case-result-head.is-alex .case-chest-visual.is-open{width:120px;height:120px}
+}
+@media(max-height:760px){
+  #zefirok-maltipoo-runner .case-result-head .case-chest-visual{width:126px;height:126px;margin:-2px auto 0}
+  #zefirok-maltipoo-runner .case-result-head .case-chest-visual.is-open{width:116px;height:116px;margin:0 auto 1px}
+  #zefirok-maltipoo-runner .case-result-head.is-alex .case-chest-visual.is-open{width:114px;height:114px}
+}
+&lt;/style&gt;
+
 &lt;style id=&quot;zefirok-tp-hidden-content-v1&quot;&gt;
 #zefirok-maltipoo-runner .case-cosmetic.is-sandbox-hidden{border-style:dashed!important;border-color:#9b74c8!important;background:linear-gradient(180deg,rgba(247,239,255,.96),rgba(255,250,253,.98))!important;box-shadow:0 7px 18px rgba(112,70,153,.12)!important}
 #zefirok-maltipoo-runner .case-hidden-badge{display:inline-flex;align-items:center;justify-content:center;padding:3px 6px;border-radius:999px;background:#76529f;color:#fff!important;font-size:7px!important;font-weight:950!important;line-height:1;letter-spacing:.04em;box-shadow:0 2px 7px rgba(80,48,112,.24)}
@@ -15777,7 +15800,17 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 
       function caseImageMarkup(caseType, opened = false, extraClass = &quot;&quot;) {
         const className = [&quot;case-chest-image&quot;, opened ? &quot;is-open&quot; : &quot;is-closed&quot;, extraClass].filter(Boolean).join(&quot; &quot;);
-        return `&lt;img class=&quot;${escapePurchaseText(className)}&quot; src=&quot;${escapePurchaseText(caseImageSource(caseType, opened))}&quot; alt=&quot;&quot; loading=&quot;${opened ? &quot;eager&quot; : &quot;lazy&quot;}&quot; decoding=&quot;async&quot; fetchpriority=&quot;${opened ? &quot;high&quot; : &quot;low&quot;}&quot;&gt;`;
+        const source = caseImageSource(caseType, opened);
+        const imageMarkup = `&lt;img class=&quot;${escapePurchaseText(className)}&quot; src=&quot;${escapePurchaseText(source)}&quot; alt=&quot;&quot; loading=&quot;${opened ? &quot;eager&quot; : &quot;lazy&quot;}&quot; decoding=&quot;async&quot; fetchpriority=&quot;${opened ? &quot;high&quot; : &quot;low&quot;}&quot;&gt;`;
+        if (String(extraClass || &quot;&quot;).includes(&quot;case-chest-image--roulette&quot;)) {
+          const visualClass = [
+            &quot;case-chest-visual&quot;,
+            opened ? &quot;is-open&quot; : &quot;is-closed&quot;,
+            caseType === &quot;alex&quot; ? &quot;is-alex&quot; : &quot;&quot;
+          ].filter(Boolean).join(&quot; &quot;);
+          return `&lt;span class=&quot;${escapePurchaseText(visualClass)}&quot; aria-hidden=&quot;true&quot;&gt;&lt;span class=&quot;case-chest-visual-glow&quot;&gt;&lt;/span&gt;${imageMarkup}&lt;/span&gt;`;
+        }
+        return imageMarkup;
       }
 
       function caseFirstAsset(...keys) {
