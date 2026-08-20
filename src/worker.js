@@ -6188,26 +6188,17 @@ async function getLevelCaseState(request, env, internal = null, ctx = null) {
     const body = internal?.body || await readJson(request);
     const auth = internal?.auth || await validateTelegramInitData(String(body.initData || ""), env);
     const telegramId = String(auth.user.id);
-    if (body.fast === true) {
-      // Before returning the warehouse snapshot, materialize only case rewards
-      // that are already due and restore delivered season-pass cases. This keeps
-      // the lightweight endpoint fast while preventing the first warehouse view
-      // from missing a just-issued case until the player presses Refresh.
-      await Promise.all([
-        processPlayerCaseRewardDeliveryQueue(env, telegramId, 8, ctx),
-        reconcileDeliveredSeasonPassCasesForPlayer(env, telegramId)
-      ]);
-      const fastPayload = await buildFastCaseRefreshPayload(env,telegramId);
-      scheduleRunSettlementBackground(ctx,
-        processPlayerRewardDeliveryQueue(env, telegramId, 10),
-        "case state reward queue refresh failed"
-      );
-      return internal?.raw ? fastPayload : jsonResponse(fastPayload);
-    }
     scheduleRunSettlementBackground(ctx,
       processPlayerRewardDeliveryQueue(env, telegramId, 10),
       "case state reward queue refresh failed"
     );
+    if (body.fast === true) {
+      // Warehouse/case tabs only need the authoritative case snapshot here.
+      // Gift inbox is fetched by its own tab; waiting for it made a supposedly
+      // fast case refresh as slow as the full startup package.
+      const fastPayload = await buildFastCaseRefreshPayload(env,telegramId);
+      return internal?.raw ? fastPayload : jsonResponse(fastPayload);
+    }
     const payload = await buildCasePayload(env, telegramId, body.current || {}, {}, {
       ensured: internal?.shared?.caseEnsured || null,
       skipRewardQueue: true
@@ -6439,6 +6430,34 @@ async function recoverStaleGrantedCaseOpenings(env, telegramId, now = Math.floor
   return recovered;
 }
 
+async function grantedCaseExistingRequestPayload(env, telegramId, requestId) {
+  const token = String(requestId || '').trim();
+  if (!token) return null;
+  const row = await env.DB.prepare(
+    `SELECT id,case_type,status,rewards_json,opened_at FROM granted_cases WHERE telegram_id=? AND opening_token=? ORDER BY created_at DESC LIMIT 1`
+  ).bind(String(telegramId), token).first();
+  if (!row) return null;
+  if (String(row.status || '') === 'opening') return { ok:true, pending:true, requestId:token, caseType:String(row.case_type || '') };
+  if (String(row.status || '') !== 'opened') return null;
+  const caseType = normalizeCaseType(row.case_type);
+  if (!caseType) return null;
+  const [ensured, liveops, profile, inventory] = await Promise.all([
+    ensureCasePlayerState(env, telegramId, {}),
+    readLiveOpsConfig(env),
+    ensureAuthoritativeProfileRow(env, telegramId, `gift-case:${caseType}:resume`),
+    readFastCaseInventory(env, telegramId)
+  ]);
+  let rewards = [];
+  try { const parsed = JSON.parse(String(row.rewards_json || '[]')); rewards = Array.isArray(parsed) ? parsed : []; } catch {}
+  const opened = { grantId:String(row.id || ''), source:'gift', caseType, title:LEVEL_CASE_CONFIG[caseType]?.title || 'Кейс', rewards, resumed:true };
+  if (caseType === 'alex') {
+    const collection = alexCaseCollectionStatus(ensured.state);
+    const collectionGrant = await env.DB.prepare(`SELECT id FROM granted_cases WHERE id=? AND telegram_id=? LIMIT 1`).bind(alexCaseCollectionGrantId(String(telegramId)),String(telegramId)).first().catch(()=>null);
+    opened.alexCollection = { ...collection, rewardCaseType:'gold', rewardTitle:'Золотой кейс', rewardClaimed:Boolean(collectionGrant?.id) };
+  }
+  return buildFastCaseOpenPayload({ state:ensured.state, liveops, profile:authoritativeProfileView(profile), opened, inventory, caseDelta:{} });
+}
+
 async function openGrantedCase(request, env, ctx = null) {
   let claimedId = "";
   let openingClaimAt = 0;
@@ -6452,13 +6471,18 @@ async function openGrantedCase(request, env, ctx = null) {
     const telegramId = String(auth.user.id);
     const caseType = normalizeCaseType(body.caseType);
     if (!caseType) throw new ApiError(400, "Неизвестный тип кейса.");
+    const requestId = String(body.requestId || '').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 96);
+    if (requestId) {
+      const existingRequest = await grantedCaseExistingRequestPayload(env, telegramId, requestId);
+      if (existingRequest) return jsonResponse(existingRequest, existingRequest.pending ? 202 : 200);
+    }
     const now = Math.floor(Date.now() / 1000);
     const [ensured, taskEvent] = await Promise.all([
       ensureCasePlayerState(env, telegramId, {}),
       prepareSeasonPassTaskProgressEvent(env, telegramId, { cases_opened:1 }, now).catch((error) => { console.error("granted case task progress prepare failed", error); return null; })
     ]);
     openingClaimAt = now;
-    openingClaimToken = crypto.randomUUID().replace(/-/g, '');
+    openingClaimToken = requestId || crypto.randomUUID().replace(/-/g, '');
     await recoverStaleGrantedCaseOpenings(env, telegramId, now);
     const liveops = await readLiveOpsConfig(env);
     if (liveOpsCaseConfig(liveops, caseType)?.enabled === false) throw new ApiError(409, "Этот кейс временно отключён администратором.");
@@ -6475,7 +6499,13 @@ async function openGrantedCase(request, env, ctx = null) {
     const claim = await env.DB.prepare(
       `UPDATE granted_cases SET status = 'opening',opening_started_at=?,opening_token=? WHERE id = ? AND telegram_id = ? AND status = 'pending'`
     ).bind(now, openingClaimToken, claimedId, telegramId).run();
-    if (Number(claim?.meta?.changes || 0) < 1) throw new ApiError(409, "Этот кейс уже открывается.");
+    if (Number(claim?.meta?.changes || 0) < 1) {
+      if (requestId) {
+        const racedRequest = await grantedCaseExistingRequestPayload(env, telegramId, requestId);
+        if (racedRequest) return jsonResponse(racedRequest, racedRequest.pending ? 202 : 200);
+      }
+      throw new ApiError(409, "Этот кейс уже открывается.");
+    }
 
     const priorAlexCollectionGrant = caseType === "alex"
       ? await env.DB.prepare(`SELECT id FROM granted_cases WHERE id=? AND telegram_id=? LIMIT 1`).bind(alexCaseCollectionGrantId(telegramId),telegramId).first().catch(()=>null)
@@ -6507,7 +6537,7 @@ async function openGrantedCase(request, env, ctx = null) {
       ),
       caseStateUpdateStatement(env, telegramId, rolled.state, now),
       env.DB.prepare(
-        `UPDATE granted_cases SET status = 'opened', rewards_json = ?, opened_at = ?, opening_started_at=0, opening_token=''
+        `UPDATE granted_cases SET status = 'opened', rewards_json = ?, opened_at = ?, opening_started_at=0
          WHERE id = ? AND telegram_id = ? AND status = 'opening'`
       ).bind(JSON.stringify(rolled.rewards), now, claimedId, telegramId),
       ...(alexCollectionRewardGranted ? [env.DB.prepare(
@@ -6518,6 +6548,9 @@ async function openGrantedCase(request, env, ctx = null) {
       ...(taskEvent?.notificationStatements || []),
       env.DB.prepare(`DELETE FROM granted_case_opening_guards WHERE guard_id=?`).bind(openingGuardId)
     ]);
+    // Stock reservations are committed by the batch above; do not release them
+    // if only the response-building phase fails afterwards.
+    physicalStockConsumptionIds = [];
     const opened = {
       grantId: claimedId,
       source: "gift",
@@ -19017,7 +19050,7 @@ async function finishSafeEvent(row, env, cancelled = false) {
   await env.DB.prepare(`UPDATE liveops_events SET end_notified=1,updated_at=? WHERE event_id=?`).bind(now,row.event_id).run();
 }
 
-async function deliverQueuedReward(env, row, leaseToken, ctx = null) {
+async function deliverQueuedReward(env, row, leaseToken) {
   const amount = Math.max(1, Math.floor(Number(row.amount || 1)));
   const telegramId = String(row.telegram_id);
   const queueId = Math.max(1, Math.floor(Number(row.id || 0)));
@@ -19133,25 +19166,20 @@ async function deliverQueuedReward(env, row, leaseToken, ctx = null) {
   }
 
   // Everything below is non-economic side effect. A notification/timeline
-  // failure must never make the atomic reward transaction retry. When a request
-  // has an ExecutionContext, keep these side effects out of the critical path.
+  // failure must never make the atomic reward transaction retry.
   const rewardDescription = safeRewardDescription({ kind: row.reward_kind, id: row.reward_id, amount });
-  const sideEffects = (async () => {
+  try {
+    await recordPlayerTimeline(env, telegramId, "reward_delivery", cosmeticDuplicate ? `получил дубликат: ${rewardDescription}` : `получил ${rewardDescription}`, { queueId, sourceType: row.source_type, sourceId: row.source_id, reason: row.reason, duplicate: cosmeticDuplicate }, `queue_${queueId}`, null);
+  } catch (error) { console.error("reward delivery timeline failed", error); }
+  if (["avatar", "frame", "trail", "skin", "music"].includes(row.reward_kind)) {
+    try { await recordContentAnalyticsEvent(env, telegramId, row.reward_kind, cosmeticId || row.reward_id, cosmeticDuplicate ? "duplicate" : "acquired", row.source_type, row.source_id); } catch (error) { console.error("reward delivery analytics failed", error); }
+  }
+  if (!["gift_inbox", "leaderboard", "season_story"].includes(String(row.source_type || ""))) {
     try {
-      await recordPlayerTimeline(env, telegramId, "reward_delivery", cosmeticDuplicate ? `получил дубликат: ${rewardDescription}` : `получил ${rewardDescription}`, { queueId, sourceType: row.source_type, sourceId: row.source_id, reason: row.reason, duplicate: cosmeticDuplicate }, `queue_${queueId}`, null);
-    } catch (error) { console.error("reward delivery timeline failed", error); }
-    if (["avatar", "frame", "trail", "skin", "music"].includes(row.reward_kind)) {
-      try { await recordContentAnalyticsEvent(env, telegramId, row.reward_kind, cosmeticId || row.reward_id, cosmeticDuplicate ? "duplicate" : "acquired", row.source_type, row.source_id); } catch (error) { console.error("reward delivery analytics failed", error); }
-    }
-    if (!["gift_inbox", "leaderboard", "season_story"].includes(String(row.source_type || ""))) {
-      try {
-        const subscriber = await env.DB.prepare(`SELECT chat_id FROM bot_subscribers WHERE telegram_id=? AND active=1 LIMIT 1`).bind(telegramId).first();
-        if (subscriber?.chat_id) await sendTelegramMessage(env, subscriber.chat_id, `<b>🎁 Награда доставлена</b>\n\n${escapeHtml(rewardDescription)}\nПричина: ${escapeHtml(row.reason || "Системная выдача")}\n\nНаграда уже записана в профиль. Откройте игру или обновите раздел с кейсами.`, { inline_keyboard: [[{ text: "🎮 Открыть игру", web_app: { url: configuredGameUrl(env) } }], [{ text: "📋 Задания", callback_data: "menu:tasks" }]] });
-      } catch (error) { console.error("reward delivery notification failed", error); }
-    }
-  })();
-  if (ctx?.waitUntil) ctx.waitUntil(sideEffects);
-  else await sideEffects;
+      const subscriber = await env.DB.prepare(`SELECT chat_id FROM bot_subscribers WHERE telegram_id=? AND active=1 LIMIT 1`).bind(telegramId).first();
+      if (subscriber?.chat_id) await sendTelegramMessage(env, subscriber.chat_id, `<b>🎁 Награда доставлена</b>\n\n${escapeHtml(rewardDescription)}\nПричина: ${escapeHtml(row.reason || "Системная выдача")}\n\nНаграда уже записана в профиль. Откройте игру или обновите раздел с кейсами.`, { inline_keyboard: [[{ text: "🎮 Открыть игру", web_app: { url: configuredGameUrl(env) } }], [{ text: "📋 Задания", callback_data: "menu:tasks" }]] });
+    } catch (error) { console.error("reward delivery notification failed", error); }
+  }
   return { cosmeticDuplicate };
 }
 
@@ -19223,45 +19251,6 @@ async function processPlayerRewardDeliveryQueue(env, telegramId, limit = 10) {
     if (Number(lock.meta?.changes || 0) < 1) continue;
     try {
       await deliverQueuedReward(env, row, token);
-      delivered += 1;
-    } catch (error) {
-      const finishedAt = Math.floor(Date.now() / 1000);
-      const attempts = Math.max(1, Number(row.attempts || 0) + 1);
-      const delay = Math.min(3600, 60 * (2 ** Math.max(0, attempts - 1)));
-      await env.DB.prepare(
-        `UPDATE reward_delivery_queue SET status='failed',attempts=?,last_error=?,updated_at=?,lease_token='',lease_until=0,available_at=? WHERE id=? AND lease_token=?`
-      ).bind(attempts, String(error?.message || error).slice(0, 500), finishedAt, finishedAt + delay, row.id, token).run();
-      failed += 1;
-    }
-  }
-  return { delivered, failed, processed: delivered + failed };
-}
-
-async function processPlayerCaseRewardDeliveryQueue(env, telegramId, limit = 8, ctx = null) {
-  await ensureSafeControlCenterSchema(env);
-  const now = Math.floor(Date.now() / 1000);
-  const max = Math.max(1, Math.min(12, Number(limit) || 8));
-  const rows = await env.DB.prepare(
-    `SELECT id,telegram_id,source_type,source_id,reward_kind,reward_id,amount,reason,attempts
-     FROM reward_delivery_queue
-     WHERE telegram_id=? AND reward_kind='case' AND status IN ('pending','failed') AND available_at<=? AND attempts<5
-       AND (lease_until=0 OR lease_until<?)
-     ORDER BY available_at ASC,created_at ASC,id ASC
-     LIMIT ?`
-  ).bind(String(telegramId), now, now, max).all();
-  let delivered = 0;
-  let failed = 0;
-  for (const row of rows.results || []) {
-    const token = caseGrantId("reward_case_lock");
-    const claimAt = Math.floor(Date.now() / 1000);
-    const lock = await env.DB.prepare(
-      `UPDATE reward_delivery_queue SET status='delivering',lease_token=?,lease_until=?,updated_at=?
-       WHERE id=? AND telegram_id=? AND reward_kind='case' AND status IN ('pending','failed') AND attempts<5 AND available_at<=?
-         AND (lease_until=0 OR lease_until<?)`
-    ).bind(token, claimAt + SERVER_NOTIFICATION_LEASE_SECONDS, claimAt, row.id, String(telegramId), claimAt, claimAt).run();
-    if (Number(lock.meta?.changes || 0) < 1) continue;
-    try {
-      await deliverQueuedReward(env, row, token, ctx);
       delivered += 1;
     } catch (error) {
       const finishedAt = Math.floor(Date.now() / 1000);
@@ -31714,7 +31703,7 @@ async function ownerPanelFlashOfferAction(env, ctx) {
 
 
 
-// =================== TP 5.5 · HARD ISOLATION ===================
+// =================== TP 5.4 · HARD ISOLATION ===================
 let ownerStagingSchemaPromise = null;
 const OWNER_STAGING_STAGEABLE = Object.freeze({
   "/api/owner/v9/game-config/draft":"game_config",
@@ -32057,7 +32046,7 @@ async function ownerStagingRollbackApplied(env,ctx,applied){
 }
 
 async function ownerStagingDispatchProduction(env,ctx,endpoint,payload){
-  if(endpoint==='/api/owner/v9/game-config/draft'){await ownerPanelV9GameConfigDraft(env,{...ctx,body:{config:payload.config||payload}});return ownerPanelV9GameConfigPublish(env,{...ctx,body:{reason:'TP 5.5 · Safe Promote from Change Set'}});}
+  if(endpoint==='/api/owner/v9/game-config/draft'){await ownerPanelV9GameConfigDraft(env,{...ctx,body:{config:payload.config||payload}});return ownerPanelV9GameConfigPublish(env,{...ctx,body:{reason:'TP 5.4 · Safe Promote from Change Set'}});}
   if(endpoint==='/api/owner/cases/save')return ownerPanelSaveCase(env,{...ctx,body:payload});
   if(endpoint==='/api/owner/cases/content/save')return ownerPanelSaveCaseContent(env,{...ctx,body:payload});
   if(endpoint==='/api/owner/season-pass/reward')return ownerPanelSetSeasonPassReward(env,{...ctx,body:payload});
@@ -32273,11 +32262,11 @@ async function ownerPanelStagingRollback(env,ctx){
     await ownerStagingReleaseLock(env,setId,lockToken);
   }
 }
-// ================= END TP 5.5 · HARD ISOLATION =================
+// ================= END TP 5.4 · HARD ISOLATION =================
 
 
-// =================== TEST PROJECT 5.5 · QA LAB · OWNER-ONLY HARD SANDBOX ===================
-const TEST_PROJECT_VERSION = "5.5";
+// =================== TEST PROJECT 5.4 · QA LAB · OWNER-ONLY HARD SANDBOX ===================
+const TEST_PROJECT_VERSION = "5.4";
 const TEST_PROJECT_SNAPSHOT_SCHEMA = 8;
 const TEST_PROJECT_MAX_CASE_SIMULATIONS = 2000;
 const TEST_PROJECT_MAX_ACTIVITY_LOG = 80;
@@ -34173,7 +34162,7 @@ function testProjectSandboxOfferList(state,snapshot) {
 
 function testProjectSandboxPollDefinition() {
   return {
-    id:"tp-poll-3",question:"Как работает Test Project 5.5?",description:"Этот опрос существует только внутри песочницы. Ответ не попадёт в Production.",
+    id:"tp-poll-3",question:"Как работает Test Project 5.4?",description:"Этот опрос существует только внутри песочницы. Ответ не попадёт в Production.",
     rewardText:"100 ⭐ тестовых очков",answerType:"choice",responseMode:"single",commentMode:"optional",commentMin:3,commentMax:400,maxChoices:1,
     options:[{id:"useful",text:"Полезно"},{id:"needs_work",text:"Нужно доработать"},{id:"found_bug",text:"Нашёл баг"}]
   };
@@ -34611,7 +34600,7 @@ async function ownerPanelTestProjectReleaseGate(env,ctx){
   return{ok:true,status,ready:summary.fail===0,summary,checks,groups:{sandbox:qa.summary,season:seasonQa.summary,content:content.summary},requestedSeasonId:String(ctx.body?.seasonId||''),seasonId:String(seasonQa?.seasonId||content?.seasonId||ctx.body?.seasonId||''),seasonTitle:String(seasonQa?.seasonTitle||''),checkedAt:Date.now(),fullAssets:Boolean(ctx.body?.fullAssets)};
 }
 
-// =================== END TEST PROJECT 5.5 ===================
+// =================== END TEST PROJECT 5.4 ===================
 
 
 // ======================= REFERRALS · "ДРУЗЬЯ КАФЕ" =======================

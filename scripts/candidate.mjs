@@ -42,7 +42,7 @@ function buildLocal(version,manifest){
     const src=path.join(dir(version),'source',name); if(!fs.existsSync(src)) fail(`Нет ${src}`);
     let html=fs.readFileSync(src,'utf8'); const sha=fileSha(src);
     html=removeTelegramScript(html); html=removeLegacyTpBridge(html); html=forceLocalMode(html); html=patchLinks(html,prefix);
-    html=html.replace(/<head([^>]*)>/i,`<head$1>\n<!-- CANDIDATE ${manifest.candidate} · LOCAL 2.1 · source-sha256:${sha} -->\n${bootstrap}`);
+    html=html.replace(/<head([^>]*)>/i,`<head$1>\n<!-- CANDIDATE ${manifest.candidate} · LOCAL 2.2 · source-sha256:${sha} -->\n${bootstrap}`);
     if(name==='index.html'){
       html=html.replace('const CLIENT_ANTI_CHEAT_ENABLED = true;','const CLIENT_ANTI_CHEAT_ENABLED = false;');
       const needle='      gameFrame.srcdoc = preparedSource;'; if(!html.includes(needle)) fail('Не найдена точка активации gameFrame в Candidate index.html');

@@ -72,6 +72,27 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
   const ACCESS_BOOTSTRAP_PATH = "/api/access/bootstrap";
   const LEGAL_STATUS_PATH = "/api/legal/status";
   const LEGAL_ACCEPT_PATH = "/api/legal/accept";
+
+  function getLocalLegalBuildApi() {
+    const api = window.__ZEFIROK_LOCAL_BUILD_V2__;
+    return api?.active ? api : null;
+  }
+
+  function legalApiFromLocalBuild(path, payload = {}) {
+    const localApi = getLocalLegalBuildApi();
+    if (!localApi) return null;
+    try {
+      if (path === LEGAL_STATUS_PATH && typeof localApi.legalStatus === "function") {
+        return localApi.legalStatus();
+      }
+      if (path === LEGAL_ACCEPT_PATH && typeof localApi.acceptLegal === "function") {
+        return localApi.acceptLegal(String(payload?.key || ""), payload?.confirmed !== false);
+      }
+    } catch (error) {
+      console.warn("Local legal helper failed", error);
+    }
+    return null;
+  }
   const SEASON_PASS_AWAY_KEY = "zefirok-season-pass-away";
 
   const TELEGRAM_FULLSCREEN_MIN_VERSION = "8.0";
@@ -449,27 +470,39 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
   }
 
   async function legalApi(path, payload = {}) {
+    const localResult = legalApiFromLocalBuild(path, payload);
+    if (localResult) return localResult;
     const initData = String(window.Telegram?.WebApp?.initData || "");
     if (!initData) {
+      const fallback = legalApiFromLocalBuild(path, payload);
+      if (fallback) return fallback;
       const error = new Error("TELEGRAM_REQUIRED");
       error.code = "TELEGRAM_REQUIRED";
       throw error;
     }
-    const response = await hostFetchWithTimeout(path, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ initData, ...payload }),
-      cache: "no-store",
-      credentials: "same-origin"
-    }, 6500);
-    const data = await response.json().catch(() => null);
-    if (!response.ok || !data?.ok) {
-      const error = new Error(data?.error || "LEGAL_REQUEST_FAILED");
-      error.status = response.status;
-      error.code = data?.code || "";
+    try {
+      const response = await hostFetchWithTimeout(path, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ initData, ...payload }),
+        cache: "no-store",
+        credentials: "same-origin"
+      }, 6500);
+      const data = await response.json().catch(() => null);
+      if (!response.ok || !data?.ok) {
+        const fallback = legalApiFromLocalBuild(path, payload);
+        if (fallback) return fallback;
+        const error = new Error(data?.error || "LEGAL_REQUEST_FAILED");
+        error.status = response.status;
+        error.code = data?.code || "";
+        throw error;
+      }
+      return data;
+    } catch (error) {
+      const fallback = legalApiFromLocalBuild(path, payload);
+      if (fallback) return fallback;
       throw error;
     }
-    return data;
   }
 
   function showLegalTelegramRequired() {
@@ -6816,6 +6849,13 @@ html&gt;body{padding:
 #zefirok-maltipoo-runner .case-open-again{border:0;border-radius:14px;padding:11px 12px;background:linear-gradient(145deg,#fff0b8,#efbd49);color:#825719;font-weight:950}
 #zefirok-maltipoo-runner .case-open-again[hidden]{display:none!important}
 #zefirok-maltipoo-runner .case-open-again:disabled{opacity:.55}
+#zefirok-maltipoo-runner .case-dialog{max-height:min(720px,calc(var(--zefirok-visible-height,100dvh) - 24px));overflow:hidden;display:flex;flex-direction:column;touch-action:none}
+#zefirok-maltipoo-runner .case-dialog&gt;[data-case-content]{min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y;padding-top:2px}
+#zefirok-maltipoo-runner .case-roulette-list{max-height:min(310px,38vh);overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y;padding:2px 1px 4px}
+#zefirok-maltipoo-runner .release-layer{touch-action:none}
+#zefirok-maltipoo-runner .release-dialog{max-height:min(760px,calc(var(--zefirok-visible-height,100dvh) - 20px));overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y}
+#zefirok-maltipoo-runner .release-copy{touch-action:pan-y}
+@media(max-height:760px){#zefirok-maltipoo-runner .case-result-head .case-chest-image--roulette{width:118px!important;height:118px!important;margin:-8px auto -6px!important}#zefirok-maltipoo-runner .case-result-head{gap:5px;margin-bottom:9px}#zefirok-maltipoo-runner .case-result-head h2{font-size:19px}#zefirok-maltipoo-runner .case-roulette-list{max-height:34vh;gap:8px}}
 #zefirok-maltipoo-runner .battle-pass-profile-card .profile-action[data-battle-pass-open]{position:relative;overflow:visible}
 #zefirok-maltipoo-runner .season-pass-attention-badge{position:absolute;z-index:5;top:-9px;right:-7px;min-width:23px;height:23px;padding:0 6px;display:inline-flex;align-items:center;justify-content:center;border:2px solid #fff8f2;border-radius:999px;background:linear-gradient(180deg,#f0b94f,#d99325);color:#fff;font-size:10px;font-weight:950;line-height:1;box-shadow:0 5px 12px rgba(173,112,28,.28);pointer-events:none}
 #zefirok-maltipoo-runner .season-pass-attention-badge[hidden]{display:none!important}
@@ -12085,6 +12125,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       const CASE_API_STATE_PATH = &quot;/api/cases/state&quot;;
       const CASE_API_OPEN_PATH = &quot;/api/cases/open&quot;;
       const CASE_API_OPEN_GRANTED_PATH = &quot;/api/cases/open-granted&quot;;
+      const CASE_OPEN_REQUEST_TIMEOUT_MS = 16000;
       const CASE_API_PURCHASE_PATH = &quot;/api/cases/purchase&quot;;
       const CASE_API_ACTIVATE_PATH = &quot;/api/cases/activate&quot;;
       const CASE_API_EQUIP_PATH = &quot;/api/cases/equip&quot;;
@@ -14738,6 +14779,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           rootStyle.setProperty(&quot;--zefirok-content-safe-right&quot;, `${Math.max(0, Number(safe.right || 0))}px`);
           rootStyle.setProperty(&quot;--zefirok-content-safe-bottom&quot;, `${Math.max(0, Number(safe.bottom || 0))}px`);
           rootStyle.setProperty(&quot;--zefirok-content-safe-left&quot;, `${Math.max(0, Number(safe.left || 0))}px`);
+          rootStyle.setProperty(&quot;--zefirok-visible-height&quot;, `${Math.max(320, Number(viewport.height || window.innerHeight || 800))}px`);
           scheduleResize();
           window.setTimeout(scheduleResize, 80);
           return;
@@ -15504,7 +15546,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         if (button) { button.disabled = true; button.textContent = &quot;Открываем…&quot;; }
         if (levelCase) showCaseOpeningPreview(levelCase.caseType);
         try {
-          const data = await caseApiRequest(CASE_API_OPEN_PATH, { level: normalizedLevel }, 12000);
+          const data = await caseApiRequest(CASE_API_OPEN_PATH, { level: normalizedLevel }, CASE_OPEN_REQUEST_TIMEOUT_MS);
           const rewards = Array.isArray(data.opened?.rewards) ? data.opened.rewards : [];
           applyServerCasePayload(data, rewards);
           showCaseResult(data.opened);
@@ -15545,11 +15587,43 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         }
       }
 
+      function grantedCaseRequestId(caseType) {
+        const suffix = (globalThis.crypto?.randomUUID?.() || `${Date.now().toString(36)}_${Math.random().toString(36).slice(2)}`).replace(/[^A-Za-z0-9_-]/g, &quot;&quot;);
+        return `case_${String(caseType || &quot;small&quot;)}_${suffix}`.slice(0, 96);
+      }
+
+      async function waitForGrantedCaseResult(caseType, requestId, firstError = null) {
+        const deadline = Date.now() + 45000;
+        let lastError = firstError;
+        while (Date.now() &lt; deadline) {
+          await new Promise((resolve) =&gt; window.setTimeout(resolve, 900));
+          try {
+            const data = await caseApiRequest(CASE_API_OPEN_GRANTED_PATH, { caseType: String(caseType || &quot;&quot;), requestId }, 7000);
+            if (data?.pending) continue;
+            return data;
+          } catch (error) {
+            lastError = error;
+            const status = Number(error?.status || 0);
+            if (status &gt;= 400 &amp;&amp; status &lt; 500 &amp;&amp; status !== 409) throw error;
+          }
+        }
+        throw lastError || new Error(&quot;Сервер всё ещё завершает открытие. Награда не потеряется — обновите склад через несколько секунд.&quot;);
+      }
+
       async function openGiftedCaseClient(caseType, button) {
         if (button) { button.disabled = true; button.textContent = &quot;Открываем…&quot;; }
+        const requestId = grantedCaseRequestId(caseType);
         showCaseOpeningPreview(caseType);
         try {
-          const data = await caseApiRequest(CASE_API_OPEN_GRANTED_PATH, { caseType: String(caseType || &quot;&quot;) }, 12000);
+          let data;
+          try {
+            data = await caseApiRequest(CASE_API_OPEN_GRANTED_PATH, { caseType: String(caseType || &quot;&quot;), requestId }, CASE_OPEN_REQUEST_TIMEOUT_MS);
+          } catch (error) {
+            const status = Number(error?.status || 0);
+            if (error?.timeout || status &gt;= 500 || !status) data = await waitForGrantedCaseResult(caseType, requestId, error);
+            else throw error;
+          }
+          if (data?.pending) data = await waitForGrantedCaseResult(caseType, requestId);
           const rewards = Array.isArray(data.opened?.rewards) ? data.opened.rewards : [];
           applyServerCasePayload(data, rewards);
           showCaseResult(data.opened);
@@ -15557,11 +15631,15 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           hapticNotify(&quot;success&quot;);
         } catch (error) {
           caseRouletteBusy = false;
-          hideCaseLayerShell();
           hapticNotify(&quot;error&quot;);
+          const timeoutLike = Boolean(error?.timeout || error?.code === &quot;REQUEST_TIMEOUT&quot;);
+          if (caseContentEl &amp;&amp; !caseLayer?.hidden) {
+            const waitingButton = caseContentEl.querySelector(&quot;.case-result-done&quot;);
+            if (waitingButton) { waitingButton.disabled = false; waitingButton.textContent = &quot;Закрыть и обновить&quot;; waitingButton.setAttribute(&quot;data-case-close&quot;, &quot;&quot;); }
+            const copy = caseContentEl.querySelector(&quot;.case-result-head p&quot;);
+            if (copy) copy.textContent = timeoutLike ? &quot;Сервер отвечает дольше обычного. Награда не потеряется — склад сейчас перепроверяется.&quot; : (error?.message || &quot;Не удалось завершить открытие.&quot;);
+          }
           showProfileToast(error?.message || &quot;Не удалось открыть подарочный кейс.&quot;, &quot;warning&quot;);
-          // Keep the UI aligned with the server even when mobile networking times
-          // out after the opening transaction has already been committed.
           await loadCaseState(true, true);
           if (button?.isConnected) { button.disabled = false; button.textContent = &quot;Открыть&quot;; }
         } finally { renderCaseHub(); }

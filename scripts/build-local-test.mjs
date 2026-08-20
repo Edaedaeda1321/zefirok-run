@@ -31,7 +31,7 @@ function removeLegacyTestProjectBridge(html) {
 
 function injectBootstrap(html, sourceSha) {
   if (html.includes('data-zlocal-runtime')) return html;
-  return html.replace(/<head([^>]*)>/i, `<head$1>\n<!-- ZEFIROK LOCAL BUILD 2.1 · source-sha256:${sourceSha} -->\n${bootstrap}`);
+  return html.replace(/<head([^>]*)>/i, `<head$1>\n<!-- ZEFIROK LOCAL BUILD 2.2 · source-sha256:${sourceSha} -->\n${bootstrap}`);
 }
 
 function forceLocalMode(html) {
@@ -53,9 +53,9 @@ function patchIndex(html) {
   out = out.replace('const CLIENT_ANTI_CHEAT_ENABLED = true;', 'const CLIENT_ANTI_CHEAT_ENABLED = false;');
   const needle = '      gameFrame.srcdoc = preparedSource;';
   if (!out.includes(needle)) throw new Error('index.html activation point not found');
-  const bridge = `      // LOCAL BUILD 2.1: inject the same LocalGameServer into the real embedded game.\n      try {\n        preparedSource = preparedSource.replace(/<script[^>]+telegram\\.org\\/js\\/telegram-web-app\\.js[^>]*><\\/script>/gi, \"\");\n        if (!preparedSource.includes(\"__ZEFIROK_LOCAL_BUILD_V2__\")) {\n          const localRuntime = String(window.__ZEFIROK_LOCAL_RUNTIME_SOURCE__ || \"\");\n          const localTag = \"<scr\" + \"ipt>\" + localRuntime.replace(/<\\/script/gi, \"<\\\\/script\") + \"</scr\" + \"ipt>\";\n          preparedSource = preparedSource.includes(\"</head>\") ? preparedSource.replace(\"</head>\", localTag + \"</head>\") : localTag + preparedSource;\n        }\n      } catch (error) { console.warn(\"LOCAL BUILD runtime injection failed\", error); }\n${needle}`;
+  const bridge = `      // LOCAL BUILD 2.2: inject the same LocalGameServer into the real embedded game.\n      try {\n        preparedSource = preparedSource.replace(/<script[^>]+telegram\\.org\\/js\\/telegram-web-app\\.js[^>]*><\\/script>/gi, \"\");\n        if (!preparedSource.includes(\"__ZEFIROK_LOCAL_BUILD_V2__\")) {\n          const localRuntime = String(window.__ZEFIROK_LOCAL_RUNTIME_SOURCE__ || \"\");\n          const localTag = \"<scr\" + \"ipt>\" + localRuntime.replace(/<\\/script/gi, \"<\\\\/script\") + \"</scr\" + \"ipt>\";\n          preparedSource = preparedSource.includes(\"</head>\") ? preparedSource.replace(\"</head>\", localTag + \"</head>\") : localTag + preparedSource;\n        }\n      } catch (error) { console.warn(\"LOCAL BUILD runtime injection failed\", error); }\n${needle}`;
   out = out.replace(needle, bridge);
-  out = out.replace(/<title>([^<]*)<\/title>/i, (_m, title) => `<title>${title.replace(/\s*·\s*LOCAL.*$/i,'')} · LOCAL 2.1</title>`);
+  out = out.replace(/<title>([^<]*)<\/title>/i, (_m, title) => `<title>${title.replace(/\s*·\s*LOCAL.*$/i,'')} · LOCAL 2.2</title>`);
   return out;
 }
 
@@ -69,7 +69,7 @@ for (const [sourceName, outputName, kind] of targets) {
   html = forceLocalMode(html);
   html = injectBootstrap(html, sourceSha);
   if (kind === 'index') html = patchIndex(html);
-  else html = html.replace(/<title>([^<]*)<\/title>/i, (_m, title) => `<title>${title.replace(/\s*·\s*LOCAL.*$/i,'')} · LOCAL 2.1</title>`);
+  else html = html.replace(/<title>([^<]*)<\/title>/i, (_m, title) => `<title>${title.replace(/\s*·\s*LOCAL.*$/i,'')} · LOCAL 2.2</title>`);
   fs.writeFileSync(path.join(root, outputName), html);
   console.log(`LOCAL BUILD: ${sourceName} -> ${outputName}`);
 }

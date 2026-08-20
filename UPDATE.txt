@@ -1,62 +1,34 @@
-СЛАДКИЙ ЗАБЕГ — CANDIDATE PIPELINE 1.0 + LOCAL 2.1
-Дата: 20.08.2026
+FIX 1.0.9 / LOCAL 2.2 — Case Reliability + Telegram Touch/Back + Overlay Layout
 
-ЦЕЛЬ
-Новые функции больше не должны впервые проверяться на Production.
-Рабочая цепочка: Candidate source → LOCAL QA → LOCAL APPROVED → TP QA → READY → отдельный Release package.
-Production root не меняется командами Candidate Pipeline.
+Исправлено в Production:
+- восстановлена отсутствовавшая константа CASE_OPEN_REQUEST_TIMEOUT_MS: из-за неё открытие кейсов могло падать после запуска превью;
+- открытие подарочных/складских кейсов теперь получает уникальный requestId;
+- Worker делает открытие idempotent по requestId: повторный запрос не открывает второй кейс и умеет вернуть уже завершённый результат;
+- если первый запрос на мобильной сети завис/оборвался, клиент не закрывает рулетку сразу, а до 45 секунд безопасно опрашивает тот же requestId;
+- если сервер уже начислил награду, но ответ потерялся, результат восстанавливается из granted_cases.rewards_json;
+- после успешного DB batch физический stock больше не освобождается из-за ошибки только на этапе формирования ответа;
+- окно кейса ограничено реальной высотой viewport, длинный список наград прокручивается внутри и больше не растягивает модалку за экран;
+- на низких экранах арт кейса и заголовок становятся компактнее;
+- окно новостей получает отдельный iOS touch-scroll и реальную высоту Telegram viewport.
 
-ИСПРАВЛЕНО В LOCAL 2.1
-- Исправлен legal flow: /api/legal/status теперь возвращает тот же контракт agreement/privacy/consent, который ждёт Production-клиент.
-- /api/legal/accept стал stateful: agreement подтверждает agreement + privacy, затем consent завершает подписание.
-- Принятие документов хранится только в LOCAL state; Worker/D1/реальный Telegram не вызываются.
-- legal_test.html получает локальные версии документов и локальную историю принятия.
-- В Developer Drawer добавлена кнопка «Сбросить документы» для повторной QA-проверки.
-- Smoke QA обязательно проверяет весь legal flow до complete=true.
+Исправлено в LOCAL 2.2 / Candidate V3:
+- Fake Telegram остаётся изолированным по данным/API, но теперь напрямую использует нативный Telegram WebView bridge только для UI-событий;
+- BackButton.show/hide снова управляет настоящей кнопкой «Назад» Telegram вместо постоянного «Закрыть»;
+- back_button_pressed приходит в LOCAL callback без Telegram SDK и без сетевого запроса;
+- disableVerticalSwipes/enableVerticalSwipes проксируются в Telegram native bridge, поэтому «Друзья кафе», новости и другие длинные экраны снова нормально скроллятся на iOS;
+- fullscreen bridge также работает через нативные события, без обращения к Production;
+- LOCAL BUILD обновлён до 2.2;
+- V3 Candidate source синхронизирован с этим hotfix и заново собраны LOCAL/TP варианты.
 
-CANDIDATE PIPELINE 1.0
-- Добавлен candidates/V3/source — отдельный исходник будущего обновления. Это НЕ Production root.
-- Добавлены candidates/V3/local — автономная LOCAL-сборка Candidate.
-- Добавлены candidates/V3/tp — тот же Candidate в Test Project sandbox.
-- Активный baseline: V3.0, статус DRAFT, основан на Production commit f662f724326460522e273e1187369d31a2dc73d4.
-- Добавлен candidates/active.json и release.json с этапами и обязательными проверками.
-- Добавлен candidate-console.html: статусы, LOCAL/TP/Production launch, device preview и локальный QA checkpoint.
-- Test Project получил кнопку «Candidate Pipeline».
+Проверки:
+- node --check src/worker.js — OK
+- node --check scripts/local-test-runtime.js — OK
+- node --check scripts/build-local-test.mjs — OK
+- node --check scripts/candidate.mjs — OK
+- inline JS в index/index_test/referrals_test/candidate LOCAL/TP — OK
+- LOCAL Smoke QA — 14/14
+- Native Telegram bridge test: BackButton callback + web_app_setup_back_button + web_app_setup_swipe_behavior — OK
+- external API/network в LOCAL Smoke — 0
 
-DEVELOPER DRAWER / QA
-- «Smoke QA» — 14 обязательных проверок: local runtime, fake Telegram, CloudStorage OFF, cases/profile/pass/referrals/rating, полный legal flow, отсутствие внешней сети и новых JS errors.
-- «Зафиксировать проблему» экспортирует CANDIDATE-ISSUE-###.json со state, экраном, viewport, virtual time, network log, JS errors, performance и последним smoke report.
-- Device Preview: iPhone SE, iPhone, Pro Max, Android narrow, Android tall.
-
-БЕЗОПАСНОСТЬ
-- .assetsignore теперь исключает scripts, candidates/*/source и candidates/*/release из публичных Cloudflare Assets.
-- Candidate source физически не открывается игрокам по URL.
-- LOCAL использует LocalGameServer и не имеет Production API.
-- Candidate TP принудительно работает в test_project mode.
-- referrals/legal TP pages получили fail-closed proxy в Test Project workspace вместо прямого Production API.
-- prepare-release запрещён до статуса READY и создаёт только candidates/V3/release; root index.html не заменяется.
-
-КОМАНДЫ ДЛЯ ДАЛЬНЕЙШЕЙ РАЗРАБОТКИ
-Создать следующий Candidate:
-  node scripts/candidate.mjs init V4 V4.0
-
-Пересобрать после изменений в candidates/V3/source:
-  node scripts/candidate.mjs build V3
-
-Этапы:
-  node scripts/candidate.mjs status V3 LOCAL_QA
-  node scripts/candidate.mjs status V3 LOCAL_APPROVED
-  node scripts/candidate.mjs status V3 TP_QA
-  node scripts/candidate.mjs status V3 READY
-
-Подготовить release-копию (только после READY):
-  node scripts/candidate.mjs prepare-release V3
-
-ВАЖНО
-В обычной работе пользователю эти команды выполнять не нужно: ChatGPT будет обновлять Candidate и отдавать TEST-архивы. Production package создаётся только после явного «одобряю в прод».
-
-МИГРАЦИИ D1
-Нет.
-
-ДЕПЛОЙ ЭТОГО TEST-INFRA ОБНОВЛЕНИЯ
-npx wrangler deploy
+Миграций D1 нет.
+Деплой: npx wrangler deploy

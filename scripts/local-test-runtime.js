@@ -1,7 +1,7 @@
 (() => {
   if (window.__ZEFIROK_LOCAL_BUILD_V2__?.active) return;
 
-  const LOCAL_VERSION = "2.1";
+  const LOCAL_VERSION = "2.2";
   const STORAGE_PREFIX = "zefirok-local-build-v2:";
   const SERVER_STATE_KEY = "__local_server_state__";
   const SNAPSHOT_KEY = "__local_snapshot_a__";
@@ -175,7 +175,7 @@
     const now = nowNative();
     return {
       schemaVersion:2,
-      build:"LOCAL 2.0",
+      build:"LOCAL 2.2",
       player:{ id:"990055001", firstName:"LOCAL", lastName:"Тестер", username:"local_tester" },
       profile:{ wallet:900000000, best:999999, treats:123000, coffee:123000, profileXp:250000, completedRuns:12 },
       cases:{
@@ -304,13 +304,28 @@
       try { callback(payload); } catch {}
     }
   }
-  function buttonStub() {
+  const telegramNativeProxy = window.TelegramWebviewProxy && typeof window.TelegramWebviewProxy.postEvent === "function"
+    ? window.TelegramWebviewProxy
+    : null;
+  function postTelegramNative(eventType, payload = {}) {
+    try {
+      if (!telegramNativeProxy) return false;
+      telegramNativeProxy.postEvent(String(eventType || ""), JSON.stringify(payload || {}));
+      return true;
+    } catch { return false; }
+  }
+  function buttonStub(kind = "generic") {
     let visible = false;
     let callback = null;
+    const sync = () => {
+      if (kind === "back") postTelegramNative("web_app_setup_back_button", { is_visible: visible });
+    };
     return {
       get isVisible(){ return visible; },
-      show(){ visible = true; return this; }, hide(){ visible = false; return this; },
-      onClick(fn){ callback = fn; return this; }, offClick(){ callback = null; return this; },
+      show(){ visible = true; sync(); return this; },
+      hide(){ visible = false; sync(); return this; },
+      onClick(fn){ callback = typeof fn === "function" ? fn : callback; return this; },
+      offClick(fn){ if (!fn || callback === fn) callback = null; return this; },
       setText(){ return this; }, enable(){ return this; }, disable(){ return this; },
       _click(){ try { callback?.(); } catch {} }
     };
@@ -322,12 +337,14 @@
     viewportHeight:window.innerHeight || 800, viewportStableHeight:window.innerHeight || 800,
     safeAreaInset:{top:0,right:0,bottom:0,left:0}, contentSafeAreaInset:{top:0,right:0,bottom:0,left:0},
     CloudStorage:null,
-    BackButton:buttonStub(), MainButton:buttonStub(), SecondaryButton:buttonStub(), SettingsButton:buttonStub(),
+    BackButton:buttonStub("back"), MainButton:buttonStub(), SecondaryButton:buttonStub(), SettingsButton:buttonStub(),
     HapticFeedback:{ impactOccurred(){}, notificationOccurred(){}, selectionChanged(){} },
     ready(){}, expand(){ this.isExpanded = true; }, close(){},
     setHeaderColor(){}, setBackgroundColor(){}, setBottomBarColor(){},
-    requestFullscreen(){ this.isFullscreen = true; emitTelegram("fullscreenChanged", {isFullscreen:true}); },
-    exitFullscreen(){ this.isFullscreen = false; emitTelegram("fullscreenChanged", {isFullscreen:false}); },
+    requestFullscreen(){ this.isFullscreen = true; postTelegramNative("web_app_request_fullscreen", {}); emitTelegram("fullscreenChanged", {isFullscreen:true}); },
+    exitFullscreen(){ this.isFullscreen = false; postTelegramNative("web_app_exit_fullscreen", {}); emitTelegram("fullscreenChanged", {isFullscreen:false}); },
+    disableVerticalSwipes(){ postTelegramNative("web_app_setup_swipe_behavior", {allow_vertical_swipe:false}); },
+    enableVerticalSwipes(){ postTelegramNative("web_app_setup_swipe_behavior", {allow_vertical_swipe:true}); },
     isVersionAtLeast(){ return true; },
     onEvent(name, callback){ if (!telegramEvents.has(name)) telegramEvents.set(name, new Set()); telegramEvents.get(name).add(callback); },
     offEvent(name, callback){ telegramEvents.get(name)?.delete(callback); },
@@ -337,7 +354,24 @@
     showPopup(params, callback){ try { console.info("LOCAL Telegram popup:", params); } catch {}; callback?.(params?.buttons?.[0]?.id || "ok"); },
     enableClosingConfirmation(){}, disableClosingConfirmation(){}
   };
-  window.Telegram = { ...(window.Telegram || {}), WebApp:fakeWebApp };
+  const previousTelegram = window.Telegram && typeof window.Telegram === "object" ? window.Telegram : {};
+  const previousWebView = previousTelegram.WebView && typeof previousTelegram.WebView === "object" ? previousTelegram.WebView : {};
+  const previousReceiveEvent = typeof previousWebView.receiveEvent === "function" ? previousWebView.receiveEvent.bind(previousWebView) : null;
+  const receiveNativeEvent = (eventType, eventData) => {
+    const type = String(eventType || "");
+    if (type === "back_button_pressed") fakeWebApp.BackButton._click();
+    if (type === "viewport_changed" && eventData && typeof eventData === "object") {
+      fakeWebApp.viewportHeight = Number(eventData.height || fakeWebApp.viewportHeight || window.innerHeight || 800);
+      fakeWebApp.viewportStableHeight = Number(eventData.height || fakeWebApp.viewportStableHeight || fakeWebApp.viewportHeight);
+    }
+    emitTelegram(type, eventData);
+    try { previousReceiveEvent?.(eventType, eventData); } catch {}
+  };
+  window.Telegram = { ...previousTelegram, WebView:{...previousWebView, receiveEvent:receiveNativeEvent}, WebApp:fakeWebApp };
+  window.TelegramGameProxy = window.TelegramGameProxy || {};
+  window.TelegramGameProxy.receiveEvent = receiveNativeEvent;
+  window.TelegramGameProxy_receiveEvent = receiveNativeEvent;
+  window.addEventListener("beforeunload", () => { try { fakeWebApp.BackButton.hide(); fakeWebApp.enableVerticalSwipes(); } catch {} }, {once:true});
 
   try {
     Object.defineProperty(navigator, "share", { configurable:true, value:async (payload) => { recordBlocked("navigator.share", JSON.stringify(payload || {})); return undefined; } });
@@ -601,8 +635,8 @@
     const def = LEGAL_DEFS[key] || LEGAL_DEFS.privacy;
     const title = language === "en" ? def.titleEn : def.titleRu;
     const content = language === "en"
-      ? `# ${title}\n\nLOCAL BUILD 2.1. This is an isolated QA copy. Acceptance is stored only in LOCAL state and is never sent to Production.`
-      : `# ${title}\n\nLOCAL BUILD 2.1. Это изолированная QA-копия. Подтверждение сохраняется только в LOCAL state и никогда не отправляется в Production.`;
+      ? `# ${title}\n\nLOCAL BUILD 2.2. This is an isolated QA copy. Acceptance is stored only in LOCAL state and is never sent to Production.`
+      : `# ${title}\n\nLOCAL BUILD 2.2. Это изолированная QA-копия. Подтверждение сохраняется только в LOCAL state и никогда не отправляется в Production.`;
     return { ok:true, localBuild:true, documentKey:def.key, version:def.version, language, title, content, source:"local" };
   }
 
@@ -959,7 +993,7 @@
     const s = loadState(true), inv=s.cases.inventory, pass=s.pass.player, fault=s.faults, forced=s.forcedCase;
     const caseInputs = CASE_TYPES.map(type => `<label>${CASE_TITLES[type]}<input data-local-case="${type}" inputmode="numeric" value="${Math.floor(Number(inv[type]||0))}"></label>`).join("");
     const candidateLabel = `${String(CANDIDATE_MANIFEST.candidate||CANDIDATE_MANIFEST.version||"LOCAL")} · ${String(CANDIDATE_MANIFEST.status||"LOCAL_QA")}`;
-    return `<div class="zlocal-head"><div><strong>LOCAL BUILD 2.1</strong><span>${candidateLabel} · 1:1 UI · LocalGameServer · Anti-cheat OFF</span></div><button data-zlocal-close>×</button></div>
+    return `<div class="zlocal-head"><div><strong>LOCAL BUILD 2.2</strong><span>${candidateLabel} · 1:1 UI · LocalGameServer · Anti-cheat OFF</span></div><button data-zlocal-close>×</button></div>
       <div class="zlocal-status"><b data-zlocal-network>NETWORK: ${Number(s.network.externalAttempts||0)} external</b><span>API локальный · Telegram fake · storage isolated</span></div>
       <div class="zlocal-actions"><button data-candidate-smoke>✅ Smoke QA</button><button data-candidate-issue>🐞 Зафиксировать проблему</button><button data-local-legal-reset>📜 Сбросить документы</button></div>
       <div class="zlocal-status" data-candidate-result><b>Candidate QA</b><span>Запусти Smoke QA перед LOCAL APPROVED.</span></div>
@@ -980,7 +1014,7 @@
     const style = document.createElement("style");
     style.textContent = `.zlocal-launch{position:fixed;right:8px;bottom:8px;z-index:2147483647;border:1px solid #6bdca7;border-radius:999px;background:#10271d;color:#b9f7d7;padding:8px 11px;font:900 10px/1 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;box-shadow:0 7px 24px rgba(0,0,0,.24)}.zlocal-drawer{position:fixed;right:8px;bottom:48px;z-index:2147483647;width:min(430px,calc(100vw - 16px));max-height:min(760px,calc(100vh - 64px));overflow:auto;border:1px solid #456c5b;border-radius:20px;background:#101714;color:#eef9f3;box-shadow:0 24px 70px rgba(0,0,0,.5);padding:12px;font:800 11px/1.35 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}.zlocal-drawer[hidden]{display:none!important}.zlocal-head{display:flex;gap:8px;align-items:flex-start}.zlocal-head>div{flex:1}.zlocal-head strong{display:block;font-size:14px}.zlocal-head span,.zlocal-status span{display:block;margin-top:3px;color:#a8c4b6;font-size:9px}.zlocal-head button{border:0;background:#20332a;color:#fff;border-radius:10px;width:30px;height:30px}.zlocal-status{margin:9px 0;padding:8px;border-radius:12px;background:#17251e}.zlocal-status b{color:#90efbd}.zlocal-status b.bad{color:#ffb0b9}.zlocal-presets,.zlocal-actions{display:flex;gap:5px;flex-wrap:wrap;margin:8px 0}.zlocal-presets button,.zlocal-actions button{border:1px solid #426553;border-radius:10px;background:#1b2b23;color:#eafff4;padding:7px 8px;font:inherit}.zlocal-actions button:first-child{background:#287651;border-color:#3da26f}.zlocal-drawer fieldset{border:1px solid #304a3e;border-radius:13px;margin:8px 0;padding:8px}.zlocal-drawer legend{padding:0 5px;color:#bff2d3}.zlocal-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}.zlocal-grid label{display:grid;gap:3px;color:#b9d0c4;font-size:9px}.zlocal-grid input,.zlocal-grid select{width:100%;min-width:0;border:1px solid #385849;border-radius:9px;background:#0e1713;color:#fff;padding:7px;font:800 10px/1.2 inherit}.zlocal-grid .zlocal-check{display:flex;align-items:center;gap:5px;padding-top:16px}.zlocal-grid .zlocal-check input{width:auto}.zlocal-drawer details{margin-top:8px}.zlocal-drawer pre{white-space:pre-wrap;word-break:break-word;color:#a9c6b7;font:700 8px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace}.zlocal-drawer summary{cursor:pointer;color:#c8e8d8}@media(max-width:480px){.zlocal-grid{grid-template-columns:1fr 1fr}.zlocal-drawer{max-height:calc(100vh - 70px)}}`;
     document.documentElement.append(style);
-    const button = document.createElement("button"); button.type="button"; button.className="zlocal-launch"; button.dataset.zlocalLauncher="1"; button.textContent="LOCAL 2.0";
+    const button = document.createElement("button"); button.type="button"; button.className="zlocal-launch"; button.dataset.zlocalLauncher="1"; button.textContent="LOCAL 2.2";
     drawerRoot = document.createElement("section"); drawerRoot.className="zlocal-drawer"; drawerRoot.hidden=true; drawerRoot.setAttribute("aria-label","LOCAL BUILD tools");
     document.body.append(button, drawerRoot);
     const render = () => {
