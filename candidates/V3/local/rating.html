@@ -1,8 +1,9 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-<!-- ZEFIROK LOCAL BUILD 2.1 · source-sha256:9218191e1e975ec2 -->
+<!-- CANDIDATE V3.0 · LOCAL 2.1 · source-sha256:9218191e1e975ec2 -->
 <meta data-zlocal-csp http-equiv="Content-Security-Policy" content="default-src 'self' blob: data:; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: data:; style-src 'self' 'unsafe-inline' blob: data:; img-src 'self' blob: data:; font-src 'self' blob: data:; media-src 'self' blob: data:; connect-src 'self'; frame-src 'self' blob: data:; worker-src blob:; object-src 'none'; form-action 'none'">
+<script data-zcandidate-manifest>window.__ZEFIROK_CANDIDATE_MANIFEST__={"schemaVersion":1,"version":"V3","candidate":"V3.0","title":"Сладкий Забег · V3.0","status":"DRAFT","sourceCommit":"f662f724326460522e273e1187369d31a2dc73d4","createdAt":"2026-08-20T14:46:57.746Z","updatedAt":"2026-08-20T14:49:17.940Z","features":[],"sourceFiles":{"index.html":"ad14ba88cffcd0ac","battle-pass.html":"36caab19bb93200e","rating.html":"9218191e1e975ec2","referrals.html":"d67af81d034ed22c","legal.html":"5a5939f0b18b4358"},"requiredChecks":["local-runtime","fake-telegram","cloud-storage-off","cases-state","profile-sync","season-pass","referrals","leaderboard","legal-initial","legal-agreement","legal-complete","legal-document","external-network-zero","new-js-errors"],"localQa":{"status":"pending"},"tpQa":{"status":"pending"},"production":{"status":"not_released"}};</script>
 <script data-zlocal-runtime>(() => {
   if (window.__ZEFIROK_LOCAL_BUILD_V2__?.active) return;
 
@@ -1042,7 +1043,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="referrer" content="no-referrer">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' https://telegram.org; style-src 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; font-src 'self' data:; base-uri 'none'; form-action 'none'; object-src 'none'">
-<title>Рейтинг игроков — Сладкий Забег · LOCAL 2.1</title>
+<title>Рейтинг игроков — Сладкий Забег · V3.0 · LOCAL</title>
 <style>:root {
   color-scheme: light dark;
   background-color: var(--background) !important;
@@ -10195,7 +10196,7 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
     }
     const auth = currentInitData();
     const hash = auth ? `#tgInitData=${encodeURIComponent(auth)}` : "";
-    location.href = `/battle-pass.html?v=1.0.9&offer=${encodeURIComponent(tier)}${hash}`;
+    location.href = `/candidates/V3/local/battle-pass.html?v=1.0.9&offer=${encodeURIComponent(tier)}${hash}`;
   }
 
   function podium(entry, place) {

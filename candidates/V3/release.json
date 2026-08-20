@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "version": "V3",
+  "candidate": "V3.0",
+  "title": "Сладкий Забег · V3.0",
+  "status": "DRAFT",
+  "sourceCommit": "f662f724326460522e273e1187369d31a2dc73d4",
+  "createdAt": "2026-08-20T14:46:57.746Z",
+  "updatedAt": "2026-08-20T14:49:17.940Z",
+  "features": [],
+  "sourceFiles": {
+    "index.html": "ad14ba88cffcd0ac",
+    "battle-pass.html": "36caab19bb93200e",
+    "rating.html": "9218191e1e975ec2",
+    "referrals.html": "d67af81d034ed22c",
+    "legal.html": "5a5939f0b18b4358"
+  },
+  "requiredChecks": [
+    "local-runtime",
+    "fake-telegram",
+    "cloud-storage-off",
+    "cases-state",
+    "profile-sync",
+    "season-pass",
+    "referrals",
+    "leaderboard",
+    "legal-initial",
+    "legal-agreement",
+    "legal-complete",
+    "legal-document",
+    "external-network-zero",
+    "new-js-errors"
+  ],
+  "localQa": {
+    "status": "pending"
+  },
+  "tpQa": {
+    "status": "pending"
+  },
+  "production": {
+    "status": "not_released"
+  }
+}

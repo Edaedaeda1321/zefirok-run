@@ -2,8 +2,9 @@
 
 <html lang="en">
 <head>
-<!-- ZEFIROK LOCAL BUILD 2.1 · source-sha256:ad14ba88cffcd0ac -->
+<!-- CANDIDATE V3.0 · LOCAL 2.1 · source-sha256:ad14ba88cffcd0ac -->
 <meta data-zlocal-csp http-equiv="Content-Security-Policy" content="default-src 'self' blob: data:; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: data:; style-src 'self' 'unsafe-inline' blob: data:; img-src 'self' blob: data:; font-src 'self' blob: data:; media-src 'self' blob: data:; connect-src 'self'; frame-src 'self' blob: data:; worker-src blob:; object-src 'none'; form-action 'none'">
+<script data-zcandidate-manifest>window.__ZEFIROK_CANDIDATE_MANIFEST__={"schemaVersion":1,"version":"V3","candidate":"V3.0","title":"Сладкий Забег · V3.0","status":"DRAFT","sourceCommit":"f662f724326460522e273e1187369d31a2dc73d4","createdAt":"2026-08-20T14:46:57.746Z","updatedAt":"2026-08-20T14:49:17.940Z","features":[],"sourceFiles":{"index.html":"ad14ba88cffcd0ac","battle-pass.html":"36caab19bb93200e","rating.html":"9218191e1e975ec2","referrals.html":"d67af81d034ed22c","legal.html":"5a5939f0b18b4358"},"requiredChecks":["local-runtime","fake-telegram","cloud-storage-off","cases-state","profile-sync","season-pass","referrals","leaderboard","legal-initial","legal-agreement","legal-complete","legal-document","external-network-zero","new-js-errors"],"localQa":{"status":"pending"},"tpQa":{"status":"pending"},"production":{"status":"not_released"}};</script>
 <script data-zlocal-runtime>(() => {
   if (window.__ZEFIROK_LOCAL_BUILD_V2__?.active) return;
 
@@ -1043,7 +1044,7 @@
 <meta content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover" name="viewport"/>
 <meta content="no-referrer" name="referrer"/>
 <meta content="default-src 'none'; script-src 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com https://telegram.org; style-src 'unsafe-inline' blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; img-src 'self' blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; font-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; media-src 'self' blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; worker-src blob:; connect-src 'self' blob: data:; frame-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'" http-equiv="Content-Security-Policy"/>
-<title>Сладкий Забег · LOCAL 2.1</title>
+<title>Сладкий Забег · V3.0 · LOCAL</title>
 <style>:root{color-scheme:light dark;background:light-dark(rgb(255 255 255), rgb(24 24 24));--zefirok-app-height:100dvh}html,body{margin:0;width:100%;height:100%;min-height:0;overflow:hidden;overscroll-behavior:none}body{box-sizing:border-box;padding:0;background:inherit}iframe{display:none;height:var(--zefirok-app-height,100dvh);border:0}body>iframe:not(.zefirok-season-pass-frame):not(.zefirok-rating-frame):not(.zefirok-referrals-frame){width:calc(100% - 32px);max-width:736px;margin:0 auto}iframe.is-ready{display:block}.zefirok-maintenance-gate{width:100%;min-height:var(--zefirok-app-height,100dvh);display:grid;background:#fff5f5;place-items:center;padding:max(24px,var(--zefirok-content-safe-top,0px)) max(24px,var(--zefirok-content-safe-right,0px)) max(24px,var(--zefirok-content-safe-bottom,0px)) max(24px,var(--zefirok-content-safe-left,0px));box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#4e3a42}.zefirok-maintenance-card{width:min(430px,100%);box-sizing:border-box;padding:28px;border:1px solid #efd0d9;border-radius:28px;background:#fff;box-shadow:0 18px 50px rgba(91,54,68,.13);text-align:center}.zefirok-maintenance-icon{font-size:54px}.zefirok-maintenance-card h1{font-size:25px;margin:12px 0}.zefirok-maintenance-card p{font-size:16px;line-height:1.5;color:#786870;margin:0}.zefirok-maintenance-card button{margin-top:18px;padding:12px 18px;border:0;border-radius:14px;background:#e56f9b;color:#fff;font-weight:800;font-size:15px}
 .zefirok-season-pass-layer{position:fixed;inset:0;width:100%;height:var(--zefirok-app-height,100dvh);z-index:2147483000;background:#fff5f4;display:block;overflow:hidden}
 .zefirok-season-pass-layer[hidden]{display:none!important}
@@ -1457,7 +1458,7 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
     legalFrame.className = "zefirok-legal-frame";
     legalFrame.referrerPolicy = "no-referrer";
     legalFrame.setAttribute("sandbox", "allow-scripts allow-same-origin");
-    legalFrame.src = `/legal_test.html?doc=${encodeURIComponent(key)}&lang=${encodeURIComponent(legalGateLanguage)}&embedded=1`;
+    legalFrame.src = `/candidates/V3/local/legal.html?doc=${encodeURIComponent(key)}&lang=${encodeURIComponent(legalGateLanguage)}&embedded=1`;
     layer.append(toolbar, legalFrame);
     document.body.append(layer);
     legalLayer = layer;
@@ -1672,15 +1673,16 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
         const bridgeTag = "<scr" + "ipt>" + TEST_PROJECT_BRIDGE_JS + "</scr" + "ipt>";
         preparedSource = preparedSource.includes("</head>") ? preparedSource.replace("</head>", bridgeTag + "</head>") : bridgeTag + preparedSource;
       }
-      // LOCAL BUILD 2.1: inject the same LocalGameServer into the real embedded game.
+      // CANDIDATE LOCAL: тот же embedded client + LocalGameServer.
       try {
         preparedSource = preparedSource.replace(/<script[^>]+telegram\.org\/js\/telegram-web-app\.js[^>]*><\/script>/gi, "");
         if (!preparedSource.includes("__ZEFIROK_LOCAL_BUILD_V2__")) {
           const localRuntime = String(window.__ZEFIROK_LOCAL_RUNTIME_SOURCE__ || "");
+          const candidateManifest = "<scr"+"ipt>window.__ZEFIROK_CANDIDATE_MANIFEST__="+JSON.stringify(window.__ZEFIROK_CANDIDATE_MANIFEST__||{})+";</scr"+"ipt>";
           const localTag = "<scr" + "ipt>" + localRuntime.replace(/<\/script/gi, "<\\/script") + "</scr" + "ipt>";
-          preparedSource = preparedSource.includes("</head>") ? preparedSource.replace("</head>", localTag + "</head>") : localTag + preparedSource;
+          preparedSource = preparedSource.includes("</head>") ? preparedSource.replace("</head>", candidateManifest + localTag + "</head>") : candidateManifest + localTag + preparedSource;
         }
-      } catch (error) { console.warn("LOCAL BUILD runtime injection failed", error); }
+      } catch (error) { console.warn("Candidate LOCAL runtime injection failed", error); }
       gameFrame.srcdoc = preparedSource;
       gameFrame.removeAttribute("data-srcdoc");
       gameFrame.dataset.activated = "1";
@@ -2089,8 +2091,8 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
     const passOffer = normalizedOfferTier ? `&offer=${encodeURIComponent(normalizedOfferTier)}` : "";
     const passTest = TEST_PROJECT_MODE ? "&test_project=1" : "";
     passFrame.src = initData
-      ? `/battle-pass_test.html?v=1.0.9${passView}${passOffer}${passTest}#tgInitData=${encodeURIComponent(initData)}`
-      : `/battle-pass_test.html?v=1.0.9${passView}${passOffer}${passTest}`;
+      ? `/candidates/V3/local/battle-pass.html?v=1.0.9${passView}${passOffer}${passTest}#tgInitData=${encodeURIComponent(initData)}`
+      : `/candidates/V3/local/battle-pass.html?v=1.0.9${passView}${passOffer}${passTest}`;
     layer.append(passFrame);
     passFrame.addEventListener("load", () => {
       const snapshot = syncTelegramViewport();
@@ -2174,8 +2176,8 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
     referralFrame.allow = "clipboard-write";
     referralFrame.referrerPolicy = "same-origin";
     referralFrame.src = initData
-      ? `/referrals_test.html?v=1.0.9#tgInitData=${encodeURIComponent(initData)}`
-      : `/referrals_test.html?v=1.0.9`;
+      ? `/candidates/V3/local/referrals.html?v=1.0.9#tgInitData=${encodeURIComponent(initData)}`
+      : `/candidates/V3/local/referrals.html?v=1.0.9`;
     layer.append(referralFrame);
     referralFrame.addEventListener("load", () => {
       const snapshot = syncTelegramViewport();
@@ -2252,7 +2254,7 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
     if (retryToken) query.set("retry", retryToken);
     if (TEST_PROJECT_MODE) query.set("test_project", "1");
     const hash = initData ? `#tgInitData=${encodeURIComponent(initData)}` : "";
-    return `/rating_test.html?${query.toString()}${hash}`;
+    return `/candidates/V3/local/rating.html?${query.toString()}${hash}`;
   }
 
   function armRatingReadyTimeout() {
@@ -22840,7 +22842,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
     event.preventDefault();
     button.disabled = true;
     try { window.parent.postMessage({ type:&quot;zefirok-open-referrals&quot; }, &quot;*&quot;); }
-    catch (error) { try { window.location.href = &quot;/referrals_test.html&quot;; } catch {} }
+    catch (error) { try { window.location.href = &quot;/candidates/V3/local/referrals.html&quot;; } catch {} }
     window.setTimeout(() =&gt; { button.disabled = false; }, 900);
   });
   window.addEventListener(&quot;pageshow&quot;, () =&gt; {document.querySelectorAll(&quot;[data-referrals-open]&quot;).forEach((button) =&gt; { button.disabled = false; });refreshReferralSummary();});
