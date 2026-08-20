@@ -31661,7 +31661,7 @@ async function ownerPanelFlashOfferAction(env, ctx) {
 
 
 
-// =================== TP 5.3 · HIGH SAFETY ===================
+// =================== TP 5.4 · HARD ISOLATION ===================
 let ownerStagingSchemaPromise = null;
 const OWNER_STAGING_STAGEABLE = Object.freeze({
   "/api/owner/v9/game-config/draft":"game_config",
@@ -32004,7 +32004,7 @@ async function ownerStagingRollbackApplied(env,ctx,applied){
 }
 
 async function ownerStagingDispatchProduction(env,ctx,endpoint,payload){
-  if(endpoint==='/api/owner/v9/game-config/draft'){await ownerPanelV9GameConfigDraft(env,{...ctx,body:{config:payload.config||payload}});return ownerPanelV9GameConfigPublish(env,{...ctx,body:{reason:'TP 5.3 · Safe Promote from Change Set'}});}
+  if(endpoint==='/api/owner/v9/game-config/draft'){await ownerPanelV9GameConfigDraft(env,{...ctx,body:{config:payload.config||payload}});return ownerPanelV9GameConfigPublish(env,{...ctx,body:{reason:'TP 5.4 · Safe Promote from Change Set'}});}
   if(endpoint==='/api/owner/cases/save')return ownerPanelSaveCase(env,{...ctx,body:payload});
   if(endpoint==='/api/owner/cases/content/save')return ownerPanelSaveCaseContent(env,{...ctx,body:payload});
   if(endpoint==='/api/owner/season-pass/reward')return ownerPanelSetSeasonPassReward(env,{...ctx,body:payload});
@@ -32220,11 +32220,11 @@ async function ownerPanelStagingRollback(env,ctx){
     await ownerStagingReleaseLock(env,setId,lockToken);
   }
 }
-// ================= END TP 5.3 · HIGH SAFETY =================
+// ================= END TP 5.4 · HARD ISOLATION =================
 
 
-// =================== TEST PROJECT 5.3 · QA LAB · OWNER-ONLY ISOLATED SANDBOX ===================
-const TEST_PROJECT_VERSION = "5.3";
+// =================== TEST PROJECT 5.4 · QA LAB · OWNER-ONLY HARD SANDBOX ===================
+const TEST_PROJECT_VERSION = "5.4";
 const TEST_PROJECT_SNAPSHOT_SCHEMA = 8;
 const TEST_PROJECT_MAX_CASE_SIMULATIONS = 2000;
 const TEST_PROJECT_MAX_ACTIVITY_LOG = 80;
@@ -33531,6 +33531,7 @@ function testProjectPresetState(presetId, current = null) {
     state.name="До гаранта 1 открытие"; state.points=900000000; state.treats=9000000; state.coffee=9000000; state.caseInventory={small:2,sweet:2,gold:2,mythic:5,legendary:5,alex:2};
     state.caseState=testProjectNormalizeCaseState({...state.caseState,mythicPityCounter:24,legendaryPityCounter:49});
   }
+  state.cloneSource = testProjectNormalizeCloneSource({});
   if (current) {
     state.virtualNow = Number(current.virtualNow||0);
     state.selectedSeasonId = String(current.selectedSeasonId||"");
@@ -33575,12 +33576,26 @@ function testProjectForcedAlexRng(rewardId) {
   return ()=>index<values.length?values[index++]:0.5;
 }
 
-async function testProjectPersistAction(env, ownerId, state, snapshot, before, action, title, result = {}) {
+async function testProjectPersistAction(env, ownerId, state, snapshot, before, action, title, result = {}, options = {}) {
   const normalized = testProjectNormalizePlayerState(state);
   const diff = testProjectStateDiff(before, normalized);
   testProjectLogAction(normalized, snapshot, action, title, diff);
   const now = Math.floor(Date.now() / 1000);
   await env.DB.prepare(`UPDATE test_project_workspaces SET state_json=?,revision=revision+1,updated_at=? WHERE owner_telegram_id=?`).bind(JSON.stringify(normalized), now, ownerId).run();
+  if (options?.fast === true) {
+    return {
+      ok:true, isolated:true, fast:true, testProjectVersion:TEST_PROJECT_VERSION, action, diff, result,
+      state:{
+        name:normalized.name,profileLevel:normalized.profileLevel,profileXp:normalized.profileXp,bestScore:normalized.bestScore,
+        points:normalized.points,treats:normalized.treats,coffee:normalized.coffee,passTier:normalized.passTier,passXp:normalized.passXp,
+        caseInventory:testProjectClone(normalized.caseInventory),cloneSource:testProjectClone(normalized.cloneSource||{}),
+        sandbox:{forcedCaseDrop:testProjectClone(normalized.sandbox?.forcedCaseDrop||null)}
+      },
+      caseInventory:testProjectClone(normalized.caseInventory),
+      forcedCaseDrop:testProjectClone(normalized.sandbox?.forcedCaseDrop||null),
+      updatedAt:now*1000
+    };
+  }
   return { ok:true, isolated:true, action, diff, result, ...testProjectClientPayload(testProjectRequireWorkspaceRow(await testProjectReadWorkspace(env, ownerId))) };
 }
 
@@ -33626,12 +33641,12 @@ async function ownerPanelTestProjectAction(env, ctx) {
     const count=Math.max(1,Math.min(99,Math.floor(Number(ctx.body?.count)||1)));
     state.caseInventory[caseType]=Math.min(999,Number(state.caseInventory?.[caseType]||0)+count);
     title=`Выдан ${snapshot?.liveops?.cases?.[caseType]?.title||LEVEL_CASE_CONFIG[caseType]?.title||caseType} ×${count}`;
-    result={caseType,count};
+    result={caseType,count,inventoryAfter:Number(state.caseInventory?.[caseType]||0)};
   } else if (action === "case_grant_all") {
     const count=Math.max(1,Math.min(99,Math.floor(Number(ctx.body?.count)||1)));
     for(const caseType of TEST_PROJECT_CASE_IDS)state.caseInventory[caseType]=Math.min(999,Number(state.caseInventory?.[caseType]||0)+count);
     title=`Выданы все тестовые кейсы ×${count}`;
-    result={caseTypes:[...TEST_PROJECT_CASE_IDS],count};
+    result={caseTypes:[...TEST_PROJECT_CASE_IDS],count,inventoryAfter:testProjectClone(state.caseInventory)};
   } else if (action === "case_force_reward") {
     const rewardId=String(ctx.body?.rewardId||"").trim();
     if(!rewardId){state.sandbox=testProjectNormalizeSandboxState({...state.sandbox,forcedCaseDrop:null});title="Принудительный дроп отключён";result={armed:false};}
@@ -33642,7 +33657,7 @@ async function ownerPanelTestProjectAction(env, ctx) {
       if(ctx.body?.grantCase!==false)state.caseInventory.alex=Math.min(999,Number(state.caseInventory?.alex||0)+1);
       state.sandbox=testProjectNormalizeSandboxState({...state.sandbox,forcedCaseDrop:{caseType:"alex",rewardId,ensureNew,armedAt:Date.now()}});
       title=`Следующий Кейс Алекса: ${rewardId}${ensureNew?" · как новая награда":" · с текущим владением"}`;
-      result={armed:true,caseType:"alex",rewardId,ensureNew,caseGranted:ctx.body?.grantCase!==false};
+      result={armed:true,caseType:"alex",rewardId,ensureNew,caseGranted:ctx.body?.grantCase!==false,inventoryAfter:Number(state.caseInventory?.alex||0)};
     }
   } else if (action === "preset") {
     const presetId = String(ctx.body?.presetId || "active");
@@ -33845,7 +33860,7 @@ async function ownerPanelTestProjectAction(env, ctx) {
   }
 
   state = testProjectNormalizePlayerState(state);
-  return testProjectPersistAction(env, ownerId, state, snapshot, before, action, title, result);
+  return testProjectPersistAction(env, ownerId, state, snapshot, before, action, title, result, {fast:ctx.body?.fast===true});
 }
 
 async function ownerPanelTestProjectStageDraft(env, ctx) {
@@ -34105,7 +34120,7 @@ function testProjectSandboxOfferList(state,snapshot) {
 
 function testProjectSandboxPollDefinition() {
   return {
-    id:"tp-poll-3",question:"Как работает Test Project 5.3?",description:"Этот опрос существует только внутри песочницы. Ответ не попадёт в Production.",
+    id:"tp-poll-3",question:"Как работает Test Project 5.4?",description:"Этот опрос существует только внутри песочницы. Ответ не попадёт в Production.",
     rewardText:"100 ⭐ тестовых очков",answerType:"choice",responseMode:"single",commentMode:"optional",commentMin:3,commentMax:400,maxChoices:1,
     options:[{id:"useful",text:"Полезно"},{id:"needs_work",text:"Нужно доработать"},{id:"found_bug",text:"Нашёл баг"}]
   };
@@ -34543,7 +34558,7 @@ async function ownerPanelTestProjectReleaseGate(env,ctx){
   return{ok:true,status,ready:summary.fail===0,summary,checks,groups:{sandbox:qa.summary,season:seasonQa.summary,content:content.summary},requestedSeasonId:String(ctx.body?.seasonId||''),seasonId:String(seasonQa?.seasonId||content?.seasonId||ctx.body?.seasonId||''),seasonTitle:String(seasonQa?.seasonTitle||''),checkedAt:Date.now(),fullAssets:Boolean(ctx.body?.fullAssets)};
 }
 
-// =================== END TEST PROJECT 5.3 ===================
+// =================== END TEST PROJECT 5.4 ===================
 
 
 // ======================= REFERRALS · "ДРУЗЬЯ КАФЕ" =======================
