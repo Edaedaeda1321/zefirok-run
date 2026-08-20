@@ -18122,14 +18122,14 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         }
       }
 
-      async function rewardApiRequest(path, payload) {
+      async function rewardApiRequest(path, payload, timeoutMs = 6500) {
         const response = await gameFetchWithTimeout(path, {
           method: &quot;POST&quot;,
           headers: { &quot;Content-Type&quot;: &quot;application/json&quot; },
           body: JSON.stringify(payload),
           cache: &quot;no-store&quot;,
           credentials: &quot;same-origin&quot;
-        }, 6500);
+        }, Math.max(1000, Number(timeoutMs || 6500)));
         const data = await response.json().catch(() =&gt; null);
         if (!response.ok || !data?.ok) {
           const error = new Error(data?.error || &quot;Сервис проверки кодов временно недоступен.&quot;);
@@ -18348,12 +18348,20 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           requestTelegramProfile();
           throw new Error(&quot;Откройте игру через Telegram-бота, чтобы получить настоящий код награды.&quot;);
         }
-        const data = await rewardApiRequest(REWARD_API_CREATE_PATH, {
+        const rewardPayload = {
           initData,
           productId: purchase.id,
           requestId,
           gameVersion: GAME_VERSION
-        });
+        };
+        let data;
+        try {
+          data = await rewardApiRequest(REWARD_API_CREATE_PATH, rewardPayload, 12000);
+        } catch (error) {
+          if (!error?.timeout &amp;&amp; error?.code !== &quot;REQUEST_TIMEOUT&quot;) throw error;
+          await new Promise((resolve) =&gt; window.setTimeout(resolve, 350));
+          data = await rewardApiRequest(REWARD_API_CREATE_PATH, rewardPayload, 12000);
+        }
         if (!data.reward?.code) throw new Error(&quot;Сервис не вернул код награды.&quot;);
         return {
           ...data.reward,
@@ -19836,10 +19844,19 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         if (cancelButton) cancelButton.disabled = true;
         purchase.requestId = purchase.requestId || makeRewardRequestId();
         try {
-          const data = await caseApiRequest(CASE_API_PURCHASE_PATH, {
+          const casePurchasePayload = {
             caseType: purchase.product.caseType,
             requestId: purchase.requestId
-          });
+          };
+          let data;
+          try {
+            data = await caseApiRequest(CASE_API_PURCHASE_PATH, casePurchasePayload, 12000);
+          } catch (error) {
+            if (!error?.timeout &amp;&amp; error?.code !== &quot;REQUEST_TIMEOUT&quot;) throw error;
+            if (confirmButton) confirmButton.textContent = &quot;Проверяем покупку…&quot;;
+            await new Promise((resolve) =&gt; window.setTimeout(resolve, 350));
+            data = await caseApiRequest(CASE_API_PURCHASE_PATH, casePurchasePayload, 12000);
+          }
           applyServerCasePayload(data);
           shopMessageEl.textContent = `${purchase.product.title} добавлен в склад кейсов.`;
           updateHud();

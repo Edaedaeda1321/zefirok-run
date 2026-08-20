@@ -1815,7 +1815,7 @@ export default {
       if (url.pathname === "/api/cases/purchase" && request.method === "POST") {
         const shopGate = await enforceFeatureFlagForRequest(request, env, "shop"); if (shopGate) return shopGate;
         const caseGate = await enforceFeatureFlagForRequest(request, env, "cases"); if (caseGate) return caseGate;
-        return await purchaseCaseFromShop(request, env);
+        return await purchaseCaseFromShop(request, env, ctx);
       }
 
       if (url.pathname === "/api/cases/activate" && request.method === "POST") {
@@ -1854,7 +1854,7 @@ export default {
       if (url.pathname === "/api/rewards/create" && request.method === "POST") {
         const shopGate = await enforceFeatureFlagForRequest(request, env, "shop"); if (shopGate) return shopGate;
         const physicalGate = await enforceFeatureFlagForRequest(request, env, "physical_rewards"); if (physicalGate) return physicalGate;
-        return await createReward(request, env);
+        return await createReward(request, env, ctx);
       }
 
       if (url.pathname === "/api/rewards/mine" && request.method === "POST") {
@@ -3057,20 +3057,26 @@ function cloneDefaultShopAssortment() {
   }]));
 }
 
+let shopAssortmentSchemaPromise = null;
 async function ensureShopAssortmentSchema(env) {
-  await ensureShopSchema(env);
-  await env.DB.prepare(SHOP_ASSORTMENT_SCHEMA_SQL).run();
-  const now = Math.floor(Date.now() / 1000);
-  const defaults = cloneDefaultShopAssortment();
-  const currentPrices = await readShopPrices(env);
-  for (const [productId, price] of Object.entries(currentPrices)) {
-    if (defaults[productId]) defaults[productId] = { enabled: true, ...price };
+  if (!shopAssortmentSchemaPromise) {
+    shopAssortmentSchemaPromise = (async () => {
+      await ensureShopSchema(env);
+      await env.DB.prepare(SHOP_ASSORTMENT_SCHEMA_SQL).run();
+      const now = Math.floor(Date.now() / 1000);
+      const defaults = cloneDefaultShopAssortment();
+      const currentPrices = await readShopPrices(env);
+      for (const [productId, price] of Object.entries(currentPrices)) {
+        if (defaults[productId]) defaults[productId] = { enabled: true, ...price };
+      }
+      await env.DB.batch(Object.entries(defaults).map(([productId, product]) => env.DB.prepare(
+        `INSERT OR IGNORE INTO shop_assortment (
+           product_id, enabled, points, treats, coffee, updated_at, updated_by
+         ) VALUES (?, 1, ?, ?, ?, ?, 'system')`
+      ).bind(productId, product.points, product.treats, product.coffee, now)));
+    })().catch((error) => { shopAssortmentSchemaPromise = null; throw error; });
   }
-  await env.DB.batch(Object.entries(defaults).map(([productId, product]) => env.DB.prepare(
-    `INSERT OR IGNORE INTO shop_assortment (
-       product_id, enabled, points, treats, coffee, updated_at, updated_by
-     ) VALUES (?, 1, ?, ?, ?, ?, 'system')`
-  ).bind(productId, product.points, product.treats, product.coffee, now)));
+  await shopAssortmentSchemaPromise;
 }
 
 async function readShopAssortment(env) {
@@ -3112,20 +3118,26 @@ function shopStockScopeKey(category, productId = "") {
   return normalizedProduct ? `${normalizedCategory}:${normalizedProduct}` : `${normalizedCategory}:*`;
 }
 
+let shopStockSchemaPromise = null;
 async function ensureShopStockSchema(env) {
-  await env.DB.batch([
-    env.DB.prepare(SHOP_STOCK_LIMIT_SCHEMA_SQL),
-    env.DB.prepare(SHOP_STOCK_CONSUMPTION_SCHEMA_SQL),
-    env.DB.prepare(SHOP_STOCK_COMMIT_GUARD_SCHEMA_SQL),
-    env.DB.prepare(SHOP_STOCK_CONSUMPTION_DECREMENT_TRIGGER_SQL),
-    env.DB.prepare(SHOP_STOCK_CONSUMPTION_RELEASE_TRIGGER_SQL)
-  ]);
-  // Existing production rows represent already-consumed stock. They are added
-  // with DEFAULT 1 so a deploy can never make historical purchases releasable.
-  // New reservations explicitly insert committed=0 below and are committed in
-  // the same transaction as the purchase/reward they protect.
-  await addRuntimeColumnIfMissing(env, 'shop_stock_consumptions', 'committed', 'INTEGER NOT NULL DEFAULT 1 CHECK(committed IN (0, 1))');
-  await addRuntimeColumnIfMissing(env, 'shop_stock_consumptions', 'committed_at', 'INTEGER NOT NULL DEFAULT 0');
+  if (!shopStockSchemaPromise) {
+    shopStockSchemaPromise = (async () => {
+      await env.DB.batch([
+        env.DB.prepare(SHOP_STOCK_LIMIT_SCHEMA_SQL),
+        env.DB.prepare(SHOP_STOCK_CONSUMPTION_SCHEMA_SQL),
+        env.DB.prepare(SHOP_STOCK_COMMIT_GUARD_SCHEMA_SQL),
+        env.DB.prepare(SHOP_STOCK_CONSUMPTION_DECREMENT_TRIGGER_SQL),
+        env.DB.prepare(SHOP_STOCK_CONSUMPTION_RELEASE_TRIGGER_SQL)
+      ]);
+      // Existing production rows represent already-consumed stock. They are added
+      // with DEFAULT 1 so a deploy can never make historical purchases releasable.
+      // New reservations explicitly insert committed=0 below and are committed in
+      // the same transaction as the purchase/reward they protect.
+      await addRuntimeColumnIfMissing(env, 'shop_stock_consumptions', 'committed', 'INTEGER NOT NULL DEFAULT 1 CHECK(committed IN (0, 1))');
+      await addRuntimeColumnIfMissing(env, 'shop_stock_consumptions', 'committed_at', 'INTEGER NOT NULL DEFAULT 0');
+    })().catch((error) => { shopStockSchemaPromise = null; throw error; });
+  }
+  await shopStockSchemaPromise;
 }
 
 function shopStockCommitGuardStatement(env, consumptionId, guardId) {
@@ -4394,7 +4406,7 @@ function requireAdminUser(user, env) {
   if (!allowedIds.includes(String(user?.id || ""))) throw new ApiError(403, "Нет доступа к административным операциям.");
 }
 
-async function createReward(request, env) {
+async function createReward(request, env, ctx = null) {
   try {
     requireDatabase(env);
     requireBotToken(env);
@@ -4417,10 +4429,12 @@ async function createReward(request, env) {
     // let a client choose that namespace, otherwise the limit could be bypassed.
     if (requestId.startsWith("case_reward_")) throw new ApiError(400, "Некорректный идентификатор покупки.");
     const ownerId = String(auth.user.id);
-    let profileRow = await ensureAuthoritativeProfileRow(env, ownerId, `physical:${requestId}`);
-    const existing = await env.DB.prepare(
-      `SELECT code,product_id,product_name,created_at,expires_at,status FROM reward_codes WHERE request_id=? AND owner_telegram_id=? LIMIT 1`
-    ).bind(requestId, ownerId).first();
+    let [profileRow, existing] = await Promise.all([
+      ensureAuthoritativeProfileRow(env, ownerId, `physical:${requestId}`),
+      env.DB.prepare(
+        `SELECT code,product_id,product_name,created_at,expires_at,status FROM reward_codes WHERE request_id=? AND owner_telegram_id=? LIMIT 1`
+      ).bind(requestId, ownerId).first()
+    ]);
     const now = Math.floor(Date.now()/1000);
     if (existing) {
       const limitStatus=await getRewardLimitStatus(env,ownerId,now);
@@ -4509,15 +4523,19 @@ async function createReward(request, env) {
       if(!stock.repeated)await releaseShopStock(env,stockConsumptionId);
       throw new ApiError(503,"Не удалось создать уникальный код. Повторите покупку.");
     }
-    profileRow=await ensureAuthoritativeProfileRow(env,ownerId,marker);
-    const updatedLimitStatus=await getRewardLimitStatus(env,ownerId,now);
+    const [freshProfileRow, updatedLimitStatus]=await Promise.all([
+      env.DB.prepare(`SELECT * FROM admin_profile_state WHERE telegram_id=? LIMIT 1`).bind(ownerId).first(),
+      getRewardLimitStatus(env,ownerId,now)
+    ]);
+    if (freshProfileRow) profileRow = freshProfileRow;
     if(repeatedRow){
       return jsonResponse({
         ok:true,reward:rewardRowToClient(repeatedRow),limitStatus:updatedLimitStatus,stock,
         profile:authoritativeProfileView(profileRow),profileXpAwarded:0,repeated:true
       });
     }
-    await recordPlayerTimeline(env,ownerId,"physical_purchase",`купил ${product.title}`,{productId:product.id,code:insertedCode,cost:price,profileXpAwarded},`reward_${requestId}`,auth.user,now);
+    const timelineTask=recordPlayerTimeline(env,ownerId,"physical_purchase",`купил ${product.title}`,{productId:product.id,code:insertedCode,cost:price,profileXpAwarded},`reward_${requestId}`,auth.user,now);
+    if(ctx?.waitUntil)ctx.waitUntil(Promise.resolve(timelineTask).catch((error)=>console.error("physical purchase timeline failed",error)));else void Promise.resolve(timelineTask).catch((error)=>console.error("physical purchase timeline failed",error));
     return jsonResponse({
       ok:true,
       reward:{code:insertedCode,productId:product.id,productName:product.title,issuedAt:now*1000,expiresAt:expiresAt*1000,status:"active"},
@@ -5689,6 +5707,29 @@ async function readFastCaseInventory(env, telegramId) {
   return { openedLevels, giftedCases };
 }
 
+async function buildFastCasePurchasePayload(env, telegramId, ensured, liveops, extra = {}) {
+  const id = String(telegramId || "");
+  const inventory = await readFastCaseInventory(env, id);
+  const state = ensured?.state || caseStateFromRow(ensured?.row || {});
+  const profile = ensured?.profile || {};
+  return {
+    ok:true,
+    authoritativeProfile:true,
+    openedLevels:inventory.openedLevels,
+    giftedCases:inventory.giftedCases,
+    caseState:state,
+    liveops,
+    profile:{
+      wallet:safeAdminNumber(profile?.wallet),
+      best:safeAdminNumber(profile?.best_score),
+      treats:safeAdminNumber(profile?.treats),
+      coffee:safeAdminNumber(profile?.coffee),
+      profileXp:safeAdminNumber(profile?.profile_xp)
+    },
+    ...extra
+  };
+}
+
 async function buildFastCaseRefreshPayload(env, telegramId) {
   requireDatabase(env);
   const id = String(telegramId || '');
@@ -6315,7 +6356,7 @@ async function openLevelCase(request, env, ctx = null) {
   }
 }
 
-async function purchaseCaseFromShop(request, env) {
+async function purchaseCaseFromShop(request, env, ctx = null) {
   try {
     requireDatabase(env);
     requireBotToken(env);
@@ -6337,9 +6378,9 @@ async function purchaseCaseFromShop(request, env) {
     const grantId = `shopcase_${telegramId}_${requestId}`;
     const existing = await env.DB.prepare(`SELECT id FROM granted_cases WHERE id=? AND telegram_id=? LIMIT 1`).bind(grantId,telegramId).first();
     if (existing) {
-      return jsonResponse(await buildCasePayload(env, telegramId, {}, {
+      return jsonResponse(await buildFastCasePurchasePayload(env, telegramId, ensured, liveops, {
         repeated:true,purchase:{productId:product.id,caseType,title:product.title}
-      }, { ensured }));
+      }));
     }
     const wallet=safeAdminNumber(ensured.profile?.wallet), treats=safeAdminNumber(ensured.profile?.treats), coffee=safeAdminNumber(ensured.profile?.coffee);
     const missing=[];
@@ -6383,17 +6424,20 @@ async function purchaseCaseFromShop(request, env) {
     } catch(error) {
       const repeated=await env.DB.prepare(`SELECT id FROM granted_cases WHERE id=? AND telegram_id=? LIMIT 1`).bind(grantId,telegramId).first().catch(()=>null);
       if(repeated && isShopStockCommitGuardError(error)){
-        ensured=await ensureCasePlayerState(env,telegramId,{});
-        return jsonResponse(await buildCasePayload(env,telegramId,{}, { repeated:true,purchase:{productId:product.id,caseType,title:product.title,stock} }, { ensured }));
+        const refreshedProfile=await env.DB.prepare(`SELECT * FROM admin_profile_state WHERE telegram_id=? LIMIT 1`).bind(telegramId).first();
+        if(refreshedProfile)ensured={...ensured,profile:refreshedProfile};
+        return jsonResponse(await buildFastCasePurchasePayload(env,telegramId,ensured,liveops,{ repeated:true,purchase:{productId:product.id,caseType,title:product.title,stock} }));
       }
       if(!stock.repeated)await releaseShopStock(env,stockConsumptionId);
       throw error;
     }
-    ensured=await ensureCasePlayerState(env,telegramId,{});
-    await recordPlayerTimeline(env,telegramId,"case_purchase",`купил ${product.title}`,{caseType,cost:{points:product.points,treats:product.treats,coffee:product.coffee}},`case_purchase_${requestId}`,auth.user,now);
-    return jsonResponse(await buildCasePayload(env,telegramId,{}, {
+    const refreshedProfile=await env.DB.prepare(`SELECT * FROM admin_profile_state WHERE telegram_id=? LIMIT 1`).bind(telegramId).first();
+    if(refreshedProfile)ensured={...ensured,profile:refreshedProfile};
+    const timelineTask=recordPlayerTimeline(env,telegramId,"case_purchase",`купил ${product.title}`,{caseType,cost:{points:product.points,treats:product.treats,coffee:product.coffee}},`case_purchase_${requestId}`,auth.user,now);
+    if(ctx?.waitUntil)ctx.waitUntil(Promise.resolve(timelineTask).catch((error)=>console.error("case purchase timeline failed",error)));else void Promise.resolve(timelineTask).catch((error)=>console.error("case purchase timeline failed",error));
+    return jsonResponse(await buildFastCasePurchasePayload(env,telegramId,ensured,liveops,{
       purchase:{productId:product.id,caseType,title:product.title,cost:{points:product.points,treats:product.treats,coffee:product.coffee},stock}
-    }, { ensured }));
+    }));
   } catch(error) {
     if(error instanceof ApiError)return jsonResponse({ok:false,error:error.message,details:error.details},error.status);
     console.error("purchaseCaseFromShop failed",error);
@@ -11758,6 +11802,11 @@ function runWorkerBackground(runtime, task, label = "background task") {
   }
   return false;
 }
+function sampleAdminPerformancePhase(env, runtime, area, startedAt, success = true, errorText = "") {
+  const task = recordV67PerformanceSample(env, area, Date.now() - Number(startedAt || Date.now()), success, errorText);
+  if (!runWorkerBackground(runtime, task, `performance phase ${area}`)) void Promise.resolve(task).catch(() => {});
+}
+
 
 async function handleCallbackQuery(query, env, runtime = {}) {
   // Do not delete the message that contains the pressed inline button.
@@ -16326,11 +16375,35 @@ async function handleStaffOperationsCallback(query, env) {
     return true;
   }
   if (data === "grant_home") {
+    const accessStartedAt = Date.now();
     const access = await requireAnySecurityPermission(chatId, query.from, ["grantRewards", "grantLegendaryCases"], env);
+    sampleAdminPerformancePhase(env, runtime, "grant_home:access", accessStartedAt, Boolean(access));
     if (!access) return true;
-    await clearStaffWorkflow(query.from.id, env);
-    await answerCallback(env, query.id, "Выберите награду.");
-    await sendTelegramMessage(env, chatId, "<b>Выдача награды</b>\n\nВыберите тип награды.", grantMainMarkup());
+    const workflowStartedAt = Date.now();
+    const callbackStartedAt = Date.now();
+    const workflowPromise = clearStaffWorkflow(query.from.id, env).then((value) => {
+      sampleAdminPerformancePhase(env, runtime, "grant_home:workflow", workflowStartedAt, true);
+      return value;
+    }, (error) => {
+      sampleAdminPerformancePhase(env, runtime, "grant_home:workflow", workflowStartedAt, false, error?.message || error);
+      throw error;
+    });
+    const callbackPromise = answerCallback(env, query.id, "Выберите награду.").then((value) => {
+      sampleAdminPerformancePhase(env, runtime, "grant_home:callback", callbackStartedAt, true);
+      return value;
+    }, (error) => {
+      sampleAdminPerformancePhase(env, runtime, "grant_home:callback", callbackStartedAt, false, error?.message || error);
+      throw error;
+    });
+    await Promise.all([workflowPromise, callbackPromise]);
+    const telegramStartedAt = Date.now();
+    try {
+      await sendTelegramMessage(env, chatId, "<b>Выдача награды</b>\n\nВыберите тип награды.", grantMainMarkup());
+      sampleAdminPerformancePhase(env, runtime, "grant_home:telegram", telegramStartedAt, true);
+    } catch (error) {
+      sampleAdminPerformancePhase(env, runtime, "grant_home:telegram", telegramStartedAt, false, error?.message || error);
+      throw error;
+    }
     return true;
   }
   const grantCatalog = data.match(/^grant_catalog:(case|avatar|frame|trail|skin)$/);
@@ -17061,8 +17134,24 @@ function adminMainMenuMarkup(access, overview = {}, env = {}) {
   return { inline_keyboard: rows };
 }
 async function showAdminMainMenu(chatId, user, env, options = {}) {
-  await clearBotPlayerSupportWorkflow(user?.id, env).catch(() => {});
-  const access = await getTeamAccess(user, env);
+  const runtime = options?.runtime || {};
+  const accessStartedAt = Date.now();
+  const supportStartedAt = Date.now();
+  const supportPromise = clearBotPlayerSupportWorkflow(user?.id, env).then((value) => {
+    sampleAdminPerformancePhase(env, runtime, "adm_home:support_cleanup", supportStartedAt, true);
+    return value;
+  }).catch((error) => {
+    sampleAdminPerformancePhase(env, runtime, "adm_home:support_cleanup", supportStartedAt, false, error?.message || error);
+    return null;
+  });
+  const accessPromise = getTeamAccess(user, env).then((value) => {
+    sampleAdminPerformancePhase(env, runtime, "adm_home:access", accessStartedAt, Boolean(value?.authorized));
+    return value;
+  }, (error) => {
+    sampleAdminPerformancePhase(env, runtime, "adm_home:access", accessStartedAt, false, error?.message || error);
+    throw error;
+  });
+  const [, access] = await Promise.all([supportPromise, accessPromise]);
   if (!access.authorized) {
     await sendTelegramMessage(env, chatId, access.reason === "expired" ? "Сессия истекла. Выполните <code>/staff</code>." : "Доступно только сотрудникам.");
     return;
@@ -17072,7 +17161,14 @@ async function showAdminMainMenu(chatId, user, env, options = {}) {
   const limitedAdministrator = !access.owner && role === "administrator";
   let overview = null;
   if (!frontline && !limitedAdministrator) {
-    try { overview = await getAdminOverviewFast(env, Boolean(options.forceRefresh)); } catch (error) { console.error("Admin overview failed", error); }
+    const overviewStartedAt = Date.now();
+    try {
+      overview = await getAdminOverviewFast(env, Boolean(options.forceRefresh));
+      sampleAdminPerformancePhase(env, runtime, "adm_home:overview", overviewStartedAt, true);
+    } catch (error) {
+      sampleAdminPerformancePhase(env, runtime, "adm_home:overview", overviewStartedAt, false, error?.message || error);
+      console.error("Admin overview failed", error);
+    }
   }
   const summary = overview
     ? `\n\n<b>${overview.healthIcon} Состояние игры</b>\n` +
@@ -17096,15 +17192,28 @@ async function showAdminMainMenu(chatId, user, env, options = {}) {
   const panelMarkup = adminMainMenuMarkup(access, overview || {}, env);
   const editMessageId = Math.floor(Number(options.editMessageId) || 0);
   if (editMessageId > 0) {
+    const telegramStartedAt = Date.now();
     try {
       await telegramApi(env, "editMessageText", { chat_id: chatId, message_id: editMessageId, text: panelText, parse_mode: "HTML", disable_web_page_preview: true, reply_markup: panelMarkup });
+      sampleAdminPerformancePhase(env, runtime, "adm_home:telegram", telegramStartedAt, true);
       return;
     } catch (error) {
-      if (/message is not modified/i.test(String(error?.description || error?.message || ""))) return;
+      if (/message is not modified/i.test(String(error?.description || error?.message || ""))) {
+        sampleAdminPerformancePhase(env, runtime, "adm_home:telegram", telegramStartedAt, true);
+        return;
+      }
+      sampleAdminPerformancePhase(env, runtime, "adm_home:telegram", telegramStartedAt, false, error?.message || error);
       console.error("Admin panel edit fallback", error);
     }
   }
-  await sendTelegramMessage(env, chatId, panelText, panelMarkup, { adminBack: false });
+  const telegramStartedAt = Date.now();
+  try {
+    await sendTelegramMessage(env, chatId, panelText, panelMarkup, { adminBack: false });
+    sampleAdminPerformancePhase(env, runtime, "adm_home:telegram", telegramStartedAt, true);
+  } catch (error) {
+    sampleAdminPerformancePhase(env, runtime, "adm_home:telegram", telegramStartedAt, false, error?.message || error);
+    throw error;
+  }
 }
 
 function banDurationLabel(blockType, blockedUntil) {
@@ -18320,8 +18429,18 @@ async function handleLiveOpsAdminCallback(query, env, runtime = {}) {
   const chatId = query.message?.chat?.id;
   if (!chatId) return false;
   if (await handleSafeControlCenterCallback(query, env, runtime)) return true;
-  if (data === "adm_home") { await answerCallback(env, query.id, "Админ-панель."); await showAdminMainMenu(chatId, query.from, env, { forceRefresh: false, editMessageId: query.message?.message_id }); return true; }
-  if (data === "adm_home_refresh") { await answerCallback(env, query.id, "Обновляю сводку."); await showAdminMainMenu(chatId, query.from, env, { forceRefresh: true, editMessageId: query.message?.message_id }); return true; }
+  if (data === "adm_home") {
+    const callbackStartedAt = Date.now();
+    const callbackPromise = answerCallback(env, query.id, "Админ-панель.").then((value) => { sampleAdminPerformancePhase(env, runtime, "adm_home:callback", callbackStartedAt, true); return value; }, (error) => { sampleAdminPerformancePhase(env, runtime, "adm_home:callback", callbackStartedAt, false, error?.message || error); throw error; });
+    await Promise.all([callbackPromise, showAdminMainMenu(chatId, query.from, env, { forceRefresh:false, editMessageId:query.message?.message_id, runtime })]);
+    return true;
+  }
+  if (data === "adm_home_refresh") {
+    const callbackStartedAt = Date.now();
+    const callbackPromise = answerCallback(env, query.id, "Обновляю сводку.").then((value) => { sampleAdminPerformancePhase(env, runtime, "adm_home_refresh:callback", callbackStartedAt, true); return value; }, (error) => { sampleAdminPerformancePhase(env, runtime, "adm_home_refresh:callback", callbackStartedAt, false, error?.message || error); throw error; });
+    await Promise.all([callbackPromise, showAdminMainMenu(chatId, query.from, env, { forceRefresh:true, editMessageId:query.message?.message_id, runtime })]);
+    return true;
+  }
   if (data === "adm_more") { await answerCallback(env, query.id, "Дополнительные инструменты."); await showOwnerMoreMenu(chatId, query.from, env, query.message?.message_id); return true; }
   if (data === "adm_players") { await answerCallback(env, query.id, "Список игроков."); await showPlayerMembers(chatId, query.from, env); return true; }
   if (data === "adm_moderation") { await answerCallback(env, query.id, "Модерация."); await showBannedPlayers(chatId, query.from, env); return true; }
