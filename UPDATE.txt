@@ -1,21 +1,27 @@
-FIX 1.0.9 — Алекс: одинаковая высота прыжка в тестовых сборках
+СЛАДКИЙ ЗАБЕГ — PROD HOTFIX · FAST COMPENSATION CLAIM
+Дата: 20.08.2026
 
-Что исправлено:
-- index_test.html (LOCAL 2.2) пересобран штатным scripts/build-local-test.mjs от текущего Production index.html, где фикс Алекса уже установлен.
-- index_testing_v1.0.9.html (legacy TEST) получил тот же визуальный фикс прыжка Алекса.
-- oversized jump.png Алекса плавно нормализуется только в воздухе.
-- Хитбокс, jumpVelocity, gravity, скорость, игровая физика и anti-cheat не изменены.
-- Остальные скины не изменены.
-- Test Project 5.5 продолжает использовать существующие цели: LOCAL -> /index_test.html, legacy -> /index_testing_v1.0.9.html.
+ИСПРАВЛЕНО
+- Ускорено получение подарков и компенсаций, состоящих только из кейсов (включая массовую выдачу Кейсов Алекса).
+- Убрана лишняя синхронная инициализация/сворачивание профиля из экономической доставки обычного кейса.
+- Для gift_inbox убрана дублирующая reward_delivery timeline-запись: остаётся единая gift_claim запись после успешной доставки всего подарка.
+- После атомарной записи case-only подарка сервер сразу возвращает статус «Получено», не ожидая повторного построения полного склада.
+- Склад кейсов обновляется клиентом отдельным быстрым запросом после успешной выдачи.
+- После мобильного timeout клиент перепроверяет одновременно и подарок, и склад, чтобы карточка не зависала в «Получаем…».
+- Надёжность очереди наград, idempotency и атомарная запись granted_cases сохранены.
 
-Проверка:
-- LOCAL 2.2: 9 inline JS scripts — syntax OK.
-- legacy TEST: 7 inline JS scripts — syntax OK.
-- Изменений backend / D1 / миграций нет.
+ИЗМЕНЕННЫЕ ФАЙЛЫ
+- index.html
+- src/worker.js
 
-Изменённые файлы:
-- index_test.html
-- index_testing_v1.0.9.html
+МИГРАЦИИ D1
+Нет.
 
-Деплой:
+ПРОВЕРКИ
+- src/worker.js: node --check — OK.
+- index.html embedded/outer executable inline scripts: 7/7 syntax OK.
+- Исходный Production index.html: Git blob 78dcf73c9a9c4eb349746d441e30f69fb8a9769c.
+- Исходный Production src/worker.js: Git blob fb985a3a193e1a78ceb9b5f4cf5e2628f06cb7a6.
+
+ДЕПЛОЙ
 npx wrangler deploy

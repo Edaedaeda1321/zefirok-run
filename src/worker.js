@@ -2618,14 +2618,12 @@ async function claimPlayerGift(request, env, ctx) {
       await env.DB.prepare(`UPDATE player_gift_inbox SET status='claimed',claimed_at=?,updated_at=? WHERE telegram_id=? AND gift_id=? AND status='claiming'`).bind(claimedAt,claimedAt,telegramId,giftId).run();
       try { await recordPlayerTimeline(env,telegramId,"gift_claim",`получил подарок «${String(row.title||"Подарок")}»`,{giftId,rewards,reason:row.reason},`gift_${giftId}`,null); } catch {}
     }
-    // The economic delivery is already committed above. Do not keep the player
-    // waiting for the full profile/case reconciliation: return a lightweight,
-    // authoritative warehouse snapshot immediately and finish maintenance in
-    // the background. This keeps compensation claims responsive on mobile.
-    const [cases,gifts] = await Promise.all([
-      buildFastCaseRefreshPayload(env,telegramId),
-      playerGiftInboxPayload(env,telegramId)
-    ]);
+    // The economic delivery is already committed above. Case-only gifts are very
+    // common for owner compensations and do not need a profile fold or a complete
+    // warehouse snapshot before the player can see "Получено". Return the claimed
+    // inbox state immediately and let the client refresh cases independently.
+    const caseOnlyGift = rewards.length > 0 && rewards.every((reward) => String(reward?.kind || "").toLowerCase() === "case");
+    const gifts = await playerGiftInboxPayload(env,telegramId);
     scheduleRunSettlementBackground(ctx,
       ensureAuthoritativeProfileRow(env,telegramId,`gift-post-claim:${giftId}`),
       "gift post-claim profile fold failed"
@@ -2634,7 +2632,11 @@ async function claimPlayerGift(request, env, ctx) {
       reconcileDeliveredSeasonPassCasesForPlayer(env,telegramId),
       "gift post-claim case reconcile failed"
     );
-    return jsonResponse({ ok:true, profile:{ ok:true, profile:cases.profile }, cases, gifts });
+    if (caseOnlyGift) {
+      return jsonResponse({ ok:true, gifts, caseRefreshRequired:true, deliveryCommitted:true });
+    }
+    const cases = await buildFastCaseRefreshPayload(env,telegramId);
+    return jsonResponse({ ok:true, profile:{ ok:true, profile:cases.profile }, cases, gifts, deliveryCommitted:true });
   } catch (error) {
     if (error instanceof ApiError) return jsonResponse({ ok:false, error:error.message }, error.status);
     console.error("claimPlayerGift failed", error);
@@ -19058,10 +19060,14 @@ async function deliverQueuedReward(env, row, leaseToken) {
   if (!queueId || !token) throw new Error("Некорректная блокировка очереди наград");
   const now = Math.floor(Date.now() / 1000);
 
-  // A promo, automation or campaign may reach a verified Telegram user before
-  // the first game launch. Creating zero-state rows is idempotent and happens
-  // before the atomic reward transaction.
-  await ensureAuthoritativeProfileRow(env, telegramId, `queue-profile:${queueId}`);
+  // Wallet-like rewards need admin_profile_state before the atomic fold.
+  // Pure case grants do not: granted_cases is authoritative on its own. Skipping
+  // the profile bootstrap for case-only gifts removes a costly DB fold from the
+  // player's synchronous claim path without changing the economic transaction.
+  const rewardKind = String(row.reward_kind || "");
+  if (["points", "zefir", "coffee"].includes(rewardKind)) {
+    await ensureAuthoritativeProfileRow(env, telegramId, `queue-profile:${queueId}`);
+  }
 
   let cosmeticDuplicate = false;
   let cosmeticId = "";
@@ -19168,9 +19174,14 @@ async function deliverQueuedReward(env, row, leaseToken) {
   // Everything below is non-economic side effect. A notification/timeline
   // failure must never make the atomic reward transaction retry.
   const rewardDescription = safeRewardDescription({ kind: row.reward_kind, id: row.reward_id, amount });
-  try {
-    await recordPlayerTimeline(env, telegramId, "reward_delivery", cosmeticDuplicate ? `получил дубликат: ${rewardDescription}` : `получил ${rewardDescription}`, { queueId, sourceType: row.source_type, sourceId: row.source_id, reason: row.reason, duplicate: cosmeticDuplicate }, `queue_${queueId}`, null);
-  } catch (error) { console.error("reward delivery timeline failed", error); }
+  // gift_inbox already writes one consolidated gift_claim timeline entry after
+  // all rewards are committed. Avoid a duplicate synchronous timeline write for
+  // every reward in the same gift.
+  if (String(row.source_type || "") !== "gift_inbox") {
+    try {
+      await recordPlayerTimeline(env, telegramId, "reward_delivery", cosmeticDuplicate ? `получил дубликат: ${rewardDescription}` : `получил ${rewardDescription}`, { queueId, sourceType: row.source_type, sourceId: row.source_id, reason: row.reason, duplicate: cosmeticDuplicate }, `queue_${queueId}`, null);
+    } catch (error) { console.error("reward delivery timeline failed", error); }
+  }
   if (["avatar", "frame", "trail", "skin", "music"].includes(row.reward_kind)) {
     try { await recordContentAnalyticsEvent(env, telegramId, row.reward_kind, cosmeticId || row.reward_id, cosmeticDuplicate ? "duplicate" : "acquired", row.source_type, row.source_id); } catch (error) { console.error("reward delivery analytics failed", error); }
   }

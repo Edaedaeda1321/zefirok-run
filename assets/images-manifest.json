@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "catalogHash": "edc87b994e25b546",
+  "catalogHash": "7b87e5db1c1567d6",
   "count": 351,
   "images": [
     {
@@ -2156,14 +2156,6 @@
       "modified": 1787159005224
     },
     {
-      "fileName": "skins/gameplay/alex/run1- Запасной.png",
-      "label": "Run1 Запасной",
-      "folder": "skins/gameplay/alex",
-      "path": "/assets/skins/gameplay/alex/run1-%20%D0%97%D0%B0%D0%BF%D0%B0%D1%81%D0%BD%D0%BE%D0%B8%CC%86.png",
-      "size": 1284816,
-      "modified": 1787159012745
-    },
-    {
       "fileName": "skins/gameplay/alex/run1.png",
       "label": "Run1",
       "folder": "skins/gameplay/alex",
@@ -2172,12 +2164,20 @@
       "modified": 1787158954137
     },
     {
+      "fileName": "skins/gameplay/alex/run2- Запаска.png",
+      "label": "Run2 Запаска",
+      "folder": "skins/gameplay/alex",
+      "path": "/assets/skins/gameplay/alex/run2-%20%D0%97%D0%B0%D0%BF%D0%B0%D1%81%D0%BA%D0%B0.png",
+      "size": 1428750,
+      "modified": 1787158960234
+    },
+    {
       "fileName": "skins/gameplay/alex/run2.png",
       "label": "Run2",
       "folder": "skins/gameplay/alex",
       "path": "/assets/skins/gameplay/alex/run2.png",
-      "size": 1428750,
-      "modified": 1787158960234
+      "size": 1284816,
+      "modified": 1787159012745
     },
     {
       "fileName": "skins/gameplay/alex/stand.png",

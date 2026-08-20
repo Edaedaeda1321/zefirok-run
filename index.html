@@ -16539,6 +16539,11 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           if (data.cases) applyServerCasePayload(data.cases);
           if (data.gifts) applyPlayerGiftPayload(data.gifts); else void loadPlayerGiftInbox(true);
           renderCaseHub();
+          if (data.caseRefreshRequired) {
+            // Case-only compensation is already committed. Do not block the gift UI
+            // on a second warehouse read; refresh it independently.
+            void loadCaseState(true, true).then(() =&gt; renderCaseHub()).catch(() =&gt; {});
+          }
           showProfileToast(&quot;🎁 Подарок получен&quot;, &quot;success&quot;);
           hapticNotify(&quot;success&quot;);
         } catch (error) {
@@ -16546,9 +16551,9 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           hapticNotify(&quot;error&quot;);
           if (button) { button.disabled = false; button.textContent = oldText; }
           // A mobile timeout can happen after the server has already committed
-          // the gift. Re-read the lightweight warehouse state so the player
-          // immediately sees the real result and never needs to guess/retry.
-          void loadCaseState(true, true);
+          // the gift. Re-read both inbox and warehouse state so neither the card
+          // nor the case counter can stay stuck in an old Получаем… snapshot.
+          void Promise.allSettled([loadPlayerGiftInbox(true), loadCaseState(true, true)]).then(() =&gt; renderCaseHub());
         }
       }
 
