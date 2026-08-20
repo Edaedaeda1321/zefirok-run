@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "catalogHash": "36e3d9ba6a39faf9",
+  "catalogHash": "2902c635f4c4e45c",
   "count": 349,
   "images": [
     {
@@ -2152,8 +2152,8 @@
       "label": "Run1",
       "folder": "skins/gameplay/alex",
       "path": "/assets/skins/gameplay/alex/run1.png",
-      "size": 1324392,
-      "modified": 1787158954137
+      "size": 1284816,
+      "modified": 1787159012745
     },
     {
       "fileName": "skins/gameplay/alex/run2.png",

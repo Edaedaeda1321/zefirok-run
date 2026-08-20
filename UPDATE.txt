@@ -1,30 +1,25 @@
-СЛАДКИЙ ЗАБЕГ — REPAIR ПОСЛЕ КОММИТА 8745128
+СЛАДКИЙ ЗАБЕГ — PROD HOTFIX · ALEX JUMP VISUAL
 Дата: 20.08.2026
 
-ПРИЧИНА
-Hotfix LOCAL 2.2 / Case Reliability был применён поверх проекта так, что macOS/Finder заменил служебные папки неполным содержимым патча. После git add -A это попало в commit 8745128 как удаления.
+ИСПРАВЛЕНО
+- Исправлена визуальная высота прыжка скина «Алекс» в основном Production-билде.
+- Физика прыжка, jumpVelocity, gravity, hitbox и серверная проверка забега НЕ изменены.
+- Причина: gameplay-арт Алекса 1254x1254 почти полностью заполняет квадрат, тогда как обычные jump-спрайты имеют заметные внутренние прозрачные поля. При одинаковой физической траектории Алекс визуально выглядел крупнее и казался прыгающим ниже.
+- Для Алекса добавлена плавная нормализация jump-спрайта по фактической высоте в воздухе: от 1.00 на земле до 0.84 на высоте 96 px и выше.
+- Добавлена компенсация отсутствующего нижнего прозрачного поля до 3 px на верхней части прыжка.
+- Эффект плавно возвращается к 0 перед приземлением, без скачка размера на земле.
+- Все остальные скины отрисовываются по прежней формуле 1:1.
 
-СЛУЧАЙНО УДАЛЁННЫЕ ФАЙЛЫ
-- scripts/check-assets.mjs
-- scripts/candidate-tp-bridge.js
-- candidates/V3/source/battle-pass.html
-- candidates/V3/source/legal.html
-- candidates/V3/source/rating.html
-
-ЧТО СДЕЛАНО
-- восстановлены 5 удалённых файлов байт-в-байт из непосредственного предыдущего commit 158357f064960fa2ea1b2787cf6023f2fbddce8a;
-- новый hotfix 8745128 (case reliability / LOCAL 2.2) НЕ откатывается;
-- в repair намеренно включены ПОЛНЫЕ папки scripts/ и candidates/, чтобы замена папки в Finder больше не удаляла соседние файлы.
+ФАЙЛЫ
+- index.html
+- UPDATE.txt
 
 ПРОВЕРКИ
-- scripts/check-assets.mjs blob SHA: 77facf445726f3f48e2f6e8ec002a9b626915e6f
-- scripts/candidate-tp-bridge.js blob SHA: 39de9a6e23364e1c230d687605ed9bf637cf1a0d
-- candidates/V3/source/battle-pass.html blob SHA: d5f7d136b6c31ed79f40708b5a52b8508958ad03
-- candidates/V3/source/legal.html blob SHA: 3d63baa85e9d483d346d4bfa4087e447b0f0b9a7
-- candidates/V3/source/rating.html blob SHA: 1acf1ff8c46d58c35f7d29fea52c43a1cc0eea46
-- node --check всех scripts: OK
-- node scripts/check-assets.mjs --news-manifest: OK
-- node scripts/check-assets.mjs --new-only: Asset check passed: 31 files
+- Патч сделан от текущего Production index.html (исходный Git blob bf158d802edcfdd1a322e0e0a931cf681cb9093a).
+- Все inline JS outer + embedded game: node --check — OK (7 scripts).
+- src/worker.js: node --check — OK; Worker не изменялся.
+- Non-Alex render path: scale=1, lift=0, прежний pivot/размер сохраняются математически.
+- Alex: плавный air tuning без изменения физики/коллизий/anti-cheat.
 
 МИГРАЦИИ D1
 Нет.
