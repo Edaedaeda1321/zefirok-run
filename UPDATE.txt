@@ -1,57 +1,19 @@
-СЛАДКИЙ ЗАБЕГ — LOCAL BUILD 2.0
-Дата: 20.08.2026
+Сладкий Забег — deploy repair 20.08.2026
 
-ЦЕЛЬ
-Полностью автономный 1:1 тестовый клиент для визуальной и клиентской QA-проверки без доступа к Production API, D1, реальному Telegram-профилю и CloudStorage.
+Причина:
+LOCAL BUILD 2.0 добавил новые файлы в scripts/, а при замене папки был потерян существующий scripts/check-assets.mjs.
+wrangler.jsonc обязательно запускает этот файл перед deploy, поэтому Wrangler завершался MODULE_NOT_FOUND до публикации.
 
-ЧТО ИЗМЕНЕНО
-1. Test Project
-- Добавлена сборка «LOCAL 2.0 · 1:1 автономный».
-- Кнопка «Открыть Мои покупки → Кейсы» открывает выбранную сборку, включая LOCAL.
-- Очистка локального кеша удаляет только LOCAL/TP namespace и не затрагивает Production.
+Исправлено:
+- восстановлен scripts/check-assets.mjs из последней рабочей версии проекта перед LOCAL BUILD 2.0;
+- содержимое восстановлено без изменений;
+- Git blob SHA: 77facf445726f3f48e2f6e8ec002a9b626915e6f;
+- синтаксис Node.js проверен через node --check.
 
-2. LOCAL BUILD 2.0
-- index_test.html генерируется из текущего index.html и сохраняет тот же HTML/CSS/JS клиента.
-- Добавлены локальные зеркала battle-pass_test.html, rating_test.html, referrals_test.html и legal_test.html.
-- Все тестовые страницы используют общий локальный state.
-- Реальный Telegram заменён Fake Telegram Adapter.
-- Telegram CloudStorage отключён.
-- CLIENT_ANTI_CHEAT_ENABLED=false только в index_test.html.
-- Auth, legal, maintenance и серверные игровые проверки обслуживаются локальным API-router.
-- Все /api/* перехватываются LocalGameServer и не уходят в Worker.
-- XMLHttpRequest, sendBeacon, WebSocket и EventSource заблокированы для сетевых действий.
-- Внешние fetch/navigation блокируются и записываются в Network Log.
-- localStorage/sessionStorage изолированы префиксом zefirok-local-build-v2:.
+Измененный файл:
+- scripts/check-assets.mjs
 
-3. Developer Drawer
-- Пресеты: новый игрок, богатый, Алекс 3/4, Season Pass 49/50, вся косметика.
-- Ручное изменение валют, XP, кейсов и Season Pass.
-- Forced drop кейса, duplicate, guaranteed и Алекс 4/4.
-- Виртуальное время.
-- Fault injection: HTTP 500, offline, timeout, delay по выбранному API path.
-- Snapshot A / Restore A / полный LOCAL reset.
-- Индикатор попыток внешней сети.
+Миграции D1 не нужны.
 
-4. Автогенерация
-scripts/build-local-test.mjs пересобирает тестовые HTML из текущих Production HTML.
-После следующих изменений index.html / battle-pass.html / rating.html / referrals.html / legal.html достаточно выполнить:
-  node scripts/build-local-test.mjs
-
-ВАЖНО
-LOCAL BUILD проверяет клиент, UI, анимации и локальные state transitions. Он намеренно НЕ проверяет настоящий Worker/D1. Для финальной интеграционной проверки перед Production используйте обычный Test Project 5.5 Sandbox.
-
-ИЗМЕНЕННЫЕ/НОВЫЕ ФАЙЛЫ
-- test-project.html
-- index_test.html
-- battle-pass_test.html
-- rating_test.html
-- referrals_test.html
-- legal_test.html
-- scripts/local-test-runtime.js
-- scripts/build-local-test.mjs
-
-МИГРАЦИИ
-Нет.
-
-ДЕПЛОЙ
+После замены файла выполнить одну команду:
 npx wrangler deploy
