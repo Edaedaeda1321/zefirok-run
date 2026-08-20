@@ -6844,8 +6844,11 @@ html&gt;body{padding:
 #zefirok-maltipoo-runner .player-gift-claim{width:100%;min-height:40px;border:0;border-radius:12px;background:linear-gradient(145deg,#ed8fb0,#d65a88);color:#fff;font-size:11px;font-weight:950;box-shadow:0 7px 14px rgba(190,72,115,.14)}
 #zefirok-maltipoo-runner .player-gift-claim:disabled{opacity:.62}
 #zefirok-maltipoo-runner .player-gift-empty{padding:12px;border-radius:13px;background:rgba(255,255,255,.72);color:#957681;font-size:10px;text-align:center}
-#zefirok-maltipoo-runner .case-result-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:15px}
+#zefirok-maltipoo-runner .case-result-actions{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;margin-top:15px;align-items:stretch}
+#zefirok-maltipoo-runner .case-result-actions.is-single-action{grid-template-columns:minmax(0,1fr)}
 #zefirok-maltipoo-runner .case-result-actions .case-result-done{margin-top:0}
+#zefirok-maltipoo-runner .case-result-actions>button{width:100%;min-width:0}
+#zefirok-maltipoo-runner .case-result-actions.is-single-action .case-result-done{grid-column:1/-1}
 #zefirok-maltipoo-runner .case-open-again{border:0;border-radius:14px;padding:11px 12px;background:linear-gradient(145deg,#fff0b8,#efbd49);color:#825719;font-weight:950}
 #zefirok-maltipoo-runner .case-open-again[hidden]{display:none!important}
 #zefirok-maltipoo-runner .case-open-again:disabled{opacity:.55}
@@ -7118,24 +7121,26 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 
 &lt;style id=&quot;zefirok-5-0-3-case-result-art-polish&quot;&gt;
 #zefirok-maltipoo-runner .case-result-head{position:relative;overflow:visible}
-#zefirok-maltipoo-runner .case-result-head .case-chest-visual{position:relative;display:grid;place-items:center;width:146px;height:146px;margin:-2px auto 0;isolation:isolate}
-#zefirok-maltipoo-runner .case-result-head .case-chest-visual.is-open{width:134px;height:134px;margin:0 auto 2px}
-#zefirok-maltipoo-runner .case-result-head.is-alex .case-chest-visual.is-open{width:132px;height:132px}
-#zefirok-maltipoo-runner .case-result-head .case-chest-visual-glow{position:absolute;left:50%;top:50%;width:118%;height:118%;transform:translate(-50%,-50%);border-radius:50%;background:radial-gradient(circle at 50% 42%,rgba(255,255,250,.98) 0%,rgba(255,246,223,.95) 28%,rgba(241,248,220,.84) 52%,rgba(226,244,191,.38) 66%,rgba(226,244,191,0) 78%);filter:blur(2px);opacity:.96;z-index:0;pointer-events:none}
-#zefirok-maltipoo-runner .case-result-head .case-chest-visual.is-closed .case-chest-visual-glow{width:112%;height:112%;background:radial-gradient(circle at 50% 42%,rgba(255,252,245,.96) 0%,rgba(255,240,223,.88) 34%,rgba(248,226,236,.42) 64%,rgba(248,226,236,0) 79%)}
-#zefirok-maltipoo-runner .case-result-head.is-alex .case-chest-visual .case-chest-visual-glow{background:radial-gradient(circle at 50% 42%,rgba(255,254,247,.98) 0%,rgba(255,244,224,.95) 27%,rgba(238,247,213,.9) 50%,rgba(199,225,120,.52) 67%,rgba(199,225,120,0) 80%)}
+#zefirok-maltipoo-runner .case-result-head .case-chest-visual{position:relative;display:grid;place-items:center;width:146px;height:146px;margin:-2px auto 0;overflow:visible;isolation:isolate}
+#zefirok-maltipoo-runner .case-result-head .case-chest-visual.is-open{width:128px;height:128px;margin:0 auto 4px}
+#zefirok-maltipoo-runner .case-result-head.is-alex .case-chest-visual.is-open{width:124px;height:124px}
+#zefirok-maltipoo-runner .case-result-head .case-chest-visual-glow{position:absolute;left:50%;top:50%;width:124%;height:124%;transform:translate(-50%,-50%);border-radius:50%;background:radial-gradient(circle at 50% 42%,rgba(255,255,250,.99) 0%,rgba(255,246,223,.96) 26%,rgba(241,248,220,.86) 49%,rgba(226,244,191,.4) 66%,rgba(226,244,191,0) 81%);filter:blur(3px);opacity:.98;z-index:0;pointer-events:none}
+#zefirok-maltipoo-runner .case-result-head .case-chest-visual.is-closed .case-chest-visual-glow{width:114%;height:114%;background:radial-gradient(circle at 50% 42%,rgba(255,252,245,.97) 0%,rgba(255,240,223,.9) 34%,rgba(248,226,236,.42) 64%,rgba(248,226,236,0) 79%)}
+#zefirok-maltipoo-runner .case-result-head.is-alex .case-chest-visual .case-chest-visual-glow{background:radial-gradient(circle at 50% 42%,rgba(255,254,247,.99) 0%,rgba(255,244,224,.96) 27%,rgba(238,247,213,.9) 50%,rgba(199,225,120,.5) 67%,rgba(199,225,120,0) 81%)}
+#zefirok-maltipoo-runner .case-result-head .case-chest-visual::after{content:"";position:absolute;left:50%;top:50%;width:122%;height:122%;transform:translate(-50%,-50%);border-radius:50%;background:radial-gradient(circle at 50% 48%,rgba(255,252,246,0) 0 54%,rgba(255,250,243,.22) 66%,rgba(255,248,241,.72) 82%,rgba(255,247,240,.98) 93%);z-index:2;pointer-events:none}
+#zefirok-maltipoo-runner .case-result-head .case-chest-visual.is-closed::after{display:none}
 #zefirok-maltipoo-runner .case-result-head .case-chest-visual .case-chest-image--roulette{position:relative;z-index:1;display:block!important;width:100%!important;height:100%!important;margin:0!important;object-fit:contain;object-position:center}
-#zefirok-maltipoo-runner .case-result-head .case-chest-visual .case-chest-image--roulette.is-open{transform:scale(.94)}
-#zefirok-maltipoo-runner .case-result-head.is-alex .case-chest-visual .case-chest-image--roulette.is-open{transform:scale(.92)}
+#zefirok-maltipoo-runner .case-result-head .case-chest-visual .case-chest-image--roulette.is-open{transform:translateY(-1px) scale(.9);filter:drop-shadow(0 12px 16px rgba(99,56,36,.18));-webkit-mask-image:radial-gradient(circle at 50% 47%,#000 0 57%,rgba(0,0,0,.98) 68%,rgba(0,0,0,.92) 75%,rgba(0,0,0,.72) 82%,rgba(0,0,0,0) 92%);mask-image:radial-gradient(circle at 50% 47%,#000 0 57%,rgba(0,0,0,.98) 68%,rgba(0,0,0,.92) 75%,rgba(0,0,0,.72) 82%,rgba(0,0,0,0) 92%);-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;-webkit-mask-size:100% 100%;mask-size:100% 100%}
+#zefirok-maltipoo-runner .case-result-head.is-alex .case-chest-visual .case-chest-image--roulette.is-open{transform:translateY(-1px) scale(.88);-webkit-mask-image:radial-gradient(circle at 50% 47%,#000 0 59%,rgba(0,0,0,.99) 70%,rgba(0,0,0,.94) 77%,rgba(0,0,0,.74) 84%,rgba(0,0,0,0) 93%);mask-image:radial-gradient(circle at 50% 47%,#000 0 59%,rgba(0,0,0,.99) 70%,rgba(0,0,0,.94) 77%,rgba(0,0,0,.74) 84%,rgba(0,0,0,0) 93%)}
 @media(max-width:390px){
   #zefirok-maltipoo-runner .case-result-head .case-chest-visual{width:132px;height:132px}
-  #zefirok-maltipoo-runner .case-result-head .case-chest-visual.is-open{width:122px;height:122px}
-  #zefirok-maltipoo-runner .case-result-head.is-alex .case-chest-visual.is-open{width:120px;height:120px}
+  #zefirok-maltipoo-runner .case-result-head .case-chest-visual.is-open{width:118px;height:118px}
+  #zefirok-maltipoo-runner .case-result-head.is-alex .case-chest-visual.is-open{width:114px;height:114px}
 }
 @media(max-height:760px){
   #zefirok-maltipoo-runner .case-result-head .case-chest-visual{width:126px;height:126px;margin:-2px auto 0}
-  #zefirok-maltipoo-runner .case-result-head .case-chest-visual.is-open{width:116px;height:116px;margin:0 auto 1px}
-  #zefirok-maltipoo-runner .case-result-head.is-alex .case-chest-visual.is-open{width:114px;height:114px}
+  #zefirok-maltipoo-runner .case-result-head .case-chest-visual.is-open{width:112px;height:112px;margin:0 auto 2px}
+  #zefirok-maltipoo-runner .case-result-head.is-alex .case-chest-visual.is-open{width:108px;height:108px}
 }
 &lt;/style&gt;
 
@@ -16351,12 +16356,22 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         const collectionBanner = isAlexCase &amp;&amp; alexCollection
           ? `&lt;div class=&quot;alex-case-result-collection${opened.alexCollectionRewardGranted ? &quot; is-complete&quot; : &quot;&quot;}&quot;&gt;&lt;span&gt;&lt;strong&gt;Коллекция Алекса · ${Number(alexCollection.count || 0)}/4&lt;/strong&gt;&lt;small&gt;${opened.alexCollectionRewardGranted ? &quot;4/4! Золотой кейс добавлен на склад.&quot; : &quot;Собирай Алекс · След · Рамку · Аватар&quot;}&lt;/small&gt;&lt;/span&gt;${opened.alexCollectionRewardGranted ? caseImageMarkup(&quot;gold&quot;, false, &quot;alex-case-result-gold&quot;) : &quot;&quot;}&lt;/div&gt;`
           : &quot;&quot;;
-        caseContentEl.innerHTML = `&lt;div class=&quot;case-result-head is-opening${isAlexCase ? &quot; is-alex&quot; : &quot;&quot;}&quot;&gt;${caseImageMarkup(opened.caseType || &quot;small&quot;, !isAlexCase, &quot;case-chest-image--roulette&quot;)}&lt;h2 id=&quot;case-dialog-title&quot;&gt;Открываем ${escapePurchaseText(opened.title || &quot;кейс&quot;)}&lt;/h2&gt;&lt;p&gt;${isAlexCase ? &quot;Лапки, изумруды и немного удачи…&quot; : &quot;Рулетка выбирает награду…&quot;}&lt;/p&gt;&lt;/div&gt;&lt;div class=&quot;case-roulette-list&quot;&gt;${rows}&lt;/div&gt;${collectionBanner}&lt;div class=&quot;case-result-actions&quot;&gt;&lt;button class=&quot;case-result-done&quot; data-case-close type=&quot;button&quot; disabled&gt;Забрать&lt;/button&gt;&lt;button class=&quot;case-open-again&quot; data-case-open-again=&quot;${escapePurchaseText(opened.caseType || &quot;small&quot;)}&quot; type=&quot;button&quot; hidden disabled&gt;Открыть ещё&lt;/button&gt;&lt;/div&gt;`;
+        caseContentEl.innerHTML = `&lt;div class=&quot;case-result-head is-opening${isAlexCase ? &quot; is-alex&quot; : &quot;&quot;}&quot;&gt;${caseImageMarkup(opened.caseType || &quot;small&quot;, !isAlexCase, &quot;case-chest-image--roulette&quot;)}&lt;h2 id=&quot;case-dialog-title&quot;&gt;Открываем ${escapePurchaseText(opened.title || &quot;кейс&quot;)}&lt;/h2&gt;&lt;p&gt;${isAlexCase ? &quot;Лапки, изумруды и немного удачи…&quot; : &quot;Рулетка выбирает награду…&quot;}&lt;/p&gt;&lt;/div&gt;&lt;div class=&quot;case-roulette-list&quot;&gt;${rows}&lt;/div&gt;${collectionBanner}&lt;div class=&quot;case-result-actions is-single-action&quot;&gt;&lt;button class=&quot;case-result-done&quot; data-case-close type=&quot;button&quot; disabled&gt;Забрать&lt;/button&gt;&lt;button class=&quot;case-open-again&quot; data-case-open-again=&quot;${escapePurchaseText(opened.caseType || &quot;small&quot;)}&quot; type=&quot;button&quot; hidden disabled&gt;Открыть ещё&lt;/button&gt;&lt;/div&gt;`;
         openCaseLayerShell();
         const rowsEls = [...caseContentEl.querySelectorAll(&quot;[data-case-roulette-row]&quot;)];
         const doneButton = caseContentEl.querySelector(&quot;.case-result-done&quot;);
         const openAgainButton = caseContentEl.querySelector(&quot;[data-case-open-again]&quot;);
+        const actionsEl = caseContentEl.querySelector(&quot;.case-result-actions&quot;);
         const head = caseContentEl.querySelector(&quot;.case-result-head&quot;);
+
+        const syncCaseResultActions = (remaining) =&gt; {
+          const hasOpenAgain = Boolean(openAgainButton &amp;&amp; remaining &gt; 0);
+          if (actionsEl) actionsEl.classList.toggle(&quot;is-single-action&quot;, !hasOpenAgain);
+          if (!openAgainButton) return;
+          openAgainButton.hidden = !hasOpenAgain;
+          openAgainButton.disabled = !hasOpenAgain;
+          if (hasOpenAgain) openAgainButton.textContent = remaining &gt; 1 ? `Открыть ещё · ${remaining}` : &quot;Открыть ещё&quot;;
+        };
 
         const settleRow = (row, index) =&gt; {
           if (row.dataset.rouletteSettled === &quot;1&quot;) return;
@@ -16369,11 +16384,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
             caseRouletteBusy = false;
             if (doneButton) doneButton.disabled = false;
             const remaining = remainingSameCaseCount(opened.caseType || &quot;small&quot;);
-            if (openAgainButton &amp;&amp; remaining &gt; 0) {
-              openAgainButton.hidden = false;
-              openAgainButton.disabled = false;
-              openAgainButton.textContent = remaining &gt; 1 ? `Открыть ещё · ${remaining}` : &quot;Открыть ещё&quot;;
-            }
+            syncCaseResultActions(remaining);
             if (head) {
               head.classList.remove(&quot;is-opening&quot;);
               if (isAlexCase) {
@@ -16437,7 +16448,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           caseRouletteBusy = false;
           if (doneButton) doneButton.disabled = false;
           const remaining = remainingSameCaseCount(opened.caseType || &quot;small&quot;);
-          if (openAgainButton &amp;&amp; remaining &gt; 0) { openAgainButton.hidden = false; openAgainButton.disabled = false; openAgainButton.textContent = remaining &gt; 1 ? `Открыть ещё · ${remaining}` : &quot;Открыть ещё&quot;; }
+          syncCaseResultActions(remaining);
         }
       }
 

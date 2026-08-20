@@ -1,18 +1,25 @@
 {
   "schemaVersion": 1,
   "version": "V3",
-  "candidate": "V3.0",
-  "title": "Сладкий Забег · V3.0",
-  "status": "DRAFT",
-  "sourceCommit": "f662f724326460522e273e1187369d31a2dc73d4",
+  "candidate": "V3.2",
+  "title": "Сладкий Забег · V3.2 · Purchase Flow QA Fix",
+  "status": "LOCAL_QA",
+  "sourceCommit": "c4e089c9314455d8d1667c1dc1851272c1fea31f",
   "createdAt": "2026-08-20T14:46:57.746Z",
-  "updatedAt": "2026-08-20T15:38:15.381Z",
-  "features": [],
+  "updatedAt": "2026-08-20T21:27:50.516Z",
+  "features": [
+    "purchase-sheet-v3",
+    "purchase-after-balance",
+    "purchase-case-inventory-preview",
+    "purchase-skin-preview",
+    "purchase-sheet-local-parity",
+    "rewards-v2-owned-cafe-actions"
+  ],
   "sourceFiles": {
-    "index.html": "74219add14da7efe",
+    "index.html": "ec25f37f5aaf0fe9",
     "battle-pass.html": "36caab19bb93200e",
     "rating.html": "9218191e1e975ec2",
-    "referrals.html": "3855cfb4a2c82b6d",
+    "referrals.html": "d67af81d034ed22c",
     "legal.html": "5a5939f0b18b4358"
   },
   "requiredChecks": [
@@ -29,7 +36,11 @@
     "legal-complete",
     "legal-document",
     "external-network-zero",
-    "new-js-errors"
+    "new-js-errors",
+    "purchase-sheet-case",
+    "purchase-sheet-skin",
+    "purchase-sheet-free",
+    "purchase-sheet-insufficient"
   ],
   "localQa": {
     "status": "pending"
