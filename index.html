@@ -16882,7 +16882,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         const oldText = button?.textContent || &quot;🎁 Забрать&quot;;
         if (button) { button.disabled = true; button.textContent = &quot;Получаем…&quot;; }
         try {
-          const response = await gameFetchWithTimeout(PLAYER_GIFTS_CLAIM_PATH, { method:&quot;POST&quot;, headers:{ &quot;Content-Type&quot;:&quot;application/json&quot; }, body:JSON.stringify({ initData:String(telegramProfile.initData), giftId:id, current:caseCurrentSnapshot() }), cache:&quot;no-store&quot;, credentials:&quot;same-origin&quot; }, 6500);
+          const response = await gameFetchWithTimeout(PLAYER_GIFTS_CLAIM_PATH, { method:&quot;POST&quot;, headers:{ &quot;Content-Type&quot;:&quot;application/json&quot; }, body:JSON.stringify({ initData:String(telegramProfile.initData), giftId:id, current:caseCurrentSnapshot() }), cache:&quot;no-store&quot;, credentials:&quot;same-origin&quot; }, 10000);
           const data = await response.json().catch(()=&gt;null);
           if (!response.ok || !data?.ok) throw new Error(data?.error || &quot;Не удалось получить подарок.&quot;);
           if (data.profile) applyServerProfilePayload(data.profile);
@@ -18357,6 +18357,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         window.scrollTo(0, saved.y || 0);
       }
       function closeFlashOffer(reason = &quot;dismiss&quot;) {
+        flashOfferPurchaseRequestId = &quot;&quot;;
         if (!flashOfferLayer || flashOfferLayer.hidden) return;
         const offer = flashOfferCurrent;
         flashOfferLayer.hidden = true;
@@ -18419,6 +18420,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           if (Number(error?.status || 0) &gt;= 500) console.warn(&quot;Flash offer load failed&quot;, error);
         } finally { flashOfferLoading = false; }
       }
+      let flashOfferPurchaseRequestId = &quot;&quot;;
       async function buyFlashOffer() {
         const offer = flashOfferCurrent;
         if (!offer || !telegramProfile?.initData || flashOfferBuy?.disabled) return;
@@ -18427,8 +18429,23 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         recordFlashOfferEvent(&quot;click&quot;, offer);
         hapticImpact(&quot;medium&quot;, 80);
         try {
-          const requestId = `offer_${makeRewardRequestId()}`.slice(0, 96);
-          const data = await rewardApiRequest(&quot;/api/shop/offers/purchase&quot;, { initData:String(telegramProfile.initData), offerId:offer.id, requestId, current:playerProfileSnapshot() });
+          const requestId = flashOfferPurchaseRequestId || (flashOfferPurchaseRequestId = `offer_${makeRewardRequestId()}`.slice(0, 96));
+          const payload = { initData:String(telegramProfile.initData), offerId:offer.id, requestId, current:playerProfileSnapshot() };
+          let data = null, lastError = null;
+          for (let attempt = 0; attempt &lt; 6; attempt += 1) {
+            try {
+              data = await rewardApiRequest(&quot;/api/shop/offers/purchase&quot;, payload, 9000);
+              if (!data?.pending) break;
+            } catch (error) {
+              lastError = error;
+              if (!error?.timeout &amp;&amp; error?.code !== &quot;REQUEST_TIMEOUT&quot;) throw error;
+            }
+            flashOfferMessage.textContent = &quot;Проверяем покупку…&quot;;
+            const waitMs = Math.max(650, Math.min(1400, Number(data?.retryAfterMs || 850)));
+            await new Promise((resolve) =&gt; window.setTimeout(resolve, waitMs));
+          }
+          if (!data || data.pending) throw lastError || new Error(&quot;Покупка ещё обрабатывается. Повторите через несколько секунд.&quot;);
+          flashOfferPurchaseRequestId = &quot;&quot;;
           antiCheatWithTrustedChange(&quot;flash-offer-purchase&quot;, () =&gt; {
             if (data.profile) {
               state.wallet = sanitizeGameNumber(data.profile.wallet);
@@ -18459,7 +18476,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           hapticNotify(&quot;error&quot;);
         }
       }
-      if (flashOfferClose) flashOfferClose.addEventListener(&quot;click&quot;, () =&gt; closeFlashOffer(&quot;dismiss&quot;));
+      if (flashOfferClose) flashOfferClose.addEventListener(&quot;click&quot;, () =&gt; { flashOfferPurchaseRequestId = &quot;&quot;; closeFlashOffer(&quot;dismiss&quot;); });
       if (flashOfferBuy) flashOfferBuy.addEventListener(&quot;click&quot;, buyFlashOffer);
       if (flashOfferLayer) {
         flashOfferLayer.addEventListener(&quot;click&quot;, (event) =&gt; { if (event.target === flashOfferLayer) closeFlashOffer(&quot;dismiss&quot;); });

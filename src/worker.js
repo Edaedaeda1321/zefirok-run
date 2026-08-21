@@ -2492,7 +2492,7 @@ async function playerGiftInboxPayload(env, telegramId) {
   const id = String(telegramId || "");
   const now = Math.floor(Date.now() / 1000);
   await env.DB.prepare(`UPDATE player_gift_inbox SET status='pending',updated_at=? WHERE telegram_id=? AND status='claiming' AND updated_at<?`)
-    .bind(now, id, now - 120).run();
+    .bind(now, id, now - 24).run();
   const [rows,pendingRow] = await Promise.all([
     env.DB.prepare(`SELECT gift_id,gift_kind,title,message_text,reason,rewards_json,status,created_at,claimed_at FROM player_gift_inbox WHERE telegram_id=? ORDER BY CASE status WHEN 'pending' THEN 0 WHEN 'claiming' THEN 1 ELSE 2 END, created_at DESC LIMIT 24`).bind(id).all(),
     env.DB.prepare(`SELECT COUNT(*) AS count FROM player_gift_inbox WHERE telegram_id=? AND status IN ('pending','claiming')`).bind(id).first()
@@ -2593,7 +2593,7 @@ async function claimPlayerGift(request, env, ctx) {
     if (!/^[A-Za-z0-9:_-]{4,120}$/.test(giftId)) throw new ApiError(400, "Некорректный подарок.");
     await ensurePlayerGiftInboxSchema(env);
     const now = Math.floor(Date.now() / 1000);
-    await env.DB.prepare(`UPDATE player_gift_inbox SET status='pending',updated_at=? WHERE telegram_id=? AND gift_id=? AND status='claiming' AND updated_at<?`).bind(now,telegramId,giftId,now-120).run();
+    await env.DB.prepare(`UPDATE player_gift_inbox SET status='pending',updated_at=? WHERE telegram_id=? AND gift_id=? AND status='claiming' AND updated_at<?`).bind(now,telegramId,giftId,now-24).run();
     let row = await env.DB.prepare(`SELECT * FROM player_gift_inbox WHERE telegram_id=? AND gift_id=? LIMIT 1`).bind(telegramId,giftId).first();
     if (!row) throw new ApiError(404, "Подарок не найден.");
     if (String(row.status) === "claimed") {
@@ -6481,8 +6481,8 @@ async function purchaseCaseFromShop(request, env, ctx = null) {
   }
 }
 
-const GRANTED_CASE_OPENING_STALE_SECONDS = 120;
-const GRANTED_CASE_RETRY_LEASE_SECONDS = 16;
+const GRANTED_CASE_OPENING_STALE_SECONDS = 24;
+const GRANTED_CASE_RETRY_LEASE_SECONDS = 12;
 
 async function releaseGrantedCaseOpeningReservations(env, telegramId, caseId, requestId, openingStartedAt = 0) {
   const id=String(telegramId||''), grantId=String(caseId||''), token=String(requestId||''), startedAt=Math.max(0,safeAdminNumber(openingStartedAt));
@@ -23782,10 +23782,12 @@ async function ensureSeasonPassSchema(env) {
         status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','opening','opened')), rewards_json TEXT NOT NULL DEFAULT '[]', snapshot_json TEXT NOT NULL DEFAULT '{}',
         opening_started_at INTEGER NOT NULL DEFAULT 0, opening_token TEXT NOT NULL DEFAULT '', granted_by TEXT NOT NULL DEFAULT '', created_at INTEGER NOT NULL, opened_at INTEGER NOT NULL DEFAULT 0
       )`),
-      env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_season_pass_case_grants_player ON season_pass_case_grants(telegram_id,status,created_at,case_id)`)
+      env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_season_pass_case_grants_player ON season_pass_case_grants(telegram_id,status,created_at,case_id)`),
+      env.DB.prepare(`CREATE TABLE IF NOT EXISTS season_pass_case_opening_guards (guard_id TEXT PRIMARY KEY,ok INTEGER NOT NULL CONSTRAINT season_pass_case_opening_guard_ok CHECK(ok=1))`)
     ]);
     await addRuntimeColumnIfMissing(env, 'season_pass_run_xp', 'applied_at', 'INTEGER NOT NULL DEFAULT 1');
     await addRuntimeColumnIfMissing(env, 'season_pass_case_grants', 'snapshot_json', "TEXT NOT NULL DEFAULT '{}'");
+    await addRuntimeColumnIfMissing(env, 'season_pass_case_grants', 'open_request_id', "TEXT NOT NULL DEFAULT ''");
     await addRuntimeColumnIfMissing(env, 'season_pass_case_definitions', 'reward_groups_json', "TEXT NOT NULL DEFAULT '{}'");
     await env.DB.prepare(`UPDATE season_pass_case_resource_items SET image_url='${SEASON_PASS_TREATS_CURRENCY_IMAGE}' WHERE reward_kind='treats' AND image_url<>'${SEASON_PASS_TREATS_CURRENCY_IMAGE}'`).run();
     await env.DB.prepare(`UPDATE season_pass_rewards SET image_url='${SEASON_PASS_TREATS_CURRENCY_IMAGE}' WHERE reward_type='treats' AND image_url<>'${SEASON_PASS_TREATS_CURRENCY_IMAGE}'`).run();
@@ -25189,19 +25191,22 @@ function seasonPassSeasonalCaseWeightedPick(items,groupChances=null,rng=Math.ran
 }
 
 async function openSeasonPassSeasonalCase(request,env,executionCtx=null){
-  let grantId='',token='';
+  let grantId='',token='',requestId='',openingStartedAt=0;
   try{
-    const ctx=await seasonPassRequestContext(request,env);const caseId=String(ctx.body?.caseId||'').trim();if(!caseId)throw new ApiError(400,'Не выбран сезонный кейс.');
+    const ctx=await seasonPassRequestContext(request,env);const caseId=String(ctx.body?.caseId||'').trim();requestId=String(ctx.body?.requestId||'').trim();if(!caseId)throw new ApiError(400,'Не выбран сезонный кейс.');if(!/^[A-Za-z0-9_-]{12,100}$/.test(requestId))throw new ApiError(400,'Некорректный идентификатор открытия.');
     const now=Math.floor(Date.now()/1000);
     const taskEventPromise=prepareSeasonPassTaskProgressEvent(env,ctx.telegramId,{cases_opened:1},now,{season:ctx.season,player:ctx.player}).catch((error)=>{console.error('seasonal case task progress prepare failed',error);return null;});
     const definition=await env.DB.prepare(`SELECT d.*,s.title AS season_title FROM season_pass_case_definitions d LEFT JOIN season_pass_seasons s ON s.season_id=d.season_id WHERE d.case_id=? LIMIT 1`).bind(caseId).first();
     if(!definition||!Number(definition.enabled||0)||Number(definition.release_at||0)>now)throw new ApiError(409,'Этот сезонный кейс пока недоступен.');
-    const staleCutoff=now-120;await env.DB.prepare(`UPDATE season_pass_case_grants SET status='pending',opening_started_at=0,opening_token='' WHERE telegram_id=? AND case_id=? AND status='opening' AND opening_started_at<=?`).bind(ctx.telegramId,caseId,staleCutoff).run();
+    let existingRequest=await env.DB.prepare(`SELECT grant_id,status,rewards_json,snapshot_json,opened_at,opening_started_at,opening_token FROM season_pass_case_grants WHERE telegram_id=? AND case_id=? AND open_request_id=? ORDER BY created_at,grant_id LIMIT 1`).bind(ctx.telegramId,caseId,requestId).first();
+    if(String(existingRequest?.status||'')==='opened'){const previousRewards=safeJson(existingRequest.rewards_json,[]),previousSnapshot=safeJson(existingRequest.snapshot_json,{}),inventory=await seasonPassSeasonalCaseInventory(env,ctx.telegramId);return jsonResponse({ok:true,repeated:true,case:{caseId,grantId:String(existingRequest.grant_id||''),title:String(previousSnapshot?.title||definition.title||'Сезонный кейс'),imageUrl:String(previousSnapshot?.openImageUrl||previousSnapshot?.imageUrl||definition.open_image_url||definition.closed_image_url||''),rewards:Array.isArray(previousRewards)?previousRewards:[]},seasonalCases:inventory});}
+    if(String(existingRequest?.status||'')==='opening'){const started=Math.max(0,Number(existingRequest.opening_started_at||0)),age=started?Math.max(0,now-started):12;if(age<12)return jsonResponse({ok:true,pending:true,requestId,retryAfterMs:900},202);const reset=await env.DB.prepare(`UPDATE season_pass_case_grants SET status='pending',opening_started_at=0,opening_token='',open_request_id='' WHERE grant_id=? AND telegram_id=? AND status='opening' AND opening_started_at=? AND opening_token=? AND open_request_id=?`).bind(String(existingRequest.grant_id||''),ctx.telegramId,started,String(existingRequest.opening_token||''),requestId).run();if(Number(reset?.meta?.changes||0)<1)return jsonResponse({ok:true,pending:true,requestId,retryAfterMs:700},202);}
+    const staleCutoff=now-24;await env.DB.prepare(`UPDATE season_pass_case_grants SET status='pending',opening_started_at=0,opening_token='',open_request_id='' WHERE telegram_id=? AND case_id=? AND status='opening' AND (opening_started_at=0 OR opening_started_at<=?)`).bind(ctx.telegramId,caseId,staleCutoff).run();
     const grant=await env.DB.prepare(`SELECT grant_id,snapshot_json FROM season_pass_case_grants WHERE telegram_id=? AND case_id=? AND status='pending' ORDER BY created_at,grant_id LIMIT 1`).bind(ctx.telegramId,caseId).first();
     if(!grant?.grant_id)throw new ApiError(409,'Сезонных кейсов этого типа нет.');
-    grantId=String(grant.grant_id);token=crypto.randomUUID().replace(/-/g,'');
-    const claim=await env.DB.prepare(`UPDATE season_pass_case_grants SET status='opening',opening_started_at=?,opening_token=? WHERE grant_id=? AND telegram_id=? AND status='pending'`).bind(now,token,grantId,ctx.telegramId).run();
-    if(Number(claim?.meta?.changes||0)<1)throw new ApiError(409,'Этот сезонный кейс уже открывается.');
+    grantId=String(grant.grant_id);token=crypto.randomUUID().replace(/-/g,'');openingStartedAt=now;
+    const claim=await env.DB.prepare(`UPDATE season_pass_case_grants SET status='opening',opening_started_at=?,opening_token=?,open_request_id=? WHERE grant_id=? AND telegram_id=? AND status='pending'`).bind(now,token,requestId,grantId,ctx.telegramId).run();
+    if(Number(claim?.meta?.changes||0)<1)return jsonResponse({ok:true,pending:true,requestId,retryAfterMs:700},202);
     const [effectiveItems,ensured,taskEvent]=await Promise.all([seasonPassEffectiveCaseItems(env,caseId),ensureCasePlayerState(env,ctx.telegramId,{}),taskEventPromise]);
     const snapshot=safeJson(grant.snapshot_json,{});const snapshotItems=Array.isArray(snapshot?.items)?snapshot.items:[];
     const sourceItems=snapshotItems.length?snapshotItems:effectiveItems;
@@ -25231,18 +25236,20 @@ async function openSeasonPassSeasonalCase(request,env,executionCtx=null){
       }
       candidates=candidates.filter(row=>String(row.item_key)!==String(pick.item_key));if(!candidates.length&&slot+1<slots)break;
     }
-    const statements=[];
+    const openingGuardId=`spcase:${grantId}:${token}`.slice(0,180);
+    const statements=[env.DB.prepare(`INSERT INTO season_pass_case_opening_guards(guard_id,ok) VALUES(?,COALESCE((SELECT CASE WHEN status='opening' AND opening_started_at=? AND opening_token=? AND open_request_id=? THEN 1 ELSE 0 END FROM season_pass_case_grants WHERE grant_id=? AND telegram_id=? LIMIT 1),0))`).bind(openingGuardId,openingStartedAt,token,requestId,grantId,ctx.telegramId)];
     if(walletTotals.points||walletTotals.treats||walletTotals.coffee)statements.push(env.DB.prepare(`UPDATE admin_profile_state SET pending_wallet=pending_wallet+?,pending_treats=pending_treats+?,pending_coffee=pending_coffee+?,revision=revision+1,updated_at=?,updated_by=? WHERE telegram_id=?`).bind(walletTotals.points,walletTotals.treats,walletTotals.coffee,now,`seasonal-case:${caseId}`,ctx.telegramId));
     let caseGrantIndex=0;for(const reward of normalCaseRewards){for(let i=0;i<reward.amount;i+=1){caseGrantIndex+=1;const normalGrantId=`spcase_reward_${grantId}_${caseGrantIndex}`.slice(0,180);statements.push(env.DB.prepare(`INSERT OR IGNORE INTO granted_cases(id,telegram_id,case_type,status,granted_by,reason,created_at) VALUES(?,?,?,'pending',?,?,?)`).bind(normalGrantId,ctx.telegramId,reward.caseType,`seasonal-case:${caseId}`,String(definition.title||'Сезонный кейс').slice(0,300),now));}}
     statements.push(caseStateUpdateStatement(env,ctx.telegramId,ensured.state,now));
-    statements.push(env.DB.prepare(`UPDATE season_pass_case_grants SET status='opened',rewards_json=?,opened_at=?,opening_started_at=0,opening_token='' WHERE grant_id=? AND telegram_id=? AND status='opening' AND opening_token=?`).bind(JSON.stringify(rewards),now,grantId,ctx.telegramId,token));
-    const batch=await env.DB.batch(statements);const finalized=Number(batch?.[batch.length-1]?.meta?.changes||0)>0;if(!finalized)throw new ApiError(409,'Состояние кейса изменилось. Повторите открытие.');
+    statements.push(env.DB.prepare(`UPDATE season_pass_case_grants SET status='opened',rewards_json=?,opened_at=?,opening_started_at=0,opening_token='' WHERE grant_id=? AND telegram_id=? AND status='opening' AND opening_started_at=? AND opening_token=? AND open_request_id=?`).bind(JSON.stringify(rewards),now,grantId,ctx.telegramId,openingStartedAt,token,requestId));
+    statements.push(env.DB.prepare(`DELETE FROM season_pass_case_opening_guards WHERE guard_id=?`).bind(openingGuardId));
+    const batch=await env.DB.batch(statements);const finalized=Number(batch?.[batch.length-2]?.meta?.changes||0)>0;if(!finalized)throw new ApiError(409,'Состояние кейса изменилось. Повторите открытие.');
     const caseTaskStatements=taskEvent?[...seasonPassCaseProgressReconcileStatements(env,ctx.telegramId,taskEvent,now),...(taskEvent.notificationStatements||[])]:[];
     const [inventory]=await Promise.all([seasonPassSeasonalCaseInventory(env,ctx.telegramId),caseTaskStatements.length?env.DB.batch(caseTaskStatements):Promise.resolve([])]);
     seasonPassBackgroundWork(executionCtx,recordPlayerTimeline(env,ctx.telegramId,'seasonal_case_open',`открыл сезонный кейс «${String(definition.title||caseId)}»`,{caseId,grantId,rewards},`seasonal_case_${grantId}`,ctx.auth.user,now),'seasonal case timeline failed');
     seasonPassBackgroundWork(executionCtx,deliverSeasonPassTaskNotificationsForRows(env,ctx.telegramId,taskEvent?.season||ctx.season,taskEvent?.taskRows||[]),'seasonal case task notification failed');
     return jsonResponse({ok:true,case:{caseId,grantId,title:String(snapshot?.title||definition.title||'Сезонный кейс'),imageUrl:String(snapshot?.openImageUrl||snapshot?.imageUrl||definition.open_image_url||definition.closed_image_url||''),rewards},seasonalCases:inventory});
-  }catch(error){if(grantId&&token){try{await env.DB.prepare(`UPDATE season_pass_case_grants SET status='pending',opening_started_at=0,opening_token='' WHERE grant_id=? AND status='opening' AND opening_token=?`).bind(grantId,token).run();}catch{}}if(error instanceof ApiError)return jsonResponse({ok:false,error:error.message},error.status);console.error('openSeasonPassSeasonalCase failed',error);return jsonResponse({ok:false,error:'Не удалось открыть сезонный кейс.'},500);}
+  }catch(error){if(grantId&&token){try{await env.DB.prepare(`UPDATE season_pass_case_grants SET status='pending',opening_started_at=0,opening_token='',open_request_id='' WHERE grant_id=? AND status='opening' AND opening_started_at=? AND opening_token=? AND open_request_id=?`).bind(grantId,openingStartedAt,token,requestId).run();}catch{}}if(error instanceof ApiError)return jsonResponse({ok:false,error:error.message},error.status);const text=String(error?.message||error);if(text.includes('season_pass_case_opening_guard_ok'))return jsonResponse({ok:false,error:'Открытие было восстановлено после задержки. Повторите действие.'},409);console.error('openSeasonPassSeasonalCase failed',error);return jsonResponse({ok:false,error:'Не удалось открыть сезонный кейс.'},500);}
 }
 
 async function processSeasonPassTeaserNotifications(env){
@@ -25764,9 +25771,9 @@ async function claimSeasonPassOverflow(request,env){
       if(Number(reserved?.meta?.changes||0)<1){
         const existing=await env.DB.prepare(`SELECT status,claimed_at FROM season_pass_claims WHERE season_id=? AND telegram_id=? AND level=? AND lane='overflow' LIMIT 1`).bind(ctx.season.id,ctx.telegramId,level).first();
         const status=String(existing?.status||'');
-        const stale=(status==='pending'&&now-Number(existing?.claimed_at||now)>=120)||status==='failed';
+        const stale=(status==='pending'&&now-Number(existing?.claimed_at||now)>=24)||status==='failed';
         if(stale){
-          const recovered=await env.DB.prepare(`UPDATE season_pass_claims SET status='pending',reward_json=?,claimed_at=?,delivered_at=0,error_text='' WHERE season_id=? AND telegram_id=? AND level=? AND lane='overflow' AND (status='failed' OR (status='pending' AND claimed_at<=?))`).bind(JSON.stringify(reward),now,ctx.season.id,ctx.telegramId,level,now-120).run();
+          const recovered=await env.DB.prepare(`UPDATE season_pass_claims SET status='pending',reward_json=?,claimed_at=?,delivered_at=0,error_text='' WHERE season_id=? AND telegram_id=? AND level=? AND lane='overflow' AND (status='failed' OR (status='pending' AND claimed_at<=?))`).bind(JSON.stringify(reward),now,ctx.season.id,ctx.telegramId,level,now-24).run();
           if(Number(recovered?.meta?.changes||0)<1){busyCount+=1;continue;}
         }else{busyCount+=1;continue;}
       }
@@ -31313,7 +31320,9 @@ const FLASH_OFFER_PURCHASE_SCHEMA_SQL = `CREATE TABLE IF NOT EXISTS shop_flash_o
   price_coffee INTEGER NOT NULL DEFAULT 0,
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL,
-  completed_at INTEGER NOT NULL DEFAULT 0
+  completed_at INTEGER NOT NULL DEFAULT 0,
+  execution_token TEXT NOT NULL DEFAULT '',
+  execution_started_at INTEGER NOT NULL DEFAULT 0
 )`;
 const FLASH_OFFER_PURCHASE_GUARD_SCHEMA_SQL = `CREATE TABLE IF NOT EXISTS shop_flash_offer_purchase_guards (
   guard_id TEXT PRIMARY KEY,
@@ -31339,6 +31348,8 @@ async function ensureFlashOfferSchema(env) {
     env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_flash_offer_purchases_player ON shop_flash_offer_purchases(telegram_id,offer_id,status,created_at)`),
     env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_flash_offer_events_offer ON shop_flash_offer_events(offer_id,event_type,created_at)`)
   ]);
+  await addRuntimeColumnIfMissing(env,'shop_flash_offer_purchases','execution_token',"TEXT NOT NULL DEFAULT ''");
+  await addRuntimeColumnIfMissing(env,'shop_flash_offer_purchases','execution_started_at','INTEGER NOT NULL DEFAULT 0');
   flashOfferSchemaReady = true;
 }
 function flashOfferId(prefix = "offer") {
@@ -31673,21 +31684,22 @@ async function releaseFlashOfferReservedStock(env,purchaseId){
   return rows.length;
 }
 
-async function cleanupStaleFlashOfferReservations(env,cutoff=Math.floor(Date.now()/1000)-300,limit=100){
+async function cleanupStaleFlashOfferReservations(env,cutoff=Math.floor(Date.now()/1000)-30,limit=100){
   await ensureFlashOfferSchema(env);
-  const rows=(await env.DB.prepare(`SELECT purchase_id FROM shop_flash_offer_purchases WHERE status='reserved' AND created_at<? ORDER BY created_at ASC LIMIT ?`).bind(Number(cutoff),Math.max(1,Math.min(200,Number(limit)||100))).all()).results||[];
+  const rows=(await env.DB.prepare(`SELECT purchase_id,execution_token,execution_started_at FROM shop_flash_offer_purchases WHERE status='reserved' AND COALESCE(NULLIF(execution_started_at,0),updated_at,created_at)<? ORDER BY COALESCE(NULLIF(execution_started_at,0),updated_at,created_at) ASC LIMIT ?`).bind(Number(cutoff),Math.max(1,Math.min(200,Number(limit)||100))).all()).results||[];
   let cleaned=0,released=0;
   for(const row of rows){
-    const purchaseId=String(row.purchase_id||'');
+    const purchaseId=String(row.purchase_id||''),token=String(row.execution_token||''),startedAt=Math.max(0,Number(row.execution_started_at||0));
+    const removed=await env.DB.prepare(`DELETE FROM shop_flash_offer_purchases WHERE purchase_id=? AND status='reserved' AND execution_token=? AND execution_started_at=? AND COALESCE(NULLIF(execution_started_at,0),updated_at,created_at)<?`).bind(purchaseId,token,startedAt,Number(cutoff)).run();
+    if(safeAdminNumber(removed?.meta?.changes)<1)continue;
     released+=await releaseFlashOfferReservedStock(env,purchaseId);
-    const removed=await env.DB.prepare(`DELETE FROM shop_flash_offer_purchases WHERE purchase_id=? AND status='reserved' AND created_at<?`).bind(purchaseId,Number(cutoff)).run();
-    cleaned+=safeAdminNumber(removed?.meta?.changes);
+    cleaned+=1;
   }
   return {cleaned,released};
 }
 
 async function purchaseFlashOffer(request, env) {
-  let reservedPurchaseId="", stockConsumptionIds=[], purchaseCommitted=false;
+  let reservedPurchaseId="", stockConsumptionIds=[], purchaseCommitted=false, executionToken="", executionStartedAt=0;
   try {
     requireDatabase(env); requireBotToken(env); await ensureFlashOfferSchema(env);
     const body=await readJson(request); const auth=await validateTelegramInitData(String(body.initData||""),env); const telegramId=String(auth.user.id); const offerId=String(body.offerId||"").trim(); const requestId=String(body.requestId||"").trim();
@@ -31695,16 +31707,15 @@ async function purchaseFlashOffer(request, env) {
     const existing=await env.DB.prepare(`SELECT * FROM shop_flash_offer_purchases WHERE request_id=? AND telegram_id=? LIMIT 1`).bind(requestId,telegramId).first();
     if(existing?.status==="completed")return jsonResponse({ok:true,repeated:true,purchaseId:String(existing.purchase_id),profile:await flashOfferProfilePayload(env,telegramId),rewards:ownerV8SafeJson(existing.rewards_json,[]),physicalRewards:ownerV8SafeJson(existing.physical_codes_json,[])});
     const row=await env.DB.prepare(`SELECT * FROM shop_flash_offers WHERE offer_id=? LIMIT 1`).bind(offerId).first(); if(!row)throw new ApiError(404,"Акция больше недоступна.");
-    const now=Math.floor(Date.now()/1000); if(String(row.status)!=="published"||Number(row.enabled)!==1||(Number(row.starts_at)>0&&Number(row.starts_at)>now)||(Number(row.ends_at)>0&&Number(row.ends_at)<=now))throw new ApiError(409,"Акция уже завершилась или временно отключена.");
-    if(!(await flashOfferMatchesSegment(env,telegramId,row.segment_key)))throw new ApiError(403,"Эта акция недоступна для вашего аккаунта.");
+    const now=Math.floor(Date.now()/1000); const resuming=String(existing?.status||"")==="reserved"; if(!resuming&&(String(row.status)!=="published"||Number(row.enabled)!==1||(Number(row.starts_at)>0&&Number(row.starts_at)>now)||(Number(row.ends_at)>0&&Number(row.ends_at)<=now)))throw new ApiError(409,"Акция уже завершилась или временно отключена.");
+    if(!resuming&&!(await flashOfferMatchesSegment(env,telegramId,row.segment_key)))throw new ApiError(403,"Эта акция недоступна для вашего аккаунта.");
     const rewards=flashOfferNormalizeRewards(ownerV8SafeJson(row.rewards_json,[])); const limit=Math.max(0,Math.min(99,Number(row.purchase_limit||0)));
     const passContext=await flashOfferSeasonPassContext(env,telegramId,rewards,{createPlayer:true});
     if(passContext&&!passContext.eligible)throw new ApiError(409,passContext.reason||"Сезонный пропуск из этой акции сейчас недоступен.");
     if(passContext?.requestedTier&&limit!==1)throw new ApiError(409,"Акция с сезонным пропуском должна иметь лимит 1 покупка на игрока.");
     if(rewards.some((reward)=>flashOfferCosmeticDefinition(reward.kind,reward.id))&&limit!==1)throw new ApiError(409,"Акция с уникальным предметом оформления должна иметь лимит 1 покупка на игрока.");
-    if(existing?.status==="reserved"&&now-Number(existing.created_at||0)>180){await releaseFlashOfferReservedStock(env,String(existing.purchase_id));await env.DB.prepare(`DELETE FROM shop_flash_offer_purchases WHERE purchase_id=? AND status='reserved' AND created_at<?`).bind(String(existing.purchase_id),now-180).run();}
-    const staleReservations=(await env.DB.prepare(`SELECT purchase_id FROM shop_flash_offer_purchases WHERE offer_id=? AND telegram_id=? AND status='reserved' AND created_at<? LIMIT 20`).bind(offerId,telegramId,now-180).all()).results||[];
-    for(const stale of staleReservations){await releaseFlashOfferReservedStock(env,String(stale.purchase_id));await env.DB.prepare(`DELETE FROM shop_flash_offer_purchases WHERE purchase_id=? AND status='reserved' AND created_at<?`).bind(String(stale.purchase_id),now-180).run();}
+    const staleReservations=(await env.DB.prepare(`SELECT purchase_id,execution_token,execution_started_at FROM shop_flash_offer_purchases WHERE offer_id=? AND telegram_id=? AND status='reserved' AND request_id<>? AND COALESCE(NULLIF(execution_started_at,0),updated_at,created_at)<? LIMIT 20`).bind(offerId,telegramId,requestId,now-24).all()).results||[];
+    for(const stale of staleReservations){const stalePurchaseId=String(stale.purchase_id||''),staleToken=String(stale.execution_token||''),staleStartedAt=Math.max(0,Number(stale.execution_started_at||0));const removed=await env.DB.prepare(`DELETE FROM shop_flash_offer_purchases WHERE purchase_id=? AND status='reserved' AND execution_token=? AND execution_started_at=?`).bind(stalePurchaseId,staleToken,staleStartedAt).run();if(safeAdminNumber(removed?.meta?.changes)>0)await releaseFlashOfferReservedStock(env,stalePurchaseId);}
     const completedRow=await env.DB.prepare(`SELECT COUNT(*) AS count FROM shop_flash_offer_purchases WHERE offer_id=? AND telegram_id=? AND status='completed'`).bind(offerId,telegramId).first(); if(limit>0&&Number(completedRow?.count||0)>=limit)throw new ApiError(409,"Лимит покупок этой акции уже исчерпан.");
     const hasInventoryBoosters=rewards.some(r=>["booster_points","booster_treats","booster_coffee"].includes(String(r.kind))||Boolean(flashOfferRunBoosterDefinition(r.kind)));
     const cosmeticRewards=rewards.filter((reward)=>flashOfferCosmeticDefinition(reward.kind,reward.id));
@@ -31714,17 +31725,19 @@ async function purchaseFlashOffer(request, env) {
     let offerBoostSeason=null;
     if(hasXpBooster){offerBoostSeason=await loadSeasonPassSeason(env);if(String(offerBoostSeason?.status||"")==="ended")throw new ApiError(409,"Буст ×2 XP сейчас недоступен: сезонный пропуск завершён.");}
     const profileSync=await syncAdminProfile(null,env,{raw:true,body:{initData:String(body.initData||""),mode:"read",current:body.current||{}},auth});
-    const profile=profileSync.profile||{}; const pricing=flashOfferEffectivePricing(row,passContext); const price=pricing.price;
+    const profile=profileSync.profile||{}; const pricing=flashOfferEffectivePricing(row,passContext); const price=resuming?{points:Math.max(0,Number(existing.price_points||0)),treats:Math.max(0,Number(existing.price_treats||0)),coffee:Math.max(0,Number(existing.price_coffee||0))}:pricing.price;
     if(Number(profile.wallet||0)<price.points||Number(profile.treats||0)<price.treats||Number(profile.coffee||0)<price.coffee)throw new ApiError(409,"Недостаточно ресурсов для покупки акции.");
     const physicalCount=rewards.filter(r=>r.kind==="product").reduce((sum,r)=>sum+Number(r.amount||1),0),caseCount=rewards.filter(r=>r.kind==="case").reduce((sum,r)=>sum+Number(r.amount||1),0);
     if(physicalCount||caseCount){const maintenance=await getMaintenanceSettings(env),flags=await publicFeatureFlags(env,telegramId);if(physicalCount&&(maintenance.physicalRewardsDisabled||flags.physical_rewards===false))throw new ApiError(503,"Физические награды временно отключены.");if(caseCount&&(maintenance.casesDisabled||flags.cases===false))throw new ApiError(503,"Кейсы временно отключены.");}
     if(physicalCount){const status=await getRewardLimitStatus(env,telegramId,now);if(physicalCount>Math.max(0,status.limit-status.used))throw new ApiError(429,`Лимит физических наград: доступно ещё ${Math.max(0,status.limit-status.used)}.`,status);}
-    reservedPurchaseId=flashOfferId("buy"); let slotNo=0;
-    const tryReserve=async(slot)=>{const result=await env.DB.prepare(`INSERT OR IGNORE INTO shop_flash_offer_purchases(purchase_id,offer_id,telegram_id,request_id,slot_no,status,rewards_json,physical_codes_json,price_points,price_treats,price_coffee,created_at,updated_at,completed_at) VALUES(?,?,?,?,?,'reserved','[]','[]',?,?,?,?,?,0)`).bind(reservedPurchaseId,offerId,telegramId,requestId,slot,price.points,price.treats,price.coffee,now,now).run();return safeAdminNumber(result?.meta?.changes)>0;};
-    if(limit>0){for(let slot=1;slot<=limit;slot+=1){if(await tryReserve(slot)){slotNo=slot;break;}}}else{for(let i=0;i<8&&!slotNo;i+=1){const slot=1000+Math.floor(Math.random()*2000000000);if(await tryReserve(slot))slotNo=slot;}}
-    if(!slotNo){const retry=await env.DB.prepare(`SELECT * FROM shop_flash_offer_purchases WHERE request_id=? AND telegram_id=? LIMIT 1`).bind(requestId,telegramId).first();if(retry?.status==="completed")return jsonResponse({ok:true,repeated:true,purchaseId:String(retry.purchase_id),profile:await flashOfferProfilePayload(env,telegramId),rewards:ownerV8SafeJson(retry.rewards_json,[]),physicalRewards:ownerV8SafeJson(retry.physical_codes_json,[])});throw new ApiError(409,"Лимит покупок этой акции уже исчерпан.");}
+    let slotNo=0;
+    if(resuming){const oldToken=String(existing.execution_token||''),oldStarted=Math.max(0,Number(existing.execution_started_at||0)),leaseBase=oldStarted||Math.max(0,Number(existing.updated_at||existing.created_at||0)),age=leaseBase?Math.max(0,now-leaseBase):12;if(age<12)return jsonResponse({ok:true,pending:true,requestId,retryAfterMs:900},202);executionToken=flashOfferId("exec");executionStartedAt=now;const takeover=await env.DB.prepare(`UPDATE shop_flash_offer_purchases SET execution_token=?,execution_started_at=?,updated_at=? WHERE purchase_id=? AND telegram_id=? AND status='reserved' AND execution_token=? AND execution_started_at=?`).bind(executionToken,executionStartedAt,now,String(existing.purchase_id),telegramId,oldToken,oldStarted).run();if(safeAdminNumber(takeover?.meta?.changes)<1)return jsonResponse({ok:true,pending:true,requestId,retryAfterMs:700},202);reservedPurchaseId=String(existing.purchase_id);slotNo=Math.max(1,Number(existing.slot_no||1));await releaseFlashOfferReservedStock(env,reservedPurchaseId);}
+    else{reservedPurchaseId=flashOfferId("buy");executionToken=flashOfferId("exec");executionStartedAt=now;}
+    const tryReserve=async(slot)=>{const result=await env.DB.prepare(`INSERT OR IGNORE INTO shop_flash_offer_purchases(purchase_id,offer_id,telegram_id,request_id,slot_no,status,rewards_json,physical_codes_json,price_points,price_treats,price_coffee,created_at,updated_at,completed_at,execution_token,execution_started_at) VALUES(?,?,?,?,?,'reserved','[]','[]',?,?,?,?,?,0,?,?)`).bind(reservedPurchaseId,offerId,telegramId,requestId,slot,price.points,price.treats,price.coffee,now,now,executionToken,executionStartedAt).run();return safeAdminNumber(result?.meta?.changes)>0;};
+    if(!slotNo&&limit>0){for(let slot=1;slot<=limit;slot+=1){if(await tryReserve(slot)){slotNo=slot;break;}}}else if(!slotNo){for(let i=0;i<8&&!slotNo;i+=1){const slot=1000+Math.floor(Math.random()*2000000000);if(await tryReserve(slot))slotNo=slot;}}
+    if(!slotNo){const retry=await env.DB.prepare(`SELECT * FROM shop_flash_offer_purchases WHERE request_id=? AND telegram_id=? LIMIT 1`).bind(requestId,telegramId).first();if(retry?.status==="completed")return jsonResponse({ok:true,repeated:true,purchaseId:String(retry.purchase_id),profile:await flashOfferProfilePayload(env,telegramId),rewards:ownerV8SafeJson(retry.rewards_json,[]),physicalRewards:ownerV8SafeJson(retry.physical_codes_json,[])});if(retry?.status==="reserved")return jsonResponse({ok:true,pending:true,requestId,retryAfterMs:900},202);throw new ApiError(409,"Лимит покупок этой акции уже исчерпан.");}
     const ownerName=telegramDisplayName(auth.user),ttl=positiveInt(env.REWARD_TTL_SECONDS,DEFAULT_REWARD_TTL_SECONDS),physicalRows=[];
-    for(const reward of rewards){if(reward.kind!=="product")continue;for(let i=0;i<reward.amount;i+=1){const product=PRODUCTS[reward.id];const consumptionId=`flash:${reservedPurchaseId}:${physicalRows.length}`;const stockReservation=await consumeShopStock(env,{category:"prize",productId:product.id,consumptionId,telegramId});stockConsumptionIds.push(consumptionId);const unique=await generateUniqueRewardCode(env,product);physicalRows.push({code:unique.code,compact:unique.compact,requestId:`flash_${reservedPurchaseId}_${physicalRows.length}`,productId:product.id,productName:product.title,createdAt:now,expiresAt:now+ttl,status:"active",consumptionId,stockLimited:Boolean(stockReservation?.limited)});}}
+    for(const reward of rewards){if(reward.kind!=="product")continue;for(let i=0;i<reward.amount;i+=1){const product=PRODUCTS[reward.id];const consumptionId=`flash:${reservedPurchaseId}:${executionToken}:${physicalRows.length}`;const stockReservation=await consumeShopStock(env,{category:"prize",productId:product.id,consumptionId,telegramId});stockConsumptionIds.push(consumptionId);const unique=await generateUniqueRewardCode(env,product);physicalRows.push({code:unique.code,compact:unique.compact,requestId:`flash_${reservedPurchaseId}_${physicalRows.length}`,productId:product.id,productName:product.title,createdAt:now,expiresAt:now+ttl,status:"active",consumptionId,stockLimited:Boolean(stockReservation?.limited)});}}
     let passStatements=[],passReceived=[];
     if(passContext?.requestedTier==="elite"){
       passStatements.push(env.DB.prepare(`UPDATE season_pass_players SET premium_tier='elite',revision=revision+1,updated_at=? WHERE season_id=? AND telegram_id=? AND premium_tier='none'`).bind(now,String(passContext.season.id),telegramId));
@@ -31736,7 +31749,7 @@ async function purchaseFlashOffer(request, env) {
     if(passContext?.xpAmount>0)passStatements.push(env.DB.prepare(`UPDATE season_pass_players SET xp=xp+?,revision=revision+1,updated_at=? WHERE season_id=? AND telegram_id=?`).bind(passContext.xpAmount,now,String(passContext.season.id),telegramId));
     const guardId=`flash:${reservedPurchaseId}`.slice(0,180);
     const statements=[
-      env.DB.prepare(`INSERT INTO shop_flash_offer_purchase_guards(guard_id,ok) VALUES(?,COALESCE((SELECT CASE WHEN p.status='reserved' AND a.wallet>=? AND a.treats>=? AND a.coffee>=? THEN 1 ELSE 0 END FROM shop_flash_offer_purchases p JOIN admin_profile_state a ON a.telegram_id=p.telegram_id WHERE p.purchase_id=? AND p.telegram_id=? LIMIT 1),0))`).bind(guardId,price.points,price.treats,price.coffee,reservedPurchaseId,telegramId),
+      env.DB.prepare(`INSERT INTO shop_flash_offer_purchase_guards(guard_id,ok) VALUES(?,COALESCE((SELECT CASE WHEN p.status='reserved' AND p.execution_token=? AND p.execution_started_at=? AND a.wallet>=? AND a.treats>=? AND a.coffee>=? THEN 1 ELSE 0 END FROM shop_flash_offer_purchases p JOIN admin_profile_state a ON a.telegram_id=p.telegram_id WHERE p.purchase_id=? AND p.telegram_id=? LIMIT 1),0))`).bind(guardId,executionToken,executionStartedAt,price.points,price.treats,price.coffee,reservedPurchaseId,telegramId),
       env.DB.prepare(`UPDATE admin_profile_state SET wallet=wallet-?,treats=treats-?,coffee=coffee-?,revision=revision+1,updated_at=?,updated_by=? WHERE telegram_id=? AND wallet>=? AND treats>=? AND coffee>=?`).bind(price.points,price.treats,price.coffee,now,telegramId,telegramId,price.points,price.treats,price.coffee),
       ...passStatements
     ];
@@ -31770,7 +31783,7 @@ async function purchaseFlashOffer(request, env) {
     }
     const physicalRewards=physicalRows.map(p=>rewardRowToClient({code:p.code,product_id:p.productId,product_name:p.productName,created_at:p.createdAt,expires_at:p.expiresAt,status:p.status,redeemed_at:0}));
     statements.push(
-      env.DB.prepare(`UPDATE shop_flash_offer_purchases SET status='completed',rewards_json=?,physical_codes_json=?,updated_at=?,completed_at=? WHERE purchase_id=? AND status='reserved'`).bind(JSON.stringify(publicRewards),JSON.stringify(physicalRewards),now,now,reservedPurchaseId),
+      env.DB.prepare(`UPDATE shop_flash_offer_purchases SET status='completed',rewards_json=?,physical_codes_json=?,updated_at=?,completed_at=? WHERE purchase_id=? AND status='reserved' AND execution_token=? AND execution_started_at=?`).bind(JSON.stringify(publicRewards),JSON.stringify(physicalRewards),now,now,reservedPurchaseId,executionToken,executionStartedAt),
       env.DB.prepare(`DELETE FROM shop_flash_offer_purchase_guards WHERE guard_id=?`).bind(guardId)
     );
     await env.DB.batch(statements); purchaseCommitted=true;
@@ -31783,8 +31796,9 @@ async function purchaseFlashOffer(request, env) {
     if(passContext?.season){try{const passPlayer=await env.DB.prepare(`SELECT xp,premium_tier,elite_plus_bonus_granted,revision FROM season_pass_players WHERE season_id=? AND telegram_id=? LIMIT 1`).bind(String(passContext.season.id),telegramId).first();const xp=Math.max(0,Number(passPlayer?.xp)||0);seasonPass={seasonId:String(passContext.season.id),tier:String(passPlayer?.premium_tier||"none"),xp,level:seasonPassLevelFromXp(xp),displayLevel:seasonPassOverflowView(xp,0).unlocked?"50+":String(seasonPassLevelFromXp(xp))};}catch{}}
     return jsonResponse({ok:true,purchaseId:reservedPurchaseId,offerId,profile:await flashOfferProfilePayload(env,telegramId),authoritativeProfile:true,rewards:publicRewards,physicalRewards,seasonPass});
   } catch(error) {
+    let ownsExecution=false;if(!purchaseCommitted&&reservedPurchaseId&&executionToken){try{ownsExecution=Boolean(await env.DB.prepare(`SELECT 1 AS ok FROM shop_flash_offer_purchases WHERE purchase_id=? AND status='reserved' AND execution_token=? AND execution_started_at=? LIMIT 1`).bind(reservedPurchaseId,executionToken,executionStartedAt).first());}catch{}}
     if(!purchaseCommitted){for(const id of stockConsumptionIds){try{await releaseShopStock(env,id);}catch(e){console.error("flash offer stock release failed",e);}}}
-    if(!purchaseCommitted&&reservedPurchaseId){try{await env.DB.prepare(`DELETE FROM shop_flash_offer_purchases WHERE purchase_id=? AND status='reserved'`).bind(reservedPurchaseId).run();}catch{}}
+    if(!purchaseCommitted&&ownsExecution){try{await env.DB.prepare(`DELETE FROM shop_flash_offer_purchases WHERE purchase_id=? AND status='reserved' AND execution_token=? AND execution_started_at=?`).bind(reservedPurchaseId,executionToken,executionStartedAt).run();}catch{}}
     if(error instanceof ApiError)return jsonResponse({ok:false,error:error.message,details:error.details},error.status);
     const text=String(error?.message||error);
     if(text.includes('REWARD_DAILY_LIMIT'))return jsonResponse({ok:false,error:"Лимит физических наград за 24 часа уже исчерпан."},429);
@@ -35173,7 +35187,7 @@ async function deliverReferralReward(env, rewardRow) {
   if (reward.kind === 'none') throw new ApiError(409,'В этой награде нечего получать.');
   const telegramId = String(row.beneficiary_telegram_id);
   const now = Math.floor(Date.now()/1000);
-  const recoveredBefore = now - 120;
+  const recoveredBefore = now - 24;
   const reserve = await env.DB.prepare(`UPDATE referral_rewards SET status='processing',updated_at=?,error_text='' WHERE reward_id=? AND (status IN ('pending','failed') OR (status='processing' AND updated_at<=?))`).bind(now,String(row.reward_id),recoveredBefore).run();
   if (Number(reserve?.meta?.changes || 0) < 1) {
     const fresh = await env.DB.prepare(`SELECT * FROM referral_rewards WHERE reward_id=? LIMIT 1`).bind(String(row.reward_id)).first();
