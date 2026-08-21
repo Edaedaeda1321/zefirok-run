@@ -455,7 +455,11 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
     const controller = new AbortController();
     const timer = window.setTimeout(() => controller.abort(), Math.max(1000, Number(timeoutMs || 6500)));
     try {
-      return await fetch(path, { ...init, signal: controller.signal });
+      const response = await fetch(path, { ...init, signal: controller.signal });
+      // Do not stop the timeout after headers arrive. A stalled/truncated body
+      // must be aborted too, otherwise response.json() can wait forever.
+      await response.clone().arrayBuffer();
+      return response;
     } catch (error) {
       if (error?.name === "AbortError") {
         const timeoutError = new Error("Сервер отвечает слишком долго. Повторите действие.");
@@ -12464,6 +12468,8 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       const CASE_API_OPEN_PATH = &quot;/api/cases/open&quot;;
       const CASE_API_OPEN_GRANTED_PATH = &quot;/api/cases/open-granted&quot;;
       const CASE_OPEN_REQUEST_TIMEOUT_MS = 16000;
+      const GRANTED_CASE_OPEN_REQUEST_TIMEOUT_MS = 8000;
+      const GRANTED_CASE_OPEN_UI_DEADLINE_MS = 18000;
       const CASE_API_PURCHASE_PATH = &quot;/api/cases/purchase&quot;;
       const CASE_API_ACTIVATE_PATH = &quot;/api/cases/activate&quot;;
       const CASE_API_EQUIP_PATH = &quot;/api/cases/equip&quot;;
@@ -15712,7 +15718,11 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         const controller = new AbortController();
         const timeout = window.setTimeout(() =&gt; controller.abort(), Math.max(1000, Number(timeoutMs || 6500)));
         try {
-          return await fetch(path, { ...init, signal: controller.signal });
+          const response = await fetch(path, { ...init, signal: controller.signal });
+          // Keep the same deadline until the complete response body has arrived.
+          // Receiving HTTP headers alone is not a completed game request.
+          await response.clone().arrayBuffer();
+          return response;
         } catch (error) {
           if (error?.name === &quot;AbortError&quot;) {
             const timeoutError = new Error(&quot;Сервер отвечает слишком долго. Повторите действие.&quot;);
@@ -15925,43 +15935,65 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         }
       }
 
+      const grantedCasePendingRequests = new Map();
+
       function grantedCaseRequestId(caseType) {
         const suffix = (globalThis.crypto?.randomUUID?.() || `${Date.now().toString(36)}_${Math.random().toString(36).slice(2)}`).replace(/[^A-Za-z0-9_-]/g, &quot;&quot;);
         return `case_${String(caseType || &quot;small&quot;)}_${suffix}`.slice(0, 96);
       }
 
-      async function waitForGrantedCaseResult(caseType, requestId, firstError = null) {
-        const deadline = Date.now() + 45000;
+      function isGrantedCaseRetryableError(error) {
+        const status = Number(error?.status || 0);
+        if (error?.pending || error?.timeout || error?.code === &quot;REQUEST_TIMEOUT&quot; || !status || status &gt;= 500) return true;
+        if (status !== 409) return false;
+        return /уже открывается|попытка открытия устарела|состояние кейса изменилось|повторите открытие/i.test(String(error?.message || &quot;&quot;));
+      }
+
+      async function waitForGrantedCaseResult(caseType, requestId, deadline, firstError = null) {
         let lastError = firstError;
         while (Date.now() &lt; deadline) {
-          await new Promise((resolve) =&gt; window.setTimeout(resolve, 900));
+          const beforeSleep = deadline - Date.now();
+          if (beforeSleep &lt;= 0) break;
+          await new Promise((resolve) =&gt; window.setTimeout(resolve, Math.min(900, Math.max(250, beforeSleep))));
+          const remaining = deadline - Date.now();
+          if (remaining &lt;= 0) break;
           try {
-            const data = await caseApiRequest(CASE_API_OPEN_GRANTED_PATH, { caseType: String(caseType || &quot;&quot;), requestId }, 7000);
+            const data = await caseApiRequest(
+              CASE_API_OPEN_GRANTED_PATH,
+              { caseType: String(caseType || &quot;&quot;), requestId },
+              Math.max(1000, Math.min(4500, remaining))
+            );
             if (data?.pending) continue;
             return data;
           } catch (error) {
             lastError = error;
-            const status = Number(error?.status || 0);
-            if (status &gt;= 400 &amp;&amp; status &lt; 500 &amp;&amp; status !== 409) throw error;
+            if (!isGrantedCaseRetryableError(error)) throw error;
           }
         }
-        throw lastError || new Error(&quot;Сервер всё ещё завершает открытие. Награда не потеряется — обновите склад через несколько секунд.&quot;);
+        const timeoutError = lastError || new Error(&quot;Сервер всё ещё завершает открытие. Награда не потеряется — повторная проверка продолжит эту же операцию.&quot;);
+        if (!timeoutError.code) timeoutError.code = &quot;CASE_OPEN_PENDING&quot;;
+        timeoutError.pending = true;
+        throw timeoutError;
       }
 
       async function openGiftedCaseClient(caseType, button) {
-        if (button) { button.disabled = true; button.textContent = &quot;Открываем…&quot;; }
-        const requestId = grantedCaseRequestId(caseType);
-        showCaseOpeningPreview(caseType);
+        const type = String(caseType || &quot;small&quot;);
+        if (button) { button.disabled = true; button.textContent = grantedCasePendingRequests.has(type) ? &quot;Проверяем…&quot; : &quot;Открываем…&quot;; }
+        const requestId = grantedCasePendingRequests.get(type) || grantedCaseRequestId(type);
+        grantedCasePendingRequests.set(type, requestId);
+        const deadline = Date.now() + GRANTED_CASE_OPEN_UI_DEADLINE_MS;
+        showCaseOpeningPreview(type);
         try {
           let data;
           try {
-            data = await caseApiRequest(CASE_API_OPEN_GRANTED_PATH, { caseType: String(caseType || &quot;&quot;), requestId }, CASE_OPEN_REQUEST_TIMEOUT_MS);
+            data = await caseApiRequest(CASE_API_OPEN_GRANTED_PATH, { caseType: type, requestId }, GRANTED_CASE_OPEN_REQUEST_TIMEOUT_MS);
           } catch (error) {
             const status = Number(error?.status || 0);
-            if (error?.timeout || status &gt;= 500 || !status) data = await waitForGrantedCaseResult(caseType, requestId, error);
+            if (error?.timeout || status &gt;= 500 || !status) data = await waitForGrantedCaseResult(type, requestId, deadline, error);
             else throw error;
           }
-          if (data?.pending) data = await waitForGrantedCaseResult(caseType, requestId);
+          if (data?.pending) data = await waitForGrantedCaseResult(type, requestId, deadline);
+          grantedCasePendingRequests.delete(type);
           const rewards = Array.isArray(data.opened?.rewards) ? data.opened.rewards : [];
           applyServerCasePayload(data, rewards);
           showCaseResult(data.opened);
@@ -15970,16 +16002,17 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         } catch (error) {
           caseRouletteBusy = false;
           hapticNotify(&quot;error&quot;);
-          const timeoutLike = Boolean(error?.timeout || error?.code === &quot;REQUEST_TIMEOUT&quot;);
+          const retryable = isGrantedCaseRetryableError(error);
+          if (!retryable &amp;&amp; grantedCasePendingRequests.get(type) === requestId) grantedCasePendingRequests.delete(type);
           if (caseContentEl &amp;&amp; !caseLayer?.hidden) {
             const waitingButton = caseContentEl.querySelector(&quot;.case-result-done&quot;);
             if (waitingButton) { waitingButton.disabled = false; waitingButton.textContent = &quot;Закрыть и обновить&quot;; waitingButton.setAttribute(&quot;data-case-close&quot;, &quot;&quot;); }
             const copy = caseContentEl.querySelector(&quot;.case-result-head p&quot;);
-            if (copy) copy.textContent = timeoutLike ? &quot;Сервер отвечает дольше обычного. Награда не потеряется — склад сейчас перепроверяется.&quot; : (error?.message || &quot;Не удалось завершить открытие.&quot;);
+            if (copy) copy.textContent = retryable ? &quot;Ответ не получен вовремя. Награда не потеряется: следующая попытка проверит эту же операцию, а не откроет новый кейс.&quot; : (error?.message || &quot;Не удалось завершить открытие.&quot;);
           }
-          showProfileToast(error?.message || &quot;Не удалось открыть подарочный кейс.&quot;, &quot;warning&quot;);
-          await loadCaseState(true, true);
-          if (button?.isConnected) { button.disabled = false; button.textContent = &quot;Открыть&quot;; }
+          showProfileToast(retryable ? &quot;Открытие ещё проверяется. Можно закрыть окно и повторить проверку.&quot; : (error?.message || &quot;Не удалось открыть подарочный кейс.&quot;), &quot;warning&quot;);
+          void loadCaseState(true, true).then(() =&gt; renderCaseHub()).catch(() =&gt; {});
+          if (button?.isConnected) { button.disabled = false; button.textContent = grantedCasePendingRequests.has(type) ? &quot;Проверить открытие&quot; : &quot;Открыть&quot;; }
         } finally { renderCaseHub(); }
       }
 
