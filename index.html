@@ -7138,6 +7138,16 @@ html&gt;body{padding:
 #zefirok-maltipoo-runner .case-gifted-wrap{display:grid;gap:9px;padding:11px;border-radius:17px;background:linear-gradient(145deg,#fff5fb,#fff9e9);border:1px solid rgba(224,151,179,.34)}
 #zefirok-maltipoo-runner .case-gifted-wrap[hidden]{display:none!important}
 #zefirok-maltipoo-runner .case-gifted-list{display:grid;gap:8px}
+#zefirok-maltipoo-runner .case-stock-tools{display:flex;align-items:center;gap:7px;margin:10px 0 9px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+#zefirok-maltipoo-runner .case-stock-tools::-webkit-scrollbar{display:none}
+#zefirok-maltipoo-runner .case-stock-filter,#zefirok-maltipoo-runner .case-stock-sort{flex:0 0 auto;min-height:34px;border:1px solid rgba(222,139,170,.34);border-radius:999px;padding:7px 11px;background:rgba(255,255,255,.78);color:#8d5e70;font-size:10px;font-weight:900;white-space:nowrap;box-shadow:0 4px 12px rgba(130,76,96,.05)}
+#zefirok-maltipoo-runner .case-stock-filter[aria-pressed=true]{background:linear-gradient(145deg,#f598bb,#de678f);border-color:#dd6b94;color:#fff;box-shadow:0 7px 16px rgba(211,91,135,.20)}
+#zefirok-maltipoo-runner .case-stock-sort{margin-left:auto;background:linear-gradient(145deg,#fff8e9,#fff);color:#7c5a42;border-color:rgba(219,178,111,.42)}
+#zefirok-maltipoo-runner .gifted-case-card{position:relative}
+#zefirok-maltipoo-runner .case-stock-count{position:absolute;left:48px;top:7px;z-index:4;min-width:28px;height:22px;display:grid;place-items:center;padding:0 7px;border-radius:999px;background:#e56f9b;color:#fff;font-size:10px;font-weight:950;line-height:1;box-shadow:0 5px 12px rgba(192,70,114,.24);pointer-events:none}
+#zefirok-maltipoo-runner .gifted-case-card.is-new-case{box-shadow:inset 0 0 0 1.5px rgba(235,105,153,.46),0 7px 18px rgba(198,87,127,.12)}
+#zefirok-maltipoo-runner .case-stock-new{display:inline-flex;align-items:center;width:max-content;margin-top:2px;padding:3px 7px;border-radius:999px;background:#fff0f6;color:#cf5d87;font-size:8px;font-weight:950;letter-spacing:.04em;text-transform:uppercase}
+#zefirok-maltipoo-runner .case-stock-rarity{color:#b19383;font-size:9px;font-weight:850}
 #zefirok-maltipoo-runner .gifted-case-card{display:grid;grid-template-columns:70px minmax(0,1fr) auto;align-items:center;gap:10px;padding:10px;border-radius:15px;background:#fff;box-shadow:0 6px 16px rgba(105,65,43,.08)}
 #zefirok-maltipoo-runner .gifted-case-card .case-chest{transform:scale(.72);margin:0}
 #zefirok-maltipoo-runner .gifted-case-card&gt;span{display:grid;gap:2px;text-align:left;color:#684532}
@@ -7391,6 +7401,8 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 #zefirok-maltipoo-runner .case-result-head .case-chest-visual{position:relative;display:grid;place-items:center;width:146px;height:146px;margin:-2px auto 0;overflow:visible;isolation:isolate}
 #zefirok-maltipoo-runner .case-result-head .case-chest-visual.is-open{width:128px;height:128px;margin:0 auto 4px}
 #zefirok-maltipoo-runner .case-result-head.is-alex .case-chest-visual.is-open{width:124px;height:124px}
+#zefirok-maltipoo-runner .case-result-head.is-opening .case-chest-visual.is-open.is-sweet,
+#zefirok-maltipoo-runner .case-result-head.is-opening .case-chest-visual.is-open.is-gold{width:104px;height:104px;margin:2px auto 10px}
 #zefirok-maltipoo-runner .case-result-head .case-chest-visual-glow{position:absolute;left:50%;top:50%;width:124%;height:124%;transform:translate(-50%,-50%);border-radius:50%;background:radial-gradient(circle at 50% 42%,rgba(255,255,250,.99) 0%,rgba(255,246,223,.96) 26%,rgba(241,248,220,.86) 49%,rgba(226,244,191,.4) 66%,rgba(226,244,191,0) 81%);filter:blur(3px);opacity:.98;z-index:0;pointer-events:none}
 #zefirok-maltipoo-runner .case-result-head .case-chest-visual.is-closed .case-chest-visual-glow{width:114%;height:114%;background:radial-gradient(circle at 50% 42%,rgba(255,252,245,.97) 0%,rgba(255,240,223,.9) 34%,rgba(248,226,236,.42) 64%,rgba(248,226,236,0) 79%)}
 #zefirok-maltipoo-runner .case-result-head.is-alex .case-chest-visual .case-chest-visual-glow{background:radial-gradient(circle at 50% 42%,rgba(255,254,247,.99) 0%,rgba(255,244,224,.96) 27%,rgba(238,247,213,.9) 50%,rgba(199,225,120,.5) 67%,rgba(199,225,120,0) 81%)}
@@ -7403,11 +7415,15 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
   #zefirok-maltipoo-runner .case-result-head .case-chest-visual{width:132px;height:132px}
   #zefirok-maltipoo-runner .case-result-head .case-chest-visual.is-open{width:118px;height:118px}
   #zefirok-maltipoo-runner .case-result-head.is-alex .case-chest-visual.is-open{width:114px;height:114px}
+  #zefirok-maltipoo-runner .case-result-head.is-opening .case-chest-visual.is-open.is-sweet,
+  #zefirok-maltipoo-runner .case-result-head.is-opening .case-chest-visual.is-open.is-gold{width:100px;height:100px;margin:2px auto 8px}
 }
 @media(max-height:760px){
   #zefirok-maltipoo-runner .case-result-head .case-chest-visual{width:126px;height:126px;margin:-2px auto 0}
   #zefirok-maltipoo-runner .case-result-head .case-chest-visual.is-open{width:112px;height:112px;margin:0 auto 2px}
   #zefirok-maltipoo-runner .case-result-head.is-alex .case-chest-visual.is-open{width:108px;height:108px}
+  #zefirok-maltipoo-runner .case-result-head.is-opening .case-chest-visual.is-open.is-sweet,
+  #zefirok-maltipoo-runner .case-result-head.is-opening .case-chest-visual.is-open.is-gold{width:94px;height:94px;margin:2px auto 7px}
 }
 &lt;/style&gt;
 
@@ -9903,6 +9919,12 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
   &lt;div class=&quot;stock-hub-panel&quot; data-stock-panel=&quot;cases&quot; hidden&gt;
     &lt;div class=&quot;case-gifted-wrap&quot; data-case-gifted-wrap&gt;
       &lt;div class=&quot;case-subsection-title&quot;&gt;&lt;strong&gt;Склад кейсов&lt;/strong&gt;&lt;span&gt;Постоянные кейсы из уровней, магазина, подарков и акций. Сезонные открываются в пропуске.&lt;/span&gt;&lt;/div&gt;
+      &lt;div class=&quot;case-stock-tools&quot; aria-label=&quot;Фильтры склада кейсов&quot;&gt;
+        &lt;button class=&quot;case-stock-filter&quot; data-case-stock-filter=&quot;all&quot; aria-pressed=&quot;true&quot; type=&quot;button&quot;&gt;Все&lt;/button&gt;
+        &lt;button class=&quot;case-stock-filter&quot; data-case-stock-filter=&quot;new&quot; aria-pressed=&quot;false&quot; type=&quot;button&quot;&gt;Новые &lt;span data-case-stock-new-count&gt;0&lt;/span&gt;&lt;/button&gt;
+        &lt;button class=&quot;case-stock-filter&quot; data-case-stock-filter=&quot;stock&quot; aria-pressed=&quot;false&quot; type=&quot;button&quot;&gt;Есть на складе&lt;/button&gt;
+        &lt;button class=&quot;case-stock-sort&quot; data-case-stock-sort type=&quot;button&quot; aria-pressed=&quot;true&quot;&gt;Редкость ↓&lt;/button&gt;
+      &lt;/div&gt;
       &lt;div class=&quot;case-gifted-list&quot; data-case-gifted-list&gt;&lt;/div&gt;
     &lt;/div&gt;
   &lt;/div&gt;
@@ -10512,6 +10534,9 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       let playerSupportSelectedTicketId = 0;
       const caseGiftedWrapEl = root.querySelector(&quot;[data-case-gifted-wrap]&quot;);
       const caseGiftedListEl = root.querySelector(&quot;[data-case-gifted-list]&quot;);
+      const caseStockFilterButtons = [...root.querySelectorAll(&quot;[data-case-stock-filter]&quot;)];
+      const caseStockSortButton = root.querySelector(&quot;[data-case-stock-sort]&quot;);
+      const caseStockNewCountEl = root.querySelector(&quot;[data-case-stock-new-count]&quot;);
       const caseBoostersListEl = root.querySelector(&quot;[data-case-boosters-list]&quot;);
       const caseAvatarsEl = root.querySelector(&quot;[data-case-avatars]&quot;);
       const caseFramesEl = root.querySelector(&quot;[data-case-frames]&quot;);
@@ -10950,6 +10975,15 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       let profileTutorialAutoTimer = 0;
       let warehouseFilter = &quot;all&quot;;
       let stockHubView = &quot;purchases&quot;;
+      let caseStockFilter = &quot;all&quot;;
+      let caseStockSortMode = &quot;rarity&quot;;
+      const CASE_STOCK_SEEN_KEY = &quot;zefirok_case_stock_seen_v2&quot;;
+      let caseStockSeenState = (() =&gt; {
+        try {
+          const parsed = JSON.parse(localStorage.getItem(CASE_STOCK_SEEN_KEY) || &quot;{}&quot;);
+          return { observed:{...(parsed?.observed || {})}, unseen:{...(parsed?.unseen || {})} };
+        } catch { return { observed:{}, unseen:{} }; }
+      })();
       let pendingPurchase = null;
       let purchaseReturnFocus = null;
       let purchaseLimitTimer = 0;
@@ -16081,7 +16115,9 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           const visualClass = [
             &quot;case-chest-visual&quot;,
             opened ? &quot;is-open&quot; : &quot;is-closed&quot;,
-            caseType === &quot;alex&quot; ? &quot;is-alex&quot; : &quot;&quot;
+            caseType === &quot;alex&quot; ? &quot;is-alex&quot; : &quot;&quot;,
+            caseType === &quot;sweet&quot; ? &quot;is-sweet&quot; : &quot;&quot;,
+            caseType === &quot;gold&quot; ? &quot;is-gold&quot; : &quot;&quot;
           ].filter(Boolean).join(&quot; &quot;);
           return `&lt;span class=&quot;${escapePurchaseText(visualClass)}&quot; aria-hidden=&quot;true&quot;&gt;&lt;span class=&quot;case-chest-visual-glow&quot;&gt;&lt;/span&gt;${imageMarkup}&lt;/span&gt;`;
         }
@@ -17125,20 +17161,109 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         } finally { if (submit?.isConnected) { submit.disabled = false; submit.textContent = oldText; } }
       }
 
+      function caseStockPersistSeenState() {
+        try { localStorage.setItem(CASE_STOCK_SEEN_KEY, JSON.stringify(caseStockSeenState)); } catch {}
+      }
+
+      function caseStockRarityMeta(type) {
+        const table = {
+          small:{order:1,label:&quot;Обычный&quot;}, sweet:{order:2,label:&quot;Серебряный&quot;}, gold:{order:3,label:&quot;Золотой&quot;},
+          mythic:{order:4,label:&quot;Мифический&quot;}, legendary:{order:5,label:&quot;Легендарный&quot;}, alex:{order:6,label:&quot;Особый&quot;}
+        };
+        return table[String(type || &quot;small&quot;)] || table.small;
+      }
+
+      function caseStockSyncSeen(entries) {
+        let changed = false;
+        const activeKeys = new Set(entries.map((entry) =&gt; String(entry.key || &quot;&quot;)).filter(Boolean));
+        for (const [key, value] of Object.entries(caseStockSeenState.observed || {})) {
+          if (!activeKeys.has(key) &amp;&amp; Math.max(0, Math.floor(Number(value) || 0)) !== 0) {
+            caseStockSeenState.observed[key] = 0;
+            delete caseStockSeenState.unseen[key];
+            changed = true;
+          }
+        }
+        for (const entry of entries) {
+          const next = Math.max(0, Math.floor(Number(entry.count) || 0));
+          const previous = Object.prototype.hasOwnProperty.call(caseStockSeenState.observed, entry.key)
+            ? Math.max(0, Math.floor(Number(caseStockSeenState.observed[entry.key]) || 0)) : null;
+          if (previous === null) {
+            caseStockSeenState.observed[entry.key] = next;
+            if (next &gt; 0) caseStockSeenState.unseen[entry.key] = true;
+            changed = true;
+          } else if (previous !== next) {
+            if (next &gt; previous) caseStockSeenState.unseen[entry.key] = true;
+            caseStockSeenState.observed[entry.key] = next;
+            changed = true;
+          }
+        }
+        if (changed) caseStockPersistSeenState();
+      }
+
+      function caseStockMarkSeen(key) {
+        const id = String(key || &quot;&quot;);
+        if (!id || !caseStockSeenState.unseen[id]) return;
+        delete caseStockSeenState.unseen[id];
+        caseStockPersistSeenState();
+        renderCaseHub();
+      }
+
+      function syncCaseStockControls(entries = []) {
+        const newCount = entries.filter((entry) =&gt; Boolean(caseStockSeenState.unseen[entry.key])).length;
+        for (const button of caseStockFilterButtons) button.setAttribute(&quot;aria-pressed&quot;, String(button.dataset.caseStockFilter === caseStockFilter));
+        if (caseStockNewCountEl) caseStockNewCountEl.textContent = String(newCount);
+        if (caseStockSortButton) {
+          const rarityMode = caseStockSortMode === &quot;rarity&quot;;
+          caseStockSortButton.setAttribute(&quot;aria-pressed&quot;, String(rarityMode));
+          caseStockSortButton.textContent = rarityMode ? &quot;Редкость ↓&quot; : &quot;Количество ↓&quot;;
+        }
+      }
+
       function renderCaseHub() {
         renderPlayerGiftInbox();
         const gifted = normalizeGiftedCases(state.caseGiftedCases);
-        const giftedTotal = gifted.small + gifted.sweet + gifted.gold + gifted.mythic + gifted.legendary + gifted.alex;
         const levelCases = availableLevelCases();
         if (caseGiftedWrapEl) caseGiftedWrapEl.hidden = false;
         if (caseGiftedListEl) {
-          const levelCards = levelCases.map((entry) =&gt; `&lt;article class=&quot;gifted-case-card is-${entry.caseType}&quot;&gt;&lt;button class=&quot;case-card-info-trigger&quot; data-case-info-type=&quot;${entry.caseType}&quot; type=&quot;button&quot; aria-label=&quot;Награды и шансы: ${escapePurchaseText(entry.title)}&quot;&gt;${caseImageMarkup(entry.caseType, false)}&lt;/button&gt;&lt;span&gt;&lt;strong&gt;${escapePurchaseText(entry.title)}&lt;/strong&gt;&lt;small&gt;Награда за ${formatter.format(entry.level)} уровень · нажми на кейс, чтобы увидеть награды&lt;/small&gt;&lt;/span&gt;&lt;button data-open-level-case=&quot;${entry.level}&quot; type=&quot;button&quot;&gt;Открыть&lt;/button&gt;&lt;/article&gt;`).join(&quot;&quot;);
-          const giftedCards = [
-            [&quot;small&quot;,&quot;Обычный кейс&quot;], [&quot;sweet&quot;,&quot;Серебряный кейс&quot;], [&quot;gold&quot;,&quot;Золотой кейс&quot;], [&quot;mythic&quot;,&quot;Мифический кейс&quot;], [&quot;legendary&quot;,&quot;Легендарный кейс&quot;], [&quot;alex&quot;,&quot;Кейс Алекса&quot;]
-          ].filter(([type]) =&gt; gifted[type] &gt; 0).map(([type,title]) =&gt; `&lt;article class=&quot;gifted-case-card is-${type}&quot;&gt;&lt;button class=&quot;case-card-info-trigger&quot; data-case-info-type=&quot;${type}&quot; type=&quot;button&quot; aria-label=&quot;Награды и шансы: ${title}&quot;&gt;${caseImageMarkup(type, false)}&lt;/button&gt;&lt;span&gt;&lt;strong&gt;${title}&lt;/strong&gt;&lt;small&gt;Подарочный · в запасе: ${formatter.format(gifted[type])} · нажми на кейс для просмотра&lt;/small&gt;&lt;/span&gt;&lt;button data-open-gifted-case=&quot;${type}&quot; type=&quot;button&quot;&gt;Открыть&lt;/button&gt;&lt;/article&gt;`).join(&quot;&quot;);
-          const cards = levelCards + giftedCards;
-          const giftedMarkup = cards || `&lt;div class=&quot;case-empty-warehouse&quot;&gt;&lt;strong&gt;Склад пока пуст&lt;/strong&gt;&lt;span&gt;Кейсы появятся здесь после получения уровня, подарка или компенсации.&lt;/span&gt;&lt;/div&gt;`;
-          setStableMarkup(caseGiftedListEl, giftedMarkup, &quot;gifted&quot;);
+          const titles = { small:&quot;Обычный кейс&quot;, sweet:&quot;Серебряный кейс&quot;, gold:&quot;Золотой кейс&quot;, mythic:&quot;Мифический кейс&quot;, legendary:&quot;Легендарный кейс&quot;, alex:&quot;Кейс Алекса&quot; };
+          const entries = [
+            ...levelCases.map((entry) =&gt; ({ key:`level:${entry.level}`, source:&quot;level&quot;, caseType:entry.caseType, title:entry.title, count:1, level:entry.level })),
+            ...Object.keys(titles).filter((type) =&gt; gifted[type] &gt; 0).map((type) =&gt; ({ key:`gifted:${type}`, source:&quot;gifted&quot;, caseType:type, title:titles[type], count:gifted[type], level:0 }))
+          ];
+          caseStockSyncSeen(entries);
+          syncCaseStockControls(entries);
+          let visible = entries.filter((entry) =&gt; {
+            if (caseStockFilter === &quot;new&quot;) return Boolean(caseStockSeenState.unseen[entry.key]);
+            if (caseStockFilter === &quot;stock&quot;) return Number(entry.count || 0) &gt; 0;
+            return true;
+          });
+          visible.sort((a,b) =&gt; {
+            if (caseStockSortMode === &quot;count&quot;) {
+              const countDiff = Number(b.count || 0) - Number(a.count || 0);
+              if (countDiff) return countDiff;
+            }
+            const rarityDiff = caseStockRarityMeta(b.caseType).order - caseStockRarityMeta(a.caseType).order;
+            if (rarityDiff) return rarityDiff;
+            return String(a.title || &quot;&quot;).localeCompare(String(b.title || &quot;&quot;), &quot;ru&quot;);
+          });
+          const cards = visible.map((entry) =&gt; {
+            const isNew = Boolean(caseStockSeenState.unseen[entry.key]);
+            const rarity = caseStockRarityMeta(entry.caseType);
+            const countBadge = entry.source === &quot;gifted&quot; ? `&lt;b class=&quot;case-stock-count&quot;&gt;×${formatter.format(entry.count)}&lt;/b&gt;` : &quot;&quot;;
+            const newBadge = isNew ? `&lt;em class=&quot;case-stock-new&quot;&gt;Новое&lt;/em&gt;` : &quot;&quot;;
+            const subtitle = entry.source === &quot;level&quot;
+              ? `Награда за ${formatter.format(entry.level)} уровень · ${rarity.label}`
+              : `В запасе ${formatter.format(entry.count)} · ${rarity.label}`;
+            const action = entry.source === &quot;level&quot;
+              ? `&lt;button data-open-level-case=&quot;${entry.level}&quot; data-case-stock-key=&quot;${escapePurchaseText(entry.key)}&quot; type=&quot;button&quot;&gt;Открыть&lt;/button&gt;`
+              : `&lt;button data-open-gifted-case=&quot;${entry.caseType}&quot; data-case-stock-key=&quot;${escapePurchaseText(entry.key)}&quot; type=&quot;button&quot;&gt;Открыть&lt;/button&gt;`;
+            return `&lt;article class=&quot;gifted-case-card is-${entry.caseType}${isNew ? &quot; is-new-case&quot; : &quot;&quot;}&quot; data-case-stock-card=&quot;${escapePurchaseText(entry.key)}&quot;&gt;&lt;button class=&quot;case-card-info-trigger&quot; data-case-info-type=&quot;${entry.caseType}&quot; data-case-stock-key=&quot;${escapePurchaseText(entry.key)}&quot; type=&quot;button&quot; aria-label=&quot;Награды и шансы: ${escapePurchaseText(entry.title)}&quot;&gt;${caseImageMarkup(entry.caseType, false)}&lt;/button&gt;${countBadge}&lt;span&gt;&lt;strong&gt;${escapePurchaseText(entry.title)}&lt;/strong&gt;&lt;small&gt;${escapePurchaseText(subtitle)}&lt;/small&gt;${newBadge}&lt;/span&gt;${action}&lt;/article&gt;`;
+          }).join(&quot;&quot;);
+          let emptyText = &quot;Кейсы появятся здесь после получения уровня, подарка или компенсации.&quot;;
+          if (caseStockFilter === &quot;new&quot;) emptyText = &quot;Новых кейсов сейчас нет. Полученные позже появятся здесь автоматически.&quot;;
+          if (caseStockFilter === &quot;stock&quot;) emptyText = &quot;Кейсов в запасе сейчас нет.&quot;;
+          const giftedMarkup = cards || `&lt;div class=&quot;case-empty-warehouse&quot;&gt;&lt;strong&gt;${caseStockFilter === &quot;all&quot; ? &quot;Склад пока пуст&quot; : &quot;Ничего не найдено&quot;}&lt;/strong&gt;&lt;span&gt;${emptyText}&lt;/span&gt;&lt;/div&gt;`;
+          setStableMarkup(caseGiftedListEl, giftedMarkup, `gifted:${caseStockFilter}:${caseStockSortMode}:${entries.map((entry)=&gt;`${entry.key}:${entry.count}:${caseStockSeenState.unseen[entry.key]?1:0}`).join(&quot;|&quot;)}`);
         }
         const active = normalizeActiveCaseBooster(state.activeCaseBooster);
         if (caseBoostersListEl) {
@@ -21157,6 +21282,8 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         const trigger = target.closest(&quot;[data-case-info-type], [data-shop-case-type], [data-case-type]&quot;);
         if (!trigger) return;
         const caseType = trigger.dataset.caseInfoType || trigger.dataset.shopCaseType || trigger.dataset.caseType || &quot;small&quot;;
+        const stockKey = trigger.dataset.caseStockKey || trigger.closest?.(&quot;[data-case-stock-card]&quot;)?.dataset.caseStockCard || &quot;&quot;;
+        if (stockKey) caseStockMarkSeen(stockKey);
         event.preventDefault();
         if (purchaseLayer &amp;&amp; !purchaseLayer.hidden) closePurchaseLayer();
         if (caseType === &quot;legendary&quot; &amp;&amp; telegramProfile?.initData) {
@@ -21205,11 +21332,15 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         const target = event.target instanceof Element ? event.target : null;
         const levelButton = target?.closest(&quot;[data-open-level-case]&quot;);
         if (levelButton &amp;&amp; !levelButton.disabled) {
+          caseStockMarkSeen(levelButton.dataset.caseStockKey || levelButton.closest?.(&quot;[data-case-stock-card]&quot;)?.dataset.caseStockCard || &quot;&quot;);
           void openLevelCaseClient(levelButton.dataset.openLevelCase, levelButton);
           return;
         }
         const giftedButton = target?.closest(&quot;[data-open-gifted-case]&quot;);
-        if (giftedButton &amp;&amp; !giftedButton.disabled) void openGiftedCaseClient(giftedButton.dataset.openGiftedCase, giftedButton);
+        if (giftedButton &amp;&amp; !giftedButton.disabled) {
+          caseStockMarkSeen(giftedButton.dataset.caseStockKey || giftedButton.closest?.(&quot;[data-case-stock-card]&quot;)?.dataset.caseStockCard || &quot;&quot;);
+          void openGiftedCaseClient(giftedButton.dataset.openGiftedCase, giftedButton);
+        }
       });
       if (caseBoostersListEl) caseBoostersListEl.addEventListener(&quot;click&quot;, (event) =&gt; {
         const button = event.target instanceof Element ? event.target.closest(&quot;[data-activate-case-booster]&quot;) : null;
@@ -21380,6 +21511,18 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       for (const button of warehouseFilterButtons) {
         button.addEventListener(&quot;click&quot;, () =&gt; setWarehouseFilter(button.dataset.warehouseFilter));
       }
+      for (const button of caseStockFilterButtons) {
+        button.addEventListener(&quot;click&quot;, () =&gt; {
+          caseStockFilter = [&quot;all&quot;,&quot;new&quot;,&quot;stock&quot;].includes(button.dataset.caseStockFilter) ? button.dataset.caseStockFilter : &quot;all&quot;;
+          renderCaseHub();
+          hapticImpact(&quot;light&quot;, 20);
+        });
+      }
+      if (caseStockSortButton) caseStockSortButton.addEventListener(&quot;click&quot;, () =&gt; {
+        caseStockSortMode = caseStockSortMode === &quot;rarity&quot; ? &quot;count&quot; : &quot;rarity&quot;;
+        renderCaseHub();
+        hapticImpact(&quot;light&quot;, 20);
+      });
       for (const button of stockHubButtons) {
         button.addEventListener(&quot;click&quot;, () =&gt; switchStockHubView(button.dataset.stockView, true));
       }

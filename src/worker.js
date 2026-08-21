@@ -1412,6 +1412,11 @@ const LEGACY_SHOP_DIRECT_COMMANDS = Object.freeze(new Set([
 let runtimeCompatibilitySchemaReady = false;
 let runtimeCompatibilitySchemaPromise = null;
 
+function isMissingRuntimeDatabaseSchemaError(error) {
+  const text = String(error?.message || error || '').toLowerCase();
+  return text.includes('no such table') || text.includes('no such column');
+}
+
 async function addRuntimeColumnIfMissing(env, tableName, columnName, definition) {
   const table = String(tableName || '');
   const column = String(columnName || '');
@@ -1803,18 +1808,14 @@ export default {
       }
 
       if (url.pathname === "/api/cases/open" && request.method === "POST") {
-        const gate = await enforceFeatureFlagForRequest(request, env, "cases"); if (gate) return gate;
         return await openLevelCase(request, env, ctx);
       }
 
       if (url.pathname === "/api/cases/open-granted" && request.method === "POST") {
-        const gate = await enforceFeatureFlagForRequest(request, env, "cases"); if (gate) return gate;
         return await openGrantedCase(request, env, ctx);
       }
 
       if (url.pathname === "/api/cases/purchase" && request.method === "POST") {
-        const shopGate = await enforceFeatureFlagForRequest(request, env, "shop"); if (shopGate) return shopGate;
-        const caseGate = await enforceFeatureFlagForRequest(request, env, "cases"); if (caseGate) return caseGate;
         return await purchaseCaseFromShop(request, env, ctx);
       }
 
@@ -3100,9 +3101,13 @@ async function readShopAssortmentProduct(env, productId) {
   const id = String(productId || "");
   const fallback = cloneDefaultShopAssortment()[id];
   if (!fallback) return null;
-  const row = await env.DB.prepare(
+  const readRow = () => env.DB.prepare(
     `SELECT product_id, enabled, points, treats, coffee FROM shop_assortment WHERE product_id = ? LIMIT 1`
   ).bind(id).first();
+  let row;
+  try { row = await readRow(); }
+  catch (error) { if (!isMissingRuntimeDatabaseSchemaError(error)) throw error; await ensureShopAssortmentSchema(env); row = await readRow(); }
+  if (!row) { await ensureShopAssortmentSchema(env); row = await readRow(); }
   if (!row) return fallback;
   return {
     enabled: Number(row.enabled || 0) === 1,
@@ -3119,9 +3124,22 @@ function shopStockScopeKey(category, productId = "") {
 }
 
 let shopStockSchemaPromise = null;
+async function shopStockSchemaQuickCheck(env) {
+  try {
+    const checks=await env.DB.batch([
+      env.DB.prepare(`SELECT committed,committed_at FROM shop_stock_consumptions LIMIT 0`),
+      env.DB.prepare(`SELECT remaining FROM shop_stock_limits LIMIT 0`),
+      env.DB.prepare(`SELECT ok FROM shop_stock_commit_guards LIMIT 0`),
+      env.DB.prepare(`SELECT name FROM sqlite_master WHERE type='trigger' AND name IN ('trg_shop_stock_consumption_decrement','trg_shop_stock_consumption_release')`)
+    ]);
+    const triggers=new Set((checks?.[3]?.results||[]).map(row=>String(row.name||'')));
+    return triggers.has('trg_shop_stock_consumption_decrement')&&triggers.has('trg_shop_stock_consumption_release');
+  } catch { return false; }
+}
 async function ensureShopStockSchema(env) {
   if (!shopStockSchemaPromise) {
     shopStockSchemaPromise = (async () => {
+      if(await shopStockSchemaQuickCheck(env))return;
       await env.DB.batch([
         env.DB.prepare(SHOP_STOCK_LIMIT_SCHEMA_SQL),
         env.DB.prepare(SHOP_STOCK_CONSUMPTION_SCHEMA_SQL),
@@ -3166,12 +3184,10 @@ function isShopStockCommitGuardError(error) {
 }
 
 async function readShopStockRows(env) {
-  await ensureShopStockSchema(env);
-  const result = await env.DB.prepare(
-    `SELECT scope_key, category, product_id, configured_limit, remaining, updated_at
-     FROM shop_stock_limits ORDER BY category ASC, product_id ASC`
-  ).all();
-  return result.results || [];
+  const readRows=()=>env.DB.prepare(`SELECT scope_key, category, product_id, configured_limit, remaining, updated_at FROM shop_stock_limits ORDER BY category ASC, product_id ASC`).all();
+  let result;
+  try{result=await readRows();}catch(error){if(!isMissingRuntimeDatabaseSchemaError(error))throw error;await ensureShopStockSchema(env);result=await readRows();}
+  return result.results||[];
 }
 
 function shopStockAvailabilityFromRows(rows, category, productId) {
@@ -3201,11 +3217,14 @@ async function readShopStockAvailability(env, category, productIds) {
 }
 
 async function consumeShopStock(env, { category, productId, consumptionId, telegramId }) {
-  await ensureShopStockSchema(env);
   const normalizedCategory = String(category || "").trim().toLowerCase();
   const normalizedProduct = String(productId || "").trim().toLowerCase();
   const normalizedConsumptionId = String(consumptionId || "").trim();
   if (!normalizedConsumptionId) throw new ApiError(400, "Некорректный идентификатор покупки.");
+  const initialRows=await readShopStockRows(env);
+  const initialAvailability=shopStockAvailabilityFromRows(initialRows,normalizedCategory,normalizedProduct);
+  if(!initialAvailability.limited)return initialAvailability;
+  await ensureShopStockSchema(env);
 
   const existing = await env.DB.prepare(
     `SELECT scope_key,category,product_id,created_at,committed FROM shop_stock_consumptions WHERE consumption_id = ? LIMIT 1`
@@ -3223,9 +3242,7 @@ async function consumeShopStock(env, { category, productId, consumptionId, teleg
     };
   }
 
-  const rows = await readShopStockRows(env);
-  const availability = shopStockAvailabilityFromRows(rows, normalizedCategory, normalizedProduct);
-  if (!availability.limited) return availability;
+  const availability = initialAvailability;
   if (availability.soldOut) throw new ApiError(409, "Товар закончился, загляните позже.");
 
   const now = Math.floor(Date.now() / 1000);
@@ -3510,9 +3527,26 @@ async function recoverLegacyUnsyncedRunProgress(env, telegramId, sourceUpdatedAt
   return await env.DB.prepare(`SELECT * FROM player_economy_cutovers WHERE telegram_id=? LIMIT 1`).bind(id).first();
 }
 
+function authoritativeProfileHasQueuedMutation(row) {
+  return row && (row.wallet_override != null || row.treats_override != null || row.coffee_override != null || row.best_score_override != null || row.profile_xp_override != null || Number(row.pending_wallet || 0) !== 0 || Number(row.pending_treats || 0) !== 0 || Number(row.pending_coffee || 0) !== 0);
+}
+
+async function readReadyAuthoritativeProfileRow(env, telegramId) {
+  const id = String(telegramId || ''); if (!id) return null;
+  try {
+    const results = await env.DB.batch([
+      env.DB.prepare(`SELECT wallet,best_score,treats,coffee,profile_xp,revision,created_at,updated_at,updated_by,wallet_override,treats_override,coffee_override,best_score_override,profile_xp_override,pending_wallet,pending_treats,pending_coffee FROM admin_profile_state WHERE telegram_id=? LIMIT 1`).bind(id),
+      env.DB.prepare(`SELECT telegram_id FROM player_economy_cutovers WHERE telegram_id=? LIMIT 1`).bind(id)
+    ]);
+    const row=results?.[0]?.results?.[0]||null, cutover=results?.[1]?.results?.[0]||null;
+    if(!row||!cutover||authoritativeProfileHasQueuedMutation(row))return null; return row;
+  } catch(error) { if(isMissingRuntimeDatabaseSchemaError(error))return null; throw error; }
+}
+
 async function ensureAuthoritativeProfileRow(env, telegramId, actor = 'server') {
-  await ensureAuthoritativeEconomySchema(env);
   const id = String(telegramId);
+  const ready = await readReadyAuthoritativeProfileRow(env, id); if (ready) return ready;
+  await ensureAuthoritativeEconomySchema(env);
   const now = Math.floor(Date.now() / 1000);
   const before = await env.DB.prepare(
     `SELECT wallet,best_score,treats,coffee,profile_xp,revision,created_at,updated_at,updated_by
@@ -5578,7 +5612,6 @@ function caseStateUpdateStatement(env, telegramId, caseState, now) {
 }
 
 async function ensureCasePlayerState(env, telegramId, currentProfile = {}, options = {}) {
-  await ensureAuthoritativeEconomySchema(env);
   const now = Math.floor(Date.now() / 1000);
   const id = String(telegramId);
   let profile = options?.profile || (options?.profilePromise ? await options.profilePromise : await ensureAuthoritativeProfileRow(env, id, `case-sync:${id}`));
@@ -6126,7 +6159,6 @@ async function prepareCasePhysicalRewards(env, { rolled, telegramId, ownerName, 
   }
 
   try {
-    await ensureShopAssortmentSchema(env);
     const ttl = positiveInt(env.REWARD_TTL_SECONDS, DEFAULT_REWARD_TTL_SECONDS);
 
     for (let index = 0; index < rewards.length; index += 1) {
@@ -6262,6 +6294,7 @@ async function openLevelCase(request, env, ctx = null) {
     const body = await readJson(request);
     const auth = await validateTelegramInitData(String(body.initData || ""), env);
     const telegramId = String(auth.user.id);
+    await requireFeatureFlagForTelegramId(env, "cases", telegramId);
     const requestedLevel = Math.floor(Number(body.level || 0));
     const caseType = LEVEL_CASE_SCHEDULE[requestedLevel];
     if (!caseType) throw new ApiError(400, "На этом уровне кейс не выдаётся.");
@@ -6362,26 +6395,29 @@ async function purchaseCaseFromShop(request, env, ctx = null) {
     requireBotToken(env);
     const body = await readJson(request);
     const auth = await validateTelegramInitData(String(body.initData || ""), env);
+    const telegramId = String(auth.user.id);
+    await requireFeatureFlagForTelegramId(env, "shop", telegramId);
+    await requireFeatureFlagForTelegramId(env, "cases", telegramId);
     const caseType = normalizeCaseType(body.caseType);
     const baseProduct = caseType ? CASE_SHOP_PRODUCTS[caseType] : null;
     if (!baseProduct) throw new ApiError(400, "Неизвестный тип кейса.");
-    const liveops = await readLiveOpsConfig(env);
-    if (liveOpsCaseConfig(liveops, caseType)?.enabled === false) throw new ApiError(409, "Этот кейс временно отключён администратором.");
-    await ensureShopAssortmentSchema(env);
-    const assortmentProduct = await readShopAssortmentProduct(env, baseProduct.id);
-    if (!assortmentProduct?.enabled) throw new ApiError(409, "Этот кейс временно убран из ассортимента.");
-    const product = { ...baseProduct, points:assortmentProduct.points, treats:assortmentProduct.treats, coffee:assortmentProduct.coffee };
     const requestId = String(body.requestId || "").trim();
     if (!/^[A-Za-z0-9_-]{12,80}$/.test(requestId)) throw new ApiError(400, "Некорректный идентификатор покупки.");
-    const telegramId = String(auth.user.id);
-    let ensured = await ensureCasePlayerState(env, telegramId, {});
     const grantId = `shopcase_${telegramId}_${requestId}`;
-    const existing = await env.DB.prepare(`SELECT id FROM granted_cases WHERE id=? AND telegram_id=? LIMIT 1`).bind(grantId,telegramId).first();
+    let ensured;
+    const [liveops, assortmentProduct, ensuredResult, existing] = await Promise.all([
+      readLiveOpsConfig(env), readShopAssortmentProduct(env, baseProduct.id), ensureCasePlayerState(env, telegramId, {}),
+      env.DB.prepare(`SELECT id FROM granted_cases WHERE id=? AND telegram_id=? LIMIT 1`).bind(grantId,telegramId).first()
+    ]);
+    ensured=ensuredResult;
+    const product={...baseProduct,points:safeAdminNumber(assortmentProduct?.points??baseProduct.points),treats:safeAdminNumber(assortmentProduct?.treats??baseProduct.treats),coffee:safeAdminNumber(assortmentProduct?.coffee??baseProduct.coffee)};
     if (existing) {
       return jsonResponse(await buildFastCasePurchasePayload(env, telegramId, ensured, liveops, {
         repeated:true,purchase:{productId:product.id,caseType,title:product.title}
       }));
     }
+    if (liveOpsCaseConfig(liveops, caseType)?.enabled === false) throw new ApiError(409, "Этот кейс временно отключён администратором.");
+    if (!assortmentProduct?.enabled) throw new ApiError(409, "Этот кейс временно убран из ассортимента.");
     const wallet=safeAdminNumber(ensured.profile?.wallet), treats=safeAdminNumber(ensured.profile?.treats), coffee=safeAdminNumber(ensured.profile?.coffee);
     const missing=[];
     if(wallet<product.points)missing.push(`${product.points-wallet} очков`);
@@ -6446,62 +6482,61 @@ async function purchaseCaseFromShop(request, env, ctx = null) {
 }
 
 const GRANTED_CASE_OPENING_STALE_SECONDS = 120;
-async function recoverStaleGrantedCaseOpenings(env, telegramId, now = Math.floor(Date.now() / 1000)) {
+const GRANTED_CASE_RETRY_LEASE_SECONDS = 16;
+
+async function releaseGrantedCaseOpeningReservations(env, telegramId, caseId, requestId, openingStartedAt = 0) {
+  const id=String(telegramId||''), grantId=String(caseId||''), token=String(requestId||''), startedAt=Math.max(0,safeAdminNumber(openingStartedAt));
+  if(!id||!grantId||!token)return 0;
   await ensureShopStockSchema(env);
-  const id = String(telegramId || '');
-  const cutoff = Math.max(0, Number(now || 0) - GRANTED_CASE_OPENING_STALE_SECONDS);
-  const stale = (await env.DB.prepare(
-    `SELECT id FROM granted_cases WHERE telegram_id=? AND status='opening' AND (opening_started_at=0 OR opening_started_at<=?) ORDER BY opening_started_at ASC LIMIT 20`
-  ).bind(id, cutoff).all()).results || [];
-  if (!stale.length) return 0;
-  const stockRows = (await env.DB.prepare(
-    `SELECT consumption_id FROM shop_stock_consumptions WHERE telegram_id=? AND consumption_id LIKE 'case-reward:%' LIMIT 400`
-  ).bind(id).all()).results || [];
-  let recovered = 0;
-  for (const row of stale) {
-    const caseId = String(row.id || '');
-    const legacyPrefix = `case-reward:grant_${caseId}:`;
-    const attemptPrefix = `case-reward:grant_${caseId}_`;
-    for (const stockRow of stockRows) {
-      const consumptionId = String(stockRow.consumption_id || '');
-      if (consumptionId.startsWith(legacyPrefix) || consumptionId.startsWith(attemptPrefix)) {
-        try { await releaseShopStock(env, consumptionId); } catch (error) { console.error('Failed to release stale granted-case stock', error); }
-      }
-    }
-    const result = await env.DB.prepare(
-      `UPDATE granted_cases SET status='pending',opening_started_at=0,opening_token='' WHERE id=? AND telegram_id=? AND status='opening' AND (opening_started_at=0 OR opening_started_at<=?)`
-    ).bind(caseId, id, cutoff).run();
-    recovered += safeAdminNumber(result?.meta?.changes);
+  const legacyPrefix=`case-reward:grant_${grantId}_${token}:`;
+  const attemptPrefix=startedAt>0?`case-reward:grant_${grantId}_${token}_${startedAt}:`:'';
+  const rows=(await env.DB.prepare(`SELECT consumption_id FROM shop_stock_consumptions WHERE telegram_id=? AND committed=0 AND (instr(consumption_id,?)=1 OR (?<>'' AND instr(consumption_id,?)=1)) LIMIT 80`).bind(id,legacyPrefix,attemptPrefix,attemptPrefix).all()).results||[];
+  let released=0;
+  for(const row of rows){try{await releaseShopStock(env,String(row.consumption_id||''));released+=1;}catch(error){console.error('Failed to release retried granted-case stock',error);}}
+  return released;
+}
+
+async function recoverGrantedCaseRequestLease(env,telegramId,row,requestId,now=Math.floor(Date.now()/1000)){
+  if(String(row?.status||'')!=='opening')return false;
+  const caseId=String(row?.id||''),token=String(requestId||''),startedAt=Math.max(0,safeAdminNumber(row?.opening_started_at));
+  const age=startedAt>0?Math.max(0,Number(now||0)-startedAt):GRANTED_CASE_RETRY_LEASE_SECONDS;
+  if(!caseId||!token||age<GRANTED_CASE_RETRY_LEASE_SECONDS)return false;
+  const reset=await env.DB.prepare(`UPDATE granted_cases SET status='pending',opening_started_at=0,opening_token='' WHERE id=? AND telegram_id=? AND status='opening' AND opening_started_at=? AND opening_token=?`).bind(caseId,String(telegramId),startedAt,token).run();
+  if(safeAdminNumber(reset?.meta?.changes)<1)return false;
+  await releaseGrantedCaseOpeningReservations(env,telegramId,caseId,token,startedAt);
+  return true;
+}
+
+async function recoverStaleGrantedCaseOpenings(env,telegramId,now=Math.floor(Date.now()/1000)){
+  const id=String(telegramId||''),cutoff=Math.max(0,Number(now||0)-GRANTED_CASE_OPENING_STALE_SECONDS);
+  const stale=(await env.DB.prepare(`SELECT id,opening_token,opening_started_at FROM granted_cases WHERE telegram_id=? AND status='opening' AND (opening_started_at=0 OR opening_started_at<=?) ORDER BY opening_started_at ASC LIMIT 20`).bind(id,cutoff).all()).results||[];
+  let recovered=0;
+  for(const row of stale){
+    const caseId=String(row.id||''),token=String(row.opening_token||''),startedAt=Math.max(0,safeAdminNumber(row.opening_started_at));
+    const result=await env.DB.prepare(`UPDATE granted_cases SET status='pending',opening_started_at=0,opening_token='' WHERE id=? AND telegram_id=? AND status='opening' AND opening_started_at=? AND opening_token=?`).bind(caseId,id,startedAt,token).run();
+    if(safeAdminNumber(result?.meta?.changes)<1)continue;
+    recovered+=1;
+    if(token){try{await releaseGrantedCaseOpeningReservations(env,id,caseId,token,startedAt);}catch(error){console.error('Failed to release stale granted-case stock',error);}}
   }
   return recovered;
 }
 
-async function grantedCaseExistingRequestPayload(env, telegramId, requestId) {
-  const token = String(requestId || '').trim();
-  if (!token) return null;
-  const row = await env.DB.prepare(
-    `SELECT id,case_type,status,rewards_json,opened_at FROM granted_cases WHERE telegram_id=? AND opening_token=? ORDER BY created_at DESC LIMIT 1`
-  ).bind(String(telegramId), token).first();
-  if (!row) return null;
-  if (String(row.status || '') === 'opening') return { ok:true, pending:true, requestId:token, caseType:String(row.case_type || '') };
-  if (String(row.status || '') !== 'opened') return null;
-  const caseType = normalizeCaseType(row.case_type);
-  if (!caseType) return null;
-  const [ensured, liveops, profile, inventory] = await Promise.all([
-    ensureCasePlayerState(env, telegramId, {}),
-    readLiveOpsConfig(env),
-    ensureAuthoritativeProfileRow(env, telegramId, `gift-case:${caseType}:resume`),
-    readFastCaseInventory(env, telegramId)
-  ]);
-  let rewards = [];
-  try { const parsed = JSON.parse(String(row.rewards_json || '[]')); rewards = Array.isArray(parsed) ? parsed : []; } catch {}
-  const opened = { grantId:String(row.id || ''), source:'gift', caseType, title:LEVEL_CASE_CONFIG[caseType]?.title || 'Кейс', rewards, resumed:true };
-  if (caseType === 'alex') {
-    const collection = alexCaseCollectionStatus(ensured.state);
-    const collectionGrant = await env.DB.prepare(`SELECT id FROM granted_cases WHERE id=? AND telegram_id=? LIMIT 1`).bind(alexCaseCollectionGrantId(String(telegramId)),String(telegramId)).first().catch(()=>null);
-    opened.alexCollection = { ...collection, rewardCaseType:'gold', rewardTitle:'Золотой кейс', rewardClaimed:Boolean(collectionGrant?.id) };
+async function grantedCaseExistingRequestPayload(env,telegramId,requestId){
+  const token=String(requestId||'').trim();if(!token)return null;
+  const readRow=()=>env.DB.prepare(`SELECT id,case_type,status,rewards_json,opened_at,opening_started_at FROM granted_cases WHERE telegram_id=? AND opening_token=? ORDER BY created_at DESC LIMIT 1`).bind(String(telegramId),token).first();
+  let row=await readRow();if(!row)return null;
+  if(String(row.status||'')==='opening'){
+    if(await recoverGrantedCaseRequestLease(env,telegramId,row,token))return null;
+    row=await readRow();if(!row)return null;
+    if(String(row.status||'')==='opening')return {ok:true,pending:true,requestId:token,caseType:String(row.case_type||''),retryAfterMs:900};
   }
-  return buildFastCaseOpenPayload({ state:ensured.state, liveops, profile:authoritativeProfileView(profile), opened, inventory, caseDelta:{} });
+  if(String(row.status||'')!=='opened')return null;
+  const caseType=normalizeCaseType(row.case_type);if(!caseType)return null;
+  const [ensured,liveops,inventory]=await Promise.all([ensureCasePlayerState(env,telegramId,{}),readLiveOpsConfig(env),readFastCaseInventory(env,telegramId)]);
+  let rewards=[];try{const parsed=JSON.parse(String(row.rewards_json||'[]'));rewards=Array.isArray(parsed)?parsed:[];}catch{}
+  const opened={grantId:String(row.id||''),source:'gift',caseType,title:LEVEL_CASE_CONFIG[caseType]?.title||'Кейс',rewards,resumed:true};
+  if(caseType==='alex'){const collection=alexCaseCollectionStatus(ensured.state);const collectionGrant=await env.DB.prepare(`SELECT id FROM granted_cases WHERE id=? AND telegram_id=? LIMIT 1`).bind(alexCaseCollectionGrantId(String(telegramId)),String(telegramId)).first().catch(()=>null);opened.alexCollection={...collection,rewardCaseType:'gold',rewardTitle:'Золотой кейс',rewardClaimed:Boolean(collectionGrant?.id)};}
+  return buildFastCaseOpenPayload({state:ensured.state,liveops,profile:authoritativeProfileView(ensured.profile),opened,inventory,caseDelta:{}});
 }
 
 async function openGrantedCase(request, env, ctx = null) {
@@ -6515,6 +6550,7 @@ async function openGrantedCase(request, env, ctx = null) {
     const body = await readJson(request);
     const auth = await validateTelegramInitData(String(body.initData || ""), env);
     const telegramId = String(auth.user.id);
+    await requireFeatureFlagForTelegramId(env, "cases", telegramId);
     const caseType = normalizeCaseType(body.caseType);
     if (!caseType) throw new ApiError(400, "Неизвестный тип кейса.");
     const requestId = String(body.requestId || '').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 96);
@@ -6523,14 +6559,14 @@ async function openGrantedCase(request, env, ctx = null) {
       if (existingRequest) return jsonResponse(existingRequest, existingRequest.pending ? 202 : 200);
     }
     const now = Math.floor(Date.now() / 1000);
-    const [ensured, taskEvent] = await Promise.all([
+    const [ensured, taskEvent, liveops] = await Promise.all([
       ensureCasePlayerState(env, telegramId, {}),
-      prepareSeasonPassTaskProgressEvent(env, telegramId, { cases_opened:1 }, now).catch((error) => { console.error("granted case task progress prepare failed", error); return null; })
+      prepareSeasonPassTaskProgressEvent(env, telegramId, { cases_opened:1 }, now).catch((error) => { console.error("granted case task progress prepare failed", error); return null; }),
+      readLiveOpsConfig(env)
     ]);
     openingClaimAt = now;
     openingClaimToken = requestId || crypto.randomUUID().replace(/-/g, '');
     await recoverStaleGrantedCaseOpenings(env, telegramId, now);
-    const liveops = await readLiveOpsConfig(env);
     if (liveOpsCaseConfig(liveops, caseType)?.enabled === false) throw new ApiError(409, "Этот кейс временно отключён администратором.");
     const gift = await env.DB.prepare(
       `SELECT id FROM granted_cases WHERE telegram_id = ? AND case_type = ? AND status = 'pending'
@@ -6565,7 +6601,7 @@ async function openGrantedCase(request, env, ctx = null) {
       rolled,
       telegramId,
       ownerName: telegramDisplayName(auth.user),
-      sourceId: `grant_${claimedId}_${openingClaimToken}`,
+      sourceId: `grant_${claimedId}_${openingClaimToken}_${openingClaimAt}`,
       now
     });
     physicalStockConsumptionIds = physicalRewards.stockConsumptionIds;
@@ -6638,7 +6674,7 @@ async function openGrantedCase(request, env, ctx = null) {
   } catch (error) {
     await releaseCasePhysicalStock(env, physicalStockConsumptionIds);
     if (claimedId) {
-      try { await env.DB.prepare(`UPDATE granted_cases SET status = 'pending',opening_started_at=0,opening_token='' WHERE id = ? AND status = 'opening' AND opening_token=?`).bind(claimedId,openingClaimToken).run(); } catch {}
+      try { await env.DB.prepare(`UPDATE granted_cases SET status = 'pending',opening_started_at=0,opening_token='' WHERE id = ? AND status = 'opening' AND opening_started_at=? AND opening_token=?`).bind(claimedId,openingClaimAt,openingClaimToken).run(); } catch {}
     }
     if (error instanceof ApiError) return jsonResponse({ ok: false, error: error.message }, error.status);
     if (String(error?.message || error).includes('granted_case_opening_guard_ok')) return jsonResponse({ ok:false, error:'Попытка открытия устарела. Повторите открытие кейса.' },409);
@@ -16784,8 +16820,8 @@ async function ensureLiveContentReleaseSchema(env){
 async function readLiveContentReleaseRules(env,force=false){
   const now=Date.now();
   if(!force&&liveContentReleaseCache.expiresAt>now&&liveContentReleaseCache.rows.size)return liveContentReleaseCache.rows;
-  await ensureLiveContentReleaseSchema(env);
-  const result=await env.DB.prepare(`SELECT * FROM live_content_release_rules ORDER BY item_kind,item_id`).all();
+  const readRows=()=>env.DB.prepare(`SELECT * FROM live_content_release_rules ORDER BY item_kind,item_id`).all();
+  let result; try{result=await readRows();}catch(error){if(!isMissingRuntimeDatabaseSchemaError(error))throw error;await ensureLiveContentReleaseSchema(env);result=await readRows();}
   const rows=new Map();for(const row of result.results||[]){const rule=liveContentRuleFromRow(row);rows.set(liveContentReleaseKey(rule.kind,rule.itemId),rule);}
   liveContentReleaseCache={expiresAt:Date.now()+LIVE_CONTENT_RELEASE_CACHE_TTL_MS,rows};
   return rows;
@@ -16936,12 +16972,14 @@ function liveOpsCaseConfigFromRow(row) {
 }
 
 async function readLiveOpsConfig(env) {
-  await ensureLiveOpsAdminSchema(env);
-  const [contentResult, caseResult, releaseRules] = await Promise.all([
+  const readRows = () => Promise.all([
     env.DB.prepare(`SELECT * FROM liveops_content_items ORDER BY item_kind, title`).all(),
     env.DB.prepare(`SELECT * FROM liveops_case_configs ORDER BY CASE case_id WHEN 'small' THEN 1 WHEN 'sweet' THEN 2 WHEN 'gold' THEN 3 WHEN 'mythic' THEN 4 ELSE 5 END`).all(),
     readLiveContentReleaseRules(env)
   ]);
+  let contentResult, caseResult, releaseRules;
+  try { [contentResult, caseResult, releaseRules] = await readRows(); }
+  catch (error) { if (!isMissingRuntimeDatabaseSchemaError(error)) throw error; await ensureLiveOpsAdminSchema(env); [contentResult, caseResult, releaseRules] = await readRows(); }
   const content = { avatar: {}, frame: {}, trail: {}, skin: {}, music: {} };
   for (const row of contentResult.results || []) {
     const kind = String(row.item_kind || "");
@@ -23200,8 +23238,14 @@ function invalidateFeatureFlagsCache() {
 async function loadFeatureFlagRows(env, force = false) {
   const now = Date.now();
   if (!force && featureFlagsMemoryCache.rows && featureFlagsMemoryCache.expiresAt > now) return featureFlagsMemoryCache.rows;
-  await ensureFeatureFlagsSchema(env);
-  const rows = (await env.DB.prepare(`SELECT * FROM live_feature_flags ORDER BY flag_key`).all()).results || [];
+  const readRows = async () => (await env.DB.prepare(`SELECT * FROM live_feature_flags ORDER BY flag_key`).all()).results || [];
+  let storedRows;
+  try { storedRows = await readRows(); }
+  catch (error) { if (!isMissingRuntimeDatabaseSchemaError(error)) throw error; await ensureFeatureFlagsSchema(env); storedRows = await readRows(); }
+  const storedByKey = new Map(storedRows.map((row) => [String(row.flag_key || ''), row]));
+  const defaults = FEATURE_FLAG_DEFAULTS.map((row) => ({ ...row, ...(storedByKey.get(String(row.flag_key)) || {}) }));
+  const defaultKeys = new Set(FEATURE_FLAG_DEFAULTS.map((row) => String(row.flag_key)));
+  const rows = [...defaults, ...storedRows.filter((row) => !defaultKeys.has(String(row.flag_key || '')))];
   featureFlagsMemoryCache = { rows, expiresAt: now + FEATURE_FLAG_CACHE_TTL_MS };
   return rows;
 }
@@ -23439,6 +23483,12 @@ async function enforceFeatureFlagForRequest(request, env, flagKey) {
   if (enabled) return null;
   const title = FEATURE_FLAG_LABELS[flagKey] || flagKey;
   return jsonResponse({ ok:false, error:`Функция «${title}» временно недоступна. Прогресс сохранён.` }, 503);
+}
+
+async function requireFeatureFlagForTelegramId(env, flagKey, telegramId) {
+  if (await isFeatureEnabled(env, flagKey, String(telegramId || ''))) return;
+  const title = FEATURE_FLAG_LABELS[flagKey] || flagKey;
+  throw new ApiError(503, `Функция «${title}» временно недоступна. Прогресс сохранён.`);
 }
 
 
