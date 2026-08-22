@@ -1748,6 +1748,12 @@ export default {
         return await markPlayerSupportTicketRead(request, env);
       }
 
+      if (url.pathname === "/api/daily-loyalty/claim" && request.method === "POST") {
+        const legalGate = await enforceLegalAcceptanceForRequest(request, env);
+        if (legalGate) return legalGate;
+        return await withPlayerApiPerformance(env, ctx, "daily_loyalty_claim", () => claimDailyLoyalty(request, env, ctx));
+      }
+
       if (url.pathname === "/api/game/startup" && request.method === "POST") {
         const legalGate = await enforceLegalAcceptanceForRequest(request, env);
         if (legalGate) return legalGate;
@@ -1937,6 +1943,7 @@ export default {
 
       try {
         await ensureRuntimeCompatibilitySchema(env);
+        await ensureDailyLoyaltySchema(env);
         await ensureRelease106PlayerFix(env);
         await ensureRelease109News(env);
         await processServerCron(env, controller);
@@ -1962,6 +1969,518 @@ function apiHeaders() {
   };
 }
 
+
+
+// ---- Daily loyalty / Coffee Card (Production) ---------------------------------
+// Server-authoritative: the client supplies only signed Telegram initData and a
+// request id. Calendar day, progression, streak and reward are resolved here.
+const DAILY_LOYALTY_CONFIG_TTL_MS = 15_000;
+const DAILY_LOYALTY_MAX_MILESTONES = 96;
+const DAILY_LOYALTY_REWARD_TYPES = new Set(["points", "zefir", "coffee", "season_xp", "case", "seasonal_case"]);
+let dailyLoyaltySchemaReady = false;
+let dailyLoyaltySchemaPromise = null;
+let dailyLoyaltyConfigMemory = { value: null, expiresAt: 0, promise: null, generation: 0 };
+
+function invalidateDailyLoyaltyConfig() {
+  dailyLoyaltyConfigMemory.generation += 1;
+  dailyLoyaltyConfigMemory.value = null;
+  dailyLoyaltyConfigMemory.expiresAt = 0;
+  dailyLoyaltyConfigMemory.promise = null;
+}
+
+async function ensureDailyLoyaltySchema(env) {
+  requireDatabase(env);
+  if (dailyLoyaltySchemaReady) return;
+  if (dailyLoyaltySchemaPromise) return dailyLoyaltySchemaPromise;
+  const promise = (async () => {
+    // Hot path: migrations create and seed these tables before code is released.
+    // A fresh Worker isolate therefore pays only one tiny probe instead of a DDL batch.
+    try {
+      const probe = await env.DB.prepare(`SELECT id FROM daily_loyalty_seasons LIMIT 1`).first();
+      if (probe?.id) return;
+    } catch (error) {
+      // Compatibility fallback below repairs an environment where the migration was missed.
+    }
+    const now = Math.floor(Date.now() / 1000);
+    await env.DB.batch([
+      env.DB.prepare(`CREATE TABLE IF NOT EXISTS daily_loyalty_seasons (
+        id TEXT PRIMARY KEY,title TEXT NOT NULL,enabled INTEGER NOT NULL DEFAULT 1,
+        timezone_offset_minutes INTEGER NOT NULL DEFAULT 180,starts_at INTEGER NOT NULL DEFAULT 0,ends_at INTEGER NOT NULL DEFAULT 0,
+        revision INTEGER NOT NULL DEFAULT 1,created_at INTEGER NOT NULL,updated_at INTEGER NOT NULL,updated_by TEXT NOT NULL DEFAULT ''
+      )`),
+      env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_daily_loyalty_seasons_active ON daily_loyalty_seasons(enabled,starts_at,ends_at,updated_at DESC)`),
+      env.DB.prepare(`CREATE TABLE IF NOT EXISTS daily_loyalty_milestones (
+        season_id TEXT NOT NULL,day_index INTEGER NOT NULL,icon TEXT NOT NULL DEFAULT '🎁',label TEXT NOT NULL,
+        reward_type TEXT NOT NULL,amount INTEGER NOT NULL DEFAULT 1,item_id TEXT NOT NULL DEFAULT '',sort_order INTEGER NOT NULL DEFAULT 0,
+        created_at INTEGER NOT NULL,updated_at INTEGER NOT NULL,PRIMARY KEY(season_id,day_index)
+      )`),
+      env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_daily_loyalty_milestones_season ON daily_loyalty_milestones(season_id,day_index)`),
+      env.DB.prepare(`CREATE TABLE IF NOT EXISTS daily_loyalty_players (
+        telegram_id TEXT NOT NULL,season_id TEXT NOT NULL,progress_days INTEGER NOT NULL DEFAULT 0,streak INTEGER NOT NULL DEFAULT 0,
+        best_streak INTEGER NOT NULL DEFAULT 0,last_active_day_key TEXT NOT NULL DEFAULT '',updated_at INTEGER NOT NULL,
+        PRIMARY KEY(telegram_id,season_id)
+      )`),
+      env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_daily_loyalty_players_streak ON daily_loyalty_players(season_id,streak DESC,updated_at DESC)`),
+      env.DB.prepare(`CREATE TABLE IF NOT EXISTS daily_loyalty_activity (
+        telegram_id TEXT NOT NULL,season_id TEXT NOT NULL,day_key TEXT NOT NULL,request_id TEXT NOT NULL,
+        applied INTEGER NOT NULL DEFAULT 0,progress_day INTEGER NOT NULL DEFAULT 0,streak INTEGER NOT NULL DEFAULT 0,
+        created_at INTEGER NOT NULL,updated_at INTEGER NOT NULL,
+        PRIMARY KEY(telegram_id,season_id,day_key),UNIQUE(request_id)
+      )`),
+      env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_daily_loyalty_activity_player ON daily_loyalty_activity(telegram_id,season_id,created_at DESC)`),
+      env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_daily_loyalty_activity_day ON daily_loyalty_activity(season_id,day_key,applied)`),
+      env.DB.prepare(`CREATE TABLE IF NOT EXISTS daily_loyalty_claims (
+        telegram_id TEXT NOT NULL,season_id TEXT NOT NULL,day_index INTEGER NOT NULL,reward_type TEXT NOT NULL,amount INTEGER NOT NULL DEFAULT 1,
+        item_id TEXT NOT NULL DEFAULT '',label TEXT NOT NULL DEFAULT '',icon TEXT NOT NULL DEFAULT '🎁',reward_json TEXT NOT NULL DEFAULT '{}',
+        status TEXT NOT NULL DEFAULT 'granting',source_request_id TEXT NOT NULL DEFAULT '',created_at INTEGER NOT NULL,delivered_at INTEGER NOT NULL DEFAULT 0,
+        updated_at INTEGER NOT NULL,PRIMARY KEY(telegram_id,season_id,day_index)
+      )`),
+      env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_daily_loyalty_claims_player ON daily_loyalty_claims(telegram_id,season_id,created_at DESC)`),
+      env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_daily_loyalty_claims_request ON daily_loyalty_claims(source_request_id,status)`),
+      env.DB.prepare(`INSERT OR IGNORE INTO daily_loyalty_seasons(id,title,enabled,timezone_offset_minutes,starts_at,ends_at,revision,created_at,updated_at,updated_by)
+        VALUES('daily-main','Кофейная карточка Зеффи',1,180,0,0,1,?,?,?)`).bind(now, now, 'runtime-daily-loyalty'),
+      env.DB.prepare(`INSERT OR IGNORE INTO daily_loyalty_milestones(season_id,day_index,icon,label,reward_type,amount,item_id,sort_order,created_at,updated_at) VALUES
+        ('daily-main',3,'🍥','250 зефира','zefir',250,'',3,?,?),
+        ('daily-main',5,'⭐','+500 XP сезона','season_xp',500,'',5,?,?),
+        ('daily-main',7,'🎁','Серебряный кейс','case',1,'sweet',7,?,?),
+        ('daily-main',14,'🏆','Золотой кейс','case',1,'gold',14,?,?),
+        ('daily-main',21,'✨','+1 500 XP сезона','season_xp',1500,'',21,?,?),
+        ('daily-main',28,'🌟','Сезонный кейс','seasonal_case',1,'',28,?,?),
+        ('daily-main',35,'💜','Мифический кейс','case',1,'mythic',35,?,?),
+        ('daily-main',42,'👑','Легендарный кейс','case',1,'legendary',42,?,?)`).bind(
+          now,now, now,now, now,now, now,now, now,now, now,now, now,now, now,now
+        )
+    ]);
+  })();
+  dailyLoyaltySchemaPromise = promise;
+  try {
+    await promise;
+    dailyLoyaltySchemaReady = true;
+  } finally {
+    if (dailyLoyaltySchemaPromise === promise) dailyLoyaltySchemaPromise = null;
+  }
+}
+
+function dailyLoyaltyDayKey(nowMs, timezoneOffsetMinutes) {
+  const shifted = Number(nowMs) + Number(timezoneOffsetMinutes || 0) * 60_000;
+  return new Date(shifted).toISOString().slice(0, 10);
+}
+function dailyLoyaltyDayOrdinal(dayKey) {
+  const parsed = Date.parse(`${String(dayKey || '')}T00:00:00Z`);
+  return Number.isFinite(parsed) ? Math.floor(parsed / 86_400_000) : 0;
+}
+function dailyLoyaltyPreviousDayKey(dayKey) {
+  return new Date((dailyLoyaltyDayOrdinal(dayKey) - 1) * 86_400_000).toISOString().slice(0, 10);
+}
+function dailyLoyaltyEffectiveStreak(row, currentDayKey) {
+  const stored = Math.max(0, Number(row?.streak || 0));
+  const last = String(row?.last_active_day_key || '');
+  if (!stored || !last) return 0;
+  const diff = dailyLoyaltyDayOrdinal(currentDayKey) - dailyLoyaltyDayOrdinal(last);
+  return diff >= 0 && diff <= 1 ? stored : 0;
+}
+function dailyLoyaltyCurrentBlock(progressDays) {
+  const progress = Math.max(0, Math.floor(Number(progressDays) || 0));
+  const index = progress > 0 ? Math.floor((progress - 1) / 7) : 0;
+  const startDay = index * 7 + 1;
+  const endDay = startDay + 6;
+  const filled = progress > 0 ? Math.min(7, progress - startDay + 1) : 0;
+  return { index: index + 1, startDay, endDay, filled };
+}
+function dailyLoyaltyRequestId(value) {
+  const id = String(value || '').trim();
+  if (!id || id.length > 120 || !/^[A-Za-z0-9_.:@-]+$/.test(id)) throw new ApiError(400, 'Некорректный requestId ежедневной отметки.');
+  return id;
+}
+function dailyLoyaltyMilestoneFromRow(row) {
+  const rewardType = String(row?.reward_type || '').trim();
+  const isCase = rewardType === 'case' || rewardType === 'seasonal_case';
+  return {
+    dayIndex: Math.max(1, Math.floor(Number(row?.day_index) || 1)),
+    icon: String(row?.icon || '🎁').slice(0, 16),
+    label: String(row?.label || 'Награда').slice(0, 120),
+    reward: {
+      type: rewardType,
+      amount: isCase ? Math.max(1, Math.min(20, Math.floor(Number(row?.amount) || 1))) : Math.max(1, Math.min(1_000_000_000, Math.floor(Number(row?.amount) || 1))),
+      itemId: String(row?.item_id || '').slice(0, 80)
+    }
+  };
+}
+function dailyLoyaltyConfigActive(season, now = Math.floor(Date.now() / 1000)) {
+  if (!season || Number(season.enabled || 0) !== 1) return false;
+  const startsAt = Math.max(0, Number(season.starts_at || 0));
+  const endsAt = Math.max(0, Number(season.ends_at || 0));
+  return (!startsAt || startsAt <= now) && (!endsAt || endsAt > now);
+}
+
+async function loadDailyLoyaltyConfig(env, options = {}) {
+  await ensureDailyLoyaltySchema(env);
+  const allowDisabled = options.allowDisabled === true;
+  const force = options.force === true;
+  const nowMs = Date.now();
+  if (!force && dailyLoyaltyConfigMemory.value && dailyLoyaltyConfigMemory.expiresAt > nowMs) {
+    if (allowDisabled || dailyLoyaltyConfigMemory.value.active) return dailyLoyaltyConfigMemory.value;
+  }
+  if (!force && dailyLoyaltyConfigMemory.promise) {
+    const value = await dailyLoyaltyConfigMemory.promise;
+    if (allowDisabled || value.active) return value;
+  }
+  const generation = dailyLoyaltyConfigMemory.generation;
+  const promise = (async () => {
+    const now = Math.floor(Date.now() / 1000);
+    let season = await env.DB.prepare(`SELECT * FROM daily_loyalty_seasons
+      WHERE enabled=1 AND (starts_at=0 OR starts_at<=?) AND (ends_at=0 OR ends_at>?)
+      ORDER BY updated_at DESC LIMIT 1`).bind(now, now).first();
+    if (!season) season = await env.DB.prepare(`SELECT * FROM daily_loyalty_seasons ORDER BY updated_at DESC LIMIT 1`).first();
+    if (!season) throw new ApiError(503, 'Ежедневная активность ещё не настроена.');
+    const rows = await env.DB.prepare(`SELECT day_index,icon,label,reward_type,amount,item_id,sort_order
+      FROM daily_loyalty_milestones WHERE season_id=? ORDER BY day_index ASC`).bind(String(season.id)).all();
+    const milestones = (rows.results || []).map(dailyLoyaltyMilestoneFromRow).filter((item) => DAILY_LOYALTY_REWARD_TYPES.has(item.reward.type));
+    const value = {
+      season: {
+        id: String(season.id), title: String(season.title || 'Кофейная карточка Зеффи'),
+        enabled: Number(season.enabled || 0) === 1, timezoneOffsetMinutes: Number(season.timezone_offset_minutes || 0),
+        startsAt: Math.max(0, Number(season.starts_at || 0)), endsAt: Math.max(0, Number(season.ends_at || 0)),
+        revision: Math.max(1, Number(season.revision || 1)), updatedAt: Math.max(0, Number(season.updated_at || 0))
+      },
+      active: dailyLoyaltyConfigActive(season, now),
+      milestones
+    };
+    if (generation === dailyLoyaltyConfigMemory.generation) {
+      dailyLoyaltyConfigMemory.value = value;
+      dailyLoyaltyConfigMemory.expiresAt = Date.now() + DAILY_LOYALTY_CONFIG_TTL_MS;
+    }
+    return value;
+  })();
+  dailyLoyaltyConfigMemory.promise = promise;
+  try {
+    const value = await promise;
+    if (!allowDisabled && !value.active) throw new ApiError(409, 'Ежедневная карточка сейчас выключена.');
+    return value;
+  } finally {
+    if (dailyLoyaltyConfigMemory.promise === promise) dailyLoyaltyConfigMemory.promise = null;
+  }
+}
+
+async function readDailyLoyaltyBundle(env, telegramId, seasonId) {
+  const id = String(telegramId);
+  const sid = String(seasonId);
+  const [playerResult, claimsResult] = await env.DB.batch([
+    env.DB.prepare(`SELECT progress_days,streak,best_streak,last_active_day_key,updated_at FROM daily_loyalty_players WHERE telegram_id=? AND season_id=? LIMIT 1`).bind(id, sid),
+    env.DB.prepare(`SELECT day_index,reward_type,amount,item_id,label,icon,status,source_request_id,created_at,delivered_at FROM daily_loyalty_claims WHERE telegram_id=? AND season_id=? AND status='delivered' ORDER BY day_index ASC`).bind(id, sid)
+  ]);
+  return { player: playerResult.results?.[0] || null, claims: claimsResult.results || [] };
+}
+
+function dailyLoyaltyModel(config, bundle, currentDayKey) {
+  const row = bundle?.player || {};
+  const progressDays = Math.max(0, Number(row.progress_days || 0));
+  const streak = dailyLoyaltyEffectiveStreak(row, currentDayKey);
+  const claimedDays = (bundle?.claims || []).map((item) => Number(item.day_index || 0)).filter(Boolean);
+  const nextMilestone = config.milestones.find((item) => item.dayIndex > progressDays) || null;
+  return {
+    ok: true,
+    serverAuthoritative: true,
+    configRevision: Number(config.season.revision || 1),
+    serverDayKey: currentDayKey,
+    season: config.season,
+    milestones: config.milestones,
+    state: {
+      progressDays,
+      streak,
+      bestStreak: Math.max(Number(row.best_streak || 0), streak),
+      lastActiveDayKey: String(row.last_active_day_key || ''),
+      todayCompleted: String(row.last_active_day_key || '') === currentDayKey,
+      currentBlock: dailyLoyaltyCurrentBlock(progressDays),
+      claimedDays,
+      nextMilestone
+    }
+  };
+}
+
+async function prepareDailyLoyaltySeasonReward(env, milestone) {
+  const type = String(milestone?.reward?.type || '');
+  if (type !== 'season_xp' && type !== 'seasonal_case') return null;
+  try {
+    const season = await loadSeasonPassSeason(env);
+    if (season && String(season.status || '') === 'active') {
+      if (type === 'season_xp') return { season };
+      const definition = await env.DB.prepare(`SELECT case_id,season_id,title,description,closed_image_url,open_image_url,slots,duplicate_points,reward_groups_json,enabled,release_at
+        FROM season_pass_case_definitions WHERE season_id=? AND enabled=1 ORDER BY updated_at DESC LIMIT 1`).bind(String(season.id)).first();
+      const now = Math.floor(Date.now() / 1000);
+      if (definition && Number(definition.enabled || 0) === 1 && Number(definition.release_at || 0) <= now) {
+        const items = await seasonPassEffectiveCaseItems(env, String(definition.case_id));
+        if (items.length) {
+          const snapshot = JSON.stringify({
+            title: String(definition.title || 'Сезонный кейс'), description: String(definition.description || ''),
+            imageUrl: String(definition.closed_image_url || ''), openImageUrl: String(definition.open_image_url || ''),
+            slots: Math.max(1, Math.min(5, Number(definition.slots) || 1)), duplicatePoints: Math.max(0, Number(definition.duplicate_points) || 0),
+            groupChances: seasonPassSeasonalCaseGroupChances(definition.reward_groups_json),
+            items: items.map((item) => ({ key:String(item.item_key),kind:String(item.reward_kind),itemId:String(item.item_id),amount:Math.max(1,Number(item.amount||1)),weight:Number(item.weight||1),rarity:String(item.rarity||'seasonal'),title:String(item.title||''),imageUrl:String(item.image_url||'') }))
+          });
+          return { season, definition, snapshot };
+        }
+      }
+    }
+  } catch (error) {
+    // Daily loyalty must stay claimable even while season-pass content is being
+    // switched. The deterministic fallback below is deliberately independent.
+    console.warn('daily loyalty season-dependent reward using fallback', error);
+  }
+  const amount = Math.max(1, Math.floor(Number(milestone?.reward?.amount) || 1));
+  if (type === 'season_xp') {
+    return {
+      fallbackReward: { type:'profile_xp', amount, itemId:'' },
+      fallbackIcon: '⭐', fallbackLabel: `+${amount.toLocaleString('ru-RU')} XP профиля`
+    };
+  }
+  return {
+    fallbackReward: { type:'case', amount:Math.max(1,Math.min(20,amount)), itemId:'gold' },
+    fallbackIcon: '🏆', fallbackLabel: amount === 1 ? 'Золотой кейс' : `Золотой кейс ×${Math.max(1,Math.min(20,amount))}`
+  };
+}
+
+async function claimDailyLoyalty(request, env, executionCtx = null) {
+  try {
+    requireDatabase(env); requireBotToken(env);
+    const body = await readJson(request);
+    const auth = await validateTelegramInitData(String(body.initData || body.init_data || ''), env);
+    const telegramId = String(auth.user.id);
+    const requestId = dailyLoyaltyRequestId(body.requestId || body.request_id);
+    const config = await loadDailyLoyaltyConfig(env);
+    const currentDayKey = dailyLoyaltyDayKey(Date.now(), config.season.timezoneOffsetMinutes);
+    const yesterday = dailyLoyaltyPreviousDayKey(currentDayKey);
+    let before = await readDailyLoyaltyBundle(env, telegramId, config.season.id);
+    let model = dailyLoyaltyModel(config, before, currentDayKey);
+    if (model.state.todayCompleted) return jsonResponse({ ...model, repeated: true, grantedRewards: [] });
+
+    const nextProgressDay = Math.max(0, Number(before.player?.progress_days || 0)) + 1;
+    let milestone = config.milestones.find((item) => item.dayIndex === nextProgressDay) || null;
+    let seasonReward = null;
+    if (milestone?.reward?.type === 'season_xp' || milestone?.reward?.type === 'seasonal_case') {
+      seasonReward = await prepareDailyLoyaltySeasonReward(env, milestone);
+      if (seasonReward?.fallbackReward) {
+        milestone = { ...milestone, icon:seasonReward.fallbackIcon || milestone.icon, label:seasonReward.fallbackLabel || milestone.label, reward:seasonReward.fallbackReward };
+        seasonReward = null;
+      }
+    }
+    if (milestone?.reward?.type === 'points' || milestone?.reward?.type === 'zefir' || milestone?.reward?.type === 'coffee' || milestone?.reward?.type === 'profile_xp') {
+      // Fold any queued/override mutations before an immediate durable credit.
+      await ensureAuthoritativeProfileRow(env, telegramId, 'daily-loyalty');
+    } else if (milestone?.reward?.type === 'case') {
+      if (!normalizeCaseType(milestone.reward.itemId)) throw new ApiError(409, 'В CC ежедневной карточки выбран неизвестный кейс.');
+    } else if (milestone?.reward?.type === 'season_xp') {
+      if (!seasonReward?.season) throw new ApiError(500, 'Не удалось подготовить награду сезонного пропуска.');
+      await ensureSeasonPassPlayer(env, seasonReward.season, telegramId);
+    } else if (milestone?.reward?.type === 'seasonal_case' && !seasonReward?.definition) {
+      throw new ApiError(500, 'Не удалось подготовить сезонный кейс.');
+    }
+
+    const now = Math.floor(Date.now() / 1000);
+    const statements = [
+      env.DB.prepare(`INSERT OR IGNORE INTO daily_loyalty_activity(telegram_id,season_id,day_key,request_id,applied,progress_day,streak,created_at,updated_at)
+        VALUES(?,?,?,?,0,0,0,?,?)`).bind(telegramId, config.season.id, currentDayKey, requestId, now, now),
+      env.DB.prepare(`INSERT INTO daily_loyalty_players(telegram_id,season_id,progress_days,streak,best_streak,last_active_day_key,updated_at)
+        SELECT ?,?,1,1,1,?,? FROM daily_loyalty_activity a
+        WHERE a.telegram_id=? AND a.season_id=? AND a.day_key=? AND a.request_id=? AND a.applied=0
+        ON CONFLICT(telegram_id,season_id) DO UPDATE SET
+          progress_days=daily_loyalty_players.progress_days+1,
+          streak=CASE WHEN daily_loyalty_players.last_active_day_key=? THEN daily_loyalty_players.streak+1 ELSE 1 END,
+          best_streak=MAX(daily_loyalty_players.best_streak,CASE WHEN daily_loyalty_players.last_active_day_key=? THEN daily_loyalty_players.streak+1 ELSE 1 END),
+          last_active_day_key=excluded.last_active_day_key,updated_at=excluded.updated_at`).bind(
+            telegramId, config.season.id, currentDayKey, now,
+            telegramId, config.season.id, currentDayKey, requestId, yesterday, yesterday
+          )
+    ];
+
+    if (milestone) {
+      const reward = milestone.reward;
+      const rewardJson = JSON.stringify({ type:reward.type,amount:reward.amount,itemId:reward.itemId,label:milestone.label,icon:milestone.icon,configRevision:config.season.revision });
+      statements.push(env.DB.prepare(`INSERT OR IGNORE INTO daily_loyalty_claims(
+        telegram_id,season_id,day_index,reward_type,amount,item_id,label,icon,reward_json,status,source_request_id,created_at,delivered_at,updated_at
+      ) SELECT ?,?,?,?,?,?,?,?,?,'granting',?,?,0,? FROM daily_loyalty_activity a
+        JOIN daily_loyalty_players p ON p.telegram_id=a.telegram_id AND p.season_id=a.season_id
+        WHERE a.telegram_id=? AND a.season_id=? AND a.day_key=? AND a.request_id=? AND a.applied=0 AND p.progress_days=?`).bind(
+          telegramId, config.season.id, milestone.dayIndex, reward.type, reward.amount, reward.itemId, milestone.label, milestone.icon, rewardJson,
+          requestId, now, now, telegramId, config.season.id, currentDayKey, requestId, milestone.dayIndex
+        ));
+
+      if (reward.type === 'points' || reward.type === 'zefir' || reward.type === 'coffee' || reward.type === 'profile_xp') {
+        const field = reward.type === 'points' ? 'wallet' : reward.type === 'zefir' ? 'treats' : reward.type === 'coffee' ? 'coffee' : 'profile_xp';
+        statements.push(env.DB.prepare(`UPDATE admin_profile_state SET ${field}=MIN(999999999,${field}+?),revision=revision+1,updated_at=?,updated_by=?
+          WHERE telegram_id=? AND EXISTS(SELECT 1 FROM daily_loyalty_claims WHERE telegram_id=? AND season_id=? AND day_index=? AND source_request_id=? AND status='granting')`).bind(
+            reward.amount, now, `daily-loyalty:${config.season.id}:${milestone.dayIndex}`, telegramId,
+            telegramId, config.season.id, milestone.dayIndex, requestId
+          ));
+      } else if (reward.type === 'case') {
+        const caseType = normalizeCaseType(reward.itemId);
+        const amount = Math.max(1, Math.min(20, Number(reward.amount) || 1));
+        for (let index = 0; index < amount; index += 1) {
+          const grantId = `daily_${config.season.id}_${telegramId}_${milestone.dayIndex}_${index + 1}`.slice(0, 180);
+          statements.push(env.DB.prepare(`INSERT OR IGNORE INTO granted_cases(id,telegram_id,case_type,status,granted_by,reason,created_at)
+            SELECT ?,?,?,'pending',?,?,? WHERE EXISTS(SELECT 1 FROM daily_loyalty_claims WHERE telegram_id=? AND season_id=? AND day_index=? AND source_request_id=? AND status='granting')`).bind(
+              grantId, telegramId, caseType, `daily-loyalty:${config.season.id}`, milestone.label, now,
+              telegramId, config.season.id, milestone.dayIndex, requestId
+            ));
+        }
+      } else if (reward.type === 'season_xp') {
+        statements.push(env.DB.prepare(`UPDATE season_pass_players SET xp=MIN(999999999,xp+?),revision=revision+1,updated_at=?
+          WHERE season_id=? AND telegram_id=? AND EXISTS(SELECT 1 FROM daily_loyalty_claims WHERE telegram_id=? AND season_id=? AND day_index=? AND source_request_id=? AND status='granting')`).bind(
+            reward.amount, now, String(seasonReward.season.id), telegramId,
+            telegramId, config.season.id, milestone.dayIndex, requestId
+          ));
+      } else if (reward.type === 'seasonal_case') {
+        const amount = Math.max(1, Math.min(20, Number(reward.amount) || 1));
+        for (let index = 0; index < amount; index += 1) {
+          const grantId = `daily_spcase_${config.season.id}_${telegramId}_${milestone.dayIndex}_${index + 1}`.slice(0, 190);
+          statements.push(env.DB.prepare(`INSERT OR IGNORE INTO season_pass_case_grants(grant_id,case_id,source_season_id,telegram_id,status,rewards_json,snapshot_json,granted_by,created_at)
+            SELECT ?,?,?,?,'pending','[]',?,?,? WHERE EXISTS(SELECT 1 FROM daily_loyalty_claims WHERE telegram_id=? AND season_id=? AND day_index=? AND source_request_id=? AND status='granting')`).bind(
+              grantId, String(seasonReward.definition.case_id), String(seasonReward.season.id), telegramId, seasonReward.snapshot, `daily-loyalty:${config.season.id}`, now,
+              telegramId, config.season.id, milestone.dayIndex, requestId
+            ));
+        }
+      }
+      statements.push(env.DB.prepare(`UPDATE daily_loyalty_claims SET status='delivered',delivered_at=?,updated_at=?
+        WHERE telegram_id=? AND season_id=? AND day_index=? AND source_request_id=? AND status='granting'`).bind(
+          now, now, telegramId, config.season.id, milestone.dayIndex, requestId
+        ));
+    }
+
+    statements.push(env.DB.prepare(`UPDATE daily_loyalty_activity SET applied=1,
+      progress_day=COALESCE((SELECT progress_days FROM daily_loyalty_players WHERE telegram_id=? AND season_id=?),progress_day),
+      streak=COALESCE((SELECT streak FROM daily_loyalty_players WHERE telegram_id=? AND season_id=?),streak),updated_at=?
+      WHERE telegram_id=? AND season_id=? AND day_key=? AND request_id=? AND applied=0`).bind(
+        telegramId, config.season.id, telegramId, config.season.id, now,
+        telegramId, config.season.id, currentDayKey, requestId
+      ));
+
+    const results = await env.DB.batch(statements);
+    const inserted = Number(results?.[0]?.meta?.changes || 0) > 0;
+    const after = await readDailyLoyaltyBundle(env, telegramId, config.season.id);
+    model = dailyLoyaltyModel(config, after, currentDayKey);
+    if (!inserted && !model.state.todayCompleted) throw new ApiError(409, 'Запрос отметки уже использован. Нажмите ещё раз.');
+    const grantedRewards = inserted ? after.claims.filter((row) => String(row.source_request_id || '') === requestId).map((row) => ({
+      dayIndex: Number(row.day_index || 0), icon: String(row.icon || '🎁'), label: String(row.label || 'Награда'),
+      reward: { type:String(row.reward_type || ''), amount:Number(row.amount || 0), itemId:String(row.item_id || '') }
+    })) : [];
+
+    if (inserted && executionCtx?.waitUntil) {
+      executionCtx.waitUntil(Promise.allSettled([
+        recordPlayerTimeline(env, telegramId, 'daily_loyalty_checkin', `ежедневная отметка · день ${model.state.progressDays} · серия ${model.state.streak}`, {
+          seasonId:config.season.id,serverDayKey:currentDayKey,progressDays:model.state.progressDays,streak:model.state.streak,grantedRewards
+        }, `daily_${config.season.id}_${telegramId}_${currentDayKey}`, auth.user, now)
+      ]));
+    }
+    return jsonResponse({ ...model, repeated: !inserted, grantedRewards });
+  } catch (error) {
+    if (error instanceof ApiError) return jsonResponse({ ok:false,error:error.message }, error.status);
+    console.error('daily loyalty claim failed', error);
+    return jsonResponse({ ok:false,error:'Не удалось получить ежедневную отметку. Нажмите ещё раз.' }, 500);
+  }
+}
+
+function normalizeDailyLoyaltyMilestones(input) {
+  if (!Array.isArray(input)) throw new ApiError(400, 'Награды должны быть списком.');
+  if (input.length > DAILY_LOYALTY_MAX_MILESTONES) throw new ApiError(400, `Максимум ${DAILY_LOYALTY_MAX_MILESTONES} наград.`);
+  const seen = new Set();
+  const rows = input.map((item) => {
+    const dayIndex = Math.floor(Number(item?.dayIndex || item?.day_index));
+    if (!Number.isInteger(dayIndex) || dayIndex < 1 || dayIndex > 3650 || seen.has(dayIndex)) throw new ApiError(400, 'Дни наград должны быть уникальными числами от 1 до 3650.');
+    seen.add(dayIndex);
+    const rewardType = String(item?.rewardType || item?.reward_type || item?.reward?.type || '').trim();
+    if (!DAILY_LOYALTY_REWARD_TYPES.has(rewardType)) throw new ApiError(400, `Неизвестный тип ежедневной награды: ${rewardType || 'пусто'}.`);
+    const isCase = rewardType === 'case' || rewardType === 'seasonal_case';
+    const amount = Math.floor(Number(item?.amount ?? item?.reward?.amount ?? 1));
+    const maxAmount = isCase ? 20 : 1_000_000_000;
+    if (!Number.isFinite(amount) || amount < 1 || amount > maxAmount) throw new ApiError(400, `Некорректное количество для дня ${dayIndex}.`);
+    let itemId = String(item?.itemId || item?.item_id || item?.reward?.itemId || '').trim();
+    if (rewardType === 'case') {
+      itemId = normalizeCaseType(itemId);
+      if (!itemId) throw new ApiError(400, `На дне ${dayIndex} выбран неизвестный обычный кейс.`);
+    } else if (rewardType !== 'seasonal_case') itemId = '';
+    return {
+      dayIndex, icon:String(item?.icon || '🎁').trim().slice(0,16) || '🎁', label:String(item?.label || 'Награда').trim().slice(0,120) || 'Награда',
+      rewardType, amount, itemId, sortOrder: dayIndex
+    };
+  });
+  rows.sort((a,b) => a.dayIndex - b.dayIndex);
+  return rows;
+}
+
+async function ownerPanelDailyLoyalty(env, ctx) {
+  const config = await loadDailyLoyaltyConfig(env, { allowDisabled:true });
+  const currentDayKey = dailyLoyaltyDayKey(Date.now(), config.season.timezoneOffsetMinutes);
+  const [players, today, longest] = await Promise.all([
+    env.DB.prepare(`SELECT COUNT(*) AS count FROM daily_loyalty_players WHERE season_id=?`).bind(config.season.id).first(),
+    env.DB.prepare(`SELECT COUNT(*) AS count FROM daily_loyalty_activity WHERE season_id=? AND day_key=? AND applied=1`).bind(config.season.id,currentDayKey).first(),
+    env.DB.prepare(`SELECT COALESCE(MAX(best_streak),0) AS value FROM daily_loyalty_players WHERE season_id=?`).bind(config.season.id).first()
+  ]);
+  return { ok:true, daily:{ ...config, serverDayKey:currentDayKey, stats:{ players:Number(players?.count||0), today:Number(today?.count||0), bestStreak:Number(longest?.value||0) } } };
+}
+
+async function ownerPanelDailyLoyaltySave(env, ctx) {
+  await ensureDailyLoyaltySchema(env);
+  const pref = await ownerStagingPreference(env, String(ctx.user.id)).catch(() => null);
+  if (pref && Number(pref.staging_enabled || 0) === 1 && String(pref.active_change_set_id || '')) {
+    throw new ApiError(409, 'STAGING включён: ежедневные награды нельзя менять в Production напрямую. Сначала осознанно выключите Staging Mode.');
+  }
+  const current = await loadDailyLoyaltyConfig(env, { allowDisabled:true, force:true });
+  const body = ctx.body || {};
+  const title = String(body.title || current.season.title || 'Кофейная карточка Зеффи').trim().slice(0,120) || 'Кофейная карточка Зеффи';
+  const enabled = body.enabled === false || Number(body.enabled) === 0 ? 0 : 1;
+  const timezoneOffsetMinutes = Math.max(-720, Math.min(840, Math.floor(Number(body.timezoneOffsetMinutes ?? current.season.timezoneOffsetMinutes ?? 180) || 0)));
+  const milestones = normalizeDailyLoyaltyMilestones(body.milestones || []);
+  if (!milestones.length) throw new ApiError(400, 'Добавьте хотя бы одну награду.');
+  const now = Math.floor(Date.now() / 1000);
+  const seasonId = String(current.season.id || 'daily-main');
+  const statements = [
+    env.DB.prepare(`UPDATE daily_loyalty_seasons SET title=?,enabled=?,timezone_offset_minutes=?,revision=revision+1,updated_at=?,updated_by=? WHERE id=?`).bind(
+      title, enabled, timezoneOffsetMinutes, now, String(ctx.user.id), seasonId
+    ),
+    env.DB.prepare(`DELETE FROM daily_loyalty_milestones WHERE season_id=?`).bind(seasonId)
+  ];
+  for (const row of milestones) statements.push(env.DB.prepare(`INSERT INTO daily_loyalty_milestones(season_id,day_index,icon,label,reward_type,amount,item_id,sort_order,created_at,updated_at)
+    VALUES(?,?,?,?,?,?,?,?,?,?)`).bind(seasonId,row.dayIndex,row.icon,row.label,row.rewardType,row.amount,row.itemId,row.sortOrder,now,now));
+  await env.DB.batch(statements);
+  invalidateDailyLoyaltyConfig();
+  try {
+    await logStaffAction(env, ctx.user, ctx.access, 'owner_panel_daily_loyalty_save', null, 'daily_loyalty', null, null, {
+      seasonId,title,enabled:Boolean(enabled),timezoneOffsetMinutes,milestones
+    });
+  } catch (error) { console.error('daily loyalty config audit failed', error); }
+  return ownerPanelDailyLoyalty(env, ctx);
+}
+
+async function ownerPanelRestoreDailyStreak(env, ctx) {
+  await ensureDailyLoyaltySchema(env);
+  const telegramId = String(ctx.body?.telegramId || '').trim();
+  if (!/^\d{4,20}$/.test(telegramId)) throw new ApiError(400, 'Некорректный Telegram ID игрока.');
+  const desired = Math.floor(Number(ctx.body?.streakDays));
+  if (!Number.isInteger(desired) || desired < 1 || desired > 3650) throw new ApiError(400, 'Серия должна быть от 1 до 3650 дней.');
+  const reason = String(ctx.body?.reason || '').trim().slice(0,300);
+  if (reason.length < 4) throw new ApiError(400, 'Укажите причину восстановления серии.');
+  const config = await loadDailyLoyaltyConfig(env, { allowDisabled:true });
+  const row = await env.DB.prepare(`SELECT * FROM daily_loyalty_players WHERE telegram_id=? AND season_id=? LIMIT 1`).bind(telegramId,config.season.id).first();
+  if (!row) throw new ApiError(404, 'У игрока ещё нет прогресса ежедневной карточки.');
+  const dayKey = dailyLoyaltyDayKey(Date.now(), config.season.timezoneOffsetMinutes);
+  const todayCompleted = String(row.last_active_day_key || '') === dayKey;
+  const effectiveBefore = dailyLoyaltyEffectiveStreak(row, dayKey);
+  if (desired < effectiveBefore) throw new ApiError(400, 'Восстановление не может уменьшать текущую серию.');
+  const restoredLastDay = todayCompleted ? dayKey : dailyLoyaltyPreviousDayKey(dayKey);
+  const now = Math.floor(Date.now() / 1000);
+  await env.DB.prepare(`UPDATE daily_loyalty_players SET streak=?,best_streak=MAX(best_streak,?),last_active_day_key=?,updated_at=? WHERE telegram_id=? AND season_id=?`).bind(
+    desired, desired, restoredLastDay, now, telegramId, config.season.id
+  ).run();
+  try {
+    await logStaffAction(env, ctx.user, ctx.access, 'owner_panel_daily_streak_restore', telegramId, 'daily_loyalty', effectiveBefore, desired, {
+      seasonId:config.season.id,reason,todayCompleted,lastActiveDayKeyBefore:String(row.last_active_day_key||''),lastActiveDayKeyAfter:restoredLastDay,progressDays:Number(row.progress_days||0)
+    });
+  } catch (error) { console.error('daily streak restore audit failed', error); }
+  const fresh = await readDailyLoyaltyBundle(env, telegramId, config.season.id);
+  return { ok:true, dailyLoyalty:dailyLoyaltyModel(config,fresh,dayKey).state };
+}
+
+// -----------------------------------------------------------------------------
 
 const SERVER_CRON_LEASE_SECONDS = 4 * 60;
 const SERVER_CRON_MAX_JOBS_PER_TICK = 4;
@@ -36168,6 +36687,9 @@ async function handleOwnerPanelApi(request, env, path, executionCtx = null) {
     if (path === "/api/owner/referrals/notifications/save") return jsonResponse(await ownerPanelReferralNotificationsSave(env, ctx));
     if (path === "/api/owner/referrals/milestone/save") return jsonResponse(await ownerPanelReferralMilestoneSave(env, ctx));
     if (path === "/api/owner/referrals/network/save") return jsonResponse(await ownerPanelReferralNetworkSave(env, ctx));
+    if (path === "/api/owner/daily-loyalty") return jsonResponse(await ownerPanelDailyLoyalty(env, ctx));
+    if (path === "/api/owner/daily-loyalty/save") return jsonResponse(await ownerPanelDailyLoyaltySave(env, ctx));
+    if (path === "/api/owner/player/daily-streak/restore") return jsonResponse(await ownerPanelRestoreDailyStreak(env, ctx));
     if (path === "/api/owner/players") return jsonResponse(await ownerPanelPlayers(env, ctx));
     if (path === "/api/owner/player") return jsonResponse(await ownerPanelPlayer(env, ctx));
     if (path === "/api/owner/player/grant") return jsonResponse(await ownerPanelGrantPlayer(env, ctx));
@@ -36462,7 +36984,15 @@ async function ownerPanelPlayer(env, ctx) {
   if (!profile) throw new ApiError(404, "Профиль игрока не найден.");
   const season = await ensureSeason(env);
   const seasonPass = await loadSeasonPassSeason(env);
-  const [allTime, seasonal, subscriber, caseRow, caseCounts, passPlayer, staffMember, recentRuns, recentAudit] = await Promise.all([
+  const dailyConfigPromise = loadDailyLoyaltyConfig(env, { allowDisabled:true }).catch(() => null);
+  const dailyStatePromise = (async () => {
+    const config = await dailyConfigPromise;
+    if (!config?.season?.id) return null;
+    const row = await env.DB.prepare(`SELECT progress_days,streak,best_streak,last_active_day_key,updated_at FROM daily_loyalty_players WHERE telegram_id=? AND season_id=? LIMIT 1`).bind(telegramId, String(config.season.id)).first().catch(() => null);
+    const serverDayKey = dailyLoyaltyDayKey(Date.now(), config.season.timezoneOffsetMinutes);
+    return { config, row, serverDayKey };
+  })();
+  const [allTime, seasonal, subscriber, caseRow, caseCounts, passPlayer, staffMember, recentRuns, recentAudit, dailyState] = await Promise.all([
     env.DB.prepare(`SELECT * FROM leaderboard_all_time WHERE telegram_id=? LIMIT 1`).bind(telegramId).first(),
     env.DB.prepare(`SELECT * FROM leaderboard_entries WHERE season_id=? AND telegram_id=? LIMIT 1`).bind(String(season.id), telegramId).first(),
     env.DB.prepare(`SELECT display_name,username,last_started_at,active FROM bot_subscribers WHERE telegram_id=? LIMIT 1`).bind(telegramId).first().catch(() => null),
@@ -36471,7 +37001,8 @@ async function ownerPanelPlayer(env, ctx) {
     ensureSeasonPassPlayer(env,seasonPass,telegramId).catch(() => null),
     env.DB.prepare(`SELECT role,active FROM staff_users WHERE telegram_id=? LIMIT 1`).bind(telegramId).first().catch(() => null),
     env.DB.prepare(`SELECT run_id,season_id,score,duration_ms,accepted,rejection_reason,created_at FROM leaderboard_runs WHERE telegram_id=? ORDER BY created_at DESC LIMIT 10`).bind(telegramId).all().catch(() => ({results:[]})),
-    env.DB.prepare(`SELECT id,action,target_telegram_id,target_type,actor_name,actor_telegram_id,actor_role,old_value,new_value,created_at,details_json FROM staff_action_log WHERE target_telegram_id=? ORDER BY created_at DESC,id DESC LIMIT 12`).bind(telegramId).all().catch(() => ({results:[]}))
+    env.DB.prepare(`SELECT id,action,target_telegram_id,target_type,actor_name,actor_telegram_id,actor_role,old_value,new_value,created_at,details_json FROM staff_action_log WHERE target_telegram_id=? ORDER BY created_at DESC,id DESC LIMIT 12`).bind(telegramId).all().catch(() => ({results:[]})),
+    dailyStatePromise
   ]);
   const identity = seasonal || allTime || subscriber || {};
   const caseState = caseStateFromRow(caseRow || {});
@@ -36513,6 +37044,18 @@ async function ownerPanelPlayer(env, ctx) {
         ownedFrames: Array.isArray(caseState.ownedFrames) ? caseState.ownedFrames : [],
         ownedTrails: Array.isArray(caseState.ownedTrails) ? caseState.ownedTrails : []
       },
+      dailyLoyalty: dailyState ? {
+        seasonId: String(dailyState.config.season.id || ''),
+        title: String(dailyState.config.season.title || 'Кофейная карточка Зеффи'),
+        enabled: Boolean(dailyState.config.active),
+        serverDayKey: String(dailyState.serverDayKey || ''),
+        progressDays: Math.max(0, Number(dailyState.row?.progress_days || 0)),
+        streak: dailyLoyaltyEffectiveStreak(dailyState.row, dailyState.serverDayKey),
+        storedStreak: Math.max(0, Number(dailyState.row?.streak || 0)),
+        bestStreak: Math.max(0, Number(dailyState.row?.best_streak || 0)),
+        lastActiveDayKey: String(dailyState.row?.last_active_day_key || ''),
+        todayCompleted: String(dailyState.row?.last_active_day_key || '') === String(dailyState.serverDayKey || '')
+      } : null,
       seasonPass: {
         title: String(seasonPass.title || ""),
         status: String(seasonPass.status || ""),
