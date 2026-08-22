@@ -1,4 +1,5 @@
-V4.0 is a Candidate-only interactive preview.
-Baseline production commit: d2044c936e9e0ce1dfda623518f2b43928e2d97e
-Production index.html, Worker/D1 and test-project.html are intentionally not copied or modified.
-The candidate exists only to review UX and rules before implementation.
+V4.1 is Candidate-only.
+The full LOCAL game shell is restored inside candidates/V4 so legal documents, Battle Pass, rating and referrals remain inside the Candidate tree.
+Production index.html, src/worker.js, D1 and test-project.html are not modified.
+LOCAL/TP pages use the fail-closed LOCAL 2.2 runtime: /api/* is handled locally or returns LOCAL_API_NOT_IMPLEMENTED; external network is blocked.
+The coffee card is a startup popup over the game, not a separate page.
