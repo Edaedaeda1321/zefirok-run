@@ -1558,7 +1558,13 @@ export default {
         return await handleOwnerPanelApi(request, env, url.pathname, ctx);
       }
       if (url.pathname.startsWith("/api/") && url.pathname !== "/api/runs/start" && url.pathname !== "/api/runs/checkpoint") {
-        await ensureRuntimeCompatibilitySchema(env);
+        // Compatibility migrations are a deploy/cron concern, not player-request work.
+        // Warm them in the background on a cold isolate; individual hot endpoints keep
+        // their missing-schema fallback for a genuinely incomplete deployment.
+        if (!runtimeCompatibilitySchemaReady && !runtimeCompatibilitySchemaPromise) {
+          const warmup = ensureRuntimeCompatibilitySchema(env).catch((error) => console.warn("Runtime compatibility warmup failed", String(error?.message || error)));
+          if (ctx?.waitUntil) ctx.waitUntil(warmup); else void warmup;
+        }
       }
       if (url.pathname === "/legal.html" && request.method === "GET") {
         if (!env.ASSETS) return new Response("Not found", { status: 404 });
@@ -1719,14 +1725,14 @@ export default {
         return await openSeasonPassStoryTest(request, env);
       }
       if (url.pathname === "/api/battle-pass/seasonal-case/open" && request.method === "POST") {
-        return await openSeasonPassSeasonalCase(request, env, ctx);
+        return await withPlayerApiPerformance(env, ctx, "season_case_open", () => openSeasonPassSeasonalCase(request, env, ctx));
       }
 
       if (url.pathname === "/api/gifts/state" && request.method === "POST") {
         return await getPlayerGiftInbox(request, env);
       }
       if (url.pathname === "/api/gifts/claim" && request.method === "POST") {
-        return await claimPlayerGift(request, env, ctx);
+        return await withPlayerApiPerformance(env, ctx, "gift_claim", () => claimPlayerGift(request, env, ctx));
       }
 
       if (url.pathname === "/api/support/state" && request.method === "POST") {
@@ -1745,7 +1751,7 @@ export default {
       if (url.pathname === "/api/game/startup" && request.method === "POST") {
         const legalGate = await enforceLegalAcceptanceForRequest(request, env);
         if (legalGate) return legalGate;
-        return await getGameStartupPackage(request, env, ctx);
+        return await withPlayerApiPerformance(env, ctx, "game_startup", () => getGameStartupPackage(request, env, ctx));
       }
       if (url.pathname === "/api/news/read" && request.method === "POST") {
         return await markGameNewsRead(request, env);
@@ -1783,7 +1789,7 @@ export default {
       }
       if (url.pathname === "/api/shop/offers/purchase" && request.method === "POST") {
         const gate = await enforceFeatureFlagForRequest(request, env, "shop"); if (gate) return gate;
-        return await purchaseFlashOffer(request, env);
+        return await withPlayerApiPerformance(env, ctx, "flash_offer_purchase", () => purchaseFlashOffer(request, env));
       }
 
       if (url.pathname === "/api/skins/config" && request.method === "GET") {
@@ -1800,23 +1806,23 @@ export default {
       }
       if (url.pathname === "/api/skins/purchase" && request.method === "POST") {
         const gate = await enforceFeatureFlagForRequest(request, env, "shop"); if (gate) return gate;
-        return await purchaseSkinWithStock(request, env);
+        return await withPlayerApiPerformance(env, ctx, "skin_purchase", () => purchaseSkinWithStock(request, env));
       }
 
       if (url.pathname === "/api/cases/state" && request.method === "POST") {
-        return await getLevelCaseState(request, env, null, ctx);
+        return await withPlayerApiPerformance(env, ctx, "cases_state", () => getLevelCaseState(request, env, null, ctx));
       }
 
       if (url.pathname === "/api/cases/open" && request.method === "POST") {
-        return await openLevelCase(request, env, ctx);
+        return await withPlayerApiPerformance(env, ctx, "case_open_level", () => openLevelCase(request, env, ctx));
       }
 
       if (url.pathname === "/api/cases/open-granted" && request.method === "POST") {
-        return await openGrantedCase(request, env, ctx);
+        return await withPlayerApiPerformance(env, ctx, "case_open_granted", () => openGrantedCase(request, env, ctx));
       }
 
       if (url.pathname === "/api/cases/purchase" && request.method === "POST") {
-        return await purchaseCaseFromShop(request, env, ctx);
+        return await withPlayerApiPerformance(env, ctx, "case_purchase", () => purchaseCaseFromShop(request, env, ctx));
       }
 
       if (url.pathname === "/api/cases/activate" && request.method === "POST") {
@@ -1845,7 +1851,7 @@ export default {
       }
 
       if ((url.pathname === "/api/profile/sync" || url.pathname === "/api/admin/profile/sync") && request.method === "POST") {
-        return await syncAdminProfile(request, env);
+        return await withPlayerApiPerformance(env, ctx, "profile_sync", () => syncAdminProfile(request, env));
       }
 
       if (url.pathname === "/api/admin/leaderboard/set" && request.method === "POST") {
@@ -1869,11 +1875,11 @@ export default {
       if (url.pathname === "/api/runs/start" && request.method === "POST") {
         const legalGate = await enforceLegalAcceptanceForRequest(request, env);
         if (legalGate) return legalGate;
-        return await startAuthoritativeRunSession(request, env);
+        return await withPlayerApiPerformance(env, ctx, "run_start", () => startAuthoritativeRunSession(request, env));
       }
 
       if (url.pathname === "/api/runs/checkpoint" && request.method === "POST") {
-        return await checkpointAuthoritativeRunSession(request, env);
+        return await withPlayerApiPerformance(env, ctx, "run_checkpoint", () => checkpointAuthoritativeRunSession(request, env));
       }
 
       if (url.pathname === "/api/leaderboard/submit" && request.method === "POST") {
@@ -1883,7 +1889,7 @@ export default {
         // path, so it must stay available even when the public rating UI is
         // disabled by a feature flag. submitLeaderboardRun decides separately
         // whether the validated run may enter the rating.
-        return await submitLeaderboardRun(request, env, ctx);
+        return await withPlayerApiPerformance(env, ctx, "run_submit", () => submitLeaderboardRun(request, env, ctx));
       }
 
       if (url.pathname === "/api/leaderboard/claim" && request.method === "POST") {
@@ -2658,16 +2664,13 @@ function startupSectionError(error) {
 async function getGameStartupPackage(request, env, ctx = null) {
   try {
     const body = await readJson(request);
-    let publicConfig;
-    try {
-      publicConfig = await readGamePublicConfig(env);
-    } catch (error) {
+    const publicConfigPromise = readGamePublicConfig(env).catch((error) => {
       console.error("startup public config failed", error);
-      publicConfig = fallbackGamePublicConfig();
-    }
-
+      return fallbackGamePublicConfig();
+    });
     const initData = String(body.initData || "");
     if (!initData) {
+      const publicConfig = await publicConfigPromise;
       return jsonResponse({
         ok: true,
         authenticated: false,
@@ -2678,7 +2681,11 @@ async function getGameStartupPackage(request, env, ctx = null) {
     }
 
     requireBotToken(env);
-    const auth = await validateTelegramInitData(initData, env);
+    // Public config and Telegram/D1 identity are independent cold-start work.
+    const [publicConfig, auth] = await Promise.all([
+      publicConfigPromise,
+      validateTelegramInitData(initData, env)
+    ]);
     const internalBody = {
       initData,
       mode: "read",
@@ -2847,6 +2854,7 @@ let gamePublicSchemaReady = false;
 let gamePublicSchemaPromise = null;
 
 function invalidateGamePublicConfigCache() {
+  invalidateShopAssortmentCache();
   gamePublicConfigMemory.value = null;
   gamePublicConfigMemory.expiresAt = 0;
   gamePublicConfigMemory.promise = null;
@@ -2900,8 +2908,7 @@ async function readGamePublicConfig(env, force = false) {
   const generation = gamePublicConfigMemory.generation;
   const promise = (async () => {
     requireDatabase(env);
-    await ensureGamePublicSchemas(env);
-    const [products, assortment, skins, stockResult, gameplay, liveContentShop] = await Promise.all([
+    const loadRows = () => Promise.all([
       readShopPrices(env),
       readShopAssortment(env),
       readSkinPrices(env),
@@ -2912,6 +2919,14 @@ async function readGamePublicConfig(env, force = false) {
       readPublishedGameRuntimeConfig(env),
       readLiveContentShopCatalog(env)
     ]);
+    let products, assortment, skins, stockResult, gameplay, liveContentShop;
+    try {
+      [products, assortment, skins, stockResult, gameplay, liveContentShop] = await loadRows();
+    } catch (error) {
+      if (!isMissingRuntimeDatabaseSchemaError(error)) throw error;
+      await ensureGamePublicSchemas(env);
+      [products, assortment, skins, stockResult, gameplay, liveContentShop] = await loadRows();
+    }
     const stockRows = stockResult.results || [];
     const value = {
       gameplay,
@@ -3061,6 +3076,14 @@ function cloneDefaultShopAssortment() {
   }]));
 }
 
+const SHOP_ASSORTMENT_CACHE_TTL_MS = 15 * 1000;
+let shopAssortmentMemory = { value: null, expiresAt: 0, promise: null, generation: 0 };
+function invalidateShopAssortmentCache() {
+  shopAssortmentMemory.value = null;
+  shopAssortmentMemory.expiresAt = 0;
+  shopAssortmentMemory.promise = null;
+  shopAssortmentMemory.generation += 1;
+}
 let shopAssortmentSchemaPromise = null;
 async function ensureShopAssortmentSchema(env) {
   if (!shopAssortmentSchemaPromise) {
@@ -3083,41 +3106,49 @@ async function ensureShopAssortmentSchema(env) {
   await shopAssortmentSchemaPromise;
 }
 
-async function readShopAssortment(env) {
-  const result = await env.DB.prepare(
-    `SELECT product_id, enabled, points, treats, coffee FROM shop_assortment ORDER BY product_id ASC`
-  ).all();
-  const assortment = cloneDefaultShopAssortment();
-  for (const row of result.results || []) {
-    if (!assortment[row.product_id]) continue;
-    assortment[row.product_id] = {
-      enabled: Number(row.enabled || 0) === 1,
-      points: safeAdminNumber(row.points),
-      treats: safeAdminNumber(row.treats),
-      coffee: safeAdminNumber(row.coffee)
-    };
-  }
-  return assortment;
+async function readShopAssortment(env, force = false) {
+  const now = Date.now();
+  if (!force && shopAssortmentMemory.value && shopAssortmentMemory.expiresAt > now) return shopAssortmentMemory.value;
+  if (!force && shopAssortmentMemory.promise) return shopAssortmentMemory.promise;
+  const generation = shopAssortmentMemory.generation;
+  const promise = (async () => {
+    const readRows = () => env.DB.prepare(
+      `SELECT product_id, enabled, points, treats, coffee FROM shop_assortment ORDER BY product_id ASC`
+    ).all();
+    let result;
+    try { result = await readRows(); }
+    catch (error) {
+      if (!isMissingRuntimeDatabaseSchemaError(error)) throw error;
+      await ensureShopAssortmentSchema(env);
+      result = await readRows();
+    }
+    const assortment = cloneDefaultShopAssortment();
+    for (const row of result.results || []) {
+      if (!assortment[row.product_id]) continue;
+      assortment[row.product_id] = {
+        enabled: Number(row.enabled || 0) === 1,
+        points: safeAdminNumber(row.points),
+        treats: safeAdminNumber(row.treats),
+        coffee: safeAdminNumber(row.coffee)
+      };
+    }
+    if (generation === shopAssortmentMemory.generation) {
+      shopAssortmentMemory.value = assortment;
+      shopAssortmentMemory.expiresAt = Date.now() + SHOP_ASSORTMENT_CACHE_TTL_MS;
+    }
+    return assortment;
+  })();
+  shopAssortmentMemory.promise = promise;
+  try { return await promise; }
+  finally { if (shopAssortmentMemory.promise === promise) shopAssortmentMemory.promise = null; }
 }
 
 async function readShopAssortmentProduct(env, productId) {
   const id = String(productId || "");
   const fallback = cloneDefaultShopAssortment()[id];
   if (!fallback) return null;
-  const readRow = () => env.DB.prepare(
-    `SELECT product_id, enabled, points, treats, coffee FROM shop_assortment WHERE product_id = ? LIMIT 1`
-  ).bind(id).first();
-  let row;
-  try { row = await readRow(); }
-  catch (error) { if (!isMissingRuntimeDatabaseSchemaError(error)) throw error; await ensureShopAssortmentSchema(env); row = await readRow(); }
-  if (!row) { await ensureShopAssortmentSchema(env); row = await readRow(); }
-  if (!row) return fallback;
-  return {
-    enabled: Number(row.enabled || 0) === 1,
-    points: safeAdminNumber(row.points),
-    treats: safeAdminNumber(row.treats),
-    coffee: safeAdminNumber(row.coffee)
-  };
+  const assortment = await readShopAssortment(env);
+  return assortment[id] || fallback;
 }
 
 function shopStockScopeKey(category, productId = "") {
@@ -4904,37 +4935,66 @@ async function ensureSeason(env, now = Math.floor(Date.now() / 1000)) {
   await reconcileLeaderboardSeasonTimeline(env, now);
   const row = await selectLeaderboardSeasonForPlayers(env, now);
   if (!row) throw new ApiError(500, "Не удалось подготовить сезон рейтинга.");
+  invalidateLeaderboardSeasonCache();
   return row;
 }
 
-async function selectLeaderboardSeasonForState(env, now = Math.floor(Date.now() / 1000)) {
+const LEADERBOARD_SEASON_CACHE_TTL_MS = 5000;
+let leaderboardSeasonMemory = { value: null, expiresAt: 0, promise: null, generation: 0 };
+function invalidateLeaderboardSeasonCache() {
+  leaderboardSeasonMemory.value = null;
+  leaderboardSeasonMemory.expiresAt = 0;
+  leaderboardSeasonMemory.promise = null;
+  leaderboardSeasonMemory.generation += 1;
+}
+async function selectLeaderboardSeasonForState(env, now = Math.floor(Date.now() / 1000), force = false) {
   requireDatabase(env);
-  let row = await env.DB.prepare(
-    `SELECT * FROM leaderboard_seasons
-     WHERE finalized_at IS NULL AND status <> 'cancelled' AND starts_at <= ? AND ends_at > ?
-     ORDER BY manual_override DESC, starts_at DESC, created_at DESC, id ASC
-     LIMIT 1`
-  ).bind(now, now).first();
-  if (row) return { ...row, status: 'active' };
+  const cacheNow = Date.now();
+  if (!force && leaderboardSeasonMemory.value && leaderboardSeasonMemory.expiresAt > cacheNow) return leaderboardSeasonMemory.value;
+  if (!force && leaderboardSeasonMemory.promise) return leaderboardSeasonMemory.promise;
+  const generation = leaderboardSeasonMemory.generation;
+  const promise = (async () => {
+    let row = await env.DB.prepare(
+      `SELECT * FROM leaderboard_seasons
+       WHERE finalized_at IS NULL AND status <> 'cancelled' AND starts_at <= ? AND ends_at > ?
+       ORDER BY manual_override DESC, starts_at DESC, created_at DESC, id ASC
+       LIMIT 1`
+    ).bind(now, now).first();
+    if (row) row = { ...row, status: 'active' };
 
-  row = await env.DB.prepare(
-    `SELECT * FROM leaderboard_seasons
-     WHERE finalized_at IS NULL AND status <> 'cancelled' AND starts_at > ? AND ends_at > ?
-     ORDER BY starts_at ASC, manual_override DESC, created_at ASC, id ASC
-     LIMIT 1`
-  ).bind(now, now).first();
-  if (row) return { ...row, status: 'scheduled' };
+    if (!row) {
+      row = await env.DB.prepare(
+        `SELECT * FROM leaderboard_seasons
+         WHERE finalized_at IS NULL AND status <> 'cancelled' AND starts_at > ? AND ends_at > ?
+         ORDER BY starts_at ASC, manual_override DESC, created_at ASC, id ASC
+         LIMIT 1`
+      ).bind(now, now).first();
+      if (row) row = { ...row, status: 'scheduled' };
+    }
 
-  row = await env.DB.prepare(
-    `SELECT * FROM leaderboard_seasons
-     WHERE status <> 'cancelled' AND (status = 'ended' OR ends_at <= ?)
-     ORDER BY ends_at DESC, finalized_at DESC, updated_at DESC, id ASC
-     LIMIT 1`
-  ).bind(now).first();
-  if (row) return { ...row, status: 'ended' };
+    if (!row) {
+      row = await env.DB.prepare(
+        `SELECT * FROM leaderboard_seasons
+         WHERE status <> 'cancelled' AND (status = 'ended' OR ends_at <= ?)
+         ORDER BY ends_at DESC, finalized_at DESC, updated_at DESC, id ASC
+         LIMIT 1`
+      ).bind(now).first();
+      if (row) row = { ...row, status: 'ended' };
+    }
 
-  // Empty/new database only: fall back to the mutating initializer once.
-  return ensureSeason(env, now);
+    if (!row) {
+      // Empty/new database only: fall back to the mutating initializer once.
+      row = await ensureSeason(env, now);
+    }
+    if (generation === leaderboardSeasonMemory.generation) {
+      leaderboardSeasonMemory.value = row;
+      leaderboardSeasonMemory.expiresAt = Date.now() + LEADERBOARD_SEASON_CACHE_TTL_MS;
+    }
+    return row;
+  })();
+  leaderboardSeasonMemory.promise = promise;
+  try { return await promise; }
+  finally { if (leaderboardSeasonMemory.promise === promise) leaderboardSeasonMemory.promise = null; }
 }
 
 async function finalizeSeason(env, season, now = Math.floor(Date.now() / 1000)) {
@@ -5769,8 +5829,7 @@ async function buildFastCasePurchasePayload(env, telegramId, ensured, liveops, e
 async function buildFastCaseRefreshPayload(env, telegramId) {
   requireDatabase(env);
   const id = String(telegramId || '');
-  await ensureRuntimeCompatibilitySchema(env);
-  const [profileRow, caseRow, inventory] = await Promise.all([
+  const readRows = () => Promise.all([
     env.DB.prepare(`SELECT
       MIN(999999999,MAX(0,COALESCE(wallet_override,wallet)+COALESCE(pending_wallet,0))) AS wallet,
       MIN(999999999,MAX(0,COALESCE(best_score_override,best_score))) AS best_score,
@@ -5782,6 +5841,14 @@ async function buildFastCaseRefreshPayload(env, telegramId) {
     env.DB.prepare(`SELECT * FROM case_player_state WHERE telegram_id=? LIMIT 1`).bind(id).first(),
     readFastCaseInventory(env,id)
   ]);
+  let profileRow, caseRow, inventory;
+  try {
+    [profileRow, caseRow, inventory] = await readRows();
+  } catch (error) {
+    if (!isMissingRuntimeDatabaseSchemaError(error)) throw error;
+    await ensureRuntimeCompatibilitySchema(env);
+    [profileRow, caseRow, inventory] = await readRows();
+  }
 
   let profile = profileRow;
   let stateRow = caseRow;
@@ -6399,8 +6466,10 @@ async function purchaseCaseFromShop(request, env, ctx = null) {
     const body = await readJson(request);
     const auth = await validateTelegramInitData(String(body.initData || ""), env);
     const telegramId = String(auth.user.id);
-    await requireFeatureFlagForTelegramId(env, "shop", telegramId);
-    await requireFeatureFlagForTelegramId(env, "cases", telegramId);
+    await Promise.all([
+      requireFeatureFlagForTelegramId(env, "shop", telegramId),
+      requireFeatureFlagForTelegramId(env, "cases", telegramId)
+    ]);
     const caseType = normalizeCaseType(body.caseType);
     const baseProduct = caseType ? CASE_SHOP_PRODUCTS[caseType] : null;
     if (!baseProduct) throw new ApiError(400, "Неизвестный тип кейса.");
@@ -7103,8 +7172,6 @@ async function submitLeaderboardRun(request, env, executionCtx = null) {
   try {
     requireDatabase(env);
     requireBotToken(env);
-    await ensureAuthoritativeEconomySchema(env);
-    await ensureSeasonPassSchema(env);
     const body = await readJson(request);
     const auth = await validateTelegramInitData(String(body.initData || ""), env);
     const telegramId = String(auth.user.id);
@@ -7120,7 +7187,7 @@ async function submitLeaderboardRun(request, env, executionCtx = null) {
     const [ratingFeatureEnabled, ratingMaintenanceSettings, season] = await Promise.all([
       isFeatureEnabled(env, "rating", telegramId),
       getMaintenanceSettings(env).catch(() => null),
-      ensureSeason(env)
+      selectLeaderboardSeasonForState(env)
     ]);
     const ratingMaintenanceEnabled = !ratingMaintenanceSettings?.ratingDisabled;
     const ratingEntryEnabled = Boolean(ratingFeatureEnabled && ratingMaintenanceEnabled);
@@ -7131,7 +7198,15 @@ async function submitLeaderboardRun(request, env, executionCtx = null) {
       ledger, telegramId, runId, submittedMetrics, season, minSeconds, minScore, ratingEntryEnabled, auth
     });
 
-    const existingLedger = await env.DB.prepare(`SELECT * FROM player_economy_run_ledger WHERE run_id=? LIMIT 1`).bind(runId).first();
+    const readExistingLedger = () => env.DB.prepare(`SELECT * FROM player_economy_run_ledger WHERE run_id=? LIMIT 1`).bind(runId).first();
+    let existingLedger;
+    try {
+      existingLedger = await readExistingLedger();
+    } catch (error) {
+      if (!isAuthoritativeRunSchemaMissingError(error) && !isMissingRuntimeDatabaseSchemaError(error)) throw error;
+      await Promise.all([ensureAuthoritativeEconomySchema(env), ensureSeasonPassSchema(env)]);
+      existingLedger = await readExistingLedger();
+    }
     if (existingLedger) {
       const same = String(existingLedger.telegram_id || "") === telegramId
         && Number(existingLedger.raw_score || 0) === submittedMetrics.score
@@ -11879,6 +11954,41 @@ function runWorkerBackground(runtime, task, label = "background task") {
 function sampleAdminPerformancePhase(env, runtime, area, startedAt, success = true, errorText = "") {
   const task = recordV67PerformanceSample(env, area, Date.now() - Number(startedAt || Date.now()), success, errorText);
   if (!runWorkerBackground(runtime, task, `performance phase ${area}`)) void Promise.resolve(task).catch(() => {});
+}
+
+const PLAYER_API_PERF_SAMPLE_RATE = 0.20;
+const PLAYER_API_PERF_SLOW_MS = 750;
+function shouldPersistPlayerApiPerformance(success, durationMs) {
+  return !success || Number(durationMs || 0) >= PLAYER_API_PERF_SLOW_MS || Math.random() < PLAYER_API_PERF_SAMPLE_RATE;
+}
+function appendServerTiming(headers, metric) {
+  const current = String(headers.get("Server-Timing") || "").trim();
+  headers.set("Server-Timing", current ? `${current}, ${metric}` : metric);
+}
+async function withPlayerApiPerformance(env, ctx, area, handler) {
+  const startedAt = Date.now();
+  let success = false;
+  let errorText = "";
+  try {
+    const response = await handler();
+    success = Boolean(response && response.status < 500);
+    const durationMs = Math.max(0, Date.now() - startedAt);
+    if (!(response instanceof Response)) return response;
+    const headers = new Headers(response.headers);
+    appendServerTiming(headers, `app;dur=${durationMs}`);
+    headers.set("X-Zefirok-Server-Ms", String(durationMs));
+    return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
+  } catch (error) {
+    errorText = String(error?.message || error);
+    throw error;
+  } finally {
+    const durationMs = Math.max(0, Date.now() - startedAt);
+    if (shouldPersistPlayerApiPerformance(success, durationMs)) {
+      const task = recordV67PerformanceSample(env, `player:${area}`, durationMs, success, errorText);
+      if (ctx?.waitUntil) ctx.waitUntil(Promise.resolve(task).catch(() => {}));
+      else void Promise.resolve(task).catch(() => {});
+    }
+  }
 }
 
 
@@ -16832,7 +16942,7 @@ async function readLiveContentReleaseRules(env,force=false){
 
 function liveContentReleaseRuleCached(kind,itemId){ return liveContentReleaseCache.rows.get(liveContentReleaseKey(kind,itemId))||null; }
 function isFutureContentReleasedCached(kind,itemId){ return Boolean(liveContentReleaseRuleCached(kind,itemId)?.released); }
-function invalidateLiveContentReleaseCache(){ liveContentReleaseCache={expiresAt:0,rows:new Map()}; }
+function invalidateLiveContentReleaseCache(){ liveContentReleaseCache={expiresAt:0,rows:new Map()}; invalidateLiveOpsConfigCache(); }
 async function bindFutureContentCatalogToSeason(env,seasonId){
   const id=String(seasonId||'').trim();if(!id)return {ok:false,bound:0};
   await ensureLiveContentReleaseSchema(env);const statements=[];
@@ -16944,6 +17054,7 @@ async function ensureLiveOpsAdminSchema(env) {
         ).bind(caseId, item.enabled ? 1 : 0, item.title, item.guaranteeCount, JSON.stringify(item.chances), JSON.stringify(item.ranges), now);
       });
       await env.DB.batch(caseStatements);
+      invalidateLiveOpsConfigCache();
     })().catch((error) => {
       liveOpsAdminSchemaPromise = null;
       throw error;
@@ -16974,7 +17085,20 @@ function liveOpsCaseConfigFromRow(row) {
   };
 }
 
-async function readLiveOpsConfig(env) {
+const LIVEOPS_CONFIG_CACHE_TTL_MS = 15 * 1000;
+let liveOpsConfigMemory = { value: null, expiresAt: 0, promise: null, generation: 0 };
+function invalidateLiveOpsConfigCache() {
+  liveOpsConfigMemory.value = null;
+  liveOpsConfigMemory.expiresAt = 0;
+  liveOpsConfigMemory.promise = null;
+  liveOpsConfigMemory.generation += 1;
+}
+async function readLiveOpsConfig(env, force = false) {
+  const nowMs = Date.now();
+  if (!force && liveOpsConfigMemory.value && liveOpsConfigMemory.expiresAt > nowMs) return liveOpsConfigMemory.value;
+  if (!force && liveOpsConfigMemory.promise) return liveOpsConfigMemory.promise;
+  const generation = liveOpsConfigMemory.generation;
+  const promise = (async () => {
   const readRows = () => Promise.all([
     env.DB.prepare(`SELECT * FROM liveops_content_items ORDER BY item_kind, title`).all(),
     env.DB.prepare(`SELECT * FROM liveops_case_configs ORDER BY CASE case_id WHEN 'small' THEN 1 WHEN 'sweet' THEN 2 WHEN 'gold' THEN 3 WHEN 'mythic' THEN 4 ELSE 5 END`).all(),
@@ -17009,7 +17133,21 @@ async function readLiveOpsConfig(env) {
   const cases = {};
   for (const row of caseResult.results || []) cases[String(row.case_id)] = liveOpsCaseConfigFromRow(row);
   for (const caseId of LIVEOPS_CASE_IDS) if (!cases[caseId]) cases[caseId] = { id: caseId, ...LIVEOPS_CASE_DEFAULTS[caseId] };
-  return { content, cases, version: 2 };
+  const revision = Math.max(0,
+    ...Array.from(contentResult.results || [], row => Number(row.updated_at || 0)),
+    ...Array.from(caseResult.results || [], row => Number(row.updated_at || 0)),
+    ...Array.from(releaseRules.values(), row => Number(row.updatedAt || 0))
+  );
+  const value = { content, cases, version: 3, revision };
+  if (generation === liveOpsConfigMemory.generation) {
+    liveOpsConfigMemory.value = value;
+    liveOpsConfigMemory.expiresAt = Date.now() + LIVEOPS_CONFIG_CACHE_TTL_MS;
+  }
+  return value;
+  })();
+  liveOpsConfigMemory.promise = promise;
+  try { return await promise; }
+  finally { if (liveOpsConfigMemory.promise === promise) liveOpsConfigMemory.promise = null; }
 }
 
 function runtimeCaseCatalog(kind, baseCatalog, liveops, caseType = "") {
@@ -18177,6 +18315,7 @@ async function restoreConfigHistoryById(historyId, user, env) {
     await env.DB.prepare(`UPDATE liveops_case_configs SET enabled = ?, title = ?, guarantee_count = ?, chances_json = ?, ranges_json = ?, updated_at = ?, updated_by = ? WHERE case_id = ?`)
       .bind(Number(oldValue.enabled || 0), String(oldValue.title || row.entity_id), Number(oldValue.guarantee_count || 0), String(oldValue.chances_json || "{}"), String(oldValue.ranges_json || "{}"), now, String(user.id), row.entity_id).run();
   }
+  invalidateLiveOpsConfigCache();
   await logLiveOpsConfigChange(env, user, row.entity_type, row.entity_id, "rollback", parseJsonObject(row.new_json, {}), oldValue, `Откат записи #${row.id}`);
   await notifySubscribedStaff(env, "case_changes", `♻️ <b>Выполнен откат настройки</b>
 
@@ -18884,6 +19023,7 @@ async function publishSafeDraft(query, draftId, env) {
       throw new Error("Этот тип черновика пока нельзя опубликовать автоматически.");
     }
     await env.DB.prepare(`UPDATE liveops_drafts SET status = 'published', published_at = ?, published_by = ?, updated_at = ?, error_text = '' WHERE id = ?`).bind(now, String(query.from.id), now, row.id).run();
+    invalidateLiveOpsConfigCache();
     await logLiveOpsConfigChange(env, query.from, row.entity_type, row.entity_id, "publish_draft", safeJson(row.base_json, {}), value, `Черновик #${row.id}`);
     if (row.entity_type === "case" || row.entity_type === "content") await notifySubscribedStaff(env, "case_changes", `🎲 <b>Опубликованы изменения ${escapeHtml(row.entity_type)}</b>\n\n${escapeHtml(row.title)}\nСотрудник: ${escapeHtml(telegramDisplayName(query.from))}`);
     await answerCallback(env, query.id, "Изменения опубликованы.");
@@ -24250,9 +24390,22 @@ async function resolveSeasonPassForceCloseTarget(env, season, nowSeconds = Math.
   return row ? seasonPassSeasonFromRow(row, configuredSeasonPassState(env, nowSeconds * 1000), nowSeconds * 1000) : null;
 }
 
-async function selectSeasonPassSeasonRow(env, nowMs = Date.now()) {
+const SEASON_PASS_CONFIG_CACHE_TTL_MS = 5000;
+let seasonPassSeasonRowMemory = { value: null, expiresAt: 0, promise: null, generation: 0 };
+function invalidateSeasonPassConfigCache() {
+  seasonPassSeasonRowMemory.value = null;
+  seasonPassSeasonRowMemory.expiresAt = 0;
+  seasonPassSeasonRowMemory.promise = null;
+  seasonPassSeasonRowMemory.generation += 1;
+}
+async function selectSeasonPassSeasonRow(env, nowMs = Date.now(), force = false) {
+  const cacheNow = Date.now();
+  if (!force && seasonPassSeasonRowMemory.value && seasonPassSeasonRowMemory.expiresAt > cacheNow) return seasonPassSeasonRowMemory.value;
+  if (!force && seasonPassSeasonRowMemory.promise) return seasonPassSeasonRowMemory.promise;
+  const generation = seasonPassSeasonRowMemory.generation;
+  const promise = (async () => {
   const now = Math.max(0,Math.floor((Number(nowMs)||Date.now())/1000));
-  return env.DB.prepare(`SELECT * FROM season_pass_seasons
+  const row = await env.DB.prepare(`SELECT * FROM season_pass_seasons
     ORDER BY
       CASE
         WHEN manual_status!='ended' AND starts_at<=? AND ends_at>? THEN 0
@@ -24265,6 +24418,15 @@ async function selectSeasonPassSeasonRow(env, nowMs = Date.now()) {
       CASE WHEN manual_status!='ended' AND starts_at>? THEN starts_at END ASC,
       ends_at DESC,updated_at DESC
     LIMIT 1`).bind(now,now,now,now,now,now,now,now,now,now).first();
+  if (generation === seasonPassSeasonRowMemory.generation) {
+    seasonPassSeasonRowMemory.value = row || null;
+    seasonPassSeasonRowMemory.expiresAt = Date.now() + SEASON_PASS_CONFIG_CACHE_TTL_MS;
+  }
+  return row;
+  })();
+  seasonPassSeasonRowMemory.promise = promise;
+  try { return await promise; }
+  finally { if (seasonPassSeasonRowMemory.promise === promise) seasonPassSeasonRowMemory.promise = null; }
 }
 
 async function loadSeasonPassSeasonById(env, seasonId, nowMs = Date.now()) {
@@ -26330,9 +26492,9 @@ async function showSeasonPassSettings(chatId,user,env){
 
 async function setSeasonPassSettingsAction(query,kind,value,env){
   const chatId=query.message?.chat?.id;const access=await requireAnySecurityPermission(chatId,query.from,['manageSeasons','manageMaintenance'],env);if(!access)return;const season=await resolveSeasonPassAdminSeason(env,query.from);const now=Math.floor(Date.now()/1000);const actor=String(query.from.id);
-  if(kind==='launch')await env.DB.prepare(`UPDATE season_pass_seasons SET elite_price_points=25000,elite_price_treats=450,elite_price_coffee=450,elite_plus_price_points=50000,elite_plus_price_treats=650,elite_plus_price_coffee=650,level_price_points=10000,updated_at=?,updated_by=? WHERE season_id=?`).bind(now,actor,season.id).run();
-  else if(kind==='level_price')await env.DB.prepare(`UPDATE season_pass_seasons SET level_price_points=?,updated_at=?,updated_by=? WHERE season_id=?`).bind(Math.max(0,Math.min(1000000,Number(value)||0)),now,actor,season.id).run();
-  else if(kind==='run_xp')await env.DB.prepare(`UPDATE season_pass_seasons SET base_run_xp=?,updated_at=?,updated_by=? WHERE season_id=?`).bind(Math.max(1,Math.min(10000,Number(value)||100)),now,actor,season.id).run();
+  if(kind==='launch')await env.DB.prepare(`UPDATE season_pass_seasons SET elite_price_points=25000,elite_price_treats=450,elite_price_coffee=450,elite_plus_price_points=50000,elite_plus_price_treats=650,elite_plus_price_coffee=650,level_price_points=10000,updated_at=?,updated_by=? WHERE season_id=?`).bind(now,actor,season.id).run();invalidateSeasonPassConfigCache();
+  else if(kind==='level_price')await env.DB.prepare(`UPDATE season_pass_seasons SET level_price_points=?,updated_at=?,updated_by=? WHERE season_id=?`).bind(Math.max(0,Math.min(1000000,Number(value)||0)),now,actor,season.id).run();invalidateSeasonPassConfigCache();
+  else if(kind==='run_xp')await env.DB.prepare(`UPDATE season_pass_seasons SET base_run_xp=?,updated_at=?,updated_by=? WHERE season_id=?`).bind(Math.max(1,Math.min(10000,Number(value)||100)),now,actor,season.id).run();invalidateSeasonPassConfigCache();
   await answerCallback(env,query.id,'Настройки сезонного пропуска сохранены.');await showSeasonPassSettings(chatId,query.from,env);
 }
 
@@ -37255,7 +37417,7 @@ async function ownerPanelStartSeasonPassSeason(env, ctx) {
     seasonId, title:String(updatedRow?.title || row.title || ""), previousStartsAt:Number(row.starts_at || 0), startsAt:now,
     endsAt:Number(updatedRow?.ends_at || row.ends_at || 0), broadcastId:String(broadcastId || "")
   });
-  return { ok:true, season:seasonPassSeasonFromRow(updatedRow, configuredSeasonPassState(env, now * 1000), now * 1000), notificationQueued:Boolean(broadcastId) };
+  invalidateSeasonPassConfigCache(); return { ok:true, season:seasonPassSeasonFromRow(updatedRow, configuredSeasonPassState(env, now * 1000), now * 1000), notificationQueued:Boolean(broadcastId) };
 }
 
 async function ownerPanelAdjustSeasonPassTiming(env, ctx) {
@@ -37621,7 +37783,7 @@ async function ownerPanelSaveShopItem(env, ctx) {
   if(kind==="product"){await ensureShopAssortmentSchema(env);before=await readShopAssortmentProduct(env,itemId);statements.push(env.DB.prepare(`UPDATE shop_assortment SET enabled=?,points=?,treats=?,coffee=?,updated_at=?,updated_by=? WHERE product_id=?`).bind(enabled?1:0,points,treats,coffee,now,actor,itemId));if(DEFAULT_SHOP_PRODUCTS[itemId])statements.push(env.DB.prepare(`INSERT INTO shop_prices(product_id,points,treats,coffee,version,updated_at,updated_by) VALUES(?,?,?,?,1,?,?) ON CONFLICT(product_id) DO UPDATE SET points=excluded.points,treats=excluded.treats,coffee=excluded.coffee,version=shop_prices.version+1,updated_at=excluded.updated_at,updated_by=excluded.updated_by`).bind(itemId,points,treats,coffee,now,actor));}
   else {await ensureSkinPriceSchema(env);statements.push(env.DB.prepare(`UPDATE skin_prices SET points=?,treats=?,coffee=?,version=version+1,updated_at=?,updated_by=? WHERE skin_id=?`).bind(points,treats,coffee,now,actor,itemId));}
   await ensureShopStockSchema(env);const scope=shopStockScopeKey(stockCategory,itemId);if(stockLimit==null)statements.push(env.DB.prepare(`DELETE FROM shop_stock_limits WHERE scope_key=?`).bind(scope));else statements.push(env.DB.prepare(`INSERT INTO shop_stock_limits(scope_key,category,product_id,configured_limit,remaining,updated_at,updated_by) VALUES(?,?,?,?,?,?,?) ON CONFLICT(scope_key) DO UPDATE SET configured_limit=excluded.configured_limit,remaining=excluded.remaining,updated_at=excluded.updated_at,updated_by=excluded.updated_by`).bind(scope,stockCategory,itemId,stockLimit,stockLimit,now,actor));
-  await env.DB.batch(statements);if(kind==="product")await logStaffAction(env,ctx.user,ctx.access,"owner_panel_shop_product_update",null,"product",null,null,{itemId,title,before,after:{enabled,points,treats,coffee}});else await logStaffAction(env,ctx.user,ctx.access,"owner_panel_shop_skin_update",null,"skin",null,null,{itemId,title,points,treats,coffee});invalidateGamePublicConfigCache();return {ok:true,itemId,title};
+  await env.DB.batch(statements);if(kind==="product")await logStaffAction(env,ctx.user,ctx.access,"owner_panel_shop_product_update",null,"product",null,null,{itemId,title,before,after:{enabled,points,treats,coffee}});else await logStaffAction(env,ctx.user,ctx.access,"owner_panel_shop_skin_update",null,"skin",null,null,{itemId,title,points,treats,coffee});invalidateShopAssortmentCache();invalidateGamePublicConfigCache();return {ok:true,itemId,title};
 }
 
 function ownerPanelResetComponents() {

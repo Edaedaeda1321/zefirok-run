@@ -1,0 +1,26 @@
+Сладкий Забег — server optimization pass
+
+1. Player API performance metrics
+- Added timing wrapper for startup, profile sync, cases, purchases, gifts, run start/checkpoint/submit and seasonal case opening.
+- Server-Timing + X-Zefirok-Server-Ms headers are returned.
+- 20% normal sampling, plus all slow (>=750 ms) and failed requests are written to existing admin_performance_samples as player:* areas via waitUntil.
+
+2. Schema checks removed from hot path
+- Broad runtime compatibility audit no longer blocks normal API requests; it is warmed in background and remains in cron.
+- Public config uses optimistic reads and runs schema ensure only on missing-schema errors.
+- Fast case refresh uses the same fallback model.
+- Run settlement no longer performs two cold schema ensures before reading the request; it repairs schema only if the authoritative tables are actually missing.
+
+3. Shared config caches
+- Shop assortment: 15 s in-isolate cache with coalesced in-flight load and invalidation.
+- LiveOps/case config: 15 s cache, coalesced load, revision value, invalidation on release/config changes.
+- Season Pass selected season: 5 s cache.
+- Leaderboard current season: 5 s read-only cache.
+
+4. Optimized hot endpoints
+- /api/game/startup: public config and Telegram identity validation now run in parallel.
+- /api/cases/purchase: shop/cases feature checks run in parallel; shop and LiveOps config now reuse caches.
+- /api/leaderboard/submit: read-only cached season lookup replaces mutating ensureSeason on the hot path; schema work is fallback-only.
+
+Economy, RNG, reward amounts, prices and player balances were not changed.
+profile.html was not touched.
