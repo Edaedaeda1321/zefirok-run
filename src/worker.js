@@ -26492,9 +26492,9 @@ async function showSeasonPassSettings(chatId,user,env){
 
 async function setSeasonPassSettingsAction(query,kind,value,env){
   const chatId=query.message?.chat?.id;const access=await requireAnySecurityPermission(chatId,query.from,['manageSeasons','manageMaintenance'],env);if(!access)return;const season=await resolveSeasonPassAdminSeason(env,query.from);const now=Math.floor(Date.now()/1000);const actor=String(query.from.id);
-  if(kind==='launch')await env.DB.prepare(`UPDATE season_pass_seasons SET elite_price_points=25000,elite_price_treats=450,elite_price_coffee=450,elite_plus_price_points=50000,elite_plus_price_treats=650,elite_plus_price_coffee=650,level_price_points=10000,updated_at=?,updated_by=? WHERE season_id=?`).bind(now,actor,season.id).run();invalidateSeasonPassConfigCache();
-  else if(kind==='level_price')await env.DB.prepare(`UPDATE season_pass_seasons SET level_price_points=?,updated_at=?,updated_by=? WHERE season_id=?`).bind(Math.max(0,Math.min(1000000,Number(value)||0)),now,actor,season.id).run();invalidateSeasonPassConfigCache();
-  else if(kind==='run_xp')await env.DB.prepare(`UPDATE season_pass_seasons SET base_run_xp=?,updated_at=?,updated_by=? WHERE season_id=?`).bind(Math.max(1,Math.min(10000,Number(value)||100)),now,actor,season.id).run();invalidateSeasonPassConfigCache();
+  if(kind==='launch'){await env.DB.prepare(`UPDATE season_pass_seasons SET elite_price_points=25000,elite_price_treats=450,elite_price_coffee=450,elite_plus_price_points=50000,elite_plus_price_treats=650,elite_plus_price_coffee=650,level_price_points=10000,updated_at=?,updated_by=? WHERE season_id=?`).bind(now,actor,season.id).run();invalidateSeasonPassConfigCache();}
+  else if(kind==='level_price'){await env.DB.prepare(`UPDATE season_pass_seasons SET level_price_points=?,updated_at=?,updated_by=? WHERE season_id=?`).bind(Math.max(0,Math.min(1000000,Number(value)||0)),now,actor,season.id).run();invalidateSeasonPassConfigCache();}
+  else if(kind==='run_xp'){await env.DB.prepare(`UPDATE season_pass_seasons SET base_run_xp=?,updated_at=?,updated_by=? WHERE season_id=?`).bind(Math.max(1,Math.min(10000,Number(value)||100)),now,actor,season.id).run();invalidateSeasonPassConfigCache();}
   await answerCallback(env,query.id,'Настройки сезонного пропуска сохранены.');await showSeasonPassSettings(chatId,query.from,env);
 }
 
