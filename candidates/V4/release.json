@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "version": "V4",
+  "candidate": "V4.0",
+  "title": "Сладкий Забег · V4.0 · Кофейная карточка Зеффи + серия",
+  "status": "LOCAL_QA",
+  "sourceCommit": "d2044c936e9e0ce1dfda623518f2b43928e2d97e",
+  "createdAt": "2026-08-22T21:25:00+03:00",
+  "updatedAt": "2026-08-22T21:25:00+03:00",
+  "features": [
+    "daily-coffee-card-preview",
+    "seven-soft-stamps",
+    "daily-activity-one-stamp",
+    "streak-visual-tier",
+    "streak-break-on-missed-day",
+    "card-progress-survives-missed-day",
+    "milestones-3-5-7-preview",
+    "new-card-after-7-next-day"
+  ],
+  "sourceFiles": {
+    "index.html": "production-unchanged",
+    "src/worker.js": "production-unchanged",
+    "test-project.html": "production-unchanged"
+  },
+  "backendCandidate": {
+    "file": null,
+    "scope": "preview-only-no-backend",
+    "d1Migration": false
+  },
+  "requiredChecks": [
+    "candidate-only-no-production-write",
+    "one-stamp-per-game-day",
+    "miss-keeps-card-progress",
+    "miss-breaks-streak",
+    "streak-tier-3",
+    "streak-tier-7",
+    "streak-tier-14",
+    "streak-tier-30",
+    "milestone-3-preview",
+    "milestone-5-preview",
+    "milestone-7-preview",
+    "card-7-complete",
+    "new-card-starts-next-day",
+    "mobile-360x800",
+    "mobile-430x932"
+  ],
+  "localQa": {"status": "pending"},
+  "tpQa": {"status": "pending"},
+  "production": {"status": "not_released"}
+}
