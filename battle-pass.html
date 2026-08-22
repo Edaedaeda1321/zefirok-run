@@ -3111,7 +3111,7 @@ img[src$="/xp.webp"]{
     const timer = setTimeout(()=>controller.abort(),Math.max(1000,Number(timeoutMs||7000)));
     try {
       const response = await fetch(path,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({initData,...payload}),cache:"no-store",credentials:"same-origin",signal:controller.signal});
-      const data = await response.json().catch(()=>({}));
+      const data = await response.json().catch((error)=>{if(error?.name === "AbortError") throw error;return {};});
       if (!response.ok || data?.ok === false) {
         const apiError = new Error(data?.error || "Сервер сезонного пропуска временно недоступен.");
         apiError.status = response.status;
@@ -3399,7 +3399,7 @@ img[src$="/xp.webp"]{
         credentials:"same-origin",
         signal:controller.signal
       });
-      const data = await response.json().catch(()=>({}));
+      const data = await response.json().catch((error)=>{if(error?.name === "AbortError") throw error;return {};});
       return {
         allowed:response.ok && data?.allowed === true,
         kind:response.status === 403 ? "hidden" : response.ok ? "ok" : "server",

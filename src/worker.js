@@ -1961,6 +1961,9 @@ const SERVER_CRON_LEASE_SECONDS = 4 * 60;
 const SERVER_CRON_MAX_JOBS_PER_TICK = 4;
 const SERVER_ANALYTICS_RETENTION_SECONDS = 180 * 24 * 60 * 60;
 const SERVER_NOTIFICATION_LEASE_SECONDS = 2 * 60;
+const GIFT_INBOX_STALE_SECONDS = 12;
+const GIFT_INBOX_REWARD_LEASE_SECONDS = 12;
+const REFERRAL_REWARD_PROCESSING_STALE_SECONDS = 12;
 const SERVER_NOTIFICATION_RETRY_BASE_SECONDS = 60;
 const SERVER_CRON_JOB_DEFAULTS = Object.freeze([
   Object.freeze({ key: "critical-queues", interval: 60, priority: 10 }),
@@ -2492,7 +2495,7 @@ async function playerGiftInboxPayload(env, telegramId) {
   const id = String(telegramId || "");
   const now = Math.floor(Date.now() / 1000);
   await env.DB.prepare(`UPDATE player_gift_inbox SET status='pending',updated_at=? WHERE telegram_id=? AND status='claiming' AND updated_at<?`)
-    .bind(now, id, now - 24).run();
+    .bind(now, id, now - GIFT_INBOX_STALE_SECONDS).run();
   const [rows,pendingRow] = await Promise.all([
     env.DB.prepare(`SELECT gift_id,gift_kind,title,message_text,reason,rewards_json,status,created_at,claimed_at FROM player_gift_inbox WHERE telegram_id=? ORDER BY CASE status WHEN 'pending' THEN 0 WHEN 'claiming' THEN 1 ELSE 2 END, created_at DESC LIMIT 24`).bind(id).all(),
     env.DB.prepare(`SELECT COUNT(*) AS count FROM player_gift_inbox WHERE telegram_id=? AND status IN ('pending','claiming')`).bind(id).first()
@@ -2552,7 +2555,7 @@ async function processGiftInboxRewardQueue(env, telegramId, giftId) {
     `SELECT id,telegram_id,source_type,source_id,reward_kind,reward_id,amount,reason,attempts
      FROM reward_delivery_queue
      WHERE telegram_id=? AND source_type='gift_inbox' AND source_id GLOB ?
-       AND status IN ('pending','failed') AND available_at<=? AND attempts<5
+       AND status IN ('pending','failed','delivering') AND available_at<=? AND attempts<5
        AND (lease_until=0 OR lease_until<?)
      ORDER BY created_at ASC,id ASC LIMIT 30`
   ).bind(String(telegramId), sourcePattern, now, now).all();
@@ -2564,9 +2567,9 @@ async function processGiftInboxRewardQueue(env, telegramId, giftId) {
     const lock = await env.DB.prepare(
       `UPDATE reward_delivery_queue SET status='delivering',lease_token=?,lease_until=?,updated_at=?
        WHERE id=? AND telegram_id=? AND source_type='gift_inbox' AND source_id GLOB ?
-         AND status IN ('pending','failed') AND attempts<5 AND available_at<=?
+         AND status IN ('pending','failed','delivering') AND attempts<5 AND available_at<=?
          AND (lease_until=0 OR lease_until<?)`
-    ).bind(token, claimAt + SERVER_NOTIFICATION_LEASE_SECONDS, claimAt, row.id, String(telegramId), sourcePattern, claimAt, claimAt).run();
+    ).bind(token, claimAt + GIFT_INBOX_REWARD_LEASE_SECONDS, claimAt, row.id, String(telegramId), sourcePattern, claimAt, claimAt).run();
     if (Number(lock.meta?.changes || 0) < 1) continue;
     try {
       await deliverQueuedReward(env, row, token);
@@ -2593,7 +2596,7 @@ async function claimPlayerGift(request, env, ctx) {
     if (!/^[A-Za-z0-9:_-]{4,120}$/.test(giftId)) throw new ApiError(400, "Некорректный подарок.");
     await ensurePlayerGiftInboxSchema(env);
     const now = Math.floor(Date.now() / 1000);
-    await env.DB.prepare(`UPDATE player_gift_inbox SET status='pending',updated_at=? WHERE telegram_id=? AND gift_id=? AND status='claiming' AND updated_at<?`).bind(now,telegramId,giftId,now-24).run();
+    await env.DB.prepare(`UPDATE player_gift_inbox SET status='pending',updated_at=? WHERE telegram_id=? AND gift_id=? AND status='claiming' AND updated_at<?`).bind(now,telegramId,giftId,now-GIFT_INBOX_STALE_SECONDS).run();
     let row = await env.DB.prepare(`SELECT * FROM player_gift_inbox WHERE telegram_id=? AND gift_id=? LIMIT 1`).bind(telegramId,giftId).first();
     if (!row) throw new ApiError(404, "Подарок не найден.");
     if (String(row.status) === "claimed") {
@@ -2603,7 +2606,7 @@ async function claimPlayerGift(request, env, ctx) {
     if (Number(lock.meta?.changes || 0) < 1) throw new ApiError(409, "Подарок уже обрабатывается. Попробуйте ещё раз через несколько секунд.");
     const rewards = normalizePlayerGiftRewards(safeJson(row.rewards_json, []));
     if (!rewards.length) {
-      await env.DB.prepare(`UPDATE player_gift_inbox SET status='claimed',claimed_at=?,updated_at=? WHERE telegram_id=? AND gift_id=?`).bind(now,now,telegramId,giftId).run();
+      await env.DB.prepare(`UPDATE player_gift_inbox SET status='claimed',claimed_at=?,updated_at=? WHERE telegram_id=? AND gift_id=? AND status='claiming' AND updated_at=?`).bind(now,now,telegramId,giftId,now).run();
     } else {
       for (let index = 0; index < rewards.length; index += 1) {
         await enqueueRewardDelivery(env, telegramId, "gift_inbox", `${giftId}_${index}`, rewards[index], String(row.reason || row.title || "Подарок"));
@@ -2612,11 +2615,11 @@ async function claimPlayerGift(request, env, ctx) {
       await processGiftInboxRewardQueue(env, telegramId, giftId);
       const remaining = await env.DB.prepare(`SELECT COUNT(*) AS count FROM reward_delivery_queue WHERE telegram_id=? AND source_type='gift_inbox' AND source_id GLOB ? AND status<>'delivered'`).bind(telegramId,`${giftId}_*`).first();
       if (Number(remaining?.count || 0) > 0) {
-        await env.DB.prepare(`UPDATE player_gift_inbox SET status='pending',updated_at=? WHERE telegram_id=? AND gift_id=?`).bind(Math.floor(Date.now()/1000),telegramId,giftId).run();
+        await env.DB.prepare(`UPDATE player_gift_inbox SET status='pending',updated_at=? WHERE telegram_id=? AND gift_id=? AND status='claiming' AND updated_at=?`).bind(Math.floor(Date.now()/1000),telegramId,giftId,now).run();
         throw new ApiError(503, "Не удалось выдать весь подарок. Ничего не потеряно — попробуйте ещё раз.");
       }
       const claimedAt = Math.floor(Date.now() / 1000);
-      await env.DB.prepare(`UPDATE player_gift_inbox SET status='claimed',claimed_at=?,updated_at=? WHERE telegram_id=? AND gift_id=? AND status='claiming'`).bind(claimedAt,claimedAt,telegramId,giftId).run();
+      await env.DB.prepare(`UPDATE player_gift_inbox SET status='claimed',claimed_at=?,updated_at=? WHERE telegram_id=? AND gift_id=? AND status='claiming' AND updated_at=?`).bind(claimedAt,claimedAt,telegramId,giftId,now).run();
       try { await recordPlayerTimeline(env,telegramId,"gift_claim",`получил подарок «${String(row.title||"Подарок")}»`,{giftId,rewards,reason:row.reason},`gift_${giftId}`,null); } catch {}
     }
     // The economic delivery is already committed above. Case-only gifts are very
@@ -19452,7 +19455,7 @@ async function processRewardDeliveryQueue(env, limit = 25) {
   const rows = await env.DB.prepare(
     `SELECT id,telegram_id,source_type,source_id,reward_kind,reward_id,amount,reason,attempts
      FROM reward_delivery_queue
-     WHERE status IN ('pending','failed') AND available_at<=? AND attempts<5
+     WHERE status IN ('pending','failed','delivering') AND available_at<=? AND attempts<5
        AND (lease_until=0 OR lease_until<?)
      ORDER BY available_at ASC,created_at ASC,id ASC
      LIMIT ?`
@@ -19466,7 +19469,7 @@ async function processRewardDeliveryQueue(env, limit = 25) {
     const lock = await env.DB.prepare(
       `UPDATE reward_delivery_queue
        SET status='delivering',lease_token=?,lease_until=?,updated_at=?
-       WHERE id=? AND status IN ('pending','failed') AND attempts<5 AND available_at<=?
+       WHERE id=? AND status IN ('pending','failed','delivering') AND attempts<5 AND available_at<=?
          AND (lease_until=0 OR lease_until<?)`
     ).bind(token, claimAt + SERVER_NOTIFICATION_LEASE_SECONDS, claimAt, row.id, claimAt, claimAt).run();
     if (Number(lock.meta?.changes || 0) < 1) { skipped += 1; continue; }
@@ -19495,7 +19498,7 @@ async function processPlayerRewardDeliveryQueue(env, telegramId, limit = 10) {
   const rows = await env.DB.prepare(
     `SELECT id,telegram_id,source_type,source_id,reward_kind,reward_id,amount,reason,attempts
      FROM reward_delivery_queue
-     WHERE telegram_id=? AND status IN ('pending','failed') AND available_at<=? AND attempts<5
+     WHERE telegram_id=? AND status IN ('pending','failed','delivering') AND available_at<=? AND attempts<5
        AND (lease_until=0 OR lease_until<?)
      ORDER BY available_at ASC,created_at ASC,id ASC
      LIMIT ?`
@@ -19507,7 +19510,7 @@ async function processPlayerRewardDeliveryQueue(env, telegramId, limit = 10) {
     const claimAt = Math.floor(Date.now() / 1000);
     const lock = await env.DB.prepare(
       `UPDATE reward_delivery_queue SET status='delivering',lease_token=?,lease_until=?,updated_at=?
-       WHERE id=? AND status IN ('pending','failed') AND attempts<5 AND available_at<=?
+       WHERE id=? AND status IN ('pending','failed','delivering') AND attempts<5 AND available_at<=?
          AND (lease_until=0 OR lease_until<?)`
     ).bind(token, claimAt + SERVER_NOTIFICATION_LEASE_SECONDS, claimAt, row.id, claimAt, claimAt).run();
     if (Number(lock.meta?.changes || 0) < 1) continue;
@@ -35187,7 +35190,7 @@ async function deliverReferralReward(env, rewardRow) {
   if (reward.kind === 'none') throw new ApiError(409,'В этой награде нечего получать.');
   const telegramId = String(row.beneficiary_telegram_id);
   const now = Math.floor(Date.now()/1000);
-  const recoveredBefore = now - 24;
+  const recoveredBefore = now - REFERRAL_REWARD_PROCESSING_STALE_SECONDS;
   const reserve = await env.DB.prepare(`UPDATE referral_rewards SET status='processing',updated_at=?,error_text='' WHERE reward_id=? AND (status IN ('pending','failed') OR (status='processing' AND updated_at<=?))`).bind(now,String(row.reward_id),recoveredBefore).run();
   if (Number(reserve?.meta?.changes || 0) < 1) {
     const fresh = await env.DB.prepare(`SELECT * FROM referral_rewards WHERE reward_id=? LIMIT 1`).bind(String(row.reward_id)).first();
@@ -35590,6 +35593,8 @@ async function referralPlayerIdentityMap(env, ids) {
 async function buildReferralState(env, telegramId, actor = null) {
   await ensureReferralSchema(env);
   const id = String(telegramId);
+  const referralStateNow=Math.floor(Date.now()/1000);
+  await env.DB.prepare(`UPDATE referral_rewards SET status='pending',updated_at=?,error_text='' WHERE beneficiary_telegram_id=? AND status='processing' AND updated_at<=? AND NOT EXISTS(SELECT 1 FROM referral_reward_effects effects WHERE effects.reward_id=referral_rewards.reward_id)`).bind(referralStateNow,id,referralStateNow-REFERRAL_REWARD_PROCESSING_STALE_SECONDS).run();
   const config = await referralProgramConfig(env);
   const code = await ensureReferralCode(env,id);
   if (config.enabled) {

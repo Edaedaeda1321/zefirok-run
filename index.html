@@ -13361,7 +13361,10 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
             method:&quot;POST&quot;, headers:{&quot;Content-Type&quot;:&quot;application/json&quot;},
             body:JSON.stringify({initData}), cache:&quot;no-store&quot;, credentials:&quot;same-origin&quot;, signal:controller.signal
           });
-          const data = await response.json().catch(() =&gt; ({}));
+          const data = await response.json().catch((error) =&gt; {
+            if (error?.name === &quot;AbortError&quot;) throw error;
+            return {};
+          });
           if (!response.ok || data?.ok === false) throw new Error(data?.error || &quot;Не удалось проверить задания.&quot;);
           if (data?.notice) applySeasonTaskNotice(data.notice);
           return activeSeasonTaskNotice;
@@ -19391,20 +19394,16 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         const initData = String(initDataValue || telegramProfile?.initData || &quot;&quot;);
         if (!initData || !run?.runId) return false;
         try {
-          const controller = new AbortController();
-          const timeout = setTimeout(() =&gt; controller.abort(), 8000);
-          let response;
-          try {
-            response = await fetch(SEASON_PASS_RUN_API_PATH, {
-              method: &quot;POST&quot;,
-              headers: { &quot;Content-Type&quot;: &quot;application/json&quot; },
-              body: JSON.stringify({ initData, ...run }),
-              credentials: &quot;same-origin&quot;,
-              cache: &quot;no-store&quot;,
-              keepalive: true,
-              signal: controller.signal
-            });
-          } finally { clearTimeout(timeout); }
+          // Background season settlement must obey the same full-response deadline
+          // as the rest of the game. Do not clear the timeout after headers only.
+          const response = await gameFetchWithTimeout(SEASON_PASS_RUN_API_PATH, {
+            method: &quot;POST&quot;,
+            headers: { &quot;Content-Type&quot;: &quot;application/json&quot; },
+            body: JSON.stringify({ initData, ...run }),
+            credentials: &quot;same-origin&quot;,
+            cache: &quot;no-store&quot;,
+            keepalive: true
+          }, 8000);
           const data = await response.json().catch(() =&gt; ({}));
           if (!response.ok || data?.ok === false) throw new Error(data?.error || &quot;Не удалось сохранить XP сезона.&quot;);
           reconcileSeasonProfileXpForRun(run, data);
@@ -22531,7 +22530,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 &lt;script id=&quot;zefirok-referrals-profile-entry-v2&quot;&gt;
 (() =&gt; {
   const referralInitData=()=&gt;{let value=&quot;&quot;;try{value=String(window.Telegram?.WebApp?.initData||sessionStorage.getItem(&quot;zefirok-telegram-init-data&quot;)||&quot;&quot;);}catch{}return value;};
-  const refreshReferralSummary=async()=&gt;{const badge=document.querySelector(&quot;[data-referrals-badge]&quot;);if(!badge)return;const initData=referralInitData();if(!initData){badge.hidden=true;return;}try{const response=await fetch(&quot;/api/referrals/summary&quot;,{method:&quot;POST&quot;,headers:{&quot;Content-Type&quot;:&quot;application/json&quot;},body:JSON.stringify({initData}),cache:&quot;no-store&quot;});const data=await response.json();if(!response.ok||!data?.ok)throw new Error(&quot;summary&quot;);const pending=Math.max(0,Number(data.pendingCount||0));if(pending&gt;0){badge.textContent=`🎁 ${pending}`;badge.classList.remove(&quot;is-boost&quot;);badge.hidden=false;}else if(data?.boost?.active){badge.textContent=`×${Number(data.boost.multiplier||2)}`;badge.classList.add(&quot;is-boost&quot;);badge.hidden=false;}else{badge.hidden=true;}}catch{badge.hidden=true;}};
+  const refreshReferralSummary=async()=&gt;{const badge=document.querySelector(&quot;[data-referrals-badge]&quot;);if(!badge)return;const initData=referralInitData();if(!initData){badge.hidden=true;return;}const controller=new AbortController();const timer=window.setTimeout(()=&gt;controller.abort(),6500);try{const response=await fetch(&quot;/api/referrals/summary&quot;,{method:&quot;POST&quot;,headers:{&quot;Content-Type&quot;:&quot;application/json&quot;},body:JSON.stringify({initData}),cache:&quot;no-store&quot;,credentials:&quot;same-origin&quot;,signal:controller.signal});const data=await response.json();if(!response.ok||!data?.ok)throw new Error(&quot;summary&quot;);const pending=Math.max(0,Number(data.pendingCount||0));if(pending&gt;0){badge.textContent=`🎁 ${pending}`;badge.classList.remove(&quot;is-boost&quot;);badge.hidden=false;}else if(data?.boost?.active){badge.textContent=`×${Number(data.boost.multiplier||2)}`;badge.classList.add(&quot;is-boost&quot;);badge.hidden=false;}else{badge.hidden=true;}}catch{badge.hidden=true;}finally{window.clearTimeout(timer);}};
   document.addEventListener(&quot;click&quot;, (event) =&gt; {
     const button = event.target?.closest?.(&quot;[data-referrals-open]&quot;);
     if (!button) return;
