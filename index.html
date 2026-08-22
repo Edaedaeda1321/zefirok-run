@@ -10989,6 +10989,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         } catch { return { observed:{}, unseen:{} }; }
       })();
       let pendingPurchase = null;
+      let purchaseOperationBusy = false;
       let purchaseReturnFocus = null;
       let purchaseLimitTimer = 0;
       const assetSources = JSON.parse(root.querySelector(&quot;[data-zefirok-assets]&quot;).textContent);
@@ -17804,7 +17805,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 
       async function confirmPendingSkinPurchase() {
         const purchase = pendingPurchase;
-        if (!purchase || purchase.kind !== &quot;skin&quot;) return;
+        if (!purchase || purchase.kind !== &quot;skin&quot; || purchaseOperationBusy) return;
         const skin = purchase.skin;
         if (skinIsOwned(skin.id)) {
           closePurchaseLayer();
@@ -17822,8 +17823,10 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         if (confirmButton) {
           confirmButton.disabled = true;
           confirmButton.textContent = &quot;Проверяем остаток…&quot;;
+          confirmButton.setAttribute(&quot;aria-busy&quot;, &quot;true&quot;);
         }
         if (cancelButton) cancelButton.disabled = true;
+        purchaseOperationBusy = true;
         let data;
         try {
           data = await caseApiRequest(SKIN_PURCHASE_PATH, { skinId: skin.id });
@@ -17834,6 +17837,8 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           showPurchaseNotice(&quot;Скин не куплен&quot;, message);
           void loadRemoteSkinPrices();
           return;
+        } finally {
+          purchaseOperationBusy = false;
         }
         void syncOwnedSkinBonusCases({ notify: true, force: true });
         playGameSound(&quot;unlockSkin&quot;);
@@ -18390,8 +18395,12 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         window.scrollTo(0, saved.y || 0);
       }
       function closeFlashOffer(reason = &quot;dismiss&quot;) {
-        flashOfferPurchaseRequestId = &quot;&quot;;
-        if (!flashOfferLayer || flashOfferLayer.hidden) return;
+        if (!flashOfferLayer || flashOfferLayer.hidden) return false;
+        if (flashOfferPurchaseBusy &amp;&amp; reason !== &quot;purchase&quot;) {
+          if (flashOfferMessage) flashOfferMessage.textContent = &quot;Покупка уже отправлена. Дождитесь результата.&quot;;
+          return false;
+        }
+        if (reason !== &quot;purchase&quot;) flashOfferPurchaseRequestId = &quot;&quot;;
         const offer = flashOfferCurrent;
         flashOfferLayer.hidden = true;
         flashOfferLayer.setAttribute(&quot;aria-hidden&quot;, &quot;true&quot;);
@@ -18401,13 +18410,14 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         if (reason === &quot;dismiss&quot;) recordFlashOfferEvent(&quot;dismiss&quot;, offer);
         flashOfferCurrent = null;
         hapticSelection(80);
+        return true;
       }
       function updateFlashOfferTimer() {
         if (!flashOfferCurrent || !flashOfferTime) return;
         const end = Number(flashOfferCurrent.endsAt || 0);
         if (!end) { flashOfferTime.textContent = &quot;⏱ Ограниченное предложение&quot;; return; }
         const left = end - (Date.now() + flashOfferClockOffset);
-        if (left &lt;= 0) { flashOfferTime.textContent = &quot;Акция завершена&quot;; if (flashOfferBuy) flashOfferBuy.disabled = true; window.setTimeout(() =&gt; closeFlashOffer(&quot;expired&quot;), 700); return; }
+        if (left &lt;= 0) { flashOfferTime.textContent = &quot;Акция завершена&quot;; if (flashOfferBuy) flashOfferBuy.disabled = true; if (flashOfferPurchaseBusy) { if (flashOfferMessage) flashOfferMessage.textContent = &quot;Проверяем уже отправленную покупку…&quot;; return; } window.setTimeout(() =&gt; closeFlashOffer(&quot;expired&quot;), 700); return; }
         flashOfferTime.textContent = `⏱ Осталось ${flashOfferRemaining(left)}`;
       }
       function renderFlashOffer(offer) {
@@ -18454,31 +18464,42 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         } finally { flashOfferLoading = false; }
       }
       let flashOfferPurchaseRequestId = &quot;&quot;;
+      let flashOfferPurchaseBusy = false;
       async function buyFlashOffer() {
         const offer = flashOfferCurrent;
-        if (!offer || !telegramProfile?.initData || flashOfferBuy?.disabled) return;
+        if (!offer || !telegramProfile?.initData || flashOfferPurchaseBusy) return;
+        if (flashOfferBuy?.disabled &amp;&amp; !flashOfferPurchaseRequestId) return;
+        flashOfferPurchaseBusy = true;
         flashOfferBuy.disabled = true;
-        flashOfferMessage.textContent = &quot;Подтверждаем покупку…&quot;;
+        if (flashOfferClose) flashOfferClose.disabled = true;
+        flashOfferMessage.textContent = flashOfferPurchaseRequestId ? &quot;Проверяем покупку…&quot; : &quot;Подтверждаем покупку…&quot;;
         recordFlashOfferEvent(&quot;click&quot;, offer);
         hapticImpact(&quot;medium&quot;, 80);
+        let purchaseCompleted = false;
         try {
           const requestId = flashOfferPurchaseRequestId || (flashOfferPurchaseRequestId = `offer_${makeRewardRequestId()}`.slice(0, 96));
           const payload = { initData:String(telegramProfile.initData), offerId:offer.id, requestId, current:playerProfileSnapshot() };
           let data = null, lastError = null;
-          for (let attempt = 0; attempt &lt; 6; attempt += 1) {
+          for (let attempt = 0; attempt &lt; 2; attempt += 1) {
             try {
-              data = await rewardApiRequest(&quot;/api/shop/offers/purchase&quot;, payload, 9000);
+              data = await rewardApiRequest(&quot;/api/shop/offers/purchase&quot;, payload, attempt === 0 ? 7000 : 6000);
               if (!data?.pending) break;
             } catch (error) {
               lastError = error;
               if (!error?.timeout &amp;&amp; error?.code !== &quot;REQUEST_TIMEOUT&quot;) throw error;
             }
+            if (attempt &gt;= 1) break;
             flashOfferMessage.textContent = &quot;Проверяем покупку…&quot;;
-            const waitMs = Math.max(650, Math.min(1400, Number(data?.retryAfterMs || 850)));
+            const waitMs = Math.max(650, Math.min(1000, Number(data?.retryAfterMs || 800)));
             await new Promise((resolve) =&gt; window.setTimeout(resolve, waitMs));
           }
-          if (!data || data.pending) throw lastError || new Error(&quot;Покупка ещё обрабатывается. Повторите через несколько секунд.&quot;);
+          if (!data || data.pending) {
+            const pendingError = lastError || new Error(&quot;Покупка ещё обрабатывается.&quot;);
+            pendingError.recoverablePurchase = true;
+            throw pendingError;
+          }
           flashOfferPurchaseRequestId = &quot;&quot;;
+          purchaseCompleted = true;
           antiCheatWithTrustedChange(&quot;flash-offer-purchase&quot;, () =&gt; {
             if (data.profile) {
               state.wallet = sanitizeGameNumber(data.profile.wallet);
@@ -18504,12 +18525,22 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           if (postPurchaseSync.length) void Promise.allSettled(postPurchaseSync);
           window.setTimeout(() =&gt; closeFlashOffer(&quot;purchase&quot;), 420);
         } catch (error) {
-          flashOfferMessage.textContent = error?.message || &quot;Не удалось выполнить покупку.&quot;;
-          flashOfferBuy.disabled = false;
+          const recoverable = Boolean(error?.recoverablePurchase || error?.timeout || error?.code === &quot;REQUEST_TIMEOUT&quot;);
+          if (!recoverable) flashOfferPurchaseRequestId = &quot;&quot;;
+          flashOfferMessage.textContent = recoverable
+            ? &quot;Не удалось сразу получить результат. Нажмите «Проверить покупку» — повторного списания не будет.&quot;
+            : (error?.message || &quot;Не удалось выполнить покупку.&quot;);
           hapticNotify(&quot;error&quot;);
+        } finally {
+          flashOfferPurchaseBusy = false;
+          if (flashOfferClose) flashOfferClose.disabled = false;
+          if (!purchaseCompleted &amp;&amp; flashOfferBuy &amp;&amp; flashOfferCurrent) {
+            flashOfferBuy.disabled = Boolean(flashOfferCurrent.previewOnly);
+            if (flashOfferPurchaseRequestId) flashOfferBuy.innerHTML = `&lt;span&gt;Проверить покупку&lt;/span&gt;${flashOfferCostHtml(flashOfferCurrent.price)}`;
+          }
         }
       }
-      if (flashOfferClose) flashOfferClose.addEventListener(&quot;click&quot;, () =&gt; { flashOfferPurchaseRequestId = &quot;&quot;; closeFlashOffer(&quot;dismiss&quot;); });
+      if (flashOfferClose) flashOfferClose.addEventListener(&quot;click&quot;, () =&gt; closeFlashOffer(&quot;dismiss&quot;));
       if (flashOfferBuy) flashOfferBuy.addEventListener(&quot;click&quot;, buyFlashOffer);
       if (flashOfferLayer) {
         flashOfferLayer.addEventListener(&quot;click&quot;, (event) =&gt; { if (event.target === flashOfferLayer) closeFlashOffer(&quot;dismiss&quot;); });
@@ -18531,11 +18562,11 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         };
         let data;
         try {
-          data = await rewardApiRequest(REWARD_API_CREATE_PATH, rewardPayload, 12000);
+          data = await rewardApiRequest(REWARD_API_CREATE_PATH, rewardPayload, 8000);
         } catch (error) {
           if (!error?.timeout &amp;&amp; error?.code !== &quot;REQUEST_TIMEOUT&quot;) throw error;
-          await new Promise((resolve) =&gt; window.setTimeout(resolve, 350));
-          data = await rewardApiRequest(REWARD_API_CREATE_PATH, rewardPayload, 12000);
+          await new Promise((resolve) =&gt; window.setTimeout(resolve, 250));
+          data = await rewardApiRequest(REWARD_API_CREATE_PATH, rewardPayload, 6000);
         }
         if (!data.reward?.code) throw new Error(&quot;Сервис не вернул код награды.&quot;);
         return {
@@ -19863,8 +19894,14 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         });
       }
 
-      function closePurchaseLayer() {
-        if (!purchaseLayer || !purchaseContent) return;
+      function closePurchaseLayer(options = {}) {
+        if (!purchaseLayer || !purchaseContent) return false;
+        const force = Boolean(options &amp;&amp; options.force);
+        if (purchaseOperationBusy &amp;&amp; !force) {
+          const activeButton = purchaseLayer.querySelector(&quot;[data-purchase-confirm]&quot;);
+          if (activeButton) activeButton.setAttribute(&quot;aria-busy&quot;, &quot;true&quot;);
+          return false;
+        }
         clearPurchaseLimitTimer();
         purchaseLayer.hidden = true;
         purchaseLayer.setAttribute(&quot;aria-hidden&quot;, &quot;true&quot;);
@@ -19876,6 +19913,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           try { purchaseReturnFocus.focus({ preventScroll: true }); } catch { purchaseReturnFocus.focus(); }
         }
         purchaseReturnFocus = null;
+        return true;
       }
 
       function showPurchaseNotice(title, text) {
@@ -20004,6 +20042,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       }
 
       async function confirmPendingCasePurchase(purchase) {
+        if (purchaseOperationBusy) return;
         const missing = purchaseMissingItems(purchase);
         if (missing.length &gt; 0) {
           shopMessageEl.textContent = `Не хватает ${missing.join(&quot; и &quot;)}.`;
@@ -20015,9 +20054,11 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         if (confirmButton) {
           confirmButton.disabled = true;
           confirmButton.textContent = &quot;Добавляем кейс…&quot;;
+          confirmButton.setAttribute(&quot;aria-busy&quot;, &quot;true&quot;);
         }
         if (cancelButton) cancelButton.disabled = true;
         purchase.requestId = purchase.requestId || makeRewardRequestId();
+        purchaseOperationBusy = true;
         try {
           const casePurchasePayload = {
             caseType: purchase.product.caseType,
@@ -20025,12 +20066,12 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           };
           let data;
           try {
-            data = await caseApiRequest(CASE_API_PURCHASE_PATH, casePurchasePayload, 12000);
+            data = await caseApiRequest(CASE_API_PURCHASE_PATH, casePurchasePayload, 8000);
           } catch (error) {
             if (!error?.timeout &amp;&amp; error?.code !== &quot;REQUEST_TIMEOUT&quot;) throw error;
             if (confirmButton) confirmButton.textContent = &quot;Проверяем покупку…&quot;;
-            await new Promise((resolve) =&gt; window.setTimeout(resolve, 350));
-            data = await caseApiRequest(CASE_API_PURCHASE_PATH, casePurchasePayload, 12000);
+            await new Promise((resolve) =&gt; window.setTimeout(resolve, 250));
+            data = await caseApiRequest(CASE_API_PURCHASE_PATH, casePurchasePayload, 6000);
           }
           applyServerCasePayload(data);
           shopMessageEl.textContent = `${purchase.product.title} добавлен в склад кейсов.`;
@@ -20042,7 +20083,9 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           hapticNotify(&quot;success&quot;);
         } catch (error) {
           showPurchaseNotice(&quot;Кейс не куплен&quot;, error?.message || &quot;Не удалось добавить кейс на склад.&quot;);
-          await loadCaseState(true);
+          void loadCaseState(true);
+        } finally {
+          purchaseOperationBusy = false;
         }
       }
 
@@ -20069,19 +20112,23 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           return;
         }
 
+        if (purchaseOperationBusy) return;
         const confirmButton = purchaseLayer?.querySelector(&quot;[data-purchase-confirm]&quot;);
         const cancelButton = purchaseLayer?.querySelector(&quot;[data-purchase-cancel]&quot;);
         if (confirmButton) {
           confirmButton.disabled = true;
           confirmButton.textContent = &quot;Проверяем в Telegram…&quot;;
+          confirmButton.setAttribute(&quot;aria-busy&quot;, &quot;true&quot;);
         }
         if (cancelButton) cancelButton.disabled = true;
 
         purchase.requestId = purchase.requestId || makeRewardRequestId();
+        purchaseOperationBusy = true;
         let reward;
         try {
           reward = await createServerReward(purchase, purchase.requestId);
         } catch (error) {
+          purchaseOperationBusy = false;
           if (Number(error?.status || 0) === 429 &amp;&amp; error?.details) {
             antiCheatWithTrustedChange(&quot;server-purchase-limit&quot;, () =&gt; {
               applyServerPurchaseLimit(error.details);
@@ -20095,6 +20142,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           showPurchaseNotice(&quot;Код не создан&quot;, `${error?.message || &quot;Не удалось связаться с сервисом кодов.&quot;}${suffix}`);
           return;
         }
+        purchaseOperationBusy = false;
 
         const previousLevel = profileLevelState(state.profileXp).level;
         if (reward.serverProfile) applyServerProfilePayload({ profile: reward.serverProfile });
