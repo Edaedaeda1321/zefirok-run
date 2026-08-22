@@ -30172,15 +30172,113 @@ function ownerV8AssetPath(value = "") {
   return "";
 }
 
+function ownerEconomyTripleFromRows(rows = []) {
+  const value = { points: 0, treats: 0, coffee: 0, operations: 0 };
+  for (const row of rows || []) {
+    const kind = String(row?.kind || "").toLowerCase();
+    const amount = Math.max(0, Number(row?.amount || 0));
+    const operations = Math.max(0, Number(row?.operations || 0));
+    if (kind === "points") value.points += amount;
+    else if (kind === "treats" || kind === "zefir" || kind === "marshmallow") value.treats += amount;
+    else if (kind === "coffee") value.coffee += amount;
+    value.operations += operations;
+  }
+  return value;
+}
+
+function ownerEconomyTripleFromRow(row = {}) {
+  return {
+    points: Math.max(0, Number(row?.points || 0)),
+    treats: Math.max(0, Number(row?.treats || 0)),
+    coffee: Math.max(0, Number(row?.coffee || 0)),
+    operations: Math.max(0, Number(row?.operations || row?.count || 0))
+  };
+}
+
+function ownerEconomyAddTriple(target, source) {
+  target.points += Number(source?.points || 0);
+  target.treats += Number(source?.treats || 0);
+  target.coffee += Number(source?.coffee || 0);
+  target.operations += Number(source?.operations || 0);
+  return target;
+}
+
+async function ownerPanelEconomyFlowWindow(env, since) {
+  const spendTypes = ["case_purchase","skin_purchase","live_content_purchase","physical_purchase","season_pass_purchase","season_pass_level_purchase","flash_offer_purchase"];
+  const [runIncome, caseIncome, rewardIncome, referralIncome, staffIncome, spendResult, caseCount] = await Promise.all([
+    env.DB.prepare(`SELECT COALESCE(SUM(points),0) AS points,COALESCE(SUM(treats),0) AS treats,COALESCE(SUM(coffee),0) AS coffee,COUNT(*) AS operations FROM player_economy_run_ledger WHERE created_at>=?`).bind(since).first(),
+    env.DB.prepare(`SELECT
+      COALESCE(SUM(CASE WHEN kind='points' THEN amount ELSE 0 END),0)+COALESCE(SUM(compensation_points),0) AS points,
+      COALESCE(SUM(CASE WHEN kind IN ('treats','zefir','marshmallow') THEN amount ELSE 0 END),0) AS treats,
+      COALESCE(SUM(CASE WHEN kind='coffee' THEN amount ELSE 0 END),0) AS coffee,
+      COUNT(*) AS operations
+      FROM (
+        SELECT LOWER(COALESCE(json_extract(j.value,'$.kind'),'')) AS kind,CAST(COALESCE(json_extract(j.value,'$.amount'),0) AS INTEGER) AS amount,CAST(COALESCE(json_extract(j.value,'$.compensationPoints'),0) AS INTEGER) AS compensation_points
+          FROM level_case_openings o,json_each(CASE WHEN json_valid(o.rewards_json) THEN o.rewards_json ELSE '[]' END) j WHERE o.opened_at>=?
+        UNION ALL
+        SELECT LOWER(COALESCE(json_extract(j.value,'$.kind'),'')) AS kind,CAST(COALESCE(json_extract(j.value,'$.amount'),0) AS INTEGER) AS amount,CAST(COALESCE(json_extract(j.value,'$.compensationPoints'),0) AS INTEGER) AS compensation_points
+          FROM granted_cases g,json_each(CASE WHEN json_valid(g.rewards_json) THEN g.rewards_json ELSE '[]' END) j WHERE g.status='opened' AND g.opened_at>=?
+        UNION ALL
+        SELECT LOWER(COALESCE(json_extract(j.value,'$.kind'),'')) AS kind,CAST(COALESCE(json_extract(j.value,'$.amount'),0) AS INTEGER) AS amount,CAST(COALESCE(json_extract(j.value,'$.compensationPoints'),0) AS INTEGER) AS compensation_points
+          FROM season_pass_case_grants s,json_each(CASE WHEN json_valid(s.rewards_json) THEN s.rewards_json ELSE '[]' END) j WHERE s.status='opened' AND s.opened_at>=?
+      )`).bind(since,since,since).first(),
+    env.DB.prepare(`SELECT LOWER(reward_kind) AS kind,COALESCE(SUM(amount),0) AS amount,COUNT(*) AS operations FROM reward_delivery_queue WHERE status IN ('delivered','claimed') AND COALESCE(NULLIF(delivered_at,0),NULLIF(claimed_at,0),updated_at)>=? AND LOWER(reward_kind) IN ('points','treats','zefir','coffee') GROUP BY LOWER(reward_kind)`).bind(since).all(),
+    env.DB.prepare(`SELECT LOWER(COALESCE(json_extract(reward_json,'$.kind'),'')) AS kind,COALESCE(SUM(CAST(COALESCE(json_extract(reward_json,'$.amount'),0) AS INTEGER)),0) AS amount,COUNT(*) AS operations FROM referral_rewards WHERE status='delivered' AND delivered_at>=? AND LOWER(COALESCE(json_extract(reward_json,'$.kind'),'')) IN ('points','treats','zefir','coffee') GROUP BY LOWER(COALESCE(json_extract(reward_json,'$.kind'),''))`).bind(since).all(),
+    env.DB.prepare(`SELECT kind,COALESCE(SUM(amount),0) AS amount,COUNT(*) AS operations FROM (
+      SELECT LOWER(COALESCE(json_extract(details_json,'$.currency'),json_extract(details_json,'$.kind'),'')) AS kind,CAST(COALESCE(json_extract(details_json,'$.amount'),0) AS INTEGER) AS amount
+      FROM player_timeline_events WHERE event_type='staff_grant' AND created_at>=?
+    ) WHERE kind IN ('points','treats','zefir','coffee') GROUP BY kind`).bind(since).all(),
+    env.DB.prepare(`SELECT event_type,
+      COALESCE(SUM(CASE WHEN event_type='season_pass_level_purchase' THEN CAST(COALESCE(json_extract(details_json,'$.pricePoints'),0) AS INTEGER) ELSE CAST(COALESCE(json_extract(details_json,'$.cost.points'),json_extract(details_json,'$.price.points'),0) AS INTEGER) END),0) AS points,
+      COALESCE(SUM(CAST(COALESCE(json_extract(details_json,'$.cost.treats'),json_extract(details_json,'$.price.treats'),0) AS INTEGER)),0) AS treats,
+      COALESCE(SUM(CAST(COALESCE(json_extract(details_json,'$.cost.coffee'),json_extract(details_json,'$.price.coffee'),0) AS INTEGER)),0) AS coffee,
+      COUNT(*) AS operations
+      FROM player_timeline_events WHERE created_at>=? AND event_type IN (${spendTypes.map(()=>'?').join(',')}) GROUP BY event_type`).bind(since,...spendTypes).all(),
+    env.DB.prepare(`SELECT
+      (SELECT COUNT(*) FROM level_case_openings WHERE opened_at>=?) +
+      (SELECT COUNT(*) FROM granted_cases WHERE status='opened' AND opened_at>=?) +
+      (SELECT COUNT(*) FROM season_pass_case_grants WHERE status='opened' AND opened_at>=?) AS opened,
+      (SELECT COUNT(*) FROM level_case_openings o,json_each(CASE WHEN json_valid(o.rewards_json) THEN o.rewards_json ELSE '[]' END) j WHERE o.opened_at>=? AND json_extract(j.value,'$.duplicate')=1) +
+      (SELECT COUNT(*) FROM granted_cases g,json_each(CASE WHEN json_valid(g.rewards_json) THEN g.rewards_json ELSE '[]' END) j WHERE g.status='opened' AND g.opened_at>=? AND json_extract(j.value,'$.duplicate')=1) +
+      (SELECT COUNT(*) FROM season_pass_case_grants s,json_each(CASE WHEN json_valid(s.rewards_json) THEN s.rewards_json ELSE '[]' END) j WHERE s.status='opened' AND s.opened_at>=? AND (json_extract(j.value,'$.duplicate')=1 OR LOWER(COALESCE(json_extract(j.value,'$.title'),'')) LIKE '%дубликат%')) AS duplicates`).bind(since,since,since,since,since,since).first()
+  ]);
+  const sources = [
+    { key:"runs", title:"Забеги", ...ownerEconomyTripleFromRow(runIncome) },
+    { key:"cases", title:"Награды из кейсов", ...ownerEconomyTripleFromRow(caseIncome) },
+    { key:"deliveries", title:"Подарки, кампании и выдачи", ...ownerEconomyTripleFromRows(rewardIncome.results || []) },
+    { key:"referrals", title:"Реферальные награды", ...ownerEconomyTripleFromRows(referralIncome.results || []) },
+    { key:"staff", title:"Прямые выдачи сотрудниками", ...ownerEconomyTripleFromRows(staffIncome.results || []) }
+  ];
+  const income = { points:0,treats:0,coffee:0,operations:0 };
+  for (const source of sources) ownerEconomyAddTriple(income, source);
+  const spendTitles = {
+    case_purchase:"Покупка кейсов",skin_purchase:"Покупка скинов",live_content_purchase:"Покупка контента",
+    physical_purchase:"Физические награды",season_pass_purchase:"Season Pass",season_pass_level_purchase:"Уровни Season Pass",flash_offer_purchase:"Flash Offer"
+  };
+  const spendSources = (spendResult.results || []).map((row) => ({ key:String(row.event_type||""), title:spendTitles[String(row.event_type||"")]||String(row.event_type||""), ...ownerEconomyTripleFromRow(row) }));
+  const spend = { points:0,treats:0,coffee:0,operations:0 };
+  for (const source of spendSources) ownerEconomyAddTriple(spend, source);
+  return {
+    since:Number(since||0),
+    income,spend,
+    net:{points:income.points-spend.points,treats:income.treats-spend.treats,coffee:income.coffee-spend.coffee},
+    sources:sources.filter((row)=>row.operations||row.points||row.treats||row.coffee),
+    spendSources:spendSources.filter((row)=>row.operations||row.points||row.treats||row.coffee),
+    casesOpened:Number(caseCount?.opened||0),
+    duplicates:Number(caseCount?.duplicates||0),
+    spendCoverage:"timeline"
+  };
+}
+
 async function ownerPanelV8AnalyticsFresh(env, ctx) {
-  await Promise.all([ensureOperationsSecuritySchema(env), ensureV67Schema(env), ensureLiveOpsAdminSchema(env), ensureSeasonPassSchema(env)]);
+  await Promise.all([ensureOperationsSecuritySchema(env), ensureV67Schema(env), ensureLiveOpsAdminSchema(env), ensureSeasonPassSchema(env), ensureAuthoritativeEconomySchema(env), ensureSafeControlCenterSchema(env), ensureReferralSchema(env)]);
   const now = Math.floor(Date.now() / 1000);
   const day = moscowDayStartUnix();
   const week = now - 7 * 86400;
   const month = now - 30 * 86400;
   const [
     dau, newPlayers, returning, runs, avgRecord, cases, shopPurchases, rewards, promos, pass, rating,
-    economy, physical, hourlyResult, contentResult, d1, d3, d7
+    economy, physical, hourlyResult, contentResult, d1, d3, d7, flow24h, flow7d, topBalances, economyQueue, caseDropsResult
   ] = await Promise.all([
     env.DB.prepare(`SELECT COUNT(DISTINCT telegram_id) AS count FROM leaderboard_runs WHERE accepted=1 AND created_at>=?`).bind(day).first(),
     env.DB.prepare(`SELECT COUNT(*) AS count FROM admin_profile_state WHERE created_at>=?`).bind(day).first(),
@@ -30193,11 +30291,37 @@ async function ownerPanelV8AnalyticsFresh(env, ctx) {
     env.DB.prepare(`SELECT COUNT(*) AS count FROM promo_redemptions WHERE created_at>=?`).bind(day).first(),
     env.DB.prepare(`SELECT COUNT(DISTINCT telegram_id) AS players,COUNT(*) AS runs FROM season_pass_activity_runs WHERE created_at>=?`).bind(day).first(),
     env.DB.prepare(`SELECT COUNT(DISTINCT telegram_id) AS players,COUNT(*) AS runs FROM leaderboard_runs WHERE accepted=1 AND created_at>=?`).bind(day).first(),
-    env.DB.prepare(`SELECT COUNT(*) AS players,COALESCE(SUM(wallet),0) AS points,COALESCE(SUM(treats),0) AS treats,COALESCE(SUM(coffee),0) AS coffee FROM admin_profile_state`).first(),
+    env.DB.prepare(`SELECT COUNT(*) AS players,
+      COALESCE(SUM(MIN(999999999,MAX(0,COALESCE(wallet_override,wallet)+COALESCE(pending_wallet,0)))),0) AS points,
+      COALESCE(SUM(MIN(999999999,MAX(0,COALESCE(treats_override,treats)+COALESCE(pending_treats,0)))),0) AS treats,
+      COALESCE(SUM(MIN(999999999,MAX(0,COALESCE(coffee_override,coffee)+COALESCE(pending_coffee,0)))),0) AS coffee,
+      COALESCE(AVG(MIN(999999999,MAX(0,COALESCE(wallet_override,wallet)+COALESCE(pending_wallet,0)))),0) AS avg_points,
+      COALESCE(AVG(MIN(999999999,MAX(0,COALESCE(treats_override,treats)+COALESCE(pending_treats,0)))),0) AS avg_treats,
+      COALESCE(AVG(MIN(999999999,MAX(0,COALESCE(coffee_override,coffee)+COALESCE(pending_coffee,0)))),0) AS avg_coffee,
+      COALESCE(MAX(MIN(999999999,MAX(0,COALESCE(wallet_override,wallet)+COALESCE(pending_wallet,0)))),0) AS max_points,
+      COALESCE(MAX(MIN(999999999,MAX(0,COALESCE(treats_override,treats)+COALESCE(pending_treats,0)))),0) AS max_treats,
+      COALESCE(MAX(MIN(999999999,MAX(0,COALESCE(coffee_override,coffee)+COALESCE(pending_coffee,0)))),0) AS max_coffee,
+      COALESCE(SUM(pending_wallet),0) AS pending_points,COALESCE(SUM(pending_treats),0) AS pending_treats,COALESCE(SUM(pending_coffee),0) AS pending_coffee
+      FROM admin_profile_state`).first(),
     env.DB.prepare(`SELECT SUM(CASE WHEN created_at>=? THEN 1 ELSE 0 END) AS created,SUM(CASE WHEN redeemed_at>=? THEN 1 ELSE 0 END) AS redeemed FROM reward_codes WHERE created_at>=? OR redeemed_at>=?`).bind(day,day,day,day).first(),
     env.DB.prepare(`SELECT bucket_at,active_players,new_players,runs_total,runs_accepted,cases_opened,shop_operations,rewards_delivered,rewards_failed,cron_failures,cron_duration_ms FROM server_analytics_hourly WHERE bucket_at>=? ORDER BY bucket_at ASC LIMIT 48`).bind(now - 48 * 3600).all(),
     env.DB.prepare(`SELECT item_kind,item_id,SUM(CASE WHEN event_type='acquired' THEN 1 ELSE 0 END) AS acquired,SUM(CASE WHEN event_type='equipped' THEN 1 ELSE 0 END) AS equipped,SUM(CASE WHEN event_type='duplicate' THEN 1 ELSE 0 END) AS duplicates,COUNT(*) AS events FROM content_analytics_events WHERE created_at>=? GROUP BY item_kind,item_id ORDER BY events DESC LIMIT 12`).bind(month).all(),
-    v67RetentionCohort(env, 1), v67RetentionCohort(env, 3), v67RetentionCohort(env, 7)
+    v67RetentionCohort(env, 1), v67RetentionCohort(env, 3), v67RetentionCohort(env, 7),
+    ownerPanelEconomyFlowWindow(env, now-86400), ownerPanelEconomyFlowWindow(env, week),
+    env.DB.prepare(`SELECT p.telegram_id,COALESCE(NULLIF(b.display_name,''),NULLIF(a.display_name,''),p.telegram_id) AS display_name,COALESCE(b.username,a.username,'') AS username,
+      MIN(999999999,MAX(0,COALESCE(p.wallet_override,p.wallet)+COALESCE(p.pending_wallet,0))) AS points,
+      MIN(999999999,MAX(0,COALESCE(p.treats_override,p.treats)+COALESCE(p.pending_treats,0))) AS treats,
+      MIN(999999999,MAX(0,COALESCE(p.coffee_override,p.coffee)+COALESCE(p.pending_coffee,0))) AS coffee
+      FROM admin_profile_state p LEFT JOIN bot_subscribers b ON b.telegram_id=p.telegram_id LEFT JOIN leaderboard_all_time a ON a.telegram_id=p.telegram_id
+      ORDER BY points DESC,treats DESC,coffee DESC LIMIT 10`).all(),
+    env.DB.prepare(`SELECT SUM(CASE WHEN status='failed' THEN 1 ELSE 0 END) AS failed,SUM(CASE WHEN status='pending' THEN 1 ELSE 0 END) AS pending,SUM(CASE WHEN status='delivering' THEN 1 ELSE 0 END) AS delivering FROM reward_delivery_queue`).first(),
+    env.DB.prepare(`SELECT kind,item_id,title,COUNT(*) AS drops,COALESCE(SUM(amount),0) AS amount,SUM(CASE WHEN duplicate=1 THEN 1 ELSE 0 END) AS duplicates FROM (
+      SELECT LOWER(COALESCE(json_extract(j.value,'$.kind'),'')) AS kind,COALESCE(json_extract(j.value,'$.id'),'') AS item_id,COALESCE(json_extract(j.value,'$.title'),'') AS title,MAX(1,CAST(COALESCE(json_extract(j.value,'$.amount'),1) AS INTEGER)) AS amount,CASE WHEN json_extract(j.value,'$.duplicate')=1 THEN 1 ELSE 0 END AS duplicate FROM level_case_openings o,json_each(CASE WHEN json_valid(o.rewards_json) THEN o.rewards_json ELSE '[]' END) j WHERE o.opened_at>=?
+      UNION ALL
+      SELECT LOWER(COALESCE(json_extract(j.value,'$.kind'),'')),COALESCE(json_extract(j.value,'$.id'),''),COALESCE(json_extract(j.value,'$.title'),''),MAX(1,CAST(COALESCE(json_extract(j.value,'$.amount'),1) AS INTEGER)),CASE WHEN json_extract(j.value,'$.duplicate')=1 THEN 1 ELSE 0 END FROM granted_cases g,json_each(CASE WHEN json_valid(g.rewards_json) THEN g.rewards_json ELSE '[]' END) j WHERE g.status='opened' AND g.opened_at>=?
+      UNION ALL
+      SELECT LOWER(COALESCE(json_extract(j.value,'$.kind'),'')),COALESCE(json_extract(j.value,'$.id'),''),COALESCE(json_extract(j.value,'$.title'),''),MAX(1,CAST(COALESCE(json_extract(j.value,'$.amount'),1) AS INTEGER)),CASE WHEN json_extract(j.value,'$.duplicate')=1 OR LOWER(COALESCE(json_extract(j.value,'$.title'),'')) LIKE '%дубликат%' THEN 1 ELSE 0 END FROM season_pass_case_grants s,json_each(CASE WHEN json_valid(s.rewards_json) THEN s.rewards_json ELSE '[]' END) j WHERE s.status='opened' AND s.opened_at>=?
+    ) GROUP BY kind,item_id,title ORDER BY drops DESC,amount DESC LIMIT 12`).bind(week,week,week).all()
   ]);
   const weekRun = await env.DB.prepare(`SELECT COUNT(*) AS total,COUNT(DISTINCT telegram_id) AS players,COALESCE(AVG(score),0) AS avg_score FROM leaderboard_runs WHERE accepted=1 AND created_at>=?`).bind(week).first();
   return {
@@ -30211,13 +30335,21 @@ async function ownerPanelV8AnalyticsFresh(env, ctx) {
       ratingPlayers: Number(rating?.players || 0), physicalCreated: Number(physical?.created || 0), physicalRedeemed: Number(physical?.redeemed || 0)
     },
     retention: [d1, d3, d7].map((x) => ({ days: x.days, cohort: x.cohort, retained: x.retained, percent: x.cohort ? x.retained * 100 / x.cohort : 0 })),
-    economy: { players: Number(economy?.players || 0), points: Number(economy?.points || 0), treats: Number(economy?.treats || 0), coffee: Number(economy?.coffee || 0) },
+    economy: {
+      players:Number(economy?.players||0),points:Number(economy?.points||0),treats:Number(economy?.treats||0),coffee:Number(economy?.coffee||0),
+      average:{points:Math.round(Number(economy?.avg_points||0)),treats:Math.round(Number(economy?.avg_treats||0)),coffee:Math.round(Number(economy?.avg_coffee||0))},
+      maximum:{points:Number(economy?.max_points||0),treats:Number(economy?.max_treats||0),coffee:Number(economy?.max_coffee||0)},
+      pending:{points:Number(economy?.pending_points||0),treats:Number(economy?.pending_treats||0),coffee:Number(economy?.pending_coffee||0)},
+      rewardQueue:{failed:Number(economyQueue?.failed||0),pending:Number(economyQueue?.pending||0),delivering:Number(economyQueue?.delivering||0)}
+    },
+    economyFlows:{day:flow24h,week:flow7d},
+    topBalances:(topBalances.results||[]).map((row)=>({telegramId:String(row.telegram_id||""),name:String(row.display_name||row.telegram_id||"Игрок"),username:String(row.username||""),points:Number(row.points||0),treats:Number(row.treats||0),coffee:Number(row.coffee||0)})),
+    caseDrops:(caseDropsResult.results||[]).map((row)=>({kind:String(row.kind||""),itemId:String(row.item_id||""),title:String(row.title||""),drops:Number(row.drops||0),amount:Number(row.amount||0),duplicates:Number(row.duplicates||0)})),
     sevenDays: { runs: Number(weekRun?.total || 0), activePlayers: Number(weekRun?.players || 0), averageScore: Math.round(Number(weekRun?.avg_score || 0)) },
     hourly: (hourlyResult.results || []).map((r) => ({ at:Number(r.bucket_at||0), active:Number(r.active_players||0), newPlayers:Number(r.new_players||0), runs:Number(r.runs_total||0), accepted:Number(r.runs_accepted||0), cases:Number(r.cases_opened||0), shop:Number(r.shop_operations||0), rewards:Number(r.rewards_delivered||0), rewardErrors:Number(r.rewards_failed||0), cronFailures:Number(r.cron_failures||0), cronDuration:Number(r.cron_duration_ms||0) })),
     content: (contentResult.results || []).map((r) => ({ kind:String(r.item_kind||""), id:String(r.item_id||""), acquired:Number(r.acquired||0), equipped:Number(r.equipped||0), duplicates:Number(r.duplicates||0), events:Number(r.events||0) }))
   };
 }
-
 async function ownerPanelV8Analytics(env, ctx) {
   return ownerV85Cached("analytics", 30000, () => ownerPanelV8AnalyticsFresh(env, ctx));
 }
@@ -31080,27 +31212,30 @@ async function ownerLegalPlayerSnapshot(env, telegramId) {
 }
 
 async function ownerPanelV85Player360(env,ctx){
-  await ensureControlCenterV85Schema(env);const telegramId=String(ctx.body?.telegramId||"").trim();if(!/^\d{4,20}$/.test(telegramId))throw new ApiError(400,"Некорректный Telegram ID.");
+  await Promise.all([ensureControlCenterV85Schema(env),ensurePlayerGiftInboxSchema(env),ensureSeasonPassSchema(env)]);const telegramId=String(ctx.body?.telegramId||"").trim();if(!/^\d{4,20}$/.test(telegramId))throw new ApiError(400,"Некорректный Telegram ID.");
   const exists=await env.DB.prepare(`SELECT telegram_id FROM admin_profile_state WHERE telegram_id=? LIMIT 1`).bind(telegramId).first();if(!exists)throw new ApiError(404,"Игрок не найден.");
   const now=Math.floor(Date.now()/1000),week=now-7*86400;
-  const [runStats,cases,purchases,promos,physical,rewardQueue,campaigns,notifications,tickets,fraud,notes,timeline,moderation,moderationHistory,legal] = await Promise.all([
+  const [runStats,cases,purchases,promos,physical,rewardQueue,campaigns,notifications,tickets,fraud,notes,timeline,moderation,moderationHistory,legal,gifts,grantedCases,seasonalCases] = await Promise.all([
     env.DB.prepare(`SELECT COUNT(*) AS total,SUM(CASE WHEN accepted=1 THEN 1 ELSE 0 END) AS accepted,SUM(CASE WHEN accepted=0 THEN 1 ELSE 0 END) AS rejected,ROUND(AVG(CASE WHEN accepted=1 THEN score END),1) AS avg_score,MAX(created_at) AS last_run,MIN(created_at) AS first_run,SUM(CASE WHEN accepted=1 AND created_at>=? THEN 1 ELSE 0 END) AS runs7 FROM leaderboard_runs WHERE telegram_id=?`).bind(week,telegramId).first(),
     env.DB.prepare(`SELECT (SELECT COUNT(*) FROM level_case_openings WHERE telegram_id=?)+(SELECT COUNT(*) FROM granted_cases WHERE telegram_id=? AND status='opened') AS opened`).bind(telegramId,telegramId).first(),
     env.DB.prepare(`SELECT (SELECT COUNT(*) FROM granted_cases WHERE telegram_id=? AND granted_by='shop')+(SELECT COUNT(*) FROM shop_stock_consumptions WHERE telegram_id=? AND category='skins') AS count`).bind(telegramId,telegramId).first(),
     env.DB.prepare(`SELECT code,status,created_at FROM promo_redemptions WHERE telegram_id=? ORDER BY created_at DESC LIMIT 12`).bind(telegramId).all(),
     env.DB.prepare(`SELECT code,product_id,product_name,status,created_at,redeemed_at FROM reward_codes WHERE owner_telegram_id=? ORDER BY created_at DESC LIMIT 12`).bind(telegramId).all(),
-    env.DB.prepare(`SELECT id,source_type,source_id,reward_kind,reward_id,amount,reason,status,attempts,last_error,created_at,delivered_at,claimed_at FROM reward_delivery_queue WHERE telegram_id=? ORDER BY created_at DESC LIMIT 20`).bind(telegramId).all(),
+    env.DB.prepare(`SELECT id,source_type,source_id,reward_kind,reward_id,amount,reason,status,attempts,last_error,created_at,updated_at,delivered_at,claimed_at,lease_until FROM reward_delivery_queue WHERE telegram_id=? ORDER BY created_at DESC LIMIT 20`).bind(telegramId).all(),
     env.DB.prepare(`SELECT r.campaign_id,r.status,r.processed_at,r.delivered_at,r.delivery_error,c.title,c.created_at FROM admin_campaign_recipients r JOIN admin_campaigns c ON c.campaign_id=r.campaign_id WHERE r.telegram_id=? ORDER BY c.created_at DESC LIMIT 12`).bind(telegramId).all(),
     env.DB.prepare(`SELECT category,sent_at FROM player_notification_log WHERE telegram_id=? ORDER BY sent_at DESC LIMIT 20`).bind(telegramId).all(),
     env.DB.prepare(`SELECT id,category,description,status,resolution,created_at,updated_at,closed_at FROM support_tickets WHERE player_telegram_id=? ORDER BY updated_at DESC LIMIT 12`).bind(telegramId).all(),
     env.DB.prepare(`SELECT id,alert_type,severity,title,status,resolution,created_at,updated_at FROM fraud_alerts WHERE telegram_id=? ORDER BY created_at DESC LIMIT 12`).bind(telegramId).all(),
     env.DB.prepare(`SELECT id,note_text,created_by,created_by_name,created_at FROM player_notes WHERE telegram_id=? AND deleted_at=0 ORDER BY created_at DESC LIMIT 30`).bind(telegramId).all(),
-    env.DB.prepare(`SELECT id,event_type,title,details_json,source_id,actor_name,created_at FROM player_timeline_events WHERE telegram_id=? ORDER BY created_at DESC,id DESC LIMIT 40`).bind(telegramId).all(),
+    env.DB.prepare(`SELECT id,event_type,title,details_json,source_id,actor_name,created_at FROM player_timeline_events WHERE telegram_id=? ORDER BY created_at DESC,id DESC LIMIT 50`).bind(telegramId).all(),
     getPlayerAdminControl(telegramId,env),
     env.DB.prepare(`SELECT id,action,reason,actor_name,created_at,block_type,blocked_until FROM player_moderation_history WHERE telegram_id=? ORDER BY created_at DESC LIMIT 20`).bind(telegramId).all(),
-    ownerLegalPlayerSnapshot(env,telegramId)
+    ownerLegalPlayerSnapshot(env,telegramId),
+    env.DB.prepare(`SELECT gift_id,gift_kind,title,message_text,reason,rewards_json,status,created_at,updated_at,claimed_at FROM player_gift_inbox WHERE telegram_id=? ORDER BY created_at DESC LIMIT 16`).bind(telegramId).all(),
+    env.DB.prepare(`SELECT id,case_type,status,granted_by,reason,created_at,opened_at,opening_started_at,opening_token FROM granted_cases WHERE telegram_id=? ORDER BY created_at DESC LIMIT 16`).bind(telegramId).all(),
+    env.DB.prepare(`SELECT grant_id,case_id,source_season_id,status,granted_by,created_at,opened_at,opening_started_at,opening_token,open_request_id FROM season_pass_case_grants WHERE telegram_id=? ORDER BY created_at DESC LIMIT 16`).bind(telegramId).all()
   ]);
-  return {ok:true,telegramId,stats:{runs:Number(runStats?.total||0),accepted:Number(runStats?.accepted||0),rejected:Number(runStats?.rejected||0),runs7:Number(runStats?.runs7||0),avgScore:Number(runStats?.avg_score||0),firstRunAt:Number(runStats?.first_run||0),lastRunAt:Number(runStats?.last_run||0),casesOpened:Number(cases?.opened||0),purchases:Number(purchases?.count||0),promoUses:(promos.results||[]).length,physicalRewards:(physical.results||[]).length},promos:(promos.results||[]).map(r=>({code:String(r.code||""),status:String(r.status||""),createdAt:Number(r.created_at||0)})),physical:(physical.results||[]).map(r=>({code:String(r.code||""),productId:String(r.product_id||""),productName:String(r.product_name||""),status:String(r.status||""),createdAt:Number(r.created_at||0),redeemedAt:Number(r.redeemed_at||0)})),rewards:(rewardQueue.results||[]).map(r=>({id:Number(r.id||0),sourceType:String(r.source_type||""),sourceId:String(r.source_id||""),kind:String(r.reward_kind||""),rewardId:String(r.reward_id||""),amount:Number(r.amount||0),reason:String(r.reason||""),status:String(r.status||""),attempts:Number(r.attempts||0),error:String(r.last_error||""),createdAt:Number(r.created_at||0),deliveredAt:Number(r.delivered_at||0),claimedAt:Number(r.claimed_at||0)})),campaigns:(campaigns.results||[]).map(r=>({id:String(r.campaign_id||""),title:String(r.title||""),status:String(r.status||""),processedAt:Number(r.processed_at||0),deliveredAt:Number(r.delivered_at||0),error:String(r.delivery_error||""),createdAt:Number(r.created_at||0)})),notifications:(notifications.results||[]).map(r=>({category:String(r.category||""),sentAt:Number(r.sent_at||0)})),tickets:(tickets.results||[]).map(r=>({id:Number(r.id||0),category:String(r.category||""),description:String(r.description||""),status:String(r.status||""),resolution:String(r.resolution||""),createdAt:Number(r.created_at||0),updatedAt:Number(r.updated_at||0),closedAt:Number(r.closed_at||0)})),fraud:(fraud.results||[]).map(r=>({id:Number(r.id||0),type:String(r.alert_type||""),severity:String(r.severity||""),title:String(r.title||""),status:String(r.status||""),resolution:String(r.resolution||""),createdAt:Number(r.created_at||0),updatedAt:Number(r.updated_at||0)})),notes:(notes.results||[]).map(r=>({id:Number(r.id||0),text:String(r.note_text||""),createdBy:String(r.created_by_name||r.created_by||""),createdAt:Number(r.created_at||0)})),timeline:(timeline.results||[]).map(r=>({id:Number(r.id||0),type:String(r.event_type||""),title:String(r.title||""),details:ownerV8SafeJson(r.details_json,{}),sourceId:String(r.source_id||""),actor:String(r.actor_name||""),createdAt:Number(r.created_at||0)})),legal,moderation:{blocked:Boolean(moderation?.blocked),reason:String(moderation?.blockReason||""),type:String(moderation?.blockType||""),until:Number(moderation?.blockedUntil||0)},moderationHistory:(moderationHistory.results||[]).map(r=>({id:Number(r.id||0),action:String(r.action||""),reason:String(r.reason||""),actor:String(r.actor_name||""),createdAt:Number(r.created_at||0),blockType:String(r.block_type||""),blockedUntil:Number(r.blocked_until||0)}))};
+  return {ok:true,telegramId,stats:{runs:Number(runStats?.total||0),accepted:Number(runStats?.accepted||0),rejected:Number(runStats?.rejected||0),runs7:Number(runStats?.runs7||0),avgScore:Number(runStats?.avg_score||0),firstRunAt:Number(runStats?.first_run||0),lastRunAt:Number(runStats?.last_run||0),casesOpened:Number(cases?.opened||0),purchases:Number(purchases?.count||0),promoUses:(promos.results||[]).length,physicalRewards:(physical.results||[]).length},promos:(promos.results||[]).map(r=>({code:String(r.code||""),status:String(r.status||""),createdAt:Number(r.created_at||0)})),physical:(physical.results||[]).map(r=>({code:String(r.code||""),productId:String(r.product_id||""),productName:String(r.product_name||""),status:String(r.status||""),createdAt:Number(r.created_at||0),redeemedAt:Number(r.redeemed_at||0)})),rewards:(rewardQueue.results||[]).map(r=>({id:Number(r.id||0),sourceType:String(r.source_type||""),sourceId:String(r.source_id||""),kind:String(r.reward_kind||""),rewardId:String(r.reward_id||""),amount:Number(r.amount||0),reason:String(r.reason||""),status:String(r.status||""),attempts:Number(r.attempts||0),error:String(r.last_error||""),createdAt:Number(r.created_at||0),updatedAt:Number(r.updated_at||0),deliveredAt:Number(r.delivered_at||0),claimedAt:Number(r.claimed_at||0),leaseUntil:Number(r.lease_until||0)})),campaigns:(campaigns.results||[]).map(r=>({id:String(r.campaign_id||""),title:String(r.title||""),status:String(r.status||""),processedAt:Number(r.processed_at||0),deliveredAt:Number(r.delivered_at||0),error:String(r.delivery_error||""),createdAt:Number(r.created_at||0)})),notifications:(notifications.results||[]).map(r=>({category:String(r.category||""),sentAt:Number(r.sent_at||0)})),tickets:(tickets.results||[]).map(r=>({id:Number(r.id||0),category:String(r.category||""),description:String(r.description||""),status:String(r.status||""),resolution:String(r.resolution||""),createdAt:Number(r.created_at||0),updatedAt:Number(r.updated_at||0),closedAt:Number(r.closed_at||0)})),fraud:(fraud.results||[]).map(r=>({id:Number(r.id||0),type:String(r.alert_type||""),severity:String(r.severity||""),title:String(r.title||""),status:String(r.status||""),resolution:String(r.resolution||""),createdAt:Number(r.created_at||0),updatedAt:Number(r.updated_at||0)})),notes:(notes.results||[]).map(r=>({id:Number(r.id||0),text:String(r.note_text||""),createdBy:String(r.created_by_name||r.created_by||""),createdAt:Number(r.created_at||0)})),timeline:(timeline.results||[]).map(r=>({id:Number(r.id||0),type:String(r.event_type||""),title:String(r.title||""),details:ownerV8SafeJson(r.details_json,{}),sourceId:String(r.source_id||""),actor:String(r.actor_name||""),createdAt:Number(r.created_at||0)})),gifts:(gifts.results||[]).map(r=>({id:String(r.gift_id||""),kind:String(r.gift_kind||""),title:String(r.title||""),message:String(r.message_text||""),reason:String(r.reason||""),rewards:ownerV8SafeJson(r.rewards_json,[]),status:String(r.status||""),createdAt:Number(r.created_at||0),updatedAt:Number(r.updated_at||0),claimedAt:Number(r.claimed_at||0)})),cases:(grantedCases.results||[]).map(r=>({id:String(r.id||""),caseType:String(r.case_type||""),status:String(r.status||""),grantedBy:String(r.granted_by||""),reason:String(r.reason||""),createdAt:Number(r.created_at||0),openedAt:Number(r.opened_at||0),openingStartedAt:Number(r.opening_started_at||0),openingToken:String(r.opening_token||"")})),seasonalCases:(seasonalCases.results||[]).map(r=>({id:String(r.grant_id||""),caseId:String(r.case_id||""),seasonId:String(r.source_season_id||""),status:String(r.status||""),grantedBy:String(r.granted_by||""),createdAt:Number(r.created_at||0),openedAt:Number(r.opened_at||0),openingStartedAt:Number(r.opening_started_at||0),openingToken:String(r.opening_token||""),requestId:String(r.open_request_id||"")})),legal,moderation:{blocked:Boolean(moderation?.blocked),reason:String(moderation?.blockReason||""),type:String(moderation?.blockType||""),until:Number(moderation?.blockedUntil||0)},moderationHistory:(moderationHistory.results||[]).map(r=>({id:Number(r.id||0),action:String(r.action||""),reason:String(r.reason||""),actor:String(r.actor_name||""),createdAt:Number(r.created_at||0),blockType:String(r.block_type||""),blockedUntil:Number(r.blocked_until||0)}))};
 }
 async function ownerPanelV85PlayerNoteSave(env,ctx){await ensureControlCenterV85Schema(env);const id=String(ctx.body?.telegramId||"").trim(),text=String(ctx.body?.text||"").trim().slice(0,1200);if(!/^\d{4,20}$/.test(id)||text.length<2)throw new ApiError(400,"Выберите игрока и укажите заметку.");const now=Math.floor(Date.now()/1000);const result=await env.DB.prepare(`INSERT INTO player_notes(telegram_id,note_text,created_by,created_by_name,created_at,deleted_at,deleted_by) VALUES(?,?,?,?,?,0,'')`).bind(id,text,String(ctx.user.id),telegramDisplayName(ctx.user),now).run();await logStaffAction(env,ctx.user,ctx.access,"owner_panel_player_note",id,"player_note",null,Number(result.meta?.last_row_id||0),{text});return {ok:true,id:Number(result.meta?.last_row_id||0)};}
 async function ownerPanelV85PlayerNoteDelete(env,ctx){await ensureControlCenterV85Schema(env);const noteId=ownerPanelInteger(ctx.body?.noteId,1,999999999);if(noteId==null)throw new ApiError(400,"Некорректная заметка.");const row=await env.DB.prepare(`SELECT * FROM player_notes WHERE id=? AND deleted_at=0 LIMIT 1`).bind(noteId).first();if(!row)throw new ApiError(404,"Заметка не найдена.");await env.DB.prepare(`UPDATE player_notes SET deleted_at=?,deleted_by=? WHERE id=? AND deleted_at=0`).bind(Math.floor(Date.now()/1000),String(ctx.user.id),noteId).run();await logStaffAction(env,ctx.user,ctx.access,"owner_panel_player_note_delete",String(row.telegram_id),"player_note",noteId,null,{});return {ok:true};}
