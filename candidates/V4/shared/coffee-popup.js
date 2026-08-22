@@ -3,6 +3,7 @@
 if(window.__ZC42_COFFEE_POPUP__)return;window.__ZC42_COFFEE_POPUP__=true;
 const API_KEY='zc42:candidate-api';
 const PLAYER_KEY='zc42:player-key';
+const DEFAULT_API_BASE='https://zefirok-candidate-v4-daily.patokad6.workers.dev';
 const DEFAULT_MILESTONES=[
   {dayIndex:3,icon:'🍥',label:'250 зефира',reward:{type:'zefir',amount:250,itemId:''}},
   {dayIndex:5,icon:'⭐',label:'+500 XP сезона',reward:{type:'season_xp',amount:500,itemId:''}},
@@ -15,7 +16,7 @@ const DEFAULT_MILESTONES=[
 ];
 let model=null, opened=false, busy=false, lastError='';
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-function apiBase(){const q=new URLSearchParams(location.search).get('candidate_api');const saved=localStorage.getItem(API_KEY)||'';return String(q||saved||'').trim().replace(/\/$/,'')}
+function apiBase(){const q=new URLSearchParams(location.search).get('candidate_api');const saved=localStorage.getItem(API_KEY)||'';return String(q||saved||DEFAULT_API_BASE||'').trim().replace(/\/$/,'')}
 function setApiBase(value){const raw=String(value||'').trim().replace(/\/$/,'');if(raw)localStorage.setItem(API_KEY,raw);else localStorage.removeItem(API_KEY);return raw}
 function playerKey(){let id='';try{id=String(window.Telegram?.WebApp?.initDataUnsafe?.user?.id||'')}catch{}if(id)return `tg-${id}`;let saved=localStorage.getItem(PLAYER_KEY)||'';if(saved)return saved;try{saved='preview-'+crypto.randomUUID().replace(/-/g,'').slice(0,20)}catch{saved='preview-'+Date.now().toString(36)+Math.random().toString(36).slice(2,8)}localStorage.setItem(PLAYER_KEY,saved);return saved}
 function requestId(){try{return 'daily-'+crypto.randomUUID()}catch{return 'daily-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2)}}
@@ -53,5 +54,5 @@ async function open(force=false){ensureLayer();const layer=document.getElementBy
 function close(){const layer=ensureLayer();layer.hidden=true;document.documentElement.classList.remove('zc42-open');document.body.classList.remove('zc42-open')}
 function gameReady(){const game=document.querySelector('iframe');return Boolean(game?.dataset?.activated==='1'&&game.classList.contains('is-ready')&&!document.querySelector('.zefirok-legal-gate')&&!document.querySelector('.zefirok-maintenance-gate')&&!document.querySelector('.zefirok-legal-layer'))}
 function auto(){ensureLayer();if(!opened&&gameReady()){opened=true;setTimeout(()=>open(true),240);return true}return false}
-window.addEventListener('message',event=>{const game=document.querySelector('iframe');if(event.source!==game?.contentWindow||event.data?.type!=='zefirok:candidate:run-settled')return;if(!apiBase())return;runActivity();});window.addEventListener('zefirok:candidate:legal-complete',()=>setTimeout(()=>open(true),180));document.addEventListener('DOMContentLoaded',()=>{ensureLayer();let tries=0;const t=setInterval(()=>{tries++;if(auto()||tries>160)clearInterval(t)},100)});if(document.readyState!=='loading'){ensureLayer();setTimeout(auto,0)}
+window.addEventListener('message',event=>{const game=document.querySelector('iframe');if(event.source!==game?.contentWindow||event.data?.type!=='zefirok:candidate:run-settled')return;if(!apiBase())return;runActivity();});window.addEventListener('zefirok:candidate:legal-complete',()=>setTimeout(()=>open(true),180));window.addEventListener('zefirok:candidate:game-ready',()=>setTimeout(()=>open(true),120));document.addEventListener('DOMContentLoaded',()=>{ensureLayer();let tries=0;const t=setInterval(()=>{tries++;if(auto()||tries>300)clearInterval(t)},100)});if(document.readyState!=='loading'){ensureLayer();setTimeout(auto,0)}
 })();

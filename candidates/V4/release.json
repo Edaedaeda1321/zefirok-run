@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "version": "V4",
-  "candidate": "V4.2",
-  "title": "Сладкий Забег · V4.2 · Server-authoritative Coffee Card",
+  "candidate": "V4.2.1",
+  "title": "Сладкий Забег · V4.2.1 · Server-authoritative Coffee Card",
   "status": "LOCAL_QA",
   "sourceCommit": "f0538c4e3491137aa457cea5733cf4cb187d2be8",
   "createdAt": "2026-08-22T21:43:00+03:00",
