@@ -2,9 +2,9 @@
 
 <html lang="en">
 <head>
-<!-- CANDIDATE V4.1 · LOCAL 2.2 · source-sha256:5991ec4dbbe73cd8 -->
-<meta data-zlocal-csp http-equiv="Content-Security-Policy" content="default-src 'self' blob: data:; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: data:; style-src 'self' 'unsafe-inline' blob: data:; img-src 'self' blob: data:; font-src 'self' blob: data:; media-src 'self' blob: data:; connect-src 'self'; frame-src 'self' blob: data:; worker-src blob:; object-src 'none'; form-action 'none'">
-<script data-zcandidate-manifest>window.__ZEFIROK_CANDIDATE_MANIFEST__={"schemaVersion":1,"version":"V4","candidate":"V4.1","title":"Сладкий Забег · V4.1 · Кофейная карточка popup + локальная изоляция","status":"LOCAL_QA","sourceCommit":"d2044c936e9e0ce1dfda623518f2b43928e2d97e","createdAt":"2026-08-22T21:45:00+03:00","updatedAt":"2026-08-22T21:45:00+03:00","features":["daily-coffee-card-popup","daily-card-startup-overlay","seven-soft-stamps","streak-visual-tier","streak-break-on-missed-day","card-progress-survives-missed-day","milestone-rewards-visible-3-5-7","reward-3-250-marshmallows-preview","reward-5-500-season-xp-preview","reward-7-silver-case-preview","local-legal-direct-no-fetch","local-api-fail-closed","candidate-subpages-self-contained"],"sourceFiles":{"index.html":"isolated-local-2.2-baseline","legal.html":"isolated-local-2.2-baseline","battle-pass.html":"isolated-local-2.2-baseline","rating.html":"isolated-local-2.2-baseline","referrals.html":"isolated-local-2.2-baseline"},"backendCandidate":{"file":null,"scope":"candidate-only-no-backend","d1Migration":false},"requiredChecks":["candidate-only-no-production-write","external-network-zero","legal-status-direct-local","legal-document-direct-local","legal-accept-direct-local","startup-daily-popup","popup-over-game-not-separate-page","reward-3-visible","reward-5-visible","reward-7-visible","one-stamp-per-game-day","miss-keeps-card-progress","miss-breaks-streak","streak-tier-3","streak-tier-7","streak-tier-14","streak-tier-30","mobile-360x800","mobile-430x932"],"localQa":{"status":"pending"},"tpQa":{"status":"pending"},"production":{"status":"not_released"}};</script>
+<!-- CANDIDATE V4.2 · LOCAL 2.2 · source-sha256:5991ec4dbbe73cd8 -->
+<meta data-zlocal-csp http-equiv="Content-Security-Policy" content="default-src 'self' blob: data:; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: data:; style-src 'self' 'unsafe-inline' blob: data:; img-src 'self' blob: data:; font-src 'self' blob: data:; media-src 'self' blob: data:; connect-src 'self' https: http://127.0.0.1:* http://localhost:*; frame-src 'self' blob: data:; worker-src blob:; object-src 'none'; form-action 'none'">
+<script data-zcandidate-manifest>window.__ZEFIROK_CANDIDATE_MANIFEST__={"schemaVersion":1,"version":"V4","candidate":"V4.2","title":"Сладкий Забег · V4.2 · Server-authoritative Coffee Card","status":"LOCAL_QA","sourceCommit":"f0538c4e3491137aa457cea5733cf4cb187d2be8","createdAt":"2026-08-22T21:43:00+03:00","updatedAt":"2026-08-22T21:43:00+03:00","features":["coffee-card-popup","server-authoritative-daily-progress","candidate-run-settlement-bridge","server-time-day-key","soft-active-day-progress","strict-consecutive-streak","streak-visual-tiers","season-specific-reward-schedule","arbitrary-milestone-days","7-14-21-28-progression","candidate-reward-ledger-only","candidate-admin-reward-config","15s-config-cache","idempotent-one-activity-per-server-day","candidate-legal-no-reload","candidate-api-origin-whitelist"],"backendCandidate":{"file":"candidates/V4/backend/src/worker.js","config":"candidates/V4/backend/wrangler.candidate-v4.jsonc","migration":"candidates/V4/backend/migrations/0001_daily_loyalty.sql","separateWorker":true,"separateD1":true,"productionEconomyWrites":false,"configCacheTtlMs":15000},"requiredChecks":["legal-agreement-local","legal-consent-local","legal-complete-opens-game-without-reload","popup-after-game-ready","completed-run-triggers-daily-server","candidate-backend-cors","candidate-backend-only-explicit-origin","server-day-key","same-day-idempotency","streak-break-after-gap","soft-progress-survives-gap","milestone-7","milestone-14","milestone-28","season-config-save","config-cache-invalidation","production-api-not-used","production-economy-not-written"],"localQa":{"status":"pending"},"tpQa":{"status":"pending"},"production":{"status":"not_released"}};</script>
 <script data-zlocal-runtime>(() => {
   if (window.__ZEFIROK_LOCAL_BUILD_V2__?.active) return;
 
@@ -835,6 +835,18 @@
     try { url = new URL(original, document.baseURI || location.href); }
     catch { recordBlocked("fetch-invalid", original); return errorResponse(`LOCAL TEST: invalid URL · ${original}`); }
     const sameOrigin = url.origin === location.origin || url.protocol === "about:" || location.protocol === "about:";
+    // Candidate V4.2 may talk only to an explicitly configured, separate
+    // Candidate backend. This exception is narrow by origin + path and never
+    // opens ordinary Production /api/* traffic.
+    let candidateApiAllowed = false;
+    try {
+      const configured = String(new URLSearchParams(location.search).get("candidate_api") || localStorage.getItem("zc42:candidate-api") || "").trim();
+      if (configured) {
+        const allowed = new URL(configured, location.href);
+        candidateApiAllowed = url.origin === allowed.origin && url.pathname.startsWith("/api/candidate/v4/");
+      }
+    } catch {}
+    if (candidateApiAllowed && nativeFetch) return nativeFetch(input, init);
     if (url.pathname.startsWith("/api/")) {
       const method = String(init.method || (input instanceof Request ? input.method : "GET") || "GET").toUpperCase();
       const payload = await requestPayload(input, init, method);
@@ -1078,7 +1090,7 @@
 <meta content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover" name="viewport"/>
 <meta content="no-referrer" name="referrer"/>
 <meta content="default-src 'none'; script-src 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com https://telegram.org; style-src 'unsafe-inline' blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; img-src 'self' blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; font-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; media-src 'self' blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; worker-src blob:; connect-src 'self' blob: data:; frame-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'" http-equiv="Content-Security-Policy"/>
-<title>Сладкий Забег · V4.1 · LOCAL</title>
+<title>Сладкий Забег · V4.2 · LOCAL</title>
 <style>:root{color-scheme:light dark;background:light-dark(rgb(255 255 255), rgb(24 24 24));--zefirok-app-height:100dvh}html,body{margin:0;width:100%;height:100%;min-height:0;overflow:hidden;overscroll-behavior:none}body{box-sizing:border-box;padding:0;background:inherit}iframe{display:none;height:var(--zefirok-app-height,100dvh);border:0}body>iframe:not(.zefirok-season-pass-frame):not(.zefirok-rating-frame):not(.zefirok-referrals-frame){width:calc(100% - 32px);max-width:736px;margin:0 auto}iframe.is-ready{display:block}.zefirok-maintenance-gate{width:100%;min-height:var(--zefirok-app-height,100dvh);display:grid;background:#fff5f5;place-items:center;padding:max(24px,var(--zefirok-content-safe-top,0px)) max(24px,var(--zefirok-content-safe-right,0px)) max(24px,var(--zefirok-content-safe-bottom,0px)) max(24px,var(--zefirok-content-safe-left,0px));box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#4e3a42}.zefirok-maintenance-card{width:min(430px,100%);box-sizing:border-box;padding:28px;border:1px solid #efd0d9;border-radius:28px;background:#fff;box-shadow:0 18px 50px rgba(91,54,68,.13);text-align:center}.zefirok-maintenance-icon{font-size:54px}.zefirok-maintenance-card h1{font-size:25px;margin:12px 0}.zefirok-maintenance-card p{font-size:16px;line-height:1.5;color:#786870;margin:0}.zefirok-maintenance-card button{margin-top:18px;padding:12px 18px;border:0;border-radius:14px;background:#e56f9b;color:#fff;font-weight:800;font-size:15px}
 .zefirok-season-pass-layer{position:fixed;inset:0;width:100%;height:var(--zefirok-app-height,100dvh);z-index:2147483000;background:#fff5f4;display:block;overflow:hidden}
 .zefirok-season-pass-layer[hidden]{display:none!important}
@@ -1144,26 +1156,76 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
   const LEGAL_STATUS_PATH = "/api/legal/status";
   const LEGAL_ACCEPT_PATH = "/api/legal/accept";
 
+  const CANDIDATE_LEGAL_FALLBACK_KEY = "zc42:legal-fallback";
+  const CANDIDATE_LEGAL_VERSIONS = Object.freeze({ agreement:"2026-08-13.1", privacy:"2026-08-13.2", consent:"2026-08-13.1" });
+
   function getLocalLegalBuildApi() {
     const api = window.__ZEFIROK_LOCAL_BUILD_V2__;
     return api?.active ? api : null;
   }
 
+  function candidateLegalFallbackState() {
+    let accepted = {};
+    try { accepted = JSON.parse(localStorage.getItem(CANDIDATE_LEGAL_FALLBACK_KEY) || "{}") || {}; } catch {}
+    const documents = {};
+    for (const key of ["agreement","privacy","consent"]) {
+      const version = CANDIDATE_LEGAL_VERSIONS[key];
+      const row = accepted[key] || {};
+      const ok = Boolean(row.accepted) && String(row.version || "") === version;
+      documents[key] = { key, version, required:true, accepted:ok, confirmed:ok, acceptedVersion:ok?version:"", acceptedAt:ok?Number(row.acceptedAt||0):0 };
+    }
+    const complete = documents.agreement.accepted && documents.privacy.accepted && documents.consent.accepted;
+    return { ok:true, localBuild:true, fallback:true, complete, required:!complete, accepted:complete, requiredStep:!documents.agreement.accepted?"agreement":!documents.privacy.accepted?"privacy":!documents.consent.accepted?"consent":"", documents, history:[] };
+  }
+
+  function candidateLegalFallbackAccept(stepInput) {
+    const step = String(stepInput || "").trim().toLowerCase();
+    if (!["agreement","privacy","consent"].includes(step)) return { ok:false, localBuild:true, error:"Неизвестный этап документов." };
+    let accepted = {};
+    try { accepted = JSON.parse(localStorage.getItem(CANDIDATE_LEGAL_FALLBACK_KEY) || "{}") || {}; } catch {}
+    const now = Date.now();
+    const mark = key => { accepted[key] = { accepted:true, version:CANDIDATE_LEGAL_VERSIONS[key], acceptedAt:now }; };
+    if (step === "agreement") { mark("agreement"); mark("privacy"); }
+    else mark(step);
+    try { localStorage.setItem(CANDIDATE_LEGAL_FALLBACK_KEY, JSON.stringify(accepted)); } catch {}
+    return candidateLegalFallbackState();
+  }
+
   function legalApiFromLocalBuild(path, payload = {}) {
     const localApi = getLocalLegalBuildApi();
-    if (!localApi) return null;
     try {
-      if (path === LEGAL_STATUS_PATH && typeof localApi.legalStatus === "function") {
-        return localApi.legalStatus();
-      }
-      if (path === LEGAL_ACCEPT_PATH && typeof localApi.acceptLegal === "function") {
-        return localApi.acceptLegal(String(payload?.step || payload?.key || ""), String(payload?.language || "ru"));
+      if (localApi) {
+        if (path === LEGAL_STATUS_PATH && typeof localApi.legalStatus === "function") {
+          let primary = localApi.legalStatus();
+          const fallback = candidateLegalFallbackState();
+          // Keep both local stores in sync so a runtime initialization hiccup on
+          // one launch cannot make the player sign the same Candidate docs again.
+          if (fallback.documents?.agreement?.accepted && !primary.documents?.agreement?.accepted && typeof localApi.acceptLegal === "function") {
+            localApi.acceptLegal("agreement", legalGateLanguage || "ru");
+          }
+          if (fallback.documents?.consent?.accepted && !primary.documents?.consent?.accepted && typeof localApi.acceptLegal === "function") {
+            localApi.acceptLegal("consent", legalGateLanguage || "ru");
+          }
+          primary = localApi.legalStatus();
+          return primary;
+        }
+        if (path === LEGAL_ACCEPT_PATH && typeof localApi.acceptLegal === "function") {
+          const step = String(payload?.step || payload?.key || "");
+          const result = localApi.acceptLegal(step, String(payload?.language || "ru"));
+          candidateLegalFallbackAccept(step);
+          return result;
+        }
       }
     } catch (error) {
-      console.warn("Local legal helper failed", error);
+      console.warn("Local legal helper failed; using Candidate fallback", error);
     }
+    // Second local implementation prevents initialization-order bugs from ever
+    // turning Candidate onboarding into a Production network request.
+    if (path === LEGAL_STATUS_PATH) return candidateLegalFallbackState();
+    if (path === LEGAL_ACCEPT_PATH) return candidateLegalFallbackAccept(payload?.step || payload?.key || "");
     return null;
   }
+
   const SEASON_PASS_AWAY_KEY = "zefirok-season-pass-away";
 
   const TELEGRAM_FULLSCREEN_MIN_VERSION = "8.0";
@@ -1513,7 +1575,11 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
     legalFrame.className = "zefirok-legal-frame";
     legalFrame.referrerPolicy = "no-referrer";
     legalFrame.setAttribute("sandbox", "allow-scripts allow-same-origin");
-    legalFrame.src = `/candidates/V4/local/legal.html?doc=${encodeURIComponent(key)}&lang=${encodeURIComponent(legalGateLanguage)}&embedded=1`;
+    const legalUrl = new URL("legal.html", window.location.href);
+    legalUrl.searchParams.set("doc", key);
+    legalUrl.searchParams.set("lang", legalGateLanguage);
+    legalUrl.searchParams.set("embedded", "1");
+    legalFrame.src = legalUrl.href;
     layer.append(toolbar, legalFrame);
     document.body.append(layer);
     legalLayer = layer;
@@ -1541,39 +1607,13 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
   }
 
   async function legalApi(path, payload = {}) {
+    // Candidate V4.2 legal flow is intentionally 100% local. Even when a real
+    // Telegram initData exists, onboarding must never fall through to Production.
     const localResult = legalApiFromLocalBuild(path, payload);
     if (localResult) return localResult;
-    const initData = String(window.Telegram?.WebApp?.initData || "");
-    if (!initData) {
-      const fallback = legalApiFromLocalBuild(path, payload);
-      if (fallback) return fallback;
-      const error = new Error("TELEGRAM_REQUIRED");
-      error.code = "TELEGRAM_REQUIRED";
-      throw error;
-    }
-    try {
-      const response = await hostFetchWithTimeout(path, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ initData, ...payload }),
-        cache: "no-store",
-        credentials: "same-origin"
-      }, 6500);
-      const data = await response.json().catch(() => null);
-      if (!response.ok || !data?.ok) {
-        const fallback = legalApiFromLocalBuild(path, payload);
-        if (fallback) return fallback;
-        const error = new Error(data?.error || "LEGAL_REQUEST_FAILED");
-        error.status = response.status;
-        error.code = data?.code || "";
-        throw error;
-      }
-      return data;
-    } catch (error) {
-      const fallback = legalApiFromLocalBuild(path, payload);
-      if (fallback) return fallback;
-      throw error;
-    }
+    const error = new Error("Candidate LOCAL legal runtime недоступен. Production legal API заблокирован.");
+    error.code = "CANDIDATE_LOCAL_LEGAL_UNAVAILABLE";
+    throw error;
   }
 
   function showLegalTelegramRequired() {
@@ -1641,16 +1681,15 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
 
   function finishLegalAccess() {
     legalStatusSnapshot = null;
+    closeLegalOverlay();
     document.querySelector(".zefirok-legal-gate")?.remove();
-    const gameFrame = frame();
-    if (gameFrame?.dataset.activated === "1") {
-      // If a document version changed while the Mini App was already open, start
-      // a clean game session after the new confirmation instead of resuming an
-      // unprotected run that was created under the previous legal state.
-      window.location.reload();
-      return;
-    }
+    // Candidate V4.2 is deliberately deterministic: once the LOCAL legal state
+    // is complete we activate/resume the embedded game immediately. No reload
+    // and no Production API round-trip are allowed here.
     activateGameFrame();
+    window.setTimeout(() => {
+      try { window.dispatchEvent(new CustomEvent("zefirok:candidate:legal-complete", { detail:{ candidate:"V4.2", local:true } })); } catch {}
+    }, 0);
   }
 
   async function resolveLegalAccess(force = false) {
@@ -1750,6 +1789,12 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
           preparedSource = preparedSource.includes("</head>") ? preparedSource.replace("</head>", candidateManifest + localTag + "</head>") : candidateManifest + localTag + preparedSource;
         }
       } catch (error) { console.warn("Candidate LOCAL runtime injection failed", error); }
+      try {
+        if (!preparedSource.includes("__ZC42_RUN_BRIDGE__")) {
+          const dailyBridge = "<scr" + "ipt>window.__ZC42_RUN_BRIDGE__=true;window.addEventListener('zefirok-run-settlement-finished',function(){try{window.parent.postMessage({type:'zefirok:candidate:run-settled',candidate:'V4.2'},'*')}catch(e){}});</scr" + "ipt>";
+          preparedSource = preparedSource.includes("</head>") ? preparedSource.replace("</head>", dailyBridge + "</head>") : dailyBridge + preparedSource;
+        }
+      } catch (error) { console.warn("Candidate V4.2 run bridge injection failed", error); }
       gameFrame.srcdoc = preparedSource;
       gameFrame.removeAttribute("data-srcdoc");
       gameFrame.dataset.activated = "1";
