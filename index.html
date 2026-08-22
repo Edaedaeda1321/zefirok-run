@@ -12468,7 +12468,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       const CASE_API_STATE_PATH = &quot;/api/cases/state&quot;;
       const CASE_API_OPEN_PATH = &quot;/api/cases/open&quot;;
       const CASE_API_OPEN_GRANTED_PATH = &quot;/api/cases/open-granted&quot;;
-      const CASE_OPEN_REQUEST_TIMEOUT_MS = 16000;
+      const CASE_OPEN_REQUEST_TIMEOUT_MS = 10000;
       const GRANTED_CASE_OPEN_REQUEST_TIMEOUT_MS = 8000;
       const GRANTED_CASE_OPEN_UI_DEADLINE_MS = 18000;
       const CASE_API_PURCHASE_PATH = &quot;/api/cases/purchase&quot;;
@@ -15904,13 +15904,19 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         } catch (error) {
           caseRouletteBusy = false;
           hideCaseLayerShell();
-          hapticNotify(&quot;error&quot;);
-          showProfileToast(error?.message || &quot;Не удалось открыть кейс.&quot;, &quot;warning&quot;);
           // The request may time out after the server has already committed the
-          // opening. Re-read the lightweight authoritative inventory before
-          // re-enabling the card so the player cannot accidentally double-open.
+          // opening. Re-read authoritative state before deciding whether this is
+          // an error. The level itself is the idempotency key for this case.
           await loadCaseState(true, true);
-          if (button?.isConnected) { button.disabled = false; button.textContent = &quot;Открыть&quot;; }
+          const recoveredOpen = normalizeCaseNumberList(state.caseOpenedLevels).includes(normalizedLevel);
+          if (recoveredOpen) {
+            hapticNotify(&quot;success&quot;);
+            showProfileToast(&quot;Кейс уже открыт · награды зачислены&quot;, &quot;success&quot;);
+          } else {
+            hapticNotify(&quot;error&quot;);
+            showProfileToast(error?.message || &quot;Не удалось открыть кейс.&quot;, &quot;warning&quot;);
+            if (button?.isConnected) { button.disabled = false; button.textContent = &quot;Открыть&quot;; }
+          }
         } finally { renderCaseHub(); }
       }
 
@@ -16935,9 +16941,14 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           hapticNotify(&quot;error&quot;);
           if (button) { button.disabled = false; button.textContent = oldText; }
           // A mobile timeout can happen after the server has already committed
-          // the gift. Re-read both inbox and warehouse state so neither the card
-          // nor the case counter can stay stuck in an old Получаем… snapshot.
-          void Promise.allSettled([loadPlayerGiftInbox(true), loadCaseState(true, true)]).then(() =&gt; renderCaseHub());
+          // the gift. Re-read both inbox and warehouse state immediately. If the
+          // first refresh still sees the short server lease, refresh once more
+          // after it expires so the card cannot stay disabled in Получаем….
+          const refreshGiftAfterTimeout = () =&gt; Promise.allSettled([loadPlayerGiftInbox(true), loadCaseState(true, true)]).then(() =&gt; renderCaseHub());
+          void refreshGiftAfterTimeout();
+          if (error?.timeout || error?.code === &quot;REQUEST_TIMEOUT&quot;) {
+            window.setTimeout(() =&gt; { void refreshGiftAfterTimeout(); }, 3200);
+          }
         }
       }
 
