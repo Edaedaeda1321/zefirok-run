@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "catalogHash": "7b87e5db1c1567d6",
-  "count": 351,
+  "catalogHash": "f0622b05b6d6495d",
+  "count": 352,
   "images": [
     {
       "fileName": "cases/398D69BA-8943-4846-94B3-FC5CB717A67F.PNG",
@@ -2810,6 +2810,14 @@
       "path": "/assets/ui/icone_prize.png",
       "size": 705491,
       "modified": 1786903690000
+    },
+    {
+      "fileName": "ui/icone_reward.png",
+      "label": "Icone reward",
+      "folder": "ui",
+      "path": "/assets/ui/icone_reward.png",
+      "size": 705491,
+      "modified": 1787447131000
     }
   ]
 }
