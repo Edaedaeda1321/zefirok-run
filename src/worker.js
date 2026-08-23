@@ -1756,6 +1756,9 @@ export default {
       if (url.pathname === "/api/gifts/state" && request.method === "POST") {
         return await getPlayerGiftInbox(request, env);
       }
+      if (url.pathname === "/api/gifts/read" && request.method === "POST") {
+        return await markPlayerGiftMailRead(request, env);
+      }
       if (url.pathname === "/api/gifts/claim" && request.method === "POST") {
         return await withPlayerApiPerformance(env, ctx, "gift_claim", () => claimPlayerGift(request, env, ctx));
       }
@@ -3924,7 +3927,16 @@ async function ensurePlayerGiftInboxSchema(env) {
         claimed_at INTEGER NOT NULL DEFAULT 0,
         PRIMARY KEY(gift_id, telegram_id)
       )`),
-      env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_player_gift_inbox_player ON player_gift_inbox(telegram_id,status,created_at DESC)`)
+      env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_player_gift_inbox_player ON player_gift_inbox(telegram_id,status,created_at DESC)`),
+      env.DB.prepare(`CREATE TABLE IF NOT EXISTS player_mail_metadata (
+        gift_id TEXT NOT NULL,
+        telegram_id TEXT NOT NULL,
+        preview_text TEXT NOT NULL DEFAULT '',
+        image_url TEXT NOT NULL DEFAULT '',
+        read_at INTEGER NOT NULL DEFAULT 0,
+        PRIMARY KEY(gift_id, telegram_id)
+      )`),
+      env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_player_mail_metadata_unread ON player_mail_metadata(telegram_id,read_at,gift_id)`)
     ]).catch((error) => {
       playerGiftInboxSchemaPromise = null;
       throw error;
@@ -3960,27 +3972,34 @@ function playerGiftRewardView(reward) {
   return { ...normalized, label: safeRewardDescription(normalized) };
 }
 
+function playerMailPreviewText(value, fallback = "") {
+  const compact = String(value || fallback || "").replace(/\s+/g, " ").trim();
+  return compact.slice(0, 120);
+}
+
 async function createPlayerGiftInbox(env, telegramId, spec = {}) {
   await ensurePlayerGiftInboxSchema(env);
   const id = String(telegramId || "").trim();
   if (!/^\d{4,20}$/.test(id)) throw new Error("Некорректный Telegram ID подарка");
   const rewards = normalizePlayerGiftRewards(spec.rewards);
-  if (!rewards.length) throw new Error("В подарке нет поддерживаемых наград");
+  const allowEmptyRewards = spec.allowEmptyRewards === true;
+  if (!rewards.length && !allowEmptyRewards) throw new Error("В подарке нет поддерживаемых наград");
   const giftId = String(spec.giftId || caseGrantId("gift")).replace(/[^A-Za-z0-9:_-]/g, "_").slice(0, 120);
   const now = Math.floor(Date.now() / 1000);
-  const result = await env.DB.prepare(`INSERT OR IGNORE INTO player_gift_inbox(gift_id,telegram_id,gift_kind,title,message_text,reason,rewards_json,status,created_at,updated_at,claimed_at) VALUES(?,?,?,?,?,?,?,'pending',?,?,0)`)
-    .bind(
-      giftId,
-      id,
-      String(spec.kind || "gift").slice(0, 30),
-      String(spec.title || "Подарок").slice(0, 120),
-      String(spec.message || "").slice(0, 1200),
-      String(spec.reason || "").slice(0, 300),
-      JSON.stringify(rewards),
-      now,
-      now
-    ).run();
-  return { giftId, created: Number(result.meta?.changes || 0) > 0, rewards };
+  const status = rewards.length ? "pending" : "info";
+  const title = String(spec.title || (rewards.length ? "Подарок" : "Письмо")).slice(0, 120);
+  const message = String(spec.message || "").slice(0, 3500);
+  const reason = String(spec.reason || "").slice(0, 300);
+  const preview = playerMailPreviewText(spec.preview, message || reason || title);
+  const imageUrl = String(spec.imageUrl || "").trim().slice(0, 1000);
+  const batch = await env.DB.batch([
+    env.DB.prepare(`INSERT OR IGNORE INTO player_gift_inbox(gift_id,telegram_id,gift_kind,title,message_text,reason,rewards_json,status,created_at,updated_at,claimed_at) VALUES(?,?,?,?,?,?,?,?,?,?,0)`)
+      .bind(giftId,id,String(spec.kind || (rewards.length ? "gift" : "letter")).slice(0,30),title,message,reason,JSON.stringify(rewards),status,now,now),
+    env.DB.prepare(`INSERT OR IGNORE INTO player_mail_metadata(gift_id,telegram_id,preview_text,image_url,read_at) VALUES(?,?,?,?,0)`)
+      .bind(giftId,id,preview,imageUrl)
+  ]);
+  const created = Number(batch?.[0]?.meta?.changes || 0) > 0;
+  return { giftId, created, rewards, status };
 }
 
 async function playerGiftInboxPayload(env, telegramId) {
@@ -4005,22 +4024,24 @@ async function playerGiftInboxPayload(env, telegramId) {
         WHERE q.telegram_id=player_gift_inbox.telegram_id AND q.source_type='gift_inbox'
           AND q.source_id GLOB (player_gift_inbox.gift_id || '_*') AND q.status<>'delivered'
       )`).bind(now,now,id).run();
-  const [rows,pendingRow] = await Promise.all([
-    env.DB.prepare(`SELECT gift_id,gift_kind,title,message_text,reason,rewards_json,status,created_at,claimed_at FROM player_gift_inbox WHERE telegram_id=? ORDER BY CASE status WHEN 'pending' THEN 0 WHEN 'claiming' THEN 1 ELSE 2 END, created_at DESC LIMIT 24`).bind(id).all(),
-    env.DB.prepare(`SELECT COUNT(*) AS count FROM player_gift_inbox WHERE telegram_id=? AND status IN ('pending','claiming')`).bind(id).first()
+  const [rows,countsRow] = await Promise.all([
+    env.DB.prepare(`SELECT g.gift_id,g.gift_kind,g.title,g.message_text,g.reason,g.rewards_json,g.status,g.created_at,g.claimed_at,m.preview_text,m.image_url,m.read_at,CASE WHEN m.gift_id IS NULL THEN 0 ELSE 1 END AS has_mail_meta FROM player_gift_inbox g LEFT JOIN player_mail_metadata m ON m.gift_id=g.gift_id AND m.telegram_id=g.telegram_id WHERE g.telegram_id=? ORDER BY CASE WHEN COALESCE(m.read_at,CASE WHEN g.status IN ('pending','claiming','info') THEN 0 ELSE g.created_at END)=0 THEN 0 ELSE 1 END, CASE g.status WHEN 'pending' THEN 0 WHEN 'claiming' THEN 1 WHEN 'info' THEN 2 ELSE 3 END, g.created_at DESC LIMIT 24`).bind(id).all(),
+    env.DB.prepare(`SELECT SUM(CASE WHEN g.status IN ('pending','claiming') THEN 1 ELSE 0 END) AS pending_count,SUM(CASE WHEN COALESCE(m.read_at,CASE WHEN g.status IN ('pending','claiming','info') THEN 0 ELSE g.created_at END)=0 THEN 1 ELSE 0 END) AS unread_count FROM player_gift_inbox g LEFT JOIN player_mail_metadata m ON m.gift_id=g.gift_id AND m.telegram_id=g.telegram_id WHERE g.telegram_id=?`).bind(id).first()
   ]);
-  const items = (rows.results || []).map((row) => ({
-    id: String(row.gift_id || ""),
-    kind: String(row.gift_kind || "gift"),
-    title: String(row.title || "Подарок"),
-    message: String(row.message_text || ""),
-    reason: String(row.reason || ""),
-    status: String(row.status || "pending"),
-    createdAt: Number(row.created_at || 0),
-    claimedAt: Number(row.claimed_at || 0),
-    rewards: normalizePlayerGiftRewards(safeJson(row.rewards_json, [])).map(playerGiftRewardView).filter(Boolean)
-  }));
-  return { ok:true, pendingCount: Math.max(0,Number(pendingRow?.count || 0)), items };
+  const items = (rows.results || []).map((row) => {
+    const rewards = normalizePlayerGiftRewards(safeJson(row.rewards_json, [])).map(playerGiftRewardView).filter(Boolean);
+    const status = String(row.status || "pending");
+    const readAt = Number(row.has_mail_meta || 0) ? Number(row.read_at || 0) : (['pending','claiming','info'].includes(status) ? 0 : Number(row.created_at || 0));
+    const message = String(row.message_text || "");
+    const reason = String(row.reason || "");
+    return {
+      id: String(row.gift_id || ""), kind: String(row.gift_kind || "gift"), title: String(row.title || "Письмо"),
+      message, reason, preview: playerMailPreviewText(row.preview_text, message || reason || "Откройте письмо, чтобы узнать подробности."),
+      imageUrl: String(row.image_url || ""), status, createdAt: Number(row.created_at || 0), claimedAt: Number(row.claimed_at || 0),
+      readAt, unread: readAt <= 0, hasRewards: rewards.length > 0, rewards
+    };
+  });
+  return { ok:true, pendingCount:Math.max(0,Number(countsRow?.pending_count || 0)), unreadCount:Math.max(0,Number(countsRow?.unread_count || 0)), items };
 }
 
 async function notifyPlayerGiftAvailable(env, telegramId, gift) {
@@ -4031,9 +4052,10 @@ async function notifyPlayerGiftAvailable(env, telegramId, gift) {
     const rewardLines = rewards.map((reward) => `• ${escapeHtml(safeRewardDescription(reward))}`).join("\n");
     const reason = String(gift?.reason || "").trim();
     const message = String(gift?.message || "").trim();
-    const text = `<b>🎁 ${escapeHtml(String(gift?.title || "Вам подарок"))}</b>${message ? `\n\n${escapeHtml(message)}` : ""}${reason ? `\n\n<b>Причина:</b> ${escapeHtml(reason)}` : ""}\n\n<b>Вам доступно:</b>\n${rewardLines}\n\nЗаберите подарок в профиле игры.`;
+    const rewardBlock = rewards.length ? `\n\n<b>Вам доступно:</b>\n${rewardLines}\n\nОткройте Почту в игре, чтобы получить награду.` : `\n\nОткройте Почту в игре, чтобы прочитать письмо.`;
+    const text = `<b>${rewards.length ? "🎁" : "💌"} ${escapeHtml(String(gift?.title || (rewards.length ? "Вам подарок" : "Новое письмо")))}</b>${message ? `\n\n${escapeHtml(message)}` : ""}${reason ? `\n\n<b>Причина:</b> ${escapeHtml(reason)}` : ""}${rewardBlock}`;
     await sendTelegramMessage(env, subscriber.chat_id, text, { inline_keyboard: [
-      [{ text:"🎁 Открыть игру", web_app:{ url:configuredGameUrl(env) } }],
+      [{ text:rewards.length ? "🎁 Открыть игру" : "💌 Открыть игру", web_app:{ url:configuredGameUrl(env) } }],
       [{ text:"⬅️ Назад в меню", callback_data:"menu:home" }]
     ] });
     return true;
@@ -4053,6 +4075,27 @@ async function getPlayerGiftInbox(request, env) {
     if (error instanceof ApiError) return jsonResponse({ ok:false, error:error.message }, error.status);
     console.error("getPlayerGiftInbox failed", error);
     return jsonResponse({ ok:false, error:"Не удалось загрузить подарки." }, 500);
+  }
+}
+
+async function markPlayerGiftMailRead(request, env) {
+  try {
+    const body = await readJson(request);
+    requireBotToken(env);
+    const auth = await validateTelegramInitData(String(body.initData || ""), env);
+    const telegramId = String(auth.user.id);
+    const giftId = String(body.giftId || "").trim().slice(0,120);
+    if (!giftId) throw new ApiError(400,"Письмо не найдено.");
+    await ensurePlayerGiftInboxSchema(env);
+    const row = await env.DB.prepare(`SELECT gift_id FROM player_gift_inbox WHERE gift_id=? AND telegram_id=? LIMIT 1`).bind(giftId,telegramId).first();
+    if (!row) throw new ApiError(404,"Письмо не найдено.");
+    const now = Math.floor(Date.now()/1000);
+    await env.DB.prepare(`INSERT INTO player_mail_metadata(gift_id,telegram_id,preview_text,image_url,read_at) VALUES(?,?,'','',?) ON CONFLICT(gift_id,telegram_id) DO UPDATE SET read_at=CASE WHEN player_mail_metadata.read_at>0 THEN player_mail_metadata.read_at ELSE excluded.read_at END`).bind(giftId,telegramId,now).run();
+    return jsonResponse(await playerGiftInboxPayload(env,telegramId));
+  } catch (error) {
+    if (error instanceof ApiError) return jsonResponse({ok:false,error:error.message},error.status);
+    console.error("markPlayerGiftMailRead failed",error);
+    return jsonResponse({ok:false,error:"Не удалось отметить письмо прочитанным."},500);
   }
 }
 
@@ -18612,6 +18655,7 @@ async function ensureLiveOpsAdminSchema(env) {
         env.DB.prepare(`CREATE TABLE IF NOT EXISTS liveops_config_history (id INTEGER PRIMARY KEY AUTOINCREMENT, entity_type TEXT NOT NULL, entity_id TEXT NOT NULL, action TEXT NOT NULL, old_json TEXT NOT NULL DEFAULT '{}', new_json TEXT NOT NULL DEFAULT '{}', reason TEXT NOT NULL DEFAULT '', actor_telegram_id TEXT NOT NULL, actor_name TEXT NOT NULL DEFAULT '', created_at INTEGER NOT NULL)`),
         env.DB.prepare(`CREATE TABLE IF NOT EXISTS admin_campaigns (campaign_id TEXT PRIMARY KEY, title TEXT NOT NULL, segment_key TEXT NOT NULL, reward_kind TEXT NOT NULL, reward_id TEXT NOT NULL DEFAULT '', amount INTEGER NOT NULL DEFAULT 1, reason TEXT NOT NULL, message_text TEXT NOT NULL DEFAULT '', reward_bundle_json TEXT NOT NULL DEFAULT '[]', status TEXT NOT NULL DEFAULT 'pending', created_by TEXT NOT NULL, created_by_name TEXT NOT NULL DEFAULT '', report_chat_id TEXT NOT NULL, total_count INTEGER NOT NULL DEFAULT 0, processed_count INTEGER NOT NULL DEFAULT 0, failed_count INTEGER NOT NULL DEFAULT 0, created_at INTEGER NOT NULL, started_at INTEGER NOT NULL DEFAULT 0, completed_at INTEGER NOT NULL DEFAULT 0, updated_at INTEGER NOT NULL, lease_token TEXT NOT NULL DEFAULT '', lease_until INTEGER NOT NULL DEFAULT 0)`),
         env.DB.prepare(`CREATE TABLE IF NOT EXISTS admin_campaign_recipients (campaign_id TEXT NOT NULL, telegram_id TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'pending', error_text TEXT NOT NULL DEFAULT '', processed_at INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(campaign_id, telegram_id))`),
+        env.DB.prepare(`CREATE TABLE IF NOT EXISTS admin_campaign_mail_config (campaign_id TEXT PRIMARY KEY, enabled INTEGER NOT NULL DEFAULT 0, preview_text TEXT NOT NULL DEFAULT '')`),
         env.DB.prepare(`CREATE TABLE IF NOT EXISTS fraud_alerts (id INTEGER PRIMARY KEY AUTOINCREMENT, telegram_id TEXT NOT NULL, alert_type TEXT NOT NULL, severity TEXT NOT NULL DEFAULT 'medium', title TEXT NOT NULL, details_json TEXT NOT NULL DEFAULT '{}', status TEXT NOT NULL DEFAULT 'open', assigned_to TEXT NOT NULL DEFAULT '', resolution TEXT NOT NULL DEFAULT '', fingerprint TEXT NOT NULL UNIQUE, created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL)`),
         env.DB.prepare(`CREATE TABLE IF NOT EXISTS staff_work_context (telegram_id TEXT PRIMARY KEY, location_name TEXT NOT NULL DEFAULT 'Основное кафе', shift_name TEXT NOT NULL DEFAULT '', updated_at INTEGER NOT NULL)`),
         env.DB.prepare(`CREATE TABLE IF NOT EXISTS physical_redemption_context (reward_code TEXT PRIMARY KEY, employee_telegram_id TEXT NOT NULL, employee_name TEXT NOT NULL DEFAULT '', location_name TEXT NOT NULL DEFAULT 'Основное кафе', shift_name TEXT NOT NULL DEFAULT '', redeemed_at INTEGER NOT NULL)`),
@@ -19537,6 +19581,13 @@ function campaignAbsoluteUrl(env, rawValue = "") {
 async function processCampaignRecipient(env, campaign, telegramId) {
   const amount = Math.max(1, Math.floor(Number(campaign.amount || 1)));
   const rewardKind = String(campaign.reward_kind || "none");
+  const inboxEnabled = Number(campaign.inbox_enabled || 0) === 1;
+  if (inboxEnabled && rewardKind !== "gift_bundle") {
+    const rewards = rewardKind === "none" ? [] : normalizePlayerGiftRewards([{kind:rewardKind,id:String(campaign.reward_id||""),amount}]);
+    const giftId = `campaign_${String(campaign.campaign_id || "")}`;
+    const campaignMessage = String(campaign.message_text || "").trim() === "__CC_SILENT__" ? "" : String(campaign.message_text || "");
+    await createPlayerGiftInbox(env,telegramId,{giftId,kind:rewards.length ? "campaign" : "letter",title:String(campaign.title||"Письмо от команды"),message:campaignMessage,reason:rewards.length ? String(campaign.reason||"") : "",preview:String(campaign.inbox_preview||""),imageUrl:String(campaign.image_url||""),rewards,allowEmptyRewards:true});
+  }
   if (rewardKind === "gift_bundle") {
     const rewards = normalizePlayerGiftRewards(safeJson(campaign.reward_bundle_json, []));
     if (!rewards.length) throw new Error("В кампании компенсации нет наград");
@@ -19544,30 +19595,31 @@ async function processCampaignRecipient(env, campaign, telegramId) {
     const campaignMessage = String(campaign.message_text || "").trim() === "__CC_SILENT__" ? "" : String(campaign.message_text || "");
     await createPlayerGiftInbox(env, telegramId, {
       giftId, kind:"compensation", title:String(campaign.title || "Компенсация"),
-      message:campaignMessage, reason:String(campaign.reason || "Компенсация"), rewards
+      message:campaignMessage, reason:String(campaign.reason || "Компенсация"), preview:String(campaign.inbox_preview||""), imageUrl:String(campaign.image_url||""), rewards
     });
     const delivered = await notifyPlayerGiftAvailable(env, telegramId, { title:String(campaign.title || "Компенсация"), message:campaignMessage, reason:String(campaign.reason || "Компенсация"), rewards });
     return delivered ? { delivered:true, error:"" } : { delivered:false, error:"Telegram недоступен; подарок сохранён в игре" };
   }
-  if (["points", "zefir", "coffee"].includes(rewardKind)) {
+  if (!inboxEnabled && ["points", "zefir", "coffee"].includes(rewardKind)) {
     const field = ({ points: "pending_wallet", zefir: "pending_treats", coffee: "pending_coffee" })[rewardKind];
     const result = await env.DB.prepare(`UPDATE admin_profile_state SET ${field} = ${field} + ?, revision = revision + 1, updated_at = ?, updated_by = ? WHERE telegram_id = ?`)
       .bind(amount, Math.floor(Date.now() / 1000), `campaign:${campaign.campaign_id}`, telegramId).run();
     if (Number(result.meta?.changes || 0) < 1) throw new Error("\u041f\u0440\u043e\u0444\u0438\u043b\u044c \u0438\u0433\u0440\u043e\u043a\u0430 \u043d\u0435 \u043d\u0430\u0439\u0434\u0435\u043d");
-  } else if (rewardKind === "case") {
+  } else if (!inboxEnabled && rewardKind === "case") {
     await createGrantedCases(env, telegramId, campaign.reward_id, amount, `campaign:${campaign.campaign_id}`, campaign.reason);
-  } else if (rewardKind !== "none") {
+  } else if (!inboxEnabled && rewardKind !== "none") {
     throw new Error("\u041d\u0435\u0438\u0437\u0432\u0435\u0441\u0442\u043d\u044b\u0439 \u0442\u0438\u043f \u043d\u0430\u0433\u0440\u0430\u0434\u044b");
   }
 
   try {
     const subscriber = await env.DB.prepare(`SELECT chat_id FROM bot_subscribers WHERE telegram_id = ? AND active = 1 LIMIT 1`).bind(telegramId).first();
-    if (!subscriber?.chat_id) return { delivered:false, error:"\u0410\u043a\u0442\u0438\u0432\u043d\u044b\u0439 Telegram-\u0447\u0430\u0442 \u043d\u0435 \u043d\u0430\u0439\u0434\u0435\u043d" };
+    if (!subscriber?.chat_id) return inboxEnabled ? { delivered:true, error:"" } : { delivered:false, error:"\u0410\u043a\u0442\u0438\u0432\u043d\u044b\u0439 Telegram-\u0447\u0430\u0442 \u043d\u0435 \u043d\u0430\u0439\u0434\u0435\u043d" };
     const custom = String(campaign.message_text || "").trim();
     if (custom === "__CC_SILENT__") return { delivered:true, error:"" };
     const rewardLine = rewardKind === "none" ? "" : `\n\n\ud83c\udf81 <b>\u041d\u0430\u0433\u0440\u0430\u0434\u0430:</b> ${escapeHtml(campaignRewardTitle(rewardKind, campaign.reward_id, amount))}`;
     const reasonLine = rewardKind === "none" || !String(campaign.reason || "").trim() ? "" : `\n${escapeHtml(String(campaign.reason))}`;
-    const text = custom ? `${escapeHtml(custom)}${rewardLine}${reasonLine}` : rewardKind === "none" ? `<b>${escapeHtml(campaign.title || "\u0421\u043e\u043e\u0431\u0449\u0435\u043d\u0438\u0435 \u043e\u0442 \u0421\u043b\u0430\u0434\u043a\u043e\u0433\u043e \u0417\u0430\u0431\u0435\u0433\u0430")}</b>` : `<b>\ud83c\udf81 \u0412\u0430\u043c \u0432\u044b\u0434\u0430\u043d\u0430 \u043d\u0430\u0433\u0440\u0430\u0434\u0430</b>${rewardLine}${reasonLine}\n\n\u041d\u0430\u0433\u0440\u0430\u0434\u0430 \u043f\u043e\u044f\u0432\u0438\u0442\u0441\u044f \u043f\u043e\u0441\u043b\u0435 \u0441\u043b\u0435\u0434\u0443\u044e\u0449\u0435\u0439 \u0441\u0438\u043d\u0445\u0440\u043e\u043d\u0438\u0437\u0430\u0446\u0438\u0438 \u0438\u0433\u0440\u044b.`;
+    const mailPrompt = inboxEnabled ? (rewardKind === "none" ? `\n\n💌 Откройте «Почту Зеффи» в игре, чтобы прочитать письмо.` : `\n\n💌 Награда ждёт в «Почте Зеффи». Откройте письмо, чтобы получить её.`) : "";
+    const text = custom ? `${escapeHtml(custom)}${rewardLine}${reasonLine}${mailPrompt}` : inboxEnabled ? `<b>💌 ${escapeHtml(campaign.title || "Новое письмо")}</b>${rewardLine}${reasonLine}${mailPrompt}` : rewardKind === "none" ? `<b>${escapeHtml(campaign.title || "Сообщение от Сладкого Забега")}</b>` : `<b>🎁 Вам выдана награда</b>${rewardLine}${reasonLine}\n\nНаграда появится после следующей синхронизации игры.`;
     const buttonText = String(campaign.button_text || "").trim().slice(0, 60);
     const buttonUrl = campaignAbsoluteUrl(env, campaign.button_url || "");
     const replyMarkup = buttonText && buttonUrl ? { inline_keyboard: [[{ text: buttonText, url: buttonUrl }]] } : null;
@@ -19584,14 +19636,14 @@ async function processCampaignRecipient(env, campaign, telegramId) {
     return { delivered:true, error:"" };
   } catch (error) {
     console.warn("Campaign notification failed", String(error?.message || error));
-    return { delivered:false, error:String(error?.message || error).slice(0,500) };
+    return inboxEnabled ? { delivered:true, error:"" } : { delivered:false, error:String(error?.message || error).slice(0,500) };
   }
 }
 
 async function processPendingAdminCampaign(env) {
   await ensureLiveOpsAdminSchema(env);
   const now = Math.floor(Date.now() / 1000);
-  const job = await env.DB.prepare(`SELECT * FROM admin_campaigns WHERE status IN ('pending','running') AND COALESCE(scheduled_at,0) <= ? AND (lease_until = 0 OR lease_until < ?) ORDER BY CASE WHEN COALESCE(scheduled_at,0)=0 THEN created_at ELSE scheduled_at END ASC, created_at ASC LIMIT 1`).bind(now,now).first();
+  const job = await env.DB.prepare(`SELECT c.*,COALESCE(m.enabled,0) AS inbox_enabled,COALESCE(m.preview_text,'') AS inbox_preview FROM admin_campaigns c LEFT JOIN admin_campaign_mail_config m ON m.campaign_id=c.campaign_id WHERE c.status IN ('pending','running') AND COALESCE(c.scheduled_at,0) <= ? AND (c.lease_until = 0 OR c.lease_until < ?) ORDER BY CASE WHEN COALESCE(c.scheduled_at,0)=0 THEN c.created_at ELSE c.scheduled_at END ASC, c.created_at ASC LIMIT 1`).bind(now,now).first();
   if (!job) return { processed: false };
   const leaseToken = caseGrantId("campaign_lock");
   const lease = await env.DB.prepare(`UPDATE admin_campaigns SET status = 'running', lease_token = ?, lease_until = ?, started_at = CASE WHEN started_at = 0 THEN ? ELSE started_at END, updated_at = ? WHERE campaign_id = ? AND status IN ('pending','running') AND COALESCE(scheduled_at,0) <= ? AND (lease_until = 0 OR lease_until < ?)`)
@@ -32085,11 +32137,11 @@ async function ownerPanelV8Segments(env, ctx) {
 async function ownerPanelV8Campaigns(env, ctx) {
   await Promise.all([ensureLiveOpsAdminSchema(env),ensureControlCenterV85Schema(env)]);
   const [result,segments]=await Promise.all([
-    env.DB.prepare(`SELECT c.*,SUM(CASE WHEN COALESCE(r.delivered_at,0)>0 THEN 1 ELSE 0 END) AS delivered_count,SUM(CASE WHEN r.status='failed' OR COALESCE(r.delivery_error,'')<>'' THEN 1 ELSE 0 END) AS recipient_errors,SUM(CASE WHEN COALESCE(r.delivered_at,0)>0 AND (COALESCE(b.last_started_at,0)>r.delivered_at OR EXISTS(SELECT 1 FROM leaderboard_runs lr WHERE lr.telegram_id=r.telegram_id AND lr.accepted=1 AND lr.created_at>r.delivered_at)) THEN 1 ELSE 0 END) AS opened_count FROM admin_campaigns c LEFT JOIN admin_campaign_recipients r ON r.campaign_id=c.campaign_id LEFT JOIN bot_subscribers b ON b.telegram_id=r.telegram_id GROUP BY c.campaign_id ORDER BY c.created_at DESC LIMIT 40`).all(),
+    env.DB.prepare(`SELECT c.*,COALESCE(MAX(m.enabled),0) AS inbox_enabled,SUM(CASE WHEN COALESCE(r.delivered_at,0)>0 THEN 1 ELSE 0 END) AS delivered_count,SUM(CASE WHEN r.status='failed' OR COALESCE(r.delivery_error,'')<>'' THEN 1 ELSE 0 END) AS recipient_errors,SUM(CASE WHEN COALESCE(r.delivered_at,0)>0 AND (COALESCE(b.last_started_at,0)>r.delivered_at OR EXISTS(SELECT 1 FROM leaderboard_runs lr WHERE lr.telegram_id=r.telegram_id AND lr.accepted=1 AND lr.created_at>r.delivered_at)) THEN 1 ELSE 0 END) AS opened_count FROM admin_campaigns c LEFT JOIN admin_campaign_mail_config m ON m.campaign_id=c.campaign_id LEFT JOIN admin_campaign_recipients r ON r.campaign_id=c.campaign_id LEFT JOIN bot_subscribers b ON b.telegram_id=r.telegram_id GROUP BY c.campaign_id ORDER BY c.created_at DESC LIMIT 40`).all(),
     ownerV85SegmentCatalog(env,false)
   ]);
   const titles=new Map(segments.map(x=>[x.key,x.title]));
-  return {ok:true,segments:segments.map(({key,title,builtin})=>({key,title,builtin})),campaigns:(result.results||[]).map(r=>({id:String(r.campaign_id),title:String(r.title||""),segmentKey:String(r.segment_key||""),segmentTitle:titles.get(String(r.segment_key))||String(r.segment_key||""),rewardKind:String(r.reward_kind||"none"),rewardId:String(r.reward_id||""),amount:Number(r.amount||1),reason:String(r.reason||""),message:String(r.message_text||""),imageUrl:String(r.image_url||""),buttonText:String(r.button_text||""),buttonUrl:String(r.button_url||""),status:String(r.status||""),total:Number(r.total_count||0),delivered:Number(r.delivered_count||r.processed_count||0),failed:Number(r.recipient_errors||r.failed_count||0),opened:Number(r.opened_count||0),scheduledAt:Number(r.scheduled_at||0),createdAt:Number(r.created_at||0),completedAt:Number(r.completed_at||0)}))};
+  return {ok:true,segments:segments.map(({key,title,builtin})=>({key,title,builtin})),campaigns:(result.results||[]).map(r=>({id:String(r.campaign_id),title:String(r.title||""),segmentKey:String(r.segment_key||""),segmentTitle:titles.get(String(r.segment_key))||String(r.segment_key||""),rewardKind:String(r.reward_kind||"none"),rewardId:String(r.reward_id||""),amount:Number(r.amount||1),reason:String(r.reason||""),message:String(r.message_text||""),imageUrl:String(r.image_url||""),buttonText:String(r.button_text||""),buttonUrl:String(r.button_url||""),status:String(r.status||""),total:Number(r.total_count||0),delivered:Number(r.delivered_count||r.processed_count||0),failed:Number(r.recipient_errors||r.failed_count||0),opened:Number(r.opened_count||0),scheduledAt:Number(r.scheduled_at||0),createdAt:Number(r.created_at||0),completedAt:Number(r.completed_at||0),inboxEnabled:Number(r.inbox_enabled||0)===1}))};
 }
 
 async function ownerPanelV8CreateCampaign(env, ctx) {
@@ -32097,9 +32149,9 @@ async function ownerPanelV8CreateCampaign(env, ctx) {
   const segmentKey=String(ctx.body?.segmentKey||"").trim();const segmentTitle=await ownerV85SegmentTitle(env,segmentKey);if(!segmentTitle)throw new ApiError(400,"Неизвестный сегмент игроков.");
   const title=String(ctx.body?.title||"").trim().replace(/\s+/g," ").slice(0,120),message=String(ctx.body?.message||"").trim().slice(0,3500);if(title.length<3)throw new ApiError(400,"Укажите название кампании.");if(!message)throw new ApiError(400,"Сообщение кампании не может быть пустым.");
   const rewardKind=String(ctx.body?.rewardKind||"none").trim();if(!["none","points","zefir","coffee","case"].includes(rewardKind))throw new ApiError(400,"Неизвестный тип награды.");let rewardId="",amount=1;if(rewardKind==="case"){rewardId=normalizeCaseType(ctx.body?.rewardId||"small");if(!rewardId)throw new ApiError(400,"Неизвестный кейс.");amount=ownerPanelInteger(ctx.body?.amount,1,10)||1;}else if(rewardKind!=="none")amount=ownerPanelInteger(ctx.body?.amount,1,rewardKind==="points"?1000000:5000)||1;
-  const reason=String(ctx.body?.reason||title).trim().slice(0,300)||title,scheduledAt=Math.max(0,Math.floor(Number(ctx.body?.scheduledAt||0))),now=Math.floor(Date.now()/1000);if(scheduledAt&&scheduledAt>now+180*86400)throw new ApiError(400,"Кампанию нельзя планировать дальше чем на 180 дней.");const imageUrl=ownerV8AssetPath(ctx.body?.imageUrl||"");if(String(ctx.body?.imageUrl||"").trim()&&!imageUrl)throw new ApiError(400,"Картинка должна быть HTTPS, /assets/... или /media/...");const buttonText=String(ctx.body?.buttonText||"").trim().slice(0,60),rawButtonUrl=String(ctx.body?.buttonUrl||"").trim();if(rawButtonUrl&&!/^https:\/\//i.test(rawButtonUrl)&&!rawButtonUrl.startsWith("/"))throw new ApiError(400,"Ссылка кнопки должна быть HTTPS или внутренним путём /...");
-  const dryRun=await buildCampaignDryRun(env,{segmentKey,rewardKind,rewardId,amount});if(!dryRun.eligibleIds.length)throw new ApiError(409,"В выбранном сегменте нет подходящих игроков.");const campaignId=await ownerV85CreateCampaignForIds(env,ctx.user,dryRun.eligibleIds,{title,segmentKey,rewardKind,rewardId,amount,reason,message,imageUrl,buttonText,buttonUrl:rawButtonUrl,scheduledAt:scheduledAt||now,reportChatId:String(ctx.user.id)});
-  await Promise.all([logStaffAction(env,ctx.user,ctx.access,"owner_panel_campaign_create",null,"campaign",null,dryRun.eligibleIds.length,{campaignId,title,segmentKey,segmentTitle,rewardKind,rewardId,amount,scheduledAt:scheduledAt||now,imageUrl,buttonText,buttonUrl:rawButtonUrl,testersExcluded:dryRun.testersExcluded,blockedExcluded:dryRun.blockedExcluded}),recordV67SettingChange(env,ctx.user,"campaign",campaignId,"create",{},{title,segmentKey,rewardKind,rewardId,amount,scheduledAt:scheduledAt||now})]);return {ok:true,campaignId,recipients:dryRun.eligibleIds.length,testersExcluded:dryRun.testersExcluded,blockedExcluded:dryRun.blockedExcluded};
+  const reason=String(ctx.body?.reason||title).trim().slice(0,300)||title,preview=playerMailPreviewText(ctx.body?.preview,ctx.body?.message||title),scheduledAt=Math.max(0,Math.floor(Number(ctx.body?.scheduledAt||0))),now=Math.floor(Date.now()/1000);if(scheduledAt&&scheduledAt>now+180*86400)throw new ApiError(400,"Кампанию нельзя планировать дальше чем на 180 дней.");const imageUrl=ownerV8AssetPath(ctx.body?.imageUrl||"");if(String(ctx.body?.imageUrl||"").trim()&&!imageUrl)throw new ApiError(400,"Картинка должна быть HTTPS, /assets/... или /media/...");const buttonText=String(ctx.body?.buttonText||"").trim().slice(0,60),rawButtonUrl=String(ctx.body?.buttonUrl||"").trim();if(rawButtonUrl&&!/^https:\/\//i.test(rawButtonUrl)&&!rawButtonUrl.startsWith("/"))throw new ApiError(400,"Ссылка кнопки должна быть HTTPS или внутренним путём /...");const inboxEnabled=ctx.body?.inboxEnabled!==false&&Number(ctx.body?.inboxEnabled)!==0;
+  const dryRun=await buildCampaignDryRun(env,{segmentKey,rewardKind,rewardId,amount});if(!dryRun.eligibleIds.length)throw new ApiError(409,"В выбранном сегменте нет подходящих игроков.");const campaignId=await ownerV85CreateCampaignForIds(env,ctx.user,dryRun.eligibleIds,{title,segmentKey,rewardKind,rewardId,amount,reason,message,preview,imageUrl,buttonText,buttonUrl:rawButtonUrl,inboxEnabled,scheduledAt:scheduledAt||now,reportChatId:String(ctx.user.id)});
+  await Promise.all([logStaffAction(env,ctx.user,ctx.access,"owner_panel_campaign_create",null,"campaign",null,dryRun.eligibleIds.length,{campaignId,title,segmentKey,segmentTitle,rewardKind,rewardId,amount,scheduledAt:scheduledAt||now,imageUrl,buttonText,buttonUrl:rawButtonUrl,inboxEnabled,testersExcluded:dryRun.testersExcluded,blockedExcluded:dryRun.blockedExcluded}),recordV67SettingChange(env,ctx.user,"campaign",campaignId,"create",{},{title,segmentKey,rewardKind,rewardId,amount,scheduledAt:scheduledAt||now})]);return {ok:true,campaignId,recipients:dryRun.eligibleIds.length,testersExcluded:dryRun.testersExcluded,blockedExcluded:dryRun.blockedExcluded};
 }
 
 async function ownerPanelV8CancelCampaign(env, ctx) {
@@ -32985,6 +33037,7 @@ async function ownerV85CreateCampaignForIds(env, actor, ids, spec={}) {
   await env.DB.prepare(`INSERT INTO admin_campaigns(campaign_id,title,segment_key,reward_kind,reward_id,amount,reason,message_text,reward_bundle_json,image_url,button_text,button_url,scheduled_at,status,created_by,created_by_name,report_chat_id,total_count,processed_count,failed_count,created_at,started_at,completed_at,updated_at,lease_token,lease_until) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?, 'pending',?,?,?,?,0,0,?,0,0,?,'',0)`).bind(
     campaignId,String(spec.title||"Компенсация").slice(0,120),String(spec.segmentKey||"direct").slice(0,120),String(spec.rewardKind||"none"),String(spec.rewardId||""),Math.max(1,Math.floor(Number(spec.amount||1))),String(spec.reason||"").slice(0,300),String(spec.message||"").slice(0,2500),JSON.stringify(rewardBundle),String(spec.imageUrl||"").slice(0,1000),String(spec.buttonText||"").slice(0,60),String(spec.buttonUrl||"").slice(0,1000),Math.max(0,Math.floor(Number(spec.scheduledAt||0))),String(actor?.id||"owner"),telegramDisplayName(actor||{}),String(spec.reportChatId||actor?.id||""),cleanIds.length,now,now
   ).run();
+  await env.DB.prepare(`INSERT OR REPLACE INTO admin_campaign_mail_config(campaign_id,enabled,preview_text) VALUES(?,?,?)`).bind(campaignId,spec.inboxEnabled===true?1:0,playerMailPreviewText(spec.preview,spec.message||spec.title||"")).run();
   const statements=cleanIds.map(id=>env.DB.prepare(`INSERT OR IGNORE INTO admin_campaign_recipients(campaign_id,telegram_id) VALUES(?,?)`).bind(campaignId,id));
   for(let i=0;i<statements.length;i+=80) await env.DB.batch(statements.slice(i,i+80));
   return campaignId;
@@ -32995,13 +33048,13 @@ async function ownerV85QueueCompensationCampaigns(env, actor, ids, data={}) {
   if(rawRewards.some((reward)=>String(reward?.kind)==="physical_restore")) throw new ApiError(409,"Шаблон восстановления физической награды требует ручной проверки и не может быть выдан массово.");
   const rewards=normalizePlayerGiftRewards(rawRewards);
   if(!rewards.length){
-    const campaignId=await ownerV85CreateCampaignForIds(env,actor,ids,{title:`Компенсация: ${String(data.templateTitle||"Без шаблона").slice(0,90)}`,segmentKey:data.segmentKey||"direct",rewardKind:"none",reason:data.reason||"Компенсация",message:String(data.message||""),reportChatId:data.reportChatId||actor?.id||""});
+    const campaignId=await ownerV85CreateCampaignForIds(env,actor,ids,{title:`Компенсация: ${String(data.templateTitle||"Без шаблона").slice(0,90)}`,segmentKey:data.segmentKey||"direct",rewardKind:"none",reason:data.reason||"Компенсация",message:String(data.message||""),reportChatId:data.reportChatId||actor?.id||"",inboxEnabled:true});
     return [campaignId];
   }
   const campaignId=await ownerV85CreateCampaignForIds(env,actor,ids,{
     title:`Компенсация: ${String(data.templateTitle||"Без шаблона").slice(0,90)}`,
     segmentKey:data.segmentKey||"direct",rewardKind:"gift_bundle",rewardId:String(data.templateId||""),amount:1,
-    rewardBundle:rewards,reason:data.reason||"Компенсация",message:String(data.message||""),reportChatId:data.reportChatId||actor?.id||""
+    rewardBundle:rewards,reason:data.reason||"Компенсация",message:String(data.message||""),reportChatId:data.reportChatId||actor?.id||"",inboxEnabled:true
   });
   return [campaignId];
 }
@@ -36374,7 +36427,7 @@ const TEST_PROJECT_SANDBOX_API_PATHS = Object.freeze([
   "/api/runs/start","/api/runs/checkpoint","/api/leaderboard/state","/api/leaderboard/submit","/api/leaderboard/claim",
   "/api/cases/state","/api/cases/open","/api/cases/open-granted","/api/cases/purchase","/api/cases/activate","/api/cases/equip","/api/cases/consume-run",
   "/api/skins/purchase","/api/skins/bonus-case","/api/live-content/shop/buy","/api/rewards/create","/api/rewards/mine",
-  "/api/gifts/state","/api/gifts/claim","/api/support/state","/api/support/create","/api/support/reply","/api/support/read","/api/news/read",
+  "/api/gifts/state","/api/gifts/read","/api/gifts/claim","/api/support/state","/api/support/create","/api/support/reply","/api/support/read","/api/news/read",
   "/api/polls/game/next","/api/polls/game/vote","/api/polls/game/snooze",
   "/api/shop/offers","/api/shop/offers/event","/api/shop/offers/purchase",
   "/api/battle-pass/access","/api/battle-pass/state","/api/battle-pass/run","/api/battle-pass/profile-bonus","/api/battle-pass/task-notices/pending","/api/battle-pass/task-notices/read",
@@ -36665,7 +36718,8 @@ async function testProjectSandboxGameData(env, ctx) {
   }
   if(path==="/api/rewards/mine")return response({ok:true,rewards:(state.sandbox?.mockRewards||[]).map(testProjectSandboxRewardView),limitStatus:null});
 
-  if(path==="/api/gifts/state")return response({ok:true,pendingCount:0,items:[]});
+  if(path==="/api/gifts/state")return response({ok:true,pendingCount:0,unreadCount:0,items:[]});
+  if(path==="/api/gifts/read")return response({ok:true,pendingCount:0,unreadCount:0,items:[]});
   if(path==="/api/gifts/claim")throw new ApiError(404,"Production-подарки в Test Project не выдаются.");
   if(path==="/api/news/read")return response({ok:true});
   if(path==="/api/polls/game/next")return response(testProjectSandboxPollNext(state,nowMs));

@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "catalogHash": "e39d706bff5d64e3",
-  "count": 357,
+  "catalogHash": "9f6e7486d5b9134d",
+  "count": 359,
   "images": [
     {
       "fileName": "albom_all/alex_albom_oblozka.png",
@@ -18,6 +18,22 @@
       "path": "/assets/albom_all/background_alex_albom.png",
       "size": 2017209,
       "modified": 1787516549929
+    },
+    {
+      "fileName": "albom_all/background_s2.png",
+      "label": "Background s2",
+      "folder": "albom_all",
+      "path": "/assets/albom_all/background_s2.png",
+      "size": 2352251,
+      "modified": 1787525758930
+    },
+    {
+      "fileName": "albom_all/icon_albom_s2.png",
+      "label": "Icon albom s2",
+      "folder": "albom_all",
+      "path": "/assets/albom_all/icon_albom_s2.png",
+      "size": 2798168,
+      "modified": 1787525668355
     },
     {
       "fileName": "cases/398D69BA-8943-4846-94B3-FC5CB717A67F.PNG",

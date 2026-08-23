@@ -7263,6 +7263,39 @@ html&gt;body{padding:
 #zefirok-maltipoo-runner .player-gift-claim{width:100%;min-height:40px;border:0;border-radius:12px;background:linear-gradient(145deg,#ed8fb0,#d65a88);color:#fff;font-size:11px;font-weight:950;box-shadow:0 7px 14px rgba(190,72,115,.14)}
 #zefirok-maltipoo-runner .player-gift-claim:disabled{opacity:.62}
 #zefirok-maltipoo-runner .player-gift-empty{padding:12px;border-radius:13px;background:rgba(255,255,255,.72);color:#957681;font-size:10px;text-align:center}
+#zefirok-maltipoo-runner .player-mail-card{position:relative;grid-template-columns:42px minmax(0,1fr) auto;align-items:center;gap:10px;padding:11px}
+#zefirok-maltipoo-runner .player-mail-card.is-unread{border-color:rgba(220,104,149,.55);background:linear-gradient(145deg,#fff,#fff1f6);box-shadow:0 8px 20px rgba(181,77,117,.1)}
+#zefirok-maltipoo-runner .player-mail-unread-dot{position:absolute;left:7px;top:7px;width:8px;height:8px;border-radius:50%;background:#e15f92;box-shadow:0 0 0 3px #ffe6ef}
+#zefirok-maltipoo-runner .player-mail-unread-dot[hidden]{display:none!important}
+#zefirok-maltipoo-runner .player-mail-card-icon{display:grid;place-items:center;width:42px;height:42px;border-radius:14px;background:#fff1f6;font-size:21px}
+#zefirok-maltipoo-runner .player-mail-card-copy{display:grid;gap:3px;min-width:0}
+#zefirok-maltipoo-runner .player-mail-card-copy strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#714559;font-size:12px;font-weight:950}
+#zefirok-maltipoo-runner .player-mail-card-copy span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#8f707c;font-size:9px}
+#zefirok-maltipoo-runner .player-mail-card-copy small{color:#aa8996;font-size:8px}
+#zefirok-maltipoo-runner .player-mail-open{min-height:34px;border:1px solid rgba(218,117,156,.32);border-radius:11px;padding:7px 9px;background:#fff;color:#b54f77;font-size:9px;font-weight:950}
+#zefirok-maltipoo-runner .player-mail-layer{position:fixed;inset:0;z-index:2147483250;display:grid;place-items:end center;padding:18px 12px max(18px,var(--zefirok-content-safe-bottom,0px));background:rgba(72,45,56,.38);backdrop-filter:blur(7px);box-sizing:border-box}
+#zefirok-maltipoo-runner .player-mail-layer[hidden]{display:none!important}
+#zefirok-maltipoo-runner .player-mail-dialog{position:relative;width:min(440px,100%);max-height:min(720px,calc(var(--zefirok-visible-height,100dvh) - 30px));overflow:auto;padding:24px 18px 18px;border:1px solid #efcbd7;border-radius:28px;background:linear-gradient(180deg,#fffdfc,#fff7f4);box-shadow:0 24px 70px rgba(87,47,61,.24);text-align:center;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+#zefirok-maltipoo-runner .player-mail-x{position:absolute;right:11px;top:10px;width:40px;height:40px;border:1px solid #efd3dc;border-radius:13px;background:#fff;color:#94536b;font-size:25px;font-weight:700}
+#zefirok-maltipoo-runner .player-mail-content{display:grid;justify-items:center;gap:10px;padding-top:4px}
+#zefirok-maltipoo-runner .player-mail-art{display:block;width:min(230px,72%);max-height:190px;object-fit:contain;border-radius:20px}
+#zefirok-maltipoo-runner .player-mail-symbol{display:grid;place-items:center;width:76px;height:76px;border-radius:24px;background:linear-gradient(145deg,#ffe8f1,#fff4d7);font-size:38px}
+#zefirok-maltipoo-runner .player-mail-kicker{padding:5px 9px;border-radius:999px;background:#fff0f5;color:#b35379;font-size:8px;font-weight:950;text-transform:uppercase;letter-spacing:.06em}
+#zefirok-maltipoo-runner .player-mail-content h2{margin:0;padding:0 36px;color:#663f50;font-size:21px;line-height:1.15}
+#zefirok-maltipoo-runner .player-mail-body{width:100%;margin:0;color:#745b65;font-size:11px;line-height:1.55;white-space:pre-wrap;text-align:left}
+#zefirok-maltipoo-runner .player-mail-note{width:100%;margin:0;padding:9px 10px;border-radius:13px;background:#fff8e9;color:#84694f;font-size:9px;line-height:1.4;text-align:left;box-sizing:border-box}
+#zefirok-maltipoo-runner .player-mail-reward-title{width:100%;margin-top:2px;color:#9e5a73;font-size:10px;font-weight:950;text-align:left}
+#zefirok-maltipoo-runner .player-mail-rewards{width:100%;justify-content:center;padding:10px;border-radius:17px;background:#fff5dc;box-sizing:border-box}
+#zefirok-maltipoo-runner .player-mail-reward{background:#fff}
+#zefirok-maltipoo-runner .player-mail-claimed{width:100%;padding:9px;border-radius:13px;background:#eaf7ee;color:#51835e;font-size:10px;font-weight:950;box-sizing:border-box}
+#zefirok-maltipoo-runner .player-mail-primary{width:100%;min-height:46px;margin-top:4px;border:0;border-radius:15px;background:linear-gradient(145deg,#ed8fb0,#d65a88);color:#fff;font-size:12px;font-weight:950;box-shadow:0 8px 17px rgba(190,72,115,.17)}
+#zefirok-maltipoo-runner .player-mail-primary:disabled{opacity:.62}
+#zefirok-maltipoo-runner .profile-hero{position:relative}
+#zefirok-maltipoo-runner .profile-mail-shortcut{position:absolute;right:10px;top:10px;z-index:6;display:grid;place-items:center;width:42px;height:42px;border:1px solid rgba(224,145,176,.42);border-radius:14px;background:linear-gradient(145deg,#fff,#ffe9f1);color:#a94b70;font-size:21px;box-shadow:0 6px 15px rgba(144,66,96,.12)}
+#zefirok-maltipoo-runner .profile-mail-shortcut&gt;span{position:absolute;right:-5px;top:-6px;display:inline-flex;align-items:center;justify-content:center;min-width:19px;height:19px;padding:0 4px;border:2px solid #fff;border-radius:999px;background:#e65e91;color:#fff;font-size:8px;font-weight:950;box-sizing:border-box}
+#zefirok-maltipoo-runner .profile-mail-shortcut&gt;span[hidden]{display:none!important}
+#zefirok-maltipoo-runner .profile-identity{padding-right:42px}
+@media(max-width:390px){#zefirok-maltipoo-runner .player-mail-card{grid-template-columns:38px minmax(0,1fr)}#zefirok-maltipoo-runner .player-mail-card-icon{width:38px;height:38px}#zefirok-maltipoo-runner .player-mail-open{grid-column:1/-1;width:100%}}
 #zefirok-maltipoo-runner .case-result-actions{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;margin-top:15px;align-items:stretch}
 #zefirok-maltipoo-runner .case-result-actions.is-single-action{grid-template-columns:minmax(0,1fr)}
 #zefirok-maltipoo-runner .case-result-actions .case-result-done{margin-top:0}
@@ -10036,7 +10069,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
     &lt;div class=&quot;warehouse-head-main&quot;&gt;
       &lt;div&gt;
         &lt;strong class=&quot;stock-label-with-icon&quot;&gt;&lt;img class=&quot;stock-section-icon&quot; src=&quot;/assets/ui/icon_shopping.png&quot; alt=&quot;&quot;&gt;Мои покупки&lt;/strong&gt;
-        &lt;span&gt;Покупки, усилители, кейсы и подарки собраны в одном месте.&lt;/span&gt;
+        &lt;span&gt;Покупки, усилители, кейсы и почта собраны в одном месте.&lt;/span&gt;
       &lt;/div&gt;
       &lt;div class=&quot;warehouse-head-actions&quot;&gt;
         &lt;span class=&quot;profile-cases-ready-badge&quot; data-profile-cases-ready hidden&gt;Доступно: 0&lt;/span&gt;
@@ -10051,7 +10084,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
     &lt;button class=&quot;stock-hub-tab&quot; data-stock-view=&quot;purchases&quot; role=&quot;tab&quot; aria-selected=&quot;true&quot; type=&quot;button&quot;&gt;&lt;img src=&quot;/assets/ui/icon_shopping.png&quot; alt=&quot;&quot;&gt;&lt;span&gt;Покупки&lt;/span&gt;&lt;b class=&quot;stock-hub-tab-badge&quot; data-stock-tab-badge=&quot;purchases&quot; hidden&gt;0&lt;/b&gt;&lt;/button&gt;
     &lt;button class=&quot;stock-hub-tab&quot; data-stock-view=&quot;boosters&quot; role=&quot;tab&quot; aria-selected=&quot;false&quot; type=&quot;button&quot;&gt;&lt;img src=&quot;/assets/ui/icon_busters.png&quot; alt=&quot;&quot;&gt;&lt;span&gt;Усилители&lt;/span&gt;&lt;b class=&quot;stock-hub-tab-badge&quot; data-stock-tab-badge=&quot;boosters&quot; hidden&gt;0&lt;/b&gt;&lt;/button&gt;
     &lt;button class=&quot;stock-hub-tab&quot; data-stock-view=&quot;cases&quot; role=&quot;tab&quot; aria-selected=&quot;false&quot; type=&quot;button&quot;&gt;&lt;img src=&quot;/assets/ui/icone_cases.png&quot; alt=&quot;&quot;&gt;&lt;span&gt;Кейсы&lt;/span&gt;&lt;b class=&quot;stock-hub-tab-badge&quot; data-stock-tab-badge=&quot;cases&quot; hidden&gt;0&lt;/b&gt;&lt;/button&gt;
-    &lt;button class=&quot;stock-hub-tab&quot; data-stock-view=&quot;gifts&quot; role=&quot;tab&quot; aria-selected=&quot;false&quot; type=&quot;button&quot;&gt;&lt;img src=&quot;/assets/ui/icone_reward.png&quot; alt=&quot;&quot;&gt;&lt;span&gt;Подарки&lt;/span&gt;&lt;b class=&quot;stock-hub-tab-badge&quot; data-stock-tab-badge=&quot;gifts&quot; hidden&gt;0&lt;/b&gt;&lt;/button&gt;
+    &lt;button class=&quot;stock-hub-tab&quot; data-stock-view=&quot;gifts&quot; role=&quot;tab&quot; aria-selected=&quot;false&quot; type=&quot;button&quot;&gt;&lt;img src=&quot;/assets/ui/icone_reward.png&quot; alt=&quot;&quot;&gt;&lt;span&gt;Почта&lt;/span&gt;&lt;b class=&quot;stock-hub-tab-badge&quot; data-stock-tab-badge=&quot;gifts&quot; hidden&gt;0&lt;/b&gt;&lt;/button&gt;
   &lt;/div&gt;
 
   &lt;div class=&quot;stock-hub-panel&quot; data-stock-panel=&quot;purchases&quot;&gt;
@@ -10082,14 +10115,21 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
   &lt;/div&gt;
 
   &lt;div class=&quot;stock-hub-panel&quot; data-stock-panel=&quot;gifts&quot; hidden&gt;
-    &lt;div class=&quot;stock-hub-panel-head&quot;&gt;&lt;strong&gt;Подарки&lt;/strong&gt;&lt;span&gt;Здесь хранится история подарков и компенсаций от команды: что было выдано, когда и по какой причине. Доступную награду можно забрать прямо здесь.&lt;/span&gt;&lt;/div&gt;
+    &lt;div class=&quot;stock-hub-panel-head&quot;&gt;&lt;strong&gt;Почта&lt;/strong&gt;&lt;span&gt;Короткий список писем. Откройте письмо, чтобы прочитать текст и получить вложенную награду.&lt;/span&gt;&lt;/div&gt;
     &lt;div class=&quot;player-gift-inbox&quot; data-player-gift-inbox&gt;
       &lt;div class=&quot;player-gift-inbox-head&quot;&gt;
-        &lt;span class=&quot;player-gift-inbox-summary-copy&quot;&gt;&lt;strong&gt;Подарки и компенсации&lt;/strong&gt;&lt;span&gt;Что именно выдавалось и по какой причине&lt;/span&gt;&lt;/span&gt;
+        &lt;span class=&quot;player-gift-inbox-summary-copy&quot;&gt;&lt;strong&gt;Почта Зеффи&lt;/strong&gt;&lt;span&gt;Письма, подарки, компенсации и новости от команды&lt;/span&gt;&lt;/span&gt;
         &lt;span class=&quot;player-gift-inbox-meta&quot; data-player-gift-inbox-meta&gt;Нет новых&lt;/span&gt;
       &lt;/div&gt;
       &lt;div class=&quot;player-gift-inbox-list&quot; data-player-gift-inbox-list&gt;&lt;/div&gt;
       &lt;button class=&quot;player-gift-inbox-more&quot; data-player-gift-inbox-more type=&quot;button&quot; hidden aria-expanded=&quot;false&quot;&gt;Показать ещё&lt;/button&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+
+  &lt;div class=&quot;player-mail-layer&quot; data-player-mail-layer hidden&gt;
+    &lt;div class=&quot;player-mail-dialog&quot; role=&quot;dialog&quot; aria-modal=&quot;true&quot; aria-labelledby=&quot;player-mail-title&quot;&gt;
+      &lt;button class=&quot;player-mail-x&quot; data-player-mail-close type=&quot;button&quot; aria-label=&quot;Закрыть письмо&quot;&gt;×&lt;/button&gt;
+      &lt;div class=&quot;player-mail-content&quot; data-player-mail-content&gt;&lt;/div&gt;
     &lt;/div&gt;
   &lt;/div&gt;
 &lt;/div&gt;
@@ -10098,6 +10138,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 &lt;section class=&quot;screen&quot; data-screen=&quot;profile&quot; hidden=&quot;&quot;&gt;
 &lt;div class=&quot;profile-shell&quot;&gt;
   &lt;div class=&quot;profile-hero&quot;&gt;
+    &lt;button class=&quot;profile-mail-shortcut&quot; data-profile-mail-open type=&quot;button&quot; aria-label=&quot;Открыть Почту&quot; title=&quot;Почта Зеффи&quot;&gt;✉&lt;span data-profile-mail-badge hidden&gt;0&lt;/span&gt;&lt;/button&gt;
     &lt;div class=&quot;profile-avatar-wrap&quot;&gt;
       &lt;img alt=&quot;Аватар игрока&quot; class=&quot;profile-avatar is-fallback&quot; data-profile-avatar referrerpolicy=&quot;no-referrer&quot;/&gt;
     &lt;/div&gt;
@@ -10278,7 +10319,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 
   &lt;section class=&quot;profile-section profile-section--help&quot; aria-labelledby=&quot;profile-help-title&quot;&gt;
     &lt;div class=&quot;profile-section-head&quot;&gt;&lt;h3 id=&quot;profile-help-title&quot;&gt;Полезно знать&lt;/h3&gt;&lt;/div&gt;
-    &lt;p class=&quot;profile-help-copy&quot;&gt;Профиль — центр аккаунта: здесь уровень и XP, сезонный пропуск, коллекция оформления, рейтинг, документы, настройки и поддержка. Покупки, усилители, постоянные кейсы, подарки и компенсации собраны отдельно в разделе «Мои покупки» — внутри него есть четыре вкладки для каждого типа содержимого. Сезонные кейсы открываются внутри сезонного пропуска. Если Telegram не передал фотографию, игра покажет Зефи — это не ошибка.&lt;/p&gt;
+    &lt;p class=&quot;profile-help-copy&quot;&gt;Профиль — центр аккаунта: здесь уровень и XP, сезонный пропуск, коллекция оформления, рейтинг, документы, настройки и поддержка. Покупки, усилители, постоянные кейсы и «Почта Зеффи» собраны отдельно в разделе «Мои покупки» — внутри него есть четыре вкладки для каждого типа содержимого. Сезонные кейсы открываются внутри сезонного пропуска. Если Telegram не передал фотографию, игра покажет Зефи — это не ошибка.&lt;/p&gt;
   &lt;/section&gt;
   &lt;section class=&quot;profile-section profile-section--legal&quot; aria-labelledby=&quot;profile-legal-title&quot;&gt;
     &lt;div class=&quot;profile-section-head&quot;&gt;
@@ -10677,6 +10718,11 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       const playerGiftInboxMetaEl = root.querySelector(&quot;[data-player-gift-inbox-meta]&quot;);
       const playerGiftInboxListEl = root.querySelector(&quot;[data-player-gift-inbox-list]&quot;);
       const playerGiftInboxMoreEl = root.querySelector(&quot;[data-player-gift-inbox-more]&quot;);
+      const playerMailLayerEl = root.querySelector(&quot;[data-player-mail-layer]&quot;);
+      const playerMailContentEl = root.querySelector(&quot;[data-player-mail-content]&quot;);
+      const playerMailCloseEl = root.querySelector(&quot;[data-player-mail-close]&quot;);
+      const profileMailOpenEl = root.querySelector(&quot;[data-profile-mail-open]&quot;);
+      const profileMailBadgeEl = root.querySelector(&quot;[data-profile-mail-badge]&quot;);
       const profileSupportButton = root.querySelector(&quot;[data-profile-support-open]&quot;);
       const profileSupportMetaEl = root.querySelector(&quot;[data-profile-support-meta]&quot;);
       const profileSupportBadgeEl = root.querySelector(&quot;[data-profile-support-badge]&quot;);
@@ -10821,7 +10867,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 • «Покупки»: физические награды и проверяемые коды. Активный код можно повторно открыть в течение 24 часов, а использованные и истёкшие покупки остаются в истории.
 • «Усилители»: все доступные ×2-бонусы и их активация перед забегом.
 • «Кейсы»: постоянные кейсы из уровней, магазина, подарков и акций можно открыть прямо здесь. Сезонные кейсы остаются внутри сезонного пропуска.
-• «Подарки»: награды, подарки и компенсации больше не теряются среди других разделов и сохраняют историю получения.
+• «Почта»: письма, подарки и компенсации больше не теряются среди других разделов; полный текст открывается отдельно, а награды сохраняют историю получения.
 
 🐱 НОВЫЙ СКИН «АЛЕКС»
 • В магазин добавлен легендарный скин Алекс.
@@ -11783,6 +11829,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         caseAlexCollectionRewardClaimed: false,
         playerGifts: [],
         playerGiftPendingCount: 0,
+        playerGiftUnreadCount: 0,
         seasonPassAttentionCount: 0,
         caseMythicPityCounter: 0,
         caseLegendaryPityCounter: 0,
@@ -12599,6 +12646,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       const REWARD_API_MINE_PATH = &quot;/api/rewards/mine&quot;;
       const GAME_STARTUP_API_PATH = &quot;/api/game/startup&quot;;
       const PLAYER_GIFTS_STATE_PATH = &quot;/api/gifts/state&quot;;
+      const PLAYER_GIFTS_READ_PATH = &quot;/api/gifts/read&quot;;
       const PLAYER_GIFTS_CLAIM_PATH = &quot;/api/gifts/claim&quot;;
       const PLAYER_SUPPORT_STATE_PATH = &quot;/api/support/state&quot;;
       const PLAYER_SUPPORT_CREATE_PATH = &quot;/api/support/create&quot;;
@@ -12872,7 +12920,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           { labels:new Set([&quot;Покупки&quot;,&quot;Мои покупки&quot;]), src:STOCK_UI_ASSETS.purchases },
           { labels:new Set([&quot;Усилители&quot;,&quot;Мои усилители&quot;]), src:STOCK_UI_ASSETS.boosters },
           { labels:new Set([&quot;Кейсы&quot;,&quot;Склад кейсов&quot;]), src:STOCK_UI_ASSETS.cases },
-          { labels:new Set([&quot;Подарки&quot;,&quot;Подарки и компенсации&quot;]), src:STOCK_UI_ASSETS.gifts }
+          { labels:new Set([&quot;Почта&quot;,&quot;Почта Зеффи&quot;,&quot;Подарки&quot;,&quot;Подарки и компенсации&quot;]), src:STOCK_UI_ASSETS.gifts }
         ];
         for (const node of scope.querySelectorAll(&quot;button,strong&quot;)) {
           if (node.matches?.(&quot;[data-stock-view]&quot;)) continue;
@@ -13041,19 +13089,19 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         },
         {
           title: &quot;Мои покупки — единый склад&quot;,
-          description: &quot;После магазина открывай «Мои покупки»: здесь вместе хранятся покупки, усилители, постоянные кейсы и подарки от команды.&quot;,
-          extra: &quot;Активный код покупки можно открыть повторно в течение 24 часов. Усилители активируются перед забегом, постоянные кейсы открываются здесь, а подарки и компенсации сохраняют историю выдачи.&quot;,
+          description: &quot;После магазина открывай «Мои покупки»: здесь вместе хранятся покупки, усилители, постоянные кейсы и «Почта Зеффи».&quot;,
+          extra: &quot;Активный код покупки можно открыть повторно в течение 24 часов. Усилители активируются перед забегом, постоянные кейсы открываются здесь, а письма, подарки и компенсации сохраняют историю.&quot;,
           visual: () =&gt; `
             &lt;div class=&quot;tutorial-stock-row&quot;&gt;
               &lt;span class=&quot;tutorial-reward&quot;&gt;&lt;img src=&quot;${STOCK_UI_ASSETS.purchases}&quot; alt=&quot;&quot;&gt;&lt;strong&gt;Покупки&lt;/strong&gt;&lt;/span&gt;
               &lt;span class=&quot;tutorial-reward&quot;&gt;&lt;img src=&quot;${STOCK_UI_ASSETS.boosters}&quot; alt=&quot;&quot;&gt;&lt;strong&gt;Усилители&lt;/strong&gt;&lt;/span&gt;
               &lt;span class=&quot;tutorial-reward&quot;&gt;&lt;img src=&quot;${STOCK_UI_ASSETS.cases}&quot; alt=&quot;&quot;&gt;&lt;strong&gt;Кейсы&lt;/strong&gt;&lt;/span&gt;
-              &lt;span class=&quot;tutorial-reward&quot;&gt;&lt;img src=&quot;${STOCK_UI_ASSETS.gifts}&quot; alt=&quot;&quot;&gt;&lt;strong&gt;Подарки&lt;/strong&gt;&lt;/span&gt;
+              &lt;span class=&quot;tutorial-reward&quot;&gt;&lt;img src=&quot;${STOCK_UI_ASSETS.gifts}&quot; alt=&quot;&quot;&gt;&lt;strong&gt;Почта&lt;/strong&gt;&lt;/span&gt;
             &lt;/div&gt;`
         },
         {
           title: &quot;Профиль — центр прогресса&quot;,
-          description: &quot;Во вкладке «Профиль» собраны Telegram-данные, уровень и XP, сезонный пропуск, рейтинг, коллекция оформления, настройки, документы и поддержка. Покупки, усилители, постоянные кейсы и подарки находятся отдельно в «Моих покупках».&quot;,
+          description: &quot;Во вкладке «Профиль» собраны Telegram-данные, уровень и XP, сезонный пропуск, рейтинг, коллекция оформления, настройки, документы и поддержка. Покупки, усилители, постоянные кейсы и «Почта Зеффи» находятся отдельно в «Моих покупках».&quot;,
           extra: `За зачтённый забег начисляется +${profileRunXpReward()} XP, а за успешную покупку — +${profilePurchaseXpReward()} XP. Чтобы забег дал XP, продержись минимум ${PROFILE_XP_MIN_RUN_SECONDS} секунд и набери ${PROFILE_XP_MIN_RUN_SCORE} очков. Все подробные гайды можно повторно открыть в разделе «Настройки и обучение».`,
           visual: () =&gt; `
             &lt;div class=&quot;tutorial-profile-card&quot;&gt;
@@ -13077,14 +13125,14 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       const stockTutorialSteps = [
         {
           title: &quot;Мои покупки — единый склад&quot;,
-          description: &quot;Склад разделён на четыре вкладки: «Покупки», «Усилители», «Кейсы» и «Подарки». Счётчик на вкладке показывает, где появилось что-то доступное.&quot;,
+          description: &quot;Склад разделён на четыре вкладки: «Покупки», «Усилители», «Кейсы» и «Почта». Счётчик показывает, где появилось что-то новое или доступное.&quot;,
           extra: &quot;Кнопка «Обновить» синхронизирует содержимое склада с сервером, не сбрасывая прогресс и уже полученные награды.&quot;,
           visual: () =&gt; `
             &lt;div class=&quot;tutorial-stock-row&quot;&gt;
               &lt;span class=&quot;tutorial-reward&quot;&gt;&lt;img src=&quot;${STOCK_UI_ASSETS.purchases}&quot; alt=&quot;&quot;&gt;&lt;strong&gt;Покупки&lt;/strong&gt;&lt;/span&gt;
               &lt;span class=&quot;tutorial-reward&quot;&gt;&lt;img src=&quot;${STOCK_UI_ASSETS.boosters}&quot; alt=&quot;&quot;&gt;&lt;strong&gt;Усилители&lt;/strong&gt;&lt;/span&gt;
               &lt;span class=&quot;tutorial-reward&quot;&gt;&lt;img src=&quot;${STOCK_UI_ASSETS.cases}&quot; alt=&quot;&quot;&gt;&lt;strong&gt;Кейсы&lt;/strong&gt;&lt;/span&gt;
-              &lt;span class=&quot;tutorial-reward&quot;&gt;&lt;img src=&quot;${STOCK_UI_ASSETS.gifts}&quot; alt=&quot;&quot;&gt;&lt;strong&gt;Подарки&lt;/strong&gt;&lt;/span&gt;
+              &lt;span class=&quot;tutorial-reward&quot;&gt;&lt;img src=&quot;${STOCK_UI_ASSETS.gifts}&quot; alt=&quot;&quot;&gt;&lt;strong&gt;Почта&lt;/strong&gt;&lt;/span&gt;
             &lt;/div&gt;`
         },
         {
@@ -13116,10 +13164,10 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
             &lt;/div&gt;`
         },
         {
-          title: &quot;Подарки и компенсации&quot;,
-          description: &quot;Во вкладке «Подарки» хранится история наград от команды: название, дата, причина выдачи и статус получения.&quot;,
-          extra: &quot;Если подарок ещё не получен, забери его прямо здесь. Полученные записи не исчезают — они остаются в истории, чтобы было понятно, что и когда было выдано.&quot;,
-          visual: () =&gt; `&lt;div class=&quot;tutorial-reward-row&quot;&gt;&lt;span class=&quot;tutorial-reward&quot;&gt;&lt;img src=&quot;${STOCK_UI_ASSETS.gifts}&quot; alt=&quot;&quot;&gt;&lt;strong&gt;Подарки&lt;/strong&gt;&lt;/span&gt;&lt;/div&gt;`
+          title: &quot;Почта Зеффи&quot;,
+          description: &quot;Во вкладке «Почта» лежат короткие карточки писем. Открой письмо, чтобы прочитать полный текст и увидеть вложенную награду.&quot;,
+          extra: &quot;Если в письме есть награда, нажми «Получить и закрыть». Полученные письма остаются в истории с отметкой о выдаче.&quot;,
+          visual: () =&gt; `&lt;div class=&quot;tutorial-reward-row&quot;&gt;&lt;span class=&quot;tutorial-reward&quot;&gt;&lt;img src=&quot;${STOCK_UI_ASSETS.gifts}&quot; alt=&quot;&quot;&gt;&lt;strong&gt;Почта&lt;/strong&gt;&lt;/span&gt;&lt;/div&gt;`
         }
       ];
 
@@ -13163,14 +13211,14 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         },
         {
           title: &quot;Мои покупки — отдельный склад&quot;,
-          description: &quot;Покупки, усилители, постоянные кейсы и подарки больше не смешиваются с профилем: они собраны в отдельном разделе «Мои покупки» с четырьмя вкладками.&quot;,
+          description: &quot;Покупки, усилители, постоянные кейсы и почта не смешиваются с профилем: они собраны в отдельном разделе «Мои покупки» с четырьмя вкладками.&quot;,
           extra: &quot;В профиле остаётся коллекция оформления: аватарки и рамки для рейтинга, следы для забега и музыка. Сезонные тематические кейсы по-прежнему находятся внутри сезонного пропуска.&quot;,
           visual: () =&gt; `
             &lt;div class=&quot;tutorial-stock-row&quot;&gt;
               &lt;span class=&quot;tutorial-reward&quot;&gt;&lt;img src=&quot;${STOCK_UI_ASSETS.purchases}&quot; alt=&quot;&quot;&gt;&lt;strong&gt;Покупки&lt;/strong&gt;&lt;/span&gt;
               &lt;span class=&quot;tutorial-reward&quot;&gt;&lt;img src=&quot;${STOCK_UI_ASSETS.boosters}&quot; alt=&quot;&quot;&gt;&lt;strong&gt;Усилители&lt;/strong&gt;&lt;/span&gt;
               &lt;span class=&quot;tutorial-reward&quot;&gt;&lt;img src=&quot;${STOCK_UI_ASSETS.cases}&quot; alt=&quot;&quot;&gt;&lt;strong&gt;Кейсы&lt;/strong&gt;&lt;/span&gt;
-              &lt;span class=&quot;tutorial-reward&quot;&gt;&lt;img src=&quot;${STOCK_UI_ASSETS.gifts}&quot; alt=&quot;&quot;&gt;&lt;strong&gt;Подарки&lt;/strong&gt;&lt;/span&gt;
+              &lt;span class=&quot;tutorial-reward&quot;&gt;&lt;img src=&quot;${STOCK_UI_ASSETS.gifts}&quot; alt=&quot;&quot;&gt;&lt;strong&gt;Почта&lt;/strong&gt;&lt;/span&gt;
             &lt;/div&gt;`
         },
         {
@@ -13204,7 +13252,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         {
           title: &quot;Где получать кейсы&quot;,
           description: &quot;Кейсы больше не привязаны только к уровням: постоянные типы можно получать несколькими способами, а сезонные — через механики сезонного пропуска.&quot;,
-          extra: &quot;После покупки или выдачи постоянный кейс синхронизируется с сервером и появляется в профиле. Историю подарков и компенсаций можно посмотреть рядом со складом.&quot;,
+          extra: &quot;После покупки или выдачи постоянный кейс синхронизируется с сервером и появляется в профиле. Историю писем, подарков и компенсаций можно посмотреть во вкладке «Почта».&quot;,
           visual: () =&gt; `
             &lt;div class=&quot;tutorial-case-source-list&quot;&gt;
               &lt;span class=&quot;tutorial-case-source&quot;&gt;&lt;b&gt;⬆&lt;/b&gt;&lt;span&gt;&lt;strong&gt;Уровни профиля&lt;/strong&gt;&lt;span&gt;Обычные, Серебряные и Золотые кейсы выдаются по лестнице уровней.&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
@@ -15799,7 +15847,9 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 
       function updateProfileCaseBadges() {
         const caseTotal = profileAvailableCaseCount();
-        const giftTotal = Math.max(0, Math.floor(Number(state.playerGiftPendingCount || 0)));
+        const giftTotal = playerMailAttentionCount();
+        const unreadMail = Math.max(0,Math.floor(Number(state.playerGiftUnreadCount||0)));
+        if(profileMailBadgeEl){profileMailBadgeEl.textContent=unreadMail&gt;99?&quot;99+&quot;:String(unreadMail);profileMailBadgeEl.hidden=unreadMail===0;}
         const collectionTotal = caseTotal + giftTotal;
         const seasonPassTotal = Math.max(0, Math.floor(Number(state.seasonPassAttentionCount || 0)));
         const compact = seasonPassTotal &gt; 99 ? &quot;99+&quot; : String(seasonPassTotal);
@@ -16997,12 +17047,17 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 
       function normalizePlayerGiftPayload(data) {
         const source = data &amp;&amp; typeof data === &quot;object&quot; ? data : {};
-        const items = Array.isArray(source.items) ? source.items.map((item) =&gt; ({
-          id: String(item?.id || &quot;&quot;), kind: String(item?.kind || &quot;gift&quot;), title: String(item?.title || &quot;Подарок&quot;),
-          message: String(item?.message || &quot;&quot;), reason: String(item?.reason || &quot;&quot;), status: String(item?.status || &quot;pending&quot;),
-          createdAt: Number(item?.createdAt || 0), claimedAt: Number(item?.claimedAt || 0), rewards: Array.isArray(item?.rewards) ? item.rewards : []
-        })).filter((item) =&gt; item.id) : [];
-        return { items, pendingCount: Math.max(0, Math.floor(Number(source.pendingCount ?? items.filter((item)=&gt;item.status!==&quot;claimed&quot;).length))) };
+        const items = Array.isArray(source.items) ? source.items.map((item) =&gt; {
+          const rewards = Array.isArray(item?.rewards) ? item.rewards : [];
+          const readAt = Number(item?.readAt || 0);
+          return {
+            id:String(item?.id||&quot;&quot;),kind:String(item?.kind||&quot;gift&quot;),title:String(item?.title||&quot;Письмо&quot;),
+            message:String(item?.message||&quot;&quot;),reason:String(item?.reason||&quot;&quot;),preview:String(item?.preview||item?.message||item?.reason||&quot;Откройте письмо, чтобы узнать подробности.&quot;),
+            imageUrl:String(item?.imageUrl||&quot;&quot;),status:String(item?.status||&quot;pending&quot;),createdAt:Number(item?.createdAt||0),claimedAt:Number(item?.claimedAt||0),
+            readAt,unread:item?.unread===true||readAt&lt;=0,hasRewards:item?.hasRewards===true||rewards.length&gt;0,rewards
+          };
+        }).filter((item)=&gt;item.id) : [];
+        return {items,pendingCount:Math.max(0,Math.floor(Number(source.pendingCount??items.filter((item)=&gt;item.hasRewards&amp;&amp;item.status!==&quot;claimed&quot;).length))),unreadCount:Math.max(0,Math.floor(Number(source.unreadCount??items.filter((item)=&gt;item.unread).length)))};
       }
 
       function giftRewardVisualMarkup(reward) {
@@ -17024,51 +17079,47 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 
       let playerGiftInboxExpanded = false;
 
+      function playerMailAttentionCount() {
+        const items = Array.isArray(state.playerGifts) ? state.playerGifts : [];
+        return items.filter((item)=&gt;item?.unread || (item?.hasRewards &amp;&amp; item.status!==&quot;claimed&quot;)).length;
+      }
+
+      function playerMailKindIcon(item) {
+        if (item?.hasRewards) return item?.kind===&quot;compensation&quot; ? &quot;🛠️&quot; : &quot;🎁&quot;;
+        return item?.kind===&quot;campaign&quot; ? &quot;✨&quot; : &quot;💌&quot;;
+      }
+
       function renderPlayerGiftInbox() {
         if (!playerGiftInboxListEl) return;
-        const allItems = Array.isArray(state.playerGifts) ? state.playerGifts : [];
-        const newestFirst = (a, b) =&gt; Number(b?.claimedAt || b?.createdAt || 0) - Number(a?.claimedAt || a?.createdAt || 0);
-        const pendingItems = allItems.filter((item) =&gt; item.status !== &quot;claimed&quot;).sort(newestFirst);
-        const claimedItems = allItems.filter((item) =&gt; item.status === &quot;claimed&quot;).sort(newestFirst);
-        const items = [...pendingItems, ...claimedItems];
-        const shouldCollapse = items.length &gt; 3;
+        const items = [...(Array.isArray(state.playerGifts)?state.playerGifts:[])].sort((a,b)=&gt;(Number(Boolean(b?.unread))-Number(Boolean(a?.unread)))||(Number(b?.createdAt||0)-Number(a?.createdAt||0)));
+        const shouldCollapse = items.length &gt; 5;
         if (!shouldCollapse) playerGiftInboxExpanded = false;
-        const visibleItems = shouldCollapse &amp;&amp; !playerGiftInboxExpanded ? items.slice(0, 3) : items;
+        const visibleItems = shouldCollapse &amp;&amp; !playerGiftInboxExpanded ? items.slice(0,5) : items;
         if (playerGiftInboxMetaEl) {
-          const pendingCount = Math.max(pendingItems.length, Math.floor(Number(state.playerGiftPendingCount || 0)));
-          const historyCount = claimedItems.length;
-          playerGiftInboxMetaEl.textContent = pendingCount &gt; 0
-            ? `Новых: ${formatter.format(pendingCount)} · История: ${formatter.format(historyCount)}`
-            : historyCount &gt; 0 ? `История: ${formatter.format(historyCount)}` : &quot;Нет новых&quot;;
+          const unread=Math.max(0,Math.floor(Number(state.playerGiftUnreadCount||0)));
+          const pending=Math.max(0,Math.floor(Number(state.playerGiftPendingCount||0)));
+          playerGiftInboxMetaEl.textContent=unread?`Непрочитанных: ${formatter.format(unread)}`:pending?`Ждут награду: ${formatter.format(pending)}`:&quot;Всё прочитано&quot;;
         }
         if (playerGiftInboxMoreEl) {
-          const hiddenCount = Math.max(0, items.length - 3);
-          playerGiftInboxMoreEl.hidden = !shouldCollapse;
-          playerGiftInboxMoreEl.textContent = playerGiftInboxExpanded ? &quot;Свернуть&quot; : `Показать ещё ${formatter.format(hiddenCount)}`;
-          playerGiftInboxMoreEl.setAttribute(&quot;aria-expanded&quot;, playerGiftInboxExpanded ? &quot;true&quot; : &quot;false&quot;);
+          const hiddenCount=Math.max(0,items.length-5);playerGiftInboxMoreEl.hidden=!shouldCollapse;playerGiftInboxMoreEl.textContent=playerGiftInboxExpanded?&quot;Свернуть&quot;:`Показать ещё ${formatter.format(hiddenCount)}`;playerGiftInboxMoreEl.setAttribute(&quot;aria-expanded&quot;,playerGiftInboxExpanded?&quot;true&quot;:&quot;false&quot;);
         }
         if (!items.length) {
-          setStableMarkup(playerGiftInboxListEl, `&lt;div class=&quot;player-gift-empty&quot;&gt;Новых подарков нет. Если команда выдаст компенсацию или подарок, он появится здесь.&lt;/div&gt;`, &quot;gift-inbox-empty&quot;);
-          return;
+          setStableMarkup(playerGiftInboxListEl,`&lt;div class=&quot;player-gift-empty&quot;&gt;Пока писем нет. Новые подарки, компенсации и новости появятся здесь.&lt;/div&gt;`,&quot;mail-inbox-empty&quot;);return;
         }
-        const markup = visibleItems.map((item) =&gt; {
-          const claimed = item.status === &quot;claimed&quot;;
-          const pending = !claimed;
-          const rewardMarkup = (Array.isArray(item.rewards) ? item.rewards : []).map((reward) =&gt; `&lt;span class=&quot;player-gift-reward&quot;&gt;${giftRewardVisualMarkup(reward)}&lt;span&gt;${escapePurchaseText(reward?.label || &quot;Награда&quot;)}&lt;/span&gt;&lt;/span&gt;`).join(&quot;&quot;);
-          const messageText = item.message || &quot;&quot;;
-          const reasonText = item.reason || &quot;&quot;;
-          const copyMarkup = messageText || reasonText ? `${messageText ? `&lt;span&gt;${escapePurchaseText(messageText)}&lt;/span&gt;` : &quot;&quot;}${reasonText ? `&lt;span&gt;&lt;strong&gt;Причина:&lt;/strong&gt; ${escapePurchaseText(reasonText)}&lt;/span&gt;` : &quot;&quot;}` : `&lt;span&gt;Подарок от команды «Сладкого Забега».&lt;/span&gt;`;
-          const when = playerGiftDate(claimed ? item.claimedAt : item.createdAt);
-          return `&lt;article class=&quot;player-gift-card${claimed ? &quot; is-claimed&quot; : &quot;&quot;}&quot;&gt;&lt;div class=&quot;player-gift-card-head&quot;&gt;&lt;span&gt;&lt;strong&gt;${escapePurchaseText(item.title)}&lt;/strong&gt;&lt;small&gt;${when ? escapePurchaseText(when) : &quot;Подарок от команды&quot;}&lt;/small&gt;&lt;/span&gt;&lt;em class=&quot;player-gift-status&quot;&gt;${claimed ? &quot;Получено&quot; : item.status === &quot;claiming&quot; ? &quot;Получаем…&quot; : &quot;Можно забрать&quot;}&lt;/em&gt;&lt;/div&gt;&lt;p class=&quot;player-gift-reason&quot;&gt;${copyMarkup}&lt;/p&gt;&lt;div class=&quot;player-gift-rewards&quot;&gt;${rewardMarkup}&lt;/div&gt;${pending ? `&lt;button class=&quot;player-gift-claim&quot; data-player-gift-claim=&quot;${escapePurchaseText(item.id)}&quot; type=&quot;button&quot; ${item.status===&quot;claiming&quot;?&quot;disabled&quot;:&quot;&quot;}&gt;🎁 Забрать&lt;/button&gt;` : &quot;&quot;}&lt;/article&gt;`;
+        const markup=visibleItems.map((item)=&gt;{
+          const claimed=item.status===&quot;claimed&quot;,when=playerGiftDate(item.createdAt),preview=String(item.preview||item.message||item.reason||&quot;Откройте письмо, чтобы узнать подробности.&quot;).replace(/\s+/g,&quot; &quot;).trim();
+          const status=claimed?&quot;✓ Получено&quot;:item.status===&quot;claiming&quot;?&quot;Получаем…&quot;:item.hasRewards?&quot;Есть награда&quot;:&quot;Письмо&quot;;
+          return `&lt;article class=&quot;player-gift-card player-mail-card${item.unread?&quot; is-unread&quot;:&quot;&quot;}${claimed?&quot; is-claimed&quot;:&quot;&quot;}&quot;&gt;&lt;span class=&quot;player-mail-unread-dot&quot; ${item.unread?&quot;&quot;:&quot;hidden&quot;} aria-hidden=&quot;true&quot;&gt;&lt;/span&gt;&lt;div class=&quot;player-mail-card-icon&quot; aria-hidden=&quot;true&quot;&gt;${playerMailKindIcon(item)}&lt;/div&gt;&lt;div class=&quot;player-mail-card-copy&quot;&gt;&lt;strong&gt;${escapePurchaseText(item.title)}&lt;/strong&gt;&lt;span&gt;${escapePurchaseText(preview)}&lt;/span&gt;&lt;small&gt;${escapePurchaseText(when||&quot;Сегодня&quot;)} · ${escapePurchaseText(status)}&lt;/small&gt;&lt;/div&gt;&lt;button class=&quot;player-mail-open&quot; data-player-mail-open=&quot;${escapePurchaseText(item.id)}&quot; type=&quot;button&quot;&gt;Открыть письмо&lt;/button&gt;&lt;/article&gt;`;
         }).join(&quot;&quot;);
-        const viewKey = shouldCollapse ? (playerGiftInboxExpanded ? &quot;all&quot; : &quot;preview3&quot;) : &quot;all&quot;;
-        setStableMarkup(playerGiftInboxListEl, markup, `gift-inbox:${viewKey}:${visibleItems.map((item)=&gt;`${item.id}:${item.status}`).join(&quot;|&quot;)}`);
+        const viewKey=shouldCollapse?(playerGiftInboxExpanded?&quot;all&quot;:&quot;preview5&quot;):&quot;all&quot;;
+        setStableMarkup(playerGiftInboxListEl,markup,`mail-inbox:${viewKey}:${visibleItems.map((item)=&gt;`${item.id}:${item.status}:${item.unread?1:0}`).join(&quot;|&quot;)}`);
       }
 
       function applyPlayerGiftPayload(data) {
         const normalized = normalizePlayerGiftPayload(data);
         state.playerGifts = normalized.items;
         state.playerGiftPendingCount = normalized.pendingCount;
+        state.playerGiftUnreadCount = normalized.unreadCount;
         renderPlayerGiftInbox();
         updateProfileCaseBadges();
       }
@@ -17085,7 +17136,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           const { response, data } = await sharedJsonApiRequest(PLAYER_GIFTS_STATE_PATH, {
             method:&quot;POST&quot;, headers:{ &quot;Content-Type&quot;:&quot;application/json&quot; }, body:JSON.stringify({ initData:String(telegramProfile.initData), force:Boolean(force) }), cache:&quot;no-store&quot;, credentials:&quot;same-origin&quot;
           }, requestOptions);
-          if (!response.ok || !data?.ok) throw new Error(data?.error || &quot;Не удалось загрузить подарки.&quot;);
+          if (!response.ok || !data?.ok) throw new Error(data?.error || &quot;Не удалось загрузить почту.&quot;);
           applyPlayerGiftPayload(data);
           return true;
         } catch (error) {
@@ -17147,6 +17198,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           refreshPlayerGiftAccountViews();
           showProfileToast(&quot;🎁 Подарок получен&quot;, &quot;success&quot;);
           hapticNotify(&quot;success&quot;);
+          return true;
         } catch (error) {
           claimFinished = true;
           window.clearTimeout(watchdog);
@@ -17158,7 +17210,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
             refreshPlayerGiftAccountViews();
             showProfileToast(&quot;🎁 Подарок получен&quot;, &quot;success&quot;);
             hapticNotify(&quot;success&quot;);
-            return;
+            return true;
           }
           if (button &amp;&amp; status !== &quot;claiming&quot;) { button.disabled = false; button.textContent = oldText; }
           if (status === &quot;claiming&quot;) {
@@ -17167,11 +17219,53 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
             showProfileToast(error?.message || &quot;Не удалось получить подарок.&quot;, &quot;warning&quot;);
           }
           hapticNotify(&quot;error&quot;);
+          return false;
         } finally {
           busy=false;
         }
       }
 
+
+      function closePlayerMail() {
+        if (!playerMailLayerEl) return;
+        playerMailLayerEl.hidden=true;
+        if (playerMailContentEl) playerMailContentEl.innerHTML=&quot;&quot;;
+      }
+
+      async function markPlayerMailReadClient(item) {
+        if (!item?.id || !item.unread || !telegramProfile?.initData) return;
+        try {
+          const response=await gameFetchWithTimeout(PLAYER_GIFTS_READ_PATH,{method:&quot;POST&quot;,headers:{&quot;Content-Type&quot;:&quot;application/json&quot;},body:JSON.stringify({initData:String(telegramProfile.initData),giftId:String(item.id)}),cache:&quot;no-store&quot;,credentials:&quot;same-origin&quot;},5000);
+          const data=await response.json().catch(()=&gt;null);if(response.ok&amp;&amp;data?.ok)applyPlayerGiftPayload(data);
+        } catch (error) { console.warn(&quot;Mail read sync failed&quot;,error); }
+      }
+
+      function renderPlayerMailLetter(item) {
+        if (!playerMailContentEl || !item) return;
+        const rewards=(Array.isArray(item.rewards)?item.rewards:[]).map((reward)=&gt;`&lt;span class=&quot;player-gift-reward player-mail-reward&quot;&gt;${giftRewardVisualMarkup(reward)}&lt;span&gt;${escapePurchaseText(reward?.label||&quot;Награда&quot;)}&lt;/span&gt;&lt;/span&gt;`).join(&quot;&quot;);
+        const claimed=item.status===&quot;claimed&quot;,claiming=item.status===&quot;claiming&quot;,hasRewards=Boolean(item.hasRewards);
+        const image=item.imageUrl?`&lt;img class=&quot;player-mail-art&quot; src=&quot;${escapePurchaseText(item.imageUrl)}&quot; alt=&quot;&quot; loading=&quot;lazy&quot; decoding=&quot;async&quot;&gt;`:`&lt;div class=&quot;player-mail-symbol&quot; aria-hidden=&quot;true&quot;&gt;${playerMailKindIcon(item)}&lt;/div&gt;`;
+        const body=item.message||item.reason||&quot;Для вас новое письмо от команды «Сладкого Забега».&quot;;
+        playerMailContentEl.innerHTML=`${image}&lt;span class=&quot;player-mail-kicker&quot;&gt;${hasRewards?&quot;Письмо с наградой&quot;:&quot;Почта Зеффи&quot;}&lt;/span&gt;&lt;h2 id=&quot;player-mail-title&quot;&gt;${escapePurchaseText(item.title)}&lt;/h2&gt;&lt;p class=&quot;player-mail-body&quot;&gt;${escapePurchaseText(body)}&lt;/p&gt;${item.reason&amp;&amp;item.message?`&lt;p class=&quot;player-mail-note&quot;&gt;&lt;strong&gt;Причина:&lt;/strong&gt; ${escapePurchaseText(item.reason)}&lt;/p&gt;`:&quot;&quot;}${hasRewards?`&lt;div class=&quot;player-mail-reward-title&quot;&gt;Награда&lt;/div&gt;&lt;div class=&quot;player-gift-rewards player-mail-rewards&quot;&gt;${rewards}&lt;/div&gt;`:&quot;&quot;}${claimed?`&lt;div class=&quot;player-mail-claimed&quot;&gt;✓ Награда получена&lt;/div&gt;`:&quot;&quot;}&lt;button class=&quot;player-mail-primary&quot; data-player-mail-action type=&quot;button&quot; ${claiming?&quot;disabled&quot;:&quot;&quot;}&gt;${hasRewards&amp;&amp;!claimed?(claiming?&quot;Получаем…&quot;:&quot;Получить и закрыть&quot;):&quot;Закрыть&quot;}&lt;/button&gt;`;
+        const action=playerMailContentEl.querySelector(&quot;[data-player-mail-action]&quot;);
+        if(action)action.addEventListener(&quot;click&quot;,async()=&gt;{
+          if(!hasRewards||claimed){closePlayerMail();return;}
+          const ok=await claimPlayerGiftClient(item.id,action);
+          if(ok){closePlayerMail();renderPlayerGiftInbox();}
+        });
+      }
+
+      function openPlayerMailLetter(giftId) {
+        const item=(Array.isArray(state.playerGifts)?state.playerGifts:[]).find((entry)=&gt;String(entry?.id||&quot;&quot;)===String(giftId||&quot;&quot;));
+        if(!item||!playerMailLayerEl)return;
+        playerMailLayerEl.hidden=false;renderPlayerMailLetter(item);void markPlayerMailReadClient(item).then(()=&gt;{const fresh=(state.playerGifts||[]).find((entry)=&gt;entry.id===item.id);if(fresh&amp;&amp;!playerMailLayerEl.hidden)renderPlayerMailLetter(fresh);});
+        hapticImpact(&quot;light&quot;,25);
+      }
+
+      function openMailFromProfile() {
+        switchScreen(&quot;warehouse&quot;);
+        switchStockHubView(&quot;gifts&quot;,true);
+      }
 
       function supportRequestId(prefix = &quot;support&quot;) {
         try { return `${prefix}_${crypto.randomUUID().replace(/-/g, &quot;&quot;)}`; }
@@ -19872,7 +19966,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         const boosters = normalizeCaseBoosters(state.caseBoosters);
         const boosterCount = Math.max(0, Number(boosters.points||0) + Number(boosters.treats||0) + Number(boosters.coffee||0) + normalizeCaseSpecials(state.caseOwnedSpecials).length);
         const caseCount = profileAvailableCaseCount();
-        const giftCount = Math.max(0, Math.floor(Number(state.playerGiftPendingCount || 0)));
+        const giftCount = playerMailAttentionCount();
         stockHubSetBadge(&quot;purchases&quot;, activePurchases);
         stockHubSetBadge(&quot;boosters&quot;, boosterCount);
         stockHubSetBadge(&quot;cases&quot;, caseCount);
@@ -21653,9 +21747,12 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         if (button &amp;&amp; !button.disabled) void openLevelCaseClient(button.dataset.openLevelCase, button);
       });
       if (playerGiftInboxListEl) playerGiftInboxListEl.addEventListener(&quot;click&quot;, (event) =&gt; {
-        const button = event.target instanceof Element ? event.target.closest(&quot;[data-player-gift-claim]&quot;) : null;
-        if (button &amp;&amp; !button.disabled) void claimPlayerGiftClient(button.dataset.playerGiftClaim, button);
+        const button = event.target instanceof Element ? event.target.closest(&quot;[data-player-mail-open]&quot;) : null;
+        if (button) openPlayerMailLetter(button.dataset.playerMailOpen);
       });
+      if (playerMailCloseEl) playerMailCloseEl.addEventListener(&quot;click&quot;, closePlayerMail);
+      if (playerMailLayerEl) playerMailLayerEl.addEventListener(&quot;click&quot;,(event)=&gt;{if(event.target===playerMailLayerEl)closePlayerMail();});
+      if (profileMailOpenEl) profileMailOpenEl.addEventListener(&quot;click&quot;, openMailFromProfile);
       if (playerGiftInboxMoreEl) playerGiftInboxMoreEl.addEventListener(&quot;click&quot;, () =&gt; {
         playerGiftInboxExpanded = !playerGiftInboxExpanded;
         renderPlayerGiftInbox();
