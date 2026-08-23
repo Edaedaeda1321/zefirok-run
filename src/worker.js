@@ -1976,7 +1976,7 @@ function apiHeaders() {
 // request id. Calendar day, progression, streak and reward are resolved here.
 const DAILY_LOYALTY_CONFIG_TTL_MS = 15_000;
 const DAILY_LOYALTY_MAX_MILESTONES = 96;
-const DAILY_LOYALTY_REWARD_TYPES = new Set(["points", "zefir", "coffee", "season_xp", "case", "seasonal_case"]);
+const DAILY_LOYALTY_REWARD_TYPES = new Set(["points", "zefir", "coffee", "profile_xp", "season_xp", "case", "seasonal_case", "booster_points", "booster_treats", "booster_coffee", "avatar", "frame", "trail", "skin", "music"]);
 let dailyLoyaltySchemaReady = false;
 let dailyLoyaltySchemaPromise = null;
 let dailyLoyaltyConfigMemory = { value: null, expiresAt: 0, promise: null, generation: 0 };
@@ -2092,18 +2092,81 @@ function dailyLoyaltyRequestId(value) {
   if (!id || id.length > 120 || !/^[A-Za-z0-9_.:@-]+$/.test(id)) throw new ApiError(400, 'Некорректный requestId ежедневной отметки.');
   return id;
 }
+function dailyLoyaltyCosmeticDefinition(kindValue, itemIdValue, options = {}) {
+  const kind = String(kindValue || '').trim().toLowerCase();
+  const itemId = String(itemIdValue || '').trim();
+  if (!SEASON_PASS_COSMETIC_KINDS.includes(kind) || !itemId) return null;
+  const item = seasonPassAnyCosmeticCatalog(kind)?.[itemId] || null;
+  if (!item || (kind === 'music' && item.defaultOwned)) return null;
+  const future = Boolean(futureSeasonContentItem(kind, itemId));
+  const released = !future || isFutureContentReleasedCached(kind, itemId);
+  if (options.requireReleased && !released) return null;
+  return { kind, itemId, item, future, released, title:String(item.title || itemId), imageUrl:seasonPassCosmeticImage(kind, itemId) };
+}
+function dailyLoyaltyRewardImage(typeValue, itemIdValue = '') {
+  const type = String(typeValue || '').trim().toLowerCase();
+  const itemId = String(itemIdValue || '').trim();
+  if (type === 'profile_xp' || type === 'season_xp') return '/assets/season-pass/xp.png?v=07939';
+  if (type === 'seasonal_case') return '/assets/season-pass/season.png?v=07939';
+  if (type === 'booster_points') return SEASON_PASS_BOOST_REWARDS.booster_points.imageUrl;
+  if (type === 'booster_treats') return SEASON_PASS_BOOST_REWARDS.booster_treats.imageUrl;
+  if (type === 'booster_coffee') return SEASON_PASS_BOOST_REWARDS.booster_coffee.imageUrl;
+  if (SEASON_PASS_COSMETIC_KINDS.includes(type)) return seasonPassCosmeticImage(type, itemId);
+  return ownerPanelRewardAsset(type === 'zefir' ? 'zefir' : type, itemId);
+}
+function dailyLoyaltyRewardTitle(typeValue, itemIdValue = '', amountValue = 1) {
+  const type = String(typeValue || '').trim().toLowerCase();
+  const itemId = String(itemIdValue || '').trim();
+  const amount = Math.max(1, Math.floor(Number(amountValue) || 1));
+  if (type === 'points') return `${amount.toLocaleString('ru-RU')} очков`;
+  if (type === 'zefir') return `${amount.toLocaleString('ru-RU')} зефира`;
+  if (type === 'coffee') return `${amount.toLocaleString('ru-RU')} кофе`;
+  if (type === 'profile_xp') return `+${amount.toLocaleString('ru-RU')} XP профиля`;
+  if (type === 'season_xp') return `+${amount.toLocaleString('ru-RU')} XP сезонного пропуска`;
+  if (type === 'case') { const title=LEVEL_CASE_CONFIG[normalizeCaseType(itemId)]?.title || 'Кейс'; return amount === 1 ? title : `${title} ×${amount}`; }
+  if (type === 'seasonal_case') return amount === 1 ? 'Сезонный кейс' : `Сезонный кейс ×${amount}`;
+  const booster=({booster_points:'×2 очки',booster_treats:'×2 зефир',booster_coffee:'×2 кофе'})[type];
+  if (booster) { const word=amount%10===1&&amount%100!==11?'забег':amount%10>=2&&amount%10<=4&&(amount%100<10||amount%100>=20)?'забега':'забегов'; return `${booster} · ${amount} ${word}`; }
+  const cosmetic=dailyLoyaltyCosmeticDefinition(type,itemId);
+  if (cosmetic) return `${({avatar:'Аватарка',frame:'Рамка',trail:'След',skin:'Скин',music:'Музыка'})[type]} · ${cosmetic.title}`;
+  return 'Награда';
+}
+function dailyLoyaltyOwnerRewardCatalog() {
+  const rows = [
+    {kind:'points',id:'',group:'Ресурсы и XP',title:'Очки',imageUrl:dailyLoyaltyRewardImage('points'),amountMode:'amount',min:1,max:1000000000,defaultAmount:500},
+    {kind:'zefir',id:'',group:'Ресурсы и XP',title:'Зефир',imageUrl:dailyLoyaltyRewardImage('zefir'),amountMode:'amount',min:1,max:1000000000,defaultAmount:15},
+    {kind:'coffee',id:'',group:'Ресурсы и XP',title:'Кофе',imageUrl:dailyLoyaltyRewardImage('coffee'),amountMode:'amount',min:1,max:1000000000,defaultAmount:15},
+    {kind:'profile_xp',id:'',group:'Ресурсы и XP',title:'XP профиля',imageUrl:dailyLoyaltyRewardImage('profile_xp'),amountMode:'amount',min:1,max:1000000000,defaultAmount:100},
+    {kind:'season_xp',id:'',group:'Ресурсы и XP',title:'XP сезонного пропуска',imageUrl:dailyLoyaltyRewardImage('season_xp'),amountMode:'amount',min:1,max:1000000000,defaultAmount:100},
+    ...Object.entries(LEVEL_CASE_CONFIG).map(([id,item])=>({kind:'case',id,group:'Кейсы',title:String(item.title||id),imageUrl:dailyLoyaltyRewardImage('case',id),amountMode:'amount',min:1,max:20,defaultAmount:1})),
+    {kind:'seasonal_case',id:'',group:'Кейсы',title:'Сезонный кейс активного сезона',imageUrl:dailyLoyaltyRewardImage('seasonal_case'),amountMode:'amount',min:1,max:20,defaultAmount:1},
+    {kind:'booster_points',id:'',group:'Усилители',title:'×2 очки · количество забегов',imageUrl:dailyLoyaltyRewardImage('booster_points'),amountMode:'amount',min:1,max:20,defaultAmount:2},
+    {kind:'booster_treats',id:'',group:'Усилители',title:'×2 зефир · количество забегов',imageUrl:dailyLoyaltyRewardImage('booster_treats'),amountMode:'amount',min:1,max:20,defaultAmount:2},
+    {kind:'booster_coffee',id:'',group:'Усилители',title:'×2 кофе · количество забегов',imageUrl:dailyLoyaltyRewardImage('booster_coffee'),amountMode:'amount',min:1,max:20,defaultAmount:2}
+  ];
+  for (const [kind,group,prefix] of [['avatar','Аватарки','Аватарка'],['frame','Рамки','Рамка'],['trail','Следы','След'],['skin','Скины','Скин'],['music','Музыка','Музыка']]) {
+    for (const [id,item] of Object.entries(seasonPassAnyCosmeticCatalog(kind) || {})) {
+      if (kind === 'skin' && id === 'default') continue;
+      if (kind === 'music' && item?.defaultOwned) continue;
+      const cosmetic=dailyLoyaltyCosmeticDefinition(kind,id);
+      if (!cosmetic) continue;
+      rows.push({kind,id,group,title:`${prefix} · ${String(item?.title||id)}${cosmetic.future&&!cosmetic.released?' · скрыто':''}`,imageUrl:cosmetic.imageUrl,amountMode:'fixed',min:1,max:1,defaultAmount:1,available:cosmetic.released});
+    }
+  }
+  return rows;
+}
 function dailyLoyaltyMilestoneFromRow(row) {
   const rewardType = String(row?.reward_type || '').trim();
   const isCase = rewardType === 'case' || rewardType === 'seasonal_case';
+  const fixed = SEASON_PASS_COSMETIC_KINDS.includes(rewardType);
+  const amount = fixed ? 1 : isCase || rewardType.startsWith('booster_') ? Math.max(1, Math.min(20, Math.floor(Number(row?.amount) || 1))) : Math.max(1, Math.min(1_000_000_000, Math.floor(Number(row?.amount) || 1)));
+  const itemId = String(row?.item_id || '').slice(0, 80);
   return {
     dayIndex: Math.max(1, Math.floor(Number(row?.day_index) || 1)),
-    icon: String(row?.icon || '🎁').slice(0, 16),
-    label: String(row?.label || 'Награда').slice(0, 120),
-    reward: {
-      type: rewardType,
-      amount: isCase ? Math.max(1, Math.min(20, Math.floor(Number(row?.amount) || 1))) : Math.max(1, Math.min(1_000_000_000, Math.floor(Number(row?.amount) || 1))),
-      itemId: String(row?.item_id || '').slice(0, 80)
-    }
+    icon: String(row?.icon || '').slice(0, 16),
+    label: String(row?.label || dailyLoyaltyRewardTitle(rewardType,itemId,amount)).slice(0, 120),
+    imageUrl: dailyLoyaltyRewardImage(rewardType,itemId),
+    reward: { type: rewardType, amount, itemId }
   };
 }
 function dailyLoyaltyConfigActive(season, now = Math.floor(Date.now() / 1000)) {
@@ -2269,6 +2332,9 @@ async function claimDailyLoyalty(request, env, executionCtx = null) {
       await ensureAuthoritativeProfileRow(env, telegramId, 'daily-loyalty');
     } else if (milestone?.reward?.type === 'case') {
       if (!normalizeCaseType(milestone.reward.itemId)) throw new ApiError(409, 'В CC ежедневной карточки выбран неизвестный кейс.');
+    } else if (SEASON_PASS_COSMETIC_KINDS.includes(String(milestone?.reward?.type || ''))) {
+      if (futureSeasonContentItem(milestone.reward.type,milestone.reward.itemId)) await readLiveContentReleaseRules(env).catch(()=>null);
+      if (!dailyLoyaltyCosmeticDefinition(milestone.reward.type,milestone.reward.itemId,{requireReleased:true})) throw new ApiError(409, 'В CC ежедневной карточки выбран недоступный предмет оформления.');
     } else if (milestone?.reward?.type === 'season_xp') {
       if (!seasonReward?.season) throw new ApiError(500, 'Не удалось подготовить награду сезонного пропуска.');
       await ensureSeasonPassPlayer(env, seasonReward.season, telegramId);
@@ -2323,6 +2389,29 @@ async function claimDailyLoyalty(request, env, executionCtx = null) {
               telegramId, config.season.id, milestone.dayIndex, requestId
             ));
         }
+      } else if (reward.type === 'booster_points' || reward.type === 'booster_treats' || reward.type === 'booster_coffee') {
+        const column = reward.type === 'booster_points' ? 'boosters_points' : reward.type === 'booster_treats' ? 'boosters_treats' : 'boosters_coffee';
+        statements.push(env.DB.prepare(`INSERT OR IGNORE INTO case_player_state(telegram_id,created_at,updated_at) VALUES(?,?,?)`).bind(telegramId,now,now));
+        statements.push(env.DB.prepare(`UPDATE case_player_state SET ${column}=MIN(999,${column}+?),revision=revision+1,updated_at=?
+          WHERE telegram_id=? AND EXISTS(SELECT 1 FROM daily_loyalty_claims WHERE telegram_id=? AND season_id=? AND day_index=? AND source_request_id=? AND status='granting')`).bind(
+            Math.max(1,Math.min(20,Number(reward.amount)||1)),now,telegramId,
+            telegramId,config.season.id,milestone.dayIndex,requestId
+          ));
+      } else if (SEASON_PASS_COSMETIC_KINDS.includes(reward.type)) {
+        const cosmetic=dailyLoyaltyCosmeticDefinition(reward.type,reward.itemId,{requireReleased:true});
+        if(!cosmetic) throw new ApiError(409,'Ежедневная косметическая награда больше недоступна.');
+        const column=({avatar:'owned_avatars_json',frame:'owned_frames_json',trail:'owned_trails_json',skin:'owned_skins_json',music:'owned_music_json'})[reward.type];
+        const fallback=reward.type==='music'?'["cafe_run"]':'[]';
+        statements.push(env.DB.prepare(`INSERT OR IGNORE INTO case_player_state(telegram_id,created_at,updated_at) VALUES(?,?,?)`).bind(telegramId,now,now));
+        statements.push(env.DB.prepare(`UPDATE case_player_state SET ${column}=CASE
+          WHEN EXISTS(SELECT 1 FROM json_each(CASE WHEN json_valid(${column}) THEN ${column} ELSE ? END) WHERE CAST(value AS TEXT)=?)
+            THEN CASE WHEN json_valid(${column}) THEN ${column} ELSE ? END
+          ELSE json_insert(CASE WHEN json_valid(${column}) THEN ${column} ELSE ? END,'$[#]',?) END,
+          revision=revision+1,updated_at=?
+          WHERE telegram_id=? AND EXISTS(SELECT 1 FROM daily_loyalty_claims WHERE telegram_id=? AND season_id=? AND day_index=? AND source_request_id=? AND status='granting')`).bind(
+            fallback,cosmetic.itemId,fallback,fallback,cosmetic.itemId,now,telegramId,
+            telegramId,config.season.id,milestone.dayIndex,requestId
+          ));
       } else if (reward.type === 'season_xp') {
         statements.push(env.DB.prepare(`UPDATE season_pass_players SET xp=MIN(999999999,xp+?),revision=revision+1,updated_at=?
           WHERE season_id=? AND telegram_id=? AND EXISTS(SELECT 1 FROM daily_loyalty_claims WHERE telegram_id=? AND season_id=? AND day_index=? AND source_request_id=? AND status='granting')`).bind(
@@ -2360,7 +2449,8 @@ async function claimDailyLoyalty(request, env, executionCtx = null) {
     model = dailyLoyaltyModel(config, after, currentDayKey);
     if (!inserted && !model.state.todayCompleted) throw new ApiError(409, 'Запрос отметки уже использован. Нажмите ещё раз.');
     const grantedRewards = inserted ? after.claims.filter((row) => String(row.source_request_id || '') === requestId).map((row) => ({
-      dayIndex: Number(row.day_index || 0), icon: String(row.icon || '🎁'), label: String(row.label || 'Награда'),
+      dayIndex: Number(row.day_index || 0), icon: String(row.icon || ''), label: String(row.label || 'Награда'),
+      imageUrl: dailyLoyaltyRewardImage(String(row.reward_type || ''),String(row.item_id || '')),
       reward: { type:String(row.reward_type || ''), amount:Number(row.amount || 0), itemId:String(row.item_id || '') }
     })) : [];
 
@@ -2387,21 +2477,30 @@ function normalizeDailyLoyaltyMilestones(input) {
     const dayIndex = Math.floor(Number(item?.dayIndex || item?.day_index));
     if (!Number.isInteger(dayIndex) || dayIndex < 1 || dayIndex > 3650 || seen.has(dayIndex)) throw new ApiError(400, 'Дни наград должны быть уникальными числами от 1 до 3650.');
     seen.add(dayIndex);
-    const rewardType = String(item?.rewardType || item?.reward_type || item?.reward?.type || '').trim();
+    const rewardType = String(item?.rewardType || item?.reward_type || item?.reward?.type || '').trim().toLowerCase();
     if (!DAILY_LOYALTY_REWARD_TYPES.has(rewardType)) throw new ApiError(400, `Неизвестный тип ежедневной награды: ${rewardType || 'пусто'}.`);
-    const isCase = rewardType === 'case' || rewardType === 'seasonal_case';
-    const amount = Math.floor(Number(item?.amount ?? item?.reward?.amount ?? 1));
-    const maxAmount = isCase ? 20 : 1_000_000_000;
-    if (!Number.isFinite(amount) || amount < 1 || amount > maxAmount) throw new ApiError(400, `Некорректное количество для дня ${dayIndex}.`);
     let itemId = String(item?.itemId || item?.item_id || item?.reward?.itemId || '').trim();
+    let amount = Math.floor(Number(item?.amount ?? item?.reward?.amount ?? 1));
     if (rewardType === 'case') {
       itemId = normalizeCaseType(itemId);
       if (!itemId) throw new ApiError(400, `На дне ${dayIndex} выбран неизвестный обычный кейс.`);
-    } else if (rewardType !== 'seasonal_case') itemId = '';
-    return {
-      dayIndex, icon:String(item?.icon || '🎁').trim().slice(0,16) || '🎁', label:String(item?.label || 'Награда').trim().slice(0,120) || 'Награда',
-      rewardType, amount, itemId, sortOrder: dayIndex
-    };
+      if (!Number.isFinite(amount) || amount < 1 || amount > 20) throw new ApiError(400, `Количество кейсов на дне ${dayIndex} должно быть от 1 до 20.`);
+    } else if (rewardType === 'seasonal_case') {
+      itemId = '';
+      if (!Number.isFinite(amount) || amount < 1 || amount > 20) throw new ApiError(400, `Количество сезонных кейсов на дне ${dayIndex} должно быть от 1 до 20.`);
+    } else if (['booster_points','booster_treats','booster_coffee'].includes(rewardType)) {
+      itemId = '';
+      if (!Number.isFinite(amount) || amount < 1 || amount > 20) throw new ApiError(400, `Количество усилителей на дне ${dayIndex} должно быть от 1 до 20.`);
+    } else if (SEASON_PASS_COSMETIC_KINDS.includes(rewardType)) {
+      const cosmetic=dailyLoyaltyCosmeticDefinition(rewardType,itemId,{requireReleased:true});
+      if(!cosmetic) throw new ApiError(400, `На дне ${dayIndex} выбран неизвестный или ещё скрытый предмет оформления.`);
+      itemId=cosmetic.itemId; amount=1;
+    } else {
+      itemId = '';
+      if (!Number.isFinite(amount) || amount < 1 || amount > 1_000_000_000) throw new ApiError(400, `Некорректное количество для дня ${dayIndex}.`);
+    }
+    const label=String(item?.label || '').trim().slice(0,120) || dailyLoyaltyRewardTitle(rewardType,itemId,amount);
+    return { dayIndex, icon:String(item?.icon || '').trim().slice(0,16), label, rewardType, amount, itemId, sortOrder: dayIndex };
   });
   rows.sort((a,b) => a.dayIndex - b.dayIndex);
   return rows;
@@ -2409,13 +2508,14 @@ function normalizeDailyLoyaltyMilestones(input) {
 
 async function ownerPanelDailyLoyalty(env, ctx) {
   const config = await loadDailyLoyaltyConfig(env, { allowDisabled:true });
+  await readLiveContentReleaseRules(env).catch(()=>null);
   const currentDayKey = dailyLoyaltyDayKey(Date.now(), config.season.timezoneOffsetMinutes);
   const [players, today, longest] = await Promise.all([
     env.DB.prepare(`SELECT COUNT(*) AS count FROM daily_loyalty_players WHERE season_id=?`).bind(config.season.id).first(),
     env.DB.prepare(`SELECT COUNT(*) AS count FROM daily_loyalty_activity WHERE season_id=? AND day_key=? AND applied=1`).bind(config.season.id,currentDayKey).first(),
     env.DB.prepare(`SELECT COALESCE(MAX(best_streak),0) AS value FROM daily_loyalty_players WHERE season_id=?`).bind(config.season.id).first()
   ]);
-  return { ok:true, daily:{ ...config, serverDayKey:currentDayKey, stats:{ players:Number(players?.count||0), today:Number(today?.count||0), bestStreak:Number(longest?.value||0) } } };
+  return { ok:true, daily:{ ...config, rewardCatalog:dailyLoyaltyOwnerRewardCatalog(), serverDayKey:currentDayKey, stats:{ players:Number(players?.count||0), today:Number(today?.count||0), bestStreak:Number(longest?.value||0) } } };
 }
 
 async function ownerPanelDailyLoyaltySave(env, ctx) {
@@ -2429,6 +2529,7 @@ async function ownerPanelDailyLoyaltySave(env, ctx) {
   const title = String(body.title || current.season.title || 'Кофейная карточка Зеффи').trim().slice(0,120) || 'Кофейная карточка Зеффи';
   const enabled = body.enabled === false || Number(body.enabled) === 0 ? 0 : 1;
   const timezoneOffsetMinutes = Math.max(-720, Math.min(840, Math.floor(Number(body.timezoneOffsetMinutes ?? current.season.timezoneOffsetMinutes ?? 180) || 0)));
+  await readLiveContentReleaseRules(env).catch(()=>null);
   const milestones = normalizeDailyLoyaltyMilestones(body.milestones || []);
   if (!milestones.length) throw new ApiError(400, 'Добавьте хотя бы одну награду.');
   const now = Math.floor(Date.now() / 1000);
