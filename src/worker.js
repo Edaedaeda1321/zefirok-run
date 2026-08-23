@@ -1977,6 +1977,7 @@ function apiHeaders() {
 const DAILY_LOYALTY_CONFIG_TTL_MS = 15_000;
 const DAILY_LOYALTY_MAX_MILESTONES = 96;
 const DAILY_LOYALTY_REWARD_WEEKS = 6;
+const DAILY_LOYALTY_ECONOMY_CONFIRMATION = 'ПОДТВЕРЖДАЮ ЭКОНОМИКУ';
 const DAILY_LOYALTY_REWARD_TYPES = new Set(["points", "zefir", "coffee", "profile_xp", "season_xp", "case", "seasonal_case", "booster_points", "booster_treats", "booster_coffee", "avatar", "frame", "trail", "skin", "music"]);
 let dailyLoyaltySchemaReady = false;
 let dailyLoyaltySchemaPromise = null;
@@ -1997,7 +1998,7 @@ async function ensureDailyLoyaltySchema(env) {
     // Hot path: migrations create and seed these tables before code is released.
     // A fresh Worker isolate therefore pays only one tiny probe instead of a DDL batch.
     try {
-      const probe = await env.DB.prepare(`SELECT s.id FROM daily_loyalty_seasons s JOIN daily_loyalty_settings ds ON ds.season_id=s.id WHERE EXISTS(SELECT 1 FROM daily_loyalty_progressive_rewards wr WHERE wr.season_id=s.id AND wr.week_number=1 AND wr.cycle_day=1) LIMIT 1`).first();
+      const probe = await env.DB.prepare(`SELECT s.id FROM daily_loyalty_seasons s JOIN daily_loyalty_settings ds ON ds.season_id=s.id WHERE EXISTS(SELECT 1 FROM daily_loyalty_progressive_rewards wr WHERE wr.season_id=s.id AND wr.week_number=1 AND wr.cycle_day=1) AND EXISTS(SELECT 1 FROM daily_loyalty_comeback_tiers ct WHERE ct.season_id=s.id) AND EXISTS(SELECT 1 FROM daily_loyalty_economy_guard eg WHERE eg.season_id=s.id) LIMIT 1`).first();
       if (probe?.id) return;
     } catch (error) {
       // Compatibility fallback below repairs an environment where the migration was missed.
@@ -2088,10 +2089,37 @@ async function ensureDailyLoyaltySchema(env) {
       )`),
       env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_daily_loyalty_weekly_claims_player ON daily_loyalty_weekly_claims(telegram_id,season_id,progress_day DESC)`),
       env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_daily_loyalty_weekly_claims_request ON daily_loyalty_weekly_claims(source_request_id,status)`),
+      env.DB.prepare(`CREATE TABLE IF NOT EXISTS daily_loyalty_comeback_tiers (
+        season_id TEXT NOT NULL,tier_days INTEGER NOT NULL,enabled INTEGER NOT NULL DEFAULT 1,title TEXT NOT NULL DEFAULT '',
+        points_threshold INTEGER NOT NULL DEFAULT 0,zefir_threshold INTEGER NOT NULL DEFAULT 0,coffee_threshold INTEGER NOT NULL DEFAULT 0,
+        fallback_reward_json TEXT NOT NULL DEFAULT '{}',low_points_reward_json TEXT NOT NULL DEFAULT '{}',low_zefir_reward_json TEXT NOT NULL DEFAULT '{}',low_coffee_reward_json TEXT NOT NULL DEFAULT '{}',
+        sort_order INTEGER NOT NULL DEFAULT 0,created_at INTEGER NOT NULL,updated_at INTEGER NOT NULL,PRIMARY KEY(season_id,tier_days)
+      )`),
+      env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_daily_loyalty_comeback_tiers ON daily_loyalty_comeback_tiers(season_id,enabled,tier_days)`),
+      env.DB.prepare(`CREATE TABLE IF NOT EXISTS daily_loyalty_comeback_claims (
+        telegram_id TEXT NOT NULL,season_id TEXT NOT NULL,return_day_key TEXT NOT NULL,missed_days INTEGER NOT NULL DEFAULT 0,tier_days INTEGER NOT NULL DEFAULT 0,
+        selection_reason TEXT NOT NULL DEFAULT 'fallback',balance_points INTEGER NOT NULL DEFAULT 0,balance_zefir INTEGER NOT NULL DEFAULT 0,balance_coffee INTEGER NOT NULL DEFAULT 0,
+        reward_type TEXT NOT NULL,amount INTEGER NOT NULL DEFAULT 1,item_id TEXT NOT NULL DEFAULT '',label TEXT NOT NULL DEFAULT '',reward_json TEXT NOT NULL DEFAULT '{}',
+        status TEXT NOT NULL DEFAULT 'granting',source_request_id TEXT NOT NULL DEFAULT '',created_at INTEGER NOT NULL,delivered_at INTEGER NOT NULL DEFAULT 0,updated_at INTEGER NOT NULL,
+        PRIMARY KEY(telegram_id,season_id,return_day_key)
+      )`),
+      env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_daily_loyalty_comeback_claims_season ON daily_loyalty_comeback_claims(season_id,created_at DESC,tier_days,status)`),
+      env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_daily_loyalty_comeback_claims_request ON daily_loyalty_comeback_claims(source_request_id,status)`),
+      env.DB.prepare(`CREATE TABLE IF NOT EXISTS daily_loyalty_economy_guard (
+        season_id TEXT PRIMARY KEY,audience_size INTEGER NOT NULL DEFAULT 10000,hard_points_per_claim INTEGER NOT NULL DEFAULT 250000,
+        hard_zefir_per_claim INTEGER NOT NULL DEFAULT 5000,hard_coffee_per_claim INTEGER NOT NULL DEFAULT 5000,hard_cases_per_claim INTEGER NOT NULL DEFAULT 5,
+        require_confirmation INTEGER NOT NULL DEFAULT 1,updated_at INTEGER NOT NULL
+      )`),
       env.DB.prepare(`INSERT OR IGNORE INTO daily_loyalty_seasons(id,title,enabled,timezone_offset_minutes,starts_at,ends_at,revision,created_at,updated_at,updated_by)
         VALUES('daily-main','Кофейная карточка Зеффи',1,180,0,0,1,?,?,?)`).bind(now, now, 'runtime-daily-loyalty'),
       env.DB.prepare(`INSERT OR IGNORE INTO daily_loyalty_settings(season_id,insurance_enabled,insurance_every_days,insurance_max,streak_rewards_enabled,updated_at)
         VALUES('daily-main',1,7,2,1,?)`).bind(now),
+      env.DB.prepare(`INSERT OR IGNORE INTO daily_loyalty_economy_guard(season_id,audience_size,hard_points_per_claim,hard_zefir_per_claim,hard_coffee_per_claim,hard_cases_per_claim,require_confirmation,updated_at)
+        VALUES('daily-main',10000,250000,5000,5000,5,1,?)`).bind(now),
+      env.DB.prepare(`INSERT OR IGNORE INTO daily_loyalty_comeback_tiers(season_id,tier_days,enabled,title,points_threshold,zefir_threshold,coffee_threshold,fallback_reward_json,low_points_reward_json,low_zefir_reward_json,low_coffee_reward_json,sort_order,created_at,updated_at) VALUES
+        ('daily-main',3,1,'С возвращением',1500,120,120,'{"type":"points","amount":1000,"itemId":"","label":"1 000 очков"}','{"type":"points","amount":1500,"itemId":"","label":"1 500 очков"}','{"type":"zefir","amount":60,"itemId":"","label":"60 зефира"}','{"type":"coffee","amount":60,"itemId":"","label":"60 кофе"}',3,?,?),
+        ('daily-main',7,1,'Мы скучали',4000,250,250,'{"type":"case","amount":1,"itemId":"small","label":"Обычный кейс"}','{"type":"points","amount":3000,"itemId":"","label":"3 000 очков"}','{"type":"zefir","amount":120,"itemId":"","label":"120 зефира"}','{"type":"coffee","amount":120,"itemId":"","label":"120 кофе"}',7,?,?),
+        ('daily-main',14,1,'Большое возвращение',8000,500,500,'{"type":"case","amount":1,"itemId":"gold","label":"Золотой кейс"}','{"type":"points","amount":6000,"itemId":"","label":"6 000 очков"}','{"type":"zefir","amount":250,"itemId":"","label":"250 зефира"}','{"type":"coffee","amount":250,"itemId":"","label":"250 кофе"}',14,?,?)`).bind(now,now,now,now,now,now),
       env.DB.prepare(`INSERT OR IGNORE INTO daily_loyalty_streak_milestones(season_id,streak_threshold,label,reward_type,amount,item_id,sort_order,created_at,updated_at) VALUES
         ('daily-main',7,'×2 очки · 2 забега','booster_points',2,'',7,?,?),
         ('daily-main',14,'500 зефира','zefir',500,'',14,?,?),
@@ -2287,6 +2315,68 @@ function dailyLoyaltyRewardWeek(progressDay) {
   return Math.min(DAILY_LOYALTY_REWARD_WEEKS,dailyLoyaltyProgressWeek(progressDay));
 }
 
+function dailyLoyaltyMissedDays(row,currentDayKey) {
+  const last=String(row?.last_active_day_key||'').trim();
+  if(!last)return 0;
+  const diff=dailyLoyaltyDayOrdinal(currentDayKey)-dailyLoyaltyDayOrdinal(last);
+  return Math.max(0,diff-1);
+}
+function dailyLoyaltyRewardFromJson(value,fallbackLabel='Награда') {
+  let raw=value;
+  if(typeof raw==='string'){
+    try{raw=JSON.parse(raw||'{}');}catch{raw={};}
+  }
+  raw=raw&&typeof raw==='object'?raw:{};
+  const type=String(raw.type||raw.kind||'').trim().toLowerCase();
+  if(!DAILY_LOYALTY_REWARD_TYPES.has(type))return null;
+  let amount=Math.floor(Number(raw.amount||1));
+  let itemId=String(raw.itemId||raw.item_id||'').trim().slice(0,80);
+  if(SEASON_PASS_COSMETIC_KINDS.includes(type))amount=1;
+  else if(type==='case'||type==='seasonal_case'||type.startsWith('booster_'))amount=Math.max(1,Math.min(20,Number.isFinite(amount)?amount:1));
+  else amount=Math.max(1,Math.min(1_000_000_000,Number.isFinite(amount)?amount:1));
+  if(type==='seasonal_case'||type.startsWith('booster_')||['points','zefir','coffee','profile_xp','season_xp'].includes(type))itemId='';
+  const label=String(raw.label||fallbackLabel||dailyLoyaltyRewardTitle(type,itemId,amount)).trim().slice(0,120)||dailyLoyaltyRewardTitle(type,itemId,amount);
+  return {label,imageUrl:dailyLoyaltyRewardImage(type,itemId),reward:{type,amount,itemId}};
+}
+function dailyLoyaltyComebackTierFromRow(row){
+  return {
+    tierDays:Math.max(1,Math.min(3650,Math.floor(Number(row?.tier_days)||1))),
+    enabled:Number(row?.enabled??1)===1,
+    title:String(row?.title||'С возвращением').slice(0,120),
+    thresholds:{points:Math.max(0,Number(row?.points_threshold||0)),zefir:Math.max(0,Number(row?.zefir_threshold||0)),coffee:Math.max(0,Number(row?.coffee_threshold||0))},
+    rewards:{
+      fallback:dailyLoyaltyRewardFromJson(row?.fallback_reward_json,'Подарок за возвращение'),
+      lowPoints:dailyLoyaltyRewardFromJson(row?.low_points_reward_json,'Помощь с очками'),
+      lowZefir:dailyLoyaltyRewardFromJson(row?.low_zefir_reward_json,'Помощь с зефиром'),
+      lowCoffee:dailyLoyaltyRewardFromJson(row?.low_coffee_reward_json,'Помощь с кофе')
+    }
+  };
+}
+function dailyLoyaltyEconomyGuardFromRow(row={}){
+  return {
+    audienceSize:Math.max(1,Math.min(100_000_000,Math.floor(Number(row?.audience_size||10000)))),
+    hardPointsPerClaim:Math.max(1,Math.min(1_000_000_000,Math.floor(Number(row?.hard_points_per_claim||250000)))),
+    hardZefirPerClaim:Math.max(1,Math.min(1_000_000_000,Math.floor(Number(row?.hard_zefir_per_claim||5000)))),
+    hardCoffeePerClaim:Math.max(1,Math.min(1_000_000_000,Math.floor(Number(row?.hard_coffee_per_claim||5000)))),
+    hardCasesPerClaim:Math.max(1,Math.min(20,Math.floor(Number(row?.hard_cases_per_claim||5)))),
+    requireConfirmation:Number(row?.require_confirmation??1)===1
+  };
+}
+function dailyLoyaltySelectComebackTier(config,missedDays){
+  return (config?.comebackTiers||[]).filter((tier)=>tier.enabled&&Number(tier.tierDays)<=Number(missedDays||0)).sort((a,b)=>b.tierDays-a.tierDays)[0]||null;
+}
+function dailyLoyaltyChooseComebackReward(tier,profileRow){
+  if(!tier)return null;
+  const balances={points:Math.max(0,Number(profileRow?.wallet||0)),zefir:Math.max(0,Number(profileRow?.treats||0)),coffee:Math.max(0,Number(profileRow?.coffee||0))};
+  const candidates=[
+    {key:'low_points',balance:balances.points,threshold:Number(tier.thresholds?.points||0),item:tier.rewards?.lowPoints},
+    {key:'low_zefir',balance:balances.zefir,threshold:Number(tier.thresholds?.zefir||0),item:tier.rewards?.lowZefir},
+    {key:'low_coffee',balance:balances.coffee,threshold:Number(tier.thresholds?.coffee||0),item:tier.rewards?.lowCoffee}
+  ].filter((x)=>x.item&&x.threshold>0&&x.balance<x.threshold).map((x)=>({...x,ratio:x.balance/Math.max(1,x.threshold)})).sort((a,b)=>a.ratio-b.ratio);
+  const selected=candidates[0]||null;
+  return {item:selected?.item||tier.rewards?.fallback||null,reason:selected?.key||'fallback',balances};
+}
+
 function dailyLoyaltyConfigActive(season, now = Math.floor(Date.now() / 1000)) {
   if (!season || Number(season.enabled || 0) !== 1) return false;
   const startsAt = Math.max(0, Number(season.starts_at || 0));
@@ -2314,11 +2404,13 @@ async function loadDailyLoyaltyConfig(env, options = {}) {
       ORDER BY updated_at DESC LIMIT 1`).bind(now, now).first();
     if (!season) season = await env.DB.prepare(`SELECT * FROM daily_loyalty_seasons ORDER BY updated_at DESC LIMIT 1`).first();
     if (!season) throw new ApiError(503, 'Ежедневная активность ещё не настроена.');
-    const [milestoneRows,settingsRows,streakRows,weeklyRows] = await env.DB.batch([
+    const [milestoneRows,settingsRows,streakRows,weeklyRows,comebackRows,economyGuardRows] = await env.DB.batch([
       env.DB.prepare(`SELECT day_index,icon,label,reward_type,amount,item_id,sort_order FROM daily_loyalty_milestones WHERE season_id=? ORDER BY day_index ASC`).bind(String(season.id)),
       env.DB.prepare(`SELECT insurance_enabled,insurance_every_days,insurance_max,streak_rewards_enabled,updated_at FROM daily_loyalty_settings WHERE season_id=? LIMIT 1`).bind(String(season.id)),
       env.DB.prepare(`SELECT streak_threshold,label,reward_type,amount,item_id,sort_order FROM daily_loyalty_streak_milestones WHERE season_id=? ORDER BY streak_threshold ASC`).bind(String(season.id)),
-      env.DB.prepare(`SELECT week_number,cycle_day,label,reward_type,amount,item_id,sort_order FROM daily_loyalty_progressive_rewards WHERE season_id=? ORDER BY week_number ASC,cycle_day ASC`).bind(String(season.id))
+      env.DB.prepare(`SELECT week_number,cycle_day,label,reward_type,amount,item_id,sort_order FROM daily_loyalty_progressive_rewards WHERE season_id=? ORDER BY week_number ASC,cycle_day ASC`).bind(String(season.id)),
+      env.DB.prepare(`SELECT tier_days,enabled,title,points_threshold,zefir_threshold,coffee_threshold,fallback_reward_json,low_points_reward_json,low_zefir_reward_json,low_coffee_reward_json,sort_order FROM daily_loyalty_comeback_tiers WHERE season_id=? ORDER BY tier_days ASC`).bind(String(season.id)),
+      env.DB.prepare(`SELECT audience_size,hard_points_per_claim,hard_zefir_per_claim,hard_coffee_per_claim,hard_cases_per_claim,require_confirmation FROM daily_loyalty_economy_guard WHERE season_id=? LIMIT 1`).bind(String(season.id))
     ]);
     const milestones = (milestoneRows.results || []).map(dailyLoyaltyMilestoneFromRow).filter((item) => DAILY_LOYALTY_REWARD_TYPES.has(item.reward.type));
     const settingRow = settingsRows.results?.[0] || {};
@@ -2326,6 +2418,8 @@ async function loadDailyLoyaltyConfig(env, options = {}) {
     const storedWeeklyRewards = (weeklyRows.results || []).map(dailyLoyaltyWeeklyRewardFromRow).filter((item) => DAILY_LOYALTY_REWARD_TYPES.has(item.reward.type));
     const storedWeeklyByKey = new Map(storedWeeklyRewards.map((item)=>[`${Number(item.weekNumber)}:${Number(item.cycleDay)}`,item]));
     const weeklyRewards = dailyLoyaltyDefaultWeeklyRewards().map((fallback)=>storedWeeklyByKey.get(`${Number(fallback.weekNumber)}:${Number(fallback.cycleDay)}`) || fallback);
+    const comebackTiers=(comebackRows.results||[]).map(dailyLoyaltyComebackTierFromRow).filter((tier)=>tier.rewards.fallback).sort((a,b)=>a.tierDays-b.tierDays);
+    const economyGuard=dailyLoyaltyEconomyGuardFromRow(economyGuardRows.results?.[0]||{});
     const value = {
       season: {
         id: String(season.id), title: String(season.title || 'Кофейная карточка Зеффи'),
@@ -2342,7 +2436,9 @@ async function loadDailyLoyaltyConfig(env, options = {}) {
       },
       milestones,
       streakMilestones,
-      weeklyRewards
+      weeklyRewards,
+      comebackTiers,
+      economyGuard
     };
     if (generation === dailyLoyaltyConfigMemory.generation) {
       dailyLoyaltyConfigMemory.value = value;
@@ -2503,10 +2599,10 @@ async function resolveDailyLoyaltyClaimItem(env, item) {
 }
 
 function appendDailyLoyaltyRewardDeliveryStatements(statements, env, options) {
-  const claimKind = options.claimKind === 'streak' ? 'streak' : options.claimKind === 'weekly' ? 'weekly' : 'progress';
+  const claimKind = options.claimKind === 'streak' ? 'streak' : options.claimKind === 'weekly' ? 'weekly' : options.claimKind === 'comeback' ? 'comeback' : 'progress';
   const telegramId = String(options.telegramId);
   const seasonId = String(options.seasonId);
-  const claimKey = Math.max(1, Math.floor(Number(options.claimKey) || 1));
+  const claimKey = claimKind === 'comeback' ? String(options.claimKey||'').slice(0,32) : Math.max(1, Math.floor(Number(options.claimKey) || 1));
   const requestId = String(options.requestId);
   const reward = options.item.reward;
   const label = String(options.item.label || dailyLoyaltyRewardTitle(reward.type,reward.itemId,reward.amount));
@@ -2516,10 +2612,12 @@ function appendDailyLoyaltyRewardDeliveryStatements(statements, env, options) {
     ? `EXISTS(SELECT 1 FROM daily_loyalty_streak_claims WHERE telegram_id=? AND season_id=? AND streak_threshold=? AND source_request_id=? AND status='granting')`
     : claimKind === 'weekly'
       ? `EXISTS(SELECT 1 FROM daily_loyalty_weekly_claims WHERE telegram_id=? AND season_id=? AND progress_day=? AND source_request_id=? AND status='granting')`
-      : `EXISTS(SELECT 1 FROM daily_loyalty_claims WHERE telegram_id=? AND season_id=? AND day_index=? AND source_request_id=? AND status='granting')`;
+      : claimKind === 'comeback'
+        ? `EXISTS(SELECT 1 FROM daily_loyalty_comeback_claims WHERE telegram_id=? AND season_id=? AND return_day_key=? AND source_request_id=? AND status='granting')`
+        : `EXISTS(SELECT 1 FROM daily_loyalty_claims WHERE telegram_id=? AND season_id=? AND day_index=? AND source_request_id=? AND status='granting')`;
   const gateBinds = [telegramId,seasonId,claimKey,requestId];
   const marker = `daily-loyalty:${seasonId}:${claimKind}:${claimKey}`;
-  const grantPrefix = claimKind === 'streak' ? 'daily_streak' : claimKind === 'weekly' ? 'daily_weekly' : 'daily';
+  const grantPrefix = claimKind === 'streak' ? 'daily_streak' : claimKind === 'weekly' ? 'daily_weekly' : claimKind === 'comeback' ? 'daily_return' : 'daily';
 
   if (reward.type === 'points' || reward.type === 'zefir' || reward.type === 'coffee' || reward.type === 'profile_xp') {
     const field = reward.type === 'points' ? 'wallet' : reward.type === 'zefir' ? 'treats' : reward.type === 'coffee' ? 'coffee' : 'profile_xp';
@@ -2576,6 +2674,10 @@ function appendDailyLoyaltyRewardDeliveryStatements(statements, env, options) {
     statements.push(env.DB.prepare(`UPDATE daily_loyalty_weekly_claims SET status='delivered',delivered_at=?,updated_at=? WHERE telegram_id=? AND season_id=? AND progress_day=? AND source_request_id=? AND status='granting'`).bind(
       now,now,telegramId,seasonId,claimKey,requestId
     ));
+  } else if (claimKind === 'comeback') {
+    statements.push(env.DB.prepare(`UPDATE daily_loyalty_comeback_claims SET status='delivered',delivered_at=?,updated_at=? WHERE telegram_id=? AND season_id=? AND return_day_key=? AND source_request_id=? AND status='granting'`).bind(
+      now,now,telegramId,seasonId,claimKey,requestId
+    ));
   } else {
     statements.push(env.DB.prepare(`UPDATE daily_loyalty_claims SET status='delivered',delivered_at=?,updated_at=? WHERE telegram_id=? AND season_id=? AND day_index=? AND source_request_id=? AND status='granting'`).bind(
       now,now,telegramId,seasonId,claimKey,requestId
@@ -2594,7 +2696,19 @@ async function claimDailyLoyalty(request, env, executionCtx = null) {
     const currentDayKey = dailyLoyaltyDayKey(Date.now(), config.season.timezoneOffsetMinutes);
     let before = await readDailyLoyaltyBundle(env, telegramId, config.season.id);
     let model = dailyLoyaltyModel(config, before, currentDayKey);
-    if (model.state.todayCompleted) return jsonResponse({ ...model, repeated:true, grantedRewards:[], insuranceEvent:{used:0,earned:0} });
+    if (model.state.todayCompleted) return jsonResponse({ ...model, repeated:true, grantedRewards:[], insuranceEvent:{used:0,earned:0}, comebackEvent:null });
+
+    const missedDays=dailyLoyaltyMissedDays(before.player,currentDayKey);
+    const comebackTier=dailyLoyaltySelectComebackTier(config,missedDays);
+    let authoritativeProfile=null,comebackSelection=null,comebackReward=null,comebackSeasonReward=null;
+    if(comebackTier){
+      authoritativeProfile=await ensureAuthoritativeProfileRow(env,telegramId,'daily-loyalty-comeback');
+      comebackSelection=dailyLoyaltyChooseComebackReward(comebackTier,authoritativeProfile);
+      if(comebackSelection?.item){
+        const resolved=await resolveDailyLoyaltyClaimItem(env,comebackSelection.item);
+        comebackReward=resolved.item;comebackSeasonReward=resolved.seasonReward;
+      }
+    }
 
     const streakPlan = dailyLoyaltyStreakPlan(before.player,currentDayKey,before.insurance,config.settings);
     const nextProgressDay = Math.max(0, Number(before.player?.progress_days || 0)) + 1;
@@ -2618,14 +2732,15 @@ async function claimDailyLoyalty(request, env, executionCtx = null) {
     streakMilestone = streakResolved.item;
     const streakSeasonReward = streakResolved.seasonReward;
 
-    const resolvedItems = [weeklyReward,milestone,streakMilestone].filter(Boolean);
-    if (resolvedItems.some((item)=>['points','zefir','coffee','profile_xp'].includes(String(item.reward?.type||'')))) {
+    const resolvedItems = [weeklyReward,milestone,streakMilestone,comebackReward].filter(Boolean);
+    if (!authoritativeProfile && resolvedItems.some((item)=>['points','zefir','coffee','profile_xp'].includes(String(item.reward?.type||'')))) {
       // Fold queued/override mutations once before all immediate credits in this claim.
-      await ensureAuthoritativeProfileRow(env, telegramId, 'daily-loyalty');
+      authoritativeProfile=await ensureAuthoritativeProfileRow(env, telegramId, 'daily-loyalty');
     }
     if (weeklyReward?.reward?.type === 'season_xp' && weeklySeasonReward?.season) await ensureSeasonPassPlayer(env,weeklySeasonReward.season,telegramId);
     if (milestone?.reward?.type === 'season_xp' && seasonReward?.season) await ensureSeasonPassPlayer(env,seasonReward.season,telegramId);
     if (streakMilestone?.reward?.type === 'season_xp' && streakSeasonReward?.season) await ensureSeasonPassPlayer(env,streakSeasonReward.season,telegramId);
+    if (comebackReward?.reward?.type === 'season_xp' && comebackSeasonReward?.season) await ensureSeasonPassPlayer(env,comebackSeasonReward.season,telegramId);
 
     const now = Math.floor(Date.now() / 1000);
     const insuranceEnabled = Boolean(config.settings?.insuranceEnabled) && Number(config.settings?.insuranceMax||0) > 0;
@@ -2679,6 +2794,22 @@ async function claimDailyLoyalty(request, env, executionCtx = null) {
           telegramId,config.season.id,currentDayKey,streakPlan.nextStreak,requestId,eventKey,now,
           telegramId,config.season.id,streakPlan.nextStreak,telegramId,config.season.id,currentDayKey,requestId
         ));
+    }
+
+    if (comebackReward && comebackTier && comebackSelection) {
+      const reward=comebackReward.reward;
+      const balances=comebackSelection.balances||{points:0,zefir:0,coffee:0};
+      const rewardJson=JSON.stringify({type:reward.type,amount:reward.amount,itemId:reward.itemId,label:comebackReward.label,configRevision:config.season.revision,source:'comeback',missedDays,tierDays:comebackTier.tierDays,selectionReason:comebackSelection.reason,balances});
+      statements.push(env.DB.prepare(`INSERT OR IGNORE INTO daily_loyalty_comeback_claims(
+        telegram_id,season_id,return_day_key,missed_days,tier_days,selection_reason,balance_points,balance_zefir,balance_coffee,reward_type,amount,item_id,label,reward_json,status,source_request_id,created_at,delivered_at,updated_at
+      ) SELECT ?,?,?,?,?,?,?,?,?,?,?,?,?,?,'granting',?,?,0,? FROM daily_loyalty_activity a
+        WHERE a.telegram_id=? AND a.season_id=? AND a.day_key=? AND a.request_id=? AND a.applied=0`).bind(
+          telegramId,config.season.id,currentDayKey,missedDays,comebackTier.tierDays,comebackSelection.reason,
+          Math.max(0,Number(balances.points||0)),Math.max(0,Number(balances.zefir||0)),Math.max(0,Number(balances.coffee||0)),
+          reward.type,reward.amount,reward.itemId,comebackReward.label,rewardJson,requestId,now,now,
+          telegramId,config.season.id,currentDayKey,requestId
+        ));
+      appendDailyLoyaltyRewardDeliveryStatements(statements,env,{claimKind:'comeback',telegramId,seasonId:config.season.id,claimKey:currentDayKey,requestId,item:comebackReward,seasonReward:comebackSeasonReward,now});
     }
 
     if (weeklyReward) {
@@ -2746,7 +2877,15 @@ async function claimDailyLoyalty(request, env, executionCtx = null) {
       imageUrl:dailyLoyaltyRewardImage(String(row.reward_type||''),String(row.item_id||'')),
       reward:{type:String(row.reward_type||''),amount:Number(row.amount||0),itemId:String(row.item_id||'')}
     });
+    const comebackEvent=inserted&&comebackReward&&comebackTier&&comebackSelection?{
+      missedDays,tierDays:Number(comebackTier.tierDays||0),title:String(comebackTier.title||'С возвращением'),selectionReason:String(comebackSelection.reason||'fallback'),
+      reward:{label:String(comebackReward.label||'Подарок за возвращение'),imageUrl:comebackReward.imageUrl||dailyLoyaltyRewardImage(comebackReward.reward.type,comebackReward.reward.itemId),type:String(comebackReward.reward.type||''),amount:Number(comebackReward.reward.amount||0),itemId:String(comebackReward.reward.itemId||'')}
+    }:null;
     const grantedRewards=inserted?[
+      ...(comebackEvent?[{
+        source:'comeback',missedDays,tierDays:comebackEvent.tierDays,icon:'',label:comebackEvent.reward.label,imageUrl:comebackEvent.reward.imageUrl,
+        reward:{type:comebackEvent.reward.type,amount:comebackEvent.reward.amount,itemId:comebackEvent.reward.itemId}
+      }]:[]),
       ...(weeklyReward?[{
         source:'weekly',progressDay:nextProgressDay,cycleDay,cycleNumber,rewardWeek,
         icon:'',label:String(weeklyReward.label||dailyLoyaltyRewardTitle(weeklyReward.reward.type,weeklyReward.reward.itemId,weeklyReward.reward.amount)),
@@ -2765,11 +2904,11 @@ async function claimDailyLoyalty(request, env, executionCtx = null) {
       executionCtx.waitUntil(Promise.allSettled([
         recordPlayerTimeline(env,telegramId,'daily_loyalty_checkin',`ежедневная отметка · день ${model.state.progressDays} · серия ${model.state.streak}`,{
           seasonId:config.season.id,serverDayKey:currentDayKey,progressDays:model.state.progressDays,streak:model.state.streak,
-          insuranceEvent,grantedRewards
+          insuranceEvent,grantedRewards,comebackEvent
         },`daily_${config.season.id}_${telegramId}_${currentDayKey}`,auth.user,now)
       ]));
     }
-    return jsonResponse({...model,repeated:!inserted,grantedRewards,insuranceEvent});
+    return jsonResponse({...model,repeated:!inserted,grantedRewards,insuranceEvent,comebackEvent});
   } catch (error) {
     if (error instanceof ApiError) return jsonResponse({ ok:false,error:error.message }, error.status);
     console.error('daily loyalty claim failed', error);
@@ -2845,6 +2984,44 @@ function normalizeDailyLoyaltyWeeklyRewards(input) {
   return result.sort((a,b)=>a.weekNumber-b.weekNumber||a.cycleDay-b.cycleDay);
 }
 
+function normalizeDailyLoyaltyComebackTiers(input){
+  if(!Array.isArray(input))throw new ApiError(400,'Уровни возврата должны быть списком.');
+  if(input.length>12)throw new ApiError(400,'Максимум 12 уровней возврата.');
+  const seen=new Set();
+  const reward=(value,label)=>{
+    const outer=value&&typeof value==='object'?value:{};
+    const raw=outer.reward&&typeof outer.reward==='object'?{...outer.reward,label:outer.label||outer.reward.label}:outer;
+    const normalized=normalizeDailyLoyaltyMilestones([{dayIndex:1,label:String(raw.label||label||''),rewardType:raw.type||raw.rewardType,amount:raw.amount,itemId:raw.itemId}])[0];
+    return {type:normalized.rewardType,amount:normalized.amount,itemId:normalized.itemId,label:normalized.label};
+  };
+  return input.map((item)=>{
+    const tierDays=Math.floor(Number(item?.tierDays??item?.tier_days));
+    if(!Number.isInteger(tierDays)||tierDays<1||tierDays>3650||seen.has(tierDays))throw new ApiError(400,'Дни comeback должны быть уникальными числами от 1 до 3650.');
+    seen.add(tierDays);
+    return {tierDays,enabled:item?.enabled!==false&&Number(item?.enabled)!==0,title:String(item?.title||'С возвращением').trim().slice(0,120)||'С возвращением',
+      thresholds:{points:Math.max(0,Math.min(1_000_000_000,Math.floor(Number(item?.thresholds?.points||0)))),zefir:Math.max(0,Math.min(1_000_000_000,Math.floor(Number(item?.thresholds?.zefir||0)))),coffee:Math.max(0,Math.min(1_000_000_000,Math.floor(Number(item?.thresholds?.coffee||0))))},
+      rewards:{fallback:reward(item?.rewards?.fallback,'Подарок за возвращение'),lowPoints:reward(item?.rewards?.lowPoints,'Помощь с очками'),lowZefir:reward(item?.rewards?.lowZefir,'Помощь с зефиром'),lowCoffee:reward(item?.rewards?.lowCoffee,'Помощь с кофе')}};
+  }).sort((a,b)=>a.tierDays-b.tierDays);
+}
+function dailyLoyaltyEconomyPreview(config,guard){
+  const g=guard||dailyLoyaltyEconomyGuardFromRow({});
+  const total={points:0,zefir:0,coffee:0,profileXp:0,seasonXp:0,cases:0,boosters:0,cosmetics:0};
+  const add=(item)=>{const r=item?.reward||item;if(!r?.type)return;const n=Math.max(0,Number(r.amount||0));if(r.type==='points')total.points+=n;else if(r.type==='zefir')total.zefir+=n;else if(r.type==='coffee')total.coffee+=n;else if(r.type==='profile_xp')total.profileXp+=n;else if(r.type==='season_xp')total.seasonXp+=n;else if(r.type==='case'||r.type==='seasonal_case')total.cases+=n;else if(String(r.type).startsWith('booster_'))total.boosters+=n;else if(SEASON_PASS_COSMETIC_KINDS.includes(r.type))total.cosmetics+=1;};
+  for(const item of config?.weeklyRewards||[])add(item);
+  for(const item of config?.milestones||[])if(Number(item.dayIndex||0)<=42)add(item);
+  if(config?.settings?.streakRewardsEnabled!==false)for(const item of config?.streakMilestones||[])if(Number(item.streakThreshold||0)<=42)add(item);
+  const all=[];
+  for(const item of config?.weeklyRewards||[])all.push({where:`Неделя ${item.weekNumber} · Д${item.cycleDay}`,item});
+  for(const item of config?.milestones||[])all.push({where:`Большой этап · день ${item.dayIndex}`,item});
+  if(config?.settings?.streakRewardsEnabled!==false)for(const item of config?.streakMilestones||[])all.push({where:`Серия · ${item.streakThreshold} дней`,item});
+  for(const tier of config?.comebackTiers||[])if(tier?.enabled!==false)for(const [key,item] of Object.entries(tier.rewards||{}))all.push({where:`Возврат ${tier.tierDays} дн. · ${key}`,item});
+  const risks=[];
+  for(const row of all){const r=row.item?.reward||row.item;if(!r?.type)continue;const n=Math.max(0,Number(r.amount||0));let limit=0;if(r.type==='points')limit=g.hardPointsPerClaim;else if(r.type==='zefir')limit=g.hardZefirPerClaim;else if(r.type==='coffee')limit=g.hardCoffeePerClaim;else if(r.type==='case'||r.type==='seasonal_case')limit=g.hardCasesPerClaim;if(limit&&n>limit)risks.push({where:row.where,type:r.type,amount:n,limit});}
+  const audience=Math.max(1,Number(g.audienceSize||10000));
+  const audienceTotals={};for(const [k,v] of Object.entries(total))audienceTotals[k]=Math.round(Number(v||0)*audience);
+  return {audienceSize:audience,perPlayer42:total,audience42:audienceTotals,risks,requiresConfirmation:Boolean(g.requireConfirmation&&risks.length),confirmationPhrase:DAILY_LOYALTY_ECONOMY_CONFIRMATION};
+}
+
 async function dailyLoyaltyRetentionAnalytics(env,config,currentDayKey){
   const seasonId=String(config.season.id);
   const days=[1,2,3,7,14,30];
@@ -2858,9 +3035,11 @@ async function dailyLoyaltyRetentionAnalytics(env,config,currentDayKey){
   const retention=await env.DB.prepare(`WITH firsts AS (
       SELECT telegram_id,MIN(day_key) AS first_day FROM daily_loyalty_activity WHERE season_id=? AND applied=1 GROUP BY telegram_id
     ) SELECT ${select.join(',')} FROM firsts f WHERE f.first_day>=date(?,'-120 day')`).bind(seasonId,...binds,currentDayKey).first().catch(()=>({}));
-  const [insurance,streakClaims]=await Promise.all([
+  const [insurance,streakClaims,comebackClaims,comebackReasons]=await Promise.all([
     env.DB.prepare(`SELECT COUNT(*) AS players,SUM(CASE WHEN balance>0 THEN 1 ELSE 0 END) AS holders,COALESCE(SUM(balance),0) AS available,COALESCE(SUM(earned_count),0) AS earned,COALESCE(SUM(used_count),0) AS used FROM daily_loyalty_insurance WHERE season_id=?`).bind(seasonId).first().catch(()=>({})),
-    env.DB.prepare(`SELECT streak_threshold,COUNT(*) AS count FROM daily_loyalty_streak_claims WHERE season_id=? AND status='delivered' GROUP BY streak_threshold ORDER BY streak_threshold`).bind(seasonId).all().catch(()=>({results:[]}))
+    env.DB.prepare(`SELECT streak_threshold,COUNT(*) AS count FROM daily_loyalty_streak_claims WHERE season_id=? AND status='delivered' GROUP BY streak_threshold ORDER BY streak_threshold`).bind(seasonId).all().catch(()=>({results:[]})),
+    env.DB.prepare(`SELECT tier_days,COUNT(*) AS count FROM daily_loyalty_comeback_claims WHERE season_id=? AND status='delivered' GROUP BY tier_days ORDER BY tier_days`).bind(seasonId).all().catch(()=>({results:[]})),
+    env.DB.prepare(`SELECT selection_reason,COUNT(*) AS count FROM daily_loyalty_comeback_claims WHERE season_id=? AND status='delivered' GROUP BY selection_reason ORDER BY count DESC`).bind(seasonId).all().catch(()=>({results:[]}))
   ]);
   const retentionView={};
   for(const n of days){
@@ -2871,7 +3050,9 @@ async function dailyLoyaltyRetentionAnalytics(env,config,currentDayKey){
   return {
     retention:retentionView,
     insurance:{players:Number(insurance?.players||0),holders:Number(insurance?.holders||0),available:Number(insurance?.available||0),earned:Number(insurance?.earned||0),used:Number(insurance?.used||0)},
-    streakBonusClaims:(streakClaims.results||[]).map((row)=>({threshold:Number(row.streak_threshold||0),count:Number(row.count||0)}))
+    streakBonusClaims:(streakClaims.results||[]).map((row)=>({threshold:Number(row.streak_threshold||0),count:Number(row.count||0)})),
+    comebackClaims:(comebackClaims.results||[]).map((row)=>({tierDays:Number(row.tier_days||0),count:Number(row.count||0)})),
+    comebackReasons:(comebackReasons.results||[]).map((row)=>({reason:String(row.selection_reason||'fallback'),count:Number(row.count||0)}))
   };
 }
 
@@ -2885,7 +3066,7 @@ async function ownerPanelDailyLoyalty(env, ctx) {
     env.DB.prepare(`SELECT COALESCE(MAX(best_streak),0) AS value FROM daily_loyalty_players WHERE season_id=?`).bind(config.season.id).first(),
     dailyLoyaltyRetentionAnalytics(env,config,currentDayKey)
   ]);
-  return { ok:true, daily:{ ...config, rewardCatalog:dailyLoyaltyOwnerRewardCatalog(), serverDayKey:currentDayKey, analytics, stats:{ players:Number(players?.count||0), today:Number(today?.count||0), bestStreak:Number(longest?.value||0) } } };
+  return { ok:true, daily:{ ...config, rewardCatalog:dailyLoyaltyOwnerRewardCatalog(), serverDayKey:currentDayKey, analytics, economyPreview:dailyLoyaltyEconomyPreview(config,config.economyGuard), stats:{ players:Number(players?.count||0), today:Number(today?.count||0), bestStreak:Number(longest?.value||0) } } };
 }
 
 async function ownerPanelDailyLoyaltySave(env, ctx) {
@@ -2908,7 +3089,11 @@ async function ownerPanelDailyLoyaltySave(env, ctx) {
   const milestones = normalizeDailyLoyaltyMilestones(body.milestones || []);
   const weeklyRewards=normalizeDailyLoyaltyWeeklyRewards(body.weeklyRewards ?? current.weeklyRewards ?? []);
   const streakMilestones=normalizeDailyLoyaltyStreakMilestones(body.streakMilestones ?? current.streakMilestones ?? []);
+  const comebackTiers=normalizeDailyLoyaltyComebackTiers(body.comebackTiers ?? current.comebackTiers ?? []);
   if (!milestones.length) throw new ApiError(400, 'Добавьте хотя бы одну награду.');
+  const guard={...current.economyGuard,audienceSize:Math.max(1,Math.min(100_000_000,Math.floor(Number(body?.economyGuard?.audienceSize??current.economyGuard?.audienceSize??10000))))};
+  const economyPreview=dailyLoyaltyEconomyPreview({weeklyRewards,milestones,streakMilestones,comebackTiers,settings:{streakRewardsEnabled}},guard);
+  if(economyPreview.requiresConfirmation&&String(body.economyConfirmation||'').trim()!==DAILY_LOYALTY_ECONOMY_CONFIRMATION)throw new ApiError(409,`Экономический предохранитель: найдена слишком крупная разовая награда. Для осознанного сохранения введите «${DAILY_LOYALTY_ECONOMY_CONFIRMATION}».`);
   const now = Math.floor(Date.now() / 1000);
   const seasonId = String(current.season.id || 'daily-main');
   const statements = [
@@ -2922,7 +3107,12 @@ async function ownerPanelDailyLoyaltySave(env, ctx) {
     env.DB.prepare(`UPDATE daily_loyalty_insurance SET balance=MIN(balance,?),updated_at=? WHERE season_id=?`).bind(insuranceMax,now,seasonId),
     env.DB.prepare(`DELETE FROM daily_loyalty_milestones WHERE season_id=?`).bind(seasonId),
     env.DB.prepare(`DELETE FROM daily_loyalty_progressive_rewards WHERE season_id=?`).bind(seasonId),
-    env.DB.prepare(`DELETE FROM daily_loyalty_streak_milestones WHERE season_id=?`).bind(seasonId)
+    env.DB.prepare(`DELETE FROM daily_loyalty_streak_milestones WHERE season_id=?`).bind(seasonId),
+    env.DB.prepare(`DELETE FROM daily_loyalty_comeback_tiers WHERE season_id=?`).bind(seasonId),
+    env.DB.prepare(`INSERT INTO daily_loyalty_economy_guard(season_id,audience_size,hard_points_per_claim,hard_zefir_per_claim,hard_coffee_per_claim,hard_cases_per_claim,require_confirmation,updated_at) VALUES(?,?,?,?,?,?,?,?)
+      ON CONFLICT(season_id) DO UPDATE SET audience_size=excluded.audience_size,hard_points_per_claim=excluded.hard_points_per_claim,hard_zefir_per_claim=excluded.hard_zefir_per_claim,hard_coffee_per_claim=excluded.hard_coffee_per_claim,hard_cases_per_claim=excluded.hard_cases_per_claim,require_confirmation=excluded.require_confirmation,updated_at=excluded.updated_at`).bind(
+        seasonId,guard.audienceSize,guard.hardPointsPerClaim,guard.hardZefirPerClaim,guard.hardCoffeePerClaim,guard.hardCasesPerClaim,guard.requireConfirmation?1:0,now
+      )
   ];
   for (const row of milestones) statements.push(env.DB.prepare(`INSERT INTO daily_loyalty_milestones(season_id,day_index,icon,label,reward_type,amount,item_id,sort_order,created_at,updated_at)
     VALUES(?,?,?,?,?,?,?,?,?,?)`).bind(seasonId,row.dayIndex,row.icon,row.label,row.rewardType,row.amount,row.itemId,row.sortOrder,now,now));
@@ -2930,12 +3120,15 @@ async function ownerPanelDailyLoyaltySave(env, ctx) {
     VALUES(?,?,?,?,?,?,?,?,?,?)`).bind(seasonId,row.weekNumber,row.cycleDay,row.label,row.rewardType,row.amount,row.itemId,row.sortOrder,now,now));
   for(const row of streakMilestones)statements.push(env.DB.prepare(`INSERT INTO daily_loyalty_streak_milestones(season_id,streak_threshold,label,reward_type,amount,item_id,sort_order,created_at,updated_at)
     VALUES(?,?,?,?,?,?,?,?,?)`).bind(seasonId,row.streakThreshold,row.label,row.rewardType,row.amount,row.itemId,row.sortOrder,now,now));
+  for(const tier of comebackTiers)statements.push(env.DB.prepare(`INSERT INTO daily_loyalty_comeback_tiers(season_id,tier_days,enabled,title,points_threshold,zefir_threshold,coffee_threshold,fallback_reward_json,low_points_reward_json,low_zefir_reward_json,low_coffee_reward_json,sort_order,created_at,updated_at)
+    VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).bind(seasonId,tier.tierDays,tier.enabled?1:0,tier.title,tier.thresholds.points,tier.thresholds.zefir,tier.thresholds.coffee,
+      JSON.stringify(tier.rewards.fallback),JSON.stringify(tier.rewards.lowPoints),JSON.stringify(tier.rewards.lowZefir),JSON.stringify(tier.rewards.lowCoffee),tier.tierDays,now,now));
   await env.DB.batch(statements);
   invalidateDailyLoyaltyConfig();
   try {
     await logStaffAction(env, ctx.user, ctx.access, 'owner_panel_daily_loyalty_save', null, 'daily_loyalty', null, null, {
       seasonId,title,enabled:Boolean(enabled),timezoneOffsetMinutes,
-      settings:{insuranceEnabled,insuranceEveryDays,insuranceMax,streakRewardsEnabled},milestones,weeklyRewards,streakMilestones
+      settings:{insuranceEnabled,insuranceEveryDays,insuranceMax,streakRewardsEnabled},milestones,weeklyRewards,streakMilestones,comebackTiers,economyPreview
     });
   } catch (error) { console.error('daily loyalty config audit failed', error); }
   return ownerPanelDailyLoyalty(env, ctx);

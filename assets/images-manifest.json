@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "catalogHash": "f0622b05b6d6495d",
-  "count": 352,
+  "catalogHash": "46cc91f829103958",
+  "count": 353,
   "images": [
     {
       "fileName": "cases/398D69BA-8943-4846-94B3-FC5CB717A67F.PNG",
@@ -2810,6 +2810,14 @@
       "path": "/assets/ui/icone_prize.png",
       "size": 705491,
       "modified": 1786903690000
+    },
+    {
+      "fileName": "ui/icone_return_player.png",
+      "label": "Icone return player",
+      "folder": "ui",
+      "path": "/assets/ui/icone_return_player.png",
+      "size": 2351032,
+      "modified": 1787447774000
     },
     {
       "fileName": "ui/icone_reward.png",
