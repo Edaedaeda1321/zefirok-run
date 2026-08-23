@@ -1593,6 +1593,21 @@ export default {
         headers.set("Content-Security-Policy", "default-src 'self'; script-src 'self' 'unsafe-inline' https://telegram.org; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'self'; base-uri 'none'; form-action 'none'; object-src 'none'");
         return new Response(asset.body, { status: asset.status, statusText: asset.statusText, headers });
       }
+      if (url.pathname === "/album.html" && request.method === "GET") {
+        if (!env.ASSETS) return new Response("Not found", { status: 404 });
+        const asset = await env.ASSETS.fetch(request);
+        const headers = new Headers(asset.headers);
+        headers.set("Cache-Control", "no-store, no-cache, must-revalidate, private");
+        headers.set("Pragma", "no-cache");
+        headers.set("X-Robots-Tag", "noindex, nofollow, noarchive");
+        headers.set("Referrer-Policy", "no-referrer");
+        headers.set("X-Content-Type-Options", "nosniff");
+        headers.set("X-Frame-Options", "SAMEORIGIN");
+        headers.set("Cross-Origin-Resource-Policy", "same-origin");
+        headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=()");
+        headers.set("Content-Security-Policy", "default-src 'self'; script-src 'self' 'unsafe-inline' https://telegram.org; style-src 'self' 'unsafe-inline'; img-src 'self' https: data:; connect-src 'self'; frame-ancestors 'self'; base-uri 'none'; form-action 'none'; object-src 'none'");
+        return new Response(asset.body, { status: asset.status, statusText: asset.statusText, headers });
+      }
       if (url.pathname === "/staff-qr.html" && request.method === "GET") {
         if (!env.ASSETS) return new Response("Not found", { status: 404 });
         const asset = await env.ASSETS.fetch(request);
@@ -1649,6 +1664,16 @@ export default {
       const maintenanceResponse = await enforceMaintenanceForRequest(request, url, env);
       if (maintenanceResponse) return maintenanceResponse;
 
+      if (url.pathname === "/api/album/state" && request.method === "POST") {
+        const legalGate = await enforceLegalAcceptanceForRequest(request, env);
+        if (legalGate) return legalGate;
+        return await getAlbumState(request, env);
+      }
+      if (url.pathname === "/api/album/claim" && request.method === "POST") {
+        const legalGate = await enforceLegalAcceptanceForRequest(request, env);
+        if (legalGate) return legalGate;
+        return await claimAlbumMilestone(request, env);
+      }
       if (url.pathname === "/api/referrals/state" && request.method === "POST") {
         return await getReferralState(request, env);
       }
@@ -1758,6 +1783,9 @@ export default {
         const legalGate = await enforceLegalAcceptanceForRequest(request, env);
         if (legalGate) return legalGate;
         return await withPlayerApiPerformance(env, ctx, "game_startup", () => getGameStartupPackage(request, env, ctx));
+      }
+      if (url.pathname === "/api/account/revision" && request.method === "POST") {
+        return await getPlayerAccountRevisionResponse(request, env);
       }
       if (url.pathname === "/api/news/read" && request.method === "POST") {
         return await markGameNewsRead(request, env);
@@ -4132,6 +4160,106 @@ async function claimPlayerGift(request, env, ctx) {
   }
 }
 
+let playerAccountRevisionSchemaReady = false;
+let playerAccountRevisionSchemaPromise = null;
+
+async function ensurePlayerAccountRevisionSchema(env) {
+  if (playerAccountRevisionSchemaReady) return;
+  if (playerAccountRevisionSchemaPromise) return playerAccountRevisionSchemaPromise;
+  playerAccountRevisionSchemaPromise = (async () => {
+    await env.DB.batch([
+      env.DB.prepare(`CREATE TABLE IF NOT EXISTS player_account_revision (
+        telegram_id TEXT PRIMARY KEY,
+        revision INTEGER NOT NULL DEFAULT 1 CHECK(revision >= 1),
+        updated_at INTEGER NOT NULL DEFAULT 0
+      )`),
+      env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_player_account_revision_updated ON player_account_revision(updated_at DESC)`),
+      env.DB.prepare(`CREATE TRIGGER IF NOT EXISTS trg_account_revision_profile_insert
+        AFTER INSERT ON admin_profile_state BEGIN
+          INSERT INTO player_account_revision(telegram_id,revision,updated_at) VALUES(NEW.telegram_id,1,unixepoch())
+          ON CONFLICT(telegram_id) DO UPDATE SET revision=player_account_revision.revision+1,updated_at=excluded.updated_at;
+        END`),
+      env.DB.prepare(`CREATE TRIGGER IF NOT EXISTS trg_account_revision_profile_economy
+        AFTER UPDATE OF wallet,treats,coffee,profile_xp ON admin_profile_state
+        WHEN OLD.wallet<>NEW.wallet OR OLD.treats<>NEW.treats OR OLD.coffee<>NEW.coffee OR OLD.profile_xp<>NEW.profile_xp
+        BEGIN
+          INSERT INTO player_account_revision(telegram_id,revision,updated_at) VALUES(NEW.telegram_id,1,unixepoch())
+          ON CONFLICT(telegram_id) DO UPDATE SET revision=player_account_revision.revision+1,updated_at=excluded.updated_at;
+        END`),
+      env.DB.prepare(`CREATE TRIGGER IF NOT EXISTS trg_account_revision_case_state_insert
+        AFTER INSERT ON case_player_state BEGIN
+          INSERT INTO player_account_revision(telegram_id,revision,updated_at) VALUES(NEW.telegram_id,1,unixepoch())
+          ON CONFLICT(telegram_id) DO UPDATE SET revision=player_account_revision.revision+1,updated_at=excluded.updated_at;
+        END`),
+      env.DB.prepare(`CREATE TRIGGER IF NOT EXISTS trg_account_revision_case_state_update
+        AFTER UPDATE ON case_player_state BEGIN
+          INSERT INTO player_account_revision(telegram_id,revision,updated_at) VALUES(NEW.telegram_id,1,unixepoch())
+          ON CONFLICT(telegram_id) DO UPDATE SET revision=player_account_revision.revision+1,updated_at=excluded.updated_at;
+        END`),
+      env.DB.prepare(`CREATE TRIGGER IF NOT EXISTS trg_account_revision_granted_case_insert
+        AFTER INSERT ON granted_cases BEGIN
+          INSERT INTO player_account_revision(telegram_id,revision,updated_at) VALUES(NEW.telegram_id,1,unixepoch())
+          ON CONFLICT(telegram_id) DO UPDATE SET revision=player_account_revision.revision+1,updated_at=excluded.updated_at;
+        END`),
+      env.DB.prepare(`CREATE TRIGGER IF NOT EXISTS trg_account_revision_granted_case_update
+        AFTER UPDATE ON granted_cases BEGIN
+          INSERT INTO player_account_revision(telegram_id,revision,updated_at) VALUES(NEW.telegram_id,1,unixepoch())
+          ON CONFLICT(telegram_id) DO UPDATE SET revision=player_account_revision.revision+1,updated_at=excluded.updated_at;
+        END`),
+      env.DB.prepare(`CREATE TRIGGER IF NOT EXISTS trg_account_revision_pass_insert
+        AFTER INSERT ON season_pass_players BEGIN
+          INSERT INTO player_account_revision(telegram_id,revision,updated_at) VALUES(NEW.telegram_id,1,unixepoch())
+          ON CONFLICT(telegram_id) DO UPDATE SET revision=player_account_revision.revision+1,updated_at=excluded.updated_at;
+        END`),
+      env.DB.prepare(`CREATE TRIGGER IF NOT EXISTS trg_account_revision_pass_update
+        AFTER UPDATE ON season_pass_players BEGIN
+          INSERT INTO player_account_revision(telegram_id,revision,updated_at) VALUES(NEW.telegram_id,1,unixepoch())
+          ON CONFLICT(telegram_id) DO UPDATE SET revision=player_account_revision.revision+1,updated_at=excluded.updated_at;
+        END`)
+    ]);
+    playerAccountRevisionSchemaReady = true;
+  })().finally(() => { playerAccountRevisionSchemaPromise = null; });
+  return playerAccountRevisionSchemaPromise;
+}
+
+function bumpPlayerAccountRevisionStatement(env, telegramId, now = Math.floor(Date.now()/1000)) {
+  return env.DB.prepare(`INSERT INTO player_account_revision(telegram_id,revision,updated_at) VALUES(?,1,?)
+    ON CONFLICT(telegram_id) DO UPDATE SET revision=player_account_revision.revision+1,updated_at=excluded.updated_at`).bind(String(telegramId), now);
+}
+
+async function ensurePlayerAccountRevisionAvailable(env) {
+  if (playerAccountRevisionSchemaReady) return;
+  try {
+    await env.DB.prepare(`SELECT revision FROM player_account_revision LIMIT 1`).first();
+    playerAccountRevisionSchemaReady = true;
+  } catch {
+    await ensurePlayerAccountRevisionSchema(env);
+  }
+}
+
+async function readPlayerAccountRevision(env, telegramId) {
+  await ensurePlayerAccountRevisionAvailable(env);
+  const id = String(telegramId || '');
+  if (!id) return 0;
+  const row = await env.DB.prepare(`SELECT revision FROM player_account_revision WHERE telegram_id=? LIMIT 1`).bind(id).first();
+  return Math.max(0, Number(row?.revision || 0));
+}
+
+async function getPlayerAccountRevisionResponse(request, env) {
+  try {
+    const body = await readJson(request);
+    const initData = String(body.initData || '');
+    if (!initData) throw new ApiError(401, 'Telegram initData отсутствует.');
+    requireBotToken(env);
+    const auth = await validateTelegramInitData(initData, env);
+    return jsonResponse({ ok:true, accountRevision:await readPlayerAccountRevision(env,String(auth.user.id)), generatedAt:Date.now() });
+  } catch (error) {
+    if (error instanceof ApiError) return jsonResponse({ ok:false, error:error.message }, error.status);
+    console.error('getPlayerAccountRevisionResponse failed', error);
+    return jsonResponse({ ok:false, error:'Не удалось проверить состояние аккаунта.' }, 500);
+  }
+}
+
 function startupSectionError(error) {
   return {
     status: error instanceof ApiError ? error.status : 500,
@@ -4197,7 +4325,8 @@ async function getGameStartupPackage(request, env, ctx = null) {
       publicFeatureFlags(env, telegramId, { trustedIdentity: true }),
       getGameNewsForPlayer(env, telegramId),
       playerGiftInboxPayload(env, telegramId),
-      seasonPassMiniGameVisualsForPlayer(env, telegramId)
+      seasonPassMiniGameVisualsForPlayer(env, telegramId),
+      readPlayerAccountRevision(env, telegramId)
     ]);
 
     let profile = null;
@@ -4215,7 +4344,7 @@ async function getGameStartupPackage(request, env, ctx = null) {
       Promise.all([startupSideSections,presencePromise]).then(([side])=>side)
     ]);
     const casesResult = casesSettled[0];
-    const [taskNoticeResult, seasonPassBonusResult, rewardsResult, flagsResult, newsResult, giftsResult, miniGameVisualResult] = sideSettled;
+    const [taskNoticeResult, seasonPassBonusResult, rewardsResult, flagsResult, newsResult, giftsResult, miniGameVisualResult, accountRevisionResult] = sideSettled;
     const cases = casesResult.status === "fulfilled" ? casesResult.value : null;
     const rewards = rewardsResult.status === "fulfilled" ? rewardsResult.value : null;
     const flags = flagsResult.status === "fulfilled" ? flagsResult.value : null;
@@ -4223,6 +4352,7 @@ async function getGameStartupPackage(request, env, ctx = null) {
     const gifts = giftsResult.status === "fulfilled" ? giftsResult.value : null;
     const miniGameVisuals = miniGameVisualResult.status === "fulfilled" ? miniGameVisualResult.value : seasonPassResolveMiniGameVisuals([], '');
     const miniGameVisual = miniGameVisuals.treats;
+    const accountRevision = accountRevisionResult?.status === "fulfilled" ? Math.max(0, Number(accountRevisionResult.value || 0)) : 0;
     const seasonPassTaskNotice = taskNoticeResult.status === "fulfilled" ? taskNoticeResult.value : null;
     const seasonPassBonus = seasonPassBonusResult.status === "fulfilled"
       ? seasonPassBonusResult.value
@@ -4252,6 +4382,7 @@ async function getGameStartupPackage(request, env, ctx = null) {
       gifts,
       miniGameVisual,
       miniGameVisuals,
+      accountRevision,
       errors
     });
   } catch (error) {
@@ -20328,6 +20459,36 @@ async function ensureSafeControlCenterSchema(env) {
   await safeControlCenterSchemaPromise;
 }
 
+let retentionOpsV14SchemaPromise = null;
+async function ensureRetentionOpsV14Schema(env) {
+  if (!retentionOpsV14SchemaPromise) {
+    retentionOpsV14SchemaPromise = (async () => {
+      await env.DB.batch([
+        env.DB.prepare(`CREATE TABLE IF NOT EXISTS liveops_event_templates (
+          template_key TEXT PRIMARY KEY,title TEXT NOT NULL,description TEXT NOT NULL DEFAULT '',duration_hours INTEGER NOT NULL DEFAULT 24,
+          payload_json TEXT NOT NULL DEFAULT '{}',enabled INTEGER NOT NULL DEFAULT 1,system_template INTEGER NOT NULL DEFAULT 0,
+          sort_order INTEGER NOT NULL DEFAULT 0,created_at INTEGER NOT NULL,updated_at INTEGER NOT NULL,updated_by TEXT NOT NULL DEFAULT '')`),
+        env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_liveops_event_templates_enabled ON liveops_event_templates(enabled,sort_order,updated_at DESC)`),
+        env.DB.prepare(`CREATE TABLE IF NOT EXISTS release_gate_runs (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,source TEXT NOT NULL DEFAULT 'manual',status TEXT NOT NULL,
+          critical_count INTEGER NOT NULL DEFAULT 0,warning_count INTEGER NOT NULL DEFAULT 0,result_json TEXT NOT NULL DEFAULT '{}',
+          change_set_id TEXT NOT NULL DEFAULT '',created_at INTEGER NOT NULL,created_by TEXT NOT NULL DEFAULT '',duration_ms INTEGER NOT NULL DEFAULT 0)`),
+        env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_release_gate_runs_created ON release_gate_runs(created_at DESC,id DESC)`),
+        env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_release_gate_runs_change_set ON release_gate_runs(change_set_id,created_at DESC)`)
+      ]);
+      const now=Math.floor(Date.now()/1000), rows=[
+        ['weekend_activity','Выходные в кафе','Короткое рейтинговое событие на выходные: Золотой кейс победителю и небольшая награда участникам.',48,{winnerReward:{kind:'case',id:'gold',amount:1,imageUrl:''},participantReward:{kind:'points',amount:500},shop:{products:{},discounts:{}},broadcasts:{start:'🏁 Выходные в кафе начались! Участвуй в забегах и поднимайся в рейтинге.',end:'🏆 Выходные в кафе завершены. Проверь итог и награды!'}},10],
+        ['return_week','Неделя возвращения','Недельное LiveOps-событие для дополнительной активности. Персональная comeback-логика Daily не изменяется.',168,{winnerReward:{kind:'case',id:'mythic',amount:1,imageUrl:''},participantReward:{kind:'points',amount:750},shop:{products:{},discounts:{}},broadcasts:{start:'💗 Неделя возвращения началась! Загляни к Зеффи и участвуй в общем рейтинге.',end:'✨ Неделя возвращения завершена. Спасибо, что снова заглянул в кафе!'}},20],
+        ['season_start','Старт сезона','Трёхдневное событие на запуск сезона: сильная награда победителю и обычный кейс участникам.',72,{winnerReward:{kind:'case',id:'legendary',amount:1,imageUrl:''},participantReward:{kind:'case',id:'small',amount:1},shop:{products:{},discounts:{}},broadcasts:{start:'🌟 Новый сезон стартовал! Начинай забег и поднимайся в рейтинге события.',end:'🎉 Стартовое событие сезона завершено. Награды готовы!'}},30],
+        ['season_final','Финальная неделя сезона','Финальные 48 часов сезона: Легендарный кейс победителю и 1 000 очков участникам.',48,{winnerReward:{kind:'case',id:'legendary',amount:1,imageUrl:''},participantReward:{kind:'points',amount:1000},shop:{products:{},discounts:{}},broadcasts:{start:'🔥 Финальный рывок сезона! Осталось совсем немного времени.',end:'🏆 Финальный рывок завершён. Сезонные результаты зафиксированы!'}},40],
+        ['holiday_cafe','Праздничное кафе','Праздничное событие на 48 часов с Мифическим кейсом победителю и небольшим подарком участникам.',48,{winnerReward:{kind:'case',id:'mythic',amount:1,imageUrl:''},participantReward:{kind:'zefir',amount:150},shop:{products:{},discounts:{}},broadcasts:{start:'🎀 Праздничное кафе открыто! Участвуй в событии вместе с Зеффи.',end:'🎁 Праздничное событие завершено. Спасибо за участие!'}},50]
+      ];
+      await env.DB.batch(rows.map(([key,title,description,hours,payload,sort])=>env.DB.prepare(`INSERT OR IGNORE INTO liveops_event_templates(template_key,title,description,duration_hours,payload_json,enabled,system_template,sort_order,created_at,updated_at,updated_by) VALUES(?,?,?,?,?,1,1,?,?,?,'runtime-v14')`).bind(key,title,description,hours,JSON.stringify(payload),sort,now,now)));
+    })().catch((error)=>{retentionOpsV14SchemaPromise=null;throw error;});
+  }
+  await retentionOpsV14SchemaPromise;
+}
+
 function safeJson(value, fallback = {}) {
   try {
     const parsed = typeof value === "string" ? JSON.parse(value) : value;
@@ -20929,6 +21090,7 @@ async function finishSafeEvent(row, env, cancelled = false) {
 }
 
 async function deliverQueuedReward(env, row, leaseToken) {
+  await ensurePlayerAccountRevisionAvailable(env);
   const amount = Math.max(1, Math.floor(Number(row.amount || 1)));
   const telegramId = String(row.telegram_id);
   const queueId = Math.max(1, Math.floor(Number(row.id || 0)));
@@ -21036,6 +21198,11 @@ async function deliverQueuedReward(env, row, leaseToken) {
     ).bind(cosmeticId, cosmeticId, now, telegramId, queueId, token));
   }
 
+  // Every successful queued economic delivery advances one global account revision.
+  // Table triggers cover direct/legacy mutations; this explicit bump also covers
+  // pending-wallet writes that are folded into the visible profile later.
+  statements.push(bumpPlayerAccountRevisionStatement(env, telegramId, now));
+
   statements.push(env.DB.prepare(
     `UPDATE reward_delivery_queue
      SET status='delivered',attempts=attempts+1,last_error='',delivered_at=?,updated_at=?,lease_token='',lease_until=0
@@ -21082,7 +21249,7 @@ async function deliverQueuedReward(env, row, leaseToken) {
   if (["avatar", "frame", "trail", "skin", "music"].includes(row.reward_kind)) {
     try { await recordContentAnalyticsEvent(env, telegramId, row.reward_kind, cosmeticId || row.reward_id, cosmeticDuplicate ? "duplicate" : "acquired", row.source_type, row.source_id); } catch (error) { console.error("reward delivery analytics failed", error); }
   }
-  if (!["gift_inbox", "leaderboard", "season_story"].includes(String(row.source_type || ""))) {
+  if (!["gift_inbox", "leaderboard", "season_story", "album_milestone"].includes(String(row.source_type || ""))) {
     try {
       const subscriber = await env.DB.prepare(`SELECT chat_id FROM bot_subscribers WHERE telegram_id=? AND active=1 LIMIT 1`).bind(telegramId).first();
       if (subscriber?.chat_id) await sendTelegramMessage(env, subscriber.chat_id, `<b>🎁 Награда доставлена</b>\n\n${escapeHtml(rewardDescription)}\nПричина: ${escapeHtml(row.reason || "Системная выдача")}\n\nНаграда уже записана в профиль. Откройте игру или обновите раздел с кейсами.`, { inline_keyboard: [[{ text: "🎮 Открыть игру", web_app: { url: configuredGameUrl(env) } }], [{ text: "📋 Задания", callback_data: "menu:tasks" }]] });
@@ -21091,8 +21258,27 @@ async function deliverQueuedReward(env, row, leaseToken) {
   return { cosmeticDuplicate };
 }
 
+async function reconcileRewardDeliveryQueue(env, telegramId = "") {
+  await ensureSafeControlCenterSchema(env);
+  const now = Math.floor(Date.now()/1000);
+  const player = String(telegramId || "");
+  const suffix = player ? " AND telegram_id=?" : "";
+  const bind = (statement, ...values) => player ? statement.bind(...values, player) : statement.bind(...values);
+  // A crashed isolate must not leave a reward visually stuck in `delivering`.
+  // Expired leases are safe to return to pending because the economic effect is
+  // protected by reward_delivery_effects / source idempotency.
+  await bind(env.DB.prepare(`UPDATE reward_delivery_queue
+    SET status='pending',lease_token='',lease_until=0,updated_at=?
+    WHERE status='delivering' AND lease_until>0 AND lease_until<? AND attempts<5${suffix}`), now, now).run();
+  // Terminal rows must never keep a stale lease after delivery/claim/cancel.
+  await bind(env.DB.prepare(`UPDATE reward_delivery_queue
+    SET lease_token='',lease_until=0,updated_at=CASE WHEN updated_at>0 THEN updated_at ELSE ? END
+    WHERE status IN ('delivered','claimed','cancelled') AND (lease_token<>'' OR lease_until<>0)${suffix}`), now).run();
+}
+
 async function processRewardDeliveryQueue(env, limit = 25) {
   await ensureSafeControlCenterSchema(env);
+  await reconcileRewardDeliveryQueue(env);
   const now = Math.floor(Date.now() / 1000);
   const max = Math.max(1, Math.min(100, Math.floor(Number(limit) || 25)));
   const rows = await env.DB.prepare(
@@ -21136,6 +21322,7 @@ async function processRewardDeliveryQueue(env, limit = 25) {
 
 async function processPlayerRewardDeliveryQueue(env, telegramId, limit = 10) {
   await ensureSafeControlCenterSchema(env);
+  await reconcileRewardDeliveryQueue(env, telegramId);
   const now = Math.floor(Date.now() / 1000);
   const max = Math.max(1, Math.min(25, Number(limit) || 10));
   const rows = await env.DB.prepare(
@@ -31774,14 +31961,14 @@ async function ownerPanelEconomyFlowWindow(env, since) {
 }
 
 async function ownerPanelV8AnalyticsFresh(env, ctx) {
-  await Promise.all([ensureOperationsSecuritySchema(env), ensureV67Schema(env), ensureLiveOpsAdminSchema(env), ensureSeasonPassSchema(env), ensureAuthoritativeEconomySchema(env), ensureSafeControlCenterSchema(env), ensureReferralSchema(env)]);
+  await Promise.all([ensureOperationsSecuritySchema(env), ensureV67Schema(env), ensureLiveOpsAdminSchema(env), ensureSeasonPassSchema(env), ensureAuthoritativeEconomySchema(env), ensureSafeControlCenterSchema(env), ensureReferralSchema(env), ensureRetentionOpsV14Schema(env)]);
   const now = Math.floor(Date.now() / 1000);
   const day = moscowDayStartUnix();
   const week = now - 7 * 86400;
   const month = now - 30 * 86400;
   const [
     dau, newPlayers, returning, runs, avgRecord, cases, shopPurchases, rewards, promos, pass, rating,
-    economy, physical, hourlyResult, contentResult, d1, d3, d7, flow24h, flow7d, topBalances, economyQueue, caseDropsResult
+    economy, physical, hourlyResult, contentResult, d1, d3, d7, d14, d30, flow24h, flow7d, topBalances, economyQueue, caseDropsResult
   ] = await Promise.all([
     env.DB.prepare(`SELECT COUNT(DISTINCT telegram_id) AS count FROM leaderboard_runs WHERE accepted=1 AND created_at>=?`).bind(day).first(),
     env.DB.prepare(`SELECT COUNT(*) AS count FROM admin_profile_state WHERE created_at>=?`).bind(day).first(),
@@ -31809,7 +31996,7 @@ async function ownerPanelV8AnalyticsFresh(env, ctx) {
     env.DB.prepare(`SELECT SUM(CASE WHEN created_at>=? THEN 1 ELSE 0 END) AS created,SUM(CASE WHEN redeemed_at>=? THEN 1 ELSE 0 END) AS redeemed FROM reward_codes WHERE created_at>=? OR redeemed_at>=?`).bind(day,day,day,day).first(),
     env.DB.prepare(`SELECT bucket_at,active_players,new_players,runs_total,runs_accepted,cases_opened,shop_operations,rewards_delivered,rewards_failed,cron_failures,cron_duration_ms FROM server_analytics_hourly WHERE bucket_at>=? ORDER BY bucket_at ASC LIMIT 48`).bind(now - 48 * 3600).all(),
     env.DB.prepare(`SELECT item_kind,item_id,SUM(CASE WHEN event_type='acquired' THEN 1 ELSE 0 END) AS acquired,SUM(CASE WHEN event_type='equipped' THEN 1 ELSE 0 END) AS equipped,SUM(CASE WHEN event_type='duplicate' THEN 1 ELSE 0 END) AS duplicates,COUNT(*) AS events FROM content_analytics_events WHERE created_at>=? GROUP BY item_kind,item_id ORDER BY events DESC LIMIT 12`).bind(month).all(),
-    v67RetentionCohort(env, 1), v67RetentionCohort(env, 3), v67RetentionCohort(env, 7),
+    v67RetentionCohort(env, 1), v67RetentionCohort(env, 3), v67RetentionCohort(env, 7), v67RetentionCohort(env, 14), v67RetentionCohort(env, 30),
     ownerPanelEconomyFlowWindow(env, now-86400), ownerPanelEconomyFlowWindow(env, week),
     env.DB.prepare(`SELECT p.telegram_id,COALESCE(NULLIF(b.display_name,''),NULLIF(a.display_name,''),p.telegram_id) AS display_name,COALESCE(b.username,a.username,'') AS username,
       MIN(999999999,MAX(0,COALESCE(p.wallet_override,p.wallet)+COALESCE(p.pending_wallet,0))) AS points,
@@ -31827,6 +32014,31 @@ async function ownerPanelV8AnalyticsFresh(env, ctx) {
     ) GROUP BY kind,item_id,title ORDER BY drops DESC,amount DESC LIMIT 12`).bind(week,week,week).all()
   ]);
   const weekRun = await env.DB.prepare(`SELECT COUNT(*) AS total,COUNT(DISTINCT telegram_id) AS players,COALESCE(AVG(score),0) AS avg_score FROM leaderboard_runs WHERE accepted=1 AND created_at>=?`).bind(week).first();
+  let dailyRetention=null;
+  try {
+    const config=await loadDailyLoyaltyConfig(env,{allowDisabled:true});
+    const currentDayKey=dailyLoyaltyDayKey(Date.now(),config.season.timezoneOffsetMinutes);
+    const base=await dailyLoyaltyRetentionAnalytics(env,config,currentDayKey);
+    const [streak,progress,rewardReturn]=await Promise.all([
+      env.DB.prepare(`SELECT COUNT(*) AS players,COALESCE(AVG(streak),0) AS avg_streak,COALESCE(AVG(best_streak),0) AS avg_best,COALESCE(MAX(best_streak),0) AS best FROM daily_loyalty_players WHERE season_id=?`).bind(config.season.id).first(),
+      env.DB.prepare(`SELECT COUNT(*) AS players,
+        SUM(CASE WHEN progress_days>=7 THEN 1 ELSE 0 END) AS d7,SUM(CASE WHEN progress_days>=14 THEN 1 ELSE 0 END) AS d14,
+        SUM(CASE WHEN progress_days>=21 THEN 1 ELSE 0 END) AS d21,SUM(CASE WHEN progress_days>=28 THEN 1 ELSE 0 END) AS d28,
+        SUM(CASE WHEN progress_days>=35 THEN 1 ELSE 0 END) AS d35,SUM(CASE WHEN progress_days>=42 THEN 1 ELSE 0 END) AS d42
+        FROM daily_loyalty_players WHERE season_id=?`).bind(config.season.id).first(),
+      env.DB.prepare(`SELECT w.reward_type,w.item_id,w.cycle_day,COUNT(*) AS claims,
+        SUM(CASE WHEN EXISTS(SELECT 1 FROM daily_loyalty_activity n WHERE n.telegram_id=w.telegram_id AND n.season_id=w.season_id AND n.applied=1 AND n.day_key=date(a.day_key,'+1 day')) THEN 1 ELSE 0 END) AS returned
+        FROM daily_loyalty_weekly_claims w JOIN daily_loyalty_activity a ON a.telegram_id=w.telegram_id AND a.season_id=w.season_id AND a.request_id=w.source_request_id
+        WHERE w.season_id=? AND w.status='delivered' AND w.created_at>=? GROUP BY w.reward_type,w.item_id,w.cycle_day ORDER BY claims DESC LIMIT 12`).bind(config.season.id,now-60*86400).all()
+    ]);
+    const total=Math.max(0,Number(progress?.players||0));
+    dailyRetention={season:{id:config.season.id,title:config.season.title,active:config.active},...base,
+      streak:{players:Number(streak?.players||0),average:Math.round(Number(streak?.avg_streak||0)*10)/10,averageBest:Math.round(Number(streak?.avg_best||0)*10)/10,best:Number(streak?.best||0)},
+      funnel:[7,14,21,28,35,42].map((days)=>{const count=Number(progress?.[`d${days}`]||0);return{days,count,total,percent:total?Math.round(count/total*1000)/10:0};}),
+      rewardReturn:(rewardReturn.results||[]).map((row)=>{const claims=Number(row.claims||0),returned=Number(row.returned||0);return{rewardType:String(row.reward_type||''),itemId:String(row.item_id||''),cycleDay:Number(row.cycle_day||0),claims,returned,rate:claims?Math.round(returned/claims*1000)/10:0};})};
+  } catch (error) {
+    dailyRetention={error:String(error?.message||error).slice(0,180)};
+  }
   return {
     ok: true,
     generatedAt: now,
@@ -31837,7 +32049,8 @@ async function ownerPanelV8AnalyticsFresh(env, ctx) {
       rewardsDelivered: Number(rewards?.delivered || 0), promoUses: Number(promos?.count || 0), passPlayers: Number(pass?.players || 0),
       ratingPlayers: Number(rating?.players || 0), physicalCreated: Number(physical?.created || 0), physicalRedeemed: Number(physical?.redeemed || 0)
     },
-    retention: [d1, d3, d7].map((x) => ({ days: x.days, cohort: x.cohort, retained: x.retained, percent: x.cohort ? x.retained * 100 / x.cohort : 0 })),
+    retention: [d1, d3, d7, d14, d30].map((x) => ({ days: x.days, cohort: x.cohort, retained: x.retained, percent: x.cohort ? x.retained * 100 / x.cohort : 0 })),
+    dailyRetention,
     economy: {
       players:Number(economy?.players||0),points:Number(economy?.points||0),treats:Number(economy?.treats||0),coffee:Number(economy?.coffee||0),
       average:{points:Math.round(Number(economy?.avg_points||0)),treats:Math.round(Number(economy?.avg_treats||0)),coffee:Math.round(Number(economy?.avg_coffee||0))},
@@ -31935,8 +32148,28 @@ function ownerV8RewardPayload(kindValue, itemValue, amountValue, imageUrl="") {
 }
 
 async function ownerPanelV8Events(env, ctx) {
-  await ensureSafeControlCenterSchema(env);const result=await env.DB.prepare(`SELECT * FROM liveops_events ORDER BY starts_at DESC LIMIT 60`).all();
-  return {ok:true,events:(result.results||[]).map((r)=>({id:String(r.event_id),title:String(r.title||""),startsAt:Number(r.starts_at||0),endsAt:Number(r.ends_at||0),status:String(r.status||""),payload:ownerV8SafeJson(r.status==='draft'?r.draft_json:r.published_json,{}),lastError:String(r.last_error||""),createdAt:Number(r.created_at||0)}))};
+  await Promise.all([ensureSafeControlCenterSchema(env),ensureRetentionOpsV14Schema(env)]);
+  const [result,templateResult]=await Promise.all([
+    env.DB.prepare(`SELECT * FROM liveops_events ORDER BY starts_at DESC LIMIT 60`).all(),
+    env.DB.prepare(`SELECT * FROM liveops_event_templates WHERE enabled=1 ORDER BY sort_order,updated_at DESC LIMIT 40`).all()
+  ]);
+  return {ok:true,events:(result.results||[]).map((r)=>({id:String(r.event_id),title:String(r.title||""),startsAt:Number(r.starts_at||0),endsAt:Number(r.ends_at||0),status:String(r.status||""),payload:ownerV8SafeJson(r.status==='draft'?r.draft_json:r.published_json,{}),lastError:String(r.last_error||""),createdAt:Number(r.created_at||0)})),templates:(templateResult.results||[]).map((r)=>({key:String(r.template_key),title:String(r.title||''),description:String(r.description||''),durationHours:Number(r.duration_hours||24),payload:ownerV8SafeJson(r.payload_json,{}),system:Boolean(r.system_template),updatedAt:Number(r.updated_at||0)}))};
+}
+
+async function ownerPanelV8SaveEventTemplate(env,ctx){
+  await ensureRetentionOpsV14Schema(env);const now=Math.floor(Date.now()/1000),rawKey=String(ctx.body?.templateKey||'').trim().toLowerCase();
+  const key=(rawKey||`custom_${crypto.randomUUID().slice(0,8)}`).replace(/[^a-z0-9_-]/g,'').slice(0,64);if(!key)throw new ApiError(400,'Некорректный ID шаблона.');
+  const title=String(ctx.body?.title||'').trim().slice(0,100),description=String(ctx.body?.description||'').trim().slice(0,400);if(title.length<3)throw new ApiError(400,'Введите название шаблона.');
+  const hours=ownerPanelInteger(ctx.body?.durationHours,1,720)||24;
+  const winner=ownerV8RewardPayload(ctx.body?.winnerKind||'case',ctx.body?.winnerId||'gold',ctx.body?.winnerAmount||1,ctx.body?.imageUrl||'');if(winner.kind==='none')throw new ApiError(400,'Награда победителя обязательна.');
+  const participant=ownerV8RewardPayload(ctx.body?.participantKind||'none',ctx.body?.participantId||'',ctx.body?.participantAmount||1,'');
+  const payload={winnerReward:winner,participantReward:participant,shop:{products:{},discounts:{}},broadcasts:{start:String(ctx.body?.startMessage||'').slice(0,3500),end:String(ctx.body?.endMessage||'').slice(0,3500)}};
+  const existing=await env.DB.prepare(`SELECT system_template FROM liveops_event_templates WHERE template_key=? LIMIT 1`).bind(key).first();
+  await env.DB.prepare(`INSERT INTO liveops_event_templates(template_key,title,description,duration_hours,payload_json,enabled,system_template,sort_order,created_at,updated_at,updated_by) VALUES(?,?,?,?,?,1,0,100,?,?,?) ON CONFLICT(template_key) DO UPDATE SET title=excluded.title,description=excluded.description,duration_hours=excluded.duration_hours,payload_json=excluded.payload_json,enabled=1,updated_at=excluded.updated_at,updated_by=excluded.updated_by`).bind(key,title,description,hours,JSON.stringify(payload),now,now,String(ctx.user.id)).run();
+  await logStaffAction(env,ctx.user,ctx.access,'owner_liveops_template_save',null,'liveops_template',null,null,{templateKey:key,title,system:Boolean(existing?.system_template)});return{ok:true,templateKey:key};
+}
+async function ownerPanelV8DeleteEventTemplate(env,ctx){
+  await ensureRetentionOpsV14Schema(env);const key=String(ctx.body?.templateKey||'').trim();const row=await env.DB.prepare(`SELECT system_template,title FROM liveops_event_templates WHERE template_key=? LIMIT 1`).bind(key).first();if(!row)throw new ApiError(404,'Шаблон не найден.');if(Number(row.system_template||0)===1)throw new ApiError(409,'Системный шаблон удалить нельзя — его можно отредактировать и сохранить.');await env.DB.prepare(`DELETE FROM liveops_event_templates WHERE template_key=?`).bind(key).run();await logStaffAction(env,ctx.user,ctx.access,'owner_liveops_template_delete',null,'liveops_template',null,null,{templateKey:key,title:row.title});return{ok:true};
 }
 
 async function ownerPanelV8SaveEvent(env, ctx) {
@@ -34086,9 +34319,9 @@ async function ownerStagingAffectedSeasonIds(env,rows){
   return [...ids].filter(Boolean).sort();
 }
 function ownerStagingCombinedGate(gates){
-  const list=(gates||[]).filter(Boolean),checks=[],summary={pass:0,warn:0,fail:0,total:0};
-  for(const entry of list){const gate=entry.gate||{},label=entry.seasonId?` · ${entry.seasonTitle||entry.seasonId}`:'';for(const check of gate.checks||[])checks.push({...check,title:`${check.title}${label}`,seasonId:entry.seasonId||''});const s=gate.summary||{};summary.pass+=Number(s.pass||0);summary.warn+=Number(s.warn||0);summary.fail+=Number(s.fail||0);summary.total+=Number(s.total||0);}
-  const status=summary.fail?'fail':summary.warn?'review':'pass';return {ok:true,status,ready:summary.fail===0,summary,checks,multiSeason:list.length>1,seasons:list.map(entry=>({seasonId:entry.seasonId||'',seasonTitle:entry.seasonTitle||'',status:String(entry.gate?.status||'review'),summary:entry.gate?.summary||{}})),checkedAt:Date.now(),fullAssets:list.some(entry=>Boolean(entry.gate?.fullAssets))};
+  const list=(gates||[]).filter(Boolean),checks=[],summary={pass:0,warn:0,fail:0,total:0};let criticalCount=0,warningCount=0;
+  for(const entry of list){const gate=entry.gate||{},label=entry.seasonId?` · ${entry.seasonTitle||entry.seasonId}`:'';for(const check of gate.checks||[])checks.push({...check,title:`${check.title}${label}`,seasonId:entry.seasonId||''});const sm=gate.summary||{};summary.pass+=Number(sm.pass||0);summary.warn+=Number(sm.warn||0);summary.fail+=Number(sm.fail||0);summary.total+=Number(sm.total||0);const gateCritical=Number(gate.criticalCount||0)||Number((gate.checks||[]).filter(x=>x.status==='fail'&&x.severity==='critical').length);const gateWarnings=Number(gate.warningCount||0)||Number((gate.checks||[]).filter(x=>x.status==='warn'||(x.status==='fail'&&x.severity!=='critical')).length);criticalCount+=gateCritical;warningCount+=gateWarnings;}
+  const blocking=criticalCount>0,status=blocking?'fail':warningCount||summary.warn?'review':'pass';return {ok:true,status,ready:!blocking,blocking,criticalCount,warningCount,summary,checks,multiSeason:list.length>1,seasons:list.map(entry=>({seasonId:entry.seasonId||'',seasonTitle:entry.seasonTitle||'',status:String(entry.gate?.status||'review'),criticalCount:Number(entry.gate?.criticalCount||0),warningCount:Number(entry.gate?.warningCount||0),summary:entry.gate?.summary||{}})),checkedAt:Date.now(),fullAssets:list.some(entry=>Boolean(entry.gate?.fullAssets))};
 }
 
 async function ownerStagingCaptureTestProjectWorkspace(env,ownerId){
@@ -34124,7 +34357,7 @@ async function ownerStagingDryRunCore(env,ctx,{changeSetId='',itemIds=[],fullAss
       checks.push({key:'season_scope',status:'pass',title:'Season QA scope',message:`Change Set затрагивает ${seasonIds.length} сезон(а): ${seasonIds.join(', ')}. Каждый сезон проверяется отдельно.`});
       const gates=[];
       for(let index=0;index<seasonIds.length;index+=1){
-        const id=seasonIds[index],single=await ownerPanelTestProjectReleaseGate(env,{...ctx,body:{fullAssets:fullAssets!==false,seasonId:id}}),qaSeasonId=String(single?.seasonId||'');
+        const id=seasonIds[index],single=await ownerPanelTestProjectReleaseGate(env,{...ctx,body:{fullAssets:fullAssets!==false,seasonId:id,source:'staging_dry_run',changeSetId:setId}}),qaSeasonId=String(single?.seasonId||'');
         if(qaSeasonId!==String(id)){
           const mismatch={id:'season_scope_mismatch',title:'Season QA scope mismatch',status:'fail',detail:`Запрошен ${id}, но TP проверил ${qaSeasonId||'неизвестный сезон'}.`};
           single.checks=[mismatch,...(single.checks||[])];single.summary=testProjectQaSummary(single.checks);single.status='fail';single.ready=false;
@@ -34137,7 +34370,7 @@ async function ownerStagingDryRunCore(env,ctx,{changeSetId='',itemIds=[],fullAss
       gate=ownerStagingCombinedGate(gates);
       checks.push({key:'release_gate',status:gate.status==='pass'?'pass':gate.status==='fail'?'fail':'warn',title:'Release Gate',message:gate.status==='pass'?`Release Gate passed for ${seasonIds.length} season(s).`:`Release Gate ${String(gate.status).toUpperCase()} for ${seasonIds.length} season(s): ${gate.seasons.map(x=>`${x.seasonTitle||x.seasonId}=${String(x.status).toUpperCase()}`).join(' / ')}`});
     }else{
-      gate=await ownerPanelTestProjectReleaseGate(env,{...ctx,body:{fullAssets:fullAssets!==false,seasonId:''}});
+      gate=await ownerPanelTestProjectReleaseGate(env,{...ctx,body:{fullAssets:fullAssets!==false,seasonId:'',source:'staging_dry_run',changeSetId:setId}});
       const gs=String(gate?.status||'review').toLowerCase();checks.push({key:'release_gate',status:gs==='pass'?'pass':gs==='fail'?'fail':'warn',title:'Release Gate',message:gs==='pass'?'Release Gate пройден.':`Release Gate: ${gs.toUpperCase()}.`});
     }
     }finally{
@@ -34146,7 +34379,7 @@ async function ownerStagingDryRunCore(env,ctx,{changeSetId='',itemIds=[],fullAss
     checks.push({key:'tp_restore',status:testProjectRestored?'pass':'fail',title:'Test Project Draft Layer',message:testProjectRestored?'Исходное состояние Test Project восстановлено после Dry Run.':`Не удалось восстановить Test Project: ${testProjectRestoreError||'unknown error'}`});
   }else checks.push({key:'release_gate',status:'skip',title:'Release Gate',message:'Не запускался: сначала устраните блокирующие конфликты.'});
   const gateStatus=String(gate?.status||'skipped').toLowerCase(),status=hardFail?'fail':gateStatus==='pass'?'pass':gateStatus==='fail'?'fail':'warn';
-  return {ok:true,dryRun:true,productionUntouched:true,testProjectRestored,testProjectRestoreError,status,hardFail,overrideAllowed:!hardFail&&gateStatus!=='pass',canPromote:!hardFail&&gateStatus==='pass',changeSet:{id:setId,title:String(setRow.title||'')},selected:rows.map(r=>({id:String(r.item_id),title:String(r.title||''),key:String(r.item_key||''),kind:String(r.kind||''),status:String(r.status||'')})),checks,conflicts,gate,seasonIds,durationMs:Date.now()-started};
+  return {ok:true,dryRun:true,productionUntouched:true,testProjectRestored,testProjectRestoreError,status,hardFail,overrideAllowed:!hardFail&&!Boolean(gate?.blocking)&&Number(gate?.criticalCount||0)===0&&gateStatus!=='pass',canPromote:!hardFail&&gateStatus==='pass',changeSet:{id:setId,title:String(setRow.title||'')},selected:rows.map(r=>({id:String(r.item_id),title:String(r.title||''),key:String(r.item_key||''),kind:String(r.kind||''),status:String(r.status||'')})),checks,conflicts,gate,seasonIds,durationMs:Date.now()-started};
 }
 async function ownerPanelStagingDryRun(env,ctx){return ownerStagingDryRunCore(env,ctx,{changeSetId:String(ctx.body?.changeSetId||''),itemIds:ctx.body?.itemIds,fullAssets:ctx.body?.fullAssets!==false,seasonId:String(ctx.body?.seasonId||'')});}
 async function ownerStagingRollbackApplied(env,ctx,applied){
@@ -34231,7 +34464,8 @@ async function ownerPanelStagingPromote(env,ctx){
       const titles=(dry.conflicts||[]).slice(0,3).map(x=>x.title).join(', ');
       throw new ApiError(409,`Safe Promotion blocked: Production baseline or Season QA coverage changed.${titles?` Conflicts: ${titles}.`:''}`);
     }
-    if(String(dry.gate?.status||'review')!=='pass'&&!ctx.body?.override)throw new ApiError(409,`Release Gate: ${String(dry.gate?.status||'review').toUpperCase()}. Fix the checks or confirm owner override.`);
+    if(Boolean(dry.gate?.blocking)||Number(dry.gate?.criticalCount||0)>0)throw new ApiError(409,`Release Gate 2.0: CRITICAL (${Number(dry.gate?.criticalCount||0)}). Critical findings cannot be overridden.`);
+    if(String(dry.gate?.status||'review')!=='pass'&&!ctx.body?.override)throw new ApiError(409,`Release Gate 2.0: ${String(dry.gate?.status||'review').toUpperCase()}. Fix warnings or confirm owner override.`);
     const rows=(await env.DB.prepare(`SELECT * FROM owner_staging_items WHERE change_set_id=? AND item_id=? LIMIT 1`).bind(setId,String(ids[0])).all()).results||[];
     if(rows.length!==1||String(rows[0].status)!=='ready')throw new ApiError(409,'Change Set changed after Dry Run. Refresh Staging and repeat.');
     const finalConflict=await ownerStagingConflict(env,rows[0]);
@@ -35678,6 +35912,8 @@ function testProjectPresetState(presetId, current = null) {
   } else if (id === "rich") {
     state.name="Богатый тестер"; state.profileLevel=50; state.profileXp=500000; state.points=900000000; state.treats=9000000; state.coffee=9000000; state.bestScore=999999;
     state.passTier="elite_plus"; state.passXp=testProjectSeasonPassXpForLevel(35); state.caseInventory={small:25,sweet:25,gold:25,mythic:25,legendary:25,alex:25};
+  } else if (id === "pass25") {
+    state.name="Pass 25"; state.passTier="elite"; state.passXp=testProjectSeasonPassXpForLevel(25); state.points=50000; state.treats=500; state.coffee=500;
   } else if (id === "pass49") {
     state.name="Pass 49 → 50"; state.passTier="elite"; state.passXp=Math.max(0,testProjectSeasonPassXpForLevel(50)-50); state.points=100000; state.treats=1000; state.coffee=1000;
   } else if (id === "pass50plus") {
@@ -36707,10 +36943,37 @@ async function ownerPanelTestProjectContentValidate(env,ctx){
   const summary=testProjectQaSummary(checks);return{ok:true,seasonId,summary,checks,assets:assets.slice(0,240),readiness};
 }
 
+async function ownerReleaseGateOperationalChecks(env){
+  await Promise.all([ensureSafeControlCenterSchema(env),ensureRetentionOpsV14Schema(env),ensureSeasonPassSchema(env),ensureDailyLoyaltySchema(env),ensurePlayerAccountRevisionAvailable(env)]);
+  const now=Math.floor(Date.now()/1000),checks=[],add=(id,title,status,detail,severity=status==='fail'?'critical':status==='warn'?'warning':'info')=>checks.push({id,title,status,detail,severity,group:'Operations'});
+  const [queue,overlapEvents,badEvents,overlapSeasons,schemaRows,revisionTriggers]=await Promise.all([
+    env.DB.prepare(`SELECT SUM(CASE WHEN status='failed' THEN 1 ELSE 0 END) AS failed,SUM(CASE WHEN status='delivering' AND updated_at<? THEN 1 ELSE 0 END) AS stale_delivering,SUM(CASE WHEN status='pending' AND available_at<? THEN 1 ELSE 0 END) AS stale_pending FROM reward_delivery_queue`).bind(now-120,now-900).first().catch(()=>({})),
+    env.DB.prepare(`SELECT a.title AS a_title,b.title AS b_title FROM liveops_events a JOIN liveops_events b ON a.event_id<b.event_id AND a.status IN ('scheduled','active') AND b.status IN ('scheduled','active') AND a.starts_at<b.ends_at AND a.ends_at>b.starts_at LIMIT 1`).first().catch(()=>null),
+    env.DB.prepare(`SELECT title,status,starts_at,ends_at FROM liveops_events WHERE status IN ('scheduled','active') AND (ends_at<=starts_at OR (status='scheduled' AND ends_at<=?)) LIMIT 1`).bind(now).first().catch(()=>null),
+    env.DB.prepare(`SELECT a.title AS a_title,b.title AS b_title FROM season_pass_seasons a JOIN season_pass_seasons b ON a.season_id<b.season_id AND COALESCE(a.manual_status,'')<>'ended' AND COALESCE(b.manual_status,'')<>'ended' AND a.starts_at<MAX(b.ends_at,b.claim_grace_ends_at) AND MAX(a.ends_at,a.claim_grace_ends_at)>b.starts_at LIMIT 1`).first().catch(()=>null),
+    env.DB.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name IN ('admin_profile_state','reward_delivery_queue','season_pass_seasons','daily_loyalty_seasons','player_game_presence','player_account_revision','liveops_event_templates','release_gate_runs')`).all().catch(()=>({results:[]})),
+    env.DB.prepare(`SELECT COUNT(*) AS count FROM sqlite_master WHERE type='trigger' AND name LIKE 'trg_account_revision_%'`).first().catch(()=>({count:0}))
+  ]);
+  const failed=Number(queue?.failed||0),staleDelivery=Number(queue?.stale_delivering||0),stalePending=Number(queue?.stale_pending||0);
+  add('reward_queue','Очередь наград',failed>=5||staleDelivery>=3?'fail':failed||staleDelivery||stalePending?'warn':'pass',`failed ${failed} · stale delivering ${staleDelivery} · stale pending ${stalePending}`);
+  add('event_overlap','Пересечения LiveOps',overlapEvents?'fail':'pass',overlapEvents?`«${overlapEvents.a_title}» ↔ «${overlapEvents.b_title}»`:'Активные и запланированные события не пересекаются.');
+  add('event_dates','Даты LiveOps',badEvents?'fail':'pass',badEvents?`${badEvents.title}: некорректное или уже завершившееся окно.`:'Окна событий валидны.');
+  add('season_overlap','Пересечения сезонов',overlapSeasons?'fail':'pass',overlapSeasons?`«${overlapSeasons.a_title}» ↔ «${overlapSeasons.b_title}»`:'Сезоны и claim grace не пересекаются.');
+  const required=['admin_profile_state','reward_delivery_queue','season_pass_seasons','daily_loyalty_seasons','player_game_presence','player_account_revision','liveops_event_templates','release_gate_runs'],found=new Set((schemaRows.results||[]).map(x=>String(x.name))),missing=required.filter(x=>!found.has(x));
+  add('schema_contract','Контракт схемы Worker',missing.length?'fail':'pass',missing.length?`Отсутствуют: ${missing.join(', ')}`:'Ключевые таблицы доступны.');
+  const triggerCount=Number(revisionTriggers?.count||0);add('account_revision','Глобальная синхронизация аккаунта',triggerCount<6?'fail':'pass',`accountRevision triggers: ${triggerCount}`);
+  try{const config=await loadDailyLoyaltyConfig(env,{allowDisabled:true}),preview=dailyLoyaltyEconomyPreview(config,config.economyGuard),risks=preview.risks||[];add('daily_economy','Экономика Daily / comeback',risks.length?'fail':'pass',risks.length?risks.slice(0,4).map(x=>`${x.where}: ${x.amount}>${x.limit}`).join(' · '):'Разовые награды находятся в заданных лимитах.');}catch(e){add('daily_economy','Экономика Daily / comeback','warn',String(e?.message||e).slice(0,180));}
+  return checks;
+}
+
 async function ownerPanelTestProjectReleaseGate(env,ctx){
-  const [qa,seasonQa,content]=await Promise.all([ownerPanelTestProjectQa(env,ctx),ownerPanelTestProjectSeasonQa(env,ctx),ownerPanelTestProjectContentValidate(env,{...ctx,body:{...(ctx.body||{}),quick:!Boolean(ctx.body?.fullAssets)}})]);
-  const checks=[...(qa.checks||[]).map((x)=>({...x,group:"Sandbox"})),...(seasonQa.checks||[]).map((x)=>({...x,group:"Season QA"})),...(content.checks||[]).map((x)=>({...x,group:"Content"}))],summary=testProjectQaSummary(checks),status=summary.fail?"fail":summary.warn?"review":"pass";
-  return{ok:true,status,ready:summary.fail===0,summary,checks,groups:{sandbox:qa.summary,season:seasonQa.summary,content:content.summary},requestedSeasonId:String(ctx.body?.seasonId||''),seasonId:String(seasonQa?.seasonId||content?.seasonId||ctx.body?.seasonId||''),seasonTitle:String(seasonQa?.seasonTitle||''),checkedAt:Date.now(),fullAssets:Boolean(ctx.body?.fullAssets)};
+  const started=Date.now();
+  const [qa,seasonQa,content,operations]=await Promise.all([ownerPanelTestProjectQa(env,ctx),ownerPanelTestProjectSeasonQa(env,ctx),ownerPanelTestProjectContentValidate(env,{...ctx,body:{...(ctx.body||{}),quick:!Boolean(ctx.body?.fullAssets)}}),ownerReleaseGateOperationalChecks(env)]);
+  const checks=[...(qa.checks||[]).map((x)=>({...x,group:'Sandbox',severity:x.status==='fail'?'critical':x.status==='warn'?'warning':'info'})),...(seasonQa.checks||[]).map((x)=>({...x,group:'Season QA',severity:x.status==='fail'?'critical':x.status==='warn'?'warning':'info'})),...(content.checks||[]).map((x)=>({...x,group:'Content',severity:x.status==='fail'?'critical':x.status==='warn'?'warning':'info'})),...(operations||[])];
+  const summary=testProjectQaSummary(checks),criticalCount=checks.filter(x=>x.status==='fail'&&x.severity==='critical').length,warningCount=checks.filter(x=>x.status==='warn'||(x.status==='fail'&&x.severity!=='critical')).length,blocking=criticalCount>0,status=blocking?'fail':warningCount?'review':'pass';
+  const result={ok:true,status,ready:!blocking,blocking,criticalCount,warningCount,summary,checks,groups:{sandbox:qa.summary,season:seasonQa.summary,content:content.summary,operations:testProjectQaSummary(operations)},requestedSeasonId:String(ctx.body?.seasonId||''),seasonId:String(seasonQa?.seasonId||content?.seasonId||ctx.body?.seasonId||''),seasonTitle:String(seasonQa?.seasonTitle||''),checkedAt:Date.now(),fullAssets:Boolean(ctx.body?.fullAssets),durationMs:Date.now()-started};
+  try{await ensureRetentionOpsV14Schema(env);const createdAt=Math.floor(Date.now()/1000),source=String(ctx.body?.source||'manual').slice(0,40),changeSetId=String(ctx.body?.changeSetId||'').slice(0,80);await env.DB.prepare(`INSERT INTO release_gate_runs(source,status,critical_count,warning_count,result_json,change_set_id,created_at,created_by,duration_ms) VALUES(?,?,?,?,?,?,?,?,?)`).bind(source,status,criticalCount,warningCount,JSON.stringify({...result,checks:checks.slice(0,120)}),changeSetId,createdAt,String(ctx.user?.id||''),result.durationMs).run();const history=(await env.DB.prepare(`SELECT id,source,status,critical_count,warning_count,change_set_id,created_at,duration_ms FROM release_gate_runs ORDER BY created_at DESC,id DESC LIMIT 8`).all()).results||[];result.history=history.map(r=>({id:Number(r.id),source:String(r.source||''),status:String(r.status||''),criticalCount:Number(r.critical_count||0),warningCount:Number(r.warning_count||0),changeSetId:String(r.change_set_id||''),createdAt:Number(r.created_at||0),durationMs:Number(r.duration_ms||0)}));}catch{}
+  return result;
 }
 
 // =================== END TEST PROJECT 5.4 ===================
@@ -37622,6 +37885,256 @@ async function ownerPanelReferralNetworkSave(env,ctx){
 // ===================== END REFERRALS · "ДРУЗЬЯ КАФЕ" =====================
 
 
+// ===================== ALBUM ZEFFI · CONFIGURABLE COLLECTIONS =====================
+const ALBUM_ITEM_KINDS = Object.freeze(["avatar","frame","trail","skin","music"]);
+const ALBUM_KIND_LABELS = Object.freeze({ avatar:"Аватарка", frame:"Рамка", trail:"След", skin:"Скин", music:"Музыка" });
+const ALBUM_STATUS_VALUES = Object.freeze(["draft","published","archived"]);
+let albumSchemaPromise = null;
+let albumSchemaReady = false;
+
+async function ensureAlbumSchema(env) {
+  requireDatabase(env);
+  if (albumSchemaReady) return;
+  if (!albumSchemaPromise) {
+    albumSchemaPromise = (async () => {
+      // Fast path after migrations: touch every Album table without running DDL.
+      try {
+        await env.DB.prepare(`SELECT
+          (SELECT COUNT(*) FROM album_collections WHERE 0) +
+          (SELECT COUNT(*) FROM album_collection_items WHERE 0) +
+          (SELECT COUNT(*) FROM album_milestones WHERE 0) +
+          (SELECT COUNT(*) FROM album_milestone_claims WHERE 0) AS ok`).first();
+        albumSchemaReady = true;
+        return;
+      } catch (error) {
+        if (!isMissingRuntimeDatabaseSchemaError(error)) throw error;
+      }
+      await env.DB.batch([
+        env.DB.prepare(`CREATE TABLE IF NOT EXISTS album_collections (
+          collection_id TEXT PRIMARY KEY,title TEXT NOT NULL,subtitle TEXT NOT NULL DEFAULT '',cover_url TEXT NOT NULL DEFAULT '',background_url TEXT NOT NULL DEFAULT '',accent_color TEXT NOT NULL DEFAULT '#d96f9b',status TEXT NOT NULL DEFAULT 'draft',sort_order INTEGER NOT NULL DEFAULT 0,revision INTEGER NOT NULL DEFAULT 1,created_at INTEGER NOT NULL,updated_at INTEGER NOT NULL,published_at INTEGER NOT NULL DEFAULT 0,created_by TEXT NOT NULL DEFAULT '',updated_by TEXT NOT NULL DEFAULT '')`),
+        env.DB.prepare(`CREATE TABLE IF NOT EXISTS album_collection_items (
+          collection_id TEXT NOT NULL,item_kind TEXT NOT NULL,item_id TEXT NOT NULL,required INTEGER NOT NULL DEFAULT 0,secret INTEGER NOT NULL DEFAULT 0,sort_order INTEGER NOT NULL DEFAULT 0,added_at INTEGER NOT NULL,added_by TEXT NOT NULL DEFAULT '',PRIMARY KEY(collection_id,item_kind,item_id))`),
+        env.DB.prepare(`CREATE TABLE IF NOT EXISTS album_milestones (
+          collection_id TEXT NOT NULL,milestone_id TEXT NOT NULL,threshold_percent INTEGER NOT NULL,title TEXT NOT NULL DEFAULT '',rewards_json TEXT NOT NULL DEFAULT '[]',enabled INTEGER NOT NULL DEFAULT 1,sort_order INTEGER NOT NULL DEFAULT 0,created_at INTEGER NOT NULL,updated_at INTEGER NOT NULL,updated_by TEXT NOT NULL DEFAULT '',PRIMARY KEY(collection_id,milestone_id),UNIQUE(collection_id,threshold_percent))`),
+        env.DB.prepare(`CREATE TABLE IF NOT EXISTS album_milestone_claims (
+          telegram_id TEXT NOT NULL,collection_id TEXT NOT NULL,milestone_id TEXT NOT NULL,threshold_percent INTEGER NOT NULL,rewards_json TEXT NOT NULL DEFAULT '[]',queue_ids_json TEXT NOT NULL DEFAULT '[]',status TEXT NOT NULL DEFAULT 'pending',request_id TEXT NOT NULL DEFAULT '',created_at INTEGER NOT NULL,delivered_at INTEGER NOT NULL DEFAULT 0,updated_at INTEGER NOT NULL,PRIMARY KEY(telegram_id,collection_id,milestone_id))`),
+        env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_album_collections_status_sort ON album_collections(status,sort_order,updated_at DESC)`),
+        env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_album_items_collection_sort ON album_collection_items(collection_id,sort_order,item_kind,item_id)`),
+        env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_album_items_reverse_lookup ON album_collection_items(item_kind,item_id,collection_id)`),
+        env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_album_milestones_collection ON album_milestones(collection_id,enabled,threshold_percent,sort_order)`),
+        env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_album_claims_player ON album_milestone_claims(telegram_id,created_at DESC)`),
+        env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_album_claims_collection ON album_milestone_claims(collection_id,milestone_id,status,created_at DESC)`)
+      ]);
+      albumSchemaReady = true;
+    })().catch((error) => { albumSchemaPromise = null; albumSchemaReady = false; throw error; });
+  }
+  await albumSchemaPromise;
+}
+
+function albumCollectionId(value) {
+  const raw=String(value||"").trim().toLowerCase();
+  return /^[a-z0-9][a-z0-9_-]{1,63}$/.test(raw) ? raw : "";
+}
+function albumItemKey(kind,itemId){return `${String(kind||"")}:${String(itemId||"")}`;}
+function albumBool(value){return value===true||Number(value||0)===1||String(value||"").toLowerCase()==="true";}
+function albumAssetUrl(value){
+  const raw=String(value||"").trim();
+  if(!raw)return "";
+  if(/[\u0000-\u001f<>"'`\\]/.test(raw))throw new ApiError(400,"В адресе картинки Альбома есть недопустимые символы.");
+  if(raw.startsWith("/assets/")||raw.startsWith("/media/"))return raw.slice(0,900);
+  if(/^https:\/\//i.test(raw)){try{const parsed=new URL(raw);if(parsed.protocol==="https:")return parsed.toString().slice(0,900);}catch{}}
+  throw new ApiError(400,"Картинка альбома должна быть HTTPS, /assets/... или /media/....");
+}
+function albumAccentColor(value){const raw=String(value||"").trim();return /^#[0-9a-f]{6}$/i.test(raw)?raw.toLowerCase():"#d96f9b";}
+function albumOwnedSet(raw,defaults=[]){
+  const list=safeJson(raw,[]),set=new Set(defaults.map((x)=>String(x).toLowerCase()));
+  for(const value of Array.isArray(list)?list:[])set.add(String(value||"").trim().toLowerCase());
+  return set;
+}
+
+async function albumCatalogSnapshot(env) {
+  // The public Album must not pay the cost of the full admin schema ensure on each isolate.
+  // Production normally already has this table; only fall back to the legacy ensure if it is missing.
+  await readLiveContentReleaseRules(env);
+  const map=new Map();
+  for(const kind of ALBUM_ITEM_KINDS){
+    const catalog=seasonPassAnyCosmeticCatalog(kind)||{};
+    for(const [itemId,item] of Object.entries(catalog)){
+      const future=Boolean(futureSeasonContentItem(kind,itemId));
+      map.set(albumItemKey(kind,itemId),{
+        kind,itemId,title:String(item?.title||itemId),rarity:String(item?.rarity||"common"),imageUrl:seasonPassCosmeticImage(kind,itemId),
+        enabled:true,future,released:!future||isFutureContentReleasedCached(kind,itemId),deliverable:true,audioUrl:String(item?.audioUrl||item?.src||"")
+      });
+    }
+  }
+  let live=[];
+  try {
+    live=(await env.DB.prepare(`SELECT item_kind,item_id,title,rarity,enabled,image_url FROM liveops_content_items ORDER BY item_kind,item_id`).all()).results||[];
+  } catch (error) {
+    if (!isMissingRuntimeDatabaseSchemaError(error)) throw error;
+    await ensureLiveOpsAdminSchema(env);
+    live=(await env.DB.prepare(`SELECT item_kind,item_id,title,rarity,enabled,image_url FROM liveops_content_items ORDER BY item_kind,item_id`).all()).results||[];
+  }
+  for(const row of live){
+    const kind=String(row.item_kind||""),itemId=String(row.item_id||"");if(!ALBUM_ITEM_KINDS.includes(kind)||!itemId)continue;
+    const key=albumItemKey(kind,itemId),before=map.get(key)||{},future=Boolean(futureSeasonContentItem(kind,itemId));
+    map.set(key,{kind,itemId,title:String(row.title||before.title||itemId),rarity:String(row.rarity||before.rarity||"common"),imageUrl:String(row.image_url||before.imageUrl||seasonPassCosmeticImage(kind,itemId)),enabled:Number(row.enabled||0)===1,future,released:!future||isFutureContentReleasedCached(kind,itemId),deliverable:Boolean(before.deliverable),audioUrl:String(before.audioUrl||"")});
+  }
+  return map;
+}
+
+function albumRewardView(reward,catalogMap=new Map()){
+  const kind=String(reward?.kind||""),id=String(reward?.id||""),amount=Math.max(1,Math.floor(Number(reward?.amount||1)));
+  if(kind==="points")return {kind,id:"",amount,title:`${amount.toLocaleString("ru-RU")} очков`,imageUrl:"/assets/optimized/v0.79.5/iconScore.png?v=0.79.5"};
+  if(kind==="zefir")return {kind,id:"",amount,title:`${amount.toLocaleString("ru-RU")} зефира`,imageUrl:"/assets/season-pass/zefir_currency.png"};
+  if(kind==="coffee")return {kind,id:"",amount,title:`${amount.toLocaleString("ru-RU")} кофе`,imageUrl:"/assets/optimized/v0.79.5/iconCoffee.png?v=0.79.5"};
+  if(kind==="case"){const c=LEVEL_CASE_CONFIG[normalizeCaseType(id)||""];return {kind,id,amount,title:`${c?.title||"Кейс"}${amount>1?` ×${amount}`:""}`,imageUrl:ownerPanelCaseAsset(normalizeCaseType(id)||"small")};}
+  if(kind==="seasonal_case")return {kind,id,amount,title:`Сезонный кейс${amount>1?` ×${amount}`:""}`,imageUrl:"/assets/season-pass/season.png?v=07939"};
+  if(ALBUM_ITEM_KINDS.includes(kind)){const item=catalogMap.get(albumItemKey(kind,id));return {kind,id,amount,title:`${String(item?.title||id)}${amount>1?` ×${amount}`:""}`,imageUrl:String(item?.imageUrl||seasonPassCosmeticImage(kind,id))};}
+  return {kind,id,amount,title:safeRewardDescription({kind,id,amount}),imageUrl:"/assets/season-pass/season.png?v=07939"};
+}
+
+async function albumPlayerState(env,telegramId){
+  await ensureAlbumSchema(env);await ensureCasePlayerState(env,String(telegramId),{});
+  const [collectionsRes,itemsRes,milestonesRes,claimsRes,caseState,catalog]=await Promise.all([
+    env.DB.prepare(`SELECT * FROM album_collections WHERE status='published' ORDER BY sort_order ASC,published_at ASC,collection_id ASC`).all(),
+    env.DB.prepare(`SELECT i.* FROM album_collection_items i JOIN album_collections c ON c.collection_id=i.collection_id WHERE c.status='published' ORDER BY i.collection_id,i.sort_order,i.item_kind,i.item_id`).all(),
+    env.DB.prepare(`SELECT m.* FROM album_milestones m JOIN album_collections c ON c.collection_id=m.collection_id WHERE c.status='published' AND m.enabled=1 ORDER BY m.collection_id,m.threshold_percent,m.sort_order,m.milestone_id`).all(),
+    env.DB.prepare(`SELECT * FROM album_milestone_claims WHERE telegram_id=?`).bind(String(telegramId)).all(),
+    env.DB.prepare(`SELECT owned_avatars_json,owned_frames_json,owned_trails_json,owned_skins_json,owned_music_json FROM case_player_state WHERE telegram_id=? LIMIT 1`).bind(String(telegramId)).first(),
+    albumCatalogSnapshot(env)
+  ]);
+  const owned={
+    avatar:albumOwnedSet(caseState?.owned_avatars_json),frame:albumOwnedSet(caseState?.owned_frames_json),trail:albumOwnedSet(caseState?.owned_trails_json),
+    skin:albumOwnedSet(caseState?.owned_skins_json,["default"]),music:albumOwnedSet(caseState?.owned_music_json,["cafe_run"])
+  };
+  const itemsByCollection=new Map(),milestonesByCollection=new Map(),claimMap=new Map();
+  for(const row of itemsRes.results||[]){const id=String(row.collection_id);if(!itemsByCollection.has(id))itemsByCollection.set(id,[]);itemsByCollection.get(id).push(row);}
+  for(const row of milestonesRes.results||[]){const id=String(row.collection_id);if(!milestonesByCollection.has(id))milestonesByCollection.set(id,[]);milestonesByCollection.get(id).push(row);}
+  for(const row of claimsRes.results||[])claimMap.set(`${String(row.collection_id)}:${String(row.milestone_id)}`,row);
+  let allRequired=0,allOwnedRequired=0,totalOwnedSlots=0,totalSlots=0,completedCollections=0;
+  const collections=[];
+  for(const row of collectionsRes.results||[]){
+    const collectionId=String(row.collection_id),sourceItems=itemsByCollection.get(collectionId)||[];let requiredTotal=0,ownedRequired=0,ownedTotal=0;
+    const items=sourceItems.map((item,index)=>{
+      const kind=String(item.item_kind),itemId=String(item.item_id),meta=catalog.get(albumItemKey(kind,itemId))||{kind,itemId,title:itemId,rarity:"common",imageUrl:"",enabled:false,future:false,released:true};
+      const isOwned=Boolean(owned[kind]?.has(itemId.toLowerCase()));const required=Number(item.required||0)===1;
+      if(required){requiredTotal+=1;if(isOwned)ownedRequired+=1;}if(isOwned)ownedTotal+=1;
+      const hidden=(!isOwned&&(Number(item.secret||0)===1||meta.future&&!meta.released));
+      if(hidden)return {slotKey:`${collectionId}:${index}`,kind,owned:false,required,secret:true,sortOrder:Number(item.sort_order||0)};
+      return {slotKey:`${collectionId}:${index}`,kind,itemId,owned:isOwned,required,secret:Number(item.secret||0)===1,sortOrder:Number(item.sort_order||0),title:String(meta.title||itemId),rarity:String(meta.rarity||"common"),imageUrl:String(meta.imageUrl||""),available:Boolean(meta.enabled&&meta.released),future:Boolean(meta.future),released:Boolean(meta.released)};
+    });
+    const progressPercent=requiredTotal>0?Math.min(100,Math.floor((ownedRequired*100)/requiredTotal)):0;
+    const milestones=(milestonesByCollection.get(collectionId)||[]).map((m)=>{const claim=claimMap.get(`${collectionId}:${String(m.milestone_id)}`);const rewards=(safeJson(m.rewards_json,[])||[]).map((r)=>albumRewardView(r,catalog));const delivered=String(claim?.status||"")==="delivered";return {milestoneId:String(m.milestone_id),thresholdPercent:Number(m.threshold_percent||0),title:String(m.title||`${m.threshold_percent}% коллекции`),rewards,eligible:progressPercent>=Number(m.threshold_percent||0),status:delivered?"claimed":claim?String(claim.status||"pending"):progressPercent>=Number(m.threshold_percent||0)?"ready":"locked"};});
+    const complete=requiredTotal>0&&ownedRequired>=requiredTotal;if(complete)completedCollections+=1;
+    allRequired+=requiredTotal;allOwnedRequired+=ownedRequired;totalOwnedSlots+=ownedTotal;totalSlots+=sourceItems.length;
+    collections.push({collectionId,title:String(row.title||collectionId),subtitle:String(row.subtitle||""),coverUrl:String(row.cover_url||""),backgroundUrl:String(row.background_url||""),accentColor:albumAccentColor(row.accent_color),sortOrder:Number(row.sort_order||0),revision:Number(row.revision||1),requiredTotal,ownedRequired,totalItems:sourceItems.length,ownedTotal,progressPercent,complete,items,milestones});
+  }
+  return {ok:true,generatedAt:Date.now(),summary:{collections:collections.length,completedCollections,requiredTotal:allRequired,ownedRequired:allOwnedRequired,totalItems:totalSlots,ownedItems:totalOwnedSlots,progressPercent:allRequired?Math.min(100,Math.floor((allOwnedRequired*100)/allRequired)):0},collections,accountRevision:await readPlayerAccountRevision(env,String(telegramId))};
+}
+
+async function getAlbumState(request,env){
+  try{const body=await readJson(request),auth=await validateTelegramInitData(String(body.initData||body.init_data||""),env);return jsonResponse(await albumPlayerState(env,String(auth.user.id)));}
+  catch(error){if(error instanceof ApiError)return jsonResponse({ok:false,error:error.message},error.status);console.error("getAlbumState failed",error);return jsonResponse({ok:false,error:"Не удалось открыть Альбом Зеффи."},500);}
+}
+
+async function albumNormalizeReward(env,input,catalogMap=null){
+  const kind=String(input?.kind||"").trim(),amount=Math.max(1,Math.min(999999999,Math.floor(Number(input?.amount)||1))),id=String(input?.id||input?.itemId||"").trim();
+  if(["points","zefir","coffee"].includes(kind))return {kind,amount};
+  if(kind==="case"){const caseId=normalizeCaseType(id);if(!caseId)throw new ApiError(400,"Выберите существующий кейс для награды Альбома.");return {kind,id:caseId,amount:Math.min(20,amount)};}
+  if(kind==="seasonal_case"){await ensureSeasonPassSchema(env);const row=await env.DB.prepare(`SELECT case_id FROM season_pass_case_definitions WHERE case_id=? LIMIT 1`).bind(id).first();if(!row)throw new ApiError(400,"Сезонный кейс для награды Альбома не найден.");return {kind,id,amount:Math.min(20,amount)};}
+  if(ALBUM_ITEM_KINDS.includes(kind)){const catalog=catalogMap||await albumCatalogSnapshot(env),item=catalog.get(albumItemKey(kind,id));if(!id||!item||item.deliverable===false)throw new ApiError(400,"Для награды Альбома выберите косметику, которую сервер умеет выдавать игроку.");return {kind,id,amount:1};}
+  throw new ApiError(400,"Неподдерживаемый тип награды Альбома.");
+}
+
+async function claimAlbumMilestone(request,env){
+  try{
+    const body=await readJson(request),auth=await validateTelegramInitData(String(body.initData||body.init_data||""),env),telegramId=String(auth.user.id),collectionId=albumCollectionId(body.collectionId),milestoneId=String(body.milestoneId||"").trim().slice(0,80),requestId=String(body.requestId||"").trim().slice(0,120);
+    if(!collectionId||!milestoneId)throw new ApiError(400,"Награда Альбома не выбрана.");await ensureAlbumSchema(env);
+    const state=await albumPlayerState(env,telegramId),collection=state.collections.find((x)=>x.collectionId===collectionId),milestone=collection?.milestones?.find((x)=>x.milestoneId===milestoneId);
+    if(!collection||!milestone)throw new ApiError(404,"Награда Альбома не найдена.");if(!milestone.eligible)throw new ApiError(409,"Сначала соберите нужную часть коллекции.");
+    const row=await env.DB.prepare(`SELECT rewards_json,threshold_percent,status FROM album_milestones WHERE collection_id=? AND milestone_id=? AND enabled=1 LIMIT 1`).bind(collectionId,milestoneId).first();if(!row)throw new ApiError(404,"Награда Альбома отключена.");
+    const snapshot=(safeJson(row.rewards_json,[])||[]).slice(0,3);if(!snapshot.length)throw new ApiError(409,"У этой отметки Альбома пока нет награды.");const now=Math.floor(Date.now()/1000);
+    await env.DB.prepare(`INSERT OR IGNORE INTO album_milestone_claims(telegram_id,collection_id,milestone_id,threshold_percent,rewards_json,queue_ids_json,status,request_id,created_at,delivered_at,updated_at) VALUES(?,?,?,?,?,'[]','pending',?,?,0,?)`).bind(telegramId,collectionId,milestoneId,Number(row.threshold_percent||0),JSON.stringify(snapshot),requestId,now,now).run();
+    let claim=await env.DB.prepare(`SELECT * FROM album_milestone_claims WHERE telegram_id=? AND collection_id=? AND milestone_id=? LIMIT 1`).bind(telegramId,collectionId,milestoneId).first();
+    if(String(claim?.status||"")==="delivered")return jsonResponse({ok:true,repeated:true,state:await albumPlayerState(env,telegramId)});
+    const rewards=(safeJson(claim?.rewards_json,[])||[]).slice(0,3),sourceIds=[],rewardCatalog=await albumCatalogSnapshot(env);
+    for(let i=0;i<rewards.length;i+=1){const reward=await albumNormalizeReward(env,rewards[i],rewardCatalog),sourceId=`${collectionId}:${milestoneId}:${i+1}`.slice(0,180);sourceIds.push(sourceId);await enqueueRewardDelivery(env,telegramId,"album_milestone",sourceId,reward,`Альбом «${collection.title}» · ${Number(claim.threshold_percent||0)}%`);}
+    if(sourceIds.length){const placeholders=sourceIds.map(()=>"?").join(",");await env.DB.prepare(`UPDATE reward_delivery_queue SET status=CASE WHEN status='failed' THEN 'pending' ELSE status END,available_at=CASE WHEN status='failed' THEN ? ELSE available_at END,last_error=CASE WHEN status='failed' THEN '' ELSE last_error END,lease_token=CASE WHEN status='failed' THEN '' ELSE lease_token END,lease_until=CASE WHEN status='failed' THEN 0 ELSE lease_until END,updated_at=? WHERE telegram_id=? AND source_type='album_milestone' AND source_id IN (${placeholders}) AND attempts<5`).bind(now,now,telegramId,...sourceIds).run();}
+    await processPlayerRewardDeliveryQueue(env,telegramId,Math.max(10,rewards.length+3));
+    let queueRows=[];if(sourceIds.length){const placeholders=sourceIds.map(()=>"?").join(",");queueRows=(await env.DB.prepare(`SELECT id,source_id,status,attempts,last_error FROM reward_delivery_queue WHERE telegram_id=? AND source_type='album_milestone' AND source_id IN (${placeholders})`).bind(telegramId,...sourceIds).all()).results||[];}
+    const allDelivered=sourceIds.length>0&&sourceIds.every((id)=>queueRows.some((q)=>String(q.source_id)===id&&["delivered","claimed"].includes(String(q.status))));const terminalFailure=queueRows.some((q)=>String(q.status)==="failed"&&Number(q.attempts||0)>=5);const nextStatus=allDelivered?"delivered":terminalFailure?"failed":"pending",queueIds=queueRows.map((q)=>Number(q.id||0)).filter(Boolean);
+    await env.DB.prepare(`UPDATE album_milestone_claims SET status=?,queue_ids_json=?,delivered_at=CASE WHEN ?='delivered' AND delivered_at=0 THEN ? ELSE delivered_at END,updated_at=? WHERE telegram_id=? AND collection_id=? AND milestone_id=?`).bind(nextStatus,JSON.stringify(queueIds),nextStatus,now,now,telegramId,collectionId,milestoneId).run();
+    return jsonResponse({ok:true,repeated:false,pending:nextStatus!=="delivered",state:await albumPlayerState(env,telegramId)});
+  }catch(error){if(error instanceof ApiError)return jsonResponse({ok:false,error:error.message},error.status);console.error("claimAlbumMilestone failed",error);return jsonResponse({ok:false,error:"Не удалось получить награду Альбома."},500);}
+}
+
+async function ownerPanelAlbums(env,ctx){
+  await ensureAlbumSchema(env);await ensureSeasonPassSchema(env);const catalog=await albumCatalogSnapshot(env);
+  const [collectionsRes,itemsRes,milestonesRes,claimStatsRes,seasonalRes]=await Promise.all([
+    env.DB.prepare(`SELECT * FROM album_collections ORDER BY CASE status WHEN 'published' THEN 0 WHEN 'draft' THEN 1 ELSE 2 END,sort_order,updated_at DESC`).all(),
+    env.DB.prepare(`SELECT * FROM album_collection_items ORDER BY collection_id,sort_order,item_kind,item_id`).all(),
+    env.DB.prepare(`SELECT * FROM album_milestones ORDER BY collection_id,threshold_percent,sort_order,milestone_id`).all(),
+    env.DB.prepare(`SELECT collection_id,milestone_id,status,COUNT(*) AS count FROM album_milestone_claims GROUP BY collection_id,milestone_id,status`).all(),
+    env.DB.prepare(`SELECT case_id,title,closed_image_url AS image_url,enabled,release_at FROM season_pass_case_definitions ORDER BY season_id,case_id`).all()
+  ]);
+  const itemsBy=new Map(),milestonesBy=new Map(),stats=new Map();for(const row of itemsRes.results||[]){const id=String(row.collection_id);if(!itemsBy.has(id))itemsBy.set(id,[]);const meta=catalog.get(albumItemKey(row.item_kind,row.item_id))||{};itemsBy.get(id).push({kind:String(row.item_kind),itemId:String(row.item_id),required:Number(row.required||0)===1,secret:Number(row.secret||0)===1,sortOrder:Number(row.sort_order||0),title:String(meta.title||row.item_id),rarity:String(meta.rarity||"common"),imageUrl:String(meta.imageUrl||""),enabled:meta.enabled!==false,future:Boolean(meta.future),released:meta.released!==false});}
+  for(const row of claimStatsRes.results||[]){const key=`${row.collection_id}:${row.milestone_id}`;if(!stats.has(key))stats.set(key,{pending:0,delivered:0,failed:0});stats.get(key)[String(row.status)||"pending"]=Number(row.count||0);}
+  for(const row of milestonesRes.results||[]){const id=String(row.collection_id);if(!milestonesBy.has(id))milestonesBy.set(id,[]);milestonesBy.get(id).push({milestoneId:String(row.milestone_id),thresholdPercent:Number(row.threshold_percent||0),title:String(row.title||""),rewards:safeJson(row.rewards_json,[]),enabled:Number(row.enabled||0)===1,sortOrder:Number(row.sort_order||0),claimStats:stats.get(`${id}:${row.milestone_id}`)||{pending:0,delivered:0,failed:0}});}
+  const collections=(collectionsRes.results||[]).map((row)=>{const items=itemsBy.get(String(row.collection_id))||[],milestones=milestonesBy.get(String(row.collection_id))||[];return {collectionId:String(row.collection_id),title:String(row.title||""),subtitle:String(row.subtitle||""),coverUrl:String(row.cover_url||""),backgroundUrl:String(row.background_url||""),accentColor:albumAccentColor(row.accent_color),status:String(row.status||"draft"),sortOrder:Number(row.sort_order||0),revision:Number(row.revision||1),createdAt:Number(row.created_at||0),updatedAt:Number(row.updated_at||0),publishedAt:Number(row.published_at||0),requiredCount:items.filter((x)=>x.required).length,bonusCount:items.filter((x)=>!x.required).length,items,milestones};});
+  return {ok:true,collections,catalog:Array.from(catalog.values()).sort((a,b)=>ALBUM_ITEM_KINDS.indexOf(a.kind)-ALBUM_ITEM_KINDS.indexOf(b.kind)||String(a.title).localeCompare(String(b.title),"ru")),kindLabels:ALBUM_KIND_LABELS,seasonalCases:(seasonalRes.results||[]).map((r)=>({id:String(r.case_id),title:String(r.title||r.case_id),imageUrl:String(r.image_url||"/assets/season-pass/season.png?v=07939"),enabled:Number(r.enabled||0)===1,released:Number(r.release_at||0)<=Math.floor(Date.now()/1000)}))};
+}
+
+async function ownerPanelAlbumSave(env,ctx){
+  await ensureAlbumSchema(env);const body=ctx.body||{},now=Math.floor(Date.now()/1000),requested=albumCollectionId(body.collectionId),title=String(body.title||"").trim().slice(0,120);if(!title)throw new ApiError(400,"Введите название альбома.");
+  const collectionId=requested||albumCollectionId(caseGrantId("album").toLowerCase().replace(/[^a-z0-9_-]/g,"_"))||`album_${Date.now().toString(36)}`;
+  const subtitle=String(body.subtitle||"").trim().slice(0,260),coverUrl=albumAssetUrl(body.coverUrl),backgroundUrl=albumAssetUrl(body.backgroundUrl),accentColor=albumAccentColor(body.accentColor),sortOrder=Math.max(-9999,Math.min(9999,Math.floor(Number(body.sortOrder)||0))),existing=await env.DB.prepare(`SELECT * FROM album_collections WHERE collection_id=? LIMIT 1`).bind(collectionId).first();
+  if(existing){await env.DB.prepare(`UPDATE album_collections SET title=?,subtitle=?,cover_url=?,background_url=?,accent_color=?,sort_order=?,revision=revision+1,updated_at=?,updated_by=? WHERE collection_id=?`).bind(title,subtitle,coverUrl,backgroundUrl,accentColor,sortOrder,now,String(ctx.user.id),collectionId).run();}
+  else{await env.DB.prepare(`INSERT INTO album_collections(collection_id,title,subtitle,cover_url,background_url,accent_color,status,sort_order,revision,created_at,updated_at,published_at,created_by,updated_by) VALUES(?,?,?,?,?,?,'draft',?,1,?,?,0,?,?)`).bind(collectionId,title,subtitle,coverUrl,backgroundUrl,accentColor,sortOrder,now,now,String(ctx.user.id),String(ctx.user.id)).run();}
+  await logStaffAction(env,ctx.user,ctx.access,existing?"album_update":"album_create",null,"album",null,null,{collectionId,title,status:String(existing?.status||"draft")});return {ok:true,collectionId};
+}
+
+async function ownerPanelAlbumItemsSave(env,ctx){
+  await ensureAlbumSchema(env);const body=ctx.body||{},collectionId=albumCollectionId(body.collectionId);if(!collectionId)throw new ApiError(400,"Альбом не выбран.");const album=await env.DB.prepare(`SELECT collection_id,title,status FROM album_collections WHERE collection_id=? LIMIT 1`).bind(collectionId).first();if(!album)throw new ApiError(404,"Альбом не найден.");const catalog=await albumCatalogSnapshot(env),source=Array.isArray(body.items)?body.items:[body],items=[];
+  for(const raw of source.slice(0,100)){const kind=String(raw?.kind||raw?.itemKind||"").trim(),itemId=String(raw?.itemId||"").trim();if(!ALBUM_ITEM_KINDS.includes(kind)||!itemId)continue;const meta=catalog.get(albumItemKey(kind,itemId));if(!meta)throw new ApiError(400,`Предмет ${kind}:${itemId} отсутствует в каталоге контента.`);items.push({kind,itemId,required:albumBool(raw.required),secret:albumBool(raw.secret),sortOrder:Math.max(-9999,Math.min(9999,Math.floor(Number(raw.sortOrder)||0))),meta});}
+  if(!items.length)throw new ApiError(400,"Выберите хотя бы один предмет.");const existingRes=await env.DB.prepare(`SELECT item_kind,item_id,required FROM album_collection_items WHERE collection_id=?`).bind(collectionId).all(),existing=new Map((existingRes.results||[]).map((r)=>[albumItemKey(r.item_kind,r.item_id),r]));let progressRisk=false;
+  for(const item of items){const before=existing.get(albumItemKey(item.kind,item.itemId)),beforeRequired=Number(before?.required||0)===1;if(String(album.status)==="published"&&(!before&&item.required||before&&beforeRequired!==item.required))progressRisk=true;if(String(album.status)==="published"&&item.required&&item.meta.future&&!item.meta.released)throw new ApiError(409,`Скрытый предмет «${item.meta.title}» нельзя сделать обязательным в опубликованном альбоме до его релиза.`);}
+  if(progressRisk&&!albumBool(body.confirmProgressChange)){const claimed=await env.DB.prepare(`SELECT COUNT(*) AS count FROM album_milestone_claims WHERE collection_id=? AND status='delivered'`).bind(collectionId).first();throw new ApiError(409,`Обязательный предмет изменит прогресс опубликованного альбома${Number(claimed?.count||0)>0?` (уже есть ${Number(claimed.count)} полученных этапов)`:""}. Подтвердите изменение прогресса.`);}
+  const now=Math.floor(Date.now()/1000),statements=items.map((item)=>env.DB.prepare(`INSERT INTO album_collection_items(collection_id,item_kind,item_id,required,secret,sort_order,added_at,added_by) VALUES(?,?,?,?,?,?,?,?) ON CONFLICT(collection_id,item_kind,item_id) DO UPDATE SET required=excluded.required,secret=excluded.secret,sort_order=excluded.sort_order`).bind(collectionId,item.kind,item.itemId,item.required?1:0,item.secret?1:0,item.sortOrder,now,String(ctx.user.id)));statements.push(env.DB.prepare(`UPDATE album_collections SET revision=revision+1,updated_at=?,updated_by=? WHERE collection_id=?`).bind(now,String(ctx.user.id),collectionId));await env.DB.batch(statements);
+  await logStaffAction(env,ctx.user,ctx.access,"album_items_save",null,"album",null,null,{collectionId,count:items.length,items:items.map((x)=>({kind:x.kind,itemId:x.itemId,required:x.required,secret:x.secret}))});return {ok:true,collectionId,count:items.length};
+}
+
+async function ownerPanelAlbumItemDelete(env,ctx){
+  await ensureAlbumSchema(env);const collectionId=albumCollectionId(ctx.body?.collectionId),kind=String(ctx.body?.kind||""),itemId=String(ctx.body?.itemId||"");if(!collectionId||!ALBUM_ITEM_KINDS.includes(kind)||!itemId)throw new ApiError(400,"Предмет Альбома не выбран.");const current=await env.DB.prepare(`SELECT i.required,c.status FROM album_collection_items i JOIN album_collections c ON c.collection_id=i.collection_id WHERE i.collection_id=? AND i.item_kind=? AND i.item_id=? LIMIT 1`).bind(collectionId,kind,itemId).first();if(!current)throw new ApiError(404,"Предмет не найден в Альбоме.");if(String(current.status)==="published"&&Number(current.required||0)===1&&!albumBool(ctx.body?.confirmProgressChange))throw new ApiError(409,"Удаление обязательного предмета увеличит прогресс опубликованного Альбома и может открыть награды. Подтвердите изменение прогресса.");const now=Math.floor(Date.now()/1000);const result=await env.DB.prepare(`DELETE FROM album_collection_items WHERE collection_id=? AND item_kind=? AND item_id=?`).bind(collectionId,kind,itemId).run();if(Number(result.meta?.changes||0)<1)throw new ApiError(404,"Предмет не найден в Альбоме.");await env.DB.prepare(`UPDATE album_collections SET revision=revision+1,updated_at=?,updated_by=? WHERE collection_id=?`).bind(now,String(ctx.user.id),collectionId).run();await logStaffAction(env,ctx.user,ctx.access,"album_item_delete",null,"album",null,null,{collectionId,kind,itemId,wasRequired:Number(current.required||0)===1});return {ok:true};
+}
+
+async function ownerPanelAlbumMilestoneSave(env,ctx){
+  await ensureAlbumSchema(env);const body=ctx.body||{},collectionId=albumCollectionId(body.collectionId),threshold=Math.max(1,Math.min(100,Math.floor(Number(body.thresholdPercent)||0)));if(!collectionId||!threshold)throw new ApiError(400,"Укажите процент этапа от 1 до 100.");const album=await env.DB.prepare(`SELECT collection_id,status,title FROM album_collections WHERE collection_id=? LIMIT 1`).bind(collectionId).first();if(!album)throw new ApiError(404,"Альбом не найден.");let milestoneId=String(body.milestoneId||"").trim().slice(0,80);if(!milestoneId)milestoneId=`p${threshold}`;if(!/^[A-Za-z0-9_-]{1,80}$/.test(milestoneId))throw new ApiError(400,"Некорректный ID этапа.");const sourceRewards=Array.isArray(body.rewards)?body.rewards:body.reward?[body.reward]:[],rewards=[];for(const raw of sourceRewards.slice(0,3))rewards.push(await albumNormalizeReward(env,raw));if(!rewards.length)throw new ApiError(400,"Добавьте награду этапа.");const existing=await env.DB.prepare(`SELECT * FROM album_milestones WHERE collection_id=? AND milestone_id=? LIMIT 1`).bind(collectionId,milestoneId).first(),sameThreshold=await env.DB.prepare(`SELECT milestone_id FROM album_milestones WHERE collection_id=? AND threshold_percent=? AND milestone_id<>? LIMIT 1`).bind(collectionId,threshold,milestoneId).first();if(sameThreshold)throw new ApiError(409,`Для ${threshold}% уже есть другой этап.`);
+  if(String(album.status)==="published"&&!albumBool(body.confirmProgressChange))throw new ApiError(409,"Изменение награды или порога опубликованного альбома требует подтверждения.");const now=Math.floor(Date.now()/1000),title=String(body.title||`${threshold}% коллекции`).trim().slice(0,140),enabled=body.enabled!==false&&Number(body.enabled)!==0,sortOrder=Math.max(-9999,Math.min(9999,Math.floor(Number(body.sortOrder)||threshold)));
+  await env.DB.prepare(`INSERT INTO album_milestones(collection_id,milestone_id,threshold_percent,title,rewards_json,enabled,sort_order,created_at,updated_at,updated_by) VALUES(?,?,?,?,?,?,?,?,?,?) ON CONFLICT(collection_id,milestone_id) DO UPDATE SET threshold_percent=excluded.threshold_percent,title=excluded.title,rewards_json=excluded.rewards_json,enabled=excluded.enabled,sort_order=excluded.sort_order,updated_at=excluded.updated_at,updated_by=excluded.updated_by`).bind(collectionId,milestoneId,threshold,title,JSON.stringify(rewards),enabled?1:0,sortOrder,Number(existing?.created_at||now),now,String(ctx.user.id)).run();await env.DB.prepare(`UPDATE album_collections SET revision=revision+1,updated_at=?,updated_by=? WHERE collection_id=?`).bind(now,String(ctx.user.id),collectionId).run();await logStaffAction(env,ctx.user,ctx.access,existing?"album_milestone_update":"album_milestone_create",null,"album",null,null,{collectionId,milestoneId,threshold,rewards});return {ok:true,milestoneId};
+}
+
+async function ownerPanelAlbumMilestoneDelete(env,ctx){
+  await ensureAlbumSchema(env);const collectionId=albumCollectionId(ctx.body?.collectionId),milestoneId=String(ctx.body?.milestoneId||"").trim();if(!collectionId||!milestoneId)throw new ApiError(400,"Этап Альбома не выбран.");const album=await env.DB.prepare(`SELECT status FROM album_collections WHERE collection_id=? LIMIT 1`).bind(collectionId).first();if(!album)throw new ApiError(404,"Альбом не найден.");if(String(album.status)==="published"&&!albumBool(ctx.body?.confirmProgressChange))throw new ApiError(409,"Удаление этапа опубликованного Альбома требует отдельного подтверждения.");const claims=await env.DB.prepare(`SELECT COUNT(*) AS count FROM album_milestone_claims WHERE collection_id=? AND milestone_id=?`).bind(collectionId,milestoneId).first();if(Number(claims?.count||0)>0)throw new ApiError(409,"Этап уже имеет историю получений. Отключите его вместо удаления.");const result=await env.DB.prepare(`DELETE FROM album_milestones WHERE collection_id=? AND milestone_id=?`).bind(collectionId,milestoneId).run();if(Number(result.meta?.changes||0)<1)throw new ApiError(404,"Этап не найден.");const now=Math.floor(Date.now()/1000);await env.DB.prepare(`UPDATE album_collections SET revision=revision+1,updated_at=?,updated_by=? WHERE collection_id=?`).bind(now,String(ctx.user.id),collectionId).run();await logStaffAction(env,ctx.user,ctx.access,"album_milestone_delete",null,"album",null,null,{collectionId,milestoneId});return {ok:true};
+}
+
+async function albumValidateForPublish(env,collectionId){
+  const catalog=await albumCatalogSnapshot(env),collection=await env.DB.prepare(`SELECT * FROM album_collections WHERE collection_id=? LIMIT 1`).bind(collectionId).first();if(!collection)throw new ApiError(404,"Альбом не найден.");const [itemsRes,milestonesRes]=await Promise.all([env.DB.prepare(`SELECT * FROM album_collection_items WHERE collection_id=?`).bind(collectionId).all(),env.DB.prepare(`SELECT * FROM album_milestones WHERE collection_id=? AND enabled=1`).bind(collectionId).all()]);const items=itemsRes.results||[],problems=[];if(!String(collection.title||"").trim())problems.push("нет названия");if(!items.some((x)=>Number(x.required||0)===1))problems.push("нет обязательных предметов");
+  for(const item of items){const meta=catalog.get(albumItemKey(item.item_kind,item.item_id));if(!meta)problems.push(`предмет ${item.item_kind}:${item.item_id} отсутствует в каталоге`);else if(Number(item.required||0)===1&&meta.enabled===false)problems.push(`обязательный предмет «${meta.title}» отключён в каталоге`);else if(Number(item.required||0)===1&&meta.future&&!meta.released)problems.push(`обязательный предмет «${meta.title}» ещё скрыт`);}
+  for(const m of milestonesRes.results||[]){const rewards=safeJson(m.rewards_json,[]);if(!Array.isArray(rewards)||!rewards.length){problems.push(`этап ${m.threshold_percent}% без награды`);continue;}for(const reward of rewards){try{const normalized=await albumNormalizeReward(env,reward,catalog);if(ALBUM_ITEM_KINDS.includes(normalized.kind)){const meta=catalog.get(albumItemKey(normalized.kind,normalized.id));if(meta?.enabled===false)problems.push(`награда этапа ${m.threshold_percent}% «${meta.title}» отключена`);else if(meta?.future&&!meta.released)problems.push(`награда этапа ${m.threshold_percent}% «${meta.title}» ещё скрыта`);}}catch(error){problems.push(`этап ${m.threshold_percent}%: ${error.message}`);}}}
+  if(problems.length)throw new ApiError(409,`Альбом нельзя опубликовать: ${problems.slice(0,8).join("; ")}.`);return {collection,items,milestones:milestonesRes.results||[]};
+}
+
+async function ownerPanelAlbumStatus(env,ctx){
+  await ensureAlbumSchema(env);const collectionId=albumCollectionId(ctx.body?.collectionId),status=String(ctx.body?.status||"");if(!collectionId||!ALBUM_STATUS_VALUES.includes(status))throw new ApiError(400,"Некорректный статус Альбома.");const before=await env.DB.prepare(`SELECT * FROM album_collections WHERE collection_id=? LIMIT 1`).bind(collectionId).first();if(!before)throw new ApiError(404,"Альбом не найден.");if(status==="published")await albumValidateForPublish(env,collectionId);const now=Math.floor(Date.now()/1000);await env.DB.prepare(`UPDATE album_collections SET status=?,published_at=CASE WHEN ?='published' AND published_at=0 THEN ? ELSE published_at END,revision=revision+1,updated_at=?,updated_by=? WHERE collection_id=?`).bind(status,status,now,now,String(ctx.user.id),collectionId).run();await logStaffAction(env,ctx.user,ctx.access,"album_status",null,"album",String(before.status||""),status,{collectionId,title:String(before.title||collectionId)});return {ok:true,collectionId,status};
+}
+
+async function ownerPanelAlbumDelete(env,ctx){
+  await ensureAlbumSchema(env);const collectionId=albumCollectionId(ctx.body?.collectionId);if(!collectionId)throw new ApiError(400,"Альбом не выбран.");const row=await env.DB.prepare(`SELECT title,status FROM album_collections WHERE collection_id=? LIMIT 1`).bind(collectionId).first();if(!row)throw new ApiError(404,"Альбом не найден.");if(String(row.status)!=="draft")throw new ApiError(409,"Удалять можно только черновик. Опубликованный Альбом сначала архивируйте.");const claims=await env.DB.prepare(`SELECT COUNT(*) AS count FROM album_milestone_claims WHERE collection_id=?`).bind(collectionId).first();if(Number(claims?.count||0)>0)throw new ApiError(409,"У Альбома уже есть история получений; его нельзя удалить.");await env.DB.batch([env.DB.prepare(`DELETE FROM album_collection_items WHERE collection_id=?`).bind(collectionId),env.DB.prepare(`DELETE FROM album_milestones WHERE collection_id=?`).bind(collectionId),env.DB.prepare(`DELETE FROM album_collections WHERE collection_id=?`).bind(collectionId)]);await logStaffAction(env,ctx.user,ctx.access,"album_delete",null,"album",null,null,{collectionId,title:String(row.title||collectionId)});return {ok:true};
+}
+// ===================== END ALBUM ZEFFI =====================
+
+
 async function handleOwnerPanelApi(request, env, path, executionCtx = null) {
   try {
     const ctx = { ...(await requireOwnerPanelContext(request, env)), executionCtx };
@@ -37638,6 +38151,14 @@ async function handleOwnerPanelApi(request, env, path, executionCtx = null) {
     if (path === "/api/owner/staging/rollback") return jsonResponse(await ownerPanelStagingRollback(env, ctx));
     const ownerSeasonMutationPaths=new Set(['/api/owner/season-pass/create','/api/owner/season-pass/delete','/api/owner/season-pass/timing','/api/owner/season-pass/start','/api/owner/season-pass/end','/api/owner/season-pass/force-close','/api/owner/season-pass/story/save','/api/owner/season-pass/story/toggle','/api/owner/season-pass/story/delete','/api/owner/season-pass/story/transfer','/api/owner/season-pass/story/duplicate','/api/owner/season-pass/story/launch','/api/owner/season-pass/letter/save','/api/owner/season-pass/task/delete']);
     if(ownerSeasonMutationPaths.has(path)){const pref=await ownerStagingPreference(env,String(ctx.user.id)).catch(()=>null);if(pref&&Number(pref.staging_enabled||0)===1&&String(pref.active_change_set_id||''))throw new ApiError(409,'STAGING включён: эта операция не может менять Production напрямую. Для create/timing сохраните её через Staging; для остальных действий сначала выключите Staging Mode осознанно.');}
+    // Main Control Center aliases for the isolated player lab and Release Gate.
+    // Old /test-project routes remain for backward compatibility, but the new tools live in owner.html.
+    if (path === "/api/owner/player-lab/bootstrap") return jsonResponse(await ownerPanelTestProjectBootstrap(env, ctx));
+    if (path === "/api/owner/player-lab/action") return jsonResponse(await ownerPanelTestProjectAction(env, ctx));
+    if (path === "/api/owner/player-lab/clone") return jsonResponse(await ownerPanelTestProjectClonePlayer(env, ctx));
+    if (path === "/api/owner/player-lab/reset") return jsonResponse(await ownerPanelTestProjectReset(env, ctx));
+    if (path === "/api/owner/player-lab/snapshot/refresh") return jsonResponse(await ownerPanelTestProjectRefreshSnapshot(env, ctx));
+    if (path === "/api/owner/release-gate") return jsonResponse(await ownerPanelTestProjectReleaseGate(env, ctx));
     if (path === "/api/owner/test-project/bootstrap") return jsonResponse(await ownerPanelTestProjectBootstrap(env, ctx));
     if (path === "/api/owner/test-project/state/save") return jsonResponse(await ownerPanelTestProjectSaveState(env, ctx));
     if (path === "/api/owner/test-project/reset") return jsonResponse(await ownerPanelTestProjectReset(env, ctx));
@@ -37733,6 +38254,14 @@ async function handleOwnerPanelApi(request, env, path, executionCtx = null) {
     if (path === "/api/owner/news") return jsonResponse(await ownerPanelNews(env, ctx));
     if (path === "/api/owner/news/publish") return jsonResponse(await ownerPanelPublishNews(env, ctx));
     if (path === "/api/owner/news/broadcast") return jsonResponse(await ownerPanelBroadcastNews(env, ctx));
+    if (path === "/api/owner/albums") return jsonResponse(await ownerPanelAlbums(env, ctx));
+    if (path === "/api/owner/albums/save") return jsonResponse(await ownerPanelAlbumSave(env, ctx));
+    if (path === "/api/owner/albums/items/save") return jsonResponse(await ownerPanelAlbumItemsSave(env, ctx));
+    if (path === "/api/owner/albums/item/delete") return jsonResponse(await ownerPanelAlbumItemDelete(env, ctx));
+    if (path === "/api/owner/albums/milestone/save") return jsonResponse(await ownerPanelAlbumMilestoneSave(env, ctx));
+    if (path === "/api/owner/albums/milestone/delete") return jsonResponse(await ownerPanelAlbumMilestoneDelete(env, ctx));
+    if (path === "/api/owner/albums/status") return jsonResponse(await ownerPanelAlbumStatus(env, ctx));
+    if (path === "/api/owner/albums/delete") return jsonResponse(await ownerPanelAlbumDelete(env, ctx));
     if (path === "/api/owner/cases") return jsonResponse(await ownerPanelCases(env, ctx));
     if (path === "/api/owner/cases/save") return jsonResponse(await ownerPanelSaveCase(env, ctx));
     if (path === "/api/owner/cases/content/save") return jsonResponse(await ownerPanelSaveCaseContent(env, ctx));
@@ -37771,6 +38300,8 @@ async function handleOwnerPanelApi(request, env, path, executionCtx = null) {
     if (path === "/api/owner/v8/events/save") return jsonResponse(await ownerPanelV8SaveEvent(env, ctx));
     if (path === "/api/owner/v8/events/publish") return jsonResponse(await ownerPanelV8PublishEvent(env, ctx));
     if (path === "/api/owner/v8/events/cancel") return jsonResponse(await ownerPanelV8CancelEvent(env, ctx));
+    if (path === "/api/owner/v8/events/template/save") return jsonResponse(await ownerPanelV8SaveEventTemplate(env, ctx));
+    if (path === "/api/owner/v8/events/template/delete") return jsonResponse(await ownerPanelV8DeleteEventTemplate(env, ctx));
     if (path === "/api/owner/v8/releases") return jsonResponse(await ownerPanelV8Releases(env, ctx));
     if (path === "/api/owner/v8/releases/create") return jsonResponse(await ownerPanelV8CreateRelease(env, ctx));
     if (path === "/api/owner/v8/releases/state") return jsonResponse(await ownerPanelV8ReleaseState(env, ctx));

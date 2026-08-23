@@ -7,11 +7,17 @@
 <meta content="no-referrer" name="referrer"/>
 <meta content="default-src 'none'; script-src 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com https://telegram.org; style-src 'unsafe-inline' blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; img-src 'self' blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; font-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; media-src 'self' blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; worker-src blob:; connect-src 'self' blob: data:; frame-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'" http-equiv="Content-Security-Policy"/>
 <title>Сладкий Забег</title>
-<style>:root{color-scheme:light dark;background:light-dark(rgb(255 255 255), rgb(24 24 24));--zefirok-app-height:100dvh}html,body{margin:0;width:100%;height:100%;min-height:0;overflow:hidden;overscroll-behavior:none}body{box-sizing:border-box;padding:0;background:inherit}iframe{display:none;height:var(--zefirok-app-height,100dvh);border:0}body>iframe:not(.zefirok-season-pass-frame):not(.zefirok-rating-frame):not(.zefirok-referrals-frame){width:calc(100% - 32px);max-width:736px;margin:0 auto}iframe.is-ready{display:block}.zefirok-maintenance-gate{width:100%;min-height:var(--zefirok-app-height,100dvh);display:grid;background:#fff5f5;place-items:center;padding:max(24px,var(--zefirok-content-safe-top,0px)) max(24px,var(--zefirok-content-safe-right,0px)) max(24px,var(--zefirok-content-safe-bottom,0px)) max(24px,var(--zefirok-content-safe-left,0px));box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#4e3a42}.zefirok-maintenance-card{width:min(430px,100%);box-sizing:border-box;padding:28px;border:1px solid #efd0d9;border-radius:28px;background:#fff;box-shadow:0 18px 50px rgba(91,54,68,.13);text-align:center}.zefirok-maintenance-icon{font-size:54px}.zefirok-maintenance-card h1{font-size:25px;margin:12px 0}.zefirok-maintenance-card p{font-size:16px;line-height:1.5;color:#786870;margin:0}.zefirok-maintenance-card button{margin-top:18px;padding:12px 18px;border:0;border-radius:14px;background:#e56f9b;color:#fff;font-weight:800;font-size:15px}
+<style>:root{color-scheme:light dark;background:light-dark(rgb(255 255 255), rgb(24 24 24));--zefirok-app-height:100dvh}html,body{margin:0;width:100%;height:100%;min-height:0;overflow:hidden;overscroll-behavior:none}body{box-sizing:border-box;padding:0;background:inherit}iframe{display:none;height:var(--zefirok-app-height,100dvh);border:0}body>iframe:not(.zefirok-season-pass-frame):not(.zefirok-rating-frame):not(.zefirok-referrals-frame):not(.zefirok-album-frame){width:calc(100% - 32px);max-width:736px;margin:0 auto}iframe.is-ready{display:block}.zefirok-maintenance-gate{width:100%;min-height:var(--zefirok-app-height,100dvh);display:grid;background:#fff5f5;place-items:center;padding:max(24px,var(--zefirok-content-safe-top,0px)) max(24px,var(--zefirok-content-safe-right,0px)) max(24px,var(--zefirok-content-safe-bottom,0px)) max(24px,var(--zefirok-content-safe-left,0px));box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#4e3a42}.zefirok-maintenance-card{width:min(430px,100%);box-sizing:border-box;padding:28px;border:1px solid #efd0d9;border-radius:28px;background:#fff;box-shadow:0 18px 50px rgba(91,54,68,.13);text-align:center}.zefirok-maintenance-icon{font-size:54px}.zefirok-maintenance-card h1{font-size:25px;margin:12px 0}.zefirok-maintenance-card p{font-size:16px;line-height:1.5;color:#786870;margin:0}.zefirok-maintenance-card button{margin-top:18px;padding:12px 18px;border:0;border-radius:14px;background:#e56f9b;color:#fff;font-weight:800;font-size:15px}
 .zefirok-season-pass-layer{position:fixed;inset:0;width:100%;height:var(--zefirok-app-height,100dvh);z-index:2147483000;background:#fff5f4;display:block;overflow:hidden}
 .zefirok-season-pass-layer[hidden]{display:none!important}
 .zefirok-season-pass-frame{display:block!important;width:100%!important;max-width:none!important;height:var(--zefirok-app-height,100dvh)!important;margin:0!important;border:0!important;background:#fff5f4}
 .zefirok-referrals-layer{position:fixed;inset:0;width:100%;height:var(--zefirok-app-height,100dvh);z-index:2147483050;background:#fff7f1;display:block;overflow:hidden}
+.zefirok-album-layer{position:fixed;inset:0;width:100%;height:var(--zefirok-app-height,100dvh);z-index:2147483060;background:#fff7f4;display:block;overflow:hidden}
+.zefirok-album-layer[hidden]{display:none!important}
+.zefirok-album-frame{display:block!important;width:100%!important;max-width:none!important;height:var(--zefirok-app-height,100dvh)!important;margin:0!important;border:0!important;background:#fff7f4}
+body.zefirok-album-open{overflow:hidden!important;padding:0!important}
+body.zefirok-album-open>iframe:not(.zefirok-album-frame){visibility:hidden!important;pointer-events:none!important}
+
 .zefirok-referrals-layer[hidden]{display:none!important}
 .zefirok-referrals-frame{display:block!important;width:100%!important;max-width:none!important;height:var(--zefirok-app-height,100dvh)!important;margin:0!important;border:0!important;background:#fff7f1}
 body.zefirok-referrals-open{overflow:hidden!important;padding:0!important}
@@ -201,12 +207,14 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
     const passOpen = Boolean(document.body?.classList?.contains("zefirok-season-pass-open"));
     const ratingOpen = Boolean(document.body?.classList?.contains("zefirok-rating-open"));
     const referralsOpen = Boolean(document.body?.classList?.contains("zefirok-referrals-open"));
+    const albumOpen = Boolean(document.body?.classList?.contains("zefirok-album-open"));
     // Freeze the game while a full-screen section is on top. Resizing a hidden iframe
     // in iOS Telegram can return a transient narrow rectangle and distort the canvas.
-    if (!passOpen && !ratingOpen && !referralsOpen) sendViewportSnapshot(gameFrame?.contentWindow, snapshot);
+    if (!passOpen && !ratingOpen && !referralsOpen && !albumOpen) sendViewportSnapshot(gameFrame?.contentWindow, snapshot);
     sendViewportSnapshot(seasonPassFrame()?.contentWindow, snapshot);
     sendViewportSnapshot(ratingFrame()?.contentWindow, snapshot);
     sendViewportSnapshot(referralsFrame()?.contentWindow, snapshot);
+    sendViewportSnapshot(albumFrame()?.contentWindow, snapshot);
     return snapshot;
   }
 
@@ -1205,6 +1213,69 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
     refreshMainGameAfterSeasonPass();
   }
 
+  let albumLayer = null;
+
+  function albumFrame() {
+    return albumLayer?.querySelector?.(".zefirok-album-frame") || null;
+  }
+
+  function handleAlbumBackButton() {
+    const target = albumFrame()?.contentWindow;
+    if (!target) { closeAlbumOverlay(); return; }
+    try { target.postMessage({ type: "zefirok-album-back" }, "*"); }
+    catch { closeAlbumOverlay(); }
+  }
+
+  function openAlbumOverlay(initData = "") {
+    if (albumLayer?.isConnected) return;
+    const layer = document.createElement("div");
+    layer.className = "zefirok-album-layer";
+    layer.setAttribute("role", "dialog");
+    layer.setAttribute("aria-label", "Альбом Зеффи");
+    const album = document.createElement("iframe");
+    album.className = "zefirok-album-frame";
+    album.title = "Альбом Зеффи";
+    album.referrerPolicy = "same-origin";
+    album.src = initData ? `/album.html?v=1.0.9-album2#tgInitData=${encodeURIComponent(initData)}` : `/album.html?v=1.0.9-album2`;
+    layer.append(album);
+    album.addEventListener("load", () => {
+      const snapshot = syncTelegramViewport();
+      sendViewportSnapshot(album.contentWindow, snapshot);
+      try { sendTelegramProfile(album.contentWindow); } catch {}
+    }, { once: true });
+    document.body.append(layer);
+    document.body.classList.add("zefirok-album-open");
+    albumLayer = layer;
+    try {
+      const webApp = window.Telegram?.WebApp;
+      webApp?.disableVerticalSwipes?.();
+      webApp?.enableClosingConfirmation?.();
+      webApp?.BackButton?.offClick?.(handleAlbumBackButton);
+      webApp?.BackButton?.offClick?.(closeAlbumOverlay);
+      webApp?.BackButton?.onClick?.(handleAlbumBackButton);
+      webApp?.BackButton?.show?.();
+    } catch {}
+    requestTelegramFullscreen();
+    scheduleTelegramViewportSync();
+  }
+
+  function closeAlbumOverlay() {
+    const layer = albumLayer;
+    albumLayer = null;
+    if (layer?.isConnected) layer.remove();
+    document.body.classList.remove("zefirok-album-open");
+    try {
+      const webApp = window.Telegram?.WebApp;
+      webApp?.BackButton?.offClick?.(handleAlbumBackButton);
+      webApp?.BackButton?.offClick?.(closeAlbumOverlay);
+      webApp?.BackButton?.hide?.();
+      webApp?.disableClosingConfirmation?.();
+    } catch {}
+    requestTelegramFullscreen();
+    scheduleTelegramViewportSync();
+    refreshMainGameAfterSeasonPass();
+  }
+
   let ratingLayer = null;
   let ratingReadyTimer = 0;
   const RATING_RELEASE_BUILD = "1.0.9-rating";
@@ -1350,18 +1421,65 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
     } catch {}
   }
 
+  let hostAccountRevision = 0;
+  let hostAccountRevisionInFlight = null;
+  let hostAccountRevisionTimer = 0;
+
+  function broadcastHostAccountRevision(revision, reason = "account-change") {
+    const next = Math.max(0, Number(revision || 0));
+    if (next > hostAccountRevision) hostAccountRevision = next;
+    const payload = { type:"zefirok-account-changed", revision:hostAccountRevision, reason:String(reason || "account-change") };
+    try { frame()?.contentWindow?.postMessage?.(payload, "*"); } catch {}
+    try { seasonPassFrame()?.contentWindow?.postMessage?.(payload, "*"); } catch {}
+    try { referralsFrame()?.contentWindow?.postMessage?.(payload, "*"); } catch {}
+    try { albumFrame()?.contentWindow?.postMessage?.(payload, "*"); } catch {}
+    try { ratingFrame()?.contentWindow?.postMessage?.(payload, "*"); } catch {}
+    requestSeasonPassStateRefresh();
+  }
+
+  async function readHostAccountRevision() {
+    const initData = String(window.Telegram?.WebApp?.initData || "");
+    if (!initData || TEST_PROJECT_MODE) return 0;
+    const response = await fetch("/api/account/revision", {
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({initData}),
+      cache:"no-store",
+      credentials:"same-origin"
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || data?.ok === false) throw new Error(data?.error || "account revision unavailable");
+    return Math.max(0, Number(data.accountRevision || 0));
+  }
+
+  function syncHostAccountRevision(reason = "account-change", force = false) {
+    window.clearTimeout(hostAccountRevisionTimer);
+    hostAccountRevisionTimer = window.setTimeout(() => {
+      if (hostAccountRevisionInFlight) return;
+      hostAccountRevisionInFlight = readHostAccountRevision().then((revision) => {
+        if (force || revision > hostAccountRevision) broadcastHostAccountRevision(revision, reason);
+      }).catch((error) => {
+        console.warn("Account revision sync failed", error);
+        if (force) broadcastHostAccountRevision(hostAccountRevision, reason);
+      }).finally(() => { hostAccountRevisionInFlight = null; });
+    }, 70);
+  }
+  window.zefirokSyncAccountRevision = syncHostAccountRevision;
+
   window.addEventListener("message", (event) => {
     const gameFrame = frame();
     const passFrame = seasonPassFrame();
     const currentRatingFrame = ratingFrame();
     const currentReferralsFrame = referralsFrame();
+    const currentAlbumFrame = albumFrame();
     const currentLegalFrame = legalDocumentFrame();
     const fromGame = Boolean(gameFrame && event.source === gameFrame.contentWindow);
     const fromSeasonPass = Boolean(passFrame && event.source === passFrame.contentWindow);
     const fromRating = Boolean(currentRatingFrame && event.source === currentRatingFrame.contentWindow);
     const fromReferrals = Boolean(currentReferralsFrame && event.source === currentReferralsFrame.contentWindow);
+    const fromAlbum = Boolean(currentAlbumFrame && event.source === currentAlbumFrame.contentWindow);
     const fromLegal = Boolean(currentLegalFrame && event.source === currentLegalFrame.contentWindow);
-    if (!fromGame && !fromSeasonPass && !fromRating && !fromReferrals && !fromLegal) return;
+    if (!fromGame && !fromSeasonPass && !fromRating && !fromReferrals && !fromAlbum && !fromLegal) return;
     const message = event.data;
     if (!message || typeof message !== "object") return;
     if (fromLegal) {
@@ -1369,11 +1487,18 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
       return;
     }
     if (message.type === "zefirok-haptic") {
-      if (fromGame && (seasonPassLayer?.isConnected || ratingLayer?.isConnected || referralsLayer?.isConnected)) return;
+      if (fromGame && (seasonPassLayer?.isConnected || ratingLayer?.isConnected || referralsLayer?.isConnected || albumLayer?.isConnected)) return;
       if (fromSeasonPass && !seasonPassLayer?.isConnected) return;
       if (fromRating && !ratingLayer?.isConnected) return;
       if (fromReferrals && !referralsLayer?.isConnected) return;
+      if (fromAlbum && !albumLayer?.isConnected) return;
       performTelegramHaptic(message);
+      return;
+    }
+    if (fromAlbum) {
+      if (message.type === "zefirok-close-album") closeAlbumOverlay();
+      else if (message.type === "zefirok-album-account-updated") syncHostAccountRevision("album", true);
+      else if (message.type === "zefirok-request-fullscreen") { requestTelegramFullscreen(); scheduleTelegramViewportSync(); }
       return;
     }
     if (fromSeasonPass) {
@@ -1381,6 +1506,7 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
       else if (message.type === "zefirok-season-pass-account-updated") {
         const target = gameFrame?.contentWindow;
         try { target?.postMessage?.({ type: "zefirok-season-pass-account-updated" }, "*"); } catch {}
+        syncHostAccountRevision("season-pass");
       } else if (message.type === "zefirok-season-pass-tasks-claimed") {
         const target = gameFrame?.contentWindow;
         try { target?.postMessage?.({ type: "zefirok-season-pass-tasks-claimed", tasks: Array.isArray(message.tasks) ? message.tasks : [] }, "*"); } catch {}
@@ -1394,6 +1520,7 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
       if (message.type === "zefirok-close-referrals") closeReferralsOverlay();
       else if (message.type === "zefirok-referrals-account-updated") {
         try { gameFrame?.contentWindow?.postMessage?.({ type: "zefirok-referrals-account-updated" }, "*"); } catch {}
+        syncHostAccountRevision("referrals");
       } else if (message.type === "zefirok-request-fullscreen") {
         requestTelegramFullscreen();
         scheduleTelegramViewportSync();
@@ -1455,6 +1582,14 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
     } else if (message.type === "zefirok-legal-required") {
       closeLegalOverlay();
       void resolveLegalAccess(true);
+    } else if (message.type === "zefirok-open-album") {
+      let initData = "";
+      try {
+        tpHostSessionSet("zefirok-return-screen", "profile");
+        initData = String(window.Telegram?.WebApp?.initData || tpHostSessionGet("zefirok-telegram-init-data") || "");
+        if (initData) tpHostSessionSet("zefirok-telegram-init-data", initData);
+      } catch (error) {}
+      openAlbumOverlay(initData);
     } else if (message.type === "zefirok-open-referrals") {
       let initData = "";
       try {
@@ -1491,6 +1626,7 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
           result: message.result || null
         }, "*");
       } catch {}
+      if (message.result?.ok) syncHostAccountRevision("rating");
     } else if (message.type === "zefirok-rating-reset-plan-result") {
       try {
         ratingFrame()?.contentWindow?.postMessage?.({
@@ -1499,6 +1635,8 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
           applied: Boolean(message.applied)
         }, "*");
       } catch {}
+    } else if (message.type === "zefirok-account-mutated") {
+      syncHostAccountRevision(String(message.reason || "game"), true);
     } else if (message.type === "zefirok-progress-save") {
       storeProgress(message.payload);
     } else if (message.type === "zefirok-run-completed") {
@@ -10042,7 +10180,12 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 
   &lt;section class=&quot;profile-section profile-section--cases&quot; aria-labelledby=&quot;profile-collection-title&quot;&gt;
     &lt;div class=&quot;profile-section-head profile-section-head--cases&quot;&gt;
-      &lt;div&gt;&lt;h3 id=&quot;profile-collection-title&quot;&gt;Коллекция&lt;/h3&gt;&lt;span&gt;Аватарки, рамки, следы и музыка профиля.&lt;/span&gt;&lt;/div&gt;
+      &lt;div&gt;&lt;h3 id=&quot;profile-collection-title&quot;&gt;Коллекция&lt;/h3&gt;&lt;span&gt;Аватарки, рамки, следы, скины и музыка профиля.&lt;/span&gt;&lt;/div&gt;
+    &lt;/div&gt;
+    &lt;div class=&quot;album-profile-card&quot;&gt;
+      &lt;div class=&quot;album-profile-icon&quot; aria-hidden=&quot;true&quot;&gt;&lt;img src=&quot;/assets/ui/icon_albom.png&quot; alt=&quot;&quot; loading=&quot;lazy&quot;&gt;&lt;/div&gt;
+      &lt;div class=&quot;album-profile-copy&quot;&gt;&lt;strong&gt;Альбом Зеффи&lt;/strong&gt;&lt;span&gt;Тематические коллекции, секретные находки и награды за завершение историй.&lt;/span&gt;&lt;/div&gt;
+      &lt;button class=&quot;profile-action profile-action--primary&quot; data-album-open type=&quot;button&quot;&gt;Открыть Альбом&lt;/button&gt;
     &lt;/div&gt;
     &lt;div class=&quot;case-subsection&quot;&gt;
       &lt;div class=&quot;case-subsection-title&quot;&gt;&lt;strong&gt;Оформление профиля&lt;/strong&gt;&lt;span&gt;Аватарка и рамка видны в рейтинге, след — в забеге, музыка меняет фон игры.&lt;/span&gt;&lt;/div&gt;
@@ -15200,6 +15343,17 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           reconcileClaimedSeasonTaskNotices(message);
           return;
         }
+        if (message.type === &quot;zefirok-account-changed&quot;) {
+          const incomingRevision = Math.max(0, Number(message.revision || 0));
+          if (incomingRevision &gt; 0 &amp;&amp; incomingRevision &lt;= serverAccountRevision) return;
+          if (incomingRevision &gt; serverAccountRevision) serverAccountRevision = incomingRevision;
+          void (async () =&gt; {
+            await syncGameStartupPackage(true);
+            await loadCaseState(true);
+            if (isScreenVisible(&quot;profile&quot;)) await refreshLeaderboard(true, &quot;season&quot;, false);
+          })();
+          return;
+        }
         if (message.type === &quot;zefirok-season-pass-account-updated&quot;) {
           // The startup package can be coalesced with an older in-flight request.
           // Always follow it with a direct case-state read so a newly claimed case
@@ -16964,6 +17118,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         // gift claim. The inbox should say &quot;Получено&quot; as soon as delivery commits.
         void syncPlayerProfileFromServer().catch(() =&gt; {});
         void loadCaseState(true, true).then(() =&gt; renderCaseHub()).catch(() =&gt; {});
+        try { window.parent.postMessage({ type:&quot;zefirok-account-mutated&quot;, reason:&quot;gift&quot; }, &quot;*&quot;); } catch {}
       }
 
       async function claimPlayerGiftClient(giftId, button) {
@@ -18945,6 +19100,8 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         }
       }
 
+      let serverAccountRevision = 0;
+
       async function syncGameStartupPackage(force = false) {
         const initData = String(telegramProfile?.initData || &quot;&quot;);
         // Legacy booster-run cleanup is idempotent and no longer blocks startup.
@@ -18984,6 +19141,14 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           else if (Object.prototype.hasOwnProperty.call(data, &quot;miniGameVisual&quot;)) applyMiniGameTreatVisual(data.miniGameVisual);
 
           if (!initData) return true;
+          const incomingAccountRevision = Math.max(0, Number(data.accountRevision || 0));
+          const staleAccountSnapshot = incomingAccountRevision > 0 && serverAccountRevision > 0 && incomingAccountRevision < serverAccountRevision;
+          if (incomingAccountRevision > serverAccountRevision) serverAccountRevision = incomingAccountRevision;
+          if (staleAccountSnapshot) {
+            // A slower startup response must never overwrite a newer reward/account state.
+            window.setTimeout(() => void syncGameStartupPackage(true), 120);
+            return true;
+          }
           if (data.profile) applyServerProfilePayload(data.profile);
           else void syncPlayerProfileFromServer();
           if (data.cases) applyServerCasePayload(data.cases);
@@ -22605,6 +22770,22 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 &lt;script id=&quot;zefirok-v0798-legendary-music-balance-audit&quot; type=&quot;application/json&quot;&gt;{&quot;version&quot;:&quot;0.79.8&quot;,&quot;scope&quot;:&quot;legendary-case-music-and-balance&quot;,&quot;newMusicTracks&quot;:4,&quot;categoryChances&quot;:{&quot;skin&quot;:0.35,&quot;music&quot;:0.45,&quot;physical&quot;:0.035,&quot;points&quot;:39.665},&quot;totalChance&quot;:100}&lt;/script&gt;
 &lt;script id=&quot;zefirok-v0797-high-speed-smoothness-audit&quot; type=&quot;application/json&quot;&gt;{&quot;version&quot;:&quot;0.79.7&quot;,&quot;scope&quot;:&quot;high-speed-gameplay-smoothness&quot;,&quot;backwardCompatible&quot;:true,&quot;gameplayValuesChanged&quot;:false,&quot;optimizations&quot;:[&quot;speedWeightedHorizontalExtrapolation&quot;,&quot;smoothedRenderVelocity&quot;,&quot;preRenderedRoadTileCache&quot;,&quot;particleObjectPool&quot;,&quot;allocationFreeCollisionChecks&quot;,&quot;highSpeedJitterMetrics&quot;,&quot;cachedCaseTrailSprite&quot;]}&lt;/script&gt;
 
+&lt;style id=&quot;zefirok-album-profile-entry-v1-style&quot;&gt;
+#zefirok-maltipoo-runner .album-profile-card{display:grid;grid-template-columns:58px minmax(0,1fr);gap:10px;align-items:center;margin:0 0 12px;padding:13px;border:1px solid rgba(213,151,48,.28);border-radius:22px;background:radial-gradient(circle at 90% 8%,rgba(255,215,103,.34),transparent 29%),linear-gradient(145deg,#ffeaf1,#fff8de);box-shadow:0 10px 24px rgba(102,61,75,.08)}
+#zefirok-maltipoo-runner .album-profile-icon{width:58px;height:58px;display:grid;place-items:center;border:1px solid rgba(220,164,64,.32);border-radius:18px;background:rgba(255,255,255,.76);overflow:hidden}#zefirok-maltipoo-runner .album-profile-icon img{width:40px;height:40px;object-fit:contain;display:block}
+#zefirok-maltipoo-runner .album-profile-copy{min-width:0}#zefirok-maltipoo-runner .album-profile-copy strong{display:block;font-size:12px;font-weight:950}#zefirok-maltipoo-runner .album-profile-copy span{display:block;margin-top:4px;color:#8c707b;font-size:9px;font-weight:750;line-height:1.4}
+#zefirok-maltipoo-runner .album-profile-card .profile-action{grid-column:1/-1;width:100%}
+&lt;/style&gt;
+&lt;script id=&quot;zefirok-album-profile-entry-v1&quot;&gt;
+(() =&gt; {
+  document.addEventListener(&quot;click&quot;, (event) =&gt; {
+    const button=event.target?.closest?.(&quot;[data-album-open]&quot;);if(!button)return;event.preventDefault();button.disabled=true;
+    try{window.parent.postMessage({type:&quot;zefirok-open-album&quot;},&quot;*&quot;);}catch{try{window.location.href=&quot;/album.html&quot;;}catch{}}
+    window.setTimeout(()=&gt;{button.disabled=false;},900);
+  });
+  window.addEventListener(&quot;pageshow&quot;,()=&gt;document.querySelectorAll(&quot;[data-album-open]&quot;).forEach(button=&gt;{button.disabled=false;}));
+})();
+&lt;/script&gt;
 &lt;script id=&quot;zefirok-referrals-profile-entry-v2&quot;&gt;
 (() =&gt; {
   const referralInitData=()=&gt;{let value=&quot;&quot;;try{value=String(window.Telegram?.WebApp?.initData||sessionStorage.getItem(&quot;zefirok-telegram-init-data&quot;)||&quot;&quot;);}catch{}return value;};
@@ -22751,11 +22932,11 @@ const TIMEOUT_MS=4500;
 const formatter=new Intl.NumberFormat('ru-RU');
 let model=null,busy=false,lastSuccessAt=0,lastError='',dismissedForSession=false,autoClaimStarted=false,watchedFrame=null,frameObserver=null,lastComeback=null,showComebackScreen=false;
 const esc=(s)=>String(s??'').replace(/[&<>"']/g,(c)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-function gameFrame(){return document.querySelector('body > iframe[title="Сладкий Забег"]')||document.querySelector('body > iframe:not(.zefirok-season-pass-frame):not(.zefirok-rating-frame):not(.zefirok-referrals-frame)');}
+function gameFrame(){return document.querySelector('body > iframe[title="Сладкий Забег"]')||document.querySelector('body > iframe:not(.zefirok-season-pass-frame):not(.zefirok-rating-frame):not(.zefirok-referrals-frame):not(.zefirok-album-frame)');}
 function requestId(){try{return 'daily-'+crypto.randomUUID()}catch{return 'daily-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,10)}}
 function plural(n){const m=n%100,d=n%10;return m>=11&&m<=19?'дней':d===1?'день':d>=2&&d<=4?'дня':'дней'}
 function frameReady(){const f=gameFrame();return Boolean(f&&f.classList.contains('is-ready'));}
-function hasBlockingOverlay(){return Boolean(document.querySelector('.zefirok-maintenance-gate,.zefirok-legal-gate,.zefirok-legal-layer'))||['zefirok-season-pass-open','zefirok-rating-open','zefirok-referrals-open','zefirok-legal-open'].some((key)=>document.body.classList.contains(key));}
+function hasBlockingOverlay(){return Boolean(document.querySelector('.zefirok-maintenance-gate,.zefirok-legal-gate,.zefirok-legal-layer'))||['zefirok-season-pass-open','zefirok-rating-open','zefirok-referrals-open','zefirok-album-open','zefirok-legal-open'].some((key)=>document.body.classList.contains(key));}
 function rewardType(item){return String(item?.reward?.type||item?.rewardType||'').trim().toLowerCase();}
 function rewardAmount(item){const value=Number(item?.reward?.amount??item?.amount??0);return Number.isFinite(value)?Math.max(0,value):0;}
 function rewardAsset(type){
@@ -22817,7 +22998,7 @@ function render(){
   bindBody();
 }
 function bindBody(){const body=document.getElementById('zdlBody');if(!body)return;body.querySelectorAll('[data-zdl-close]').forEach(btn=>btn.addEventListener('click',closeLayer));body.querySelector('[data-zdl-retry]')?.addEventListener('click',()=>claim(true));body.querySelector('[data-zdl-comeback-next]')?.addEventListener('click',()=>{showComebackScreen=false;safeRender();});}
-function refreshGameAccount(){const target=gameFrame()?.contentWindow;try{target?.postMessage?.({type:'zefirok-season-pass-account-updated'},'*')}catch{}try{target?.postMessage?.({type:'zefirok-daily-loyalty-updated'},'*')}catch{}window.dispatchEvent(new CustomEvent('zefirok:daily-loyalty-updated',{detail:model}));}
+function refreshGameAccount(){const target=gameFrame()?.contentWindow;try{target?.postMessage?.({type:'zefirok-season-pass-account-updated'},'*')}catch{}try{target?.postMessage?.({type:'zefirok-daily-loyalty-updated'},'*')}catch{}try{window.zefirokSyncAccountRevision?.('daily',true)}catch{}window.dispatchEvent(new CustomEvent('zefirok:daily-loyalty-updated',{detail:model}));}
 async function claim(force=false){
   if(busy)return;
   autoClaimStarted=true;
