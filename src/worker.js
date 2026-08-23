@@ -23,7 +23,7 @@ const ALEX_CASE_DEFINITION = Object.freeze({
     points: ALEX_CASE_CURRENCY_CHANCE, treats: ALEX_CASE_CURRENCY_CHANCE, coffee: ALEX_CASE_CURRENCY_CHANCE,
     booster: 0, epicCosmetic: 0, mythicCosmetic: 0, legendaryCosmetic: 0, music: 0, physical: 0
   }),
-  ranges: Object.freeze({ points:[2000,90000], treats:[50,130], coffee:[50,130] }),
+  ranges: Object.freeze({ points:[2500,5000], treats:[20,60], coffee:[20,60] }),
   collectionRewardCaseType: "gold"
 });
 
