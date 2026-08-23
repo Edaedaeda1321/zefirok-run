@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "catalogHash": "b11100d83697d4fe",
-  "count": 356,
+  "catalogHash": "e39d706bff5d64e3",
+  "count": 357,
   "images": [
     {
       "fileName": "albom_all/alex_albom_oblozka.png",
@@ -2794,6 +2794,14 @@
       "path": "/assets/ui/icon_albom.png",
       "size": 1514930,
       "modified": 1787515827724
+    },
+    {
+      "fileName": "ui/icon_background_albom.png",
+      "label": "Icon background albom",
+      "folder": "ui",
+      "path": "/assets/ui/icon_background_albom.png",
+      "size": 680373,
+      "modified": 1787517094000
     },
     {
       "fileName": "ui/icon_busters.png",
