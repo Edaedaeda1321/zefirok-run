@@ -23,7 +23,7 @@ CREATE TABLE IF NOT EXISTS daily_loyalty_milestones (
   day_index INTEGER NOT NULL CHECK(day_index BETWEEN 1 AND 3650),
   icon TEXT NOT NULL DEFAULT '🎁',
   label TEXT NOT NULL,
-  reward_type TEXT NOT NULL CHECK(reward_type IN ('points','zefir','coffee','profile_xp','season_xp','case','seasonal_case','booster_points','booster_treats','booster_coffee','avatar','frame','trail','skin','music')),
+  reward_type TEXT NOT NULL CHECK(reward_type IN ('points','zefir','coffee','season_xp','case','seasonal_case')),
   amount INTEGER NOT NULL DEFAULT 1 CHECK(amount BETWEEN 1 AND 1000000000),
   item_id TEXT NOT NULL DEFAULT '',
   sort_order INTEGER NOT NULL DEFAULT 0,
