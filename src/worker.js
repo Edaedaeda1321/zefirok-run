@@ -2321,6 +2321,46 @@ function dailyLoyaltyMissedDays(row,currentDayKey) {
   const diff=dailyLoyaltyDayOrdinal(currentDayKey)-dailyLoyaltyDayOrdinal(last);
   return Math.max(0,diff-1);
 }
+async function dailyLoyaltyMissedDaysForClaim(env,telegramId,row,currentDayKey,timezoneOffsetMinutes=0) {
+  const lastDailyDayKey=String(row?.last_active_day_key||'').trim();
+  if(lastDailyDayKey){
+    return {missedDays:dailyLoyaltyMissedDays(row,currentDayKey),source:'daily',lastDayKey:lastDailyDayKey,lastActivityAt:0};
+  }
+
+  // Legacy bridge for players who existed before Daily Activity was released.
+  // This lookup runs only on the first-ever daily claim. After that the compact
+  // daily_loyalty_players.last_active_day_key is authoritative and this path is skipped.
+  // Prefer real player actions over profile.updated_at because background/admin
+  // economy mutations may touch the profile while the player is away.
+  let legacy={};
+  try {
+    legacy=await env.DB.prepare(`SELECT
+      COALESCE((SELECT MAX(created_at) FROM leaderboard_runs WHERE telegram_id=? AND accepted=1),0) AS last_run_at,
+      COALESCE((SELECT MAX(created_at) FROM player_timeline_events WHERE telegram_id=? AND event_type IN (
+        'run','case_open','case_purchase','physical_purchase','skin_purchase','live_content_purchase','skin_equip','cosmetic_equip','promo','support',
+        'seasonal_case_open','season_pass_purchase','season_pass_level_purchase','season_pass_reward','season_pass_reward_bulk','referral_weekly','referral_gift_sent','referral_reward_choice_selected'
+      )),0) AS last_player_event_at,
+      COALESCE((SELECT updated_at FROM admin_profile_state WHERE telegram_id=? LIMIT 1),0) AS profile_updated_at`).bind(
+        String(telegramId),String(telegramId),String(telegramId)
+      ).first()||{};
+  } catch (error) {
+    // Rolling-deploy fallback: keep the bridge functional even if the timeline
+    // compatibility table has not been created yet.
+    try {
+      legacy=await env.DB.prepare(`SELECT
+        COALESCE((SELECT MAX(created_at) FROM leaderboard_runs WHERE telegram_id=? AND accepted=1),0) AS last_run_at,
+        COALESCE((SELECT updated_at FROM admin_profile_state WHERE telegram_id=? LIMIT 1),0) AS profile_updated_at`).bind(String(telegramId),String(telegramId)).first()||{};
+    } catch {
+      legacy={};
+    }
+  }
+  const meaningfulActivityAt=Math.max(Number(legacy.last_run_at||0),Number(legacy.last_player_event_at||0));
+  const lastActivityAt=meaningfulActivityAt>0?meaningfulActivityAt:Math.max(0,Number(legacy.profile_updated_at||0));
+  if(!lastActivityAt)return {missedDays:0,source:'none',lastDayKey:'',lastActivityAt:0};
+  const lastDayKey=dailyLoyaltyDayKey(lastActivityAt*1000,timezoneOffsetMinutes);
+  const diff=dailyLoyaltyDayOrdinal(currentDayKey)-dailyLoyaltyDayOrdinal(lastDayKey);
+  return {missedDays:Math.max(0,diff-1),source:meaningfulActivityAt>0?'legacy_action':'legacy_profile',lastDayKey,lastActivityAt};
+}
 function dailyLoyaltyRewardFromJson(value,fallbackLabel='Награда') {
   let raw=value;
   if(typeof raw==='string'){
@@ -2685,6 +2725,53 @@ function appendDailyLoyaltyRewardDeliveryStatements(statements, env, options) {
   }
 }
 
+async function repairFirstDailyComebackIfNeeded(env,telegramId,config,currentDayKey,requestId) {
+  // Hotfix bridge for players whose first Daily check-in happened before the
+  // legacy-activity fallback existed. It can only add the missing comeback;
+  // it never increments daily progress or reissues the daily reward.
+  const existing=await env.DB.prepare(`SELECT missed_days,tier_days,selection_reason,reward_type,amount,item_id,label,status
+    FROM daily_loyalty_comeback_claims WHERE telegram_id=? AND season_id=? AND return_day_key=? LIMIT 1`).bind(
+      String(telegramId),String(config.season.id),String(currentDayKey)
+    ).first().catch(()=>null);
+  if(existing?.status==='delivered'){
+    return {
+      missedDays:Number(existing.missed_days||0),tierDays:Number(existing.tier_days||0),title:String((config.comebackTiers||[]).find((x)=>Number(x.tierDays)===Number(existing.tier_days))?.title||'С возвращением'),selectionReason:String(existing.selection_reason||'fallback'),
+      reward:{label:String(existing.label||'Подарок за возвращение'),imageUrl:dailyLoyaltyRewardImage(String(existing.reward_type||''),String(existing.item_id||'')),type:String(existing.reward_type||''),amount:Number(existing.amount||0),itemId:String(existing.item_id||'')}
+    };
+  }
+  if(existing)return null;
+
+  const absence=await dailyLoyaltyMissedDaysForClaim(env,telegramId,null,currentDayKey,config.season.timezoneOffsetMinutes);
+  const tier=dailyLoyaltySelectComebackTier(config,absence.missedDays);
+  if(!tier)return null;
+  const profile=await ensureAuthoritativeProfileRow(env,telegramId,'daily-loyalty-comeback-repair');
+  const selection=dailyLoyaltyChooseComebackReward(tier,profile);
+  if(!selection?.item)return null;
+  const resolved=await resolveDailyLoyaltyClaimItem(env,selection.item);
+  const item=resolved.item;
+  if(!item)return null;
+  if(item.reward?.type==='season_xp'&&resolved.seasonReward?.season)await ensureSeasonPassPlayer(env,resolved.seasonReward.season,telegramId);
+
+  const now=Math.floor(Date.now()/1000),reward=item.reward,balances=selection.balances||{points:0,zefir:0,coffee:0};
+  const rewardJson=JSON.stringify({type:reward.type,amount:reward.amount,itemId:reward.itemId,label:item.label,configRevision:config.season.revision,source:'comeback_repair',missedDays:absence.missedDays,tierDays:tier.tierDays,selectionReason:selection.reason,balances});
+  const statements=[env.DB.prepare(`INSERT OR IGNORE INTO daily_loyalty_comeback_claims(
+    telegram_id,season_id,return_day_key,missed_days,tier_days,selection_reason,balance_points,balance_zefir,balance_coffee,reward_type,amount,item_id,label,reward_json,status,source_request_id,created_at,delivered_at,updated_at
+  ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,'granting',?,?,0,?)`).bind(
+    String(telegramId),String(config.season.id),String(currentDayKey),absence.missedDays,tier.tierDays,selection.reason,
+    Math.max(0,Number(balances.points||0)),Math.max(0,Number(balances.zefir||0)),Math.max(0,Number(balances.coffee||0)),
+    reward.type,reward.amount,reward.itemId,item.label,rewardJson,String(requestId),now,now
+  )];
+  appendDailyLoyaltyRewardDeliveryStatements(statements,env,{claimKind:'comeback',telegramId,seasonId:config.season.id,claimKey:currentDayKey,requestId,item,seasonReward:resolved.seasonReward,now});
+  await env.DB.batch(statements);
+  const delivered=await env.DB.prepare(`SELECT missed_days,tier_days,selection_reason,reward_type,amount,item_id,label,status FROM daily_loyalty_comeback_claims
+    WHERE telegram_id=? AND season_id=? AND return_day_key=? LIMIT 1`).bind(String(telegramId),String(config.season.id),String(currentDayKey)).first();
+  if(delivered?.status!=='delivered')return null;
+  return {
+    missedDays:Number(delivered.missed_days||0),tierDays:Number(delivered.tier_days||0),title:String(tier.title||'С возвращением'),selectionReason:String(delivered.selection_reason||selection.reason||'fallback'),
+    reward:{label:String(delivered.label||item.label||'Подарок за возвращение'),imageUrl:item.imageUrl||dailyLoyaltyRewardImage(String(delivered.reward_type||''),String(delivered.item_id||'')),type:String(delivered.reward_type||''),amount:Number(delivered.amount||0),itemId:String(delivered.item_id||'')}
+  };
+}
+
 async function claimDailyLoyalty(request, env, executionCtx = null) {
   try {
     requireDatabase(env); requireBotToken(env);
@@ -2696,9 +2783,28 @@ async function claimDailyLoyalty(request, env, executionCtx = null) {
     const currentDayKey = dailyLoyaltyDayKey(Date.now(), config.season.timezoneOffsetMinutes);
     let before = await readDailyLoyaltyBundle(env, telegramId, config.season.id);
     let model = dailyLoyaltyModel(config, before, currentDayKey);
-    if (model.state.todayCompleted) return jsonResponse({ ...model, repeated:true, grantedRewards:[], insuranceEvent:{used:0,earned:0}, comebackEvent:null });
+    if (model.state.todayCompleted) {
+      let comebackEvent=null;
+      // Only first-day players are eligible for the repair path. Mature Daily
+      // players keep the zero-extra-work repeated-claim fast path.
+      if(Number(before.player?.progress_days||0)===1){
+        comebackEvent=await repairFirstDailyComebackIfNeeded(env,telegramId,config,currentDayKey,requestId);
+      }
+      const grantedRewards=comebackEvent?[{
+        source:'comeback',missedDays:comebackEvent.missedDays,tierDays:comebackEvent.tierDays,icon:'',label:comebackEvent.reward.label,imageUrl:comebackEvent.reward.imageUrl,
+        reward:{type:comebackEvent.reward.type,amount:comebackEvent.reward.amount,itemId:comebackEvent.reward.itemId}
+      }]:[];
+      if(comebackEvent&&executionCtx?.waitUntil){
+        const now=Math.floor(Date.now()/1000);
+        executionCtx.waitUntil(recordPlayerTimeline(env,telegramId,'daily_loyalty_comeback_repair',`подарок за возвращение · ${comebackEvent.tierDays} дней`,{
+          seasonId:config.season.id,serverDayKey:currentDayKey,comebackEvent
+        },`daily_return_repair_${config.season.id}_${telegramId}_${currentDayKey}`,auth.user,now).catch(()=>{}));
+      }
+      return jsonResponse({ ...model, repeated:true, grantedRewards, insuranceEvent:{used:0,earned:0}, comebackEvent });
+    }
 
-    const missedDays=dailyLoyaltyMissedDays(before.player,currentDayKey);
+    const absence=await dailyLoyaltyMissedDaysForClaim(env,telegramId,before.player,currentDayKey,config.season.timezoneOffsetMinutes);
+    const missedDays=absence.missedDays;
     const comebackTier=dailyLoyaltySelectComebackTier(config,missedDays);
     let authoritativeProfile=null,comebackSelection=null,comebackReward=null,comebackSeasonReward=null;
     if(comebackTier){
