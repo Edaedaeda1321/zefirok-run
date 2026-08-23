@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "catalogHash": "46cc91f829103958",
-  "count": 353,
+  "catalogHash": "50d7d11efd138d31",
+  "count": 354,
   "images": [
     {
       "fileName": "cases/398D69BA-8943-4846-94B3-FC5CB717A67F.PNG",
@@ -2770,6 +2770,14 @@
       "path": "/assets/ui/background_referals.png",
       "size": 2184233,
       "modified": 1787146378000
+    },
+    {
+      "fileName": "ui/icon_albom.png",
+      "label": "Icon albom",
+      "folder": "ui",
+      "path": "/assets/ui/icon_albom.png",
+      "size": 1514930,
+      "modified": 1787515827724
     },
     {
       "fileName": "ui/icon_busters.png",
