@@ -1,20 +1,44 @@
 (() => {
   'use strict';
   const cfg = window.__ZEFIROK_PROFILE_V2_CANDIDATE__ || {};
-  const VERSION = String(cfg.version || 'V5.0.0');
-  const MODE = String(cfg.mode || 'LOCAL').toUpperCase();
+  const VERSION = String(cfg.version || 'V5.0.1');
+  const MODE = String(cfg.mode || 'CANDIDATE').toUpperCase();
   const STYLE_URL = '/candidates/V5/source/profile-v2-candidate.css';
-  const ROOT_URL = `/index.html?test_project=1&candidate_profile_v2=${encodeURIComponent(VERSION)}&candidate_surface=${encodeURIComponent(MODE.toLowerCase())}`;
-  const frame = document.getElementById('candidate-root');
-  const status = document.getElementById('candidate-status');
   const installed = new WeakSet();
   let cssText = '';
+  let autoOpened = false;
+  let badge = null;
 
-  function setStatus(text, bad = false) {
-    if (!status) return;
-    status.textContent = text;
-    status.hidden = !text;
-    status.classList.toggle('is-error', Boolean(bad));
+  function ensureBadge() {
+    if (badge?.isConnected) return badge;
+    badge = document.createElement('div');
+    badge.dataset.profileV2CandidateBadge = '1';
+    badge.textContent = `🧪 ${VERSION} · PROFILE 2.0 · ${MODE}`;
+    Object.assign(badge.style, {
+      position:'fixed', right:'8px', top:'max(8px, env(safe-area-inset-top))', zIndex:'2147483647',
+      padding:'6px 9px', border:'1px solid rgba(181,112,144,.34)', borderRadius:'999px',
+      background:'rgba(75,46,65,.92)', color:'#fff', font:'900 9px/1.2 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif',
+      letterSpacing:'.02em', pointerEvents:'none', boxShadow:'0 6px 18px rgba(62,36,50,.18)'
+    });
+    document.body.appendChild(badge);
+    return badge;
+  }
+
+  function setBadgeState(state, message = '') {
+    const el = ensureBadge();
+    if (state === 'ready') {
+      el.textContent = `✓ ${VERSION} · PROFILE 2.0 · ${MODE}`;
+      el.style.background = 'rgba(61,112,80,.94)';
+      el.title = 'Profile 2.0 Candidate активен';
+      return;
+    }
+    if (state === 'error') {
+      el.textContent = `⚠ ${VERSION} · PROFILE 2.0`;
+      el.style.background = 'rgba(151,63,85,.95)';
+      el.title = message || 'Candidate не установлен';
+      return;
+    }
+    el.title = message || '';
   }
 
   function safeDocument(win) {
@@ -154,7 +178,7 @@
     return text || fallback;
   }
 
-  function sync(doc, runner, quickbar, accountHub) {
+  function sync(doc, quickbar, accountHub) {
     const q = action => quickbar?.querySelector(`[data-profile-v2-action="${action}"]`);
     const qMeta = action => q(action)?.querySelector('[data-profile-v2-meta]');
     const place = textOf(doc.querySelector('[data-leaderboard-summary-place]'), '—');
@@ -193,6 +217,19 @@
     }
   }
 
+  function maybeOpenProfile(doc) {
+    if (autoOpened || cfg.autoOpenProfile === false) return;
+    const tab = doc.querySelector('[data-tab="profile"]');
+    const profile = doc.querySelector('[data-screen="profile"]');
+    if (!tab || !profile) return;
+    autoOpened = true;
+    window.setTimeout(() => {
+      try {
+        if (profile.hidden || tab.getAttribute('aria-selected') !== 'true') tab.click();
+      } catch {}
+    }, 250);
+  }
+
   function install(doc) {
     const runner = doc.getElementById('zefirok-maltipoo-runner');
     const profile = runner?.querySelector('[data-screen="profile"]');
@@ -215,21 +252,22 @@
     const cases = shell.querySelector('.profile-section--cases');
     ensureCosmeticsToggle(doc, cases);
     const accountHub = ensureAccountHub(doc, shell, cases);
-    sync(doc, runner, quickbar, accountHub);
+    sync(doc, quickbar, accountHub);
+    maybeOpenProfile(doc);
 
     if (!installed.has(doc)) {
       installed.add(doc);
       const Observer = doc.defaultView?.MutationObserver || MutationObserver;
-      const observer = new Observer(() => sync(doc, runner, quickbar, accountHub));
+      const observer = new Observer(() => sync(doc, quickbar, accountHub));
       observer.observe(profile, { subtree:true, childList:true, attributes:true, characterData:true, attributeFilter:['hidden','class'] });
-      doc.addEventListener('click', () => setTimeout(() => sync(doc, runner, quickbar, accountHub), 50), true);
+      doc.addEventListener('click', () => setTimeout(() => sync(doc, quickbar, accountHub), 50), true);
     }
-    setStatus('');
+    setBadgeState('ready');
     return true;
   }
 
   function walk(win, depth = 0) {
-    if (!win || depth > 4) return false;
+    if (!win || depth > 3) return false;
     const doc = safeDocument(win);
     if (!doc) return false;
     let found = install(doc);
@@ -240,30 +278,34 @@
   }
 
   async function start() {
+    ensureBadge();
     try {
-      cssText = await fetch(`${STYLE_URL}?v=${encodeURIComponent(VERSION)}`, { cache:'no-store' }).then(r => {
+      cssText = await fetch(`${STYLE_URL}?v=${encodeURIComponent(VERSION)}`, { cache:'no-store', credentials:'same-origin' }).then(r => {
         if (!r.ok) throw new Error(`CSS ${r.status}`);
         return r.text();
       });
     } catch (error) {
-      setStatus(`Не удалось загрузить стили Profile 2.0: ${error.message}`, true);
+      console.error('Profile 2.0 Candidate CSS load failed', error);
+      setBadgeState('error', `CSS: ${error.message}`);
       return;
     }
-    if (!frame) {
-      setStatus('Candidate iframe не найден.', true);
-      return;
-    }
-    frame.src = ROOT_URL;
-    setStatus('Загружаю текущую игру в безопасной песочнице…');
+
     let attempts = 0;
-    const timer = setInterval(() => {
+    const timer = window.setInterval(() => {
       attempts += 1;
       let found = false;
-      try { found = walk(frame.contentWindow); } catch {}
-      if (!found && attempts === 20) setStatus('Игра загружена, жду экран профиля…');
-      if (attempts > 900) clearInterval(timer);
-    }, 350);
+      try {
+        const gameFrame = document.querySelector('body > iframe');
+        if (gameFrame?.contentWindow) found = walk(gameFrame.contentWindow);
+      } catch (error) {
+        if (attempts % 20 === 0) console.warn('Profile 2.0 Candidate wait', error);
+      }
+      if (found && attempts > 6) window.clearInterval(timer);
+      if (!found && attempts === 120) setBadgeState('error', 'Игра загрузилась, но профиль не найден.');
+      if (attempts > 240) window.clearInterval(timer);
+    }, 250);
   }
 
-  start();
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, { once:true });
+  else start();
 })();
