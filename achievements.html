@@ -6,6 +6,11 @@
   <meta name="referrer" content="no-referrer" />
   <meta name="color-scheme" content="light" />
   <title>Достижения — Сладкий Забег</title>
+  <script>
+    try {
+      if (window.parent && window.parent !== window) document.documentElement.classList.add('is-embedded');
+    } catch {}
+  </script>
   <style>
     :root{
       color-scheme:light;
@@ -26,16 +31,21 @@
       --blue-soft:#eaf6ff;
       --shadow:0 16px 44px rgba(111,70,87,.10);
       --safe-top:max(env(safe-area-inset-top,0px),18px);
-      --safe-right:max(env(safe-area-inset-right,0px),14px);
+      --safe-right:max(env(safe-area-inset-right,0px),16px);
       --safe-bottom:max(env(safe-area-inset-bottom,0px),20px);
-      --safe-left:max(env(safe-area-inset-left,0px),14px);
+      --safe-left:max(env(safe-area-inset-left,0px),16px);
+      --content-max:430px;
+      --embedded-top-clearance:72px;
     }
 
     *{box-sizing:border-box}
-    html,body{margin:0;min-height:100%;background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--text)}
-    body{padding:var(--safe-top) var(--safe-right) var(--safe-bottom) var(--safe-left);background:radial-gradient(circle at 85% -4%,rgba(255,221,233,.76),transparent 34%),linear-gradient(180deg,#fffaf7 0%,#fff6f4 100%)}
+    html{width:100%;overflow-x:hidden;background:var(--bg)}
+    html,body{margin:0;min-height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--text)}
+    body{width:100%;padding:var(--safe-top) var(--safe-right) var(--safe-bottom) var(--safe-left);overflow-x:hidden;background:radial-gradient(circle at 85% -4%,rgba(255,221,233,.76),transparent 34%),linear-gradient(180deg,#fffaf7 0%,#fff6f4 100%)}
+    html.is-embedded body{padding-top:calc(var(--safe-top) + var(--embedded-top-clearance))}
     button{font:inherit}
-    .page{width:min(720px,100%);margin:0 auto;display:grid;gap:12px;padding-bottom:4px}
+    .page{width:100%;max-width:var(--content-max);margin:0 auto;display:grid;gap:12px;padding-bottom:4px}
+    .page>*{min-width:0;max-width:100%}
 
     .hero{position:relative;overflow:hidden;padding:18px;border:1px solid var(--line);border-radius:26px;background:linear-gradient(145deg,rgba(255,255,255,.98),rgba(255,243,248,.96));box-shadow:var(--shadow)}
     .hero::after{content:"";position:absolute;width:180px;height:180px;right:-62px;top:-88px;border-radius:50%;background:radial-gradient(circle,rgba(255,211,227,.72),rgba(255,211,227,0));pointer-events:none}
@@ -54,7 +64,7 @@
     .filters-head div{display:grid;gap:2px}
     .filters-head strong{color:#613c4c;font-size:15px;font-weight:950}
     .filters-head span{color:#a1838e;font-size:9px;font-weight:700;line-height:1.35}
-    .filters-scroll{display:flex;gap:7px;overflow-x:auto;padding:1px 1px 3px;scrollbar-width:none;overscroll-behavior-inline:contain}
+    .filters-scroll{display:flex;max-width:100%;gap:7px;overflow-x:auto;padding:1px 1px 3px;scrollbar-width:none;overscroll-behavior-inline:contain}
     .filters-scroll::-webkit-scrollbar{display:none}
     .filter{appearance:none;flex:0 0 auto;min-height:38px;padding:0 13px;border:1px solid rgba(229,194,207,.92);border-radius:999px;background:#fff;color:#885c6d;font-size:10px;font-weight:900;white-space:nowrap;cursor:pointer}
     .filter[aria-selected="true"]{border-color:#e481a5;background:linear-gradient(180deg,#ffeaf2,#ffdeeb);color:#9b3f61;box-shadow:0 7px 16px rgba(215,94,139,.13)}
@@ -92,7 +102,7 @@
     [hidden]{display:none!important}
 
     @media (max-width:420px){
-      body{padding-left:max(env(safe-area-inset-left,0px),10px);padding-right:max(env(safe-area-inset-right,0px),10px)}
+      :root{--safe-right:max(env(safe-area-inset-right,0px),16px);--safe-left:max(env(safe-area-inset-left,0px),16px)}
       .hero{padding:16px}
       .hero h1{font-size:23px}
       .summary{gap:6px}
@@ -100,6 +110,13 @@
       .summary-card span{font-size:8px}
       .summary-card strong{font-size:16px}
       .filters-card,.catalog{padding:11px}
+    }
+
+    @media (max-width:360px){
+      :root{--safe-right:max(env(safe-area-inset-right,0px),12px);--safe-left:max(env(safe-area-inset-left,0px),12px);--embedded-top-clearance:68px}
+      .hero{padding:14px}
+      .hero h1{font-size:22px}
+      .hero p{font-size:11px}
     }
   </style>
 </head>
