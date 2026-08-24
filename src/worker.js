@@ -1674,6 +1674,12 @@ export default {
         if (legalGate) return legalGate;
         return await claimAlbumMilestone(request, env);
       }
+      if (url.pathname === "/api/friends/coop/state" && request.method === "POST") {
+        return await getFriendCoopState(request, env);
+      }
+      if (url.pathname === "/api/friends/coop/claim" && request.method === "POST") {
+        return await withPlayerApiPerformance(env, ctx, "friend_coop_claim", () => claimFriendCoopTask(request, env, ctx));
+      }
       if (url.pathname === "/api/referrals/state" && request.method === "POST") {
         return await getReferralState(request, env);
       }
@@ -1774,6 +1780,12 @@ export default {
       }
       if (url.pathname === "/api/support/read" && request.method === "POST") {
         return await markPlayerSupportTicketRead(request, env);
+      }
+
+      if (url.pathname === "/api/newcomer/claim" && request.method === "POST") {
+        const legalGate = await enforceLegalAcceptanceForRequest(request, env);
+        if (legalGate) return legalGate;
+        return await withPlayerApiPerformance(env, ctx, "newcomer_claim", () => claimNewcomerPath(request, env, ctx));
       }
 
       if (url.pathname === "/api/daily-loyalty/claim" && request.method === "POST") {
@@ -4303,6 +4315,168 @@ async function getPlayerAccountRevisionResponse(request, env) {
   }
 }
 
+
+// ===================== LIVEOPS RETENTION PLATFORM v2 =====================
+let retentionPlatformV2SchemaReady = false;
+let retentionPlatformV2SchemaPromise = null;
+let activeRunLiveOpsCache = { value:null, expiresAt:0, promise:null };
+
+async function ensureRetentionPlatformV2Schema(env) {
+  requireDatabase(env);
+  if (retentionPlatformV2SchemaReady) return;
+  if (!retentionPlatformV2SchemaPromise) {
+    retentionPlatformV2SchemaPromise = (async () => {
+      try {
+        await env.DB.prepare(`SELECT
+          (SELECT COUNT(*) FROM automation_mail_deliveries WHERE 0) +
+          (SELECT COUNT(*) FROM friend_coop_task_config WHERE 0) +
+          (SELECT COUNT(*) FROM friend_coop_claims WHERE 0) +
+          (SELECT COUNT(*) FROM newcomer_path_steps WHERE 0) +
+          (SELECT COUNT(*) FROM newcomer_path_claims WHERE 0) AS ok`).first();
+        retentionPlatformV2SchemaReady = true;
+        return;
+      } catch (error) {
+        if (!isMissingRuntimeDatabaseSchemaError(error)) throw error;
+      }
+      const now=Math.floor(Date.now()/1000);
+      await env.DB.batch([
+        env.DB.prepare(`CREATE TABLE IF NOT EXISTS automation_mail_deliveries (execution_key TEXT PRIMARY KEY,chain_key TEXT NOT NULL,telegram_id TEXT NOT NULL,gift_id TEXT NOT NULL UNIQUE,created_at INTEGER NOT NULL)`),
+        env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_automation_mail_chain ON automation_mail_deliveries(chain_key,created_at DESC)`),
+        env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_automation_mail_player ON automation_mail_deliveries(telegram_id,created_at DESC)`),
+        env.DB.prepare(`CREATE TABLE IF NOT EXISTS friend_coop_task_config (id INTEGER PRIMARY KEY CHECK(id=1),task_key TEXT NOT NULL,enabled INTEGER NOT NULL DEFAULT 0,title TEXT NOT NULL DEFAULT 'Вместе вкуснее',description TEXT NOT NULL DEFAULT 'Выполняйте цель вместе с другом.',metric TEXT NOT NULL DEFAULT 'runs',target_value INTEGER NOT NULL DEFAULT 6,reward_json TEXT NOT NULL DEFAULT '{"kind":"case","id":"small","amount":1}',starts_at INTEGER NOT NULL DEFAULT 0,ends_at INTEGER NOT NULL DEFAULT 0,cycle_started_at INTEGER NOT NULL DEFAULT 0,updated_at INTEGER NOT NULL DEFAULT 0,updated_by TEXT NOT NULL DEFAULT '')`),
+        env.DB.prepare(`INSERT OR IGNORE INTO friend_coop_task_config(id,task_key,enabled,title,description,metric,target_value,reward_json,starts_at,ends_at,cycle_started_at,updated_at,updated_by) VALUES(1,'coop_default',0,'Вместе вкуснее','Сделайте 6 зачтённых забегов на двоих.','runs',6,'{"kind":"case","id":"small","amount":1}',0,0,?,?, 'runtime-v2')`).bind(now,now),
+        env.DB.prepare(`CREATE TABLE IF NOT EXISTS friend_coop_claims (task_key TEXT NOT NULL,pair_key TEXT NOT NULL,telegram_id TEXT NOT NULL,queue_id INTEGER NOT NULL DEFAULT 0,status TEXT NOT NULL DEFAULT 'pending',claimed_at INTEGER NOT NULL DEFAULT 0,updated_at INTEGER NOT NULL,PRIMARY KEY(task_key,pair_key,telegram_id))`),
+        env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_friend_coop_claims_player ON friend_coop_claims(telegram_id,claimed_at DESC)`),
+        env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_friend_coop_claims_task ON friend_coop_claims(task_key,claimed_at DESC)`),
+        env.DB.prepare(`CREATE TABLE IF NOT EXISTS newcomer_path_steps (step_day INTEGER PRIMARY KEY,enabled INTEGER NOT NULL DEFAULT 1,title TEXT NOT NULL,description TEXT NOT NULL DEFAULT '',runs_required INTEGER NOT NULL DEFAULT 1,cta_type TEXT NOT NULL DEFAULT 'game',reward_json TEXT NOT NULL DEFAULT '{}',updated_at INTEGER NOT NULL DEFAULT 0,updated_by TEXT NOT NULL DEFAULT '')`),
+        env.DB.prepare(`INSERT OR IGNORE INTO newcomer_path_steps(step_day,enabled,title,description,runs_required,cta_type,reward_json,updated_at,updated_by) VALUES(1,1,'Первый сладкий забег','Заверши первый полноценный забег и забери стартовый подарок.',1,'game','{"kind":"points","amount":500}',?,'runtime-v2')`).bind(now),
+        env.DB.prepare(`INSERT OR IGNORE INTO newcomer_path_steps(step_day,enabled,title,description,runs_required,cta_type,reward_json,updated_at,updated_by) VALUES(2,1,'Загляни в коллекцию','Вернись на второй день, сделай ещё один забег и познакомься с кейсами и Альбомом.',2,'album','{"kind":"zefir","amount":20}',?,'runtime-v2')`).bind(now),
+        env.DB.prepare(`INSERT OR IGNORE INTO newcomer_path_steps(step_day,enabled,title,description,runs_required,cta_type,reward_json,updated_at,updated_by) VALUES(3,1,'Играть вместе веселее','На третий день сделай ещё один забег и открой «Друзья кафе».',3,'referrals','{"kind":"case","id":"small","amount":1}',?,'runtime-v2')`).bind(now),
+        env.DB.prepare(`CREATE TABLE IF NOT EXISTS newcomer_path_claims (telegram_id TEXT NOT NULL,step_day INTEGER NOT NULL,queue_id INTEGER NOT NULL DEFAULT 0,status TEXT NOT NULL DEFAULT 'pending',claimed_at INTEGER NOT NULL DEFAULT 0,updated_at INTEGER NOT NULL,PRIMARY KEY(telegram_id,step_day))`),
+        env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_newcomer_claims_day ON newcomer_path_claims(step_day,claimed_at DESC)`)
+      ]);
+      retentionPlatformV2SchemaReady = true;
+    })().catch((error)=>{retentionPlatformV2SchemaPromise=null;retentionPlatformV2SchemaReady=false;throw error;});
+  }
+  await retentionPlatformV2SchemaPromise;
+}
+
+function retentionV2Reward(raw) {
+  const reward=referralSafeReward(raw);
+  return ['points','zefir','coffee','case'].includes(String(reward?.kind||'')) ? reward : {kind:'none'};
+}
+function retentionV2RewardArray(raw){const reward=retentionV2Reward(raw);return reward.kind==='none'?[]:[reward];}
+function retentionV2ShortHash(value){let h=2166136261;for(const ch of String(value||'')){h^=ch.charCodeAt(0);h=Math.imul(h,16777619);}return (h>>>0).toString(36);}
+function retentionV2PairKey(a,b){const x=String(a||''),y=String(b||'');return x<y?`${x}:${y}`:`${y}:${x}`;}
+
+function normalizeLiveOpsRunEconomy(payload={}) {
+  const economy=payload&&typeof payload==='object'&&payload.economy&&typeof payload.economy==='object'?payload.economy:{};
+  const multiplier=(value)=>Math.max(1,Math.min(3,Math.round(Number(value)||1)));
+  return {pointsMultiplier:multiplier(economy.pointsMultiplier),treatsMultiplier:multiplier(economy.treatsMultiplier),coffeeMultiplier:multiplier(economy.coffeeMultiplier)};
+}
+function invalidateActiveRunLiveOpsCache(){activeRunLiveOpsCache={value:null,expiresAt:0,promise:null};}
+async function activeRunLiveOpsEvent(env,force=false){
+  const nowMs=Date.now();
+  if(!force&&activeRunLiveOpsCache.value&&activeRunLiveOpsCache.expiresAt>nowMs)return activeRunLiveOpsCache.value;
+  if(!force&&activeRunLiveOpsCache.promise)return activeRunLiveOpsCache.promise;
+  const promise=(async()=>{
+    const now=Math.floor(Date.now()/1000);
+    let row=null;
+    try{row=await env.DB.prepare(`SELECT event_id,title,ends_at,published_json FROM liveops_events WHERE status='active' AND starts_at<=? AND ends_at>? ORDER BY starts_at DESC LIMIT 1`).bind(now,now).first();}catch(error){if(!isMissingRuntimeDatabaseSchemaError(error))throw error;}
+    if(!row)return {active:false,multipliers:{pointsMultiplier:1,treatsMultiplier:1,coffeeMultiplier:1}};
+    const payload=safeJson(row.published_json,{}),multipliers=normalizeLiveOpsRunEconomy(payload);
+    return {active:true,id:String(row.event_id||''),title:String(row.title||'LiveOps событие'),endsAt:Number(row.ends_at||0),notice:String(payload.playerNotice?.text||'').slice(0,220),multipliers};
+  })();
+  activeRunLiveOpsCache.promise=promise;
+  try{const value=await promise;activeRunLiveOpsCache={value,expiresAt:Date.now()+15000,promise:null};return value;}catch(error){activeRunLiveOpsCache={value:null,expiresAt:0,promise:null};throw error;}
+}
+
+async function newcomerPathState(env,telegramId){
+  await ensureRetentionPlatformV2Schema(env);
+  const id=String(telegramId||'');
+  if(!id)return {available:false,dayNumber:0,runs:0,steps:[]};
+  const [profile,stepsResult,claimsResult,runsRow]=await Promise.all([
+    env.DB.prepare(`SELECT created_at FROM admin_profile_state WHERE telegram_id=? LIMIT 1`).bind(id).first(),
+    env.DB.prepare(`SELECT * FROM newcomer_path_steps WHERE enabled=1 ORDER BY step_day`).all(),
+    env.DB.prepare(`SELECT step_day,status,claimed_at FROM newcomer_path_claims WHERE telegram_id=?`).bind(id).all(),
+    env.DB.prepare(`SELECT COUNT(*) AS count FROM player_economy_run_ledger WHERE telegram_id=? AND duration_ms>=?`).bind(id,positiveInt(env.LEADERBOARD_MIN_RUN_SECONDS,DEFAULT_LEADERBOARD_MIN_RUN_SECONDS)*1000).first().catch(()=>({count:0}))
+  ]);
+  const createdAt=Math.max(0,Number(profile?.created_at||0));
+  if(!createdAt)return {available:false,dayNumber:0,runs:0,steps:[]};
+  const todayKey=dailyLoyaltyDayKey(Date.now(),180),createdKey=dailyLoyaltyDayKey(createdAt*1000,180);
+  const dayNumber=Math.max(1,dailyLoyaltyDayOrdinal(todayKey)-dailyLoyaltyDayOrdinal(createdKey)+1),runs=Math.max(0,Number(runsRow?.count||0));
+  const claims=new Map((claimsResult.results||[]).map(row=>[Number(row.step_day),row]));
+  let previousClaimed=true;
+  const steps=(stepsResult.results||[]).map(row=>{
+    const day=Math.max(1,Number(row.step_day||1)),claim=claims.get(day),claimed=String(claim?.status||'')==='claimed';
+    const reward=retentionV2Reward(row.reward_json),dayReached=dayNumber>=day,progress=Math.min(Math.max(0,Number(row.runs_required||1)),runs);
+    const ready=!claimed&&previousClaimed&&dayReached&&runs>=Number(row.runs_required||1);
+    const status=claimed?'claimed':ready?'ready':!previousClaimed?'previous':!dayReached?'day': 'progress';
+    const view={day,title:String(row.title||`День ${day}`),description:String(row.description||''),runsRequired:Number(row.runs_required||1),runs:progress,ctaType:String(row.cta_type||'game'),reward,rewardLabel:referralRewardLabel(reward),claimed,claimedAt:Number(claim?.claimed_at||0),ready,status};
+    previousClaimed=previousClaimed&&claimed;
+    return view;
+  });
+  const completed=steps.length>0&&steps.every(step=>step.claimed),available=dayNumber<=7&&!completed&&steps.length>0;
+  return {available,completed,dayNumber,runs,steps};
+}
+
+async function claimNewcomerPath(request,env,ctx=null){
+  try{
+    const body=await readJson(request);requireBotToken(env);const auth=await validateTelegramInitData(String(body.initData||''),env),telegramId=String(auth.user.id),stepDay=Math.max(1,Math.min(3,Math.floor(Number(body.stepDay)||0)));
+    await ensureRetentionPlatformV2Schema(env);let state=await newcomerPathState(env,telegramId),step=state.steps.find(x=>x.day===stepDay);if(!step)throw new ApiError(404,'Этап пути новичка не найден.');if(step.claimed)return jsonResponse({ok:true,repeated:true,newcomerPath:state});if(!state.available||!step.ready)throw new ApiError(409,'Этот этап пока не готов к получению.');
+    const reward=retentionV2Reward(step.reward);if(reward.kind==='none')throw new ApiError(409,'Для этапа не настроена награда.');const now=Math.floor(Date.now()/1000);
+    await env.DB.prepare(`INSERT OR IGNORE INTO newcomer_path_claims(telegram_id,step_day,queue_id,status,claimed_at,updated_at) VALUES(?,?,0,'pending',0,?)`).bind(telegramId,stepDay,now).run();
+    let claim=await env.DB.prepare(`SELECT * FROM newcomer_path_claims WHERE telegram_id=? AND step_day=? LIMIT 1`).bind(telegramId,stepDay).first();if(String(claim?.status||'')==='claimed')return jsonResponse({ok:true,repeated:true,newcomerPath:await newcomerPathState(env,telegramId)});
+    let queueId=Math.max(0,Number(claim?.queue_id||0)),sourceId=`${telegramId}:day:${stepDay}`;
+    if(!queueId){queueId=await enqueueRewardDelivery(env,telegramId,'newcomer_path',sourceId,reward,`Путь новичка · ${step.title}`);if(!queueId){const existing=await env.DB.prepare(`SELECT id FROM reward_delivery_queue WHERE source_type='newcomer_path' AND source_id=? AND telegram_id=? LIMIT 1`).bind(sourceId,telegramId).first();queueId=Number(existing?.id||0);}if(queueId)await env.DB.prepare(`UPDATE newcomer_path_claims SET queue_id=?,updated_at=? WHERE telegram_id=? AND step_day=?`).bind(queueId,now,telegramId,stepDay).run();}
+    await processPlayerRewardDeliveryQueue(env,telegramId,5);const delivery=queueId?await env.DB.prepare(`SELECT status,last_error FROM reward_delivery_queue WHERE id=? LIMIT 1`).bind(queueId).first():null;
+    if(String(delivery?.status||'')!=='delivered')throw new ApiError(503,String(delivery?.last_error||'Награда сохранена и будет выдана при повторной попытке.'));
+    const claimedAt=Math.floor(Date.now()/1000);await env.DB.prepare(`UPDATE newcomer_path_claims SET status='claimed',claimed_at=?,updated_at=? WHERE telegram_id=? AND step_day=?`).bind(claimedAt,claimedAt,telegramId,stepDay).run();
+    scheduleRunSettlementBackground(ctx,recordPlayerTimeline(env,telegramId,'newcomer_path',`завершил этап «${step.title}»`,{stepDay,reward},`newcomer_${telegramId}_${stepDay}`,auth.user,claimedAt),'newcomer timeline failed');
+    return jsonResponse({ok:true,newcomerPath:await newcomerPathState(env,telegramId),profileRefreshRequired:['points','zefir','coffee'].includes(reward.kind),caseRefreshRequired:reward.kind==='case'});
+  }catch(error){if(error instanceof ApiError)return jsonResponse({ok:false,error:error.message},error.status);console.error('claimNewcomerPath failed',error);return jsonResponse({ok:false,error:'Не удалось получить награду пути новичка.'},500);}
+}
+
+async function friendCoopConfig(env){
+  await ensureRetentionPlatformV2Schema(env);const row=await env.DB.prepare(`SELECT * FROM friend_coop_task_config WHERE id=1 LIMIT 1`).first();const now=Math.floor(Date.now()/1000),start=Math.max(0,Number(row?.starts_at||0)),end=Math.max(0,Number(row?.ends_at||0)),enabled=Number(row?.enabled||0)===1,active=enabled&&(!start||now>=start)&&(!end||now<end);
+  const metric=['runs','coffee','zefir','score'].includes(String(row?.metric||''))?String(row.metric):'runs';const reward=retentionV2Reward(row?.reward_json);
+  return {taskKey:String(row?.task_key||'coop_default'),enabled,active,title:String(row?.title||'Вместе вкуснее'),description:String(row?.description||''),metric,target:Math.max(1,Number(row?.target_value||1)),reward,rewardLabel:referralRewardLabel(reward),startsAt:start,endsAt:end,cycleStartedAt:Math.max(0,Number(row?.cycle_started_at||0)),updatedAt:Number(row?.updated_at||0)};
+}
+async function friendCoopProgress(env,a,b,config){
+  const start=config.startsAt||config.cycleStartedAt||0,end=config.endsAt||Math.floor(Date.now()/1000)+1,minMs=positiveInt(env.LEADERBOARD_MIN_RUN_SECONDS,DEFAULT_LEADERBOARD_MIN_RUN_SECONDS)*1000;
+  const metric=String(config.metric||'runs');let expr='COUNT(*)';if(metric==='coffee')expr='COALESCE(SUM(coffee),0)';else if(metric==='zefir')expr='COALESCE(SUM(treats),0)';else if(metric==='score')expr='COALESCE(SUM(raw_score),0)';
+  const row=await env.DB.prepare(`SELECT ${expr} AS value FROM player_economy_run_ledger WHERE telegram_id IN (?,?) AND created_at>=? AND created_at<? AND duration_ms>=?`).bind(String(a),String(b),start,end,minMs).first();return Math.max(0,Number(row?.value||0));
+}
+async function friendCoopStateForPlayer(env,telegramId){
+  await Promise.all([ensureRetentionPlatformV2Schema(env),ensureReferralSchema(env)]);const id=String(telegramId),config=await friendCoopConfig(env);if(!config.enabled)return {ok:true,config,partners:[]};
+  const links=(await env.DB.prepare(`SELECT invitee_telegram_id AS partner_id FROM referral_links WHERE referrer_telegram_id=? AND status='active' UNION SELECT referrer_telegram_id AS partner_id FROM referral_links WHERE invitee_telegram_id=? AND status='active' LIMIT 8`).bind(id,id).all()).results||[];
+  const partnerIds=links.map(r=>String(r.partner_id||'')).filter(Boolean),identities=await referralPlayerIdentityMap(env,partnerIds);const partners=[];
+  for(const partnerId of partnerIds){const pairKey=retentionV2PairKey(id,partnerId),[progress,claim]=await Promise.all([friendCoopProgress(env,id,partnerId,config),env.DB.prepare(`SELECT status,claimed_at FROM friend_coop_claims WHERE task_key=? AND pair_key=? AND telegram_id=? LIMIT 1`).bind(config.taskKey,pairKey,id).first()]);const who=identities.get(partnerId)||{};partners.push({telegramId:partnerId,displayName:who.displayName||who.username||'Друг',username:who.username||'',pairKey,progress,target:config.target,completed:progress>=config.target,claimed:String(claim?.status||'')==='claimed',claimStatus:String(claim?.status||''),claimedAt:Number(claim?.claimed_at||0)});}
+  partners.sort((a,b)=>Number(b.completed)-Number(a.completed)||b.progress-a.progress);return {ok:true,config,partners};
+}
+async function getFriendCoopState(request,env){try{const body=await readJson(request);requireBotToken(env);const auth=await validateTelegramInitData(String(body.initData||''),env);return jsonResponse(await friendCoopStateForPlayer(env,String(auth.user.id)));}catch(error){if(error instanceof ApiError)return jsonResponse({ok:false,error:error.message},error.status);console.error('getFriendCoopState failed',error);return jsonResponse({ok:false,error:'Не удалось загрузить совместное задание.'},500);}}
+async function claimFriendCoopTask(request,env,ctx=null){
+  try{const body=await readJson(request);requireBotToken(env);const auth=await validateTelegramInitData(String(body.initData||''),env),telegramId=String(auth.user.id),partnerId=String(body.partnerId||'').trim();if(!/^\d{4,20}$/.test(partnerId)||partnerId===telegramId)throw new ApiError(400,'Некорректный друг.');const state=await friendCoopStateForPlayer(env,telegramId),partner=state.partners.find(x=>x.telegramId===partnerId);if(!state.config?.active)throw new ApiError(409,'Совместное задание сейчас не активно.');if(!partner)throw new ApiError(404,'Активный друг не найден.');if(!partner.completed)throw new ApiError(409,'Совместная цель ещё не выполнена.');if(partner.claimed)return jsonResponse({ok:true,repeated:true,coop:state});const reward=retentionV2Reward(state.config.reward);if(reward.kind==='none')throw new ApiError(409,'Награда совместного задания не настроена.');const now=Math.floor(Date.now()/1000),sourceId=`${state.config.taskKey}:${partner.pairKey}`;
+    await env.DB.prepare(`INSERT OR IGNORE INTO friend_coop_claims(task_key,pair_key,telegram_id,queue_id,status,claimed_at,updated_at) VALUES(?,?,?,0,'pending',0,?)`).bind(state.config.taskKey,partner.pairKey,telegramId,now).run();let claim=await env.DB.prepare(`SELECT * FROM friend_coop_claims WHERE task_key=? AND pair_key=? AND telegram_id=? LIMIT 1`).bind(state.config.taskKey,partner.pairKey,telegramId).first();if(String(claim?.status||'')==='claimed')return jsonResponse({ok:true,repeated:true,coop:await friendCoopStateForPlayer(env,telegramId)});let queueId=Math.max(0,Number(claim?.queue_id||0));if(!queueId){queueId=await enqueueRewardDelivery(env,telegramId,'friend_coop',sourceId,reward,`Совместное задание · ${state.config.title}`);if(!queueId){const q=await env.DB.prepare(`SELECT id FROM reward_delivery_queue WHERE source_type='friend_coop' AND source_id=? AND telegram_id=? LIMIT 1`).bind(sourceId,telegramId).first();queueId=Number(q?.id||0);}if(queueId)await env.DB.prepare(`UPDATE friend_coop_claims SET queue_id=?,updated_at=? WHERE task_key=? AND pair_key=? AND telegram_id=?`).bind(queueId,now,state.config.taskKey,partner.pairKey,telegramId).run();}
+    await processPlayerRewardDeliveryQueue(env,telegramId,5);const delivery=queueId?await env.DB.prepare(`SELECT status,last_error FROM reward_delivery_queue WHERE id=? LIMIT 1`).bind(queueId).first():null;if(String(delivery?.status||'')!=='delivered')throw new ApiError(503,String(delivery?.last_error||'Награда сохранена и будет выдана при повторной попытке.'));const claimedAt=Math.floor(Date.now()/1000);await env.DB.prepare(`UPDATE friend_coop_claims SET status='claimed',claimed_at=?,updated_at=? WHERE task_key=? AND pair_key=? AND telegram_id=?`).bind(claimedAt,claimedAt,state.config.taskKey,partner.pairKey,telegramId).run();scheduleRunSettlementBackground(ctx,recordPlayerTimeline(env,telegramId,'friend_coop',`получил награду за совместное задание`,{taskKey:state.config.taskKey,partnerId,reward},`friend_coop_${retentionV2ShortHash(sourceId)}_${telegramId}`,auth.user,claimedAt),'friend coop timeline failed');return jsonResponse({ok:true,coop:await friendCoopStateForPlayer(env,telegramId),profileRefreshRequired:['points','zefir','coffee'].includes(reward.kind),caseRefreshRequired:reward.kind==='case'});
+  }catch(error){if(error instanceof ApiError)return jsonResponse({ok:false,error:error.message},error.status);console.error('claimFriendCoopTask failed',error);return jsonResponse({ok:false,error:'Не удалось получить совместную награду.'},500);}
+}
+
+async function retentionEngagementAnalytics(env,now=Math.floor(Date.now()/1000)){
+  await ensureRetentionPlatformV2Schema(env);const week=now-7*86400;
+  const [mail,autoMail,newcomer,coop,event]=await Promise.all([
+    env.DB.prepare(`SELECT COUNT(*) AS sent,SUM(CASE WHEN COALESCE(m.read_at,0)>0 THEN 1 ELSE 0 END) AS read,SUM(CASE WHEN g.status='claimed' THEN 1 ELSE 0 END) AS claimed FROM player_gift_inbox g LEFT JOIN player_mail_metadata m ON m.gift_id=g.gift_id AND m.telegram_id=g.telegram_id WHERE g.created_at>=?`).bind(week).first().catch(()=>({})),
+    env.DB.prepare(`SELECT COUNT(*) AS sent,SUM(CASE WHEN COALESCE(m.read_at,0)>0 THEN 1 ELSE 0 END) AS read,SUM(CASE WHEN g.status='claimed' THEN 1 ELSE 0 END) AS claimed FROM automation_mail_deliveries d LEFT JOIN player_gift_inbox g ON g.gift_id=d.gift_id AND g.telegram_id=d.telegram_id LEFT JOIN player_mail_metadata m ON m.gift_id=d.gift_id AND m.telegram_id=d.telegram_id WHERE d.created_at>=?`).bind(week).first().catch(()=>({})),
+    env.DB.prepare(`SELECT step_day,COUNT(*) AS claims FROM newcomer_path_claims WHERE status='claimed' GROUP BY step_day ORDER BY step_day`).all().catch(()=>({results:[]})),
+    env.DB.prepare(`SELECT COUNT(*) AS claims,COUNT(DISTINCT pair_key) AS pairs FROM friend_coop_claims WHERE status='claimed' AND claimed_at>=?`).bind(week).first().catch(()=>({})),
+    activeRunLiveOpsEvent(env).catch(()=>({active:false,multipliers:{pointsMultiplier:1,treatsMultiplier:1,coffeeMultiplier:1}}))
+  ]);
+  const mailView=(row)=>{const sent=Number(row?.sent||0),read=Number(row?.read||0),claimed=Number(row?.claimed||0);return{sent,read,claimed,readRate:sent?Math.round(read/sent*1000)/10:0,claimRate:sent?Math.round(claimed/sent*1000)/10:0};};
+  return {mail7d:mailView(mail),automationMail7d:mailView(autoMail),newcomer:{claims:Object.fromEntries((newcomer.results||[]).map(r=>[`day${Number(r.step_day||0)}`,Number(r.claims||0)]))},friendCoop7d:{claims:Number(coop?.claims||0),pairs:Number(coop?.pairs||0)},liveOps:event};
+}
+
+// =================== /LIVEOPS RETENTION PLATFORM v2 =====================
+
 function startupSectionError(error) {
   return {
     status: error instanceof ApiError ? error.status : 500,
@@ -4369,7 +4543,9 @@ async function getGameStartupPackage(request, env, ctx = null) {
       getGameNewsForPlayer(env, telegramId),
       playerGiftInboxPayload(env, telegramId),
       seasonPassMiniGameVisualsForPlayer(env, telegramId),
-      readPlayerAccountRevision(env, telegramId)
+      readPlayerAccountRevision(env, telegramId),
+      activeRunLiveOpsEvent(env),
+      newcomerPathState(env, telegramId)
     ]);
 
     let profile = null;
@@ -4387,7 +4563,7 @@ async function getGameStartupPackage(request, env, ctx = null) {
       Promise.all([startupSideSections,presencePromise]).then(([side])=>side)
     ]);
     const casesResult = casesSettled[0];
-    const [taskNoticeResult, seasonPassBonusResult, rewardsResult, flagsResult, newsResult, giftsResult, miniGameVisualResult, accountRevisionResult] = sideSettled;
+    const [taskNoticeResult, seasonPassBonusResult, rewardsResult, flagsResult, newsResult, giftsResult, miniGameVisualResult, accountRevisionResult, liveOpsEventResult, newcomerPathResult] = sideSettled;
     const cases = casesResult.status === "fulfilled" ? casesResult.value : null;
     const rewards = rewardsResult.status === "fulfilled" ? rewardsResult.value : null;
     const flags = flagsResult.status === "fulfilled" ? flagsResult.value : null;
@@ -4396,6 +4572,8 @@ async function getGameStartupPackage(request, env, ctx = null) {
     const miniGameVisuals = miniGameVisualResult.status === "fulfilled" ? miniGameVisualResult.value : seasonPassResolveMiniGameVisuals([], '');
     const miniGameVisual = miniGameVisuals.treats;
     const accountRevision = accountRevisionResult?.status === "fulfilled" ? Math.max(0, Number(accountRevisionResult.value || 0)) : 0;
+    const liveOpsEvent = liveOpsEventResult?.status === "fulfilled" ? liveOpsEventResult.value : {active:false,multipliers:{pointsMultiplier:1,treatsMultiplier:1,coffeeMultiplier:1}};
+    const newcomerPath = newcomerPathResult?.status === "fulfilled" ? newcomerPathResult.value : {available:false,dayNumber:0,runs:0,steps:[]};
     const seasonPassTaskNotice = taskNoticeResult.status === "fulfilled" ? taskNoticeResult.value : null;
     const seasonPassBonus = seasonPassBonusResult.status === "fulfilled"
       ? seasonPassBonusResult.value
@@ -4426,6 +4604,8 @@ async function getGameStartupPackage(request, env, ctx = null) {
       miniGameVisual,
       miniGameVisuals,
       accountRevision,
+      liveOpsEvent,
+      newcomerPath,
       errors
     });
   } catch (error) {
@@ -9000,7 +9180,7 @@ async function submitLeaderboardRun(request, env, executionCtx = null) {
     const qualifies = metrics.durationMs >= minSeconds * 1000 && metrics.score >= minScore;
     const acceptedToRating = ratingEntryEnabled && String(season.status || "") === "active" && qualifies;
     const profileBeforePromise = ensureAuthoritativeProfileRow(env, telegramId, `run:${runId}:prepare`);
-    const [ensured, profileBefore, consumed, fastSeasonPass, testerRow] = await Promise.all([
+    const [ensured, profileBefore, consumed, fastSeasonPass, testerRow, liveOpsRunEvent] = await Promise.all([
       ensureCasePlayerState(env, telegramId, {}, { profilePromise: profileBeforePromise }),
       profileBeforePromise,
       env.DB.prepare(`SELECT booster_type,telegram_id FROM case_booster_run_consumptions WHERE run_id=? LIMIT 1`).bind(runId).first(),
@@ -9008,7 +9188,8 @@ async function submitLeaderboardRun(request, env, executionCtx = null) {
         runId, score: metrics.score, durationMs: metrics.durationMs,
         runTreats: metrics.runTreats, runCoffee: metrics.runCoffee
       }, runActivityCreatedAt) : Promise.resolve(null),
-      acceptedToRating ? getTesterAccountSafe(telegramId, env) : Promise.resolve(null)
+      acceptedToRating ? getTesterAccountSafe(telegramId, env) : Promise.resolve(null),
+      activeRunLiveOpsEvent(env).catch(()=>({active:false,multipliers:{pointsMultiplier:1,treatsMultiplier:1,coffeeMultiplier:1}}))
     ]);
     if (consumed && String(consumed.telegram_id || "") !== telegramId) throw new ApiError(409, "Этот идентификатор забега уже использован.");
 
@@ -9024,9 +9205,13 @@ async function submitLeaderboardRun(request, env, executionCtx = null) {
     const boostedPoints = appliedBoosterType === "points" ? metrics.score * 2 : metrics.score;
     const boostedTreats = appliedBoosterType === "treats" ? metrics.runTreats * 2 : metrics.runTreats;
     const boostedCoffee = appliedBoosterType === "coffee" ? metrics.runCoffee * 2 : metrics.runCoffee;
-    const economyPoints = rewardEligible ? Math.min(999999999, boostedPoints + (qualifies ? skinBonus.points : 0)) : 0;
-    const economyTreats = rewardEligible ? Math.min(999999999, boostedTreats + (qualifies ? skinBonus.treats : 0)) : 0;
-    const economyCoffee = rewardEligible ? Math.min(999999999, boostedCoffee + (qualifies ? skinBonus.coffee : 0)) : 0;
+    const liveOpsMultipliers=liveOpsRunEvent?.active?liveOpsRunEvent.multipliers:{pointsMultiplier:1,treatsMultiplier:1,coffeeMultiplier:1};
+    const eventPoints=Math.floor(boostedPoints*Math.max(1,Number(liveOpsMultipliers.pointsMultiplier||1)));
+    const eventTreats=Math.floor(boostedTreats*Math.max(1,Number(liveOpsMultipliers.treatsMultiplier||1)));
+    const eventCoffee=Math.floor(boostedCoffee*Math.max(1,Number(liveOpsMultipliers.coffeeMultiplier||1)));
+    const economyPoints = rewardEligible ? Math.min(999999999, eventPoints + (qualifies ? skinBonus.points : 0)) : 0;
+    const economyTreats = rewardEligible ? Math.min(999999999, eventTreats + (qualifies ? skinBonus.treats : 0)) : 0;
+    const economyCoffee = rewardEligible ? Math.min(999999999, eventCoffee + (qualifies ? skinBonus.coffee : 0)) : 0;
     const profileXpMultiplier = qualifies ? Math.max(1, Number(fastSeasonPass?.premiumMultiplier || 1)) : 1;
     const profileXpAwarded = qualifies ? Math.min(999999999, AUTHORITATIVE_PROFILE_RUN_XP * profileXpMultiplier) : 0;
     const newRecord = rewardEligible && metrics.score > Number(profileBefore?.best_score || 0) && metrics.score > 0;
@@ -9205,7 +9390,8 @@ async function submitLeaderboardRun(request, env, executionCtx = null) {
         credited: { points: economyPoints, treats: economyTreats, coffee: economyCoffee },
         profileXpAwarded, profileXpMultiplier, newRecord,
         boosterType: appliedBoosterType, activeBooster: { type: String(caseState.activeBooster?.type || ""), runsLeft: safeAdminNumber(caseState.activeBooster?.runsLeft) },
-        skinId, seasonId: String(season.id || "")
+        skinId, seasonId: String(season.id || ""),
+        liveOpsEvent:liveOpsRunEvent?.active?{id:liveOpsRunEvent.id,title:liveOpsRunEvent.title,endsAt:liveOpsRunEvent.endsAt,multipliers:liveOpsRunEvent.multipliers}:null
       }
     });
   } catch (error) {
@@ -21105,6 +21291,7 @@ async function startSafeEvent(row, env) {
   await env.DB.prepare(`INSERT INTO leaderboard_seasons (id,title,starts_at,ends_at,status,reward_type,reward_amount,reward_claim_days,reset_plan_json,close_reason,created_at,updated_at,finalized_at,manual_override,reward_title,reward_image_url,reward_item_id) VALUES (?,?,?,?,'active',?, ?,30,?,'',?,?,NULL,1,?,?,?) ON CONFLICT(id) DO UPDATE SET title=excluded.title,starts_at=excluded.starts_at,ends_at=excluded.ends_at,status='active',reward_type=excluded.reward_type,reward_amount=excluded.reward_amount,reward_title=excluded.reward_title,reward_image_url=excluded.reward_image_url,reward_item_id=excluded.reward_item_id,manual_override=1,updated_at=excluded.updated_at`)
     .bind(seasonId, row.title, row.starts_at, row.ends_at, presentation.type, presentation.amount, JSON.stringify(DEFAULT_SEASON_RESET_PLAN), now, now, presentation.title, presentation.imageUrl, presentation.itemId).run();
   await env.DB.prepare(`UPDATE liveops_events SET status='active',runtime_snapshot_json=?,started_at=CASE WHEN started_at=0 THEN ? ELSE started_at END,updated_at=?,start_notified=0,last_error='',lease_token='',lease_until=0 WHERE event_id=?`).bind(JSON.stringify(snapshot), now, now, row.event_id).run();
+  invalidateActiveRunLiveOpsCache();
   await queueSystemBroadcast(env, payload.broadcasts?.start || `🏁 Событие «${row.title}» началось!`, "", `event_${row.event_id}_start`);
   await env.DB.prepare(`UPDATE liveops_events SET start_notified=1,updated_at=? WHERE event_id=?`).bind(now,row.event_id).run();
 }
@@ -21137,6 +21324,7 @@ async function finishSafeEvent(row, env, cancelled = false) {
     }
   }
   await env.DB.prepare(`UPDATE liveops_events SET status=?,completed_at=CASE WHEN completed_at=0 THEN ? ELSE completed_at END,updated_at=?,end_notified=0,last_error='',lease_token='',lease_until=0 WHERE event_id=?`).bind(cancelled ? "cancelled" : "completed", now, now, row.event_id).run();
+  invalidateActiveRunLiveOpsCache();
   await queueSystemBroadcast(env, cancelled ? `⛔ Событие «${row.title}» отменено.` : (payload.broadcasts?.end || `🏆 Событие «${row.title}» завершено.`), "", `event_${row.event_id}_${cancelled ? "cancel" : "end"}`);
   await env.DB.prepare(`UPDATE liveops_events SET end_notified=1,updated_at=? WHERE event_id=?`).bind(now,row.event_id).run();
 }
@@ -30319,6 +30507,13 @@ async function executeV67AutomationTarget(env, chain, target, context = {}) {
       if (!target.chat_id) throw new Error("У игрока нет активного чата с ботом");
       const notification = await v77DeliverPlayerNotification(env, String(target.telegram_id), target.chat_id, "automation", String(action.text || ""), { inline_keyboard: [[{ text: "🎮 Открыть игру", web_app: { url: configuredGameUrl(env) } }]] });
       details = { delivered: notification.status === "sent", queued: notification.status === "queued", notification };
+    } else if (chain.action_type === "mail") {
+      await ensureRetentionPlatformV2Schema(env);
+      const telegramId=String(target.telegram_id),reward=retentionV2Reward(action.reward),giftId=`auto_mail_${retentionV2ShortHash(executionKey)}_${retentionV2ShortHash(telegramId)}`.slice(0,120);
+      const gift=await createPlayerGiftInbox(env,telegramId,{giftId,kind:"automation_mail",title:String(action.title||chain.title||"Письмо").slice(0,120),preview:String(action.preview||""),message:String(action.text||""),imageUrl:String(action.imageUrl||""),reason:String(action.reason||chain.title||"Автоматическое письмо"),rewards:reward.kind==='none'?[]:[reward],allowEmptyRewards:true});
+      await env.DB.prepare(`INSERT OR IGNORE INTO automation_mail_deliveries(execution_key,chain_key,telegram_id,gift_id,created_at) VALUES(?,?,?,?,?)`).bind(executionKey,String(chain.chain_key),telegramId,gift.giftId,now).run();
+      const notified=await notifyPlayerGiftAvailable(env,telegramId,{title:String(action.title||chain.title||"Письмо"),message:String(action.text||""),reason:String(action.reason||""),rewards:gift.rewards});
+      details={giftId:gift.giftId,created:gift.created,notified,reward,status:gift.status};
     } else if (chain.action_type === "reward") {
       let queueId = await enqueueRewardDelivery(env, String(target.telegram_id), "automation", executionKey, action, String(action.reason || chain.title), "");
       if (!queueId) {
@@ -32013,7 +32208,7 @@ async function ownerPanelEconomyFlowWindow(env, since) {
 }
 
 async function ownerPanelV8AnalyticsFresh(env, ctx) {
-  await Promise.all([ensureOperationsSecuritySchema(env), ensureV67Schema(env), ensureLiveOpsAdminSchema(env), ensureSeasonPassSchema(env), ensureAuthoritativeEconomySchema(env), ensureSafeControlCenterSchema(env), ensureReferralSchema(env), ensureRetentionOpsV14Schema(env)]);
+  await Promise.all([ensureOperationsSecuritySchema(env), ensureV67Schema(env), ensureLiveOpsAdminSchema(env), ensureSeasonPassSchema(env), ensureAuthoritativeEconomySchema(env), ensureSafeControlCenterSchema(env), ensureReferralSchema(env), ensureRetentionOpsV14Schema(env), ensureRetentionPlatformV2Schema(env)]);
   const now = Math.floor(Date.now() / 1000);
   const day = moscowDayStartUnix();
   const week = now - 7 * 86400;
@@ -32065,7 +32260,10 @@ async function ownerPanelV8AnalyticsFresh(env, ctx) {
       SELECT LOWER(COALESCE(json_extract(j.value,'$.kind'),'')),COALESCE(json_extract(j.value,'$.id'),''),COALESCE(json_extract(j.value,'$.title'),''),MAX(1,CAST(COALESCE(json_extract(j.value,'$.amount'),1) AS INTEGER)),CASE WHEN json_extract(j.value,'$.duplicate')=1 OR LOWER(COALESCE(json_extract(j.value,'$.title'),'')) LIKE '%дубликат%' THEN 1 ELSE 0 END FROM season_pass_case_grants s,json_each(CASE WHEN json_valid(s.rewards_json) THEN s.rewards_json ELSE '[]' END) j WHERE s.status='opened' AND s.opened_at>=?
     ) GROUP BY kind,item_id,title ORDER BY drops DESC,amount DESC LIMIT 12`).bind(week,week,week).all()
   ]);
-  const weekRun = await env.DB.prepare(`SELECT COUNT(*) AS total,COUNT(DISTINCT telegram_id) AS players,COALESCE(AVG(score),0) AS avg_score FROM leaderboard_runs WHERE accepted=1 AND created_at>=?`).bind(week).first();
+  const [weekRun,engagement] = await Promise.all([
+    env.DB.prepare(`SELECT COUNT(*) AS total,COUNT(DISTINCT telegram_id) AS players,COALESCE(AVG(score),0) AS avg_score FROM leaderboard_runs WHERE accepted=1 AND created_at>=?`).bind(week).first(),
+    retentionEngagementAnalytics(env,now)
+  ]);
   let dailyRetention=null;
   try {
     const config=await loadDailyLoyaltyConfig(env,{allowDisabled:true});
@@ -32103,6 +32301,7 @@ async function ownerPanelV8AnalyticsFresh(env, ctx) {
     },
     retention: [d1, d3, d7, d14, d30].map((x) => ({ days: x.days, cohort: x.cohort, retained: x.retained, percent: x.cohort ? x.retained * 100 / x.cohort : 0 })),
     dailyRetention,
+    engagement,
     economy: {
       players:Number(economy?.players||0),points:Number(economy?.points||0),treats:Number(economy?.treats||0),coffee:Number(economy?.coffee||0),
       average:{points:Math.round(Number(economy?.avg_points||0)),treats:Math.round(Number(economy?.avg_treats||0)),coffee:Math.round(Number(economy?.avg_coffee||0))},
@@ -32199,6 +32398,11 @@ function ownerV8RewardPayload(kindValue, itemValue, amountValue, imageUrl="") {
   if(!["points","zefir","coffee"].includes(kind))throw new ApiError(400,"Неизвестная награда.");return {kind,amount:ownerPanelInteger(amountValue,1,999999999)||1,imageUrl:ownerV8AssetPath(imageUrl)};
 }
 
+function ownerV8EventEconomy(body={}) {
+  const mult=(value)=>{const n=ownerPanelInteger(value??1,1,3);if(n==null)throw new ApiError(400,"Множитель экономики события должен быть от ×1 до ×3.");return n;};
+  return {pointsMultiplier:mult(body.pointsMultiplier),treatsMultiplier:mult(body.treatsMultiplier),coffeeMultiplier:mult(body.coffeeMultiplier)};
+}
+
 async function ownerPanelV8Events(env, ctx) {
   await Promise.all([ensureSafeControlCenterSchema(env),ensureRetentionOpsV14Schema(env)]);
   const [result,templateResult]=await Promise.all([
@@ -32215,7 +32419,7 @@ async function ownerPanelV8SaveEventTemplate(env,ctx){
   const hours=ownerPanelInteger(ctx.body?.durationHours,1,720)||24;
   const winner=ownerV8RewardPayload(ctx.body?.winnerKind||'case',ctx.body?.winnerId||'gold',ctx.body?.winnerAmount||1,ctx.body?.imageUrl||'');if(winner.kind==='none')throw new ApiError(400,'Награда победителя обязательна.');
   const participant=ownerV8RewardPayload(ctx.body?.participantKind||'none',ctx.body?.participantId||'',ctx.body?.participantAmount||1,'');
-  const payload={winnerReward:winner,participantReward:participant,shop:{products:{},discounts:{}},broadcasts:{start:String(ctx.body?.startMessage||'').slice(0,3500),end:String(ctx.body?.endMessage||'').slice(0,3500)}};
+  const payload={winnerReward:winner,participantReward:participant,economy:ownerV8EventEconomy(ctx.body),playerNotice:{text:String(ctx.body?.playerNotice||'').trim().slice(0,220)},shop:{products:{},discounts:{}},broadcasts:{start:String(ctx.body?.startMessage||'').slice(0,3500),end:String(ctx.body?.endMessage||'').slice(0,3500)}};
   const existing=await env.DB.prepare(`SELECT system_template FROM liveops_event_templates WHERE template_key=? LIMIT 1`).bind(key).first();
   await env.DB.prepare(`INSERT INTO liveops_event_templates(template_key,title,description,duration_hours,payload_json,enabled,system_template,sort_order,created_at,updated_at,updated_by) VALUES(?,?,?,?,?,1,0,100,?,?,?) ON CONFLICT(template_key) DO UPDATE SET title=excluded.title,description=excluded.description,duration_hours=excluded.duration_hours,payload_json=excluded.payload_json,enabled=1,updated_at=excluded.updated_at,updated_by=excluded.updated_by`).bind(key,title,description,hours,JSON.stringify(payload),now,now,String(ctx.user.id)).run();
   await logStaffAction(env,ctx.user,ctx.access,'owner_liveops_template_save',null,'liveops_template',null,null,{templateKey:key,title,system:Boolean(existing?.system_template)});return{ok:true,templateKey:key};
@@ -32229,22 +32433,22 @@ async function ownerPanelV8SaveEvent(env, ctx) {
   if(title.length<3||startsAt==null||endsAt==null||endsAt<=startsAt)throw new ApiError(400,"Проверьте название и даты события.");
   const winner=ownerV8RewardPayload(ctx.body?.winnerKind||"case",ctx.body?.winnerId||"legendary",ctx.body?.winnerAmount||1,ctx.body?.imageUrl||"");if(winner.kind==='none')throw new ApiError(400,"Награда победителя обязательна.");
   const participant=ownerV8RewardPayload(ctx.body?.participantKind||"none",ctx.body?.participantId||"",ctx.body?.participantAmount||1,"");
-  const payload={title,startsAt,endsAt,winnerReward:winner,participantReward:participant,shop:{products:{},discounts:{}},broadcasts:{start:String(ctx.body?.startMessage||"").slice(0,3500),end:String(ctx.body?.endMessage||"").slice(0,3500)}};
+  const payload={title,startsAt,endsAt,winnerReward:winner,participantReward:participant,economy:ownerV8EventEconomy(ctx.body),playerNotice:{text:String(ctx.body?.playerNotice||"").trim().slice(0,220)},shop:{products:{},discounts:{}},broadcasts:{start:String(ctx.body?.startMessage||"").slice(0,3500),end:String(ctx.body?.endMessage||"").slice(0,3500)}};
   const id=eventId||`evt_${now}_${crypto.randomUUID().slice(0,8)}`;
   if(eventId){const row=await env.DB.prepare(`SELECT * FROM liveops_events WHERE event_id=? LIMIT 1`).bind(eventId).first();if(!row)throw new ApiError(404,"Событие не найдено.");if(String(row.status)!=='draft')throw new ApiError(409,"Изменять можно только черновик события.");await env.DB.prepare(`UPDATE liveops_events SET title=?,starts_at=?,ends_at=?,draft_json=?,updated_at=? WHERE event_id=?`).bind(title,startsAt,endsAt,JSON.stringify(payload),now,eventId).run();}
   else await env.DB.prepare(`INSERT INTO liveops_events(event_id,title,starts_at,ends_at,status,draft_json,published_json,runtime_snapshot_json,created_by,created_by_name,created_at,updated_at) VALUES(?,?,?,?,'draft',?,'{}','{}',?,?,?,?)`).bind(id,title,startsAt,endsAt,JSON.stringify(payload),String(ctx.user.id),telegramDisplayName(ctx.user),now,now).run();
-  await logStaffAction(env,ctx.user,ctx.access,"owner_panel_event_save",null,"event",null,null,{eventId:id,title,startsAt,endsAt});return {ok:true,eventId:id};
+  invalidateActiveRunLiveOpsCache();await logStaffAction(env,ctx.user,ctx.access,"owner_panel_event_save",null,"event",null,null,{eventId:id,title,startsAt,endsAt,economy:payload.economy});return {ok:true,eventId:id};
 }
 
 async function ownerPanelV8PublishEvent(env, ctx) {
   await ensureSafeControlCenterSchema(env);const eventId=String(ctx.body?.eventId||"").trim();const row=await env.DB.prepare(`SELECT * FROM liveops_events WHERE event_id=? AND status='draft' LIMIT 1`).bind(eventId).first();if(!row)throw new ApiError(404,"Черновик события не найден.");
   const payload=ownerV8SafeJson(row.draft_json,{});const validation=await validateSafeDraftRow({entity_type:"event",draft_json:JSON.stringify(payload)},env);if(!validation.ok)throw new ApiError(409,"Событие не прошло проверку: "+validation.checks.filter(x=>!x.ok).map(x=>x.text).join(", "));
   const overlap=await env.DB.prepare(`SELECT title FROM liveops_events WHERE event_id<>? AND status IN ('scheduled','active') AND starts_at<? AND ends_at>? LIMIT 1`).bind(eventId,row.ends_at,row.starts_at).first();if(overlap)throw new ApiError(409,`Период пересекается с событием «${overlap.title}».`);
-  const now=Math.floor(Date.now()/1000);await env.DB.prepare(`UPDATE liveops_events SET status='scheduled',published_json=draft_json,published_at=?,updated_at=?,last_error='' WHERE event_id=? AND status='draft'`).bind(now,now,eventId).run();await logStaffAction(env,ctx.user,ctx.access,"owner_panel_event_publish",null,"event",null,null,{eventId,title:row.title});return {ok:true};
+  const now=Math.floor(Date.now()/1000);await env.DB.prepare(`UPDATE liveops_events SET status='scheduled',published_json=draft_json,published_at=?,updated_at=?,last_error='' WHERE event_id=? AND status='draft'`).bind(now,now,eventId).run();invalidateActiveRunLiveOpsCache();await logStaffAction(env,ctx.user,ctx.access,"owner_panel_event_publish",null,"event",null,null,{eventId,title:row.title});return {ok:true};
 }
 
 async function ownerPanelV8CancelEvent(env, ctx) {
-  await ensureSafeControlCenterSchema(env);const eventId=String(ctx.body?.eventId||"").trim();const row=await env.DB.prepare(`SELECT * FROM liveops_events WHERE event_id=? LIMIT 1`).bind(eventId).first();if(!row)throw new ApiError(404,"Событие не найдено.");if(String(row.status)==='active')await finishSafeEvent(row,env,true);const now=Math.floor(Date.now()/1000);await env.DB.prepare(`UPDATE liveops_events SET status='cancelled',updated_at=?,completed_at=CASE WHEN completed_at=0 THEN ? ELSE completed_at END WHERE event_id=?`).bind(now,now,eventId).run();await logStaffAction(env,ctx.user,ctx.access,"owner_panel_event_cancel",null,"event",null,null,{eventId,title:row.title});return {ok:true};
+  await ensureSafeControlCenterSchema(env);const eventId=String(ctx.body?.eventId||"").trim();const row=await env.DB.prepare(`SELECT * FROM liveops_events WHERE event_id=? LIMIT 1`).bind(eventId).first();if(!row)throw new ApiError(404,"Событие не найдено.");if(String(row.status)==='active')await finishSafeEvent(row,env,true);const now=Math.floor(Date.now()/1000);await env.DB.prepare(`UPDATE liveops_events SET status='cancelled',updated_at=?,completed_at=CASE WHEN completed_at=0 THEN ? ELSE completed_at END WHERE event_id=?`).bind(now,now,eventId).run();invalidateActiveRunLiveOpsCache();await logStaffAction(env,ctx.user,ctx.access,"owner_panel_event_cancel",null,"event",null,null,{eventId,title:row.title});return {ok:true};
 }
 
 async function ownerPanelV8Releases(env, ctx) {
@@ -32445,6 +32649,13 @@ function ownerV8AutomationAction(body, title, previousRow=null) {
     }
     return {actionType,action:{text:escapeHtml(text)}};
   }
+  if(actionType==="mail"){
+    const mailTitle=String(body?.mailTitle||title||"Письмо").trim().slice(0,120),text=String(body?.mailText||"").trim();
+    if(mailTitle.length<2)throw new ApiError(400,"Введите заголовок письма.");if(text.length<3||text.length>3500)throw new ApiError(400,"Текст письма должен содержать от 3 до 3500 символов.");
+    const preview=playerMailPreviewText(body?.mailPreview,text),imageUrl=ownerV8AssetPath(body?.mailImageUrl||"");if(String(body?.mailImageUrl||"").trim()&&!imageUrl)throw new ApiError(400,"Картинка письма должна быть HTTPS, /assets/... или /media/...");
+    const rewardKind=String(body?.mailRewardKind||"none").trim();let reward={kind:"none"};if(rewardKind!=="none")reward=ownerV8AutomationReward({rewardKind,rewardId:body?.mailRewardId,rewardAmount:body?.mailRewardAmount},mailTitle);
+    return {actionType,action:{title:mailTitle,preview,text,imageUrl,reward,reason:String(body?.mailReason||title||mailTitle).trim().slice(0,300)}};
+  }
   throw new ApiError(400,"Неизвестное действие автоматизации.");
 }
 
@@ -32454,18 +32665,20 @@ function ownerV8AutomationView(row, allRows=[]) {
   return {
     key:String(row.chain_key||""),title:String(row.title||""),description:String(row.description||""),enabled:Boolean(row.enabled),
     triggerType:String(row.trigger_type||""),triggerValue:Number(row.trigger_value||0),triggerLabel:v67AutomationTriggerLabel(row.trigger_type,row.trigger_value),
-    actionType:String(row.action_type||""),action,actionLabel:String(row.action_type)==="reward"?safeRewardDescription(action):ownerV8AutomationPlainMessage(action.text).slice(0,180),messageText:String(row.action_type)==="message"?ownerV8AutomationPlainMessage(action.text):"",
+    actionType:String(row.action_type||""),action,actionLabel:String(row.action_type)==="reward"?safeRewardDescription(action):String(row.action_type)==="mail"?`💌 ${String(action.title||row.title||"Письмо")}`:ownerV8AutomationPlainMessage(action.text).slice(0,180),messageText:String(row.action_type)==="message"?ownerV8AutomationPlainMessage(action.text):"",
+    mailTitle:String(row.action_type)==="mail"?String(action.title||""):"",mailPreview:String(row.action_type)==="mail"?String(action.preview||""):"",mailText:String(row.action_type)==="mail"?String(action.text||""):"",mailImageUrl:String(row.action_type)==="mail"?String(action.imageUrl||""):"",mailReward:String(row.action_type)==="mail"?retentionV2Reward(action.reward):{kind:"none"},
     showAsTask:Boolean(row.show_as_task),taskMode:String(row.task_mode||"one_time"),taskDescription:String(row.task_description||""),
     taskStartsAt:Number(row.task_starts_at||0),taskEndsAt:Number(row.task_ends_at||0),taskSort:Number(row.task_sort||100),
     cooldownSeconds:Number(row.cooldown_seconds||0),lastRunAt:Number(row.last_run_at||0),updatedAt:Number(row.updated_at||0),updatedBy:String(row.updated_by||""),
     executions7d:Number(row.executions_7d||0),completed7d:Number(row.completed_7d||0),failed7d:Number(row.failed_7d||0),lastExecutionAt:Number(row.last_execution_at||0),
     taskSeen30d:Number(row.task_seen_30d||0),taskCompleted30d:Number(row.task_completed_30d||0),taskClaimed30d:Number(row.task_claimed_30d||0),
+    mailSent7d:Number(row.mail_sent_7d||0),mailRead7d:Number(row.mail_read_7d||0),mailClaimed7d:Number(row.mail_claimed_7d||0),
     preset:V67_AUTOMATION_PRESETS.some((preset)=>preset.key===String(row.chain_key)),issues
   };
 }
 
 async function ownerPanelV8Automations(env, ctx) {
-  await Promise.all([ensureV67Schema(env),ensureV77Schema(env),ensureServerOptimizationSchema(env)]);
+  await Promise.all([ensureV67Schema(env),ensureV77Schema(env),ensureServerOptimizationSchema(env),ensureRetentionPlatformV2Schema(env)]);
   const now=Math.floor(Date.now()/1000),week=now-7*V67_DAY,month=now-30*V67_DAY;
   const result=await env.DB.prepare(`SELECT c.*,
     (SELECT COUNT(*) FROM automation_chain_executions e WHERE e.chain_key=c.chain_key AND e.created_at>=?) AS executions_7d,
@@ -32474,8 +32687,11 @@ async function ownerPanelV8Automations(env, ctx) {
     (SELECT MAX(e.created_at) FROM automation_chain_executions e WHERE e.chain_key=c.chain_key) AS last_execution_at,
     (SELECT COUNT(DISTINCT x.telegram_id) FROM task_exposure_log x WHERE x.chain_key=c.chain_key AND x.last_seen_at>=?) AS task_seen_30d,
     (SELECT COUNT(DISTINCT x.telegram_id) FROM task_exposure_log x WHERE x.chain_key=c.chain_key AND x.last_seen_at>=? AND x.completed_at>0) AS task_completed_30d,
-    (SELECT COUNT(*) FROM player_task_claims cl WHERE cl.chain_key=c.chain_key AND cl.status='claimed' AND cl.created_at>=?) AS task_claimed_30d
-    FROM automation_chains c ORDER BY c.enabled DESC,c.show_as_task DESC,c.task_sort ASC,c.updated_at DESC`).bind(week,week,week,month,month,month).all();
+    (SELECT COUNT(*) FROM player_task_claims cl WHERE cl.chain_key=c.chain_key AND cl.status='claimed' AND cl.created_at>=?) AS task_claimed_30d,
+    (SELECT COUNT(*) FROM automation_mail_deliveries d WHERE d.chain_key=c.chain_key AND d.created_at>=?) AS mail_sent_7d,
+    (SELECT COUNT(*) FROM automation_mail_deliveries d JOIN player_mail_metadata m ON m.gift_id=d.gift_id AND m.telegram_id=d.telegram_id WHERE d.chain_key=c.chain_key AND d.created_at>=? AND m.read_at>0) AS mail_read_7d,
+    (SELECT COUNT(*) FROM automation_mail_deliveries d JOIN player_gift_inbox g ON g.gift_id=d.gift_id AND g.telegram_id=d.telegram_id WHERE d.chain_key=c.chain_key AND d.created_at>=? AND g.status='claimed') AS mail_claimed_7d
+    FROM automation_chains c ORDER BY c.enabled DESC,c.show_as_task DESC,c.task_sort ASC,c.updated_at DESC`).bind(week,week,week,month,month,month,week,week,week).all();
   const rawRows=result.results||[];
   const automations=rawRows.map((row)=>ownerV8AutomationView(row,rawRows));
   const [executionRows,claimRows,cron]=await Promise.all([
@@ -36427,7 +36643,7 @@ const TEST_PROJECT_SANDBOX_API_PATHS = Object.freeze([
   "/api/runs/start","/api/runs/checkpoint","/api/leaderboard/state","/api/leaderboard/submit","/api/leaderboard/claim",
   "/api/cases/state","/api/cases/open","/api/cases/open-granted","/api/cases/purchase","/api/cases/activate","/api/cases/equip","/api/cases/consume-run",
   "/api/skins/purchase","/api/skins/bonus-case","/api/live-content/shop/buy","/api/rewards/create","/api/rewards/mine",
-  "/api/gifts/state","/api/gifts/read","/api/gifts/claim","/api/support/state","/api/support/create","/api/support/reply","/api/support/read","/api/news/read",
+  "/api/gifts/state","/api/gifts/read","/api/gifts/claim","/api/friends/coop/state","/api/friends/coop/claim","/api/newcomer/claim","/api/support/state","/api/support/create","/api/support/reply","/api/support/read","/api/news/read",
   "/api/polls/game/next","/api/polls/game/vote","/api/polls/game/snooze",
   "/api/shop/offers","/api/shop/offers/event","/api/shop/offers/purchase",
   "/api/battle-pass/access","/api/battle-pass/state","/api/battle-pass/run","/api/battle-pass/profile-bonus","/api/battle-pass/task-notices/pending","/api/battle-pass/task-notices/read",
@@ -36665,7 +36881,7 @@ async function testProjectSandboxGameData(env, ctx) {
   const response=(data,status=200)=>({ok:true,proxyStatus:status,data:{...data,testProject:true,productionWrites:false}});
   const reload=async()=>{loaded=await testProjectSandboxLoad(env,ctx);({ownerId,state,productionSnapshot,snapshot,nowMs}=loaded);return loaded;};
 
-  if(path==="/api/game/startup")return response({ok:true,authenticated:true,workerBuild:WORKER_BUILD,generatedAt:nowMs,publicConfig:testProjectClone(snapshot?.publicConfig||fallbackGamePublicConfig()),profile:testProjectSandboxProfile(state),cases:testProjectSandboxCasePayload(state,snapshot),rewards:{ok:true,rewards:(state.sandbox?.mockRewards||[]).map(testProjectSandboxRewardView),limitStatus:null},flags:{...(snapshot?.featureFlags||{}),battle_pass:true,shop:true,rating:true},seasonPassBonus:{active:Number(state.seasonXpBoosts||0)>0||state.passTier==="elite_plus",multiplier:(Number(state.seasonXpBoosts||0)>0||state.passTier==="elite_plus")?2:1,claimableCount:testProjectSandboxPassPayload(state,snapshot).taskClaimableCount},seasonPassTaskNotice:{ok:true,pending:false,notice:null},news:{ok:true,items:[],unreadCount:0},gifts:{ok:true,pendingCount:0,items:[]},miniGameVisual:testProjectMiniGameVisual(state,snapshot),miniGameVisuals:testProjectMiniGameVisuals(state,snapshot),errors:{}});
+  if(path==="/api/game/startup")return response({ok:true,authenticated:true,workerBuild:WORKER_BUILD,generatedAt:nowMs,publicConfig:testProjectClone(snapshot?.publicConfig||fallbackGamePublicConfig()),profile:testProjectSandboxProfile(state),cases:testProjectSandboxCasePayload(state,snapshot),rewards:{ok:true,rewards:(state.sandbox?.mockRewards||[]).map(testProjectSandboxRewardView),limitStatus:null},flags:{...(snapshot?.featureFlags||{}),battle_pass:true,shop:true,rating:true},seasonPassBonus:{active:Number(state.seasonXpBoosts||0)>0||state.passTier==="elite_plus",multiplier:(Number(state.seasonXpBoosts||0)>0||state.passTier==="elite_plus")?2:1,claimableCount:testProjectSandboxPassPayload(state,snapshot).taskClaimableCount},seasonPassTaskNotice:{ok:true,pending:false,notice:null},news:{ok:true,items:[],unreadCount:0},gifts:{ok:true,pendingCount:0,unreadCount:0,items:[]},liveOpsEvent:{active:false,multipliers:{pointsMultiplier:1,treatsMultiplier:1,coffeeMultiplier:1}},newcomerPath:{available:false,dayNumber:1,runs:Number(state.sandbox?.completedRuns||0),steps:[]},miniGameVisual:testProjectMiniGameVisual(state,snapshot),miniGameVisuals:testProjectMiniGameVisuals(state,snapshot),errors:{}});
   if(path==="/api/features")return response({ok:true,flags:{...(snapshot?.featureFlags||{}),battle_pass:true,shop:true,rating:true}});
   if(path==="/api/profile/sync")return response({ok:true,profile:testProjectSandboxProfile(state)});
   if(path==="/api/shop/config")return response({ok:true,...testProjectClone(snapshot?.publicConfig?.shop||fallbackGamePublicConfig().shop)});
@@ -36721,6 +36937,9 @@ async function testProjectSandboxGameData(env, ctx) {
   if(path==="/api/gifts/state")return response({ok:true,pendingCount:0,unreadCount:0,items:[]});
   if(path==="/api/gifts/read")return response({ok:true,pendingCount:0,unreadCount:0,items:[]});
   if(path==="/api/gifts/claim")throw new ApiError(404,"Production-подарки в Test Project не выдаются.");
+  if(path==="/api/friends/coop/state")return response({ok:true,config:{enabled:false,active:false,title:"Совместное задание",metric:"runs",target:1,reward:{kind:"none"},rewardLabel:"Без награды"},partners:[]});
+  if(path==="/api/friends/coop/claim")throw new ApiError(409,"Совместные Production-награды в Test Project не выдаются.");
+  if(path==="/api/newcomer/claim")throw new ApiError(409,"Production-путь новичка в Test Project не выдаёт реальные награды.");
   if(path==="/api/news/read")return response({ok:true});
   if(path==="/api/polls/game/next")return response(testProjectSandboxPollNext(state,nowMs));
   if(path==="/api/polls/game/snooze"){
@@ -37861,7 +38080,7 @@ async function assertReferralProductionEditAllowed(env,ctx){
 }
 
 async function ownerPanelReferrals(env,ctx){
-  await ensureReferralSchema(env);const config=await referralProgramConfig(env);
+  await Promise.all([ensureReferralSchema(env),ensureRetentionPlatformV2Schema(env)]);const config=await referralProgramConfig(env);
   const [stats,milestones,network,recent,rewardStats,giftStats,weeklyStats,choiceStats,notificationOptIns,notificationStats]=await Promise.all([
     env.DB.prepare(`SELECT COUNT(*) AS invited,SUM(CASE WHEN status='active' THEN 1 ELSE 0 END) AS active FROM referral_links`).first(),
     env.DB.prepare(`SELECT * FROM referral_milestones ORDER BY sort_order,milestone_key`).all(),
@@ -37876,7 +38095,21 @@ async function ownerPanelReferrals(env,ctx){
   ]);
   const elite=(await env.DB.prepare(`SELECT COUNT(*) AS count FROM referral_progress WHERE milestone_key='elite'`).first())?.count||0,elitePlus=(await env.DB.prepare(`SELECT COUNT(*) AS count FROM referral_progress WHERE milestone_key='elite_plus'`).first())?.count||0,returns=(await env.DB.prepare(`SELECT COUNT(*) AS count FROM referral_return_progress WHERE rewarded_at>0`).first())?.count||0;
   const invited=Number(stats?.invited||0),active=Number(stats?.active||0);const rewardsByStatus=Object.fromEntries((rewardStats.results||[]).map((row)=>[String(row.status),Number(row.count||0)]));
-  return {ok:true,config,stats:{invited,active,conversion:invited?Math.round(active/invited*1000)/10:0,pendingRewards:Number(rewardsByStatus.pending||0)+Number(rewardsByStatus.failed||0)+Number(choiceStats?.pending||0),deliveredRewards:Number(rewardsByStatus.delivered||0),elite:Number(elite),elitePlus:Number(elitePlus),returns:Number(returns),friendGifts:Number(giftStats?.count||0),weeklyGifts:Number(weeklyStats?.count||0),rewardChoices:Number(choiceStats?.selected||0),pendingChoices:Number(choiceStats?.pending||0),notificationOptIns:Number(notificationOptIns?.count||0),notificationsSent:Number(notificationStats?.sent||0),notificationsFailed:Number(notificationStats?.failed||0)},milestones:(milestones.results||[]).map((row)=>({...row,inviterReward:referralSafeReward(row.inviter_reward_json),inviteeReward:referralSafeReward(row.invitee_reward_json),inviterRewardLabel:referralRewardLabel(row.inviter_reward_json),inviteeRewardLabel:referralRewardLabel(row.invitee_reward_json)})),network:(network.results||[]).map((row)=>{const choices=referralChoiceRewards(row.choice_rewards_json);return {...row,reward:referralSafeReward(row.reward_json),rewardLabel:referralRewardLabel(row.reward_json),choiceRewards:choices,choiceRewardLabels:choices.map(referralRewardLabel)};}),recent:(recent.results||[]).map((row)=>({inviteeTelegramId:String(row.invitee_telegram_id),referrerTelegramId:String(row.referrer_telegram_id),inviteeName:String(row.invitee_name||''),referrerName:String(row.referrer_name||''),status:String(row.status||''),boundAt:Number(row.bound_at||0),activatedAt:Number(row.activated_at||0)}))};
+  const [coopConfig,coopStats]=await Promise.all([friendCoopConfig(env),env.DB.prepare(`SELECT COUNT(*) AS claims,COUNT(DISTINCT pair_key) AS pairs FROM friend_coop_claims WHERE status='claimed'`).first()]);
+  return {ok:true,config,coop:{config:coopConfig,stats:{claims:Number(coopStats?.claims||0),pairs:Number(coopStats?.pairs||0)}},stats:{invited,active,conversion:invited?Math.round(active/invited*1000)/10:0,pendingRewards:Number(rewardsByStatus.pending||0)+Number(rewardsByStatus.failed||0)+Number(choiceStats?.pending||0),deliveredRewards:Number(rewardsByStatus.delivered||0),elite:Number(elite),elitePlus:Number(elitePlus),returns:Number(returns),friendGifts:Number(giftStats?.count||0),weeklyGifts:Number(weeklyStats?.count||0),rewardChoices:Number(choiceStats?.selected||0),pendingChoices:Number(choiceStats?.pending||0),notificationOptIns:Number(notificationOptIns?.count||0),notificationsSent:Number(notificationStats?.sent||0),notificationsFailed:Number(notificationStats?.failed||0)},milestones:(milestones.results||[]).map((row)=>({...row,inviterReward:referralSafeReward(row.inviter_reward_json),inviteeReward:referralSafeReward(row.invitee_reward_json),inviterRewardLabel:referralRewardLabel(row.inviter_reward_json),inviteeRewardLabel:referralRewardLabel(row.invitee_reward_json)})),network:(network.results||[]).map((row)=>{const choices=referralChoiceRewards(row.choice_rewards_json);return {...row,reward:referralSafeReward(row.reward_json),rewardLabel:referralRewardLabel(row.reward_json),choiceRewards:choices,choiceRewardLabels:choices.map(referralRewardLabel)};}),recent:(recent.results||[]).map((row)=>({inviteeTelegramId:String(row.invitee_telegram_id),referrerTelegramId:String(row.referrer_telegram_id),inviteeName:String(row.invitee_name||''),referrerName:String(row.referrer_name||''),status:String(row.status||''),boundAt:Number(row.bound_at||0),activatedAt:Number(row.activated_at||0)}))};
+}
+
+async function ownerPanelReferralCoopSave(env,ctx){
+  await assertReferralProductionEditAllowed(env,ctx);await ensureRetentionPlatformV2Schema(env);
+  const current=await env.DB.prepare(`SELECT * FROM friend_coop_task_config WHERE id=1 LIMIT 1`).first();const enabled=ctx.body?.enabled===true||Number(ctx.body?.enabled)===1?1:0,title=String(ctx.body?.title||'Вместе вкуснее').trim().slice(0,100)||'Вместе вкуснее',description=String(ctx.body?.description||'').trim().slice(0,300),metric=String(ctx.body?.metric||'runs');if(!['runs','coffee','zefir','score'].includes(metric))throw new ApiError(400,'Неизвестная метрика совместного задания.');const target=Math.max(1,Math.min(metric==='score'?10000000:100000,Math.floor(Number(ctx.body?.target)||1))),startsAt=Math.max(0,Math.floor(Number(ctx.body?.startsAt)||0)),endsAt=Math.max(0,Math.floor(Number(ctx.body?.endsAt)||0));if(enabled&&startsAt&&endsAt&&endsAt<=startsAt)throw new ApiError(400,'Конец совместного задания должен быть позже старта.');const reward=retentionV2Reward(ownerReferralRewardInput(ctx.body?.rewardKind,ctx.body?.rewardId,ctx.body?.rewardAmount));if(enabled&&reward.kind==='none')throw new ApiError(400,'Выберите награду совместного задания.');const now=Math.floor(Date.now()/1000),reset=Boolean(ctx.body?.resetTask),taskKey=reset?`coop_${now}_${crypto.randomUUID().slice(0,6)}`:String(current?.task_key||`coop_${now}`),cycleStartedAt=reset||!Number(current?.cycle_started_at||0)?now:Number(current.cycle_started_at);
+  await env.DB.prepare(`UPDATE friend_coop_task_config SET task_key=?,enabled=?,title=?,description=?,metric=?,target_value=?,reward_json=?,starts_at=?,ends_at=?,cycle_started_at=?,updated_at=?,updated_by=? WHERE id=1`).bind(taskKey,enabled,title,description,metric,target,JSON.stringify(reward),startsAt,endsAt,cycleStartedAt,now,String(ctx.user.id)).run();await logStaffAction(env,ctx.user,ctx.access,'owner_referral_coop',null,'referrals',null,null,{taskKey,enabled,title,metric,target,reward,startsAt,endsAt,cycleStartedAt,reset});return ownerPanelReferrals(env,ctx);
+}
+
+async function ownerPanelNewcomer(env,ctx){
+  await ensureRetentionPlatformV2Schema(env);const [steps,claims]=await Promise.all([env.DB.prepare(`SELECT * FROM newcomer_path_steps ORDER BY step_day`).all(),env.DB.prepare(`SELECT step_day,COUNT(*) AS claims FROM newcomer_path_claims WHERE status='claimed' GROUP BY step_day ORDER BY step_day`).all()]);const counts=new Map((claims.results||[]).map(r=>[Number(r.step_day),Number(r.claims||0)]));return{ok:true,steps:(steps.results||[]).map(r=>({day:Number(r.step_day),enabled:Boolean(r.enabled),title:String(r.title||''),description:String(r.description||''),runsRequired:Number(r.runs_required||1),ctaType:String(r.cta_type||'game'),reward:retentionV2Reward(r.reward_json),rewardLabel:referralRewardLabel(r.reward_json),claims:counts.get(Number(r.step_day))||0,updatedAt:Number(r.updated_at||0)}))};
+}
+async function ownerPanelNewcomerSave(env,ctx){
+  const pref=await ownerStagingPreference(env,String(ctx.user.id)).catch(()=>null);if(pref&&Number(pref.staging_enabled||0)===1&&String(pref.active_change_set_id||''))throw new ApiError(409,'STAGING включён: путь новичка пока не имеет Sandbox-версии. Выключите Staging Mode осознанно, чтобы изменить Production.');await ensureRetentionPlatformV2Schema(env);const day=Math.max(1,Math.min(3,Math.floor(Number(ctx.body?.day)||0))),current=await env.DB.prepare(`SELECT * FROM newcomer_path_steps WHERE step_day=? LIMIT 1`).bind(day).first();if(!current)throw new ApiError(404,'Этап пути новичка не найден.');const enabled=ctx.body?.enabled===true||Number(ctx.body?.enabled)===1?1:0,title=String(ctx.body?.title||current.title||`День ${day}`).trim().slice(0,100),description=String(ctx.body?.description||current.description||'').trim().slice(0,300),runsRequired=Math.max(1,Math.min(100,Math.floor(Number(ctx.body?.runsRequired)||Number(current.runs_required||1)))),ctaType=String(ctx.body?.ctaType||current.cta_type||'game');if(!['game','album','referrals','mail','profile'].includes(ctaType))throw new ApiError(400,'Неизвестная кнопка этапа.');const reward=retentionV2Reward(ownerReferralRewardInput(ctx.body?.rewardKind,ctx.body?.rewardId,ctx.body?.rewardAmount));if(enabled&&reward.kind==='none')throw new ApiError(400,'У активного этапа должна быть награда.');const now=Math.floor(Date.now()/1000);await env.DB.prepare(`UPDATE newcomer_path_steps SET enabled=?,title=?,description=?,runs_required=?,cta_type=?,reward_json=?,updated_at=?,updated_by=? WHERE step_day=?`).bind(enabled,title,description,runsRequired,ctaType,JSON.stringify(reward),now,String(ctx.user.id),day).run();await logStaffAction(env,ctx.user,ctx.access,'owner_newcomer_save',null,'newcomer',null,null,{day,enabled,title,runsRequired,ctaType,reward});return ownerPanelNewcomer(env,ctx);
 }
 
 async function ownerPanelReferralConfigSave(env,ctx){
@@ -38238,6 +38471,7 @@ async function handleOwnerPanelApi(request, env, path, executionCtx = null) {
     if (path === "/api/owner/v9/media/upload") return jsonResponse(await ownerPanelV9MediaUpload(env, ctx));
     if (path === "/api/owner/v9/media/delete") return jsonResponse(await ownerPanelV9MediaDelete(env, ctx));
     if (path === "/api/owner/referrals") return jsonResponse(await ownerPanelReferrals(env, ctx));
+    if (path === "/api/owner/referrals/coop/save") return jsonResponse(await ownerPanelReferralCoopSave(env, ctx));
     if (path === "/api/owner/referrals/config/save") return jsonResponse(await ownerPanelReferralConfigSave(env, ctx));
     if (path === "/api/owner/referrals/boost/save") return jsonResponse(await ownerPanelReferralBoostSave(env, ctx));
     if (path === "/api/owner/referrals/return/save") return jsonResponse(await ownerPanelReferralReturnSave(env, ctx));
@@ -38246,6 +38480,8 @@ async function handleOwnerPanelApi(request, env, path, executionCtx = null) {
     if (path === "/api/owner/referrals/notifications/save") return jsonResponse(await ownerPanelReferralNotificationsSave(env, ctx));
     if (path === "/api/owner/referrals/milestone/save") return jsonResponse(await ownerPanelReferralMilestoneSave(env, ctx));
     if (path === "/api/owner/referrals/network/save") return jsonResponse(await ownerPanelReferralNetworkSave(env, ctx));
+    if (path === "/api/owner/newcomer") return jsonResponse(await ownerPanelNewcomer(env, ctx));
+    if (path === "/api/owner/newcomer/save") return jsonResponse(await ownerPanelNewcomerSave(env, ctx));
     if (path === "/api/owner/daily-loyalty") return jsonResponse(await ownerPanelDailyLoyalty(env, ctx));
     if (path === "/api/owner/daily-loyalty/save") return jsonResponse(await ownerPanelDailyLoyaltySave(env, ctx));
     if (path === "/api/owner/player/daily-return-test/prepare") return jsonResponse(await ownerPanelPrepareDailyReturnTest(env, ctx));
