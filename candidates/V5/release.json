@@ -1,0 +1,69 @@
+{
+  "schemaVersion": 1,
+  "version": "V5",
+  "candidate": "V5.0.0",
+  "title": "Сладкий Забег · V5.0.0 · Profile 2.0 Visual Candidate",
+  "status": "LOCAL_QA",
+  "sourceCommit": "830c2311954938244c37c14a66c3836bdd89dc3a",
+  "createdAt": "2026-08-24T11:06:00+03:00",
+  "updatedAt": "2026-08-24T11:06:00+03:00",
+  "visualOnly": true,
+  "features": [
+    "profile-v2-visual-shell",
+    "profile-v2-four-quick-actions",
+    "profile-v2-compact-progress",
+    "profile-v2-progressive-disclosure",
+    "profile-v2-collapsible-cosmetics",
+    "profile-v2-account-help-hub",
+    "profile-v2-dynamic-coop-card",
+    "profile-avatar-geometry-preserved",
+    "profile-frame-layers-preserved",
+    "test-project-sandbox-only"
+  ],
+  "sourceFiles": {
+    "profile-v2-candidate.css": "f7c75d58ad37df07",
+    "profile-v2-candidate.js": "0be48cf336e10842"
+  },
+  "candidateArchitecture": {
+    "base": "/index.html?test_project=1",
+    "currentProductionSourceReadOnly": true,
+    "candidateOverlayOnly": true,
+    "productionRootFilesChanged": false,
+    "productionEconomyWrites": false,
+    "avatarSizeOverrides": false,
+    "frameImageOverrides": false
+  },
+  "requiredChecks": [
+    "candidate-opens-current-index-in-test-project-mode",
+    "profile-v2-style-injected-only-inside-candidate",
+    "production-root-unchanged",
+    "avatar-84px-and-mobile-66px-rules-remain-owned-by-production",
+    "all-case-frame-layers-remain-owned-by-production",
+    "mail-shortcut-still-works",
+    "quick-rating-opens-rating",
+    "quick-season-opens-season-pass",
+    "quick-album-opens-album",
+    "quick-friends-opens-referrals",
+    "progress-extra-stats-toggle",
+    "cosmetics-toggle-preserves-existing-controls",
+    "settings-panel-opens-with-original-controls",
+    "support-proxy-opens-original-support",
+    "legal-proxy-opens-original-legal-hub",
+    "newcomer-section-still-dynamic",
+    "friend-coop-section-still-dynamic",
+    "viewport-360",
+    "viewport-375",
+    "viewport-390",
+    "viewport-430",
+    "no-new-production-api"
+  ],
+  "localQa": {
+    "status": "pending"
+  },
+  "tpQa": {
+    "status": "pending"
+  },
+  "production": {
+    "status": "not_released"
+  }
+}
