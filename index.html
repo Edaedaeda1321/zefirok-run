@@ -10190,9 +10190,16 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
     &lt;/div&gt;
   &lt;/div&gt;
 
+  &lt;div class=&quot;profile-v2-quickbar&quot; aria-label=&quot;Быстрый доступ&quot;&gt;
+    &lt;button class=&quot;profile-v2-quick&quot; data-leaderboard-open type=&quot;button&quot;&gt;&lt;span class=&quot;profile-v2-quick-icon&quot; aria-hidden=&quot;true&quot;&gt;🏆&lt;/span&gt;&lt;span class=&quot;profile-v2-quick-copy&quot;&gt;&lt;strong&gt;Рейтинг&lt;/strong&gt;&lt;small&gt;Открыть&lt;/small&gt;&lt;/span&gt;&lt;b aria-hidden=&quot;true&quot;&gt;›&lt;/b&gt;&lt;/button&gt;
+    &lt;button class=&quot;profile-v2-quick&quot; data-battle-pass-open data-battle-pass-section type=&quot;button&quot; hidden&gt;&lt;span class=&quot;profile-v2-quick-icon&quot; aria-hidden=&quot;true&quot;&gt;🎟️&lt;/span&gt;&lt;span class=&quot;profile-v2-quick-copy&quot;&gt;&lt;strong&gt;Сезон&lt;/strong&gt;&lt;small&gt;Пропуск&lt;/small&gt;&lt;/span&gt;&lt;span class=&quot;profile-v2-quick-badge season-pass-attention-badge&quot; data-season-pass-attention hidden&gt;0&lt;/span&gt;&lt;b aria-hidden=&quot;true&quot;&gt;›&lt;/b&gt;&lt;/button&gt;
+    &lt;button class=&quot;profile-v2-quick&quot; data-album-open type=&quot;button&quot;&gt;&lt;span class=&quot;profile-v2-quick-icon&quot; aria-hidden=&quot;true&quot;&gt;📖&lt;/span&gt;&lt;span class=&quot;profile-v2-quick-copy&quot;&gt;&lt;strong&gt;Альбом&lt;/strong&gt;&lt;small&gt;Коллекции&lt;/small&gt;&lt;/span&gt;&lt;b aria-hidden=&quot;true&quot;&gt;›&lt;/b&gt;&lt;/button&gt;
+    &lt;button class=&quot;profile-v2-quick&quot; data-referrals-open type=&quot;button&quot;&gt;&lt;span class=&quot;profile-v2-quick-icon&quot; aria-hidden=&quot;true&quot;&gt;🐾&lt;/span&gt;&lt;span class=&quot;profile-v2-quick-copy&quot;&gt;&lt;strong&gt;Друзья&lt;/strong&gt;&lt;small&gt;Играть вместе&lt;/small&gt;&lt;/span&gt;&lt;span class=&quot;profile-v2-quick-badge referrals-profile-badge&quot; data-referrals-badge hidden&gt;&lt;/span&gt;&lt;b aria-hidden=&quot;true&quot;&gt;›&lt;/b&gt;&lt;/button&gt;
+  &lt;/div&gt;
+
   &lt;section class=&quot;profile-section profile-section--progress&quot; aria-labelledby=&quot;profile-progress-title&quot;&gt;
     &lt;div class=&quot;profile-section-head&quot;&gt;
-      &lt;h3 id=&quot;profile-progress-title&quot;&gt;Уровень и прогресс&lt;/h3&gt;
+      &lt;h3 id=&quot;profile-progress-title&quot;&gt;Мой прогресс&lt;/h3&gt;
     &lt;/div&gt;
     &lt;div class=&quot;profile-stats&quot;&gt;
       &lt;div class=&quot;profile-stat&quot;&gt;&lt;img alt=&quot;&quot; data-shop-img=&quot;iconRecord&quot;/&gt;&lt;div&gt;&lt;span&gt;Лучший рекорд&lt;/span&gt;&lt;strong data-profile-best&gt;0&lt;/strong&gt;&lt;/div&gt;&lt;/div&gt;
@@ -10230,7 +10237,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
     &lt;div class=&quot;newcomer-profile-card&quot; data-newcomer-list&gt;&lt;/div&gt;
   &lt;/section&gt;
 
-  &lt;section class=&quot;profile-section profile-section--battle-pass&quot; data-battle-pass-section aria-labelledby=&quot;profile-battle-pass-title&quot; hidden&gt;
+  &lt;section class=&quot;profile-section profile-section--battle-pass&quot; aria-labelledby=&quot;profile-battle-pass-title&quot; hidden&gt;
     &lt;div class=&quot;profile-section-head&quot;&gt;
       &lt;div&gt;
         &lt;h3 id=&quot;profile-battle-pass-title&quot;&gt;Сезонный пропуск&lt;/h3&gt;
@@ -10243,16 +10250,15 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         &lt;strong&gt;Сезон I: Открытие Кафе&lt;/strong&gt;
         &lt;span&gt;50 уровней, ежедневные и недельные задания, кейсы и две линии наград.&lt;/span&gt;
       &lt;/div&gt;
-      &lt;button class=&quot;profile-action profile-action--primary&quot; data-battle-pass-open type=&quot;button&quot;&gt;Открыть сезонный пропуск&lt;span class=&quot;season-pass-attention-badge&quot; data-season-pass-attention hidden&gt;0&lt;/span&gt;&lt;/button&gt;
+      &lt;button class=&quot;profile-action profile-action--primary&quot; data-battle-pass-open type=&quot;button&quot;&gt;Открыть сезонный пропуск&lt;/button&gt;
     &lt;/div&gt;
   &lt;/section&gt;
 
-  &lt;section class=&quot;profile-section profile-section--referrals&quot; aria-labelledby=&quot;profile-referrals-title&quot;&gt;
+  &lt;section class=&quot;profile-section profile-section--referrals&quot; data-profile-v2-coop-section aria-labelledby=&quot;profile-referrals-title&quot; hidden&gt;
     &lt;div class=&quot;profile-section-head&quot;&gt;
       &lt;div&gt;&lt;h3 id=&quot;profile-referrals-title&quot;&gt;Друзья кафе&lt;/h3&gt;&lt;span&gt;Играйте вместе и открывайте совместные подарки.&lt;/span&gt;&lt;/div&gt;
     &lt;/div&gt;
     &lt;div class=&quot;referrals-profile-card&quot;&gt;
-      &lt;span class=&quot;referrals-profile-badge&quot; data-referrals-badge hidden&gt;&lt;/span&gt;
       &lt;div class=&quot;referrals-profile-icon&quot; aria-hidden=&quot;true&quot;&gt;&lt;img src=&quot;/assets/ui/icon_referals.png&quot; alt=&quot;&quot;&gt;&lt;/div&gt;
       &lt;div class=&quot;referrals-profile-copy&quot;&gt;&lt;strong&gt;Пригласи друзей в кафе&lt;/strong&gt;&lt;span&gt;Награды за старт, уровни 5/10/20 и бонусный XP, когда друг активирует Элитный или Элитный+.&lt;/span&gt;&lt;/div&gt;
       &lt;button class=&quot;profile-action profile-action--primary&quot; data-referrals-open type=&quot;button&quot;&gt;Открыть «Друзья кафе»&lt;/button&gt;
@@ -10266,7 +10272,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 
   &lt;section class=&quot;profile-section profile-section--cases&quot; aria-labelledby=&quot;profile-collection-title&quot;&gt;
     &lt;div class=&quot;profile-section-head profile-section-head--cases&quot;&gt;
-      &lt;div&gt;&lt;h3 id=&quot;profile-collection-title&quot;&gt;Коллекция&lt;/h3&gt;&lt;span&gt;Аватарки, рамки, следы, скины и музыка профиля.&lt;/span&gt;&lt;/div&gt;
+      &lt;div&gt;&lt;h3 id=&quot;profile-collection-title&quot;&gt;Оформление профиля&lt;/h3&gt;&lt;span&gt;Аватарки, рамки, следы и музыка.&lt;/span&gt;&lt;/div&gt;
     &lt;/div&gt;
     &lt;div class=&quot;album-profile-card&quot;&gt;
       &lt;div class=&quot;album-profile-icon&quot; aria-hidden=&quot;true&quot;&gt;&lt;img src=&quot;/assets/ui/icon_albom.png&quot; alt=&quot;&quot; loading=&quot;lazy&quot;&gt;&lt;/div&gt;
@@ -10295,9 +10301,9 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
   &lt;/section&gt;
 
   &lt;section class=&quot;profile-section profile-section--settings&quot; aria-labelledby=&quot;profile-settings-title&quot;&gt;
-    &lt;div class=&quot;profile-section-head&quot;&gt;
-      &lt;h3 id=&quot;profile-settings-title&quot;&gt;Настройки и обучение&lt;/h3&gt;
-    &lt;/div&gt;
+    &lt;details class=&quot;profile-v2-service-details&quot;&gt;
+      &lt;summary class=&quot;profile-v2-service-summary&quot;&gt;&lt;span class=&quot;profile-v2-service-icon&quot; aria-hidden=&quot;true&quot;&gt;⚙️&lt;/span&gt;&lt;span class=&quot;profile-v2-service-copy&quot;&gt;&lt;strong id=&quot;profile-settings-title&quot;&gt;Настройки и обучение&lt;/strong&gt;&lt;small&gt;Звук, музыка, язык и игровые гиды&lt;/small&gt;&lt;/span&gt;&lt;b aria-hidden=&quot;true&quot;&gt;⌄&lt;/b&gt;&lt;/summary&gt;
+      &lt;div class=&quot;profile-v2-service-body&quot;&gt;
     &lt;label class=&quot;profile-setting-row&quot;&gt;
       &lt;span&gt;Язык интерфейса&lt;/span&gt;
       &lt;select class=&quot;profile-select&quot; aria-label=&quot;Язык интерфейса&quot;&gt;
@@ -10334,6 +10340,8 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       &lt;button class=&quot;profile-action&quot; data-profile-refresh type=&quot;button&quot;&gt;Обновить данные Telegram&lt;/button&gt;
     &lt;/div&gt;
     &lt;div class=&quot;profile-refresh-hint&quot;&gt;Обновляет имя, фото и статус Telegram. Игровой прогресс, покупки и коллекция не сбрасываются.&lt;/div&gt;
+      &lt;/div&gt;
+    &lt;/details&gt;
   &lt;/section&gt;
 
   &lt;section class=&quot;profile-section profile-section--leaderboard leaderboard-v4&quot; aria-labelledby=&quot;profile-rating-title&quot;&gt;
@@ -10363,8 +10371,10 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
   &lt;/section&gt;
 
   &lt;section class=&quot;profile-section profile-section--help&quot; aria-labelledby=&quot;profile-help-title&quot;&gt;
-    &lt;div class=&quot;profile-section-head&quot;&gt;&lt;h3 id=&quot;profile-help-title&quot;&gt;Полезно знать&lt;/h3&gt;&lt;/div&gt;
-    &lt;p class=&quot;profile-help-copy&quot;&gt;Профиль — центр аккаунта: здесь уровень и XP, сезонный пропуск, коллекция оформления, рейтинг, документы, настройки и поддержка. Покупки, усилители, постоянные кейсы и «Почта Зеффи» собраны отдельно в разделе «Мои покупки» — внутри него есть четыре вкладки для каждого типа содержимого. Сезонные кейсы открываются внутри сезонного пропуска. Если Telegram не передал фотографию, игра покажет Зефи — это не ошибка.&lt;/p&gt;
+    &lt;details class=&quot;profile-v2-service-details&quot;&gt;
+      &lt;summary class=&quot;profile-v2-service-summary&quot;&gt;&lt;span class=&quot;profile-v2-service-icon&quot; aria-hidden=&quot;true&quot;&gt;❔&lt;/span&gt;&lt;span class=&quot;profile-v2-service-copy&quot;&gt;&lt;strong id=&quot;profile-help-title&quot;&gt;О профиле&lt;/strong&gt;&lt;small&gt;Где находятся основные возможности игры&lt;/small&gt;&lt;/span&gt;&lt;b aria-hidden=&quot;true&quot;&gt;⌄&lt;/b&gt;&lt;/summary&gt;
+      &lt;div class=&quot;profile-v2-service-body&quot;&gt;&lt;p class=&quot;profile-help-copy&quot;&gt;Профиль — центр аккаунта: здесь уровень и XP, оформление, быстрый вход в сезон, рейтинг, Альбом и «Друзья кафе», а также документы, настройки и поддержка. Покупки, усилители, постоянные кейсы и «Почта Зеффи» находятся в разделе «Мои покупки». Если Telegram не передал фотографию, игра покажет Зефи — это не ошибка.&lt;/p&gt;&lt;/div&gt;
+    &lt;/details&gt;
   &lt;/section&gt;
   &lt;section class=&quot;profile-section profile-section--legal&quot; aria-labelledby=&quot;profile-legal-title&quot;&gt;
     &lt;div class=&quot;profile-section-head&quot;&gt;
@@ -10374,7 +10384,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       &lt;button type=&quot;button&quot; class=&quot;profile-legal-row&quot; data-profile-legal-open=&quot;agreement&quot;&gt;&lt;span class=&quot;profile-legal-icon&quot;&gt;📜&lt;/span&gt;&lt;span&gt;&lt;strong&gt;Лицензионное соглашение&lt;/strong&gt;&lt;small&gt;Условия использования сервиса · RU / EN&lt;/small&gt;&lt;/span&gt;&lt;b&gt;›&lt;/b&gt;&lt;/button&gt;
       &lt;button type=&quot;button&quot; class=&quot;profile-legal-row&quot; data-profile-legal-open=&quot;privacy&quot;&gt;&lt;span class=&quot;profile-legal-icon&quot;&gt;🔐&lt;/span&gt;&lt;span&gt;&lt;strong&gt;Политика конфиденциальности&lt;/strong&gt;&lt;small&gt;Обработка и защита данных · RU / EN&lt;/small&gt;&lt;/span&gt;&lt;b&gt;›&lt;/b&gt;&lt;/button&gt;
       &lt;button type=&quot;button&quot; class=&quot;profile-legal-row&quot; data-profile-legal-open=&quot;consent&quot;&gt;&lt;span class=&quot;profile-legal-icon&quot;&gt;✅&lt;/span&gt;&lt;span&gt;&lt;strong&gt;Согласие на обработку ПДн&lt;/strong&gt;&lt;small&gt;Отдельное согласие · RU / EN&lt;/small&gt;&lt;/span&gt;&lt;b&gt;›&lt;/b&gt;&lt;/button&gt;
-      &lt;button type=&quot;button&quot; class=&quot;profile-action profile-action--primary profile-legal-history&quot; data-profile-legal-open=&quot;hub&quot;&gt;Статус и история принятия&lt;/button&gt;
+      &lt;button type=&quot;button&quot; class=&quot;profile-v2-service-row profile-legal-history&quot; data-profile-legal-open=&quot;hub&quot;&gt;&lt;span class=&quot;profile-v2-service-icon&quot; aria-hidden=&quot;true&quot;&gt;📜&lt;/span&gt;&lt;span class=&quot;profile-v2-service-copy&quot;&gt;&lt;strong&gt;Документы&lt;/strong&gt;&lt;small&gt;Соглашения, конфиденциальность и история принятия&lt;/small&gt;&lt;/span&gt;&lt;b aria-hidden=&quot;true&quot;&gt;›&lt;/b&gt;&lt;/button&gt;
     &lt;/div&gt;
   &lt;/section&gt;
 
@@ -10382,11 +10392,11 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
   &lt;section class=&quot;profile-section profile-section--support&quot; aria-labelledby=&quot;profile-support-title&quot;&gt;
     &lt;div class=&quot;profile-section-head&quot;&gt;
       &lt;div&gt;&lt;h3 id=&quot;profile-support-title&quot;&gt;Поддержка&lt;/h3&gt;&lt;span&gt;Связь с командой «Сладкого Забега»&lt;/span&gt;&lt;/div&gt;
-      &lt;span class=&quot;profile-support-badge&quot; data-profile-support-badge hidden&gt;0&lt;/span&gt;
     &lt;/div&gt;
     &lt;button class=&quot;profile-support-card&quot; data-profile-support-open type=&quot;button&quot;&gt;
       &lt;span class=&quot;profile-support-icon&quot; aria-hidden=&quot;true&quot;&gt;🛟&lt;/span&gt;
-      &lt;span class=&quot;profile-support-copy&quot;&gt;&lt;strong&gt;Написать в поддержку&lt;/strong&gt;&lt;span&gt;Сообщить о проблеме, задать вопрос или предложить идею. Ответ сохранится в игре и придёт от бота.&lt;/span&gt;&lt;/span&gt;
+      &lt;span class=&quot;profile-support-copy&quot;&gt;&lt;strong&gt;Поддержка&lt;/strong&gt;&lt;span&gt;Вопросы, проблемы и ответы команды&lt;/span&gt;&lt;/span&gt;
+      &lt;span class=&quot;profile-support-badge&quot; data-profile-support-badge hidden&gt;0&lt;/span&gt;
       &lt;b class=&quot;profile-support-arrow&quot; aria-hidden=&quot;true&quot;&gt;›&lt;/b&gt;
     &lt;/button&gt;
     &lt;span class=&quot;profile-support-meta&quot; data-profile-support-meta&gt;Обращения ещё не загружены&lt;/span&gt;
@@ -10775,6 +10785,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       const newcomerListEl = root.querySelector(&quot;[data-newcomer-list]&quot;);
       const newcomerSubtitleEl = root.querySelector(&quot;[data-newcomer-subtitle]&quot;);
       const friendCoopProfileEl = root.querySelector(&quot;[data-friend-coop-profile]&quot;);
+      const friendCoopSectionEl = root.querySelector(&quot;[data-profile-v2-coop-section]&quot;);
       const friendCoopTitleEl = root.querySelector(&quot;[data-friend-coop-title]&quot;);
       const friendCoopDescriptionEl = root.querySelector(&quot;[data-friend-coop-description]&quot;);
       const friendCoopRewardEl = root.querySelector(&quot;[data-friend-coop-reward]&quot;);
@@ -17329,7 +17340,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       }
 
       function renderFriendCoopProfile() {
-        if(!friendCoopProfileEl)return;const config=friendCoopClientState?.config||{},partners=Array.isArray(friendCoopClientState?.partners)?friendCoopClientState.partners:[];friendCoopProfileEl.hidden=!config.enabled;if(!config.enabled)return;
+        if(!friendCoopProfileEl)return;const config=friendCoopClientState?.config||{},partners=Array.isArray(friendCoopClientState?.partners)?friendCoopClientState.partners:[];if(friendCoopSectionEl)friendCoopSectionEl.hidden=!config.enabled;friendCoopProfileEl.hidden=!config.enabled;if(!config.enabled)return;
         const partner=partners[0]||null;if(friendCoopTitleEl)friendCoopTitleEl.textContent=config.title||&quot;Совместное задание&quot;;if(friendCoopDescriptionEl)friendCoopDescriptionEl.textContent=partner?`${partner.displayName||&quot;Друг&quot;} · ${config.description||&quot;Выполняйте цель вместе.&quot;}`:(config.active?&quot;Нужен активный друг из «Друзья кафе».&quot;:&quot;Задание сейчас вне активного окна.&quot;);if(friendCoopRewardEl)friendCoopRewardEl.textContent=`🎁 ${config.rewardLabel||clientRewardShortLabel(config.reward)}`;
         const progress=Math.max(0,Number(partner?.progress||0)),target=Math.max(1,Number(config.target||1)),percent=Math.max(0,Math.min(100,progress/target*100));if(friendCoopFillEl)friendCoopFillEl.style.width=`${percent}%`;if(friendCoopMetaEl)friendCoopMetaEl.textContent=partner?`${formatter.format(progress)} / ${formatter.format(target)}${partners.length&gt;1?` · ещё друзей: ${partners.length-1}`:&quot;&quot;}`:&quot;Открой «Друзья кафе» и пригласи друга&quot;;
         if(friendCoopActionEl){friendCoopActionEl.hidden=false;friendCoopActionEl.disabled=false;if(!partner){friendCoopActionEl.textContent=&quot;К друзьям&quot;;friendCoopActionEl.dataset.partnerId=&quot;&quot;;}else if(partner.claimed){friendCoopActionEl.textContent=&quot;✓ Получено&quot;;friendCoopActionEl.disabled=true;friendCoopActionEl.dataset.partnerId=partner.telegramId;}else if(partner.completed&amp;&amp;config.active){friendCoopActionEl.textContent=&quot;Получить&quot;;friendCoopActionEl.dataset.partnerId=partner.telegramId;}else{friendCoopActionEl.textContent=&quot;Открыть друзей&quot;;friendCoopActionEl.dataset.partnerId=&quot;&quot;;}}
@@ -23125,6 +23136,106 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 #zefirok-maltipoo-runner .live-content-shop-card .shop-card-main&gt;img{object-fit:contain}
 #zefirok-maltipoo-runner .live-content-shop-empty{padding:22px 12px;border:1px dashed #e7c5d0;border-radius:18px;text-align:center;color:#8c6573;font-size:11px;background:#fff9fb}
 #zefirok-maltipoo-runner .profile-avatar-wrap.case-frame-live::after{background-image:var(--case-live-frame-image)!important}
+&lt;/style&gt;
+&lt;style id=&quot;zefirok-profile-v2-safe&quot;&gt;
+/* Profile 2.0 safe rollout: presentation only. Avatar/frame geometry is intentionally untouched. */
+#zefirok-maltipoo-runner [data-screen=&quot;profile&quot;]{background:linear-gradient(180deg,#fff9f7 0%,#fff6f4 52%,#fffaf6 100%)}
+#zefirok-maltipoo-runner .profile-shell{gap:9px;padding:2px 0 9px;border:0;border-radius:0;background:transparent;box-shadow:none}
+#zefirok-maltipoo-runner .profile-shell&gt;.profile-hero{order:0}
+#zefirok-maltipoo-runner .profile-v2-quickbar{order:5}
+#zefirok-maltipoo-runner .profile-section--newcomer{order:10}
+#zefirok-maltipoo-runner .profile-section--referrals{order:11}
+#zefirok-maltipoo-runner .profile-section--progress{order:20}
+#zefirok-maltipoo-runner .profile-section--cases{order:30}
+#zefirok-maltipoo-runner .profile-section--settings{order:40}
+#zefirok-maltipoo-runner .profile-section--legal{order:41}
+#zefirok-maltipoo-runner .profile-section--support{order:42}
+#zefirok-maltipoo-runner .profile-section--help{order:43}
+#zefirok-maltipoo-runner .profile-version-row{order:60}
+#zefirok-maltipoo-runner .profile-toast{order:70}
+
+#zefirok-maltipoo-runner .profile-hero{position:relative;padding:14px;border:1px solid rgba(228,174,194,.30);border-radius:25px;background:radial-gradient(circle at 94% 4%,rgba(255,224,154,.30),transparent 34%),radial-gradient(circle at 2% 98%,rgba(255,216,231,.50),transparent 35%),linear-gradient(145deg,rgba(255,255,255,.99),rgba(255,245,248,.97));box-shadow:0 12px 30px rgba(119,65,85,.09),inset 0 1px 0 rgba(255,255,255,.92)}
+#zefirok-maltipoo-runner .profile-identity{gap:5px}
+#zefirok-maltipoo-runner .profile-identity h2{font-size:clamp(21px,5.6vw,26px);letter-spacing:-.025em}
+#zefirok-maltipoo-runner .profile-username,#zefirok-maltipoo-runner .profile-id,#zefirok-maltipoo-runner .profile-avatar-note{display:none!important}
+#zefirok-maltipoo-runner .profile-status-row{margin-top:1px}
+#zefirok-maltipoo-runner .profile-rank{margin-top:2px;padding:5px 9px;border-color:rgba(219,116,153,.22);background:rgba(255,238,244,.86);color:#a85170;font-size:10px;box-shadow:none}
+#zefirok-maltipoo-runner .profile-mail-shortcut{border-color:rgba(222,137,169,.26);background:rgba(255,255,255,.92);box-shadow:0 5px 14px rgba(123,65,87,.08)}
+
+#zefirok-maltipoo-runner .profile-v2-quickbar{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+#zefirok-maltipoo-runner .profile-v2-quick{position:relative;min-width:0;min-height:68px;display:grid;grid-template-columns:38px minmax(0,1fr) auto;align-items:center;gap:9px;padding:9px 11px;border:1px solid rgba(226,185,199,.48);border-radius:18px;background:rgba(255,255,255,.92);color:#684553;box-shadow:0 7px 18px rgba(108,66,81,.055);font:inherit;text-align:left;-webkit-tap-highlight-color:transparent}
+#zefirok-maltipoo-runner .profile-v2-quick[hidden]{display:none!important}
+#zefirok-maltipoo-runner .profile-v2-quick:active{transform:translateY(1px)}
+#zefirok-maltipoo-runner .profile-v2-quick-icon{display:grid;place-items:center;width:38px;height:38px;border-radius:13px;background:linear-gradient(145deg,#fff0f5,#fff4dc);font-size:19px;line-height:1}
+#zefirok-maltipoo-runner .profile-v2-quick-copy{display:block;min-width:0}
+#zefirok-maltipoo-runner .profile-v2-quick-copy strong{display:block;color:#674452;font-size:11px;font-weight:950;line-height:1.1}
+#zefirok-maltipoo-runner .profile-v2-quick-copy small{display:block;margin-top:4px;color:#9b7986;font-size:8px;font-weight:800;line-height:1.15}
+#zefirok-maltipoo-runner .profile-v2-quick&gt;b{color:#c56c8d;font-size:18px;line-height:1}
+#zefirok-maltipoo-runner .profile-v2-quick-badge{position:absolute!important;right:7px!important;top:6px!important;z-index:2;min-width:18px!important;height:18px!important;display:inline-flex!important;align-items:center;justify-content:center;padding:0 5px!important;border:2px solid #fff!important;border-radius:999px!important;background:#df6693!important;color:#fff!important;font-size:7px!important;font-weight:950!important;line-height:1!important;box-sizing:border-box!important}
+#zefirok-maltipoo-runner .profile-v2-quick-badge[hidden]{display:none!important}
+
+#zefirok-maltipoo-runner .profile-section{gap:10px;padding:13px;border:1px solid rgba(228,194,204,.42);border-radius:22px;background:rgba(255,255,255,.88);box-shadow:0 8px 22px rgba(106,64,78,.045)}
+#zefirok-maltipoo-runner .profile-section h3{font-size:15px;letter-spacing:-.015em}
+#zefirok-maltipoo-runner .profile-section--newcomer[hidden],#zefirok-maltipoo-runner .profile-section--referrals[hidden]{display:none!important}
+#zefirok-maltipoo-runner .profile-section--newcomer,#zefirok-maltipoo-runner .profile-section--referrals{border-color:rgba(221,166,85,.26);background:linear-gradient(145deg,#fffaf0,#fff7f8)}
+#zefirok-maltipoo-runner .profile-section--newcomer::before,#zefirok-maltipoo-runner .profile-section--referrals::before{content:&quot;Актуально сейчас&quot;;display:block;color:#a06b36;font-size:8px;font-weight:950;letter-spacing:.08em;text-transform:uppercase}
+#zefirok-maltipoo-runner .profile-section--referrals&gt;.profile-section-head,#zefirok-maltipoo-runner .profile-section--referrals&gt;.referrals-profile-card{display:none!important}
+#zefirok-maltipoo-runner .profile-section--referrals .friend-coop-profile-card{margin:0;border-radius:18px;box-shadow:none}
+
+#zefirok-maltipoo-runner .profile-section--battle-pass,#zefirok-maltipoo-runner .profile-section--leaderboard{display:none!important}
+
+#zefirok-maltipoo-runner .profile-section--progress{display:grid;padding:14px;background:linear-gradient(155deg,rgba(255,255,255,.97),rgba(255,248,242,.94))}
+#zefirok-maltipoo-runner .profile-section--progress .profile-section-head{order:0}
+#zefirok-maltipoo-runner .profile-section--progress .profile-level-card{order:1;gap:8px;padding:11px 12px;border-color:rgba(225,174,194,.42);background:linear-gradient(145deg,#fff,#fff5f8);box-shadow:none}
+#zefirok-maltipoo-runner .profile-section--progress .profile-stats{order:2;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+#zefirok-maltipoo-runner .profile-section--progress .profile-stat{padding:9px 7px;border-color:rgba(231,207,196,.60);background:rgba(255,253,251,.90);box-shadow:none}
+#zefirok-maltipoo-runner .profile-section--progress .profile-stat:nth-child(2),#zefirok-maltipoo-runner .profile-section--progress .profile-stat:nth-child(3),#zefirok-maltipoo-runner .profile-section--progress .profile-stat:nth-child(4),#zefirok-maltipoo-runner .profile-section--progress .profile-stat:nth-child(7),#zefirok-maltipoo-runner .profile-section--progress .profile-stat:nth-child(8){display:none!important}
+#zefirok-maltipoo-runner .profile-section--progress .profile-stat span{font-size:8px;line-height:1.2}
+#zefirok-maltipoo-runner .profile-section--progress .profile-stat strong{font-size:14px}
+#zefirok-maltipoo-runner .profile-xp-sources,#zefirok-maltipoo-runner .profile-run-rule,#zefirok-maltipoo-runner .profile-level-guide-link{display:none!important}
+
+#zefirok-maltipoo-runner .profile-section--cases{gap:10px;background:linear-gradient(155deg,#fff,#fff9f2);border-color:rgba(221,176,121,.24)}
+#zefirok-maltipoo-runner .profile-section--cases .album-profile-card{display:none!important}
+#zefirok-maltipoo-runner .profile-section--cases .profile-section-head span{font-size:9px;color:#9a7883}
+#zefirok-maltipoo-runner .profile-section--cases .case-subsection{gap:7px}
+#zefirok-maltipoo-runner .profile-section--cases .case-subsection-title{display:none!important}
+#zefirok-maltipoo-runner .profile-section--cases .case-collection-group{border-color:rgba(226,194,177,.48);background:rgba(255,255,255,.82);box-shadow:none}
+#zefirok-maltipoo-runner .profile-section--cases .case-collection-group&gt;summary{min-height:42px;padding:8px 10px}
+
+#zefirok-maltipoo-runner .profile-section--settings::before{content:&quot;Настройки и аккаунт&quot;;display:block;padding:1px 2px 2px;color:#74505d;font-size:13px;font-weight:950}
+#zefirok-maltipoo-runner .profile-section--settings,#zefirok-maltipoo-runner .profile-section--legal,#zefirok-maltipoo-runner .profile-section--support,#zefirok-maltipoo-runner .profile-section--help{padding:0;overflow:hidden;border-color:rgba(226,192,203,.42);background:rgba(255,255,255,.90);box-shadow:0 6px 18px rgba(107,65,78,.035)}
+#zefirok-maltipoo-runner .profile-section--settings::before{padding:12px 13px 4px;background:linear-gradient(180deg,rgba(255,255,255,.8),rgba(255,255,255,0))}
+#zefirok-maltipoo-runner .profile-v2-service-details{width:100%}
+#zefirok-maltipoo-runner .profile-v2-service-summary,#zefirok-maltipoo-runner .profile-v2-service-row,#zefirok-maltipoo-runner .profile-support-card{min-height:56px;display:grid;grid-template-columns:38px minmax(0,1fr) auto;align-items:center;gap:10px;width:100%;padding:9px 12px;border:0;background:transparent;color:#684653;font:inherit;text-align:left;box-sizing:border-box;list-style:none}
+#zefirok-maltipoo-runner .profile-v2-service-summary::-webkit-details-marker{display:none}
+#zefirok-maltipoo-runner .profile-v2-service-icon,#zefirok-maltipoo-runner .profile-support-icon{display:grid;place-items:center;width:38px;height:38px;border-radius:13px;background:#fff1f5;font-size:18px}
+#zefirok-maltipoo-runner .profile-v2-service-copy,#zefirok-maltipoo-runner .profile-support-copy{display:block;min-width:0}
+#zefirok-maltipoo-runner .profile-v2-service-copy strong,#zefirok-maltipoo-runner .profile-support-copy strong{display:block;color:#684653;font-size:10px;font-weight:950;line-height:1.15}
+#zefirok-maltipoo-runner .profile-v2-service-copy small,#zefirok-maltipoo-runner .profile-support-copy span{display:block;margin-top:3px;color:#9a7883;font-size:8px;font-weight:750;line-height:1.3}
+#zefirok-maltipoo-runner .profile-v2-service-summary&gt;b,#zefirok-maltipoo-runner .profile-v2-service-row&gt;b,#zefirok-maltipoo-runner .profile-support-arrow{color:#c16b8c;font-size:18px}
+#zefirok-maltipoo-runner .profile-v2-service-details[open]&gt;.profile-v2-service-summary&gt;b{transform:rotate(180deg)}
+#zefirok-maltipoo-runner .profile-v2-service-body{padding:4px 12px 12px;border-top:1px solid rgba(232,210,217,.54)}
+#zefirok-maltipoo-runner .profile-section--settings .profile-setting-row{margin-top:8px}
+#zefirok-maltipoo-runner .profile-section--settings .profile-actions{margin-top:9px}
+#zefirok-maltipoo-runner .profile-section--legal&gt;.profile-section-head,#zefirok-maltipoo-runner .profile-section--legal .profile-legal-row{display:none!important}
+#zefirok-maltipoo-runner .profile-section--legal .profile-legal-card{padding:0;border:0;background:transparent;box-shadow:none}
+#zefirok-maltipoo-runner .profile-section--support&gt;.profile-section-head,#zefirok-maltipoo-runner .profile-section--support .profile-support-meta{display:none!important}
+#zefirok-maltipoo-runner .profile-section--support .profile-support-card{grid-template-columns:38px minmax(0,1fr) auto auto;border-radius:0;box-shadow:none}
+#zefirok-maltipoo-runner .profile-section--support .profile-support-badge{position:static;min-width:19px;height:19px;padding:0 5px;border:0;border-radius:999px;background:#df6693;color:#fff;font-size:8px;font-weight:950}
+#zefirok-maltipoo-runner .profile-section--support .profile-support-badge[hidden]{display:none!important}
+#zefirok-maltipoo-runner .profile-section--help .profile-help-copy{margin:0;padding:8px 2px 2px;color:#7f6871;font-size:10px;line-height:1.5}
+#zefirok-maltipoo-runner .profile-version-row{opacity:.70;padding-inline:6px}
+
+@media(max-width:390px){
+  #zefirok-maltipoo-runner .profile-hero{padding:12px}
+  #zefirok-maltipoo-runner .profile-v2-quickbar{gap:6px}
+  #zefirok-maltipoo-runner .profile-v2-quick{min-height:64px;grid-template-columns:34px minmax(0,1fr) auto;gap:7px;padding:8px 9px;border-radius:16px}
+  #zefirok-maltipoo-runner .profile-v2-quick-icon{width:34px;height:34px;border-radius:11px;font-size:17px}
+  #zefirok-maltipoo-runner .profile-section{border-radius:20px}
+  #zefirok-maltipoo-runner .profile-section--progress .profile-stats{gap:5px}
+  #zefirok-maltipoo-runner .profile-section--progress .profile-stat{padding:8px 5px}
+}
+@media(max-width:340px){#zefirok-maltipoo-runner .profile-v2-quickbar{grid-template-columns:1fr}}
 &lt;/style&gt;
 &lt;/body&gt;
 &lt;/html&gt;" title="Сладкий Забег"></iframe>
