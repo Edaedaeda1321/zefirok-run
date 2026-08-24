@@ -10191,10 +10191,10 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
   &lt;/div&gt;
 
   &lt;div class=&quot;profile-v2-quickbar&quot; aria-label=&quot;Быстрый доступ&quot;&gt;
-    &lt;button class=&quot;profile-v2-quick&quot; data-leaderboard-open type=&quot;button&quot;&gt;&lt;span class=&quot;profile-v2-quick-icon&quot; aria-hidden=&quot;true&quot;&gt;🏆&lt;/span&gt;&lt;span class=&quot;profile-v2-quick-copy&quot;&gt;&lt;strong&gt;Рейтинг&lt;/strong&gt;&lt;small&gt;Открыть&lt;/small&gt;&lt;/span&gt;&lt;b aria-hidden=&quot;true&quot;&gt;›&lt;/b&gt;&lt;/button&gt;
-    &lt;button class=&quot;profile-v2-quick&quot; data-battle-pass-open data-battle-pass-section type=&quot;button&quot; hidden&gt;&lt;span class=&quot;profile-v2-quick-icon&quot; aria-hidden=&quot;true&quot;&gt;🎟️&lt;/span&gt;&lt;span class=&quot;profile-v2-quick-copy&quot;&gt;&lt;strong&gt;Сезон&lt;/strong&gt;&lt;small&gt;Пропуск&lt;/small&gt;&lt;/span&gt;&lt;span class=&quot;profile-v2-quick-badge season-pass-attention-badge&quot; data-season-pass-attention hidden&gt;0&lt;/span&gt;&lt;b aria-hidden=&quot;true&quot;&gt;›&lt;/b&gt;&lt;/button&gt;
+    &lt;button class=&quot;profile-v2-quick&quot; data-leaderboard-open type=&quot;button&quot;&gt;&lt;span class=&quot;profile-v2-quick-icon&quot; aria-hidden=&quot;true&quot;&gt;🏆&lt;/span&gt;&lt;span class=&quot;profile-v2-quick-copy&quot;&gt;&lt;strong&gt;Рейтинг&lt;/strong&gt;&lt;small data-profile-v2-rating-meta&gt;Открыть&lt;/small&gt;&lt;/span&gt;&lt;b aria-hidden=&quot;true&quot;&gt;›&lt;/b&gt;&lt;/button&gt;
+    &lt;button class=&quot;profile-v2-quick&quot; data-battle-pass-open data-battle-pass-section type=&quot;button&quot; hidden&gt;&lt;span class=&quot;profile-v2-quick-icon&quot; aria-hidden=&quot;true&quot;&gt;🎟️&lt;/span&gt;&lt;span class=&quot;profile-v2-quick-copy&quot;&gt;&lt;strong&gt;Сезон&lt;/strong&gt;&lt;small data-profile-v2-season-meta&gt;Пропуск&lt;/small&gt;&lt;/span&gt;&lt;span class=&quot;profile-v2-quick-badge season-pass-attention-badge&quot; data-season-pass-attention hidden&gt;0&lt;/span&gt;&lt;b aria-hidden=&quot;true&quot;&gt;›&lt;/b&gt;&lt;/button&gt;
     &lt;button class=&quot;profile-v2-quick&quot; data-album-open type=&quot;button&quot;&gt;&lt;span class=&quot;profile-v2-quick-icon&quot; aria-hidden=&quot;true&quot;&gt;📖&lt;/span&gt;&lt;span class=&quot;profile-v2-quick-copy&quot;&gt;&lt;strong&gt;Альбом&lt;/strong&gt;&lt;small&gt;Коллекции&lt;/small&gt;&lt;/span&gt;&lt;b aria-hidden=&quot;true&quot;&gt;›&lt;/b&gt;&lt;/button&gt;
-    &lt;button class=&quot;profile-v2-quick&quot; data-referrals-open type=&quot;button&quot;&gt;&lt;span class=&quot;profile-v2-quick-icon&quot; aria-hidden=&quot;true&quot;&gt;🐾&lt;/span&gt;&lt;span class=&quot;profile-v2-quick-copy&quot;&gt;&lt;strong&gt;Друзья&lt;/strong&gt;&lt;small&gt;Играть вместе&lt;/small&gt;&lt;/span&gt;&lt;span class=&quot;profile-v2-quick-badge referrals-profile-badge&quot; data-referrals-badge hidden&gt;&lt;/span&gt;&lt;b aria-hidden=&quot;true&quot;&gt;›&lt;/b&gt;&lt;/button&gt;
+    &lt;button class=&quot;profile-v2-quick&quot; data-referrals-open type=&quot;button&quot;&gt;&lt;span class=&quot;profile-v2-quick-icon&quot; aria-hidden=&quot;true&quot;&gt;🐾&lt;/span&gt;&lt;span class=&quot;profile-v2-quick-copy&quot;&gt;&lt;strong&gt;Друзья&lt;/strong&gt;&lt;small data-profile-v2-friends-meta&gt;Играть вместе&lt;/small&gt;&lt;/span&gt;&lt;span class=&quot;profile-v2-quick-badge referrals-profile-badge&quot; data-referrals-badge hidden&gt;&lt;/span&gt;&lt;b aria-hidden=&quot;true&quot;&gt;›&lt;/b&gt;&lt;/button&gt;
   &lt;/div&gt;
 
   &lt;section class=&quot;profile-section profile-section--progress&quot; aria-labelledby=&quot;profile-progress-title&quot;&gt;
@@ -10829,7 +10829,10 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       const leaderboardSummaryScoreEl = root.querySelector(&quot;[data-leaderboard-summary-score]&quot;);
       const leaderboardSummaryDetailEl = root.querySelector(&quot;[data-leaderboard-summary-detail]&quot;);
       const leaderboardSummaryRewardEl = root.querySelector(&quot;[data-leaderboard-summary-reward]&quot;);
-      const leaderboardOpenButton = root.querySelector(&quot;[data-leaderboard-open]&quot;);
+      const leaderboardOpenButton = root.querySelector(&quot;.profile-section--leaderboard [data-leaderboard-open]&quot;);
+      const leaderboardQuickButton = root.querySelector(&quot;.profile-v2-quick[data-leaderboard-open]&quot;);
+      const profileV2RatingMetaEl = root.querySelector(&quot;[data-profile-v2-rating-meta]&quot;);
+      const profileV2SeasonMetaEl = root.querySelector(&quot;[data-profile-v2-season-meta]&quot;);
       const caseLayer = root.querySelector(&quot;[data-case-layer]&quot;);
       const caseContentEl = root.querySelector(&quot;[data-case-content]&quot;);
       const caseCloseButton = root.querySelector(&quot;[data-case-close]&quot;);
@@ -13929,7 +13932,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         tutorialLayer.setAttribute(&quot;aria-hidden&quot;, &quot;true&quot;);
         setTutorialScrollLocked(false);
         tutorialOpenedAutomatically = false;
-        if (tutorialMode === &quot;rating&quot;) leaderboardOpenButton?.focus({ preventScroll: true });
+        if (tutorialMode === &quot;rating&quot;) (leaderboardQuickButton || leaderboardOpenButton)?.focus({ preventScroll: true });
         else if (tutorialMode === &quot;stock&quot;) stockTutorialButton?.focus({ preventScroll: true });
         else if (tutorialMode === &quot;profile&quot; || tutorialMode === &quot;cases&quot;) root.querySelector(&#x27;[data-tab=&quot;profile&quot;]&#x27;)?.focus({ preventScroll: true });
         else tutorialOpenButton?.focus({ preventScroll: true });
@@ -15927,6 +15930,13 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         const collectionTotal = caseTotal + giftTotal;
         const seasonPassTotal = Math.max(0, Math.floor(Number(state.seasonPassAttentionCount || 0)));
         const compact = seasonPassTotal &gt; 99 ? &quot;99+&quot; : String(seasonPassTotal);
+        if (profileV2SeasonMetaEl) {
+          if (seasonPassTotal &gt; 0) {
+            const mod100 = seasonPassTotal % 100, mod10 = seasonPassTotal % 10;
+            const rewardWord = seasonPassTotal &gt; 99 || (mod100 &gt;= 11 &amp;&amp; mod100 &lt;= 14) ? &quot;наград&quot; : mod10 === 1 ? &quot;награда&quot; : (mod10 &gt;= 2 &amp;&amp; mod10 &lt;= 4) ? &quot;награды&quot; : &quot;наград&quot;;
+            profileV2SeasonMetaEl.textContent = `${compact} ${rewardWord}`;
+          } else profileV2SeasonMetaEl.textContent = &quot;Пропуск&quot;;
+        }
         if (profileTabCaseCountEl) {
           profileTabCaseCountEl.textContent = compact;
           profileTabCaseCountEl.hidden = seasonPassTotal === 0;
@@ -19649,6 +19659,10 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         if (leaderboardStatusEl) leaderboardStatusEl.textContent = status;
         /* Season title is baked into the selected banner artwork. */
         if (leaderboardSummaryPlaceEl) { leaderboardSummaryPlaceEl.textContent = place; fitLeaderboardSummaryNumber(leaderboardSummaryPlaceEl); }
+        if (profileV2RatingMetaEl) {
+          const quickPlace = String(place || &quot;&quot;).trim();
+          profileV2RatingMetaEl.textContent = quickPlace &amp;&amp; quickPlace !== &quot;—&quot; ? `#${quickPlace}` : (status === &quot;Идёт&quot; ? &quot;Без места&quot; : (status || &quot;Открыть&quot;));
+        }
         if (leaderboardSummaryScoreEl) { leaderboardSummaryScoreEl.textContent = score; fitLeaderboardSummaryNumber(leaderboardSummaryScoreEl); }
         if (leaderboardSummaryDetailEl) leaderboardSummaryDetailEl.textContent = detail;
         if (leaderboardSummaryRewardEl) {
@@ -21847,6 +21861,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 
 
       if (leaderboardOpenButton) leaderboardOpenButton.addEventListener(&quot;click&quot;, requestOpenLeaderboard);
+      if (leaderboardQuickButton) leaderboardQuickButton.addEventListener(&quot;click&quot;, requestOpenLeaderboard);
       if (leaderboardSummaryEl) {
         leaderboardSummaryEl.addEventListener(&quot;click&quot;, (event) =&gt; {
           if (event.target instanceof Element &amp;&amp; event.target.closest(&quot;[data-leaderboard-open]&quot;)) requestOpenLeaderboard();
@@ -23020,7 +23035,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 &lt;script id=&quot;zefirok-referrals-profile-entry-v2&quot;&gt;
 (() =&gt; {
   const referralInitData=()=&gt;{let value=&quot;&quot;;try{value=String(window.Telegram?.WebApp?.initData||sessionStorage.getItem(&quot;zefirok-telegram-init-data&quot;)||&quot;&quot;);}catch{}return value;};
-  const refreshReferralSummary=async()=&gt;{const badge=document.querySelector(&quot;[data-referrals-badge]&quot;);if(!badge)return;const initData=referralInitData();if(!initData){badge.hidden=true;return;}const controller=new AbortController();const timer=window.setTimeout(()=&gt;controller.abort(),6500);try{const response=await fetch(&quot;/api/referrals/summary&quot;,{method:&quot;POST&quot;,headers:{&quot;Content-Type&quot;:&quot;application/json&quot;},body:JSON.stringify({initData}),cache:&quot;no-store&quot;,credentials:&quot;same-origin&quot;,signal:controller.signal});const data=await response.json();if(!response.ok||!data?.ok)throw new Error(&quot;summary&quot;);const pending=Math.max(0,Number(data.pendingCount||0));if(pending&gt;0){badge.textContent=`🎁 ${pending}`;badge.classList.remove(&quot;is-boost&quot;);badge.hidden=false;}else if(data?.boost?.active){badge.textContent=`×${Number(data.boost.multiplier||2)}`;badge.classList.add(&quot;is-boost&quot;);badge.hidden=false;}else{badge.hidden=true;}}catch{badge.hidden=true;}finally{window.clearTimeout(timer);}};
+  const refreshReferralSummary=async()=&gt;{const badge=document.querySelector(&quot;[data-referrals-badge]&quot;),meta=document.querySelector(&quot;[data-profile-v2-friends-meta]&quot;);if(!badge)return;const setMeta=(value)=&gt;{if(meta)meta.textContent=value;};const initData=referralInitData();if(!initData){badge.hidden=true;setMeta(&quot;Играть вместе&quot;);return;}const controller=new AbortController();const timer=window.setTimeout(()=&gt;controller.abort(),6500);try{const response=await fetch(&quot;/api/referrals/summary&quot;,{method:&quot;POST&quot;,headers:{&quot;Content-Type&quot;:&quot;application/json&quot;},body:JSON.stringify({initData}),cache:&quot;no-store&quot;,credentials:&quot;same-origin&quot;,signal:controller.signal});const data=await response.json();if(!response.ok||!data?.ok)throw new Error(&quot;summary&quot;);const pending=Math.max(0,Number(data.pendingCount||0));if(pending&gt;0){badge.textContent=`🎁 ${pending}`;badge.classList.remove(&quot;is-boost&quot;);badge.hidden=false;const mod100=pending%100,mod10=pending%10,giftWord=(mod100&gt;=11&amp;&amp;mod100&lt;=14)?&quot;подарков&quot;:mod10===1?&quot;подарок&quot;:(mod10&gt;=2&amp;&amp;mod10&lt;=4)?&quot;подарка&quot;:&quot;подарков&quot;;setMeta(`${pending} ${giftWord}`);}else if(data?.boost?.active){const multiplier=Number(data.boost.multiplier||2);badge.textContent=`×${multiplier}`;badge.classList.add(&quot;is-boost&quot;);badge.hidden=false;setMeta(`XP ×${multiplier}`);}else{badge.hidden=true;setMeta(&quot;Играть вместе&quot;);}}catch{badge.hidden=true;setMeta(&quot;Играть вместе&quot;);}finally{window.clearTimeout(timer);}};
   document.addEventListener(&quot;click&quot;, (event) =&gt; {
     const button = event.target?.closest?.(&quot;[data-referrals-open]&quot;);
     if (!button) return;
@@ -23159,10 +23174,10 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 #zefirok-maltipoo-runner .profile-identity h2{font-size:clamp(21px,5.6vw,26px);letter-spacing:-.025em;padding-right:52px;box-sizing:border-box}
 #zefirok-maltipoo-runner .profile-username,#zefirok-maltipoo-runner .profile-id,#zefirok-maltipoo-runner .profile-avatar-note{display:none!important}
 #zefirok-maltipoo-runner .profile-status-row{margin-top:1px;padding-right:52px;box-sizing:border-box}
-#zefirok-maltipoo-runner .profile-status-row .profile-source-badge,#zefirok-maltipoo-runner .profile-status-row .profile-premium-badge{flex:0 0 100%;width:100%;max-width:100%;box-sizing:border-box;justify-content:flex-start}
+#zefirok-maltipoo-runner .profile-status-row .profile-source-badge,#zefirok-maltipoo-runner .profile-status-row .profile-premium-badge{flex:0 0 100%;width:100%;max-width:100%;box-sizing:border-box;justify-content:center;text-align:center}
 #zefirok-maltipoo-runner .profile-rank{margin-top:2px;padding:5px 9px;border-color:rgba(219,116,153,.22);background:rgba(255,238,244,.86);color:#a85170;font-size:10px;box-shadow:none}
-#zefirok-maltipoo-runner .profile-rank--button{display:flex;align-items:center;width:100%;max-width:100%;box-sizing:border-box;text-align:left;overflow:hidden;text-overflow:ellipsis}
-#zefirok-maltipoo-runner .profile-rank--button::after{flex:0 0 auto;margin-left:auto}
+#zefirok-maltipoo-runner .profile-rank--button{position:relative;display:flex;align-items:center;justify-content:center;width:100%;max-width:100%;box-sizing:border-box;padding-left:28px;padding-right:28px;text-align:center;overflow:hidden;text-overflow:ellipsis}
+#zefirok-maltipoo-runner .profile-rank--button::after{position:absolute;right:12px;flex:0 0 auto;margin-left:0}
 #zefirok-maltipoo-runner .profile-mail-shortcut{width:44px;height:44px;border-radius:10px;border-color:rgba(222,137,169,.26);background:rgba(255,255,255,.92);box-shadow:0 5px 14px rgba(123,65,87,.08)}
 
 #zefirok-maltipoo-runner .profile-v2-quickbar{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
