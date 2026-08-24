@@ -3,23 +3,14 @@
 <html lang="en">
 <head>
 <script data-profile-v2-candidate-prebootstrap>
-(() => {
-  try {
-    const u = new URL(location.href);
-    if (u.searchParams.get('test_project') !== '1') {
-      u.searchParams.set('test_project', '1');
-      history.replaceState(history.state, '', u.pathname + u.search + u.hash);
-    }
-  } catch {}
-  window.__ZEFIROK_PROFILE_V2_CANDIDATE__ = { version: "V5.0.1", mode: "TP", autoOpenProfile: true };
-})();
+(() => { try { const u=new URL(location.href); if(u.searchParams.get("test_project")!=="1"){u.searchParams.set("test_project","1");history.replaceState(history.state,"",u.pathname+u.search+u.hash);} } catch {} window.__ZEFIROK_PROFILE_V2_CANDIDATE__={version:"V5.0.2",mode:"TP",autoOpenProfile:true}; })();
 </script>
 
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover" name="viewport"/>
 <meta content="no-referrer" name="referrer"/>
 <meta content="default-src 'none'; script-src 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com https://telegram.org; style-src 'unsafe-inline' blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; img-src 'self' blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; font-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; media-src 'self' blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; worker-src blob:; connect-src 'self' blob: data:; frame-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'" http-equiv="Content-Security-Policy"/>
-<title>Сладкий Забег · V5.0.1 Profile 2.0 · TP</title>
+<title>Сладкий Забег · V5.0.2 Profile 2.0 · TP</title>
 <style>:root{color-scheme:light dark;background:light-dark(rgb(255 255 255), rgb(24 24 24));--zefirok-app-height:100dvh}html,body{margin:0;width:100%;height:100%;min-height:0;overflow:hidden;overscroll-behavior:none}body{box-sizing:border-box;padding:0;background:inherit}iframe{display:none;height:var(--zefirok-app-height,100dvh);border:0}body>iframe:not(.zefirok-season-pass-frame):not(.zefirok-rating-frame):not(.zefirok-referrals-frame):not(.zefirok-album-frame){width:calc(100% - 32px);max-width:736px;margin:0 auto}iframe.is-ready{display:block}.zefirok-maintenance-gate{width:100%;min-height:var(--zefirok-app-height,100dvh);display:grid;background:#fff5f5;place-items:center;padding:max(24px,var(--zefirok-content-safe-top,0px)) max(24px,var(--zefirok-content-safe-right,0px)) max(24px,var(--zefirok-content-safe-bottom,0px)) max(24px,var(--zefirok-content-safe-left,0px));box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#4e3a42}.zefirok-maintenance-card{width:min(430px,100%);box-sizing:border-box;padding:28px;border:1px solid #efd0d9;border-radius:28px;background:#fff;box-shadow:0 18px 50px rgba(91,54,68,.13);text-align:center}.zefirok-maintenance-icon{font-size:54px}.zefirok-maintenance-card h1{font-size:25px;margin:12px 0}.zefirok-maintenance-card p{font-size:16px;line-height:1.5;color:#786870;margin:0}.zefirok-maintenance-card button{margin-top:18px;padding:12px 18px;border:0;border-radius:14px;background:#e56f9b;color:#fff;font-weight:800;font-size:15px}
 .zefirok-season-pass-layer{position:fixed;inset:0;width:100%;height:var(--zefirok-app-height,100dvh);z-index:2147483000;background:#fff5f4;display:block;overflow:hidden}
 .zefirok-season-pass-layer[hidden]{display:none!important}
@@ -9105,6 +9096,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 #zefirok-maltipoo-runner .profile-section--battle-pass { order: 15; }
 #zefirok-maltipoo-runner .profile-section--referrals { order: 17; }
 #zefirok-maltipoo-runner .profile-section--newcomer { order: 12; }
+#zefirok-maltipoo-runner .profile-section--newcomer[hidden] { display: none !important; }
 #zefirok-maltipoo-runner .liveops-run-banner{display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px;align-items:center;margin:8px 0 10px;padding:10px 12px;border:1px solid rgba(218,157,61,.34);border-radius:16px;background:linear-gradient(135deg,#fff6cc,#ffeaf2);box-shadow:0 7px 18px rgba(125,78,52,.08)}
 #zefirok-maltipoo-runner .liveops-run-banner[hidden]{display:none!important}
 #zefirok-maltipoo-runner .liveops-run-banner-icon{display:grid;place-items:center;width:36px;height:36px;border-radius:12px;background:#fff;color:#b46b22;font-size:19px}
@@ -23265,7 +23257,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 (() => {
   'use strict';
   const cfg = window.__ZEFIROK_PROFILE_V2_CANDIDATE__ || {};
-  const VERSION = String(cfg.version || 'V5.0.1');
+  const VERSION = String(cfg.version || 'V5.0.2');
   const MODE = String(cfg.mode || 'CANDIDATE').toUpperCase();
   const STYLE_URL = '/candidates/V5/source/profile-v2-candidate.css';
   const installed = new WeakSet();
@@ -23442,7 +23434,45 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     return text || fallback;
   }
 
+
+  function ensureNewcomerPreview(doc) {
+    const section = doc.querySelector('[data-newcomer-section]');
+    const list = doc.querySelector('[data-newcomer-list]');
+    const subtitle = doc.querySelector('[data-newcomer-subtitle]');
+    if (!section || !list) return;
+
+    const preview = list.querySelector('[data-profile-v2-newcomer-preview]');
+    const hasRealContent = !section.hidden && list.children.length > 0 && !preview;
+    if (hasRealContent) {
+      delete section.dataset.profileV2Preview;
+      return;
+    }
+    if (!section.hidden && list.children.length > 0 && preview) return;
+    if (!section.hidden && list.children.length > 0) return;
+
+    section.hidden = false;
+    section.dataset.profileV2Preview = '1';
+    if (subtitle) subtitle.textContent = 'Три коротких шага, чтобы освоиться в кафе.';
+    list.innerHTML = `
+      <div class="newcomer-step is-ready" data-profile-v2-newcomer-preview="1">
+        <div class="newcomer-step-day">D1</div>
+        <div class="newcomer-step-copy"><strong>Первый сладкий забег</strong><span>Заверши первый полноценный забег и познакомься с Зеффи. · 🎁 500 очков</span></div>
+        <span class="newcomer-step-state">1 забег</span>
+      </div>
+      <div class="newcomer-step">
+        <div class="newcomer-step-day">D2</div>
+        <div class="newcomer-step-copy"><strong>Загляни в коллекцию</strong><span>Вернись на второй день, сделай ещё один забег и открой Альбом. · 🎁 20 зефира</span></div>
+        <span class="newcomer-step-state">День 2</span>
+      </div>
+      <div class="newcomer-step">
+        <div class="newcomer-step-day">D3</div>
+        <div class="newcomer-step-copy"><strong>Играть вместе веселее</strong><span>На третий день сделай ещё один забег и загляни в «Друзья кафе». · 🎁 Обычный кейс</span></div>
+        <span class="newcomer-step-state">День 3</span>
+      </div>`;
+  }
+
   function sync(doc, quickbar, accountHub) {
+    ensureNewcomerPreview(doc);
     const q = action => quickbar?.querySelector(`[data-profile-v2-action="${action}"]`);
     const qMeta = action => q(action)?.querySelector('[data-profile-v2-meta]');
     const place = textOf(doc.querySelector('[data-leaderboard-summary-place]'), '—');

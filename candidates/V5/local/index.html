@@ -2,24 +2,21 @@
 
 <html lang="en">
 <head>
+<meta data-zlocal-strict-csp http-equiv="Content-Security-Policy" content="default-src 'self' blob: data:; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: data:; style-src 'self' 'unsafe-inline' blob: data:; img-src 'self' blob: data:; font-src 'self' blob: data:; media-src 'self' blob: data:; connect-src 'self'; frame-src 'self' blob: data:; worker-src blob:; object-src 'none'; form-action 'none'">
 <script data-profile-v2-candidate-prebootstrap>
 (() => {
-  try {
-    const u = new URL(location.href);
-    if (u.searchParams.get('test_project') !== '1') {
-      u.searchParams.set('test_project', '1');
-      history.replaceState(history.state, '', u.pathname + u.search + u.hash);
-    }
-  } catch {}
-  window.__ZEFIROK_PROFILE_V2_CANDIDATE__ = { version: "V5.0.1", mode: "LOCAL", autoOpenProfile: true };
+  try { const u=new URL(location.href); u.searchParams.delete("test_project"); history.replaceState(history.state,"",u.pathname+u.search+u.hash); } catch {}
+  window.__ZEFIROK_CANDIDATE_MANIFEST__={"version": "V5", "candidate": "V5.0.2", "status": "LOCAL_QA", "title": "Сладкий Забег · V5.0.2 · Profile 2.0"};
+  window.__ZEFIROK_PROFILE_V2_CANDIDATE__={version:"V5.0.2",mode:"LOCAL",autoOpenProfile:true};
 })();
 </script>
+<script data-zlocal-runtime-external src="/scripts/local-test-runtime.js"></script>
 
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover" name="viewport"/>
 <meta content="no-referrer" name="referrer"/>
-<meta content="default-src 'none'; script-src 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com https://telegram.org; style-src 'unsafe-inline' blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; img-src 'self' blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; font-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; media-src 'self' blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; worker-src blob:; connect-src 'self' blob: data:; frame-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'" http-equiv="Content-Security-Policy"/>
-<title>Сладкий Забег · V5.0.1 Profile 2.0 · LOCAL</title>
+<meta content="default-src 'none'; script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com https://telegram.org; style-src 'unsafe-inline' blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; img-src 'self' blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; font-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; media-src 'self' blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; worker-src blob:; connect-src 'self' blob: data:; frame-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'" http-equiv="Content-Security-Policy"/>
+<title>Сладкий Забег · V5.0.2 Profile 2.0 · LOCAL</title>
 <style>:root{color-scheme:light dark;background:light-dark(rgb(255 255 255), rgb(24 24 24));--zefirok-app-height:100dvh}html,body{margin:0;width:100%;height:100%;min-height:0;overflow:hidden;overscroll-behavior:none}body{box-sizing:border-box;padding:0;background:inherit}iframe{display:none;height:var(--zefirok-app-height,100dvh);border:0}body>iframe:not(.zefirok-season-pass-frame):not(.zefirok-rating-frame):not(.zefirok-referrals-frame):not(.zefirok-album-frame){width:calc(100% - 32px);max-width:736px;margin:0 auto}iframe.is-ready{display:block}.zefirok-maintenance-gate{width:100%;min-height:var(--zefirok-app-height,100dvh);display:grid;background:#fff5f5;place-items:center;padding:max(24px,var(--zefirok-content-safe-top,0px)) max(24px,var(--zefirok-content-safe-right,0px)) max(24px,var(--zefirok-content-safe-bottom,0px)) max(24px,var(--zefirok-content-safe-left,0px));box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#4e3a42}.zefirok-maintenance-card{width:min(430px,100%);box-sizing:border-box;padding:28px;border:1px solid #efd0d9;border-radius:28px;background:#fff;box-shadow:0 18px 50px rgba(91,54,68,.13);text-align:center}.zefirok-maintenance-icon{font-size:54px}.zefirok-maintenance-card h1{font-size:25px;margin:12px 0}.zefirok-maintenance-card p{font-size:16px;line-height:1.5;color:#786870;margin:0}.zefirok-maintenance-card button{margin-top:18px;padding:12px 18px;border:0;border-radius:14px;background:#e56f9b;color:#fff;font-weight:800;font-size:15px}
 .zefirok-season-pass-layer{position:fixed;inset:0;width:100%;height:var(--zefirok-app-height,100dvh);z-index:2147483000;background:#fff5f4;display:block;overflow:hidden}
 .zefirok-season-pass-layer[hidden]{display:none!important}
@@ -56,11 +53,10 @@ body.zefirok-rating-open{overflow:hidden!important;padding:0!important}
 body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!important;pointer-events:none!important}
 .zefirok-legal-gate{position:fixed;inset:0;z-index:2147483400;display:grid;place-items:center;overflow:auto;box-sizing:border-box;padding:max(22px,var(--zefirok-content-safe-top,0px)) max(14px,var(--zefirok-content-safe-right,0px)) max(22px,var(--zefirok-content-safe-bottom,0px)) max(14px,var(--zefirok-content-safe-left,0px));background:linear-gradient(180deg,#fff4f4,#fffaf4);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#4e363d}.zefirok-legal-card{width:min(470px,100%);padding:24px;box-sizing:border-box;border:1px solid #efd5de;border-radius:28px;background:#fffdfb;box-shadow:0 22px 64px rgba(93,53,66,.15)}.zefirok-legal-badge{display:inline-flex;padding:7px 10px;border-radius:999px;background:#fff0d6;color:#93662c;font-size:11px;font-weight:900;letter-spacing:.04em}.zefirok-legal-card h1{margin:13px 0 8px;font-size:24px;line-height:1.1;color:#603d4a}.zefirok-legal-card p{margin:0;color:#806b72;font-size:14px;line-height:1.5}.zefirok-legal-doc-buttons{display:grid;gap:9px;margin:17px 0}.zefirok-legal-doc-button{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;padding:13px 14px;border:1px solid #ead4dc;border-radius:16px;background:#fff7fa;color:#74465a;font:800 14px/1.25 inherit;text-align:left}.zefirok-legal-doc-button span:last-child{font-size:20px;color:#cb668b}.zefirok-legal-check{display:flex;gap:10px;align-items:flex-start;margin:13px 0;padding:12px 13px;border:1px solid #eadbd7;border-radius:15px;background:#fffaf5;color:#674f56;font-size:13px;line-height:1.45}.zefirok-legal-check input{width:20px;height:20px;margin:0;accent-color:#dc6993;flex:0 0 auto}.zefirok-legal-consent-text{margin:15px 0;padding:14px;border-radius:17px;background:#fff6f8;color:#654c55;font-size:13px;line-height:1.5}.zefirok-legal-actions{display:grid;gap:9px;margin-top:16px}.zefirok-legal-primary,.zefirok-legal-secondary{min-height:50px;border-radius:16px;padding:12px 15px;font:900 14px/1.2 inherit}.zefirok-legal-primary{border:1px solid #d86690;background:linear-gradient(180deg,#f19abb,#df6d98);color:#fff;box-shadow:0 10px 22px rgba(209,89,134,.2)}.zefirok-legal-primary:disabled{opacity:.48;box-shadow:none}.zefirok-legal-secondary{border:1px solid #ead8de;background:#fff;color:#80616d}.zefirok-legal-status{min-height:19px;margin-top:11px;color:#9a5b70;font-size:12px;line-height:1.4}.zefirok-legal-lang{display:flex;justify-content:flex-end;gap:6px;margin-top:-2px}.zefirok-legal-lang button{padding:7px 9px;border:1px solid #ead7de;border-radius:11px;background:#fff;color:#806b72;font:900 11px/1 inherit}.zefirok-legal-lang button.is-active{background:#ffe4ee;color:#98405f;border-color:#f0bfd0}.zefirok-legal-layer{position:fixed;inset:0;z-index:2147483500;display:grid;grid-template-rows:auto 1fr;width:100%;height:var(--zefirok-app-height,100dvh);background:#fff5f4;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}.zefirok-legal-layer[hidden]{display:none!important}.zefirok-legal-toolbar{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:max(10px,var(--zefirok-content-safe-top,0px)) 12px 10px;background:#fff7f5;border-bottom:1px solid #efd8df;color:#64434f}.zefirok-legal-toolbar strong{font-size:14px}.zefirok-legal-close{width:40px;height:40px;border:1px solid #ead2da;border-radius:13px;background:#fff;color:#8e4d65;font:900 24px/1 inherit}.zefirok-legal-frame{display:block!important;width:100%!important;max-width:none!important;height:100%!important;margin:0!important;border:0!important;background:#fff5f4}.zefirok-legal-open>iframe:not(.zefirok-legal-frame){visibility:hidden!important;pointer-events:none!important}
 </style>
-<script src="https://telegram.org/js/telegram-web-app.js?63"></script>
 <script>
 (() => {
   const TEST_PROJECT_QUERY = new URLSearchParams(location.search);
-  const TEST_PROJECT_MODE = TEST_PROJECT_QUERY.get("test_project") === "1";
+  const TEST_PROJECT_MODE = false;
   const TEST_PROJECT_DEVICE_LAB = TEST_PROJECT_MODE && TEST_PROJECT_QUERY.get("device_lab") === "1";
   const TEST_PROJECT_OWNER_SESSION_KEY = "zefirok-owner-session-v1";
   const TEST_PROJECT_BRIDGE_JS = "(()=>{\n  let active=new URLSearchParams(location.search).get(\"test_project\")===\"1\";\n  if(!active&&window.parent&&window.parent!==window){try{active=new URLSearchParams(window.parent.location.search).get(\"test_project\")===\"1\"}catch{}}\n  if(!active)return;\n  if(window.__ZEFIROK_TP_BRIDGE_INSTALLED_V55__===true)return;\n  window.__ZEFIROK_TP_BRIDGE_INSTALLED_V55__=true;\n  const nativeFetch=window.fetch.bind(window),PROXY=\"/api/owner/test-project/game\",STORAGE_PREFIX=\"zefirok-tp5.5:\",TP_INIT_DATA=\"tp-sandbox-5.5\";\n  const baseUrl=(()=>{const direct=String(document.baseURI||\"\");if(/^https?:/i.test(direct))return direct;try{if(window.parent&&window.parent!==window&&/^https?:/i.test(String(window.parent.location.href||\"\")))return String(window.parent.location.href)}catch{}return String(location.href||direct)})();\n  const sandboxOrigin=(()=>{try{return new URL(baseUrl).origin}catch{return location.origin}})(),proxyUrl=(()=>{try{return new URL(PROXY,baseUrl).toString()}catch{return PROXY}})();\n  const blocked=(message,status=403)=>new Response(JSON.stringify({ok:false,testProject:true,isolated:true,productionWrites:false,error:message}),{status,headers:{\"Content-Type\":\"application/json\",\"Cache-Control\":\"no-store\",\"X-Test-Project\":\"5.5\"}});\n  const isSameOriginApi=(value)=>{try{const parsed=new URL(String(value||\"\"),baseUrl);return parsed.origin===sandboxOrigin&&parsed.pathname.startsWith(\"/api/\")}catch{return false}};\n  try{\n    const local=window.localStorage,session=window.sessionStorage,proto=Object.getPrototypeOf(local),nativeGet=proto.getItem,nativeSet=proto.setItem,nativeRemove=proto.removeItem,nativeClear=proto.clear,nativeKey=proto.key;\n    const scopedKey=(store,key)=>`${STORAGE_PREFIX}${store===session?\"session\":\"local\"}:${String(key)}`,prefixFor=(store)=>`${STORAGE_PREFIX}${store===session?\"session\":\"local\"}:`;\n    proto.getItem=function(key){return this===local||this===session?nativeGet.call(this,scopedKey(this,key)):nativeGet.call(this,key)};\n    proto.setItem=function(key,value){return this===local||this===session?nativeSet.call(this,scopedKey(this,key),value):nativeSet.call(this,key,value)};\n    proto.removeItem=function(key){return this===local||this===session?nativeRemove.call(this,scopedKey(this,key)):nativeRemove.call(this,key)};\n    proto.clear=function(){if(this!==local&&this!==session)return nativeClear.call(this);const prefix=prefixFor(this),remove=[];for(let i=0;i<this.length;i+=1){const key=nativeKey.call(this,i);if(String(key||\"\").startsWith(prefix))remove.push(key)}for(const key of remove)nativeRemove.call(this,key)};\n    proto.key=function(index){if(this!==local&&this!==session)return nativeKey.call(this,index);const prefix=prefixFor(this),keys=[];for(let i=0;i<this.length;i+=1){const key=nativeKey.call(this,i);if(String(key||\"\").startsWith(prefix))keys.push(String(key).slice(prefix.length))}return keys[Math.max(0,Number(index)||0)]??null};\n  }catch(error){console.warn(\"TP 5.5 storage isolation fallback\",error)}\n  let seededFromParent=false;\n  try{const raw=String(window.parent?.__ZEFIROK_TP_INITIAL_PROGRESS__||\"\");if(raw){JSON.parse(raw);localStorage.setItem(\"zefirok-runner-progress-v2\",raw);sessionStorage.removeItem(\"zefirok-runner-progress-v2\");seededFromParent=true}}catch(error){console.warn(\"TP 5.5 initial progress seed failed\",error)}\n  const fakeUser={id:\"tp-player\",first_name:\"Тестовый игрок\",last_name:\"\",username:\"test_project\",language_code:\"ru\",is_premium:false};\n  const maskTelegram=()=>{try{const webApp=window.Telegram?.WebApp;if(!webApp)return;try{Object.defineProperty(webApp,\"initData\",{configurable:true,get:()=>TP_INIT_DATA})}catch{}try{Object.defineProperty(webApp,\"initDataUnsafe\",{configurable:true,get:()=>({user:fakeUser,query_id:\"tp-sandbox\",auth_date:0,hash:\"tp-sandbox\"})})}catch{}try{Object.defineProperty(webApp,\"CloudStorage\",{configurable:true,value:null})}catch{}}catch{}};\n  maskTelegram();window.setTimeout(maskTelegram,0);window.setTimeout(maskTelegram,250);document.addEventListener(\"DOMContentLoaded\",maskTelegram,{once:true});\n  async function bodyValue(body){if(body==null)return {};if(typeof body===\"string\"){try{return JSON.parse(body)}catch{return {raw:body.slice(0,12000)}}}if(body instanceof URLSearchParams)return Object.fromEntries(body.entries());if(typeof FormData!==\"undefined\"&&body instanceof FormData){const out={};for(const [key,value] of body.entries()){if(typeof value===\"string\")out[key]=value;else out[key]={name:String(value?.name||\"file\"),type:String(value?.type||\"\"),size:Number(value?.size||0),testProjectFileBlocked:true};}return out;}if(typeof body===\"object\")return body;return {}};\n  const ownerSession=()=>{try{return String(window.parent?.__ZEFIROK_TP_OWNER_SESSION__||\"\")}catch{return \"\"}};\n  window.__TEST_PROJECT_SANDBOX__={active:true,version:\"5.5\",storagePrefix:STORAGE_PREFIX,localStorageIsolated:true,sessionStorageIsolated:true,telegramMasked:true,failClosed:true,seededFromParent};\n  window.fetch=async(input,init={})=>{\n    const original=input instanceof Request?input.url:String(input||\"\");let url;try{url=new URL(original,baseUrl)}catch{return String(original).startsWith(\"/api/\")?blocked(\"Test Project заблокировал нераспознанный API-запрос.\",418):nativeFetch(input,init)}\n    if(url.origin!==sandboxOrigin||!url.pathname.startsWith(\"/api/\"))return nativeFetch(input,init);\n    if(url.pathname.startsWith(\"/api/owner/\"))return blocked(\"Игровой клиент Test Project не может обращаться к owner API напрямую.\",403);\n    const session=ownerSession();if(!session)return blocked(\"Test Project: owner-session не передана sandbox proxy.\",401);\n    const sourceRequest=input instanceof Request?input:null,method=String(init.method||sourceRequest?.method||\"GET\").toUpperCase();let requestBody=init.body;if(requestBody==null&&sourceRequest&&method!==\"GET\"&&method!==\"HEAD\"){try{requestBody=await sourceRequest.clone().text()}catch{requestBody=null}}\n    const payload=await bodyValue(requestBody);if(payload&&typeof payload===\"object\")payload.initData=TP_INIT_DATA;\n    const controllerSignal=init.signal||sourceRequest?.signal;\n    const proxyResponse=await nativeFetch(proxyUrl,{method:\"POST\",headers:{\"Content-Type\":\"application/json\",\"X-Test-Project-Proxy\":\"5.5\"},body:JSON.stringify({initData:\"\",ownerSession:session,path:url.pathname,method,query:Object.fromEntries(url.searchParams.entries()),payload}),cache:\"no-store\",credentials:\"same-origin\",signal:controllerSignal});\n    const envelope=await proxyResponse.json().catch(()=>({ok:false,error:\"Test Project proxy вернул некорректный ответ.\"}));\n    if(!proxyResponse.ok||!envelope?.ok||!(\"data\" in envelope))return new Response(JSON.stringify(envelope||{ok:false,error:\"Test Project proxy error\"}),{status:proxyResponse.status||500,headers:{\"Content-Type\":\"application/json\",\"Cache-Control\":\"no-store\",\"X-Test-Project\":\"5.5\"}});\n    return new Response(JSON.stringify(envelope.data),{status:Number(envelope.proxyStatus||200),headers:{\"Content-Type\":\"application/json\",\"Cache-Control\":\"no-store\",\"X-Test-Project\":\"5.5\"}});\n  };\n  try{const Xhr=window.XMLHttpRequest,nativeOpen=Xhr?.prototype?.open;if(nativeOpen)Xhr.prototype.open=function(method,url,...rest){if(isSameOriginApi(url))throw new Error(\"Test Project: XMLHttpRequest к /api/* заблокирован. Используйте sandbox fetch proxy.\");return nativeOpen.call(this,method,url,...rest)}}catch{}\n  try{const nativeBeacon=navigator.sendBeacon?.bind(navigator);if(nativeBeacon)navigator.sendBeacon=(url,data)=>isSameOriginApi(url)?false:nativeBeacon(url,data)}catch{}\n})();";
@@ -694,6 +690,18 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
         const bridgeTag = "<scr" + "ipt>" + TEST_PROJECT_BRIDGE_JS + "</scr" + "ipt>";
         preparedSource = preparedSource.includes("</head>") ? preparedSource.replace("</head>", bridgeTag + "</head>") : bridgeTag + preparedSource;
       }
+      // V5.0.2 LOCAL: inject LocalGameServer into the actual runner srcdoc. No TP/Production API proxy.
+      try {
+        preparedSource = preparedSource.replace(/<script[^>]+telegram\.org\/js\/telegram-web-app\.js[^>]*><\/script>/gi, "");
+        preparedSource = preparedSource.replace("script-src 'unsafe-inline'", "script-src 'self' 'unsafe-inline'");
+        if (!preparedSource.includes('data-zlocal-runtime-external')) {
+          const strictLocalCsp = "<meta data-zlocal-strict-csp http-equiv=\"Content-Security-Policy\" content=\"default-src 'self' blob: data:; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: data:; style-src 'self' 'unsafe-inline' blob: data:; img-src 'self' blob: data:; font-src 'self' blob: data:; media-src 'self' blob: data:; connect-src 'self'; frame-src 'self' blob: data:; worker-src blob:; object-src 'none'; form-action 'none'\">";
+          const localManifestTag = '<scr'+'ipt>window.__ZEFIROK_CANDIDATE_MANIFEST__=' + "{\"version\": \"V5\", \"candidate\": \"V5.0.2\", \"status\": \"LOCAL_QA\", \"title\": \"\u0421\u043b\u0430\u0434\u043a\u0438\u0439 \u0417\u0430\u0431\u0435\u0433 \u00b7 V5.0.2 \u00b7 Profile 2.0\"}" + ';</scr'+'ipt>';
+          const localRuntimeTag = '<scr'+'ipt data-zlocal-runtime-external src="/scripts/local-test-runtime.js"></scr'+'ipt>';
+          const localBootstrap = strictLocalCsp + localManifestTag + localRuntimeTag;
+          preparedSource = preparedSource.includes('</head>') ? preparedSource.replace('</head>', localBootstrap + '</head>') : localBootstrap + preparedSource;
+        }
+      } catch (error) { console.warn('Candidate LOCAL runtime injection failed', error); }
       gameFrame.srcdoc = preparedSource;
       gameFrame.removeAttribute("data-srcdoc");
       gameFrame.dataset.activated = "1";
@@ -9105,6 +9113,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 #zefirok-maltipoo-runner .profile-section--battle-pass { order: 15; }
 #zefirok-maltipoo-runner .profile-section--referrals { order: 17; }
 #zefirok-maltipoo-runner .profile-section--newcomer { order: 12; }
+#zefirok-maltipoo-runner .profile-section--newcomer[hidden] { display: none !important; }
 #zefirok-maltipoo-runner .liveops-run-banner{display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px;align-items:center;margin:8px 0 10px;padding:10px 12px;border:1px solid rgba(218,157,61,.34);border-radius:16px;background:linear-gradient(135deg,#fff6cc,#ffeaf2);box-shadow:0 7px 18px rgba(125,78,52,.08)}
 #zefirok-maltipoo-runner .liveops-run-banner[hidden]{display:none!important}
 #zefirok-maltipoo-runner .liveops-run-banner-icon{display:grid;place-items:center;width:36px;height:36px;border-radius:12px;background:#fff;color:#b46b22;font-size:19px}
@@ -23265,7 +23274,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 (() => {
   'use strict';
   const cfg = window.__ZEFIROK_PROFILE_V2_CANDIDATE__ || {};
-  const VERSION = String(cfg.version || 'V5.0.1');
+  const VERSION = String(cfg.version || 'V5.0.2');
   const MODE = String(cfg.mode || 'CANDIDATE').toUpperCase();
   const STYLE_URL = '/candidates/V5/source/profile-v2-candidate.css';
   const installed = new WeakSet();
@@ -23442,7 +23451,45 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     return text || fallback;
   }
 
+
+  function ensureNewcomerPreview(doc) {
+    const section = doc.querySelector('[data-newcomer-section]');
+    const list = doc.querySelector('[data-newcomer-list]');
+    const subtitle = doc.querySelector('[data-newcomer-subtitle]');
+    if (!section || !list) return;
+
+    const preview = list.querySelector('[data-profile-v2-newcomer-preview]');
+    const hasRealContent = !section.hidden && list.children.length > 0 && !preview;
+    if (hasRealContent) {
+      delete section.dataset.profileV2Preview;
+      return;
+    }
+    if (!section.hidden && list.children.length > 0 && preview) return;
+    if (!section.hidden && list.children.length > 0) return;
+
+    section.hidden = false;
+    section.dataset.profileV2Preview = '1';
+    if (subtitle) subtitle.textContent = 'Три коротких шага, чтобы освоиться в кафе.';
+    list.innerHTML = `
+      <div class="newcomer-step is-ready" data-profile-v2-newcomer-preview="1">
+        <div class="newcomer-step-day">D1</div>
+        <div class="newcomer-step-copy"><strong>Первый сладкий забег</strong><span>Заверши первый полноценный забег и познакомься с Зеффи. · 🎁 500 очков</span></div>
+        <span class="newcomer-step-state">1 забег</span>
+      </div>
+      <div class="newcomer-step">
+        <div class="newcomer-step-day">D2</div>
+        <div class="newcomer-step-copy"><strong>Загляни в коллекцию</strong><span>Вернись на второй день, сделай ещё один забег и открой Альбом. · 🎁 20 зефира</span></div>
+        <span class="newcomer-step-state">День 2</span>
+      </div>
+      <div class="newcomer-step">
+        <div class="newcomer-step-day">D3</div>
+        <div class="newcomer-step-copy"><strong>Играть вместе веселее</strong><span>На третий день сделай ещё один забег и загляни в «Друзья кафе». · 🎁 Обычный кейс</span></div>
+        <span class="newcomer-step-state">День 3</span>
+      </div>`;
+  }
+
   function sync(doc, quickbar, accountHub) {
+    ensureNewcomerPreview(doc);
     const q = action => quickbar?.querySelector(`[data-profile-v2-action="${action}"]`);
     const qMeta = action => q(action)?.querySelector('[data-profile-v2-meta]');
     const place = textOf(doc.querySelector('[data-leaderboard-summary-place]'), '—');

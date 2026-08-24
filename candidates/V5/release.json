@@ -1,54 +1,59 @@
 {
   "schemaVersion": 1,
   "version": "V5",
-  "candidate": "V5.0.1",
-  "title": "Сладкий Забег · V5.0.1 · Profile 2.0 Visual Candidate",
+  "candidate": "V5.0.2",
+  "title": "Сладкий Забег · V5.0.2 · Profile 2.0 + true LOCAL",
   "status": "LOCAL_QA",
-  "sourceCommit": "830c2311954938244c37c14a66c3836bdd89dc3a",
-  "createdAt": "2026-08-24T14:45:00+03:00",
-  "updatedAt": "2026-08-24T14:45:00+03:00",
+  "sourceCommit": "7ca86dffc9b1307293d58761a20c88434e1f6f80",
+  "createdAt": "2026-08-24T15:06:00+03:00",
+  "updatedAt": "2026-08-24T15:06:00+03:00",
   "visualOnly": true,
   "features": [
     "profile-v2-visual-shell",
-    "profile-v2-four-quick-actions",
-    "profile-v2-compact-progress",
-    "profile-v2-progressive-disclosure",
-    "profile-v2-collapsible-cosmetics",
-    "profile-v2-account-help-hub",
-    "profile-v2-dynamic-coop-card",
+    "profile-v2-newcomer-preview",
     "profile-avatar-geometry-preserved",
     "profile-frame-layers-preserved",
-    "single-test-project-sandbox",
-    "no-nested-candidate-iframe"
+    "true-local-game-server",
+    "local-network-blocked",
+    "local-telegram-fake",
+    "local-storage-isolated",
+    "tp-kept-separate"
   ],
   "sourceFiles": {
-    "index.html": "a832bc70d2a1f16e",
+    "index.html": "fead14400f6bc839",
     "profile-v2-candidate.css": "f7c75d58ad37df07",
-    "profile-v2-candidate.js": "cae75cad92f4fe20"
+    "profile-v2-candidate.js": "084a5238fbd14e10"
   },
   "candidateArchitecture": {
-    "base": "current index.html copied from sourceCommit",
-    "testProjectModeForcedBeforeBootstrap": true,
-    "candidateOverlayInjectedIntoExistingGameFrame": true,
-    "nestedIframeWrapper": false,
+    "productionSourceCommit": "7ca86dffc9b1307293d58761a20c88434e1f6f80",
     "productionRootFilesChanged": false,
-    "productionEconomyWrites": false,
     "avatarSizeOverrides": false,
-    "frameImageOverrides": false
+    "frameImageOverrides": false,
+    "local": {
+      "testProjectMode": false,
+      "runtime": "/scripts/local-test-runtime.js",
+      "api": "LocalGameServer",
+      "productionApiWrites": false,
+      "externalNetworkBlocked": true
+    },
+    "tp": {
+      "testProjectMode": true,
+      "api": "/api/owner/test-project/game",
+      "productionApiWrites": false
+    }
   },
   "requiredChecks": [
-    "local-opens-full-current-game-not-wrapper",
-    "single-test-project-sandbox",
-    "profile-v2-style-injected-inside-existing-game-frame",
-    "production-root-unchanged",
-    "avatar-geometry-owned-by-production",
-    "case-frame-layers-owned-by-production",
-    "profile-auto-opens-for-visual-qa",
+    "local-runtime",
+    "fake-telegram",
+    "cloud-storage-off",
+    "external-network-zero",
+    "local-test-project-mode-false",
+    "local-runner-runtime-injected",
+    "profile-v2-newcomer-preview",
     "viewport-360",
     "viewport-375",
     "viewport-390",
-    "viewport-430",
-    "no-new-production-api"
+    "viewport-430"
   ],
   "localQa": {
     "status": "pending"

@@ -1,7 +1,7 @@
 (() => {
   'use strict';
   const cfg = window.__ZEFIROK_PROFILE_V2_CANDIDATE__ || {};
-  const VERSION = String(cfg.version || 'V5.0.1');
+  const VERSION = String(cfg.version || 'V5.0.2');
   const MODE = String(cfg.mode || 'CANDIDATE').toUpperCase();
   const STYLE_URL = '/candidates/V5/source/profile-v2-candidate.css';
   const installed = new WeakSet();
@@ -178,7 +178,45 @@
     return text || fallback;
   }
 
+
+  function ensureNewcomerPreview(doc) {
+    const section = doc.querySelector('[data-newcomer-section]');
+    const list = doc.querySelector('[data-newcomer-list]');
+    const subtitle = doc.querySelector('[data-newcomer-subtitle]');
+    if (!section || !list) return;
+
+    const preview = list.querySelector('[data-profile-v2-newcomer-preview]');
+    const hasRealContent = !section.hidden && list.children.length > 0 && !preview;
+    if (hasRealContent) {
+      delete section.dataset.profileV2Preview;
+      return;
+    }
+    if (!section.hidden && list.children.length > 0 && preview) return;
+    if (!section.hidden && list.children.length > 0) return;
+
+    section.hidden = false;
+    section.dataset.profileV2Preview = '1';
+    if (subtitle) subtitle.textContent = 'Три коротких шага, чтобы освоиться в кафе.';
+    list.innerHTML = `
+      <div class="newcomer-step is-ready" data-profile-v2-newcomer-preview="1">
+        <div class="newcomer-step-day">D1</div>
+        <div class="newcomer-step-copy"><strong>Первый сладкий забег</strong><span>Заверши первый полноценный забег и познакомься с Зеффи. · 🎁 500 очков</span></div>
+        <span class="newcomer-step-state">1 забег</span>
+      </div>
+      <div class="newcomer-step">
+        <div class="newcomer-step-day">D2</div>
+        <div class="newcomer-step-copy"><strong>Загляни в коллекцию</strong><span>Вернись на второй день, сделай ещё один забег и открой Альбом. · 🎁 20 зефира</span></div>
+        <span class="newcomer-step-state">День 2</span>
+      </div>
+      <div class="newcomer-step">
+        <div class="newcomer-step-day">D3</div>
+        <div class="newcomer-step-copy"><strong>Играть вместе веселее</strong><span>На третий день сделай ещё один забег и загляни в «Друзья кафе». · 🎁 Обычный кейс</span></div>
+        <span class="newcomer-step-state">День 3</span>
+      </div>`;
+  }
+
   function sync(doc, quickbar, accountHub) {
+    ensureNewcomerPreview(doc);
     const q = action => quickbar?.querySelector(`[data-profile-v2-action="${action}"]`);
     const qMeta = action => q(action)?.querySelector('[data-profile-v2-meta]');
     const place = textOf(doc.querySelector('[data-leaderboard-summary-place]'), '—');
