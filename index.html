@@ -12,7 +12,13 @@
 .zefirok-season-pass-layer[hidden]{display:none!important}
 .zefirok-season-pass-frame{display:block!important;width:100%!important;max-width:none!important;height:var(--zefirok-app-height,100dvh)!important;margin:0!important;border:0!important;background:#fff5f4}
 .zefirok-referrals-layer{position:fixed;inset:0;width:100%;height:var(--zefirok-app-height,100dvh);z-index:2147483050;background:#fff7f1;display:block;overflow:hidden}
+.zefirok-achievements-layer{position:fixed;inset:0;width:100%;height:var(--zefirok-app-height,100dvh);z-index:2147483055;background:#fff7f4;display:block;overflow:hidden}
 .zefirok-album-layer{position:fixed;inset:0;width:100%;height:var(--zefirok-app-height,100dvh);z-index:2147483060;background:#fff7f4;display:block;overflow:hidden}
+.zefirok-achievements-layer[hidden]{display:none!important}
+.zefirok-achievements-frame{display:block!important;width:100%!important;max-width:none!important;height:var(--zefirok-app-height,100dvh)!important;margin:0!important;border:0!important;background:#fff7f4}
+body.zefirok-achievements-open{overflow:hidden!important;padding:0!important}
+body.zefirok-achievements-open>iframe:not(.zefirok-achievements-frame){visibility:hidden!important;pointer-events:none!important}
+
 .zefirok-album-layer[hidden]{display:none!important}
 .zefirok-album-frame{display:block!important;width:100%!important;max-width:none!important;height:var(--zefirok-app-height,100dvh)!important;margin:0!important;border:0!important;background:#fff7f4}
 body.zefirok-album-open{overflow:hidden!important;padding:0!important}
@@ -1213,6 +1219,62 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
     refreshMainGameAfterSeasonPass();
   }
 
+  let achievementsLayer = null;
+
+  function achievementsFrame() {
+    return achievementsLayer?.querySelector?.(".zefirok-achievements-frame") || null;
+  }
+
+  function openAchievementsOverlay(initData = "") {
+    if (achievementsLayer?.isConnected) return;
+    const layer = document.createElement("div");
+    layer.className = "zefirok-achievements-layer";
+    layer.setAttribute("role", "dialog");
+    layer.setAttribute("aria-label", "Достижения");
+    const frame = document.createElement("iframe");
+    frame.className = "zefirok-achievements-frame";
+    frame.title = "Достижения";
+    frame.referrerPolicy = "same-origin";
+    frame.src = initData
+      ? `/achievements.html?v=1.0.9-achievements1#tgInitData=${encodeURIComponent(initData)}`
+      : `/achievements.html?v=1.0.9-achievements1`;
+    layer.append(frame);
+    frame.addEventListener("load", () => {
+      const snapshot = syncTelegramViewport();
+      sendViewportSnapshot(frame.contentWindow, snapshot);
+      try { sendTelegramProfile(frame.contentWindow); } catch {}
+    }, { once: true });
+    document.body.append(layer);
+    document.body.classList.add("zefirok-achievements-open");
+    achievementsLayer = layer;
+    try {
+      const webApp = window.Telegram?.WebApp;
+      webApp?.disableVerticalSwipes?.();
+      webApp?.enableClosingConfirmation?.();
+      webApp?.BackButton?.offClick?.(closeAchievementsOverlay);
+      webApp?.BackButton?.onClick?.(closeAchievementsOverlay);
+      webApp?.BackButton?.show?.();
+    } catch {}
+    requestTelegramFullscreen();
+    scheduleTelegramViewportSync();
+  }
+
+  function closeAchievementsOverlay() {
+    const layer = achievementsLayer;
+    achievementsLayer = null;
+    if (layer?.isConnected) layer.remove();
+    document.body.classList.remove("zefirok-achievements-open");
+    try {
+      const webApp = window.Telegram?.WebApp;
+      webApp?.BackButton?.offClick?.(closeAchievementsOverlay);
+      webApp?.BackButton?.hide?.();
+      webApp?.disableClosingConfirmation?.();
+    } catch {}
+    requestTelegramFullscreen();
+    scheduleTelegramViewportSync();
+    refreshMainGameAfterSeasonPass();
+  }
+
   let albumLayer = null;
 
   function albumFrame() {
@@ -1598,6 +1660,16 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
         if (initData) tpHostSessionSet("zefirok-telegram-init-data", initData);
       } catch (error) {}
       openReferralsOverlay(initData);
+    } else if (message.type === "zefirok-open-achievements") {
+      let initData = "";
+      try {
+        tpHostSessionSet("zefirok-return-screen", "profile");
+        initData = String(window.Telegram?.WebApp?.initData || tpHostSessionGet("zefirok-telegram-init-data") || "");
+        if (initData) tpHostSessionSet("zefirok-telegram-init-data", initData);
+      } catch (error) {}
+      openAchievementsOverlay(initData);
+    } else if (message.type === "zefirok-close-achievements") {
+      closeAchievementsOverlay();
     } else if (message.type === "zefirok-open-battle-pass") {
       let initData = "";
       try {
@@ -10209,6 +10281,19 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       &lt;/span&gt;
       &lt;span class=&quot;profile-v2-spotlight-cta&quot; data-profile-spotlight-cta&gt;Открыть&lt;/span&gt;
     &lt;/button&gt;
+  &lt;/section&gt;
+
+  &lt;section class=&quot;profile-section profile-section--showcase&quot; aria-labelledby=&quot;profile-showcase-title&quot;&gt;
+    &lt;div class=&quot;profile-section-head&quot;&gt;
+      &lt;div&gt;&lt;h3 id=&quot;profile-showcase-title&quot;&gt;Моя витрина&lt;/h3&gt;&lt;span&gt;Избранные трофеи, рекорды и коллекции для будущего показа в профиле.&lt;/span&gt;&lt;/div&gt;
+      &lt;button class=&quot;profile-link-chip&quot; data-achievements-open type=&quot;button&quot;&gt;&lt;span aria-hidden=&quot;true&quot;&gt;🏅&lt;/span&gt;&lt;span&gt;Достижения&lt;/span&gt;&lt;b aria-hidden=&quot;true&quot;&gt;›&lt;/b&gt;&lt;/button&gt;
+    &lt;/div&gt;
+    &lt;div class=&quot;profile-showcase-empty&quot;&gt;
+      &lt;span class=&quot;profile-showcase-empty-icon&quot; aria-hidden=&quot;true&quot;&gt;🏆&lt;/span&gt;
+      &lt;strong&gt;Витрина подготовлена&lt;/strong&gt;
+      &lt;span&gt;Пока здесь пусто. На следующем шаге добавим достижения, лучшие сезонные результаты и завершённые коллекции, которые можно будет показать другим игрокам.&lt;/span&gt;
+      &lt;button class=&quot;profile-action profile-action--primary&quot; data-achievements-open type=&quot;button&quot;&gt;Открыть достижения&lt;/button&gt;
+    &lt;/div&gt;
   &lt;/section&gt;
 
   &lt;section class=&quot;profile-section profile-section--progress&quot; aria-labelledby=&quot;profile-progress-title&quot;&gt;
@@ -23151,6 +23236,32 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
   window.addEventListener(&quot;pageshow&quot;, () =&gt; {document.querySelectorAll(&quot;[data-referrals-open]&quot;).forEach((button) =&gt; { button.disabled = false; });refreshReferralSummary();});
   window.addEventListener(&quot;message&quot;,(event)=&gt;{if(event.data?.type===&quot;zefirok-referrals-account-updated&quot;)refreshReferralSummary();});
   window.setTimeout(refreshReferralSummary,700);
+})();
+&lt;/script&gt;
+&lt;style id=&quot;zefirok-achievements-entry-v1-style&quot;&gt;
+#zefirok-maltipoo-runner .profile-link-chip{display:inline-flex;align-items:center;justify-content:center;gap:6px;flex:0 0 auto;padding:9px 12px;border:1px solid rgba(230,176,196,.72);border-radius:999px;background:linear-gradient(180deg,rgba(255,255,255,.96),rgba(255,238,245,.98));color:#8f4f67;font-size:11px;font-weight:900;line-height:1;text-decoration:none;box-shadow:0 8px 20px rgba(119,72,90,.08)}
+#zefirok-maltipoo-runner .profile-link-chip b{font-size:12px;line-height:1;color:#b56f88}
+#zefirok-maltipoo-runner .profile-link-chip:active{transform:translateY(1px)}
+#zefirok-maltipoo-runner .profile-section--showcase .profile-section-head&gt;div{display:grid;gap:3px}
+#zefirok-maltipoo-runner .profile-section--showcase .profile-section-head span{font-size:9px;color:#9c7984;line-height:1.4}
+#zefirok-maltipoo-runner .profile-showcase-empty{display:grid;justify-items:center;gap:8px;padding:18px 16px;border:1px dashed rgba(229,173,194,.88);border-radius:22px;background:linear-gradient(180deg,rgba(255,247,250,.95),rgba(255,252,247,.98));text-align:center;box-shadow:inset 0 1px 0 rgba(255,255,255,.78)}
+#zefirok-maltipoo-runner .profile-showcase-empty-icon{width:52px;height:52px;display:grid;place-items:center;border-radius:18px;background:linear-gradient(145deg,#fff5da,#ffe4ef);box-shadow:0 10px 22px rgba(220,170,80,.15);font-size:25px}
+#zefirok-maltipoo-runner .profile-showcase-empty strong{font-size:14px;font-weight:950;color:#6f3f53}
+#zefirok-maltipoo-runner .profile-showcase-empty span{max-width:290px;color:#8e7280;font-size:10px;font-weight:700;line-height:1.55}
+#zefirok-maltipoo-runner .profile-showcase-empty .profile-action{width:100%;max-width:240px;margin-top:3px}
+&lt;/style&gt;
+&lt;script id=&quot;zefirok-achievements-profile-entry-v1&quot;&gt;
+(() =&gt; {
+  document.addEventListener(&quot;click&quot;, (event) =&gt; {
+    const button = event.target?.closest?.(&quot;[data-achievements-open]&quot;);
+    if (!button) return;
+    event.preventDefault();
+    button.disabled = true;
+    try { window.parent.postMessage({ type:&quot;zefirok-open-achievements&quot; }, &quot;*&quot;); }
+    catch (error) { try { window.location.href = &quot;/achievements.html&quot;; } catch {} }
+    window.setTimeout(() =&gt; { button.disabled = false; }, 900);
+  });
+  window.addEventListener(&quot;pageshow&quot;, () =&gt; { document.querySelectorAll(&quot;[data-achievements-open]&quot;).forEach((button) =&gt; { button.disabled = false; }); });
 })();
 &lt;/script&gt;
 &lt;script id=&quot;zefirok-v07914-battle-pass-visibility&quot;&gt;

@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
+  <meta name="referrer" content="no-referrer" />
+  <title>Достижения — Сладкий Забег</title>
+  <style>
+    :root{
+      color-scheme: light;
+      --bg:#fff7f4;
+      --card:#fffdfb;
+      --line:rgba(232,194,206,.72);
+      --text:#5f4150;
+      --muted:#90707f;
+      --accent:#db6e98;
+      --accent-soft:#ffe9f1;
+      --gold:#f3c86f;
+      --shadow:0 18px 44px rgba(116,72,91,.12);
+      --safe-top:max(env(safe-area-inset-top,0px), 18px);
+      --safe-right:max(env(safe-area-inset-right,0px), 16px);
+      --safe-bottom:max(env(safe-area-inset-bottom,0px), 18px);
+      --safe-left:max(env(safe-area-inset-left,0px), 16px);
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;min-height:100%;background:radial-gradient(circle at top right, rgba(255,233,241,.95), transparent 36%), linear-gradient(180deg,#fff9f6 0%, var(--bg) 100%);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--text)}
+    body{padding:var(--safe-top) var(--safe-right) var(--safe-bottom) var(--safe-left)}
+    .shell{width:min(720px,100%);margin:0 auto;display:grid;gap:14px}
+    .topbar{display:flex;align-items:center;gap:10px}
+    .back{appearance:none;border:0;display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:11px 14px;border-radius:999px;background:#fff;border:1px solid rgba(230,184,198,.9);box-shadow:0 10px 26px rgba(119,72,90,.10);color:#7f5566;font:800 14px/1 inherit;cursor:pointer}
+    .title-card{padding:18px 18px 20px;border:1px solid var(--line);border-radius:28px;background:var(--card);box-shadow:var(--shadow);display:grid;gap:10px}
+    .kicker{display:inline-flex;align-items:center;gap:8px;width:max-content;padding:8px 12px;border-radius:999px;background:var(--accent-soft);color:#9c4c6d;font-size:12px;font-weight:900}
+    h1{margin:0;font-size:28px;line-height:1.08;color:#6d3850}
+    .subtitle{margin:0;color:var(--muted);font-size:15px;line-height:1.5;font-weight:600}
+    .empty-card{padding:26px 20px;border:1px dashed rgba(230,176,196,.95);border-radius:28px;background:linear-gradient(180deg,rgba(255,255,255,.98),rgba(255,248,252,.98));display:grid;justify-items:center;gap:10px;text-align:center;box-shadow:0 14px 36px rgba(128,79,98,.08)}
+    .empty-icon{width:72px;height:72px;border-radius:24px;display:grid;place-items:center;background:linear-gradient(145deg,#fff1c9,#ffe6f0);font-size:34px;box-shadow:0 14px 26px rgba(227,180,99,.18)}
+    .empty-card strong{font-size:20px;line-height:1.2;color:#6e4054}
+    .empty-card p{margin:0;max-width:420px;color:#8f7380;font-size:14px;line-height:1.6;font-weight:600}
+    .ghost-grid{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));width:100%;margin-top:6px}
+    .ghost-tile{min-height:88px;border-radius:22px;border:1px solid rgba(238,220,227,.95);background:linear-gradient(180deg,rgba(255,255,255,.85),rgba(255,244,248,.85));display:grid;place-items:center;padding:12px;color:#b094a1;font-size:13px;font-weight:800}
+    .primary{appearance:none;border:0;display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:48px;padding:0 18px;border-radius:16px;background:linear-gradient(180deg,#f27ca8,#d85f8e);color:#fff;font:900 15px/1 inherit;box-shadow:0 12px 24px rgba(216,95,142,.24);cursor:pointer}
+    .note{padding:14px 16px;border:1px solid rgba(234,209,165,.7);border-radius:20px;background:linear-gradient(180deg,rgba(255,248,229,.96),rgba(255,253,245,.98));color:#8a6f42;font-size:13px;line-height:1.55;font-weight:700}
+    @media (max-width: 480px){
+      h1{font-size:24px}
+      .subtitle,.empty-card p{font-size:13px}
+      .ghost-grid{grid-template-columns:1fr}
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <div class="topbar">
+      <button class="back" type="button" data-close-achievements>‹ Назад</button>
+    </div>
+
+    <section class="title-card" aria-labelledby="achievements-title">
+      <span class="kicker">🏅 Новый раздел профиля</span>
+      <h1 id="achievements-title">Достижения</h1>
+      <p class="subtitle">Здесь будут собираться ваши игровые трофеи, сезонные рекорды, завершённые коллекции и другие важные успехи. Сейчас мы подготовили саму страницу без наполнения.</p>
+    </section>
+
+    <section class="empty-card" aria-labelledby="achievements-empty-title">
+      <span class="empty-icon" aria-hidden="true">🏆</span>
+      <strong id="achievements-empty-title">Раздел готов к наполнению</strong>
+      <p>Пока здесь пусто — без тестовых карточек и случайных заглушек. Следующим шагом можно добавить категории достижений, их прогресс и выбор наград для витрины профиля.</p>
+      <div class="ghost-grid" aria-hidden="true">
+        <div class="ghost-tile">Место под категории</div>
+        <div class="ghost-tile">Место под прогресс</div>
+        <div class="ghost-tile">Место под награды</div>
+      </div>
+      <button class="primary" type="button" data-close-achievements>Вернуться в профиль</button>
+    </section>
+
+    <div class="note">Позже сюда можно безопасно добавить реальные достижения, не меняя логику уже созданной страницы.</div>
+  </main>
+
+  <script>
+    (() => {
+      const tg = window.Telegram?.WebApp || null;
+
+      function closeAchievements() {
+        if (window.parent && window.parent !== window) {
+          try { window.parent.postMessage({ type: 'zefirok-close-achievements' }, '*'); } catch {}
+          return;
+        }
+        try {
+          if (window.history.length > 1) {
+            window.history.back();
+            return;
+          }
+        } catch {}
+        try { window.location.href = '/'; } catch {}
+      }
+
+      document.querySelectorAll('[data-close-achievements]').forEach((button) => {
+        button.addEventListener('click', closeAchievements);
+      });
+
+      window.addEventListener('message', (event) => {
+        if (event?.data?.type === 'zefirok-achievements-back') closeAchievements();
+        const payload = event?.data?.payload;
+        if (event?.data?.type === 'zefirok-host-viewport-changed' && payload && typeof payload === 'object') {
+          const root = document.documentElement;
+          if (payload.safeTop != null) root.style.setProperty('--safe-top', `max(env(safe-area-inset-top,0px), ${Number(payload.safeTop) || 0}px)`);
+          if (payload.safeRight != null) root.style.setProperty('--safe-right', `max(env(safe-area-inset-right,0px), ${Number(payload.safeRight) || 0}px)`);
+          if (payload.safeBottom != null) root.style.setProperty('--safe-bottom', `max(env(safe-area-inset-bottom,0px), ${Number(payload.safeBottom) || 0}px)`);
+          if (payload.safeLeft != null) root.style.setProperty('--safe-left', `max(env(safe-area-inset-left,0px), ${Number(payload.safeLeft) || 0}px)`);
+        }
+      });
+
+      try {
+        tg?.ready?.();
+        tg?.expand?.();
+        tg?.disableVerticalSwipes?.();
+        tg?.enableClosingConfirmation?.();
+        tg?.BackButton?.offClick?.(closeAchievements);
+        tg?.BackButton?.onClick?.(closeAchievements);
+        tg?.BackButton?.show?.();
+      } catch {}
+
+      window.addEventListener('pagehide', () => {
+        try {
+          tg?.BackButton?.offClick?.(closeAchievements);
+          tg?.BackButton?.hide?.();
+          tg?.disableClosingConfirmation?.();
+        } catch {}
+      });
+    })();
+  </script>
+</body>
+</html>
