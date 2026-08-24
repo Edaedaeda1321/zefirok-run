@@ -10197,6 +10197,20 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
     &lt;button class=&quot;profile-v2-quick&quot; data-referrals-open type=&quot;button&quot;&gt;&lt;span class=&quot;profile-v2-quick-icon&quot; aria-hidden=&quot;true&quot;&gt;🐾&lt;/span&gt;&lt;span class=&quot;profile-v2-quick-copy&quot;&gt;&lt;strong&gt;Друзья&lt;/strong&gt;&lt;small data-profile-v2-friends-meta&gt;Играть вместе&lt;/small&gt;&lt;/span&gt;&lt;span class=&quot;profile-v2-quick-badge referrals-profile-badge&quot; data-referrals-badge hidden&gt;&lt;/span&gt;&lt;b aria-hidden=&quot;true&quot;&gt;›&lt;/b&gt;&lt;/button&gt;
   &lt;/div&gt;
 
+  &lt;section class=&quot;profile-v2-spotlight&quot; data-profile-spotlight hidden aria-live=&quot;polite&quot;&gt;
+    &lt;button class=&quot;profile-v2-spotlight-card&quot; data-profile-spotlight-action type=&quot;button&quot;&gt;
+      &lt;span class=&quot;profile-v2-spotlight-kicker&quot;&gt;✨ Актуально сейчас&lt;/span&gt;
+      &lt;span class=&quot;profile-v2-spotlight-icon&quot; data-profile-spotlight-icon aria-hidden=&quot;true&quot;&gt;✨&lt;/span&gt;
+      &lt;span class=&quot;profile-v2-spotlight-copy&quot;&gt;
+        &lt;strong data-profile-spotlight-title&gt;Актуальное событие&lt;/strong&gt;
+        &lt;small data-profile-spotlight-subtitle&gt;&lt;/small&gt;
+        &lt;span class=&quot;profile-v2-spotlight-progress&quot; data-profile-spotlight-progress hidden&gt;&lt;i data-profile-spotlight-fill&gt;&lt;/i&gt;&lt;/span&gt;
+        &lt;small class=&quot;profile-v2-spotlight-meta&quot; data-profile-spotlight-meta hidden&gt;&lt;/small&gt;
+      &lt;/span&gt;
+      &lt;span class=&quot;profile-v2-spotlight-cta&quot; data-profile-spotlight-cta&gt;Открыть&lt;/span&gt;
+    &lt;/button&gt;
+  &lt;/section&gt;
+
   &lt;section class=&quot;profile-section profile-section--progress&quot; aria-labelledby=&quot;profile-progress-title&quot;&gt;
     &lt;div class=&quot;profile-section-head&quot;&gt;
       &lt;h3 id=&quot;profile-progress-title&quot;&gt;Мой прогресс&lt;/h3&gt;
@@ -10833,6 +10847,15 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       const leaderboardQuickButton = root.querySelector(&quot;.profile-v2-quick[data-leaderboard-open]&quot;);
       const profileV2RatingMetaEl = root.querySelector(&quot;[data-profile-v2-rating-meta]&quot;);
       const profileV2SeasonMetaEl = root.querySelector(&quot;[data-profile-v2-season-meta]&quot;);
+      const profileSpotlightEl = root.querySelector(&quot;[data-profile-spotlight]&quot;);
+      const profileSpotlightActionEl = root.querySelector(&quot;[data-profile-spotlight-action]&quot;);
+      const profileSpotlightIconEl = root.querySelector(&quot;[data-profile-spotlight-icon]&quot;);
+      const profileSpotlightTitleEl = root.querySelector(&quot;[data-profile-spotlight-title]&quot;);
+      const profileSpotlightSubtitleEl = root.querySelector(&quot;[data-profile-spotlight-subtitle]&quot;);
+      const profileSpotlightProgressEl = root.querySelector(&quot;[data-profile-spotlight-progress]&quot;);
+      const profileSpotlightFillEl = root.querySelector(&quot;[data-profile-spotlight-fill]&quot;);
+      const profileSpotlightMetaEl = root.querySelector(&quot;[data-profile-spotlight-meta]&quot;);
+      const profileSpotlightCtaEl = root.querySelector(&quot;[data-profile-spotlight-cta]&quot;);
       const caseLayer = root.querySelector(&quot;[data-case-layer]&quot;);
       const caseContentEl = root.querySelector(&quot;[data-case-content]&quot;);
       const caseCloseButton = root.querySelector(&quot;[data-case-close]&quot;);
@@ -15856,6 +15879,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         renderActiveRunBooster();
         applyBoosterArtIcons(root);
         renderPlayerSupportSummary();
+        renderProfileSpotlight();
         if (profile &amp;&amp; isScreenVisible(&quot;profile&quot;) &amp;&amp; Date.now() - playerSupportStateLoadedAt &gt; 15000) void loadPlayerSupportState(false);
       }
 
@@ -15952,6 +15976,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           seasonPassAttentionEl.setAttribute(&quot;aria-label&quot;, seasonPassTotal ? `В сезонном пропуске доступно наград: ${seasonPassTotal}` : &quot;&quot;);
         }
         updateStockHubBadges();
+        renderProfileSpotlight();
         return seasonPassTotal;
       }
 
@@ -17319,13 +17344,75 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         return fallback;
       }
 
+      function profileSpotlightSeasonWord(count) {
+        const value=Math.max(0,Math.floor(Number(count||0))),mod100=value%100,mod10=value%10;
+        return mod100&gt;=11&amp;&amp;mod100&lt;=14?&quot;наград&quot;:mod10===1?&quot;награда&quot;:mod10&gt;=2&amp;&amp;mod10&lt;=4?&quot;награды&quot;:&quot;наград&quot;;
+      }
+
+      function renderProfileSpotlight() {
+        if(!profileSpotlightEl||!profileSpotlightActionEl)return;
+        let model=null;
+        const seasonCount=Math.max(0,Math.floor(Number(state.seasonPassAttentionCount||0)));
+        if(seasonCount&gt;0){
+          const word=profileSpotlightSeasonWord(seasonCount);
+          model={type:&quot;season&quot;,icon:&quot;🎟️&quot;,title:seasonCount===1?&quot;Награда сезона готова&quot;:&quot;Награды сезона готовы&quot;,subtitle:`${formatter.format(seasonCount)} ${word} ${seasonCount===1?&quot;ждёт&quot;:&quot;ждут&quot;} в сезонном пропуске`,cta:&quot;Открыть&quot;,progress:null,meta:&quot;&quot;};
+        }
+        if(!model){
+          const config=friendCoopClientState?.config||{},partners=Array.isArray(friendCoopClientState?.partners)?friendCoopClientState.partners:[],partner=partners[0]||null;
+          if(config.enabled===true&amp;&amp;config.active===true&amp;&amp;partner&amp;&amp;partner.claimed!==true){
+            const progress=Math.max(0,Number(partner.progress||0)),target=Math.max(1,Number(config.target||1)),percent=Math.max(0,Math.min(100,progress/target*100)),ready=partner.completed===true;
+            model={type:&quot;friend&quot;,icon:&quot;🎁&quot;,title:String(config.title||&quot;Совместное задание друзей&quot;),subtitle:ready?&quot;Цель выполнена · совместная награда готова&quot;:`${partner.displayName||&quot;Друг&quot;} · ${config.description||&quot;Выполняйте цель вместе.&quot;}`,cta:ready?&quot;Получить&quot;:&quot;Продолжить&quot;,progress:percent,meta:`${formatter.format(progress)} / ${formatter.format(target)} · 🎁 ${config.rewardLabel||clientRewardShortLabel(config.reward)}`,claimable:ready};
+          }
+        }
+        if(!model){
+          const data=newcomerPathClientState||{},steps=Array.isArray(data.steps)?data.steps:[];
+          if(data.available===true&amp;&amp;data.completed!==true&amp;&amp;steps.length&gt;0){
+            const step=steps.find((item)=&gt;item?.ready===true)||steps.find((item)=&gt;item?.claimed!==true)||steps[steps.length-1],claimed=steps.filter((item)=&gt;item?.claimed===true).length,total=Math.max(1,steps.length),ready=step?.ready===true;
+            model={type:&quot;newcomer&quot;,icon:&quot;🌸&quot;,title:&quot;Первые 3 дня с Зеффи&quot;,subtitle:ready?`День ${Number(step?.day||data.dayNumber||1)} · награда готова`:`День ${Math.max(1,Number(data.dayNumber||step?.day||1))} из ${total} · ${String(step?.title||&quot;Продолжи маршрут&quot;)}`,cta:ready?&quot;Получить&quot;:&quot;Продолжить&quot;,progress:Math.max(0,Math.min(100,claimed/total*100)),meta:`${formatter.format(claimed)} / ${formatter.format(total)} этапов пройдено`,stepDay:Math.max(0,Number(step?.day||0)),ctaType:String(step?.ctaType||&quot;game&quot;),claimable:ready};
+          }
+        }
+        if(!model&amp;&amp;liveOpsRunEventClient?.active===true){
+          const lm=liveOpsRunEventClient.multipliers||{},parts=[];
+          if(Number(lm.pointsMultiplier||1)&gt;1)parts.push(`очки ×${lm.pointsMultiplier}`);
+          if(Number(lm.treatsMultiplier||1)&gt;1)parts.push(`зефир ×${lm.treatsMultiplier}`);
+          if(Number(lm.coffeeMultiplier||1)&gt;1)parts.push(`кофе ×${lm.coffeeMultiplier}`);
+          if(liveOpsRunEventClient.endsAt)parts.push(`до ${new Date(liveOpsRunEventClient.endsAt*1000).toLocaleString(&quot;ru-RU&quot;,{day:&quot;2-digit&quot;,month:&quot;2-digit&quot;,hour:&quot;2-digit&quot;,minute:&quot;2-digit&quot;})}`);
+          model={type:&quot;liveops&quot;,icon:&quot;⭐&quot;,title:String(liveOpsRunEventClient.title||&quot;Событие в кафе&quot;),subtitle:[String(liveOpsRunEventClient.notice||&quot;&quot;),parts.join(&quot; · &quot;)].filter(Boolean).join(&quot; · &quot;)||&quot;Особое событие уже активно&quot;,cta:&quot;В игру&quot;,progress:null,meta:&quot;&quot;};
+        }
+        if(!model){
+          profileSpotlightEl.hidden=true;
+          profileSpotlightActionEl.dataset.spotlightType=&quot;&quot;;
+          profileSpotlightActionEl.dataset.spotlightStepDay=&quot;&quot;;
+          profileSpotlightActionEl.dataset.spotlightCtaType=&quot;&quot;;
+          profileSpotlightActionEl.dataset.spotlightClaimable=&quot;&quot;;
+          return;
+        }
+        profileSpotlightEl.hidden=false;
+        profileSpotlightEl.dataset.spotlightType=model.type;
+        profileSpotlightActionEl.dataset.spotlightType=model.type;
+        profileSpotlightActionEl.dataset.spotlightStepDay=String(model.stepDay||&quot;&quot;);
+        profileSpotlightActionEl.dataset.spotlightCtaType=String(model.ctaType||&quot;&quot;);
+        profileSpotlightActionEl.dataset.spotlightClaimable=model.claimable===true?&quot;1&quot;:&quot;&quot;;
+        if(profileSpotlightIconEl)profileSpotlightIconEl.textContent=model.icon;
+        if(profileSpotlightTitleEl)profileSpotlightTitleEl.textContent=model.title;
+        if(profileSpotlightSubtitleEl)profileSpotlightSubtitleEl.textContent=model.subtitle;
+        if(profileSpotlightCtaEl)profileSpotlightCtaEl.textContent=model.cta;
+        const hasProgress=Number.isFinite(model.progress);
+        if(profileSpotlightProgressEl)profileSpotlightProgressEl.hidden=!hasProgress;
+        if(profileSpotlightFillEl)profileSpotlightFillEl.style.width=hasProgress?`${Math.max(0,Math.min(100,Number(model.progress)))}%`:&quot;0%&quot;;
+        if(profileSpotlightMetaEl){profileSpotlightMetaEl.hidden=!model.meta;profileSpotlightMetaEl.textContent=model.meta||&quot;&quot;;}
+      }
+
       function applyLiveOpsRunEvent(value) {
         const source=value&amp;&amp;typeof value===&quot;object&quot;?value:{};const m=source.multipliers&amp;&amp;typeof source.multipliers===&quot;object&quot;?source.multipliers:{};
         const previous=liveOpsRunEventClient;liveOpsRunEventClient={active:source.active===true,id:String(source.id||&quot;&quot;),title:String(source.title||&quot;LiveOps событие&quot;),notice:String(source.notice||(previous?.id&amp;&amp;String(previous.id)===String(source.id||&quot;&quot;)?previous.notice:&quot;&quot;)||&quot;&quot;),endsAt:Math.max(0,Number(source.endsAt||0)),multipliers:{pointsMultiplier:Math.max(1,Math.min(3,Number(m.pointsMultiplier||1))),treatsMultiplier:Math.max(1,Math.min(3,Number(m.treatsMultiplier||1))),coffeeMultiplier:Math.max(1,Math.min(3,Number(m.coffeeMultiplier||1)))}};
-        if(!liveOpsRunBannerEl)return;liveOpsRunBannerEl.hidden=!liveOpsRunEventClient.active;if(!liveOpsRunEventClient.active)return;
-        const parts=[];const lm=liveOpsRunEventClient.multipliers;if(lm.pointsMultiplier&gt;1)parts.push(`очки ×${lm.pointsMultiplier}`);if(lm.treatsMultiplier&gt;1)parts.push(`зефир ×${lm.treatsMultiplier}`);if(lm.coffeeMultiplier&gt;1)parts.push(`кофе ×${lm.coffeeMultiplier}`);
-        if(liveOpsRunTitleEl)liveOpsRunTitleEl.textContent=liveOpsRunEventClient.title;
-        if(liveOpsRunMetaEl){const until=liveOpsRunEventClient.endsAt?` · до ${new Date(liveOpsRunEventClient.endsAt*1000).toLocaleString(&quot;ru-RU&quot;,{day:&quot;2-digit&quot;,month:&quot;2-digit&quot;,hour:&quot;2-digit&quot;,minute:&quot;2-digit&quot;})}`:&quot;&quot;;liveOpsRunMetaEl.textContent=[liveOpsRunEventClient.notice,parts.join(&quot; · &quot;)].filter(Boolean).join(&quot; · &quot;)+until;}
+        if(liveOpsRunBannerEl)liveOpsRunBannerEl.hidden=!liveOpsRunEventClient.active;
+        if(liveOpsRunEventClient.active){
+          const parts=[];const lm=liveOpsRunEventClient.multipliers;if(lm.pointsMultiplier&gt;1)parts.push(`очки ×${lm.pointsMultiplier}`);if(lm.treatsMultiplier&gt;1)parts.push(`зефир ×${lm.treatsMultiplier}`);if(lm.coffeeMultiplier&gt;1)parts.push(`кофе ×${lm.coffeeMultiplier}`);
+          if(liveOpsRunTitleEl)liveOpsRunTitleEl.textContent=liveOpsRunEventClient.title;
+          if(liveOpsRunMetaEl){const until=liveOpsRunEventClient.endsAt?` · до ${new Date(liveOpsRunEventClient.endsAt*1000).toLocaleString(&quot;ru-RU&quot;,{day:&quot;2-digit&quot;,month:&quot;2-digit&quot;,hour:&quot;2-digit&quot;,minute:&quot;2-digit&quot;})}`:&quot;&quot;;liveOpsRunMetaEl.textContent=[liveOpsRunEventClient.notice,parts.join(&quot; · &quot;)].filter(Boolean).join(&quot; · &quot;)+until;}
+        }
+        renderProfileSpotlight();
       }
 
       function newcomerCtaLabel(type) { return ({game:&quot;В игру&quot;,album:&quot;Открыть Альбом&quot;,referrals:&quot;Друзья кафе&quot;,mail:&quot;Открыть Почту&quot;,profile:&quot;Профиль&quot;})[String(type||&quot;&quot;)]||&quot;Продолжить&quot;; }
@@ -17336,7 +17423,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         if(value===&quot;mail&quot;){openMailFromProfile();return;}
         switchScreen(value===&quot;profile&quot;?&quot;profile&quot;:&quot;game&quot;);
       }
-      function applyNewcomerPath(value) { const source=value&amp;&amp;typeof value===&quot;object&quot;?value:{};newcomerPathClientState={available:source.available===true,completed:source.completed===true,dayNumber:Math.max(0,Number(source.dayNumber||0)),runs:Math.max(0,Number(source.runs||0)),steps:Array.isArray(source.steps)?source.steps:[]};renderNewcomerPath(); }
+      function applyNewcomerPath(value) { const source=value&amp;&amp;typeof value===&quot;object&quot;?value:{};newcomerPathClientState={available:source.available===true,completed:source.completed===true,dayNumber:Math.max(0,Number(source.dayNumber||0)),runs:Math.max(0,Number(source.runs||0)),steps:Array.isArray(source.steps)?source.steps:[]};renderNewcomerPath();renderProfileSpotlight(); }
       function renderNewcomerPath() {
         if(!newcomerSectionEl||!newcomerListEl)return;const data=newcomerPathClientState,visible=data.available&amp;&amp;data.steps.length&gt;0;newcomerSectionEl.hidden=!visible;if(!visible){newcomerListEl.innerHTML=&quot;&quot;;return;}
         if(newcomerSubtitleEl)newcomerSubtitleEl.textContent=`Сегодня день ${Math.max(1,data.dayNumber)} · подтверждённых забегов: ${formatter.format(data.runs)}`;
@@ -17350,10 +17437,11 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       }
 
       function renderFriendCoopProfile() {
-        if(!friendCoopProfileEl)return;const config=friendCoopClientState?.config||{},partners=Array.isArray(friendCoopClientState?.partners)?friendCoopClientState.partners:[];if(friendCoopSectionEl)friendCoopSectionEl.hidden=!config.enabled;friendCoopProfileEl.hidden=!config.enabled;if(!config.enabled)return;
+        if(!friendCoopProfileEl){renderProfileSpotlight();return;}const config=friendCoopClientState?.config||{},partners=Array.isArray(friendCoopClientState?.partners)?friendCoopClientState.partners:[];if(friendCoopSectionEl)friendCoopSectionEl.hidden=!config.enabled;friendCoopProfileEl.hidden=!config.enabled;if(!config.enabled){renderProfileSpotlight();return;}
         const partner=partners[0]||null;if(friendCoopTitleEl)friendCoopTitleEl.textContent=config.title||&quot;Совместное задание&quot;;if(friendCoopDescriptionEl)friendCoopDescriptionEl.textContent=partner?`${partner.displayName||&quot;Друг&quot;} · ${config.description||&quot;Выполняйте цель вместе.&quot;}`:(config.active?&quot;Нужен активный друг из «Друзья кафе».&quot;:&quot;Задание сейчас вне активного окна.&quot;);if(friendCoopRewardEl)friendCoopRewardEl.textContent=`🎁 ${config.rewardLabel||clientRewardShortLabel(config.reward)}`;
         const progress=Math.max(0,Number(partner?.progress||0)),target=Math.max(1,Number(config.target||1)),percent=Math.max(0,Math.min(100,progress/target*100));if(friendCoopFillEl)friendCoopFillEl.style.width=`${percent}%`;if(friendCoopMetaEl)friendCoopMetaEl.textContent=partner?`${formatter.format(progress)} / ${formatter.format(target)}${partners.length&gt;1?` · ещё друзей: ${partners.length-1}`:&quot;&quot;}`:&quot;Открой «Друзья кафе» и пригласи друга&quot;;
         if(friendCoopActionEl){friendCoopActionEl.hidden=false;friendCoopActionEl.disabled=false;if(!partner){friendCoopActionEl.textContent=&quot;К друзьям&quot;;friendCoopActionEl.dataset.partnerId=&quot;&quot;;}else if(partner.claimed){friendCoopActionEl.textContent=&quot;✓ Получено&quot;;friendCoopActionEl.disabled=true;friendCoopActionEl.dataset.partnerId=partner.telegramId;}else if(partner.completed&amp;&amp;config.active){friendCoopActionEl.textContent=&quot;Получить&quot;;friendCoopActionEl.dataset.partnerId=partner.telegramId;}else{friendCoopActionEl.textContent=&quot;Открыть друзей&quot;;friendCoopActionEl.dataset.partnerId=&quot;&quot;;}}
+        renderProfileSpotlight();
       }
       async function loadFriendCoopState(force=false) {
         if(!telegramProfile?.initData){friendCoopClientState={config:null,partners:[]};renderFriendCoopProfile();return false;}if(friendCoopLoading)return false;if(!force&amp;&amp;friendCoopLoadedAt&amp;&amp;Date.now()-friendCoopLoadedAt&lt;30000){renderFriendCoopProfile();return true;}friendCoopLoading=true;
@@ -21902,6 +21990,21 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       if (playerMailLayerEl) playerMailLayerEl.addEventListener(&quot;click&quot;,(event)=&gt;{if(event.target===playerMailLayerEl)closePlayerMail();});
       if (profileMailOpenEl) profileMailOpenEl.addEventListener(&quot;click&quot;, openMailFromProfile);
       if (friendCoopActionEl) friendCoopActionEl.addEventListener(&quot;click&quot;,()=&gt;void claimFriendCoopClient(String(friendCoopActionEl.dataset.partnerId||&quot;&quot;),friendCoopActionEl));
+      if (profileSpotlightActionEl) profileSpotlightActionEl.addEventListener(&quot;click&quot;,() =&gt; {
+        const type=String(profileSpotlightActionEl.dataset.spotlightType||&quot;&quot;);
+        if(type===&quot;season&quot;){root.querySelector(&quot;.profile-v2-quick[data-battle-pass-open]&quot;)?.click();return;}
+        if(type===&quot;friend&quot;){
+          if(profileSpotlightActionEl.dataset.spotlightClaimable===&quot;1&quot;&amp;&amp;friendCoopActionEl){friendCoopActionEl.click();return;}
+          root.querySelector(&quot;.profile-v2-quick[data-referrals-open]&quot;)?.click();return;
+        }
+        if(type===&quot;newcomer&quot;){
+          const stepDay=Math.max(0,Number(profileSpotlightActionEl.dataset.spotlightStepDay||0));
+          const claimButton=stepDay?newcomerListEl?.querySelector(`[data-newcomer-claim=&quot;${stepDay}&quot;]`):null;
+          if(claimButton){claimButton.click();return;}
+          openNewcomerCta(profileSpotlightActionEl.dataset.spotlightCtaType||&quot;game&quot;);return;
+        }
+        if(type===&quot;liveops&quot;)switchScreen(&quot;game&quot;);
+      });
       if (playerGiftInboxMoreEl) playerGiftInboxMoreEl.addEventListener(&quot;click&quot;, () =&gt; {
         playerGiftInboxExpanded = !playerGiftInboxExpanded;
         renderPlayerGiftInbox();
@@ -23158,8 +23261,9 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 #zefirok-maltipoo-runner .profile-shell{gap:9px;padding:2px 0 9px;border:0;border-radius:0;background:transparent;box-shadow:none}
 #zefirok-maltipoo-runner .profile-shell&gt;.profile-hero{order:0}
 #zefirok-maltipoo-runner .profile-v2-quickbar{order:5}
-#zefirok-maltipoo-runner .profile-section--newcomer{order:10}
-#zefirok-maltipoo-runner .profile-section--referrals{order:11}
+#zefirok-maltipoo-runner .profile-v2-spotlight{order:10}
+#zefirok-maltipoo-runner .profile-section--newcomer{order:11}
+#zefirok-maltipoo-runner .profile-section--referrals{order:12}
 #zefirok-maltipoo-runner .profile-section--progress{order:20}
 #zefirok-maltipoo-runner .profile-section--cases{order:30}
 #zefirok-maltipoo-runner .profile-section--settings{order:40}
@@ -23194,11 +23298,23 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 
 #zefirok-maltipoo-runner .profile-section{gap:10px;padding:13px;border:1px solid rgba(228,194,204,.42);border-radius:22px;background:rgba(255,255,255,.88);box-shadow:0 8px 22px rgba(106,64,78,.045)}
 #zefirok-maltipoo-runner .profile-section h3{font-size:15px;letter-spacing:-.015em}
-#zefirok-maltipoo-runner .profile-section--newcomer[hidden],#zefirok-maltipoo-runner .profile-section--referrals[hidden]{display:none!important}
-#zefirok-maltipoo-runner .profile-section--newcomer,#zefirok-maltipoo-runner .profile-section--referrals{border-color:rgba(221,166,85,.26);background:linear-gradient(145deg,#fffaf0,#fff7f8)}
-#zefirok-maltipoo-runner .profile-section--newcomer::before,#zefirok-maltipoo-runner .profile-section--referrals::before{content:&quot;Актуально сейчас&quot;;display:block;color:#a06b36;font-size:8px;font-weight:950;letter-spacing:.08em;text-transform:uppercase}
-#zefirok-maltipoo-runner .profile-section--referrals&gt;.profile-section-head,#zefirok-maltipoo-runner .profile-section--referrals&gt;.referrals-profile-card{display:none!important}
-#zefirok-maltipoo-runner .profile-section--referrals .friend-coop-profile-card{margin:0;border-radius:18px;box-shadow:none}
+#zefirok-maltipoo-runner .profile-section--newcomer,#zefirok-maltipoo-runner .profile-section--referrals{display:none!important}
+
+#zefirok-maltipoo-runner .profile-v2-spotlight[hidden]{display:none!important}
+#zefirok-maltipoo-runner .profile-v2-spotlight-card{position:relative;width:100%;display:grid;grid-template-columns:42px minmax(0,1fr) auto;gap:9px;align-items:center;padding:11px 12px 12px;border:1px solid rgba(207,158,224,.46);border-radius:21px;background:radial-gradient(circle at 92% 12%,rgba(245,211,255,.55),transparent 34%),linear-gradient(145deg,#fffaff,#fff5f8 62%,#fff8df);color:#684653;box-shadow:0 9px 24px rgba(106,64,96,.07);font:inherit;text-align:left;-webkit-tap-highlight-color:transparent}
+#zefirok-maltipoo-runner .profile-v2-spotlight-card:active{transform:translateY(1px)}
+#zefirok-maltipoo-runner .profile-v2-spotlight-kicker{grid-column:1/-1;justify-self:start;margin-bottom:1px;padding:4px 7px;border-radius:999px;background:linear-gradient(135deg,#a86ed5,#d76f9c);color:#fff;font-size:7px;font-weight:950;line-height:1;letter-spacing:.045em;text-transform:uppercase}
+#zefirok-maltipoo-runner .profile-v2-spotlight-icon{display:grid;place-items:center;width:42px;height:42px;border-radius:14px;background:rgba(255,255,255,.82);box-shadow:inset 0 0 0 1px rgba(206,164,220,.22);font-size:21px}
+#zefirok-maltipoo-runner .profile-v2-spotlight-copy{display:block;min-width:0}
+#zefirok-maltipoo-runner .profile-v2-spotlight-copy&gt;strong{display:block;color:#664250;font-size:11px;font-weight:950;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#zefirok-maltipoo-runner .profile-v2-spotlight-copy&gt;small{display:block;margin-top:3px;color:#987681;font-size:8px;font-weight:780;line-height:1.3}
+#zefirok-maltipoo-runner .profile-v2-spotlight-progress{display:block;height:6px;margin-top:7px;overflow:hidden;border-radius:999px;background:#ecdfe7}
+#zefirok-maltipoo-runner .profile-v2-spotlight-progress[hidden]{display:none!important}
+#zefirok-maltipoo-runner .profile-v2-spotlight-progress i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#d878b0,#bd75dc);transition:width .2s ease}
+#zefirok-maltipoo-runner .profile-v2-spotlight-meta[hidden]{display:none!important}
+#zefirok-maltipoo-runner .profile-v2-spotlight-cta{align-self:center;min-width:58px;padding:7px 9px;border-radius:12px;background:rgba(255,255,255,.86);box-shadow:inset 0 0 0 1px rgba(207,153,178,.26);color:#a24e71;font-size:8px;font-weight:950;text-align:center;white-space:nowrap}
+#zefirok-maltipoo-runner .profile-v2-spotlight[data-spotlight-type=&quot;season&quot;] .profile-v2-spotlight-card{border-color:rgba(229,177,73,.48);background:radial-gradient(circle at 92% 12%,rgba(255,221,132,.48),transparent 34%),linear-gradient(145deg,#fffdf7,#fff6ec)}
+#zefirok-maltipoo-runner .profile-v2-spotlight[data-spotlight-type=&quot;liveops&quot;] .profile-v2-spotlight-card{border-color:rgba(146,205,173,.42);background:radial-gradient(circle at 92% 12%,rgba(204,240,216,.58),transparent 34%),linear-gradient(145deg,#fbfffc,#f3fbf5)}
 
 #zefirok-maltipoo-runner .profile-section--battle-pass,#zefirok-maltipoo-runner .profile-section--leaderboard{display:none!important}
 
@@ -23249,6 +23365,9 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
   #zefirok-maltipoo-runner .profile-v2-quickbar{gap:6px}
   #zefirok-maltipoo-runner .profile-v2-quick{min-height:64px;grid-template-columns:34px minmax(0,1fr) auto;gap:7px;padding:8px 9px;border-radius:16px}
   #zefirok-maltipoo-runner .profile-v2-quick-icon{width:34px;height:34px;border-radius:11px;font-size:17px}
+  #zefirok-maltipoo-runner .profile-v2-spotlight-card{grid-template-columns:38px minmax(0,1fr) auto;gap:7px;padding:10px}
+  #zefirok-maltipoo-runner .profile-v2-spotlight-icon{width:38px;height:38px;border-radius:12px;font-size:19px}
+  #zefirok-maltipoo-runner .profile-v2-spotlight-cta{min-width:52px;padding:7px 8px}
   #zefirok-maltipoo-runner .profile-section{border-radius:20px}
   #zefirok-maltipoo-runner .profile-section--progress .profile-stats{gap:5px}
   #zefirok-maltipoo-runner .profile-section--progress .profile-stat{padding:8px 5px}
