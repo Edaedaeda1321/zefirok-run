@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "catalogHash": "990ca8d7aa90422f",
-  "count": 404,
+  "catalogHash": "6513341bbefd4312",
+  "count": 408,
   "images": [
     {
       "fileName": "achievements/badges/album-complete-1.png",
@@ -3180,6 +3180,22 @@
       "modified": 1786903690000
     },
     {
+      "fileName": "ui/icon_documents.png",
+      "label": "Icon documents",
+      "folder": "ui",
+      "path": "/assets/ui/icon_documents.png",
+      "size": 136185,
+      "modified": 1787698022000
+    },
+    {
+      "fileName": "ui/icon_o_profile.png",
+      "label": "Icon o profile",
+      "folder": "ui",
+      "path": "/assets/ui/icon_o_profile.png",
+      "size": 153631,
+      "modified": 1787698023000
+    },
+    {
       "fileName": "ui/icon_referals.png",
       "label": "Icon referals",
       "folder": "ui",
@@ -3194,6 +3210,22 @@
       "path": "/assets/ui/icon_score_acivment.png",
       "size": 1753543,
       "modified": 1787680456000
+    },
+    {
+      "fileName": "ui/icon_sepport.png",
+      "label": "Icon sepport",
+      "folder": "ui",
+      "path": "/assets/ui/icon_sepport.png",
+      "size": 197716,
+      "modified": 1787698022000
+    },
+    {
+      "fileName": "ui/icon_setting_FAQ.png",
+      "label": "Icon setting FAQ",
+      "folder": "ui",
+      "path": "/assets/ui/icon_setting_FAQ.png",
+      "size": 163550,
+      "modified": 1787698022000
     },
     {
       "fileName": "ui/icon_shopping.png",
