@@ -1,8 +1,32 @@
 {
   "version": 1,
-  "catalogHash": "09522dae63933ca6",
-  "count": 385,
+  "catalogHash": "990ca8d7aa90422f",
+  "count": 404,
   "images": [
+    {
+      "fileName": "achievements/badges/album-complete-1.png",
+      "label": "Album complete 1",
+      "folder": "achievements/badges",
+      "path": "/assets/achievements/badges/album-complete-1.png",
+      "size": 2339866,
+      "modified": 1787693350000
+    },
+    {
+      "fileName": "achievements/badges/album-milestone-1.png",
+      "label": "Album milestone 1",
+      "folder": "achievements/badges",
+      "path": "/assets/achievements/badges/album-milestone-1.png",
+      "size": 2182823,
+      "modified": 1787693350000
+    },
+    {
+      "fileName": "achievements/badges/avatar-1.png",
+      "label": "Avatar 1",
+      "folder": "achievements/badges",
+      "path": "/assets/achievements/badges/avatar-1.png",
+      "size": 1778237,
+      "modified": 1787693350000
+    },
     {
       "fileName": "achievements/badges/best-score-1000.png",
       "label": "Best score 1000",
@@ -10,6 +34,14 @@
       "path": "/assets/achievements/badges/best-score-1000.png",
       "size": 2045958,
       "modified": 1787687934000
+    },
+    {
+      "fileName": "achievements/badges/best-score-10000.png",
+      "label": "Best score 10000",
+      "folder": "achievements/badges",
+      "path": "/assets/achievements/badges/best-score-10000.png",
+      "size": 2275743,
+      "modified": 1787693350000
     },
     {
       "fileName": "achievements/badges/best-score-2500.png",
@@ -28,12 +60,36 @@
       "modified": 1787687934000
     },
     {
+      "fileName": "achievements/badges/case-open-1.png",
+      "label": "Case open 1",
+      "folder": "achievements/badges",
+      "path": "/assets/achievements/badges/case-open-1.png",
+      "size": 2073635,
+      "modified": 1787693350000
+    },
+    {
+      "fileName": "achievements/badges/case-open-10.png",
+      "label": "Case open 10",
+      "folder": "achievements/badges",
+      "path": "/assets/achievements/badges/case-open-10.png",
+      "size": 2148367,
+      "modified": 1787693350000
+    },
+    {
       "fileName": "achievements/badges/first-run.png",
       "label": "First run",
       "folder": "achievements/badges",
       "path": "/assets/achievements/badges/first-run.png",
       "size": 1814092,
       "modified": 1787687934000
+    },
+    {
+      "fileName": "achievements/badges/frame-1.png",
+      "label": "Frame 1",
+      "folder": "achievements/badges",
+      "path": "/assets/achievements/badges/frame-1.png",
+      "size": 1708347,
+      "modified": 1787693350000
     },
     {
       "fileName": "achievements/badges/level-10.png",
@@ -44,12 +100,52 @@
       "modified": 1787687934000
     },
     {
+      "fileName": "achievements/badges/level-25.png",
+      "label": "Level 25",
+      "folder": "achievements/badges",
+      "path": "/assets/achievements/badges/level-25.png",
+      "size": 2182149,
+      "modified": 1787693350000
+    },
+    {
       "fileName": "achievements/badges/level-5.png",
       "label": "Level 5",
       "folder": "achievements/badges",
       "path": "/assets/achievements/badges/level-5.png",
       "size": 1537758,
       "modified": 1787687934000
+    },
+    {
+      "fileName": "achievements/badges/level-50.png",
+      "label": "Level 50",
+      "folder": "achievements/badges",
+      "path": "/assets/achievements/badges/level-50.png",
+      "size": 2309172,
+      "modified": 1787693350000
+    },
+    {
+      "fileName": "achievements/badges/music-2.png",
+      "label": "Music 2",
+      "folder": "achievements/badges",
+      "path": "/assets/achievements/badges/music-2.png",
+      "size": 1759643,
+      "modified": 1787693350000
+    },
+    {
+      "fileName": "achievements/badges/referral-1.png",
+      "label": "Referral 1",
+      "folder": "achievements/badges",
+      "path": "/assets/achievements/badges/referral-1.png",
+      "size": 2082974,
+      "modified": 1787693350000
+    },
+    {
+      "fileName": "achievements/badges/referral-5.png",
+      "label": "Referral 5",
+      "folder": "achievements/badges",
+      "path": "/assets/achievements/badges/referral-5.png",
+      "size": 2313330,
+      "modified": 1787693350000
     },
     {
       "fileName": "achievements/badges/run-coffee-25.png",
@@ -84,6 +180,14 @@
       "modified": 1787687934000
     },
     {
+      "fileName": "achievements/badges/runs-1000.png",
+      "label": "Runs 1000",
+      "folder": "achievements/badges",
+      "path": "/assets/achievements/badges/runs-1000.png",
+      "size": 2244841,
+      "modified": 1787693350000
+    },
+    {
       "fileName": "achievements/badges/runs-250.png",
       "label": "Runs 250",
       "folder": "achievements/badges",
@@ -100,12 +204,60 @@
       "modified": 1787687934000
     },
     {
+      "fileName": "achievements/badges/season-belkino-complete.png",
+      "label": "Season belkino complete",
+      "folder": "achievements/badges",
+      "path": "/assets/achievements/badges/season-belkino-complete.png",
+      "size": 2414414,
+      "modified": 1787693350000
+    },
+    {
+      "fileName": "achievements/badges/season-belkino-joined.png",
+      "label": "Season belkino joined",
+      "folder": "achievements/badges",
+      "path": "/assets/achievements/badges/season-belkino-joined.png",
+      "size": 2276270,
+      "modified": 1787693350000
+    },
+    {
+      "fileName": "achievements/badges/season-reward-1.png",
+      "label": "Season reward 1",
+      "folder": "achievements/badges",
+      "path": "/assets/achievements/badges/season-reward-1.png",
+      "size": 2090313,
+      "modified": 1787693350000
+    },
+    {
+      "fileName": "achievements/badges/season-reward-10.png",
+      "label": "Season reward 10",
+      "folder": "achievements/badges",
+      "path": "/assets/achievements/badges/season-reward-10.png",
+      "size": 2131644,
+      "modified": 1787693350000
+    },
+    {
+      "fileName": "achievements/badges/secret-locked.png",
+      "label": "Secret locked",
+      "folder": "achievements/badges",
+      "path": "/assets/achievements/badges/secret-locked.png",
+      "size": 1882470,
+      "modified": 1787693350000
+    },
+    {
       "fileName": "achievements/badges/total-score-5000.png",
       "label": "Total score 5000",
       "folder": "achievements/badges",
       "path": "/assets/achievements/badges/total-score-5000.png",
       "size": 2430730,
       "modified": 1787687934000
+    },
+    {
+      "fileName": "achievements/badges/trail-1.png",
+      "label": "Trail 1",
+      "folder": "achievements/badges",
+      "path": "/assets/achievements/badges/trail-1.png",
+      "size": 1775516,
+      "modified": 1787693350000
     },
     {
       "fileName": "albom_all/alex_albom_oblozka.png",
