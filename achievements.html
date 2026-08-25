@@ -53,7 +53,7 @@
     .hero h1{position:relative;z-index:1;margin:10px 0 5px;color:#64384a;font-size:26px;line-height:1.08;font-weight:950}
     .hero p{position:relative;z-index:1;margin:0;max-width:560px;color:#92717f;font-size:12px;line-height:1.55;font-weight:650}
 
-    .summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+    .summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
     .summary-card{min-width:0;padding:12px 10px;border:1px solid var(--line-soft);border-radius:19px;background:rgba(255,255,255,.82);box-shadow:0 8px 22px rgba(102,64,79,.055);display:grid;gap:3px}
     .summary-card span{color:#9a7b87;font-size:9px;font-weight:800;line-height:1.2}
     .summary-card strong{color:#653d4e;font-size:18px;font-weight:950;line-height:1}
@@ -78,7 +78,7 @@
 
     .achievement-list{display:grid;gap:9px}
     .achievement-card{display:grid;grid-template-columns:54px minmax(0,1fr);gap:11px;align-items:center;padding:12px;border:1px solid var(--line-soft);border-radius:20px;background:#fff}
-    .achievement-card.is-earned{background:linear-gradient(145deg,#fffdf6,#fff8e9);border-color:rgba(232,188,99,.58)}
+    .achievement-card.is-earned{background:linear-gradient(145deg,#fffdf3,#fff0c9);border-color:rgba(226,174,67,.68);box-shadow:0 9px 24px rgba(205,150,45,.10)}
     .achievement-icon{width:54px;height:54px;border-radius:18px;display:grid;place-items:center;background:linear-gradient(145deg,#fff2da,#ffe8f1);font-size:25px;box-shadow:0 7px 18px rgba(145,94,111,.08)}
     .achievement-copy{min-width:0;display:grid;gap:5px}
     .achievement-title-row{display:flex;align-items:center;justify-content:space-between;gap:8px}
@@ -90,6 +90,25 @@
     .achievement-track{height:7px;border-radius:999px;overflow:hidden;background:#f3e5ea}
     .achievement-track i{display:block;width:0;height:100%;border-radius:inherit;background:linear-gradient(90deg,#ef84ab,#d95d90)}
     .achievement-progress small{display:flex;justify-content:space-between;gap:8px;color:#a0858f;font-size:8px;font-weight:800}
+    .achievement-reward-row{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-top:2px}
+    .achievement-meta{display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+    .achievement-rarity,.achievement-points{display:inline-flex;align-items:center;gap:4px;min-height:22px;padding:4px 7px;border-radius:999px;font-size:7px;font-weight:950;line-height:1}
+    .achievement-rarity{border:1px solid rgba(219,185,197,.7);background:#fff7fa;color:#936b7a}
+    .achievement-rarity[data-rarity="rare"]{border-color:rgba(97,168,218,.38);background:#edf8ff;color:#487da1}
+    .achievement-rarity[data-rarity="epic"]{border-color:rgba(166,114,214,.35);background:#f7efff;color:#8052aa}
+    .achievement-rarity[data-rarity="legendary"]{border-color:rgba(218,163,51,.46);background:#fff4ce;color:#8d6119}
+    .achievement-rarity[data-rarity="legacy"]{border-color:rgba(211,109,142,.40);background:#fff0f5;color:#9f4767}
+    .achievement-points{border:1px solid rgba(218,163,51,.38);background:#fff8df;color:#8e631f}
+    .achievement-reward{display:inline-flex;align-items:center;gap:6px;min-height:30px;padding:5px 8px;border:1px solid rgba(226,191,118,.58);border-radius:12px;background:rgba(255,249,229,.92);color:#8d6520;font-size:8px;font-weight:950}
+    .achievement-reward img{width:24px;height:24px;flex:0 0 auto;border-radius:8px;object-fit:cover;background:#fff;box-shadow:0 2px 6px rgba(125,83,24,.10)}
+    .achievement-claim{appearance:none;min-height:32px;padding:0 12px;border:0;border-radius:11px;background:linear-gradient(180deg,#e8ad3d,#ce8520);color:#fff;font-size:9px;font-weight:950;box-shadow:0 7px 15px rgba(184,119,27,.18);cursor:pointer}
+    .achievement-claim:disabled{cursor:default;opacity:.62;box-shadow:none}
+    .achievement-claim.is-retry{background:linear-gradient(180deg,#d77b93,#b95070)}
+    .achievement-delivery-note{color:#987a60;font-size:8px;font-weight:800}
+    .achievement-actions{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-left:auto}
+    .achievement-showcase{appearance:none;min-height:32px;padding:0 10px;border:1px solid rgba(214,163,61,.56);border-radius:11px;background:rgba(255,255,255,.82);color:#94631d;font-size:9px;font-weight:950;cursor:pointer}
+    .achievement-showcase.is-selected{border-color:#d39b2b;background:linear-gradient(180deg,#fff4bc,#ffe59b);color:#80520d;box-shadow:0 6px 13px rgba(187,131,27,.13)}
+    .achievement-showcase:disabled{cursor:default;opacity:.48;box-shadow:none}
 
     .empty{display:grid;justify-items:center;gap:8px;padding:25px 17px;border:1px dashed rgba(226,172,193,.9);border-radius:21px;background:linear-gradient(180deg,rgba(255,249,251,.94),rgba(255,253,249,.94));text-align:center}
     .empty-icon{width:58px;height:58px;display:grid;place-items:center;border-radius:19px;background:linear-gradient(145deg,#fff1cf,#ffe8f1);font-size:27px;box-shadow:0 10px 20px rgba(213,167,89,.13)}
@@ -125,13 +144,14 @@
     <section class="hero" aria-labelledby="achievements-title">
       <span class="hero-kicker">🏅 Коллекция достижений</span>
       <h1 id="achievements-title">Достижения</h1>
-      <p>Здесь будут храниться игровые трофеи, особые рекорды, сезонные результаты и завершённые коллекции. Лучшие из них позже можно будет закрепить в «Моей витрине».</p>
+      <p>Это история и статус твоего аккаунта. Простые достижения могут открыть тематическую аватарку, а сложные становятся престижными трофеями для «Моей витрины».</p>
     </section>
 
     <section class="summary" aria-label="Сводка достижений">
-      <div class="summary-card"><span>Открыто</span><strong data-summary-earned>0</strong></div>
-      <div class="summary-card"><span>Всего</span><strong data-summary-total>0</strong></div>
+      <div class="summary-card"><span>Выполнено</span><strong data-summary-earned>0</strong></div>
+      <div class="summary-card"><span>Очки достижений</span><strong data-summary-points>🏆 0</strong></div>
       <div class="summary-card is-showcase"><span>В витрине</span><strong data-summary-showcase>0 / 3</strong></div>
+      <div class="summary-card"><span>Всего</span><strong data-summary-total>0</strong></div>
     </section>
 
     <section class="filters-card" aria-labelledby="achievement-filters-title">
@@ -150,16 +170,16 @@
       <div class="empty" data-achievement-empty>
         <span class="empty-icon" aria-hidden="true">🏆</span>
         <strong data-empty-title>Каталог пока пуст</strong>
-        <span data-empty-copy>Структура страницы уже готова. Сами достижения добавим отдельным следующим этапом.</span>
+        <span data-empty-copy>Считаем прогресс по фактическим данным аккаунта.</span>
       </div>
     </section>
 
-    <div class="info"><b aria-hidden="true">✨</b><span>На этом этапе страница не начисляет награды и не меняет прогресс игрока. Достижения и их условия будут подключаться отдельно.</span></div>
+    <div class="info"><b aria-hidden="true">🏆</b><span data-system-info>Очки достижений — это престиж, а не валюта: их нельзя потратить, они начисляются автоматически за выполненные цели. Кнопка «Забрать» появляется только у специальных аватарок-наград.</span></div>
   </main>
 
   <script>
     (() => {
-      const tg = window.Telegram?.WebApp || null;
+      const tg = resolveTelegramWebApp();
 
       const CATEGORIES = Object.freeze([
         { id: 'all', label: 'Все', title: 'Все достижения', subtitle: 'Полный каталог игровых трофеев' },
@@ -167,13 +187,13 @@
         { id: 'progress', label: 'Прогресс', title: 'Прогресс', subtitle: 'Уровни и развитие профиля' },
         { id: 'collections', label: 'Коллекции', title: 'Коллекции', subtitle: 'Редкие находки и завершённые истории' },
         { id: 'seasons', label: 'Сезоны', title: 'Сезоны', subtitle: 'Особые результаты прошлых и текущих сезонов' },
-        { id: 'special', label: 'Особые', title: 'Особые', subtitle: 'Редкие события и памятные трофеи' }
+        { id: 'friends', label: 'Друзья', title: 'Друзья кафе', subtitle: 'Приглашения и развитие своей компании' }
       ]);
 
-      // Этап 1: каталог намеренно пуст. На следующем этапе сюда подключим
-      // реальные серверные определения и прогресс достижений.
-      const ACHIEVEMENTS = Object.freeze([]);
-      const SHOWCASE_IDS = Object.freeze([]);
+      let ACHIEVEMENTS = [];
+      let SHOWCASE_IDS = [];
+      let SHOWCASE_LIMIT = 3;
+      let ACHIEVEMENT_SUMMARY = {};
 
       const filtersEl = document.querySelector('[data-achievement-filters]');
       const listEl = document.querySelector('[data-achievement-list]');
@@ -184,13 +204,123 @@
       const catalogSubtitleEl = document.querySelector('[data-catalog-subtitle]');
       const catalogCountEl = document.querySelector('[data-catalog-count]');
       const summaryEarnedEl = document.querySelector('[data-summary-earned]');
-      const summaryTotalEl = document.querySelector('[data-summary-total]');
+      const summaryPointsEl = document.querySelector('[data-summary-points]');
       const summaryShowcaseEl = document.querySelector('[data-summary-showcase]');
+      const summaryTotalEl = document.querySelector('[data-summary-total]');
+      const systemInfoEl = document.querySelector('[data-system-info]');
+      const SYSTEM_INFO_DEFAULT = 'Очки достижений — престиж, а не валюта: они начисляются автоматически и не тратятся. Простые цели могут открыть специальную аватарку; сложные достижения сейчас остаются статусными трофеями.';
+      const claimingIds = new Set();
+      let showcaseSaving = false;
       let activeCategory = 'all';
+      let loading = true;
+      let loadError = '';
+      let systemMessage = '';
 
       function safeNumber(value) {
         const number = Number(value);
         return Number.isFinite(number) ? number : 0;
+      }
+
+      function escapeHtml(value) {
+        return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+          '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+        })[char]);
+      }
+
+      function resolveTelegramWebApp() {
+        try {
+          return window.Telegram?.WebApp
+            || (window.parent && window.parent !== window ? window.parent.Telegram?.WebApp : null)
+            || null;
+        } catch {
+          return window.Telegram?.WebApp || null;
+        }
+      }
+
+      function testProjectActive() {
+        try {
+          if (new URLSearchParams(window.location.search).get('test_project') === '1') return true;
+          if (window.parent && window.parent !== window) {
+            return new URLSearchParams(window.parent.location.search).get('test_project') === '1';
+          }
+        } catch {}
+        return false;
+      }
+
+      function currentInitData() {
+        const webApp = resolveTelegramWebApp();
+        return String(webApp?.initData || '');
+      }
+
+      function makeRequestId() {
+        try { return crypto.randomUUID(); } catch {}
+        return `achievement_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+      }
+
+      async function achievementsApiRequest(path, payload = {}) {
+        const headers = { 'Content-Type': 'application/json' };
+        const initData = currentInitData();
+        if (!initData && !testProjectActive()) throw new Error('Открой достижения из Telegram Mini App.');
+        const requestPayload = { ...payload, initData };
+        if (testProjectActive()) {
+          const response = await fetch('/api/owner/test-project/game', {
+            method: 'POST',
+            headers,
+            cache: 'no-store',
+            credentials: 'same-origin',
+            body: JSON.stringify({
+              initData,
+              ownerSession: localStorage.getItem('zefirok-owner-session-v1') || '',
+              path,
+              method: 'POST',
+              query: {},
+              payload: requestPayload
+            })
+          });
+          const envelope = await response.json().catch(() => ({}));
+          if (!response.ok || envelope?.ok === false) throw new Error(envelope?.error || 'Не удалось выполнить запрос достижений.');
+          const data = envelope?.data || envelope;
+          if (data?.ok === false) throw new Error(data.error || 'Не удалось выполнить запрос достижений.');
+          return data;
+        }
+        const response = await fetch(path, {
+          method: 'POST',
+          headers,
+          cache: 'no-store',
+          credentials: 'same-origin',
+          body: JSON.stringify(requestPayload)
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok || data?.ok === false) throw new Error(data?.error || 'Не удалось выполнить запрос достижений.');
+        return data;
+      }
+
+      function applyAchievementsState(state) {
+        ACHIEVEMENTS = Array.isArray(state?.achievements) ? state.achievements : [];
+        const ids = Array.isArray(state?.showcase?.ids) ? state.showcase.ids : ACHIEVEMENTS.filter((item) => item?.inShowcase).sort((a,b) => safeNumber(a.showcaseSlot) - safeNumber(b.showcaseSlot)).map((item) => item.id);
+        SHOWCASE_IDS = [...new Set(ids.map((id) => String(id || '')).filter(Boolean))].slice(0, 3);
+        SHOWCASE_LIMIT = Math.max(1, Math.min(3, Math.floor(safeNumber(state?.showcase?.limit) || 3)));
+        ACHIEVEMENT_SUMMARY = state?.summary && typeof state.summary === 'object' ? state.summary : {};
+      }
+
+      async function loadAchievements() {
+        loading = true;
+        loadError = '';
+        renderSummary();
+        renderCatalog();
+        try {
+          const data = await achievementsApiRequest('/api/achievements');
+          applyAchievementsState(data);
+        } catch (error) {
+          ACHIEVEMENTS = [];
+          SHOWCASE_IDS = [];
+          ACHIEVEMENT_SUMMARY = {};
+          loadError = String(error?.message || 'Не удалось загрузить достижения.');
+        } finally {
+          loading = false;
+          renderSummary();
+          renderCatalog();
+        }
       }
 
       function filteredAchievements() {
@@ -207,23 +337,72 @@
 
       function renderSummary() {
         const earned = ACHIEVEMENTS.filter((item) => item.earned === true).length;
+        const prestige = Math.max(0, safeNumber(ACHIEVEMENT_SUMMARY?.achievementPoints));
         if (summaryEarnedEl) summaryEarnedEl.textContent = String(earned);
+        if (summaryPointsEl) summaryPointsEl.textContent = `🏆 ${prestige}`;
+        if (summaryShowcaseEl) summaryShowcaseEl.textContent = `${SHOWCASE_IDS.length} / ${SHOWCASE_LIMIT}`;
         if (summaryTotalEl) summaryTotalEl.textContent = String(ACHIEVEMENTS.length);
-        if (summaryShowcaseEl) summaryShowcaseEl.textContent = `${Math.min(3, SHOWCASE_IDS.length)} / 3`;
+      }
+
+      function renderInfo() {
+        if (systemInfoEl) systemInfoEl.textContent = systemMessage || SYSTEM_INFO_DEFAULT;
       }
 
       function achievementCard(item) {
+        const id = String(item?.id || '');
         const target = Math.max(0, safeNumber(item.target));
         const current = Math.max(0, safeNumber(item.current));
         const percent = target > 0 ? Math.min(100, Math.round(current / target * 100)) : (item.earned ? 100 : 0);
-        const state = item.earned ? 'Получено' : (target > 0 ? 'В процессе' : 'Закрыто');
+        const claimStatus = String(item.claimStatus || (item.claimed ? 'claimed' : item.earned ? 'complete' : 'locked'));
+        const busy = claimingIds.has(id);
+        const hasReward = item?.hasReward === true || item?.reward?.hasReward === true;
+        const state = item.claimed
+          ? 'Получено'
+          : busy || claimStatus === 'pending'
+            ? 'Выдаём…'
+            : claimStatus === 'failed'
+              ? 'Нужна попытка'
+              : item.earned
+                ? 'Выполнено'
+                : (target > 0 ? 'В процессе' : 'Закрыто');
+        const rarity = String(item?.rarity || 'common');
+        const rarityLabel = String(item?.rarityLabel || 'Обычное');
+        const prestige = Math.max(0, safeNumber(item?.achievementPoints));
+        const rewardLabel = String(item?.reward?.label || '');
+        const rewardImage = String(item?.reward?.imageUrl || '');
+        const canClaim = hasReward && item.earned === true && item.claimed !== true && (item.claimable === true || claimStatus === 'ready' || claimStatus === 'failed');
+        const claimButton = canClaim
+          ? `<button class="achievement-claim${claimStatus === 'failed' ? ' is-retry' : ''}" type="button" data-claim-achievement="${escapeHtml(id)}"${busy ? ' disabled' : ''}>${busy ? 'Выдаём…' : claimStatus === 'failed' ? 'Повторить' : 'Забрать'}</button>`
+          : '';
+        const deliveryNote = hasReward && item.earned && !item.claimed && claimStatus === 'pending'
+          ? '<span class="achievement-delivery-note">Аватарка уже в очереди выдачи</span>'
+          : hasReward && item.claimed
+            ? '<span class="achievement-delivery-note">Аватарка уже получена</span>'
+            : item.earned && !hasReward
+              ? '<span class="achievement-delivery-note">Статусный трофей · без отдельного приза</span>'
+              : '';
+        const inShowcase = item.inShowcase === true || SHOWCASE_IDS.includes(id);
+        const showcaseEligible = item.earned === true && item.showcaseEligible !== false;
+        const showcaseLimitReached = !inShowcase && SHOWCASE_IDS.length >= SHOWCASE_LIMIT;
+        const showcaseButton = showcaseEligible
+          ? `<button class="achievement-showcase${inShowcase ? ' is-selected' : ''}" type="button" data-showcase-achievement="${escapeHtml(id)}"${showcaseSaving || showcaseLimitReached ? ' disabled' : ''}>${inShowcase ? '★ В витрине' : 'На витрину'}</button>`
+          : '';
+        const actions = claimButton || showcaseButton ? `<span class="achievement-actions">${claimButton}${showcaseButton}</span>` : '';
+        const rewardMarkup = hasReward && rewardLabel
+          ? `<span class="achievement-reward">${rewardImage ? `<img src="${escapeHtml(rewardImage)}" alt="">` : '<span aria-hidden="true">🎁</span>'}<span>${escapeHtml(rewardLabel)}</span></span>`
+          : '';
         return `
           <article class="achievement-card${item.earned ? ' is-earned' : ''}">
-            <div class="achievement-icon" aria-hidden="true">${item.icon || '🏅'}</div>
+            <div class="achievement-icon" aria-hidden="true">${escapeHtml(item.icon || '🏅')}</div>
             <div class="achievement-copy">
-              <div class="achievement-title-row"><strong>${item.title || 'Достижение'}</strong><span class="achievement-state${item.earned ? ' is-earned' : ''}">${state}</span></div>
-              <div class="achievement-description">${item.description || ''}</div>
+              <div class="achievement-title-row"><strong>${escapeHtml(item.title || 'Достижение')}</strong><span class="achievement-state${item.earned ? ' is-earned' : ''}">${state}</span></div>
+              <div class="achievement-meta"><span class="achievement-rarity" data-rarity="${escapeHtml(rarity)}">${escapeHtml(rarityLabel)}</span><span class="achievement-points">🏆 +${prestige}</span></div>
+              <div class="achievement-description">${escapeHtml(item.description || '')}</div>
               ${target > 0 ? `<div class="achievement-progress"><div class="achievement-track"><i style="width:${percent}%"></i></div><small><span>${current} / ${target}</span><span>${percent}%</span></small></div>` : ''}
+              <div class="achievement-reward-row">
+                ${rewardMarkup || deliveryNote}
+                ${actions}
+              </div>
             </div>
           </article>`;
       }
@@ -235,12 +414,89 @@
         if (catalogSubtitleEl) catalogSubtitleEl.textContent = category.subtitle;
         if (catalogCountEl) catalogCountEl.textContent = String(items.length);
         if (listEl) listEl.innerHTML = items.map(achievementCard).join('');
-        if (emptyEl) emptyEl.hidden = items.length > 0;
-        if (emptyTitleEl) emptyTitleEl.textContent = activeCategory === 'all' ? 'Каталог пока пуст' : `В категории «${category.label}» пока пусто`;
-        if (emptyCopyEl) emptyCopyEl.textContent = activeCategory === 'all'
-          ? 'Структура страницы уже готова. Сами достижения добавим отдельным следующим этапом.'
-          : 'Достижения этой категории добавим вместе с условиями и реальным прогрессом игрока.';
+        const showEmpty = loading || Boolean(loadError) || items.length === 0;
+        if (emptyEl) emptyEl.hidden = !showEmpty;
+        if (emptyTitleEl) emptyTitleEl.textContent = loading
+          ? 'Загружаем достижения'
+          : loadError
+            ? 'Не удалось загрузить достижения'
+            : (activeCategory === 'all' ? 'Достижений пока нет' : `В категории «${category.label}» пока пусто`);
+        if (emptyCopyEl) emptyCopyEl.textContent = loading
+          ? 'Считаем прогресс по фактическим данным аккаунта…'
+          : loadError
+            ? loadError
+            : 'Здесь появятся достижения, когда сервер вернёт доступные условия.';
       }
+
+      async function claimAchievement(achievementId) {
+        const id = String(achievementId || '');
+        const item = ACHIEVEMENTS.find((entry) => String(entry.id || '') === id);
+        if (!item || claimingIds.has(id) || item.claimed === true) return;
+        claimingIds.add(id);
+        systemMessage = '';
+        renderCatalog();
+        renderInfo();
+        try {
+          const data = await achievementsApiRequest('/api/achievements/claim', {
+            achievementId: id,
+            requestId: makeRequestId()
+          });
+          const state = data?.state || data;
+          if (Array.isArray(state?.achievements)) applyAchievementsState(state);
+          if (data?.pending) {
+            systemMessage = 'Награда зафиксирована и находится в очереди выдачи. Повторно она не начислится.';
+          } else {
+            const label = String(data?.reward?.label || item?.reward?.label || 'награда');
+            systemMessage = data?.repeated ? `Эта награда уже была получена: ${label}.` : `Получено: ${label}.`;
+            try { window.parent?.postMessage?.({ type: 'zefirok-achievements-account-updated' }, '*'); } catch {}
+          }
+        } catch (error) {
+          systemMessage = String(error?.message || 'Не удалось получить награду. Попробуй ещё раз.');
+        } finally {
+          claimingIds.delete(id);
+          renderSummary();
+          renderCatalog();
+          renderInfo();
+        }
+      }
+
+      async function toggleShowcase(achievementId) {
+        const id = String(achievementId || '');
+        const item = ACHIEVEMENTS.find((entry) => String(entry.id || '') === id);
+        if (!item || item.earned !== true || showcaseSaving) return;
+        const alreadySelected = SHOWCASE_IDS.includes(id);
+        if (!alreadySelected && SHOWCASE_IDS.length >= SHOWCASE_LIMIT) {
+          systemMessage = `В витрине уже ${SHOWCASE_LIMIT} достижения. Сначала убери одно из выбранных.`;
+          renderInfo();
+          return;
+        }
+        const nextIds = alreadySelected ? SHOWCASE_IDS.filter((entry) => entry !== id) : [...SHOWCASE_IDS, id];
+        showcaseSaving = true;
+        systemMessage = '';
+        renderCatalog();
+        renderInfo();
+        try {
+          const data = await achievementsApiRequest('/api/achievements/showcase', { ids: nextIds });
+          const state = data?.state || data;
+          applyAchievementsState(state);
+          systemMessage = alreadySelected ? 'Достижение убрано из «Моей витрины».' : `Достижение добавлено в «Мою витрину» (${SHOWCASE_IDS.length} / ${SHOWCASE_LIMIT}).`;
+          try { window.parent?.postMessage?.({ type: 'zefirok-achievements-account-updated' }, '*'); } catch {}
+        } catch (error) {
+          systemMessage = String(error?.message || 'Не удалось обновить витрину.');
+        } finally {
+          showcaseSaving = false;
+          renderSummary();
+          renderCatalog();
+          renderInfo();
+        }
+      }
+
+      listEl?.addEventListener('click', (event) => {
+        const claimButton = event.target?.closest?.('[data-claim-achievement]');
+        if (claimButton) { claimAchievement(String(claimButton.dataset.claimAchievement || '')); return; }
+        const showcaseButton = event.target?.closest?.('[data-showcase-achievement]');
+        if (showcaseButton) toggleShowcase(String(showcaseButton.dataset.showcaseAchievement || ''));
+      });
 
       function selectCategory(categoryId) {
         if (!CATEGORIES.some((item) => item.id === categoryId)) return;
@@ -302,6 +558,8 @@
       renderFilters();
       renderSummary();
       renderCatalog();
+      renderInfo();
+      loadAchievements();
     })();
   </script>
 </body>

@@ -1128,6 +1128,7 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
     const refresh = () => {
       try { target.postMessage({ type: "zefirok-open-screen", screen: "profile" }, "*"); } catch {}
       try { target.postMessage({ type: "zefirok-season-pass-account-updated" }, "*"); } catch {}
+      try { target.postMessage({ type: "zefirok-achievements-account-updated" }, "*"); } catch {}
       try { sendTelegramProfile(target); } catch {}
     };
     const restoreLayout = () => {
@@ -1236,8 +1237,8 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
     frame.title = "Достижения";
     frame.referrerPolicy = "same-origin";
     frame.src = initData
-      ? `/achievements.html?v=1.0.9-achievements2#tgInitData=${encodeURIComponent(initData)}`
-      : `/achievements.html?v=1.0.9-achievements2`;
+      ? `/achievements.html?v=1.0.9-achievements3#tgInitData=${encodeURIComponent(initData)}`
+      : `/achievements.html?v=1.0.9-achievements3`;
     layer.append(frame);
     frame.addEventListener("load", () => {
       const snapshot = syncTelegramViewport();
@@ -1670,6 +1671,8 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
       openAchievementsOverlay(initData);
     } else if (message.type === "zefirok-close-achievements") {
       closeAchievementsOverlay();
+    } else if (message.type === "zefirok-achievements-account-updated") {
+      try { frame()?.contentWindow?.postMessage?.({ type: "zefirok-achievements-account-updated" }, "*"); } catch {}
     } else if (message.type === "zefirok-open-battle-pass") {
       let initData = "";
       try {
@@ -10285,13 +10288,14 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 
   &lt;section class=&quot;profile-section profile-section--showcase&quot; aria-labelledby=&quot;profile-showcase-title&quot;&gt;
     &lt;div class=&quot;profile-section-head&quot;&gt;
-      &lt;div&gt;&lt;h3 id=&quot;profile-showcase-title&quot;&gt;Моя витрина&lt;/h3&gt;&lt;span&gt;Избранные трофеи, рекорды и коллекции для будущего показа в профиле.&lt;/span&gt;&lt;/div&gt;
+      &lt;div&gt;&lt;h3 id=&quot;profile-showcase-title&quot;&gt;Моя витрина&lt;/h3&gt;&lt;span&gt;До 3 выполненных достижений, которые видны в профиле и рейтинге.&lt;/span&gt;&lt;/div&gt;
       &lt;button class=&quot;profile-link-chip&quot; data-achievements-open type=&quot;button&quot;&gt;&lt;span aria-hidden=&quot;true&quot;&gt;🏅&lt;/span&gt;&lt;span&gt;Достижения&lt;/span&gt;&lt;b aria-hidden=&quot;true&quot;&gt;›&lt;/b&gt;&lt;/button&gt;
     &lt;/div&gt;
-    &lt;div class=&quot;profile-showcase-empty&quot;&gt;
+    &lt;div class=&quot;profile-achievement-prestige&quot; data-profile-achievement-points&gt;🏆 0 очков достижений&lt;/div&gt;
+    &lt;div class=&quot;profile-showcase-empty&quot; data-profile-achievement-showcase&gt;
       &lt;span class=&quot;profile-showcase-empty-icon&quot; aria-hidden=&quot;true&quot;&gt;🏆&lt;/span&gt;
-      &lt;strong&gt;Витрина подготовлена&lt;/strong&gt;
-      &lt;span&gt;Пока здесь пусто. На следующем шаге добавим достижения, лучшие сезонные результаты и завершённые коллекции, которые можно будет показать другим игрокам.&lt;/span&gt;
+      &lt;strong&gt;Витрина пока пустая&lt;/strong&gt;
+      &lt;span&gt;Выбери до 3 выполненных достижений — они появятся здесь и рядом с твоим именем в рейтинге.&lt;/span&gt;
       &lt;button class=&quot;profile-action profile-action--primary&quot; data-achievements-open type=&quot;button&quot;&gt;Открыть достижения&lt;/button&gt;
     &lt;/div&gt;
   &lt;/section&gt;
@@ -12972,6 +12976,16 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         marshmallow_cloud: { title: &quot;Зефирное облако&quot;, rarity: &quot;Эпическая&quot;, rarityClass: &quot;epic&quot;, src: &quot;/assets/cases/avatars/A34D0D9F-4BF6-4618-8E2B-3D4833CED067.PNG&quot; },
         pink_hearts: { title: &quot;Розовые сердечки&quot;, rarity: &quot;Эпическая&quot;, rarityClass: &quot;epic&quot;, src: &quot;/assets/cases/avatars/E74178F8-3156-4301-8559-D818D85404DA.PNG&quot; },
         sakura: { title: &quot;Сакура&quot;, rarity: &quot;Эпическая&quot;, rarityClass: &quot;epic&quot;, src: &quot;/assets/cases/avatars/F1680265-2EC6-4028-9FED-E26997442675.PNG&quot; },
+        achievement_avatar_score: { title: &quot;Звёздный счёт&quot;, rarity: &quot;Редкая&quot;, rarityClass: &quot;rare&quot;, achievementOnly: true, isNew: true, src: &quot;/assets/cases/avatars/achievements/achievement_score.png&quot; },
+        achievement_avatar_coffee: { title: &quot;Кофейный успех&quot;, rarity: &quot;Редкая&quot;, rarityClass: &quot;rare&quot;, achievementOnly: true, isNew: true, src: &quot;/assets/cases/avatars/achievements/achievement_coffee.png&quot; },
+        achievement_avatar_zefir: { title: &quot;Зефирная добыча&quot;, rarity: &quot;Редкая&quot;, rarityClass: &quot;rare&quot;, achievementOnly: true, isNew: true, src: &quot;/assets/cases/avatars/achievements/achievement_zefir.png&quot; },
+        achievement_avatar_runs: { title: &quot;Первый забег&quot;, rarity: &quot;Редкая&quot;, rarityClass: &quot;rare&quot;, achievementOnly: true, isNew: true, src: &quot;/assets/cases/avatars/achievements/achievement_runs.png&quot; },
+        achievement_avatar_records: { title: &quot;Рекордсмен&quot;, rarity: &quot;Редкая&quot;, rarityClass: &quot;rare&quot;, achievementOnly: true, isNew: true, src: &quot;/assets/cases/avatars/achievements/achievement_records.png&quot; },
+        achievement_avatar_paws: { title: &quot;Первые шаги&quot;, rarity: &quot;Редкая&quot;, rarityClass: &quot;rare&quot;, achievementOnly: true, isNew: true, src: &quot;/assets/cases/avatars/achievements/achievement_paws.png&quot; },
+        achievement_avatar_case: { title: &quot;Первый кейс&quot;, rarity: &quot;Редкая&quot;, rarityClass: &quot;rare&quot;, achievementOnly: true, isNew: true, src: &quot;/assets/cases/avatars/achievements/achievement_case.png&quot; },
+        achievement_avatar_music: { title: &quot;Музыкальный вкус&quot;, rarity: &quot;Редкая&quot;, rarityClass: &quot;rare&quot;, achievementOnly: true, isNew: true, src: &quot;/assets/cases/avatars/achievements/achievement_music.png&quot; },
+        achievement_avatar_friend: { title: &quot;Первый друг&quot;, rarity: &quot;Редкая&quot;, rarityClass: &quot;rare&quot;, achievementOnly: true, isNew: true, src: &quot;/assets/cases/avatars/achievements/achievement_friend.png&quot; },
+        achievement_avatar_albums: { title: &quot;Альбом Зеффи&quot;, rarity: &quot;Редкая&quot;, rarityClass: &quot;rare&quot;, achievementOnly: true, isNew: true, src: &quot;/assets/cases/avatars/achievements/achievement_albums.png&quot; },
         alex_avatar_1: { title: &quot;Алекс · Аватар I&quot;, rarity: &quot;Легендарная&quot;, rarityClass: &quot;legendary&quot;, legendaryOnly: true, alexOnly: true, isNew: true, src: &quot;/assets/cases/avatars/alex_avatar_1.png&quot; },
         alex_avatar_2: { title: &quot;Алекс · Аватар II&quot;, rarity: &quot;Легендарная&quot;, rarityClass: &quot;legendary&quot;, legendaryOnly: true, alexOnly: true, isNew: true, src: &quot;/assets/cases/avatars/alex_avatar_2.png&quot; }
       });
@@ -16784,6 +16798,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           isNew: override.isNew == null ? Boolean(item?.isNew) : Boolean(override.isNew),
           legendaryOnly: override.legendaryOnly == null ? Boolean(item?.legendaryOnly) : Boolean(override.legendaryOnly),
           alexOnly: override.alexOnly == null ? Boolean(item?.alexOnly) : Boolean(override.alexOnly),
+          achievementOnly: Boolean(item?.achievementOnly),
           src: String(isMusic ? (override.audioUrl || item?.src || &quot;&quot;) : (override.imageUrl || item?.src || &quot;&quot;)),
           imageUrl: String(override.imageUrl || item?.imageUrl || &quot;&quot;),
           audioUrl: String(override.audioUrl || item?.audioUrl || item?.src || &quot;&quot;),
@@ -16807,6 +16822,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           const base = catalog?.[id] || {};
           const item = caseLiveOpsItem(kind, id, base);
           const dynamic = !Object.prototype.hasOwnProperty.call(catalog || {}, id);
+          if (caseType &amp;&amp; item?.achievementOnly) continue;
           if (caseType &amp;&amp; dynamic &amp;&amp; (item.destinationType !== &quot;case&quot; || item.destinationId !== String(caseType))) continue;
           const sandboxHiddenVisible = Boolean(!caseType &amp;&amp; window.__TEST_PROJECT_SANDBOX__?.active &amp;&amp; item?.sandboxHidden);
           if (item.enabled === false &amp;&amp; !owned.has(id) &amp;&amp; !sandboxHiddenVisible) continue;
@@ -23239,32 +23255,45 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
   window.setTimeout(refreshReferralSummary,700);
 })();
 &lt;/script&gt;
-&lt;style id=&quot;zefirok-achievements-entry-v1-style&quot;&gt;
+&lt;style id=&quot;zefirok-achievements-entry-v4-style&quot;&gt;
 #zefirok-maltipoo-runner .profile-link-chip{display:inline-flex;align-items:center;justify-content:center;gap:6px;flex:0 0 auto;padding:9px 12px;border:1px solid rgba(230,176,196,.72);border-radius:999px;background:linear-gradient(180deg,rgba(255,255,255,.96),rgba(255,238,245,.98));color:#8f4f67;font-size:11px;font-weight:900;line-height:1;text-decoration:none;box-shadow:0 8px 20px rgba(119,72,90,.08)}
 #zefirok-maltipoo-runner .profile-link-chip b{font-size:12px;line-height:1;color:#b56f88}
 #zefirok-maltipoo-runner .profile-link-chip:active{transform:translateY(1px)}
 #zefirok-maltipoo-runner .profile-section--showcase .profile-section-head&gt;div{display:grid;gap:3px}
 #zefirok-maltipoo-runner .profile-section--showcase .profile-section-head span{font-size:9px;color:#9c7984;line-height:1.4}
+#zefirok-maltipoo-runner .profile-achievement-prestige{display:flex;align-items:center;justify-content:center;min-height:31px;margin:-1px 0 7px;padding:6px 10px;border:1px solid rgba(221,173,64,.34);border-radius:13px;background:linear-gradient(145deg,#fff9e6,#fff4d6);color:#8b621d;font-size:9px;font-weight:950;line-height:1.2;text-align:center}
 #zefirok-maltipoo-runner .profile-showcase-empty{display:grid;justify-items:center;gap:8px;padding:18px 16px;border:1px dashed rgba(229,173,194,.88);border-radius:22px;background:linear-gradient(180deg,rgba(255,247,250,.95),rgba(255,252,247,.98));text-align:center;box-shadow:inset 0 1px 0 rgba(255,255,255,.78)}
 #zefirok-maltipoo-runner .profile-showcase-empty-icon{width:52px;height:52px;display:grid;place-items:center;border-radius:18px;background:linear-gradient(145deg,#fff5da,#ffe4ef);box-shadow:0 10px 22px rgba(220,170,80,.15);font-size:25px}
 #zefirok-maltipoo-runner .profile-showcase-empty strong{font-size:14px;font-weight:950;color:#6f3f53}
 #zefirok-maltipoo-runner .profile-showcase-empty span{max-width:290px;color:#8e7280;font-size:10px;font-weight:700;line-height:1.55}
 #zefirok-maltipoo-runner .profile-showcase-empty .profile-action{width:100%;max-width:240px;margin-top:3px}
+#zefirok-maltipoo-runner .profile-showcase-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+#zefirok-maltipoo-runner .profile-showcase-trophy{min-width:0;min-height:96px;padding:10px 7px;border:1px solid rgba(218,168,64,.46);border-radius:18px;background:radial-gradient(circle at 82% 8%,rgba(255,232,142,.56),transparent 36%),linear-gradient(155deg,#fffdf3,#fff0c8);box-shadow:0 8px 18px rgba(167,113,25,.08);display:grid;align-content:center;justify-items:center;gap:5px;text-align:center}
+#zefirok-maltipoo-runner .profile-showcase-trophy[data-rarity=&quot;epic&quot;]{border-color:rgba(159,103,204,.42);background:linear-gradient(155deg,#fffaff,#f3e6ff)}
+#zefirok-maltipoo-runner .profile-showcase-trophy[data-rarity=&quot;legendary&quot;]{border-color:rgba(218,151,37,.58);background:radial-gradient(circle at 82% 8%,rgba(255,224,111,.64),transparent 38%),linear-gradient(155deg,#fffceb,#ffe7a4)}
+#zefirok-maltipoo-runner .profile-showcase-trophy[data-rarity=&quot;legacy&quot;]{border-color:rgba(202,82,124,.46);background:linear-gradient(155deg,#fff7fb,#ffe3ee)}
+#zefirok-maltipoo-runner .profile-showcase-trophy-icon{width:37px;height:37px;display:grid;place-items:center;border-radius:13px;background:rgba(255,255,255,.78);font-size:20px;box-shadow:inset 0 0 0 1px rgba(219,166,59,.18)}
+#zefirok-maltipoo-runner .profile-showcase-trophy strong{width:100%;overflow:hidden;color:#714b1f;font-size:9px;font-weight:950;line-height:1.25;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2}
+#zefirok-maltipoo-runner .profile-showcase-trophy small{color:#9b7438;font-size:7px;font-weight:850;line-height:1.15}
+@media(max-width:360px){#zefirok-maltipoo-runner .profile-showcase-grid{gap:5px}#zefirok-maltipoo-runner .profile-showcase-trophy{min-height:89px;padding:8px 5px;border-radius:16px}#zefirok-maltipoo-runner .profile-showcase-trophy strong{font-size:8px}}
 &lt;/style&gt;
-&lt;script id=&quot;zefirok-achievements-profile-entry-v1&quot;&gt;
+&lt;script id=&quot;zefirok-achievements-profile-entry-v4&quot;&gt;
 (() =&gt; {
-  document.addEventListener(&quot;click&quot;, (event) =&gt; {
-    const button = event.target?.closest?.(&quot;[data-achievements-open]&quot;);
-    if (!button) return;
-    event.preventDefault();
-    button.disabled = true;
-    try { window.parent.postMessage({ type:&quot;zefirok-open-achievements&quot; }, &quot;*&quot;); }
-    catch (error) { try { window.location.href = &quot;/achievements.html&quot;; } catch {} }
-    window.setTimeout(() =&gt; { button.disabled = false; }, 900);
-  });
-  window.addEventListener(&quot;pageshow&quot;, () =&gt; { document.querySelectorAll(&quot;[data-achievements-open]&quot;).forEach((button) =&gt; { button.disabled = false; }); });
+  const escapeHtml=(value)=&gt;String(value??&quot;&quot;).replace(/[&amp;&lt;&gt;&quot;&#39;]/g,(char)=&gt;char===&quot;&amp;&quot;?&quot;&amp;amp;&quot;:char===&quot;&lt;&quot;?&quot;&amp;lt;&quot;:char===&quot;&gt;&quot;?&quot;&amp;gt;&quot;:char.charCodeAt(0)===34?&quot;&amp;quot;&quot;:&quot;&amp;#39;&quot;);
+  const initData=()=&gt;{let value=&quot;&quot;;try{value=String(window.Telegram?.WebApp?.initData||sessionStorage.getItem(&quot;zefirok-telegram-init-data&quot;)||&quot;&quot;);}catch{}return value;};
+  const target=()=&gt;document.querySelector(&quot;[data-profile-achievement-showcase]&quot;);
+  const pointsTarget=()=&gt;document.querySelector(&quot;[data-profile-achievement-points]&quot;);
+  const profileVisible=()=&gt;{const screen=document.querySelector(&#39;[data-screen=&quot;profile&quot;]&#39;);return Boolean(screen&amp;&amp;!screen.hidden);};
+  const emptyMarkup=()=&gt;`&lt;span class=&quot;profile-showcase-empty-icon&quot; aria-hidden=&quot;true&quot;&gt;🏆&lt;/span&gt;&lt;strong&gt;Витрина пока пустая&lt;/strong&gt;&lt;span&gt;Выбери до 3 выполненных достижений — это публичные трофеи твоего аккаунта.&lt;/span&gt;&lt;button class=&quot;profile-action profile-action--primary&quot; data-achievements-open type=&quot;button&quot;&gt;Выбрать достижения&lt;/button&gt;`;
+  const render=(data)=&gt;{const points=Math.max(0,Number(data?.summary?.achievementPoints||0)),max=Math.max(0,Number(data?.summary?.maxAchievementPoints||0)),pointsNode=pointsTarget();if(pointsNode)pointsNode.textContent=`🏆 ${points.toLocaleString(&quot;ru-RU&quot;)} очков достижений${max?` · из ${max.toLocaleString(&quot;ru-RU&quot;)}`:&quot;&quot;}`;const node=target();if(!node)return;const rows=Array.isArray(data?.showcase?.items)?data.showcase.items.slice(0,3):[];if(!rows.length){node.className=&quot;profile-showcase-empty&quot;;node.innerHTML=emptyMarkup();return;}node.className=&quot;profile-showcase-grid&quot;;node.innerHTML=rows.map((item)=&gt;{const rarity=String(item?.rarity||&quot;common&quot;),rarityLabel=String(item?.rarityLabel||&quot;Обычное&quot;),prestige=Math.max(0,Number(item?.achievementPoints||0));return `&lt;div class=&quot;profile-showcase-trophy&quot; data-rarity=&quot;${escapeHtml(rarity)}&quot; title=&quot;${escapeHtml(item.title||&quot;Достижение&quot;)} · ${escapeHtml(rarityLabel)} · +${prestige} 🏆&quot;&gt;&lt;span class=&quot;profile-showcase-trophy-icon&quot; aria-hidden=&quot;true&quot;&gt;${escapeHtml(item.icon||&quot;🏅&quot;)}&lt;/span&gt;&lt;strong&gt;${escapeHtml(item.title||&quot;Достижение&quot;)}&lt;/strong&gt;&lt;small&gt;${escapeHtml(rarityLabel)} · +${prestige} 🏆&lt;/small&gt;&lt;/div&gt;`;}).join(&quot;&quot;);};
+  let inflight=null;
+  const refresh=async(force=false)=&gt;{if(!force&amp;&amp;!profileVisible())return;if(inflight)return inflight;const auth=initData();if(!auth){render({summary:{achievementPoints:0},showcase:{items:[]}});return;}const controller=new AbortController(),timer=window.setTimeout(()=&gt;controller.abort(),6500);inflight=(async()=&gt;{try{const response=await fetch(&quot;/api/achievements&quot;,{method:&quot;POST&quot;,headers:{&quot;Content-Type&quot;:&quot;application/json&quot;},body:JSON.stringify({initData:auth}),cache:&quot;no-store&quot;,credentials:&quot;same-origin&quot;,signal:controller.signal});const data=await response.json();if(!response.ok||!data?.ok)throw new Error(&quot;achievements&quot;);render(data);}catch{if(force||profileVisible())render({summary:{achievementPoints:0},showcase:{items:[]}});}finally{window.clearTimeout(timer);inflight=null;}})();return inflight;};
+  document.addEventListener(&quot;click&quot;,(event)=&gt;{const openButton=event.target?.closest?.(&quot;[data-achievements-open]&quot;);if(openButton){event.preventDefault();openButton.disabled=true;try{window.parent.postMessage({type:&quot;zefirok-open-achievements&quot;},&quot;*&quot;);}catch{try{window.location.href=&quot;/achievements.html&quot;;}catch{}}window.setTimeout(()=&gt;{openButton.disabled=false;},900);return;}if(event.target?.closest?.(&#39;[data-tab=&quot;profile&quot;]&#39;))window.setTimeout(()=&gt;refresh(true),80);});
+  window.addEventListener(&quot;pageshow&quot;,()=&gt;{document.querySelectorAll(&quot;[data-achievements-open]&quot;).forEach((button)=&gt;{button.disabled=false;});if(profileVisible())refresh(true);});
+  window.addEventListener(&quot;message&quot;,(event)=&gt;{if(event.data?.type===&quot;zefirok-achievements-account-updated&quot;)refresh(true);if(event.data?.type===&quot;zefirok-open-screen&quot;&amp;&amp;String(event.data?.screen||&quot;&quot;)===&quot;profile&quot;)window.setTimeout(()=&gt;refresh(true),80);});
 })();
 &lt;/script&gt;
+
 &lt;script id=&quot;zefirok-v07914-battle-pass-visibility&quot;&gt;
 (() =&gt; {
   let battlePassEnabled = false;

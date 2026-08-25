@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "catalogHash": "164a7f0ef771f085",
-  "count": 87,
+  "catalogHash": "3689f0df3c4fa837",
+  "count": 97,
   "images": [
     {
       "fileName": "398D69BA-8943-4846-94B3-FC5CB717A67F.PNG",
@@ -106,6 +106,86 @@
       "path": "/assets/cases/avatars/A34D0D9F-4BF6-4618-8E2B-3D4833CED067.PNG",
       "hash": "4c6bf6dd2260",
       "size": 2650309
+    },
+    {
+      "fileName": "avatars/achievements/achievement_albums.png",
+      "label": "Achievement albums",
+      "folder": "avatars/achievements",
+      "path": "/assets/cases/avatars/achievements/achievement_albums.png",
+      "hash": "6060f9c194cc",
+      "size": 1999969
+    },
+    {
+      "fileName": "avatars/achievements/achievement_case.png",
+      "label": "Achievement case",
+      "folder": "avatars/achievements",
+      "path": "/assets/cases/avatars/achievements/achievement_case.png",
+      "hash": "1961eb876119",
+      "size": 1914491
+    },
+    {
+      "fileName": "avatars/achievements/achievement_coffee.png",
+      "label": "Achievement coffee",
+      "folder": "avatars/achievements",
+      "path": "/assets/cases/avatars/achievements/achievement_coffee.png",
+      "hash": "b80c236d01f4",
+      "size": 1912549
+    },
+    {
+      "fileName": "avatars/achievements/achievement_friend.png",
+      "label": "Achievement friend",
+      "folder": "avatars/achievements",
+      "path": "/assets/cases/avatars/achievements/achievement_friend.png",
+      "hash": "ab6d1c96f408",
+      "size": 1944327
+    },
+    {
+      "fileName": "avatars/achievements/achievement_music.png",
+      "label": "Achievement music",
+      "folder": "avatars/achievements",
+      "path": "/assets/cases/avatars/achievements/achievement_music.png",
+      "hash": "3bbb0a1650e6",
+      "size": 1992832
+    },
+    {
+      "fileName": "avatars/achievements/achievement_paws.png",
+      "label": "Achievement paws",
+      "folder": "avatars/achievements",
+      "path": "/assets/cases/avatars/achievements/achievement_paws.png",
+      "hash": "59676cbfff66",
+      "size": 1923191
+    },
+    {
+      "fileName": "avatars/achievements/achievement_records.png",
+      "label": "Achievement records",
+      "folder": "avatars/achievements",
+      "path": "/assets/cases/avatars/achievements/achievement_records.png",
+      "hash": "e59263a3f70f",
+      "size": 2046209
+    },
+    {
+      "fileName": "avatars/achievements/achievement_runs.png",
+      "label": "Achievement runs",
+      "folder": "avatars/achievements",
+      "path": "/assets/cases/avatars/achievements/achievement_runs.png",
+      "hash": "6d45e0dfe143",
+      "size": 1985517
+    },
+    {
+      "fileName": "avatars/achievements/achievement_score.png",
+      "label": "Achievement score",
+      "folder": "avatars/achievements",
+      "path": "/assets/cases/avatars/achievements/achievement_score.png",
+      "hash": "566e98d85156",
+      "size": 1806806
+    },
+    {
+      "fileName": "avatars/achievements/achievement_zefir.png",
+      "label": "Achievement zefir",
+      "folder": "avatars/achievements",
+      "path": "/assets/cases/avatars/achievements/achievement_zefir.png",
+      "hash": "b7c09b42eb69",
+      "size": 1966365
     },
     {
       "fileName": "avatars/AE100D7E-3441-428C-B67F-C7A46B23F712.PNG",

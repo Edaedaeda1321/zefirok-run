@@ -114,7 +114,17 @@ const CASE_AVATARS = Object.freeze({
   pink_hearts: Object.freeze({ id: "pink_hearts", title: "Розовые сердечки", rarity: "epic", weight: 6 }),
   sakura: Object.freeze({ id: "sakura", title: "Сакура", rarity: "epic", weight: 6 }),
   alex_avatar_1: Object.freeze({ id: "alex_avatar_1", title: "Алекс · Портрет I", rarity: "legendary", weight: 0, legendaryOnly: true, alexOnly: true, isNew: true }),
-  alex_avatar_2: Object.freeze({ id: "alex_avatar_2", title: "Алекс · Портрет II", rarity: "legendary", weight: 0, legendaryOnly: true, alexOnly: true, isNew: true })
+  alex_avatar_2: Object.freeze({ id: "alex_avatar_2", title: "Алекс · Портрет II", rarity: "legendary", weight: 0, legendaryOnly: true, alexOnly: true, isNew: true }),
+  achievement_avatar_score: Object.freeze({ id: "achievement_avatar_score", title: "Звёздный счёт", rarity: "rare", weight: 0, achievementOnly: true, isNew: true }),
+  achievement_avatar_coffee: Object.freeze({ id: "achievement_avatar_coffee", title: "Кофейный успех", rarity: "rare", weight: 0, achievementOnly: true, isNew: true }),
+  achievement_avatar_zefir: Object.freeze({ id: "achievement_avatar_zefir", title: "Зефирная добыча", rarity: "rare", weight: 0, achievementOnly: true, isNew: true }),
+  achievement_avatar_runs: Object.freeze({ id: "achievement_avatar_runs", title: "Первый забег", rarity: "rare", weight: 0, achievementOnly: true, isNew: true }),
+  achievement_avatar_records: Object.freeze({ id: "achievement_avatar_records", title: "Рекордсмен", rarity: "rare", weight: 0, achievementOnly: true, isNew: true }),
+  achievement_avatar_paws: Object.freeze({ id: "achievement_avatar_paws", title: "Первые шаги", rarity: "rare", weight: 0, achievementOnly: true, isNew: true }),
+  achievement_avatar_case: Object.freeze({ id: "achievement_avatar_case", title: "Первый кейс", rarity: "rare", weight: 0, achievementOnly: true, isNew: true }),
+  achievement_avatar_music: Object.freeze({ id: "achievement_avatar_music", title: "Музыкальный вкус", rarity: "rare", weight: 0, achievementOnly: true, isNew: true }),
+  achievement_avatar_friend: Object.freeze({ id: "achievement_avatar_friend", title: "Первый друг", rarity: "rare", weight: 0, achievementOnly: true, isNew: true }),
+  achievement_avatar_albums: Object.freeze({ id: "achievement_avatar_albums", title: "Альбом Зеффи", rarity: "rare", weight: 0, achievementOnly: true, isNew: true })
 });
 
 const CASE_FRAMES = Object.freeze({
@@ -1798,6 +1808,21 @@ export default {
         const legalGate = await enforceLegalAcceptanceForRequest(request, env);
         if (legalGate) return legalGate;
         return await withPlayerApiPerformance(env, ctx, "game_startup", () => getGameStartupPackage(request, env, ctx));
+      }
+      if (url.pathname === "/api/achievements" && request.method === "POST") {
+        const legalGate = await enforceLegalAcceptanceForRequest(request, env);
+        if (legalGate) return legalGate;
+        return await withPlayerApiPerformance(env, ctx, "achievements_state", () => getAchievementsV2(request, env));
+      }
+      if (url.pathname === "/api/achievements/claim" && request.method === "POST") {
+        const legalGate = await enforceLegalAcceptanceForRequest(request, env);
+        if (legalGate) return legalGate;
+        return await withPlayerApiPerformance(env, ctx, "achievements_claim", () => claimAchievementV2(request, env));
+      }
+      if (url.pathname === "/api/achievements/showcase" && request.method === "POST") {
+        const legalGate = await enforceLegalAcceptanceForRequest(request, env);
+        if (legalGate) return legalGate;
+        return await withPlayerApiPerformance(env, ctx, "achievements_showcase", () => saveAchievementShowcase(request, env));
       }
       if (url.pathname === "/api/account/revision" && request.method === "POST") {
         return await getPlayerAccountRevisionResponse(request, env);
@@ -4476,6 +4501,546 @@ async function retentionEngagementAnalytics(env,now=Math.floor(Date.now()/1000))
 }
 
 // =================== /LIVEOPS RETENTION PLATFORM v2 =====================
+
+// Achievements V4 are identity/status projections over authoritative player state.
+// Simple milestones can unlock achievement-only avatars. Difficult milestones are
+// intentionally status-only for now. Achievement points are prestige, never currency.
+// Conditions remain hard-coded here and are never editable from CC.
+const ACHIEVEMENTS_V2 = Object.freeze([
+  // Забеги и результат. Простые цели знакомят с системой и могут открыть тематическую аватарку.
+  Object.freeze({ id: "first-run", category: "runs", icon: "🏃", title: "Первый забег", description: "Заверши 1 полноценный забег.", target: 1, source: "runs", rarity: "common", achievementPoints: 10, reward: Object.freeze({ kind: "avatar", id: "achievement_avatar_runs", amount: 1 }) }),
+  Object.freeze({ id: "runs-10", category: "runs", icon: "🏃", title: "Разогрелся", description: "Заверши 10 полноценных забегов.", target: 10, source: "runs", rarity: "common", achievementPoints: 10, reward: Object.freeze({ kind: "none" }) }),
+  Object.freeze({ id: "runs-100", category: "runs", icon: "🏃", title: "Не остановить", description: "Заверши 100 полноценных забегов.", target: 100, source: "runs", rarity: "rare", achievementPoints: 25, reward: Object.freeze({ kind: "none" }) }),
+  Object.freeze({ id: "runs-250", category: "runs", icon: "🏃", title: "На полном ходу", description: "Заверши 250 полноценных забегов.", target: 250, source: "runs", rarity: "rare", achievementPoints: 25, reward: Object.freeze({ kind: "none" }) }),
+  Object.freeze({ id: "runs-500", category: "runs", icon: "🏃", title: "Марафонец кафе", description: "Заверши 500 полноценных забегов.", target: 500, source: "runs", rarity: "epic", achievementPoints: 50, reward: Object.freeze({ kind: "none" }) }),
+  Object.freeze({ id: "runs-1000", category: "runs", icon: "🏃", title: "Тысяча забегов", description: "Заверши 1000 полноценных забегов.", target: 1000, source: "runs", rarity: "legendary", achievementPoints: 100, reward: Object.freeze({ kind: "none" }) }),
+  Object.freeze({ id: "total-score-5000", category: "runs", icon: "⭐", title: "Первые 5000", description: "Набери суммарно 5000 очков в подтверждённых забегах.", target: 5000, source: "totalScore", rarity: "common", achievementPoints: 10, reward: Object.freeze({ kind: "avatar", id: "achievement_avatar_score", amount: 1 }) }),
+  Object.freeze({ id: "best-score-1000", category: "runs", icon: "🏆", title: "Первый рекорд", description: "Поставь личный рекорд 1000 очков.", target: 1000, source: "bestScore", rarity: "common", achievementPoints: 10, reward: Object.freeze({ kind: "avatar", id: "achievement_avatar_records", amount: 1 }) }),
+  Object.freeze({ id: "best-score-2500", category: "runs", icon: "🏆", title: "Высокая планка", description: "Поставь личный рекорд 2500 очков.", target: 2500, source: "bestScore", rarity: "rare", achievementPoints: 25, reward: Object.freeze({ kind: "none" }) }),
+  Object.freeze({ id: "best-score-5000", category: "runs", icon: "🏆", title: "Мастер забега", description: "Поставь личный рекорд 5000 очков.", target: 5000, source: "bestScore", rarity: "epic", achievementPoints: 50, reward: Object.freeze({ kind: "none" }) }),
+  Object.freeze({ id: "best-score-10000", category: "runs", icon: "🏆", title: "Легенда забега", description: "Поставь личный рекорд 10000 очков.", target: 10000, source: "bestScore", rarity: "legendary", achievementPoints: 100, reward: Object.freeze({ kind: "none" }) }),
+  Object.freeze({ id: "run-zefir-25", category: "runs", icon: "🍥", title: "Зефирный запас", description: "Собери суммарно 25 зефира в подтверждённых забегах.", target: 25, source: "runZefir", rarity: "common", achievementPoints: 10, reward: Object.freeze({ kind: "avatar", id: "achievement_avatar_zefir", amount: 1 }) }),
+  Object.freeze({ id: "run-coffee-25", category: "runs", icon: "☕", title: "Кофейный заряд", description: "Собери суммарно 25 кофе в подтверждённых забегах.", target: 25, source: "runCoffee", rarity: "common", achievementPoints: 10, reward: Object.freeze({ kind: "avatar", id: "achievement_avatar_coffee", amount: 1 }) }),
+
+  // Развитие профиля. Крупные уровни — статусные трофеи без экономической награды.
+  Object.freeze({ id: "level-5", category: "progress", icon: "⭐", title: "Первые шаги", description: "Достигни 5 уровня профиля.", target: 5, source: "level", rarity: "common", achievementPoints: 10, reward: Object.freeze({ kind: "avatar", id: "achievement_avatar_paws", amount: 1 }) }),
+  Object.freeze({ id: "level-10", category: "progress", icon: "⭐", title: "Опытный сладкоежка", description: "Достигни 10 уровня профиля.", target: 10, source: "level", rarity: "rare", achievementPoints: 25, reward: Object.freeze({ kind: "none" }) }),
+  Object.freeze({ id: "level-25", category: "progress", icon: "⭐", title: "Ветеран кафе", description: "Достигни 25 уровня профиля.", target: 25, source: "level", rarity: "epic", achievementPoints: 50, reward: Object.freeze({ kind: "none" }) }),
+  Object.freeze({ id: "level-50", category: "progress", icon: "⭐", title: "Легенда кафе", description: "Достигни максимального 50 уровня профиля.", target: 50, source: "level", rarity: "legendary", achievementPoints: 100, reward: Object.freeze({ kind: "none" }) }),
+
+  // Коллекции и контент. Наградные аватарки выдаются только за первые понятные шаги.
+  Object.freeze({ id: "avatar-1", category: "collections", icon: "🖼️", title: "Начало коллекции", description: "Получи первую аватарку.", target: 1, source: "avatars", rarity: "common", achievementPoints: 10, reward: Object.freeze({ kind: "none" }) }),
+  Object.freeze({ id: "frame-1", category: "collections", icon: "🖼️", title: "Красиво оформлено", description: "Получи первую рамку.", target: 1, source: "frames", rarity: "common", achievementPoints: 10, reward: Object.freeze({ kind: "none" }) }),
+  Object.freeze({ id: "trail-1", category: "collections", icon: "✨", title: "По следам Зеффи", description: "Получи первый след.", target: 1, source: "trails", rarity: "common", achievementPoints: 10, reward: Object.freeze({ kind: "none" }) }),
+  Object.freeze({ id: "music-2", category: "collections", icon: "🎵", title: "Музыкальный вкус", description: "Получи первый дополнительный музыкальный трек.", target: 2, source: "music", rarity: "common", achievementPoints: 10, reward: Object.freeze({ kind: "avatar", id: "achievement_avatar_music", amount: 1 }) }),
+  Object.freeze({ id: "case-open-1", category: "collections", icon: "🎁", title: "Первый кейс", description: "Открой первый игровой кейс.", target: 1, source: "caseOpenings", rarity: "common", achievementPoints: 10, reward: Object.freeze({ kind: "avatar", id: "achievement_avatar_case", amount: 1 }) }),
+  Object.freeze({ id: "case-open-10", category: "collections", icon: "🎁", title: "Любопытный коллекционер", description: "Открой 10 игровых кейсов.", target: 10, source: "caseOpenings", rarity: "rare", achievementPoints: 25, reward: Object.freeze({ kind: "none" }) }),
+  Object.freeze({ id: "album-milestone-1", category: "collections", icon: "📚", title: "Страница за страницей", description: "Получи первую награду за этап Альбома Зеффи.", target: 1, source: "albumMilestones", rarity: "common", achievementPoints: 10, reward: Object.freeze({ kind: "avatar", id: "achievement_avatar_albums", amount: 1 }) }),
+  Object.freeze({ id: "album-complete-1", category: "collections", icon: "📚", title: "История собрана", description: "Полностью заверши один опубликованный Альбом Зеффи.", target: 1, source: "albumCompleted", rarity: "epic", achievementPoints: 50, reward: Object.freeze({ kind: "none" }) }),
+
+  // Сезоны и друзья. Пока это статусные отметки, кроме первого приглашённого друга.
+  Object.freeze({ id: "season-reward-1", category: "seasons", icon: "🎟️", title: "Начало сезона", description: "Получи первую награду сезонного пропуска.", target: 1, source: "seasonRewards", rarity: "common", achievementPoints: 10, reward: Object.freeze({ kind: "none" }) }),
+  Object.freeze({ id: "season-reward-10", category: "seasons", icon: "🎟️", title: "Сезон в разгаре", description: "Забери 10 наград сезонного пропуска.", target: 10, source: "seasonRewards", rarity: "rare", achievementPoints: 25, reward: Object.freeze({ kind: "none" }) }),
+  Object.freeze({ id: "referral-1", category: "friends", icon: "👥", title: "Первый друг", description: "Успешно пригласи 1 друга в кафе.", target: 1, source: "referrals", rarity: "common", achievementPoints: 10, reward: Object.freeze({ kind: "avatar", id: "achievement_avatar_friend", amount: 1 }) }),
+  Object.freeze({ id: "referral-5", category: "friends", icon: "👥", title: "Своя компания", description: "Успешно пригласи 5 друзей в кафе.", target: 5, source: "referrals", rarity: "epic", achievementPoints: 50, reward: Object.freeze({ kind: "none" }) })
+]);
+
+const ACHIEVEMENT_LEGACY_REWARD_KINDS = Object.freeze(["points", "zefir", "coffee"]);
+const ACHIEVEMENT_REWARD_MODES = Object.freeze(["default", "none", "avatar"]);
+const ACHIEVEMENT_RARITIES = Object.freeze(["common", "rare", "epic", "legendary", "legacy"]);
+const ACHIEVEMENT_RARITY_LABELS = Object.freeze({ common:"Обычное", rare:"Редкое", epic:"Эпическое", legendary:"Легендарное", legacy:"Legacy" });
+const ACHIEVEMENT_AVATAR_IDS = Object.freeze(Object.keys(CASE_AVATARS).filter((id) => CASE_AVATARS[id]?.achievementOnly === true));
+const ACHIEVEMENT_AVATAR_ID_SET = new Set(ACHIEVEMENT_AVATAR_IDS);
+const ACHIEVEMENT_SHOWCASE_LIMIT = 3;
+let achievementClaimSchemaPromise = null;
+let achievementClaimSchemaReady = false;
+let achievementConfigSchemaPromise = null;
+let achievementConfigSchemaReady = false;
+
+async function ensureAchievementClaimSchema(env) {
+  requireDatabase(env);
+  if (achievementClaimSchemaReady) return;
+  if (!achievementClaimSchemaPromise) {
+    achievementClaimSchemaPromise = (async () => {
+      try {
+        await env.DB.prepare(`SELECT COUNT(*) AS count FROM achievement_claims WHERE 0`).first();
+        achievementClaimSchemaReady = true;
+        return;
+      } catch (error) {
+        if (!isMissingRuntimeDatabaseSchemaError(error)) throw error;
+      }
+      await env.DB.batch([
+        env.DB.prepare(`CREATE TABLE IF NOT EXISTS achievement_claims (
+          telegram_id TEXT NOT NULL,
+          achievement_id TEXT NOT NULL,
+          reward_json TEXT NOT NULL DEFAULT '{}',
+          queue_id INTEGER NOT NULL DEFAULT 0,
+          status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','delivered','failed')),
+          request_id TEXT NOT NULL DEFAULT '',
+          created_at INTEGER NOT NULL,
+          delivered_at INTEGER NOT NULL DEFAULT 0,
+          updated_at INTEGER NOT NULL,
+          PRIMARY KEY(telegram_id,achievement_id)
+        )`),
+        env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_achievement_claims_player ON achievement_claims(telegram_id,status,created_at DESC)`)
+      ]);
+      achievementClaimSchemaReady = true;
+    })().catch((error) => {
+      achievementClaimSchemaPromise = null;
+      achievementClaimSchemaReady = false;
+      throw error;
+    });
+  }
+  await achievementClaimSchemaPromise;
+}
+
+async function ensureAchievementConfigSchema(env) {
+  requireDatabase(env);
+  if (achievementConfigSchemaReady) return;
+  if (!achievementConfigSchemaPromise) {
+    achievementConfigSchemaPromise = (async () => {
+      let missing = false;
+      try {
+        await env.DB.prepare(`SELECT COUNT(*) AS count FROM achievement_settings WHERE 0`).first();
+        await env.DB.prepare(`SELECT COUNT(*) AS count FROM achievement_showcase WHERE 0`).first();
+      } catch (error) {
+        if (!isMissingRuntimeDatabaseSchemaError(error)) throw error;
+        missing = true;
+      }
+      if (missing) {
+        await env.DB.batch([
+          env.DB.prepare(`CREATE TABLE IF NOT EXISTS achievement_settings (
+            achievement_id TEXT PRIMARY KEY,
+            enabled INTEGER NOT NULL DEFAULT 1 CHECK(enabled IN (0,1)),
+            visible INTEGER NOT NULL DEFAULT 1 CHECK(visible IN (0,1)),
+            title TEXT NOT NULL DEFAULT '',
+            description TEXT NOT NULL DEFAULT '',
+            reward_kind TEXT NOT NULL DEFAULT '' CHECK(reward_kind IN ('','points','zefir','coffee')),
+            reward_amount INTEGER NOT NULL DEFAULT 0 CHECK(reward_amount >= 0),
+            reward_mode TEXT NOT NULL DEFAULT 'default' CHECK(reward_mode IN ('default','none','avatar')),
+            reward_item_id TEXT NOT NULL DEFAULT '',
+            rarity TEXT NOT NULL DEFAULT '' CHECK(rarity IN ('','common','rare','epic','legendary','legacy')),
+            achievement_points INTEGER NOT NULL DEFAULT -1 CHECK(achievement_points >= -1 AND achievement_points <= 10000),
+            sort_order INTEGER NOT NULL DEFAULT 0,
+            revision INTEGER NOT NULL DEFAULT 1 CHECK(revision >= 1),
+            updated_at INTEGER NOT NULL DEFAULT 0,
+            updated_by TEXT NOT NULL DEFAULT ''
+          )`),
+          env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_achievement_settings_visibility ON achievement_settings(enabled,visible,sort_order,achievement_id)`),
+          env.DB.prepare(`CREATE TABLE IF NOT EXISTS achievement_showcase (
+            telegram_id TEXT NOT NULL,
+            slot INTEGER NOT NULL CHECK(slot BETWEEN 1 AND 3),
+            achievement_id TEXT NOT NULL,
+            selected_at INTEGER NOT NULL,
+            updated_at INTEGER NOT NULL,
+            PRIMARY KEY(telegram_id,slot),
+            UNIQUE(telegram_id,achievement_id)
+          )`),
+          env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_achievement_showcase_player ON achievement_showcase(telegram_id,slot)`),
+          env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_achievement_showcase_achievement ON achievement_showcase(achievement_id,telegram_id)`)
+        ]);
+      }
+      await addRuntimeColumnIfMissing(env, "achievement_settings", "reward_mode", "TEXT NOT NULL DEFAULT 'default' CHECK(reward_mode IN ('default','none','avatar'))");
+      await addRuntimeColumnIfMissing(env, "achievement_settings", "reward_item_id", "TEXT NOT NULL DEFAULT ''");
+      await addRuntimeColumnIfMissing(env, "achievement_settings", "rarity", "TEXT NOT NULL DEFAULT '' CHECK(rarity IN ('','common','rare','epic','legendary','legacy'))");
+      await addRuntimeColumnIfMissing(env, "achievement_settings", "achievement_points", "INTEGER NOT NULL DEFAULT -1 CHECK(achievement_points >= -1 AND achievement_points <= 10000)");
+      achievementConfigSchemaReady = true;
+    })().catch((error) => {
+      achievementConfigSchemaPromise = null;
+      achievementConfigSchemaReady = false;
+      throw error;
+    });
+  }
+  await achievementConfigSchemaPromise;
+}
+
+function achievementV2Count(value) {
+  return Math.max(0, Math.floor(Number(value) || 0));
+}
+
+function achievementRewardSnapshot(input = {}) {
+  const kind = String(input?.kind || "").trim();
+  if (kind === "none") return { kind:"none", id:"", amount:0 };
+  if (kind === "avatar") {
+    const id = String(input?.id || input?.itemId || "").trim();
+    if (!ACHIEVEMENT_AVATAR_ID_SET.has(id)) return { kind:"none", id:"", amount:0 };
+    return { kind:"avatar", id, amount:1 };
+  }
+  // Backward compatibility: V2/V3 claim snapshots remain deliverable. New CC no longer offers wallet currency rewards.
+  if (ACHIEVEMENT_LEGACY_REWARD_KINDS.includes(kind)) {
+    const amount = Math.max(1, Math.min(999999999, Math.floor(Number(input?.amount) || 1)));
+    return { kind, id:"", amount };
+  }
+  return { kind:"none", id:"", amount:0 };
+}
+
+function achievementRewardView(input = {}) {
+  const reward = achievementRewardSnapshot(input);
+  const description = safeRewardDescription(reward);
+  return {
+    ...reward,
+    hasReward:reward.kind !== "none",
+    label:reward.kind === "avatar" ? `Аватарка · ${description}` : description,
+    imageUrl:reward.kind === "avatar" ? String(LIVEOPS_CONTENT_IMAGES?.avatar?.[reward.id] || "") : ""
+  };
+}
+
+function achievementRarity(value, fallback = "common") {
+  const rarity = String(value || "").trim();
+  return ACHIEVEMENT_RARITIES.includes(rarity) ? rarity : (ACHIEVEMENT_RARITIES.includes(fallback) ? fallback : "common");
+}
+
+function achievementPointsValue(value, fallback = 10) {
+  const numeric = Math.floor(Number(value));
+  return Number.isFinite(numeric) && numeric >= 0 ? Math.min(10000, numeric) : Math.max(0, Math.min(10000, Math.floor(Number(fallback) || 0)));
+}
+
+function achievementConditionLabel(definition = {}) {
+  const target = Math.max(1, achievementV2Count(definition.target));
+  const labels = {
+    runs:`Завершённые забеги ≥ ${target}`,
+    totalScore:`Суммарные очки подтверждённых забегов ≥ ${target}`,
+    bestScore:`Личный рекорд ≥ ${target}`,
+    runZefir:`Зефир, собранный в подтверждённых забегах ≥ ${target}`,
+    runCoffee:`Кофе, собранный в подтверждённых забегах ≥ ${target}`,
+    level:`Уровень профиля ≥ ${target}`,
+    avatars:`Получено аватарок ≥ ${target}`,
+    frames:`Получено рамок ≥ ${target}`,
+    trails:`Получено следов ≥ ${target}`,
+    music:`Музыкальных треков в коллекции ≥ ${target}`,
+    caseOpenings:`Открыто игровых кейсов ≥ ${target}`,
+    albumMilestones:`Получено этапов Альбома ≥ ${target}`,
+    albumCompleted:`Полностью завершено Альбомов ≥ ${target}`,
+    seasonRewards:`Получено наград Season Pass ≥ ${target}`,
+    referrals:`Активных приглашённых друзей ≥ ${target}`
+  };
+  return labels[String(definition.source || "")] || `Серверное условие ≥ ${target}`;
+}
+
+async function achievementConfiguredDefinitions(env) {
+  await ensureAchievementConfigSchema(env);
+  const rows = (await env.DB.prepare(`SELECT * FROM achievement_settings`).all()).results || [];
+  const overrides = new Map(rows.map((row) => [String(row.achievement_id || ""), row]));
+  return ACHIEVEMENTS_V2.map((base, index) => {
+    const row = overrides.get(base.id) || null;
+    const mode = row ? String(row.reward_mode || "default").trim() : "default";
+    let reward = achievementRewardSnapshot(base.reward);
+    if (row && mode === "none") reward = achievementRewardSnapshot({kind:"none"});
+    if (row && mode === "avatar") reward = achievementRewardSnapshot({kind:"avatar",id:String(row.reward_item_id || "")});
+    const title = row ? String(row.title || "").trim().slice(0, 80) : base.title;
+    const description = row ? String(row.description || "").trim().slice(0, 240) : base.description;
+    const sortOrder = row ? Math.max(-9999, Math.min(9999, Math.floor(Number(row.sort_order) || 0))) : (index + 1) * 10;
+    const rarity = achievementRarity(row?.rarity, achievementRarity(base.rarity, "common"));
+    const achievementPoints = achievementPointsValue(row && Number(row.achievement_points) >= 0 ? row.achievement_points : base.achievementPoints, base.achievementPoints);
+    return {
+      ...base,
+      title:title || base.title,
+      description:row ? description : base.description,
+      reward,
+      rewardMode:row ? (ACHIEVEMENT_REWARD_MODES.includes(mode) ? mode : "default") : "default",
+      rarity,
+      rarityLabel:ACHIEVEMENT_RARITY_LABELS[rarity] || rarity,
+      achievementPoints,
+      enabled:row ? Number(row.enabled || 0) === 1 : true,
+      visible:row ? Number(row.visible || 0) === 1 : true,
+      sortOrder,
+      configured:Boolean(row),
+      revision:Math.max(1, Number(row?.revision || 1)),
+      conditionLabel:achievementConditionLabel(base),
+      defaultTitle:base.title,
+      defaultDescription:base.description,
+      defaultReward:achievementRewardSnapshot(base.reward),
+      defaultRarity:achievementRarity(base.rarity, "common"),
+      defaultAchievementPoints:achievementPointsValue(base.achievementPoints, 10),
+      defaultSortOrder:(index + 1) * 10
+    };
+  }).sort((a,b) => Number(a.sortOrder || 0) - Number(b.sortOrder || 0) || ACHIEVEMENTS_V2.findIndex((item)=>item.id===a.id) - ACHIEVEMENTS_V2.findIndex((item)=>item.id===b.id));
+}
+
+function achievementClaimRowsMap(rows = []) {
+  const map = new Map();
+  for (const row of Array.isArray(rows) ? rows : []) {
+    const id = String(row?.achievement_id || "").trim();
+    if (!id) continue;
+    const previous = map.get(id);
+    const currentDelivered = ["delivered", "claimed"].includes(String(row?.queue_status || "")) || String(row?.status || "") === "delivered";
+    const previousDelivered = previous && (["delivered", "claimed"].includes(String(previous?.queue_status || "")) || String(previous?.status || "") === "delivered");
+    if (!previous || (currentDelivered && !previousDelivered) || Number(row?.delivery_queue_id || 0) > Number(previous?.delivery_queue_id || 0)) map.set(id, row);
+  }
+  return map;
+}
+
+function achievementEffectiveClaimStatus(row, earned, hasReward = true) {
+  if (!earned) return "locked";
+  if (!row && !hasReward) return "complete";
+  if (!row) return "ready";
+  const queueStatus = String(row?.queue_status || "");
+  if (String(row?.status || "") === "delivered" || ["delivered", "claimed"].includes(queueStatus)) return "claimed";
+  if (String(row?.status || "") === "failed" || (queueStatus === "failed" && Number(row?.queue_attempts || 0) >= 5)) return "failed";
+  const queueId = Math.max(0, Number(row?.delivery_queue_id || row?.queue_id || 0));
+  if (!queueId) return "ready";
+  return "pending";
+}
+
+function achievementPublicShowcaseItem(definition, slot = 0) {
+  const rarity=achievementRarity(definition?.rarity,"common");
+  return {
+    id:String(definition?.id || ""),
+    slot:Math.max(0, Math.min(ACHIEVEMENT_SHOWCASE_LIMIT, Number(slot) || 0)),
+    category:String(definition?.category || "special"),
+    icon:String(definition?.icon || "🏅"),
+    title:String(definition?.title || "Достижение"),
+    rarity,
+    rarityLabel:ACHIEVEMENT_RARITY_LABELS[rarity] || rarity,
+    achievementPoints:achievementPointsValue(definition?.achievementPoints,0)
+  };
+}
+
+function achievementsV2FromStats(raw = {}, claimRows = [], definitions = ACHIEVEMENTS_V2, showcaseIds = []) {
+  const stats = {
+    runs:achievementV2Count(raw.runs),
+    totalScore:achievementV2Count(raw.totalScore),
+    bestScore:achievementV2Count(raw.bestScore),
+    runZefir:achievementV2Count(raw.runZefir),
+    runCoffee:achievementV2Count(raw.runCoffee),
+    level:Math.max(1, Math.min(50, achievementV2Count(raw.level) || 1)),
+    avatars:achievementV2Count(raw.avatars),
+    frames:achievementV2Count(raw.frames),
+    trails:achievementV2Count(raw.trails),
+    music:achievementV2Count(raw.music),
+    caseOpenings:achievementV2Count(raw.caseOpenings),
+    albumMilestones:achievementV2Count(raw.albumMilestones),
+    albumCompleted:achievementV2Count(raw.albumCompleted),
+    seasonRewards:achievementV2Count(raw.seasonRewards),
+    referrals:achievementV2Count(raw.referrals)
+  };
+  const claims = achievementClaimRowsMap(claimRows);
+  const activeDefinitions = (Array.isArray(definitions) ? definitions : []).filter((definition) => definition?.enabled !== false && definition?.visible !== false);
+  const selectedOrder = [...new Set((Array.isArray(showcaseIds) ? showcaseIds : []).map((id)=>String(id||"").trim()).filter(Boolean))].slice(0, ACHIEVEMENT_SHOWCASE_LIMIT);
+  const selectedSlots = new Map(selectedOrder.map((id,index)=>[id,index+1]));
+  const achievements = activeDefinitions.map((definition) => {
+    const rawCurrent = achievementV2Count(stats[definition.source]);
+    const target = Math.max(1, achievementV2Count(definition.target));
+    const earned = rawCurrent >= target;
+    const claimRow = claims.get(definition.id) || null;
+    const storedReward = claimRow ? safeJson(claimRow.reward_json, null) : null;
+    const reward = achievementRewardView(storedReward && storedReward.kind ? storedReward : definition.reward);
+    const hasReward = reward.hasReward === true;
+    const claimStatus = achievementEffectiveClaimStatus(claimRow, earned, hasReward);
+    const claimed = claimStatus === "claimed";
+    const claimable = hasReward && earned && ["ready", "failed"].includes(claimStatus);
+    const showcaseSlot = earned ? Math.max(0, Number(selectedSlots.get(definition.id) || 0)) : 0;
+    const rarity=achievementRarity(definition.rarity,"common");
+    const points=achievementPointsValue(definition.achievementPoints,0);
+    return {
+      id:definition.id, category:definition.category, icon:definition.icon, title:definition.title, description:definition.description,
+      rarity, rarityLabel:ACHIEVEMENT_RARITY_LABELS[rarity] || rarity, achievementPoints:points,
+      current:Math.min(target, rawCurrent), target, earned, claimed, hasReward, claimable, claimStatus,
+      claimedAt:claimed ? Math.max(0, Number(claimRow?.delivered_at || claimRow?.queue_delivered_at || 0)) : 0,
+      reward, showcaseEligible:earned, inShowcase:showcaseSlot > 0, showcaseSlot
+    };
+  });
+  const achievementMap = new Map(achievements.map((item)=>[item.id,item]));
+  const showcaseItems = selectedOrder.map((id,index)=>{const item=achievementMap.get(id);if(!item?.earned)return null;return achievementPublicShowcaseItem(item,index+1);}).filter(Boolean).slice(0,ACHIEVEMENT_SHOWCASE_LIMIT);
+  const showcaseIdSet = new Set(showcaseItems.map((item)=>item.id));
+  for(const item of achievements){if(!showcaseIdSet.has(item.id)){item.inShowcase=false;item.showcaseSlot=0;}}
+  const achievementPoints=achievements.reduce((sum,item)=>sum+(item.earned?achievementPointsValue(item.achievementPoints,0):0),0);
+  const maxAchievementPoints=achievements.reduce((sum,item)=>sum+achievementPointsValue(item.achievementPoints,0),0);
+  return {
+    ok:true, version:4, serverAuthoritative:true, generatedAt:Date.now(),
+    summary:{earned:achievements.filter((item)=>item.earned).length,claimed:achievements.filter((item)=>item.claimed).length,claimable:achievements.filter((item)=>item.claimable).length,showcased:showcaseItems.length,achievementPoints,maxAchievementPoints,total:achievements.length},
+    showcase:{limit:ACHIEVEMENT_SHOWCASE_LIMIT,count:showcaseItems.length,ids:showcaseItems.map((item)=>item.id),items:showcaseItems},
+    achievements
+  };
+}
+
+function achievementV2OwnedCount(raw, kind, catalog) {
+  return caseParseOwned(raw, kind, catalog).length;
+}
+
+async function achievementPlayerState(env, telegramId) {
+  requireDatabase(env);
+  await Promise.all([ensureAchievementClaimSchema(env), ensureAchievementConfigSchema(env)]);
+  const playerId=String(telegramId);
+  const minRunMs=positiveInt(env.LEADERBOARD_MIN_RUN_SECONDS, DEFAULT_LEADERBOARD_MIN_RUN_SECONDS) * 1000;
+  const optionalAll=(statement)=>statement.all().catch((error)=>{if(isMissingRuntimeDatabaseSchemaError(error))return {results:[]};throw error;});
+  const optionalFirst=(statement)=>statement.first().catch((error)=>{if(isMissingRuntimeDatabaseSchemaError(error))return null;throw error;});
+
+  const [definitions, profileRow, runsRow, caseRow, seasonRow, referralRow, caseOpeningsRow, seasonalCaseOpeningsRow, albumMilestoneRow, albumItemsResult, claimsResult, showcaseResult] = await Promise.all([
+    achievementConfiguredDefinitions(env),
+    env.DB.prepare(`SELECT profile_xp,best_score FROM admin_profile_state WHERE telegram_id=? LIMIT 1`).bind(playerId).first(),
+    env.DB.prepare(`SELECT COUNT(*) AS count,COALESCE(SUM(score),0) AS total_score,COALESCE(SUM(run_zefir),0) AS run_zefir,COALESCE(SUM(run_coffee),0) AS run_coffee FROM (
+      SELECT run_id,MAX(score) AS score,MAX(run_zefir) AS run_zefir,MAX(run_coffee) AS run_coffee FROM (
+        SELECT run_id,raw_score AS score,raw_treats AS run_zefir,raw_coffee AS run_coffee FROM player_economy_run_ledger WHERE telegram_id=? AND duration_ms>=?
+        UNION ALL
+        SELECT run_id,score,0,0 FROM leaderboard_runs WHERE telegram_id=? AND accepted=1
+      ) GROUP BY run_id
+    )`).bind(playerId,minRunMs,playerId).first(),
+    env.DB.prepare(`SELECT owned_avatars_json,owned_frames_json,owned_trails_json,owned_skins_json,owned_music_json FROM case_player_state WHERE telegram_id=? LIMIT 1`).bind(playerId).first(),
+    env.DB.prepare(`SELECT COUNT(*) AS count FROM season_pass_claims WHERE telegram_id=? AND status='delivered'`).bind(playerId).first(),
+    env.DB.prepare(`SELECT COUNT(*) AS count FROM referral_links WHERE referrer_telegram_id=? AND status='active'`).bind(playerId).first(),
+    optionalFirst(env.DB.prepare(`SELECT ((SELECT COUNT(*) FROM level_case_openings WHERE telegram_id=?)+(SELECT COUNT(*) FROM granted_cases WHERE telegram_id=? AND status='opened')) AS count`).bind(playerId,playerId)),
+    optionalFirst(env.DB.prepare(`SELECT COUNT(*) AS count FROM season_pass_case_grants WHERE telegram_id=? AND status='opened'`).bind(playerId)),
+    optionalFirst(env.DB.prepare(`SELECT COUNT(*) AS count FROM album_milestone_claims WHERE telegram_id=? AND status='delivered'`).bind(playerId)),
+    optionalAll(env.DB.prepare(`SELECT i.collection_id,i.item_kind,i.item_id FROM album_collection_items i JOIN album_collections c ON c.collection_id=i.collection_id WHERE c.status='published' AND i.required=1 ORDER BY i.collection_id`)),
+    env.DB.prepare(`SELECT c.achievement_id,c.reward_json,c.queue_id,c.status,c.request_id,c.created_at,c.delivered_at,c.updated_at,
+      q.id AS delivery_queue_id,q.status AS queue_status,q.attempts AS queue_attempts,q.delivered_at AS queue_delivered_at
+      FROM achievement_claims c
+      LEFT JOIN reward_delivery_queue q ON q.telegram_id=c.telegram_id AND q.source_type='achievement' AND q.source_id=c.achievement_id
+      WHERE c.telegram_id=? ORDER BY q.id DESC`).bind(playerId).all(),
+    env.DB.prepare(`SELECT achievement_id,slot FROM achievement_showcase WHERE telegram_id=? ORDER BY slot`).bind(playerId).all()
+  ]);
+
+  const albumOwned={
+    avatar:albumOwnedSet(caseRow?.owned_avatars_json), frame:albumOwnedSet(caseRow?.owned_frames_json), trail:albumOwnedSet(caseRow?.owned_trails_json),
+    skin:albumOwnedSet(caseRow?.owned_skins_json,["default"]), music:albumOwnedSet(caseRow?.owned_music_json,["cafe_run"])
+  };
+  const albumCollections=new Map();
+  for(const row of albumItemsResult.results||[]){
+    const collectionId=String(row.collection_id||""),kind=String(row.item_kind||""),itemId=String(row.item_id||"").trim().toLowerCase();
+    if(!collectionId||!albumOwned[kind]||!itemId)continue;
+    if(!albumCollections.has(collectionId))albumCollections.set(collectionId,{required:0,owned:0});
+    const entry=albumCollections.get(collectionId);entry.required+=1;if(albumOwned[kind].has(itemId))entry.owned+=1;
+  }
+  let albumCompleted=0;for(const entry of albumCollections.values())if(entry.required>0&&entry.owned>=entry.required)albumCompleted+=1;
+
+  return achievementsV2FromStats({
+    runs:runsRow?.count,totalScore:runsRow?.total_score,bestScore:profileRow?.best_score,runZefir:runsRow?.run_zefir,runCoffee:runsRow?.run_coffee,
+    level:caseProfileLevel(Number(profileRow?.profile_xp || 0)),
+    avatars:achievementV2OwnedCount(caseRow?.owned_avatars_json, "avatar", CASE_AVATARS),
+    frames:achievementV2OwnedCount(caseRow?.owned_frames_json, "frame", CASE_FRAMES),
+    trails:achievementV2OwnedCount(caseRow?.owned_trails_json, "trail", CASE_TRAILS),
+    music:achievementV2OwnedCount(caseRow?.owned_music_json, "music", CASE_MUSIC_TRACKS),
+    caseOpenings:Number(caseOpeningsRow?.count||0)+Number(seasonalCaseOpeningsRow?.count||0),
+    albumMilestones:albumMilestoneRow?.count,albumCompleted,seasonRewards:seasonRow?.count,referrals:referralRow?.count
+  }, claimsResult.results || [], definitions, (showcaseResult.results || []).sort((a,b)=>Number(a.slot||0)-Number(b.slot||0)).map((row)=>String(row.achievement_id||"")));
+}
+
+async function getAchievementsV2(request, env) {
+  try {
+    requireDatabase(env);
+    requireBotToken(env);
+    const body = await readJson(request);
+    const auth = await validateTelegramInitData(String(body.initData || body.init_data || ""), env);
+    return jsonResponse(await achievementPlayerState(env, String(auth.user.id)));
+  } catch (error) {
+    if (error instanceof ApiError) return jsonResponse({ ok: false, error: error.message }, error.status);
+    console.error("getAchievementsV2 failed", error);
+    return jsonResponse({ ok: false, error: "Не удалось загрузить достижения." }, 500);
+  }
+}
+
+async function saveAchievementShowcase(request, env) {
+  try {
+    requireDatabase(env);
+    requireBotToken(env);
+    const body=await readJson(request),auth=await validateTelegramInitData(String(body.initData||body.init_data||""),env),telegramId=String(auth.user.id);
+    if(!Array.isArray(body.ids))throw new ApiError(400,"Передайте список достижений для витрины.");
+    const normalized=body.ids.map((id)=>String(id||"").trim().slice(0,80)).filter(Boolean);
+    const ids=[...new Set(normalized)];
+    if(ids.length!==normalized.length)throw new ApiError(400,"Одно достижение нельзя добавить в витрину дважды.");
+    if(ids.length>ACHIEVEMENT_SHOWCASE_LIMIT)throw new ApiError(400,`В витрине может быть не больше ${ACHIEVEMENT_SHOWCASE_LIMIT} достижений.`);
+    const current=await achievementPlayerState(env,telegramId),available=new Map(current.achievements.map((item)=>[item.id,item]));
+    for(const id of ids){const item=available.get(id);if(!item)throw new ApiError(404,"Достижение недоступно или скрыто.");if(!item.earned)throw new ApiError(409,`Сначала выполни достижение «${item.title}».`);}
+    const now=Math.floor(Date.now()/1000),statements=[env.DB.prepare(`DELETE FROM achievement_showcase WHERE telegram_id=?`).bind(telegramId)];
+    ids.forEach((id,index)=>statements.push(env.DB.prepare(`INSERT INTO achievement_showcase(telegram_id,slot,achievement_id,selected_at,updated_at) VALUES(?,?,?,?,?)`).bind(telegramId,index+1,id,now,now)));
+    await env.DB.batch(statements);
+    return jsonResponse({ok:true,state:await achievementPlayerState(env,telegramId)});
+  }catch(error){if(error instanceof ApiError)return jsonResponse({ok:false,error:error.message},error.status);console.error("saveAchievementShowcase failed",error);return jsonResponse({ok:false,error:"Не удалось обновить витрину."},500);}
+}
+
+async function claimAchievementV2(request, env) {
+  try {
+    requireDatabase(env); requireBotToken(env);
+    const body=await readJson(request),auth=await validateTelegramInitData(String(body.initData||body.init_data||""),env),telegramId=String(auth.user.id);
+    const achievementId=String(body.achievementId||body.achievement_id||body.id||"").trim().slice(0,80),requestId=String(body.requestId||body.request_id||"").trim().slice(0,120);
+    const definitions=await achievementConfiguredDefinitions(env),definition=definitions.find((item)=>item.id===achievementId&&item.enabled!==false&&item.visible!==false);
+    if(!definition)throw new ApiError(404,"Достижение не найдено или временно скрыто.");
+    const beforeState=await achievementPlayerState(env,telegramId),beforeAchievement=beforeState.achievements.find((item)=>item.id===achievementId);
+    if(!beforeAchievement?.earned)throw new ApiError(409,"Сначала выполни условие достижения.");
+
+    const now=Math.floor(Date.now()/1000);
+    let claim=await env.DB.prepare(`SELECT * FROM achievement_claims WHERE telegram_id=? AND achievement_id=? LIMIT 1`).bind(telegramId,achievementId).first();
+    if(!claim){
+      const freshReward=achievementRewardSnapshot(definition.reward);
+      if(freshReward.kind==="none")throw new ApiError(409,"Это статусное достижение: очки престижа уже начислены автоматически, отдельного приза нет.");
+      await env.DB.prepare(`INSERT OR IGNORE INTO achievement_claims (telegram_id,achievement_id,reward_json,queue_id,status,request_id,created_at,delivered_at,updated_at) VALUES(?,?,?,0,'pending',?,?,0,?)`)
+        .bind(telegramId,achievementId,JSON.stringify(freshReward),requestId,now,now).run();
+      claim=await env.DB.prepare(`SELECT * FROM achievement_claims WHERE telegram_id=? AND achievement_id=? LIMIT 1`).bind(telegramId,achievementId).first();
+    }
+    if(!claim)throw new ApiError(503,"Не удалось зафиксировать получение награды.");
+    const snapshot=achievementRewardSnapshot(safeJson(claim.reward_json,definition.reward));
+    if(snapshot.kind==="none")throw new ApiError(409,"У этого достижения нет отдельного материального приза.");
+    if(String(claim.status||"")==="delivered")return jsonResponse({ok:true,repeated:true,pending:false,reward:achievementRewardView(snapshot),state:await achievementPlayerState(env,telegramId)});
+
+    let queue=await env.DB.prepare(`SELECT id,status,attempts,last_error,delivered_at FROM reward_delivery_queue WHERE telegram_id=? AND source_type='achievement' AND source_id=? ORDER BY id ASC LIMIT 1`).bind(telegramId,achievementId).first();
+    if(queue&&["delivered","claimed"].includes(String(queue.status||""))){
+      const deliveredAt=Math.max(now,Number(queue.delivered_at||0));
+      await env.DB.prepare(`UPDATE achievement_claims SET status='delivered',queue_id=?,delivered_at=CASE WHEN delivered_at>0 THEN delivered_at ELSE ? END,updated_at=? WHERE telegram_id=? AND achievement_id=?`).bind(Number(queue.id||0),deliveredAt,now,telegramId,achievementId).run();
+      return jsonResponse({ok:true,repeated:true,pending:false,reward:achievementRewardView(snapshot),state:await achievementPlayerState(env,telegramId)});
+    }
+    await enqueueRewardDelivery(env,telegramId,"achievement",achievementId,snapshot,`Достижение «${definition.title}»`);
+    queue=await env.DB.prepare(`SELECT id,status,attempts,last_error,delivered_at FROM reward_delivery_queue WHERE telegram_id=? AND source_type='achievement' AND source_id=? ORDER BY id ASC LIMIT 1`).bind(telegramId,achievementId).first();
+    if(!queue)throw new ApiError(503,"Награда сохранена, но очередь выдачи временно недоступна.");
+    await env.DB.prepare(`UPDATE achievement_claims SET queue_id=?,status='pending',updated_at=? WHERE telegram_id=? AND achievement_id=? AND status<>'delivered'`).bind(Number(queue.id||0),now,telegramId,achievementId).run();
+    if(String(queue.status||"")==="failed"){
+      await env.DB.prepare(`UPDATE reward_delivery_queue SET status='pending',attempts=CASE WHEN attempts>=5 THEN 0 ELSE attempts END,last_error='',available_at=?,lease_token='',lease_until=0,updated_at=? WHERE id=? AND status='failed'`).bind(now,now,Number(queue.id||0)).run();
+    }
+    await processPlayerRewardDeliveryQueue(env,telegramId,5);
+    queue=await env.DB.prepare(`SELECT id,status,attempts,last_error,delivered_at FROM reward_delivery_queue WHERE id=? LIMIT 1`).bind(Number(queue.id||0)).first();
+    const delivered=["delivered","claimed"].includes(String(queue?.status||"")),terminalFailure=String(queue?.status||"")==="failed"&&Number(queue?.attempts||0)>=5,nextStatus=delivered?"delivered":terminalFailure?"failed":"pending",deliveredAt=delivered?Math.max(now,Number(queue?.delivered_at||0)):0;
+    await env.DB.prepare(`UPDATE achievement_claims SET status=?,queue_id=?,delivered_at=CASE WHEN ?='delivered' AND delivered_at=0 THEN ? ELSE delivered_at END,updated_at=? WHERE telegram_id=? AND achievement_id=?`).bind(nextStatus,Number(queue?.id||0),nextStatus,deliveredAt,now,telegramId,achievementId).run();
+    return jsonResponse({ok:true,repeated:false,pending:nextStatus!=="delivered",claimStatus:nextStatus,reward:achievementRewardView(snapshot),profileRefreshRequired:["points","zefir","coffee","avatar"].includes(snapshot.kind),state:await achievementPlayerState(env,telegramId)});
+  } catch(error){
+    if(error instanceof ApiError)return jsonResponse({ok:false,error:error.message},error.status);
+    console.error("claimAchievementV2 failed",error);return jsonResponse({ok:false,error:"Не удалось получить награду достижения."},500);
+  }
+}
+
+async function achievementPublicShowcaseMap(env, telegramIds = []) {
+  const ids=[...new Set((Array.isArray(telegramIds)?telegramIds:[]).map((id)=>String(id||"").trim()).filter(Boolean))].slice(0,120),result=new Map();
+  if(!ids.length)return result;
+  try{
+    await ensureAchievementConfigSchema(env);
+    const definitions=await achievementConfiguredDefinitions(env),definitionMap=new Map(definitions.filter((item)=>item.enabled!==false&&item.visible!==false).map((item)=>[item.id,item]));
+    for(let offset=0;offset<ids.length;offset+=80){const chunk=ids.slice(offset,offset+80),placeholders=chunk.map(()=>"?").join(",");const rows=(await env.DB.prepare(`SELECT telegram_id,slot,achievement_id FROM achievement_showcase WHERE telegram_id IN (${placeholders}) ORDER BY telegram_id,slot`).bind(...chunk).all()).results||[];for(const row of rows){const telegramId=String(row.telegram_id||""),definition=definitionMap.get(String(row.achievement_id||""));if(!definition)continue;if(!result.has(telegramId))result.set(telegramId,[]);const list=result.get(telegramId);if(list.length<ACHIEVEMENT_SHOWCASE_LIMIT)list.push(achievementPublicShowcaseItem(definition,Number(row.slot||0)));}}
+  }catch(error){if(!isMissingRuntimeDatabaseSchemaError(error))console.error("achievement public showcase lookup failed",error);}
+  return result;
+}
+
+async function ownerPanelAchievementsConfig(env,ctx){
+  const definitions=await achievementConfiguredDefinitions(env);
+  const avatarRewards=ACHIEVEMENT_AVATAR_IDS.map((id)=>({id,title:String(CASE_AVATARS[id]?.title||id),imageUrl:String(LIVEOPS_CONTENT_IMAGES?.avatar?.[id]||"")}));
+  return {
+    ok:true,conditionEditing:false,showcaseLimit:ACHIEVEMENT_SHOWCASE_LIMIT,
+    rewardModes:[{id:"default",label:"По умолчанию"},{id:"none",label:"Без материальной награды"},{id:"avatar",label:"Аватарка достижения"}],
+    avatarRewards,rarities:ACHIEVEMENT_RARITIES.map((id)=>({id,label:ACHIEVEMENT_RARITY_LABELS[id]||id})),
+    achievementPoints:{spendable:false,label:"Очки достижений",maxPerAchievement:10000},
+    items:definitions.map((item)=>({
+      id:item.id,category:item.category,icon:item.icon,enabled:item.enabled,visible:item.visible,title:item.title,description:item.description,
+      reward:achievementRewardView(item.reward),rewardMode:item.rewardMode,rarity:item.rarity,rarityLabel:item.rarityLabel,achievementPoints:item.achievementPoints,
+      sortOrder:item.sortOrder,configured:item.configured,condition:{source:item.source,target:item.target,label:item.conditionLabel,editable:false},
+      defaults:{title:item.defaultTitle,description:item.defaultDescription,reward:achievementRewardView(item.defaultReward),rarity:item.defaultRarity,rarityLabel:ACHIEVEMENT_RARITY_LABELS[item.defaultRarity]||item.defaultRarity,achievementPoints:item.defaultAchievementPoints,sortOrder:item.defaultSortOrder}
+    }))
+  };
+}
+
+async function ownerPanelAchievementConfigSave(env,ctx){
+  await ensureAchievementConfigSchema(env);
+  const body=ctx.body||{},achievementId=String(body.achievementId||body.id||"").trim().slice(0,80),base=ACHIEVEMENTS_V2.find((item)=>item.id===achievementId);if(!base)throw new ApiError(404,"Достижение не найдено.");
+  const enabled=body.enabled===true||body.enabled===1||String(body.enabled)==="1",visible=body.visible===true||body.visible===1||String(body.visible)==="1",title=String(body.title||"").trim().replace(/\s+/g," ").slice(0,80),description=String(body.description??"").trim().slice(0,240),sortOrder=Math.max(-9999,Math.min(9999,Math.floor(Number(body.sortOrder??body.sort_order)||0)));
+  const rewardMode=String(body.rewardMode||body.reward_mode||"default").trim(),rewardItemId=String(body.rewardItemId||body.reward_item_id||"").trim().slice(0,100),rarity=achievementRarity(body.rarity,achievementRarity(base.rarity,"common"));
+  const achievementPointsRaw=body.achievementPoints??body.achievement_points,achievementPointsNumber=Number(achievementPointsRaw);
+  if(title.length<2)throw new ApiError(400,"Название достижения слишком короткое.");
+  if(!ACHIEVEMENT_REWARD_MODES.includes(rewardMode))throw new ApiError(400,"Для достижений доступны только: награда по умолчанию, без приза или специальная аватарка.");
+  if(rewardMode==="avatar"&&!ACHIEVEMENT_AVATAR_ID_SET.has(rewardItemId))throw new ApiError(400,"Выберите специальную аватарку достижений.");
+  if(achievementPointsRaw==null||String(achievementPointsRaw).trim()===""||!Number.isFinite(achievementPointsNumber)||!Number.isInteger(achievementPointsNumber)||achievementPointsNumber<0||achievementPointsNumber>10000)throw new ApiError(400,"Очки достижений должны быть целым числом от 0 до 10 000.");
+  const achievementPoints=achievementPointsNumber,old=(await achievementConfiguredDefinitions(env)).find((item)=>item.id===achievementId),now=Math.floor(Date.now()/1000),actorId=String(ctx.user.id);
+  await env.DB.prepare(`INSERT INTO achievement_settings(achievement_id,enabled,visible,title,description,reward_kind,reward_amount,reward_mode,reward_item_id,rarity,achievement_points,sort_order,revision,updated_at,updated_by) VALUES(?,?,?,?,?,'',0,?,?,?,?,?,1,?,?) ON CONFLICT(achievement_id) DO UPDATE SET enabled=excluded.enabled,visible=excluded.visible,title=excluded.title,description=excluded.description,reward_kind='',reward_amount=0,reward_mode=excluded.reward_mode,reward_item_id=excluded.reward_item_id,rarity=excluded.rarity,achievement_points=excluded.achievement_points,sort_order=excluded.sort_order,revision=achievement_settings.revision+1,updated_at=excluded.updated_at,updated_by=excluded.updated_by`)
+    .bind(achievementId,enabled?1:0,visible?1:0,title,description,rewardMode,rewardMode==="avatar"?rewardItemId:"",rarity,achievementPoints,sortOrder,now,actorId).run();
+  await logStaffAction(env,ctx.user,ctx.access,"owner_panel_achievement_config_save",null,"achievement",null,null,{achievementId,conditionLocked:true,old:{enabled:old?.enabled,visible:old?.visible,title:old?.title,description:old?.description,reward:old?.reward,rarity:old?.rarity,achievementPoints:old?.achievementPoints,sortOrder:old?.sortOrder},next:{enabled,visible,title,description,rewardMode,rewardItemId:rewardMode==="avatar"?rewardItemId:"",rarity,achievementPoints,sortOrder}});
+  return ownerPanelAchievementsConfig(env,ctx);
+}
 
 function startupSectionError(error) {
   return {
@@ -9675,9 +10240,10 @@ async function buildLeaderboardPayload(env, season, telegramId, mode = "season")
     myEntry = leaderboardRowToClient(me, Number(rank?.place || 0));
   }
 
-  const passTierMap = await leaderboardSeasonPassTierMap(env, [...top.map((entry) => entry.telegramId), String(telegramId)]);
-  for (const entry of top) entry.seasonPassTier = passTierMap.get(String(entry.telegramId || "")) || "none";
-  if (myEntry) myEntry.seasonPassTier = passTierMap.get(String(myEntry.telegramId || "")) || "none";
+  const leaderboardPlayerIds=[...top.map((entry)=>entry.telegramId),String(telegramId)];
+  const [passTierMap,achievementShowcaseMap]=await Promise.all([leaderboardSeasonPassTierMap(env,leaderboardPlayerIds),achievementPublicShowcaseMap(env,leaderboardPlayerIds)]);
+  for (const entry of top) {entry.seasonPassTier = passTierMap.get(String(entry.telegramId || "")) || "none";entry.showcase=achievementShowcaseMap.get(String(entry.telegramId||""))||[];}
+  if (myEntry) {myEntry.seasonPassTier = passTierMap.get(String(myEntry.telegramId || "")) || "none";myEntry.showcase=achievementShowcaseMap.get(String(myEntry.telegramId||""))||[];}
 
   const firstScore = top.length ? top[0].score : 0;
   const rewardConfig = configuredSeason(env);
@@ -14844,7 +15410,7 @@ function grantMainMarkup() {
 
 function grantCatalogItems(kind) {
   if (kind === "case") return Object.entries(LEVEL_CASE_CONFIG).map(([id, item]) => ({ id, title: item.title }));
-  if (kind === "avatar") return Object.entries(CASE_AVATARS).map(([id, item]) => ({ id, title: item.title }));
+  if (kind === "avatar") return Object.entries(CASE_AVATARS).filter(([,item])=>item?.achievementOnly!==true).map(([id, item]) => ({ id, title: item.title }));
   if (kind === "frame") return Object.entries(CASE_FRAMES).map(([id, item]) => ({ id, title: item.title }));
   if (kind === "trail") return Object.entries(CASE_TRAILS).map(([id, item]) => ({ id, title: item.title }));
   if (kind === "skin") return Object.entries(SKINS).filter(([id]) => id !== "default").map(([id, item]) => ({ id, title: item.title }));
@@ -18685,7 +19251,17 @@ const LIVEOPS_CONTENT_IMAGES = Object.freeze({
     pink_hearts: "/assets/cases/avatars/E74178F8-3156-4301-8559-D818D85404DA.PNG",
     sakura: "/assets/cases/avatars/F1680265-2EC6-4028-9FED-E26997442675.PNG",
     alex_avatar_1: "/assets/cases/avatars/alex_avatar_1.png",
-    alex_avatar_2: "/assets/cases/avatars/alex_avatar_2.png"
+    alex_avatar_2: "/assets/cases/avatars/alex_avatar_2.png",
+    achievement_avatar_score: "/assets/cases/avatars/achievements/achievement_score.png",
+    achievement_avatar_coffee: "/assets/cases/avatars/achievements/achievement_coffee.png",
+    achievement_avatar_zefir: "/assets/cases/avatars/achievements/achievement_zefir.png",
+    achievement_avatar_runs: "/assets/cases/avatars/achievements/achievement_runs.png",
+    achievement_avatar_records: "/assets/cases/avatars/achievements/achievement_records.png",
+    achievement_avatar_paws: "/assets/cases/avatars/achievements/achievement_paws.png",
+    achievement_avatar_case: "/assets/cases/avatars/achievements/achievement_case.png",
+    achievement_avatar_music: "/assets/cases/avatars/achievements/achievement_music.png",
+    achievement_avatar_friend: "/assets/cases/avatars/achievements/achievement_friend.png",
+    achievement_avatar_albums: "/assets/cases/avatars/achievements/achievement_albums.png"
   }),
   frame: Object.freeze({
     heart: "/assets/rating/frames/profile/ramka_profile_sedce.png",
@@ -18997,6 +19573,7 @@ function runtimeCaseCatalog(kind, baseCatalog, liveops, caseType = "") {
   const overrides = liveops?.content?.[kind] || {};
   const result = {};
   for (const [id, item] of Object.entries(baseCatalog || {})) {
+    if (caseType && item?.achievementOnly === true) continue;
     const override = overrides[id];
     if (override && override.enabled === false) continue;
     result[id] = {
@@ -19006,6 +19583,7 @@ function runtimeCaseCatalog(kind, baseCatalog, liveops, caseType = "") {
       weight: Math.max(0, Number(override?.weight ?? item.weight ?? 1)),
       isNew: override?.isNew == null ? Boolean(item.isNew) : Boolean(override.isNew),
       legendaryOnly: override?.legendaryOnly == null ? Boolean(item.legendaryOnly) : Boolean(override.legendaryOnly),
+      achievementOnly:Boolean(item.achievementOnly),
       imageUrl:String(override?.imageUrl||item.imageUrl||""),audioUrl:String(override?.audioUrl||item.audioUrl||item.src||"")
     };
   }
@@ -21489,7 +22067,7 @@ async function deliverQueuedReward(env, row, leaseToken) {
   if (["avatar", "frame", "trail", "skin", "music"].includes(row.reward_kind)) {
     try { await recordContentAnalyticsEvent(env, telegramId, row.reward_kind, cosmeticId || row.reward_id, cosmeticDuplicate ? "duplicate" : "acquired", row.source_type, row.source_id); } catch (error) { console.error("reward delivery analytics failed", error); }
   }
-  if (!["gift_inbox", "leaderboard", "season_story", "album_milestone"].includes(String(row.source_type || ""))) {
+  if (!["gift_inbox", "leaderboard", "season_story", "album_milestone", "achievement"].includes(String(row.source_type || ""))) {
     try {
       const subscriber = await env.DB.prepare(`SELECT chat_id FROM bot_subscribers WHERE telegram_id=? AND active=1 LIMIT 1`).bind(telegramId).first();
       if (subscriber?.chat_id) await sendTelegramMessage(env, subscriber.chat_id, `<b>🎁 Награда доставлена</b>\n\n${escapeHtml(rewardDescription)}\nПричина: ${escapeHtml(row.reason || "Системная выдача")}\n\nНаграда уже записана в профиль. Откройте игру или обновите раздел с кейсами.`, { inline_keyboard: [[{ text: "🎮 Открыть игру", web_app: { url: configuredGameUrl(env) } }], [{ text: "📋 Задания", callback_data: "menu:tasks" }]] });
@@ -35175,6 +35753,10 @@ function testProjectNormalizeSandboxState(raw = {}) {
   return {
     activeRun,
     completedRuns:Math.max(0, Math.min(999999, Math.floor(Number(source.completedRuns) || 0))),
+    achievementRunScore:Math.max(0, Math.min(999999999999, Math.floor(Number(source.achievementRunScore) || 0))),
+    achievementRunZefir:Math.max(0, Math.min(999999999, Math.floor(Number(source.achievementRunZefir) || 0))),
+    achievementRunCoffee:Math.max(0, Math.min(999999999, Math.floor(Number(source.achievementRunCoffee) || 0))),
+    achievementOpenedCases:Math.max(0, Math.min(999999, Math.floor(Number(source.achievementOpenedCases) || 0))),
     lastRun:source.lastRun && typeof source.lastRun === "object" ? {
       id:String(source.lastRun.id || "").slice(0,96),
       score:Math.max(0,Math.min(999999999,Math.floor(Number(source.lastRun.score)||0))),
@@ -35192,6 +35774,8 @@ function testProjectNormalizeSandboxState(raw = {}) {
     externalEvents:normalizeObjects(source.externalEvents,40,(item)=>({type:String(item?.type||"event").slice(0,80),title:String(item?.title||"Тестовое внешнее действие").slice(0,180),createdAt:Math.max(0,Math.floor(Number(item?.createdAt)||0))})),
     skinBonusClaims:testProjectArray(source.skinBonusClaims,200),
     leaderboardClaimed:testProjectArray(source.leaderboardClaimed,100),
+    achievementClaims:testProjectArray(source.achievementClaims,100),
+    achievementShowcase:testProjectArray(source.achievementShowcase,ACHIEVEMENT_SHOWCASE_LIMIT),
     pollSnoozedUntil:Math.max(0,Math.floor(Number(source.pollSnoozedUntil)||0)),
     pollVote:source.pollVote&&typeof source.pollVote==="object"?{pollId:String(source.pollVote.pollId||"").slice(0,80),optionIds:testProjectArray(source.pollVote.optionIds,10),comment:String(source.pollVote.comment||"").slice(0,1200),votedAt:Math.max(0,Math.floor(Number(source.pollVote.votedAt)||0))}:null,
     forcedCaseDrop:testProjectNormalizeForcedCaseDrop(source.forcedCaseDrop||{}),
@@ -36600,6 +37184,7 @@ async function ownerPanelTestProjectCaseOpen(env, ctx) {
     ? rollAlexCase(state.caseState, state.caseState.ownedSkins, rng || testProjectCaseRng(state,`case-open:${caseType}`))
     : rollLevelCase(caseType, state.caseState, state.caseState.ownedSkins, liveops, rng);
   state.caseState = testProjectNormalizeCaseState(rolled.state);
+  state.sandbox = testProjectNormalizeSandboxState({...state.sandbox,achievementOpenedCases:Number(state.sandbox?.achievementOpenedCases||0)+1});
   if (forced) state.sandbox = testProjectNormalizeSandboxState({...state.sandbox,forcedCaseDrop:null});
   const alexCollection = caseType === "alex" ? alexCaseCollectionStatus(state.caseState) : null;
   const alexCollectionRewardGranted = Boolean(caseType === "alex" && alexCollection?.complete && !state.sandbox?.alexCollectionRewardClaimed);
@@ -36639,7 +37224,7 @@ async function ownerPanelTestProjectCaseOpen(env, ctx) {
 }
 
 const TEST_PROJECT_SANDBOX_API_PATHS = Object.freeze([
-  "/api/game/startup","/api/features","/api/profile/sync","/api/shop/config","/api/skins/config",
+  "/api/game/startup","/api/achievements","/api/achievements/claim","/api/achievements/showcase","/api/features","/api/profile/sync","/api/shop/config","/api/skins/config",
   "/api/runs/start","/api/runs/checkpoint","/api/leaderboard/state","/api/leaderboard/submit","/api/leaderboard/claim",
   "/api/cases/state","/api/cases/open","/api/cases/open-granted","/api/cases/purchase","/api/cases/activate","/api/cases/equip","/api/cases/consume-run",
   "/api/skins/purchase","/api/skins/bonus-case","/api/live-content/shop/buy","/api/rewards/create","/api/rewards/mine",
@@ -36737,17 +37322,18 @@ function testProjectSandboxPassReceived(reward) {
   return {level:Number(item.level||0),lane:String(item.lane||"free"),title:String(item.title||"Награда"),rewardType:String(item.rewardType||item.kind||""),amount:Math.max(1,Number(item.amount||1)),itemId:String(item.itemId||item.id||""),imageUrl:String(item.imageUrl||item.image_url||"")};
 }
 
-function testProjectSandboxLeaderboardPayload(state, mode, nowMs, snapshot = null) {
+async function testProjectSandboxLeaderboardPayload(env, state, mode, nowMs, snapshot = null) {
   const fakeId="tp-player";
   const templates=[
     ["Карамелька",128400,"tp-bot-1"],["Капучино",97200,"tp-bot-2"],["Пончик",71500,"tp-bot-3"],["Маршмеллоу",52600,"tp-bot-4"],
     ["Булочка",38800,"tp-bot-5"],["Мокко",27400,"tp-bot-6"],["Клубничка",16900,"tp-bot-7"],["Круассан",8400,"tp-bot-8"]
   ];
-  const rows=templates.map(([name,score,telegramId])=>({telegramId,name,firstName:name,lastName:"",username:"",score:Number(score),premiumTier:"none",avatarId:"",frameId:"",caseAvatarId:"",caseFrameId:"",caseAvatarUrl:"",caseFrameUrl:"",place:0}));
+  const rows=templates.map(([name,score,telegramId])=>({telegramId,name,firstName:name,lastName:"",username:"",score:Number(score),premiumTier:"none",avatarId:"",frameId:"",caseAvatarId:"",caseFrameId:"",caseAvatarUrl:"",caseFrameUrl:"",showcase:[],place:0}));
   if(Number(state?.bestScore||0)>0){
     const caseAvatarId=String(state?.caseState?.activeAvatarId||""),caseFrameId=String(state?.caseState?.activeFrameId||"");
     const avatarItem=caseAvatarId?snapshot?.liveops?.content?.avatar?.[caseAvatarId]:null,frameItem=caseFrameId?snapshot?.liveops?.content?.frame?.[caseFrameId]:null;
-    rows.push({telegramId:fakeId,name:String(state?.name||"Тестовый игрок"),firstName:String(state?.name||"Тестовый игрок"),lastName:"",username:"test_project",score:Number(state.bestScore||0),premiumTier:String(state?.passTier||"none"),avatarId:caseAvatarId,frameId:caseFrameId,caseAvatarId,caseFrameId,caseAvatarUrl:String(avatarItem?.imageUrl||""),caseFrameUrl:String(frameItem?.imageUrl||""),place:0});
+    const achievementState=await testProjectSandboxAchievementsPayload(env,state,snapshot);
+    rows.push({telegramId:fakeId,name:String(state?.name||"Тестовый игрок"),firstName:String(state?.name||"Тестовый игрок"),lastName:"",username:"test_project",score:Number(state.bestScore||0),premiumTier:String(state?.passTier||"none"),avatarId:caseAvatarId,frameId:caseFrameId,caseAvatarId,caseFrameId,caseAvatarUrl:String(avatarItem?.imageUrl||""),caseFrameUrl:String(frameItem?.imageUrl||""),showcase:achievementState.showcase?.items||[],place:0});
   }
   rows.sort((a,b)=>b.score-a.score||a.name.localeCompare(b.name,"ru")); rows.forEach((row,index)=>row.place=index+1);
   const me=rows.find((row)=>row.telegramId===fakeId)||null;
@@ -36850,6 +37436,7 @@ async function testProjectSandboxCaseOpenLevel(env, ctx, loaded, payload) {
   if((state.openedLevelCases||[]).includes(level))throw new ApiError(409,"Этот уровневый кейс уже открыт в Test Project.");
   const rolled=rollLevelCase(caseType,state.caseState,state.caseState.ownedSkins,snapshot?.liveops||{content:{},cases:{}},testProjectCaseRng(state,`level-case:${caseType}:${level}`));
   state.caseState=testProjectNormalizeCaseState(rolled.state); state.openedLevelCases=[...(state.openedLevelCases||[]),level];
+  state.sandbox=testProjectNormalizeSandboxState({...state.sandbox,achievementOpenedCases:Number(state.sandbox?.achievementOpenedCases||0)+1});
   state.points=Math.min(999999999,Number(state.points||0)+Number(rolled.points||0));state.treats=Math.min(9999999,Number(state.treats||0)+Number(rolled.treats||0));state.coffee=Math.min(9999999,Number(state.coffee||0)+Number(rolled.coffee||0));
   const persisted=await testProjectSandboxSave(env,ownerId,state,snapshot,before,"game_case_level_open",`Игра · открыт кейс уровня ${level}`);
   const current=persisted.state;
@@ -36867,10 +37454,40 @@ async function testProjectSandboxRunSubmit(env, loaded, payload) {
   if(season?.status==="active"&&score>0){const base=Math.max(0,Math.floor(Number(season?.baseRunXp||0)));const earned=testProjectPassEarnedMultiplier(state,season,nowMs);seasonPassXpAwarded=Math.floor(base*Math.max(1,Number(earned?.multiplier||1)));state.passXp=Math.min(999999999,Number(state.passXp||0)+seasonPassXpAwarded);
     for(const task of season?.tasks||[]){if(!task?.enabled)continue;const key=testProjectTaskKey(season.id,task,nowMs);let delta=0;const metric=String(task.metric||"");if(metric==="runs")delta=1;else if(metric==="score")delta=score;else if(metric==="treats")delta=runTreats;else if(metric==="coffee")delta=runCoffee;if(delta>0)state.passTaskProgress[key]=Math.min(999999999,Number(state.passTaskProgress[key]||0)+delta);}
   }
-  state.sandbox=testProjectNormalizeSandboxState({...state.sandbox,activeRun:null,completedRuns:Number(state.sandbox?.completedRuns||0)+1,lastRun:{id:runId,score,durationMs,acceptedAt:Date.now()}});
+  state.sandbox=testProjectNormalizeSandboxState({...state.sandbox,activeRun:null,completedRuns:Number(state.sandbox?.completedRuns||0)+1,achievementRunScore:Number(state.sandbox?.achievementRunScore||0)+score,achievementRunZefir:Number(state.sandbox?.achievementRunZefir||0)+runTreats,achievementRunCoffee:Number(state.sandbox?.achievementRunCoffee||0)+runCoffee,lastRun:{id:runId,score,durationMs,acceptedAt:Date.now()}});
   const persisted=await testProjectSandboxSave(env,ownerId,state,snapshot,before,"game_run_submit",`Игра · забег ${score.toLocaleString("ru-RU")} очков`);
   const current=persisted.state;
   return {ok:true,testProject:true,fastSettlement:true,runSettlement:{accepted:true,acceptedToRating:score>0,activeBooster:current.caseState?.activeBooster||{type:"",runsLeft:0}},profile:testProjectSandboxProfile(current),profileXpAwarded,seasonPassAward:{xpAwarded:seasonPassXpAwarded,taskNotice:null},serverTime:Date.now()};
+}
+
+
+async function testProjectSandboxAchievementsPayload(env, state, snapshot) {
+  const pass = testProjectSandboxPassPayload(state, snapshot);
+  const claimRows = testProjectArray(state?.sandbox?.achievementClaims, 100).map((achievementId) => ({
+    achievement_id:String(achievementId),
+    status:"delivered",
+    reward_json:"",
+    queue_status:"delivered",
+    queue_delivered_at:Math.floor(Date.now()/1000)
+  }));
+  const definitions=await achievementConfiguredDefinitions(env);
+  return achievementsV2FromStats({
+    runs:Number(state?.sandbox?.completedRuns||0),
+    totalScore:Number(state?.sandbox?.achievementRunScore||0),
+    bestScore:Number(state?.bestScore||0),
+    runZefir:Number(state?.sandbox?.achievementRunZefir||0),
+    runCoffee:Number(state?.sandbox?.achievementRunCoffee||0),
+    level:caseProfileLevel(Number(state?.profileXp||0)),
+    avatars:Array.isArray(state?.caseState?.ownedAvatars)?state.caseState.ownedAvatars.length:0,
+    frames:Array.isArray(state?.caseState?.ownedFrames)?state.caseState.ownedFrames.length:0,
+    trails:Array.isArray(state?.caseState?.ownedTrails)?state.caseState.ownedTrails.length:0,
+    music:Array.isArray(state?.caseState?.ownedMusicTracks)?state.caseState.ownedMusicTracks.length:0,
+    caseOpenings:Number(state?.sandbox?.achievementOpenedCases||0),
+    albumMilestones:0,
+    albumCompleted:0,
+    seasonRewards:Number(pass?.summary?.rewardsClaimed||0),
+    referrals:0
+  }, claimRows, definitions, testProjectArray(state?.sandbox?.achievementShowcase,ACHIEVEMENT_SHOWCASE_LIMIT));
 }
 
 async function testProjectSandboxGameData(env, ctx) {
@@ -36882,6 +37499,29 @@ async function testProjectSandboxGameData(env, ctx) {
   const reload=async()=>{loaded=await testProjectSandboxLoad(env,ctx);({ownerId,state,productionSnapshot,snapshot,nowMs}=loaded);return loaded;};
 
   if(path==="/api/game/startup")return response({ok:true,authenticated:true,workerBuild:WORKER_BUILD,generatedAt:nowMs,publicConfig:testProjectClone(snapshot?.publicConfig||fallbackGamePublicConfig()),profile:testProjectSandboxProfile(state),cases:testProjectSandboxCasePayload(state,snapshot),rewards:{ok:true,rewards:(state.sandbox?.mockRewards||[]).map(testProjectSandboxRewardView),limitStatus:null},flags:{...(snapshot?.featureFlags||{}),battle_pass:true,shop:true,rating:true},seasonPassBonus:{active:Number(state.seasonXpBoosts||0)>0||state.passTier==="elite_plus",multiplier:(Number(state.seasonXpBoosts||0)>0||state.passTier==="elite_plus")?2:1,claimableCount:testProjectSandboxPassPayload(state,snapshot).taskClaimableCount},seasonPassTaskNotice:{ok:true,pending:false,notice:null},news:{ok:true,items:[],unreadCount:0},gifts:{ok:true,pendingCount:0,unreadCount:0,items:[]},liveOpsEvent:{active:false,multipliers:{pointsMultiplier:1,treatsMultiplier:1,coffeeMultiplier:1}},newcomerPath:{available:false,dayNumber:1,runs:Number(state.sandbox?.completedRuns||0),steps:[]},miniGameVisual:testProjectMiniGameVisual(state,snapshot),miniGameVisuals:testProjectMiniGameVisuals(state,snapshot),errors:{}});
+  if(path==="/api/achievements")return response(await testProjectSandboxAchievementsPayload(env,state,snapshot));
+  if(path==="/api/achievements/claim"){
+    const achievementId=String(payload?.achievementId||payload?.achievement_id||payload?.id||"").trim().slice(0,80);
+    const current=await testProjectSandboxAchievementsPayload(env,state,snapshot),achievement=current.achievements.find((item)=>item.id===achievementId);
+    if(!achievement)throw new ApiError(404,"Достижение не найдено или временно скрыто.");
+    if(!achievement.earned)throw new ApiError(409,"Сначала выполни условие достижения.");
+    const already=testProjectArray(state?.sandbox?.achievementClaims,100).includes(achievementId);
+    if(already)return response({ok:true,repeated:true,pending:false,reward:achievement.reward,state:current});
+    const before=testProjectClone(state),reward=achievementRewardSnapshot(achievement.reward);
+    if(reward.kind==="none")throw new ApiError(409,"Это статусное достижение: очки престижа уже начислены автоматически, отдельного приза нет.");
+    const tpReward=reward.kind==="zefir"?{...reward,kind:"treats"}:reward;
+    testProjectApplyReward(state,tpReward,snapshot?.season||{});
+    state.sandbox=testProjectNormalizeSandboxState({...state.sandbox,achievementClaims:[...testProjectArray(state?.sandbox?.achievementClaims,100),achievementId]});
+    await testProjectSandboxSave(env,ownerId,state,snapshot,before,"game_achievement_claim",`Игра · достижение ${achievementId}`);
+    await reload();
+    return response({ok:true,repeated:false,pending:false,reward:achievementRewardView(reward),state:await testProjectSandboxAchievementsPayload(env,state,snapshot)});
+  }
+  if(path==="/api/achievements/showcase"){
+    if(!Array.isArray(payload?.ids))throw new ApiError(400,"Передайте список достижений для витрины.");
+    const normalized=payload.ids.map((id)=>String(id||"").trim().slice(0,80)).filter(Boolean),ids=[...new Set(normalized)];if(ids.length!==normalized.length)throw new ApiError(400,"Одно достижение нельзя добавить дважды.");if(ids.length>ACHIEVEMENT_SHOWCASE_LIMIT)throw new ApiError(400,"В витрине может быть не больше 3 достижений.");
+    const current=await testProjectSandboxAchievementsPayload(env,state,snapshot),available=new Map(current.achievements.map((item)=>[item.id,item]));for(const id of ids){const item=available.get(id);if(!item)throw new ApiError(404,"Достижение недоступно или скрыто.");if(!item.earned)throw new ApiError(409,`Сначала выполни достижение «${item.title}».`);}
+    const before=testProjectClone(state);state.sandbox=testProjectNormalizeSandboxState({...state.sandbox,achievementShowcase:ids});await testProjectSandboxSave(env,ownerId,state,snapshot,before,"game_achievement_showcase","Игра · обновлена витрина достижений");await reload();return response({ok:true,state:await testProjectSandboxAchievementsPayload(env,state,snapshot)});
+  }
   if(path==="/api/features")return response({ok:true,flags:{...(snapshot?.featureFlags||{}),battle_pass:true,shop:true,rating:true}});
   if(path==="/api/profile/sync")return response({ok:true,profile:testProjectSandboxProfile(state)});
   if(path==="/api/shop/config")return response({ok:true,...testProjectClone(snapshot?.publicConfig?.shop||fallbackGamePublicConfig().shop)});
@@ -36893,7 +37533,7 @@ async function testProjectSandboxGameData(env, ctx) {
   }
   if(path==="/api/runs/checkpoint")return response({ok:true,checkpoint:{runId:String(payload?.runId||""),durationMs:Math.max(0,Math.floor(Number(payload?.durationMs)||0)),score:Math.max(0,Math.floor(Number(payload?.score)||0)),accepted:true}});
   if(path==="/api/leaderboard/submit")return response(await testProjectSandboxRunSubmit(env,loaded,payload));
-  if(path==="/api/leaderboard/state")return response(testProjectSandboxLeaderboardPayload(state,String(payload?.mode||query?.mode||"season"),nowMs,snapshot));
+  if(path==="/api/leaderboard/state")return response(await testProjectSandboxLeaderboardPayload(env,state,String(payload?.mode||query?.mode||"season"),nowMs,snapshot));
   if(path==="/api/leaderboard/claim"){
     const claimKey="tp-rating",already=(state.sandbox?.leaderboardClaimed||[]).includes(claimKey),reward={id:"tp-rating-reward",title:"Тестовый Золотой кейс",status:"claimed",type:"case",kind:"case",amount:1,itemId:"gold"};
     if(!already){const before=testProjectClone(state);state.caseInventory.gold=Math.min(999,Number(state.caseInventory.gold||0)+1);state.sandbox=testProjectNormalizeSandboxState({...state.sandbox,leaderboardClaimed:[...(state.sandbox?.leaderboardClaimed||[]),claimKey]});await testProjectSandboxSave(env,ownerId,state,snapshot,before,"game_rating_claim","Игра · награда тестового рейтинга");await reload();}
@@ -36995,6 +37635,7 @@ async function testProjectSandboxGameData(env, ctx) {
     const definition=testProjectSeasonalCaseDefinition(snapshot,caseId);if(!definition)throw new ApiError(404,"Этот сезонный кейс не относится к выбранному сезону Test Project.");
     if(!caseId||Number(state.seasonalCaseInventory?.[caseId]||0)<1)throw new ApiError(409,"Нет сезонного кейса в Test Project.");
     const before=testProjectClone(state);state.seasonalCaseInventory[caseId]=Math.max(0,Number(state.seasonalCaseInventory[caseId]||0)-1);const rolled=testProjectRollSeasonalCase(state,definition,{apply:true,rng:testProjectCaseRng(state,`seasonal:${caseId}`)});
+    state.sandbox=testProjectNormalizeSandboxState({...state.sandbox,achievementOpenedCases:Number(state.sandbox?.achievementOpenedCases||0)+1});
     await testProjectSandboxSave(env,ownerId,state,snapshot,before,"game_seasonal_case_open",`Игра · открыт ${String(definition.title||"сезонный кейс")}`);await reload();
     const pass=testProjectSandboxPassPayload(state,snapshot),casePayload={caseId,grantId:`tp_${crypto.randomUUID().replaceAll("-","").slice(0,16)}`,title:String(definition.title||"Сезонный кейс"),imageUrl:String(definition.openImageUrl||definition.imageUrl||""),rewards:rolled.rewards};
     return response({...pass,case:casePayload,opened:casePayload});
@@ -38484,6 +39125,8 @@ async function handleOwnerPanelApi(request, env, path, executionCtx = null) {
     if (path === "/api/owner/newcomer/save") return jsonResponse(await ownerPanelNewcomerSave(env, ctx));
     if (path === "/api/owner/daily-loyalty") return jsonResponse(await ownerPanelDailyLoyalty(env, ctx));
     if (path === "/api/owner/daily-loyalty/save") return jsonResponse(await ownerPanelDailyLoyaltySave(env, ctx));
+    if (path === "/api/owner/achievements/config") return jsonResponse(await ownerPanelAchievementsConfig(env, ctx));
+    if (path === "/api/owner/achievements/config/save") return jsonResponse(await ownerPanelAchievementConfigSave(env, ctx));
     if (path === "/api/owner/player/daily-return-test/prepare") return jsonResponse(await ownerPanelPrepareDailyReturnTest(env, ctx));
     if (path === "/api/owner/player/daily-return-test/cancel") return jsonResponse(await ownerPanelCancelDailyReturnTest(env, ctx));
     if (path === "/api/owner/player/daily-streak/restore") return jsonResponse(await ownerPanelRestoreDailyStreak(env, ctx));
