@@ -20201,6 +20201,10 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           } else if (!silent &amp;&amp; loaded?.runSettlement?.accepted) {
             showProfileToast(&quot;Результат сохранён.&quot;, &quot;success&quot;, 1800);
           }
+          try {
+            const achievementUnlocks = Array.isArray(loaded?.achievementUnlocks) ? loaded.achievementUnlocks : [];
+            if (achievementUnlocks.length) window.dispatchEvent(new CustomEvent(&quot;zefirok-achievements-unlocked&quot;, { detail: { items: achievementUnlocks, runId: String(run.runId || &quot;&quot;) } }));
+          } catch (error) {}
           try { window.parent.postMessage({ type: &quot;zefirok-run-completed&quot;, accepted: Boolean(loaded?.runSettlement?.acceptedToRating), runId: String(run.runId || &quot;&quot;) }, &quot;*&quot;); } catch (error) {}
           return true;
         } catch (error) {
@@ -23526,6 +23530,68 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 }
 @media(max-width:340px){#zefirok-maltipoo-runner .profile-v2-quickbar{grid-template-columns:1fr}}
 &lt;/style&gt;
+
+&lt;style id=&quot;zefirok-achievement-unlock-popup-v1-style&quot;&gt;
+#achievementUnlockLayer{position:fixed;inset:0;z-index:2147482600;pointer-events:none;display:flex;align-items:flex-end;justify-content:center;padding:14px 14px max(18px,env(safe-area-inset-bottom));font-family:-apple-system,BlinkMacSystemFont,&quot;Segoe UI&quot;,sans-serif}
+#achievementUnlockLayer[hidden]{display:none}
+.achievement-unlock-card{pointer-events:auto;position:relative;width:min(390px,calc(100vw - 28px));overflow:hidden;border:1px solid rgba(231,181,79,.72);border-radius:25px;background:radial-gradient(circle at 86% 0,rgba(255,224,124,.34),transparent 34%),linear-gradient(145deg,#fffef8,#fff2e8 58%,#ffeaf2);box-shadow:0 20px 58px rgba(88,48,63,.22);padding:13px;display:grid;grid-template-columns:76px minmax(0,1fr);gap:11px;transform-origin:50% 100%;animation:achievementUnlockIn .42s cubic-bezier(.2,.82,.23,1.12) both}
+.achievement-unlock-card.is-festive{border-color:rgba(222,156,32,.88);box-shadow:0 22px 68px rgba(183,119,25,.28),0 0 0 5px rgba(255,222,112,.12);animation:achievementUnlockFestiveIn .58s cubic-bezier(.17,.89,.24,1.18) both}
+.achievement-unlock-art{width:76px;height:76px;display:grid;place-items:center;align-self:center;font-size:34px;filter:drop-shadow(0 8px 12px rgba(166,111,28,.16))}
+.achievement-unlock-art img{width:76px;height:76px;display:block;object-fit:contain}
+.achievement-unlock-copy{min-width:0;display:grid;align-content:center;gap:5px;padding-right:20px}
+.achievement-unlock-kicker{color:#a46c17;font-size:8px;font-weight:950;letter-spacing:.09em;text-transform:uppercase}
+.achievement-unlock-title{margin:0;color:#673d4e;font-size:15px;line-height:1.15;font-weight:950}
+.achievement-unlock-meta{display:flex;align-items:center;gap:6px;flex-wrap:wrap;color:#9a7180;font-size:8px;font-weight:850}
+.achievement-unlock-points{display:inline-flex;align-items:center;gap:4px;min-height:25px;padding:4px 7px;border:1px solid rgba(218,163,51,.38);border-radius:999px;background:#fff8df;color:#8e631f;font-size:9px;font-weight:950}
+.achievement-unlock-points img{width:15px;height:15px;object-fit:contain}
+.achievement-unlock-actions{grid-column:1/-1;display:flex;align-items:center;gap:8px;margin-top:1px}
+.achievement-unlock-claim{appearance:none;min-height:38px;flex:1;border:0;border-radius:13px;background:linear-gradient(180deg,#ee82ad,#d9588b);box-shadow:0 8px 18px rgba(201,71,120,.20);color:#fff;font-size:11px;font-weight:950;cursor:pointer}
+.achievement-unlock-claim:disabled{opacity:.72;cursor:default;box-shadow:none}
+.achievement-unlock-note{min-width:0;flex:1;color:#9a7683;font-size:8px;font-weight:750;line-height:1.35}
+.achievement-unlock-close{appearance:none;position:absolute;right:8px;top:8px;width:28px;height:28px;border:0;border-radius:999px;background:rgba(255,255,255,.76);color:#a37483;font-size:17px;font-weight:900;line-height:1;cursor:pointer}
+.achievement-unlock-spark{position:absolute;width:8px;height:8px;border-radius:50%;background:#ffd76b;opacity:0;pointer-events:none}.is-festive .achievement-unlock-spark{animation:achievementSpark 1.25s ease-out infinite}.achievement-unlock-spark.s1{left:9%;top:10%;animation-delay:.05s}.achievement-unlock-spark.s2{right:13%;top:18%;animation-delay:.32s}.achievement-unlock-spark.s3{left:22%;bottom:14%;animation-delay:.58s}.achievement-unlock-spark.s4{right:28%;bottom:9%;animation-delay:.82s}
+@keyframes achievementUnlockIn{from{opacity:0;transform:translateY(26px) scale(.96)}to{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes achievementUnlockFestiveIn{0%{opacity:0;transform:translateY(34px) scale(.90) rotate(-1deg)}68%{opacity:1;transform:translateY(-3px) scale(1.025) rotate(.3deg)}100%{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes achievementSpark{0%{opacity:0;transform:scale(.35) translateY(5px)}35%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(.2) translateY(-15px)}}
+@media(max-width:360px){.achievement-unlock-card{grid-template-columns:66px minmax(0,1fr);padding:11px}.achievement-unlock-art,.achievement-unlock-art img{width:66px;height:66px}.achievement-unlock-title{font-size:13px}}
+@media(prefers-reduced-motion:reduce){.achievement-unlock-card,.achievement-unlock-spark{animation:none!important}}
+&lt;/style&gt;
+&lt;script id=&quot;zefirok-achievement-unlock-popup-v1&quot;&gt;
+(()=&gt;{
+  const POINTS_ICON=&quot;/assets/ui/icon_score_acivment.png&quot;;
+  const queue=[],seen=new Set();let active=null,timer=0,busy=false;
+  const esc=(value)=&gt;String(value??&quot;&quot;).replace(/[&amp;&lt;&gt;&quot;&#x27;]/g,(char)=&gt;({&quot;&amp;&quot;:&quot;&amp;amp;&quot;,&quot;&lt;&quot;:&quot;&amp;lt;&quot;,&quot;&gt;&quot;:&quot;&amp;gt;&quot;,&quot;\&quot;&quot;:&quot;&amp;quot;&quot;,&quot;&#x27;&quot;:&quot;&amp;#39;&quot;})[char]);
+  const initData=()=&gt;{try{return String(window.Telegram?.WebApp?.initData||sessionStorage.getItem(&quot;zefirok-telegram-init-data&quot;)||&quot;&quot;);}catch{return String(window.Telegram?.WebApp?.initData||&quot;&quot;);}};
+  const requestId=()=&gt;{try{return crypto.randomUUID();}catch{return `achievement_${Date.now()}_${Math.random().toString(36).slice(2,10)}`;}};
+  const ensureLayer=()=&gt;{let layer=document.getElementById(&quot;achievementUnlockLayer&quot;);if(layer)return layer;layer=document.createElement(&quot;div&quot;);layer.id=&quot;achievementUnlockLayer&quot;;layer.hidden=true;layer.setAttribute(&quot;aria-live&quot;,&quot;polite&quot;);document.body.appendChild(layer);return layer;};
+  const art=(item)=&gt;{const url=String(item?.artUrl||&quot;&quot;).trim();return url?`&lt;img src=&quot;${esc(url)}&quot; alt=&quot;&quot; decoding=&quot;async&quot;&gt;`:esc(item?.icon||&quot;🏅&quot;);};
+  const isFestive=(item)=&gt;Boolean(item?.festive)||[&quot;epic&quot;,&quot;legendary&quot;,&quot;legacy&quot;].includes(String(item?.rarity||&quot;&quot;))||Number(item?.achievementPoints||0)&gt;=50;
+  const clearTimer=()=&gt;{if(timer){clearTimeout(timer);timer=0;}};
+  const finish=()=&gt;{clearTimer();const layer=ensureLayer();layer.hidden=true;layer.innerHTML=&quot;&quot;;active=null;busy=false;setTimeout(showNext,120);};
+  const scheduleClose=(item)=&gt;{clearTimer();const delay=item?.claimable?8000:(isFestive(item)?6000:4800);timer=setTimeout(finish,delay);};
+  async function claimCurrent(button,note){
+    if(!active||busy||String(active?.rewardKind||active?.reward?.kind||&quot;&quot;)!==&quot;avatar&quot;)return;
+    const auth=initData();if(!auth){note.textContent=&quot;Открой игру через Telegram, чтобы забрать аватарку.&quot;;return;}
+    busy=true;clearTimer();button.disabled=true;button.textContent=&quot;Выдаём…&quot;;note.textContent=&quot;Сервер закрепляет награду за аккаунтом.&quot;;
+    try{
+      const response=await fetch(&quot;/api/achievements/claim&quot;,{method:&quot;POST&quot;,headers:{&quot;Content-Type&quot;:&quot;application/json&quot;},body:JSON.stringify({initData:auth,achievementId:String(active.id||&quot;&quot;),requestId:requestId()}),cache:&quot;no-store&quot;,credentials:&quot;same-origin&quot;});
+      const data=await response.json().catch(()=&gt;({}));if(!response.ok||data?.ok===false)throw new Error(data?.error||&quot;Не удалось забрать награду.&quot;);
+      button.textContent=data?.pending?&quot;Выдаём…&quot;:&quot;Получено&quot;;note.textContent=data?.pending?&quot;Аватарка поставлена в очередь выдачи.&quot;:&quot;Аватарка уже в твоей коллекции.&quot;;
+      try{window.parent.postMessage({type:&quot;zefirok-achievements-account-updated&quot;},&quot;*&quot;);}catch{}
+      timer=setTimeout(finish,data?.pending?1800:1200);
+    }catch(error){busy=false;button.disabled=false;button.textContent=&quot;Повторить&quot;;note.textContent=String(error?.message||&quot;Не удалось забрать аватарку.&quot;);timer=setTimeout(finish,9000);}
+  }
+  function showNext(){
+    if(active||!queue.length)return;active=queue.shift();const layer=ensureLayer(),festive=isFestive(active),points=Math.max(0,Number(active?.achievementPoints||0)),rewardKind=String(active?.rewardKind||active?.reward?.kind||&quot;none&quot;),canClaim=active?.claimable===true&amp;&amp;rewardKind===&quot;avatar&quot;;
+    layer.hidden=false;layer.innerHTML=`&lt;article class=&quot;achievement-unlock-card${festive?&quot; is-festive&quot;:&quot;&quot;}&quot; role=&quot;status&quot;&gt;&lt;span class=&quot;achievement-unlock-spark s1&quot;&gt;&lt;/span&gt;&lt;span class=&quot;achievement-unlock-spark s2&quot;&gt;&lt;/span&gt;&lt;span class=&quot;achievement-unlock-spark s3&quot;&gt;&lt;/span&gt;&lt;span class=&quot;achievement-unlock-spark s4&quot;&gt;&lt;/span&gt;&lt;button class=&quot;achievement-unlock-close&quot; type=&quot;button&quot; aria-label=&quot;Закрыть&quot;&gt;×&lt;/button&gt;&lt;span class=&quot;achievement-unlock-art&quot; aria-hidden=&quot;true&quot;&gt;${art(active)}&lt;/span&gt;&lt;div class=&quot;achievement-unlock-copy&quot;&gt;&lt;span class=&quot;achievement-unlock-kicker&quot;&gt;Достижение получено&lt;/span&gt;&lt;h3 class=&quot;achievement-unlock-title&quot;&gt;${esc(active?.title||&quot;Новое достижение&quot;)}&lt;/h3&gt;&lt;div class=&quot;achievement-unlock-meta&quot;&gt;&lt;span&gt;${esc(active?.rarityLabel||&quot;Обычное&quot;)}&lt;/span&gt;&lt;span class=&quot;achievement-unlock-points&quot;&gt;&lt;img src=&quot;${POINTS_ICON}&quot; alt=&quot;&quot; aria-hidden=&quot;true&quot;&gt;&lt;span&gt;+${points.toLocaleString(&quot;ru-RU&quot;)} очков достижений&lt;/span&gt;&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;${canClaim?`&lt;div class=&quot;achievement-unlock-actions&quot;&gt;&lt;button class=&quot;achievement-unlock-claim&quot; type=&quot;button&quot;&gt;Забрать&lt;/button&gt;&lt;span class=&quot;achievement-unlock-note&quot;&gt;Специальная аватарка ждёт получения.&lt;/span&gt;&lt;/div&gt;`:&quot;&quot;}&lt;/article&gt;`;
+    layer.querySelector(&quot;.achievement-unlock-close&quot;)?.addEventListener(&quot;click&quot;,finish);
+    const claimButton=layer.querySelector(&quot;.achievement-unlock-claim&quot;),note=layer.querySelector(&quot;.achievement-unlock-note&quot;);if(claimButton&amp;&amp;note)claimButton.addEventListener(&quot;click&quot;,()=&gt;claimCurrent(claimButton,note));
+    scheduleClose(active);
+  }
+  window.addEventListener(&quot;zefirok-achievements-unlocked&quot;,(event)=&gt;{const items=Array.isArray(event?.detail?.items)?event.detail.items:[];for(const item of items){const key=`${String(item?.id||&quot;&quot;)}:${Number(item?.unlockedAt||0)}`;if(!item?.id||seen.has(key))continue;seen.add(key);queue.push(item);}showNext();});
+})();
+&lt;/script&gt;
+
 &lt;/body&gt;
 &lt;/html&gt;" title="Сладкий Забег"></iframe>
 <script id="zefirok-v07934-season-pass-overlay-audit" type="application/json">{"version":"0.79.34","scope":"outer-app-return-recovery","samePageOverlay":true,"mainGamePreserved":true,"restores":["telegram_profile","rating","balances","cases","notifications","feature_flags"]}</script>

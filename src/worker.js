@@ -4851,11 +4851,12 @@ function achievementAvailability(definition = {}, now = Math.floor(Date.now()/10
   return {status:(availableFrom||availableUntil)?"active":"always",availableFrom,availableUntil,open:true};
 }
 
-async function achievementConfiguredDefinitions(env) {
+async function achievementConfiguredDefinitions(env, options = {}) {
   await ensureAchievementConfigSchema(env);
+  const includeSeasonDefinitions = options?.includeSeasonDefinitions !== false;
   const [rows,baseDefinitions]=await Promise.all([
     env.DB.prepare(`SELECT * FROM achievement_settings`).all().then((result)=>result.results||[]),
-    achievementBaseDefinitions(env)
+    includeSeasonDefinitions ? achievementBaseDefinitions(env) : Promise.resolve(ACHIEVEMENTS_V2)
   ]);
   const overrides = new Map(rows.map((row) => [String(row.achievement_id || ""), row]));
   return baseDefinitions.map((base, index) => {
@@ -4945,6 +4946,79 @@ function achievementFactCanUnlock(definition, fact, now = Math.floor(Date.now()/
 function achievementUnlockCandidate(definition, fact, now = Math.floor(Date.now()/1000)) {
   const unlockedAt=Math.max(1,Math.floor(Number(fact?.evidenceAt)||now));
   return {achievement_id:String(definition.id),unlocked_at:unlockedAt,source_kind:String(definition.source||""),season_id:String(fact?.seasonId||definition?.seasonId||""),source_snapshot_json:JSON.stringify({source:String(definition.source||""),current:Number(fact?.current||0),target:Number(fact?.target||0),evidenceAt:Math.max(0,Number(fact?.evidenceAt)||0),seasonId:String(fact?.seasonId||definition?.seasonId||"")})};
+}
+
+
+const ACHIEVEMENT_RUN_SOURCES = new Set(["runs","totalScore","bestScore","runZefir","runCoffee","level"]);
+
+async function achievementRunStatsRow(env, telegramId, minRunMs) {
+  const playerId=String(telegramId||"");
+  return env.DB.prepare(`SELECT COUNT(*) AS count,COALESCE(SUM(score),0) AS total_score,COALESCE(SUM(run_zefir),0) AS run_zefir,COALESCE(SUM(run_coffee),0) AS run_coffee FROM (SELECT run_id,MAX(score) AS score,MAX(run_zefir) AS run_zefir,MAX(run_coffee) AS run_coffee FROM (SELECT run_id,raw_score AS score,raw_treats AS run_zefir,raw_coffee AS run_coffee FROM player_economy_run_ledger WHERE telegram_id=? AND duration_ms>=? UNION ALL SELECT run_id,score,0,0 FROM leaderboard_runs WHERE telegram_id=? AND accepted=1) GROUP BY run_id)`)
+    .bind(playerId,Math.max(0,Number(minRunMs)||0),playerId).first();
+}
+
+async function prepareRunAchievementUnlockContext(env, telegramId, minRunMs) {
+  try {
+    await ensureAchievementConfigSchema(env);
+    const playerId=String(telegramId||"");
+    const [definitions,runsRow,earnedResult]=await Promise.all([
+      achievementConfiguredDefinitions(env,{includeSeasonDefinitions:false}),
+      achievementRunStatsRow(env,playerId,minRunMs),
+      env.DB.prepare(`SELECT achievement_id FROM achievement_unlocks WHERE telegram_id=? UNION SELECT achievement_id FROM achievement_claims WHERE telegram_id=?`).bind(playerId,playerId).all()
+    ]);
+    return {
+      definitions:(definitions||[]).filter((definition)=>definition?.enabled!==false&&definition?.visible!==false&&definition?.catalogVisible===true&&ACHIEVEMENT_RUN_SOURCES.has(String(definition?.source||""))),
+      earnedIds:new Set((earnedResult?.results||[]).map((row)=>String(row?.achievement_id||"")).filter(Boolean)),
+      runs:{
+        runs:achievementV2Count(runsRow?.count),
+        totalScore:achievementV2Count(runsRow?.total_score),
+        runZefir:achievementV2Count(runsRow?.run_zefir),
+        runCoffee:achievementV2Count(runsRow?.run_coffee)
+      }
+    };
+  } catch(error) {
+    console.error("prepare run achievement unlock context failed",error);
+    return null;
+  }
+}
+
+function achievementRunUnlockPublicItem(definition, unlockedAt) {
+  const rarity=achievementRarity(definition?.rarity,"common"),reward=achievementRewardView(definition?.reward),points=achievementPointsValue(definition?.achievementPoints,0);
+  return {
+    id:String(definition?.id||""),category:String(definition?.category||"runs"),icon:String(definition?.icon||"🏅"),artUrl:String(definition?.artUrl||""),
+    title:String(definition?.title||"Достижение"),description:String(definition?.description||""),rarity,rarityLabel:ACHIEVEMENT_RARITY_LABELS[rarity]||rarity,
+    achievementPoints:points,unlockedAt:Math.max(1,Number(unlockedAt)||0),earned:true,hasReward:reward.hasReward===true,claimable:reward.kind==="avatar",claimStatus:reward.kind==="avatar"?"ready":"complete",
+    reward,rewardKind:String(reward.kind||"none"),festive:["epic","legendary","legacy"].includes(rarity)||points>=50
+  };
+}
+
+async function persistRunAchievementUnlocks(env, context, input = {}) {
+  if(!context||!input?.rewardEligible)return [];
+  const telegramId=String(input.telegramId||""),runId=String(input.runId||""),metrics=input.metrics||{},now=Math.max(1,Math.floor(Number(input.now)||Date.now()/1000));
+  if(!telegramId||!runId)return [];
+  const before={
+    runs:achievementV2Count(context?.runs?.runs),totalScore:achievementV2Count(context?.runs?.totalScore),runZefir:achievementV2Count(context?.runs?.runZefir),runCoffee:achievementV2Count(context?.runs?.runCoffee),
+    bestScore:achievementV2Count(input?.profileBefore?.best_score),level:caseProfileLevel(Number(input?.profileBefore?.profile_xp||0))
+  };
+  const after={
+    runs:before.runs+1,totalScore:before.totalScore+achievementV2Count(metrics?.score),runZefir:before.runZefir+achievementV2Count(metrics?.runTreats),runCoffee:before.runCoffee+achievementV2Count(metrics?.runCoffee),
+    bestScore:Math.max(before.bestScore,achievementV2Count(metrics?.score)),level:caseProfileLevel(Number(input?.nextProfileXp||0))
+  };
+  const rows=[];
+  for(const definition of context.definitions||[]){
+    const achievementId=String(definition?.id||"");
+    if(!achievementId||context.earnedIds?.has(achievementId))continue;
+    const beforeFact=achievementFact(before,definition),afterFact=achievementFact(after,definition);
+    if(Number(beforeFact.current||0)>=Number(beforeFact.target||1)||!achievementFactCanUnlock(definition,afterFact,now))continue;
+    const candidate=achievementUnlockCandidate(definition,afterFact,now);
+    candidate.source_snapshot_json=JSON.stringify({source:String(definition.source||""),current:Number(afterFact.current||0),target:Number(afterFact.target||0),evidenceAt:now,trigger:"run_settlement",runId,before:Number(beforeFact.current||0),after:Number(afterFact.current||0),run:{score:achievementV2Count(metrics?.score),durationMs:achievementV2Count(metrics?.durationMs),runZefir:achievementV2Count(metrics?.runTreats),runCoffee:achievementV2Count(metrics?.runCoffee)}});
+    rows.push({definition,candidate});
+  }
+  if(!rows.length)return [];
+  const results=await env.DB.batch(rows.map(({candidate})=>env.DB.prepare(`INSERT OR IGNORE INTO achievement_unlocks(telegram_id,achievement_id,unlocked_at,source_kind,season_id,source_snapshot_json) VALUES(?,?,?,?,?,?)`).bind(telegramId,candidate.achievement_id,candidate.unlocked_at,candidate.source_kind,candidate.season_id,candidate.source_snapshot_json)));
+  const unlocked=[];
+  rows.forEach((entry,index)=>{if(Number(results?.[index]?.meta?.changes||0)>0){context.earnedIds?.add(entry.candidate.achievement_id);unlocked.push(achievementRunUnlockPublicItem(entry.definition,entry.candidate.unlocked_at));}});
+  return unlocked.sort((a,b)=>Number(b.achievementPoints||0)-Number(a.achievementPoints||0)||String(a.id).localeCompare(String(b.id)));
 }
 
 async function achievementSyncSeasonHistoryForPlayer(env, telegramId) {
@@ -5055,7 +5129,7 @@ async function achievementPlayerState(env, telegramId) {
   const [definitions, profileRow, runsRow, caseRow, seasonRow, referralRow, caseOpeningsRow, seasonalCaseOpeningsRow, albumMilestoneRow, albumItemsResult, claimsResult, showcaseResult, unlockResult] = await Promise.all([
     achievementConfiguredDefinitions(env),
     env.DB.prepare(`SELECT profile_xp,best_score FROM admin_profile_state WHERE telegram_id=? LIMIT 1`).bind(playerId).first(),
-    env.DB.prepare(`SELECT COUNT(*) AS count,COALESCE(SUM(score),0) AS total_score,COALESCE(SUM(run_zefir),0) AS run_zefir,COALESCE(SUM(run_coffee),0) AS run_coffee FROM (SELECT run_id,MAX(score) AS score,MAX(run_zefir) AS run_zefir,MAX(run_coffee) AS run_coffee FROM (SELECT run_id,raw_score AS score,raw_treats AS run_zefir,raw_coffee AS run_coffee FROM player_economy_run_ledger WHERE telegram_id=? AND duration_ms>=? UNION ALL SELECT run_id,score,0,0 FROM leaderboard_runs WHERE telegram_id=? AND accepted=1) GROUP BY run_id)`).bind(playerId,minRunMs,playerId).first(),
+    achievementRunStatsRow(env,playerId,minRunMs),
     env.DB.prepare(`SELECT owned_avatars_json,owned_frames_json,owned_trails_json,owned_skins_json,owned_music_json FROM case_player_state WHERE telegram_id=? LIMIT 1`).bind(playerId).first(),
     env.DB.prepare(`SELECT COUNT(*) AS count FROM season_pass_claims WHERE telegram_id=? AND status='delivered'`).bind(playerId).first(),
     env.DB.prepare(`SELECT COUNT(*) AS count FROM referral_links WHERE referrer_telegram_id=? AND status='active'`).bind(playerId).first(),
@@ -9905,10 +9979,11 @@ async function submitLeaderboardRun(request, env, executionCtx = null) {
       submittedMetrics,
       historicalAttestAtMs > 0 ? { nowMs: historicalAttestAtMs } : {}
     );
-    const qualifies = metrics.durationMs >= minSeconds * 1000 && metrics.score >= minScore;
+    const rewardEligible = metrics.durationMs >= minSeconds * 1000;
+    const qualifies = rewardEligible && metrics.score >= minScore;
     const acceptedToRating = ratingEntryEnabled && String(season.status || "") === "active" && qualifies;
     const profileBeforePromise = ensureAuthoritativeProfileRow(env, telegramId, `run:${runId}:prepare`);
-    const [ensured, profileBefore, consumed, fastSeasonPass, testerRow, liveOpsRunEvent] = await Promise.all([
+    const [ensured, profileBefore, consumed, fastSeasonPass, testerRow, liveOpsRunEvent, runAchievementContext] = await Promise.all([
       ensureCasePlayerState(env, telegramId, {}, { profilePromise: profileBeforePromise }),
       profileBeforePromise,
       env.DB.prepare(`SELECT booster_type,telegram_id FROM case_booster_run_consumptions WHERE run_id=? LIMIT 1`).bind(runId).first(),
@@ -9917,13 +9992,13 @@ async function submitLeaderboardRun(request, env, executionCtx = null) {
         runTreats: metrics.runTreats, runCoffee: metrics.runCoffee
       }, runActivityCreatedAt) : Promise.resolve(null),
       acceptedToRating ? getTesterAccountSafe(telegramId, env) : Promise.resolve(null),
-      activeRunLiveOpsEvent(env).catch(()=>({active:false,multipliers:{pointsMultiplier:1,treatsMultiplier:1,coffeeMultiplier:1}}))
+      activeRunLiveOpsEvent(env).catch(()=>({active:false,multipliers:{pointsMultiplier:1,treatsMultiplier:1,coffeeMultiplier:1}})),
+      rewardEligible ? prepareRunAchievementUnlockContext(env,telegramId,minSeconds*1000) : Promise.resolve(null)
     ]);
     if (consumed && String(consumed.telegram_id || "") !== telegramId) throw new ApiError(409, "Этот идентификатор забега уже использован.");
 
     const caseState = ensured.state;
     const boosterAlreadyConsumed = Boolean(consumed);
-    const rewardEligible = metrics.durationMs >= minSeconds * 1000;
     const boosterType = boosterAlreadyConsumed
       ? String(consumed.booster_type || "")
       : (caseState.activeBooster.type && caseState.activeBooster.runsLeft > 0 ? String(caseState.activeBooster.type) : "");
@@ -10089,6 +10164,13 @@ async function submitLeaderboardRun(request, env, executionCtx = null) {
       `run_${runId}`, auth.user, now
     ), "authoritative run timeline failed");
 
+    let achievementUnlocks=[];
+    try {
+      achievementUnlocks=await persistRunAchievementUnlocks(env,runAchievementContext,{telegramId,runId,metrics,rewardEligible,profileBefore,nextProfileXp,now});
+    } catch(error) {
+      console.error("run achievement unlock persistence failed",error);
+    }
+
     const seasonPassXpApplied = fastSeasonPass && fastSeasonPassApplyIndex >= 0
       ? Number(settlementBatchResult?.[fastSeasonPassApplyIndex]?.meta?.changes || 0) > 0
       : false;
@@ -10110,6 +10192,7 @@ async function submitLeaderboardRun(request, env, executionCtx = null) {
       fastSettlement: { version: FAST_RUN_SETTLEMENT_VERSION, serverMs: Math.max(0, Date.now() - settlementRequestStartedAtMs) },
       profile,
       authoritativeProfile: true,
+      achievementUnlocks,
       ...(seasonPassAward ? { seasonPassAward } : {}),
       runSettlement: {
         accepted: true, repeated: false, acceptedToRating,

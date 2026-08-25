@@ -85,6 +85,19 @@
     .showcase-slot-actions button[data-showcase-remove]{color:#a95167}
     .showcase-slot-actions button:disabled{opacity:.35;cursor:default}
 
+    .recent-card{padding:13px;border:1px solid rgba(226,190,204,.82);border-radius:24px;background:linear-gradient(145deg,rgba(255,255,255,.96),rgba(255,246,250,.95));box-shadow:0 10px 26px rgba(102,64,79,.06);display:grid;gap:9px}
+    .recent-head{display:flex;align-items:flex-end;justify-content:space-between;gap:10px}
+    .recent-head div{display:grid;gap:2px;min-width:0}
+    .recent-head strong{color:#613c4c;font-size:15px;font-weight:950}
+    .recent-head span{color:#a1838e;font-size:9px;font-weight:700;line-height:1.35}
+    .recent-list{display:grid;gap:7px}
+    .recent-achievement{display:grid;grid-template-columns:50px minmax(0,1fr) auto;align-items:center;gap:9px;padding:8px 9px;border:1px solid rgba(236,214,221,.88);border-radius:16px;background:rgba(255,255,255,.82)}
+    .recent-achievement-art{width:50px;height:50px;display:grid;place-items:center;font-size:22px}.recent-achievement-art img{width:50px;height:50px;display:block;object-fit:contain;filter:drop-shadow(0 5px 8px rgba(145,94,111,.10))}
+    .recent-achievement-copy{min-width:0;display:grid;gap:3px}
+    .recent-achievement-copy strong{overflow:hidden;text-overflow:ellipsis;color:#633d4e;font-size:10px;font-weight:950;line-height:1.25}
+    .recent-achievement-copy small{color:#9c7b88;font-size:8px;font-weight:750;line-height:1.3}
+    .recent-achievement-points{justify-self:end;display:inline-flex;align-items:center;min-height:26px;padding:4px 7px;border:1px solid rgba(218,163,51,.34);border-radius:999px;background:#fff8df;color:#8e631f;font-size:8px;font-weight:950;white-space:nowrap}
+
     .filters-card{padding:12px;border:1px solid var(--line);border-radius:23px;background:rgba(255,253,252,.92);box-shadow:0 10px 26px rgba(103,64,79,.06)}
     .filters-head{display:flex;align-items:flex-end;justify-content:space-between;gap:10px;margin-bottom:10px}
     .filters-head div{display:grid;gap:2px}
@@ -111,7 +124,7 @@
     .achievement-copy{min-width:0;display:grid;gap:5px}
     .achievement-title-row{display:flex;align-items:center;justify-content:space-between;gap:8px}
     .achievement-title-row strong{min-width:0;color:#623c4c;font-size:12px;font-weight:950}
-    .achievement-state{flex:0 0 auto;padding:4px 7px;border-radius:999px;background:#f4eff1;color:#987d87;font-size:8px;font-weight:950}
+    .achievement-state{flex:0 0 auto;padding:4px 7px;border-radius:999px;background:#f4eff1;color:#987d87;font-size:8px;font-weight:950;white-space:nowrap}
     .achievement-state.is-earned{background:#fff0c9;color:#966516}
     .achievement-state.is-secret{background:#f4eef9;color:#7b5a94}
     .achievement-state.is-expired{background:#f4edf0;color:#9b6676}
@@ -188,6 +201,13 @@
       <div class="summary-card"><span>Всего</span><strong data-summary-total>0</strong></div>
     </section>
 
+    <section class="recent-card" data-recent-achievements hidden aria-labelledby="recent-achievements-title">
+      <div class="recent-head">
+        <div><strong id="recent-achievements-title">Недавно получено</strong><span>Последние трофеи становятся историей твоего аккаунта</span></div>
+      </div>
+      <div class="recent-list" data-recent-achievement-list></div>
+    </section>
+
     <section class="showcase-card" aria-labelledby="achievement-showcase-title">
       <div class="showcase-head">
         <div><strong id="achievement-showcase-title">Моя витрина</strong><span>Выбери до 3 выполненных трофеев и расставь их в нужном порядке. Этот порядок используется в профиле и рейтинге.</span></div>
@@ -251,6 +271,8 @@
       const summaryPointsEl = document.querySelector('[data-summary-points]');
       const summaryShowcaseEl = document.querySelector('[data-summary-showcase]');
       const summaryTotalEl = document.querySelector('[data-summary-total]');
+      const recentSectionEl = document.querySelector('[data-recent-achievements]');
+      const recentListEl = document.querySelector('[data-recent-achievement-list]');
       const showcaseSlotsEl = document.querySelector('[data-showcase-slots]');
       const showcaseCountEl = document.querySelector('[data-showcase-count]');
       const systemInfoEl = document.querySelector('[data-system-info]');
@@ -370,11 +392,20 @@
         try { return new Intl.DateTimeFormat('ru-RU', { day:'2-digit', month:'2-digit', year:'numeric' }).format(new Date(value * 1000)); } catch { return ''; }
       }
 
+      function formatAchievementHistoryDate(seconds) {
+        const value = Math.max(0, safeNumber(seconds));
+        if (!value) return '';
+        try { return new Intl.DateTimeFormat('ru-RU', { day:'numeric', month:'long', year:'numeric' }).format(new Date(value * 1000)); } catch { return formatAchievementDate(seconds); }
+      }
+
       function achievementStatusMeta(item) {
-        if (item?.earned && String(item?.rarity || '') === 'legacy') return { label:'Legacy', className:' is-earned is-legacy' };
         if (item?.secretLocked) return { label:'Секрет', className:' is-secret' };
         if (item?.legacyExpired) return { label:'Время вышло', className:' is-expired' };
-        if (item?.earned) return { label:'Выполнено', className:' is-earned' };
+        if (item?.earned) {
+          const received = formatAchievementDate(item?.unlockedAt);
+          const legacyClass = String(item?.rarity || '') === 'legacy' ? ' is-earned is-legacy' : ' is-earned';
+          return { label: received ? `Получено ${received}` : 'Получено', className:legacyClass };
+        }
         if (String(item?.availabilityStatus || '') === 'active' && safeNumber(item?.availableUntil) > 0) return { label:'Ограничено', className:'' };
         return null;
       }
@@ -463,6 +494,26 @@
         showcaseSlotsEl.innerHTML = slots.join('');
       }
 
+      function renderRecent() {
+        if (!recentSectionEl || !recentListEl) return;
+        const items = catalogAchievements()
+          .filter((item) => item?.earned === true && safeNumber(item?.unlockedAt) > 0)
+          .sort((a,b) => safeNumber(b?.unlockedAt) - safeNumber(a?.unlockedAt) || safeNumber(b?.achievementPoints) - safeNumber(a?.achievementPoints))
+          .slice(0, 3);
+        recentSectionEl.hidden = items.length === 0;
+        if (!items.length) { recentListEl.innerHTML = ''; return; }
+        recentListEl.innerHTML = items.map((item) => {
+          const date = formatAchievementHistoryDate(item?.unlockedAt) || formatAchievementDate(item?.unlockedAt);
+          const rarity = String(item?.rarityLabel || 'Обычное');
+          const prestige = Math.max(0, safeNumber(item?.achievementPoints));
+          return `<div class="recent-achievement">
+            ${achievementArtMarkup(item, 'recent-achievement-art')}
+            <span class="recent-achievement-copy"><strong>${escapeHtml(item?.title || 'Достижение')}</strong><small>${escapeHtml(date)} · ${escapeHtml(rarity)}</small></span>
+            <span class="recent-achievement-points">${achievementPointsInline(prestige, { prefix: '+', small: true })}</span>
+          </div>`;
+        }).join('');
+      }
+
       function renderSummary() {
         const published = catalogAchievements();
         const earned = Number.isFinite(Number(ACHIEVEMENT_SUMMARY?.catalogEarned)) ? Number(ACHIEVEMENT_SUMMARY.catalogEarned) : published.filter((item) => item.earned === true).length;
@@ -472,6 +523,7 @@
         if (summaryPointsEl) summaryPointsEl.innerHTML = achievementPointsInline(prestige);
         if (summaryShowcaseEl) summaryShowcaseEl.textContent = `${SHOWCASE_IDS.length} / ${SHOWCASE_LIMIT}`;
         if (summaryTotalEl) summaryTotalEl.textContent = String(total);
+        renderRecent();
         renderShowcase();
       }
 
@@ -488,14 +540,10 @@
         const busy = claimingIds.has(id);
         const hasReward = item?.hasReward === true || item?.reward?.hasReward === true;
         const statusMeta = achievementStatusMeta(item);
-        const state = item.claimed
-          ? 'Получено'
-          : busy || claimStatus === 'pending'
-            ? 'Выдаём…'
-            : claimStatus === 'failed'
-              ? 'Нужна попытка'
-              : statusMeta?.label || (target > 0 ? 'В процессе' : 'Закрыто');
-        const stateClass = item.claimed || item.earned ? ' is-earned' : String(statusMeta?.className || '');
+        const state = item.earned
+          ? statusMeta?.label || 'Получено'
+          : statusMeta?.label || (target > 0 ? 'В процессе' : 'Закрыто');
+        const stateClass = String(statusMeta?.className || '');
         const rarity = String(item?.rarity || 'common');
         const rarityLabel = String(item?.rarityLabel || 'Обычное');
         const prestige = Math.max(0, safeNumber(item?.achievementPoints));
