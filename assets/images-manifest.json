@@ -1,8 +1,112 @@
 {
   "version": 1,
-  "catalogHash": "9bbef537e6932183",
-  "count": 371,
+  "catalogHash": "09522dae63933ca6",
+  "count": 385,
   "images": [
+    {
+      "fileName": "achievements/badges/best-score-1000.png",
+      "label": "Best score 1000",
+      "folder": "achievements/badges",
+      "path": "/assets/achievements/badges/best-score-1000.png",
+      "size": 2045958,
+      "modified": 1787687934000
+    },
+    {
+      "fileName": "achievements/badges/best-score-2500.png",
+      "label": "Best score 2500",
+      "folder": "achievements/badges",
+      "path": "/assets/achievements/badges/best-score-2500.png",
+      "size": 2063633,
+      "modified": 1787687934000
+    },
+    {
+      "fileName": "achievements/badges/best-score-5000.png",
+      "label": "Best score 5000",
+      "folder": "achievements/badges",
+      "path": "/assets/achievements/badges/best-score-5000.png",
+      "size": 2283524,
+      "modified": 1787687934000
+    },
+    {
+      "fileName": "achievements/badges/first-run.png",
+      "label": "First run",
+      "folder": "achievements/badges",
+      "path": "/assets/achievements/badges/first-run.png",
+      "size": 1814092,
+      "modified": 1787687934000
+    },
+    {
+      "fileName": "achievements/badges/level-10.png",
+      "label": "Level 10",
+      "folder": "achievements/badges",
+      "path": "/assets/achievements/badges/level-10.png",
+      "size": 1905457,
+      "modified": 1787687934000
+    },
+    {
+      "fileName": "achievements/badges/level-5.png",
+      "label": "Level 5",
+      "folder": "achievements/badges",
+      "path": "/assets/achievements/badges/level-5.png",
+      "size": 1537758,
+      "modified": 1787687934000
+    },
+    {
+      "fileName": "achievements/badges/run-coffee-25.png",
+      "label": "Run coffee 25",
+      "folder": "achievements/badges",
+      "path": "/assets/achievements/badges/run-coffee-25.png",
+      "size": 1585477,
+      "modified": 1787687934000
+    },
+    {
+      "fileName": "achievements/badges/run-zefir-25.png",
+      "label": "Run zefir 25",
+      "folder": "achievements/badges",
+      "path": "/assets/achievements/badges/run-zefir-25.png",
+      "size": 2053793,
+      "modified": 1787687934000
+    },
+    {
+      "fileName": "achievements/badges/runs-10.png",
+      "label": "Runs 10",
+      "folder": "achievements/badges",
+      "path": "/assets/achievements/badges/runs-10.png",
+      "size": 1599628,
+      "modified": 1787687934000
+    },
+    {
+      "fileName": "achievements/badges/runs-100.png",
+      "label": "Runs 100",
+      "folder": "achievements/badges",
+      "path": "/assets/achievements/badges/runs-100.png",
+      "size": 2310012,
+      "modified": 1787687934000
+    },
+    {
+      "fileName": "achievements/badges/runs-250.png",
+      "label": "Runs 250",
+      "folder": "achievements/badges",
+      "path": "/assets/achievements/badges/runs-250.png",
+      "size": 2018320,
+      "modified": 1787687934000
+    },
+    {
+      "fileName": "achievements/badges/runs-500.png",
+      "label": "Runs 500",
+      "folder": "achievements/badges",
+      "path": "/assets/achievements/badges/runs-500.png",
+      "size": 2375224,
+      "modified": 1787687934000
+    },
+    {
+      "fileName": "achievements/badges/total-score-5000.png",
+      "label": "Total score 5000",
+      "folder": "achievements/badges",
+      "path": "/assets/achievements/badges/total-score-5000.png",
+      "size": 2430730,
+      "modified": 1787687934000
+    },
     {
       "fileName": "albom_all/alex_albom_oblozka.png",
       "label": "Alex albom oblozka",
@@ -2930,6 +3034,14 @@
       "path": "/assets/ui/icon_referals.png",
       "size": 891598,
       "modified": 1787146378000
+    },
+    {
+      "fileName": "ui/icon_score_acivment.png",
+      "label": "Icon score acivment",
+      "folder": "ui",
+      "path": "/assets/ui/icon_score_acivment.png",
+      "size": 1753543,
+      "modified": 1787680456000
     },
     {
       "fileName": "ui/icon_shopping.png",
