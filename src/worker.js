@@ -4613,6 +4613,22 @@ const ACHIEVEMENT_RARITY_LABELS = Object.freeze({ common:"Обычное", rare:
 const ACHIEVEMENT_AVATAR_IDS = Object.freeze(Object.keys(CASE_AVATARS).filter((id) => CASE_AVATARS[id]?.achievementOnly === true));
 const ACHIEVEMENT_AVATAR_ID_SET = new Set(ACHIEVEMENT_AVATAR_IDS);
 const ACHIEVEMENT_SHOWCASE_LIMIT = 3;
+const ACHIEVEMENT_RANKS = Object.freeze([
+  Object.freeze({id:"newcomer",title:"Новичок",minPoints:0}),
+  Object.freeze({id:"seeker",title:"Искатель",minPoints:50}),
+  Object.freeze({id:"collector",title:"Коллекционер",minPoints:150}),
+  Object.freeze({id:"veteran",title:"Ветеран",minPoints:300}),
+  Object.freeze({id:"zeffi-legend",title:"Легенда Зеффи",minPoints:600})
+]);
+const ACHIEVEMENT_SERIES = Object.freeze([
+  Object.freeze({id:"runner",title:"Бегун",category:"runs",icon:"🏃",memberIds:Object.freeze(["runs-100","runs-250","runs-500","runs-1000"])}),
+  Object.freeze({id:"record-holder",title:"Рекордсмен",category:"runs",icon:"🏆",memberIds:Object.freeze(["best-score-1000","best-score-2500","best-score-5000","best-score-10000"])}),
+  Object.freeze({id:"profile-path",title:"Путь Зеффи",category:"progress",icon:"⭐",memberIds:Object.freeze(["level-5","level-10","level-25","level-50"])}),
+  Object.freeze({id:"collector-kit",title:"Коллекция Зеффи",category:"collections",icon:"🖼️",memberIds:Object.freeze(["avatar-1","frame-1","trail-1","music-2"])}),
+  Object.freeze({id:"case-hunter",title:"Охотник за кейсами",category:"collections",icon:"🎁",memberIds:Object.freeze(["case-open-1","case-open-10"])}),
+  Object.freeze({id:"friends-circle",title:"Своя компания",category:"friends",icon:"👥",memberIds:Object.freeze(["referral-1","referral-5"])}),
+  Object.freeze({id:"season-path",title:"Сезонный путь",category:"seasons",icon:"🎟️",memberIds:Object.freeze(["season-reward-1","season-reward-10"])})
+]);
 const ACHIEVEMENT_SECRET_TITLE = "Секретное достижение";
 const ACHIEVEMENT_SECRET_DESCRIPTION = "Условие скрыто. Достижение раскроется после выполнения.";
 const ACHIEVEMENT_POINTS_ICON_URL = "/assets/ui/icon_score_acivment.png";
@@ -4787,6 +4803,48 @@ function achievementPointsMeta(extra = {}) {
 function achievementPointsValue(value, fallback = 10) {
   const numeric = Math.floor(Number(value));
   return Number.isFinite(numeric) && numeric >= 0 ? Math.min(10000, numeric) : Math.max(0, Math.min(10000, Math.floor(Number(fallback) || 0)));
+}
+
+function achievementRankForPoints(value) {
+  const points=Math.max(0,achievementPointsValue(value,0));
+  let rank=ACHIEVEMENT_RANKS[0],next=null;
+  for(let index=0;index<ACHIEVEMENT_RANKS.length;index+=1){
+    const candidate=ACHIEVEMENT_RANKS[index];
+    if(points>=Number(candidate.minPoints||0))rank=candidate;
+    else{next=candidate;break;}
+  }
+  const minPoints=Math.max(0,Number(rank?.minPoints)||0),nextMinPoints=next?Math.max(minPoints+1,Number(next.minPoints)||0):0;
+  const progressPercent=next?Math.max(0,Math.min(100,Math.round((points-minPoints)/Math.max(1,nextMinPoints-minPoints)*100))):100;
+  return {id:String(rank?.id||"newcomer"),title:String(rank?.title||"Новичок"),points,minPoints,nextId:String(next?.id||""),nextTitle:String(next?.title||""),nextMinPoints,pointsToNext:next?Math.max(0,nextMinPoints-points):0,progressPercent};
+}
+
+function achievementPlayerPercent(earnedPlayers,totalPlayers) {
+  const total=Math.max(0,Number(totalPlayers)||0),earned=Math.max(0,Math.min(total,Number(earnedPlayers)||0));
+  if(!total)return null;
+  return Math.max(0,Math.min(100,Math.round((earned/total)*10000)/100));
+}
+
+async function achievementPopulationStats(env) {
+  const empty={totalPlayers:0,counts:new Map(),scope:"all_player_profiles",excludesTesters:false};
+  const parse=(results,excludesTesters)=>{
+    const totalPlayers=Math.max(0,Number(results?.[0]?.results?.[0]?.total_players||0));
+    const counts=new Map();
+    for(const row of results?.[1]?.results||[]){const id=String(row?.achievement_id||"").trim();if(id)counts.set(id,Math.max(0,Number(row?.earned_players)||0));}
+    return {totalPlayers,counts,scope:"all_player_profiles",excludesTesters};
+  };
+  const statements=(excludeTesters)=>{
+    const testerProfile=excludeTesters?` AND NOT EXISTS(SELECT 1 FROM tester_accounts t WHERE t.telegram_id=p.telegram_id)`:``;
+    const testerEarned=excludeTesters?` AND NOT EXISTS(SELECT 1 FROM tester_accounts t WHERE t.telegram_id=e.telegram_id)`:``;
+    return [
+      env.DB.prepare(`SELECT COUNT(*) AS total_players FROM admin_profile_state p WHERE TRIM(COALESCE(p.telegram_id,''))<>''${testerProfile}`),
+      env.DB.prepare(`SELECT e.achievement_id,COUNT(DISTINCT e.telegram_id) AS earned_players FROM (SELECT telegram_id,achievement_id FROM achievement_unlocks UNION ALL SELECT telegram_id,achievement_id FROM achievement_claims UNION ALL SELECT telegram_id,achievement_id FROM achievement_showcase) e JOIN admin_profile_state p ON p.telegram_id=e.telegram_id WHERE TRIM(COALESCE(e.achievement_id,''))<>''${testerEarned} GROUP BY e.achievement_id`)
+    ];
+  };
+  try{
+    try{return parse(await env.DB.batch(statements(true)),true);}
+    catch(error){if(!isMissingRuntimeDatabaseSchemaError(error))throw error;}
+    return parse(await env.DB.batch(statements(false)),false);
+  }catch(error){console.error("achievement population stats failed",error);return empty;}
 }
 
 function achievementConditionLabel(definition = {}) {
@@ -5086,6 +5144,7 @@ function achievementsV2FromStats(raw = {}, claimRows = [], definitions = ACHIEVE
     level:Math.max(1, Math.min(50, achievementV2Count(raw.level) || 1)),avatars:achievementV2Count(raw.avatars),frames:achievementV2Count(raw.frames),trails:achievementV2Count(raw.trails),music:achievementV2Count(raw.music),caseOpenings:achievementV2Count(raw.caseOpenings),albumMilestones:achievementV2Count(raw.albumMilestones),albumCompleted:achievementV2Count(raw.albumCompleted),seasonRewards:achievementV2Count(raw.seasonRewards),referrals:achievementV2Count(raw.referrals),seasonHistory:raw?.seasonHistory instanceof Map?raw.seasonHistory:achievementSeasonHistoryMap(raw?.seasonHistory||[])
   };
   const now=Math.max(1,Math.floor(Number(options?.now)||Date.now()/1000));
+  const populationStats=options?.populationStats||{},populationTotal=Math.max(0,Number(populationStats?.totalPlayers)||0),populationCounts=populationStats?.counts instanceof Map?populationStats.counts:new Map(Object.entries(populationStats?.counts||{}));
   const claims = achievementClaimRowsMap(claimRows),unlocks=achievementUnlockRowsMap(unlockRows);
   const activeDefinitions = (Array.isArray(definitions) ? definitions : []).filter((definition) => definition?.enabled !== false && definition?.visible !== false && !(Math.max(0,Number(definition?.availableFrom)||0)>now&&!unlocks.has(String(definition?.id||""))));
   const selectedOrder = [...new Set((Array.isArray(showcaseIds) ? showcaseIds : []).map((id)=>String(id||"").trim()).filter(Boolean))].slice(0, ACHIEVEMENT_SHOWCASE_LIMIT);
@@ -5097,6 +5156,7 @@ function achievementsV2FromStats(raw = {}, claimRows = [], definitions = ACHIEVE
     const claimStatus = achievementEffectiveClaimStatus(claimRow, earned, hasReward),claimed=claimStatus === "claimed",claimable=hasReward && earned && ["ready", "failed"].includes(claimStatus);
     const showcaseSlot = earned ? Math.max(0, Number(selectedSlots.get(definition.id) || 0)) : 0,rarity=achievementRarity(definition.rarity,"common"),points=achievementPointsValue(definition.achievementPoints,0),availability=achievementAvailability(definition,now),secretLocked=Boolean(definition.secret)&&!earned;
     const publicTitle=secretLocked?ACHIEVEMENT_SECRET_TITLE:String(definition.title||"Достижение"),publicDescription=secretLocked?ACHIEVEMENT_SECRET_DESCRIPTION:String(definition.description||""),publicIcon=secretLocked?"❓":String(definition.icon||"🏅");
+    const earnedPlayers=Math.max(0,Math.min(populationTotal,Number(populationCounts.get(String(definition.id))||0))),playerPercent=achievementPlayerPercent(earnedPlayers,populationTotal);
     return {
       id:definition.id, category:definition.category, icon:publicIcon, title:publicTitle, description:publicDescription,
       artUrl:secretLocked?ACHIEVEMENT_SECRET_ART_URL:String(definition.artUrl||""),artReady:Boolean(definition.artReady),catalogVisible:Boolean(definition.catalogVisible),
@@ -5105,7 +5165,8 @@ function achievementsV2FromStats(raw = {}, claimRows = [], definitions = ACHIEVE
       availabilityStatus:earned?"unlocked":availability.status,availableFrom:availability.availableFrom,availableUntil:availability.availableUntil,legacyExpired:!earned&&availability.status==="expired",
       claimed, hasReward, claimable, claimStatus,claimedAt:claimed ? Math.max(0, Number(claimRow?.delivered_at || claimRow?.queue_delivered_at || 0)) : 0,
       reward, rewardKind:String(reward.kind || "none"), prestigeOnly:!hasReward, rewardPolicy:hasReward?"simple_reward":"prestige_only",
-      showcaseEligible:earned&&Boolean(definition.catalogVisible), inShowcase:showcaseSlot > 0&&Boolean(definition.catalogVisible), showcaseSlot:Boolean(definition.catalogVisible)?showcaseSlot:0,dynamicSeason:Boolean(definition.dynamicSeason),seasonId:String(definition.seasonId||""),seasonTitle:String(definition.seasonTitle||"")
+      showcaseEligible:earned&&Boolean(definition.catalogVisible), inShowcase:showcaseSlot > 0&&Boolean(definition.catalogVisible), showcaseSlot:Boolean(definition.catalogVisible)?showcaseSlot:0,dynamicSeason:Boolean(definition.dynamicSeason),seasonId:String(definition.seasonId||""),seasonTitle:String(definition.seasonTitle||""),
+      earnedPlayers,totalPlayers:populationTotal,playerPercent
     };
   });
   const achievementMap = new Map(achievements.map((item)=>[item.id,item]));
@@ -5113,8 +5174,16 @@ function achievementsV2FromStats(raw = {}, claimRows = [], definitions = ACHIEVE
   const showcaseIdSet = new Set(showcaseItems.map((item)=>item.id));
   for(const item of achievements){if(!showcaseIdSet.has(item.id)){item.inShowcase=false;item.showcaseSlot=0;}}
   const catalogAchievements=achievements.filter((item)=>item.catalogVisible===true);
-  const achievementPoints=catalogAchievements.reduce((sum,item)=>sum+(item.earned?achievementPointsValue(item.achievementPoints,0):0),0),maxAchievementPoints=catalogAchievements.reduce((sum,item)=>sum+((item.earned||!item.legacyExpired)?achievementPointsValue(item.achievementPoints,0):0),0);
-  return {ok:true,version:8,serverAuthoritative:true,generatedAt:Date.now(),meta:{achievementPoints:achievementPointsMeta({max:maxAchievementPoints}),showcaseLimit:ACHIEVEMENT_SHOWCASE_LIMIT,rewardPolicy:{simple:"avatar",prestige:"status"},secretAchievements:true,secretArtUrl:ACHIEVEMENT_SECRET_ART_URL,permanentUnlocks:true,seasonAchievements:true,artworkGatedCatalog:true,artPublishedCount:catalogAchievements.length},summary:{earned:catalogAchievements.filter((item)=>item.earned).length,claimed:catalogAchievements.filter((item)=>item.claimed).length,claimable:catalogAchievements.filter((item)=>item.claimable).length,showcased:showcaseItems.length,achievementPoints,maxAchievementPoints,total:catalogAchievements.length,catalogEarned:catalogAchievements.filter((item)=>item.earned).length,catalogTotal:catalogAchievements.length},showcase:{limit:ACHIEVEMENT_SHOWCASE_LIMIT,count:showcaseItems.length,ids:showcaseItems.map((item)=>item.id),items:showcaseItems},achievements};
+  const catalogEarned=catalogAchievements.filter((item)=>item.earned).length,catalogTotal=catalogAchievements.length,completionPercent=catalogTotal?Math.max(0,Math.min(100,Math.round(catalogEarned/catalogTotal*100))):0;
+  const achievementPoints=catalogAchievements.reduce((sum,item)=>sum+(item.earned?achievementPointsValue(item.achievementPoints,0):0),0),maxAchievementPoints=catalogAchievements.reduce((sum,item)=>sum+((item.earned||!item.legacyExpired)?achievementPointsValue(item.achievementPoints,0):0),0),rank=achievementRankForPoints(achievementPoints);
+  const series=ACHIEVEMENT_SERIES.map((definition)=>{
+    const members=(definition.memberIds||[]).map((id)=>achievementMap.get(String(id))).filter((item)=>item?.catalogVisible===true);
+    if(members.length!==(definition.memberIds||[]).length||members.length<2)return null;
+    const earnedCount=members.filter((item)=>item.earned===true).length,total=members.length,completed=earnedCount===total;
+    return {id:String(definition.id),title:String(definition.title),category:String(definition.category),icon:String(definition.icon||"🏅"),earned:earnedCount,total,completed,progressPercent:total?Math.round(earnedCount/total*100):0,members:members.map((item)=>({id:item.id,title:item.title,earned:item.earned,artUrl:item.artUrl,icon:item.icon,rarity:item.rarity}))};
+  }).filter(Boolean);
+  const nearCompletion=catalogAchievements.filter((item)=>item.earned!==true&&!item.secretLocked&&!item.legacyExpired&&Number(item.target||0)>0&&Number(item.current||0)>0&&["always","active"].includes(String(item.availabilityStatus||"always"))).map((item)=>{const ratio=Math.max(0,Math.min(1,Number(item.current||0)/Math.max(1,Number(item.target||1))));return {id:item.id,title:item.title,category:item.category,artUrl:item.artUrl,icon:item.icon,current:Number(item.current||0),target:Number(item.target||0),progressPercent:Math.round(ratio*1000)/10,remaining:Math.max(0,Number(item.target||0)-Number(item.current||0)),_ratio:ratio};}).sort((a,b)=>b._ratio-a._ratio||a.remaining-b.remaining||String(a.id).localeCompare(String(b.id))).slice(0,3).map(({_ratio,...item})=>item);
+  return {ok:true,version:9,serverAuthoritative:true,generatedAt:Date.now(),meta:{achievementPoints:achievementPointsMeta({max:maxAchievementPoints}),showcaseLimit:ACHIEVEMENT_SHOWCASE_LIMIT,rewardPolicy:{simple:"avatar",prestige:"status"},secretAchievements:true,secretArtUrl:ACHIEVEMENT_SECRET_ART_URL,permanentUnlocks:true,seasonAchievements:true,artworkGatedCatalog:true,artPublishedCount:catalogAchievements.length,rankLevels:ACHIEVEMENT_RANKS.map((item)=>({id:item.id,title:item.title,minPoints:item.minPoints})),rarityPopulation:{totalPlayers:populationTotal,scope:String(populationStats?.scope||"all_player_profiles"),excludesTesters:Boolean(populationStats?.excludesTesters)}},summary:{earned:catalogEarned,claimed:catalogAchievements.filter((item)=>item.claimed).length,claimable:catalogAchievements.filter((item)=>item.claimable).length,showcased:showcaseItems.length,achievementPoints,maxAchievementPoints,total:catalogTotal,catalogEarned,catalogTotal,completionPercent,rank,completedSeries:series.filter((item)=>item.completed).length,totalSeries:series.length},showcase:{limit:ACHIEVEMENT_SHOWCASE_LIMIT,count:showcaseItems.length,ids:showcaseItems.map((item)=>item.id),items:showcaseItems},series,nearCompletion,achievements};
 }
 
 function achievementV2OwnedCount(raw, kind, catalog) {
@@ -5148,7 +5217,8 @@ async function achievementPlayerState(env, telegramId) {
   const unlockMap=achievementUnlockRowsMap(unlockResult.results||[]),claimMap=achievementClaimRowsMap(claimsResult.results||[]),showcaseIds=(showcaseResult.results||[]).sort((a,b)=>Number(a.slot||0)-Number(b.slot||0)).map((row)=>String(row.achievement_id||"")),now=Math.floor(Date.now()/1000),newUnlocks=[];
   for(const definition of definitions){if(definition?.enabled===false||unlockMap.has(definition.id)||claimMap.has(definition.id))continue;const fact=achievementFact(raw,definition);if(!achievementFactCanUnlock(definition,fact,now))continue;const candidate=achievementUnlockCandidate(definition,fact,now);newUnlocks.push(candidate);unlockMap.set(definition.id,candidate);}
   if(newUnlocks.length){const statements=newUnlocks.map((row)=>env.DB.prepare(`INSERT OR IGNORE INTO achievement_unlocks(telegram_id,achievement_id,unlocked_at,source_kind,season_id,source_snapshot_json) VALUES(?,?,?,?,?,?)`).bind(playerId,row.achievement_id,row.unlocked_at,row.source_kind,row.season_id,row.source_snapshot_json));for(let offset=0;offset<statements.length;offset+=25)await env.DB.batch(statements.slice(offset,offset+25));}
-  return achievementsV2FromStats(raw,claimsResult.results||[],definitions,showcaseIds,[...unlockMap.values()],{now});
+  const populationStats=await achievementPopulationStats(env);
+  return achievementsV2FromStats(raw,claimsResult.results||[],definitions,showcaseIds,[...unlockMap.values()],{now,populationStats});
 }
 
 async function getAchievementsV2(request, env) {

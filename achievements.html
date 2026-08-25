@@ -57,11 +57,19 @@
     .summary-card{min-width:0;padding:12px 10px;border:1px solid var(--line-soft);border-radius:19px;background:rgba(255,255,255,.82);box-shadow:0 8px 22px rgba(102,64,79,.055);display:grid;gap:3px}
     .summary-card span{color:#9a7b87;font-size:9px;font-weight:800;line-height:1.2}
     .summary-card strong{color:#653d4e;font-size:18px;font-weight:950;line-height:1}
+    .summary-card strong .points-inline span{font-size:inherit;color:inherit;font-weight:inherit;line-height:inherit}
     .points-inline{display:inline-flex;align-items:center;gap:6px;vertical-align:middle}
     .points-inline img{width:18px;height:18px;flex:0 0 auto;object-fit:contain}
     .points-inline.is-small img{width:14px;height:14px}
     .info-achievement-icon{width:18px;height:18px;object-fit:contain;display:block}
     .summary-card.is-showcase{background:linear-gradient(145deg,#fff8dd,#fff2f7)}
+    .summary-card.is-catalog{background:linear-gradient(145deg,#fffdf8,#fff1f6)}
+    .summary-card.is-catalog strong{font-size:15px;line-height:1.15}
+    .summary-progress-track{height:6px;margin-top:5px;border-radius:999px;overflow:hidden;background:#f1e3e8}
+    .summary-progress-track i{display:block;width:0;height:100%;border-radius:inherit;background:linear-gradient(90deg,#ed86ad,#d45c8e);transition:width .3s ease}
+    .summary-card.is-rank{background:linear-gradient(145deg,#fff9e8,#fff3db)}
+    .summary-card.is-rank strong{font-size:15px;line-height:1.1;color:#8a5a16}
+    .summary-rank-next{margin-top:2px;color:#a4865b!important;font-size:8px!important}
 
     .showcase-card{padding:13px;border:1px solid rgba(222,188,115,.72);border-radius:24px;background:radial-gradient(circle at 88% 0,rgba(255,229,145,.38),transparent 32%),linear-gradient(145deg,#fffdf7,#fff4ed);box-shadow:0 12px 30px rgba(149,103,35,.07);display:grid;gap:10px}
     .showcase-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
@@ -97,6 +105,24 @@
     .recent-achievement-copy strong{overflow:hidden;text-overflow:ellipsis;color:#633d4e;font-size:10px;font-weight:950;line-height:1.25}
     .recent-achievement-copy small{color:#9c7b88;font-size:8px;font-weight:750;line-height:1.3}
     .recent-achievement-points{justify-self:end;display:inline-flex;align-items:center;min-height:26px;padding:4px 7px;border:1px solid rgba(218,163,51,.34);border-radius:999px;background:#fff8df;color:#8e631f;font-size:8px;font-weight:950;white-space:nowrap}
+
+    .near-card,.series-card{padding:13px;border:1px solid rgba(226,190,204,.82);border-radius:24px;background:rgba(255,253,252,.94);box-shadow:0 10px 26px rgba(102,64,79,.06);display:grid;gap:9px}
+    .section-head{display:flex;align-items:flex-end;justify-content:space-between;gap:10px}
+    .section-head div{display:grid;gap:2px;min-width:0}
+    .section-head strong{color:#613c4c;font-size:15px;font-weight:950}
+    .section-head span{color:#a1838e;font-size:9px;font-weight:700;line-height:1.35}
+    .near-list,.series-list{display:grid;gap:7px}
+    .near-achievement{display:grid;grid-template-columns:50px minmax(0,1fr);align-items:center;gap:9px;padding:9px;border:1px solid rgba(236,214,221,.88);border-radius:16px;background:#fff}
+    .near-achievement-art{width:50px;height:50px;display:grid;place-items:center;font-size:22px}.near-achievement-art img{width:50px;height:50px;display:block;object-fit:contain;filter:drop-shadow(0 5px 8px rgba(145,94,111,.10))}
+    .near-copy{min-width:0;display:grid;gap:5px}
+    .near-title-row{display:flex;align-items:center;justify-content:space-between;gap:8px}.near-title-row strong{min-width:0;color:#633d4e;font-size:10px;font-weight:950;line-height:1.25}.near-title-row b{flex:0 0 auto;color:#b34e75;font-size:9px;font-weight:950}
+    .near-progress{height:7px;border-radius:999px;overflow:hidden;background:#f3e5ea}.near-progress i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#ef84ab,#d95d90)}
+    .near-copy small{display:flex;justify-content:space-between;gap:8px;color:#9c7b88;font-size:8px;font-weight:800}
+    .achievement-series{display:grid;grid-template-columns:36px minmax(0,1fr) auto;align-items:center;gap:9px;padding:10px;border:1px solid rgba(235,211,219,.88);border-radius:16px;background:#fff}
+    .achievement-series.is-complete{border-color:rgba(225,175,63,.62);background:linear-gradient(145deg,#fffdf2,#fff2c9);box-shadow:0 7px 18px rgba(185,126,31,.08)}
+    .series-icon{width:36px;height:36px;display:grid;place-items:center;border-radius:12px;background:#fff4f7;font-size:18px}.achievement-series.is-complete .series-icon{background:#fff4c9}
+    .series-copy{min-width:0;display:grid;gap:5px}.series-copy strong{color:#633d4e;font-size:10px;font-weight:950}.series-progress{height:6px;border-radius:999px;overflow:hidden;background:#f3e5ea}.series-progress i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#ef84ab,#d95d90)}.achievement-series.is-complete .series-progress i{background:linear-gradient(90deg,#f0c65d,#d99a22)}
+    .series-status{max-width:92px;text-align:right;color:#9a7a86;font-size:8px;font-weight:900;line-height:1.25}.series-status.is-complete{color:#986813}
 
     .filters-card{padding:12px;border:1px solid var(--line);border-radius:23px;background:rgba(255,253,252,.92);box-shadow:0 10px 26px rgba(103,64,79,.06)}
     .filters-head{display:flex;align-items:flex-end;justify-content:space-between;gap:10px;margin-bottom:10px}
@@ -136,13 +162,14 @@
     .achievement-progress small{display:flex;justify-content:space-between;gap:8px;color:#a0858f;font-size:8px;font-weight:800}
     .achievement-reward-row{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-top:2px}
     .achievement-meta{display:flex;align-items:center;gap:5px;flex-wrap:wrap}
-    .achievement-rarity,.achievement-points{display:inline-flex;align-items:center;gap:4px;min-height:22px;padding:4px 7px;border-radius:999px;font-size:7px;font-weight:950;line-height:1}
+    .achievement-rarity,.achievement-points,.achievement-player-rarity{display:inline-flex;align-items:center;gap:4px;min-height:22px;padding:4px 7px;border-radius:999px;font-size:7px;font-weight:950;line-height:1}
     .achievement-rarity{border:1px solid rgba(219,185,197,.7);background:#fff7fa;color:#936b7a}
     .achievement-rarity[data-rarity="rare"]{border-color:rgba(97,168,218,.38);background:#edf8ff;color:#487da1}
     .achievement-rarity[data-rarity="epic"]{border-color:rgba(166,114,214,.35);background:#f7efff;color:#8052aa}
     .achievement-rarity[data-rarity="legendary"]{border-color:rgba(218,163,51,.46);background:#fff4ce;color:#8d6119}
     .achievement-rarity[data-rarity="legacy"]{border-color:rgba(211,109,142,.40);background:#fff0f5;color:#9f4767}
     .achievement-points{border:1px solid rgba(218,163,51,.38);background:#fff8df;color:#8e631f}
+    .achievement-player-rarity{border:1px solid rgba(107,164,202,.30);background:#f0f8ff;color:#557d96;white-space:nowrap}
     .achievement-reward{display:inline-flex;align-items:center;gap:6px;min-height:30px;padding:5px 8px;border:1px solid rgba(226,191,118,.58);border-radius:12px;background:rgba(255,249,229,.92);color:#8d6520;font-size:8px;font-weight:950}
     .achievement-reward img{width:24px;height:24px;flex:0 0 auto;border-radius:8px;object-fit:cover;background:#fff;box-shadow:0 2px 6px rgba(125,83,24,.10)}
     .achievement-claim{appearance:none;min-height:32px;padding:0 12px;border:0;border-radius:11px;background:linear-gradient(180deg,#e8ad3d,#ce8520);color:#fff;font-size:9px;font-weight:950;box-shadow:0 7px 15px rgba(184,119,27,.18);cursor:pointer}
@@ -172,7 +199,7 @@
       .summary-card{padding:11px 8px;border-radius:17px}
       .summary-card span{font-size:8px}
       .summary-card strong{font-size:16px}
-      .filters-card,.catalog,.showcase-card{padding:11px}
+      .filters-card,.catalog,.showcase-card,.recent-card,.near-card,.series-card{padding:11px}
       .showcase-slots{gap:5px}
       .showcase-slot{min-height:124px;padding:8px 5px;border-radius:16px}
       .achievement-card{grid-template-columns:66px minmax(0,1fr);gap:9px}.achievement-icon,.achievement-icon img{width:66px;height:66px}
@@ -195,10 +222,10 @@
     </section>
 
     <section class="summary" aria-label="Сводка достижений">
-      <div class="summary-card"><span>Выполнено</span><strong data-summary-earned>0</strong></div>
+      <div class="summary-card is-catalog"><span>Каталог</span><strong data-summary-earned>0 / 0 · 0%</strong><div class="summary-progress-track" aria-hidden="true"><i data-summary-completion-bar></i></div></div>
       <div class="summary-card"><span>Очки достижений</span><strong data-summary-points><span class="points-inline"><img src="/assets/ui/icon_score_acivment.png" alt="" aria-hidden="true"><span>0</span></span></strong></div>
+      <div class="summary-card is-rank"><span>Ранг достижений</span><strong data-summary-rank>Новичок</strong><span class="summary-rank-next" data-summary-rank-next>Начало пути</span></div>
       <div class="summary-card is-showcase"><span>В витрине</span><strong data-summary-showcase>0 / 3</strong></div>
-      <div class="summary-card"><span>Всего</span><strong data-summary-total>0</strong></div>
     </section>
 
     <section class="recent-card" data-recent-achievements hidden aria-labelledby="recent-achievements-title">
@@ -206,6 +233,16 @@
         <div><strong id="recent-achievements-title">Недавно получено</strong><span>Последние трофеи становятся историей твоего аккаунта</span></div>
       </div>
       <div class="recent-list" data-recent-achievement-list></div>
+    </section>
+
+    <section class="near-card" data-near-achievements hidden aria-labelledby="near-achievements-title">
+      <div class="section-head"><div><strong id="near-achievements-title">Почти выполнено</strong><span>Три ближайшие цели по текущему серверному прогрессу</span></div></div>
+      <div class="near-list" data-near-achievement-list></div>
+    </section>
+
+    <section class="series-card" data-achievement-series hidden aria-labelledby="achievement-series-title">
+      <div class="section-head"><div><strong id="achievement-series-title">Серии достижений</strong><span>Закрой всю цепочку — серия получит золотую отметку</span></div></div>
+      <div class="series-list" data-achievement-series-list></div>
     </section>
 
     <section class="showcase-card" aria-labelledby="achievement-showcase-title">
@@ -256,6 +293,8 @@
       let SHOWCASE_IDS = [];
       let SHOWCASE_LIMIT = 3;
       let ACHIEVEMENT_SUMMARY = {};
+      let ACHIEVEMENT_SERIES = [];
+      let NEAR_COMPLETION = [];
       const ACHIEVEMENT_POINTS_ICON_FALLBACK = '/assets/ui/icon_score_acivment.png';
       let ACHIEVEMENT_POINTS_ICON_URL = ACHIEVEMENT_POINTS_ICON_FALLBACK;
 
@@ -268,11 +307,17 @@
       const catalogSubtitleEl = document.querySelector('[data-catalog-subtitle]');
       const catalogCountEl = document.querySelector('[data-catalog-count]');
       const summaryEarnedEl = document.querySelector('[data-summary-earned]');
+      const summaryCompletionBarEl = document.querySelector('[data-summary-completion-bar]');
       const summaryPointsEl = document.querySelector('[data-summary-points]');
+      const summaryRankEl = document.querySelector('[data-summary-rank]');
+      const summaryRankNextEl = document.querySelector('[data-summary-rank-next]');
       const summaryShowcaseEl = document.querySelector('[data-summary-showcase]');
-      const summaryTotalEl = document.querySelector('[data-summary-total]');
       const recentSectionEl = document.querySelector('[data-recent-achievements]');
       const recentListEl = document.querySelector('[data-recent-achievement-list]');
+      const nearSectionEl = document.querySelector('[data-near-achievements]');
+      const nearListEl = document.querySelector('[data-near-achievement-list]');
+      const seriesSectionEl = document.querySelector('[data-achievement-series]');
+      const seriesListEl = document.querySelector('[data-achievement-series-list]');
       const showcaseSlotsEl = document.querySelector('[data-showcase-slots]');
       const showcaseCountEl = document.querySelector('[data-showcase-count]');
       const systemInfoEl = document.querySelector('[data-system-info]');
@@ -305,6 +350,24 @@
 
       function achievementPointsPill(value) {
         return `<span class="achievement-points">${achievementPointsInline(value, { prefix: '+', small: true })}</span>`;
+      }
+
+      function formatPlayerPercent(value, earnedPlayers = 0) {
+        const percent = Math.max(0, Math.min(100, safeNumber(value)));
+        const earned = Math.max(0, safeNumber(earnedPlayers));
+        if (earned > 0 && percent < 0.01) return '<0,01%';
+        if (percent >= 100) return '100%';
+        if (percent >= 1) return `${percent.toFixed(1).replace('.', ',')}%`;
+        if (percent > 0) return `${percent.toFixed(2).replace('.', ',')}%`;
+        return '0%';
+      }
+
+      function playerRarityPill(item) {
+        const total = Math.max(0, safeNumber(item?.totalPlayers));
+        if (!total) return '';
+        const earned = Math.max(0, safeNumber(item?.earnedPlayers));
+        const percent = formatPlayerPercent(item?.playerPercent, earned);
+        return `<span class="achievement-player-rarity" title="${escapeHtml(`${earned.toLocaleString('ru-RU')} из ${total.toLocaleString('ru-RU')} игроков`)}">Получили ${escapeHtml(percent)} игроков</span>`;
       }
 
       function achievementArtMarkup(item, className = 'achievement-icon') {
@@ -424,6 +487,8 @@
         SHOWCASE_IDS = [...new Set(ids.map((id) => String(id || '')).filter(Boolean))].slice(0, 3);
         SHOWCASE_LIMIT = Math.max(1, Math.min(3, Math.floor(safeNumber(state?.showcase?.limit) || 3)));
         ACHIEVEMENT_SUMMARY = state?.summary && typeof state.summary === 'object' ? state.summary : {};
+        ACHIEVEMENT_SERIES = Array.isArray(state?.series) ? state.series : [];
+        NEAR_COMPLETION = Array.isArray(state?.nearCompletion) ? state.nearCompletion : [];
         ACHIEVEMENT_POINTS_ICON_URL = String(state?.meta?.achievementPoints?.iconUrl || ACHIEVEMENT_POINTS_ICON_FALLBACK);
       }
 
@@ -439,6 +504,8 @@
           ACHIEVEMENTS = [];
           SHOWCASE_IDS = [];
           ACHIEVEMENT_SUMMARY = {};
+          ACHIEVEMENT_SERIES = [];
+          NEAR_COMPLETION = [];
           loadError = String(error?.message || 'Не удалось загрузить достижения.');
         } finally {
           loading = false;
@@ -514,16 +581,58 @@
         }).join('');
       }
 
+      function renderNearCompletion() {
+        if (!nearSectionEl || !nearListEl) return;
+        const items = Array.isArray(NEAR_COMPLETION) ? NEAR_COMPLETION.slice(0, 3) : [];
+        nearSectionEl.hidden = items.length === 0;
+        if (!items.length) { nearListEl.innerHTML = ''; return; }
+        nearListEl.innerHTML = items.map((entry) => {
+          const item = showcaseItemById(entry?.id) || entry;
+          const current = Math.max(0, safeNumber(entry?.current));
+          const target = Math.max(1, safeNumber(entry?.target));
+          const percent = Math.max(0, Math.min(100, safeNumber(entry?.progressPercent) || (current / target * 100)));
+          const percentLabel = `${percent.toFixed(percent % 1 ? 1 : 0).replace('.', ',')}%`;
+          return `<div class="near-achievement">
+            ${achievementArtMarkup(item, 'near-achievement-art')}
+            <span class="near-copy"><span class="near-title-row"><strong>${escapeHtml(entry?.title || item?.title || 'Достижение')}</strong><b>${escapeHtml(percentLabel)}</b></span><span class="near-progress" aria-hidden="true"><i style="width:${Math.min(100, percent)}%"></i></span><small><span>${current.toLocaleString('ru-RU')} / ${target.toLocaleString('ru-RU')}</span><span>осталось ${Math.max(0, target-current).toLocaleString('ru-RU')}</span></small></span>
+          </div>`;
+        }).join('');
+      }
+
+      function renderSeries() {
+        if (!seriesSectionEl || !seriesListEl) return;
+        const series = Array.isArray(ACHIEVEMENT_SERIES) ? ACHIEVEMENT_SERIES : [];
+        seriesSectionEl.hidden = series.length === 0;
+        if (!series.length) { seriesListEl.innerHTML = ''; return; }
+        seriesListEl.innerHTML = series.map((entry) => {
+          const earned = Math.max(0, safeNumber(entry?.earned));
+          const total = Math.max(1, safeNumber(entry?.total));
+          const completed = entry?.completed === true;
+          const percent = Math.max(0, Math.min(100, safeNumber(entry?.progressPercent) || Math.round(earned / total * 100)));
+          return `<div class="achievement-series${completed ? ' is-complete' : ''}" data-series-category="${escapeHtml(entry?.category || '')}">
+            <span class="series-icon" aria-hidden="true">${escapeHtml(entry?.icon || '🏅')}</span>
+            <span class="series-copy"><strong>${escapeHtml(entry?.title || 'Серия')}</strong><span class="series-progress" aria-hidden="true"><i style="width:${percent}%"></i></span></span>
+            <span class="series-status${completed ? ' is-complete' : ''}">${completed ? '✓ Серия завершена' : `${earned} / ${total}`}</span>
+          </div>`;
+        }).join('');
+      }
+
       function renderSummary() {
         const published = catalogAchievements();
         const earned = Number.isFinite(Number(ACHIEVEMENT_SUMMARY?.catalogEarned)) ? Number(ACHIEVEMENT_SUMMARY.catalogEarned) : published.filter((item) => item.earned === true).length;
         const total = Number.isFinite(Number(ACHIEVEMENT_SUMMARY?.catalogTotal)) ? Number(ACHIEVEMENT_SUMMARY.catalogTotal) : published.length;
+        const completion = Math.max(0, Math.min(100, Number.isFinite(Number(ACHIEVEMENT_SUMMARY?.completionPercent)) ? Number(ACHIEVEMENT_SUMMARY.completionPercent) : (total ? Math.round(earned / total * 100) : 0)));
         const prestige = Math.max(0, safeNumber(ACHIEVEMENT_SUMMARY?.achievementPoints));
-        if (summaryEarnedEl) summaryEarnedEl.textContent = String(earned);
+        const rank = ACHIEVEMENT_SUMMARY?.rank && typeof ACHIEVEMENT_SUMMARY.rank === 'object' ? ACHIEVEMENT_SUMMARY.rank : { title:'Новичок', nextTitle:'Искатель', pointsToNext:50 };
+        if (summaryEarnedEl) summaryEarnedEl.textContent = `${earned} / ${total} · ${completion}%`;
+        if (summaryCompletionBarEl) summaryCompletionBarEl.style.width = `${completion}%`;
         if (summaryPointsEl) summaryPointsEl.innerHTML = achievementPointsInline(prestige);
+        if (summaryRankEl) summaryRankEl.textContent = String(rank?.title || 'Новичок');
+        if (summaryRankNextEl) summaryRankNextEl.textContent = rank?.nextTitle ? `До «${String(rank.nextTitle)}»: ${Math.max(0, safeNumber(rank.pointsToNext)).toLocaleString('ru-RU')}` : 'Максимальный статус';
         if (summaryShowcaseEl) summaryShowcaseEl.textContent = `${SHOWCASE_IDS.length} / ${SHOWCASE_LIMIT}`;
-        if (summaryTotalEl) summaryTotalEl.textContent = String(total);
         renderRecent();
+        renderNearCompletion();
+        renderSeries();
         renderShowcase();
       }
 
@@ -578,7 +687,7 @@
             ${achievementArtMarkup(item)}
             <div class="achievement-copy">
               <div class="achievement-title-row"><strong>${escapeHtml(item.title || 'Достижение')}</strong><span class="achievement-state${stateClass}">${state}</span></div>
-              <div class="achievement-meta"><span class="achievement-rarity" data-rarity="${escapeHtml(rarity)}">${escapeHtml(rarityLabel)}</span>${achievementPointsPill(prestige)}</div>
+              <div class="achievement-meta"><span class="achievement-rarity" data-rarity="${escapeHtml(rarity)}">${escapeHtml(rarityLabel)}</span>${achievementPointsPill(prestige)}${playerRarityPill(item)}</div>
               <div class="achievement-description">${escapeHtml(item.description || '')}</div>
               ${target > 0 ? `<div class="achievement-progress"><div class="achievement-track"><i style="width:${percent}%"></i></div><small><span>${current} / ${target}</span><span>${percent}%</span></small></div>` : ''}
               <div class="achievement-reward-row">
