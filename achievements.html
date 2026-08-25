@@ -57,6 +57,10 @@
     .summary-card{min-width:0;padding:12px 10px;border:1px solid var(--line-soft);border-radius:19px;background:rgba(255,255,255,.82);box-shadow:0 8px 22px rgba(102,64,79,.055);display:grid;gap:3px}
     .summary-card span{color:#9a7b87;font-size:9px;font-weight:800;line-height:1.2}
     .summary-card strong{color:#653d4e;font-size:18px;font-weight:950;line-height:1}
+    .points-inline{display:inline-flex;align-items:center;gap:6px;vertical-align:middle}
+    .points-inline img{width:18px;height:18px;flex:0 0 auto;object-fit:contain}
+    .points-inline.is-small img{width:14px;height:14px}
+    .info-achievement-icon{width:18px;height:18px;object-fit:contain;display:block}
     .summary-card.is-showcase{background:linear-gradient(145deg,#fff8dd,#fff2f7)}
 
     .filters-card{padding:12px;border:1px solid var(--line);border-radius:23px;background:rgba(255,253,252,.92);box-shadow:0 10px 26px rgba(103,64,79,.06)}
@@ -149,7 +153,7 @@
 
     <section class="summary" aria-label="Сводка достижений">
       <div class="summary-card"><span>Выполнено</span><strong data-summary-earned>0</strong></div>
-      <div class="summary-card"><span>Очки достижений</span><strong data-summary-points>🏆 0</strong></div>
+      <div class="summary-card"><span>Очки достижений</span><strong data-summary-points><span class="points-inline"><img src="/assets/achievements/icon_score_acivment.png" alt="" aria-hidden="true"><span>0</span></span></strong></div>
       <div class="summary-card is-showcase"><span>В витрине</span><strong data-summary-showcase>0 / 3</strong></div>
       <div class="summary-card"><span>Всего</span><strong data-summary-total>0</strong></div>
     </section>
@@ -174,7 +178,7 @@
       </div>
     </section>
 
-    <div class="info"><b aria-hidden="true">🏆</b><span data-system-info>Очки достижений — это престиж, а не валюта: их нельзя потратить, они начисляются автоматически за выполненные цели. Кнопка «Забрать» появляется только у специальных аватарок-наград.</span></div>
+    <div class="info"><b aria-hidden="true"><img class="info-achievement-icon" src="/assets/achievements/icon_score_acivment.png" alt=""></b><span data-system-info>Очки достижений — это престиж, а не валюта: их нельзя потратить, они начисляются автоматически за выполненные цели. Кнопка «Забрать» появляется только у специальных аватарок-наград.</span></div>
   </main>
 
   <script>
@@ -194,6 +198,8 @@
       let SHOWCASE_IDS = [];
       let SHOWCASE_LIMIT = 3;
       let ACHIEVEMENT_SUMMARY = {};
+      const ACHIEVEMENT_POINTS_ICON_FALLBACK = '/assets/achievements/icon_score_acivment.png';
+      let ACHIEVEMENT_POINTS_ICON_URL = ACHIEVEMENT_POINTS_ICON_FALLBACK;
 
       const filtersEl = document.querySelector('[data-achievement-filters]');
       const listEl = document.querySelector('[data-achievement-list]');
@@ -225,6 +231,18 @@
         return String(value ?? '').replace(/[&<>"']/g, (char) => ({
           '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
         })[char]);
+      }
+
+      function achievementPointsInline(value, options = {}) {
+        const amount = Math.max(0, safeNumber(value)).toLocaleString('ru-RU');
+        const icon = escapeHtml(ACHIEVEMENT_POINTS_ICON_URL || ACHIEVEMENT_POINTS_ICON_FALLBACK);
+        const prefix = String(options.prefix || '');
+        const sizeClass = options.small ? ' is-small' : '';
+        return `<span class="points-inline${sizeClass}"><img src="${icon}" alt="" aria-hidden="true"><span>${escapeHtml(prefix + amount)}</span></span>`;
+      }
+
+      function achievementPointsPill(value) {
+        return `<span class="achievement-points">${achievementPointsInline(value, { prefix: '+', small: true })}</span>`;
       }
 
       function resolveTelegramWebApp() {
@@ -301,6 +319,7 @@
         SHOWCASE_IDS = [...new Set(ids.map((id) => String(id || '')).filter(Boolean))].slice(0, 3);
         SHOWCASE_LIMIT = Math.max(1, Math.min(3, Math.floor(safeNumber(state?.showcase?.limit) || 3)));
         ACHIEVEMENT_SUMMARY = state?.summary && typeof state.summary === 'object' ? state.summary : {};
+        ACHIEVEMENT_POINTS_ICON_URL = String(state?.meta?.achievementPoints?.iconUrl || ACHIEVEMENT_POINTS_ICON_FALLBACK);
       }
 
       async function loadAchievements() {
@@ -339,7 +358,7 @@
         const earned = ACHIEVEMENTS.filter((item) => item.earned === true).length;
         const prestige = Math.max(0, safeNumber(ACHIEVEMENT_SUMMARY?.achievementPoints));
         if (summaryEarnedEl) summaryEarnedEl.textContent = String(earned);
-        if (summaryPointsEl) summaryPointsEl.textContent = `🏆 ${prestige}`;
+        if (summaryPointsEl) summaryPointsEl.innerHTML = achievementPointsInline(prestige);
         if (summaryShowcaseEl) summaryShowcaseEl.textContent = `${SHOWCASE_IDS.length} / ${SHOWCASE_LIMIT}`;
         if (summaryTotalEl) summaryTotalEl.textContent = String(ACHIEVEMENTS.length);
       }
@@ -396,7 +415,7 @@
             <div class="achievement-icon" aria-hidden="true">${escapeHtml(item.icon || '🏅')}</div>
             <div class="achievement-copy">
               <div class="achievement-title-row"><strong>${escapeHtml(item.title || 'Достижение')}</strong><span class="achievement-state${item.earned ? ' is-earned' : ''}">${state}</span></div>
-              <div class="achievement-meta"><span class="achievement-rarity" data-rarity="${escapeHtml(rarity)}">${escapeHtml(rarityLabel)}</span><span class="achievement-points">🏆 +${prestige}</span></div>
+              <div class="achievement-meta"><span class="achievement-rarity" data-rarity="${escapeHtml(rarity)}">${escapeHtml(rarityLabel)}</span>${achievementPointsPill(prestige)}</div>
               <div class="achievement-description">${escapeHtml(item.description || '')}</div>
               ${target > 0 ? `<div class="achievement-progress"><div class="achievement-track"><i style="width:${percent}%"></i></div><small><span>${current} / ${target}</span><span>${percent}%</span></small></div>` : ''}
               <div class="achievement-reward-row">

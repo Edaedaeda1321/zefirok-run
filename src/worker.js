@@ -4552,6 +4552,15 @@ const ACHIEVEMENT_RARITY_LABELS = Object.freeze({ common:"Обычное", rare:
 const ACHIEVEMENT_AVATAR_IDS = Object.freeze(Object.keys(CASE_AVATARS).filter((id) => CASE_AVATARS[id]?.achievementOnly === true));
 const ACHIEVEMENT_AVATAR_ID_SET = new Set(ACHIEVEMENT_AVATAR_IDS);
 const ACHIEVEMENT_SHOWCASE_LIMIT = 3;
+const ACHIEVEMENT_POINTS_ICON_URL = "/assets/achievements/icon_score_acivment.png";
+const ACHIEVEMENT_POINTS_META = Object.freeze({
+  id:"achievementPoints",
+  label:"Очки достижений",
+  shortLabel:"Очки достижений",
+  iconUrl:ACHIEVEMENT_POINTS_ICON_URL,
+  spendable:false,
+  description:"Статусный престиж аккаунта. Начисляется автоматически за выполненные достижения и не тратится."
+});
 let achievementClaimSchemaPromise = null;
 let achievementClaimSchemaReady = false;
 let achievementConfigSchemaPromise = null;
@@ -4688,6 +4697,10 @@ function achievementRewardView(input = {}) {
 function achievementRarity(value, fallback = "common") {
   const rarity = String(value || "").trim();
   return ACHIEVEMENT_RARITIES.includes(rarity) ? rarity : (ACHIEVEMENT_RARITIES.includes(fallback) ? fallback : "common");
+}
+
+function achievementPointsMeta(extra = {}) {
+  return { ...ACHIEVEMENT_POINTS_META, ...extra, iconUrl:String(extra?.iconUrl || ACHIEVEMENT_POINTS_ICON_URL) };
 }
 
 function achievementPointsValue(value, fallback = 10) {
@@ -4837,7 +4850,8 @@ function achievementsV2FromStats(raw = {}, claimRows = [], definitions = ACHIEVE
       rarity, rarityLabel:ACHIEVEMENT_RARITY_LABELS[rarity] || rarity, achievementPoints:points,
       current:Math.min(target, rawCurrent), target, earned, claimed, hasReward, claimable, claimStatus,
       claimedAt:claimed ? Math.max(0, Number(claimRow?.delivered_at || claimRow?.queue_delivered_at || 0)) : 0,
-      reward, showcaseEligible:earned, inShowcase:showcaseSlot > 0, showcaseSlot
+      reward, rewardKind:String(reward.kind || "none"), prestigeOnly:!hasReward, rewardPolicy:hasReward?"simple_reward":"prestige_only",
+      showcaseEligible:earned, inShowcase:showcaseSlot > 0, showcaseSlot
     };
   });
   const achievementMap = new Map(achievements.map((item)=>[item.id,item]));
@@ -4847,7 +4861,8 @@ function achievementsV2FromStats(raw = {}, claimRows = [], definitions = ACHIEVE
   const achievementPoints=achievements.reduce((sum,item)=>sum+(item.earned?achievementPointsValue(item.achievementPoints,0):0),0);
   const maxAchievementPoints=achievements.reduce((sum,item)=>sum+achievementPointsValue(item.achievementPoints,0),0);
   return {
-    ok:true, version:4, serverAuthoritative:true, generatedAt:Date.now(),
+    ok:true, version:5, serverAuthoritative:true, generatedAt:Date.now(),
+    meta:{achievementPoints:achievementPointsMeta({ max:maxAchievementPoints }),showcaseLimit:ACHIEVEMENT_SHOWCASE_LIMIT,rewardPolicy:{simple:"avatar",prestige:"status"}},
     summary:{earned:achievements.filter((item)=>item.earned).length,claimed:achievements.filter((item)=>item.claimed).length,claimable:achievements.filter((item)=>item.claimable).length,showcased:showcaseItems.length,achievementPoints,maxAchievementPoints,total:achievements.length},
     showcase:{limit:ACHIEVEMENT_SHOWCASE_LIMIT,count:showcaseItems.length,ids:showcaseItems.map((item)=>item.id),items:showcaseItems},
     achievements
@@ -5015,7 +5030,8 @@ async function ownerPanelAchievementsConfig(env,ctx){
     ok:true,conditionEditing:false,showcaseLimit:ACHIEVEMENT_SHOWCASE_LIMIT,
     rewardModes:[{id:"default",label:"По умолчанию"},{id:"none",label:"Без материальной награды"},{id:"avatar",label:"Аватарка достижения"}],
     avatarRewards,rarities:ACHIEVEMENT_RARITIES.map((id)=>({id,label:ACHIEVEMENT_RARITY_LABELS[id]||id})),
-    achievementPoints:{spendable:false,label:"Очки достижений",maxPerAchievement:10000},
+    rewardPolicy:{simple:"avatar",prestige:"status"},
+    achievementPoints:achievementPointsMeta({maxPerAchievement:10000}),
     items:definitions.map((item)=>({
       id:item.id,category:item.category,icon:item.icon,enabled:item.enabled,visible:item.visible,title:item.title,description:item.description,
       reward:achievementRewardView(item.reward),rewardMode:item.rewardMode,rarity:item.rarity,rarityLabel:item.rarityLabel,achievementPoints:item.achievementPoints,
