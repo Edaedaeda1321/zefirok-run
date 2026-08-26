@@ -4520,6 +4520,8 @@ html&gt;body{padding:
     width: min(100%, 440px);
     max-height: min(88dvh, 760px);
     padding: 14px 14px 16px;
+    transition: transform .18s ease, opacity .18s ease;
+    will-change: transform;
     border: 1px solid rgba(222, 172, 188, .42);
     border-radius: 32px 32px 24px 24px;
     background:
@@ -4531,17 +4533,39 @@ html&gt;body{padding:
     scrollbar-width: none;
   }
   #zefirok-maltipoo-runner .tutorial-dialog::-webkit-scrollbar { display:none; }
-  #zefirok-maltipoo-runner .tutorial-dialog::before {
-    content: &quot;&quot;;
+  #zefirok-maltipoo-runner .tutorial-dialog::before { content: none; }
+  #zefirok-maltipoo-runner .tutorial-drag-handle {
+    width: 96px;
+    height: 26px;
+    display: grid;
+    place-items: center;
+    margin: -6px auto 4px;
+    border: 0;
+    background: transparent;
+    touch-action: none;
+    -webkit-user-select: none;
+    user-select: none;
+    cursor: grab;
+  }
+  #zefirok-maltipoo-runner .tutorial-drag-handle:active { cursor: grabbing; }
+  #zefirok-maltipoo-runner .tutorial-drag-handle span {
     display: block;
-    width: 42px;
-    height: 4px;
-    margin: 0 auto 9px;
+    width: 44px;
+    height: 5px;
     border-radius: 999px;
-    background: rgba(176, 123, 141, .24);
+    background: rgba(176, 123, 141, .28);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.55);
+    transition: width .15s ease, background .15s ease;
+  }
+  #zefirok-maltipoo-runner .tutorial-dialog.is-tutorial-dragging {
+    transition: none !important;
+  }
+  #zefirok-maltipoo-runner .tutorial-dialog.is-tutorial-dragging .tutorial-drag-handle span {
+    width: 52px;
+    background: rgba(176, 123, 141, .42);
   }
   #zefirok-maltipoo-runner .tutorial-skip {
-    top: 18px;
+    top: 40px;
     right: 17px;
     min-height: 30px;
     padding: 0 10px;
@@ -4552,16 +4576,17 @@ html&gt;body{padding:
     backdrop-filter: blur(8px);
   }
   #zefirok-maltipoo-runner .tutorial-headline {
+    position: relative;
     display: flex;
     align-items: center;
-    justify-content: space-between;
     gap: 8px;
-    min-height: 30px;
-    padding-right: 66px;
+    min-height: 32px;
+    padding-right: 94px;
     margin-bottom: 9px;
   }
   #zefirok-maltipoo-runner .tutorial-mode-chip {
     min-width: 0;
+    max-width: calc(50% - 50px);
     display: inline-flex;
     align-items: center;
     gap: 7px;
@@ -4582,6 +4607,10 @@ html&gt;body{padding:
     filter: drop-shadow(0 4px 7px rgba(111,65,78,.11));
   }
   #zefirok-maltipoo-runner .tutorial-progress {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
     flex: 0 0 auto;
     min-height: 26px;
     margin: 0;
@@ -4709,8 +4738,9 @@ html&gt;body{padding:
   }
   @media (max-width: 370px) {
     #zefirok-maltipoo-runner .tutorial-dialog { padding:12px 11px 13px; border-radius:28px 28px 22px 22px; }
-    #zefirok-maltipoo-runner .tutorial-headline { padding-right:58px; }
-    #zefirok-maltipoo-runner .tutorial-mode-chip { font-size:8px; }
+    #zefirok-maltipoo-runner .tutorial-headline { padding-right:86px; }
+    #zefirok-maltipoo-runner .tutorial-mode-chip { max-width:calc(50% - 44px); font-size:8px; }
+    #zefirok-maltipoo-runner .tutorial-skip { right:11px; }
     #zefirok-maltipoo-runner .tutorial-visual { min-height:146px; padding:10px; }
     #zefirok-maltipoo-runner .tutorial-profile-feature-grid.tutorial-feature-grid--three { grid-template-columns:repeat(2,minmax(0,1fr)); }
     #zefirok-maltipoo-runner .tutorial-case-rewards--seven { grid-template-columns:repeat(3,minmax(0,1fr)); }
@@ -10753,6 +10783,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 
 &lt;div aria-hidden=&quot;true&quot; class=&quot;tutorial-layer&quot; data-tutorial-layer hidden&gt;
   &lt;div aria-labelledby=&quot;tutorial-dialog-title&quot; aria-modal=&quot;true&quot; class=&quot;tutorial-dialog&quot; role=&quot;dialog&quot;&gt;
+    &lt;div class=&quot;tutorial-drag-handle&quot; data-tutorial-drag-handle aria-hidden=&quot;true&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/div&gt;
     &lt;button class=&quot;tutorial-skip&quot; data-tutorial-skip type=&quot;button&quot;&gt;Пропустить&lt;/button&gt;
     &lt;div data-tutorial-content&gt;&lt;/div&gt;
   &lt;/div&gt;
@@ -13477,6 +13508,10 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       let tutorialOpenedAutomatically = false;
       let tutorialMode = &quot;main&quot;;
       let tutorialScrollLock = null;
+      let tutorialDragPointerId = null;
+      let tutorialDragStartY = 0;
+      let tutorialDragDistance = 0;
+      let tutorialDragStartedAt = 0;
 
       const tutorialSteps = [
         {
@@ -13603,7 +13638,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       const profileTutorialSteps = [
         {
           title: &quot;Профиль — центр аккаунта&quot;,
-          description: &quot;Новый профиль показывает Telegram-данные, рекорд, игровые ресурсы, число забегов и покупок, уровень, XP и звание — всё в одном экране.&quot;,
+          description: &quot;Новый профиль показывает Telegram-данные, рекорд, число забегов и покупок, уровень, XP, звание, быстрые разделы и витрину достижений — всё в одном экране.&quot;,
           extra: &quot;Если Telegram не передал фотографию, игра показывает стандартную Зеффи. «Обновить данные Telegram» заново запрашивает имя и фото, не затрагивая игровой прогресс.&quot;,
           visual: () =&gt; `
             &lt;div class=&quot;tutorial-profile-card&quot;&gt;
@@ -14280,6 +14315,31 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         window.scrollTo(0, saved.y || 0);
       }
 
+      function tutorialDialogElement() {
+        return tutorialLayer?.querySelector(&quot;.tutorial-dialog&quot;) || null;
+      }
+
+      function resetTutorialDrag(animate = true) {
+        tutorialDragPointerId = null;
+        tutorialDragStartY = 0;
+        tutorialDragDistance = 0;
+        tutorialDragStartedAt = 0;
+        const dialog = tutorialDialogElement();
+        if (!dialog) return;
+        dialog.classList.remove(&quot;is-tutorial-dragging&quot;);
+        if (!animate) dialog.style.transition = &quot;none&quot;;
+        dialog.style.transform = &quot;&quot;;
+        dialog.style.opacity = &quot;&quot;;
+        if (!animate) window.requestAnimationFrame(() =&gt; { dialog.style.transition = &quot;&quot;; });
+      }
+
+      function skipTutorial() {
+        const continueToRating = tutorialMode === &quot;rating&quot;;
+        resetTutorialDrag(false);
+        closeTutorial(true);
+        if (continueToRating) openLeaderboard();
+      }
+
       function openTutorialMode(automatic = false, startIndex = 0) {
         if (!tutorialLayer || !tutorialContent) return;
         if (releaseLayer &amp;&amp; !releaseLayer.hidden) return;
@@ -14288,6 +14348,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         tutorialOpenedAutomatically = Boolean(automatic);
         const steps = activeTutorialSteps();
         tutorialStepIndex = Math.max(0, Math.min(steps.length - 1, Number(startIndex) || 0));
+        resetTutorialDrag(false);
         renderTutorial();
         setTutorialScrollLocked(true);
         tutorialLayer.hidden = false;
@@ -14309,6 +14370,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         }
         tutorialLayer.hidden = true;
         tutorialLayer.setAttribute(&quot;aria-hidden&quot;, &quot;true&quot;);
+        resetTutorialDrag(false);
         setTutorialScrollLocked(false);
         tutorialOpenedAutomatically = false;
         if (tutorialMode === &quot;rating&quot;) (leaderboardQuickButton || leaderboardOpenButton)?.focus({ preventScroll: true });
@@ -22534,9 +22596,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           const target = event.target instanceof Element ? event.target : null;
           if (!target) return;
           if (target.closest(&quot;[data-tutorial-skip]&quot;)) {
-            const continueToRating = tutorialMode === &quot;rating&quot;;
-            closeTutorial(true);
-            if (continueToRating) openLeaderboard();
+            skipTutorial();
             return;
           }
           if (target.closest(&quot;[data-tutorial-back]&quot;)) {
@@ -22554,6 +22614,51 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
             renderTutorial();
           }
         });
+      }
+
+      if (tutorialLayer) {
+        const dragHandle = tutorialLayer.querySelector(&quot;[data-tutorial-drag-handle]&quot;);
+        const dragDialog = tutorialDialogElement();
+        if (dragHandle &amp;&amp; dragDialog) {
+          dragHandle.addEventListener(&quot;pointerdown&quot;, (event) =&gt; {
+            if (tutorialLayer.hidden || tutorialDragPointerId !== null) return;
+            tutorialDragPointerId = event.pointerId;
+            tutorialDragStartY = Number(event.clientY || 0);
+            tutorialDragDistance = 0;
+            tutorialDragStartedAt = performance.now();
+            dragDialog.classList.add(&quot;is-tutorial-dragging&quot;);
+            try { dragHandle.setPointerCapture(event.pointerId); } catch {}
+            event.preventDefault();
+          });
+          dragHandle.addEventListener(&quot;pointermove&quot;, (event) =&gt; {
+            if (event.pointerId !== tutorialDragPointerId) return;
+            const distance = Math.max(0, Number(event.clientY || 0) - tutorialDragStartY);
+            tutorialDragDistance = Math.min(distance, Math.max(180, window.innerHeight * .42));
+            dragDialog.style.transform = `translate3d(0, ${tutorialDragDistance}px, 0)`;
+            dragDialog.style.opacity = String(Math.max(.72, 1 - tutorialDragDistance / 520));
+            event.preventDefault();
+          });
+          const finishDrag = (event, cancelled = false) =&gt; {
+            if (event.pointerId !== tutorialDragPointerId) return;
+            try { dragHandle.releasePointerCapture(event.pointerId); } catch {}
+            const elapsed = Math.max(1, performance.now() - tutorialDragStartedAt);
+            const velocity = tutorialDragDistance / elapsed;
+            const threshold = Math.max(72, Math.min(112, window.innerHeight * .11));
+            const shouldSkip = !cancelled &amp;&amp; (tutorialDragDistance &gt;= threshold || (tutorialDragDistance &gt;= 46 &amp;&amp; velocity &gt; .62));
+            tutorialDragPointerId = null;
+            dragDialog.classList.remove(&quot;is-tutorial-dragging&quot;);
+            if (shouldSkip) {
+              dragDialog.style.transition = &quot;transform .16s ease-in, opacity .16s ease-in&quot;;
+              dragDialog.style.transform = `translate3d(0, ${Math.max(window.innerHeight * .62, 420)}px, 0)`;
+              dragDialog.style.opacity = &quot;0&quot;;
+              window.setTimeout(() =&gt; skipTutorial(), 145);
+              return;
+            }
+            resetTutorialDrag(true);
+          };
+          dragHandle.addEventListener(&quot;pointerup&quot;, (event) =&gt; finishDrag(event, false));
+          dragHandle.addEventListener(&quot;pointercancel&quot;, (event) =&gt; finishDrag(event, true));
+        }
       }
 
       root.addEventListener(&quot;click&quot;, (event) =&gt; {
