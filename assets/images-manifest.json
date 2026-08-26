@@ -1,8 +1,16 @@
 {
   "version": 1,
-  "catalogHash": "b90b7f6c2bb09f60",
-  "count": 417,
+  "catalogHash": "be8a7984fa3f294d",
+  "count": 418,
   "images": [
+    {
+      "fileName": "achievements/background_achivment_panel.png",
+      "label": "Background achivment panel",
+      "folder": "achievements",
+      "path": "/assets/achievements/background_achivment_panel.png",
+      "size": 737415,
+      "modified": 1787770944000
+    },
     {
       "fileName": "achievements/badges/album-complete-1.png",
       "label": "Album complete 1",
