@@ -152,7 +152,7 @@
     .near-copy small{display:flex;justify-content:space-between;gap:8px;color:#9c7b88;font-size:8px;font-weight:800}
     .achievement-series{display:grid;grid-template-columns:36px minmax(0,1fr) auto;align-items:center;gap:9px;padding:10px;border:1px solid rgba(235,211,219,.88);border-radius:16px;background:#fff}
     .achievement-series.is-complete{border-color:rgba(225,175,63,.62);background:linear-gradient(145deg,#fffdf2,#fff2c9);box-shadow:0 7px 18px rgba(185,126,31,.08)}
-    .series-icon{width:36px;height:36px;display:grid;place-items:center;border-radius:12px;background:#fff4f7;font-size:18px}.achievement-series.is-complete .series-icon{background:#fff4c9}
+    .series-icon{width:36px;height:36px;display:grid;place-items:center;border-radius:12px;background:#fff4f7;overflow:hidden}.series-icon img{display:block;width:34px;height:34px;object-fit:contain}.achievement-series.is-complete .series-icon{background:#fff4c9}
     .series-copy{min-width:0;display:grid;gap:5px}.series-copy strong{color:#633d4e;font-size:10px;font-weight:950}.series-progress{height:6px;border-radius:999px;overflow:hidden;background:#f3e5ea}.series-progress i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#ef84ab,#d95d90)}.achievement-series.is-complete .series-progress i{background:linear-gradient(90deg,#f0c65d,#d99a22)}
     .series-status{max-width:92px;text-align:right;color:#9a7a86;font-size:8px;font-weight:900;line-height:1.25}.series-status.is-complete{color:#986813}
 
@@ -676,6 +676,16 @@
         }).join('');
       }
 
+      const SERIES_ICON_BY_TITLE = Object.freeze({
+        'Бегун':'/assets/achievements/series/icon_begyn.png',
+        'Рекордсмен':'/assets/achievements/series/icon_recordsmen.png',
+        'Путь Зеффи':'/assets/achievements/series/icon_put_zeffi.png',
+        'Коллекция Зеффи':'/assets/achievements/series/icon_collectibl_achivments.png',
+        'Охотник за кейсами':'/assets/achievements/series/icon_hanter_case.png',
+        'Своя компания':'/assets/achievements/series/icon_my_company.png',
+        'Сезонный путь':'/assets/achievements/series/icon_season_put.png'
+      });
+
       function renderSeries() {
         if (!seriesSectionEl || !seriesListEl) return;
         const series = Array.isArray(ACHIEVEMENT_SERIES) ? ACHIEVEMENT_SERIES : [];
@@ -686,9 +696,11 @@
           const total = Math.max(1, safeNumber(entry?.total));
           const completed = entry?.completed === true;
           const percent = Math.max(0, Math.min(100, safeNumber(entry?.progressPercent) || Math.round(earned / total * 100)));
+          const title = String(entry?.title || 'Серия');
+          const iconUrl = SERIES_ICON_BY_TITLE[title] || '/assets/ui/icon_score_acivment.png';
           return `<div class="achievement-series${completed ? ' is-complete' : ''}" data-series-category="${escapeHtml(entry?.category || '')}">
-            <span class="series-icon" aria-hidden="true">${escapeHtml(entry?.icon || '🏅')}</span>
-            <span class="series-copy"><strong>${escapeHtml(entry?.title || 'Серия')}</strong><span class="series-progress" aria-hidden="true"><i style="width:${percent}%"></i></span></span>
+            <span class="series-icon" aria-hidden="true"><img src="${escapeHtml(iconUrl)}" alt="" loading="lazy" decoding="async"></span>
+            <span class="series-copy"><strong>${escapeHtml(title)}</strong><span class="series-progress" aria-hidden="true"><i style="width:${percent}%"></i></span></span>
             <span class="series-status${completed ? ' is-complete' : ''}">${completed ? '✓ Серия завершена' : `${earned} / ${total}`}</span>
           </div>`;
         }).join('');
