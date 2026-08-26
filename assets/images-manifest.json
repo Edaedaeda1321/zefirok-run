@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "catalogHash": "be8a7984fa3f294d",
-  "count": 418,
+  "catalogHash": "3e71fb748f0a26f8",
+  "count": 419,
   "images": [
     {
       "fileName": "achievements/background_achivment_panel.png",
@@ -3346,6 +3346,14 @@
       "path": "/assets/ui/icone_reward.png",
       "size": 705491,
       "modified": 1787447131000
+    },
+    {
+      "fileName": "ui/new_avatars_game.png",
+      "label": "New avatars game",
+      "folder": "ui",
+      "path": "/assets/ui/new_avatars_game.png",
+      "size": 412252,
+      "modified": 1787780165000
     }
   ]
 }
