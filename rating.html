@@ -8775,17 +8775,21 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
 #zefirok-maltipoo-runner .leaderboard-showcase{display:flex;align-items:center;gap:3px;min-width:0;max-width:100%;overflow:hidden}
 #zefirok-maltipoo-runner .leaderboard-v4-row-copy .leaderboard-showcase{margin-top:2px}
 #zefirok-maltipoo-runner .leaderboard-achievement{display:inline-flex;align-items:center;gap:3px;min-width:0;max-width:92px;padding:3px 5px;border:1px solid rgba(211,158,52,.42);border-radius:999px;background:linear-gradient(180deg,#fff8d7,#fff0b2);color:#865919!important;font-size:7px!important;font-weight:950!important;line-height:1!important;white-space:nowrap;box-shadow:0 2px 5px rgba(143,92,21,.06)}
-#zefirok-maltipoo-runner .leaderboard-achievement-icon{flex:0 0 auto;font-size:9px;line-height:1}
+#zefirok-maltipoo-runner .leaderboard-achievement-icon{display:grid;place-items:center;flex:0 0 auto;width:14px;height:14px;font-size:9px;line-height:1;overflow:hidden;border-radius:5px;background:rgba(255,255,255,.56)}
+#zefirok-maltipoo-runner .leaderboard-achievement-icon img{display:block;width:100%;height:100%;object-fit:contain}
 #zefirok-maltipoo-runner .leaderboard-achievement-title{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:inherit!important;font-size:inherit!important;font-weight:inherit!important;line-height:inherit!important}
 #zefirok-maltipoo-runner .leaderboard-achievement[data-rarity="rare"]{border-color:rgba(87,157,207,.40);background:linear-gradient(180deg,#eff9ff,#e3f4ff);color:#497c9f!important}
 #zefirok-maltipoo-runner .leaderboard-achievement[data-rarity="epic"]{border-color:rgba(155,102,201,.38);background:linear-gradient(180deg,#faf4ff,#f0e3ff);color:#7950a0!important}
 #zefirok-maltipoo-runner .leaderboard-achievement[data-rarity="legendary"]{border-color:rgba(211,147,34,.54);background:linear-gradient(180deg,#fff8d2,#ffeaa1);color:#855812!important}
 #zefirok-maltipoo-runner .leaderboard-achievement[data-rarity="legacy"]{border-color:rgba(198,80,120,.42);background:linear-gradient(180deg,#fff2f7,#ffe1eb);color:#984461!important}
 #zefirok-maltipoo-runner .leaderboard-showcase.is-compact{justify-content:center;gap:2px;overflow:visible}
-#zefirok-maltipoo-runner .leaderboard-showcase.is-compact .leaderboard-achievement{width:22px;height:22px;padding:0;justify-content:center;border-radius:8px;overflow:visible}
+#zefirok-maltipoo-runner .leaderboard-showcase.is-compact .leaderboard-achievement{width:28px;height:28px;padding:0;justify-content:center;border-radius:9px;overflow:visible}
 #zefirok-maltipoo-runner .leaderboard-showcase.is-compact .leaderboard-achievement-title{display:none}
-#zefirok-maltipoo-runner .leaderboard-showcase.is-compact .leaderboard-achievement-icon{font-size:11px}
-@media(max-width:390px){#zefirok-maltipoo-runner .leaderboard-v4-row-copy .leaderboard-achievement{max-width:none;width:20px;height:20px;padding:0;justify-content:center;border-radius:7px}#zefirok-maltipoo-runner .leaderboard-v4-row-copy .leaderboard-achievement-title{display:none}#zefirok-maltipoo-runner .leaderboard-v4-row-copy .leaderboard-achievement-icon{font-size:10px}}
+#zefirok-maltipoo-runner .leaderboard-showcase.is-compact .leaderboard-achievement-icon{width:24px;height:24px;border-radius:7px;background:rgba(255,255,255,.72)}
+#zefirok-maltipoo-runner .leaderboard-v4-tabs button{display:flex;align-items:center;justify-content:center;gap:7px}
+#zefirok-maltipoo-runner .leaderboard-v4-tab-icon{display:block;width:19px;height:19px;object-fit:contain;filter:drop-shadow(0 2px 3px rgba(91,45,59,.12))}
+#zefirok-maltipoo-runner .leaderboard-v4-tabs button.is-active .leaderboard-v4-tab-icon{filter:brightness(0) invert(1) drop-shadow(0 1px 2px rgba(91,45,59,.16));opacity:.96}
+@media(max-width:390px){#zefirok-maltipoo-runner .leaderboard-v4-row-copy .leaderboard-achievement{max-width:none;width:22px;height:22px;padding:0;justify-content:center;border-radius:7px}#zefirok-maltipoo-runner .leaderboard-v4-row-copy .leaderboard-achievement-title{display:none}#zefirok-maltipoo-runner .leaderboard-v4-row-copy .leaderboard-achievement-icon{width:18px;height:18px}}
 </style>
 <style id="zefirok-rating-player-profile-v2">
 #zefirok-maltipoo-runner .leaderboard-v4-row[data-player-profile-id],#zefirok-maltipoo-runner .leaderboard-v4-podium-card[data-player-profile-id]{cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation;transition:border-color .16s ease,box-shadow .16s ease,filter .16s ease}
@@ -8798,7 +8802,10 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
 .rating-player-profile{position:fixed;inset:0;z-index:2147483620;display:flex;align-items:flex-end;justify-content:center;padding:0;background:rgba(67,42,50,.32);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);animation:rating-profile-backdrop-in .2s ease both}
 .rating-player-profile[hidden]{display:none!important}
 .rating-player-profile-sheet{position:relative;width:min(540px,100%);max-height:min(82dvh,760px);overflow:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:13px max(15px,var(--zefirok-content-safe-right,0px)) max(20px,calc(var(--zefirok-content-safe-bottom,0px) + 12px)) max(15px,var(--zefirok-content-safe-left,0px));border:1px solid rgba(231,196,180,.94);border-bottom:0;border-radius:28px 28px 0 0;background:linear-gradient(165deg,#fffdf9 0%,#fff8f6 48%,#fff2f6 100%);box-shadow:0 -18px 55px rgba(72,37,51,.19);color:#68404e;animation:rating-profile-sheet-in .28s cubic-bezier(.22,.86,.28,1) both;transform:translateY(0)}
-.rating-player-profile-drag{display:block;width:46px;height:5px;margin:0 auto 10px;border-radius:999px;background:#c99a83;opacity:.72;touch-action:none;cursor:grab}
+.rating-player-profile-drag{display:block;width:72px;height:24px;margin:0 auto 5px;padding:0;border:0;background:transparent;cursor:grab;touch-action:none;appearance:none;-webkit-appearance:none;position:relative;z-index:6}
+.rating-player-profile-drag::before{content:"";position:absolute;left:50%;top:8px;width:48px;height:5px;transform:translateX(-50%);border-radius:999px;background:#c99a83;opacity:.72;transition:width .16s ease,opacity .16s ease,background .16s ease}
+.rating-player-profile-drag:active::before,.rating-player-profile-drag.is-dragging::before{width:54px;opacity:.98;background:#bb816f}.rating-player-profile-drag.is-armed::before{width:58px;background:#c95f86;opacity:1}
+.rating-player-profile-drag:focus-visible{outline:2px solid rgba(203,79,124,.32);outline-offset:4px;border-radius:999px}
 .rating-player-profile-close{position:absolute;right:14px;top:13px;z-index:4;width:36px;height:36px;border:1px solid rgba(213,165,145,.68);border-radius:50%;background:rgba(255,252,249,.94);color:#a76569;font:800 24px/1 var(--font-sans);display:grid;place-items:center;cursor:pointer}
 .rating-player-profile-content{display:grid;gap:12px}
 .rating-player-profile-loading{display:grid;gap:12px;padding:18px 0 8px}
@@ -8807,26 +8814,26 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
 .rating-player-profile-head{display:grid;grid-template-columns:94px minmax(0,1fr);gap:13px;align-items:center;padding-right:36px}
 .rating-player-profile-avatar .leaderboard-avatar-frame{width:88px!important;height:88px!important;border-radius:24px!important}
 .rating-player-profile-avatar .leaderboard-level-badge{width:27px!important;height:27px!important;right:-3px!important;bottom:-3px!important;font-size:11px!important}
-.rating-player-profile-copy{display:grid;gap:5px;min-width:0}.rating-player-profile-copy h2{margin:0;color:#693748;font-size:23px;font-weight:950;line-height:1.05;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.rating-player-profile-place{color:#cb4f7c;font-size:12px;font-weight:950}.rating-player-profile-rank{display:inline-flex;align-items:center;gap:5px;width:max-content;max-width:100%;padding:6px 10px;border:1px solid rgba(221,178,115,.58);border-radius:999px;background:#fff8e9;color:#80531c;font-size:11px;font-weight:900}.rating-player-profile-since{color:#967581;font-size:10px;font-weight:750}
+.rating-player-profile-copy{display:grid;gap:5px;min-width:0}.rating-player-profile-copy h2{margin:0;color:#693748;font-size:23px;font-weight:950;line-height:1.05;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.rating-player-profile-place{color:#cb4f7c;font-size:12px;font-weight:950}.rating-player-profile-rank{display:inline-flex;align-items:center;gap:5px;width:max-content;max-width:100%;padding:6px 10px;border:1px solid rgba(221,178,115,.58);border-radius:999px;background:#fff8e9;color:#80531c;font-size:11px;font-weight:900}.rating-player-inline-icon{display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;flex:0 0 14px}.rating-player-inline-icon img{display:block;width:100%;height:100%;object-fit:contain}.rating-player-profile-since{color:#967581;font-size:10px;font-weight:750}
 .rating-player-showcase{position:relative;overflow:hidden;display:grid;gap:9px;padding:11px;border:1px solid rgba(225,189,153,.72);border-radius:20px;background:linear-gradient(155deg,#fffdf7,#fff6ef)}
 .rating-player-showcase[data-style="gold"]{border-color:rgba(213,155,42,.72);background:radial-gradient(circle at 85% -10%,rgba(255,234,141,.6),transparent 40%),linear-gradient(155deg,#fffce9,#fff0bc)}
 .rating-player-showcase[data-style="seasonal"]{border-color:rgba(202,126,173,.64);background:radial-gradient(circle at 10% 0,rgba(220,235,255,.72),transparent 37%),radial-gradient(circle at 93% 5%,rgba(255,213,233,.65),transparent 37%),linear-gradient(155deg,#fffaff,#f7efff)}
 .rating-player-showcase-head{display:flex;align-items:center;justify-content:space-between;gap:8px}.rating-player-showcase-head strong{color:#70452c;font-size:12px;font-weight:950}.rating-player-showcase-style{padding:5px 9px;border:1px solid rgba(215,164,87,.48);border-radius:999px;background:rgba(255,255,255,.76);color:#8a5c22;font-size:8px;font-weight:900;white-space:nowrap}
 .rating-player-showcase-shelf{position:relative;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;align-items:end;padding:1px 8px 12px}.rating-player-showcase-shelf::after{content:"";position:absolute;left:3px;right:3px;bottom:3px;height:8px;border:1px solid rgba(202,139,36,.55);border-radius:999px;background:linear-gradient(180deg,#ffe9a7,#dfa43b);box-shadow:0 4px 8px rgba(138,88,24,.12)}
-.rating-player-trophy{position:relative;z-index:1;display:grid;justify-items:center;gap:4px;min-width:0}.rating-player-trophy-art{display:grid;place-items:center;width:54px;height:54px;border-radius:16px;background:rgba(255,255,255,.72);font-size:28px;filter:drop-shadow(0 5px 6px rgba(112,70,34,.12))}.rating-player-trophy-art img{display:block;width:52px;height:52px;object-fit:contain}.rating-player-trophy small{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#8a6670;font-size:7px;font-weight:850}.rating-player-trophy.is-empty .rating-player-trophy-art{border:1px dashed rgba(190,142,155,.45);background:rgba(255,255,255,.45);color:#c8aeb6;font-size:20px}
-.rating-player-profile-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}.rating-player-stat{display:grid;gap:3px;min-width:0;padding:10px 8px;border:1px solid rgba(227,197,178,.76);border-radius:16px;background:rgba(255,255,255,.78);text-align:center}.rating-player-stat span{color:#9a7a68;font-size:7.5px;font-weight:800;line-height:1.2}.rating-player-stat strong{color:#724435;font-size:15px;font-weight:950;font-variant-numeric:tabular-nums;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rating-player-trophy{position:relative;z-index:1;display:grid;justify-items:center;gap:5px;min-width:0}.rating-player-trophy-art{display:grid;place-items:center;width:68px;height:68px;border-radius:19px;background:rgba(255,255,255,.72);filter:drop-shadow(0 6px 8px rgba(112,70,34,.13))}.rating-player-trophy-art img{display:block;width:64px;height:64px;object-fit:contain}.rating-player-trophy small{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#8a6670;font-size:7px;font-weight:850}.rating-player-trophy.is-empty .rating-player-trophy-art{border:1px dashed rgba(190,142,155,.42);background:rgba(255,255,255,.34);filter:none}.rating-player-empty-slot{display:block;width:25px;height:25px;border:2px solid rgba(191,151,164,.30);border-radius:50%;box-shadow:inset 0 0 0 5px rgba(255,255,255,.42)}.rating-player-showcase-empty{grid-column:1/-1;position:relative;z-index:1;display:grid;grid-template-columns:44px minmax(0,1fr);gap:10px;align-items:center;justify-self:center;width:min(285px,100%);padding:8px 11px 10px;border:1px dashed rgba(203,158,171,.38);border-radius:16px;background:rgba(255,255,255,.46);text-align:left}.rating-player-showcase-empty img{display:block;width:42px;height:42px;object-fit:contain;opacity:.42;filter:grayscale(.22)}.rating-player-showcase-empty-copy{display:grid;gap:2px}.rating-player-showcase-empty strong{color:#8a6370;font-size:9px;font-weight:950}.rating-player-showcase-empty small{color:#ae8e98;font-size:7px;font-weight:750;line-height:1.25}
+.rating-player-profile-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}.rating-player-stat{display:grid;grid-template-columns:26px minmax(0,1fr);grid-template-rows:auto auto;column-gap:6px;row-gap:1px;align-items:center;min-width:0;padding:9px 7px;border:1px solid rgba(227,197,178,.76);border-radius:16px;background:rgba(255,255,255,.78);text-align:left}.rating-player-stat-icon{grid-row:1/3;display:grid;place-items:center;width:26px;height:26px}.rating-player-stat-icon img{display:block;width:25px;height:25px;object-fit:contain}.rating-player-stat span{min-width:0;color:#9a7a68;font-size:7px;font-weight:800;line-height:1.15}.rating-player-stat strong{min-width:0;color:#724435;font-size:14px;font-weight:950;font-variant-numeric:tabular-nums;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .rating-player-profile-progress{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:9px;align-items:center;padding:10px 11px;border:1px solid rgba(226,191,202,.76);border-radius:17px;background:rgba(255,255,255,.66)}.rating-player-progress-copy{display:grid;gap:5px}.rating-player-progress-copy span{color:#9a7480;font-size:8px;font-weight:800}.rating-player-progress-copy strong{color:#a94369;font-size:13px;font-weight:950}.rating-player-progress-track{height:7px;overflow:hidden;border-radius:999px;background:#f1dfe5}.rating-player-progress-track i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#ee83aa,#d95385)}.rating-player-rare{display:grid;gap:2px;max-width:142px;padding:7px 9px;border:1px solid rgba(219,167,75,.58);border-radius:13px;background:#fff8e8;color:#81591f}.rating-player-rare span{font-size:7px;font-weight:850}.rating-player-rare strong{font-size:10px;font-weight:950;line-height:1.2}.rating-player-rare[hidden]{display:none!important}
 @keyframes rating-profile-backdrop-in{from{background:rgba(67,42,50,0);backdrop-filter:blur(0);-webkit-backdrop-filter:blur(0)}to{background:rgba(67,42,50,.32)}}@keyframes rating-profile-sheet-in{from{transform:translateY(28px);opacity:.45}to{transform:translateY(0);opacity:1}}@keyframes rating-profile-shimmer{to{background-position:-220% 0}}
 @media(max-width:390px){.rating-player-profile-sheet{padding-left:11px;padding-right:11px}.rating-player-profile-head{grid-template-columns:82px minmax(0,1fr);gap:10px}.rating-player-profile-avatar .leaderboard-avatar-frame{width:78px!important;height:78px!important}.rating-player-profile-copy h2{font-size:20px}.rating-player-stat{padding:9px 5px}.rating-player-stat strong{font-size:13px}.rating-player-profile-progress{grid-template-columns:1fr}.rating-player-rare{max-width:none}}
 /* Stage 2: social comparison, recent trophies and motion polish. */
-.rating-player-profile.is-closing{animation:rating-profile-backdrop-out .18s ease both;pointer-events:none}.rating-player-profile.is-closing .rating-player-profile-sheet{animation:rating-profile-sheet-out .18s ease both}
+.rating-player-profile.is-closing{animation:rating-profile-backdrop-out .18s ease both;pointer-events:none}
 .rating-player-profile-content.is-loaded>.rating-player-profile-head{animation:rating-profile-content-in .28s cubic-bezier(.2,.82,.25,1) both}.rating-player-profile-content.is-loaded>.rating-player-showcase{animation:rating-profile-content-in .32s .035s cubic-bezier(.2,.82,.25,1) both}.rating-player-profile-content.is-loaded>.rating-player-profile-stats{animation:rating-profile-content-in .32s .07s cubic-bezier(.2,.82,.25,1) both}.rating-player-profile-content.is-loaded>.rating-player-profile-progress{animation:rating-profile-content-in .32s .10s cubic-bezier(.2,.82,.25,1) both}.rating-player-profile-content.is-loaded>.rating-player-recent{animation:rating-profile-content-in .32s .13s cubic-bezier(.2,.82,.25,1) both}.rating-player-profile-content.is-loaded>.rating-player-compare-wrap{animation:rating-profile-content-in .32s .16s cubic-bezier(.2,.82,.25,1) both}
 .rating-player-showcase-shelf .rating-player-trophy{animation:rating-profile-trophy-in .36s cubic-bezier(.18,.9,.28,1.2) both}.rating-player-showcase-shelf .rating-player-trophy:nth-child(2){animation-delay:.05s}.rating-player-showcase-shelf .rating-player-trophy:nth-child(3){animation-delay:.1s}
 .rating-player-rare{grid-template-columns:36px minmax(0,1fr);align-items:center;gap:7px;max-width:190px}.rating-player-rare-art{display:grid;place-items:center;width:36px;height:36px;border-radius:11px;background:rgba(255,255,255,.72);font-size:20px}.rating-player-rare-art img{display:block;width:34px;height:34px;object-fit:contain}.rating-player-rare-copy{display:grid;gap:1px;min-width:0}.rating-player-rare-copy span{font-size:7px;font-weight:850}.rating-player-rare-copy strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:9px}.rating-player-rare-copy em{color:#a47731;font-size:7px;font-style:normal;font-weight:850}
-.rating-player-recent{display:grid;gap:8px;padding:10px 11px;border:1px solid rgba(226,190,204,.72);border-radius:18px;background:rgba(255,255,255,.62)}.rating-player-section-head{display:flex;align-items:baseline;justify-content:space-between;gap:8px}.rating-player-section-head strong{color:#754653;font-size:11px;font-weight:950}.rating-player-section-head small{color:#a2818b;font-size:7.5px;font-weight:800}.rating-player-recent-list{display:grid;gap:6px}.rating-player-recent-item{display:grid;grid-template-columns:40px minmax(0,1fr) auto;gap:8px;align-items:center;padding:7px 8px;border-radius:13px;background:linear-gradient(145deg,rgba(255,248,246,.9),rgba(255,255,255,.86))}.rating-player-recent-art{display:grid;place-items:center;width:40px;height:40px;border-radius:12px;background:#fff7f3;font-size:21px}.rating-player-recent-art img{display:block;width:38px;height:38px;object-fit:contain}.rating-player-recent-copy{display:grid;gap:2px;min-width:0}.rating-player-recent-copy strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#70424f;font-size:9px;font-weight:950}.rating-player-recent-copy span{color:#9b7b85;font-size:7px;font-weight:800}.rating-player-recent-points{color:#a97322;font-size:8px;font-weight:950;white-space:nowrap}
-.rating-player-compare-wrap{display:grid;gap:7px}.rating-player-compare-toggle{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;min-height:43px;padding:9px 12px;border:1px solid rgba(213,157,184,.58);border-radius:15px;background:linear-gradient(145deg,#fff7fa,#fff);color:#8b4862;font:900 10px/1.2 var(--font-sans);cursor:pointer}.rating-player-compare-toggle b{font-size:16px;transition:transform .18s ease}.rating-player-compare-toggle[aria-expanded="true"] b{transform:rotate(180deg)}.rating-player-compare{display:grid;gap:6px;padding:9px;border:1px solid rgba(223,191,205,.68);border-radius:16px;background:rgba(255,255,255,.66);animation:rating-profile-compare-in .2s ease both}.rating-player-compare[hidden]{display:none!important}.rating-player-compare-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:9px;align-items:center;padding:7px 8px;border-radius:12px;background:rgba(255,248,250,.88)}.rating-player-compare-copy{display:grid;gap:2px;min-width:0}.rating-player-compare-copy strong{color:#714652;font-size:8.5px;font-weight:950}.rating-player-compare-copy span{color:#9e7d87;font-size:7px;font-weight:800}.rating-player-compare-values{display:grid;justify-items:end;gap:1px;color:#7d4c5b;font-size:8px;font-weight:900;white-space:nowrap}.rating-player-compare-values b{color:#c34f78;font-size:9px}.rating-player-profile-self-note{padding:9px 11px;border:1px solid rgba(226,190,204,.62);border-radius:14px;background:rgba(255,247,250,.72);color:#9a7480;font-size:8px;font-weight:850;text-align:center}
-@keyframes rating-profile-backdrop-out{to{background:rgba(67,42,50,0);backdrop-filter:blur(0);-webkit-backdrop-filter:blur(0)}}@keyframes rating-profile-sheet-out{to{transform:translateY(34px);opacity:0}}@keyframes rating-profile-content-in{from{transform:translateY(6px);opacity:0}to{transform:translateY(0);opacity:1}}@keyframes rating-profile-trophy-in{from{transform:translateY(9px) scale(.92);opacity:0}to{transform:translateY(0) scale(1);opacity:1}}@keyframes rating-profile-compare-in{from{transform:translateY(-4px);opacity:0}to{transform:translateY(0);opacity:1}}
-@media(max-width:390px){.rating-player-recent-item{grid-template-columns:36px minmax(0,1fr) auto}.rating-player-recent-art{width:36px;height:36px}.rating-player-recent-art img{width:34px;height:34px}.rating-player-rare{max-width:none}}
+.rating-player-recent{display:grid;gap:8px;padding:10px 11px;border:1px solid rgba(226,190,204,.72);border-radius:18px;background:rgba(255,255,255,.62)}.rating-player-section-head{display:flex;align-items:baseline;justify-content:space-between;gap:8px}.rating-player-section-head strong{color:#754653;font-size:11px;font-weight:950}.rating-player-section-head small{color:#a2818b;font-size:7.5px;font-weight:800}.rating-player-recent-list{display:grid;gap:6px}.rating-player-recent-item{display:grid;grid-template-columns:40px minmax(0,1fr) auto;gap:8px;align-items:center;padding:7px 8px;border-radius:13px;background:linear-gradient(145deg,rgba(255,248,246,.9),rgba(255,255,255,.86))}.rating-player-recent-art{display:grid;place-items:center;width:40px;height:40px;border-radius:12px;background:#fff7f3;font-size:21px}.rating-player-recent-art img{display:block;width:38px;height:38px;object-fit:contain}.rating-player-recent-copy{display:grid;gap:2px;min-width:0}.rating-player-recent-copy strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#70424f;font-size:9px;font-weight:950}.rating-player-recent-copy span{color:#9b7b85;font-size:7px;font-weight:800}.rating-player-recent-points{display:inline-flex;align-items:center;gap:3px;color:#a97322;font-size:8px;font-weight:950;white-space:nowrap}.rating-player-recent-points img{display:block;width:13px;height:13px;object-fit:contain}
+.rating-player-compare-wrap{display:grid;gap:7px}.rating-player-compare-toggle{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;min-height:43px;padding:9px 12px;border:1px solid rgba(213,157,184,.58);border-radius:15px;background:linear-gradient(145deg,#fff7fa,#fff);color:#8b4862;font:900 10px/1.2 var(--font-sans);cursor:pointer}.rating-player-compare-toggle-copy{display:inline-flex;align-items:center;gap:8px;min-width:0}.rating-player-compare-toggle-copy strong{display:block;font-size:10px;font-weight:950;color:inherit}.rating-player-compare-toggle-copy span{display:block;font-size:7px;font-weight:800;color:#a17b87}.rating-player-compare-toggle-icon{display:grid;place-items:center;width:22px;height:22px;border-radius:10px;background:rgba(255,255,255,.76);box-shadow:inset 0 0 0 1px rgba(214,172,191,.34)}.rating-player-compare-toggle-icon img{display:block;width:15px;height:15px;object-fit:contain}.rating-player-compare-toggle b{font-size:16px;transition:transform .18s ease}.rating-player-compare-toggle[aria-expanded="true"] b{transform:rotate(180deg)}.rating-player-compare{display:grid;gap:6px;padding:9px;border:1px solid rgba(223,191,205,.68);border-radius:16px;background:rgba(255,255,255,.66);animation:rating-profile-compare-in .2s ease both}.rating-player-compare[hidden]{display:none!important}.rating-player-compare-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:9px;align-items:center;padding:7px 8px;border-radius:12px;background:rgba(255,248,250,.88)}.rating-player-compare-copy{display:grid;grid-template-columns:30px minmax(0,1fr);gap:8px;align-items:center;min-width:0}.rating-player-compare-icon{display:grid;place-items:center;width:30px;height:30px;border-radius:10px;background:rgba(255,255,255,.82);box-shadow:inset 0 0 0 1px rgba(223,191,205,.46)}.rating-player-compare-icon img{display:block;width:22px;height:22px;object-fit:contain}.rating-player-compare-copy-text{display:grid;gap:2px;min-width:0}.rating-player-compare-copy-text strong{color:#714652;font-size:8.5px;font-weight:950}.rating-player-compare-copy-text span{color:#9e7d87;font-size:7px;font-weight:800}.rating-player-compare-values{display:grid;justify-items:end;gap:1px;color:#7d4c5b;font-size:8px;font-weight:900;white-space:nowrap}.rating-player-compare-values b{color:#c34f78;font-size:9px}.rating-player-profile-self-note{padding:9px 11px;border:1px solid rgba(226,190,204,.62);border-radius:14px;background:rgba(255,247,250,.72);color:#9a7480;font-size:8px;font-weight:850;text-align:center}
+@keyframes rating-profile-backdrop-out{to{background:rgba(67,42,50,0);backdrop-filter:blur(0);-webkit-backdrop-filter:blur(0)}}@keyframes rating-profile-content-in{from{transform:translateY(6px);opacity:0}to{transform:translateY(0);opacity:1}}@keyframes rating-profile-trophy-in{from{transform:translateY(9px) scale(.92);opacity:0}to{transform:translateY(0) scale(1);opacity:1}}@keyframes rating-profile-compare-in{from{transform:translateY(-4px);opacity:0}to{transform:translateY(0);opacity:1}}
+@media(max-width:390px){.rating-player-recent-item{grid-template-columns:36px minmax(0,1fr) auto}.rating-player-recent-art{width:36px;height:36px}.rating-player-recent-art img{width:34px;height:34px}.rating-player-rare{max-width:none}.rating-player-trophy-art{width:60px;height:60px}.rating-player-trophy-art img{width:57px;height:57px}.rating-player-stat{grid-template-columns:23px minmax(0,1fr);padding:8px 5px}.rating-player-stat-icon{width:23px;height:23px}.rating-player-stat-icon img{width:22px;height:22px}.rating-player-stat strong{font-size:12px}}
 @media(prefers-reduced-motion:reduce){.rating-player-profile,.rating-player-profile-sheet,.rating-player-profile-content.is-loaded>*,.rating-player-showcase-shelf .rating-player-trophy,.rating-player-compare{animation:none!important;transition:none!important}}
 </style>
 </head>
@@ -8873,7 +8880,7 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
 </section>
 <section class="rating-player-profile" data-rating-player-profile hidden role="dialog" aria-modal="true" aria-labelledby="rating-player-profile-title">
   <div class="rating-player-profile-sheet" data-rating-player-profile-sheet>
-    <span class="rating-player-profile-drag" data-rating-player-profile-drag aria-hidden="true"></span>
+    <button class="rating-player-profile-drag" data-rating-player-profile-drag type="button" aria-label="Потяните эту ручку вниз, чтобы закрыть мини-профиль"></button>
     <button class="rating-player-profile-close" data-rating-player-profile-close type="button" aria-label="Закрыть мини-профиль">×</button>
     <div class="rating-player-profile-content" data-rating-player-profile-content></div>
   </div>
@@ -8881,7 +8888,7 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
 <script>(() => {
   "use strict";
 
-  const BUILD = "1.2.0 · player-mini-profile-social";
+  const BUILD = "1.3.0 · player-profile-art-drag";
   const tg = window.Telegram?.WebApp;
   const embedded = window.parent !== window;
   let lastHapticAt = 0;
@@ -8907,6 +8914,14 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
   const STATE_PATH = "/api/leaderboard/state";
   const PLAYER_PROFILE_PATH = "/api/leaderboard/player-profile";
   const PLAYER_PROFILE_CACHE_TTL_MS = 5 * 60 * 1000;
+  const ACHIEVEMENT_POINTS_ICON = "/assets/ui/icon_score_acivment.png";
+  const ACHIEVEMENT_FALLBACK_ICON = ACHIEVEMENT_POINTS_ICON;
+  const BEST_SCORE_ICON = "/assets/optimized/v0.79.5/iconRecord.png?v=0.79.5";
+  const COMPLETED_RUNS_ICON = "/assets/optimized/v0.79.5/iconScore.webp?v=0.79.5";
+  const ACHIEVEMENTS_COUNT_ICON = ACHIEVEMENT_POINTS_ICON;
+  const COMPARE_PANEL_ICON = "/assets/ui/icon_reiting.png";
+  const RATING_TAB_ICON = "/assets/ui/icon_reiting.png";
+  const REWARD_FALLBACK_ICON = "/assets/ui/icone_reward.png";
   const PROFILE_MIN_SECONDS = 12;
   const PROFILE_MIN_SCORE = 150;
   const CACHE_TTL_MS = 30000;
@@ -8991,6 +9006,14 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
   let playerProfileTrigger = null;
   let playerProfileContentOverflow = "";
   let playerProfileCloseTimer = 0;
+  let profileDragStartY = 0;
+  let profileDragDelta = 0;
+  let profileDragLastY = 0;
+  let profileDragLastTs = 0;
+  let profileDragVelocity = 0;
+  let profileDragPointerId = null;
+  let profileDragArmed = false;
+  let playerProfileDismissAnimating = false;
   let lastTransitionRefreshAt = 0;
   let lastVisibleRefreshAt = 0;
 
@@ -9183,7 +9206,7 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
       const iconClass = type === "case" ? "leaderboard-reward-icon leaderboard-reward-icon--case" : "leaderboard-reward-icon";
       visual = `<span class="leaderboard-reward-visual"><img class="${iconClass}" src="${escapeHtml(image)}" alt="${escapeHtml(title)}" width="96" height="96" loading="eager" decoding="async"></span>`;
     } else {
-      visual = `<span class="leaderboard-reward-visual" aria-hidden="true">🎁</span>`;
+      visual = `<span class="leaderboard-reward-visual" aria-hidden="true"><img class="leaderboard-reward-icon" src="${escapeHtml(REWARD_FALLBACK_ICON)}" alt="" width="96" height="96" loading="eager" decoding="async"></span>`;
     }
     const caseType = type === "case" ? normalizedRatingCaseType(reward?.itemId || "small") : "";
     const caseAttrs = type === "case"
@@ -9201,7 +9224,7 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
   }
 
   function tabs() {
-    return `<div class="leaderboard-v4-tabs" role="tablist" aria-label="Раздел рейтинга"><button class="${mode === "season" ? "is-active" : ""}" data-leaderboard-mode="season" type="button" role="tab" aria-selected="${mode === "season"}">🏆 Текущий сезон</button><button class="${mode === "all_time" ? "is-active" : ""}" data-leaderboard-mode="all_time" type="button" role="tab" aria-selected="${mode === "all_time"}">За всё время</button></div>`;
+    return `<div class="leaderboard-v4-tabs" role="tablist" aria-label="Раздел рейтинга"><button class="${mode === "season" ? "is-active" : ""}" data-leaderboard-mode="season" type="button" role="tab" aria-selected="${mode === "season"}"><img class="leaderboard-v4-tab-icon" src="${escapeHtml(RATING_TAB_ICON)}" alt="" aria-hidden="true">Текущий сезон</button><button class="${mode === "all_time" ? "is-active" : ""}" data-leaderboard-mode="all_time" type="button" role="tab" aria-selected="${mode === "all_time"}">За всё время</button></div>`;
   }
 
   function openRatingCaseInfo(trigger) {
@@ -9250,10 +9273,22 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
     return `<span class="leaderboard-name-text">${escapeHtml(entry?.name || "Игрок")}</span>${passBadgeMarkup(entry)}`;
   }
 
+  function achievementThumbMarkup(item, fallbackIcon = ACHIEVEMENT_FALLBACK_ICON) {
+    const fallback = String(fallbackIcon || ACHIEVEMENT_FALLBACK_ICON).trim() || ACHIEVEMENT_FALLBACK_ICON;
+    const artUrl = String(item?.artUrl || "").trim();
+    const src = artUrl || fallback;
+    return `<img src="${escapeHtml(src)}" data-achievement-fallback="${escapeHtml(fallback)}" alt="" loading="lazy" decoding="async">`;
+  }
+
+  function playerProfileMetricIconMarkup(iconUrl) {
+    const src = String(iconUrl || ACHIEVEMENT_FALLBACK_ICON).trim() || ACHIEVEMENT_FALLBACK_ICON;
+    return `<img src="${escapeHtml(src)}" alt="" loading="lazy" decoding="async">`;
+  }
+
   function showcaseMarkup(entry, compact = false) {
     const items = Array.isArray(entry?.showcase) ? entry.showcase.slice(0, 3) : [];
     if (!items.length) return "";
-    return `<span class="leaderboard-showcase${compact ? " is-compact" : ""}" aria-label="Витрина достижений">${items.map((item) => {const rarity=String(item?.rarity||"common"),rarityLabel=String(item?.rarityLabel||"Обычное"),prestige=Math.max(0,Number(item?.achievementPoints||0));return `<span class="leaderboard-achievement" data-rarity="${escapeHtml(rarity)}" title="${escapeHtml(item?.title || "Достижение")} · ${escapeHtml(rarityLabel)} · +${prestige} очков достижений"><span class="leaderboard-achievement-icon" aria-hidden="true">${escapeHtml(item?.icon || "🏅")}</span><span class="leaderboard-achievement-title">${escapeHtml(item?.title || "Достижение")}</span></span>`;}).join("")}</span>`;
+    return `<span class="leaderboard-showcase${compact ? " is-compact" : ""}" aria-label="Витрина достижений">${items.map((item) => {const rarity=String(item?.rarity||"common"),rarityLabel=String(item?.rarityLabel||"Обычное"),prestige=Math.max(0,Number(item?.achievementPoints||0));return `<span class="leaderboard-achievement" data-rarity="${escapeHtml(rarity)}" title="${escapeHtml(item?.title || "Достижение")} · ${escapeHtml(rarityLabel)} · +${prestige} очков достижений"><span class="leaderboard-achievement-icon" aria-hidden="true">${achievementThumbMarkup(item)}</span><span class="leaderboard-achievement-title">${escapeHtml(item?.title || "Достижение")}</span></span>`;}).join("")}</span>`;
   }
 
   function openPassInfo(tierValue) {
@@ -9483,9 +9518,19 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
   }
 
   function playerProfileTrophyMarkup(item) {
-    if(!item)return `<span class="rating-player-trophy is-empty"><span class="rating-player-trophy-art" aria-hidden="true">＋</span><small>Пусто</small></span>`;
-    const art=String(item?.artUrl||"").trim(),visual=art?`<img src="${escapeHtml(art)}" alt="" loading="lazy" decoding="async">`:escapeHtml(item?.icon||"🏅");
+    if(!item)return `<span class="rating-player-trophy is-empty"><span class="rating-player-trophy-art" aria-hidden="true"><span class="rating-player-empty-slot"></span></span><small>Свободно</small></span>`;
+    const visual=achievementThumbMarkup(item);
     return `<span class="rating-player-trophy" title="${escapeHtml(item?.title||"Достижение")}"><span class="rating-player-trophy-art" aria-hidden="true">${visual}</span><small>${escapeHtml(item?.title||"Достижение")}</small></span>`;
+  }
+
+  function playerProfileShowcaseItemsMarkup(items) {
+    const selected=Array.isArray(items)?items.slice(0,3):[];
+    if(!selected.length)return `<span class="rating-player-showcase-empty"><img src="${escapeHtml(ACHIEVEMENT_FALLBACK_ICON)}" alt="" aria-hidden="true"><span class="rating-player-showcase-empty-copy"><strong>Витрина пока пустая</strong><small>Игрок ещё не выставил трофеи.</small></span></span>`;
+    return [0,1,2].map((index)=>playerProfileTrophyMarkup(selected[index])).join("");
+  }
+
+  function playerProfileStatMarkup(label,value,iconUrl) {
+    return `<div class="rating-player-stat"><span class="rating-player-stat-icon" aria-hidden="true">${playerProfileMetricIconMarkup(iconUrl)}</span><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>`;
   }
 
   function playerProfileAchievementDate(value) {
@@ -9495,9 +9540,9 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
   }
 
   function playerProfileRecentMarkup(item) {
-    const art=String(item?.artUrl||"").trim(),visual=art?`<img src="${escapeHtml(art)}" alt="" loading="lazy" decoding="async">`:escapeHtml(item?.icon||"🏅"),date=playerProfileAchievementDate(item?.unlockedAt),percent=Number(item?.playerPercent);
+    const visual=achievementThumbMarkup(item),date=playerProfileAchievementDate(item?.unlockedAt),percent=Number(item?.playerPercent);
     const meta=[date,String(item?.rarityLabel||"")].filter(Boolean);if(Number.isFinite(percent)&&percent>0)meta.push(`получили ${playerProfilePercent(percent)} игроков`);
-    return `<div class="rating-player-recent-item"><span class="rating-player-recent-art" aria-hidden="true">${visual}</span><span class="rating-player-recent-copy"><strong>${escapeHtml(item?.title||"Достижение")}</strong><span>${escapeHtml(meta.join(" · "))}</span></span><b class="rating-player-recent-points">+${formatter.format(Math.max(0,Number(item?.achievementPoints||0)))} 🏆</b></div>`;
+    return `<div class="rating-player-recent-item"><span class="rating-player-recent-art" aria-hidden="true">${visual}</span><span class="rating-player-recent-copy"><strong>${escapeHtml(item?.title||"Достижение")}</strong><span>${escapeHtml(meta.join(" · "))}</span></span><b class="rating-player-recent-points">+${formatter.format(Math.max(0,Number(item?.achievementPoints||0)))}<img src="${escapeHtml(ACHIEVEMENT_POINTS_ICON)}" alt="" aria-hidden="true"></b></div>`;
   }
 
   function playerProfileCompareLead(delta, unit="") {
@@ -9507,9 +9552,9 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
     return "Поровну";
   }
 
-  function playerProfileCompareRow(label,icon,targetValue,viewerValue,delta,unit="") {
+  function playerProfileCompareRow(label,iconUrl,targetValue,viewerValue,delta,unit="") {
     const target=Math.max(0,Number(targetValue)||0),viewer=Math.max(0,Number(viewerValue)||0);
-    return `<div class="rating-player-compare-row"><span class="rating-player-compare-copy"><strong>${escapeHtml(icon)} ${escapeHtml(label)}</strong><span>${escapeHtml(playerProfileCompareLead(delta,unit))}</span></span><span class="rating-player-compare-values"><b>${formatter.format(target)}</b><span>ты: ${formatter.format(viewer)}</span></span></div>`;
+    return `<div class="rating-player-compare-row"><span class="rating-player-compare-copy"><span class="rating-player-compare-icon" aria-hidden="true">${playerProfileMetricIconMarkup(iconUrl)}</span><span class="rating-player-compare-copy-text"><strong>${escapeHtml(label)}</strong><span>${escapeHtml(playerProfileCompareLead(delta,unit))}</span></span></span><span class="rating-player-compare-values"><b>${formatter.format(target)}</b><span>ты: ${formatter.format(viewer)}</span></span></div>`;
   }
 
   function renderPlayerProfileLoading(entry) {
@@ -9531,19 +9576,19 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
     const entry={...player,telegramId:String(targetId||playerProfileTargetId||""),name:String(player?.name||"Игрок")};
     const placeLabel=data?.mode==="all_time"?`#${Math.max(1,Number(player?.place||0))} за всё время`:`#${Math.max(1,Number(player?.place||0))} в сезоне`;
     const earned=Math.max(0,Number(achievements?.catalogEarned||0)),total=Math.max(0,Number(achievements?.catalogTotal||0)),completion=Math.max(0,Math.min(100,Number(achievements?.completionPercent||0))),points=Math.max(0,Number(achievements?.points||rank?.points||0));
-    const rare=achievements?.rareTrophy||null,rarePercent=rare?playerProfilePercent(rare.playerPercent):"",rareArt=String(rare?.artUrl||"").trim(),rareVisual=rareArt?`<img src="${escapeHtml(rareArt)}" alt="" loading="lazy" decoding="async">`:escapeHtml(rare?.icon||"🏅");
+    const rare=achievements?.rareTrophy||null,rarePercent=rare?playerProfilePercent(rare.playerPercent):"",rareVisual=rare?achievementThumbMarkup(rare):"";
     const recent=Array.isArray(achievements?.recent)?achievements.recent.slice(0,3):[],recentMarkup=recent.length?`<section class="rating-player-recent"><div class="rating-player-section-head"><strong>Недавно получено</strong><small>Последние трофеи</small></div><div class="rating-player-recent-list">${recent.map(playerProfileRecentMarkup).join("")}</div></section>`:"";
     const comparison=data?.comparison||{},viewer=comparison?.viewer||{},deltas=comparison?.deltas||{},comparisonMarkup=comparison?.isSelf===true
       ? `<div class="rating-player-profile-self-note">Это твой публичный мини-профиль в рейтинге.</div>`
-      : comparison?.available===true?`<section class="rating-player-compare-wrap"><button class="rating-player-compare-toggle" data-rating-player-compare-toggle type="button" aria-expanded="false"><span>⚖️ Сравнить со мной</span><b aria-hidden="true">⌄</b></button><div class="rating-player-compare" data-rating-player-compare hidden>${playerProfileCompareRow("Очки достижений","🏆",points,viewer?.achievementPoints,deltas?.achievementPoints,"🏆")}${playerProfileCompareRow("Лучший рекорд","⭐",player?.bestScore,viewer?.bestScore,deltas?.bestScore,"очк.")}${playerProfileCompareRow("Получено достижений","🏅",earned,viewer?.catalogEarned,deltas?.catalogEarned,"шт.")}</div></section>`:"";
+      : comparison?.available===true?`<section class="rating-player-compare-wrap"><button class="rating-player-compare-toggle" data-rating-player-compare-toggle type="button" aria-expanded="false"><span class="rating-player-compare-toggle-copy"><span class="rating-player-compare-toggle-icon" aria-hidden="true">${playerProfileMetricIconMarkup(COMPARE_PANEL_ICON)}</span><span><strong>Сравнить со мной</strong><span>Показать разницу по ключевым метрикам</span></span></span><b aria-hidden="true">⌄</b></button><div class="rating-player-compare" data-rating-player-compare hidden>${playerProfileCompareRow("Очки достижений",ACHIEVEMENT_POINTS_ICON,points,viewer?.achievementPoints,deltas?.achievementPoints,"очк. достиж.")}${playerProfileCompareRow("Лучший рекорд",BEST_SCORE_ICON,player?.bestScore,viewer?.bestScore,deltas?.bestScore,"очк.")}${playerProfileCompareRow("Получено достижений",ACHIEVEMENTS_COUNT_ICON,earned,viewer?.catalogEarned,deltas?.catalogEarned,"шт.")}</div></section>`:"";
     playerProfileContent.classList.remove("is-loaded");
     playerProfileContent.innerHTML=`
       <div class="rating-player-profile-head">
         <div class="rating-player-profile-avatar">${avatarMarkup(entry,false,true)}</div>
-        <div class="rating-player-profile-copy"><h2 id="rating-player-profile-title">${escapeHtml(player?.name||"Игрок")}</h2><span class="rating-player-profile-place">${escapeHtml(placeLabel)}</span><span class="rating-player-profile-rank">🏆 ${formatter.format(points)} · ${escapeHtml(rank?.title||"Новичок")}</span><span class="rating-player-profile-since">${escapeHtml(playerProfileSince(player?.registeredAt))}</span></div>
+        <div class="rating-player-profile-copy"><h2 id="rating-player-profile-title">${escapeHtml(player?.name||"Игрок")}</h2><span class="rating-player-profile-place">${escapeHtml(placeLabel)}</span><span class="rating-player-profile-rank"><span class="rating-player-inline-icon" aria-hidden="true">${playerProfileMetricIconMarkup(ACHIEVEMENT_POINTS_ICON)}</span>${formatter.format(points)} · ${escapeHtml(rank?.title||"Новичок")}</span><span class="rating-player-profile-since">${escapeHtml(playerProfileSince(player?.registeredAt))}</span></div>
       </div>
-      <section class="rating-player-showcase" data-style="${escapeHtml(styleId)}" aria-label="Витрина достижений игрока"><div class="rating-player-showcase-head"><strong>Витрина достижений</strong><span class="rating-player-showcase-style">${escapeHtml(playerProfileStyleLabel(showcase))} витрина</span></div><div class="rating-player-showcase-shelf">${[0,1,2].map((index)=>playerProfileTrophyMarkup(items[index])).join("")}</div></section>
-      <div class="rating-player-profile-stats"><div class="rating-player-stat"><span>Лучший рекорд</span><strong>${formatter.format(Math.max(0,Number(player?.bestScore||0)))}</strong></div><div class="rating-player-stat"><span>Завершено забегов</span><strong>${formatter.format(Math.max(0,Number(player?.completedRuns||0)))}</strong></div><div class="rating-player-stat"><span>Достижений</span><strong>${earned} / ${total}</strong></div></div>
+      <section class="rating-player-showcase" data-style="${escapeHtml(styleId)}" aria-label="Витрина достижений игрока"><div class="rating-player-showcase-head"><strong>Витрина достижений</strong><span class="rating-player-showcase-style">${escapeHtml(playerProfileStyleLabel(showcase))} витрина</span></div><div class="rating-player-showcase-shelf">${playerProfileShowcaseItemsMarkup(items)}</div></section>
+      <div class="rating-player-profile-stats">${playerProfileStatMarkup("Лучший рекорд",formatter.format(Math.max(0,Number(player?.bestScore||0))),BEST_SCORE_ICON)}${playerProfileStatMarkup("Завершено забегов",formatter.format(Math.max(0,Number(player?.completedRuns||0))),COMPLETED_RUNS_ICON)}${playerProfileStatMarkup("Достижений",`${earned} / ${total}`,ACHIEVEMENTS_COUNT_ICON)}</div>
       <div class="rating-player-profile-progress"><div class="rating-player-progress-copy"><span>Прогресс достижений</span><strong>${earned} / ${total} · ${Math.round(completion)}%</strong><span class="rating-player-progress-track" aria-hidden="true"><i style="width:${completion}%"></i></span></div><div class="rating-player-rare"${rare?"":" hidden"}><span class="rating-player-rare-art" aria-hidden="true">${rare?rareVisual:""}</span><span class="rating-player-rare-copy"><span>Редкий трофей</span><strong>${escapeHtml(rare?.title||"")}</strong><em>Получили ${escapeHtml(rarePercent)} игроков</em></span></div></div>
       ${recentMarkup}
       ${comparisonMarkup}`;
@@ -9555,10 +9600,18 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
     playerProfileRequest?.abort?.();playerProfileRequest=null;playerProfileTargetId="";
     if(playerProfileCloseTimer){clearTimeout(playerProfileCloseTimer);playerProfileCloseTimer=0;}
     const trigger=playerProfileTrigger;playerProfileTrigger=null;
-    const finalize=()=>{playerProfileLayer.classList.remove("is-closing");playerProfileLayer.hidden=true;if(playerProfileSheet)playerProfileSheet.style.transform="";if(playerProfileContent)playerProfileContent.classList.remove("is-loaded");if(content)content.style.overflow=playerProfileContentOverflow||"";try{trigger?.focus?.({preventScroll:true});}catch{}};
+    const finalize=()=>{playerProfileDismissAnimating=false;resetPlayerProfileDragState();playerProfileLayer.classList.remove("is-closing");playerProfileLayer.hidden=true;if(playerProfileSheet){playerProfileSheet.style.transform="";playerProfileSheet.style.transition="";playerProfileSheet.style.opacity="";}if(playerProfileContent)playerProfileContent.classList.remove("is-loaded");if(content)content.style.overflow=playerProfileContentOverflow||"";try{trigger?.focus?.({preventScroll:true});}catch{}};
     const reduced=window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches===true;
-    if(options?.immediate===true||reduced){finalize();return;}
-    playerProfileLayer.classList.add("is-closing");playerProfileCloseTimer=setTimeout(()=>{playerProfileCloseTimer=0;finalize();},185);
+    if(options?.immediate===true||reduced||!playerProfileSheet){finalize();return;}
+    playerProfileDismissAnimating=true;
+    playerProfileLayer.classList.add("is-closing");
+    const offset=Math.max(0,Number(options?.offset)||0);
+    const sheetHeight=Math.max(220,playerProfileSheet.getBoundingClientRect().height||playerProfileSheet.offsetHeight||0);
+    const travel=Math.max(offset + Math.min(168, sheetHeight * 0.28), sheetHeight + 28);
+    playerProfileSheet.style.transition="transform .22s cubic-bezier(.2,.82,.2,1), opacity .18s ease";
+    playerProfileSheet.style.transform=`translateY(${Math.round(travel)}px)`;
+    playerProfileSheet.style.opacity="0";
+    playerProfileCloseTimer=setTimeout(()=>{playerProfileCloseTimer=0;finalize();},220);
   }
 
   async function loadPlayerProfile(targetId,entry,force=false) {
@@ -9573,7 +9626,7 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
   function openPlayerProfile(targetId,trigger=null) {
     const id=String(targetId||"").trim();if(!id||!playerProfileLayer)return;
     const auth=currentInitData();if(!auth){showToast("Откройте рейтинг из Telegram Mini App, чтобы посмотреть профиль игрока.","warning",4200);return;}
-    if(playerProfileCloseTimer){clearTimeout(playerProfileCloseTimer);playerProfileCloseTimer=0;}playerProfileLayer.classList.remove("is-closing");
+    if(playerProfileCloseTimer){clearTimeout(playerProfileCloseTimer);playerProfileCloseTimer=0;}playerProfileDismissAnimating=false;resetPlayerProfileDragState();playerProfileLayer.classList.remove("is-closing");if(playerProfileSheet){playerProfileSheet.style.transform="";playerProfileSheet.style.transition="";playerProfileSheet.style.opacity="";}
     ratingImpactHaptic("light");playerProfileTargetId=id;playerProfileTrigger=trigger instanceof HTMLElement?trigger:null;
     const entry=leaderboardEntryById(id);renderPlayerProfileLoading(entry);playerProfileLayer.hidden=false;if(content){playerProfileContentOverflow=content.style.overflow;content.style.overflow="hidden";}
     try{playerProfileClose?.focus?.({preventScroll:true});}catch{}
@@ -9741,10 +9794,41 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
     const retry=target.closest("[data-rating-player-profile-retry]");if(retry&&playerProfileTargetId){ratingImpactHaptic("light");renderPlayerProfileLoading(leaderboardEntryById(playerProfileTargetId));void loadPlayerProfile(playerProfileTargetId,leaderboardEntryById(playerProfileTargetId),true);return;}
     const compareToggle=target.closest("[data-rating-player-compare-toggle]");if(compareToggle){const panel=playerProfileContent?.querySelector("[data-rating-player-compare]");if(panel){const open=panel.hidden;panel.hidden=!open;compareToggle.setAttribute("aria-expanded",open?"true":"false");ratingSelectHaptic();}return;}
   });
-  let profileDragStartY=0,profileDragDelta=0;
-  playerProfileDrag?.addEventListener("touchstart",event=>{profileDragStartY=Number(event.touches?.[0]?.clientY||0);profileDragDelta=0;},{passive:true});
-  playerProfileDrag?.addEventListener("touchmove",event=>{if(!profileDragStartY||!playerProfileSheet)return;profileDragDelta=Math.max(0,Number(event.touches?.[0]?.clientY||0)-profileDragStartY);playerProfileSheet.style.transform=`translateY(${Math.min(150,profileDragDelta)}px)`;},{passive:true});
-  playerProfileDrag?.addEventListener("touchend",()=>{if(!playerProfileSheet)return;if(profileDragDelta>72){ratingSelectHaptic();closePlayerProfile();}else playerProfileSheet.style.transform="";profileDragStartY=0;profileDragDelta=0;},{passive:true});
+  function resetPlayerProfileDragState() {
+    if(profileDragPointerId!=null){try{playerProfileDrag?.releasePointerCapture?.(profileDragPointerId);}catch{}}
+    profileDragStartY=0;profileDragDelta=0;profileDragLastY=0;profileDragLastTs=0;profileDragVelocity=0;profileDragPointerId=null;profileDragArmed=false;
+    playerProfileDrag?.classList.remove("is-dragging","is-armed");
+  }
+  function settlePlayerProfileDrag() {
+    if(!playerProfileSheet)return;
+    playerProfileSheet.style.transition="transform .24s cubic-bezier(.18,.88,.24,1)";
+    playerProfileSheet.style.transform="translateY(0)";
+    setTimeout(()=>{if(playerProfileSheet&&!playerProfileDismissAnimating)playerProfileSheet.style.transition="";},250);
+  }
+  playerProfileDrag?.addEventListener("pointerdown",event=>{
+    if(playerProfileDismissAnimating||playerProfileLayer?.hidden||!playerProfileSheet)return;
+    if(event.pointerType==="mouse"&&event.button!==0)return;
+    event.preventDefault();profileDragPointerId=event.pointerId;profileDragStartY=Number(event.clientY||0);profileDragDelta=0;profileDragLastY=profileDragStartY;profileDragLastTs=performance.now();profileDragVelocity=0;profileDragArmed=false;
+    playerProfileSheet.style.transition="none";playerProfileDrag.classList.add("is-dragging");
+    try{playerProfileDrag.setPointerCapture(event.pointerId);}catch{}
+  });
+  playerProfileDrag?.addEventListener("pointermove",event=>{
+    if(profileDragPointerId!==event.pointerId||!profileDragStartY||!playerProfileSheet||playerProfileDismissAnimating)return;
+    event.preventDefault();const currentY=Number(event.clientY||0),nowTs=performance.now(),dt=Math.max(1,nowTs-profileDragLastTs),step=currentY-profileDragLastY;profileDragVelocity=step/dt;profileDragLastY=currentY;profileDragLastTs=nowTs;profileDragDelta=Math.max(0,currentY-profileDragStartY);
+    const sheetHeight=Math.max(220,playerProfileSheet.getBoundingClientRect().height||playerProfileSheet.offsetHeight||0),closeThreshold=Math.max(68,Math.min(96,sheetHeight*.13)),manualOffset=Math.min(190,profileDragDelta*.88);
+    playerProfileSheet.style.transform=`translateY(${Math.round(manualOffset)}px)`;
+    if(!profileDragArmed&&profileDragDelta>=closeThreshold){profileDragArmed=true;playerProfileDrag?.classList.add("is-armed");ratingSelectHaptic();}
+    else if(profileDragArmed&&profileDragDelta<closeThreshold*.72){profileDragArmed=false;playerProfileDrag?.classList.remove("is-armed");}
+  });
+  const finishPlayerProfileDrag=(event,cancelled=false)=>{
+    if(profileDragPointerId!==event.pointerId)return;
+    try{playerProfileDrag?.releasePointerCapture?.(event.pointerId);}catch{}
+    const sheetHeight=Math.max(220,playerProfileSheet?.getBoundingClientRect?.().height||0),closeThreshold=Math.max(68,Math.min(96,sheetHeight*.13)),closeByDistance=!cancelled&&profileDragDelta>=closeThreshold,closeByFlick=!cancelled&&profileDragDelta>24&&profileDragVelocity>.72,manualOffset=Math.min(190,profileDragDelta*.88);
+    if(closeByDistance||closeByFlick){resetPlayerProfileDragState();ratingImpactHaptic("light");closePlayerProfile({offset:manualOffset});return;}
+    resetPlayerProfileDragState();settlePlayerProfileDrag();
+  };
+  playerProfileDrag?.addEventListener("pointerup",event=>finishPlayerProfileDrag(event,false));
+  playerProfileDrag?.addEventListener("pointercancel",event=>finishPlayerProfileDrag(event,true));
   document.addEventListener("keydown", event => {
     if((event.key==="Enter"||event.key===" ")&&document.activeElement instanceof HTMLElement&&document.activeElement.matches("[data-player-profile-id]")){event.preventDefault();openPlayerProfile(document.activeElement.dataset.playerProfileId,document.activeElement);return;}
     if (event.key !== "Escape") return;
@@ -9763,7 +9847,12 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
       return;
     }
     if (image.matches(".leaderboard-reward-icon") && image.parentElement) {
-      image.parentElement.textContent = "🎁";
+      if(image.getAttribute("src")!==REWARD_FALLBACK_ICON){image.src=REWARD_FALLBACK_ICON;image.alt="";}
+      return;
+    }
+    if (image.matches("[data-achievement-fallback]")) {
+      const fallback=String(image.dataset.achievementFallback||ACHIEVEMENT_FALLBACK_ICON);
+      if(fallback&&image.getAttribute("src")!==fallback)image.src=fallback;
     }
   }, true);
 
