@@ -10289,7 +10289,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
   &lt;section class=&quot;profile-section profile-section--showcase&quot; aria-labelledby=&quot;profile-showcase-title&quot;&gt;
     &lt;div class=&quot;profile-section-head&quot;&gt;
       &lt;div&gt;&lt;h3 id=&quot;profile-showcase-title&quot;&gt;Моя витрина&lt;/h3&gt;&lt;span&gt;До 3 выполненных достижений, которые видны в профиле и рейтинге.&lt;/span&gt;&lt;/div&gt;
-      &lt;button class=&quot;profile-link-chip&quot; data-achievements-open type=&quot;button&quot;&gt;&lt;span aria-hidden=&quot;true&quot;&gt;🏅&lt;/span&gt;&lt;span&gt;Достижения&lt;/span&gt;&lt;b aria-hidden=&quot;true&quot;&gt;›&lt;/b&gt;&lt;/button&gt;
+      &lt;button class=&quot;profile-link-chip&quot; data-achievements-open type=&quot;button&quot;&gt;&lt;span class=&quot;profile-link-chip-icon&quot; aria-hidden=&quot;true&quot;&gt;&lt;img src=&quot;/assets/ui/icon_score_acivment.png&quot; alt=&quot;&quot;&gt;&lt;/span&gt;&lt;span&gt;Достижения&lt;/span&gt;&lt;b aria-hidden=&quot;true&quot;&gt;›&lt;/b&gt;&lt;/button&gt;
     &lt;/div&gt;
     &lt;div class=&quot;profile-achievement-prestige&quot; data-profile-achievement-points&gt;&lt;span class=&quot;achievement-points-inline&quot;&gt;&lt;img src=&quot;/assets/ui/icon_score_acivment.png&quot; alt=&quot;&quot; aria-hidden=&quot;true&quot;&gt;&lt;span&gt;0 очков достижений&lt;/span&gt;&lt;/span&gt;&lt;/div&gt;
     &lt;div class=&quot;profile-showcase-empty&quot; data-profile-achievement-showcase&gt;
@@ -23291,7 +23291,9 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 })();
 &lt;/script&gt;
 &lt;style id=&quot;zefirok-achievements-entry-v4-style&quot;&gt;
-#zefirok-maltipoo-runner .profile-link-chip{display:inline-flex;align-items:center;justify-content:center;gap:6px;flex:0 0 auto;padding:9px 12px;border:1px solid rgba(230,176,196,.72);border-radius:999px;background:linear-gradient(180deg,rgba(255,255,255,.96),rgba(255,238,245,.98));color:#8f4f67;font-size:11px;font-weight:900;line-height:1;text-decoration:none;box-shadow:0 8px 20px rgba(119,72,90,.08)}
+#zefirok-maltipoo-runner .profile-link-chip{display:inline-flex;align-items:center;justify-content:center;gap:7px;flex:0 0 auto;min-height:42px;padding:8px 11px;border:1px solid rgba(230,176,196,.72);border-radius:24px;background:linear-gradient(180deg,rgba(255,255,255,.96),rgba(255,238,245,.98));color:#8f4f67;font-size:10px;font-weight:900;line-height:1;text-decoration:none;box-shadow:0 8px 20px rgba(119,72,90,.08)}
+#zefirok-maltipoo-runner .profile-link-chip-icon{display:grid;place-items:center;width:18px;height:18px;flex:0 0 18px}
+#zefirok-maltipoo-runner .profile-link-chip-icon img{display:block;width:18px;height:18px;object-fit:contain}
 #zefirok-maltipoo-runner .profile-link-chip b{font-size:12px;line-height:1;color:#b56f88}
 #zefirok-maltipoo-runner .profile-link-chip:active{transform:translateY(1px)}
 #zefirok-maltipoo-runner .profile-section--showcase .profile-section-head&gt;div{display:grid;gap:3px}
