@@ -47,9 +47,10 @@
     .page{width:100%;max-width:var(--content-max);margin:0 auto;display:grid;gap:12px;padding-bottom:4px}
     .page>*{min-width:0;max-width:100%}
 
-    .hero{position:relative;overflow:hidden;padding:18px;border:1px solid var(--line);border-radius:26px;background:linear-gradient(145deg,rgba(255,255,255,.98),rgba(255,243,248,.96));box-shadow:var(--shadow)}
-    .hero::after{content:"";position:absolute;width:180px;height:180px;right:-62px;top:-88px;border-radius:50%;background:radial-gradient(circle,rgba(255,211,227,.72),rgba(255,211,227,0));pointer-events:none}
-    .hero-kicker{position:relative;z-index:1;display:inline-flex;align-items:center;gap:7px;padding:7px 10px;border-radius:999px;background:var(--gold-soft);color:#946424;font-size:10px;font-weight:900;letter-spacing:.02em}
+    .hero{position:relative;overflow:hidden;padding:18px;border:1px solid var(--line);border-radius:26px;background-color:#fffaf8;background-image:url("/assets/achievements/background_achivment_panel.png");background-size:cover;background-position:center center;background-repeat:no-repeat;box-shadow:var(--shadow)}
+    .hero::after{content:none}
+    .hero-kicker{position:relative;z-index:1;display:inline-flex;align-items:center;gap:7px;padding:7px 10px;border-radius:999px;background:rgba(255,242,213,.92);color:#946424;font-size:10px;font-weight:900;letter-spacing:.02em;backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px)}
+    .hero-kicker img{display:block;width:16px;height:16px;flex:0 0 16px;object-fit:contain}
     .hero h1{position:relative;z-index:1;margin:10px 0 5px;color:#64384a;font-size:26px;line-height:1.08;font-weight:950}
     .hero p{position:relative;z-index:1;margin:0;max-width:560px;color:#92717f;font-size:12px;line-height:1.55;font-weight:650}
 
@@ -214,7 +215,8 @@
     .achievement-showcase:disabled{cursor:default;opacity:.48;box-shadow:none}
 
     .empty{display:grid;justify-items:center;gap:8px;padding:25px 17px;border:1px dashed rgba(226,172,193,.9);border-radius:21px;background:linear-gradient(180deg,rgba(255,249,251,.94),rgba(255,253,249,.94));text-align:center}
-    .empty-icon{width:58px;height:58px;display:grid;place-items:center;border-radius:19px;background:linear-gradient(145deg,#fff1cf,#ffe8f1);font-size:27px;box-shadow:0 10px 20px rgba(213,167,89,.13)}
+    .empty-icon{width:58px;height:58px;display:grid;place-items:center;border-radius:19px;background:linear-gradient(145deg,#fff1cf,#ffe8f1);box-shadow:0 10px 20px rgba(213,167,89,.13)}
+    .empty-icon img{display:block;width:44px;height:44px;object-fit:contain}
     .empty strong{color:#6a4052;font-size:14px;font-weight:950}
     .empty span{max-width:360px;color:#957985;font-size:10px;line-height:1.55;font-weight:700}
 
@@ -248,7 +250,7 @@
 <body>
   <main class="page">
     <section class="hero" aria-labelledby="achievements-title">
-      <span class="hero-kicker">🏅 Коллекция достижений</span>
+      <span class="hero-kicker"><img src="/assets/ui/icon_score_acivment.png" alt="" aria-hidden="true">Коллекция достижений</span>
       <h1 id="achievements-title">Достижения</h1>
       <p>Это история и статус твоего аккаунта. Простые достижения могут открыть тематическую аватарку, а сложные становятся престижными трофеями для «Моей витрины».</p>
     </section>
@@ -303,7 +305,7 @@
       </div>
       <div class="achievement-list" data-achievement-list></div>
       <div class="empty" data-achievement-empty>
-        <span class="empty-icon" aria-hidden="true">🏆</span>
+        <span class="empty-icon" aria-hidden="true"><img src="/assets/ui/icon_score_acivment.png" alt=""></span>
         <strong data-empty-title>Каталог пока пуст</strong>
         <span data-empty-copy>Считаем прогресс по фактическим данным аккаунта.</span>
       </div>
@@ -427,9 +429,8 @@
 
       function achievementArtMarkup(item, className = 'achievement-icon') {
         const artUrl = String(item?.artUrl || '').trim();
-        const fallback = escapeHtml(item?.icon || '🏅');
-        if (!artUrl) return `<span class="${className}" aria-hidden="true">${fallback}</span>`;
-        return `<span class="${className}" aria-hidden="true"><img src="${escapeHtml(artUrl)}" alt="" loading="lazy" decoding="async"></span>`;
+        const resolvedArt = artUrl || '/assets/ui/icon_score_acivment.png';
+        return `<span class="${className}" aria-hidden="true"><img src="${escapeHtml(resolvedArt)}" alt="" loading="lazy" decoding="async"></span>`;
       }
 
       function catalogAchievements() {
@@ -767,7 +768,7 @@
           : '';
         const actions = claimButton || showcaseButton ? `<span class="achievement-actions">${claimButton}${showcaseButton}</span>` : '';
         const rewardMarkup = hasReward && rewardLabel
-          ? `<span class="achievement-reward">${rewardImage ? `<img src="${escapeHtml(rewardImage)}" alt="">` : '<span aria-hidden="true">🎁</span>'}<span>${escapeHtml(rewardLabel)}</span></span>`
+          ? `<span class="achievement-reward">${rewardImage ? `<img src="${escapeHtml(rewardImage)}" alt="">` : ''}<span>${escapeHtml(rewardLabel)}</span></span>`
           : '';
         const timeNote = availabilityNote(item);
         const secondaryNote = timeNote ? `<span class="achievement-delivery-note">${escapeHtml(timeNote)}</span>` : '';
