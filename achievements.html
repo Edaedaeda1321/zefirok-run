@@ -71,7 +71,21 @@
     .summary-card.is-rank strong{font-size:15px;line-height:1.1;color:#8a5a16}
     .summary-rank-next{margin-top:2px;color:#a4865b!important;font-size:8px!important}
 
-    .showcase-card{padding:13px;border:1px solid rgba(222,188,115,.72);border-radius:24px;background:radial-gradient(circle at 88% 0,rgba(255,229,145,.38),transparent 32%),linear-gradient(145deg,#fffdf7,#fff4ed);box-shadow:0 12px 30px rgba(149,103,35,.07);display:grid;gap:10px}
+    .showcase-card{position:relative;overflow:hidden;padding:13px;border:1px solid rgba(222,188,115,.72);border-radius:24px;background:radial-gradient(circle at 88% 0,rgba(255,229,145,.38),transparent 32%),linear-gradient(145deg,#fffdf7,#fff4ed);box-shadow:0 12px 30px rgba(149,103,35,.07);display:grid;gap:10px;transition:border-color .25s ease,background .25s ease,box-shadow .25s ease}
+    .showcase-card>*{position:relative;z-index:1}
+    .showcase-card::before{content:"";position:absolute;inset:-36% auto auto 64%;width:170px;height:170px;border-radius:50%;opacity:0;pointer-events:none;transition:opacity .25s ease}
+    .showcase-card[data-style="gold"]{border-color:rgba(214,155,37,.88);background:radial-gradient(circle at 82% -8%,rgba(255,231,133,.72),transparent 36%),linear-gradient(145deg,#fffbe6,#ffe9a6);box-shadow:0 14px 34px rgba(170,113,20,.15)}
+    .showcase-card[data-style="gold"]::before{opacity:1;background:radial-gradient(circle,rgba(255,255,235,.95),rgba(255,224,120,.28) 36%,transparent 68%)}
+    .showcase-card[data-style="gold"] .showcase-head strong{color:#80520e}
+    .showcase-card[data-style="gold"] .showcase-count{border-color:rgba(197,134,24,.52);background:#fff0ac;color:#7d520d}
+    .showcase-card[data-style="gold"] .showcase-slot{border-color:rgba(199,143,31,.64);background:rgba(255,250,223,.82)}
+    .showcase-card[data-style="gold"] .showcase-slot.is-filled{border-color:rgba(195,132,20,.76);background:linear-gradient(155deg,#fffdf0,#ffe7a0);box-shadow:0 8px 20px rgba(173,111,15,.12)}
+    .showcase-card[data-style="seasonal"]{border-color:rgba(205,121,166,.76);background:radial-gradient(circle at 10% 0,rgba(211,232,255,.80),transparent 36%),radial-gradient(circle at 92% 0,rgba(255,206,230,.74),transparent 37%),linear-gradient(145deg,#fff9fc,#f9f0ff);box-shadow:0 14px 34px rgba(150,87,145,.13)}
+    .showcase-card[data-style="seasonal"]::before{opacity:1;background:radial-gradient(circle,rgba(255,255,255,.96),rgba(221,201,255,.35) 38%,transparent 68%)}
+    .showcase-card[data-style="seasonal"] .showcase-head strong{color:#8f4a72}
+    .showcase-card[data-style="seasonal"] .showcase-count{border-color:rgba(190,112,161,.42);background:#fff0f8;color:#9c4d73}
+    .showcase-card[data-style="seasonal"] .showcase-slot{border-color:rgba(196,139,188,.56);background:rgba(255,250,255,.82)}
+    .showcase-card[data-style="seasonal"] .showcase-slot.is-filled{border-color:rgba(188,117,176,.58);background:linear-gradient(155deg,#fffaff,#f4e9ff);box-shadow:0 8px 20px rgba(148,89,145,.10)}
     .showcase-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
     .showcase-head div{display:grid;gap:3px;min-width:0}
     .showcase-head strong{font-size:15px;font-weight:950;color:#6f4a21}
@@ -92,6 +106,24 @@
     .showcase-slot-actions button{appearance:none;min-width:27px;height:27px;padding:0 6px;border:1px solid rgba(214,170,85,.45);border-radius:9px;background:rgba(255,255,255,.86);color:#8d6427;font-size:9px;font-weight:950;cursor:pointer}
     .showcase-slot-actions button[data-showcase-remove]{color:#a95167}
     .showcase-slot-actions button:disabled{opacity:.35;cursor:default}
+    .showcase-style-block{display:grid;gap:7px;padding:9px;border:1px solid rgba(229,207,178,.72);border-radius:17px;background:rgba(255,255,255,.54)}
+    .showcase-style-title{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+    .showcase-style-title div{display:grid;gap:2px;min-width:0}
+    .showcase-style-title strong{color:#744f29;font-size:10px;font-weight:950}
+    .showcase-style-title span{color:#9e8064;font-size:8px;font-weight:750;line-height:1.35}
+    .showcase-style-picker{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+    .showcase-style-option{appearance:none;min-width:0;min-height:76px;padding:8px 6px;border:1px solid rgba(224,198,171,.72);border-radius:14px;background:rgba(255,255,255,.86);color:#805f43;display:grid;align-content:center;justify-items:center;gap:4px;text-align:center;cursor:pointer}
+    .showcase-style-option[data-style-id="gold"]{background:linear-gradient(145deg,#fffdf0,#fff0bd);border-color:rgba(219,169,60,.52);color:#84570f}
+    .showcase-style-option[data-style-id="seasonal"]{background:linear-gradient(145deg,#fff8fc,#f4ebff);border-color:rgba(196,133,184,.43);color:#8f4c77}
+    .showcase-style-option.is-selected{outline:2px solid rgba(215,111,151,.46);outline-offset:1px;box-shadow:0 7px 16px rgba(151,89,117,.10)}
+    .showcase-style-option[data-style-id="gold"].is-selected{outline-color:rgba(208,148,35,.58)}
+    .showcase-style-option.is-locked{filter:saturate(.55);opacity:.58}
+    .showcase-style-option:disabled{cursor:default}
+    .showcase-style-swatch{width:28px;height:20px;border:1px solid rgba(219,190,172,.78);border-radius:8px;background:linear-gradient(145deg,#fff9f4,#ffe7ef);box-shadow:inset 0 1px 0 rgba(255,255,255,.9)}
+    .showcase-style-option[data-style-id="gold"] .showcase-style-swatch{border-color:rgba(203,139,27,.55);background:radial-gradient(circle at 75% 20%,#fff7b7,transparent 28%),linear-gradient(145deg,#fff9dc,#edb63e)}
+    .showcase-style-option[data-style-id="seasonal"] .showcase-style-swatch{border-color:rgba(188,122,178,.52);background:radial-gradient(circle at 20% 15%,#ddecff,transparent 34%),linear-gradient(145deg,#ffddea,#e7d9ff)}
+    .showcase-style-option strong{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:8px;font-weight:950}
+    .showcase-style-option small{font-size:6.5px;font-weight:800;line-height:1.2;color:inherit}
 
     .recent-card{padding:13px;border:1px solid rgba(226,190,204,.82);border-radius:24px;background:linear-gradient(145deg,rgba(255,255,255,.96),rgba(255,246,250,.95));box-shadow:0 10px 26px rgba(102,64,79,.06);display:grid;gap:9px}
     .recent-head{display:flex;align-items:flex-end;justify-content:space-between;gap:10px}
@@ -245,10 +277,14 @@
       <div class="series-list" data-achievement-series-list></div>
     </section>
 
-    <section class="showcase-card" aria-labelledby="achievement-showcase-title">
+    <section class="showcase-card" data-showcase-card data-style="default" aria-labelledby="achievement-showcase-title">
       <div class="showcase-head">
         <div><strong id="achievement-showcase-title">Моя витрина</strong><span>Выбери до 3 выполненных трофеев и расставь их в нужном порядке. Этот порядок используется в профиле и рейтинге.</span></div>
         <span class="showcase-count" data-showcase-count>0 / 3</span>
+      </div>
+      <div class="showcase-style-block">
+        <div class="showcase-style-title"><div><strong>Оформление полки</strong><span>Открывается за ранг и этапы достижений — ничего покупать не нужно.</span></div></div>
+        <div class="showcase-style-picker" data-showcase-style-picker aria-label="Оформление витрины"></div>
       </div>
       <div class="showcase-slots" data-showcase-slots aria-live="polite"></div>
     </section>
@@ -292,6 +328,8 @@
       let ACHIEVEMENTS = [];
       let SHOWCASE_IDS = [];
       let SHOWCASE_LIMIT = 3;
+      let SHOWCASE_STYLE_ID = 'default';
+      let SHOWCASE_STYLES = [];
       let ACHIEVEMENT_SUMMARY = {};
       let ACHIEVEMENT_SERIES = [];
       let NEAR_COMPLETION = [];
@@ -318,6 +356,8 @@
       const nearListEl = document.querySelector('[data-near-achievement-list]');
       const seriesSectionEl = document.querySelector('[data-achievement-series]');
       const seriesListEl = document.querySelector('[data-achievement-series-list]');
+      const showcaseCardEl = document.querySelector('[data-showcase-card]');
+      const showcaseStylePickerEl = document.querySelector('[data-showcase-style-picker]');
       const showcaseSlotsEl = document.querySelector('[data-showcase-slots]');
       const showcaseCountEl = document.querySelector('[data-showcase-count]');
       const systemInfoEl = document.querySelector('[data-system-info]');
@@ -486,6 +526,8 @@
         const ids = Array.isArray(state?.showcase?.ids) ? state.showcase.ids : ACHIEVEMENTS.filter((item) => item?.inShowcase).sort((a,b) => safeNumber(a.showcaseSlot) - safeNumber(b.showcaseSlot)).map((item) => item.id);
         SHOWCASE_IDS = [...new Set(ids.map((id) => String(id || '')).filter(Boolean))].slice(0, 3);
         SHOWCASE_LIMIT = Math.max(1, Math.min(3, Math.floor(safeNumber(state?.showcase?.limit) || 3)));
+        SHOWCASE_STYLE_ID = ['default','gold','seasonal'].includes(String(state?.showcase?.selectedStyleId || '')) ? String(state.showcase.selectedStyleId) : 'default';
+        SHOWCASE_STYLES = Array.isArray(state?.showcase?.styles) ? state.showcase.styles : [{ id:'default', title:'Классическая', description:'Базовая витрина', unlocked:true, selected:true, unlockText:'Доступна всем' }];
         ACHIEVEMENT_SUMMARY = state?.summary && typeof state.summary === 'object' ? state.summary : {};
         ACHIEVEMENT_SERIES = Array.isArray(state?.series) ? state.series : [];
         NEAR_COMPLETION = Array.isArray(state?.nearCompletion) ? state.nearCompletion : [];
@@ -503,6 +545,8 @@
         } catch (error) {
           ACHIEVEMENTS = [];
           SHOWCASE_IDS = [];
+          SHOWCASE_STYLE_ID = 'default';
+          SHOWCASE_STYLES = [];
           ACHIEVEMENT_SUMMARY = {};
           ACHIEVEMENT_SERIES = [];
           NEAR_COMPLETION = [];
@@ -535,7 +579,18 @@
       }
 
       function renderShowcase() {
+        if (showcaseCardEl) showcaseCardEl.dataset.style = SHOWCASE_STYLE_ID;
         if (showcaseCountEl) showcaseCountEl.textContent = `${SHOWCASE_IDS.length} / ${SHOWCASE_LIMIT}`;
+        if (showcaseStylePickerEl) {
+          const styles = SHOWCASE_STYLES.length ? SHOWCASE_STYLES : [{ id:'default', title:'Классическая', description:'Базовая витрина', unlocked:true, selected:true, unlockText:'Доступна всем' }];
+          showcaseStylePickerEl.innerHTML = styles.map((entry) => {
+            const id = String(entry?.id || 'default');
+            const unlocked = entry?.unlocked === true;
+            const selected = id === SHOWCASE_STYLE_ID;
+            const note = selected ? 'Выбрано' : unlocked ? 'Доступно' : String(entry?.unlockText || 'Пока закрыто');
+            return `<button class="showcase-style-option${selected ? ' is-selected' : ''}${unlocked ? '' : ' is-locked'}" type="button" data-showcase-style-id="${escapeHtml(id)}" data-style-id="${escapeHtml(id)}" title="${escapeHtml(entry?.description || note)}"${(!unlocked || showcaseSaving) ? ' disabled' : ''}><span class="showcase-style-swatch" aria-hidden="true"></span><strong>${escapeHtml(entry?.title || 'Оформление')}</strong><small>${escapeHtml(note)}</small></button>`;
+          }).join('');
+        }
         if (!showcaseSlotsEl) return;
         const slots = Array.from({ length: SHOWCASE_LIMIT }, (_, index) => {
           const id = SHOWCASE_IDS[index] || '';
@@ -778,6 +833,36 @@
         }
       }
 
+      async function saveShowcaseStyle(styleId) {
+        const id = String(styleId || '').trim();
+        if (!id || id === SHOWCASE_STYLE_ID || showcaseSaving) return;
+        const style = SHOWCASE_STYLES.find((entry) => String(entry?.id || '') === id);
+        if (!style || style?.unlocked !== true) {
+          systemMessage = String(style?.unlockText || 'Это оформление витрины пока закрыто.');
+          renderInfo();
+          return;
+        }
+        showcaseSaving = true;
+        systemMessage = '';
+        renderSummary();
+        renderCatalog();
+        renderInfo();
+        try {
+          const data = await achievementsApiRequest('/api/achievements/showcase', { ids: SHOWCASE_IDS, styleId: id });
+          const state = data?.state || data;
+          applyAchievementsState(state);
+          systemMessage = `Оформление «${String(style?.title || 'витрины')}» выбрано.`;
+          try { window.parent?.postMessage?.({ type: 'zefirok-achievements-account-updated' }, '*'); } catch {}
+        } catch (error) {
+          systemMessage = String(error?.message || 'Не удалось сменить оформление витрины.');
+        } finally {
+          showcaseSaving = false;
+          renderSummary();
+          renderCatalog();
+          renderInfo();
+        }
+      }
+
       async function toggleShowcase(achievementId) {
         const id = String(achievementId || '');
         const item = ACHIEVEMENTS.find((entry) => String(entry.id || '') === id);
@@ -816,6 +901,12 @@
         if (removeButton) { toggleShowcase(String(removeButton.dataset.showcaseId || '')); return; }
         const moveButton = event.target?.closest?.('[data-showcase-move]');
         if (moveButton) moveShowcase(String(moveButton.dataset.showcaseId || ''), String(moveButton.dataset.showcaseMove || ''));
+      });
+
+      showcaseStylePickerEl?.addEventListener('click', (event) => {
+        const button = event.target?.closest?.('[data-showcase-style-id]');
+        if (!button || button.disabled) return;
+        saveShowcaseStyle(String(button.dataset.showcaseStyleId || ''));
       });
 
       function selectCategory(categoryId) {

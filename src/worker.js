@@ -4613,6 +4613,7 @@ const ACHIEVEMENT_RARITY_LABELS = Object.freeze({ common:"Обычное", rare:
 const ACHIEVEMENT_AVATAR_IDS = Object.freeze(Object.keys(CASE_AVATARS).filter((id) => CASE_AVATARS[id]?.achievementOnly === true));
 const ACHIEVEMENT_AVATAR_ID_SET = new Set(ACHIEVEMENT_AVATAR_IDS);
 const ACHIEVEMENT_SHOWCASE_LIMIT = 3;
+const ACHIEVEMENT_SHOWCASE_STYLE_IDS = Object.freeze(["default","gold","seasonal"]);
 const ACHIEVEMENT_RANKS = Object.freeze([
   Object.freeze({id:"newcomer",title:"Новичок",minPoints:0}),
   Object.freeze({id:"seeker",title:"Искатель",minPoints:50}),
@@ -4628,6 +4629,11 @@ const ACHIEVEMENT_SERIES = Object.freeze([
   Object.freeze({id:"case-hunter",title:"Охотник за кейсами",category:"collections",icon:"🎁",memberIds:Object.freeze(["case-open-1","case-open-10"])}),
   Object.freeze({id:"friends-circle",title:"Своя компания",category:"friends",icon:"👥",memberIds:Object.freeze(["referral-1","referral-5"])}),
   Object.freeze({id:"season-path",title:"Сезонный путь",category:"seasons",icon:"🎟️",memberIds:Object.freeze(["season-reward-1","season-reward-10"])})
+]);
+const ACHIEVEMENT_SHOWCASE_STYLES = Object.freeze([
+  Object.freeze({id:"default",title:"Классическая",description:"Базовая кремово-розовая полка.",unlockType:"default",unlockText:"Доступна всем"}),
+  Object.freeze({id:"gold",title:"Золотая",description:"Статусная золотая полка для опытных коллекционеров.",unlockType:"rank",minPoints:300,unlockText:"Открывается с ранга «Ветеран»"}),
+  Object.freeze({id:"seasonal",title:"Сезонная",description:"Праздничная сезонная полка за завершённый сезонный путь.",unlockType:"series",seriesId:"season-path",unlockText:"Открывается за серию «Сезонный путь»"})
 ]);
 const ACHIEVEMENT_SECRET_TITLE = "Секретное достижение";
 const ACHIEVEMENT_SECRET_DESCRIPTION = "Условие скрыто. Достижение раскроется после выполнения.";
@@ -4691,6 +4697,7 @@ async function ensureAchievementConfigSchema(env) {
       try {
         await env.DB.prepare(`SELECT COUNT(*) AS count FROM achievement_settings WHERE 0`).first();
         await env.DB.prepare(`SELECT COUNT(*) AS count FROM achievement_showcase WHERE 0`).first();
+        await env.DB.prepare(`SELECT COUNT(*) AS count FROM achievement_showcase_preferences WHERE 0`).first();
       } catch (error) {
         if (!isMissingRuntimeDatabaseSchemaError(error)) throw error;
         missing = true;
@@ -4727,6 +4734,11 @@ async function ensureAchievementConfigSchema(env) {
           )`),
           env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_achievement_showcase_player ON achievement_showcase(telegram_id,slot)`),
           env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_achievement_showcase_achievement ON achievement_showcase(achievement_id,telegram_id)`),
+          env.DB.prepare(`CREATE TABLE IF NOT EXISTS achievement_showcase_preferences (
+            telegram_id TEXT PRIMARY KEY,
+            style_id TEXT NOT NULL DEFAULT 'default',
+            updated_at INTEGER NOT NULL DEFAULT 0
+          )`),
           env.DB.prepare(`CREATE TABLE IF NOT EXISTS achievement_unlocks (
             telegram_id TEXT NOT NULL,achievement_id TEXT NOT NULL,unlocked_at INTEGER NOT NULL,source_kind TEXT NOT NULL DEFAULT '',season_id TEXT NOT NULL DEFAULT '',source_snapshot_json TEXT NOT NULL DEFAULT '{}',PRIMARY KEY(telegram_id,achievement_id)
           )`),
@@ -4744,6 +4756,7 @@ async function ensureAchievementConfigSchema(env) {
       await addRuntimeColumnIfMissing(env, "achievement_settings", "achievement_points", "INTEGER NOT NULL DEFAULT -1 CHECK(achievement_points >= -1 AND achievement_points <= 10000)");
       await addRuntimeColumnIfMissing(env, "achievement_settings", "secret_mode", "INTEGER NOT NULL DEFAULT -1 CHECK(secret_mode IN (-1,0,1))");
       await env.DB.batch([
+        env.DB.prepare(`CREATE TABLE IF NOT EXISTS achievement_showcase_preferences (telegram_id TEXT PRIMARY KEY,style_id TEXT NOT NULL DEFAULT 'default',updated_at INTEGER NOT NULL DEFAULT 0)`),
         env.DB.prepare(`CREATE TABLE IF NOT EXISTS achievement_unlocks (telegram_id TEXT NOT NULL,achievement_id TEXT NOT NULL,unlocked_at INTEGER NOT NULL,source_kind TEXT NOT NULL DEFAULT '',season_id TEXT NOT NULL DEFAULT '',source_snapshot_json TEXT NOT NULL DEFAULT '{}',PRIMARY KEY(telegram_id,achievement_id))`),
         env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_achievement_unlocks_player ON achievement_unlocks(telegram_id,unlocked_at DESC,achievement_id)`),
         env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_achievement_unlocks_achievement ON achievement_unlocks(achievement_id,unlocked_at DESC,telegram_id)`),
@@ -4816,6 +4829,24 @@ function achievementRankForPoints(value) {
   const minPoints=Math.max(0,Number(rank?.minPoints)||0),nextMinPoints=next?Math.max(minPoints+1,Number(next.minPoints)||0):0;
   const progressPercent=next?Math.max(0,Math.min(100,Math.round((points-minPoints)/Math.max(1,nextMinPoints-minPoints)*100))):100;
   return {id:String(rank?.id||"newcomer"),title:String(rank?.title||"Новичок"),points,minPoints,nextId:String(next?.id||""),nextTitle:String(next?.title||""),nextMinPoints,pointsToNext:next?Math.max(0,nextMinPoints-points):0,progressPercent};
+}
+
+function achievementShowcaseStyleId(value) {
+  const id=String(value||"").trim();
+  return ACHIEVEMENT_SHOWCASE_STYLE_IDS.includes(id)?id:"default";
+}
+
+function achievementShowcaseStyleState(rank = {}, series = [], selectedStyleId = "default") {
+  const requested=achievementShowcaseStyleId(selectedStyleId),points=Math.max(0,Number(rank?.points)||0),completedSeries=new Set((Array.isArray(series)?series:[]).filter((entry)=>entry?.completed===true).map((entry)=>String(entry?.id||"")));
+  const styles=ACHIEVEMENT_SHOWCASE_STYLES.map((definition)=>{
+    let unlocked=false;
+    if(definition.unlockType==="default")unlocked=true;
+    else if(definition.unlockType==="rank")unlocked=points>=Math.max(0,Number(definition.minPoints)||0)||requested===String(definition.id||"");
+    else if(definition.unlockType==="series")unlocked=completedSeries.has(String(definition.seriesId||""))||requested===String(definition.id||"");
+    return {id:String(definition.id),title:String(definition.title),description:String(definition.description||""),unlockType:String(definition.unlockType||"default"),unlockText:String(definition.unlockText||""),unlocked};
+  });
+  const selected=styles.find((entry)=>entry.id===requested&&entry.unlocked)||styles[0];
+  return {selectedStyleId:selected.id,style:{...selected,selected:true},styles:styles.map((entry)=>({...entry,selected:entry.id===selected.id}))};
 }
 
 function achievementPlayerPercent(earnedPlayers,totalPlayers) {
@@ -5183,7 +5214,8 @@ function achievementsV2FromStats(raw = {}, claimRows = [], definitions = ACHIEVE
     return {id:String(definition.id),title:String(definition.title),category:String(definition.category),icon:String(definition.icon||"🏅"),earned:earnedCount,total,completed,progressPercent:total?Math.round(earnedCount/total*100):0,members:members.map((item)=>({id:item.id,title:item.title,earned:item.earned,artUrl:item.artUrl,icon:item.icon,rarity:item.rarity}))};
   }).filter(Boolean);
   const nearCompletion=catalogAchievements.filter((item)=>item.earned!==true&&!item.secretLocked&&!item.legacyExpired&&Number(item.target||0)>0&&Number(item.current||0)>0&&["always","active"].includes(String(item.availabilityStatus||"always"))).map((item)=>{const ratio=Math.max(0,Math.min(1,Number(item.current||0)/Math.max(1,Number(item.target||1))));return {id:item.id,title:item.title,category:item.category,artUrl:item.artUrl,icon:item.icon,current:Number(item.current||0),target:Number(item.target||0),progressPercent:Math.round(ratio*1000)/10,remaining:Math.max(0,Number(item.target||0)-Number(item.current||0)),_ratio:ratio};}).sort((a,b)=>b._ratio-a._ratio||a.remaining-b.remaining||String(a.id).localeCompare(String(b.id))).slice(0,3).map(({_ratio,...item})=>item);
-  return {ok:true,version:9,serverAuthoritative:true,generatedAt:Date.now(),meta:{achievementPoints:achievementPointsMeta({max:maxAchievementPoints}),showcaseLimit:ACHIEVEMENT_SHOWCASE_LIMIT,rewardPolicy:{simple:"avatar",prestige:"status"},secretAchievements:true,secretArtUrl:ACHIEVEMENT_SECRET_ART_URL,permanentUnlocks:true,seasonAchievements:true,artworkGatedCatalog:true,artPublishedCount:catalogAchievements.length,rankLevels:ACHIEVEMENT_RANKS.map((item)=>({id:item.id,title:item.title,minPoints:item.minPoints})),rarityPopulation:{totalPlayers:populationTotal,scope:String(populationStats?.scope||"all_player_profiles"),excludesTesters:Boolean(populationStats?.excludesTesters)}},summary:{earned:catalogEarned,claimed:catalogAchievements.filter((item)=>item.claimed).length,claimable:catalogAchievements.filter((item)=>item.claimable).length,showcased:showcaseItems.length,achievementPoints,maxAchievementPoints,total:catalogTotal,catalogEarned,catalogTotal,completionPercent,rank,completedSeries:series.filter((item)=>item.completed).length,totalSeries:series.length},showcase:{limit:ACHIEVEMENT_SHOWCASE_LIMIT,count:showcaseItems.length,ids:showcaseItems.map((item)=>item.id),items:showcaseItems},series,nearCompletion,achievements};
+  const showcaseStyle=achievementShowcaseStyleState(rank,series,options?.selectedShowcaseStyle);
+  return {ok:true,version:10,serverAuthoritative:true,generatedAt:Date.now(),meta:{achievementPoints:achievementPointsMeta({max:maxAchievementPoints}),showcaseLimit:ACHIEVEMENT_SHOWCASE_LIMIT,showcaseStyles:true,rewardPolicy:{simple:"avatar",prestige:"status"},secretAchievements:true,secretArtUrl:ACHIEVEMENT_SECRET_ART_URL,permanentUnlocks:true,seasonAchievements:true,artworkGatedCatalog:true,artPublishedCount:catalogAchievements.length,rankLevels:ACHIEVEMENT_RANKS.map((item)=>({id:item.id,title:item.title,minPoints:item.minPoints})),rarityPopulation:{totalPlayers:populationTotal,scope:String(populationStats?.scope||"all_player_profiles"),excludesTesters:Boolean(populationStats?.excludesTesters)}},summary:{earned:catalogEarned,claimed:catalogAchievements.filter((item)=>item.claimed).length,claimable:catalogAchievements.filter((item)=>item.claimable).length,showcased:showcaseItems.length,achievementPoints,maxAchievementPoints,total:catalogTotal,catalogEarned,catalogTotal,completionPercent,rank,completedSeries:series.filter((item)=>item.completed).length,totalSeries:series.length},showcase:{limit:ACHIEVEMENT_SHOWCASE_LIMIT,count:showcaseItems.length,ids:showcaseItems.map((item)=>item.id),items:showcaseItems,selectedStyleId:showcaseStyle.selectedStyleId,style:showcaseStyle.style,styles:showcaseStyle.styles},series,nearCompletion,achievements};
 }
 
 function achievementV2OwnedCount(raw, kind, catalog) {
@@ -5195,7 +5227,7 @@ async function achievementPlayerState(env, telegramId) {
   await Promise.all([ensureAchievementClaimSchema(env), ensureAchievementConfigSchema(env)]);
   const playerId=String(telegramId),minRunMs=positiveInt(env.LEADERBOARD_MIN_RUN_SECONDS,DEFAULT_LEADERBOARD_MIN_RUN_SECONDS)*1000,optionalAll=(statement)=>statement.all().catch((error)=>{if(isMissingRuntimeDatabaseSchemaError(error))return {results:[]};throw error;}),optionalFirst=(statement)=>statement.first().catch((error)=>{if(isMissingRuntimeDatabaseSchemaError(error))return null;throw error;});
   const seasonHistoryRows=await achievementSyncSeasonHistoryForPlayer(env,playerId);
-  const [definitions, profileRow, runsRow, caseRow, seasonRow, referralRow, caseOpeningsRow, seasonalCaseOpeningsRow, albumMilestoneRow, albumItemsResult, claimsResult, showcaseResult, unlockResult] = await Promise.all([
+  const [definitions, profileRow, runsRow, caseRow, seasonRow, referralRow, caseOpeningsRow, seasonalCaseOpeningsRow, albumMilestoneRow, albumItemsResult, claimsResult, showcaseResult, showcasePreferenceRow, unlockResult] = await Promise.all([
     achievementConfiguredDefinitions(env),
     env.DB.prepare(`SELECT profile_xp,best_score FROM admin_profile_state WHERE telegram_id=? LIMIT 1`).bind(playerId).first(),
     achievementRunStatsRow(env,playerId,minRunMs),
@@ -5208,6 +5240,7 @@ async function achievementPlayerState(env, telegramId) {
     optionalAll(env.DB.prepare(`SELECT i.collection_id,i.item_kind,i.item_id FROM album_collection_items i JOIN album_collections c ON c.collection_id=i.collection_id WHERE c.status='published' AND i.required=1 ORDER BY i.collection_id`)),
     env.DB.prepare(`SELECT c.achievement_id,c.reward_json,c.queue_id,c.status,c.request_id,c.created_at,c.delivered_at,c.updated_at,q.id AS delivery_queue_id,q.status AS queue_status,q.attempts AS queue_attempts,q.delivered_at AS queue_delivered_at FROM achievement_claims c LEFT JOIN reward_delivery_queue q ON q.telegram_id=c.telegram_id AND q.source_type='achievement' AND q.source_id=c.achievement_id WHERE c.telegram_id=? ORDER BY q.id DESC`).bind(playerId).all(),
     env.DB.prepare(`SELECT achievement_id,slot FROM achievement_showcase WHERE telegram_id=? ORDER BY slot`).bind(playerId).all(),
+    optionalFirst(env.DB.prepare(`SELECT style_id FROM achievement_showcase_preferences WHERE telegram_id=? LIMIT 1`).bind(playerId)),
     env.DB.prepare(`SELECT * FROM achievement_unlocks WHERE telegram_id=?`).bind(playerId).all()
   ]);
   const albumOwned={avatar:albumOwnedSet(caseRow?.owned_avatars_json),frame:albumOwnedSet(caseRow?.owned_frames_json),trail:albumOwnedSet(caseRow?.owned_trails_json),skin:albumOwnedSet(caseRow?.owned_skins_json,["default"]),music:albumOwnedSet(caseRow?.owned_music_json,["cafe_run"])},albumCollections=new Map();
@@ -5218,7 +5251,7 @@ async function achievementPlayerState(env, telegramId) {
   for(const definition of definitions){if(definition?.enabled===false||unlockMap.has(definition.id)||claimMap.has(definition.id))continue;const fact=achievementFact(raw,definition);if(!achievementFactCanUnlock(definition,fact,now))continue;const candidate=achievementUnlockCandidate(definition,fact,now);newUnlocks.push(candidate);unlockMap.set(definition.id,candidate);}
   if(newUnlocks.length){const statements=newUnlocks.map((row)=>env.DB.prepare(`INSERT OR IGNORE INTO achievement_unlocks(telegram_id,achievement_id,unlocked_at,source_kind,season_id,source_snapshot_json) VALUES(?,?,?,?,?,?)`).bind(playerId,row.achievement_id,row.unlocked_at,row.source_kind,row.season_id,row.source_snapshot_json));for(let offset=0;offset<statements.length;offset+=25)await env.DB.batch(statements.slice(offset,offset+25));}
   const populationStats=await achievementPopulationStats(env);
-  return achievementsV2FromStats(raw,claimsResult.results||[],definitions,showcaseIds,[...unlockMap.values()],{now,populationStats});
+  return achievementsV2FromStats(raw,claimsResult.results||[],definitions,showcaseIds,[...unlockMap.values()],{now,populationStats,selectedShowcaseStyle:String(showcasePreferenceRow?.style_id||"default")});
 }
 
 async function getAchievementsV2(request, env) {
@@ -5247,8 +5280,19 @@ async function saveAchievementShowcase(request, env) {
     if(ids.length>ACHIEVEMENT_SHOWCASE_LIMIT)throw new ApiError(400,`В витрине может быть не больше ${ACHIEVEMENT_SHOWCASE_LIMIT} достижений.`);
     const current=await achievementPlayerState(env,telegramId),available=new Map(current.achievements.map((item)=>[item.id,item]));
     for(const id of ids){const item=available.get(id);if(!item)throw new ApiError(404,"Достижение недоступно или скрыто.");if(!item.earned)throw new ApiError(409,`Сначала выполни достижение «${item.title}».`);if(!item.catalogVisible||item.showcaseEligible===false)throw new ApiError(409,"Это достижение пока не опубликовано для витрины.");}
-    const now=Math.floor(Date.now()/1000),statements=[env.DB.prepare(`DELETE FROM achievement_showcase WHERE telegram_id=?`).bind(telegramId)];
-    ids.forEach((id,index)=>statements.push(env.DB.prepare(`INSERT INTO achievement_showcase(telegram_id,slot,achievement_id,selected_at,updated_at) VALUES(?,?,?,?,?)`).bind(telegramId,index+1,id,now,now)));
+    const hasStyle=Object.prototype.hasOwnProperty.call(body,"styleId")||Object.prototype.hasOwnProperty.call(body,"style_id");
+    const rawStyle=hasStyle?String(body.styleId||body.style_id||"").trim():String(current?.showcase?.selectedStyleId||"default");
+    if(hasStyle&&!ACHIEVEMENT_SHOWCASE_STYLE_IDS.includes(rawStyle))throw new ApiError(400,"Неизвестное оформление витрины.");
+    const styleId=achievementShowcaseStyleId(rawStyle),style=current?.showcase?.styles?.find?.((entry)=>String(entry?.id||"")===styleId);
+    if(!style)throw new ApiError(400,"Оформление витрины недоступно.");
+    if(style.unlocked!==true)throw new ApiError(409,String(style.unlockText||"Сначала выполни условие открытия оформления."));
+    const currentIds=Array.isArray(current?.showcase?.ids)?current.showcase.ids.map((id)=>String(id||"")):[],sameIds=ids.length===currentIds.length&&ids.every((id,index)=>id===currentIds[index]);
+    const now=Math.floor(Date.now()/1000),statements=[];
+    if(!sameIds){
+      statements.push(env.DB.prepare(`DELETE FROM achievement_showcase WHERE telegram_id=?`).bind(telegramId));
+      ids.forEach((id,index)=>statements.push(env.DB.prepare(`INSERT INTO achievement_showcase(telegram_id,slot,achievement_id,selected_at,updated_at) VALUES(?,?,?,?,?)`).bind(telegramId,index+1,id,now,now)));
+    }
+    statements.push(env.DB.prepare(`INSERT INTO achievement_showcase_preferences(telegram_id,style_id,updated_at) VALUES(?,?,?) ON CONFLICT(telegram_id) DO UPDATE SET style_id=excluded.style_id,updated_at=excluded.updated_at`).bind(telegramId,styleId,now));
     await env.DB.batch(statements);
     return jsonResponse({ok:true,state:await achievementPlayerState(env,telegramId)});
   }catch(error){if(error instanceof ApiError)return jsonResponse({ok:false,error:error.message},error.status);console.error("saveAchievementShowcase failed",error);return jsonResponse({ok:false,error:"Не удалось обновить витрину."},500);}
@@ -18942,6 +18986,7 @@ async function blockPlayerAndWipeProgress(env, options) {
     env.DB.prepare(`DELETE FROM season_pass_purchase_guards WHERE instr(guard_id,?)>0`).bind(`:${telegramId}:`),
     env.DB.prepare(`DELETE FROM achievement_claims WHERE telegram_id=?`).bind(telegramId),
     env.DB.prepare(`DELETE FROM achievement_showcase WHERE telegram_id=?`).bind(telegramId),
+    env.DB.prepare(`DELETE FROM achievement_showcase_preferences WHERE telegram_id=?`).bind(telegramId),
     env.DB.prepare(`DELETE FROM achievement_unlocks WHERE telegram_id=?`).bind(telegramId),
     env.DB.prepare(`DELETE FROM achievement_season_history WHERE telegram_id=?`).bind(telegramId),
     env.DB.prepare(`DELETE FROM player_task_claims WHERE telegram_id=?`).bind(telegramId),
@@ -36097,6 +36142,7 @@ function testProjectNormalizeSandboxState(raw = {}) {
     leaderboardClaimed:testProjectArray(source.leaderboardClaimed,100),
     achievementClaims:testProjectArray(source.achievementClaims,100),
     achievementShowcase:testProjectArray(source.achievementShowcase,ACHIEVEMENT_SHOWCASE_LIMIT),
+    achievementShowcaseStyle:achievementShowcaseStyleId(source.achievementShowcaseStyle),
     pollSnoozedUntil:Math.max(0,Math.floor(Number(source.pollSnoozedUntil)||0)),
     pollVote:source.pollVote&&typeof source.pollVote==="object"?{pollId:String(source.pollVote.pollId||"").slice(0,80),optionIds:testProjectArray(source.pollVote.optionIds,10),comment:String(source.pollVote.comment||"").slice(0,1200),votedAt:Math.max(0,Math.floor(Number(source.pollVote.votedAt)||0))}:null,
     forcedCaseDrop:testProjectNormalizeForcedCaseDrop(source.forcedCaseDrop||{}),
@@ -37809,7 +37855,7 @@ async function testProjectSandboxAchievementsPayload(env, state, snapshot) {
     seasonRewards:Number(pass?.summary?.rewardsClaimed||0),
     referrals:0,
     seasonHistory:(()=>{const map=new Map(),season=testProjectDynamicSeason(snapshot?.season||{},Date.now());if(season?.id){const level=Math.max(1,Math.min(SEASON_PASS_MAX_LEVEL,Number(pass?.level||seasonPassLevelFromXp(Number(state?.passXp||0)))||1)),started=Number(state?.passXp||0)>0||Number(pass?.summary?.rewardsClaimed||0)>0;map.set(String(season.id),{seasonId:String(season.id),title:String(season.title||"Сезон"),startedAt:started?Math.floor(Date.now()/1000):0,completedAt:level>=SEASON_PASS_MAX_LEVEL?Math.floor(Date.now()/1000):0,maxLevel:level,startsAt:Math.floor(Date.parse(String(season.startsAt||""))/1000)||0,endsAt:Math.floor(Date.parse(String(season.endsAt||""))/1000)||0});}return map;})()
-  }, claimRows, definitions, testProjectArray(state?.sandbox?.achievementShowcase,ACHIEVEMENT_SHOWCASE_LIMIT),[],{now:Math.floor(Date.now()/1000)});
+  }, claimRows, definitions, testProjectArray(state?.sandbox?.achievementShowcase,ACHIEVEMENT_SHOWCASE_LIMIT),[],{now:Math.floor(Date.now()/1000),selectedShowcaseStyle:String(state?.sandbox?.achievementShowcaseStyle||"default")});
 }
 
 async function testProjectSandboxGameData(env, ctx) {
@@ -37842,7 +37888,10 @@ async function testProjectSandboxGameData(env, ctx) {
     if(!Array.isArray(payload?.ids))throw new ApiError(400,"Передайте список достижений для витрины.");
     const normalized=payload.ids.map((id)=>String(id||"").trim().slice(0,80)).filter(Boolean),ids=[...new Set(normalized)];if(ids.length!==normalized.length)throw new ApiError(400,"Одно достижение нельзя добавить дважды.");if(ids.length>ACHIEVEMENT_SHOWCASE_LIMIT)throw new ApiError(400,"В витрине может быть не больше 3 достижений.");
     const current=await testProjectSandboxAchievementsPayload(env,state,snapshot),available=new Map(current.achievements.map((item)=>[item.id,item]));for(const id of ids){const item=available.get(id);if(!item)throw new ApiError(404,"Достижение недоступно или скрыто.");if(!item.earned)throw new ApiError(409,`Сначала выполни достижение «${item.title}».`);if(!item.catalogVisible||item.showcaseEligible===false)throw new ApiError(409,"Это достижение пока не опубликовано для витрины.");}
-    const before=testProjectClone(state);state.sandbox=testProjectNormalizeSandboxState({...state.sandbox,achievementShowcase:ids});await testProjectSandboxSave(env,ownerId,state,snapshot,before,"game_achievement_showcase","Игра · обновлена витрина достижений");await reload();return response({ok:true,state:await testProjectSandboxAchievementsPayload(env,state,snapshot)});
+    const hasStyle=Object.prototype.hasOwnProperty.call(payload,"styleId")||Object.prototype.hasOwnProperty.call(payload,"style_id"),rawStyle=hasStyle?String(payload.styleId||payload.style_id||"").trim():String(current?.showcase?.selectedStyleId||"default");
+    if(hasStyle&&!ACHIEVEMENT_SHOWCASE_STYLE_IDS.includes(rawStyle))throw new ApiError(400,"Неизвестное оформление витрины.");
+    const styleId=achievementShowcaseStyleId(rawStyle),style=current?.showcase?.styles?.find?.((entry)=>String(entry?.id||"")===styleId);if(!style||style.unlocked!==true)throw new ApiError(409,String(style?.unlockText||"Оформление пока закрыто."));
+    const before=testProjectClone(state);state.sandbox=testProjectNormalizeSandboxState({...state.sandbox,achievementShowcase:ids,achievementShowcaseStyle:styleId});await testProjectSandboxSave(env,ownerId,state,snapshot,before,"game_achievement_showcase","Игра · обновлена витрина достижений");await reload();return response({ok:true,state:await testProjectSandboxAchievementsPayload(env,state,snapshot)});
   }
   if(path==="/api/features")return response({ok:true,flags:{...(snapshot?.featureFlags||{}),battle_pass:true,shop:true,rating:true}});
   if(path==="/api/profile/sync")return response({ok:true,profile:testProjectSandboxProfile(state)});
