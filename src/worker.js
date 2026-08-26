@@ -1945,6 +1945,9 @@ export default {
       if (url.pathname === "/api/leaderboard/state" && request.method === "POST") {
         return await leaderboardState(request, env);
       }
+      if (url.pathname === "/api/leaderboard/player-profile" && request.method === "POST") {
+        return await withPlayerApiPerformance(env, ctx, "leaderboard_player_profile", () => leaderboardPlayerProfile(request, env));
+      }
 
       if (url.pathname === "/api/runs/start" && request.method === "POST") {
         const legalGate = await enforceLegalAcceptanceForRequest(request, env);
@@ -5287,8 +5290,9 @@ async function achievementShowcasePreviewForPlayer(env, telegramId) {
   const items=ordered.map((row)=>{const definition=definitionMap.get(String(row?.achievement_id||""));return definition?achievementPublicShowcaseItem(definition,Number(row?.slot||0)):null;}).filter(Boolean).slice(0,ACHIEVEMENT_SHOWCASE_LIMIT);
   const achievementPoints=published.reduce((sum,definition)=>sum+(earnedIds.has(String(definition.id||""))?achievementPointsValue(definition.achievementPoints,0):0),0);
   const maxAchievementPoints=published.reduce((sum,definition)=>{const availability=achievementAvailability(definition,now);return sum+((earnedIds.has(String(definition.id||""))||availability.status!=="expired")?achievementPointsValue(definition.achievementPoints,0):0);},0);
-  const rank=achievementRankForPoints(achievementPoints),selectedStyleId=achievementShowcaseStyleId(preferenceRow?.style_id||"default");
-  return {ok:true,version:1,serverAuthoritative:true,generatedAt:Date.now(),summary:{achievementPoints,maxAchievementPoints,rank,showcased:items.length},showcase:{limit:ACHIEVEMENT_SHOWCASE_LIMIT,count:items.length,ids:items.map((item)=>item.id),items,selectedStyleId}};
+  const catalogTotal=published.length,catalogEarned=published.reduce((sum,definition)=>sum+(earnedIds.has(String(definition.id||""))?1:0),0),completionPercent=catalogTotal?Math.round(catalogEarned/catalogTotal*100):0;
+  const rank=achievementRankForPoints(achievementPoints),selectedStyleId=achievementShowcaseStyleId(preferenceRow?.style_id||"default"),selectedStyle=ACHIEVEMENT_SHOWCASE_STYLES.find((entry)=>String(entry?.id||"")===selectedStyleId)||ACHIEVEMENT_SHOWCASE_STYLES[0];
+  return {ok:true,version:1,serverAuthoritative:true,generatedAt:Date.now(),summary:{achievementPoints,maxAchievementPoints,rank,showcased:items.length,catalogEarned,catalogTotal,completionPercent},showcase:{limit:ACHIEVEMENT_SHOWCASE_LIMIT,count:items.length,ids:items.map((item)=>item.id),items,selectedStyleId,styleTitle:String(selectedStyle?.title||"Классическая")}};
 }
 
 async function getAchievementsV2(request, env) {
@@ -9829,6 +9833,71 @@ async function leaderboardState(request, env) {
     if (error instanceof ApiError) return jsonResponse({ ok: false, error: error.message }, error.status);
     console.error("leaderboardState failed", error);
     return jsonResponse({ ok: false, error: "Не удалось загрузить рейтинг." }, 500);
+  }
+}
+
+async function leaderboardPlayerProfile(request, env) {
+  try {
+    requireDatabase(env);
+    requireBotToken(env);
+    const body=await readJson(request);
+    await validateTelegramInitData(String(body.initData||""),env);
+    const targetTelegramId=String(body.targetTelegramId||body.telegramId||body.playerId||"").trim();
+    if(!/^\d{4,20}$/.test(targetTelegramId))throw new ApiError(400,"Некорректный игрок рейтинга.");
+    const mode=String(body.mode||"season")==="all_time"?"all_time":"season";
+    const season=await selectLeaderboardSeasonForState(env);
+    if(mode==="all_time")await ensureLeaderboardAllTimeBestScoreMode(env);
+    const table=mode==="all_time"?"leaderboard_all_time":"leaderboard_entries";
+    const playerRow=mode==="all_time"
+      ? await env.DB.prepare(`SELECT * FROM ${table} WHERE telegram_id=? AND hidden=0 LIMIT 1`).bind(targetTelegramId).first()
+      : await env.DB.prepare(`SELECT * FROM ${table} WHERE season_id=? AND telegram_id=? AND hidden=0 LIMIT 1`).bind(String(season.id),targetTelegramId).first();
+    if(!playerRow)throw new ApiError(404,"Игрок сейчас не отображается в этом рейтинге.");
+
+    const rankQuery=mode==="all_time"
+      ? `SELECT COUNT(*)+1 AS place FROM leaderboard_all_time WHERE hidden=0 AND (best_score>? OR (best_score=? AND achieved_at<?) OR (best_score=? AND achieved_at=? AND telegram_id<?))`
+      : `SELECT COUNT(*)+1 AS place FROM leaderboard_entries WHERE season_id=? AND hidden=0 AND (best_score>? OR (best_score=? AND achieved_at<?) OR (best_score=? AND achieved_at=? AND telegram_id<?))`;
+    const rankPromise=mode==="all_time"
+      ? env.DB.prepare(rankQuery).bind(playerRow.best_score,playerRow.best_score,playerRow.achieved_at,playerRow.best_score,playerRow.achieved_at,targetTelegramId).first()
+      : env.DB.prepare(rankQuery).bind(String(season.id),playerRow.best_score,playerRow.best_score,playerRow.achieved_at,playerRow.best_score,playerRow.achieved_at,targetTelegramId).first();
+    const optionalFirst=(statement)=>statement.first().catch((error)=>{if(isMissingRuntimeDatabaseSchemaError(error))return null;throw error;});
+    const minRunMs=positiveInt(env.LEADERBOARD_MIN_RUN_SECONDS,DEFAULT_LEADERBOARD_MIN_RUN_SECONDS)*1000;
+    const [rankRow,profileRow,caseRow,presenceRow,runsRow,achievementPreview,populationStats]=await Promise.all([
+      rankPromise,
+      optionalFirst(env.DB.prepare(`SELECT best_score,profile_xp,created_at FROM admin_profile_state WHERE telegram_id=? LIMIT 1`).bind(targetTelegramId)),
+      optionalFirst(env.DB.prepare(`SELECT active_avatar_id,active_frame_id FROM case_player_state WHERE telegram_id=? LIMIT 1`).bind(targetTelegramId)),
+      optionalFirst(env.DB.prepare(`SELECT first_seen_at FROM player_game_presence WHERE telegram_id=? LIMIT 1`).bind(targetTelegramId)),
+      achievementRunStatsRow(env,targetTelegramId,minRunMs).catch((error)=>{if(isMissingRuntimeDatabaseSchemaError(error))return null;throw error;}),
+      achievementShowcasePreviewForPlayer(env,targetTelegramId),
+      achievementPopulationStats(env)
+    ]);
+
+    const activeAvatarId=normalizeCaseCosmeticId("avatar",caseRow?.active_avatar_id||playerRow.case_avatar_id),activeFrameId=normalizeCaseCosmeticId("frame",caseRow?.active_frame_id||playerRow.case_frame_id);
+    const showcaseItems=Array.isArray(achievementPreview?.showcase?.items)?achievementPreview.showcase.items.slice(0,ACHIEVEMENT_SHOWCASE_LIMIT):[];
+    const populationTotal=Math.max(0,Number(populationStats?.totalPlayers)||0),populationCounts=populationStats?.counts instanceof Map?populationStats.counts:new Map();
+    const rarityCandidates=showcaseItems.map((item)=>{const earnedPlayers=Math.max(0,Number(populationCounts.get(String(item?.id||""))||0)),playerPercent=achievementPlayerPercent(earnedPlayers,populationTotal);return playerPercent==null||earnedPlayers<1?null:{...item,earnedPlayers,totalPlayers:populationTotal,playerPercent};}).filter(Boolean).sort((a,b)=>Number(a.playerPercent)-Number(b.playerPercent)||Number(b.achievementPoints||0)-Number(a.achievementPoints||0));
+    const rareTrophy=rarityCandidates[0]||null;
+    const registeredAt=Math.max(0,Number(presenceRow?.first_seen_at||profileRow?.created_at||0))*1000;
+    const level=profileRow?caseProfileLevel(Number(profileRow.profile_xp||0)):Math.max(1,Number(playerRow.level||1));
+    const bestScore=Math.max(0,Number(profileRow?.best_score||0),Number(playerRow.best_score||0));
+    return jsonResponse({
+      ok:true,serverAuthoritative:true,generatedAt:Date.now(),mode,
+      player:{
+        name:String(playerRow.display_name||"Гость кафе"),place:Math.max(1,Number(rankRow?.place||0)),level,bestScore,
+        caseAvatarId:activeAvatarId,caseAvatarUrl:activeAvatarId?seasonPassCosmeticImage("avatar",activeAvatarId):"",
+        caseFrameId:activeFrameId,caseFrameUrl:activeFrameId?seasonPassCosmeticImage("frame",activeFrameId):"",
+        registeredAt,completedRuns:Math.max(0,Number(runsRow?.count||0))
+      },
+      achievements:{
+        points:Math.max(0,Number(achievementPreview?.summary?.achievementPoints||0)),rank:achievementPreview?.summary?.rank||achievementRankForPoints(0),
+        catalogEarned:Math.max(0,Number(achievementPreview?.summary?.catalogEarned||0)),catalogTotal:Math.max(0,Number(achievementPreview?.summary?.catalogTotal||0)),completionPercent:Math.max(0,Math.min(100,Number(achievementPreview?.summary?.completionPercent||0))),
+        showcase:{items:showcaseItems,selectedStyleId:String(achievementPreview?.showcase?.selectedStyleId||"default"),styleTitle:String(achievementPreview?.showcase?.styleTitle||"Классическая")},
+        rareTrophy
+      }
+    });
+  } catch(error) {
+    if(error instanceof ApiError)return jsonResponse({ok:false,error:error.message},error.status);
+    console.error("leaderboardPlayerProfile failed",error);
+    return jsonResponse({ok:false,error:"Не удалось открыть мини-профиль игрока."},500);
   }
 }
 
@@ -37638,7 +37707,7 @@ async function ownerPanelTestProjectCaseOpen(env, ctx) {
 
 const TEST_PROJECT_SANDBOX_API_PATHS = Object.freeze([
   "/api/game/startup","/api/achievements","/api/achievements/claim","/api/achievements/showcase","/api/features","/api/profile/sync","/api/shop/config","/api/skins/config",
-  "/api/runs/start","/api/runs/checkpoint","/api/leaderboard/state","/api/leaderboard/submit","/api/leaderboard/claim",
+  "/api/runs/start","/api/runs/checkpoint","/api/leaderboard/state","/api/leaderboard/player-profile","/api/leaderboard/submit","/api/leaderboard/claim",
   "/api/cases/state","/api/cases/open","/api/cases/open-granted","/api/cases/purchase","/api/cases/activate","/api/cases/equip","/api/cases/consume-run",
   "/api/skins/purchase","/api/skins/bonus-case","/api/live-content/shop/buy","/api/rewards/create","/api/rewards/mine",
   "/api/gifts/state","/api/gifts/read","/api/gifts/claim","/api/friends/coop/state","/api/friends/coop/claim","/api/newcomer/claim","/api/support/state","/api/support/create","/api/support/reply","/api/support/read","/api/news/read",
@@ -37951,6 +38020,12 @@ async function testProjectSandboxGameData(env, ctx) {
   if(path==="/api/runs/checkpoint")return response({ok:true,checkpoint:{runId:String(payload?.runId||""),durationMs:Math.max(0,Math.floor(Number(payload?.durationMs)||0)),score:Math.max(0,Math.floor(Number(payload?.score)||0)),accepted:true}});
   if(path==="/api/leaderboard/submit")return response(await testProjectSandboxRunSubmit(env,loaded,payload));
   if(path==="/api/leaderboard/state")return response(await testProjectSandboxLeaderboardPayload(env,state,String(payload?.mode||query?.mode||"season"),nowMs,snapshot));
+  if(path==="/api/leaderboard/player-profile"){
+    const requestedMode=String(payload?.mode||query?.mode||"season"),board=await testProjectSandboxLeaderboardPayload(env,state,requestedMode,nowMs,snapshot),targetId=String(payload?.targetTelegramId||payload?.telegramId||payload?.playerId||"").trim(),entry=(board.top||[]).find((item)=>String(item?.telegramId||"")===targetId);
+    if(!entry)throw new ApiError(404,"Игрок не найден в тестовом рейтинге.");
+    const isPlayer=targetId==="tp-player",achievementState=isPlayer?await testProjectSandboxAchievementsPayload(env,state,snapshot):null,summary=achievementState?.summary||{},showcase=achievementState?.showcase||{items:[],selectedStyleId:"default",style:{title:"Классическая"}};
+    return response({ok:true,serverAuthoritative:true,generatedAt:nowMs,mode:requestedMode==="all_time"?"all_time":"season",player:{name:String(entry.name||"Игрок"),place:Number(entry.place||0),level:Math.max(1,Number(entry.level||caseProfileLevel(Number(state?.profileXp||0))||1)),bestScore:Number(entry.score||0),caseAvatarId:String(entry.caseAvatarId||""),caseAvatarUrl:String(entry.caseAvatarUrl||""),caseFrameId:String(entry.caseFrameId||""),caseFrameUrl:String(entry.caseFrameUrl||""),registeredAt:nowMs-(isPlayer?75:180)*86400000,completedRuns:isPlayer?Math.max(0,Number(state?.sandbox?.completedRuns||0)):Math.max(10,220-Number(entry.place||1)*17)},achievements:{points:isPlayer?Number(summary.achievementPoints||0):Math.max(0,360-Number(entry.place||1)*35),rank:isPlayer?(summary.rank||achievementRankForPoints(0)):achievementRankForPoints(Math.max(0,360-Number(entry.place||1)*35)),catalogEarned:isPlayer?Number(summary.catalogEarned||0):Math.max(1,14-Number(entry.place||1)),catalogTotal:isPlayer?Number(summary.catalogTotal||29):29,completionPercent:isPlayer?Number(summary.completionPercent||0):Math.max(1,Math.round(Math.max(1,14-Number(entry.place||1))/29*100)),showcase:{items:Array.isArray(showcase.items)?showcase.items:[],selectedStyleId:String(showcase.selectedStyleId||"default"),styleTitle:String(showcase.style?.title||"Классическая")},rareTrophy:null}});
+  }
   if(path==="/api/leaderboard/claim"){
     const claimKey="tp-rating",already=(state.sandbox?.leaderboardClaimed||[]).includes(claimKey),reward={id:"tp-rating-reward",title:"Тестовый Золотой кейс",status:"claimed",type:"case",kind:"case",amount:1,itemId:"gold"};
     if(!already){const before=testProjectClone(state);state.caseInventory.gold=Math.min(999,Number(state.caseInventory.gold||0)+1);state.sandbox=testProjectNormalizeSandboxState({...state.sandbox,leaderboardClaimed:[...(state.sandbox?.leaderboardClaimed||[]),claimKey]});await testProjectSandboxSave(env,ownerId,state,snapshot,before,"game_rating_claim","Игра · награда тестового рейтинга");await reload();}
