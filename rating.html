@@ -8956,6 +8956,32 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
 @media(max-width:390px){#zefirok-maltipoo-runner .rating-v6-content{padding-inline:10px!important}#zefirok-maltipoo-runner .rating-v6-hero{grid-template-columns:minmax(0,1fr) 108px;padding:15px;min-height:168px}.rating-v6-hero-copy h2{font-size:25px!important}.rating-v6-hero-reward{padding:8px!important}.rating-v6-me-stat{grid-template-columns:26px minmax(0,1fr);padding:4px 6px}.rating-v6-me-stat-icon{width:26px!important;height:26px!important}.rating-v6-me-stat-icon img{width:22px!important;height:22px!important}.rating-v6-me-stat-copy strong{font-size:16px!important}.rating-v6-podium{gap:5px!important}.rating-v6-podium-card{min-height:164px!important;padding-inline:5px!important}.rating-v6-podium-card.is-first{min-height:183px!important}.rating-v6-podium-card .leaderboard-avatar-frame{width:62px!important;height:62px!important}.rating-v6-podium-card.is-first .leaderboard-avatar-frame{width:73px!important;height:73px!important}.rating-v6-row{grid-template-columns:24px 39px minmax(0,1fr) 28px auto 10px!important;gap:6px!important;padding-inline:8px!important}.rating-v6-row-avatar .leaderboard-avatar-frame.is-compact{width:39px!important;height:39px!important}.rating-v6-row-score{font-size:12px!important}.rating-v6-section-title>span{display:none!important}}
 @media(prefers-reduced-motion:reduce){#zefirok-maltipoo-runner .rating-v6-tabs button,#zefirok-maltipoo-runner .rating-v6-row,#zefirok-maltipoo-runner .rating-v6-podium-card{transition:none!important}}
 </style>
+
+<style id="rating-v6-polish-hotfix-20260827">
+/* Hero: let the season artwork read through the wash, while keeping text contrast. */
+#zefirok-maltipoo-runner .rating-v6-hero{grid-template-columns:minmax(0,1fr) 116px!important;min-height:186px!important}
+#zefirok-maltipoo-runner .rating-v6-hero-art{inset:-5%!important;width:110%!important;height:110%!important;max-width:none!important;max-height:none!important;object-fit:cover!important;object-position:61% 50%!important;opacity:.30!important;filter:saturate(.88) contrast(.97)!important;transform:scale(1.035)!important;transform-origin:61% 50%!important}
+#zefirok-maltipoo-runner .rating-v6-hero-wash{background:linear-gradient(90deg,rgba(255,250,246,.94) 0%,rgba(255,247,243,.88) 46%,rgba(255,242,235,.62) 72%,rgba(255,234,229,.40) 100%)!important}
+#zefirok-maltipoo-runner .rating-v6-hero-reward{position:relative!important;overflow:hidden!important;isolation:isolate!important;padding:10px!important;border-color:rgba(220,169,71,.76)!important;background:linear-gradient(180deg,rgba(255,252,242,.88),rgba(255,238,203,.82))!important;box-shadow:0 10px 24px rgba(142,94,33,.14),inset 0 1px 0 rgba(255,255,255,.94)!important}
+#zefirok-maltipoo-runner .rating-v6-hero-reward>small{display:inline-flex!important;align-items:center!important;justify-content:center!important;justify-self:center!important;min-height:24px!important;padding:5px 9px!important;border:1px solid rgba(218,167,70,.42)!important;border-radius:999px!important;background:rgba(255,247,221,.92)!important;color:#8d611b!important;font-size:9px!important;font-weight:950!important;letter-spacing:.035em!important;box-shadow:0 4px 10px rgba(151,101,34,.07)!important}
+#zefirok-maltipoo-runner .rating-v6-hero-reward .leaderboard-reward-line{position:relative!important;display:grid!important;grid-template-columns:1fr!important;grid-template-rows:auto auto!important;justify-items:center!important;align-content:center!important;gap:5px!important;width:100%!important;min-width:0!important;min-height:0!important;padding:0!important;overflow:hidden!important;isolation:isolate!important;contain:layout paint!important}
+#zefirok-maltipoo-runner .rating-v6-hero-reward .leaderboard-reward-amount--fixed{position:static!important;left:auto!important;right:auto!important;top:auto!important;bottom:auto!important;width:auto!important;max-width:100%!important;height:auto!important;margin:1px 0 0!important;padding:5px 8px!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;border:1px solid rgba(215,163,61,.38)!important;border-radius:999px!important;background:rgba(255,249,231,.94)!important;color:#7a531c!important;font-family:var(--font-sans)!important;font-size:9px!important;font-weight:950!important;line-height:1.05!important;letter-spacing:0!important;text-align:center!important;white-space:normal!important;overflow:hidden!important;text-overflow:ellipsis!important;z-index:2!important}
+#zefirok-maltipoo-runner .rating-v6-hero-reward .leaderboard-reward-visual{position:relative!important;z-index:1!important}
+
+/* Earned reward: keep dynamic amount inside its own card while the page scrolls. */
+#zefirok-maltipoo-runner .rating-v6-earned-reward{position:relative!important;overflow:hidden!important;isolation:isolate!important}
+#zefirok-maltipoo-runner .rating-v6-earned-reward-visual{position:relative!important;display:grid!important;place-items:center!important;min-width:118px!important;overflow:hidden!important;isolation:isolate!important;contain:layout paint!important}
+#zefirok-maltipoo-runner .rating-v6-earned-reward-visual .leaderboard-reward-line{position:relative!important;display:flex!important;align-items:center!important;justify-content:flex-end!important;gap:7px!important;width:100%!important;min-width:0!important;min-height:0!important;padding:0!important;overflow:hidden!important;isolation:isolate!important;contain:layout paint!important}
+#zefirok-maltipoo-runner .rating-v6-earned-reward-visual .leaderboard-reward-amount--fixed{position:static!important;left:auto!important;right:auto!important;top:auto!important;bottom:auto!important;width:auto!important;max-width:62px!important;height:auto!important;margin:0!important;padding:0!important;color:#7a531c!important;font-family:var(--font-sans)!important;font-size:11px!important;font-weight:900!important;line-height:1.08!important;text-align:left!important;white-space:normal!important;overflow:hidden!important;z-index:auto!important}
+#zefirok-maltipoo-runner .rating-v6-earned-reward-visual .leaderboard-reward-visual{width:48px!important;height:48px!important;min-width:48px!important;flex:0 0 48px!important;overflow:hidden!important}
+#zefirok-maltipoo-runner .rating-v6-earned-reward-visual .leaderboard-reward-cups{width:52px!important;height:46px!important;min-width:52px!important}
+#zefirok-maltipoo-runner .rating-v6-earned-reward-visual .leaderboard-reward-cups img{width:27px!important;height:27px!important;margin:0 -7px!important}
+
+/* Full-sheet swipe affordance. Native vertical scrolling remains available until the sheet reaches scrollTop=0. */
+#zefirok-maltipoo-runner .rating-player-profile-sheet{cursor:grab}
+#zefirok-maltipoo-runner .rating-player-profile-sheet.is-full-dragging{cursor:grabbing;user-select:none;-webkit-user-select:none}
+@media(max-width:390px){#zefirok-maltipoo-runner .rating-v6-hero{grid-template-columns:minmax(0,1fr) 104px!important}.rating-v6-hero-reward{padding:8px!important}.rating-v6-hero-reward>small{font-size:8px!important;padding-inline:7px!important}.rating-v6-hero-reward .leaderboard-reward-amount--fixed{font-size:8px!important;padding:4px 6px!important}}
+</style>
 </head>
 <body>
 <div id="zefirok-maltipoo-runner">
@@ -10112,6 +10138,47 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
   };
   playerProfileDrag?.addEventListener("pointerup",event=>finishPlayerProfileDrag(event,false));
   playerProfileDrag?.addEventListener("pointercancel",event=>finishPlayerProfileDrag(event,true));
+
+  // Full-sheet swipe-to-close for touch devices. The sheet only takes over a downward
+  // gesture when it is already scrolled to the top, so normal profile scrolling remains intact.
+  let profileSheetTouchId=null,profileSheetTouchStartX=0,profileSheetTouchStartY=0,profileSheetTouchLastY=0,profileSheetTouchLastTs=0,profileSheetTouchVelocity=0,profileSheetTouchDelta=0,profileSheetTouchDragging=false;
+  const resetPlayerProfileSheetTouch=()=>{profileSheetTouchId=null;profileSheetTouchStartX=0;profileSheetTouchStartY=0;profileSheetTouchLastY=0;profileSheetTouchLastTs=0;profileSheetTouchVelocity=0;profileSheetTouchDelta=0;profileSheetTouchDragging=false;playerProfileSheet?.classList.remove("is-full-dragging");playerProfileDrag?.classList.remove("is-armed");};
+  const touchByIdentifier=(touches,id)=>{for(const touch of Array.from(touches||[])){if(touch.identifier===id)return touch;}return null;};
+  const isProfileSwipeInteractiveTarget=target=>target instanceof Element&&!!target.closest("button,a,input,select,textarea,[contenteditable='true'],[role='button']");
+  playerProfileSheet?.addEventListener("touchstart",event=>{
+    if(playerProfileDismissAnimating||playerProfileLayer?.hidden||!playerProfileSheet||event.touches?.length!==1)return;
+    if(event.target instanceof Element&&event.target.closest("[data-rating-player-profile-drag]"))return;
+    if(isProfileSwipeInteractiveTarget(event.target))return;
+    if((playerProfileSheet.scrollTop||0)>2)return;
+    const touch=event.touches[0];profileSheetTouchId=touch.identifier;profileSheetTouchStartX=Number(touch.clientX||0);profileSheetTouchStartY=Number(touch.clientY||0);profileSheetTouchLastY=profileSheetTouchStartY;profileSheetTouchLastTs=performance.now();profileSheetTouchVelocity=0;profileSheetTouchDelta=0;profileSheetTouchDragging=false;
+  },{passive:false});
+  playerProfileSheet?.addEventListener("touchmove",event=>{
+    if(profileSheetTouchId==null||playerProfileDismissAnimating||!playerProfileSheet)return;
+    const touch=touchByIdentifier(event.touches,profileSheetTouchId);if(!touch)return;
+    const currentX=Number(touch.clientX||0),currentY=Number(touch.clientY||0),dy=currentY-profileSheetTouchStartY,dx=currentX-profileSheetTouchStartX;
+    if(!profileSheetTouchDragging){
+      if(Math.abs(dy)<9)return;
+      if(dy<=0||Math.abs(dx)>Math.abs(dy)*.82){resetPlayerProfileSheetTouch();return;}
+      if((playerProfileSheet.scrollTop||0)>2){resetPlayerProfileSheetTouch();return;}
+      profileSheetTouchDragging=true;++playerProfileMotionSerial;cancelPlayerProfileMotion();playerProfileSheet.scrollTop=0;playerProfileSheet.style.animation="none";playerProfileSheet.style.transition="none";playerProfileSheet.style.willChange="transform";playerProfileLayer.style.willChange="background,backdrop-filter";playerProfileSheet.classList.add("is-full-dragging");
+    }
+    event.preventDefault();
+    const nowTs=performance.now(),dt=Math.max(1,nowTs-profileSheetTouchLastTs),step=currentY-profileSheetTouchLastY;profileSheetTouchVelocity=step/dt;profileSheetTouchLastY=currentY;profileSheetTouchLastTs=nowTs;profileSheetTouchDelta=Math.max(0,dy);
+    const sheetHeight=Math.max(220,playerProfileSheet.offsetHeight||playerProfileSheet.getBoundingClientRect().height||0),closeThreshold=Math.max(330,Math.min(480,sheetHeight*.60)),manualOffset=Math.min(sheetHeight*.90,profileSheetTouchDelta*.98);
+    playerProfileSheet.style.transform=`translate3d(0,${Math.round(manualOffset)}px,0)`;applyPlayerProfileBackdropProgress(playerProfileBackdropProgressForOffset(manualOffset,sheetHeight));
+    if(profileSheetTouchDelta>=closeThreshold)playerProfileDrag?.classList.add("is-armed");else if(profileSheetTouchDelta<closeThreshold*.88)playerProfileDrag?.classList.remove("is-armed");
+  },{passive:false});
+  const finishPlayerProfileSheetTouch=(event,cancelled=false)=>{
+    if(profileSheetTouchId==null)return;
+    const changed=touchByIdentifier(event.changedTouches,profileSheetTouchId);if(!changed&&!cancelled)return;
+    const sheetHeight=Math.max(220,playerProfileSheet?.offsetHeight||playerProfileSheet?.getBoundingClientRect?.().height||0),closeThreshold=Math.max(330,Math.min(480,sheetHeight*.60)),closeByDistance=!cancelled&&profileSheetTouchDelta>=closeThreshold,closeByFlick=!cancelled&&profileSheetTouchDelta>=closeThreshold*.78&&profileSheetTouchVelocity>1.25,manualOffset=Math.min(sheetHeight*.90,profileSheetTouchDelta*.98),releaseVelocity=Math.max(0,profileSheetTouchVelocity);
+    const shouldClose=profileSheetTouchDragging&&(closeByDistance||closeByFlick);resetPlayerProfileSheetTouch();
+    if(shouldClose){ratingImpactHaptic("light");closePlayerProfile({offset:manualOffset,velocity:releaseVelocity,fromDrag:true});return;}
+    if(profileSheetTouchDragging||manualOffset>0)settlePlayerProfileDrag(manualOffset);
+  };
+  playerProfileSheet?.addEventListener("touchend",event=>finishPlayerProfileSheetTouch(event,false),{passive:false});
+  playerProfileSheet?.addEventListener("touchcancel",event=>finishPlayerProfileSheetTouch(event,true),{passive:false});
+
   document.addEventListener("keydown", event => {
     if((event.key==="Enter"||event.key===" ")&&document.activeElement instanceof HTMLElement&&document.activeElement.matches("[data-player-profile-id]")){event.preventDefault();openPlayerProfile(document.activeElement.dataset.playerProfileId,document.activeElement);return;}
     if (event.key !== "Escape") return;
