@@ -4855,27 +4855,39 @@ function achievementPlayerPercent(earnedPlayers,totalPlayers) {
   return Math.max(0,Math.min(100,Math.round((earned/total)*10000)/100));
 }
 
-async function achievementPopulationStats(env) {
-  const empty={totalPlayers:0,counts:new Map(),scope:"all_player_profiles",excludesTesters:false};
-  const parse=(results,excludesTesters)=>{
-    const totalPlayers=Math.max(0,Number(results?.[0]?.results?.[0]?.total_players||0));
-    const counts=new Map();
-    for(const row of results?.[1]?.results||[]){const id=String(row?.achievement_id||"").trim();if(id)counts.set(id,Math.max(0,Number(row?.earned_players)||0));}
-    return {totalPlayers,counts,scope:"all_player_profiles",excludesTesters};
-  };
-  const statements=(excludeTesters)=>{
-    const testerProfile=excludeTesters?` AND NOT EXISTS(SELECT 1 FROM tester_accounts t WHERE t.telegram_id=p.telegram_id)`:``;
-    const testerEarned=excludeTesters?` AND NOT EXISTS(SELECT 1 FROM tester_accounts t WHERE t.telegram_id=e.telegram_id)`:``;
-    return [
-      env.DB.prepare(`SELECT COUNT(*) AS total_players FROM admin_profile_state p WHERE TRIM(COALESCE(p.telegram_id,''))<>''${testerProfile}`),
-      env.DB.prepare(`SELECT e.achievement_id,COUNT(DISTINCT e.telegram_id) AS earned_players FROM (SELECT telegram_id,achievement_id FROM achievement_unlocks UNION ALL SELECT telegram_id,achievement_id FROM achievement_claims UNION ALL SELECT telegram_id,achievement_id FROM achievement_showcase) e JOIN admin_profile_state p ON p.telegram_id=e.telegram_id WHERE TRIM(COALESCE(e.achievement_id,''))<>''${testerEarned} GROUP BY e.achievement_id`)
-    ];
-  };
-  try{
-    try{return parse(await env.DB.batch(statements(true)),true);}
-    catch(error){if(!isMissingRuntimeDatabaseSchemaError(error))throw error;}
-    return parse(await env.DB.batch(statements(false)),false);
-  }catch(error){console.error("achievement population stats failed",error);return empty;}
+const ACHIEVEMENT_POPULATION_CACHE_TTL_MS = 5 * 60 * 1000;
+let achievementPopulationStatsCache = null;
+let achievementPopulationStatsCacheAt = 0;
+let achievementPopulationStatsInFlight = null;
+
+async function achievementPopulationStats(env, options = {}) {
+  const now=Date.now(),force=options?.force===true;
+  if(!force&&achievementPopulationStatsCache&&now-achievementPopulationStatsCacheAt<ACHIEVEMENT_POPULATION_CACHE_TTL_MS)return achievementPopulationStatsCache;
+  if(achievementPopulationStatsInFlight)return achievementPopulationStatsInFlight;
+  achievementPopulationStatsInFlight=(async()=>{
+    const empty={totalPlayers:0,counts:new Map(),scope:"all_player_profiles",excludesTesters:false};
+    const parse=(results,excludesTesters)=>{
+      const totalPlayers=Math.max(0,Number(results?.[0]?.results?.[0]?.total_players||0));
+      const counts=new Map();
+      for(const row of results?.[1]?.results||[]){const id=String(row?.achievement_id||"").trim();if(id)counts.set(id,Math.max(0,Number(row?.earned_players)||0));}
+      return {totalPlayers,counts,scope:"all_player_profiles",excludesTesters};
+    };
+    const statements=(excludeTesters)=>{
+      const testerProfile=excludeTesters?` AND NOT EXISTS(SELECT 1 FROM tester_accounts t WHERE t.telegram_id=p.telegram_id)`:``;
+      const testerEarned=excludeTesters?` AND NOT EXISTS(SELECT 1 FROM tester_accounts t WHERE t.telegram_id=u.telegram_id)`:``;
+      return [
+        env.DB.prepare(`SELECT COUNT(*) AS total_players FROM admin_profile_state p WHERE TRIM(COALESCE(p.telegram_id,''))<>''${testerProfile}`),
+        env.DB.prepare(`SELECT u.achievement_id,COUNT(*) AS earned_players FROM achievement_unlocks u JOIN admin_profile_state p ON p.telegram_id=u.telegram_id WHERE TRIM(COALESCE(u.achievement_id,''))<>''${testerEarned} GROUP BY u.achievement_id`)
+      ];
+    };
+    try{
+      let value;
+      try{value=parse(await env.DB.batch(statements(true)),true);}
+      catch(error){if(!isMissingRuntimeDatabaseSchemaError(error))throw error;value=parse(await env.DB.batch(statements(false)),false);}
+      achievementPopulationStatsCache=value;achievementPopulationStatsCacheAt=Date.now();return value;
+    }catch(error){console.error("achievement population stats failed",error);achievementPopulationStatsCache=empty;achievementPopulationStatsCacheAt=Date.now();return empty;}
+  })().finally(()=>{achievementPopulationStatsInFlight=null;});
+  return achievementPopulationStatsInFlight;
 }
 
 function achievementConditionLabel(definition = {}) {
@@ -5226,8 +5238,10 @@ async function achievementPlayerState(env, telegramId) {
   requireDatabase(env);
   await Promise.all([ensureAchievementClaimSchema(env), ensureAchievementConfigSchema(env)]);
   const playerId=String(telegramId),minRunMs=positiveInt(env.LEADERBOARD_MIN_RUN_SECONDS,DEFAULT_LEADERBOARD_MIN_RUN_SECONDS)*1000,optionalAll=(statement)=>statement.all().catch((error)=>{if(isMissingRuntimeDatabaseSchemaError(error))return {results:[]};throw error;}),optionalFirst=(statement)=>statement.first().catch((error)=>{if(isMissingRuntimeDatabaseSchemaError(error))return null;throw error;});
-  const seasonHistoryRows=await achievementSyncSeasonHistoryForPlayer(env,playerId);
-  const [definitions, profileRow, runsRow, caseRow, seasonRow, referralRow, caseOpeningsRow, seasonalCaseOpeningsRow, albumMilestoneRow, albumItemsResult, claimsResult, showcaseResult, showcasePreferenceRow, unlockResult] = await Promise.all([
+  const populationStatsPromise=achievementPopulationStats(env);
+  const seasonHistoryPromise=achievementSyncSeasonHistoryForPlayer(env,playerId);
+  const [seasonHistoryRows, definitions, profileRow, runsRow, caseRow, seasonRow, referralRow, caseOpeningsRow, seasonalCaseOpeningsRow, albumMilestoneRow, albumItemsResult, claimsResult, showcaseResult, showcasePreferenceRow, unlockResult] = await Promise.all([
+    seasonHistoryPromise,
     achievementConfiguredDefinitions(env),
     env.DB.prepare(`SELECT profile_xp,best_score FROM admin_profile_state WHERE telegram_id=? LIMIT 1`).bind(playerId).first(),
     achievementRunStatsRow(env,playerId,minRunMs),
@@ -5250,8 +5264,31 @@ async function achievementPlayerState(env, telegramId) {
   const unlockMap=achievementUnlockRowsMap(unlockResult.results||[]),claimMap=achievementClaimRowsMap(claimsResult.results||[]),showcaseIds=(showcaseResult.results||[]).sort((a,b)=>Number(a.slot||0)-Number(b.slot||0)).map((row)=>String(row.achievement_id||"")),now=Math.floor(Date.now()/1000),newUnlocks=[];
   for(const definition of definitions){if(definition?.enabled===false||unlockMap.has(definition.id)||claimMap.has(definition.id))continue;const fact=achievementFact(raw,definition);if(!achievementFactCanUnlock(definition,fact,now))continue;const candidate=achievementUnlockCandidate(definition,fact,now);newUnlocks.push(candidate);unlockMap.set(definition.id,candidate);}
   if(newUnlocks.length){const statements=newUnlocks.map((row)=>env.DB.prepare(`INSERT OR IGNORE INTO achievement_unlocks(telegram_id,achievement_id,unlocked_at,source_kind,season_id,source_snapshot_json) VALUES(?,?,?,?,?,?)`).bind(playerId,row.achievement_id,row.unlocked_at,row.source_kind,row.season_id,row.source_snapshot_json));for(let offset=0;offset<statements.length;offset+=25)await env.DB.batch(statements.slice(offset,offset+25));}
-  const populationStats=await achievementPopulationStats(env);
+  const populationStats=await populationStatsPromise;
   return achievementsV2FromStats(raw,claimsResult.results||[],definitions,showcaseIds,[...unlockMap.values()],{now,populationStats,selectedShowcaseStyle:String(showcasePreferenceRow?.style_id||"default")});
+}
+
+async function achievementShowcasePreviewForPlayer(env, telegramId) {
+  requireDatabase(env);
+  await ensureAchievementConfigSchema(env);
+  const playerId=String(telegramId||"").trim();
+  if(!playerId)return {ok:true,version:1,serverAuthoritative:true,summary:{achievementPoints:0,maxAchievementPoints:0,rank:achievementRankForPoints(0)},showcase:{limit:ACHIEVEMENT_SHOWCASE_LIMIT,count:0,ids:[],items:[],selectedStyleId:"default"}};
+  const optionalFirst=(statement)=>statement.first().catch((error)=>{if(isMissingRuntimeDatabaseSchemaError(error))return null;throw error;});
+  const [definitions,showcaseResult,preferenceRow,earnedResult]=await Promise.all([
+    achievementConfiguredDefinitions(env),
+    env.DB.prepare(`SELECT achievement_id,slot FROM achievement_showcase WHERE telegram_id=? ORDER BY slot`).bind(playerId).all(),
+    optionalFirst(env.DB.prepare(`SELECT style_id FROM achievement_showcase_preferences WHERE telegram_id=? LIMIT 1`).bind(playerId)),
+    env.DB.prepare(`SELECT achievement_id FROM achievement_unlocks WHERE telegram_id=? UNION SELECT achievement_id FROM achievement_claims WHERE telegram_id=?`).bind(playerId,playerId).all()
+  ]);
+  const now=Math.floor(Date.now()/1000),earnedIds=new Set((earnedResult.results||[]).map((row)=>String(row?.achievement_id||"")).filter(Boolean));
+  const published=(definitions||[]).filter((definition)=>definition?.enabled!==false&&definition?.visible!==false&&definition?.catalogVisible===true);
+  const definitionMap=new Map(published.map((definition)=>[String(definition.id||""),definition]));
+  const ordered=(showcaseResult.results||[]).sort((a,b)=>Number(a.slot||0)-Number(b.slot||0));
+  const items=ordered.map((row)=>{const definition=definitionMap.get(String(row?.achievement_id||""));return definition?achievementPublicShowcaseItem(definition,Number(row?.slot||0)):null;}).filter(Boolean).slice(0,ACHIEVEMENT_SHOWCASE_LIMIT);
+  const achievementPoints=published.reduce((sum,definition)=>sum+(earnedIds.has(String(definition.id||""))?achievementPointsValue(definition.achievementPoints,0):0),0);
+  const maxAchievementPoints=published.reduce((sum,definition)=>{const availability=achievementAvailability(definition,now);return sum+((earnedIds.has(String(definition.id||""))||availability.status!=="expired")?achievementPointsValue(definition.achievementPoints,0):0);},0);
+  const rank=achievementRankForPoints(achievementPoints),selectedStyleId=achievementShowcaseStyleId(preferenceRow?.style_id||"default");
+  return {ok:true,version:1,serverAuthoritative:true,generatedAt:Date.now(),summary:{achievementPoints,maxAchievementPoints,rank,showcased:items.length},showcase:{limit:ACHIEVEMENT_SHOWCASE_LIMIT,count:items.length,ids:items.map((item)=>item.id),items,selectedStyleId}};
 }
 
 async function getAchievementsV2(request, env) {
@@ -5260,6 +5297,8 @@ async function getAchievementsV2(request, env) {
     requireBotToken(env);
     const body = await readJson(request);
     const auth = await validateTelegramInitData(String(body.initData || body.init_data || ""), env);
+    const scope=String(body.scope||body.view||"").trim().toLowerCase();
+    if(scope==="showcase"||scope==="profile")return jsonResponse(await achievementShowcasePreviewForPlayer(env,String(auth.user.id)));
     return jsonResponse(await achievementPlayerState(env, String(auth.user.id)));
   } catch (error) {
     if (error instanceof ApiError) return jsonResponse({ ok: false, error: error.message }, error.status);
@@ -5461,7 +5500,11 @@ async function getGameStartupPackage(request, env, ctx = null) {
       seasonPassMiniGameVisualsForPlayer(env, telegramId),
       readPlayerAccountRevision(env, telegramId),
       activeRunLiveOpsEvent(env),
-      newcomerPathState(env, telegramId)
+      newcomerPathState(env, telegramId),
+      Promise.race([
+        achievementShowcasePreviewForPlayer(env, telegramId),
+        new Promise((resolve)=>setTimeout(()=>resolve(null),350))
+      ])
     ]);
 
     let profile = null;
@@ -5479,7 +5522,7 @@ async function getGameStartupPackage(request, env, ctx = null) {
       Promise.all([startupSideSections,presencePromise]).then(([side])=>side)
     ]);
     const casesResult = casesSettled[0];
-    const [taskNoticeResult, seasonPassBonusResult, rewardsResult, flagsResult, newsResult, giftsResult, miniGameVisualResult, accountRevisionResult, liveOpsEventResult, newcomerPathResult] = sideSettled;
+    const [taskNoticeResult, seasonPassBonusResult, rewardsResult, flagsResult, newsResult, giftsResult, miniGameVisualResult, accountRevisionResult, liveOpsEventResult, newcomerPathResult, achievementShowcaseResult] = sideSettled;
     const cases = casesResult.status === "fulfilled" ? casesResult.value : null;
     const rewards = rewardsResult.status === "fulfilled" ? rewardsResult.value : null;
     const flags = flagsResult.status === "fulfilled" ? flagsResult.value : null;
@@ -5490,6 +5533,7 @@ async function getGameStartupPackage(request, env, ctx = null) {
     const accountRevision = accountRevisionResult?.status === "fulfilled" ? Math.max(0, Number(accountRevisionResult.value || 0)) : 0;
     const liveOpsEvent = liveOpsEventResult?.status === "fulfilled" ? liveOpsEventResult.value : {active:false,multipliers:{pointsMultiplier:1,treatsMultiplier:1,coffeeMultiplier:1}};
     const newcomerPath = newcomerPathResult?.status === "fulfilled" ? newcomerPathResult.value : {available:false,dayNumber:0,runs:0,steps:[]};
+    const achievementShowcase = achievementShowcaseResult?.status === "fulfilled" ? achievementShowcaseResult.value : null;
     const seasonPassTaskNotice = taskNoticeResult.status === "fulfilled" ? taskNoticeResult.value : null;
     const seasonPassBonus = seasonPassBonusResult.status === "fulfilled"
       ? seasonPassBonusResult.value
@@ -5502,6 +5546,7 @@ async function getGameStartupPackage(request, env, ctx = null) {
     if (newsResult.status === "rejected") errors.news = startupSectionError(newsResult.reason);
     if (giftsResult.status === "rejected") errors.gifts = startupSectionError(giftsResult.reason);
     if (miniGameVisualResult.status === "rejected") errors.miniGameVisual = startupSectionError(miniGameVisualResult.reason);
+    if (achievementShowcaseResult.status === "rejected") errors.achievementShowcase = startupSectionError(achievementShowcaseResult.reason);
 
     return jsonResponse({
       ok: true,
@@ -5522,6 +5567,7 @@ async function getGameStartupPackage(request, env, ctx = null) {
       accountRevision,
       liveOpsEvent,
       newcomerPath,
+      achievementShowcase,
       errors
     });
   } catch (error) {
@@ -37866,8 +37912,8 @@ async function testProjectSandboxGameData(env, ctx) {
   const response=(data,status=200)=>({ok:true,proxyStatus:status,data:{...data,testProject:true,productionWrites:false}});
   const reload=async()=>{loaded=await testProjectSandboxLoad(env,ctx);({ownerId,state,productionSnapshot,snapshot,nowMs}=loaded);return loaded;};
 
-  if(path==="/api/game/startup")return response({ok:true,authenticated:true,workerBuild:WORKER_BUILD,generatedAt:nowMs,publicConfig:testProjectClone(snapshot?.publicConfig||fallbackGamePublicConfig()),profile:testProjectSandboxProfile(state),cases:testProjectSandboxCasePayload(state,snapshot),rewards:{ok:true,rewards:(state.sandbox?.mockRewards||[]).map(testProjectSandboxRewardView),limitStatus:null},flags:{...(snapshot?.featureFlags||{}),battle_pass:true,shop:true,rating:true},seasonPassBonus:{active:Number(state.seasonXpBoosts||0)>0||state.passTier==="elite_plus",multiplier:(Number(state.seasonXpBoosts||0)>0||state.passTier==="elite_plus")?2:1,claimableCount:testProjectSandboxPassPayload(state,snapshot).taskClaimableCount},seasonPassTaskNotice:{ok:true,pending:false,notice:null},news:{ok:true,items:[],unreadCount:0},gifts:{ok:true,pendingCount:0,unreadCount:0,items:[]},liveOpsEvent:{active:false,multipliers:{pointsMultiplier:1,treatsMultiplier:1,coffeeMultiplier:1}},newcomerPath:{available:false,dayNumber:1,runs:Number(state.sandbox?.completedRuns||0),steps:[]},miniGameVisual:testProjectMiniGameVisual(state,snapshot),miniGameVisuals:testProjectMiniGameVisuals(state,snapshot),errors:{}});
-  if(path==="/api/achievements")return response(await testProjectSandboxAchievementsPayload(env,state,snapshot));
+  if(path==="/api/game/startup"){const achievementState=await testProjectSandboxAchievementsPayload(env,state,snapshot);return response({ok:true,authenticated:true,workerBuild:WORKER_BUILD,generatedAt:nowMs,publicConfig:testProjectClone(snapshot?.publicConfig||fallbackGamePublicConfig()),profile:testProjectSandboxProfile(state),cases:testProjectSandboxCasePayload(state,snapshot),rewards:{ok:true,rewards:(state.sandbox?.mockRewards||[]).map(testProjectSandboxRewardView),limitStatus:null},flags:{...(snapshot?.featureFlags||{}),battle_pass:true,shop:true,rating:true},seasonPassBonus:{active:Number(state.seasonXpBoosts||0)>0||state.passTier==="elite_plus",multiplier:(Number(state.seasonXpBoosts||0)>0||state.passTier==="elite_plus")?2:1,claimableCount:testProjectSandboxPassPayload(state,snapshot).taskClaimableCount},seasonPassTaskNotice:{ok:true,pending:false,notice:null},news:{ok:true,items:[],unreadCount:0},gifts:{ok:true,pendingCount:0,unreadCount:0,items:[]},liveOpsEvent:{active:false,multipliers:{pointsMultiplier:1,treatsMultiplier:1,coffeeMultiplier:1}},newcomerPath:{available:false,dayNumber:1,runs:Number(state.sandbox?.completedRuns||0),steps:[]},miniGameVisual:testProjectMiniGameVisual(state,snapshot),miniGameVisuals:testProjectMiniGameVisuals(state,snapshot),achievementShowcase:{ok:true,version:1,serverAuthoritative:true,generatedAt:nowMs,summary:testProjectClone(achievementState.summary||{}),showcase:testProjectClone(achievementState.showcase||{})},errors:{}});}
+  if(path==="/api/achievements"){const achievementState=await testProjectSandboxAchievementsPayload(env,state,snapshot),scope=String(payload?.scope||payload?.view||"").trim().toLowerCase();if(scope==="showcase"||scope==="profile")return response({ok:true,version:1,serverAuthoritative:true,generatedAt:nowMs,summary:testProjectClone(achievementState.summary||{}),showcase:testProjectClone(achievementState.showcase||{})});return response(achievementState);}
   if(path==="/api/achievements/claim"){
     const achievementId=String(payload?.achievementId||payload?.achievement_id||payload?.id||"").trim().slice(0,80);
     const current=await testProjectSandboxAchievementsPayload(env,state,snapshot),achievement=current.achievements.find((item)=>item.id===achievementId);

@@ -368,6 +368,21 @@
       let loading = true;
       let loadError = '';
       let systemMessage = '';
+      const ACHIEVEMENTS_CACHE_TTL_MS = 5 * 60 * 1000;
+      const achievementsCacheKey = () => `zefirok-achievements-state-v2:${testProjectActive() ? 'test' : 'prod'}`;
+
+      function readAchievementsCache() {
+        try {
+          const parsed = JSON.parse(sessionStorage.getItem(achievementsCacheKey()) || 'null');
+          if (!parsed || typeof parsed !== 'object' || !parsed.state || Date.now() - Number(parsed.savedAt || 0) > ACHIEVEMENTS_CACHE_TTL_MS) return null;
+          return parsed.state;
+        } catch { return null; }
+      }
+
+      function writeAchievementsCache(state) {
+        if (!state || !Array.isArray(state?.achievements)) return;
+        try { sessionStorage.setItem(achievementsCacheKey(), JSON.stringify({ savedAt:Date.now(), state })); } catch {}
+      }
 
       function safeNumber(value) {
         const number = Number(value);
@@ -521,7 +536,7 @@
         return '';
       }
 
-      function applyAchievementsState(state) {
+      function applyAchievementsState(state, options = {}) {
         ACHIEVEMENTS = Array.isArray(state?.achievements) ? state.achievements : [];
         const ids = Array.isArray(state?.showcase?.ids) ? state.showcase.ids : ACHIEVEMENTS.filter((item) => item?.inShowcase).sort((a,b) => safeNumber(a.showcaseSlot) - safeNumber(b.showcaseSlot)).map((item) => item.id);
         SHOWCASE_IDS = [...new Set(ids.map((id) => String(id || '')).filter(Boolean))].slice(0, 3);
@@ -532,10 +547,12 @@
         ACHIEVEMENT_SERIES = Array.isArray(state?.series) ? state.series : [];
         NEAR_COMPLETION = Array.isArray(state?.nearCompletion) ? state.nearCompletion : [];
         ACHIEVEMENT_POINTS_ICON_URL = String(state?.meta?.achievementPoints?.iconUrl || ACHIEVEMENT_POINTS_ICON_FALLBACK);
+        if (options?.cache !== false) writeAchievementsCache(state);
       }
 
-      async function loadAchievements() {
-        loading = true;
+      async function loadAchievements(options = {}) {
+        const preserveCurrent = options?.preserveCurrent === true && ACHIEVEMENTS.length > 0;
+        loading = !preserveCurrent;
         loadError = '';
         renderSummary();
         renderCatalog();
@@ -543,18 +560,23 @@
           const data = await achievementsApiRequest('/api/achievements');
           applyAchievementsState(data);
         } catch (error) {
-          ACHIEVEMENTS = [];
-          SHOWCASE_IDS = [];
-          SHOWCASE_STYLE_ID = 'default';
-          SHOWCASE_STYLES = [];
-          ACHIEVEMENT_SUMMARY = {};
-          ACHIEVEMENT_SERIES = [];
-          NEAR_COMPLETION = [];
-          loadError = String(error?.message || 'Не удалось загрузить достижения.');
+          if (!preserveCurrent) {
+            ACHIEVEMENTS = [];
+            SHOWCASE_IDS = [];
+            SHOWCASE_STYLE_ID = 'default';
+            SHOWCASE_STYLES = [];
+            ACHIEVEMENT_SUMMARY = {};
+            ACHIEVEMENT_SERIES = [];
+            NEAR_COMPLETION = [];
+            loadError = String(error?.message || 'Не удалось загрузить достижения.');
+          } else {
+            systemMessage = 'Показываем последнее сохранённое состояние. Обновление повторится при следующем открытии.';
+          }
         } finally {
           loading = false;
           renderSummary();
           renderCatalog();
+          renderInfo();
         }
       }
 
@@ -966,11 +988,16 @@
         } catch {}
       });
 
+      const cachedAchievementState = readAchievementsCache();
+      if (cachedAchievementState) {
+        applyAchievementsState(cachedAchievementState, { cache:false });
+        loading = false;
+      }
       renderFilters();
       renderSummary();
       renderCatalog();
       renderInfo();
-      loadAchievements();
+      loadAchievements({ preserveCurrent:Boolean(cachedAchievementState) });
     })();
   </script>
 </body>
