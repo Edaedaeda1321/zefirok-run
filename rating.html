@@ -8868,13 +8868,69 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
 @media(max-width:390px){.rating-player-profile-head{grid-template-columns:86px minmax(0,1fr);gap:11px;padding:10px}.rating-player-profile-avatar .leaderboard-avatar-frame{width:80px!important;height:80px!important;flex-basis:80px!important}.rating-player-profile-avatar .leaderboard-level-badge{right:-7px!important;bottom:-7px!important;min-width:44px!important;height:23px!important;padding:0 7px!important;font-size:8.5px!important}.rating-player-profile-name-row{gap:6px}.rating-player-profile-name-row h2{font-size:19px}.rating-player-profile-public-title{min-height:23px;padding:4px 7px}.rating-player-profile-public-title small{font-size:6px}.rating-player-profile-public-title strong{font-size:7.5px}.rating-player-profile-meta{gap:5px}.rating-player-profile-place,.rating-player-profile-rank{min-height:25px;padding:5px 8px;font-size:7.5px}.rating-player-profile-rank>span:not(.rating-player-inline-icon){max-width:88px;overflow:hidden;text-overflow:ellipsis}.rating-player-profile-since{font-size:8px}}
 @media(prefers-reduced-motion:reduce){.rating-player-profile,.rating-player-profile-sheet,.rating-player-profile-content.is-loaded>*,.rating-player-showcase-shelf .rating-player-trophy,.rating-player-compare{animation:none!important;transition:none!important}}
 </style>
+
+<style id="rating-v5-mockup-adjustments">
+#zefirok-maltipoo-runner .leaderboard-v5-head-note{display:block;color:#a77d8c;font-size:11px;font-weight:800;line-height:1.35}
+#zefirok-maltipoo-runner .leaderboard-v4-dialog{max-width:min(100%,560px)!important;border-radius:34px!important}
+#zefirok-maltipoo-runner .leaderboard-content{gap:16px!important;padding:14px 14px 24px!important}
+#zefirok-maltipoo-runner .leaderboard-v4-modal-hero{aspect-ratio:1400/620!important;border-radius:28px!important;border-color:rgba(232,188,206,.95)!important;background:linear-gradient(180deg,#ffeef5,#ffe3ec)!important;box-shadow:0 14px 30px rgba(126,68,91,.14)!important}
+#zefirok-maltipoo-runner .leaderboard-v4-modal-hero::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,255,255,0) 38%,rgba(255,239,246,.20) 100%);pointer-events:none}
+#zefirok-maltipoo-runner .leaderboard-v5-section-kicker{display:inline-flex;align-items:center;min-height:26px;padding:5px 12px;border:1px solid rgba(226,180,76,.48);border-radius:999px;background:linear-gradient(180deg,#fff8dc,#ffefbe);color:#8a6116;font-size:10px;font-weight:950;letter-spacing:.12em;text-transform:uppercase;box-shadow:inset 0 1px 0 rgba(255,255,255,.72)}
+#zefirok-maltipoo-runner .leaderboard-v5-season-card,#zefirok-maltipoo-runner .leaderboard-v5-summary,#zefirok-maltipoo-runner .leaderboard-v5-block,#zefirok-maltipoo-runner .leaderboard-v4-reward-card{display:grid;gap:14px;padding:16px;border:1px solid rgba(228,186,201,.92);border-radius:28px;background:linear-gradient(180deg,rgba(255,255,255,.99),rgba(255,243,248,.97));box-shadow:0 15px 32px rgba(121,67,88,.10),inset 0 1px 0 rgba(255,255,255,.94)}
+#zefirok-maltipoo-runner .leaderboard-v5-season-card{grid-template-columns:minmax(0,1fr) minmax(180px,210px);align-items:stretch}
+#zefirok-maltipoo-runner .leaderboard-v5-season-copy{display:grid;gap:10px;align-content:start;min-width:0}
+#zefirok-maltipoo-runner .leaderboard-v5-season-title{color:#70314e;font-family:Copperplate,"Copperplate Gothic Light","Palatino Linotype",Georgia,serif;font-size:clamp(24px,6vw,34px);font-weight:900;line-height:1.02;letter-spacing:.04em;text-transform:uppercase;text-shadow:0 2px 0 #fff,0 5px 12px rgba(113,53,77,.10)}
+#zefirok-maltipoo-runner .leaderboard-v5-season-subtitle{margin:0;color:#88606f;font-size:13px;font-weight:800;line-height:1.45}
+#zefirok-maltipoo-runner .leaderboard-v5-season-meta{display:grid;grid-template-columns:auto 1fr;gap:9px;align-items:start;padding:11px 12px;border:1px solid rgba(229,190,204,.82);border-radius:18px;background:rgba(255,255,255,.78);color:#7d5b68;font-size:12px;font-weight:850;line-height:1.4}
+#zefirok-maltipoo-runner .leaderboard-v5-season-clock{display:grid;place-items:center;width:34px;height:34px;border-radius:12px;background:linear-gradient(180deg,#fff3f8,#ffdce8);font-size:18px}
+#zefirok-maltipoo-runner .leaderboard-v5-season-hint{padding:11px 12px;border-radius:18px;background:linear-gradient(180deg,#fffaf1,#fff3cf);color:#866224;font-size:12px;font-weight:850;line-height:1.45}
+#zefirok-maltipoo-runner .leaderboard-v5-season-aside{display:grid;align-content:stretch}
+#zefirok-maltipoo-runner .leaderboard-v5-reward-box{display:grid;align-content:start;gap:10px;padding:14px;border:1px solid rgba(236,204,126,.64);border-radius:24px;background:linear-gradient(180deg,#fffaf0,#fff2d8);box-shadow:inset 0 1px 0 rgba(255,255,255,.84)}
+#zefirok-maltipoo-runner .leaderboard-v5-reward-box small{color:#9a7420;font-size:10px;font-weight:950;letter-spacing:.10em;text-transform:uppercase}
+#zefirok-maltipoo-runner .leaderboard-v5-reward-box p{margin:0;color:#8c6d2c;font-size:12px;font-weight:800;line-height:1.4}
+#zefirok-maltipoo-runner .leaderboard-v5-reward-box.is-all-time{justify-content:center;text-align:center}
+#zefirok-maltipoo-runner .leaderboard-v5-summary-head,#zefirok-maltipoo-runner .leaderboard-v5-block-head{display:grid;gap:8px}
+#zefirok-maltipoo-runner .leaderboard-v5-summary-head>div,#zefirok-maltipoo-runner .leaderboard-v5-block-head>div{display:grid;gap:7px}
+#zefirok-maltipoo-runner .leaderboard-v5-summary-head strong,#zefirok-maltipoo-runner .leaderboard-v5-block-head strong{color:#70314e;font-size:21px;font-weight:950;line-height:1.08}
+#zefirok-maltipoo-runner .leaderboard-v5-summary-head p,#zefirok-maltipoo-runner .leaderboard-v5-block-head p{margin:0;color:#8b6a77;font-size:12px;font-weight:800;line-height:1.42}
+#zefirok-maltipoo-runner .leaderboard-v5-summary-badge{justify-self:start;display:inline-flex;align-items:center;min-height:30px;padding:7px 12px;border:1px solid rgba(231,178,197,.82);border-radius:999px;background:linear-gradient(180deg,#fff4f8,#ffe4ee);color:#c05580;font-size:11px;font-weight:950;letter-spacing:.08em;text-transform:uppercase}
+#zefirok-maltipoo-runner .leaderboard-v5-summary-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+#zefirok-maltipoo-runner .leaderboard-v5-summary-item{display:grid;grid-template-columns:42px minmax(0,1fr);gap:10px;align-items:center;padding:12px;border:1px solid rgba(226,186,201,.78);border-radius:20px;background:rgba(255,255,255,.84)}
+#zefirok-maltipoo-runner .leaderboard-v5-summary-icon{display:grid;place-items:center;width:42px;height:42px;border-radius:14px;background:linear-gradient(180deg,#fff0f5,#ffd9e6);font-size:22px;box-shadow:inset 0 1px 0 rgba(255,255,255,.86)}
+#zefirok-maltipoo-runner .leaderboard-v5-summary-copy{display:grid;gap:3px;min-width:0}
+#zefirok-maltipoo-runner .leaderboard-v5-summary-copy small{color:#a45f7b;font-size:10px;font-weight:900;line-height:1.1}
+#zefirok-maltipoo-runner .leaderboard-v5-summary-copy strong{color:#6f2d49;font-size:23px;font-weight:950;line-height:1;font-variant-numeric:tabular-nums;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#zefirok-maltipoo-runner .leaderboard-v5-summary-note{color:#936f7d;font-size:11px;font-weight:800;line-height:1.25}
+#zefirok-maltipoo-runner .leaderboard-v5-summary-showcase{display:grid;gap:8px;padding:12px;border:1px dashed rgba(218,172,190,.58);border-radius:19px;background:rgba(255,255,255,.62)}
+#zefirok-maltipoo-runner .leaderboard-v5-summary-showcase strong{color:#7b4058;font-size:12px;font-weight:950}
+#zefirok-maltipoo-runner .leaderboard-v5-summary-showcase span:last-child{color:#947985;font-size:11px;font-weight:800;line-height:1.35}
+#zefirok-maltipoo-runner .leaderboard-v5-block{gap:16px}
+#zefirok-maltipoo-runner .leaderboard-v5-top-stack .leaderboard-v4-podium{padding-top:6px}
+#zefirok-maltipoo-runner .leaderboard-v4-podium-card{min-height:222px!important;padding:38px 10px 18px!important;border-radius:26px!important;background:linear-gradient(180deg,#fffafc,#ffeef5)!important;border:1px solid rgba(228,185,201,.88)!important;box-shadow:0 12px 24px rgba(121,67,88,.10)!important}
+#zefirok-maltipoo-runner .leaderboard-v4-podium-card.is-first{min-height:246px!important;transform:translateY(-8px)}
+#zefirok-maltipoo-runner .leaderboard-v4-podium-name{font-size:14px!important}
+#zefirok-maltipoo-runner .leaderboard-v4-ribbon-value{font-variant-numeric:tabular-nums}
+#zefirok-maltipoo-runner .leaderboard-v4-list{display:grid;gap:9px}
+#zefirok-maltipoo-runner .leaderboard-v4-row{grid-template-columns:34px 48px minmax(0,1fr) auto 18px!important;align-items:center!important;min-height:72px;padding:10px 12px!important;border-radius:22px!important;border:1px solid rgba(227,187,201,.84)!important;background:linear-gradient(180deg,#fffdfd,#fff3f7)!important;box-shadow:0 8px 18px rgba(116,69,88,.07)}
+#zefirok-maltipoo-runner .leaderboard-v4-place{font-size:19px!important}
+#zefirok-maltipoo-runner .leaderboard-v4-row-copy{gap:5px!important}
+#zefirok-maltipoo-runner .leaderboard-v4-row-copy strong{font-size:14px!important}
+#zefirok-maltipoo-runner .leaderboard-v4-row-copy span{font-size:11px!important}
+#zefirok-maltipoo-runner .leaderboard-v4-score{display:grid;justify-items:end;gap:2px;color:#bc4d79!important;font-size:18px!important;font-weight:950!important;line-height:1}
+#zefirok-maltipoo-runner .leaderboard-v4-score small{color:#a97b89;font-size:9px;font-weight:900;letter-spacing:.06em;text-transform:uppercase}
+#zefirok-maltipoo-runner .leaderboard-v4-me-card{display:none!important}
+#zefirok-maltipoo-runner .leaderboard-v4-reward-card{gap:10px;background:linear-gradient(180deg,#fffaf0,#fff0d7)!important;border-color:rgba(229,190,110,.80)!important}
+#zefirok-maltipoo-runner .leaderboard-v4-reward-card>span{color:#8e6b27;font-size:12px;font-weight:900}
+#zefirok-maltipoo-runner .leaderboard-v4-reward-card .leaderboard-claim{justify-self:start}
+@media(max-width:520px){#zefirok-maltipoo-runner .leaderboard-v5-season-card{grid-template-columns:1fr}#zefirok-maltipoo-runner .leaderboard-v5-summary-grid{grid-template-columns:1fr}#zefirok-maltipoo-runner .leaderboard-v4-row{grid-template-columns:30px 46px minmax(0,1fr) auto 16px!important;padding-inline:10px!important}#zefirok-maltipoo-runner .leaderboard-v4-score{font-size:16px!important}#zefirok-maltipoo-runner .leaderboard-v4-podium-card{min-height:188px!important}#zefirok-maltipoo-runner .leaderboard-v4-podium-card.is-first{min-height:206px!important}}
+</style>
 </head>
 <body>
 <div id="zefirok-maltipoo-runner">
   <div aria-hidden="false" class="leaderboard-layer leaderboard-v4-layer" data-leaderboard-layer>
     <div aria-labelledby="leaderboard-dialog-title" aria-modal="true" class="leaderboard-dialog leaderboard-v4-dialog" role="dialog">
       <div class="leaderboard-dialog-head">
-        <div class="leaderboard-v4-title-wrap"><span><span class="leaderboard-v4-kicker-label"><small>СЛАДКИЙ ЗАБЕГ</small><strong>СЕЗОННЫЙ РЕЙТИНГ</strong></span></span><strong id="leaderboard-dialog-title">РЕЙТИНГ ИГРОКОВ</strong></div>
+        <div class="leaderboard-v4-title-wrap"><span><span class="leaderboard-v4-kicker-label"><small>СЛАДКИЙ ЗАБЕГ</small><strong>СЕЗОННЫЙ РЕЙТИНГ</strong></span></span><strong id="leaderboard-dialog-title">РЕЙТИНГ ИГРОКОВ</strong><small class="leaderboard-v5-head-note">Новый визуальный макет: сезонный обзор, лидеры и мини‑профили игроков</small></div>
       </div>
       <div class="leaderboard-content" data-leaderboard-content>
         <div class="leaderboard-v4-modal-hero leaderboard-fixed-media" aria-hidden="true"><img src="/assets/rating/v8/season-1-cafe-opening.png?v=20260810" alt="" decoding="async" loading="eager" fetchpriority="high" data-leaderboard-modal-banner></div>
@@ -8920,7 +8976,7 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
 <script>(() => {
   "use strict";
 
-  const BUILD = "1.3.0 · player-profile-art-drag";
+  const BUILD = "1.4.0 · rating-mockup-refresh";
   const tg = window.Telegram?.WebApp;
   const embedded = window.parent !== window;
   let lastHapticAt = 0;
@@ -9252,9 +9308,50 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
 
   function seasonHeader(season, timing, requestedMode) {
     const allTime = requestedMode === "all_time";
-    return `<section class="leaderboard-v4-season-card${allTime ? " is-all-time" : ""}">
-      <div class="leaderboard-v4-season-main"><span class="leaderboard-v4-season-badge">${allTime ? "ЛУЧШИЕ РЕЗУЛЬТАТЫ" : "ПРЕМИАЛЬНЫЙ СЕЗОН"}</span><div class="leaderboard-v4-season-timing" data-leaderboard-season-timing><span>${escapeHtml(timing)}</span></div></div>
-      ${allTime ? "" : `<div class="leaderboard-v4-season-reward">${rewardMarkup(season?.reward)}</div>`}
+    const seasonName = String(season?.title || season?.name || season?.label || "").trim();
+    const primaryTitle = seasonName || (allTime ? "ЗАЛ СЛАВЫ" : "СЕЗОННЫЙ ЗАЧЁТ");
+    const subtitle = allTime
+      ? "Лучшие личные рекорды игроков за всё время. Здесь сохраняются самые сильные результаты."
+      : "Следите за сезоном, забирайте награду лидера и открывайте мини‑профили игроков прямо из таблицы.";
+    const rewardBlock = allTime
+      ? `<div class="leaderboard-v5-reward-box is-all-time"><small>Режим</small><strong class="leaderboard-v5-season-title">Рекорды</strong><p>Показываем лучший личный результат каждого игрока без привязки к одному сезону.</p></div>`
+      : `<div class="leaderboard-v5-reward-box"><small>Награда сезона</small>${season?.reward ? rewardMarkup(season.reward) : `<p>Награда появится после публикации сезона.</p>`}<p>Следите за местом в рейтинге — награды автоматически закреплены за призовыми позициями.</p></div>`;
+    return `<section class="leaderboard-v5-season-card${allTime ? " is-all-time" : ""}">
+      <div class="leaderboard-v5-season-copy">
+        <span class="leaderboard-v5-section-kicker">${allTime ? "ЛУЧШИЕ РЕЗУЛЬТАТЫ" : "АКТИВНЫЙ СЕЗОН"}</span>
+        <strong class="leaderboard-v5-season-title">${escapeHtml(primaryTitle)}</strong>
+        <p class="leaderboard-v5-season-subtitle">${escapeHtml(subtitle)}</p>
+        <div class="leaderboard-v5-season-meta" data-leaderboard-season-timing><span class="leaderboard-v5-season-clock" aria-hidden="true">⏳</span><span>${escapeHtml(timing)}</span></div>
+        <div class="leaderboard-v5-season-hint">Тап по карточке игрока открывает его мини‑профиль: уровень, трофеи, свежие достижения и сравнение с вашим прогрессом.</div>
+      </div>
+      <div class="leaderboard-v5-season-aside">${rewardBlock}</div>
+    </section>`;
+  }
+
+  function leaderboardSectionHead(kicker, title, subtitle = "") {
+    return `<div class="leaderboard-v5-block-head"><div><span class="leaderboard-v5-section-kicker">${escapeHtml(kicker)}</span><strong>${escapeHtml(title)}</strong>${subtitle ? `<p>${escapeHtml(subtitle)}</p>` : ""}</div></div>`;
+  }
+
+  function summaryMetric(icon, label, value, note = "") {
+    return `<div class="leaderboard-v5-summary-item"><span class="leaderboard-v5-summary-icon" aria-hidden="true">${icon}</span><span class="leaderboard-v5-summary-copy"><small>${escapeHtml(label)}</small><strong>${escapeHtml(value)}</strong>${note ? `<span class="leaderboard-v5-summary-note">${escapeHtml(note)}</span>` : ""}</span></div>`;
+  }
+
+  function summaryCard(data) {
+    const hasMe = !!data?.me;
+    const placeValue = hasMe ? `#${Number(data.me.place || 0)}` : "—";
+    const scoreValue = hasMe ? formatter.format(data.me.score) : "—";
+    const gapValue = !hasMe ? "—" : Number(data.gapToFirst || 0) > 0 ? formatter.format(data.gapToFirst) : "Лидер";
+    const placeNote = hasMe ? "Ваше текущее место в таблице" : "Вы ещё не попали в рейтинг";
+    const scoreNote = hasMe ? "Лучший подтверждённый результат" : `Нужно от ${PROFILE_MIN_SECONDS} сек и ${PROFILE_MIN_SCORE} очков`;
+    const gapNote = hasMe ? (Number(data.gapToFirst || 0) > 0 ? "Сколько очков до первого места" : "Вы уже на вершине рейтинга") : "Появится после первого зачтённого забега";
+    const badgeText = hasMe ? "В рейтинге" : "Ещё не в таблице";
+    const showcase = hasMe && Array.isArray(data.me?.showcase) && data.me.showcase.length
+      ? `<div class="leaderboard-v5-summary-showcase"><strong>Ваши избранные достижения</strong>${showcaseMarkup(data.me)}<span>Показываем витрину достижений сразу в блоке прогресса.</span></div>`
+      : `<div class="leaderboard-v5-summary-showcase"><strong>Как попасть в рейтинг</strong><span>Завершите забег от ${PROFILE_MIN_SECONDS} секунд и ${PROFILE_MIN_SCORE} очков — после этого появится место в таблице и мини‑профиль.</span></div>`;
+    return `<section class="leaderboard-v5-summary">
+      <div class="leaderboard-v5-summary-head"><div><span class="leaderboard-v5-section-kicker">МОЙ ПРОГРЕСС</span><strong>Твоя позиция видна сразу</strong><p>Компактный блок под табами показывает место, лучший результат и отставание от лидера без лишних переходов.</p></div><span class="leaderboard-v5-summary-badge">${escapeHtml(badgeText)}</span></div>
+      <div class="leaderboard-v5-summary-grid">${summaryMetric("🏆", "Место", placeValue, placeNote)}${summaryMetric("⭐", "Лучший результат", scoreValue, scoreNote)}${summaryMetric("💖", "До первого места", gapValue, gapNote)}</div>
+      ${showcase}
     </section>`;
   }
 
@@ -9374,7 +9471,11 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
 
   function rows(entries) {
     const myId = String(telegramProfile?.id || "");
-    return entries.slice(3).map(entry => {const playerId=escapeHtml(entry.telegramId||""),playerLabel=escapeHtml(`Открыть мини-профиль: ${entry.name||"Игрок"}`);return `<div class="leaderboard-v4-row${String(entry.telegramId || "") === myId ? " is-me" : ""}" data-player-profile-id="${playerId}" role="button" tabindex="0" aria-label="${playerLabel}"><span class="leaderboard-v4-place">${Number(entry.place || 0)}</span>${avatarMarkup(entry, true, false)}<span class="leaderboard-v4-row-copy"><strong>${playerNameMarkup(entry)}</strong>${showcaseMarkup(entry)}</span><span class="leaderboard-v4-score">${formatter.format(entry.score)}</span><span class="leaderboard-v4-row-chevron" aria-hidden="true">›</span></div>`;}).join("");
+    return entries.slice(3).map(entry => {
+      const playerId = escapeHtml(entry.telegramId || "");
+      const playerLabel = escapeHtml(`Открыть мини-профиль: ${entry.name || "Игрок"}`);
+      return `<div class="leaderboard-v4-row${String(entry.telegramId || "") === myId ? " is-me" : ""}" data-player-profile-id="${playerId}" role="button" tabindex="0" aria-label="${playerLabel}"><span class="leaderboard-v4-place">${Number(entry.place || 0)}</span>${avatarMarkup(entry, true, false)}<span class="leaderboard-v4-row-copy"><strong>${playerNameMarkup(entry)}</strong>${showcaseMarkup(entry)}</span><span class="leaderboard-v4-score"><small>очки</small>${formatter.format(entry.score)}</span><span class="leaderboard-v4-row-chevron" aria-hidden="true">›</span></div>`;
+    }).join("");
   }
 
   function syncBanner() {
@@ -9489,13 +9590,13 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
     const timing = liveTimingText(data, mode);
     const reward = data.reward;
     const rewardBlock = reward
-      ? `<div class="leaderboard-v4-reward-card"><div class="leaderboard-v4-season-reward leaderboard-v4-claimed-reward-frame">${rewardMarkup(reward)}</div><span>${Number(reward.place || 0)} место · ${escapeHtml(reward.title || `${reward.amount} кофе`)}</span>${reward.status === "pending" ? `<button class="leaderboard-claim" data-leaderboard-claim data-reward-id="${escapeHtml(reward.id)}" type="button">Забрать награду</button>` : ""}</div>`
+      ? `<div class="leaderboard-v4-reward-card">${leaderboardSectionHead("НАГРАДА", "Что выдается по итогам", "Этот блок оставили заметным и самостоятельным, чтобы пользователь сразу видел приз за результат.")}<div class="leaderboard-v4-season-reward leaderboard-v4-claimed-reward-frame">${rewardMarkup(reward)}</div><span>${Number(reward.place || 0)} место · ${escapeHtml(reward.title || `${reward.amount} кофе`)}</span>${reward.status === "pending" ? `<button class="leaderboard-claim" data-leaderboard-claim data-reward-id="${escapeHtml(reward.id)}" type="button">Забрать награду</button>` : ""}</div>`
       : "";
-    const me = data.me
-      ? `<div class="leaderboard-v4-me-card"><strong>Ваше место: ${Number(data.me.place || 0)}</strong><span>Лучший результат: ${formatter.format(data.me.score)}${Number(data.gapToFirst || 0) > 0 ? ` · до первого места ${formatter.format(data.gapToFirst)}` : " · вы на первом месте!"}</span>${showcaseMarkup(data.me)}</div>`
-      : `<div class="leaderboard-v4-me-card"><strong>Вы ещё не в таблице</strong><span>Завершите забег от ${PROFILE_MIN_SECONDS} секунд и ${PROFILE_MIN_SCORE} очков.</span></div>`;
+    const topBlock = top.length
+      ? `<section class="leaderboard-v5-block leaderboard-v5-top-stack">${leaderboardSectionHead(mode === "all_time" ? "ТОП РЕКОРДОВ" : "ЛИДЕРЫ СЕЗОНА", "Первые три места", "Победный подиум отделён от общего списка, как в макете: игроки 1–3 сразу считываются визуально.")}<div class="leaderboard-v4-podium">${podium(top[1], 2)}${podium(top[0], 1)}${podium(top[2], 3)}</div></section><section class="leaderboard-v5-block leaderboard-v5-list-shell">${leaderboardSectionHead("ОБЩИЙ СПИСОК", "Остальные игроки рейтинга", "Каждая строка компактна и кликабельна: аватар, имя, витрина достижений, результат и быстрый вход в мини‑профиль.")}<div class="leaderboard-v4-list">${rows(top)}</div></section>`
+      : '<div class="leaderboard-empty">Пока нет результатов. Станьте первым!</div>';
 
-    dynamic.innerHTML = `${seasonHeader(season, timing, mode)}${tabs()}${top.length ? `<div class="leaderboard-v4-podium">${podium(top[1], 2)}${podium(top[0], 1)}${podium(top[2], 3)}</div><div class="leaderboard-v4-list">${rows(top)}</div>` : '<div class="leaderboard-empty">Пока нет результатов. Станьте первым!</div>'}${me}${rewardBlock}`;
+    dynamic.innerHTML = `${seasonHeader(season, timing, mode)}${tabs()}${summaryCard(data)}${topBlock}${rewardBlock}`;
   }
 
   function stripTelegramPhotos(data) {
