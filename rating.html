@@ -8588,7 +8588,7 @@ html>body{padding:
 html,body{width:100%;min-height:100%;margin:0;overflow:hidden;background:#fff5f4}
 body{font-family:var(--font-sans);color:#60384a}
 #zefirok-maltipoo-runner{position:relative;width:100%;height:var(--zefirok-app-height,100dvh);min-height:100dvh;overflow:hidden;background:#fff5f4;font-family:var(--font-sans)}
-#zefirok-maltipoo-runner .leaderboard-v4-layer{position:absolute!important;inset:0!important;z-index:1!important;display:grid!important;place-items:center!important;box-sizing:border-box!important;padding:max(8px,var(--zefirok-content-safe-top,0px)) max(8px,var(--zefirok-content-safe-right,0px)) max(8px,var(--zefirok-content-safe-bottom,0px)) max(8px,var(--zefirok-content-safe-left,0px))!important;background:linear-gradient(180deg,#fff5f4,#fde8ef)!important;backdrop-filter:none!important}
+#zefirok-maltipoo-runner .leaderboard-v4-layer{position:absolute!important;inset:0!important;z-index:1!important;display:grid!important;place-items:center!important;box-sizing:border-box!important;padding:calc(max(8px,var(--zefirok-content-safe-top,0px)) + 18px) max(8px,var(--zefirok-content-safe-right,0px)) max(8px,var(--zefirok-content-safe-bottom,0px)) max(8px,var(--zefirok-content-safe-left,0px))!important;background:linear-gradient(180deg,#fff5f4,#fde8ef)!important;backdrop-filter:none!important}
 #zefirok-maltipoo-runner .leaderboard-v4-dialog{width:min(100%,540px)!important;height:100%!important;max-height:100%!important;box-sizing:border-box!important;border-radius:26px!important;display:flex!important;flex-direction:column!important;overflow:hidden!important}
 #zefirok-maltipoo-runner .leaderboard-dialog-head{flex:0 0 auto!important}
 #zefirok-maltipoo-runner .leaderboard-content{flex:1 1 auto!important;min-height:0!important;overflow:auto!important;overscroll-behavior:contain!important;-webkit-overflow-scrolling:touch!important}
@@ -8603,7 +8603,7 @@ html > body { padding: 0 !important; }
   grid-template-columns: minmax(0, 540px) !important;
   grid-template-rows: minmax(0, 1fr) !important;
   place-items: stretch center !important;
-  padding: max(8px, var(--zefirok-content-safe-top, 0px)) max(8px, var(--zefirok-content-safe-right, 0px)) max(8px, var(--zefirok-content-safe-bottom, 0px)) max(8px, var(--zefirok-content-safe-left, 0px)) !important;
+  padding: calc(max(8px, var(--zefirok-content-safe-top, 0px)) + 18px) max(8px, var(--zefirok-content-safe-right, 0px)) max(8px, var(--zefirok-content-safe-bottom, 0px)) max(8px, var(--zefirok-content-safe-left, 0px)) !important;
 }
 #zefirok-maltipoo-runner .leaderboard-v4-dialog {
   width: 100% !important;
@@ -8874,7 +8874,7 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
 .rating-v6-sr-only{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
 #zefirok-maltipoo-runner .leaderboard-v4-layer{padding:0!important;background:linear-gradient(180deg,#fff8f6,#fff2f5)!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
 #zefirok-maltipoo-runner .leaderboard-v4-dialog{width:min(100%,560px)!important;height:100%!important;max-height:none!important;border:0!important;border-radius:0!important;background:linear-gradient(180deg,#fff9f6 0%,#fff5f4 32%,#fff0f5 100%)!important;box-shadow:none!important;overflow:hidden!important}
-#zefirok-maltipoo-runner .rating-v6-content{display:block!important;height:100%!important;overflow-y:auto!important;overscroll-behavior:contain!important;padding:14px 14px max(26px,env(safe-area-inset-bottom))!important;scrollbar-width:none!important}
+#zefirok-maltipoo-runner .rating-v6-content{display:block!important;height:100%!important;overflow-y:auto!important;overscroll-behavior:contain!important;padding:18px 14px max(26px,env(safe-area-inset-bottom))!important;scrollbar-width:none!important}
 #zefirok-maltipoo-runner .rating-v6-content::-webkit-scrollbar{display:none!important}
 #zefirok-maltipoo-runner .rating-v6-dynamic{display:grid!important;gap:12px!important;min-height:100%!important}
 #zefirok-maltipoo-runner .leaderboard-v4-modal-hero,#zefirok-maltipoo-runner .leaderboard-dialog-head{display:none!important}
@@ -8925,7 +8925,7 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
 #zefirok-maltipoo-runner .rating-v6-section-title>div{display:grid;gap:1px}.rating-v6-section-title small{color:#b26180;font-size:8.5px;font-weight:950;text-transform:uppercase;letter-spacing:.08em}.rating-v6-section-title strong{color:#6d334a;font-size:19px;font-weight:950;line-height:1}.rating-v6-section-title>span{max-width:190px;color:#a07e8a;font-size:8px;font-weight:800;line-height:1.25;text-align:right}
 #zefirok-maltipoo-runner .rating-v6-podium{display:grid;grid-template-columns:1fr 1.08fr 1fr;gap:7px;align-items:end;padding:18px 0 0}
 #zefirok-maltipoo-runner .rating-v6-podium-card{position:relative;display:grid;justify-items:center;align-content:end;gap:5px;min-width:0;min-height:175px;padding:31px 7px 13px;border:1px solid rgba(229,188,202,.82);border-radius:23px 23px 16px 16px;background:linear-gradient(180deg,#fffdfd,#fff1f5);box-shadow:0 10px 20px rgba(114,65,84,.09);cursor:pointer;-webkit-tap-highlight-color:transparent;transition:transform .16s ease,box-shadow .16s ease}
-#zefirok-maltipoo-runner .rating-v6-podium-card::after{content:"";position:absolute;left:-2px;right:-2px;bottom:-7px;height:17px;border:1px solid rgba(224,184,198,.68);border-radius:50%;background:linear-gradient(180deg,#fff9fb,#f6dbe5);box-shadow:0 5px 8px rgba(120,71,88,.06);z-index:-1}
+#zefirok-maltipoo-runner .rating-v6-podium-card::after{content:"";position:absolute;left:12px;right:12px;bottom:-12px;height:22px;border:0;border-radius:50%;background:radial-gradient(ellipse at center,rgba(111,72,85,.24) 0%,rgba(111,72,85,.14) 48%,rgba(111,72,85,0) 76%);box-shadow:none;filter:blur(1.2px);opacity:.92;z-index:-1;pointer-events:none}
 #zefirok-maltipoo-runner .rating-v6-podium-card.is-first{min-height:196px;padding-top:33px;border-color:rgba(226,183,89,.70);background:radial-gradient(circle at 50% 8%,rgba(255,233,146,.38),transparent 28%),linear-gradient(180deg,#fffdf5,#fff1db);box-shadow:0 14px 28px rgba(157,108,37,.12);transform:translateY(-10px)}
 #zefirok-maltipoo-runner .rating-v6-podium-card[data-place="2"]{border-color:rgba(181,192,205,.82);background:linear-gradient(180deg,#fdfefe,#f2f4f8)}
 #zefirok-maltipoo-runner .rating-v6-podium-card[data-place="3"]{border-color:rgba(211,161,119,.78);background:linear-gradient(180deg,#fffaf6,#f8e5d5)}
