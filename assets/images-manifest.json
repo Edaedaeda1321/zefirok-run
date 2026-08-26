@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "catalogHash": "6513341bbefd4312",
-  "count": 408,
+  "catalogHash": "d1b7d85b95572c60",
+  "count": 410,
   "images": [
     {
       "fileName": "achievements/badges/album-complete-1.png",
@@ -3172,6 +3172,14 @@
       "modified": 1787517094000
     },
     {
+      "fileName": "ui/icon_battlepass.png",
+      "label": "Icon battlepass",
+      "folder": "ui",
+      "path": "/assets/ui/icon_battlepass.png",
+      "size": 109597,
+      "modified": 1787741743000
+    },
+    {
       "fileName": "ui/icon_busters.png",
       "label": "Icon busters",
       "folder": "ui",
@@ -3202,6 +3210,14 @@
       "path": "/assets/ui/icon_referals.png",
       "size": 891598,
       "modified": 1787146378000
+    },
+    {
+      "fileName": "ui/icon_reiting.png",
+      "label": "Icon reiting",
+      "folder": "ui",
+      "path": "/assets/ui/icon_reiting.png",
+      "size": 133342,
+      "modified": 1787741743000
     },
     {
       "fileName": "ui/icon_score_acivment.png",
