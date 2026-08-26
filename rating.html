@@ -8942,18 +8942,19 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
 
 #zefirok-maltipoo-runner .rating-v6-ranking-list{display:grid;gap:10px;padding-top:2px}
 #zefirok-maltipoo-runner .rating-v6-list{display:grid;gap:7px}
-#zefirok-maltipoo-runner .rating-v6-row{display:grid;grid-template-columns:28px 43px minmax(0,1fr) 30px auto 12px;gap:8px;align-items:center;min-height:62px;padding:8px 10px;border:1px solid rgba(228,190,202,.80);border-radius:19px;background:linear-gradient(180deg,#fffdfd,#fff5f7);box-shadow:0 6px 14px rgba(117,70,87,.055);cursor:pointer;-webkit-tap-highlight-color:transparent;transition:transform .14s ease,box-shadow .14s ease,background .14s ease}
+#zefirok-maltipoo-runner .rating-v6-row{display:grid;grid-template-columns:28px 43px minmax(0,1fr) auto 12px;gap:8px;align-items:center;min-height:62px;padding:8px 10px;border:1px solid rgba(228,190,202,.80);border-radius:19px;background:linear-gradient(180deg,#fffdfd,#fff5f7);box-shadow:0 6px 14px rgba(117,70,87,.055);cursor:pointer;-webkit-tap-highlight-color:transparent;transition:transform .14s ease,box-shadow .14s ease,background .14s ease}
+#zefirok-maltipoo-runner .rating-v6-row.has-trophy{grid-template-columns:28px 43px minmax(0,1fr) 30px auto 12px}
 #zefirok-maltipoo-runner .rating-v6-row:active{transform:scale(.993)}
 #zefirok-maltipoo-runner .rating-v6-row.is-me{border-color:rgba(207,82,130,.60);background:linear-gradient(180deg,#fff4f8,#ffe7ef);box-shadow:0 7px 18px rgba(185,75,116,.10)}
 #zefirok-maltipoo-runner .rating-v6-row-place{color:#bd4e79;font-size:15px;font-weight:950;text-align:center;font-variant-numeric:tabular-nums}
 #zefirok-maltipoo-runner .rating-v6-row-avatar{display:grid;place-items:center}.rating-v6-row-avatar .leaderboard-avatar-frame.is-compact{width:43px!important;height:43px!important}.rating-v6-row-avatar .leaderboard-level-badge{display:none!important}
 #zefirok-maltipoo-runner .rating-v6-row-identity{display:grid;gap:3px;min-width:0}.rating-v6-row-identity>strong{display:flex;align-items:center;gap:5px;min-width:0;overflow:hidden;color:#69334a;font-size:11px;font-weight:950;line-height:1.1;white-space:nowrap}.rating-v6-row-identity .leaderboard-name-text{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.rating-v6-row-identity em{flex:0 0 auto;display:inline-flex;align-items:center;min-height:18px;padding:3px 6px;border-radius:999px;background:#d65e8b;color:#fff;font-size:6.5px;font-style:normal;font-weight:950}.rating-v6-row-identity>small{justify-self:start;display:inline-flex;min-height:18px;align-items:center;padding:3px 7px;border-radius:999px;background:#f4e8e9;color:#977b81;font-size:6.5px;font-weight:900}
-#zefirok-maltipoo-runner .rating-v6-row-trophy{display:grid;place-items:center;width:30px;height:30px;border-radius:10px;background:linear-gradient(180deg,#fff9ec,#fff0d9);box-shadow:inset 0 0 0 1px rgba(226,191,114,.32)}.rating-v6-row-trophy img{width:27px;height:27px;object-fit:contain}.rating-v6-row-trophy.is-empty{background:transparent;box-shadow:none}
+#zefirok-maltipoo-runner .rating-v6-row-trophy{display:grid;place-items:center;width:30px;height:30px;border-radius:10px;background:linear-gradient(180deg,#fff9ec,#fff0d9);box-shadow:inset 0 0 0 1px rgba(226,191,114,.32)}.rating-v6-row-trophy img{width:27px;height:27px;object-fit:contain}
 #zefirok-maltipoo-runner .rating-v6-row-score{color:#b94773;font-size:13px;font-weight:950;font-variant-numeric:tabular-nums;white-space:nowrap}
 #zefirok-maltipoo-runner .rating-v6-row-chevron{color:#c66a8c;font-size:18px;font-weight:900;line-height:1}
 #zefirok-maltipoo-runner .rating-v6-earned-reward{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;padding:13px 14px;border:1px solid rgba(226,189,104,.68);border-radius:21px;background:linear-gradient(180deg,#fffaf0,#fff1d4)}.rating-v6-earned-reward>div:first-child{display:grid;gap:2px}.rating-v6-earned-reward>div:first-child small{color:#a0782d;font-size:8px;font-weight:900;text-transform:uppercase}.rating-v6-earned-reward>div:first-child strong{color:#795420;font-size:15px;font-weight:950}.rating-v6-earned-reward-visual .leaderboard-reward-line{border:0!important;padding:0!important;background:none!important}.rating-v6-earned-reward .leaderboard-claim{grid-column:1/-1;justify-self:stretch}
 
-@media(max-width:390px){#zefirok-maltipoo-runner .rating-v6-content{padding-inline:10px!important}#zefirok-maltipoo-runner .rating-v6-hero{grid-template-columns:minmax(0,1fr) 108px;padding:15px;min-height:168px}.rating-v6-hero-copy h2{font-size:25px!important}.rating-v6-hero-reward{padding:8px!important}.rating-v6-me-stat{grid-template-columns:26px minmax(0,1fr);padding:4px 6px}.rating-v6-me-stat-icon{width:26px!important;height:26px!important}.rating-v6-me-stat-icon img{width:22px!important;height:22px!important}.rating-v6-me-stat-copy strong{font-size:16px!important}.rating-v6-podium{gap:5px!important}.rating-v6-podium-card{min-height:164px!important;padding-inline:5px!important}.rating-v6-podium-card.is-first{min-height:183px!important}.rating-v6-podium-card .leaderboard-avatar-frame{width:62px!important;height:62px!important}.rating-v6-podium-card.is-first .leaderboard-avatar-frame{width:73px!important;height:73px!important}.rating-v6-row{grid-template-columns:24px 39px minmax(0,1fr) 28px auto 10px!important;gap:6px!important;padding-inline:8px!important}.rating-v6-row-avatar .leaderboard-avatar-frame.is-compact{width:39px!important;height:39px!important}.rating-v6-row-score{font-size:12px!important}.rating-v6-section-title>span{display:none!important}}
+@media(max-width:390px){#zefirok-maltipoo-runner .rating-v6-content{padding-inline:10px!important}#zefirok-maltipoo-runner .rating-v6-hero{grid-template-columns:minmax(0,1fr) 108px;padding:15px;min-height:168px}.rating-v6-hero-copy h2{font-size:25px!important}.rating-v6-hero-reward{padding:8px!important}.rating-v6-me-stat{grid-template-columns:26px minmax(0,1fr);padding:4px 6px}.rating-v6-me-stat-icon{width:26px!important;height:26px!important}.rating-v6-me-stat-icon img{width:22px!important;height:22px!important}.rating-v6-me-stat-copy strong{font-size:16px!important}.rating-v6-podium{gap:5px!important}.rating-v6-podium-card{min-height:164px!important;padding-inline:5px!important}.rating-v6-podium-card.is-first{min-height:183px!important}.rating-v6-podium-card .leaderboard-avatar-frame{width:62px!important;height:62px!important}.rating-v6-podium-card.is-first .leaderboard-avatar-frame{width:73px!important;height:73px!important}.rating-v6-row{grid-template-columns:24px 39px minmax(0,1fr) auto 10px!important;gap:6px!important;padding-inline:8px!important}.rating-v6-row.has-trophy{grid-template-columns:24px 39px minmax(0,1fr) 28px auto 10px!important}.rating-v6-row-avatar .leaderboard-avatar-frame.is-compact{width:39px!important;height:39px!important}.rating-v6-row-score{font-size:12px!important}.rating-v6-section-title>span{display:none!important}}
 @media(prefers-reduced-motion:reduce){#zefirok-maltipoo-runner .rating-v6-tabs button,#zefirok-maltipoo-runner .rating-v6-row,#zefirok-maltipoo-runner .rating-v6-podium-card{transition:none!important}}
 </style>
 
@@ -9435,7 +9436,7 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
 
   function firstTrophyMarkup(entry) {
     const item = Array.isArray(entry?.showcase) ? entry.showcase[0] : null;
-    if (!item) return `<span class="rating-v6-row-trophy is-empty" aria-hidden="true"></span>`;
+    if (!item) return "";
     return `<span class="rating-v6-row-trophy" title="${escapeHtml(item?.title || "Достижение")}">${achievementThumbMarkup(item)}</span>`;
   }
 
@@ -9568,11 +9569,12 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
       const playerLabel = escapeHtml(`Открыть мини-профиль: ${entry.name || "Игрок"}`);
       const isMe = String(entry.telegramId || "") === myId;
       const level = Math.max(1, Math.floor(Number(entry?.level || 1)));
-      return `<div class="rating-v6-row${isMe ? " is-me" : ""}" data-player-profile-id="${playerId}" role="button" tabindex="0" aria-label="${playerLabel}">
+      const trophyMarkup = firstTrophyMarkup(entry);
+      return `<div class="rating-v6-row${isMe ? " is-me" : ""}${trophyMarkup ? " has-trophy" : ""}" data-player-profile-id="${playerId}" role="button" tabindex="0" aria-label="${playerLabel}">
         <span class="rating-v6-row-place">${Number(entry.place || 0)}</span>
         <span class="rating-v6-row-avatar">${avatarMarkup(entry, true, false)}</span>
         <span class="rating-v6-row-identity"><strong>${playerNameMarkup(entry)}${isMe ? '<em>Ты</em>' : ""}</strong><small>Ур. ${level}</small></span>
-        ${firstTrophyMarkup(entry)}
+        ${trophyMarkup}
         <span class="rating-v6-row-score">${formatter.format(entry.score || 0)}</span>
         <span class="rating-v6-row-chevron" aria-hidden="true">›</span>
       </div>`;

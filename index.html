@@ -11384,6 +11384,9 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       let purchaseReturnFocus = null;
       let purchaseLimitTimer = 0;
       const assetSources = JSON.parse(root.querySelector(&quot;[data-zefirok-assets]&quot;).textContent);
+      // Новый стандартный аватар Зеффи в шапке основного экрана.
+      // Не влияет на игровой спрайт и портрет выбранного скина в забеге.
+      assetSources.skinDefaultAvatar = &quot;/assets/ui/new_avatars_game.png&quot;;
       // Физический товар «Фирменный зефир» во всех экранах использует тот же арт,
       // что и основная карточка магазина: параметры, подтверждение, успех и склад.
       assetSources.shopZefirProduct = assetSources.shopMarshmallowAssortment || &quot;/assets/optimized/v0.79.5/shopMarshmallowAssortment.png?v=0.79.5&quot;;
