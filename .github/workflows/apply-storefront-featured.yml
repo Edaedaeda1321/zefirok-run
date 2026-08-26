@@ -18,6 +18,8 @@ jobs:
         with:
           ref: feat/storefront-featured-control
           fetch-depth: 0
+      - name: Fix patch matcher
+        run: python3 .github/fix_patch_storefront.py
       - name: Apply patch
         run: python3 .github/patch_storefront_featured.py
       - name: Validate
