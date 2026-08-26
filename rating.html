@@ -9922,15 +9922,15 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
   playerProfileDrag?.addEventListener("pointermove",event=>{
     if(profileDragPointerId!==event.pointerId||!profileDragStartY||!playerProfileSheet||playerProfileDismissAnimating)return;
     event.preventDefault();const currentY=Number(event.clientY||0),nowTs=performance.now(),dt=Math.max(1,nowTs-profileDragLastTs),step=currentY-profileDragLastY;profileDragVelocity=step/dt;profileDragLastY=currentY;profileDragLastTs=nowTs;profileDragDelta=Math.max(0,currentY-profileDragStartY);
-    const sheetHeight=Math.max(220,playerProfileSheet.offsetHeight||playerProfileSheet.getBoundingClientRect().height||0),closeThreshold=Math.max(170,Math.min(220,sheetHeight*.27)),manualOffset=Math.min(sheetHeight*.38,profileDragDelta*.90);
+    const sheetHeight=Math.max(220,playerProfileSheet.offsetHeight||playerProfileSheet.getBoundingClientRect().height||0),closeThreshold=Math.max(330,Math.min(480,sheetHeight*.60)),manualOffset=Math.min(sheetHeight*.68,profileDragDelta*.94);
     playerProfileSheet.style.transform=`translate3d(0,${Math.round(manualOffset)}px,0)`;applyPlayerProfileBackdropProgress(playerProfileBackdropProgressForOffset(manualOffset,sheetHeight));
     if(!profileDragArmed&&profileDragDelta>=closeThreshold){profileDragArmed=true;playerProfileDrag?.classList.add("is-armed");ratingSelectHaptic();}
-    else if(profileDragArmed&&profileDragDelta<closeThreshold*.82){profileDragArmed=false;playerProfileDrag?.classList.remove("is-armed");}
+    else if(profileDragArmed&&profileDragDelta<closeThreshold*.88){profileDragArmed=false;playerProfileDrag?.classList.remove("is-armed");}
   });
   const finishPlayerProfileDrag=(event,cancelled=false)=>{
     if(profileDragPointerId!==event.pointerId)return;
     try{playerProfileDrag?.releasePointerCapture?.(event.pointerId);}catch{}
-    const sheetHeight=Math.max(220,playerProfileSheet?.offsetHeight||playerProfileSheet?.getBoundingClientRect?.().height||0),closeThreshold=Math.max(170,Math.min(220,sheetHeight*.27)),closeByDistance=!cancelled&&profileDragDelta>=closeThreshold,closeByFlick=!cancelled&&profileDragDelta>=closeThreshold*.58&&profileDragVelocity>1.0,manualOffset=Math.min(sheetHeight*.38,profileDragDelta*.90),releaseVelocity=Math.max(0,profileDragVelocity);
+    const sheetHeight=Math.max(220,playerProfileSheet?.offsetHeight||playerProfileSheet?.getBoundingClientRect?.().height||0),closeThreshold=Math.max(330,Math.min(480,sheetHeight*.60)),closeByDistance=!cancelled&&profileDragDelta>=closeThreshold,closeByFlick=!cancelled&&profileDragDelta>=closeThreshold*.78&&profileDragVelocity>1.25,manualOffset=Math.min(sheetHeight*.68,profileDragDelta*.94),releaseVelocity=Math.max(0,profileDragVelocity);
     if(closeByDistance||closeByFlick){resetPlayerProfileDragState();ratingImpactHaptic("light");closePlayerProfile({offset:manualOffset,velocity:releaseVelocity,fromDrag:true});return;}
     resetPlayerProfileDragState();settlePlayerProfileDrag(manualOffset);
   };
