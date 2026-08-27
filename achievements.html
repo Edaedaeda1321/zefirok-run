@@ -7,1011 +7,234 @@
   <meta name="color-scheme" content="light" />
   <title>Достижения — Сладкий Забег</title>
   <script>
-    try {
-      if (window.parent && window.parent !== window) document.documentElement.classList.add('is-embedded');
-    } catch {}
+    try { if (window.parent && window.parent !== window) document.documentElement.classList.add('is-embedded'); } catch {}
   </script>
   <style>
     :root{
       color-scheme:light;
-      --bg:#fff7f4;
-      --surface:#fffdfb;
-      --surface-soft:#fff8f9;
-      --line:rgba(232,194,206,.78);
-      --line-soft:rgba(235,213,220,.88);
-      --text:#573744;
-      --ink:#2f313a;
-      --muted:#957582;
-      --accent:#d86291;
-      --accent-strong:#bc456f;
-      --accent-soft:#ffe8f1;
-      --gold:#e9aa36;
-      --gold-soft:#fff2d5;
-      --blue:#55aee5;
-      --blue-soft:#eaf6ff;
-      --shadow:0 16px 44px rgba(111,70,87,.10);
-      --safe-top:max(env(safe-area-inset-top,0px),18px);
-      --safe-right:max(env(safe-area-inset-right,0px),16px);
-      --safe-bottom:max(env(safe-area-inset-bottom,0px),20px);
-      --safe-left:max(env(safe-area-inset-left,0px),16px);
-      --content-max:430px;
-      --embedded-top-clearance:72px;
+      --bg:#fff7f4;--surface:#fffdfa;--surface2:#fff7f8;--line:#efcfda;--line2:#f2dde4;
+      --text:#593844;--ink:#30333d;--muted:#947782;--pink:#e85a92;--pink2:#cf4779;--pink-soft:#ffe8f1;
+      --gold:#e5a52d;--gold2:#c98716;--gold-soft:#fff4cc;--green:#4ca663;--shadow:0 16px 42px rgba(104,65,81,.09);
+      --safe-top:max(env(safe-area-inset-top,0px),18px);--safe-right:max(env(safe-area-inset-right,0px),16px);
+      --safe-bottom:max(env(safe-area-inset-bottom,0px),20px);--safe-left:max(env(safe-area-inset-left,0px),16px);
+      --content-max:430px;--embedded-top-clearance:72px;
     }
-
-    *{box-sizing:border-box}
-    html{width:100%;overflow-x:hidden;background:var(--bg)}
+    *{box-sizing:border-box} html{width:100%;overflow-x:hidden;background:var(--bg)}
     html,body{margin:0;min-height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--text)}
-    body{width:100%;padding:var(--safe-top) var(--safe-right) var(--safe-bottom) var(--safe-left);overflow-x:hidden;background:radial-gradient(circle at 85% -4%,rgba(255,221,233,.76),transparent 34%),linear-gradient(180deg,#fffaf7 0%,#fff6f4 100%)}
+    body{width:100%;padding:var(--safe-top) var(--safe-right) var(--safe-bottom) var(--safe-left);overflow-x:hidden;background:radial-gradient(circle at 88% -2%,rgba(255,219,232,.78),transparent 31%),linear-gradient(180deg,#fffaf8,#fff5f3 70%,#fff9f5)}
     html.is-embedded body{padding-top:calc(var(--safe-top) + var(--embedded-top-clearance))}
-    button{font:inherit}
-    .page{width:100%;max-width:var(--content-max);margin:0 auto;display:grid;gap:12px;padding-bottom:4px}
-    .page>*{min-width:0;max-width:100%}
+    button{font:inherit;-webkit-tap-highlight-color:transparent}.page{width:100%;max-width:var(--content-max);margin:0 auto;display:grid;gap:12px;padding-bottom:6px}.page>*{min-width:0}
 
-    .hero{position:relative;overflow:hidden;padding:18px;border:1px solid var(--line);border-radius:26px;background-color:#fffaf8;background-image:url("/assets/achievements/background_achivment_panel.png");background-size:cover;background-position:center center;background-repeat:no-repeat;box-shadow:var(--shadow)}
-    .hero::after{content:none}
-    .hero-kicker{position:relative;z-index:1;display:inline-flex;align-items:center;gap:7px;padding:7px 10px;border-radius:999px;background:rgba(255,242,213,.92);color:#946424;font-size:10px;font-weight:900;letter-spacing:.02em;backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px)}
-    .hero-kicker img{display:block;width:16px;height:16px;flex:0 0 16px;object-fit:contain}
-    .hero h1{position:relative;z-index:1;margin:10px 0 5px;color:#64384a;font-size:26px;line-height:1.08;font-weight:950}
-    .hero p{position:relative;z-index:1;margin:0;max-width:560px;color:#92717f;font-size:12px;line-height:1.55;font-weight:650}
+    .topbar{display:grid;grid-template-columns:48px minmax(0,1fr) 48px;align-items:center;gap:10px;padding:2px 0 4px}
+    .topbar-btn{appearance:none;width:48px;height:48px;border:1px solid var(--line);border-radius:17px;background:rgba(255,255,255,.9);color:#aa5874;font-size:24px;font-weight:900;box-shadow:0 7px 19px rgba(113,73,89,.07);cursor:pointer}
+    .topbar-copy{text-align:center;min-width:0}.topbar-copy strong{display:block;color:#4e343c;font-size:20px;font-weight:950;line-height:1.1}.topbar-copy span{display:block;margin-top:3px;color:#ba7188;font-size:10px;font-weight:850}.topbar-spacer{width:48px}
 
-    .summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
-    .summary-card{min-width:0;padding:12px 10px;border:1px solid var(--line-soft);border-radius:19px;background:rgba(255,255,255,.82);box-shadow:0 8px 22px rgba(102,64,79,.055);display:grid;gap:3px}
-    .summary-card span{color:#9a7b87;font-size:9px;font-weight:800;line-height:1.2}
-    .summary-card strong{color:#653d4e;font-size:18px;font-weight:950;line-height:1}
-    .summary-card strong .points-inline span{font-size:inherit;color:inherit;font-weight:inherit;line-height:inherit}
-    .points-inline{display:inline-flex;align-items:center;gap:6px;vertical-align:middle}
-    .points-inline img{width:18px;height:18px;flex:0 0 auto;object-fit:contain}
-    .points-inline.is-small img{width:14px;height:14px}
-    .info-achievement-icon{width:18px;height:18px;object-fit:contain;display:block}
-    .summary-card.is-showcase{background:linear-gradient(145deg,#fff8dd,#fff2f7)}
-    .summary-card.is-catalog{background:linear-gradient(145deg,#fffdf8,#fff1f6)}
-    .summary-card.is-catalog strong{font-size:15px;line-height:1.15}
-    .summary-progress-track{height:6px;margin-top:5px;border-radius:999px;overflow:hidden;background:#f1e3e8}
-    .summary-progress-track i{display:block;width:0;height:100%;border-radius:inherit;background:linear-gradient(90deg,#ed86ad,#d45c8e);transition:width .3s ease}
-    .summary-card.is-rank{background:linear-gradient(145deg,#fff9e8,#fff3db)}
-    .summary-card.is-rank strong{font-size:15px;line-height:1.1;color:#8a5a16}
-    .summary-rank-next{margin-top:2px;color:#a4865b!important;font-size:8px!important}
+    .hero{position:relative;overflow:hidden;padding:17px;border:1px solid var(--line);border-radius:27px;background-color:#fffaf8;background-image:url('/assets/achievements/background_achivment_panel.png');background-size:cover;background-position:center;box-shadow:var(--shadow)}
+    .hero::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(255,250,248,.96) 0%,rgba(255,250,248,.82) 54%,rgba(255,250,248,.28) 100%);pointer-events:none}.hero>*{position:relative;z-index:1}
+    .hero-kicker{display:inline-flex;align-items:center;gap:7px;padding:7px 10px;border-radius:999px;background:rgba(255,242,213,.94);color:#91621d;font-size:9px;font-weight:950}.hero-kicker img{width:17px;height:17px;object-fit:contain}
+    .hero h1{margin:10px 0 5px;color:#60384a;font-size:25px;line-height:1.06;font-weight:950}.hero p{margin:0;max-width:305px;color:#8f6d7a;font-size:11px;line-height:1.5;font-weight:700}
 
-    .showcase-card{position:relative;overflow:hidden;padding:13px;border:1px solid rgba(222,188,115,.72);border-radius:24px;background:radial-gradient(circle at 88% 0,rgba(255,229,145,.38),transparent 32%),linear-gradient(145deg,#fffdf7,#fff4ed);box-shadow:0 12px 30px rgba(149,103,35,.07);display:grid;gap:10px;transition:border-color .25s ease,background .25s ease,box-shadow .25s ease}
-    .showcase-card>*{position:relative;z-index:1}
-    .showcase-card::before{content:"";position:absolute;inset:-36% auto auto 64%;width:170px;height:170px;border-radius:50%;opacity:0;pointer-events:none;transition:opacity .25s ease}
-    .showcase-card[data-style="gold"]{border-color:rgba(214,155,37,.88);background:radial-gradient(circle at 82% -8%,rgba(255,231,133,.72),transparent 36%),linear-gradient(145deg,#fffbe6,#ffe9a6);box-shadow:0 14px 34px rgba(170,113,20,.15)}
-    .showcase-card[data-style="gold"]::before{opacity:1;background:radial-gradient(circle,rgba(255,255,235,.95),rgba(255,224,120,.28) 36%,transparent 68%)}
-    .showcase-card[data-style="gold"] .showcase-head strong{color:#80520e}
-    .showcase-card[data-style="gold"] .showcase-count{border-color:rgba(197,134,24,.52);background:#fff0ac;color:#7d520d}
-    .showcase-card[data-style="gold"] .showcase-slot{border-color:rgba(199,143,31,.64);background:rgba(255,250,223,.82)}
-    .showcase-card[data-style="gold"] .showcase-slot.is-filled{border-color:rgba(195,132,20,.76);background:linear-gradient(155deg,#fffdf0,#ffe7a0);box-shadow:0 8px 20px rgba(173,111,15,.12)}
-    .showcase-card[data-style="seasonal"]{border-color:rgba(205,121,166,.76);background:radial-gradient(circle at 10% 0,rgba(211,232,255,.80),transparent 36%),radial-gradient(circle at 92% 0,rgba(255,206,230,.74),transparent 37%),linear-gradient(145deg,#fff9fc,#f9f0ff);box-shadow:0 14px 34px rgba(150,87,145,.13)}
-    .showcase-card[data-style="seasonal"]::before{opacity:1;background:radial-gradient(circle,rgba(255,255,255,.96),rgba(221,201,255,.35) 38%,transparent 68%)}
-    .showcase-card[data-style="seasonal"] .showcase-head strong{color:#8f4a72}
-    .showcase-card[data-style="seasonal"] .showcase-count{border-color:rgba(190,112,161,.42);background:#fff0f8;color:#9c4d73}
-    .showcase-card[data-style="seasonal"] .showcase-slot{border-color:rgba(196,139,188,.56);background:rgba(255,250,255,.82)}
-    .showcase-card[data-style="seasonal"] .showcase-slot.is-filled{border-color:rgba(188,117,176,.58);background:linear-gradient(155deg,#fffaff,#f4e9ff);box-shadow:0 8px 20px rgba(148,89,145,.10)}
-    .showcase-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
-    .showcase-head div{display:grid;gap:3px;min-width:0}
-    .showcase-head strong{font-size:15px;font-weight:950;color:#6f4a21}
-    .showcase-head span{font-size:9px;font-weight:700;line-height:1.45;color:#9b7a58}
-    .showcase-count{flex:0 0 auto;min-width:48px;padding:7px 9px;border:1px solid rgba(218,166,59,.38);border-radius:999px;background:#fff8d8;text-align:center;color:#926018;font-size:9px;font-weight:950}
-    .showcase-slots{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
-    .showcase-slot{min-width:0;min-height:132px;padding:9px 7px;border:1px dashed rgba(223,183,102,.65);border-radius:18px;background:rgba(255,255,255,.68);display:grid;align-content:center;justify-items:center;gap:5px;text-align:center}
-    .showcase-slot.is-filled{border-style:solid;border-color:rgba(217,161,47,.52);background:linear-gradient(155deg,#fffdf2,#ffefc6);box-shadow:0 7px 16px rgba(173,117,27,.07)}
-    .showcase-slot[data-rarity="epic"]{border-color:rgba(155,99,205,.38);background:linear-gradient(155deg,#fffaff,#f3e8ff)}
-    .showcase-slot[data-rarity="legendary"]{border-color:rgba(218,151,37,.58);background:linear-gradient(155deg,#fffbe8,#ffe7a5)}
-    .showcase-slot[data-rarity="legacy"]{border-color:rgba(202,82,124,.44);background:linear-gradient(155deg,#fff7fb,#ffe2ee)}
-    .showcase-slot-index{display:inline-flex;align-items:center;justify-content:center;min-width:21px;height:21px;padding:0 6px;border-radius:999px;background:rgba(255,255,255,.82);color:#a1712c;font-size:7px;font-weight:950}
-    .showcase-slot-icon{width:48px;height:48px;display:grid;place-items:center;font-size:24px;line-height:1}.showcase-slot-icon img{width:48px;height:48px;display:block;object-fit:contain}
-    .showcase-slot strong{width:100%;overflow:hidden;color:#714b1f;font-size:8px;font-weight:950;line-height:1.2;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
-    .showcase-slot small{font-size:7px;font-weight:850;line-height:1.25;color:#9c7944}
-    .showcase-slot-empty{color:#ab8b70;font-size:8px;font-weight:850;line-height:1.35}
-    .showcase-slot-actions{display:flex;justify-content:center;gap:4px;width:100%;margin-top:2px}
-    .showcase-slot-actions button{appearance:none;min-width:27px;height:27px;padding:0 6px;border:1px solid rgba(214,170,85,.45);border-radius:9px;background:rgba(255,255,255,.86);color:#8d6427;font-size:9px;font-weight:950;cursor:pointer}
-    .showcase-slot-actions button[data-showcase-remove]{color:#a95167}
-    .showcase-slot-actions button:disabled{opacity:.35;cursor:default}
-    .showcase-style-block{display:grid;gap:7px;padding:9px;border:1px solid rgba(229,207,178,.72);border-radius:17px;background:rgba(255,255,255,.54)}
-    .showcase-style-title{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
-    .showcase-style-title div{display:grid;gap:2px;min-width:0}
-    .showcase-style-title strong{color:#744f29;font-size:10px;font-weight:950}
-    .showcase-style-title span{color:#9e8064;font-size:8px;font-weight:750;line-height:1.35}
-    .showcase-style-picker{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
-    .showcase-style-option{appearance:none;min-width:0;min-height:76px;padding:8px 6px;border:1px solid rgba(224,198,171,.72);border-radius:14px;background:rgba(255,255,255,.86);color:#805f43;display:grid;align-content:center;justify-items:center;gap:4px;text-align:center;cursor:pointer}
-    .showcase-style-option[data-style-id="gold"]{background:linear-gradient(145deg,#fffdf0,#fff0bd);border-color:rgba(219,169,60,.52);color:#84570f}
-    .showcase-style-option[data-style-id="seasonal"]{background:linear-gradient(145deg,#fff8fc,#f4ebff);border-color:rgba(196,133,184,.43);color:#8f4c77}
-    .showcase-style-option.is-selected{outline:2px solid rgba(215,111,151,.46);outline-offset:1px;box-shadow:0 7px 16px rgba(151,89,117,.10)}
-    .showcase-style-option[data-style-id="gold"].is-selected{outline-color:rgba(208,148,35,.58)}
-    .showcase-style-option.is-locked{filter:saturate(.55);opacity:.58}
-    .showcase-style-option:disabled{cursor:default}
-    .showcase-style-swatch{width:28px;height:20px;border:1px solid rgba(219,190,172,.78);border-radius:8px;background:linear-gradient(145deg,#fff9f4,#ffe7ef);box-shadow:inset 0 1px 0 rgba(255,255,255,.9)}
-    .showcase-style-option[data-style-id="gold"] .showcase-style-swatch{border-color:rgba(203,139,27,.55);background:radial-gradient(circle at 75% 20%,#fff7b7,transparent 28%),linear-gradient(145deg,#fff9dc,#edb63e)}
-    .showcase-style-option[data-style-id="seasonal"] .showcase-style-swatch{border-color:rgba(188,122,178,.52);background:radial-gradient(circle at 20% 15%,#ddecff,transparent 34%),linear-gradient(145deg,#ffddea,#e7d9ff)}
-    .showcase-style-option strong{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:8px;font-weight:950}
-    .showcase-style-option small{font-size:6.5px;font-weight:800;line-height:1.2;color:inherit}
+    .prestige{position:relative;overflow:hidden;padding:14px;border:1px solid rgba(222,171,54,.62);border-radius:25px;background:radial-gradient(circle at 92% 0,rgba(255,229,130,.72),transparent 32%),linear-gradient(145deg,#fffdf2,#fff0cf 66%,#ffe7ee);box-shadow:0 13px 31px rgba(164,111,23,.10);display:grid;gap:12px}
+    .prestige-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}.prestige-title{display:flex;align-items:center;gap:9px;min-width:0}.prestige-title img{width:39px;height:39px;object-fit:contain;filter:drop-shadow(0 6px 10px rgba(183,119,27,.17))}.prestige-title div{display:grid;gap:2px}.prestige-title small{color:#a17948;font-size:8px;font-weight:900;text-transform:uppercase;letter-spacing:.06em}.prestige-title strong{color:#704817;font-size:16px;font-weight:950}
+    .prestige-rank{flex:0 0 auto;padding:7px 10px;border:1px solid rgba(201,137,25,.38);border-radius:999px;background:rgba(255,255,255,.62);color:#855a19;font-size:9px;font-weight:950}
+    .prestige-balance{display:flex;align-items:flex-end;justify-content:space-between;gap:10px}.prestige-points{display:flex;align-items:center;gap:7px;color:#6b4315}.prestige-points b{font-size:32px;line-height:.9;font-weight:950;letter-spacing:-1px}.prestige-points span{max-width:88px;color:#9b7140;font-size:8px;font-weight:850;line-height:1.25}.prestige-permanent{padding:6px 9px;border-radius:999px;background:#fff8e3;color:#a07127;font-size:8px;font-weight:900;white-space:nowrap}
+    .prestige-goal{padding:10px;border:1px solid rgba(225,190,120,.52);border-radius:17px;background:rgba(255,255,255,.62);display:grid;gap:7px}.prestige-goal-head{display:flex;align-items:center;justify-content:space-between;gap:8px}.prestige-goal-head strong{color:#784d1b;font-size:10px;font-weight:950}.prestige-goal-head span{color:#a0794c;font-size:8px;font-weight:850;text-align:right}.prestige-track{height:9px;overflow:hidden;border-radius:999px;background:#eedfcf}.prestige-track i{display:block;height:100%;width:0;border-radius:inherit;background:linear-gradient(90deg,#f08ab2,#db5489 53%,#e8aa31);transition:width .28s ease}.prestige-goal-foot{display:flex;justify-content:space-between;gap:8px;color:#a27c54;font-size:8px;font-weight:800}
 
-    .recent-card{padding:13px;border:1px solid rgba(226,190,204,.82);border-radius:24px;background:linear-gradient(145deg,rgba(255,255,255,.96),rgba(255,246,250,.95));box-shadow:0 10px 26px rgba(102,64,79,.06);display:grid;gap:9px}
-    .recent-head{display:flex;align-items:flex-end;justify-content:space-between;gap:10px}
-    .recent-head div{display:grid;gap:2px;min-width:0}
-    .recent-head strong{color:#613c4c;font-size:15px;font-weight:950}
-    .recent-head span{color:#a1838e;font-size:9px;font-weight:700;line-height:1.35}
-    .recent-list{display:grid;gap:7px}
-    .recent-achievement{display:grid;grid-template-columns:50px minmax(0,1fr) auto;align-items:center;gap:9px;padding:8px 9px;border:1px solid rgba(236,214,221,.88);border-radius:16px;background:rgba(255,255,255,.82)}
-    .recent-achievement-art{width:50px;height:50px;display:grid;place-items:center;font-size:22px}.recent-achievement-art img{width:50px;height:50px;display:block;object-fit:contain;filter:drop-shadow(0 5px 8px rgba(145,94,111,.10))}
-    .recent-achievement-copy{min-width:0;display:grid;gap:3px}
-    .recent-achievement-copy strong{overflow:hidden;text-overflow:ellipsis;color:#633d4e;font-size:10px;font-weight:950;line-height:1.25}
-    .recent-achievement-copy small{color:#9c7b88;font-size:8px;font-weight:750;line-height:1.3}
-    .recent-achievement-points{justify-self:end;display:inline-flex;align-items:center;min-height:26px;padding:4px 7px;border:1px solid rgba(218,163,51,.34);border-radius:999px;background:#fff8df;color:#8e631f;font-size:8px;font-weight:950;white-space:nowrap}
+    .quick{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}.quick-card{padding:10px 8px;border:1px solid var(--line2);border-radius:18px;background:rgba(255,255,255,.83);display:grid;gap:3px;text-align:center;box-shadow:0 7px 18px rgba(100,63,78,.045)}.quick-card span{color:#a0818c;font-size:7px;font-weight:850}.quick-card strong{color:#67414f;font-size:14px;font-weight:950}.quick-card.is-gold{background:linear-gradient(145deg,#fffaf0,#fff0cc);border-color:rgba(225,181,81,.5)}.quick-card.is-pink{background:linear-gradient(145deg,#fff9fb,#ffeaf2)}
 
-    .near-card,.series-card{padding:13px;border:1px solid rgba(226,190,204,.82);border-radius:24px;background:rgba(255,253,252,.94);box-shadow:0 10px 26px rgba(102,64,79,.06);display:grid;gap:9px}
-    .section-head{display:flex;align-items:flex-end;justify-content:space-between;gap:10px}
-    .section-head div{display:grid;gap:2px;min-width:0}
-    .section-head strong{color:#613c4c;font-size:15px;font-weight:950}
-    .section-head span{color:#a1838e;font-size:9px;font-weight:700;line-height:1.35}
-    .near-list,.series-list{display:grid;gap:7px}
-    .near-achievement{display:grid;grid-template-columns:50px minmax(0,1fr);align-items:center;gap:9px;padding:9px;border:1px solid rgba(236,214,221,.88);border-radius:16px;background:#fff}
-    .near-achievement-art{width:50px;height:50px;display:grid;place-items:center;font-size:22px}.near-achievement-art img{width:50px;height:50px;display:block;object-fit:contain;filter:drop-shadow(0 5px 8px rgba(145,94,111,.10))}
-    .near-copy{min-width:0;display:grid;gap:5px}
-    .near-title-row{display:flex;align-items:center;justify-content:space-between;gap:8px}.near-title-row strong{min-width:0;color:#633d4e;font-size:10px;font-weight:950;line-height:1.25}.near-title-row b{flex:0 0 auto;color:#b34e75;font-size:9px;font-weight:950}
-    .near-progress{height:7px;border-radius:999px;overflow:hidden;background:#f3e5ea}.near-progress i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#ef84ab,#d95d90)}
-    .near-copy small{display:flex;justify-content:space-between;gap:8px;color:#9c7b88;font-size:8px;font-weight:800}
-    .achievement-series{display:grid;grid-template-columns:36px minmax(0,1fr) auto;align-items:center;gap:9px;padding:10px;border:1px solid rgba(235,211,219,.88);border-radius:16px;background:#fff}
-    .achievement-series.is-complete{border-color:rgba(225,175,63,.62);background:linear-gradient(145deg,#fffdf2,#fff2c9);box-shadow:0 7px 18px rgba(185,126,31,.08)}
-    .series-icon{width:36px;height:36px;display:grid;place-items:center;border-radius:12px;background:#fff4f7;overflow:hidden}.series-icon img{display:block;width:34px;height:34px;object-fit:contain}.achievement-series.is-complete .series-icon{background:#fff4c9}
-    .series-copy{min-width:0;display:grid;gap:5px}.series-copy strong{color:#633d4e;font-size:10px;font-weight:950}.series-progress{height:6px;border-radius:999px;overflow:hidden;background:#f3e5ea}.series-progress i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#ef84ab,#d95d90)}.achievement-series.is-complete .series-progress i{background:linear-gradient(90deg,#f0c65d,#d99a22)}
-    .series-status{max-width:92px;text-align:right;color:#9a7a86;font-size:8px;font-weight:900;line-height:1.25}.series-status.is-complete{color:#986813}
+    .showcase{position:relative;overflow:hidden;padding:13px;border:1px solid rgba(224,183,101,.6);border-radius:27px;background:linear-gradient(145deg,#fffdf8,#fff4ed);box-shadow:0 14px 34px rgba(135,86,38,.08);display:grid;gap:11px;transition:.25s}
+    .showcase::before{content:"";position:absolute;right:-80px;top:-100px;width:220px;height:220px;border-radius:50%;background:radial-gradient(circle,rgba(255,229,142,.35),transparent 68%);pointer-events:none}.showcase>*{position:relative;z-index:1}
+    .showcase[data-style="gold"]{border-color:rgba(211,150,30,.8);background:radial-gradient(circle at 88% 0,rgba(255,230,124,.7),transparent 36%),linear-gradient(145deg,#fffbea,#ffe7a5)}
+    .showcase[data-style="seasonal"]{border-color:rgba(199,126,181,.68);background:radial-gradient(circle at 8% 0,rgba(218,236,255,.8),transparent 34%),radial-gradient(circle at 92% 0,rgba(255,208,231,.78),transparent 35%),linear-gradient(145deg,#fff9fc,#f4ebff)}
+    .showcase-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}.showcase-head div{min-width:0;display:grid;gap:3px}.showcase-head small{color:#b17287;font-size:8px;font-weight:950;text-transform:uppercase;letter-spacing:.05em}.showcase-head strong{color:#603b49;font-size:18px;font-weight:950}.showcase-head span{color:#987884;font-size:9px;font-weight:720;line-height:1.4}.showcase-count{flex:0 0 auto;padding:7px 9px;border:1px solid rgba(221,166,59,.42);border-radius:999px;background:#fff8dc;color:#93621b!important;font-size:9px!important;font-weight:950!important;line-height:1!important}
+    .showcase-shelf{padding:9px;border:1px solid rgba(222,183,107,.46);border-radius:22px;background:rgba(255,255,255,.54);display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}.showcase[data-style="gold"] .showcase-shelf{border-color:rgba(199,137,23,.48);background:rgba(255,250,220,.58)}.showcase[data-style="seasonal"] .showcase-shelf{border-color:rgba(191,128,180,.44);background:rgba(255,251,255,.62)}
+    .slot{position:relative;min-width:0;min-height:139px;padding:8px 6px;border:1px dashed rgba(218,180,113,.7);border-radius:18px;background:rgba(255,255,255,.72);display:grid;align-content:center;justify-items:center;gap:5px;text-align:center}.slot.is-filled{border-style:solid;background:linear-gradient(155deg,#fffdf7,#fff0d3);box-shadow:0 7px 17px rgba(143,93,31,.07)}.slot[data-rarity="epic"]{background:linear-gradient(155deg,#fffaff,#f2e6ff);border-color:#d4b2ed}.slot[data-rarity="legendary"]{background:linear-gradient(155deg,#fffbea,#ffe7a7);border-color:#e6be56}.slot[data-rarity="legacy"]{background:linear-gradient(155deg,#fff6fa,#ffe2ed);border-color:#e5adc1}
+    .slot-index{position:absolute;left:7px;top:7px;display:grid;place-items:center;width:21px;height:21px;border-radius:8px;background:#fff;color:#ab7a32;font-size:7px;font-weight:950;box-shadow:0 3px 8px rgba(101,68,42,.07)}.slot-art{width:55px;height:55px;display:grid;place-items:center;font-size:27px}.slot-art img{width:55px;height:55px;object-fit:contain;display:block}.slot strong{width:100%;color:#6d4853;font-size:8px;font-weight:950;line-height:1.22;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}.slot small{color:#a27e87;font-size:7px;font-weight:800}.slot-empty{max-width:72px;color:#a48b91;font-size:8px;font-weight:850;line-height:1.35}.slot-actions{display:flex;align-items:center;justify-content:center;gap:3px;margin-top:1px}.slot-actions button{appearance:none;width:27px;height:25px;border:1px solid rgba(219,179,107,.48);border-radius:9px;background:#fff;color:#9c6c2d;font-size:9px;font-weight:950;cursor:pointer}.slot-actions button:disabled{opacity:.28}.slot-actions .remove{color:#b85b78}
 
-    .filters-card{padding:12px;border:1px solid var(--line);border-radius:23px;background:rgba(255,253,252,.92);box-shadow:0 10px 26px rgba(103,64,79,.06)}
-    .filters-head{display:flex;align-items:flex-end;justify-content:space-between;gap:10px;margin-bottom:10px}
-    .filters-head div{display:grid;gap:2px}
-    .filters-head strong{color:#613c4c;font-size:15px;font-weight:950}
-    .filters-head span{color:#a1838e;font-size:9px;font-weight:700;line-height:1.35}
-    .filters-scroll{display:flex;max-width:100%;gap:7px;overflow-x:auto;padding:1px 1px 3px;scrollbar-width:none;overscroll-behavior-inline:contain}
-    .filters-scroll::-webkit-scrollbar{display:none}
-    .filter{appearance:none;flex:0 0 auto;min-height:38px;padding:0 13px;border:1px solid rgba(229,194,207,.92);border-radius:999px;background:#fff;color:#885c6d;font-size:10px;font-weight:900;white-space:nowrap;cursor:pointer}
-    .filter[aria-selected="true"]{border-color:#e481a5;background:linear-gradient(180deg,#ffeaf2,#ffdeeb);color:#9b3f61;box-shadow:0 7px 16px rgba(215,94,139,.13)}
+    .style-zone{display:grid;gap:8px;padding-top:2px}.style-zone-head{display:flex;align-items:flex-end;justify-content:space-between;gap:8px}.style-zone-head div{display:grid;gap:2px}.style-zone-head strong{color:#663f4d;font-size:13px;font-weight:950}.style-zone-head span{color:#9b7c86;font-size:8px;font-weight:750}.style-zone-head b{color:#b06b80;font-size:8px;font-weight:900;text-align:right}.style-list{display:grid;gap:7px}.style-card{appearance:none;width:100%;min-height:72px;padding:9px;border:1px solid var(--line2);border-radius:18px;background:#fff;color:var(--text);display:grid;grid-template-columns:68px minmax(0,1fr) auto;align-items:center;gap:9px;text-align:left;cursor:pointer}.style-card.is-selected{border-color:#ea91b3;background:linear-gradient(145deg,#fff6fa,#ffe8f1);box-shadow:0 7px 17px rgba(188,83,126,.08)}.style-card[data-style-id="gold"]{border-color:rgba(224,178,73,.54);background:linear-gradient(145deg,#fffdf3,#fff1c7)}.style-card[data-style-id="gold"].is-selected{border-color:#dfa42c;box-shadow:0 8px 20px rgba(181,122,22,.11)}.style-card[data-style-id="seasonal"]{border-color:rgba(205,151,198,.55);background:linear-gradient(145deg,#fff9fd,#f5edff)}.style-card.is-locked{filter:saturate(.72);opacity:.68;cursor:default}.style-preview{height:50px;border:1px solid rgba(218,187,175,.75);border-radius:14px;background:radial-gradient(circle at 80% 15%,#ffe0eb,transparent 30%),linear-gradient(145deg,#fff9f4,#ffe8ee);box-shadow:inset 0 1px 0 #fff}.style-card[data-style-id="gold"] .style-preview{border-color:#ddaf46;background:radial-gradient(circle at 80% 15%,#fff49e,transparent 32%),linear-gradient(145deg,#fff9d7,#edb63c)}.style-card[data-style-id="seasonal"] .style-preview{border-color:#c99dc2;background:radial-gradient(circle at 20% 15%,#d9ebff,transparent 35%),linear-gradient(145deg,#ffdce9,#e6d9ff)}.style-copy{min-width:0;display:grid;gap:3px}.style-copy strong{font-size:11px;font-weight:950;color:#69414f}.style-copy span{font-size:8px;font-weight:730;line-height:1.35;color:#957781}.style-state{max-width:86px;padding:6px 8px;border-radius:999px;background:#f7eff2;color:#a1818b;font-size:7px;font-weight:950;text-align:center}.style-card.is-selected .style-state{background:#e96698;color:#fff}.style-card[data-style-id="gold"] .style-state{background:#ffe9aa;color:#8d5d12}.style-card.is-locked .style-state{background:#eee8e8;color:#9c8e8e}
 
-    .catalog{padding:13px;border:1px solid var(--line);border-radius:24px;background:rgba(255,253,252,.92);box-shadow:0 12px 30px rgba(104,65,80,.07);display:grid;gap:10px}
-    .catalog-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
-    .catalog-title{display:grid;gap:2px;min-width:0}
-    .catalog-title strong{color:#563743;font-size:16px;font-weight:950}
-    .catalog-title span{color:#9b7b87;font-size:9px;font-weight:700}
-    .catalog-count{flex:0 0 auto;min-width:42px;padding:7px 10px;border-radius:999px;background:#fff0f5;color:#b34e75;text-align:center;font-size:10px;font-weight:950}
+    .section{padding:13px;border:1px solid var(--line2);border-radius:24px;background:rgba(255,255,255,.8);box-shadow:0 10px 26px rgba(101,64,78,.05);display:grid;gap:9px}.section[hidden]{display:none!important}.section-head{display:flex;align-items:flex-end;justify-content:space-between;gap:10px}.section-head div{min-width:0;display:grid;gap:2px}.section-head strong{color:#603c49;font-size:14px;font-weight:950}.section-head span{color:#9b7b87;font-size:8px;font-weight:750;line-height:1.35}.section-head b{color:#bb597e;font-size:9px;font-weight:950}
+    .recent-list,.near-list,.series-list{display:grid;gap:7px}.mini-ach{display:grid;grid-template-columns:48px minmax(0,1fr) auto;align-items:center;gap:9px;padding:8px;border:1px solid #f0dce3;border-radius:16px;background:#fff}.mini-ach-art{width:48px;height:48px;display:grid;place-items:center;font-size:22px}.mini-ach-art img{width:48px;height:48px;object-fit:contain}.mini-ach-copy{min-width:0;display:grid;gap:3px}.mini-ach-copy strong{font-size:9px;font-weight:950;color:#68414f}.mini-ach-copy span{font-size:7px;font-weight:760;color:#9d7e88;line-height:1.3}.mini-ach-points{padding:5px 7px;border-radius:999px;background:#fff3d4;color:#966219;font-size:7px;font-weight:950;white-space:nowrap}.mini-progress{height:5px;border-radius:999px;background:#efe5e7;overflow:hidden}.mini-progress i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#eb7eaa,#d95789)}
+    .series-item{padding:9px;border:1px solid #efdae2;border-radius:16px;background:#fff;display:grid;gap:6px}.series-row{display:flex;align-items:center;justify-content:space-between;gap:8px}.series-row strong{font-size:9px;font-weight:950}.series-status{padding:5px 7px;border-radius:999px;background:#f4edf0;color:#a0848e;font-size:7px;font-weight:900}.series-status.is-complete{background:#e7f6e9;color:#3e8d51}.series-members{display:flex;gap:4px;overflow:hidden}.series-member{width:31px;height:31px;border:1px solid #efd9e1;border-radius:10px;background:#fff8fa;display:grid;place-items:center;overflow:hidden;opacity:.55}.series-member.is-earned{opacity:1;border-color:#e5b957;background:#fff7d8}.series-member img{width:28px;height:28px;object-fit:contain}
 
-    .achievement-list{display:grid;gap:9px}
-    .achievement-card{display:grid;grid-template-columns:72px minmax(0,1fr);gap:11px;align-items:center;padding:12px;border:1px solid var(--line-soft);border-radius:20px;background:#fff}
-    .achievement-card.is-earned{background:linear-gradient(145deg,#fffdf3,#fff0c9);border-color:rgba(226,174,67,.68);box-shadow:0 9px 24px rgba(205,150,45,.10)}
-    .achievement-card.is-secret-locked{border-style:dashed;background:linear-gradient(145deg,#fffafd,#f8f2fb)}
-    .achievement-card.is-expired:not(.is-earned){opacity:.72}
-    .achievement-icon{width:72px;height:72px;display:grid;place-items:center;font-size:25px}.achievement-icon img{width:72px;height:72px;display:block;object-fit:contain;filter:drop-shadow(0 7px 10px rgba(145,94,111,.10))}
-    .achievement-copy{min-width:0;display:grid;gap:5px}
-    .achievement-title-row{display:flex;align-items:center;justify-content:space-between;gap:8px}
-    .achievement-title-row strong{min-width:0;color:#623c4c;font-size:12px;font-weight:950}
-    .achievement-state{flex:0 0 auto;padding:4px 7px;border-radius:999px;background:#f4eff1;color:#987d87;font-size:8px;font-weight:950;white-space:nowrap}
-    .achievement-state.is-earned{background:#fff0c9;color:#966516}
-    .achievement-state.is-secret{background:#f4eef9;color:#7b5a94}
-    .achievement-state.is-expired{background:#f4edf0;color:#9b6676}
-    .achievement-state.is-legacy{background:#fff0f5;color:#a04466}
-    .achievement-description{color:#947680;font-size:9px;font-weight:700;line-height:1.4}
-    .achievement-progress{display:grid;gap:4px}
-    .achievement-track{height:7px;border-radius:999px;overflow:hidden;background:#f3e5ea}
-    .achievement-track i{display:block;width:0;height:100%;border-radius:inherit;background:linear-gradient(90deg,#ef84ab,#d95d90)}
-    .achievement-progress small{display:flex;justify-content:space-between;gap:8px;color:#a0858f;font-size:8px;font-weight:800}
-    .achievement-reward-row{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-top:2px}
-    .achievement-meta{display:flex;align-items:center;gap:5px;flex-wrap:wrap}
-    .achievement-rarity,.achievement-points,.achievement-player-rarity{display:inline-flex;align-items:center;gap:4px;min-height:22px;padding:4px 7px;border-radius:999px;font-size:7px;font-weight:950;line-height:1}
-    .achievement-rarity{border:1px solid rgba(219,185,197,.7);background:#fff7fa;color:#936b7a}
-    .achievement-rarity[data-rarity="rare"]{border-color:rgba(97,168,218,.38);background:#edf8ff;color:#487da1}
-    .achievement-rarity[data-rarity="epic"]{border-color:rgba(166,114,214,.35);background:#f7efff;color:#8052aa}
-    .achievement-rarity[data-rarity="legendary"]{border-color:rgba(218,163,51,.46);background:#fff4ce;color:#8d6119}
-    .achievement-rarity[data-rarity="legacy"]{border-color:rgba(211,109,142,.40);background:#fff0f5;color:#9f4767}
-    .achievement-points{border:1px solid rgba(218,163,51,.38);background:#fff8df;color:#8e631f}
-    .achievement-player-rarity{border:1px solid rgba(107,164,202,.30);background:#f0f8ff;color:#557d96;white-space:nowrap}
-    .achievement-reward{display:inline-flex;align-items:center;gap:6px;min-height:30px;padding:5px 8px;border:1px solid rgba(226,191,118,.58);border-radius:12px;background:rgba(255,249,229,.92);color:#8d6520;font-size:8px;font-weight:950}
-    .achievement-reward img{width:24px;height:24px;flex:0 0 auto;border-radius:8px;object-fit:cover;background:#fff;box-shadow:0 2px 6px rgba(125,83,24,.10)}
-    .achievement-claim{appearance:none;min-height:32px;padding:0 12px;border:0;border-radius:11px;background:linear-gradient(180deg,#e8ad3d,#ce8520);color:#fff;font-size:9px;font-weight:950;box-shadow:0 7px 15px rgba(184,119,27,.18);cursor:pointer}
-    .achievement-claim:disabled{cursor:default;opacity:.62;box-shadow:none}
-    .achievement-claim.is-retry{background:linear-gradient(180deg,#d77b93,#b95070)}
-    .achievement-delivery-note{color:#987a60;font-size:8px;font-weight:800}
-    .achievement-actions{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-left:auto}
-    .achievement-showcase{appearance:none;min-height:32px;padding:0 10px;border:1px solid rgba(214,163,61,.56);border-radius:11px;background:rgba(255,255,255,.82);color:#94631d;font-size:9px;font-weight:950;cursor:pointer}
-    .achievement-showcase.is-selected{border-color:#d39b2b;background:linear-gradient(180deg,#fff4bc,#ffe59b);color:#80520d;box-shadow:0 6px 13px rgba(187,131,27,.13)}
-    .achievement-showcase:disabled{cursor:default;opacity:.48;box-shadow:none}
+    .catalog{padding:13px;border:1px solid var(--line2);border-radius:25px;background:rgba(255,255,255,.82);box-shadow:0 10px 26px rgba(100,63,77,.05);display:grid;gap:10px}.catalog-head{display:flex;align-items:flex-end;justify-content:space-between;gap:8px}.catalog-head div{display:grid;gap:2px}.catalog-head strong{font-size:16px;font-weight:950;color:#573743}.catalog-head span{font-size:8px;font-weight:750;color:#9a7a86}.catalog-count{padding:7px 9px;border-radius:999px;background:#fff0f5;color:#b94e76;font-size:9px;font-weight:950}.filters{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none}.filters::-webkit-scrollbar{display:none}.filter{appearance:none;flex:0 0 auto;padding:8px 11px;border:1px solid #efd8e0;border-radius:999px;background:#fff;color:#8c707a;font-size:8px;font-weight:900;cursor:pointer}.filter[aria-selected="true"]{border-color:#e77fa7;background:#f46096;color:#fff;box-shadow:0 5px 13px rgba(202,70,122,.14)}
+    .achievement-list{display:grid;gap:8px}.achievement{display:grid;grid-template-columns:68px minmax(0,1fr);gap:10px;align-items:center;padding:10px;border:1px solid #f0dde4;border-radius:20px;background:#fff}.achievement.is-earned{border-color:rgba(225,175,72,.62);background:linear-gradient(145deg,#fffdf5,#fff1cf)}.achievement.is-secret{border-style:dashed;background:linear-gradient(145deg,#fffafd,#f8f2fb)}.achievement.is-expired:not(.is-earned){opacity:.7}.ach-art{width:68px;height:68px;display:grid;place-items:center;font-size:27px}.ach-art img{width:68px;height:68px;object-fit:contain;filter:drop-shadow(0 6px 10px rgba(120,77,94,.09))}.ach-copy{min-width:0;display:grid;gap:5px}.ach-title{display:flex;align-items:flex-start;justify-content:space-between;gap:6px}.ach-title strong{min-width:0;font-size:11px;font-weight:950;color:#623d4b;line-height:1.22}.state{flex:0 0 auto;padding:4px 6px;border-radius:999px;background:#f2ecef;color:#9b828b;font-size:7px;font-weight:950}.state.earned{background:#e9f7e8;color:#478b54}.state.claim{background:#ffe9f1;color:#bc4c78}.meta{display:flex;align-items:center;gap:4px;flex-wrap:wrap}.pill{display:inline-flex;align-items:center;gap:3px;padding:4px 6px;border-radius:999px;background:#f7f0f3;color:#967881;font-size:7px;font-weight:900}.pill.points{background:#fff1c8;color:#936017}.pill img{width:12px;height:12px;object-fit:contain}.description{color:#927680;font-size:8px;font-weight:700;line-height:1.4}.progress{display:grid;gap:3px}.progress-track{height:5px;overflow:hidden;border-radius:999px;background:#f1e5e9}.progress-track i{display:block;height:100%;background:linear-gradient(90deg,#ed80aa,#d95789);border-radius:inherit}.progress-copy{display:flex;justify-content:space-between;gap:6px;color:#a0848d;font-size:7px;font-weight:800}.reward{display:flex;align-items:center;gap:5px;color:#966a2a;font-size:7px;font-weight:900}.reward img{width:18px;height:18px;object-fit:contain}.actions{display:flex;align-items:center;gap:5px;flex-wrap:wrap}.action{appearance:none;min-height:31px;padding:0 10px;border:1px solid #e6cdda;border-radius:11px;background:#fff;color:#9c6076;font-size:8px;font-weight:950;cursor:pointer}.action.primary{border:0;background:linear-gradient(180deg,#ee78a6,#d84b82);color:#fff}.action.gold{border-color:#e2bd6f;background:#fff5d7;color:#8c5b16}.action.selected{border-color:#dfa52e;background:#ffe8a3;color:#80520d}.action:disabled{opacity:.47;cursor:default}
+    .empty{display:grid;justify-items:center;gap:7px;padding:22px 14px;border:1px dashed #e7bfd0;border-radius:19px;background:#fff9fb;text-align:center}.empty b{font-size:13px}.empty span{color:#9a7d87;font-size:8px;line-height:1.4}
+    .info{padding:11px 12px;border:1px solid rgba(222,177,78,.45);border-radius:18px;background:linear-gradient(145deg,#fffaf0,#fff1dc);color:#8b6943;font-size:8px;font-weight:760;line-height:1.45}.info strong{color:#795018}.info.is-error{border-color:#e8b8c7;background:#fff2f5;color:#a44d69}
 
-    .empty{display:grid;justify-items:center;gap:8px;padding:25px 17px;border:1px dashed rgba(226,172,193,.9);border-radius:21px;background:linear-gradient(180deg,rgba(255,249,251,.94),rgba(255,253,249,.94));text-align:center}
-    .empty-icon{width:58px;height:58px;display:grid;place-items:center;border-radius:19px;background:linear-gradient(145deg,#fff1cf,#ffe8f1);box-shadow:0 10px 20px rgba(213,167,89,.13)}
-    .empty-icon img{display:block;width:44px;height:44px;object-fit:contain}
-    .empty strong{color:#6a4052;font-size:14px;font-weight:950}
-    .empty span{max-width:360px;color:#957985;font-size:10px;line-height:1.55;font-weight:700}
-
-    .info{padding:13px 14px;border:1px solid rgba(229,206,164,.72);border-radius:20px;background:linear-gradient(145deg,#fff9e8,#fffdf8);display:flex;align-items:flex-start;gap:10px;color:#816944;font-size:9px;line-height:1.5;font-weight:750}
-    .info b{font-size:17px;line-height:1}
-
-    [hidden]{display:none!important}
-
-    @media (max-width:420px){
-      :root{--safe-right:max(env(safe-area-inset-right,0px),16px);--safe-left:max(env(safe-area-inset-left,0px),16px)}
-      .hero{padding:16px}
-      .hero h1{font-size:23px}
-      .summary{gap:6px}
-      .summary-card{padding:11px 8px;border-radius:17px}
-      .summary-card span{font-size:8px}
-      .summary-card strong{font-size:16px}
-      .filters-card,.catalog,.showcase-card,.recent-card,.near-card,.series-card{padding:11px}
-      .showcase-slots{gap:5px}
-      .showcase-slot{min-height:124px;padding:8px 5px;border-radius:16px}
-      .achievement-card{grid-template-columns:66px minmax(0,1fr);gap:9px}.achievement-icon,.achievement-icon img{width:66px;height:66px}
-    }
-
-    @media (max-width:360px){
-      :root{--safe-right:max(env(safe-area-inset-right,0px),12px);--safe-left:max(env(safe-area-inset-left,0px),12px);--embedded-top-clearance:68px}
-      .hero{padding:14px}
-      .hero h1{font-size:22px}
-      .hero p{font-size:11px}
-    }
+    @media(max-width:370px){:root{--safe-left:max(env(safe-area-inset-left,0px),12px);--safe-right:max(env(safe-area-inset-right,0px),12px);--embedded-top-clearance:68px}.hero{padding:14px}.prestige{padding:12px}.prestige-points b{font-size:28px}.style-card{grid-template-columns:61px minmax(0,1fr) auto;padding:8px}.showcase-shelf{gap:5px;padding:7px}.slot{min-height:132px;padding:7px 4px}.slot-art,.slot-art img{width:49px;height:49px}.achievement{grid-template-columns:62px minmax(0,1fr);gap:8px}.ach-art,.ach-art img{width:62px;height:62px}}
   </style>
 </head>
 <body>
   <main class="page">
-    <section class="hero" aria-labelledby="achievements-title">
-      <span class="hero-kicker"><img src="/assets/ui/icon_score_acivment.png" alt="" aria-hidden="true">Коллекция достижений</span>
-      <h1 id="achievements-title">Достижения</h1>
-      <p>Это история и статус твоего аккаунта. Простые достижения могут открыть тематическую аватарку, а сложные становятся престижными трофеями для «Моей витрины».</p>
+    <header class="topbar">
+      <button class="topbar-btn" type="button" data-back aria-label="Назад">←</button>
+      <div class="topbar-copy"><strong>Достижения</strong><span>Трофеи и престиж аккаунта</span></div>
+      <div class="topbar-spacer" aria-hidden="true"></div>
+    </header>
+
+    <section class="hero">
+      <span class="hero-kicker"><img src="/assets/ui/icon_score_acivment.png" alt=""> СИСТЕМА ПРЕСТИЖА</span>
+      <h1>Твои достижения<br>теперь имеют вес</h1>
+      <p>Выполняй цели, собирай очки достижений и навсегда открывай статусное оформление своей витрины.</p>
     </section>
 
-    <section class="summary" aria-label="Сводка достижений">
-      <div class="summary-card is-catalog"><span>Каталог</span><strong data-summary-earned>0 / 0 · 0%</strong><div class="summary-progress-track" aria-hidden="true"><i data-summary-completion-bar></i></div></div>
-      <div class="summary-card"><span>Очки достижений</span><strong data-summary-points><span class="points-inline"><img src="/assets/ui/icon_score_acivment.png" alt="" aria-hidden="true"><span>0</span></span></strong></div>
-      <div class="summary-card is-rank"><span>Ранг достижений</span><strong data-summary-rank>Новичок</strong><span class="summary-rank-next" data-summary-rank-next>Начало пути</span></div>
-      <div class="summary-card is-showcase"><span>В витрине</span><strong data-summary-showcase>0 / 3</strong></div>
-    </section>
-
-    <section class="recent-card" data-recent-achievements hidden aria-labelledby="recent-achievements-title">
-      <div class="recent-head">
-        <div><strong id="recent-achievements-title">Недавно получено</strong><span>Последние трофеи становятся историей твоего аккаунта</span></div>
+    <section class="prestige" aria-label="Престиж достижений">
+      <div class="prestige-head">
+        <div class="prestige-title"><img src="/assets/ui/icon_score_acivment.png" alt=""><div><small>Очки достижений</small><strong>Престиж аккаунта</strong></div></div>
+        <span class="prestige-rank" data-prestige-rank>Новичок</span>
       </div>
-      <div class="recent-list" data-recent-achievement-list></div>
-    </section>
-
-    <section class="near-card" data-near-achievements hidden aria-labelledby="near-achievements-title">
-      <div class="section-head"><div><strong id="near-achievements-title">Почти выполнено</strong><span>Три ближайшие цели по текущему серверному прогрессу</span></div></div>
-      <div class="near-list" data-near-achievement-list></div>
-    </section>
-
-    <section class="series-card" data-achievement-series hidden aria-labelledby="achievement-series-title">
-      <div class="section-head"><div><strong id="achievement-series-title">Серии достижений</strong><span>Закрой всю цепочку — серия получит золотую отметку</span></div></div>
-      <div class="series-list" data-achievement-series-list></div>
-    </section>
-
-    <section class="showcase-card" data-showcase-card data-style="default" aria-labelledby="achievement-showcase-title">
-      <div class="showcase-head">
-        <div><strong id="achievement-showcase-title">Моя витрина</strong><span>Выбери до 3 выполненных трофеев и расставь их в нужном порядке. Этот порядок используется в профиле и рейтинге.</span></div>
-        <span class="showcase-count" data-showcase-count>0 / 3</span>
+      <div class="prestige-balance">
+        <div class="prestige-points"><b data-prestige-points>0</b><span>накоплено за всё время</span></div>
+        <span class="prestige-permanent">Не расходуются</span>
       </div>
-      <div class="showcase-style-block">
-        <div class="showcase-style-title"><div><strong>Оформление полки</strong><span>Открывается за ранг и этапы достижений — ничего покупать не нужно.</span></div></div>
-        <div class="showcase-style-picker" data-showcase-style-picker aria-label="Оформление витрины"></div>
+      <div class="prestige-goal">
+        <div class="prestige-goal-head"><strong data-prestige-goal-title>Следующая награда престижа</strong><span data-prestige-goal-value>Загрузка…</span></div>
+        <div class="prestige-track"><i data-prestige-goal-bar></i></div>
+        <div class="prestige-goal-foot"><span data-prestige-goal-left>0 очков</span><span data-prestige-goal-right>Навсегда</span></div>
       </div>
-      <div class="showcase-slots" data-showcase-slots aria-live="polite"></div>
     </section>
 
-    <section class="filters-card" aria-labelledby="achievement-filters-title">
-      <div class="filters-head">
-        <div><strong id="achievement-filters-title">Категории</strong><span>Переключай разделы каталога</span></div>
-      </div>
-      <div class="filters-scroll" role="tablist" aria-label="Категории достижений" data-achievement-filters></div>
+    <section class="quick" aria-label="Сводка">
+      <div class="quick-card is-pink"><span>Каталог</span><strong data-summary-earned>0 / 0</strong></div>
+      <div class="quick-card is-gold"><span>В витрине</span><strong data-summary-showcase>0 / 3</strong></div>
+      <div class="quick-card"><span>Серии</span><strong data-summary-series>0 / 0</strong></div>
     </section>
 
-    <section class="catalog" aria-labelledby="achievement-catalog-title">
-      <div class="catalog-head">
-        <div class="catalog-title"><strong id="achievement-catalog-title" data-catalog-title>Все достижения</strong><span data-catalog-subtitle>Полный каталог игровых трофеев</span></div>
-        <span class="catalog-count" data-catalog-count>0</span>
+    <section class="showcase" data-showcase data-style="default">
+      <div class="showcase-head"><div><small>Главная награда престижа</small><strong>Моя витрина</strong><span>Выбери до трёх любимых трофеев. Они видны в профиле и рейтинге.</span></div><span class="showcase-count" data-showcase-count>0 / 3</span></div>
+      <div class="showcase-shelf" data-showcase-slots></div>
+      <div class="style-zone">
+        <div class="style-zone-head"><div><strong>Оформление витрины</strong><span>Очки не списываются — оформление открывается навсегда.</span></div><b>Престиж → стиль</b></div>
+        <div class="style-list" data-style-list></div>
       </div>
+    </section>
+
+    <section class="section" data-recent hidden><div class="section-head"><div><strong>Недавно получено</strong><span>Последние трофеи аккаунта</span></div></div><div class="recent-list" data-recent-list></div></section>
+    <section class="section" data-near hidden><div class="section-head"><div><strong>Почти готово</strong><span>Цели, до которых осталось совсем немного</span></div></div><div class="near-list" data-near-list></div></section>
+    <section class="section" data-series hidden><div class="section-head"><div><strong>Серии достижений</strong><span>Закрывай тематические цепочки целиком</span></div><b data-series-count></b></div><div class="series-list" data-series-list></div></section>
+
+    <section class="catalog">
+      <div class="catalog-head"><div><strong>Каталог достижений</strong><span data-catalog-subtitle>Все опубликованные цели</span></div><span class="catalog-count" data-catalog-count>0</span></div>
+      <div class="filters" data-filters role="tablist"></div>
       <div class="achievement-list" data-achievement-list></div>
-      <div class="empty" data-achievement-empty>
-        <span class="empty-icon" aria-hidden="true"><img src="/assets/ui/icon_score_acivment.png" alt=""></span>
-        <strong data-empty-title>Каталог пока пуст</strong>
-        <span data-empty-copy>Считаем прогресс по фактическим данным аккаунта.</span>
-      </div>
     </section>
 
-    <div class="info"><b aria-hidden="true"><img class="info-achievement-icon" src="/assets/ui/icon_score_acivment.png" alt=""></b><span data-system-info>Очки достижений — это престиж, а не валюта: их нельзя потратить, они начисляются автоматически за выполненные цели. Кнопка «Забрать» появляется только у специальных аватарок-наград.</span></div>
+    <div class="info" data-info><strong>Очки достижений</strong> — постоянный престиж. Они не тратятся: чем больше очков ты заработал, тем выше ранг и тем больше статусного оформления открывается навсегда.</div>
   </main>
 
-  <script>
-    (() => {
-      const tg = resolveTelegramWebApp();
+<script>
+(() => {
+  'use strict';
+  const $ = (s, root=document) => root.querySelector(s);
+  const safeNumber = (v) => Number.isFinite(Number(v)) ? Number(v) : 0;
+  const esc = (v) => String(v ?? '').replace(/[&<>'"]/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+  const clamp = (n,a,b) => Math.max(a,Math.min(b,n));
+  const POINT_ICON_FALLBACK = '/assets/ui/icon_score_acivment.png';
+  const STYLE_POINT_REQUIREMENTS = Object.freeze({ default:0, gold:300 });
+  const CATEGORY_LABELS = Object.freeze({
+    all:'Все', runs:'Забеги', run:'Забеги', score:'Счёт', resources:'Ресурсы', economy:'Ресурсы',
+    collections:'Коллекция', collection:'Коллекция', cosmetics:'Коллекция', cases:'Кейсы',
+    friends:'Друзья', social:'Друзья', seasons:'Сезоны', season:'Сезоны', profile:'Профиль', misc:'Другое'
+  });
 
-      const CATEGORIES = Object.freeze([
-        { id: 'all', label: 'Все', title: 'Все достижения', subtitle: 'Полный каталог игровых трофеев' },
-        { id: 'runs', label: 'Забеги', title: 'Забеги', subtitle: 'Результаты и особые цели в забегах' },
-        { id: 'progress', label: 'Прогресс', title: 'Прогресс', subtitle: 'Уровни и развитие профиля' },
-        { id: 'collections', label: 'Коллекции', title: 'Коллекции', subtitle: 'Редкие находки и завершённые истории' },
-        { id: 'seasons', label: 'Сезоны', title: 'Сезоны', subtitle: 'Особые результаты прошлых и текущих сезонов' },
-        { id: 'friends', label: 'Друзья', title: 'Друзья кафе', subtitle: 'Приглашения и развитие своей компании' }
-      ]);
+  let ACHIEVEMENTS=[]; let SUMMARY={}; let SHOWCASE_IDS=[]; let SHOWCASE_LIMIT=3; let SHOWCASE_STYLE_ID='default'; let SHOWCASE_STYLES=[]; let SERIES=[]; let NEAR=[]; let POINT_ICON=POINT_ICON_FALLBACK; let activeCategory='all'; let saving=false; let claiming=new Set(); let loadError=''; let systemMessage='';
 
-      let ACHIEVEMENTS = [];
-      let SHOWCASE_IDS = [];
-      let SHOWCASE_LIMIT = 3;
-      let SHOWCASE_STYLE_ID = 'default';
-      let SHOWCASE_STYLES = [];
-      let ACHIEVEMENT_SUMMARY = {};
-      let ACHIEVEMENT_SERIES = [];
-      let NEAR_COMPLETION = [];
-      const ACHIEVEMENT_POINTS_ICON_FALLBACK = '/assets/ui/icon_score_acivment.png';
-      let ACHIEVEMENT_POINTS_ICON_URL = ACHIEVEMENT_POINTS_ICON_FALLBACK;
+  function resolveTelegramWebApp(){ try{return window.Telegram?.WebApp || (window.parent&&window.parent!==window?window.parent.Telegram?.WebApp:null) || null;}catch{return window.Telegram?.WebApp||null;} }
+  function currentInitData(){ return String(resolveTelegramWebApp()?.initData || ''); }
+  function testProjectActive(){ try{if(new URLSearchParams(location.search).get('test_project')==='1')return true;if(window.parent&&window.parent!==window)return new URLSearchParams(window.parent.location.search).get('test_project')==='1';}catch{}return false; }
+  function makeRequestId(){ try{return crypto.randomUUID();}catch{return `achievement_${Date.now()}_${Math.random().toString(36).slice(2,10)}`;} }
 
-      const filtersEl = document.querySelector('[data-achievement-filters]');
-      const listEl = document.querySelector('[data-achievement-list]');
-      const emptyEl = document.querySelector('[data-achievement-empty]');
-      const emptyTitleEl = document.querySelector('[data-empty-title]');
-      const emptyCopyEl = document.querySelector('[data-empty-copy]');
-      const catalogTitleEl = document.querySelector('[data-catalog-title]');
-      const catalogSubtitleEl = document.querySelector('[data-catalog-subtitle]');
-      const catalogCountEl = document.querySelector('[data-catalog-count]');
-      const summaryEarnedEl = document.querySelector('[data-summary-earned]');
-      const summaryCompletionBarEl = document.querySelector('[data-summary-completion-bar]');
-      const summaryPointsEl = document.querySelector('[data-summary-points]');
-      const summaryRankEl = document.querySelector('[data-summary-rank]');
-      const summaryRankNextEl = document.querySelector('[data-summary-rank-next]');
-      const summaryShowcaseEl = document.querySelector('[data-summary-showcase]');
-      const recentSectionEl = document.querySelector('[data-recent-achievements]');
-      const recentListEl = document.querySelector('[data-recent-achievement-list]');
-      const nearSectionEl = document.querySelector('[data-near-achievements]');
-      const nearListEl = document.querySelector('[data-near-achievement-list]');
-      const seriesSectionEl = document.querySelector('[data-achievement-series]');
-      const seriesListEl = document.querySelector('[data-achievement-series-list]');
-      const showcaseCardEl = document.querySelector('[data-showcase-card]');
-      const showcaseStylePickerEl = document.querySelector('[data-showcase-style-picker]');
-      const showcaseSlotsEl = document.querySelector('[data-showcase-slots]');
-      const showcaseCountEl = document.querySelector('[data-showcase-count]');
-      const systemInfoEl = document.querySelector('[data-system-info]');
-      const SYSTEM_INFO_DEFAULT = 'Очки достижений — престиж, а не валюта: они начисляются автоматически и не тратятся. Простые цели могут открыть специальную аватарку; сложные достижения сейчас остаются статусными трофеями.';
-      const claimingIds = new Set();
-      let showcaseSaving = false;
-      let activeCategory = 'all';
-      let loading = true;
-      let loadError = '';
-      let systemMessage = '';
-      const ACHIEVEMENTS_CACHE_TTL_MS = 5 * 60 * 1000;
-      const achievementsCacheKey = () => `zefirok-achievements-state-v2:${testProjectActive() ? 'test' : 'prod'}`;
+  async function api(path,payload={}){
+    const headers={'Content-Type':'application/json'}; const initData=currentInitData();
+    if(!initData&&!testProjectActive())throw new Error('Открой достижения из Telegram Mini App.');
+    const requestPayload={...payload,initData};
+    if(testProjectActive()){
+      const response=await fetch('/api/owner/test-project/game',{method:'POST',headers,cache:'no-store',credentials:'same-origin',body:JSON.stringify({initData,ownerSession:localStorage.getItem('zefirok-owner-session-v1')||'',path,method:'POST',query:{},payload:requestPayload})});
+      const envelope=await response.json().catch(()=>({}));
+      if(!response.ok||envelope?.ok===false)throw new Error(envelope?.error||'Не удалось выполнить запрос достижений.');
+      return envelope?.data||envelope;
+    }
+    const response=await fetch(path,{method:'POST',headers,cache:'no-store',credentials:'same-origin',body:JSON.stringify(requestPayload)});
+    const data=await response.json().catch(()=>({})); if(!response.ok||data?.ok===false)throw new Error(data?.error||'Не удалось выполнить запрос достижений.'); return data;
+  }
 
-      function readAchievementsCache() {
-        try {
-          const parsed = JSON.parse(sessionStorage.getItem(achievementsCacheKey()) || 'null');
-          if (!parsed || typeof parsed !== 'object' || !parsed.state || Date.now() - Number(parsed.savedAt || 0) > ACHIEVEMENTS_CACHE_TTL_MS) return null;
-          return parsed.state;
-        } catch { return null; }
-      }
+  function catalog(){return ACHIEVEMENTS.filter(i=>i?.catalogVisible===true);}
+  function art(item, cls='ach-art'){
+    const url=String(item?.artUrl||item?.imageUrl||'').trim(); const icon=String(item?.icon||'🏅');
+    return `<span class="${cls}">${url?`<img src="${esc(url)}" alt="">`:esc(icon)}</span>`;
+  }
+  function pointsInline(value){return `<span class="pill points"><img src="${esc(POINT_ICON)}" alt="">+${Math.max(0,safeNumber(value)).toLocaleString('ru-RU')}</span>`;}
+  function rarityLabel(item){return String(item?.rarityLabel||({common:'Обычное',rare:'Редкое',superrare:'Сверхредкое',epic:'Эпическое',mythic:'Мифическое',legendary:'Легендарное',legacy:'Legacy'}[String(item?.rarity||'common')]||'Обычное'));}
+  function categoryLabel(id, items=[]){const known=CATEGORY_LABELS[id];if(known)return known;const found=items.find(i=>String(i?.category||'')===id&&i?.categoryLabel);return String(found?.categoryLabel||id||'Другое').replace(/^./,c=>c.toUpperCase());}
 
-      function writeAchievementsCache(state) {
-        if (!state || !Array.isArray(state?.achievements)) return;
-        try { sessionStorage.setItem(achievementsCacheKey(), JSON.stringify({ savedAt:Date.now(), state })); } catch {}
-      }
+  function applyState(state){
+    ACHIEVEMENTS=Array.isArray(state?.achievements)?state.achievements:[];
+    SUMMARY=state?.summary&&typeof state.summary==='object'?state.summary:{};
+    const showcase=state?.showcase&&typeof state.showcase==='object'?state.showcase:{};
+    SHOWCASE_LIMIT=clamp(Math.floor(safeNumber(showcase.limit)||3),1,3);
+    const ids=Array.isArray(showcase.ids)?showcase.ids:ACHIEVEMENTS.filter(i=>i?.inShowcase).sort((a,b)=>safeNumber(a?.showcaseSlot)-safeNumber(b?.showcaseSlot)).map(i=>i.id);
+    SHOWCASE_IDS=[...new Set(ids.map(String).filter(Boolean))].slice(0,SHOWCASE_LIMIT);
+    SHOWCASE_STYLES=Array.isArray(showcase.styles)&&showcase.styles.length?showcase.styles:[{id:'default',title:'Классическая',description:'Базовая витрина',unlocked:true,selected:true,unlockText:'Доступна всем'}];
+    const requested=String(showcase.selectedStyleId||'default'); SHOWCASE_STYLE_ID=SHOWCASE_STYLES.some(s=>String(s?.id)===requested)?requested:'default';
+    SERIES=Array.isArray(state?.series)?state.series:[]; NEAR=Array.isArray(state?.nearCompletion)?state.nearCompletion:[];
+    POINT_ICON=String(state?.meta?.achievementPoints?.iconUrl||POINT_ICON_FALLBACK);
+    loadError=''; renderAll();
+  }
 
-      function safeNumber(value) {
-        const number = Number(value);
-        return Number.isFinite(number) ? number : 0;
-      }
+  function pointStyleRequirement(style){const id=String(style?.id||'');if(Number.isFinite(Number(style?.minPoints)))return Math.max(0,Number(style.minPoints));return STYLE_POINT_REQUIREMENTS[id]??null;}
+  function pointStyleCandidates(){return SHOWCASE_STYLES.map(s=>({style:s,need:pointStyleRequirement(s)})).filter(x=>x.need!=null&&x.need>0).sort((a,b)=>a.need-b.need);}
+  function nextPointStyle(points){return pointStyleCandidates().find(x=>points<x.need)||null;}
 
-      function escapeHtml(value) {
-        return String(value ?? '').replace(/[&<>"']/g, (char) => ({
-          '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-        })[char]);
-      }
+  function renderPrestige(){
+    const points=Math.max(0,safeNumber(SUMMARY.achievementPoints)); const rank=SUMMARY?.rank&&typeof SUMMARY.rank==='object'?SUMMARY.rank:{title:'Новичок',nextTitle:'Искатель',pointsToNext:50};
+    $('[data-prestige-points]').textContent=points.toLocaleString('ru-RU'); $('[data-prestige-rank]').textContent=String(rank.title||'Новичок');
+    const nextStyle=nextPointStyle(points); const title=$('[data-prestige-goal-title]'),value=$('[data-prestige-goal-value]'),bar=$('[data-prestige-goal-bar]'),left=$('[data-prestige-goal-left]'),right=$('[data-prestige-goal-right]');
+    if(nextStyle){const need=nextStyle.need,remain=Math.max(0,need-points),pct=clamp(points/Math.max(1,need)*100,0,100);title.textContent=`Следующее оформление: ${nextStyle.style.title||'витрина'}`;value.textContent=`ещё ${remain.toLocaleString('ru-RU')}`;bar.style.width=`${pct}%`;left.textContent=`${points.toLocaleString('ru-RU')} / ${need.toLocaleString('ru-RU')} очков`;right.textContent='Откроется навсегда';}
+    else if(rank?.nextTitle){title.textContent=`Следующий ранг: ${rank.nextTitle}`;value.textContent=`ещё ${Math.max(0,safeNumber(rank.pointsToNext)).toLocaleString('ru-RU')}`;bar.style.width=`${clamp(safeNumber(SUMMARY.completionPercent),5,100)}%`;left.textContent=`${points.toLocaleString('ru-RU')} очков престижа`;right.textContent='Очки не списываются';}
+    else{title.textContent='Максимальный текущий престиж';value.textContent='Все цели открыты';bar.style.width='100%';left.textContent=`${points.toLocaleString('ru-RU')} очков`;right.textContent='Продолжай коллекцию';}
+  }
 
-      function achievementPointsInline(value, options = {}) {
-        const amount = Math.max(0, safeNumber(value)).toLocaleString('ru-RU');
-        const icon = escapeHtml(ACHIEVEMENT_POINTS_ICON_URL || ACHIEVEMENT_POINTS_ICON_FALLBACK);
-        const prefix = String(options.prefix || '');
-        const sizeClass = options.small ? ' is-small' : '';
-        return `<span class="points-inline${sizeClass}"><img src="${icon}" alt="" aria-hidden="true"><span>${escapeHtml(prefix + amount)}</span></span>`;
-      }
+  function itemById(id){return ACHIEVEMENTS.find(i=>String(i?.id||'')===String(id||''))||null;}
+  function renderShowcase(){
+    const root=$('[data-showcase]'); root.dataset.style=SHOWCASE_STYLE_ID; $('[data-showcase-count]').textContent=`${SHOWCASE_IDS.length} / ${SHOWCASE_LIMIT}`;
+    const slots=Array.from({length:SHOWCASE_LIMIT},(_,index)=>{const id=SHOWCASE_IDS[index]||'',item=id?itemById(id):null;if(!item)return `<div class="slot"><span class="slot-index">${index+1}</span><span class="slot-art">＋</span><span class="slot-empty">Свободное место для трофея</span></div>`;const rarity=String(item?.rarity||'common');return `<div class="slot is-filled" data-rarity="${esc(rarity)}"><span class="slot-index">${index+1}</span>${art(item,'slot-art')}<strong>${esc(item?.title||'Достижение')}</strong><small>${esc(rarityLabel(item))}</small><span class="slot-actions"><button type="button" data-move="left" data-id="${esc(id)}" ${index===0||saving?'disabled':''}>←</button><button class="remove" type="button" data-remove="${esc(id)}" ${saving?'disabled':''}>×</button><button type="button" data-move="right" data-id="${esc(id)}" ${index>=SHOWCASE_IDS.length-1||saving?'disabled':''}>→</button></span></div>`;});
+    $('[data-showcase-slots]').innerHTML=slots.join('');
+    const points=Math.max(0,safeNumber(SUMMARY.achievementPoints));
+    $('[data-style-list]').innerHTML=SHOWCASE_STYLES.map(s=>{const id=String(s?.id||'default'),selected=id===SHOWCASE_STYLE_ID,unlocked=s?.unlocked===true,need=pointStyleRequirement(s);let state='';if(selected)state='Используется';else if(unlocked)state='Открыто';else if(need!=null)state=`${points.toLocaleString('ru-RU')} / ${need.toLocaleString('ru-RU')}`;else state=String(s?.unlockText||'Пока закрыто');let desc=String(s?.description||'Оформление витрины');if(!unlocked&&need!=null)desc=`Набери ${need.toLocaleString('ru-RU')} очков достижений. Очки останутся на аккаунте.`;return `<button class="style-card${selected?' is-selected':''}${unlocked?'':' is-locked'}" type="button" data-style="${esc(id)}" data-style-id="${esc(id)}" ${!unlocked||saving?'disabled':''}><span class="style-preview" aria-hidden="true"></span><span class="style-copy"><strong>${esc(s?.title||'Оформление')}</strong><span>${esc(desc)}</span></span><span class="style-state">${esc(state)}</span></button>`;}).join('');
+  }
 
-      function achievementPointsPill(value) {
-        return `<span class="achievement-points">${achievementPointsInline(value, { prefix: '+', small: true })}</span>`;
-      }
+  function renderSummary(){const published=catalog(),earned=Number.isFinite(Number(SUMMARY.catalogEarned))?Number(SUMMARY.catalogEarned):published.filter(i=>i?.earned).length,total=Number.isFinite(Number(SUMMARY.catalogTotal))?Number(SUMMARY.catalogTotal):published.length,doneSeries=SERIES.filter(s=>s?.completed===true).length;$('[data-summary-earned]').textContent=`${earned} / ${total}`;$('[data-summary-showcase]').textContent=`${SHOWCASE_IDS.length} / ${SHOWCASE_LIMIT}`;$('[data-summary-series]').textContent=`${doneSeries} / ${SERIES.length}`;renderPrestige();}
 
-      function formatPlayerPercent(value, earnedPlayers = 0) {
-        const percent = Math.max(0, Math.min(100, safeNumber(value)));
-        const earned = Math.max(0, safeNumber(earnedPlayers));
-        if (earned > 0 && percent < 0.01) return '<0,01%';
-        if (percent >= 100) return '100%';
-        if (percent >= 1) return `${percent.toFixed(1).replace('.', ',')}%`;
-        if (percent > 0) return `${percent.toFixed(2).replace('.', ',')}%`;
-        return '0%';
-      }
+  function renderRecent(){const section=$('[data-recent]'),list=$('[data-recent-list]');const items=catalog().filter(i=>i?.earned===true&&!i?.secretLocked).sort((a,b)=>safeNumber(b?.unlockedAt)-safeNumber(a?.unlockedAt)).slice(0,3);section.hidden=!items.length;if(!items.length){list.innerHTML='';return;}list.innerHTML=items.map(i=>`<div class="mini-ach">${art(i,'mini-ach-art')}<span class="mini-ach-copy"><strong>${esc(i.title||'Достижение')}</strong><span>${esc(rarityLabel(i))} · получено</span></span><span class="mini-ach-points">+${Math.max(0,safeNumber(i.achievementPoints))}</span></div>`).join('');}
+  function renderNear(){const section=$('[data-near]'),list=$('[data-near-list]');const items=NEAR.slice(0,3);section.hidden=!items.length;if(!items.length){list.innerHTML='';return;}list.innerHTML=items.map(e=>{const i=itemById(e?.id)||e,current=Math.max(0,safeNumber(e.current)),target=Math.max(1,safeNumber(e.target)),pct=clamp(safeNumber(e.progressPercent)||(current/target*100),0,100);return `<div class="mini-ach">${art(i,'mini-ach-art')}<span class="mini-ach-copy"><strong>${esc(i.title||'Достижение')}</strong><span>${current.toLocaleString('ru-RU')} / ${target.toLocaleString('ru-RU')}</span><span class="mini-progress"><i style="width:${pct}%"></i></span></span><span class="mini-ach-points">${Math.round(pct)}%</span></div>`;}).join('');}
+  function renderSeries(){const section=$('[data-series]'),list=$('[data-series-list]');section.hidden=!SERIES.length;$('[data-series-count]').textContent=SERIES.length?`${SERIES.filter(s=>s?.completed).length}/${SERIES.length}`:'';if(!SERIES.length){list.innerHTML='';return;}list.innerHTML=SERIES.map(s=>{const earned=Math.max(0,safeNumber(s.earned)),total=Math.max(0,safeNumber(s.total)),completed=s?.completed===true;const members=Array.isArray(s?.members)?s.members:[];return `<div class="series-item"><div class="series-row"><strong>${esc(s?.title||'Серия')}</strong><span class="series-status${completed?' is-complete':''}">${completed?'✓ Завершена':`${earned} / ${total}`}</span></div><div class="series-members">${members.map(m=>`<span class="series-member${m?.earned?' is-earned':''}">${m?.artUrl?`<img src="${esc(m.artUrl)}" alt="">`:esc(m?.icon||'🏅')}</span>`).join('')}</div></div>`;}).join('');}
 
-      function playerRarityPill(item) {
-        const total = Math.max(0, safeNumber(item?.totalPlayers));
-        if (!total) return '';
-        const earned = Math.max(0, safeNumber(item?.earnedPlayers));
-        const percent = formatPlayerPercent(item?.playerPercent, earned);
-        return `<span class="achievement-player-rarity" title="${escapeHtml(`${earned.toLocaleString('ru-RU')} из ${total.toLocaleString('ru-RU')} игроков`)}">Получили ${escapeHtml(percent)} игроков</span>`;
-      }
+  function stateFor(item){if(item?.claimable===true)return ['Забрать','claim'];if(item?.earned===true)return ['Получено','earned'];if(item?.legacyExpired===true)return ['Legacy',''];if(item?.secretLocked===true)return ['Секрет',''];return ['В процессе',''];}
+  function rewardMarkup(item){const reward=item?.reward&&typeof item.reward==='object'?item.reward:null;if(!reward&&(item?.hasReward!==true))return '';const label=String(reward?.label||reward?.title||item?.rewardLabel||'Награда');const img=String(reward?.imageUrl||reward?.artUrl||item?.rewardImageUrl||'');return `<span class="reward">${img?`<img src="${esc(img)}" alt="">`:''}<span>${esc(label)}</span></span>`;}
+  function achievementCard(item){const id=String(item?.id||''),target=Math.max(0,safeNumber(item?.target)),current=Math.max(0,safeNumber(item?.current)),pct=target>0?clamp(current/target*100,0,100):(item?.earned?100:0),[state,stateClass]=stateFor(item),inShowcase=SHOWCASE_IDS.includes(id),eligible=item?.earned===true&&item?.showcaseEligible!==false,limit=!inShowcase&&SHOWCASE_IDS.length>=SHOWCASE_LIMIT,busy=claiming.has(id);const claim=item?.claimable===true?`<button class="action primary" type="button" data-claim="${esc(id)}" ${busy?'disabled':''}>${busy?'Получаем…':'Забрать награду'}</button>`:'';const showcase=eligible?`<button class="action gold${inShowcase?' selected':''}" type="button" data-toggle-showcase="${esc(id)}" ${saving||limit?'disabled':''}>${inShowcase?`★ В витрине #${SHOWCASE_IDS.indexOf(id)+1}`:'На витрину'}</button>`:'';return `<article class="achievement${item?.earned?' is-earned':''}${item?.secretLocked?' is-secret':''}${item?.legacyExpired?' is-expired':''}">${art(item)}<div class="ach-copy"><div class="ach-title"><strong>${esc(item?.title||'Достижение')}</strong><span class="state ${stateClass}">${esc(state)}</span></div><div class="meta"><span class="pill">${esc(rarityLabel(item))}</span>${pointsInline(item?.achievementPoints)}</div><div class="description">${esc(item?.description||'')}</div>${target>0&&!item?.earned?`<div class="progress"><div class="progress-track"><i style="width:${pct}%"></i></div><div class="progress-copy"><span>${current.toLocaleString('ru-RU')} / ${target.toLocaleString('ru-RU')}</span><span>${Math.round(pct)}%</span></div></div>`:''}${rewardMarkup(item)}${claim||showcase?`<div class="actions">${claim}${showcase}</div>`:''}</div></article>`;}
 
-      function achievementArtMarkup(item, className = 'achievement-icon') {
-        const artUrl = String(item?.artUrl || '').trim();
-        const resolvedArt = artUrl || '/assets/ui/icon_score_acivment.png';
-        return `<span class="${className}" aria-hidden="true"><img src="${escapeHtml(resolvedArt)}" alt="" loading="lazy" decoding="async"></span>`;
-      }
+  function renderFilters(){const items=catalog(),ids=['all',...new Set(items.map(i=>String(i?.category||'misc')).filter(Boolean))];if(!ids.includes(activeCategory))activeCategory='all';$('[data-filters]').innerHTML=ids.map(id=>`<button class="filter" role="tab" type="button" data-category="${esc(id)}" aria-selected="${id===activeCategory?'true':'false'}">${esc(categoryLabel(id,items))}</button>`).join('');}
+  function renderCatalog(){const all=catalog(),items=activeCategory==='all'?all:all.filter(i=>String(i?.category||'misc')===activeCategory);$('[data-catalog-count]').textContent=String(items.length);$('[data-catalog-subtitle]').textContent=activeCategory==='all'?'Все опубликованные цели':categoryLabel(activeCategory,all);const list=$('[data-achievement-list]');if(loadError){list.innerHTML=`<div class="empty"><b>Не удалось загрузить достижения</b><span>${esc(loadError)}</span><button class="action primary" type="button" data-retry>Повторить</button></div>`;return;}if(!items.length){list.innerHTML='<div class="empty"><b>Здесь пока пусто</b><span>В этой категории ещё нет опубликованных достижений.</span></div>';return;}list.innerHTML=items.map(achievementCard).join('');}
+  function renderInfo(){const el=$('[data-info]');el.classList.toggle('is-error',Boolean(loadError));if(loadError){el.innerHTML=`<strong>Ошибка загрузки.</strong> ${esc(loadError)}`;return;}if(systemMessage){el.textContent=systemMessage;return;}el.innerHTML='<strong>Очки достижений</strong> — постоянный престиж. Они не тратятся: чем больше очков ты заработал, тем выше ранг и тем больше статусного оформления открывается навсегда.';}
+  function renderAll(){renderSummary();renderShowcase();renderRecent();renderNear();renderSeries();renderFilters();renderCatalog();renderInfo();}
 
-      function catalogAchievements() {
-        return ACHIEVEMENTS.filter((item) => item?.catalogVisible === true);
-      }
+  async function load(){loadError='';try{const data=await api('/api/achievements');applyState(data);}catch(e){loadError=String(e?.message||e||'Ошибка загрузки');renderCatalog();renderInfo();}}
+  async function saveShowcase(ids,message){if(saving)return false;saving=true;systemMessage='';renderShowcase();renderCatalog();try{const data=await api('/api/achievements/showcase',{ids});applyState(data?.state||data);systemMessage=message||'Витрина обновлена.';renderInfo();try{window.parent?.postMessage?.({type:'zefirok-achievements-account-updated'},'*');}catch{}return true;}catch(e){systemMessage=String(e?.message||e);renderInfo();return false;}finally{saving=false;renderShowcase();renderCatalog();}}
+  async function saveStyle(id){if(saving||id===SHOWCASE_STYLE_ID)return;const style=SHOWCASE_STYLES.find(s=>String(s?.id||'')===id);if(!style||style?.unlocked!==true){systemMessage=String(style?.unlockText||'Это оформление пока закрыто.');renderInfo();return;}saving=true;renderShowcase();try{const data=await api('/api/achievements/showcase',{ids:SHOWCASE_IDS,styleId:id});applyState(data?.state||data);systemMessage=`Оформление «${style.title||'витрины'}» выбрано.`;renderInfo();try{window.parent?.postMessage?.({type:'zefirok-achievements-account-updated'},'*');}catch{}}catch(e){systemMessage=String(e?.message||e);renderInfo();}finally{saving=false;renderShowcase();}}
+  async function claim(id){if(!id||claiming.has(id))return;claiming.add(id);renderCatalog();try{const data=await api('/api/achievements/claim',{achievementId:id,requestId:makeRequestId()});applyState(data?.state||data);systemMessage='Награда за достижение получена.';renderInfo();try{window.parent?.postMessage?.({type:'zefirok-achievements-account-updated'},'*');}catch{}}catch(e){systemMessage=String(e?.message||e);renderInfo();}finally{claiming.delete(id);renderCatalog();}}
 
-      function resolveTelegramWebApp() {
-        try {
-          return window.Telegram?.WebApp
-            || (window.parent && window.parent !== window ? window.parent.Telegram?.WebApp : null)
-            || null;
-        } catch {
-          return window.Telegram?.WebApp || null;
-        }
-      }
+  function closeAchievements(){if(window.parent&&window.parent!==window){try{window.parent.postMessage({type:'zefirok-close-achievements'},'*');}catch{}return;}try{history.back();}catch{location.href='/';}}
+  $('[data-back]').addEventListener('click',closeAchievements);
+  $('[data-filters]').addEventListener('click',e=>{const b=e.target?.closest?.('[data-category]');if(!b)return;activeCategory=String(b.dataset.category||'all');renderFilters();renderCatalog();});
+  $('[data-achievement-list]').addEventListener('click',e=>{const retry=e.target?.closest?.('[data-retry]');if(retry){void load();return;}const claimBtn=e.target?.closest?.('[data-claim]');if(claimBtn){void claim(String(claimBtn.dataset.claim||''));return;}const showcaseBtn=e.target?.closest?.('[data-toggle-showcase]');if(showcaseBtn){const id=String(showcaseBtn.dataset.toggleShowcase||'');if(!id)return;const exists=SHOWCASE_IDS.includes(id);const next=exists?SHOWCASE_IDS.filter(x=>x!==id):[...SHOWCASE_IDS,id].slice(0,SHOWCASE_LIMIT);void saveShowcase(next,exists?'Трофей убран из витрины.':'Трофей добавлен в витрину.');}});
+  $('[data-showcase-slots]').addEventListener('click',e=>{const rem=e.target?.closest?.('[data-remove]');if(rem){const id=String(rem.dataset.remove||'');void saveShowcase(SHOWCASE_IDS.filter(x=>x!==id),'Трофей убран из витрины.');return;}const move=e.target?.closest?.('[data-move]');if(!move)return;const id=String(move.dataset.id||''),dir=String(move.dataset.move||''),idx=SHOWCASE_IDS.indexOf(id);if(idx<0)return;const nextIdx=dir==='left'?idx-1:idx+1;if(nextIdx<0||nextIdx>=SHOWCASE_IDS.length)return;const next=[...SHOWCASE_IDS];[next[idx],next[nextIdx]]=[next[nextIdx],next[idx]];void saveShowcase(next,'Порядок витрины обновлён.');});
+  $('[data-style-list]').addEventListener('click',e=>{const b=e.target?.closest?.('[data-style]');if(b)void saveStyle(String(b.dataset.style||''));});
 
-      function testProjectActive() {
-        try {
-          if (new URLSearchParams(window.location.search).get('test_project') === '1') return true;
-          if (window.parent && window.parent !== window) {
-            return new URLSearchParams(window.parent.location.search).get('test_project') === '1';
-          }
-        } catch {}
-        return false;
-      }
-
-      function currentInitData() {
-        const webApp = resolveTelegramWebApp();
-        return String(webApp?.initData || '');
-      }
-
-      function makeRequestId() {
-        try { return crypto.randomUUID(); } catch {}
-        return `achievement_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
-      }
-
-      async function achievementsApiRequest(path, payload = {}) {
-        const headers = { 'Content-Type': 'application/json' };
-        const initData = currentInitData();
-        if (!initData && !testProjectActive()) throw new Error('Открой достижения из Telegram Mini App.');
-        const requestPayload = { ...payload, initData };
-        if (testProjectActive()) {
-          const response = await fetch('/api/owner/test-project/game', {
-            method: 'POST',
-            headers,
-            cache: 'no-store',
-            credentials: 'same-origin',
-            body: JSON.stringify({
-              initData,
-              ownerSession: localStorage.getItem('zefirok-owner-session-v1') || '',
-              path,
-              method: 'POST',
-              query: {},
-              payload: requestPayload
-            })
-          });
-          const envelope = await response.json().catch(() => ({}));
-          if (!response.ok || envelope?.ok === false) throw new Error(envelope?.error || 'Не удалось выполнить запрос достижений.');
-          const data = envelope?.data || envelope;
-          if (data?.ok === false) throw new Error(data.error || 'Не удалось выполнить запрос достижений.');
-          return data;
-        }
-        const response = await fetch(path, {
-          method: 'POST',
-          headers,
-          cache: 'no-store',
-          credentials: 'same-origin',
-          body: JSON.stringify(requestPayload)
-        });
-        const data = await response.json().catch(() => ({}));
-        if (!response.ok || data?.ok === false) throw new Error(data?.error || 'Не удалось выполнить запрос достижений.');
-        return data;
-      }
-
-      function formatAchievementDate(seconds) {
-        const value = Math.max(0, safeNumber(seconds));
-        if (!value) return '';
-        try { return new Intl.DateTimeFormat('ru-RU', { day:'2-digit', month:'2-digit', year:'numeric' }).format(new Date(value * 1000)); } catch { return ''; }
-      }
-
-      function formatAchievementHistoryDate(seconds) {
-        const value = Math.max(0, safeNumber(seconds));
-        if (!value) return '';
-        try { return new Intl.DateTimeFormat('ru-RU', { day:'numeric', month:'long', year:'numeric' }).format(new Date(value * 1000)); } catch { return formatAchievementDate(seconds); }
-      }
-
-      function achievementStatusMeta(item) {
-        if (item?.secretLocked) return { label:'Секрет', className:' is-secret' };
-        if (item?.legacyExpired) return { label:'Время вышло', className:' is-expired' };
-        if (item?.earned) {
-          const received = formatAchievementDate(item?.unlockedAt);
-          const legacyClass = String(item?.rarity || '') === 'legacy' ? ' is-earned is-legacy' : ' is-earned';
-          return { label: received ? `Получено ${received}` : 'Получено', className:legacyClass };
-        }
-        if (String(item?.availabilityStatus || '') === 'active' && safeNumber(item?.availableUntil) > 0) return { label:'Ограничено', className:'' };
-        return null;
-      }
-
-      function availabilityNote(item) {
-        if (item?.earned && String(item?.rarity || '') === 'legacy') return 'Legacy-трофей · навсегда в истории аккаунта';
-        if (item?.legacyExpired) return 'Legacy-период завершён · получить этот трофей уже нельзя';
-        const until = formatAchievementDate(item?.availableUntil);
-        if (!item?.earned && String(item?.availabilityStatus || '') === 'active' && until) return `Можно получить до ${until}`;
-        return '';
-      }
-
-      function applyAchievementsState(state, options = {}) {
-        ACHIEVEMENTS = Array.isArray(state?.achievements) ? state.achievements : [];
-        const ids = Array.isArray(state?.showcase?.ids) ? state.showcase.ids : ACHIEVEMENTS.filter((item) => item?.inShowcase).sort((a,b) => safeNumber(a.showcaseSlot) - safeNumber(b.showcaseSlot)).map((item) => item.id);
-        SHOWCASE_IDS = [...new Set(ids.map((id) => String(id || '')).filter(Boolean))].slice(0, 3);
-        SHOWCASE_LIMIT = Math.max(1, Math.min(3, Math.floor(safeNumber(state?.showcase?.limit) || 3)));
-        SHOWCASE_STYLE_ID = ['default','gold','seasonal'].includes(String(state?.showcase?.selectedStyleId || '')) ? String(state.showcase.selectedStyleId) : 'default';
-        SHOWCASE_STYLES = Array.isArray(state?.showcase?.styles) ? state.showcase.styles : [{ id:'default', title:'Классическая', description:'Базовая витрина', unlocked:true, selected:true, unlockText:'Доступна всем' }];
-        ACHIEVEMENT_SUMMARY = state?.summary && typeof state.summary === 'object' ? state.summary : {};
-        ACHIEVEMENT_SERIES = Array.isArray(state?.series) ? state.series : [];
-        NEAR_COMPLETION = Array.isArray(state?.nearCompletion) ? state.nearCompletion : [];
-        ACHIEVEMENT_POINTS_ICON_URL = String(state?.meta?.achievementPoints?.iconUrl || ACHIEVEMENT_POINTS_ICON_FALLBACK);
-        if (options?.cache !== false) writeAchievementsCache(state);
-      }
-
-      async function loadAchievements(options = {}) {
-        const preserveCurrent = options?.preserveCurrent === true && ACHIEVEMENTS.length > 0;
-        loading = !preserveCurrent;
-        loadError = '';
-        renderSummary();
-        renderCatalog();
-        try {
-          const data = await achievementsApiRequest('/api/achievements');
-          applyAchievementsState(data);
-        } catch (error) {
-          if (!preserveCurrent) {
-            ACHIEVEMENTS = [];
-            SHOWCASE_IDS = [];
-            SHOWCASE_STYLE_ID = 'default';
-            SHOWCASE_STYLES = [];
-            ACHIEVEMENT_SUMMARY = {};
-            ACHIEVEMENT_SERIES = [];
-            NEAR_COMPLETION = [];
-            loadError = String(error?.message || 'Не удалось загрузить достижения.');
-          } else {
-            systemMessage = 'Показываем последнее сохранённое состояние. Обновление повторится при следующем открытии.';
-          }
-        } finally {
-          loading = false;
-          renderSummary();
-          renderCatalog();
-          renderInfo();
-        }
-      }
-
-      function filteredAchievements() {
-        const published = catalogAchievements();
-        if (activeCategory === 'all') return published;
-        return published.filter((item) => item.category === activeCategory);
-      }
-
-      function renderFilters() {
-        if (!filtersEl) return;
-        const published = catalogAchievements();
-        const available = CATEGORIES.filter((category) => category.id === 'all' || published.some((item) => item.category === category.id));
-        if (!available.some((category) => category.id === activeCategory)) activeCategory = 'all';
-        filtersEl.innerHTML = available.map((category) => `
-          <button class="filter" role="tab" type="button" data-category="${category.id}" aria-selected="${category.id === activeCategory ? 'true' : 'false'}">${category.label}</button>
-        `).join('');
-      }
-
-      function showcaseItemById(id) {
-        return ACHIEVEMENTS.find((item) => String(item?.id || '') === String(id || '')) || null;
-      }
-
-      function renderShowcase() {
-        if (showcaseCardEl) showcaseCardEl.dataset.style = SHOWCASE_STYLE_ID;
-        if (showcaseCountEl) showcaseCountEl.textContent = `${SHOWCASE_IDS.length} / ${SHOWCASE_LIMIT}`;
-        if (showcaseStylePickerEl) {
-          const styles = SHOWCASE_STYLES.length ? SHOWCASE_STYLES : [{ id:'default', title:'Классическая', description:'Базовая витрина', unlocked:true, selected:true, unlockText:'Доступна всем' }];
-          showcaseStylePickerEl.innerHTML = styles.map((entry) => {
-            const id = String(entry?.id || 'default');
-            const unlocked = entry?.unlocked === true;
-            const selected = id === SHOWCASE_STYLE_ID;
-            const note = selected ? 'Выбрано' : unlocked ? 'Доступно' : String(entry?.unlockText || 'Пока закрыто');
-            return `<button class="showcase-style-option${selected ? ' is-selected' : ''}${unlocked ? '' : ' is-locked'}" type="button" data-showcase-style-id="${escapeHtml(id)}" data-style-id="${escapeHtml(id)}" title="${escapeHtml(entry?.description || note)}"${(!unlocked || showcaseSaving) ? ' disabled' : ''}><span class="showcase-style-swatch" aria-hidden="true"></span><strong>${escapeHtml(entry?.title || 'Оформление')}</strong><small>${escapeHtml(note)}</small></button>`;
-          }).join('');
-        }
-        if (!showcaseSlotsEl) return;
-        const slots = Array.from({ length: SHOWCASE_LIMIT }, (_, index) => {
-          const id = SHOWCASE_IDS[index] || '';
-          const item = id ? showcaseItemById(id) : null;
-          if (!item) {
-            return `<div class="showcase-slot"><span class="showcase-slot-index">${index + 1}</span><span class="showcase-slot-icon" aria-hidden="true">＋</span><span class="showcase-slot-empty">Свободное место</span></div>`;
-          }
-          const rarity = String(item?.rarity || 'common');
-          const rarityLabel = String(item?.rarityLabel || 'Обычное');
-          const prestige = Math.max(0, safeNumber(item?.achievementPoints));
-          return `<div class="showcase-slot is-filled" data-rarity="${escapeHtml(rarity)}">
-            <span class="showcase-slot-index">${index + 1}</span>
-            ${achievementArtMarkup(item, 'showcase-slot-icon')}
-            <strong>${escapeHtml(item?.title || 'Достижение')}</strong>
-            <small>${escapeHtml(rarityLabel)} · ${achievementPointsInline(prestige, { prefix: '+', small: true })}</small>
-            <span class="showcase-slot-actions">
-              <button type="button" data-showcase-move="left" data-showcase-id="${escapeHtml(id)}" aria-label="Переместить влево"${index === 0 || showcaseSaving ? ' disabled' : ''}>←</button>
-              <button type="button" data-showcase-remove data-showcase-id="${escapeHtml(id)}" aria-label="Убрать из витрины"${showcaseSaving ? ' disabled' : ''}>×</button>
-              <button type="button" data-showcase-move="right" data-showcase-id="${escapeHtml(id)}" aria-label="Переместить вправо"${index >= SHOWCASE_IDS.length - 1 || showcaseSaving ? ' disabled' : ''}>→</button>
-            </span>
-          </div>`;
-        });
-        showcaseSlotsEl.innerHTML = slots.join('');
-      }
-
-      function renderRecent() {
-        if (!recentSectionEl || !recentListEl) return;
-        const items = catalogAchievements()
-          .filter((item) => item?.earned === true && safeNumber(item?.unlockedAt) > 0)
-          .sort((a,b) => safeNumber(b?.unlockedAt) - safeNumber(a?.unlockedAt) || safeNumber(b?.achievementPoints) - safeNumber(a?.achievementPoints))
-          .slice(0, 3);
-        recentSectionEl.hidden = items.length === 0;
-        if (!items.length) { recentListEl.innerHTML = ''; return; }
-        recentListEl.innerHTML = items.map((item) => {
-          const date = formatAchievementHistoryDate(item?.unlockedAt) || formatAchievementDate(item?.unlockedAt);
-          const rarity = String(item?.rarityLabel || 'Обычное');
-          const prestige = Math.max(0, safeNumber(item?.achievementPoints));
-          return `<div class="recent-achievement">
-            ${achievementArtMarkup(item, 'recent-achievement-art')}
-            <span class="recent-achievement-copy"><strong>${escapeHtml(item?.title || 'Достижение')}</strong><small>${escapeHtml(date)} · ${escapeHtml(rarity)}</small></span>
-            <span class="recent-achievement-points">${achievementPointsInline(prestige, { prefix: '+', small: true })}</span>
-          </div>`;
-        }).join('');
-      }
-
-      function renderNearCompletion() {
-        if (!nearSectionEl || !nearListEl) return;
-        const items = Array.isArray(NEAR_COMPLETION) ? NEAR_COMPLETION.slice(0, 3) : [];
-        nearSectionEl.hidden = items.length === 0;
-        if (!items.length) { nearListEl.innerHTML = ''; return; }
-        nearListEl.innerHTML = items.map((entry) => {
-          const item = showcaseItemById(entry?.id) || entry;
-          const current = Math.max(0, safeNumber(entry?.current));
-          const target = Math.max(1, safeNumber(entry?.target));
-          const percent = Math.max(0, Math.min(100, safeNumber(entry?.progressPercent) || (current / target * 100)));
-          const percentLabel = `${percent.toFixed(percent % 1 ? 1 : 0).replace('.', ',')}%`;
-          return `<div class="near-achievement">
-            ${achievementArtMarkup(item, 'near-achievement-art')}
-            <span class="near-copy"><span class="near-title-row"><strong>${escapeHtml(entry?.title || item?.title || 'Достижение')}</strong><b>${escapeHtml(percentLabel)}</b></span><span class="near-progress" aria-hidden="true"><i style="width:${Math.min(100, percent)}%"></i></span><small><span>${current.toLocaleString('ru-RU')} / ${target.toLocaleString('ru-RU')}</span><span>осталось ${Math.max(0, target-current).toLocaleString('ru-RU')}</span></small></span>
-          </div>`;
-        }).join('');
-      }
-
-      const SERIES_ICON_BY_TITLE = Object.freeze({
-        'Бегун':'/assets/achievements/series/icon_begyn.png',
-        'Рекордсмен':'/assets/achievements/series/icon_recordsmen.png',
-        'Путь Зеффи':'/assets/achievements/series/icon_put_zeffi.png',
-        'Коллекция Зеффи':'/assets/achievements/series/icon_collectibl_achivments.png',
-        'Охотник за кейсами':'/assets/achievements/series/icon_hanter_case.png',
-        'Своя компания':'/assets/achievements/series/icon_my_company.png',
-        'Сезонный путь':'/assets/achievements/series/icon_season_put.png'
-      });
-
-      function renderSeries() {
-        if (!seriesSectionEl || !seriesListEl) return;
-        const series = Array.isArray(ACHIEVEMENT_SERIES) ? ACHIEVEMENT_SERIES : [];
-        seriesSectionEl.hidden = series.length === 0;
-        if (!series.length) { seriesListEl.innerHTML = ''; return; }
-        seriesListEl.innerHTML = series.map((entry) => {
-          const earned = Math.max(0, safeNumber(entry?.earned));
-          const total = Math.max(1, safeNumber(entry?.total));
-          const completed = entry?.completed === true;
-          const percent = Math.max(0, Math.min(100, safeNumber(entry?.progressPercent) || Math.round(earned / total * 100)));
-          const title = String(entry?.title || 'Серия');
-          const iconUrl = SERIES_ICON_BY_TITLE[title] || '/assets/ui/icon_score_acivment.png';
-          return `<div class="achievement-series${completed ? ' is-complete' : ''}" data-series-category="${escapeHtml(entry?.category || '')}">
-            <span class="series-icon" aria-hidden="true"><img src="${escapeHtml(iconUrl)}" alt="" loading="lazy" decoding="async"></span>
-            <span class="series-copy"><strong>${escapeHtml(title)}</strong><span class="series-progress" aria-hidden="true"><i style="width:${percent}%"></i></span></span>
-            <span class="series-status${completed ? ' is-complete' : ''}">${completed ? '✓ Серия завершена' : `${earned} / ${total}`}</span>
-          </div>`;
-        }).join('');
-      }
-
-      function renderSummary() {
-        const published = catalogAchievements();
-        const earned = Number.isFinite(Number(ACHIEVEMENT_SUMMARY?.catalogEarned)) ? Number(ACHIEVEMENT_SUMMARY.catalogEarned) : published.filter((item) => item.earned === true).length;
-        const total = Number.isFinite(Number(ACHIEVEMENT_SUMMARY?.catalogTotal)) ? Number(ACHIEVEMENT_SUMMARY.catalogTotal) : published.length;
-        const completion = Math.max(0, Math.min(100, Number.isFinite(Number(ACHIEVEMENT_SUMMARY?.completionPercent)) ? Number(ACHIEVEMENT_SUMMARY.completionPercent) : (total ? Math.round(earned / total * 100) : 0)));
-        const prestige = Math.max(0, safeNumber(ACHIEVEMENT_SUMMARY?.achievementPoints));
-        const rank = ACHIEVEMENT_SUMMARY?.rank && typeof ACHIEVEMENT_SUMMARY.rank === 'object' ? ACHIEVEMENT_SUMMARY.rank : { title:'Новичок', nextTitle:'Искатель', pointsToNext:50 };
-        if (summaryEarnedEl) summaryEarnedEl.textContent = `${earned} / ${total} · ${completion}%`;
-        if (summaryCompletionBarEl) summaryCompletionBarEl.style.width = `${completion}%`;
-        if (summaryPointsEl) summaryPointsEl.innerHTML = achievementPointsInline(prestige);
-        if (summaryRankEl) summaryRankEl.textContent = String(rank?.title || 'Новичок');
-        if (summaryRankNextEl) summaryRankNextEl.textContent = rank?.nextTitle ? `До «${String(rank.nextTitle)}»: ${Math.max(0, safeNumber(rank.pointsToNext)).toLocaleString('ru-RU')}` : 'Максимальный статус';
-        if (summaryShowcaseEl) summaryShowcaseEl.textContent = `${SHOWCASE_IDS.length} / ${SHOWCASE_LIMIT}`;
-        renderRecent();
-        renderNearCompletion();
-        renderSeries();
-        renderShowcase();
-      }
-
-      function renderInfo() {
-        if (systemInfoEl) systemInfoEl.textContent = systemMessage || SYSTEM_INFO_DEFAULT;
-      }
-
-      function achievementCard(item) {
-        const id = String(item?.id || '');
-        const target = Math.max(0, safeNumber(item.target));
-        const current = Math.max(0, safeNumber(item.current));
-        const percent = target > 0 ? Math.min(100, Math.round(current / target * 100)) : (item.earned ? 100 : 0);
-        const claimStatus = String(item.claimStatus || (item.claimed ? 'claimed' : item.earned ? 'complete' : 'locked'));
-        const busy = claimingIds.has(id);
-        const hasReward = item?.hasReward === true || item?.reward?.hasReward === true;
-        const statusMeta = achievementStatusMeta(item);
-        const state = item.earned
-          ? statusMeta?.label || 'Получено'
-          : statusMeta?.label || (target > 0 ? 'В процессе' : 'Закрыто');
-        const stateClass = String(statusMeta?.className || '');
-        const rarity = String(item?.rarity || 'common');
-        const rarityLabel = String(item?.rarityLabel || 'Обычное');
-        const prestige = Math.max(0, safeNumber(item?.achievementPoints));
-        const rewardLabel = String(item?.reward?.label || '');
-        const rewardImage = String(item?.reward?.imageUrl || '');
-        const canClaim = hasReward && item.earned === true && item.claimed !== true && (item.claimable === true || claimStatus === 'ready' || claimStatus === 'failed');
-        const claimButton = canClaim
-          ? `<button class="achievement-claim${claimStatus === 'failed' ? ' is-retry' : ''}" type="button" data-claim-achievement="${escapeHtml(id)}"${busy ? ' disabled' : ''}>${busy ? 'Выдаём…' : claimStatus === 'failed' ? 'Повторить' : 'Забрать'}</button>`
-          : '';
-        const deliveryNote = hasReward && item.earned && !item.claimed && claimStatus === 'pending'
-          ? '<span class="achievement-delivery-note">Аватарка уже в очереди выдачи</span>'
-          : hasReward && item.claimed
-            ? '<span class="achievement-delivery-note">Аватарка уже получена</span>'
-            : item.earned && !hasReward
-              ? '<span class="achievement-delivery-note">Статусный трофей · без отдельного приза</span>'
-              : '';
-        const inShowcase = item.inShowcase === true || SHOWCASE_IDS.includes(id);
-        const showcaseEligible = item.earned === true && item.showcaseEligible !== false;
-        const showcaseLimitReached = !inShowcase && SHOWCASE_IDS.length >= SHOWCASE_LIMIT;
-        const showcaseSlot = inShowcase ? Math.max(1, SHOWCASE_IDS.indexOf(id) + 1) : 0;
-        const showcaseButton = showcaseEligible
-          ? `<button class="achievement-showcase${inShowcase ? ' is-selected' : ''}" type="button" data-showcase-achievement="${escapeHtml(id)}"${showcaseSaving || showcaseLimitReached ? ' disabled' : ''}>${inShowcase ? `★ В витрине #${showcaseSlot}` : 'На витрину'}</button>`
-          : '';
-        const actions = claimButton || showcaseButton ? `<span class="achievement-actions">${claimButton}${showcaseButton}</span>` : '';
-        const rewardMarkup = hasReward && rewardLabel
-          ? `<span class="achievement-reward">${rewardImage ? `<img src="${escapeHtml(rewardImage)}" alt="">` : ''}<span>${escapeHtml(rewardLabel)}</span></span>`
-          : '';
-        const timeNote = availabilityNote(item);
-        const secondaryNote = timeNote ? `<span class="achievement-delivery-note">${escapeHtml(timeNote)}</span>` : '';
-        return `
-          <article class="achievement-card${item.earned ? ' is-earned' : ''}${item.secretLocked ? ' is-secret-locked' : ''}${item.legacyExpired ? ' is-expired' : ''}">
-            ${achievementArtMarkup(item)}
-            <div class="achievement-copy">
-              <div class="achievement-title-row"><strong>${escapeHtml(item.title || 'Достижение')}</strong><span class="achievement-state${stateClass}">${state}</span></div>
-              <div class="achievement-meta"><span class="achievement-rarity" data-rarity="${escapeHtml(rarity)}">${escapeHtml(rarityLabel)}</span>${achievementPointsPill(prestige)}${playerRarityPill(item)}</div>
-              <div class="achievement-description">${escapeHtml(item.description || '')}</div>
-              ${target > 0 ? `<div class="achievement-progress"><div class="achievement-track"><i style="width:${percent}%"></i></div><small><span>${current} / ${target}</span><span>${percent}%</span></small></div>` : ''}
-              <div class="achievement-reward-row">
-                ${rewardMarkup || deliveryNote || secondaryNote}
-                ${actions}
-              </div>
-            </div>
-          </article>`;
-      }
-
-      function renderCatalog() {
-        renderFilters();
-        const category = CATEGORIES.find((item) => item.id === activeCategory) || CATEGORIES[0];
-        const items = filteredAchievements();
-        if (catalogTitleEl) catalogTitleEl.textContent = category.title;
-        if (catalogSubtitleEl) catalogSubtitleEl.textContent = category.subtitle;
-        if (catalogCountEl) catalogCountEl.textContent = String(items.length);
-        if (listEl) listEl.innerHTML = items.map(achievementCard).join('');
-        const showEmpty = loading || Boolean(loadError) || items.length === 0;
-        if (emptyEl) emptyEl.hidden = !showEmpty;
-        if (emptyTitleEl) emptyTitleEl.textContent = loading
-          ? 'Загружаем достижения'
-          : loadError
-            ? 'Не удалось загрузить достижения'
-            : (activeCategory === 'all' ? 'Достижений пока нет' : `В категории «${category.label}» пока пусто`);
-        if (emptyCopyEl) emptyCopyEl.textContent = loading
-          ? 'Считаем прогресс по фактическим данным аккаунта…'
-          : loadError
-            ? loadError
-            : 'Здесь появятся достижения, когда сервер вернёт доступные условия.';
-      }
-
-      async function claimAchievement(achievementId) {
-        const id = String(achievementId || '');
-        const item = ACHIEVEMENTS.find((entry) => String(entry.id || '') === id);
-        if (!item || claimingIds.has(id) || item.claimed === true) return;
-        claimingIds.add(id);
-        systemMessage = '';
-        renderCatalog();
-        renderInfo();
-        try {
-          const data = await achievementsApiRequest('/api/achievements/claim', {
-            achievementId: id,
-            requestId: makeRequestId()
-          });
-          const state = data?.state || data;
-          if (Array.isArray(state?.achievements)) applyAchievementsState(state);
-          if (data?.pending) {
-            systemMessage = 'Награда зафиксирована и находится в очереди выдачи. Повторно она не начислится.';
-          } else {
-            const label = String(data?.reward?.label || item?.reward?.label || 'награда');
-            systemMessage = data?.repeated ? `Эта награда уже была получена: ${label}.` : `Получено: ${label}.`;
-            try { window.parent?.postMessage?.({ type: 'zefirok-achievements-account-updated' }, '*'); } catch {}
-          }
-        } catch (error) {
-          systemMessage = String(error?.message || 'Не удалось получить награду. Попробуй ещё раз.');
-        } finally {
-          claimingIds.delete(id);
-          renderSummary();
-          renderCatalog();
-          renderInfo();
-        }
-      }
-
-      async function saveShowcaseIds(nextIds, successMessage = '') {
-        if (showcaseSaving) return false;
-        const normalized = [...new Set((Array.isArray(nextIds) ? nextIds : []).map((id) => String(id || '').trim()).filter(Boolean))].slice(0, SHOWCASE_LIMIT);
-        showcaseSaving = true;
-        systemMessage = '';
-        renderSummary();
-        renderCatalog();
-        renderInfo();
-        try {
-          const data = await achievementsApiRequest('/api/achievements/showcase', { ids: normalized });
-          const state = data?.state || data;
-          applyAchievementsState(state);
-          systemMessage = successMessage || '«Моя витрина» обновлена.';
-          try { window.parent?.postMessage?.({ type: 'zefirok-achievements-account-updated' }, '*'); } catch {}
-          return true;
-        } catch (error) {
-          systemMessage = String(error?.message || 'Не удалось обновить витрину.');
-          return false;
-        } finally {
-          showcaseSaving = false;
-          renderSummary();
-          renderCatalog();
-          renderInfo();
-        }
-      }
-
-      async function saveShowcaseStyle(styleId) {
-        const id = String(styleId || '').trim();
-        if (!id || id === SHOWCASE_STYLE_ID || showcaseSaving) return;
-        const style = SHOWCASE_STYLES.find((entry) => String(entry?.id || '') === id);
-        if (!style || style?.unlocked !== true) {
-          systemMessage = String(style?.unlockText || 'Это оформление витрины пока закрыто.');
-          renderInfo();
-          return;
-        }
-        showcaseSaving = true;
-        systemMessage = '';
-        renderSummary();
-        renderCatalog();
-        renderInfo();
-        try {
-          const data = await achievementsApiRequest('/api/achievements/showcase', { ids: SHOWCASE_IDS, styleId: id });
-          const state = data?.state || data;
-          applyAchievementsState(state);
-          systemMessage = `Оформление «${String(style?.title || 'витрины')}» выбрано.`;
-          try { window.parent?.postMessage?.({ type: 'zefirok-achievements-account-updated' }, '*'); } catch {}
-        } catch (error) {
-          systemMessage = String(error?.message || 'Не удалось сменить оформление витрины.');
-        } finally {
-          showcaseSaving = false;
-          renderSummary();
-          renderCatalog();
-          renderInfo();
-        }
-      }
-
-      async function toggleShowcase(achievementId) {
-        const id = String(achievementId || '');
-        const item = ACHIEVEMENTS.find((entry) => String(entry.id || '') === id);
-        if (!item || item.earned !== true || showcaseSaving) return;
-        const alreadySelected = SHOWCASE_IDS.includes(id);
-        if (!alreadySelected && SHOWCASE_IDS.length >= SHOWCASE_LIMIT) {
-          systemMessage = `В витрине уже ${SHOWCASE_LIMIT} достижения. Сначала убери одно из выбранных.`;
-          renderInfo();
-          return;
-        }
-        const nextIds = alreadySelected ? SHOWCASE_IDS.filter((entry) => entry !== id) : [...SHOWCASE_IDS, id];
-        await saveShowcaseIds(nextIds, alreadySelected ? 'Достижение убрано из «Моей витрины».' : `Достижение добавлено в «Мою витрину».`);
-      }
-
-      async function moveShowcase(achievementId, direction) {
-        const id = String(achievementId || '');
-        const index = SHOWCASE_IDS.indexOf(id);
-        if (index < 0 || showcaseSaving) return;
-        const delta = direction === 'left' ? -1 : direction === 'right' ? 1 : 0;
-        const nextIndex = index + delta;
-        if (!delta || nextIndex < 0 || nextIndex >= SHOWCASE_IDS.length) return;
-        const nextIds = [...SHOWCASE_IDS];
-        [nextIds[index], nextIds[nextIndex]] = [nextIds[nextIndex], nextIds[index]];
-        await saveShowcaseIds(nextIds, 'Порядок «Моей витрины» обновлён.');
-      }
-
-      listEl?.addEventListener('click', (event) => {
-        const claimButton = event.target?.closest?.('[data-claim-achievement]');
-        if (claimButton) { claimAchievement(String(claimButton.dataset.claimAchievement || '')); return; }
-        const showcaseButton = event.target?.closest?.('[data-showcase-achievement]');
-        if (showcaseButton) toggleShowcase(String(showcaseButton.dataset.showcaseAchievement || ''));
-      });
-
-      showcaseSlotsEl?.addEventListener('click', (event) => {
-        const removeButton = event.target?.closest?.('[data-showcase-remove]');
-        if (removeButton) { toggleShowcase(String(removeButton.dataset.showcaseId || '')); return; }
-        const moveButton = event.target?.closest?.('[data-showcase-move]');
-        if (moveButton) moveShowcase(String(moveButton.dataset.showcaseId || ''), String(moveButton.dataset.showcaseMove || ''));
-      });
-
-      showcaseStylePickerEl?.addEventListener('click', (event) => {
-        const button = event.target?.closest?.('[data-showcase-style-id]');
-        if (!button || button.disabled) return;
-        saveShowcaseStyle(String(button.dataset.showcaseStyleId || ''));
-      });
-
-      function selectCategory(categoryId) {
-        if (!CATEGORIES.some((item) => item.id === categoryId)) return;
-        activeCategory = categoryId;
-        renderFilters();
-        renderCatalog();
-      }
-
-      filtersEl?.addEventListener('click', (event) => {
-        const button = event.target?.closest?.('[data-category]');
-        if (!button) return;
-        selectCategory(String(button.dataset.category || 'all'));
-      });
-
-      function closeAchievements() {
-        if (window.parent && window.parent !== window) {
-          try { window.parent.postMessage({ type: 'zefirok-close-achievements' }, '*'); } catch {}
-          return;
-        }
-        try {
-          if (window.history.length > 1) {
-            window.history.back();
-            return;
-          }
-        } catch {}
-        try { window.location.href = '/'; } catch {}
-      }
-
-      window.addEventListener('message', (event) => {
-        if (event?.data?.type === 'zefirok-achievements-back') closeAchievements();
-        const payload = event?.data?.payload;
-        if (event?.data?.type === 'zefirok-host-viewport-changed' && payload && typeof payload === 'object') {
-          const root = document.documentElement;
-          if (payload.safeTop != null) root.style.setProperty('--safe-top', `max(env(safe-area-inset-top,0px), ${Number(payload.safeTop) || 0}px)`);
-          if (payload.safeRight != null) root.style.setProperty('--safe-right', `max(env(safe-area-inset-right,0px), ${Number(payload.safeRight) || 0}px)`);
-          if (payload.safeBottom != null) root.style.setProperty('--safe-bottom', `max(env(safe-area-inset-bottom,0px), ${Number(payload.safeBottom) || 0}px)`);
-          if (payload.safeLeft != null) root.style.setProperty('--safe-left', `max(env(safe-area-inset-left,0px), ${Number(payload.safeLeft) || 0}px)`);
-        }
-      });
-
-      try {
-        tg?.ready?.();
-        tg?.expand?.();
-        tg?.disableVerticalSwipes?.();
-        tg?.enableClosingConfirmation?.();
-        tg?.BackButton?.offClick?.(closeAchievements);
-        tg?.BackButton?.onClick?.(closeAchievements);
-        tg?.BackButton?.show?.();
-      } catch {}
-
-      window.addEventListener('pagehide', () => {
-        try {
-          tg?.BackButton?.offClick?.(closeAchievements);
-          tg?.BackButton?.hide?.();
-          tg?.disableClosingConfirmation?.();
-        } catch {}
-      });
-
-      const cachedAchievementState = readAchievementsCache();
-      if (cachedAchievementState) {
-        applyAchievementsState(cachedAchievementState, { cache:false });
-        loading = false;
-      }
-      renderFilters();
-      renderSummary();
-      renderCatalog();
-      renderInfo();
-      loadAchievements({ preserveCurrent:Boolean(cachedAchievementState) });
-    })();
-  </script>
+  window.addEventListener('message',event=>{if(event?.data?.type==='zefirok-achievements-back')closeAchievements();const payload=event?.data?.payload;if(event?.data?.type==='zefirok-host-viewport-changed'&&payload&&typeof payload==='object'){const root=document.documentElement;if(payload.safeTop!=null)root.style.setProperty('--safe-top',`max(env(safe-area-inset-top,0px), ${Number(payload.safeTop)||0}px)`);if(payload.safeRight!=null)root.style.setProperty('--safe-right',`max(env(safe-area-inset-right,0px), ${Number(payload.safeRight)||0}px)`);if(payload.safeBottom!=null)root.style.setProperty('--safe-bottom',`max(env(safe-area-inset-bottom,0px), ${Number(payload.safeBottom)||0}px)`);if(payload.safeLeft!=null)root.style.setProperty('--safe-left',`max(env(safe-area-inset-left,0px), ${Number(payload.safeLeft)||0}px)`);}});
+  try{const wa=resolveTelegramWebApp();wa?.ready?.();wa?.expand?.();wa?.disableVerticalSwipes?.();}catch{}
+  void load();
+})();
+</script>
 </body>
 </html>

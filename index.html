@@ -1237,8 +1237,8 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
     frame.title = "Достижения";
     frame.referrerPolicy = "same-origin";
     frame.src = initData
-      ? `/achievements.html?v=1.2.0-achievements3#tgInitData=${encodeURIComponent(initData)}`
-      : `/achievements.html?v=1.2.0-achievements3`;
+      ? `/achievements.html?v=1.2.0-achievements-prestige1#tgInitData=${encodeURIComponent(initData)}`
+      : `/achievements.html?v=1.2.0-achievements-prestige1`;
     layer.append(frame);
     frame.addEventListener("load", () => {
       const snapshot = syncTelegramViewport();
@@ -14351,7 +14351,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         {
           title: &quot;Достижения и «Моя витрина»&quot;,
           description: &quot;Достижения теперь ведут отдельную историю аккаунта. Выполненные трофеи дают очки достижений, а до трёх любимых можно выставить в «Мою витрину».&quot;,
-          extra: &quot;Очки достижений — показатель престижа, а не валюта. Витрина видна в профиле и рейтинге; секретные достижения раскрываются после выполнения, а Legacy-трофеи сохраняются в истории аккаунта.&quot;,
+          extra: &quot;Очки достижений — постоянный престиж: они не тратятся. Чем больше очков ты набрал, тем выше ранг и тем больше оформлений витрины открывается навсегда. Витрина видна в профиле и рейтинге.&quot;,
           visual: () =&gt; `
             &lt;div class=&quot;tutorial-profile-feature-grid&quot;&gt;
               &lt;span class=&quot;tutorial-profile-feature&quot;&gt;&lt;b&gt;&lt;img src=&quot;/assets/ui/icon_score_acivment.png&quot; alt=&quot;&quot;&gt;&lt;/b&gt;&lt;span&gt;&lt;strong&gt;Каталог&lt;/strong&gt;&lt;span&gt;обычные, редкие и секретные&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
@@ -14477,7 +14477,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         {
           title: &quot;Нажми на игрока — откроется мини-профиль&quot;,
           description: &quot;Теперь строки рейтинга интерактивны. В мини-профиле видны лучший рекорд, число забегов, достижения и до трёх трофеев из «Моей витрины».&quot;,
-          extra: &quot;У других игроков доступно сравнение с твоими ключевыми метриками. Очки достижений показывают престиж и прогресс коллекции — они не являются игровой валютой.&quot;,
+          extra: &quot;У других игроков доступно сравнение с твоими ключевыми метриками. Очки достижений показывают престиж и прогресс коллекции. Они не тратятся и открывают статусное оформление витрины по мере роста аккаунта.&quot;,
           visual: () =&gt; `
             &lt;div class=&quot;tutorial-profile-feature-grid&quot;&gt;
               &lt;span class=&quot;tutorial-profile-feature&quot;&gt;&lt;b&gt;&lt;img src=&quot;/assets/ui/icon_o_profile.png&quot; alt=&quot;&quot;&gt;&lt;/b&gt;&lt;span&gt;&lt;strong&gt;Мини-профиль&lt;/strong&gt;&lt;span&gt;рекорд и статистика&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
