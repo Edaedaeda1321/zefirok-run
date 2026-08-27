@@ -18,6 +18,8 @@ jobs:
         with:
           ref: feat/storefront-featured-control
           fetch-depth: 0
+      - name: Fix encoded matcher
+        run: python3 .github/fix_patch_v2.py
       - name: Apply patch
         run: python3 .github/patch_storefront_featured_v2.py
       - name: Validate
@@ -28,7 +30,7 @@ jobs:
           grep -q 'shopFeaturedSave' owner.html
           grep -q 'remoteShopFeatured' index.html
           grep -q 'ownerPanelSaveShopFeatured' src/worker.js
-          grep -q '0068_shop_featured' <(find migrations -maxdepth 1 -type f -printf '%f\n')
+          test -f migrations/0068_shop_featured.sql
       - name: Commit feature changes
         run: |
           git config user.name "github-actions[bot]"
