@@ -17620,6 +17620,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       }
 
       let playerGiftInboxExpanded = false;
+      let playerGiftClaimBusy = false;
 
       function playerMailAttentionCount() {
         const items = Array.isArray(state.playerGifts) ? state.playerGifts : [];
@@ -17716,8 +17717,8 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 
       async function claimPlayerGiftClient(giftId, button) {
         const id = String(giftId || &quot;&quot;);
-        if (!id || !telegramProfile?.initData || button?.disabled || busy) return;
-        busy=true;
+        if (!id || !telegramProfile?.initData || button?.disabled || playerGiftClaimBusy) return false;
+        playerGiftClaimBusy=true;
         const oldText = button?.textContent || &quot;🎁 Забрать&quot;;
         if (button) { button.disabled = true; button.textContent = &quot;Получаем…&quot;; }
         let claimFinished = false;
@@ -17763,7 +17764,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           hapticNotify(&quot;error&quot;);
           return false;
         } finally {
-          busy=false;
+          playerGiftClaimBusy=false;
         }
       }
 
