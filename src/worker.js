@@ -72,6 +72,15 @@ const DEFAULT_SKIN_PRICES = Object.freeze({
   alex: Object.freeze({ points: 3000000, treats: 1500, coffee: 1500 })
 });
 
+const DEFAULT_SHOP_FEATURED_CONFIG = Object.freeze({
+  rewards: Object.freeze({ itemId: "case-alex", label: "Рекомендуем · Особый · Алекс" }),
+  skins: Object.freeze({ itemId: "alex", label: "Рекомендуем · Легендарный" })
+});
+
+function cloneDefaultShopFeaturedConfig() {
+  return Object.fromEntries(Object.entries(DEFAULT_SHOP_FEATURED_CONFIG).map(([slot, value]) => [slot, { ...value }]));
+}
+
 const SKIN_PURCHASE_CASE_BONUSES = Object.freeze({
   bee: Object.freeze({ caseType: "small", title: "Обычный кейс", version: "balance-v1" }),
   sailor: Object.freeze({ caseType: "sweet", title: "Серебряный кейс", version: "balance-v1" }),
@@ -407,6 +416,14 @@ const SHOP_ASSORTMENT_SCHEMA_SQL = `CREATE TABLE IF NOT EXISTS shop_assortment (
   treats INTEGER NOT NULL DEFAULT 0 CHECK(treats >= 0),
   coffee INTEGER NOT NULL DEFAULT 0 CHECK(coffee >= 0),
   updated_at INTEGER NOT NULL,
+  updated_by TEXT NOT NULL DEFAULT ''
+)`;
+
+const SHOP_FEATURED_SCHEMA_SQL = `CREATE TABLE IF NOT EXISTS shop_featured_config (
+  slot TEXT PRIMARY KEY CHECK(slot IN ('rewards', 'skins')),
+  item_id TEXT NOT NULL DEFAULT '',
+  badge_text TEXT NOT NULL DEFAULT '',
+  updated_at INTEGER NOT NULL DEFAULT 0,
   updated_by TEXT NOT NULL DEFAULT ''
 )`;
 
@@ -5669,6 +5686,7 @@ async function ensureGamePublicSchemas(env) {
   if (gamePublicSchemaPromise) return gamePublicSchemaPromise;
   const promise = Promise.all([
     ensureShopAssortmentSchema(env),
+    ensureShopFeaturedSchema(env),
     ensureSkinPriceSchema(env),
     ensureShopStockSchema(env),
     ensureLiveContentReleaseSchema(env)
@@ -5688,6 +5706,7 @@ function fallbackGamePublicConfig() {
       products: cloneDefaultShopProducts(),
       assortment: cloneDefaultShopAssortment(),
       stock: {},
+      featured: cloneDefaultShopFeaturedConfig(),
       liveContent: [],
       defaults: DEFAULT_SHOP_PRODUCTS,
       source: "fallback"
@@ -5714,6 +5733,7 @@ async function readGamePublicConfig(env, force = false) {
     const loadRows = () => Promise.all([
       readShopPrices(env),
       readShopAssortment(env),
+      readShopFeaturedConfig(env),
       readSkinPrices(env),
       env.DB.prepare(
         `SELECT scope_key, category, product_id, configured_limit, remaining, updated_at
@@ -5722,13 +5742,13 @@ async function readGamePublicConfig(env, force = false) {
       readPublishedGameRuntimeConfig(env),
       readLiveContentShopCatalog(env)
     ]);
-    let products, assortment, skins, stockResult, gameplay, liveContentShop;
+    let products, assortment, featured, skins, stockResult, gameplay, liveContentShop;
     try {
-      [products, assortment, skins, stockResult, gameplay, liveContentShop] = await loadRows();
+      [products, assortment, featured, skins, stockResult, gameplay, liveContentShop] = await loadRows();
     } catch (error) {
       if (!isMissingRuntimeDatabaseSchemaError(error)) throw error;
       await ensureGamePublicSchemas(env);
-      [products, assortment, skins, stockResult, gameplay, liveContentShop] = await loadRows();
+      [products, assortment, featured, skins, stockResult, gameplay, liveContentShop] = await loadRows();
     }
     const stockRows = stockResult.results || [];
     const value = {
@@ -5740,6 +5760,7 @@ async function readGamePublicConfig(env, force = false) {
           productId,
           shopStockAvailabilityFromRows(stockRows, "prize", productId)
         ])),
+        featured,
         liveContent: liveContentShop,
         defaults: DEFAULT_SHOP_PRODUCTS,
         source: "d1"
@@ -5952,6 +5973,56 @@ async function readShopAssortmentProduct(env, productId) {
   if (!fallback) return null;
   const assortment = await readShopAssortment(env);
   return assortment[id] || fallback;
+}
+
+let shopFeaturedSchemaPromise = null;
+async function ensureShopFeaturedSchema(env) {
+  requireDatabase(env);
+  if (!shopFeaturedSchemaPromise) {
+    shopFeaturedSchemaPromise = (async () => {
+      await env.DB.prepare(SHOP_FEATURED_SCHEMA_SQL).run();
+      const now = Math.floor(Date.now() / 1000);
+      await env.DB.batch(Object.entries(DEFAULT_SHOP_FEATURED_CONFIG).map(([slot, value]) => env.DB.prepare(
+        `INSERT OR IGNORE INTO shop_featured_config(slot,item_id,badge_text,updated_at,updated_by) VALUES(?,?,?,?,?)`
+      ).bind(slot, value.itemId, value.label, now, "system")));
+    })().catch((error) => { shopFeaturedSchemaPromise = null; throw error; });
+  }
+  await shopFeaturedSchemaPromise;
+}
+
+async function readShopFeaturedConfig(env) {
+  const readRows = () => env.DB.prepare(`SELECT slot,item_id,badge_text FROM shop_featured_config ORDER BY slot ASC`).all();
+  let result;
+  try { result = await readRows(); }
+  catch (error) {
+    if (!isMissingRuntimeDatabaseSchemaError(error)) throw error;
+    await ensureShopFeaturedSchema(env);
+    result = await readRows();
+  }
+  const featured = cloneDefaultShopFeaturedConfig();
+  for (const row of result.results || []) {
+    const slot = String(row.slot || "");
+    if (!Object.prototype.hasOwnProperty.call(featured, slot)) continue;
+    featured[slot] = { itemId:String(row.item_id || ""), label:String(row.badge_text || "") };
+  }
+  return featured;
+}
+
+function normalizeShopFeaturedLabel(value) {
+  return String(value || "").replace(/\s+/g, " ").trim().slice(0, 48);
+}
+
+function normalizeValidateShopFeaturedPayload(payload = {}) {
+  const rewardsInput = payload?.rewards && typeof payload.rewards === "object" ? payload.rewards : {};
+  const skinsInput = payload?.skins && typeof payload.skins === "object" ? payload.skins : {};
+  const rewardsItemId = String(rewardsInput.itemId || "").trim();
+  const skinItemId = String(skinsInput.itemId || "").trim();
+  if (rewardsItemId && (!SHOP_ASSORTMENT_PRODUCTS[rewardsItemId] || !rewardsItemId.startsWith("case-"))) throw new ApiError(400, "Для блока кейсов выберите постоянный кейс магазина или «Не показывать».");
+  if (skinItemId && (skinItemId === "default" || !DEFAULT_SKIN_PRICES[skinItemId])) throw new ApiError(400, "Для блока скинов выберите покупаемый скин или «Не показывать».");
+  return {
+    rewards:{itemId:rewardsItemId,label:normalizeShopFeaturedLabel(rewardsInput.label)},
+    skins:{itemId:skinItemId,label:normalizeShopFeaturedLabel(skinsInput.label)}
+  };
 }
 
 function shopStockScopeKey(category, productId = "") {
@@ -35430,6 +35501,7 @@ const OWNER_STAGING_STAGEABLE = Object.freeze({
   "/api/owner/season-pass/create":"season_definition",
   "/api/owner/season-pass/timing":"season_timing",
   "/api/owner/shop/save":"shop",
+  "/api/owner/shop/featured/save":"shop_featured",
   "/api/owner/live-content/save":"live_content",
   "/api/owner/offers/save":"offer"
 });
@@ -35590,6 +35662,7 @@ async function ownerStagingTariffPayload(env,seasonId){await ensureSeasonPassSch
 async function ownerStagingTaskPayload(env,seasonId,taskId){await ensureSeasonPassSchema(env);const row=await env.DB.prepare(`SELECT * FROM season_pass_tasks WHERE season_id=? AND task_id=? LIMIT 1`).bind(String(seasonId),String(taskId)).first();if(!row)return {_missing:true,seasonId:String(seasonId),taskId:String(taskId)};return {seasonId:String(seasonId),taskId:String(taskId),title:String(row.title||''),period:String(row.period||'daily'),metric:String(row.metric||''),target:Number(row.target||0),xp:Number(row.xp_reward||0),premium:Number(row.premium||0)===1,description:String(row.description||''),enabled:Number(row.enabled||0)===1,sortOrder:Number(row.sort_order||0)};}
 async function ownerStagingSeasonPayload(env,seasonId){await ensureSeasonPassSchema(env);const row=await env.DB.prepare(`SELECT * FROM season_pass_seasons WHERE season_id=? LIMIT 1`).bind(String(seasonId)).first();if(!row)return {_missing:true,seasonId:String(seasonId)};return {seasonId:String(row.season_id||seasonId),title:String(row.title||''),assetKey:String(row.asset_key||''),startsAt:Number(row.starts_at||0),endsAt:Number(row.ends_at||0),claimGraceEndsAt:Number(row.claim_grace_ends_at||0),manualStatus:String(row.manual_status||''),baseRunXp:Number(row.base_run_xp||0),levelPricePoints:Number(row.level_price_points||0)};}
 async function ownerStagingShopPayload(env,kind,itemId){if(kind==='product'){await ensureShopAssortmentSchema(env);const p=await readShopAssortmentProduct(env,itemId);if(!p)return {_missing:true,kind,itemId};await ensureShopStockSchema(env);const stock=await env.DB.prepare(`SELECT configured_limit FROM shop_stock_limits WHERE scope_key=? LIMIT 1`).bind(shopStockScopeKey('prize',itemId)).first();return {kind,itemId,enabled:Boolean(p.enabled),points:Number(p.points||0),treats:Number(p.treats||0),coffee:Number(p.coffee||0),stockLimit:stock?Number(stock.configured_limit):null};}if(kind==='skin'){await ensureSkinPriceSchema(env);const prices=await readSkinPrices(env);const p=prices?.[itemId];if(!p)return {_missing:true,kind,itemId};await ensureShopStockSchema(env);const stock=await env.DB.prepare(`SELECT configured_limit FROM shop_stock_limits WHERE scope_key=? LIMIT 1`).bind(shopStockScopeKey('skins',itemId)).first();return {kind,itemId,enabled:true,points:Number(p.points||0),treats:Number(p.treats||0),coffee:Number(p.coffee||0),stockLimit:stock?Number(stock.configured_limit):null};}return {_missing:true,kind,itemId};}
+async function ownerStagingShopFeaturedPayload(env){return readShopFeaturedConfig(env);}
 function ownerStagingLiveContentPayload(rule,kind,itemId){if(!rule)return {kind,itemId,seasonId:'',released:false,destinationType:'native',destinationId:'',reason:'rollback'};const cfg=rule.destinationConfig||{};return {kind,itemId,seasonId:String(rule.seasonId||''),released:Boolean(rule.released),destinationType:String(rule.destinationType||'native'),destinationId:String(rule.destinationId||''),weight:Number(cfg.weight||1),points:Number(cfg.points||0),treats:Number(cfg.treats||0),coffee:Number(cfg.coffee||0),level:Number(cfg.level||1),lane:String(cfg.lane||'free'),reason:'rollback'};}function ownerStagingOfferPayload(row){if(!row)return null;return {offerId:String(row.offer_id||''),title:String(row.title||''),subtitle:String(row.subtitle||''),badgeText:String(row.badge_text||'АКЦИЯ'),imageUrl:String(row.image_url||''),rewards:ownerStagingJson(row.rewards_json,[]),price:{points:Number(row.price_points||0),treats:Number(row.price_treats||0),coffee:Number(row.price_coffee||0)},original:{points:Number(row.original_points||0),treats:Number(row.original_treats||0),coffee:Number(row.original_coffee||0)},startsAt:Number(row.starts_at||0),endsAt:Number(row.ends_at||0),segmentKey:String(row.segment_key||'all'),purchaseLimit:Number(row.purchase_limit||0),showFrequency:String(row.show_frequency||'once_session'),priority:Number(row.priority||100)};}
 
 function ownerStagingAssignCanonicalPayload(target,value){for(const key of Object.keys(target||{}))delete target[key];Object.assign(target,value&&typeof value==='object'?value:{});return target;}
@@ -35631,6 +35704,9 @@ async function ownerStagingDescribe(env,endpoint,payload){
   }
   else if(tpKind==='shop'){
     const n=await normalizeValidateShopItemPayload(env,p);ownerStagingAssignCanonicalPayload(p,{kind:n.kind,itemId:n.itemId,enabled:n.enabled,points:n.points,treats:n.treats,coffee:n.coffee,stockLimit:n.stockLimit});key=`shop:${n.kind}:${n.itemId}`;title=`Магазин · ${n.title}`;before=await ownerStagingShopPayload(env,n.kind,n.itemId);
+  }
+  else if(tpKind==='shop_featured'){
+    const n=normalizeValidateShopFeaturedPayload(p);ownerStagingAssignCanonicalPayload(p,n);key='shop_featured:main';title='Магазин · Лучшее';before=await ownerStagingShopFeaturedPayload(env);
   }
   else if(tpKind==='live_content'){
     const n=await normalizeValidateLiveContentPayload(env,p);ownerStagingAssignCanonicalPayload(p,{kind:n.kind,itemId:n.itemId,seasonId:n.seasonId,released:n.released,destinationType:n.destinationType,destinationId:n.destinationId,weight:n.weight,points:n.points,treats:n.treats,coffee:n.coffee,level:n.level,lane:n.lane,reason:n.reason});key=`live_content:${n.kind}:${n.itemId}`;title=`Скрытый контент · ${String(n.item.title||n.itemId)}`;before=ownerStagingLiveContentPayload(n.before,n.kind,n.itemId);
@@ -35770,6 +35846,7 @@ async function ownerStagingDispatchProduction(env,ctx,endpoint,payload){
   if(endpoint==='/api/owner/season-pass/create'){const body={...payload};delete body.seasonId;return ownerPanelCreateSeasonPassSeason(env,{...ctx,body});}
   if(endpoint==='/api/owner/season-pass/timing')return ownerPanelAdjustSeasonPassTiming(env,{...ctx,body:payload});
   if(endpoint==='/api/owner/shop/save')return ownerPanelSaveShopItem(env,{...ctx,body:payload});
+  if(endpoint==='/api/owner/shop/featured/save')return ownerPanelSaveShopFeatured(env,{...ctx,body:payload});
   if(endpoint==='/api/owner/live-content/save')return ownerPanelSaveLiveContentRelease(env,{...ctx,body:payload});
   if(endpoint==='/api/owner/offers/save'){const body={...payload};if(String(body.offerId||'').startsWith('stgnew_offer_'))body.offerId='';return ownerPanelSaveFlashOffer(env,{...ctx,body});}
   throw new ApiError(400,'Неподдерживаемая операция продвижения.');
@@ -35797,6 +35874,8 @@ async function ownerStagingProductionReadback(env,row,prodResult){
     const seasonId=String(payload.seasonId||'');state=await ownerStagingSeasonPayload(env,seasonId);key=`season_timing:${seasonId}`;title=`Сезон · расписание · ${String(state?.title||seasonId)}`;
   }else if(endpoint==='/api/owner/shop/save'){
     const kind=String(payload.kind||''),itemId=String(payload.itemId||'');state=await ownerStagingShopPayload(env,kind,itemId);key=`shop:${kind}:${itemId}`;
+  }else if(endpoint==='/api/owner/shop/featured/save'){
+    state=await ownerStagingShopFeaturedPayload(env);key='shop_featured:main';title='Магазин · Лучшее';
   }else if(endpoint==='/api/owner/live-content/save'){
     const kind=String(payload.kind||''),itemId=String(payload.itemId||''),rules=await readLiveContentReleaseRules(env,true),rule=rules.get(liveContentReleaseKey(kind,itemId));if(rule){state=ownerStagingLiveContentPayload(rule,kind,itemId);delete state.reason;}key=`live_content:${kind}:${itemId}`;title=`Скрытый контент · ${String(futureSeasonContentItem(kind,itemId)?.title||itemId)}`;
   }else if(endpoint==='/api/owner/offers/save'){
@@ -36131,6 +36210,11 @@ function testProjectNormalizeDraftLayer(raw = {}) {
   }
   const shopItems = {};
   for (const [rawKey,value] of Object.entries(source.shopItems || {}).slice(0,120)) {const kind=String(value?.kind||rawKey.split(':')[0]||''),itemId=String(value?.itemId||rawKey.split(':').slice(1).join(':')||'');if(!['product','skin'].includes(kind)||!itemId)continue;shopItems[`${kind}:${itemId}`]={kind,itemId,enabled:value?.enabled!==false,points:Math.max(0,Math.floor(Number(value?.points)||0)),treats:Math.max(0,Math.floor(Number(value?.treats)||0)),coffee:Math.max(0,Math.floor(Number(value?.coffee)||0)),stockLimit:value?.stockLimit==null?null:Math.max(0,Math.floor(Number(value.stockLimit)||0)),testDraft:true,draftSource:String(value?.draftSource||'test_project').slice(0,40)};}
+  let shopFeatured = null;
+  if (source.shopFeatured && typeof source.shopFeatured === 'object') {
+    const normalizedFeatured = normalizeValidateShopFeaturedPayload(source.shopFeatured);
+    shopFeatured = {...normalizedFeatured,testDraft:true,draftSource:String(source.shopFeatured?.draftSource||'test_project').slice(0,40)};
+  }
   const liveContent = {};
   for (const [rawKey,value] of Object.entries(source.liveContent || {}).slice(0,200)) {const kind=String(value?.kind||rawKey.split(':')[0]||''),itemId=String(value?.itemId||rawKey.split(':').slice(1).join(':')||''),seasonId=String(value?.seasonId||'').trim().slice(0,120);if(!futureSeasonContentItem(kind,itemId)||!seasonId)continue;liveContent[`${kind}:${itemId}`]={kind,itemId,seasonId,released:Boolean(value?.released),destinationType:LIVE_CONTENT_DESTINATIONS.includes(String(value?.destinationType||''))?String(value.destinationType):'native',destinationId:String(value?.destinationId||'').slice(0,180),weight:Math.max(.01,Number(value?.weight)||1),points:Math.max(0,Math.floor(Number(value?.points)||0)),treats:Math.max(0,Math.floor(Number(value?.treats)||0)),coffee:Math.max(0,Math.floor(Number(value?.coffee)||0)),level:Math.max(1,Math.min(50,Math.floor(Number(value?.level)||1))),lane:String(value?.lane)==='premium'?'premium':'free',testDraft:true,draftSource:String(value?.draftSource||'test_project').slice(0,40)};}
   const offers = {};
@@ -36143,7 +36227,7 @@ function testProjectNormalizeDraftLayer(raw = {}) {
   if (source.gameConfig?.config && typeof source.gameConfig.config === "object") {
     gameConfig = {config:normalizeGameRuntimeConfig(source.gameConfig.config),title:String(source.gameConfig.title || "Баланс игры").slice(0,120),draftSource:String(source.gameConfig.draftSource || "test_project").slice(0,40),stagedAt:Math.max(0,Math.floor(Number(source.gameConfig.stagedAt)||0))};
   }
-  return {updatedAt:Math.max(0,Math.floor(Number(source.updatedAt)||0)),gameConfig,cases,content,seasonRewards,seasonTariffs,seasonDefinitions,seasonalCases,seasonTasks,shopItems,liveContent,offers};
+  return {updatedAt:Math.max(0,Math.floor(Number(source.updatedAt)||0)),gameConfig,cases,content,seasonRewards,seasonTariffs,seasonDefinitions,seasonalCases,seasonTasks,shopItems,shopFeatured,liveContent,offers};
 }
 
 function testProjectScenarioSnapshot(value) {
@@ -36813,7 +36897,7 @@ function testProjectMergeDraftLayers(baseValue, nextValue) {
   return testProjectNormalizeDraftLayer({
     updatedAt:Math.max(base.updatedAt,next.updatedAt,Date.now()),
     gameConfig:next.gameConfig || base.gameConfig,
-    cases:{...base.cases,...next.cases}, content:{...base.content,...next.content}, seasonRewards:{...base.seasonRewards,...next.seasonRewards}, seasonTariffs:{...base.seasonTariffs,...next.seasonTariffs}, seasonDefinitions:{...base.seasonDefinitions,...next.seasonDefinitions}, seasonalCases:{...base.seasonalCases,...next.seasonalCases}, seasonTasks:{...base.seasonTasks,...next.seasonTasks}, shopItems:{...base.shopItems,...next.shopItems}, liveContent:{...base.liveContent,...next.liveContent}, offers:{...base.offers,...next.offers}
+    cases:{...base.cases,...next.cases}, content:{...base.content,...next.content}, seasonRewards:{...base.seasonRewards,...next.seasonRewards}, seasonTariffs:{...base.seasonTariffs,...next.seasonTariffs}, seasonDefinitions:{...base.seasonDefinitions,...next.seasonDefinitions}, seasonalCases:{...base.seasonalCases,...next.seasonalCases}, seasonTasks:{...base.seasonTasks,...next.seasonTasks}, shopItems:{...base.shopItems,...next.shopItems}, shopFeatured:next.shopFeatured||base.shopFeatured, liveContent:{...base.liveContent,...next.liveContent}, offers:{...base.offers,...next.offers}
   });
 }
 
@@ -36867,6 +36951,7 @@ function testProjectApplyDraftLayer(state, snapshot) {
   }
   base.publicConfig=base.publicConfig||fallbackGamePublicConfig();base.publicConfig.shop=base.publicConfig.shop||{};base.publicConfig.skins=base.publicConfig.skins||{};base.publicConfig.shop.assortment=base.publicConfig.shop.assortment||{};base.publicConfig.skins.skins=base.publicConfig.skins.skins||{};base.publicConfig.shop.liveContent=Array.isArray(base.publicConfig.shop.liveContent)?base.publicConfig.shop.liveContent.slice():[];
   for(const value of Object.values(layer.shopItems)){if(value.kind==='product')base.publicConfig.shop.assortment[value.itemId]={...(base.publicConfig.shop.assortment[value.itemId]||{}),enabled:value.enabled,points:value.points,treats:value.treats,coffee:value.coffee,testDraft:true};else base.publicConfig.skins.skins[value.itemId]={...(base.publicConfig.skins.skins[value.itemId]||{}),points:value.points,treats:value.treats,coffee:value.coffee,testDraft:true};}
+  if(layer.shopFeatured)base.publicConfig.shop.featured={rewards:{...layer.shopFeatured.rewards},skins:{...layer.shopFeatured.skins},testDraft:true};
   for(const value of Object.values(layer.liveContent)){const item=futureSeasonContentItem(value.kind,value.itemId);if(!item)continue;base.liveops.content[value.kind]=base.liveops.content[value.kind]||{};base.liveops.content[value.kind][value.itemId]={...(base.liveops.content[value.kind][value.itemId]||{}),title:String(item.title||value.itemId),rarity:String(item.rarity||'common'),imageUrl:String(item.imageUrl||''),audioUrl:String(item.audioUrl||item.src||''),weight:value.weight,enabled:Boolean(value.released),released:Boolean(value.released),future:true,seasonId:String(value.seasonId||''),destinationType:value.destinationType,destinationId:value.destinationId,destinationConfig:{weight:value.weight,points:value.points,treats:value.treats,coffee:value.coffee,level:value.level,lane:value.lane},testDraft:true};if(value.released&&value.destinationType==='shop'){base.publicConfig.shop.liveContent=base.publicConfig.shop.liveContent.filter(x=>!(String(x.kind)===value.kind&&String(x.itemId)===value.itemId));base.publicConfig.shop.liveContent.push({kind:value.kind,itemId:value.itemId,title:String(item.title||value.itemId),rarity:String(item.rarity||'common'),imageUrl:String(item.imageUrl||''),audioUrl:String(item.audioUrl||item.src||''),price:{points:value.points,treats:value.treats,coffee:value.coffee},seasonId:String(value.seasonId||''),seasonLabel:FUTURE_SEASON_CONTENT_LABEL,testDraft:true});}if(base.season?.id&&value.released&&value.destinationType==='seasonal_case'){const cases=base.season.seasonalCases||[];const c=cases.find(x=>String(x.caseId)===String(value.destinationId));if(c&&!c.items?.some(x=>String(x.kind)===value.kind&&String(x.itemId)===value.itemId)){c.items=[...(c.items||[]),{kind:value.kind,itemId:value.itemId,amount:1,weight:value.weight,rarity:String(item.rarity||'common'),title:String(item.title||value.itemId),imageUrl:String(item.imageUrl||''),enabled:true,testDraft:true}];}}if(base.season?.id&&value.released&&value.destinationType==='season_pass'&&String(value.destinationId)===String(base.season.id)){const reward=ownerPanelSeasonPassRewardPresentation(value.kind,1,value.itemId),rewards=base.season.rewards||[],i=rewards.findIndex(x=>Number(x.level)===Number(value.level)&&String(x.lane)===String(value.lane));const next={level:value.level,lane:value.lane,rewardType:reward.publicRewardType||reward.rewardType,amount:reward.amount,itemId:reward.publicItemId||reward.itemId,title:reward.title,imageUrl:reward.imageUrl,enabled:true,testDraft:true};if(i>=0)rewards[i]={...rewards[i],...next};else rewards.push(next);base.season.rewards=rewards;}}
 
   const offers = Array.isArray(base.offers) ? base.offers.slice() : [];
@@ -36897,6 +36982,7 @@ function testProjectDraftLayerView(state, snapshot) {
   for(const [caseId,value] of Object.entries(layer.seasonalCases)){const base=(snapshot?.season?.seasonalCases||[]).find(x=>String(x.caseId)===caseId)||{};push('seasonal_case',caseId,`Сезонный кейс · ${value.title||caseId}`,base.caseId?{title:base.title,enabled:base.enabled,slots:base.slots,groupChances:base.groupChances||null,items:(base.items||[]).length}:{status:'нет в Production'},{title:value.title,enabled:value.enabled,slots:value.slots,groupChances:value.groupChances||null,items:(value.items||[]).length},value.draftSource);}
   for(const [key,value] of Object.entries(layer.seasonTasks)){const base=(snapshot?.season?.tasks||[]).find(x=>String(x.id||x.taskId)===String(value.taskId))||{};push('season_task',key,`Задание · ${value.title||value.taskId}`,base.id?{title:base.title,target:base.target,xp:base.xp,enabled:base.enabled}:{status:'нет в Production'},{title:value.title,target:value.target,xp:value.xp,enabled:value.enabled},value.draftSource);}
   for(const [key,value] of Object.entries(layer.shopItems)){push('shop',key,`Магазин · ${value.itemId}`,{}, {enabled:value.enabled,points:value.points,treats:value.treats,coffee:value.coffee,stockLimit:value.stockLimit},value.draftSource);}
+  if(layer.shopFeatured)push('shop_featured','main','Магазин · Лучшее',snapshot?.publicConfig?.shop?.featured||cloneDefaultShopFeaturedConfig(),{rewards:layer.shopFeatured.rewards,skins:layer.shopFeatured.skins},layer.shopFeatured.draftSource);
   for(const [key,value] of Object.entries(layer.liveContent)){push('live_content',key,`Скрытый контент · ${value.itemId}`,{}, {released:value.released,destinationType:value.destinationType,destinationId:value.destinationId},value.draftSource);}
   for(const [id,value] of Object.entries(layer.offers)){const base=(snapshot?.offers||[]).find((row)=>String(row.id)===id)||{};push("offer",id,`Акция · ${value.title||id}`,base.id?{title:base.title,price:base.price,rewards:base.rewards,status:base.status}:{status:"нет в Production"},{title:value.title,price:value.price,rewards:value.rewards,status:"draft"},value.draftSource);}
   return {mode:String(state?.draftMode||"production"),active:String(state?.draftMode||"production")==="draft",updatedAt:layer.updatedAt,count:items.length,items};
@@ -37652,6 +37738,8 @@ async function ownerPanelTestProjectStageDraft(env, ctx) {
     const n=await normalizeValidateSeasonPassTaskPayload(env,payload),taskId=String(n.taskId||'').trim();if(!taskId)throw new ApiError(400,'Не выбрано задание.');selectedSeasonId=n.seasonId;const key=`${n.seasonId}:${taskId}`;patch.seasonTasks[key]={seasonId:n.seasonId,taskId,title:n.title,period:n.period,metric:n.metric,target:n.target,xp:n.xp,premium:n.premium,description:n.description,enabled:n.enabled,testDraft:true,draftSource:'control_center_form'};title=`Задание · ${n.title}`;
   } else if(kind==='shop') {
     const n=await normalizeValidateShopItemPayload(env,payload);patch.shopItems[`${n.kind}:${n.itemId}`]={kind:n.kind,itemId:n.itemId,enabled:n.enabled,points:n.points,treats:n.treats,coffee:n.coffee,stockLimit:n.stockLimit,testDraft:true,draftSource:'control_center_form'};title=`Магазин · ${n.title}`;
+  } else if(kind==='shop_featured') {
+    const n=normalizeValidateShopFeaturedPayload(payload);patch.shopFeatured={...n,testDraft:true,draftSource:'control_center_form'};title='Магазин · Лучшее';
   } else if(kind==='live_content') {
     const n=await normalizeValidateLiveContentPayload(env,payload);selectedSeasonId=n.seasonId;patch.liveContent[`${n.kind}:${n.itemId}`]={kind:n.kind,itemId:n.itemId,seasonId:n.seasonId,released:n.released,destinationType:n.destinationType,destinationId:n.destinationId,weight:n.weight,points:n.points,treats:n.treats,coffee:n.coffee,level:n.level,lane:n.lane,testDraft:true,draftSource:'control_center_form'};title=`Скрытый контент · ${String(n.item.title||n.itemId)}`;
   } else if(kind==="offer") {
@@ -39738,6 +39826,7 @@ async function handleOwnerPanelApi(request, env, path, executionCtx = null) {
     if (path === "/api/owner/promocodes/toggle") return jsonResponse(await ownerPanelTogglePromocode(env, ctx));
     if (path === "/api/owner/shop") return jsonResponse(await ownerPanelShop(env, ctx));
     if (path === "/api/owner/shop/save") return jsonResponse(await ownerPanelSaveShopItem(env, ctx));
+    if (path === "/api/owner/shop/featured/save") return jsonResponse(await ownerPanelSaveShopFeatured(env, ctx));
     if (path === "/api/owner/offers") return jsonResponse(await ownerPanelFlashOffers(env, ctx));
     if (path === "/api/owner/offers/save") return jsonResponse(await ownerPanelSaveFlashOffer(env, ctx));
     if (path === "/api/owner/offers/action") return jsonResponse(await ownerPanelFlashOfferAction(env, ctx));
@@ -41457,10 +41546,22 @@ function ownerPanelShopProductAsset(productId) {
 function ownerPanelSkinAsset(skinId){return skinId==="default"?"/assets/optimized/v0.79.5/skinDefaultAvatar.png?v=0.79.5":`/assets/skins/avatars/${String(skinId)}.png`;}
 
 async function ownerPanelShop(env, ctx) {
-  await ensureShopAssortmentSchema(env);await ensureSkinPriceSchema(env);await ensureShopStockSchema(env);const [assortment,skins,stockRows]=await Promise.all([readShopAssortment(env),readSkinPrices(env),readShopStockRows(env)]);
+  await ensureShopAssortmentSchema(env);await ensureShopFeaturedSchema(env);await ensureSkinPriceSchema(env);await ensureShopStockSchema(env);const [assortment,featured,skins,stockRows]=await Promise.all([readShopAssortment(env),readShopFeaturedConfig(env),readSkinPrices(env),readShopStockRows(env)]);
   const products=Object.keys(SHOP_ASSORTMENT_PRODUCTS).map(id=>{const value=assortment[id];const stock=shopStockAvailabilityFromRows(stockRows,"prize",id);return {kind:"product",id,title:botShopProductTitle(id),imageUrl:ownerPanelShopProductAsset(id),enabled:Boolean(value.enabled),points:Number(value.points||0),treats:Number(value.treats||0),coffee:Number(value.coffee||0),stock};});
   const skinItems=Object.keys(DEFAULT_SKIN_PRICES).map(id=>{const value=skins[id];const stock=shopStockAvailabilityFromRows(stockRows,"skins",id);return {kind:"skin",id,title:SKINS[id]?.title||id,imageUrl:ownerPanelSkinAsset(id),enabled:true,points:Number(value.points||0),treats:Number(value.treats||0),coffee:Number(value.coffee||0),stock};});
-  return {ok:true,products,skins:skinItems};
+  return {ok:true,products,skins:skinItems,featured};
+}
+
+async function ownerPanelSaveShopFeatured(env, ctx) {
+  const featured=normalizeValidateShopFeaturedPayload(ctx.body||{}),before=await readShopFeaturedConfig(env),now=Math.floor(Date.now()/1000),actor=String(ctx.user.id);
+  await ensureShopFeaturedSchema(env);
+  await env.DB.batch(Object.entries(featured).map(([slot,value])=>env.DB.prepare(
+    `INSERT INTO shop_featured_config(slot,item_id,badge_text,updated_at,updated_by) VALUES(?,?,?,?,?) ON CONFLICT(slot) DO UPDATE SET item_id=excluded.item_id,badge_text=excluded.badge_text,updated_at=excluded.updated_at,updated_by=excluded.updated_by`
+  ).bind(slot,value.itemId,value.label,now,actor)));
+  invalidateGamePublicConfigCache();
+  const after=await readShopFeaturedConfig(env);
+  await logStaffAction(env,ctx.user,ctx.access,"owner_panel_shop_featured_update",null,"shop_featured",null,null,{before,after});
+  return {ok:true,featured:after};
 }
 
 async function ownerPanelSaveShopItem(env, ctx) {
