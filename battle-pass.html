@@ -215,6 +215,115 @@ button{-webkit-tap-highlight-color:transparent}
   gap:7px;
   margin-top:16px
 }
+.hero{
+  min-height:338px;
+  padding:22px 168px 20px 20px
+}
+.hero:before{
+  top:20px;
+  bottom:auto
+}
+.hero:after{
+  top:116px;
+  bottom:auto
+}
+.hero-progress{
+  position:relative;
+  z-index:1;
+  grid-template-columns:84px minmax(0,1fr) 170px;
+  align-items:center;
+  gap:14px 16px;
+  margin:18px -148px 0 0;
+  padding:18px 18px 18px 16px;
+  border:1px solid rgba(224,191,116,.42);
+  border-radius:27px;
+  background:linear-gradient(145deg,rgba(255,255,255,.97),rgba(255,249,240,.96));
+  box-shadow:0 12px 28px rgba(152,101,74,.08)
+}
+.hero-progress .level-badge{
+  width:84px;
+  height:84px;
+  border-radius:50%;
+  background:radial-gradient(circle at 35% 30%,#ffe89b 0,#f1c552 48%,#d59a1c 100%);
+  border:5px solid rgba(255,244,213,.95);
+  color:#9a6400;
+  font-size:27px;
+  font-weight:950;
+  letter-spacing:-.04em;
+  box-shadow:inset 0 0 0 2px rgba(196,140,16,.52),0 10px 20px rgba(188,127,22,.16)
+}
+.hero-progress .progress-copy strong{
+  font-size:16px;
+  color:#68463d
+}
+.hero-progress .progress-track{
+  height:16px;
+  margin-top:10px;
+  background:#eedfda
+}
+.hero-progress .progress-track i{
+  background:linear-gradient(90deg,#ea71a6 0,#e84f93 52%,#a43861 100%)
+}
+.hero-progress .progress-meta{
+  margin-top:8px;
+  color:#896b63;
+  font-size:10px;
+  font-weight:900
+}
+.hero-progress-side{
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-self:stretch;
+  min-width:0;
+  padding-left:16px;
+  border-left:1px solid rgba(222,197,186,.9)
+}
+.hero-progress-side span{
+  display:block;
+  color:#a17d74;
+  font-size:10px;
+  font-weight:900;
+  line-height:1.15
+}
+.hero-progress-side b{
+  display:block;
+  margin-top:6px;
+  color:#eb5792;
+  font-size:18px;
+  line-height:1.04;
+  font-weight:950
+}
+.hero-tier-button{
+  grid-column:3;
+  min-height:48px;
+  padding:0 16px;
+  border:1px solid rgba(217,191,126,.72);
+  border-radius:18px;
+  background:linear-gradient(145deg,#f5ebc8,#ebdbad);
+  color:#8d7040;
+  font-size:12px;
+  font-weight:950;
+  box-shadow:0 8px 18px rgba(170,134,64,.12)
+}
+.hero-tier-button.is-none{
+  background:linear-gradient(145deg,#fff4f7,#ffe4ee);
+  border-color:rgba(236,151,186,.72);
+  color:#c44f82
+}
+.hero-tier-button.is-upgrade{
+  background:linear-gradient(145deg,#f6f0d7,#eedca9);
+  color:#926d1f
+}
+.hero-tier-button.is-active{
+  background:linear-gradient(145deg,#efe4bc,#e7d49d);
+  color:#8e733d
+}
+.hero-tier-button:disabled{
+  opacity:1;
+  cursor:default
+}
+.buy-level--legacy{display:none!important}
 .pill{
   padding:7px 10px;
   border:1px solid rgba(223,92,145,.16);
@@ -308,6 +417,22 @@ button{-webkit-tap-highlight-color:transparent}
   font-weight:950
 }
 
+@media(max-width:620px){
+  .hero{min-height:0;padding:20px 18px 18px}
+  .hero:before{right:92px;top:18px;width:78px;height:78px;border-radius:24px}
+  .hero:after{right:14px;top:92px;width:72px;height:68px;border-radius:22px}
+  .hero-progress{grid-template-columns:68px minmax(0,1fr);margin-right:0}
+  .hero-progress .level-badge{width:68px;height:68px;font-size:24px;border-width:4px}
+  .hero-progress-side{grid-column:1/-1;flex-direction:row;justify-content:space-between;align-items:flex-end;padding:12px 0 0;border-left:0;border-top:1px solid rgba(222,197,186,.9)}
+  .hero-tier-button{grid-column:1/-1;width:100%}
+  .hero-progress .progress-meta{flex-wrap:wrap}
+}
+@media(max-width:420px){
+  .hero{padding-right:18px;padding-top:154px}
+  .hero:before{right:98px;top:18px}
+  .hero:after{right:18px;top:86px}
+  .hero h1{font-size:24px}
+}
 .view[hidden]{display:none!important}
 .section-head{
   display:flex;
@@ -2568,6 +2693,20 @@ img[src$="/xp.webp"]{
         <span class="pill">Завершение: <b data-season-end-label>10 сентября 2026</b></span>
         <span class="pill" id="premiumStatus">Премиум не активирован</span>
       </div>
+      <section class="progress-card hero-progress">
+        <div class="level-badge" id="levelValue">1</div>
+        <div class="progress-copy">
+          <strong>Уровень пропуска</strong>
+          <div class="progress-track"><i id="progressFill"></i></div>
+          <div class="progress-meta"><span id="progressText">0 / 100 XP</span><span id="runsText">0 забегов</span></div>
+        </div>
+        <div class="hero-progress-side">
+          <span>До конца сезона</span>
+          <b id="seasonDaysText">14 дней</b>
+        </div>
+        <button class="hero-tier-button is-none" id="heroTierButton" type="button">Premium Тарифы</button>
+        <button class="buy-level buy-level--legacy" id="buyLevel" type="button" hidden><img src="/assets/optimized/v0.79.5/iconScore.png" alt="">Купить уровень · 0</button>
+      </section>
     </section>
 
     <div class="content">
@@ -2575,16 +2714,6 @@ img[src$="/xp.webp"]{
         <button class="main-tab active" data-view-tab="rewards" type="button"><img class="main-tab-art" src="/assets/season-pass/season.png?v=07939" alt=""><span id="rewardsTabLabel">Сезон</span></button>
         <button class="main-tab" data-view-tab="tasks" type="button"><img class="main-tab-art" src="/assets/season-pass/quest.png?v=07939" alt=""><span id="tasksTabLabel">Задания</span></button>
       </nav>
-
-      <section class="progress-card">
-        <div class="level-badge" id="levelValue">1</div>
-        <div class="progress-copy">
-          <strong>Уровень пропуска</strong>
-          <div class="progress-track"><i id="progressFill"></i></div>
-          <div class="progress-meta"><span id="progressText">0 / 100 XP</span><span id="runsText">0 забегов</span></div>
-        </div>
-        <button class="buy-level" id="buyLevel" type="button"><img src="/assets/optimized/v0.79.5/iconScore.png" alt="">Купить уровень · 0</button>
-      </section>
 
       <section class="catchup-card" id="catchUpCard" hidden>
         <div class="catchup-icon">⚡</div>
@@ -3492,6 +3621,35 @@ img[src$="/xp.webp"]{
     return "Премиум не активирован";
   }
 
+  function pluralRu(value, forms) {
+    const num = Math.abs(Number(value) || 0) % 100;
+    const mod10 = num % 10;
+    if (num > 10 && num < 20) return forms[2];
+    if (mod10 > 1 && mod10 < 5) return forms[1];
+    if (mod10 === 1) return forms[0];
+    return forms[2];
+  }
+
+  function seasonDaysLabel() {
+    const status = String(serverPass?.season?.status || "active");
+    if (status === "ended") return "Сезон завершён";
+    const rawEnd = serverPass?.season?.endsAt || '2026-09-10T23:59:59+03:00';
+    const end = new Date(rawEnd);
+    if (!Number.isFinite(end.getTime())) return "—";
+    const ms = Math.max(0, end.getTime() - Date.now());
+    const days = Math.ceil(ms / 86400000);
+    if (days <= 0) return "Сегодня";
+    return `${days} ${pluralRu(days,["день","дня","дней"])}`;
+  }
+
+  function heroTierButtonState() {
+    const seasonEnded = String(serverPass?.season?.status || "active") === "ended";
+    if (seasonEnded) return {text:"Сезон завершён", className:"is-active", disabled:true};
+    if (pass.premiumTier === "elite_plus") return {text:"Premium+ активен", className:"is-active", disabled:true};
+    if (pass.premiumTier === "elite") return {text:"Улучшить до Premium+", className:"is-upgrade", disabled:false};
+    return {text:"Premium Тарифы", className:"is-none", disabled:false};
+  }
+
   function realRunXp() {
     const totalRuns = Math.max(0,Number(readProgress().completedRuns)||0);
     const baseline = Math.max(0,Number(pass.runBaseline)||0);
@@ -4115,6 +4273,16 @@ img[src$="/xp.webp"]{
     const previousLevel = Math.min(MAX_LEVEL,Number(renderedProgressState?.rewardLevel ?? level)||level);
     el("playerName").textContent = profileName();
     el("premiumStatus").textContent = premiumTierLabel();
+    const seasonDaysNode = el("seasonDaysText");
+    if (seasonDaysNode) seasonDaysNode.textContent = seasonDaysLabel();
+    const heroTierButton = el("heroTierButton");
+    if (heroTierButton) {
+      const state = heroTierButtonState();
+      heroTierButton.textContent = state.text;
+      heroTierButton.disabled = Boolean(state.disabled);
+      heroTierButton.className = `hero-tier-button ${state.className}`;
+      heroTierButton.setAttribute("aria-label", state.text);
+    }
     animatePassProgress({level,stage:overflow.unlocked?MAX_LEVEL+overflow.earned+1:level,rewardLevel:level,label:overflow.unlocked?"50+":String(level),within,required,percent});
     const progressCard=el("levelValue")?.closest?.(".progress-card");
     if(progressCard)progressCard.classList.toggle("is-overflow",overflow.unlocked);
@@ -4702,6 +4870,12 @@ img[src$="/xp.webp"]{
   el("seasonFinaleLetter").addEventListener("click",()=>{closeSeasonFinale();showSeasonLetter();});
   el("seasonFinaleOverlay").addEventListener("click",event=>{if(event.target===el("seasonFinaleOverlay"))closeSeasonFinale();});
 
+  el("heroTierButton").addEventListener("click",()=>{
+    if (el("heroTierButton").disabled) return;
+    passImpactHaptic("light");
+    const target = document.querySelector(".premium-offer");
+    if (target) target.scrollIntoView({behavior:"smooth",block:"start"});
+  });
   el("buyElite").addEventListener("click",()=>openPurchaseConfirm("elite"));
   el("buyElitePlus").addEventListener("click",()=>openPurchaseConfirm("elite_plus"));
 
