@@ -2723,7 +2723,7 @@ img[src$="/xp.webp"]{
     <section class="hero">
       <h1><span class="season-index">Сезон I:</span> <span class="season-name">Открытие Кафе</span></h1>
       <p>Получай награды, проходи 50 уровней сезона, а после финала продолжай бесконечную дорожку 50+ за золотые кейсы.</p>
-      <section class="progress-card hero-progress">
+      <section class="hero-progress">
         <div class="level-badge" id="levelValue">1</div>
         <div class="progress-copy">
           <strong>Уровень пропуска</strong>
@@ -4162,7 +4162,7 @@ img[src$="/xp.webp"]{
   function animatePassProgress(next) {
     const fill = el("progressFill");
     const badge = el("levelValue");
-    const card = badge?.closest?.(".progress-card");
+    const card = badge?.closest?.(".hero-progress");
     const previous = renderedProgressState;
     const reduced = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
     const stage=Number(next.stage??next.level)||1;
@@ -4312,7 +4312,7 @@ img[src$="/xp.webp"]{
       heroTierButton.setAttribute("aria-label", state.text);
     }
     animatePassProgress({level,stage:overflow.unlocked?MAX_LEVEL+overflow.earned+1:level,rewardLevel:level,label:overflow.unlocked?"50+":String(level),within,required,percent});
-    const progressCard=el("levelValue")?.closest?.(".progress-card");
+    const progressCard=el("levelValue")?.closest?.(".hero-progress");
     if(progressCard)progressCard.classList.toggle("is-overflow",overflow.unlocked);
     const progressTitle=progressCard?.querySelector?.(".progress-copy>strong");
     if(progressTitle)progressTitle.textContent=overflow.unlocked?"Бонусный уровень ∞":"Уровень пропуска";
@@ -5096,5 +5096,142 @@ img[src$="/xp.webp"]{
 <script type="application/json" id="zefirok-season-pass-balance-v4">{"version":"1.4.0","curve":"smooth-50","level1Xp":300,"level50Xp":3500,"level50StartXp":71200,"level50CompleteXp":74700,"overflowStepXp":1500,"overflowAvailableToAll":true,"existingXpPolicy":"keep_raw_xp_never_reduce","fairEarnedXpRecalc":"v3","elitePlusTaskXpMultiplier":2,"catchUp":{"windowDays":7,"belowLevel":35,"multiplier":2,"stacksWithPremium":false}}</script>
 <script type="application/json" id="zefirok-season-pass-letter-case-v1">{"version":"1.0","features":["level_letter","seasonal_case_inventory","seasonal_case_open"]}</script>
 <!-- zefirok-season-story-player-v1 -->
+
+<style id="zefirok-hero-progress-final-v4">
+/* Final override: isolated hero progression. Legacy .progress-card rules must never affect this block. */
+.hero-progress{
+  position:relative!important;
+  z-index:2!important;
+  display:grid!important;
+  grid-template-columns:84px minmax(0,1fr) 154px!important;
+  grid-template-rows:auto auto!important;
+  align-items:center!important;
+  gap:10px 15px!important;
+  width:auto!important;
+  max-width:none!important;
+  min-width:0!important;
+  margin:16px -148px 0 0!important;
+  padding:13px 15px!important;
+  border:1px solid rgba(236,202,214,.95)!important;
+  border-radius:22px!important;
+  background:linear-gradient(180deg,#fffefd 0%,#fffaf8 100%)!important;
+  box-shadow:0 9px 22px rgba(121,72,65,.07)!important;
+}
+.hero-progress.is-level-up{animation:seasonLevelCardGlow .9s cubic-bezier(.2,.75,.25,1)!important}
+.hero-progress.is-overflow{border-color:rgba(236,202,214,.95)!important;background:linear-gradient(180deg,#fffefd 0%,#fffaf8 100%)!important}
+.hero-progress .level-badge{
+  grid-column:1!important;
+  grid-row:1 / span 2!important;
+  align-self:center!important;
+  justify-self:center!important;
+  width:72px!important;
+  height:72px!important;
+  flex:0 0 72px!important;
+  border:4px solid #f3c04d!important;
+  border-radius:50%!important;
+  background:radial-gradient(circle at 35% 28%,#ffefac 0%,#ffdb67 43%,#efb735 73%,#d69412 100%)!important;
+  color:#98610b!important;
+  font-size:25px!important;
+  font-weight:1000!important;
+  line-height:1!important;
+  box-shadow:inset 0 0 0 3px rgba(255,248,219,.86),0 7px 15px rgba(192,127,15,.14)!important;
+}
+.hero-progress.is-overflow .level-badge{width:72px!important;height:72px!important;background:radial-gradient(circle at 35% 28%,#ffefac 0%,#ffdb67 43%,#efb735 73%,#d69412 100%)!important;color:#98610b!important;font-size:25px!important}
+.hero-progress .progress-copy{
+  grid-column:2!important;
+  grid-row:1 / span 2!important;
+  align-self:center!important;
+  min-width:0!important;
+}
+.hero-progress .progress-copy>strong{
+  display:block!important;
+  margin:0!important;
+  color:#6b463b!important;
+  font-size:14px!important;
+  font-weight:1000!important;
+  line-height:1.15!important;
+}
+.hero-progress .progress-track{
+  width:100%!important;
+  height:13px!important;
+  margin:9px 0 0!important;
+  overflow:hidden!important;
+  border-radius:999px!important;
+  background:#f0e2df!important;
+}
+.hero-progress .progress-track i{background:linear-gradient(90deg,#ed6ea4 0%,#eb5596 62%,#c53e75 100%)!important}
+.hero-progress .progress-meta{
+  display:grid!important;
+  grid-template-columns:auto minmax(0,1fr)!important;
+  gap:6px 12px!important;
+  align-items:start!important;
+  margin-top:7px!important;
+  color:#8e7067!important;
+  font-size:8.5px!important;
+  font-weight:900!important;
+  line-height:1.25!important;
+}
+.hero-progress #progressText{color:#d94a83!important;font-size:10px!important;font-weight:1000!important;white-space:nowrap!important}
+.hero-progress #runsText{text-align:right!important;overflow-wrap:normal!important;word-break:normal!important}
+.hero-progress-side{
+  grid-column:3!important;
+  grid-row:1!important;
+  align-self:stretch!important;
+  display:flex!important;
+  flex-direction:column!important;
+  justify-content:center!important;
+  min-width:0!important;
+  padding:1px 0 1px 14px!important;
+  border-left:1px solid #eedbd6!important;
+}
+.hero-progress-side span{color:#a17d74!important;font-size:9px!important;font-weight:900!important;line-height:1.15!important}
+.hero-progress-side b{display:block!important;margin-top:4px!important;color:#ea4f8a!important;font-size:17px!important;font-weight:1000!important;line-height:1!important;white-space:nowrap!important}
+.hero-tier-button{
+  grid-column:3!important;
+  grid-row:2!important;
+  align-self:end!important;
+  width:100%!important;
+  min-width:0!important;
+  height:36px!important;
+  min-height:36px!important;
+  margin:0!important;
+  padding:0 9px!important;
+  border-radius:12px!important;
+  font-size:9px!important;
+  font-weight:1000!important;
+  white-space:nowrap!important;
+}
+@media(max-width:620px){
+  .hero-progress{
+    grid-template-columns:70px minmax(0,1fr) 126px!important;
+    gap:9px 10px!important;
+    width:100%!important;
+    margin:18px 0 0!important;
+    padding:11px 11px!important;
+    border-radius:20px!important;
+  }
+  .hero-progress .level-badge,.hero-progress.is-overflow .level-badge{width:62px!important;height:62px!important;flex-basis:62px!important;font-size:22px!important}
+  .hero-progress .progress-copy>strong{font-size:12px!important}
+  .hero-progress .progress-track{height:12px!important;margin-top:7px!important}
+  .hero-progress .progress-meta{grid-template-columns:auto minmax(0,1fr)!important;gap:5px 7px!important;margin-top:6px!important;font-size:7.5px!important}
+  .hero-progress #progressText{font-size:8.8px!important}
+  .hero-progress-side{padding-left:9px!important}
+  .hero-progress-side span{font-size:8px!important}
+  .hero-progress-side b{font-size:14px!important}
+  .hero-tier-button{height:32px!important;min-height:32px!important;padding:0 6px!important;font-size:8px!important;border-radius:11px!important}
+}
+@media(max-width:430px){
+  .hero-progress{grid-template-columns:60px minmax(0,1fr) 108px!important;gap:8px 8px!important;padding:10px!important}
+  .hero-progress .level-badge,.hero-progress.is-overflow .level-badge{width:54px!important;height:54px!important;flex-basis:54px!important;font-size:20px!important}
+  .hero-progress .progress-copy>strong{font-size:11px!important}
+  .hero-progress .progress-track{height:11px!important}
+  .hero-progress .progress-meta{font-size:6.8px!important;gap:4px 6px!important}
+  .hero-progress #progressText{font-size:8px!important}
+  .hero-progress-side{padding-left:8px!important}
+  .hero-progress-side span{font-size:7.2px!important}
+  .hero-progress-side b{font-size:13px!important}
+  .hero-tier-button{font-size:7.2px!important;height:30px!important;min-height:30px!important}
+}
+</style>
 </body>
 </html>
