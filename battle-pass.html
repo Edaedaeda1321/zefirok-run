@@ -275,6 +275,19 @@ button{-webkit-tap-highlight-color:transparent}
 .hero-progress .progress-track i{
   background:linear-gradient(90deg,#ea71a6 0,#e84f93 52%,#a43861 100%)
 }
+.hero-progress.is-overflow .progress-track{position:relative;margin-right:26px;overflow:visible}
+.hero-progress.is-overflow .progress-track::after{
+  content:"";
+  position:absolute;
+  right:-29px;
+  top:50%;
+  width:31px;
+  height:31px;
+  transform:translateY(-50%);
+  background:url("/assets/cases/gold_closed.png") center/contain no-repeat;
+  filter:drop-shadow(0 4px 6px rgba(156,102,17,.16));
+  pointer-events:none
+}
 .hero-progress .progress-meta{
   display:flex;
   justify-content:space-between;
@@ -2643,7 +2656,6 @@ img[src$="/xp.webp"]{
 </style>
 
 <style id="zefirok-season-pass-overflow-v2">
-.overflow-card{display:grid;grid-template-columns:68px minmax(0,1fr);gap:12px;align-items:center;margin:10px 0 0;padding:13px;border:1px solid rgba(222,169,48,.46);border-radius:19px;background:linear-gradient(145deg,#fffdf3,#fff4c8);box-shadow:0 9px 24px rgba(163,111,24,.10);transition:opacity .2s ease,border-color .2s ease,background .2s ease}
 .level-column.overflow-reward-column{flex:0 0 124px;background:linear-gradient(180deg,#fffdf6,#fff4ca);box-shadow:inset 0 0 0 1px rgba(222,169,48,.24)}
 .level-column.overflow-reward-column .level-number{color:#835811;background:linear-gradient(180deg,#fff8d9,#ffefad);font-size:13px;letter-spacing:.01em}
 .level-column.overflow-reward-column.current .level-number,.level-column.overflow-reward-column.selected .level-number{margin:4px auto;width:auto;min-width:54px;height:30px;padding:0 8px;border:1px solid rgba(210,148,24,.42);border-radius:999px;background:linear-gradient(145deg,#f4c94c,#c9891d);color:#fff9df;box-shadow:0 4px 12px rgba(171,109,19,.18)}
@@ -2660,7 +2672,7 @@ img[src$="/xp.webp"]{
 .overflow-cell-progress{position:relative;z-index:1;color:#8c681e;font-size:7px;font-weight:950;line-height:1.2}
 .overflow-cell-action{position:relative;z-index:1;width:100%;min-height:28px;padding:0 6px;border:0;border-radius:10px;background:linear-gradient(145deg,#e7b63d,#c9891d);color:#fff9e4;font-size:8px;font-weight:950;box-shadow:0 6px 14px rgba(177,116,24,.18)}
 .overflow-cell-action:disabled{background:#eee5df!important;color:#9f8980!important;box-shadow:none!important}
-.overflow-card[hidden]{display:none!important}.overflow-card.is-locked{border-color:rgba(221,183,124,.34);background:linear-gradient(145deg,#fffaf7,#fff5ef);box-shadow:0 7px 20px rgba(129,82,61,.06)}.overflow-card.is-locked .overflow-art{filter:grayscale(.15) opacity(.76) drop-shadow(0 5px 7px rgba(142,92,17,.10))}.overflow-card.is-locked .overflow-track i{width:0!important;background:linear-gradient(90deg,#e9c5b7,#d9b5a8)}.overflow-card.is-locked .overflow-copy strong{color:#7b5560}.overflow-card.is-locked .overflow-copy p,.overflow-card.is-locked .overflow-meta{color:#9b7d83}.overflow-art{width:68px;height:68px;object-fit:contain;filter:drop-shadow(0 7px 9px rgba(142,92,17,.16))}.overflow-copy{min-width:0;display:grid;gap:6px}.overflow-copy strong{color:#744d13;font-size:14px;font-weight:950}.overflow-copy p{margin:0;color:#98752d;font-size:10px;font-weight:800;line-height:1.4}.overflow-track{height:9px;border-radius:999px;background:rgba(183,132,33,.16);overflow:hidden}.overflow-track i{display:block;height:100%;width:0;border-radius:inherit;background:linear-gradient(90deg,#efc34e,#d69720);transition:width .7s cubic-bezier(.22,.78,.24,1)}.overflow-meta{display:flex;justify-content:space-between;gap:8px;color:#98752d;font-size:9px;font-weight:900}.overflow-claim{grid-column:1/-1;min-height:43px;border:0;border-radius:14px;background:linear-gradient(145deg,#e7b63d,#c9891d);color:#fff9e2;font-weight:950;box-shadow:0 8px 18px rgba(177,116,24,.18)}.overflow-claim:disabled{opacity:.55;box-shadow:none}.progress-card.is-overflow{grid-template-columns:56px minmax(0,1fr) auto;border-color:rgba(220,166,45,.54);background:linear-gradient(145deg,#fffdf5,#fff6d9)}.progress-card.is-overflow .level-badge{width:48px;height:48px;background:linear-gradient(145deg,#f4c94c,#c9891d);color:#fff8dd;font-size:20px;line-height:1;letter-spacing:-.04em}.progress-card.is-overflow .progress-copy>strong{color:#80571b}
+.progress-card.is-overflow{grid-template-columns:56px minmax(0,1fr) auto;border-color:rgba(220,166,45,.54);background:linear-gradient(145deg,#fffdf5,#fff6d9)}.progress-card.is-overflow .level-badge{width:48px;height:48px;background:linear-gradient(145deg,#f4c94c,#c9891d);color:#fff8dd;font-size:20px;line-height:1;letter-spacing:-.04em}.progress-card.is-overflow .progress-copy>strong{color:#80571b}
 </style>
 <style id="zefirok-season-letter-case-v1">
 .season-letter-card{display:grid;grid-template-columns:62px minmax(0,1fr) auto;gap:11px;align-items:center;margin:10px 0;padding:12px;border:1px solid rgba(205,151,51,.4);border-radius:18px;background:linear-gradient(145deg,#fffaf3,#fff1dc);box-shadow:0 8px 22px rgba(127,75,45,.08)}.season-letter-card[hidden],.seasonal-case-shelf[hidden],.season-story-card[hidden]{display:none!important}.season-letter-icon{width:62px;height:62px;display:grid;place-items:center;border-radius:17px;background:linear-gradient(145deg,#fff,#ffe1b8);font-size:32px;box-shadow:inset 0 0 0 1px rgba(208,154,72,.24)}.season-letter-copy{min-width:0}.season-letter-copy b{display:block;color:#704637;font-size:13px;font-weight:950}.season-letter-copy span{display:block;margin-top:3px;color:#9d786a;font-size:9px;font-weight:800;line-height:1.35}.season-letter-open{min-height:36px;padding:0 12px;border:0;border-radius:12px;background:linear-gradient(145deg,#e9b449,#c98222);color:#fffaf0;font-size:9px;font-weight:950}.seasonal-case-shelf{margin:10px 0 2px;padding:12px;border:1px solid rgba(210,157,71,.32);border-radius:18px;background:rgba(255,250,243,.9)}.seasonal-case-shelf-head{display:flex;justify-content:space-between;gap:8px;align-items:end;margin-bottom:8px}.seasonal-case-shelf-head b{color:#6d473c;font-size:13px}.seasonal-case-shelf-head span{color:#a08075;font-size:8px;font-weight:850}.seasonal-case-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));gap:8px}.seasonal-case-player-card{display:grid;grid-template-columns:54px minmax(0,1fr);gap:8px;align-items:center;padding:9px;border:1px solid rgba(221,183,142,.44);border-radius:14px;background:#fff}.seasonal-case-player-card img{width:54px;height:54px;object-fit:contain}.seasonal-case-player-card b,.seasonal-case-player-card span{display:block}.seasonal-case-player-card b{color:#714d42;font-size:10px;font-weight:950}.seasonal-case-player-card span{margin-top:2px;color:#9b7b72;font-size:8px;font-weight:800}.seasonal-case-player-card button{grid-column:1/-1;min-height:32px;border:0;border-radius:10px;background:linear-gradient(145deg,#e8b14a,#c78322);color:#fffaf1;font-size:8px;font-weight:950}.seasonal-case-player-card button:disabled{opacity:.55}.season-letter-overlay{position:fixed;inset:0;z-index:9998;display:grid;place-items:center;padding:18px;background:rgba(67,38,33,.5);backdrop-filter:blur(7px)}.season-letter-overlay[hidden]{display:none!important}.season-letter-sheet{width:min(430px,100%);max-height:min(82vh,720px);overflow:auto;border-radius:25px;padding:17px;background:linear-gradient(165deg,#fffdf9,#fff1dc);box-shadow:0 24px 70px rgba(67,34,24,.3);text-align:center}.season-letter-art{width:100%;max-height:220px;object-fit:cover;border-radius:18px;margin-bottom:12px}.season-letter-envelope{width:102px;height:78px;margin:7px auto 14px;display:grid;place-items:center;border-radius:18px;background:linear-gradient(145deg,#fff5df,#efc474);font-size:48px;box-shadow:0 12px 25px rgba(144,91,32,.18)}.season-letter-sheet h2{margin:0;color:#68453b;font-size:22px}.season-letter-sheet .letter-preview{margin:7px auto 0;max-width:330px;color:#a0796d;font-size:11px;font-weight:800;line-height:1.5}.season-letter-body{margin:13px 0;padding:13px;border-radius:16px;background:rgba(255,255,255,.72);color:#6f4b41;font-size:12px;font-weight:750;line-height:1.65;text-align:left;white-space:pre-wrap}.season-letter-target{display:block;margin:8px 0;color:#9a6c25;font-size:9px;font-weight:900}.season-letter-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}.season-letter-actions button{min-height:42px;border:0;border-radius:13px;font-size:10px;font-weight:950}.season-letter-actions .primary{background:linear-gradient(145deg,#e8b249,#c78121);color:#fffaf0}.season-letter-actions .secondary{background:#f3e8df;color:#76584f}@media(max-width:520px){.season-letter-card{grid-template-columns:52px minmax(0,1fr)}.season-letter-icon{width:52px;height:52px}.season-letter-open{grid-column:1/-1;width:100%}.season-letter-actions{grid-template-columns:1fr}}
@@ -2864,17 +2876,6 @@ img[src$="/xp.webp"]{
         <div class="catchup-icon">⚡</div>
         <div class="catchup-copy"><strong>Догоняющий бонус активен</strong><p id="catchUpCopy">В последние дни сезона отстающие игроки получают больше XP.</p></div>
         <div class="catchup-multiplier" id="catchUpMultiplier">×2 XP</div>
-      </section>
-
-      <section class="overflow-card is-locked" id="overflowCard">
-        <img class="overflow-art" src="/assets/cases/gold_closed.png" alt="Золотой кейс">
-        <div class="overflow-copy">
-          <strong>50+ / ∞ · Бесконечная дорожка</strong>
-          <p><b>Доступна всем игрокам:</b> бесплатному тарифу, Элитному и Элитному+. После полного 50 уровня каждые <b id="overflowStepLabel">1 500 XP</b> открывают ещё один Золотой кейс.</p>
-          <div class="overflow-track"><i id="overflowFill"></i></div>
-          <div class="overflow-meta"><span id="overflowProgress">Откроется после 50 уровня</span><span id="overflowEarned">1 500 XP за кейс</span></div>
-        </div>
-        <button class="overflow-claim" id="claimOverflow" type="button" disabled>Откроется после полного 50 уровня</button>
       </section>
 
       <section class="season-letter-card" id="seasonLetterCard" hidden>
@@ -4521,41 +4522,20 @@ img[src$="/xp.webp"]{
     const progressCard=el("levelValue")?.closest?.(".hero-progress");
     if(progressCard)progressCard.classList.toggle("is-overflow",overflow.unlocked);
     const progressTitle=progressCard?.querySelector?.(".progress-copy>strong");
-    if(progressTitle)progressTitle.textContent=overflow.unlocked?"Бонусный уровень ∞":"Уровень пропуска";
+    if(progressTitle)progressTitle.textContent=overflow.unlocked?"50+ / ∞ · до Золотого кейса":"Уровень пропуска";
     const runCount = serverPass?.summary ? Number(serverPass.summary.runs||0) : real.runs;
     const elitePlusSettings = serverPass?.season?.tierSettings?.elitePlus || {};
     const seasonXpBoostActive = pass.entitlements.includes("season_xp_x2") || (pass.premiumTier === "elite_plus" && elitePlusSettings.xpBoost !== false);
     const catchUpActive=Boolean(serverPass?.catchUp?.active);
-    el("runsText").textContent = catchUpActive ? `${runCount} забегов · ⚡ ×2 догоняющий XP${seasonXpBoostActive?" · не складывается с ×2":""}` : seasonXpBoostActive ? `${runCount} забегов · ×2 XP за забеги и задания` : `${runCount} забегов`;
+    el("runsText").textContent = overflow.unlocked
+      ? `Получено кейсов: ${overflow.claimed}${overflow.available>0?` · готово: ${overflow.available}`:""}`
+      : catchUpActive ? `${runCount} забегов · ⚡ ×2 догоняющий XP${seasonXpBoostActive?" · не складывается с ×2":""}` : seasonXpBoostActive ? `${runCount} забегов · ×2 XP за забеги и задания` : `${runCount} забегов`;
     el("claimedCount").textContent = `${pass.claimed.length} получено`;
     renderCatchUpCard();
     renderFinalMilestone();
     renderSeasonLetter();
     renderSeasonStory();
     renderSeasonalCases();
-    const overflowCard=el("overflowCard"),claimOverflow=el("claimOverflow");
-    if(overflowCard){
-      overflowCard.hidden=false;
-      overflowCard.classList.toggle("is-locked",!overflow.unlocked);
-      el("overflowStepLabel").textContent=`${overflow.step.toLocaleString("ru-RU")} XP`;
-      if(overflow.unlocked){
-        el("overflowProgress").textContent=`${Math.round(overflow.within).toLocaleString("ru-RU")} / ${overflow.step.toLocaleString("ru-RU")} XP`;
-        el("overflowEarned").textContent=`Получено: ${overflow.claimed} · открыто: ${overflow.earned}`;
-        el("overflowFill").style.width=`${Math.min(100,Math.round(overflow.within/overflow.step*100))}%`;
-      }else{
-        el("overflowProgress").textContent="Откроется после 50 уровня";
-        el("overflowEarned").textContent=`${overflow.step.toLocaleString("ru-RU")} XP за кейс`;
-        el("overflowFill").style.width="0%";
-      }
-      if(claimOverflow){
-        claimOverflow.disabled=!overflow.unlocked||overflow.available<=0;
-        claimOverflow.textContent=!overflow.unlocked
-          ? "Откроется после полного 50 уровня"
-          : overflow.available>0
-            ? (overflow.available===1?"Забрать Золотой кейс":`Забрать Золотые кейсы ×${overflow.available}`)
-            : "Следующий кейс ещё не открыт";
-      }
-    }
     const seasonStatus = String(serverPass?.season?.status||"active");
     const banner = el("seasonStateBanner");
     if (seasonStatus === "ended") {
@@ -4935,16 +4915,18 @@ img[src$="/xp.webp"]{
     }
   }
 
-  async function claimOverflowRewards(){
+  async function claimOverflowRewards(sourceButton=null){
     const state=overflowState();if(state.available<=0)return showToast("Следующий золотой кейс ещё не открыт");
-    const button=el("claimOverflow"),old=button?.textContent||"";if(button){button.disabled=true;button.textContent="Получаем кейс…";}
+    const button=sourceButton||document.querySelector("[data-overflow-inline]");
+    const old=button?.textContent||"";
+    if(button){button.disabled=true;button.textContent="Получаем кейс…";}
     try{
       const data=await seasonPassApi(CLAIM_OVERFLOW_PATH,{all:true});
       applyServerPass(data);render();notifyAccountChanged();passNotifyHaptic("success");
       const received=Array.isArray(data.received)?data.received.map(item=>({premium:true,icon:"",image:item.imageUrl||"/assets/cases/gold_closed.png",name:item.title||"Золотой кейс",description:"Бонус после 50 уровня",level:"50+",source:"Бесконечная дорожка 50+"})):[];
       if(received.length)openRewardSummary(received);else showToast("Золотой кейс уже получен");
     }catch(error){passNotifyHaptic("error");showToast(error.message||"Не удалось получить золотой кейс");}
-    finally{if(button){button.textContent=old;button.disabled=false;}render();}
+    finally{if(button&&button.isConnected){button.textContent=old;button.disabled=false;}render();}
   }
 
   function openView(name) {
@@ -4988,8 +4970,7 @@ img[src$="/xp.webp"]{
     const overflowInlineButton = event.target.closest("[data-overflow-inline]");
     if (overflowInlineButton) {
       passImpactHaptic("medium");
-      overflowInlineButton.disabled = true;
-      void claimOverflowRewards();
+      void claimOverflowRewards(overflowInlineButton);
       return;
     }
 
@@ -5098,7 +5079,6 @@ img[src$="/xp.webp"]{
   },{passive:true});
 
   el("buyLevel").addEventListener("click",openLevelPurchaseConfirm);
-  el("claimOverflow").addEventListener("click",()=>{passImpactHaptic("medium");void claimOverflowRewards();});
   el("seasonFinaleOpen").addEventListener("click",()=>{passImpactHaptic("medium");showSeasonFinale();});
   el("seasonFinaleClose").addEventListener("click",()=>{passSelectHaptic();closeSeasonFinale();});
   el("seasonFinaleLetter").addEventListener("click",()=>{closeSeasonFinale();showSeasonLetter();});
