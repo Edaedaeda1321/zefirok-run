@@ -2592,6 +2592,41 @@ html,body{background:#fff8f5;color:var(--bp-text)}
 }
 @media(max-width:390px){.page{padding-inline:7px}.hero-art{min-height:140px}.hero-redesign h1{font-size:26px!important}.progress-card{grid-template-columns:48px minmax(0,1fr) 78px!important}.hero-bottom{flex-direction:column;align-items:stretch}.hero-premium-button{width:100%}.premium-chip{text-align:center}.level-column{grid-template-columns:46px minmax(0,1fr) minmax(0,1fr)!important}.level-column::after{left:22px}.level-number{width:40px!important;height:40px!important}.reward-cell{grid-template-columns:40px minmax(0,1fr)!important}.reward-icon{width:39px!important;height:39px!important}.reward-name{font-size:8px!important}.reward-availability{display:none!important}.reward-cell{grid-template-rows:auto auto 0 28px!important}.task-summary{grid-template-columns:1fr 1fr}.summary-card{padding:8px;gap:6px}.summary-emoji{width:34px;height:34px;font-size:18px}.summary-card strong{font-size:17px!important}.summary-card small{display:none}.premium-benefit-grid{grid-template-columns:1fr}.pass-tiers{grid-template-columns:1fr!important}}
 @media(prefers-reduced-motion:reduce){.premium-sheet-card{animation:none!important}}
+
+/* v0.79.36 — dynamic season identity, sheet swipe fix and reward-track polish */
+.premium-sheet{touch-action:none}
+.premium-sheet-card{overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y;scrollbar-width:none;padding-bottom:max(26px,env(safe-area-inset-bottom))}
+.premium-sheet-card::-webkit-scrollbar{display:none}
+#premiumSheetOfferHost{min-height:0}
+.premium-sheet-head #premiumSheetSeasonLine{display:inline-flex;align-items:center;flex-wrap:wrap;gap:7px;color:#e45182;font-size:9px;font-weight:1000;letter-spacing:.05em}
+.premium-benefit-grid{gap:0!important;overflow:hidden}
+.premium-benefit-grid>div{padding:10px 9px!important}
+.premium-benefit-grid>div:nth-child(odd){border-right:1px solid rgba(239,221,215,.96)}
+.premium-benefit-grid>div:nth-child(-n+2){border-bottom:1px solid rgba(239,221,215,.96)}
+.hero-redesign{background:linear-gradient(145deg,#fffbf9 0,#fff3f5 56%,#fff8ee 100%)!important}
+.hero-art{border-radius:0 27px 18px 42px!important}
+.progress-card{box-shadow:0 10px 24px rgba(119,73,67,.06)!important}
+.reward-scroll{padding:3px 4px 10px 0!important}
+.level-column{grid-template-columns:58px minmax(0,1fr) minmax(0,1fr)!important;gap:10px!important;align-items:stretch!important;padding:0 0 12px!important}
+.level-column::after{left:28px!important;top:0!important;bottom:-14px!important;width:4px!important;background:linear-gradient(180deg,#f3bfd0,#ef93af)!important;border-radius:999px!important;opacity:.92!important}
+.level-column:last-child::after,.overflow-reward-column::after{display:none!important}
+.level-number{width:56px!important;height:56px!important;border:2px solid #efd2cf!important;border-radius:50%!important;background:linear-gradient(145deg,#fffdfb,#fff0eb)!important;color:#7a4b3f!important;font-size:20px!important;box-shadow:0 6px 14px rgba(118,70,63,.08)!important}
+.level-column.current .level-number{border-color:#f06f9b!important;background:linear-gradient(145deg,#f779a5,#e34781)!important;color:#fff!important;box-shadow:0 0 0 5px #ffe7ef,0 9px 20px rgba(206,61,116,.20)!important}
+.reward-cell{min-height:140px!important;padding:11px 10px!important;border-radius:22px!important;box-shadow:0 10px 22px rgba(111,68,61,.07)!important}
+.reward-cell.level-locked,.reward-cell.tier-locked{opacity:.7!important}
+.reward-cell.level-locked{background:linear-gradient(145deg,#fffaf8,#f7eeee)!important;border-color:#f0ddda!important}
+.reward-cell.premium.tier-locked{background:linear-gradient(145deg,#fffdf6,#f7efdc)!important;border-color:#f0dfb8!important}
+.reward-cell.claimed:not(.premium){background:linear-gradient(145deg,#fcfffc,#eef9ef)!important;border-color:#b9dbbb!important}
+.reward-cell.premium.claimed,.reward-cell.gold-reward.claimed{background:linear-gradient(145deg,#fffef6,#fbefca)!important;border-color:#e3bd67!important}
+.reward-lane-title{font-size:9px!important;letter-spacing:.01em!important}
+.reward-state{top:9px!important;right:9px!important;height:20px!important;min-height:20px!important;line-height:20px!important;font-size:7px!important;max-width:60%!important;padding:0 8px!important}
+.reward-icon{width:54px!important;height:54px!important;border-radius:17px!important}
+.reward-name{font-size:10px!important;line-height:1.18!important}
+.reward-availability{font-size:7.1px!important;line-height:1.22!important}
+.reward-action{height:30px!important;min-height:30px!important;border-radius:11px!important;font-size:8px!important;line-height:30px!important}
+.reward-cell.locked .reward-action{background:linear-gradient(145deg,#efe7e3,#e7deda)!important;color:#ad9892!important}
+.reward-cell.premium.locked .reward-action{background:linear-gradient(145deg,#f0e4c1,#ebd69e)!important;color:#a07b38!important}
+@media(max-width:430px){.premium-sheet-head{grid-template-columns:78px minmax(0,1fr)!important}.premium-sheet-art{width:76px!important;height:68px!important}.premium-sheet-head h2{font-size:22px!important}.premium-sheet-head #premiumSheetSeasonLine{font-size:8px!important}.level-column{grid-template-columns:52px minmax(0,1fr) minmax(0,1fr)!important;gap:7px!important}.level-column::after{left:25px!important}.level-number{width:48px!important;height:48px!important;font-size:18px!important}.reward-cell{min-height:128px!important;padding:8px!important;border-radius:18px!important}.reward-icon{width:46px!important;height:46px!important}.reward-name{font-size:8.6px!important}.reward-action{height:27px!important;min-height:27px!important;line-height:27px!important}}
 </style>
 </head>
 <body>
@@ -2635,7 +2670,7 @@ html,body{background:#fff8f5;color:var(--bp-text)}
 <main class="page" id="seasonPassPage">
   <header class="topbar">
     <button class="back" id="backButton" aria-label="Назад в профиль">←</button>
-    <div class="title"><strong>Сезонный пропуск</strong><span id="topSeasonName">Тайны Белкино</span></div>
+    <div class="title"><strong>Сезонный пропуск</strong><span id="topSeasonName">Открытие Кафе</span></div>
     <button class="season-info" id="seasonInfoButton" type="button" aria-label="Информация о сезоне">i</button>
   </header>
 
@@ -2643,8 +2678,8 @@ html,body{background:#fff8f5;color:var(--bp-text)}
     <div class="season-state-banner" id="seasonStateBanner" hidden></div>
     <section class="hero hero-redesign">
       <div class="hero-copy">
-        <span class="season-ribbon" id="seasonRibbon">СЕЗОН 3</span>
-        <h1 id="seasonDisplayTitle">Тайны Белкино</h1>
+        <span class="season-ribbon" id="seasonRibbon">СЕЗОН I</span>
+        <h1 id="seasonDisplayTitle">Открытие Кафе</h1>
         <p id="seasonDisplaySubtitle">Сладкие тайны ждут искателей!</p>
       </div>
       <div class="hero-art" aria-hidden="true"><img src="/assets/season-pass/season_pass1.png?v=07939" alt=""></div>
@@ -2821,7 +2856,7 @@ html,body{background:#fff8f5;color:var(--bp-text)}
     <button class="premium-sheet-close" id="premiumSheetClose" type="button" aria-label="Закрыть">×</button>
     <header class="premium-sheet-head">
       <img src="/assets/cases/gold_closed.png" alt="" class="premium-sheet-art">
-      <div><span>СЕЗОН 3 · ТАЙНЫ БЕЛКИНО</span><h2 id="premiumSheetTitle">Premium-пропуск</h2><p>Открой больше наград сезона</p></div>
+      <div><span id="premiumSheetSeasonLine">СЕЗОН I · ОТКРЫТИЕ КАФЕ</span><h2 id="premiumSheetTitle">Premium-пропуск</h2><p>Открой больше наград сезона</p></div>
     </header>
     <div class="premium-benefit-grid">
       <div><img src="/assets/season-pass/season.png?v=07939" alt=""><b>Больше наград</b><span>Дополнительная награда на каждом уровне</span></div>
@@ -3294,12 +3329,7 @@ html,body{background:#fff8f5;color:var(--bp-text)}
     // напрямую в подписанное локальное сохранение основной игры: это ломает
     // контрольную подпись прогресса. Основная игра обновит баланс через
     // zefirok-season-pass-account-updated.
-    if (serverPass.season?.title) {
-      const fullTitle = String(serverPass.season.title||"").trim();
-      const cleanTitle = fullTitle.replace(/^Сезон\s+(?:[IVXLCDM]+|\d+)\s*[:·—-]?\s*/i,"").trim() || fullTitle;
-      if (el("seasonDisplayTitle")) el("seasonDisplayTitle").textContent = cleanTitle;
-      if (el("topSeasonName")) el("topSeasonName").textContent = cleanTitle;
-    }
+    applySeasonIdentityToUi();
     if (serverPass.season?.endsAt) {
       const end = new Date(serverPass.season.endsAt);
       const label = document.querySelector('[data-season-end-label]');
@@ -3729,6 +3759,36 @@ html,body{background:#fff8f5;color:var(--bp-text)}
   }
 
   let pass = readPass();
+
+  function seasonIdentity() {
+    const season = serverPass?.season || {};
+    const fallbackTitle = String(el("preseasonTitle")?.textContent || el("seasonDisplayTitle")?.textContent || "Сезон I: Открытие Кафе").trim();
+    const rawTitle = String(season.title || season.displayTitle || season.name || fallbackTitle).trim() || fallbackTitle;
+    let cleanTitle = rawTitle;
+    let seasonIndex = "";
+    const titleMatch = rawTitle.match(/^Сезон\s+([IVXLCDM]+|\d+)\s*[:·—-]?\s*(.*)$/i);
+    if (titleMatch) {
+      seasonIndex = String(titleMatch[1] || "").toUpperCase();
+      cleanTitle = String(titleMatch[2] || "").trim() || rawTitle;
+    }
+    if (!seasonIndex) {
+      const rawIndex = String(season.number ?? season.index ?? season.ordinal ?? season.order ?? season.sequence ?? season.seasonNumber ?? season.seasonIndex ?? season.position ?? "").trim();
+      if (/^\d+$/.test(rawIndex)) seasonIndex = rawIndex;
+      else if (/^[ivxlcdm]+$/i.test(rawIndex)) seasonIndex = rawIndex.toUpperCase();
+    }
+    if (!cleanTitle) cleanTitle = "Открытие Кафе";
+    const ribbon = seasonIndex ? `СЕЗОН ${seasonIndex}` : "СЕЗОН";
+    const headerLine = seasonIndex ? `${ribbon} · ${cleanTitle.toUpperCase()}` : cleanTitle.toUpperCase();
+    return { rawTitle, cleanTitle, ribbon, headerLine, seasonIndex };
+  }
+
+  function applySeasonIdentityToUi() {
+    const info = seasonIdentity();
+    if (el("seasonDisplayTitle")) el("seasonDisplayTitle").textContent = info.cleanTitle;
+    if (el("topSeasonName")) el("topSeasonName").textContent = info.cleanTitle;
+    if (el("seasonRibbon")) el("seasonRibbon").textContent = info.ribbon;
+    if (el("premiumSheetSeasonLine")) el("premiumSheetSeasonLine").textContent = info.headerLine;
+  }
 
   function rewardCellMarkup(level,type,data) {
     const id = rewardId(level,type);
@@ -4224,6 +4284,7 @@ html,body{background:#fff8f5;color:var(--bp-text)}
   async function loadRequestedSeasonLetter(){const query=new URLSearchParams(location.search);if(query.get("letter")!=="1")return false;const requested=String(query.get("letterSeason")||"").trim();if(!requested){if(serverPass?.letter?.available){showSeasonLetter();return true;}return false;}if(String(serverPass?.letter?.seasonId||"")!==requested){try{const data=await seasonPassApi(LETTER_STATE_PATH,{seasonId:requested});if(data?.letter)serverPass={...(serverPass||{}),letter:data.letter};renderSeasonLetter();}catch(error){showToast(error.message||"Не удалось загрузить письмо");return false;}}if(serverPass?.letter?.available){showSeasonLetter();return true;}return false;}
 
   function render() {
+    applySeasonIdentityToUi();
     const real = realRunXp();
     const xp = totalXp();
     const level = currentLevel();
@@ -4825,8 +4886,23 @@ html,body{background:#fff8f5;color:var(--bp-text)}
   el("seasonFinaleOverlay").addEventListener("click",event=>{if(event.target===el("seasonFinaleOverlay"))closeSeasonFinale();});
 
   const premiumSheet = el("premiumSheet");
+  const premiumSheetCard = premiumSheet?.querySelector?.(".premium-sheet-card") || null;
   const premiumOffer = el("premiumOffer");
   const premiumOfferHost = el("premiumSheetOfferHost");
+  if (premiumSheetCard) {
+    let premiumTouchStartY = 0;
+    premiumSheetCard.addEventListener("touchstart",event=>{
+      premiumTouchStartY = event.touches[0]?.clientY || 0;
+    },{passive:true});
+    premiumSheetCard.addEventListener("touchmove",event=>{
+      const currentY = event.touches[0]?.clientY || 0;
+      const atTop = premiumSheetCard.scrollTop <= 0;
+      const atBottom = premiumSheetCard.scrollTop + premiumSheetCard.clientHeight >= premiumSheetCard.scrollHeight - 1;
+      if ((atTop && currentY > premiumTouchStartY) || (atBottom && currentY < premiumTouchStartY)) event.preventDefault();
+      event.stopPropagation();
+    },{passive:false});
+    premiumSheetCard.addEventListener("wheel",event=>event.stopPropagation(),{passive:true});
+  }
   if (premiumSheet && premiumOffer && premiumOfferHost && premiumOffer.parentElement !== premiumOfferHost) premiumOfferHost.appendChild(premiumOffer);
   function openPremiumSheet(){
     if (!premiumSheet) return;
@@ -4998,6 +5074,7 @@ html,body{background:#fff8f5;color:var(--bp-text)}
 
       installCopyProtection();
   installScrollProtection();
+      applySeasonIdentityToUi();
       const access = await checkAccess();
       if (!access.allowed) {
         if (access.kind === "hidden") denyAccess(access.error);
