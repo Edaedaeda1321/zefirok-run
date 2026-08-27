@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "catalogHash": "f4e7d0ae5d70c7dc",
-  "count": 7,
+  "catalogHash": "0d5d2f2d9d6e573f",
+  "count": 8,
   "images": [
     {
       "fileName": "cases-5.0.1.png",
@@ -51,6 +51,13 @@
       "path": "/assets/news/update_v_1_0_9.png",
       "hash": "32c20276f944",
       "size": 3518444
+    },
+    {
+      "fileName": "update_v_1_2_0.jpeg",
+      "label": "Update v 1 2 0",
+      "path": "/assets/news/update_v_1_2_0.jpeg",
+      "hash": "739669c2e014",
+      "size": 667197
     }
   ]
 }

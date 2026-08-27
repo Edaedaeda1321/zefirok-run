@@ -1095,8 +1095,8 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
     const passOffer = normalizedOfferTier ? `&offer=${encodeURIComponent(normalizedOfferTier)}` : "";
     const passTest = TEST_PROJECT_MODE ? "&test_project=1" : "";
     passFrame.src = initData
-      ? `/battle-pass.html?v=1.0.9${passView}${passOffer}${passTest}#tgInitData=${encodeURIComponent(initData)}`
-      : `/battle-pass.html?v=1.0.9${passView}${passOffer}${passTest}`;
+      ? `/battle-pass.html?v=1.2.0${passView}${passOffer}${passTest}#tgInitData=${encodeURIComponent(initData)}`
+      : `/battle-pass.html?v=1.2.0${passView}${passOffer}${passTest}`;
     layer.append(passFrame);
     passFrame.addEventListener("load", () => {
       const snapshot = syncTelegramViewport();
@@ -1181,8 +1181,8 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
     referralFrame.allow = "clipboard-write";
     referralFrame.referrerPolicy = "same-origin";
     referralFrame.src = initData
-      ? `/referrals.html?v=1.0.9#tgInitData=${encodeURIComponent(initData)}`
-      : `/referrals.html?v=1.0.9`;
+      ? `/referrals.html?v=1.2.0#tgInitData=${encodeURIComponent(initData)}`
+      : `/referrals.html?v=1.2.0`;
     layer.append(referralFrame);
     referralFrame.addEventListener("load", () => {
       const snapshot = syncTelegramViewport();
@@ -1237,8 +1237,8 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
     frame.title = "Достижения";
     frame.referrerPolicy = "same-origin";
     frame.src = initData
-      ? `/achievements.html?v=1.0.9-achievements3#tgInitData=${encodeURIComponent(initData)}`
-      : `/achievements.html?v=1.0.9-achievements3`;
+      ? `/achievements.html?v=1.2.0-achievements3#tgInitData=${encodeURIComponent(initData)}`
+      : `/achievements.html?v=1.2.0-achievements3`;
     layer.append(frame);
     frame.addEventListener("load", () => {
       const snapshot = syncTelegramViewport();
@@ -1299,7 +1299,7 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
     album.className = "zefirok-album-frame";
     album.title = "Альбом Зеффи";
     album.referrerPolicy = "same-origin";
-    album.src = initData ? `/album.html?v=1.0.9-album4#tgInitData=${encodeURIComponent(initData)}` : `/album.html?v=1.0.9-album4`;
+    album.src = initData ? `/album.html?v=1.2.0-album4#tgInitData=${encodeURIComponent(initData)}` : `/album.html?v=1.2.0-album4`;
     layer.append(album);
     album.addEventListener("load", () => {
       const snapshot = syncTelegramViewport();
@@ -1341,7 +1341,7 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
 
   let ratingLayer = null;
   let ratingReadyTimer = 0;
-  const RATING_RELEASE_BUILD = "1.0.9-rating";
+  const RATING_RELEASE_BUILD = "1.2.0-rating";
   const RATING_READY_TIMEOUT_MS = 16000;
 
   function ratingFrame() {
@@ -10758,7 +10758,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
     &lt;span class=&quot;profile-support-meta&quot; data-profile-support-meta&gt;Обращения ещё не загружены&lt;/span&gt;
   &lt;/section&gt;
 
-  &lt;div class=&quot;profile-version-row&quot;&gt;&lt;span&gt;Версия игры&lt;/span&gt;&lt;strong data-profile-game-version&gt;1.0.9&lt;/strong&gt;&lt;/div&gt;
+  &lt;div class=&quot;profile-version-row&quot;&gt;&lt;span&gt;Версия игры&lt;/span&gt;&lt;strong data-profile-game-version&gt;1.2.0&lt;/strong&gt;&lt;/div&gt;
   &lt;div aria-live=&quot;polite&quot; class=&quot;profile-toast&quot; data-profile-toast hidden&gt;&lt;/div&gt;
 &lt;/div&gt;
 &lt;/section&gt;
@@ -10812,7 +10812,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 &lt;div aria-hidden=&quot;true&quot; class=&quot;release-layer&quot; data-release-layer hidden&gt;
   &lt;div aria-labelledby=&quot;release-dialog-title&quot; aria-modal=&quot;true&quot; class=&quot;release-dialog&quot; role=&quot;dialog&quot; tabindex=&quot;-1&quot;&gt;
     &lt;div class=&quot;release-image-wrap&quot; data-release-image-wrap aria-hidden=&quot;true&quot;&gt;
-      &lt;img class=&quot;release-image&quot; data-release-image src=&quot;/assets/news/update_v_1_0_9.png?v=1.0.9&quot; alt=&quot;Обновление Сладкого Забега 1.0.9&quot; width=&quot;1254&quot; height=&quot;1254&quot; decoding=&quot;async&quot; loading=&quot;lazy&quot; fetchpriority=&quot;low&quot;/&gt;
+      &lt;img class=&quot;release-image&quot; data-release-image src=&quot;/assets/news/update_v_1_2_0.jpeg?v=1.2.0&quot; alt=&quot;Обновление Сладкого Забега 1.2.0&quot; width=&quot;1254&quot; height=&quot;1254&quot; decoding=&quot;async&quot; loading=&quot;lazy&quot; fetchpriority=&quot;low&quot;/&gt;
     &lt;/div&gt;
     &lt;div class=&quot;release-kicker&quot; data-release-kicker&gt;Новое обновление&lt;/div&gt;
     &lt;h2 id=&quot;release-dialog-title&quot; data-release-title&gt;Обновление&lt;/h2&gt;
@@ -11287,44 +11287,47 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       // Заголовок, текст и кнопку ниже можно свободно редактировать.
       // Переносы строк внутри UPDATE_NOTICE_TEXT сохраняются.
       // Версия: год игры.сезонное обновление.исправление.
-      const GAME_VERSION = &quot;1.0.9&quot;;
+      const GAME_VERSION = &quot;1.2.0&quot;;
       const ECONOMY_RESET_KEY = &quot;economy-reset-0.1.1-beta-purchase-limit-fix-2026-07-23&quot;;
-      const UPDATE_NOTICE_KEY = &quot;release-1-0-9-2026-08-19&quot;;
+      const UPDATE_NOTICE_KEY = &quot;release-1-2-0-2026-08-27&quot;;
       const UPDATE_NOTICE_ENABLED = true;
-      const UPDATE_NOTICE_TITLE = &quot;Сладкий Забег 1.0.9 — друзья, новый XP и Алекс&quot;;
-      const UPDATE_NOTICE_TEXT = `Версия 1.0.9 уже доступна! Это большое обновление друзей, сезонного прогресса и удобства. Весь игровой прогресс сохраняется.
+      const UPDATE_NOTICE_TITLE = &quot;Сладкий Забег 1.2.0 — большое обновление уже в игре&quot;;
+      const UPDATE_NOTICE_TEXT = `Версия 1.2.0 уже доступна! Это одно из самых крупных обновлений «Сладкого Забега»: мы полностью обновили интерфейс и переработали основные разделы игры. Весь ваш прогресс, покупки, коллекция и рейтинг сохраняются.
 
-👥 ДРУЗЬЯ КАФЕ
-• В профиле появился раздел «Друзья кафе» с персональной Telegram-ссылкой для приглашений. Код уже встроен в ссылку — другу ничего не нужно вводить вручную.
-• Совместные награды открываются за стартовый этап, уровни профиля 5/10/20 и активность приглашённого друга. За Элитный и Элитный+ пригласивший получает дополнительный XP сезонного пропуска.
-• Добавлена общая лестница за 1/3/5/10/20/50 активных друзей, а на крупных целях можно выбрать одну большую награду.
-• Появились лента друзей, бесплатный подарок другу, совместный недельный подарок, награда за возвращение друга и временные события с увеличенными наградами.
-• Карточки друзей теперь показывают точный прогресс и ближайшую цель. Обучение подробно объясняет, что засчитывается, а что нет.
+✨ ОБНОВЛЁННЫЙ ИНТЕРФЕЙС
+• Полностью обновили главные экраны, навигацию, карточки и окна — теперь нужные разделы проще находить, а важная информация стала заметнее.
+• Профиль, магазин, рейтинг и другие игровые экраны получили более цельный и удобный интерфейс.
 
-🎟 СЕЗОННЫЙ ПРОПУСК
-• Полностью переработана кривая XP на 50 уровнях: прогресс стал плавнее и понятнее.
-• Полное прохождение 50 уровней теперь требует 74 700 XP.
-• После 50 уровня работает бесконечная дорожка 50+: каждые 1 500 XP открывают следующий шаг.
-• Уже заработанный XP не уменьшается.
+👤 ПРОФИЛЬ, ДОСТИЖЕНИЯ И АЛЬБОМ
+• Профиль стал полноценным центром аккаунта: уровень, XP, рекорд, оформление и быстрые переходы в ключевые разделы собраны в одном месте.
+• Добавлены «Достижения» с наградами, очками престижа, сериями достижений и собственной витриной. До трёх выполненных достижений можно показать в профиле и рейтинге.
+• «Альбом Зеффи» собирает тематические коллекции, истории и секретные находки, за завершение которых можно получать награды.
 
-🛍 МОИ ПОКУПКИ
-• «Мои покупки» теперь работают как единый склад — всё нужное собрано в одном месте и разделено на понятные вкладки.
-• «Покупки»: физические награды и проверяемые коды. Активный код можно повторно открыть в течение 24 часов, а использованные и истёкшие покупки остаются в истории.
-• «Усилители»: все доступные ×2-бонусы и их активация перед забегом.
-• «Кейсы»: постоянные кейсы из уровней, магазина, подарков и акций можно открыть прямо здесь. Сезонные кейсы остаются внутри сезонного пропуска.
-• «Почта»: письма, подарки и компенсации больше не теряются среди других разделов; полный текст открывается отдельно, а награды сохраняют историю получения.
+🛍 МАГАЗИН И «МОИ ПОКУПКИ»
+• Магазин заметно обновлён: карточки товаров, кейсов и рекомендаций стали понятнее, а покупки — удобнее.
+• «Мои покупки» теперь работают как единый склад: покупки, усилители, постоянные кейсы и «Почта Зеффи» находятся в одном разделе.
+• В «Почте Зеффи» сохраняются письма, подарки, компенсации и награды от команды.
 
-🐱 НОВЫЙ СКИН «АЛЕКС»
-• В магазин добавлен легендарный скин Алекс.
-• Стоимость: 3 000 000 очков, 1 500 зефира и 1 500 кофе.
-• За каждый полноценный забег Алекс даёт +600 очков, +15 зефира и +15 кофе.
-• Алекс также может выпасть из Легендарного кейса и имеет самый маленький шанс среди скинов внутри категории «Скины».
+🏆 РЕЙТИНГ
+• Обновили интерфейс рейтинга: сезонный прогресс, позиции игроков, рекорды и награды стали нагляднее.
+• Достижения из витрины профиля теперь помогают сделать карточку игрока более личной.
 
-✨ ЕЩЁ
-• Обновлены обучение, подсказки, отображение наград и переходы между новыми разделами.
-• Сохранены весь прогресс, покупки, коллекция, профиль и рейтинг за всё время.
+🤝 ДРУЗЬЯ КАФЕ
+• Добавлена реферальная система: приглашайте друзей по персональной ссылке, играйте вместе и открывайте совместные награды.
+• Карточки друзей показывают прогресс и ближайшие цели, а за активность открываются дополнительные подарки.
 
-Спасибо, что играете с нами! Зеффи рада подарить вам ещё больше сладких эмоций!`;
+🎁 ЕЖЕДНЕВНЫЕ НАГРАДЫ
+• Появилась серия ежедневных входов с гарантированными наградами и усиленным седьмым днём.
+• Для возвращающихся игроков предусмотрены дополнительные бонусы, чтобы снова включиться в забег было приятнее.
+
+🎟 СКОРО — БАТЛ-ПАСС
+• Мы продолжаем готовить батл-пасс. Он появится совсем скоро — о запуске и наградах расскажем отдельной новостью.
+
+🛠 ИСПРАВЛЕНИЕ ОШИБОК И ДОРАБОТКА ФУНКЦИОНАЛА
+• Исправили множество небольших ошибок и доработали стабильность игры, переходы между разделами, отображение данных и работу игровых функций.
+• Продолжаем улучшать игру по вашим отзывам — и это только часть обновления!
+
+Спасибо, что остаетесь с нами ❤️`;
       const UPDATE_NOTICE_BUTTON = &quot;Продолжить&quot;;
       const CASE_TUTORIAL_KEY = &quot;cases-tutorial-3-2026-08-27&quot;;
       const RATING_TUTORIAL_KEY = &quot;rating-tutorial-2-2026-08-27&quot;;
