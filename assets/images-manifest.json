@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "catalogHash": "3e71fb748f0a26f8",
-  "count": 419,
+  "catalogHash": "993ac275b5c6916e",
+  "count": 420,
   "images": [
     {
       "fileName": "achievements/background_achivment_panel.png",
@@ -1250,6 +1250,14 @@
       "path": "/assets/news/update_v_1_0_9.png",
       "size": 3518444,
       "modified": 1787160610000
+    },
+    {
+      "fileName": "news/update_v_1_2_0.jpeg",
+      "label": "Update v 1 2 0",
+      "folder": "news",
+      "path": "/assets/news/update_v_1_2_0.jpeg",
+      "size": 667197,
+      "modified": 1787817580000
     },
     {
       "fileName": "optimized/v0.79.5/cafeBackground.png",
