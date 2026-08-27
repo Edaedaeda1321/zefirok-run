@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "catalogHash": "993ac275b5c6916e",
-  "count": 420,
+  "catalogHash": "68bb905d83eec584",
+  "count": 424,
   "images": [
     {
       "fileName": "achievements/background_achivment_panel.png",
@@ -3268,12 +3268,36 @@
       "modified": 1787698022000
     },
     {
+      "fileName": "ui/icon_game_button.png",
+      "label": "Icon game button",
+      "folder": "ui",
+      "path": "/assets/ui/icon_game_button.png",
+      "size": 1378970,
+      "modified": 1787859539000
+    },
+    {
+      "fileName": "ui/icon_my_buy_button.png",
+      "label": "Icon my buy button",
+      "folder": "ui",
+      "path": "/assets/ui/icon_my_buy_button.png",
+      "size": 1712031,
+      "modified": 1787859539000
+    },
+    {
       "fileName": "ui/icon_o_profile.png",
       "label": "Icon o profile",
       "folder": "ui",
       "path": "/assets/ui/icon_o_profile.png",
       "size": 153631,
       "modified": 1787698023000
+    },
+    {
+      "fileName": "ui/icon_profile_button.png",
+      "label": "Icon profile button",
+      "folder": "ui",
+      "path": "/assets/ui/icon_profile_button.png",
+      "size": 1765425,
+      "modified": 1787859539000
     },
     {
       "fileName": "ui/icon_referals.png",
@@ -3314,6 +3338,14 @@
       "path": "/assets/ui/icon_setting_FAQ.png",
       "size": 163550,
       "modified": 1787698022000
+    },
+    {
+      "fileName": "ui/icon_shop_buttom.png",
+      "label": "Icon shop buttom",
+      "folder": "ui",
+      "path": "/assets/ui/icon_shop_buttom.png",
+      "size": 1996232,
+      "modified": 1787859539000
     },
     {
       "fileName": "ui/icon_shopping.png",
