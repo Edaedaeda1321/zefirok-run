@@ -10051,15 +10051,15 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 #zefirok-maltipoo-runner .profile-section--cases .profile-section-head{margin-bottom:0}
 @media(max-width:390px){#zefirok-maltipoo-runner .stock-hub-tab{min-height:69px;border-radius:15px}#zefirok-maltipoo-runner .stock-hub-tab&gt;img{width:36px;height:36px}#zefirok-maltipoo-runner .stock-hub-tabs{gap:5px}}
 &lt;/style&gt;
-&lt;style id=&quot;zefirok-main-nav-ui-v2&quot;&gt;
-/* 1.2 navigation: real UI controls instead of pre-rendered button images. */
+&lt;style id=&quot;zefirok-main-nav-ui-v3&quot;&gt;
+/* 1.2 navigation: compact real UI controls; future icons can be added without changing geometry. */
 #zefirok-maltipoo-runner .tabs.main-nav-v2{
   display:grid!important;
   grid-template-columns:repeat(2,minmax(0,1fr))!important;
-  grid-auto-rows:72px!important;
-  gap:8px!important;
+  grid-auto-rows:50px!important;
+  gap:7px!important;
   width:100%!important;
-  margin-bottom:12px!important;
+  margin-bottom:10px!important;
   padding:0!important;
   border:0!important;
   border-radius:0!important;
@@ -10072,41 +10072,31 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
   align-items:center!important;
   justify-content:center!important;
   width:100%!important;
-  height:72px!important;
+  height:50px!important;
   min-width:0!important;
-  min-height:72px!important;
-  max-height:72px!important;
+  min-height:50px!important;
+  max-height:50px!important;
   aspect-ratio:auto!important;
   margin:0!important;
-  padding:0 16px!important;
+  padding:0 12px!important;
   overflow:visible!important;
-  border:1px solid rgba(228,193,176,.94)!important;
-  border-radius:22px!important;
-  background:
-    radial-gradient(circle at 22% 18%,rgba(255,255,255,.95),transparent 30%),
-    linear-gradient(180deg,#fffdfb 0%,#fff8f4 100%)!important;
+  border:1px solid rgba(228,193,176,.92)!important;
+  border-radius:16px!important;
+  background:linear-gradient(180deg,#fffdfb 0%,#fff9f6 100%)!important;
   color:#6c514a!important;
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,.98),
-    0 7px 16px rgba(111,76,63,.07)!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.96),0 4px 10px rgba(111,76,63,.055)!important;
   opacity:1!important;
   filter:none!important;
   transform:none!important;
   transition:transform .14s ease,box-shadow .14s ease,border-color .14s ease,background .14s ease!important;
   -webkit-tap-highlight-color:transparent;
 }
-#zefirok-maltipoo-runner .tabs.main-nav-v2 &gt; button:active{
-  transform:scale(.975)!important;
-}
+#zefirok-maltipoo-runner .tabs.main-nav-v2 &gt; button:active{transform:scale(.98)!important}
 #zefirok-maltipoo-runner .tabs.main-nav-v2 &gt; button[aria-selected=&quot;true&quot;]{
-  border-color:rgba(229,113,157,.8)!important;
-  background:
-    radial-gradient(circle at 22% 18%,rgba(255,255,255,.72),transparent 30%),
-    linear-gradient(180deg,#ffe8f0 0%,#f8bfd3 100%)!important;
+  border-color:rgba(231,123,164,.8)!important;
+  background:linear-gradient(180deg,#ffeaf1 0%,#f8c5d7 100%)!important;
   color:#7b3f56!important;
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,.76),
-    0 9px 20px rgba(208,91,135,.15)!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.78),0 5px 12px rgba(208,91,135,.12)!important;
 }
 #zefirok-maltipoo-runner .tabs.main-nav-v2 .main-nav-v2__label{
   display:block!important;
@@ -10116,54 +10106,48 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
   text-overflow:ellipsis;
   white-space:nowrap;
   color:inherit;
-  font-size:clamp(15px,4.3vw,19px);
+  font-size:15px;
   font-weight:900;
   line-height:1;
-  letter-spacing:-.015em;
+  letter-spacing:-.012em;
   text-align:center;
-  text-shadow:0 1px 0 rgba(255,255,255,.8);
+  text-shadow:0 1px 0 rgba(255,255,255,.72);
   pointer-events:none;
 }
 #zefirok-maltipoo-runner .tabs.main-nav-v2 .warehouse-tab,
 #zefirok-maltipoo-runner .tabs.main-nav-v2 .profile-tab{
-  padding:0 16px!important;
-  border-radius:22px!important;
-  background:
-    radial-gradient(circle at 22% 18%,rgba(255,255,255,.95),transparent 30%),
-    linear-gradient(180deg,#fffdfb 0%,#fff8f4 100%)!important;
+  height:50px!important;
+  min-height:50px!important;
+  max-height:50px!important;
+  padding:0 12px!important;
+  border-radius:16px!important;
+  background:linear-gradient(180deg,#fffdfb 0%,#fff9f6 100%)!important;
 }
 #zefirok-maltipoo-runner .tabs.main-nav-v2 .warehouse-tab[aria-selected=&quot;true&quot;],
 #zefirok-maltipoo-runner .tabs.main-nav-v2 .profile-tab[aria-selected=&quot;true&quot;]{
-  background:
-    radial-gradient(circle at 22% 18%,rgba(255,255,255,.72),transparent 30%),
-    linear-gradient(180deg,#ffe8f0 0%,#f8bfd3 100%)!important;
+  background:linear-gradient(180deg,#ffeaf1 0%,#f8c5d7 100%)!important;
 }
 #zefirok-maltipoo-runner .tabs.main-nav-v2 .warehouse-tab__badge,
 #zefirok-maltipoo-runner .tabs.main-nav-v2 .profile-tab__badge{
-  top:-7px!important;
-  right:-5px!important;
+  top:-6px!important;
+  right:-4px!important;
   z-index:4!important;
 }
 @media(max-width:390px){
   #zefirok-maltipoo-runner .tabs.main-nav-v2{
-    grid-auto-rows:64px!important;
-    gap:7px!important;
+    grid-auto-rows:46px!important;
+    gap:6px!important;
   }
-  #zefirok-maltipoo-runner .tabs.main-nav-v2 &gt; button{
-    height:64px!important;
-    min-height:64px!important;
-    max-height:64px!important;
-    border-radius:19px!important;
-    padding:0 11px!important;
-  }
+  #zefirok-maltipoo-runner .tabs.main-nav-v2 &gt; button,
   #zefirok-maltipoo-runner .tabs.main-nav-v2 .warehouse-tab,
   #zefirok-maltipoo-runner .tabs.main-nav-v2 .profile-tab{
-    border-radius:19px!important;
-    padding:0 11px!important;
+    height:46px!important;
+    min-height:46px!important;
+    max-height:46px!important;
+    border-radius:15px!important;
+    padding:0 10px!important;
   }
-  #zefirok-maltipoo-runner .tabs.main-nav-v2 .main-nav-v2__label{
-    font-size:15px;
-  }
+  #zefirok-maltipoo-runner .tabs.main-nav-v2 .main-nav-v2__label{font-size:14px}
 }
 &lt;/style&gt;
 &lt;div class=&quot;phone&quot;&gt;
