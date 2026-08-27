@@ -2588,6 +2588,57 @@ img[src$="/xp.webp"]{
   .hero-premium-button{font-size:9px!important}
 }
 
+
+
+/* v0.79.40 — hero buttons equalized and reward cards hardened */
+.hero-bottom{grid-template-columns:repeat(2,minmax(0,1fr))!important;align-items:stretch!important;gap:12px!important}
+.hero-bottom>*{min-height:54px!important;height:54px!important}
+.premium-chip,.hero-premium-button{width:100%!important;min-width:0!important;display:flex!important;align-items:center!important;justify-content:center!important;border-radius:18px!important;text-align:center!important}
+.premium-chip{padding:0 18px!important;font-size:11px!important;font-weight:1000!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
+.hero-premium-button{padding:0 18px!important;font-size:11.5px!important}
+
+.reward-cell{grid-template-columns:72px minmax(0,1fr)!important;grid-template-rows:auto auto auto 34px!important;grid-template-areas:"lane lane" "icon name" "icon availability" "action action"!important;column-gap:14px!important;row-gap:4px!important;min-height:158px!important;padding:12px 13px 11px!important;overflow:hidden!important}
+.reward-lane-title{padding-right:90px!important}
+.reward-state{max-width:90px!important;height:20px!important;line-height:20px!important;font-size:6.5px!important}
+.reward-icon{width:64px!important;height:64px!important;align-self:start!important;justify-self:start!important;margin-top:2px!important}
+.reward-name{align-self:start!important;justify-content:flex-start!important;gap:5px!important;padding-top:4px!important;padding-right:2px!important;min-width:0!important;overflow:hidden!important}
+.reward-name-text{display:-webkit-box!important;-webkit-line-clamp:2!important;-webkit-box-orient:vertical!important;overflow:hidden!important;font-size:13px!important;line-height:1.06!important;font-weight:1000!important;letter-spacing:-.01em!important;word-break:break-word!important}
+.reward-name.has-value .reward-name-text{font-size:14px!important;line-height:1.02!important}
+.reward-qty{display:inline-flex!important;align-items:center!important;align-self:flex-start!important;min-height:24px!important;padding:0 10px!important;border:1px solid #f3bdd0!important;border-radius:999px!important;background:linear-gradient(180deg,#fff1f6 0%,#ffdfe9 100%)!important;color:#dc4f87!important;font-size:12px!important;line-height:1!important;font-weight:1000!important;box-shadow:0 3px 8px rgba(225,92,139,.12)!important}
+.reward-cell.premium .reward-qty{border-color:#edc766!important;background:linear-gradient(180deg,#fff8e0 0%,#ffe5a7 100%)!important;color:#af7311!important;box-shadow:0 3px 8px rgba(197,141,23,.11)!important}
+.reward-availability{display:block!important;align-self:start!important;padding-top:2px!important;font-size:7.5px!important;line-height:1.2!important;white-space:normal!important;overflow:visible!important;-webkit-line-clamp:unset!important}
+.reward-cell.claimed .reward-availability,.reward-cell.tier-locked .reward-availability{display:none!important}
+.reward-action{margin-top:6px!important;height:32px!important;min-height:32px!important;border-radius:12px!important;font-size:8.8px!important;line-height:32px!important}
+
+@media(max-width:430px){
+  .hero-bottom{gap:8px!important}
+  .hero-bottom>*{min-height:48px!important;height:48px!important}
+  .premium-chip{font-size:9px!important;padding:0 10px!important}
+  .hero-premium-button{font-size:9.8px!important;padding:0 10px!important}
+  .reward-cell{grid-template-columns:56px minmax(0,1fr)!important;column-gap:10px!important;min-height:138px!important;padding:10px 10px 9px!important}
+  .reward-lane-title{padding-right:76px!important}
+  .reward-state{max-width:76px!important;font-size:5.8px!important}
+  .reward-icon{width:50px!important;height:50px!important}
+  .reward-name-text{font-size:11.2px!important}
+  .reward-name.has-value .reward-name-text{font-size:12px!important}
+  .reward-qty{min-height:21px!important;padding:0 8px!important;font-size:10px!important}
+  .reward-availability{font-size:6.6px!important}
+  .reward-action{height:28px!important;min-height:28px!important;font-size:7.8px!important;line-height:28px!important}
+}
+@media(max-width:390px){
+  .hero-bottom{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  .premium-chip{font-size:8.4px!important}
+  .hero-premium-button{font-size:9px!important}
+  .reward-cell{grid-template-columns:54px minmax(0,1fr)!important;column-gap:9px!important;min-height:132px!important;padding:9px 9px 8px!important}
+  .reward-lane-title{padding-right:70px!important}
+  .reward-state{max-width:70px!important}
+  .reward-icon{width:46px!important;height:46px!important}
+  .reward-name-text{font-size:10.4px!important}
+  .reward-name.has-value .reward-name-text{font-size:11px!important}
+  .reward-qty{font-size:9.2px!important}
+  .reward-availability{font-size:6.2px!important}
+}
+
 </style>
 
 <style id="zefirok-v07946-season-progress-motion">
@@ -3966,11 +4017,11 @@ html,body{background:#fff8f5;color:var(--bp-text)}
       if (/очк/i.test(noun)) title = 'Очки';
       else if (/зефир/i.test(noun)) title = 'Зефир';
       else if (/кофе/i.test(noun)) title = 'Кофе';
-      return { title, value: `x${amount}`, compact: `${title} ${amount}` };
+      return { title, value: `×${amount}`, compact: `${title} ${amount}` };
     }
     const multMatch = compact.match(/^(.*?)(?:\s*[×xх]\s*(\d+))$/i);
     if (multMatch && multMatch[1]) {
-      return { title: String(multMatch[1]).trim(), value: `x${multMatch[2]}`, compact };
+      return { title: String(multMatch[1]).trim(), value: `×${multMatch[2]}`, compact };
     }
     return { title: compact, value: '', compact };
   }
