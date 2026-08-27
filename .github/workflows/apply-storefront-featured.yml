@@ -19,7 +19,7 @@ jobs:
           ref: feat/storefront-featured-control
           fetch-depth: 0
       - name: Fix encoded matcher
-        run: python3 .github/fix_patch_v2.py
+        run: python3 .github/fix_patch_v2b.py
       - name: Apply patch
         run: python3 .github/patch_storefront_featured_v2.py
       - name: Validate
