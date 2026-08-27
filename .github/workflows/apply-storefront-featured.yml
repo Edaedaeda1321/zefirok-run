@@ -18,14 +18,8 @@ jobs:
         with:
           ref: feat/storefront-featured-control
           fetch-depth: 0
-      - name: Diagnose match
-        run: |
-          grep -n "const preferred" index.html | head -20 || true
-          grep -n "case-alex" index.html | head -20 || true
-      - name: Fix patch matcher
-        run: python3 .github/fix_patch_storefront.py
       - name: Apply patch
-        run: python3 .github/patch_storefront_featured.py
+        run: python3 .github/patch_storefront_featured_v2.py
       - name: Validate
         run: |
           node --check src/worker.js
@@ -34,6 +28,7 @@ jobs:
           grep -q 'shopFeaturedSave' owner.html
           grep -q 'remoteShopFeatured' index.html
           grep -q 'ownerPanelSaveShopFeatured' src/worker.js
+          grep -q '0068_shop_featured' <(find migrations -maxdepth 1 -type f -printf '%f\n')
       - name: Commit feature changes
         run: |
           git config user.name "github-actions[bot]"
