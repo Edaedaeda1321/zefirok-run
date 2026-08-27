@@ -7428,7 +7428,19 @@ async function createReward(request, env, ctx = null) {
             purchaseStatements.push(shopStockCommitGuardCleanupStatement(env,stockGuardId));
           }
           const results=await env.DB.batch(purchaseStatements);
-          if(Number(results?.[chargeIndex]?.meta?.changes||0)!==1 || Number(results?.[codeIndex]?.meta?.changes||0)!==1)throw new ApiError(409,"Баланс изменился. Обновите магазин и повторите покупку.");
+          const chargeChanges=Number(results?.[chargeIndex]?.meta?.changes||0);
+          const codeChanges=Number(results?.[codeIndex]?.meta?.changes||0);
+          if(chargeChanges!==1 || codeChanges!==1){
+            // D1 can report an unexpected changes count for INSERT ... SELECT even
+            // after the transactional batch has already committed. Reconcile by
+            // requestId before returning a purchase error so a successfully issued
+            // physical reward is never shown to the player as a failed purchase.
+            const committedRow=await env.DB.prepare(
+              `SELECT code,product_id,product_name,created_at,expires_at,status FROM reward_codes WHERE request_id=? AND owner_telegram_id=? LIMIT 1`
+            ).bind(requestId,ownerId).first();
+            if(committedRow?.code){insertedCode=String(committedRow.code);break;}
+            throw new ApiError(409,"Баланс изменился. Обновите магазин и повторите покупку.");
+          }
           insertedCode=generated.code;
           break;
         }catch(error){

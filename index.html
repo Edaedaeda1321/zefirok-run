@@ -11161,6 +11161,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       let playerSupportStateLoading = false;
       let playerSupportStateLoadedAt = 0;
       let playerSupportSelectedTicketId = 0;
+      let playerSupportView = &quot;hub&quot;;
       let liveOpsRunEventClient = { active:false, multipliers:{ pointsMultiplier:1, treatsMultiplier:1, coffeeMultiplier:1 } };
       let newcomerPathClientState = { available:false, completed:false, dayNumber:0, runs:0, steps:[] };
       let friendCoopClientState = { config:null, partners:[] };
@@ -18026,7 +18027,10 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           const data = await response.json().catch(() =&gt; null);
           if (!response.ok || !data?.ok) throw new Error(data?.error || &quot;Не удалось загрузить обращения.&quot;);
           applyPlayerSupportState(data);
-          if (supportLayer &amp;&amp; !supportLayer.hidden &amp;&amp; !playerSupportSelectedTicketId) renderPlayerSupportHub();
+          if (supportLayer &amp;&amp; !supportLayer.hidden) {
+            if (playerSupportView === &quot;hub&quot;) renderPlayerSupportHub();
+            else if (playerSupportView === &quot;ticket&quot; &amp;&amp; playerSupportSelectedTicketId) openPlayerSupportTicket(playerSupportSelectedTicketId);
+          }
           return true;
         } catch (error) {
           console.warn(&quot;Support state sync failed&quot;, error);
@@ -18039,8 +18043,9 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         supportLayer.hidden = false;
         supportLayer.setAttribute(&quot;aria-hidden&quot;, &quot;false&quot;);
         playerSupportSelectedTicketId = 0;
+        playerSupportView = &quot;hub&quot;;
         renderPlayerSupportHub();
-        void loadPlayerSupportState(true).then(() =&gt; { if (!playerSupportSelectedTicketId) renderPlayerSupportHub(); });
+        void loadPlayerSupportState(true);
       }
 
       function closeSupportLayer() {
@@ -18048,10 +18053,13 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         supportLayer.hidden = true;
         supportLayer.setAttribute(&quot;aria-hidden&quot;, &quot;true&quot;);
         playerSupportSelectedTicketId = 0;
+        playerSupportView = &quot;hub&quot;;
       }
 
       function renderPlayerSupportHub() {
         if (!supportContentEl) return;
+        playerSupportSelectedTicketId = 0;
+        playerSupportView = &quot;hub&quot;;
         if (supportTitleEl) supportTitleEl.textContent = &quot;Поддержка&quot;;
         if (supportSubtitleEl) supportSubtitleEl.textContent = &quot;Ваши обращения и ответы команды&quot;;
         if (!telegramProfile?.initData) {
@@ -18065,6 +18073,8 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 
       function renderPlayerSupportNew() {
         if (!supportContentEl) return;
+        playerSupportSelectedTicketId = 0;
+        playerSupportView = &quot;new&quot;;
         if (supportTitleEl) supportTitleEl.textContent = &quot;Новое обращение&quot;;
         if (supportSubtitleEl) supportSubtitleEl.textContent = &quot;Ответ придёт в игру и от Telegram-бота&quot;;
         const requestId = supportRequestId(&quot;ticket&quot;);
@@ -18143,6 +18153,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         const ticket = findPlayerSupportTicket(ticketId);
         if (!ticket || !supportContentEl) { renderPlayerSupportHub(); return; }
         playerSupportSelectedTicketId = Number(ticket.id);
+        playerSupportView = &quot;ticket&quot;;
         if (supportTitleEl) supportTitleEl.textContent = `Обращение #${ticket.id}`;
         if (supportSubtitleEl) supportSubtitleEl.textContent = ticket.categoryLabel;
         if (ticket.unread) {
@@ -22482,10 +22493,10 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       if (supportCloseButton) supportCloseButton.addEventListener(&quot;click&quot;, closeSupportLayer);
       if (supportLayer) supportLayer.addEventListener(&quot;click&quot;, (event) =&gt; {
         const target = event.target instanceof Element ? event.target : null;
-        if (target === supportLayer) { closeSupportLayer(); return; }
+        if (target === supportLayer) return;
         if (target?.closest(&quot;[data-support-close]&quot;)) { closeSupportLayer(); return; }
-        if (target?.closest(&quot;[data-support-new]&quot;)) { playerSupportSelectedTicketId = 0; renderPlayerSupportNew(); return; }
-        if (target?.closest(&quot;[data-support-back]&quot;)) { playerSupportSelectedTicketId = 0; renderPlayerSupportHub(); return; }
+        if (target?.closest(&quot;[data-support-new]&quot;)) { renderPlayerSupportNew(); return; }
+        if (target?.closest(&quot;[data-support-back]&quot;)) { renderPlayerSupportHub(); return; }
         const ticketButton = target?.closest(&quot;[data-support-ticket]&quot;);
         if (ticketButton) { openPlayerSupportTicket(ticketButton.dataset.supportTicket); return; }
       });
@@ -22878,7 +22889,9 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       });
       stage.addEventListener(&quot;pointerdown&quot;, jump);
       root.addEventListener(&quot;keydown&quot;, (event) =&gt; {
-        if ((purchaseLayer &amp;&amp; !purchaseLayer.hidden) || (tutorialLayer &amp;&amp; !tutorialLayer.hidden) || (releaseLayer &amp;&amp; !releaseLayer.hidden) || (caseLayer &amp;&amp; !caseLayer.hidden)) return;
+        const keyTarget = event.target instanceof Element ? event.target : null;
+        if (keyTarget?.closest(&quot;input, textarea, select, [contenteditable=&#x27;true&#x27;], [contenteditable=&#x27;&#x27;]&quot;)) return;
+        if ((supportLayer &amp;&amp; !supportLayer.hidden) || (purchaseLayer &amp;&amp; !purchaseLayer.hidden) || (tutorialLayer &amp;&amp; !tutorialLayer.hidden) || (releaseLayer &amp;&amp; !releaseLayer.hidden) || (caseLayer &amp;&amp; !caseLayer.hidden)) return;
         if (event.code === &quot;Space&quot; || event.code === &quot;Enter&quot;) {
           event.preventDefault();
           jump();
