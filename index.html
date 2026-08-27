@@ -19209,14 +19209,6 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         const enteringFlashOfferShop = name === &quot;shop&quot; &amp;&amp; flashOfferLastScreen !== &quot;shop&quot;;
         flashOfferLastScreen = name;
         for (const button of tabButtons) button.setAttribute(&quot;aria-selected&quot;, String(button.dataset.tab === name));
-        const gameTabImage = root.querySelector(&quot;[data-tab=game] img&quot;);
-        if (gameTabImage) {
-          gameTabImage.src = assetSources[name === &quot;game&quot; ? &quot;navGameButtonSelected&quot; : &quot;navGameButtonUnselected&quot;] || assetSources.navGameButton;
-        }
-        const shopTabImage = root.querySelector(&quot;[data-tab=shop] img&quot;);
-        if (shopTabImage) {
-          shopTabImage.src = assetSources[name === &quot;shop&quot; ? &quot;navShopButtonSelected&quot; : &quot;navShopButtonUnselected&quot;] || assetSources.navShopButton;
-        }
         const warehouseTabImage = root.querySelector(&quot;[data-warehouse-tab-image]&quot;);
         if (warehouseTabImage) {
           warehouseTabImage.src = assetSources[name === &quot;warehouse&quot; ? &quot;warehouseButtonOn&quot; : &quot;warehouseButtonOff&quot;] || &quot;&quot;;
