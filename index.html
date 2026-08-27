@@ -3288,6 +3288,149 @@ html&gt;body{padding:
       width: 100%;
     }
 
+    /* 1.2.0 · Compact reward QR sheet in My purchases. */
+    #zefirok-maltipoo-runner .purchase-layer[data-purchase-mode=&quot;reward-code&quot;] {
+      padding: max(14px, env(safe-area-inset-top)) 12px max(14px, env(safe-area-inset-bottom));
+      background: rgba(49, 36, 40, 0.50);
+      backdrop-filter: blur(9px);
+      -webkit-backdrop-filter: blur(9px);
+    }
+
+    #zefirok-maltipoo-runner .purchase-layer[data-purchase-mode=&quot;reward-code&quot;] .purchase-dialog {
+      width: min(100%, 380px);
+      max-height: calc(var(--zefirok-visible-height, 100dvh) - 28px);
+      padding: 16px 16px 14px;
+      border-color: rgba(232, 190, 207, 0.82);
+      border-radius: 28px;
+      background:
+        radial-gradient(circle at 50% 0%, rgba(255, 223, 233, .56), transparent 28%),
+        linear-gradient(165deg, rgba(255, 253, 250, .995), rgba(255, 242, 238, .995));
+      box-shadow: 0 26px 72px rgba(54, 37, 41, .30), inset 0 1px 0 rgba(255,255,255,.96);
+    }
+
+    #zefirok-maltipoo-runner .reward-code-sheet {
+      display: grid;
+      justify-items: stretch;
+      text-align: center;
+    }
+
+    #zefirok-maltipoo-runner .reward-code-sheet .purchase-kicker {
+      justify-self: center;
+      min-height: 24px;
+      padding: 4px 10px;
+      font-size: 10px;
+    }
+
+    #zefirok-maltipoo-runner .reward-code-sheet .purchase-product-image {
+      width: 92px;
+      height: 78px;
+      margin: 7px auto 2px;
+      filter: drop-shadow(0 7px 10px rgba(163, 94, 107, .12));
+    }
+
+    #zefirok-maltipoo-runner .reward-code-sheet h2 {
+      margin: 2px 0 4px;
+      font-size: clamp(22px, 6vw, 27px);
+    }
+
+    #zefirok-maltipoo-runner .reward-code-sheet &gt; p {
+      max-width: 310px;
+      margin: 0 auto;
+      color: #7f777e;
+      font-size: 13px;
+      line-height: 1.35;
+    }
+
+    #zefirok-maltipoo-runner .reward-code-sheet .purchase-qr-wrap {
+      gap: 5px;
+      margin: 11px 0 8px;
+      padding: 10px 10px 9px;
+      border-radius: 18px;
+      background: rgba(255,255,255,.86);
+    }
+
+    #zefirok-maltipoo-runner .reward-code-sheet .purchase-qr {
+      width: min(52vw, 188px);
+      padding: 7px;
+      border-radius: 13px;
+    }
+
+    #zefirok-maltipoo-runner .reward-code-sheet .purchase-qr-title {
+      font-size: 12px;
+    }
+
+    #zefirok-maltipoo-runner .reward-code-sheet .purchase-qr-note {
+      max-width: 285px;
+      font-size: 9.5px;
+      line-height: 1.25;
+    }
+
+    #zefirok-maltipoo-runner .reward-code-sheet .purchase-code-label {
+      margin-top: 7px;
+      font-size: 11px;
+      color: #95838a;
+    }
+
+    #zefirok-maltipoo-runner .reward-code-sheet .purchase-code {
+      margin: 5px 0 8px;
+      padding: 10px 8px 8px;
+      border-radius: 15px;
+      font-size: clamp(17px, 5.4vw, 22px);
+    }
+
+    #zefirok-maltipoo-runner .reward-code-sheet .purchase-code__hint {
+      margin-top: 4px;
+      font-size: 9px;
+    }
+
+    #zefirok-maltipoo-runner .reward-code-time {
+      display: grid;
+      gap: 2px;
+      margin: 2px 0 0;
+      color: #8d7e84;
+      font-size: 11px;
+      line-height: 1.3;
+    }
+
+    #zefirok-maltipoo-runner .reward-code-time strong {
+      color: #c74f7c;
+      font-size: 15px;
+      line-height: 1.15;
+    }
+
+    #zefirok-maltipoo-runner .reward-code-sheet .purchase-screenshot {
+      margin: 10px 0 11px !important;
+      padding: 8px 10px;
+      border-radius: 13px;
+      font-size: 10px !important;
+      line-height: 1.25 !important;
+    }
+
+    #zefirok-maltipoo-runner .reward-code-sheet .purchase-actions {
+      gap: 8px;
+      margin-top: 0;
+    }
+
+    #zefirok-maltipoo-runner .reward-code-sheet .purchase-action {
+      min-height: 46px;
+      border-radius: 15px;
+      font-size: 13px;
+    }
+
+    @media (max-width: 390px), (max-height: 720px) {
+      #zefirok-maltipoo-runner .purchase-layer[data-purchase-mode=&quot;reward-code&quot;] .purchase-dialog {
+        padding: 13px 13px 12px;
+        border-radius: 25px;
+      }
+      #zefirok-maltipoo-runner .reward-code-sheet .purchase-product-image { width: 78px; height: 66px; margin-top: 5px; }
+      #zefirok-maltipoo-runner .reward-code-sheet h2 { font-size: 21px; }
+      #zefirok-maltipoo-runner .reward-code-sheet &gt; p { font-size: 11.5px; }
+      #zefirok-maltipoo-runner .reward-code-sheet .purchase-qr { width: min(48vw, 166px); }
+      #zefirok-maltipoo-runner .reward-code-sheet .purchase-qr-wrap { margin-top: 8px; padding: 8px; }
+      #zefirok-maltipoo-runner .reward-code-sheet .purchase-screenshot { margin-top: 8px !important; }
+      #zefirok-maltipoo-runner .reward-code-sheet .purchase-action { min-height: 43px; }
+    }
+
     #zefirok-maltipoo-runner .shop-card &gt; button[data-buy].is-unaffordable,
     #zefirok-maltipoo-runner .shop-preview button.is-unaffordable {
       opacity: 0.72;
@@ -21189,20 +21332,22 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         const product = warehouseProduct(entry);
         const productImage = assetSources[product.image] || &quot;&quot;;
         openPurchaseLayer(`
-          &lt;span class=&quot;purchase-kicker&quot;&gt;Проверяемый код&lt;/span&gt;
-          &lt;img class=&quot;purchase-product-image&quot; alt=&quot;${escapePurchaseText(product.title)}&quot; src=&quot;${productImage}&quot;&gt;
-          &lt;h2 id=&quot;purchase-dialog-title&quot;&gt;${escapePurchaseText(product.title)}&lt;/h2&gt;
-          &lt;p&gt;Покажите QR сотруднику кафе. Он проверит награду и спишет её после выдачи.&lt;/p&gt;
-          ${rewardQrMarkup(entry.code)}
-          &lt;div class=&quot;purchase-code-label&quot;&gt;Или введите код вручную&lt;/div&gt;
-          &lt;button aria-label=&quot;Скопировать код ${escapePurchaseText(entry.code)}&quot; class=&quot;purchase-code&quot; data-copy-reward-code=&quot;${escapePurchaseText(entry.code)}&quot; type=&quot;button&quot;&gt;&lt;span class=&quot;purchase-code__value&quot;&gt;${escapePurchaseText(entry.code)}&lt;/span&gt;&lt;span class=&quot;purchase-code__hint&quot;&gt;Нажмите, чтобы скопировать&lt;/span&gt;&lt;/button&gt;
-          &lt;div class=&quot;purchase-expiry&quot;&gt;&lt;strong&gt;Осталось ${escapePurchaseText(formatWarehouseRemaining(Number(entry.expiresAt) - Date.now()))}.&lt;/strong&gt;&lt;br&gt;Действителен до ${escapePurchaseText(formatPurchaseExpiry(entry.expiresAt))}.&lt;/div&gt;
-          &lt;p class=&quot;purchase-screenshot&quot;&gt;Код одноразовый. После выдачи карточка получит статус «Списан».&lt;/p&gt;
-          &lt;div class=&quot;purchase-actions&quot;&gt;
-            &lt;button class=&quot;purchase-action&quot; data-open-reward-bot=&quot;${escapePurchaseText(entry.code)}&quot; type=&quot;button&quot;&gt;Открыть в боте&lt;/button&gt;
-            &lt;button class=&quot;purchase-action purchase-action--done&quot; data-purchase-close type=&quot;button&quot;&gt;Готово&lt;/button&gt;
+          &lt;div class=&quot;reward-code-sheet&quot;&gt;
+            &lt;span class=&quot;purchase-kicker&quot;&gt;Проверяемый код&lt;/span&gt;
+            &lt;img class=&quot;purchase-product-image&quot; alt=&quot;${escapePurchaseText(product.title)}&quot; src=&quot;${productImage}&quot;&gt;
+            &lt;h2 id=&quot;purchase-dialog-title&quot;&gt;${escapePurchaseText(product.title)}&lt;/h2&gt;
+            &lt;p&gt;Покажите QR сотруднику кафе — после выдачи награда будет списана.&lt;/p&gt;
+            ${rewardQrMarkup(entry.code)}
+            &lt;div class=&quot;purchase-code-label&quot;&gt;Или используйте код вручную&lt;/div&gt;
+            &lt;button aria-label=&quot;Скопировать код ${escapePurchaseText(entry.code)}&quot; class=&quot;purchase-code&quot; data-copy-reward-code=&quot;${escapePurchaseText(entry.code)}&quot; type=&quot;button&quot;&gt;&lt;span class=&quot;purchase-code__value&quot;&gt;${escapePurchaseText(entry.code)}&lt;/span&gt;&lt;span class=&quot;purchase-code__hint&quot;&gt;Нажмите, чтобы скопировать&lt;/span&gt;&lt;/button&gt;
+            &lt;div class=&quot;reward-code-time&quot;&gt;&lt;strong&gt;Осталось ${escapePurchaseText(formatWarehouseRemaining(Number(entry.expiresAt) - Date.now()))}&lt;/strong&gt;&lt;span&gt;Действует до ${escapePurchaseText(formatPurchaseExpiry(entry.expiresAt))}&lt;/span&gt;&lt;/div&gt;
+            &lt;p class=&quot;purchase-screenshot&quot;&gt;Код одноразовый · после выдачи карточка получит статус «Списан».&lt;/p&gt;
+            &lt;div class=&quot;purchase-actions purchase-actions--equal&quot;&gt;
+              &lt;button class=&quot;purchase-action&quot; data-open-reward-bot=&quot;${escapePurchaseText(entry.code)}&quot; type=&quot;button&quot;&gt;Открыть в боте&lt;/button&gt;
+              &lt;button class=&quot;purchase-action purchase-action--done&quot; data-purchase-close type=&quot;button&quot;&gt;Готово&lt;/button&gt;
+            &lt;/div&gt;
           &lt;/div&gt;
-        `, &quot;[data-purchase-close]&quot;);
+        `, &quot;[data-purchase-close]&quot;, &quot;reward-code&quot;);
       }
 
       function purchaseSheetResourceItems(purchase) {
