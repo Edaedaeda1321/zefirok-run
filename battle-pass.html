@@ -2559,6 +2559,35 @@ img[src$="/xp.webp"]{
   .reward-availability{font-size:6px!important}
 }
 
+
+
+/* v0.79.39 — Premium sheet behaves like rating mini-profile bottom sheet */
+.progress-card{grid-template-areas:"badge copy days" "bottom bottom bottom"!important}
+.hero-bottom{grid-area:bottom!important;display:grid!important;grid-template-columns:minmax(0,1fr) minmax(170px,1.05fr)!important;align-items:center!important;gap:12px!important;width:100%!important}
+.premium-chip{min-width:0!important;width:100%!important;justify-content:flex-start!important;overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important}
+.hero-premium-button{grid-area:auto!important;justify-self:stretch!important;width:100%!important;min-width:0!important;position:relative!important;z-index:1!important}
+
+.premium-sheet{touch-action:pan-y!important}
+.premium-sheet-card{touch-action:pan-y!important;overscroll-behavior:contain!important;-webkit-overflow-scrolling:touch!important;cursor:grab!important;transform:translate3d(0,0,0)}
+.premium-sheet-card.is-full-dragging{cursor:grabbing!important;user-select:none!important;-webkit-user-select:none!important}
+.sheet-handle{width:58px!important;height:6px!important;margin:1px auto 12px!important;background:#d9c5bf!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.8)!important;touch-action:none!important}
+.sheet-handle.is-armed{background:#e15a87!important;box-shadow:0 0 0 5px rgba(225,90,135,.10)!important}
+.premium-sheet-later{display:flex!important;align-items:center!important;justify-content:center!important;width:100%!important;min-height:48px!important;margin:12px 0 0!important;padding:0 18px!important;border:1px solid #edcfc7!important;border-radius:15px!important;background:linear-gradient(180deg,#fffaf8 0%,#fff0ed 100%)!important;color:#8d655d!important;font-size:10px!important;font-weight:1000!important;box-shadow:0 7px 16px rgba(105,67,60,.07)!important;transition:transform .14s ease,background .14s ease,box-shadow .14s ease!important}
+.premium-sheet-later:active{transform:scale(.985)!important;background:#ffe8e5!important;box-shadow:0 3px 8px rgba(105,67,60,.06)!important}
+.premium-sheet-later:focus-visible{outline:3px solid rgba(230,83,132,.18)!important;outline-offset:2px!important}
+
+@media(max-width:430px){
+  .hero-bottom{grid-template-columns:minmax(0,.78fr) minmax(150px,1.22fr)!important;gap:8px!important}
+  .premium-chip{font-size:7.8px!important;padding:0 9px!important}
+  .hero-premium-button{font-size:9.5px!important;padding:0 9px!important}
+  .premium-sheet-later{min-height:46px!important;font-size:9.5px!important}
+}
+@media(max-width:390px){
+  .hero-bottom{grid-template-columns:minmax(92px,.72fr) minmax(145px,1.28fr)!important;gap:7px!important}
+  .premium-chip{font-size:7.2px!important}
+  .hero-premium-button{font-size:9px!important}
+}
+
 </style>
 
 <style id="zefirok-v07946-season-progress-motion">
@@ -5049,34 +5078,242 @@ html,body{background:#fff8f5;color:var(--bp-text)}
 
   const premiumSheet = el("premiumSheet");
   const premiumSheetCard = premiumSheet?.querySelector?.(".premium-sheet-card") || null;
+  const premiumSheetHandle = premiumSheet?.querySelector?.(".sheet-handle") || null;
   const premiumOffer = el("premiumOffer");
   const premiumOfferHost = el("premiumSheetOfferHost");
-  if (premiumSheetCard) {
-    let premiumTouchStartY = 0;
-    premiumSheetCard.addEventListener("touchstart",event=>{
-      premiumTouchStartY = event.touches[0]?.clientY || 0;
-    },{passive:true});
-    premiumSheetCard.addEventListener("touchmove",event=>{
-      const currentY = event.touches[0]?.clientY || 0;
-      const atTop = premiumSheetCard.scrollTop <= 0;
-      const atBottom = premiumSheetCard.scrollTop + premiumSheetCard.clientHeight >= premiumSheetCard.scrollHeight - 1;
-      if ((atTop && currentY > premiumTouchStartY) || (atBottom && currentY < premiumTouchStartY)) event.preventDefault();
-      event.stopPropagation();
-    },{passive:false});
-    premiumSheetCard.addEventListener("wheel",event=>event.stopPropagation(),{passive:true});
-  }
   if (premiumSheet && premiumOffer && premiumOfferHost && premiumOffer.parentElement !== premiumOfferHost) premiumOfferHost.appendChild(premiumOffer);
-  function openPremiumSheet(){
+
+  let premiumDismissAnimating = false;
+  let premiumMotionSerial = 0;
+  let premiumCloseTimer = 0;
+  let premiumSheetTouchId = null;
+  let premiumSheetTouchStartX = 0;
+  let premiumSheetTouchStartY = 0;
+  let premiumSheetTouchLastY = 0;
+  let premiumSheetTouchLastTs = 0;
+  let premiumSheetTouchVelocity = 0;
+  let premiumSheetTouchDelta = 0;
+  let premiumSheetTouchDragging = false;
+
+  const premiumTouchByIdentifier = (touches,id) => {
+    for (const touch of Array.from(touches || [])) if (touch.identifier === id) return touch;
+    return null;
+  };
+  const isPremiumSwipeInteractiveTarget = target => target instanceof Element && !!target.closest("button,a,input,select,textarea,[contenteditable='true'],[role='button']");
+
+  function clearPremiumSheetMotionStyles() {
+    if (premiumCloseTimer) clearTimeout(premiumCloseTimer);
+    premiumCloseTimer = 0;
+    if (premiumSheetCard) {
+      premiumSheetCard.style.transform = "";
+      premiumSheetCard.style.transition = "";
+      premiumSheetCard.style.animation = "";
+      premiumSheetCard.style.willChange = "";
+    }
+    if (premiumSheet) {
+      premiumSheet.style.background = "";
+      premiumSheet.style.backdropFilter = "";
+      premiumSheet.style.webkitBackdropFilter = "";
+      premiumSheet.style.transition = "";
+      premiumSheet.style.willChange = "";
+    }
+  }
+
+  function premiumBackdropProgressForOffset(offset,sheetHeight) {
+    const height = Math.max(220,Number(sheetHeight) || 0);
+    const distance = Math.max(0,Number(offset) || 0);
+    return Math.max(0,Math.min(.52,(distance / height) * 1.22));
+  }
+
+  function applyPremiumBackdropProgress(progress) {
     if (!premiumSheet) return;
+    const p = Math.max(0,Math.min(1,Number(progress) || 0));
+    const alpha = .43 * (1 - p);
+    const blur = 10 * (1 - p);
+    premiumSheet.style.background = `rgba(63,44,44,${alpha.toFixed(4)})`;
+    premiumSheet.style.backdropFilter = `blur(${blur.toFixed(2)}px)`;
+    premiumSheet.style.webkitBackdropFilter = `blur(${blur.toFixed(2)}px)`;
+  }
+
+  function resetPremiumSheetTouch() {
+    premiumSheetTouchId = null;
+    premiumSheetTouchStartX = 0;
+    premiumSheetTouchStartY = 0;
+    premiumSheetTouchLastY = 0;
+    premiumSheetTouchLastTs = 0;
+    premiumSheetTouchVelocity = 0;
+    premiumSheetTouchDelta = 0;
+    premiumSheetTouchDragging = false;
+    premiumSheetCard?.classList.remove("is-full-dragging");
+    premiumSheetHandle?.classList.remove("is-armed");
+  }
+
+  function settlePremiumSheetDrag(startOffset = 0) {
+    if (!premiumSheetCard || !premiumSheet || premiumSheet.hidden) return;
+    const motionSerial = ++premiumMotionSerial;
+    const offset = Math.max(0,Number(startOffset) || 0);
+    const sheetHeight = Math.max(220,premiumSheetCard.offsetHeight || premiumSheetCard.getBoundingClientRect().height || 0);
+    const duration = Math.round(Math.max(250,Math.min(340,270 + offset * .28)));
+    const easing = "cubic-bezier(.32,.72,0,1)";
+    premiumSheetCard.style.animation = "none";
+    premiumSheetCard.style.transition = "none";
+    premiumSheetCard.style.transform = `translate3d(0,${Math.round(offset)}px,0)`;
+    premiumSheetCard.style.willChange = "transform";
+    premiumSheet.style.willChange = "background,backdrop-filter";
+    applyPremiumBackdropProgress(premiumBackdropProgressForOffset(offset,sheetHeight));
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{
+      if (motionSerial !== premiumMotionSerial || !premiumSheetCard || premiumSheet.hidden) return;
+      premiumSheetCard.style.transition = `transform ${duration}ms ${easing}`;
+      premiumSheet.style.transition = `background ${Math.min(duration,300)}ms ${easing},backdrop-filter ${Math.min(duration,300)}ms ${easing}`;
+      premiumSheetCard.style.transform = "translate3d(0,0,0)";
+      applyPremiumBackdropProgress(0);
+    }));
+    setTimeout(()=>{
+      if (motionSerial !== premiumMotionSerial || premiumDismissAnimating || premiumSheet?.hidden) return;
+      clearPremiumSheetMotionStyles();
+    },duration + 30);
+  }
+
+  function finalizePremiumSheetClose() {
+    if (!premiumSheet) return;
+    ++premiumMotionSerial;
+    premiumDismissAnimating = false;
+    resetPremiumSheetTouch();
+    premiumSheet.hidden = true;
+    clearPremiumSheetMotionStyles();
+    document.body.style.overflow = "";
+  }
+
+  function closePremiumSheet(options = {}) {
+    if (!premiumSheet || premiumSheet.hidden || premiumDismissAnimating) return;
+    const reduced = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches === true;
+    if (options?.immediate === true || reduced || !premiumSheetCard) {
+      finalizePremiumSheetClose();
+      return;
+    }
+    premiumDismissAnimating = true;
+    const motionSerial = ++premiumMotionSerial;
+    const offset = Math.max(0,Number(options?.offset) || 0);
+    const velocity = Math.max(0,Number(options?.velocity) || 0);
+    const sheetHeight = Math.max(220,premiumSheetCard.offsetHeight || premiumSheetCard.getBoundingClientRect().height || 0);
+    const travel = Math.max(sheetHeight + 44,offset + sheetHeight * .84);
+    const speedBoost = Math.min(92,velocity * 62);
+    const dragBoost = Math.min(54,offset * .16);
+    const duration = Math.round(Math.max(300,Math.min(420,420 - speedBoost - dragBoost)));
+    const easing = "cubic-bezier(.32,.72,0,1)";
+    premiumSheetCard.style.animation = "none";
+    premiumSheetCard.style.transition = "none";
+    premiumSheetCard.style.transform = offset > 0 ? `translate3d(0,${Math.round(offset)}px,0)` : (premiumSheetCard.style.transform || "translate3d(0,0,0)");
+    premiumSheetCard.style.willChange = "transform";
+    premiumSheet.style.willChange = "background,backdrop-filter";
+    applyPremiumBackdropProgress(premiumBackdropProgressForOffset(offset,sheetHeight));
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{
+      if (motionSerial !== premiumMotionSerial || !premiumSheetCard) return;
+      premiumSheetCard.style.transition = `transform ${duration}ms ${easing}`;
+      premiumSheet.style.transition = `background ${Math.min(duration,300)}ms ${easing},backdrop-filter ${Math.min(duration,300)}ms ${easing}`;
+      premiumSheetCard.style.transform = `translate3d(0,${Math.round(travel)}px,0)`;
+      applyPremiumBackdropProgress(1);
+    }));
+    premiumCloseTimer = setTimeout(()=>{
+      if (motionSerial === premiumMotionSerial) finalizePremiumSheetClose();
+    },duration + 35);
+  }
+
+  function openPremiumSheet() {
+    if (!premiumSheet || premiumDismissAnimating) return;
+    ++premiumMotionSerial;
+    resetPremiumSheetTouch();
+    clearPremiumSheetMotionStyles();
     premiumSheet.hidden = false;
+    if (premiumSheetCard) premiumSheetCard.scrollTop = 0;
     document.body.style.overflow = "hidden";
     passImpactHaptic("light");
   }
-  function closePremiumSheet(){
-    if (!premiumSheet) return;
-    premiumSheet.hidden = true;
-    if (el("purchaseConfirm")?.hidden && el("rewardSummary")?.hidden) document.body.style.overflow = "";
-  }
+
+  premiumSheetCard?.addEventListener("touchstart",event=>{
+    if (premiumDismissAnimating || premiumSheet?.hidden || event.touches?.length !== 1) return;
+    if (isPremiumSwipeInteractiveTarget(event.target)) return;
+    if ((premiumSheetCard.scrollTop || 0) > 2) return;
+    const touch = event.touches[0];
+    premiumSheetTouchId = touch.identifier;
+    premiumSheetTouchStartX = Number(touch.clientX || 0);
+    premiumSheetTouchStartY = Number(touch.clientY || 0);
+    premiumSheetTouchLastY = premiumSheetTouchStartY;
+    premiumSheetTouchLastTs = performance.now();
+    premiumSheetTouchVelocity = 0;
+    premiumSheetTouchDelta = 0;
+    premiumSheetTouchDragging = false;
+  },{passive:true});
+
+  premiumSheetCard?.addEventListener("touchmove",event=>{
+    if (premiumSheetTouchId == null || premiumDismissAnimating || premiumSheet?.hidden) return;
+    const touch = premiumTouchByIdentifier(event.touches,premiumSheetTouchId);
+    if (!touch) return;
+    const currentX = Number(touch.clientX || 0);
+    const currentY = Number(touch.clientY || 0);
+    const dy = currentY - premiumSheetTouchStartY;
+    const dx = currentX - premiumSheetTouchStartX;
+    if (!premiumSheetTouchDragging) {
+      if (Math.abs(dy) < 9) return;
+      if (dy <= 0 || Math.abs(dx) > Math.abs(dy) * .82) {
+        resetPremiumSheetTouch();
+        return;
+      }
+      if ((premiumSheetCard.scrollTop || 0) > 2) {
+        resetPremiumSheetTouch();
+        return;
+      }
+      premiumSheetTouchDragging = true;
+      ++premiumMotionSerial;
+      if (premiumCloseTimer) clearTimeout(premiumCloseTimer);
+      premiumSheetCard.scrollTop = 0;
+      premiumSheetCard.style.animation = "none";
+      premiumSheetCard.style.transition = "none";
+      premiumSheetCard.style.willChange = "transform";
+      premiumSheet.style.willChange = "background,backdrop-filter";
+      premiumSheetCard.classList.add("is-full-dragging");
+    }
+    event.preventDefault();
+    const nowTs = performance.now();
+    const dt = Math.max(1,nowTs - premiumSheetTouchLastTs);
+    const step = currentY - premiumSheetTouchLastY;
+    premiumSheetTouchVelocity = step / dt;
+    premiumSheetTouchLastY = currentY;
+    premiumSheetTouchLastTs = nowTs;
+    premiumSheetTouchDelta = Math.max(0,dy);
+    const sheetHeight = Math.max(220,premiumSheetCard.offsetHeight || premiumSheetCard.getBoundingClientRect().height || 0);
+    const closeThreshold = Math.max(330,Math.min(480,sheetHeight * .60));
+    const manualOffset = Math.min(sheetHeight * .90,premiumSheetTouchDelta * .98);
+    premiumSheetCard.style.transform = `translate3d(0,${Math.round(manualOffset)}px,0)`;
+    applyPremiumBackdropProgress(premiumBackdropProgressForOffset(manualOffset,sheetHeight));
+    if (premiumSheetTouchDelta >= closeThreshold) premiumSheetHandle?.classList.add("is-armed");
+    else if (premiumSheetTouchDelta < closeThreshold * .88) premiumSheetHandle?.classList.remove("is-armed");
+  },{passive:false});
+
+  const finishPremiumSheetTouch = (event,cancelled = false) => {
+    if (premiumSheetTouchId == null) return;
+    const changed = premiumTouchByIdentifier(event.changedTouches,premiumSheetTouchId);
+    if (!changed && !cancelled) return;
+    const wasDragging = premiumSheetTouchDragging;
+    const sheetHeight = Math.max(220,premiumSheetCard?.offsetHeight || premiumSheetCard?.getBoundingClientRect?.().height || 0);
+    const closeThreshold = Math.max(330,Math.min(480,sheetHeight * .60));
+    const closeByDistance = !cancelled && premiumSheetTouchDelta >= closeThreshold;
+    const closeByFlick = !cancelled && premiumSheetTouchDelta >= closeThreshold * .78 && premiumSheetTouchVelocity > 1.25;
+    const manualOffset = Math.min(sheetHeight * .90,premiumSheetTouchDelta * .98);
+    const releaseVelocity = Math.max(0,premiumSheetTouchVelocity);
+    const shouldClose = wasDragging && (closeByDistance || closeByFlick);
+    resetPremiumSheetTouch();
+    if (shouldClose) {
+      passImpactHaptic("light");
+      closePremiumSheet({offset:manualOffset,velocity:releaseVelocity,fromDrag:true});
+      return;
+    }
+    if (wasDragging || manualOffset > 0) settlePremiumSheetDrag(manualOffset);
+  };
+
+  premiumSheetCard?.addEventListener("touchend",event=>finishPremiumSheetTouch(event,false),{passive:false});
+  premiumSheetCard?.addEventListener("touchcancel",event=>finishPremiumSheetTouch(event,true),{passive:false});
+
   el("openPremiumSheet")?.addEventListener("click",openPremiumSheet);
   el("premiumSheetClose")?.addEventListener("click",()=>{passSelectHaptic();closePremiumSheet();});
   el("premiumSheetLater")?.addEventListener("click",()=>{passSelectHaptic();closePremiumSheet();});
@@ -5088,8 +5325,8 @@ html,body{background:#fff8f5;color:var(--bp-text)}
     showToast(`${title}${end?` · до ${end}`:""}`);
   });
 
-  el("buyElite").addEventListener("click",()=>{closePremiumSheet();openPurchaseConfirm("elite");});
-  el("buyElitePlus").addEventListener("click",()=>{closePremiumSheet();openPurchaseConfirm("elite_plus");});
+  el("buyElite").addEventListener("click",()=>{closePremiumSheet({immediate:true});openPurchaseConfirm("elite");});
+  el("buyElitePlus").addEventListener("click",()=>{closePremiumSheet({immediate:true});openPurchaseConfirm("elite_plus");});
 
   el("claimAllTasks").addEventListener("click",()=>{
     passImpactHaptic("medium");
