@@ -2844,6 +2844,55 @@ html,body{background:#fff8f5;color:var(--bp-text)}
 .reward-cell.premium.locked .reward-action{background:linear-gradient(145deg,#f0e4c1,#ebd69e)!important;color:#a07b38!important}
 @media(max-width:430px){.premium-sheet-head{grid-template-columns:78px minmax(0,1fr)!important}.premium-sheet-art{width:76px!important;height:68px!important}.premium-sheet-head h2{font-size:22px!important}.premium-sheet-head #premiumSheetSeasonLine{font-size:8px!important}.level-column{grid-template-columns:52px minmax(0,1fr) minmax(0,1fr)!important;gap:7px!important}.level-column::after{left:25px!important}.level-number{width:48px!important;height:48px!important;font-size:18px!important}.reward-cell{min-height:128px!important;padding:8px!important;border-radius:18px!important}.reward-icon{width:46px!important;height:46px!important}.reward-name{font-size:8.6px!important}.reward-action{height:27px!important;min-height:27px!important;line-height:27px!important}}
 </style>
+
+<style id="zefirok-bp-final-v41">
+/* Final override must stay last: reward cards + single tariff CTA. */
+.hero-bottom{grid-area:bottom!important;display:block!important;width:100%!important;padding:0!important}
+.hero-premium-button{display:flex!important;align-items:center!important;justify-content:center!important;width:100%!important;min-height:52px!important;height:52px!important;padding:0 18px!important;border:1px solid #e5aa32!important;border-radius:18px!important;background:linear-gradient(180deg,#ffd669 0%,#efad2d 100%)!important;color:#754708!important;font-size:12px!important;font-weight:1000!important;line-height:1!important;box-shadow:0 9px 19px rgba(183,117,22,.18)!important}
+.hero-premium-button:disabled,.hero-premium-button.is-owned{cursor:default!important;border-color:#ead7ad!important;background:linear-gradient(180deg,#f7efd8 0%,#eee1c0 100%)!important;color:#a18a61!important;box-shadow:none!important;opacity:1!important}
+.premium-chip{display:none!important}
+
+.level-column{grid-template-columns:56px minmax(0,1fr) minmax(0,1fr)!important;gap:10px!important;align-items:stretch!important}
+.reward-cell{position:relative!important;display:grid!important;grid-template-columns:70px minmax(0,1fr)!important;grid-template-rows:auto minmax(82px,1fr) auto!important;grid-template-areas:"lane lane" "icon copy" "action action"!important;column-gap:16px!important;row-gap:7px!important;align-content:stretch!important;align-items:center!important;min-width:0!important;min-height:158px!important;padding:12px 13px 11px!important;overflow:hidden!important;border-radius:24px!important}
+.reward-lane-title{grid-area:lane!important;min-width:0!important;padding-right:92px!important;font-size:9px!important;line-height:1!important}
+.reward-state{position:absolute!important;top:9px!important;right:9px!important;left:auto!important;max-width:92px!important;height:21px!important;min-height:21px!important;padding:0 9px!important;border-radius:999px!important;font-size:6.5px!important;line-height:21px!important;white-space:nowrap!important}
+.reward-icon{grid-area:icon!important;align-self:center!important;justify-self:start!important;width:62px!important;height:62px!important;margin:0!important;padding:3px!important;border-radius:18px!important;overflow:visible!important}
+.reward-copy{grid-area:copy!important;align-self:center!important;display:flex!important;flex-direction:column!important;justify-content:center!important;gap:8px!important;min-width:0!important;max-width:100%!important;padding-left:2px!important;overflow:hidden!important}
+.reward-name{display:flex!important;flex-direction:column!important;align-items:flex-start!important;justify-content:center!important;gap:6px!important;min-width:0!important;max-width:100%!important;margin:0!important;padding:0!important;color:#5c3b34!important;text-align:left!important;overflow:hidden!important}
+.reward-name-text{display:-webkit-box!important;max-width:100%!important;-webkit-box-orient:vertical!important;-webkit-line-clamp:2!important;overflow:hidden!important;color:#5c3b34!important;font-size:13px!important;font-weight:1000!important;line-height:1.08!important;letter-spacing:-.012em!important;overflow-wrap:anywhere!important}
+.reward-name.has-value .reward-name-text{font-size:13.5px!important}
+.reward-qty{display:inline-flex!important;align-items:center!important;justify-content:center!important;align-self:flex-start!important;min-width:48px!important;min-height:27px!important;padding:0 11px!important;border:1px solid #efb4cb!important;border-radius:999px!important;background:linear-gradient(180deg,#fff0f5 0%,#ffdce8 100%)!important;color:#dd4c85!important;font-size:12px!important;font-weight:1000!important;line-height:1!important;box-shadow:0 3px 8px rgba(219,75,132,.10)!important}
+.reward-cell.premium .reward-qty{border-color:#e9c15b!important;background:linear-gradient(180deg,#fff8df 0%,#ffe3a0 100%)!important;color:#aa6c0a!important;box-shadow:0 3px 8px rgba(183,124,14,.09)!important}
+.reward-availability{display:block!important;min-width:0!important;max-width:100%!important;margin:0!important;padding:0!important;color:#87645d!important;font-size:7.2px!important;font-weight:850!important;line-height:1.2!important;white-space:normal!important;overflow-wrap:anywhere!important}
+.reward-cell.claimed .reward-availability,.reward-cell.tier-locked .reward-availability{display:none!important}
+.reward-action{grid-area:action!important;width:100%!important;height:34px!important;min-height:34px!important;margin:0!important;border-radius:12px!important;font-size:9px!important;font-weight:1000!important;line-height:34px!important}
+.reward-cell.claimed .reward-action,.reward-cell.level-locked .reward-action,.reward-cell.tier-locked .reward-action{display:none!important}
+.reward-cell.claimed::after{display:none!important}
+.reward-status-mark{position:absolute!important;inset:auto!important;top:-4px!important;right:-4px!important;width:25px!important;height:25px!important;display:block!important;pointer-events:none!important}
+.reward-status-mark span{width:25px!important;height:25px!important;font-size:11px!important}
+
+@media(max-width:430px){
+  .hero-premium-button{min-height:48px!important;height:48px!important;font-size:10px!important}
+  .level-column{grid-template-columns:48px minmax(0,1fr) minmax(0,1fr)!important;gap:7px!important}
+  .reward-cell{grid-template-columns:54px minmax(0,1fr)!important;grid-template-rows:auto minmax(70px,1fr) auto!important;column-gap:11px!important;row-gap:5px!important;min-height:136px!important;padding:9px 9px 8px!important;border-radius:20px!important}
+  .reward-lane-title{padding-right:76px!important;font-size:7.6px!important}
+  .reward-state{top:8px!important;right:8px!important;max-width:76px!important;height:18px!important;min-height:18px!important;padding:0 7px!important;font-size:5.7px!important;line-height:18px!important}
+  .reward-icon{width:48px!important;height:48px!important;border-radius:14px!important}
+  .reward-copy{gap:6px!important;padding-left:1px!important}
+  .reward-name-text,.reward-name.has-value .reward-name-text{font-size:10.5px!important;line-height:1.08!important}
+  .reward-qty{min-width:42px!important;min-height:23px!important;padding:0 8px!important;font-size:10px!important}
+  .reward-availability{font-size:6.3px!important;line-height:1.16!important}
+  .reward-action{height:29px!important;min-height:29px!important;font-size:7.7px!important;line-height:29px!important}
+}
+@media(max-width:390px){
+  .reward-cell{grid-template-columns:50px minmax(0,1fr)!important;column-gap:9px!important;min-height:130px!important;padding:8px!important}
+  .reward-lane-title{padding-right:70px!important}
+  .reward-state{max-width:70px!important}
+  .reward-icon{width:44px!important;height:44px!important}
+  .reward-name-text,.reward-name.has-value .reward-name-text{font-size:9.8px!important}
+  .reward-qty{min-height:22px!important;font-size:9.3px!important}
+}
+</style>
 </head>
 <body>
 <section class="access-gate" id="accessGate">
@@ -2911,8 +2960,7 @@ html,body{background:#fff8f5;color:var(--bp-text)}
           <strong id="seasonDaysLeft">—</strong>
         </div>
         <div class="hero-bottom">
-          <span class="premium-chip" id="premiumStatus">Premium не активен</span>
-          <button class="hero-premium-button" id="openPremiumSheet" type="button">♛ Открыть Premium</button>
+          <button class="hero-premium-button" id="openPremiumSheet" type="button">♛ Premium Тарифы</button>
         </div>
         <button class="buy-level" id="buyLevel" type="button"><img src="/assets/optimized/v0.79.5/iconScore.png" alt="">Купить уровень · 0</button>
       </section>
@@ -4023,6 +4071,9 @@ html,body{background:#fff8f5;color:var(--bp-text)}
     if (multMatch && multMatch[1]) {
       return { title: String(multMatch[1]).trim(), value: `×${multMatch[2]}`, compact };
     }
+    if (/кейс|аватар|рамк|след|скин|десерт|усилител|музык/i.test(compact)) {
+      return { title: compact, value: '×1', compact };
+    }
     return { title: compact, value: '', compact };
   }
 
@@ -4056,8 +4107,10 @@ html,body{background:#fff8f5;color:var(--bp-text)}
         ${rewardArtMarkup(rewardName,data[0],data[3] || "")}
         ${mark?`<span class="reward-status-mark"><span>${mark}</span></span>`:""}
       </div>
-      ${rewardNameMarkup(data[1])}
-      ${claimed ? "" : `<div class="reward-availability">${availability}</div>`}
+      <div class="reward-copy">
+        ${rewardNameMarkup(data[1])}
+        ${claimed ? "" : `<div class="reward-availability">${availability}</div>`}
+      </div>
       ${claimable ? `<button class="reward-action" data-claim="${id}" type="button">${label}</button>` : ""}
     </article>`;
   }
@@ -4537,9 +4590,20 @@ html,body{background:#fff8f5;color:var(--bp-text)}
 
     const previousLevel = Math.min(MAX_LEVEL,Number(renderedProgressState?.rewardLevel ?? level)||level);
     el("playerName").textContent = profileName();
-    el("premiumStatus").textContent = premiumTierLabel();
+    const premiumStatusNode = el("premiumStatus");
+    if (premiumStatusNode) premiumStatusNode.textContent = premiumTierLabel();
     const premiumLaunch = el("openPremiumSheet");
-    if (premiumLaunch) premiumLaunch.textContent = pass.premiumTier === "elite_plus" ? "♛ Premium+ активен" : pass.premiumTier === "elite" ? "♛ Premium активен" : "♛ Открыть Premium";
+    if (premiumLaunch) {
+      const plusActive = pass.premiumTier === "elite_plus";
+      premiumLaunch.textContent = plusActive
+        ? "♛ Premium+ активен"
+        : pass.premiumTier === "elite"
+          ? "♛ Улучшить до Premium+"
+          : "♛ Premium Тарифы";
+      premiumLaunch.disabled = plusActive;
+      premiumLaunch.classList.toggle("is-owned", plusActive);
+      premiumLaunch.setAttribute("aria-disabled", plusActive ? "true" : "false");
+    }
     animatePassProgress({level,stage:overflow.unlocked?MAX_LEVEL+overflow.earned+1:level,rewardLevel:level,label:overflow.unlocked?"50+":String(level),within,required,percent});
     const progressCard=el("levelValue")?.closest?.(".progress-card");
     if(progressCard)progressCard.classList.toggle("is-overflow",overflow.unlocked);
