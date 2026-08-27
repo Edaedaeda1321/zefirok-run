@@ -233,7 +233,7 @@ button{-webkit-tap-highlight-color:transparent}
   grid-template-columns:84px minmax(0,1fr) 170px;
   align-items:center;
   gap:14px 16px;
-  margin:18px -148px 0 0;
+  margin:14px -148px 0 0;
   padding:18px 18px 18px 16px;
   border:1px solid rgba(224,191,116,.42);
   border-radius:27px;
@@ -418,7 +418,7 @@ button{-webkit-tap-highlight-color:transparent}
 }
 
 @media(max-width:620px){
-  .hero{min-height:0;padding:20px 18px 18px}
+  .hero{min-height:0;padding:18px 18px 18px}
   .hero:before{right:92px;top:18px;width:78px;height:78px;border-radius:24px}
   .hero:after{right:14px;top:92px;width:72px;height:68px;border-radius:22px}
   .hero-progress{grid-template-columns:68px minmax(0,1fr);margin-right:0}
@@ -428,7 +428,7 @@ button{-webkit-tap-highlight-color:transparent}
   .hero-progress .progress-meta{flex-wrap:wrap}
 }
 @media(max-width:420px){
-  .hero{padding-right:18px;padding-top:154px}
+  .hero{padding-right:18px;padding-top:146px}
   .hero:before{right:98px;top:18px}
   .hero:after{right:18px;top:86px}
   .hero h1{font-size:24px}
@@ -2688,11 +2688,6 @@ img[src$="/xp.webp"]{
     <section class="hero">
       <h1><span class="season-index">Сезон I:</span> <span class="season-name">Открытие Кафе</span></h1>
       <p>Получай награды, проходи 50 уровней сезона, а после финала продолжай бесконечную дорожку 50+ за золотые кейсы.</p>
-      <div class="hero-meta">
-        <span class="pill" id="playerName">Гость кафе</span>
-        <span class="pill">Завершение: <b data-season-end-label>10 сентября 2026</b></span>
-        <span class="pill" id="premiumStatus">Премиум не активирован</span>
-      </div>
       <section class="progress-card hero-progress">
         <div class="level-badge" id="levelValue">1</div>
         <div class="progress-copy">
@@ -2704,7 +2699,7 @@ img[src$="/xp.webp"]{
           <span>До конца сезона</span>
           <b id="seasonDaysText">14 дней</b>
         </div>
-        <button class="hero-tier-button is-none" id="heroTierButton" type="button">Premium Тарифы</button>
+        <button class="hero-tier-button is-none" id="heroTierButton" type="button">Элитные тарифы</button>
         <button class="buy-level buy-level--legacy" id="buyLevel" type="button" hidden><img src="/assets/optimized/v0.79.5/iconScore.png" alt="">Купить уровень · 0</button>
       </section>
     </section>
@@ -3645,9 +3640,9 @@ img[src$="/xp.webp"]{
   function heroTierButtonState() {
     const seasonEnded = String(serverPass?.season?.status || "active") === "ended";
     if (seasonEnded) return {text:"Сезон завершён", className:"is-active", disabled:true};
-    if (pass.premiumTier === "elite_plus") return {text:"Premium+ активен", className:"is-active", disabled:true};
-    if (pass.premiumTier === "elite") return {text:"Улучшить до Premium+", className:"is-upgrade", disabled:false};
-    return {text:"Premium Тарифы", className:"is-none", disabled:false};
+    if (pass.premiumTier === "elite_plus") return {text:"Элитный+ активен", className:"is-active", disabled:true};
+    if (pass.premiumTier === "elite") return {text:"Улучшить до Элитный+", className:"is-upgrade", disabled:false};
+    return {text:"Элитные тарифы", className:"is-none", disabled:false};
   }
 
   function realRunXp() {
@@ -4271,8 +4266,6 @@ img[src$="/xp.webp"]{
     const percent = Math.min(100,Math.round(within/Math.max(1,required)*100));
 
     const previousLevel = Math.min(MAX_LEVEL,Number(renderedProgressState?.rewardLevel ?? level)||level);
-    el("playerName").textContent = profileName();
-    el("premiumStatus").textContent = premiumTierLabel();
     const seasonDaysNode = el("seasonDaysText");
     if (seasonDaysNode) seasonDaysNode.textContent = seasonDaysLabel();
     const heroTierButton = el("heroTierButton");
