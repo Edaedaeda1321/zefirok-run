@@ -8921,53 +8921,28 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       outline-offset: 3px;
     }
 
+    #zefirok-maltipoo-runner .game-action[hidden] {
+      display: none !important;
+    }
+
     #zefirok-maltipoo-runner .game-action__icon {
-      position: relative;
-      flex: 0 0 32px;
-      width: 32px;
-      height: 32px;
-      display: grid;
-      place-items: center;
-      border-radius: 11px;
-      background: rgba(255,255,255,.52);
-      box-shadow: inset 0 0 0 1px rgba(255,255,255,.46);
-    }
-
-    #zefirok-maltipoo-runner .game-action.is-secondary .game-action__icon {
-      background: #fff2f6;
-      box-shadow: inset 0 0 0 1px rgba(231, 154, 182, .30);
-    }
-
-    /* CSS placeholders only. PNG icons can later be inserted into this same slot. */
-    #zefirok-maltipoo-runner .game-action__icon::before {
-      content: &quot;&quot;;
+      flex: 0 0 40px;
+      width: 40px;
+      height: 40px;
       display: block;
-      width: 0;
-      height: 0;
-      border-top: 7px solid transparent;
-      border-bottom: 7px solid transparent;
-      border-left: 11px solid currentColor;
-      margin-left: 3px;
-      color: inherit;
+      object-fit: contain;
+      object-position: center;
+      background: transparent;
+      border: 0;
+      box-shadow: none;
+      pointer-events: none;
+      user-select: none;
+      -webkit-user-drag: none;
     }
 
-    #zefirok-maltipoo-runner .game-action__icon[data-icon=&quot;restart&quot;]::before {
-      content: &quot;↻&quot;;
-      width: auto;
-      height: auto;
-      margin: 0;
-      border: 0;
-      font-size: 22px;
-      line-height: 1;
-      font-weight: 950;
-    }
-
-    #zefirok-maltipoo-runner .game-action__icon[data-icon=&quot;pause&quot;]::before {
-      width: 13px;
-      height: 15px;
-      margin: 0;
-      border: 0;
-      background: linear-gradient(90deg, currentColor 0 4px, transparent 4px 9px, currentColor 9px 13px);
+    #zefirok-maltipoo-runner .game-action__icon[data-icon=&quot;pause&quot;] {
+      width: 44px;
+      flex-basis: 44px;
     }
 
     #zefirok-maltipoo-runner .game-action__label {
@@ -8987,7 +8962,8 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
     @media (max-width: 390px) {
       #zefirok-maltipoo-runner .actions.game-actions-v2 { gap: 7px; }
       #zefirok-maltipoo-runner .game-action { min-height: 50px; padding: 0 13px; border-radius: 16px; font-size: 15px; }
-      #zefirok-maltipoo-runner .game-action__icon { flex-basis: 29px; width: 29px; height: 29px; border-radius: 10px; }
+      #zefirok-maltipoo-runner .game-action__icon { flex-basis: 36px; width: 36px; height: 36px; }
+      #zefirok-maltipoo-runner .game-action__icon[data-icon=&quot;pause&quot;] { width: 40px; flex-basis: 40px; }
       #zefirok-maltipoo-runner .actions.game-actions-v2.is-single .game-action { min-height: 54px; font-size: 17px; }
     }
 
@@ -10721,11 +10697,11 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 &lt;/div&gt;
 &lt;div class=&quot;actions game-actions-v2 is-single&quot; data-game-actions=&quot;&quot;&gt;
 &lt;button aria-label=&quot;Старт&quot; class=&quot;game-action is-primary&quot; data-mode=&quot;start&quot; data-start=&quot;&quot; type=&quot;button&quot;&gt;
-&lt;span aria-hidden=&quot;true&quot; class=&quot;game-action__icon&quot; data-game-action-icon=&quot;start&quot; data-icon=&quot;play&quot;&gt;&lt;/span&gt;
+&lt;img alt=&quot;&quot; aria-hidden=&quot;true&quot; class=&quot;game-action__icon&quot; data-game-action-icon=&quot;start&quot; data-icon=&quot;play&quot; src=&quot;/assets/ui/icon_play_start_button.png&quot;/&gt;
 &lt;span class=&quot;game-action__label&quot; data-game-action-label=&quot;start&quot;&gt;СТАРТ&lt;/span&gt;
 &lt;/button&gt;
 &lt;button aria-label=&quot;Пауза&quot; class=&quot;game-action is-primary&quot; data-pause=&quot;&quot; type=&quot;button&quot; hidden=&quot;&quot;&gt;
-&lt;span aria-hidden=&quot;true&quot; class=&quot;game-action__icon&quot; data-game-action-icon=&quot;pause&quot; data-icon=&quot;pause&quot;&gt;&lt;/span&gt;
+&lt;img alt=&quot;&quot; aria-hidden=&quot;true&quot; class=&quot;game-action__icon&quot; data-game-action-icon=&quot;pause&quot; data-icon=&quot;pause&quot; src=&quot;/assets/ui/icon_pause_button.png&quot;/&gt;
 &lt;span class=&quot;game-action__label&quot; data-game-action-label=&quot;pause&quot;&gt;Пауза&lt;/span&gt;
 &lt;/button&gt;
 &lt;/div&gt;
@@ -11524,12 +11500,22 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 
         if (startBtnLabel) startBtnLabel.textContent = startText;
         if (pauseBtnLabel) pauseBtnLabel.textContent = pauseText;
-        if (startBtnIcon) startBtnIcon.dataset.icon = startMode === &quot;restart&quot; ? &quot;restart&quot; : &quot;play&quot;;
-        if (pauseBtnIcon) pauseBtnIcon.dataset.icon = state.paused ? &quot;play&quot; : &quot;pause&quot;;
+        if (startBtnIcon) {
+          const restart = startMode === &quot;restart&quot;;
+          startBtnIcon.dataset.icon = restart ? &quot;restart&quot; : &quot;play&quot;;
+          startBtnIcon.src = restart ? &quot;/assets/ui/icon_zanovo_button.png&quot; : &quot;/assets/ui/icon_play_start_button.png&quot;;
+        }
+        if (pauseBtnIcon) {
+          const resumeMode = Boolean(state.paused);
+          pauseBtnIcon.dataset.icon = resumeMode ? &quot;play&quot; : &quot;pause&quot;;
+          pauseBtnIcon.src = resumeMode ? &quot;/assets/ui/icon_play_start_button.png&quot; : &quot;/assets/ui/icon_pause_button.png&quot;;
+        }
 
         startBtn.setAttribute(&quot;aria-label&quot;, startMode === &quot;restart&quot; ? &quot;Заново&quot; : &quot;Старт&quot;);
         pauseBtn.setAttribute(&quot;aria-label&quot;, pauseText);
         pauseBtn.hidden = single;
+        pauseBtn.style.display = single ? &quot;none&quot; : &quot;&quot;;
+        pauseBtn.setAttribute(&quot;aria-hidden&quot;, single ? &quot;true&quot; : &quot;false&quot;);
         gameActionsEl?.classList.toggle(&quot;is-single&quot;, single);
         startBtn.classList.toggle(&quot;is-primary&quot;, single);
         startBtn.classList.toggle(&quot;is-secondary&quot;, !single);
