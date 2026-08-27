@@ -2672,6 +2672,121 @@ img[src$="/xp.webp"]{
 .level-column.final-milestone-column{position:relative;flex-basis:126px;min-width:126px;border-radius:18px;background:linear-gradient(180deg,rgba(255,246,211,.78),rgba(255,255,255,.2));box-shadow:inset 0 0 0 1px rgba(211,157,44,.25)}.level-column.final-milestone-column::before{content:"ФИНАЛ";position:absolute;z-index:4;top:-7px;left:50%;transform:translateX(-50%);padding:2px 7px;border-radius:999px;background:#d69a20;color:#fff9e3;font-size:6px;font-weight:1000;letter-spacing:.08em}.level-column.final-milestone-column .level-number{background:linear-gradient(145deg,#efc24b,#ca881b)!important;color:#fff9e4!important;box-shadow:0 5px 12px rgba(168,106,15,.16)!important}
 .season-finale-overlay{position:fixed;inset:0;z-index:10005;display:grid;place-items:center;padding:18px;background:rgba(58,37,30,.58);backdrop-filter:blur(8px)}.season-finale-overlay[hidden]{display:none!important}.season-finale-sheet{width:min(470px,100%);max-height:min(88vh,760px);overflow:auto;padding:18px;border-radius:27px;background:linear-gradient(165deg,#fffef9,#fff1cf);box-shadow:0 28px 80px rgba(62,35,20,.32);text-align:center}.season-finale-crown{width:94px;height:94px;margin:2px auto 10px;display:grid;place-items:center;border-radius:26px;background:linear-gradient(145deg,#fff8d4,#eab23a);font-size:48px;box-shadow:0 13px 28px rgba(159,101,18,.18),inset 0 0 0 1px rgba(190,128,22,.2)}.season-finale-sheet h2{margin:0;color:#6c4618;font-size:23px;font-weight:1000}.season-finale-subtitle{margin:6px auto 13px;max-width:360px;color:#9a7530;font-size:10px;font-weight:800;line-height:1.5}.season-finale-stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:12px 0}.season-finale-stat{padding:11px 8px;border:1px solid rgba(215,170,82,.34);border-radius:15px;background:rgba(255,255,255,.72)}.season-finale-stat strong{display:block;color:#704b19;font-size:18px;font-weight:1000}.season-finale-stat span{display:block;margin-top:2px;color:#a07d43;font-size:8px;font-weight:850}.season-finale-teaser{margin-top:11px;padding:13px;border:1px solid rgba(203,157,68,.35);border-radius:18px;background:linear-gradient(145deg,rgba(255,255,255,.75),rgba(255,239,201,.76));text-align:left}.season-finale-teaser[hidden]{display:none!important}.season-finale-teaser b{display:block;color:#704918;font-size:12px;font-weight:1000}.season-finale-teaser p{margin:5px 0 0;color:#92703a;font-size:9px;font-weight:800;line-height:1.55}.season-finale-teaser span{display:block;margin-top:6px;color:#b08028;font-size:8px;font-weight:900}.season-finale-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:13px}.season-finale-actions button{min-height:42px;border:0;border-radius:13px;font-size:10px;font-weight:1000}.season-finale-actions .secondary{background:#f0e6df;color:#76584e}.season-finale-actions .primary{background:linear-gradient(145deg,#e5ae39,#c7811c);color:#fff9e7}.season-finale-actions button[hidden]{display:none!important}
 @media(max-width:520px){.catchup-card{grid-template-columns:50px minmax(0,1fr)}.catchup-icon{width:50px;height:50px}.catchup-multiplier{grid-column:1/-1;width:100%}.final-milestone{grid-template-columns:62px minmax(0,1fr)}.final-milestone-art{width:62px;height:62px}.final-milestone-open{grid-column:1/-1;width:100%}.season-finale-actions{grid-template-columns:1fr}.season-finale-stats{grid-template-columns:1fr 1fr}}
+
+
+/* Tariff bottom-sheet: tariffs live here, not in the page flow. */
+.tariff-sheet-overlay{
+  position:fixed;
+  inset:0;
+  z-index:180;
+  display:flex;
+  align-items:flex-end;
+  justify-content:center;
+  padding:0;
+  background:rgba(57,39,43,.48);
+  backdrop-filter:blur(8px);
+  -webkit-backdrop-filter:blur(8px);
+  touch-action:auto
+}
+.tariff-sheet-overlay[hidden]{display:none!important}
+.tariff-sheet-card{
+  width:min(100%,620px);
+  max-height:min(90dvh,860px);
+  overflow:hidden;
+  border:1px solid rgba(235,205,198,.95);
+  border-radius:30px 30px 0 0;
+  background:linear-gradient(180deg,#fffdfb 0%,#fff7f4 100%);
+  box-shadow:0 -22px 70px rgba(70,35,41,.28);
+  transform:translate3d(0,0,0);
+  transition:transform .26s cubic-bezier(.22,.8,.25,1);
+  will-change:transform
+}
+.tariff-sheet-card.is-dragging{transition:none}
+.tariff-sheet-handle{
+  width:54px;
+  height:5px;
+  margin:10px auto 5px;
+  border-radius:999px;
+  background:#ddcbc6
+}
+.tariff-sheet-scroll{
+  max-height:calc(min(90dvh,860px) - 20px);
+  overflow-y:auto;
+  overscroll-behavior:contain;
+  -webkit-overflow-scrolling:touch;
+  touch-action:pan-y;
+  padding:8px 16px max(20px,env(safe-area-inset-bottom));
+  scrollbar-width:none
+}
+.tariff-sheet-scroll::-webkit-scrollbar{display:none}
+.tariff-sheet-title-row{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) 86px;
+  gap:12px;
+  align-items:center;
+  padding:4px 4px 12px
+}
+.tariff-sheet-title-row span{
+  color:#d95085;
+  font-size:9px;
+  font-weight:1000;
+  letter-spacing:.07em
+}
+.tariff-sheet-title-row h2{
+  margin:3px 0 2px;
+  color:#6f4144;
+  font-size:25px;
+  line-height:1
+}
+.tariff-sheet-title-row p{
+  margin:0;
+  color:#96766e;
+  font-size:10px;
+  font-weight:800;
+  line-height:1.35
+}
+.tariff-sheet-title-row>img{
+  width:82px;
+  height:82px;
+  object-fit:contain;
+  filter:drop-shadow(0 8px 12px rgba(158,105,23,.12))
+}
+.tariff-sheet-card .premium-offer{
+  margin:0;
+  padding:0;
+  overflow:visible;
+  border:0;
+  border-radius:0;
+  background:transparent
+}
+.tariff-sheet-card .premium-offer:after{display:none!important}
+.tariff-sheet-card .premium-offer>h2,
+.tariff-sheet-card .premium-offer>p{display:none!important}
+.tariff-sheet-card .pass-tiers{margin-top:0}
+.tariff-sheet-close{
+  width:100%;
+  min-height:48px;
+  position:sticky;
+  bottom:0;
+  z-index:8;
+  margin-top:14px;
+  border:1px solid #e6cbc4;
+  border-radius:16px;
+  background:linear-gradient(180deg,#fff 0%,#fff2ef 100%);
+  color:#815c53;
+  font-size:11px;
+  font-weight:1000;
+  letter-spacing:.04em;
+  box-shadow:0 -10px 22px rgba(92,54,48,.10)
+}
+@media(max-width:520px){
+  .tariff-sheet-card{max-height:92dvh;border-radius:26px 26px 0 0}
+  .tariff-sheet-scroll{max-height:calc(92dvh - 18px);padding:7px 12px max(18px,env(safe-area-inset-bottom))}
+  .tariff-sheet-title-row{grid-template-columns:minmax(0,1fr) 68px;padding-bottom:10px}
+  .tariff-sheet-title-row h2{font-size:22px}
+  .tariff-sheet-title-row>img{width:64px;height:64px}
+  .tariff-sheet-card .pass-tiers{grid-template-columns:1fr}
+}
 </style>
 </head>
 <body>
@@ -2734,7 +2849,7 @@ img[src$="/xp.webp"]{
           <span>До конца сезона</span>
           <b id="seasonDaysText">14 дней</b>
         </div>
-        <button class="hero-tier-button is-none" id="heroTierButton" type="button">Элитные тарифы</button>
+        <button class="hero-tier-button is-none" id="heroTierButton" type="button">Тарифы</button>
         <button class="buy-level buy-level--legacy" id="buyLevel" type="button" hidden><img src="/assets/optimized/v0.79.5/iconScore.png" alt="">Купить уровень · 0</button>
       </section>
     </section>
@@ -2806,50 +2921,6 @@ img[src$="/xp.webp"]{
         </div>
 
         <button class="claim-all" id="claimAll" type="button">Получить все доступные награды</button>
-
-        <section class="premium-offer">
-          <h2>Тарифы сезонного пропуска</h2>
-          <p>Выбери обычный премиальный доступ или расширенный тариф с дополнительными бонусами.</p>
-          <div class="pass-tiers">
-            <article class="tier-card" id="eliteCard">
-              <div class="tier-title"><i class="tier-card-art"><img src="/assets/season-pass/elite.png?v=07939" alt="Элитный"></i><div><strong>Элитный</strong><span>Базовый премиальный тариф</span></div></div>
-              <div class="tier-benefits">
-                <div class="tier-benefit"><img src="/assets/season-pass/season.png?v=07939" alt=""><span>Открывает премиальную линию наград</span></div>
-                <div class="tier-benefit"><img src="/assets/season-pass/quest.png?v=07939" alt=""><span>Открывает премиальные задания</span></div>
-                <div class="tier-benefit rating-star-benefit" data-rating-star-tier="elite"><span class="tier-benefit-star" aria-hidden="true">✦</span><span>Вы выделяетесь среди игроков — розовая ✦ рядом с именем в рейтинге</span></div>
-                <div class="tier-benefit"><img src="/assets/cases/legendary_closed.png" alt=""><span>Легендарный кейс на 50 уровне</span></div>
-              </div>
-              <div class="tier-price">
-                <span><img src="/assets/optimized/v0.79.5/iconScore.png" alt="">Очки<b>0</b></span>
-                <span><img src="/assets/optimized/v0.79.5/shopMarshmallowAssortment.png" alt="">Зефир<b>0</b></span>
-                <span><img src="/assets/optimized/v0.79.5/iconCoffee.png" alt="">Кофе<b>0</b></span>
-              </div>
-              <button class="tier-buy" id="buyElite" type="button">Открыть Элитный</button>
-              <div class="tier-owned">Тариф активирован</div>
-            </article>
-
-            <article class="tier-card elite-plus" id="elitePlusCard">
-              <div class="tier-title"><i class="tier-card-art"><img src="/assets/season-pass/elite_plus.png?v=07939" alt="Элитный+"></i><div><strong>Элитный+</strong><span>Максимальный тариф сезона</span></div></div>
-              <div class="tier-benefits">
-                <div class="tier-benefit"><img src="/assets/season-pass/xp_x2.png?v=07939" alt=""><span>×2 XP за забеги и задания сезонного пропуска</span></div>
-                <div class="tier-benefit"><img src="/assets/season-pass/levels_5.png?v=07939" alt=""><span>Сразу +5 уровней пропуска</span></div>
-                <div class="tier-benefit"><img src="/assets/rating/frames/profile/ramka_profile_elita.png" alt=""><span>Эксклюзивная рамка</span></div>
-                <div class="tier-benefit"><img src="/assets/cases/avatars/legendary_avatarka_5.png" alt=""><span>Эксклюзивная аватарка</span></div>
-                <div class="tier-benefit"><img src="/assets/cases/gold_closed.png" alt=""><span>Золотой кейс при открытии</span></div>
-                <div class="tier-benefit"><img src="/assets/season-pass/elite.png?v=07939" alt=""><span>Все преимущества тарифа «Элитный»</span></div>
-                <div class="tier-benefit rating-star-benefit" data-rating-star-tier="elite_plus"><span class="tier-benefit-star" aria-hidden="true">✦</span><span>Золотая ✦ рядом с именем — особое выделение в рейтинге</span></div>
-              </div>
-              <div class="tier-price">
-                <span><img src="/assets/optimized/v0.79.5/iconScore.png" alt="">Очки<b>0</b></span>
-                <span><img src="/assets/optimized/v0.79.5/shopMarshmallowAssortment.png" alt="">Зефир<b>0</b></span>
-                <span><img src="/assets/optimized/v0.79.5/iconCoffee.png" alt="">Кофе<b>0</b></span>
-              </div>
-              <div class="tier-upgrade-note" id="elitePlusUpgradePriceNote" hidden>Показана доплата с уже активного тарифа «Элитный»</div>
-              <button class="tier-buy" id="buyElitePlus" type="button">Открыть Элитный+</button>
-              <div class="tier-owned">Тариф активирован</div>
-            </article>
-          </div>
-        </section>
       </section>
 
       <section class="view" data-view="tasks" id="tasksView" hidden>
@@ -2901,6 +2972,67 @@ img[src$="/xp.webp"]{
     </div>
     <div class="season-finale-teaser" id="seasonFinaleTeaser" hidden><b id="seasonFinaleTeaserTitle">Что дальше?</b><p id="seasonFinaleTeaserText"></p><span id="seasonFinaleTeaserDate"></span></div>
     <div class="season-finale-actions"><button class="secondary" id="seasonFinaleClose" type="button">Закрыть</button><button class="primary" id="seasonFinaleLetter" type="button" hidden>💌 Открыть письмо</button></div>
+  </div>
+</section>
+
+
+<section class="tariff-sheet-overlay" id="tariffSheet" hidden aria-modal="true" role="dialog" aria-labelledby="tariffSheetTitle">
+  <div class="tariff-sheet-card" id="tariffSheetCard">
+    <div class="tariff-sheet-handle" aria-hidden="true"></div>
+    <div class="tariff-sheet-scroll" id="tariffSheetScroll">
+      <div class="tariff-sheet-title-row">
+        <div>
+          <span>СЕЗОННЫЙ ПРОПУСК</span>
+          <h2 id="tariffSheetTitle">Тарифы</h2>
+          <p>Выбери Элитный тариф или улучши его до Элитный+.</p>
+        </div>
+        <img src="/assets/season-pass/elite_plus.png?v=07939" alt="">
+      </div>
+      <section class="premium-offer">
+          <h2>Тарифы сезонного пропуска</h2>
+          <p>Выбери обычный премиальный доступ или расширенный тариф с дополнительными бонусами.</p>
+          <div class="pass-tiers">
+            <article class="tier-card" id="eliteCard">
+              <div class="tier-title"><i class="tier-card-art"><img src="/assets/season-pass/elite.png?v=07939" alt="Элитный"></i><div><strong>Элитный</strong><span>Базовый премиальный тариф</span></div></div>
+              <div class="tier-benefits">
+                <div class="tier-benefit"><img src="/assets/season-pass/season.png?v=07939" alt=""><span>Открывает премиальную линию наград</span></div>
+                <div class="tier-benefit"><img src="/assets/season-pass/quest.png?v=07939" alt=""><span>Открывает премиальные задания</span></div>
+                <div class="tier-benefit rating-star-benefit" data-rating-star-tier="elite"><span class="tier-benefit-star" aria-hidden="true">✦</span><span>Вы выделяетесь среди игроков — розовая ✦ рядом с именем в рейтинге</span></div>
+                <div class="tier-benefit"><img src="/assets/cases/legendary_closed.png" alt=""><span>Легендарный кейс на 50 уровне</span></div>
+              </div>
+              <div class="tier-price">
+                <span><img src="/assets/optimized/v0.79.5/iconScore.png" alt="">Очки<b>0</b></span>
+                <span><img src="/assets/optimized/v0.79.5/shopMarshmallowAssortment.png" alt="">Зефир<b>0</b></span>
+                <span><img src="/assets/optimized/v0.79.5/iconCoffee.png" alt="">Кофе<b>0</b></span>
+              </div>
+              <button class="tier-buy" id="buyElite" type="button">Открыть Элитный</button>
+              <div class="tier-owned">Тариф активирован</div>
+            </article>
+
+            <article class="tier-card elite-plus" id="elitePlusCard">
+              <div class="tier-title"><i class="tier-card-art"><img src="/assets/season-pass/elite_plus.png?v=07939" alt="Элитный+"></i><div><strong>Элитный+</strong><span>Максимальный тариф сезона</span></div></div>
+              <div class="tier-benefits">
+                <div class="tier-benefit"><img src="/assets/season-pass/xp_x2.png?v=07939" alt=""><span>×2 XP за забеги и задания сезонного пропуска</span></div>
+                <div class="tier-benefit"><img src="/assets/season-pass/levels_5.png?v=07939" alt=""><span>Сразу +5 уровней пропуска</span></div>
+                <div class="tier-benefit"><img src="/assets/rating/frames/profile/ramka_profile_elita.png" alt=""><span>Эксклюзивная рамка</span></div>
+                <div class="tier-benefit"><img src="/assets/cases/avatars/legendary_avatarka_5.png" alt=""><span>Эксклюзивная аватарка</span></div>
+                <div class="tier-benefit"><img src="/assets/cases/gold_closed.png" alt=""><span>Золотой кейс при открытии</span></div>
+                <div class="tier-benefit"><img src="/assets/season-pass/elite.png?v=07939" alt=""><span>Все преимущества тарифа «Элитный»</span></div>
+                <div class="tier-benefit rating-star-benefit" data-rating-star-tier="elite_plus"><span class="tier-benefit-star" aria-hidden="true">✦</span><span>Золотая ✦ рядом с именем — особое выделение в рейтинге</span></div>
+              </div>
+              <div class="tier-price">
+                <span><img src="/assets/optimized/v0.79.5/iconScore.png" alt="">Очки<b>0</b></span>
+                <span><img src="/assets/optimized/v0.79.5/shopMarshmallowAssortment.png" alt="">Зефир<b>0</b></span>
+                <span><img src="/assets/optimized/v0.79.5/iconCoffee.png" alt="">Кофе<b>0</b></span>
+              </div>
+              <div class="tier-upgrade-note" id="elitePlusUpgradePriceNote" hidden>Показана доплата с уже активного тарифа «Элитный»</div>
+              <button class="tier-buy" id="buyElitePlus" type="button">Открыть Элитный+</button>
+              <div class="tier-owned">Тариф активирован</div>
+            </article>
+          </div>
+        </section>
+      <button class="tariff-sheet-close" id="tariffSheetClose" type="button">ЗАКРЫТЬ</button>
+    </div>
   </div>
 </section>
 
@@ -3508,14 +3640,11 @@ img[src$="/xp.webp"]{
     const requested = String(new URLSearchParams(location.search).get("offer") || "");
     if (!['elite','elite_plus'].includes(requested)) return;
     requestedTierOfferHandled = true;
-    const card = requested === 'elite_plus' ? el('elitePlusCard') : el('eliteCard');
     requestAnimationFrame(() => requestAnimationFrame(() => {
-      try { card?.scrollIntoView?.({ behavior:'smooth', block:'center' }); } catch {}
-      card?.classList.add('is-rating-offer-focus');
-      setTimeout(() => card?.classList.remove('is-rating-offer-focus'), 2800);
+      openTariffSheet({focusTier:requested});
       const alreadyOwned = requested === 'elite' ? pass.premiumTier !== 'none' : pass.premiumTier === 'elite_plus';
       const canPurchase = serverPass?.season?.capabilities?.canPurchase !== false && String(serverPass?.season?.status || 'active') === 'active';
-      if (!alreadyOwned && canPurchase) setTimeout(() => openPurchaseConfirm(requested), 260);
+      if (!alreadyOwned && canPurchase) setTimeout(() => openPurchaseConfirm(requested), 320);
       else if (alreadyOwned) showToast(requested === 'elite_plus' ? 'Тариф «Элитный+» уже активирован' : 'Премиальный тариф уже активирован');
     }));
   }
@@ -3673,11 +3802,88 @@ img[src$="/xp.webp"]{
   }
 
   function heroTierButtonState() {
-    const seasonEnded = String(serverPass?.season?.status || "active") === "ended";
-    if (seasonEnded) return {text:"Сезон завершён", className:"is-active", disabled:true};
-    if (pass.premiumTier === "elite_plus") return {text:"Элитный+ активен", className:"is-active", disabled:true};
-    if (pass.premiumTier === "elite") return {text:"Улучшить до Элитный+", className:"is-upgrade", disabled:false};
-    return {text:"Элитные тарифы", className:"is-none", disabled:false};
+    return {text:"Тарифы", className:"is-none", disabled:false};
+  }
+
+  let tariffSheetDrag = null;
+
+  function openTariffSheet({focusTier=""}={}) {
+    const overlay = el("tariffSheet");
+    const card = el("tariffSheetCard");
+    const scroll = el("tariffSheetScroll");
+    if (!overlay || !card || !scroll) return;
+    overlay.hidden = false;
+    card.classList.remove("is-dragging");
+    card.style.transform = "translate3d(0,0,0)";
+    scroll.scrollTop = 0;
+    passSelectHaptic();
+    requestAnimationFrame(()=>{
+      if (!focusTier) return;
+      const target = focusTier === "elite_plus" ? el("elitePlusCard") : el("eliteCard");
+      target?.classList.add("is-rating-offer-focus");
+      target?.scrollIntoView?.({behavior:"smooth",block:"center"});
+      setTimeout(()=>target?.classList.remove("is-rating-offer-focus"),2200);
+    });
+  }
+
+  function closeTariffSheet({animated=true}={}) {
+    const overlay = el("tariffSheet");
+    const card = el("tariffSheetCard");
+    if (!overlay || overlay.hidden || !card) return;
+    tariffSheetDrag = null;
+    card.classList.remove("is-dragging");
+    if (!animated) {
+      card.style.transform = "translate3d(0,0,0)";
+      overlay.hidden = true;
+      return;
+    }
+    card.style.transform = `translate3d(0,${Math.max(window.innerHeight,card.offsetHeight)}px,0)`;
+    window.setTimeout(()=>{
+      overlay.hidden = true;
+      card.style.transform = "translate3d(0,0,0)";
+    },240);
+  }
+
+  function installTariffSheetSwipe() {
+    const card = el("tariffSheetCard");
+    const scroll = el("tariffSheetScroll");
+    if (!card || !scroll || card.dataset.swipeReady === "1") return;
+    card.dataset.swipeReady = "1";
+    card.addEventListener("touchstart",event=>{
+      if (el("tariffSheet")?.hidden) return;
+      const touch=event.touches?.[0];
+      if (!touch || scroll.scrollTop > 0) { tariffSheetDrag=null; return; }
+      tariffSheetDrag={startY:touch.clientY,lastY:touch.clientY,startTime:performance.now(),dragging:false};
+    },{passive:true});
+    card.addEventListener("touchmove",event=>{
+      const drag=tariffSheetDrag,touch=event.touches?.[0];
+      if (!drag || !touch) return;
+      const dy=touch.clientY-drag.startY;
+      drag.lastY=touch.clientY;
+      if (dy <= 0 || scroll.scrollTop > 0) return;
+      if (dy > 8) drag.dragging=true;
+      if (!drag.dragging) return;
+      event.preventDefault();
+      card.classList.add("is-dragging");
+      const eased=Math.max(0,dy*.92);
+      card.style.transform=`translate3d(0,${eased}px,0)`;
+    },{passive:false});
+    const finish=()=>{
+      const drag=tariffSheetDrag;
+      tariffSheetDrag=null;
+      if (!drag) return;
+      const dy=Math.max(0,drag.lastY-drag.startY);
+      const elapsed=Math.max(1,performance.now()-drag.startTime);
+      const velocity=dy/elapsed;
+      card.classList.remove("is-dragging");
+      if (dy > Math.min(150,card.offsetHeight*.2) || velocity > .75) {
+        closeTariffSheet({animated:true});
+      } else {
+        card.style.transform="translate3d(0,0,0)";
+      }
+    };
+    card.addEventListener("touchend",finish,{passive:true});
+    card.addEventListener("touchcancel",finish,{passive:true});
   }
 
   function realRunXp() {
@@ -4899,11 +5105,11 @@ img[src$="/xp.webp"]{
   el("seasonFinaleOverlay").addEventListener("click",event=>{if(event.target===el("seasonFinaleOverlay"))closeSeasonFinale();});
 
   el("heroTierButton").addEventListener("click",()=>{
-    if (el("heroTierButton").disabled) return;
     passImpactHaptic("light");
-    const target = document.querySelector(".premium-offer");
-    if (target) target.scrollIntoView({behavior:"smooth",block:"start"});
+    openTariffSheet();
   });
+  el("tariffSheetClose").addEventListener("click",()=>{ passSelectHaptic(); closeTariffSheet({animated:true}); });
+  installTariffSheetSwipe();
   el("buyElite").addEventListener("click",()=>openPurchaseConfirm("elite"));
   el("buyElitePlus").addEventListener("click",()=>openPurchaseConfirm("elite_plus"));
 
@@ -4983,7 +5189,8 @@ img[src$="/xp.webp"]{
   });
   document.addEventListener("keydown",event=>{
     if (event.key !== "Escape") return;
-    if (!el("seasonFinaleOverlay").hidden) closeSeasonFinale();
+    if (!el("tariffSheet").hidden) closeTariffSheet({animated:true});
+    else if (!el("seasonFinaleOverlay").hidden) closeSeasonFinale();
     else if (!el("seasonStoryOverlay").hidden) closeSeasonStory();
     else if (!el("seasonStoryArchiveOverlay").hidden) closeSeasonStoryArchive();
     else if (!el("seasonLetterOverlay").hidden) closeSeasonLetter();
