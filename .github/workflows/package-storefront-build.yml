@@ -1,0 +1,46 @@
+name: Package storefront featured build
+
+on:
+  push:
+    branches:
+      - feat/storefront-featured-control
+    paths:
+      - .github/workflows/package-storefront-build.yml
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/storefront-featured-control
+      - name: Prepare build folder
+        shell: bash
+        run: |
+          mkdir -p build/src build/migrations
+          cp index.html build/index.html
+          cp owner.html build/owner.html
+          cp src/worker.js build/src/worker.js
+          cp migrations/0068_shop_featured.sql build/migrations/0068_shop_featured.sql
+          cat > build/README.txt <<'EOF'
+Сборка: управление блоком «Лучшее» в магазине
+
+Заменить в локальном проекте:
+- index.html
+- owner.html
+- src/worker.js
+
+Добавить:
+- migrations/0068_shop_featured.sql
+
+Никаких git pull/push/deploy эта сборка не выполняет.
+EOF
+      - name: Upload build
+        uses: actions/upload-artifact@v4
+        with:
+          name: storefront-featured-build
+          path: build/
+          if-no-files-found: error

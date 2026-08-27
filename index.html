@@ -14448,6 +14448,10 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       let remoteShopPrices = {};
       let remoteShopAssortment = {};
       let remoteLiveContentShop = [];
+      let remoteShopFeatured = {
+        case: { itemId: &quot;case-alex&quot;, badgeText: &quot;Рекомендуем · Особый · Алекс&quot; },
+        skin: { itemId: &quot;alex&quot;, badgeText: &quot;Рекомендуем · Легендарный&quot; }
+      };
 
 
       function sanitizeGameNumber(value) {
@@ -18512,14 +18516,18 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       }
 
       function skinFeaturedMarkup() {
-        const skin = SKIN_CATALOG.alex;
+        const featuredSkinId = String(remoteShopFeatured?.skin?.itemId ?? &quot;alex&quot;);
+        if (!featuredSkinId) return &quot;&quot;;
+        const skin = SKIN_CATALOG[featuredSkinId];
         if (!skin || skin.enabled === false) return &quot;&quot;;
         const owned = skinIsOwned(skin.id);
         const equipped = currentDogSkin.id === skin.id;
         const affordable = skinAffordable(skin);
         const actionText = equipped ? &quot;Надето&quot; : owned ? &quot;Надеть&quot; : &quot;Купить&quot;;
         const rarity = skinRarityMeta(skin);
-        return `&lt;div class=&quot;skins-v2-featured-art&quot; style=&quot;--featured-bg:url(&#x27;${skin.background || &quot;&quot;}&#x27;)&quot;&gt;&lt;img src=&quot;${skin.image}&quot; alt=&quot;Скин ${skin.title}&quot; loading=&quot;eager&quot;&gt;&lt;/div&gt;&lt;div class=&quot;skins-v2-featured-copy&quot;&gt;&lt;span class=&quot;skins-v2-featured-kicker&quot;&gt;Рекомендуем · ${escapePurchaseText(rarity.label)}&lt;/span&gt;&lt;h3&gt;${escapePurchaseText(skin.title)} ${skin.isNew ? `&lt;span class=&quot;skin-card-new-badge&quot;&gt;NEW&lt;/span&gt;` : &quot;&quot;}&lt;/h3&gt;${skinBonusVisualMarkup(skin)}${skinCaseLineMarkup(skin, true)}&lt;p&gt;${owned ? &quot;Уже в вашей коллекции.&quot; : affordable ? &quot;Все ресурсы уже собраны — можно приобрести.&quot; : &quot;Собирайте ресурсы для покупки или попытайтесь выиграть скин в кейсе.&quot;}&lt;/p&gt;&lt;div class=&quot;skins-v2-featured-actions&quot;&gt;&lt;button class=&quot;is-secondary&quot; type=&quot;button&quot; data-skin-details=&quot;${skin.id}&quot;&gt;Подробнее&lt;/button&gt;&lt;button class=&quot;is-primary&quot; type=&quot;button&quot; data-skin-action=&quot;${skin.id}&quot; ${equipped ? &quot;disabled&quot; : &quot;&quot;}&gt;${actionText}&lt;/button&gt;&lt;/div&gt;&lt;/div&gt;`;
+        const featuredKickerText = String(remoteShopFeatured?.skin?.badgeText || &quot;&quot;).trim();
+        const featuredKicker = featuredKickerText ? `&lt;span class=&quot;skins-v2-featured-kicker&quot;&gt;${escapePurchaseText(featuredKickerText)}&lt;/span&gt;` : &quot;&quot;;
+        return `&lt;div class=&quot;skins-v2-featured-art&quot; style=&quot;--featured-bg:url(&#x27;${skin.background || &quot;&quot;}&#x27;)&quot;&gt;&lt;img src=&quot;${skin.image}&quot; alt=&quot;Скин ${skin.title}&quot; loading=&quot;eager&quot;&gt;&lt;/div&gt;&lt;div class=&quot;skins-v2-featured-copy&quot;&gt;${featuredKicker}&lt;h3&gt;${escapePurchaseText(skin.title)} ${skin.isNew ? `&lt;span class=&quot;skin-card-new-badge&quot;&gt;NEW&lt;/span&gt;` : &quot;&quot;}&lt;/h3&gt;${skinBonusVisualMarkup(skin)}${skinCaseLineMarkup(skin, true)}&lt;p&gt;${owned ? &quot;Уже в вашей коллекции.&quot; : affordable ? &quot;Все ресурсы уже собраны — можно приобрести.&quot; : &quot;Собирайте ресурсы для покупки или попытайтесь выиграть скин в кейсе.&quot;}&lt;/p&gt;&lt;div class=&quot;skins-v2-featured-actions&quot;&gt;&lt;button class=&quot;is-secondary&quot; type=&quot;button&quot; data-skin-details=&quot;${skin.id}&quot;&gt;Подробнее&lt;/button&gt;&lt;button class=&quot;is-primary&quot; type=&quot;button&quot; data-skin-action=&quot;${skin.id}&quot; ${equipped ? &quot;disabled&quot; : &quot;&quot;}&gt;${actionText}&lt;/button&gt;&lt;/div&gt;&lt;/div&gt;`;
       }
 
       function syncSkinShopControls(catalog = Object.values(SKIN_CATALOG)) {
@@ -19760,6 +19768,19 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         remoteShopPrices = data.products;
         remoteShopAssortment = data.assortment &amp;&amp; typeof data.assortment === &quot;object&quot; ? data.assortment : {};
         remoteLiveContentShop = Array.isArray(data.liveContent) ? data.liveContent : [];
+        const featured = data.featured &amp;&amp; typeof data.featured === &quot;object&quot; ? data.featured : {};
+        remoteShopFeatured = {
+          case: {
+            itemId: String(featured.case?.itemId ?? &quot;case-alex&quot;),
+            badgeText: String(featured.case?.badgeText ?? &quot;Рекомендуем · Особый · Алекс&quot;)
+          },
+          skin: {
+            itemId: String(featured.skin?.itemId ?? &quot;alex&quot;),
+            badgeText: String(featured.skin?.badgeText ?? &quot;Рекомендуем · Легендарный&quot;)
+          }
+        };
+        rewardsV2RenderSignature = &quot;&quot;;
+        skinsRenderSignature = &quot;&quot;;
         applyRemoteShopPrices();
         applyShopAssortment();
         renderLiveContentShop();
@@ -21384,7 +21405,8 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 
       function renderRewardsV2Featured() {
         if (!rewardsV2FeaturedEl) return;
-        const preferred = [&quot;case-alex&quot;,&quot;case-legendary&quot;,&quot;case-mythic&quot;,&quot;case-gold&quot;].find((id) =&gt; shopProducts[id]?.enabled !== false &amp;&amp; shopProducts[id]);
+        const configuredFeaturedCaseId = String(remoteShopFeatured?.case?.itemId ?? &quot;case-alex&quot;);
+        const preferred = configuredFeaturedCaseId &amp;&amp; shopProducts[configuredFeaturedCaseId]?.enabled !== false &amp;&amp; shopProducts[configuredFeaturedCaseId]?.caseType ? configuredFeaturedCaseId : &quot;&quot;;
         if (!preferred) {
           rewardsV2FeaturedEl.hidden = true;
           rewardsV2FeaturedEl.innerHTML = &quot;&quot;;
@@ -21399,8 +21421,10 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         rewardsV2FeaturedEl.classList.toggle(&quot;is-alex-featured&quot;, product.caseType === &quot;alex&quot;);
         const featuredCopy = product.caseType === &quot;alex&quot;
           ? (owned &gt; 0 ? `У тебя уже есть: ${formatter.format(owned)}. Открывай со склада или бери ещё.` : &quot;Собери коллекцию Алекса. За первые 4/4 получишь Золотой кейс. Гаранта нет.&quot;)
-          : (owned &gt; 0 ? `У тебя уже есть: ${formatter.format(owned)}. Можно открыть со склада или купить ещё.` : &quot;Самый премиальный постоянный кейс магазина. После покупки сразу попадёт на склад.&quot;);
-        rewardsV2FeaturedEl.innerHTML = `&lt;div class=&quot;rewards-v2-featured-art&quot;&gt;&lt;img src=&quot;${escapePurchaseText(image)}&quot; alt=&quot;${escapePurchaseText(product.title)}&quot;&gt;&lt;/div&gt;&lt;div class=&quot;rewards-v2-featured-copy&quot;&gt;&lt;span class=&quot;rewards-v2-featured-badge&quot;&gt;Рекомендуем · ${escapePurchaseText(meta.label)}&lt;/span&gt;&lt;h3&gt;${escapePurchaseText(product.title)}&lt;/h3&gt;&lt;div class=&quot;rewards-v2-case-chips&quot;&gt;${meta.chips.map((chip) =&gt; `&lt;span class=&quot;rewards-v2-case-chip&quot;&gt;${escapePurchaseText(chip)}&lt;/span&gt;`).join(&quot;&quot;)}&lt;/div&gt;&lt;div class=&quot;rewards-v2-prices&quot;&gt;${rewardsV2PricesMarkup(product)}&lt;/div&gt;&lt;p&gt;${featuredCopy}&lt;/p&gt;&lt;div class=&quot;rewards-v2-actions&quot;&gt;&lt;button class=&quot;rewards-v2-secondary&quot; type=&quot;button&quot; data-rewards-v2-case-info=&quot;${escapePurchaseText(product.caseType)}&quot;&gt;Состав и шансы&lt;/button&gt;&lt;button class=&quot;rewards-v2-primary${affordable ? &quot;&quot; : &quot; is-unaffordable&quot;}&quot; type=&quot;button&quot; data-rewards-v2-buy=&quot;${escapePurchaseText(preferred)}&quot;&gt;${rewardsV2IsFree(product) ? &quot;Получить&quot; : &quot;Купить&quot;}&lt;/button&gt;&lt;/div&gt;&lt;/div&gt;`;
+          : (owned &gt; 0 ? `У тебя уже есть: ${formatter.format(owned)}. Можно открыть со склада или купить ещё.` : &quot;Выбранный кейс из рекомендаций магазина. После покупки сразу попадёт на склад.&quot;);
+        const featuredBadgeText = String(remoteShopFeatured?.case?.badgeText || &quot;&quot;).trim();
+        const featuredBadgeMarkup = featuredBadgeText ? `&lt;span class=&quot;rewards-v2-featured-badge&quot;&gt;${escapePurchaseText(featuredBadgeText)}&lt;/span&gt;` : &quot;&quot;;
+        rewardsV2FeaturedEl.innerHTML = `&lt;div class=&quot;rewards-v2-featured-art&quot;&gt;&lt;img src=&quot;${escapePurchaseText(image)}&quot; alt=&quot;${escapePurchaseText(product.title)}&quot;&gt;&lt;/div&gt;&lt;div class=&quot;rewards-v2-featured-copy&quot;&gt;${featuredBadgeMarkup}&lt;h3&gt;${escapePurchaseText(product.title)}&lt;/h3&gt;&lt;div class=&quot;rewards-v2-case-chips&quot;&gt;${meta.chips.map((chip) =&gt; `&lt;span class=&quot;rewards-v2-case-chip&quot;&gt;${escapePurchaseText(chip)}&lt;/span&gt;`).join(&quot;&quot;)}&lt;/div&gt;&lt;div class=&quot;rewards-v2-prices&quot;&gt;${rewardsV2PricesMarkup(product)}&lt;/div&gt;&lt;p&gt;${featuredCopy}&lt;/p&gt;&lt;div class=&quot;rewards-v2-actions&quot;&gt;&lt;button class=&quot;rewards-v2-secondary&quot; type=&quot;button&quot; data-rewards-v2-case-info=&quot;${escapePurchaseText(product.caseType)}&quot;&gt;Состав и шансы&lt;/button&gt;&lt;button class=&quot;rewards-v2-primary${affordable ? &quot;&quot; : &quot; is-unaffordable&quot;}&quot; type=&quot;button&quot; data-rewards-v2-buy=&quot;${escapePurchaseText(preferred)}&quot;&gt;${rewardsV2IsFree(product) ? &quot;Получить&quot; : &quot;Купить&quot;}&lt;/button&gt;&lt;/div&gt;&lt;/div&gt;`;
       }
 
       function renderRewardsV2StockSummary() {

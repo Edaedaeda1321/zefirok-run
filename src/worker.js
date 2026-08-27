@@ -5771,11 +5771,11 @@ async function readGamePublicConfig(env, force = false) {
 
 async function getShopConfig(env) {
   try {
-    const config = await readGamePublicConfig(env);
-    return jsonResponse({ ok: true, ...config.shop });
+    const [config, featured] = await Promise.all([readGamePublicConfig(env), readShopFeatured(env)]);
+    return jsonResponse({ ok: true, ...config.shop, featured });
   } catch (error) {
     console.error("getShopConfig failed", error);
-    return jsonResponse({ ok: true, ...fallbackGamePublicConfig().shop });
+    return jsonResponse({ ok: true, ...fallbackGamePublicConfig().shop, featured: defaultShopFeatured() });
   }
 }
 
@@ -39738,6 +39738,7 @@ async function handleOwnerPanelApi(request, env, path, executionCtx = null) {
     if (path === "/api/owner/promocodes/toggle") return jsonResponse(await ownerPanelTogglePromocode(env, ctx));
     if (path === "/api/owner/shop") return jsonResponse(await ownerPanelShop(env, ctx));
     if (path === "/api/owner/shop/save") return jsonResponse(await ownerPanelSaveShopItem(env, ctx));
+    if (path === "/api/owner/shop/featured/save") return jsonResponse(await ownerPanelSaveShopFeatured(env, ctx));
     if (path === "/api/owner/offers") return jsonResponse(await ownerPanelFlashOffers(env, ctx));
     if (path === "/api/owner/offers/save") return jsonResponse(await ownerPanelSaveFlashOffer(env, ctx));
     if (path === "/api/owner/offers/action") return jsonResponse(await ownerPanelFlashOfferAction(env, ctx));
@@ -41456,11 +41457,83 @@ function ownerPanelShopProductAsset(productId) {
 }
 function ownerPanelSkinAsset(skinId){return skinId==="default"?"/assets/optimized/v0.79.5/skinDefaultAvatar.png?v=0.79.5":`/assets/skins/avatars/${String(skinId)}.png`;}
 
+
+const DEFAULT_SHOP_FEATURED = Object.freeze({
+  case: Object.freeze({ itemId: "case-alex", badgeText: "Рекомендуем · Особый · Алекс" }),
+  skin: Object.freeze({ itemId: "alex", badgeText: "Рекомендуем · Легендарный" })
+});
+let shopFeaturedSchemaPromise = null;
+
+function defaultShopFeatured() {
+  return {
+    case: { ...DEFAULT_SHOP_FEATURED.case },
+    skin: { ...DEFAULT_SHOP_FEATURED.skin }
+  };
+}
+
+async function ensureShopFeaturedSchema(env) {
+  if (!shopFeaturedSchemaPromise) {
+    const now = Math.floor(Date.now() / 1000);
+    shopFeaturedSchemaPromise = env.DB.batch([
+      env.DB.prepare(`CREATE TABLE IF NOT EXISTS shop_featured_slots (slot_key TEXT PRIMARY KEY, item_id TEXT NOT NULL DEFAULT '', badge_text TEXT NOT NULL DEFAULT '', updated_at INTEGER NOT NULL DEFAULT 0, updated_by TEXT NOT NULL DEFAULT '')`),
+      env.DB.prepare(`INSERT OR IGNORE INTO shop_featured_slots(slot_key,item_id,badge_text,updated_at,updated_by) VALUES('case',?,?,?,'runtime')`).bind(DEFAULT_SHOP_FEATURED.case.itemId, DEFAULT_SHOP_FEATURED.case.badgeText, now),
+      env.DB.prepare(`INSERT OR IGNORE INTO shop_featured_slots(slot_key,item_id,badge_text,updated_at,updated_by) VALUES('skin',?,?,?,'runtime')`).bind(DEFAULT_SHOP_FEATURED.skin.itemId, DEFAULT_SHOP_FEATURED.skin.badgeText, now)
+    ]).catch((error) => { shopFeaturedSchemaPromise = null; throw error; });
+  }
+  await shopFeaturedSchemaPromise;
+}
+
+function normalizeShopFeaturedSlot(slotKey, row) {
+  const fallback = DEFAULT_SHOP_FEATURED[slotKey] || { itemId: "", badgeText: "" };
+  return {
+    itemId: row ? String(row.item_id || "") : String(fallback.itemId || ""),
+    badgeText: row ? String(row.badge_text || "") : String(fallback.badgeText || "")
+  };
+}
+
+async function readShopFeatured(env) {
+  await ensureShopFeaturedSchema(env);
+  const result = await env.DB.prepare(`SELECT slot_key,item_id,badge_text FROM shop_featured_slots WHERE slot_key IN ('case','skin')`).all();
+  const rows = new Map((result.results || []).map((row) => [String(row.slot_key || ""), row]));
+  return {
+    case: normalizeShopFeaturedSlot("case", rows.get("case")),
+    skin: normalizeShopFeaturedSlot("skin", rows.get("skin"))
+  };
+}
+
+function validateShopFeaturedItem(slotKey, itemId) {
+  if (!itemId) return true;
+  if (slotKey === "case") return String(itemId).startsWith("case-") && Object.prototype.hasOwnProperty.call(SHOP_ASSORTMENT_PRODUCTS, itemId);
+  if (slotKey === "skin") return Object.prototype.hasOwnProperty.call(SKINS, itemId);
+  return false;
+}
+
+async function ownerPanelSaveShopFeatured(env, ctx) {
+  await ensureShopFeaturedSchema(env);
+  const featured = ctx.body?.featured && typeof ctx.body.featured === "object" ? ctx.body.featured : {};
+  const caseItemId = String(featured.case?.itemId || "").trim();
+  const skinItemId = String(featured.skin?.itemId || "").trim();
+  if (!validateShopFeaturedItem("case", caseItemId)) throw new ApiError(400, "Неизвестный кейс для блока «Лучшее».");
+  if (!validateShopFeaturedItem("skin", skinItemId)) throw new ApiError(400, "Неизвестный скин для блока «Лучшее».");
+  const caseBadgeText = String(featured.case?.badgeText || "").trim().slice(0, 80);
+  const skinBadgeText = String(featured.skin?.badgeText || "").trim().slice(0, 80);
+  const before = await readShopFeatured(env);
+  const now = Math.floor(Date.now() / 1000), actor = String(ctx.user.id);
+  await env.DB.batch([
+    env.DB.prepare(`INSERT INTO shop_featured_slots(slot_key,item_id,badge_text,updated_at,updated_by) VALUES('case',?,?,?,?) ON CONFLICT(slot_key) DO UPDATE SET item_id=excluded.item_id,badge_text=excluded.badge_text,updated_at=excluded.updated_at,updated_by=excluded.updated_by`).bind(caseItemId, caseBadgeText, now, actor),
+    env.DB.prepare(`INSERT INTO shop_featured_slots(slot_key,item_id,badge_text,updated_at,updated_by) VALUES('skin',?,?,?,?) ON CONFLICT(slot_key) DO UPDATE SET item_id=excluded.item_id,badge_text=excluded.badge_text,updated_at=excluded.updated_at,updated_by=excluded.updated_by`).bind(skinItemId, skinBadgeText, now, actor)
+  ]);
+  invalidateGamePublicConfigCache();
+  const after = await readShopFeatured(env);
+  await logStaffAction(env, ctx.user, ctx.access, "owner_panel_shop_featured_update", null, "shop_featured", null, null, { before, after });
+  return { ok: true, featured: after };
+}
+
 async function ownerPanelShop(env, ctx) {
-  await ensureShopAssortmentSchema(env);await ensureSkinPriceSchema(env);await ensureShopStockSchema(env);const [assortment,skins,stockRows]=await Promise.all([readShopAssortment(env),readSkinPrices(env),readShopStockRows(env)]);
+  await ensureShopAssortmentSchema(env);await ensureSkinPriceSchema(env);await ensureShopStockSchema(env);await ensureShopFeaturedSchema(env);const [assortment,skins,stockRows,featured]=await Promise.all([readShopAssortment(env),readSkinPrices(env),readShopStockRows(env),readShopFeatured(env)]);
   const products=Object.keys(SHOP_ASSORTMENT_PRODUCTS).map(id=>{const value=assortment[id];const stock=shopStockAvailabilityFromRows(stockRows,"prize",id);return {kind:"product",id,title:botShopProductTitle(id),imageUrl:ownerPanelShopProductAsset(id),enabled:Boolean(value.enabled),points:Number(value.points||0),treats:Number(value.treats||0),coffee:Number(value.coffee||0),stock};});
   const skinItems=Object.keys(DEFAULT_SKIN_PRICES).map(id=>{const value=skins[id];const stock=shopStockAvailabilityFromRows(stockRows,"skins",id);return {kind:"skin",id,title:SKINS[id]?.title||id,imageUrl:ownerPanelSkinAsset(id),enabled:true,points:Number(value.points||0),treats:Number(value.treats||0),coffee:Number(value.coffee||0),stock};});
-  return {ok:true,products,skins:skinItems};
+  return {ok:true,products,skins:skinItems,featured};
 }
 
 async function ownerPanelSaveShopItem(env, ctx) {
