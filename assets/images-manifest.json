@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "catalogHash": "2a3ae91cf35898bd",
-  "count": 427,
+  "catalogHash": "1a4cc5e556be0d58",
+  "count": 429,
   "images": [
     {
       "fileName": "achievements/background_achivment_panel.png",
@@ -3418,6 +3418,22 @@
       "path": "/assets/ui/new_avatars_game.png",
       "size": 412252,
       "modified": 1787780165000
+    },
+    {
+      "fileName": "ui/shop_tab_rewards_icon.png",
+      "label": "Shop tab rewards icon",
+      "folder": "ui",
+      "path": "/assets/ui/shop_tab_rewards_icon.png",
+      "size": 5515,
+      "modified": 1787869390000
+    },
+    {
+      "fileName": "ui/shop_tab_skins_icon.png",
+      "label": "Shop tab skins icon",
+      "folder": "ui",
+      "path": "/assets/ui/shop_tab_skins_icon.png",
+      "size": 8233,
+      "modified": 1787869390000
     }
   ]
 }
