@@ -24764,12 +24764,28 @@ function ensureUi(){
   const observer=new MutationObserver(()=>{bindGameFrameObserver();syncVisibility();});observer.observe(document.body,{childList:true,attributes:true,subtree:false,attributeFilter:['class']});
   bindGameFrameObserver();syncVisibility();
 }
-function syncVisibility(){bindGameFrameObserver();if(!dismissedForSession&&!autoClaimStarted&&frameReady()&&!hasBlockingOverlay())claim(false);}
+function estimatedServerDayKey(){
+  const offset=Number(model?.season?.timezoneOffsetMinutes);
+  if(!Number.isFinite(offset))return '';
+  const shifted=new Date(Date.now()+offset*60000);
+  return `${shifted.getUTCFullYear()}-${String(shifted.getUTCMonth()+1).padStart(2,'0')}-${String(shifted.getUTCDate()).padStart(2,'0')}`;
+}
+function resetForNewServerDay(){
+  const known=String(model?.serverDayKey||'');
+  const current=estimatedServerDayKey();
+  if(!known||!current||known===current)return false;
+  autoClaimStarted=false;
+  dismissedForSession=false;
+  showComebackScreen=false;
+  return true;
+}
+function syncVisibility(){bindGameFrameObserver();resetForNewServerDay();if(!dismissedForSession&&!autoClaimStarted&&frameReady()&&!hasBlockingOverlay())claim(false);}
 function toast(text){const node=document.getElementById('zdlToast');if(!node)return;node.textContent=String(text||'');node.classList.add('show');clearTimeout(node._timer);node._timer=setTimeout(()=>node.classList.remove('show'),2600);}
 function updateLaunchOnly(){}
 function safeRender(){try{render();}catch(error){console.warn('daily loyalty render recovery',error);}}
 function openLayer(){const layer=document.getElementById('zdlLayer');if(layer)layer.hidden=false;safeRender();}
-function closeLayer(){dismissedForSession=true;showComebackScreen=false;const layer=document.getElementById('zdlLayer');if(layer)layer.hidden=true;}
+function hideLayer(){showComebackScreen=false;const layer=document.getElementById('zdlLayer');if(layer)layer.hidden=true;}
+function closeLayer(){dismissedForSession=true;hideLayer();}
 function currentBlock(state){return state?.currentBlock||{index:1,startDay:1,endDay:7,filled:0};}
 function render(){
   const body=document.getElementById('zdlBody');if(!body)return;
@@ -24804,33 +24820,51 @@ function bindBody(){const body=document.getElementById('zdlBody');if(!body)retur
 function refreshGameAccount(){const target=gameFrame()?.contentWindow;try{target?.postMessage?.({type:'zefirok-season-pass-account-updated'},'*')}catch{}try{target?.postMessage?.({type:'zefirok-daily-loyalty-updated'},'*')}catch{}try{window.zefirokSyncAccountRevision?.('daily',true)}catch{}window.dispatchEvent(new CustomEvent('zefirok:daily-loyalty-updated',{detail:model}));}
 async function claim(force=false){
   if(busy)return;
+  resetForNewServerDay();
+  const knownDay=String(model?.serverDayKey||'');
+  const currentDay=estimatedServerDayKey();
+  if(!force&&model?.state?.todayCompleted&&knownDay&&currentDay&&knownDay===currentDay)return;
   autoClaimStarted=true;
-  if(!force&&model?.state?.todayCompleted&&Date.now()-lastSuccessAt<CACHE_MS){openLayer();return;}
   const initData=String(window.Telegram?.WebApp?.initData||'');
   if(!initData){lastError='Ежедневная награда доступна только при запуске игры через Telegram.';openLayer();render();return;}
   busy=true;lastError='';
   const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),TIMEOUT_MS);
+  let shouldShowLayer=Boolean(force);
   try{
-    openLayer();safeRender();
+    if(force){openLayer();safeRender();}
     const response=await fetch(API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({initData,requestId:requestId()}),cache:'no-store',credentials:'same-origin',signal:controller.signal});
     const data=await response.json().catch(()=>({}));
     if(!response.ok||data?.ok===false)throw new Error(data?.error||`Ошибка ${response.status}`);
     model=data;lastComeback=data.comebackEvent||null;showComebackScreen=Boolean(lastComeback?.reward);lastSuccessAt=Date.now();lastError='';
+    const repeated=Boolean(data.repeated);
     const rewards=Array.isArray(data.grantedRewards)?data.grantedRewards:[],notice=[];
+    shouldShowLayer=!repeated||Boolean(lastComeback?.reward);
+    if(shouldShowLayer)openLayer();else hideLayer();
     if(rewards.length)notice.push('Получено: '+rewards.map((x)=>rewardText(x)).join(' · '));
     if(Number(data.insuranceEvent?.used||0)>0)notice.push('Серия сохранена защитой');
     if(Number(data.insuranceEvent?.earned||0)>0)notice.push('Получена защита серии');
-    if(notice.length){toast(notice.join(' · '));refreshGameAccount();}
-    else if(data.repeated)toast('Сегодняшняя награда уже получена');
-    else toast('Ежедневная награда получена');
-  }catch(error){lastError=error?.name==='AbortError'?'Сервер ответил не сразу. Нажмите «Повторить». Повторная награда не выдастся.':String(error?.message||'Не удалось получить награду. Нажмите «Повторить».');}
-  finally{clearTimeout(timer);busy=false;updateLaunchOnly();safeRender();}
+    if(!repeated){
+      if(notice.length)toast(notice.join(' · '));
+      else toast('Ежедневная награда получена');
+      refreshGameAccount();
+    }else if(lastComeback?.reward&&notice.length){
+      toast(notice.join(' · '));
+      refreshGameAccount();
+    }
+  }catch(error){
+    lastError=error?.name==='AbortError'?'Сервер ответил не сразу. Нажмите «Повторить». Повторная награда не выдастся.':String(error?.message||'Не удалось получить награду. Нажмите «Повторить».');
+    shouldShowLayer=true;
+    openLayer();
+  }
+  finally{clearTimeout(timer);busy=false;updateLaunchOnly();if(shouldShowLayer)safeRender();}
 }
 function boot(){ensureUi();syncVisibility();}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();
 </script>
 <script type="application/json" id="zefirok-daily-loyalty-v1-audit">{"build":"2026-08-23","feature":"server-authoritative-daily-loyalty-v11","autoClaimPerGameOpen":true,"maxAutoClaimRequestsPerSession":1,"claimTimeoutMs":4500,"streakInsurance":true,"streakRewards":true,"guaranteedWeeklyCycle":true,"day7BigReward":true,"retentionAnalyticsClientRequests":0,"testProjectProductionWriteGuard":true}</script>
+<script type="application/json" id="zefirok-daily-loyalty-once-per-day-audit">{"build":"2026-08-28","feature":"daily-loyalty-popup-once-per-server-day","serverAuthoritative":true,"suppressRepeatedPopup":true,"suppressRepeatedToast":true,"sameSessionNextDayReset":true}</script>
+
 
 </body>
 </html>

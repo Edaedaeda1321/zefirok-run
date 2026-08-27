@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "catalogHash": "1a4cc5e556be0d58",
-  "count": 429,
+  "catalogHash": "4f08ecf2042338d0",
+  "count": 431,
   "images": [
     {
       "fileName": "achievements/background_achivment_panel.png",
@@ -3284,6 +3284,14 @@
       "modified": 1787859539000
     },
     {
+      "fileName": "ui/icon_nagrady_buttom.png",
+      "label": "Icon nagrady buttom",
+      "folder": "ui",
+      "path": "/assets/ui/icon_nagrady_buttom.png",
+      "size": 13591,
+      "modified": 1787869777000
+    },
+    {
       "fileName": "ui/icon_o_profile.png",
       "label": "Icon o profile",
       "folder": "ui",
@@ -3370,6 +3378,14 @@
       "path": "/assets/ui/icon_shopping.png",
       "size": 940024,
       "modified": 1786903690000
+    },
+    {
+      "fileName": "ui/icon_skins_buttom.png",
+      "label": "Icon skins buttom",
+      "folder": "ui",
+      "path": "/assets/ui/icon_skins_buttom.png",
+      "size": 9651,
+      "modified": 1787869777000
     },
     {
       "fileName": "ui/icon_zanovo_button.png",
