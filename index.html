@@ -9767,54 +9767,99 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
     }
 
 
-    /* Rewards and Skins tabs: identical 320 x 91 source ratio, responsive in the shop row. */
+    /* Shop section tabs — flat pastel controls matching the current navigation UI. */
     #zefirok-maltipoo-runner .shop-modes {
-      display: flex;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
       width: 100%;
       gap: 8px;
-      align-items: stretch;
-      justify-content: space-between;
       padding: 0;
-      overflow: hidden;
+      overflow: visible;
     }
 
     #zefirok-maltipoo-runner .shop-modes button {
-      flex: 1 1 0;
-      width: calc(50% - 4px);
-      max-width: calc(50% - 4px);
       min-width: 0;
-      height: auto;
-      aspect-ratio: 320 / 91;
-      padding: 0;
+      min-height: 52px;
+      height: 52px;
       margin: 0;
+      padding: 6px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 9px;
       overflow: hidden;
-      border: 0;
-      border-radius: 999px;
+      border: 1px solid rgba(224, 190, 174, 0.92);
+      border-radius: 18px;
       outline: none;
-      background: transparent;
-      box-shadow: none;
+      background: rgba(255, 253, 250, 0.94);
+      color: #72534d;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.95), 0 4px 10px rgba(116,75,64,.05);
+      filter: none;
+      opacity: 1;
       transform: none;
+      font: 900 clamp(15px, 4vw, 18px)/1 inherit;
+      letter-spacing: -0.015em;
+      transition: background .16s ease, border-color .16s ease, color .16s ease, box-shadow .16s ease, transform .12s ease;
     }
 
-    #zefirok-maltipoo-runner .shop-modes button[aria-selected=&quot;true&quot;],
-    #zefirok-maltipoo-runner .shop-modes button[aria-selected=&quot;false&quot;],
+    #zefirok-maltipoo-runner .shop-modes button[aria-selected=&quot;true&quot;] {
+      border-color: #eb78a5;
+      background: linear-gradient(180deg, #ffe9f1 0%, #ffd5e4 100%);
+      color: #87415d;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.9), 0 6px 13px rgba(210,91,137,.11);
+      filter: none;
+      opacity: 1;
+    }
+
+    #zefirok-maltipoo-runner .shop-modes button[aria-selected=&quot;false&quot;] {
+      opacity: 1;
+      filter: none;
+    }
+
     #zefirok-maltipoo-runner .shop-modes button:focus,
-    #zefirok-maltipoo-runner .shop-modes button:focus-visible,
-    #zefirok-maltipoo-runner .shop-modes button:active {
-      transform: none;
+    #zefirok-maltipoo-runner .shop-modes button:focus-visible {
       outline: none;
-      box-shadow: none;
     }
 
-    #zefirok-maltipoo-runner .shop-modes img {
+    #zefirok-maltipoo-runner .shop-modes button:active {
+      transform: scale(.985);
+    }
+
+    #zefirok-maltipoo-runner .shop-modes .shop-mode-icon {
+      flex: 0 0 auto;
       display: block;
-      width: 100%;
-      max-width: none;
-      height: 100%;
-      aspect-ratio: 320 / 91;
+      width: 38px;
+      height: 36px;
+      max-width: 38px;
+      margin: 0;
+      border-radius: 0;
       object-fit: contain;
       object-position: center;
       pointer-events: none;
+      box-shadow: none;
+    }
+
+    #zefirok-maltipoo-runner .shop-modes .shop-mode-label {
+      display: block;
+      min-width: 0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      pointer-events: none;
+    }
+
+    @media (max-width: 360px) {
+      #zefirok-maltipoo-runner .shop-modes button {
+        min-height: 48px;
+        height: 48px;
+        padding: 5px 10px;
+        gap: 7px;
+      }
+      #zefirok-maltipoo-runner .shop-modes .shop-mode-icon {
+        width: 34px;
+        height: 32px;
+        max-width: 34px;
+      }
     }
 
 
@@ -10719,8 +10764,8 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 &lt;/div&gt;
 &lt;/div&gt;
 &lt;div aria-label=&quot;Разделы магазина&quot; class=&quot;shop-modes&quot; role=&quot;tablist&quot;&gt;
-&lt;button aria-label=&quot;Награды&quot; aria-selected=&quot;true&quot; data-shop-mode=&quot;rewards&quot; role=&quot;tab&quot; type=&quot;button&quot;&gt;&lt;img alt=&quot;&quot; data-shop-img=&quot;rewardsTabButton&quot;/&gt;&lt;/button&gt;
-&lt;button aria-label=&quot;Скины&quot; aria-selected=&quot;false&quot; data-shop-mode=&quot;skins&quot; role=&quot;tab&quot; type=&quot;button&quot;&gt;&lt;img alt=&quot;&quot; data-shop-img=&quot;skinsTabButton&quot;/&gt;&lt;/button&gt;
+&lt;button aria-label=&quot;Награды&quot; aria-selected=&quot;true&quot; data-shop-mode=&quot;rewards&quot; role=&quot;tab&quot; type=&quot;button&quot;&gt;&lt;img alt=&quot;&quot; aria-hidden=&quot;true&quot; class=&quot;shop-mode-icon&quot; src=&quot;/assets/ui/shop_tab_rewards_icon.png&quot;/&gt;&lt;span class=&quot;shop-mode-label&quot;&gt;Награды&lt;/span&gt;&lt;/button&gt;
+&lt;button aria-label=&quot;Скины&quot; aria-selected=&quot;false&quot; data-shop-mode=&quot;skins&quot; role=&quot;tab&quot; type=&quot;button&quot;&gt;&lt;img alt=&quot;&quot; aria-hidden=&quot;true&quot; class=&quot;shop-mode-icon&quot; src=&quot;/assets/ui/shop_tab_skins_icon.png&quot;/&gt;&lt;span class=&quot;shop-mode-label&quot;&gt;Скины&lt;/span&gt;&lt;/button&gt;
 &lt;/div&gt;
 &lt;style id=&quot;zefirok-rewards-v2&quot;&gt;
 #zefirok-maltipoo-runner [data-shop-panel=&quot;rewards&quot;] &gt; .shop-list,
@@ -19598,14 +19643,6 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 
       function switchShopPanel(name) {
         for (const button of shopModeButtons) button.setAttribute(&quot;aria-selected&quot;, String(button.dataset.shopMode === name));
-        const rewardsTabImage = root.querySelector(&quot;[data-shop-mode=rewards] img&quot;);
-        if (rewardsTabImage) {
-          rewardsTabImage.src = assetSources[name === &quot;rewards&quot; ? &quot;rewardsTabButtonSelected&quot; : &quot;rewardsTabButtonUnselected&quot;] || assetSources.rewardsTabButton;
-        }
-        const skinsTabImage = root.querySelector(&quot;[data-shop-mode=skins] img&quot;);
-        if (skinsTabImage) {
-          skinsTabImage.src = assetSources[name === &quot;skins&quot; ? &quot;skinsTabButtonSelected&quot; : &quot;skinsTabButtonUnselected&quot;] || assetSources.skinsTabButton;
-        }
         for (const panel of shopPanels) panel.hidden = panel.dataset.shopPanel !== name;
         const activePanel = shopPanels.find((panel) =&gt; panel.dataset.shopPanel === name) || null;
         if (activePanel) hydrateDeferredUiImages(activePanel);

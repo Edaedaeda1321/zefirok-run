@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "catalogHash": "0ce6ae851b75dbe6",
-  "count": 424,
+  "catalogHash": "2a3ae91cf35898bd",
+  "count": 427,
   "images": [
     {
       "fileName": "achievements/background_achivment_panel.png",
@@ -3292,6 +3292,22 @@
       "modified": 1787698023000
     },
     {
+      "fileName": "ui/icon_pause_button.png",
+      "label": "Icon pause button",
+      "folder": "ui",
+      "path": "/assets/ui/icon_pause_button.png",
+      "size": 84091,
+      "modified": 1787857670000
+    },
+    {
+      "fileName": "ui/icon_play_start_button.png",
+      "label": "Icon play start button",
+      "folder": "ui",
+      "path": "/assets/ui/icon_play_start_button.png",
+      "size": 144057,
+      "modified": 1787857670000
+    },
+    {
       "fileName": "ui/icon_profile_button.png",
       "label": "Icon profile button",
       "folder": "ui",
@@ -3354,6 +3370,14 @@
       "path": "/assets/ui/icon_shopping.png",
       "size": 940024,
       "modified": 1786903690000
+    },
+    {
+      "fileName": "ui/icon_zanovo_button.png",
+      "label": "Icon zanovo button",
+      "folder": "ui",
+      "path": "/assets/ui/icon_zanovo_button.png",
+      "size": 147557,
+      "modified": 1787857670000
     },
     {
       "fileName": "ui/icone_cases.png",
