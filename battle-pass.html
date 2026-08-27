@@ -2461,6 +2461,104 @@ img[src$="/xp.webp"]{
   .reward-availability{font-size:5.9px!important;display:-webkit-box!important}
 }
 
+
+
+/* v0.79.38 — stricter mockup fit for hero and reward cards */
+.hero-player,.hero-end-date{display:none!important}
+.hero-redesign{position:relative!important;grid-template-columns:minmax(0,1fr) 46%!important;grid-template-areas:"copy art" "progress progress"!important;overflow:hidden!important;border:1px solid #f1d6ce!important;border-radius:30px!important;background:linear-gradient(180deg,#fffdf9 0%,#fff6f5 58%,#fffaf0 100%)!important;box-shadow:0 14px 34px rgba(133,88,74,.07)!important}
+.hero-copy{padding:22px 8px 10px 18px!important}
+.season-ribbon{display:inline-flex!important;align-items:center!important;justify-content:center!important;min-height:37px!important;padding:0 18px!important;border-radius:9px!important;background:linear-gradient(180deg,#ff79a4 0%,#f2528a 100%)!important;color:#fff!important;font-size:11px!important;font-weight:1000!important;letter-spacing:.07em!important;box-shadow:0 8px 20px rgba(225,82,127,.22)!important}
+.hero-redesign h1{margin:14px 0 7px!important;max-width:280px!important;color:#f15f97!important;font-family:Georgia,"Times New Roman",serif!important;font-size:clamp(38px,8.8vw,56px)!important;font-style:normal!important;font-weight:900!important;line-height:.88!important;letter-spacing:-.06em!important;text-shadow:0 2px 0 #fff,0 7px 16px rgba(233,95,147,.18)!important}
+.hero-redesign p{max-width:300px!important;color:#b27c6e!important;font-size:12px!important;font-weight:900!important;line-height:1.3!important}
+.hero-art{min-height:206px!important;border-radius:0 0 0 40px!important;background:radial-gradient(circle at 22% 25%,rgba(255,255,255,.82),rgba(255,255,255,0) 44%),linear-gradient(180deg,#fff3f4 0%,#ffeaf1 65%,#fff6ef 100%)!important}
+.hero-art::before{content:"";position:absolute;inset:0;background:radial-gradient(circle at 77% 20%,rgba(255,192,214,.44),transparent 32%),radial-gradient(circle at 82% 70%,rgba(255,221,188,.4),transparent 38%);pointer-events:none}
+.hero-art img{inset:auto -7% -1% auto!important;width:120%!important;height:110%!important;object-fit:contain!important;object-position:right bottom!important;filter:drop-shadow(0 12px 15px rgba(126,67,57,.14))!important}
+.progress-card{grid-template-columns:70px minmax(0,1fr) 122px!important;grid-template-areas:"badge copy days" "status status cta"!important;gap:12px 14px!important;margin:0 14px 14px!important;padding:14px 14px 13px!important;border:1px solid rgba(236,205,196,.95)!important;border-radius:24px!important;background:linear-gradient(180deg,#fffdfa 0%,#fff7f2 100%)!important;box-shadow:0 10px 24px rgba(119,73,67,.06)!important}
+.level-badge{width:58px!important;height:58px!important;border:4px solid #ebb74a!important;background:linear-gradient(180deg,#ffe48b 0%,#f8cf4d 100%)!important;color:#98670f!important;font-size:20px!important;box-shadow:0 8px 18px rgba(210,152,36,.15)!important}
+.progress-copy>strong{font-size:15px!important;color:#7a4e18!important;font-weight:1000!important}
+.progress-track{height:16px!important;border-radius:999px!important;background:#f7e5df!important;box-shadow:inset 0 2px 4px rgba(126,88,76,.06)!important}
+.progress-track i{background:linear-gradient(90deg,#f672a0 0%,#f286ad 40%,#d84e87 100%)!important}
+.progress-meta{display:grid!important;grid-template-columns:auto auto!important;justify-content:space-between!important;gap:8px!important;margin-top:7px!important;color:#9f706f!important;font-size:8.8px!important;font-weight:900!important}
+.progress-meta span:first-child{color:#d84f86!important;font-size:10px!important}
+.season-countdown{min-height:70px!important;padding:10px 12px!important;border-left:1px solid #f3e1db!important;color:#b2857b!important}
+.season-countdown span{font-size:8.5px!important;font-weight:950!important}
+.season-countdown strong{font-size:18px!important;font-weight:1000!important;color:#f0578d!important}
+.hero-bottom{grid-area:status!important;display:flex!important;align-items:center!important;gap:12px!important;padding-top:0!important}
+.premium-chip{display:inline-flex!important;align-items:center!important;min-height:42px!important;padding:0 16px!important;border:1px solid #edd9d1!important;border-radius:999px!important;background:#fffaf8!important;color:#8f6d67!important;font-size:10px!important;font-weight:1000!important;white-space:nowrap!important}
+.hero-premium-button{grid-area:cta!important;align-self:end!important;justify-self:end!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;min-height:48px!important;width:100%!important;padding:0 18px!important;border:1px solid #e5ab34!important;border-radius:17px!important;background:linear-gradient(180deg,#ffd669 0%,#ecaf30 100%)!important;color:#7d4d0e!important;font-size:12px!important;font-weight:1000!important;box-shadow:0 10px 20px rgba(184,117,24,.18)!important}
+.buy-level{display:none!important}
+.main-tabs{margin:0 2px 16px!important;padding:4px!important;border-radius:22px!important;background:linear-gradient(180deg,#fffdfb 0%,#fff6f5 100%)!important;border:1px solid #f1dbd3!important;box-shadow:0 10px 24px rgba(113,69,62,.05)!important}
+.main-tab{min-height:58px!important;border-radius:18px!important;color:#9b7b71!important;font-size:12px!important;font-weight:1000!important}
+.main-tab.active{background:linear-gradient(180deg,#ff72a3 0%,#f04f88 100%)!important;color:#fff!important;box-shadow:0 8px 18px rgba(221,75,127,.22)!important}
+.main-tab .tab-icon{font-size:22px!important}
+.level-column{grid-template-columns:56px minmax(0,1fr) minmax(0,1fr)!important;gap:10px!important;align-items:stretch!important;min-height:144px!important;padding-bottom:16px!important}
+.level-column::after{left:27px!important;top:48px!important;bottom:-16px!important;width:4px!important;background:linear-gradient(180deg,#f3a4bf 0%,#eca8bc 75%,rgba(243,164,191,.18) 100%)!important}
+.level-number{width:52px!important;height:52px!important;border:3px solid #f3d4d4!important;background:linear-gradient(180deg,#fffdfa 0%,#fff4ef 100%)!important;color:#7d5347!important;font-size:17px!important;font-weight:1000!important;box-shadow:none!important}
+.level-column.is-milestone .level-number,.level-number.milestone{border-color:#edbf50!important;background:linear-gradient(180deg,#ffe98f 0%,#f8cf58 100%)!important;color:#98670f!important}
+.reward-cell{grid-template-columns:66px minmax(0,1fr)!important;grid-template-rows:auto auto auto auto!important;grid-template-areas:"lane lane" "icon name" "icon availability" "action action"!important;min-height:144px!important;padding:11px 12px 10px!important;border-radius:24px!important;align-content:start!important;row-gap:3px!important;column-gap:12px!important}
+.reward-cell.premium{background:linear-gradient(180deg,#fffdf7 0%,#fff6e0 100%)!important}
+.reward-cell.claimed:not(.premium){background:linear-gradient(180deg,#fcfffc 0%,#eef9ef 100%)!important}
+.reward-cell.premium.claimed,.reward-cell.gold-reward.claimed{background:linear-gradient(180deg,#fffef7 0%,#fbefca 100%)!important}
+.reward-lane-title{font-size:8.8px!important;font-weight:1000!important;line-height:1!important;padding-right:72px!important}
+.reward-state{top:9px!important;right:9px!important;max-width:58%!important;height:20px!important;padding:0 8px!important;font-size:6.4px!important;line-height:20px!important}
+.reward-icon{width:58px!important;height:58px!important;align-self:center!important;padding:4px!important;border-radius:18px!important}
+.reward-name{display:flex!important;flex-direction:column!important;align-self:end!important;gap:2px!important;padding-right:4px!important;color:#5e3f37!important;text-align:left!important}
+.reward-name-text{display:block!important;font-size:11px!important;line-height:1.14!important;font-weight:900!important;word-break:break-word!important}
+.reward-name.has-value .reward-name-text{font-size:13px!important;line-height:1.06!important}
+.reward-qty{display:block!important;color:#9c6661!important;font-size:10px!important;line-height:1.05!important;font-weight:1000!important}
+.reward-availability{min-height:auto!important;font-size:7.2px!important;line-height:1.14!important;color:#87645e!important;display:-webkit-box!important;-webkit-line-clamp:1!important;-webkit-box-orient:vertical!important;overflow:hidden!important}
+.reward-action{margin-top:5px!important;height:34px!important;min-height:34px!important;border-radius:12px!important;font-size:9.2px!important;line-height:34px!important;font-weight:1000!important}
+.reward-cell.claimed .reward-action,.reward-cell.level-locked .reward-action,.reward-cell.tier-locked .reward-action{display:none!important}
+.reward-cell.claimed .reward-availability,.reward-cell.tier-locked .reward-availability{display:none!important}
+.reward-cell.claimed::after{right:9px!important;bottom:9px!important;width:22px!important;height:22px!important}
+.reward-status-mark span{width:25px!important;height:25px!important;font-size:11px!important}
+@media(max-width:430px){
+  .hero-redesign{grid-template-columns:minmax(0,1fr) 43%!important}
+  .hero-copy{padding:18px 6px 8px 15px!important}
+  .season-ribbon{min-height:34px!important;padding:0 14px!important;font-size:10px!important}
+  .hero-redesign h1{font-size:clamp(31px,9vw,44px)!important;max-width:200px!important}
+  .hero-redesign p{font-size:10px!important;max-width:190px!important}
+  .hero-art{min-height:160px!important}
+  .hero-art img{width:126%!important;right:-10%!important}
+  .progress-card{grid-template-columns:56px minmax(0,1fr) 100px!important;gap:9px 10px!important;margin:0 10px 10px!important;padding:10px!important}
+  .level-badge{width:48px!important;height:48px!important;font-size:18px!important}
+  .progress-copy>strong{font-size:12px!important}
+  .progress-track{height:14px!important}
+  .progress-meta{font-size:7.4px!important}
+  .progress-meta span:first-child{font-size:8.8px!important}
+  .season-countdown{padding:7px 8px!important;min-height:58px!important}
+  .season-countdown strong{font-size:15px!important}
+  .premium-chip{min-height:36px!important;padding:0 11px!important;font-size:8.2px!important}
+  .hero-premium-button{min-height:40px!important;font-size:10px!important;padding:0 10px!important}
+  .main-tabs{margin:0 2px 12px!important}
+  .main-tab{min-height:50px!important;font-size:11px!important}
+  .main-tab .tab-icon{font-size:18px!important}
+  .level-column{grid-template-columns:48px minmax(0,1fr) minmax(0,1fr)!important;gap:7px!important;min-height:128px!important;padding-bottom:12px!important}
+  .level-column::after{left:23px!important;top:44px!important;bottom:-12px!important}
+  .level-number{width:44px!important;height:44px!important;font-size:16px!important}
+  .reward-cell{grid-template-columns:48px minmax(0,1fr)!important;min-height:122px!important;padding:8px!important;border-radius:19px!important;column-gap:8px!important}
+  .reward-lane-title{font-size:7.6px!important;padding-right:60px!important}
+  .reward-state{height:18px!important;line-height:18px!important;font-size:5.7px!important;max-width:54%!important;padding:0 7px!important}
+  .reward-icon{width:44px!important;height:44px!important;border-radius:14px!important}
+  .reward-name-text{font-size:9.8px!important}
+  .reward-name.has-value .reward-name-text{font-size:11px!important}
+  .reward-qty{font-size:9px!important}
+  .reward-availability{font-size:6.4px!important}
+  .reward-action{height:28px!important;min-height:28px!important;font-size:7.8px!important;line-height:28px!important}
+}
+@media(max-width:390px){
+  .progress-card{grid-template-columns:50px minmax(0,1fr) 86px!important}
+  .hero-bottom{gap:8px!important}
+  .level-column{grid-template-columns:46px minmax(0,1fr) minmax(0,1fr)!important;gap:6px!important}
+  .level-number{width:40px!important;height:40px!important;font-size:15px!important}
+  .reward-cell{grid-template-columns:44px minmax(0,1fr)!important;min-height:116px!important;padding:7px!important}
+  .reward-icon{width:40px!important;height:40px!important}
+  .reward-name-text{font-size:9px!important}
+  .reward-name.has-value .reward-name-text{font-size:10px!important}
+  .reward-qty{font-size:8.2px!important}
+  .reward-availability{font-size:6px!important}
+}
+
 </style>
 
 <style id="zefirok-v07946-season-progress-motion">
@@ -3828,6 +3926,32 @@ html,body{background:#fff8f5;color:var(--bp-text)}
     if (el("premiumSheetSeasonLine")) el("premiumSheetSeasonLine").textContent = info.headerLine;
   }
 
+  function rewardDisplayModel(name) {
+    const raw = String(name || "").trim();
+    const compact = raw.replace(/\s+/g, ' ').trim();
+    const qtyMatch = compact.match(/^(\d[\d\s]*)\s+(очк(?:о|а|ов)|зефир(?:а|ов)?|кофе)$/i);
+    if (qtyMatch) {
+      const amount = String(qtyMatch[1] || '').replace(/\s+/g, '');
+      const noun = String(qtyMatch[2] || '').toLowerCase();
+      let title = compact;
+      if (/очк/i.test(noun)) title = 'Очки';
+      else if (/зефир/i.test(noun)) title = 'Зефир';
+      else if (/кофе/i.test(noun)) title = 'Кофе';
+      return { title, value: `x${amount}`, compact: `${title} ${amount}` };
+    }
+    const multMatch = compact.match(/^(.*?)(?:\s*[×xх]\s*(\d+))$/i);
+    if (multMatch && multMatch[1]) {
+      return { title: String(multMatch[1]).trim(), value: `x${multMatch[2]}`, compact };
+    }
+    return { title: compact, value: '', compact };
+  }
+
+  function rewardNameMarkup(name) {
+    const model = rewardDisplayModel(name);
+    const hasValue = !!model.value;
+    return `<div class="reward-name ${hasValue ? 'has-value' : ''}"><span class="reward-name-text">${model.title}</span>${hasValue ? `<span class="reward-qty">${model.value}</span>` : ''}</div>`;
+  }
+
   function rewardCellMarkup(level,type,data) {
     const id = rewardId(level,type);
     const premium = type === "premium";
@@ -3841,7 +3965,7 @@ html,body{background:#fff8f5;color:var(--bp-text)}
     const rewardName = String(data?.[1] || "");
     const goldReward = /золот|легендар/i.test(rewardName);
     const silverReward = /серебр/i.test(rewardName);
-    const label = levelLocked ? "Закрыто" : tierLocked ? "Нужен Premium" : "Получить";
+    const label = claimable ? "Забрать" : levelLocked ? "Закрыто" : tierLocked ? "Нужен Premium" : "";
     const state = claimed ? "✓ Получено" : claimable ? "Можно забрать" : tierLocked ? "Premium" : `Уровень ${level}`;
     const availability = claimed ? "Награда уже забрана" : claimable ? "Награда открыта" : tierLocked ? "Откроется с Premium" : `Откроется на ${level} уровне`;
     const mark = claimed ? "✓" : locked ? "🔒" : "";
@@ -3852,9 +3976,9 @@ html,body{background:#fff8f5;color:var(--bp-text)}
         ${rewardArtMarkup(rewardName,data[0],data[3] || "")}
         ${mark?`<span class="reward-status-mark"><span>${mark}</span></span>`:""}
       </div>
-      <div class="reward-name">${data[1]}</div>
-      <div class="reward-availability">${availability}</div>
-      ${claimed ? "" : `<button class="reward-action" data-claim="${id}" ${locked?"disabled":""} type="button">${label}</button>`}
+      ${rewardNameMarkup(data[1])}
+      ${claimed ? "" : `<div class="reward-availability">${availability}</div>`}
+      ${claimable ? `<button class="reward-action" data-claim="${id}" type="button">${label}</button>` : ""}
     </article>`;
   }
 
