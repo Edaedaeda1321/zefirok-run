@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "catalogHash": "68bb905d83eec584",
+  "catalogHash": "0ce6ae851b75dbe6",
   "count": 424,
   "images": [
     {
@@ -3344,8 +3344,8 @@
       "label": "Icon shop buttom",
       "folder": "ui",
       "path": "/assets/ui/icon_shop_buttom.png",
-      "size": 1996232,
-      "modified": 1787859539000
+      "size": 933911,
+      "modified": 1787862271000
     },
     {
       "fileName": "ui/icon_shopping.png",
