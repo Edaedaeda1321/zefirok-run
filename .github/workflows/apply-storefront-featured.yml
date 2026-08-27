@@ -18,6 +18,10 @@ jobs:
         with:
           ref: feat/storefront-featured-control
           fetch-depth: 0
+      - name: Diagnose match
+        run: |
+          grep -n "const preferred" index.html | head -20 || true
+          grep -n "case-alex" index.html | head -20 || true
       - name: Fix patch matcher
         run: python3 .github/fix_patch_storefront.py
       - name: Apply patch
