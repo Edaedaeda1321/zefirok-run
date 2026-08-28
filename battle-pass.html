@@ -2873,16 +2873,16 @@ img[src$="/xp.webp"]{
       </nav>
 
       <section class="catchup-card" id="catchUpCard" hidden>
-        <div class="catchup-icon">⚡</div>
+        <div class="catchup-icon"><img src="/assets/season-pass/xp_x2.png?v=07939" alt=""></div>
         <div class="catchup-copy"><strong>Догоняющий бонус активен</strong><p id="catchUpCopy">В последние дни сезона отстающие игроки получают больше XP.</p></div>
         <div class="catchup-multiplier" id="catchUpMultiplier">×2 XP</div>
       </section>
 
       <section class="season-letter-card" id="seasonLetterCard" hidden>
-        <div class="season-letter-icon">💌</div><div class="season-letter-copy"><b id="seasonLetterCardTitle">Вам письмо</b><span id="seasonLetterCardPreview">Спойлер следующего сезона уже ждёт.</span></div><button class="season-letter-open" id="seasonLetterCardOpen" type="button">Открыть</button>
+        <div class="season-letter-icon"><img src="/assets/ui/icon_documents.png" alt=""></div><div class="season-letter-copy"><b id="seasonLetterCardTitle">Вам письмо</b><span id="seasonLetterCardPreview">Спойлер следующего сезона уже ждёт.</span></div><button class="season-letter-open" id="seasonLetterCardOpen" type="button">Открыть</button>
       </section>
       <section class="season-story-card" id="seasonStoryCard" hidden>
-        <div class="season-story-icon">📖</div><div class="season-story-copy"><b id="seasonStoryCardTitle">История сезона</b><span id="seasonStoryCardPreview">Открылась новая часть истории.</span></div><div class="season-story-actions"><button class="primary" id="seasonStoryOpen" type="button">Продолжить</button><button class="secondary" id="seasonStoryArchive" type="button">История</button></div>
+        <div class="season-story-icon"><img src="/assets/season-pass/season.png?v=07939" alt=""></div><div class="season-story-copy"><b id="seasonStoryCardTitle">История сезона</b><span id="seasonStoryCardPreview">Открылась новая часть истории.</span></div><div class="season-story-actions"><button class="primary" id="seasonStoryOpen" type="button">Продолжить</button><button class="secondary" id="seasonStoryArchive" type="button">История</button></div>
       </section>
       <section class="seasonal-case-shelf" id="seasonalCaseShelf" hidden><div class="seasonal-case-shelf-head"><div><b>Сезонные кейсы</b><br><span>Тематическая косметика сезонов остаётся доступной после их окончания.</span></div><span id="seasonalCaseCount"></span></div><div class="seasonal-case-list" id="seasonalCaseList"></div></section>
 
@@ -2891,7 +2891,7 @@ img[src$="/xp.webp"]{
 
         <section class="final-milestone is-locked" id="finalMilestone">
           <img class="final-milestone-art" id="finalMilestoneArt" src="/assets/season-pass/season.png?v=07939" alt="Финал сезона">
-          <div class="final-milestone-copy"><span class="final-milestone-kicker">УРОВЕНЬ 50 · ФИНАЛ</span><strong id="finalMilestoneTitle">Финал сезона впереди</strong><p id="finalMilestoneCopy">Доберись до 50 уровня и полностью заполни финальную шкалу.</p><div class="final-milestone-tags"><span id="finalMilestoneRewardTag">🎁 Финальная награда</span><span id="finalMilestoneStoryTag">📖 Сюжет</span><span id="finalMilestoneLetterTag">💌 Письмо</span></div></div>
+          <div class="final-milestone-copy"><span class="final-milestone-kicker">УРОВЕНЬ 50 · ФИНАЛ</span><strong id="finalMilestoneTitle">Финал сезона впереди</strong><p id="finalMilestoneCopy">Доберись до 50 уровня и полностью заполни финальную шкалу.</p><div class="final-milestone-tags"><span class="final-milestone-tag is-reward" id="finalMilestoneRewardTag">Финальная награда</span><span class="final-milestone-tag is-story" id="finalMilestoneStoryTag">Сюжет</span><span class="final-milestone-tag is-letter" id="finalMilestoneLetterTag">Письмо</span></div></div>
           <button class="final-milestone-open" id="seasonFinaleOpen" type="button" disabled>Откроется позже</button>
         </section>
 
@@ -2956,7 +2956,7 @@ img[src$="/xp.webp"]{
 </main>
 </div>
 
-<section class="season-letter-overlay" id="seasonLetterOverlay" hidden aria-modal="true" role="dialog" aria-labelledby="seasonLetterTitle"><div class="season-letter-sheet"><img class="season-letter-art" id="seasonLetterArt" hidden alt=""><div class="season-letter-envelope" id="seasonLetterEnvelope">💌</div><h2 id="seasonLetterTitle">Вам письмо</h2><p class="letter-preview" id="seasonLetterPreview"></p><span class="season-letter-target" id="seasonLetterTarget"></span><div class="season-letter-body" id="seasonLetterBody" hidden></div><div class="season-letter-actions"><button class="secondary" id="seasonLetterClose" type="button">Закрыть</button><button class="primary" id="seasonLetterReveal" type="button">Открыть письмо</button></div></div></section>
+<section class="season-letter-overlay" id="seasonLetterOverlay" hidden aria-modal="true" role="dialog" aria-labelledby="seasonLetterTitle"><div class="season-letter-sheet"><img class="season-letter-art" id="seasonLetterArt" hidden alt=""><div class="season-letter-envelope" id="seasonLetterEnvelope"><img src="/assets/ui/icon_documents.png" alt=""></div><h2 id="seasonLetterTitle">Вам письмо</h2><p class="letter-preview" id="seasonLetterPreview"></p><span class="season-letter-target" id="seasonLetterTarget"></span><div class="season-letter-body" id="seasonLetterBody" hidden></div><div class="season-letter-actions"><button class="secondary" id="seasonLetterClose" type="button">Закрыть</button><button class="primary" id="seasonLetterReveal" type="button">Открыть письмо</button></div></div></section>
 <section class="season-story-overlay" id="seasonStoryOverlay" hidden aria-modal="true" role="dialog" aria-labelledby="seasonStoryTitle"><div class="season-story-sheet"><img class="season-story-art" id="seasonStoryArt" hidden alt=""><span class="season-story-kicker">История сезона</span><h2 id="seasonStoryTitle">Сюжет</h2><div class="season-story-meta" id="seasonStoryMeta"></div><div class="season-story-body" id="seasonStoryBody"></div><div class="season-story-reward" id="seasonStoryReward" hidden><img id="seasonStoryRewardImage" src="/assets/season-pass/season.png" alt=""><div><b id="seasonStoryRewardTitle">Награда за завершение</b><span>Будет выдана один раз после последней страницы.</span></div></div><div class="season-story-footer"><button class="secondary" id="seasonStoryBack" type="button">Назад</button><button class="secondary" id="seasonStoryClose" type="button">Закрыть</button><button class="primary" id="seasonStoryComplete" type="button">Продолжить</button></div></div></section>
 <section class="season-story-archive-overlay" id="seasonStoryArchiveOverlay" hidden aria-modal="true" role="dialog"><div class="season-story-archive-sheet"><div class="season-story-archive-head"><h2>История сезона</h2><button class="season-story-archive-close" id="seasonStoryArchiveClose" type="button">×</button></div><div class="season-story-archive-list" id="seasonStoryArchiveList"></div></div></section>
 
@@ -4051,7 +4051,7 @@ img[src$="/xp.webp"]{
         ? (available === 1 ? "Забрать кейс" : `Забрать ×${available}`)
         : "Копи XP";
     return `<section class="level-column overflow-reward-column ${unlocked?"current":""} ${selectedLevel===MAX_LEVEL+1?"selected":""}" data-level-column="${MAX_LEVEL+1}" aria-label="Бесконечная дорожка 50 плюс">
-      <div class="level-number">50+ · ∞</div>
+      <div class="level-number is-overflow"><small>50+</small><b>∞</b></div>
       <article class="overflow-reward-cell ${unlocked?"":"is-locked"}">
         <span class="overflow-cell-state">${stateLabel}</span>
         <img class="overflow-cell-art" src="/assets/cases/gold_closed.png" alt="Золотой кейс">
@@ -4069,7 +4069,7 @@ img[src$="/xp.webp"]{
     const levelColumns = rewards.map((reward,index)=>{
       const itemLevel = index + 1;
       return `<section class="level-column ${itemLevel===MAX_LEVEL?"final-milestone-column":""} ${itemLevel===level?"current":""} ${itemLevel===selectedLevel?"selected":""}" data-level-column="${itemLevel}">
-        <div class="level-number">${itemLevel}</div>
+        <div class="level-number"><small>УР.</small><b>${itemLevel}</b></div>
         ${rewardCellMarkup(itemLevel,"free",reward.free)}
         <div class="reward-connector"><span></span></div>
         ${rewardCellMarkup(itemLevel,"premium",reward.premium)}
@@ -4490,7 +4490,7 @@ img[src$="/xp.webp"]{
 
   function finaleData(){return serverPass?.finale&&typeof serverPass.finale==="object"?serverPass.finale:null;}
   function finaleSeenKey(){return `${TEST_PROJECT_MODE?"zefirok-test-project-season-finale-seen":"zefirok-season-finale-seen"}:${String(serverPass?.season?.id||"season")}`;}
-  function renderFinalMilestone(){const card=el("finalMilestone"),button=el("seasonFinaleOpen");if(!card||!button)return;const xp=totalXp(),level=currentLevel(),complete=xp>=Math.max(LEVEL_50_COMPLETE_XP,Number(serverPass?.season?.progression?.level50CompleteXp||0)||0);const reward50=rewards[MAX_LEVEL-1]?.[pass.premiumTier!=="none"?"premium":"free"]||rewards[MAX_LEVEL-1]?.free||null;if(reward50){el("finalMilestoneArt").src=String(reward50[3]||rewardAssetFor(reward50[1])||"/assets/season-pass/season.png?v=07939");el("finalMilestoneRewardTag").textContent=`🎁 ${String(reward50[1]||"Награда 50 уровня")}`;}else{el("finalMilestoneArt").src="/assets/season-pass/season.png?v=07939";el("finalMilestoneRewardTag").textContent="🎁 Награда 50 уровня";}el("finalMilestoneStoryTag").textContent=serverPass?.story?.pending&&Number(serverPass.story.pending.unlockLevel||0)>=MAX_LEVEL?"📖 Финальная глава":"📖 Сюжет сезона";el("finalMilestoneLetterTag").textContent=serverPass?.letter?.available?(serverPass.letter.unread?"💌 Новое письмо":"💌 Письмо прочитано"):"💌 Письмо";card.classList.toggle("is-locked",level<MAX_LEVEL);card.classList.toggle("is-complete",complete);if(complete){el("finalMilestoneTitle").textContent="Финал сезона пройден";el("finalMilestoneCopy").textContent="Полный 50 уровень завершён. Открой итоги сезона и загляни в тизер следующего приключения.";button.disabled=false;button.textContent="⭐ Итоги сезона";}else if(level>=MAX_LEVEL){el("finalMilestoneTitle").textContent="Финальный уровень открыт";el("finalMilestoneCopy").textContent="Ты уже на 50 уровне. Заполни последнюю шкалу XP, чтобы открыть экран финала сезона.";button.disabled=true;button.textContent="Заверши 50 уровень";}else{el("finalMilestoneTitle").textContent="Финал сезона впереди";el("finalMilestoneCopy").textContent=`Откроется на 50 уровне · осталось ${Math.max(0,MAX_LEVEL-level)} ур.`;button.disabled=true;button.textContent="Откроется позже";}}
+  function renderFinalMilestone(){const card=el("finalMilestone"),button=el("seasonFinaleOpen");if(!card||!button)return;const xp=totalXp(),level=currentLevel(),complete=xp>=Math.max(LEVEL_50_COMPLETE_XP,Number(serverPass?.season?.progression?.level50CompleteXp||0)||0);const reward50=rewards[MAX_LEVEL-1]?.[pass.premiumTier!=="none"?"premium":"free"]||rewards[MAX_LEVEL-1]?.free||null;if(reward50){el("finalMilestoneArt").src=String(reward50[3]||rewardAssetFor(reward50[1])||"/assets/season-pass/season.png?v=07939");el("finalMilestoneRewardTag").textContent=String(reward50[1]||"Награда 50 уровня");}else{el("finalMilestoneArt").src="/assets/season-pass/season.png?v=07939";el("finalMilestoneRewardTag").textContent="Награда 50 уровня";}el("finalMilestoneStoryTag").textContent=serverPass?.story?.pending&&Number(serverPass.story.pending.unlockLevel||0)>=MAX_LEVEL?"Финальная глава":"Сюжет сезона";el("finalMilestoneLetterTag").textContent=serverPass?.letter?.available?(serverPass.letter.unread?"Новое письмо":"Письмо прочитано"):"Письмо";card.classList.toggle("is-locked",level<MAX_LEVEL);card.classList.toggle("is-complete",complete);if(complete){el("finalMilestoneTitle").textContent="Финал сезона пройден";el("finalMilestoneCopy").textContent="Полный 50 уровень завершён. Открой итоги сезона и загляни в тизер следующего приключения.";button.disabled=false;button.textContent="⭐ Итоги сезона";}else if(level>=MAX_LEVEL){el("finalMilestoneTitle").textContent="Финальный уровень открыт";el("finalMilestoneCopy").textContent="Ты уже на 50 уровне. Заполни последнюю шкалу XP, чтобы открыть экран финала сезона.";button.disabled=true;button.textContent="Заверши 50 уровень";}else{el("finalMilestoneTitle").textContent="Финал сезона впереди";el("finalMilestoneCopy").textContent=`Откроется на 50 уровне · осталось ${Math.max(0,MAX_LEVEL-level)} ур.`;button.disabled=true;button.textContent="Откроется позже";}}
 
   function showSeasonFinale(){const data=finaleData();if(!data?.unlocked){showToast("Сначала полностью заверши 50 уровень");return;}el("seasonFinaleTitle").textContent=`${serverPass?.season?.title||"Сезон"} · финал`;el("seasonFinaleSubtitle").textContent=`Полный путь пройден · ${Number(data.runs||0).toLocaleString("ru-RU")} забегов · ${Number(data.tasksClaimed||0).toLocaleString("ru-RU")} заданий с XP`;el("seasonFinaleLevel").textContent="50";el("seasonFinaleRewards").textContent=Number(data.rewardsClaimed||0).toLocaleString("ru-RU");el("seasonFinaleStory").textContent=`${Number(data.storyCompleted||0)} / ${Number(data.storyTotal||0)}`;el("seasonFinaleBest").textContent=Number(data.bestScore||0).toLocaleString("ru-RU");const teaser=data.teaser||null,box=el("seasonFinaleTeaser");const title=String(teaser?.title||data?.nextSeason?.title||"").trim(),text=String(teaser?.previewText||"").trim(),startsAt=Number(teaser?.startsAt||data?.nextSeason?.startsAt||0);box.hidden=!(title||text||startsAt);if(!box.hidden){el("seasonFinaleTeaserTitle").textContent=title?`Дальше: ${title}`:"Что дальше?";el("seasonFinaleTeaserText").textContent=text||"Следующее приключение уже готовится.";el("seasonFinaleTeaserDate").textContent=startsAt?`Старт: ${new Intl.DateTimeFormat("ru-RU",{day:"numeric",month:"long",year:"numeric",timeZone:"Europe/Moscow"}).format(new Date(startsAt*1000))}`:"";}const letterButton=el("seasonFinaleLetter");letterButton.hidden=!Boolean(serverPass?.letter?.available);el("seasonFinaleOverlay").hidden=false;document.body.style.overflow="hidden";passNotifyHaptic("success");}
   function closeSeasonFinale(){el("seasonFinaleOverlay").hidden=true;document.body.style.overflow="";}
@@ -4529,7 +4529,7 @@ img[src$="/xp.webp"]{
     const catchUpActive=Boolean(serverPass?.catchUp?.active);
     el("runsText").textContent = overflow.unlocked
       ? `Получено кейсов: ${overflow.claimed}${overflow.available>0?` · готово: ${overflow.available}`:""}`
-      : catchUpActive ? `${runCount} забегов · ⚡ ×2 догоняющий XP${seasonXpBoostActive?" · не складывается с ×2":""}` : seasonXpBoostActive ? `${runCount} забегов · ×2 XP за забеги и задания` : `${runCount} забегов`;
+      : catchUpActive ? `${runCount} забегов · ×2 догоняющий XP${seasonXpBoostActive?" · не складывается с ×2":""}` : seasonXpBoostActive ? `${runCount} забегов · ×2 XP за забеги и задания` : `${runCount} забегов`;
     el("claimedCount").textContent = `${pass.claimed.length} получено`;
     renderCatchUpCard();
     renderFinalMilestone();
@@ -5508,6 +5508,223 @@ img[src$="/xp.webp"]{
   .hero-progress-side span{font-size:7.2px!important}
   .hero-progress-side b{font-size:13px!important}
   .hero-tier-button{font-size:7.2px!important;height:30px!important;min-height:30px!important}
+}
+</style>
+
+<style id="zefirok-season-level-medallions-v1">
+/* Premium level medallions: consistent optical centering for 1..50 and 50+. */
+.hero-progress .level-badge,
+.hero-progress.is-overflow .level-badge{
+  position:relative!important;
+  overflow:visible!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  box-sizing:border-box!important;
+  padding:8px 0 0!important;
+  border:2px solid #dba22e!important;
+  border-radius:50%!important;
+  background:
+    radial-gradient(circle at 33% 24%,rgba(255,255,255,.96) 0 6%,transparent 7%),
+    radial-gradient(circle at 50% 45%,#fffdf4 0 43%,#ffe9ad 44% 57%,#efbb42 58% 70%,#c98218 71% 100%)!important;
+  color:#7f4b14!important;
+  font-family:"SF Pro Rounded","Arial Rounded MT Bold","Trebuchet MS",system-ui,sans-serif!important;
+  font-size:23px!important;
+  font-weight:1000!important;
+  font-style:normal!important;
+  font-variant-numeric:tabular-nums lining-nums!important;
+  font-feature-settings:"tnum" 1!important;
+  letter-spacing:-.04em!important;
+  line-height:1!important;
+  text-align:center!important;
+  text-indent:0!important;
+  text-shadow:0 1px 0 rgba(255,255,255,.88),0 2px 5px rgba(112,63,16,.14)!important;
+  box-shadow:
+    inset 0 0 0 3px rgba(255,255,255,.82),
+    inset 0 0 0 5px rgba(213,147,38,.18),
+    0 7px 16px rgba(155,96,17,.14)!important;
+}
+.hero-progress .level-badge::before{
+  content:"УР.";
+  position:absolute;
+  top:10px;
+  left:0;
+  right:0;
+  text-align:center;
+  color:#a56f27;
+  font:1000 6px/1 "SF Pro Rounded","Arial Rounded MT Bold",system-ui,sans-serif;
+  letter-spacing:.13em;
+  text-shadow:none;
+}
+.hero-progress .level-badge::after{
+  content:"";
+  position:absolute;
+  left:50%;
+  bottom:-4px;
+  width:9px;
+  height:9px;
+  transform:translateX(-50%) rotate(45deg);
+  border:1px solid #e5ab32;
+  border-radius:3px;
+  background:linear-gradient(145deg,#ff8db7,#d94782);
+  box-shadow:0 2px 5px rgba(151,66,95,.18);
+}
+.hero-progress.is-overflow .level-badge{
+  background:
+    radial-gradient(circle at 34% 23%,rgba(255,255,255,.96) 0 6%,transparent 7%),
+    radial-gradient(circle at 50% 45%,#fffbee 0 42%,#ffe59b 43% 56%,#efb638 57% 69%,#bd7410 70% 100%)!important;
+  color:#75440f!important;
+  font-size:20px!important;
+}
+.hero-progress.is-overflow .level-badge::before{content:"БОНУС";font-size:5px;letter-spacing:.08em;top:10px}
+
+/* Reward-track levels use one expensive badge language instead of bare numerals. */
+.level-column .level-number,
+.level-column.current .level-number,
+.level-column.selected .level-number,
+.level-column.final-milestone-column .level-number,
+.level-column.overflow-reward-column .level-number,
+.level-column.overflow-reward-column.current .level-number,
+.level-column.overflow-reward-column.selected .level-number{
+  position:relative!important;
+  z-index:5!important;
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:center!important;
+  justify-content:center!important;
+  gap:0!important;
+  box-sizing:border-box!important;
+  width:58px!important;
+  min-width:58px!important;
+  height:34px!important;
+  min-height:34px!important;
+  margin:2px auto!important;
+  padding:3px 6px 2px!important;
+  border:1px solid rgba(214,154,49,.68)!important;
+  border-radius:13px!important;
+  background:
+    linear-gradient(180deg,rgba(255,255,255,.94),rgba(255,249,235,.93)),
+    linear-gradient(145deg,#fff7dd,#f0c55b)!important;
+  color:#77502a!important;
+  box-shadow:
+    inset 0 0 0 2px rgba(255,255,255,.7),
+    0 4px 10px rgba(122,77,35,.08)!important;
+  text-shadow:none!important;
+}
+.level-column .level-number small{
+  display:block;
+  margin:0 0 1px;
+  color:#b27b38;
+  font:1000 5px/1 "SF Pro Rounded","Arial Rounded MT Bold",system-ui,sans-serif;
+  letter-spacing:.12em;
+  text-transform:uppercase;
+}
+.level-column .level-number b{
+  display:block;
+  min-width:1.7em;
+  color:inherit;
+  font:1000 15px/.95 "SF Pro Rounded","Arial Rounded MT Bold","Trebuchet MS",system-ui,sans-serif;
+  font-variant-numeric:tabular-nums lining-nums;
+  font-feature-settings:"tnum" 1;
+  letter-spacing:-.045em;
+  text-align:center;
+}
+.level-column .level-number::after{
+  content:"";
+  position:absolute;
+  left:50%;
+  bottom:-3px;
+  width:6px;
+  height:6px;
+  transform:translateX(-50%) rotate(45deg);
+  border:1px solid #e2ab42;
+  border-radius:2px;
+  background:#fff5cf;
+}
+.level-column.current .level-number,
+.level-column.selected .level-number{
+  border-color:#e05b91!important;
+  background:linear-gradient(145deg,#fff6fa,#ffdbe8)!important;
+  color:#a53d69!important;
+  box-shadow:
+    inset 0 0 0 2px rgba(255,255,255,.78),
+    0 0 0 2px rgba(230,90,146,.14),
+    0 6px 14px rgba(190,67,118,.14)!important;
+}
+.level-column.current .level-number small,
+.level-column.selected .level-number small{color:#c15a83}
+.level-column.current .level-number::after,
+.level-column.selected .level-number::after{background:linear-gradient(145deg,#ff91b9,#dd4f87);border-color:#f0b440}
+.level-column.final-milestone-column .level-number{
+  border-color:#d39521!important;
+  background:linear-gradient(145deg,#fff7d6,#f2c34f)!important;
+  color:#76460f!important;
+}
+.level-column.final-milestone-column .level-number small{color:#996116}
+.level-column.overflow-reward-column .level-number{
+  width:62px!important;
+  min-width:62px!important;
+  border-color:#d79a26!important;
+  background:linear-gradient(145deg,#fff8d9,#edbd44)!important;
+  color:#70430e!important;
+}
+.level-column.overflow-reward-column .level-number small{font-size:6px;color:#986119;letter-spacing:.06em}
+.level-column.overflow-reward-column .level-number b{font-size:16px}
+
+/* Concrete project icons for status/current-season cards — no emoji glyphs. */
+.catchup-icon,
+.season-letter-icon,
+.season-story-icon,
+.season-letter-envelope{
+  overflow:hidden;
+}
+.catchup-icon img,
+.season-letter-icon img,
+.season-story-icon img{
+  display:block;
+  width:72%;
+  height:72%;
+  object-fit:contain;
+  filter:drop-shadow(0 4px 7px rgba(122,76,47,.12));
+}
+.season-letter-envelope img{
+  display:block;
+  width:56px;
+  height:56px;
+  object-fit:contain;
+  filter:drop-shadow(0 6px 9px rgba(144,91,32,.14));
+}
+.final-milestone-tags .final-milestone-tag{
+  display:inline-flex;
+  align-items:center;
+  gap:4px;
+}
+.final-milestone-tags .final-milestone-tag::before{
+  content:"";
+  flex:0 0 14px;
+  width:14px;
+  height:14px;
+  background-repeat:no-repeat;
+  background-position:center;
+  background-size:contain;
+}
+.final-milestone-tags .final-milestone-tag.is-reward::before{background-image:url('/assets/cases/gold_closed.png')}
+.final-milestone-tags .final-milestone-tag.is-story::before{background-image:url('/assets/season-pass/season.png?v=07939')}
+.final-milestone-tags .final-milestone-tag.is-letter::before{background-image:url('/assets/ui/icon_documents.png')}
+
+@media(max-width:560px){
+  .hero-progress .level-badge,.hero-progress.is-overflow .level-badge{
+    font-size:20px!important;
+    padding-top:7px!important;
+  }
+  .hero-progress .level-badge::before{top:8px;font-size:5.5px}
+  .hero-progress.is-overflow .level-badge::before{top:8px;font-size:4.5px}
+}
+@media(max-width:390px){
+  .hero-progress .level-badge,.hero-progress.is-overflow .level-badge{font-size:18px!important}
+  .level-column .level-number,
+  .level-column.current .level-number,
+  .level-column.selected .level-number{width:54px!important;min-width:54px!important}
 }
 </style>
 </body>
