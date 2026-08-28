@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "catalogHash": "4f08ecf2042338d0",
-  "count": 431,
+  "catalogHash": "c777145014edd71a",
+  "count": 433,
   "images": [
     {
       "fileName": "achievements/background_achivment_panel.png",
@@ -3276,6 +3276,14 @@
       "modified": 1787859539000
     },
     {
+      "fileName": "ui/icon_message_season.png",
+      "label": "Icon message season",
+      "folder": "ui",
+      "path": "/assets/ui/icon_message_season.png",
+      "size": 1993531,
+      "modified": 1787932183000
+    },
+    {
       "fileName": "ui/icon_my_buy_button.png",
       "label": "Icon my buy button",
       "folder": "ui",
@@ -3386,6 +3394,14 @@
       "path": "/assets/ui/icon_skins_buttom.png",
       "size": 9651,
       "modified": 1787869777000
+    },
+    {
+      "fileName": "ui/icon_sushet_season.png",
+      "label": "Icon sushet season",
+      "folder": "ui",
+      "path": "/assets/ui/icon_sushet_season.png",
+      "size": 1912140,
+      "modified": 1787932183000
     },
     {
       "fileName": "ui/icon_zanovo_button.png",

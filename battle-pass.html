@@ -2799,6 +2799,195 @@ img[src$="/xp.webp"]{
   .tariff-sheet-title-row>img{width:64px;height:64px}
   .tariff-sheet-card .pass-tiers{grid-template-columns:1fr}
 }
+
+/* Reward preview bottom-sheet: one component for every pass reward. */
+.reward-preview-overlay{
+  position:fixed;
+  inset:0;
+  z-index:185;
+  display:flex;
+  align-items:flex-end;
+  justify-content:center;
+  background:rgba(57,39,43,.50);
+  backdrop-filter:blur(8px);
+  -webkit-backdrop-filter:blur(8px);
+  touch-action:auto
+}
+.reward-preview-overlay[hidden]{display:none!important}
+.reward-preview-card{
+  width:min(100%,520px);
+  max-height:min(88dvh,720px);
+  overflow:hidden;
+  border:1px solid rgba(235,205,198,.96);
+  border-radius:30px 30px 0 0;
+  background:linear-gradient(180deg,#fffdfb 0%,#fff7f4 100%);
+  box-shadow:0 -24px 74px rgba(70,35,41,.30);
+  transform:translate3d(0,0,0);
+  transition:transform .26s cubic-bezier(.22,.8,.25,1);
+  will-change:transform
+}
+.reward-preview-card.is-dragging{transition:none}
+.reward-preview-card.is-premium{
+  border-color:rgba(229,184,75,.74);
+  background:linear-gradient(180deg,#fffdf6 0%,#fff7e7 100%)
+}
+.reward-preview-handle{
+  width:54px;
+  height:5px;
+  margin:10px auto 5px;
+  border-radius:999px;
+  background:#ddcbc6
+}
+.reward-preview-scroll{
+  max-height:calc(min(88dvh,720px) - 18px);
+  overflow-y:auto;
+  overscroll-behavior:contain;
+  -webkit-overflow-scrolling:touch;
+  touch-action:pan-y;
+  padding:8px 18px max(20px,env(safe-area-inset-bottom));
+  text-align:center;
+  scrollbar-width:none
+}
+.reward-preview-scroll::-webkit-scrollbar{display:none}
+.reward-preview-kicker{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-height:27px;
+  padding:5px 11px;
+  border-radius:999px;
+  background:#ffe7f0;
+  color:#bb4774;
+  font-size:9px;
+  font-weight:1000;
+  letter-spacing:.075em
+}
+.reward-preview-card.is-premium .reward-preview-kicker{
+  background:linear-gradient(145deg,#fff0bd,#f5d46c);
+  color:#86590b
+}
+.reward-preview-art{
+  width:148px;
+  height:148px;
+  margin:10px auto 4px;
+  display:grid;
+  place-items:center;
+  border-radius:34px;
+  background:linear-gradient(145deg,#fff,#fff1f5);
+  border:1px solid rgba(231,190,202,.75);
+  box-shadow:0 13px 30px rgba(123,69,81,.10),inset 0 0 0 1px rgba(255,255,255,.9)
+}
+.reward-preview-card.is-premium .reward-preview-art{
+  background:linear-gradient(145deg,#fffdf3,#fff0bd);
+  border-color:rgba(221,174,65,.58);
+  box-shadow:0 13px 30px rgba(155,105,24,.12),inset 0 0 0 1px rgba(255,255,255,.84)
+}
+.reward-preview-art img{
+  width:128px;
+  height:128px;
+  object-fit:contain;
+  filter:drop-shadow(0 8px 12px rgba(92,51,60,.10))
+}
+.reward-preview-title{
+  margin:8px 0 0;
+  color:#653c3b;
+  font-size:25px;
+  line-height:1.08;
+  font-weight:1000
+}
+.reward-preview-amount{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-width:82px;
+  min-height:38px;
+  margin-top:9px;
+  padding:7px 16px;
+  border:1px solid rgba(222,102,149,.35);
+  border-radius:999px;
+  background:#ffe9f1;
+  color:#d84f87;
+  font-size:17px;
+  font-weight:1000;
+  font-variant-numeric:tabular-nums
+}
+.reward-preview-card.is-premium .reward-preview-amount{
+  border-color:rgba(214,158,40,.44);
+  background:#fff1bd;
+  color:#a06a08
+}
+.reward-preview-meta{
+  margin-top:9px;
+  color:#a27d73;
+  font-size:10px;
+  font-weight:900
+}
+.reward-preview-note{
+  margin:14px 0 0;
+  padding:13px 14px;
+  border:1px solid #efd8d1;
+  border-radius:18px;
+  background:rgba(255,255,255,.76);
+  color:#805f58;
+  font-size:11px;
+  font-weight:850;
+  line-height:1.48
+}
+.reward-preview-card.is-premium .reward-preview-note{
+  border-color:rgba(222,183,90,.42);
+  background:rgba(255,250,228,.88);
+  color:#856526
+}
+.reward-preview-action,
+.reward-preview-close{
+  width:100%;
+  min-height:50px;
+  margin-top:12px;
+  border:0;
+  border-radius:17px;
+  font-size:12px;
+  font-weight:1000
+}
+.reward-preview-action{
+  background:linear-gradient(145deg,#eb6799,#cb3c75);
+  color:#fff;
+  box-shadow:0 9px 20px rgba(184,56,108,.18)
+}
+.reward-preview-action.is-tariff{
+  background:linear-gradient(145deg,#f1bd48,#d89020);
+  color:#fff9e9;
+  box-shadow:0 9px 20px rgba(177,115,20,.18)
+}
+.reward-preview-action.is-claimed{
+  background:#dcefe0;
+  color:#3f7d49;
+  box-shadow:none
+}
+.reward-preview-action:disabled{
+  background:#eee5e1;
+  color:#a18d85;
+  box-shadow:none
+}
+.reward-preview-action.is-claimed:disabled{
+  background:#dcefe0;
+  color:#3f7d49
+}
+.reward-preview-close{
+  min-height:44px;
+  margin-top:8px;
+  border:1px solid #e8d4ce;
+  background:linear-gradient(180deg,#fff,#fff3ef);
+  color:#85635b
+}
+.reward-cell[data-reward-preview]{cursor:pointer}
+.reward-cell[data-reward-preview]:active{transform:scale(.985)}
+@media(max-width:520px){
+  .reward-preview-card{max-height:91dvh;border-radius:26px 26px 0 0}
+  .reward-preview-scroll{max-height:calc(91dvh - 18px);padding:7px 14px max(18px,env(safe-area-inset-bottom))}
+  .reward-preview-art{width:132px;height:132px;border-radius:30px}
+  .reward-preview-art img{width:114px;height:114px}
+  .reward-preview-title{font-size:22px}
+}
 </style>
 </head>
 <body>
@@ -2976,6 +3165,22 @@ img[src$="/xp.webp"]{
   </div>
 </section>
 
+
+<section class="reward-preview-overlay" id="rewardPreviewSheet" hidden aria-modal="true" role="dialog" aria-labelledby="rewardPreviewTitle">
+  <div class="reward-preview-card" id="rewardPreviewCard">
+    <div class="reward-preview-handle" aria-hidden="true"></div>
+    <div class="reward-preview-scroll" id="rewardPreviewScroll">
+      <span class="reward-preview-kicker" id="rewardPreviewKicker">НАГРАДА СЕЗОНА</span>
+      <div class="reward-preview-art"><img id="rewardPreviewArt" src="/assets/season-pass/season.png?v=07939" alt=""></div>
+      <h2 class="reward-preview-title" id="rewardPreviewTitle">Награда</h2>
+      <div class="reward-preview-amount" id="rewardPreviewAmount">×1</div>
+      <div class="reward-preview-meta" id="rewardPreviewMeta">Уровень 1 · Бесплатная линия</div>
+      <div class="reward-preview-note" id="rewardPreviewNote"></div>
+      <button class="reward-preview-action" id="rewardPreviewAction" type="button">Забрать награду</button>
+      <button class="reward-preview-close" id="rewardPreviewClose" type="button">ЗАКРЫТЬ</button>
+    </div>
+  </div>
+</section>
 
 <section class="tariff-sheet-overlay" id="tariffSheet" hidden aria-modal="true" role="dialog" aria-labelledby="tariffSheetTitle">
   <div class="tariff-sheet-card" id="tariffSheetCard">
@@ -3806,6 +4011,175 @@ img[src$="/xp.webp"]{
     return {text:"Тарифы", className:"is-none", disabled:false};
   }
 
+  let rewardPreviewDrag = null;
+  let rewardPreviewContext = null;
+
+  function rewardPreviewDisplay(rawName) {
+    const raw = String(rawName || "Награда").replace(/\s+/g," ").trim();
+    const amountMatch = raw.match(/^([\d\s\u00a0]+)\s+(.+)$/u);
+    let amount = 1;
+    let title = raw || "Награда";
+    if (amountMatch) {
+      const parsed = Number(String(amountMatch[1] || "").replace(/\s|\u00a0/g,""));
+      if (Number.isFinite(parsed) && parsed > 0) amount = parsed;
+      const tail = String(amountMatch[2] || "").toLowerCase();
+      if (tail.includes("кофе")) title = "Кофе";
+      else if (tail.includes("зефир")) title = "Зефир";
+      else if (tail.includes("очк")) title = "Очки";
+      else if (tail.includes("xp") || tail.includes("опыт")) title = "XP пропуска";
+      else title = String(amountMatch[2] || raw);
+    }
+    return {title,amount,amountLabel:`×${amount.toLocaleString("ru-RU")}`};
+  }
+
+  function rewardPreviewState(id) {
+    const [rawLevel,rawLane] = String(id || "").split(":");
+    const level = Number(rawLevel);
+    const lane = rawLane === "premium" ? "premium" : "free";
+    if (!Number.isInteger(level) || level < 1 || level > MAX_LEVEL) return null;
+    const tuple = rewards[level-1]?.[lane];
+    if (!tuple) return null;
+    const premium = lane === "premium";
+    const claimed = pass.claimed.includes(`${level}:${lane}`);
+    const levelLocked = !isUnlocked(level);
+    const tierLocked = premium && !pass.premium;
+    const claimable = !claimed && !levelLocked && !tierLocked;
+    return {id:`${level}:${lane}`,level,lane,premium,claimed,levelLocked,tierLocked,claimable,tuple};
+  }
+
+  function openRewardPreview(id) {
+    const state = rewardPreviewState(id);
+    const overlay = el("rewardPreviewSheet");
+    const card = el("rewardPreviewCard");
+    const scroll = el("rewardPreviewScroll");
+    if (!state || !overlay || !card || !scroll) return;
+    const rawName = String(state.tuple?.[1] || "Награда");
+    const display = rewardPreviewDisplay(rawName);
+    const image = String(state.tuple?.[3] || rewardAssetFor(rawName) || "/assets/season-pass/season.png?v=07939");
+    rewardPreviewContext = state;
+    rewardPreviewDrag = null;
+    card.classList.toggle("is-premium",state.premium);
+    card.classList.remove("is-dragging");
+    card.style.transform = "translate3d(0,0,0)";
+    scroll.scrollTop = 0;
+    el("rewardPreviewKicker").textContent = state.premium ? "ЭЛИТНАЯ НАГРАДА" : "НАГРАДА СЕЗОНА";
+    el("rewardPreviewArt").src = image;
+    el("rewardPreviewArt").alt = display.title;
+    el("rewardPreviewTitle").textContent = display.title;
+    el("rewardPreviewAmount").textContent = display.amountLabel;
+    el("rewardPreviewMeta").textContent = `Уровень ${state.level} · ${state.premium ? "Элитная линия" : "Бесплатная линия"}`;
+    const action = el("rewardPreviewAction");
+    action.disabled = false;
+    action.className = "reward-preview-action";
+    action.dataset.mode = "";
+    if (state.claimed) {
+      el("rewardPreviewNote").textContent = "Эта награда уже получена и находится на вашем аккаунте.";
+      action.textContent = "Получено";
+      action.classList.add("is-claimed");
+      action.disabled = true;
+    } else if (state.tierLocked) {
+      el("rewardPreviewNote").textContent = state.levelLocked
+        ? `Эта награда доступна только владельцам тарифов «Элитный» и «Элитный+». Также она откроется на ${state.level} уровне.`
+        : "Эта награда доступна только владельцам тарифов «Элитный» и «Элитный+».";
+      action.textContent = "Перейти к тарифам";
+      action.classList.add("is-tariff");
+      action.dataset.mode = "tariff";
+    } else if (state.levelLocked) {
+      el("rewardPreviewNote").textContent = `Награда откроется на ${state.level} уровне сезонного пропуска.`;
+      action.textContent = `Откроется на уровне ${state.level}`;
+      action.disabled = true;
+    } else {
+      el("rewardPreviewNote").textContent = "Награда уже открыта. Заберите её — она сразу будет начислена на аккаунт.";
+      action.textContent = "Забрать награду";
+      action.dataset.mode = "claim";
+    }
+    overlay.hidden = false;
+    passSelectHaptic();
+    requestAnimationFrame(()=>{ try { action.focus({preventScroll:true}); } catch {} });
+  }
+
+  function closeRewardPreview({animated=true}={}) {
+    const overlay = el("rewardPreviewSheet");
+    const card = el("rewardPreviewCard");
+    if (!overlay || overlay.hidden || !card) return;
+    rewardPreviewDrag = null;
+    rewardPreviewContext = null;
+    card.classList.remove("is-dragging");
+    if (!animated) {
+      card.style.transform = "translate3d(0,0,0)";
+      overlay.hidden = true;
+      return;
+    }
+    card.style.transform = `translate3d(0,${Math.max(window.innerHeight,card.offsetHeight)}px,0)`;
+    window.setTimeout(()=>{
+      overlay.hidden = true;
+      card.style.transform = "translate3d(0,0,0)";
+    },240);
+  }
+
+  function installRewardPreviewSwipe() {
+    const card = el("rewardPreviewCard");
+    const scroll = el("rewardPreviewScroll");
+    if (!card || !scroll || card.dataset.swipeReady === "1") return;
+    card.dataset.swipeReady = "1";
+    card.addEventListener("touchstart",event=>{
+      if (el("rewardPreviewSheet")?.hidden) return;
+      const touch=event.touches?.[0];
+      if (!touch || scroll.scrollTop > 0) { rewardPreviewDrag=null; return; }
+      rewardPreviewDrag={startY:touch.clientY,lastY:touch.clientY,startTime:performance.now(),dragging:false};
+    },{passive:true});
+    card.addEventListener("touchmove",event=>{
+      const drag=rewardPreviewDrag,touch=event.touches?.[0];
+      if (!drag || !touch) return;
+      const dy=touch.clientY-drag.startY;
+      drag.lastY=touch.clientY;
+      if (dy <= 0 || scroll.scrollTop > 0) return;
+      if (dy > 8) drag.dragging=true;
+      if (!drag.dragging) return;
+      event.preventDefault();
+      card.classList.add("is-dragging");
+      card.style.transform=`translate3d(0,${Math.max(0,dy*.92)}px,0)`;
+    },{passive:false});
+    const finish=()=>{
+      const drag=rewardPreviewDrag;
+      rewardPreviewDrag=null;
+      if (!drag) return;
+      const dy=Math.max(0,drag.lastY-drag.startY);
+      const elapsed=Math.max(1,performance.now()-drag.startTime);
+      const velocity=dy/elapsed;
+      card.classList.remove("is-dragging");
+      if (dy > Math.min(140,card.offsetHeight*.2) || velocity > .75) closeRewardPreview({animated:true});
+      else card.style.transform="translate3d(0,0,0)";
+    };
+    card.addEventListener("touchend",finish,{passive:true});
+    card.addEventListener("touchcancel",finish,{passive:true});
+  }
+
+  async function runRewardPreviewAction() {
+    const context = rewardPreviewContext;
+    const button = el("rewardPreviewAction");
+    if (!context || !button || button.disabled) return;
+    if (button.dataset.mode === "tariff") {
+      closeRewardPreview({animated:false});
+      openTariffSheet({focusTier:"elite"});
+      return;
+    }
+    if (button.dataset.mode !== "claim") return;
+    const old = button.textContent;
+    button.disabled = true;
+    button.textContent = "Получаем…";
+    const received = await claim(context.id);
+    render();
+    if (received) {
+      closeRewardPreview({animated:false});
+      openRewardSummary([{premium:received.lane==="premium",icon:"",image:received.imageUrl||"",name:received.title||"Награда",description:"Начислено на аккаунт",level:received.level,source:`Уровень ${received.level} · ${received.lane==="premium"?"Премиум":"Бесплатно"}`}]);
+    } else {
+      const next = rewardPreviewState(context.id);
+      if (next?.claimed) openRewardPreview(context.id);
+      else { button.disabled=false; button.textContent=old; }
+    }
+  }
+
   let tariffSheetDrag = null;
 
   function openTariffSheet({focusTier=""}={}) {
@@ -4022,7 +4396,7 @@ img[src$="/xp.webp"]{
     const state = claimed ? "✓ Получено" : claimable ? "Можно забрать" : tierLocked ? "Элитный" : `Уровень ${level}`;
     const availability = claimed ? "Награда уже забрана" : claimable ? "Награда открыта" : tierLocked ? "Откроется с премиумом" : `Откроется на ${level} уровне`;
     const mark = claimed ? "✓" : locked ? "🔒" : "";
-    return `<article class="reward-cell ${premium?"premium":""} ${unlocked?"unlocked":""} ${claimable?"claimable":""} ${claimed?"claimed":""} ${locked?"locked":""} ${levelLocked?"level-locked":""} ${tierLocked?"tier-locked":""} ${goldReward?"gold-reward":""} ${silverReward?"silver-reward":""}" aria-label="${rewardName}. ${availability}">
+    return `<article class="reward-cell ${premium?"premium":""} ${unlocked?"unlocked":""} ${claimable?"claimable":""} ${claimed?"claimed":""} ${locked?"locked":""} ${levelLocked?"level-locked":""} ${tierLocked?"tier-locked":""} ${goldReward?"gold-reward":""} ${silverReward?"silver-reward":""}" data-reward-preview="${id}" data-reward-level="${level}" data-reward-lane="${type}" aria-label="${rewardName}. ${availability}">
       <span class="reward-state">${state}</span>
       <div class="reward-icon">
         ${rewardArtMarkup(rewardName,data[0],data[3] || "")}
@@ -4030,7 +4404,7 @@ img[src$="/xp.webp"]{
       </div>
       <div class="reward-name">${data[1]}</div>
       <div class="reward-availability">${availability}</div>
-      ${claimed ? "" : `<button class="reward-action" data-claim="${id}" ${locked?"disabled":""} type="button">${label}</button>`}
+      ${claimed ? "" : `<button class="reward-action" ${locked?`data-preview-reward="${id}"`:`data-claim="${id}"`} type="button">${label}</button>`}
     </article>`;
   }
 
@@ -4974,6 +5348,13 @@ img[src$="/xp.webp"]{
       return;
     }
 
+    const previewButton = event.target.closest("[data-preview-reward]");
+    if (previewButton) {
+      passImpactHaptic("light");
+      openRewardPreview(previewButton.dataset.previewReward);
+      return;
+    }
+
     const rewardButton = event.target.closest("[data-claim]");
     if (rewardButton) {
       passImpactHaptic("medium");
@@ -4984,6 +5365,13 @@ img[src$="/xp.webp"]{
         render();
         if (received) openRewardSummary([{premium:received.lane==="premium",icon:"",image:received.imageUrl||"",name:received.title||"Награда",description:"Начислено на аккаунт",level:received.level,source:`Уровень ${received.level} · ${received.lane==="premium"?"Премиум":"Бесплатно"}`}]);
       });
+      return;
+    }
+
+    const rewardCard = event.target.closest("[data-reward-preview]");
+    if (rewardCard) {
+      passImpactHaptic("light");
+      openRewardPreview(rewardCard.dataset.rewardPreview);
       return;
     }
 
@@ -5088,6 +5476,10 @@ img[src$="/xp.webp"]{
     passImpactHaptic("light");
     openTariffSheet();
   });
+  el("rewardPreviewAction").addEventListener("click",()=>{ passImpactHaptic("medium"); void runRewardPreviewAction(); });
+  el("rewardPreviewClose").addEventListener("click",()=>{ passSelectHaptic(); closeRewardPreview({animated:true}); });
+  el("rewardPreviewSheet").addEventListener("click",event=>{ if(event.target===el("rewardPreviewSheet")) closeRewardPreview({animated:true}); });
+  installRewardPreviewSwipe();
   el("tariffSheetClose").addEventListener("click",()=>{ passSelectHaptic(); closeTariffSheet({animated:true}); });
   installTariffSheetSwipe();
   el("buyElite").addEventListener("click",()=>openPurchaseConfirm("elite"));
@@ -5169,7 +5561,8 @@ img[src$="/xp.webp"]{
   });
   document.addEventListener("keydown",event=>{
     if (event.key !== "Escape") return;
-    if (!el("tariffSheet").hidden) closeTariffSheet({animated:true});
+    if (!el("rewardPreviewSheet").hidden) closeRewardPreview({animated:true});
+    else if (!el("tariffSheet").hidden) closeTariffSheet({animated:true});
     else if (!el("seasonFinaleOverlay").hidden) closeSeasonFinale();
     else if (!el("seasonStoryOverlay").hidden) closeSeasonStory();
     else if (!el("seasonStoryArchiveOverlay").hidden) closeSeasonStoryArchive();
