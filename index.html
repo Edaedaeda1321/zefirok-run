@@ -11169,8 +11169,8 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 
   &lt;section class=&quot;profile-v2-spotlight&quot; data-profile-spotlight hidden aria-live=&quot;polite&quot;&gt;
     &lt;button class=&quot;profile-v2-spotlight-card&quot; data-profile-spotlight-action type=&quot;button&quot;&gt;
-      &lt;span class=&quot;profile-v2-spotlight-kicker&quot;&gt;✨ Актуально сейчас&lt;/span&gt;
-      &lt;span class=&quot;profile-v2-spotlight-icon&quot; data-profile-spotlight-icon aria-hidden=&quot;true&quot;&gt;✨&lt;/span&gt;
+      &lt;span class=&quot;profile-v2-spotlight-kicker&quot;&gt;&lt;img src=&quot;/assets/ui/icon_nagrady_buttom.png&quot; alt=&quot;&quot;&gt;Актуально сейчас&lt;/span&gt;
+      &lt;span class=&quot;profile-v2-spotlight-icon&quot; data-profile-spotlight-icon aria-hidden=&quot;true&quot;&gt;&lt;img src=&quot;/assets/ui/icon_nagrady_buttom.png&quot; alt=&quot;&quot;&gt;&lt;/span&gt;
       &lt;span class=&quot;profile-v2-spotlight-copy&quot;&gt;
         &lt;strong data-profile-spotlight-title&gt;Актуальное событие&lt;/strong&gt;
         &lt;small data-profile-spotlight-subtitle&gt;&lt;/small&gt;
@@ -18462,20 +18462,20 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         const seasonCount=Math.max(0,Math.floor(Number(state.seasonPassAttentionCount||0)));
         if(seasonCount&gt;0){
           const word=profileSpotlightSeasonWord(seasonCount);
-          model={type:&quot;season&quot;,icon:&quot;🎟️&quot;,title:seasonCount===1?&quot;Награда сезона готова&quot;:&quot;Награды сезона готовы&quot;,subtitle:`${formatter.format(seasonCount)} ${word} ${seasonCount===1?&quot;ждёт&quot;:&quot;ждут&quot;} в сезонном пропуске`,cta:&quot;Открыть&quot;,progress:null,meta:&quot;&quot;};
+          model={type:&quot;season&quot;,icon:&quot;/assets/ui/icon_battlepass.png&quot;,title:seasonCount===1?&quot;Награда сезона готова&quot;:&quot;Награды сезона готовы&quot;,subtitle:`${formatter.format(seasonCount)} ${word} ${seasonCount===1?&quot;ждёт&quot;:&quot;ждут&quot;} в сезонном пропуске`,cta:&quot;Открыть&quot;,progress:null,meta:&quot;&quot;};
         }
         if(!model){
           const config=friendCoopClientState?.config||{},partners=Array.isArray(friendCoopClientState?.partners)?friendCoopClientState.partners:[],partner=partners[0]||null;
           if(config.enabled===true&amp;&amp;config.active===true&amp;&amp;partner&amp;&amp;partner.claimed!==true){
             const progress=Math.max(0,Number(partner.progress||0)),target=Math.max(1,Number(config.target||1)),percent=Math.max(0,Math.min(100,progress/target*100)),ready=partner.completed===true;
-            model={type:&quot;friend&quot;,icon:&quot;🎁&quot;,title:String(config.title||&quot;Совместное задание друзей&quot;),subtitle:ready?&quot;Цель выполнена · совместная награда готова&quot;:`${partner.displayName||&quot;Друг&quot;} · ${config.description||&quot;Выполняйте цель вместе.&quot;}`,cta:ready?&quot;Получить&quot;:&quot;Продолжить&quot;,progress:percent,meta:`${formatter.format(progress)} / ${formatter.format(target)} · 🎁 ${config.rewardLabel||clientRewardShortLabel(config.reward)}`,claimable:ready};
+            model={type:&quot;friend&quot;,icon:&quot;/assets/ui/icon_referals.png&quot;,title:String(config.title||&quot;Совместное задание друзей&quot;),subtitle:ready?&quot;Цель выполнена · совместная награда готова&quot;:`${partner.displayName||&quot;Друг&quot;} · ${config.description||&quot;Выполняйте цель вместе.&quot;}`,cta:ready?&quot;Получить&quot;:&quot;Продолжить&quot;,progress:percent,meta:`${formatter.format(progress)} / ${formatter.format(target)} · ${config.rewardLabel||clientRewardShortLabel(config.reward)}`,claimable:ready};
           }
         }
         if(!model){
           const data=newcomerPathClientState||{},steps=Array.isArray(data.steps)?data.steps:[];
           if(data.available===true&amp;&amp;data.completed!==true&amp;&amp;steps.length&gt;0){
             const step=steps.find((item)=&gt;item?.ready===true)||steps.find((item)=&gt;item?.claimed!==true)||steps[steps.length-1],claimed=steps.filter((item)=&gt;item?.claimed===true).length,total=Math.max(1,steps.length),ready=step?.ready===true;
-            model={type:&quot;newcomer&quot;,icon:&quot;🌸&quot;,title:&quot;Первые 3 дня с Зеффи&quot;,subtitle:ready?`День ${Number(step?.day||data.dayNumber||1)} · награда готова`:`День ${Math.max(1,Number(data.dayNumber||step?.day||1))} из ${total} · ${String(step?.title||&quot;Продолжи маршрут&quot;)}`,cta:ready?&quot;Получить&quot;:&quot;Продолжить&quot;,progress:Math.max(0,Math.min(100,claimed/total*100)),meta:`${formatter.format(claimed)} / ${formatter.format(total)} этапов пройдено`,stepDay:Math.max(0,Number(step?.day||0)),ctaType:String(step?.ctaType||&quot;game&quot;),claimable:ready};
+            model={type:&quot;newcomer&quot;,icon:&quot;/assets/ui/icon_nagrady_buttom.png&quot;,title:&quot;Первые 3 дня с Зеффи&quot;,subtitle:ready?`День ${Number(step?.day||data.dayNumber||1)} · награда готова`:`День ${Math.max(1,Number(data.dayNumber||step?.day||1))} из ${total} · ${String(step?.title||&quot;Продолжи маршрут&quot;)}`,cta:ready?&quot;Получить&quot;:&quot;Продолжить&quot;,progress:Math.max(0,Math.min(100,claimed/total*100)),meta:`${formatter.format(claimed)} / ${formatter.format(total)} этапов пройдено`,stepDay:Math.max(0,Number(step?.day||0)),ctaType:String(step?.ctaType||&quot;game&quot;),claimable:ready};
           }
         }
         if(!model&amp;&amp;liveOpsRunEventClient?.active===true){
@@ -18484,7 +18484,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           if(Number(lm.treatsMultiplier||1)&gt;1)parts.push(`зефир ×${lm.treatsMultiplier}`);
           if(Number(lm.coffeeMultiplier||1)&gt;1)parts.push(`кофе ×${lm.coffeeMultiplier}`);
           if(liveOpsRunEventClient.endsAt)parts.push(`до ${new Date(liveOpsRunEventClient.endsAt*1000).toLocaleString(&quot;ru-RU&quot;,{day:&quot;2-digit&quot;,month:&quot;2-digit&quot;,hour:&quot;2-digit&quot;,minute:&quot;2-digit&quot;})}`);
-          model={type:&quot;liveops&quot;,icon:&quot;⭐&quot;,title:String(liveOpsRunEventClient.title||&quot;Событие в кафе&quot;),subtitle:[String(liveOpsRunEventClient.notice||&quot;&quot;),parts.join(&quot; · &quot;)].filter(Boolean).join(&quot; · &quot;)||&quot;Особое событие уже активно&quot;,cta:&quot;В игру&quot;,progress:null,meta:&quot;&quot;};
+          model={type:&quot;liveops&quot;,icon:&quot;/assets/ui/icon_busters.png&quot;,title:String(liveOpsRunEventClient.title||&quot;Событие в кафе&quot;),subtitle:[String(liveOpsRunEventClient.notice||&quot;&quot;),parts.join(&quot; · &quot;)].filter(Boolean).join(&quot; · &quot;)||&quot;Особое событие уже активно&quot;,cta:&quot;В игру&quot;,progress:null,meta:&quot;&quot;};
         }
         if(!model){
           profileSpotlightEl.hidden=true;
@@ -18500,7 +18500,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         profileSpotlightActionEl.dataset.spotlightStepDay=String(model.stepDay||&quot;&quot;);
         profileSpotlightActionEl.dataset.spotlightCtaType=String(model.ctaType||&quot;&quot;);
         profileSpotlightActionEl.dataset.spotlightClaimable=model.claimable===true?&quot;1&quot;:&quot;&quot;;
-        if(profileSpotlightIconEl)profileSpotlightIconEl.textContent=model.icon;
+        if(profileSpotlightIconEl)profileSpotlightIconEl.innerHTML=`&lt;img src=&quot;${model.icon}&quot; alt=&quot;&quot;&gt;`;
         if(profileSpotlightTitleEl)profileSpotlightTitleEl.textContent=model.title;
         if(profileSpotlightSubtitleEl)profileSpotlightSubtitleEl.textContent=model.subtitle;
         if(profileSpotlightCtaEl)profileSpotlightCtaEl.textContent=model.cta;
@@ -24571,8 +24571,10 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 #zefirok-maltipoo-runner .profile-v2-spotlight[hidden]{display:none!important}
 #zefirok-maltipoo-runner .profile-v2-spotlight-card{position:relative;width:100%;display:grid;grid-template-columns:42px minmax(0,1fr) auto;gap:9px;align-items:center;padding:11px 12px 12px;border:1px solid rgba(207,158,224,.46);border-radius:21px;background:radial-gradient(circle at 92% 12%,rgba(245,211,255,.55),transparent 34%),linear-gradient(145deg,#fffaff,#fff5f8 62%,#fff8df);color:#684653;box-shadow:0 9px 24px rgba(106,64,96,.07);font:inherit;text-align:left;-webkit-tap-highlight-color:transparent}
 #zefirok-maltipoo-runner .profile-v2-spotlight-card:active{transform:translateY(1px)}
-#zefirok-maltipoo-runner .profile-v2-spotlight-kicker{grid-column:1/-1;justify-self:start;margin-bottom:1px;padding:4px 7px;border-radius:999px;background:linear-gradient(135deg,#a86ed5,#d76f9c);color:#fff;font-size:7px;font-weight:950;line-height:1;letter-spacing:.045em;text-transform:uppercase}
-#zefirok-maltipoo-runner .profile-v2-spotlight-icon{display:grid;place-items:center;width:42px;height:42px;border-radius:14px;background:rgba(255,255,255,.82);box-shadow:inset 0 0 0 1px rgba(206,164,220,.22);font-size:21px}
+#zefirok-maltipoo-runner .profile-v2-spotlight-kicker{grid-column:1/-1;justify-self:start;display:inline-flex;align-items:center;gap:4px;margin-bottom:1px;padding:4px 7px;border-radius:999px;background:linear-gradient(135deg,#a86ed5,#d76f9c);color:#fff;font-size:7px;font-weight:950;line-height:1;letter-spacing:.045em;text-transform:uppercase}
+#zefirok-maltipoo-runner .profile-v2-spotlight-kicker img{display:block;width:12px;height:12px;object-fit:contain}
+#zefirok-maltipoo-runner .profile-v2-spotlight-icon{display:grid;place-items:center;width:42px;height:42px;border-radius:14px;background:rgba(255,255,255,.82);box-shadow:inset 0 0 0 1px rgba(206,164,220,.22)}
+#zefirok-maltipoo-runner .profile-v2-spotlight-icon img{display:block;width:38px;height:38px;object-fit:contain;object-position:center}
 #zefirok-maltipoo-runner .profile-v2-spotlight-copy{display:block;min-width:0}
 #zefirok-maltipoo-runner .profile-v2-spotlight-copy&gt;strong{display:block;color:#664250;font-size:11px;font-weight:950;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #zefirok-maltipoo-runner .profile-v2-spotlight-copy&gt;small{display:block;margin-top:3px;color:#987681;font-size:8px;font-weight:780;line-height:1.3}
