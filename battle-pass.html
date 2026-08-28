@@ -918,7 +918,22 @@ button{-webkit-tap-highlight-color:transparent}
   font-size:23px
 }
 .elite-plus .tier-title i{background:#fff3c7}
-.tier-title strong{display:block;font-size:18px;color:#744155}
+.tier-title strong{display:inline-flex;align-items:center;min-height:30px;padding:3px 10px;margin-left:-10px;border-radius:999px;font-size:18px;color:#744155}
+#eliteCard .tier-title strong{
+  color:#993a62;
+  background:linear-gradient(90deg,rgba(255,222,235,.98),rgba(255,241,246,.74));
+  box-shadow:inset 0 0 0 1px rgba(221,93,143,.18),0 5px 14px rgba(180,66,112,.08);
+  text-shadow:0 1px 0 rgba(255,255,255,.9)
+}
+#elitePlusCard .tier-title strong{
+  color:#9a6509;
+  background:linear-gradient(90deg,#fff0ad 0%,#ffe28a 42%,#fff5c7 64%,#f3c853 100%);
+  box-shadow:inset 0 0 0 1px rgba(208,151,27,.34),0 6px 16px rgba(187,126,20,.14);
+  text-shadow:0 1px 0 rgba(255,255,255,.86)
+}
+.tariff-name-accent{display:inline-flex;align-items:center;padding:1px 6px;border-radius:999px;font-weight:1000;white-space:nowrap}
+.tariff-name-accent.is-elite{color:#a23d66;background:#ffe6ef;box-shadow:inset 0 0 0 1px rgba(221,93,143,.16)}
+.tariff-name-accent.is-plus{color:#94600a;background:linear-gradient(90deg,#fff0ad,#ffe08a,#fff4c6);box-shadow:inset 0 0 0 1px rgba(208,151,27,.28);text-shadow:0 1px rgba(255,255,255,.8)}
 .tier-title span{display:block;margin-top:2px;color:#9a7568;font-size:9px;font-weight:850}
 .tier-benefits{display:grid;gap:6px;margin:13px 0}
 .tier-benefit{
@@ -3096,6 +3111,27 @@ img[src$="/xp.webp"]{
   font-weight:800;
   line-height:1.35
 }
+.tariff-sheet-title-row .tariff-name-accent{
+  display:inline-flex;
+  align-items:center;
+  padding:1px 6px;
+  border-radius:999px;
+  font-size:10px;
+  font-weight:1000;
+  letter-spacing:0;
+  white-space:nowrap
+}
+.tariff-sheet-title-row .tariff-name-accent.is-elite{
+  color:#a23d66;
+  background:#ffe6ef;
+  box-shadow:inset 0 0 0 1px rgba(221,93,143,.16)
+}
+.tariff-sheet-title-row .tariff-name-accent.is-plus{
+  color:#94600a;
+  background:linear-gradient(90deg,#fff0ad,#ffe08a,#fff4c6);
+  box-shadow:inset 0 0 0 1px rgba(208,151,27,.28);
+  text-shadow:0 1px rgba(255,255,255,.8)
+}
 .tariff-sheet-title-row>img{
   width:82px;
   height:82px;
@@ -3117,10 +3153,8 @@ img[src$="/xp.webp"]{
 .tariff-sheet-close{
   width:100%;
   min-height:48px;
-  position:sticky;
-  bottom:0;
-  z-index:8;
-  margin-top:14px;
+  position:static;
+  margin:18px 0 4px;
   border:1px solid #e6cbc4;
   border-radius:16px;
   background:linear-gradient(180deg,#fff 0%,#fff2ef 100%);
@@ -3128,7 +3162,7 @@ img[src$="/xp.webp"]{
   font-size:11px;
   font-weight:1000;
   letter-spacing:.04em;
-  box-shadow:0 -10px 22px rgba(92,54,48,.10)
+  box-shadow:0 8px 18px rgba(92,54,48,.08)
 }
 @media(max-width:520px){
   .tariff-sheet-card{max-height:92dvh;border-radius:26px 26px 0 0}
@@ -3529,7 +3563,7 @@ img[src$="/xp.webp"]{
         <div>
           <span>СЕЗОННЫЙ ПРОПУСК</span>
           <h2 id="tariffSheetTitle">Тарифы</h2>
-          <p>Выбери Элитный тариф или улучши его до Элитный+.</p>
+          <p>Выбери <span class="tariff-name-accent is-elite">Элитный</span> тариф или улучши его до <span class="tariff-name-accent is-plus">Элитный+</span>.</p>
         </div>
         <img src="/assets/season-pass/elite_plus.png?v=07939" alt="">
       </div>
