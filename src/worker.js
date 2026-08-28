@@ -1739,6 +1739,9 @@ export default {
       if (url.pathname === "/api/battle-pass/profile-bonus" && request.method === "POST") {
         return await getSeasonPassProfileBonus(request, env);
       }
+      if (url.pathname === "/api/battle-pass/tier-activation/claim" && request.method === "POST") {
+        return await claimSeasonPassTierActivationNotice(request, env);
+      }
       if (url.pathname === "/api/battle-pass/claim" && request.method === "POST") {
         return await claimSeasonPassReward(request, env, ctx);
       }
@@ -27434,6 +27437,7 @@ async function removeSeasonXpBoostFromCaseState(env, telegramIds, now = Math.flo
 
 async function resetSeasonPassDataForSeason(env, season, options = {}) {
   if (!season?.id) return { playersReset:0, boostsRemoved:0, claimsRemoved:0, tasksRemoved:0, runsRemoved:0, purchasesRemoved:0, pendingCasesRemoved:0 };
+  await ensureSeasonPassTierActivationNoticeSchema(env);
   const seasonId = String(season.id);
   try { await achievementSnapshotSeasonHistoryBeforeCleanup(env,season); } catch(error) { console.error('achievement season history snapshot before cleanup failed',seasonId,error); }
   // D1 keeps a very small compound-SELECT limit in production. Reading all
@@ -27466,10 +27470,11 @@ async function resetSeasonPassDataForSeason(env, season, options = {}) {
     env.DB.prepare(`DELETE FROM season_pass_purchases WHERE season_id=?`).bind(seasonId),
     env.DB.prepare(`DELETE FROM season_pass_purchase_guards WHERE (substr(guard_id,1,length(?))=?) OR (substr(guard_id,1,length(?))=?)`).bind(tierGuardPrefix,tierGuardPrefix,levelGuardPrefix,levelGuardPrefix),
     env.DB.prepare(`DELETE FROM season_pass_task_notifications WHERE season_id=?`).bind(seasonId),
+    env.DB.prepare(`DELETE FROM season_pass_tier_activation_notices WHERE season_id=?`).bind(seasonId),
     env.DB.prepare(`DELETE FROM season_pass_players WHERE season_id=?`).bind(seasonId)
   ]);
   return {
-    playersReset:Number(result?.[9]?.meta?.changes || 0),
+    playersReset:Number(result?.[10]?.meta?.changes || 0),
     boostsRemoved,
     claimsRemoved:Number(result?.[0]?.meta?.changes || 0),
     tasksRemoved:Number(result?.[1]?.meta?.changes || 0),
@@ -28688,6 +28693,119 @@ ${escapeHtml(text)}`,{inline_keyboard:[[{text:'📖 Читать',web_app:{url:u
   return {active:true,processed};
 }
 
+let seasonPassTierActivationNoticeSchemaPromise = null;
+async function ensureSeasonPassTierActivationNoticeSchema(env) {
+  requireDatabase(env);
+  if (!seasonPassTierActivationNoticeSchemaPromise) {
+    seasonPassTierActivationNoticeSchemaPromise = env.DB.batch([
+      env.DB.prepare(`CREATE TABLE IF NOT EXISTS season_pass_tier_activation_notices (
+        notice_id TEXT PRIMARY KEY,
+        season_id TEXT NOT NULL,
+        telegram_id TEXT NOT NULL,
+        previous_tier TEXT NOT NULL DEFAULT 'none' CHECK(previous_tier IN ('none','elite','elite_plus')),
+        new_tier TEXT NOT NULL CHECK(new_tier IN ('elite','elite_plus')),
+        source TEXT NOT NULL DEFAULT '',
+        source_key TEXT NOT NULL,
+        payload_json TEXT NOT NULL DEFAULT '{}',
+        activated_at INTEGER NOT NULL,
+        claimed_at INTEGER NOT NULL DEFAULT 0,
+        claimed_surface TEXT NOT NULL DEFAULT ''
+      )`),
+      env.DB.prepare(`CREATE UNIQUE INDEX IF NOT EXISTS idx_season_pass_tier_activation_source ON season_pass_tier_activation_notices(season_id,telegram_id,source_key)`),
+      env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_season_pass_tier_activation_pending ON season_pass_tier_activation_notices(telegram_id,season_id,claimed_at,activated_at)`)
+    ]).catch((error)=>{ seasonPassTierActivationNoticeSchemaPromise=null; throw error; });
+  }
+  return seasonPassTierActivationNoticeSchemaPromise;
+}
+
+function seasonPassTierActivationSourceKey(value) {
+  const raw=String(value||'').trim().replace(/[^A-Za-z0-9:_-]/g,'_');
+  return raw.slice(0,160)||`tier_${Date.now().toString(36)}`;
+}
+
+function seasonPassTierActivationBenefits(season,newTier,payload={}) {
+  if(newTier==='elite') return [
+    {key:'premium_rewards',title:'Премиальная линия из 50 наград',imageUrl:'/assets/season-pass/season.png?v=07939'},
+    {key:'premium_tasks',title:'Премиальные задания',imageUrl:'/assets/season-pass/quest.png?v=07939'},
+    {key:'rating_star',title:'Розовая ✦ в рейтинге',imageUrl:'',symbol:'✦'},
+    {key:'legendary_case',title:'Легендарный кейс на 50 уровне',imageUrl:'/assets/cases/legendary_closed.png'}
+  ];
+  const settings=seasonPassPublicTierSettings(season)?.elitePlus||{};
+  const benefits=[
+    {key:'elite_all',title:'Все преимущества «Элитного»',imageUrl:'/assets/season-pass/elite.png?v=07939'},
+    {key:'rating_star',title:'Золотая ✦ в рейтинге',imageUrl:'',symbol:'✦'}
+  ];
+  if(settings.xpBoost!==false){
+    benefits.push({key:'season_xp_x2',title:'×2 XP сезона',imageUrl:'/assets/season-pass/xp_x2.png?v=07939'});
+    benefits.push({key:'profile_xp_x2',title:'×2 XP профиля',imageUrl:'/assets/season-pass/xp_x2.png?v=07939'});
+  }
+  const bonusLevels=Math.max(0,Number(payload.bonusLevels??settings.bonusLevels)||0);
+  if(bonusLevels>0)benefits.push({key:'bonus_levels',title:`+${bonusLevels} уровней пропуска`,imageUrl:'/assets/season-pass/levels_5.png?v=07939'});
+  for(const cosmetic of Array.isArray(settings.cosmetics)?settings.cosmetics:[]){
+    if(!cosmetic||cosmetic.kind==='secret')continue;
+    benefits.push({key:`cosmetic_${String(cosmetic.kind||'item')}`,title:String(cosmetic.title||'Эксклюзивная награда'),imageUrl:String(cosmetic.imageUrl||'/assets/season-pass/season.png?v=07939')});
+  }
+  if(settings.case)benefits.push({key:'bonus_case',title:String(settings.case.title||'Золотой кейс'),imageUrl:String(settings.case.imageUrl||'/assets/cases/gold_closed.png')});
+  return benefits;
+}
+
+function seasonPassTierActivationNoticeView(row,season) {
+  if(!row)return null;
+  let payload={};try{payload=JSON.parse(String(row.payload_json||'{}'))||{};}catch{}
+  const previousTier=['elite','elite_plus'].includes(String(row.previous_tier))?String(row.previous_tier):'none';
+  const newTier=String(row.new_tier)==='elite_plus'?'elite_plus':'elite';
+  const fromLevel=Math.max(0,Number(payload.fromLevel)||0),toLevel=Math.max(0,Number(payload.toLevel)||0);
+  const bonusLevels=Math.max(0,Number(payload.bonusLevels)||Math.max(0,toLevel-fromLevel));
+  return {
+    id:String(row.notice_id||''),seasonId:String(row.season_id||''),seasonTitle:String(season?.title||payload.seasonTitle||''),
+    previousTier,newTier,isUpgrade:previousTier==='elite'&&newTier==='elite_plus',source:String(row.source||''),activatedAt:Number(row.activated_at||0),
+    fromLevel,toLevel,bonusLevels,benefits:seasonPassTierActivationBenefits(season,newTier,{...payload,bonusLevels})
+  };
+}
+
+async function queueSeasonPassTierActivationNotice(env,{season,telegramId,previousTier='none',newTier='',source='',sourceKey='',activatedAt=0,payload={}}={}) {
+  const id=String(telegramId||'').trim(),sid=String(season?.id||'').trim();
+  const before=['elite','elite_plus'].includes(String(previousTier))?String(previousTier):'none';
+  const after=String(newTier)==='elite_plus'?'elite_plus':String(newTier)==='elite'?'elite':'';
+  if(!id||!sid||!after||before===after||(before==='elite_plus'&&after==='elite'))return null;
+  await ensureSeasonPassTierActivationNoticeSchema(env);
+  const key=seasonPassTierActivationSourceKey(sourceKey||`${source}:${after}:${activatedAt||Date.now()}`);
+  const noticeId=`sp_tier_${sid}_${id}_${key}`.replace(/[^A-Za-z0-9:_-]/g,'_').slice(0,190);
+  const now=Math.max(1,Math.floor(Number(activatedAt)||Date.now()/1000));
+  const safePayload={...(payload&&typeof payload==='object'?payload:{}),seasonTitle:String(season?.title||payload?.seasonTitle||'')};
+  // If a player went from no tier to Elite and then to Elite+ before ever seeing
+  // the first celebration, the newer maximum-tier notice supersedes the stale
+  // Elite presentation. Already-viewed notices are never rewritten.
+  if(after==='elite_plus')await env.DB.prepare(`UPDATE season_pass_tier_activation_notices SET claimed_at=?,claimed_surface='superseded' WHERE season_id=? AND telegram_id=? AND new_tier='elite' AND claimed_at=0`).bind(now,sid,id).run();
+  await env.DB.prepare(`INSERT OR IGNORE INTO season_pass_tier_activation_notices(notice_id,season_id,telegram_id,previous_tier,new_tier,source,source_key,payload_json,activated_at,claimed_at,claimed_surface) VALUES(?,?,?,?,?,?,?,?,?,0,'')`)
+    .bind(noticeId,sid,id,before,after,String(source||'').slice(0,80),key,JSON.stringify(safePayload),now).run();
+  const row=await env.DB.prepare(`SELECT * FROM season_pass_tier_activation_notices WHERE season_id=? AND telegram_id=? AND source_key=? LIMIT 1`).bind(sid,id,key).first();
+  return row&&Number(row.claimed_at||0)===0?seasonPassTierActivationNoticeView(row,season):null;
+}
+
+async function pendingSeasonPassTierActivationNotice(env,telegramId,season) {
+  const id=String(telegramId||'').trim(),sid=String(season?.id||'').trim();
+  if(!id||!sid)return null;
+  await ensureSeasonPassTierActivationNoticeSchema(env);
+  const row=await env.DB.prepare(`SELECT * FROM season_pass_tier_activation_notices WHERE telegram_id=? AND season_id=? AND claimed_at=0 ORDER BY activated_at ASC,notice_id ASC LIMIT 1`).bind(id,sid).first();
+  return seasonPassTierActivationNoticeView(row,season);
+}
+
+async function claimSeasonPassTierActivationNotice(request,env) {
+  try{
+    requireDatabase(env);requireBotToken(env);await ensureSeasonPassTierActivationNoticeSchema(env);
+    const body=await readJson(request),auth=await validateTelegramInitData(String(body.initData||body.init_data||''),env),telegramId=String(auth.user.id);
+    const noticeId=String(body.noticeId||body.notice_id||'').trim();if(!noticeId||noticeId.length>190)throw new ApiError(400,'Некорректное уведомление активации.');
+    const surface=['index','battle_pass'].includes(String(body.surface||''))?String(body.surface):'unknown';
+    const now=Math.floor(Date.now()/1000);
+    const changed=await env.DB.prepare(`UPDATE season_pass_tier_activation_notices SET claimed_at=?,claimed_surface=? WHERE notice_id=? AND telegram_id=? AND claimed_at=0`).bind(now,surface,noticeId,telegramId).run();
+    if(Number(changed?.meta?.changes||0)<1)return jsonResponse({ok:true,claimed:false,notice:null});
+    const row=await env.DB.prepare(`SELECT * FROM season_pass_tier_activation_notices WHERE notice_id=? AND telegram_id=? LIMIT 1`).bind(noticeId,telegramId).first();
+    const season=row?await loadSeasonPassSeasonById(env,String(row.season_id||'')):null;
+    return jsonResponse({ok:true,claimed:true,notice:seasonPassTierActivationNoticeView(row,season)});
+  }catch(error){if(error instanceof ApiError)return jsonResponse({ok:false,error:error.message},error.status);console.error('claimSeasonPassTierActivationNotice failed',error);return jsonResponse({ok:false,error:'Не удалось открыть уведомление активации.'},500);}
+}
+
 async function buildSeasonPassPayload(env,season,telegramId,player=null){
   const current=player||await ensureSeasonPassPlayer(env,season,telegramId);
   const [rewardsResult,claimsResult,entitlementsResult,profileRow,tasksPayload,summary]=await Promise.all([
@@ -28702,13 +28820,13 @@ async function buildSeasonPassPayload(env,season,telegramId,player=null){
   const deliveredClaims=claimsResult.results||[];
   const overflowClaimed=deliveredClaims.filter(row=>String(row.lane)==='overflow').length;
   const overflow=seasonPassOverflowView(xp,overflowClaimed);
-  const [letter,seasonalCases,story]=await Promise.all([seasonPassTeaserForPlayer(env,season,telegramId,current),seasonPassSeasonalCaseInventory(env,telegramId),seasonPassStoryForPlayer(env,season,telegramId,current)]);
+  const [letter,seasonalCases,story,tierActivationNotice]=await Promise.all([seasonPassTeaserForPlayer(env,season,telegramId,current),seasonPassSeasonalCaseInventory(env,telegramId),seasonPassStoryForPlayer(env,season,telegramId,current),pendingSeasonPassTierActivationNotice(env,telegramId,season)]);
   const catchUp=seasonPassCatchUpView(season,current);
   const finale=await seasonPassFinaleForPlayer(env,season,telegramId,current,summary,story,letter);
   const availablePoints=(profileRow?.wallet_override==null?Number(profileRow?.wallet||0):Number(profileRow?.wallet_override||0))+Number(profileRow?.pending_wallet||0);
   const availableTreats=(profileRow?.treats_override==null?Number(profileRow?.treats||0):Number(profileRow?.treats_override||0))+Number(profileRow?.pending_treats||0);
   const availableCoffee=(profileRow?.coffee_override==null?Number(profileRow?.coffee||0):Number(profileRow?.coffee_override||0))+Number(profileRow?.pending_coffee||0);
-  return {ok:true,season:{...season,progression:seasonPassProgressionView(),tierSettings:seasonPassPublicTierSettings(season),capabilities:seasonPassCapabilities(season)},player:seasonPassPlayerView(current),overflow,catchUp,finale,letter,seasonalCases,story,
+  return {ok:true,season:{...season,progression:seasonPassProgressionView(),tierSettings:seasonPassPublicTierSettings(season),capabilities:seasonPassCapabilities(season)},player:seasonPassPlayerView(current),overflow,catchUp,finale,letter,seasonalCases,story,tierActivationNotice,
     rewards:(rewardsResult.results||[]).map(seasonPassPlayerRewardView),
     claimed:deliveredClaims.filter(row=>String(row.lane)==='free'||String(row.lane)==='premium').map(row=>`${Number(row.level)}:${String(row.lane)}`),entitlements:(entitlementsResult.results||[]).map(row=>String(row.item_id)).filter(item=>!item.startsWith('__system:')),tasks:tasksPayload.tasks,taskPeriods:tasksPayload.periods,taskClaimableCount:seasonPassCapabilities(season).canClaimTasks?tasksPayload.claimableCount:0,summary,
     balance:{points:availablePoints,treats:availableTreats,coffee:availableCoffee}};
@@ -28766,7 +28884,9 @@ async function buildSeasonPassMutationPayload(env,season,telegramId,options={}){
   if(options.includeClaims){const rows=claimsResult?.results||[];payload.claimed=rows.filter(row=>String(row.lane)==='free'||String(row.lane)==='premium').map(row=>`${Number(row.level)}:${String(row.lane)}`);payload.overflow=seasonPassOverflowView(player?.xp,rows.filter(row=>String(row.lane)==='overflow').length);}
   if(options.includeEntitlements)payload.entitlements=(entitlementsResult?.results||[]).map(row=>String(row.item_id)).filter(item=>!item.startsWith('__system:'));
   if(options.includeTasks&&tasksPayload){payload.tasks=tasksPayload.tasks;payload.taskPeriods=tasksPayload.periods;payload.taskClaimableCount=seasonPassCapabilities(season).canClaimTasks?tasksPayload.claimableCount:0;}
-  payload.story=await seasonPassStoryForPlayer(env,season,String(telegramId),player);
+  const [story,tierActivationNotice]=await Promise.all([seasonPassStoryForPlayer(env,season,String(telegramId),player),pendingSeasonPassTierActivationNotice(env,String(telegramId),season)]);
+  payload.story=story;
+  payload.tierActivationNotice=tierActivationNotice;
   payload.catchUp=seasonPassCatchUpView(season,player);
   if(Math.max(0,Number(player?.xp)||0)>=SEASON_PASS_LEVEL_50_COMPLETE_XP)payload.finale=await seasonPassFinaleForPlayer(env,season,String(telegramId),player,null,payload.story,null);
   else payload.finale={unlocked:false,level:seasonPassLevelFromXp(Math.max(0,Number(player?.xp)||0)),displayLevel:String(seasonPassLevelFromXp(Math.max(0,Number(player?.xp)||0))),xp:Math.max(0,Number(player?.xp)||0),rewardsClaimed:0,tasksClaimed:0,runs:0,bestScore:0,storyCompleted:0,storyTotal:0,nextSeason:null,teaser:null};
@@ -28821,15 +28941,16 @@ async function getSeasonPassProfileBonusForUser(env,telegramId){
   const season=await loadSeasonPassSeason(env);
   if(season.status==='ended'){
     const player=season.claimWindowOpen?await ensureSeasonPassPlayer(env,season,String(telegramId)):null;
-    const attention=player?await seasonPassAttentionForPlayer(env,season,String(telegramId),player):{claimableCount:0,rewardCount:0,taskCount:0,overflowCount:0};
-    return {ok:true,active:false,multiplier:1,premiumTier:String(player?.premium_tier||'none'),seasonId:season.id,status:season.status,endsAt:season.endsAt,claimWindowOpen:Boolean(season.claimWindowOpen),claimableCount:attention.claimableCount,rewardClaimableCount:attention.rewardCount,taskClaimableCount:attention.taskCount,overflowClaimableCount:attention.overflowCount,seasonalCaseClaimableCount:attention.seasonalCaseCount||0};
+    const [attention,tierActivationNotice]=player?await Promise.all([seasonPassAttentionForPlayer(env,season,String(telegramId),player),pendingSeasonPassTierActivationNotice(env,String(telegramId),season)]):[{claimableCount:0,rewardCount:0,taskCount:0,overflowCount:0},null];
+    return {ok:true,active:false,multiplier:1,premiumTier:String(player?.premium_tier||'none'),seasonId:season.id,status:season.status,endsAt:season.endsAt,claimWindowOpen:Boolean(season.claimWindowOpen),tierActivationNotice,claimableCount:attention.claimableCount,rewardClaimableCount:attention.rewardCount,taskClaimableCount:attention.taskCount,overflowClaimableCount:attention.overflowCount,seasonalCaseClaimableCount:attention.seasonalCaseCount||0};
   }
   const player=await ensureSeasonPassPlayer(env,season,String(telegramId));
-  const [active,attention]=await Promise.all([
+  const [active,attention,tierActivationNotice]=await Promise.all([
     season.status==='active'?seasonPassHasXpX2(env,season.id,String(telegramId),player):Promise.resolve(false),
-    seasonPassAttentionForPlayer(env,season,String(telegramId),player)
+    seasonPassAttentionForPlayer(env,season,String(telegramId),player),
+    pendingSeasonPassTierActivationNotice(env,String(telegramId),season)
   ]);
-  return {ok:true,active,multiplier:active?2:1,premiumTier:String(player?.premium_tier||'none'),seasonId:season.id,status:season.status,endsAt:season.endsAt,claimWindowOpen:false,claimableCount:attention.claimableCount,rewardClaimableCount:attention.rewardCount,taskClaimableCount:attention.taskCount,overflowClaimableCount:attention.overflowCount,seasonalCaseClaimableCount:attention.seasonalCaseCount||0};
+  return {ok:true,active,multiplier:active?2:1,premiumTier:String(player?.premium_tier||'none'),seasonId:season.id,status:season.status,endsAt:season.endsAt,claimWindowOpen:false,tierActivationNotice,claimableCount:attention.claimableCount,rewardClaimableCount:attention.rewardCount,taskClaimableCount:attention.taskCount,overflowClaimableCount:attention.overflowCount,seasonalCaseClaimableCount:attention.seasonalCaseCount||0};
 }
 
 async function getSeasonPassProfileBonus(request,env){
@@ -29299,7 +29420,8 @@ async function elitePlusBenefitPlan(env,ctx,player,now,options={}){
   const currentLevel=seasonPassLevelFromXp(player.xp);
   const bonusLevels=bonusAlreadyGranted?0:Math.max(0,Math.min(25,Number(benefits.bonusLevels)||0));
   const targetLevel=Math.min(50,currentLevel+bonusLevels);
-  const targetXp=bonusLevels>0?Math.max(Number(player.xp)||0,seasonPassXpForLevel(targetLevel)):Math.max(0,Number(player.xp)||0);
+  const grantedBonusLevels=Math.max(0,targetLevel-currentLevel);
+  const targetXp=grantedBonusLevels>0?Math.max(Number(player.xp)||0,seasonPassXpForLevel(targetLevel)):Math.max(0,Number(player.xp)||0);
   const statements=[
     env.DB.prepare(`UPDATE season_pass_players SET xp=?,premium_tier='elite_plus',elite_plus_bonus_granted=1,revision=revision+1,updated_at=? WHERE season_id=? AND telegram_id=?`).bind(targetXp,now,ctx.season.id,ctx.telegramId)
   ];
@@ -29318,10 +29440,10 @@ async function elitePlusBenefitPlan(env,ctx,player,now,options={}){
   statements.push(caseStateUpdateStatement(env,ctx.telegramId,state,now));
   const received=[];
   if(benefits.xpBoost)received.push({title:'×2 XP сезонного пропуска',itemId:SEASON_PASS_SPECIAL_XP_X2,imageUrl:'/assets/season-pass/xp_x2.png'});
-  if(bonusLevels>0)received.push({title:`+${bonusLevels} уровней`,itemId:`levels_${bonusLevels}`,imageUrl:'/assets/season-pass/levels_5.png'});
+  if(grantedBonusLevels>0)received.push({title:`+${grantedBonusLevels} уровней`,itemId:`levels_${grantedBonusLevels}`,imageUrl:'/assets/season-pass/levels_5.png'});
   for(const cosmetic of cosmetics)received.push({title:String(cosmetic.title||'Эксклюзивная награда'),itemId:String(cosmetic.itemId),imageUrl:String(cosmetic.imageUrl||'/assets/season-pass/season.png')});
   if(caseCount>0)received.push({title:`${String(benefits.case?.title||'Кейс')}${caseCount>1?` ×${caseCount}`:''}`,itemId:`${caseType}_case`,imageUrl:String(benefits.case?.imageUrl||ownerPanelCaseAsset(caseType))});
-  return {statements,received};
+  return {statements,received,activation:{fromLevel:currentLevel,toLevel:targetLevel,bonusLevels:grantedBonusLevels,caseCount,caseType}};
 }
 
 async function reconcileDeliveredSeasonPassTier(env,ctx,effectiveTier,now){
@@ -29406,6 +29528,7 @@ async function purchaseSeasonPassTier(request,env){
       await reconcileElitePlusTaskXpBoost(env,ctx.season,ctx.telegramId,upgradedPlayer);
     }
     try{await recordPlayerTimeline(env,ctx.telegramId,'season_pass_purchase',`активировал тариф «${tier==='elite_plus'?'Элитный+':'Элитный'}»`,{seasonId:ctx.season.id,tier,price},`season_pass_purchase_${ctx.season.id}_${tier}`,ctx.auth.user,now);}catch(error){console.error('season pass purchase timeline failed',error);}
+    try{await queueSeasonPassTierActivationNotice(env,{season:ctx.season,telegramId:ctx.telegramId,previousTier:current,newTier:tier,source:'battle_pass_purchase',sourceKey:`purchase:${tier}`,activatedAt:now,payload:elitePlusPlan?.activation||{fromLevel:seasonPassLevelFromXp(ctx.player?.xp),toLevel:seasonPassLevelFromXp(ctx.player?.xp),bonusLevels:0}});}catch(error){console.error('season pass purchase activation notice failed',error);}
     try{await refreshReferralProgressForInvitee(env,ctx.telegramId,{source:'season_tier',seasonId:ctx.season.id,tier});}catch(error){console.error('referral season tier refresh failed',error);}
     const received=tier==='elite_plus'?(elitePlusPlan?.received||[]):[];
     return jsonResponse({...await buildSeasonPassMutationPayload(env,ctx.season,ctx.telegramId,{includeEntitlements:true,includeTasks:true,premiumTier:tier}),received,pricePaid:price,repeated:false,purchasedTier:tier});
@@ -35371,12 +35494,12 @@ async function purchaseFlashOffer(request, env) {
     if(!slotNo){const retry=await env.DB.prepare(`SELECT * FROM shop_flash_offer_purchases WHERE request_id=? AND telegram_id=? LIMIT 1`).bind(requestId,telegramId).first();if(retry?.status==="completed")return jsonResponse({ok:true,repeated:true,purchaseId:String(retry.purchase_id),profile:await flashOfferProfilePayload(env,telegramId),rewards:ownerV8SafeJson(retry.rewards_json,[]),physicalRewards:ownerV8SafeJson(retry.physical_codes_json,[])});if(retry?.status==="reserved")return jsonResponse({ok:true,pending:true,requestId,retryAfterMs:900},202);throw new ApiError(409,"Лимит покупок этой акции уже исчерпан.");}
     const ownerName=telegramDisplayName(auth.user),ttl=positiveInt(env.REWARD_TTL_SECONDS,DEFAULT_REWARD_TTL_SECONDS),physicalRows=[];
     for(const reward of rewards){if(reward.kind!=="product")continue;for(let i=0;i<reward.amount;i+=1){const product=PRODUCTS[reward.id];const consumptionId=`flash:${reservedPurchaseId}:${executionToken}:${physicalRows.length}`;const stockReservation=await consumeShopStock(env,{category:"prize",productId:product.id,consumptionId,telegramId});stockConsumptionIds.push(consumptionId);const unique=await generateUniqueRewardCode(env,product);physicalRows.push({code:unique.code,compact:unique.compact,requestId:`flash_${reservedPurchaseId}_${physicalRows.length}`,productId:product.id,productName:product.title,createdAt:now,expiresAt:now+ttl,status:"active",consumptionId,stockLimited:Boolean(stockReservation?.limited)});}}
-    let passStatements=[],passReceived=[];
+    let passStatements=[],passReceived=[],passElitePlusActivation=null;
     if(passContext?.requestedTier==="elite"){
       passStatements.push(env.DB.prepare(`UPDATE season_pass_players SET premium_tier='elite',revision=revision+1,updated_at=? WHERE season_id=? AND telegram_id=? AND premium_tier='none'`).bind(now,String(passContext.season.id),telegramId));
     }else if(passContext?.requestedTier==="elite_plus"){
       const plan=await elitePlusBenefitPlan(env,{season:passContext.season,telegramId,player:passContext.player},passContext.player,now,{source:`flash-offer:${offerId}`,bonusAlreadyGranted:Boolean(Number(passContext.player?.elite_plus_bonus_granted||0))});
-      passStatements.push(...plan.statements);passReceived=Array.isArray(plan.received)?plan.received:[];
+      passStatements.push(...plan.statements);passReceived=Array.isArray(plan.received)?plan.received:[];passElitePlusActivation=plan.activation||null;
     }
     if(passContext?.levelCount>0&&passContext?.targetXp>Number(passContext?.player?.xp||0))passStatements.push(env.DB.prepare(`UPDATE season_pass_players SET xp=CASE WHEN xp<? THEN ? ELSE xp END,revision=revision+1,updated_at=? WHERE season_id=? AND telegram_id=?`).bind(passContext.targetXp,passContext.targetXp,now,String(passContext.season.id),telegramId));
     if(passContext?.xpAmount>0)passStatements.push(env.DB.prepare(`UPDATE season_pass_players SET xp=xp+?,revision=revision+1,updated_at=? WHERE season_id=? AND telegram_id=?`).bind(passContext.xpAmount,now,String(passContext.season.id),telegramId));
@@ -35423,6 +35546,9 @@ async function purchaseFlashOffer(request, env) {
     for(const reward of cosmeticRewards){if(["avatar","frame","trail","skin"].includes(String(reward.kind)))await recordContentAnalyticsEvent(env,telegramId,reward.kind,reward.id,"acquired","flash_offer",offerId);}
     if(passContext?.requestedTier==="elite_plus"){
       try{const updatedPass=await env.DB.prepare(`SELECT * FROM season_pass_players WHERE season_id=? AND telegram_id=? LIMIT 1`).bind(String(passContext.season.id),telegramId).first();await reconcileElitePlusTaskXpBoost(env,passContext.season,telegramId,updatedPass);}catch(error){console.error("flash offer elite+ task xp reconciliation failed",error);}
+    }
+    if(passContext?.requestedTier&&passContext?.season){
+      try{await queueSeasonPassTierActivationNotice(env,{season:passContext.season,telegramId,previousTier:passContext.currentTier,newTier:passContext.requestedTier,source:'flash_offer',sourceKey:`flash:${reservedPurchaseId}`,activatedAt:now,payload:passContext.requestedTier==='elite_plus'?(passElitePlusActivation||{}):{fromLevel:passContext.currentLevel,toLevel:passContext.currentLevel,bonusLevels:0}});}catch(error){console.error("flash offer tier activation notice failed",error);}
     }
     try{await recordPlayerTimeline(env,telegramId,"flash_offer_purchase",`купил акцию «${String(row.title||offerId)}»`,{offerId,price,rewards:publicRewards.map(r=>({kind:r.kind,id:r.id||"",amount:r.amount}))},reservedPurchaseId,auth.user,now);}catch(error){console.error("flash offer timeline write failed",error);}
     let seasonPass=null;
@@ -37999,7 +38125,7 @@ const TEST_PROJECT_SANDBOX_API_PATHS = Object.freeze([
   "/api/gifts/state","/api/gifts/read","/api/gifts/claim","/api/friends/coop/state","/api/friends/coop/claim","/api/newcomer/claim","/api/support/state","/api/support/create","/api/support/reply","/api/support/read","/api/news/read",
   "/api/polls/game/next","/api/polls/game/vote","/api/polls/game/snooze",
   "/api/shop/offers","/api/shop/offers/event","/api/shop/offers/purchase",
-  "/api/battle-pass/access","/api/battle-pass/state","/api/battle-pass/run","/api/battle-pass/profile-bonus","/api/battle-pass/task-notices/pending","/api/battle-pass/task-notices/read",
+  "/api/battle-pass/access","/api/battle-pass/state","/api/battle-pass/run","/api/battle-pass/profile-bonus","/api/battle-pass/tier-activation/claim","/api/battle-pass/task-notices/pending","/api/battle-pass/task-notices/read",
   "/api/battle-pass/claim","/api/battle-pass/claim-all","/api/battle-pass/purchase-tier","/api/battle-pass/purchase-level",
   "/api/battle-pass/tasks/claim","/api/battle-pass/tasks/claim-all","/api/battle-pass/overflow/claim","/api/battle-pass/seasonal-case/open",
   "/api/battle-pass/letter/state","/api/battle-pass/letter/open","/api/battle-pass/story/open","/api/battle-pass/story/complete","/api/battle-pass/story/test/open"
@@ -38076,7 +38202,7 @@ function testProjectSandboxPassPayload(state, snapshot) {
     season:{...testProjectClone(season),progression:testProjectSeasonPassProgressionView(),tierSettings:seasonPassPublicTierSettings(season),capabilities:seasonPassCapabilities(season)},
     player,overflow:testProjectSeasonPassOverflowView(Number(state?.passXp||0),Number(state?.passOverflowClaimed||0)),catchUp:lab.catchUp||{active:false,multiplier:1},
     finale:{unlocked:Number(player.level||1)>=50,level:Number(player.level||1),displayLevel:String(player.displayLevel||player.level||1),xp:Number(player.xp||0),rewardsClaimed:claimed.length,tasksClaimed:(state?.passTaskClaims||[]).length,runs:Number(state?.sandbox?.completedRuns||0),bestScore:Number(state?.bestScore||0),storyCompleted:0,storyTotal:0,nextSeason:null,teaser:null},
-    letter:null,seasonalCases,story:null,
+    letter:null,seasonalCases,story:null,tierActivationNotice:null,
     rewards:(season?.rewards||[]).map((reward)=>({...testProjectClone(reward),rewardType:String(reward?.rewardType||reward?.kind||""),itemId:String(reward?.itemId||reward?.id||"")})),
     claimed,entitlements,tasks,taskPeriods:periods,taskClaimableCount:tasks.filter((task)=>task.complete&&!task.claimed&&!task.locked).length,
     summary:{runs:Number(state?.sandbox?.completedRuns||0),bestScore:Number(state?.bestScore||0),tasksClaimed:(state?.passTaskClaims||[]).length,rewardsClaimed:claimed.length},
@@ -38390,7 +38516,8 @@ async function testProjectSandboxGameData(env, ctx) {
 
   if(path==="/api/battle-pass/access")return response({ok:true,allowed:true,canPreviewUpcoming:true,accessRole:"owner_test_project",season:testProjectSandboxPassPayload(state,snapshot).season,state:testProjectSandboxPassPayload(state,snapshot)});
   if(path==="/api/battle-pass/state")return response(testProjectSandboxPassPayload(state,snapshot));
-  if(path==="/api/battle-pass/profile-bonus"){const active=Number(state.seasonXpBoosts||0)>0||state.passTier==="elite_plus";return response({ok:true,active,multiplier:active?2:1,claimableCount:testProjectSandboxPassPayload(state,snapshot).taskClaimableCount});}
+  if(path==="/api/battle-pass/profile-bonus"){const active=Number(state.seasonXpBoosts||0)>0||state.passTier==="elite_plus";return response({ok:true,active,multiplier:active?2:1,tierActivationNotice:null,claimableCount:testProjectSandboxPassPayload(state,snapshot).taskClaimableCount});}
+  if(path==="/api/battle-pass/tier-activation/claim")return response({ok:true,claimed:false,notice:null,testOnly:true});
   if(path==="/api/battle-pass/task-notices/pending")return response({ok:true,pending:false,notice:null});
   if(path==="/api/battle-pass/task-notices/read")return response({ok:true});
   if(path==="/api/battle-pass/run")return response({ok:true,xpAwarded:0,profileXpAwarded:0,repeated:true,taskNotice:null});
@@ -40432,10 +40559,11 @@ async function ownerPanelGrantSeasonPassTier(env, ctx, telegramId, tier, reason)
   }
 
   let received = [];
+  let plan = null;
   if (normalizedTier === "elite") {
     await env.DB.prepare(`UPDATE season_pass_players SET premium_tier='elite',revision=revision+1,updated_at=? WHERE season_id=? AND telegram_id=? AND premium_tier='none'`).bind(now, season.id, telegramId).run();
   } else {
-    const plan = await elitePlusBenefitPlan(env, { season, telegramId, player }, player, now, {
+    plan = await elitePlusBenefitPlan(env, { season, telegramId, player }, player, now, {
       source: `owner_grant:${sourceId}`,
       bonusAlreadyGranted: Boolean(Number(player?.elite_plus_bonus_granted || 0))
     });
@@ -40447,6 +40575,8 @@ async function ownerPanelGrantSeasonPassTier(env, ctx, telegramId, tier, reason)
     updated=await reconcileElitePlusTaskXpBoost(env,season,telegramId,updated);
   }
   const premiumTier = String(updated?.premium_tier || normalizedTier);
+  try { await queueSeasonPassTierActivationNotice(env,{season,telegramId,previousTier:currentTier,newTier:premiumTier,source:'owner_grant',sourceKey:sourceId,activatedAt:now,payload:normalizedTier==='elite_plus'?(plan?.activation||{}):{fromLevel:seasonPassLevelFromXp(player?.xp),toLevel:seasonPassLevelFromXp(player?.xp),bonusLevels:0}}); }
+  catch (error) { console.error("owner season pass activation notice failed", error); }
   try {
     await recordPlayerTimeline(env, telegramId, "season_pass_owner_grant", `получил тариф «${ownerPanelSeasonPassTierLabel(normalizedTier)}» от владельца`, {
       seasonId: season.id, previousTier: currentTier, premiumTier, requestedTier: normalizedTier, received, sourceId, reason

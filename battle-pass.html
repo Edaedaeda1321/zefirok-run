@@ -1326,99 +1326,402 @@ button{-webkit-tap-highlight-color:transparent}
 }
 .toast.show{transform:translate(-50%,0);opacity:1}
 
+.tier-celebration{
+  position:fixed;
+  inset:0;
+  z-index:205;
+  display:grid;
+  place-items:center;
+  padding:18px;
+  background:rgba(49,25,31,.58);
+  backdrop-filter:blur(11px);
+  -webkit-backdrop-filter:blur(11px)
+}
+.tier-celebration[hidden]{display:none!important}
+.tier-celebration-card{
+  position:relative;
+  width:min(100%,510px);
+  max-height:min(90dvh,780px);
+  overflow:hidden;
+  border:1px solid rgba(242,196,205,.95);
+  border-radius:32px;
+  background:
+    radial-gradient(circle at 50% 0,rgba(255,255,255,.98) 0 9%,rgba(255,235,242,.76) 32%,transparent 52%),
+    linear-gradient(180deg,#fffaf9 0%,#fff3f5 64%,#ffe9f1 100%);
+  box-shadow:0 30px 90px rgba(70,28,43,.34),inset 0 0 0 1px rgba(255,255,255,.85);
+  animation:tierCelebrationIn .28s cubic-bezier(.2,.75,.25,1)
+}
+.tier-celebration-card.is-plus{
+  border-color:rgba(235,181,67,.88);
+  background:
+    radial-gradient(circle at 50% 0,rgba(255,255,255,.98) 0 9%,rgba(255,230,154,.66) 31%,transparent 52%),
+    linear-gradient(180deg,#fffaf0 0%,#fff2c8 55%,#ffe4b3 100%);
+  box-shadow:0 30px 90px rgba(117,72,10,.30),0 0 0 3px rgba(255,229,146,.25),inset 0 0 0 1px rgba(255,255,255,.85)
+}
+.tier-celebration-scroll{
+  max-height:min(90dvh,780px);
+  overflow-y:auto;
+  overscroll-behavior:contain;
+  -webkit-overflow-scrolling:touch;
+  padding:25px 20px max(20px,env(safe-area-inset-bottom));
+  text-align:center;
+  scrollbar-width:none
+}
+.tier-celebration-scroll::-webkit-scrollbar{display:none}
+.tier-celebration-close{
+  position:absolute;
+  z-index:2;
+  top:13px;
+  right:13px;
+  width:39px;
+  height:39px;
+  border:1px solid rgba(228,171,185,.70);
+  border-radius:50%;
+  background:rgba(255,255,255,.84);
+  color:#a44768;
+  font-size:21px;
+  font-weight:900
+}
+.tier-celebration-burst{
+  position:absolute;
+  inset:-55px -50px auto;
+  height:260px;
+  pointer-events:none;
+  opacity:.72;
+  background:repeating-conic-gradient(from 0deg at 50% 58%,rgba(255,255,255,.88) 0 7deg,transparent 7deg 18deg);
+  -webkit-mask-image:linear-gradient(180deg,#000,transparent)
+}
+.tier-celebration-card.is-plus .tier-celebration-burst{opacity:.88}
+.tier-celebration-badge{
+  position:relative;
+  z-index:1;
+  width:150px;
+  height:132px;
+  margin:2px auto 5px;
+  display:grid;
+  place-items:center
+}
+.tier-celebration-badge:before{
+  content:"";
+  position:absolute;
+  inset:8px;
+  border-radius:50%;
+  background:radial-gradient(circle,rgba(255,214,230,.96),rgba(255,225,236,.34) 44%,transparent 70%);
+  filter:blur(1px)
+}
+.tier-celebration-card.is-plus .tier-celebration-badge:before{background:radial-gradient(circle,rgba(255,213,91,.95),rgba(255,228,151,.38) 47%,transparent 71%)}
+.tier-celebration-badge img{position:relative;z-index:1;max-width:145px;max-height:126px;object-fit:contain;filter:drop-shadow(0 14px 18px rgba(120,67,37,.18))}
+.tier-celebration-kicker{
+  display:inline-flex;
+  min-height:26px;
+  align-items:center;
+  padding:5px 11px;
+  border-radius:999px;
+  background:#ffe1ec;
+  color:#b74770;
+  font-size:9px;
+  font-weight:1000;
+  letter-spacing:.09em
+}
+.tier-celebration-card.is-plus .tier-celebration-kicker{background:#fff0b7;color:#946111}
+.tier-celebration h2{
+  margin:9px 0 6px;
+  color:#7f3150;
+  font-size:26px;
+  line-height:1.08;
+  font-weight:1000
+}
+.tier-celebration-card.is-plus h2{color:#7c4c0f}
+.tier-celebration-subtitle{
+  max-width:400px;
+  margin:0 auto;
+  color:#886b66;
+  font-size:11px;
+  line-height:1.48;
+  font-weight:800
+}
+.tier-level-jump{
+  display:grid;
+  grid-template-columns:1fr auto 1fr;
+  align-items:center;
+  gap:8px;
+  margin:14px auto 0;
+  max-width:380px
+}
+.tier-level-jump[hidden]{display:none!important}
+.tier-level-jump span{
+  min-height:39px;
+  display:grid;
+  place-items:center;
+  border:1px solid #e4bf69;
+  border-radius:999px;
+  background:rgba(255,255,255,.72);
+  color:#765026;
+  font-size:11px;
+  font-weight:1000
+}
+.tier-level-jump b{color:#d98d1f;font-size:24px}
+.tier-level-jump em{
+  grid-column:1/-1;
+  width:max-content;
+  max-width:100%;
+  justify-self:center;
+  margin-top:-4px;
+  padding:5px 13px;
+  border-radius:999px;
+  background:#fff0bb;
+  color:#d64a7e;
+  font-size:11px;
+  font-style:normal;
+  font-weight:1000
+}
+.tier-celebration-benefits{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:8px;
+  margin-top:16px
+}
+.tier-celebration-benefit{
+  min-height:70px;
+  display:grid;
+  grid-template-columns:43px minmax(0,1fr);
+  align-items:center;
+  gap:9px;
+  padding:9px 10px;
+  border:1px solid rgba(233,196,203,.86);
+  border-radius:18px;
+  background:rgba(255,255,255,.70);
+  color:#734a50;
+  text-align:left;
+  box-shadow:0 6px 16px rgba(109,62,69,.05)
+}
+.tier-celebration-card.is-plus .tier-celebration-benefit{border-color:rgba(224,178,69,.60);background:rgba(255,252,237,.76);color:#6f5125}
+.tier-celebration-benefit-icon{
+  width:43px;
+  height:43px;
+  display:grid;
+  place-items:center;
+  border-radius:14px;
+  background:#fff5f7;
+  font-size:25px;
+  color:#df5c91
+}
+.tier-celebration-card.is-plus .tier-celebration-benefit-icon{background:#fff2c6;color:#d39926}
+.tier-celebration-benefit-icon img{width:39px;height:39px;object-fit:contain}
+.tier-celebration-benefit strong{font-size:10px;line-height:1.22;font-weight:950}
+.tier-celebration-benefit:last-child:nth-child(odd){grid-column:1/-1}
+.tier-celebration-action{
+  width:100%;
+  min-height:53px;
+  margin-top:16px;
+  border:0;
+  border-radius:18px;
+  background:linear-gradient(145deg,#ef6da0,#ce3d77);
+  color:#fff;
+  font-size:13px;
+  font-weight:1000;
+  box-shadow:0 12px 25px rgba(188,62,112,.22)
+}
+.tier-celebration-card.is-plus .tier-celebration-action{
+  border:1px solid rgba(255,239,188,.78);
+  background:linear-gradient(135deg,#f3b833 0%,#ef8a31 48%,#df4b82 100%);
+  box-shadow:0 12px 28px rgba(179,111,20,.25),inset 0 1px rgba(255,255,255,.46)
+}
+@keyframes tierCelebrationIn{from{opacity:0;transform:translateY(24px) scale(.955)}to{opacity:1;transform:translateY(0) scale(1)}}
+
 .reward-summary{
   position:fixed;
   inset:0;
   z-index:180;
   display:grid;
   place-items:center;
-  padding:20px;
-  background:rgba(48,25,30,.48);
-  backdrop-filter:blur(8px)
+  padding:16px;
+  background:rgba(48,25,30,.52);
+  backdrop-filter:blur(10px);
+  -webkit-backdrop-filter:blur(10px)
 }
 .reward-summary[hidden]{display:none!important}
 .reward-summary-card{
-  width:min(100%,520px);
-  max-height:min(82dvh,760px);
+  width:min(100%,540px);
+  max-height:min(88dvh,800px);
   display:flex;
   flex-direction:column;
   overflow:hidden;
-  border:1px solid #efd4cb;
-  border-radius:26px;
-  background:linear-gradient(180deg,#fffaf8,#fff4ee);
-  box-shadow:0 24px 70px rgba(70,35,41,.28);
-  animation:rewardSummaryIn .24s ease-out
+  border:1px solid rgba(239,201,192,.95);
+  border-radius:30px;
+  background:linear-gradient(180deg,#fffdfb 0%,#fff7f2 62%,#fff0ef 100%);
+  box-shadow:0 28px 84px rgba(70,35,41,.31),inset 0 0 0 1px rgba(255,255,255,.72);
+  animation:rewardSummaryIn .26s cubic-bezier(.2,.75,.25,1)
 }
 .reward-summary-head{
-  padding:20px 20px 13px;
-  text-align:center
+  position:relative;
+  padding:18px 20px 12px;
+  text-align:center;
+  background:radial-gradient(circle at 50% -5%,rgba(255,221,160,.48),transparent 48%)
 }
-.reward-summary-head .summary-icon{font-size:40px}
-.reward-summary-head h2{margin:7px 0 4px;font-size:22px;color:#743c50}
-.reward-summary-head p{margin:0;color:var(--muted);font-size:11px;font-weight:750}
+.reward-summary-kicker{
+  display:inline-flex;
+  align-items:center;
+  min-height:24px;
+  padding:4px 10px;
+  border-radius:999px;
+  background:#fff0c8;
+  color:#9b6817;
+  font-size:8px;
+  font-weight:1000;
+  letter-spacing:.10em
+}
+.reward-summary-head .summary-icon{
+  width:72px;
+  height:62px;
+  display:grid;
+  place-items:center;
+  margin:2px auto 0
+}
+.reward-summary-head .summary-icon img{max-width:70px;max-height:60px;object-fit:contain;filter:drop-shadow(0 8px 10px rgba(137,91,24,.16))}
+.reward-summary-head h2{margin:2px 0 4px;font-size:25px;line-height:1.08;color:#71344d;font-weight:1000}
+.reward-summary-head p{margin:0;color:#95756d;font-size:10px;font-weight:850}
+.reward-summary-body{
+  flex:1;
+  min-height:0;
+  overflow-y:auto;
+  overscroll-behavior:contain;
+  -webkit-overflow-scrolling:touch;
+  padding:0 14px 10px;
+  scrollbar-width:none
+}
+.reward-summary-body::-webkit-scrollbar{display:none}
+.reward-summary-section[hidden]{display:none!important}
+.reward-summary-section-title{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  margin:8px 3px 8px;
+  color:#a1713b;
+  font-size:10px;
+  font-weight:1000;
+  text-transform:uppercase;
+  letter-spacing:.07em
+}
+.reward-summary-section-title:before,.reward-summary-section-title:after{content:"";height:1px;flex:1;background:linear-gradient(90deg,transparent,#e8c887)}
+.reward-summary-section-title:after{background:linear-gradient(90deg,#e8c887,transparent)}
+.reward-summary-featured-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(105px,1fr));
+  gap:8px
+}
+.reward-featured-card{
+  position:relative;
+  min-width:0;
+  min-height:150px;
+  padding:10px 8px 9px;
+  border:1px solid #ead6cf;
+  border-radius:20px;
+  background:rgba(255,255,255,.82);
+  text-align:center;
+  box-shadow:0 7px 20px rgba(93,53,47,.07)
+}
+.reward-featured-card.premium{
+  border:2px solid #e1aa39;
+  background:linear-gradient(145deg,#fffdf2,#ffefb5);
+  box-shadow:0 0 0 2px rgba(255,239,178,.72),0 10px 24px rgba(175,116,25,.16)
+}
+.reward-featured-art{height:84px;display:grid;place-items:center}
+.reward-featured-art img{max-width:82px;max-height:82px;object-fit:contain;filter:drop-shadow(0 7px 8px rgba(106,66,45,.13))}
+.reward-featured-art span{font-size:48px}
+.reward-featured-card strong{display:block;color:#70443b;font-size:10px;line-height:1.2;font-weight:1000}
+.reward-featured-card small{display:block;margin-top:4px;color:#a47a67;font-size:8px;font-weight:850}
+.reward-summary-resource-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(105px,1fr));
+  gap:8px
+}
+.reward-resource-card{
+  min-height:70px;
+  display:grid;
+  grid-template-columns:42px minmax(0,1fr);
+  align-items:center;
+  gap:6px;
+  padding:8px;
+  border:1px solid #ead9d2;
+  border-radius:17px;
+  background:rgba(255,255,255,.76)
+}
+.reward-resource-card img{width:40px;height:40px;object-fit:contain}
+.reward-resource-card b{display:block;color:#763c4e;font-size:13px;line-height:1.05;font-weight:1000;font-variant-numeric:tabular-nums}
+.reward-resource-card span{display:block;margin-top:3px;color:#9d766d;font-size:8px;font-weight:900}
+.reward-summary-details{
+  margin-top:11px;
+  border:1px solid #ead8d1;
+  border-radius:18px;
+  background:rgba(255,255,255,.58);
+  overflow:hidden
+}
+.reward-summary-details summary{
+  min-height:46px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  padding:0 13px;
+  color:#7c4e51;
+  font-size:10px;
+  font-weight:1000;
+  cursor:pointer;
+  list-style:none
+}
+.reward-summary-details summary::-webkit-details-marker{display:none}
+.reward-summary-details summary:after{content:"⌄";font-size:17px;color:#c54e7e;transition:transform .18s}
+.reward-summary-details[open] summary:after{transform:rotate(180deg)}
 .reward-summary-list{
   display:grid;
   grid-template-columns:repeat(2,minmax(0,1fr));
-  gap:9px;
-  overflow-y:auto;
-  padding:4px 14px 14px;
-  overscroll-behavior:contain
+  gap:8px;
+  padding:0 10px 10px
 }
 .received-reward{
   position:relative;
   display:grid;
-  grid-template-columns:48px minmax(0,1fr);
-  gap:9px;
+  grid-template-columns:45px minmax(0,1fr);
+  gap:8px;
   align-items:center;
-  min-height:72px;
-  padding:10px;
+  min-height:67px;
+  padding:9px;
   border:1px solid #eed9d2;
-  border-radius:17px;
+  border-radius:16px;
   background:#fff;
-  box-shadow:0 5px 16px rgba(87,52,45,.06)
+  box-shadow:0 4px 13px rgba(87,52,45,.05)
 }
-.received-reward.premium{
-  border:2px solid #e6ae3f;
-  background:linear-gradient(145deg,#fffdf3,#fff0bb);
-  box-shadow:0 0 0 2px rgba(255,239,177,.9),0 8px 24px rgba(191,132,30,.18)
-}
-.received-reward.premium:after{
-  content:"ПРЕМИУМ";
-  position:absolute;
-  right:8px;
-  top:7px;
-  color:#956514;
-  font-size:7px;
-  font-weight:1000;
-  letter-spacing:.08em
-}
-.received-reward-icon{
-  display:grid;
-  place-items:center;
-  width:46px;
-  height:46px;
-  border-radius:14px;
-  background:#fff7f4;
-  font-size:25px
-}
+.received-reward.premium{border:1.5px solid #e4ad3e;background:linear-gradient(145deg,#fffdf3,#fff0bb)}
+.received-reward-icon{display:grid;place-items:center;width:43px;height:43px;border-radius:13px;background:#fff7f4;font-size:23px}
+.received-reward-icon img{max-width:42px;max-height:42px;object-fit:contain}
 .received-reward.premium .received-reward-icon{background:#fff7d7}
-.received-reward-copy{min-width:0;padding-right:2px}
-.received-reward-copy strong{display:block;font-size:10px;line-height:1.2;color:#674036}
-.received-reward-copy span{display:block;margin-top:4px;color:#9b7467;font-size:8px;font-weight:850}
+.received-reward-copy{min-width:0}
+.received-reward-copy strong{display:block;font-size:9px;line-height:1.2;color:#674036}
+.received-reward-copy span{display:block;margin-top:4px;color:#9b7467;font-size:7px;font-weight:850}
 .reward-summary-close{
-  min-height:48px;
+  min-height:51px;
   margin:0 14px 14px;
   border:0;
-  border-radius:16px;
-  background:linear-gradient(145deg,#eb6799,#cb3c75);
+  border-radius:18px;
+  background:linear-gradient(145deg,#ed679b,#ce3f78);
   color:#fff;
-  font-weight:950
+  font-size:13px;
+  font-weight:1000;
+  box-shadow:0 10px 22px rgba(184,56,108,.18)
 }
-@keyframes rewardSummaryIn{
-  from{opacity:0;transform:translateY(20px) scale(.96)}
-  to{opacity:1;transform:translateY(0) scale(1)}
+@keyframes rewardSummaryIn{from{opacity:0;transform:translateY(22px) scale(.955)}to{opacity:1;transform:translateY(0) scale(1)}}
+@media(max-width:430px){
+  .tier-celebration{padding:12px}
+  .tier-celebration-scroll{padding:22px 14px max(16px,env(safe-area-inset-bottom))}
+  .tier-celebration-badge{width:132px;height:116px}.tier-celebration-badge img{max-width:128px;max-height:112px}
+  .tier-celebration h2{font-size:23px}
+  .tier-celebration-benefits{gap:7px}.tier-celebration-benefit{min-height:65px;grid-template-columns:39px minmax(0,1fr);padding:8px}.tier-celebration-benefit-icon{width:39px;height:39px}.tier-celebration-benefit-icon img{width:36px;height:36px}
+  .reward-summary{padding:10px}.reward-summary-card{max-height:91dvh;border-radius:27px}
+  .reward-summary-featured-grid{gap:6px}.reward-featured-card{min-height:137px;padding:8px 6px}.reward-featured-art{height:76px}.reward-featured-art img{max-width:74px;max-height:74px}
+  .reward-summary-resource-grid{gap:6px}.reward-resource-card{grid-template-columns:36px minmax(0,1fr);padding:7px}.reward-resource-card img{width:35px;height:35px}
+  .reward-summary-list{grid-template-columns:1fr}
 }
-@media(max-width:430px){.reward-summary-list{grid-template-columns:1fr}}
 
 .purchase-confirm{
   position:fixed;
@@ -3242,14 +3545,47 @@ img[src$="/xp.webp"]{
   </div>
 </section>
 
+<section class="tier-celebration" id="tierCelebration" hidden aria-modal="true" role="dialog" aria-labelledby="tierCelebrationTitle">
+  <div class="tier-celebration-card" id="tierCelebrationCard">
+    <div class="tier-celebration-burst" aria-hidden="true"></div>
+    <button class="tier-celebration-close" id="tierCelebrationClose" type="button" aria-label="Закрыть">×</button>
+    <div class="tier-celebration-scroll">
+      <div class="tier-celebration-badge"><img id="tierCelebrationBadge" src="/assets/season-pass/elite.png?v=07939" alt=""></div>
+      <span class="tier-celebration-kicker" id="tierCelebrationKicker">НОВЫЙ СТАТУС</span>
+      <h2 id="tierCelebrationTitle">Элитный активирован</h2>
+      <p class="tier-celebration-subtitle" id="tierCelebrationSubtitle">Премиальные возможности сезона теперь доступны.</p>
+      <div class="tier-level-jump" id="tierCelebrationLevelJump" hidden>
+        <span id="tierCelebrationFromLevel">Уровень 1</span><b aria-hidden="true">→</b><span id="tierCelebrationToLevel">Уровень 6</span>
+        <em id="tierCelebrationBonusLevels">+5 уровней</em>
+      </div>
+      <div class="tier-celebration-benefits" id="tierCelebrationBenefits"></div>
+      <button class="tier-celebration-action" id="tierCelebrationAction" type="button">Посмотреть награды</button>
+    </div>
+  </div>
+</section>
+
 <section class="reward-summary" id="rewardSummary" hidden aria-modal="true" role="dialog" aria-labelledby="rewardSummaryTitle">
   <div class="reward-summary-card">
     <header class="reward-summary-head">
+      <span class="reward-summary-kicker">НАГРАДА ПОЛУЧЕНА</span>
       <div class="summary-icon"><img src="/assets/cases/gold_open.png" alt=""></div>
-      <h2 id="rewardSummaryTitle">Полученные награды</h2>
-      <p id="rewardSummarySubtitle">Все доступные награды начислены на аккаунт.</p>
+      <h2 id="rewardSummaryTitle">Вот это улов!</h2>
+      <p id="rewardSummarySubtitle">Полученные награды уже на аккаунте.</p>
     </header>
-    <div class="reward-summary-list" id="rewardSummaryList"></div>
+    <div class="reward-summary-body">
+      <section class="reward-summary-section" id="rewardSummaryFeatured" hidden>
+        <div class="reward-summary-section-title">Главное</div>
+        <div class="reward-summary-featured-grid" id="rewardSummaryFeaturedGrid"></div>
+      </section>
+      <section class="reward-summary-section" id="rewardSummaryResources" hidden>
+        <div class="reward-summary-section-title">Итоговые ресурсы</div>
+        <div class="reward-summary-resource-grid" id="rewardSummaryResourceGrid"></div>
+      </section>
+      <details class="reward-summary-details" id="rewardSummaryDetails">
+        <summary>Подробности по уровням</summary>
+        <div class="reward-summary-list" id="rewardSummaryList"></div>
+      </details>
+    </div>
     <button class="reward-summary-close" id="rewardSummaryClose" type="button">Отлично</button>
   </div>
 </section>
@@ -3298,6 +3634,7 @@ img[src$="/xp.webp"]{
   const CLAIM_PATH = "/api/battle-pass/claim";
   const CLAIM_ALL_PATH = "/api/battle-pass/claim-all";
   const PURCHASE_TIER_PATH = "/api/battle-pass/purchase-tier";
+  const TIER_ACTIVATION_CLAIM_PATH = "/api/battle-pass/tier-activation/claim";
   const PURCHASE_LEVEL_PATH = "/api/battle-pass/purchase-level";
   const CLAIM_TASK_PATH = "/api/battle-pass/tasks/claim";
   const CLAIM_ALL_TASKS_PATH = "/api/battle-pass/tasks/claim-all";
@@ -3445,6 +3782,14 @@ img[src$="/xp.webp"]{
           hostTelegramInitData = nextInitData;
           try { sessionStorage.setItem("zefirok-telegram-init-data", nextInitData); } catch {}
         }
+        return;
+      }
+      if (message.type === "zefirok-host-tier-activation-notice") {
+        void maybeShowTierActivationNotice(message.notice).catch(()=>false);
+        return;
+      }
+      if (message.type === "zefirok-host-season-pass-refresh") {
+        void loadServerPass().then(async()=>{render();await maybeShowTierActivationNotice(serverPass?.tierActivationNotice).catch(()=>false);}).catch(()=>{});
         return;
       }
       if (message.type !== "zefirok-host-viewport-changed") return;
@@ -3855,6 +4200,16 @@ img[src$="/xp.webp"]{
     }));
   }
 
+  let seasonPostOpenPresentationHandled = false;
+  function handleSeasonPassPostOpenPresentation() {
+    if (seasonPostOpenPresentationHandled) return;
+    seasonPostOpenPresentationHandled = true;
+    const openParams=new URLSearchParams(location.search);
+    if (openParams.get("storyTest") === "1") setTimeout(()=>{void loadRequestedStoryTest();},150);
+    else if (openParams.get("letter") === "1") setTimeout(()=>{void loadRequestedSeasonLetter();},180);
+    else if(serverPass?.story?.pending)setTimeout(()=>{void showPendingSeasonStory();},240);
+  }
+
   async function openSeasonPassInterface(initialState = null) {
     stopPreseasonTimer();
     el("accessGate").hidden = true;
@@ -3871,11 +4226,11 @@ img[src$="/xp.webp"]{
     const requestedView = new URLSearchParams(location.search).get("view");
     if (requestedView === "tasks") openView("tasks");
     else requestAnimationFrame(()=>requestAnimationFrame(()=>scrollToLevel(selectedLevel,"auto")));
-    handleRequestedTierOffer();
-    const openParams=new URLSearchParams(location.search);
-    if (openParams.get("storyTest") === "1") setTimeout(()=>{void loadRequestedStoryTest();},150);
-    else if (openParams.get("letter") === "1") setTimeout(()=>{void loadRequestedSeasonLetter();},180);
-    else if(serverPass?.story?.pending)setTimeout(()=>{void showPendingSeasonStory();},240);
+    const tierNoticeShown = await maybeShowTierActivationNotice(serverPass?.tierActivationNotice).catch(()=>false);
+    if (!tierNoticeShown) {
+      handleRequestedTierOffer();
+      handleSeasonPassPostOpenPresentation();
+    }
   }
 
   async function checkAccess() {
@@ -4172,7 +4527,7 @@ img[src$="/xp.webp"]{
     render();
     if (received) {
       closeRewardPreview({animated:false});
-      openRewardSummary([{premium:received.lane==="premium",icon:"",image:received.imageUrl||"",name:received.title||"Награда",description:"Начислено на аккаунт",level:received.level,source:`Уровень ${received.level} · ${received.lane==="premium"?"Премиум":"Бесплатно"}`}]);
+      openRewardSummary([{premium:received.lane==="premium",icon:"",image:received.imageUrl||"",name:received.title||"Награда",description:"Начислено на аккаунт",level:received.level,source:`Уровень ${received.level} · ${received.lane==="premium"?"Премиум":"Бесплатно"}`,rewardType:received.rewardType||"",amount:Number(received.amount||0),itemId:received.itemId||""}]);
     } else {
       const next = rewardPreviewState(context.id);
       if (next?.claimed) openRewardPreview(context.id);
@@ -4857,7 +5212,7 @@ img[src$="/xp.webp"]{
 
   function isSeasonalCaseRetryableError(error){const status=Number(error?.status||0);if(error?.pending||error?.timeout||error?.code==="REQUEST_TIMEOUT"||!status||status>=500)return true;if(status!==409)return false;return /состояние кейса изменилось|открытие было восстановлено|уже открывается|повторите открытие/i.test(String(error?.message||""));}
   function renderSeasonalCases(){const list=(Array.isArray(serverPass?.seasonalCases)?serverPass.seasonalCases:[]).filter(item=>Number(item.pending||0)+Number(item.opening||0)>0);const shelf=el("seasonalCaseShelf");if(!shelf)return;shelf.hidden=!list.length;if(!list.length){el("seasonalCaseList").innerHTML="";return;}const total=list.reduce((sum,item)=>sum+Number(item.pending||0)+Number(item.opening||0),0);el("seasonalCaseCount").textContent=`Доступно: ${total}`;el("seasonalCaseList").innerHTML=list.map(item=>{const caseId=String(item.caseId||"");const checking=seasonalCasePendingRequests.has(caseId);return `<article class="seasonal-case-player-card"><img src="${String(item.imageUrl||'/assets/season-pass/season.png').replace(/"/g,'&quot;')}" alt=""><div><b>${String(item.title||'Сезонный кейс').replace(/</g,'&lt;')}</b><span>${String(item.seasonTitle||'Архив сезона').replace(/</g,'&lt;')} · ${Number(item.pending||0)} шт.</span></div><button type="button" data-open-seasonal-case="${caseId.replace(/"/g,'&quot;')}" ${item.released===false?'disabled':''}>${item.released===false?'Откроется позже':checking?'Проверить открытие':'Открыть кейс'}</button></article>`;}).join("");el("seasonalCaseList").querySelectorAll("[data-open-seasonal-case]").forEach(button=>button.addEventListener("click",()=>{passImpactHaptic("medium");void openSeasonalCase(button.dataset.openSeasonalCase,button);}));}
-  async function openSeasonalCase(caseId,button){const key=String(caseId||"");if(!key)return;const continuing=seasonalCasePendingRequests.has(key);const requestId=seasonalCasePendingRequests.get(key)||(()=>{try{return `spcase_${crypto.randomUUID().replace(/-/g,"")}`.slice(0,96);}catch{return `spcase_${Date.now().toString(36)}_${Math.random().toString(36).slice(2,14)}`.slice(0,96);}})();seasonalCasePendingRequests.set(key,requestId);const deadline=Date.now()+SEASONAL_CASE_OPEN_UI_DEADLINE_MS;if(button){button.disabled=true;button.textContent=continuing?"Проверяем…":"Открываем…";}try{let data=null,lastError=null;while(Date.now()<deadline){const remaining=deadline-Date.now();if(remaining<=0)break;try{data=await seasonPassApi(SEASONAL_CASE_OPEN_PATH,{caseId:key,requestId},Math.max(1000,Math.min(SEASONAL_CASE_OPEN_REQUEST_TIMEOUT_MS,remaining)));if(!data?.pending)break;}catch(error){lastError=error;if(!isSeasonalCaseRetryableError(error)){seasonalCasePendingRequests.delete(key);throw error;}}if(button)button.textContent="Проверяем…";const remainingAfterRequest=deadline-Date.now();if(remainingAfterRequest<=0)break;const sleepMs=Math.max(250,Math.min(1000,Number(data?.retryAfterMs||800),remainingAfterRequest));await new Promise(resolve=>setTimeout(resolve,sleepMs));}if(!data||data.pending){const pendingError=lastError||new Error("Открытие ещё проверяется. Повторная попытка продолжит эту же операцию.");pendingError.pending=true;throw pendingError;}seasonalCasePendingRequests.delete(key);if(Array.isArray(data?.seasonalCases))serverPass={...(serverPass||{}),seasonalCases:data.seasonalCases};renderSeasonalCases();notifyAccountChanged();const rewards=Array.isArray(data?.case?.rewards)?data.case.rewards.map(item=>({premium:false,icon:"",image:item.imageUrl||data?.case?.imageUrl||"",name:item.title||(item.kind==="points"?`${Number(item.amount||0).toLocaleString("ru-RU")} очков`:"Сезонная награда"),source:data?.case?.title||"Сезонный кейс"})):[];passNotifyHaptic("success");if(rewards.length)openRewardSummary(rewards);else showToast("Сезонный кейс открыт");}catch(error){passNotifyHaptic("error");const retryable=isSeasonalCaseRetryableError(error);if(!retryable&&seasonalCasePendingRequests.get(key)===requestId)seasonalCasePendingRequests.delete(key);showToast(retryable?"Сервер отвечает дольше обычного. Нажмите «Проверить открытие» — новый кейс не будет списан.":(error.message||"Не удалось открыть сезонный кейс"));if(retryable)void loadServerPass().then(()=>renderSeasonalCases()).catch(()=>{});}finally{if(button?.isConnected){button.disabled=false;button.textContent=seasonalCasePendingRequests.has(key)?"Проверить открытие":"Открыть кейс";}renderSeasonalCases();}}
+  async function openSeasonalCase(caseId,button){const key=String(caseId||"");if(!key)return;const continuing=seasonalCasePendingRequests.has(key);const requestId=seasonalCasePendingRequests.get(key)||(()=>{try{return `spcase_${crypto.randomUUID().replace(/-/g,"")}`.slice(0,96);}catch{return `spcase_${Date.now().toString(36)}_${Math.random().toString(36).slice(2,14)}`.slice(0,96);}})();seasonalCasePendingRequests.set(key,requestId);const deadline=Date.now()+SEASONAL_CASE_OPEN_UI_DEADLINE_MS;if(button){button.disabled=true;button.textContent=continuing?"Проверяем…":"Открываем…";}try{let data=null,lastError=null;while(Date.now()<deadline){const remaining=deadline-Date.now();if(remaining<=0)break;try{data=await seasonPassApi(SEASONAL_CASE_OPEN_PATH,{caseId:key,requestId},Math.max(1000,Math.min(SEASONAL_CASE_OPEN_REQUEST_TIMEOUT_MS,remaining)));if(!data?.pending)break;}catch(error){lastError=error;if(!isSeasonalCaseRetryableError(error)){seasonalCasePendingRequests.delete(key);throw error;}}if(button)button.textContent="Проверяем…";const remainingAfterRequest=deadline-Date.now();if(remainingAfterRequest<=0)break;const sleepMs=Math.max(250,Math.min(1000,Number(data?.retryAfterMs||800),remainingAfterRequest));await new Promise(resolve=>setTimeout(resolve,sleepMs));}if(!data||data.pending){const pendingError=lastError||new Error("Открытие ещё проверяется. Повторная попытка продолжит эту же операцию.");pendingError.pending=true;throw pendingError;}seasonalCasePendingRequests.delete(key);if(Array.isArray(data?.seasonalCases))serverPass={...(serverPass||{}),seasonalCases:data.seasonalCases};renderSeasonalCases();notifyAccountChanged();const rewards=Array.isArray(data?.case?.rewards)?data.case.rewards.map(item=>({premium:false,icon:"",image:item.imageUrl||data?.case?.imageUrl||"",name:item.title||(item.kind==="points"?`${Number(item.amount||0).toLocaleString("ru-RU")} очков`:"Сезонная награда"),source:data?.case?.title||"Сезонный кейс",rewardType:item.kind||item.rewardType||"",amount:Number(item.amount||0),itemId:item.itemId||item.id||""})):[];passNotifyHaptic("success");if(rewards.length)openRewardSummary(rewards);else showToast("Сезонный кейс открыт");}catch(error){passNotifyHaptic("error");const retryable=isSeasonalCaseRetryableError(error);if(!retryable&&seasonalCasePendingRequests.get(key)===requestId)seasonalCasePendingRequests.delete(key);showToast(retryable?"Сервер отвечает дольше обычного. Нажмите «Проверить открытие» — новый кейс не будет списан.":(error.message||"Не удалось открыть сезонный кейс"));if(retryable)void loadServerPass().then(()=>renderSeasonalCases()).catch(()=>{});}finally{if(button?.isConnected){button.disabled=false;button.textContent=seasonalCasePendingRequests.has(key)?"Проверить открытие":"Открыть кейс";}renderSeasonalCases();}}
 
   function catchUpData(){return serverPass?.catchUp&&typeof serverPass.catchUp==="object"?serverPass.catchUp:null;}
   function renderCatchUpCard(){const data=catchUpData(),card=el("catchUpCard");if(!card)return;const active=Boolean(data?.active);card.hidden=!active;if(!active)return;const days=Math.max(1,Number(data.daysLeft)||1),limit=Math.max(2,Number(data.eligibleBelowLevel)||35),mult=Math.max(2,Number(data.multiplier)||2);el("catchUpMultiplier").textContent=`×${mult} XP`;el("catchUpCopy").textContent=`Ещё ${days} дн. · пока уровень ниже ${limit}, XP за забеги и задания умножается на ${mult}. С Элитным+ бонус не складывается.`;}
@@ -5229,6 +5584,76 @@ img[src$="/xp.webp"]{
     if (el("rewardSummary").hidden) document.body.style.overflow = "";
   }
 
+  let tierCelebrationFollowupRewards = [];
+  let tierCelebrationNotice = null;
+  let tierActivationClaimId = "";
+  let tierActivationClaimPromise = null;
+
+  function tierActivationBenefitIcon(item) {
+    const image = String(item?.imageUrl || "").trim();
+    if (image) return `<img src="${image}" alt="">`;
+    return `<span aria-hidden="true">${String(item?.symbol || "✦")}</span>`;
+  }
+
+  function openTierCelebration(notice,rewards=[]) {
+    if (!notice?.id) return false;
+    const plus = String(notice.newTier) === "elite_plus";
+    tierCelebrationNotice = notice;
+    tierCelebrationFollowupRewards = Array.isArray(rewards) ? rewards.filter(Boolean) : [];
+    const card=el("tierCelebrationCard");
+    card.classList.toggle("is-plus",plus);
+    el("tierCelebrationBadge").src = plus ? REWARD_ASSETS.elitePlusBadge : REWARD_ASSETS.eliteBadge;
+    el("tierCelebrationKicker").textContent = plus ? (notice.isUpgrade ? "ТАРИФ УЛУЧШЕН" : "МАКСИМАЛЬНЫЙ ТАРИФ") : "ПРЕМИАЛЬНЫЙ ДОСТУП";
+    el("tierCelebrationTitle").textContent = plus ? "Элитный+ активирован" : "Поздравляем! Элитный активирован";
+    el("tierCelebrationSubtitle").textContent = plus
+      ? "Максимальные преимущества сезона уже действуют на вашем аккаунте."
+      : "Премиальная линия и особые возможности сезона теперь доступны.";
+    const from=Math.max(0,Number(notice.fromLevel)||0),to=Math.max(0,Number(notice.toLevel)||0),bonus=Math.max(0,Number(notice.bonusLevels)||Math.max(0,to-from));
+    const jump=el("tierCelebrationLevelJump");
+    jump.hidden = !(plus && bonus>0 && to>from);
+    if(!jump.hidden){
+      el("tierCelebrationFromLevel").textContent=`Уровень ${from}`;
+      el("tierCelebrationToLevel").textContent=`Уровень ${to}`;
+      el("tierCelebrationBonusLevels").textContent=`+${bonus} ${bonus===1?"уровень":bonus>=2&&bonus<=4?"уровня":"уровней"}`;
+    }
+    const benefits=Array.isArray(notice.benefits)?notice.benefits:[];
+    el("tierCelebrationBenefits").innerHTML=benefits.map(item=>`<div class="tier-celebration-benefit"><span class="tier-celebration-benefit-icon">${tierActivationBenefitIcon(item)}</span><strong>${String(item?.title||"Преимущество")}</strong></div>`).join("");
+    el("tierCelebrationAction").textContent = tierCelebrationFollowupRewards.length
+      ? (plus ? "Получить бонусы" : "Посмотреть награды")
+      : "К наградам сезона";
+    el("tierCelebration").hidden=false;
+    document.body.style.overflow="hidden";
+    requestAnimationFrame(()=>el("tierCelebrationAction")?.focus());
+    return true;
+  }
+
+  function closeTierCelebration({showRewards=false}={}) {
+    const followup=showRewards?[...tierCelebrationFollowupRewards]:[];
+    el("tierCelebration").hidden=true;
+    tierCelebrationFollowupRewards=[];
+    tierCelebrationNotice=null;
+    if(el("rewardSummary").hidden&&el("purchaseConfirm").hidden)document.body.style.overflow="";
+    if(followup.length)setTimeout(()=>openRewardSummary(followup),120);
+    handleSeasonPassPostOpenPresentation();
+  }
+
+  async function maybeShowTierActivationNotice(notice,{rewards=[]}={}) {
+    const id=String(notice?.id||"").trim();
+    if(!id)return false;
+    if(tierCelebrationNotice?.id===id&&!el("tierCelebration").hidden)return true;
+    if(tierActivationClaimPromise&&tierActivationClaimId===id)return tierActivationClaimPromise;
+    tierActivationClaimId=id;
+    tierActivationClaimPromise=(async()=>{
+      const data=await seasonPassApi(TIER_ACTIVATION_CLAIM_PATH,{noticeId:id,surface:"battle_pass"});
+      if(serverPass&&String(serverPass?.tierActivationNotice?.id||"")===id)serverPass={...serverPass,tierActivationNotice:null};
+      if(!data?.claimed||!data?.notice)return false;
+      passNotifyHaptic("success");
+      return openTierCelebration(data.notice,rewards);
+    })();
+    try{return await tierActivationClaimPromise;}
+    finally{if(tierActivationClaimId===id){tierActivationClaimId="";tierActivationClaimPromise=null;}}
+  }
+
   async function activatePremiumTier(tier) {
     if (!["elite","elite_plus"].includes(tier)) return;
     const button=tier==="elite_plus"?el("buyElitePlus"):el("buyElite");const previous=button?.textContent||"";if(button){button.disabled=true;button.textContent=tier==="elite_plus"?"Активируем Элитный+…":"Активируем Элитный…";}
@@ -5241,26 +5666,83 @@ img[src$="/xp.webp"]{
       applyServerPass(data);
       render();
       scrollToLevel(currentLevel());
-      notifyAccountChanged();
-      const received = Array.isArray(data.received) ? data.received.map(item=>({premium:true,icon:"",image:item.imageUrl||"",name:item.title||"Награда",description:"Бонус тарифа",level:"—",source:tier==="elite_plus"?"Элитный+":"Элитный"})) : [];
+      const received = Array.isArray(data.received) ? data.received.map(item=>({premium:true,icon:"",image:item.imageUrl||"",name:item.title||"Награда",description:"Бонус тарифа",level:"—",source:tier==="elite_plus"?"Элитный+":"Элитный",rewardType:item.rewardType||"",amount:Number(item.amount||0),itemId:item.itemId||""})) : [];
       passNotifyHaptic(data.repeated ? "warning" : "success");
       showToast(data.repeated ? "Тариф уже активирован" : (tier === "elite_plus" ? "Тариф «Элитный+» активирован" : "Тариф «Элитный» активирован"));
-      if (received.length) openRewardSummary(received);
+      if(!data.repeated){
+        const shown=await maybeShowTierActivationNotice(data?.tierActivationNotice,{rewards:received}).catch(()=>false);
+        if(!shown&&received.length)openRewardSummary(received);
+      }else if(received.length)openRewardSummary(received);
+      notifyAccountChanged();
     } catch (error) { passNotifyHaptic("error"); showToast(error.message || "Не удалось активировать тариф"); }
     finally { if(button){button.textContent=previous;button.disabled=false;} render(); }
   }
 
+  function rewardSummaryAmount(item) {
+    const direct=Number(item?.amount||0);
+    if(Number.isFinite(direct)&&direct>0)return Math.floor(direct);
+    const text=String(item?.name||"").replace(/[\u00a0\u202f]/g," ");
+    const match=text.match(/([\d\s]+)(?=\s*(?:зефир|кофе|очк))/i)||text.match(/[×x]\s*(\d+)/i);
+    if(!match)return 1;
+    const value=Number(String(match[1]||match[0]||"").replace(/\D/g,""));
+    return Number.isFinite(value)&&value>0?value:1;
+  }
+
+  function rewardSummaryKind(item) {
+    const explicit=String(item?.rewardType||item?.kind||"").toLowerCase();
+    if(["points","coffee","zefir","treats"].includes(explicit))return explicit==="treats"?"zefir":explicit;
+    const text=String(item?.name||"").toLowerCase();
+    if(text.includes("зефир"))return "zefir";
+    if(text.includes("кофе"))return "coffee";
+    if(text.includes("очк"))return "points";
+    return explicit;
+  }
+
+  function rewardSummaryPriority(item) {
+    const text=`${String(item?.name||"")} ${String(item?.rewardType||"")} ${String(item?.itemId||"")}`.toLowerCase();
+    if(/легендар/.test(text))return 100;
+    if(/мифическ|mythic/.test(text))return 90;
+    if(/золот|gold/.test(text))return 80;
+    if(/серебр|sweet/.test(text))return 70;
+    if(/аватар|рамк|скин|след|музык|avatar|frame|skin|trail|music/.test(text))return 65;
+    if(/кейс|case/.test(text))return 55;
+    if(item?.premium)return 35;
+    return 20;
+  }
+
   function openRewardSummary(items) {
-    const valid = items.filter(Boolean);
+    const valid=(Array.isArray(items)?items:[]).filter(Boolean);
     if (!valid.length) return;
-    el("rewardSummarySubtitle").textContent = `Получено наград: ${valid.length}. Премиальные отмечены золотой рамкой.`;
+    const uniqueLevels=new Set(valid.map(item=>String(item?.level??"")).filter(value=>/^\d+$/.test(value)));
+    el("rewardSummaryTitle").textContent="Вот это улов!";
+    el("rewardSummarySubtitle").textContent=`Получено ${valid.length.toLocaleString("ru-RU")} ${valid.length%10===1&&valid.length%100!==11?"награда":valid.length%10>=2&&valid.length%10<=4&&(valid.length%100<10||valid.length%100>=20)?"награды":"наград"}${uniqueLevels.size>1?` · уровней: ${uniqueLevels.size}`:""}`;
+
+    const resources={zefir:0,coffee:0,points:0};
+    for(const item of valid){const kind=rewardSummaryKind(item);if(kind in resources)resources[kind]+=rewardSummaryAmount(item);}
+    const nonResources=valid.filter(item=>!(rewardSummaryKind(item) in resources));
+    const featured=(nonResources.length?nonResources:valid).map((item,index)=>({item,index,score:rewardSummaryPriority(item)})).sort((a,b)=>b.score-a.score||a.index-b.index).slice(0,3).map(entry=>entry.item);
+    const featuredSection=el("rewardSummaryFeatured");
+    featuredSection.hidden=!featured.length;
+    el("rewardSummaryFeaturedGrid").innerHTML=featured.map(item=>`<article class="reward-featured-card ${item.premium?"premium":""}"><div class="reward-featured-art">${rewardArtMarkup(item.name,item.icon,item.image)}</div><strong>${String(item.name||"Награда")}</strong><small>${String(item.source||("Получено"))}</small></article>`).join("");
+
+    const resourceRows=[
+      {kind:"zefir",title:"зефира",image:REWARD_ASSETS.marshmallow},
+      {kind:"coffee",title:"кофе",image:REWARD_ASSETS.coffee},
+      {kind:"points",title:"очков",image:REWARD_ASSETS.points}
+    ].filter(row=>resources[row.kind]>0);
+    el("rewardSummaryResources").hidden=!resourceRows.length;
+    el("rewardSummaryResourceGrid").innerHTML=resourceRows.map(row=>`<div class="reward-resource-card"><img src="${row.image}" alt=""><div><b>${resources[row.kind].toLocaleString("ru-RU")}</b><span>${row.title}</span></div></div>`).join("");
+
     el("rewardSummaryList").innerHTML = valid.map(item=>`<article class="received-reward ${item.premium?"premium":""}">
       <div class="received-reward-icon">${rewardArtMarkup(item.name,item.icon,item.image)}</div>
       <div class="received-reward-copy">
-        <strong>${item.name}</strong>
-        <span>${item.source || (`Уровень ${item.level} · ${item.premium?"Премиум":"Бесплатно"}`)}</span>
+        <strong>${String(item.name||"Награда")}</strong>
+        <span>${String(item.source || (`Уровень ${item.level} · ${item.premium?"Премиум":"Бесплатно"}`))}</span>
       </div>
     </article>`).join("");
+    const details=el("rewardSummaryDetails");
+    details.open=valid.length<=4;
+    details.querySelector("summary").textContent=uniqueLevels.size>0?"Подробности по уровням":"Все полученные награды";
     el("rewardSummary").hidden = false;
     document.body.style.overflow = "hidden";
     requestAnimationFrame(()=>el("rewardSummaryClose").focus());
@@ -5268,7 +5750,7 @@ img[src$="/xp.webp"]{
 
   function closeRewardSummary() {
     el("rewardSummary").hidden = true;
-    document.body.style.overflow = "";
+    if(el("tierCelebration").hidden&&el("purchaseConfirm").hidden)document.body.style.overflow = "";
   }
 
   async function claim(id,quiet=false) {
@@ -5363,7 +5845,7 @@ img[src$="/xp.webp"]{
       rewardButton.textContent = "Получаем…";
       void claim(rewardButton.dataset.claim).then((received)=>{
         render();
-        if (received) openRewardSummary([{premium:received.lane==="premium",icon:"",image:received.imageUrl||"",name:received.title||"Награда",description:"Начислено на аккаунт",level:received.level,source:`Уровень ${received.level} · ${received.lane==="premium"?"Премиум":"Бесплатно"}`}]);
+        if (received) openRewardSummary([{premium:received.lane==="premium",icon:"",image:received.imageUrl||"",name:received.title||"Награда",description:"Начислено на аккаунт",level:received.level,source:`Уровень ${received.level} · ${received.lane==="premium"?"Премиум":"Бесплатно"}`,rewardType:received.rewardType||"",amount:Number(received.amount||0),itemId:received.itemId||""}]);
       });
       return;
     }
@@ -5514,7 +5996,7 @@ img[src$="/xp.webp"]{
     const button=el("claimAll");const oldText=button.textContent;button.disabled=true;button.textContent="Получаем награды…";
     void seasonPassApi(CLAIM_ALL_PATH).then((data)=>{
       applyServerPass(data); render(); notifyAccountChanged();
-      const received = Array.isArray(data.received) ? data.received.map(item=>({premium:item.lane==="premium",icon:"",image:item.imageUrl||"",name:item.title||"Награда",description:"Начислено на аккаунт",level:item.level,source:`Уровень ${item.level} · ${item.lane==="premium"?"Премиум":"Бесплатно"}`})) : [];
+      const received = Array.isArray(data.received) ? data.received.map(item=>({premium:item.lane==="premium",icon:"",image:item.imageUrl||"",name:item.title||"Награда",description:"Начислено на аккаунт",level:item.level,source:`Уровень ${item.level} · ${item.lane==="premium"?"Премиум":"Бесплатно"}`,rewardType:item.rewardType||"",amount:Number(item.amount||0),itemId:item.itemId||""})) : [];
       const failedCount = Array.isArray(data?.failedRewards) ? data.failedRewards.length : 0;
       if (received.length) {
         passNotifyHaptic(failedCount?"warning":"success");
@@ -5555,13 +6037,17 @@ img[src$="/xp.webp"]{
     if (event.target === el("purchaseConfirm")) closePurchaseConfirm();
   });
 
+  el("tierCelebrationAction").addEventListener("click",()=>{ passImpactHaptic("medium"); closeTierCelebration({showRewards:true}); });
+  el("tierCelebrationClose").addEventListener("click",()=>{ passSelectHaptic(); closeTierCelebration({showRewards:false}); });
+  el("tierCelebration").addEventListener("click",event=>{ if(event.target===el("tierCelebration"))closeTierCelebration({showRewards:false}); });
   el("rewardSummaryClose").addEventListener("click",()=>{ passSelectHaptic(); closeRewardSummary(); });
   el("rewardSummary").addEventListener("click",event=>{
     if (event.target === el("rewardSummary")) closeRewardSummary();
   });
   document.addEventListener("keydown",event=>{
     if (event.key !== "Escape") return;
-    if (!el("rewardPreviewSheet").hidden) closeRewardPreview({animated:true});
+    if (!el("tierCelebration").hidden) closeTierCelebration({showRewards:false});
+    else if (!el("rewardPreviewSheet").hidden) closeRewardPreview({animated:true});
     else if (!el("tariffSheet").hidden) closeTariffSheet({animated:true});
     else if (!el("seasonFinaleOverlay").hidden) closeSeasonFinale();
     else if (!el("seasonStoryOverlay").hidden) closeSeasonStory();

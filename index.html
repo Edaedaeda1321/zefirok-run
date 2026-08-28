@@ -49,6 +49,10 @@ body.zefirok-rating-open{overflow:hidden!important;padding:0!important}
 body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!important;pointer-events:none!important}
 .zefirok-legal-gate{position:fixed;inset:0;z-index:2147483400;display:grid;place-items:center;overflow:auto;box-sizing:border-box;padding:max(22px,var(--zefirok-content-safe-top,0px)) max(14px,var(--zefirok-content-safe-right,0px)) max(22px,var(--zefirok-content-safe-bottom,0px)) max(14px,var(--zefirok-content-safe-left,0px));background:linear-gradient(180deg,#fff4f4,#fffaf4);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#4e363d}.zefirok-legal-card{width:min(470px,100%);padding:24px;box-sizing:border-box;border:1px solid #efd5de;border-radius:28px;background:#fffdfb;box-shadow:0 22px 64px rgba(93,53,66,.15)}.zefirok-legal-badge{display:inline-flex;padding:7px 10px;border-radius:999px;background:#fff0d6;color:#93662c;font-size:11px;font-weight:900;letter-spacing:.04em}.zefirok-legal-card h1{margin:13px 0 8px;font-size:24px;line-height:1.1;color:#603d4a}.zefirok-legal-card p{margin:0;color:#806b72;font-size:14px;line-height:1.5}.zefirok-legal-doc-buttons{display:grid;gap:9px;margin:17px 0}.zefirok-legal-doc-button{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;padding:13px 14px;border:1px solid #ead4dc;border-radius:16px;background:#fff7fa;color:#74465a;font:800 14px/1.25 inherit;text-align:left}.zefirok-legal-doc-button span:last-child{font-size:20px;color:#cb668b}.zefirok-legal-check{display:flex;gap:10px;align-items:flex-start;margin:13px 0;padding:12px 13px;border:1px solid #eadbd7;border-radius:15px;background:#fffaf5;color:#674f56;font-size:13px;line-height:1.45}.zefirok-legal-check input{width:20px;height:20px;margin:0;accent-color:#dc6993;flex:0 0 auto}.zefirok-legal-consent-text{margin:15px 0;padding:14px;border-radius:17px;background:#fff6f8;color:#654c55;font-size:13px;line-height:1.5}.zefirok-legal-actions{display:grid;gap:9px;margin-top:16px}.zefirok-legal-primary,.zefirok-legal-secondary{min-height:50px;border-radius:16px;padding:12px 15px;font:900 14px/1.2 inherit}.zefirok-legal-primary{border:1px solid #d86690;background:linear-gradient(180deg,#f19abb,#df6d98);color:#fff;box-shadow:0 10px 22px rgba(209,89,134,.2)}.zefirok-legal-primary:disabled{opacity:.48;box-shadow:none}.zefirok-legal-secondary{border:1px solid #ead8de;background:#fff;color:#80616d}.zefirok-legal-status{min-height:19px;margin-top:11px;color:#9a5b70;font-size:12px;line-height:1.4}.zefirok-legal-lang{display:flex;justify-content:flex-end;gap:6px;margin-top:-2px}.zefirok-legal-lang button{padding:7px 9px;border:1px solid #ead7de;border-radius:11px;background:#fff;color:#806b72;font:900 11px/1 inherit}.zefirok-legal-lang button.is-active{background:#ffe4ee;color:#98405f;border-color:#f0bfd0}.zefirok-legal-layer{position:fixed;inset:0;z-index:2147483500;display:grid;grid-template-rows:auto 1fr;width:100%;height:var(--zefirok-app-height,100dvh);background:#fff5f4;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}.zefirok-legal-layer[hidden]{display:none!important}.zefirok-legal-toolbar{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:max(10px,var(--zefirok-content-safe-top,0px)) 12px 10px;background:#fff7f5;border-bottom:1px solid #efd8df;color:#64434f}.zefirok-legal-toolbar strong{font-size:14px}.zefirok-legal-close{width:40px;height:40px;border:1px solid #ead2da;border-radius:13px;background:#fff;color:#8e4d65;font:900 24px/1 inherit}.zefirok-legal-frame{display:block!important;width:100%!important;max-width:none!important;height:100%!important;margin:0!important;border:0!important;background:#fff5f4}.zefirok-legal-open>iframe:not(.zefirok-legal-frame){visibility:hidden!important;pointer-events:none!important}
 </style>
+
+<style id="zefirok-tier-activation-style">
+.zefirok-tier-activation-layer{position:fixed;inset:0;z-index:2147483200;display:grid;place-items:center;box-sizing:border-box;padding:max(18px,var(--zefirok-content-safe-top,0px)) max(14px,var(--zefirok-content-safe-right,0px)) max(18px,var(--zefirok-content-safe-bottom,0px)) max(14px,var(--zefirok-content-safe-left,0px));background:rgba(54,30,38,.58);backdrop-filter:blur(11px);-webkit-backdrop-filter:blur(11px);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#6b3e4d}.zefirok-tier-activation-card{position:relative;width:min(470px,100%);max-height:min(90dvh,780px);overflow:hidden;border:1px solid rgba(242,196,205,.96);border-radius:32px;background:radial-gradient(circle at 50% 0,rgba(255,255,255,.98) 0 9%,rgba(255,228,239,.74) 32%,transparent 53%),linear-gradient(180deg,#fffaf9,#fff2f5 65%,#ffe8f0);box-shadow:0 30px 90px rgba(70,28,43,.34),inset 0 0 0 1px rgba(255,255,255,.9);animation:zefirokTierActivationIn .28s cubic-bezier(.2,.75,.25,1)}.zefirok-tier-activation-card.is-plus{border-color:rgba(235,181,67,.9);background:radial-gradient(circle at 50% 0,rgba(255,255,255,.98) 0 9%,rgba(255,226,132,.7) 31%,transparent 53%),linear-gradient(180deg,#fffaf0,#fff2c8 55%,#ffe5b4);box-shadow:0 30px 90px rgba(117,72,10,.31),0 0 0 3px rgba(255,229,146,.24),inset 0 0 0 1px rgba(255,255,255,.88)}.zefirok-tier-activation-scroll{max-height:min(90dvh,780px);overflow:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;box-sizing:border-box;padding:24px 19px max(19px,env(safe-area-inset-bottom));text-align:center;scrollbar-width:none}.zefirok-tier-activation-scroll::-webkit-scrollbar{display:none}.zefirok-tier-activation-burst{position:absolute;inset:-58px -52px auto;height:260px;pointer-events:none;opacity:.72;background:repeating-conic-gradient(from 0deg at 50% 58%,rgba(255,255,255,.88) 0 7deg,transparent 7deg 18deg);-webkit-mask-image:linear-gradient(180deg,#000,transparent)}.zefirok-tier-activation-card.is-plus .zefirok-tier-activation-burst{opacity:.9}.zefirok-tier-activation-close{position:absolute;z-index:3;right:13px;top:13px;width:40px;height:40px;border:1px solid rgba(226,167,184,.72);border-radius:50%;background:rgba(255,255,255,.86);color:#a44768;font:900 22px/1 inherit}.zefirok-tier-activation-badge{position:relative;z-index:1;width:152px;height:132px;margin:2px auto 3px;display:grid;place-items:center}.zefirok-tier-activation-badge:before{content:"";position:absolute;inset:5px;border-radius:50%;background:radial-gradient(circle,rgba(255,211,228,.96),rgba(255,228,238,.36) 45%,transparent 72%)}.zefirok-tier-activation-card.is-plus .zefirok-tier-activation-badge:before{background:radial-gradient(circle,rgba(255,212,84,.96),rgba(255,230,158,.38) 48%,transparent 72%)}.zefirok-tier-activation-badge img{position:relative;z-index:1;max-width:146px;max-height:126px;object-fit:contain;filter:drop-shadow(0 14px 18px rgba(115,67,38,.18))}.zefirok-tier-activation-kicker{display:inline-flex;align-items:center;min-height:26px;padding:5px 11px;border-radius:999px;background:#ffe1ec;color:#b74770;font-size:10px;font-weight:900;letter-spacing:.08em}.zefirok-tier-activation-card.is-plus .zefirok-tier-activation-kicker{background:#fff0b7;color:#936111}.zefirok-tier-activation-title{margin:9px 0 6px;color:#7d3150;font-size:26px;line-height:1.08;font-weight:950}.zefirok-tier-activation-card.is-plus .zefirok-tier-activation-title{color:#794a0f}.zefirok-tier-activation-copy{max-width:390px;margin:0 auto;color:#896d68;font-size:13px;line-height:1.45;font-weight:650}.zefirok-tier-level-jump{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px;max-width:370px;margin:14px auto 0}.zefirok-tier-level-jump[hidden]{display:none!important}.zefirok-tier-level-jump span{min-height:39px;display:grid;place-items:center;border:1px solid #e3bd68;border-radius:999px;background:rgba(255,255,255,.72);color:#755027;font-size:12px;font-weight:900}.zefirok-tier-level-jump b{color:#d88b1f;font-size:24px}.zefirok-tier-level-jump em{grid-column:1/-1;justify-self:center;margin-top:-4px;padding:5px 13px;border-radius:999px;background:#fff0b9;color:#d54a7d;font-size:11px;font-style:normal;font-weight:900}.zefirok-tier-activation-benefits{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:16px}.zefirok-tier-activation-benefit{min-height:70px;display:grid;grid-template-columns:43px minmax(0,1fr);align-items:center;gap:9px;box-sizing:border-box;padding:9px 10px;border:1px solid rgba(233,196,203,.9);border-radius:18px;background:rgba(255,255,255,.72);color:#72494f;text-align:left;box-shadow:0 6px 16px rgba(109,62,69,.05)}.zefirok-tier-activation-card.is-plus .zefirok-tier-activation-benefit{border-color:rgba(222,177,68,.62);background:rgba(255,252,237,.78);color:#6d4f24}.zefirok-tier-activation-benefit-icon{width:43px;height:43px;display:grid;place-items:center;border-radius:14px;background:#fff5f7;color:#df5c91;font-size:25px}.zefirok-tier-activation-card.is-plus .zefirok-tier-activation-benefit-icon{background:#fff2c7;color:#d39724}.zefirok-tier-activation-benefit-icon img{width:39px;height:39px;object-fit:contain}.zefirok-tier-activation-benefit strong{font-size:11px;line-height:1.22;font-weight:900}.zefirok-tier-activation-benefit:last-child:nth-child(odd){grid-column:1/-1}.zefirok-tier-activation-action{width:100%;min-height:54px;margin-top:16px;border:0;border-radius:18px;background:linear-gradient(145deg,#ef6da0,#ce3d77);color:#fff;font-size:14px;font-weight:900;box-shadow:0 12px 25px rgba(188,62,112,.22)}.zefirok-tier-activation-card.is-plus .zefirok-tier-activation-action{border:1px solid rgba(255,239,188,.78);background:linear-gradient(135deg,#f3b833,#ef8a31 48%,#df4b82);box-shadow:0 12px 28px rgba(179,111,20,.25),inset 0 1px rgba(255,255,255,.46)}@keyframes zefirokTierActivationIn{from{opacity:0;transform:translateY(24px) scale(.955)}to{opacity:1;transform:translateY(0) scale(1)}}@media(max-width:430px){.zefirok-tier-activation-layer{padding:11px}.zefirok-tier-activation-scroll{padding:22px 13px max(16px,env(safe-area-inset-bottom))}.zefirok-tier-activation-badge{width:132px;height:114px}.zefirok-tier-activation-badge img{max-width:128px;max-height:110px}.zefirok-tier-activation-title{font-size:23px}.zefirok-tier-activation-copy{font-size:12px}.zefirok-tier-activation-benefits{gap:7px}.zefirok-tier-activation-benefit{min-height:65px;grid-template-columns:39px minmax(0,1fr);padding:8px}.zefirok-tier-activation-benefit-icon{width:39px;height:39px}.zefirok-tier-activation-benefit-icon img{width:36px;height:36px}}
+</style>
 <script src="https://telegram.org/js/telegram-web-app.js?63"></script>
 <script>
 (() => {
@@ -1529,6 +1533,106 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
   }
   window.zefirokSyncAccountRevision = syncHostAccountRevision;
 
+  const TIER_ACTIVATION_CLAIM_PATH = "/api/battle-pass/tier-activation/claim";
+  let tierActivationLayer = null;
+  let tierActivationClaimingId = "";
+  let tierActivationPendingNotice = null;
+  let tierActivationRetryTimer = 0;
+  let tierActivationRetryAttempts = 0;
+
+  function tierActivationHostBlocked() {
+    if (document.body.classList.contains("zefirok-season-pass-open")) return "season-pass";
+    if (["zefirok-rating-open","zefirok-referrals-open","zefirok-album-open","zefirok-achievements-open","zefirok-legal-open"].some(key=>document.body.classList.contains(key))) return "overlay";
+    if (document.querySelector(".zefirok-maintenance-gate,.zefirok-legal-gate,.zefirok-legal-layer")) return "gate";
+    return "";
+  }
+
+  function scheduleTierActivationRetry(delayMs=650) {
+    window.clearTimeout(tierActivationRetryTimer);
+    tierActivationRetryTimer = window.setTimeout(() => {
+      tierActivationRetryTimer = 0;
+      const pending=tierActivationPendingNotice;
+      if(pending)void presentTierActivationNotice(pending);
+    }, Math.max(350,Number(delayMs)||650));
+  }
+
+  function closeTierActivationLayer({openPass=false}={}) {
+    if (tierActivationLayer?.isConnected) tierActivationLayer.remove();
+    tierActivationLayer = null;
+    if (!openPass) return;
+    let initData="";
+    try { initData=String(window.Telegram?.WebApp?.initData||tpHostSessionGet("zefirok-telegram-init-data")||""); } catch {}
+    openSeasonPassOverlay(initData);
+  }
+
+  function renderTierActivationLayer(notice) {
+    const plus=String(notice?.newTier||"")==="elite_plus";
+    const layer=document.createElement("section");
+    layer.className="zefirok-tier-activation-layer";
+    layer.setAttribute("role","dialog");
+    layer.setAttribute("aria-modal","true");
+    layer.setAttribute("aria-label",plus?"Элитный плюс активирован":"Элитный активирован");
+    const card=document.createElement("div");
+    card.className=`zefirok-tier-activation-card${plus?" is-plus":""}`;
+    card.innerHTML=`<div class="zefirok-tier-activation-burst" aria-hidden="true"></div><button class="zefirok-tier-activation-close" type="button" aria-label="Закрыть">×</button><div class="zefirok-tier-activation-scroll"><div class="zefirok-tier-activation-badge"><img alt=""></div><span class="zefirok-tier-activation-kicker"></span><h2 class="zefirok-tier-activation-title"></h2><p class="zefirok-tier-activation-copy"></p><div class="zefirok-tier-level-jump" hidden><span data-from></span><b aria-hidden="true">→</b><span data-to></span><em data-bonus></em></div><div class="zefirok-tier-activation-benefits"></div><button class="zefirok-tier-activation-action" type="button">Открыть сезонный пропуск</button></div>`;
+    const badge=card.querySelector(".zefirok-tier-activation-badge img");
+    badge.src=plus?"/assets/season-pass/elite_plus.png?v=07939":"/assets/season-pass/elite.png?v=07939";
+    card.querySelector(".zefirok-tier-activation-kicker").textContent=plus?(notice?.isUpgrade?"ТАРИФ УЛУЧШЕН":"МАКСИМАЛЬНЫЙ ТАРИФ"):"ПРЕМИАЛЬНЫЙ ДОСТУП";
+    card.querySelector(".zefirok-tier-activation-title").textContent=plus?"Элитный+ активирован":"Поздравляем! Элитный активирован";
+    card.querySelector(".zefirok-tier-activation-copy").textContent=plus?"Максимальные преимущества сезона уже действуют на вашем аккаунте.":"Премиальная линия и особые возможности сезона теперь доступны.";
+    const from=Math.max(0,Number(notice?.fromLevel)||0),to=Math.max(0,Number(notice?.toLevel)||0),bonus=Math.max(0,Number(notice?.bonusLevels)||Math.max(0,to-from));
+    const jump=card.querySelector(".zefirok-tier-level-jump");
+    if(plus&&bonus>0&&to>from){jump.hidden=false;jump.querySelector("[data-from]").textContent=`Уровень ${from}`;jump.querySelector("[data-to]").textContent=`Уровень ${to}`;jump.querySelector("[data-bonus]").textContent=`+${bonus} ${bonus===1?"уровень":bonus>=2&&bonus<=4?"уровня":"уровней"}`;}
+    const benefits=card.querySelector(".zefirok-tier-activation-benefits");
+    for(const benefit of Array.isArray(notice?.benefits)?notice.benefits:[]){
+      const row=document.createElement("div");row.className="zefirok-tier-activation-benefit";
+      const icon=document.createElement("span");icon.className="zefirok-tier-activation-benefit-icon";
+      const image=String(benefit?.imageUrl||"").trim();
+      if(image){const img=document.createElement("img");img.src=image;img.alt="";icon.append(img);}else icon.textContent=String(benefit?.symbol||"✦");
+      const title=document.createElement("strong");title.textContent=String(benefit?.title||"Преимущество");
+      row.append(icon,title);benefits.append(row);
+    }
+    const close=()=>closeTierActivationLayer({openPass:false});
+    card.querySelector(".zefirok-tier-activation-close").addEventListener("click",close);
+    card.querySelector(".zefirok-tier-activation-action").addEventListener("click",()=>closeTierActivationLayer({openPass:true}));
+    layer.addEventListener("click",event=>{if(event.target===layer)close();});
+    layer.append(card);document.body.append(layer);tierActivationLayer=layer;
+    try { window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred?.("success"); } catch {}
+    requestAnimationFrame(()=>card.querySelector(".zefirok-tier-activation-action")?.focus());
+  }
+
+  async function presentTierActivationNotice(notice) {
+    const id=String(notice?.id||"").trim();
+    if(!id||TEST_PROJECT_MODE||tierActivationLayer?.isConnected||tierActivationClaimingId===id)return false;
+    tierActivationPendingNotice=notice;
+    const blocked=tierActivationHostBlocked();
+    if(blocked==="season-pass"){
+      try { seasonPassFrame()?.contentWindow?.postMessage?.({type:"zefirok-host-tier-activation-notice",notice},"*"); } catch {}
+      tierActivationPendingNotice=null;
+      return true;
+    }
+    if(blocked){scheduleTierActivationRetry();return false;}
+    const initData=String(window.Telegram?.WebApp?.initData||buildTelegramProfile()?.initData||"");
+    if(!initData){scheduleTierActivationRetry();return false;}
+    tierActivationClaimingId=id;
+    try{
+      const controller=new AbortController();const timer=window.setTimeout(()=>controller.abort(),6500);
+      const response=await fetch(TIER_ACTIVATION_CLAIM_PATH,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({initData,noticeId:id,surface:"index"}),cache:"no-store",credentials:"same-origin",signal:controller.signal}).finally(()=>window.clearTimeout(timer));
+      const data=await response.json().catch(()=>null);
+      if(!response.ok||!data?.ok)throw new Error(data?.error||"Не удалось открыть уведомление активации.");
+      tierActivationPendingNotice=null;
+      tierActivationRetryAttempts=0;
+      if(!data.claimed||!data.notice)return false;
+      renderTierActivationLayer(data.notice);
+      return true;
+    }catch(error){
+      console.warn("Tier activation notice claim failed",error);
+      tierActivationRetryAttempts+=1;
+      if(tierActivationRetryAttempts<=4)scheduleTierActivationRetry(Math.min(12000,900*(2**tierActivationRetryAttempts)));
+      return false;
+    }finally{tierActivationClaimingId="";}
+  }
+
   window.addEventListener("message", (event) => {
     const gameFrame = frame();
     const passFrame = seasonPassFrame();
@@ -1710,6 +1814,8 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
           applied: Boolean(message.applied)
         }, "*");
       } catch {}
+    } else if (message.type === "zefirok-tier-activation-notice") {
+      if (fromGame) void presentTierActivationNotice(message.notice);
     } else if (message.type === "zefirok-account-mutated") {
       syncHostAccountRevision(String(message.reason || "game"), true);
     } else if (message.type === "zefirok-progress-save") {
@@ -16713,6 +16819,9 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         state.seasonProfileXpMultiplier = active ? 2 : 1;
         state.seasonProfileXpEndsAt = String(data.endsAt || &quot;&quot;);
         state.seasonPassAttentionCount = Math.max(0, Math.floor(Number(data.claimableCount || 0)));
+        if (data.tierActivationNotice &amp;&amp; data.tierActivationNotice.id) {
+          try { window.parent.postMessage({ type:&quot;zefirok-tier-activation-notice&quot;, notice:data.tierActivationNotice }, &quot;*&quot;); } catch (error) {}
+        }
         updateProfileCaseBadges();
         if (isScreenVisible(&quot;profile&quot;)) renderProfile();
       }
