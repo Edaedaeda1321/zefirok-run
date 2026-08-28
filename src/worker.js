@@ -4005,13 +4005,23 @@ async function ensurePlayerGiftInboxSchema(env) {
 }
 
 function normalizePlayerGiftRewards(input) {
-  const allowed = new Set(["points", "zefir", "coffee", "case", "avatar", "frame", "trail", "skin"]);
+  const allowed = new Set(["points", "zefir", "coffee", "case", "avatar", "frame", "trail", "skin", "season_pass_xp"]);
   const merged = new Map();
   for (const raw of Array.isArray(input) ? input : []) {
     if (!raw || typeof raw !== "object") continue;
     let kind = String(raw.kind || "").trim().toLowerCase();
     if (kind === "treats" || kind === "marshmallow") kind = "zefir";
     if (!allowed.has(kind)) continue;
+    if (kind === "season_pass_xp") {
+      const seasonId = String(raw.seasonId || raw.season_id || "").trim().slice(0, 120);
+      const taskId = String(raw.taskId || raw.task_id || "").trim().slice(0, 80);
+      const periodKey = String(raw.periodKey || raw.period_key || "").trim().slice(0, 24);
+      if (!/^[A-Za-z0-9_-]{1,120}$/.test(seasonId) || !/^[A-Za-z0-9_-]{2,80}$/.test(taskId) || !/^[DW]:\d{4}-\d{2}-\d{2}$/.test(periodKey)) continue;
+      const amount = Math.max(1, Math.min(5000000, Math.floor(Number(raw.amount || 1))));
+      const key = `${kind}:${seasonId}:${taskId}:${periodKey}`;
+      if (!merged.has(key)) merged.set(key, { kind, id:"", amount, seasonId, taskId, periodKey });
+      continue;
+    }
     const id = String(raw.id || raw.rewardId || "").trim().slice(0, 96);
     if (["case", "avatar", "frame", "trail", "skin"].includes(kind) && !id) continue;
     const amount = ["avatar", "frame", "trail", "skin"].includes(kind)
@@ -4059,6 +4069,65 @@ async function createPlayerGiftInbox(env, telegramId, spec = {}) {
   ]);
   const created = Number(batch?.[0]?.meta?.changes || 0) > 0;
   return { giftId, created, rewards, status };
+}
+
+function seasonPassTaskMailGiftId(seasonId, taskId, periodKey) {
+  const raw = `${String(seasonId || "")}|${String(taskId || "")}|${String(periodKey || "")}`;
+  const taskPart = String(taskId || "task").replace(/[^A-Za-z0-9_-]/g, "_").slice(0, 38) || "task";
+  const periodPart = String(periodKey || "period").replace(/[^A-Za-z0-9:_-]/g, "_").slice(0, 20) || "period";
+  return `season_task:${retentionV2ShortHash(raw)}:${taskPart}:${periodPart}`.slice(0, 120);
+}
+
+async function syncSeasonPassTaskGiftInbox(env, telegramId, options = {}) {
+  const id = String(telegramId || "").trim();
+  if (!/^\d{4,20}$/.test(id)) return 0;
+  await Promise.all([ensureSeasonPassSchema(env), ensurePlayerGiftInboxSchema(env)]);
+  const seasonId = String(options.seasonId || options.season_id || "").trim();
+  const requestedPairs = Array.isArray(options.pairs) ? options.pairs.slice(0, 30) : [];
+  const binds = [id];
+  let where = `n.telegram_id=? AND n.xp_reward>0 AND NOT EXISTS(
+    SELECT 1 FROM season_pass_task_claims c
+    WHERE c.season_id=n.season_id AND c.telegram_id=n.telegram_id AND c.task_id=n.task_id AND c.period_key=n.period_key AND c.status='delivered'
+  )`;
+  if (seasonId) { where += ` AND n.season_id=?`; binds.push(seasonId); }
+  const pairs = requestedPairs.map((item) => ({ taskId:String(item?.taskId || item?.task_id || "").trim(), periodKey:String(item?.periodKey || item?.period_key || "").trim() }))
+    .filter((item) => /^[A-Za-z0-9_-]{2,80}$/.test(item.taskId) && /^[DW]:\d{4}-\d{2}-\d{2}$/.test(item.periodKey));
+  if (requestedPairs.length && !pairs.length) return 0;
+  if (pairs.length) {
+    where += ` AND (${pairs.map(() => `(n.task_id=? AND n.period_key=?)`).join(" OR ")})`;
+    for (const pair of pairs) binds.push(pair.taskId, pair.periodKey);
+  }
+  const result = await env.DB.prepare(`SELECT n.season_id,n.task_id,n.period_key,n.task_title,n.xp_reward,n.completed_at
+    FROM season_pass_task_notifications n WHERE ${where}
+    ORDER BY n.completed_at DESC,n.task_id LIMIT 24`).bind(...binds).all();
+  const rows = result.results || [];
+  if (!rows.length) return 0;
+  const now = Math.floor(Date.now() / 1000);
+  const statements = [];
+  for (const row of rows) {
+    const rowSeasonId = String(row.season_id || "").trim();
+    const taskId = String(row.task_id || "").trim();
+    const periodKey = String(row.period_key || "").trim();
+    if (!rowSeasonId || !taskId || !periodKey) continue;
+    const xp = Math.max(1, Math.floor(Number(row.xp_reward) || 1));
+    const taskTitle = String(row.task_title || "Задание").trim().slice(0, 180) || "Задание";
+    const giftId = seasonPassTaskMailGiftId(rowSeasonId, taskId, periodKey);
+    const rewards = normalizePlayerGiftRewards([{ kind:"season_pass_xp", amount:xp, seasonId:rowSeasonId, taskId, periodKey }]);
+    if (!rewards.length) continue;
+    const createdAt = Math.max(1, Math.floor(Number(row.completed_at) || now));
+    const title = "Задание сезонного пропуска выполнено";
+    const message = `Задание «${taskTitle}» выполнено. Заберите XP сезонного пропуска.`;
+    const reason = "Награда за выполненное задание сезонного пропуска";
+    const preview = playerMailPreviewText(`${taskTitle} · +${xp.toLocaleString("ru-RU")} XP`, message);
+    statements.push(
+      env.DB.prepare(`INSERT OR IGNORE INTO player_gift_inbox(gift_id,telegram_id,gift_kind,title,message_text,reason,rewards_json,status,created_at,updated_at,claimed_at) VALUES(?,?,?,?,?,?,?,'pending',?,?,0)`)
+        .bind(giftId,id,"season_pass_task",title,message,reason,JSON.stringify(rewards),createdAt,now),
+      env.DB.prepare(`INSERT OR IGNORE INTO player_mail_metadata(gift_id,telegram_id,preview_text,image_url,read_at) VALUES(?,?,?,?,0)`)
+        .bind(giftId,id,preview,"/assets/ui/icon_battlepass.png")
+    );
+  }
+  for (let index = 0; index < statements.length; index += 40) await env.DB.batch(statements.slice(index, index + 40));
+  return Math.floor(statements.length / 2);
 }
 
 async function playerGiftInboxPayload(env, telegramId) {
@@ -4129,7 +4198,14 @@ async function getPlayerGiftInbox(request, env) {
     const body = await readJson(request);
     requireBotToken(env);
     const auth = await validateTelegramInitData(String(body.initData || ""), env);
-    return jsonResponse(await playerGiftInboxPayload(env, String(auth.user.id)));
+    const telegramId = String(auth.user.id);
+    try {
+      const season = await loadSeasonPassSeason(env);
+      if (season?.id && seasonPassCapabilities(season).canClaimTasks) await syncSeasonPassTaskGiftInbox(env, telegramId, { seasonId:season.id });
+    } catch (syncError) {
+      console.error("season pass task mail backfill failed", syncError);
+    }
+    return jsonResponse(await playerGiftInboxPayload(env, telegramId));
   } catch (error) {
     if (error instanceof ApiError) return jsonResponse({ ok:false, error:error.message }, error.status);
     console.error("getPlayerGiftInbox failed", error);
@@ -4216,6 +4292,23 @@ async function claimPlayerGift(request, env, ctx) {
     const lock = await env.DB.prepare(`UPDATE player_gift_inbox SET status='claiming',updated_at=? WHERE telegram_id=? AND gift_id=? AND status='pending'`).bind(now,telegramId,giftId).run();
     if (Number(lock.meta?.changes || 0) < 1) throw new ApiError(409, "Подарок уже обрабатывается. Попробуйте ещё раз через несколько секунд.");
     const rewards = normalizePlayerGiftRewards(safeJson(row.rewards_json, []));
+    const seasonTaskRewards = rewards.filter((reward) => String(reward?.kind || "") === "season_pass_xp");
+    if (seasonTaskRewards.length) {
+      if (seasonTaskRewards.length !== rewards.length || seasonTaskRewards.length !== 1) {
+        await env.DB.prepare(`UPDATE player_gift_inbox SET status='pending',updated_at=? WHERE telegram_id=? AND gift_id=? AND status='claiming'`).bind(Math.floor(Date.now()/1000),telegramId,giftId).run();
+        throw new ApiError(409,"Письмо содержит несовместимый набор наград.");
+      }
+      try {
+        const taskResult = await claimSeasonPassTaskGiftReward(env,telegramId,seasonTaskRewards[0],ctx);
+        const claimedAt = Math.floor(Date.now()/1000);
+        await env.DB.prepare(`UPDATE player_gift_inbox SET status='claimed',claimed_at=CASE WHEN claimed_at>0 THEN claimed_at ELSE ? END,updated_at=? WHERE telegram_id=? AND gift_id=? AND status IN ('claiming','pending')`).bind(claimedAt,claimedAt,telegramId,giftId).run();
+        const gifts = await playerGiftInboxPayload(env,telegramId);
+        return jsonResponse({ok:true,gifts,deliveryCommitted:true,seasonPassRefreshRequired:true,repeated:Boolean(taskResult?.repeated),receivedSeasonPassXp:Math.max(0,Number(taskResult?.xp||0))});
+      } catch (taskError) {
+        await env.DB.prepare(`UPDATE player_gift_inbox SET status='pending',updated_at=? WHERE telegram_id=? AND gift_id=? AND status='claiming'`).bind(Math.floor(Date.now()/1000),telegramId,giftId).run().catch(()=>{});
+        throw taskError;
+      }
+    }
     if (!rewards.length) {
       await env.DB.prepare(`UPDATE player_gift_inbox SET status='claimed',claimed_at=?,updated_at=? WHERE telegram_id=? AND gift_id=? AND status='claiming' AND updated_at=?`).bind(now,now,telegramId,giftId,now).run();
     } else {
@@ -21957,6 +22050,7 @@ function parseSafeReward(value, allowNone = false) {
 
 function safeRewardDescription(reward) {
   if (!reward || reward.kind === "none") return "Без награды";
+  if (reward.kind === "season_pass_xp") return `${Math.max(1,Number(reward.amount || 1)).toLocaleString("ru-RU")} XP сезонного пропуска`;
   if (reward.kind === "case") return `${reward.amount} × ${LEVEL_CASE_CONFIG[reward.id]?.title || reward.id}`;
   if (reward.kind === "seasonal_case") return `${reward.amount} × сезонный кейс`;
   if (["avatar", "frame", "trail", "skin", "music"].includes(String(reward.kind || ""))) return grantRewardTitle(String(reward.kind), String(reward.id || ""));
@@ -27915,6 +28009,13 @@ async function deliverSeasonPassTaskNotificationsForRows(env,telegramId,season,t
   let lease=0;
   try{
     if(!id||!season||!rows.length)return null;
+    try {
+      await syncSeasonPassTaskGiftInbox(env,id,{seasonId:String(season.id),pairs:rows.map(row=>({taskId:String(row.task_id),periodKey:String(row.period_key)}))});
+    } catch (mailError) {
+      // Telegram delivery must not be blocked by a temporary inbox failure.
+      // /api/gifts/state backfills the same deterministic mail later.
+      console.error('season pass task mail create failed',mailError);
+    }
     const now=Math.floor(Date.now()/1000);const pairs=rows.flatMap(row=>[String(row.task_id),String(row.period_key)]);const predicates=rows.map(()=>`(task_id=? AND period_key=?)`).join(' OR ');
     const subscriber=await env.DB.prepare(`SELECT chat_id FROM bot_subscribers WHERE telegram_id=? AND active=1 LIMIT 1`).bind(id).first();
     if(!subscriber?.chat_id){await env.DB.prepare(`UPDATE season_pass_task_notifications SET bot_notified_at=? WHERE season_id=? AND telegram_id=? AND bot_notified_at=0 AND (${predicates})`).bind(now,String(season.id),id,...pairs).run();return null;}
@@ -28936,6 +29037,27 @@ function seasonPassTaskTimelineLater(executionCtx,promise){
   else void promise.catch(error=>console.error('season pass task timeline failed',error));
 }
 
+async function claimSeasonPassTaskGiftReward(env, telegramId, reward, executionCtx = null) {
+  const id = String(telegramId || "").trim();
+  const seasonId = String(reward?.seasonId || "").trim();
+  const taskId = String(reward?.taskId || "").trim();
+  const periodKey = String(reward?.periodKey || "").trim();
+  if (!/^\d{4,20}$/.test(id) || !/^[A-Za-z0-9_-]{1,120}$/.test(seasonId) || !/^[A-Za-z0-9_-]{2,80}$/.test(taskId) || !/^[DW]:\d{4}-\d{2}-\d{2}$/.test(periodKey)) throw new ApiError(400,"Некорректная награда сезонного задания.");
+  await ensureSeasonPassSchema(env);
+  const [season,notification,taskRow] = await Promise.all([
+    loadSeasonPassSeasonById(env,seasonId),
+    env.DB.prepare(`SELECT task_title,xp_reward FROM season_pass_task_notifications WHERE season_id=? AND telegram_id=? AND task_id=? AND period_key=? LIMIT 1`).bind(seasonId,id,taskId,periodKey).first(),
+    env.DB.prepare(`SELECT task_id,xp_reward,title FROM season_pass_tasks WHERE season_id=? AND task_id=? LIMIT 1`).bind(seasonId,taskId).first()
+  ]);
+  if (!season) throw new ApiError(404,"Сезон для этой награды не найден.");
+  assertSeasonPassTaskClaimsOpen(season);
+  if (!notification) throw new ApiError(404,"Выполненное задание не найдено.");
+  if (!taskRow) throw new ApiError(404,"Задание сезонного пропуска больше недоступно.");
+  const player = await ensureSeasonPassPlayer(env,season,id);
+  const task = { id:taskId, periodKey, xp:Math.max(1,Number(taskRow.xp_reward)||1), title:String(notification.task_title || taskRow.title || "Задание") };
+  return grantSeasonPassTaskXp(env,{season,telegramId:id,player,auth:{user:null}},task,executionCtx);
+}
+
 async function grantSeasonPassTaskXp(env,ctx,task,executionCtx=null){
   const now=Math.floor(Date.now()/1000);const key=[ctx.season.id,ctx.telegramId,String(task.id),String(task.periodKey)];
   const premiumMultiplier=await seasonPassHasXpX2(env,ctx.season.id,ctx.telegramId,ctx.player)?2:seasonPassTaskXpMultiplierForPlayer(ctx.season,ctx.player);
@@ -28952,6 +29074,14 @@ async function grantSeasonPassTaskXp(env,ctx,task,executionCtx=null){
     env.DB.prepare(`UPDATE season_pass_task_notifications SET bot_notified_at=CASE WHEN bot_notified_at<=0 THEN ? ELSE bot_notified_at END WHERE season_id=? AND telegram_id=? AND task_id=? AND period_key=?`).bind(now,...key)
   ]);
   const awarded=Number(batchResult?.[2]?.meta?.changes||0)>0;
+  try {
+    await ensurePlayerGiftInboxSchema(env);
+    const giftId=seasonPassTaskMailGiftId(ctx.season.id,task.id,task.periodKey);
+    await env.DB.batch([
+      env.DB.prepare(`UPDATE player_gift_inbox SET status='claimed',claimed_at=CASE WHEN claimed_at>0 THEN claimed_at ELSE ? END,updated_at=? WHERE telegram_id=? AND gift_id=? AND status IN ('pending','claiming')`).bind(now,now,ctx.telegramId,giftId),
+      env.DB.prepare(`UPDATE player_mail_metadata SET read_at=CASE WHEN read_at>0 THEN read_at ELSE ? END WHERE telegram_id=? AND gift_id=?`).bind(now,ctx.telegramId,giftId)
+    ]);
+  } catch (mailError) { console.error('season pass task mail finalize failed',mailError); }
   if(awarded)seasonPassTaskTimelineLater(executionCtx,recordPlayerTimeline(env,ctx.telegramId,'season_pass_task',`получил ${taskXp.toLocaleString('ru-RU')} XP за задание «${String(task.title||'Задание')}»`,{seasonId:ctx.season.id,taskId:task.id,periodKey:task.periodKey,xp:taskXp,multiplier},`season_pass_task_${ctx.season.id}_${task.id}_${task.periodKey}`,ctx.auth.user,now));
   return {repeated:!awarded,xp:awarded?taskXp:0,multiplier};
 }
@@ -29009,6 +29139,20 @@ async function claimAllSeasonPassTasks(request,env,executionCtx=null){
     ]);
     const awardedXp=Math.max(0,Number(batch?.[2]?.results?.[0]?.total||batch?.[2]?.results?.[0]?.TOTAL||0));
     const awarded=Number(batch?.[3]?.meta?.changes||0)>0&&awardedXp>0;
+    if(awarded){
+      try{
+        await ensurePlayerGiftInboxSchema(env);
+        const mailStatements=[];
+        for(const task of ready){
+          const giftId=seasonPassTaskMailGiftId(ctx.season.id,task.id,task.periodKey);
+          mailStatements.push(
+            env.DB.prepare(`UPDATE player_gift_inbox SET status='claimed',claimed_at=CASE WHEN claimed_at>0 THEN claimed_at ELSE ? END,updated_at=? WHERE telegram_id=? AND gift_id=? AND status IN ('pending','claiming')`).bind(now,now,ctx.telegramId,giftId),
+            env.DB.prepare(`UPDATE player_mail_metadata SET read_at=CASE WHEN read_at>0 THEN read_at ELSE ? END WHERE telegram_id=? AND gift_id=?`).bind(now,ctx.telegramId,giftId)
+          );
+        }
+        for(let index=0;index<mailStatements.length;index+=40)await env.DB.batch(mailStatements.slice(index,index+40));
+      }catch(mailError){console.error('season pass bulk task mail finalize failed',mailError);}
+    }
     await cancelQueuedSeasonPassTaskNotifications(env,ctx.telegramId,'season-task-claimed-all');
     const receivedTasks=awarded?ready.map(task=>({id:task.id,periodKey:task.periodKey,title:task.title,xp:Math.max(1,Number(task.xp)||1)*taskXpMultiplier})):[];
     if(awarded)seasonPassTaskTimelineLater(executionCtx,recordPlayerTimeline(env,ctx.telegramId,'season_pass_task_bulk',`получил ${awardedXp.toLocaleString('ru-RU')} XP за задания`,{seasonId:ctx.season.id,count:receivedTasks.length,xp:awardedXp},`season_pass_tasks_bulk_${ctx.season.id}_${now}`,ctx.auth.user,now));
