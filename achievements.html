@@ -26,7 +26,6 @@
     button{font:inherit;-webkit-tap-highlight-color:transparent}.page{width:100%;max-width:var(--content-max);margin:0 auto;display:grid;gap:12px;padding-bottom:6px}.page>*{min-width:0}
 
     .topbar{display:grid;grid-template-columns:48px minmax(0,1fr) 48px;align-items:center;gap:10px;padding:2px 0 4px}
-    .topbar-btn{appearance:none;width:48px;height:48px;border:1px solid var(--line);border-radius:17px;background:rgba(255,255,255,.9);color:#aa5874;font-size:24px;font-weight:900;box-shadow:0 7px 19px rgba(113,73,89,.07);cursor:pointer}
     .topbar-copy{text-align:center;min-width:0}.topbar-copy strong{display:block;color:#4e343c;font-size:20px;font-weight:950;line-height:1.1}.topbar-copy span{display:block;margin-top:3px;color:#ba7188;font-size:10px;font-weight:850}.topbar-spacer{width:48px}
 
     .hero{position:relative;overflow:hidden;padding:17px;border:1px solid var(--line);border-radius:27px;background-color:#fffaf8;background-image:url('/assets/achievements/background_achivment_panel.png');background-size:cover;background-position:center;box-shadow:var(--shadow)}
@@ -68,7 +67,7 @@
 <body>
   <main class="page">
     <header class="topbar">
-      <button class="topbar-btn" type="button" data-back aria-label="Назад">←</button>
+      <div class="topbar-spacer" aria-hidden="true"></div>
       <div class="topbar-copy"><strong>Достижения</strong><span>Трофеи и престиж аккаунта</span></div>
       <div class="topbar-spacer" aria-hidden="true"></div>
     </header>
@@ -225,7 +224,6 @@
   async function claim(id){if(!id||claiming.has(id))return;claiming.add(id);renderCatalog();try{const data=await api('/api/achievements/claim',{achievementId:id,requestId:makeRequestId()});applyState(data?.state||data);systemMessage='Награда за достижение получена.';renderInfo();try{window.parent?.postMessage?.({type:'zefirok-achievements-account-updated'},'*');}catch{}}catch(e){systemMessage=String(e?.message||e);renderInfo();}finally{claiming.delete(id);renderCatalog();}}
 
   function closeAchievements(){if(window.parent&&window.parent!==window){try{window.parent.postMessage({type:'zefirok-close-achievements'},'*');}catch{}return;}try{history.back();}catch{location.href='/';}}
-  $('[data-back]').addEventListener('click',closeAchievements);
   $('[data-filters]').addEventListener('click',e=>{const b=e.target?.closest?.('[data-category]');if(!b)return;activeCategory=String(b.dataset.category||'all');renderFilters();renderCatalog();});
   $('[data-achievement-list]').addEventListener('click',e=>{const retry=e.target?.closest?.('[data-retry]');if(retry){void load();return;}const claimBtn=e.target?.closest?.('[data-claim]');if(claimBtn){void claim(String(claimBtn.dataset.claim||''));return;}const showcaseBtn=e.target?.closest?.('[data-toggle-showcase]');if(showcaseBtn){const id=String(showcaseBtn.dataset.toggleShowcase||'');if(!id)return;const exists=SHOWCASE_IDS.includes(id);const next=exists?SHOWCASE_IDS.filter(x=>x!==id):[...SHOWCASE_IDS,id].slice(0,SHOWCASE_LIMIT);void saveShowcase(next,exists?'Трофей убран из витрины.':'Трофей добавлен в витрину.');}});
   $('[data-showcase-slots]').addEventListener('click',e=>{const rem=e.target?.closest?.('[data-remove]');if(rem){const id=String(rem.dataset.remove||'');void saveShowcase(SHOWCASE_IDS.filter(x=>x!==id),'Трофей убран из витрины.');return;}const move=e.target?.closest?.('[data-move]');if(!move)return;const id=String(move.dataset.id||''),dir=String(move.dataset.move||''),idx=SHOWCASE_IDS.indexOf(id);if(idx<0)return;const nextIdx=dir==='left'?idx-1:idx+1;if(nextIdx<0||nextIdx>=SHOWCASE_IDS.length)return;const next=[...SHOWCASE_IDS];[next[idx],next[nextIdx]]=[next[nextIdx],next[idx]];void saveShowcase(next,'Порядок витрины обновлён.');});
