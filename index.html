@@ -11254,7 +11254,10 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       &lt;img alt=&quot;Аватар игрока&quot; class=&quot;profile-avatar is-fallback&quot; data-profile-avatar referrerpolicy=&quot;no-referrer&quot;/&gt;
     &lt;/div&gt;
     &lt;div class=&quot;profile-identity&quot;&gt;
-      &lt;h2 data-profile-name&gt;Гость кафе&lt;/h2&gt;
+      &lt;div class=&quot;profile-name-line&quot;&gt;
+        &lt;h2 data-profile-name&gt;Гость кафе&lt;/h2&gt;
+        &lt;button class=&quot;profile-pass-tier-badge&quot; data-profile-pass-tier-badge data-battle-pass-open type=&quot;button&quot; hidden aria-label=&quot;Открыть сезонный пропуск&quot;&gt;&lt;img data-profile-pass-tier-image src=&quot;&quot; alt=&quot;&quot;&gt;&lt;/button&gt;
+      &lt;/div&gt;
       &lt;div class=&quot;profile-status-row&quot;&gt;
         &lt;span class=&quot;profile-source-badge is-guest&quot; data-profile-source-badge&gt;Гостевой профиль&lt;/span&gt;
         &lt;span class=&quot;profile-premium-badge&quot; data-profile-premium-badge hidden&gt;Telegram Premium&lt;/span&gt;
@@ -11857,6 +11860,8 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       const profilePremiumBadgeEl = root.querySelector(&quot;[data-profile-premium-badge]&quot;);
       const profileAvatarNoteEl = root.querySelector(&quot;[data-profile-avatar-note]&quot;);
       const profileNameEl = root.querySelector(&quot;[data-profile-name]&quot;);
+      const profilePassTierBadgeEl = root.querySelector(&quot;[data-profile-pass-tier-badge]&quot;);
+      const profilePassTierImageEl = root.querySelector(&quot;[data-profile-pass-tier-image]&quot;);
       const profileUsernameEl = root.querySelector(&quot;[data-profile-username]&quot;);
       const profileIdEl = root.querySelector(&quot;[data-profile-id]&quot;);
       const profileRankEl = root.querySelector(&quot;[data-profile-rank]&quot;);
@@ -16812,8 +16817,36 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         return sanitizeGameNumber(PROFILE_XP_PER_PURCHASE * profileXpMultiplier());
       }
 
+      let seasonPassProfileTier = &quot;none&quot;;
+
+      function renderProfilePassTierBadge(rawTier) {
+        if (rawTier !== undefined &amp;&amp; rawTier !== null) {
+          const normalized = String(rawTier || &quot;none&quot;).trim().toLowerCase();
+          seasonPassProfileTier = normalized === &quot;elite_plus&quot; ? &quot;elite_plus&quot; : (normalized === &quot;elite&quot; ? &quot;elite&quot; : &quot;none&quot;);
+        }
+        if (!profilePassTierBadgeEl) return;
+        const activeTier = seasonPassProfileTier === &quot;elite&quot; || seasonPassProfileTier === &quot;elite_plus&quot;;
+        profilePassTierBadgeEl.hidden = !activeTier;
+        if (!activeTier) {
+          profilePassTierBadgeEl.removeAttribute(&quot;data-tier&quot;);
+          if (profilePassTierImageEl) { profilePassTierImageEl.removeAttribute(&quot;src&quot;); profilePassTierImageEl.alt = &quot;&quot;; }
+          return;
+        }
+        const plus = seasonPassProfileTier === &quot;elite_plus&quot;;
+        const label = plus ? &quot;Элитный+&quot; : &quot;Элитный&quot;;
+        profilePassTierBadgeEl.dataset.tier = seasonPassProfileTier;
+        profilePassTierBadgeEl.title = `${label} активирован`;
+        profilePassTierBadgeEl.setAttribute(&quot;aria-label&quot;, `${label} активирован. Открыть сезонный пропуск`);
+        if (profilePassTierImageEl) {
+          profilePassTierImageEl.src = plus ? &quot;/assets/ui/icon_player_elit+.png&quot; : &quot;/assets/ui/icon_player_elit.png&quot;;
+          profilePassTierImageEl.alt = label;
+        }
+      }
+
       function applySeasonPassProfileBonus(payload) {
         const data = payload &amp;&amp; typeof payload === &quot;object&quot; ? payload : {};
+        if (Object.prototype.hasOwnProperty.call(data, &quot;premiumTier&quot;)) renderProfilePassTierBadge(data.premiumTier);
+        else renderProfilePassTierBadge();
         const active = Boolean(data.active) &amp;&amp; Number(data.multiplier || 1) &gt;= 2;
         state.seasonProfileXpBonusActive = active;
         state.seasonProfileXpMultiplier = active ? 2 : 1;
@@ -16829,7 +16862,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       async function loadSeasonPassProfileBonus() {
         const initData = String(telegramProfile?.initData || &quot;&quot;);
         if (!initData) {
-          applySeasonPassProfileBonus({ active: false, multiplier: 1 });
+          applySeasonPassProfileBonus({ active: false, multiplier: 1, premiumTier: &quot;none&quot; });
           return false;
         }
         try {
@@ -24645,6 +24678,13 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 #zefirok-maltipoo-runner .profile-hero{position:relative;padding:14px;border:1px solid rgba(228,174,194,.30);border-radius:25px;background:radial-gradient(circle at 94% 4%,rgba(255,224,154,.30),transparent 34%),radial-gradient(circle at 2% 98%,rgba(255,216,231,.50),transparent 35%),linear-gradient(145deg,rgba(255,255,255,.99),rgba(255,245,248,.97));box-shadow:0 12px 30px rgba(119,65,85,.09),inset 0 1px 0 rgba(255,255,255,.92)}
 #zefirok-maltipoo-runner .profile-identity{gap:5px;padding-right:0}
 #zefirok-maltipoo-runner .profile-identity h2{font-size:clamp(21px,5.6vw,26px);letter-spacing:-.025em;padding-right:52px;box-sizing:border-box}
+#zefirok-maltipoo-runner .profile-name-line{display:flex;align-items:center;gap:5px;min-width:0;padding-right:52px;box-sizing:border-box}
+#zefirok-maltipoo-runner .profile-name-line h2{flex:1 1 auto;min-width:0;max-width:100%;padding-right:0!important;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#zefirok-maltipoo-runner .profile-pass-tier-badge{flex:0 0 30px;display:grid;place-items:center;width:30px;height:30px;margin:0;padding:0;border:0;border-radius:0;background:transparent;box-shadow:none;cursor:pointer;-webkit-tap-highlight-color:transparent}
+#zefirok-maltipoo-runner .profile-pass-tier-badge[hidden]{display:none!important}
+#zefirok-maltipoo-runner .profile-pass-tier-badge img{display:block;width:30px;height:30px;object-fit:contain;filter:drop-shadow(0 3px 5px rgba(178,76,116,.18));pointer-events:none}
+#zefirok-maltipoo-runner .profile-pass-tier-badge[data-tier=&quot;elite_plus&quot;] img{filter:drop-shadow(0 3px 6px rgba(190,137,24,.22))}
+#zefirok-maltipoo-runner .profile-pass-tier-badge:focus-visible{outline:2px solid rgba(225,145,178,.45);outline-offset:2px;border-radius:8px}
 #zefirok-maltipoo-runner .profile-username,#zefirok-maltipoo-runner .profile-id,#zefirok-maltipoo-runner .profile-avatar-note{display:none!important}
 #zefirok-maltipoo-runner .profile-status-row{margin-top:1px;padding-right:52px;box-sizing:border-box}
 #zefirok-maltipoo-runner .profile-status-row .profile-source-badge,#zefirok-maltipoo-runner .profile-status-row .profile-premium-badge{flex:0 0 100%;width:100%;max-width:100%;box-sizing:border-box;justify-content:center;text-align:center}

@@ -28829,13 +28829,13 @@ function seasonPassTierActivationBenefits(season,newTier,payload={}) {
   if(newTier==='elite') return [
     {key:'premium_rewards',title:'Премиальная линия из 50 наград',imageUrl:'/assets/season-pass/season.png?v=07939'},
     {key:'premium_tasks',title:'Премиальные задания',imageUrl:'/assets/season-pass/quest.png?v=07939'},
-    {key:'rating_star',title:'Розовая ✦ в рейтинге',imageUrl:'',symbol:'✦'},
+    {key:'rating_badge',title:'Значок «Элитный» в рейтинге',imageUrl:'/assets/ui/icon_player_elit.png',symbol:''},
     {key:'legendary_case',title:'Легендарный кейс на 50 уровне',imageUrl:'/assets/cases/legendary_closed.png'}
   ];
   const settings=seasonPassPublicTierSettings(season)?.elitePlus||{};
   const benefits=[
     {key:'elite_all',title:'Все преимущества «Элитного»',imageUrl:'/assets/season-pass/elite.png?v=07939'},
-    {key:'rating_star',title:'Золотая ✦ в рейтинге',imageUrl:'',symbol:'✦'}
+    {key:'rating_badge',title:'Значок «Элитный+» в рейтинге',imageUrl:'/assets/ui/icon_player_elit+.png',symbol:''}
   ];
   if(settings.xpBoost!==false){
     benefits.push({key:'season_xp_x2',title:'×2 XP сезона',imageUrl:'/assets/season-pass/xp_x2.png?v=07939'});
@@ -38618,7 +38618,7 @@ async function testProjectSandboxGameData(env, ctx) {
 
   if(path==="/api/battle-pass/access")return response({ok:true,allowed:true,canPreviewUpcoming:true,accessRole:"owner_test_project",season:testProjectSandboxPassPayload(state,snapshot).season,state:testProjectSandboxPassPayload(state,snapshot)});
   if(path==="/api/battle-pass/state")return response(testProjectSandboxPassPayload(state,snapshot));
-  if(path==="/api/battle-pass/profile-bonus"){const active=Number(state.seasonXpBoosts||0)>0||state.passTier==="elite_plus";return response({ok:true,active,multiplier:active?2:1,tierActivationNotice:null,claimableCount:testProjectSandboxPassPayload(state,snapshot).taskClaimableCount});}
+  if(path==="/api/battle-pass/profile-bonus"){const active=Number(state.seasonXpBoosts||0)>0||state.passTier==="elite_plus";return response({ok:true,active,multiplier:active?2:1,premiumTier:String(state.passTier||"none"),tierActivationNotice:null,claimableCount:testProjectSandboxPassPayload(state,snapshot).taskClaimableCount});}
   if(path==="/api/battle-pass/tier-activation/claim")return response({ok:true,claimed:false,notice:null,testOnly:true});
   if(path==="/api/battle-pass/task-notices/pending")return response({ok:true,pending:false,notice:null});
   if(path==="/api/battle-pass/task-notices/read")return response({ok:true});

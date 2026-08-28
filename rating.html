@@ -8709,10 +8709,11 @@ html > body { padding: 0 !important; }
 #zefirok-maltipoo-runner .leaderboard-v4-podium-name{justify-content:center;overflow:visible}
 #zefirok-maltipoo-runner .leaderboard-name-text{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #zefirok-maltipoo-runner .leaderboard-v4-row-copy>strong .leaderboard-name-text{color:inherit;font-size:inherit;font-weight:inherit;line-height:inherit}
-#zefirok-maltipoo-runner .leaderboard-pass-star{all:unset;display:inline-flex;align-items:center;justify-content:center;position:relative;flex:0 0 auto;width:auto;height:auto;min-width:0;min-height:0;margin:0 0 0 2px;padding:0;border:0!important;border-radius:0!important;background:none!important;box-shadow:none!important;outline:none!important;color:#d56f9b;font-family:Georgia,"Times New Roman",serif;font-size:19px;font-weight:950;line-height:1;cursor:pointer;vertical-align:middle;-webkit-appearance:none!important;appearance:none!important;-webkit-tap-highlight-color:transparent;touch-action:manipulation;text-shadow:0 0 4px rgba(213,111,155,.30),0 1px 0 rgba(255,255,255,.95);transform:none!important}
+#zefirok-maltipoo-runner .leaderboard-pass-star{all:unset;display:inline-flex;align-items:center;justify-content:center;position:relative;flex:0 0 25px;width:25px;height:25px;min-width:25px;min-height:25px;margin:0 0 0 2px;padding:0;border:0!important;border-radius:0!important;background:none!important;box-shadow:none!important;outline:none!important;cursor:pointer;vertical-align:middle;-webkit-appearance:none!important;appearance:none!important;-webkit-tap-highlight-color:transparent;touch-action:manipulation;transform:none!important}
 #zefirok-maltipoo-runner .leaderboard-pass-star::-moz-focus-inner{border:0;padding:0}
-#zefirok-maltipoo-runner .leaderboard-pass-star[data-pass-tier-badge="elite_plus"]{color:#d39a13;font-size:20px;text-shadow:0 0 4px rgba(232,184,49,.52),0 0 10px rgba(220,157,24,.32),0 1px 0 #fff}
-#zefirok-maltipoo-runner .leaderboard-pass-star:focus-visible{outline:2px solid rgba(225,145,178,.42);outline-offset:4px;border-radius:8px!important}
+#zefirok-maltipoo-runner .leaderboard-pass-star img{display:block;width:25px;height:25px;object-fit:contain;filter:drop-shadow(0 3px 5px rgba(178,76,116,.18));pointer-events:none}
+#zefirok-maltipoo-runner .leaderboard-pass-star[data-pass-tier-badge="elite_plus"] img{filter:drop-shadow(0 3px 6px rgba(190,137,24,.24))}
+#zefirok-maltipoo-runner .leaderboard-pass-star:focus-visible{outline:2px solid rgba(225,145,178,.42)!important;outline-offset:3px;border-radius:8px!important}
 #zefirok-maltipoo-runner .leaderboard-pass-star:active{transform:scale(.9)!important}
 #zefirok-maltipoo-runner .leaderboard-avatar-frame{position:relative!important;overflow:visible!important}
 #zefirok-maltipoo-runner .leaderboard-level-badge{position:absolute;right:-5px;bottom:-4px;z-index:9;display:grid;place-items:center;width:25px;height:25px;padding:0;border:2px solid rgba(255,255,255,.96);border-radius:50%;box-sizing:border-box;color:#665d58;background:linear-gradient(145deg,#f5f1ed,#d8d3d0);box-shadow:0 3px 8px rgba(83,63,57,.18);font:950 10px/1 var(--font-sans);font-variant-numeric:tabular-nums;cursor:pointer;-webkit-tap-highlight-color:transparent}
@@ -8726,8 +8727,9 @@ html > body { padding: 0 !important; }
 .rating-pass-info{position:fixed;inset:0;z-index:2147483600;display:grid;place-items:center;padding:max(22px,var(--zefirok-content-safe-top,0px)) 18px max(22px,var(--zefirok-content-safe-bottom,0px));background:rgba(67,42,50,.42);backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px);box-sizing:border-box}
 .rating-pass-info[hidden]{display:none!important}
 .rating-pass-info-card{width:min(390px,100%);box-sizing:border-box;padding:22px;border:1px solid rgba(235,205,188,.92);border-radius:26px;background:linear-gradient(165deg,#fffdf9,#fff2f4);box-shadow:0 24px 70px rgba(69,38,49,.24);text-align:center;color:#68404e}
-.rating-pass-info-star{display:grid;place-items:center;width:58px;height:58px;margin:0 auto 12px;border-radius:50%;background:#fff0f6;color:#d68bab;font:950 36px/1 Georgia,serif;box-shadow:inset 0 0 0 1px rgba(214,139,171,.24),0 8px 22px rgba(166,86,118,.12)}
-.rating-pass-info[data-tier="elite_plus"] .rating-pass-info-star{background:#fff7d8;color:#d4a126;box-shadow:inset 0 0 0 1px rgba(215,167,45,.34),0 8px 22px rgba(170,119,22,.13)}
+.rating-pass-info-star{display:grid;place-items:center;width:72px;height:72px;margin:0 auto 12px}
+.rating-pass-info-star img{display:block;width:72px;height:72px;object-fit:contain;filter:drop-shadow(0 8px 18px rgba(174,72,112,.18))}
+.rating-pass-info[data-tier="elite_plus"] .rating-pass-info-star img{filter:drop-shadow(0 8px 20px rgba(184,128,18,.22))}
 .rating-pass-info-card h2{margin:0;font-size:22px;font-weight:950}
 .rating-pass-info-card p{margin:9px 0 0;color:#856773;font-size:12px;font-weight:750;line-height:1.5}
 .rating-pass-info-benefit{margin:14px 0 0;padding:11px 13px;border-radius:15px;background:#fff;color:#744c5c;font-size:11px;font-weight:850;line-height:1.45}
@@ -8998,7 +9000,7 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
 <div class="rating-toast" data-rating-toast hidden></div>
 <section class="rating-pass-info" data-rating-pass-info data-tier="elite" hidden role="dialog" aria-modal="true" aria-labelledby="rating-pass-info-title">
   <div class="rating-pass-info-card">
-    <span class="rating-pass-info-star" aria-hidden="true">✦</span>
+    <span class="rating-pass-info-star" aria-hidden="true"></span>
     <h2 id="rating-pass-info-title" data-rating-pass-info-title>Элитный пропуск</h2>
     <p data-rating-pass-info-copy>У игрока активен премиальный тариф сезонного пропуска.</p>
     <div class="rating-pass-info-benefit" data-rating-pass-info-benefit>Премиальная линия наград и премиальные задания сезона.</div>
@@ -9122,6 +9124,7 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
   const banner = document.querySelector("[data-leaderboard-modal-banner]");
   const toast = document.querySelector("[data-rating-toast]");
   const passInfo = document.querySelector("[data-rating-pass-info]");
+  const passInfoStar = document.querySelector(".rating-pass-info-star");
   const passInfoTitle = document.querySelector("[data-rating-pass-info-title]");
   const passInfoCopy = document.querySelector("[data-rating-pass-info-copy]");
   const passInfoBenefit = document.querySelector("[data-rating-pass-info-benefit]");
@@ -9483,7 +9486,8 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
     const tier = normalizedPassTier(entry?.seasonPassTier);
     if (tier === "none") return "";
     const label = tier === "elite_plus" ? "Элитный+ сезонный пропуск" : "Элитный сезонный пропуск";
-    return `<span class="leaderboard-pass-star" data-pass-tier-badge="${tier}" role="button" tabindex="0" aria-label="${label}" title="${label}">✦</span>`;
+    const badgeSrc = tier === "elite_plus" ? "/assets/ui/icon_player_elit+.png" : "/assets/ui/icon_player_elit.png";
+    return `<span class="leaderboard-pass-star" data-pass-tier-badge="${tier}" role="button" tabindex="0" aria-label="${label}" title="${label}"><img src="${badgeSrc}" alt="" aria-hidden="true" loading="lazy" decoding="async"></span>`;
   }
 
   function playerNameMarkup(entry) {
@@ -9514,10 +9518,12 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
     ratingImpactHaptic("light");
     passInfo.dataset.tier = tier;
     const plus = tier === "elite_plus";
-    if (passInfoTitle) passInfoTitle.textContent = plus ? "✦ Элитный+" : "✦ Элитный пропуск";
+    const badgeSrc = plus ? "/assets/ui/icon_player_elit+.png" : "/assets/ui/icon_player_elit.png";
+    if (passInfoStar) passInfoStar.innerHTML = `<img src="${badgeSrc}" alt="">`;
+    if (passInfoTitle) passInfoTitle.textContent = plus ? "Элитный+" : "Элитный пропуск";
     if (passInfoCopy) passInfoCopy.textContent = plus
-      ? "Золотая ✦ означает, что у игрока активен максимальный тариф «Элитный+»."
-      : "✦ означает, что у игрока активен тариф «Элитный» этого сезона.";
+      ? "Этот значок означает, что у игрока активен максимальный тариф «Элитный+»."
+      : "Этот значок означает, что у игрока активен тариф «Элитный» этого сезона.";
     if (passInfoBenefit) passInfoBenefit.textContent = plus
       ? "Все преимущества «Элитного» плюс дополнительные бонусы «Элитный+»."
       : "Премиальная линия наград и премиальные задания сезона.";
