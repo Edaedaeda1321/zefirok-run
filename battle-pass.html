@@ -1626,11 +1626,47 @@ button{-webkit-tap-highlight-color:transparent}
   background:linear-gradient(145deg,#fffdf2,#ffefb5);
   box-shadow:0 0 0 2px rgba(255,239,178,.72),0 10px 24px rgba(175,116,25,.16)
 }
-.reward-featured-art{height:84px;display:grid;place-items:center}
-.reward-featured-art img{max-width:82px;max-height:82px;object-fit:contain;filter:drop-shadow(0 7px 8px rgba(106,66,45,.13))}
+.reward-featured-art{
+  width:84px;
+  height:84px;
+  display:grid;
+  place-items:center;
+  justify-self:center;
+  overflow:hidden
+}
+.reward-featured-art .reward-art{
+  width:76px!important;
+  height:76px!important;
+  min-width:0!important;
+  min-height:0!important
+}
+.reward-featured-art .reward-art img{
+  display:block!important;
+  width:100%!important;
+  height:100%!important;
+  max-width:100%!important;
+  max-height:100%!important;
+  object-fit:contain!important;
+  transform:none!important;
+  filter:drop-shadow(0 7px 8px rgba(106,66,45,.13))
+}
 .reward-featured-art span{font-size:48px}
 .reward-featured-card strong{display:block;color:#70443b;font-size:10px;line-height:1.2;font-weight:1000}
 .reward-featured-card small{display:block;margin-top:4px;color:#a47a67;font-size:8px;font-weight:850}
+.reward-summary-featured-grid.is-single .reward-featured-card{
+  min-height:100px;
+  display:grid;
+  grid-template-columns:88px minmax(0,1fr);
+  grid-template-rows:auto auto;
+  grid-template-areas:"art title" "art meta";
+  align-items:center;
+  column-gap:10px;
+  padding:9px 14px;
+  text-align:left
+}
+.reward-summary-featured-grid.is-single .reward-featured-art{grid-area:art}
+.reward-summary-featured-grid.is-single .reward-featured-card strong{grid-area:title;align-self:end;font-size:12px}
+.reward-summary-featured-grid.is-single .reward-featured-card small{grid-area:meta;align-self:start;font-size:9px}
 .reward-summary-resource-grid{
   display:grid;
   grid-template-columns:repeat(auto-fit,minmax(105px,1fr));
@@ -1718,7 +1754,7 @@ button{-webkit-tap-highlight-color:transparent}
   .tier-celebration h2{font-size:23px}
   .tier-celebration-benefits{gap:7px}.tier-celebration-benefit{min-height:65px;grid-template-columns:39px minmax(0,1fr);padding:8px}.tier-celebration-benefit-icon{width:39px;height:39px}.tier-celebration-benefit-icon img{width:36px;height:36px}
   .reward-summary{padding:10px}.reward-summary-card{max-height:91dvh;border-radius:27px}
-  .reward-summary-featured-grid{gap:6px}.reward-featured-card{min-height:137px;padding:8px 6px}.reward-featured-art{height:76px}.reward-featured-art img{max-width:74px;max-height:74px}
+  .reward-summary-featured-grid{gap:6px}.reward-featured-card{min-height:137px;padding:8px 6px}.reward-featured-art{width:76px;height:76px}.reward-featured-art .reward-art{width:68px!important;height:68px!important}.reward-summary-featured-grid.is-single .reward-featured-card{min-height:92px;grid-template-columns:78px minmax(0,1fr);padding:8px 12px}
   .reward-summary-resource-grid{gap:6px}.reward-resource-card{grid-template-columns:36px minmax(0,1fr);padding:7px}.reward-resource-card img{width:35px;height:35px}
   .reward-summary-list{grid-template-columns:1fr}
 }
@@ -5720,10 +5756,12 @@ img[src$="/xp.webp"]{
     const resources={zefir:0,coffee:0,points:0};
     for(const item of valid){const kind=rewardSummaryKind(item);if(kind in resources)resources[kind]+=rewardSummaryAmount(item);}
     const nonResources=valid.filter(item=>!(rewardSummaryKind(item) in resources));
-    const featured=(nonResources.length?nonResources:valid).map((item,index)=>({item,index,score:rewardSummaryPriority(item)})).sort((a,b)=>b.score-a.score||a.index-b.index).slice(0,3).map(entry=>entry.item);
+    const featured=nonResources.map((item,index)=>({item,index,score:rewardSummaryPriority(item)})).sort((a,b)=>b.score-a.score||a.index-b.index).slice(0,3).map(entry=>entry.item);
     const featuredSection=el("rewardSummaryFeatured");
+    const featuredGrid=el("rewardSummaryFeaturedGrid");
     featuredSection.hidden=!featured.length;
-    el("rewardSummaryFeaturedGrid").innerHTML=featured.map(item=>`<article class="reward-featured-card ${item.premium?"premium":""}"><div class="reward-featured-art">${rewardArtMarkup(item.name,item.icon,item.image)}</div><strong>${String(item.name||"Награда")}</strong><small>${String(item.source||("Получено"))}</small></article>`).join("");
+    featuredGrid.classList.toggle("is-single",featured.length===1);
+    featuredGrid.innerHTML=featured.map(item=>`<article class="reward-featured-card ${item.premium?"premium":""}"><div class="reward-featured-art">${rewardArtMarkup(item.name,item.icon,item.image)}</div><strong>${String(item.name||"Награда")}</strong><small>${String(item.source||("Получено"))}</small></article>`).join("");
 
     const resourceRows=[
       {kind:"zefir",title:"зефира",image:REWARD_ASSETS.marshmallow},
@@ -5741,7 +5779,7 @@ img[src$="/xp.webp"]{
       </div>
     </article>`).join("");
     const details=el("rewardSummaryDetails");
-    details.open=valid.length<=4;
+    details.open=false;
     details.querySelector("summary").textContent=uniqueLevels.size>0?"Подробности по уровням":"Все полученные награды";
     el("rewardSummary").hidden = false;
     document.body.style.overflow = "hidden";
