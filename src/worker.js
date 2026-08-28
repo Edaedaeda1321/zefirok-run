@@ -4074,6 +4074,103 @@ async function createPlayerGiftInbox(env, telegramId, spec = {}) {
   return { giftId, created, rewards, status };
 }
 
+function ownerPanelGiftAuditCandidate(row) {
+  const details = safeJson(row?.details_json, {});
+  const giftId = String(details?.giftId || "").trim();
+  if (!/^[A-Za-z0-9:_-]{4,120}$/.test(giftId)) return null;
+  let kind = String(details?.kind || "").trim().toLowerCase();
+  if (kind === "treats" || kind === "marshmallow") kind = "zefir";
+  if (!["points", "zefir", "coffee", "case", "skin"].includes(kind)) return null;
+  const itemId = String(details?.itemId || "").trim().slice(0, 96);
+  const rawAmount = kind === "skin" ? 1 : Math.floor(Number(row?.new_value ?? details?.amount ?? 1));
+  if (!Number.isFinite(rawAmount) || rawAmount < 1) return null;
+  const rewards = normalizePlayerGiftRewards([{ kind, id:itemId, amount:rawAmount }]);
+  if (!rewards.length) return null;
+  return {
+    auditId: Math.max(0, Math.floor(Number(row?.id || 0))),
+    giftId,
+    rewards,
+    reason: String(details?.reason || "Выдача из панели владельца").trim().slice(0, 300) || "Выдача из панели владельца",
+    createdAt: Math.max(1, Math.floor(Number(row?.created_at || 0)))
+  };
+}
+
+async function repairOwnerPanelGiftInboxFromAudit(env, telegramId) {
+  const id = String(telegramId || "").trim();
+  if (!/^\d{4,20}$/.test(id)) return 0;
+  await ensurePlayerGiftInboxSchema(env);
+
+  let auditRows;
+  try {
+    const result = await env.DB.prepare(`SELECT id,new_value,details_json,created_at
+      FROM staff_action_log
+      WHERE target_telegram_id=? AND action='owner_panel_grant' AND target_type='gift_inbox' AND success=1
+      ORDER BY created_at DESC,id DESC LIMIT 24`).bind(id).all();
+    auditRows = result.results || [];
+  } catch (error) {
+    console.error("owner gift inbox audit repair lookup failed", error);
+    return 0;
+  }
+
+  const candidateMap = new Map();
+  for (const row of auditRows) {
+    const candidate = ownerPanelGiftAuditCandidate(row);
+    if (candidate && !candidateMap.has(candidate.giftId)) candidateMap.set(candidate.giftId, candidate);
+  }
+  const candidates = [...candidateMap.values()];
+  if (!candidates.length) return 0;
+
+  const placeholders = candidates.map(() => "?").join(",");
+  const existing = await env.DB.prepare(`SELECT gift_id FROM player_gift_inbox WHERE telegram_id=? AND gift_id IN (${placeholders})`)
+    .bind(id, ...candidates.map((item) => item.giftId)).all();
+  const existingIds = new Set((existing.results || []).map((row) => String(row.gift_id || "")));
+  const missing = candidates.filter((item) => !existingIds.has(item.giftId));
+  if (!missing.length) return 0;
+
+  // The economic queue is the idempotency ledger. A missing inbox row may be
+  // reconstructed as claimable only when no delivered queue row proves that the
+  // reward was already applied. This prevents a repaired historical letter from
+  // ever granting the same compensation twice.
+  let queueRows = [];
+  try {
+    const queueWhere = missing.map(() => "source_id GLOB ?").join(" OR ");
+    const queueResult = await env.DB.prepare(`SELECT source_id,status,delivered_at FROM reward_delivery_queue
+      WHERE telegram_id=? AND source_type='gift_inbox' AND (${queueWhere})`)
+      .bind(id, ...missing.map((item) => `${item.giftId}_*`)).all();
+    queueRows = queueResult.results || [];
+  } catch (error) {
+    // If the idempotency ledger cannot be inspected, do not guess. Returning an
+    // empty repair is safer than risking a duplicate economic delivery.
+    console.error("owner gift inbox audit repair queue lookup failed", error);
+    return 0;
+  }
+
+  const now = Math.floor(Date.now() / 1000);
+  const statements = [];
+  for (const item of missing) {
+    const relatedQueue = queueRows.filter((row) => String(row.source_id || "").startsWith(`${item.giftId}_`));
+    const allDelivered = relatedQueue.length > 0 && relatedQueue.every((row) => String(row.status || "") === "delivered");
+    const claimedAt = allDelivered ? Math.max(item.createdAt, ...relatedQueue.map((row) => Math.max(0, Number(row.delivered_at || 0)))) : 0;
+    const status = allDelivered ? "claimed" : "pending";
+    const rewardLabel = item.rewards.map((reward) => safeRewardDescription(reward)).join(", ");
+    const message = "Для вас подготовлена награда.";
+    const preview = playerMailPreviewText(rewardLabel ? `${rewardLabel} · ${item.reason}` : item.reason, message);
+    statements.push(
+      env.DB.prepare(`INSERT OR IGNORE INTO player_gift_inbox(gift_id,telegram_id,gift_kind,title,message_text,reason,rewards_json,status,created_at,updated_at,claimed_at)
+        VALUES(?,?,?,?,?,?,?,?,?,?,?)`).bind(item.giftId,id,"gift","Подарок от команды",message,item.reason,JSON.stringify(item.rewards),status,item.createdAt,now,claimedAt),
+      env.DB.prepare(`INSERT OR IGNORE INTO player_mail_metadata(gift_id,telegram_id,preview_text,image_url,read_at) VALUES(?,?,?,?,?)`)
+        .bind(item.giftId,id,preview,"",allDelivered ? claimedAt : 0)
+    );
+  }
+
+  if (!statements.length) return 0;
+  const results = await env.DB.batch(statements);
+  let repaired = 0;
+  for (let index = 0; index < results.length; index += 2) repaired += Number(results[index]?.meta?.changes || 0) > 0 ? 1 : 0;
+  if (repaired > 0) console.info("owner gift inbox repaired from audit", { telegramId:id, repaired });
+  return repaired;
+}
+
 function seasonPassTaskMailGiftId(seasonId, taskId, periodKey) {
   const raw = `${String(seasonId || "")}|${String(taskId || "")}|${String(periodKey || "")}`;
   const taskPart = String(taskId || "task").replace(/[^A-Za-z0-9_-]/g, "_").slice(0, 38) || "task";
@@ -4202,6 +4299,11 @@ async function getPlayerGiftInbox(request, env) {
     requireBotToken(env);
     const auth = await validateTelegramInitData(String(body.initData || ""), env);
     const telegramId = String(auth.user.id);
+    try {
+      await repairOwnerPanelGiftInboxFromAudit(env, telegramId);
+    } catch (repairError) {
+      console.error("owner gift inbox backfill failed", repairError);
+    }
     try {
       const season = await loadSeasonPassSeason(env);
       if (season?.id && seasonPassCapabilities(season).canClaimTasks) await syncSeasonPassTaskGiftInbox(env, telegramId, { seasonId:season.id });
@@ -40723,9 +40825,12 @@ async function ownerPanelGrantPlayer(env, ctx) {
   const reward = { kind, id:itemId, amount };
   const gift = await createPlayerGiftInbox(env, telegramId, { giftId:sourceId, kind:"gift", title:"Подарок от команды", message:"Для вас подготовлена награда.", reason, rewards:[reward] });
   if (!gift.created) throw new ApiError(409, "Такая выдача уже существует.");
+  // Persist the audit recovery record before the external Telegram notice. If a
+  // later presentation row is ever lost, /api/gifts/state can restore it from
+  // this durable grant record without duplicating an already delivered reward.
+  await logStaffAction(env, ctx.user, ctx.access, "owner_panel_grant", telegramId, "gift_inbox", null, amount, { kind, itemId, reason, giftId:sourceId });
   const notifyPromise = notifyPlayerGiftAvailable(env, telegramId, { title:"Подарок от команды", message:"Для вас подготовлена награда.", reason, rewards:[reward] });
   if (ctx.executionCtx?.waitUntil) ctx.executionCtx.waitUntil(notifyPromise); else await notifyPromise;
-  await logStaffAction(env, ctx.user, ctx.access, "owner_panel_grant", telegramId, "gift_inbox", null, amount, { kind, itemId, reason, giftId:sourceId });
   return { ok: true, giftId:sourceId, message: "Подарок создан. Игрок увидит причину и сможет забрать награду в профиле." };
 }
 
