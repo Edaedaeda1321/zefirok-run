@@ -8724,20 +8724,51 @@ html > body { padding: 0 !important; }
 #zefirok-maltipoo-runner .leaderboard-level-badge[data-level-band="50"]{color:#81530c;background:linear-gradient(145deg,#fff7c8,#e5b43c);border-color:#fff8db;box-shadow:0 0 0 1px #d9a52e,0 3px 9px rgba(174,121,17,.28)}
 #zefirok-maltipoo-runner .leaderboard-level-badge:active{transform:scale(.91)}
 #zefirok-maltipoo-runner .leaderboard-v4-row-copy{align-content:center}
-.rating-pass-info{position:fixed;inset:0;z-index:2147483600;display:grid;place-items:center;padding:max(22px,var(--zefirok-content-safe-top,0px)) 18px max(22px,var(--zefirok-content-safe-bottom,0px));background:rgba(67,42,50,.42);backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px);box-sizing:border-box}
+.rating-pass-info{position:fixed;inset:0;z-index:2147483600;display:grid;place-items:center;padding:max(18px,var(--zefirok-content-safe-top,0px)) 16px max(18px,var(--zefirok-content-safe-bottom,0px));background:rgba(59,37,46,.48);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);box-sizing:border-box}
 .rating-pass-info[hidden]{display:none!important}
-.rating-pass-info-card{width:min(390px,100%);box-sizing:border-box;padding:22px;border:1px solid rgba(235,205,188,.92);border-radius:26px;background:linear-gradient(165deg,#fffdf9,#fff2f4);box-shadow:0 24px 70px rgba(69,38,49,.24);text-align:center;color:#68404e}
-.rating-pass-info-star{display:grid;place-items:center;width:72px;height:72px;margin:0 auto 12px}
-.rating-pass-info-star img{display:block;width:72px;height:72px;object-fit:contain;filter:drop-shadow(0 8px 18px rgba(174,72,112,.18))}
-.rating-pass-info[data-tier="elite_plus"] .rating-pass-info-star img{filter:drop-shadow(0 8px 20px rgba(184,128,18,.22))}
-.rating-pass-info-card h2{margin:0;font-size:22px;font-weight:950}
-.rating-pass-info-card p{margin:9px 0 0;color:#856773;font-size:12px;font-weight:750;line-height:1.5}
-.rating-pass-info-benefit{margin:14px 0 0;padding:11px 13px;border-radius:15px;background:#fff;color:#744c5c;font-size:11px;font-weight:850;line-height:1.45}
-.rating-pass-info-actions{display:grid;grid-template-columns:.85fr 1.35fr;gap:9px;margin-top:18px}
-.rating-pass-info-actions button{min-height:46px;border:0;border-radius:15px;font:900 12px/1.2 var(--font-sans);cursor:pointer}
-.rating-pass-info-close{background:#f1e5e2;color:#73534f}
-.rating-pass-info-open{background:linear-gradient(145deg,#e986a8,#c9517e);color:#fff;box-shadow:0 8px 18px rgba(190,72,115,.19)}
-.rating-pass-info[data-tier="elite_plus"] .rating-pass-info-open{background:linear-gradient(145deg,#efc257,#cf8d20)}
+.rating-pass-info-card{position:relative;display:grid;grid-template-columns:minmax(0,220px) minmax(0,1fr);gap:20px;align-items:center;width:min(940px,100%);max-height:min(92dvh,780px);overflow:auto;box-sizing:border-box;padding:24px 24px 22px;border:1px solid rgba(231,198,189,.96);border-radius:34px;background:linear-gradient(145deg,#fffdfa 0%,#fff6f6 52%,#fff2f5 100%);box-shadow:0 28px 80px rgba(67,39,49,.24),inset 0 1px 0 rgba(255,255,255,.92);color:#68404e;scrollbar-width:none}
+.rating-pass-info-card::-webkit-scrollbar{display:none}
+.rating-pass-info-close-x{position:absolute;right:16px;top:16px;display:grid;place-items:center;width:42px;height:42px;border:1px solid rgba(219,184,191,.82);border-radius:50%;background:rgba(255,250,250,.92);color:#99697b;font:900 28px/1 var(--font-sans);cursor:pointer;box-shadow:0 8px 18px rgba(125,83,96,.09)}
+.rating-pass-info-close-x:active{transform:scale(.97)}
+.rating-pass-info-hero{position:relative;display:grid;place-items:center;min-height:100%;padding:22px 14px;border-radius:28px;background:radial-gradient(circle at 50% 16%,rgba(255,255,255,.92),transparent 28%),radial-gradient(circle at 50% 58%,rgba(245,197,120,.20),transparent 52%),linear-gradient(180deg,rgba(255,250,247,.98),rgba(255,243,246,.82));overflow:hidden}
+.rating-pass-info-hero::before{content:"";position:absolute;inset:24px;border-radius:26px;background:radial-gradient(circle at center,rgba(255,236,243,.82),rgba(255,255,255,0) 70%);pointer-events:none}
+.rating-pass-info-hero::after{content:"✦ ✦ ✦";position:absolute;left:50%;top:22px;transform:translateX(-50%);color:rgba(241,194,63,.62);font-size:18px;letter-spacing:16px;pointer-events:none}
+.rating-pass-info-star{position:relative;display:grid;place-items:center;width:min(200px,100%);aspect-ratio:1/1;margin:0 auto;z-index:1}
+.rating-pass-info-star img{display:block;width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 16px 26px rgba(174,72,112,.18))}
+.rating-pass-info[data-tier="elite_plus"] .rating-pass-info-star img{filter:drop-shadow(0 18px 28px rgba(184,128,18,.24))}
+.rating-pass-info-body{display:grid;gap:14px;min-width:0;padding-right:6px}
+.rating-pass-info-kicker{justify-self:start;display:inline-flex;align-items:center;min-height:23px;padding:5px 10px;border:1px solid rgba(227,184,82,.54);border-radius:999px;background:rgba(255,248,225,.92);color:#a26a10;font-size:10px;font-weight:950;letter-spacing:.045em;text-transform:uppercase;box-shadow:0 5px 12px rgba(189,134,27,.07)}
+.rating-pass-info-heading{display:grid;gap:4px}
+.rating-pass-info-heading h2{margin:0;color:#6e4052;font-size:clamp(30px,5vw,44px);font-weight:980;line-height:.96;letter-spacing:-.03em}
+.rating-pass-info-subtitle{color:#875a67;font-size:clamp(14px,2.4vw,18px);font-weight:900;line-height:1.18}
+.rating-pass-info-card p{margin:0;color:#8b6975;font-size:13px;font-weight:760;line-height:1.55}
+.rating-pass-info-divider{display:grid;grid-template-columns:minmax(36px,1fr) auto minmax(36px,1fr);align-items:center;gap:10px;color:#efb6c5}
+.rating-pass-info-divider::before,.rating-pass-info-divider::after{content:"";height:1px;background:linear-gradient(90deg,rgba(234,198,209,0),rgba(234,198,209,.92));border-radius:999px}
+.rating-pass-info-divider::after{background:linear-gradient(90deg,rgba(234,198,209,.92),rgba(234,198,209,0))}
+.rating-pass-info-divider span{font-size:13px;line-height:1}
+.rating-pass-info-features{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.rating-pass-info-feature{display:grid;grid-template-columns:56px minmax(0,1fr);gap:12px;align-items:start;padding:14px 14px 13px;border:1px solid rgba(235,208,211,.92);border-radius:20px;background:linear-gradient(180deg,rgba(255,255,255,.94),rgba(255,248,249,.9));box-shadow:inset 0 1px 0 rgba(255,255,255,.96)}
+.rating-pass-info-feature-icon{display:grid;place-items:center;width:56px;height:56px;border-radius:18px;background:linear-gradient(145deg,#ffe4ef,#fff4f9);border:1px solid rgba(240,193,210,.9);color:#da5d90;font-size:21px;font-weight:980;line-height:1;letter-spacing:-.03em;box-shadow:0 8px 16px rgba(214,94,140,.08)}
+.rating-pass-info[data-tier="elite_plus"] .rating-pass-info-feature-icon{background:linear-gradient(145deg,#fff0ca,#fff9ec);border-color:rgba(233,196,115,.9);color:#c48310;box-shadow:0 8px 16px rgba(205,145,30,.09)}
+.rating-pass-info-feature-copy{display:grid;gap:4px;min-width:0}
+.rating-pass-info-feature-copy strong{color:#6e4153;font-size:14px;font-weight:950;line-height:1.15}
+.rating-pass-info-feature-copy span{color:#876771;font-size:11.5px;font-weight:780;line-height:1.38}
+.rating-pass-info-benefit{display:flex;align-items:flex-start;gap:10px;padding:13px 15px;border-radius:18px;border:1px solid rgba(235,201,213,.92);background:linear-gradient(180deg,#fff9fc,#fff0f5);color:#774c5d;font-size:12px;font-weight:880;line-height:1.45}
+.rating-pass-info-benefit strong{display:block;margin-bottom:3px;color:#6f4154;font-size:12px;font-weight:950}
+.rating-pass-info-benefit-mark{flex:0 0 28px;display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:linear-gradient(145deg,#ffd9e7,#fff3f9);color:#dd5f90;font-size:14px;font-weight:950}
+.rating-pass-info[data-tier="elite_plus"] .rating-pass-info-benefit{border-color:rgba(232,196,113,.82);background:linear-gradient(180deg,#fffaf0,#fff4dd)}
+.rating-pass-info[data-tier="elite_plus"] .rating-pass-info-benefit-mark{background:linear-gradient(145deg,#ffe9b4,#fff8e6);color:#ca8b1d}
+.rating-pass-info-note{color:#a17f8c;font-size:10.5px;font-weight:820;line-height:1.4}
+.rating-pass-info-note[hidden]{display:none!important}
+.rating-pass-info-actions{display:grid;grid-template-columns:minmax(0,170px) minmax(0,1fr);gap:10px;margin-top:4px}
+.rating-pass-info-actions button{min-height:54px;border:0;border-radius:18px;font:950 14px/1.15 var(--font-sans);cursor:pointer}
+.rating-pass-info-close{background:linear-gradient(180deg,#fffefe,#f5ecea);color:#7c5b57;box-shadow:inset 0 0 0 1px rgba(227,199,192,.9)}
+.rating-pass-info-open{background:linear-gradient(145deg,#f49cbe,#d95a8a);color:#fff;box-shadow:0 12px 26px rgba(190,72,115,.22),inset 0 1px 0 rgba(255,255,255,.28)}
+.rating-pass-info[data-tier="elite_plus"] .rating-pass-info-open{background:linear-gradient(145deg,#ffcf60,#ef8f4d 52%,#f25d8d 100%);box-shadow:0 12px 26px rgba(210,136,38,.22),inset 0 1px 0 rgba(255,255,255,.32)}
+.rating-pass-info-actions button:active{transform:scale(.99)}
+@media(max-width:720px){.rating-pass-info-card{grid-template-columns:1fr;padding:18px 18px 20px;border-radius:28px;gap:14px}.rating-pass-info-close-x{top:12px;right:12px;width:40px;height:40px}.rating-pass-info-hero{min-height:210px;padding:24px 14px 10px}.rating-pass-info-star{width:min(180px,60vw)}.rating-pass-info-body{padding-right:0}.rating-pass-info-features{grid-template-columns:1fr}.rating-pass-info-actions{grid-template-columns:1fr}.rating-pass-info-actions .rating-pass-info-open{order:-1}}
+@media(max-width:420px){.rating-pass-info{padding-inline:10px}.rating-pass-info-card{padding:16px 14px 18px;border-radius:24px}.rating-pass-info-kicker{font-size:9px;padding:4px 9px}.rating-pass-info-heading h2{font-size:32px}.rating-pass-info-subtitle{font-size:15px}.rating-pass-info-card p{font-size:12px}.rating-pass-info-feature{grid-template-columns:48px minmax(0,1fr);gap:10px;padding:12px}.rating-pass-info-feature-icon{width:48px;height:48px;border-radius:16px;font-size:18px}.rating-pass-info-feature-copy strong{font-size:13px}.rating-pass-info-feature-copy span{font-size:11px}.rating-pass-info-actions button{min-height:50px;font-size:13px}}
+@media(prefers-reduced-motion:reduce){.rating-pass-info-close-x,.rating-pass-info-actions button{transition:none!important}}
 #zefirok-maltipoo-runner .leaderboard-reward-line[data-rating-case-info-type]{cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation;transition:transform .12s ease,filter .12s ease}
 #zefirok-maltipoo-runner .leaderboard-reward-line[data-rating-case-info-type]:active{transform:scale(.975);filter:brightness(.98)}
 .rating-case-info{position:fixed;inset:0;z-index:2147483610;display:grid;place-items:center;padding:max(22px,var(--zefirok-content-safe-top,0px)) 18px max(22px,var(--zefirok-content-safe-bottom,0px));background:rgba(67,42,50,.42);backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px);box-sizing:border-box}
@@ -9000,13 +9031,28 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
 <div class="rating-toast" data-rating-toast hidden></div>
 <section class="rating-pass-info" data-rating-pass-info data-tier="elite" hidden role="dialog" aria-modal="true" aria-labelledby="rating-pass-info-title">
   <div class="rating-pass-info-card">
-    <span class="rating-pass-info-star" aria-hidden="true"></span>
-    <h2 id="rating-pass-info-title" data-rating-pass-info-title>Элитный пропуск</h2>
-    <p data-rating-pass-info-copy>У игрока активен премиальный тариф сезонного пропуска.</p>
-    <div class="rating-pass-info-benefit" data-rating-pass-info-benefit>Премиальная линия наград и премиальные задания сезона.</div>
-    <div class="rating-pass-info-actions">
-      <button class="rating-pass-info-close" data-rating-pass-info-close type="button">Остаться</button>
-      <button class="rating-pass-info-open" data-rating-pass-info-open type="button">Посмотреть тариф</button>
+    <button class="rating-pass-info-close-x" data-rating-pass-info-close type="button" aria-label="Закрыть окно статуса">×</button>
+    <div class="rating-pass-info-hero" aria-hidden="true">
+      <span class="rating-pass-info-star"></span>
+    </div>
+    <div class="rating-pass-info-body">
+      <span class="rating-pass-info-kicker" data-rating-pass-info-kicker>Активен в этом сезоне</span>
+      <div class="rating-pass-info-heading">
+        <h2 id="rating-pass-info-title" data-rating-pass-info-title>Элитный</h2>
+        <span class="rating-pass-info-subtitle" data-rating-pass-info-subtitle>Премиальный статус сезона</span>
+      </div>
+      <p data-rating-pass-info-copy>Этот значок показывает, что у игрока открыт премиальный тариф сезонного пропуска.</p>
+      <div class="rating-pass-info-divider" aria-hidden="true"><span>♥</span></div>
+      <div class="rating-pass-info-features" data-rating-pass-info-features></div>
+      <div class="rating-pass-info-benefit" data-rating-pass-info-benefit>
+        <span class="rating-pass-info-benefit-mark" aria-hidden="true">★</span>
+        <div><strong data-rating-pass-info-benefit-title>Что даёт статус</strong><span data-rating-pass-info-benefit-copy>Премиальная линия наград и премиальные задания сезона.</span></div>
+      </div>
+      <span class="rating-pass-info-note" data-rating-pass-info-note hidden></span>
+      <div class="rating-pass-info-actions">
+        <button class="rating-pass-info-close" data-rating-pass-info-close type="button">Закрыть</button>
+        <button class="rating-pass-info-open" data-rating-pass-info-open type="button">Открыть сезонный пропуск</button>
+      </div>
     </div>
   </div>
 </section>
@@ -9125,9 +9171,15 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
   const toast = document.querySelector("[data-rating-toast]");
   const passInfo = document.querySelector("[data-rating-pass-info]");
   const passInfoStar = document.querySelector(".rating-pass-info-star");
+  const passInfoKicker = document.querySelector("[data-rating-pass-info-kicker]");
   const passInfoTitle = document.querySelector("[data-rating-pass-info-title]");
+  const passInfoSubtitle = document.querySelector("[data-rating-pass-info-subtitle]");
   const passInfoCopy = document.querySelector("[data-rating-pass-info-copy]");
+  const passInfoFeatures = document.querySelector("[data-rating-pass-info-features]");
   const passInfoBenefit = document.querySelector("[data-rating-pass-info-benefit]");
+  const passInfoBenefitTitle = document.querySelector("[data-rating-pass-info-benefit-title]");
+  const passInfoBenefitCopy = document.querySelector("[data-rating-pass-info-benefit-copy]");
+  const passInfoNote = document.querySelector("[data-rating-pass-info-note]");
   const passInfoOpen = document.querySelector("[data-rating-pass-info-open]");
   const caseInfo = document.querySelector("[data-rating-case-info]");
   const caseInfoImage = document.querySelector("[data-rating-case-info-image]");
@@ -9512,22 +9564,70 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
     return `<span class="leaderboard-showcase${compact ? " is-compact" : ""}" aria-label="Витрина достижений">${items.map((item) => {const rarity=String(item?.rarity||"common"),rarityLabel=String(item?.rarityLabel||"Обычное"),prestige=Math.max(0,Number(item?.achievementPoints||0));return `<span class="leaderboard-achievement" data-rarity="${escapeHtml(rarity)}" title="${escapeHtml(item?.title || "Достижение")} · ${escapeHtml(rarityLabel)} · +${prestige} очков достижений"><span class="leaderboard-achievement-icon" aria-hidden="true">${achievementThumbMarkup(item)}</span><span class="leaderboard-achievement-title">${escapeHtml(item?.title || "Достижение")}</span></span>`;}).join("")}</span>`;
   }
 
+  function passInfoFeatureMarkup(item = {}) {
+    const icon = escapeHtml(String(item.icon || "★"));
+    const title = escapeHtml(String(item.title || "Преимущество"));
+    const text = escapeHtml(String(item.text || ""));
+    return `<div class="rating-pass-info-feature"><span class="rating-pass-info-feature-icon" aria-hidden="true">${icon}</span><span class="rating-pass-info-feature-copy"><strong>${title}</strong><span>${text}</span></span></div>`;
+  }
+
+  const PASS_INFO_META = {
+    elite: {
+      badgeSrc: "/assets/ui/icon_player_elit.png",
+      kicker: "Активен в этом сезоне",
+      title: "Элитный",
+      subtitle: "Премиальный статус сезона",
+      copy: "Этот значок показывает, что у игрока открыт тариф «Элитный» в текущем сезоне.",
+      benefitTitle: "Что даёт статус",
+      benefitCopy: "Премиальная линия наград, премиальные задания и фирменный сезонный статус игрока.",
+      note: "Значок просто показывает активный тариф игрока. Полные награды и условия можно посмотреть в сезонном пропуске.",
+      action: "Открыть сезонный пропуск",
+      features: [
+        { icon: "★", title: "Премиальная линия наград", text: "Больше ценных наград по мере прокачки пропуска." },
+        { icon: "✓", title: "Премиальные задания", text: "Ежедневные и недельные задания с дополнительными бонусами." },
+        { icon: "✦", title: "Эксклюзивный статус", text: "Значок «Элитный» рядом с именем в рейтинге." },
+        { icon: "10", title: "Легендарный кейс", text: "Дополнительная награда каждые 10 уровней пропуска." }
+      ]
+    },
+    elite_plus: {
+      badgeSrc: "/assets/ui/icon_player_elit+.png",
+      kicker: "Активен в этом сезоне",
+      title: "Элитный+",
+      subtitle: "Максимальный статус сезона",
+      copy: "Этот значок показывает, что у игрока активен максимальный тариф «Элитный+».",
+      benefitTitle: "Все бонусы уже включены",
+      benefitCopy: "Тариф «Элитный+» включает все преимущества «Элитного» и открывает дополнительные сезонные бонусы.",
+      note: "Это максимальный тариф сезона: усиленная прокачка, бонусные уровни и эксклюзивные косметические награды.",
+      action: "Открыть сезонный пропуск",
+      features: [
+        { icon: "2×", title: "Двойной XP", text: "За забеги и сезонные задания, пока активен статус." },
+        { icon: "+5", title: "+5 уровней", text: "Мгновенно при активации тарифа «Элитный+»." },
+        { icon: "◇", title: "Эксклюзивная рамка и аватарка", text: "Особые косметические награды только для владельцев статуса." },
+        { icon: "7D", title: "Золотой кейс", text: "Легендарный кейс каждую неделю в течение сезона." }
+      ]
+    }
+  };
+
   function openPassInfo(tierValue) {
     const tier = normalizedPassTier(tierValue);
     if (tier === "none" || !passInfo) return;
     ratingImpactHaptic("light");
     passInfo.dataset.tier = tier;
-    const plus = tier === "elite_plus";
-    const badgeSrc = plus ? "/assets/ui/icon_player_elit+.png" : "/assets/ui/icon_player_elit.png";
-    if (passInfoStar) passInfoStar.innerHTML = `<img src="${badgeSrc}" alt="">`;
-    if (passInfoTitle) passInfoTitle.textContent = plus ? "Элитный+" : "Элитный пропуск";
-    if (passInfoCopy) passInfoCopy.textContent = plus
-      ? "Этот значок означает, что у игрока активен максимальный тариф «Элитный+»."
-      : "Этот значок означает, что у игрока активен тариф «Элитный» этого сезона.";
-    if (passInfoBenefit) passInfoBenefit.textContent = plus
-      ? "Все преимущества «Элитного» плюс дополнительные бонусы «Элитный+»."
-      : "Премиальная линия наград и премиальные задания сезона.";
-    if (passInfoOpen) passInfoOpen.textContent = plus ? "Перейти к «Элитный+»" : "Перейти к «Элитный»";
+    const meta = PASS_INFO_META[tier] || PASS_INFO_META.elite;
+    if (passInfoStar) passInfoStar.innerHTML = `<img src="${meta.badgeSrc}" alt="">`;
+    if (passInfoKicker) passInfoKicker.textContent = meta.kicker;
+    if (passInfoTitle) passInfoTitle.textContent = meta.title;
+    if (passInfoSubtitle) passInfoSubtitle.textContent = meta.subtitle;
+    if (passInfoCopy) passInfoCopy.textContent = meta.copy;
+    if (passInfoFeatures) passInfoFeatures.innerHTML = Array.isArray(meta.features) ? meta.features.map((item) => passInfoFeatureMarkup(item)).join("") : "";
+    if (passInfoBenefitTitle) passInfoBenefitTitle.textContent = meta.benefitTitle;
+    if (passInfoBenefitCopy) passInfoBenefitCopy.textContent = meta.benefitCopy;
+    if (passInfoNote) {
+      const note = String(meta.note || "").trim();
+      passInfoNote.textContent = note;
+      passInfoNote.hidden = !note;
+    }
+    if (passInfoOpen) passInfoOpen.textContent = meta.action;
     passInfo.hidden = false;
   }
 
@@ -10081,7 +10181,7 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
     if(playerCard){openPlayerProfile(playerCard.dataset.playerProfileId,playerCard);}
   });
 
-  document.querySelector("[data-rating-pass-info-close]")?.addEventListener("click", () => { ratingSelectHaptic(); closePassInfo(); });
+  document.querySelectorAll("[data-rating-pass-info-close]").forEach((button) => { button.addEventListener("click", () => { ratingSelectHaptic(); closePassInfo(); }); });
   passInfoOpen?.addEventListener("click", openPassTierFromInfo);
   passInfo?.addEventListener("click", event => { if (event.target === passInfo) closePassInfo(); });
   document.querySelector("[data-rating-case-info-close]")?.addEventListener("click", () => { ratingSelectHaptic(); closeRatingCaseInfo(); });
