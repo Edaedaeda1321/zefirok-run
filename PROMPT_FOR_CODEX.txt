@@ -1,0 +1,13 @@
+Работай от актуального main репозитория Edaedaeda1321/zefirok-run. Не используй profile.html.
+
+Задача: исправить визуальное центрирование кейсов в модальном окне сезонного пропуска «Вот это улов!».
+
+Файл: battle-pass.html.
+Найди CSS-блок .reward-featured-art. Сейчас в нем есть width, height, display:grid, place-items:center, justify-self:center и overflow:hidden.
+
+Добавь только:
+margin:0 auto;
+
+Причина: justify-self:center не центрирует .reward-featured-art в обычной .reward-featured-card, потому что родитель не grid. margin:0 auto надежно центрирует фиксированный блок арта внутри карточки. Не сдвигай PNG через transform и не меняй саму сетку .reward-summary-featured-grid.
+
+После изменения проверь окно с 1, 2 и 3 главными наградами на мобильной ширине <=430px и на ширине >430px. Все арты должны быть визуально по центру своих карточек. Не менять механику выдачи наград.

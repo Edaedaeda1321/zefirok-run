@@ -1,0 +1,12 @@
+--- a/battle-pass.html
++++ b/battle-pass.html
+@@
+ .reward-featured-art{
+   width:84px;
+   height:84px;
+   display:grid;
+   place-items:center;
+   justify-self:center;
++  margin:0 auto;
+   overflow:hidden
+ }
