@@ -906,7 +906,7 @@ button{-webkit-tap-highlight-color:transparent}
   letter-spacing:.08em;
   transform:rotate(38deg)
 }
-.tier-title{display:flex;align-items:center;gap:9px;padding-right:32px}
+.tier-title{display:flex;align-items:center;gap:14px;padding-right:32px}
 .tier-title i{
   display:grid;
   place-items:center;
@@ -918,7 +918,7 @@ button{-webkit-tap-highlight-color:transparent}
   font-size:23px
 }
 .elite-plus .tier-title i{background:#fff3c7}
-.tier-title strong{display:inline-flex;align-items:center;min-height:30px;padding:3px 10px;margin-left:-10px;border-radius:999px;font-size:18px;color:#744155}
+.tier-title strong{display:inline-flex;align-items:center;min-height:30px;padding:3px 10px;margin-left:0;border-radius:999px;font-size:18px;color:#744155}
 #eliteCard .tier-title strong{
   color:#993a62;
   background:linear-gradient(90deg,rgba(255,222,235,.98),rgba(255,241,246,.74));
@@ -2154,7 +2154,8 @@ button{-webkit-tap-highlight-color:transparent}
   filter:drop-shadow(0 3px 5px rgba(96,55,48,.12))
 }
 .premium-offer:after{content:none!important;display:none!important}
-.tier-title{align-items:center;padding-right:30px}
+.tier-title{align-items:center;gap:14px;padding-right:30px}
+.tier-title>div{min-width:0;padding-left:2px}
 .tier-title i.tier-card-art{
   flex:0 0 auto;
   width:62px;
@@ -2251,6 +2252,7 @@ button{-webkit-tap-highlight-color:transparent}
 }
 @media(max-width:430px){
   .main-tab-art{width:35px;height:35px}
+  .tier-title{gap:12px}
   .tier-title i.tier-card-art{width:58px;height:70px}
   .section-title-art img{width:38px;height:38px}
 }
