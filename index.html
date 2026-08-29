@@ -20779,9 +20779,11 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         if (!telegramProfile?.initData || document.visibilityState === &quot;hidden&quot;) return;
         const forceFull = options?.forceFull === true;
         const hiddenFor = serverAccountHiddenAt &gt; 0 ? Math.max(0, Date.now() - serverAccountHiddenAt) : 0;
-        // Very short Telegram/UI focus changes do not justify any server request.
+        // Very short Telegram/UI focus changes skip heavy account sync. If the
+        // player is already looking at Mail, refresh only that lightweight state.
         if (!forceFull &amp;&amp; hiddenFor &gt; 0 &amp;&amp; hiddenFor &lt; 10000) {
           serverAccountHiddenAt = 0;
+          if (stockHubView === &quot;gifts&quot;) void loadPlayerGiftInbox(true).then(() =&gt; updateStockHubBadges());
           if (loadPendingLeaderboardRun()) void retryPendingLeaderboardRun();
           return;
         }
@@ -20800,10 +20802,11 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
             if (forceFull || awayMs &gt;= 60000) {
               await syncGameStartupPackage(true);
             } else if (awayMs &gt;= 10000) {
-              // Medium-length resume: refresh only account values and any pending
-              // task notice. Full cases/news/gifts startup is unnecessary here.
+              // Medium-length resume: refresh account values, Mail, and pending
+              // task notice. Full cases/news startup is unnecessary here.
               await Promise.allSettled([
                 syncPlayerProfileFromServer(),
+                loadPlayerGiftInbox(true),
                 refreshSeasonTaskNotice(false)
               ]);
             }
@@ -20835,6 +20838,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         if (Date.now() - serverAccountResumeSyncAt &lt; 15000) return;
         serverAccountResumeSyncAt = Date.now();
         void syncPlayerProfileFromServer();
+        if (stockHubView === &quot;gifts&quot;) void loadPlayerGiftInbox(true).then(() =&gt; updateStockHubBadges());
       }, 10000);
 
 
@@ -21503,7 +21507,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         }
         if (stockHubView === &quot;gifts&quot;) {
           renderPlayerGiftInbox();
-          void loadPlayerGiftInbox(false).then(() =&gt; updateStockHubBadges());
+          void loadPlayerGiftInbox(true).then(() =&gt; updateStockHubBadges());
         }
         updateStockHubBadges();
         if (feedback) hapticImpact(&quot;light&quot;, 25);

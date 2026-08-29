@@ -4171,6 +4171,96 @@ async function repairOwnerPanelGiftInboxFromAudit(env, telegramId) {
   return repaired;
 }
 
+async function repairCompensationCampaignGiftInbox(env, telegramId) {
+  const id = String(telegramId || "").trim();
+  if (!/^\d{4,20}$/.test(id)) return 0;
+  await ensurePlayerGiftInboxSchema(env);
+
+  let campaignRows = [];
+  try {
+    const result = await env.DB.prepare(`SELECT c.campaign_id,c.title,c.reason,c.message_text,c.reward_bundle_json,c.created_at,
+        r.processed_at,COALESCE(m.enabled,0) AS inbox_enabled,COALESCE(m.preview_text,'') AS preview_text
+      FROM admin_campaign_recipients r
+      JOIN admin_campaigns c ON c.campaign_id=r.campaign_id
+      LEFT JOIN admin_campaign_mail_config m ON m.campaign_id=c.campaign_id
+      WHERE r.telegram_id=? AND r.status='processed' AND c.reward_kind='gift_bundle' AND COALESCE(m.enabled,0)=1
+      ORDER BY COALESCE(r.processed_at,c.created_at) DESC,c.created_at DESC LIMIT 24`).bind(id).all();
+    campaignRows = result.results || [];
+  } catch (error) {
+    console.error("compensation gift inbox recovery lookup failed", error);
+    return 0;
+  }
+  if (!campaignRows.length) return 0;
+
+  const candidates = [];
+  for (const row of campaignRows) {
+    const campaignId = String(row.campaign_id || "").trim();
+    if (!campaignId) continue;
+    const giftId = `campaign_${campaignId}`.replace(/[^A-Za-z0-9:_-]/g, "_").slice(0,120);
+    const rewards = normalizePlayerGiftRewards(safeJson(row.reward_bundle_json, []));
+    if (!rewards.length) continue;
+    candidates.push({
+      giftId, rewards,
+      title: String(row.title || "Компенсация").slice(0,120),
+      message: String(row.message_text || "").trim() === "__CC_SILENT__" ? "" : String(row.message_text || "").slice(0,3500),
+      reason: String(row.reason || "Компенсация").slice(0,300),
+      preview: String(row.preview_text || "").slice(0,120),
+      createdAt: Math.max(1, Math.floor(Number(row.processed_at || row.created_at || 0)))
+    });
+  }
+  if (!candidates.length) return 0;
+
+  const placeholders = candidates.map(() => "?").join(",");
+  const existing = await env.DB.prepare(`SELECT gift_id FROM player_gift_inbox WHERE telegram_id=? AND gift_id IN (${placeholders})`)
+    .bind(id, ...candidates.map((item) => item.giftId)).all();
+  const existingIds = new Set((existing.results || []).map((row) => String(row.gift_id || "")));
+  const missing = candidates.filter((item) => !existingIds.has(item.giftId));
+  if (!missing.length) return 0;
+
+  let queueRows = [];
+  try {
+    const queueWhere = missing.map(() => "source_id GLOB ?").join(" OR ");
+    const queueResult = await env.DB.prepare(`SELECT source_id,status,delivered_at FROM reward_delivery_queue
+      WHERE telegram_id=? AND source_type='gift_inbox' AND (${queueWhere})`)
+      .bind(id, ...missing.map((item) => `${item.giftId}_*`)).all();
+    queueRows = queueResult.results || [];
+  } catch (error) {
+    console.error("compensation gift inbox recovery queue lookup failed", error);
+    return 0;
+  }
+
+  const now = Math.floor(Date.now() / 1000);
+  const statements = [];
+  for (const item of missing) {
+    const relatedQueue = queueRows.filter((row) => String(row.source_id || "").startsWith(`${item.giftId}_`));
+    const allDelivered = relatedQueue.length >= item.rewards.length && relatedQueue.every((row) => String(row.status || "") === "delivered");
+    const claimedAt = allDelivered ? Math.max(item.createdAt, ...relatedQueue.map((row) => Math.max(0, Number(row.delivered_at || 0)))) : 0;
+    const status = allDelivered ? "claimed" : "pending";
+    const preview = playerMailPreviewText(item.preview, item.message || item.reason || item.title);
+    statements.push(
+      env.DB.prepare(`INSERT OR IGNORE INTO player_gift_inbox(gift_id,telegram_id,gift_kind,title,message_text,reason,rewards_json,status,created_at,updated_at,claimed_at)
+        VALUES(?,?,?,?,?,?,?,?,?,?,?)`).bind(item.giftId,id,"compensation",item.title,item.message,item.reason,JSON.stringify(item.rewards),status,item.createdAt,now,claimedAt),
+      env.DB.prepare(`INSERT OR IGNORE INTO player_mail_metadata(gift_id,telegram_id,preview_text,image_url,read_at) VALUES(?,?,?,?,?)`)
+        .bind(item.giftId,id,preview,"",allDelivered ? claimedAt : 0)
+    );
+  }
+  if (!statements.length) return 0;
+  const results = await env.DB.batch(statements);
+  let repaired = 0;
+  for (let index = 0; index < results.length; index += 2) repaired += Number(results[index]?.meta?.changes || 0) > 0 ? 1 : 0;
+  if (repaired > 0) console.info("compensation gift inbox repaired from campaign history", { telegramId:id, repaired });
+  return repaired;
+}
+
+async function repairPlayerGiftInboxAuthoritativeSources(env, telegramId) {
+  let repaired = 0;
+  try { repaired += await repairOwnerPanelGiftInboxFromAudit(env, telegramId); }
+  catch (error) { console.error("owner gift inbox recovery failed", error); }
+  try { repaired += await repairCompensationCampaignGiftInbox(env, telegramId); }
+  catch (error) { console.error("compensation gift inbox recovery failed", error); }
+  return repaired;
+}
+
 function seasonPassTaskMailGiftId(seasonId, taskId, periodKey) {
   const raw = `${String(seasonId || "")}|${String(taskId || "")}|${String(periodKey || "")}`;
   const taskPart = String(taskId || "task").replace(/[^A-Za-z0-9_-]/g, "_").slice(0, 38) || "task";
@@ -4299,11 +4389,7 @@ async function getPlayerGiftInbox(request, env) {
     requireBotToken(env);
     const auth = await validateTelegramInitData(String(body.initData || ""), env);
     const telegramId = String(auth.user.id);
-    try {
-      await repairOwnerPanelGiftInboxFromAudit(env, telegramId);
-    } catch (repairError) {
-      console.error("owner gift inbox backfill failed", repairError);
-    }
+    await repairPlayerGiftInboxAuthoritativeSources(env, telegramId);
     try {
       const season = await loadSeasonPassSeason(env);
       if (season?.id && seasonPassCapabilities(season).canClaimTasks) await syncSeasonPassTaskGiftInbox(env, telegramId, { seasonId:season.id });
@@ -21164,6 +21250,8 @@ async function processCampaignRecipient(env, campaign, telegramId) {
       giftId, kind:"compensation", title:String(campaign.title || "Компенсация"),
       message:campaignMessage, reason:String(campaign.reason || "Компенсация"), preview:String(campaign.inbox_preview||""), imageUrl:String(campaign.image_url||""), rewards
     });
+    const storedGift = await env.DB.prepare(`SELECT gift_id FROM player_gift_inbox WHERE gift_id=? AND telegram_id=? LIMIT 1`).bind(giftId,String(telegramId)).first();
+    if (!storedGift?.gift_id) throw new Error("Компенсация не зафиксирована в игровой почте");
     const delivered = await notifyPlayerGiftAvailable(env, telegramId, { title:String(campaign.title || "Компенсация"), message:campaignMessage, reason:String(campaign.reason || "Компенсация"), rewards });
     return delivered ? { delivered:true, error:"" } : { delivered:false, error:"Telegram недоступен; подарок сохранён в игре" };
   }

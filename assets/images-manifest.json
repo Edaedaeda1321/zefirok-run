@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "catalogHash": "c777145014edd71a",
-  "count": 433,
+  "catalogHash": "bd846fb24f9e5212",
+  "count": 435,
   "images": [
     {
       "fileName": "achievements/background_achivment_panel.png",
@@ -3322,6 +3322,22 @@
       "path": "/assets/ui/icon_play_start_button.png",
       "size": 144057,
       "modified": 1787857670000
+    },
+    {
+      "fileName": "ui/icon_player_elit.png",
+      "label": "Icon player elit",
+      "folder": "ui",
+      "path": "/assets/ui/icon_player_elit.png",
+      "size": 80371,
+      "modified": 1787958388000
+    },
+    {
+      "fileName": "ui/icon_player_elit+.png",
+      "label": "Icon player elit+",
+      "folder": "ui",
+      "path": "/assets/ui/icon_player_elit%2B.png",
+      "size": 129679,
+      "modified": 1787958388000
     },
     {
       "fileName": "ui/icon_profile_button.png",
