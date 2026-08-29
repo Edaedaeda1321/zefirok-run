@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "catalogHash": "bd846fb24f9e5212",
-  "count": 435,
+  "catalogHash": "f2e245c9b114562f",
+  "count": 436,
   "images": [
     {
       "fileName": "achievements/background_achivment_panel.png",
@@ -2018,6 +2018,14 @@
       "path": "/assets/rating/frames/strawberry.png",
       "size": 11062,
       "modified": 1784921251000
+    },
+    {
+      "fileName": "rating/icon_vitrina_raiting.png",
+      "label": "Icon vitrina raiting",
+      "folder": "rating",
+      "path": "/assets/rating/icon_vitrina_raiting.png",
+      "size": 704535,
+      "modified": 1787972765000
     },
     {
       "fileName": "rating/season-leaderboard-banner.png",

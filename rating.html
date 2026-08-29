@@ -8728,8 +8728,6 @@ html > body { padding: 0 !important; }
 .rating-pass-info[hidden]{display:none!important}
 .rating-pass-info-card{position:relative;display:grid;grid-template-columns:minmax(0,220px) minmax(0,1fr);gap:20px;align-items:center;width:min(940px,100%);max-height:min(92dvh,780px);overflow:auto;box-sizing:border-box;padding:24px 24px 22px;border:1px solid rgba(231,198,189,.96);border-radius:34px;background:linear-gradient(145deg,#fffdfa 0%,#fff6f6 52%,#fff2f5 100%);box-shadow:0 28px 80px rgba(67,39,49,.24),inset 0 1px 0 rgba(255,255,255,.92);color:#68404e;scrollbar-width:none}
 .rating-pass-info-card::-webkit-scrollbar{display:none}
-.rating-pass-info-close-x{position:absolute;right:16px;top:16px;display:grid;place-items:center;width:42px;height:42px;border:1px solid rgba(219,184,191,.82);border-radius:50%;background:rgba(255,250,250,.92);color:#99697b;font:900 28px/1 var(--font-sans);cursor:pointer;box-shadow:0 8px 18px rgba(125,83,96,.09)}
-.rating-pass-info-close-x:active{transform:scale(.97)}
 .rating-pass-info-hero{position:relative;display:grid;place-items:center;min-height:100%;padding:22px 14px;border-radius:28px;background:radial-gradient(circle at 50% 16%,rgba(255,255,255,.92),transparent 28%),radial-gradient(circle at 50% 58%,rgba(245,197,120,.20),transparent 52%),linear-gradient(180deg,rgba(255,250,247,.98),rgba(255,243,246,.82));overflow:hidden}
 .rating-pass-info-hero::before{content:"";position:absolute;inset:24px;border-radius:26px;background:radial-gradient(circle at center,rgba(255,236,243,.82),rgba(255,255,255,0) 70%);pointer-events:none}
 .rating-pass-info-hero::after{content:"✦ ✦ ✦";position:absolute;left:50%;top:22px;transform:translateX(-50%);color:rgba(241,194,63,.62);font-size:18px;letter-spacing:16px;pointer-events:none}
@@ -8767,9 +8765,9 @@ html > body { padding: 0 !important; }
 .rating-pass-info-open{background:linear-gradient(145deg,#f49cbe,#d95a8a);color:#fff;box-shadow:0 12px 26px rgba(190,72,115,.22),inset 0 1px 0 rgba(255,255,255,.28)}
 .rating-pass-info[data-tier="elite_plus"] .rating-pass-info-open{background:linear-gradient(145deg,#ffcf60,#ef8f4d 52%,#f25d8d 100%);box-shadow:0 12px 26px rgba(210,136,38,.22),inset 0 1px 0 rgba(255,255,255,.32)}
 .rating-pass-info-actions button:active{transform:scale(.99)}
-@media(max-width:720px){.rating-pass-info-card{grid-template-columns:1fr;padding:16px 16px 18px;border-radius:28px;gap:10px}.rating-pass-info-close-x{top:12px;right:12px;width:40px;height:40px}.rating-pass-info-hero{min-height:160px;padding:18px 14px 8px}.rating-pass-info-star{width:min(142px,46vw)}.rating-pass-info-body{padding-right:0;gap:9px}.rating-pass-info-features{grid-template-columns:1fr;gap:7px}.rating-pass-info-actions{grid-template-columns:1fr}.rating-pass-info-actions .rating-pass-info-open{order:-1}}
+@media(max-width:720px){.rating-pass-info-card{grid-template-columns:1fr;padding:16px 16px 18px;border-radius:28px;gap:10px}.rating-pass-info-hero{min-height:160px;padding:18px 14px 8px}.rating-pass-info-star{width:min(142px,46vw)}.rating-pass-info-body{padding-right:0;gap:9px}.rating-pass-info-features{grid-template-columns:1fr;gap:7px}.rating-pass-info-actions{grid-template-columns:1fr}.rating-pass-info-actions .rating-pass-info-open{order:-1}}
 @media(max-width:420px){.rating-pass-info{padding-inline:10px}.rating-pass-info-card{padding:14px 12px 16px;border-radius:24px}.rating-pass-info-kicker{font-size:8.5px;padding:4px 8px}.rating-pass-info-heading h2{font-size:29px}.rating-pass-info-subtitle{font-size:14px}.rating-pass-info-card p{font-size:11px}.rating-pass-info-feature{grid-template-columns:44px minmax(0,1fr);gap:9px;padding:9px 10px}.rating-pass-info-feature-icon{width:44px;height:44px;border-radius:14px;font-size:17px}.rating-pass-info-feature-copy strong{font-size:12px}.rating-pass-info-feature-copy span{font-size:10px}.rating-pass-info-actions button{min-height:48px;font-size:12.5px}}
-@media(prefers-reduced-motion:reduce){.rating-pass-info-close-x,.rating-pass-info-actions button{transition:none!important}}
+@media(prefers-reduced-motion:reduce){.rating-pass-info-actions button{transition:none!important}}
 #zefirok-maltipoo-runner .leaderboard-reward-line[data-rating-case-info-type]{cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation;transition:transform .12s ease,filter .12s ease}
 #zefirok-maltipoo-runner .leaderboard-reward-line[data-rating-case-info-type]:active{transform:scale(.975);filter:brightness(.98)}
 .rating-case-info{position:fixed;inset:0;z-index:2147483610;display:grid;place-items:center;padding:max(22px,var(--zefirok-content-safe-top,0px)) 18px max(22px,var(--zefirok-content-safe-bottom,0px));background:rgba(67,42,50,.42);backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px);box-sizing:border-box}
@@ -9032,7 +9030,6 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
 <div class="rating-toast" data-rating-toast hidden></div>
 <section class="rating-pass-info" data-rating-pass-info data-tier="elite" hidden role="dialog" aria-modal="true" aria-labelledby="rating-pass-info-title">
   <div class="rating-pass-info-card">
-    <button class="rating-pass-info-close-x" data-rating-pass-info-close type="button" aria-label="Закрыть окно статуса">×</button>
     <div class="rating-pass-info-hero" aria-hidden="true">
       <span class="rating-pass-info-star"></span>
     </div>
