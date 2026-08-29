@@ -1659,6 +1659,13 @@ export default {
         headers.set("Cross-Origin-Resource-Policy", "same-origin");
         headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=()");
         headers.set("Content-Security-Policy", "default-src 'self'; script-src 'self' 'unsafe-inline' https://telegram.org; style-src 'self' 'unsafe-inline'; img-src 'self' https: data: blob:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'");
+        if (asset.ok && String(headers.get("Content-Type") || "").toLowerCase().includes("text/html")) {
+          const html = ownerPanelDirectGrantUi(await asset.text());
+          headers.delete("Content-Length");
+          headers.delete("Content-Encoding");
+          headers.delete("ETag");
+          return new Response(html, { status: asset.status, statusText: asset.statusText, headers });
+        }
         return new Response(asset.body, { status: asset.status, statusText: asset.statusText, headers });
       }
       if (url.pathname === "/test-project.html" && request.method === "GET") {
@@ -40874,6 +40881,67 @@ async function ownerPanelGrantRatingRecord(env, ctx, telegramId, score, reason) 
   };
 }
 
+function ownerPanelDirectGrantUi(htmlValue) {
+  let html = String(htmlValue || "");
+  if (!html || html.includes("zefirok-owner-direct-grant-ui-v1")) return html;
+  // owner.html is a protected, no-cache admin surface. Keeping these additive
+  // grant options at the Worker boundary lets older static CC builds expose
+  // backend capabilities without coupling ordinary player startup to CC UI.
+  const script = `<script id="zefirok-owner-direct-grant-ui-v1">(()=>{const enhance=()=>{const select=document.getElementById('playerGrantKind');if(!select||select.dataset.directGrantUi==='1')return;select.dataset.directGrantUi='1';const options=[['season_pass:elite','🎟 Пропуск · Элит'],['season_pass:elite_plus','✨ Пропуск · Элит+'],['season_pass_xp','⚡ EXP пропуска (+ к текущему)']];for(const [value,label] of options){if(!Array.from(select.options||[]).some(option=>option.value===value)){const option=document.createElement('option');option.value=value;option.textContent=label;select.appendChild(option);}}const card=select.closest('.card');const description=card?.querySelector('.section-head p');if(description)description.textContent='Начисляется напрямую на аккаунт, без Почты Зеффи. Компенсации работают отдельно через письма.';const amount=document.getElementById('playerGrantAmount');const amountLabel=amount?.closest('.field')?.querySelector('label');if(amountLabel)amountLabel.textContent='Количество / EXP';const sync=()=>{if(!amount)return;const isTier=select.value==='season_pass:elite'||select.value==='season_pass:elite_plus';amount.disabled=isTier;if(isTier)amount.value='1';};select.addEventListener('change',sync);sync();};const start=()=>{enhance();new MutationObserver(enhance).observe(document.body,{childList:true,subtree:true});};if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();})();</script>`;
+  const closeIndex = html.lastIndexOf("</body>");
+  if (closeIndex >= 0) html = `${html.slice(0, closeIndex)}${script}${html.slice(closeIndex)}`;
+  else html += script;
+  return html.replace("toast('Награда отправлена');", "toast('Награда начислена');");
+}
+
+async function ownerPanelGrantDirectReward(env, ctx, telegramId, kind, itemId, amount, reason) {
+  await ensurePlayerAccountRevisionAvailable(env);
+  const now = Math.floor(Date.now() / 1000);
+  const sourceId = `owner_direct_${Date.now()}_${crypto.randomUUID().replaceAll("-", "").slice(0, 10)}`;
+  let alreadyOwned = false;
+
+  if (["points", "zefir", "coffee"].includes(kind)) {
+    const field = ({ points:"pending_wallet", zefir:"pending_treats", coffee:"pending_coffee" })[kind];
+    const results = await env.DB.batch([
+      env.DB.prepare(`UPDATE admin_profile_state SET ${field}=${field}+?,revision=revision+1,updated_at=?,updated_by=? WHERE telegram_id=?`)
+        .bind(amount, now, `owner-direct:${ctx.user.id}:${sourceId}`, telegramId),
+      // pending_* is intentionally not covered by the economy trigger because
+      // it is folded into the base wallet later. Bump the global revision in
+      // the same batch so an open client can invalidate its account snapshot.
+      bumpPlayerAccountRevisionStatement(env, telegramId, now)
+    ]);
+    if (Number(results?.[0]?.meta?.changes || 0) < 1) throw new ApiError(404, "Профиль игрока не найден.");
+  } else if (kind === "case") {
+    await createGrantedCases(env, telegramId, itemId, amount, `owner-direct:${ctx.user.id}`, reason);
+  } else if (kind === "skin") {
+    const cosmetic = await grantCosmeticToPlayer(env, telegramId, kind, itemId);
+    alreadyOwned = Boolean(cosmetic?.alreadyOwned);
+  } else {
+    throw new ApiError(400, "Неизвестный тип прямой награды.");
+  }
+
+  const description = safeRewardDescription({ kind, id:itemId, amount });
+  const details = { kind, itemId, amount, reason, sourceId, direct:true, alreadyOwned };
+  await logStaffAction(env, ctx.user, ctx.access, "owner_panel_grant", telegramId, "direct_reward", null, amount, details);
+  try {
+    await recordPlayerTimeline(
+      env,
+      telegramId,
+      "owner_direct_grant",
+      alreadyOwned ? `повторная ручная выдача: ${description}` : `владелец напрямую выдал: ${description}`,
+      details,
+      sourceId,
+      ctx.user,
+      now
+    );
+  } catch (error) { console.error("owner direct grant timeline failed", error); }
+
+  if (alreadyOwned) {
+    return { ok:true, grantType:"direct", sourceId, alreadyOwned:true, message:"Предмет уже был у игрока. Повторная копия не добавлена." };
+  }
+  return { ok:true, grantType:"direct", sourceId, direct:true, message:`Начислено напрямую: ${description}.` };
+}
+
 async function ownerPanelGrantPlayer(env, ctx) {
   const telegramId = String(ctx.body?.telegramId || "").trim();
   if (!/^\d{4,20}$/.test(telegramId)) throw new ApiError(400, "Некорректный Telegram ID игрока.");
@@ -40909,17 +40977,7 @@ async function ownerPanelGrantPlayer(env, ctx) {
     itemId = String(ctx.body?.itemId || "").trim().toLowerCase();
     if (!SKINS[itemId] || itemId === "default") throw new ApiError(400, "Выберите доступный скин.");
   }
-  const sourceId = `owner_${Date.now()}_${crypto.randomUUID().replaceAll("-", "").slice(0, 10)}`;
-  const reward = { kind, id:itemId, amount };
-  const gift = await createPlayerGiftInbox(env, telegramId, { giftId:sourceId, kind:"gift", title:"Подарок от команды", message:"Для вас подготовлена награда.", reason, rewards:[reward] });
-  if (!gift.created) throw new ApiError(409, "Такая выдача уже существует.");
-  // Persist the audit recovery record before the external Telegram notice. If a
-  // later presentation row is ever lost, /api/gifts/state can restore it from
-  // this durable grant record without duplicating an already delivered reward.
-  await logStaffAction(env, ctx.user, ctx.access, "owner_panel_grant", telegramId, "gift_inbox", null, amount, { kind, itemId, reason, giftId:sourceId });
-  const notifyPromise = notifyPlayerGiftAvailable(env, telegramId, { title:"Подарок от команды", message:"Для вас подготовлена награда.", reason, rewards:[reward] });
-  if (ctx.executionCtx?.waitUntil) ctx.executionCtx.waitUntil(notifyPromise); else await notifyPromise;
-  return { ok: true, giftId:sourceId, message: "Подарок создан. Игрок увидит причину и сможет забрать награду в профиле." };
+  return ownerPanelGrantDirectReward(env, ctx, telegramId, kind, itemId, amount, reason);
 }
 
 function ownerPanelRatingSeasonView(row) {
