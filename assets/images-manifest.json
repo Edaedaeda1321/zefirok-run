@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "catalogHash": "fdfe926a74dc1d25",
-  "count": 445,
+  "catalogHash": "fb7cdfd80357ca3a",
+  "count": 446,
   "images": [
     {
       "fileName": "achievements/background_achivment_panel.png",
@@ -834,6 +834,14 @@
       "path": "/assets/cases/boosters/icon_buster_shit_zeffi.png",
       "size": 1529910,
       "modified": 1788120914883
+    },
+    {
+      "fileName": "cases/boosters/icon_pause_zeffi.png",
+      "label": "Icon pause zeffi",
+      "folder": "cases/boosters",
+      "path": "/assets/cases/boosters/icon_pause_zeffi.png",
+      "size": 2233235,
+      "modified": 1788130148000
     },
     {
       "fileName": "cases/Bronze_close.png",

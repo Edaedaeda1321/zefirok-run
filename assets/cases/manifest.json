@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "catalogHash": "3f59fdf4059235a5",
-  "count": 99,
+  "catalogHash": "52c953c3a030393b",
+  "count": 100,
   "images": [
     {
       "fileName": "398D69BA-8943-4846-94B3-FC5CB717A67F.PNG",
@@ -426,6 +426,14 @@
       "path": "/assets/cases/boosters/icon_buster_shit_zeffi.png",
       "hash": "ef80f172c59f",
       "size": 1529910
+    },
+    {
+      "fileName": "boosters/icon_pause_zeffi.png",
+      "label": "Icon pause zeffi",
+      "folder": "boosters",
+      "path": "/assets/cases/boosters/icon_pause_zeffi.png",
+      "hash": "ef53e42a82d3",
+      "size": 2233235
     },
     {
       "fileName": "Bronze_close.png",

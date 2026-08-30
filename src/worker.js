@@ -824,6 +824,22 @@ const SEASON_PASS_BOOST_REWARDS = Object.freeze({
   booster_xp: Object.freeze({ itemId:SEASON_PASS_SPECIAL_XP_X2, storedType:"points", kind:"xp", title:"×2 XP сезонного пропуска", imageUrl:"/assets/season-pass/xp_x2.png" })
 });
 
+function runBoosterDefinition(rawId) {
+  const id = String(rawId || "").trim().toLowerCase();
+  if (!CASE_BOOSTER_TYPES.includes(id)) return null;
+  const reward = Object.values(SEASON_PASS_BOOST_REWARDS).find((item) => item?.kind === id) || null;
+  return {
+    id,
+    title:String(reward?.title || id),
+    imageUrl:String(reward?.imageUrl || ""),
+    runs:Math.max(1,Number(CASE_BOOSTER_RUNS[id] || 1))
+  };
+}
+
+function runBoosterCatalogItems() {
+  return CASE_BOOSTER_TYPES.map((id) => runBoosterDefinition(id)).filter(Boolean);
+}
+
 function seasonPassProgressionView() {
   return {
     maxLevel:SEASON_PASS_MAX_LEVEL,
@@ -4049,7 +4065,7 @@ async function ensurePlayerGiftInboxSchema(env) {
 }
 
 function normalizePlayerGiftRewards(input) {
-  const allowed = new Set(["points", "zefir", "coffee", "case", "avatar", "frame", "trail", "skin", "season_pass_xp", "season_pass_tier", "season_pass_xp_grant"]);
+  const allowed = new Set(["points", "zefir", "coffee", "case", "avatar", "frame", "trail", "skin", "booster", "season_pass_xp", "season_pass_tier", "season_pass_xp_grant"]);
   const merged = new Map();
   for (const raw of Array.isArray(input) ? input : []) {
     if (!raw || typeof raw !== "object") continue;
@@ -4084,6 +4100,16 @@ function normalizePlayerGiftRewards(input) {
       const current = merged.get(key);
       if (current) current.amount = Math.min(5000000, current.amount + amount);
       else merged.set(key, { kind, id:seasonId, amount });
+      continue;
+    }
+    if (kind === "booster") {
+      const id = String(raw.id || raw.rewardId || "").trim().toLowerCase();
+      if (!runBoosterDefinition(id)) continue;
+      const amount = Math.max(1, Math.min(999, Math.floor(Number(raw.amount || 1))));
+      const key = `${kind}:${id}`;
+      const current = merged.get(key);
+      if (current) current.amount = Math.min(999, current.amount + amount);
+      else merged.set(key, { kind, id, amount });
       continue;
     }
     const id = String(raw.id || raw.rewardId || "").trim().slice(0, 96);
@@ -16502,6 +16528,7 @@ function grantRewardTitle(kind, rewardId = "") {
   if (kind === "zefir") return "Зефир";
   if (kind === "coffee") return "Кофе";
   if (kind === "case") return LEVEL_CASE_CONFIG[rewardId]?.title || "Кейс";
+  if (kind === "booster") return runBoosterDefinition(rewardId)?.title || "Усилитель";
   if (kind === "avatar") return CASE_AVATARS[rewardId]?.title || rewardId;
   if (kind === "frame") return CASE_FRAMES[rewardId]?.title || rewardId;
   if (kind === "trail") return CASE_TRAILS[rewardId]?.title || rewardId;
@@ -22508,6 +22535,11 @@ function safeRewardDescription(reward) {
     const tier = rawId.includes("|") ? rawId.slice(rawId.lastIndexOf("|") + 1) : rawId;
     return tier === "elite_plus" ? "Тариф «Элитный+»" : "Тариф «Элитный»";
   }
+  if (reward.kind === "booster") {
+    const booster = runBoosterDefinition(reward.id);
+    const amount = Math.max(1, Number(reward.amount || 1));
+    return booster ? `${amount.toLocaleString("ru-RU")} × ${booster.title}` : `${amount.toLocaleString("ru-RU")} × усилитель`;
+  }
   if (reward.kind === "case") return `${reward.amount} × ${LEVEL_CASE_CONFIG[reward.id]?.title || reward.id}`;
   if (reward.kind === "seasonal_case") return `${reward.amount} × сезонный кейс`;
   if (String(reward.kind||"")==="showcase_style") { const style=achievementShowcaseRewardStyleDefinition(reward.id); return style?`Витрина «${style.title}»`:"Витрина достижений"; }
@@ -23124,6 +23156,13 @@ async function deliverQueuedReward(env, row, leaseToken) {
       seasonPassDelivery = { kind:rewardKind, season, player };
     }
   }
+  let runBoosterReward = null;
+  if (rewardKind === "booster") {
+    runBoosterReward = runBoosterDefinition(row.reward_id);
+    if (!runBoosterReward) throw new Error("Неизвестный усилитель");
+    if (amount > 999) throw new Error("Количество усилителей превышает безопасный лимит");
+    await ensureCasePlayerState(env, telegramId, {});
+  }
   let showcaseStyleReward=null;
   if(rewardKind==="showcase_style"){
     await ensureAchievementConfigSchema(env);showcaseStyleReward=achievementShowcaseRewardStyleDefinition(row.reward_id);if(!showcaseStyleReward)throw new Error("Неизвестное оформление витрины");
@@ -23161,7 +23200,7 @@ async function deliverQueuedReward(env, row, leaseToken) {
     row.__seasonalCase={definition,caseItems};
   } else if (row.reward_kind === "physical_restore") {
     throw new Error("Требуется ручная проверка и восстановление физического кода");
-  } else if (!["points", "zefir", "coffee", "case", "season_pass_tier", "season_pass_xp_grant", "showcase_style"].includes(row.reward_kind)) {
+  } else if (!["points", "zefir", "coffee", "case", "booster", "season_pass_tier", "season_pass_xp_grant", "showcase_style"].includes(row.reward_kind)) {
     throw new Error("Неизвестный тип награды");
   }
 
@@ -23194,6 +23233,22 @@ async function deliverQueuedReward(env, row, leaseToken) {
            SELECT 1 FROM reward_delivery_effects WHERE queue_id=? AND apply_token=?
          )`
       ).bind(grantId, telegramId, caseType, `queue:${queueId}`, String(row.reason || "").slice(0,300), now, queueId, token));
+    }
+  } else if (row.reward_kind === "booster") {
+    if (!runBoosterReward) throw new Error("Неизвестный усилитель");
+    const boosterId = runBoosterReward.id;
+    if (CASE_REWARD_BOOSTER_TYPES.includes(boosterId)) {
+      const column = boosterId === "points" ? "boosters_points" : boosterId === "treats" ? "boosters_treats" : "boosters_coffee";
+      statements.push(env.DB.prepare(
+        `UPDATE case_player_state SET ${column}=MAX(0,${column})+?,revision=revision+1,updated_at=?
+         WHERE telegram_id=? AND EXISTS(SELECT 1 FROM reward_delivery_effects WHERE queue_id=? AND apply_token=?)`
+      ).bind(amount,now,telegramId,queueId,token));
+    } else {
+      const jsonPath = `$.${boosterId}`;
+      statements.push(env.DB.prepare(
+        `UPDATE case_player_state SET boosters_extra_json=json_set(CASE WHEN json_valid(boosters_extra_json) THEN boosters_extra_json ELSE '{}' END,'${jsonPath}',MAX(0,CAST(COALESCE(json_extract(CASE WHEN json_valid(boosters_extra_json) THEN boosters_extra_json ELSE '{}' END,'${jsonPath}'),0) AS INTEGER))+?),revision=revision+1,updated_at=?
+         WHERE telegram_id=? AND EXISTS(SELECT 1 FROM reward_delivery_effects WHERE queue_id=? AND apply_token=?)`
+      ).bind(amount,now,telegramId,queueId,token));
     }
   } else if (row.reward_kind === "seasonal_case") {
     const definition=row.__seasonalCase?.definition,caseItems=row.__seasonalCase?.caseItems||[];
@@ -35400,7 +35455,8 @@ function ownerV85CompensationRewardCatalog(){
     skins: grantCatalogItems("skin").map(item=>({id:String(item.id),title:String(item.title)})),
     avatars: grantCatalogItems("avatar").map(item=>({id:String(item.id),title:String(item.title)})),
     frames: grantCatalogItems("frame").map(item=>({id:String(item.id),title:String(item.title)})),
-    trails: grantCatalogItems("trail").map(item=>({id:String(item.id),title:String(item.title)}))
+    trails: grantCatalogItems("trail").map(item=>({id:String(item.id),title:String(item.title)})),
+    boosters: runBoosterCatalogItems().map(item=>({id:String(item.id),title:String(item.title)}))
   };
 }
 async function ownerV85NormalizeCustomCompensationRewards(env,input){
@@ -35411,7 +35467,8 @@ async function ownerV85NormalizeCustomCompensationRewards(env,input){
     skin:new Set(grantCatalogItems("skin").map(item=>String(item.id))),
     avatar:new Set(grantCatalogItems("avatar").map(item=>String(item.id))),
     frame:new Set(grantCatalogItems("frame").map(item=>String(item.id))),
-    trail:new Set(grantCatalogItems("trail").map(item=>String(item.id)))
+    trail:new Set(grantCatalogItems("trail").map(item=>String(item.id))),
+    booster:new Set(runBoosterCatalogItems().map(item=>String(item.id)))
   };
   const checked=[];
   let boundSeason=null;
@@ -35438,6 +35495,12 @@ async function ownerV85NormalizeCustomCompensationRewards(env,input){
     if(kind==="case"){
       if(!catalog.case.has(id))throw new ApiError(400,"Выбран неизвестный кейс.");
       if(!Number.isFinite(amount)||amount<1||amount>20)throw new ApiError(400,"За одну компенсацию можно выдать от 1 до 20 кейсов одного типа.");
+      checked.push({kind,id,amount});
+      continue;
+    }
+    if(kind==="booster"){
+      if(!catalog.booster.has(id))throw new ApiError(400,"Выбран неизвестный усилитель.");
+      if(!Number.isFinite(amount)||amount<1||amount>999)throw new ApiError(400,"За одну компенсацию можно выдать от 1 до 999 усилителей одного типа.");
       checked.push({kind,id,amount});
       continue;
     }
@@ -41295,23 +41358,25 @@ async function ownerPanelGrantRatingRecord(env, ctx, telegramId, score, reason) 
 function ownerPanelDirectGrantUi(htmlValue) {
   let html = String(htmlValue || "");
   if (!html || html.includes("zefirok-owner-reward-grant-ui-v2")) return html;
-  // owner.html keeps its controller inside a private IIFE, so patch the three
-  // compensation helper functions in the HTML source before the browser runs
-  // that controller. Direct player-grant controls remain an additive DOM layer.
-  html = html.replace(
-    "${group('Следы','trail',c.trails)}`;}",
-    "${group('Следы','trail',c.trails)}${option('season_pass_tier:elite','Тариф · Элитный')}${option('season_pass_tier:elite_plus','Тариф · Элитный+')}${option('season_pass_xp_grant','EXP пропуска (+ к текущему)')}`;}"
-  );
-  html = html.replace(
-    "function compCustomChoiceMeta(choice=''){const [kind,id='']=String(choice||'').split(':');const cosmetic=['skin','avatar','frame','trail'].includes(kind);const isCase=kind==='case';return{kind,id,cosmetic,isCase,max:cosmetic?1:isCase?20:5000000};}",
-    "function compCustomChoiceMeta(choice=''){const [kind,id='']=String(choice||'').split(':');const cosmetic=['skin','avatar','frame','trail'].includes(kind);const isCase=kind==='case';if(kind==='season_pass_tier')return{kind,id,cosmetic:true,isCase:false,max:1};if(kind==='season_pass_xp_grant')return{kind,id:'',cosmetic:false,isCase:false,max:5000000};return{kind,id,cosmetic,isCase,max:cosmetic?1:isCase?20:5000000};}"
-  );
-  html = html.replace(
-    "function compCustomRewardTitle(choice=''){const [kind,id='']=String(choice||'').split(':');if(kind==='points')return'Очки';if(kind==='zefir')return'Зефир';if(kind==='coffee')return'Кофе';const c=state.compensations?.rewardCatalog||{};const key={case:'cases',skin:'skins',avatar:'avatars',frame:'frames',trail:'trails'}[kind];return(c[key]||[]).find(x=>String(x.id)===id)?.title||id||'Награда';}",
-    "function compCustomRewardTitle(choice=''){const [kind,id='']=String(choice||'').split(':');if(kind==='points')return'Очки';if(kind==='zefir')return'Зефир';if(kind==='coffee')return'Кофе';if(kind==='season_pass_tier')return id==='elite_plus'?'Тариф «Элитный+»':'Тариф «Элитный»';if(kind==='season_pass_xp_grant')return'EXP сезонного пропуска';const c=state.compensations?.rewardCatalog||{};const key={case:'cases',skin:'skins',avatar:'avatars',frame:'frames',trail:'trails'}[kind];return(c[key]||[]).find(x=>String(x.id)===id)?.title||id||'Награда';}"
-  );
+  // Older owner.html builds did not yet know how to grant Season Pass items.
+  // Keep that compatibility patch only for those old assets; the current source
+  // already owns the compensation catalog and must not receive duplicate options.
+  if (!html.includes("season_pass_xp_grant")) {
+    html = html.replace(
+      "${group('Следы','trail',c.trails)}`;}",
+      "${group('Следы','trail',c.trails)}${option('season_pass_tier:elite','Тариф · Элитный')}${option('season_pass_tier:elite_plus','Тариф · Элитный+')}${option('season_pass_xp_grant','EXP пропуска (+ к текущему)')}`;}"
+    );
+    html = html.replace(
+      "function compCustomChoiceMeta(choice=''){const [kind,id='']=String(choice||'').split(':');const cosmetic=['skin','avatar','frame','trail'].includes(kind);const isCase=kind==='case';return{kind,id,cosmetic,isCase,max:cosmetic?1:isCase?20:5000000};}",
+      "function compCustomChoiceMeta(choice=''){const [kind,id='']=String(choice||'').split(':');const cosmetic=['skin','avatar','frame','trail'].includes(kind);const isCase=kind==='case';if(kind==='season_pass_tier')return{kind,id,cosmetic:true,isCase:false,max:1};if(kind==='season_pass_xp_grant')return{kind,id:'',cosmetic:false,isCase:false,max:5000000};return{kind,id,cosmetic,isCase,max:cosmetic?1:isCase?20:5000000};}"
+    );
+    html = html.replace(
+      "function compCustomRewardTitle(choice=''){const [kind,id='']=String(choice||'').split(':');if(kind==='points')return'Очки';if(kind==='zefir')return'Зефир';if(kind==='coffee')return'Кофе';const c=state.compensations?.rewardCatalog||{};const key={case:'cases',skin:'skins',avatar:'avatars',frame:'frames',trail:'trails'}[kind];return(c[key]||[]).find(x=>String(x.id)===id)?.title||id||'Награда';}",
+      "function compCustomRewardTitle(choice=''){const [kind,id='']=String(choice||'').split(':');if(kind==='points')return'Очки';if(kind==='zefir')return'Зефир';if(kind==='coffee')return'Кофе';if(kind==='season_pass_tier')return id==='elite_plus'?'Тариф «Элитный+»':'Тариф «Элитный»';if(kind==='season_pass_xp_grant')return'EXP сезонного пропуска';const c=state.compensations?.rewardCatalog||{};const key={case:'cases',skin:'skins',avatar:'avatars',frame:'frames',trail:'trails'}[kind];return(c[key]||[]).find(x=>String(x.id)===id)?.title||id||'Награда';}"
+    );
+  }
   const script = `<script id="zefirok-owner-reward-grant-ui-v2">(()=>{
-    const options=[['season_pass:elite','🎟 Пропуск · Элит'],['season_pass:elite_plus','✨ Пропуск · Элит+'],['season_pass_xp','⚡ EXP пропуска (+ к текущему)']];
+    const options=[['booster:points','⚡ ×2 очки · 2 забега'],['booster:treats','⚡ ×2 зефир · 2 забега'],['booster:coffee','⚡ ×2 кофе · 2 забега'],['booster:shield','🛡 Щит Зеффи · 1 забег'],['booster:second_chance','💗 Второй шанс · 1 забег'],['booster:pause','⏸ Пауза Зеффи · 1 забег'],['season_pass:elite','🎟 Пропуск · Элит'],['season_pass:elite_plus','✨ Пропуск · Элит+'],['season_pass_xp','⚡ EXP пропуска (+ к текущему)']];
     const enhance=()=>{const select=document.getElementById('playerGrantKind');if(!select)return;for(const [value,label] of options){if(!Array.from(select.options||[]).some(option=>option.value===value)){const option=document.createElement('option');option.value=value;option.textContent=label;select.appendChild(option);}}const card=select.closest('.card');const description=card?.querySelector('.section-head p');if(description)description.textContent='Начисляется напрямую на аккаунт, без Почты Зеффи. Компенсации работают отдельно через письма.';const amount=document.getElementById('playerGrantAmount');const amountLabel=amount?.closest('.field')?.querySelector('label');if(amountLabel)amountLabel.textContent='Количество / EXP';const sync=()=>{if(!amount)return;const isTier=select.value==='season_pass:elite'||select.value==='season_pass:elite_plus';amount.disabled=isTier;if(isTier)amount.value='1';};if(select.dataset.directGrantUiV2!=='1'){select.dataset.directGrantUiV2='1';select.addEventListener('change',sync);}sync();};
     const start=()=>{enhance();new MutationObserver(enhance).observe(document.body,{childList:true,subtree:true});};if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
   })();</script>`;
@@ -41340,6 +41405,20 @@ async function ownerPanelGrantDirectReward(env, ctx, telegramId, kind, itemId, a
     if (Number(results?.[0]?.meta?.changes || 0) < 1) throw new ApiError(404, "Профиль игрока не найден.");
   } else if (kind === "case") {
     await createGrantedCases(env, telegramId, itemId, amount, `owner-direct:${ctx.user.id}`, reason);
+  } else if (kind === "booster") {
+    const booster = runBoosterDefinition(itemId);
+    if (!booster) throw new ApiError(400, "Неизвестный усилитель.");
+    await ensureCasePlayerState(env, telegramId, {});
+    let update;
+    if (CASE_REWARD_BOOSTER_TYPES.includes(booster.id)) {
+      const column = booster.id === "points" ? "boosters_points" : booster.id === "treats" ? "boosters_treats" : "boosters_coffee";
+      update = env.DB.prepare(`UPDATE case_player_state SET ${column}=MAX(0,${column})+?,revision=revision+1,updated_at=? WHERE telegram_id=?`).bind(amount,now,telegramId);
+    } else {
+      const jsonPath = `$.${booster.id}`;
+      update = env.DB.prepare(`UPDATE case_player_state SET boosters_extra_json=json_set(CASE WHEN json_valid(boosters_extra_json) THEN boosters_extra_json ELSE '{}' END,'${jsonPath}',MAX(0,CAST(COALESCE(json_extract(CASE WHEN json_valid(boosters_extra_json) THEN boosters_extra_json ELSE '{}' END,'${jsonPath}'),0) AS INTEGER))+?),revision=revision+1,updated_at=? WHERE telegram_id=?`).bind(amount,now,telegramId);
+    }
+    const results = await env.DB.batch([update,bumpPlayerAccountRevisionStatement(env,telegramId,now)]);
+    if (Number(results?.[0]?.meta?.changes || 0) < 1) throw new ApiError(404, "Профиль усилителей игрока не найден.");
   } else if (kind === "skin") {
     const cosmetic = await grantCosmeticToPlayer(env, telegramId, kind, itemId);
     alreadyOwned = Boolean(cosmetic?.alreadyOwned);
@@ -41392,14 +41471,17 @@ async function ownerPanelGrantPlayer(env, ctx) {
   }
 
   const kind = rawKind === "treats" ? "zefir" : rawKind;
-  if (!["points", "zefir", "coffee", "case", "skin"].includes(kind)) throw new ApiError(400, "Неизвестный тип награды.");
+  if (!["points", "zefir", "coffee", "case", "skin", "booster"].includes(kind)) throw new ApiError(400, "Неизвестный тип награды.");
   const cosmeticSkin = kind === "skin";
-  const amount = cosmeticSkin ? 1 : ownerPanelInteger(ctx.body?.amount, 1, kind === "case" ? 20 : 10000000);
+  const amount = cosmeticSkin ? 1 : ownerPanelInteger(ctx.body?.amount, 1, kind === "case" ? 20 : kind === "booster" ? 999 : 10000000);
   if (amount == null) throw new ApiError(400, "Некорректное количество награды.");
   let itemId = "";
   if (kind === "case") {
     itemId = normalizeCaseType(ctx.body?.itemId);
     if (!itemId) throw new ApiError(400, "Выберите тип кейса.");
+  } else if (kind === "booster") {
+    itemId = String(ctx.body?.itemId || "").trim().toLowerCase();
+    if (!runBoosterDefinition(itemId)) throw new ApiError(400, "Выберите доступный усилитель.");
   } else if (cosmeticSkin) {
     itemId = String(ctx.body?.itemId || "").trim().toLowerCase();
     if (!SKINS[itemId] || itemId === "default") throw new ApiError(400, "Выберите доступный скин.");
