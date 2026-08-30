@@ -403,7 +403,9 @@ const CASE_PHYSICAL_REWARDS = Object.freeze({
   cappuccino: Object.freeze({ id: "cappuccino", title: PRODUCTS.cappuccino.title, chance: CASE_PHYSICAL_TOTAL_CHANCE / 3 })
 });
 
-const CASE_BOOSTER_TYPES = Object.freeze(["points", "treats", "coffee"]);
+const CASE_REWARD_BOOSTER_TYPES = Object.freeze(["points", "treats", "coffee"]);
+const CASE_BOOSTER_TYPES = Object.freeze([...CASE_REWARD_BOOSTER_TYPES, "shield", "second_chance"]);
+const CASE_BOOSTER_RUNS = Object.freeze({ points:2, treats:2, coffee:2, shield:1, second_chance:1 });
 const CASE_DUPLICATE_COMPENSATION = Object.freeze({ skin: 150000, avatar: 500, frame: 1500, trail: 5000, music: 150000 });
 const CASE_RARITY_ORDER = Object.freeze({ common: 0, rare: 1, superrare: 2, epic: 3, mythic: 4, legendary: 5 });
 
@@ -1062,18 +1064,12 @@ function seasonPassApplyCosmeticToState(state, cosmetic) {
 
 async function seasonPassHasXpX2(env, seasonId, telegramId, player = null) {
   try {
-    const [seasonRow, entitlement]=await Promise.all([
-      String(player?.premium_tier || "none") === "elite_plus"
-        ? env.DB.prepare(`SELECT elite_plus_benefits_json FROM season_pass_seasons WHERE season_id=? LIMIT 1`).bind(String(seasonId)).first()
-        : Promise.resolve(null),
-      env.DB.prepare(`SELECT 1 AS ok,source FROM season_pass_entitlements WHERE season_id=? AND telegram_id=? AND item_id=? LIMIT 1`).bind(String(seasonId),String(telegramId),SEASON_PASS_SPECIAL_XP_X2).first()
-    ]);
-    if (String(player?.premium_tier || "none") === "elite_plus") {
-      const config=seasonPassElitePlusBenefitsConfig(seasonRow?.elite_plus_benefits_json);
-      if (config.xpBoost) return true;
-      return Boolean(entitlement?.ok) && !String(entitlement?.source || "").startsWith("elite_plus");
-    }
-    return Boolean(entitlement?.ok);
+    // ×2 XP is not an inventory consumable. It is an Elite+ benefit that is
+    // valid only while the player has Elite+ in the active season.
+    if (String(player?.premium_tier || "none") !== "elite_plus") return false;
+    const seasonRow=await env.DB.prepare(`SELECT elite_plus_benefits_json FROM season_pass_seasons WHERE season_id=? LIMIT 1`).bind(String(seasonId)).first();
+    const config=seasonPassElitePlusBenefitsConfig(seasonRow?.elite_plus_benefits_json);
+    return Boolean(config.xpBoost);
   } catch (error) {
     console.error("season pass xp boost check failed", error);
     return false;
@@ -1483,6 +1479,17 @@ async function ensureRuntimeCompatibilitySchema(env) {
       ['admin_profile_state', 'pending_coffee', 'INTEGER NOT NULL DEFAULT 0'],
       ['case_player_state', 'owned_specials_json', "TEXT NOT NULL DEFAULT '[]'"],
       ['case_player_state', 'mythic_pity_counter', 'INTEGER NOT NULL DEFAULT 0'],
+      ['case_player_state', 'boosters_extra_json', "TEXT NOT NULL DEFAULT '{}'"],
+      ['case_player_state', 'active_boosters_json', "TEXT NOT NULL DEFAULT '{}'"],
+      ['game_run_sessions', 'booster_points', 'INTEGER NOT NULL DEFAULT 0'],
+      ['game_run_sessions', 'booster_treats', 'INTEGER NOT NULL DEFAULT 0'],
+      ['game_run_sessions', 'booster_coffee', 'INTEGER NOT NULL DEFAULT 0'],
+      ['game_run_sessions', 'booster_shield', 'INTEGER NOT NULL DEFAULT 0'],
+      ['game_run_sessions', 'booster_second_chance', 'INTEGER NOT NULL DEFAULT 0'],
+      ['game_run_sessions', 'shield_used', 'INTEGER NOT NULL DEFAULT 0'],
+      ['game_run_sessions', 'second_chance_used', 'INTEGER NOT NULL DEFAULT 0'],
+      ['case_booster_run_consumptions', 'booster_types_json', "TEXT NOT NULL DEFAULT '[]'"],
+      ['player_economy_run_ledger', 'booster_types_json', "TEXT NOT NULL DEFAULT '[]'"],
       ['leaderboard_runs', 'run_treats', 'INTEGER NOT NULL DEFAULT 0'],
       ['leaderboard_runs', 'run_coffee', 'INTEGER NOT NULL DEFAULT 0'],
       ['leaderboard_entries', 'case_avatar_id', "TEXT NOT NULL DEFAULT ''"],
@@ -6583,6 +6590,13 @@ async function ensureAuthoritativeEconomySchema(env) {
           score INTEGER NOT NULL DEFAULT 0,
           run_treats INTEGER NOT NULL DEFAULT 0,
           run_coffee INTEGER NOT NULL DEFAULT 0,
+          booster_points INTEGER NOT NULL DEFAULT 0,
+          booster_treats INTEGER NOT NULL DEFAULT 0,
+          booster_coffee INTEGER NOT NULL DEFAULT 0,
+          booster_shield INTEGER NOT NULL DEFAULT 0,
+          booster_second_chance INTEGER NOT NULL DEFAULT 0,
+          shield_used INTEGER NOT NULL DEFAULT 0,
+          second_chance_used INTEGER NOT NULL DEFAULT 0,
           economy_points INTEGER NOT NULL DEFAULT 0,
           economy_treats INTEGER NOT NULL DEFAULT 0,
           economy_coffee INTEGER NOT NULL DEFAULT 0,
@@ -6622,6 +6636,7 @@ async function ensureAuthoritativeEconomySchema(env) {
           raw_coffee INTEGER NOT NULL DEFAULT 0,
           duration_ms INTEGER NOT NULL DEFAULT 0,
           booster_type TEXT NOT NULL DEFAULT '',
+          booster_types_json TEXT NOT NULL DEFAULT '[]',
           skin_id TEXT NOT NULL DEFAULT 'default',
           new_record INTEGER NOT NULL DEFAULT 0,
           accepted_rating INTEGER NOT NULL DEFAULT 0,
@@ -6996,7 +7011,12 @@ function isAuthoritativeRunSchemaMissingError(error) {
   const text = String(error?.message || error || '').toLowerCase();
   return (
     (text.includes('no such table') && (text.includes('game_run_sessions') || text.includes('game_run_live_proofs'))) ||
-    (text.includes('no such column') && (text.includes('anchor_duration_ms') || text.includes('anchor_server_at_ms')))
+    (text.includes('no such column') && (
+      text.includes('anchor_duration_ms') || text.includes('anchor_server_at_ms') ||
+      text.includes('booster_points') || text.includes('booster_treats') || text.includes('booster_coffee') ||
+      text.includes('booster_shield') || text.includes('booster_second_chance') ||
+      text.includes('shield_used') || text.includes('second_chance_used') || text.includes('active_boosters_json')
+    ))
   );
 }
 
@@ -7014,10 +7034,21 @@ async function checkpointAuthoritativeRunSession(request, env) {
       const session = await env.DB.prepare(`SELECT * FROM game_run_sessions WHERE run_id=? LIMIT 1`).bind(runId).first();
       if (!session || String(session.telegram_id || '') !== telegramId) throw new ApiError(409, 'Защищённая сессия забега не найдена.');
       if (String(session.status || '') !== 'started') throw new ApiError(409, 'Эта сессия забега уже завершена или заменена.');
+      const shieldUsed=Boolean(body.shieldUsed || body.shield_used);
+      const secondChanceUsed=Boolean(body.secondChanceUsed || body.second_chance_used);
+      if (shieldUsed && Number(session.booster_shield||0)!==1) throw new ApiError(409, 'Щит Зеффи не был активирован для этого забега.');
+      if (secondChanceUsed && Number(session.booster_second_chance||0)!==1) throw new ApiError(409, 'Второй шанс не был активирован для этого забега.');
       const checkpoint = await attestAuthoritativeRunProgress(env, session, body);
+      if ((shieldUsed && Number(session.shield_used||0)!==1) || (secondChanceUsed && Number(session.second_chance_used||0)!==1)) {
+        await env.DB.prepare(`UPDATE game_run_sessions SET shield_used=MAX(shield_used,?),second_chance_used=MAX(second_chance_used,?),updated_at=? WHERE run_id=? AND telegram_id=? AND status='started'`)
+          .bind(shieldUsed?1:0,secondChanceUsed?1:0,Math.floor(checkpoint.attestedAtMs/1000),runId,telegramId).run();
+      }
       return jsonResponse({ ok: true, checkpoint: {
         runId, seq: checkpoint.proofSeq, durationMs: checkpoint.durationMs, score: checkpoint.score,
-        runTreats: checkpoint.runTreats, runCoffee: checkpoint.runCoffee, serverTime: checkpoint.attestedAtMs
+        runTreats: checkpoint.runTreats, runCoffee: checkpoint.runCoffee,
+        shieldUsed:Boolean(shieldUsed || Number(session.shield_used||0)),
+        secondChanceUsed:Boolean(secondChanceUsed || Number(session.second_chance_used||0)),
+        serverTime: checkpoint.attestedAtMs
       }});
     };
 
@@ -7071,9 +7102,16 @@ async function startAuthoritativeRunSession(request, env) {
         ).bind(now, telegramId, runId, runId, telegramId),
         env.DB.prepare(
           `INSERT OR IGNORE INTO game_run_sessions(
-             run_id,telegram_id,started_at_ms,expires_at_ms,status,created_at,updated_at
-           ) VALUES(?,?,?,?,'started',?,?)`
-        ).bind(runId, telegramId, nowMs, expiresAtMs, now, now),
+             run_id,telegram_id,started_at_ms,expires_at_ms,status,created_at,updated_at,
+             booster_points,booster_treats,booster_coffee,booster_shield,booster_second_chance
+           ) VALUES(?,?,?,?,'started',?,?,
+             COALESCE((SELECT CASE WHEN COALESCE(CAST(json_extract(CASE WHEN json_valid(active_boosters_json) THEN active_boosters_json ELSE '{}' END,'$.points') AS INTEGER),CASE WHEN active_booster_type='points' THEN active_booster_runs ELSE 0 END,0)>0 THEN 1 ELSE 0 END FROM case_player_state WHERE telegram_id=? LIMIT 1),0),
+             COALESCE((SELECT CASE WHEN COALESCE(CAST(json_extract(CASE WHEN json_valid(active_boosters_json) THEN active_boosters_json ELSE '{}' END,'$.treats') AS INTEGER),CASE WHEN active_booster_type='treats' THEN active_booster_runs ELSE 0 END,0)>0 THEN 1 ELSE 0 END FROM case_player_state WHERE telegram_id=? LIMIT 1),0),
+             COALESCE((SELECT CASE WHEN COALESCE(CAST(json_extract(CASE WHEN json_valid(active_boosters_json) THEN active_boosters_json ELSE '{}' END,'$.coffee') AS INTEGER),CASE WHEN active_booster_type='coffee' THEN active_booster_runs ELSE 0 END,0)>0 THEN 1 ELSE 0 END FROM case_player_state WHERE telegram_id=? LIMIT 1),0),
+             COALESCE((SELECT CASE WHEN COALESCE(CAST(json_extract(CASE WHEN json_valid(active_boosters_json) THEN active_boosters_json ELSE '{}' END,'$.shield') AS INTEGER),CASE WHEN active_booster_type='shield' THEN active_booster_runs ELSE 0 END,0)>0 THEN 1 ELSE 0 END FROM case_player_state WHERE telegram_id=? LIMIT 1),0),
+             COALESCE((SELECT CASE WHEN COALESCE(CAST(json_extract(CASE WHEN json_valid(active_boosters_json) THEN active_boosters_json ELSE '{}' END,'$.second_chance') AS INTEGER),CASE WHEN active_booster_type='second_chance' THEN active_booster_runs ELSE 0 END,0)>0 THEN 1 ELSE 0 END FROM case_player_state WHERE telegram_id=? LIMIT 1),0)
+           )`
+        ).bind(runId, telegramId, nowMs, expiresAtMs, now, now, telegramId, telegramId, telegramId, telegramId, telegramId),
         env.DB.prepare(
           `INSERT OR IGNORE INTO game_run_live_proofs(
              run_id,telegram_id,seq,duration_ms,score,run_treats,run_coffee,last_server_at_ms,
@@ -7084,12 +7122,26 @@ async function startAuthoritativeRunSession(request, env) {
            WHERE run_id=? AND telegram_id=? AND status='started'`
         ).bind(runId, telegramId),
         env.DB.prepare(
-          `SELECT run_id,telegram_id,started_at_ms,expires_at_ms,status
+          `UPDATE case_player_state SET
+             active_boosters_json=json_set(
+               CASE WHEN json_valid(active_boosters_json) THEN active_boosters_json ELSE '{}' END,
+               '$.shield',MAX(0,COALESCE(CAST(json_extract(CASE WHEN json_valid(active_boosters_json) THEN active_boosters_json ELSE '{}' END,'$.shield') AS INTEGER),CASE WHEN active_booster_type='shield' THEN active_booster_runs ELSE 0 END,0)-COALESCE((SELECT booster_shield FROM game_run_sessions WHERE run_id=? AND telegram_id=? AND started_at_ms=? LIMIT 1),0)),
+               '$.second_chance',MAX(0,COALESCE(CAST(json_extract(CASE WHEN json_valid(active_boosters_json) THEN active_boosters_json ELSE '{}' END,'$.second_chance') AS INTEGER),CASE WHEN active_booster_type='second_chance' THEN active_booster_runs ELSE 0 END,0)-COALESCE((SELECT booster_second_chance FROM game_run_sessions WHERE run_id=? AND telegram_id=? AND started_at_ms=? LIMIT 1),0))
+             ),
+             revision=revision+1,updated_at=?
+           WHERE telegram_id=? AND EXISTS(
+             SELECT 1 FROM game_run_sessions WHERE run_id=? AND telegram_id=? AND started_at_ms=? AND (booster_shield=1 OR booster_second_chance=1)
+           )`
+        ).bind(runId,telegramId,nowMs,runId,telegramId,nowMs,now,telegramId,runId,telegramId,nowMs),
+        env.DB.prepare(
+          `SELECT run_id,telegram_id,started_at_ms,expires_at_ms,status,
+                  booster_points,booster_treats,booster_coffee,booster_shield,booster_second_chance,
+                  shield_used,second_chance_used
            FROM game_run_sessions WHERE run_id=? LIMIT 1`
         ).bind(runId)
       ]);
 
-      const session = result?.[3]?.results?.[0] || null;
+      const session = result?.[4]?.results?.[0] || null;
       if (!session) throw new ApiError(409, 'Защищённая сессия забега не создана. Начните новый забег.');
       if (String(session.telegram_id || '') !== telegramId) throw new ApiError(409, 'Этот идентификатор забега уже используется.');
       if (String(session.status || '') !== 'started') throw new ApiError(409, 'Эта сессия забега уже завершена или заменена новым забегом.');
@@ -7100,7 +7152,14 @@ async function startAuthoritativeRunSession(request, env) {
           runId,
           startedAt:Number(session.started_at_ms || nowMs),
           expiresAt:Number(session.expires_at_ms || expiresAtMs),
-          status:'started'
+          status:'started',
+          boosters:{
+            points:Number(session.booster_points||0)===1,
+            treats:Number(session.booster_treats||0)===1,
+            coffee:Number(session.booster_coffee||0)===1,
+            shield:Number(session.booster_shield||0)===1,
+            second_chance:Number(session.booster_second_chance||0)===1
+          }
         },
         repeated
       });
@@ -8779,11 +8838,69 @@ function caseCurrencyRange(caseType, kind, liveops = null) {
   return [0, 0];
 }
 
+function caseBoosterRunsForType(rawType) {
+  const type=String(rawType || "");
+  return CASE_BOOSTER_TYPES.includes(type) ? Math.max(1, safeAdminNumber(CASE_BOOSTER_RUNS[type] || 1)) : 0;
+}
+
+function caseParseBoosterExtras(value) {
+  let source={};
+  try { source=value && typeof value === "object" ? value : JSON.parse(String(value || "{}")); } catch {}
+  return {
+    shield: safeAdminNumber(source?.shield),
+    second_chance: safeAdminNumber(source?.second_chance)
+  };
+}
+
+function caseNormalizeActiveBoosters(value, legacyType = "", legacyRuns = 0) {
+  let source={};
+  try { source=value && typeof value === "object" ? value : JSON.parse(String(value || "{}")); } catch {}
+  const normalized={};
+  for (const type of CASE_BOOSTER_TYPES) {
+    const cap=caseBoosterRunsForType(type);
+    normalized[type]=Math.max(0, Math.min(cap, safeAdminNumber(source?.[type])));
+  }
+  const fallbackType=CASE_BOOSTER_TYPES.includes(String(legacyType || "")) ? String(legacyType) : "";
+  if (fallbackType && !Object.prototype.hasOwnProperty.call(source || {}, fallbackType)) {
+    normalized[fallbackType]=Math.max(0, Math.min(caseBoosterRunsForType(fallbackType), safeAdminNumber(legacyRuns)));
+  }
+  return normalized;
+}
+
+function caseLegacyActiveBooster(value) {
+  const active=caseNormalizeActiveBoosters(value);
+  // Historical D1 schema restricts active_booster_type to the three classic
+  // reward boosters. New one-run boosters live only in active_boosters_json.
+  const type=CASE_REWARD_BOOSTER_TYPES.find((id) => safeAdminNumber(active[id]) > 0) || "";
+  return type ? { type, runsLeft:safeAdminNumber(active[type]) } : { type:"", runsLeft:0 };
+}
+
+function caseActiveBoosterTypes(value) {
+  const active=caseNormalizeActiveBoosters(value);
+  return CASE_BOOSTER_TYPES.filter((type) => safeAdminNumber(active[type]) > 0);
+}
+
+function caseStoredBoosterTypes(value, fallbackType = "") {
+  let values=[];
+  try { const parsed=JSON.parse(String(value || "[]")); if (Array.isArray(parsed)) values=parsed; } catch {}
+  const fallback=String(fallbackType || "");
+  if (!values.length && CASE_BOOSTER_TYPES.includes(fallback)) values=[fallback];
+  return [...new Set(values.map((type)=>String(type || "")).filter((type)=>CASE_BOOSTER_TYPES.includes(type)))];
+}
+
+function caseRunSessionBoosterTypes(session) {
+  const columns={ points:"booster_points", treats:"booster_treats", coffee:"booster_coffee", shield:"booster_shield", second_chance:"booster_second_chance" };
+  return CASE_BOOSTER_TYPES.filter((type)=>Number(session?.[columns[type]] || 0) === 1);
+}
+
 function caseStateFromRow(row) {
-  const activeType = CASE_BOOSTER_TYPES.includes(String(row?.active_booster_type || ""))
+  const legacyType = CASE_BOOSTER_TYPES.includes(String(row?.active_booster_type || ""))
     ? String(row.active_booster_type)
     : "";
-  const activeRuns = activeType ? Math.max(0, Math.min(2, safeAdminNumber(row?.active_booster_runs))) : 0;
+  const legacyRuns = legacyType ? Math.max(0, Math.min(caseBoosterRunsForType(legacyType), safeAdminNumber(row?.active_booster_runs))) : 0;
+  const activeBoosters=caseNormalizeActiveBoosters(row?.active_boosters_json, legacyType, legacyRuns);
+  const activeBooster=caseLegacyActiveBooster(activeBoosters);
+  const boosterExtras=caseParseBoosterExtras(row?.boosters_extra_json);
   const ownedAvatars = caseParseOwned(row?.owned_avatars_json, "avatar", CASE_AVATARS);
   const ownedFrames = caseParseOwned(row?.owned_frames_json, "frame", CASE_FRAMES);
   const ownedTrails = caseParseOwned(row?.owned_trails_json, "trail", CASE_TRAILS);
@@ -8809,9 +8926,12 @@ function caseStateFromRow(row) {
     boosters: {
       points: safeAdminNumber(row?.boosters_points),
       treats: safeAdminNumber(row?.boosters_treats),
-      coffee: safeAdminNumber(row?.boosters_coffee)
+      coffee: safeAdminNumber(row?.boosters_coffee),
+      shield: boosterExtras.shield,
+      second_chance: boosterExtras.second_chance
     },
-    activeBooster: { type: activeType, runsLeft: activeRuns },
+    activeBoosters,
+    activeBooster,
     ownedAvatars,
     activeAvatarId,
     ownedFrames,
@@ -8833,9 +8953,15 @@ function caseStateFromRow(row) {
 }
 
 function caseStateUpdateStatement(env, telegramId, caseState, now) {
+  const boosters=caseState?.boosters && typeof caseState.boosters === "object" ? caseState.boosters : {};
+  const activeBoosters=caseNormalizeActiveBoosters(caseState?.activeBoosters, caseState?.activeBooster?.type, caseState?.activeBooster?.runsLeft);
+  const legacyActive=caseLegacyActiveBooster(activeBoosters);
+  caseState.activeBoosters=activeBoosters;
+  caseState.activeBooster=legacyActive;
   return env.DB.prepare(
     `UPDATE case_player_state SET
       boosters_points = ?, boosters_treats = ?, boosters_coffee = ?,
+      boosters_extra_json = ?, active_boosters_json = ?,
       active_booster_type = ?,
       active_booster_runs = CASE WHEN revision = ? THEN ? ELSE -1 END,
       owned_avatars_json = ?, active_avatar_id = ?,
@@ -8856,12 +8982,14 @@ function caseStateUpdateStatement(env, telegramId, caseState, now) {
       revision = revision + 1, updated_at = ?
      WHERE telegram_id = ?`
   ).bind(
-    safeAdminNumber(caseState.boosters.points),
-    safeAdminNumber(caseState.boosters.treats),
-    safeAdminNumber(caseState.boosters.coffee),
-    String(caseState.activeBooster.type || ""),
+    safeAdminNumber(boosters.points),
+    safeAdminNumber(boosters.treats),
+    safeAdminNumber(boosters.coffee),
+    JSON.stringify({ shield:safeAdminNumber(boosters.shield), second_chance:safeAdminNumber(boosters.second_chance) }),
+    JSON.stringify(activeBoosters),
+    String(legacyActive.type || ""),
     safeAdminNumber(caseState.revision),
-    safeAdminNumber(caseState.activeBooster.runsLeft),
+    safeAdminNumber(legacyActive.runsLeft),
     JSON.stringify(caseState.ownedAvatars),
     String(caseState.activeAvatarId || ""),
     JSON.stringify(caseState.ownedFrames),
@@ -9388,7 +9516,7 @@ function rollLevelCase(caseType, sourceState, currentOwnedSkins = [], liveops = 
       rewards.push({ kind, amount }); incrementPity(); continue;
     }
     if (kind === "booster") {
-      const boosterType = caseRandomChoice(CASE_BOOSTER_TYPES, rng) || "points";
+      const boosterType = caseRandomChoice(CASE_REWARD_BOOSTER_TYPES, rng) || "points";
       state.boosters[boosterType] = safeAdminNumber(state.boosters[boosterType] + 1);
       rewards.push({ kind: "booster", boosterType, amount: 1, runs: 2 }); incrementPity(); continue;
     }
@@ -10016,12 +10144,14 @@ async function activateCaseBooster(request, env) {
     if (!CASE_BOOSTER_TYPES.includes(boosterType)) throw new ApiError(400, "Неизвестный усилитель.");
     const ensured = await ensureCasePlayerState(env, telegramId, body.current || {});
     const state = ensured.state;
-    if (state.activeBooster.type && state.activeBooster.runsLeft > 0) {
-      throw new ApiError(409, "Сначала завершите забеги с уже активным усилителем.");
+    state.activeBoosters=caseNormalizeActiveBoosters(state.activeBoosters, state.activeBooster?.type, state.activeBooster?.runsLeft);
+    if (safeAdminNumber(state.activeBoosters[boosterType]) > 0) {
+      throw new ApiError(409, "Этот усилитель уже активен.");
     }
     if (safeAdminNumber(state.boosters[boosterType]) <= 0) throw new ApiError(409, "Такого усилителя нет в коллекции.");
     state.boosters[boosterType] = safeAdminNumber(state.boosters[boosterType] - 1);
-    state.activeBooster = { type: boosterType, runsLeft: 2 };
+    state.activeBoosters[boosterType] = caseBoosterRunsForType(boosterType);
+    state.activeBooster = caseLegacyActiveBooster(state.activeBoosters);
     await caseStateUpdateStatement(env, telegramId, state, Math.floor(Date.now() / 1000)).run();
     return jsonResponse(await buildCasePayload(env, telegramId, body.current || {}));
   } catch (error) {
@@ -10117,9 +10247,8 @@ async function consumeCaseBoosterRun(request, env) {
     const runId = String(body.runId || "").trim();
     if (!/^[A-Za-z0-9_-]{12,96}$/.test(runId)) throw new ApiError(400, "Некорректный идентификатор забега.");
 
-    // New clients start a protected run session before gameplay. The booster is
-    // consumed by the authoritative settlement together with the economy
-    // credit, so a legacy background /consume-run request must not race it.
+    // New clients start a protected run session before gameplay. Booster
+    // consumption is committed by the authoritative run settlement.
     const session = await env.DB.prepare(`SELECT telegram_id,status FROM game_run_sessions WHERE run_id=? LIMIT 1`).bind(runId).first();
     if (session) {
       if (String(session.telegram_id || "") !== telegramId) throw new ApiError(409, "Этот идентификатор забега уже используется.");
@@ -10135,19 +10264,16 @@ async function consumeCaseBoosterRun(request, env) {
     ).bind(runId).first();
     if (!existing) {
       const state = ensured.state;
-      const consumedType = state.activeBooster.type && state.activeBooster.runsLeft > 0
-        ? state.activeBooster.type
-        : "";
-      if (consumedType) {
-        state.activeBooster.runsLeft = Math.max(0, state.activeBooster.runsLeft - 1);
-        if (state.activeBooster.runsLeft <= 0) state.activeBooster = { type: "", runsLeft: 0 };
-      }
+      state.activeBoosters=caseNormalizeActiveBoosters(state.activeBoosters, state.activeBooster?.type, state.activeBooster?.runsLeft);
+      const consumedTypes=caseActiveBoosterTypes(state.activeBoosters);
+      for (const type of consumedTypes) state.activeBoosters[type]=Math.max(0, safeAdminNumber(state.activeBoosters[type]) - 1);
+      state.activeBooster=caseLegacyActiveBooster(state.activeBoosters);
       const now = Math.floor(Date.now() / 1000);
       await env.DB.batch([
         env.DB.prepare(
-          `INSERT INTO case_booster_run_consumptions (run_id, telegram_id, booster_type, consumed_at)
-           VALUES (?, ?, ?, ?)`
-        ).bind(runId, telegramId, consumedType, now),
+          `INSERT INTO case_booster_run_consumptions (run_id, telegram_id, booster_type, booster_types_json, consumed_at)
+           VALUES (?, ?, ?, ?, ?)`
+        ).bind(runId, telegramId, String(consumedTypes[0] || ""), JSON.stringify(consumedTypes), now),
         caseStateUpdateStatement(env, telegramId, state, now)
       ]);
     }
@@ -10481,6 +10607,8 @@ async function buildFastRepeatedRunResponse(env, executionCtx, context) {
       profileXpAwarded: Number(ledger?.profile_xp || 0),
       newRecord: Number(ledger?.new_record || 0) === 1,
       boosterType: String(ledger?.booster_type || ""),
+      boosterTypes: caseStoredBoosterTypes(ledger?.booster_types_json, ledger?.booster_type),
+      activeBoosters: caseNormalizeActiveBoosters(repeatCaseState.activeBoosters, repeatCaseState.activeBooster?.type, repeatCaseState.activeBooster?.runsLeft),
       activeBooster: {
         type: String(repeatCaseState.activeBooster?.type || ""),
         runsLeft: safeAdminNumber(repeatCaseState.activeBooster?.runsLeft)
@@ -10594,6 +10722,10 @@ async function submitLeaderboardRun(request, env, executionCtx = null) {
       });
     }
     if (String(session.telegram_id || "") !== telegramId) throw new ApiError(409, "Этот идентификатор забега уже используется.");
+    const submittedShieldUsed=Boolean(body.shieldUsed || body.shield_used);
+    const submittedSecondChanceUsed=Boolean(body.secondChanceUsed || body.second_chance_used);
+    if (submittedShieldUsed && Number(session.booster_shield||0)!==1) throw new ApiError(409, "Щит Зеффи не был активирован для этого забега.");
+    if (submittedSecondChanceUsed && Number(session.booster_second_chance||0)!==1) throw new ApiError(409, "Второй шанс не был активирован для этого забега.");
 
     const sessionStatus = String(session.status || "");
     const runActivityCreatedAt = Math.max(
@@ -10609,8 +10741,8 @@ async function submitLeaderboardRun(request, env, executionCtx = null) {
       await env.DB.prepare(
         `INSERT OR IGNORE INTO player_economy_run_ledger(
           run_id,telegram_id,points,treats,coffee,profile_xp,raw_score,raw_treats,raw_coffee,duration_ms,
-          booster_type,skin_id,new_record,accepted_rating,season_id,created_at
-        ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
+          booster_type,booster_types_json,skin_id,new_record,accepted_rating,season_id,created_at
+        ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
       ).bind(
         runId, telegramId,
         Math.max(0, Number(session.economy_points || 0)),
@@ -10621,7 +10753,9 @@ async function submitLeaderboardRun(request, env, executionCtx = null) {
         Math.max(0, Number(session.run_treats || submittedMetrics.runTreats)),
         Math.max(0, Number(session.run_coffee || submittedMetrics.runCoffee)),
         Math.max(0, Number(session.duration_ms || submittedMetrics.durationMs)),
-        "", "default", Number(session.new_record || 0) ? 1 : 0,
+        String(caseRunSessionBoosterTypes(session).filter((type)=>CASE_REWARD_BOOSTER_TYPES.includes(type))[0] || ""),
+        JSON.stringify(caseRunSessionBoosterTypes(session).filter((type)=>CASE_REWARD_BOOSTER_TYPES.includes(type))),
+        "default", Number(session.new_record || 0) ? 1 : 0,
         Number(session.accepted_rating || 0) ? 1 : 0,
         String(session.season_id || season.id || ""), runActivityCreatedAt
       ).run();
@@ -10672,7 +10806,7 @@ async function submitLeaderboardRun(request, env, executionCtx = null) {
     const [ensured, profileBefore, consumed, fastSeasonPass, testerRow, liveOpsRunEvent, runAchievementContext] = await Promise.all([
       ensureCasePlayerState(env, telegramId, {}, { profilePromise: profileBeforePromise }),
       profileBeforePromise,
-      env.DB.prepare(`SELECT booster_type,telegram_id FROM case_booster_run_consumptions WHERE run_id=? LIMIT 1`).bind(runId).first(),
+      env.DB.prepare(`SELECT booster_type,booster_types_json,telegram_id FROM case_booster_run_consumptions WHERE run_id=? LIMIT 1`).bind(runId).first(),
       qualifies ? prepareFastSeasonPassRunContext(env, telegramId, {
         runId, score: metrics.score, durationMs: metrics.durationMs,
         runTreats: metrics.runTreats, runCoffee: metrics.runCoffee
@@ -10684,16 +10818,22 @@ async function submitLeaderboardRun(request, env, executionCtx = null) {
     if (consumed && String(consumed.telegram_id || "") !== telegramId) throw new ApiError(409, "Этот идентификатор забега уже использован.");
 
     const caseState = ensured.state;
+    caseState.activeBoosters=caseNormalizeActiveBoosters(caseState.activeBoosters, caseState.activeBooster?.type, caseState.activeBooster?.runsLeft);
     const boosterAlreadyConsumed = Boolean(consumed);
-    const boosterType = boosterAlreadyConsumed
-      ? String(consumed.booster_type || "")
-      : (caseState.activeBooster.type && caseState.activeBooster.runsLeft > 0 ? String(caseState.activeBooster.type) : "");
-    const appliedBoosterType = rewardEligible ? boosterType : "";
+    const sessionBoosterTypes=caseRunSessionBoosterTypes(session);
+    const storedConsumedTypes=boosterAlreadyConsumed ? caseStoredBoosterTypes(consumed.booster_types_json, consumed.booster_type) : [];
+    const rewardSessionTypes=sessionBoosterTypes.filter((type)=>CASE_REWARD_BOOSTER_TYPES.includes(type));
+    const appliedBoosterTypes=rewardEligible
+      ? (boosterAlreadyConsumed
+          ? storedConsumedTypes.filter((type)=>CASE_REWARD_BOOSTER_TYPES.includes(type))
+          : rewardSessionTypes.filter((type)=>safeAdminNumber(caseState.activeBoosters[type])>0))
+      : [];
+    const appliedBoosterType=String(appliedBoosterTypes[0] || "");
     const skinId = normalizeCurrentActiveSkin(caseState.activeSkinId, caseState.ownedSkins);
     const skinBonus = serverRunSkinBonus(skinId);
-    const boostedPoints = appliedBoosterType === "points" ? metrics.score * 2 : metrics.score;
-    const boostedTreats = appliedBoosterType === "treats" ? metrics.runTreats * 2 : metrics.runTreats;
-    const boostedCoffee = appliedBoosterType === "coffee" ? metrics.runCoffee * 2 : metrics.runCoffee;
+    const boostedPoints = appliedBoosterTypes.includes("points") ? metrics.score * 2 : metrics.score;
+    const boostedTreats = appliedBoosterTypes.includes("treats") ? metrics.runTreats * 2 : metrics.runTreats;
+    const boostedCoffee = appliedBoosterTypes.includes("coffee") ? metrics.runCoffee * 2 : metrics.runCoffee;
     const liveOpsMultipliers=liveOpsRunEvent?.active?liveOpsRunEvent.multipliers:{pointsMultiplier:1,treatsMultiplier:1,coffeeMultiplier:1};
     const eventPoints=Math.floor(boostedPoints*Math.max(1,Number(liveOpsMultipliers.pointsMultiplier||1)));
     const eventTreats=Math.floor(boostedTreats*Math.max(1,Number(liveOpsMultipliers.treatsMultiplier||1)));
@@ -10714,10 +10854,10 @@ async function submitLeaderboardRun(request, env, executionCtx = null) {
     const rejectionReason = acceptedToRating ? "" : (!qualifies ? "below_minimum" : (!ratingEntryEnabled ? "rating_disabled" : `season_${String(season.status || "inactive")}`));
 
     if (!boosterAlreadyConsumed && rewardEligible) {
-      if (appliedBoosterType) {
-        caseState.activeBooster.runsLeft = Math.max(0, Number(caseState.activeBooster.runsLeft || 0) - 1);
-        if (caseState.activeBooster.runsLeft <= 0) caseState.activeBooster = { type: "", runsLeft: 0 };
+      for (const type of appliedBoosterTypes) {
+        caseState.activeBoosters[type]=Math.max(0, safeAdminNumber(caseState.activeBoosters[type]) - 1);
       }
+      caseState.activeBooster=caseLegacyActiveBooster(caseState.activeBoosters);
     }
 
     const settlementGuardId = `run-settle:${runId}`.slice(0,180);
@@ -10727,9 +10867,9 @@ async function submitLeaderboardRun(request, env, executionCtx = null) {
       env.DB.prepare(
         `INSERT INTO player_economy_run_ledger(
           run_id,telegram_id,points,treats,coffee,profile_xp,raw_score,raw_treats,raw_coffee,duration_ms,
-          booster_type,skin_id,new_record,accepted_rating,season_id,created_at
-        ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
-      ).bind(runId, telegramId, economyPoints, economyTreats, economyCoffee, profileXpAwarded, metrics.score, metrics.runTreats, metrics.runCoffee, metrics.durationMs, appliedBoosterType, skinId, newRecord ? 1 : 0, acceptedToRating ? 1 : 0, String(season.id || ""), runActivityCreatedAt),
+          booster_type,booster_types_json,skin_id,new_record,accepted_rating,season_id,created_at
+        ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
+      ).bind(runId, telegramId, economyPoints, economyTreats, economyCoffee, profileXpAwarded, metrics.score, metrics.runTreats, metrics.runCoffee, metrics.durationMs, appliedBoosterType, JSON.stringify(appliedBoosterTypes), skinId, newRecord ? 1 : 0, acceptedToRating ? 1 : 0, String(season.id || ""), runActivityCreatedAt),
       env.DB.prepare(
         `UPDATE admin_profile_state SET
            wallet=MIN(999999999,wallet+?),treats=MIN(999999999,treats+?),coffee=MIN(999999999,coffee+?),
@@ -10738,9 +10878,10 @@ async function submitLeaderboardRun(request, env, executionCtx = null) {
       ).bind(economyPoints, economyTreats, economyCoffee, profileXpAwarded, rewardEligible ? metrics.score : Number(profileBefore?.best_score || 0), now, `run:${runId}`, telegramId),
       env.DB.prepare(
         `UPDATE game_run_sessions SET status='finished',finished_at_ms=?,duration_ms=?,score=?,run_treats=?,run_coffee=?,
-           economy_points=?,economy_treats=?,economy_coffee=?,profile_xp=?,new_record=?,accepted_rating=?,season_id=?,updated_at=?
+           economy_points=?,economy_treats=?,economy_coffee=?,profile_xp=?,new_record=?,accepted_rating=?,season_id=?,
+           shield_used=MAX(shield_used,?),second_chance_used=MAX(second_chance_used,?),updated_at=?
          WHERE run_id=? AND telegram_id=? AND status='settling'`
-      ).bind(Date.now(), metrics.durationMs, metrics.score, metrics.runTreats, metrics.runCoffee, economyPoints, economyTreats, economyCoffee, profileXpAwarded, newRecord ? 1 : 0, acceptedToRating ? 1 : 0, String(season.id || ""), now, runId, telegramId),
+      ).bind(Date.now(), metrics.durationMs, metrics.score, metrics.runTreats, metrics.runCoffee, economyPoints, economyTreats, economyCoffee, profileXpAwarded, newRecord ? 1 : 0, acceptedToRating ? 1 : 0, String(season.id || ""), submittedShieldUsed?1:0, submittedSecondChanceUsed?1:0, now, runId, telegramId),
       env.DB.prepare(
         `INSERT INTO leaderboard_runs(run_id,season_id,telegram_id,score,duration_ms,run_treats,run_coffee,accepted,rejection_reason,created_at)
          VALUES(?,?,?,?,?,?,?,?,?,?)`
@@ -10749,12 +10890,10 @@ async function submitLeaderboardRun(request, env, executionCtx = null) {
     if (!boosterAlreadyConsumed && rewardEligible) {
       statements.push(
         env.DB.prepare(
-          `INSERT INTO case_booster_run_consumptions(run_id,telegram_id,booster_type,consumed_at) VALUES(?,?,?,?)`
-        ).bind(runId, telegramId, appliedBoosterType, now),
-        env.DB.prepare(
-          `UPDATE case_player_state SET active_booster_type=?,active_booster_runs=?,revision=revision+1,updated_at=? WHERE telegram_id=?`
-        ).bind(String(caseState.activeBooster.type || ""), safeAdminNumber(caseState.activeBooster.runsLeft), now, telegramId)
+          `INSERT INTO case_booster_run_consumptions(run_id,telegram_id,booster_type,booster_types_json,consumed_at) VALUES(?,?,?,?,?)`
+        ).bind(runId, telegramId, appliedBoosterType, JSON.stringify(appliedBoosterTypes), now)
       );
+      if (appliedBoosterTypes.length) statements.push(caseStateUpdateStatement(env, telegramId, caseState, now));
     }
     if (acceptedToRating) {
       statements.push(env.DB.prepare(
@@ -10845,7 +10984,7 @@ async function submitLeaderboardRun(request, env, executionCtx = null) {
       {
         runId, score: metrics.score, durationMs: metrics.durationMs, runTreats: metrics.runTreats, runCoffee: metrics.runCoffee,
         credited: { points: economyPoints, treats: economyTreats, coffee: economyCoffee }, profileXpAwarded,
-        boosterType: appliedBoosterType, skinId, newRecord, accepted: acceptedToRating, excludedFromRating: Boolean(ratingHidden)
+        boosterType: appliedBoosterType, boosterTypes: appliedBoosterTypes, runBoosterTypes: sessionBoosterTypes, skinId, newRecord, accepted: acceptedToRating, excludedFromRating: Boolean(ratingHidden)
       },
       `run_${runId}`, auth.user, now
     ), "authoritative run timeline failed");
@@ -10886,7 +11025,9 @@ async function submitLeaderboardRun(request, env, executionCtx = null) {
         raw: { score: metrics.score, treats: metrics.runTreats, coffee: metrics.runCoffee, durationMs: metrics.durationMs },
         credited: { points: economyPoints, treats: economyTreats, coffee: economyCoffee },
         profileXpAwarded, profileXpMultiplier, newRecord,
-        boosterType: appliedBoosterType, activeBooster: { type: String(caseState.activeBooster?.type || ""), runsLeft: safeAdminNumber(caseState.activeBooster?.runsLeft) },
+        boosterType: appliedBoosterType, boosterTypes: appliedBoosterTypes,
+        activeBoosters: caseNormalizeActiveBoosters(caseState.activeBoosters, caseState.activeBooster?.type, caseState.activeBooster?.runsLeft),
+        activeBooster: { type: String(caseState.activeBooster?.type || ""), runsLeft: safeAdminNumber(caseState.activeBooster?.runsLeft) },
         skinId, seasonId: String(season.id || ""),
         liveOpsEvent:liveOpsRunEvent?.active?{id:liveOpsRunEvent.id,title:liveOpsRunEvent.title,endsAt:liveOpsRunEvent.endsAt,multipliers:liveOpsRunEvent.multipliers}:null
       }
@@ -14713,7 +14854,7 @@ async function showPlayerProfile(chatId, user, telegramId, env) {
     : "нет";
   const boosterType = String(caseState.activeBooster?.type || "");
   const boosterLabel = boosterType
-    ? `${CASE_BOOSTER_TYPES.includes(boosterType) ? ({ points: "×2 очки", treats: "×2 зефир", coffee: "×2 кофе" })[boosterType] : boosterType} · ${Number(caseState.activeBooster.runsLeft || 0)} забега`
+    ? `${CASE_BOOSTER_TYPES.includes(boosterType) ? ({ points: "×2 очки", treats: "×2 зефир", coffee: "×2 кофе", shield: "Щит Зеффи", second_chance: "Второй шанс" })[boosterType] : boosterType} · ${Number(caseState.activeBooster.runsLeft || 0)} забега`
     : "не активен";
 
   const seasonStatus = String(season.status || "scheduled");
@@ -19530,7 +19671,7 @@ async function blockPlayerAndWipeProgress(env, options) {
       revision=revision+1,updated_at=?,updated_by=?
       WHERE telegram_id=?`).bind(now, actorId, telegramId),
     env.DB.prepare(`UPDATE case_player_state SET
-      boosters_points=0,boosters_treats=0,boosters_coffee=0,
+      boosters_points=0,boosters_treats=0,boosters_coffee=0,boosters_extra_json='{}',active_boosters_json='{}',
       active_booster_type='',active_booster_runs=0,
       owned_avatars_json='[]',active_avatar_id='',
       owned_frames_json='[]',active_frame_id='',
@@ -25781,7 +25922,7 @@ async function manageTesterAccount(chatId,user,action,telegramId,note,env){
     await env.DB.prepare(`DELETE FROM season_pass_entitlements WHERE telegram_id=?`).bind(id).run();
     await env.DB.prepare(`DELETE FROM season_pass_purchases WHERE telegram_id=?`).bind(id).run();
     await env.DB.prepare(`DELETE FROM season_pass_players WHERE telegram_id=?`).bind(id).run();
-    await env.DB.prepare(`UPDATE case_player_state SET boosters_points=0,boosters_treats=0,boosters_coffee=0,active_booster_type='',active_booster_runs=0,owned_avatars_json='[]',active_avatar_id='',owned_frames_json='[]',active_frame_id='',owned_trails_json='[]',active_trail_id='',owned_music_json='["cafe_run"]',active_music_id='cafe_run',owned_specials_json='[]',owned_skins_json='[]',active_skin_id='',mythic_pity_counter=0,legendary_pity_counter=0,revision=revision+1,updated_at=? WHERE telegram_id=?`).bind(now,id).run();
+    await env.DB.prepare(`UPDATE case_player_state SET boosters_points=0,boosters_treats=0,boosters_coffee=0,boosters_extra_json='{}',active_boosters_json='{}',active_booster_type='',active_booster_runs=0,owned_avatars_json='[]',active_avatar_id='',owned_frames_json='[]',active_frame_id='',owned_trails_json='[]',active_trail_id='',owned_music_json='["cafe_run"]',active_music_id='cafe_run',owned_specials_json='[]',owned_skins_json='[]',active_skin_id='',mythic_pity_counter=0,legendary_pity_counter=0,revision=revision+1,updated_at=? WHERE telegram_id=?`).bind(now,id).run();
     await env.DB.prepare(`UPDATE tester_accounts SET test_balance_enabled=0,unlock_all_skins=0,unlock_all_cases=0,accelerated_guarantee=0,exclude_from_rating=1,updated_at=?,updated_by=? WHERE telegram_id=?`).bind(now,String(user.id),id).run();
     await recordPlayerTimeline(env,id,"tester_reset","тестовый аккаунт сброшен",{},`tester_reset_${now}`,user,now);
     await logStaffAction(env,user,access,"tester_reset",id,"tester",1,0,{});
@@ -29312,7 +29453,7 @@ async function grantSeasonPassReward(env,ctx,reward,executionCtx=null){
   if(cosmeticReward?.future&&!cosmeticReward?.released) throw new ApiError(409,'Эта награда относится к скрытому будущему контенту и откроется после релизного обновления сезона.');
   const now=Math.floor(Date.now()/1000);const level=Number(reward.level);const lane=String(reward.lane);const key=[ctx.season.id,ctx.telegramId,level,lane];
   let caseEnsured=null;
-  if(cosmeticReward || (boostReward&&CASE_BOOSTER_TYPES.includes(boostReward.kind))){
+  if(cosmeticReward || (boostReward&&CASE_REWARD_BOOSTER_TYPES.includes(boostReward.kind))){
     caseEnsured=await ensureCasePlayerState(env,ctx.telegramId,{});
     if(cosmeticReward)seasonPassApplyCosmeticToState(caseEnsured.state,cosmeticReward);
   }
@@ -29328,7 +29469,7 @@ async function grantSeasonPassReward(env,ctx,reward,executionCtx=null){
   }else if(boostReward?.kind==='xp'){
     statements.push(env.DB.prepare(`INSERT OR IGNORE INTO season_pass_entitlements(season_id,telegram_id,item_id,source,granted_at) SELECT ?,?,?,?,? WHERE EXISTS(SELECT 1 FROM season_pass_claims WHERE season_id=? AND telegram_id=? AND level=? AND lane=? AND status='pending')`).bind(ctx.season.id,ctx.telegramId,SEASON_PASS_SPECIAL_XP_X2,`reward:${level}:${lane}`,now,...key));
     entitlementsAdded.push(SEASON_PASS_SPECIAL_XP_X2);
-  }else if(boostReward&&CASE_BOOSTER_TYPES.includes(boostReward.kind)){
+  }else if(boostReward&&CASE_REWARD_BOOSTER_TYPES.includes(boostReward.kind)){
     const column=boostReward.kind==='points'?'boosters_points':boostReward.kind==='treats'?'boosters_treats':'boosters_coffee';
     statements.push(env.DB.prepare(`UPDATE case_player_state SET ${column}=${column}+?,revision=revision+1,updated_at=? WHERE telegram_id=? AND EXISTS(SELECT 1 FROM season_pass_claims WHERE season_id=? AND telegram_id=? AND level=? AND lane=? AND status='pending')`).bind(Math.max(1,Number(reward.amount)||1),now,ctx.telegramId,...key));
   }else if(['points','treats','coffee'].includes(String(reward.reward_type))){
@@ -29399,7 +29540,7 @@ async function claimAllSeasonPassRewards(request,env,executionCtx=null){
     const stateTouching=[];const parallelSafe=[];
     for(const reward of rows){
       const cosmetic=seasonPassCosmeticRewardDefinition(reward);const boost=seasonPassBoostRewardDefinition(reward);
-      if(cosmetic||(boost&&CASE_BOOSTER_TYPES.includes(boost.kind)))stateTouching.push(reward);
+      if(cosmetic||(boost&&CASE_REWARD_BOOSTER_TYPES.includes(boost.kind)))stateTouching.push(reward);
       else parallelSafe.push(reward);
     }
 
@@ -30629,7 +30770,7 @@ async function setFeatureFlag(query, flagKey, mode, percent, env) {
 }
 
 function emptySimulationCaseState() {
-  return { boosters:{points:0,treats:0,coffee:0}, activeBooster:{type:"",runsLeft:0}, ownedAvatars:[], activeAvatarId:"", ownedFrames:[], activeFrameId:"", ownedTrails:[], activeTrailId:"", ownedMusicTracks:["cafe_run"], activeMusicTrackId:"cafe_run", ownedSpecials:[], ownedSkins:["default"], activeSkinId:"default", mythicPityCounter:0, mythicGuaranteedEvery:25, legendaryPityCounter:0, legendaryGuaranteedEvery:50, revision:0, updatedAt:0 };
+  return { boosters:{points:0,treats:0,coffee:0,shield:0,second_chance:0}, activeBoosters:caseNormalizeActiveBoosters({}), activeBooster:{type:"",runsLeft:0}, ownedAvatars:[], activeAvatarId:"", ownedFrames:[], activeFrameId:"", ownedTrails:[], activeTrailId:"", ownedMusicTracks:["cafe_run"], activeMusicTrackId:"cafe_run", ownedSpecials:[], ownedSkins:["default"], activeSkinId:"default", mythicPityCounter:0, mythicGuaranteedEvery:25, legendaryPityCounter:0, legendaryGuaranteedEvery:50, revision:0, updatedAt:0 };
 }
 
 async function runCaseSimulation(env, caseType, sampleCount) {
@@ -33585,7 +33726,7 @@ async function applyPlayerReset(env, options) {
   }
   if (selected.includes("cases")) {
     statements.push(bind(env.DB.prepare(`DELETE FROM granted_cases${where}`)), bind(env.DB.prepare(`DELETE FROM level_case_openings${where}`)), bind(env.DB.prepare(`DELETE FROM case_booster_run_consumptions${where}`)));
-    statements.push(bind(env.DB.prepare(`UPDATE case_player_state SET boosters_points=0,boosters_treats=0,boosters_coffee=0,active_booster_type='',active_booster_runs=0,mythic_pity_counter=0,legendary_pity_counter=0,revision=revision+1,updated_at=${now}${where}`)));
+    statements.push(bind(env.DB.prepare(`UPDATE case_player_state SET boosters_points=0,boosters_treats=0,boosters_coffee=0,boosters_extra_json='{}',active_boosters_json='{}',active_booster_type='',active_booster_runs=0,mythic_pity_counter=0,legendary_pity_counter=0,revision=revision+1,updated_at=${now}${where}`)));
   }
   if (selected.includes("collection")) {
     statements.push(bind(env.DB.prepare(`UPDATE case_player_state SET owned_avatars_json='[]',active_avatar_id='',owned_frames_json='[]',active_frame_id='',owned_trails_json='[]',active_trail_id='',owned_music_json='["cafe_run"]',active_music_id='cafe_run',owned_specials_json='[]',owned_skins_json='[]',active_skin_id='',revision=revision+1,updated_at=${now}${where}`)));
@@ -36896,12 +37037,12 @@ function testProjectNormalizeCaseState(raw = {}) {
     boosters: {
       points: Math.max(0, Math.min(999, Math.floor(Number(boosters.points) || 0))),
       treats: Math.max(0, Math.min(999, Math.floor(Number(boosters.treats) || 0))),
-      coffee: Math.max(0, Math.min(999, Math.floor(Number(boosters.coffee) || 0)))
+      coffee: Math.max(0, Math.min(999, Math.floor(Number(boosters.coffee) || 0))),
+      shield: Math.max(0, Math.min(999, Math.floor(Number(boosters.shield) || 0))),
+      second_chance: Math.max(0, Math.min(999, Math.floor(Number(boosters.second_chance) || 0)))
     },
-    activeBooster: {
-      type:["points","treats","coffee"].includes(String(raw?.activeBooster?.type||"")) ? String(raw.activeBooster.type) : "",
-      runsLeft:Math.max(0,Math.min(2,Math.floor(Number(raw?.activeBooster?.runsLeft)||0)))
-    },
+    activeBoosters: caseNormalizeActiveBoosters(raw?.activeBoosters, raw?.activeBooster?.type, raw?.activeBooster?.runsLeft),
+    activeBooster: caseLegacyActiveBooster(caseNormalizeActiveBoosters(raw?.activeBoosters, raw?.activeBooster?.type, raw?.activeBooster?.runsLeft)),
     ownedAvatars,
     activeAvatarId: ownedAvatars.includes(String(raw?.activeAvatarId || "")) ? String(raw.activeAvatarId) : "",
     ownedFrames,
@@ -38687,7 +38828,11 @@ async function testProjectSandboxRunSubmit(env, loaded, payload) {
   const runId=String(payload?.runId||state?.sandbox?.activeRun?.id||"").trim(); if(!/^[A-Za-z0-9_-]{12,96}$/.test(runId))throw new ApiError(400,"Некорректный тестовый runId.");
   const score=Math.max(0,Math.min(999999999,Math.floor(Number(payload?.score)||0))),durationMs=Math.max(0,Math.min(86400000,Math.floor(Number(payload?.durationMs)||0)));
   const runTreats=Math.max(0,Math.min(9999999,Math.floor(Number(payload?.runTreats)||0))),runCoffee=Math.max(0,Math.min(9999999,Math.floor(Number(payload?.runCoffee)||0)));
-  state.points=Math.min(999999999,Number(state.points||0)+score);state.treats=Math.min(9999999,Number(state.treats||0)+runTreats);state.coffee=Math.min(9999999,Number(state.coffee||0)+runCoffee);state.bestScore=Math.max(Number(state.bestScore||0),score);
+  const activeRun=state?.sandbox?.activeRun||{},runBoosters=activeRun?.boosters&&typeof activeRun.boosters==="object"?activeRun.boosters:{};
+  const boosterTypes=CASE_REWARD_BOOSTER_TYPES.filter((type)=>Boolean(runBoosters[type]));
+  const creditedPoints=boosterTypes.includes("points")?score*2:score,creditedTreats=boosterTypes.includes("treats")?runTreats*2:runTreats,creditedCoffee=boosterTypes.includes("coffee")?runCoffee*2:runCoffee;
+  state.points=Math.min(999999999,Number(state.points||0)+creditedPoints);state.treats=Math.min(9999999,Number(state.treats||0)+creditedTreats);state.coffee=Math.min(9999999,Number(state.coffee||0)+creditedCoffee);state.bestScore=Math.max(Number(state.bestScore||0),score);
+  const active=caseNormalizeActiveBoosters(state.caseState?.activeBoosters,state.caseState?.activeBooster?.type,state.caseState?.activeBooster?.runsLeft);for(const type of boosterTypes){if(Number(active[type]||0)>0)active[type]=Math.max(0,Number(active[type])-1);}state.caseState.activeBoosters=active;state.caseState.activeBooster=caseLegacyActiveBooster(active);
   const profileXpAwarded=score>0?AUTHORITATIVE_PROFILE_RUN_XP:0;state.profileXp=Math.min(999999999,Number(state.profileXp||0)+profileXpAwarded);
   let seasonPassXpAwarded=0; const season=testProjectDynamicSeason(snapshot?.season||{},nowMs);
   if(season?.status==="active"&&score>0){const base=Math.max(0,Math.floor(Number(season?.baseRunXp||0)));const earned=testProjectPassEarnedMultiplier(state,season,nowMs);seasonPassXpAwarded=Math.floor(base*Math.max(1,Number(earned?.multiplier||1)));state.passXp=Math.min(999999999,Number(state.passXp||0)+seasonPassXpAwarded);
@@ -38696,7 +38841,7 @@ async function testProjectSandboxRunSubmit(env, loaded, payload) {
   state.sandbox=testProjectNormalizeSandboxState({...state.sandbox,activeRun:null,completedRuns:Number(state.sandbox?.completedRuns||0)+1,achievementRunScore:Number(state.sandbox?.achievementRunScore||0)+score,achievementRunZefir:Number(state.sandbox?.achievementRunZefir||0)+runTreats,achievementRunCoffee:Number(state.sandbox?.achievementRunCoffee||0)+runCoffee,lastRun:{id:runId,score,durationMs,acceptedAt:Date.now()}});
   const persisted=await testProjectSandboxSave(env,ownerId,state,snapshot,before,"game_run_submit",`Игра · забег ${score.toLocaleString("ru-RU")} очков`);
   const current=persisted.state;
-  return {ok:true,testProject:true,fastSettlement:true,runSettlement:{accepted:true,acceptedToRating:score>0,activeBooster:current.caseState?.activeBooster||{type:"",runsLeft:0}},profile:testProjectSandboxProfile(current),profileXpAwarded,seasonPassAward:{xpAwarded:seasonPassXpAwarded,taskNotice:null},serverTime:Date.now()};
+  return {ok:true,testProject:true,fastSettlement:true,runSettlement:{accepted:true,acceptedToRating:score>0,boosterType:String(boosterTypes[0]||""),boosterTypes,activeBoosters:current.caseState?.activeBoosters||{},activeBooster:current.caseState?.activeBooster||{type:"",runsLeft:0}},profile:testProjectSandboxProfile(current),profileXpAwarded,seasonPassAward:{xpAwarded:seasonPassXpAwarded,taskNotice:null},serverTime:Date.now()};
 }
 
 
@@ -38738,7 +38883,7 @@ async function testProjectSandboxGameData(env, ctx) {
   const response=(data,status=200)=>({ok:true,proxyStatus:status,data:{...data,testProject:true,productionWrites:false}});
   const reload=async()=>{loaded=await testProjectSandboxLoad(env,ctx);({ownerId,state,productionSnapshot,snapshot,nowMs}=loaded);return loaded;};
 
-  if(path==="/api/game/startup"){const achievementState=await testProjectSandboxAchievementsPayload(env,state,snapshot);return response({ok:true,authenticated:true,workerBuild:WORKER_BUILD,generatedAt:nowMs,publicConfig:testProjectClone(snapshot?.publicConfig||fallbackGamePublicConfig()),profile:testProjectSandboxProfile(state),cases:testProjectSandboxCasePayload(state,snapshot),rewards:{ok:true,rewards:(state.sandbox?.mockRewards||[]).map(testProjectSandboxRewardView),limitStatus:null},flags:{...(snapshot?.featureFlags||{}),battle_pass:true,shop:true,rating:true},seasonPassBonus:{active:Number(state.seasonXpBoosts||0)>0||state.passTier==="elite_plus",multiplier:(Number(state.seasonXpBoosts||0)>0||state.passTier==="elite_plus")?2:1,claimableCount:testProjectSandboxPassPayload(state,snapshot).taskClaimableCount},seasonPassTaskNotice:{ok:true,pending:false,notice:null},news:{ok:true,items:[],unreadCount:0},gifts:{ok:true,pendingCount:0,unreadCount:0,items:[]},liveOpsEvent:{active:false,multipliers:{pointsMultiplier:1,treatsMultiplier:1,coffeeMultiplier:1}},newcomerPath:{available:false,dayNumber:1,runs:Number(state.sandbox?.completedRuns||0),steps:[]},miniGameVisual:testProjectMiniGameVisual(state,snapshot),miniGameVisuals:testProjectMiniGameVisuals(state,snapshot),achievementShowcase:{ok:true,version:1,serverAuthoritative:true,generatedAt:nowMs,summary:testProjectClone(achievementState.summary||{}),showcase:testProjectClone(achievementState.showcase||{})},errors:{}});}
+  if(path==="/api/game/startup"){const achievementState=await testProjectSandboxAchievementsPayload(env,state,snapshot);return response({ok:true,authenticated:true,workerBuild:WORKER_BUILD,generatedAt:nowMs,publicConfig:testProjectClone(snapshot?.publicConfig||fallbackGamePublicConfig()),profile:testProjectSandboxProfile(state),cases:testProjectSandboxCasePayload(state,snapshot),rewards:{ok:true,rewards:(state.sandbox?.mockRewards||[]).map(testProjectSandboxRewardView),limitStatus:null},flags:{...(snapshot?.featureFlags||{}),battle_pass:true,shop:true,rating:true},seasonPassBonus:{active:state.passTier==="elite_plus",multiplier:state.passTier==="elite_plus"?2:1,claimableCount:testProjectSandboxPassPayload(state,snapshot).taskClaimableCount},seasonPassTaskNotice:{ok:true,pending:false,notice:null},news:{ok:true,items:[],unreadCount:0},gifts:{ok:true,pendingCount:0,unreadCount:0,items:[]},liveOpsEvent:{active:false,multipliers:{pointsMultiplier:1,treatsMultiplier:1,coffeeMultiplier:1}},newcomerPath:{available:false,dayNumber:1,runs:Number(state.sandbox?.completedRuns||0),steps:[]},miniGameVisual:testProjectMiniGameVisual(state,snapshot),miniGameVisuals:testProjectMiniGameVisuals(state,snapshot),achievementShowcase:{ok:true,version:1,serverAuthoritative:true,generatedAt:nowMs,summary:testProjectClone(achievementState.summary||{}),showcase:testProjectClone(achievementState.showcase||{})},errors:{}});}
   if(path==="/api/achievements"){const achievementState=await testProjectSandboxAchievementsPayload(env,state,snapshot),scope=String(payload?.scope||payload?.view||"").trim().toLowerCase();if(scope==="showcase"||scope==="profile")return response({ok:true,version:1,serverAuthoritative:true,generatedAt:nowMs,summary:testProjectClone(achievementState.summary||{}),showcase:testProjectClone(achievementState.showcase||{})});return response(achievementState);}
   if(path==="/api/achievements/claim"){
     const achievementId=String(payload?.achievementId||payload?.achievement_id||payload?.id||"").trim().slice(0,80);
@@ -38772,7 +38917,10 @@ async function testProjectSandboxGameData(env, ctx) {
 
   if(path==="/api/runs/start"){
     const runId=String(payload?.runId||"").trim();if(!/^[A-Za-z0-9_-]{12,96}$/.test(runId))throw new ApiError(400,"Некорректный test runId.");
-    const before=testProjectClone(state);state.sandbox=testProjectNormalizeSandboxState({...state.sandbox,activeRun:{id:runId,startedAt:nowMs}});await testProjectSandboxSave(env,ownerId,state,snapshot,before,"game_run_start","Игра · старт тестового забега");return response({ok:true,runId,startedAt:nowMs,expiresAt:nowMs+2*60*60*1000});
+    const before=testProjectClone(state),active=caseNormalizeActiveBoosters(state.caseState?.activeBoosters,state.caseState?.activeBooster?.type,state.caseState?.activeBooster?.runsLeft),runBoosters=Object.fromEntries(CASE_BOOSTER_TYPES.map((type)=>[type,Number(active[type]||0)>0]));
+    if(runBoosters.shield)active.shield=0;if(runBoosters.second_chance)active.second_chance=0;state.caseState.activeBoosters=active;state.caseState.activeBooster=caseLegacyActiveBooster(active);
+    state.sandbox=testProjectNormalizeSandboxState({...state.sandbox,activeRun:{id:runId,startedAt:nowMs,boosters:runBoosters}});await testProjectSandboxSave(env,ownerId,state,snapshot,before,"game_run_start","Игра · старт тестового забега");
+    return response({ok:true,runId,startedAt:nowMs,expiresAt:nowMs+2*60*60*1000,runSession:{runId,startedAt:nowMs,expiresAt:nowMs+2*60*60*1000,status:"started",boosters:runBoosters}});
   }
   if(path==="/api/runs/checkpoint")return response({ok:true,checkpoint:{runId:String(payload?.runId||""),durationMs:Math.max(0,Math.floor(Number(payload?.durationMs)||0)),score:Math.max(0,Math.floor(Number(payload?.score)||0)),accepted:true}});
   if(path==="/api/leaderboard/submit")return response(await testProjectSandboxRunSubmit(env,loaded,payload));
@@ -38801,10 +38949,10 @@ async function testProjectSandboxGameData(env, ctx) {
     const caseType=normalizeCaseType(payload?.caseType);if(!caseType)throw new ApiError(400,"Выберите тестовый кейс.");const result=await ownerPanelTestProjectAction(env,{...ctx,body:{action:"case_buy",caseType}});await reload();return response(testProjectSandboxCasePayload(state,snapshot,{purchase:{caseType,cost:result.result?.price||{}}}));
   }
   if(path==="/api/cases/activate"){
-    const type=["points","treats","coffee"].includes(String(payload?.type||payload?.boosterType||""))?String(payload?.type||payload?.boosterType):"";if(!type)throw new ApiError(400,"Неизвестный усилитель.");if(Number(state.caseState?.boosters?.[type]||0)<1)throw new ApiError(409,"Усилителя нет в тестовом инвентаре.");const before=testProjectClone(state);state.caseState.boosters[type]-=1;state.caseState.activeBooster={type,runsLeft:2};await testProjectSandboxSave(env,ownerId,state,snapshot,before,"game_booster_activate",`Игра · активирован ${type}`);await reload();return response(testProjectSandboxCasePayload(state,snapshot));
+    const type=CASE_BOOSTER_TYPES.includes(String(payload?.type||payload?.boosterType||""))?String(payload?.type||payload?.boosterType):"";if(!type)throw new ApiError(400,"Неизвестный усилитель.");if(Number(state.caseState?.boosters?.[type]||0)<1)throw new ApiError(409,"Усилителя нет в тестовом инвентаре.");const before=testProjectClone(state),active=caseNormalizeActiveBoosters(state.caseState?.activeBoosters,state.caseState?.activeBooster?.type,state.caseState?.activeBooster?.runsLeft);if(Number(active[type]||0)>0)throw new ApiError(409,"Этот усилитель уже активен.");state.caseState.boosters[type]-=1;active[type]=caseBoosterRunsForType(type);state.caseState.activeBoosters=active;state.caseState.activeBooster=caseLegacyActiveBooster(active);await testProjectSandboxSave(env,ownerId,state,snapshot,before,"game_booster_activate",`Игра · активирован ${type}`);await reload();return response(testProjectSandboxCasePayload(state,snapshot));
   }
   if(path==="/api/cases/consume-run"){
-    const before=testProjectClone(state),active=state.caseState?.activeBooster||{type:"",runsLeft:0};if(active.type&&Number(active.runsLeft)>0){active.runsLeft=Math.max(0,Number(active.runsLeft)-1);if(active.runsLeft<=0)active.type="";state.caseState.activeBooster=active;await testProjectSandboxSave(env,ownerId,state,snapshot,before,"game_booster_consume","Игра · расход усилителя");await reload();}return response(testProjectSandboxCasePayload(state,snapshot));
+    const before=testProjectClone(state),active=caseNormalizeActiveBoosters(state.caseState?.activeBoosters,state.caseState?.activeBooster?.type,state.caseState?.activeBooster?.runsLeft),types=caseActiveBoosterTypes(active);if(types.length){for(const type of types)active[type]=Math.max(0,Number(active[type]||0)-1);state.caseState.activeBoosters=active;state.caseState.activeBooster=caseLegacyActiveBooster(active);await testProjectSandboxSave(env,ownerId,state,snapshot,before,"game_booster_consume","Игра · расход усилителей");await reload();}return response(testProjectSandboxCasePayload(state,snapshot));
   }
   if(path==="/api/cases/equip"){
     const kind=String(payload?.kind||payload?.type||""),id=String(payload?.id||payload?.itemId||"");const key={avatar:"activeAvatarId",frame:"activeFrameId",trail:"activeTrailId",music:"activeMusicTrackId",skin:"activeSkinId"}[kind];const ownedKey={avatar:"ownedAvatars",frame:"ownedFrames",trail:"ownedTrails",music:"ownedMusicTracks",skin:"ownedSkins"}[kind];if(!key||!ownedKey)throw new ApiError(400,"Неизвестный тип предмета.");const liveItem=id?snapshot?.liveops?.content?.[kind]?.[id]:null;const nativeFree=Boolean(liveItem?.future&&liveItem?.released&&String(liveItem?.destinationType||"")==="native");const sandboxHidden=Boolean(liveItem?.future&&liveItem?.sandboxHidden);const before=testProjectClone(state);if(id&&!(state.caseState?.[ownedKey]||[]).includes(id)){if(!nativeFree&&!sandboxHidden)throw new ApiError(409,"Этого предмета нет у тестового игрока.");testProjectGrantCosmetic(state,kind,id);}state.caseState[key]=id;await testProjectSandboxSave(env,ownerId,state,snapshot,before,"game_cosmetic_equip",`Игра · экипирован ${kind}${sandboxHidden?" · скрытый TP-контент":""}`);await reload();return response(testProjectSandboxCasePayload(state,snapshot));

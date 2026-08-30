@@ -796,7 +796,7 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
       ownedSkins:Array.isArray(cs.ownedSkins)?[...cs.ownedSkins]:[],activeSkin:String(cs.activeSkinId||"default"),
       ownedMusicTracks:Array.isArray(cs.ownedMusicTracks)?[...cs.ownedMusicTracks]:["cafe_run"],activeMusicTrack:String(cs.activeMusicTrackId||"cafe_run"),
       caseGiftedCases:{small:0,sweet:0,gold:0,mythic:0,legendary:0,alex:0,...(state.caseInventory||{})},caseOpenedLevels:Array.isArray(state.openedLevelCases)?[...state.openedLevelCases]:[],
-      caseMythicPityCounter:Number(cs.mythicPityCounter||0),caseLegendaryPityCounter:Number(cs.legendaryPityCounter||0),caseBoosters:{...(cs.boosters||{})},activeCaseBooster:{...(cs.activeBooster||{type:"",runsLeft:0})},
+      caseMythicPityCounter:Number(cs.mythicPityCounter||0),caseLegendaryPityCounter:Number(cs.legendaryPityCounter||0),caseBoosters:{...(cs.boosters||{})},activeCaseBoosters:{...(cs.activeBoosters||{})},activeCaseBooster:{...(cs.activeBooster||{type:"",runsLeft:0})},
       caseOwnedAvatars:Array.isArray(cs.ownedAvatars)?[...cs.ownedAvatars]:[],caseActiveAvatar:String(cs.activeAvatarId||""),caseOwnedFrames:Array.isArray(cs.ownedFrames)?[...cs.ownedFrames]:[],caseActiveFrame:String(cs.activeFrameId||""),caseOwnedTrails:Array.isArray(cs.ownedTrails)?[...cs.ownedTrails]:[],caseActiveTrail:String(cs.activeTrailId||""),
       completedRuns:Number(state.sandbox?.completedRuns||0),purchaseHistory:[],redemptionCodes:[],inventory:{},
       __testProject:true,__testProjectVersion:"5.5",__testProjectVirtualName:String(state.name||"Тестовый игрок"),__testProjectSeededAt:Date.now(),updatedAt:Date.now()
@@ -8827,6 +8827,67 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       pointer-events: none;
     }
 
+    #zefirok-maltipoo-runner .overlay.is-second-chance-modal {
+      z-index: 8;
+      display: grid;
+      place-items: center;
+      padding: 20px 16px;
+      pointer-events: auto;
+      background: rgba(91, 63, 64, 0.22);
+      backdrop-filter: blur(5px);
+      -webkit-backdrop-filter: blur(5px);
+    }
+
+    #zefirok-maltipoo-runner .overlay.is-second-chance-modal .second-chance-modal {
+      width: min(calc(100% - 8px), 302px);
+      padding: 18px 17px 16px;
+      border-color: rgba(232, 170, 194, 0.7);
+      background: linear-gradient(180deg, rgba(255,255,255,.98), rgba(255,246,249,.98));
+      box-shadow: 0 20px 48px rgba(82, 48, 58, 0.24);
+    }
+
+    #zefirok-maltipoo-runner .second-chance-art {
+      width: 102px;
+      height: 102px;
+      margin: -6px auto 4px;
+      display: grid;
+      place-items: center;
+    }
+
+    #zefirok-maltipoo-runner .second-chance-art img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      filter: drop-shadow(0 9px 14px rgba(170, 70, 111, 0.16));
+    }
+
+    #zefirok-maltipoo-runner .second-chance-actions {
+      display: grid;
+      gap: 8px;
+      margin-top: 14px;
+    }
+
+    #zefirok-maltipoo-runner .second-chance-actions button {
+      min-height: 45px;
+      border: 1px solid rgba(219, 132, 166, 0.55);
+      border-radius: 15px;
+      background: linear-gradient(135deg, #ef78a5, #d95388);
+      color: #fff;
+      font: inherit;
+      font-size: 12px;
+      font-weight: 900;
+      box-shadow: 0 8px 18px rgba(180, 74, 116, 0.18);
+      pointer-events: auto;
+      touch-action: manipulation;
+    }
+
+    #zefirok-maltipoo-runner .second-chance-actions button.is-secondary {
+      background: #fff;
+      color: #91576d;
+      border-color: rgba(222, 186, 200, 0.75);
+      box-shadow: none;
+    }
+
     #zefirok-maltipoo-runner .overlay.is-finish-modal {
       display: grid;
       place-items: center;
@@ -13096,8 +13157,9 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         seasonPassAttentionCount: 0,
         caseMythicPityCounter: 0,
         caseLegendaryPityCounter: 0,
-        caseBoosters: { points: 0, treats: 0, coffee: 0 },
+        caseBoosters: { points: 0, treats: 0, coffee: 0, shield: 0, second_chance: 0 },
         caseOwnedSpecials: [],
+        activeCaseBoosters: { points: 0, treats: 0, coffee: 0, shield: 0, second_chance: 0 },
         activeCaseBooster: { type: &quot;&quot;, runsLeft: 0 },
         caseOwnedAvatars: [],
         caseActiveAvatar: &quot;&quot;,
@@ -13107,6 +13169,10 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         caseActiveTrail: &quot;&quot;,
         pendingBoosterRuns: [],
         caseRunId: &quot;&quot;,
+        runCaseBoosters: { points: false, treats: false, coffee: false, shield: false, second_chance: false },
+        runShieldUsed: false,
+        runSecondChanceUsed: false,
+        collisionGraceUntil: 0,
         trailClock: 0,
         economyResetKey: ECONOMY_RESET_KEY,
         seenUpdateNoticeKey: &quot;&quot;,
@@ -14144,12 +14210,15 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         CASE_TRAIL_IMAGES[trailId] = image;
       }
       const CASE_BOOSTER_CATALOG = Object.freeze({
-        points: { title: &quot;×2 очки&quot;, src: &quot;/assets/cases/boosters/1F00010C-F984-4A41-B8B6-8E5CD7DF637A.PNG&quot;, noun: &quot;очки в кошелёк&quot; },
-        coffee: { title: &quot;×2 кофе&quot;, src: &quot;/assets/cases/boosters/11FDBEBF-D838-4DA5-AA57-9DE0E4BA26AE.PNG&quot;, noun: &quot;кофе&quot; },
-        treats: { title: &quot;×2 зефир&quot;, src: &quot;/assets/cases/boosters/80C21DC3-04A8-46F7-B8E4-9AC8FE13CCEB.PNG&quot;, noun: &quot;зефир&quot; }
+        points: { title: &quot;×2 очки&quot;, src: &quot;/assets/cases/boosters/1F00010C-F984-4A41-B8B6-8E5CD7DF637A.PNG&quot;, noun: &quot;очки в кошелёк&quot;, runs: 2 },
+        coffee: { title: &quot;×2 кофе&quot;, src: &quot;/assets/cases/boosters/11FDBEBF-D838-4DA5-AA57-9DE0E4BA26AE.PNG&quot;, noun: &quot;кофе&quot;, runs: 2 },
+        treats: { title: &quot;×2 зефир&quot;, src: &quot;/assets/cases/boosters/80C21DC3-04A8-46F7-B8E4-9AC8FE13CCEB.PNG&quot;, noun: &quot;зефир&quot;, runs: 2 },
+        shield: { title: &quot;Щит Зеффи&quot;, src: &quot;/assets/cases/boosters/icon_buster_shit_zeffi.png&quot;, noun: &quot;защита от столкновения&quot;, runs: 1 },
+        second_chance: { title: &quot;Второй шанс&quot;, src: &quot;/assets/cases/boosters/icon_2shans.png&quot;, noun: &quot;продолжение забега&quot;, runs: 1 }
       });
+      const CASE_REWARD_BOOSTER_TYPES = Object.freeze([&quot;points&quot;, &quot;treats&quot;, &quot;coffee&quot;]);
       const CASE_SPECIAL_CATALOG = Object.freeze({
-        season_xp_x2: { title: &quot;×2 XP&quot;, src: &quot;/assets/season-pass/xp_x2.png&quot;, description: &quot;Получай в 2 раза больше XP профиля и сезона&quot;, tag: &quot;Новые забеги · покупки&quot; }
+        season_xp_x2: { title: &quot;×2 XP&quot;, src: &quot;/assets/season-pass/xp_x2.png&quot;, description: &quot;Постоянно удваивает XP профиля и сезона в активном сезоне&quot;, tag: &quot;Элитный+ · активный сезон&quot; }
       });
       const STOCK_UI_ASSETS = Object.freeze({
         purchases: &quot;/assets/ui/icon_shopping.png&quot;,
@@ -15535,6 +15604,10 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         state.over = false;
         state.time = 0;
         state.runAnimationClock = 0;
+        state.runCaseBoosters = normalizeRunCaseBoosters({});
+        state.runShieldUsed = false;
+        state.runSecondChanceUsed = false;
+        state.collisionGraceUntil = 0;
         state.caseRunId = makeCaseRunId();
         const protectedRunId = String(state.caseRunId || &quot;&quot;);
         authoritativeRunCheckpointRunId = protectedRunId;
@@ -15568,7 +15641,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         dog.vy = 0;
         dog.grounded = true;
         syncSimulationRenderHistory();
-        overlay.classList.remove(&quot;is-finish-modal&quot;);
+        overlay.classList.remove(&quot;is-finish-modal&quot;, &quot;is-second-chance-modal&quot;);
         overlay.style.display = &quot;none&quot;;
         statusEl.textContent = &quot;проверка&quot;;
         if (!preservePauseVisual) setPauseButtonVisual(false);
@@ -15594,6 +15667,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       }
 
       function jump() {
+        if (overlay?.classList.contains(&quot;is-second-chance-modal&quot;)) return;
         if (state.running &amp;&amp; state.caseRunId &amp;&amp; authoritativeRunSessionReadyId !== String(state.caseRunId)) {
           hapticImpact(&quot;light&quot;, 50);
           return;
@@ -15617,6 +15691,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       }
 
       function togglePause(preserveButtonVisual = false) {
+        if (overlay?.classList.contains(&quot;is-second-chance-modal&quot;)) return;
         if (state.over) return;
         if (!state.running &amp;&amp; !state.paused) {
           reset(false, preserveButtonVisual);
@@ -15657,7 +15732,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         renderExtrapolationSeconds = 0;
         state.renderSpeed = Number(state.speed || 0);
         syncSimulationRenderHistory();
-        overlay.classList.remove(&quot;is-finish-modal&quot;);
+        overlay.classList.remove(&quot;is-finish-modal&quot;, &quot;is-second-chance-modal&quot;);
         overlay.style.display = &quot;none&quot;;
         statusEl.textContent = &quot;бежим&quot;;
         if (!preserveButtonVisual) setPauseButtonVisual(false);
@@ -15762,11 +15837,80 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 
       function showModal(title, text) {
         const finishModal = String(title || &quot;&quot;).startsWith(&quot;Забег окончен&quot;);
+        overlay.classList.remove(&quot;is-second-chance-modal&quot;);
         overlay.classList.toggle(&quot;is-finish-modal&quot;, finishModal);
         const modalCopy = String(text || &quot;&quot;);
         overlay.innerHTML = `&lt;div class=&quot;modal&quot;&gt;&lt;div class=&quot;badge&quot;&gt;${currentDogPortraitMarkup()}&lt;/div&gt;&lt;strong&gt;${title}&lt;/strong&gt;&lt;div class=&quot;rule&quot;&gt;&lt;/div&gt;&lt;span&gt;${modalCopy}&lt;/span&gt;&lt;/div&gt;`;
         syncDogPortraits(overlay);
         overlay.style.display = &quot;grid&quot;;
+      }
+
+      function showRunSecondChance() {
+        if (state.over || !state.caseRunId) return;
+        void sendAuthoritativeRunCheckpoint(true);
+        state.running = false;
+        state.paused = true;
+        clientPerformanceLastFrameAt = 0;
+        clientPerformanceLastFrameDurationMs = 0;
+        fixedStepAccumulator = 0;
+        renderInterpolationAlpha = 1;
+        renderExtrapolationSeconds = 0;
+        cancelGameLoop();
+        flushDeferredAntiCheatGuard();
+        statusEl.textContent = &quot;второй шанс&quot;;
+        setPauseButtonVisual(false);
+        overlay.classList.remove(&quot;is-finish-modal&quot;);
+        overlay.classList.add(&quot;is-second-chance-modal&quot;);
+        overlay.innerHTML = `&lt;div class=&quot;modal second-chance-modal&quot; role=&quot;dialog&quot; aria-modal=&quot;true&quot; aria-label=&quot;Второй шанс&quot;&gt;&lt;div class=&quot;second-chance-art&quot;&gt;&lt;img src=&quot;${CASE_BOOSTER_CATALOG.second_chance.src}&quot; alt=&quot;&quot; decoding=&quot;async&quot;&gt;&lt;/div&gt;&lt;strong&gt;Второй шанс&lt;/strong&gt;&lt;div class=&quot;rule&quot;&gt;&lt;/div&gt;&lt;span&gt;Продолжить этот же забег? Уже заработанные очки, зефир и кофе сохранятся и не будут выданы повторно.&lt;/span&gt;&lt;div class=&quot;second-chance-actions&quot;&gt;&lt;button type=&quot;button&quot; data-second-chance-continue&gt;Продолжить&lt;/button&gt;&lt;button type=&quot;button&quot; class=&quot;is-secondary&quot; data-second-chance-finish&gt;Завершить забег&lt;/button&gt;&lt;/div&gt;&lt;/div&gt;`;
+        overlay.style.display = &quot;grid&quot;;
+        const continueButton = overlay.querySelector(&quot;[data-second-chance-continue]&quot;);
+        const finishButton = overlay.querySelector(&quot;[data-second-chance-finish]&quot;);
+        continueButton?.addEventListener(&quot;pointerdown&quot;, (event) =&gt; event.stopPropagation());
+        finishButton?.addEventListener(&quot;pointerdown&quot;, (event) =&gt; event.stopPropagation());
+        continueButton?.addEventListener(&quot;click&quot;, (event) =&gt; {
+          event.stopPropagation();
+          state.collisionGraceUntil = Math.max(Number(state.collisionGraceUntil || 0), Number(state.time || 0) + .75);
+          overlay.classList.remove(&quot;is-second-chance-modal&quot;);
+          resume();
+        }, { once: true });
+        finishButton?.addEventListener(&quot;click&quot;, (event) =&gt; {
+          event.stopPropagation();
+          overlay.classList.remove(&quot;is-second-chance-modal&quot;);
+          overlay.style.display = &quot;none&quot;;
+          state.paused = false;
+          endGame();
+        }, { once: true });
+      }
+
+      function handleRunCollision(item) {
+        if (Number(state.time || 0) &lt; Number(state.collisionGraceUntil || 0)) return false;
+        const runBoosters = normalizeRunCaseBoosters(state.runCaseBoosters);
+        if (runBoosters.shield &amp;&amp; !state.runShieldUsed) {
+          state.runShieldUsed = true;
+          state.collisionGraceUntil = Number(state.time || 0) + .75;
+          item.x = -200;
+          item.previousX = item.x;
+          puff(dog.x + dog.w * .62, dog.y + dog.h * .55, 11);
+          playGameSound(&quot;hitPouf&quot;);
+          hapticImpact(&quot;heavy&quot;);
+          showProfileToast(&quot;Щит Зеффи поглотил столкновение.&quot;, &quot;success&quot;, 1800);
+          renderActiveRunBooster();
+          void sendAuthoritativeRunCheckpoint(true);
+          return false;
+        }
+        if (runBoosters.second_chance &amp;&amp; !state.runSecondChanceUsed) {
+          state.runSecondChanceUsed = true;
+          state.collisionGraceUntil = Number(state.time || 0) + .75;
+          item.x = -200;
+          item.previousX = item.x;
+          playGameSound(&quot;hitPouf&quot;);
+          hapticImpact(&quot;heavy&quot;);
+          renderActiveRunBooster();
+          showRunSecondChance();
+          return true;
+        }
+        endGame();
+        return true;
       }
 
       function cancelGameLoop() {
@@ -16033,8 +16177,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 
         for (const item of state.obstacles) {
           if (collidesWithObstacle(item)) {
-            endGame();
-            return;
+            if (handleRunCollision(item)) return;
           }
         }
 
@@ -16304,8 +16447,11 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
             return &quot;Обнаружено добавление усилителя вне кейса.&quot;;
           }
         }
+        if (antiCheatStableStringify(candidate.activeCaseBoosters) !== antiCheatStableStringify(previous.activeCaseBoosters)) {
+          return &quot;Обнаружено изменение активных усилителей вне сервера.&quot;;
+        }
         if (antiCheatStableStringify(candidate.activeCaseBooster) !== antiCheatStableStringify(previous.activeCaseBooster)) {
-          return &quot;Обнаружено изменение активного усилителя вне кейса.&quot;;
+          return &quot;Обнаружено изменение активного усилителя вне сервера.&quot;;
         }
         const equippedCaseCosmetics = [
           [&quot;caseActiveAvatar&quot;, &quot;caseOwnedAvatars&quot;, &quot;аватарки&quot;],
@@ -16462,7 +16608,8 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           caseOpenedLevels: normalizeCaseNumberList(state.caseOpenedLevels),
           caseBoosters: normalizeCaseBoosters(state.caseBoosters),
           caseOwnedSpecials: normalizeCaseSpecials(state.caseOwnedSpecials),
-          activeCaseBooster: normalizeActiveCaseBooster(state.activeCaseBooster),
+          activeCaseBoosters: normalizeActiveCaseBoosters(state.activeCaseBoosters, state.activeCaseBooster),
+          activeCaseBooster: legacyActiveCaseBooster(state.activeCaseBoosters),
           caseOwnedAvatars: normalizeCaseOwned(&quot;avatar&quot;, state.caseOwnedAvatars),
           caseActiveAvatar: normalizeCaseCosmetic(&quot;avatar&quot;, state.caseActiveAvatar),
           caseOwnedFrames: normalizeCaseOwned(&quot;frame&quot;, state.caseOwnedFrames),
@@ -16889,6 +17036,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         }
         updateProfileCaseBadges();
         if (isScreenVisible(&quot;profile&quot;)) renderProfile();
+        if (caseLayer &amp;&amp; !caseLayer.hidden) renderCaseHub();
       }
 
       async function loadSeasonPassProfileBonus() {
@@ -17263,7 +17411,9 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         return {
           points: sanitizeProgressNumber(source.points),
           treats: sanitizeProgressNumber(source.treats),
-          coffee: sanitizeProgressNumber(source.coffee)
+          coffee: sanitizeProgressNumber(source.coffee),
+          shield: sanitizeProgressNumber(source.shield),
+          second_chance: sanitizeProgressNumber(source.second_chance)
         };
       }
 
@@ -17272,11 +17422,48 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         return [...new Set(values.map((item) =&gt; String(item || &quot;&quot;).trim()).filter((item) =&gt; Object.prototype.hasOwnProperty.call(CASE_SPECIAL_CATALOG, item)))];
       }
 
+      function caseBoosterMaxRuns(type) {
+        return Math.max(1, Math.floor(Number(CASE_BOOSTER_CATALOG[String(type || &quot;&quot;)]?.runs || 1)));
+      }
+
       function normalizeActiveCaseBooster(value) {
         const source = value &amp;&amp; typeof value === &quot;object&quot; ? value : {};
         const type = Object.prototype.hasOwnProperty.call(CASE_BOOSTER_CATALOG, String(source.type || &quot;&quot;)) ? String(source.type) : &quot;&quot;;
-        const runsLeft = type ? Math.max(0, Math.min(2, Math.floor(Number(source.runsLeft || 0)))) : 0;
+        const runsLeft = type ? Math.max(0, Math.min(caseBoosterMaxRuns(type), Math.floor(Number(source.runsLeft || 0)))) : 0;
         return runsLeft &gt; 0 ? { type, runsLeft } : { type: &quot;&quot;, runsLeft: 0 };
+      }
+
+      function normalizeActiveCaseBoosters(value, legacyValue = null) {
+        const source = value &amp;&amp; typeof value === &quot;object&quot; ? value : {};
+        const result = {};
+        for (const type of Object.keys(CASE_BOOSTER_CATALOG)) {
+          result[type] = Math.max(0, Math.min(caseBoosterMaxRuns(type), Math.floor(Number(source[type] || 0))));
+        }
+        const legacy = normalizeActiveCaseBooster(legacyValue);
+        if (legacy.type &amp;&amp; !Object.prototype.hasOwnProperty.call(source, legacy.type)) result[legacy.type] = legacy.runsLeft;
+        return result;
+      }
+
+      function legacyActiveCaseBooster(value) {
+        const active = normalizeActiveCaseBoosters(value);
+        const type = Object.keys(CASE_BOOSTER_CATALOG).find((id) =&gt; Number(active[id] || 0) &gt; 0) || &quot;&quot;;
+        return type ? { type, runsLeft: Number(active[type] || 0) } : { type: &quot;&quot;, runsLeft: 0 };
+      }
+
+      function syncLegacyActiveCaseBooster() {
+        state.activeCaseBoosters = normalizeActiveCaseBoosters(state.activeCaseBoosters, state.activeCaseBooster);
+        state.activeCaseBooster = legacyActiveCaseBooster(state.activeCaseBoosters);
+        return state.activeCaseBoosters;
+      }
+
+      function activeCaseBoosterTypes(value = state.activeCaseBoosters) {
+        const active = normalizeActiveCaseBoosters(value, state.activeCaseBooster);
+        return Object.keys(CASE_BOOSTER_CATALOG).filter((type) =&gt; Number(active[type] || 0) &gt; 0);
+      }
+
+      function normalizeRunCaseBoosters(value) {
+        const source = value &amp;&amp; typeof value === &quot;object&quot; ? value : {};
+        return Object.fromEntries(Object.keys(CASE_BOOSTER_CATALOG).map((type) =&gt; [type, Boolean(source[type])]));
       }
 
       function normalizePendingBoosterRuns(values) {
@@ -17292,7 +17479,8 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         state.caseOpenedLevels = normalizeCaseNumberList(saved?.caseOpenedLevels);
         state.caseBoosters = normalizeCaseBoosters(saved?.caseBoosters);
         state.caseOwnedSpecials = normalizeCaseSpecials(saved?.caseOwnedSpecials);
-        state.activeCaseBooster = normalizeActiveCaseBooster(saved?.activeCaseBooster);
+        state.activeCaseBoosters = normalizeActiveCaseBoosters(saved?.activeCaseBoosters, saved?.activeCaseBooster);
+        state.activeCaseBooster = legacyActiveCaseBooster(state.activeCaseBoosters);
         state.caseOwnedAvatars = normalizeCaseOwned(&quot;avatar&quot;, saved?.caseOwnedAvatars);
         state.caseActiveAvatar = state.caseOwnedAvatars.includes(normalizeCaseCosmetic(&quot;avatar&quot;, saved?.caseActiveAvatar)) ? normalizeCaseCosmetic(&quot;avatar&quot;, saved?.caseActiveAvatar) : &quot;&quot;;
         state.caseOwnedFrames = normalizeCaseOwned(&quot;frame&quot;, saved?.caseOwnedFrames);
@@ -17397,7 +17585,8 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
             : 0;
           state.caseBoosters = normalizeCaseBoosters(server.boosters);
           state.caseOwnedSpecials = normalizeCaseSpecials(server.ownedSpecials);
-          state.activeCaseBooster = normalizeActiveCaseBooster(server.activeBooster);
+          state.activeCaseBoosters = normalizeActiveCaseBoosters(server.activeBoosters, server.activeBooster);
+          state.activeCaseBooster = legacyActiveCaseBooster(state.activeCaseBoosters);
           state.ownedSkins = normalizeOwnedSkins(server.ownedSkins);
           setCurrentDogSkin(server.activeSkinId || &quot;default&quot;, false);
           state.caseOwnedAvatars = normalizeCaseOwned(&quot;avatar&quot;, server.ownedAvatars);
@@ -17637,7 +17826,8 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         try {
           const data = await caseApiRequest(CASE_API_ACTIVATE_PATH, { boosterType: type });
           applyServerCasePayload(data);
-          showProfileToast(`${CASE_BOOSTER_CATALOG[type]?.title || &quot;Усилитель&quot;} активирован на 2 забега.`, &quot;success&quot;);
+          const runs = caseBoosterMaxRuns(type);
+          showProfileToast(`${CASE_BOOSTER_CATALOG[type]?.title || &quot;Усилитель&quot;} активирован на ${runs} ${caseRunWord(runs)}.`, &quot;success&quot;);
           hapticNotify(&quot;success&quot;);
         } catch (error) { hapticNotify(&quot;error&quot;); showProfileToast(error?.message || &quot;Не удалось активировать усилитель.&quot;, &quot;warning&quot;); }
         finally { renderCaseHub(); renderActiveRunBooster(); }
@@ -17682,14 +17872,23 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       }
 
       function consumeLocalCaseBoosterRun(credited, runId) {
-        const active = normalizeActiveCaseBooster(state.activeCaseBooster);
-        if (!credited?.boosterType || active.type !== credited.boosterType || active.runsLeft &lt;= 0) return null;
-        const nextRuns = Math.max(0, active.runsLeft - 1);
-        state.activeCaseBooster = nextRuns &gt; 0 ? { type: active.type, runsLeft: nextRuns } : { type: &quot;&quot;, runsLeft: 0 };
+        const appliedTypes = (Array.isArray(credited?.boosterTypes) ? credited.boosterTypes : [credited?.boosterType])
+          .map((type) =&gt; String(type || &quot;&quot;))
+          .filter((type) =&gt; CASE_REWARD_BOOSTER_TYPES.includes(type));
+        if (!appliedTypes.length) return null;
+        const active = normalizeActiveCaseBoosters(state.activeCaseBoosters, state.activeCaseBooster);
+        const runsLeft = {};
+        for (const type of appliedTypes) {
+          if (Number(active[type] || 0) &lt;= 0) continue;
+          active[type] = Math.max(0, Number(active[type] || 0) - 1);
+          runsLeft[type] = active[type];
+        }
+        state.activeCaseBoosters = active;
+        state.activeCaseBooster = legacyActiveCaseBooster(active);
         const validRunId = /^[A-Za-z0-9_-]{12,96}$/.test(String(runId || &quot;&quot;)) ? String(runId) : makeCaseRunId();
         state.pendingBoosterRuns = normalizePendingBoosterRuns([...(state.pendingBoosterRuns || []), validRunId]);
         renderActiveRunBooster(); renderCaseHub();
-        return { type: active.type, runsLeft: nextRuns };
+        return { types: appliedTypes, runsLeft };
       }
 
       async function flushPendingCaseBoosterRuns() {
@@ -17715,17 +17914,38 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       }
 
       function caseBoosterRunText(credited, summary) {
-        if (!credited?.boosterType) return &quot;&quot;;
-        const bonus = credited.boosterType === &quot;points&quot; ? credited.boosterPointBonus : credited.boosterType === &quot;treats&quot; ? credited.boosterTreatBonus : credited.boosterCoffeeBonus;
-        const noun = CASE_BOOSTER_CATALOG[credited.boosterType]?.noun || &quot;награда&quot;;
-        return `Усилитель ×2: +${formatter.format(Math.max(0, bonus))} ${noun} · осталось ${summary?.runsLeft || 0} ${caseRunWord(summary?.runsLeft)}`;
+        const types = (Array.isArray(credited?.boosterTypes) ? credited.boosterTypes : [credited?.boosterType])
+          .map((type) =&gt; String(type || &quot;&quot;))
+          .filter((type) =&gt; CASE_REWARD_BOOSTER_TYPES.includes(type));
+        if (!types.length) return &quot;&quot;;
+        return types.map((type) =&gt; {
+          const bonus = type === &quot;points&quot; ? credited.boosterPointBonus : type === &quot;treats&quot; ? credited.boosterTreatBonus : credited.boosterCoffeeBonus;
+          const noun = CASE_BOOSTER_CATALOG[type]?.noun || &quot;награда&quot;;
+          const left = Number(summary?.runsLeft?.[type] || 0);
+          return `${CASE_BOOSTER_CATALOG[type]?.title || &quot;Усилитель&quot;}: +${formatter.format(Math.max(0, bonus))} ${noun} · осталось ${left} ${caseRunWord(left)}`;
+        }).join(&quot;&lt;br&gt;&quot;);
+      }
+
+      function currentRunBoosterTypes() {
+        if (state.running || state.paused || state.over) {
+          const run = normalizeRunCaseBoosters(state.runCaseBoosters);
+          return Object.keys(CASE_BOOSTER_CATALOG).filter((type) =&gt; {
+            if (!run[type]) return false;
+            if (type === &quot;shield&quot; &amp;&amp; state.runShieldUsed) return false;
+            if (type === &quot;second_chance&quot; &amp;&amp; state.runSecondChanceUsed) return false;
+            return true;
+          });
+        }
+        return activeCaseBoosterTypes();
       }
 
       function renderActiveRunBooster() {
         if (!activeRunBoosterEl) return;
-        const active = normalizeActiveCaseBooster(state.activeCaseBooster);
-        activeRunBoosterEl.hidden = !active.type;
-        if (active.type) activeRunBoosterEl.textContent = `${CASE_BOOSTER_CATALOG[active.type]?.title || &quot;×2&quot;} · осталось ${active.runsLeft} ${caseRunWord(active.runsLeft)}`;
+        const types = currentRunBoosterTypes();
+        activeRunBoosterEl.hidden = !types.length;
+        if (!types.length) { activeRunBoosterEl.textContent = &quot;&quot;; return; }
+        const labels = types.map((type) =&gt; CASE_BOOSTER_CATALOG[type]?.title || type);
+        activeRunBoosterEl.textContent = labels.length &lt;= 2 ? labels.join(&quot; · &quot;) : `${labels.slice(0,2).join(&quot; · &quot;)} · +${labels.length - 2}`;
       }
 
       function drawCaseTrailImage() {
@@ -18146,6 +18366,8 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         if (type === &quot;points&quot;) return { what: &quot;Удваивает очки, полученные за завершённый забег.&quot;, detail: &quot;Удваивает именно очки забега; дополнительные бонусы скина начисляются отдельно.&quot; };
         if (type === &quot;coffee&quot;) return { what: &quot;Удваивает кофе, полученный за завершённый забег.&quot;, detail: &quot;Работает только на кофе, заработанный в забеге, и расходует один заряд после завершения.&quot; };
         if (type === &quot;treats&quot;) return { what: &quot;Удваивает зефир, полученный за завершённый забег.&quot;, detail: &quot;Работает только на зефир, заработанный в забеге, и расходует один заряд после завершения.&quot; };
+        if (type === &quot;shield&quot;) return { what: &quot;Поглощает одно столкновение или ошибку во время забега. После срабатывания защита исчезает.&quot;, detail: &quot;Щит закрепляется за следующим забегом и не переносится на следующий, даже если не понадобился.&quot; };
+        if (type === &quot;second_chance&quot;) return { what: &quot;После проигрыша один раз предлагает «Продолжить» и возвращает в тот же забег.&quot;, detail: &quot;Очки, зефир и кофе уже заработанные до проигрыша сохраняются и не выдаются повторно.&quot; };
         return { what: &quot;&quot;, detail: &quot;&quot; };
       }
 
@@ -18156,36 +18378,38 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         const special = CASE_SPECIAL_CATALOG[id];
         if (!consumable &amp;&amp; !special) return;
         caseRouletteBusy = false;
-        const active = normalizeActiveCaseBooster(state.activeCaseBooster);
+        const active = normalizeActiveCaseBoosters(state.activeCaseBoosters, state.activeCaseBooster);
         const isSpecial = Boolean(special);
         const item = special || consumable;
         const count = consumable ? Math.max(0, Number(state.caseBoosters?.[id] || 0)) : 1;
-        const isActive = consumable ? active.type === id &amp;&amp; active.runsLeft &gt; 0 : true;
-        const otherActive = consumable &amp;&amp; Boolean(active.type) &amp;&amp; active.runsLeft &gt; 0 &amp;&amp; active.type !== id;
-        const activeTitle = otherActive ? (CASE_BOOSTER_CATALOG[active.type]?.title || &quot;другой усилитель&quot;) : &quot;&quot;;
+        const runs = consumable ? caseBoosterMaxRuns(id) : 0;
+        const activeRuns = consumable ? Math.max(0, Number(active[id] || 0)) : 0;
+        const isActive = consumable ? activeRuns &gt; 0 : true;
         const info = boosterInfoCopy(id);
         const status = isSpecial
-          ? `&lt;b class=&quot;is-special&quot;&gt;АКТИВЕН&lt;/b&gt;&lt;span&gt;Постоянный бонус этого сезона&lt;/span&gt;`
+          ? `&lt;b class=&quot;is-special&quot;&gt;АКТИВЕН&lt;/b&gt;&lt;span&gt;Элитный+ · активный сезон&lt;/span&gt;`
           : isActive
-            ? `&lt;b&gt;АКТИВЕН&lt;/b&gt;&lt;span&gt;Осталось: ${formatter.format(active.runsLeft)} ${caseRunWord(active.runsLeft)}&lt;/span&gt;`
-            : otherActive
-              ? `&lt;span&gt;Сейчас активен ${escapePurchaseText(activeTitle)} · ещё ${formatter.format(active.runsLeft)} ${caseRunWord(active.runsLeft)}&lt;/span&gt;`
-              : count &gt; 0
-                ? `&lt;span&gt;Готов к активации&lt;/span&gt;`
-                : `&lt;span&gt;Нет в запасе&lt;/span&gt;`;
+            ? `&lt;b&gt;АКТИВЕН&lt;/b&gt;&lt;span&gt;Осталось: ${formatter.format(activeRuns)} ${caseRunWord(activeRuns)}&lt;/span&gt;`
+            : count &gt; 0
+              ? `&lt;span&gt;Готов к активации&lt;/span&gt;`
+              : `&lt;span&gt;Нет в запасе&lt;/span&gt;`;
+        const durationText = id === &quot;shield&quot;
+          ? &quot;На 1 следующий забег. Поглощает только первое столкновение и после этого исчезает.&quot;
+          : id === &quot;second_chance&quot;
+            ? &quot;На 1 следующий забег. После первого проигрыша можно один раз продолжить тот же забег.&quot;
+            : `На ${runs} следующих завершённых ${runs === 1 ? &quot;забег&quot; : &quot;забега&quot;} после активации.`;
         const facts = isSpecial
-          ? `&lt;div class=&quot;booster-info-fact&quot;&gt;&lt;strong&gt;Что делает&lt;/strong&gt;&lt;span&gt;Увеличивает получение XP профиля и сезонного пропуска в 2 раза.&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;booster-info-xp-tags&quot;&gt;&lt;span&gt;Профиль XP ×2&lt;/span&gt;&lt;span&gt;Сезон XP ×2&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;booster-info-fact&quot;&gt;&lt;strong&gt;Действует&lt;/strong&gt;&lt;span&gt;Постоянно в течение текущего сезона. Удвоение применяется к новым забегам, покупкам и сезонным заданиям там, где сервер начисляет XP.&lt;/span&gt;&lt;/div&gt;`
-          : `&lt;div class=&quot;booster-info-fact&quot;&gt;&lt;strong&gt;Что делает&lt;/strong&gt;&lt;span&gt;${escapePurchaseText(info.what)}&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;booster-info-fact&quot;&gt;&lt;strong&gt;Действует&lt;/strong&gt;&lt;span&gt;${isActive ? `Ещё ${formatter.format(active.runsLeft)} ${caseRunWord(active.runsLeft)}.` : &quot;На 2 следующих завершённых забега после активации.&quot;}&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;booster-info-fact&quot;&gt;&lt;strong&gt;В запасе&lt;/strong&gt;&lt;span&gt;${formatter.format(count)} шт.&lt;/span&gt;&lt;/div&gt;`;
-        const primary = consumable &amp;&amp; !isActive &amp;&amp; !otherActive &amp;&amp; count &gt; 0
+          ? `&lt;div class=&quot;booster-info-fact&quot;&gt;&lt;strong&gt;Что делает&lt;/strong&gt;&lt;span&gt;Увеличивает получение XP профиля и сезонного пропуска в 2 раза.&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;booster-info-xp-tags&quot;&gt;&lt;span&gt;Профиль XP ×2&lt;/span&gt;&lt;span&gt;Сезон XP ×2&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;booster-info-fact&quot;&gt;&lt;strong&gt;Действует&lt;/strong&gt;&lt;span&gt;Автоматически и постоянно, пока активен текущий сезон и у игрока действует тариф Элитный+. Вручную не активируется и не расходуется.&lt;/span&gt;&lt;/div&gt;`
+          : `&lt;div class=&quot;booster-info-fact&quot;&gt;&lt;strong&gt;Что делает&lt;/strong&gt;&lt;span&gt;${escapePurchaseText(info.what)}&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;booster-info-fact&quot;&gt;&lt;strong&gt;Действует&lt;/strong&gt;&lt;span&gt;${isActive ? `Ещё ${formatter.format(activeRuns)} ${caseRunWord(activeRuns)}. ` : &quot;&quot;}${escapePurchaseText(durationText)}&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;booster-info-fact&quot;&gt;&lt;strong&gt;В запасе&lt;/strong&gt;&lt;span&gt;${formatter.format(count)} шт.&lt;/span&gt;&lt;/div&gt;`;
+        const primary = consumable &amp;&amp; !isActive &amp;&amp; count &gt; 0
           ? `&lt;button class=&quot;case-info-primary&quot; data-activate-case-booster=&quot;${escapePurchaseText(id)}&quot; data-booster-modal-activate type=&quot;button&quot;&gt;Активировать&lt;/button&gt;`
           : &quot;&quot;;
         const note = isSpecial
-          ? `&lt;strong&gt;Бонус уже включён&lt;/strong&gt;&lt;span&gt;Его не нужно активировать вручную и он не расходует запас усилителей.&lt;/span&gt;`
-          : otherActive
-            ? `&lt;strong&gt;Одновременно работает один расходный усилитель&lt;/strong&gt;&lt;span&gt;Новый можно активировать после завершения текущего ${escapePurchaseText(activeTitle)}.&lt;/span&gt;`
-            : `&lt;strong&gt;Активация не происходит при просмотре&lt;/strong&gt;&lt;span&gt;Усилитель расходуется только после нажатия кнопки «Активировать». ${escapePurchaseText(info.detail)}&lt;/span&gt;`;
+          ? `&lt;strong&gt;Постоянный бонус Элитный+&lt;/strong&gt;&lt;span&gt;×2 XP больше не является обычным расходным усилителем: бонус определяется сервером по активному тарифу и сезону.&lt;/span&gt;`
+          : `&lt;strong&gt;Усилители действуют независимо&lt;/strong&gt;&lt;span&gt;Можно активировать разные усилители одновременно. Их эффекты не перемножаются и не складываются друг с другом: каждый работает отдельно и расходует собственный заряд. ${escapePurchaseText(info.detail)}&lt;/span&gt;`;
+        const heroCopy = isSpecial ? &quot;Постоянный бонус Элитный+ на активный сезон.&quot; : `Расходный бонус на ${runs} ${caseRunWord(runs)}.`;
         caseLayer.classList.add(&quot;is-info-view&quot;);
-        caseContentEl.innerHTML = `&lt;div class=&quot;booster-info-view&quot;&gt;&lt;div class=&quot;booster-info-hero${isSpecial ? &quot; is-special&quot; : &quot;&quot;}&quot;&gt;&lt;span class=&quot;booster-info-art&quot;&gt;&lt;img src=&quot;${escapePurchaseText(item.src)}&quot; alt=&quot;&quot; decoding=&quot;async&quot;&gt;&lt;/span&gt;&lt;span class=&quot;booster-info-copy&quot;&gt;&lt;small class=&quot;booster-info-kicker&quot;&gt;${isSpecial ? &quot;Бонус опыта&quot; : &quot;Усилитель&quot;}&lt;/small&gt;&lt;h2 id=&quot;case-dialog-title&quot;&gt;${escapePurchaseText(item.title)}&lt;/h2&gt;&lt;p&gt;${isSpecial ? &quot;Постоянное усиление прогресса текущего сезона.&quot; : &quot;Расходный бонус для следующих завершённых забегов.&quot;}&lt;/p&gt;&lt;span class=&quot;booster-info-state&quot;&gt;${status}&lt;/span&gt;&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;booster-info-facts&quot;&gt;${facts}&lt;/div&gt;&lt;div class=&quot;booster-info-note&quot;&gt;${note}&lt;/div&gt;&lt;div class=&quot;booster-info-actions&quot;&gt;${primary}&lt;button class=&quot;case-info-secondary&quot; data-case-close type=&quot;button&quot;&gt;Закрыть&lt;/button&gt;&lt;/div&gt;&lt;/div&gt;`;
+        caseContentEl.innerHTML = `&lt;div class=&quot;booster-info-view&quot;&gt;&lt;div class=&quot;booster-info-hero${isSpecial ? &quot; is-special&quot; : &quot;&quot;}&quot;&gt;&lt;span class=&quot;booster-info-art&quot;&gt;&lt;img src=&quot;${escapePurchaseText(item.src)}&quot; alt=&quot;&quot; decoding=&quot;async&quot;&gt;&lt;/span&gt;&lt;span class=&quot;booster-info-copy&quot;&gt;&lt;small class=&quot;booster-info-kicker&quot;&gt;${isSpecial ? &quot;Бонус Элитный+&quot; : &quot;Усилитель&quot;}&lt;/small&gt;&lt;h2 id=&quot;case-dialog-title&quot;&gt;${escapePurchaseText(item.title)}&lt;/h2&gt;&lt;p&gt;${heroCopy}&lt;/p&gt;&lt;span class=&quot;booster-info-state&quot;&gt;${status}&lt;/span&gt;&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;booster-info-facts&quot;&gt;${facts}&lt;/div&gt;&lt;div class=&quot;booster-info-note&quot;&gt;${note}&lt;/div&gt;&lt;div class=&quot;booster-info-actions&quot;&gt;${primary}&lt;button class=&quot;case-info-secondary&quot; data-case-close type=&quot;button&quot;&gt;Закрыть&lt;/button&gt;&lt;/div&gt;&lt;/div&gt;`;
         openCaseLayerShell();
         caseLayer.querySelector(&quot;.case-dialog&quot;)?.scrollTo({ top: 0, behavior: &quot;auto&quot; });
       }
@@ -19210,17 +19434,21 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           const giftedMarkup = cards || `&lt;div class=&quot;case-empty-warehouse&quot;&gt;&lt;strong&gt;${caseStockFilter === &quot;all&quot; ? &quot;Склад пока пуст&quot; : &quot;Ничего не найдено&quot;}&lt;/strong&gt;&lt;span&gt;${emptyText}&lt;/span&gt;&lt;/div&gt;`;
           setStableMarkup(caseGiftedListEl, giftedMarkup, `gifted:${caseStockFilter}:${caseStockSortMode}:${entries.map((entry)=&gt;`${entry.key}:${entry.count}:${caseStockSeenState.unseen[entry.key]?1:0}`).join(&quot;|&quot;)}`);
         }
-        const active = normalizeActiveCaseBooster(state.activeCaseBooster);
-        const ownedSpecials = normalizeCaseSpecials(state.caseOwnedSpecials);
+        const active = normalizeActiveCaseBoosters(state.activeCaseBoosters, state.activeCaseBooster);
+        const activeTypes = activeCaseBoosterTypes(active);
+        const ownedSpecials = normalizeCaseSpecials(state.caseOwnedSpecials).filter((id) =&gt; id !== &quot;season_xp_x2&quot;);
+        if (state.seasonProfileXpBonusActive &amp;&amp; seasonPassProfileTier === &quot;elite_plus&quot;) ownedSpecials.push(&quot;season_xp_x2&quot;);
         const boosterStatusEl = root.querySelector(&quot;[data-case-booster-status]&quot;);
         if (boosterStatusEl) {
-          const activeConsumable = active.type ? CASE_BOOSTER_CATALOG[active.type] : null;
+          const activeConsumables = activeTypes.map((type) =&gt; ({ type, item:CASE_BOOSTER_CATALOG[type], runs:Number(active[type] || 0) })).filter((entry) =&gt; entry.item);
           const activeSpecial = ownedSpecials.includes(&quot;season_xp_x2&quot;) ? CASE_SPECIAL_CATALOG.season_xp_x2 : null;
-          const statusItem = activeConsumable || activeSpecial;
+          const statusItem = activeConsumables[0]?.item || activeSpecial;
           if (statusItem) {
-            const statusMeta = activeConsumable ? `Ещё ${active.runsLeft} ${caseRunWord(active.runsLeft)}` : &quot;Постоянный бонус&quot;;
-            const statusCopy = activeConsumable ? &quot;Работает на завершённые забеги&quot; : &quot;XP профиля и сезона ×2&quot;;
-            boosterStatusEl.innerHTML = `&lt;span class=&quot;booster-active-main&quot;&gt;&lt;img src=&quot;${escapePurchaseText(statusItem.src)}&quot; alt=&quot;&quot; decoding=&quot;async&quot;&gt;&lt;span&gt;&lt;strong&gt;Активно сейчас: ${escapePurchaseText(statusItem.title)}&lt;/strong&gt;&lt;small&gt;${statusCopy}&lt;/small&gt;&lt;/span&gt;&lt;/span&gt;&lt;b class=&quot;booster-active-meta&quot;&gt;${statusMeta}&lt;/b&gt;`;
+            const consumableTitles = activeConsumables.map((entry) =&gt; entry.item.title);
+            const statusTitle = activeConsumables.length === 1 ? consumableTitles[0] : activeConsumables.length &gt; 1 ? `${activeConsumables.length} усилителя` : activeSpecial.title;
+            const statusMeta = activeConsumables.length ? &quot;Действуют отдельно&quot; : &quot;Элитный+&quot;;
+            const statusCopy = activeConsumables.length ? consumableTitles.join(&quot; · &quot;) : &quot;XP профиля и сезона ×2 · активный сезон&quot;;
+            boosterStatusEl.innerHTML = `&lt;span class=&quot;booster-active-main&quot;&gt;&lt;img src=&quot;${escapePurchaseText(statusItem.src)}&quot; alt=&quot;&quot; decoding=&quot;async&quot;&gt;&lt;span&gt;&lt;strong&gt;Активно сейчас: ${escapePurchaseText(statusTitle)}&lt;/strong&gt;&lt;small&gt;${escapePurchaseText(statusCopy)}&lt;/small&gt;&lt;/span&gt;&lt;/span&gt;&lt;b class=&quot;booster-active-meta&quot;&gt;${statusMeta}&lt;/b&gt;`;
             boosterStatusEl.hidden = false;
           } else {
             boosterStatusEl.hidden = true;
@@ -19229,11 +19457,11 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         }
         if (caseBoostersListEl) {
           const consumableMarkup = Object.entries(CASE_BOOSTER_CATALOG).map(([type,item]) =&gt; {
-            const count = Number(state.caseBoosters?.[type] || 0); const isActive = active.type === type;
-            const disabled = Boolean(active.type) || count &lt;= 0;
-            return `&lt;div class=&quot;case-booster-card${isActive?&quot; is-active&quot;:&quot;&quot;}&quot;&gt;&lt;img class=&quot;case-booster-icon&quot; data-booster-info=&quot;${type}&quot; src=&quot;${escapePurchaseText(item.src)}&quot; alt=&quot;Информация: ${escapePurchaseText(item.title)}&quot; loading=&quot;eager&quot; decoding=&quot;async&quot;&gt;&lt;strong data-booster-info=&quot;${type}&quot;&gt;${item.title}&lt;/strong&gt;&lt;span&gt;${isActive?`Ещё ${active.runsLeft} ${caseRunWord(active.runsLeft)}`:`В запасе: ${formatter.format(count)}`}&lt;/span&gt;&lt;button data-activate-case-booster=&quot;${type}&quot; type=&quot;button&quot; ${disabled?&quot;disabled&quot;:&quot;&quot;}&gt;${isActive?&quot;Активен&quot;:&quot;Активировать&quot;}&lt;/button&gt;&lt;/div&gt;`;
+            const count = Number(state.caseBoosters?.[type] || 0); const activeRuns = Number(active[type] || 0); const isActive = activeRuns &gt; 0;
+            const disabled = isActive || count &lt;= 0;
+            return `&lt;div class=&quot;case-booster-card${isActive?&quot; is-active&quot;:&quot;&quot;}&quot;&gt;&lt;img class=&quot;case-booster-icon&quot; data-booster-info=&quot;${type}&quot; src=&quot;${escapePurchaseText(item.src)}&quot; alt=&quot;Информация: ${escapePurchaseText(item.title)}&quot; loading=&quot;eager&quot; decoding=&quot;async&quot;&gt;&lt;strong data-booster-info=&quot;${type}&quot;&gt;${item.title}&lt;/strong&gt;&lt;span&gt;${isActive?`Ещё ${activeRuns} ${caseRunWord(activeRuns)}`:`В запасе: ${formatter.format(count)}`}&lt;/span&gt;&lt;button data-activate-case-booster=&quot;${type}&quot; type=&quot;button&quot; ${disabled?&quot;disabled&quot;:&quot;&quot;}&gt;${isActive?&quot;Активен&quot;:&quot;Активировать&quot;}&lt;/button&gt;&lt;/div&gt;`;
           }).join(&quot;&quot;);
-          const specialMarkup = ownedSpecials.map((id) =&gt; {
+          const specialMarkup = [...new Set(ownedSpecials)].map((id) =&gt; {
             const item = CASE_SPECIAL_CATALOG[id];
             return `&lt;div class=&quot;case-booster-card case-booster-card--season&quot;&gt;&lt;img class=&quot;case-booster-icon&quot; data-booster-info=&quot;${escapePurchaseText(id)}&quot; src=&quot;${escapePurchaseText(item.src)}&quot; alt=&quot;Информация: ${escapePurchaseText(item.title)}&quot; loading=&quot;eager&quot; decoding=&quot;async&quot;&gt;&lt;strong data-booster-info=&quot;${escapePurchaseText(id)}&quot;&gt;${item.title}&lt;/strong&gt;&lt;span class=&quot;booster-special-copy&quot;&gt;${escapePurchaseText(item.description)}&lt;/span&gt;&lt;span class=&quot;booster-special-tag&quot;&gt;${escapePurchaseText(item.tag || &quot;&quot;)}&lt;/span&gt;&lt;button type=&quot;button&quot; disabled&gt;Активен&lt;/button&gt;&lt;/div&gt;`;
           }).join(&quot;&quot;);
@@ -19329,11 +19557,13 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         const rawPoints = Math.max(0, Math.floor(Number(points) || 0));
         const rawTreats = Math.max(0, Math.floor(Number(treats) || 0));
         const rawCoffee = Math.max(0, Math.floor(Number(coffee) || 0));
-        const activeBooster = normalizeActiveCaseBooster(state.activeCaseBooster);
-        const boosterType = activeBooster.runsLeft &gt; 0 ? activeBooster.type : &quot;&quot;;
-        const boostedPoints = boosterType === &quot;points&quot; ? rawPoints * 2 : rawPoints;
-        const boostedTreats = boosterType === &quot;treats&quot; ? rawTreats * 2 : rawTreats;
-        const boostedCoffee = boosterType === &quot;coffee&quot; ? rawCoffee * 2 : rawCoffee;
+        const runBoosters = normalizeRunCaseBoosters(state.runCaseBoosters);
+        const boosterTypes = CASE_REWARD_BOOSTER_TYPES.filter((type) =&gt; runBoosters[type]);
+        const boosterType = String(boosterTypes[0] || &quot;&quot;);
+        const activeBoosters = normalizeActiveCaseBoosters(state.activeCaseBoosters, state.activeCaseBooster);
+        const boostedPoints = boosterTypes.includes(&quot;points&quot;) ? rawPoints * 2 : rawPoints;
+        const boostedTreats = boosterTypes.includes(&quot;treats&quot;) ? rawTreats * 2 : rawTreats;
+        const boostedCoffee = boosterTypes.includes(&quot;coffee&quot;) ? rawCoffee * 2 : rawCoffee;
         const skinBonusEligible = profileRunQualifiesForXp(durationSeconds, rawPoints);
         const skinPointBonus = skinBonusEligible ? Math.max(0, Math.floor(Number(bonus.points) || 0)) : 0;
         const skinTreatBonus = skinBonusEligible ? Math.max(0, Math.floor(Number(bonus.treats) || 0)) : 0;
@@ -19341,7 +19571,8 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         return {
           skin,
           boosterType,
-          boosterRunsBefore: activeBooster.runsLeft,
+          boosterTypes,
+          boosterRunsBefore: Object.fromEntries(boosterTypes.map((type) =&gt; [type, Number(activeBoosters[type] || 0)])),
           rawPoints,
           rawTreats,
           rawCoffee,
@@ -20991,7 +21222,8 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
             state.caseMythicPityCounter = 0;
             state.caseLegendaryPityCounter = 0;
             state.caseBoosters = normalizeCaseBoosters({});
-            state.activeCaseBooster = normalizeActiveCaseBooster({});
+            state.activeCaseBoosters = normalizeActiveCaseBoosters({});
+            state.activeCaseBooster = legacyActiveCaseBooster(state.activeCaseBoosters);
             state.pendingBoosterRuns = [];
           }
           if (reset.collection) {
@@ -21271,8 +21503,22 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         if (authoritativeRunSessionId === id &amp;&amp; authoritativeRunStartPromise) return authoritativeRunStartPromise;
         authoritativeRunSessionId = id;
         const task = leaderboardApiRequest(RUN_SESSION_START_PATH, { initData, runId: id, gameVersion: GAME_VERSION })
-          .then(() =&gt; {
-            if (authoritativeRunSessionId === id) authoritativeRunSessionReadyId = id;
+          .then((data) =&gt; {
+            if (authoritativeRunSessionId !== id) return false;
+            const runBoosters = normalizeRunCaseBoosters(data?.runSession?.boosters);
+            if (String(state.caseRunId || &quot;&quot;) === id) {
+              antiCheatWithTrustedChange(&quot;run-booster-snapshot&quot;, () =&gt; {
+                state.runCaseBoosters = runBoosters;
+                const active = normalizeActiveCaseBoosters(state.activeCaseBoosters, state.activeCaseBooster);
+                if (runBoosters.shield) active.shield = 0;
+                if (runBoosters.second_chance) active.second_chance = 0;
+                state.activeCaseBoosters = active;
+                state.activeCaseBooster = legacyActiveCaseBooster(active);
+                saveProgress();
+                renderActiveRunBooster();
+              });
+            }
+            authoritativeRunSessionReadyId = id;
             return true;
           })
           .catch((error) =&gt; {
@@ -21290,7 +21536,9 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           durationMs: Math.max(0, Math.floor(Number(state.time || 0) * 1000)),
           score: Math.max(0, Math.floor(Number(state.score || 0))),
           runTreats: Math.max(0, Math.floor(Number(state.runTreats || 0))),
-          runCoffee: Math.max(0, Math.floor(Number(state.runCoffee || 0)))
+          runCoffee: Math.max(0, Math.floor(Number(state.runCoffee || 0))),
+          shieldUsed: Boolean(state.runShieldUsed),
+          secondChanceUsed: Boolean(state.runSecondChanceUsed)
         };
       }
 
@@ -21327,6 +21575,8 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
             score: snapshot.score,
             runTreats: snapshot.runTreats,
             runCoffee: snapshot.runCoffee,
+            shieldUsed: snapshot.shieldUsed,
+            secondChanceUsed: snapshot.secondChanceUsed,
             gameVersion: GAME_VERSION
           });
           if (authoritativeRunCheckpointRunId === runId) {
@@ -21394,9 +21644,11 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
             state.coffee = sanitizeProgressNumber(profile.coffee);
             state.profileXp = sanitizeProgressNumber(profile.profileXp);
           }
+          const activeBoosters = data?.runSettlement?.activeBoosters;
           const activeBooster = data?.runSettlement?.activeBooster;
-          if (activeBooster &amp;&amp; typeof activeBooster === &quot;object&quot;) {
-            state.activeCaseBooster = normalizeActiveCaseBooster(activeBooster);
+          if ((activeBoosters &amp;&amp; typeof activeBoosters === &quot;object&quot;) || (activeBooster &amp;&amp; typeof activeBooster === &quot;object&quot;)) {
+            state.activeCaseBoosters = normalizeActiveCaseBoosters(activeBoosters, activeBooster);
+            state.activeCaseBooster = legacyActiveCaseBooster(state.activeCaseBoosters);
           }
           if (Object.prototype.hasOwnProperty.call(data?.runSettlement||{}, &quot;liveOpsEvent&quot;)) applyLiveOpsRunEvent(data.runSettlement.liveOpsEvent||{active:false,multipliers:{pointsMultiplier:1,treatsMultiplier:1,coffeeMultiplier:1}});
           saveProgress();
@@ -21425,6 +21677,8 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
             durationMs,
             runTreats: Math.max(0, Math.floor(Number(runMetrics?.treats || 0))),
             runCoffee: Math.max(0, Math.floor(Number(runMetrics?.coffee || 0))),
+            shieldUsed: Boolean(state.runShieldUsed),
+            secondChanceUsed: Boolean(state.runSecondChanceUsed),
             newRecord: Boolean(runMetrics?.newRecord),
             profileXpLocalAwarded: Math.max(0, Math.floor(Number(runMetrics?.profileXpAwarded || 0))),
             profileXpReconciled: true,
@@ -24574,7 +24828,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 #zefirok-maltipoo-runner .booster-info-state span{border:1px solid rgba(226,185,199,.52);background:#fff;color:#9d6b7d}
 #zefirok-maltipoo-runner .booster-info-facts{display:grid;gap:8px}
 #zefirok-maltipoo-runner .booster-info-fact{display:grid;gap:4px;padding:11px 12px;border:1px solid rgba(232,205,214,.58);border-radius:16px;background:rgba(255,255,255,.86);box-shadow:0 5px 14px rgba(102,61,77,.045)}
-#zefirok-maltipoo-runner .booster-info-fact strong{color:#704354;font-size:11px;line-height:1.15}
+#zefirok-maltipoo-runner .booster-info-fact strong{display:inline-flex;width:max-content;max-width:100%;align-items:center;padding:4px 8px;border-radius:999px;background:#ffe5ef;color:#b84270;font-size:9.5px;line-height:1;font-weight:950;letter-spacing:.055em;text-transform:uppercase}
 #zefirok-maltipoo-runner .booster-info-fact span{color:#967783;font-size:9.5px;line-height:1.45}
 #zefirok-maltipoo-runner .booster-info-xp-tags{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
 #zefirok-maltipoo-runner .booster-info-xp-tags span{display:grid;place-items:center;min-height:42px;padding:8px;border:1px solid rgba(222,170,56,.38);border-radius:14px;background:linear-gradient(180deg,#fffdf6,#fff4cf);color:#91631b;font-size:10px;font-weight:950;text-align:center}

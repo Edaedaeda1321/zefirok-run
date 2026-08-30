@@ -5324,7 +5324,7 @@ img[src$="/xp.webp"]{
     if(progressTitle)progressTitle.textContent=overflow.unlocked?"50+ / ∞ · до Золотого кейса":"Уровень пропуска";
     const runCount = serverPass?.summary ? Number(serverPass.summary.runs||0) : real.runs;
     const elitePlusSettings = serverPass?.season?.tierSettings?.elitePlus || {};
-    const seasonXpBoostActive = pass.entitlements.includes("season_xp_x2") || (pass.premiumTier === "elite_plus" && elitePlusSettings.xpBoost !== false);
+    const seasonXpBoostActive = pass.premiumTier === "elite_plus" && elitePlusSettings.xpBoost !== false;
     const catchUpActive=Boolean(serverPass?.catchUp?.active);
     el("runsText").textContent = overflow.unlocked
       ? `Получено кейсов: ${overflow.claimed}${overflow.available>0?` · готово: ${overflow.available}`:""}`
