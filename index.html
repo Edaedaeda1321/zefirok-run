@@ -14125,7 +14125,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         gold: Object.freeze({ treats: [40, 70], coffee: [40, 70], points: [2500, 5000] }),
         mythic: Object.freeze({ treats: [100, 300], coffee: [100, 300], points: [15000, 60000] }),
         legendary: Object.freeze({ treats: [250, 1200], coffee: [250, 1200], points: [35000, 150000] }),
-        alex: Object.freeze({ treats: [50, 130], coffee: [50, 130], points: [2000, 90000] })
+        alex: Object.freeze({ treats: [20, 50], coffee: [20, 50], points: [2000, 25000] })
       });
       const CASE_COSMETIC_WEIGHTS = Object.freeze({
         avatar: Object.freeze({ royal: 2, legendary_avatar_1: 2, legendary_avatar_2: 2, legendary_avatar_3: 2, legendary_avatar_4: 2, legendary_avatar_5: 2, champion: 3, winter_cocoa: 30, birthday_gift: 20, sweet_dreams: 9, strawberry_cake: 9, coffee_barista: 9, marshmallow_cloud: 6, pink_hearts: 6, sakura: 6 }),
@@ -18125,6 +18125,21 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         return `&lt;section class=&quot;case-info-section&quot;&gt;&lt;div class=&quot;case-info-section-title&quot;&gt;&lt;span&gt;&lt;strong&gt;${escapePurchaseText(title)}&lt;/strong&gt;&lt;small&gt;Обычное выпадение может повториться; дубликат компенсируется очками&lt;/small&gt;&lt;/span&gt;&lt;em&gt;${caseChanceLabel(chance)}&lt;/em&gt;&lt;/div&gt;&lt;div class=&quot;case-info-cosmetic-list&quot;&gt;${markup}&lt;/div&gt;&lt;/section&gt;`;
       }
 
+      function caseInfoOpenActionMarkup(caseType) {
+        const type = String(caseType || &quot;small&quot;);
+        const gifted = normalizeGiftedCases(state.caseGiftedCases);
+        const giftedCount = Math.max(0, Math.floor(Number(gifted[type] || 0)));
+        if (giftedCount &gt; 0) {
+          const suffix = giftedCount &gt; 1 ? ` · ×${formatter.format(giftedCount)}` : &quot;&quot;;
+          return `&lt;button class=&quot;case-info-primary&quot; data-open-gifted-case=&quot;${escapePurchaseText(type)}&quot; type=&quot;button&quot;&gt;Открыть кейс${suffix}&lt;/button&gt;`;
+        }
+        const levelCase = availableLevelCases().find((entry) =&gt; String(entry?.caseType || &quot;&quot;) === type);
+        if (levelCase) {
+          return `&lt;button class=&quot;case-info-primary&quot; data-open-level-case=&quot;${Math.floor(Number(levelCase.level || 0))}&quot; type=&quot;button&quot;&gt;Открыть кейс&lt;/button&gt;`;
+        }
+        return `&lt;button class=&quot;case-info-primary&quot; type=&quot;button&quot; disabled&gt;Нет кейса на складе&lt;/button&gt;`;
+      }
+
       function showAlexCaseRewardsInfo() {
         if (!caseLayer || !caseContentEl) return;
         const collection = alexCollectionClientState();
@@ -18132,28 +18147,29 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           [&quot;skin&quot;, &quot;Скин Алекс&quot;, CASE_SKIN_CATALOG.alex.src, &quot;сам Алекс&quot;],
           [&quot;trail&quot;, &quot;След&quot;, CASE_TRAIL_CATALOG.alex_trail.src, &quot;След Алекса&quot;],
           [&quot;frame&quot;, &quot;Рамка&quot;, CASE_FRAME_CATALOG.alex_frame_1.src, &quot;любая из 2 рамок&quot;],
-          [&quot;avatar&quot;, &quot;Аватар&quot;, CASE_AVATAR_CATALOG.alex_avatar_1.src, &quot;любая из 2 аватарок&quot;]
+          [&quot;avatar&quot;, &quot;Аватарка&quot;, CASE_AVATAR_CATALOG.alex_avatar_1.src, &quot;любая из 2 аватарок&quot;]
         ];
         const slots = slotDefs.map(([key,title,src,detail]) =&gt; `&lt;div class=&quot;alex-collection-slot${collection.slots[key] ? &quot; is-owned&quot; : &quot;&quot;}&quot;&gt;&lt;span&gt;&lt;img src=&quot;${escapePurchaseText(src)}&quot; alt=&quot;&quot;&gt;&lt;/span&gt;&lt;strong&gt;${escapePurchaseText(title)}&lt;/strong&gt;&lt;small&gt;${collection.slots[key] ? &quot;Получено&quot; : escapePurchaseText(detail)}&lt;/small&gt;${collection.slots[key] ? &quot;&lt;b&gt;✓&lt;/b&gt;&quot; : &quot;&quot;}&lt;/div&gt;`).join(&quot;&quot;);
         const uniqueRewards = [
-          caseInfoSimpleReward(&quot;Скин · Алекс&quot;, &quot;Главная награда коллекции&quot;, 0.12, CASE_SKIN_CATALOG.alex.src),
+          `&lt;div class=&quot;case-info-simple-reward is-main-reward&quot;&gt;&lt;span class=&quot;case-info-main-badge&quot;&gt;Главная награда&lt;/span&gt;&lt;img src=&quot;${escapePurchaseText(CASE_SKIN_CATALOG.alex.src)}&quot; alt=&quot;&quot;&gt;&lt;span&gt;&lt;strong&gt;Скин · Алекс&lt;/strong&gt;&lt;small&gt;Главная награда коллекции&lt;/small&gt;&lt;/span&gt;&lt;em&gt;${caseChanceLabel(0.12)}&lt;/em&gt;&lt;/div&gt;`,
           caseInfoSimpleReward(&quot;След Алекса&quot;, &quot;Эксклюзивный след&quot;, 0.15, CASE_TRAIL_CATALOG.alex_trail.src),
           caseInfoSimpleReward(&quot;Рамка Алекса I&quot;, &quot;Закрывает слот «Рамка»&quot;, 0.075, CASE_FRAME_CATALOG.alex_frame_1.src),
           caseInfoSimpleReward(&quot;Рамка Алекса II&quot;, &quot;Закрывает слот «Рамка»&quot;, 0.075, CASE_FRAME_CATALOG.alex_frame_2.src),
-          caseInfoSimpleReward(&quot;Аватар Алекса I&quot;, &quot;Закрывает слот «Аватар»&quot;, 0.075, CASE_AVATAR_CATALOG.alex_avatar_1.src),
-          caseInfoSimpleReward(&quot;Аватар Алекса II&quot;, &quot;Закрывает слот «Аватар»&quot;, 0.075, CASE_AVATAR_CATALOG.alex_avatar_2.src)
+          caseInfoSimpleReward(&quot;Аватар Алекса I&quot;, &quot;Любая из 2 аватарок&quot;, 0.075, CASE_AVATAR_CATALOG.alex_avatar_1.src),
+          caseInfoSimpleReward(&quot;Аватар Алекса II&quot;, &quot;Любая из 2 аватарок&quot;, 0.075, CASE_AVATAR_CATALOG.alex_avatar_2.src)
         ].join(&quot;&quot;);
         const currencyChance = CASE_REWARD_CHANCES.alex.points;
         const currencies = [
-          caseInfoSimpleReward(&quot;Очки&quot;, &quot;2 000–90 000&quot;, currencyChance, caseResourceImage(&quot;points&quot;)),
-          caseInfoSimpleReward(&quot;Зефир&quot;, &quot;50–130&quot;, currencyChance, caseResourceImage(&quot;treats&quot;)),
-          caseInfoSimpleReward(&quot;Кофе&quot;, &quot;50–130&quot;, currencyChance, caseResourceImage(&quot;coffee&quot;))
+          caseInfoSimpleReward(&quot;Очки&quot;, &quot;2 000–25 000 · крупные суммы реже&quot;, currencyChance, caseResourceImage(&quot;points&quot;)),
+          caseInfoSimpleReward(&quot;Кофе&quot;, &quot;20–50&quot;, currencyChance, caseResourceImage(&quot;coffee&quot;)),
+          caseInfoSimpleReward(&quot;Зефир&quot;, &quot;20–50&quot;, currencyChance, caseResourceImage(&quot;treats&quot;))
         ].join(&quot;&quot;);
         const rewardState = collection.complete
           ? (collection.rewardClaimed ? &quot;Награда за коллекцию уже выдана&quot; : &quot;Коллекция собрана — награда будет выдана сервером&quot;)
           : `Осталось собрать: ${formatter.format(4 - collection.count)}`;
+        const openAction = caseInfoOpenActionMarkup(&quot;alex&quot;);
         caseRouletteBusy = false;
-        caseContentEl.innerHTML = `&lt;div class=&quot;case-info-head is-alex&quot;&gt;${caseImageMarkup(&quot;alex&quot;, false, &quot;case-info-chest&quot;)}&lt;span&gt;&lt;small&gt;Особый тематический кейс&lt;/small&gt;&lt;h2 id=&quot;case-dialog-title&quot;&gt;Кейс Алекса&lt;/h2&gt;&lt;p&gt;Без гаранта. Каждое открытие — независимый шанс.&lt;/p&gt;&lt;/span&gt;&lt;/div&gt;&lt;section class=&quot;alex-collection-panel&quot;&gt;&lt;div class=&quot;alex-collection-head&quot;&gt;&lt;span&gt;&lt;strong&gt;Коллекция Алекса · ${collection.count}/4&lt;/strong&gt;&lt;small&gt;${escapePurchaseText(rewardState)}&lt;/small&gt;&lt;/span&gt;${caseImageMarkup(&quot;gold&quot;, false, &quot;alex-collection-gold&quot;)}&lt;/div&gt;&lt;div class=&quot;alex-collection-slots&quot;&gt;${slots}&lt;/div&gt;&lt;div class=&quot;alex-collection-prize&quot;&gt;&lt;b&gt;🎁&lt;/b&gt;&lt;span&gt;&lt;strong&gt;Награда за 4/4 — Золотой кейс&lt;/strong&gt;&lt;small&gt;Выдаётся один раз, когда коллекция впервые собрана полностью.&lt;/small&gt;&lt;/span&gt;&lt;/div&gt;&lt;/section&gt;&lt;section class=&quot;case-info-section&quot;&gt;&lt;div class=&quot;case-info-section-title&quot;&gt;&lt;span&gt;&lt;strong&gt;Предметы коллекции&lt;/strong&gt;&lt;small&gt;Рамки и аватарки имеют по две версии&lt;/small&gt;&lt;/span&gt;&lt;em&gt;0,57%&lt;/em&gt;&lt;/div&gt;&lt;div class=&quot;case-info-simple-list&quot;&gt;${uniqueRewards}&lt;/div&gt;&lt;/section&gt;&lt;section class=&quot;case-info-section&quot;&gt;&lt;div class=&quot;case-info-section-title&quot;&gt;&lt;span&gt;&lt;strong&gt;Игровая валюта&lt;/strong&gt;&lt;small&gt;Остальные 99,43% распределены поровну&lt;/small&gt;&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;case-info-simple-list&quot;&gt;${currencies}&lt;/div&gt;&lt;/section&gt;&lt;div class=&quot;case-info-note is-alex&quot;&gt;&lt;strong&gt;Без гаранта и pity&lt;/strong&gt;&lt;span&gt;Скин Алекс — 0,12%. След — 0,15%. Рамки — суммарно 0,15% (по 0,075% каждая). Аватарки — суммарно 0,15% (по 0,075% каждая). Повтор уже полученного уникального предмета автоматически заменяется на 10 000 очков.&lt;/span&gt;&lt;/div&gt;&lt;button class=&quot;case-result-done&quot; data-case-close type=&quot;button&quot;&gt;Понятно&lt;/button&gt;`;
+        caseContentEl.innerHTML = `&lt;div class=&quot;case-info-view case-info-view--alex&quot;&gt;&lt;div class=&quot;case-info-hero is-alex&quot;&gt;&lt;span class=&quot;case-info-hero-art&quot;&gt;${caseImageMarkup(&quot;alex&quot;, false, &quot;case-info-chest&quot;)}&lt;/span&gt;&lt;span class=&quot;case-info-hero-copy&quot;&gt;&lt;small class=&quot;case-info-kicker&quot;&gt;◆ Особый тематический кейс&lt;/small&gt;&lt;h2 id=&quot;case-dialog-title&quot;&gt;Кейс Алекса&lt;/h2&gt;&lt;p&gt;Без гаранта. Каждое открытие — независимый шанс.&lt;/p&gt;&lt;/span&gt;&lt;/div&gt;&lt;section class=&quot;alex-collection-panel is-v2&quot;&gt;&lt;div class=&quot;alex-collection-main&quot;&gt;&lt;div class=&quot;alex-collection-head&quot;&gt;&lt;span&gt;&lt;strong&gt;Коллекция Алекса · ${collection.count}/4&lt;/strong&gt;&lt;small&gt;${escapePurchaseText(rewardState)}&lt;/small&gt;&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;alex-collection-slots&quot;&gt;${slots}&lt;/div&gt;&lt;/div&gt;&lt;aside class=&quot;alex-collection-reward-card&quot;&gt;&lt;small&gt;Награда за 4/4&lt;/small&gt;${caseImageMarkup(&quot;gold&quot;, false, &quot;alex-collection-gold&quot;)}&lt;strong&gt;Золотой кейс&lt;/strong&gt;&lt;span&gt;Выдаётся один раз, когда коллекция впервые собрана полностью.&lt;/span&gt;&lt;/aside&gt;&lt;/section&gt;&lt;section class=&quot;case-info-section case-info-section--premium&quot;&gt;&lt;div class=&quot;case-info-section-title&quot;&gt;&lt;span&gt;&lt;strong&gt;Предметы в кейсе&lt;/strong&gt;&lt;small&gt;Рамки и аватарки имеют по две версии&lt;/small&gt;&lt;/span&gt;&lt;em&gt;Шансы выпадения&lt;/em&gt;&lt;/div&gt;&lt;div class=&quot;case-info-simple-list&quot;&gt;${uniqueRewards}&lt;/div&gt;&lt;/section&gt;&lt;section class=&quot;case-info-section&quot;&gt;&lt;div class=&quot;case-info-section-title&quot;&gt;&lt;span&gt;&lt;strong&gt;Игровая валюта&lt;/strong&gt;&lt;small&gt;Остальные 99,43% распределены поровну между тремя видами наград&lt;/small&gt;&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;case-info-simple-list&quot;&gt;${currencies}&lt;/div&gt;&lt;div class=&quot;alex-points-bands&quot;&gt;&lt;strong&gt;Если выпали очки&lt;/strong&gt;&lt;span&gt;2–5 тыс. — 55% · 5–10 тыс. — 25% · 10–15 тыс. — 12% · 15–20 тыс. — 6% · 20–25 тыс. — 2%&lt;/span&gt;&lt;/div&gt;&lt;/section&gt;&lt;div class=&quot;case-info-note is-alex&quot;&gt;&lt;strong&gt;Без гаранта и pity&lt;/strong&gt;&lt;span&gt;Скин Алекс — 0,12%. След — 0,15%. Рамки — суммарно 0,15% (по 0,075% каждая). Аватарки — суммарно 0,15% (по 0,075% каждая). Повтор уже полученного уникального предмета автоматически заменяется на 10 000 очков.&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;case-info-actions&quot;&gt;${openAction}&lt;button class=&quot;case-info-secondary&quot; data-case-close type=&quot;button&quot;&gt;Закрыть&lt;/button&gt;&lt;/div&gt;&lt;/div&gt;`;
         openCaseLayerShell();
         caseLayer.querySelector(&quot;.case-dialog&quot;)?.scrollTo({ top: 0, behavior: &quot;auto&quot; });
       }
@@ -18249,7 +18265,8 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
               : `&lt;strong&gt;Гарант отключён&lt;/strong&gt;&lt;span&gt;Полученные предметы исключаются из Легендарного кейса, а шанс полностью собранной категории переходит в очки.&lt;/span&gt;`
             : `&lt;strong&gt;Повтор косметики не пропадает&lt;/strong&gt;&lt;span&gt;За дубликат начисляется компенсация очками.&lt;/span&gt;`;
         caseRouletteBusy = false;
-        caseContentEl.innerHTML = `&lt;div class=&quot;case-info-head&quot;&gt;${caseImageMarkup(info.type, false, &quot;case-info-chest&quot;)}&lt;span&gt;&lt;small&gt;Содержимое кейса&lt;/small&gt;&lt;h2 id=&quot;case-dialog-title&quot;&gt;${escapePurchaseText(info.title)}&lt;/h2&gt;&lt;p&gt;При открытии выпадает одна гарантированная награда.&lt;/p&gt;&lt;/span&gt;&lt;/div&gt;${guaranteeProgress}&lt;section class=&quot;case-info-section&quot;&gt;&lt;div class=&quot;case-info-section-title&quot;&gt;&lt;span&gt;&lt;strong&gt;Шансы по категориям&lt;/strong&gt;&lt;small&gt;Вероятность за одно открытие&lt;/small&gt;&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;case-info-category-list&quot;&gt;${categories}&lt;/div&gt;&lt;/section&gt;&lt;section class=&quot;case-info-section&quot;&gt;&lt;div class=&quot;case-info-section-title&quot;&gt;&lt;span&gt;&lt;strong&gt;Ресурсы и усилители&lt;/strong&gt;&lt;small&gt;Точное количество и шанс&lt;/small&gt;&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;case-info-simple-list&quot;&gt;${simpleRewards}&lt;/div&gt;&lt;/section&gt;${physicalSection}${musicSection}${cosmeticSections}&lt;div class=&quot;case-info-note&quot;&gt;${note}&lt;/div&gt;&lt;button class=&quot;case-result-done&quot; data-case-close type=&quot;button&quot;&gt;Понятно&lt;/button&gt;`;
+        const openAction = caseInfoOpenActionMarkup(info.type);
+        caseContentEl.innerHTML = `&lt;div class=&quot;case-info-view&quot;&gt;&lt;div class=&quot;case-info-hero&quot;&gt;&lt;span class=&quot;case-info-hero-art&quot;&gt;${caseImageMarkup(info.type, false, &quot;case-info-chest&quot;)}&lt;/span&gt;&lt;span class=&quot;case-info-hero-copy&quot;&gt;&lt;small class=&quot;case-info-kicker&quot;&gt;Содержимое кейса&lt;/small&gt;&lt;h2 id=&quot;case-dialog-title&quot;&gt;${escapePurchaseText(info.title)}&lt;/h2&gt;&lt;p&gt;При открытии выпадает одна гарантированная награда.&lt;/p&gt;&lt;/span&gt;&lt;/div&gt;${guaranteeProgress}&lt;section class=&quot;case-info-section&quot;&gt;&lt;div class=&quot;case-info-section-title&quot;&gt;&lt;span&gt;&lt;strong&gt;Шансы по категориям&lt;/strong&gt;&lt;small&gt;Вероятность за одно открытие&lt;/small&gt;&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;case-info-category-list&quot;&gt;${categories}&lt;/div&gt;&lt;/section&gt;&lt;section class=&quot;case-info-section&quot;&gt;&lt;div class=&quot;case-info-section-title&quot;&gt;&lt;span&gt;&lt;strong&gt;Ресурсы и усилители&lt;/strong&gt;&lt;small&gt;Точное количество и шанс&lt;/small&gt;&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;case-info-simple-list&quot;&gt;${simpleRewards}&lt;/div&gt;&lt;/section&gt;${physicalSection}${musicSection}${cosmeticSections}&lt;div class=&quot;case-info-note&quot;&gt;${note}&lt;/div&gt;&lt;div class=&quot;case-info-actions&quot;&gt;${openAction}&lt;button class=&quot;case-info-secondary&quot; data-case-close type=&quot;button&quot;&gt;Закрыть&lt;/button&gt;&lt;/div&gt;&lt;/div&gt;`;
         applyBoosterArtIcons(caseContentEl);
         openCaseLayerShell();
         caseLayer.querySelector(&quot;.case-dialog&quot;)?.scrollTo({ top: 0, behavior: &quot;auto&quot; });
@@ -24419,6 +24436,53 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 }
 &lt;/style&gt;
 
+&lt;style id=&quot;zefirok-case-info-v2&quot;&gt;
+#zefirok-maltipoo-runner .case-info-view{display:grid;gap:10px;padding:2px 0 1px}
+#zefirok-maltipoo-runner .case-info-hero{display:grid;grid-template-columns:112px minmax(0,1fr);align-items:center;gap:14px;padding:12px 30px 12px 10px;border-radius:20px;background:linear-gradient(135deg,#fff9f5,#fffdf8);box-shadow:inset 0 0 0 1px rgba(225,190,176,.28);text-align:left}
+#zefirok-maltipoo-runner .case-info-hero.is-alex{background:radial-gradient(circle at 12% 30%,rgba(255,219,228,.78),transparent 38%),linear-gradient(135deg,#fff9f3,#f4f8e4);box-shadow:inset 0 0 0 1px rgba(170,178,99,.34)}
+#zefirok-maltipoo-runner .case-info-hero-art{display:grid;place-items:center;min-width:0}
+#zefirok-maltipoo-runner .case-info-hero .case-info-chest{width:108px;height:108px;object-fit:contain;filter:drop-shadow(0 10px 15px rgba(116,77,55,.12))}
+#zefirok-maltipoo-runner .case-info-hero-copy{display:grid;gap:5px;min-width:0}
+#zefirok-maltipoo-runner .case-info-kicker{width:max-content;max-width:100%;padding:5px 9px;border-radius:999px;background:#fff0f5;color:#bd6182;font-size:8px!important;font-weight:950!important;letter-spacing:.08em!important;text-transform:uppercase}
+#zefirok-maltipoo-runner .case-info-hero.is-alex .case-info-kicker{background:#f1f6dd;color:#6e843d}
+#zefirok-maltipoo-runner .case-info-hero h2{margin:0;color:#5e3b2a;font-size:24px;line-height:1.02}
+#zefirok-maltipoo-runner .case-info-hero p{margin:0;color:#92705f;font-size:10px;line-height:1.45}
+#zefirok-maltipoo-runner .case-info-view .case-info-section{margin-top:0;border-radius:18px;padding:11px;background:rgba(255,255,255,.83);box-shadow:inset 0 0 0 1px rgba(230,202,190,.36),0 6px 16px rgba(93,55,39,.05)}
+#zefirok-maltipoo-runner .case-info-section--premium{background:linear-gradient(180deg,#fffdf9,#fff9f5)}
+#zefirok-maltipoo-runner .case-info-view .case-info-simple-reward{position:relative;min-height:48px;padding:6px 8px;border-radius:12px;box-shadow:inset 0 0 0 1px rgba(236,219,210,.42)}
+#zefirok-maltipoo-runner .case-info-view .case-info-simple-reward.is-main-reward{grid-template-columns:42px minmax(0,1fr) auto;padding-top:22px;background:linear-gradient(100deg,#fff3ce,#fffaf2 52%,#fff4f7);box-shadow:inset 0 0 0 1px rgba(230,181,77,.38)}
+#zefirok-maltipoo-runner .case-info-main-badge{position:absolute;left:0;top:0;padding:4px 8px;border-radius:12px 0 9px 0;background:linear-gradient(135deg,#f5c24a,#eaa53a);color:#875117;font-size:7px;font-weight:950;letter-spacing:.04em;text-transform:uppercase}
+#zefirok-maltipoo-runner .alex-collection-panel.is-v2{grid-template-columns:minmax(0,1fr) 92px;align-items:stretch;gap:8px;margin-top:0;padding:10px}
+#zefirok-maltipoo-runner .alex-collection-main{display:grid;gap:8px;min-width:0}
+#zefirok-maltipoo-runner .alex-collection-panel.is-v2 .alex-collection-slots{gap:5px}
+#zefirok-maltipoo-runner .alex-collection-panel.is-v2 .alex-collection-slot{padding:6px 3px;min-height:76px}
+#zefirok-maltipoo-runner .alex-collection-panel.is-v2 .alex-collection-slot&gt;span{width:42px;height:42px}
+#zefirok-maltipoo-runner .alex-collection-panel.is-v2 .alex-collection-slot img{max-width:42px;max-height:42px}
+#zefirok-maltipoo-runner .alex-collection-reward-card{display:grid;justify-items:center;align-content:center;gap:3px;padding:7px 5px;border-radius:15px;background:linear-gradient(180deg,#fff9e8,#fff2cb);box-shadow:inset 0 0 0 1px rgba(225,178,75,.35);text-align:center;color:#704b2e}
+#zefirok-maltipoo-runner .alex-collection-reward-card&gt;small{font-size:8px;font-weight:900;color:#9b6d33}
+#zefirok-maltipoo-runner .alex-collection-reward-card .alex-collection-gold{width:56px;height:56px}
+#zefirok-maltipoo-runner .alex-collection-reward-card&gt;strong{font-size:9px;line-height:1.15}
+#zefirok-maltipoo-runner .alex-collection-reward-card&gt;span{font-size:6.5px;line-height:1.3;color:#99734c}
+#zefirok-maltipoo-runner .alex-points-bands{display:grid;gap:3px;padding:8px 10px;border-radius:12px;background:linear-gradient(135deg,#fff7dc,#fffaf0);color:#795631;text-align:left}
+#zefirok-maltipoo-runner .alex-points-bands strong{font-size:9px}
+#zefirok-maltipoo-runner .alex-points-bands span{font-size:7.5px;line-height:1.4;color:#9a7752}
+#zefirok-maltipoo-runner .case-info-actions{position:sticky;bottom:-1px;z-index:3;display:grid;gap:7px;padding-top:8px;background:linear-gradient(180deg,rgba(255,246,239,0),#fff5ec 23%,#fff5ec)}
+#zefirok-maltipoo-runner .case-info-primary,#zefirok-maltipoo-runner .case-info-secondary{width:100%;min-height:46px;border-radius:15px;font:900 12px/1.1 inherit}
+#zefirok-maltipoo-runner .case-info-primary{border:1px solid #df5c8c;background:linear-gradient(135deg,#f178a1,#db4f83);color:#fff;box-shadow:0 8px 18px rgba(207,73,121,.20)}
+#zefirok-maltipoo-runner .case-info-primary:disabled{border-color:#eadbd6;background:#f1e9e5;color:#a9958c;box-shadow:none}
+#zefirok-maltipoo-runner .case-info-secondary{border:1px solid rgba(225,192,183,.75);background:#fffaf8;color:#a06476}
+@media(max-width:390px){
+#zefirok-maltipoo-runner .case-info-hero{grid-template-columns:88px minmax(0,1fr);gap:10px;padding:10px 26px 10px 8px}
+#zefirok-maltipoo-runner .case-info-hero .case-info-chest{width:86px;height:86px}
+#zefirok-maltipoo-runner .case-info-hero h2{font-size:20px}
+#zefirok-maltipoo-runner .alex-collection-panel.is-v2{grid-template-columns:1fr}
+#zefirok-maltipoo-runner .alex-collection-reward-card{grid-template-columns:50px minmax(0,1fr);justify-items:start;align-items:center;text-align:left}
+#zefirok-maltipoo-runner .alex-collection-reward-card&gt;small{grid-column:1/-1}
+#zefirok-maltipoo-runner .alex-collection-reward-card .alex-collection-gold{grid-column:1;grid-row:2/4;width:50px;height:50px}
+#zefirok-maltipoo-runner .alex-collection-reward-card&gt;strong{grid-column:2}
+#zefirok-maltipoo-runner .alex-collection-reward-card&gt;span{grid-column:2}
+}
+&lt;/style&gt;
 &lt;script id=&quot;zefirok-v0796-gameplay-smoothness-audit&quot; type=&quot;application/json&quot;&gt;{&quot;version&quot;:&quot;0.79.6&quot;,&quot;scope&quot;:&quot;gameplay-smoothness&quot;,&quot;backwardCompatible&quot;:true,&quot;gameplayValuesChanged&quot;:false,&quot;optimizations&quot;:[&quot;fixedTimestep60Hz&quot;,&quot;renderInterpolation&quot;,&quot;deferredHeavyAnticheatDuringRun&quot;,&quot;scaledSpriteCanvasCache&quot;,&quot;phasePerformanceMetrics&quot;,&quot;legacyLoopFallback&quot;]}&lt;/script&gt;
 &lt;script id=&quot;zefirok-v0792-client-optimization-audit&quot; type=&quot;application/json&quot;&gt;{&quot;version&quot;:&quot;0.79.2&quot;,&quot;scope&quot;:&quot;safe-client-performance&quot;,&quot;gameplayLogicChanged&quot;:false,&quot;optimizations&quot;:[&quot;deferredHiddenUiImages&quot;,&quot;lazyAudioWarmup&quot;,&quot;staticCafeCanvasCache&quot;,&quot;inPlaceGameArrays&quot;,&quot;cachedCanvasDimensions&quot;,&quot;throttledResize&quot;,&quot;lazyLeaderboardAvatars&quot;,&quot;reducedHiddenRenders&quot;,&quot;reducedWarehouseRenders&quot;,&quot;reducedLeaderboardRepaints&quot;]}&lt;/script&gt;
 

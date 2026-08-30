@@ -11,6 +11,13 @@ const DEFAULT_SHOP_PRODUCTS = Object.freeze({
 });
 
 const ALEX_CASE_DUPLICATE_POINTS = 10000;
+const ALEX_CASE_POINT_BANDS = Object.freeze([
+  Object.freeze({ min: 2000, max: 5000, weight: 55 }),
+  Object.freeze({ min: 5001, max: 10000, weight: 25 }),
+  Object.freeze({ min: 10001, max: 15000, weight: 12 }),
+  Object.freeze({ min: 15001, max: 20000, weight: 6 }),
+  Object.freeze({ min: 20001, max: 25000, weight: 2 })
+]);
 const ALEX_CASE_CURRENCY_CHANCE = (100 - 0.12 - 0.15 - 0.15 - 0.15) / 3;
 const ALEX_CASE_DEFINITION = Object.freeze({
   id: "alex",
@@ -23,7 +30,8 @@ const ALEX_CASE_DEFINITION = Object.freeze({
     points: ALEX_CASE_CURRENCY_CHANCE, treats: ALEX_CASE_CURRENCY_CHANCE, coffee: ALEX_CASE_CURRENCY_CHANCE,
     booster: 0, epicCosmetic: 0, mythicCosmetic: 0, legendaryCosmetic: 0, music: 0, physical: 0
   }),
-  ranges: Object.freeze({ points:[2500,5000], treats:[20,60], coffee:[20,60] }),
+  ranges: Object.freeze({ points:[2000,25000], treats:[20,50], coffee:[20,50] }),
+  pointBands: ALEX_CASE_POINT_BANDS,
   collectionRewardCaseType: "gold"
 });
 
@@ -9128,6 +9136,18 @@ function alexCaseCollectionStatus(state) {
   return { count, total:4, complete:count >= 4, slots };
 }
 
+function rollAlexCasePoints(rng = caseSecureFloat) {
+  const random = typeof rng === "function" ? rng : caseSecureFloat;
+  const roll = Math.max(0, Math.min(0.999999999999, Number(random()) || 0)) * 100;
+  let cursor = 0;
+  for (const band of ALEX_CASE_POINT_BANDS) {
+    cursor += Math.max(0, Number(band.weight) || 0);
+    if (roll < cursor) return caseRandomInt(band.min, band.max, random);
+  }
+  const fallback = ALEX_CASE_POINT_BANDS[ALEX_CASE_POINT_BANDS.length - 1];
+  return caseRandomInt(fallback.min, fallback.max, random);
+}
+
 function rollAlexCase(sourceState, currentOwnedSkins = [], rng = caseSecureFloat) {
   const state = JSON.parse(JSON.stringify(sourceState || {}));
   state.ownedSkins = normalizeCurrentOwnedSkins(currentOwnedSkins);
@@ -9173,7 +9193,7 @@ function rollAlexCase(sourceState, currentOwnedSkins = [], rng = caseSecureFloat
           const currencyRoll = roll - cursor;
           const band = ALEX_CASE_CURRENCY_CHANCE;
           if (currencyRoll < band) {
-            points = caseRandomInt(ALEX_CASE_DEFINITION.ranges.points[0], ALEX_CASE_DEFINITION.ranges.points[1], rng);
+            points = rollAlexCasePoints(rng);
             rewards.push({ kind:"points", amount:points, alexCase:true });
           } else if (currencyRoll < band * 2) {
             treats = caseRandomInt(ALEX_CASE_DEFINITION.ranges.treats[0], ALEX_CASE_DEFINITION.ranges.treats[1], rng);
