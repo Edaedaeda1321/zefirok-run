@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "catalogHash": "f2e245c9b114562f",
-  "count": 436,
+  "catalogHash": "64e8a711f0eb7cbb",
+  "count": 438,
   "images": [
     {
       "fileName": "achievements/background_achivment_panel.png",
@@ -778,6 +778,22 @@
       "path": "/assets/cases/boosters/80C21DC3-04A8-46F7-B8E4-9AC8FE13CCEB.PNG",
       "size": 973982,
       "modified": 1784926950000
+    },
+    {
+      "fileName": "cases/boosters/icon_2shans.png",
+      "label": "Icon 2shans",
+      "folder": "cases/boosters",
+      "path": "/assets/cases/boosters/icon_2shans.png",
+      "size": 1686254,
+      "modified": 1788118892000
+    },
+    {
+      "fileName": "cases/boosters/icon_buster_shit_zeffi.png",
+      "label": "Icon buster shit zeffi",
+      "folder": "cases/boosters",
+      "path": "/assets/cases/boosters/icon_buster_shit_zeffi.png",
+      "size": 2243462,
+      "modified": 1788118892000
     },
     {
       "fileName": "cases/Bronze_close.png",

@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "catalogHash": "3689f0df3c4fa837",
-  "count": 97,
+  "catalogHash": "9813c2d8e62aeeba",
+  "count": 99,
   "images": [
     {
       "fileName": "398D69BA-8943-4846-94B3-FC5CB717A67F.PNG",
@@ -410,6 +410,22 @@
       "path": "/assets/cases/boosters/80C21DC3-04A8-46F7-B8E4-9AC8FE13CCEB.PNG",
       "hash": "c312a097210e",
       "size": 973982
+    },
+    {
+      "fileName": "boosters/icon_2shans.png",
+      "label": "Icon 2shans",
+      "folder": "boosters",
+      "path": "/assets/cases/boosters/icon_2shans.png",
+      "hash": "e978b952f04a",
+      "size": 1686254
+    },
+    {
+      "fileName": "boosters/icon_buster_shit_zeffi.png",
+      "label": "Icon buster shit zeffi",
+      "folder": "boosters",
+      "path": "/assets/cases/boosters/icon_buster_shit_zeffi.png",
+      "hash": "8c630b41f985",
+      "size": 2243462
     },
     {
       "fileName": "Bronze_close.png",
