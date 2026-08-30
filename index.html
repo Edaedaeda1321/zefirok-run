@@ -12350,6 +12350,9 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       let clientPerformancePublishTimer = 0;
       let clientLongTaskObserver = null;
       let visibilityPauseActive = false;
+      let zeffiPauseCountdownActive = false;
+      let zeffiPauseCountdownTimer = 0;
+      let zeffiPauseCountdownRunId = &quot;&quot;;
       let lastSavedProgressContentSignature = &quot;&quot;;
       let skinsRenderSignature = &quot;&quot;;
       let skinShopFilter = &quot;all&quot;;
@@ -13164,9 +13167,9 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         seasonPassAttentionCount: 0,
         caseMythicPityCounter: 0,
         caseLegendaryPityCounter: 0,
-        caseBoosters: { points: 0, treats: 0, coffee: 0, shield: 0, second_chance: 0 },
+        caseBoosters: { points: 0, treats: 0, coffee: 0, shield: 0, second_chance: 0, pause: 0 },
         caseOwnedSpecials: [],
-        activeCaseBoosters: { points: 0, treats: 0, coffee: 0, shield: 0, second_chance: 0 },
+        activeCaseBoosters: { points: 0, treats: 0, coffee: 0, shield: 0, second_chance: 0, pause: 0 },
         activeCaseBooster: { type: &quot;&quot;, runsLeft: 0 },
         caseOwnedAvatars: [],
         caseActiveAvatar: &quot;&quot;,
@@ -13176,9 +13179,10 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         caseActiveTrail: &quot;&quot;,
         pendingBoosterRuns: [],
         caseRunId: &quot;&quot;,
-        runCaseBoosters: { points: false, treats: false, coffee: false, shield: false, second_chance: false },
+        runCaseBoosters: { points: false, treats: false, coffee: false, shield: false, second_chance: false, pause: false },
         runShieldUsed: false,
         runSecondChanceUsed: false,
+        runPauseUsed: false,
         collisionGraceUntil: 0,
         trailClock: 0,
         economyResetKey: ECONOMY_RESET_KEY,
@@ -14221,7 +14225,8 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         coffee: { title: &quot;×2 кофе&quot;, src: &quot;/assets/cases/boosters/11FDBEBF-D838-4DA5-AA57-9DE0E4BA26AE.PNG&quot;, noun: &quot;кофе&quot;, runs: 2 },
         treats: { title: &quot;×2 зефир&quot;, src: &quot;/assets/cases/boosters/80C21DC3-04A8-46F7-B8E4-9AC8FE13CCEB.PNG&quot;, noun: &quot;зефир&quot;, runs: 2 },
         shield: { title: &quot;Щит Зеффи&quot;, src: &quot;/assets/cases/boosters/icon_buster_shit_zeffi.png&quot;, noun: &quot;защита от столкновения&quot;, runs: 1 },
-        second_chance: { title: &quot;Второй шанс&quot;, src: &quot;/assets/cases/boosters/icon_2shans.png&quot;, noun: &quot;продолжение забега&quot;, runs: 1 }
+        second_chance: { title: &quot;Второй шанс&quot;, src: &quot;/assets/cases/boosters/icon_2shans.png&quot;, noun: &quot;продолжение забега&quot;, runs: 1 },
+        pause: { title: &quot;Пауза Зеффи&quot;, src: &quot;/assets/cases/boosters/icon_pause_zeffi.png&quot;, noun: &quot;безопасная пауза&quot;, runs: 1 }
       });
       const CASE_REWARD_BOOSTER_TYPES = Object.freeze([&quot;points&quot;, &quot;treats&quot;, &quot;coffee&quot;]);
       const CASE_SPECIAL_CATALOG = Object.freeze({
@@ -15603,6 +15608,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 
       function reset(preserveButtonVisual = false, preservePauseVisual = false) {
         cancelGameLoop();
+        cancelZeffiPauseCountdown();
         visibilityPauseActive = false;
         clientPerformanceLastFrameAt = 0;
         clientPerformanceLastFrameDurationMs = 0;
@@ -15614,6 +15620,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         state.runCaseBoosters = normalizeRunCaseBoosters({});
         state.runShieldUsed = false;
         state.runSecondChanceUsed = false;
+        state.runPauseUsed = false;
         state.collisionGraceUntil = 0;
         state.caseRunId = makeCaseRunId();
         const protectedRunId = String(state.caseRunId || &quot;&quot;);
@@ -15673,6 +15680,51 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         });
       }
 
+      function cancelZeffiPauseCountdown() {
+        if (zeffiPauseCountdownTimer) window.clearTimeout(zeffiPauseCountdownTimer);
+        zeffiPauseCountdownTimer = 0;
+        zeffiPauseCountdownActive = false;
+        zeffiPauseCountdownRunId = &quot;&quot;;
+      }
+
+      function startZeffiPauseCountdown(preserveButtonVisual = false) {
+        const runId = String(state.caseRunId || &quot;&quot;);
+        const runBoosters = normalizeRunCaseBoosters(state.runCaseBoosters);
+        if (zeffiPauseCountdownActive || !visibilityPauseActive || !state.paused || state.over || !runId || !runBoosters.pause || state.runPauseUsed) return false;
+        state.runPauseUsed = true;
+        zeffiPauseCountdownActive = true;
+        zeffiPauseCountdownRunId = runId;
+        renderActiveRunBooster();
+        let seconds = 3;
+        const renderCountdown = () =&gt; {
+          overlay.classList.remove(&quot;is-finish-modal&quot;);
+          overlay.classList.add(&quot;is-second-chance-modal&quot;);
+          overlay.innerHTML = `&lt;div class=&quot;modal second-chance-modal&quot; role=&quot;dialog&quot; aria-modal=&quot;true&quot; aria-label=&quot;Пауза Зеффи&quot;&gt;&lt;div class=&quot;second-chance-art&quot;&gt;&lt;img src=&quot;${CASE_BOOSTER_CATALOG.pause.src}&quot; alt=&quot;&quot; decoding=&quot;async&quot;&gt;&lt;/div&gt;&lt;strong&gt;Пауза Зеффи&lt;/strong&gt;&lt;div class=&quot;rule&quot;&gt;&lt;/div&gt;&lt;span&gt;Подготовься — продолжаем через &lt;b&gt;${seconds}&lt;/b&gt; сек.&lt;/span&gt;&lt;/div&gt;`;
+          overlay.style.display = &quot;grid&quot;;
+        };
+        const tick = () =&gt; {
+          if (!zeffiPauseCountdownActive || String(state.caseRunId || &quot;&quot;) !== zeffiPauseCountdownRunId || state.over || !state.paused) {
+            cancelZeffiPauseCountdown();
+            return;
+          }
+          if (document.visibilityState === &quot;hidden&quot;) {
+            cancelZeffiPauseCountdown();
+            return;
+          }
+          seconds -= 1;
+          if (seconds &lt;= 0) {
+            cancelZeffiPauseCountdown();
+            resume(preserveButtonVisual, true);
+            return;
+          }
+          renderCountdown();
+          zeffiPauseCountdownTimer = window.setTimeout(tick, 1000);
+        };
+        renderCountdown();
+        zeffiPauseCountdownTimer = window.setTimeout(tick, 1000);
+        return true;
+      }
+
       function jump() {
         if (overlay?.classList.contains(&quot;is-second-chance-modal&quot;)) return;
         if (state.running &amp;&amp; state.caseRunId &amp;&amp; authoritativeRunSessionReadyId !== String(state.caseRunId)) {
@@ -15724,7 +15776,9 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         showModal(&quot;Пауза&quot;, &quot;Тапни по витрине или нажми «Продолжить», чтобы вернуться в забег.&quot;);
       }
 
-      function resume(preserveButtonVisual = false) {
+      function resume(preserveButtonVisual = false, skipZeffiPause = false) {
+        if (!skipZeffiPause &amp;&amp; startZeffiPauseCountdown(preserveButtonVisual)) return;
+        cancelZeffiPauseCountdown();
         cancelGameLoop();
         visibilityPauseActive = false;
         clientPerformanceLastFrameAt = 0;
@@ -15768,6 +15822,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 
       function handleApplicationVisibilityChange() {
         if (document.visibilityState === &quot;hidden&quot;) {
+          if (zeffiPauseCountdownActive) cancelZeffiPauseCountdown();
           pauseForHiddenApplication();
           saveProgress();
           publishClientPerformance();
@@ -15785,6 +15840,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       function endGame() {
         flushDeferredAntiCheatGuard();
         return antiCheatWithTrustedChange(&quot;completed-run&quot;, () =&gt; {
+          cancelZeffiPauseCountdown();
           visibilityPauseActive = false;
           clientPerformanceLastFrameAt = 0;
         clientPerformanceLastFrameDurationMs = 0;
@@ -17420,7 +17476,8 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           treats: sanitizeProgressNumber(source.treats),
           coffee: sanitizeProgressNumber(source.coffee),
           shield: sanitizeProgressNumber(source.shield),
-          second_chance: sanitizeProgressNumber(source.second_chance)
+          second_chance: sanitizeProgressNumber(source.second_chance),
+          pause: sanitizeProgressNumber(source.pause)
         };
       }
 
@@ -17940,6 +17997,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
             if (!run[type]) return false;
             if (type === &quot;shield&quot; &amp;&amp; state.runShieldUsed) return false;
             if (type === &quot;second_chance&quot; &amp;&amp; state.runSecondChanceUsed) return false;
+            if (type === &quot;pause&quot; &amp;&amp; state.runPauseUsed) return false;
             return true;
           });
         }
@@ -18375,6 +18433,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         if (type === &quot;treats&quot;) return { what: &quot;Удваивает зефир, полученный за завершённый забег.&quot;, detail: &quot;Работает только на зефир, заработанный в забеге, и расходует один заряд после завершения.&quot; };
         if (type === &quot;shield&quot;) return { what: &quot;Поглощает одно столкновение или ошибку во время забега. После срабатывания защита исчезает.&quot;, detail: &quot;Щит закрепляется за следующим забегом и не переносится на следующий, даже если не понадобился.&quot; };
         if (type === &quot;second_chance&quot;) return { what: &quot;После проигрыша один раз предлагает «Продолжить» и возвращает в тот же забег.&quot;, detail: &quot;Очки, зефир и кофе уже заработанные до проигрыша сохраняются и не выдаются повторно.&quot; };
+        if (type === &quot;pause&quot;) return { what: &quot;После возвращения в игру из фона даёт 3 секунды подготовки перед продолжением.&quot;, detail: &quot;Срабатывает один раз за забег. Во время отсчёта игра остаётся полностью на паузе; скорость и награды не меняются.&quot; };
         return { what: &quot;&quot;, detail: &quot;&quot; };
       }
 
@@ -18404,7 +18463,9 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           ? &quot;На 1 следующий забег. Поглощает только первое столкновение и после этого исчезает.&quot;
           : id === &quot;second_chance&quot;
             ? &quot;На 1 следующий забег. После первого проигрыша можно один раз продолжить тот же забег.&quot;
-            : `На ${runs} следующих завершённых ${runs === 1 ? &quot;забег&quot; : &quot;забега&quot;} после активации.`;
+            : id === &quot;pause&quot;
+              ? &quot;На 1 следующий забег. При первом продолжении после возвращения из фона запускает 3-секундный отсчёт.&quot;
+              : `На ${runs} следующих завершённых ${runs === 1 ? &quot;забег&quot; : &quot;забега&quot;} после активации.`;
         const facts = isSpecial
           ? `&lt;div class=&quot;booster-info-fact&quot;&gt;&lt;strong&gt;Что делает&lt;/strong&gt;&lt;span&gt;Увеличивает получение XP профиля и сезонного пропуска в 2 раза.&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;booster-info-xp-tags&quot;&gt;&lt;span&gt;Профиль XP ×2&lt;/span&gt;&lt;span&gt;Сезон XP ×2&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;booster-info-fact&quot;&gt;&lt;strong&gt;Действует&lt;/strong&gt;&lt;span&gt;Автоматически и постоянно, пока активен текущий сезон и у игрока действует тариф Элитный+. Вручную не активируется и не расходуется.&lt;/span&gt;&lt;/div&gt;`
           : `&lt;div class=&quot;booster-info-fact&quot;&gt;&lt;strong&gt;Что делает&lt;/strong&gt;&lt;span&gt;${escapePurchaseText(info.what)}&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;booster-info-fact&quot;&gt;&lt;strong&gt;Действует&lt;/strong&gt;&lt;span&gt;${isActive ? `Ещё ${formatter.format(activeRuns)} ${caseRunWord(activeRuns)}. ` : &quot;&quot;}${escapePurchaseText(durationText)}&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;booster-info-fact&quot;&gt;&lt;strong&gt;В запасе&lt;/strong&gt;&lt;span&gt;${formatter.format(count)} шт.&lt;/span&gt;&lt;/div&gt;`;
@@ -18488,7 +18549,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           [chances.treats, caseInfoSimpleReward(&quot;Зефир&quot;, `${formatter.format(ranges.treats[0])}–${formatter.format(ranges.treats[1])} за открытие`, chances.treats, caseResourceImage(&quot;treats&quot;))],
           [chances.coffee, caseInfoSimpleReward(&quot;Кофе&quot;, `${formatter.format(ranges.coffee[0])}–${formatter.format(ranges.coffee[1])} за открытие`, chances.coffee, caseResourceImage(&quot;coffee&quot;))],
           [chances.points, caseInfoSimpleReward(&quot;Очки&quot;, `${formatter.format(ranges.points[0])}–${formatter.format(ranges.points[1])} в кошелёк`, chances.points, caseResourceImage(&quot;points&quot;))],
-          ...Object.entries(CASE_BOOSTER_CATALOG)
+          ...CASE_REWARD_BOOSTER_TYPES.map((type) =&gt; [type, CASE_BOOSTER_CATALOG[type]])
             .filter(() =&gt; boosterEachChance &gt; 0)
             .map(([type, item]) =&gt; [boosterEachChance, caseInfoSimpleReward(item.title, &quot;Работает 2 забега&quot;, boosterEachChance, item.src)])
         ].filter((entry) =&gt; Number(entry[0]) &gt; 0), 0);
@@ -21521,6 +21582,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
                 const active = normalizeActiveCaseBoosters(state.activeCaseBoosters, state.activeCaseBooster);
                 if (runBoosters.shield) active.shield = 0;
                 if (runBoosters.second_chance) active.second_chance = 0;
+                if (runBoosters.pause) active.pause = 0;
                 state.activeCaseBoosters = active;
                 state.activeCaseBooster = legacyActiveCaseBooster(active);
                 saveProgress();

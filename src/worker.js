@@ -404,8 +404,8 @@ const CASE_PHYSICAL_REWARDS = Object.freeze({
 });
 
 const CASE_REWARD_BOOSTER_TYPES = Object.freeze(["points", "treats", "coffee"]);
-const CASE_BOOSTER_TYPES = Object.freeze([...CASE_REWARD_BOOSTER_TYPES, "shield", "second_chance"]);
-const CASE_BOOSTER_RUNS = Object.freeze({ points:2, treats:2, coffee:2, shield:1, second_chance:1 });
+const CASE_BOOSTER_TYPES = Object.freeze([...CASE_REWARD_BOOSTER_TYPES, "shield", "second_chance", "pause"]);
+const CASE_BOOSTER_RUNS = Object.freeze({ points:2, treats:2, coffee:2, shield:1, second_chance:1, pause:1 });
 const CASE_DUPLICATE_COMPENSATION = Object.freeze({ skin: 150000, avatar: 500, frame: 1500, trail: 5000, music: 150000 });
 const CASE_RARITY_ORDER = Object.freeze({ common: 0, rare: 1, superrare: 2, epic: 3, mythic: 4, legendary: 5 });
 
@@ -820,6 +820,7 @@ const SEASON_PASS_BOOST_REWARDS = Object.freeze({
   booster_coffee: Object.freeze({ itemId:"season_booster_coffee", storedType:"points", kind:"coffee", title:"×2 кофе · 2 забега", imageUrl:"/assets/cases/boosters/11FDBEBF-D838-4DA5-AA57-9DE0E4BA26AE.PNG" }),
   booster_shield: Object.freeze({ itemId:"season_booster_shield", storedType:"points", kind:"shield", title:"Щит Зеффи · 1 забег", imageUrl:"/assets/cases/boosters/icon_buster_shit_zeffi.png" }),
   booster_second_chance: Object.freeze({ itemId:"season_booster_second_chance", storedType:"points", kind:"second_chance", title:"Второй шанс · 1 забег", imageUrl:"/assets/cases/boosters/icon_2shans.png" }),
+  booster_pause: Object.freeze({ itemId:"season_booster_pause", storedType:"points", kind:"pause", title:"Пауза Зеффи · 1 забег", imageUrl:"/assets/cases/boosters/icon_pause_zeffi.png" }),
   booster_xp: Object.freeze({ itemId:SEASON_PASS_SPECIAL_XP_X2, storedType:"points", kind:"xp", title:"×2 XP сезонного пропуска", imageUrl:"/assets/season-pass/xp_x2.png" })
 });
 
@@ -1503,6 +1504,7 @@ async function ensureRuntimeCompatibilitySchema(env) {
       ['game_run_sessions', 'booster_coffee', 'INTEGER NOT NULL DEFAULT 0'],
       ['game_run_sessions', 'booster_shield', 'INTEGER NOT NULL DEFAULT 0'],
       ['game_run_sessions', 'booster_second_chance', 'INTEGER NOT NULL DEFAULT 0'],
+      ['game_run_sessions', 'booster_pause', 'INTEGER NOT NULL DEFAULT 0'],
       ['game_run_sessions', 'shield_used', 'INTEGER NOT NULL DEFAULT 0'],
       ['game_run_sessions', 'second_chance_used', 'INTEGER NOT NULL DEFAULT 0'],
       ['case_booster_run_consumptions', 'booster_types_json', "TEXT NOT NULL DEFAULT '[]'"],
@@ -6639,6 +6641,7 @@ async function ensureAuthoritativeEconomySchema(env) {
           booster_coffee INTEGER NOT NULL DEFAULT 0,
           booster_shield INTEGER NOT NULL DEFAULT 0,
           booster_second_chance INTEGER NOT NULL DEFAULT 0,
+          booster_pause INTEGER NOT NULL DEFAULT 0,
           shield_used INTEGER NOT NULL DEFAULT 0,
           second_chance_used INTEGER NOT NULL DEFAULT 0,
           economy_points INTEGER NOT NULL DEFAULT 0,
@@ -7058,7 +7061,7 @@ function isAuthoritativeRunSchemaMissingError(error) {
     (text.includes('no such column') && (
       text.includes('anchor_duration_ms') || text.includes('anchor_server_at_ms') ||
       text.includes('booster_points') || text.includes('booster_treats') || text.includes('booster_coffee') ||
-      text.includes('booster_shield') || text.includes('booster_second_chance') ||
+      text.includes('booster_shield') || text.includes('booster_second_chance') || text.includes('booster_pause') ||
       text.includes('shield_used') || text.includes('second_chance_used') || text.includes('active_boosters_json')
     ))
   );
@@ -7147,15 +7150,16 @@ async function startAuthoritativeRunSession(request, env) {
         env.DB.prepare(
           `INSERT OR IGNORE INTO game_run_sessions(
              run_id,telegram_id,started_at_ms,expires_at_ms,status,created_at,updated_at,
-             booster_points,booster_treats,booster_coffee,booster_shield,booster_second_chance
+             booster_points,booster_treats,booster_coffee,booster_shield,booster_second_chance,booster_pause
            ) VALUES(?,?,?,?,'started',?,?,
              COALESCE((SELECT CASE WHEN COALESCE(CAST(json_extract(CASE WHEN json_valid(active_boosters_json) THEN active_boosters_json ELSE '{}' END,'$.points') AS INTEGER),CASE WHEN active_booster_type='points' THEN active_booster_runs ELSE 0 END,0)>0 THEN 1 ELSE 0 END FROM case_player_state WHERE telegram_id=? LIMIT 1),0),
              COALESCE((SELECT CASE WHEN COALESCE(CAST(json_extract(CASE WHEN json_valid(active_boosters_json) THEN active_boosters_json ELSE '{}' END,'$.treats') AS INTEGER),CASE WHEN active_booster_type='treats' THEN active_booster_runs ELSE 0 END,0)>0 THEN 1 ELSE 0 END FROM case_player_state WHERE telegram_id=? LIMIT 1),0),
              COALESCE((SELECT CASE WHEN COALESCE(CAST(json_extract(CASE WHEN json_valid(active_boosters_json) THEN active_boosters_json ELSE '{}' END,'$.coffee') AS INTEGER),CASE WHEN active_booster_type='coffee' THEN active_booster_runs ELSE 0 END,0)>0 THEN 1 ELSE 0 END FROM case_player_state WHERE telegram_id=? LIMIT 1),0),
              COALESCE((SELECT CASE WHEN COALESCE(CAST(json_extract(CASE WHEN json_valid(active_boosters_json) THEN active_boosters_json ELSE '{}' END,'$.shield') AS INTEGER),CASE WHEN active_booster_type='shield' THEN active_booster_runs ELSE 0 END,0)>0 THEN 1 ELSE 0 END FROM case_player_state WHERE telegram_id=? LIMIT 1),0),
-             COALESCE((SELECT CASE WHEN COALESCE(CAST(json_extract(CASE WHEN json_valid(active_boosters_json) THEN active_boosters_json ELSE '{}' END,'$.second_chance') AS INTEGER),CASE WHEN active_booster_type='second_chance' THEN active_booster_runs ELSE 0 END,0)>0 THEN 1 ELSE 0 END FROM case_player_state WHERE telegram_id=? LIMIT 1),0)
+             COALESCE((SELECT CASE WHEN COALESCE(CAST(json_extract(CASE WHEN json_valid(active_boosters_json) THEN active_boosters_json ELSE '{}' END,'$.second_chance') AS INTEGER),CASE WHEN active_booster_type='second_chance' THEN active_booster_runs ELSE 0 END,0)>0 THEN 1 ELSE 0 END FROM case_player_state WHERE telegram_id=? LIMIT 1),0),
+             COALESCE((SELECT CASE WHEN COALESCE(CAST(json_extract(CASE WHEN json_valid(active_boosters_json) THEN active_boosters_json ELSE '{}' END,'$.pause') AS INTEGER),0)>0 THEN 1 ELSE 0 END FROM case_player_state WHERE telegram_id=? LIMIT 1),0)
            )`
-        ).bind(runId, telegramId, nowMs, expiresAtMs, now, now, telegramId, telegramId, telegramId, telegramId, telegramId),
+        ).bind(runId, telegramId, nowMs, expiresAtMs, now, now, telegramId, telegramId, telegramId, telegramId, telegramId, telegramId),
         env.DB.prepare(
           `INSERT OR IGNORE INTO game_run_live_proofs(
              run_id,telegram_id,seq,duration_ms,score,run_treats,run_coffee,last_server_at_ms,
@@ -7170,16 +7174,17 @@ async function startAuthoritativeRunSession(request, env) {
              active_boosters_json=json_set(
                CASE WHEN json_valid(active_boosters_json) THEN active_boosters_json ELSE '{}' END,
                '$.shield',MAX(0,COALESCE(CAST(json_extract(CASE WHEN json_valid(active_boosters_json) THEN active_boosters_json ELSE '{}' END,'$.shield') AS INTEGER),CASE WHEN active_booster_type='shield' THEN active_booster_runs ELSE 0 END,0)-COALESCE((SELECT booster_shield FROM game_run_sessions WHERE run_id=? AND telegram_id=? AND started_at_ms=? LIMIT 1),0)),
-               '$.second_chance',MAX(0,COALESCE(CAST(json_extract(CASE WHEN json_valid(active_boosters_json) THEN active_boosters_json ELSE '{}' END,'$.second_chance') AS INTEGER),CASE WHEN active_booster_type='second_chance' THEN active_booster_runs ELSE 0 END,0)-COALESCE((SELECT booster_second_chance FROM game_run_sessions WHERE run_id=? AND telegram_id=? AND started_at_ms=? LIMIT 1),0))
+               '$.second_chance',MAX(0,COALESCE(CAST(json_extract(CASE WHEN json_valid(active_boosters_json) THEN active_boosters_json ELSE '{}' END,'$.second_chance') AS INTEGER),CASE WHEN active_booster_type='second_chance' THEN active_booster_runs ELSE 0 END,0)-COALESCE((SELECT booster_second_chance FROM game_run_sessions WHERE run_id=? AND telegram_id=? AND started_at_ms=? LIMIT 1),0)),
+               '$.pause',MAX(0,COALESCE(CAST(json_extract(CASE WHEN json_valid(active_boosters_json) THEN active_boosters_json ELSE '{}' END,'$.pause') AS INTEGER),0)-COALESCE((SELECT booster_pause FROM game_run_sessions WHERE run_id=? AND telegram_id=? AND started_at_ms=? LIMIT 1),0))
              ),
              revision=revision+1,updated_at=?
            WHERE telegram_id=? AND EXISTS(
-             SELECT 1 FROM game_run_sessions WHERE run_id=? AND telegram_id=? AND started_at_ms=? AND (booster_shield=1 OR booster_second_chance=1)
+             SELECT 1 FROM game_run_sessions WHERE run_id=? AND telegram_id=? AND started_at_ms=? AND (booster_shield=1 OR booster_second_chance=1 OR booster_pause=1)
            )`
-        ).bind(runId,telegramId,nowMs,runId,telegramId,nowMs,now,telegramId,runId,telegramId,nowMs),
+        ).bind(runId,telegramId,nowMs,runId,telegramId,nowMs,runId,telegramId,nowMs,now,telegramId,runId,telegramId,nowMs),
         env.DB.prepare(
           `SELECT run_id,telegram_id,started_at_ms,expires_at_ms,status,
-                  booster_points,booster_treats,booster_coffee,booster_shield,booster_second_chance,
+                  booster_points,booster_treats,booster_coffee,booster_shield,booster_second_chance,booster_pause,
                   shield_used,second_chance_used
            FROM game_run_sessions WHERE run_id=? LIMIT 1`
         ).bind(runId)
@@ -7202,7 +7207,8 @@ async function startAuthoritativeRunSession(request, env) {
             treats:Number(session.booster_treats||0)===1,
             coffee:Number(session.booster_coffee||0)===1,
             shield:Number(session.booster_shield||0)===1,
-            second_chance:Number(session.booster_second_chance||0)===1
+            second_chance:Number(session.booster_second_chance||0)===1,
+            pause:Number(session.booster_pause||0)===1
           }
         },
         repeated
@@ -8892,7 +8898,8 @@ function caseParseBoosterExtras(value) {
   try { source=value && typeof value === "object" ? value : JSON.parse(String(value || "{}")); } catch {}
   return {
     shield: safeAdminNumber(source?.shield),
-    second_chance: safeAdminNumber(source?.second_chance)
+    second_chance: safeAdminNumber(source?.second_chance),
+    pause: safeAdminNumber(source?.pause)
   };
 }
 
@@ -8933,7 +8940,7 @@ function caseStoredBoosterTypes(value, fallbackType = "") {
 }
 
 function caseRunSessionBoosterTypes(session) {
-  const columns={ points:"booster_points", treats:"booster_treats", coffee:"booster_coffee", shield:"booster_shield", second_chance:"booster_second_chance" };
+  const columns={ points:"booster_points", treats:"booster_treats", coffee:"booster_coffee", shield:"booster_shield", second_chance:"booster_second_chance", pause:"booster_pause" };
   return CASE_BOOSTER_TYPES.filter((type)=>Number(session?.[columns[type]] || 0) === 1);
 }
 
@@ -8972,7 +8979,8 @@ function caseStateFromRow(row) {
       treats: safeAdminNumber(row?.boosters_treats),
       coffee: safeAdminNumber(row?.boosters_coffee),
       shield: boosterExtras.shield,
-      second_chance: boosterExtras.second_chance
+      second_chance: boosterExtras.second_chance,
+      pause: boosterExtras.pause
     },
     activeBoosters,
     activeBooster,
@@ -9029,7 +9037,7 @@ function caseStateUpdateStatement(env, telegramId, caseState, now) {
     safeAdminNumber(boosters.points),
     safeAdminNumber(boosters.treats),
     safeAdminNumber(boosters.coffee),
-    JSON.stringify({ shield:safeAdminNumber(boosters.shield), second_chance:safeAdminNumber(boosters.second_chance) }),
+    JSON.stringify({ shield:safeAdminNumber(boosters.shield), second_chance:safeAdminNumber(boosters.second_chance), pause:safeAdminNumber(boosters.pause) }),
     JSON.stringify(activeBoosters),
     String(legacyActive.type || ""),
     safeAdminNumber(caseState.revision),
@@ -29560,8 +29568,8 @@ async function grantSeasonPassReward(env,ctx,reward,executionCtx=null){
   }else if(boostReward&&CASE_REWARD_BOOSTER_TYPES.includes(boostReward.kind)){
     const column=boostReward.kind==='points'?'boosters_points':boostReward.kind==='treats'?'boosters_treats':'boosters_coffee';
     statements.push(env.DB.prepare(`UPDATE case_player_state SET ${column}=${column}+?,revision=revision+1,updated_at=? WHERE telegram_id=? AND EXISTS(SELECT 1 FROM season_pass_claims WHERE season_id=? AND telegram_id=? AND level=? AND lane=? AND status='pending')`).bind(Math.max(1,Number(reward.amount)||1),now,ctx.telegramId,...key));
-  }else if(boostReward&&['shield','second_chance'].includes(boostReward.kind)){
-    const jsonPath=boostReward.kind==='shield'?'$.shield':'$.second_chance';
+  }else if(boostReward&&['shield','second_chance','pause'].includes(boostReward.kind)){
+    const jsonPath=`$.${boostReward.kind}`;
     const amount=Math.max(1,Number(reward.amount)||1);
     statements.push(env.DB.prepare(`UPDATE case_player_state SET boosters_extra_json=json_set(CASE WHEN json_valid(boosters_extra_json) THEN boosters_extra_json ELSE '{}' END,'${jsonPath}',MIN(999,MAX(0,CAST(COALESCE(json_extract(CASE WHEN json_valid(boosters_extra_json) THEN boosters_extra_json ELSE '{}' END,'${jsonPath}'),0) AS INTEGER))+?)),revision=revision+1,updated_at=? WHERE telegram_id=? AND EXISTS(SELECT 1 FROM season_pass_claims WHERE season_id=? AND telegram_id=? AND level=? AND lane=? AND status='pending')`).bind(amount,now,ctx.telegramId,...key));
   }else if(['points','treats','coffee'].includes(String(reward.reward_type))){
@@ -30862,7 +30870,7 @@ async function setFeatureFlag(query, flagKey, mode, percent, env) {
 }
 
 function emptySimulationCaseState() {
-  return { boosters:{points:0,treats:0,coffee:0,shield:0,second_chance:0}, activeBoosters:caseNormalizeActiveBoosters({}), activeBooster:{type:"",runsLeft:0}, ownedAvatars:[], activeAvatarId:"", ownedFrames:[], activeFrameId:"", ownedTrails:[], activeTrailId:"", ownedMusicTracks:["cafe_run"], activeMusicTrackId:"cafe_run", ownedSpecials:[], ownedSkins:["default"], activeSkinId:"default", mythicPityCounter:0, mythicGuaranteedEvery:25, legendaryPityCounter:0, legendaryGuaranteedEvery:50, revision:0, updatedAt:0 };
+  return { boosters:{points:0,treats:0,coffee:0,shield:0,second_chance:0,pause:0}, activeBoosters:caseNormalizeActiveBoosters({}), activeBooster:{type:"",runsLeft:0}, ownedAvatars:[], activeAvatarId:"", ownedFrames:[], activeFrameId:"", ownedTrails:[], activeTrailId:"", ownedMusicTracks:["cafe_run"], activeMusicTrackId:"cafe_run", ownedSpecials:[], ownedSkins:["default"], activeSkinId:"default", mythicPityCounter:0, mythicGuaranteedEvery:25, legendaryPityCounter:0, legendaryGuaranteedEvery:50, revision:0, updatedAt:0 };
 }
 
 async function runCaseSimulation(env, caseType, sampleCount) {
@@ -37132,7 +37140,8 @@ function testProjectNormalizeCaseState(raw = {}) {
       treats: Math.max(0, Math.min(999, Math.floor(Number(boosters.treats) || 0))),
       coffee: Math.max(0, Math.min(999, Math.floor(Number(boosters.coffee) || 0))),
       shield: Math.max(0, Math.min(999, Math.floor(Number(boosters.shield) || 0))),
-      second_chance: Math.max(0, Math.min(999, Math.floor(Number(boosters.second_chance) || 0)))
+      second_chance: Math.max(0, Math.min(999, Math.floor(Number(boosters.second_chance) || 0))),
+      pause: Math.max(0, Math.min(999, Math.floor(Number(boosters.pause) || 0)))
     },
     activeBoosters: caseNormalizeActiveBoosters(raw?.activeBoosters, raw?.activeBooster?.type, raw?.activeBooster?.runsLeft),
     activeBooster: caseLegacyActiveBooster(caseNormalizeActiveBoosters(raw?.activeBoosters, raw?.activeBooster?.type, raw?.activeBooster?.runsLeft)),
@@ -38158,8 +38167,8 @@ function testProjectApplyReward(state, reward, season) {
     if (caseType) state.caseInventory[caseType] = Math.min(999, Number(state.caseInventory[caseType]||0) + amount);
   } else if (kind === "seasonal_case") state.seasonalCaseInventory[itemId || "seasonal"] = Math.min(999, Number(state.seasonalCaseInventory[itemId || "seasonal"]||0) + amount);
   else if (["avatar","frame","trail","skin","music"].includes(kind)) testProjectGrantCosmetic(state, kind, itemId);
-  else if (["booster_points","booster_treats","booster_coffee","booster_shield","booster_second_chance"].includes(kind)) {
-    const bucket = ({booster_points:"points",booster_treats:"treats",booster_coffee:"coffee",booster_shield:"shield",booster_second_chance:"second_chance"})[kind];
+  else if (["booster_points","booster_treats","booster_coffee","booster_shield","booster_second_chance","booster_pause"].includes(kind)) {
+    const bucket = ({booster_points:"points",booster_treats:"treats",booster_coffee:"coffee",booster_shield:"shield",booster_second_chance:"second_chance",booster_pause:"pause"})[kind];
     state.caseState.boosters[bucket] = Math.min(999, Number(state.caseState.boosters[bucket]||0) + amount);
   } else if (flashOfferRunBoosterDefinition(kind)) {
     const bucket = flashOfferRunBoosterDefinition(kind).bucket;
@@ -39013,7 +39022,7 @@ async function testProjectSandboxGameData(env, ctx) {
   if(path==="/api/runs/start"){
     const runId=String(payload?.runId||"").trim();if(!/^[A-Za-z0-9_-]{12,96}$/.test(runId))throw new ApiError(400,"Некорректный test runId.");
     const before=testProjectClone(state),active=caseNormalizeActiveBoosters(state.caseState?.activeBoosters,state.caseState?.activeBooster?.type,state.caseState?.activeBooster?.runsLeft),runBoosters=Object.fromEntries(CASE_BOOSTER_TYPES.map((type)=>[type,Number(active[type]||0)>0]));
-    if(runBoosters.shield)active.shield=0;if(runBoosters.second_chance)active.second_chance=0;state.caseState.activeBoosters=active;state.caseState.activeBooster=caseLegacyActiveBooster(active);
+    if(runBoosters.shield)active.shield=0;if(runBoosters.second_chance)active.second_chance=0;if(runBoosters.pause)active.pause=0;state.caseState.activeBoosters=active;state.caseState.activeBooster=caseLegacyActiveBooster(active);
     state.sandbox=testProjectNormalizeSandboxState({...state.sandbox,activeRun:{id:runId,startedAt:nowMs,boosters:runBoosters}});await testProjectSandboxSave(env,ownerId,state,snapshot,before,"game_run_start","Игра · старт тестового забега");
     return response({ok:true,runId,startedAt:nowMs,expiresAt:nowMs+2*60*60*1000,runSession:{runId,startedAt:nowMs,expiresAt:nowMs+2*60*60*1000,status:"started",boosters:runBoosters}});
   }
