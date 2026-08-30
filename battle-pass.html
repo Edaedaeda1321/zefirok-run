@@ -2174,8 +2174,8 @@ button{-webkit-tap-highlight-color:transparent}
 .tier-title i.tier-card-art img{
   width:100%;
   height:100%;
-  object-fit:cover;
-  object-position:center 42%
+  object-fit:contain;
+  object-position:center
 }
 .tier-benefit img,.purchase-benefit img{border-radius:10px}
 .claim-all-tasks > span{
@@ -3085,7 +3085,7 @@ img[src$="/xp.webp"]{
 .tariff-sheet-scroll::-webkit-scrollbar{display:none}
 .tariff-sheet-title-row{
   display:grid;
-  grid-template-columns:minmax(0,1fr) 86px;
+  grid-template-columns:minmax(0,1fr);
   gap:12px;
   align-items:center;
   padding:4px 4px 12px
@@ -3130,12 +3130,6 @@ img[src$="/xp.webp"]{
   box-shadow:inset 0 0 0 1px rgba(208,151,27,.28);
   text-shadow:0 1px rgba(255,255,255,.8)
 }
-.tariff-sheet-title-row>img{
-  width:82px;
-  height:82px;
-  object-fit:contain;
-  filter:drop-shadow(0 8px 12px rgba(158,105,23,.12))
-}
 .tariff-sheet-card .premium-offer{
   margin:0;
   padding:0;
@@ -3165,9 +3159,8 @@ img[src$="/xp.webp"]{
 @media(max-width:520px){
   .tariff-sheet-card{max-height:92dvh;border-radius:26px 26px 0 0}
   .tariff-sheet-scroll{max-height:calc(92dvh - 18px);padding:7px 12px max(18px,env(safe-area-inset-bottom))}
-  .tariff-sheet-title-row{grid-template-columns:minmax(0,1fr) 68px;padding-bottom:10px}
+  .tariff-sheet-title-row{grid-template-columns:minmax(0,1fr);padding-bottom:10px}
   .tariff-sheet-title-row h2{font-size:22px}
-  .tariff-sheet-title-row>img{width:64px;height:64px}
   .tariff-sheet-card .pass-tiers{grid-template-columns:1fr}
 }
 
@@ -3563,14 +3556,13 @@ img[src$="/xp.webp"]{
           <h2 id="tariffSheetTitle">Тарифы</h2>
           <p>Выбери <span class="tariff-name-accent is-elite">Элитный</span> тариф или улучши его до <span class="tariff-name-accent is-plus">Элитный+</span>.</p>
         </div>
-        <img src="/assets/season-pass/elite_plus.png?v=07939" alt="">
       </div>
       <section class="premium-offer">
           <h2>Тарифы сезонного пропуска</h2>
           <p>Выбери обычный премиальный доступ или расширенный тариф с дополнительными бонусами.</p>
           <div class="pass-tiers">
             <article class="tier-card" id="eliteCard">
-              <div class="tier-title"><i class="tier-card-art"><img src="/assets/season-pass/elite.png?v=07939" alt="Элитный"></i><div><strong>Элитный</strong><span>Базовый премиальный тариф</span></div></div>
+              <div class="tier-title"><i class="tier-card-art"><img src="/assets/season-pass/icon_tarif_elit.png" alt="Элитный"></i><div><strong>Элитный</strong><span>Базовый премиальный тариф</span></div></div>
               <div class="tier-benefits">
                 <div class="tier-benefit"><img src="/assets/season-pass/season.png?v=07939" alt=""><span>Открывает премиальную линию наград</span></div>
                 <div class="tier-benefit"><img src="/assets/season-pass/quest.png?v=07939" alt=""><span>Открывает премиальные задания</span></div>
@@ -3587,14 +3579,14 @@ img[src$="/xp.webp"]{
             </article>
 
             <article class="tier-card elite-plus" id="elitePlusCard">
-              <div class="tier-title"><i class="tier-card-art"><img src="/assets/season-pass/elite_plus.png?v=07939" alt="Элитный+"></i><div><strong>Элитный+</strong><span>Максимальный тариф сезона</span></div></div>
+              <div class="tier-title"><i class="tier-card-art"><img src="/assets/season-pass/icon_tarif_elit_plus.png" alt="Элитный+"></i><div><strong>Элитный+</strong><span>Максимальный тариф сезона</span></div></div>
               <div class="tier-benefits">
                 <div class="tier-benefit"><img src="/assets/season-pass/xp_x2.png?v=07939" alt=""><span>×2 XP за забеги и задания сезонного пропуска</span></div>
                 <div class="tier-benefit"><img src="/assets/season-pass/levels_5.png?v=07939" alt=""><span>Сразу +5 уровней пропуска</span></div>
                 <div class="tier-benefit"><img src="/assets/rating/frames/profile/ramka_profile_elita.png" alt=""><span>Эксклюзивная рамка</span></div>
                 <div class="tier-benefit"><img src="/assets/cases/avatars/legendary_avatarka_5.png" alt=""><span>Эксклюзивная аватарка</span></div>
                 <div class="tier-benefit"><img src="/assets/cases/gold_closed.png" alt=""><span>Золотой кейс при открытии</span></div>
-                <div class="tier-benefit"><img src="/assets/season-pass/elite.png?v=07939" alt=""><span>Все преимущества тарифа «Элитный»</span></div>
+                <div class="tier-benefit"><img src="/assets/season-pass/icon_tarif_elit.png" alt=""><span>Все преимущества тарифа «Элитный»</span></div>
                 <div class="tier-benefit rating-star-benefit" data-rating-star-tier="elite_plus"><img class="tier-benefit-status-badge" src="/assets/ui/icon_player_elit+.png" alt="" aria-hidden="true"><span>Значок «Элитный+» рядом с именем — максимальный статус в рейтинге</span></div>
               </div>
               <div class="tier-price">
@@ -3618,7 +3610,7 @@ img[src$="/xp.webp"]{
     <div class="tier-celebration-burst" aria-hidden="true"></div>
     <button class="tier-celebration-close" id="tierCelebrationClose" type="button" aria-label="Закрыть">×</button>
     <div class="tier-celebration-scroll">
-      <div class="tier-celebration-badge"><img id="tierCelebrationBadge" src="/assets/season-pass/elite.png?v=07939" alt=""></div>
+      <div class="tier-celebration-badge"><img id="tierCelebrationBadge" src="/assets/season-pass/icon_tarif_elit.png" alt=""></div>
       <span class="tier-celebration-kicker" id="tierCelebrationKicker">НОВЫЙ СТАТУС</span>
       <h2 id="tierCelebrationTitle">Элитный активирован</h2>
       <p class="tier-celebration-subtitle" id="tierCelebrationSubtitle">Премиальные возможности сезона теперь доступны.</p>
@@ -3661,7 +3653,7 @@ img[src$="/xp.webp"]{
 <section class="purchase-confirm" id="purchaseConfirm" hidden aria-modal="true" role="dialog" aria-labelledby="purchaseConfirmTitle">
   <div class="purchase-confirm-card">
     <header class="purchase-confirm-head">
-      <div class="purchase-icon" id="purchaseConfirmIcon"><img src="/assets/season-pass/elite.png?v=07939" alt=""></div>
+      <div class="purchase-icon" id="purchaseConfirmIcon"><img src="/assets/season-pass/icon_tarif_elit.png" alt=""></div>
       <h2 id="purchaseConfirmTitle">Подтвердить покупку</h2>
       <p id="purchaseConfirmSubtitle">Проверьте тариф и его бонусы перед активацией.</p>
     </header>
@@ -3944,8 +3936,8 @@ img[src$="/xp.webp"]{
     cosmeticSkin:"/assets/skins/avatars/barista.png",
     cosmeticTrail:"/assets/cases/trails/BBFD9E7E-393D-4B0A-B990-CC93BFCFB505.PNG",
     cosmeticMusic:"/assets/season-pass/season.png?v=07939",
-    eliteBadge:"/assets/season-pass/elite.png?v=07939",
-    elitePlusBadge:"/assets/season-pass/elite_plus.png?v=07939",
+    eliteBadge:"/assets/season-pass/icon_tarif_elit.png",
+    elitePlusBadge:"/assets/season-pass/icon_tarif_elit_plus.png",
     playerEliteBadge:"/assets/ui/icon_player_elit.png",
     playerElitePlusBadge:"/assets/ui/icon_player_elit+.png",
     premiumReward:"/assets/season-pass/season.png?v=07939",
