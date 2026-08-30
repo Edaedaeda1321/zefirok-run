@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "catalogHash": "64e8a711f0eb7cbb",
+  "catalogHash": "e23c8e541cbe4214",
   "count": 438,
   "images": [
     {
@@ -792,8 +792,8 @@
       "label": "Icon buster shit zeffi",
       "folder": "cases/boosters",
       "path": "/assets/cases/boosters/icon_buster_shit_zeffi.png",
-      "size": 2243462,
-      "modified": 1788118892000
+      "size": 1529910,
+      "modified": 1788120914883
     },
     {
       "fileName": "cases/Bronze_close.png",

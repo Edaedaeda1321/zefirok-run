@@ -818,6 +818,8 @@ const SEASON_PASS_BOOST_REWARDS = Object.freeze({
   booster_points: Object.freeze({ itemId:"season_booster_points", storedType:"points", kind:"points", title:"×2 очки · 2 забега", imageUrl:"/assets/cases/boosters/1F00010C-F984-4A41-B8B6-8E5CD7DF637A.PNG" }),
   booster_treats: Object.freeze({ itemId:"season_booster_treats", storedType:"points", kind:"treats", title:"×2 зефир · 2 забега", imageUrl:"/assets/cases/boosters/80C21DC3-04A8-46F7-B8E4-9AC8FE13CCEB.PNG" }),
   booster_coffee: Object.freeze({ itemId:"season_booster_coffee", storedType:"points", kind:"coffee", title:"×2 кофе · 2 забега", imageUrl:"/assets/cases/boosters/11FDBEBF-D838-4DA5-AA57-9DE0E4BA26AE.PNG" }),
+  booster_shield: Object.freeze({ itemId:"season_booster_shield", storedType:"points", kind:"shield", title:"Щит Зеффи · 1 забег", imageUrl:"/assets/cases/boosters/icon_buster_shit_zeffi.png" }),
+  booster_second_chance: Object.freeze({ itemId:"season_booster_second_chance", storedType:"points", kind:"second_chance", title:"Второй шанс · 1 забег", imageUrl:"/assets/cases/boosters/icon_2shans.png" }),
   booster_xp: Object.freeze({ itemId:SEASON_PASS_SPECIAL_XP_X2, storedType:"points", kind:"xp", title:"×2 XP сезонного пропуска", imageUrl:"/assets/season-pass/xp_x2.png" })
 });
 
@@ -29453,7 +29455,7 @@ async function grantSeasonPassReward(env,ctx,reward,executionCtx=null){
   if(cosmeticReward?.future&&!cosmeticReward?.released) throw new ApiError(409,'Эта награда относится к скрытому будущему контенту и откроется после релизного обновления сезона.');
   const now=Math.floor(Date.now()/1000);const level=Number(reward.level);const lane=String(reward.lane);const key=[ctx.season.id,ctx.telegramId,level,lane];
   let caseEnsured=null;
-  if(cosmeticReward || (boostReward&&CASE_REWARD_BOOSTER_TYPES.includes(boostReward.kind))){
+  if(cosmeticReward || (boostReward&&CASE_BOOSTER_TYPES.includes(boostReward.kind))){
     caseEnsured=await ensureCasePlayerState(env,ctx.telegramId,{});
     if(cosmeticReward)seasonPassApplyCosmeticToState(caseEnsured.state,cosmeticReward);
   }
@@ -29472,6 +29474,10 @@ async function grantSeasonPassReward(env,ctx,reward,executionCtx=null){
   }else if(boostReward&&CASE_REWARD_BOOSTER_TYPES.includes(boostReward.kind)){
     const column=boostReward.kind==='points'?'boosters_points':boostReward.kind==='treats'?'boosters_treats':'boosters_coffee';
     statements.push(env.DB.prepare(`UPDATE case_player_state SET ${column}=${column}+?,revision=revision+1,updated_at=? WHERE telegram_id=? AND EXISTS(SELECT 1 FROM season_pass_claims WHERE season_id=? AND telegram_id=? AND level=? AND lane=? AND status='pending')`).bind(Math.max(1,Number(reward.amount)||1),now,ctx.telegramId,...key));
+  }else if(boostReward&&['shield','second_chance'].includes(boostReward.kind)){
+    const jsonPath=boostReward.kind==='shield'?'$.shield':'$.second_chance';
+    const amount=Math.max(1,Number(reward.amount)||1);
+    statements.push(env.DB.prepare(`UPDATE case_player_state SET boosters_extra_json=json_set(CASE WHEN json_valid(boosters_extra_json) THEN boosters_extra_json ELSE '{}' END,'${jsonPath}',MIN(999,MAX(0,CAST(COALESCE(json_extract(CASE WHEN json_valid(boosters_extra_json) THEN boosters_extra_json ELSE '{}' END,'${jsonPath}'),0) AS INTEGER))+?)),revision=revision+1,updated_at=? WHERE telegram_id=? AND EXISTS(SELECT 1 FROM season_pass_claims WHERE season_id=? AND telegram_id=? AND level=? AND lane=? AND status='pending')`).bind(amount,now,ctx.telegramId,...key));
   }else if(['points','treats','coffee'].includes(String(reward.reward_type))){
     const field=reward.reward_type==='points'?'pending_wallet':reward.reward_type==='treats'?'pending_treats':'pending_coffee';
     statements.push(env.DB.prepare(`UPDATE admin_profile_state SET ${field}=${field}+?,revision=revision+1,updated_at=?,updated_by=? WHERE telegram_id=? AND EXISTS(SELECT 1 FROM season_pass_claims WHERE season_id=? AND telegram_id=? AND level=? AND lane=? AND status='pending')`).bind(Math.max(0,Number(reward.amount)||0),now,`season-pass:${ctx.season.id}`,ctx.telegramId,...key));
@@ -29540,7 +29546,7 @@ async function claimAllSeasonPassRewards(request,env,executionCtx=null){
     const stateTouching=[];const parallelSafe=[];
     for(const reward of rows){
       const cosmetic=seasonPassCosmeticRewardDefinition(reward);const boost=seasonPassBoostRewardDefinition(reward);
-      if(cosmetic||(boost&&CASE_REWARD_BOOSTER_TYPES.includes(boost.kind)))stateTouching.push(reward);
+      if(cosmetic||(boost&&CASE_BOOSTER_TYPES.includes(boost.kind)))stateTouching.push(reward);
       else parallelSafe.push(reward);
     }
 
@@ -38063,8 +38069,8 @@ function testProjectApplyReward(state, reward, season) {
     if (caseType) state.caseInventory[caseType] = Math.min(999, Number(state.caseInventory[caseType]||0) + amount);
   } else if (kind === "seasonal_case") state.seasonalCaseInventory[itemId || "seasonal"] = Math.min(999, Number(state.seasonalCaseInventory[itemId || "seasonal"]||0) + amount);
   else if (["avatar","frame","trail","skin","music"].includes(kind)) testProjectGrantCosmetic(state, kind, itemId);
-  else if (["booster_points","booster_treats","booster_coffee"].includes(kind)) {
-    const bucket = kind.replace("booster_", "");
+  else if (["booster_points","booster_treats","booster_coffee","booster_shield","booster_second_chance"].includes(kind)) {
+    const bucket = ({booster_points:"points",booster_treats:"treats",booster_coffee:"coffee",booster_shield:"shield",booster_second_chance:"second_chance"})[kind];
     state.caseState.boosters[bucket] = Math.min(999, Number(state.caseState.boosters[bucket]||0) + amount);
   } else if (flashOfferRunBoosterDefinition(kind)) {
     const bucket = flashOfferRunBoosterDefinition(kind).bucket;
