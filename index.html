@@ -8895,6 +8895,51 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       box-shadow: none;
     }
 
+    #zefirok-maltipoo-runner .overlay.is-second-chance-modal .second-chance-modal.second-chance-choice-modal {
+      max-height: calc(100% - 8px);
+      padding: 8px 11px;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      scrollbar-width: none;
+    }
+
+    #zefirok-maltipoo-runner .overlay.is-second-chance-modal .second-chance-modal.second-chance-choice-modal::-webkit-scrollbar {
+      display: none;
+    }
+
+    #zefirok-maltipoo-runner .second-chance-choice-modal .second-chance-art {
+      width: 60px;
+      height: 60px;
+      margin: -2px auto 2px;
+    }
+
+    #zefirok-maltipoo-runner .second-chance-choice-modal strong {
+      font-size: clamp(15px, 4.1vw, 18px);
+      margin-bottom: 4px;
+    }
+
+    #zefirok-maltipoo-runner .second-chance-choice-modal .rule {
+      margin-bottom: 6px;
+    }
+
+    #zefirok-maltipoo-runner .second-chance-choice-modal span {
+      font-size: clamp(10.5px, 3vw, 12px);
+      line-height: 1.24;
+    }
+
+    #zefirok-maltipoo-runner .second-chance-choice-modal .second-chance-actions {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 6px;
+      margin-top: 7px;
+    }
+
+    #zefirok-maltipoo-runner .second-chance-choice-modal .second-chance-actions button {
+      min-height: 36px;
+      padding: 5px 7px;
+      font-size: 10.5px;
+      line-height: 1.12;
+    }
+
     #zefirok-maltipoo-runner .overlay.is-finish-modal {
       display: grid;
       place-items: center;
@@ -15924,7 +15969,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         setPauseButtonVisual(false);
         overlay.classList.remove(&quot;is-finish-modal&quot;);
         overlay.classList.add(&quot;is-second-chance-modal&quot;);
-        overlay.innerHTML = `&lt;div class=&quot;modal second-chance-modal&quot; role=&quot;dialog&quot; aria-modal=&quot;true&quot; aria-label=&quot;Второй шанс&quot;&gt;&lt;div class=&quot;second-chance-art&quot;&gt;&lt;img src=&quot;${CASE_BOOSTER_CATALOG.second_chance.src}&quot; alt=&quot;&quot; decoding=&quot;async&quot;&gt;&lt;/div&gt;&lt;strong&gt;Второй шанс&lt;/strong&gt;&lt;div class=&quot;rule&quot;&gt;&lt;/div&gt;&lt;span&gt;Продолжить этот же забег? Уже заработанные очки, зефир и кофе сохранятся и не будут выданы повторно.&lt;/span&gt;&lt;div class=&quot;second-chance-actions&quot;&gt;&lt;button type=&quot;button&quot; data-second-chance-continue&gt;Продолжить&lt;/button&gt;&lt;button type=&quot;button&quot; class=&quot;is-secondary&quot; data-second-chance-finish&gt;Завершить забег&lt;/button&gt;&lt;/div&gt;&lt;/div&gt;`;
+        overlay.innerHTML = `&lt;div class=&quot;modal second-chance-modal second-chance-choice-modal&quot; role=&quot;dialog&quot; aria-modal=&quot;true&quot; aria-label=&quot;Второй шанс&quot;&gt;&lt;div class=&quot;second-chance-art&quot;&gt;&lt;img src=&quot;${CASE_BOOSTER_CATALOG.second_chance.src}&quot; alt=&quot;&quot; decoding=&quot;async&quot;&gt;&lt;/div&gt;&lt;strong&gt;Второй шанс&lt;/strong&gt;&lt;div class=&quot;rule&quot;&gt;&lt;/div&gt;&lt;span&gt;Продолжить этот же забег? Уже заработанные очки, зефир и кофе сохранятся и не будут выданы повторно.&lt;/span&gt;&lt;div class=&quot;second-chance-actions&quot;&gt;&lt;button type=&quot;button&quot; data-second-chance-continue&gt;Продолжить&lt;/button&gt;&lt;button type=&quot;button&quot; class=&quot;is-secondary&quot; data-second-chance-finish&gt;Завершить забег&lt;/button&gt;&lt;/div&gt;&lt;/div&gt;`;
         overlay.style.display = &quot;grid&quot;;
         const continueButton = overlay.querySelector(&quot;[data-second-chance-continue]&quot;);
         const finishButton = overlay.querySelector(&quot;[data-second-chance-finish]&quot;);
