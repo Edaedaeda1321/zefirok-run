@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "catalogHash": "e23c8e541cbe4214",
-  "count": 438,
+  "catalogHash": "40dc92c38480d425",
+  "count": 442,
   "images": [
     {
       "fileName": "achievements/background_achivment_panel.png",
@@ -322,6 +322,38 @@
       "path": "/assets/achievements/series/icon_season_put.png",
       "size": 94637,
       "modified": 1787764805000
+    },
+    {
+      "fileName": "achievements/showcases/gold_vitrina.png",
+      "label": "Gold vitrina",
+      "folder": "achievements/showcases",
+      "path": "/assets/achievements/showcases/gold_vitrina.png",
+      "size": 905546,
+      "modified": 1788125622000
+    },
+    {
+      "fileName": "achievements/showcases/Standart_vitrina.png",
+      "label": "Standart vitrina",
+      "folder": "achievements/showcases",
+      "path": "/assets/achievements/showcases/Standart_vitrina.png",
+      "size": 598871,
+      "modified": 1788125622000
+    },
+    {
+      "fileName": "achievements/showcases/vitrina_s1.png",
+      "label": "Vitrina s1",
+      "folder": "achievements/showcases",
+      "path": "/assets/achievements/showcases/vitrina_s1.png",
+      "size": 1679814,
+      "modified": 1788125622000
+    },
+    {
+      "fileName": "achievements/showcases/vitrina_s2.png",
+      "label": "Vitrina s2",
+      "folder": "achievements/showcases",
+      "path": "/assets/achievements/showcases/vitrina_s2.png",
+      "size": 1427575,
+      "modified": 1788125622000
     },
     {
       "fileName": "albom_all/alex_albom_oblozka.png",
