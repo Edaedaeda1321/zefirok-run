@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "catalogHash": "fc7206f70f71d2ab",
-  "count": 443,
+  "catalogHash": "fdfe926a74dc1d25",
+  "count": 445,
   "images": [
     {
       "fileName": "achievements/background_achivment_panel.png",
@@ -2402,6 +2402,22 @@
       "path": "/assets/season-pass/icon_one_season.png",
       "size": 1501563,
       "modified": 1785407156000
+    },
+    {
+      "fileName": "season-pass/icon_tarif_elit_plus.png",
+      "label": "Icon tarif elit plus",
+      "folder": "season-pass",
+      "path": "/assets/season-pass/icon_tarif_elit_plus.png",
+      "size": 3145681,
+      "modified": 1788128068000
+    },
+    {
+      "fileName": "season-pass/icon_tarif_elit.png",
+      "label": "Icon tarif elit",
+      "folder": "season-pass",
+      "path": "/assets/season-pass/icon_tarif_elit.png",
+      "size": 2608574,
+      "modified": 1788128068000
     },
     {
       "fileName": "season-pass/levels_5.png",
