@@ -7992,6 +7992,7 @@ html&gt;body{padding:
 #zefirok-maltipoo-runner .case-layer[hidden]{display:none!important}
 #zefirok-maltipoo-runner .case-dialog{position:relative;width:min(390px,100%);max-height:min(720px,88vh);overflow:auto;border-radius:26px;padding:24px 18px 20px;background:linear-gradient(#fffdf8,#fff2e8);box-shadow:0 24px 65px rgba(49,29,20,.35);text-align:center;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
 #zefirok-maltipoo-runner .case-dialog-close{position:absolute;right:12px;top:10px;display:flex;align-items:center;justify-content:center;border:1px solid rgba(220,183,201,.78);background:linear-gradient(180deg,#fff,#fde6ef);border-radius:14px;width:44px;height:44px;font-size:28px;line-height:1;color:#8a4662;box-shadow:0 6px 12px rgba(130,66,92,.12)}
+#zefirok-maltipoo-runner .case-layer.is-info-view .case-dialog-close{display:none!important}
 #zefirok-maltipoo-runner .case-result-head{display:grid;justify-items:center;gap:8px;margin-bottom:14px}.case-result-head h2{margin:0;color:#603e2d;font-size:22px}.case-result-head p{margin:0;color:#98715d;font-size:12px}
 #zefirok-maltipoo-runner .case-result-list{display:grid;gap:9px;text-align:left}
 #zefirok-maltipoo-runner .case-result-item{padding:12px 13px;border-radius:15px;background:#fff;display:flex;gap:10px;align-items:center;color:#704b37;box-shadow:0 6px 16px rgba(97,58,39,.08)}
@@ -12014,7 +12015,6 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       const profileSpotlightCtaEl = root.querySelector(&quot;[data-profile-spotlight-cta]&quot;);
       const caseLayer = root.querySelector(&quot;[data-case-layer]&quot;);
       const caseContentEl = root.querySelector(&quot;[data-case-content]&quot;);
-      const caseCloseButton = root.querySelector(&quot;[data-case-close]&quot;);
       let caseLayerScrollLock = null;
       function setCaseLayerScrollLocked(locked) {
         const html = document.documentElement;
@@ -12061,6 +12061,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         if (!caseLayer) return;
         caseLayer.hidden = true;
         caseLayer.setAttribute(&quot;aria-hidden&quot;, &quot;true&quot;);
+        caseLayer.classList.remove(&quot;is-info-view&quot;);
         setCaseLayerScrollLocked(false);
       }
       const releaseLayer = root.querySelector(&quot;[data-release-layer]&quot;);
@@ -18140,6 +18141,55 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         return `&lt;button class=&quot;case-info-primary&quot; type=&quot;button&quot; disabled&gt;Нет кейса на складе&lt;/button&gt;`;
       }
 
+      function boosterInfoCopy(id) {
+        const type = String(id || &quot;&quot;);
+        if (type === &quot;points&quot;) return { what: &quot;Удваивает очки, полученные за завершённый забег.&quot;, detail: &quot;Удваивает именно очки забега; дополнительные бонусы скина начисляются отдельно.&quot; };
+        if (type === &quot;coffee&quot;) return { what: &quot;Удваивает кофе, полученный за завершённый забег.&quot;, detail: &quot;Работает только на кофе, заработанный в забеге, и расходует один заряд после завершения.&quot; };
+        if (type === &quot;treats&quot;) return { what: &quot;Удваивает зефир, полученный за завершённый забег.&quot;, detail: &quot;Работает только на зефир, заработанный в забеге, и расходует один заряд после завершения.&quot; };
+        return { what: &quot;&quot;, detail: &quot;&quot; };
+      }
+
+      function showBoosterInfo(rawId) {
+        if (!caseLayer || !caseContentEl) return;
+        const id = String(rawId || &quot;&quot;);
+        const consumable = CASE_BOOSTER_CATALOG[id];
+        const special = CASE_SPECIAL_CATALOG[id];
+        if (!consumable &amp;&amp; !special) return;
+        caseRouletteBusy = false;
+        const active = normalizeActiveCaseBooster(state.activeCaseBooster);
+        const isSpecial = Boolean(special);
+        const item = special || consumable;
+        const count = consumable ? Math.max(0, Number(state.caseBoosters?.[id] || 0)) : 1;
+        const isActive = consumable ? active.type === id &amp;&amp; active.runsLeft &gt; 0 : true;
+        const otherActive = consumable &amp;&amp; Boolean(active.type) &amp;&amp; active.runsLeft &gt; 0 &amp;&amp; active.type !== id;
+        const activeTitle = otherActive ? (CASE_BOOSTER_CATALOG[active.type]?.title || &quot;другой усилитель&quot;) : &quot;&quot;;
+        const info = boosterInfoCopy(id);
+        const status = isSpecial
+          ? `&lt;b class=&quot;is-special&quot;&gt;АКТИВЕН&lt;/b&gt;&lt;span&gt;Постоянный бонус этого сезона&lt;/span&gt;`
+          : isActive
+            ? `&lt;b&gt;АКТИВЕН&lt;/b&gt;&lt;span&gt;Осталось: ${formatter.format(active.runsLeft)} ${caseRunWord(active.runsLeft)}&lt;/span&gt;`
+            : otherActive
+              ? `&lt;span&gt;Сейчас активен ${escapePurchaseText(activeTitle)} · ещё ${formatter.format(active.runsLeft)} ${caseRunWord(active.runsLeft)}&lt;/span&gt;`
+              : count &gt; 0
+                ? `&lt;span&gt;Готов к активации&lt;/span&gt;`
+                : `&lt;span&gt;Нет в запасе&lt;/span&gt;`;
+        const facts = isSpecial
+          ? `&lt;div class=&quot;booster-info-fact&quot;&gt;&lt;strong&gt;Что делает&lt;/strong&gt;&lt;span&gt;Увеличивает получение XP профиля и сезонного пропуска в 2 раза.&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;booster-info-xp-tags&quot;&gt;&lt;span&gt;Профиль XP ×2&lt;/span&gt;&lt;span&gt;Сезон XP ×2&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;booster-info-fact&quot;&gt;&lt;strong&gt;Действует&lt;/strong&gt;&lt;span&gt;Постоянно в течение текущего сезона. Удвоение применяется к новым забегам, покупкам и сезонным заданиям там, где сервер начисляет XP.&lt;/span&gt;&lt;/div&gt;`
+          : `&lt;div class=&quot;booster-info-fact&quot;&gt;&lt;strong&gt;Что делает&lt;/strong&gt;&lt;span&gt;${escapePurchaseText(info.what)}&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;booster-info-fact&quot;&gt;&lt;strong&gt;Действует&lt;/strong&gt;&lt;span&gt;${isActive ? `Ещё ${formatter.format(active.runsLeft)} ${caseRunWord(active.runsLeft)}.` : &quot;На 2 следующих завершённых забега после активации.&quot;}&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;booster-info-fact&quot;&gt;&lt;strong&gt;В запасе&lt;/strong&gt;&lt;span&gt;${formatter.format(count)} шт.&lt;/span&gt;&lt;/div&gt;`;
+        const primary = consumable &amp;&amp; !isActive &amp;&amp; !otherActive &amp;&amp; count &gt; 0
+          ? `&lt;button class=&quot;case-info-primary&quot; data-activate-case-booster=&quot;${escapePurchaseText(id)}&quot; data-booster-modal-activate type=&quot;button&quot;&gt;Активировать&lt;/button&gt;`
+          : &quot;&quot;;
+        const note = isSpecial
+          ? `&lt;strong&gt;Бонус уже включён&lt;/strong&gt;&lt;span&gt;Его не нужно активировать вручную и он не расходует запас усилителей.&lt;/span&gt;`
+          : otherActive
+            ? `&lt;strong&gt;Одновременно работает один расходный усилитель&lt;/strong&gt;&lt;span&gt;Новый можно активировать после завершения текущего ${escapePurchaseText(activeTitle)}.&lt;/span&gt;`
+            : `&lt;strong&gt;Активация не происходит при просмотре&lt;/strong&gt;&lt;span&gt;Усилитель расходуется только после нажатия кнопки «Активировать». ${escapePurchaseText(info.detail)}&lt;/span&gt;`;
+        caseLayer.classList.add(&quot;is-info-view&quot;);
+        caseContentEl.innerHTML = `&lt;div class=&quot;booster-info-view&quot;&gt;&lt;div class=&quot;booster-info-hero${isSpecial ? &quot; is-special&quot; : &quot;&quot;}&quot;&gt;&lt;span class=&quot;booster-info-art&quot;&gt;&lt;img src=&quot;${escapePurchaseText(item.src)}&quot; alt=&quot;&quot; decoding=&quot;async&quot;&gt;&lt;/span&gt;&lt;span class=&quot;booster-info-copy&quot;&gt;&lt;small class=&quot;booster-info-kicker&quot;&gt;${isSpecial ? &quot;Бонус опыта&quot; : &quot;Усилитель&quot;}&lt;/small&gt;&lt;h2 id=&quot;case-dialog-title&quot;&gt;${escapePurchaseText(item.title)}&lt;/h2&gt;&lt;p&gt;${isSpecial ? &quot;Постоянное усиление прогресса текущего сезона.&quot; : &quot;Расходный бонус для следующих завершённых забегов.&quot;}&lt;/p&gt;&lt;span class=&quot;booster-info-state&quot;&gt;${status}&lt;/span&gt;&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;booster-info-facts&quot;&gt;${facts}&lt;/div&gt;&lt;div class=&quot;booster-info-note&quot;&gt;${note}&lt;/div&gt;&lt;div class=&quot;booster-info-actions&quot;&gt;${primary}&lt;button class=&quot;case-info-secondary&quot; data-case-close type=&quot;button&quot;&gt;Закрыть&lt;/button&gt;&lt;/div&gt;&lt;/div&gt;`;
+        openCaseLayerShell();
+        caseLayer.querySelector(&quot;.case-dialog&quot;)?.scrollTo({ top: 0, behavior: &quot;auto&quot; });
+      }
+
       function showAlexCaseRewardsInfo() {
         if (!caseLayer || !caseContentEl) return;
         const collection = alexCollectionClientState();
@@ -18169,6 +18219,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           : `Осталось собрать: ${formatter.format(4 - collection.count)}`;
         const openAction = caseInfoOpenActionMarkup(&quot;alex&quot;);
         caseRouletteBusy = false;
+        caseLayer.classList.add(&quot;is-info-view&quot;);
         caseContentEl.innerHTML = `&lt;div class=&quot;case-info-view case-info-view--alex&quot;&gt;&lt;div class=&quot;case-info-hero is-alex&quot;&gt;&lt;span class=&quot;case-info-hero-art&quot;&gt;${caseImageMarkup(&quot;alex&quot;, false, &quot;case-info-chest&quot;)}&lt;/span&gt;&lt;span class=&quot;case-info-hero-copy&quot;&gt;&lt;small class=&quot;case-info-kicker&quot;&gt;◆ Особый тематический кейс&lt;/small&gt;&lt;h2 id=&quot;case-dialog-title&quot;&gt;Кейс Алекса&lt;/h2&gt;&lt;p&gt;Без гаранта. Каждое открытие — независимый шанс.&lt;/p&gt;&lt;/span&gt;&lt;/div&gt;&lt;section class=&quot;alex-collection-panel is-v2&quot;&gt;&lt;div class=&quot;alex-collection-main&quot;&gt;&lt;div class=&quot;alex-collection-head&quot;&gt;&lt;span&gt;&lt;strong&gt;Коллекция Алекса · ${collection.count}/4&lt;/strong&gt;&lt;small&gt;${escapePurchaseText(rewardState)}&lt;/small&gt;&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;alex-collection-slots&quot;&gt;${slots}&lt;/div&gt;&lt;/div&gt;&lt;aside class=&quot;alex-collection-reward-card&quot;&gt;&lt;small&gt;Награда за 4/4&lt;/small&gt;${caseImageMarkup(&quot;gold&quot;, false, &quot;alex-collection-gold&quot;)}&lt;strong&gt;Золотой кейс&lt;/strong&gt;&lt;span&gt;Выдаётся один раз, когда коллекция впервые собрана полностью.&lt;/span&gt;&lt;/aside&gt;&lt;/section&gt;&lt;section class=&quot;case-info-section case-info-section--premium&quot;&gt;&lt;div class=&quot;case-info-section-title&quot;&gt;&lt;span&gt;&lt;strong&gt;Предметы в кейсе&lt;/strong&gt;&lt;small&gt;Рамки и аватарки имеют по две версии&lt;/small&gt;&lt;/span&gt;&lt;em&gt;Шансы выпадения&lt;/em&gt;&lt;/div&gt;&lt;div class=&quot;case-info-simple-list&quot;&gt;${uniqueRewards}&lt;/div&gt;&lt;/section&gt;&lt;section class=&quot;case-info-section&quot;&gt;&lt;div class=&quot;case-info-section-title&quot;&gt;&lt;span&gt;&lt;strong&gt;Игровая валюта&lt;/strong&gt;&lt;small&gt;Остальные 99,43% распределены поровну между тремя видами наград&lt;/small&gt;&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;case-info-simple-list&quot;&gt;${currencies}&lt;/div&gt;&lt;div class=&quot;alex-points-bands&quot;&gt;&lt;strong&gt;Если выпали очки&lt;/strong&gt;&lt;span&gt;2–5 тыс. — 55% · 5–10 тыс. — 25% · 10–15 тыс. — 12% · 15–20 тыс. — 6% · 20–25 тыс. — 2%&lt;/span&gt;&lt;/div&gt;&lt;/section&gt;&lt;div class=&quot;case-info-note is-alex&quot;&gt;&lt;strong&gt;Без гаранта и pity&lt;/strong&gt;&lt;span&gt;Скин Алекс — 0,12%. След — 0,15%. Рамки — суммарно 0,15% (по 0,075% каждая). Аватарки — суммарно 0,15% (по 0,075% каждая). Повтор уже полученного уникального предмета автоматически заменяется на 10 000 очков.&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;case-info-actions&quot;&gt;${openAction}&lt;button class=&quot;case-info-secondary&quot; data-case-close type=&quot;button&quot;&gt;Закрыть&lt;/button&gt;&lt;/div&gt;&lt;/div&gt;`;
         openCaseLayerShell();
         caseLayer.querySelector(&quot;.case-dialog&quot;)?.scrollTo({ top: 0, behavior: &quot;auto&quot; });
@@ -18266,6 +18317,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
             : `&lt;strong&gt;Повтор косметики не пропадает&lt;/strong&gt;&lt;span&gt;За дубликат начисляется компенсация очками.&lt;/span&gt;`;
         caseRouletteBusy = false;
         const openAction = caseInfoOpenActionMarkup(info.type);
+        caseLayer.classList.add(&quot;is-info-view&quot;);
         caseContentEl.innerHTML = `&lt;div class=&quot;case-info-view&quot;&gt;&lt;div class=&quot;case-info-hero&quot;&gt;&lt;span class=&quot;case-info-hero-art&quot;&gt;${caseImageMarkup(info.type, false, &quot;case-info-chest&quot;)}&lt;/span&gt;&lt;span class=&quot;case-info-hero-copy&quot;&gt;&lt;small class=&quot;case-info-kicker&quot;&gt;Содержимое кейса&lt;/small&gt;&lt;h2 id=&quot;case-dialog-title&quot;&gt;${escapePurchaseText(info.title)}&lt;/h2&gt;&lt;p&gt;При открытии выпадает одна гарантированная награда.&lt;/p&gt;&lt;/span&gt;&lt;/div&gt;${guaranteeProgress}&lt;section class=&quot;case-info-section&quot;&gt;&lt;div class=&quot;case-info-section-title&quot;&gt;&lt;span&gt;&lt;strong&gt;Шансы по категориям&lt;/strong&gt;&lt;small&gt;Вероятность за одно открытие&lt;/small&gt;&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;case-info-category-list&quot;&gt;${categories}&lt;/div&gt;&lt;/section&gt;&lt;section class=&quot;case-info-section&quot;&gt;&lt;div class=&quot;case-info-section-title&quot;&gt;&lt;span&gt;&lt;strong&gt;Ресурсы и усилители&lt;/strong&gt;&lt;small&gt;Точное количество и шанс&lt;/small&gt;&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;case-info-simple-list&quot;&gt;${simpleRewards}&lt;/div&gt;&lt;/section&gt;${physicalSection}${musicSection}${cosmeticSections}&lt;div class=&quot;case-info-note&quot;&gt;${note}&lt;/div&gt;&lt;div class=&quot;case-info-actions&quot;&gt;${openAction}&lt;button class=&quot;case-info-secondary&quot; data-case-close type=&quot;button&quot;&gt;Закрыть&lt;/button&gt;&lt;/div&gt;&lt;/div&gt;`;
         applyBoosterArtIcons(caseContentEl);
         openCaseLayerShell();
@@ -18311,6 +18363,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 
       function showCaseResult(opened) {
         if (!caseLayer || !caseContentEl || !opened) return;
+        caseLayer.classList.remove(&quot;is-info-view&quot;);
         const isAlexCase = String(opened.caseType || &quot;&quot;) === &quot;alex&quot;;
         const rewards = Array.isArray(opened.rewards) ? opened.rewards.slice(0, 1) : [];
         const winningIndex = 28;
@@ -19178,11 +19231,11 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           const consumableMarkup = Object.entries(CASE_BOOSTER_CATALOG).map(([type,item]) =&gt; {
             const count = Number(state.caseBoosters?.[type] || 0); const isActive = active.type === type;
             const disabled = Boolean(active.type) || count &lt;= 0;
-            return `&lt;div class=&quot;case-booster-card${isActive?&quot; is-active&quot;:&quot;&quot;}&quot;&gt;&lt;img class=&quot;case-booster-icon&quot; src=&quot;${escapePurchaseText(item.src)}&quot; alt=&quot;&quot; loading=&quot;eager&quot; decoding=&quot;async&quot;&gt;&lt;strong&gt;${item.title}&lt;/strong&gt;&lt;span&gt;${isActive?`Ещё ${active.runsLeft} ${caseRunWord(active.runsLeft)}`:`В запасе: ${formatter.format(count)}`}&lt;/span&gt;&lt;button data-activate-case-booster=&quot;${type}&quot; type=&quot;button&quot; ${disabled?&quot;disabled&quot;:&quot;&quot;}&gt;${isActive?&quot;Активен&quot;:&quot;Активировать&quot;}&lt;/button&gt;&lt;/div&gt;`;
+            return `&lt;div class=&quot;case-booster-card${isActive?&quot; is-active&quot;:&quot;&quot;}&quot;&gt;&lt;img class=&quot;case-booster-icon&quot; data-booster-info=&quot;${type}&quot; src=&quot;${escapePurchaseText(item.src)}&quot; alt=&quot;Информация: ${escapePurchaseText(item.title)}&quot; loading=&quot;eager&quot; decoding=&quot;async&quot;&gt;&lt;strong data-booster-info=&quot;${type}&quot;&gt;${item.title}&lt;/strong&gt;&lt;span&gt;${isActive?`Ещё ${active.runsLeft} ${caseRunWord(active.runsLeft)}`:`В запасе: ${formatter.format(count)}`}&lt;/span&gt;&lt;button data-activate-case-booster=&quot;${type}&quot; type=&quot;button&quot; ${disabled?&quot;disabled&quot;:&quot;&quot;}&gt;${isActive?&quot;Активен&quot;:&quot;Активировать&quot;}&lt;/button&gt;&lt;/div&gt;`;
           }).join(&quot;&quot;);
           const specialMarkup = ownedSpecials.map((id) =&gt; {
             const item = CASE_SPECIAL_CATALOG[id];
-            return `&lt;div class=&quot;case-booster-card case-booster-card--season&quot;&gt;&lt;img class=&quot;case-booster-icon&quot; src=&quot;${escapePurchaseText(item.src)}&quot; alt=&quot;&quot; loading=&quot;eager&quot; decoding=&quot;async&quot;&gt;&lt;strong&gt;${item.title}&lt;/strong&gt;&lt;span class=&quot;booster-special-copy&quot;&gt;${escapePurchaseText(item.description)}&lt;/span&gt;&lt;span class=&quot;booster-special-tag&quot;&gt;${escapePurchaseText(item.tag || &quot;&quot;)}&lt;/span&gt;&lt;button type=&quot;button&quot; disabled&gt;Активен&lt;/button&gt;&lt;/div&gt;`;
+            return `&lt;div class=&quot;case-booster-card case-booster-card--season&quot;&gt;&lt;img class=&quot;case-booster-icon&quot; data-booster-info=&quot;${escapePurchaseText(id)}&quot; src=&quot;${escapePurchaseText(item.src)}&quot; alt=&quot;Информация: ${escapePurchaseText(item.title)}&quot; loading=&quot;eager&quot; decoding=&quot;async&quot;&gt;&lt;strong data-booster-info=&quot;${escapePurchaseText(id)}&quot;&gt;${item.title}&lt;/strong&gt;&lt;span class=&quot;booster-special-copy&quot;&gt;${escapePurchaseText(item.description)}&lt;/span&gt;&lt;span class=&quot;booster-special-tag&quot;&gt;${escapePurchaseText(item.tag || &quot;&quot;)}&lt;/span&gt;&lt;button type=&quot;button&quot; disabled&gt;Активен&lt;/button&gt;&lt;/div&gt;`;
           }).join(&quot;&quot;);
           const specialsBlock = specialMarkup ? `&lt;div class=&quot;booster-specials&quot;&gt;${specialMarkup}&lt;/div&gt;` : &quot;&quot;;
           setStableMarkup(caseBoostersListEl, `&lt;div class=&quot;booster-consumables-grid&quot;&gt;${consumableMarkup}&lt;/div&gt;${specialsBlock}`, &quot;boosters&quot;);
@@ -23393,7 +23446,13 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         }
       });
       if (caseBoostersListEl) caseBoostersListEl.addEventListener(&quot;click&quot;, (event) =&gt; {
-        const button = event.target instanceof Element ? event.target.closest(&quot;[data-activate-case-booster]&quot;) : null;
+        const target = event.target instanceof Element ? event.target : null;
+        const infoTarget = target?.closest(&quot;[data-booster-info]&quot;);
+        if (infoTarget) {
+          showBoosterInfo(infoTarget.dataset.boosterInfo);
+          return;
+        }
+        const button = target?.closest(&quot;[data-activate-case-booster]&quot;);
         if (button &amp;&amp; !button.disabled) void activateCaseBoosterClient(button.dataset.activateCaseBooster, button);
       });
       for (const container of [caseAvatarsEl, caseFramesEl, caseTrailsEl]) container?.addEventListener(&quot;click&quot;, (event) =&gt; {
@@ -23402,6 +23461,16 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       });
       if (caseLayer) caseLayer.addEventListener(&quot;click&quot;, (event) =&gt; {
         const target = event.target instanceof Element ? event.target : null;
+        const boosterActivate = target?.closest(&quot;[data-booster-modal-activate][data-activate-case-booster]&quot;);
+        if (boosterActivate &amp;&amp; !boosterActivate.disabled) {
+          event.preventDefault();
+          event.stopPropagation();
+          const boosterType = boosterActivate.dataset.activateCaseBooster;
+          void activateCaseBoosterClient(boosterType, boosterActivate).then(() =&gt; {
+            if (!caseLayer.hidden) showBoosterInfo(boosterType);
+          });
+          return;
+        }
         const openAgain = target?.closest(&quot;[data-case-open-again]&quot;);
         if (openAgain &amp;&amp; !openAgain.disabled) {
           event.preventDefault();
@@ -24438,7 +24507,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 
 &lt;style id=&quot;zefirok-case-info-v2&quot;&gt;
 #zefirok-maltipoo-runner .case-info-view{display:grid;gap:10px;padding:2px 0 1px}
-#zefirok-maltipoo-runner .case-info-hero{display:grid;grid-template-columns:112px minmax(0,1fr);align-items:center;gap:14px;padding:12px 30px 12px 10px;border-radius:20px;background:linear-gradient(135deg,#fff9f5,#fffdf8);box-shadow:inset 0 0 0 1px rgba(225,190,176,.28);text-align:left}
+#zefirok-maltipoo-runner .case-info-hero{display:grid;grid-template-columns:112px minmax(0,1fr);align-items:center;gap:14px;padding:12px 12px 12px 10px;border-radius:20px;background:linear-gradient(135deg,#fff9f5,#fffdf8);box-shadow:inset 0 0 0 1px rgba(225,190,176,.28);text-align:left}
 #zefirok-maltipoo-runner .case-info-hero.is-alex{background:radial-gradient(circle at 12% 30%,rgba(255,219,228,.78),transparent 38%),linear-gradient(135deg,#fff9f3,#f4f8e4);box-shadow:inset 0 0 0 1px rgba(170,178,99,.34)}
 #zefirok-maltipoo-runner .case-info-hero-art{display:grid;place-items:center;min-width:0}
 #zefirok-maltipoo-runner .case-info-hero .case-info-chest{width:108px;height:108px;object-fit:contain;filter:drop-shadow(0 10px 15px rgba(116,77,55,.12))}
@@ -24472,7 +24541,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 #zefirok-maltipoo-runner .case-info-primary:disabled{border-color:#eadbd6;background:#f1e9e5;color:#a9958c;box-shadow:none}
 #zefirok-maltipoo-runner .case-info-secondary{border:1px solid rgba(225,192,183,.75);background:#fffaf8;color:#a06476}
 @media(max-width:390px){
-#zefirok-maltipoo-runner .case-info-hero{grid-template-columns:88px minmax(0,1fr);gap:10px;padding:10px 26px 10px 8px}
+#zefirok-maltipoo-runner .case-info-hero{grid-template-columns:88px minmax(0,1fr);gap:10px;padding:10px 10px 10px 8px}
 #zefirok-maltipoo-runner .case-info-hero .case-info-chest{width:86px;height:86px}
 #zefirok-maltipoo-runner .case-info-hero h2{font-size:20px}
 #zefirok-maltipoo-runner .alex-collection-panel.is-v2{grid-template-columns:1fr}
@@ -24481,6 +24550,44 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 #zefirok-maltipoo-runner .alex-collection-reward-card .alex-collection-gold{grid-column:1;grid-row:2/4;width:50px;height:50px}
 #zefirok-maltipoo-runner .alex-collection-reward-card&gt;strong{grid-column:2}
 #zefirok-maltipoo-runner .alex-collection-reward-card&gt;span{grid-column:2}
+}
+&lt;/style&gt;
+
+&lt;style id=&quot;zefirok-booster-info-v1&quot;&gt;
+#zefirok-maltipoo-runner .case-booster-icon[data-booster-info],#zefirok-maltipoo-runner .case-booster-card strong[data-booster-info]{cursor:pointer;touch-action:manipulation}
+#zefirok-maltipoo-runner .case-booster-icon[data-booster-info]:active{transform:scale(.96)}
+#zefirok-maltipoo-runner .booster-info-view{display:grid;gap:10px;padding:2px 0 1px;text-align:left}
+#zefirok-maltipoo-runner .booster-info-hero{display:grid;grid-template-columns:116px minmax(0,1fr);align-items:center;gap:14px;padding:14px 13px;border:1px solid rgba(232,190,204,.52);border-radius:22px;background:radial-gradient(circle at 13% 35%,rgba(255,222,234,.68),transparent 42%),linear-gradient(135deg,#fffaf9,#fff5f7);box-shadow:0 8px 22px rgba(106,59,76,.07)}
+#zefirok-maltipoo-runner .booster-info-hero.is-special{border-color:rgba(223,171,61,.54);background:radial-gradient(circle at 13% 35%,rgba(255,224,121,.4),transparent 42%),linear-gradient(135deg,#fffdf5,#fff3cd)}
+#zefirok-maltipoo-runner .booster-info-art{width:112px;height:112px;display:grid;place-items:center;border-radius:20px;background:rgba(255,255,255,.7)}
+#zefirok-maltipoo-runner .booster-info-art img{width:98px;height:98px;object-fit:contain;filter:drop-shadow(0 9px 13px rgba(105,57,42,.14))}
+#zefirok-maltipoo-runner .booster-info-copy{display:grid;gap:5px;min-width:0}
+#zefirok-maltipoo-runner .booster-info-kicker{width:max-content;max-width:100%;padding:5px 9px;border-radius:999px;background:#ffe9f1;color:#b75679;font-size:8px;font-weight:950;letter-spacing:.07em;text-transform:uppercase}
+#zefirok-maltipoo-runner .booster-info-hero.is-special .booster-info-kicker{background:#fff0bc;color:#946719}
+#zefirok-maltipoo-runner .booster-info-copy h2{margin:0;color:#633848;font-size:25px;line-height:1.02}
+#zefirok-maltipoo-runner .booster-info-hero.is-special .booster-info-copy h2{color:#704921}
+#zefirok-maltipoo-runner .booster-info-copy p{margin:0;color:#96717e;font-size:10px;line-height:1.42}
+#zefirok-maltipoo-runner .booster-info-state{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+#zefirok-maltipoo-runner .booster-info-state b,#zefirok-maltipoo-runner .booster-info-state span{padding:6px 9px;border-radius:999px;font-size:8.5px;line-height:1;font-weight:900}
+#zefirok-maltipoo-runner .booster-info-state b{background:#e5f5e9;color:#47845a}
+#zefirok-maltipoo-runner .booster-info-state b.is-special{background:#fff0bf;color:#9a6817}
+#zefirok-maltipoo-runner .booster-info-state span{border:1px solid rgba(226,185,199,.52);background:#fff;color:#9d6b7d}
+#zefirok-maltipoo-runner .booster-info-facts{display:grid;gap:8px}
+#zefirok-maltipoo-runner .booster-info-fact{display:grid;gap:4px;padding:11px 12px;border:1px solid rgba(232,205,214,.58);border-radius:16px;background:rgba(255,255,255,.86);box-shadow:0 5px 14px rgba(102,61,77,.045)}
+#zefirok-maltipoo-runner .booster-info-fact strong{color:#704354;font-size:11px;line-height:1.15}
+#zefirok-maltipoo-runner .booster-info-fact span{color:#967783;font-size:9.5px;line-height:1.45}
+#zefirok-maltipoo-runner .booster-info-xp-tags{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+#zefirok-maltipoo-runner .booster-info-xp-tags span{display:grid;place-items:center;min-height:42px;padding:8px;border:1px solid rgba(222,170,56,.38);border-radius:14px;background:linear-gradient(180deg,#fffdf6,#fff4cf);color:#91631b;font-size:10px;font-weight:950;text-align:center}
+#zefirok-maltipoo-runner .booster-info-note{display:grid;gap:3px;padding:10px 12px;border-radius:15px;background:linear-gradient(135deg,#fff7fb,#fff9ee);color:#79505f}
+#zefirok-maltipoo-runner .booster-info-note strong{font-size:10px}
+#zefirok-maltipoo-runner .booster-info-note span{font-size:8.5px;line-height:1.42;color:#9b7582}
+#zefirok-maltipoo-runner .booster-info-actions{position:sticky;bottom:-1px;z-index:3;display:grid;gap:7px;padding-top:8px;background:linear-gradient(180deg,rgba(255,246,239,0),#fff5ec 23%,#fff5ec)}
+#zefirok-maltipoo-runner .booster-info-actions .case-info-primary,#zefirok-maltipoo-runner .booster-info-actions .case-info-secondary{min-height:46px}
+@media(max-width:390px){
+#zefirok-maltipoo-runner .booster-info-hero{grid-template-columns:92px minmax(0,1fr);gap:10px;padding:11px 10px}
+#zefirok-maltipoo-runner .booster-info-art{width:88px;height:88px}
+#zefirok-maltipoo-runner .booster-info-art img{width:78px;height:78px}
+#zefirok-maltipoo-runner .booster-info-copy h2{font-size:21px}
 }
 &lt;/style&gt;
 &lt;script id=&quot;zefirok-v0796-gameplay-smoothness-audit&quot; type=&quot;application/json&quot;&gt;{&quot;version&quot;:&quot;0.79.6&quot;,&quot;scope&quot;:&quot;gameplay-smoothness&quot;,&quot;backwardCompatible&quot;:true,&quot;gameplayValuesChanged&quot;:false,&quot;optimizations&quot;:[&quot;fixedTimestep60Hz&quot;,&quot;renderInterpolation&quot;,&quot;deferredHeavyAnticheatDuringRun&quot;,&quot;scaledSpriteCanvasCache&quot;,&quot;phasePerformanceMetrics&quot;,&quot;legacyLoopFallback&quot;]}&lt;/script&gt;
