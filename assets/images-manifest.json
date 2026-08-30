@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "catalogHash": "40dc92c38480d425",
-  "count": 442,
+  "catalogHash": "afce8ceeba4af55f",
+  "count": 443,
   "images": [
     {
       "fileName": "achievements/background_achivment_panel.png",
@@ -354,6 +354,14 @@
       "path": "/assets/achievements/showcases/vitrina_s2.png",
       "size": 1427575,
       "modified": 1788125622000
+    },
+    {
+      "fileName": "achievements/showcases/vitrina_s3.png",
+      "label": "Vitrina s3",
+      "folder": "achievements/showcases",
+      "path": "/assets/achievements/showcases/vitrina_s3.png",
+      "size": 1710561,
+      "modified": 1788126542102
     },
     {
       "fileName": "albom_all/alex_albom_oblozka.png",
@@ -2408,8 +2416,8 @@
       "label": "Premium line",
       "folder": "season-pass",
       "path": "/assets/season-pass/premium_line.png",
-      "size": 2771688,
-      "modified": 1785367641000
+      "size": 2623616,
+      "modified": 1788127055118
     },
     {
       "fileName": "season-pass/quest.png",
