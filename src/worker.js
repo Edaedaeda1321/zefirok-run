@@ -198,16 +198,17 @@ const CASE_MUSIC_TRACKS = Object.freeze({
   legendary_marshmallow_dash_4: Object.freeze({ id: "legendary_marshmallow_dash_4", title: "Зефирный рывок IV", rarity: "legendary", weight: 1, legendaryOnly: true, isNew: true, src: "/assets/sounds/marshmallow_dash_4.ogg?v=0.79.8", imageUrl: "/assets/sounds/covers/music_marshmallow_dash_4.png" })
 });
 
-// Будущий контент сезона «Тайны Белкино». Файлы лежат в проекте заранее,
-// но публичная доступность управляется Live Content Manager из Control Center.
-// Пока предмет не выпущен в D1, обычная игра его не видит.
+// Скрытый сезонный каталог нескольких сезонов. Часть исторических itemId имеет
+// префикс season3, хотя фактически относится к S2: эти стабильные ID нельзя
+// переименовывать из-за уже существующих владений/наград в D1. Физические файлы
+// и seasonKey являются источником истины для сезона; публикацией управляет Live Content Manager.
 const FUTURE_SEASON_CONTENT = Object.freeze({
   avatar: Object.freeze({
-    season3_avatar_elite: Object.freeze({ id:"season3_avatar_elite", title:"Лунная принцесса", rarity:"mythic", imageUrl:"/assets/cases/avatars/avatrs_season3Elit.png" }),
-    season3_avatar_epic: Object.freeze({ id:"season3_avatar_epic", title:"Вечерняя бариста", rarity:"epic", imageUrl:"/assets/cases/avatars/avatrs_season3Epik.png" }),
-    season3_avatar_epic_2: Object.freeze({ id:"season3_avatar_epic_2", title:"Бариста на прогулке", rarity:"epic", imageUrl:"/assets/cases/avatars/avatrs_season3Epik2.png" }),
-    season3_avatar_mythic: Object.freeze({ id:"season3_avatar_mythic", title:"Кофе под луной", rarity:"mythic", imageUrl:"/assets/cases/avatars/avatrs_season3Mifik.png" }),
-    season3_avatar_elite_plus: Object.freeze({ id:"season3_avatar_elite_plus", title:"Ночная королева", rarity:"legendary", imageUrl:"/assets/rating/frames/profile/Elit+avatrs_season3.png" }),
+    season3_avatar_elite: Object.freeze({ id:"season3_avatar_elite", seasonKey:"season2", title:"Лунная принцесса", rarity:"mythic", imageUrl:"/assets/cases/avatars/avatrs_season2Elit.png" }),
+    season3_avatar_epic: Object.freeze({ id:"season3_avatar_epic", seasonKey:"season2", title:"Вечерняя бариста", rarity:"epic", imageUrl:"/assets/cases/avatars/avatrs_season2Epik.png" }),
+    season3_avatar_epic_2: Object.freeze({ id:"season3_avatar_epic_2", seasonKey:"season2", title:"Бариста на прогулке", rarity:"epic", imageUrl:"/assets/cases/avatars/avatrs_season2Epik2.png" }),
+    season3_avatar_mythic: Object.freeze({ id:"season3_avatar_mythic", seasonKey:"season2", title:"Кофе под луной", rarity:"mythic", imageUrl:"/assets/cases/avatars/avatrs_season2Mifik.png" }),
+    season3_avatar_elite_plus: Object.freeze({ id:"season3_avatar_elite_plus", seasonKey:"season2", title:"Ночная королева", rarity:"legendary", imageUrl:"/assets/rating/frames/profile/Elit+avatrs_season2.png" }),
     season3_avatar_standard_1: Object.freeze({ id:"season3_avatar_standard_1", title:"Прогулка в саду", rarity:"common", imageUrl:"/assets/cases/avatars/season3_avatar_standard_1.png" }),
     season3_avatar_standard_2: Object.freeze({ id:"season3_avatar_standard_2", title:"У канала", rarity:"common", imageUrl:"/assets/cases/avatars/season3_avatar_standard_2.png" }),
     season3_avatar_standard_3: Object.freeze({ id:"season3_avatar_standard_3", title:"Ягодный пикник", rarity:"common", imageUrl:"/assets/cases/avatars/season3_avatar_standard_3.png" }),
@@ -220,11 +221,11 @@ const FUTURE_SEASON_CONTENT = Object.freeze({
     season3_avatar_legendary_new_2: Object.freeze({ id:"season3_avatar_legendary_new_2", title:"Золотое сердце", rarity:"legendary", imageUrl:"/assets/cases/avatars/season3_avatar_legendary_new_2.png" })
   }),
   frame: Object.freeze({
-    season3_frame_elite_plus: Object.freeze({ id:"season3_frame_elite_plus", title:"Ночная Королева", rarity:"legendary", imageUrl:"/assets/rating/frames/profile/Elit+ramka_season3_5.png" }),
+    season3_frame_elite_plus: Object.freeze({ id:"season3_frame_elite_plus", seasonKey:"season2", title:"Ночная Королева", rarity:"legendary", imageUrl:"/assets/rating/frames/profile/Elit+ramka_season2_5.png" }),
     season3_frame_elite_1: Object.freeze({ id:"season3_frame_elite_1", title:"Ночная принцесса", rarity:"legendary", imageUrl:"/assets/rating/frames/profile/Elitramka_season3_1.png" }),
-    season3_frame_elite_4: Object.freeze({ id:"season3_frame_elite_4", title:"Премиальные сладости", rarity:"legendary", imageUrl:"/assets/rating/frames/profile/Elitramka_season3_4.png" }),
-    season3_frame_epic: Object.freeze({ id:"season3_frame_epic", title:"Ночная смена", rarity:"epic", imageUrl:"/assets/rating/frames/profile/epickramka_season3_2.png" }),
-    season3_frame_mythic: Object.freeze({ id:"season3_frame_mythic", title:"Ночные сладости", rarity:"mythic", imageUrl:"/assets/rating/frames/profile/mifikramka_season3_3.png" }),
+    season3_frame_elite_4: Object.freeze({ id:"season3_frame_elite_4", seasonKey:"season2", title:"Премиальные сладости", rarity:"legendary", imageUrl:"/assets/rating/frames/profile/Elitramka_season2_4.png" }),
+    season3_frame_epic: Object.freeze({ id:"season3_frame_epic", seasonKey:"season2", title:"Ночная смена", rarity:"epic", imageUrl:"/assets/rating/frames/profile/epickramka_season2_2.png" }),
+    season3_frame_mythic: Object.freeze({ id:"season3_frame_mythic", seasonKey:"season2", title:"Ночные сладости", rarity:"mythic", imageUrl:"/assets/rating/frames/profile/mifikramka_season2_3.png" }),
     season3_frame_standard_new_1: Object.freeze({ id:"season3_frame_standard_new_1", title:"Розовый сад", rarity:"common", imageUrl:"/assets/rating/frames/profile/ramka_s3_standart1.png" }),
     season3_frame_standard_new_2: Object.freeze({ id:"season3_frame_standard_new_2", title:"Садовый бант", rarity:"common", imageUrl:"/assets/rating/frames/profile/ramka_s3_standart2.png" }),
     season3_frame_standard_new_3: Object.freeze({ id:"season3_frame_standard_new_3", title:"Лунный пруд", rarity:"common", imageUrl:"/assets/rating/frames/profile/ramka_s3_standart3.png" }),
@@ -237,11 +238,11 @@ const FUTURE_SEASON_CONTENT = Object.freeze({
     season3_frame_legendary_new_2: Object.freeze({ id:"season3_frame_legendary_new_2", title:"Королевский сад", rarity:"legendary", imageUrl:"/assets/rating/frames/profile/ramka_s3_legendary2.png" })
   }),
   trail: Object.freeze({
-    season3_trail_epic: Object.freeze({ id:"season3_trail_epic", title:"Ночной Волшебный след", rarity:"epic", imageUrl:"/assets/cases/trails/Epik_sled_season3.png" }),
-    season3_trail_epic_2: Object.freeze({ id:"season3_trail_epic_2", title:"Ночной кофейный след", rarity:"epic", imageUrl:"/assets/cases/trails/Epik_sled_season3_2.png" }),
-    season3_trail_legendary_plus: Object.freeze({ id:"season3_trail_legendary_plus", title:"Ночная королева", rarity:"legendary", imageUrl:"/assets/cases/trails/legendary+_sled_season_3.png" }),
-    season3_trail_legendary: Object.freeze({ id:"season3_trail_legendary", title:"Воздушные сны", rarity:"legendary", imageUrl:"/assets/cases/trails/Legendary_sled_season3.png" }),
-    season3_trail_mythic: Object.freeze({ id:"season3_trail_mythic", title:"Ночная принцесса", rarity:"mythic", imageUrl:"/assets/cases/trails/mifik_sled_season3.png" }),
+    season3_trail_epic: Object.freeze({ id:"season3_trail_epic", seasonKey:"season2", title:"Ночной Волшебный след", rarity:"epic", imageUrl:"/assets/cases/trails/Epik_sled_season2.png" }),
+    season3_trail_epic_2: Object.freeze({ id:"season3_trail_epic_2", seasonKey:"season2", title:"Ночной кофейный след", rarity:"epic", imageUrl:"/assets/cases/trails/Epik_sled_season2_2.png" }),
+    season3_trail_legendary_plus: Object.freeze({ id:"season3_trail_legendary_plus", seasonKey:"season2", title:"Ночная королева", rarity:"legendary", imageUrl:"/assets/cases/trails/legendary+_sled_season_2.png" }),
+    season3_trail_legendary: Object.freeze({ id:"season3_trail_legendary", seasonKey:"season2", title:"Воздушные сны", rarity:"legendary", imageUrl:"/assets/cases/trails/Legendary_sled_season2.png" }),
+    season3_trail_mythic: Object.freeze({ id:"season3_trail_mythic", seasonKey:"season2", title:"Ночная принцесса", rarity:"mythic", imageUrl:"/assets/cases/trails/mifik_sled_season2.png" }),
     season3_trail_standard_new_1: Object.freeze({ id:"season3_trail_standard_new_1", title:"Цветочная лапка", rarity:"common", imageUrl:"/assets/cases/trails/sled_s3_standart1.png" }),
     season3_trail_standard_new_2: Object.freeze({ id:"season3_trail_standard_new_2", title:"Зелёный сад", rarity:"common", imageUrl:"/assets/cases/trails/sled_s3_standart2.png" }),
     season3_trail_standard_new_3: Object.freeze({ id:"season3_trail_standard_new_3", title:"Золотая лапка", rarity:"common", imageUrl:"/assets/cases/trails/sled_s3_standart3.png" }),
@@ -256,8 +257,8 @@ const FUTURE_SEASON_CONTENT = Object.freeze({
   music: Object.freeze({
     season3_music_moon_cafe_epic: Object.freeze({ id:"season3_music_moon_cafe_epic", title:"Лунное зефирное кафе", rarity:"epic", imageUrl:"/assets/sounds/covers/img_sound_s3.png", audioUrl:"/assets/sounds/Moon Marshmallow Café(Epik).mp3" }),
     season3_music_moon_cafe_epic_2: Object.freeze({ id:"season3_music_moon_cafe_epic_2", title:"Лунное зефирное кафе II", rarity:"epic", imageUrl:"/assets/sounds/covers/img_sound_s3.png", audioUrl:"/assets/sounds/Moon Marshmallow Café_2(epik).mp3" }),
-    season3_music_lunar_run_legendary: Object.freeze({ id:"season3_music_lunar_run_legendary", title:"Лунный забег", rarity:"legendary", imageUrl:"/assets/sounds/covers/img_sound_s3.png", audioUrl:"/assets/sounds/new_song_season3(Legendary).mp3" }),
-    season3_music_lunar_run_mythic: Object.freeze({ id:"season3_music_lunar_run_mythic", title:"Лунный забег II", rarity:"mythic", imageUrl:"/assets/sounds/covers/img_sound_s3.png", audioUrl:"/assets/sounds/new_song_season3_2(Mifik).mp3" }),
+    season3_music_lunar_run_legendary: Object.freeze({ id:"season3_music_lunar_run_legendary", seasonKey:"season2", title:"Лунный забег", rarity:"legendary", imageUrl:"/assets/sounds/covers/img_sound_s3.png", audioUrl:"/assets/sounds/new_song_season2(Legendary).mp3" }),
+    season3_music_lunar_run_mythic: Object.freeze({ id:"season3_music_lunar_run_mythic", seasonKey:"season2", title:"Лунный забег II", rarity:"mythic", imageUrl:"/assets/sounds/covers/img_sound_s3.png", audioUrl:"/assets/sounds/new_song_season2_2(Mifik).mp3" }),
     season3_music_puppy_parade_epic: Object.freeze({ id:"season3_music_puppy_parade_epic", title:"Belkino Puppy Parade", rarity:"epic", imageUrl:"/assets/sounds/covers/img_sound_s3.png", audioUrl:"/assets/sounds/season3/belkino_puppy_parade.mp3" }),
     season3_music_puppy_trails_mythic: Object.freeze({ id:"season3_music_puppy_trails_mythic", title:"Belkino Puppy Trails I", rarity:"mythic", imageUrl:"/assets/sounds/covers/img_sound_s3.png", audioUrl:"/assets/sounds/season3/belkino_puppy_trails_1.mp3" }),
     season3_music_puppy_trails_legendary: Object.freeze({ id:"season3_music_puppy_trails_legendary", title:"Belkino Puppy Trails II", rarity:"legendary", imageUrl:"/assets/sounds/covers/img_sound_s3.png", audioUrl:"/assets/sounds/season3/belkino_puppy_trails_2.mp3" })
@@ -265,13 +266,16 @@ const FUTURE_SEASON_CONTENT = Object.freeze({
 });
 
 const FUTURE_SEASON_CONTENT_LABEL = "Тайны Белкино";
+const FUTURE_SEASON2_CONTENT_LABEL = "Сезон 2 · Ночной сезон";
 function futureSeasonContentCatalog(kind){ return FUTURE_SEASON_CONTENT[String(kind||"")] || Object.freeze({}); }
 function futureSeasonContentItem(kind,itemId){ return futureSeasonContentCatalog(kind)?.[String(itemId||"")] || null; }
+function futureSeasonContentSeasonKey(kind,itemId){ return String(futureSeasonContentItem(kind,itemId)?.seasonKey || "season3"); }
+function futureSeasonContentLabel(kind,itemId){ return futureSeasonContentSeasonKey(kind,itemId) === "season2" ? FUTURE_SEASON2_CONTENT_LABEL : FUTURE_SEASON_CONTENT_LABEL; }
+function futureSeasonContentMatchesSeasonKey(kind,itemId,seasonKey){ return futureSeasonContentSeasonKey(kind,itemId) === String(seasonKey||""); }
 
-// Draft seasonal case for the second real season. Asset/reward filenames keep the
-// historical season3 prefix because the first content season was a test season.
-// The definition is deliberately seeded with enabled=0 and therefore cannot be
-// claimed/opened until an owner explicitly enables it in Control Center.
+// Draft seasonal case именно для S3 «Тайны Белкино». Исторический S2-контент
+// с season3_* itemId сюда не попадает: pool фильтруется по явному seasonKey.
+// Definition создаётся с enabled=0 и не может открываться до явного включения в CC.
 const SEASON3_DRAFT_CASE_PRESET = Object.freeze({
   marker: "system-season3-draft-case-v1",
   targetTitle: FUTURE_SEASON_CONTENT_LABEL,
@@ -288,6 +292,7 @@ function season3DraftCasePool() {
   const items = [];
   for (const kind of SEASON_PASS_COSMETIC_KINDS) {
     for (const [itemId,item] of Object.entries(futureSeasonContentCatalog(kind))) {
+      if (!futureSeasonContentMatchesSeasonKey(kind,itemId,"season3")) continue;
       const rarity=String(item?.rarity||"epic");
       items.push({
         key:`${kind}:${itemId}`,
@@ -1044,7 +1049,7 @@ function seasonPassCosmeticRewardDefinition(value) {
   const split=body.indexOf(":");
   if (split <= 0) return null;
   let kind=body.slice(0,split), itemId=body.slice(split+1);
-  // Совместимость с ранней скрытой сборкой v9.4: файл Elit+avatrs_season3
+  // Совместимость с ранней скрытой сборкой v9.4: стабильный itemId сохранён, физический файл теперь season2.
   // лежал в папке рамок, хотя фактически это аватарка.
   if (kind === "frame" && itemId === "season3_frame_elite_plus_portrait") {
     kind = "avatar";
@@ -1056,8 +1061,8 @@ function seasonPassCosmeticRewardDefinition(value) {
   if (!item) return null;
   const future=Boolean(futureSeasonContentItem(kind,itemId));
   const liveRule=future?liveContentReleaseRuleCached(kind,itemId):null,rewardSeasonId=String(value?.season_id??value?.seasonId??"");let released=!future||Boolean(liveRule?.released);
-  if(future&&rewardSeasonId){const passRoute=liveContentRoute(liveRule,"season_pass",rewardSeasonId),rewardLevel=Math.max(1,Math.min(50,Math.floor(Number(value?.level)||1))),rewardLane=String(value?.lane||"")==="premium"?"premium":"free";released=Boolean(liveRule?.released&&passRoute&&Number(passRoute.level)===rewardLevel&&String(passRoute.lane||"free")===rewardLane);}
-  return { publicType:kind, storedType:"points", kind, itemId, storedItemId:`${SEASON_PASS_COSMETIC_PREFIX}${kind}:${itemId}`, title:String(item.title||itemId), imageUrl:seasonPassCosmeticImage(kind,itemId), future, released, seasonLabel:future?FUTURE_SEASON_CONTENT_LABEL:"", audioUrl:String(item.audioUrl||item.src||"") };
+  if(future&&rewardSeasonId){const passRoute=liveContentRoute(liveRule,"season_pass",rewardSeasonId),rewardLevel=Math.max(1,Math.min(50,Math.floor(Number(value?.level)||1))),rewardLane=String(value?.lane||"")==="premium"?"premium":"free";released=Boolean(liveRule?.released&&String(liveRule?.seasonId||"")===rewardSeasonId&&passRoute&&Number(passRoute.level)===rewardLevel&&String(passRoute.lane||"free")===rewardLane);}
+  return { publicType:kind, storedType:"points", kind, itemId, storedItemId:`${SEASON_PASS_COSMETIC_PREFIX}${kind}:${itemId}`, title:String(item.title||itemId), imageUrl:seasonPassCosmeticImage(kind,itemId), future, released, seasonLabel:future?futureSeasonContentLabel(kind,itemId):"", audioUrl:String(item.audioUrl||item.src||"") };
 }
 
 function seasonPassShowcaseStyleRewardDefinition(value) {
@@ -20545,11 +20550,11 @@ const LIVEOPS_CONTENT_IMAGES = Object.freeze({
     marshmallow_splash: "/assets/cases/trails/7F194357-28F3-4CC0-BD09-D4937777E361.PNG",
     strawberry: "/assets/cases/trails/6A8C47A2-F099-40A9-8270-A676725538D8.PNG",
     gold: "/assets/cases/trails/1C180321-0C98-48DD-9B43-0F6E5D3B61EA.PNG",
-    legendary_trail_1: "/assets/cases/trails/legendary_trail_1.png",
-    legendary_trail_2: "/assets/cases/trails/legendary_trail_2.png",
-    legendary_trail_3: "/assets/cases/trails/legendary_trail_3.png",
-    legendary_trail_4: "/assets/cases/trails/legendary_trail_4.png",
-    legendary_trail_5: "/assets/cases/trails/legendary_trail_5.png?v=45",
+    legendary_trail_1: "/assets/cases/trails/legendary_trail_1_season2.png",
+    legendary_trail_2: "/assets/cases/trails/legendary_trail_2_season2.png",
+    legendary_trail_3: "/assets/cases/trails/legendary_trail_3_season2.png",
+    legendary_trail_4: "/assets/cases/trails/legendary_trail_4_season2.png",
+    legendary_trail_5: "/assets/cases/trails/legendary_trail_5_season2.png?v=45",
     alex_trail: "/assets/cases/trails/sled_alex_collectia.png"
   }),
   skin: Object.freeze({
@@ -20677,14 +20682,18 @@ async function ensureLiveContentReleaseSchema(env){
       ]);
       const columns=(await env.DB.prepare(`PRAGMA table_info(live_content_release_rules)`).all()).results||[];
       if(!columns.some(row=>String(row.name)==='content_season_id'))await env.DB.prepare(`ALTER TABLE live_content_release_rules ADD COLUMN content_season_id TEXT NOT NULL DEFAULT ''`).run();
-      let boundSeasonId='';
-      try{boundSeasonId=String((await env.DB.prepare(`SELECT season_id FROM season_pass_case_presets WHERE preset_id='season3_belkino_case_v1' LIMIT 1`).first())?.season_id||'');}catch{}
+      let boundSeason3Id='',boundSeason2Id='';
+      try{boundSeason3Id=String((await env.DB.prepare(`SELECT season_id FROM season_pass_case_presets WHERE preset_id='season3_belkino_case_v1' LIMIT 1`).first())?.season_id||'');}catch{}
+      try{boundSeason2Id=String((await env.DB.prepare(`SELECT season_id FROM season_pass_story_presets WHERE preset_id='season2-night-cafe-story-v1' LIMIT 1`).first())?.season_id||'');}catch{}
       const now=Math.floor(Date.now()/1000),statements=[];
       for(const [kind,catalog] of Object.entries(FUTURE_SEASON_CONTENT)){
-        for(const itemId of Object.keys(catalog||{})){
-          const isSeason3=String(itemId).startsWith('season3_'),initialSeasonId=isSeason3?boundSeasonId:'';
+        for(const [itemId,item] of Object.entries(catalog||{})){
+          const seasonKey=String(item?.seasonKey||'season3'),initialSeasonId=seasonKey==='season2'?boundSeason2Id:boundSeason3Id;
           statements.push(env.DB.prepare(`INSERT OR IGNORE INTO live_content_release_rules(item_kind,item_id,content_season_id,released,ever_released,destination_type,destination_id,destination_config_json,updated_at,updated_by) VALUES(?,?,?,0,0,'native','','{}',?,'system')`).bind(kind,itemId,initialSeasonId,now));
-          if(isSeason3&&boundSeasonId)statements.push(env.DB.prepare(`UPDATE live_content_release_rules SET content_season_id=? WHERE item_kind=? AND item_id=? AND content_season_id=''`).bind(boundSeasonId,kind,itemId));
+          if(initialSeasonId){
+            if(seasonKey==='season2'&&boundSeason3Id)statements.push(env.DB.prepare(`UPDATE live_content_release_rules SET content_season_id=? WHERE item_kind=? AND item_id=? AND (content_season_id='' OR content_season_id=?)`).bind(initialSeasonId,kind,itemId,boundSeason3Id));
+            else statements.push(env.DB.prepare(`UPDATE live_content_release_rules SET content_season_id=? WHERE item_kind=? AND item_id=? AND content_season_id=''`).bind(initialSeasonId,kind,itemId));
+          }
         }
       }
       for(let i=0;i<statements.length;i+=40)await env.DB.batch(statements.slice(i,i+40));
@@ -20713,11 +20722,24 @@ async function bindFutureContentCatalogToSeason(env,seasonId){
   const id=String(seasonId||'').trim();if(!id)return {ok:false,bound:0};
   await ensureLiveContentReleaseSchema(env);const statements=[];
   for(const [kind,catalog] of Object.entries(FUTURE_SEASON_CONTENT))for(const itemId of Object.keys(catalog||{})){
-    if(!String(itemId).startsWith('season3_'))continue;
+    if(!futureSeasonContentMatchesSeasonKey(kind,itemId,'season3'))continue;
     statements.push(env.DB.prepare(`UPDATE live_content_release_rules SET content_season_id=? WHERE item_kind=? AND item_id=? AND (content_season_id='' OR content_season_id=?)`).bind(id,kind,itemId,id));
   }
   for(let i=0;i<statements.length;i+=40)await env.DB.batch(statements.slice(i,i+40));
   invalidateLiveContentReleaseCache();return {ok:true,bound:statements.length,seasonId:id,scope:'season3_only'};
+}
+async function bindSeason2ContentCatalogToSeason(env,seasonId){
+  const id=String(seasonId||'').trim();if(!id)return {ok:false,bound:0};
+  await ensureLiveContentReleaseSchema(env);let season3Id='';
+  try{season3Id=String((await env.DB.prepare(`SELECT season_id FROM season_pass_case_presets WHERE preset_id='season3_belkino_case_v1' LIMIT 1`).first())?.season_id||'');}catch{}
+  const statements=[];
+  for(const [kind,catalog] of Object.entries(FUTURE_SEASON_CONTENT))for(const itemId of Object.keys(catalog||{})){
+    if(!futureSeasonContentMatchesSeasonKey(kind,itemId,'season2'))continue;
+    if(season3Id)statements.push(env.DB.prepare(`UPDATE live_content_release_rules SET content_season_id=? WHERE item_kind=? AND item_id=? AND (content_season_id='' OR content_season_id=?)`).bind(id,kind,itemId,season3Id));
+    else statements.push(env.DB.prepare(`UPDATE live_content_release_rules SET content_season_id=? WHERE item_kind=? AND item_id=? AND content_season_id=''`).bind(id,kind,itemId));
+  }
+  for(let i=0;i<statements.length;i+=40)await env.DB.batch(statements.slice(i,i+40));
+  invalidateLiveContentReleaseCache();return {ok:true,bound:statements.length,seasonId:id,scope:'season2_only'};
 }
 
 async function readLiveContentShopCatalog(env){
@@ -20725,7 +20747,7 @@ async function readLiveContentShopCatalog(env){
   for(const rule of rules.values()){
     const route=liveContentRoute(rule,"shop");if(!rule.released||!route)continue;
     const item=futureSeasonContentItem(rule.kind,rule.itemId);if(!item)continue;
-    items.push({kind:rule.kind,itemId:rule.itemId,title:String(item.title||rule.itemId),rarity:String(item.rarity||"common"),imageUrl:String(item.imageUrl||""),audioUrl:String(item.audioUrl||item.src||""),price:{points:Math.max(0,Math.floor(Number(route.points)||0)),treats:Math.max(0,Math.floor(Number(route.treats)||0)),coffee:Math.max(0,Math.floor(Number(route.coffee)||0))},seasonId:String(rule.seasonId||""),seasonLabel:FUTURE_SEASON_CONTENT_LABEL});
+    items.push({kind:rule.kind,itemId:rule.itemId,title:String(item.title||rule.itemId),rarity:String(item.rarity||"common"),imageUrl:String(item.imageUrl||""),audioUrl:String(item.audioUrl||item.src||""),price:{points:Math.max(0,Math.floor(Number(route.points)||0)),treats:Math.max(0,Math.floor(Number(route.treats)||0)),coffee:Math.max(0,Math.floor(Number(route.coffee)||0))},seasonId:String(rule.seasonId||""),seasonLabel:futureSeasonContentLabel(rule.kind,rule.itemId)});
   }
   return items.sort((a,b)=>String(a.kind).localeCompare(String(b.kind))||String(a.title).localeCompare(String(b.title),"ru"));
 }
@@ -20748,6 +20770,7 @@ async function ensureSeasonPassCaseSpecialItemsSchema(env){
 
 async function seasonPassEffectiveCaseItems(env,caseIdValue,baseRows=null){
   const caseId=String(caseIdValue||"").trim();if(!caseId)return [];
+  const caseDefinition=await env.DB.prepare(`SELECT season_id FROM season_pass_case_definitions WHERE case_id=? LIMIT 1`).bind(caseId).first(),caseSeasonId=String(caseDefinition?.season_id||"");
   let rows;
   if(Array.isArray(baseRows))rows=baseRows.slice();
   else{
@@ -20761,7 +20784,7 @@ async function seasonPassEffectiveCaseItems(env,caseIdValue,baseRows=null){
   }
   const known=new Set(rows.map(row=>`${String(row.reward_kind)}:${String(row.item_id)}:${String(row.item_key||"")}`));const rules=await readLiveContentReleaseRules(env);
   for(const rule of rules.values()){
-    const seasonalRoute=liveContentRoute(rule,"seasonal_case",caseId);if(!rule.released||!seasonalRoute)continue;
+    const seasonalRoute=liveContentRoute(rule,"seasonal_case",caseId);if(!rule.released||!seasonalRoute||!caseSeasonId||String(rule.seasonId||"")!==caseSeasonId)continue;
     const item=futureSeasonContentItem(rule.kind,rule.itemId);if(!item)continue;const key=`${rule.kind}:${rule.itemId}`;if(rows.some(row=>String(row.reward_kind)===rule.kind&&String(row.item_id)===rule.itemId))continue;
     const weight=Math.max(.01,Math.min(100000,Number(seasonalRoute.weight)||1));
     rows.push({item_key:`live:${key}`,reward_kind:rule.kind,item_id:rule.itemId,amount:1,weight,rarity:String(item.rarity||"epic"),title:String(item.title||rule.itemId),image_url:String(item.imageUrl||""),enabled:1,live_content:1});
@@ -20911,7 +20934,7 @@ async function readLiveOpsConfig(env, force = false) {
     content[rule.kind][rule.itemId]={
       title:String(item.title||rule.itemId),rarity:String(item.rarity||"common"),weight:Math.max(0,Number((liveContentRoute(rule,"case")||liveContentRoute(rule,"seasonal_case")||{}).weight)||1),
       enabled:Boolean(rule.released),isNew:true,legendaryOnly:false,imageUrl:String(item.imageUrl||""),audioUrl:String(item.audioUrl||item.src||""),
-      future:true,released:Boolean(rule.released),everReleased:Boolean(rule.everReleased),status:String(rule.status||"hidden"),releaseAt:Number(rule.releaseAt||0),routes:rule.routes||{},seasonId:String(rule.seasonId||""),destinationType:rule.destinationType,destinationId:rule.destinationId,destinationConfig:rule.destinationConfig||{},seasonLabel:FUTURE_SEASON_CONTENT_LABEL
+      future:true,released:Boolean(rule.released),everReleased:Boolean(rule.everReleased),status:String(rule.status||"hidden"),releaseAt:Number(rule.releaseAt||0),routes:rule.routes||{},seasonId:String(rule.seasonId||""),destinationType:rule.destinationType,destinationId:rule.destinationId,destinationConfig:rule.destinationConfig||{},seasonLabel:futureSeasonContentLabel(rule.kind,rule.itemId)
     };
   }
   const cases = {};
@@ -23383,7 +23406,10 @@ async function deliverQueuedReward(env, row, leaseToken) {
     }
     if(futureSeasonContentItem(row.reward_kind,cosmeticId)){
       const routeType=liveContentRewardQueueRoute(row.source_type);
-      if(!(await liveContentRouteAllowed(env,row.reward_kind,cosmeticId,routeType)))throw new Error(`Косметический предмет недоступен через канал ${routeType}`);
+      if(routeType==='story'){
+        const rules=await readLiveContentReleaseRules(env,true),rule=rules.get(liveContentReleaseKey(row.reward_kind,cosmeticId)),storyEvent=await env.DB.prepare(`SELECT season_id FROM season_pass_story_events WHERE event_id=? LIMIT 1`).bind(String(row.source_id||'')).first();
+        if(!rule?.released||!storyEvent?.season_id||String(rule.seasonId||'')!==String(storyEvent.season_id)||!liveContentRouteEnabled(rule,'story'))throw new Error('Косметический предмет недоступен через сюжет этого сезона');
+      }else if(!(await liveContentRouteAllowed(env,row.reward_kind,cosmeticId,routeType)))throw new Error(`Косметический предмет недоступен через канал ${routeType}`);
     }
     const current = await env.DB.prepare(`SELECT ${cosmeticColumn} AS owned FROM case_player_state WHERE telegram_id=? LIMIT 1`).bind(telegramId).first();
     let owned = [];
@@ -29052,7 +29078,7 @@ async function ensureSeason3DraftSeasonalCase(env){
 async function ensureSeason2StoryPreset(env){
   const presetId=SEASON2_STORY_PRESET.id;
   const markerRow=await env.DB.prepare(`SELECT preset_id,season_id FROM season_pass_story_presets WHERE preset_id=? LIMIT 1`).bind(presetId).first();
-  if(markerRow?.preset_id)return {ok:true,seeded:false,reason:'already-seeded',seasonId:String(markerRow.season_id||'')};
+  if(markerRow?.preset_id){const seasonId=String(markerRow.season_id||'');if(seasonId)await bindSeason2ContentCatalogToSeason(env,seasonId).catch(error=>console.error('season2 content binding failed',error));return {ok:true,seeded:false,reason:'already-seeded',seasonId};}
 
   const now=Math.floor(Date.now()/1000);
   const target=await env.DB.prepare(`SELECT season_id,title,starts_at,ends_at,manual_status FROM season_pass_seasons WHERE starts_at>? AND COALESCE(manual_status,'')<>'ended' ORDER BY starts_at ASC,season_id ASC LIMIT 1`).bind(now).first();
@@ -29076,6 +29102,7 @@ async function ensureSeason2StoryPreset(env){
 
   statements.push(env.DB.prepare(`INSERT OR IGNORE INTO season_pass_story_presets(preset_id,season_id,seeded_at,updated_by) VALUES(?,?,?,?)`).bind(presetId,seasonId,now,SEASON2_STORY_PRESET.marker));
   for(let index=0;index<statements.length;index+=30)await env.DB.batch(statements.slice(index,index+30));
+  await bindSeason2ContentCatalogToSeason(env,seasonId).catch(error=>console.error('season2 content binding failed',error));
   return {ok:true,seeded:true,seasonId,inserted};
 }
 
@@ -29271,7 +29298,7 @@ async function completeSeasonPassStory(request,env){
     const story=await seasonPassStoryForPlayer(env,ctx.season,ctx.telegramId,ctx.player);if(!story.pending||story.pending.eventId!==eventId)throw new ApiError(409,'Сначала завершите текущее сюжетное событие.');
     const eventRow=await env.DB.prepare(`SELECT * FROM season_pass_story_events WHERE event_id=? AND season_id=? LIMIT 1`).bind(eventId,String(ctx.season.id)).first();if(!eventRow)throw new ApiError(404,'Сюжетное событие не найдено.');
     const reward=seasonPassStoryRewardConfig(eventRow);
-    if(reward&&SEASON_PASS_COSMETIC_KINDS.includes(reward.kind)&&futureSeasonContentItem(reward.kind,reward.itemId)&&!(await liveContentRouteAllowed(env,reward.kind,reward.itemId,'story')))throw new ApiError(409,'Сюжетная награда ещё не открыта через Управление контентом.');
+    if(reward&&SEASON_PASS_COSMETIC_KINDS.includes(reward.kind)&&futureSeasonContentItem(reward.kind,reward.itemId)){const rules=await readLiveContentReleaseRules(env,true),rule=rules.get(liveContentReleaseKey(reward.kind,reward.itemId));if(!rule?.released||String(rule.seasonId||'')!==String(ctx.season.id)||!liveContentRouteEnabled(rule,'story'))throw new ApiError(409,'Сюжетная награда ещё не открыта для этого сезона через Управление контентом.');}
     const now=Math.floor(Date.now()/1000),statements=[
       env.DB.prepare(`INSERT INTO season_pass_story_progress(event_id,season_id,telegram_id,seen_at,completed_at) VALUES(?,?,?,?,?)
         ON CONFLICT(event_id,telegram_id) DO UPDATE SET seen_at=CASE WHEN season_pass_story_progress.seen_at=0 THEN excluded.seen_at ELSE season_pass_story_progress.seen_at END,completed_at=CASE WHEN season_pass_story_progress.completed_at=0 THEN excluded.completed_at ELSE season_pass_story_progress.completed_at END`)
@@ -29404,7 +29431,7 @@ async function openSeasonPassSeasonalCase(request,env,executionCtx=null){
       if(kind==='showcase_style')return Boolean(achievementShowcaseRewardStyleDefinition(itemId));
       if(SEASON_PASS_COSMETIC_KINDS.includes(kind)){
         if(!seasonPassAnyCosmeticCatalog(kind)?.[itemId])return false;
-        if(futureSeasonContentItem(kind,itemId)){const rule=liveContentRules.get(liveContentReleaseKey(kind,itemId));if(!rule?.released||!liveContentRouteEnabled(rule,'seasonal_case',caseId))return false;}
+        if(futureSeasonContentItem(kind,itemId)){const rule=liveContentRules.get(liveContentReleaseKey(kind,itemId));if(!rule?.released||String(rule.seasonId||'')!==String(definition.season_id||'')||!liveContentRouteEnabled(rule,'seasonal_case',caseId))return false;}
         return true;
       }
       if(!SEASON_PASS_SEASONAL_CASE_RESOURCE_KINDS.includes(kind))return false;
@@ -36648,7 +36675,13 @@ async function normalizeValidateLiveContentPayload(env,payload={}){
   const kind=String(payload?.kind||'').trim(),itemId=String(payload?.itemId||'').trim(),item=futureSeasonContentItem(kind,itemId);if(!item)throw new ApiError(404,'Скрытый контент не найден.');
   const rules=await readLiveContentReleaseRules(env,true),before=rules.get(liveContentReleaseKey(kind,itemId))||{kind,itemId,seasonId:'',status:'hidden',releaseAt:0,released:false,everReleased:false,routes:{native:{enabled:true}},destinationType:'native',destinationId:'',destinationConfig:{}};
   let seasonId=String(before.seasonId||''),requestedSeasonId=String(payload?.seasonId||'').trim();
-  if(!seasonId&&String(itemId).startsWith('season3_')){try{seasonId=String((await env.DB.prepare(`SELECT season_id FROM season_pass_case_presets WHERE preset_id='season3_belkino_case_v1' LIMIT 1`).first())?.season_id||'');}catch{}}
+  if(!seasonId){
+    const seasonKey=futureSeasonContentSeasonKey(kind,itemId);
+    try{
+      if(seasonKey==='season2')seasonId=String((await env.DB.prepare(`SELECT season_id FROM season_pass_story_presets WHERE preset_id='season2-night-cafe-story-v1' LIMIT 1`).first())?.season_id||'');
+      else if(seasonKey==='season3')seasonId=String((await env.DB.prepare(`SELECT season_id FROM season_pass_case_presets WHERE preset_id='season3_belkino_case_v1' LIMIT 1`).first())?.season_id||'');
+    }catch{}
+  }
   if(!seasonId&&requestedSeasonId){const bindSeason=await loadSeasonPassSeasonById(env,requestedSeasonId);if(!bindSeason)throw new ApiError(404,'Выбранный seasonId для hidden-item не найден.');if(bindSeason.status==='ended')throw new ApiError(409,'Нельзя впервые привязывать hidden-item к завершённому сезону.');seasonId=requestedSeasonId;}
   if(!seasonId)throw new ApiError(409,'Скрытый контент ещё не привязан к конкретному seasonId. Выберите сезон контента перед сохранением.');
   if(requestedSeasonId&&requestedSeasonId!==seasonId)throw new ApiError(409,'Этот hidden-item уже привязан к другому seasonId. Перепривязка между сезонами запрещена.');
@@ -37928,7 +37961,7 @@ async function testProjectReadLiveOpsSnapshot(env) {
           future:true, released:Boolean(rule.released), everReleased:Boolean(rule.everReleased), status:liveContentStatus(rule.status,rule.released?'open':'hidden'), releaseAt:Math.max(0,Number(rule.releaseAt)||0), routes:testProjectClone(rule.routes||{}),
           destinationType:LIVE_CONTENT_DESTINATIONS.includes(String(rule.destinationType || "")) ? String(rule.destinationType) : "manual",
           destinationId:String(rule.destinationId || ""), destinationConfig:testProjectClone(cfg),
-          seasonId:String(rule.seasonId||""), seasonLabel:FUTURE_SEASON_CONTENT_LABEL,
+          seasonId:String(rule.seasonId||""), seasonLabel:futureSeasonContentLabel(rule.kind,rule.itemId),
           sandboxVisible:true, sandboxHidden:!rule.released, testOnly:!rule.released
         };
       }
@@ -38194,7 +38227,7 @@ function testProjectApplyDraftLayer(state, snapshot) {
     const routes=testProjectClone(value.routes||{}),routeRule={routes},primary=liveContentPrimaryRoute(routes,value.destinationType),caseRoute=liveContentRoute(routeRule,'case')||liveContentRoute(routeRule,'seasonal_case')||{},shopRoute=liveContentRoute(routeRule,'shop'),seasonalRoute=liveContentRoute(routeRule,'seasonal_case'),passRoute=liveContentRoute(routeRule,'season_pass');
     base.liveops.content[value.kind]=base.liveops.content[value.kind]||{};
     base.liveops.content[value.kind][value.itemId]={...(base.liveops.content[value.kind][value.itemId]||{}),title:String(item.title||value.itemId),rarity:String(item.rarity||'common'),imageUrl:String(item.imageUrl||''),audioUrl:String(item.audioUrl||item.src||''),weight:Math.max(.01,Number(caseRoute.weight)||1),enabled:Boolean(value.released),released:Boolean(value.released),status:liveContentStatus(value.status,value.released?'open':'hidden'),releaseAt:Math.max(0,Number(value.releaseAt)||0),routes,future:true,seasonId:String(value.seasonId||''),destinationType:primary.type,destinationId:String(primary.route?.destinationId||''),destinationConfig:liveContentLegacyRouteConfig(primary.type,primary.route),testDraft:true};
-    if(value.released&&shopRoute){base.publicConfig.shop.liveContent=base.publicConfig.shop.liveContent.filter(x=>!(String(x.kind)===value.kind&&String(x.itemId)===value.itemId));base.publicConfig.shop.liveContent.push({kind:value.kind,itemId:value.itemId,title:String(item.title||value.itemId),rarity:String(item.rarity||'common'),imageUrl:String(item.imageUrl||''),audioUrl:String(item.audioUrl||item.src||''),price:{points:Number(shopRoute.points||0),treats:Number(shopRoute.treats||0),coffee:Number(shopRoute.coffee||0)},seasonId:String(value.seasonId||''),seasonLabel:FUTURE_SEASON_CONTENT_LABEL,testDraft:true});}
+    if(value.released&&shopRoute){base.publicConfig.shop.liveContent=base.publicConfig.shop.liveContent.filter(x=>!(String(x.kind)===value.kind&&String(x.itemId)===value.itemId));base.publicConfig.shop.liveContent.push({kind:value.kind,itemId:value.itemId,title:String(item.title||value.itemId),rarity:String(item.rarity||'common'),imageUrl:String(item.imageUrl||''),audioUrl:String(item.audioUrl||item.src||''),price:{points:Number(shopRoute.points||0),treats:Number(shopRoute.treats||0),coffee:Number(shopRoute.coffee||0)},seasonId:String(value.seasonId||''),seasonLabel:futureSeasonContentLabel(value.kind,value.itemId),testDraft:true});}
     if(base.season?.id&&value.released&&seasonalRoute){const cases=base.season.seasonalCases||[],c=cases.find(x=>String(x.caseId)===String(seasonalRoute.destinationId));if(c&&!c.items?.some(x=>String(x.kind)===value.kind&&String(x.itemId)===value.itemId)){c.items=[...(c.items||[]),{kind:value.kind,itemId:value.itemId,amount:1,weight:Math.max(.01,Number(seasonalRoute.weight)||1),rarity:String(item.rarity||'common'),title:String(item.title||value.itemId),imageUrl:String(item.imageUrl||''),enabled:true,testDraft:true}];}}
     if(base.season?.id&&value.released&&passRoute&&String(passRoute.destinationId)===String(base.season.id)){const reward=ownerPanelSeasonPassRewardPresentation(value.kind,1,value.itemId),rewards=base.season.rewards||[],i=rewards.findIndex(x=>Number(x.level)===Number(passRoute.level)&&String(x.lane)===String(passRoute.lane));const next={level:Number(passRoute.level||1),lane:String(passRoute.lane||'free'),rewardType:reward.publicRewardType||reward.rewardType,amount:reward.amount,itemId:reward.publicItemId||reward.itemId,title:reward.title,imageUrl:reward.imageUrl,enabled:true,testDraft:true};if(i>=0)rewards[i]={...rewards[i],...next};else rewards.push(next);base.season.rewards=rewards;}
   }
@@ -39253,7 +39286,7 @@ async function testProjectSandboxHydrateFutureContent(env, snapshotValue) {
       if(snapshot.liveops.content[kind][itemId])continue;
       const rule=rules.get(liveContentReleaseKey(kind,itemId))||{status:"hidden",releaseAt:0,routes:{native:{enabled:true}},released:false,everReleased:false,destinationType:"native",destinationId:"",destinationConfig:{}};
       const cfg=rule.destinationConfig&&typeof rule.destinationConfig==="object"?rule.destinationConfig:{},caseRoute=liveContentRoute(rule,"case")||liveContentRoute(rule,"seasonal_case")||{},weightValue=Number(caseRoute.weight);
-      snapshot.liveops.content[kind][itemId]={title:String(item?.title||itemId),rarity:String(item?.rarity||"common"),weight:Number.isFinite(weightValue)?Math.max(0,weightValue):1,enabled:Boolean(rule.released),isNew:true,legendaryOnly:false,imageUrl:String(item?.imageUrl||""),audioUrl:String(item?.audioUrl||item?.src||""),future:true,released:Boolean(rule.released),everReleased:Boolean(rule.everReleased),status:liveContentStatus(rule.status,rule.released?"open":"hidden"),releaseAt:Math.max(0,Number(rule.releaseAt)||0),routes:testProjectClone(rule.routes||{}),seasonId:String(rule.seasonId||""),destinationType:LIVE_CONTENT_DESTINATIONS.includes(String(rule.destinationType||""))?String(rule.destinationType):"manual",destinationId:String(rule.destinationId||""),destinationConfig:testProjectClone(cfg),seasonLabel:FUTURE_SEASON_CONTENT_LABEL,sandboxVisible:true,sandboxHidden:!rule.released,testOnly:!rule.released};
+      snapshot.liveops.content[kind][itemId]={title:String(item?.title||itemId),rarity:String(item?.rarity||"common"),weight:Number.isFinite(weightValue)?Math.max(0,weightValue):1,enabled:Boolean(rule.released),isNew:true,legendaryOnly:false,imageUrl:String(item?.imageUrl||""),audioUrl:String(item?.audioUrl||item?.src||""),future:true,released:Boolean(rule.released),everReleased:Boolean(rule.everReleased),status:liveContentStatus(rule.status,rule.released?"open":"hidden"),releaseAt:Math.max(0,Number(rule.releaseAt)||0),routes:testProjectClone(rule.routes||{}),seasonId:String(rule.seasonId||""),destinationType:LIVE_CONTENT_DESTINATIONS.includes(String(rule.destinationType||""))?String(rule.destinationType):"manual",destinationId:String(rule.destinationId||""),destinationConfig:testProjectClone(cfg),seasonLabel:futureSeasonContentLabel(kind,itemId),sandboxVisible:true,sandboxHidden:!rule.released,testOnly:!rule.released};
     }
   }
   snapshot.liveops.sandboxHiddenContent=true;
@@ -39727,11 +39760,11 @@ async function ownerPanelTestProjectContentValidate(env,ctx){
   add("season_case_refs","Пулы сезонных кейсов",caseProblems.length?"fail":seasonalCases.length?"pass":"warn",caseProblems.length?caseProblems.slice(0,8).join("; "):seasonalCases.length?`${seasonalCases.length} кейс(ов), ссылки и веса валидны.`:"У сезона нет сезонных кейсов.");
   const publicLiveops=await readLiveOpsConfig(env).catch(()=>null),leaks=[];for(const [kind,catalog] of Object.entries(FUTURE_SEASON_CONTENT)){for(const itemId of Object.keys(catalog||{})){const rule=rules.get(liveContentReleaseKey(kind,itemId));if(!rule?.released&&publicLiveops?.content?.[kind]?.[itemId]?.enabled)leaks.push(`${kind}:${itemId}`);}}
   add("hidden_leak","Скрытый контент не течёт в Production",leaks.length?"fail":"pass",leaks.length?`Утечки: ${leaks.slice(0,8).join(", ")}`:"Неопубликованные future-предметы отсутствуют в публичном пуле.");
-  const routeProblems=[],seasonalCaseExists=new Map(),seasonExists=new Map();
+  const routeProblems=[],seasonalCaseSeasons=new Map(),seasonExists=new Map();
   for(const [key,rule] of rules.entries()){
     const [kind,itemId]=key.split(":");if(!futureSeasonContentItem(kind,itemId))continue;const status=liveContentStatus(rule.status,rule.released?"open":"hidden");if(status==="scheduled"&&(!Number(rule.releaseAt)||Number(rule.releaseAt)<=0))routeProblems.push(`${key}: scheduled without releaseAt`);if(!["open","scheduled"].includes(status))continue;
     if(liveContentRouteCount(rule.routes)<=0){routeProblems.push(`${key}: no enabled routes`);continue;}
-    for(const type of LIVE_CONTENT_DESTINATIONS){const route=liveContentRoute(rule,type);if(!route)continue;const id=String(route.destinationId||"");if(type==="case"&&!LIVEOPS_CASE_IDS.includes(normalizeCaseType(id)))routeProblems.push(`${key}: case ${id}`);else if(type==="shop"&&Number(route.points||0)+Number(route.treats||0)+Number(route.coffee||0)<=0)routeProblems.push(`${key}: shop without price`);else if(type==="seasonal_case"){let exists=seasonalCaseExists.get(id);if(exists===undefined){exists=Boolean(await env.DB.prepare(`SELECT case_id FROM season_pass_case_definitions WHERE case_id=? LIMIT 1`).bind(id).first().catch(()=>null));seasonalCaseExists.set(id,exists);}if(!exists)routeProblems.push(`${key}: seasonal case ${id}`);}else if(type==="season_pass"){let exists=seasonExists.get(id);if(exists===undefined){exists=Boolean(await env.DB.prepare(`SELECT season_id FROM season_pass_seasons WHERE season_id=? LIMIT 1`).bind(id).first().catch(()=>null));seasonExists.set(id,exists);}if(!exists||Number(route.level)<1||Number(route.level)>50)routeProblems.push(`${key}: season pass ${id}/${route.level}`);}}
+    for(const type of LIVE_CONTENT_DESTINATIONS){const route=liveContentRoute(rule,type);if(!route)continue;const id=String(route.destinationId||"");if(type==="case"&&!LIVEOPS_CASE_IDS.includes(normalizeCaseType(id)))routeProblems.push(`${key}: case ${id}`);else if(type==="shop"&&Number(route.points||0)+Number(route.treats||0)+Number(route.coffee||0)<=0)routeProblems.push(`${key}: shop without price`);else if(type==="seasonal_case"){let routeSeason=seasonalCaseSeasons.get(id);if(routeSeason===undefined){routeSeason=String((await env.DB.prepare(`SELECT season_id FROM season_pass_case_definitions WHERE case_id=? LIMIT 1`).bind(id).first().catch(()=>null))?.season_id||"");seasonalCaseSeasons.set(id,routeSeason);}if(!routeSeason)routeProblems.push(`${key}: seasonal case ${id}`);else if(String(rule.seasonId||"")!==routeSeason)routeProblems.push(`${key}: seasonal case ${id} belongs to another season`);}else if(type==="season_pass"){let exists=seasonExists.get(id);if(exists===undefined){exists=Boolean(await env.DB.prepare(`SELECT season_id FROM season_pass_seasons WHERE season_id=? LIMIT 1`).bind(id).first().catch(()=>null));seasonExists.set(id,exists);}if(!exists||Number(route.level)<1||Number(route.level)>50)routeProblems.push(`${key}: season pass ${id}/${route.level}`);else if(String(rule.seasonId||"")!==id)routeProblems.push(`${key}: season pass ${id} belongs to another content season`);}}
   }
   add("release_routes","Маршруты Live Content Manager",routeProblems.length?"fail":"pass",routeProblems.length?routeProblems.slice(0,8).join("; "):"Выпущенные future-предметы имеют валидные каналы получения.");
   if(!ctx.body?.quick){const unique=[...new Map(paths.map((x)=>[String(x.path).split(/[?#]/,1)[0],x])).values()].slice(0,220);for(let i=0;i<unique.length;i+=12){const chunk=unique.slice(i,i+12),res=await Promise.all(chunk.map(async(x)=>({...x,...await testProjectAssetExists(env,x.path)})));assets.push(...res);}const missing=assets.filter((x)=>!x.ok);add("future_assets","Файлы скрытого контента",missing.length?"fail":"pass",missing.length?`Не найдены: ${missing.slice(0,6).map((x)=>x.path).join(", ")}`:`Проверено ${assets.length} локальных ассетов.`);}else add("future_assets","Файлы скрытого контента","pass","Quick mode: глубокая проверка файлов пропущена; используйте полный Release Gate для asset scan.");
@@ -42199,7 +42232,7 @@ async function ownerPanelSeasonPassReadiness(env,ctx){
 function liveContentRulePublicView(kind,itemId,rule){
   const item=futureSeasonContentItem(kind,itemId);if(!item)return null;
   const r=rule||{status:"hidden",releaseAt:0,released:false,everReleased:false,routes:{},destinationType:"manual",destinationId:"",destinationConfig:{},updatedAt:0,updatedBy:""};
-  return {kind,itemId,title:String(item.title||itemId),rarity:String(item.rarity||"common"),imageUrl:String(item.imageUrl||""),audioUrl:String(item.audioUrl||item.src||""),seasonId:String(r.seasonId||""),seasonLabel:FUTURE_SEASON_CONTENT_LABEL,status:liveContentStatus(r.status,r.released?"open":"hidden"),releaseAt:Math.max(0,Math.floor(Number(r.releaseAt)||0)),released:Boolean(r.released),everReleased:Boolean(r.everReleased),routes:testProjectClone(r.routes||{}),destinationType:String(r.destinationType||"manual"),destinationId:String(r.destinationId||""),destinationConfig:testProjectClone(r.destinationConfig||{}),updatedAt:Number(r.updatedAt||0),updatedBy:String(r.updatedBy||"")};
+  return {kind,itemId,title:String(item.title||itemId),rarity:String(item.rarity||"common"),imageUrl:String(item.imageUrl||""),audioUrl:String(item.audioUrl||item.src||""),seasonId:String(r.seasonId||""),seasonLabel:futureSeasonContentLabel(kind,itemId),status:liveContentStatus(r.status,r.released?"open":"hidden"),releaseAt:Math.max(0,Math.floor(Number(r.releaseAt)||0)),released:Boolean(r.released),everReleased:Boolean(r.everReleased),routes:testProjectClone(r.routes||{}),destinationType:String(r.destinationType||"manual"),destinationId:String(r.destinationId||""),destinationConfig:testProjectClone(r.destinationConfig||{}),updatedAt:Number(r.updatedAt||0),updatedBy:String(r.updatedBy||"")};
 }
 async function validateLiveContentReleaseAssets(env,normalizedItems){
   const items=(Array.isArray(normalizedItems)?normalizedItems:[normalizedItems]).filter(Boolean);if(!items.length)return {ok:true,checked:0};
@@ -42333,7 +42366,7 @@ async function ownerPanelSeasonPass(env, ctx) {
   const caseItemsById=new Map();for(const row of [...(caseItemsResult.results||[]),...(caseSpecialItemsResult.results||[]),...(caseResourceItemsResult.results||[])]){const id=String(row.case_id);const list=caseItemsById.get(id)||[];list.push({key:String(row.item_key),kind:String(row.reward_kind),itemId:String(row.item_id),amount:Math.max(1,Number(row.amount||1)),weight:Number(row.weight||1),rarity:String(row.rarity||''),title:String(row.title||''),imageUrl:String(row.image_url||''),enabled:Number(row.enabled||0)===1,resource:SEASON_PASS_SEASONAL_CASE_RESOURCE_KINDS.includes(String(row.reward_kind||''))});caseItemsById.set(id,list);}
   const seasonalCases=(caseDefinitionsResult.results||[]).map(row=>{
     const view=ownerPanelSeasonalCaseView(row,seasonMap);const items=(caseItemsById.get(view.caseId)||[]).slice();const known=new Set(items.map(item=>`${item.kind}:${item.itemId}`));
-    for(const [kind,catalog] of Object.entries(liveops?.content||{})){for(const [itemId,item] of Object.entries(catalog||{})){const seasonalRoute=liveContentRoute(item,"seasonal_case",view.caseId);if(item?.enabled!==true||!seasonalRoute)continue;const key=`${kind}:${itemId}`;if(known.has(key))continue;items.push({key:`live:${key}`,kind,itemId,weight:Math.max(.01,Number(seasonalRoute.weight)||1),rarity:String(item.rarity||""),title:String(item.title||itemId),imageUrl:String(item.imageUrl||""),enabled:true,liveContent:true});known.add(key);}}
+    for(const [kind,catalog] of Object.entries(liveops?.content||{})){for(const [itemId,item] of Object.entries(catalog||{})){const seasonalRoute=liveContentRoute(item,"seasonal_case",view.caseId);if(item?.enabled!==true||!seasonalRoute||!view.seasonId||String(item.seasonId||"")!==String(view.seasonId))continue;const key=`${kind}:${itemId}`;if(known.has(key))continue;items.push({key:`live:${key}`,kind,itemId,weight:Math.max(.01,Number(seasonalRoute.weight)||1),rarity:String(item.rarity||""),title:String(item.title||itemId),imageUrl:String(item.imageUrl||""),enabled:true,liveContent:true});known.add(key);}}
     view.items=items;return view;
   });
   const selectedSeasonalCase=seasonalCases.find(item=>item.seasonId===selected.id)||null;
