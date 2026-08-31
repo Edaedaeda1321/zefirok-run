@@ -2887,6 +2887,8 @@ html&gt;body{padding:
       background: rgba(56, 39, 45, 0.54);
       backdrop-filter: blur(10px) saturate(1.06);
       -webkit-backdrop-filter: blur(10px) saturate(1.06);
+      overflow: hidden;
+      overscroll-behavior: none;
     }
 
     #zefirok-maltipoo-runner .purchase-layer[data-purchase-mode=&quot;confirm&quot;] .purchase-dialog {
@@ -2896,6 +2898,12 @@ html&gt;body{padding:
       padding: 10px 14px max(12px, env(safe-area-inset-bottom));
       border: 1px solid rgba(232, 190, 207, 0.86);
       border-radius: 30px;
+      overflow-x: hidden;
+      overflow-y: auto;
+      overscroll-behavior-y: contain;
+      -webkit-overflow-scrolling: touch;
+      touch-action: pan-y;
+      scrollbar-width: none;
       background:
         radial-gradient(circle at 12% 0%, rgba(255, 218, 231, 0.78), transparent 33%),
         radial-gradient(circle at 88% 5%, rgba(255, 237, 193, 0.68), transparent 30%),
@@ -2906,12 +2914,27 @@ html&gt;body{padding:
       animation: purchase-sheet-enter .24s cubic-bezier(.18,.82,.2,1) both;
     }
 
+    #zefirok-maltipoo-runner .purchase-layer[data-purchase-mode=&quot;confirm&quot;] .purchase-dialog::-webkit-scrollbar {
+      display: none;
+    }
+
+    #zefirok-maltipoo-runner .purchase-layer[data-purchase-mode=&quot;confirm&quot;] .purchase-dialog.is-purchase-sheet-dragging {
+      transition: none !important;
+      will-change: transform, opacity;
+    }
+
     #zefirok-maltipoo-runner .purchase-sheet-handle {
       width: 42px;
       height: 5px;
       margin: 0 auto 10px;
       border-radius: 999px;
       background: rgba(151, 111, 126, 0.26);
+      touch-action: none;
+      cursor: grab;
+    }
+
+    #zefirok-maltipoo-runner .purchase-sheet-handle:active {
+      cursor: grabbing;
     }
 
     #zefirok-maltipoo-runner .purchase-sheet-head {
@@ -11953,6 +11976,10 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       const purchaseLayer = root.querySelector(&quot;[data-purchase-layer]&quot;);
       const purchaseContent = root.querySelector(&quot;[data-purchase-content]&quot;);
       let purchaseLayerScrollLock = null;
+      let purchaseSheetDragPointerId = null;
+      let purchaseSheetDragStartY = 0;
+      let purchaseSheetDragDistance = 0;
+      let purchaseSheetDragStartedAt = 0;
       function setPurchaseLayerScrollLocked(locked) {
         const html = document.documentElement;
         const body = document.body;
@@ -22215,6 +22242,77 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         return rows.join(&quot;&quot;);
       }
 
+      function purchaseSheetDialogElement() {
+        return purchaseLayer?.querySelector(&quot;.purchase-dialog&quot;) || null;
+      }
+
+      function resetPurchaseSheetDrag(animate = true) {
+        purchaseSheetDragPointerId = null;
+        purchaseSheetDragStartY = 0;
+        purchaseSheetDragDistance = 0;
+        purchaseSheetDragStartedAt = 0;
+        const dialog = purchaseSheetDialogElement();
+        if (!dialog) return;
+        dialog.classList.remove(&quot;is-purchase-sheet-dragging&quot;);
+        if (animate) {
+          dialog.style.transition = &quot;transform .18s cubic-bezier(.2,.82,.2,1), opacity .18s ease&quot;;
+          dialog.style.transform = &quot;translate3d(0, 0, 0)&quot;;
+          dialog.style.opacity = &quot;1&quot;;
+          window.setTimeout(() =&gt; {
+            if (!purchaseSheetDragPointerId &amp;&amp; dialog.isConnected) dialog.style.transition = &quot;&quot;;
+          }, 190);
+          return;
+        }
+        dialog.style.transition = &quot;&quot;;
+        dialog.style.transform = &quot;&quot;;
+        dialog.style.opacity = &quot;&quot;;
+      }
+
+      function installPurchaseSheetSwipe() {
+        if (!purchaseLayer || purchaseLayer.dataset.purchaseMode !== &quot;confirm&quot;) return;
+        const dialog = purchaseSheetDialogElement();
+        const handle = purchaseContent?.querySelector(&quot;.purchase-sheet-handle&quot;);
+        if (!dialog || !handle) return;
+        handle.addEventListener(&quot;pointerdown&quot;, (event) =&gt; {
+          if (purchaseLayer.hidden || purchaseOperationBusy || purchaseSheetDragPointerId !== null) return;
+          purchaseSheetDragPointerId = event.pointerId;
+          purchaseSheetDragStartY = Number(event.clientY || 0);
+          purchaseSheetDragDistance = 0;
+          purchaseSheetDragStartedAt = performance.now();
+          dialog.classList.add(&quot;is-purchase-sheet-dragging&quot;);
+          try { handle.setPointerCapture(event.pointerId); } catch {}
+          event.preventDefault();
+        });
+        handle.addEventListener(&quot;pointermove&quot;, (event) =&gt; {
+          if (event.pointerId !== purchaseSheetDragPointerId) return;
+          const distance = Math.max(0, Number(event.clientY || 0) - purchaseSheetDragStartY);
+          purchaseSheetDragDistance = Math.min(distance, Math.max(220, window.innerHeight * .5));
+          dialog.style.transform = `translate3d(0, ${purchaseSheetDragDistance}px, 0)`;
+          dialog.style.opacity = String(Math.max(.58, 1 - purchaseSheetDragDistance / 520));
+          event.preventDefault();
+        });
+        const finishDrag = (event, cancelled = false) =&gt; {
+          if (event.pointerId !== purchaseSheetDragPointerId) return;
+          try { handle.releasePointerCapture(event.pointerId); } catch {}
+          const elapsed = Math.max(1, performance.now() - purchaseSheetDragStartedAt);
+          const velocity = purchaseSheetDragDistance / elapsed;
+          const threshold = Math.max(78, Math.min(118, window.innerHeight * .115));
+          const shouldClose = !cancelled &amp;&amp; !purchaseOperationBusy &amp;&amp; (purchaseSheetDragDistance &gt;= threshold || (purchaseSheetDragDistance &gt;= 46 &amp;&amp; velocity &gt; .62));
+          purchaseSheetDragPointerId = null;
+          dialog.classList.remove(&quot;is-purchase-sheet-dragging&quot;);
+          if (shouldClose) {
+            dialog.style.transition = &quot;transform .16s ease-in, opacity .16s ease-in&quot;;
+            dialog.style.transform = `translate3d(0, ${Math.max(window.innerHeight * .62, 420)}px, 0)`;
+            dialog.style.opacity = &quot;0&quot;;
+            window.setTimeout(() =&gt; closePurchaseLayer(), 145);
+            return;
+          }
+          resetPurchaseSheetDrag(true);
+        };
+        handle.addEventListener(&quot;pointerup&quot;, (event) =&gt; finishDrag(event, false));
+        handle.addEventListener(&quot;pointercancel&quot;, (event) =&gt; finishDrag(event, true));
+      }
+
       function openPurchaseLayer(markup, focusSelector, mode = &quot;&quot;) {
         if (!purchaseLayer || !purchaseContent) return;
         clearPurchaseLimitTimer();
@@ -22222,6 +22320,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         setPurchaseLayerScrollLocked(true);
         if (mode) purchaseLayer.setAttribute(&quot;data-purchase-mode&quot;, mode);
         else purchaseLayer.removeAttribute(&quot;data-purchase-mode&quot;);
+        resetPurchaseSheetDrag(false);
         purchaseContent.innerHTML = markup;
         tuneRuntimeImages(purchaseContent);
         renderRewardQrCodes(purchaseContent);
@@ -22236,6 +22335,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         purchaseLayer.setAttribute(&quot;aria-hidden&quot;, &quot;false&quot;);
         purchaseLayer.scrollTop = 0;
         const purchaseDialog = purchaseLayer.querySelector(&quot;.purchase-dialog&quot;);
+        installPurchaseSheetSwipe();
         if (purchaseDialog) purchaseDialog.scrollTop = 0;
         window.requestAnimationFrame(() =&gt; {
           const focusTarget = purchaseLayer.querySelector(focusSelector);
@@ -22254,6 +22354,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           return false;
         }
         clearPurchaseLimitTimer();
+        resetPurchaseSheetDrag(false);
         purchaseLayer.hidden = true;
         purchaseLayer.setAttribute(&quot;aria-hidden&quot;, &quot;true&quot;);
         purchaseLayer.removeAttribute(&quot;data-purchase-mode&quot;);
