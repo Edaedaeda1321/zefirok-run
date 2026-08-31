@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "catalogHash": "07d000a7518a61f1",
+  "catalogHash": "d6b3b6511ece1915",
   "count": 449,
   "images": [
     {
@@ -644,34 +644,34 @@
       "modified": 1787178888000
     },
     {
-      "fileName": "cases/avatars/avatrs_season3Elit.png",
-      "label": "Avatrs season3Elit",
+      "fileName": "cases/avatars/avatrs_season2Elit.png",
+      "label": "Avatrs season2Elit",
       "folder": "cases/avatars",
-      "path": "/assets/cases/avatars/avatrs_season3Elit.png",
+      "path": "/assets/cases/avatars/avatrs_season2Elit.png",
       "size": 2584574,
       "modified": 1786299951365
     },
     {
-      "fileName": "cases/avatars/avatrs_season3Epik.png",
-      "label": "Avatrs season3Epik",
+      "fileName": "cases/avatars/avatrs_season2Epik.png",
+      "label": "Avatrs season2Epik",
       "folder": "cases/avatars",
-      "path": "/assets/cases/avatars/avatrs_season3Epik.png",
+      "path": "/assets/cases/avatars/avatrs_season2Epik.png",
       "size": 2314937,
       "modified": 1786299964718
     },
     {
-      "fileName": "cases/avatars/avatrs_season3Epik2.png",
-      "label": "Avatrs season3Epik2",
+      "fileName": "cases/avatars/avatrs_season2Epik2.png",
+      "label": "Avatrs season2Epik2",
       "folder": "cases/avatars",
-      "path": "/assets/cases/avatars/avatrs_season3Epik2.png",
+      "path": "/assets/cases/avatars/avatrs_season2Epik2.png",
       "size": 2183720,
       "modified": 1786299972682
     },
     {
-      "fileName": "cases/avatars/avatrs_season3Mifik.png",
-      "label": "Avatrs season3Mifik",
+      "fileName": "cases/avatars/avatrs_season2Mifik.png",
+      "label": "Avatrs season2Mifik",
       "folder": "cases/avatars",
-      "path": "/assets/cases/avatars/avatrs_season3Mifik.png",
+      "path": "/assets/cases/avatars/avatrs_season2Mifik.png",
       "size": 2561068,
       "modified": 1786299957669
     },
@@ -888,48 +888,48 @@
       "label": "Effect epick",
       "folder": "cases/effects",
       "path": "/assets/cases/effects/effect_epick.png",
-      "size": 888249,
-      "modified": 1784935615000
+      "size": 1608106,
+      "modified": 1788206148186
     },
     {
       "fileName": "cases/effects/effect_mifick.png",
       "label": "Effect mifick",
       "folder": "cases/effects",
       "path": "/assets/cases/effects/effect_mifick.png",
-      "size": 1431104,
-      "modified": 1784935615000
+      "size": 2192532,
+      "modified": 1788206336000
     },
     {
       "fileName": "cases/effects/effect_rar.png",
       "label": "Effect rar",
       "folder": "cases/effects",
       "path": "/assets/cases/effects/effect_rar.png",
-      "size": 554173,
-      "modified": 1784935615000
+      "size": 1524111,
+      "modified": 1788206712294
     },
     {
       "fileName": "cases/effects/effect_standart.png",
       "label": "Effect standart",
       "folder": "cases/effects",
       "path": "/assets/cases/effects/effect_standart.png",
-      "size": 546049,
-      "modified": 1784935615000
+      "size": 1770350,
+      "modified": 1788206888716
     },
     {
       "fileName": "cases/effects/effect_super_rar.png",
       "label": "Effect super rar",
       "folder": "cases/effects",
       "path": "/assets/cases/effects/effect_super_rar.png",
-      "size": 664365,
-      "modified": 1784935615000
+      "size": 1937779,
+      "modified": 1788207075047
     },
     {
       "fileName": "cases/effects/legendary_effect.png",
       "label": "Legendary effect",
       "folder": "cases/effects",
       "path": "/assets/cases/effects/legendary_effect.png",
-      "size": 1240595,
-      "modified": 1784935616000
+      "size": 2309366,
+      "modified": 1788207287913
     },
     {
       "fileName": "cases/F41C3D35-4820-401C-BE45-375EB8897837.PNG",
@@ -1076,82 +1076,82 @@
       "modified": 1784926950000
     },
     {
-      "fileName": "cases/trails/Epik_sled_season3_2.png",
-      "label": "Epik sled season3 2",
+      "fileName": "cases/trails/Epik_sled_season2_2.png",
+      "label": "Epik sled season2 2",
       "folder": "cases/trails",
-      "path": "/assets/cases/trails/Epik_sled_season3_2.png",
+      "path": "/assets/cases/trails/Epik_sled_season2_2.png",
       "size": 1037357,
       "modified": 1786300000801
     },
     {
-      "fileName": "cases/trails/Epik_sled_season3.png",
-      "label": "Epik sled season3",
+      "fileName": "cases/trails/Epik_sled_season2.png",
+      "label": "Epik sled season2",
       "folder": "cases/trails",
-      "path": "/assets/cases/trails/Epik_sled_season3.png",
+      "path": "/assets/cases/trails/Epik_sled_season2.png",
       "size": 1509334,
       "modified": 1786299984314
     },
     {
-      "fileName": "cases/trails/Legendary_sled_season3.png",
-      "label": "Legendary sled season3",
+      "fileName": "cases/trails/Legendary_sled_season2.png",
+      "label": "Legendary sled season2",
       "folder": "cases/trails",
-      "path": "/assets/cases/trails/Legendary_sled_season3.png",
+      "path": "/assets/cases/trails/Legendary_sled_season2.png",
       "size": 929088,
       "modified": 1786300037379
     },
     {
-      "fileName": "cases/trails/legendary_trail_1.png",
-      "label": "Legendary trail 1",
+      "fileName": "cases/trails/legendary_trail_1_season2.png",
+      "label": "Legendary trail 1 season2",
       "folder": "cases/trails",
-      "path": "/assets/cases/trails/legendary_trail_1.png",
+      "path": "/assets/cases/trails/legendary_trail_1_season2.png",
       "size": 543793,
       "modified": 1785167785000
     },
     {
-      "fileName": "cases/trails/legendary_trail_2.png",
-      "label": "Legendary trail 2",
+      "fileName": "cases/trails/legendary_trail_2_season2.png",
+      "label": "Legendary trail 2 season2",
       "folder": "cases/trails",
-      "path": "/assets/cases/trails/legendary_trail_2.png",
+      "path": "/assets/cases/trails/legendary_trail_2_season2.png",
       "size": 751697,
       "modified": 1785167785000
     },
     {
-      "fileName": "cases/trails/legendary_trail_3.png",
-      "label": "Legendary trail 3",
+      "fileName": "cases/trails/legendary_trail_3_season2.png",
+      "label": "Legendary trail 3 season2",
       "folder": "cases/trails",
-      "path": "/assets/cases/trails/legendary_trail_3.png",
+      "path": "/assets/cases/trails/legendary_trail_3_season2.png",
       "size": 878675,
       "modified": 1785167785000
     },
     {
-      "fileName": "cases/trails/legendary_trail_4.png",
-      "label": "Legendary trail 4",
+      "fileName": "cases/trails/legendary_trail_4_season2.png",
+      "label": "Legendary trail 4 season2",
       "folder": "cases/trails",
-      "path": "/assets/cases/trails/legendary_trail_4.png",
+      "path": "/assets/cases/trails/legendary_trail_4_season2.png",
       "size": 656476,
       "modified": 1785167785000
     },
     {
-      "fileName": "cases/trails/legendary_trail_5.png",
-      "label": "Legendary trail 5",
+      "fileName": "cases/trails/legendary_trail_5_season2.png",
+      "label": "Legendary trail 5 season2",
       "folder": "cases/trails",
-      "path": "/assets/cases/trails/legendary_trail_5.png",
+      "path": "/assets/cases/trails/legendary_trail_5_season2.png",
       "size": 2386211,
       "modified": 1785171838000
     },
     {
-      "fileName": "cases/trails/legendary+_sled_season_3.png",
-      "label": "Legendary+ sled season 3",
+      "fileName": "cases/trails/legendary+_sled_season_2.png",
+      "label": "Legendary+ sled season 2",
       "folder": "cases/trails",
-      "path": "/assets/cases/trails/legendary%2B_sled_season_3.png",
+      "path": "/assets/cases/trails/legendary%2B_sled_season_2.png",
       "size": 1850613,
       "modified": 1786300046368
     },
     {
-      "fileName": "cases/trails/mifik_sled_season3.png",
-      "label": "Mifik sled season3",
+      "fileName": "cases/trails/mifik_sled_season2.png",
+      "label": "Mifik sled season2",
       "folder": "cases/trails",
-      "path": "/assets/cases/trails/mifik_sled_season3.png",
+      "path": "/assets/cases/trails/mifik_sled_season2.png",
       "size": 1761299,
       "modified": 1786300027808
     },

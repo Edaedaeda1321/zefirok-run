@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "catalogHash": "52c953c3a030393b",
+  "catalogHash": "5b4868a4bac3e986",
   "count": 100,
   "images": [
     {
@@ -212,34 +212,34 @@
       "size": 2496056
     },
     {
-      "fileName": "avatars/avatrs_season3Elit.png",
-      "label": "Avatrs season3Elit",
+      "fileName": "avatars/avatrs_season2Elit.png",
+      "label": "Avatrs season2Elit",
       "folder": "avatars",
-      "path": "/assets/cases/avatars/avatrs_season3Elit.png",
+      "path": "/assets/cases/avatars/avatrs_season2Elit.png",
       "hash": "5407db9a79ec",
       "size": 2584574
     },
     {
-      "fileName": "avatars/avatrs_season3Epik.png",
-      "label": "Avatrs season3Epik",
+      "fileName": "avatars/avatrs_season2Epik.png",
+      "label": "Avatrs season2Epik",
       "folder": "avatars",
-      "path": "/assets/cases/avatars/avatrs_season3Epik.png",
+      "path": "/assets/cases/avatars/avatrs_season2Epik.png",
       "hash": "38a7fd1cf4a2",
       "size": 2314937
     },
     {
-      "fileName": "avatars/avatrs_season3Epik2.png",
-      "label": "Avatrs season3Epik2",
+      "fileName": "avatars/avatrs_season2Epik2.png",
+      "label": "Avatrs season2Epik2",
       "folder": "avatars",
-      "path": "/assets/cases/avatars/avatrs_season3Epik2.png",
+      "path": "/assets/cases/avatars/avatrs_season2Epik2.png",
       "hash": "431e441044ca",
       "size": 2183720
     },
     {
-      "fileName": "avatars/avatrs_season3Mifik.png",
-      "label": "Avatrs season3Mifik",
+      "fileName": "avatars/avatrs_season2Mifik.png",
+      "label": "Avatrs season2Mifik",
       "folder": "avatars",
-      "path": "/assets/cases/avatars/avatrs_season3Mifik.png",
+      "path": "/assets/cases/avatars/avatrs_season2Mifik.png",
       "hash": "788c2fb1705e",
       "size": 2561068
     },
@@ -456,48 +456,48 @@
       "label": "Effect epick",
       "folder": "effects",
       "path": "/assets/cases/effects/effect_epick.png",
-      "hash": "dabd3578f5c4",
-      "size": 888249
+      "hash": "769fb0ae289f",
+      "size": 1608106
     },
     {
       "fileName": "effects/effect_mifick.png",
       "label": "Effect mifick",
       "folder": "effects",
       "path": "/assets/cases/effects/effect_mifick.png",
-      "hash": "81eee76f158c",
-      "size": 1431104
+      "hash": "283d86ff8a06",
+      "size": 2192532
     },
     {
       "fileName": "effects/effect_rar.png",
       "label": "Effect rar",
       "folder": "effects",
       "path": "/assets/cases/effects/effect_rar.png",
-      "hash": "fd641ede20a7",
-      "size": 554173
+      "hash": "f37bfa5bfb46",
+      "size": 1524111
     },
     {
       "fileName": "effects/effect_standart.png",
       "label": "Effect standart",
       "folder": "effects",
       "path": "/assets/cases/effects/effect_standart.png",
-      "hash": "17ac1256d1bd",
-      "size": 546049
+      "hash": "77a27ded5087",
+      "size": 1770350
     },
     {
       "fileName": "effects/effect_super_rar.png",
       "label": "Effect super rar",
       "folder": "effects",
       "path": "/assets/cases/effects/effect_super_rar.png",
-      "hash": "45c89a20fc55",
-      "size": 664365
+      "hash": "022f81d66399",
+      "size": 1937779
     },
     {
       "fileName": "effects/legendary_effect.png",
       "label": "Legendary effect",
       "folder": "effects",
       "path": "/assets/cases/effects/legendary_effect.png",
-      "hash": "ef937e75bca0",
-      "size": 1240595
+      "hash": "20c4c3b23336",
+      "size": 2309366
     },
     {
       "fileName": "F41C3D35-4820-401C-BE45-375EB8897837.PNG",
@@ -644,82 +644,82 @@
       "size": 213508
     },
     {
-      "fileName": "trails/Epik_sled_season3_2.png",
-      "label": "Epik sled season3 2",
+      "fileName": "trails/Epik_sled_season2_2.png",
+      "label": "Epik sled season2 2",
       "folder": "trails",
-      "path": "/assets/cases/trails/Epik_sled_season3_2.png",
+      "path": "/assets/cases/trails/Epik_sled_season2_2.png",
       "hash": "8f67d33dfd5c",
       "size": 1037357
     },
     {
-      "fileName": "trails/Epik_sled_season3.png",
-      "label": "Epik sled season3",
+      "fileName": "trails/Epik_sled_season2.png",
+      "label": "Epik sled season2",
       "folder": "trails",
-      "path": "/assets/cases/trails/Epik_sled_season3.png",
+      "path": "/assets/cases/trails/Epik_sled_season2.png",
       "hash": "5f08170f4ca2",
       "size": 1509334
     },
     {
-      "fileName": "trails/Legendary_sled_season3.png",
-      "label": "Legendary sled season3",
+      "fileName": "trails/Legendary_sled_season2.png",
+      "label": "Legendary sled season2",
       "folder": "trails",
-      "path": "/assets/cases/trails/Legendary_sled_season3.png",
+      "path": "/assets/cases/trails/Legendary_sled_season2.png",
       "hash": "8dd7f7e9083a",
       "size": 929088
     },
     {
-      "fileName": "trails/legendary_trail_1.png",
-      "label": "Legendary trail 1",
+      "fileName": "trails/legendary_trail_1_season2.png",
+      "label": "Legendary trail 1 season2",
       "folder": "trails",
-      "path": "/assets/cases/trails/legendary_trail_1.png",
+      "path": "/assets/cases/trails/legendary_trail_1_season2.png",
       "hash": "32b29a823ce9",
       "size": 543793
     },
     {
-      "fileName": "trails/legendary_trail_2.png",
-      "label": "Legendary trail 2",
+      "fileName": "trails/legendary_trail_2_season2.png",
+      "label": "Legendary trail 2 season2",
       "folder": "trails",
-      "path": "/assets/cases/trails/legendary_trail_2.png",
+      "path": "/assets/cases/trails/legendary_trail_2_season2.png",
       "hash": "ccb519442054",
       "size": 751697
     },
     {
-      "fileName": "trails/legendary_trail_3.png",
-      "label": "Legendary trail 3",
+      "fileName": "trails/legendary_trail_3_season2.png",
+      "label": "Legendary trail 3 season2",
       "folder": "trails",
-      "path": "/assets/cases/trails/legendary_trail_3.png",
+      "path": "/assets/cases/trails/legendary_trail_3_season2.png",
       "hash": "a7e4b5da6297",
       "size": 878675
     },
     {
-      "fileName": "trails/legendary_trail_4.png",
-      "label": "Legendary trail 4",
+      "fileName": "trails/legendary_trail_4_season2.png",
+      "label": "Legendary trail 4 season2",
       "folder": "trails",
-      "path": "/assets/cases/trails/legendary_trail_4.png",
+      "path": "/assets/cases/trails/legendary_trail_4_season2.png",
       "hash": "6d4e4a640aac",
       "size": 656476
     },
     {
-      "fileName": "trails/legendary_trail_5.png",
-      "label": "Legendary trail 5",
+      "fileName": "trails/legendary_trail_5_season2.png",
+      "label": "Legendary trail 5 season2",
       "folder": "trails",
-      "path": "/assets/cases/trails/legendary_trail_5.png",
+      "path": "/assets/cases/trails/legendary_trail_5_season2.png",
       "hash": "5223ac377e84",
       "size": 2386211
     },
     {
-      "fileName": "trails/legendary+_sled_season_3.png",
-      "label": "Legendary+ sled season 3",
+      "fileName": "trails/legendary+_sled_season_2.png",
+      "label": "Legendary+ sled season 2",
       "folder": "trails",
-      "path": "/assets/cases/trails/legendary%2B_sled_season_3.png",
+      "path": "/assets/cases/trails/legendary%2B_sled_season_2.png",
       "hash": "43c1e0118da9",
       "size": 1850613
     },
     {
-      "fileName": "trails/mifik_sled_season3.png",
-      "label": "Mifik sled season3",
+      "fileName": "trails/mifik_sled_season2.png",
+      "label": "Mifik sled season2",
       "folder": "trails",
-      "path": "/assets/cases/trails/mifik_sled_season3.png",
+      "path": "/assets/cases/trails/mifik_sled_season2.png",
       "hash": "bb03256dcdbc",
       "size": 1761299
     },
