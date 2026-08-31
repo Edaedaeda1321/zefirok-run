@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "catalogHash": "c5d5f461fca08b78",
-  "count": 449,
+  "catalogHash": "a5849a00cd688ef4",
+  "count": 450,
   "images": [
     {
       "fileName": "achievements/background_achivment_panel.png",
@@ -3338,6 +3338,14 @@
       "path": "/assets/ui/background_referals.png",
       "size": 2184233,
       "modified": 1787146378000
+    },
+    {
+      "fileName": "ui/error404-no-icon.png",
+      "label": "Error404 no icon",
+      "folder": "ui",
+      "path": "/assets/ui/error404-no-icon.png",
+      "size": 1948102,
+      "modified": 1788214575000
     },
     {
       "fileName": "ui/icon_albom.png",
