@@ -4153,14 +4153,30 @@ async function createPlayerGiftInbox(env, telegramId, spec = {}) {
   const reason = String(spec.reason || "").slice(0, 300);
   const preview = playerMailPreviewText(spec.preview, message || reason || title);
   const imageUrl = String(spec.imageUrl || "").trim().slice(0, 1000);
+  const giftKind = String(spec.kind || (rewards.length ? "gift" : "letter")).slice(0,30);
+  const rewardsJson = JSON.stringify(rewards);
   const batch = await env.DB.batch([
     env.DB.prepare(`INSERT OR IGNORE INTO player_gift_inbox(gift_id,telegram_id,gift_kind,title,message_text,reason,rewards_json,status,created_at,updated_at,claimed_at) VALUES(?,?,?,?,?,?,?,?,?,?,0)`)
-      .bind(giftId,id,String(spec.kind || (rewards.length ? "gift" : "letter")).slice(0,30),title,message,reason,JSON.stringify(rewards),status,now,now),
+      .bind(giftId,id,giftKind,title,message,reason,rewardsJson,status,now,now),
     env.DB.prepare(`INSERT OR IGNORE INTO player_mail_metadata(gift_id,telegram_id,preview_text,image_url,read_at) VALUES(?,?,?,?,0)`)
       .bind(giftId,id,preview,imageUrl)
   ]);
   const created = Number(batch?.[0]?.meta?.changes || 0) > 0;
-  return { giftId, created, rewards, status };
+  const mailMetadataCreated = Number(batch?.[1]?.meta?.changes || 0) > 0;
+  const stored = await env.DB.prepare(`SELECT gift_id,gift_kind,title,rewards_json,status FROM player_gift_inbox WHERE gift_id=? AND telegram_id=? LIMIT 1`).bind(giftId,id).first();
+  if (!stored?.gift_id) throw new Error("Письмо не зафиксировано в игровой почте");
+  const storedRewards = normalizePlayerGiftRewards(safeJson(stored.rewards_json, []));
+  if (JSON.stringify(storedRewards) !== rewardsJson || String(stored.gift_kind || "") !== giftKind) {
+    throw new Error("Конфликт идентификатора письма: в игровой почте уже хранится другая награда");
+  }
+  // Mail is part of the player's authoritative account state. Without a revision
+  // bump a slower startup/profile response can overwrite a freshly loaded inbox
+  // in the open Mini App, producing the false state “Telegram arrived, mail did not”.
+  if (created || mailMetadataCreated) {
+    await ensurePlayerAccountRevisionAvailable(env);
+    await bumpPlayerAccountRevisionStatement(env,id,now).run();
+  }
+  return { giftId, created, rewards, status:String(stored.status || status) };
 }
 
 function ownerPanelGiftAuditCandidate(row) {
@@ -4169,9 +4185,9 @@ function ownerPanelGiftAuditCandidate(row) {
   if (!/^[A-Za-z0-9:_-]{4,120}$/.test(giftId)) return null;
   let kind = String(details?.kind || "").trim().toLowerCase();
   if (kind === "treats" || kind === "marshmallow") kind = "zefir";
-  if (!["points", "zefir", "coffee", "case", "skin"].includes(kind)) return null;
+  if (!["points", "zefir", "coffee", "case", "avatar", "frame", "trail", "skin", "showcase_style", "booster"].includes(kind)) return null;
   const itemId = String(details?.itemId || "").trim().slice(0, 96);
-  const rawAmount = kind === "skin" ? 1 : Math.floor(Number(row?.new_value ?? details?.amount ?? 1));
+  const rawAmount = ["avatar","frame","trail","skin","showcase_style"].includes(kind) ? 1 : Math.floor(Number(row?.new_value ?? details?.amount ?? 1));
   if (!Number.isFinite(rawAmount) || rawAmount < 1) return null;
   const rewards = normalizePlayerGiftRewards([{ kind, id:itemId, amount:rawAmount }]);
   if (!rewards.length) return null;
@@ -4256,7 +4272,11 @@ async function repairOwnerPanelGiftInboxFromAudit(env, telegramId) {
   const results = await env.DB.batch(statements);
   let repaired = 0;
   for (let index = 0; index < results.length; index += 2) repaired += Number(results[index]?.meta?.changes || 0) > 0 ? 1 : 0;
-  if (repaired > 0) console.info("owner gift inbox repaired from audit", { telegramId:id, repaired });
+  if (repaired > 0) {
+    await ensurePlayerAccountRevisionAvailable(env);
+    await bumpPlayerAccountRevisionStatement(env,id,now).run();
+    console.info("owner gift inbox repaired from audit", { telegramId:id, repaired });
+  }
   return repaired;
 }
 
@@ -4272,7 +4292,7 @@ async function repairCompensationCampaignGiftInbox(env, telegramId) {
       FROM admin_campaign_recipients r
       JOIN admin_campaigns c ON c.campaign_id=r.campaign_id
       LEFT JOIN admin_campaign_mail_config m ON m.campaign_id=c.campaign_id
-      WHERE r.telegram_id=? AND r.status='processed' AND c.reward_kind='gift_bundle' AND COALESCE(m.enabled,0)=1
+      WHERE r.telegram_id=? AND r.status IN ('processed','failed') AND c.reward_kind='gift_bundle' AND COALESCE(m.enabled,0)=1
       ORDER BY COALESCE(r.processed_at,c.created_at) DESC,c.created_at DESC LIMIT 24`).bind(id).all();
     campaignRows = result.results || [];
   } catch (error) {
@@ -4337,7 +4357,11 @@ async function repairCompensationCampaignGiftInbox(env, telegramId) {
   const results = await env.DB.batch(statements);
   let repaired = 0;
   for (let index = 0; index < results.length; index += 2) repaired += Number(results[index]?.meta?.changes || 0) > 0 ? 1 : 0;
-  if (repaired > 0) console.info("compensation gift inbox repaired from campaign history", { telegramId:id, repaired });
+  if (repaired > 0) {
+    await ensurePlayerAccountRevisionAvailable(env);
+    await bumpPlayerAccountRevisionStatement(env,id,now).run();
+    console.info("compensation gift inbox repaired from campaign history", { telegramId:id, repaired });
+  }
   return repaired;
 }
 
@@ -4383,6 +4407,7 @@ async function syncSeasonPassTaskGiftInbox(env, telegramId, options = {}) {
   if (!rows.length) return 0;
   const now = Math.floor(Date.now() / 1000);
   const statements = [];
+  const expectedMail = new Map();
   for (const row of rows) {
     const rowSeasonId = String(row.season_id || "").trim();
     const taskId = String(row.task_id || "").trim();
@@ -4398,6 +4423,7 @@ async function syncSeasonPassTaskGiftInbox(env, telegramId, options = {}) {
     const message = `Задание «${taskTitle}» выполнено. Заберите XP сезонного пропуска.`;
     const reason = "Награда за выполненное задание сезонного пропуска";
     const preview = playerMailPreviewText(`${taskTitle} · +${xp.toLocaleString("ru-RU")} XP`, message);
+    expectedMail.set(giftId, JSON.stringify(rewards));
     statements.push(
       env.DB.prepare(`INSERT OR IGNORE INTO player_gift_inbox(gift_id,telegram_id,gift_kind,title,message_text,reason,rewards_json,status,created_at,updated_at,claimed_at) VALUES(?,?,?,?,?,?,?,'pending',?,?,0)`)
         .bind(giftId,id,"season_pass_task",title,message,reason,JSON.stringify(rewards),createdAt,now),
@@ -4405,20 +4431,40 @@ async function syncSeasonPassTaskGiftInbox(env, telegramId, options = {}) {
         .bind(giftId,id,preview,"/assets/ui/icon_battlepass.png")
     );
   }
-  for (let index = 0; index < statements.length; index += 40) await env.DB.batch(statements.slice(index, index + 40));
-  return Math.floor(statements.length / 2);
+  let created = 0;
+  for (let index = 0; index < statements.length; index += 40) {
+    const results = await env.DB.batch(statements.slice(index, index + 40));
+    for (let resultIndex = 0; resultIndex < results.length; resultIndex += 2) {
+      if (Number(results[resultIndex]?.meta?.changes || 0) > 0) created += 1;
+    }
+  }
+  if (created > 0) {
+    await ensurePlayerAccountRevisionAvailable(env);
+    await bumpPlayerAccountRevisionStatement(env,id,now).run();
+  }
+  const expectedIds = [...expectedMail.keys()];
+  if (expectedIds.length) {
+    const placeholders = expectedIds.map(() => "?").join(",");
+    const stored = await env.DB.prepare(`SELECT gift_id,rewards_json FROM player_gift_inbox WHERE telegram_id=? AND gift_id IN (${placeholders})`).bind(id,...expectedIds).all();
+    const storedMap = new Map((stored.results || []).map((row) => [String(row.gift_id || ""), JSON.stringify(normalizePlayerGiftRewards(safeJson(row.rewards_json, [])))]));
+    for (const giftId of expectedIds) {
+      if (!storedMap.has(giftId)) throw new Error(`Письмо сезонного задания не зафиксировано: ${giftId}`);
+      if (storedMap.get(giftId) !== expectedMail.get(giftId)) throw new Error(`Конфликт письма сезонного задания: ${giftId}`);
+    }
+  }
+  return created;
 }
 
-async function playerGiftInboxPayload(env, telegramId) {
+async function maintainPlayerGiftInboxState(env, telegramId) {
   await ensurePlayerGiftInboxSchema(env);
   const id = String(telegramId || "");
   const now = Math.floor(Date.now() / 1000);
-  await env.DB.prepare(`UPDATE player_gift_inbox SET status='pending',updated_at=? WHERE telegram_id=? AND status='claiming' AND updated_at<?`)
+  const staleReset = await env.DB.prepare(`UPDATE player_gift_inbox SET status='pending',updated_at=? WHERE telegram_id=? AND status='claiming' AND updated_at<?`)
     .bind(now, id, now - GIFT_INBOX_STALE_SECONDS).run();
   // Self-heal a gift whose economic queue already finished but whose inbox row
   // did not reach the final state (for example because another queue worker won
   // the delivery lease). A pending gift with no queue rows is never touched.
-  await env.DB.prepare(`UPDATE player_gift_inbox
+  const completedRepair = await env.DB.prepare(`UPDATE player_gift_inbox
     SET status='claimed',claimed_at=CASE WHEN claimed_at>0 THEN claimed_at ELSE ? END,updated_at=?
     WHERE telegram_id=? AND status IN ('pending','claiming')
       AND EXISTS(
@@ -4431,6 +4477,17 @@ async function playerGiftInboxPayload(env, telegramId) {
         WHERE q.telegram_id=player_gift_inbox.telegram_id AND q.source_type='gift_inbox'
           AND q.source_id GLOB (player_gift_inbox.gift_id || '_*') AND q.status<>'delivered'
       )`).bind(now,now,id).run();
+  const changed = Number(staleReset?.meta?.changes || 0) + Number(completedRepair?.meta?.changes || 0);
+  if (changed > 0) {
+    await ensurePlayerAccountRevisionAvailable(env);
+    await bumpPlayerAccountRevisionStatement(env,id,now).run();
+  }
+  return changed;
+}
+
+async function playerGiftInboxPayload(env, telegramId) {
+  await ensurePlayerGiftInboxSchema(env);
+  const id = String(telegramId || "");
   const [rows,countsRow] = await Promise.all([
     env.DB.prepare(`SELECT g.gift_id,g.gift_kind,g.title,g.message_text,g.reason,g.rewards_json,g.status,g.created_at,g.claimed_at,m.preview_text,m.image_url,m.read_at,CASE WHEN m.gift_id IS NULL THEN 0 ELSE 1 END AS has_mail_meta FROM player_gift_inbox g LEFT JOIN player_mail_metadata m ON m.gift_id=g.gift_id AND m.telegram_id=g.telegram_id WHERE g.telegram_id=? ORDER BY CASE WHEN COALESCE(m.read_at,CASE WHEN g.status IN ('pending','claiming','info') THEN 0 ELSE g.created_at END)=0 THEN 0 ELSE 1 END, CASE g.status WHEN 'pending' THEN 0 WHEN 'claiming' THEN 1 WHEN 'info' THEN 2 ELSE 3 END, g.created_at DESC LIMIT 24`).bind(id).all(),
     env.DB.prepare(`SELECT SUM(CASE WHEN g.status IN ('pending','claiming') THEN 1 ELSE 0 END) AS pending_count,SUM(CASE WHEN COALESCE(m.read_at,CASE WHEN g.status IN ('pending','claiming','info') THEN 0 ELSE g.created_at END)=0 THEN 1 ELSE 0 END) AS unread_count FROM player_gift_inbox g LEFT JOIN player_mail_metadata m ON m.gift_id=g.gift_id AND m.telegram_id=g.telegram_id WHERE g.telegram_id=?`).bind(id).first()
@@ -4449,6 +4506,14 @@ async function playerGiftInboxPayload(env, telegramId) {
     };
   });
   return { ok:true, pendingCount:Math.max(0,Number(countsRow?.pending_count || 0)), unreadCount:Math.max(0,Number(countsRow?.unread_count || 0)), items };
+}
+
+async function playerGiftInboxSnapshot(env, telegramId, options = {}) {
+  if (options.maintenancePromise) await options.maintenancePromise;
+  else await maintainPlayerGiftInboxState(env, telegramId);
+  const revision = options.revisionPromise ? await options.revisionPromise : await readPlayerAccountRevision(env, telegramId);
+  const payload = await playerGiftInboxPayload(env, telegramId);
+  return { ...payload, accountRevision:Math.max(0,Number(revision || 0)), generatedAt:Date.now() };
 }
 
 async function notifyPlayerGiftAvailable(env, telegramId, gift) {
@@ -4485,7 +4550,7 @@ async function getPlayerGiftInbox(request, env) {
     } catch (syncError) {
       console.error("season pass task mail backfill failed", syncError);
     }
-    return jsonResponse(await playerGiftInboxPayload(env, telegramId));
+    return jsonResponse(await playerGiftInboxSnapshot(env, telegramId));
   } catch (error) {
     if (error instanceof ApiError) return jsonResponse({ ok:false, error:error.message }, error.status);
     console.error("getPlayerGiftInbox failed", error);
@@ -4502,11 +4567,15 @@ async function markPlayerGiftMailRead(request, env) {
     const giftId = String(body.giftId || "").trim().slice(0,120);
     if (!giftId) throw new ApiError(400,"Письмо не найдено.");
     await ensurePlayerGiftInboxSchema(env);
-    const row = await env.DB.prepare(`SELECT gift_id FROM player_gift_inbox WHERE gift_id=? AND telegram_id=? LIMIT 1`).bind(giftId,telegramId).first();
+    const row = await env.DB.prepare(`SELECT g.gift_id,COALESCE(m.read_at,0) AS read_at FROM player_gift_inbox g LEFT JOIN player_mail_metadata m ON m.gift_id=g.gift_id AND m.telegram_id=g.telegram_id WHERE g.gift_id=? AND g.telegram_id=? LIMIT 1`).bind(giftId,telegramId).first();
     if (!row) throw new ApiError(404,"Письмо не найдено.");
     const now = Math.floor(Date.now()/1000);
     await env.DB.prepare(`INSERT INTO player_mail_metadata(gift_id,telegram_id,preview_text,image_url,read_at) VALUES(?,?,'','',?) ON CONFLICT(gift_id,telegram_id) DO UPDATE SET read_at=CASE WHEN player_mail_metadata.read_at>0 THEN player_mail_metadata.read_at ELSE excluded.read_at END`).bind(giftId,telegramId,now).run();
-    return jsonResponse(await playerGiftInboxPayload(env,telegramId));
+    if (Number(row.read_at || 0) <= 0) {
+      await ensurePlayerAccountRevisionAvailable(env);
+      await bumpPlayerAccountRevisionStatement(env,telegramId,now).run();
+    }
+    return jsonResponse(await playerGiftInboxSnapshot(env,telegramId));
   } catch (error) {
     if (error instanceof ApiError) return jsonResponse({ok:false,error:error.message},error.status);
     console.error("markPlayerGiftMailRead failed",error);
@@ -4567,30 +4636,37 @@ async function claimPlayerGift(request, env, ctx) {
     let row = await env.DB.prepare(`SELECT * FROM player_gift_inbox WHERE telegram_id=? AND gift_id=? LIMIT 1`).bind(telegramId,giftId).first();
     if (!row) throw new ApiError(404, "Подарок не найден.");
     if (String(row.status) === "claimed") {
-      return jsonResponse({ ok:true, repeated:true, gifts:await playerGiftInboxPayload(env,telegramId) });
+      return jsonResponse({ ok:true, repeated:true, gifts:await playerGiftInboxSnapshot(env,telegramId) });
     }
     const lock = await env.DB.prepare(`UPDATE player_gift_inbox SET status='claiming',updated_at=? WHERE telegram_id=? AND gift_id=? AND status='pending'`).bind(now,telegramId,giftId).run();
     if (Number(lock.meta?.changes || 0) < 1) throw new ApiError(409, "Подарок уже обрабатывается. Попробуйте ещё раз через несколько секунд.");
+    await ensurePlayerAccountRevisionAvailable(env);
+    await bumpPlayerAccountRevisionStatement(env,telegramId,now).run();
     const rewards = normalizePlayerGiftRewards(safeJson(row.rewards_json, []));
     const seasonTaskRewards = rewards.filter((reward) => String(reward?.kind || "") === "season_pass_xp");
     if (seasonTaskRewards.length) {
       if (seasonTaskRewards.length !== rewards.length || seasonTaskRewards.length !== 1) {
-        await env.DB.prepare(`UPDATE player_gift_inbox SET status='pending',updated_at=? WHERE telegram_id=? AND gift_id=? AND status='claiming'`).bind(Math.floor(Date.now()/1000),telegramId,giftId).run();
+        const resetAt = Math.floor(Date.now()/1000);
+        const reset = await env.DB.prepare(`UPDATE player_gift_inbox SET status='pending',updated_at=? WHERE telegram_id=? AND gift_id=? AND status='claiming'`).bind(resetAt,telegramId,giftId).run();
+        if (Number(reset?.meta?.changes || 0) > 0) await bumpPlayerAccountRevisionStatement(env,telegramId,resetAt).run();
         throw new ApiError(409,"Письмо содержит несовместимый набор наград.");
       }
       try {
         const taskResult = await claimSeasonPassTaskGiftReward(env,telegramId,seasonTaskRewards[0],ctx);
         const claimedAt = Math.floor(Date.now()/1000);
         await env.DB.prepare(`UPDATE player_gift_inbox SET status='claimed',claimed_at=CASE WHEN claimed_at>0 THEN claimed_at ELSE ? END,updated_at=? WHERE telegram_id=? AND gift_id=? AND status IN ('claiming','pending')`).bind(claimedAt,claimedAt,telegramId,giftId).run();
-        const gifts = await playerGiftInboxPayload(env,telegramId);
+        const gifts = await playerGiftInboxSnapshot(env,telegramId);
         return jsonResponse({ok:true,gifts,deliveryCommitted:true,seasonPassRefreshRequired:true,repeated:Boolean(taskResult?.repeated),receivedSeasonPassXp:Math.max(0,Number(taskResult?.xp||0))});
       } catch (taskError) {
-        await env.DB.prepare(`UPDATE player_gift_inbox SET status='pending',updated_at=? WHERE telegram_id=? AND gift_id=? AND status='claiming'`).bind(Math.floor(Date.now()/1000),telegramId,giftId).run().catch(()=>{});
+        const resetAt = Math.floor(Date.now()/1000);
+        const reset = await env.DB.prepare(`UPDATE player_gift_inbox SET status='pending',updated_at=? WHERE telegram_id=? AND gift_id=? AND status='claiming'`).bind(resetAt,telegramId,giftId).run().catch(()=>null);
+        if (Number(reset?.meta?.changes || 0) > 0) await bumpPlayerAccountRevisionStatement(env,telegramId,resetAt).run().catch(()=>{});
         throw taskError;
       }
     }
     if (!rewards.length) {
-      await env.DB.prepare(`UPDATE player_gift_inbox SET status='claimed',claimed_at=?,updated_at=? WHERE telegram_id=? AND gift_id=? AND status='claiming' AND updated_at=?`).bind(now,now,telegramId,giftId,now).run();
+      const emptyClaim = await env.DB.prepare(`UPDATE player_gift_inbox SET status='claimed',claimed_at=?,updated_at=? WHERE telegram_id=? AND gift_id=? AND status='claiming' AND updated_at=?`).bind(now,now,telegramId,giftId,now).run();
+      if (Number(emptyClaim?.meta?.changes || 0) > 0) await bumpPlayerAccountRevisionStatement(env,telegramId,now).run();
     } else {
       for (let index = 0; index < rewards.length; index += 1) {
         await enqueueRewardDelivery(env, telegramId, "gift_inbox", `${giftId}_${index}`, rewards[index], String(row.reason || row.title || "Подарок"));
@@ -4599,7 +4675,9 @@ async function claimPlayerGift(request, env, ctx) {
       await processGiftInboxRewardQueue(env, telegramId, giftId);
       const remaining = await env.DB.prepare(`SELECT COUNT(*) AS count FROM reward_delivery_queue WHERE telegram_id=? AND source_type='gift_inbox' AND source_id GLOB ? AND status<>'delivered'`).bind(telegramId,`${giftId}_*`).first();
       if (Number(remaining?.count || 0) > 0) {
-        await env.DB.prepare(`UPDATE player_gift_inbox SET status='pending',updated_at=? WHERE telegram_id=? AND gift_id=? AND status='claiming' AND updated_at=?`).bind(Math.floor(Date.now()/1000),telegramId,giftId,now).run();
+        const resetAt = Math.floor(Date.now()/1000);
+        const reset = await env.DB.prepare(`UPDATE player_gift_inbox SET status='pending',updated_at=? WHERE telegram_id=? AND gift_id=? AND status='claiming' AND updated_at=?`).bind(resetAt,telegramId,giftId,now).run();
+        if (Number(reset?.meta?.changes || 0) > 0) await bumpPlayerAccountRevisionStatement(env,telegramId,resetAt).run();
         throw new ApiError(503, "Не удалось выдать весь подарок. Ничего не потеряно — попробуйте ещё раз.");
       }
       const claimedAt = Math.floor(Date.now() / 1000);
@@ -4608,14 +4686,15 @@ async function claimPlayerGift(request, env, ctx) {
       // to pending while this request was running. Queue delivery itself is
       // idempotent, so requiring the old updated_at lease here only creates a UI
       // race without adding economic protection.
-      await env.DB.prepare(`UPDATE player_gift_inbox SET status='claimed',claimed_at=?,updated_at=? WHERE telegram_id=? AND gift_id=? AND status IN ('claiming','pending')`).bind(claimedAt,claimedAt,telegramId,giftId).run();
+      const finalClaim = await env.DB.prepare(`UPDATE player_gift_inbox SET status='claimed',claimed_at=?,updated_at=? WHERE telegram_id=? AND gift_id=? AND status IN ('claiming','pending')`).bind(claimedAt,claimedAt,telegramId,giftId).run();
+      if (Number(finalClaim?.meta?.changes || 0) > 0) await bumpPlayerAccountRevisionStatement(env,telegramId,claimedAt).run();
       try { await recordPlayerTimeline(env,telegramId,"gift_claim",`получил подарок «${String(row.title||"Подарок")}»`,{giftId,rewards,reason:row.reason},`gift_${giftId}`,null); } catch {}
     }
     // The economic transaction and inbox finalization are the synchronous
     // contract of /api/gifts/claim. Do not keep the player's button in
     // "Получаем…" while profile/case snapshots are rebuilt: return the final
     // gift state immediately and refresh the rest of the account in background.
-    const gifts = await playerGiftInboxPayload(env,telegramId);
+    const gifts = await playerGiftInboxSnapshot(env,telegramId);
     const rewardKinds = new Set(rewards.map((reward)=>String(reward?.kind||"").toLowerCase()));
     const caseRefreshRequired = [...rewardKinds].some((kind)=>["case","seasonal_case","avatar","frame","trail","skin","music","season_pass_tier"].includes(kind));
     const profileRefreshRequired = [...rewardKinds].some((kind)=>["points","zefir","coffee","avatar","frame","trail","skin","music","season_pass_tier","season_pass_xp_grant"].includes(kind));
@@ -5925,15 +6004,22 @@ async function getGameStartupPackage(request, env, ctx = null) {
     // These sections do not depend on the profile/case-state reconciliation.
     // Start them immediately and attach allSettled now so a slow profile read
     // does not serialize unrelated startup work or create unhandled rejections.
+    // Repair durable mail sources before taking the startup mail revision. This
+    // also heals compensation rows created by older builds where Telegram could
+    // be delivered while the inbox presentation was missing.
+    const startupGiftRepairPromise = repairPlayerGiftInboxAuthoritativeSources(env, telegramId)
+      .catch((error) => { console.error("startup gift inbox recovery failed", error); return 0; });
+    const startupGiftMaintenancePromise = startupGiftRepairPromise.then(() => maintainPlayerGiftInboxState(env, telegramId));
+    const startupAccountRevisionPromise = startupGiftMaintenancePromise.then(() => readPlayerAccountRevision(env, telegramId));
     const startupSideSections = Promise.allSettled([
       readSeasonPassTaskNoticeState(env, telegramId),
       getSeasonPassProfileBonusForUser(env, telegramId),
       listMyRewards(null, env, { raw: true, body: internalBody, auth }),
       publicFeatureFlags(env, telegramId, { trustedIdentity: true }),
       getGameNewsForPlayer(env, telegramId),
-      playerGiftInboxPayload(env, telegramId),
+      playerGiftInboxSnapshot(env, telegramId, { maintenancePromise:startupGiftMaintenancePromise, revisionPromise:startupAccountRevisionPromise }),
       seasonPassMiniGameVisualsForPlayer(env, telegramId),
-      readPlayerAccountRevision(env, telegramId),
+      startupAccountRevisionPromise,
       activeRunLiveOpsEvent(env),
       newcomerPathState(env, telegramId),
       Promise.race([
@@ -21640,8 +21726,6 @@ async function processCampaignRecipient(env, campaign, telegramId) {
       giftId, kind:"compensation", title:String(campaign.title || "Компенсация"),
       message:campaignMessage, reason:String(campaign.reason || "Компенсация"), preview:String(campaign.inbox_preview||""), imageUrl:String(campaign.image_url||""), rewards
     });
-    const storedGift = await env.DB.prepare(`SELECT gift_id FROM player_gift_inbox WHERE gift_id=? AND telegram_id=? LIMIT 1`).bind(giftId,String(telegramId)).first();
-    if (!storedGift?.gift_id) throw new Error("Компенсация не зафиксирована в игровой почте");
     const delivered = await notifyPlayerGiftAvailable(env, telegramId, { title:String(campaign.title || "Компенсация"), message:campaignMessage, reason:String(campaign.reason || "Компенсация"), rewards });
     return delivered ? { delivered:true, error:"" } : { delivered:false, error:"Telegram недоступен; подарок сохранён в игре" };
   }
@@ -23437,7 +23521,7 @@ async function deliverQueuedReward(env, row, leaseToken) {
   // account but the player still sees "Получаем…" / a second "Забрать".
   if (String(row.source_type || "") === "gift_inbox") {
     try {
-      await env.DB.prepare(`UPDATE player_gift_inbox
+      const inboxFinalize = await env.DB.prepare(`UPDATE player_gift_inbox
         SET status='claimed',claimed_at=CASE WHEN claimed_at>0 THEN claimed_at ELSE ? END,updated_at=?
         WHERE telegram_id=? AND status IN ('pending','claiming') AND ? GLOB (gift_id || '_*')
           AND NOT EXISTS(
@@ -23445,9 +23529,12 @@ async function deliverQueuedReward(env, row, leaseToken) {
             WHERE q.telegram_id=? AND q.source_type='gift_inbox'
               AND q.source_id GLOB (player_gift_inbox.gift_id || '_*') AND q.status<>'delivered'
           )`).bind(now,now,telegramId,String(row.source_id || ""),telegramId).run();
+      if (Number(inboxFinalize?.meta?.changes || 0) > 0) {
+        await bumpPlayerAccountRevisionStatement(env,telegramId,now).run();
+      }
     } catch (error) {
       // Economic delivery has already committed. Inbox self-heal in
-      // playerGiftInboxPayload will finish the presentation state later.
+      // maintainPlayerGiftInboxState will finish the presentation state later.
       console.error("gift inbox finalization after delivery failed", error);
     }
   }
@@ -23766,7 +23853,7 @@ async function confirmCompensation(query, env) {
   const gift = await createPlayerGiftInbox(env, String(data.targetId), { giftId:sourceId, kind:"compensation", title:`Компенсация: ${String(template.title || "")}`, message:String(template.description || ""), reason:String(data.reason || "Компенсация"), rewards });
   await notifyPlayerGiftAvailable(env, String(data.targetId), { title:`Компенсация: ${String(template.title || "")}`, message:String(template.description || ""), reason:String(data.reason || "Компенсация"), rewards });
   if (gift.created) await recordCompensationUsage(env, query.from.id, limitCheck.summary);
-  await logStaffAction(env, query.from, access, "compensation_template", data.targetId, "gift_inbox", null, gift.created ? rewards.length : 0, { templateId:data.templateId, reason:data.reason, sourceId, usage:limitCheck.summary });
+  await logStaffAction(env, query.from, access, "compensation_template", data.targetId, "gift_inbox", null, gift.created ? gift.rewards.length : 0, { templateId:data.templateId, reason:data.reason, sourceId, rewards:gift.rewards, usage:limitCheck.summary });
   await clearStaffWorkflow(query.from.id, env);
   await answerCallback(env, query.id, "Компенсация создана.");
   await sendTelegramMessage(env, chatId, `✅ <b>Компенсация создана</b>\n\nИгрок: <code>${escapeHtml(data.targetId)}</code>\nШаблон: <b>${escapeHtml(template.title)}</b>\nНаграда ждёт игрока в разделе «Подарки и коллекция».`);
@@ -28727,13 +28814,9 @@ async function deliverSeasonPassTaskNotificationsForRows(env,telegramId,season,t
   let lease=0;
   try{
     if(!id||!season||!rows.length)return null;
-    try {
-      await syncSeasonPassTaskGiftInbox(env,id,{seasonId:String(season.id),pairs:rows.map(row=>({taskId:String(row.task_id),periodKey:String(row.period_key)}))});
-    } catch (mailError) {
-      // Telegram delivery must not be blocked by a temporary inbox failure.
-      // /api/gifts/state backfills the same deterministic mail later.
-      console.error('season pass task mail create failed',mailError);
-    }
+    // Mail is the durable delivery contract. Never tell Telegram that a reward
+    // is ready until the deterministic in-game letter is confirmed in D1.
+    await syncSeasonPassTaskGiftInbox(env,id,{seasonId:String(season.id),pairs:rows.map(row=>({taskId:String(row.task_id),periodKey:String(row.period_key)}))});
     const now=Math.floor(Date.now()/1000);const pairs=rows.flatMap(row=>[String(row.task_id),String(row.period_key)]);const predicates=rows.map(()=>`(task_id=? AND period_key=?)`).join(' OR ');
     const subscriber=await env.DB.prepare(`SELECT chat_id FROM bot_subscribers WHERE telegram_id=? AND active=1 LIMIT 1`).bind(id).first();
     if(!subscriber?.chat_id){await env.DB.prepare(`UPDATE season_pass_task_notifications SET bot_notified_at=? WHERE season_id=? AND telegram_id=? AND bot_notified_at=0 AND (${predicates})`).bind(now,String(season.id),id,...pairs).run();return null;}
@@ -29937,14 +30020,20 @@ async function grantSeasonPassTaskXp(env,ctx,task,executionCtx=null){
     env.DB.prepare(`UPDATE season_pass_task_notifications SET bot_notified_at=CASE WHEN bot_notified_at<=0 THEN ? ELSE bot_notified_at END WHERE season_id=? AND telegram_id=? AND task_id=? AND period_key=?`).bind(now,...key)
   ]);
   const awarded=Number(batchResult?.[2]?.meta?.changes||0)>0;
+  let mailChanged=false;
   try {
     await ensurePlayerGiftInboxSchema(env);
     const giftId=seasonPassTaskMailGiftId(ctx.season.id,task.id,task.periodKey);
-    await env.DB.batch([
+    const mailResults=await env.DB.batch([
       env.DB.prepare(`UPDATE player_gift_inbox SET status='claimed',claimed_at=CASE WHEN claimed_at>0 THEN claimed_at ELSE ? END,updated_at=? WHERE telegram_id=? AND gift_id=? AND status IN ('pending','claiming')`).bind(now,now,ctx.telegramId,giftId),
       env.DB.prepare(`UPDATE player_mail_metadata SET read_at=CASE WHEN read_at>0 THEN read_at ELSE ? END WHERE telegram_id=? AND gift_id=?`).bind(now,ctx.telegramId,giftId)
     ]);
+    mailChanged=mailResults.some((result)=>Number(result?.meta?.changes||0)>0);
   } catch (mailError) { console.error('season pass task mail finalize failed',mailError); }
+  if(awarded||mailChanged){
+    await ensurePlayerAccountRevisionAvailable(env);
+    await bumpPlayerAccountRevisionStatement(env,ctx.telegramId,now).run();
+  }
   if(awarded)seasonPassTaskTimelineLater(executionCtx,recordPlayerTimeline(env,ctx.telegramId,'season_pass_task',`получил ${taskXp.toLocaleString('ru-RU')} XP за задание «${String(task.title||'Задание')}»`,{seasonId:ctx.season.id,taskId:task.id,periodKey:task.periodKey,xp:taskXp,multiplier},`season_pass_task_${ctx.season.id}_${task.id}_${task.periodKey}`,ctx.auth.user,now));
   return {repeated:!awarded,xp:awarded?taskXp:0,multiplier};
 }
@@ -30015,6 +30104,8 @@ async function claimAllSeasonPassTasks(request,env,executionCtx=null){
         }
         for(let index=0;index<mailStatements.length;index+=40)await env.DB.batch(mailStatements.slice(index,index+40));
       }catch(mailError){console.error('season pass bulk task mail finalize failed',mailError);}
+      await ensurePlayerAccountRevisionAvailable(env);
+      await bumpPlayerAccountRevisionStatement(env,ctx.telegramId,now).run();
     }
     await cancelQueuedSeasonPassTaskNotifications(env,ctx.telegramId,'season-task-claimed-all');
     const receivedTasks=awarded?ready.map(task=>({id:task.id,periodKey:task.periodKey,title:task.title,xp:Math.max(1,Number(task.xp)||1)*taskXpMultiplier})):[];

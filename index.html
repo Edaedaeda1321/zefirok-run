@@ -18878,7 +18878,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
             readAt,unread:item?.unread===true||readAt&lt;=0,hasRewards:item?.hasRewards===true||rewards.length&gt;0,rewards
           };
         }).filter((item)=&gt;item.id) : [];
-        return {items,pendingCount:Math.max(0,Math.floor(Number(source.pendingCount??items.filter((item)=&gt;item.hasRewards&amp;&amp;item.status!==&quot;claimed&quot;).length))),unreadCount:Math.max(0,Math.floor(Number(source.unreadCount??items.filter((item)=&gt;item.unread).length)))};
+        return {items,pendingCount:Math.max(0,Math.floor(Number(source.pendingCount??items.filter((item)=&gt;item.hasRewards&amp;&amp;item.status!==&quot;claimed&quot;).length))),unreadCount:Math.max(0,Math.floor(Number(source.unreadCount??items.filter((item)=&gt;item.unread).length))),accountRevision:Math.max(0,Number(source.accountRevision||0)),generatedAt:Math.max(0,Number(source.generatedAt||0))};
       }
 
       function giftRewardVisualMarkup(reward) {
@@ -18888,7 +18888,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         const resourceKind = kind === &quot;zefir&quot; ? &quot;treats&quot; : kind;
         const src = [&quot;points&quot;,&quot;treats&quot;,&quot;coffee&quot;].includes(resourceKind) ? caseResourceImage(resourceKind) : &quot;&quot;;
         if (src) return `&lt;img src=&quot;${escapePurchaseText(src)}&quot; alt=&quot;&quot; loading=&quot;lazy&quot; decoding=&quot;async&quot;&gt;`;
-        const emoji = ({ avatar:&quot;🐶&quot;,frame:&quot;🖼️&quot;,trail:&quot;✨&quot;,skin:&quot;👗&quot; })[kind] || &quot;🎁&quot;;
+        const emoji = ({ avatar:&quot;🐶&quot;,frame:&quot;🖼️&quot;,trail:&quot;✨&quot;,skin:&quot;👗&quot;,showcase_style:&quot;🏆&quot;,booster:&quot;⚡&quot; })[kind] || &quot;🎁&quot;;
         return `&lt;span aria-hidden=&quot;true&quot;&gt;${emoji}&lt;/span&gt;`;
       }
 
@@ -18939,11 +18939,24 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 
       function applyPlayerGiftPayload(data) {
         const normalized = normalizePlayerGiftPayload(data);
+        const incomingRevision = Math.max(0, Number(normalized.accountRevision || 0));
+        const incomingGeneratedAt = Math.max(0, Number(normalized.generatedAt || 0));
+        if (incomingRevision &gt; 0 &amp;&amp; serverAccountRevision &gt; 0 &amp;&amp; incomingRevision &lt; serverAccountRevision) return false;
+        // Revision changes are authoritative. When two mail snapshots legitimately
+        // share the same revision, generatedAt breaks the tie so an older startup
+        // response cannot erase a newer /api/gifts/state result that arrived first.
+        if (incomingRevision &gt; 0 &amp;&amp; incomingRevision === serverAccountRevision &amp;&amp; incomingGeneratedAt &gt; 0 &amp;&amp; serverGiftSnapshotGeneratedAt &gt; 0 &amp;&amp; incomingGeneratedAt &lt; serverGiftSnapshotGeneratedAt) return false;
+        if (incomingRevision &gt; serverAccountRevision) {
+          serverAccountRevision = incomingRevision;
+          serverGiftSnapshotGeneratedAt = 0;
+        }
+        if (incomingGeneratedAt &gt; serverGiftSnapshotGeneratedAt) serverGiftSnapshotGeneratedAt = incomingGeneratedAt;
         state.playerGifts = normalized.items;
         state.playerGiftPendingCount = normalized.pendingCount;
         state.playerGiftUnreadCount = normalized.unreadCount;
         renderPlayerGiftInbox();
         updateProfileCaseBadges();
+        return true;
       }
 
       async function loadPlayerGiftInbox(force = false) {
@@ -18959,8 +18972,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
             method:&quot;POST&quot;, headers:{ &quot;Content-Type&quot;:&quot;application/json&quot; }, body:JSON.stringify({ initData:String(telegramProfile.initData), force:Boolean(force) }), cache:&quot;no-store&quot;, credentials:&quot;same-origin&quot;
           }, requestOptions);
           if (!response.ok || !data?.ok) throw new Error(data?.error || &quot;Не удалось загрузить почту.&quot;);
-          applyPlayerGiftPayload(data);
-          return true;
+          return applyPlayerGiftPayload(data) !== false;
         } catch (error) {
           console.warn(&quot;Gift inbox sync failed&quot;, error);
           return false;
@@ -21162,6 +21174,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       }
 
       let serverAccountRevision = 0;
+      let serverGiftSnapshotGeneratedAt = 0;
 
       async function syncGameStartupPackage(force = false) {
         const initData = String(telegramProfile?.initData || &quot;&quot;);
@@ -21229,7 +21242,9 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           }
           if (Object.prototype.hasOwnProperty.call(data, &quot;news&quot;)) applyGameNewsPayload(data.news);
           if (Object.prototype.hasOwnProperty.call(data, &quot;newcomerPath&quot;)) applyNewcomerPath(data.newcomerPath);
-          if (data.gifts) applyPlayerGiftPayload(data.gifts); else void loadPlayerGiftInbox(true);
+          if (data.gifts) {
+            if (applyPlayerGiftPayload(data.gifts) === false) void loadPlayerGiftInbox(true);
+          } else void loadPlayerGiftInbox(true);
           if (data.rewards) {
             applyServerRewardsPayload(data.rewards);
             rewardLastSyncAt = Date.now();
@@ -21269,11 +21284,12 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         if (!telegramProfile?.initData || document.visibilityState === &quot;hidden&quot;) return;
         const forceFull = options?.forceFull === true;
         const hiddenFor = serverAccountHiddenAt &gt; 0 ? Math.max(0, Date.now() - serverAccountHiddenAt) : 0;
-        // Very short Telegram/UI focus changes skip heavy account sync. If the
-        // player is already looking at Mail, refresh only that lightweight state.
+        // Very short Telegram/UI focus changes skip heavy account sync, but Mail
+        // must still refresh: a compensation notification can arrive while the
+        // Mini App is hidden even when the player was not already on the Mail tab.
         if (!forceFull &amp;&amp; hiddenFor &gt; 0 &amp;&amp; hiddenFor &lt; 10000) {
           serverAccountHiddenAt = 0;
-          if (stockHubView === &quot;gifts&quot;) void loadPlayerGiftInbox(true).then(() =&gt; updateStockHubBadges());
+          void loadPlayerGiftInbox(true).then(() =&gt; updateStockHubBadges());
           if (loadPendingLeaderboardRun()) void retryPendingLeaderboardRun();
           return;
         }
