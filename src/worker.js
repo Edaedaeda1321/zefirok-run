@@ -1,3 +1,5 @@
+const SYSTEM_IMAGE_FALLBACK = "/assets/ui/error404-no-icon.png";
+
 const PRODUCTS = Object.freeze({
   zefir: { id: "zefir", title: "Фирменный зефир", prefix: "ZF" },
   americano: { id: "americano", title: "Американо", prefix: "AM" },
@@ -1036,9 +1038,9 @@ function seasonPassCosmeticImage(kind, itemId) {
   const future=futureSeasonContentItem(k,id);
   if (future?.imageUrl) return String(future.imageUrl);
   if (k === "skin") return ownerPanelSkinAsset(id);
-  if (["avatar","frame","trail"].includes(k)) return String(LIVEOPS_CONTENT_IMAGES?.[k]?.[id] || "/assets/season-pass/season.png?v=07939");
-  if (k === "music") return String(CASE_MUSIC_TRACKS?.[id]?.imageUrl || "/assets/season-pass/season.png?v=07939");
-  return "/assets/season-pass/season.png?v=07939";
+  if (["avatar","frame","trail"].includes(k)) return String(LIVEOPS_CONTENT_IMAGES?.[k]?.[id] || SYSTEM_IMAGE_FALLBACK);
+  if (k === "music") return String(CASE_MUSIC_TRACKS?.[id]?.imageUrl || SYSTEM_IMAGE_FALLBACK);
+  return SYSTEM_IMAGE_FALLBACK;
 }
 
 function seasonPassCosmeticRewardDefinition(value) {
@@ -2386,7 +2388,7 @@ function dailyLoyaltyRewardImage(typeValue, itemIdValue = '') {
   const type = String(typeValue || '').trim().toLowerCase();
   const itemId = String(itemIdValue || '').trim();
   if (type === 'profile_xp' || type === 'season_xp') return '/assets/season-pass/xp.png?v=07939';
-  if (type === 'seasonal_case') return '/assets/season-pass/season.png?v=07939';
+  if (type === 'seasonal_case') return SYSTEM_IMAGE_FALLBACK;
   if (type === 'booster_points') return SEASON_PASS_BOOST_REWARDS.booster_points.imageUrl;
   if (type === 'booster_treats') return SEASON_PASS_BOOST_REWARDS.booster_treats.imageUrl;
   if (type === 'booster_coffee') return SEASON_PASS_BOOST_REWARDS.booster_coffee.imageUrl;
@@ -29582,9 +29584,9 @@ function seasonPassTierActivationBenefits(season,newTier,payload={}) {
   if(bonusLevels>0)benefits.push({key:'bonus_levels',title:`+${bonusLevels} уровней пропуска`,imageUrl:'/assets/season-pass/levels_5.png?v=07939'});
   for(const cosmetic of Array.isArray(settings.cosmetics)?settings.cosmetics:[]){
     if(!cosmetic||cosmetic.kind==='secret')continue;
-    benefits.push({key:`cosmetic_${String(cosmetic.kind||'item')}`,title:String(cosmetic.title||'Эксклюзивная награда'),imageUrl:String(cosmetic.imageUrl||'/assets/season-pass/season.png?v=07939')});
+    benefits.push({key:`cosmetic_${String(cosmetic.kind||'item')}`,title:String(cosmetic.title||'Эксклюзивная награда'),imageUrl:String(cosmetic.imageUrl||SYSTEM_IMAGE_FALLBACK)});
   }
-  if(settings.case)benefits.push({key:'bonus_case',title:String(settings.case.title||'Золотой кейс'),imageUrl:String(settings.case.imageUrl||'/assets/cases/gold_closed.png')});
+  if(settings.case)benefits.push({key:'bonus_case',title:String(settings.case.title||'Золотой кейс'),imageUrl:String(settings.case.imageUrl||SYSTEM_IMAGE_FALLBACK)});
   return benefits;
 }
 
@@ -30313,7 +30315,7 @@ async function elitePlusBenefitPlan(env,ctx,player,now,options={}){
   const received=[];
   if(benefits.xpBoost)received.push({title:'×2 XP сезонного пропуска',itemId:SEASON_PASS_SPECIAL_XP_X2,imageUrl:'/assets/season-pass/xp_x2.png'});
   if(grantedBonusLevels>0)received.push({title:`+${grantedBonusLevels} уровней`,itemId:`levels_${grantedBonusLevels}`,imageUrl:'/assets/season-pass/levels_5.png'});
-  for(const cosmetic of cosmetics)received.push({title:String(cosmetic.title||'Эксклюзивная награда'),itemId:String(cosmetic.itemId),imageUrl:String(cosmetic.imageUrl||'/assets/season-pass/season.png')});
+  for(const cosmetic of cosmetics)received.push({title:String(cosmetic.title||'Эксклюзивная награда'),itemId:String(cosmetic.itemId),imageUrl:String(cosmetic.imageUrl||SYSTEM_IMAGE_FALLBACK)});
   if(caseCount>0)received.push({title:`${String(benefits.case?.title||'Кейс')}${caseCount>1?` ×${caseCount}`:''}`,itemId:`${caseType}_case`,imageUrl:String(benefits.case?.imageUrl||ownerPanelCaseAsset(caseType))});
   return {statements,received,activation:{fromLevel:currentLevel,toLevel:targetLevel,bonusLevels:grantedBonusLevels,caseCount,caseType}};
 }
@@ -34309,7 +34311,7 @@ function ownerPanelCaseAsset(caseType) {
     mythic: "/assets/cases/Mifik_case_closed.png",
     legendary: "/assets/cases/legendary_closed.png",
     alex: "/assets/cases/alex/alex_case_close.png"
-  })[String(caseType || "")] || "/assets/cases/standart_closed.png";
+  })[String(caseType || "")] || SYSTEM_IMAGE_FALLBACK;
 }
 
 function ownerPanelRewardAsset(kind, itemId = "") {
@@ -34324,7 +34326,7 @@ function ownerPanelRewardAsset(kind, itemId = "") {
   if (encodedCosmetic?.imageUrl) return encodedCosmetic.imageUrl;
   const boost=SEASON_PASS_BOOST_REWARDS[normalized] || seasonPassBoostRewardDefinition({item_id:itemId});
   if (boost?.imageUrl) return boost.imageUrl;
-  return "/assets/season-pass/season.png";
+  return SYSTEM_IMAGE_FALLBACK;
 }
 
 function ownerPanelInteger(value, min = 0, max = 999999999) {
@@ -36217,7 +36219,7 @@ function flashOfferRewardTitle(reward) {
   return "Награда";
 }
 function flashOfferRewardImage(reward) {
-  if (!reward) return "/assets/optimized/v0.79.5/shopMascot.webp?v=0.79.5";
+  if (!reward) return SYSTEM_IMAGE_FALLBACK;
   if (reward.kind === "product") return ownerPanelShopProductAsset(reward.id);
   if (reward.kind === "case") return ownerPanelCaseAsset(normalizeCaseType(reward.id) || "small");
   if (flashOfferCosmeticDefinition(reward.kind,reward.id)) return ownerPanelRewardAsset(reward.kind,reward.id);
@@ -36232,7 +36234,7 @@ function flashOfferAutoImage(rewards) {
   if (list.length === 1) return flashOfferRewardImage(list[0]);
   const passReward = list.find((item) => item?.kind === "season_pass");
   if (passReward) return flashOfferRewardImage(passReward);
-  return "/assets/optimized/v0.79.5/shopMascot.webp?v=0.79.5";
+  return SYSTEM_IMAGE_FALLBACK;
 }
 function flashOfferSeasonPassRewardInfo(rewards) {
   const list = Array.isArray(rewards) ? rewards : [];
@@ -36603,7 +36605,7 @@ async function normalizeValidateSeasonPassRewardPayload(env,payload={}){
   if(String(payload?.rewardType||'')==='seasonal_case'){
     const caseId=String(payload?.itemId||'').trim(),definition=await env.DB.prepare(`SELECT * FROM season_pass_case_definitions WHERE case_id=? LIMIT 1`).bind(caseId).first();if(!definition)throw new ApiError(400,'Выберите существующий сезонный кейс.');
     const amount=ownerPanelInteger(payload?.amount,1,20);if(amount==null)throw new ApiError(400,'Количество сезонных кейсов должно быть от 1 до 20.');
-    reward={rewardType:'case',publicRewardType:'seasonal_case',amount,itemId:`${SEASON_PASS_SEASONAL_CASE_PREFIX}${caseId}`,publicItemId:caseId,title:amount===1?String(definition.title||'Сезонный кейс'):`${String(definition.title||'Сезонный кейс')} ×${amount}`,imageUrl:String(definition.closed_image_url||'/assets/season-pass/season.png?v=07939')};
+    reward={rewardType:'case',publicRewardType:'seasonal_case',amount,itemId:`${SEASON_PASS_SEASONAL_CASE_PREFIX}${caseId}`,publicItemId:caseId,title:amount===1?String(definition.title||'Сезонный кейс'):`${String(definition.title||'Сезонный кейс')} ×${amount}`,imageUrl:String(definition.closed_image_url||SYSTEM_IMAGE_FALLBACK)};
   }else reward=ownerPanelSeasonPassRewardPresentation(payload?.rewardType,payload?.amount,payload?.itemId);
   return {seasonId,level,lane,season,reward,publicReward:{seasonId,level,lane,rewardType:reward.publicRewardType||reward.rewardType,amount:reward.amount,itemId:reward.publicItemId||reward.itemId,title:reward.title,imageUrl:reward.imageUrl,enabled:true}};
 }
@@ -42487,7 +42489,7 @@ async function ownerPanelSeasonPassStoryRewardConfig(env,ctx){
   if(type==='seasonal_case'){
     const caseId=String(ctx.body?.rewardItemId||'').trim(),definition=await env.DB.prepare(`SELECT * FROM season_pass_case_definitions WHERE case_id=? LIMIT 1`).bind(caseId).first();if(!definition)throw new ApiError(400,'Выберите существующий сезонный кейс.');
     const amount=ownerPanelInteger(ctx.body?.rewardAmount,1,20);if(amount==null)throw new ApiError(400,'Количество сезонных кейсов должно быть от 1 до 20.');
-    return {kind:'seasonal_case',itemId:caseId,amount,title:amount===1?String(definition.title||'Сезонный кейс'):`${String(definition.title||'Сезонный кейс')} ×${amount}`,imageUrl:String(definition.closed_image_url||'/assets/season-pass/season.png?v=07939')};
+    return {kind:'seasonal_case',itemId:caseId,amount,title:amount===1?String(definition.title||'Сезонный кейс'):`${String(definition.title||'Сезонный кейс')} ×${amount}`,imageUrl:String(definition.closed_image_url||SYSTEM_IMAGE_FALLBACK)};
   }
   const presentation=ownerPanelSeasonPassRewardPresentation(type,ctx.body?.rewardAmount,ctx.body?.rewardItemId);
   return {kind:String(presentation.publicRewardType||presentation.rewardType),itemId:String(presentation.publicItemId||presentation.itemId||''),amount:Number(presentation.amount||1),title:String(presentation.title||'Награда'),imageUrl:String(presentation.imageUrl||'')};
@@ -43116,7 +43118,7 @@ function ownerPanelShopProductAsset(productId) {
   if(id==="zefir")return "/assets/optimized/v0.79.5/shopMarshmallowAssortment.png?v=0.79.5";
   if(id==="americano")return "/assets/optimized/v0.79.5/shopAmericano.webp?v=1.0.0";
   if(id==="cappuccino")return "/assets/optimized/v0.79.5/shopCappuccino.webp?v=1.0.0";
-  return "/assets/optimized/v0.79.5/shopMascot.webp?v=0.79.5";
+  return SYSTEM_IMAGE_FALLBACK;
 }
 function ownerPanelSkinAsset(skinId){return skinId==="default"?"/assets/optimized/v0.79.5/skinDefaultAvatar.png?v=0.79.5":`/assets/skins/avatars/${String(skinId)}.png`;}
 

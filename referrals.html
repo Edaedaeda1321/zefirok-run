@@ -6,6 +6,50 @@
   <meta name="color-scheme" content="light">
   <meta name="theme-color" content="#fff7f1">
   <title>Друзья кафе · Сладкий Забег</title>
+<script data-zefirok-image-fallback>
+(()=>{
+  const FALLBACK="/assets/ui/error404-no-icon.png";
+  if(window.__ZEFIROK_IMAGE_FALLBACK_V1__)return;
+  window.__ZEFIROK_IMAGE_FALLBACK_V1__=true;
+  window.ZEFIROK_IMAGE_FALLBACK=FALLBACK;
+  const bad=value=>/^(?:|undefined|null|false|nan|\[object object\])$/i.test(String(value??"").trim());
+  const sameFallback=value=>{try{return new URL(String(value||""),document.baseURI).pathname===FALLBACK}catch{return String(value||"")===FALLBACK}};
+  const replace=(img,reason,failed)=>{
+    if(!(img instanceof HTMLImageElement))return;
+    const current=String(img.currentSrc||img.getAttribute("src")||img.src||"");
+    if(sameFallback(current))return;
+    img.dataset.zefirokImageError=reason||"load-error";
+    img.dataset.zefirokFailedSrc=String(failed||current||"").slice(0,1000);
+    img.onerror=null;
+    img.removeAttribute("srcset");
+    img.src=FALLBACK;
+  };
+  const inspect=img=>{
+    if(!(img instanceof HTMLImageElement)||!img.hasAttribute("src"))return;
+    const raw=String(img.getAttribute("src")||"").trim();
+    if(bad(raw)){replace(img,"invalid-src",raw);return;}
+    if(!sameFallback(raw)&&img.complete&&img.naturalWidth===0)replace(img,"load-error",raw);
+  };
+  document.addEventListener("error",event=>{
+    const img=event.target;
+    if(!(img instanceof HTMLImageElement))return;
+    if(sameFallback(img.currentSrc||img.src||img.getAttribute("src")))return;
+    event.preventDefault?.();
+    event.stopImmediatePropagation?.();
+    replace(img,"load-error",img.currentSrc||img.src||img.getAttribute("src")||"");
+  },true);
+  const scan=root=>{
+    if(root instanceof HTMLImageElement)inspect(root);
+    root?.querySelectorAll?.("img").forEach(inspect);
+  };
+  const boot=()=>{
+    scan(document);
+    new MutationObserver(records=>{for(const record of records){if(record.type==="attributes")inspect(record.target);else record.addedNodes.forEach(scan);}}).observe(document.documentElement,{subtree:true,childList:true,attributes:true,attributeFilter:["src","srcset"]});
+  };
+  if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",boot,{once:true});else queueMicrotask(boot);
+  window.zefirokImageSrc=value=>bad(value)?FALLBACK:String(value).trim();
+})();
+</script>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
     :root{--bg:#fff7f1;--card:#fff;--ink:#583947;--muted:#90737d;--pink:#dd6d98;--pink2:#ef9ab8;--cream:#fff0cf;--gold:#d69a37;--line:rgba(151,96,112,.16);--ok:#62a978;--shadow:0 16px 40px rgba(112,72,82,.11);--tg-content-safe-top:0px;font-family:"Sofia Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#583947;background:#fff7f1}
@@ -126,7 +170,7 @@
   const REWARD_IMAGES = Object.freeze({
     case:Object.freeze({small:"/assets/cases/standart_closed.png",sweet:"/assets/cases/Bronze_close.png",gold:"/assets/cases/gold_closed.png",mythic:"/assets/cases/Mifik_case_closed.png",legendary:"/assets/cases/legendary_closed.png"}),
     booster:Object.freeze({points:"/assets/cases/boosters/1F00010C-F984-4A41-B8B6-8E5CD7DF637A.PNG",treats:"/assets/cases/boosters/80C21DC3-04A8-46F7-B8E4-9AC8FE13CCEB.PNG",coffee:"/assets/cases/boosters/11FDBEBF-D838-4DA5-AA57-9DE0E4BA26AE.PNG"}),
-    points:"/assets/shop/currency_star_256x256.png",zefir:"/assets/season-pass/zefir_currency.png",coffee:"/assets/optimized/v0.79.5/iconCoffee.png",season_pass_xp:"/assets/season-pass/xp_x2.png",fallback:"/assets/ui/icon_referals.png"
+    points:"/assets/shop/currency_star_256x256.png",zefir:"/assets/season-pass/zefir_currency.png",coffee:"/assets/optimized/v0.79.5/iconCoffee.png",season_pass_xp:"/assets/season-pass/xp_x2.png",fallback:"/assets/ui/error404-no-icon.png"
   });
   const rewardImage = (reward) => { const kind=String(reward?.kind||''); if(kind==='case')return REWARD_IMAGES.case[String(reward?.id||'small')]||REWARD_IMAGES.fallback;if(kind==='booster')return REWARD_IMAGES.booster[String(reward?.id||'points')]||REWARD_IMAGES.fallback;return REWARD_IMAGES[kind]||REWARD_IMAGES.fallback; };
   const rewardImageMarkup = (reward,cls='') => `<img class="${esc(cls)}" src="${esc(rewardImage(reward))}" alt="" loading="lazy" decoding="async">`;

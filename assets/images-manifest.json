@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "catalogHash": "5d5270402aff340b",
+  "catalogHash": "c5d5f461fca08b78",
   "count": 449,
   "images": [
     {
@@ -1812,20 +1812,20 @@
       "modified": 1786299785558
     },
     {
+      "fileName": "rating/frames/profile/Elitramka_season2_1.png",
+      "label": "Elitramka season2 1",
+      "folder": "rating/frames/profile",
+      "path": "/assets/rating/frames/profile/Elitramka_season2_1.png",
+      "size": 2348842,
+      "modified": 1786299701156
+    },
+    {
       "fileName": "rating/frames/profile/Elitramka_season2_4.png",
       "label": "Elitramka season2 4",
       "folder": "rating/frames/profile",
       "path": "/assets/rating/frames/profile/Elitramka_season2_4.png",
       "size": 2009601,
       "modified": 1786299730020
-    },
-    {
-      "fileName": "rating/frames/profile/Elitramka_season3_1.png",
-      "label": "Elitramka season3 1",
-      "folder": "rating/frames/profile",
-      "path": "/assets/rating/frames/profile/Elitramka_season3_1.png",
-      "size": 2348842,
-      "modified": 1786299701156
     },
     {
       "fileName": "rating/frames/profile/epickramka_season2_2.png",

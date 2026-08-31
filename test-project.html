@@ -6,6 +6,50 @@
 <meta name="robots" content="noindex,nofollow,noarchive">
 <meta name="referrer" content="no-referrer">
 <title>Test Project 5.5 · Safe Control · Сладкий Забег</title>
+<script data-zefirok-image-fallback>
+(()=>{
+  const FALLBACK="/assets/ui/error404-no-icon.png";
+  if(window.__ZEFIROK_IMAGE_FALLBACK_V1__)return;
+  window.__ZEFIROK_IMAGE_FALLBACK_V1__=true;
+  window.ZEFIROK_IMAGE_FALLBACK=FALLBACK;
+  const bad=value=>/^(?:|undefined|null|false|nan|\[object object\])$/i.test(String(value??"").trim());
+  const sameFallback=value=>{try{return new URL(String(value||""),document.baseURI).pathname===FALLBACK}catch{return String(value||"")===FALLBACK}};
+  const replace=(img,reason,failed)=>{
+    if(!(img instanceof HTMLImageElement))return;
+    const current=String(img.currentSrc||img.getAttribute("src")||img.src||"");
+    if(sameFallback(current))return;
+    img.dataset.zefirokImageError=reason||"load-error";
+    img.dataset.zefirokFailedSrc=String(failed||current||"").slice(0,1000);
+    img.onerror=null;
+    img.removeAttribute("srcset");
+    img.src=FALLBACK;
+  };
+  const inspect=img=>{
+    if(!(img instanceof HTMLImageElement)||!img.hasAttribute("src"))return;
+    const raw=String(img.getAttribute("src")||"").trim();
+    if(bad(raw)){replace(img,"invalid-src",raw);return;}
+    if(!sameFallback(raw)&&img.complete&&img.naturalWidth===0)replace(img,"load-error",raw);
+  };
+  document.addEventListener("error",event=>{
+    const img=event.target;
+    if(!(img instanceof HTMLImageElement))return;
+    if(sameFallback(img.currentSrc||img.src||img.getAttribute("src")))return;
+    event.preventDefault?.();
+    event.stopImmediatePropagation?.();
+    replace(img,"load-error",img.currentSrc||img.src||img.getAttribute("src")||"");
+  },true);
+  const scan=root=>{
+    if(root instanceof HTMLImageElement)inspect(root);
+    root?.querySelectorAll?.("img").forEach(inspect);
+  };
+  const boot=()=>{
+    scan(document);
+    new MutationObserver(records=>{for(const record of records){if(record.type==="attributes")inspect(record.target);else record.addedNodes.forEach(scan);}}).observe(document.documentElement,{subtree:true,childList:true,attributes:true,attributeFilter:["src","srcset"]});
+  };
+  if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",boot,{once:true});else queueMicrotask(boot);
+  window.zefirokImageSrc=value=>bad(value)?FALLBACK:String(value).trim();
+})();
+</script>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
 :root{--bg:#100d18;--card:#1b1726;--card2:#231d31;--ink:#fff9ff;--muted:#bdb3ca;--line:#3c3250;--violet:#8f63ff;--violet2:#6545c7;--pink:#ef76ab;--orange:#ffb65a;--green:#62d69f;--red:#ff6f80;--blue:#71b7ff;--safe-top:0px;--safe-bottom:0px;--app-h:100dvh}
@@ -297,7 +341,7 @@ function renderPass(){
     $('seasonCaseBadge').textContent=ready?'READY':def.enabled===false?'DRAFT':'UPCOMING';$('seasonCaseBadge').className=`status ${ready?'ok':'warn'}`;
     const selector=seasonCases.length>1?`<div class="field" style="margin-bottom:8px"><label>Кейс выбранного сезона</label><select id="seasonCaseSelect">${seasonCases.map(x=>`<option value="${esc(x.caseId)}" ${String(x.caseId)===caseId?'selected':''}>${esc(x.title||x.caseId)}</option>`).join('')}</select></div>`:'';
     const items=(def.items||[]).filter(x=>x.enabled!==false);
-    $('seasonCaseContent').innerHTML=`${selector}<div class="season-case"><img src="${esc(def.imageUrl||'/assets/season-pass/season.png')}" alt=""><div class="season-case-copy"><b>${esc(def.title||'Сезонный кейс')}</b><span>${esc(def.description||'')}<br><code>${esc(caseId)}</code> · ${def.enabled===false?'выключен в Production · разрешён для TP':'включён'} · release ${date(Number(def.releaseAt||0)*1000)}<br>Слотов: ${fmt(def.slots||1)} · дубликат: ${fmt(def.duplicatePoints||0)} ⭐ · в TP: <b>${fmt(count)}</b>${def.groupChances?`<br>🎲 шанс группы: 💰 ${Number(def.groupChances.currency||0).toFixed(1)}% · ✨ ${Number(def.groupChances.cosmetic||0).toFixed(1)}% · 📦 ${Number(def.groupChances.case||0).toFixed(1)}%`:''}<br>Повтор косметики разрешён → уже имеющийся предмет превращается в компенсацию.<br>RNG: ${app.state?.rngSeed?`🎯 seed <b>${esc(app.state.rngSeed)}</b>`:'🎲 random'}</span><div class="actions" style="margin-top:8px"><button class="btn green small" data-season-case-grant="${esc(caseId)}">+1 в инвентарь</button><button class="btn orange small" data-season-case-open="${esc(caseId)}" ${count<1?'disabled':''}>Открыть</button></div></div></div><div class="section-label" style="margin-top:10px">Пул наград · ${fmt(items.length)}</div><div class="season-case-items">${items.length?items.map(item=>`<div class="reward"><div class="reward-icon">${item.imageUrl?`<img src="${esc(item.imageUrl)}" alt="">`:rewardIcon(item.kind)}</div><div><b>${esc(item.title||item.itemId)}</b><span>${esc(item.kind)} · ${esc(item.rarity||'seasonal')} · вес ${fmt(item.weight)} · ≈ ${tpSeasonCaseChance(def,item,items).toFixed(2)}%</span></div></div>`).join(''):'<div class="empty">В кейсе нет включённых наград.</div>'}</div>`;
+    $('seasonCaseContent').innerHTML=`${selector}<div class="season-case"><img src="${esc(def.imageUrl||'/assets/ui/error404-no-icon.png')}" alt=""><div class="season-case-copy"><b>${esc(def.title||'Сезонный кейс')}</b><span>${esc(def.description||'')}<br><code>${esc(caseId)}</code> · ${def.enabled===false?'выключен в Production · разрешён для TP':'включён'} · release ${date(Number(def.releaseAt||0)*1000)}<br>Слотов: ${fmt(def.slots||1)} · дубликат: ${fmt(def.duplicatePoints||0)} ⭐ · в TP: <b>${fmt(count)}</b>${def.groupChances?`<br>🎲 шанс группы: 💰 ${Number(def.groupChances.currency||0).toFixed(1)}% · ✨ ${Number(def.groupChances.cosmetic||0).toFixed(1)}% · 📦 ${Number(def.groupChances.case||0).toFixed(1)}%`:''}<br>Повтор косметики разрешён → уже имеющийся предмет превращается в компенсацию.<br>RNG: ${app.state?.rngSeed?`🎯 seed <b>${esc(app.state.rngSeed)}</b>`:'🎲 random'}</span><div class="actions" style="margin-top:8px"><button class="btn green small" data-season-case-grant="${esc(caseId)}">+1 в инвентарь</button><button class="btn orange small" data-season-case-open="${esc(caseId)}" ${count<1?'disabled':''}>Открыть</button></div></div></div><div class="section-label" style="margin-top:10px">Пул наград · ${fmt(items.length)}</div><div class="season-case-items">${items.length?items.map(item=>`<div class="reward"><div class="reward-icon">${item.imageUrl?`<img src="${esc(item.imageUrl)}" alt="">`:rewardIcon(item.kind)}</div><div><b>${esc(item.title||item.itemId)}</b><span>${esc(item.kind)} · ${esc(item.rarity||'seasonal')} · вес ${fmt(item.weight)} · ≈ ${tpSeasonCaseChance(def,item,items).toFixed(2)}%</span></div></div>`).join(''):'<div class="empty">В кейсе нет включённых наград.</div>'}</div>`;
     const select=$('seasonCaseSelect');if(select)select.onchange=()=>{app.selectedSeasonalCaseId=select.value;app.seasonCaseResult=null;renderPass()};
     const grant=$('seasonCaseContent').querySelector('[data-season-case-grant]');if(grant)grant.onclick=()=>runAction('seasonal_case_grant',{caseId:grant.dataset.seasonCaseGrant,count:1},grant,'Добавляю…');
     const open=$('seasonCaseContent').querySelector('[data-season-case-open]');if(open)open.onclick=async()=>{try{const d=await runAction('seasonal_case_open',{caseId:open.dataset.seasonCaseOpen},open,'Открываю…');app.seasonCaseResult={caseId:open.dataset.seasonCaseOpen,...(d.result||{})};renderPass()}catch{}};

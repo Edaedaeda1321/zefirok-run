@@ -6,6 +6,50 @@
 <meta name="referrer" content="no-referrer">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' https://telegram.org; style-src 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; font-src 'self' data:; base-uri 'none'; form-action 'none'; object-src 'none'">
 <title>Рейтинг игроков — Сладкий Забег</title>
+<script data-zefirok-image-fallback>
+(()=>{
+  const FALLBACK="/assets/ui/error404-no-icon.png";
+  if(window.__ZEFIROK_IMAGE_FALLBACK_V1__)return;
+  window.__ZEFIROK_IMAGE_FALLBACK_V1__=true;
+  window.ZEFIROK_IMAGE_FALLBACK=FALLBACK;
+  const bad=value=>/^(?:|undefined|null|false|nan|\[object object\])$/i.test(String(value??"").trim());
+  const sameFallback=value=>{try{return new URL(String(value||""),document.baseURI).pathname===FALLBACK}catch{return String(value||"")===FALLBACK}};
+  const replace=(img,reason,failed)=>{
+    if(!(img instanceof HTMLImageElement))return;
+    const current=String(img.currentSrc||img.getAttribute("src")||img.src||"");
+    if(sameFallback(current))return;
+    img.dataset.zefirokImageError=reason||"load-error";
+    img.dataset.zefirokFailedSrc=String(failed||current||"").slice(0,1000);
+    img.onerror=null;
+    img.removeAttribute("srcset");
+    img.src=FALLBACK;
+  };
+  const inspect=img=>{
+    if(!(img instanceof HTMLImageElement)||!img.hasAttribute("src"))return;
+    const raw=String(img.getAttribute("src")||"").trim();
+    if(bad(raw)){replace(img,"invalid-src",raw);return;}
+    if(!sameFallback(raw)&&img.complete&&img.naturalWidth===0)replace(img,"load-error",raw);
+  };
+  document.addEventListener("error",event=>{
+    const img=event.target;
+    if(!(img instanceof HTMLImageElement))return;
+    if(sameFallback(img.currentSrc||img.src||img.getAttribute("src")))return;
+    event.preventDefault?.();
+    event.stopImmediatePropagation?.();
+    replace(img,"load-error",img.currentSrc||img.src||img.getAttribute("src")||"");
+  },true);
+  const scan=root=>{
+    if(root instanceof HTMLImageElement)inspect(root);
+    root?.querySelectorAll?.("img").forEach(inspect);
+  };
+  const boot=()=>{
+    scan(document);
+    new MutationObserver(records=>{for(const record of records){if(record.type==="attributes")inspect(record.target);else record.addedNodes.forEach(scan);}}).observe(document.documentElement,{subtree:true,childList:true,attributes:true,attributeFilter:["src","srcset"]});
+  };
+  if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",boot,{once:true});else queueMicrotask(boot);
+  window.zefirokImageSrc=value=>bad(value)?FALLBACK:String(value).trim();
+})();
+</script>
 <script src="https://telegram.org/js/telegram-web-app.js?63"></script>
 <script>
 (()=>{
@@ -9157,20 +9201,7 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
     "legendary_frame_1", "legendary_frame_2", "legendary_frame_3", "legendary_frame_4", "legendary_frame_5",
     "alex_frame_1", "alex_frame_2"
   ]);
-  const FALLBACKS = Object.freeze([
-    "/assets/rating/avatars/avatar-fox.png", "/assets/rating/avatars/avatar-corgi.png",
-    "/assets/rating/avatars/avatar-bunny.png", "/assets/rating/avatars/avatar-hedgehog.png",
-    "/assets/rating/avatars/avatar-koala.png", "/assets/rating/avatars/avatar-penguin.png",
-    "/assets/rating/avatars/avatar-cat.png", "/assets/rating/avatars/avatar-bear.png",
-    "/assets/rating/avatars/avatar-shiba.png", "/assets/rating/avatars/avatar-poodle.png",
-    "/assets/rating/avatars/avatar-corgi-blue.png", "/assets/rating/avatars/avatar-fox-red.png",
-    "/assets/rating/avatars/avatar-bunny-white.png", "/assets/rating/avatars/avatar-kitten-gray.png",
-    "/assets/rating/avatars/avatar-bear-bow.png", "/assets/rating/avatars/avatar-koala-leaf.png",
-    "/assets/rating/avatars/avatar-hedgehog-mint.png", "/assets/rating/avatars/avatar-penguin-blue.png",
-    "/assets/rating/avatars/avatar-raccoon.png", "/assets/rating/avatars/avatar-deer.png",
-    "/assets/rating/avatars/avatar-hamster.png", "/assets/rating/avatars/avatar-chick.png",
-    "/assets/rating/avatars/avatar-panda.png", "/assets/rating/avatars/avatar-husky.png"
-  ]);
+  const IMAGE_ERROR_FALLBACK = "/assets/ui/error404-no-icon.png";
 
   const formatter = new Intl.NumberFormat("ru-RU");
   const content = document.querySelector("[data-leaderboard-content]");
@@ -9334,15 +9365,7 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
     return `${minutes}:${String(secs).padStart(2, "0")}`;
   }
 
-  function fallbackAvatar(entry) {
-    const key = String(entry?.telegramId || entry?.name || "zefirok-player");
-    let hash = 2166136261;
-    for (let index = 0; index < key.length; index += 1) {
-      hash ^= key.charCodeAt(index);
-      hash = Math.imul(hash, 16777619);
-    }
-    return FALLBACKS[Math.abs(hash) % FALLBACKS.length];
-  }
+  function fallbackAvatar() { return IMAGE_ERROR_FALLBACK; }
 
   function normalizeFrame(value) {
     let id = String(value || "").trim();

@@ -7,6 +7,50 @@
 <meta content="no-referrer" name="referrer"/>
 <meta content="default-src 'none'; script-src 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com https://telegram.org; style-src 'unsafe-inline' blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; img-src 'self' blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; font-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; media-src 'self' blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; worker-src blob:; connect-src 'self' blob: data:; frame-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'" http-equiv="Content-Security-Policy"/>
 <title>Сладкий Забег</title>
+<script data-zefirok-image-fallback>
+(()=>{
+  const FALLBACK="/assets/ui/error404-no-icon.png";
+  if(window.__ZEFIROK_IMAGE_FALLBACK_V1__)return;
+  window.__ZEFIROK_IMAGE_FALLBACK_V1__=true;
+  window.ZEFIROK_IMAGE_FALLBACK=FALLBACK;
+  const bad=value=>/^(?:|undefined|null|false|nan|\[object object\])$/i.test(String(value??"").trim());
+  const sameFallback=value=>{try{return new URL(String(value||""),document.baseURI).pathname===FALLBACK}catch{return String(value||"")===FALLBACK}};
+  const replace=(img,reason,failed)=>{
+    if(!(img instanceof HTMLImageElement))return;
+    const current=String(img.currentSrc||img.getAttribute("src")||img.src||"");
+    if(sameFallback(current))return;
+    img.dataset.zefirokImageError=reason||"load-error";
+    img.dataset.zefirokFailedSrc=String(failed||current||"").slice(0,1000);
+    img.onerror=null;
+    img.removeAttribute("srcset");
+    img.src=FALLBACK;
+  };
+  const inspect=img=>{
+    if(!(img instanceof HTMLImageElement)||!img.hasAttribute("src"))return;
+    const raw=String(img.getAttribute("src")||"").trim();
+    if(bad(raw)){replace(img,"invalid-src",raw);return;}
+    if(!sameFallback(raw)&&img.complete&&img.naturalWidth===0)replace(img,"load-error",raw);
+  };
+  document.addEventListener("error",event=>{
+    const img=event.target;
+    if(!(img instanceof HTMLImageElement))return;
+    if(sameFallback(img.currentSrc||img.src||img.getAttribute("src")))return;
+    event.preventDefault?.();
+    event.stopImmediatePropagation?.();
+    replace(img,"load-error",img.currentSrc||img.src||img.getAttribute("src")||"");
+  },true);
+  const scan=root=>{
+    if(root instanceof HTMLImageElement)inspect(root);
+    root?.querySelectorAll?.("img").forEach(inspect);
+  };
+  const boot=()=>{
+    scan(document);
+    new MutationObserver(records=>{for(const record of records){if(record.type==="attributes")inspect(record.target);else record.addedNodes.forEach(scan);}}).observe(document.documentElement,{subtree:true,childList:true,attributes:true,attributeFilter:["src","srcset"]});
+  };
+  if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",boot,{once:true});else queueMicrotask(boot);
+  window.zefirokImageSrc=value=>bad(value)?FALLBACK:String(value).trim();
+})();
+</script>
 <style>:root{color-scheme:light dark;background:light-dark(rgb(255 255 255), rgb(24 24 24));--zefirok-app-height:100dvh}html,body{margin:0;width:100%;height:100%;min-height:0;overflow:hidden;overscroll-behavior:none}body{box-sizing:border-box;padding:0;background:inherit}iframe{display:none;height:var(--zefirok-app-height,100dvh);border:0}body>iframe:not(.zefirok-season-pass-frame):not(.zefirok-rating-frame):not(.zefirok-referrals-frame):not(.zefirok-album-frame){width:calc(100% - 32px);max-width:736px;margin:0 auto}iframe.is-ready{display:block}.zefirok-maintenance-gate{width:100%;min-height:var(--zefirok-app-height,100dvh);display:grid;background:#fff5f5;place-items:center;padding:max(24px,var(--zefirok-content-safe-top,0px)) max(24px,var(--zefirok-content-safe-right,0px)) max(24px,var(--zefirok-content-safe-bottom,0px)) max(24px,var(--zefirok-content-safe-left,0px));box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#4e3a42}.zefirok-maintenance-card{width:min(430px,100%);box-sizing:border-box;padding:28px;border:1px solid #efd0d9;border-radius:28px;background:#fff;box-shadow:0 18px 50px rgba(91,54,68,.13);text-align:center}.zefirok-maintenance-icon{font-size:54px}.zefirok-maintenance-card h1{font-size:25px;margin:12px 0}.zefirok-maintenance-card p{font-size:16px;line-height:1.5;color:#786870;margin:0}.zefirok-maintenance-card button{margin-top:18px;padding:12px 18px;border:0;border-radius:14px;background:#e56f9b;color:#fff;font-weight:800;font-size:15px}
 .zefirok-season-pass-layer{position:fixed;inset:0;width:100%;height:var(--zefirok-app-height,100dvh);z-index:2147483000;background:#fff5f4;display:block;overflow:hidden}
 .zefirok-season-pass-layer[hidden]{display:none!important}
@@ -12611,9 +12655,9 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       }
       function resolveAssetFallbackSource(src) {
         const normalized = String(src || &quot;&quot;);
-        if (!normalized) return &quot;&quot;;
-        if (assetFallbackByUrl.has(normalized)) return assetFallbackByUrl.get(normalized) || &quot;&quot;;
-        try { return assetFallbackByUrl.get(new URL(normalized, document.baseURI).href) || &quot;&quot;; } catch (error) { return &quot;&quot;; }
+        if (!normalized) return &quot;/assets/ui/error404-no-icon.png&quot;;
+        if (assetFallbackByUrl.has(normalized)) return &quot;/assets/ui/error404-no-icon.png&quot;;
+        try { return assetFallbackByUrl.has(new URL(normalized, document.baseURI).href) ? &quot;/assets/ui/error404-no-icon.png&quot; : &quot;&quot;; } catch (error) { return &quot;&quot;; }
       }
       function installDetachedAssetFallback(image) {
         if (!(image instanceof HTMLImageElement)) return image;
@@ -12773,14 +12817,10 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         img.decoding = &quot;async&quot;;
         img.setAttribute(&quot;fetchpriority&quot;, &quot;high&quot;);
         img.onerror = () =&gt; {
-          if (fallback &amp;&amp; img.dataset.skinFallbackApplied !== &quot;1&quot;) {
-            img.dataset.skinFallbackApplied = &quot;1&quot;;
-            img.src = fallback;
-            return;
-          }
           img.onerror = null;
-          img.removeAttribute(&quot;src&quot;);
-          img.style.visibility = &quot;hidden&quot;;
+          img.dataset.skinFallbackApplied = &quot;1&quot;;
+          img.src = &quot;/assets/ui/error404-no-icon.png&quot;;
+          img.style.visibility = &quot;visible&quot;;
         };
         img.onload = () =&gt; {
           img.dataset.skinFallbackApplied = &quot;0&quot;;
