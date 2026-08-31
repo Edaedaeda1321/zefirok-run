@@ -20495,7 +20495,7 @@ function liveContentLegacyRoute(type,id,config){
   if(routeType==="native"||routeType==="story"||routeType==="event"||routeType==="manual")return {enabled:true};
   if(routeType==="shop")return {enabled:true,points:Math.max(0,Math.floor(Number(cfg.points)||0)),treats:Math.max(0,Math.floor(Number(cfg.treats)||0)),coffee:Math.max(0,Math.floor(Number(cfg.coffee)||0))};
   if(routeType==="case"||routeType==="seasonal_case")return {enabled:true,destinationId:String(id||""),weight:Math.max(.01,Math.min(100000,Number(cfg.weight)||1))};
-  if(routeType==="season_pass")return {enabled:true,destinationId:String(id||""),level:Math.max(1,Math.min(50,Math.floor(Number(cfg.level)||1)),lane:String(cfg.lane||"")==="premium"?"premium":"free",...(cfg.previousReward&&typeof cfg.previousReward==="object"?{previousReward:cfg.previousReward}:{})};
+  if(routeType==="season_pass")return {enabled:true,destinationId:String(id||""),level:Math.max(1,Math.min(50,Math.floor(Number(cfg.level)||1))),lane:String(cfg.lane||"")==="premium"?"premium":"free",...(cfg.previousReward&&typeof cfg.previousReward==="object"?{previousReward:cfg.previousReward}:{})};
   return {enabled:true};
 }
 function liveContentRoutesFromStorage(raw,legacyType,legacyId,legacyConfig){
