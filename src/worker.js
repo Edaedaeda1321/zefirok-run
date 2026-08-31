@@ -255,10 +255,10 @@ const FUTURE_SEASON_CONTENT = Object.freeze({
   }),
   skin: Object.freeze({}),
   music: Object.freeze({
-    season3_music_moon_cafe_epic: Object.freeze({ id:"season3_music_moon_cafe_epic", title:"Лунное зефирное кафе", rarity:"epic", imageUrl:"/assets/sounds/covers/img_sound_s3.png", audioUrl:"/assets/sounds/Moon Marshmallow Café(Epik).mp3" }),
-    season3_music_moon_cafe_epic_2: Object.freeze({ id:"season3_music_moon_cafe_epic_2", title:"Лунное зефирное кафе II", rarity:"epic", imageUrl:"/assets/sounds/covers/img_sound_s3.png", audioUrl:"/assets/sounds/Moon Marshmallow Café_2(epik).mp3" }),
-    season3_music_lunar_run_legendary: Object.freeze({ id:"season3_music_lunar_run_legendary", seasonKey:"season2", title:"Лунный забег", rarity:"legendary", imageUrl:"/assets/sounds/covers/img_sound_s3.png", audioUrl:"/assets/sounds/new_song_season2(Legendary).mp3" }),
-    season3_music_lunar_run_mythic: Object.freeze({ id:"season3_music_lunar_run_mythic", seasonKey:"season2", title:"Лунный забег II", rarity:"mythic", imageUrl:"/assets/sounds/covers/img_sound_s3.png", audioUrl:"/assets/sounds/new_song_season2_2(Mifik).mp3" }),
+    season3_music_moon_cafe_epic: Object.freeze({ id:"season3_music_moon_cafe_epic", seasonKey:"season2", title:"Лунное зефирное кафе", rarity:"epic", imageUrl:"/assets/sounds/covers/season3_lunar_music.png", audioUrl:"/assets/sounds/Moon Marshmallow Café(Epik).mp3" }),
+    season3_music_moon_cafe_epic_2: Object.freeze({ id:"season3_music_moon_cafe_epic_2", seasonKey:"season2", title:"Лунное зефирное кафе II", rarity:"epic", imageUrl:"/assets/sounds/covers/season3_lunar_music.png", audioUrl:"/assets/sounds/Moon Marshmallow Café_2(epik).mp3" }),
+    season3_music_lunar_run_legendary: Object.freeze({ id:"season3_music_lunar_run_legendary", seasonKey:"season2", title:"Лунный забег", rarity:"legendary", imageUrl:"/assets/sounds/covers/season3_lunar_music.png", audioUrl:"/assets/sounds/new_song_season2(Legendary).mp3" }),
+    season3_music_lunar_run_mythic: Object.freeze({ id:"season3_music_lunar_run_mythic", seasonKey:"season2", title:"Лунный забег II", rarity:"mythic", imageUrl:"/assets/sounds/covers/season3_lunar_music.png", audioUrl:"/assets/sounds/new_song_season2_2(Mifik).mp3" }),
     season3_music_puppy_parade_epic: Object.freeze({ id:"season3_music_puppy_parade_epic", title:"Belkino Puppy Parade", rarity:"epic", imageUrl:"/assets/sounds/covers/img_sound_s3.png", audioUrl:"/assets/sounds/season3/belkino_puppy_parade.mp3" }),
     season3_music_puppy_trails_mythic: Object.freeze({ id:"season3_music_puppy_trails_mythic", title:"Belkino Puppy Trails I", rarity:"mythic", imageUrl:"/assets/sounds/covers/img_sound_s3.png", audioUrl:"/assets/sounds/season3/belkino_puppy_trails_1.mp3" }),
     season3_music_puppy_trails_legendary: Object.freeze({ id:"season3_music_puppy_trails_legendary", title:"Belkino Puppy Trails II", rarity:"legendary", imageUrl:"/assets/sounds/covers/img_sound_s3.png", audioUrl:"/assets/sounds/season3/belkino_puppy_trails_2.mp3" })
@@ -20691,7 +20691,7 @@ async function ensureLiveContentReleaseSchema(env){
           const seasonKey=String(item?.seasonKey||'season3'),initialSeasonId=seasonKey==='season2'?boundSeason2Id:boundSeason3Id;
           statements.push(env.DB.prepare(`INSERT OR IGNORE INTO live_content_release_rules(item_kind,item_id,content_season_id,released,ever_released,destination_type,destination_id,destination_config_json,updated_at,updated_by) VALUES(?,?,?,0,0,'native','','{}',?,'system')`).bind(kind,itemId,initialSeasonId,now));
           if(initialSeasonId){
-            if(seasonKey==='season2'&&boundSeason3Id)statements.push(env.DB.prepare(`UPDATE live_content_release_rules SET content_season_id=? WHERE item_kind=? AND item_id=? AND (content_season_id='' OR content_season_id=?)`).bind(initialSeasonId,kind,itemId,boundSeason3Id));
+            if(seasonKey==='season2')statements.push(env.DB.prepare(`UPDATE live_content_release_rules SET content_season_id=? WHERE item_kind=? AND item_id=? AND content_season_id<>?`).bind(initialSeasonId,kind,itemId,initialSeasonId));
             else statements.push(env.DB.prepare(`UPDATE live_content_release_rules SET content_season_id=? WHERE item_kind=? AND item_id=? AND content_season_id=''`).bind(initialSeasonId,kind,itemId));
           }
         }
@@ -20730,13 +20730,10 @@ async function bindFutureContentCatalogToSeason(env,seasonId){
 }
 async function bindSeason2ContentCatalogToSeason(env,seasonId){
   const id=String(seasonId||'').trim();if(!id)return {ok:false,bound:0};
-  await ensureLiveContentReleaseSchema(env);let season3Id='';
-  try{season3Id=String((await env.DB.prepare(`SELECT season_id FROM season_pass_case_presets WHERE preset_id='season3_belkino_case_v1' LIMIT 1`).first())?.season_id||'');}catch{}
-  const statements=[];
+  await ensureLiveContentReleaseSchema(env);const statements=[];
   for(const [kind,catalog] of Object.entries(FUTURE_SEASON_CONTENT))for(const itemId of Object.keys(catalog||{})){
     if(!futureSeasonContentMatchesSeasonKey(kind,itemId,'season2'))continue;
-    if(season3Id)statements.push(env.DB.prepare(`UPDATE live_content_release_rules SET content_season_id=? WHERE item_kind=? AND item_id=? AND (content_season_id='' OR content_season_id=?)`).bind(id,kind,itemId,season3Id));
-    else statements.push(env.DB.prepare(`UPDATE live_content_release_rules SET content_season_id=? WHERE item_kind=? AND item_id=? AND content_season_id=''`).bind(id,kind,itemId));
+    statements.push(env.DB.prepare(`UPDATE live_content_release_rules SET content_season_id=? WHERE item_kind=? AND item_id=? AND content_season_id<>?`).bind(id,kind,itemId,id));
   }
   for(let i=0;i<statements.length;i+=40)await env.DB.batch(statements.slice(i,i+40));
   invalidateLiveContentReleaseCache();return {ok:true,bound:statements.length,seasonId:id,scope:'season2_only'};
@@ -34321,6 +34318,7 @@ function ownerPanelRewardAsset(kind, itemId = "") {
   if (normalized === "points") return "/assets/optimized/v0.79.5/iconScore.png";
   if (normalized === "treats" || normalized === "zefir") return seasonPassResourceRewardAsset(normalized);
   if (normalized === "coffee") return "/assets/optimized/v0.79.5/iconCoffee.png";
+  if (normalized === "profile_xp" || normalized === "season_xp" || normalized === "xp") return "/assets/season-pass/xp.png";
   if (SEASON_PASS_COSMETIC_KINDS.includes(normalized)) return seasonPassCosmeticImage(normalized,itemId);
   const encodedCosmetic=seasonPassCosmeticRewardDefinition({item_id:itemId});
   if (encodedCosmetic?.imageUrl) return encodedCosmetic.imageUrl;
