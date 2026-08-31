@@ -20557,7 +20557,7 @@ function liveContentPrimaryRoute(routes,preferred=""){
 function liveContentLegacyRouteConfig(type,route){
   const r=liveContentSafeObject(route);if(type==="shop")return {points:Math.max(0,Math.floor(Number(r.points)||0)),treats:Math.max(0,Math.floor(Number(r.treats)||0)),coffee:Math.max(0,Math.floor(Number(r.coffee)||0))};
   if(type==="case"||type==="seasonal_case")return {weight:Math.max(.01,Math.min(100000,Number(r.weight)||1))};
-  if(type==="season_pass")return {level:Math.max(1,Math.min(50,Math.floor(Number(r.level)||1)),lane:String(r.lane||"")==="premium"?"premium":"free",...(r.previousReward&&typeof r.previousReward==="object"?{previousReward:r.previousReward}:{})};
+  if(type==="season_pass")return {level:Math.max(1,Math.min(50,Math.floor(Number(r.level)||1))),lane:String(r.lane||"")==="premium"?"premium":"free",...(r.previousReward&&typeof r.previousReward==="object"?{previousReward:r.previousReward}:{})};
   return {};
 }
 function liveContentRuleFromRow(row){
@@ -36548,7 +36548,7 @@ function liveContentRouteLegacyPayload(payload,type){
   if(type==="native"||type==="story"||type==="event"||type==="manual")return {enabled:true};
   if(type==="case"||type==="seasonal_case")return {enabled:true,destinationId,weight};
   if(type==="shop")return {enabled:true,points:Math.max(0,Math.min(999999999,Math.floor(Number(payload?.points)||0))),treats:Math.max(0,Math.min(999999999,Math.floor(Number(payload?.treats)||0))),coffee:Math.max(0,Math.min(999999999,Math.floor(Number(payload?.coffee)||0)))};
-  if(type==="season_pass")return {enabled:true,destinationId,level:Math.max(1,Math.min(50,Math.floor(Number(payload?.level)||1)),lane:String(payload?.lane||"")==="premium"?"premium":"free"};
+  if(type==="season_pass")return {enabled:true,destinationId,level:Math.max(1,Math.min(50,Math.floor(Number(payload?.level)||1))),lane:String(payload?.lane||"")==="premium"?"premium":"free"};
   return {enabled:true};
 }
 
