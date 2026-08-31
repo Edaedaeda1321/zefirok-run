@@ -40999,6 +40999,7 @@ async function ownerPanelPlayers(env, ctx) {
 async function ownerPanelPlayer(env, ctx) {
   const telegramId = String(ctx.body?.telegramId || "").trim();
   if (!/^\d{4,20}$/.test(telegramId)) throw new ApiError(400, "Некорректный Telegram ID игрока.");
+  await ensureAchievementConfigSchema(env);
   const profile = await env.DB.prepare(`SELECT * FROM admin_profile_state WHERE telegram_id=? LIMIT 1`).bind(telegramId).first();
   if (!profile) throw new ApiError(404, "Профиль игрока не найден.");
   const season = await ensureSeason(env);
@@ -41016,7 +41017,7 @@ async function ownerPanelPlayer(env, ctx) {
     const serverDayKey = dailyLoyaltyDayKey(Date.now(), config.season.timezoneOffsetMinutes);
     return { config, bundle, serverDayKey, model:dailyLoyaltyModel(config,bundle,serverDayKey),returnTest:returnTest&&String(returnTest.status)==='pending'&&Number(returnTest.expires_at||0)>now?returnTest:null,presence };
   })();
-  const [allTime, seasonal, subscriber, caseRow, caseCounts, passPlayer, staffMember, recentRuns, recentAudit, dailyState] = await Promise.all([
+  const [allTime, seasonal, subscriber, caseRow, caseCounts, passPlayer, staffMember, recentRuns, recentAudit, showcaseOwnership, dailyState] = await Promise.all([
     env.DB.prepare(`SELECT * FROM leaderboard_all_time WHERE telegram_id=? LIMIT 1`).bind(telegramId).first(),
     env.DB.prepare(`SELECT * FROM leaderboard_entries WHERE season_id=? AND telegram_id=? LIMIT 1`).bind(String(season.id), telegramId).first(),
     env.DB.prepare(`SELECT display_name,username,last_started_at,active FROM bot_subscribers WHERE telegram_id=? LIMIT 1`).bind(telegramId).first().catch(() => null),
@@ -41026,6 +41027,7 @@ async function ownerPanelPlayer(env, ctx) {
     env.DB.prepare(`SELECT role,active FROM staff_users WHERE telegram_id=? LIMIT 1`).bind(telegramId).first().catch(() => null),
     env.DB.prepare(`SELECT run_id,season_id,score,duration_ms,accepted,rejection_reason,created_at FROM leaderboard_runs WHERE telegram_id=? ORDER BY created_at DESC LIMIT 10`).bind(telegramId).all().catch(() => ({results:[]})),
     env.DB.prepare(`SELECT id,action,target_telegram_id,target_type,actor_name,actor_telegram_id,actor_role,old_value,new_value,created_at,details_json FROM staff_action_log WHERE target_telegram_id=? ORDER BY created_at DESC,id DESC LIMIT 12`).bind(telegramId).all().catch(() => ({results:[]})),
+    env.DB.prepare(`SELECT style_id FROM achievement_showcase_style_ownership WHERE telegram_id=? ORDER BY unlocked_at,style_id`).bind(telegramId).all().catch(() => ({results:[]})),
     dailyStatePromise
   ]);
   const identity = seasonal || allTime || subscriber || {};
@@ -41037,6 +41039,18 @@ async function ownerPanelPlayer(env, ctx) {
   const pendingCases = { small: 0, sweet: 0, gold: 0, mythic: 0, legendary: 0, alex: 0 };
   for (const row of caseCounts.results || []) if (row.case_type in pendingCases) pendingCases[row.case_type] = Number(row.count || 0);
   const passXp = Math.max(0, Number(passPlayer?.xp || 0));
+  const ownedShowcaseStyles = new Set((showcaseOwnership?.results || []).map((row) => String(row.style_id || "")).filter(Boolean));
+  const showcaseStyles = ACHIEVEMENT_SHOWCASE_STYLES
+    .filter((style) => style?.rewardable === true)
+    .map((style) => ({
+      id:String(style.id || ""),
+      title:String(style.title || style.id || "Витрина"),
+      imageUrl:String(style.imageUrl || ""),
+      category:String(style.category || "seasonal"),
+      seasonLabel:String(style.seasonLabel || ""),
+      hidden:Boolean(style.hidden),
+      owned:ownedShowcaseStyles.has(String(style.id || ""))
+    }));
   return {
     ok: true,
     player: {
@@ -41059,6 +41073,7 @@ async function ownerPanelPlayer(env, ctx) {
       allTimeScore: Number(allTime?.best_score || 0),
       currentSeasonTitle: String(season.title || ""),
       pendingCases,
+      showcaseStyles,
       cosmetics: {
         activeAvatarId: String(caseState.activeAvatarId || ""),
         activeFrameId: String(caseState.activeFrameId || ""),
@@ -41377,7 +41392,7 @@ function ownerPanelDirectGrantUi(htmlValue) {
   }
   const script = `<script id="zefirok-owner-reward-grant-ui-v2">(()=>{
     const options=[['booster:points','⚡ ×2 очки · 2 забега'],['booster:treats','⚡ ×2 зефир · 2 забега'],['booster:coffee','⚡ ×2 кофе · 2 забега'],['booster:shield','🛡 Щит Зеффи · 1 забег'],['booster:second_chance','💗 Второй шанс · 1 забег'],['booster:pause','⏸ Пауза Зеффи · 1 забег'],['season_pass:elite','🎟 Пропуск · Элит'],['season_pass:elite_plus','✨ Пропуск · Элит+'],['season_pass_xp','⚡ EXP пропуска (+ к текущему)']];
-    const enhance=()=>{const select=document.getElementById('playerGrantKind');if(!select)return;for(const [value,label] of options){if(!Array.from(select.options||[]).some(option=>option.value===value)){const option=document.createElement('option');option.value=value;option.textContent=label;select.appendChild(option);}}const card=select.closest('.card');const description=card?.querySelector('.section-head p');if(description)description.textContent='Начисляется напрямую на аккаунт, без Почты Зеффи. Компенсации работают отдельно через письма.';const amount=document.getElementById('playerGrantAmount');const amountLabel=amount?.closest('.field')?.querySelector('label');if(amountLabel)amountLabel.textContent='Количество / EXP';const sync=()=>{if(!amount)return;const isTier=select.value==='season_pass:elite'||select.value==='season_pass:elite_plus';amount.disabled=isTier;if(isTier)amount.value='1';};if(select.dataset.directGrantUiV2!=='1'){select.dataset.directGrantUiV2='1';select.addEventListener('change',sync);}sync();};
+    const enhance=()=>{const select=document.getElementById('playerGrantKind');if(!select)return;for(const [value,label] of options){if(!Array.from(select.options||[]).some(option=>option.value===value)){const option=document.createElement('option');option.value=value;option.textContent=label;select.appendChild(option);}}const card=select.closest('.card');const description=card?.querySelector('.section-head p');if(description)description.textContent='Начисляется напрямую на аккаунт, без Почты Зеффи. Компенсации работают отдельно через письма.';const amount=document.getElementById('playerGrantAmount');const amountLabel=amount?.closest('.field')?.querySelector('label');if(amountLabel)amountLabel.textContent='Количество / EXP';const sync=()=>{if(!amount)return;const isTier=select.value==='season_pass:elite'||select.value==='season_pass:elite_plus';const isShowcase=String(select.value||'').startsWith('showcase_style:');const fixed=isTier||isShowcase;amount.disabled=fixed;if(fixed)amount.value='1';};if(select.dataset.directGrantUiV2!=='1'){select.dataset.directGrantUiV2='1';select.addEventListener('change',sync);}sync();};
     const start=()=>{enhance();new MutationObserver(enhance).observe(document.body,{childList:true,subtree:true});};if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
   })();</script>`;
   const closeIndex = html.lastIndexOf("</body>");
@@ -41419,6 +41434,16 @@ async function ownerPanelGrantDirectReward(env, ctx, telegramId, kind, itemId, a
     }
     const results = await env.DB.batch([update,bumpPlayerAccountRevisionStatement(env,telegramId,now)]);
     if (Number(results?.[0]?.meta?.changes || 0) < 1) throw new ApiError(404, "Профиль усилителей игрока не найден.");
+  } else if (kind === "showcase_style") {
+    await ensureAchievementConfigSchema(env);
+    const style = achievementShowcaseRewardStyleDefinition(itemId);
+    if (!style) throw new ApiError(400, "Неизвестная витрина достижений.");
+    const results = await env.DB.batch([
+      env.DB.prepare(`INSERT OR IGNORE INTO achievement_showcase_style_ownership(telegram_id,style_id,source_type,source_id,unlocked_at,updated_at) VALUES(?,?,'owner_direct',?,?,?)`)
+        .bind(telegramId, String(style.id), sourceId, now, now),
+      bumpPlayerAccountRevisionStatement(env, telegramId, now)
+    ]);
+    alreadyOwned = Number(results?.[0]?.meta?.changes || 0) < 1;
   } else if (kind === "skin") {
     const cosmetic = await grantCosmeticToPlayer(env, telegramId, kind, itemId);
     alreadyOwned = Boolean(cosmetic?.alreadyOwned);
@@ -41471,9 +41496,10 @@ async function ownerPanelGrantPlayer(env, ctx) {
   }
 
   const kind = rawKind === "treats" ? "zefir" : rawKind;
-  if (!["points", "zefir", "coffee", "case", "skin", "booster"].includes(kind)) throw new ApiError(400, "Неизвестный тип награды.");
+  if (!["points", "zefir", "coffee", "case", "skin", "booster", "showcase_style"].includes(kind)) throw new ApiError(400, "Неизвестный тип награды.");
+  const singleItemReward = kind === "skin" || kind === "showcase_style";
   const cosmeticSkin = kind === "skin";
-  const amount = cosmeticSkin ? 1 : ownerPanelInteger(ctx.body?.amount, 1, kind === "case" ? 20 : kind === "booster" ? 999 : 10000000);
+  const amount = singleItemReward ? 1 : ownerPanelInteger(ctx.body?.amount, 1, kind === "case" ? 20 : kind === "booster" ? 999 : 10000000);
   if (amount == null) throw new ApiError(400, "Некорректное количество награды.");
   let itemId = "";
   if (kind === "case") {
@@ -41482,6 +41508,9 @@ async function ownerPanelGrantPlayer(env, ctx) {
   } else if (kind === "booster") {
     itemId = String(ctx.body?.itemId || "").trim().toLowerCase();
     if (!runBoosterDefinition(itemId)) throw new ApiError(400, "Выберите доступный усилитель.");
+  } else if (kind === "showcase_style") {
+    itemId = String(ctx.body?.itemId || "").trim();
+    if (!achievementShowcaseRewardStyleDefinition(itemId)) throw new ApiError(400, "Выберите доступную витрину достижений.");
   } else if (cosmeticSkin) {
     itemId = String(ctx.body?.itemId || "").trim().toLowerCase();
     if (!SKINS[itemId] || itemId === "default") throw new ApiError(400, "Выберите доступный скин.");
