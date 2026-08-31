@@ -5029,7 +5029,10 @@ const ACHIEVEMENT_SHOWCASE_STYLES = Object.freeze([
   Object.freeze({id:"gold",title:"Золотая",description:"Статусная золотая витрина за постоянный престиж достижений.",unlockType:"rank",minPoints:300,unlockText:"Открывается с ранга «Ветеран»",category:"base",layout:"gold",rarity:"legendary",rewardable:false,hidden:false,imageUrl:"/assets/achievements/showcases/gold_vitrina.png"}),
   Object.freeze({id:"season_1_cafe",title:"Открытие кафе",description:"Коллекционная витрина первого сезона. После получения навсегда остаётся на аккаунте.",unlockType:"ownership",unlockText:"Архивная сезонная награда. Получается только из назначенной награды сезона.",category:"seasonal",layout:"season1",rarity:"legendary",rewardable:true,hidden:false,seasonLabel:"Сезон 1 · Открытие кафе",imageUrl:"/assets/achievements/showcases/vitrina_s1.png"}),
   Object.freeze({id:"season_2_night",title:"Ночной сезон",description:"Скрытая коллекционная витрина ночного сезона. После получения навсегда остаётся на аккаунте.",unlockType:"ownership",unlockText:"Скрытая витрина. Появится в коллекции после получения.",category:"seasonal",layout:"season2",rarity:"legendary",rewardable:true,hidden:true,seasonLabel:"Сезон 2 · Ночной сезон",imageUrl:"/assets/achievements/showcases/vitrina_s2.png"}),
-  Object.freeze({id:"season_3_belkino",title:"Тайны Белкино",description:"Скрытая коллекционная витрина третьего сезона «Тайны Белкино». После получения навсегда остаётся на аккаунте.",unlockType:"ownership",unlockText:"Скрытая витрина сезона 3. Появится в коллекции после получения.",category:"seasonal",layout:"season3",rarity:"legendary",rewardable:true,hidden:true,seasonLabel:"Сезон 3 · Тайны Белкино",imageUrl:"/assets/achievements/showcases/vitrina_s3.png"})
+  Object.freeze({id:"season_3_belkino",title:"Тайны Белкино",description:"Скрытая коллекционная витрина третьего сезона «Тайны Белкино». После получения навсегда остаётся на аккаунте.",unlockType:"ownership",unlockText:"Скрытая витрина сезона 3. Появится в коллекции после получения.",category:"seasonal",layout:"season3",rarity:"legendary",rewardable:true,hidden:true,seasonLabel:"Сезон 3 · Тайны Белкино",imageUrl:"/assets/achievements/showcases/vitrina_s3.png"}),
+  Object.freeze({id:"special_origins",title:"У истоков",description:"Памятная витрина первых исследователей «Сладкого Забега» — тех, кто вошёл в игру ещё до официального старта и помог Зеффи сделать первые шаги.",unlockType:"ownership",unlockText:"Эту витрину получили только участники BETA-тестирования проекта.",category:"special",layout:"special_origins",rarity:"legendary",rewardable:true,manualOnly:true,hidden:false,seasonLabel:"Особая · BETA-тест",storyTitle:"Для тех, кто был в самом начале",storyText:"До сезонов, рекордов и большого кафе была первая тестовая версия. Эта витрина хранит память об игроках, которые первыми отправились в забег, проверяли механики, находили ошибки и помогали проекту становиться лучше.",obtainText:"Памятная награда участникам BETA-тестирования «Сладкого Забега». Обычным способом получить её нельзя.",imageUrl:"/assets/achievements/showcases/vitrina_At_the_origins.png"}),
+  Object.freeze({id:"special_creator",title:"Создатель Зефирка",description:"Особая витрина команды проекта — знак тех, чьими руками создавался и развивался «Сладкий Забег».",unlockType:"ownership",unlockText:"Выдаётся командой проекта людям, которые непосредственно участвовали в создании игры.",category:"special",layout:"special_creator",rarity:"legendary",rewardable:true,manualOnly:true,hidden:false,seasonLabel:"Особая · Команда проекта",storyTitle:"Часть истории создания",storyText:"Каждый забег, экран и маленькая деталь игры появились благодаря людям, которые создавали проект и помогали ему расти. Эта витрина отмечает тех, чей труд стал частью самого «Сладкого Забега».",obtainText:"Выдаётся вручную участникам команды и людям, внесшим непосредственный вклад в создание и развитие проекта.",imageUrl:"/assets/achievements/showcases/vitrina_creator_zeffirok.png"}),
+  Object.freeze({id:"special_cafe_legend",title:"Легенда кафе",description:"Редкая почётная витрина за исключительный вклад в жизнь кафе и развитие «Сладкого Забега».",unlockType:"ownership",unlockText:"Выдаётся вручную командой проекта за особые заслуги.",category:"special",layout:"special_legend",rarity:"legendary",rewardable:true,manualOnly:true,hidden:false,seasonLabel:"Особая · Легенда кафе",storyTitle:"Имя, которое остаётся в истории",storyText:"Это не сезонная и не покупная награда. «Легенда кафе» отмечает игроков и друзей проекта, чей особый вклад стал заметной частью истории «Сладкого Забега».",obtainText:"Выдаётся вручную командой проекта за особые заслуги. Получить её через магазин, кейсы или сезонный пропуск нельзя.",imageUrl:"/assets/achievements/showcases/vitrina_Legenda_cafe.png"})
 ]);
 const ACHIEVEMENT_SHOWCASE_STYLE_IDS = Object.freeze(ACHIEVEMENT_SHOWCASE_STYLES.map((item)=>String(item.id)));
 const ACHIEVEMENT_SECRET_TITLE = "Секретное достижение";
@@ -5240,7 +5243,14 @@ function achievementShowcaseStyleDefinition(value, options = {}) {
   return found || (options?.fallback===false?null:ACHIEVEMENT_SHOWCASE_STYLES[0]);
 }
 
-function achievementShowcaseRewardStyleDefinition(value) {
+function achievementShowcaseRewardStyleDefinition(value, options = {}) {
+  const definition=achievementShowcaseStyleDefinition(value,{fallback:false});
+  if(definition?.rewardable!==true)return null;
+  if(definition?.manualOnly===true&&options?.includeManualOnly!==true)return null;
+  return definition;
+}
+
+function achievementShowcaseDirectGrantStyleDefinition(value) {
   const definition=achievementShowcaseStyleDefinition(value,{fallback:false});
   return definition?.rewardable===true?definition:null;
 }
@@ -5250,7 +5260,7 @@ function achievementShowcaseStyleId(value) {
 }
 
 function achievementShowcaseStylePublic(definition,unlocked=false,selected=false){
-  return {id:String(definition.id),title:String(definition.title),description:String(definition.description||""),unlockType:String(definition.unlockType||"default"),unlockText:String(definition.unlockText||""),unlocked:Boolean(unlocked),selected:Boolean(selected),category:String(definition.category||"base"),layout:String(definition.layout||"standard"),rarity:String(definition.rarity||"common"),rewardable:Boolean(definition.rewardable),hidden:Boolean(definition.hidden),seasonLabel:String(definition.seasonLabel||""),imageUrl:String(definition.imageUrl||""),minPoints:Math.max(0,Number(definition.minPoints)||0)};
+  return {id:String(definition.id),title:String(definition.title),description:String(definition.description||""),unlockType:String(definition.unlockType||"default"),unlockText:String(definition.unlockText||""),unlocked:Boolean(unlocked),selected:Boolean(selected),category:String(definition.category||"base"),layout:String(definition.layout||"standard"),rarity:String(definition.rarity||"common"),rewardable:Boolean(definition.rewardable),manualOnly:Boolean(definition.manualOnly),hidden:Boolean(definition.hidden),seasonLabel:String(definition.seasonLabel||""),storyTitle:String(definition.storyTitle||""),storyText:String(definition.storyText||""),obtainText:String(definition.obtainText||""),imageUrl:String(definition.imageUrl||""),minPoints:Math.max(0,Number(definition.minPoints)||0)};
 }
 
 function achievementShowcaseStyleState(rank = {}, series = [], selectedStyleId = "default", ownedStyleIds = []) {
@@ -22542,7 +22552,7 @@ function safeRewardDescription(reward) {
   }
   if (reward.kind === "case") return `${reward.amount} × ${LEVEL_CASE_CONFIG[reward.id]?.title || reward.id}`;
   if (reward.kind === "seasonal_case") return `${reward.amount} × сезонный кейс`;
-  if (String(reward.kind||"")==="showcase_style") { const style=achievementShowcaseRewardStyleDefinition(reward.id); return style?`Витрина «${style.title}»`:"Витрина достижений"; }
+  if (String(reward.kind||"")==="showcase_style") { const style=achievementShowcaseStyleDefinition(reward.id,{fallback:false}); return style?`Витрина «${style.title}»`:"Витрина достижений"; }
   if (["avatar", "frame", "trail", "skin", "music"].includes(String(reward.kind || ""))) return grantRewardTitle(String(reward.kind), String(reward.id || ""));
   const suffix = reward.kind === "points" ? "очков" : reward.kind === "zefir" ? "зефира" : reward.kind === "coffee" ? "кофе" : reward.kind;
   return `${Number(reward.amount || 1).toLocaleString("ru-RU")} ${suffix}`;
@@ -41436,7 +41446,7 @@ async function ownerPanelGrantDirectReward(env, ctx, telegramId, kind, itemId, a
     if (Number(results?.[0]?.meta?.changes || 0) < 1) throw new ApiError(404, "Профиль усилителей игрока не найден.");
   } else if (kind === "showcase_style") {
     await ensureAchievementConfigSchema(env);
-    const style = achievementShowcaseRewardStyleDefinition(itemId);
+    const style = achievementShowcaseDirectGrantStyleDefinition(itemId);
     if (!style) throw new ApiError(400, "Неизвестная витрина достижений.");
     const results = await env.DB.batch([
       env.DB.prepare(`INSERT OR IGNORE INTO achievement_showcase_style_ownership(telegram_id,style_id,source_type,source_id,unlocked_at,updated_at) VALUES(?,?,'owner_direct',?,?,?)`)
@@ -41510,7 +41520,7 @@ async function ownerPanelGrantPlayer(env, ctx) {
     if (!runBoosterDefinition(itemId)) throw new ApiError(400, "Выберите доступный усилитель.");
   } else if (kind === "showcase_style") {
     itemId = String(ctx.body?.itemId || "").trim();
-    if (!achievementShowcaseRewardStyleDefinition(itemId)) throw new ApiError(400, "Выберите доступную витрину достижений.");
+    if (!achievementShowcaseDirectGrantStyleDefinition(itemId)) throw new ApiError(400, "Выберите доступную витрину достижений.");
   } else if (cosmeticSkin) {
     itemId = String(ctx.body?.itemId || "").trim().toLowerCase();
     if (!SKINS[itemId] || itemId === "default") throw new ApiError(400, "Выберите доступный скин.");
@@ -41683,7 +41693,7 @@ function ownerPanelSeasonPassCosmeticCatalogs(liveops={content:{}},releaseRules=
       };
     });
   }
-  result.showcase_style=ACHIEVEMENT_SHOWCASE_STYLES.filter((item)=>item?.rewardable===true).map((item)=>({id:String(item.id),title:String(item.title||item.id),rarity:String(item.rarity||"legendary"),imageUrl:String(item.imageUrl||""),audioUrl:"",future:false,released:true,everReleased:true,hidden:Boolean(item.hidden),seasonId:"",destinationType:"native",destinationId:"",destinationConfig:{},seasonLabel:String(item.seasonLabel||""),description:String(item.description||"")}));
+  result.showcase_style=ACHIEVEMENT_SHOWCASE_STYLES.filter((item)=>item?.rewardable===true&&item?.manualOnly!==true).map((item)=>({id:String(item.id),title:String(item.title||item.id),rarity:String(item.rarity||"legendary"),imageUrl:String(item.imageUrl||""),audioUrl:"",future:false,released:true,everReleased:true,hidden:Boolean(item.hidden),seasonId:"",destinationType:"native",destinationId:"",destinationConfig:{},seasonLabel:String(item.seasonLabel||""),description:String(item.description||"")}));
   return result;
 }
 
