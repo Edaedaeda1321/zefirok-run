@@ -774,7 +774,7 @@ const DEFAULT_SEASON_PASS_END_AT = "2026-09-10T23:59:59+03:00";
 const DEFAULT_SEASON_PASS_CLAIM_GRACE_END_AT = "2026-09-13T23:59:59+03:00";
 const SEASON_PASS_MANUAL_CLAIM_GRACE_SECONDS = 3 * 24 * 60 * 60;
 const SEASON_PASS_FORCE_CLOSE_STATE_KEY = "season_pass:forced_close";
-const DEFAULT_SEASON_PASS_LEVEL_PRICE_POINTS = 10000;
+const DEFAULT_SEASON_PASS_LEVEL_PRICE_POINTS = 15000;
 const DEFAULT_SEASON_PASS_ELITE_PRICE = Object.freeze({ points:25000, treats:450, coffee:450 });
 const DEFAULT_SEASON_PASS_ELITE_PLUS_PRICE = Object.freeze({ points:50000, treats:650, coffee:650 });
 const DEFAULT_SEASON_PASS_ELITE_PLUS_BENEFITS = Object.freeze({
@@ -27807,7 +27807,7 @@ async function ensureSeasonPassSchema(env) {
         season_id TEXT PRIMARY KEY, title TEXT NOT NULL, asset_key TEXT NOT NULL DEFAULT '', starts_at INTEGER NOT NULL, ends_at INTEGER NOT NULL,
         claim_grace_ends_at INTEGER NOT NULL DEFAULT 0,
         manual_status TEXT NOT NULL DEFAULT '' CHECK(manual_status IN ('','active','ended')),
-        base_run_xp INTEGER NOT NULL DEFAULT 100, level_price_points INTEGER NOT NULL DEFAULT 10000,
+        base_run_xp INTEGER NOT NULL DEFAULT 100, level_price_points INTEGER NOT NULL DEFAULT 15000,
         elite_price_points INTEGER NOT NULL DEFAULT 0, elite_price_treats INTEGER NOT NULL DEFAULT 0, elite_price_coffee INTEGER NOT NULL DEFAULT 0,
         elite_plus_price_points INTEGER NOT NULL DEFAULT 0, elite_plus_price_treats INTEGER NOT NULL DEFAULT 0, elite_plus_price_coffee INTEGER NOT NULL DEFAULT 0,
         elite_plus_benefits_json TEXT NOT NULL DEFAULT '{}',
@@ -27999,7 +27999,7 @@ async function ensureSeasonPassSchema(env) {
     await env.DB.prepare(`INSERT OR IGNORE INTO season_pass_seasons(
       season_id,title,starts_at,ends_at,claim_grace_ends_at,manual_status,base_run_xp,level_price_points,
       elite_price_points,elite_price_treats,elite_price_coffee,elite_plus_price_points,elite_plus_price_treats,elite_plus_price_coffee,updated_at,updated_by
-    ) VALUES(?,?,?,?,?, '',100,10000,25000,450,450,50000,650,650,?,'runtime-v07939')`).bind(
+    ) VALUES(?,?,?,?,?, '',100,15000,25000,450,450,50000,650,650,?,'runtime-v07939')`).bind(
       fallback.id, fallback.title, Math.floor(Date.parse(fallback.startsAt)/1000), Math.floor(Date.parse(fallback.endsAt)/1000), Math.floor(Date.parse(fallback.claimGraceEndsAt)/1000), now
     ).run();
     await env.DB.prepare(`UPDATE season_pass_seasons SET
@@ -30253,6 +30253,18 @@ function seasonPassTierStateGuardStatement(env,guardId,seasonId,telegramId,expec
   ),0))`).bind(String(guardId),String(expectedTier),String(seasonId),String(telegramId));
 }
 
+// Level purchases may span several levels. Freeze the pass revision, paid tier and
+// configured unit price inside the same D1 transaction as the charge so a run,
+// tier change or LiveOps price edit cannot make the confirmation stale mid-buy.
+function seasonPassLevelStateGuardStatement(env,guardId,seasonId,telegramId,expectedRevision,expectedTier,expectedUnitPrice){
+  return env.DB.prepare(`INSERT INTO season_pass_purchase_guards(guard_id,ok) VALUES(?,COALESCE((
+    SELECT CASE WHEN p.revision=? AND p.premium_tier=? AND s.level_price_points=? THEN 1 ELSE 0 END
+    FROM season_pass_players p
+    JOIN season_pass_seasons s ON s.season_id=p.season_id
+    WHERE p.season_id=? AND p.telegram_id=? LIMIT 1
+  ),0))`).bind(String(guardId),Math.max(0,Math.floor(Number(expectedRevision)||0)),String(expectedTier),Math.max(0,Math.floor(Number(expectedUnitPrice)||0)),String(seasonId),String(telegramId));
+}
+
 function seasonPassChargeStatement(env,telegramId,price,now,source){
   const points=seasonPassInteger(price.points);const treats=seasonPassInteger(price.treats);const coffee=seasonPassInteger(price.coffee);
   return env.DB.prepare(`UPDATE admin_profile_state SET
@@ -30403,45 +30415,82 @@ async function purchaseSeasonPassLevel(request,env){
     const ctx=await seasonPassRequestContext(request,env);
     await assertSeasonPassNotForceClosed(env);
     if(ctx.season.status!=='active')throw new ApiError(409,ctx.season.status==='ended'?'Сезон завершён. Покупка уровней недоступна.':'Сезон ещё не начался. Покупка уровней недоступна.');
-    if(String(ctx.player.premium_tier||'none')==='none')throw new ApiError(403,'Покупка уровней доступна только платному тарифу.');
-    const currentLevel=seasonPassLevelFromXp(ctx.player.xp);if(currentLevel>=50)throw new ApiError(409,'Уже достигнут максимальный уровень.');
-    const targetLevel=Math.max(2,Math.min(50,Math.floor(Number(ctx.body.targetLevel||ctx.body.target_level||currentLevel+1))));
-    if(targetLevel<=currentLevel)return jsonResponse({...await buildSeasonPassMutationPayload(env,ctx.season,ctx.telegramId),purchasedLevel:currentLevel,pricePoints:0,repeated:true});
-    if(targetLevel!==currentLevel+1)throw new ApiError(409,'Уровень изменился. Откройте подтверждение покупки ещё раз.');
+    const currentTier=String(ctx.player.premium_tier||'none');
+    if(currentTier!=='elite'&&currentTier!=='elite_plus')throw new ApiError(403,'Покупка уровней доступна только игрокам со статусом Элит / Элит+.');
+    const currentLevel=seasonPassLevelFromXp(ctx.player.xp);if(currentLevel>=50)throw new ApiError(409,'Уже достигнут максимальный уровень. После 50 уровня работает дорожка 50+.');
 
-    const price=seasonPassInteger(ctx.season.levelPricePoints,DEFAULT_SEASON_PASS_LEVEL_PRICE_POINTS);const now=Math.floor(Date.now()/1000);const purchaseKey=`level:${targetLevel}`;
-    const existing=await env.DB.prepare(`SELECT status,created_at FROM season_pass_purchases WHERE season_id=? AND telegram_id=? AND purchase_key=? LIMIT 1`).bind(ctx.season.id,ctx.telegramId,purchaseKey).first();
+    const expectedCurrentRaw=ctx.body.expectedCurrentLevel??ctx.body.expected_current_level;
+    if(expectedCurrentRaw!==undefined&&expectedCurrentRaw!==null&&expectedCurrentRaw!==''){
+      const expectedCurrent=Math.floor(Number(expectedCurrentRaw));
+      if(!Number.isFinite(expectedCurrent)||expectedCurrent!==currentLevel)throw new ApiError(409,'Уровень уже изменился. Обновите расчёт покупки.');
+    }
+    const expectedRevisionRaw=ctx.body.expectedRevision??ctx.body.expected_revision;
+    if(expectedRevisionRaw!==undefined&&expectedRevisionRaw!==null&&expectedRevisionRaw!==''){
+      const expectedRevision=Math.floor(Number(expectedRevisionRaw));
+      if(!Number.isFinite(expectedRevision)||expectedRevision!==Math.floor(Number(ctx.player.revision)||0))throw new ApiError(409,'Прогресс сезонного пропуска уже изменился. Обновите расчёт покупки.');
+    }
+
+    const targetLevel=Math.max(2,Math.min(50,Math.floor(Number(ctx.body.targetLevel||ctx.body.target_level||currentLevel+1))));
+    if(targetLevel<=currentLevel)return jsonResponse({...await buildSeasonPassMutationPayload(env,ctx.season,ctx.telegramId),purchasedLevel:currentLevel,purchasedLevels:0,levelCount:0,unitPricePoints:seasonPassInteger(ctx.season.levelPricePoints,DEFAULT_SEASON_PASS_LEVEL_PRICE_POINTS),pricePoints:0,repeated:true});
+    const levelCount=targetLevel-currentLevel;
+    const unitPrice=seasonPassInteger(ctx.season.levelPricePoints,DEFAULT_SEASON_PASS_LEVEL_PRICE_POINTS);
+    const expectedUnitRaw=ctx.body.expectedUnitPrice??ctx.body.expected_unit_price;
+    if(expectedUnitRaw!==undefined&&expectedUnitRaw!==null&&expectedUnitRaw!==''){
+      const expectedUnit=Math.floor(Number(expectedUnitRaw));
+      if(!Number.isFinite(expectedUnit)||expectedUnit!==unitPrice)throw new ApiError(409,'Стоимость уровня уже изменилась. Проверьте новую цену перед покупкой.');
+    }
+    const totalPriceRaw=unitPrice*levelCount;
+    if(!Number.isSafeInteger(totalPriceRaw)||totalPriceRaw<0||totalPriceRaw>999999999)throw new ApiError(409,'Итоговая стоимость покупки слишком велика. Уменьшите количество уровней.');
+    const totalPrice=Math.floor(totalPriceRaw);
+    const now=Math.floor(Date.now()/1000);
+    const purchaseKey=levelCount===1?`level:${targetLevel}`:`levels:${currentLevel+1}-${targetLevel}`;
+    const existing=await env.DB.prepare(`SELECT status,price_points,created_at FROM season_pass_purchases WHERE season_id=? AND telegram_id=? AND purchase_key=? LIMIT 1`).bind(ctx.season.id,ctx.telegramId,purchaseKey).first();
     if(String(existing?.status)==='delivered'){
       const targetXp=seasonPassXpForLevel(targetLevel);
       await env.DB.prepare(`UPDATE season_pass_players SET xp=MAX(xp,?),revision=revision+1,updated_at=? WHERE season_id=? AND telegram_id=?`).bind(targetXp,now,ctx.season.id,ctx.telegramId).run();
-      return jsonResponse({...await buildSeasonPassMutationPayload(env,ctx.season,ctx.telegramId),purchasedLevel:targetLevel,pricePoints:price,repeated:true});
+      return jsonResponse({...await buildSeasonPassMutationPayload(env,ctx.season,ctx.telegramId),purchasedLevel:targetLevel,purchasedLevels:levelCount,levelCount,unitPricePoints:unitPrice,pricePoints:Math.max(0,Number(existing?.price_points)||totalPrice),repeated:true});
     }
     if(String(existing?.status)==='pending'){
-      if(now-Number(existing.created_at||now)<120)throw new ApiError(409,'Покупка уровня уже обрабатывается.');
+      if(now-Number(existing.created_at||now)<120)throw new ApiError(409,'Покупка уровней уже обрабатывается.');
       await env.DB.prepare(`DELETE FROM season_pass_purchases WHERE season_id=? AND telegram_id=? AND purchase_key=? AND status='pending'`).bind(ctx.season.id,ctx.telegramId,purchaseKey).run();
     }
 
-    const balance=await seasonPassAccountBalance(env,ctx.telegramId);if(balance.points<price)throw new ApiError(409,`Недостаточно очков. Требуется ${price.toLocaleString('ru-RU')}.`);
-    const targetXp=seasonPassXpForLevel(targetLevel);const guardId=`level:${ctx.season.id}:${ctx.telegramId}:${targetLevel}:${now}`.slice(0,180);
-    const priceObject={points:price,treats:0,coffee:0};
+    const balance=await seasonPassAccountBalance(env,ctx.telegramId);if(balance.points<totalPrice)throw new ApiError(409,`Недостаточно очков. Требуется ${totalPrice.toLocaleString('ru-RU')}.`);
+    const targetXp=seasonPassXpForLevel(targetLevel);
+    const nonce=crypto.randomUUID().slice(0,12);
+    const balanceGuardId=`level:${ctx.season.id}:${ctx.telegramId}:${targetLevel}:${now}:${nonce}:balance`.slice(0,180);
+    const stateGuardId=`level:${ctx.season.id}:${ctx.telegramId}:${targetLevel}:${now}:${nonce}:state`.slice(0,180);
+    const priceObject={points:totalPrice,treats:0,coffee:0};
+    const expectedRevision=Math.max(0,Math.floor(Number(ctx.player.revision)||0));
     try{await env.DB.batch([
-      env.DB.prepare(`INSERT INTO season_pass_purchases(season_id,telegram_id,purchase_key,status,price_points,price_treats,price_coffee,created_at) VALUES(?,?,?,'pending',?,0,0,?)`).bind(ctx.season.id,ctx.telegramId,purchaseKey,price,now),
-      seasonPassBalanceGuardStatement(env,guardId,ctx.telegramId,priceObject),
-      seasonPassChargeStatement(env,ctx.telegramId,priceObject,now,`season-pass:${ctx.season.id}:level-${targetLevel}`),
+      env.DB.prepare(`INSERT INTO season_pass_purchases(season_id,telegram_id,purchase_key,status,price_points,price_treats,price_coffee,created_at) VALUES(?,?,?,'pending',?,0,0,?)`).bind(ctx.season.id,ctx.telegramId,purchaseKey,totalPrice,now),
+      seasonPassLevelStateGuardStatement(env,stateGuardId,ctx.season.id,ctx.telegramId,expectedRevision,currentTier,unitPrice),
+      seasonPassBalanceGuardStatement(env,balanceGuardId,ctx.telegramId,priceObject),
+      seasonPassChargeStatement(env,ctx.telegramId,priceObject,now,`season-pass:${ctx.season.id}:levels-${currentLevel+1}-${targetLevel}`),
       env.DB.prepare(`UPDATE season_pass_players SET xp=MAX(xp,?),revision=revision+1,updated_at=? WHERE season_id=? AND telegram_id=?`).bind(targetXp,now,ctx.season.id,ctx.telegramId),
       env.DB.prepare(`UPDATE season_pass_purchases SET status='delivered',completed_at=? WHERE season_id=? AND telegram_id=? AND purchase_key=? AND status='pending'`).bind(now,ctx.season.id,ctx.telegramId,purchaseKey),
-      env.DB.prepare(`DELETE FROM season_pass_purchase_guards WHERE guard_id=?`).bind(guardId)
+      env.DB.prepare(`DELETE FROM season_pass_purchase_guards WHERE guard_id IN (?,?)`).bind(balanceGuardId,stateGuardId)
     ]);}catch(batchError){
-      const after=await env.DB.prepare(`SELECT status FROM season_pass_purchases WHERE season_id=? AND telegram_id=? AND purchase_key=? LIMIT 1`).bind(ctx.season.id,ctx.telegramId,purchaseKey).first();
-      if(String(after?.status)==='delivered')return jsonResponse({...await buildSeasonPassMutationPayload(env,ctx.season,ctx.telegramId),purchasedLevel:targetLevel,pricePoints:price,repeated:true});
+      const after=await env.DB.prepare(`SELECT status,price_points FROM season_pass_purchases WHERE season_id=? AND telegram_id=? AND purchase_key=? LIMIT 1`).bind(ctx.season.id,ctx.telegramId,purchaseKey).first();
+      if(String(after?.status)==='delivered')return jsonResponse({...await buildSeasonPassMutationPayload(env,ctx.season,ctx.telegramId),purchasedLevel:targetLevel,purchasedLevels:levelCount,levelCount,unitPricePoints:unitPrice,pricePoints:Math.max(0,Number(after?.price_points)||totalPrice),repeated:true});
       const text=String(batchError?.message||batchError).toLowerCase();
-      if(text.includes('check constraint')||text.includes('season_pass_purchase_guards'))throw new ApiError(409,'Баланс изменился. Проверьте количество очков и повторите покупку.');
-      if(text.includes('unique')||text.includes('primary key'))throw new ApiError(409,'Покупка уровня уже обрабатывается.');
+      if(text.includes('check constraint')||text.includes('season_pass_purchase_guards')){
+        const [actualPlayer,actualSeason]=await Promise.all([
+          env.DB.prepare(`SELECT xp,premium_tier,revision FROM season_pass_players WHERE season_id=? AND telegram_id=? LIMIT 1`).bind(ctx.season.id,ctx.telegramId).first(),
+          env.DB.prepare(`SELECT level_price_points FROM season_pass_seasons WHERE season_id=? LIMIT 1`).bind(ctx.season.id).first()
+        ]);
+        const actualLevel=seasonPassLevelFromXp(actualPlayer?.xp);
+        if(actualLevel!==currentLevel||Number(actualPlayer?.revision||0)!==expectedRevision||String(actualPlayer?.premium_tier||'none')!==currentTier)throw new ApiError(409,'Прогресс или тариф уже изменился. Обновите расчёт покупки.');
+        if(seasonPassInteger(actualSeason?.level_price_points,DEFAULT_SEASON_PASS_LEVEL_PRICE_POINTS)!==unitPrice)throw new ApiError(409,'Стоимость уровня уже изменилась. Проверьте новую цену перед покупкой.');
+        throw new ApiError(409,'Баланс изменился. Проверьте количество очков и повторите покупку.');
+      }
+      if(text.includes('unique')||text.includes('primary key'))throw new ApiError(409,'Покупка уровней уже обрабатывается.');
       throw batchError;
     }
-    try{await recordPlayerTimeline(env,ctx.telegramId,'season_pass_level_purchase',`купил ${targetLevel} уровень сезонного пропуска`,{seasonId:ctx.season.id,targetLevel,pricePoints:price},`season_pass_level_${ctx.season.id}_${targetLevel}`,ctx.auth.user,now);}catch(error){console.error('season pass level timeline failed',error);}
-    return jsonResponse({...await buildSeasonPassMutationPayload(env,ctx.season,ctx.telegramId),purchasedLevel:targetLevel,pricePoints:price,repeated:false});
-  }catch(error){if(error instanceof ApiError)return jsonResponse({ok:false,error:error.message},error.status);console.error('purchaseSeasonPassLevel failed',error);return jsonResponse({ok:false,error:'Не удалось купить уровень.'},500);}
+    const levelLabel=levelCount===1?`${targetLevel} уровень`:`уровни ${currentLevel+1}–${targetLevel}`;
+    try{await recordPlayerTimeline(env,ctx.telegramId,'season_pass_level_purchase',`купил ${levelLabel} сезонного пропуска`,{seasonId:ctx.season.id,fromLevel:currentLevel,toLevel:targetLevel,levelCount,unitPricePoints:unitPrice,pricePoints:totalPrice},`season_pass_level_${ctx.season.id}_${targetLevel}`,ctx.auth.user,now);}catch(error){console.error('season pass level timeline failed',error);}
+    return jsonResponse({...await buildSeasonPassMutationPayload(env,ctx.season,ctx.telegramId),purchasedLevel:targetLevel,purchasedLevels:levelCount,levelCount,fromLevel:currentLevel,toLevel:targetLevel,unitPricePoints:unitPrice,pricePoints:totalPrice,repeated:false});
+  }catch(error){if(error instanceof ApiError)return jsonResponse({ok:false,error:error.message},error.status);console.error('purchaseSeasonPassLevel failed',error);return jsonResponse({ok:false,error:'Не удалось купить уровни.'},500);}
 }
 
 async function recordSeasonPassRunActivity(env,telegramId,input={},seasonValue=null,options={}){
@@ -30736,7 +30785,7 @@ async function showSeasonPassSettings(chatId,user,env){
 
 async function setSeasonPassSettingsAction(query,kind,value,env){
   const chatId=query.message?.chat?.id;const access=await requireAnySecurityPermission(chatId,query.from,['manageSeasons','manageMaintenance'],env);if(!access)return;const season=await resolveSeasonPassAdminSeason(env,query.from);const now=Math.floor(Date.now()/1000);const actor=String(query.from.id);
-  if(kind==='launch'){await env.DB.prepare(`UPDATE season_pass_seasons SET elite_price_points=25000,elite_price_treats=450,elite_price_coffee=450,elite_plus_price_points=50000,elite_plus_price_treats=650,elite_plus_price_coffee=650,level_price_points=10000,updated_at=?,updated_by=? WHERE season_id=?`).bind(now,actor,season.id).run();invalidateSeasonPassConfigCache();}
+  if(kind==='launch'){await env.DB.prepare(`UPDATE season_pass_seasons SET elite_price_points=25000,elite_price_treats=450,elite_price_coffee=450,elite_plus_price_points=50000,elite_plus_price_treats=650,elite_plus_price_coffee=650,level_price_points=15000,updated_at=?,updated_by=? WHERE season_id=?`).bind(now,actor,season.id).run();invalidateSeasonPassConfigCache();}
   else if(kind==='level_price'){await env.DB.prepare(`UPDATE season_pass_seasons SET level_price_points=?,updated_at=?,updated_by=? WHERE season_id=?`).bind(Math.max(0,Math.min(1000000,Number(value)||0)),now,actor,season.id).run();invalidateSeasonPassConfigCache();}
   else if(kind==='run_xp'){await env.DB.prepare(`UPDATE season_pass_seasons SET base_run_xp=?,updated_at=?,updated_by=? WHERE season_id=?`).bind(Math.max(1,Math.min(10000,Number(value)||100)),now,actor,season.id).run();invalidateSeasonPassConfigCache();}
   await answerCallback(env,query.id,'Настройки сезонного пропуска сохранены.');await showSeasonPassSettings(chatId,query.from,env);
@@ -38894,11 +38943,14 @@ async function ownerPanelTestProjectAction(env, ctx) {
     if (state.passTier === "none") throw new ApiError(403, "Покупка уровня доступна только Elite / Elite+.");
     const currentLevel = testProjectSeasonPassLevelFromXp(state.passXp);
     if (currentLevel >= 50) throw new ApiError(409, "Уже достигнут 50 уровень.");
-    const price = {points:Math.max(0,Number(season?.levelPricePoints || DEFAULT_SEASON_PASS_LEVEL_PRICE_POINTS)),treats:0,coffee:0};
+    const targetLevel = Math.max(currentLevel+1,Math.min(50,Math.floor(Number(ctx.body?.targetLevel)||currentLevel+1)));
+    const levelCount = targetLevel-currentLevel;
+    const unitPrice = Math.max(0,Number(season?.levelPricePoints ?? DEFAULT_SEASON_PASS_LEVEL_PRICE_POINTS));
+    const price = {points:unitPrice*levelCount,treats:0,coffee:0};
     testProjectCharge(state, price);
-    state.passXp = Math.max(state.passXp, testProjectSeasonPassXpForLevel(currentLevel + 1));
-    title = `Куплен ${currentLevel + 1} уровень пропуска`;
-    result = { targetLevel:currentLevel+1, price };
+    state.passXp = Math.max(state.passXp, testProjectSeasonPassXpForLevel(targetLevel));
+    title = levelCount===1 ? `Куплен ${targetLevel} уровень пропуска` : `Куплены уровни ${currentLevel+1}–${targetLevel} пропуска`;
+    result = { targetLevel, fromLevel:currentLevel, levelCount, unitPricePoints:unitPrice, price };
   } else if (action === "pass_buy_tier") {
     if (season.status !== "active") throw new ApiError(409, "Тариф можно активировать только в активном сезоне.");
     const target = String(ctx.body?.tier || "");
@@ -39525,7 +39577,7 @@ async function testProjectSandboxGameData(env, ctx) {
   if(path==="/api/battle-pass/purchase-tier"){
     const tier=String(payload?.tier||payload?.premiumTier||""),mutation=await ownerPanelTestProjectAction(env,{...ctx,body:{action:"pass_buy_tier",tier}});await reload();const result=mutation?.result||{};return response({...testProjectSandboxPassPayload(state,snapshot),received:(result.received||[]).map(testProjectSandboxPassReceived),pricePaid:result.price||{},repeated:false,purchasedTier:result.tier||tier});
   }
-  if(path==="/api/battle-pass/purchase-level"){const mutation=await ownerPanelTestProjectAction(env,{...ctx,body:{action:"pass_buy_level"}});await reload();const result=mutation?.result||{};return response({...testProjectSandboxPassPayload(state,snapshot),purchasedLevel:Number(result.targetLevel||testProjectSeasonPassLevelFromXp(state.passXp)),pricePoints:Number(result.price?.points||0),repeated:false});}
+  if(path==="/api/battle-pass/purchase-level"){const targetLevel=Math.floor(Number(payload?.targetLevel||payload?.target_level)||0),mutation=await ownerPanelTestProjectAction(env,{...ctx,body:{action:"pass_buy_level",targetLevel}});await reload();const result=mutation?.result||{};return response({...testProjectSandboxPassPayload(state,snapshot),purchasedLevel:Number(result.targetLevel||testProjectSeasonPassLevelFromXp(state.passXp)),purchasedLevels:Number(result.levelCount||1),levelCount:Number(result.levelCount||1),fromLevel:Number(result.fromLevel||0),toLevel:Number(result.targetLevel||0),unitPricePoints:Number(result.unitPricePoints||0),pricePoints:Number(result.price?.points||0),repeated:false});}
   if(path==="/api/battle-pass/claim"){
     const level=Math.floor(Number(payload?.level)||0),lane=String(payload?.lane||payload?.type||"free")==="premium"?"premium":"free",mutation=await ownerPanelTestProjectAction(env,{...ctx,body:{action:"pass_claim_reward",level,lane}});await reload();const reward=mutation?.result?.reward;return response({...testProjectSandboxPassPayload(state,snapshot),claimedAdded:[`${level}:${lane}`],received:reward?[testProjectSandboxPassReceived({...reward,level,lane})]:[],repeated:false});
   }

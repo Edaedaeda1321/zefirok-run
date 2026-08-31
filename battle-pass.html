@@ -3404,7 +3404,10 @@ img[src$="/xp.webp"]{
       <h1><span class="season-index">Сезон I:</span> <span class="season-name">Открытие Кафе</span></h1>
       <p>Получай награды, проходи 50 уровней сезона, а после финала продолжай бесконечную дорожку 50+ за золотые кейсы.</p>
       <section class="hero-progress">
-        <div class="level-badge" id="levelValue">1</div>
+        <div class="level-badge-wrap">
+          <div class="level-badge" id="levelValue">1</div>
+          <button class="level-buy-entry" id="levelBuyEntry" type="button" aria-label="Купить уровни сезонного пропуска">+</button>
+        </div>
         <div class="progress-copy">
           <strong>Уровень пропуска</strong>
           <div class="progress-track"><i id="progressFill"></i></div>
@@ -3647,6 +3650,48 @@ img[src$="/xp.webp"]{
       </details>
     </div>
     <button class="reward-summary-close" id="rewardSummaryClose" type="button">Отлично</button>
+  </div>
+</section>
+
+<section class="level-purchase-overlay" id="levelPurchaseModal" hidden aria-modal="true" role="dialog" aria-labelledby="levelPurchaseTitle">
+  <div class="level-purchase-card">
+    <button class="level-purchase-x" id="levelPurchaseClose" type="button" aria-label="Закрыть">×</button>
+    <div class="level-purchase-hero-icon" aria-hidden="true"><img src="/assets/season-pass/levels_5.png?v=07939" alt=""></div>
+    <header class="level-purchase-head">
+      <span class="level-purchase-kicker">УСКОРЕНИЕ СЕЗОНА</span>
+      <h2 id="levelPurchaseTitle">Купить уровень</h2>
+      <p id="levelPurchaseTarget">До уровня 2</p>
+    </header>
+
+    <section class="level-purchase-locked" id="levelPurchaseLocked" hidden>
+      <div class="level-purchase-lock-badges" aria-hidden="true">
+        <img src="/assets/season-pass/icon_tarif_elit.png" alt="">
+        <img src="/assets/season-pass/icon_tarif_elit_plus.png" alt="">
+      </div>
+      <strong>Доступно только для Элит / Элит+</strong>
+      <p>Покупка уровней доступна только для игроков со статусом Элит / Элит+.</p>
+      <small>Оформи тариф, чтобы докупать уровни и сразу забирать открытые награды.</small>
+      <button class="level-purchase-primary" id="levelPurchaseTariffs" type="button">Посмотреть тарифы</button>
+    </section>
+
+    <section class="level-purchase-unlocked" id="levelPurchaseUnlocked">
+      <div class="level-purchase-summary">
+        <span>Текущий уровень: <b id="levelPurchaseCurrent">1</b></span>
+        <span>Нужно купить: <b id="levelPurchaseNeed">1 уровень</b></span>
+      </div>
+      <div class="level-purchase-stepper" aria-label="Количество покупаемых уровней">
+        <button id="levelPurchaseMinus" type="button" aria-label="Уменьшить количество уровней">−</button>
+        <div><b id="levelPurchaseQuantity">1</b><span>уровней</span></div>
+        <button id="levelPurchasePlus" type="button" aria-label="Увеличить количество уровней">+</button>
+      </div>
+      <div class="level-purchase-calculation"><span id="levelPurchaseUnitPrice">15 000</span> × <span id="levelPurchaseMultiplier">1</span> <img src="/assets/optimized/v0.79.5/iconScore.png" alt=""></div>
+      <div class="level-purchase-total"><b id="levelPurchaseTotal">15 000</b><img src="/assets/optimized/v0.79.5/iconScore.png" alt="Очки"></div>
+      <div class="level-purchase-premium"><img src="/assets/season-pass/icon_tarif_elit_plus.png" alt=""><span>Доступно для Элит / Элит+</span></div>
+      <p class="level-purchase-result" id="levelPurchaseResult">Ты сразу откроешь уровень 2 и сможешь забрать награды.</p>
+      <div class="level-purchase-balance-line" id="levelPurchaseBalanceLine">Баланс: 0 очков</div>
+      <button class="level-purchase-primary" id="levelPurchaseSubmit" type="button">Купить до 2 уровня</button>
+    </section>
+    <button class="level-purchase-cancel" id="levelPurchaseCancel" type="button">Отмена</button>
   </div>
 </section>
 
@@ -3898,6 +3943,12 @@ img[src$="/xp.webp"]{
   let sliderInteracting = false;
   let pendingPurchaseTier = null;
   let pendingLevelPurchase = false;
+  let levelPurchaseBaseLevel = 1;
+  let levelPurchaseQuantity = 1;
+  let levelPurchaseDesiredTarget = 2;
+  let levelPurchaseExpectedRevision = 0;
+  let levelPurchaseExpectedUnitPrice = 0;
+  let levelPurchaseSubmitting = false;
 
   const tasks = [
     {id:"d_run_1",period:"daily",premium:false,title:"Заверши 1 забег",description:"Засчитывается любой завершённый забег.",target:1,step:1,xp:180},
@@ -4860,7 +4911,7 @@ img[src$="/xp.webp"]{
     const levelColumns = rewards.map((reward,index)=>{
       const itemLevel = index + 1;
       return `<section class="level-column ${itemLevel===MAX_LEVEL?"final-milestone-column":""} ${itemLevel===level?"current":""} ${itemLevel===selectedLevel?"selected":""}" data-level-column="${itemLevel}">
-        <div class="level-number"><small>УР.</small><b>${itemLevel}</b></div>
+        <div class="level-number" data-level-purchase-target="${itemLevel}" role="button" tabindex="0" aria-label="Уровень ${itemLevel}"><small>УР.</small><b>${itemLevel}</b></div>
         ${rewardCellMarkup(itemLevel,"free",reward.free)}
         <div class="reward-connector"><span></span></div>
         ${rewardCellMarkup(itemLevel,"premium",reward.premium)}
@@ -5379,6 +5430,16 @@ img[src$="/xp.webp"]{
     const levelPrice = Math.max(0,Number(serverPass?.season?.levelPricePoints)||0);
     el("buyLevel").innerHTML = `<img src="/assets/optimized/v0.79.5/iconScore.png" alt="">Купить уровень · ${levelPrice.toLocaleString("ru-RU")}`;
     el("buyLevel").disabled = pass.premiumTier === "none" || level >= MAX_LEVEL || !canPurchase;
+    const levelBuyEntry = el("levelBuyEntry");
+    if (levelBuyEntry) {
+      const levelPurchaseAvailable = canPurchase && level < MAX_LEVEL;
+      levelBuyEntry.hidden = !levelPurchaseAvailable;
+      levelBuyEntry.disabled = !levelPurchaseAvailable;
+      levelBuyEntry.classList.toggle("is-locked", pass.premiumTier === "none");
+      levelBuyEntry.setAttribute("aria-label", pass.premiumTier === "none"
+        ? "Покупка уровней доступна для Элит и Элит+"
+        : `Купить уровни сезонного пропуска. Один уровень — ${levelPrice.toLocaleString("ru-RU")} очков`);
+    }
 
     renderRewardTrack();
     animateNewlyUnlockedLevels(previousLevel,level);
@@ -5589,7 +5650,116 @@ img[src$="/xp.webp"]{
     void refreshOpenPurchaseBalance(tier);
   }
 
-  function openLevelPurchaseConfirm() {
+  function levelPurchaseWord(value) {
+    const count = Math.max(0,Math.floor(Number(value)||0));
+    const mod100 = count % 100;
+    const mod10 = count % 10;
+    if (mod100 >= 11 && mod100 <= 14) return "уровней";
+    if (mod10 === 1) return "уровень";
+    if (mod10 >= 2 && mod10 <= 4) return "уровня";
+    return "уровней";
+  }
+
+  function levelPurchaseUnitPrice() {
+    return Math.max(0,Math.floor(Number(serverPass?.season?.levelPricePoints)||0));
+  }
+
+  function levelPurchaseEligible() {
+    return pass.premiumTier === "elite" || pass.premiumTier === "elite_plus";
+  }
+
+  function renderLevelPurchaseModal() {
+    const modal = el("levelPurchaseModal");
+    if (!modal || modal.hidden) return;
+    const base = Math.max(1,Math.min(MAX_LEVEL,Math.floor(Number(levelPurchaseBaseLevel)||currentLevel())));
+    const maxQuantity = Math.max(0,MAX_LEVEL-base);
+    levelPurchaseQuantity = Math.max(1,Math.min(Math.max(1,maxQuantity),Math.floor(Number(levelPurchaseQuantity)||1)));
+    levelPurchaseDesiredTarget = Math.min(MAX_LEVEL,base+levelPurchaseQuantity);
+    const quantity = levelPurchaseQuantity;
+    const target = levelPurchaseDesiredTarget;
+    const unitPrice = levelPurchaseUnitPrice();
+    const total = unitPrice*quantity;
+    const balance = purchaseBalanceSnapshot().points;
+    const eligible = levelPurchaseEligible();
+    const canAfford = balance >= total;
+
+    el("levelPurchaseTarget").textContent = `До уровня ${target}`;
+    el("levelPurchaseLocked").hidden = eligible;
+    el("levelPurchaseUnlocked").hidden = !eligible;
+    el("levelPurchaseCancel").hidden = false;
+    if (!eligible) return;
+
+    el("levelPurchaseCurrent").textContent = String(base);
+    el("levelPurchaseNeed").textContent = `${quantity} ${levelPurchaseWord(quantity)}`;
+    el("levelPurchaseQuantity").textContent = String(quantity);
+    const quantityCaption = el("levelPurchaseQuantity")?.nextElementSibling;
+    if (quantityCaption) quantityCaption.textContent = levelPurchaseWord(quantity);
+    el("levelPurchaseUnitPrice").textContent = unitPrice.toLocaleString("ru-RU");
+    el("levelPurchaseMultiplier").textContent = String(quantity);
+    el("levelPurchaseTotal").textContent = total.toLocaleString("ru-RU");
+    el("levelPurchaseResult").textContent = quantity === 1
+      ? `Ты сразу откроешь уровень ${target} и сможешь забрать награды.`
+      : `Ты сразу откроешь уровни ${base+1}–${target} и сможешь забрать награды.`;
+    const after = Math.max(0,balance-total);
+    const balanceLine = el("levelPurchaseBalanceLine");
+    balanceLine.textContent = canAfford
+      ? `Баланс: ${balance.toLocaleString("ru-RU")} · после покупки: ${after.toLocaleString("ru-RU")} очков`
+      : `Недостаточно очков · баланс: ${balance.toLocaleString("ru-RU")} · нужно: ${total.toLocaleString("ru-RU")}`;
+    balanceLine.classList.toggle("is-insufficient",!canAfford);
+    el("levelPurchaseMinus").disabled = levelPurchaseSubmitting || quantity <= 1;
+    el("levelPurchasePlus").disabled = levelPurchaseSubmitting || quantity >= maxQuantity;
+    const submit = el("levelPurchaseSubmit");
+    submit.disabled = levelPurchaseSubmitting || !canAfford || maxQuantity <= 0;
+    submit.textContent = levelPurchaseSubmitting ? "Покупаем…" : `Купить до ${target} уровня`;
+  }
+
+  function setLevelPurchaseQuantity(nextQuantity) {
+    const maxQuantity = Math.max(1,MAX_LEVEL-levelPurchaseBaseLevel);
+    const next = Math.max(1,Math.min(maxQuantity,Math.floor(Number(nextQuantity)||1)));
+    if (next === levelPurchaseQuantity) return;
+    levelPurchaseQuantity = next;
+    levelPurchaseDesiredTarget = Math.min(MAX_LEVEL,levelPurchaseBaseLevel+next);
+    passSelectHaptic();
+    renderLevelPurchaseModal();
+  }
+
+  function closeLevelPurchaseModal() {
+    const modal = el("levelPurchaseModal");
+    if (!modal) return;
+    modal.hidden = true;
+    levelPurchaseSubmitting = false;
+    if (el("purchaseConfirm")?.hidden && el("rewardSummary")?.hidden && el("tariffSheet")?.hidden) document.body.style.overflow = "";
+  }
+
+  async function refreshLevelPurchaseState() {
+    const modal = el("levelPurchaseModal");
+    if (!modal || modal.hidden) return;
+    const desiredTarget = Math.max(2,Math.min(MAX_LEVEL,Number(levelPurchaseDesiredTarget)||currentLevel()+1));
+    try {
+      const data = await seasonPassApi(STATE_PATH);
+      applyServerPass(data);
+    } catch {
+      renderLevelPurchaseModal();
+      return;
+    }
+    if (modal.hidden) return;
+    const freshLevel = currentLevel();
+    if (freshLevel >= MAX_LEVEL) {
+      closeLevelPurchaseModal();
+      render();
+      showToast("50 уровень уже достигнут. Дальше работает дорожка 50+");
+      return;
+    }
+    levelPurchaseBaseLevel = freshLevel;
+    levelPurchaseQuantity = Math.max(1,Math.min(MAX_LEVEL-freshLevel,desiredTarget>freshLevel?desiredTarget-freshLevel:1));
+    levelPurchaseDesiredTarget = freshLevel+levelPurchaseQuantity;
+    levelPurchaseExpectedRevision = Math.max(0,Number(serverPass?.player?.revision)||0);
+    levelPurchaseExpectedUnitPrice = levelPurchaseUnitPrice();
+    render();
+    renderLevelPurchaseModal();
+  }
+
+  function openLevelPurchaseConfirm(targetLevel = 0) {
     passImpactHaptic("medium");
     const seasonStatus = String(serverPass?.season?.status || "active");
     const canPurchase = serverPass?.season?.capabilities?.canPurchase !== false && seasonStatus === "active";
@@ -5597,47 +5767,64 @@ img[src$="/xp.webp"]{
       showToast(seasonStatus === "ended" ? "Сезон завершён — покупка уровней недоступна" : "Покупка уровней пока недоступна");
       return;
     }
-    if (pass.premiumTier === "none") {
-      showToast("Покупка уровней доступна только владельцам тарифа «Элитный» или «Элитный+»");
-      return;
-    }
     const level = currentLevel();
-    const needed = xpNeededForNextLevel();
-    if (!needed || level >= MAX_LEVEL) {
+    if (level >= MAX_LEVEL) {
       showToast("После 50 уровня XP идёт в бесконечную дорожку 50+");
       return;
     }
+    const requestedTarget = Math.max(level+1,Math.min(MAX_LEVEL,Math.floor(Number(targetLevel)||level+1)));
     pendingPurchaseTier = null;
-    pendingLevelPurchase = true;
-    el("purchaseConfirm").dataset.purchaseKind = "level";
-    el("purchaseConfirmIcon").innerHTML = `<img src="/assets/season-pass/levels_5.png?v=07939" alt="Покупка уровня">`;
-    el("purchaseConfirmTitle").textContent = `Купить ${level + 1} уровень?`;
-    el("purchaseConfirmSubtitle").textContent = `Будет добавлено ${needed.toLocaleString("ru-RU")} XP — ровно до следующего уровня.`;
-    el("purchaseConfirmBenefits").innerHTML = `<div class="purchase-benefit"><img src="/assets/season-pass/xp.png?v=07939" alt=""><span>Текущий уровень: ${level}. После покупки: ${level + 1}.</span></div><div class="purchase-benefit"><img src="/assets/optimized/v0.79.5/iconScore.png" alt=""><span>Перед покупкой всегда показывается подтверждение, чтобы исключить случайное нажатие.</span></div>`;
-    const levelPrice = Math.max(0,Number(serverPass?.season?.levelPricePoints)||0);
-    el("purchasePricePoints").textContent = levelPrice.toLocaleString("ru-RU");
-    el("purchasePriceMarshmallow").textContent = "0";
-    el("purchasePriceCoffee").textContent = "0";
-    renderPurchaseBalance("level", {points:levelPrice,treats:0,coffee:0});
-    el("purchaseSubmit").textContent = "Купить уровень";
-    el("purchaseConfirm").hidden = false;
+    pendingLevelPurchase = false;
+    levelPurchaseBaseLevel = level;
+    levelPurchaseQuantity = Math.max(1,requestedTarget-level);
+    levelPurchaseDesiredTarget = requestedTarget;
+    levelPurchaseExpectedRevision = Math.max(0,Number(serverPass?.player?.revision)||0);
+    levelPurchaseExpectedUnitPrice = levelPurchaseUnitPrice();
+    levelPurchaseSubmitting = false;
+    el("levelPurchaseModal").hidden = false;
     document.body.style.overflow = "hidden";
-    resetPurchaseDialogToTop();
-    void refreshOpenPurchaseBalance("level");
+    renderLevelPurchaseModal();
+    void refreshLevelPurchaseState();
   }
 
   async function performLevelPurchase() {
-    const button=el("buyLevel");const previous=button?.innerHTML||"";if(button){button.disabled=true;button.textContent="Покупаем уровень…";}
+    if (!levelPurchaseEligible()) {
+      renderLevelPurchaseModal();
+      return;
+    }
+    const base = levelPurchaseBaseLevel;
+    const quantity = levelPurchaseQuantity;
+    const target = Math.min(MAX_LEVEL,base+quantity);
+    if (target <= base || base !== currentLevel()) {
+      showToast("Уровень уже изменился. Обновляем расчёт…");
+      void refreshLevelPurchaseState();
+      return;
+    }
+    levelPurchaseSubmitting = true;
+    renderLevelPurchaseModal();
     try {
-      const data = await seasonPassApi(PURCHASE_LEVEL_PATH,{targetLevel:currentLevel()+1});
+      const data = await seasonPassApi(PURCHASE_LEVEL_PATH,{
+        targetLevel:target,
+        expectedCurrentLevel:base,
+        expectedRevision:levelPurchaseExpectedRevision,
+        expectedUnitPrice:levelPurchaseExpectedUnitPrice
+      });
       applyServerPass(data);
+      closeLevelPurchaseModal();
       render();
-      scrollToLevel(currentLevel());
+      const purchasedLevel = Math.max(base+1,Math.min(MAX_LEVEL,Number(data.purchasedLevel||target)||target));
+      scrollToLevel(purchasedLevel);
       notifyAccountChanged();
       passNotifyHaptic("success");
-      showToast(`Уровень ${data.purchasedLevel || currentLevel()} открыт`);
-    } catch (error) { passNotifyHaptic("error"); showToast(error.message || "Не удалось купить уровень"); }
-    finally { if(button){button.innerHTML=previous;button.disabled=false;} render(); }
+      const bought = Math.max(1,Number(data.purchasedLevels||data.levelCount||quantity)||quantity);
+      showToast(bought === 1 ? `Уровень ${purchasedLevel} открыт` : `Открыты уровни ${base+1}–${purchasedLevel}`);
+    } catch (error) {
+      levelPurchaseSubmitting = false;
+      passNotifyHaptic("error");
+      showToast(error.message || "Не удалось купить уровни");
+      if (Number(error?.status) === 409) void refreshLevelPurchaseState();
+      else renderLevelPurchaseModal();
+    }
   }
 
   function closePurchaseConfirm() {
@@ -5889,6 +6076,16 @@ img[src$="/xp.webp"]{
   }
 
   document.addEventListener("click",event=>{
+    const levelTarget = event.target.closest("[data-level-purchase-target]");
+    if (levelTarget) {
+      const targetLevel = Math.floor(Number(levelTarget.dataset.levelPurchaseTarget)||0);
+      if (targetLevel >= 1 && targetLevel <= MAX_LEVEL) {
+        scrollToLevel(targetLevel);
+        if (targetLevel > currentLevel()) openLevelPurchaseConfirm(targetLevel);
+      }
+      return;
+    }
+
     const overflowInlineButton = event.target.closest("[data-overflow-inline]");
     if (overflowInlineButton) {
       passImpactHaptic("medium");
@@ -5985,6 +6182,14 @@ img[src$="/xp.webp"]{
     }
   });
 
+  el("rewardTrack").addEventListener("keydown",event=>{
+    if (event.key !== "Enter" && event.key !== " ") return;
+    const targetNode = event.target.closest("[data-level-purchase-target]");
+    if (!targetNode) return;
+    event.preventDefault();
+    targetNode.click();
+  });
+
   el("levelSlider").addEventListener("pointerdown",()=>{ sliderInteracting = true; });
   el("levelSlider").addEventListener("touchstart",()=>{ sliderInteracting = true; },{passive:true});
   let lastSliderHapticLevel = Number(el("levelSlider")?.value || 0);
@@ -6014,7 +6219,15 @@ img[src$="/xp.webp"]{
     });
   },{passive:true});
 
-  el("buyLevel").addEventListener("click",openLevelPurchaseConfirm);
+  el("buyLevel").addEventListener("click",()=>openLevelPurchaseConfirm());
+  el("levelBuyEntry").addEventListener("click",()=>openLevelPurchaseConfirm());
+  el("levelPurchaseMinus").addEventListener("click",()=>setLevelPurchaseQuantity(levelPurchaseQuantity-1));
+  el("levelPurchasePlus").addEventListener("click",()=>setLevelPurchaseQuantity(levelPurchaseQuantity+1));
+  el("levelPurchaseSubmit").addEventListener("click",()=>{ passImpactHaptic("medium"); void performLevelPurchase(); });
+  el("levelPurchaseTariffs").addEventListener("click",()=>{ passImpactHaptic("light"); closeLevelPurchaseModal(); openTariffSheet(); });
+  el("levelPurchaseCancel").addEventListener("click",()=>{ passSelectHaptic(); closeLevelPurchaseModal(); });
+  el("levelPurchaseClose").addEventListener("click",()=>{ passSelectHaptic(); closeLevelPurchaseModal(); });
+  el("levelPurchaseModal").addEventListener("click",event=>{ if(event.target===el("levelPurchaseModal"))closeLevelPurchaseModal(); });
   el("seasonFinaleOpen").addEventListener("click",()=>{passImpactHaptic("medium");showSeasonFinale();});
   el("seasonFinaleClose").addEventListener("click",()=>{passSelectHaptic();closeSeasonFinale();});
   el("seasonFinaleLetter").addEventListener("click",()=>{closeSeasonFinale();showSeasonLetter();});
@@ -6113,6 +6326,7 @@ img[src$="/xp.webp"]{
   document.addEventListener("keydown",event=>{
     if (event.key !== "Escape") return;
     if (!el("tierCelebration").hidden) closeTierCelebration({showRewards:false});
+    else if (!el("levelPurchaseModal").hidden) closeLevelPurchaseModal();
     else if (!el("rewardPreviewSheet").hidden) closeRewardPreview({animated:true});
     else if (!el("tariffSheet").hidden) closeTariffSheet({animated:true});
     else if (!el("seasonFinaleOverlay").hidden) closeSeasonFinale();
@@ -6671,5 +6885,135 @@ img[src$="/xp.webp"]{
   .level-column.selected .level-number{width:54px!important;min-width:54px!important}
 }
 </style>
+
+<style id="zefirok-season-level-purchase-v1">
+/* Contextual level purchase: discovery entry, Elite gate, quantity stepper and confirmation. */
+.hero-progress .level-badge-wrap{
+  grid-column:1!important;
+  grid-row:1 / span 2!important;
+  position:relative!important;
+  align-self:center!important;
+  justify-self:center!important;
+  display:grid!important;
+  place-items:center!important;
+  width:84px!important;
+  min-width:0!important;
+  min-height:76px!important;
+}
+.hero-progress .level-badge-wrap .level-badge{grid-column:auto!important;grid-row:auto!important}
+.level-buy-entry{
+  position:absolute;
+  z-index:8;
+  right:0;
+  bottom:1px;
+  display:grid;
+  place-items:center;
+  width:29px;
+  height:29px;
+  padding:0;
+  border:2px solid #f0b63b;
+  border-radius:10px;
+  background:linear-gradient(180deg,#fffafd,#ffe7f0);
+  color:#af426c;
+  box-shadow:0 5px 12px rgba(148,70,91,.15),inset 0 0 0 2px rgba(255,255,255,.78);
+  font:1000 22px/1 "SF Pro Rounded","Arial Rounded MT Bold",system-ui,sans-serif;
+  cursor:pointer;
+  transition:transform .14s ease,box-shadow .14s ease,filter .14s ease;
+}
+.level-buy-entry:active{transform:scale(.92)}
+.level-buy-entry.is-locked{background:linear-gradient(180deg,#fff9f1,#fff0d7);color:#a56c20}
+.level-buy-entry.is-locked::after{content:"";position:absolute;right:-2px;top:-2px;width:8px;height:8px;border:2px solid #fff;border-radius:50%;background:#d89a23;box-shadow:0 1px 4px rgba(115,73,20,.2)}
+.level-buy-entry[hidden]{display:none!important}
+.level-column [data-level-purchase-target]{cursor:pointer;touch-action:manipulation}
+.level-column [data-level-purchase-target]:focus-visible{outline:2px solid #df5d91!important;outline-offset:3px}
+
+.level-purchase-overlay{
+  position:fixed;
+  inset:0;
+  z-index:15000;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:calc(18px + env(safe-area-inset-top)) 16px calc(18px + env(safe-area-inset-bottom));
+  overflow:auto;
+  background:rgba(89,54,50,.34);
+  backdrop-filter:blur(8px);
+  -webkit-backdrop-filter:blur(8px);
+}
+.level-purchase-overlay[hidden]{display:none!important}
+.level-purchase-card{
+  position:relative;
+  width:min(440px,100%);
+  max-height:min(760px,calc(100dvh - 36px - env(safe-area-inset-top) - env(safe-area-inset-bottom)));
+  overflow:auto;
+  overscroll-behavior:contain;
+  padding:22px 20px 18px;
+  border:1px solid rgba(232,140,174,.48);
+  border-radius:28px;
+  background:
+    radial-gradient(circle at 50% 0,rgba(255,226,238,.9),transparent 34%),
+    linear-gradient(180deg,#fffdfc 0%,#fff9f8 58%,#fffdfb 100%);
+  box-shadow:0 24px 70px rgba(100,52,61,.24),inset 0 0 0 1px rgba(255,255,255,.8);
+  color:#674138;
+  text-align:center;
+  animation:levelPurchaseIn .22s cubic-bezier(.2,.82,.25,1);
+}
+@keyframes levelPurchaseIn{from{opacity:0;transform:translateY(12px) scale(.97)}to{opacity:1;transform:none}}
+.level-purchase-x{position:absolute;z-index:3;right:14px;top:14px;width:38px;height:38px;border:0;border-radius:50%;background:#f5ebe7;color:#80594e;font:900 25px/1 system-ui;cursor:pointer}
+.level-purchase-hero-icon{width:94px;height:76px;margin:0 auto 2px;display:grid;place-items:center}
+.level-purchase-hero-icon img{display:block;width:90px;height:72px;object-fit:contain;filter:drop-shadow(0 8px 12px rgba(181,103,37,.18))}
+.level-purchase-head{padding:0 30px}
+.level-purchase-kicker{display:block;margin:2px 0 5px;color:#c58c24;font-size:8px;font-weight:1000;letter-spacing:.1em}
+.level-purchase-head h2{margin:0;color:#644035;font-size:27px;line-height:1.05;font-weight:1000}
+.level-purchase-head p{margin:5px 0 0;color:#df4f89;font-size:17px;font-weight:1000}
+.level-purchase-summary{display:flex;justify-content:center;gap:8px 16px;flex-wrap:wrap;margin:14px 0 12px;color:#87665d;font-size:11px;font-weight:850}
+.level-purchase-summary b{color:#674138;font-weight:1000}
+.level-purchase-stepper{display:grid;grid-template-columns:54px minmax(92px,1fr) 54px;align-items:center;gap:10px;width:min(260px,100%);margin:0 auto 13px}
+.level-purchase-stepper button{width:54px;height:48px;border:1px solid #efb547;border-radius:15px;background:linear-gradient(180deg,#fff,#fff0f5);color:#a93e69;font-size:25px;font-weight:1000;box-shadow:0 5px 12px rgba(126,71,63,.08)}
+.level-purchase-stepper button:disabled{opacity:.38;box-shadow:none}
+.level-purchase-stepper>div{display:flex;align-items:baseline;justify-content:center;gap:6px;min-width:0;color:#715044}
+.level-purchase-stepper>div b{font-size:26px;font-weight:1000;font-variant-numeric:tabular-nums}
+.level-purchase-stepper>div span{font-size:9px;font-weight:900;color:#a17c70}
+.level-purchase-calculation{display:flex;align-items:center;justify-content:center;gap:6px;color:#765248;font-size:13px;font-weight:900}
+.level-purchase-calculation img{width:20px;height:20px;object-fit:contain}
+.level-purchase-total{display:flex;align-items:center;justify-content:center;gap:8px;margin:5px 0 8px}
+.level-purchase-total b{color:#e14682;font-size:36px;line-height:1;font-weight:1000;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.level-purchase-total img{width:38px;height:38px;object-fit:contain}
+.level-purchase-premium{display:inline-flex;align-items:center;gap:6px;margin:0 auto 12px;padding:5px 9px;border:1px solid #f0c96c;border-radius:999px;background:#fff9e8;color:#a36a1d;font-size:8px;font-weight:1000}
+.level-purchase-premium img{width:22px;height:18px;object-fit:contain}
+.level-purchase-result{margin:0 auto 10px;max-width:330px;color:#7b5b51;font-size:11px;font-weight:800;line-height:1.45}
+.level-purchase-balance-line{margin:0 auto 12px;padding:8px 10px;border-radius:12px;background:#fff4df;color:#805e33;font-size:9px;font-weight:900}
+.level-purchase-balance-line.is-insufficient{background:#fff0f2;color:#b8455d}
+.level-purchase-primary{width:100%;min-height:52px;border:0;border-radius:17px;background:linear-gradient(145deg,#efb63e,#d48e1d);color:#fff;font-size:14px;font-weight:1000;box-shadow:0 8px 18px rgba(188,124,25,.2);cursor:pointer}
+.level-purchase-primary:disabled{filter:grayscale(.25);opacity:.5;box-shadow:none}
+.level-purchase-cancel{margin:10px auto 0;padding:8px 16px;border:0;background:transparent;color:#d34e83;font-size:11px;font-weight:900;cursor:pointer}
+.level-purchase-locked{margin-top:16px;padding:16px 14px 14px;border:1px solid #efd1d9;border-radius:20px;background:linear-gradient(180deg,#fff,#fff8f7)}
+.level-purchase-lock-badges{display:flex;align-items:center;justify-content:center;gap:4px;height:58px;margin-bottom:6px}
+.level-purchase-lock-badges img{width:68px;height:52px;object-fit:contain;filter:drop-shadow(0 5px 8px rgba(154,94,24,.12))}
+.level-purchase-locked>strong{display:block;color:#70463b;font-size:15px;font-weight:1000}
+.level-purchase-locked>p{margin:8px auto 5px;max-width:330px;color:#76544a;font-size:11px;font-weight:850;line-height:1.45}
+.level-purchase-locked>small{display:block;margin:0 auto 14px;max-width:330px;color:#a27d72;font-size:9px;font-weight:800;line-height:1.45}
+@media(max-width:620px){
+  .hero-progress .level-badge-wrap{width:70px!important;min-height:66px!important}
+  .level-buy-entry{width:26px;height:26px;border-radius:9px;font-size:19px}
+}
+@media(max-width:560px){
+  .hero-progress .level-badge-wrap{width:68px!important;min-height:64px!important}
+  .level-purchase-overlay{padding:calc(12px + env(safe-area-inset-top)) 12px calc(12px + env(safe-area-inset-bottom))}
+  .level-purchase-card{padding:18px 16px 15px;border-radius:24px}
+  .level-purchase-head h2{font-size:24px}
+  .level-purchase-total b{font-size:32px}
+}
+@media(max-width:390px){
+  .hero-progress .level-badge-wrap{width:62px!important;min-height:58px!important}
+  .level-buy-entry{right:-1px;bottom:-1px;width:24px;height:24px;font-size:18px}
+  .level-purchase-card{padding-left:14px;padding-right:14px}
+  .level-purchase-stepper{grid-template-columns:48px minmax(82px,1fr) 48px}
+  .level-purchase-stepper button{width:48px;height:44px}
+  .level-purchase-total b{font-size:29px}
+}
+@media(prefers-reduced-motion:reduce){.level-purchase-card{animation:none}.level-buy-entry{transition:none}}
+</style>
+
 </body>
 </html>
