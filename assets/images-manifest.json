@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "catalogHash": "fb7cdfd80357ca3a",
-  "count": 446,
+  "catalogHash": "07d000a7518a61f1",
+  "count": 449,
   "images": [
     {
       "fileName": "achievements/background_achivment_panel.png",
@@ -338,6 +338,30 @@
       "path": "/assets/achievements/showcases/Standart_vitrina.png",
       "size": 598871,
       "modified": 1788125622000
+    },
+    {
+      "fileName": "achievements/showcases/vitrina_At_the_origins.png",
+      "label": "Vitrina At the origins",
+      "folder": "achievements/showcases",
+      "path": "/assets/achievements/showcases/vitrina_At_the_origins.png",
+      "size": 2685781,
+      "modified": 1788178475000
+    },
+    {
+      "fileName": "achievements/showcases/vitrina_creator_zeffirok.png",
+      "label": "Vitrina creator zeffirok",
+      "folder": "achievements/showcases",
+      "path": "/assets/achievements/showcases/vitrina_creator_zeffirok.png",
+      "size": 2871467,
+      "modified": 1788178475000
+    },
+    {
+      "fileName": "achievements/showcases/vitrina_Legenda_cafe.png",
+      "label": "Vitrina Legenda cafe",
+      "folder": "achievements/showcases",
+      "path": "/assets/achievements/showcases/vitrina_Legenda_cafe.png",
+      "size": 2930295,
+      "modified": 1788178475000
     },
     {
       "fileName": "achievements/showcases/vitrina_s1.png",
