@@ -4217,7 +4217,7 @@ async function repairOwnerPanelGiftInboxFromAudit(env, telegramId) {
     const result = await env.DB.prepare(`SELECT id,new_value,details_json,created_at
       FROM staff_action_log
       WHERE target_telegram_id=? AND action='owner_panel_grant' AND target_type='gift_inbox' AND success=1
-      ORDER BY created_at DESC,id DESC LIMIT 24`).bind(id).all();
+      ORDER BY created_at DESC,id DESC LIMIT 100`).bind(id).all();
     auditRows = result.results || [];
   } catch (error) {
     console.error("owner gift inbox audit repair lookup failed", error);
@@ -4294,13 +4294,18 @@ async function repairCompensationCampaignGiftInbox(env, telegramId) {
 
   let campaignRows = [];
   try {
-    const result = await env.DB.prepare(`SELECT c.campaign_id,c.title,c.reason,c.message_text,c.reward_bundle_json,c.created_at,
+    const result = await env.DB.prepare(`SELECT c.campaign_id,c.title,c.reason,c.message_text,c.reward_kind,c.reward_id,c.amount,c.reward_bundle_json,c.image_url,c.created_at,
         r.processed_at,COALESCE(m.enabled,0) AS inbox_enabled,COALESCE(m.preview_text,'') AS preview_text
       FROM admin_campaign_recipients r
       JOIN admin_campaigns c ON c.campaign_id=r.campaign_id
       LEFT JOIN admin_campaign_mail_config m ON m.campaign_id=c.campaign_id
-      WHERE r.telegram_id=? AND r.status IN ('processed','failed') AND c.reward_kind='gift_bundle' AND COALESCE(m.enabled,0)=1
-      ORDER BY COALESCE(r.processed_at,c.created_at) DESC,c.created_at DESC LIMIT 24`).bind(id).all();
+      WHERE r.telegram_id=? AND r.status IN ('processed','failed')
+        AND (
+          COALESCE(m.enabled,0)=1
+          OR c.reward_kind='gift_bundle'
+          OR (c.reward_kind='none' AND c.title LIKE 'Компенсация:%')
+        )
+      ORDER BY COALESCE(r.processed_at,c.created_at) DESC,c.created_at DESC LIMIT 100`).bind(id).all();
     campaignRows = result.results || [];
   } catch (error) {
     console.error("compensation gift inbox recovery lookup failed", error);
@@ -4308,68 +4313,101 @@ async function repairCompensationCampaignGiftInbox(env, telegramId) {
   }
   if (!campaignRows.length) return 0;
 
-  const candidates = [];
+  const candidateMap = new Map();
   for (const row of campaignRows) {
     const campaignId = String(row.campaign_id || "").trim();
     if (!campaignId) continue;
+    const rewardKind = String(row.reward_kind || "none").trim().toLowerCase();
+    let rewards = [];
+    if (rewardKind === "gift_bundle") rewards = normalizePlayerGiftRewards(safeJson(row.reward_bundle_json, []));
+    else if (rewardKind !== "none") rewards = normalizePlayerGiftRewards([{ kind:rewardKind, id:String(row.reward_id || ""), amount:Math.max(1,Math.floor(Number(row.amount || 1))) }]);
+    if (rewardKind !== "none" && !rewards.length) continue;
     const giftId = `campaign_${campaignId}`.replace(/[^A-Za-z0-9:_-]/g, "_").slice(0,120);
-    const rewards = normalizePlayerGiftRewards(safeJson(row.reward_bundle_json, []));
-    if (!rewards.length) continue;
-    candidates.push({
-      giftId, rewards,
-      title: String(row.title || "Компенсация").slice(0,120),
-      message: String(row.message_text || "").trim() === "__CC_SILENT__" ? "" : String(row.message_text || "").slice(0,3500),
-      reason: String(row.reason || "Компенсация").slice(0,300),
+    if (candidateMap.has(giftId)) continue;
+    const campaignMessage = String(row.message_text || "").trim() === "__CC_SILENT__" ? "" : String(row.message_text || "").slice(0,3500);
+    candidateMap.set(giftId, {
+      giftId,
+      rewards,
+      kind: rewards.length ? (rewardKind === "gift_bundle" ? "compensation" : "campaign") : "letter",
+      title: String(row.title || (rewards.length ? "Компенсация" : "Письмо от команды")).slice(0,120),
+      message: campaignMessage,
+      reason: rewards.length ? String(row.reason || "Компенсация").slice(0,300) : "",
       preview: String(row.preview_text || "").slice(0,120),
+      imageUrl: String(row.image_url || "").trim().slice(0,1000),
       createdAt: Math.max(1, Math.floor(Number(row.processed_at || row.created_at || 0)))
     });
   }
+  const candidates = [...candidateMap.values()];
   if (!candidates.length) return 0;
 
   const placeholders = candidates.map(() => "?").join(",");
-  const existing = await env.DB.prepare(`SELECT gift_id FROM player_gift_inbox WHERE telegram_id=? AND gift_id IN (${placeholders})`)
+  const existing = await env.DB.prepare(`SELECT g.gift_id,g.status,g.claimed_at,m.gift_id AS metadata_gift_id
+      FROM player_gift_inbox g
+      LEFT JOIN player_mail_metadata m ON m.gift_id=g.gift_id AND m.telegram_id=g.telegram_id
+      WHERE g.telegram_id=? AND g.gift_id IN (${placeholders})`)
     .bind(id, ...candidates.map((item) => item.giftId)).all();
-  const existingIds = new Set((existing.results || []).map((row) => String(row.gift_id || "")));
-  const missing = candidates.filter((item) => !existingIds.has(item.giftId));
-  if (!missing.length) return 0;
+  const existingMap = new Map((existing.results || []).map((row) => [String(row.gift_id || ""), row]));
+  const missingInbox = candidates.filter((item) => !existingMap.has(item.giftId));
 
   let queueRows = [];
-  try {
-    const queueWhere = missing.map(() => "source_id GLOB ?").join(" OR ");
-    const queueResult = await env.DB.prepare(`SELECT source_id,status,delivered_at FROM reward_delivery_queue
-      WHERE telegram_id=? AND source_type='gift_inbox' AND (${queueWhere})`)
-      .bind(id, ...missing.map((item) => `${item.giftId}_*`)).all();
-    queueRows = queueResult.results || [];
-  } catch (error) {
-    console.error("compensation gift inbox recovery queue lookup failed", error);
-    return 0;
+  const missingRewardInbox = missingInbox.filter((item) => item.rewards.length > 0);
+  if (missingRewardInbox.length) {
+    try {
+      const queueWhere = missingRewardInbox.map(() => "source_id GLOB ?").join(" OR ");
+      const queueResult = await env.DB.prepare(`SELECT source_id,status,delivered_at FROM reward_delivery_queue
+        WHERE telegram_id=? AND source_type='gift_inbox' AND (${queueWhere})`)
+        .bind(id, ...missingRewardInbox.map((item) => `${item.giftId}_*`)).all();
+      queueRows = queueResult.results || [];
+    } catch (error) {
+      // Never reconstruct a reward-bearing letter as claimable when the economic
+      // idempotency ledger cannot be inspected. Informational mail can still heal.
+      console.error("compensation gift inbox recovery queue lookup failed", error);
+      queueRows = null;
+    }
   }
 
   const now = Math.floor(Date.now() / 1000);
   const statements = [];
-  for (const item of missing) {
-    const relatedQueue = queueRows.filter((row) => String(row.source_id || "").startsWith(`${item.giftId}_`));
-    const allDelivered = relatedQueue.length >= item.rewards.length && relatedQueue.every((row) => String(row.status || "") === "delivered");
-    const claimedAt = allDelivered ? Math.max(item.createdAt, ...relatedQueue.map((row) => Math.max(0, Number(row.delivered_at || 0)))) : 0;
-    const status = allDelivered ? "claimed" : "pending";
-    const preview = playerMailPreviewText(item.preview, item.message || item.reason || item.title);
-    statements.push(
-      env.DB.prepare(`INSERT OR IGNORE INTO player_gift_inbox(gift_id,telegram_id,gift_kind,title,message_text,reason,rewards_json,status,created_at,updated_at,claimed_at)
-        VALUES(?,?,?,?,?,?,?,?,?,?,?)`).bind(item.giftId,id,"compensation",item.title,item.message,item.reason,JSON.stringify(item.rewards),status,item.createdAt,now,claimedAt),
-      env.DB.prepare(`INSERT OR IGNORE INTO player_mail_metadata(gift_id,telegram_id,preview_text,image_url,read_at) VALUES(?,?,?,?,?)`)
-        .bind(item.giftId,id,preview,"",allDelivered ? claimedAt : 0)
-    );
+  const inboxStatementIndexes = [];
+  const metadataStatementIndexes = [];
+  for (const item of candidates) {
+    const existingRow = existingMap.get(item.giftId);
+    let status = String(existingRow?.status || "");
+    let claimedAt = Math.max(0, Number(existingRow?.claimed_at || 0));
+    if (!existingRow) {
+      if (!item.rewards.length) {
+        status = "info";
+        claimedAt = 0;
+      } else {
+        if (queueRows === null) continue;
+        const relatedQueue = queueRows.filter((row) => String(row.source_id || "").startsWith(`${item.giftId}_`));
+        const allDelivered = relatedQueue.length >= item.rewards.length && relatedQueue.every((row) => String(row.status || "") === "delivered");
+        claimedAt = allDelivered ? Math.max(item.createdAt, ...relatedQueue.map((row) => Math.max(0, Number(row.delivered_at || 0)))) : 0;
+        status = allDelivered ? "claimed" : "pending";
+      }
+      inboxStatementIndexes.push(statements.length);
+      statements.push(env.DB.prepare(`INSERT OR IGNORE INTO player_gift_inbox(gift_id,telegram_id,gift_kind,title,message_text,reason,rewards_json,status,created_at,updated_at,claimed_at)
+        VALUES(?,?,?,?,?,?,?,?,?,?,?)`).bind(item.giftId,id,item.kind,item.title,item.message,item.reason,JSON.stringify(item.rewards),status,item.createdAt,now,claimedAt));
+    }
+    if (!existingRow?.metadata_gift_id) {
+      const readAt = status === "claimed" ? Math.max(claimedAt,item.createdAt) : 0;
+      metadataStatementIndexes.push(statements.length);
+      statements.push(env.DB.prepare(`INSERT OR IGNORE INTO player_mail_metadata(gift_id,telegram_id,preview_text,image_url,read_at) VALUES(?,?,?,?,?)`)
+        .bind(item.giftId,id,playerMailPreviewText(item.preview,item.message || item.reason || item.title),item.imageUrl,readAt));
+    }
   }
   if (!statements.length) return 0;
   const results = await env.DB.batch(statements);
   let repaired = 0;
-  for (let index = 0; index < results.length; index += 2) repaired += Number(results[index]?.meta?.changes || 0) > 0 ? 1 : 0;
-  if (repaired > 0) {
+  for (const index of inboxStatementIndexes) repaired += Number(results[index]?.meta?.changes || 0) > 0 ? 1 : 0;
+  let metadataRepaired = 0;
+  for (const index of metadataStatementIndexes) metadataRepaired += Number(results[index]?.meta?.changes || 0) > 0 ? 1 : 0;
+  if (repaired > 0 || metadataRepaired > 0) {
     await ensurePlayerAccountRevisionAvailable(env);
     await bumpPlayerAccountRevisionStatement(env,id,now).run();
-    console.info("compensation gift inbox repaired from campaign history", { telegramId:id, repaired });
+    console.info("compensation gift inbox repaired from campaign history", { telegramId:id, repaired, metadataRepaired });
   }
-  return repaired;
+  return repaired + metadataRepaired;
 }
 
 async function repairPlayerGiftInboxAuthoritativeSources(env, telegramId) {
@@ -4496,7 +4534,7 @@ async function playerGiftInboxPayload(env, telegramId) {
   await ensurePlayerGiftInboxSchema(env);
   const id = String(telegramId || "");
   const [rows,countsRow] = await Promise.all([
-    env.DB.prepare(`SELECT g.gift_id,g.gift_kind,g.title,g.message_text,g.reason,g.rewards_json,g.status,g.created_at,g.claimed_at,m.preview_text,m.image_url,m.read_at,CASE WHEN m.gift_id IS NULL THEN 0 ELSE 1 END AS has_mail_meta FROM player_gift_inbox g LEFT JOIN player_mail_metadata m ON m.gift_id=g.gift_id AND m.telegram_id=g.telegram_id WHERE g.telegram_id=? ORDER BY CASE WHEN COALESCE(m.read_at,CASE WHEN g.status IN ('pending','claiming','info') THEN 0 ELSE g.created_at END)=0 THEN 0 ELSE 1 END, CASE g.status WHEN 'pending' THEN 0 WHEN 'claiming' THEN 1 WHEN 'info' THEN 2 ELSE 3 END, g.created_at DESC LIMIT 24`).bind(id).all(),
+    env.DB.prepare(`SELECT g.gift_id,g.gift_kind,g.title,g.message_text,g.reason,g.rewards_json,g.status,g.created_at,g.claimed_at,m.preview_text,m.image_url,m.read_at,CASE WHEN m.gift_id IS NULL THEN 0 ELSE 1 END AS has_mail_meta FROM player_gift_inbox g LEFT JOIN player_mail_metadata m ON m.gift_id=g.gift_id AND m.telegram_id=g.telegram_id WHERE g.telegram_id=? ORDER BY CASE WHEN COALESCE(m.read_at,CASE WHEN g.status IN ('pending','claiming','info') THEN 0 ELSE g.created_at END)=0 THEN 0 ELSE 1 END, CASE g.status WHEN 'pending' THEN 0 WHEN 'claiming' THEN 1 WHEN 'info' THEN 2 ELSE 3 END, g.created_at DESC LIMIT 100`).bind(id).all(),
     env.DB.prepare(`SELECT SUM(CASE WHEN g.status IN ('pending','claiming') THEN 1 ELSE 0 END) AS pending_count,SUM(CASE WHEN COALESCE(m.read_at,CASE WHEN g.status IN ('pending','claiming','info') THEN 0 ELSE g.created_at END)=0 THEN 1 ELSE 0 END) AS unread_count FROM player_gift_inbox g LEFT JOIN player_mail_metadata m ON m.gift_id=g.gift_id AND m.telegram_id=g.telegram_id WHERE g.telegram_id=?`).bind(id).first()
   ]);
   const items = (rows.results || []).map((row) => {
@@ -4523,25 +4561,130 @@ async function playerGiftInboxSnapshot(env, telegramId, options = {}) {
   return { ...payload, accountRevision:Math.max(0,Number(revision || 0)), generatedAt:Date.now() };
 }
 
-async function notifyPlayerGiftAvailable(env, telegramId, gift) {
+async function playerTransactionalTelegramChatCandidates(env, telegramId, preferredChatId = "") {
+  const id = String(telegramId || "").trim();
+  const candidates = [];
+  const add = (value) => {
+    const clean = String(value || "").trim();
+    if (clean && !candidates.includes(clean)) candidates.push(clean);
+  };
+  add(preferredChatId);
+  let subscriber = null;
   try {
-    const subscriber = await env.DB.prepare(`SELECT chat_id FROM bot_subscribers WHERE telegram_id=? AND active=1 LIMIT 1`).bind(String(telegramId)).first();
-    if (!subscriber?.chat_id) return false;
+    subscriber = await env.DB.prepare(`SELECT chat_id,active FROM bot_subscribers WHERE telegram_id=? LIMIT 1`).bind(id).first();
+    add(subscriber?.chat_id);
+  } catch (error) {
+    console.warn("Player Telegram subscriber lookup failed", String(error?.message || error));
+  }
+  if (/^\d{4,20}$/.test(id)) add(id);
+  return { id, candidates, subscriber };
+}
+
+async function markPlayerTransactionalTelegramDelivered(env, telegramId, chatId, category, sentAt) {
+  const id = String(telegramId || "");
+  await ensureV77Schema(env);
+  const statements = [
+    env.DB.prepare(`INSERT INTO player_notification_log(telegram_id,category,sent_at) VALUES(?,?,?)`).bind(id,String(category || "player_mail"),sentAt)
+  ];
+  if (/^\d{4,20}$/.test(id)) {
+    statements.push(env.DB.prepare(`UPDATE bot_subscribers SET chat_id=?,active=1,last_error='',last_delivery_at=? WHERE telegram_id=?`).bind(String(chatId || id),sentAt,id));
+  }
+  try { await env.DB.batch(statements); }
+  catch (error) { console.warn("Player transactional notification state update failed", String(error?.message || error)); }
+}
+
+async function sendPlayerTransactionalNotificationNow(env, telegramId, preferredChatId, messageHtml, replyMarkup = {}, options = {}) {
+  const resolved = await playerTransactionalTelegramChatCandidates(env, telegramId, preferredChatId);
+  if (!resolved.candidates.length) return { ok:false, retryable:false, errorText:"Telegram-чат игрока не найден", chatId:"" };
+  const imageUrl = String(options?.imageUrl || "").trim();
+  let lastError = null;
+  let retryable = false;
+  for (const chatId of resolved.candidates) {
+    try {
+      if (imageUrl) {
+        try {
+          await telegramApi(env, "sendPhoto", { chat_id:chatId, photo:imageUrl, caption:String(messageHtml || "").slice(0,1000), parse_mode:"HTML", ...(replyMarkup && Object.keys(replyMarkup).length ? { reply_markup:replyMarkup } : {}) });
+        } catch (photoError) {
+          console.warn("Player mail photo fallback", String(photoError?.message || photoError));
+          await sendTelegramMessage(env, chatId, String(messageHtml || ""), replyMarkup && Object.keys(replyMarkup).length ? replyMarkup : null, { cleanChat:false });
+        }
+      } else {
+        await sendTelegramMessage(env, chatId, String(messageHtml || ""), replyMarkup && Object.keys(replyMarkup).length ? replyMarkup : null, { cleanChat:false });
+      }
+      const sentAt = Math.floor(Date.now() / 1000);
+      await markPlayerTransactionalTelegramDelivered(env,resolved.id,chatId,String(options?.category || "player_mail"),sentAt);
+      return { ok:true, retryable:false, errorText:"", chatId:String(chatId), sentAt };
+    } catch (error) {
+      lastError = error;
+      if (!isPermanentTelegramDeliveryError(error)) retryable = true;
+    }
+  }
+  return {
+    ok:false,
+    retryable,
+    error:lastError,
+    errorText:String(lastError?.message || lastError || "Telegram недоступен").slice(0,500),
+    chatId:String(resolved.candidates[0] || resolved.id || "")
+  };
+}
+
+async function enqueuePlayerTransactionalNotification(env, telegramId, chatId, category, messageHtml, replyMarkup = {}, lastError = "") {
+  await ensureV77Schema(env);
+  const id = String(telegramId || "").trim();
+  const normalizedCategory = String(category || "player_mail").slice(0,180);
+  const now = Math.floor(Date.now() / 1000);
+  const existing = await env.DB.prepare(`SELECT id,available_at FROM player_notification_queue
+    WHERE telegram_id=? AND category=? AND status IN ('pending','failed') AND attempts<5
+    ORDER BY id DESC LIMIT 1`).bind(id,normalizedCategory).first();
+  const availableAt = now + SERVER_NOTIFICATION_RETRY_BASE_SECONDS;
+  if (existing?.id) {
+    await env.DB.prepare(`UPDATE player_notification_queue
+      SET chat_id=?,message_html=?,reply_markup_json=?,status='pending',last_error=?,available_at=CASE WHEN available_at<? THEN available_at ELSE ? END,updated_at=?,lease_token='',lease_until=0
+      WHERE id=? AND attempts<5`).bind(String(chatId || id),String(messageHtml || ""),JSON.stringify(replyMarkup || {}),String(lastError || "").slice(0,300),availableAt,availableAt,now,existing.id).run();
+    return Number(existing.id || 0);
+  }
+  const result = await env.DB.prepare(`INSERT INTO player_notification_queue(telegram_id,chat_id,category,message_html,reply_markup_json,status,attempts,last_error,available_at,created_at,updated_at,lease_token,lease_until)
+    VALUES(?,?,?,?,?,'pending',0,?,?,?,?,'',0)`).bind(id,String(chatId || id),normalizedCategory,String(messageHtml || ""),JSON.stringify(replyMarkup || {}),String(lastError || "").slice(0,300),availableAt,now,now).run();
+  return Number(result.meta?.last_row_id || 0);
+}
+
+async function deliverPlayerTransactionalNotification(env, telegramId, category, messageHtml, replyMarkup = {}, options = {}) {
+  const attempted = await sendPlayerTransactionalNotificationNow(env,telegramId,String(options?.chatId || ""),messageHtml,replyMarkup,{ category, imageUrl:String(options?.imageUrl || "") });
+  if (attempted.ok) return { status:"sent", delivered:true, queued:false, queueId:0, chatId:attempted.chatId, error:"" };
+  if (!attempted.retryable) return { status:"failed", delivered:false, queued:false, queueId:0, chatId:attempted.chatId, error:attempted.errorText || "Telegram недоступен" };
+  try {
+    const queueId = await enqueuePlayerTransactionalNotification(env,telegramId,attempted.chatId,category,messageHtml,replyMarkup,attempted.errorText);
+    if (queueId) return { status:"queued", delivered:false, queued:true, queueId, chatId:attempted.chatId, error:attempted.errorText || "Временная ошибка Telegram" };
+  } catch (queueError) {
+    console.error("Player transactional notification queue failed", queueError);
+    return { status:"failed", delivered:false, queued:false, queueId:0, chatId:attempted.chatId, error:`${attempted.errorText || "Telegram недоступен"}; очередь: ${String(queueError?.message || queueError)}`.slice(0,500) };
+  }
+  return { status:"failed", delivered:false, queued:false, queueId:0, chatId:attempted.chatId, error:attempted.errorText || "Telegram недоступен" };
+}
+
+async function notifyPlayerGiftAvailableDetailed(env, telegramId, gift) {
+  try {
     const rewards = normalizePlayerGiftRewards(gift?.rewards || []);
     const rewardLines = rewards.map((reward) => `• ${escapeHtml(safeRewardDescription(reward))}`).join("\n");
     const reason = String(gift?.reason || "").trim();
     const message = String(gift?.message || "").trim();
     const rewardBlock = rewards.length ? `\n\n<b>Вам доступно:</b>\n${rewardLines}\n\nОткройте Почту в игре, чтобы получить награду.` : `\n\nОткройте Почту в игре, чтобы прочитать письмо.`;
     const text = `<b>${rewards.length ? "🎁" : "💌"} ${escapeHtml(String(gift?.title || (rewards.length ? "Вам подарок" : "Новое письмо")))}</b>${message ? `\n\n${escapeHtml(message)}` : ""}${reason ? `\n\n<b>Причина:</b> ${escapeHtml(reason)}` : ""}${rewardBlock}`;
-    await sendTelegramMessage(env, subscriber.chat_id, text, { inline_keyboard: [
+    const giftId = String(gift?.giftId || "").replace(/[^A-Za-z0-9:_-]/g,"_").slice(0,120);
+    const category = `player_mail:${giftId || String(telegramId || "unknown")}`.slice(0,180);
+    return await deliverPlayerTransactionalNotification(env,telegramId,category,text,{ inline_keyboard: [
       [{ text:rewards.length ? "🎁 Открыть игру" : "💌 Открыть игру", web_app:{ url:configuredGameUrl(env) } }],
       [{ text:"⬅️ Назад в меню", callback_data:"menu:home" }]
     ] });
-    return true;
   } catch (error) {
     console.warn("Gift inbox notification failed", String(error?.message || error));
-    return false;
+    return { status:"failed", delivered:false, queued:false, queueId:0, error:String(error?.message || error).slice(0,500) };
   }
+}
+
+async function notifyPlayerGiftAvailable(env, telegramId, gift) {
+  const delivery = await notifyPlayerGiftAvailableDetailed(env,telegramId,gift);
+  return delivery.status === "sent";
 }
 
 async function getPlayerGiftInbox(request, env) {
@@ -21752,61 +21895,73 @@ async function processCampaignRecipient(env, campaign, telegramId) {
   const amount = Math.max(1, Math.floor(Number(campaign.amount || 1)));
   const rewardKind = String(campaign.reward_kind || "none");
   const inboxEnabled = Number(campaign.inbox_enabled || 0) === 1;
+  const campaignId = String(campaign.campaign_id || "");
+  const giftId = `campaign_${campaignId}`;
+  const campaignMessage = String(campaign.message_text || "").trim() === "__CC_SILENT__" ? "" : String(campaign.message_text || "");
+
   if (inboxEnabled && rewardKind !== "gift_bundle") {
     const rewards = rewardKind === "none" ? [] : normalizePlayerGiftRewards([{kind:rewardKind,id:String(campaign.reward_id||""),amount}]);
-    const giftId = `campaign_${String(campaign.campaign_id || "")}`;
-    const campaignMessage = String(campaign.message_text || "").trim() === "__CC_SILENT__" ? "" : String(campaign.message_text || "");
     await createPlayerGiftInbox(env,telegramId,{giftId,kind:rewards.length ? "campaign" : "letter",title:String(campaign.title||"Письмо от команды"),message:campaignMessage,reason:rewards.length ? String(campaign.reason||"") : "",preview:String(campaign.inbox_preview||""),imageUrl:String(campaign.image_url||""),rewards,allowEmptyRewards:true});
   }
+
   if (rewardKind === "gift_bundle") {
     const rewards = normalizePlayerGiftRewards(safeJson(campaign.reward_bundle_json, []));
     if (!rewards.length) throw new Error("В кампании компенсации нет наград");
-    const giftId = `campaign_${String(campaign.campaign_id || "")}`;
-    const campaignMessage = String(campaign.message_text || "").trim() === "__CC_SILENT__" ? "" : String(campaign.message_text || "");
     await createPlayerGiftInbox(env, telegramId, {
       giftId, kind:"compensation", title:String(campaign.title || "Компенсация"),
       message:campaignMessage, reason:String(campaign.reason || "Компенсация"), preview:String(campaign.inbox_preview||""), imageUrl:String(campaign.image_url||""), rewards
     });
-    const delivered = await notifyPlayerGiftAvailable(env, telegramId, { title:String(campaign.title || "Компенсация"), message:campaignMessage, reason:String(campaign.reason || "Компенсация"), rewards });
-    return delivered ? { delivered:true, error:"" } : { delivered:false, error:"Telegram недоступен; подарок сохранён в игре" };
+    const notification = await notifyPlayerGiftAvailableDetailed(env, telegramId, { giftId, title:String(campaign.title || "Компенсация"), message:campaignMessage, reason:String(campaign.reason || "Компенсация"), rewards });
+    if (notification.status === "sent") return { delivered:true, telegramStatus:"sent", error:"" };
+    if (notification.status === "queued") return { delivered:false, telegramStatus:"queued", error:`Telegram в повторной очереди${notification.queueId ? ` #${notification.queueId}` : ""}` };
+    return { delivered:false, telegramStatus:"failed", error:`Telegram не доставлен: ${String(notification.error || "недоступен").slice(0,450)}` };
   }
+
   if (!inboxEnabled && ["points", "zefir", "coffee"].includes(rewardKind)) {
     const field = ({ points: "pending_wallet", zefir: "pending_treats", coffee: "pending_coffee" })[rewardKind];
     const result = await env.DB.prepare(`UPDATE admin_profile_state SET ${field} = ${field} + ?, revision = revision + 1, updated_at = ?, updated_by = ? WHERE telegram_id = ?`)
       .bind(amount, Math.floor(Date.now() / 1000), `campaign:${campaign.campaign_id}`, telegramId).run();
-    if (Number(result.meta?.changes || 0) < 1) throw new Error("\u041f\u0440\u043e\u0444\u0438\u043b\u044c \u0438\u0433\u0440\u043e\u043a\u0430 \u043d\u0435 \u043d\u0430\u0439\u0434\u0435\u043d");
+    if (Number(result.meta?.changes || 0) < 1) throw new Error("Профиль игрока не найден");
   } else if (!inboxEnabled && rewardKind === "case") {
     await createGrantedCases(env, telegramId, campaign.reward_id, amount, `campaign:${campaign.campaign_id}`, campaign.reason);
   } else if (!inboxEnabled && rewardKind !== "none") {
-    throw new Error("\u041d\u0435\u0438\u0437\u0432\u0435\u0441\u0442\u043d\u044b\u0439 \u0442\u0438\u043f \u043d\u0430\u0433\u0440\u0430\u0434\u044b");
+    throw new Error("Неизвестный тип награды");
+  }
+
+  const custom = String(campaign.message_text || "").trim();
+  if (custom === "__CC_SILENT__") return { delivered:false, telegramStatus:"skipped", error:"Telegram пропущен: тихая кампания" };
+  const rewardLine = rewardKind === "none" ? "" : `\n\n🎁 <b>Награда:</b> ${escapeHtml(campaignRewardTitle(rewardKind, campaign.reward_id, amount))}`;
+  const reasonLine = rewardKind === "none" || !String(campaign.reason || "").trim() ? "" : `\n${escapeHtml(String(campaign.reason))}`;
+  const mailPrompt = inboxEnabled ? (rewardKind === "none" ? `\n\n💌 Откройте «Почту Зеффи» в игре, чтобы прочитать письмо.` : `\n\n💌 Награда ждёт в «Почте Зеффи». Откройте письмо, чтобы получить её.`) : "";
+  const text = custom ? `${escapeHtml(custom)}${rewardLine}${reasonLine}${mailPrompt}` : inboxEnabled ? `<b>💌 ${escapeHtml(campaign.title || "Новое письмо")}</b>${rewardLine}${reasonLine}${mailPrompt}` : rewardKind === "none" ? `<b>${escapeHtml(campaign.title || "Сообщение от Сладкого Забега")}</b>` : `<b>🎁 Вам выдана награда</b>${rewardLine}${reasonLine}\n\nНаграда появится после следующей синхронизации игры.`;
+  const buttonText = String(campaign.button_text || "").trim().slice(0, 60);
+  const buttonUrl = campaignAbsoluteUrl(env, campaign.button_url || "");
+  const replyMarkup = buttonText && buttonUrl ? { inline_keyboard: [[{ text: buttonText, url: buttonUrl }]] } : {};
+  const imageUrl = campaignAbsoluteUrl(env, campaign.image_url || "");
+
+  if (inboxEnabled) {
+    const notification = await deliverPlayerTransactionalNotification(env,telegramId,`campaign_mail:${campaignId}`.slice(0,180),text,replyMarkup,{ imageUrl });
+    if (notification.status === "sent") return { delivered:true, telegramStatus:"sent", error:"" };
+    if (notification.status === "queued") return { delivered:false, telegramStatus:"queued", error:`Telegram в повторной очереди${notification.queueId ? ` #${notification.queueId}` : ""}` };
+    return { delivered:false, telegramStatus:"failed", error:`Telegram не доставлен: ${String(notification.error || "недоступен").slice(0,450)}` };
   }
 
   try {
     const subscriber = await env.DB.prepare(`SELECT chat_id FROM bot_subscribers WHERE telegram_id = ? AND active = 1 LIMIT 1`).bind(telegramId).first();
-    if (!subscriber?.chat_id) return inboxEnabled ? { delivered:true, error:"" } : { delivered:false, error:"\u0410\u043a\u0442\u0438\u0432\u043d\u044b\u0439 Telegram-\u0447\u0430\u0442 \u043d\u0435 \u043d\u0430\u0439\u0434\u0435\u043d" };
-    const custom = String(campaign.message_text || "").trim();
-    if (custom === "__CC_SILENT__") return { delivered:true, error:"" };
-    const rewardLine = rewardKind === "none" ? "" : `\n\n\ud83c\udf81 <b>\u041d\u0430\u0433\u0440\u0430\u0434\u0430:</b> ${escapeHtml(campaignRewardTitle(rewardKind, campaign.reward_id, amount))}`;
-    const reasonLine = rewardKind === "none" || !String(campaign.reason || "").trim() ? "" : `\n${escapeHtml(String(campaign.reason))}`;
-    const mailPrompt = inboxEnabled ? (rewardKind === "none" ? `\n\n💌 Откройте «Почту Зеффи» в игре, чтобы прочитать письмо.` : `\n\n💌 Награда ждёт в «Почте Зеффи». Откройте письмо, чтобы получить её.`) : "";
-    const text = custom ? `${escapeHtml(custom)}${rewardLine}${reasonLine}${mailPrompt}` : inboxEnabled ? `<b>💌 ${escapeHtml(campaign.title || "Новое письмо")}</b>${rewardLine}${reasonLine}${mailPrompt}` : rewardKind === "none" ? `<b>${escapeHtml(campaign.title || "Сообщение от Сладкого Забега")}</b>` : `<b>🎁 Вам выдана награда</b>${rewardLine}${reasonLine}\n\nНаграда появится после следующей синхронизации игры.`;
-    const buttonText = String(campaign.button_text || "").trim().slice(0, 60);
-    const buttonUrl = campaignAbsoluteUrl(env, campaign.button_url || "");
-    const replyMarkup = buttonText && buttonUrl ? { inline_keyboard: [[{ text: buttonText, url: buttonUrl }]] } : null;
-    const imageUrl = campaignAbsoluteUrl(env, campaign.image_url || "");
+    if (!subscriber?.chat_id) return { delivered:false, telegramStatus:"failed", error:"Telegram не доставлен: активный чат не найден" };
     if (imageUrl) {
       try {
-        await telegramApi(env, "sendPhoto", { chat_id:subscriber.chat_id, photo:imageUrl, caption:text.slice(0,1000), parse_mode:"HTML", ...(replyMarkup ? { reply_markup:replyMarkup } : {}) });
-        return { delivered:true, error:"" };
+        await telegramApi(env, "sendPhoto", { chat_id:subscriber.chat_id, photo:imageUrl, caption:text.slice(0,1000), parse_mode:"HTML", ...(Object.keys(replyMarkup).length ? { reply_markup:replyMarkup } : {}) });
+        return { delivered:true, telegramStatus:"sent", error:"" };
       } catch (error) {
         console.warn("Campaign photo fallback", String(error?.message || error));
       }
     }
-    await sendTelegramMessage(env, subscriber.chat_id, text, replyMarkup);
-    return { delivered:true, error:"" };
+    await sendTelegramMessage(env, subscriber.chat_id, text, Object.keys(replyMarkup).length ? replyMarkup : null);
+    return { delivered:true, telegramStatus:"sent", error:"" };
   } catch (error) {
     console.warn("Campaign notification failed", String(error?.message || error));
-    return inboxEnabled ? { delivered:true, error:"" } : { delivered:false, error:String(error?.message || error).slice(0,500) };
+    return { delivered:false, telegramStatus:"failed", error:`Telegram не доставлен: ${String(error?.message || error).slice(0,450)}` };
   }
 }
 
@@ -21830,14 +21985,21 @@ async function processPendingAdminCampaign(env) {
       await env.DB.prepare(`UPDATE admin_campaign_recipients SET status='failed',error_text=?,processed_at=?,delivered_at=0,delivery_error=? WHERE campaign_id=? AND telegram_id=?`).bind(message,Math.floor(Date.now()/1000),message,job.campaign_id,row.telegram_id).run();
     }
   }
-  const counts = await env.DB.prepare(`SELECT SUM(CASE WHEN status = 'processed' THEN 1 ELSE 0 END) AS processed, SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) AS failed, SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) AS pending FROM admin_campaign_recipients WHERE campaign_id = ?`).bind(job.campaign_id).first();
+  const counts = await env.DB.prepare(`SELECT
+    SUM(CASE WHEN status='processed' THEN 1 ELSE 0 END) AS processed,
+    SUM(CASE WHEN status='failed' THEN 1 ELSE 0 END) AS failed,
+    SUM(CASE WHEN status='pending' THEN 1 ELSE 0 END) AS pending,
+    SUM(CASE WHEN status='processed' AND delivered_at>0 THEN 1 ELSE 0 END) AS telegram_delivered,
+    SUM(CASE WHEN status='processed' AND delivered_at=0 AND delivery_error LIKE 'Telegram в повторной очереди%' THEN 1 ELSE 0 END) AS telegram_queued,
+    SUM(CASE WHEN status='processed' AND delivered_at=0 AND delivery_error LIKE 'Telegram не доставлен:%' THEN 1 ELSE 0 END) AS telegram_failed
+    FROM admin_campaign_recipients WHERE campaign_id=?`).bind(job.campaign_id).first();
   const pending = Number(counts?.pending || 0);
   const completed = pending === 0;
   const finish = Math.floor(Date.now() / 1000);
   await env.DB.prepare(`UPDATE admin_campaigns SET status = ?, processed_count = ?, failed_count = ?, completed_at = ?, updated_at = ?, lease_token = '', lease_until = 0 WHERE campaign_id = ? AND lease_token = ?`)
     .bind(completed ? "completed" : "running", Number(counts?.processed || 0), Number(counts?.failed || 0), completed ? finish : 0, finish, job.campaign_id, leaseToken).run();
   if (completed) {
-    const report = `<b>📣 Кампания завершена</b>\n\n${escapeHtml(job.title)}\nУспешно: <b>${Number(counts?.processed || 0)}</b>\nОшибок: <b>${Number(counts?.failed || 0)}</b>`;
+    const report = `<b>📣 Кампания завершена</b>\n\n${escapeHtml(job.title)}\nВ игру обработано: <b>${Number(counts?.processed || 0)}</b>\nTelegram доставлено: <b>${Number(counts?.telegram_delivered || 0)}</b>\nTelegram в повторной очереди: <b>${Number(counts?.telegram_queued || 0)}</b>\nTelegram не доставлено: <b>${Number(counts?.telegram_failed || 0)}</b>\nОшибок обработки: <b>${Number(counts?.failed || 0)}</b>`;
     try { await sendTelegramMessage(env, job.report_chat_id, report); } catch {}
     await notifySubscribedStaff(env, "mass_grants", report);
   }
@@ -23895,7 +24057,7 @@ async function confirmCompensation(query, env) {
 
   const sourceId = `comp_${Date.now().toString(36)}_${query.from.id}`;
   const gift = await createPlayerGiftInbox(env, String(data.targetId), { giftId:sourceId, kind:"compensation", title:`Компенсация: ${String(template.title || "")}`, message:String(template.description || ""), reason:String(data.reason || "Компенсация"), rewards });
-  await notifyPlayerGiftAvailable(env, String(data.targetId), { title:`Компенсация: ${String(template.title || "")}`, message:String(template.description || ""), reason:String(data.reason || "Компенсация"), rewards });
+  await notifyPlayerGiftAvailable(env, String(data.targetId), { giftId:sourceId, title:`Компенсация: ${String(template.title || "")}`, message:String(template.description || ""), reason:String(data.reason || "Компенсация"), rewards });
   if (gift.created) await recordCompensationUsage(env, query.from.id, limitCheck.summary);
   await logStaffAction(env, query.from, access, "compensation_template", data.targetId, "gift_inbox", null, gift.created ? gift.rewards.length : 0, { templateId:data.templateId, reason:data.reason, sourceId, rewards:gift.rewards, usage:limitCheck.summary });
   await clearStaffWorkflow(query.from.id, env);
@@ -26185,7 +26347,7 @@ async function executeDangerousAction(row,env,approver) {
     const rewards=normalizePlayerGiftRewards(Array.isArray(payload.rewards)?payload.rewards:[]);
     const sourceId=`comp_approval_${row.id}`;
     const gift=await createPlayerGiftInbox(env,String(payload.targetId),{giftId:sourceId,kind:"compensation",title:`Компенсация: ${String(payload.templateTitle||payload.templateId||"Компенсация")}`,message:"",reason:String(payload.reason||"Компенсация"),rewards});
-    await notifyPlayerGiftAvailable(env,String(payload.targetId),{title:`Компенсация: ${String(payload.templateTitle||payload.templateId||"Компенсация")}`,reason:String(payload.reason||"Компенсация"),rewards});
+    await notifyPlayerGiftAvailable(env,String(payload.targetId),{giftId:sourceId,title:`Компенсация: ${String(payload.templateTitle||payload.templateId||"Компенсация")}`,reason:String(payload.reason||"Компенсация"),rewards});
     const usage=await compensationUsageSummary(rewards);
     if(gift.created) await recordCompensationUsage(env,String(row.requested_by),usage);
     await recordPlayerTimeline(env,String(payload.targetId),"staff_grant",`создана компенсация «${String(payload.templateTitle||payload.templateId||"Компенсация")}»`,{templateId:payload.templateId,rewards,reason:payload.reason,giftId:sourceId},`approval_${row.id}`,approver);
@@ -32893,7 +33055,7 @@ async function executeV67AutomationTarget(env, chain, target, context = {}) {
       const telegramId=String(target.telegram_id),reward=retentionV2Reward(action.reward),giftId=`auto_mail_${retentionV2ShortHash(executionKey)}_${retentionV2ShortHash(telegramId)}`.slice(0,120);
       const gift=await createPlayerGiftInbox(env,telegramId,{giftId,kind:"automation_mail",title:String(action.title||chain.title||"Письмо").slice(0,120),preview:String(action.preview||""),message:String(action.text||""),imageUrl:String(action.imageUrl||""),reason:String(action.reason||chain.title||"Автоматическое письмо"),rewards:reward.kind==='none'?[]:[reward],allowEmptyRewards:true});
       await env.DB.prepare(`INSERT OR IGNORE INTO automation_mail_deliveries(execution_key,chain_key,telegram_id,gift_id,created_at) VALUES(?,?,?,?,?)`).bind(executionKey,String(chain.chain_key),telegramId,gift.giftId,now).run();
-      const notified=await notifyPlayerGiftAvailable(env,telegramId,{title:String(action.title||chain.title||"Письмо"),message:String(action.text||""),reason:String(action.reason||""),rewards:gift.rewards});
+      const notified=await notifyPlayerGiftAvailable(env,telegramId,{giftId:gift.giftId,title:String(action.title||chain.title||"Письмо"),message:String(action.text||""),reason:String(action.reason||""),rewards:gift.rewards});
       details={giftId:gift.giftId,created:gift.created,notified,reward,status:gift.status};
     } else if (chain.action_type === "reward") {
       let queueId = await enqueueRewardDelivery(env, String(target.telegram_id), "automation", executionKey, action, String(action.reason || chain.title), "");
@@ -33576,6 +33738,7 @@ async function showV77Feedback(chatId,user,filter="new",page=0,env){
 }
 
 function v77MoscowHour(now){return new Date((Number(now)+3*3600)*1000).getUTCHours();}
+function isTransactionalPlayerNotificationCategory(category){const value=String(category||"");return value==="player_mail"||value.startsWith("player_mail:")||value.startsWith("campaign_mail:");}
 function v77QuietDelaySeconds(policy,now){const start=Number(policy.quiet_start_hour),end=Number(policy.quiet_end_hour),hour=v77MoscowHour(now);const quiet=start===end?false:start<end?(hour>=start&&hour<end):(hour>=start||hour<end);if(!quiet)return 0;let hours=(end-hour+24)%24;if(hours===0)hours=24;return hours*3600+60;}
 async function v77NotificationDecision(env,telegramId,now=Math.floor(Date.now()/1000)){
   await ensureV77Schema(env);const policy=await env.DB.prepare(`SELECT * FROM player_notification_policy WHERE id=1`).first();if(Number(policy?.paused))return {allowed:false,delay:3600,reason:"paused",policy};const quiet=v77QuietDelaySeconds(policy,now);if(quiet)return {allowed:false,delay:quiet,reason:"quiet",policy};const dayStart=Math.floor((now+3*3600)/V67_DAY)*V67_DAY-3*3600;const count=await env.DB.prepare(`SELECT COUNT(*) AS count,MAX(sent_at) AS last_at FROM player_notification_log WHERE telegram_id=? AND sent_at>=?`).bind(String(telegramId),dayStart).first();if(Number(count?.count||0)>=Number(policy?.max_per_day||3))return {allowed:false,delay:Math.max(900,dayStart+V67_DAY-now),reason:"daily_limit",policy};const gap=Math.max(0,Number(policy?.min_gap_seconds||0));if(count?.last_at&&now-Number(count.last_at)<gap)return {allowed:false,delay:gap-(now-Number(count.last_at))+30,reason:"gap",policy};return {allowed:true,delay:0,reason:"ok",policy};
@@ -33617,22 +33780,29 @@ async function processV77NotificationQueue(env,limit=24){
         await env.DB.prepare(`UPDATE player_notification_queue SET status='cancelled',last_error='realtime-season-task-superseded',updated_at=?,lease_token='',lease_until=0 WHERE id=? AND lease_token=?`).bind(claimAt,row.id,token).run();
         skipped+=1;continue;
       }
-      const decision=await v77NotificationDecision(env,row.telegram_id,claimAt);
+      const transactional=isTransactionalPlayerNotificationCategory(row.category);
+      const decision=transactional?{allowed:true,delay:0,reason:"transactional"}:await v77NotificationDecision(env,row.telegram_id,claimAt);
       if(!decision.allowed){
         await env.DB.prepare(`UPDATE player_notification_queue SET available_at=?,updated_at=?,lease_token='',lease_until=0 WHERE id=? AND lease_token=?`).bind(claimAt+Math.max(60,decision.delay),claimAt,row.id,token).run();
         deferred+=1;continue;
       }
-      await sendTelegramMessage(env,row.chat_id,row.message_html,safeJson(row.reply_markup_json,{}));
+      if(transactional){
+        const attempted=await sendPlayerTransactionalNotificationNow(env,row.telegram_id,row.chat_id,row.message_html,safeJson(row.reply_markup_json,{}),{category:row.category});
+        if(!attempted.ok){const error=new Error(attempted.errorText||"Telegram недоступен");error.status=Number(attempted.error?.status||0);error.retryAfter=Number(attempted.error?.retryAfter||0);error.transactionalRetryable=attempted.retryable;throw error;}
+      }else{
+        await sendTelegramMessage(env,row.chat_id,row.message_html,safeJson(row.reply_markup_json,{}));
+      }
       const finishedAt=Math.floor(Date.now()/1000);
-      await env.DB.batch([
-        env.DB.prepare(`UPDATE player_notification_queue SET status='sent',attempts=attempts+1,last_error='',updated_at=?,lease_token='',lease_until=0 WHERE id=? AND lease_token=?`).bind(finishedAt,row.id,token),
-        env.DB.prepare(`INSERT INTO player_notification_log(telegram_id,category,sent_at) VALUES(?,?,?)`).bind(row.telegram_id,row.category,finishedAt)
-      ]);
+      const successStatements=[env.DB.prepare(`UPDATE player_notification_queue SET status='sent',attempts=attempts+1,last_error='',updated_at=?,lease_token='',lease_until=0 WHERE id=? AND lease_token=?`).bind(finishedAt,row.id,token)];
+      if(!transactional) successStatements.push(env.DB.prepare(`INSERT INTO player_notification_log(telegram_id,category,sent_at) VALUES(?,?,?)`).bind(row.telegram_id,row.category,finishedAt));
+      await env.DB.batch(successStatements);
       sent+=1;
     }catch(error){
       const finishedAt=Math.floor(Date.now()/1000);
-      const attempts=Math.max(1,Number(row.attempts||0)+1);
-      const delay=Math.min(3600,SERVER_NOTIFICATION_RETRY_BASE_SECONDS*(2**Math.max(0,attempts-1)));
+      const retryable=error?.transactionalRetryable!==undefined?Boolean(error.transactionalRetryable):!isPermanentTelegramDeliveryError(error);
+      const attempts=retryable?Math.max(1,Number(row.attempts||0)+1):5;
+      const retryAfter=Math.max(0,Math.floor(Number(error?.retryAfter||0)));
+      const delay=retryAfter>0?Math.min(3600,retryAfter):Math.min(3600,SERVER_NOTIFICATION_RETRY_BASE_SECONDS*(2**Math.max(0,attempts-1)));
       await env.DB.prepare(`UPDATE player_notification_queue SET status='failed',attempts=?,last_error=?,available_at=?,updated_at=?,lease_token='',lease_until=0 WHERE id=? AND lease_token=?`).bind(attempts,String(error?.message||error).slice(0,300),finishedAt+delay,finishedAt,row.id,token).run();
       failed+=1;
     }
