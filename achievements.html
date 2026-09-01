@@ -251,8 +251,9 @@
 
   function catalog(){return ACHIEVEMENTS.filter(i=>i?.catalogVisible===true);}
   function art(item, cls='ach-art'){
-    const url=String(item?.artUrl||item?.imageUrl||'').trim(); const icon=String(item?.icon||'🏅');
-    return `<span class="${cls}">${url?`<img src="${esc(url)}" alt="">`:esc(icon)}</span>`;
+    const url=String(item?.artUrl||item?.imageUrl||'').trim();
+    const src=url||POINT_ICON_FALLBACK;
+    return `<span class="${cls}"><img src="${esc(src)}" alt="" loading="lazy" decoding="async"></span>`;
   }
   function pointsInline(value){return `<span class="pill points"><img src="${esc(POINT_ICON)}" alt="">+${Math.max(0,safeNumber(value)).toLocaleString('ru-RU')}</span>`;}
   function rarityLabel(item){return String(item?.rarityLabel||({common:'Обычное',rare:'Редкое',superrare:'Сверхредкое',epic:'Эпическое',mythic:'Мифическое',legendary:'Легендарное',legacy:'Legacy'}[String(item?.rarity||'common')]||'Обычное'));}
@@ -285,8 +286,23 @@
     else{title.textContent='Максимальный текущий престиж';value.textContent='Все цели открыты';bar.style.width='100%';left.textContent=`${points.toLocaleString('ru-RU')} очков`;right.textContent='Продолжай коллекцию';}
   }
 
+  const SHOWCASE_PRESENTATION_FALLBACKS=Object.freeze({
+    default:{id:'default',layout:'standard',imageUrl:'/assets/achievements/showcases/Standart_vitrina.png'},
+    gold:{id:'gold',layout:'gold',imageUrl:'/assets/achievements/showcases/gold_vitrina.png'},
+    seasonal:{id:'season_1_cafe',layout:'season1',imageUrl:'/assets/achievements/showcases/vitrina_s1.png'},
+    season_1_cafe:{id:'season_1_cafe',layout:'season1',imageUrl:'/assets/achievements/showcases/vitrina_s1.png'},
+    season_2_night:{id:'season_2_night',layout:'season2',imageUrl:'/assets/achievements/showcases/vitrina_s2.png'},
+    season_3_belkino:{id:'season_3_belkino',layout:'season3',imageUrl:'/assets/achievements/showcases/vitrina_s3.png'},
+    special_origins:{id:'special_origins',layout:'special_origins',imageUrl:'/assets/achievements/showcases/vitrina_At_the_origins.png'},
+    special_creator:{id:'special_creator',layout:'special_creator',imageUrl:'/assets/achievements/showcases/vitrina_creator_zeffirok.png'},
+    special_cafe_legend:{id:'special_cafe_legend',layout:'special_legend',imageUrl:'/assets/achievements/showcases/vitrina_Legenda_cafe.png'}
+  });
   function itemById(id){return ACHIEVEMENTS.find(i=>String(i?.id||'')===String(id||''))||null;}
-  function showcaseStyleById(id){return SHOWCASE_STYLES.find(s=>String(s?.id||'')===String(id||''))||SHOWCASE_STYLES[0]||{id:'default',title:'Стандартная',description:'Базовая витрина',unlocked:true,category:'base',layout:'standard',imageUrl:'/assets/achievements/showcases/Standart_vitrina.png'};}
+  function showcaseStyleById(id){
+    const requested=String(id||'default'),style=SHOWCASE_STYLES.find(s=>String(s?.id||'')===requested)||SHOWCASE_STYLES[0]||{id:'default',title:'Стандартная',description:'Базовая витрина',unlocked:true,category:'base'};
+    const styleId=String(style?.id||requested||'default'),canonical=SHOWCASE_PRESENTATION_FALLBACKS[styleId]||SHOWCASE_PRESENTATION_FALLBACKS[requested]||null,fallback=canonical||SHOWCASE_PRESENTATION_FALLBACKS.default;
+    return {...style,id:String(canonical?.id||styleId||fallback.id),layout:String(canonical?.layout||style?.layout||fallback.layout),imageUrl:String(canonical?.imageUrl||style?.imageUrl||fallback.imageUrl)};
+  }
   function showcaseStyleStateText(style,points){const selected=String(style?.id||'')===SHOWCASE_STYLE_ID,unlocked=style?.unlocked===true,need=pointStyleRequirement(style),special=String(style?.category||'')==='special';if(selected)return 'Используется';if(unlocked)return special?'Получено':'Открыто';if(need!=null)return `${points.toLocaleString('ru-RU')} / ${need.toLocaleString('ru-RU')}`;return special?'Не получено':'Закрыто';}
   function showcaseStyleDescription(style,points){const unlocked=style?.unlocked===true,need=pointStyleRequirement(style);if(!unlocked&&need!=null)return `Набери ${need.toLocaleString('ru-RU')} очков достижений — очки не списываются.`;return String(style?.description||style?.unlockText||'Оформление витрины');}
   function showcaseStyleCategory(style){const category=String(style?.category||'base');return category==='seasonal'?'Сезонная':category==='special'?'Особая':'Базовая';}

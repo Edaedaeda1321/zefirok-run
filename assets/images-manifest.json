@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "catalogHash": "ca7203ae4c277a9b",
-  "count": 451,
+  "catalogHash": "21faddc4264f9cc8",
+  "count": 452,
   "images": [
     {
       "fileName": "achievements/background_achivment_panel.png",
@@ -3394,6 +3394,14 @@
       "path": "/assets/ui/icon_documents.png",
       "size": 136185,
       "modified": 1787698022000
+    },
+    {
+      "fileName": "ui/icon_done_buy.png",
+      "label": "Icon done buy",
+      "folder": "ui",
+      "path": "/assets/ui/icon_done_buy.png",
+      "size": 61829,
+      "modified": 1788291147000
     },
     {
       "fileName": "ui/icon_game_button.png",

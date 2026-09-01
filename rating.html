@@ -14,6 +14,7 @@
   window.ZEFIROK_IMAGE_FALLBACK=FALLBACK;
   const bad=value=>/^(?:|undefined|null|false|nan|\[object object\])$/i.test(String(value??"").trim());
   const sameFallback=value=>{try{return new URL(String(value||""),document.baseURI).pathname===FALLBACK}catch{return String(value||"")===FALLBACK}};
+  const sameSource=(left,right)=>{try{return new URL(String(left||""),document.baseURI).href===new URL(String(right||""),document.baseURI).href}catch{return String(left||"")===String(right||"")}};
   const replace=(img,reason,failed)=>{
     if(!(img instanceof HTMLImageElement))return;
     const current=String(img.currentSrc||img.getAttribute("src")||img.src||"");
@@ -22,6 +23,8 @@
     img.dataset.zefirokFailedSrc=String(failed||current||"").slice(0,1000);
     img.onerror=null;
     img.removeAttribute("srcset");
+    const localFallback=String(img.dataset.avatarFallback||"").trim();
+    if(localFallback&&!bad(localFallback)&&!sameSource(current,localFallback)){img.src=localFallback;return;}
     img.src=FALLBACK;
   };
   const inspect=img=>{
@@ -9201,6 +9204,22 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
     "legendary_frame_1", "legendary_frame_2", "legendary_frame_3", "legendary_frame_4", "legendary_frame_5",
     "alex_frame_1", "alex_frame_2"
   ]);
+  // Privacy-safe game placeholders. Keep this list deterministic so the same player
+  // keeps the same default avatar in the podium, rows and mini-profile.
+  const FALLBACK_AVATARS = Object.freeze([
+    "/assets/rating/avatars/avatar-fox.png", "/assets/rating/avatars/avatar-corgi.png",
+    "/assets/rating/avatars/avatar-bunny.png", "/assets/rating/avatars/avatar-hedgehog.png",
+    "/assets/rating/avatars/avatar-koala.png", "/assets/rating/avatars/avatar-penguin.png",
+    "/assets/rating/avatars/avatar-cat.png", "/assets/rating/avatars/avatar-bear.png",
+    "/assets/rating/avatars/avatar-shiba.png", "/assets/rating/avatars/avatar-poodle.png",
+    "/assets/rating/avatars/avatar-corgi-blue.png", "/assets/rating/avatars/avatar-fox-red.png",
+    "/assets/rating/avatars/avatar-bunny-white.png", "/assets/rating/avatars/avatar-kitten-gray.png",
+    "/assets/rating/avatars/avatar-bear-bow.png", "/assets/rating/avatars/avatar-koala-leaf.png",
+    "/assets/rating/avatars/avatar-hedgehog-mint.png", "/assets/rating/avatars/avatar-penguin-blue.png",
+    "/assets/rating/avatars/avatar-raccoon.png", "/assets/rating/avatars/avatar-deer.png",
+    "/assets/rating/avatars/avatar-hamster.png", "/assets/rating/avatars/avatar-chick.png",
+    "/assets/rating/avatars/avatar-panda.png", "/assets/rating/avatars/avatar-husky.png"
+  ]);
   const IMAGE_ERROR_FALLBACK = "/assets/ui/error404-no-icon.png";
 
   const formatter = new Intl.NumberFormat("ru-RU");
@@ -9365,7 +9384,15 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
     return `${minutes}:${String(secs).padStart(2, "0")}`;
   }
 
-  function fallbackAvatar() { return IMAGE_ERROR_FALLBACK; }
+  function fallbackAvatar(entry) {
+    const key = String(entry?.telegramId || entry?.name || "zefirok-player");
+    let hash = 2166136261;
+    for (let index = 0; index < key.length; index += 1) {
+      hash ^= key.charCodeAt(index);
+      hash = Math.imul(hash, 16777619);
+    }
+    return FALLBACK_AVATARS[Math.abs(hash) % FALLBACK_AVATARS.length] || IMAGE_ERROR_FALLBACK;
+  }
 
   function normalizeFrame(value) {
     let id = String(value || "").trim();
@@ -9888,9 +9915,14 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
   };
 
   function playerProfileShowcaseStyle(showcase) {
-    const raw=String(showcase?.selectedStyleId||"default"),fallback=PLAYER_PROFILE_SHOWCASE_FALLBACKS[raw]||PLAYER_PROFILE_SHOWCASE_FALLBACKS.default;
+    const raw=String(showcase?.selectedStyleId||showcase?.style?.id||"default");
     const explicit=showcase?.style&&typeof showcase.style==="object"?showcase.style:{};
-    return {id:String(explicit.id||fallback.id),title:String(explicit.title||showcase?.styleTitle||fallback.title),layout:String(explicit.layout||fallback.layout),imageUrl:String(explicit.imageUrl||fallback.imageUrl),seasonLabel:String(explicit.seasonLabel||fallback.seasonLabel||"")};
+    const explicitId=String(explicit.id||raw||"default");
+    const canonical=PLAYER_PROFILE_SHOWCASE_FALLBACKS[explicitId]||PLAYER_PROFILE_SHOWCASE_FALLBACKS[raw]||null;
+    const fallback=canonical||PLAYER_PROFILE_SHOWCASE_FALLBACKS.default;
+    // Known showcase IDs own their artwork/layout pair. This prevents stale partial
+    // payloads from putting trophies onto the wrong frame geometry.
+    return {id:String(canonical?.id||explicitId||fallback.id),title:String(explicit.title||showcase?.styleTitle||fallback.title),layout:String(canonical?.layout||explicit.layout||fallback.layout),imageUrl:String(canonical?.imageUrl||explicit.imageUrl||fallback.imageUrl),seasonLabel:String(explicit.seasonLabel||fallback.seasonLabel||"")};
   }
 
   function playerProfileStyleLabel(showcase) {
