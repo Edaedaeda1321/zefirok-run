@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "catalogHash": "0d5d2f2d9d6e573f",
-  "count": 8,
+  "catalogHash": "7377ce118e0dcff8",
+  "count": 9,
   "images": [
     {
       "fileName": "cases-5.0.1.png",
@@ -23,6 +23,13 @@
       "path": "/assets/news/img_bugs.png",
       "hash": "31c5f3052540",
       "size": 2385433
+    },
+    {
+      "fileName": "news.png",
+      "label": "News",
+      "path": "/assets/news/news.png",
+      "hash": "e1edaa98719f",
+      "size": 2287236
     },
     {
       "fileName": "relise_clear_progress_news.png",

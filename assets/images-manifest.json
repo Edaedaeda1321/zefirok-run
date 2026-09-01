@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "catalogHash": "a5849a00cd688ef4",
-  "count": 450,
+  "catalogHash": "ca7203ae4c277a9b",
+  "count": 451,
   "images": [
     {
       "fileName": "achievements/background_achivment_panel.png",
@@ -1306,6 +1306,14 @@
       "path": "/assets/news/img_bugs.png",
       "size": 2385433,
       "modified": 1786610412445
+    },
+    {
+      "fileName": "news/news.png",
+      "label": "News",
+      "folder": "news",
+      "path": "/assets/news/news.png",
+      "size": 2287236,
+      "modified": 1788290621696
     },
     {
       "fileName": "news/relise_clear_progress_news.png",
