@@ -42,27 +42,51 @@ async function exactFile(relativePath) {
   let current = root;
   for (const part of parts) {
     let entries;
-    try { entries = await readdir(current); } catch { return null; }
-    if (!entries.includes(part)) return null;
+    try { entries = await readdir(current); } catch { return { kind: 'missing' }; }
+    if (!entries.includes(part)) {
+      const unicodeEquivalent = entries.find((entry) => entry.normalize('NFC') === part.normalize('NFC'));
+      if (unicodeEquivalent) {
+        return {
+          kind: 'unicode-mismatch',
+          expected: path.join(current, part),
+          actual: path.join(current, unicodeEquivalent)
+        };
+      }
+      return { kind: 'missing' };
+    }
     current = path.join(current, part);
   }
   try {
     const info = await stat(current);
-    return info.isFile() && info.size > 0 ? { path: current, size: info.size } : null;
+    return info.isFile() && info.size > 0
+      ? { kind: 'ok', path: current, size: info.size }
+      : { kind: 'missing' };
   } catch {
-    return null;
+    return { kind: 'missing' };
   }
 }
 
 const missing = [];
+const unicodeMismatches = [];
 for (const relativePath of [...required].sort()) {
-  if (!(await exactFile(relativePath))) missing.push(relativePath);
+  const result = await exactFile(relativePath);
+  if (result.kind === 'unicode-mismatch') unicodeMismatches.push({ relativePath, ...result });
+  else if (result.kind !== 'ok') missing.push(relativePath);
 }
 
-if (missing.length) {
-  console.error('\nLive Content assets missing from deploy input:');
-  for (const item of missing) console.error(`  - ${item}`);
-  console.error(`\nLive Content asset check failed: ${missing.length} missing of ${required.size} required.`);
+if (missing.length || unicodeMismatches.length) {
+  if (missing.length) {
+    console.error('\nLive Content assets missing from deploy input:');
+    for (const item of missing) console.error(`  - ${item}`);
+  }
+  if (unicodeMismatches.length) {
+    console.error('\nLive Content assets have Unicode-normalization filename mismatches:');
+    for (const item of unicodeMismatches) {
+      console.error(`  - ${item.relativePath}`);
+      console.error('    The visually identical filename on disk uses different Unicode bytes. Rename deploy-addressed assets to ASCII-safe names.');
+    }
+  }
+  console.error(`\nLive Content asset check failed: ${missing.length} missing, ${unicodeMismatches.length} Unicode mismatch(es), ${required.size} required.`);
   process.exitCode = 1;
 } else {
   console.log(`Live Content asset check passed: ${required.size} file(s).`);

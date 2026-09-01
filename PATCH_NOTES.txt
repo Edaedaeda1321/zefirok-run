@@ -1,17 +1,31 @@
-Сладкий Забег — исправление потерянных Live Content ассетов
-База: актуальный main на момент проверки, commit 554d3c92e6b5ad9d360a6e6ed754c99e3999c356.
+Sweet Run — Unicode sound filename fix v3
+Base: main commit 5943da6ff41dc275126af14951233443f7603605
 
-Что исправлено:
-1. Для встроенной косметики канонический путь к картинке из кода теперь имеет приоритет над устаревшим image_url из D1.
-2. liveops_content_items автоматически синхронизирует устаревшие image_url с каноническими путями при первом чтении LiveOps после deploy.
-3. Старые seasonal-case rows и снимки выдачи отображают/возвращают каноническую картинку косметики, даже если в D1 остался старый путь.
-4. Добавлена build-проверка скрытых/сезонных ассетов. Она извлекает /assets/... из FUTURE_SEASON_CONTENT, LIVEOPS_CONTENT_IMAGES и системного S3 seasonal-case preset и останавливает deploy, если файл физически отсутствует в deploy input.
-5. Release Gate не ослабляется: если файл реально отсутствует в опубликованном Cloudflare ASSETS, CRITICAL остаётся правильным.
+WHY DEPLOY FAILED
+Two MP3 files exist in Git but their names contain the accented character "é" (Café).
+On macOS the visible filename can be stored/exposed in decomposed Unicode form (NFD), while the path literal parsed from src/worker.js is composed (NFC). The two strings look identical but are not byte-for-byte identical. The strict preflight therefore correctly stops the deploy. This same class of mismatch can also produce a real static-asset 404.
 
-ВАЖНО ПОСЛЕ MERGE:
-Нужен полный deploy из корня репозитория командой `npx wrangler deploy` (или эквивалентный Cloudflare Git deploy, который использует wrangler.jsonc и assets.directory='.'). Worker-only upload не восстановит MP3/PNG в Cloudflare Static Assets.
+FIX
+1. Rename the two deploy-addressed MP3s to ASCII-only filenames without changing their bytes:
+   assets/sounds/moon_marshmallow_cafe_epic.mp3
+     -> assets/sounds/moon_marshmallow_cafe_epic.mp3
+   assets/sounds/moon_marshmallow_cafe_2_epic.mp3
+     -> assets/sounds/moon_marshmallow_cafe_2_epic.mp3
+2. Update every textual reference to the old filenames.
+3. src/worker.js in this patch already uses the new paths.
+4. check-live-content-assets.mjs now explains Unicode-normalization mismatches instead of reporting them only as generic missing files. It still FAILS the build; no CRITICAL check is weakened.
 
-Изменённые/новые файлы:
-- src/worker.js
-- wrangler.jsonc
-- scripts/check-live-content-assets.mjs
+HOW TO APPLY IN THE REAL REPO
+Overlay src/ and scripts/ from this archive onto the repository, then from repo root run:
+
+  node scripts/rename-unicode-sound-files.mjs
+  node scripts/check-live-content-assets.mjs
+  git status
+  git diff --check
+  git add -A
+  git commit -m "Normalize live content sound paths"
+  git push origin main
+  npx wrangler deploy
+
+IMPORTANT
+Do not delete/re-encode/re-export the MP3 files. The migration script renames the existing files in-place and handles macOS NFC/NFD spelling by enumerating the directory first.

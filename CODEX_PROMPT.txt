@@ -1,0 +1,18 @@
+Работаем с production-репозиторием «Сладкий Забег». Главный источник истины — текущий main. Базовый commit для этого патча: 5943da6ff41dc275126af14951233443f7603605. Перед применением сначала проверь актуальный main и не затирай более новые изменения.
+
+Задача: исправить падение Wrangler preflight на двух существующих MP3 с "Café" в имени. Это Unicode NFC/NFD проблема macOS, а не повод отключать проверку.
+
+Сделай минимально и безопасно:
+1) Сохрани байты существующих MP3 и переименуй их в ASCII:
+- moon_marshmallow_cafe_epic.mp3 -> moon_marshmallow_cafe_epic.mp3
+- moon_marshmallow_cafe_2_epic.mp3 -> moon_marshmallow_cafe_2_epic.mp3
+Для поиска исходных файлов учитывай NFC/NFD; не полагайся на буквальное fs.existsSync старого имени.
+2) Обнови ВСЕ текстовые ссылки на старые имена во всём проекте. src/worker.js из патча уже содержит новые пути, но всё равно проверь repo-wide.
+3) Не меняй ID предметов, rarity, seasonKey, title, D1-схему, логику выдачи и Release Gate.
+4) Не ослабляй scripts/check-live-content-assets.mjs. Улучшение диагностики Unicode mismatch из патча сохранить.
+5) Не трогай другие ассеты и не перекодируй музыку.
+6) После изменений выполни:
+   node scripts/check-live-content-assets.mjs
+   git diff --check
+   затем полный npx wrangler deploy.
+7) Если checker после переименования сообщает любой другой missing asset — не обходи его, остановись и выпиши точный путь.

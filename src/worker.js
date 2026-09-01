@@ -257,8 +257,8 @@ const FUTURE_SEASON_CONTENT = Object.freeze({
   }),
   skin: Object.freeze({}),
   music: Object.freeze({
-    season3_music_moon_cafe_epic: Object.freeze({ id:"season3_music_moon_cafe_epic", seasonKey:"season2", title:"Лунное зефирное кафе", rarity:"epic", imageUrl:"/assets/sounds/covers/season3_lunar_music.png", audioUrl:"/assets/sounds/Moon Marshmallow Café(Epik).mp3" }),
-    season3_music_moon_cafe_epic_2: Object.freeze({ id:"season3_music_moon_cafe_epic_2", seasonKey:"season2", title:"Лунное зефирное кафе II", rarity:"epic", imageUrl:"/assets/sounds/covers/season3_lunar_music.png", audioUrl:"/assets/sounds/Moon Marshmallow Café_2(epik).mp3" }),
+    season3_music_moon_cafe_epic: Object.freeze({ id:"season3_music_moon_cafe_epic", seasonKey:"season2", title:"Лунное зефирное кафе", rarity:"epic", imageUrl:"/assets/sounds/covers/season3_lunar_music.png", audioUrl:"/assets/sounds/moon_marshmallow_cafe_epic.mp3" }),
+    season3_music_moon_cafe_epic_2: Object.freeze({ id:"season3_music_moon_cafe_epic_2", seasonKey:"season2", title:"Лунное зефирное кафе II", rarity:"epic", imageUrl:"/assets/sounds/covers/season3_lunar_music.png", audioUrl:"/assets/sounds/moon_marshmallow_cafe_2_epic.mp3" }),
     season3_music_lunar_run_legendary: Object.freeze({ id:"season3_music_lunar_run_legendary", seasonKey:"season2", title:"Лунный забег", rarity:"legendary", imageUrl:"/assets/sounds/covers/season3_lunar_music.png", audioUrl:"/assets/sounds/new_song_season2(Legendary).mp3" }),
     season3_music_lunar_run_mythic: Object.freeze({ id:"season3_music_lunar_run_mythic", seasonKey:"season2", title:"Лунный забег II", rarity:"mythic", imageUrl:"/assets/sounds/covers/season3_lunar_music.png", audioUrl:"/assets/sounds/new_song_season2_2(Mifik).mp3" }),
     season3_music_puppy_parade_epic: Object.freeze({ id:"season3_music_puppy_parade_epic", title:"Belkino Puppy Parade", rarity:"epic", imageUrl:"/assets/sounds/covers/img_sound_s3.png", audioUrl:"/assets/sounds/season3/belkino_puppy_parade.mp3" }),
