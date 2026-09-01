@@ -39818,31 +39818,90 @@ async function ownerPanelTestProjectSeasonQa(env,ctx){
 
 async function testProjectAssetExists(env,path){const raw=String(path||"").trim().split(/[?#]/,1)[0];if(!raw.startsWith("/assets/"))return{path:raw,ok:true,skipped:true};if(!env.ASSETS?.fetch)return{path:raw,ok:false,error:"ASSETS binding unavailable"};try{let r=await env.ASSETS.fetch(new Request(`https://zefirok.local${raw}`,{method:"HEAD"}));if(!r.ok){try{await r.body?.cancel?.();}catch{}r=await env.ASSETS.fetch(new Request(`https://zefirok.local${raw}`,{method:"GET"}));}const out={path:raw,ok:r.ok,status:r.status};try{await r.body?.cancel?.();}catch{}return out;}catch(e){return{path:raw,ok:false,error:String(e?.message||e).slice(0,120)};}}
 
+function releaseGateRequestedContentItems(body={}){
+  const source=Array.isArray(body?.contentItems)?body.contentItems:[],items=[],seen=new Set();
+  for(const entry of source){
+    const kind=String(entry?.kind||"").trim(),itemId=String(entry?.itemId||"").trim();if(!kind||!itemId)continue;
+    const key=liveContentReleaseKey(kind,itemId);if(seen.has(key))continue;seen.add(key);items.push({kind,itemId,key});if(items.length>=100)break;
+  }
+  return items;
+}
+
 async function ownerPanelTestProjectContentValidate(env,ctx){
   await ensureLiveContentReleaseSchema(env);
-  const loaded=await testProjectQaLoad(env,ctx),seasonId=String(loaded.snapshot?.season?.id||""),checks=[],assets=[];const add=(id,title,status,detail)=>checks.push({id,title,status,detail});
-  let readiness=null;if(seasonId){readiness=await seasonPassReadinessReport(env,seasonId,{skipAssets:Boolean(ctx.body?.quick)}).catch((e)=>({ready:false,score:0,blockerCount:1,warningCount:0,checks:[],error:String(e?.message||e)}));add("season_readiness","Готовность сезона",readiness.ready?"pass":"fail",readiness.error||`score ${readiness.score}% · blockers ${readiness.blockerCount}`);}else add("season_readiness","Готовность сезона","warn","Сезон не выбран.");
-  const requestedContentItems=Array.isArray(ctx.body?.contentItems)?ctx.body.contentItems.map((entry)=>({kind:String(entry?.kind||"").trim(),itemId:String(entry?.itemId||"").trim()})).filter((entry)=>entry.kind&&entry.itemId).slice(0,100):[],requestedContentKeys=new Set(requestedContentItems.map((entry)=>`${entry.kind}:${entry.itemId}`)),scopedAssets=requestedContentKeys.size>0,missingRequestedContent=new Set(requestedContentKeys);
-  const rules=await readLiveContentReleaseRules(env,true),paths=[],ids=new Set(),duplicateIds=[],audioOwners=new Map(),duplicateAudio=[];for(const [kind,catalog] of Object.entries(FUTURE_SEASON_CONTENT)){for(const [itemId,item] of Object.entries(catalog||{})){const key=`${kind}:${itemId}`;if(ids.has(key))duplicateIds.push(key);ids.add(key);const audio=String(item.audioUrl||item.src||"").split(/[?#]/,1)[0];if(!scopedAssets||requestedContentKeys.has(key)){missingRequestedContent.delete(key);if(item.imageUrl)paths.push({path:item.imageUrl,source:key});if(audio)paths.push({path:audio,source:key});}if(audio){if(audioOwners.has(audio))duplicateAudio.push(`${audioOwners.get(audio)} ↔ ${key}`);else audioOwners.set(audio,key);}}}
-  if(scopedAssets&&missingRequestedContent.size)add("future_content_scope","Выбранный скрытый контент","fail",`Не найдены записи: ${[...missingRequestedContent].slice(0,6).join(", ")}`);
-  add("future_ids","Уникальные ID скрытого контента",duplicateIds.length?"fail":"pass",duplicateIds.length?`Дубли: ${duplicateIds.join(", ")}`:`${ids.size} уникальных ID`);
-  add("future_audio","Уникальные аудиофайлы future-музыки",duplicateAudio.length?"warn":"pass",duplicateAudio.length?`Один MP3 привязан к нескольким ID: ${duplicateAudio.slice(0,5).join("; ")}`:"Дублирующих MP3-ссылок не найдено.");
-  const season=loaded.snapshot?.season||{},seasonalCases=Array.isArray(season.seasonalCases)?season.seasonalCases:[],seasonCaseIds=new Set(seasonalCases.map((c)=>String(c.caseId||""))),rewardProblems=[],rewardSlots=new Set();
-  for(const reward of (Array.isArray(season.rewards)?season.rewards:[]).filter((r)=>r.enabled!==false)){const level=Number(reward.level),lane=String(reward.lane||""),kind=String(reward.rewardType||""),itemId=String(reward.itemId||"");const slot=`${level}:${lane}`;if(rewardSlots.has(slot))rewardProblems.push(`duplicate slot ${slot}`);rewardSlots.add(slot);if(level<1||level>50||!["free","premium"].includes(lane))rewardProblems.push(`invalid slot ${slot}`);if(Number(reward.amount)<0)rewardProblems.push(`${slot}: negative amount`);if(SEASON_PASS_COSMETIC_KINDS.includes(kind)&&!seasonPassAnyCosmeticCatalog(kind)?.[itemId])rewardProblems.push(`${slot}: ${kind}:${itemId}`);if(kind==="case"&&itemId&&!normalizeCaseType(itemId))rewardProblems.push(`${slot}: case ${itemId}`);if(kind==="seasonal_case"&&itemId&&!seasonCaseIds.has(itemId))rewardProblems.push(`${slot}: seasonal_case ${itemId}`);if(!scopedAssets&&reward.imageUrl)paths.push({path:reward.imageUrl,source:`reward ${slot}`});}
-  add("season_reward_refs","Награды выбранного сезона",rewardProblems.length?"fail":rewardSlots.size===100?"pass":"warn",rewardProblems.length?rewardProblems.slice(0,8).join("; "):`${rewardSlots.size}/100 уникальных включённых слотов`);
-  const caseProblems=[];for(const c of seasonalCases){if(!scopedAssets&&c.imageUrl)paths.push({path:c.imageUrl,source:`case ${c.caseId} closed`});if(!scopedAssets&&c.openImageUrl)paths.push({path:c.openImageUrl,source:`case ${c.caseId} open`});const seen=new Set();for(const item of Array.isArray(c.items)?c.items:[]){if(item.enabled===false)continue;const key=String(item.key||`${item.kind}:${item.itemId}`);if(seen.has(key))caseProblems.push(`${c.caseId}: duplicate ${key}`);seen.add(key);if(!(Number(item.weight)>0))caseProblems.push(`${c.caseId}: weight ${key}`);const kind=String(item.kind||""),itemId=String(item.itemId||"");if(SEASON_PASS_COSMETIC_KINDS.includes(kind)&&!seasonPassAnyCosmeticCatalog(kind)?.[itemId])caseProblems.push(`${c.caseId}: ${kind}:${itemId}`);else if(SEASON_PASS_SEASONAL_CASE_RESOURCE_KINDS.includes(kind)){if(!(Number(item.amount)>0))caseProblems.push(`${c.caseId}: amount ${key}`);if(kind==='case'&&!normalizeCaseType(itemId))caseProblems.push(`${c.caseId}: case ${itemId||'empty'}`);}else if(!SEASON_PASS_COSMETIC_KINDS.includes(kind))caseProblems.push(`${c.caseId}: unknown kind ${kind}`);if(!scopedAssets&&item.imageUrl)paths.push({path:item.imageUrl,source:`${c.caseId}:${key}`});}}
-  add("season_case_refs","Пулы сезонных кейсов",caseProblems.length?"fail":seasonalCases.length?"pass":"warn",caseProblems.length?caseProblems.slice(0,8).join("; "):seasonalCases.length?`${seasonalCases.length} кейс(ов), ссылки и веса валидны.`:"У сезона нет сезонных кейсов.");
-  const publicLiveops=await readLiveOpsConfig(env).catch(()=>null),leaks=[];for(const [kind,catalog] of Object.entries(FUTURE_SEASON_CONTENT)){for(const itemId of Object.keys(catalog||{})){const rule=rules.get(liveContentReleaseKey(kind,itemId));if(!rule?.released&&publicLiveops?.content?.[kind]?.[itemId]?.enabled)leaks.push(`${kind}:${itemId}`);}}
-  add("hidden_leak","Скрытый контент не течёт в Production",leaks.length?"fail":"pass",leaks.length?`Утечки: ${leaks.slice(0,8).join(", ")}`:"Неопубликованные future-предметы отсутствуют в публичном пуле.");
-  const routeProblems=[],seasonalCaseSeasons=new Map(),seasonExists=new Map();
-  for(const [key,rule] of rules.entries()){
-    const [kind,itemId]=key.split(":");if(!futureSeasonContentItem(kind,itemId))continue;const status=liveContentStatus(rule.status,rule.released?"open":"hidden");if(status==="scheduled"&&(!Number(rule.releaseAt)||Number(rule.releaseAt)<=0))routeProblems.push(`${key}: scheduled without releaseAt`);if(!["open","scheduled"].includes(status))continue;
-    if(liveContentRouteCount(rule.routes)<=0){routeProblems.push(`${key}: no enabled routes`);continue;}
-    for(const type of LIVE_CONTENT_DESTINATIONS){const route=liveContentRoute(rule,type);if(!route)continue;const id=String(route.destinationId||"");if(type==="case"&&!LIVEOPS_CASE_IDS.includes(normalizeCaseType(id)))routeProblems.push(`${key}: case ${id}`);else if(type==="shop"&&Number(route.points||0)+Number(route.treats||0)+Number(route.coffee||0)<=0)routeProblems.push(`${key}: shop without price`);else if(type==="seasonal_case"){let routeSeason=seasonalCaseSeasons.get(id);if(routeSeason===undefined){routeSeason=String((await env.DB.prepare(`SELECT season_id FROM season_pass_case_definitions WHERE case_id=? LIMIT 1`).bind(id).first().catch(()=>null))?.season_id||"");seasonalCaseSeasons.set(id,routeSeason);}if(!routeSeason)routeProblems.push(`${key}: seasonal case ${id}`);else if(String(rule.seasonId||"")!==routeSeason)routeProblems.push(`${key}: seasonal case ${id} belongs to another season`);}else if(type==="season_pass"){let exists=seasonExists.get(id);if(exists===undefined){exists=Boolean(await env.DB.prepare(`SELECT season_id FROM season_pass_seasons WHERE season_id=? LIMIT 1`).bind(id).first().catch(()=>null));seasonExists.set(id,exists);}if(!exists||Number(route.level)<1||Number(route.level)>50)routeProblems.push(`${key}: season pass ${id}/${route.level}`);else if(String(rule.seasonId||"")!==id)routeProblems.push(`${key}: season pass ${id} belongs to another content season`);}}
+  const requestedContentItems=releaseGateRequestedContentItems(ctx.body),requestedContentKeys=new Set(requestedContentItems.map((entry)=>entry.key)),scopedContent=requestedContentKeys.size>0,missingRequestedContent=new Set(requestedContentKeys),missingRequestedRules=[];
+  const loaded=scopedContent?{snapshot:{}}:await testProjectQaLoad(env,ctx),seasonId=String(loaded.snapshot?.season?.id||""),checks=[],assets=[];const add=(id,title,status,detail)=>checks.push({id,title,status,detail});
+  let readiness=null;
+  if(!scopedContent){
+    if(seasonId){readiness=await seasonPassReadinessReport(env,seasonId,{skipAssets:Boolean(ctx.body?.quick)}).catch((e)=>({ready:false,score:0,blockerCount:1,warningCount:0,checks:[],error:String(e?.message||e)}));add("season_readiness","Готовность сезона",readiness.ready?"pass":"fail",readiness.error||`score ${readiness.score}% · blockers ${readiness.blockerCount}`);}else add("season_readiness","Готовность сезона","warn","Сезон не выбран.");
+  }else add("season_readiness","Готовность сезона","pass",`Scoped Live Content: проверяется выбранный пакет из ${requestedContentKeys.size} элемент(ов), а не готовность всего Season Pass.`);
+
+  const rules=await readLiveContentReleaseRules(env,true),paths=[],ids=new Set(),duplicateIds=[],audioOwners=new Map(),duplicateAudio=[],selectedRouteTypes=new Set(),selectedSeasonIds=new Set();
+  for(const [kind,catalog] of Object.entries(FUTURE_SEASON_CONTENT)){
+    for(const [itemId,item] of Object.entries(catalog||{})){
+      const key=liveContentReleaseKey(kind,itemId);if(ids.has(key))duplicateIds.push(key);ids.add(key);
+      const selected=!scopedContent||requestedContentKeys.has(key),audio=String(item.audioUrl||item.src||"").split(/[?#]/,1)[0];
+      if(selected){
+        missingRequestedContent.delete(key);if(item.imageUrl)paths.push({path:item.imageUrl,source:key});if(audio)paths.push({path:audio,source:key});
+        if(audio){if(audioOwners.has(audio))duplicateAudio.push(`${audioOwners.get(audio)} ↔ ${key}`);else audioOwners.set(audio,key);}
+        const rule=rules.get(key);if(!rule&&scopedContent)missingRequestedRules.push(key);if(rule){if(rule.seasonId)selectedSeasonIds.add(String(rule.seasonId));for(const type of LIVE_CONTENT_DESTINATIONS)if(liveContentRoute(rule,type))selectedRouteTypes.add(type);}
+      }
+    }
   }
-  add("release_routes","Маршруты Live Content Manager",routeProblems.length?"fail":"pass",routeProblems.length?routeProblems.slice(0,8).join("; "):"Выпущенные future-предметы имеют валидные каналы получения.");
-  if(!ctx.body?.quick){const unique=[...new Map(paths.map((x)=>[String(x.path).split(/[?#]/,1)[0],x])).values()].slice(0,220);for(let i=0;i<unique.length;i+=12){const chunk=unique.slice(i,i+12),res=await Promise.all(chunk.map(async(x)=>({...x,...await testProjectAssetExists(env,x.path)})));assets.push(...res);}const missing=assets.filter((x)=>!x.ok),scopeDetail=scopedAssets?`выбранного пакета · ${requestedContentKeys.size} элемент(ов)`:"всего каталога";add("future_assets","Файлы скрытого контента",missing.length?"fail":"pass",missing.length?`Не найдены (${scopeDetail}): ${missing.slice(0,6).map((x)=>x.path).join(", ")}`:`Проверено ${assets.length} локальных ассетов · ${scopeDetail}.`);}else add("future_assets","Файлы скрытого контента","pass","Quick mode: глубокая проверка файлов пропущена; используйте полный Release Gate для asset scan.");
-  const summary=testProjectQaSummary(checks);return{ok:true,seasonId,summary,checks,assets:assets.slice(0,240),readiness};
+  if(scopedContent&&missingRequestedContent.size)add("future_content_scope","Выбранный скрытый контент","fail",`Не найдены записи: ${[...missingRequestedContent].slice(0,6).join(", ")}`);
+  if(scopedContent&&missingRequestedRules.length)add("future_content_registry","Инициализация Live Content","fail",`Не инициализированы в live_content_registry_state: ${missingRequestedRules.slice(0,6).join(", ")}`);
+  else if(scopedContent)add("future_content_registry","Инициализация Live Content","pass",`Все ${requestedContentKeys.size} выбранных элементов присутствуют в серверном реестре.`);
+  add("future_ids","Уникальные ID скрытого контента",duplicateIds.length?"fail":"pass",duplicateIds.length?`Дубли: ${duplicateIds.join(", ")}`:`${ids.size} уникальных ID`);
+  add("future_audio","Уникальные аудиофайлы future-музыки",duplicateAudio.length?"warn":"pass",duplicateAudio.length?`Один MP3 привязан к нескольким ${scopedContent?"выбранным ":""}ID: ${duplicateAudio.slice(0,5).join("; ")}`:`Дублирующих MP3-ссылок ${scopedContent?"в выбранном пакете ":""}не найдено.`);
+
+  const season=loaded.snapshot?.season||{},seasonalCases=Array.isArray(season.seasonalCases)?season.seasonalCases:[],seasonCaseIds=new Set(seasonalCases.map((c)=>String(c.caseId||"")));
+  if(!scopedContent){
+    const rewardProblems=[],rewardSlots=new Set();
+    for(const reward of (Array.isArray(season.rewards)?season.rewards:[]).filter((r)=>r.enabled!==false)){
+      const level=Number(reward.level),lane=String(reward.lane||""),kind=String(reward.rewardType||""),itemId=String(reward.itemId||""),slot=`${level}:${lane}`;if(rewardSlots.has(slot))rewardProblems.push(`duplicate slot ${slot}`);rewardSlots.add(slot);if(level<1||level>50||!["free","premium"].includes(lane))rewardProblems.push(`invalid slot ${slot}`);if(Number(reward.amount)<0)rewardProblems.push(`${slot}: negative amount`);if(SEASON_PASS_COSMETIC_KINDS.includes(kind)&&!seasonPassAnyCosmeticCatalog(kind)?.[itemId])rewardProblems.push(`${slot}: ${kind}:${itemId}`);if(kind==="case"&&itemId&&!normalizeCaseType(itemId))rewardProblems.push(`${slot}: case ${itemId}`);if(kind==="seasonal_case"&&itemId&&!seasonCaseIds.has(itemId))rewardProblems.push(`${slot}: seasonal_case ${itemId}`);if(reward.imageUrl)paths.push({path:reward.imageUrl,source:`reward ${slot}`});
+    }
+    add("season_reward_refs","Награды выбранного сезона",rewardProblems.length?"fail":rewardSlots.size===100?"pass":"warn",rewardProblems.length?rewardProblems.slice(0,8).join("; "):`${rewardSlots.size}/100 уникальных включённых слотов`);
+    const caseProblems=[];
+    for(const c of seasonalCases){
+      if(c.imageUrl)paths.push({path:c.imageUrl,source:`case ${c.caseId} closed`});if(c.openImageUrl)paths.push({path:c.openImageUrl,source:`case ${c.caseId} open`});const seen=new Set();
+      for(const item of Array.isArray(c.items)?c.items:[]){if(item.enabled===false)continue;const key=String(item.key||`${item.kind}:${item.itemId}`);if(seen.has(key))caseProblems.push(`${c.caseId}: duplicate ${key}`);seen.add(key);if(!(Number(item.weight)>0))caseProblems.push(`${c.caseId}: weight ${key}`);const kind=String(item.kind||""),itemId=String(item.itemId||"");if(SEASON_PASS_COSMETIC_KINDS.includes(kind)&&!seasonPassAnyCosmeticCatalog(kind)?.[itemId])caseProblems.push(`${c.caseId}: ${kind}:${itemId}`);else if(SEASON_PASS_SEASONAL_CASE_RESOURCE_KINDS.includes(kind)){if(!(Number(item.amount)>0))caseProblems.push(`${c.caseId}: amount ${key}`);if(kind==='case'&&!normalizeCaseType(itemId))caseProblems.push(`${c.caseId}: case ${itemId||'empty'}`);}else if(!SEASON_PASS_COSMETIC_KINDS.includes(kind))caseProblems.push(`${c.caseId}: unknown kind ${kind}`);if(item.imageUrl)paths.push({path:item.imageUrl,source:`${c.caseId}:${key}`});}
+    }
+    add("season_case_refs","Пулы сезонных кейсов",caseProblems.length?"fail":seasonalCases.length?"pass":"warn",caseProblems.length?caseProblems.slice(0,8).join("; "):seasonalCases.length?`${seasonalCases.length} кейс(ов), ссылки и веса валидны.`:"У сезона нет сезонных кейсов.");
+  }else{
+    add("season_reward_refs","Награды выбранного сезона","pass","Scoped Live Content не требует готовности всех 100 слотов Season Pass; целевые season_pass-маршруты проверяются отдельно.");
+    add("season_case_refs","Пулы сезонных кейсов","pass",selectedRouteTypes.has("seasonal_case")?"Проверяется только сезонный кейс, выбранный в маршрутах пакета.":"В выбранном пакете нет маршрута seasonal_case — сезонный кейс не требуется.");
+  }
+
+  const publicLiveops=await readLiveOpsConfig(env).catch(()=>null),leaks=[];
+  for(const [kind,catalog] of Object.entries(FUTURE_SEASON_CONTENT))for(const itemId of Object.keys(catalog||{})){
+    const key=liveContentReleaseKey(kind,itemId);if(scopedContent&&!requestedContentKeys.has(key))continue;const rule=rules.get(key);if(!rule?.released&&publicLiveops?.content?.[kind]?.[itemId]?.enabled)leaks.push(key);
+  }
+  add("hidden_leak","Скрытый контент не течёт в Production",leaks.length?"fail":"pass",leaks.length?`Утечки: ${leaks.slice(0,8).join(", ")}`:`Неопубликованные ${scopedContent?"выбранные ":"future-"}предметы отсутствуют в публичном пуле.`);
+
+  const routeProblems=[],seasonalCaseCache=new Map(),seasonCache=new Map();
+  for(const [key,rule] of rules.entries()){
+    if(scopedContent&&!requestedContentKeys.has(key))continue;const [kind,itemId]=key.split(":");if(!futureSeasonContentItem(kind,itemId))continue;const status=liveContentStatus(rule.status,rule.released?"open":"hidden"),prospective=scopedContent&&requestedContentKeys.has(key);
+    if(!prospective){if(status==="scheduled"&&(!Number(rule.releaseAt)||Number(rule.releaseAt)<=0))routeProblems.push(`${key}: scheduled without releaseAt`);if(!["open","scheduled"].includes(status))continue;}
+    if(liveContentRouteCount(rule.routes)<=0){routeProblems.push(`${key}: no enabled routes`);continue;}
+    for(const type of LIVE_CONTENT_DESTINATIONS){
+      const route=liveContentRoute(rule,type);if(!route)continue;const id=String(route.destinationId||"");
+      if(type==="case"&&!LIVEOPS_CASE_IDS.includes(normalizeCaseType(id)))routeProblems.push(`${key}: case ${id}`);
+      else if(type==="shop"&&Number(route.points||0)+Number(route.treats||0)+Number(route.coffee||0)<=0)routeProblems.push(`${key}: shop without price`);
+      else if(type==="seasonal_case"){
+        let definition=seasonalCaseCache.get(id);if(definition===undefined){definition=await env.DB.prepare(`SELECT season_id,enabled,release_at FROM season_pass_case_definitions WHERE case_id=? LIMIT 1`).bind(id).first().catch(()=>null);seasonalCaseCache.set(id,definition||null);}
+        if(!definition)routeProblems.push(`${key}: seasonal case ${id}`);else if(String(rule.seasonId||"")!==String(definition.season_id||""))routeProblems.push(`${key}: seasonal case ${id} belongs to another season`);
+      }else if(type==="season_pass"){
+        let passSeason=seasonCache.get(id);if(passSeason===undefined){passSeason=await loadSeasonPassSeasonById(env,id).catch(()=>null);seasonCache.set(id,passSeason||null);}
+        if(!passSeason||Number(route.level)<1||Number(route.level)>50)routeProblems.push(`${key}: season pass ${id}/${route.level}`);else if(String(rule.seasonId||"")!==id)routeProblems.push(`${key}: season pass ${id} belongs to another content season`);else if(prospective&&String(passSeason.status||"")==="ended")routeProblems.push(`${key}: season pass ${id} already ended`);
+      }
+    }
+  }
+  add("release_routes","Маршруты Live Content Manager",routeProblems.length?"fail":"pass",routeProblems.length?routeProblems.slice(0,8).join("; "):scopedContent?`Проверены будущие маршруты выбранного пакета · ${requestedContentKeys.size} элемент(ов).`:"Выпущенные future-предметы имеют валидные каналы получения.");
+
+  if(!ctx.body?.quick){
+    const unique=[...new Map(paths.map((x)=>[String(x.path).split(/[?#]/,1)[0],x])).values()].slice(0,220);for(let i=0;i<unique.length;i+=12){const chunk=unique.slice(i,i+12),res=await Promise.all(chunk.map(async(x)=>({...x,...await testProjectAssetExists(env,x.path)})));assets.push(...res);}const missing=assets.filter((x)=>!x.ok),scopeDetail=scopedContent?`выбранного пакета · ${requestedContentKeys.size} элемент(ов)`:"всего каталога";add("future_assets","Файлы скрытого контента",missing.length?"fail":"pass",missing.length?`Не найдены (${scopeDetail}): ${missing.slice(0,6).map((x)=>x.path).join(", ")}`:`Проверено ${assets.length} локальных ассетов · ${scopeDetail}.`);
+  }else add("future_assets","Файлы скрытого контента","pass","Quick mode: глубокая проверка файлов пропущена; используйте полный Release Gate для asset scan.");
+  const summary=testProjectQaSummary(checks);return{ok:true,seasonId,summary,checks,assets:assets.slice(0,240),readiness,scope:{scoped:scopedContent,kind:scopedContent?"live_content":"full",itemCount:requestedContentKeys.size,routeTypes:[...selectedRouteTypes],seasonIds:[...selectedSeasonIds]}};
 }
 
 async function ownerReleaseGateOperationalChecks(env){
@@ -39869,11 +39928,12 @@ async function ownerReleaseGateOperationalChecks(env){
 }
 
 async function ownerPanelTestProjectReleaseGate(env,ctx){
-  const started=Date.now();
-  const [qa,seasonQa,content,operations]=await Promise.all([ownerPanelTestProjectQa(env,ctx),ownerPanelTestProjectSeasonQa(env,ctx),ownerPanelTestProjectContentValidate(env,{...ctx,body:{...(ctx.body||{}),quick:!Boolean(ctx.body?.fullAssets)}}),ownerReleaseGateOperationalChecks(env)]);
-  const checks=[...(qa.checks||[]).map((x)=>({...x,group:'Sandbox',severity:x.status==='fail'?'critical':x.status==='warn'?'warning':'info'})),...(seasonQa.checks||[]).map((x)=>({...x,group:'Season QA',severity:x.status==='fail'?'critical':x.status==='warn'?'warning':'info'})),...(content.checks||[]).map((x)=>({...x,group:'Content',severity:x.status==='fail'?'critical':x.status==='warn'?'warning':'info'})),...(operations||[])];
+  const started=Date.now(),scopedRequest=releaseGateRequestedContentItems(ctx.body).length>0;
+  const [qa,seasonQa,content,operations]=await Promise.all([scopedRequest?Promise.resolve({checks:[]}):ownerPanelTestProjectQa(env,ctx),scopedRequest?Promise.resolve({checks:[],seasonId:"",seasonTitle:""}):ownerPanelTestProjectSeasonQa(env,ctx),ownerPanelTestProjectContentValidate(env,{...ctx,body:{...(ctx.body||{}),quick:!Boolean(ctx.body?.fullAssets)}}),ownerReleaseGateOperationalChecks(env)]);
+  const scopedLiveContent=Boolean(content?.scope?.scoped),sandboxChecks=scopedLiveContent?[]:(qa.checks||[]),seasonChecks=scopedLiveContent?[]:(seasonQa.checks||[]),contentChecks=content.checks||[],operationChecks=operations||[];
+  const checks=[...sandboxChecks.map((x)=>({...x,group:'Sandbox',severity:x.status==='fail'?'critical':x.status==='warn'?'warning':'info'})),...seasonChecks.map((x)=>({...x,group:'Season QA',severity:x.status==='fail'?'critical':x.status==='warn'?'warning':'info'})),...contentChecks.map((x)=>({...x,group:'Content',severity:x.status==='fail'?'critical':x.status==='warn'?'warning':'info'})),...operationChecks];
   const summary=testProjectQaSummary(checks),criticalCount=checks.filter(x=>x.status==='fail'&&x.severity==='critical').length,warningCount=checks.filter(x=>x.status==='warn'||(x.status==='fail'&&x.severity!=='critical')).length,blocking=criticalCount>0,status=blocking?'fail':warningCount?'review':'pass';
-  const result={ok:true,status,ready:!blocking,blocking,criticalCount,warningCount,summary,checks,groups:{sandbox:qa.summary,season:seasonQa.summary,content:content.summary,operations:testProjectQaSummary(operations)},requestedSeasonId:String(ctx.body?.seasonId||''),seasonId:String(seasonQa?.seasonId||content?.seasonId||ctx.body?.seasonId||''),seasonTitle:String(seasonQa?.seasonTitle||''),checkedAt:Date.now(),fullAssets:Boolean(ctx.body?.fullAssets),durationMs:Date.now()-started};
+  const result={ok:true,status,ready:!blocking,blocking,criticalCount,warningCount,summary,checks,groups:{sandbox:testProjectQaSummary(sandboxChecks),season:testProjectQaSummary(seasonChecks),content:testProjectQaSummary(contentChecks),operations:testProjectQaSummary(operationChecks)},scope:content?.scope||{scoped:false,kind:'full',itemCount:0,routeTypes:[],seasonIds:[]},requestedSeasonId:String(ctx.body?.seasonId||''),seasonId:String(scopedLiveContent?(content?.scope?.seasonIds?.[0]||content?.seasonId||''):(seasonQa?.seasonId||content?.seasonId||ctx.body?.seasonId||'')),seasonTitle:String(scopedLiveContent?'':(seasonQa?.seasonTitle||'')),checkedAt:Date.now(),fullAssets:Boolean(ctx.body?.fullAssets),durationMs:Date.now()-started};
   try{await ensureRetentionOpsV14Schema(env);const createdAt=Math.floor(Date.now()/1000),source=String(ctx.body?.source||'manual').slice(0,40),changeSetId=String(ctx.body?.changeSetId||'').slice(0,80);await env.DB.prepare(`INSERT INTO release_gate_runs(source,status,critical_count,warning_count,result_json,change_set_id,created_at,created_by,duration_ms) VALUES(?,?,?,?,?,?,?,?,?)`).bind(source,status,criticalCount,warningCount,JSON.stringify({...result,checks:checks.slice(0,120)}),changeSetId,createdAt,String(ctx.user?.id||''),result.durationMs).run();const history=(await env.DB.prepare(`SELECT id,source,status,critical_count,warning_count,change_set_id,created_at,duration_ms FROM release_gate_runs ORDER BY created_at DESC,id DESC LIMIT 8`).all()).results||[];result.history=history.map(r=>({id:Number(r.id),source:String(r.source||''),status:String(r.status||''),criticalCount:Number(r.critical_count||0),warningCount:Number(r.warning_count||0),changeSetId:String(r.change_set_id||''),createdAt:Number(r.created_at||0),durationMs:Number(r.duration_ms||0)}));}catch{}
   return result;
 }
@@ -42309,11 +42369,16 @@ function liveContentRulePublicView(kind,itemId,rule){
   return {kind,itemId,title:String(item.title||itemId),rarity:String(item.rarity||"common"),imageUrl:String(item.imageUrl||""),audioUrl:String(item.audioUrl||item.src||""),seasonId:String(r.seasonId||""),seasonLabel:futureSeasonContentLabel(kind,itemId),status:liveContentStatus(r.status,r.released?"open":"hidden"),releaseAt:Math.max(0,Math.floor(Number(r.releaseAt)||0)),released:Boolean(r.released),everReleased:Boolean(r.everReleased),routes:testProjectClone(r.routes||{}),destinationType:String(r.destinationType||"manual"),destinationId:String(r.destinationId||""),destinationConfig:testProjectClone(r.destinationConfig||{}),updatedAt:Number(r.updatedAt||0),updatedBy:String(r.updatedBy||"")};
 }
 async function validateLiveContentReleaseAssets(env,normalizedItems){
-  const items=(Array.isArray(normalizedItems)?normalizedItems:[normalizedItems]).filter(Boolean);if(!items.length)return {ok:true,checked:0};
-  const manifest=await seasonPassReadinessImageManifest(env);if(!manifest.available)throw new ApiError(503,`Live Content asset manifest unavailable: ${manifest.error||"unknown error"}. Release remains closed.`);
-  const missing=[];for(const normalized of items){const item=normalized.item||futureSeasonContentItem(normalized.kind,normalized.itemId),path=seasonPassReadinessAssetPath(item?.imageUrl||"");if(!path)missing.push(`${normalized.kind}:${normalized.itemId} -> invalid imageUrl`);else if(!manifest.paths.has(path))missing.push(`${normalized.kind}:${normalized.itemId} -> ${path}`);}
-  if(missing.length)throw new ApiError(409,`Live Content release blocked: missing image asset ${missing[0]}${missing.length>1?` and ${missing.length-1} more`:""}.`);
-  return {ok:true,checked:items.length,catalogHash:manifest.catalogHash};
+  const items=(Array.isArray(normalizedItems)?normalizedItems:[normalizedItems]).filter(Boolean);if(!items.length)return {ok:true,checked:0,assets:0};
+  const refs=[];
+  for(const normalized of items){
+    const item=normalized.item||futureSeasonContentItem(normalized.kind,normalized.itemId),key=`${normalized.kind}:${normalized.itemId}`,image=String(item?.imageUrl||"").trim(),audio=String(item?.audioUrl||item?.src||"").trim();
+    if(!image)refs.push({key,type:"image",path:"",invalid:true});else refs.push({key,type:"image",path:image});if(audio)refs.push({key,type:"audio",path:audio});
+  }
+  const results=[];
+  for(let i=0;i<refs.length;i+=12){const chunk=refs.slice(i,i+12),checked=await Promise.all(chunk.map(async(ref)=>ref.invalid?{...ref,ok:false,error:"invalid path"}:{...ref,...await testProjectAssetExists(env,ref.path)}));results.push(...checked);}
+  const missing=results.filter((entry)=>!entry.ok);if(missing.length){const first=missing[0],detail=first.invalid?`${first.key} -> invalid ${first.type} path`:`${first.key} -> ${String(first.path||"").split(/[?#]/,1)[0]}${first.status?` (${first.status})`:first.error?` (${first.error})`:""}`;throw new ApiError(409,`Live Content release blocked: missing ${first.type} asset ${detail}${missing.length>1?` and ${missing.length-1} more`:""}.`);}
+  return {ok:true,checked:items.length,assets:results.length};
 }
 
 function liveContentSamePassRoute(a,b){
