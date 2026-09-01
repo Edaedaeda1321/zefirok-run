@@ -8110,26 +8110,40 @@ html&gt;body{padding:
 #zefirok-maltipoo-runner .player-mail-card-copy span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#8f707c;font-size:9px}
 #zefirok-maltipoo-runner .player-mail-card-copy small{color:#aa8996;font-size:8px}
 #zefirok-maltipoo-runner .player-mail-open{min-height:34px;border:1px solid rgba(218,117,156,.32);border-radius:11px;padding:7px 9px;background:#fff;color:#b54f77;font-size:9px;font-weight:950}
-#zefirok-maltipoo-runner .player-mail-layer{position:fixed;inset:0;z-index:2147483250;display:grid;place-items:end center;padding:18px 12px max(18px,var(--zefirok-content-safe-bottom,0px));background:rgba(72,45,56,.38);backdrop-filter:blur(7px);box-sizing:border-box}
+#zefirok-maltipoo-runner .player-mail-layer{position:fixed;inset:0;z-index:2147483250;display:flex;align-items:flex-end;justify-content:center;padding:0;background:rgba(67,42,50,.32);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);box-sizing:border-box;animation:player-mail-backdrop-in .2s ease both}
 #zefirok-maltipoo-runner .player-mail-layer[hidden]{display:none!important}
-#zefirok-maltipoo-runner .player-mail-dialog{position:relative;width:min(440px,100%);max-height:min(720px,calc(var(--zefirok-visible-height,100dvh) - 30px));overflow:auto;padding:12px 18px 18px;border:1px solid #efcbd7;border-radius:28px;background:linear-gradient(180deg,#fffdfc,#fff7f4);box-shadow:0 24px 70px rgba(87,47,61,.24);text-align:center;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y}
-#zefirok-maltipoo-runner .player-mail-dialog.is-player-mail-dragging{transition:none!important;will-change:transform,opacity}
-#zefirok-maltipoo-runner .player-mail-drag-handle{width:62px;height:28px;margin:0 auto 2px;display:grid;place-items:center;border:0;background:transparent;touch-action:none;cursor:grab;user-select:none;-webkit-user-select:none}
-#zefirok-maltipoo-runner .player-mail-drag-handle:active{cursor:grabbing}
-#zefirok-maltipoo-runner .player-mail-drag-handle span{display:block;width:42px;height:5px;border-radius:999px;background:rgba(151,111,126,.28);box-shadow:inset 0 1px 0 rgba(255,255,255,.7)}
-#zefirok-maltipoo-runner .player-mail-content{display:grid;justify-items:center;gap:10px;padding-top:4px}
-#zefirok-maltipoo-runner .player-mail-art{display:block;width:min(100%,420px);max-height:320px;object-fit:contain;border-radius:20px}
-#zefirok-maltipoo-runner .player-mail-symbol{display:grid;place-items:center;width:76px;height:76px;border-radius:24px;background:linear-gradient(145deg,#ffe8f1,#fff4d7);font-size:38px}
-#zefirok-maltipoo-runner .player-mail-kicker{padding:5px 9px;border-radius:999px;background:#fff0f5;color:#b35379;font-size:8px;font-weight:950;text-transform:uppercase;letter-spacing:.06em}
-#zefirok-maltipoo-runner .player-mail-content h2{margin:0;padding:0 36px;color:#663f50;font-size:21px;line-height:1.15}
-#zefirok-maltipoo-runner .player-mail-body{width:100%;margin:0;color:#745b65;font-size:11px;line-height:1.65;white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;text-align:left}
-#zefirok-maltipoo-runner .player-mail-note{width:100%;margin:0;padding:9px 10px;border-radius:13px;background:#fff8e9;color:#84694f;font-size:9px;line-height:1.4;text-align:left;box-sizing:border-box}
-#zefirok-maltipoo-runner .player-mail-reward-title{width:100%;margin-top:2px;color:#9e5a73;font-size:10px;font-weight:950;text-align:left}
-#zefirok-maltipoo-runner .player-mail-rewards{width:100%;justify-content:center;padding:10px;border-radius:17px;background:#fff5dc;box-sizing:border-box}
-#zefirok-maltipoo-runner .player-mail-reward{background:#fff}
-#zefirok-maltipoo-runner .player-mail-claimed{width:100%;padding:9px;border-radius:13px;background:#eaf7ee;color:#51835e;font-size:10px;font-weight:950;box-sizing:border-box}
-#zefirok-maltipoo-runner .player-mail-primary{width:100%;min-height:46px;margin-top:4px;border:0;border-radius:15px;background:linear-gradient(145deg,#ed8fb0,#d65a88);color:#fff;font-size:12px;font-weight:950;box-shadow:0 8px 17px rgba(190,72,115,.17)}
+#zefirok-maltipoo-runner .player-mail-dialog{position:relative;width:min(540px,100%);max-height:min(82dvh,760px);overflow:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:13px max(15px,var(--zefirok-content-safe-right,0px)) max(20px,calc(var(--zefirok-content-safe-bottom,0px) + 12px)) max(15px,var(--zefirok-content-safe-left,0px));border:1px solid rgba(231,196,180,.94);border-bottom:0;border-radius:28px 28px 0 0;background:linear-gradient(165deg,#fffdf9 0%,#fff8f6 48%,#fff2f6 100%);box-shadow:0 -18px 55px rgba(72,37,51,.19);color:#68404e;text-align:left;animation:player-mail-sheet-in .28s cubic-bezier(.22,.86,.28,1) both;transform:translateY(0);cursor:grab}
+#zefirok-maltipoo-runner .player-mail-dialog.is-player-mail-dragging,#zefirok-maltipoo-runner .player-mail-dialog.is-player-mail-full-dragging{cursor:grabbing;user-select:none;-webkit-user-select:none}
+#zefirok-maltipoo-runner .player-mail-drag-handle{display:block;width:min(420px,calc(100% - 112px));height:52px;margin:-8px auto -10px;padding:0;border:0;background:transparent;cursor:grab;touch-action:none;appearance:none;-webkit-appearance:none;-webkit-tap-highlight-color:transparent;user-select:none;position:relative;z-index:6}
+#zefirok-maltipoo-runner .player-mail-drag-handle span{position:absolute;left:50%;top:18px;display:block;width:48px;height:5px;transform:translateX(-50%);border-radius:999px;background:#c99a83;opacity:.72;transition:width .18s cubic-bezier(.32,.72,0,1),opacity .18s ease,background .18s ease;box-shadow:none}
+#zefirok-maltipoo-runner .player-mail-drag-handle:active span,#zefirok-maltipoo-runner .player-mail-drag-handle.is-dragging span{width:54px;opacity:.98;background:#bb816f}
+#zefirok-maltipoo-runner .player-mail-drag-handle.is-armed span{width:58px;background:#c95f86;opacity:1}
+#zefirok-maltipoo-runner .player-mail-drag-handle:focus-visible{outline:2px solid rgba(203,79,124,.32);outline-offset:-6px;border-radius:22px}
+#zefirok-maltipoo-runner .player-mail-content{display:grid;gap:12px;min-width:0}
+#zefirok-maltipoo-runner .player-mail-head{display:grid;grid-template-columns:92px minmax(0,1fr);gap:13px;align-items:center;min-width:0}
+#zefirok-maltipoo-runner .player-mail-artbox,#zefirok-maltipoo-runner .player-mail-symbol{display:grid;place-items:center;width:88px;height:88px;border:3px solid #fff;border-radius:24px;background:linear-gradient(145deg,#ffe4ee,#f8e7db);box-shadow:0 6px 14px rgba(116,57,80,.14),0 0 0 1px rgba(216,171,189,.58);overflow:hidden;box-sizing:border-box}
+#zefirok-maltipoo-runner .player-mail-art{display:block;width:100%;height:100%;object-fit:contain;object-position:center;background:rgba(255,255,255,.68)}
+#zefirok-maltipoo-runner .player-mail-symbol{font-size:38px;overflow:visible}
+#zefirok-maltipoo-runner .player-mail-head-copy{display:grid;gap:6px;min-width:0}
+#zefirok-maltipoo-runner .player-mail-kicker{justify-self:start;display:inline-flex;align-items:center;max-width:100%;min-height:24px;padding:5px 9px;border:1px solid rgba(218,151,177,.36);border-radius:999px;background:#fff0f5;color:#b35379;font-size:8px;font-weight:950;text-transform:uppercase;letter-spacing:.055em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#zefirok-maltipoo-runner .player-mail-content h2{min-width:0;margin:0;color:#693748;font-size:21px;font-weight:950;line-height:1.08;overflow-wrap:anywhere}
+#zefirok-maltipoo-runner .player-mail-message{min-width:0;padding:13px 14px;border:1px solid rgba(226,200,190,.76);border-radius:20px;background:rgba(255,255,255,.70);box-shadow:inset 0 1px 0 rgba(255,255,255,.72)}
+#zefirok-maltipoo-runner .player-mail-body{width:100%;margin:0;color:#745b65;font-size:12px;line-height:1.58;white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;text-align:left}
+#zefirok-maltipoo-runner .player-mail-note{width:100%;margin:0;padding:10px 11px;border:1px solid rgba(227,193,127,.52);border-radius:16px;background:#fff8e9;color:#84694f;font-size:9px;line-height:1.45;text-align:left;box-sizing:border-box}
+#zefirok-maltipoo-runner .player-mail-reward-card{display:grid;gap:8px;width:100%;padding:11px;border:1px solid rgba(225,189,153,.72);border-radius:20px;background:linear-gradient(155deg,#fffdf7,#fff6ef);box-sizing:border-box}
+#zefirok-maltipoo-runner .player-mail-reward-title{width:100%;margin:0;color:#70452c;font-size:11px;font-weight:950;text-align:left}
+#zefirok-maltipoo-runner .player-mail-rewards{width:100%;justify-content:flex-start;padding:0;background:transparent;box-sizing:border-box}
+#zefirok-maltipoo-runner .player-mail-reward{background:rgba(255,255,255,.82)}
+#zefirok-maltipoo-runner .player-mail-claimed{width:100%;padding:10px 11px;border:1px solid #c7e7da;border-radius:15px;background:#f7fffb;color:#51835e;font-size:10px;font-weight:950;box-sizing:border-box}
+#zefirok-maltipoo-runner .player-mail-primary{width:100%;min-height:44px;margin-top:0;border:0;border-radius:14px;background:linear-gradient(145deg,#e986a8,#cb537f);color:#fff;font-size:12px;font-weight:950;box-shadow:0 8px 17px rgba(190,72,115,.17)}
 #zefirok-maltipoo-runner .player-mail-primary:disabled{opacity:.62}
+#zefirok-maltipoo-runner .player-mail-loading{display:flex;align-items:center;gap:9px;min-height:48px;padding:11px 13px;border:1px solid rgba(226,200,190,.72);border-radius:18px;background:rgba(255,255,255,.68);color:#92727e;font-size:10px;font-weight:850}
+#zefirok-maltipoo-runner .player-mail-loading::before{content:&quot;&quot;;width:15px;height:15px;flex:0 0 15px;border:2px solid rgba(202,94,137,.18);border-top-color:#cb5f88;border-radius:50%;animation:player-mail-spin .72s linear infinite}
+@keyframes player-mail-backdrop-in{from{background:rgba(67,42,50,0);backdrop-filter:blur(0);-webkit-backdrop-filter:blur(0)}to{background:rgba(67,42,50,.32);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}}
+@keyframes player-mail-sheet-in{from{transform:translateY(28px);opacity:.45}to{transform:translateY(0);opacity:1}}
+@keyframes player-mail-spin{to{transform:rotate(360deg)}}
+@media(max-width:390px){#zefirok-maltipoo-runner .player-mail-dialog{padding-left:11px;padding-right:11px}#zefirok-maltipoo-runner .player-mail-head{grid-template-columns:82px minmax(0,1fr);gap:10px}#zefirok-maltipoo-runner .player-mail-artbox,#zefirok-maltipoo-runner .player-mail-symbol{width:78px;height:78px}#zefirok-maltipoo-runner .player-mail-content h2{font-size:19px}#zefirok-maltipoo-runner .player-mail-body{font-size:11px}}
+@media(prefers-reduced-motion:reduce){#zefirok-maltipoo-runner .player-mail-layer,#zefirok-maltipoo-runner .player-mail-dialog,#zefirok-maltipoo-runner .player-mail-loading::before{animation:none!important;transition:none!important}}
 #zefirok-maltipoo-runner .profile-hero{position:relative}
 #zefirok-maltipoo-runner .profile-mail-shortcut{position:absolute;right:10px;top:10px;z-index:6;display:grid;place-items:center;width:42px;height:42px;border:1px solid rgba(224,145,176,.42);border-radius:14px;background:linear-gradient(145deg,#fff,#ffe9f1);color:#a94b70;font-size:21px;box-shadow:0 6px 15px rgba(144,66,96,.12)}
 #zefirok-maltipoo-runner .profile-mail-shortcut&gt;span{position:absolute;right:-5px;top:-6px;display:inline-flex;align-items:center;justify-content:center;min-width:19px;height:19px;padding:0 4px;border:2px solid #fff;border-radius:999px;background:#e65e91;color:#fff;font-size:8px;font-weight:950;box-sizing:border-box}
@@ -19224,114 +19238,415 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       let playerMailActiveLetter = null;
       let playerMailDragPointerId = null;
       let playerMailDragStartY = 0;
-      let playerMailDragDistance = 0;
-      let playerMailDragStartedAt = 0;
+      let playerMailDragDelta = 0;
+      let playerMailDragLastY = 0;
+      let playerMailDragLastTs = 0;
+      let playerMailDragVelocity = 0;
+      let playerMailDragArmed = false;
+      let playerMailDismissAnimating = false;
+      let playerMailMotionSerial = 0;
+      let playerMailSheetMotion = null;
+      let playerMailBackdropMotion = null;
+      let playerMailCloseTimer = 0;
+      let playerMailSheetTouchId = null;
+      let playerMailSheetTouchStartX = 0;
+      let playerMailSheetTouchStartY = 0;
+      let playerMailSheetTouchLastY = 0;
+      let playerMailSheetTouchLastTs = 0;
+      let playerMailSheetTouchVelocity = 0;
+      let playerMailSheetTouchDelta = 0;
+      let playerMailSheetTouchDragging = false;
 
-      function resetPlayerMailDrag(animate = true) {
+      function cancelPlayerMailMotion() {
+        try { playerMailSheetMotion?.cancel?.(); } catch {}
+        try { playerMailBackdropMotion?.cancel?.(); } catch {}
+        playerMailSheetMotion = null;
+        playerMailBackdropMotion = null;
+      }
+
+      function clearPlayerMailMotionStyles() {
+        const dialog = playerMailDialogEl;
+        const layer = playerMailLayerEl;
+        if (dialog) {
+          dialog.style.transform = &quot;&quot;;
+          dialog.style.transition = &quot;&quot;;
+          dialog.style.opacity = &quot;&quot;;
+          dialog.style.animation = &quot;&quot;;
+          dialog.style.willChange = &quot;&quot;;
+        }
+        if (layer) {
+          layer.style.background = &quot;&quot;;
+          layer.style.backdropFilter = &quot;&quot;;
+          layer.style.webkitBackdropFilter = &quot;&quot;;
+          layer.style.transition = &quot;&quot;;
+          layer.style.willChange = &quot;&quot;;
+        }
+      }
+
+      function playerMailBackdropProgressForOffset(offset, sheetHeight) {
+        const height = Math.max(220, Number(sheetHeight) || 0);
+        const distance = Math.max(0, Number(offset) || 0);
+        return Math.max(0, Math.min(1, distance / Math.max(260, height * .88)));
+      }
+
+      function applyPlayerMailBackdropProgress(progress) {
+        if (!playerMailLayerEl) return;
+        const p = Math.max(0, Math.min(1, Number(progress) || 0));
+        const alpha = .32 * (1 - p);
+        const blur = 6 * (1 - p);
+        playerMailLayerEl.style.background = `rgba(67,42,50,${alpha.toFixed(4)})`;
+        playerMailLayerEl.style.backdropFilter = `blur(${blur.toFixed(2)}px)`;
+        playerMailLayerEl.style.webkitBackdropFilter = `blur(${blur.toFixed(2)}px)`;
+      }
+
+      function resetPlayerMailDragState() {
+        if (playerMailDragPointerId !== null) {
+          try { playerMailDragHandleEl?.releasePointerCapture?.(playerMailDragPointerId); } catch {}
+        }
         playerMailDragPointerId = null;
         playerMailDragStartY = 0;
-        playerMailDragDistance = 0;
-        playerMailDragStartedAt = 0;
+        playerMailDragDelta = 0;
+        playerMailDragLastY = 0;
+        playerMailDragLastTs = 0;
+        playerMailDragVelocity = 0;
+        playerMailDragArmed = false;
+        playerMailDragHandleEl?.classList.remove(&quot;is-dragging&quot;, &quot;is-armed&quot;);
+      }
+
+      function resetPlayerMailSheetTouch() {
+        playerMailSheetTouchId = null;
+        playerMailSheetTouchStartX = 0;
+        playerMailSheetTouchStartY = 0;
+        playerMailSheetTouchLastY = 0;
+        playerMailSheetTouchLastTs = 0;
+        playerMailSheetTouchVelocity = 0;
+        playerMailSheetTouchDelta = 0;
+        playerMailSheetTouchDragging = false;
+        playerMailDialogEl?.classList.remove(&quot;is-player-mail-full-dragging&quot;);
+        playerMailDragHandleEl?.classList.remove(&quot;is-armed&quot;);
+      }
+
+      function resetPlayerMailForOpen() {
+        if (playerMailCloseTimer) { clearTimeout(playerMailCloseTimer); playerMailCloseTimer = 0; }
+        ++playerMailMotionSerial;
+        cancelPlayerMailMotion();
+        playerMailDismissAnimating = false;
+        resetPlayerMailDragState();
+        resetPlayerMailSheetTouch();
+        clearPlayerMailMotionStyles();
+        if (playerMailDialogEl) playerMailDialogEl.scrollTop = 0;
+      }
+
+      function settlePlayerMailDrag(startOffset = 0) {
         const dialog = playerMailDialogEl;
-        if (!dialog) return;
-        dialog.classList.remove(&quot;is-player-mail-dragging&quot;);
-        if (animate) {
-          dialog.style.transition = &quot;transform .18s cubic-bezier(.2,.82,.2,1), opacity .18s ease&quot;;
-          dialog.style.transform = &quot;translate3d(0, 0, 0)&quot;;
-          dialog.style.opacity = &quot;1&quot;;
-          window.setTimeout(() =&gt; {
-            if (playerMailDragPointerId === null &amp;&amp; dialog.isConnected) dialog.style.transition = &quot;&quot;;
-          }, 190);
-          return;
+        const layer = playerMailLayerEl;
+        if (!dialog || !layer) return;
+        const motionSerial = ++playerMailMotionSerial;
+        cancelPlayerMailMotion();
+        const offset = Math.max(0, Number(startOffset) || 0);
+        const sheetHeight = Math.max(220, dialog.offsetHeight || dialog.getBoundingClientRect().height || 0);
+        const startProgress = playerMailBackdropProgressForOffset(offset, sheetHeight);
+        const duration = Math.round(Math.max(240, Math.min(330, 255 + offset * .24)));
+        const easing = &quot;cubic-bezier(.32,.72,0,1)&quot;;
+        const from = offset &gt; 0 ? `translate3d(0,${Math.round(offset)}px,0)` : (dialog.style.transform || &quot;translate3d(0,0,0)&quot;);
+        dialog.style.animation = &quot;none&quot;;
+        dialog.style.transition = &quot;none&quot;;
+        dialog.style.willChange = &quot;transform&quot;;
+        layer.style.willChange = &quot;background,backdrop-filter&quot;;
+        applyPlayerMailBackdropProgress(startProgress);
+        let nativeMotion = false;
+        if (typeof dialog.animate === &quot;function&quot; &amp;&amp; typeof layer.animate === &quot;function&quot;) {
+          try {
+            playerMailSheetMotion = dialog.animate([
+              { transform: from },
+              { transform: &quot;translate3d(0,-1.5px,0)&quot;, offset: .88 },
+              { transform: &quot;translate3d(0,0,0)&quot; }
+            ], { duration, easing, fill: &quot;forwards&quot; });
+            const startAlpha = .32 * (1 - startProgress);
+            const startBlur = 6 * (1 - startProgress);
+            playerMailBackdropMotion = layer.animate([
+              { background: `rgba(67,42,50,${startAlpha.toFixed(4)})`, backdropFilter: `blur(${startBlur.toFixed(2)}px)`, webkitBackdropFilter: `blur(${startBlur.toFixed(2)}px)` },
+              { background: &quot;rgba(67,42,50,.32)&quot;, backdropFilter: &quot;blur(6px)&quot;, webkitBackdropFilter: &quot;blur(6px)&quot; }
+            ], { duration: Math.min(duration, 300), easing, fill: &quot;forwards&quot; });
+            nativeMotion = true;
+          } catch { cancelPlayerMailMotion(); }
         }
-        dialog.style.transition = &quot;&quot;;
-        dialog.style.transform = &quot;&quot;;
-        dialog.style.opacity = &quot;&quot;;
+        if (!nativeMotion) {
+          dialog.style.transition = `transform ${duration}ms ${easing}`;
+          dialog.style.transform = &quot;translate3d(0,0,0)&quot;;
+          layer.style.transition = `background ${Math.min(duration,300)}ms ${easing},backdrop-filter ${Math.min(duration,300)}ms ${easing}`;
+          requestAnimationFrame(() =&gt; applyPlayerMailBackdropProgress(0));
+        }
+        setTimeout(() =&gt; {
+          if (motionSerial === playerMailMotionSerial &amp;&amp; !playerMailDismissAnimating) {
+            cancelPlayerMailMotion();
+            clearPlayerMailMotionStyles();
+          }
+        }, duration + 24);
+      }
+
+      function closePlayerMail(options = {}) {
+        const layer = playerMailLayerEl;
+        const dialog = playerMailDialogEl;
+        if (!layer || layer.hidden || playerMailDismissAnimating) return;
+        const finalize = () =&gt; {
+          if (playerMailCloseTimer) { clearTimeout(playerMailCloseTimer); playerMailCloseTimer = 0; }
+          ++playerMailMotionSerial;
+          cancelPlayerMailMotion();
+          playerMailDismissAnimating = false;
+          resetPlayerMailDragState();
+          resetPlayerMailSheetTouch();
+          layer.hidden = true;
+          clearPlayerMailMotionStyles();
+          playerMailActiveLetter = null;
+          if (playerMailContentEl) playerMailContentEl.innerHTML = &quot;&quot;;
+        };
+        const reduced = Boolean(window.matchMedia?.(&quot;(prefers-reduced-motion: reduce)&quot;)?.matches);
+        if (options?.immediate === true || reduced || !dialog) { finalize(); return; }
+        playerMailDismissAnimating = true;
+        ++playerMailMotionSerial;
+        cancelPlayerMailMotion();
+        resetPlayerMailDragState();
+        resetPlayerMailSheetTouch();
+        const offset = Math.max(0, Number(options?.offset) || 0);
+        const velocity = Math.max(0, Number(options?.velocity) || 0);
+        const sheetHeight = Math.max(220, dialog.offsetHeight || dialog.getBoundingClientRect().height || 0);
+        const travel = Math.max(sheetHeight + 44, offset + sheetHeight * .84);
+        const startProgress = playerMailBackdropProgressForOffset(offset, sheetHeight);
+        const speedBoost = Math.min(90, velocity * 60);
+        const dragBoost = Math.min(52, offset * .15);
+        const duration = Math.round(Math.max(300, Math.min(420, 410 - speedBoost - dragBoost)));
+        const easing = &quot;cubic-bezier(.32,.72,0,1)&quot;;
+        const startTransform = offset &gt; 0 ? `translate3d(0,${Math.round(offset)}px,0)` : (dialog.style.transform || &quot;translate3d(0,0,0)&quot;);
+        dialog.style.animation = &quot;none&quot;;
+        dialog.style.transition = &quot;none&quot;;
+        dialog.style.willChange = &quot;transform&quot;;
+        layer.style.willChange = &quot;background,backdrop-filter&quot;;
+        applyPlayerMailBackdropProgress(startProgress);
+        let nativeMotion = false;
+        if (typeof dialog.animate === &quot;function&quot; &amp;&amp; typeof layer.animate === &quot;function&quot;) {
+          try {
+            playerMailSheetMotion = dialog.animate([
+              { transform: startTransform },
+              { transform: `translate3d(0,${Math.round(travel)}px,0)` }
+            ], { duration, easing, fill: &quot;forwards&quot; });
+            const startAlpha = .32 * (1 - startProgress);
+            const startBlur = 6 * (1 - startProgress);
+            playerMailBackdropMotion = layer.animate([
+              { background: `rgba(67,42,50,${startAlpha.toFixed(4)})`, backdropFilter: `blur(${startBlur.toFixed(2)}px)`, webkitBackdropFilter: `blur(${startBlur.toFixed(2)}px)` },
+              { background: &quot;rgba(67,42,50,0)&quot;, backdropFilter: &quot;blur(0)&quot;, webkitBackdropFilter: &quot;blur(0)&quot; }
+            ], { duration: Math.min(duration, 310), easing, fill: &quot;forwards&quot; });
+            nativeMotion = true;
+          } catch { cancelPlayerMailMotion(); }
+        }
+        if (!nativeMotion) {
+          dialog.style.transition = `transform ${duration}ms ${easing}`;
+          dialog.style.transform = `translate3d(0,${Math.round(travel)}px,0)`;
+          layer.style.transition = `background ${Math.min(duration,310)}ms ${easing},backdrop-filter ${Math.min(duration,310)}ms ${easing}`;
+          requestAnimationFrame(() =&gt; applyPlayerMailBackdropProgress(1));
+        }
+        playerMailCloseTimer = window.setTimeout(finalize, duration + 34);
       }
 
       function installPlayerMailSwipe() {
         const dialog = playerMailDialogEl;
         const handle = playerMailDragHandleEl;
-        if (!dialog || !handle) return;
+        const layer = playerMailLayerEl;
+        if (!dialog || !handle || !layer) return;
+
         handle.addEventListener(&quot;pointerdown&quot;, (event) =&gt; {
-          if (playerMailLayerEl?.hidden || playerMailDragPointerId !== null) return;
+          if (playerMailDismissAnimating || layer.hidden || playerMailDragPointerId !== null) return;
+          if (event.pointerType === &quot;mouse&quot; &amp;&amp; event.button !== 0) return;
+          event.preventDefault();
+          ++playerMailMotionSerial;
+          cancelPlayerMailMotion();
           playerMailDragPointerId = event.pointerId;
           playerMailDragStartY = Number(event.clientY || 0);
-          playerMailDragDistance = 0;
-          playerMailDragStartedAt = performance.now();
+          playerMailDragDelta = 0;
+          playerMailDragLastY = playerMailDragStartY;
+          playerMailDragLastTs = performance.now();
+          playerMailDragVelocity = 0;
+          playerMailDragArmed = false;
+          dialog.style.animation = &quot;none&quot;;
+          dialog.style.transition = &quot;none&quot;;
+          dialog.style.willChange = &quot;transform&quot;;
+          layer.style.willChange = &quot;background,backdrop-filter&quot;;
           dialog.classList.add(&quot;is-player-mail-dragging&quot;);
+          handle.classList.add(&quot;is-dragging&quot;);
           try { handle.setPointerCapture(event.pointerId); } catch {}
-          event.preventDefault();
         });
+
         handle.addEventListener(&quot;pointermove&quot;, (event) =&gt; {
-          if (event.pointerId !== playerMailDragPointerId) return;
-          const distance = Math.max(0, Number(event.clientY || 0) - playerMailDragStartY);
-          playerMailDragDistance = Math.min(distance, Math.max(220, window.innerHeight * .5));
-          dialog.style.transform = `translate3d(0, ${playerMailDragDistance}px, 0)`;
-          dialog.style.opacity = String(Math.max(.58, 1 - playerMailDragDistance / 520));
+          if (event.pointerId !== playerMailDragPointerId || !playerMailDragStartY || playerMailDismissAnimating) return;
           event.preventDefault();
+          const currentY = Number(event.clientY || 0);
+          const nowTs = performance.now();
+          const dt = Math.max(1, nowTs - playerMailDragLastTs);
+          const step = currentY - playerMailDragLastY;
+          playerMailDragVelocity = step / dt;
+          playerMailDragLastY = currentY;
+          playerMailDragLastTs = nowTs;
+          playerMailDragDelta = Math.max(0, currentY - playerMailDragStartY);
+          const sheetHeight = Math.max(220, dialog.offsetHeight || dialog.getBoundingClientRect().height || 0);
+          const closeThreshold = Math.max(185, Math.min(380, sheetHeight * .55));
+          const manualOffset = Math.min(sheetHeight * .76, playerMailDragDelta * .96);
+          dialog.style.transform = `translate3d(0,${Math.round(manualOffset)}px,0)`;
+          applyPlayerMailBackdropProgress(playerMailBackdropProgressForOffset(manualOffset, sheetHeight));
+          if (!playerMailDragArmed &amp;&amp; playerMailDragDelta &gt;= closeThreshold) {
+            playerMailDragArmed = true;
+            handle.classList.add(&quot;is-armed&quot;);
+            hapticSelection(70);
+          } else if (playerMailDragArmed &amp;&amp; playerMailDragDelta &lt; closeThreshold * .88) {
+            playerMailDragArmed = false;
+            handle.classList.remove(&quot;is-armed&quot;);
+          }
         });
-        const finishDrag = (event, cancelled = false) =&gt; {
+
+        const finishHandleDrag = (event, cancelled = false) =&gt; {
           if (event.pointerId !== playerMailDragPointerId) return;
           try { handle.releasePointerCapture(event.pointerId); } catch {}
-          const elapsed = Math.max(1, performance.now() - playerMailDragStartedAt);
-          const velocity = playerMailDragDistance / elapsed;
-          const threshold = Math.max(78, Math.min(118, window.innerHeight * .115));
-          const shouldClose = !cancelled &amp;&amp; (playerMailDragDistance &gt;= threshold || (playerMailDragDistance &gt;= 46 &amp;&amp; velocity &gt; .62));
-          playerMailDragPointerId = null;
+          const sheetHeight = Math.max(220, dialog.offsetHeight || dialog.getBoundingClientRect().height || 0);
+          const closeThreshold = Math.max(185, Math.min(380, sheetHeight * .55));
+          const closeByDistance = !cancelled &amp;&amp; playerMailDragDelta &gt;= closeThreshold;
+          const closeByFlick = !cancelled &amp;&amp; playerMailDragDelta &gt;= closeThreshold * .68 &amp;&amp; playerMailDragVelocity &gt; 1.05;
+          const manualOffset = Math.min(sheetHeight * .76, playerMailDragDelta * .96);
+          const releaseVelocity = Math.max(0, playerMailDragVelocity);
           dialog.classList.remove(&quot;is-player-mail-dragging&quot;);
-          if (shouldClose) {
-            dialog.style.transition = &quot;transform .16s ease-in, opacity .16s ease-in&quot;;
-            dialog.style.transform = `translate3d(0, ${Math.max(window.innerHeight * .62, 420)}px, 0)`;
-            dialog.style.opacity = &quot;0&quot;;
-            window.setTimeout(() =&gt; closePlayerMail(), 145);
+          if (closeByDistance || closeByFlick) {
+            resetPlayerMailDragState();
+            hapticImpact(&quot;light&quot;, 40);
+            closePlayerMail({ offset: manualOffset, velocity: releaseVelocity, fromDrag: true });
             return;
           }
-          resetPlayerMailDrag(true);
+          resetPlayerMailDragState();
+          settlePlayerMailDrag(manualOffset);
         };
-        handle.addEventListener(&quot;pointerup&quot;, (event) =&gt; finishDrag(event, false));
-        handle.addEventListener(&quot;pointercancel&quot;, (event) =&gt; finishDrag(event, true));
-      }
+        handle.addEventListener(&quot;pointerup&quot;, (event) =&gt; finishHandleDrag(event, false));
+        handle.addEventListener(&quot;pointercancel&quot;, (event) =&gt; finishHandleDrag(event, true));
 
+        const touchByIdentifier = (touches, id) =&gt; {
+          for (const touch of Array.from(touches || [])) if (touch.identifier === id) return touch;
+          return null;
+        };
+        const isInteractiveTarget = (target) =&gt; target instanceof Element &amp;&amp; Boolean(target.closest(&quot;button,a,input,select,textarea,[contenteditable=&#x27;true&#x27;],[role=&#x27;button&#x27;]&quot;));
 
-      function closePlayerMail() {
-        if (!playerMailLayerEl) return;
-        resetPlayerMailDrag(false);
-        playerMailLayerEl.hidden=true;
-        playerMailActiveLetter=null;
-        if (playerMailContentEl) playerMailContentEl.innerHTML=&quot;&quot;;
+        dialog.addEventListener(&quot;touchstart&quot;, (event) =&gt; {
+          if (playerMailDismissAnimating || layer.hidden || event.touches?.length !== 1) return;
+          if (event.target instanceof Element &amp;&amp; event.target.closest(&quot;[data-player-mail-drag-handle]&quot;)) return;
+          if (isInteractiveTarget(event.target)) return;
+          if ((dialog.scrollTop || 0) &gt; 2) return;
+          const touch = event.touches[0];
+          playerMailSheetTouchId = touch.identifier;
+          playerMailSheetTouchStartX = Number(touch.clientX || 0);
+          playerMailSheetTouchStartY = Number(touch.clientY || 0);
+          playerMailSheetTouchLastY = playerMailSheetTouchStartY;
+          playerMailSheetTouchLastTs = performance.now();
+          playerMailSheetTouchVelocity = 0;
+          playerMailSheetTouchDelta = 0;
+          playerMailSheetTouchDragging = false;
+        }, { passive: false });
+
+        dialog.addEventListener(&quot;touchmove&quot;, (event) =&gt; {
+          if (playerMailSheetTouchId === null || playerMailDismissAnimating) return;
+          const touch = touchByIdentifier(event.touches, playerMailSheetTouchId);
+          if (!touch) return;
+          const currentX = Number(touch.clientX || 0);
+          const currentY = Number(touch.clientY || 0);
+          const dy = currentY - playerMailSheetTouchStartY;
+          const dx = currentX - playerMailSheetTouchStartX;
+          if (!playerMailSheetTouchDragging) {
+            if (Math.abs(dy) &lt; 9) return;
+            if (dy &lt;= 0 || Math.abs(dx) &gt; Math.abs(dy) * .82) { resetPlayerMailSheetTouch(); return; }
+            if ((dialog.scrollTop || 0) &gt; 2) { resetPlayerMailSheetTouch(); return; }
+            playerMailSheetTouchDragging = true;
+            ++playerMailMotionSerial;
+            cancelPlayerMailMotion();
+            dialog.scrollTop = 0;
+            dialog.style.animation = &quot;none&quot;;
+            dialog.style.transition = &quot;none&quot;;
+            dialog.style.willChange = &quot;transform&quot;;
+            layer.style.willChange = &quot;background,backdrop-filter&quot;;
+            dialog.classList.add(&quot;is-player-mail-full-dragging&quot;);
+          }
+          event.preventDefault();
+          const nowTs = performance.now();
+          const dt = Math.max(1, nowTs - playerMailSheetTouchLastTs);
+          const step = currentY - playerMailSheetTouchLastY;
+          playerMailSheetTouchVelocity = step / dt;
+          playerMailSheetTouchLastY = currentY;
+          playerMailSheetTouchLastTs = nowTs;
+          playerMailSheetTouchDelta = Math.max(0, dy);
+          const sheetHeight = Math.max(220, dialog.offsetHeight || dialog.getBoundingClientRect().height || 0);
+          const closeThreshold = Math.max(185, Math.min(380, sheetHeight * .55));
+          const manualOffset = Math.min(sheetHeight * .90, playerMailSheetTouchDelta * .98);
+          dialog.style.transform = `translate3d(0,${Math.round(manualOffset)}px,0)`;
+          applyPlayerMailBackdropProgress(playerMailBackdropProgressForOffset(manualOffset, sheetHeight));
+          if (playerMailSheetTouchDelta &gt;= closeThreshold) handle.classList.add(&quot;is-armed&quot;);
+          else if (playerMailSheetTouchDelta &lt; closeThreshold * .88) handle.classList.remove(&quot;is-armed&quot;);
+        }, { passive: false });
+
+        const finishSheetTouch = (event, cancelled = false) =&gt; {
+          if (playerMailSheetTouchId === null) return;
+          const changed = touchByIdentifier(event.changedTouches, playerMailSheetTouchId);
+          if (!changed &amp;&amp; !cancelled) return;
+          const sheetHeight = Math.max(220, dialog.offsetHeight || dialog.getBoundingClientRect().height || 0);
+          const closeThreshold = Math.max(185, Math.min(380, sheetHeight * .55));
+          const closeByDistance = !cancelled &amp;&amp; playerMailSheetTouchDelta &gt;= closeThreshold;
+          const closeByFlick = !cancelled &amp;&amp; playerMailSheetTouchDelta &gt;= closeThreshold * .68 &amp;&amp; playerMailSheetTouchVelocity &gt; 1.05;
+          const manualOffset = Math.min(sheetHeight * .90, playerMailSheetTouchDelta * .98);
+          const releaseVelocity = Math.max(0, playerMailSheetTouchVelocity);
+          const shouldClose = playerMailSheetTouchDragging &amp;&amp; (closeByDistance || closeByFlick);
+          const wasDragging = playerMailSheetTouchDragging;
+          resetPlayerMailSheetTouch();
+          if (shouldClose) {
+            hapticImpact(&quot;light&quot;, 40);
+            closePlayerMail({ offset: manualOffset, velocity: releaseVelocity, fromDrag: true });
+            return;
+          }
+          if (wasDragging || manualOffset &gt; 0) settlePlayerMailDrag(manualOffset);
+        };
+        dialog.addEventListener(&quot;touchend&quot;, (event) =&gt; finishSheetTouch(event, false), { passive: false });
+        dialog.addEventListener(&quot;touchcancel&quot;, (event) =&gt; finishSheetTouch(event, true), { passive: false });
       }
 
       function renderPlayerMailLetter(item) {
         if (!playerMailContentEl || !item) return;
-        playerMailActiveLetter=item;
-        const rewards=(Array.isArray(item.rewards)?item.rewards:[]).map((reward)=&gt;`&lt;span class=&quot;player-gift-reward player-mail-reward&quot;&gt;${giftRewardVisualMarkup(reward)}&lt;span&gt;${escapePurchaseText(reward?.label||&quot;Награда&quot;)}&lt;/span&gt;&lt;/span&gt;`).join(&quot;&quot;);
-        const claimed=item.status===&quot;claimed&quot;,claiming=item.status===&quot;claiming&quot;,hasRewards=Boolean(item.hasRewards)||rewards.length&gt;0;
-        const image=item.imageUrl?`&lt;img class=&quot;player-mail-art&quot; src=&quot;${escapePurchaseText(item.imageUrl)}&quot; alt=&quot;&quot; loading=&quot;lazy&quot; decoding=&quot;async&quot;&gt;`:`&lt;div class=&quot;player-mail-symbol&quot; aria-hidden=&quot;true&quot;&gt;${playerMailKindIcon({...item,hasRewards})}&lt;/div&gt;`;
-        const body=item.message||item.body||item.reason||&quot;Для вас новое письмо от команды «Сладкого Забега».&quot;;
-        playerMailContentEl.innerHTML=`${image}&lt;span class=&quot;player-mail-kicker&quot;&gt;${hasRewards?&quot;Письмо с наградой&quot;:&quot;Почта Зеффи&quot;}&lt;/span&gt;&lt;h2 id=&quot;player-mail-title&quot;&gt;${escapePurchaseText(item.title)}&lt;/h2&gt;&lt;p class=&quot;player-mail-body&quot;&gt;${escapePurchaseText(body)}&lt;/p&gt;${item.reason&amp;&amp;(item.message||item.body)?`&lt;p class=&quot;player-mail-note&quot;&gt;&lt;strong&gt;Причина:&lt;/strong&gt; ${escapePurchaseText(item.reason)}&lt;/p&gt;`:&quot;&quot;}${hasRewards?`&lt;div class=&quot;player-mail-reward-title&quot;&gt;Вложение&lt;/div&gt;&lt;div class=&quot;player-gift-rewards player-mail-rewards&quot;&gt;${rewards}&lt;/div&gt;`:&quot;&quot;}${claimed?`&lt;div class=&quot;player-mail-claimed&quot;&gt;✓ Награда получена&lt;/div&gt;`:&quot;&quot;}&lt;button class=&quot;player-mail-primary&quot; data-player-mail-action type=&quot;button&quot; ${claiming?&quot;disabled&quot;:&quot;&quot;}&gt;${hasRewards&amp;&amp;!claimed?(claiming?&quot;Получаем…&quot;:&quot;Получить и закрыть&quot;):&quot;Закрыть&quot;}&lt;/button&gt;`;
-        const action=playerMailContentEl.querySelector(&quot;[data-player-mail-action]&quot;);
-        if(action)action.addEventListener(&quot;click&quot;,async()=&gt;{
-          if(!hasRewards||claimed){closePlayerMail();return;}
-          const ok=await claimPlayerGiftClient(item.id,action);
-          if(ok){closePlayerMail();renderPlayerGiftInbox();}
+        playerMailActiveLetter = item;
+        const rewards = (Array.isArray(item.rewards) ? item.rewards : []).map((reward) =&gt; `&lt;span class=&quot;player-gift-reward player-mail-reward&quot;&gt;${giftRewardVisualMarkup(reward)}&lt;span&gt;${escapePurchaseText(reward?.label || &quot;Награда&quot;)}&lt;/span&gt;&lt;/span&gt;`).join(&quot;&quot;);
+        const claimed = item.status === &quot;claimed&quot;;
+        const claiming = item.status === &quot;claiming&quot;;
+        const hasRewards = Boolean(item.hasRewards) || rewards.length &gt; 0;
+        const visual = item.imageUrl
+          ? `&lt;div class=&quot;player-mail-artbox&quot;&gt;&lt;img class=&quot;player-mail-art&quot; src=&quot;${escapePurchaseText(item.imageUrl)}&quot; alt=&quot;&quot; loading=&quot;lazy&quot; decoding=&quot;async&quot;&gt;&lt;/div&gt;`
+          : `&lt;div class=&quot;player-mail-symbol&quot; aria-hidden=&quot;true&quot;&gt;${playerMailKindIcon({...item,hasRewards})}&lt;/div&gt;`;
+        const body = item.message || item.body || item.reason || &quot;Для вас новое письмо от команды «Сладкого Забега».&quot;;
+        const claimButton = hasRewards &amp;&amp; !claimed
+          ? `&lt;button class=&quot;player-mail-primary&quot; data-player-mail-action type=&quot;button&quot; ${claiming ? &quot;disabled&quot; : &quot;&quot;}&gt;${claiming ? &quot;Получаем…&quot; : &quot;Получить награду&quot;}&lt;/button&gt;`
+          : &quot;&quot;;
+        playerMailContentEl.innerHTML = `&lt;div class=&quot;player-mail-head&quot;&gt;${visual}&lt;div class=&quot;player-mail-head-copy&quot;&gt;&lt;span class=&quot;player-mail-kicker&quot;&gt;${hasRewards ? &quot;Письмо с наградой&quot; : &quot;Почта Зеффи&quot;}&lt;/span&gt;&lt;h2 id=&quot;player-mail-title&quot;&gt;${escapePurchaseText(item.title)}&lt;/h2&gt;&lt;/div&gt;&lt;/div&gt;&lt;div class=&quot;player-mail-message&quot;&gt;&lt;p class=&quot;player-mail-body&quot;&gt;${escapePurchaseText(body)}&lt;/p&gt;&lt;/div&gt;${item.reason &amp;&amp; (item.message || item.body) ? `&lt;p class=&quot;player-mail-note&quot;&gt;&lt;strong&gt;Причина:&lt;/strong&gt; ${escapePurchaseText(item.reason)}&lt;/p&gt;` : &quot;&quot;}${hasRewards ? `&lt;section class=&quot;player-mail-reward-card&quot;&gt;&lt;div class=&quot;player-mail-reward-title&quot;&gt;Вложение&lt;/div&gt;&lt;div class=&quot;player-gift-rewards player-mail-rewards&quot;&gt;${rewards}&lt;/div&gt;&lt;/section&gt;` : &quot;&quot;}${claimed ? `&lt;div class=&quot;player-mail-claimed&quot;&gt;✓ Награда уже получена&lt;/div&gt;` : &quot;&quot;}${claimButton}`;
+        const action = playerMailContentEl.querySelector(&quot;[data-player-mail-action]&quot;);
+        if (action) action.addEventListener(&quot;click&quot;, async () =&gt; {
+          const ok = await claimPlayerGiftClient(item.id, action);
+          if (ok) {
+            closePlayerMail();
+            renderPlayerGiftInbox();
+          }
         });
       }
 
       function renderPlayerMailLoadError(item,error) {
-        if(!playerMailContentEl)return;
-        const title=String(item?.title||&quot;Почта Зеффи&quot;);
-        playerMailContentEl.innerHTML=`&lt;div class=&quot;player-mail-symbol&quot; aria-hidden=&quot;true&quot;&gt;💌&lt;/div&gt;&lt;span class=&quot;player-mail-kicker&quot;&gt;Почта Зеффи&lt;/span&gt;&lt;h2 id=&quot;player-mail-title&quot;&gt;${escapePurchaseText(title)}&lt;/h2&gt;&lt;p class=&quot;player-mail-body&quot;&gt;${escapePurchaseText(error?.message||&quot;Не удалось открыть письмо. Обновите почту и попробуйте ещё раз.&quot;)}&lt;/p&gt;&lt;button class=&quot;player-mail-primary&quot; data-player-mail-error-close type=&quot;button&quot;&gt;Закрыть&lt;/button&gt;`;
-        playerMailContentEl.querySelector(&quot;[data-player-mail-error-close]&quot;)?.addEventListener(&quot;click&quot;,closePlayerMail);
+        if (!playerMailContentEl) return;
+        const title = String(item?.title || &quot;Почта Зеффи&quot;);
+        playerMailContentEl.innerHTML = `&lt;div class=&quot;player-mail-head&quot;&gt;&lt;div class=&quot;player-mail-symbol&quot; aria-hidden=&quot;true&quot;&gt;💌&lt;/div&gt;&lt;div class=&quot;player-mail-head-copy&quot;&gt;&lt;span class=&quot;player-mail-kicker&quot;&gt;Почта Зеффи&lt;/span&gt;&lt;h2 id=&quot;player-mail-title&quot;&gt;${escapePurchaseText(title)}&lt;/h2&gt;&lt;/div&gt;&lt;/div&gt;&lt;div class=&quot;player-mail-message&quot;&gt;&lt;p class=&quot;player-mail-body&quot;&gt;${escapePurchaseText(error?.message || &quot;Не удалось открыть письмо. Обновите почту и попробуйте ещё раз.&quot;)}&lt;/p&gt;&lt;/div&gt;`;
       }
 
       async function openPlayerMailLetter(mailId) {
         const item=(Array.isArray(state.playerGifts)?state.playerGifts:[]).find((entry)=&gt;String(entry?.id||&quot;&quot;)===String(mailId||&quot;&quot;));
         if(!item||!playerMailLayerEl||!telegramProfile?.initData)return;
-        resetPlayerMailDrag(false);
+        resetPlayerMailForOpen();
         playerMailLayerEl.hidden=false;
         playerMailActiveLetter=null;
-        if(playerMailContentEl)playerMailContentEl.innerHTML=`&lt;div class=&quot;player-mail-symbol&quot; aria-hidden=&quot;true&quot;&gt;💌&lt;/div&gt;&lt;span class=&quot;player-mail-kicker&quot;&gt;Почта Зеффи&lt;/span&gt;&lt;h2 id=&quot;player-mail-title&quot;&gt;${escapePurchaseText(item.title)}&lt;/h2&gt;&lt;p class=&quot;player-mail-body&quot;&gt;Загружаем письмо…&lt;/p&gt;`;
+        if(playerMailContentEl)playerMailContentEl.innerHTML=`&lt;div class=&quot;player-mail-head&quot;&gt;&lt;div class=&quot;player-mail-symbol&quot; aria-hidden=&quot;true&quot;&gt;💌&lt;/div&gt;&lt;div class=&quot;player-mail-head-copy&quot;&gt;&lt;span class=&quot;player-mail-kicker&quot;&gt;Почта Зеффи&lt;/span&gt;&lt;h2 id=&quot;player-mail-title&quot;&gt;${escapePurchaseText(item.title)}&lt;/h2&gt;&lt;/div&gt;&lt;/div&gt;&lt;div class=&quot;player-mail-loading&quot;&gt;Загружаем письмо…&lt;/div&gt;`;
         hapticImpact(&quot;light&quot;,25);
         try{
           const response=await gameFetchWithTimeout(PLAYER_GIFTS_OPEN_PATH,{method:&quot;POST&quot;,headers:{&quot;Content-Type&quot;:&quot;application/json&quot;},body:JSON.stringify({initData:String(telegramProfile.initData),mailId:String(item.id)}),cache:&quot;no-store&quot;,credentials:&quot;same-origin&quot;},7000);
