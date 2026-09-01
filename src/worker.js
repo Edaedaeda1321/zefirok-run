@@ -20570,6 +20570,20 @@ const LIVEOPS_CONTENT_IMAGES = Object.freeze({
   })
 });
 
+function liveOpsCanonicalContentImage(kindValue,itemIdValue,configuredValue=""){
+  const kind=String(kindValue||"").trim().toLowerCase(),itemId=String(itemIdValue||"").trim(),configured=String(configuredValue||"").trim();
+  if(!kind||!itemId)return configured;
+  const future=futureSeasonContentItem(kind,itemId),futureImage=String(future?.imageUrl||"").trim();
+  if(futureImage)return futureImage;
+  if(kind==="skin"&&CASE_SKINS[itemId])return ownerPanelSkinAsset(itemId);
+  if(kind==="music"){
+    const musicImage=String(CASE_MUSIC_TRACKS?.[itemId]?.imageUrl||"").trim();
+    if(musicImage)return musicImage;
+  }
+  const builtin=String(LIVEOPS_CONTENT_IMAGES?.[kind]?.[itemId]||"").trim();
+  return builtin||configured;
+}
+
 const LIVE_CONTENT_DESTINATIONS = Object.freeze(["native","case","seasonal_case","shop","season_pass","story","event","manual"]);
 const LIVE_CONTENT_STATUSES = Object.freeze(["draft","hidden","scheduled","open","archived"]);
 const LIVE_CONTENT_RELEASE_CACHE_TTL_MS = 5000;
@@ -20788,6 +20802,10 @@ async function seasonPassEffectiveCaseItems(env,caseIdValue,baseRows=null){
     const weight=Math.max(.01,Math.min(100000,Number(seasonalRoute.weight)||1));
     rows.push({item_key:`live:${key}`,reward_kind:rule.kind,item_id:rule.itemId,amount:1,weight,rarity:String(item.rarity||"epic"),title:String(item.title||rule.itemId),image_url:String(item.imageUrl||""),enabled:1,live_content:1});
   }
+  for(const row of rows){
+    const kind=String(row?.reward_kind||row?.kind||""),itemId=String(row?.item_id||row?.itemId||"");
+    if(SEASON_PASS_COSMETIC_KINDS.includes(kind))row.image_url=liveOpsCanonicalContentImage(kind,itemId,row?.image_url||row?.imageUrl||"");
+  }
   return rows;
 }
 
@@ -20840,15 +20858,15 @@ async function ensureLiveOpsAdminSchema(env) {
       const contentStatements = [];
       for (const [kind, catalog] of Object.entries({ avatar: CASE_AVATARS, frame: CASE_FRAMES, trail: CASE_TRAILS, skin: CASE_SKINS })) {
         for (const [itemId, item] of Object.entries(catalog)) {
-          const imageUrl = String(LIVEOPS_CONTENT_IMAGES[kind]?.[itemId] || "");
+          const imageUrl = liveOpsCanonicalContentImage(kind,itemId,String(item?.imageUrl||""));
           contentStatements.push(env.DB.prepare(
             `INSERT OR IGNORE INTO liveops_content_items (item_kind, item_id, title, rarity, weight, enabled, is_new, legendary_only, image_url, updated_at, updated_by)
              VALUES (?, ?, ?, ?, ?, 1, ?, ?, ?, ?, 'system')`
           ).bind(kind, itemId, String(item.title || itemId), String(item.rarity || "common"), Math.max(0, Number(item.weight || 1)), item.isNew ? 1 : 0, item.legendaryOnly ? 1 : 0, imageUrl, now));
           if (imageUrl) contentStatements.push(env.DB.prepare(
-            `UPDATE liveops_content_items SET image_url = ?, updated_at = ?, updated_by = 'asset-backfill-v0.56'
-             WHERE item_kind = ? AND item_id = ? AND image_url = ''`
-          ).bind(imageUrl, now, kind, itemId));
+            `UPDATE liveops_content_items SET image_url = ?, updated_at = ?, updated_by = 'asset-canonical-v0.58'
+             WHERE item_kind = ? AND item_id = ? AND COALESCE(image_url,'') <> ?`
+          ).bind(imageUrl, now, kind, itemId, imageUrl));
         }
       }
       if (contentStatements.length) await env.DB.batch(contentStatements);
@@ -20900,6 +20918,7 @@ function invalidateLiveOpsConfigCache() {
   liveOpsConfigMemory.generation += 1;
 }
 async function readLiveOpsConfig(env, force = false) {
+  await ensureLiveOpsAdminSchema(env);
   const nowMs = Date.now();
   if (!force && liveOpsConfigMemory.value && liveOpsConfigMemory.expiresAt > nowMs) return liveOpsConfigMemory.value;
   if (!force && liveOpsConfigMemory.promise) return liveOpsConfigMemory.promise;
@@ -20924,7 +20943,7 @@ async function readLiveOpsConfig(env, force = false) {
       enabled: Number(row.enabled || 0) === 1,
       isNew: Number(row.is_new || 0) === 1,
       legendaryOnly: Number(row.legendary_only || 0) === 1,
-      imageUrl: String(row.image_url || "")
+      imageUrl: liveOpsCanonicalContentImage(kind,String(row.item_id),row.image_url)
     };
   }
   for(const rule of releaseRules.values()){
@@ -20971,7 +20990,7 @@ function runtimeCaseCatalog(kind, baseCatalog, liveops, caseType = "") {
       isNew: override?.isNew == null ? Boolean(item.isNew) : Boolean(override.isNew),
       legendaryOnly: override?.legendaryOnly == null ? Boolean(item.legendaryOnly) : Boolean(override.legendaryOnly),
       achievementOnly:Boolean(item.achievementOnly),
-      imageUrl:String(override?.imageUrl||item.imageUrl||""),audioUrl:String(override?.audioUrl||item.audioUrl||item.src||"")
+      imageUrl:liveOpsCanonicalContentImage(kind,id,override?.imageUrl||item.imageUrl||""),audioUrl:String(override?.audioUrl||item.audioUrl||item.src||"")
     };
   }
   for(const [id,override] of Object.entries(overrides)){
@@ -29436,7 +29455,7 @@ async function openSeasonPassSeasonalCase(request,env,executionCtx=null){
       if(!SEASON_PASS_SEASONAL_CASE_RESOURCE_KINDS.includes(kind))return false;
       if(kind==='case')return Boolean(normalizeCaseType(itemId));
       return Math.max(1,Number(row.amount||1))>0;
-    }).map(row=>({item_key:String(row.item_key||row.key||`${row.reward_kind||row.kind}:${row.item_id||row.itemId}`),reward_kind:String(row.reward_kind||row.kind),item_id:String(row.item_id||row.itemId||''),amount:Math.max(1,Math.floor(Number(row.amount)||1)),weight:Number(row.weight||1),rarity:String(row.rarity||'seasonal'),title:String(row.title||''),image_url:String(row.image_url||row.imageUrl||'')}));
+    }).map(row=>{const kind=String(row.reward_kind||row.kind),itemId=String(row.item_id||row.itemId||'');return {item_key:String(row.item_key||row.key||`${kind}:${itemId}`),reward_kind:kind,item_id:itemId,amount:Math.max(1,Math.floor(Number(row.amount)||1)),weight:Number(row.weight||1),rarity:String(row.rarity||'seasonal'),title:String(row.title||''),image_url:SEASON_PASS_COSMETIC_KINDS.includes(kind)?liveOpsCanonicalContentImage(kind,itemId,row.image_url||row.imageUrl||''):String(row.image_url||row.imageUrl||'')}});
     if(!candidates.length)throw new ApiError(409,'В сезонном кейсе пока нет доступных наград.');
     const ownedShowcaseStyles=new Set((ownedShowcaseResult.results||[]).map((row)=>String(row.style_id||'')).filter(Boolean));
     const owned=(row)=>{const id=String(row.item_id),kind=String(row.reward_kind);if(kind==='showcase_style')return ownedShowcaseStyles.has(achievementShowcaseStyleId(id));if(kind==='avatar')return ensured.state.ownedAvatars?.includes(id);if(kind==='frame')return ensured.state.ownedFrames?.includes(id);if(kind==='trail')return ensured.state.ownedTrails?.includes(id);if(kind==='skin')return ensured.state.ownedSkins?.includes(id);if(kind==='music')return ensured.state.ownedMusicTracks?.includes(id);return false;};
@@ -37988,7 +38007,7 @@ async function testProjectReadLiveOpsSnapshot(env) {
         title: String(row.title || row.item_id), rarity: String(row.rarity || "common"),
         weight: Math.max(0, Number(row.weight || 0)), enabled: Number(row.enabled || 0) === 1,
         isNew: Number(row.is_new || 0) === 1, legendaryOnly: Number(row.legendary_only || 0) === 1,
-        imageUrl: String(row.image_url || "")
+        imageUrl: liveOpsCanonicalContentImage(kind,String(row.item_id),row.image_url)
       };
     }
     // Test Project intentionally receives the whole future catalog. Hidden items stay
@@ -42078,7 +42097,7 @@ function ownerPanelSeasonPassCosmeticCatalogs(liveops={content:{}},releaseRules=
       const isFuture=Boolean(future[id]),rule=isFuture?releaseRules?.get?.(liveContentReleaseKey(kind,id)):null,liveOverride=overrides?.[id]||{};
       return {
         id,title:String(liveOverride.title||item.title||id),rarity:String(liveOverride.rarity||item.rarity||"common"),
-        imageUrl:String(liveOverride.imageUrl||item.imageUrl||seasonPassCosmeticImage(kind,id)),
+        imageUrl:liveOpsCanonicalContentImage(kind,id,item.imageUrl||liveOverride.imageUrl||seasonPassCosmeticImage(kind,id)),
         audioUrl:String(item.audioUrl||item.src||""),future:isFuture,released:isFuture?Boolean(rule?.released??liveOverride.released):true,everReleased:isFuture?Boolean(rule?.everReleased??liveOverride.everReleased):true,
         status:isFuture?String(rule?.status||liveOverride.status||"hidden"):"open",releaseAt:isFuture?Number(rule?.releaseAt||liveOverride.releaseAt||0):0,routes:isFuture?(rule?.routes||liveOverride.routes||{}):{native:{enabled:true}},seasonId:isFuture?String(rule?.seasonId||liveOverride.seasonId||""):"",destinationType:isFuture?String(rule?.destinationType||liveOverride.destinationType||"manual"):"native",destinationId:isFuture?String(rule?.destinationId||liveOverride.destinationId||""):"",destinationConfig:isFuture?(rule?.destinationConfig||liveOverride.destinationConfig||{}):{},
         seasonLabel:isFuture?String(seasonMap?.get?.(String(rule?.seasonId||liveOverride.seasonId||""))?.title||""):""
@@ -42416,7 +42435,7 @@ async function ownerPanelSeasonPass(env, ctx) {
   ]);
   const nowMs = Date.now();const seasonRows=seasonsResult.results||[];
   const seasonMap=new Map(seasonRows.map(row=>[String(row.season_id),seasonPassSeasonFromRow(row,configuredSeasonPassState(env,nowMs),nowMs)]));
-  const caseItemsById=new Map();for(const row of [...(caseItemsResult.results||[]),...(caseSpecialItemsResult.results||[]),...(caseResourceItemsResult.results||[])]){const id=String(row.case_id);const list=caseItemsById.get(id)||[];list.push({key:String(row.item_key),kind:String(row.reward_kind),itemId:String(row.item_id),amount:Math.max(1,Number(row.amount||1)),weight:Number(row.weight||1),rarity:String(row.rarity||''),title:String(row.title||''),imageUrl:String(row.image_url||''),enabled:Number(row.enabled||0)===1,resource:SEASON_PASS_SEASONAL_CASE_RESOURCE_KINDS.includes(String(row.reward_kind||''))});caseItemsById.set(id,list);}
+  const caseItemsById=new Map();for(const row of [...(caseItemsResult.results||[]),...(caseSpecialItemsResult.results||[]),...(caseResourceItemsResult.results||[])]){const id=String(row.case_id),kind=String(row.reward_kind),itemId=String(row.item_id);const list=caseItemsById.get(id)||[];list.push({key:String(row.item_key),kind,itemId,amount:Math.max(1,Number(row.amount||1)),weight:Number(row.weight||1),rarity:String(row.rarity||''),title:String(row.title||''),imageUrl:SEASON_PASS_COSMETIC_KINDS.includes(kind)?liveOpsCanonicalContentImage(kind,itemId,row.image_url):String(row.image_url||''),enabled:Number(row.enabled||0)===1,resource:SEASON_PASS_SEASONAL_CASE_RESOURCE_KINDS.includes(kind)});caseItemsById.set(id,list);}
   const seasonalCases=(caseDefinitionsResult.results||[]).map(row=>{
     const view=ownerPanelSeasonalCaseView(row,seasonMap);const items=(caseItemsById.get(view.caseId)||[]).slice();const known=new Set(items.map(item=>`${item.kind}:${item.itemId}`));
     for(const [kind,catalog] of Object.entries(liveops?.content||{})){for(const [itemId,item] of Object.entries(catalog||{})){const seasonalRoute=liveContentRoute(item,"seasonal_case",view.caseId);if(item?.enabled!==true||!seasonalRoute||!view.seasonId||String(item.seasonId||"")!==String(view.seasonId))continue;const key=`${kind}:${itemId}`;if(known.has(key))continue;items.push({key:`live:${key}`,kind,itemId,weight:Math.max(.01,Number(seasonalRoute.weight)||1),rarity:String(item.rarity||""),title:String(item.title||itemId),imageUrl:String(item.imageUrl||""),enabled:true,liveContent:true});known.add(key);}}

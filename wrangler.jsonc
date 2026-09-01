@@ -7,7 +7,7 @@
 		"enabled": true
 	},
 	"build": {
-		"command": "node scripts/check-assets.mjs --news-manifest && node scripts/check-assets.mjs --new-only"
+		"command": "node scripts/check-assets.mjs --news-manifest && node scripts/check-assets.mjs --new-only && node scripts/check-live-content-assets.mjs"
 	},
 	"assets": {
 		"directory": ".",

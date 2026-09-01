@@ -1,46 +1,17 @@
-Сладкий Забег — витрина достижений / рейтинг / сезон 3
-BASE main: 30fe51589b48e0a20be6af733f309d1464b96ee9
+Сладкий Забег — исправление потерянных Live Content ассетов
+База: актуальный main на момент проверки, commit 554d3c92e6b5ad9d360a6e6ed754c99e3999c356.
 
-Что изменено:
-1. rating.html
-   - мини-профиль игрока в рейтинге больше не рисует старую универсальную полку;
-   - используется реальный выбранный стиль витрины (standard / gold / season1 / season2 / season3);
-   - из API принимается полный descriptor стиля: id, title, layout, imageUrl, seasonLabel;
-   - добавлены fallback-описания для старых ответов сервера;
-   - достижения внутри окон увеличены до 50 px (43 px на узких экранах).
+Что исправлено:
+1. Для встроенной косметики канонический путь к картинке из кода теперь имеет приоритет над устаревшим image_url из D1.
+2. liveops_content_items автоматически синхронизирует устаревшие image_url с каноническими путями при первом чтении LiveOps после deploy.
+3. Старые seasonal-case rows и снимки выдачи отображают/возвращают каноническую картинку косметики, даже если в D1 остался старый путь.
+4. Добавлена build-проверка скрытых/сезонных ассетов. Она извлекает /assets/... из FUTURE_SEASON_CONTENT, LIVEOPS_CONTENT_IMAGES и системного S3 seasonal-case preset и останавливает deploy, если файл физически отсутствует в deploy input.
+5. Release Gate не ослабляется: если файл реально отсутствует в опубликованном Cloudflare ASSETS, CRITICAL остаётся правильным.
 
-2. index.html
-   - достижения внутри окон профиля увеличены с 38 до 50 px;
-   - на узких экранах с 33 до 43 px;
-   - добавлена поддержка layout season3 и fallback season_3_belkino.
+ВАЖНО ПОСЛЕ MERGE:
+Нужен полный deploy из корня репозитория командой `npx wrangler deploy` (или эквивалентный Cloudflare Git deploy, который использует wrangler.jsonc и assets.directory='.'). Worker-only upload не восстановит MP3/PNG в Cloudflare Static Assets.
 
-3. achievements.html
-   - достижения внутри окон редактора витрины увеличены с 39 до 50 px;
-   - на узких экранах с 34 до 43 px;
-   - добавлена геометрия layout season3.
-
-4. src/worker.js
-   - добавлена скрытая витрина сезона 3:
-     id: season_3_belkino
-     title: Тайны Белкино
-     hidden: true
-     rewardable: true
-     unlockType: ownership
-     image: /assets/achievements/showcases/vitrina_s3.png
-   - скрытая витрина не показывается обычному игроку до получения;
-   - в Test Project rewardable-витрины по-прежнему доступны для проверки;
-   - endpoint мини-профиля рейтинга теперь передаёт полный объект showcase.style;
-   - то же добавлено в Test Project endpoint рейтинга.
-
-5. assets/achievements/showcases/vitrina_s3.png
-   - подготовлена из приложенного изображения;
-   - отдельный путь для S3, чтобы будущие изменения S1/S3 не были связаны одним URL.
-
-Проверки:
-- inline JS в achievements.html / index.html / rating.html: OK
-- embedded profile script: OK
-- node --check src/worker.js: OK
-
-Важно:
-- S3 витрина заведена скрытой по той же модели, что и скрытая витрина S2.
-- profile.html не затрагивался.
+Изменённые/новые файлы:
+- src/worker.js
+- wrangler.jsonc
+- scripts/check-live-content-assets.mjs
