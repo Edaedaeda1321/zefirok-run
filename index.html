@@ -8114,16 +8114,16 @@ html&gt;body{padding:
 #zefirok-maltipoo-runner .player-mail-layer[hidden]{display:none!important}
 #zefirok-maltipoo-runner .player-mail-dialog{position:relative;width:min(540px,100%);max-height:min(82dvh,760px);overflow:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:13px max(15px,var(--zefirok-content-safe-right,0px)) max(20px,calc(var(--zefirok-content-safe-bottom,0px) + 12px)) max(15px,var(--zefirok-content-safe-left,0px));border:1px solid rgba(231,196,180,.94);border-bottom:0;border-radius:28px 28px 0 0;background:linear-gradient(165deg,#fffdf9 0%,#fff8f6 48%,#fff2f6 100%);box-shadow:0 -18px 55px rgba(72,37,51,.19);color:#68404e;text-align:left;animation:player-mail-sheet-in .28s cubic-bezier(.22,.86,.28,1) both;transform:translateY(0);cursor:grab}
 #zefirok-maltipoo-runner .player-mail-dialog.is-player-mail-dragging,#zefirok-maltipoo-runner .player-mail-dialog.is-player-mail-full-dragging{cursor:grabbing;user-select:none;-webkit-user-select:none}
-#zefirok-maltipoo-runner .player-mail-drag-handle{display:block;width:min(420px,calc(100% - 112px));height:52px;margin:-8px auto -10px;padding:0;border:0;background:transparent;cursor:grab;touch-action:none;appearance:none;-webkit-appearance:none;-webkit-tap-highlight-color:transparent;user-select:none;position:relative;z-index:6}
-#zefirok-maltipoo-runner .player-mail-drag-handle span{position:absolute;left:50%;top:18px;display:block;width:48px;height:5px;transform:translateX(-50%);border-radius:999px;background:#c99a83;opacity:.72;transition:width .18s cubic-bezier(.32,.72,0,1),opacity .18s ease,background .18s ease;box-shadow:none}
+#zefirok-maltipoo-runner .player-mail-drag-handle{display:block;width:min(420px,calc(100% - 112px));height:44px;margin:-6px auto -8px;padding:0;border:0!important;border-radius:0!important;background:none!important;box-shadow:none!important;outline:0;cursor:grab;touch-action:none;-webkit-tap-highlight-color:transparent;user-select:none;position:relative;z-index:6}
+#zefirok-maltipoo-runner .player-mail-drag-handle span{position:absolute;left:50%;top:16px;display:block;width:48px;height:5px;transform:translateX(-50%);border-radius:999px;background:#c99a83;opacity:.72;transition:width .18s cubic-bezier(.32,.72,0,1),opacity .18s ease,background .18s ease;box-shadow:none}
 #zefirok-maltipoo-runner .player-mail-drag-handle:active span,#zefirok-maltipoo-runner .player-mail-drag-handle.is-dragging span{width:54px;opacity:.98;background:#bb816f}
 #zefirok-maltipoo-runner .player-mail-drag-handle.is-armed span{width:58px;background:#c95f86;opacity:1}
-#zefirok-maltipoo-runner .player-mail-drag-handle:focus-visible{outline:2px solid rgba(203,79,124,.32);outline-offset:-6px;border-radius:22px}
 #zefirok-maltipoo-runner .player-mail-content{display:grid;gap:12px;min-width:0}
 #zefirok-maltipoo-runner .player-mail-head{display:grid;grid-template-columns:92px minmax(0,1fr);gap:13px;align-items:center;min-width:0}
-#zefirok-maltipoo-runner .player-mail-artbox,#zefirok-maltipoo-runner .player-mail-symbol{display:grid;place-items:center;width:88px;height:88px;border:3px solid #fff;border-radius:24px;background:linear-gradient(145deg,#ffe4ee,#f8e7db);box-shadow:0 6px 14px rgba(116,57,80,.14),0 0 0 1px rgba(216,171,189,.58);overflow:hidden;box-sizing:border-box}
-#zefirok-maltipoo-runner .player-mail-art{display:block;width:100%;height:100%;object-fit:contain;object-position:center;background:rgba(255,255,255,.68)}
-#zefirok-maltipoo-runner .player-mail-symbol{font-size:38px;overflow:visible}
+#zefirok-maltipoo-runner .player-mail-head.player-mail-head--banner{display:block}
+#zefirok-maltipoo-runner .player-mail-artbox{display:grid;place-items:center;width:100%;max-height:min(38dvh,320px);overflow:hidden;border:0;border-radius:20px;background:transparent;box-shadow:none;box-sizing:border-box}
+#zefirok-maltipoo-runner .player-mail-art{display:block;max-width:100%;max-height:min(38dvh,320px);width:auto;height:auto;object-fit:contain;object-position:center;border-radius:20px;background:transparent}
+#zefirok-maltipoo-runner .player-mail-symbol{display:grid;place-items:center;width:88px;height:88px;border:3px solid #fff;border-radius:24px;background:linear-gradient(145deg,#ffe4ee,#f8e7db);box-shadow:0 6px 14px rgba(116,57,80,.14),0 0 0 1px rgba(216,171,189,.58);font-size:38px;overflow:visible;box-sizing:border-box}
 #zefirok-maltipoo-runner .player-mail-head-copy{display:grid;gap:6px;min-width:0}
 #zefirok-maltipoo-runner .player-mail-kicker{justify-self:start;display:inline-flex;align-items:center;max-width:100%;min-height:24px;padding:5px 9px;border:1px solid rgba(218,151,177,.36);border-radius:999px;background:#fff0f5;color:#b35379;font-size:8px;font-weight:950;text-transform:uppercase;letter-spacing:.055em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #zefirok-maltipoo-runner .player-mail-content h2{min-width:0;margin:0;color:#693748;font-size:21px;font-weight:950;line-height:1.08;overflow-wrap:anywhere}
@@ -8142,7 +8142,7 @@ html&gt;body{padding:
 @keyframes player-mail-backdrop-in{from{background:rgba(67,42,50,0);backdrop-filter:blur(0);-webkit-backdrop-filter:blur(0)}to{background:rgba(67,42,50,.32);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}}
 @keyframes player-mail-sheet-in{from{transform:translateY(28px);opacity:.45}to{transform:translateY(0);opacity:1}}
 @keyframes player-mail-spin{to{transform:rotate(360deg)}}
-@media(max-width:390px){#zefirok-maltipoo-runner .player-mail-dialog{padding-left:11px;padding-right:11px}#zefirok-maltipoo-runner .player-mail-head{grid-template-columns:82px minmax(0,1fr);gap:10px}#zefirok-maltipoo-runner .player-mail-artbox,#zefirok-maltipoo-runner .player-mail-symbol{width:78px;height:78px}#zefirok-maltipoo-runner .player-mail-content h2{font-size:19px}#zefirok-maltipoo-runner .player-mail-body{font-size:11px}}
+@media(max-width:390px){#zefirok-maltipoo-runner .player-mail-dialog{padding-left:11px;padding-right:11px}#zefirok-maltipoo-runner .player-mail-head{grid-template-columns:82px minmax(0,1fr);gap:10px}#zefirok-maltipoo-runner .player-mail-symbol{width:78px;height:78px}#zefirok-maltipoo-runner .player-mail-artbox,#zefirok-maltipoo-runner .player-mail-art{max-height:min(34dvh,280px)}#zefirok-maltipoo-runner .player-mail-content h2{font-size:19px}#zefirok-maltipoo-runner .player-mail-body{font-size:11px}}
 @media(prefers-reduced-motion:reduce){#zefirok-maltipoo-runner .player-mail-layer,#zefirok-maltipoo-runner .player-mail-dialog,#zefirok-maltipoo-runner .player-mail-loading::before{animation:none!important;transition:none!important}}
 #zefirok-maltipoo-runner .profile-hero{position:relative}
 #zefirok-maltipoo-runner .profile-mail-shortcut{position:absolute;right:10px;top:10px;z-index:6;display:grid;place-items:center;width:42px;height:42px;border:1px solid rgba(224,145,176,.42);border-radius:14px;background:linear-gradient(145deg,#fff,#ffe9f1);color:#a94b70;font-size:21px;box-shadow:0 6px 15px rgba(144,66,96,.12)}
@@ -11467,7 +11467,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 
   &lt;div class=&quot;player-mail-layer&quot; data-player-mail-layer hidden&gt;
     &lt;div class=&quot;player-mail-dialog&quot; role=&quot;dialog&quot; aria-modal=&quot;true&quot; aria-labelledby=&quot;player-mail-title&quot;&gt;
-      &lt;button class=&quot;player-mail-drag-handle&quot; data-player-mail-drag-handle type=&quot;button&quot; aria-label=&quot;Свернуть письмо свайпом вниз&quot;&gt;&lt;span aria-hidden=&quot;true&quot;&gt;&lt;/span&gt;&lt;/button&gt;
+      &lt;div class=&quot;player-mail-drag-handle&quot; data-player-mail-drag-handle aria-hidden=&quot;true&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/div&gt;
       &lt;div class=&quot;player-mail-content&quot; data-player-mail-content&gt;&lt;/div&gt;
     &lt;/div&gt;
   &lt;/div&gt;
@@ -19616,14 +19616,17 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         const claimed = item.status === &quot;claimed&quot;;
         const claiming = item.status === &quot;claiming&quot;;
         const hasRewards = Boolean(item.hasRewards) || rewards.length &gt; 0;
-        const visual = item.imageUrl
+        const banner = item.imageUrl
           ? `&lt;div class=&quot;player-mail-artbox&quot;&gt;&lt;img class=&quot;player-mail-art&quot; src=&quot;${escapePurchaseText(item.imageUrl)}&quot; alt=&quot;&quot; loading=&quot;lazy&quot; decoding=&quot;async&quot;&gt;&lt;/div&gt;`
+          : &quot;&quot;;
+        const headVisual = item.imageUrl
+          ? &quot;&quot;
           : `&lt;div class=&quot;player-mail-symbol&quot; aria-hidden=&quot;true&quot;&gt;${playerMailKindIcon({...item,hasRewards})}&lt;/div&gt;`;
         const body = item.message || item.body || item.reason || &quot;Для вас новое письмо от команды «Сладкого Забега».&quot;;
         const claimButton = hasRewards &amp;&amp; !claimed
           ? `&lt;button class=&quot;player-mail-primary&quot; data-player-mail-action type=&quot;button&quot; ${claiming ? &quot;disabled&quot; : &quot;&quot;}&gt;${claiming ? &quot;Получаем…&quot; : &quot;Получить награду&quot;}&lt;/button&gt;`
           : &quot;&quot;;
-        playerMailContentEl.innerHTML = `&lt;div class=&quot;player-mail-head&quot;&gt;${visual}&lt;div class=&quot;player-mail-head-copy&quot;&gt;&lt;span class=&quot;player-mail-kicker&quot;&gt;${hasRewards ? &quot;Письмо с наградой&quot; : &quot;Почта Зеффи&quot;}&lt;/span&gt;&lt;h2 id=&quot;player-mail-title&quot;&gt;${escapePurchaseText(item.title)}&lt;/h2&gt;&lt;/div&gt;&lt;/div&gt;&lt;div class=&quot;player-mail-message&quot;&gt;&lt;p class=&quot;player-mail-body&quot;&gt;${escapePurchaseText(body)}&lt;/p&gt;&lt;/div&gt;${item.reason &amp;&amp; (item.message || item.body) ? `&lt;p class=&quot;player-mail-note&quot;&gt;&lt;strong&gt;Причина:&lt;/strong&gt; ${escapePurchaseText(item.reason)}&lt;/p&gt;` : &quot;&quot;}${hasRewards ? `&lt;section class=&quot;player-mail-reward-card&quot;&gt;&lt;div class=&quot;player-mail-reward-title&quot;&gt;Вложение&lt;/div&gt;&lt;div class=&quot;player-gift-rewards player-mail-rewards&quot;&gt;${rewards}&lt;/div&gt;&lt;/section&gt;` : &quot;&quot;}${claimed ? `&lt;div class=&quot;player-mail-claimed&quot;&gt;✓ Награда уже получена&lt;/div&gt;` : &quot;&quot;}${claimButton}`;
+        playerMailContentEl.innerHTML = `${banner}&lt;div class=&quot;player-mail-head${item.imageUrl ? &quot; player-mail-head--banner&quot; : &quot;&quot;}&quot;&gt;${headVisual}&lt;div class=&quot;player-mail-head-copy&quot;&gt;&lt;span class=&quot;player-mail-kicker&quot;&gt;${hasRewards ? &quot;Письмо с наградой&quot; : &quot;Почта Зеффи&quot;}&lt;/span&gt;&lt;h2 id=&quot;player-mail-title&quot;&gt;${escapePurchaseText(item.title)}&lt;/h2&gt;&lt;/div&gt;&lt;/div&gt;&lt;div class=&quot;player-mail-message&quot;&gt;&lt;p class=&quot;player-mail-body&quot;&gt;${escapePurchaseText(body)}&lt;/p&gt;&lt;/div&gt;${item.reason &amp;&amp; (item.message || item.body) ? `&lt;p class=&quot;player-mail-note&quot;&gt;&lt;strong&gt;Причина:&lt;/strong&gt; ${escapePurchaseText(item.reason)}&lt;/p&gt;` : &quot;&quot;}${hasRewards ? `&lt;section class=&quot;player-mail-reward-card&quot;&gt;&lt;div class=&quot;player-mail-reward-title&quot;&gt;Вложение&lt;/div&gt;&lt;div class=&quot;player-gift-rewards player-mail-rewards&quot;&gt;${rewards}&lt;/div&gt;&lt;/section&gt;` : &quot;&quot;}${claimed ? `&lt;div class=&quot;player-mail-claimed&quot;&gt;✓ Награда уже получена&lt;/div&gt;` : &quot;&quot;}${claimButton}`;
         const action = playerMailContentEl.querySelector(&quot;[data-player-mail-action]&quot;);
         if (action) action.addEventListener(&quot;click&quot;, async () =&gt; {
           const ok = await claimPlayerGiftClient(item.id, action);
