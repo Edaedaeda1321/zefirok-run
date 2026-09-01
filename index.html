@@ -8112,8 +8112,11 @@ html&gt;body{padding:
 #zefirok-maltipoo-runner .player-mail-open{min-height:34px;border:1px solid rgba(218,117,156,.32);border-radius:11px;padding:7px 9px;background:#fff;color:#b54f77;font-size:9px;font-weight:950}
 #zefirok-maltipoo-runner .player-mail-layer{position:fixed;inset:0;z-index:2147483250;display:grid;place-items:end center;padding:18px 12px max(18px,var(--zefirok-content-safe-bottom,0px));background:rgba(72,45,56,.38);backdrop-filter:blur(7px);box-sizing:border-box}
 #zefirok-maltipoo-runner .player-mail-layer[hidden]{display:none!important}
-#zefirok-maltipoo-runner .player-mail-dialog{position:relative;width:min(440px,100%);max-height:min(720px,calc(var(--zefirok-visible-height,100dvh) - 30px));overflow:auto;padding:24px 18px 18px;border:1px solid #efcbd7;border-radius:28px;background:linear-gradient(180deg,#fffdfc,#fff7f4);box-shadow:0 24px 70px rgba(87,47,61,.24);text-align:center;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
-#zefirok-maltipoo-runner .player-mail-x{position:absolute;right:11px;top:10px;width:40px;height:40px;border:1px solid #efd3dc;border-radius:13px;background:#fff;color:#94536b;font-size:25px;font-weight:700}
+#zefirok-maltipoo-runner .player-mail-dialog{position:relative;width:min(440px,100%);max-height:min(720px,calc(var(--zefirok-visible-height,100dvh) - 30px));overflow:auto;padding:12px 18px 18px;border:1px solid #efcbd7;border-radius:28px;background:linear-gradient(180deg,#fffdfc,#fff7f4);box-shadow:0 24px 70px rgba(87,47,61,.24);text-align:center;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y}
+#zefirok-maltipoo-runner .player-mail-dialog.is-player-mail-dragging{transition:none!important;will-change:transform,opacity}
+#zefirok-maltipoo-runner .player-mail-drag-handle{width:62px;height:28px;margin:0 auto 2px;display:grid;place-items:center;border:0;background:transparent;touch-action:none;cursor:grab;user-select:none;-webkit-user-select:none}
+#zefirok-maltipoo-runner .player-mail-drag-handle:active{cursor:grabbing}
+#zefirok-maltipoo-runner .player-mail-drag-handle span{display:block;width:42px;height:5px;border-radius:999px;background:rgba(151,111,126,.28);box-shadow:inset 0 1px 0 rgba(255,255,255,.7)}
 #zefirok-maltipoo-runner .player-mail-content{display:grid;justify-items:center;gap:10px;padding-top:4px}
 #zefirok-maltipoo-runner .player-mail-art{display:block;width:min(100%,420px);max-height:320px;object-fit:contain;border-radius:20px}
 #zefirok-maltipoo-runner .player-mail-symbol{display:grid;place-items:center;width:76px;height:76px;border-radius:24px;background:linear-gradient(145deg,#ffe8f1,#fff4d7);font-size:38px}
@@ -11450,7 +11453,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 
   &lt;div class=&quot;player-mail-layer&quot; data-player-mail-layer hidden&gt;
     &lt;div class=&quot;player-mail-dialog&quot; role=&quot;dialog&quot; aria-modal=&quot;true&quot; aria-labelledby=&quot;player-mail-title&quot;&gt;
-      &lt;button class=&quot;player-mail-x&quot; data-player-mail-close type=&quot;button&quot; aria-label=&quot;Закрыть письмо&quot;&gt;×&lt;/button&gt;
+      &lt;button class=&quot;player-mail-drag-handle&quot; data-player-mail-drag-handle type=&quot;button&quot; aria-label=&quot;Свернуть письмо свайпом вниз&quot;&gt;&lt;span aria-hidden=&quot;true&quot;&gt;&lt;/span&gt;&lt;/button&gt;
       &lt;div class=&quot;player-mail-content&quot; data-player-mail-content&gt;&lt;/div&gt;
     &lt;/div&gt;
   &lt;/div&gt;
@@ -12126,7 +12129,8 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       const playerGiftInboxMoreEl = root.querySelector(&quot;[data-player-gift-inbox-more]&quot;);
       const playerMailLayerEl = root.querySelector(&quot;[data-player-mail-layer]&quot;);
       const playerMailContentEl = root.querySelector(&quot;[data-player-mail-content]&quot;);
-      const playerMailCloseEl = root.querySelector(&quot;[data-player-mail-close]&quot;);
+      const playerMailDialogEl = root.querySelector(&quot;.player-mail-dialog&quot;);
+      const playerMailDragHandleEl = root.querySelector(&quot;[data-player-mail-drag-handle]&quot;);
       const profileMailOpenEl = root.querySelector(&quot;[data-profile-mail-open]&quot;);
       const profileMailBadgeEl = root.querySelector(&quot;[data-profile-mail-badge]&quot;);
       const liveOpsRunBannerEl = root.querySelector(&quot;[data-liveops-run-banner]&quot;);
@@ -19218,9 +19222,81 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       }
 
       let playerMailActiveLetter = null;
+      let playerMailDragPointerId = null;
+      let playerMailDragStartY = 0;
+      let playerMailDragDistance = 0;
+      let playerMailDragStartedAt = 0;
+
+      function resetPlayerMailDrag(animate = true) {
+        playerMailDragPointerId = null;
+        playerMailDragStartY = 0;
+        playerMailDragDistance = 0;
+        playerMailDragStartedAt = 0;
+        const dialog = playerMailDialogEl;
+        if (!dialog) return;
+        dialog.classList.remove(&quot;is-player-mail-dragging&quot;);
+        if (animate) {
+          dialog.style.transition = &quot;transform .18s cubic-bezier(.2,.82,.2,1), opacity .18s ease&quot;;
+          dialog.style.transform = &quot;translate3d(0, 0, 0)&quot;;
+          dialog.style.opacity = &quot;1&quot;;
+          window.setTimeout(() =&gt; {
+            if (playerMailDragPointerId === null &amp;&amp; dialog.isConnected) dialog.style.transition = &quot;&quot;;
+          }, 190);
+          return;
+        }
+        dialog.style.transition = &quot;&quot;;
+        dialog.style.transform = &quot;&quot;;
+        dialog.style.opacity = &quot;&quot;;
+      }
+
+      function installPlayerMailSwipe() {
+        const dialog = playerMailDialogEl;
+        const handle = playerMailDragHandleEl;
+        if (!dialog || !handle) return;
+        handle.addEventListener(&quot;pointerdown&quot;, (event) =&gt; {
+          if (playerMailLayerEl?.hidden || playerMailDragPointerId !== null) return;
+          playerMailDragPointerId = event.pointerId;
+          playerMailDragStartY = Number(event.clientY || 0);
+          playerMailDragDistance = 0;
+          playerMailDragStartedAt = performance.now();
+          dialog.classList.add(&quot;is-player-mail-dragging&quot;);
+          try { handle.setPointerCapture(event.pointerId); } catch {}
+          event.preventDefault();
+        });
+        handle.addEventListener(&quot;pointermove&quot;, (event) =&gt; {
+          if (event.pointerId !== playerMailDragPointerId) return;
+          const distance = Math.max(0, Number(event.clientY || 0) - playerMailDragStartY);
+          playerMailDragDistance = Math.min(distance, Math.max(220, window.innerHeight * .5));
+          dialog.style.transform = `translate3d(0, ${playerMailDragDistance}px, 0)`;
+          dialog.style.opacity = String(Math.max(.58, 1 - playerMailDragDistance / 520));
+          event.preventDefault();
+        });
+        const finishDrag = (event, cancelled = false) =&gt; {
+          if (event.pointerId !== playerMailDragPointerId) return;
+          try { handle.releasePointerCapture(event.pointerId); } catch {}
+          const elapsed = Math.max(1, performance.now() - playerMailDragStartedAt);
+          const velocity = playerMailDragDistance / elapsed;
+          const threshold = Math.max(78, Math.min(118, window.innerHeight * .115));
+          const shouldClose = !cancelled &amp;&amp; (playerMailDragDistance &gt;= threshold || (playerMailDragDistance &gt;= 46 &amp;&amp; velocity &gt; .62));
+          playerMailDragPointerId = null;
+          dialog.classList.remove(&quot;is-player-mail-dragging&quot;);
+          if (shouldClose) {
+            dialog.style.transition = &quot;transform .16s ease-in, opacity .16s ease-in&quot;;
+            dialog.style.transform = `translate3d(0, ${Math.max(window.innerHeight * .62, 420)}px, 0)`;
+            dialog.style.opacity = &quot;0&quot;;
+            window.setTimeout(() =&gt; closePlayerMail(), 145);
+            return;
+          }
+          resetPlayerMailDrag(true);
+        };
+        handle.addEventListener(&quot;pointerup&quot;, (event) =&gt; finishDrag(event, false));
+        handle.addEventListener(&quot;pointercancel&quot;, (event) =&gt; finishDrag(event, true));
+      }
+
 
       function closePlayerMail() {
         if (!playerMailLayerEl) return;
+        resetPlayerMailDrag(false);
         playerMailLayerEl.hidden=true;
         playerMailActiveLetter=null;
         if (playerMailContentEl) playerMailContentEl.innerHTML=&quot;&quot;;
@@ -19252,6 +19328,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       async function openPlayerMailLetter(mailId) {
         const item=(Array.isArray(state.playerGifts)?state.playerGifts:[]).find((entry)=&gt;String(entry?.id||&quot;&quot;)===String(mailId||&quot;&quot;));
         if(!item||!playerMailLayerEl||!telegramProfile?.initData)return;
+        resetPlayerMailDrag(false);
         playerMailLayerEl.hidden=false;
         playerMailActiveLetter=null;
         if(playerMailContentEl)playerMailContentEl.innerHTML=`&lt;div class=&quot;player-mail-symbol&quot; aria-hidden=&quot;true&quot;&gt;💌&lt;/div&gt;&lt;span class=&quot;player-mail-kicker&quot;&gt;Почта Зеффи&lt;/span&gt;&lt;h2 id=&quot;player-mail-title&quot;&gt;${escapePurchaseText(item.title)}&lt;/h2&gt;&lt;p class=&quot;player-mail-body&quot;&gt;Загружаем письмо…&lt;/p&gt;`;
@@ -23930,7 +24007,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         const button = event.target instanceof Element ? event.target.closest(&quot;[data-player-mail-open]&quot;) : null;
         if (button) openPlayerMailLetter(button.dataset.playerMailOpen);
       });
-      if (playerMailCloseEl) playerMailCloseEl.addEventListener(&quot;click&quot;, closePlayerMail);
+      installPlayerMailSwipe();
       if (playerMailLayerEl) playerMailLayerEl.addEventListener(&quot;click&quot;,(event)=&gt;{if(event.target===playerMailLayerEl)closePlayerMail();});
       if (profileMailOpenEl) profileMailOpenEl.addEventListener(&quot;click&quot;, openMailFromProfile);
       if (friendCoopActionEl) friendCoopActionEl.addEventListener(&quot;click&quot;,()=&gt;void claimFriendCoopClient(String(friendCoopActionEl.dataset.partnerId||&quot;&quot;),friendCoopActionEl));
