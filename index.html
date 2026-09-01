@@ -8115,11 +8115,11 @@ html&gt;body{padding:
 #zefirok-maltipoo-runner .player-mail-dialog{position:relative;width:min(440px,100%);max-height:min(720px,calc(var(--zefirok-visible-height,100dvh) - 30px));overflow:auto;padding:24px 18px 18px;border:1px solid #efcbd7;border-radius:28px;background:linear-gradient(180deg,#fffdfc,#fff7f4);box-shadow:0 24px 70px rgba(87,47,61,.24);text-align:center;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
 #zefirok-maltipoo-runner .player-mail-x{position:absolute;right:11px;top:10px;width:40px;height:40px;border:1px solid #efd3dc;border-radius:13px;background:#fff;color:#94536b;font-size:25px;font-weight:700}
 #zefirok-maltipoo-runner .player-mail-content{display:grid;justify-items:center;gap:10px;padding-top:4px}
-#zefirok-maltipoo-runner .player-mail-art{display:block;width:min(230px,72%);max-height:190px;object-fit:contain;border-radius:20px}
+#zefirok-maltipoo-runner .player-mail-art{display:block;width:min(100%,420px);max-height:320px;object-fit:contain;border-radius:20px}
 #zefirok-maltipoo-runner .player-mail-symbol{display:grid;place-items:center;width:76px;height:76px;border-radius:24px;background:linear-gradient(145deg,#ffe8f1,#fff4d7);font-size:38px}
 #zefirok-maltipoo-runner .player-mail-kicker{padding:5px 9px;border-radius:999px;background:#fff0f5;color:#b35379;font-size:8px;font-weight:950;text-transform:uppercase;letter-spacing:.06em}
 #zefirok-maltipoo-runner .player-mail-content h2{margin:0;padding:0 36px;color:#663f50;font-size:21px;line-height:1.15}
-#zefirok-maltipoo-runner .player-mail-body{width:100%;margin:0;color:#745b65;font-size:11px;line-height:1.55;white-space:pre-wrap;text-align:left}
+#zefirok-maltipoo-runner .player-mail-body{width:100%;margin:0;color:#745b65;font-size:11px;line-height:1.65;white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;text-align:left}
 #zefirok-maltipoo-runner .player-mail-note{width:100%;margin:0;padding:9px 10px;border-radius:13px;background:#fff8e9;color:#84694f;font-size:9px;line-height:1.4;text-align:left;box-sizing:border-box}
 #zefirok-maltipoo-runner .player-mail-reward-title{width:100%;margin-top:2px;color:#9e5a73;font-size:10px;font-weight:950;text-align:left}
 #zefirok-maltipoo-runner .player-mail-rewards{width:100%;justify-content:center;padding:10px;border-radius:17px;background:#fff5dc;box-sizing:border-box}
@@ -14096,9 +14096,9 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       const REWARD_API_CREATE_PATH = &quot;/api/rewards/create&quot;;
       const REWARD_API_MINE_PATH = &quot;/api/rewards/mine&quot;;
       const GAME_STARTUP_API_PATH = &quot;/api/game/startup&quot;;
-      const PLAYER_GIFTS_STATE_PATH = &quot;/api/gifts/state&quot;;
-      const PLAYER_GIFTS_READ_PATH = &quot;/api/gifts/read&quot;;
-      const PLAYER_GIFTS_CLAIM_PATH = &quot;/api/gifts/claim&quot;;
+      const PLAYER_GIFTS_STATE_PATH = &quot;/api/mail/state&quot;;
+      const PLAYER_GIFTS_OPEN_PATH = &quot;/api/mail/open&quot;;
+      const PLAYER_GIFTS_CLAIM_PATH = &quot;/api/mail/claim&quot;;
       const PLAYER_SUPPORT_STATE_PATH = &quot;/api/support/state&quot;;
       const PLAYER_SUPPORT_CREATE_PATH = &quot;/api/support/create&quot;;
       const PLAYER_SUPPORT_REPLY_PATH = &quot;/api/support/reply&quot;;
@@ -18984,7 +18984,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         if (incomingRevision &gt; 0 &amp;&amp; serverAccountRevision &gt; 0 &amp;&amp; incomingRevision &lt; serverAccountRevision) return false;
         // Revision changes are authoritative. When two mail snapshots legitimately
         // share the same revision, generatedAt breaks the tie so an older startup
-        // response cannot erase a newer /api/gifts/state result that arrived first.
+        // response cannot erase a newer /api/mail/state result that arrived first.
         if (incomingRevision &gt; 0 &amp;&amp; incomingRevision === serverAccountRevision &amp;&amp; incomingGeneratedAt &gt; 0 &amp;&amp; serverGiftSnapshotGeneratedAt &gt; 0 &amp;&amp; incomingGeneratedAt &lt; serverGiftSnapshotGeneratedAt) return false;
         if (incomingRevision &gt; serverAccountRevision) {
           serverAccountRevision = incomingRevision;
@@ -19063,12 +19063,12 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           }).catch(() =&gt; {});
         }, 1200);
         try {
-          const response = await gameFetchWithTimeout(PLAYER_GIFTS_CLAIM_PATH, { method:&quot;POST&quot;, headers:{ &quot;Content-Type&quot;:&quot;application/json&quot; }, body:JSON.stringify({ initData:String(telegramProfile.initData), giftId:id, current:caseCurrentSnapshot() }), cache:&quot;no-store&quot;, credentials:&quot;same-origin&quot; }, 7000);
+          const response = await gameFetchWithTimeout(PLAYER_GIFTS_CLAIM_PATH, { method:&quot;POST&quot;, headers:{ &quot;Content-Type&quot;:&quot;application/json&quot; }, body:JSON.stringify({ initData:String(telegramProfile.initData), mailId:id, current:caseCurrentSnapshot() }), cache:&quot;no-store&quot;, credentials:&quot;same-origin&quot; }, 7000);
           const data = await response.json().catch(()=&gt;null);
           if (!response.ok || !data?.ok) throw new Error(data?.error || &quot;Не удалось получить подарок.&quot;);
           claimFinished = true;
           window.clearTimeout(watchdog);
-          if (data.gifts) applyPlayerGiftPayload(data.gifts); else await loadPlayerGiftInbox(true);
+          if (data.state) applyPlayerGiftPayload(data.state); else if (data.gifts) applyPlayerGiftPayload(data.gifts); else await loadPlayerGiftInbox(true);
           refreshPlayerGiftAccountViews();
           showProfileToast(&quot;🎁 Подарок получен&quot;, &quot;success&quot;);
           hapticNotify(&quot;success&quot;);
@@ -19217,27 +19217,23 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         try{const response=await gameFetchWithTimeout(&quot;/api/friends/coop/claim&quot;,{method:&quot;POST&quot;,headers:{&quot;Content-Type&quot;:&quot;application/json&quot;},body:JSON.stringify({initData:String(telegramProfile.initData),partnerId:String(partnerId)}),cache:&quot;no-store&quot;,credentials:&quot;same-origin&quot;},7000);const data=await response.json().catch(()=&gt;null);if(!response.ok||!data?.ok)throw new Error(data?.error||&quot;Не удалось получить совместную награду.&quot;);friendCoopClientState=data.coop||friendCoopClientState;friendCoopLoadedAt=Date.now();renderFriendCoopProfile();showProfileToast(&quot;Совместная награда получена.&quot;,&quot;success&quot;,2200);await syncGameStartupPackage(true);}catch(error){showProfileToast(String(error?.message||&quot;Не удалось получить совместную награду.&quot;),&quot;warning&quot;,3200);void loadFriendCoopState(true);}
       }
 
+      let playerMailActiveLetter = null;
+
       function closePlayerMail() {
         if (!playerMailLayerEl) return;
         playerMailLayerEl.hidden=true;
+        playerMailActiveLetter=null;
         if (playerMailContentEl) playerMailContentEl.innerHTML=&quot;&quot;;
-      }
-
-      async function markPlayerMailReadClient(item) {
-        if (!item?.id || !item.unread || !telegramProfile?.initData) return;
-        try {
-          const response=await gameFetchWithTimeout(PLAYER_GIFTS_READ_PATH,{method:&quot;POST&quot;,headers:{&quot;Content-Type&quot;:&quot;application/json&quot;},body:JSON.stringify({initData:String(telegramProfile.initData),giftId:String(item.id)}),cache:&quot;no-store&quot;,credentials:&quot;same-origin&quot;},5000);
-          const data=await response.json().catch(()=&gt;null);if(response.ok&amp;&amp;data?.ok)applyPlayerGiftPayload(data);
-        } catch (error) { console.warn(&quot;Mail read sync failed&quot;,error); }
       }
 
       function renderPlayerMailLetter(item) {
         if (!playerMailContentEl || !item) return;
+        playerMailActiveLetter=item;
         const rewards=(Array.isArray(item.rewards)?item.rewards:[]).map((reward)=&gt;`&lt;span class=&quot;player-gift-reward player-mail-reward&quot;&gt;${giftRewardVisualMarkup(reward)}&lt;span&gt;${escapePurchaseText(reward?.label||&quot;Награда&quot;)}&lt;/span&gt;&lt;/span&gt;`).join(&quot;&quot;);
-        const claimed=item.status===&quot;claimed&quot;,claiming=item.status===&quot;claiming&quot;,hasRewards=Boolean(item.hasRewards);
-        const image=item.imageUrl?`&lt;img class=&quot;player-mail-art&quot; src=&quot;${escapePurchaseText(item.imageUrl)}&quot; alt=&quot;&quot; loading=&quot;lazy&quot; decoding=&quot;async&quot;&gt;`:`&lt;div class=&quot;player-mail-symbol&quot; aria-hidden=&quot;true&quot;&gt;${playerMailKindIcon(item)}&lt;/div&gt;`;
-        const body=item.message||item.reason||&quot;Для вас новое письмо от команды «Сладкого Забега».&quot;;
-        playerMailContentEl.innerHTML=`${image}&lt;span class=&quot;player-mail-kicker&quot;&gt;${hasRewards?&quot;Письмо с наградой&quot;:&quot;Почта Зеффи&quot;}&lt;/span&gt;&lt;h2 id=&quot;player-mail-title&quot;&gt;${escapePurchaseText(item.title)}&lt;/h2&gt;&lt;p class=&quot;player-mail-body&quot;&gt;${escapePurchaseText(body)}&lt;/p&gt;${item.reason&amp;&amp;item.message?`&lt;p class=&quot;player-mail-note&quot;&gt;&lt;strong&gt;Причина:&lt;/strong&gt; ${escapePurchaseText(item.reason)}&lt;/p&gt;`:&quot;&quot;}${hasRewards?`&lt;div class=&quot;player-mail-reward-title&quot;&gt;Награда&lt;/div&gt;&lt;div class=&quot;player-gift-rewards player-mail-rewards&quot;&gt;${rewards}&lt;/div&gt;`:&quot;&quot;}${claimed?`&lt;div class=&quot;player-mail-claimed&quot;&gt;✓ Награда получена&lt;/div&gt;`:&quot;&quot;}&lt;button class=&quot;player-mail-primary&quot; data-player-mail-action type=&quot;button&quot; ${claiming?&quot;disabled&quot;:&quot;&quot;}&gt;${hasRewards&amp;&amp;!claimed?(claiming?&quot;Получаем…&quot;:&quot;Получить и закрыть&quot;):&quot;Закрыть&quot;}&lt;/button&gt;`;
+        const claimed=item.status===&quot;claimed&quot;,claiming=item.status===&quot;claiming&quot;,hasRewards=Boolean(item.hasRewards)||rewards.length&gt;0;
+        const image=item.imageUrl?`&lt;img class=&quot;player-mail-art&quot; src=&quot;${escapePurchaseText(item.imageUrl)}&quot; alt=&quot;&quot; loading=&quot;lazy&quot; decoding=&quot;async&quot;&gt;`:`&lt;div class=&quot;player-mail-symbol&quot; aria-hidden=&quot;true&quot;&gt;${playerMailKindIcon({...item,hasRewards})}&lt;/div&gt;`;
+        const body=item.message||item.body||item.reason||&quot;Для вас новое письмо от команды «Сладкого Забега».&quot;;
+        playerMailContentEl.innerHTML=`${image}&lt;span class=&quot;player-mail-kicker&quot;&gt;${hasRewards?&quot;Письмо с наградой&quot;:&quot;Почта Зеффи&quot;}&lt;/span&gt;&lt;h2 id=&quot;player-mail-title&quot;&gt;${escapePurchaseText(item.title)}&lt;/h2&gt;&lt;p class=&quot;player-mail-body&quot;&gt;${escapePurchaseText(body)}&lt;/p&gt;${item.reason&amp;&amp;(item.message||item.body)?`&lt;p class=&quot;player-mail-note&quot;&gt;&lt;strong&gt;Причина:&lt;/strong&gt; ${escapePurchaseText(item.reason)}&lt;/p&gt;`:&quot;&quot;}${hasRewards?`&lt;div class=&quot;player-mail-reward-title&quot;&gt;Вложение&lt;/div&gt;&lt;div class=&quot;player-gift-rewards player-mail-rewards&quot;&gt;${rewards}&lt;/div&gt;`:&quot;&quot;}${claimed?`&lt;div class=&quot;player-mail-claimed&quot;&gt;✓ Награда получена&lt;/div&gt;`:&quot;&quot;}&lt;button class=&quot;player-mail-primary&quot; data-player-mail-action type=&quot;button&quot; ${claiming?&quot;disabled&quot;:&quot;&quot;}&gt;${hasRewards&amp;&amp;!claimed?(claiming?&quot;Получаем…&quot;:&quot;Получить и закрыть&quot;):&quot;Закрыть&quot;}&lt;/button&gt;`;
         const action=playerMailContentEl.querySelector(&quot;[data-player-mail-action]&quot;);
         if(action)action.addEventListener(&quot;click&quot;,async()=&gt;{
           if(!hasRewards||claimed){closePlayerMail();return;}
@@ -19246,11 +19242,30 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         });
       }
 
-      function openPlayerMailLetter(giftId) {
-        const item=(Array.isArray(state.playerGifts)?state.playerGifts:[]).find((entry)=&gt;String(entry?.id||&quot;&quot;)===String(giftId||&quot;&quot;));
-        if(!item||!playerMailLayerEl)return;
-        playerMailLayerEl.hidden=false;renderPlayerMailLetter(item);void markPlayerMailReadClient(item).then(()=&gt;{const fresh=(state.playerGifts||[]).find((entry)=&gt;entry.id===item.id);if(fresh&amp;&amp;!playerMailLayerEl.hidden)renderPlayerMailLetter(fresh);});
+      function renderPlayerMailLoadError(item,error) {
+        if(!playerMailContentEl)return;
+        const title=String(item?.title||&quot;Почта Зеффи&quot;);
+        playerMailContentEl.innerHTML=`&lt;div class=&quot;player-mail-symbol&quot; aria-hidden=&quot;true&quot;&gt;💌&lt;/div&gt;&lt;span class=&quot;player-mail-kicker&quot;&gt;Почта Зеффи&lt;/span&gt;&lt;h2 id=&quot;player-mail-title&quot;&gt;${escapePurchaseText(title)}&lt;/h2&gt;&lt;p class=&quot;player-mail-body&quot;&gt;${escapePurchaseText(error?.message||&quot;Не удалось открыть письмо. Обновите почту и попробуйте ещё раз.&quot;)}&lt;/p&gt;&lt;button class=&quot;player-mail-primary&quot; data-player-mail-error-close type=&quot;button&quot;&gt;Закрыть&lt;/button&gt;`;
+        playerMailContentEl.querySelector(&quot;[data-player-mail-error-close]&quot;)?.addEventListener(&quot;click&quot;,closePlayerMail);
+      }
+
+      async function openPlayerMailLetter(mailId) {
+        const item=(Array.isArray(state.playerGifts)?state.playerGifts:[]).find((entry)=&gt;String(entry?.id||&quot;&quot;)===String(mailId||&quot;&quot;));
+        if(!item||!playerMailLayerEl||!telegramProfile?.initData)return;
+        playerMailLayerEl.hidden=false;
+        playerMailActiveLetter=null;
+        if(playerMailContentEl)playerMailContentEl.innerHTML=`&lt;div class=&quot;player-mail-symbol&quot; aria-hidden=&quot;true&quot;&gt;💌&lt;/div&gt;&lt;span class=&quot;player-mail-kicker&quot;&gt;Почта Зеффи&lt;/span&gt;&lt;h2 id=&quot;player-mail-title&quot;&gt;${escapePurchaseText(item.title)}&lt;/h2&gt;&lt;p class=&quot;player-mail-body&quot;&gt;Загружаем письмо…&lt;/p&gt;`;
         hapticImpact(&quot;light&quot;,25);
+        try{
+          const response=await gameFetchWithTimeout(PLAYER_GIFTS_OPEN_PATH,{method:&quot;POST&quot;,headers:{&quot;Content-Type&quot;:&quot;application/json&quot;},body:JSON.stringify({initData:String(telegramProfile.initData),mailId:String(item.id)}),cache:&quot;no-store&quot;,credentials:&quot;same-origin&quot;},7000);
+          const data=await response.json().catch(()=&gt;null);
+          if(!response.ok||!data?.ok||!data?.letter)throw new Error(data?.error||&quot;Не удалось открыть письмо.&quot;);
+          if(data.state)applyPlayerGiftPayload(data.state);else if(data.gifts)applyPlayerGiftPayload(data.gifts);
+          if(!playerMailLayerEl.hidden)renderPlayerMailLetter(data.letter);
+        }catch(error){
+          console.warn(&quot;Mail V3 open failed&quot;,error);
+          if(!playerMailLayerEl.hidden)renderPlayerMailLoadError(item,error);
+        }
       }
 
       function openMailFromProfile() {
