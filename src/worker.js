@@ -4239,11 +4239,110 @@ function playerMailV3LegacyStatus(rewardState) {
   return "info";
 }
 
+function playerMailV3RewardsFromRows(rows) {
+  const recovered = [];
+  for (const row of Array.isArray(rows) ? rows : []) {
+    const fromJson = normalizePlayerGiftRewards([safeJson(row?.reward_json, {})]);
+    if (fromJson.length) {
+      recovered.push(...fromJson);
+      continue;
+    }
+    const fallback = normalizePlayerGiftRewards([{
+      kind:String(row?.reward_kind || ""),
+      id:String(row?.reward_id || ""),
+      amount:Math.max(1,Math.floor(Number(row?.amount || 1)))
+    }]);
+    if (fallback.length) recovered.push(...fallback);
+  }
+  return normalizePlayerGiftRewards(recovered);
+}
+
+function playerMailV3CampaignRewards(campaign) {
+  const kind = String(campaign?.reward_kind || "none").trim().toLowerCase();
+  if (!kind || kind === "none") return [];
+  if (kind === "gift_bundle") return normalizePlayerGiftRewards(safeJson(campaign?.reward_bundle_json, []));
+  return normalizePlayerGiftRewards([{
+    kind,
+    id:String(campaign?.reward_id || ""),
+    amount:Math.max(1,Math.floor(Number(campaign?.amount || 1)))
+  }]);
+}
+
+// Campaign mail is authoritative: if an older/partial V3 write left the letter
+// without its attachment rows, rebuild those rows from admin_campaigns. This is
+// safe for claimed letters too: reward_state stays claimed and claim delivery
+// remains idempotent through reward_delivery_queue source IDs.
+async function repairPlayerMailV3CampaignAttachments(env, telegramId, mailId = "") {
+  await ensurePlayerMailV3Schema(env);
+  const id = String(telegramId || "").trim();
+  if (!/^\d{4,20}$/.test(id)) return 0;
+  const mid = String(mailId || "").trim();
+  const binds = [id];
+  let mailFilter = "";
+  let inconsistencyFilter = ` AND (m.reward_state='none' OR NOT EXISTS(
+          SELECT 1 FROM player_mail_rewards_v3 r WHERE r.telegram_id=m.telegram_id AND r.mail_id=m.mail_id
+        ))`;
+  if (mid) {
+    if (!/^[A-Za-z0-9:_-]{4,120}$/.test(mid)) return 0;
+    mailFilter = " AND m.mail_id=?";
+    inconsistencyFilter = "";
+    binds.push(mid);
+  }
+  let candidates;
+  try {
+    const result = await env.DB.prepare(`SELECT m.mail_id,m.reward_state,m.claimed_at,m.created_at,m.source_id,
+        c.reward_kind,c.reward_id,c.amount,c.reward_bundle_json
+      FROM player_mail_v3 m
+      JOIN admin_campaigns c ON c.campaign_id=m.source_id
+      WHERE m.telegram_id=? AND m.source_type='campaign'${mailFilter}
+        AND COALESCE(c.reward_kind,'none')<>'none'${inconsistencyFilter}
+      ORDER BY m.created_at DESC LIMIT 25`).bind(...binds).all();
+    candidates = result.results || [];
+  } catch (error) {
+    console.error("player mail v3 campaign attachment repair lookup failed", error);
+    return 0;
+  }
+  if (!candidates.length) return 0;
+  let changed = 0;
+  const now = Math.floor(Date.now()/1000);
+  for (const candidate of candidates) {
+    const rewards = playerMailV3CampaignRewards(candidate);
+    if (!rewards.length) {
+      console.error("player mail v3 campaign attachment repair has unsupported reward", { mailId:candidate.mail_id, campaignId:candidate.source_id, rewardKind:candidate.reward_kind });
+      continue;
+    }
+    const currentRows = await env.DB.prepare(`SELECT reward_kind,reward_id,amount,reward_json FROM player_mail_rewards_v3 WHERE telegram_id=? AND mail_id=? ORDER BY reward_index`).bind(id,String(candidate.mail_id)).all();
+    const currentRewards = playerMailV3RewardsFromRows(currentRows.results || []);
+    const nextState = String(candidate.reward_state || "") === "claimed" || Number(candidate.claimed_at || 0) > 0 ? "claimed" : "available";
+    const attachmentsMatch = JSON.stringify(currentRewards) === JSON.stringify(rewards);
+    const stateMatches = String(candidate.reward_state || "") === nextState;
+    if (attachmentsMatch && stateMatches) continue;
+
+    if (!attachmentsMatch) {
+      const statements = [env.DB.prepare(`DELETE FROM player_mail_rewards_v3 WHERE telegram_id=? AND mail_id=?`).bind(id,String(candidate.mail_id))];
+      rewards.forEach((reward,index)=>statements.push(env.DB.prepare(`INSERT INTO player_mail_rewards_v3(mail_id,telegram_id,reward_index,reward_kind,reward_id,amount,reward_json,created_at) VALUES(?,?,?,?,?,?,?,?)`)
+        .bind(String(candidate.mail_id),id,index,String(reward.kind||""),String(reward.id||""),Math.max(1,Math.floor(Number(reward.amount||1))),JSON.stringify(reward),Math.max(1,Math.floor(Number(candidate.created_at||now))))));
+      await env.DB.batch(statements);
+    }
+    const storedRows = await env.DB.prepare(`SELECT reward_kind,reward_id,amount,reward_json FROM player_mail_rewards_v3 WHERE telegram_id=? AND mail_id=? ORDER BY reward_index`).bind(id,String(candidate.mail_id)).all();
+    const storedRewards = playerMailV3RewardsFromRows(storedRows.results || []);
+    if (JSON.stringify(storedRewards) !== JSON.stringify(rewards)) {
+      console.error("player mail v3 campaign attachment repair verification failed", { mailId:candidate.mail_id, campaignId:candidate.source_id });
+      continue;
+    }
+    const update = await env.DB.prepare(`UPDATE player_mail_v3 SET reward_state=?,updated_at=? WHERE telegram_id=? AND mail_id=? AND reward_state<>?`).bind(nextState,now,id,String(candidate.mail_id),nextState).run();
+    changed += (attachmentsMatch ? 0 : 1) + Number(update?.meta?.changes || 0);
+  }
+  return changed;
+}
+
 async function createPlayerMailV3(env, telegramId, spec = {}) {
   await ensurePlayerMailV3Schema(env);
   const id = String(telegramId || "").trim();
   if (!/^\d{4,20}$/.test(id)) throw new Error("Некорректный Telegram ID письма");
-  const rewards = normalizePlayerGiftRewards(spec.rewards || []);
+  const rawRewards = Array.isArray(spec.rewards) ? spec.rewards : [];
+  const rewards = normalizePlayerGiftRewards(rawRewards);
+  if (rawRewards.length && !rewards.length) throw new Error("Вложение письма содержит неподдерживаемую награду и не может быть потеряно молча");
   const mailId = playerMailV3SanitizeId(spec.mailId || spec.giftId, "mail");
   const sourceType = String(spec.sourceType || "manual").trim().replace(/[^A-Za-z0-9:_-]/g,"_").slice(0,60) || "manual";
   const sourceId = String(spec.sourceId || mailId).trim().slice(0,180) || mailId;
@@ -4278,8 +4377,8 @@ async function createPlayerMailV3(env, telegramId, spec = {}) {
 
   const stored = await env.DB.prepare(`SELECT mail_id,source_type,source_id,mail_kind,title,preview_text,body_text,image_url,reason,reward_state FROM player_mail_v3 WHERE mail_id=? AND telegram_id=? LIMIT 1`).bind(mailId,id).first();
   if (!stored?.mail_id) throw new Error("Письмо V3 не зафиксировано в D1");
-  const storedRewardRows = await env.DB.prepare(`SELECT reward_json FROM player_mail_rewards_v3 WHERE mail_id=? AND telegram_id=? ORDER BY reward_index`).bind(mailId,id).all();
-  const storedRewards = normalizePlayerGiftRewards((storedRewardRows.results||[]).map((row)=>safeJson(row.reward_json,{})));
+  const storedRewardRows = await env.DB.prepare(`SELECT reward_kind,reward_id,amount,reward_json FROM player_mail_rewards_v3 WHERE mail_id=? AND telegram_id=? ORDER BY reward_index`).bind(mailId,id).all();
+  const storedRewards = playerMailV3RewardsFromRows(storedRewardRows.results || []);
   if (String(stored.source_type||"") !== sourceType || String(stored.source_id||"") !== sourceId || String(stored.mail_kind||"") !== mailKind
       || String(stored.title||"") !== title || String(stored.preview_text||"") !== preview || String(stored.body_text||"") !== body
       || String(stored.image_url||"") !== imageUrl || String(stored.reason||"") !== reason
@@ -4297,8 +4396,9 @@ async function maintainPlayerMailV3State(env, telegramId) {
   await ensurePlayerMailV3Schema(env);
   const id=String(telegramId||"").trim();
   const now=Math.floor(Date.now()/1000);
+  const repaired=await repairPlayerMailV3CampaignAttachments(env,id).catch((error)=>{console.error("player mail v3 attachment maintenance failed",error);return 0;});
   const reset=await env.DB.prepare(`UPDATE player_mail_v3 SET reward_state='available',updated_at=? WHERE telegram_id=? AND reward_state='claiming' AND updated_at<?`).bind(now,id,now-PLAYER_MAIL_V3_CLAIM_STALE_SECONDS).run();
-  const changed=Number(reset?.meta?.changes||0);
+  const changed=Math.max(0,Number(repaired||0))+Number(reset?.meta?.changes||0);
   if(changed>0){await ensurePlayerAccountRevisionAvailable(env);await bumpPlayerAccountRevisionStatement(env,id,now).run();}
   return changed;
 }
@@ -4307,7 +4407,8 @@ async function playerMailV3StatePayload(env, telegramId) {
   await ensurePlayerMailV3Schema(env);
   const id=String(telegramId||"").trim(),now=Math.floor(Date.now()/1000);
   const [rows,counts]=await Promise.all([
-    env.DB.prepare(`SELECT mail_id,mail_kind,title,preview_text,image_url,reward_state,read_at,claimed_at,created_at,expires_at
+    env.DB.prepare(`SELECT mail_id,mail_kind,title,preview_text,image_url,reward_state,read_at,claimed_at,created_at,expires_at,
+        (SELECT COUNT(*) FROM player_mail_rewards_v3 r WHERE r.telegram_id=player_mail_v3.telegram_id AND r.mail_id=player_mail_v3.mail_id) AS reward_count
       FROM player_mail_v3 WHERE telegram_id=? AND (expires_at=0 OR expires_at>?)
       ORDER BY CASE WHEN read_at=0 THEN 0 ELSE 1 END,created_at DESC LIMIT ?`).bind(id,now,PLAYER_MAIL_V3_LIST_LIMIT).all(),
     env.DB.prepare(`SELECT SUM(CASE WHEN read_at=0 THEN 1 ELSE 0 END) AS unread_count,SUM(CASE WHEN reward_state IN ('available','claiming') THEN 1 ELSE 0 END) AS pending_count
@@ -4316,7 +4417,7 @@ async function playerMailV3StatePayload(env, telegramId) {
   const items=(rows.results||[]).map((row)=>({
     id:String(row.mail_id||""),kind:String(row.mail_kind||"message"),title:String(row.title||"Письмо от Зеффи"),preview:String(row.preview_text||""),
     imageUrl:String(row.image_url||""),status:playerMailV3LegacyStatus(row.reward_state),rewardState:String(row.reward_state||"none"),createdAt:Number(row.created_at||0),
-    claimedAt:Number(row.claimed_at||0),readAt:Number(row.read_at||0),unread:Number(row.read_at||0)<=0,hasRewards:String(row.reward_state||"none")!=="none",rewards:[]
+    claimedAt:Number(row.claimed_at||0),readAt:Number(row.read_at||0),unread:Number(row.read_at||0)<=0,hasRewards:Number(row.reward_count||0)>0||String(row.reward_state||"none")!=="none",rewards:[]
   }));
   return {ok:true,mailVersion:3,pendingCount:Math.max(0,Number(counts?.pending_count||0)),unreadCount:Math.max(0,Number(counts?.unread_count||0)),items};
 }
@@ -4332,10 +4433,12 @@ async function playerMailV3LetterPayload(env, telegramId, mailId) {
   await ensurePlayerMailV3Schema(env);
   const id=String(telegramId||"").trim(),mid=playerMailV3SanitizeId(mailId,"mail");
   const now=Math.floor(Date.now()/1000);
+  const repaired=await repairPlayerMailV3CampaignAttachments(env,id,mid).catch((error)=>{console.error("player mail v3 open attachment repair failed",error);return 0;});
+  if(repaired>0){await ensurePlayerAccountRevisionAvailable(env);await bumpPlayerAccountRevisionStatement(env,id,now).run();}
   const row=await env.DB.prepare(`SELECT * FROM player_mail_v3 WHERE telegram_id=? AND mail_id=? AND (expires_at=0 OR expires_at>?) LIMIT 1`).bind(id,mid,now).first();
   if(!row) return null;
-  const rewardRows=await env.DB.prepare(`SELECT reward_json FROM player_mail_rewards_v3 WHERE telegram_id=? AND mail_id=? ORDER BY reward_index`).bind(id,mid).all();
-  const rewards=normalizePlayerGiftRewards((rewardRows.results||[]).map((reward)=>safeJson(reward.reward_json,{}))).map(playerGiftRewardView).filter(Boolean);
+  const rewardRows=await env.DB.prepare(`SELECT reward_kind,reward_id,amount,reward_json FROM player_mail_rewards_v3 WHERE telegram_id=? AND mail_id=? ORDER BY reward_index`).bind(id,mid).all();
+  const rewards=playerMailV3RewardsFromRows(rewardRows.results || []).map(playerGiftRewardView).filter(Boolean);
   return {
     id:String(row.mail_id||""),kind:String(row.mail_kind||"message"),title:String(row.title||"Письмо от Зеффи"),preview:String(row.preview_text||""),
     message:String(row.body_text||""),body:String(row.body_text||""),reason:String(row.reason||""),imageUrl:String(row.image_url||""),
@@ -4396,13 +4499,17 @@ async function claimPlayerMailV3(request, env, ctx) {
     await env.DB.prepare(`UPDATE player_mail_v3 SET reward_state='available',updated_at=? WHERE telegram_id=? AND mail_id=? AND reward_state='claiming' AND updated_at<?`).bind(now,telegramId,mailId,now-PLAYER_MAIL_V3_CLAIM_STALE_SECONDS).run();
     let row=await env.DB.prepare(`SELECT * FROM player_mail_v3 WHERE telegram_id=? AND mail_id=? AND (expires_at=0 OR expires_at>?) LIMIT 1`).bind(telegramId,mailId,now).first();
     if(!row)throw new ApiError(404,"Письмо не найдено.");
-    if(String(row.reward_state)==="none")throw new ApiError(409,"В этом письме нет награды.");
+    if(String(row.reward_state)==="none"){
+      const repairedBeforeClaim=await repairPlayerMailV3CampaignAttachments(env,telegramId,mailId).catch((error)=>{console.error("player mail v3 pre-claim attachment repair failed",error);return 0;});
+      if(repairedBeforeClaim>0){await ensurePlayerAccountRevisionAvailable(env);await bumpPlayerAccountRevisionStatement(env,telegramId,now).run();row=await env.DB.prepare(`SELECT * FROM player_mail_v3 WHERE telegram_id=? AND mail_id=? AND (expires_at=0 OR expires_at>?) LIMIT 1`).bind(telegramId,mailId,now).first();}
+    }
+    if(String(row?.reward_state)==="none")throw new ApiError(409,"В этом письме нет награды.");
     if(String(row.reward_state)==="claimed"){const state=await playerMailV3Snapshot(env,telegramId);return jsonResponse({ok:true,repeated:true,state,gifts:state});}
     const lock=await env.DB.prepare(`UPDATE player_mail_v3 SET reward_state='claiming',read_at=CASE WHEN read_at=0 THEN ? ELSE read_at END,updated_at=? WHERE telegram_id=? AND mail_id=? AND reward_state='available'`).bind(now,now,telegramId,mailId).run();
     if(Number(lock?.meta?.changes||0)<1)throw new ApiError(409,"Награда уже обрабатывается. Попробуйте ещё раз через несколько секунд.");
     await ensurePlayerAccountRevisionAvailable(env);await bumpPlayerAccountRevisionStatement(env,telegramId,now).run();
-    const rewardRows=await env.DB.prepare(`SELECT reward_json FROM player_mail_rewards_v3 WHERE telegram_id=? AND mail_id=? ORDER BY reward_index`).bind(telegramId,mailId).all();
-    const rewards=normalizePlayerGiftRewards((rewardRows.results||[]).map((reward)=>safeJson(reward.reward_json,{})));
+    const rewardRows=await env.DB.prepare(`SELECT reward_kind,reward_id,amount,reward_json FROM player_mail_rewards_v3 WHERE telegram_id=? AND mail_id=? ORDER BY reward_index`).bind(telegramId,mailId).all();
+    const rewards=playerMailV3RewardsFromRows(rewardRows.results || []);
     if(!rewards.length){await env.DB.prepare(`UPDATE player_mail_v3 SET reward_state='none',updated_at=? WHERE telegram_id=? AND mail_id=? AND reward_state='claiming'`).bind(now,telegramId,mailId).run();throw new ApiError(409,"Вложения письма повреждены. Награда не списана.");}
     const seasonTaskRewards=rewards.filter((reward)=>String(reward?.kind||"")==="season_pass_xp");
     if(seasonTaskRewards.length){
