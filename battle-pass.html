@@ -4138,11 +4138,45 @@ img[src$="/xp.webp"]{
     return [icon,title,description,String(item?.imageUrl || "")];
   }
 
+  const PASS_LIVEOPS_VISUAL_FALLBACKS=Object.freeze({
+    heroImage:"/assets/season-pass/season_pass1.png?v=07939",
+    seasonTabIcon:"/assets/season-pass/season.png?v=07939",
+    tasksTabIcon:"/assets/season-pass/quest.png?v=07939",
+    taskSectionIcon:"/assets/season-pass/quest.png?v=07939",
+    claimXpIcon:"/assets/season-pass/xp.png?v=07939",
+    eliteCardIcon:"/assets/season-pass/icon_tarif_elit.png",
+    elitePlusCardIcon:"/assets/season-pass/icon_tarif_elit_plus.png",
+    elitePremiumRewardsIcon:"/assets/season-pass/season.png?v=07939",
+    elitePremiumTasksIcon:"/assets/season-pass/quest.png?v=07939",
+    eliteRatingBadgeIcon:"/assets/ui/icon_player_elit.png",
+    eliteFinalCaseIcon:"/assets/cases/legendary_closed.png",
+    elitePlusIncludesEliteIcon:"/assets/season-pass/icon_tarif_elit.png",
+    elitePlusRatingBadgeIcon:"/assets/ui/icon_player_elit+.png",
+    elitePlusXpBoostIcon:"/assets/season-pass/xp_x2.png?v=07939",
+    elitePlusLevelsIcon:"/assets/season-pass/levels_5.png?v=07939"
+  });
+  function seasonPassLiveOpsVisual(path,fallback){
+    let value=serverPass?.season?.visuals?.battlePass;
+    for(const key of String(path||"").split(".")){if(!key)continue;value=value&&typeof value==="object"?value[key]:"";}
+    const normalized=String(value||"").trim();
+    return normalized.startsWith("/assets/")?normalized:fallback;
+  }
+  function setSeasonPassLiveOpsImage(selector,path,fallback){const image=document.querySelector(selector);if(image instanceof HTMLImageElement)image.src=seasonPassLiveOpsVisual(path,fallback);}
   function applySeasonPassLiveOpsVisuals(){
-    const configured=String(serverPass?.season?.visuals?.battlePass?.heroImage||"").trim();
-    const path=configured.startsWith("/assets/")?configured:"/assets/season-pass/season_pass1.png?v=07939";
-    const cssPath=path.replace(/\\/g,"\\\\").replace(/"/g,'\\"');
+    const heroPath=seasonPassLiveOpsVisual("heroImage",PASS_LIVEOPS_VISUAL_FALLBACKS.heroImage);
+    const cssPath=heroPath.replace(/\\/g,"\\\\").replace(/"/g,'\\"');
     document.documentElement.style.setProperty("--season-pass-liveops-hero-art",`url("${cssPath}")`);
+    setSeasonPassLiveOpsImage('[data-view-tab="rewards"] .main-tab-art',"navigation.seasonIcon",PASS_LIVEOPS_VISUAL_FALLBACKS.seasonTabIcon);
+    setSeasonPassLiveOpsImage('[data-view-tab="tasks"] .main-tab-art',"navigation.tasksIcon",PASS_LIVEOPS_VISUAL_FALLBACKS.tasksTabIcon);
+    setSeasonPassLiveOpsImage('#tasksView .section-title-art img',"tasks.sectionIcon",PASS_LIVEOPS_VISUAL_FALLBACKS.taskSectionIcon);
+    setSeasonPassLiveOpsImage('#tasksClosedState>img',"tasks.sectionIcon",PASS_LIVEOPS_VISUAL_FALLBACKS.taskSectionIcon);
+    setSeasonPassLiveOpsImage('#claimAllTasks .claim-all-task-art',"tasks.claimXpIcon",PASS_LIVEOPS_VISUAL_FALLBACKS.claimXpIcon);
+    setSeasonPassLiveOpsImage('#eliteCard .tier-card-art img',"tariffs.eliteCardIcon",PASS_LIVEOPS_VISUAL_FALLBACKS.eliteCardIcon);
+    setSeasonPassLiveOpsImage('#elitePlusCard .tier-card-art img',"tariffs.elitePlusCardIcon",PASS_LIVEOPS_VISUAL_FALLBACKS.elitePlusCardIcon);
+    const lockedBadges=document.querySelectorAll('#levelPurchaseLocked .level-purchase-lock-badges img');
+    if(lockedBadges[0] instanceof HTMLImageElement)lockedBadges[0].src=seasonPassLiveOpsVisual("tariffs.eliteCardIcon",PASS_LIVEOPS_VISUAL_FALLBACKS.eliteCardIcon);
+    if(lockedBadges[1] instanceof HTMLImageElement)lockedBadges[1].src=seasonPassLiveOpsVisual("tariffs.elitePlusCardIcon",PASS_LIVEOPS_VISUAL_FALLBACKS.elitePlusCardIcon);
+    setSeasonPassLiveOpsImage('#levelPurchaseUnlocked .level-purchase-premium img',"tariffs.elitePlusCardIcon",PASS_LIVEOPS_VISUAL_FALLBACKS.elitePlusCardIcon);
   }
 
   function applyServerPass(data) {
@@ -5467,6 +5501,10 @@ img[src$="/xp.webp"]{
       buyElite.setAttribute("aria-label",buyElite.textContent);
       buyElitePlus.setAttribute("aria-label",buyElitePlus.textContent);
     }
+    const eliteConfig=tierConfigFor("elite"),elitePlusConfig=tierConfigFor("elite_plus");
+    const eliteCardArt=eliteCard.querySelector(".tier-card-art img"),elitePlusCardArt=elitePlusCard.querySelector(".tier-card-art img");
+    if(eliteCardArt&&eliteConfig)eliteCardArt.src=eliteConfig.image;
+    if(elitePlusCardArt&&elitePlusConfig)elitePlusCardArt.src=elitePlusConfig.image;
     const eliteBenefitsNode=eliteCard.querySelector(".tier-benefits");
     const elitePlusBenefitsNode=elitePlusCard.querySelector(".tier-benefits");
     if(eliteBenefitsNode)eliteBenefitsNode.innerHTML=TIER_CONFIG.elite.benefits.map(item=>tierBenefitMarkup(item,"tier")).join("");
@@ -5522,10 +5560,13 @@ img[src$="/xp.webp"]{
     if (ratingTier) {
       const plus = ratingTier === "elite_plus";
       const label = plus ? "Значок тарифа Элитный+ в рейтинге" : "Значок тарифа Элитный в рейтинге";
-      const badge = plus ? REWARD_ASSETS.playerElitePlusBadge : REWARD_ASSETS.playerEliteBadge;
+      const badge = plus
+        ? seasonPassLiveOpsVisual("tariffs.elitePlusRatingBadgeIcon",PASS_LIVEOPS_VISUAL_FALLBACKS.elitePlusRatingBadgeIcon)
+        : seasonPassLiveOpsVisual("tariffs.eliteRatingBadgeIcon",PASS_LIVEOPS_VISUAL_FALLBACKS.eliteRatingBadgeIcon);
       return `<div class="${wrapperClass} rating-star-benefit" data-rating-star-tier="${ratingTier}" aria-label="${label}" title="${label}"><img class="${badgeClass}" src="${badge}" alt="" aria-hidden="true"><span>${item.text}</span></div>`;
     }
-    return `<div class="${wrapperClass}"><img src="${item.image}" alt=""><span>${item.text}</span></div>`;
+    const image=item?.visualKey?seasonPassLiveOpsVisual(item.visualKey,item.image):item.image;
+    return `<div class="${wrapperClass}"><img src="${image}" alt=""><span>${item.text}</span></div>`;
   }
 
   const TIER_CONFIG = {
@@ -5534,10 +5575,10 @@ img[src$="/xp.webp"]{
       title:"Элитный",
       subtitle:"Открывает премиальную линию сезонного пропуска.",
       benefits:[
-        {image:REWARD_ASSETS.premiumReward,text:"Премиальная линия из 50 наград"},
-        {image:REWARD_ASSETS.premiumTask,text:"Премиальные ежедневные и недельные задания"},
+        {image:REWARD_ASSETS.premiumReward,visualKey:"tariffs.elitePremiumRewardsIcon",text:"Премиальная линия из 50 наград"},
+        {image:REWARD_ASSETS.premiumTask,visualKey:"tariffs.elitePremiumTasksIcon",text:"Премиальные ежедневные и недельные задания"},
         {ratingTier:"elite",text:"Значок «Элитный» рядом с именем в рейтинге"},
-        {image:REWARD_ASSETS.legendaryCase,text:"Легендарный кейс на 50 уровне"}
+        {image:REWARD_ASSETS.legendaryCase,visualKey:"tariffs.eliteFinalCaseIcon",text:"Легендарный кейс на 50 уровне"}
       ]
     },
     elite_plus:{
@@ -5545,10 +5586,10 @@ img[src$="/xp.webp"]{
       title:"Элитный+",
       subtitle:"Максимальный тариф со всеми дополнительными бонусами.",
       benefits:[
-        {image:REWARD_ASSETS.eliteBadge,text:"Все преимущества тарифа «Элитный»"},
+        {image:REWARD_ASSETS.eliteBadge,visualKey:"tariffs.elitePlusIncludesEliteIcon",text:"Все преимущества тарифа «Элитный»"},
         {ratingTier:"elite_plus",text:"Значок «Элитный+» рядом с именем — максимальный статус в рейтинге"},
-        {image:REWARD_ASSETS.xpBoost,text:"×2 XP профиля за забеги и покупки + ×2 XP сезона"},
-        {image:REWARD_ASSETS.levelBoost,text:"Сразу +5 уровней пропуска"},
+        {image:REWARD_ASSETS.xpBoost,visualKey:"tariffs.elitePlusXpBoostIcon",text:"×2 XP профиля за забеги и покупки + ×2 XP сезона"},
+        {image:REWARD_ASSETS.levelBoost,visualKey:"tariffs.elitePlusLevelsIcon",text:"Сразу +5 уровней пропуска"},
         {image:REWARD_ASSETS.eliteFrame,text:"Эксклюзивная рамка"},
         {image:REWARD_ASSETS.eliteAvatar,text:"Эксклюзивная аватарка"},
         {image:REWARD_ASSETS.goldCase,text:"Золотой кейс при открытии"}
@@ -5559,11 +5600,11 @@ img[src$="/xp.webp"]{
   function elitePlusBenefitItems(){
     const cfg=serverPass?.season?.tierSettings?.elitePlus||{};
     const items=[
-      {image:REWARD_ASSETS.eliteBadge,text:"Все преимущества тарифа «Элитный»"},
+      {image:REWARD_ASSETS.eliteBadge,visualKey:"tariffs.elitePlusIncludesEliteIcon",text:"Все преимущества тарифа «Элитный»"},
       {ratingTier:"elite_plus",text:"Значок «Элитный+» рядом с именем — максимальный статус в рейтинге"}
     ];
-    if(cfg.xpBoost!==false)items.push({image:REWARD_ASSETS.xpBoost,text:"×2 XP за забеги и задания сезонного пропуска"});
-    const levels=Math.max(0,Number(cfg.bonusLevels)||0);if(levels>0)items.push({image:REWARD_ASSETS.levelBoost,text:`Сразу +${levels} ${levels===1?"уровень":"уровней"} пропуска`});
+    if(cfg.xpBoost!==false)items.push({image:REWARD_ASSETS.xpBoost,visualKey:"tariffs.elitePlusXpBoostIcon",text:"×2 XP за забеги и задания сезонного пропуска"});
+    const levels=Math.max(0,Number(cfg.bonusLevels)||0);if(levels>0)items.push({image:REWARD_ASSETS.levelBoost,visualKey:"tariffs.elitePlusLevelsIcon",text:`Сразу +${levels} ${levels===1?"уровень":"уровней"} пропуска`});
     for(const cosmetic of (Array.isArray(cfg.cosmetics)?cfg.cosmetics:[])){
       items.push({image:cosmetic.imageUrl||IMAGE_ERROR_FALLBACK,text:cosmetic.title||"Эксклюзивная награда"});
     }
@@ -5572,7 +5613,10 @@ img[src$="/xp.webp"]{
   }
   function tierConfigFor(tier){
     const config=TIER_CONFIG[tier];if(!config)return null;
-    return tier==="elite_plus"?{...config,benefits:elitePlusBenefitItems()}:config;
+    const image=tier==="elite_plus"
+      ? seasonPassLiveOpsVisual("tariffs.elitePlusCardIcon",PASS_LIVEOPS_VISUAL_FALLBACKS.elitePlusCardIcon)
+      : seasonPassLiveOpsVisual("tariffs.eliteCardIcon",PASS_LIVEOPS_VISUAL_FALLBACKS.eliteCardIcon);
+    return tier==="elite_plus"?{...config,image,benefits:elitePlusBenefitItems()}:{...config,image};
   }
 
   function tierPriceForDisplay(tier) {
@@ -5907,7 +5951,9 @@ img[src$="/xp.webp"]{
     tierCelebrationFollowupRewards = Array.isArray(rewards) ? rewards.filter(Boolean) : [];
     const card=el("tierCelebrationCard");
     card.classList.toggle("is-plus",plus);
-    el("tierCelebrationBadge").src = plus ? REWARD_ASSETS.elitePlusBadge : REWARD_ASSETS.eliteBadge;
+    el("tierCelebrationBadge").src = plus
+      ? seasonPassLiveOpsVisual("tariffs.elitePlusCardIcon",PASS_LIVEOPS_VISUAL_FALLBACKS.elitePlusCardIcon)
+      : seasonPassLiveOpsVisual("tariffs.eliteCardIcon",PASS_LIVEOPS_VISUAL_FALLBACKS.eliteCardIcon);
     el("tierCelebrationKicker").textContent = plus ? (notice.isUpgrade ? "ТАРИФ УЛУЧШЕН" : "МАКСИМАЛЬНЫЙ ТАРИФ") : "ПРЕМИАЛЬНЫЙ ДОСТУП";
     el("tierCelebrationTitle").textContent = plus ? "Элитный+ активирован" : "Поздравляем! Элитный активирован";
     el("tierCelebrationSubtitle").textContent = plus

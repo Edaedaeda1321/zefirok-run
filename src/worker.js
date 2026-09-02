@@ -42816,15 +42816,49 @@ function seasonVisualsObject(raw){
   try{const parsed=JSON.parse(String(raw||'{}'));return parsed&&typeof parsed==='object'&&!Array.isArray(parsed)?parsed:{};}catch{return {};}
 }
 function seasonVisualsView(raw){
-  const data=seasonVisualsObject(raw);
+  const data=seasonVisualsObject(raw),battlePass=data?.battlePass&&typeof data.battlePass==='object'&&!Array.isArray(data.battlePass)?data.battlePass:{};
+  const navigation=battlePass?.navigation&&typeof battlePass.navigation==='object'&&!Array.isArray(battlePass.navigation)?battlePass.navigation:{};
+  const tasks=battlePass?.tasks&&typeof battlePass.tasks==='object'&&!Array.isArray(battlePass.tasks)?battlePass.tasks:{};
+  const tariffs=battlePass?.tariffs&&typeof battlePass.tariffs==='object'&&!Array.isArray(battlePass.tariffs)?battlePass.tariffs:{};
   return {
     rating:{heroImage:seasonPassReadinessAssetPath(data?.rating?.heroImage)},
-    battlePass:{heroImage:seasonPassReadinessAssetPath(data?.battlePass?.heroImage)}
+    battlePass:{
+      heroImage:seasonPassReadinessAssetPath(battlePass.heroImage),
+      navigation:{
+        seasonIcon:seasonPassReadinessAssetPath(navigation.seasonIcon),
+        tasksIcon:seasonPassReadinessAssetPath(navigation.tasksIcon)
+      },
+      tasks:{
+        sectionIcon:seasonPassReadinessAssetPath(tasks.sectionIcon),
+        claimXpIcon:seasonPassReadinessAssetPath(tasks.claimXpIcon)
+      },
+      tariffs:{
+        eliteCardIcon:seasonPassReadinessAssetPath(tariffs.eliteCardIcon),
+        elitePlusCardIcon:seasonPassReadinessAssetPath(tariffs.elitePlusCardIcon),
+        elitePremiumRewardsIcon:seasonPassReadinessAssetPath(tariffs.elitePremiumRewardsIcon),
+        elitePremiumTasksIcon:seasonPassReadinessAssetPath(tariffs.elitePremiumTasksIcon),
+        eliteRatingBadgeIcon:seasonPassReadinessAssetPath(tariffs.eliteRatingBadgeIcon),
+        eliteFinalCaseIcon:seasonPassReadinessAssetPath(tariffs.eliteFinalCaseIcon),
+        elitePlusIncludesEliteIcon:seasonPassReadinessAssetPath(tariffs.elitePlusIncludesEliteIcon),
+        elitePlusRatingBadgeIcon:seasonPassReadinessAssetPath(tariffs.elitePlusRatingBadgeIcon),
+        elitePlusXpBoostIcon:seasonPassReadinessAssetPath(tariffs.elitePlusXpBoostIcon),
+        elitePlusLevelsIcon:seasonPassReadinessAssetPath(tariffs.elitePlusLevelsIcon)
+      }
+    }
   };
 }
-function seasonVisualsMerge(raw,surface,heroImage){
+function seasonVisualsMerge(raw,surface,value){
   const data=seasonVisualsObject(raw),current=data?.[surface]&&typeof data[surface]==='object'&&!Array.isArray(data[surface])?data[surface]:{};
-  data[surface]={...current,heroImage:String(heroImage||'')};
+  if(surface!=='battlePass'){
+    data[surface]={...current,heroImage:String(value||'')};
+    return JSON.stringify(data);
+  }
+  const patch=value&&typeof value==='object'&&!Array.isArray(value)?value:{heroImage:String(value||'')};
+  const nested=(key)=>({
+    ...(current?.[key]&&typeof current[key]==='object'&&!Array.isArray(current[key])?current[key]:{}),
+    ...(patch?.[key]&&typeof patch[key]==='object'&&!Array.isArray(patch[key])?patch[key]:{})
+  });
+  data.battlePass={...current,...patch,navigation:nested('navigation'),tasks:nested('tasks'),tariffs:nested('tariffs')};
   return JSON.stringify(data);
 }
 async function requireSeasonVisualsSchema(env,table){
@@ -42834,13 +42868,13 @@ async function requireSeasonVisualsSchema(env,table){
   const columns=new Set((info.results||[]).map(row=>String(row.name||'')));
   if(!columns.has('visuals_json'))throw new ApiError(503,'Не применена migration 0076: сезонные визуалы пока недоступны.');
 }
-async function validateSeasonVisualHeroImage(env,value){
+async function validateSeasonVisualHeroImage(env,value,manifestOverride=null){
   const raw=String(value||'').trim();
   if(!raw)return '';
   const path=seasonPassReadinessAssetPath(raw);
   if(!path)throw new ApiError(400,'Выберите изображение из assets проекта через кнопку «Выбрать».');
   if(!/\.(?:png|webp|jpe?g|gif|avif|svg)$/i.test(path))throw new ApiError(400,'Для сезонного визуала нужен файл изображения.');
-  const manifest=await seasonPassReadinessImageManifest(env);
+  const manifest=manifestOverride||await seasonPassReadinessImageManifest(env);
   if(!manifest.available)throw new ApiError(503,'Каталог изображений временно недоступен. Обновите assets manifest и повторите попытку.');
   if(!manifest.paths.has(path))throw new ApiError(400,'Эта картинка не найдена в опубликованном assets/images-manifest.json. Сначала добавьте её в проект и выполните deploy.');
   return path;
@@ -42937,7 +42971,24 @@ async function seasonPassReadinessReport(env, seasonIdValue, options={}){
 
   const enabledStory=storyRows.filter(r=>Number(r.enabled||0)===1),draftStory=storyRows.filter(r=>Number(r.enabled||0)!==1),emptyStory=[],storyRewardRefs=new Set(),storyActionErrors=[],storyVisualAssetRefs=[],storyLiveContentErrors=[];let storyActionCount=0;
   const assetRefs=[];const addAsset=(value,source,blocking=true)=>{const path=seasonPassReadinessAssetPath(value);if(path)assetRefs.push({path,source:String(source),blocking:Boolean(blocking)});};
-  const configuredSeasonVisuals=seasonVisualsView(row.visuals_json);if(configuredSeasonVisuals.battlePass.heroImage)addAsset(configuredSeasonVisuals.battlePass.heroImage,'Визуал шапки сезонного пропуска',true);
+  const configuredSeasonVisuals=seasonVisualsView(row.visuals_json),bpVisuals=configuredSeasonVisuals.battlePass;
+  for(const [asset,label] of [
+    [bpVisuals.heroImage,'Визуал шапки сезонного пропуска'],
+    [bpVisuals.navigation.seasonIcon,'Визуал кнопки «Сезон»'],
+    [bpVisuals.navigation.tasksIcon,'Визуал кнопки «Задания»'],
+    [bpVisuals.tasks.sectionIcon,'Визуал заголовка «Задания сезона»'],
+    [bpVisuals.tasks.claimXpIcon,'Визуал «Забрать XP»'],
+    [bpVisuals.tariffs.eliteCardIcon,'Тариф «Элитный» · главный значок'],
+    [bpVisuals.tariffs.elitePlusCardIcon,'Тариф «Элитный+» · главный значок'],
+    [bpVisuals.tariffs.elitePremiumRewardsIcon,'Тариф «Элитный» · премиальная линия'],
+    [bpVisuals.tariffs.elitePremiumTasksIcon,'Тариф «Элитный» · премиальные задания'],
+    [bpVisuals.tariffs.eliteRatingBadgeIcon,'Тариф «Элитный» · значок рейтинга'],
+    [bpVisuals.tariffs.eliteFinalCaseIcon,'Тариф «Элитный» · финальный кейс'],
+    [bpVisuals.tariffs.elitePlusIncludesEliteIcon,'Тариф «Элитный+» · преимущества Элитного'],
+    [bpVisuals.tariffs.elitePlusRatingBadgeIcon,'Тариф «Элитный+» · значок рейтинга'],
+    [bpVisuals.tariffs.elitePlusXpBoostIcon,'Тариф «Элитный+» · ×2 XP'],
+    [bpVisuals.tariffs.elitePlusLevelsIcon,'Тариф «Элитный+» · бонус уровней']
+  ])if(asset)addAsset(asset,label,true);
   for(const storyRow of enabledStory){
     const pages=seasonPassStoryPagesFromRow(storyRow);
     if(!String(storyRow.title||'').trim()||!pages.length||pages.every(p=>!String(p.title||'').trim()&&!String(p.bodyText||'').trim()&&!String(p.imageUrl||'').trim()))emptyStory.push(String(storyRow.event_id));
@@ -43460,13 +43511,40 @@ async function ownerPanelSaveSeasonPassAssetKey(env,ctx){
 
 async function ownerPanelSaveSeasonPassVisuals(env,ctx){
   await ensureSeasonPassSchema(env);
-  const seasonId=String(ctx.body?.seasonId||'').trim();
+  const seasonId=String(ctx.body?.seasonId||'').trim(),body=ctx.body||{};
   if(!seasonId)throw new ApiError(400,'Не выбран сезонный пропуск.');
   await requireSeasonVisualsSchema(env,'season_pass_seasons');
   const row=await env.DB.prepare(`SELECT * FROM season_pass_seasons WHERE season_id=? LIMIT 1`).bind(seasonId).first();
   if(!row)throw new ApiError(404,'Сезонный пропуск не найден.');
-  const heroImage=await validateSeasonVisualHeroImage(env,ctx.body?.heroImage);
-  const before=seasonVisualsView(row.visuals_json),nextJson=seasonVisualsMerge(row.visuals_json,'battlePass',heroImage),now=Math.floor(Date.now()/1000);
+  const mappings=[
+    ['heroImage',['heroImage']],
+    ['seasonTabIcon',['navigation','seasonIcon']],
+    ['tasksTabIcon',['navigation','tasksIcon']],
+    ['taskSectionIcon',['tasks','sectionIcon']],
+    ['claimXpIcon',['tasks','claimXpIcon']],
+    ['eliteCardIcon',['tariffs','eliteCardIcon']],
+    ['elitePlusCardIcon',['tariffs','elitePlusCardIcon']],
+    ['elitePremiumRewardsIcon',['tariffs','elitePremiumRewardsIcon']],
+    ['elitePremiumTasksIcon',['tariffs','elitePremiumTasksIcon']],
+    ['eliteRatingBadgeIcon',['tariffs','eliteRatingBadgeIcon']],
+    ['eliteFinalCaseIcon',['tariffs','eliteFinalCaseIcon']],
+    ['elitePlusIncludesEliteIcon',['tariffs','elitePlusIncludesEliteIcon']],
+    ['elitePlusRatingBadgeIcon',['tariffs','elitePlusRatingBadgeIcon']],
+    ['elitePlusXpBoostIcon',['tariffs','elitePlusXpBoostIcon']],
+    ['elitePlusLevelsIcon',['tariffs','elitePlusLevelsIcon']]
+  ];
+  const provided=mappings.filter(([bodyKey])=>Object.prototype.hasOwnProperty.call(body,bodyKey));
+  const needsManifest=provided.some(([bodyKey])=>String(body?.[bodyKey]||'').trim());
+  const manifest=needsManifest?await seasonPassReadinessImageManifest(env):null;
+  if(needsManifest&&!manifest?.available)throw new ApiError(503,'Каталог изображений временно недоступен. Обновите assets manifest и повторите попытку.');
+  const patch={};
+  for(const [bodyKey,path] of provided){
+    const value=await validateSeasonVisualHeroImage(env,body?.[bodyKey],manifest);
+    let target=patch;
+    for(let index=0;index<path.length-1;index+=1){const key=path[index];target[key]??={};target=target[key];}
+    target[path[path.length-1]]=value;
+  }
+  const before=seasonVisualsView(row.visuals_json),nextJson=seasonVisualsMerge(row.visuals_json,'battlePass',patch),now=Math.floor(Date.now()/1000);
   await env.DB.prepare(`UPDATE season_pass_seasons SET visuals_json=?,updated_at=?,updated_by=? WHERE season_id=?`).bind(nextJson,now,String(ctx.user.id),seasonId).run();
   invalidateSeasonPassConfigCache();
   const updated=await env.DB.prepare(`SELECT * FROM season_pass_seasons WHERE season_id=? LIMIT 1`).bind(seasonId).first();
