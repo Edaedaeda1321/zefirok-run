@@ -9074,6 +9074,199 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
 #zefirok-maltipoo-runner .rating-player-profile-sheet.is-full-dragging{cursor:grabbing;user-select:none;-webkit-user-select:none}
 @media(max-width:390px){#zefirok-maltipoo-runner .rating-v6-hero{grid-template-columns:minmax(0,1fr) 104px!important}.rating-v6-hero-reward{padding:8px!important}.rating-v6-hero-reward>small{font-size:8px!important;padding-inline:7px!important}.rating-v6-hero-reward .leaderboard-reward-amount--fixed{font-size:8px!important;padding:4px 6px!important}}
 </style>
+
+<style id="zefirok-rating-podium-winner-art-v1">
+/* Top-3 identity: each podium place owns its own palette and supplied winner artwork. */
+#zefirok-maltipoo-runner .rating-v6-podium{
+  gap:8px!important;
+  padding-top:25px!important;
+  overflow:visible!important;
+}
+#zefirok-maltipoo-runner .rating-v6-podium-card{
+  isolation:isolate!important;
+  overflow:visible!important;
+  min-height:188px!important;
+  padding:35px 7px 14px!important;
+  border-width:1px!important;
+  transition:transform .16s ease,box-shadow .2s ease,filter .2s ease!important;
+}
+#zefirok-maltipoo-runner .rating-v6-podium-card::before{
+  content:"";
+  position:absolute;
+  inset:-2px;
+  z-index:-1;
+  border-radius:25px 25px 18px 18px;
+  pointer-events:none;
+  opacity:.72;
+}
+#zefirok-maltipoo-runner .rating-v6-podium-card[data-place="1"]{
+  min-height:211px!important;
+  padding-top:37px!important;
+  border-color:rgba(221,166,48,.86)!important;
+  background:
+    radial-gradient(circle at 50% 5%,rgba(255,224,102,.52),transparent 31%),
+    radial-gradient(circle at 16% 34%,rgba(255,164,194,.20),transparent 34%),
+    linear-gradient(180deg,#fffdf1 0%,#fff4d4 55%,#ffead6 100%)!important;
+  box-shadow:0 22px 38px rgba(153,101,20,.25),0 7px 15px rgba(138,73,47,.12),inset 0 1px 0 rgba(255,255,255,.96)!important;
+  transform:translateY(-13px)!important;
+}
+#zefirok-maltipoo-runner .rating-v6-podium-card[data-place="1"]::before{
+  border:1px solid rgba(241,188,57,.78);
+  box-shadow:0 0 0 1px rgba(255,238,164,.42),0 0 26px rgba(247,190,55,.20);
+  animation:rating-winner-card-aura 3.6s ease-in-out infinite;
+}
+#zefirok-maltipoo-runner .rating-v6-podium-card[data-place="2"]{
+  border-color:rgba(159,174,195,.88)!important;
+  background:
+    radial-gradient(circle at 50% 5%,rgba(255,255,255,.92),transparent 32%),
+    radial-gradient(circle at 15% 26%,rgba(238,184,213,.18),transparent 34%),
+    linear-gradient(180deg,#fcfdff 0%,#f1f4f8 57%,#e7ecf2 100%)!important;
+  box-shadow:0 19px 32px rgba(72,86,108,.21),0 6px 13px rgba(87,67,87,.09),inset 0 1px 0 rgba(255,255,255,.98)!important;
+}
+#zefirok-maltipoo-runner .rating-v6-podium-card[data-place="2"]::before{
+  border:1px solid rgba(190,202,218,.72);
+  box-shadow:0 0 18px rgba(170,188,213,.16);
+}
+#zefirok-maltipoo-runner .rating-v6-podium-card[data-place="3"]{
+  border-color:rgba(199,137,86,.84)!important;
+  background:
+    radial-gradient(circle at 50% 4%,rgba(255,226,193,.54),transparent 32%),
+    radial-gradient(circle at 86% 32%,rgba(255,176,194,.14),transparent 34%),
+    linear-gradient(180deg,#fffaf4 0%,#f9e5d4 58%,#f2d2bc 100%)!important;
+  box-shadow:0 19px 32px rgba(122,70,37,.22),0 6px 13px rgba(111,62,42,.10),inset 0 1px 0 rgba(255,255,255,.92)!important;
+}
+#zefirok-maltipoo-runner .rating-v6-podium-card[data-place="3"]::before{
+  border:1px solid rgba(219,157,103,.72);
+  box-shadow:0 0 18px rgba(198,124,70,.14);
+}
+
+/* Keep the numeric badge for instant scanning, but make it a small secondary element. */
+#zefirok-maltipoo-runner .rating-v6-podium-place{
+  top:-15px!important;
+  width:34px!important;
+  height:34px!important;
+  border-width:2px!important;
+  font-size:13px!important;
+  box-shadow:0 6px 13px rgba(90,57,55,.15)!important;
+}
+#zefirok-maltipoo-runner .rating-v6-podium-card[data-place="1"] .rating-v6-podium-place{
+  background:linear-gradient(145deg,#fff4a7 0%,#efb833 48%,#d68a16 100%)!important;
+  border-color:rgba(255,255,255,.98)!important;
+  color:#75450a!important;
+  box-shadow:0 0 0 1px rgba(211,151,31,.30),0 7px 16px rgba(161,104,19,.22)!important;
+}
+#zefirok-maltipoo-runner .rating-v6-podium-card[data-place="2"] .rating-v6-podium-place{
+  background:linear-gradient(145deg,#fff 0%,#dfe7f0 48%,#aeb9ca 100%)!important;
+  color:#566173!important;
+  box-shadow:0 0 0 1px rgba(144,159,180,.22),0 7px 15px rgba(76,91,112,.16)!important;
+}
+#zefirok-maltipoo-runner .rating-v6-podium-card[data-place="3"] .rating-v6-podium-place{
+  background:linear-gradient(145deg,#ffe5c6 0%,#e7a264 48%,#b9692d 100%)!important;
+  color:#6d3918!important;
+  box-shadow:0 0 0 1px rgba(174,100,49,.22),0 7px 15px rgba(113,65,36,.17)!important;
+}
+
+/* Supplied winner art. The bronze artwork is optically rounder, so it has its own fit. */
+#zefirok-maltipoo-runner .rating-v6-podium-avatar{
+  position:relative!important;
+  z-index:2!important;
+  display:grid!important;
+  place-items:center!important;
+  width:100%!important;
+  min-height:93px!important;
+  margin-top:1px!important;
+  overflow:visible!important;
+}
+#zefirok-maltipoo-runner .rating-v6-podium-avatar .leaderboard-avatar-frame{
+  position:relative!important;
+  z-index:2!important;
+}
+#zefirok-maltipoo-runner .rating-v6-podium-laurel{
+  position:absolute!important;
+  left:50%!important;
+  top:50%!important;
+  z-index:1!important;
+  display:block!important;
+  width:116px!important;
+  height:116px!important;
+  max-width:none!important;
+  object-fit:contain!important;
+  pointer-events:none!important;
+  user-select:none!important;
+  -webkit-user-drag:none!important;
+  transform:translate(-50%,-50%)!important;
+  transform-origin:50% 54%!important;
+  filter:drop-shadow(0 7px 10px rgba(101,61,40,.13));
+}
+#zefirok-maltipoo-runner .rating-v6-podium-card[data-place="1"] .rating-v6-podium-avatar{min-height:108px!important}
+#zefirok-maltipoo-runner .rating-v6-podium-card[data-place="1"] .rating-v6-podium-laurel{
+  width:132px!important;
+  height:132px!important;
+  top:49%!important;
+  filter:drop-shadow(0 8px 13px rgba(189,126,19,.22)) brightness(1.02);
+  animation:rating-winner-laurel-breathe 3.2s ease-in-out infinite;
+}
+#zefirok-maltipoo-runner .rating-v6-podium-card[data-place="2"] .rating-v6-podium-laurel{
+  width:119px!important;
+  height:119px!important;
+  top:51%!important;
+  filter:drop-shadow(0 7px 11px rgba(91,105,129,.18));
+}
+#zefirok-maltipoo-runner .rating-v6-podium-card[data-place="3"] .rating-v6-podium-laurel{
+  width:108px!important;
+  height:108px!important;
+  top:48%!important;
+  filter:drop-shadow(0 7px 11px rgba(139,82,43,.18));
+}
+
+/* Per-place typography and small surfaces reinforce the palette without hurting readability. */
+#zefirok-maltipoo-runner .rating-v6-podium-card[data-place="1"] .rating-v6-podium-name,
+#zefirok-maltipoo-runner .rating-v6-podium-card[data-place="1"] .rating-v6-podium-score{color:#7b4a19!important}
+#zefirok-maltipoo-runner .rating-v6-podium-card[data-place="2"] .rating-v6-podium-name,
+#zefirok-maltipoo-runner .rating-v6-podium-card[data-place="2"] .rating-v6-podium-score{color:#556176!important}
+#zefirok-maltipoo-runner .rating-v6-podium-card[data-place="3"] .rating-v6-podium-name,
+#zefirok-maltipoo-runner .rating-v6-podium-card[data-place="3"] .rating-v6-podium-score{color:#814b2a!important}
+#zefirok-maltipoo-runner .rating-v6-podium-card[data-place="1"] .rating-v6-podium-level{background:rgba(255,250,225,.86)!important;color:#9a6a20!important;box-shadow:inset 0 0 0 1px rgba(225,176,74,.20)}
+#zefirok-maltipoo-runner .rating-v6-podium-card[data-place="2"] .rating-v6-podium-level{background:rgba(250,252,255,.86)!important;color:#718096!important;box-shadow:inset 0 0 0 1px rgba(162,177,198,.18)}
+#zefirok-maltipoo-runner .rating-v6-podium-card[data-place="3"] .rating-v6-podium-level{background:rgba(255,247,239,.88)!important;color:#98613a!important;box-shadow:inset 0 0 0 1px rgba(197,134,87,.18)}
+#zefirok-maltipoo-runner .rating-v6-podium-card[data-place="1"] .rating-v6-mini-trophies>span{background:rgba(255,250,225,.86)!important;box-shadow:inset 0 0 0 1px rgba(225,176,74,.24)}
+#zefirok-maltipoo-runner .rating-v6-podium-card[data-place="2"] .rating-v6-mini-trophies>span{background:rgba(249,252,255,.88)!important;box-shadow:inset 0 0 0 1px rgba(161,177,199,.22)}
+#zefirok-maltipoo-runner .rating-v6-podium-card[data-place="3"] .rating-v6-mini-trophies>span{background:rgba(255,247,239,.88)!important;box-shadow:inset 0 0 0 1px rgba(198,137,91,.22)}
+#zefirok-maltipoo-runner .rating-v6-podium-card[data-place="1"] .rating-v6-podium-score small{color:#a67a35!important}
+#zefirok-maltipoo-runner .rating-v6-podium-card[data-place="2"] .rating-v6-podium-score small{color:#8390a2!important}
+#zefirok-maltipoo-runner .rating-v6-podium-card[data-place="3"] .rating-v6-podium-score small{color:#a27658!important}
+
+#zefirok-maltipoo-runner .rating-v6-podium-card[data-place="1"]:active{transform:translateY(-13px) scale(.985)!important}
+#zefirok-maltipoo-runner .rating-v6-podium-card[data-place="2"]:active,
+#zefirok-maltipoo-runner .rating-v6-podium-card[data-place="3"]:active{transform:scale(.985)!important}
+
+@keyframes rating-winner-card-aura{
+  0%,100%{opacity:.58;box-shadow:0 0 0 1px rgba(255,238,164,.32),0 0 20px rgba(247,190,55,.13)}
+  50%{opacity:.92;box-shadow:0 0 0 1px rgba(255,239,170,.54),0 0 32px rgba(247,190,55,.27)}
+}
+@keyframes rating-winner-laurel-breathe{
+  0%,100%{transform:translate(-50%,-50%) scale(1);filter:drop-shadow(0 8px 13px rgba(189,126,19,.19)) brightness(1.01)}
+  50%{transform:translate(-50%,-50%) scale(1.035);filter:drop-shadow(0 9px 17px rgba(217,152,26,.30)) brightness(1.07)}
+}
+
+@media(max-width:390px){
+  #zefirok-maltipoo-runner .rating-v6-podium{gap:5px!important;padding-top:24px!important}
+  #zefirok-maltipoo-runner .rating-v6-podium-card{min-height:174px!important;padding:33px 5px 12px!important}
+  #zefirok-maltipoo-runner .rating-v6-podium-card[data-place="1"]{min-height:196px!important;padding-top:35px!important}
+  #zefirok-maltipoo-runner .rating-v6-podium-avatar{min-height:83px!important}
+  #zefirok-maltipoo-runner .rating-v6-podium-card[data-place="1"] .rating-v6-podium-avatar{min-height:98px!important}
+  #zefirok-maltipoo-runner .rating-v6-podium-laurel{width:101px!important;height:101px!important}
+  #zefirok-maltipoo-runner .rating-v6-podium-card[data-place="1"] .rating-v6-podium-laurel{width:116px!important;height:116px!important}
+  #zefirok-maltipoo-runner .rating-v6-podium-card[data-place="2"] .rating-v6-podium-laurel{width:104px!important;height:104px!important}
+  #zefirok-maltipoo-runner .rating-v6-podium-card[data-place="3"] .rating-v6-podium-laurel{width:94px!important;height:94px!important;top:48%!important}
+  #zefirok-maltipoo-runner .rating-v6-podium-place{width:32px!important;height:32px!important;font-size:12px!important}
+}
+@media(prefers-reduced-motion:reduce){
+  #zefirok-maltipoo-runner .rating-v6-podium-card[data-place="1"]::before,
+  #zefirok-maltipoo-runner .rating-v6-podium-card[data-place="1"] .rating-v6-podium-laurel{animation:none!important}
+}
+</style>
+
 </head>
 <body>
 <div id="zefirok-maltipoo-runner">
@@ -9180,6 +9373,11 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
     1: "/assets/rating/v7/podlozka_gold.png",
     2: "/assets/rating/v7/serebryannay.png",
     3: "/assets/rating/v7/bronze_podl.png"
+  });
+  const PODIUM_WINNER_ART = Object.freeze({
+    1: "/assets/rating/icon_winner_raiting.png",
+    2: "/assets/rating/icon_2winner_raiting.png",
+    3: "/assets/rating/icon_3winner_raiting.png"
   });
   const CASE_AVATARS = Object.freeze({
     royal: "/assets/cases/avatars/AE100D7E-3441-428C-B67F-C7A46B23F712.PNG",
@@ -9709,9 +9907,15 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
     location.href = `/battle-pass.html?v=1.0.9&offer=${encodeURIComponent(tier)}${hash}`;
   }
 
+  function podiumWinnerArt(place) {
+    const src = String(PODIUM_WINNER_ART[Number(place)] || "");
+    if (!src) return "";
+    return `<img class="rating-v6-podium-laurel" data-place="${Number(place)}" src="${escapeHtml(src)}" alt="" aria-hidden="true" loading="eager" decoding="async">`;
+  }
+
   function podium(entry, place) {
     if (!entry) {
-      return `<div class="rating-v6-podium-card is-empty" data-place="${place}"><span class="rating-v6-podium-place">${place}</span>${avatarMarkup({ telegramId:`empty-${place}`, name:"Свободно" }, false, true)}<strong>Свободно</strong><span class="rating-v6-podium-score">—</span></div>`;
+      return `<div class="rating-v6-podium-card is-empty" data-place="${place}"><span class="rating-v6-podium-place">${place}</span><div class="rating-v6-podium-avatar">${podiumWinnerArt(place)}${avatarMarkup({ telegramId:`empty-${place}`, name:"Свободно" }, false, true)}</div><strong>Свободно</strong><span class="rating-v6-podium-score">—</span></div>`;
     }
     const isMe = String(entry.telegramId || "") === String(telegramProfile?.id || "");
     const playerId = escapeHtml(entry.telegramId || "");
@@ -9720,7 +9924,7 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
     return `<div class="rating-v6-podium-card${place === 1 ? " is-first" : ""}${isMe ? " is-me" : ""}" data-place="${place}" data-player-profile-id="${playerId}" role="button" tabindex="0" aria-label="${playerLabel}">
       <span class="rating-v6-podium-place">${place}</span>
       ${isMe ? '<span class="rating-v6-you">Ты</span>' : ""}
-      <div class="rating-v6-podium-avatar">${avatarMarkup(entry, false, true)}</div>
+      <div class="rating-v6-podium-avatar">${podiumWinnerArt(place)}${avatarMarkup(entry, false, true)}</div>
       <strong class="rating-v6-podium-name">${playerNameMarkup(entry)}</strong>
       <span class="rating-v6-podium-level">Ур. ${level}</span>
       ${compactShowcaseMarkup(entry, 3)}
