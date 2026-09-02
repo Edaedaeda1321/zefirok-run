@@ -268,7 +268,7 @@ const FUTURE_SEASON_CONTENT = Object.freeze({
 });
 
 const FUTURE_SEASON_CONTENT_LABEL = "Тайны Белкино";
-const FUTURE_SEASON2_CONTENT_LABEL = "Сезон 2 · Ночной сезон";
+const FUTURE_SEASON2_CONTENT_LABEL = "Сезон 2 · Ночь сладких чудес";
 function futureSeasonContentCatalog(kind){ return FUTURE_SEASON_CONTENT[String(kind||"")] || Object.freeze({}); }
 function futureSeasonContentItem(kind,itemId){ return futureSeasonContentCatalog(kind)?.[String(itemId||"")] || null; }
 function futureSeasonContentSeasonKey(kind,itemId){ return String(futureSeasonContentItem(kind,itemId)?.seasonKey || "season3"); }
@@ -5658,7 +5658,7 @@ const ACHIEVEMENT_SHOWCASE_STYLES = Object.freeze([
   Object.freeze({id:"default",title:"Стандартная",description:"Базовая кремово-золотая витрина. Доступна каждому игроку.",unlockType:"default",unlockText:"Доступна всем",category:"base",layout:"standard",rarity:"common",rewardable:false,hidden:false,imageUrl:"/assets/achievements/showcases/Standart_vitrina.png"}),
   Object.freeze({id:"gold",title:"Золотая",description:"Статусная золотая витрина за постоянный престиж достижений.",unlockType:"rank",minPoints:300,unlockText:"Открывается с ранга «Ветеран»",category:"base",layout:"gold",rarity:"legendary",rewardable:false,hidden:false,imageUrl:"/assets/achievements/showcases/gold_vitrina.png"}),
   Object.freeze({id:"season_1_cafe",title:"Открытие кафе",description:"Коллекционная витрина первого сезона. После получения навсегда остаётся на аккаунте.",unlockType:"ownership",unlockText:"Архивная сезонная награда. Получается только из назначенной награды сезона.",category:"seasonal",layout:"season1",rarity:"legendary",rewardable:true,hidden:false,seasonLabel:"Сезон 1 · Открытие кафе",imageUrl:"/assets/achievements/showcases/vitrina_s1.png"}),
-  Object.freeze({id:"season_2_night",title:"Ночной сезон",description:"Скрытая коллекционная витрина ночного сезона. После получения навсегда остаётся на аккаунте.",unlockType:"ownership",unlockText:"Скрытая витрина. Появится в коллекции после получения.",category:"seasonal",layout:"season2",rarity:"legendary",rewardable:true,hidden:true,seasonLabel:"Сезон 2 · Ночной сезон",imageUrl:"/assets/achievements/showcases/vitrina_s2.png"}),
+  Object.freeze({id:"season_2_night",title:"Ночь сладких чудес",description:"Скрытая коллекционная витрина сезона «Ночь сладких чудес». После получения навсегда остаётся на аккаунте.",unlockType:"ownership",unlockText:"Скрытая витрина. Появится в коллекции после получения.",category:"seasonal",layout:"season2",rarity:"legendary",rewardable:true,hidden:true,seasonLabel:"Сезон 2 · Ночь сладких чудес",imageUrl:"/assets/achievements/showcases/vitrina_s2.png"}),
   Object.freeze({id:"season_3_belkino",title:"Тайны Белкино",description:"Скрытая коллекционная витрина третьего сезона «Тайны Белкино». После получения навсегда остаётся на аккаунте.",unlockType:"ownership",unlockText:"Скрытая витрина сезона 3. Появится в коллекции после получения.",category:"seasonal",layout:"season3",rarity:"legendary",rewardable:true,hidden:true,seasonLabel:"Сезон 3 · Тайны Белкино",imageUrl:"/assets/achievements/showcases/vitrina_s3.png"}),
   Object.freeze({id:"special_origins",title:"У истоков",description:"Памятная витрина первых исследователей «Сладкого Забега» — тех, кто вошёл в игру ещё до официального старта и помог Зеффи сделать первые шаги.",unlockType:"ownership",unlockText:"Эту витрину получили только участники BETA-тестирования проекта.",category:"special",layout:"special_origins",rarity:"legendary",rewardable:true,manualOnly:true,hidden:false,seasonLabel:"Особая · BETA-тест",storyTitle:"Для тех, кто был в самом начале",storyText:"До сезонов, рекордов и большого кафе была первая тестовая версия. Эта витрина хранит память об игроках, которые первыми отправились в забег, проверяли механики, находили ошибки и помогали проекту становиться лучше.",obtainText:"Памятная награда участникам BETA-тестирования «Сладкого Забега». Обычным способом получить её нельзя.",imageUrl:"/assets/achievements/showcases/vitrina_At_the_origins.png"}),
   Object.freeze({id:"special_creator",title:"Создатель Зефирка",description:"Особая витрина команды проекта — знак тех, чьими руками создавался и развивался «Сладкий Забег».",unlockType:"ownership",unlockText:"Выдаётся командой проекта людям, которые непосредственно участвовали в создании игры.",category:"special",layout:"special_creator",rarity:"legendary",rewardable:true,manualOnly:true,hidden:false,seasonLabel:"Особая · Команда проекта",storyTitle:"Часть истории создания",storyText:"Каждый забег, экран и маленькая деталь игры появились благодаря людям, которые создавали проект и помогали ему расти. Эта витрина отмечает тех, чей труд стал частью самого «Сладкого Забега».",obtainText:"Выдаётся вручную участникам команды и людям, внесшим непосредственный вклад в создание и развитие проекта.",imageUrl:"/assets/achievements/showcases/vitrina_creator_zeffirok.png"}),
@@ -5789,6 +5789,7 @@ async function ensureAchievementConfigSchema(env) {
       await addRuntimeColumnIfMissing(env, "achievement_settings", "rarity", "TEXT NOT NULL DEFAULT '' CHECK(rarity IN ('','common','rare','epic','legendary','legacy'))");
       await addRuntimeColumnIfMissing(env, "achievement_settings", "achievement_points", "INTEGER NOT NULL DEFAULT -1 CHECK(achievement_points >= -1 AND achievement_points <= 10000)");
       await addRuntimeColumnIfMissing(env, "achievement_settings", "secret_mode", "INTEGER NOT NULL DEFAULT -1 CHECK(secret_mode IN (-1,0,1))");
+      await env.DB.prepare(`UPDATE achievement_settings SET title='Ночь сладких чудес' WHERE achievement_id='season_2_night' AND TRIM(title)='Ночной сезон'`).run();
       await env.DB.batch([
         env.DB.prepare(`CREATE TABLE IF NOT EXISTS achievement_showcase_preferences (telegram_id TEXT PRIMARY KEY,style_id TEXT NOT NULL DEFAULT 'default',updated_at INTEGER NOT NULL DEFAULT 0)`),
         env.DB.prepare(`CREATE TABLE IF NOT EXISTS achievement_showcase_style_ownership (telegram_id TEXT NOT NULL,style_id TEXT NOT NULL,source_type TEXT NOT NULL DEFAULT '',source_id TEXT NOT NULL DEFAULT '',unlocked_at INTEGER NOT NULL DEFAULT 0,updated_at INTEGER NOT NULL DEFAULT 0,PRIMARY KEY(telegram_id,style_id))`),
@@ -8812,6 +8813,50 @@ function configuredSeason(env) {
   };
 }
 
+function leaderboardSeasonOrdinal(value) {
+  const match=String(value||"").match(/(?:сезон|season)\s*[№#:]?\s*(\d{1,3})/i);
+  return match?Math.max(0,Number(match[1])||0):0;
+}
+
+function ownerPanelGameSeasonView(row, now = Math.floor(Date.now()/1000)) {
+  if(!row)return null;
+  const startsAt=Math.max(0,Number(row.starts_at)||0),endsAt=Math.max(startsAt,Number(row.ends_at)||0),manual=String(row.manual_status||"");
+  const status=manual==="ended"||endsAt<=now?"ended":startsAt>now?"upcoming":"active";
+  return {id:String(row.season_id||""),title:String(row.title||""),startsAt,endsAt,status,ordinal:leaderboardSeasonOrdinal(row.title)};
+}
+
+function leaderboardGameSeasonCandidate(rating, gameSeasons=[]) {
+  const rows=Array.isArray(gameSeasons)?gameSeasons:[];
+  if(!rows.length)return null;
+  const ordinal=leaderboardSeasonOrdinal(rating?.title);
+  if(ordinal){const byNumber=rows.filter((row)=>leaderboardSeasonOrdinal(row?.title)===ordinal);if(byNumber.length===1)return byNumber[0];}
+  const rs=Math.max(0,Number(rating?.starts_at)||0),re=Math.max(rs,Number(rating?.ends_at)||0),rd=Math.max(1,re-rs);
+  const ranked=rows.map((row)=>{const s=Math.max(0,Number(row?.starts_at)||0),e=Math.max(s,Number(row?.ends_at)||0),overlap=Math.max(0,Math.min(re,e)-Math.max(rs,s)),den=Math.max(1,Math.min(rd,Math.max(1,e-s)));return {row,score:overlap/den};}).filter((x)=>x.score>=.8).sort((a,b)=>b.score-a.score);
+  if(ranked.length===1||ranked[0]?.score>(ranked[1]?.score||0)+.15)return ranked[0]?.row||null;
+  return null;
+}
+
+async function findLivePrimaryRatingForGameSeason(env, gameSeasonId, ignoredId="") {
+  const id=String(gameSeasonId||"").trim();if(!id)return null;
+  return env.DB.prepare(`SELECT id,title,starts_at,ends_at,status FROM leaderboard_seasons WHERE game_season_id=? AND rating_kind='primary' AND finalized_at IS NULL AND status IN ('scheduled','active') AND id<>? ORDER BY manual_override DESC,starts_at ASC,created_at ASC LIMIT 1`).bind(id,String(ignoredId||"")).first();
+}
+
+async function ownerPanelReconcileRatingGameSeasonLinks(env, ratingRows, gameSeasonRows) {
+  const ratings=Array.isArray(ratingRows)?ratingRows:[],games=Array.isArray(gameSeasonRows)?gameSeasonRows:[];
+  if(!ratings.length||!games.length)return 0;
+  let changed=0;
+  const ordered=[...ratings].sort((a,b)=>{const aliveA=!a.finalized_at&&['active','scheduled'].includes(String(a.status))?1:0,aliveB=!b.finalized_at&&['active','scheduled'].includes(String(b.status))?1:0;if(aliveA!==aliveB)return aliveB-aliveA;const manualA=Number(a.manual_override||0),manualB=Number(b.manual_override||0);if(manualA!==manualB)return manualB-manualA;return Number(a.created_at||0)-Number(b.created_at||0);});
+  for(const row of ordered){
+    if(String(row.game_season_id||"").trim())continue;
+    const target=leaderboardGameSeasonCandidate(row,games);if(!target?.season_id)continue;
+    const gameSeasonId=String(target.season_id);
+    const live=!row.finalized_at&&['active','scheduled'].includes(String(row.status));
+    if(live){const existing=await findLivePrimaryRatingForGameSeason(env,gameSeasonId,String(row.id));if(existing)continue;}
+    try{const update=await env.DB.prepare(`UPDATE leaderboard_seasons SET game_season_id=?,rating_kind='primary',updated_at=MAX(updated_at,?) WHERE id=? AND game_season_id=''`).bind(gameSeasonId,Math.floor(Date.now()/1000),String(row.id)).run();changed+=Number(update?.meta?.changes||0);}catch(error){if(!String(error?.message||error).toLowerCase().includes('unique'))throw error;}
+  }
+  return changed;
+}
+
 function parseConfiguredDate(value, label) {
   const timestamp = Date.parse(String(value || ""));
   if (!Number.isFinite(timestamp)) throw new ApiError(500, `Некорректная ${label}.`);
@@ -8838,6 +8883,8 @@ function leaderboardSeasonResetPlan(seasonId) {
 
 async function upsertConfiguredLeaderboardSeason(env, now) {
   const config = configuredSeason(env);
+  const existing=await env.DB.prepare(`SELECT id FROM leaderboard_seasons WHERE id=? LIMIT 1`).bind(config.id).first();
+  if(!existing){const overlap=await findLeaderboardSeasonOverlap(env,config.startsAt,config.endsAt,config.id);if(overlap)return {...config,skipped:true,existingSeasonId:String(overlap.id||"")};}
   await env.DB.prepare(
     `INSERT INTO leaderboard_seasons (
       id, title, starts_at, ends_at, status, reward_type, reward_amount,
@@ -29683,8 +29730,11 @@ async function ensureSeason2StoryPreset(env){
   if(markerRow?.preset_id){const seasonId=String(markerRow.season_id||'');if(seasonId)await bindSeason2ContentCatalogToSeason(env,seasonId).catch(error=>console.error('season2 content binding failed',error));return {ok:true,seeded:false,reason:'already-seeded',seasonId};}
 
   const now=Math.floor(Date.now()/1000);
-  const target=await env.DB.prepare(`SELECT season_id,title,starts_at,ends_at,manual_status FROM season_pass_seasons WHERE starts_at>? AND COALESCE(manual_status,'')<>'ended' ORDER BY starts_at ASC,season_id ASC LIMIT 1`).bind(now).first();
-  if(!target?.season_id)return {ok:true,seeded:false,reason:'upcoming-season-not-created'};
+  const candidates=(await env.DB.prepare(`SELECT season_id,title,starts_at,ends_at,manual_status FROM season_pass_seasons WHERE starts_at>? AND COALESCE(manual_status,'')<>'ended' ORDER BY starts_at ASC,season_id ASC LIMIT 100`).bind(now).all()).results||[];
+  const canonical=candidates.filter((row)=>String(row.title||'').toLocaleLowerCase('ru-RU').includes('ночь сладких чудес'));
+  const numbered=candidates.filter((row)=>/(?:сезон|season)\s*2(?:\D|$)/i.test(String(row.title||'')));
+  const target=canonical.length===1?canonical[0]:(numbered.length===1?numbered[0]:null);
+  if(!target?.season_id)return {ok:true,seeded:false,reason:candidates.length?'season2-season-ambiguous':'upcoming-season-not-created'};
 
   const seasonId=String(target.season_id),safeSeason=seasonId.replace(/[^A-Za-z0-9_-]+/g,'_').slice(0,90)||'season2';
   const existing=(await env.DB.prepare(`SELECT event_id,title FROM season_pass_story_events WHERE season_id=?`).bind(seasonId).all()).results||[];
@@ -42620,30 +42670,39 @@ async function ownerPanelGrantPlayer(env, ctx) {
   return ownerPanelGrantDirectReward(env, ctx, telegramId, kind, itemId, amount, reason);
 }
 
-function ownerPanelRatingSeasonView(row) {
+function ownerPanelRatingSeasonView(row, gameSeasonMap=new Map()) {
   if (!row) return null;
   const reward = leaderboardRewardPresentation(row.reward_type, row.reward_amount, row.reward_item_id, row.reward_title, row.reward_image_url);
+  const gameSeasonId=String(row.game_season_id||""),gameSeason=gameSeasonId?gameSeasonMap.get(gameSeasonId)||null:null,ratingKind=String(row.rating_kind||"special")==="primary"?"primary":"special";
   return {
-    id: String(row.id || ""), title: String(row.title || ""),
+    id: String(row.id || ""), title: String(row.title || ""), displayTitle:ratingKind==="primary"&&gameSeason?`Рейтинг · ${String(gameSeason.title||row.title||"")}`:String(row.title||""),
     startsAt: Number(row.starts_at || 0), endsAt: Number(row.ends_at || 0),
     status: String(row.status || ""), finalizedAt: Number(row.finalized_at || 0),
     reward: { type: reward.type, amount: reward.amount, title: reward.title, itemId: reward.itemId, imageUrl: ownerPanelRewardAsset(reward.type, reward.itemId) || reward.imageUrl },
     visuals: seasonVisualsView(row.visuals_json),
-    manualOverride: Number(row.manual_override || 0) === 1
+    manualOverride: Number(row.manual_override || 0) === 1,
+    gameSeasonId,ratingKind,gameSeason:gameSeason?ownerPanelGameSeasonView(gameSeason):null
   };
 }
 
 async function ownerPanelRating(env, ctx) {
-  await reconcileLeaderboardSeasonTimeline(env);
-  const seasonsResult = await env.DB.prepare(`SELECT * FROM leaderboard_seasons ORDER BY CASE status WHEN 'active' THEN 0 WHEN 'scheduled' THEN 1 WHEN 'ended' THEN 2 ELSE 3 END, starts_at DESC LIMIT 30`).all();
-  const active = (seasonsResult.results || []).find((row) => String(row.status) === "active") || await ensureSeason(env);
-  const topResult = active ? await env.DB.prepare(`SELECT telegram_id,display_name,username,photo_url,best_score,level,achieved_at FROM leaderboard_entries WHERE season_id=? AND hidden=0 ORDER BY best_score DESC,achieved_at ASC,telegram_id ASC LIMIT 20`).bind(String(active.id)).all() : { results: [] };
+  await Promise.all([reconcileLeaderboardSeasonTimeline(env),ensureSeasonPassSchema(env)]);
+  let seasonsResult=await env.DB.prepare(`SELECT * FROM leaderboard_seasons ORDER BY CASE status WHEN 'active' THEN 0 WHEN 'scheduled' THEN 1 WHEN 'ended' THEN 2 ELSE 3 END, starts_at DESC LIMIT 30`).all();
+  let rows=seasonsResult.results||[];
+  let current=rows.find((row)=>String(row.status)==="active")||rows.find((row)=>String(row.status)==="scheduled")||null;
+  if(!current){await ensureSeason(env);seasonsResult=await env.DB.prepare(`SELECT * FROM leaderboard_seasons ORDER BY CASE status WHEN 'active' THEN 0 WHEN 'scheduled' THEN 1 WHEN 'ended' THEN 2 ELSE 3 END, starts_at DESC LIMIT 30`).all();rows=seasonsResult.results||[];current=rows.find((row)=>String(row.status)==="active")||rows.find((row)=>String(row.status)==="scheduled")||rows[0]||null;}
+  const gameSeasonResult=await env.DB.prepare(`SELECT season_id,title,starts_at,ends_at,manual_status FROM season_pass_seasons ORDER BY starts_at DESC,season_id ASC LIMIT 100`).all();
+  const gameSeasonRows=gameSeasonResult.results||[];
+  if(await ownerPanelReconcileRatingGameSeasonLinks(env,rows,gameSeasonRows)){seasonsResult=await env.DB.prepare(`SELECT * FROM leaderboard_seasons ORDER BY CASE status WHEN 'active' THEN 0 WHEN 'scheduled' THEN 1 WHEN 'ended' THEN 2 ELSE 3 END, starts_at DESC LIMIT 30`).all();rows=seasonsResult.results||[];current=rows.find((row)=>String(row.status)==="active")||rows.find((row)=>String(row.status)==="scheduled")||rows[0]||null;}
+  const gameSeasonMap=new Map(gameSeasonRows.map((row)=>[String(row.season_id||""),row]));
+  const topResult=current&&String(current.status)==="active"?await env.DB.prepare(`SELECT telegram_id,display_name,username,photo_url,best_score,level,achieved_at FROM leaderboard_entries WHERE season_id=? AND hidden=0 ORDER BY best_score DESC,achieved_at ASC,telegram_id ASC LIMIT 20`).bind(String(current.id)).all():{results:[]};
   return {
-    ok: true,
-    seasons: (seasonsResult.results || []).map(ownerPanelRatingSeasonView),
-    active: ownerPanelRatingSeasonView(active),
-    top: (topResult.results || []).map((row, index) => ({ place: index + 1, telegramId: String(row.telegram_id), name: String(row.display_name || row.username || row.telegram_id), username: String(row.username || ""), photoUrl: String(row.photo_url || ""), score: Number(row.best_score || 0), level: Number(row.level || 1) })),
-    banners: { current: seasonVisualsView(active?.visuals_json).rating.heroImage || SEASON_VISUAL_RATING_HERO_FALLBACK, allTime: "/assets/rating/v8/all-time-rating.png" }
+    ok:true,
+    seasons:rows.map((row)=>ownerPanelRatingSeasonView(row,gameSeasonMap)),
+    active:ownerPanelRatingSeasonView(current,gameSeasonMap),
+    gameSeasons:gameSeasonRows.map((row)=>ownerPanelGameSeasonView(row)),
+    top:(topResult.results||[]).map((row,index)=>({place:index+1,telegramId:String(row.telegram_id),name:String(row.display_name||row.username||row.telegram_id),username:String(row.username||""),photoUrl:String(row.photo_url||""),score:Number(row.best_score||0),level:Number(row.level||1)})),
+    banners:{current:seasonVisualsView(current?.visuals_json).rating.heroImage||SEASON_VISUAL_RATING_HERO_FALLBACK,allTime:"/assets/rating/v8/all-time-rating.png"}
   };
 }
 
@@ -42662,12 +42721,23 @@ async function ownerPanelSaveRatingVisuals(env, ctx) {
 }
 
 async function ownerPanelCreateRatingSeason(env, ctx) {
+  await ensureSeasonPassSchema(env);
   const title = String(ctx.body?.title || "").trim().slice(0, 80);
   const startsAt = ownerPanelInteger(ctx.body?.startsAt, 1, 4102444800);
   const endsAt = ownerPanelInteger(ctx.body?.endsAt, 1, 4102444800);
+  const ratingKind=String(ctx.body?.ratingKind||"primary")==="special"?"special":"primary";
+  const gameSeasonId=String(ctx.body?.gameSeasonId||"").trim();
   if (title.length < 3) throw new ApiError(400, "Название сезона слишком короткое.");
   if (startsAt == null || endsAt == null || endsAt <= startsAt + 3600) throw new ApiError(400, "Проверьте даты сезона: длительность должна быть больше часа.");
   if (endsAt - startsAt > 180 * 24 * 3600) throw new ApiError(400, "Рейтинговый сезон не может длиться больше 180 дней.");
+  let gameSeason=null;
+  if(ratingKind==="primary"){
+    if(!gameSeasonId)throw new ApiError(400,"Для основного рейтинга выберите игровой сезон.");
+    gameSeason=await env.DB.prepare(`SELECT season_id,title,starts_at,ends_at,manual_status FROM season_pass_seasons WHERE season_id=? LIMIT 1`).bind(gameSeasonId).first();
+    if(!gameSeason)throw new ApiError(404,"Выбранный игровой сезон не найден.");
+    const primary=await findLivePrimaryRatingForGameSeason(env,gameSeasonId);
+    if(primary)throw new ApiError(409,`У сезона «${String(gameSeason.title||gameSeasonId)}» уже есть основной рейтинг «${String(primary.title||primary.id)}».`);
+  }
   const overlap = await findLeaderboardSeasonOverlap(env, startsAt, endsAt);
   if (overlap) throw new ApiError(409, `Период пересекается с сезоном «${String(overlap.title || overlap.id)}».`);
   const type = normalizeLeaderboardRewardType(ctx.body?.rewardType || "case");
@@ -42680,10 +42750,10 @@ async function ownerPanelCreateRatingSeason(env, ctx) {
   if (endsAt <= now) throw new ApiError(400, "Дата окончания уже прошла.");
   const seasonId = leaderboardSeasonCreateId(startsAt);
   const status = startsAt <= now ? "active" : "scheduled";
-  await env.DB.prepare(`INSERT INTO leaderboard_seasons(id,title,starts_at,ends_at,status,reward_type,reward_amount,reward_claim_days,reset_plan_json,close_reason,created_at,updated_at,finalized_at,manual_override,reward_title,reward_image_url,reward_item_id) VALUES(?,?,?,?,?,?,?,?,?,'',?,?,NULL,1,?,?,?)`).bind(
-    seasonId,title,startsAt,endsAt,status,reward.type,reward.amount,DEFAULT_SEASON_REWARD_CLAIM_DAYS,JSON.stringify(leaderboardSeasonResetPlan(seasonId)),now,now,reward.title,reward.imageUrl,reward.itemId
+  await env.DB.prepare(`INSERT INTO leaderboard_seasons(id,title,starts_at,ends_at,status,reward_type,reward_amount,reward_claim_days,reset_plan_json,close_reason,created_at,updated_at,finalized_at,manual_override,reward_title,reward_image_url,reward_item_id,game_season_id,rating_kind) VALUES(?,?,?,?,?,?,?,?,?,'',?,?,NULL,1,?,?,?,?,?)`).bind(
+    seasonId,title,startsAt,endsAt,status,reward.type,reward.amount,DEFAULT_SEASON_REWARD_CLAIM_DAYS,JSON.stringify(leaderboardSeasonResetPlan(seasonId)),now,now,reward.title,reward.imageUrl,reward.itemId,ratingKind==="primary"?gameSeasonId:"",ratingKind
   ).run();
-  await logStaffAction(env, ctx.user, ctx.access, "owner_panel_rating_create", null, "season", null, null, { seasonId,title,startsAt,endsAt,rewardType:reward.type,rewardAmount:reward.amount,rewardItemId:reward.itemId });
+  await logStaffAction(env, ctx.user, ctx.access, "owner_panel_rating_create", null, "season", null, null, { seasonId,title,startsAt,endsAt,rewardType:reward.type,rewardAmount:reward.amount,rewardItemId:reward.itemId,ratingKind,gameSeasonId:ratingKind==="primary"?gameSeasonId:"" });
   return { ok: true, season: ownerPanelRatingSeasonView(await env.DB.prepare(`SELECT * FROM leaderboard_seasons WHERE id=?`).bind(seasonId).first()) };
 }
 
@@ -42698,6 +42768,7 @@ async function ownerPanelStartRatingSeason(env, ctx) {
     throw new ApiError(409, "Запустить раньше времени можно только будущий запланированный сезон.");
   }
   if (Number(season.ends_at || 0) <= now) throw new ApiError(409, "Дата окончания этого сезона уже прошла.");
+  if(String(season.rating_kind||"")==="primary"&&String(season.game_season_id||"")){const primary=await findLivePrimaryRatingForGameSeason(env,String(season.game_season_id),seasonId);if(primary)throw new ApiError(409,`У связанного игрового сезона уже есть другой основной рейтинг «${String(primary.title||primary.id)}».`);}
 
   const update = await env.DB.prepare(
     `UPDATE leaderboard_seasons
