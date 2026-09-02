@@ -359,14 +359,61 @@ button.cc29-routed-save{display:inline-flex;align-items:center;justify-content:c
 
 </style>
 
+
+<style id="cc32-mobile-gesture-fix">
+/* CC 3.1.1 · Mobile gesture/navigation hotfix */
+.cc32-scroll-top-hitbox{display:none}
+@media(max-width:620px){
+  /* Make every horizontal tool strip genuinely finger-scrollable in iOS/Telegram WebView. */
+  .subnav,.context-nav,.cc27-mobile-tabs,.cc23-asset-smart,.cc30-access-list,.cc31-task-grid,
+  .cc24-recent-players,.cc24-profile-tabs,.content-filters,.future-pass-toolbar,
+  .cc23-asset-browser .case-asset-folders{
+    overflow-x:auto!important;overflow-y:hidden!important;-webkit-overflow-scrolling:touch;
+    touch-action:pan-x;overscroll-behavior-x:contain;scroll-snap-type:x proximity;
+    scrollbar-width:none;
+  }
+  .subnav::-webkit-scrollbar,.context-nav::-webkit-scrollbar,.cc27-mobile-tabs::-webkit-scrollbar,
+  .cc23-asset-smart::-webkit-scrollbar,.cc30-access-list::-webkit-scrollbar,.cc31-task-grid::-webkit-scrollbar,
+  .cc24-recent-players::-webkit-scrollbar,.cc24-profile-tabs::-webkit-scrollbar,
+  .content-filters::-webkit-scrollbar,.future-pass-toolbar::-webkit-scrollbar,
+  .cc23-asset-browser .case-asset-folders::-webkit-scrollbar{display:none}
+  .subnav>*,.context-nav>*,.cc27-mobile-tabs>*,.cc23-asset-smart>*,.cc30-access-list>*,
+  .cc31-task-grid>*,.cc24-recent-players>*,.cc24-profile-tabs>*,.content-filters>*,
+  .future-pass-toolbar>*,.cc23-asset-browser .case-asset-folders>*{scroll-snap-align:start}
+
+  /* Stronger selected state in the permanent bottom navigation. */
+  .cc28-bottom-nav{padding:5px;gap:3px;border-color:rgba(92,68,80,.16);box-shadow:0 14px 40px rgba(52,36,44,.20)}
+  .cc28-bottom-nav button{position:relative;border:1px solid transparent;transition:transform .16s ease,border-color .16s ease,background .16s ease,box-shadow .16s ease,color .16s ease}
+  .cc28-bottom-nav button.active{
+    border:2px solid color-mix(in srgb,var(--cc2-accent) 64%,#fff);
+    background:linear-gradient(180deg,#fff 0%,var(--cc2-accent-soft) 100%);
+    color:var(--cc2-accent);
+    box-shadow:0 0 0 2px rgba(var(--cc2-accent-rgb),.10),0 8px 20px rgba(var(--cc2-accent-rgb),.20);
+    transform:translateY(-2px);
+  }
+  .cc28-bottom-nav button.active::after{content:"";position:absolute;left:50%;bottom:3px;width:19px;height:3px;border-radius:99px;background:var(--cc2-accent);transform:translateX(-50%);box-shadow:0 0 8px rgba(var(--cc2-accent-rgb),.28)}
+  .cc28-bottom-nav button.active>span{transform:translateY(-2px) scale(1.15);filter:saturate(1.08)}
+  .cc28-bottom-nav button.active>b{font-weight:950;color:var(--cc2-accent)}
+  .cc27-mobile-tabs button.active{border-color:var(--cc2-accent)!important;box-shadow:0 0 0 2px rgba(var(--cc2-accent-rgb),.09);background:var(--cc2-accent-soft)!important}
+
+  /* Visual feedback while the user swipes between primary workspaces. */
+  #main.cc32-swipe-tracking>.view.active{transform:translateX(var(--cc32-swipe-x,0px));opacity:var(--cc32-swipe-opacity,1);will-change:transform,opacity;transition:none!important}
+  #main.cc32-swipe-release>.view.active{transform:translateX(0)!important;opacity:1!important;transition:transform .16s ease,opacity .16s ease!important}
+
+  /* Safari-like top tap area. It also works above full-screen drawers. */
+  .cc32-scroll-top-hitbox{display:block;position:fixed;z-index:190;top:0;left:0;right:0;height:max(10px,calc(var(--safe-top) + 3px));padding:0;border:0;background:transparent;opacity:0;touch-action:manipulation}
+  .brand{cursor:pointer}
+}
+</style>
+
 </head>
 <body>
 <div class="app" id="app">
 <header class="top cc2-top">
   <div class="cc2-brand-row">
-    <div class="brand"><div class="brand-icon">★</div><div class="brand-copy"><span class="cc2-brand-kicker">Control Center 3.1</span><h1>Sweet Operations</h1><p id="ownerLine">Проверка доступа…</p></div></div>
+    <div class="brand"><div class="brand-icon">★</div><div class="brand-copy"><span class="cc2-brand-kicker">Control Center 3.1.1</span><h1>Sweet Operations</h1><p id="ownerLine">Проверка доступа…</p></div></div>
     <div class="cc27-mobile-tools"><button class="cc27-icon-btn" id="cc27SearchToggle" type="button" aria-expanded="false" aria-controls="cc28CommandOverlay" title="Команды и поиск">⌕</button></div>
-    <div class="cc2-header-status"><span class="cc2-status is-prod" id="cc2EnvBadge">PROD</span><span class="cc2-status is-neutral" id="cc2WorkspaceBadge">STAGING OFF</span><div class="version" id="versionBadge">CC 3.1 · v9.37</div></div>
+    <div class="cc2-header-status"><span class="cc2-status is-prod" id="cc2EnvBadge">PROD</span><span class="cc2-status is-neutral" id="cc2WorkspaceBadge">STAGING OFF</span><div class="version" id="versionBadge">CC 3.1.1 · v9.38</div></div>
   </div>
   <div class="cc2-search-row" id="cc27SearchRow"><div class="global-search"><input id="globalSearch" placeholder="Поиск: @username, ID, промокод, физический код, событие…"><button class="btn small" id="globalSearchBtn">Найти</button></div><button class="btn secondary small cc28-command-open" id="cc28CommandOpen" type="button" title="Command Palette · Ctrl/⌘ K">⌘K · Команды</button><button class="btn gold small cc30-quick-create-head" id="cc30QuickCreateHeader" type="button">＋ Создать</button></div>
   <nav class="nav" id="nav" aria-label="Разделы Control Center">
@@ -1036,7 +1083,7 @@ function cc2SeasonCountdown(pass,serverTime){const now=Date.parse(serverTime||''
 function renderBootstrap(d){
   state.bootstrap=d;
   $('ownerLine').textContent=`${d.owner.name} · роль Владелец · игра ${d.version}`;
-  $('versionBadge').textContent='CC 3.1 · v9.37';
+  $('versionBadge').textContent='CC 3.1.1 · v9.38';
   if(typeof cc30RefreshUi==='function')cc30RefreshUi();
   const counts=d.counts||{};
   const queuePending=Number(counts.queuePending||0),queueFailed=Number(counts.queueFailed||0);
@@ -2380,7 +2427,65 @@ function cc31CompactActions(scope){if(!(scope instanceof Element))return;for(con
 function cc31DecorateOverlay(id){const overlay=$(id);if(!overlay)return;const view=CC31_OVERLAY_PREVIEW[id];if(view){const head=overlay.querySelector('.sheet-head');if(head&&!head.querySelector('.cc31-inline-preview')){const b=document.createElement('button');b.type='button';b.className='cc31-inline-preview';b.textContent='👁';b.title='Как увидит игрок';b.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();cc31OpenPreview(view);});const close=head.querySelector('.close');head.insertBefore(b,close||null);}}if(['playerOverlay','supportTicketOverlay','shopEditOverlay','liveContentOverlay','pollOverlay'].includes(id))cc31CompactActions(overlay);}
 function cc31InitUi(){cc31EnsureShell();cc31RenderTaskHub();cc31SyncWorkspaceUi(state.view);$('cc31PreviewButton')?.addEventListener('click',()=>cc31OpenPreview());$('cc31ContextButton')?.addEventListener('click',cc31OpenContext);$('cc31ContextList')?.addEventListener('click',e=>{const b=e.target.closest('[data-cc31-context]');if(b)cc31RunContext(b.dataset.cc31Context);});$('cc31TaskSteps')?.addEventListener('click',e=>{const b=e.target.closest('[data-cc31-task-step]');if(b)cc31GoTaskStep(b.dataset.cc31TaskStep);});$('cc31TaskNext')?.addEventListener('click',e=>cc31GoTaskStep(e.currentTarget.dataset.cc31TaskNext));$('cc31TaskReset')?.addEventListener('click',()=>cc31TaskReset(cc31CurrentTask));document.addEventListener('click',e=>{if(!e.target.closest('.cc31-overflow-host'))document.querySelectorAll('.cc31-overflow-panel:not(.hidden)').forEach(x=>x.classList.add('hidden'));});}
 
-async function boot(){try{cc28InitUi();cc29InitUi();cc30InitUi();cc31InitUi();cc26DecorateUnifiedViews();requestFullscreen();setTimeout(requestFullscreen,250);setTimeout(syncViewport,700);const initData=String(tg?.initData||'');if(!initData)throw new Error('Откройте панель кнопкой «Панель владельца» внутри Telegram-бота. Прямой вход из браузера закрыт.');state.ownerSession=readOwnerSession();const hasFastSession=Boolean(state.ownerSession);$('gateText').textContent=hasFastSession?'Быстро подтверждаем сохранённую защищённую сессию…':'Подтверждаем подпись Telegram и роль владельца…';if(hasFastSession){const localUser=tg?.initDataUnsafe?.user||{};$('ownerLine').textContent=`${[localUser.first_name,localUser.last_name].filter(Boolean).join(' ')||'Владелец'} · защищённая сессия`;$('versionBadge').textContent='CC 3.1 · v9.37';renderContextNav(state.view);$('gate').classList.add('hidden');}const auth=await api('/api/owner/auth');if(auth.sessionToken)saveOwnerSession(auth.sessionToken);$('ownerLine').textContent=`${auth.owner?.name||'Владелец'} · роль Владелец · игра ${auth.version||'1.0.9'}`;$('versionBadge').textContent='CC 3.1 · v9.37';renderContextNav(state.view);$('gate').classList.add('hidden');await loadStaging().catch(e=>toast(`Staging: ${e.message}`,true));const bootstrapPromise=api('/api/owner/bootstrap').then(d=>{state.bootstrap=d;renderBootstrap(d);}).catch(e=>toast(`Фоновые данные: ${e.message}`,true));setTimeout(()=>loadView('players',true).catch(()=>{}),300);await bootstrapPromise;runReleaseGateCc({fullAssets:false,silent:true}).catch(()=>{});}catch(e){saveOwnerSession('');$('gate').classList.remove('hidden');$('gateSpinner').classList.add('hidden');$('gateTitle').textContent='Доступ закрыт';$('gateText').textContent=e.message||'Роль владельца не подтверждена.';$('gateClose').classList.remove('hidden');}}
+
+
+/* CC 3.1.1 · Mobile gesture/navigation hotfix */
+const CC32_PRIMARY_SWIPE=[
+  {group:'home',view:'dashboard'},
+  {group:'players',view:'players'},
+  {group:'liveops',view:'daily'},
+  {group:'content',view:'contentmanager'}
+];
+const CC32_HORIZONTAL_GESTURE_SELECTOR='.subnav,.context-nav,.cc27-mobile-tabs,.cc23-asset-smart,.cc30-access-list,.cc31-task-grid,.cc24-recent-players,.cc24-profile-tabs,.content-filters,.future-pass-toolbar,.case-asset-folders';
+let cc32SwipeGesture=null;
+function cc32IsMobile(){return window.matchMedia?.('(max-width: 620px)')?.matches??window.innerWidth<=620;}
+function cc32VisibleOverlay(){const rows=[...document.querySelectorAll('.overlay:not(.hidden)')];return rows.length?rows[rows.length-1]:null;}
+function cc32SwipeBlockedTarget(target){return Boolean(target?.closest?.(`input,textarea,select,button,a,label,[contenteditable="true"],[role="button"],${CC32_HORIZONTAL_GESTURE_SELECTOR}`));}
+function cc32ResetSwipeVisual(){const main=$('main');if(!main)return;main.classList.remove('cc32-swipe-tracking');main.classList.add('cc32-swipe-release');main.style.removeProperty('--cc32-swipe-x');main.style.removeProperty('--cc32-swipe-opacity');setTimeout(()=>main.classList.remove('cc32-swipe-release'),180);}
+function cc32Haptic(){try{tg?.HapticFeedback?.selectionChanged?.();}catch{}}
+function cc32ScrollToTop(){
+  if(!cc32IsMobile())return;
+  const overlay=cc32VisibleOverlay();
+  const scroller=overlay?.querySelector('.sheet')||$('main');
+  if(!scroller)return;
+  try{scroller.scrollTo({top:0,left:0,behavior:'smooth'});}catch{scroller.scrollTop=0;}
+  cc32Haptic();
+}
+function cc32InitSwipeNavigation(){
+  const main=$('main');if(!main||main.dataset.cc32SwipeReady==='1')return;main.dataset.cc32SwipeReady='1';
+  main.addEventListener('touchstart',e=>{
+    if(!cc32IsMobile()||e.touches.length!==1||cc32VisibleOverlay()||cc32SwipeBlockedTarget(e.target))return;
+    if($('cc21DirtyBar')?.classList.contains('visible'))return;
+    const t=e.touches[0];cc32SwipeGesture={x:t.clientX,y:t.clientY,lastX:t.clientX,lastY:t.clientY,time:performance.now(),locked:false};
+  },{passive:true});
+  main.addEventListener('touchmove',e=>{
+    const g=cc32SwipeGesture;if(!g||e.touches.length!==1)return;
+    const t=e.touches[0],dx=t.clientX-g.x,dy=t.clientY-g.y;g.lastX=t.clientX;g.lastY=t.clientY;
+    if(!g.locked&&Math.abs(dx)>12&&Math.abs(dx)>Math.abs(dy)*1.22)g.locked=true;
+    if(!g.locked)return;
+    e.preventDefault();
+    const drag=Math.max(-48,Math.min(48,dx*.28)),opacity=Math.max(.88,1-Math.abs(drag)/400);
+    main.classList.add('cc32-swipe-tracking');main.style.setProperty('--cc32-swipe-x',`${drag}px`);main.style.setProperty('--cc32-swipe-opacity',String(opacity));
+  },{passive:false});
+  const finish=e=>{
+    const g=cc32SwipeGesture;cc32SwipeGesture=null;if(!g)return;
+    const t=e.changedTouches?.[0],dx=(t?.clientX??g.lastX)-g.x,dy=(t?.clientY??g.lastY)-g.y,dt=performance.now()-g.time;
+    cc32ResetSwipeVisual();
+    if(!g.locked||Math.abs(dx)<Math.max(58,window.innerWidth*.14)||Math.abs(dx)<=Math.abs(dy)*1.2||dt>1000)return;
+    const index=CC32_PRIMARY_SWIPE.findIndex(x=>x.group===state.group);if(index<0)return;
+    const next=index+(dx<0?1:-1);if(next<0||next>=CC32_PRIMARY_SWIPE.length)return;
+    cc32Haptic();switchView(CC32_PRIMARY_SWIPE[next].view);
+  };
+  main.addEventListener('touchend',finish,{passive:true});main.addEventListener('touchcancel',()=>{cc32SwipeGesture=null;cc32ResetSwipeVisual();},{passive:true});
+}
+function cc32InitScrollTopTap(){
+  if($('cc32ScrollTopHitbox'))return;
+  const hit=document.createElement('button');hit.type='button';hit.id='cc32ScrollTopHitbox';hit.className='cc32-scroll-top-hitbox';hit.setAttribute('aria-label','Наверх');hit.title='Наверх';hit.addEventListener('click',cc32ScrollToTop);document.body.appendChild(hit);
+  document.querySelector('.brand')?.addEventListener('click',e=>{if(cc32IsMobile()&&!e.target.closest('button,a,input,select,textarea'))cc32ScrollToTop();});
+}
+function cc32InitMobileUx(){cc32InitSwipeNavigation();cc32InitScrollTopTap();}
+
+async function boot(){try{cc32InitMobileUx();cc28InitUi();cc29InitUi();cc30InitUi();cc31InitUi();cc26DecorateUnifiedViews();requestFullscreen();setTimeout(requestFullscreen,250);setTimeout(syncViewport,700);const initData=String(tg?.initData||'');if(!initData)throw new Error('Откройте панель кнопкой «Панель владельца» внутри Telegram-бота. Прямой вход из браузера закрыт.');state.ownerSession=readOwnerSession();const hasFastSession=Boolean(state.ownerSession);$('gateText').textContent=hasFastSession?'Быстро подтверждаем сохранённую защищённую сессию…':'Подтверждаем подпись Telegram и роль владельца…';if(hasFastSession){const localUser=tg?.initDataUnsafe?.user||{};$('ownerLine').textContent=`${[localUser.first_name,localUser.last_name].filter(Boolean).join(' ')||'Владелец'} · защищённая сессия`;$('versionBadge').textContent='CC 3.1.1 · v9.38';renderContextNav(state.view);$('gate').classList.add('hidden');}const auth=await api('/api/owner/auth');if(auth.sessionToken)saveOwnerSession(auth.sessionToken);$('ownerLine').textContent=`${auth.owner?.name||'Владелец'} · роль Владелец · игра ${auth.version||'1.0.9'}`;$('versionBadge').textContent='CC 3.1.1 · v9.38';renderContextNav(state.view);$('gate').classList.add('hidden');await loadStaging().catch(e=>toast(`Staging: ${e.message}`,true));const bootstrapPromise=api('/api/owner/bootstrap').then(d=>{state.bootstrap=d;renderBootstrap(d);}).catch(e=>toast(`Фоновые данные: ${e.message}`,true));setTimeout(()=>loadView('players',true).catch(()=>{}),300);await bootstrapPromise;runReleaseGateCc({fullAssets:false,silent:true}).catch(()=>{});}catch(e){saveOwnerSession('');$('gate').classList.remove('hidden');$('gateSpinner').classList.add('hidden');$('gateTitle').textContent='Доступ закрыт';$('gateText').textContent=e.message||'Роль владельца не подтверждена.';$('gateClose').classList.remove('hidden');}}
 boot();
 })();
 </script>
