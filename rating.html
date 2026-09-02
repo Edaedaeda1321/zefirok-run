@@ -9289,6 +9289,95 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
 }
 </style>
 
+<style id="zefirok-rating-award-place-emphasis-v1">
+/* Stronger hierarchy for the season winner reward without adding new artwork. */
+#zefirok-maltipoo-runner .rating-v6-hero-reward>.rating-v6-hero-reward-place-label{
+  display:grid!important;
+  justify-items:center!important;
+  align-content:center!important;
+  gap:2px!important;
+  min-height:36px!important;
+  padding:5px 11px 6px!important;
+  border:1px solid rgba(213,157,45,.58)!important;
+  border-radius:15px!important;
+  background:linear-gradient(180deg,rgba(255,255,255,.94) 0%,rgba(255,246,207,.96) 100%)!important;
+  color:#805217!important;
+  letter-spacing:0!important;
+  line-height:1!important;
+  text-transform:none!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.98),inset 0 -2px 4px rgba(199,139,30,.06),0 5px 12px rgba(153,101,34,.10)!important;
+}
+#zefirok-maltipoo-runner .rating-v6-hero-reward-place-label>span{
+  display:block;
+  color:#a2782d;
+  font-size:7.5px;
+  font-weight:950;
+  letter-spacing:.14em;
+  line-height:1;
+  text-transform:uppercase;
+}
+#zefirok-maltipoo-runner .rating-v6-hero-reward-place-label>b{
+  display:flex;
+  align-items:baseline;
+  justify-content:center;
+  gap:2px;
+  color:#71430d;
+  font-size:11.5px;
+  font-weight:950;
+  letter-spacing:.018em;
+  line-height:1;
+  text-transform:uppercase;
+  text-shadow:0 1px 0 rgba(255,255,255,.98);
+}
+#zefirok-maltipoo-runner .rating-v6-hero-reward-place-label em{
+  display:inline-block;
+  color:#b87408;
+  font-size:14px;
+  font-style:normal;
+  font-weight:1000;
+  line-height:.82;
+  text-shadow:0 1px 0 #fff4bd,0 2px 3px rgba(135,79,5,.16);
+}
+
+/* Make 1 / 2 / 3 read as premium metal medallions; winner artwork stays untouched. */
+#zefirok-maltipoo-runner .rating-v6-podium-place-number{
+  font-size:17px!important;
+  font-weight:1000!important;
+  letter-spacing:-.035em!important;
+  -webkit-font-smoothing:antialiased;
+}
+#zefirok-maltipoo-runner .rating-v6-podium-place-number::after{
+  content:"";
+  position:absolute;
+  inset:3px;
+  border-radius:50%;
+  border:1px solid rgba(255,255,255,.34);
+  pointer-events:none;
+}
+#zefirok-maltipoo-runner .rating-v6-podium-card[data-place="1"] .rating-v6-podium-place-number{
+  color:#684000!important;
+  text-shadow:0 1px 0 rgba(255,248,204,.98),0 2px 3px rgba(110,65,0,.20)!important;
+  box-shadow:0 0 0 1px rgba(211,151,31,.34),0 7px 16px rgba(161,104,19,.23),inset 0 1px 0 rgba(255,255,255,.98),inset 0 -3px 6px rgba(167,94,7,.12)!important;
+}
+#zefirok-maltipoo-runner .rating-v6-podium-card[data-place="2"] .rating-v6-podium-place-number{
+  color:#435066!important;
+  text-shadow:0 1px 0 rgba(255,255,255,.98),0 2px 3px rgba(53,66,87,.17)!important;
+  box-shadow:0 0 0 1px rgba(144,159,180,.27),0 7px 15px rgba(76,91,112,.17),inset 0 1px 0 rgba(255,255,255,.98),inset 0 -3px 6px rgba(83,102,128,.10)!important;
+}
+#zefirok-maltipoo-runner .rating-v6-podium-card[data-place="3"] .rating-v6-podium-place-number{
+  color:#613014!important;
+  text-shadow:0 1px 0 rgba(255,238,215,.98),0 2px 3px rgba(91,47,22,.18)!important;
+  box-shadow:0 0 0 1px rgba(174,100,49,.28),0 7px 15px rgba(113,65,36,.18),inset 0 1px 0 rgba(255,255,255,.92),inset 0 -3px 6px rgba(126,63,26,.11)!important;
+}
+@media(max-width:390px){
+  #zefirok-maltipoo-runner .rating-v6-podium-place-number{font-size:15px!important}
+  #zefirok-maltipoo-runner .rating-v6-hero-reward>.rating-v6-hero-reward-place-label{min-height:34px!important;padding:5px 8px!important}
+  #zefirok-maltipoo-runner .rating-v6-hero-reward-place-label>span{font-size:7px}
+  #zefirok-maltipoo-runner .rating-v6-hero-reward-place-label>b{font-size:10px}
+  #zefirok-maltipoo-runner .rating-v6-hero-reward-place-label em{font-size:13px}
+}
+</style>
+
 </head>
 <body>
 <div id="zefirok-maltipoo-runner">
@@ -9727,7 +9816,7 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
         <div class="rating-v6-timer" data-leaderboard-season-timing><span>${escapeHtml(timing)}</span></div>
       </div>
       <div class="rating-v6-hero-reward${allTime ? " is-all-time" : ""}">
-        <small>${allTime ? "Режим" : "Награда за 1 место"}</small>
+        <small class="${allTime ? "" : "rating-v6-hero-reward-place-label"}">${allTime ? "Режим" : "<span>Награда</span><b>за <em>1</em> место</b>"}</small>
         ${allTime ? `<strong>Личный рекорд</strong><span>Лучший результат каждого игрока</span>` : rewardVisual}
       </div>
     </section>`;
