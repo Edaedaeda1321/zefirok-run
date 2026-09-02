@@ -43017,11 +43017,11 @@ async function seasonPassReadinessReport(env, seasonIdValue, options={}){
   else add('story_final','Сюжетный финал','warning','Нет опубликованной главы на 50 уровне. Финальная карточка пропуска будет работать, но без сюжетного финала.');
 
   const targetSeason=teaserRow?.target_season_id?seasonRows.find(x=>String(x.season_id)===String(teaserRow.target_season_id)):null;
+  const teaserImagePath=Number(teaserRow?.enabled||0)===1?seasonPassReadinessAssetPath(teaserRow?.image_url):'';
   if(Number(teaserRow?.enabled||0)===1){
     const missing=[];if(!String(teaserRow.title||'').trim())missing.push('заголовок');if(!String(teaserRow.body_text||'').trim())missing.push('текст');if(!String(teaserRow.target_season_id||'').trim()||!targetSeason)missing.push('будущий сезон');
     if(missing.length)add('letter','Письмо 50 уровня','error',`Письмо включено, но не заполнено: ${missing.join(', ')}.`,true);
     else add('letter','Письмо 50 уровня','pass',`Включено на уровне ${Number(teaserRow.unlock_level||50)} → ${String(targetSeason.title||targetSeason.season_id)}.`);
-    addAsset(teaserRow.image_url,'Письмо 50 уровня',false);
   }else add('letter','Письмо 50 уровня','warning','Письмо выключено. Это допустимо, если тизер следующего сезона пока не готов.');
 
   const itemCountByCase=new Map();for(const item of caseItems){if(Number(item.enabled||0)!==1||Number(item.weight||0)<=0)continue;const id=String(item.case_id),count=itemCountByCase.get(id)||0;itemCountByCase.set(id,count+1);}
@@ -43072,6 +43072,11 @@ async function seasonPassReadinessReport(env, seasonIdValue, options={}){
     const missing=[...uniqueAssets.values()].filter(item=>!assetManifest.paths.has(item.path));const blockingMissing=missing.filter(item=>item.blocking);
     if(missing.length)add('assets','Картинки сезона',blockingMissing.length?'error':'warning',`Не найдены в assets/images-manifest.json: ${missing.slice(0,5).map(x=>x.path).join(', ')}${missing.length>5?'…':''}`,blockingMissing.length>0,{missing});
     else add('assets','Картинки сезона','pass',`Проверено ${uniqueAssets.size} используемых изображений по manifest (${assetManifest.count} файлов в каталоге).`);
+    if(teaserImagePath){
+      const targetLabel=String(targetSeason?.title||targetSeason?.season_id||teaserRow?.target_season_id||'следующий сезон');
+      if(assetManifest.paths.has(teaserImagePath))add('letter_image','Письмо 50 уровня · картинка','pass',`Тизер ведёт в «${targetLabel}». Картинка письма найдена в assets manifest.`);
+      else add('letter_image','Письмо 50 уровня · картинка','warning',`Тизер ведёт в «${targetLabel}». Картинка письма не найдена в assets/images-manifest.json: ${teaserImagePath}`,false,{path:teaserImagePath,targetSeasonId:String(teaserRow?.target_season_id||'')});
+    }
   }else add('assets','Картинки сезона','warning',`Не удалось проверить manifest изображений${assetManifest.error&&assetManifest.error!=='skipped'?`: ${assetManifest.error}`:''}.`);
 
   if(invalidRewardRefs.some(x=>String(x).startsWith('story '))&&!checks.some(c=>c.key==='story_reward_refs'))add('story_reward_refs','Награды сюжетов','error','В опубликованном сюжете есть некорректная награда.',true);
@@ -43472,7 +43477,8 @@ async function ownerPanelSaveSeasonPassTeaser(env,ctx){
   await ensureSeasonPassSchema(env);const seasonId=String(ctx.body?.seasonId||'').trim();const season=await loadSeasonPassSeasonById(env,seasonId);if(!season)throw new ApiError(404,'Сезонный пропуск не найден.');if(season.status==='ended')throw new ApiError(409,'Письмо завершённого сезона менять нельзя.');
   const enabled=Boolean(ctx.body?.enabled);const targetSeasonId=String(ctx.body?.targetSeasonId||'').trim();if(enabled&&targetSeasonId){const target=await loadSeasonPassSeasonById(env,targetSeasonId);if(!target)throw new ApiError(400,'Следующий сезон для письма не найден.');if(target.id===seasonId)throw new ApiError(400,'Письмо должно вести к другому сезону.');if(Date.parse(String(target.startsAt||''))<=Date.parse(String(season.startsAt||'')))throw new ApiError(400,'Для спойлера выберите сезон, который начинается позже текущего.');}
   const unlockLevel=ownerPanelInteger(ctx.body?.unlockLevel,1,50)??50;const clean=(v,max)=>String(v||'').trim().slice(0,max);const now=Math.floor(Date.now()/1000);const before=await env.DB.prepare(`SELECT * FROM season_pass_teasers WHERE season_id=?`).bind(seasonId).first();
-  const values={envelopeTitle:clean(ctx.body?.envelopeTitle,80)||'Вам письмо',title:clean(ctx.body?.title,120),previewText:clean(ctx.body?.previewText,240),bodyText:clean(ctx.body?.bodyText,2500),imageUrl:clean(ctx.body?.imageUrl,500),pushText:clean(ctx.body?.pushText,500)};if(enabled&&!values.bodyText)throw new ApiError(400,'Добавьте текст письма.');
+  const rawImageUrl=clean(ctx.body?.imageUrl,500);const imageUrl=rawImageUrl?await validateSeasonVisualHeroImage(env,rawImageUrl):'';
+  const values={envelopeTitle:clean(ctx.body?.envelopeTitle,80)||'Вам письмо',title:clean(ctx.body?.title,120),previewText:clean(ctx.body?.previewText,240),bodyText:clean(ctx.body?.bodyText,2500),imageUrl,pushText:clean(ctx.body?.pushText,500)};if(enabled&&!values.bodyText)throw new ApiError(400,'Добавьте текст письма.');
   await env.DB.prepare(`INSERT INTO season_pass_teasers(season_id,target_season_id,enabled,unlock_level,envelope_title,title,preview_text,body_text,image_url,push_text,updated_at,updated_by) VALUES(?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(season_id) DO UPDATE SET target_season_id=excluded.target_season_id,enabled=excluded.enabled,unlock_level=excluded.unlock_level,envelope_title=excluded.envelope_title,title=excluded.title,preview_text=excluded.preview_text,body_text=excluded.body_text,image_url=excluded.image_url,push_text=excluded.push_text,updated_at=excluded.updated_at,updated_by=excluded.updated_by`).bind(seasonId,targetSeasonId,enabled?1:0,unlockLevel,values.envelopeTitle,values.title,values.previewText,values.bodyText,values.imageUrl,values.pushText,now,String(ctx.user.id)).run();
   await logStaffAction(env,ctx.user,ctx.access,'owner_panel_season_pass_teaser',null,'season_pass_teaser',null,null,{seasonId,before:before||null,enabled,targetSeasonId,unlockLevel});return {ok:true};
 }

@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "catalogHash": "c1059b7fe4a01848",
-  "count": 455,
+  "catalogHash": "5c4f11aea0ef2a8c",
+  "count": 456,
   "images": [
     {
       "fileName": "achievements/background_achivment_panel.png",
@@ -1354,6 +1354,14 @@
       "path": "/assets/news/update_v_1_2_0.jpeg",
       "size": 667197,
       "modified": 1787817580000
+    },
+    {
+      "fileName": "optimized/v0.79.5/background_season2.webp",
+      "label": "Background season2",
+      "folder": "optimized/v0.79.5",
+      "path": "/assets/optimized/v0.79.5/background_season2.webp",
+      "size": 1521024,
+      "modified": 1788384772295
     },
     {
       "fileName": "optimized/v0.79.5/cafeBackground.png",
