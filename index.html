@@ -8112,7 +8112,7 @@ html&gt;body{padding:
 #zefirok-maltipoo-runner .player-mail-card-copy span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#8f707c;font-size:9px}
 #zefirok-maltipoo-runner .player-mail-card-copy small{color:#aa8996;font-size:8px}
 #zefirok-maltipoo-runner .player-mail-open{min-height:34px;border:1px solid rgba(218,117,156,.32);border-radius:11px;padding:7px 9px;background:#fff;color:#b54f77;font-size:9px;font-weight:950}
-#zefirok-maltipoo-runner .player-mail-layer{position:fixed;inset:0;z-index:2147483250;display:flex;align-items:flex-end;justify-content:center;padding:0;background:rgba(67,42,50,.32);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);box-sizing:border-box;animation:player-mail-backdrop-in .2s ease both}
+#zefirok-maltipoo-runner .player-mail-layer{position:fixed;inset:0;z-index:2147483250;display:flex;align-items:flex-end;justify-content:center;padding:0;overflow:hidden;overscroll-behavior:none;background:rgba(67,42,50,.32);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);box-sizing:border-box;animation:player-mail-backdrop-in .2s ease both}
 #zefirok-maltipoo-runner .player-mail-layer[hidden]{display:none!important}
 #zefirok-maltipoo-runner .player-mail-dialog{position:relative;width:min(540px,100%);max-height:min(82dvh,760px);overflow:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:13px max(15px,var(--zefirok-content-safe-right,0px)) max(20px,calc(var(--zefirok-content-safe-bottom,0px) + 12px)) max(15px,var(--zefirok-content-safe-left,0px));border:1px solid rgba(231,196,180,.94);border-bottom:0;border-radius:28px 28px 0 0;background:linear-gradient(165deg,#fffdf9 0%,#fff8f6 48%,#fff2f6 100%);box-shadow:0 -18px 55px rgba(72,37,51,.19);color:#68404e;text-align:left;animation:player-mail-sheet-in .28s cubic-bezier(.22,.86,.28,1) both;transform:translateY(0);cursor:grab}
 #zefirok-maltipoo-runner .player-mail-dialog.is-player-mail-dragging,#zefirok-maltipoo-runner .player-mail-dialog.is-player-mail-full-dragging{cursor:grabbing;user-select:none;-webkit-user-select:none}
@@ -19293,6 +19293,53 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       let playerMailSheetTouchVelocity = 0;
       let playerMailSheetTouchDelta = 0;
       let playerMailSheetTouchDragging = false;
+      let playerMailPageScrollLock = null;
+
+      function snapshotPlayerMailStyle(style, names) {
+        return names.map((name) =&gt; [name, style.getPropertyValue(name), style.getPropertyPriority(name)]);
+      }
+
+      function restorePlayerMailStyle(style, snapshot) {
+        for (const [name, value, priority] of snapshot || []) {
+          if (value) style.setProperty(name, value, priority || &quot;&quot;);
+          else style.removeProperty(name);
+        }
+      }
+
+      function lockPlayerMailPageScroll() {
+        if (playerMailPageScrollLock) return;
+        const html = document.documentElement;
+        const body = document.body;
+        if (!html || !body) return;
+        const scrollX = Math.max(0, Number(window.scrollX || html.scrollLeft || body.scrollLeft || 0));
+        const scrollY = Math.max(0, Number(window.scrollY || html.scrollTop || body.scrollTop || 0));
+        playerMailPageScrollLock = {
+          scrollX,
+          scrollY,
+          html: snapshotPlayerMailStyle(html.style, [&quot;overflow&quot;,&quot;overscroll-behavior&quot;]),
+          body: snapshotPlayerMailStyle(body.style, [&quot;position&quot;,&quot;top&quot;,&quot;left&quot;,&quot;right&quot;,&quot;width&quot;,&quot;overflow&quot;,&quot;overscroll-behavior&quot;])
+        };
+        html.style.setProperty(&quot;overflow&quot;,&quot;hidden&quot;,&quot;important&quot;);
+        html.style.setProperty(&quot;overscroll-behavior&quot;,&quot;none&quot;,&quot;important&quot;);
+        body.style.setProperty(&quot;position&quot;,&quot;fixed&quot;,&quot;important&quot;);
+        body.style.setProperty(&quot;top&quot;,`${-scrollY}px`,&quot;important&quot;);
+        body.style.setProperty(&quot;left&quot;,&quot;0&quot;,&quot;important&quot;);
+        body.style.setProperty(&quot;right&quot;,&quot;0&quot;,&quot;important&quot;);
+        body.style.setProperty(&quot;width&quot;,&quot;100%&quot;,&quot;important&quot;);
+        body.style.setProperty(&quot;overflow&quot;,&quot;hidden&quot;,&quot;important&quot;);
+        body.style.setProperty(&quot;overscroll-behavior&quot;,&quot;none&quot;,&quot;important&quot;);
+      }
+
+      function unlockPlayerMailPageScroll() {
+        const lock = playerMailPageScrollLock;
+        if (!lock) return;
+        playerMailPageScrollLock = null;
+        const html = document.documentElement;
+        const body = document.body;
+        if (html) restorePlayerMailStyle(html.style, lock.html);
+        if (body) restorePlayerMailStyle(body.style, lock.body);
+        try { window.scrollTo(lock.scrollX, lock.scrollY); } catch {}
+      }
 
       function cancelPlayerMailMotion() {
         try { playerMailSheetMotion?.cancel?.(); } catch {}
@@ -19435,6 +19482,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           resetPlayerMailSheetTouch();
           layer.hidden = true;
           clearPlayerMailMotionStyles();
+          unlockPlayerMailPageScroll();
           playerMailActiveLetter = null;
           if (playerMailContentEl) playerMailContentEl.innerHTML = &quot;&quot;;
         };
@@ -19684,6 +19732,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         const item=(Array.isArray(state.playerGifts)?state.playerGifts:[]).find((entry)=&gt;String(entry?.id||&quot;&quot;)===String(mailId||&quot;&quot;));
         if(!item||!playerMailLayerEl||!telegramProfile?.initData)return;
         resetPlayerMailForOpen();
+        lockPlayerMailPageScroll();
         playerMailLayerEl.hidden=false;
         playerMailActiveLetter=null;
         if(playerMailContentEl)playerMailContentEl.innerHTML=`&lt;div class=&quot;player-mail-head&quot;&gt;&lt;div class=&quot;player-mail-symbol&quot; aria-hidden=&quot;true&quot;&gt;💌&lt;/div&gt;&lt;div class=&quot;player-mail-head-copy&quot;&gt;&lt;span class=&quot;player-mail-kicker&quot;&gt;Почта Зеффи&lt;/span&gt;&lt;h2 id=&quot;player-mail-title&quot;&gt;${escapePurchaseText(item.title)}&lt;/h2&gt;&lt;/div&gt;&lt;/div&gt;&lt;div class=&quot;player-mail-loading&quot;&gt;Загружаем письмо…&lt;/div&gt;`;
@@ -25699,16 +25748,17 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 #zefirok-maltipoo-runner .profile-achievement-prestige{display:flex;align-items:center;justify-content:center;min-height:31px;margin:-1px 0 7px;padding:6px 10px;border:1px solid rgba(221,173,64,.34);border-radius:13px;background:linear-gradient(145deg,#fff9e6,#fff4d6);color:#8b621d;font-size:9px;font-weight:950;line-height:1.2;text-align:center}
 #zefirok-maltipoo-runner .achievement-points-inline{display:inline-flex;align-items:center;gap:6px;vertical-align:middle}#zefirok-maltipoo-runner .achievement-points-inline img{width:16px;height:16px;object-fit:contain;flex:0 0 auto}#zefirok-maltipoo-runner .achievement-points-inline.is-small img{width:13px;height:13px}#zefirok-maltipoo-runner .profile-showcase-empty-icon img{width:28px;height:28px;object-fit:contain;display:block}
 #zefirok-maltipoo-runner .profile-showcase-wrap{display:grid;gap:7px}
-#zefirok-maltipoo-runner .profile-showcase-frame{--ps-top:15.5%;--ps-right:5%;--ps-bottom:16%;--ps-left:5%;--ps-gap:3.2%;position:relative;width:100%;isolation:isolate;filter:drop-shadow(0 8px 14px rgba(128,78,29,.10))}
-#zefirok-maltipoo-runner .profile-showcase-frame[data-layout=&quot;gold&quot;]{--ps-top:21.5%;--ps-right:5.5%;--ps-bottom:17%;--ps-left:5.5%;--ps-gap:3.4%}
-#zefirok-maltipoo-runner .profile-showcase-frame[data-layout=&quot;season1&quot;],#zefirok-maltipoo-runner .profile-showcase-frame[data-layout=&quot;season3&quot;]{--ps-top:42.2%;--ps-right:5.6%;--ps-bottom:14.5%;--ps-left:5.6%;--ps-gap:3.3%}
-#zefirok-maltipoo-runner .profile-showcase-frame[data-layout=&quot;season2&quot;]{--ps-top:38.4%;--ps-right:6.1%;--ps-bottom:20.2%;--ps-left:6.1%;--ps-gap:3.4%}
-#zefirok-maltipoo-runner .profile-showcase-frame[data-layout=&quot;special_origins&quot;]{--ps-top:38.4%;--ps-right:7.1%;--ps-bottom:18.2%;--ps-left:7.1%;--ps-gap:3.6%}
-#zefirok-maltipoo-runner .profile-showcase-frame[data-layout=&quot;special_creator&quot;]{--ps-top:39.1%;--ps-right:6.3%;--ps-bottom:18.6%;--ps-left:6.3%;--ps-gap:3.5%}
-#zefirok-maltipoo-runner .profile-showcase-frame[data-layout=&quot;special_legend&quot;]{--ps-top:42.2%;--ps-right:6.6%;--ps-bottom:17.8%;--ps-left:6.6%;--ps-gap:3.5%}
+#zefirok-maltipoo-runner .profile-showcase-frame{--ps-top:15.5%;--ps-right:5%;--ps-bottom:16%;--ps-left:5%;--ps-gap:3.2%;--ps-foot:10px;--ps-lift:0px;position:relative;width:100%;isolation:isolate;filter:drop-shadow(0 8px 14px rgba(128,78,29,.10))}
+#zefirok-maltipoo-runner .profile-showcase-frame[data-layout=&quot;gold&quot;]{--ps-top:21.5%;--ps-right:5.5%;--ps-bottom:17%;--ps-left:5.5%;--ps-gap:3.4%;--ps-foot:11px;--ps-lift:-1px}
+#zefirok-maltipoo-runner .profile-showcase-frame[data-layout=&quot;season1&quot;]{--ps-top:42.2%;--ps-right:5.6%;--ps-bottom:14.5%;--ps-left:5.6%;--ps-gap:3.3%;--ps-foot:14px;--ps-lift:-1px}
+#zefirok-maltipoo-runner .profile-showcase-frame[data-layout=&quot;season2&quot;]{--ps-top:38.4%;--ps-right:6.1%;--ps-bottom:20.2%;--ps-left:6.1%;--ps-gap:3.4%;--ps-foot:14px;--ps-lift:-1px}
+#zefirok-maltipoo-runner .profile-showcase-frame[data-layout=&quot;season3&quot;]{--ps-top:42.2%;--ps-right:5.6%;--ps-bottom:14.5%;--ps-left:5.6%;--ps-gap:3.3%;--ps-foot:14px;--ps-lift:-2px}
+#zefirok-maltipoo-runner .profile-showcase-frame[data-layout=&quot;special_origins&quot;]{--ps-top:38.4%;--ps-right:7.1%;--ps-bottom:18.2%;--ps-left:7.1%;--ps-gap:3.6%;--ps-foot:16px;--ps-lift:-3px}
+#zefirok-maltipoo-runner .profile-showcase-frame[data-layout=&quot;special_creator&quot;]{--ps-top:39.1%;--ps-right:6.3%;--ps-bottom:18.6%;--ps-left:6.3%;--ps-gap:3.5%;--ps-foot:14px;--ps-lift:-2px}
+#zefirok-maltipoo-runner .profile-showcase-frame[data-layout=&quot;special_legend&quot;]{--ps-top:42.2%;--ps-right:6.6%;--ps-bottom:17.8%;--ps-left:6.6%;--ps-gap:3.5%;--ps-foot:14px;--ps-lift:-2px}
 #zefirok-maltipoo-runner .profile-showcase-frame-art{display:block;width:100%;height:auto;pointer-events:none;user-select:none}
 #zefirok-maltipoo-runner .profile-showcase-slots{position:absolute;z-index:2;top:var(--ps-top);right:var(--ps-right);bottom:var(--ps-bottom);left:var(--ps-left);display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--ps-gap)}
-#zefirok-maltipoo-runner .profile-showcase-trophy{min-width:0;min-height:0;padding:2px 3px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;text-align:center;overflow:hidden}
+#zefirok-maltipoo-runner .profile-showcase-trophy{position:relative;top:var(--ps-lift);min-width:0;min-height:0;padding:2px 3px var(--ps-foot);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;text-align:center;overflow:hidden}
 #zefirok-maltipoo-runner .profile-showcase-trophy-icon{width:50px;height:50px;flex:0 0 auto;display:grid;place-items:center;font-size:23px}#zefirok-maltipoo-runner .profile-showcase-trophy-icon img{width:50px;height:50px;display:block;object-fit:contain;filter:drop-shadow(0 3px 6px rgba(118,70,88,.14))}
 #zefirok-maltipoo-runner .profile-showcase-trophy strong{width:100%;overflow:hidden;color:#69434f;font-size:7px;font-weight:950;line-height:1.14;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;text-shadow:0 1px rgba(255,255,255,.76)}
 #zefirok-maltipoo-runner .profile-showcase-trophy small{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#96727d;font-size:5.4px;font-weight:850;line-height:1.1}
