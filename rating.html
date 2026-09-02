@@ -9395,18 +9395,45 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
   animation:ratingPodiumGoldSweep 6.4s ease-in-out infinite!important;
 }
 
+#zefirok-maltipoo-runner .rating-v6-hero-reward-place-label{
+  position:relative!important;
+  overflow:hidden!important;
+  isolation:isolate;
+}
+#zefirok-maltipoo-runner .rating-v6-hero-reward-place-label>span,
 #zefirok-maltipoo-runner .rating-v6-hero-reward-place-label>b{
-  background:linear-gradient(100deg,#71430d 0 34%,#b8750b 43%,#f0c75e 50%,#9e6210 57%,#71430d 66% 100%);
-  background-size:240% 100%;
-  background-position:100% 50%;
-  -webkit-background-clip:text;
-  background-clip:text;
-  -webkit-text-fill-color:transparent;
-  animation:ratingRewardGoldShimmer 5.8s ease-in-out infinite;
+  position:relative;
+  z-index:2;
+}
+#zefirok-maltipoo-runner .rating-v6-hero-reward-place-label>b{
+  background:none!important;
+  color:#70420d!important;
+  -webkit-background-clip:border-box!important;
+  background-clip:border-box!important;
+  -webkit-text-fill-color:#70420d!important;
+  font-family:inherit!important;
+  font-weight:1000!important;
+  text-shadow:0 1px 0 rgba(255,255,255,.98),0 1px 2px rgba(122,75,8,.10)!important;
+  animation:none!important;
 }
 #zefirok-maltipoo-runner .rating-v6-hero-reward-place-label em{
-  -webkit-text-fill-color:#b87408;
+  color:#b87408!important;
+  -webkit-text-fill-color:#b87408!important;
+  font-family:inherit!important;
+  font-weight:1000!important;
   animation:ratingRewardOneGlow 5.8s ease-in-out infinite;
+}
+#zefirok-maltipoo-runner .rating-v6-hero-reward-place-label::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  z-index:1;
+  border-radius:inherit;
+  background:linear-gradient(108deg,transparent 0 38%,rgba(255,255,255,0) 43%,rgba(255,239,172,.34) 49%,rgba(255,255,255,.48) 52%,rgba(255,225,120,.20) 57%,transparent 63% 100%);
+  transform:translateX(-135%) skewX(-12deg);
+  opacity:0;
+  pointer-events:none;
+  animation:ratingRewardPlaqueSweep 6.2s ease-in-out infinite;
 }
 
 #zefirok-maltipoo-runner .rating-v6-podium-place{
@@ -9447,9 +9474,11 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
   78%{background-position:-55% 50%;opacity:.66}
   86%,100%{background-position:-55% 50%;opacity:0}
 }
-@keyframes ratingRewardGoldShimmer{
-  0%,28%{background-position:100% 50%}
-  62%,100%{background-position:0 50%}
+@keyframes ratingRewardPlaqueSweep{
+  0%,64%{transform:translateX(-135%) skewX(-12deg);opacity:0}
+  70%{opacity:.38}
+  82%{transform:translateX(135%) skewX(-12deg);opacity:.26}
+  88%,100%{transform:translateX(135%) skewX(-12deg);opacity:0}
 }
 @keyframes ratingRewardOneGlow{
   0%,100%{filter:brightness(1);text-shadow:0 1px 0 #fff4bd,0 2px 3px rgba(135,79,5,.16)}
@@ -9469,7 +9498,7 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
 
 @media(prefers-reduced-motion:reduce){
   #zefirok-maltipoo-runner .rating-v6-podium-card[data-place="1"]::after,
-  #zefirok-maltipoo-runner .rating-v6-hero-reward-place-label>b,
+  #zefirok-maltipoo-runner .rating-v6-hero-reward-place-label::before,
   #zefirok-maltipoo-runner .rating-v6-hero-reward-place-label em,
   #zefirok-maltipoo-runner .rating-v6-podium-place,
   #zefirok-maltipoo-runner .rating-v6-podium-place-number::before{
