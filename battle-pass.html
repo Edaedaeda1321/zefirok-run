@@ -2487,7 +2487,7 @@ img[src$="/xp.webp"]{
   height:198px;
   border:0;
   border-radius:0;
-  background:url("/assets/season-pass/season_pass1.png?v=07939") center/contain no-repeat;
+  background:var(--season-pass-liveops-hero-art,url("/assets/season-pass/season_pass1.png?v=07939")) center/contain no-repeat;
   box-shadow:none;
   filter:drop-shadow(0 12px 18px rgba(142,74,63,.18))
 }
@@ -4138,6 +4138,13 @@ img[src$="/xp.webp"]{
     return [icon,title,description,String(item?.imageUrl || "")];
   }
 
+  function applySeasonPassLiveOpsVisuals(){
+    const configured=String(serverPass?.season?.visuals?.battlePass?.heroImage||"").trim();
+    const path=configured.startsWith("/assets/")?configured:"/assets/season-pass/season_pass1.png?v=07939";
+    const cssPath=path.replace(/\\/g,"\\\\").replace(/"/g,'\\"');
+    document.documentElement.style.setProperty("--season-pass-liveops-hero-art",`url("${cssPath}")`);
+  }
+
   function applyServerPass(data) {
     if (!data || typeof data !== "object") return;
     const previous = serverPass && typeof serverPass === "object" ? serverPass : {};
@@ -4149,6 +4156,7 @@ img[src$="/xp.webp"]{
       overflow:{...(previous.overflow||{}),...(data.overflow||{})},
       balance:{...(previous.balance||{}),...(data.balance||{})}
     };
+    applySeasonPassLiveOpsVisuals();
     if (!("rewards" in data) && Array.isArray(previous.rewards)) serverPass.rewards = previous.rewards;
     if (!("tasks" in data) && Array.isArray(previous.tasks)) serverPass.tasks = previous.tasks;
     if (!("claimed" in data) && Array.isArray(previous.claimed)) serverPass.claimed = previous.claimed;

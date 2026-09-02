@@ -12072,6 +12072,7 @@ async function buildLeaderboardPayload(env, season, telegramId, mode = "season")
         imageUrl: seasonReward.imageUrl,
         itemId: seasonReward.itemId
       },
+      visuals: seasonVisualsView(season.visuals_json),
       resetPlan: resetPlan ? { ...resetPlan, applyAt: Number(season.ends_at || 0) * 1000 } : null
     },
     nextSeason: nextSeasonRow ? {
@@ -28945,6 +28946,7 @@ function seasonPassSeasonFromRow(row, fallback, nowMs = Date.now()) {
     startsAt:new Date(startsAt).toISOString(), endsAt:new Date(endsAt).toISOString(), claimGraceEndsAt:new Date(claimGraceEndsAt).toISOString(), claimWindowOpen,
     serverTime:new Date(nowMs).toISOString(),
     assetBase:'/assets/season-pass/', baseRunXp:Math.max(1,seasonPassInteger(row.base_run_xp,100)), levelPricePoints:seasonPassInteger(row.level_price_points,DEFAULT_SEASON_PASS_LEVEL_PRICE_POINTS),
+    visuals:seasonVisualsView(row.visuals_json),
     progression:seasonPassProgressionView(),
     prices:{
       elite:{points:seasonPassInteger(row.elite_price_points,DEFAULT_SEASON_PASS_ELITE_PRICE.points),treats:seasonPassInteger(row.elite_price_treats,DEFAULT_SEASON_PASS_ELITE_PRICE.treats),coffee:seasonPassInteger(row.elite_price_coffee,DEFAULT_SEASON_PASS_ELITE_PRICE.coffee)},
@@ -41824,6 +41826,7 @@ async function handleOwnerPanelApi(request, env, path, executionCtx = null) {
     if (path === "/api/owner/rating/timing") return jsonResponse(await ownerPanelAdjustRatingSeason(env, ctx));
     if (path === "/api/owner/rating/end") return jsonResponse(await ownerPanelEndRatingSeason(env, ctx));
     if (path === "/api/owner/rating/cancel") return jsonResponse(await ownerPanelCancelRatingSeason(env, ctx));
+    if (path === "/api/owner/rating/visuals") return jsonResponse(await ownerPanelSaveRatingVisuals(env, ctx));
     if (path === "/api/owner/season-pass") return jsonResponse(await ownerPanelSeasonPass(env, ctx));
     if (path === "/api/owner/live-content") return jsonResponse(await ownerPanelLiveContentRegistry(env, ctx));
     if (path === "/api/owner/live-content/save") return jsonResponse(await ownerPanelSaveLiveContentRelease(env, ctx));
@@ -41831,6 +41834,7 @@ async function handleOwnerPanelApi(request, env, path, executionCtx = null) {
     if (path === "/api/owner/live-content/batch") return jsonResponse(await ownerPanelLiveContentBatch(env, ctx));
     if (path === "/api/owner/season-pass/readiness") return jsonResponse(await ownerPanelSeasonPassReadiness(env, ctx));
     if (path === "/api/owner/season-pass/asset-key") return jsonResponse(await ownerPanelSaveSeasonPassAssetKey(env, ctx));
+    if (path === "/api/owner/season-pass/visuals") return jsonResponse(await ownerPanelSaveSeasonPassVisuals(env, ctx));
     if (path === "/api/owner/season-pass/reward") return jsonResponse(await ownerPanelSetSeasonPassReward(env, ctx));
     if (path === "/api/owner/season-pass/story/save") return jsonResponse(await ownerPanelSaveSeasonPassStory(env, ctx));
     if (path === "/api/owner/season-pass/story/delete") return jsonResponse(await ownerPanelDeleteSeasonPassStory(env, ctx));
@@ -42624,6 +42628,7 @@ function ownerPanelRatingSeasonView(row) {
     startsAt: Number(row.starts_at || 0), endsAt: Number(row.ends_at || 0),
     status: String(row.status || ""), finalizedAt: Number(row.finalized_at || 0),
     reward: { type: reward.type, amount: reward.amount, title: reward.title, itemId: reward.itemId, imageUrl: ownerPanelRewardAsset(reward.type, reward.itemId) || reward.imageUrl },
+    visuals: seasonVisualsView(row.visuals_json),
     manualOverride: Number(row.manual_override || 0) === 1
   };
 }
@@ -42638,8 +42643,22 @@ async function ownerPanelRating(env, ctx) {
     seasons: (seasonsResult.results || []).map(ownerPanelRatingSeasonView),
     active: ownerPanelRatingSeasonView(active),
     top: (topResult.results || []).map((row, index) => ({ place: index + 1, telegramId: String(row.telegram_id), name: String(row.display_name || row.username || row.telegram_id), username: String(row.username || ""), photoUrl: String(row.photo_url || ""), score: Number(row.best_score || 0), level: Number(row.level || 1) })),
-    banners: { current: "/assets/rating/v8/season-1-cafe-opening.png", allTime: "/assets/rating/v8/all-time-rating.png" }
+    banners: { current: seasonVisualsView(active?.visuals_json).rating.heroImage || SEASON_VISUAL_RATING_HERO_FALLBACK, allTime: "/assets/rating/v8/all-time-rating.png" }
   };
+}
+
+async function ownerPanelSaveRatingVisuals(env, ctx) {
+  const seasonId=String(ctx.body?.seasonId||'').trim();
+  if(!seasonId)throw new ApiError(400,'Не выбран рейтинговый сезон.');
+  await requireSeasonVisualsSchema(env,'leaderboard_seasons');
+  const row=await env.DB.prepare(`SELECT * FROM leaderboard_seasons WHERE id=? LIMIT 1`).bind(seasonId).first();
+  if(!row)throw new ApiError(404,'Рейтинговый сезон не найден.');
+  const heroImage=await validateSeasonVisualHeroImage(env,ctx.body?.heroImage);
+  const before=seasonVisualsView(row.visuals_json),nextJson=seasonVisualsMerge(row.visuals_json,'rating',heroImage),now=Math.floor(Date.now()/1000);
+  await env.DB.prepare(`UPDATE leaderboard_seasons SET visuals_json=?,updated_at=? WHERE id=?`).bind(nextJson,now,seasonId).run();
+  const updated=await env.DB.prepare(`SELECT * FROM leaderboard_seasons WHERE id=? LIMIT 1`).bind(seasonId).first();
+  await logStaffAction(env,ctx.user,ctx.access,'owner_panel_rating_visuals',null,'season',seasonId,null,{seasonId,before:before.rating,after:seasonVisualsView(updated?.visuals_json).rating});
+  return {ok:true,season:ownerPanelRatingSeasonView(updated)};
 }
 
 async function ownerPanelCreateRatingSeason(env, ctx) {
@@ -42790,6 +42809,43 @@ function ownerPanelSeasonalCaseView(row,seasonMap=new Map()){
   return {caseId:String(row.case_id),seasonId:String(row.season_id),seasonTitle:String(ownerSeason?.title||''),title:String(row.title||'Сезонный кейс'),description:String(row.description||''),imageUrl:String(row.closed_image_url||''),openImageUrl:String(row.open_image_url||''),slots:Number(row.slots||1),duplicatePoints:Number(row.duplicate_points||0),groupChances:seasonPassSeasonalCaseGroupChances(row.reward_groups_json),enabled:Number(row.enabled||0)===1,releaseAt:Number(row.release_at||0),status:seasonPassSeasonalCaseStatus(row,ownerSeason),items:[]};
 }
 
+const SEASON_VISUAL_RATING_HERO_FALLBACK='/assets/rating/v8/season-1-cafe-opening.png';
+const SEASON_VISUAL_BATTLE_PASS_HERO_FALLBACK='/assets/season-pass/season_pass1.png';
+function seasonVisualsObject(raw){
+  if(raw&&typeof raw==='object'&&!Array.isArray(raw))return {...raw};
+  try{const parsed=JSON.parse(String(raw||'{}'));return parsed&&typeof parsed==='object'&&!Array.isArray(parsed)?parsed:{};}catch{return {};}
+}
+function seasonVisualsView(raw){
+  const data=seasonVisualsObject(raw);
+  return {
+    rating:{heroImage:seasonPassReadinessAssetPath(data?.rating?.heroImage)},
+    battlePass:{heroImage:seasonPassReadinessAssetPath(data?.battlePass?.heroImage)}
+  };
+}
+function seasonVisualsMerge(raw,surface,heroImage){
+  const data=seasonVisualsObject(raw),current=data?.[surface]&&typeof data[surface]==='object'&&!Array.isArray(data[surface])?data[surface]:{};
+  data[surface]={...current,heroImage:String(heroImage||'')};
+  return JSON.stringify(data);
+}
+async function requireSeasonVisualsSchema(env,table){
+  const allowed=new Set(['leaderboard_seasons','season_pass_seasons']);
+  if(!allowed.has(String(table)))throw new ApiError(500,'Некорректная таблица визуала сезона.');
+  const info=await env.DB.prepare(`PRAGMA table_info(${table})`).all();
+  const columns=new Set((info.results||[]).map(row=>String(row.name||'')));
+  if(!columns.has('visuals_json'))throw new ApiError(503,'Не применена migration 0076: сезонные визуалы пока недоступны.');
+}
+async function validateSeasonVisualHeroImage(env,value){
+  const raw=String(value||'').trim();
+  if(!raw)return '';
+  const path=seasonPassReadinessAssetPath(raw);
+  if(!path)throw new ApiError(400,'Выберите изображение из assets проекта через кнопку «Выбрать».');
+  if(!/\.(?:png|webp|jpe?g|gif|avif|svg)$/i.test(path))throw new ApiError(400,'Для сезонного визуала нужен файл изображения.');
+  const manifest=await seasonPassReadinessImageManifest(env);
+  if(!manifest.available)throw new ApiError(503,'Каталог изображений временно недоступен. Обновите assets manifest и повторите попытку.');
+  if(!manifest.paths.has(path))throw new ApiError(400,'Эта картинка не найдена в опубликованном assets/images-manifest.json. Сначала добавьте её в проект и выполните deploy.');
+  return path;
+}
+
 function seasonPassReadinessAssetPath(value){
   const raw=String(value||'').trim();
   if(!raw.startsWith('/assets/'))return '';
@@ -42881,6 +42937,7 @@ async function seasonPassReadinessReport(env, seasonIdValue, options={}){
 
   const enabledStory=storyRows.filter(r=>Number(r.enabled||0)===1),draftStory=storyRows.filter(r=>Number(r.enabled||0)!==1),emptyStory=[],storyRewardRefs=new Set(),storyActionErrors=[],storyVisualAssetRefs=[],storyLiveContentErrors=[];let storyActionCount=0;
   const assetRefs=[];const addAsset=(value,source,blocking=true)=>{const path=seasonPassReadinessAssetPath(value);if(path)assetRefs.push({path,source:String(source),blocking:Boolean(blocking)});};
+  const configuredSeasonVisuals=seasonVisualsView(row.visuals_json);if(configuredSeasonVisuals.battlePass.heroImage)addAsset(configuredSeasonVisuals.battlePass.heroImage,'Визуал шапки сезонного пропуска',true);
   for(const storyRow of enabledStory){
     const pages=seasonPassStoryPagesFromRow(storyRow);
     if(!String(storyRow.title||'').trim()||!pages.length||pages.every(p=>!String(p.title||'').trim()&&!String(p.bodyText||'').trim()&&!String(p.imageUrl||'').trim()))emptyStory.push(String(storyRow.event_id));
@@ -43399,6 +43456,22 @@ async function ownerPanelSaveSeasonPassAssetKey(env,ctx){
   await env.DB.prepare(`UPDATE season_pass_seasons SET asset_key=?,updated_at=?,updated_by=? WHERE season_id=?`).bind(assetKey,now,String(ctx.user.id),seasonId).run();
   await logStaffAction(env,ctx.user,ctx.access,'owner_panel_season_pass_asset_key',null,'season_pass',seasonId,null,{seasonId,before,after:assetKey});
   return {ok:true,season:await loadSeasonPassSeasonById(env,seasonId)};
+}
+
+async function ownerPanelSaveSeasonPassVisuals(env,ctx){
+  await ensureSeasonPassSchema(env);
+  const seasonId=String(ctx.body?.seasonId||'').trim();
+  if(!seasonId)throw new ApiError(400,'Не выбран сезонный пропуск.');
+  await requireSeasonVisualsSchema(env,'season_pass_seasons');
+  const row=await env.DB.prepare(`SELECT * FROM season_pass_seasons WHERE season_id=? LIMIT 1`).bind(seasonId).first();
+  if(!row)throw new ApiError(404,'Сезонный пропуск не найден.');
+  const heroImage=await validateSeasonVisualHeroImage(env,ctx.body?.heroImage);
+  const before=seasonVisualsView(row.visuals_json),nextJson=seasonVisualsMerge(row.visuals_json,'battlePass',heroImage),now=Math.floor(Date.now()/1000);
+  await env.DB.prepare(`UPDATE season_pass_seasons SET visuals_json=?,updated_at=?,updated_by=? WHERE season_id=?`).bind(nextJson,now,String(ctx.user.id),seasonId).run();
+  invalidateSeasonPassConfigCache();
+  const updated=await env.DB.prepare(`SELECT * FROM season_pass_seasons WHERE season_id=? LIMIT 1`).bind(seasonId).first();
+  await logStaffAction(env,ctx.user,ctx.access,'owner_panel_season_pass_visuals',null,'season_pass',seasonId,null,{seasonId,before:before.battlePass,after:seasonVisualsView(updated?.visuals_json).battlePass});
+  return {ok:true,season:seasonPassSeasonFromRow(updated,configuredSeasonPassState(env,Date.now()),Date.now())};
 }
 
 async function ownerPanelCreateSeasonPassSeason(env, ctx) {

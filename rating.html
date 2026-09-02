@@ -9930,7 +9930,8 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
 
   function seasonHeader(season, timing, requestedMode) {
     const allTime = requestedMode === "all_time";
-    const heroArt = allTime ? "/assets/rating/v8/all-time-rating.png?v=20260810" : "/assets/rating/v8/season-1-cafe-opening.png?v=20260810";
+    const configuredHeroArt=String(season?.visuals?.rating?.heroImage||"").trim();
+    const heroArt = allTime ? "/assets/rating/v8/all-time-rating.png?v=20260810" : (configuredHeroArt.startsWith("/assets/")?configuredHeroArt:"/assets/rating/v8/season-1-cafe-opening.png?v=20260810");
     const reward = allTime ? null : season?.reward;
     const rewardVisual = reward
       ? rewardMarkup(reward)
