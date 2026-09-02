@@ -9140,84 +9140,106 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
   box-shadow:0 0 18px rgba(198,124,70,.14);
 }
 
-/* Keep the numeric badge for instant scanning, but make it a small secondary element. */
+/* Winner artwork belongs to the place badge, not to the player avatar. */
 #zefirok-maltipoo-runner .rating-v6-podium-place{
   top:-15px!important;
-  width:34px!important;
-  height:34px!important;
-  border-width:2px!important;
-  font-size:13px!important;
-  box-shadow:0 6px 13px rgba(90,57,55,.15)!important;
+  z-index:8!important;
+  width:36px!important;
+  height:36px!important;
+  border:0!important;
+  border-radius:50%!important;
+  background:transparent!important;
+  box-shadow:none!important;
+  color:inherit!important;
+  font-size:0!important;
+  isolation:isolate!important;
+  overflow:visible!important;
+  pointer-events:none!important;
 }
-#zefirok-maltipoo-runner .rating-v6-podium-card[data-place="1"] .rating-v6-podium-place{
-  background:linear-gradient(145deg,#fff4a7 0%,#efb833 48%,#d68a16 100%)!important;
-  border-color:rgba(255,255,255,.98)!important;
-  color:#75450a!important;
-  box-shadow:0 0 0 1px rgba(211,151,31,.30),0 7px 16px rgba(161,104,19,.22)!important;
+#zefirok-maltipoo-runner .rating-v6-podium-place-number{
+  position:absolute;
+  left:50%;
+  top:50%;
+  z-index:3;
+  display:grid;
+  place-items:center;
+  width:36px;
+  height:36px;
+  transform:translate(-50%,-50%);
+  border:2px solid rgba(255,255,255,.98);
+  border-radius:50%;
+  font:950 14px/1 var(--font-sans);
+  box-shadow:0 6px 13px rgba(90,57,55,.15);
 }
-#zefirok-maltipoo-runner .rating-v6-podium-card[data-place="2"] .rating-v6-podium-place{
-  background:linear-gradient(145deg,#fff 0%,#dfe7f0 48%,#aeb9ca 100%)!important;
-  color:#566173!important;
-  box-shadow:0 0 0 1px rgba(144,159,180,.22),0 7px 15px rgba(76,91,112,.16)!important;
+#zefirok-maltipoo-runner .rating-v6-podium-card[data-place="1"] .rating-v6-podium-place-number{
+  background:linear-gradient(145deg,#fff4a7 0%,#efb833 48%,#d68a16 100%);
+  color:#75450a;
+  box-shadow:0 0 0 1px rgba(211,151,31,.30),0 7px 16px rgba(161,104,19,.22);
 }
-#zefirok-maltipoo-runner .rating-v6-podium-card[data-place="3"] .rating-v6-podium-place{
-  background:linear-gradient(145deg,#ffe5c6 0%,#e7a264 48%,#b9692d 100%)!important;
-  color:#6d3918!important;
-  box-shadow:0 0 0 1px rgba(174,100,49,.22),0 7px 15px rgba(113,65,36,.17)!important;
+#zefirok-maltipoo-runner .rating-v6-podium-card[data-place="2"] .rating-v6-podium-place-number{
+  background:linear-gradient(145deg,#fff 0%,#dfe7f0 48%,#aeb9ca 100%);
+  color:#566173;
+  box-shadow:0 0 0 1px rgba(144,159,180,.22),0 7px 15px rgba(76,91,112,.16);
+}
+#zefirok-maltipoo-runner .rating-v6-podium-card[data-place="3"] .rating-v6-podium-place-number{
+  background:linear-gradient(145deg,#ffe5c6 0%,#e7a264 48%,#b9692d 100%);
+  color:#6d3918;
+  box-shadow:0 0 0 1px rgba(174,100,49,.22),0 7px 15px rgba(113,65,36,.17);
+}
+#zefirok-maltipoo-runner .rating-v6-podium-place-art{
+  --winner-art-y:-72%;
+  position:absolute!important;
+  left:50%!important;
+  top:50%!important;
+  z-index:1!important;
+  display:block!important;
+  width:82px!important;
+  height:82px!important;
+  max-width:none!important;
+  object-fit:contain!important;
+  pointer-events:none!important;
+  user-select:none!important;
+  -webkit-user-drag:none!important;
+  transform:translate(-50%,var(--winner-art-y))!important;
+  transform-origin:50% 72%!important;
+}
+#zefirok-maltipoo-runner .rating-v6-podium-card[data-place="1"] .rating-v6-podium-place-art{
+  --winner-art-y:-76%;
+  width:88px!important;
+  height:88px!important;
+  filter:drop-shadow(0 7px 10px rgba(189,126,19,.24)) brightness(1.02);
+  animation:rating-winner-place-art-breathe 3.2s ease-in-out infinite;
+}
+#zefirok-maltipoo-runner .rating-v6-podium-card[data-place="2"] .rating-v6-podium-place-art{
+  --winner-art-y:-73%;
+  width:84px!important;
+  height:84px!important;
+  filter:drop-shadow(0 6px 9px rgba(91,105,129,.20));
+}
+#zefirok-maltipoo-runner .rating-v6-podium-card[data-place="3"] .rating-v6-podium-place-art{
+  /* Bronze artwork carries more visual weight at the bottom; move it higher and keep it tighter. */
+  --winner-art-y:-69%;
+  width:76px!important;
+  height:76px!important;
+  filter:drop-shadow(0 6px 9px rgba(139,82,43,.20));
 }
 
-/* Supplied winner art. The bronze artwork is optically rounder, so it has its own fit. */
+/* Avatars stay clean: winner artwork no longer participates in their layout. */
 #zefirok-maltipoo-runner .rating-v6-podium-avatar{
   position:relative!important;
   z-index:2!important;
   display:grid!important;
   place-items:center!important;
   width:100%!important;
-  min-height:93px!important;
-  margin-top:1px!important;
+  min-height:82px!important;
+  margin-top:0!important;
   overflow:visible!important;
 }
 #zefirok-maltipoo-runner .rating-v6-podium-avatar .leaderboard-avatar-frame{
   position:relative!important;
   z-index:2!important;
 }
-#zefirok-maltipoo-runner .rating-v6-podium-laurel{
-  position:absolute!important;
-  left:50%!important;
-  top:50%!important;
-  z-index:1!important;
-  display:block!important;
-  width:116px!important;
-  height:116px!important;
-  max-width:none!important;
-  object-fit:contain!important;
-  pointer-events:none!important;
-  user-select:none!important;
-  -webkit-user-drag:none!important;
-  transform:translate(-50%,-50%)!important;
-  transform-origin:50% 54%!important;
-  filter:drop-shadow(0 7px 10px rgba(101,61,40,.13));
-}
-#zefirok-maltipoo-runner .rating-v6-podium-card[data-place="1"] .rating-v6-podium-avatar{min-height:108px!important}
-#zefirok-maltipoo-runner .rating-v6-podium-card[data-place="1"] .rating-v6-podium-laurel{
-  width:132px!important;
-  height:132px!important;
-  top:49%!important;
-  filter:drop-shadow(0 8px 13px rgba(189,126,19,.22)) brightness(1.02);
-  animation:rating-winner-laurel-breathe 3.2s ease-in-out infinite;
-}
-#zefirok-maltipoo-runner .rating-v6-podium-card[data-place="2"] .rating-v6-podium-laurel{
-  width:119px!important;
-  height:119px!important;
-  top:51%!important;
-  filter:drop-shadow(0 7px 11px rgba(91,105,129,.18));
-}
-#zefirok-maltipoo-runner .rating-v6-podium-card[data-place="3"] .rating-v6-podium-laurel{
-  width:108px!important;
-  height:108px!important;
-  top:48%!important;
-  filter:drop-shadow(0 7px 11px rgba(139,82,43,.18));
-}
+#zefirok-maltipoo-runner .rating-v6-podium-card[data-place="1"] .rating-v6-podium-avatar{min-height:96px!important}
 
 /* Per-place typography and small surfaces reinforce the palette without hurting readability. */
 #zefirok-maltipoo-runner .rating-v6-podium-card[data-place="1"] .rating-v6-podium-name,
@@ -9244,26 +9266,26 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
   0%,100%{opacity:.58;box-shadow:0 0 0 1px rgba(255,238,164,.32),0 0 20px rgba(247,190,55,.13)}
   50%{opacity:.92;box-shadow:0 0 0 1px rgba(255,239,170,.54),0 0 32px rgba(247,190,55,.27)}
 }
-@keyframes rating-winner-laurel-breathe{
-  0%,100%{transform:translate(-50%,-50%) scale(1);filter:drop-shadow(0 8px 13px rgba(189,126,19,.19)) brightness(1.01)}
-  50%{transform:translate(-50%,-50%) scale(1.035);filter:drop-shadow(0 9px 17px rgba(217,152,26,.30)) brightness(1.07)}
+@keyframes rating-winner-place-art-breathe{
+  0%,100%{transform:translate(-50%,var(--winner-art-y)) scale(1);filter:drop-shadow(0 7px 10px rgba(189,126,19,.22)) brightness(1.01)}
+  50%{transform:translate(-50%,var(--winner-art-y)) scale(1.035);filter:drop-shadow(0 8px 14px rgba(217,152,26,.32)) brightness(1.07)}
 }
 
 @media(max-width:390px){
   #zefirok-maltipoo-runner .rating-v6-podium{gap:5px!important;padding-top:24px!important}
   #zefirok-maltipoo-runner .rating-v6-podium-card{min-height:174px!important;padding:33px 5px 12px!important}
   #zefirok-maltipoo-runner .rating-v6-podium-card[data-place="1"]{min-height:196px!important;padding-top:35px!important}
-  #zefirok-maltipoo-runner .rating-v6-podium-avatar{min-height:83px!important}
-  #zefirok-maltipoo-runner .rating-v6-podium-card[data-place="1"] .rating-v6-podium-avatar{min-height:98px!important}
-  #zefirok-maltipoo-runner .rating-v6-podium-laurel{width:101px!important;height:101px!important}
-  #zefirok-maltipoo-runner .rating-v6-podium-card[data-place="1"] .rating-v6-podium-laurel{width:116px!important;height:116px!important}
-  #zefirok-maltipoo-runner .rating-v6-podium-card[data-place="2"] .rating-v6-podium-laurel{width:104px!important;height:104px!important}
-  #zefirok-maltipoo-runner .rating-v6-podium-card[data-place="3"] .rating-v6-podium-laurel{width:94px!important;height:94px!important;top:48%!important}
-  #zefirok-maltipoo-runner .rating-v6-podium-place{width:32px!important;height:32px!important;font-size:12px!important}
+  #zefirok-maltipoo-runner .rating-v6-podium-avatar{min-height:74px!important}
+  #zefirok-maltipoo-runner .rating-v6-podium-card[data-place="1"] .rating-v6-podium-avatar{min-height:87px!important}
+  #zefirok-maltipoo-runner .rating-v6-podium-place{width:32px!important;height:32px!important}
+  #zefirok-maltipoo-runner .rating-v6-podium-place-number{width:32px;height:32px;font-size:12px}
+  #zefirok-maltipoo-runner .rating-v6-podium-card[data-place="1"] .rating-v6-podium-place-art{width:79px!important;height:79px!important}
+  #zefirok-maltipoo-runner .rating-v6-podium-card[data-place="2"] .rating-v6-podium-place-art{width:75px!important;height:75px!important}
+  #zefirok-maltipoo-runner .rating-v6-podium-card[data-place="3"] .rating-v6-podium-place-art{width:68px!important;height:68px!important}
 }
 @media(prefers-reduced-motion:reduce){
   #zefirok-maltipoo-runner .rating-v6-podium-card[data-place="1"]::before,
-  #zefirok-maltipoo-runner .rating-v6-podium-card[data-place="1"] .rating-v6-podium-laurel{animation:none!important}
+  #zefirok-maltipoo-runner .rating-v6-podium-card[data-place="1"] .rating-v6-podium-place-art{animation:none!important}
 }
 </style>
 
@@ -9910,21 +9932,21 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
   function podiumWinnerArt(place) {
     const src = String(PODIUM_WINNER_ART[Number(place)] || "");
     if (!src) return "";
-    return `<img class="rating-v6-podium-laurel" data-place="${Number(place)}" src="${escapeHtml(src)}" alt="" aria-hidden="true" loading="eager" decoding="async">`;
+    return `<img class="rating-v6-podium-place-art" data-place="${Number(place)}" src="${escapeHtml(src)}" alt="" aria-hidden="true" loading="eager" decoding="async">`;
   }
 
   function podium(entry, place) {
     if (!entry) {
-      return `<div class="rating-v6-podium-card is-empty" data-place="${place}"><span class="rating-v6-podium-place">${place}</span><div class="rating-v6-podium-avatar">${podiumWinnerArt(place)}${avatarMarkup({ telegramId:`empty-${place}`, name:"Свободно" }, false, true)}</div><strong>Свободно</strong><span class="rating-v6-podium-score">—</span></div>`;
+      return `<div class="rating-v6-podium-card is-empty" data-place="${place}"><span class="rating-v6-podium-place">${podiumWinnerArt(place)}<b class="rating-v6-podium-place-number">${place}</b></span><div class="rating-v6-podium-avatar">${avatarMarkup({ telegramId:`empty-${place}`, name:"Свободно" }, false, true)}</div><strong>Свободно</strong><span class="rating-v6-podium-score">—</span></div>`;
     }
     const isMe = String(entry.telegramId || "") === String(telegramProfile?.id || "");
     const playerId = escapeHtml(entry.telegramId || "");
     const playerLabel = escapeHtml(`Открыть мини-профиль: ${entry.name || "Игрок"}`);
     const level = Math.max(1, Math.floor(Number(entry?.level || 1)));
     return `<div class="rating-v6-podium-card${place === 1 ? " is-first" : ""}${isMe ? " is-me" : ""}" data-place="${place}" data-player-profile-id="${playerId}" role="button" tabindex="0" aria-label="${playerLabel}">
-      <span class="rating-v6-podium-place">${place}</span>
+      <span class="rating-v6-podium-place">${podiumWinnerArt(place)}<b class="rating-v6-podium-place-number">${place}</b></span>
       ${isMe ? '<span class="rating-v6-you">Ты</span>' : ""}
-      <div class="rating-v6-podium-avatar">${podiumWinnerArt(place)}${avatarMarkup(entry, false, true)}</div>
+      <div class="rating-v6-podium-avatar">${avatarMarkup(entry, false, true)}</div>
       <strong class="rating-v6-podium-name">${playerNameMarkup(entry)}</strong>
       <span class="rating-v6-podium-level">Ур. ${level}</span>
       ${compactShowcaseMarkup(entry, 3)}

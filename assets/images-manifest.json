@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "catalogHash": "21faddc4264f9cc8",
-  "count": 452,
+  "catalogHash": "c1059b7fe4a01848",
+  "count": 455,
   "images": [
     {
       "fileName": "achievements/background_achivment_panel.png",
@@ -2116,12 +2116,36 @@
       "modified": 1784921251000
     },
     {
+      "fileName": "rating/icon_2winner_raiting.png",
+      "label": "Icon 2winner raiting",
+      "folder": "rating",
+      "path": "/assets/rating/icon_2winner_raiting.png",
+      "size": 1484452,
+      "modified": 1788343035000
+    },
+    {
+      "fileName": "rating/icon_3winner_raiting.png",
+      "label": "Icon 3winner raiting",
+      "folder": "rating",
+      "path": "/assets/rating/icon_3winner_raiting.png",
+      "size": 901609,
+      "modified": 1788343035000
+    },
+    {
       "fileName": "rating/icon_vitrina_raiting.png",
       "label": "Icon vitrina raiting",
       "folder": "rating",
       "path": "/assets/rating/icon_vitrina_raiting.png",
       "size": 704535,
       "modified": 1787972765000
+    },
+    {
+      "fileName": "rating/icon_winner_raiting.png",
+      "label": "Icon winner raiting",
+      "folder": "rating",
+      "path": "/assets/rating/icon_winner_raiting.png",
+      "size": 1048213,
+      "modified": 1788343035000
     },
     {
       "fileName": "rating/season-leaderboard-banner.png",
