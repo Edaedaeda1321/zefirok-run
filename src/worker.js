@@ -4409,10 +4409,10 @@ async function playerMailV3StatePayload(env, telegramId) {
   const [rows,counts]=await Promise.all([
     env.DB.prepare(`SELECT mail_id,mail_kind,title,preview_text,image_url,reward_state,read_at,claimed_at,created_at,expires_at,
         (SELECT COUNT(*) FROM player_mail_rewards_v3 r WHERE r.telegram_id=player_mail_v3.telegram_id AND r.mail_id=player_mail_v3.mail_id) AS reward_count
-      FROM player_mail_v3 WHERE telegram_id=? AND (expires_at=0 OR expires_at>?)
+      FROM player_mail_v3 WHERE telegram_id=? AND source_type<>'season_pass_task' AND mail_kind<>'season_pass_task' AND (expires_at=0 OR expires_at>?)
       ORDER BY CASE WHEN read_at=0 THEN 0 ELSE 1 END,created_at DESC LIMIT ?`).bind(id,now,PLAYER_MAIL_V3_LIST_LIMIT).all(),
     env.DB.prepare(`SELECT SUM(CASE WHEN read_at=0 THEN 1 ELSE 0 END) AS unread_count,SUM(CASE WHEN reward_state IN ('available','claiming') THEN 1 ELSE 0 END) AS pending_count
-      FROM player_mail_v3 WHERE telegram_id=? AND (expires_at=0 OR expires_at>?)`).bind(id,now).first()
+      FROM player_mail_v3 WHERE telegram_id=? AND source_type<>'season_pass_task' AND mail_kind<>'season_pass_task' AND (expires_at=0 OR expires_at>?)`).bind(id,now).first()
   ]);
   const items=(rows.results||[]).map((row)=>({
     id:String(row.mail_id||""),kind:String(row.mail_kind||"message"),title:String(row.title||"Письмо от Зеффи"),preview:String(row.preview_text||""),
@@ -4435,7 +4435,7 @@ async function playerMailV3LetterPayload(env, telegramId, mailId) {
   const now=Math.floor(Date.now()/1000);
   const repaired=await repairPlayerMailV3CampaignAttachments(env,id,mid).catch((error)=>{console.error("player mail v3 open attachment repair failed",error);return 0;});
   if(repaired>0){await ensurePlayerAccountRevisionAvailable(env);await bumpPlayerAccountRevisionStatement(env,id,now).run();}
-  const row=await env.DB.prepare(`SELECT * FROM player_mail_v3 WHERE telegram_id=? AND mail_id=? AND (expires_at=0 OR expires_at>?) LIMIT 1`).bind(id,mid,now).first();
+  const row=await env.DB.prepare(`SELECT * FROM player_mail_v3 WHERE telegram_id=? AND mail_id=? AND source_type<>'season_pass_task' AND mail_kind<>'season_pass_task' AND (expires_at=0 OR expires_at>?) LIMIT 1`).bind(id,mid,now).first();
   if(!row) return null;
   const rewardRows=await env.DB.prepare(`SELECT reward_kind,reward_id,amount,reward_json FROM player_mail_rewards_v3 WHERE telegram_id=? AND mail_id=? ORDER BY reward_index`).bind(id,mid).all();
   const rewards=playerMailV3RewardsFromRows(rewardRows.results || []).map(playerGiftRewardView).filter(Boolean);
@@ -4462,7 +4462,7 @@ async function openPlayerMailV3(request, env) {
     const body=await readJson(request);requireBotToken(env);const auth=await validateTelegramInitData(String(body.initData||""),env);const telegramId=String(auth.user.id);
     const mailId=String(body.mailId||body.giftId||"").trim();if(!/^[A-Za-z0-9:_-]{4,120}$/.test(mailId))throw new ApiError(400,"Некорректное письмо.");
     await ensurePlayerMailV3Schema(env);const now=Math.floor(Date.now()/1000);
-    const read=await env.DB.prepare(`UPDATE player_mail_v3 SET read_at=?,updated_at=? WHERE telegram_id=? AND mail_id=? AND read_at=0 AND (expires_at=0 OR expires_at>?)`).bind(now,now,telegramId,mailId,now).run();
+    const read=await env.DB.prepare(`UPDATE player_mail_v3 SET read_at=?,updated_at=? WHERE telegram_id=? AND mail_id=? AND source_type<>'season_pass_task' AND mail_kind<>'season_pass_task' AND read_at=0 AND (expires_at=0 OR expires_at>?)`).bind(now,now,telegramId,mailId,now).run();
     if(Number(read?.meta?.changes||0)>0){await ensurePlayerAccountRevisionAvailable(env);await bumpPlayerAccountRevisionStatement(env,telegramId,now).run();}
     const letter=await playerMailV3LetterPayload(env,telegramId,mailId);if(!letter)throw new ApiError(404,"Письмо не найдено.");
     const state=await playerMailV3Snapshot(env,telegramId);
@@ -4499,6 +4499,7 @@ async function claimPlayerMailV3(request, env, ctx) {
     await env.DB.prepare(`UPDATE player_mail_v3 SET reward_state='available',updated_at=? WHERE telegram_id=? AND mail_id=? AND reward_state='claiming' AND updated_at<?`).bind(now,telegramId,mailId,now-PLAYER_MAIL_V3_CLAIM_STALE_SECONDS).run();
     let row=await env.DB.prepare(`SELECT * FROM player_mail_v3 WHERE telegram_id=? AND mail_id=? AND (expires_at=0 OR expires_at>?) LIMIT 1`).bind(telegramId,mailId,now).first();
     if(!row)throw new ApiError(404,"Письмо не найдено.");
+    if(String(row.source_type||"")==="season_pass_task"||String(row.mail_kind||"")==="season_pass_task")throw new ApiError(409,"Награда задания доступна в сезонном пропуске.");
     if(String(row.reward_state)==="none"){
       const repairedBeforeClaim=await repairPlayerMailV3CampaignAttachments(env,telegramId,mailId).catch((error)=>{console.error("player mail v3 pre-claim attachment repair failed",error);return 0;});
       if(repairedBeforeClaim>0){await ensurePlayerAccountRevisionAvailable(env);await bumpPlayerAccountRevisionStatement(env,telegramId,now).run();row=await env.DB.prepare(`SELECT * FROM player_mail_v3 WHERE telegram_id=? AND mail_id=? AND (expires_at=0 OR expires_at>?) LIMIT 1`).bind(telegramId,mailId,now).first();}
@@ -4904,122 +4905,6 @@ function seasonPassTaskMailGiftId(seasonId, taskId, periodKey) {
   return `season_task:${retentionV2ShortHash(raw)}:${taskPart}:${periodPart}`.slice(0, 120);
 }
 
-async function syncSeasonPassTaskGiftInbox(env, telegramId, options = {}) {
-  const id = String(telegramId || "").trim();
-  if (!/^\d{4,20}$/.test(id)) return 0;
-  await Promise.all([ensureSeasonPassSchema(env), ensurePlayerGiftInboxSchema(env)]);
-  const seasonId = String(options.seasonId || options.season_id || "").trim();
-  const requestedPairs = Array.isArray(options.pairs) ? options.pairs.slice(0, 30) : [];
-  const binds = [id];
-  let where = `n.telegram_id=? AND n.xp_reward>0 AND NOT EXISTS(
-    SELECT 1 FROM season_pass_task_claims c
-    WHERE c.season_id=n.season_id AND c.telegram_id=n.telegram_id AND c.task_id=n.task_id AND c.period_key=n.period_key AND c.status='delivered'
-  )`;
-  if (seasonId) { where += ` AND n.season_id=?`; binds.push(seasonId); }
-  const pairs = requestedPairs.map((item) => ({ taskId:String(item?.taskId || item?.task_id || "").trim(), periodKey:String(item?.periodKey || item?.period_key || "").trim() }))
-    .filter((item) => /^[A-Za-z0-9_-]{2,80}$/.test(item.taskId) && /^[DW]:\d{4}-\d{2}-\d{2}$/.test(item.periodKey));
-  if (requestedPairs.length && !pairs.length) return 0;
-  if (pairs.length) {
-    where += ` AND (${pairs.map(() => `(n.task_id=? AND n.period_key=?)`).join(" OR ")})`;
-    for (const pair of pairs) binds.push(pair.taskId, pair.periodKey);
-  }
-  const result = await env.DB.prepare(`SELECT n.season_id,n.task_id,n.period_key,n.task_title,n.xp_reward,n.completed_at
-    FROM season_pass_task_notifications n WHERE ${where}
-    ORDER BY n.completed_at DESC,n.task_id LIMIT 24`).bind(...binds).all();
-  const rows = result.results || [];
-  if (!rows.length) return 0;
-  const now = Math.floor(Date.now() / 1000);
-  const statements = [];
-  const expectedMail = new Map();
-  for (const row of rows) {
-    const rowSeasonId = String(row.season_id || "").trim();
-    const taskId = String(row.task_id || "").trim();
-    const periodKey = String(row.period_key || "").trim();
-    if (!rowSeasonId || !taskId || !periodKey) continue;
-    const xp = Math.max(1, Math.floor(Number(row.xp_reward) || 1));
-    const taskTitle = String(row.task_title || "Задание").trim().slice(0, 180) || "Задание";
-    const giftId = seasonPassTaskMailGiftId(rowSeasonId, taskId, periodKey);
-    const rewards = normalizePlayerGiftRewards([{ kind:"season_pass_xp", amount:xp, seasonId:rowSeasonId, taskId, periodKey }]);
-    if (!rewards.length) continue;
-    const createdAt = Math.max(1, Math.floor(Number(row.completed_at) || now));
-    const title = "Задание сезонного пропуска выполнено";
-    const message = `Задание «${taskTitle}» выполнено. Заберите XP сезонного пропуска.`;
-    const reason = "Награда за выполненное задание сезонного пропуска";
-    const preview = playerMailPreviewText(`${taskTitle} · +${xp.toLocaleString("ru-RU")} XP`, message);
-    expectedMail.set(giftId, JSON.stringify(rewards));
-    statements.push(
-      env.DB.prepare(`INSERT OR IGNORE INTO player_gift_inbox(gift_id,telegram_id,gift_kind,title,message_text,reason,rewards_json,status,created_at,updated_at,claimed_at) VALUES(?,?,?,?,?,?,?,'pending',?,?,0)`)
-        .bind(giftId,id,"season_pass_task",title,message,reason,JSON.stringify(rewards),createdAt,now),
-      env.DB.prepare(`INSERT OR IGNORE INTO player_mail_metadata(gift_id,telegram_id,preview_text,image_url,read_at) VALUES(?,?,?,?,0)`)
-        .bind(giftId,id,preview,"/assets/ui/icon_battlepass.png")
-    );
-  }
-  let created = 0;
-  for (let index = 0; index < statements.length; index += 40) {
-    const results = await env.DB.batch(statements.slice(index, index + 40));
-    for (let resultIndex = 0; resultIndex < results.length; resultIndex += 2) {
-      if (Number(results[resultIndex]?.meta?.changes || 0) > 0) created += 1;
-    }
-  }
-  if (created > 0) {
-    await ensurePlayerAccountRevisionAvailable(env);
-    await bumpPlayerAccountRevisionStatement(env,id,now).run();
-  }
-  const expectedIds = [...expectedMail.keys()];
-  if (expectedIds.length) {
-    const placeholders = expectedIds.map(() => "?").join(",");
-    const stored = await env.DB.prepare(`SELECT gift_id,rewards_json FROM player_gift_inbox WHERE telegram_id=? AND gift_id IN (${placeholders})`).bind(id,...expectedIds).all();
-    const storedMap = new Map((stored.results || []).map((row) => [String(row.gift_id || ""), JSON.stringify(normalizePlayerGiftRewards(safeJson(row.rewards_json, [])))]));
-    for (const giftId of expectedIds) {
-      if (!storedMap.has(giftId)) throw new Error(`Письмо сезонного задания не зафиксировано: ${giftId}`);
-      if (storedMap.get(giftId) !== expectedMail.get(giftId)) throw new Error(`Конфликт письма сезонного задания: ${giftId}`);
-    }
-  }
-  return created;
-}
-
-
-async function syncSeasonPassTaskMailV3(env, telegramId, options = {}) {
-  const id=String(telegramId||"").trim();
-  if(!/^\d{4,20}$/.test(id)) return 0;
-  await Promise.all([ensureSeasonPassSchema(env),ensurePlayerMailV3Schema(env)]);
-  const seasonId=String(options.seasonId||options.season_id||"").trim();
-  const requestedPairs=Array.isArray(options.pairs)?options.pairs.slice(0,30):[];
-  const binds=[id];
-  let where=`n.telegram_id=? AND n.xp_reward>0 AND NOT EXISTS(
-    SELECT 1 FROM season_pass_task_claims c
-    WHERE c.season_id=n.season_id AND c.telegram_id=n.telegram_id AND c.task_id=n.task_id AND c.period_key=n.period_key AND c.status='delivered'
-  )`;
-  if(seasonId){where+=` AND n.season_id=?`;binds.push(seasonId);}
-  const pairs=requestedPairs.map((item)=>({taskId:String(item?.taskId||item?.task_id||"").trim(),periodKey:String(item?.periodKey||item?.period_key||"").trim()}))
-    .filter((item)=>/^[A-Za-z0-9_-]{2,80}$/.test(item.taskId)&&/^[DW]:\d{4}-\d{2}-\d{2}$/.test(item.periodKey));
-  if(requestedPairs.length&&!pairs.length)return 0;
-  if(pairs.length){where+=` AND (${pairs.map(()=>`(n.task_id=? AND n.period_key=?)`).join(" OR ")})`;for(const pair of pairs)binds.push(pair.taskId,pair.periodKey);}
-  const result=await env.DB.prepare(`SELECT n.season_id,n.task_id,n.period_key,n.task_title,n.xp_reward,n.completed_at
-    FROM season_pass_task_notifications n WHERE ${where}
-    ORDER BY n.completed_at DESC,n.task_id LIMIT 24`).bind(...binds).all();
-  let created=0;
-  const now=Math.floor(Date.now()/1000);
-  for(const row of result.results||[]){
-    const rowSeasonId=String(row.season_id||"").trim(),taskId=String(row.task_id||"").trim(),periodKey=String(row.period_key||"").trim();
-    if(!rowSeasonId||!taskId||!periodKey)continue;
-    const xp=Math.max(1,Math.floor(Number(row.xp_reward)||1));
-    const taskTitle=String(row.task_title||"Задание").trim().slice(0,180)||"Задание";
-    const mailId=seasonPassTaskMailGiftId(rowSeasonId,taskId,periodKey);
-    const rewards=normalizePlayerGiftRewards([{kind:"season_pass_xp",amount:xp,seasonId:rowSeasonId,taskId,periodKey}]);
-    if(!rewards.length)continue;
-    const message=`Задание «${taskTitle}» выполнено. Заберите XP сезонного пропуска.`;
-    const mail=await createPlayerMailV3(env,id,{
-      mailId,sourceType:"season_pass_task",sourceId:`${rowSeasonId}|${taskId}|${periodKey}`,kind:"season_pass_task",
-      title:"Задание сезонного пропуска выполнено",preview:`${taskTitle} · +${xp.toLocaleString("ru-RU")} XP`,body:message,
-      imageUrl:"/assets/ui/icon_battlepass.png",reason:"Награда за выполненное задание сезонного пропуска",rewards,
-      createdAt:Math.max(1,Math.floor(Number(row.completed_at)||now))
-    });
-    if(mail.created)created+=1;
-  }
-  return created;
-}
-
 async function maintainPlayerGiftInboxState(env, telegramId) {
   await ensurePlayerGiftInboxSchema(env);
   const id = String(telegramId || "");
@@ -5054,8 +4939,8 @@ async function playerGiftInboxPayload(env, telegramId) {
   await ensurePlayerGiftInboxSchema(env);
   const id = String(telegramId || "");
   const [rows,countsRow] = await Promise.all([
-    env.DB.prepare(`SELECT g.gift_id,g.gift_kind,g.title,g.message_text,g.reason,g.rewards_json,g.status,g.created_at,g.claimed_at,m.preview_text,m.image_url,m.read_at,CASE WHEN m.gift_id IS NULL THEN 0 ELSE 1 END AS has_mail_meta FROM player_gift_inbox g LEFT JOIN player_mail_metadata m ON m.gift_id=g.gift_id AND m.telegram_id=g.telegram_id WHERE g.telegram_id=? ORDER BY CASE WHEN COALESCE(m.read_at,CASE WHEN g.status IN ('pending','claiming','info') THEN 0 ELSE g.created_at END)=0 THEN 0 ELSE 1 END, CASE g.status WHEN 'pending' THEN 0 WHEN 'claiming' THEN 1 WHEN 'info' THEN 2 ELSE 3 END, g.created_at DESC LIMIT 100`).bind(id).all(),
-    env.DB.prepare(`SELECT SUM(CASE WHEN g.status IN ('pending','claiming') THEN 1 ELSE 0 END) AS pending_count,SUM(CASE WHEN COALESCE(m.read_at,CASE WHEN g.status IN ('pending','claiming','info') THEN 0 ELSE g.created_at END)=0 THEN 1 ELSE 0 END) AS unread_count FROM player_gift_inbox g LEFT JOIN player_mail_metadata m ON m.gift_id=g.gift_id AND m.telegram_id=g.telegram_id WHERE g.telegram_id=?`).bind(id).first()
+    env.DB.prepare(`SELECT g.gift_id,g.gift_kind,g.title,g.message_text,g.reason,g.rewards_json,g.status,g.created_at,g.claimed_at,m.preview_text,m.image_url,m.read_at,CASE WHEN m.gift_id IS NULL THEN 0 ELSE 1 END AS has_mail_meta FROM player_gift_inbox g LEFT JOIN player_mail_metadata m ON m.gift_id=g.gift_id AND m.telegram_id=g.telegram_id WHERE g.telegram_id=? AND g.gift_kind<>'season_pass_task' ORDER BY CASE WHEN COALESCE(m.read_at,CASE WHEN g.status IN ('pending','claiming','info') THEN 0 ELSE g.created_at END)=0 THEN 0 ELSE 1 END, CASE g.status WHEN 'pending' THEN 0 WHEN 'claiming' THEN 1 WHEN 'info' THEN 2 ELSE 3 END, g.created_at DESC LIMIT 100`).bind(id).all(),
+    env.DB.prepare(`SELECT SUM(CASE WHEN g.status IN ('pending','claiming') THEN 1 ELSE 0 END) AS pending_count,SUM(CASE WHEN COALESCE(m.read_at,CASE WHEN g.status IN ('pending','claiming','info') THEN 0 ELSE g.created_at END)=0 THEN 1 ELSE 0 END) AS unread_count FROM player_gift_inbox g LEFT JOIN player_mail_metadata m ON m.gift_id=g.gift_id AND m.telegram_id=g.telegram_id WHERE g.telegram_id=? AND g.gift_kind<>'season_pass_task'`).bind(id).first()
   ]);
   const items = (rows.results || []).map((row) => {
     const rewards = normalizePlayerGiftRewards(safeJson(row.rewards_json, [])).map(playerGiftRewardView).filter(Boolean);
@@ -5214,12 +5099,6 @@ async function getPlayerGiftInbox(request, env) {
     const auth = await validateTelegramInitData(String(body.initData || ""), env);
     const telegramId = String(auth.user.id);
     await repairPlayerGiftInboxAuthoritativeSources(env, telegramId);
-    try {
-      const season = await loadSeasonPassSeason(env);
-      if (season?.id && seasonPassCapabilities(season).canClaimTasks) await syncSeasonPassTaskGiftInbox(env, telegramId, { seasonId:season.id });
-    } catch (syncError) {
-      console.error("season pass task mail backfill failed", syncError);
-    }
     return jsonResponse(await playerGiftInboxSnapshot(env, telegramId));
   } catch (error) {
     if (error instanceof ApiError) return jsonResponse({ ok:false, error:error.message }, error.status);
@@ -29561,9 +29440,9 @@ async function deliverSeasonPassTaskNotificationsForRows(env,telegramId,season,t
   let lease=0;
   try{
     if(!id||!season||!rows.length)return null;
-    // Mail is the durable delivery contract. Never tell Telegram that a reward
-    // is ready until the deterministic in-game letter is confirmed in D1.
-    await syncSeasonPassTaskMailV3(env,id,{seasonId:String(season.id),pairs:rows.map(row=>({taskId:String(row.task_id),periodKey:String(row.period_key)}))});
+    // Completed Battle Pass tasks have exactly two notification channels:
+    // the in-game task notice (season_pass_task_notifications.game_read_at) and Telegram.
+    // They are intentionally NOT durable Player Mail messages.
     const now=Math.floor(Date.now()/1000);const pairs=rows.flatMap(row=>[String(row.task_id),String(row.period_key)]);const predicates=rows.map(()=>`(task_id=? AND period_key=?)`).join(' OR ');
     const subscriber=await env.DB.prepare(`SELECT chat_id FROM bot_subscribers WHERE telegram_id=? AND active=1 LIMIT 1`).bind(id).first();
     if(!subscriber?.chat_id){await env.DB.prepare(`UPDATE season_pass_task_notifications SET bot_notified_at=? WHERE season_id=? AND telegram_id=? AND bot_notified_at=0 AND (${predicates})`).bind(now,String(season.id),id,...pairs).run();return null;}
