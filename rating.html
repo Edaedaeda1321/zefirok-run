@@ -8880,17 +8880,18 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
 #zefirok-maltipoo-runner .leaderboard-v4-podium-card[data-player-profile-id].is-first:active{transform:translateY(-11px) scale(.985)!important}
 .rating-player-profile{position:fixed;inset:0;z-index:2147483620;display:flex;align-items:flex-end;justify-content:center;padding:0;background:rgba(67,42,50,.32);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);animation:rating-profile-backdrop-in .2s ease both}
 .rating-player-profile[hidden]{display:none!important}
-.rating-player-profile-sheet{position:relative;width:min(540px,100%);max-height:min(82dvh,760px);overflow:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:13px max(15px,var(--zefirok-content-safe-right,0px)) max(20px,calc(var(--zefirok-content-safe-bottom,0px) + 12px)) max(15px,var(--zefirok-content-safe-left,0px));border:1px solid rgba(231,196,180,.94);border-bottom:0;border-radius:28px 28px 0 0;background:linear-gradient(165deg,#fffdf9 0%,#fff8f6 48%,#fff2f6 100%);box-shadow:0 -18px 55px rgba(72,37,51,.19);color:#68404e;animation:rating-profile-sheet-in .28s cubic-bezier(.22,.86,.28,1) both;transform:translateY(0)}
-.rating-player-profile-drag{display:block;width:min(420px,calc(100% - 112px));height:52px;margin:-8px auto -10px;padding:0;border:0;background:transparent;cursor:grab;touch-action:none;appearance:none;-webkit-appearance:none;-webkit-tap-highlight-color:transparent;user-select:none;position:relative;z-index:6}
+.rating-player-profile-sheet{position:relative;width:min(540px,100%);max-height:min(82dvh,760px);overflow:auto;overscroll-behavior-x:contain;overscroll-behavior-y:none;-webkit-overflow-scrolling:touch;padding:13px max(15px,var(--zefirok-content-safe-right,0px)) max(20px,calc(var(--zefirok-content-safe-bottom,0px) + 12px)) max(15px,var(--zefirok-content-safe-left,0px));border:1px solid rgba(231,196,180,.94);border-bottom:0;border-radius:28px 28px 0 0;background:linear-gradient(165deg,#fffdf9 0%,#fff8f6 48%,#fff2f6 100%);box-shadow:0 -18px 55px rgba(72,37,51,.19);color:#68404e;animation:rating-profile-sheet-in .28s cubic-bezier(.22,.86,.28,1) both;transform:translateY(0)}
+.rating-player-profile-sheet.is-full-dragging{overflow-y:hidden}
+.rating-player-profile-sheet:focus{outline:none}
+.rating-player-profile-drag{display:block;width:min(420px,calc(100% - 48px));height:52px;margin:-8px auto -10px;padding:0;border:0;background:transparent;cursor:grab;touch-action:none;appearance:none;-webkit-appearance:none;-webkit-tap-highlight-color:transparent;user-select:none;position:relative;z-index:6}
 .rating-player-profile-drag::before{content:"";position:absolute;left:50%;top:18px;width:48px;height:5px;transform:translateX(-50%);border-radius:999px;background:#c99a83;opacity:.72;transition:width .18s cubic-bezier(.32,.72,0,1),opacity .18s ease,background .18s ease}
 .rating-player-profile-drag:active::before,.rating-player-profile-drag.is-dragging::before{width:54px;opacity:.98;background:#bb816f}.rating-player-profile-drag.is-armed::before{width:58px;background:#c95f86;opacity:1}
 .rating-player-profile-drag:focus-visible{outline:2px solid rgba(203,79,124,.32);outline-offset:-6px;border-radius:22px}
-.rating-player-profile-close{position:absolute;right:14px;top:13px;z-index:4;width:36px;height:36px;border:1px solid rgba(213,165,145,.68);border-radius:50%;background:rgba(255,252,249,.94);color:#a76569;font:800 24px/1 var(--font-sans);display:grid;place-items:center;cursor:pointer}
 .rating-player-profile-content{display:grid;gap:12px}
 .rating-player-profile-loading{display:grid;gap:12px;padding:18px 0 8px}
 .rating-player-profile-skeleton{height:82px;border-radius:20px;background:linear-gradient(90deg,#f8e9e8 20%,#fff8f6 45%,#f8e9e8 70%);background-size:220% 100%;animation:rating-profile-shimmer 1.15s linear infinite}
 .rating-player-profile-error{display:grid;justify-items:center;gap:10px;padding:44px 18px 28px;text-align:center}.rating-player-profile-error strong{font-size:17px;font-weight:950}.rating-player-profile-error span{color:#92727e;font-size:12px;font-weight:750;line-height:1.45}.rating-player-profile-retry{min-height:42px;padding:9px 16px;border:0;border-radius:14px;background:linear-gradient(145deg,#e986a8,#cb537f);color:#fff;font:900 12px/1 var(--font-sans)}
-.rating-player-profile-head{display:grid;grid-template-columns:94px minmax(0,1fr);gap:13px;align-items:center;padding-right:36px}
+.rating-player-profile-head{display:grid;grid-template-columns:94px minmax(0,1fr);gap:13px;align-items:center}
 .rating-player-profile-avatar{display:grid;place-items:center;align-self:center;min-width:0}
 .rating-player-profile-avatar .leaderboard-avatar-frame{position:relative!important;display:grid!important;place-items:center!important;width:88px!important;height:88px!important;flex:0 0 88px!important;overflow:visible!important;border:3px solid #fff!important;border-radius:24px!important;background:linear-gradient(145deg,#ffe4ee,#f5d9e6)!important;box-shadow:0 6px 14px rgba(116,57,80,.14),0 0 0 1px rgba(216,171,189,.58)!important}
 .rating-player-profile-avatar .leaderboard-avatar{display:block!important;width:100%!important;height:100%!important;border:0!important;border-radius:inherit!important;object-fit:cover!important;background:#f5dae5!important}
@@ -9127,9 +9128,8 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
   </div>
 </section>
 <section class="rating-player-profile" data-rating-player-profile hidden role="dialog" aria-modal="true" aria-labelledby="rating-player-profile-title">
-  <div class="rating-player-profile-sheet" data-rating-player-profile-sheet>
+  <div class="rating-player-profile-sheet" data-rating-player-profile-sheet tabindex="-1">
     <button class="rating-player-profile-drag" data-rating-player-profile-drag type="button" aria-label="Потяните эту ручку вниз, чтобы закрыть мини-профиль"></button>
-    <button class="rating-player-profile-close" data-rating-player-profile-close type="button" aria-label="Закрыть мини-профиль">×</button>
     <div class="rating-player-profile-content" data-rating-player-profile-content></div>
   </div>
 </section>
@@ -9248,7 +9248,6 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
   const playerProfileLayer = document.querySelector("[data-rating-player-profile]");
   const playerProfileSheet = document.querySelector("[data-rating-player-profile-sheet]");
   const playerProfileContent = document.querySelector("[data-rating-player-profile-content]");
-  const playerProfileClose = document.querySelector("[data-rating-player-profile-close]");
   const playerProfileDrag = document.querySelector("[data-rating-player-profile-drag]");
   const cache = { season: null, all_time: null };
   const requestSerial = { season: 0, all_time: 0 };
@@ -9263,6 +9262,7 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
   let playerProfileTargetId = "";
   let playerProfileTrigger = null;
   let playerProfileContentOverflow = "";
+  let playerProfileViewportLock = null;
   let playerProfileCloseTimer = 0;
   let profileDragStartY = 0;
   let profileDragDelta = 0;
@@ -10033,7 +10033,7 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
   }
 
   function clearPlayerProfileMotionStyles() {
-    if(playerProfileSheet){playerProfileSheet.style.transform="";playerProfileSheet.style.transition="";playerProfileSheet.style.opacity="";playerProfileSheet.style.animation="";playerProfileSheet.style.willChange="";}
+    if(playerProfileSheet){playerProfileSheet.style.transform="";playerProfileSheet.style.transition="";playerProfileSheet.style.opacity="";playerProfileSheet.style.animation="";playerProfileSheet.style.willChange="";playerProfileSheet.style.overflowY="";}
     if(playerProfileLayer){playerProfileLayer.style.background="";playerProfileLayer.style.backdropFilter="";playerProfileLayer.style.webkitBackdropFilter="";playerProfileLayer.style.transition="";playerProfileLayer.style.willChange="";}
   }
 
@@ -10050,6 +10050,19 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
     playerProfileLayer.style.webkitBackdropFilter=`blur(${blur.toFixed(2)}px)`;
   }
 
+  function lockPlayerProfileViewport() {
+    if(playerProfileViewportLock)return;
+    const html=document.documentElement,body=document.body,x=Math.max(0,window.scrollX||0),y=Math.max(0,window.scrollY||0);
+    playerProfileViewportLock={x,y,htmlOverflow:html.style.overflow,htmlOverscroll:html.style.overscrollBehavior,bodyOverflow:body.style.overflow,bodyOverscroll:body.style.overscrollBehavior,bodyPosition:body.style.position,bodyTop:body.style.top,bodyLeft:body.style.left,bodyRight:body.style.right,bodyWidth:body.style.width};
+    html.style.overflow="hidden";html.style.overscrollBehavior="none";body.style.overflow="hidden";body.style.overscrollBehavior="none";body.style.position="fixed";body.style.top=`-${y}px`;body.style.left=`-${x}px`;body.style.right="0";body.style.width="100%";
+  }
+
+  function unlockPlayerProfileViewport() {
+    const lock=playerProfileViewportLock;if(!lock)return;playerProfileViewportLock=null;
+    const html=document.documentElement,body=document.body;html.style.overflow=lock.htmlOverflow;html.style.overscrollBehavior=lock.htmlOverscroll;body.style.overflow=lock.bodyOverflow;body.style.overscrollBehavior=lock.bodyOverscroll;body.style.position=lock.bodyPosition;body.style.top=lock.bodyTop;body.style.left=lock.bodyLeft;body.style.right=lock.bodyRight;body.style.width=lock.bodyWidth;
+    requestAnimationFrame(()=>{try{window.scrollTo(lock.x,lock.y);}catch{}});
+  }
+
   function closePlayerProfile(options={}) {
     if(!playerProfileLayer||playerProfileLayer.hidden)return;
     playerProfileRequest?.abort?.();playerProfileRequest=null;playerProfileTargetId="";
@@ -10059,8 +10072,8 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
     const trigger=playerProfileTrigger;playerProfileTrigger=null;
     const finalize=()=>{
       if(motionSerial!==playerProfileMotionSerial)return;
-      cancelPlayerProfileMotion();playerProfileDismissAnimating=false;resetPlayerProfileDragState();playerProfileLayer.classList.remove("is-closing");playerProfileLayer.hidden=true;clearPlayerProfileMotionStyles();
-      if(playerProfileContent)playerProfileContent.classList.remove("is-loaded");if(content)content.style.overflow=playerProfileContentOverflow||"";try{trigger?.focus?.({preventScroll:true});}catch{}
+      cancelPlayerProfileMotion();playerProfileDismissAnimating=false;resetPlayerProfileDragState();resetPlayerProfileSheetTouch();playerProfileLayer.classList.remove("is-closing");playerProfileLayer.hidden=true;clearPlayerProfileMotionStyles();
+      if(playerProfileContent)playerProfileContent.classList.remove("is-loaded");if(content)content.style.overflow=playerProfileContentOverflow||"";unlockPlayerProfileViewport();try{trigger?.focus?.({preventScroll:true});}catch{}
     };
     const reduced=window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches===true;
     if(options?.immediate===true||reduced||!playerProfileSheet){finalize();return;}
@@ -10106,10 +10119,10 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
   function openPlayerProfile(targetId,trigger=null) {
     const id=String(targetId||"").trim();if(!id||!playerProfileLayer)return;
     const auth=currentInitData();if(!auth){showToast("Откройте рейтинг из Telegram Mini App, чтобы посмотреть профиль игрока.","warning",4200);return;}
-    if(playerProfileCloseTimer){clearTimeout(playerProfileCloseTimer);playerProfileCloseTimer=0;}++playerProfileMotionSerial;cancelPlayerProfileMotion();playerProfileDismissAnimating=false;resetPlayerProfileDragState();playerProfileLayer.classList.remove("is-closing");clearPlayerProfileMotionStyles();
+    if(playerProfileCloseTimer){clearTimeout(playerProfileCloseTimer);playerProfileCloseTimer=0;}++playerProfileMotionSerial;cancelPlayerProfileMotion();playerProfileDismissAnimating=false;resetPlayerProfileDragState();resetPlayerProfileSheetTouch();playerProfileLayer.classList.remove("is-closing");clearPlayerProfileMotionStyles();
     ratingImpactHaptic("light");playerProfileTargetId=id;playerProfileTrigger=trigger instanceof HTMLElement?trigger:null;
-    const entry=leaderboardEntryById(id);renderPlayerProfileLoading(entry);playerProfileLayer.hidden=false;if(content){playerProfileContentOverflow=content.style.overflow;content.style.overflow="hidden";}
-    try{playerProfileClose?.focus?.({preventScroll:true});}catch{}
+    const entry=leaderboardEntryById(id);renderPlayerProfileLoading(entry);playerProfileLayer.hidden=false;lockPlayerProfileViewport();if(content){playerProfileContentOverflow=content.style.overflow;content.style.overflow="hidden";}if(playerProfileSheet)playerProfileSheet.scrollTop=0;
+    try{playerProfileSheet?.focus?.({preventScroll:true});}catch{}
     void loadPlayerProfile(id,entry,false);
   }
 
@@ -10267,7 +10280,6 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
   passInfo?.addEventListener("click", event => { if (event.target === passInfo) closePassInfo(); });
   document.querySelector("[data-rating-case-info-close]")?.addEventListener("click", () => { ratingSelectHaptic(); closeRatingCaseInfo(); });
   caseInfo?.addEventListener("click", event => { if (event.target === caseInfo) closeRatingCaseInfo(); });
-  playerProfileClose?.addEventListener("click",()=>{ratingSelectHaptic();closePlayerProfile();});
   playerProfileLayer?.addEventListener("click",event=>{
     if(event.target===playerProfileLayer){closePlayerProfile();return;}
     const target=event.target instanceof Element?event.target:null;if(!target)return;
@@ -10331,9 +10343,9 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
   // Full-sheet swipe-to-close for touch devices. The sheet only takes over a downward
   // gesture when it is already scrolled to the top, so normal profile scrolling remains intact.
   let profileSheetTouchId=null,profileSheetTouchStartX=0,profileSheetTouchStartY=0,profileSheetTouchLastY=0,profileSheetTouchLastTs=0,profileSheetTouchVelocity=0,profileSheetTouchDelta=0,profileSheetTouchDragging=false;
-  const resetPlayerProfileSheetTouch=()=>{profileSheetTouchId=null;profileSheetTouchStartX=0;profileSheetTouchStartY=0;profileSheetTouchLastY=0;profileSheetTouchLastTs=0;profileSheetTouchVelocity=0;profileSheetTouchDelta=0;profileSheetTouchDragging=false;playerProfileSheet?.classList.remove("is-full-dragging");playerProfileDrag?.classList.remove("is-armed");};
+  const resetPlayerProfileSheetTouch=()=>{profileSheetTouchId=null;profileSheetTouchStartX=0;profileSheetTouchStartY=0;profileSheetTouchLastY=0;profileSheetTouchLastTs=0;profileSheetTouchVelocity=0;profileSheetTouchDelta=0;profileSheetTouchDragging=false;playerProfileSheet?.classList.remove("is-full-dragging");if(playerProfileSheet)playerProfileSheet.style.overflowY="";playerProfileDrag?.classList.remove("is-armed");};
   const touchByIdentifier=(touches,id)=>{for(const touch of Array.from(touches||[])){if(touch.identifier===id)return touch;}return null;};
-  const isProfileSwipeInteractiveTarget=target=>target instanceof Element&&!!target.closest("button,a,input,select,textarea,[contenteditable='true'],[role='button']");
+  const isProfileSwipeInteractiveTarget=target=>target instanceof Element&&!!target.closest("button,a,input,select,textarea,[contenteditable='true']");
   playerProfileSheet?.addEventListener("touchstart",event=>{
     if(playerProfileDismissAnimating||playerProfileLayer?.hidden||!playerProfileSheet||event.touches?.length!==1)return;
     if(event.target instanceof Element&&event.target.closest("[data-rating-player-profile-drag]"))return;
@@ -10344,12 +10356,19 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
   playerProfileSheet?.addEventListener("touchmove",event=>{
     if(profileSheetTouchId==null||playerProfileDismissAnimating||!playerProfileSheet)return;
     const touch=touchByIdentifier(event.touches,profileSheetTouchId);if(!touch)return;
-    const currentX=Number(touch.clientX||0),currentY=Number(touch.clientY||0),dy=currentY-profileSheetTouchStartY,dx=currentX-profileSheetTouchStartX;
+    const currentX=Number(touch.clientX||0),currentY=Number(touch.clientY||0),dy=currentY-profileSheetTouchStartY,dx=currentX-profileSheetTouchStartX,atTop=(playerProfileSheet.scrollTop||0)<=2,verticalDown=dy>0&&Math.abs(dx)<=Math.max(5,Math.abs(dy)*.9);
     if(!profileSheetTouchDragging){
-      if(Math.abs(dy)<9)return;
-      if(dy<=0||Math.abs(dx)>Math.abs(dy)*.82){resetPlayerProfileSheetTouch();return;}
-      if((playerProfileSheet.scrollTop||0)>2){resetPlayerProfileSheetTouch();return;}
-      profileSheetTouchDragging=true;++playerProfileMotionSerial;cancelPlayerProfileMotion();playerProfileSheet.scrollTop=0;playerProfileSheet.style.animation="none";playerProfileSheet.style.transition="none";playerProfileSheet.style.willChange="transform";playerProfileLayer.style.willChange="background,backdrop-filter";playerProfileSheet.classList.add("is-full-dragging");
+      // Cancel a downward gesture at scrollTop=0 immediately. Waiting for the old
+      // 9px threshold let iOS start native rubber-band scrolling inside the sheet,
+      // which moved the profile content while the popup shell stayed in place.
+      if(atTop&&verticalDown){
+        event.preventDefault();
+        if(Math.abs(dy)<3)return;
+        profileSheetTouchDragging=true;++playerProfileMotionSerial;cancelPlayerProfileMotion();playerProfileSheet.scrollTop=0;playerProfileSheet.style.overflowY="hidden";playerProfileSheet.style.animation="none";playerProfileSheet.style.transition="none";playerProfileSheet.style.willChange="transform";playerProfileLayer.style.willChange="background,backdrop-filter";playerProfileSheet.classList.add("is-full-dragging");
+      }else{
+        if(Math.abs(dy)<9)return;
+        resetPlayerProfileSheetTouch();return;
+      }
     }
     event.preventDefault();
     const nowTs=performance.now(),dt=Math.max(1,nowTs-profileSheetTouchLastTs),step=currentY-profileSheetTouchLastY;profileSheetTouchVelocity=step/dt;profileSheetTouchLastY=currentY;profileSheetTouchLastTs=nowTs;profileSheetTouchDelta=Math.max(0,dy);
