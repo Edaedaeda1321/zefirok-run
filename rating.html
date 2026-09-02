@@ -9142,7 +9142,7 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
 
 /* Winner artwork belongs to the place badge, not to the player avatar. */
 #zefirok-maltipoo-runner .rating-v6-podium-place{
-  top:-15px!important;
+  top:-12px!important;
   z-index:8!important;
   width:36px!important;
   height:36px!important;
@@ -9187,14 +9187,14 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
   box-shadow:0 0 0 1px rgba(174,100,49,.22),0 7px 15px rgba(113,65,36,.17);
 }
 #zefirok-maltipoo-runner .rating-v6-podium-place-art{
-  --winner-art-y:-50%;
+  --winner-art-y:-48%;
   position:absolute!important;
   left:50%!important;
   top:50%!important;
   z-index:1!important;
   display:block!important;
-  width:62px!important;
-  height:62px!important;
+  width:56px!important;
+  height:56px!important;
   max-width:none!important;
   object-fit:contain!important;
   pointer-events:none!important;
@@ -9204,23 +9204,23 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
   transform-origin:50% 50%!important;
 }
 #zefirok-maltipoo-runner .rating-v6-podium-card[data-place="1"] .rating-v6-podium-place-art{
-  --winner-art-y:-50%;
-  width:64px!important;
-  height:64px!important;
+  --winner-art-y:-47%;
+  width:58px!important;
+  height:58px!important;
   filter:drop-shadow(0 7px 10px rgba(189,126,19,.24)) brightness(1.02);
   animation:rating-winner-place-art-breathe 3.2s ease-in-out infinite;
 }
 #zefirok-maltipoo-runner .rating-v6-podium-card[data-place="2"] .rating-v6-podium-place-art{
-  --winner-art-y:-50%;
-  width:60px!important;
-  height:60px!important;
+  --winner-art-y:-47%;
+  width:54px!important;
+  height:54px!important;
   filter:drop-shadow(0 6px 9px rgba(91,105,129,.20));
 }
 #zefirok-maltipoo-runner .rating-v6-podium-card[data-place="3"] .rating-v6-podium-place-art{
-  /* Bronze artwork is a closed wreath, so it needs a little more diameter to stay readable. */
+  /* Bronze artwork is a closed wreath, so it keeps a touch more diameter than silver. */
   --winner-art-y:-50%;
-  width:62px!important;
-  height:62px!important;
+  width:58px!important;
+  height:58px!important;
   filter:drop-shadow(0 6px 9px rgba(139,82,43,.20));
 }
 
@@ -9268,7 +9268,7 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
 }
 @keyframes rating-winner-place-art-breathe{
   0%,100%{transform:translate(-50%,var(--winner-art-y)) scale(1);filter:drop-shadow(0 4px 7px rgba(189,126,19,.18)) brightness(1.01)}
-  50%{transform:translate(-50%,var(--winner-art-y)) scale(1.015);filter:drop-shadow(0 5px 9px rgba(217,152,26,.24)) brightness(1.045)}
+  50%{transform:translate(-50%,var(--winner-art-y)) scale(1.01);filter:drop-shadow(0 5px 8px rgba(217,152,26,.22)) brightness(1.035)}
 }
 
 @media(max-width:390px){
@@ -9279,9 +9279,9 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
   #zefirok-maltipoo-runner .rating-v6-podium-card[data-place="1"] .rating-v6-podium-avatar{min-height:87px!important}
   #zefirok-maltipoo-runner .rating-v6-podium-place{width:32px!important;height:32px!important}
   #zefirok-maltipoo-runner .rating-v6-podium-place-number{width:32px;height:32px;font-size:12px}
-  #zefirok-maltipoo-runner .rating-v6-podium-card[data-place="1"] .rating-v6-podium-place-art{width:58px!important;height:58px!important}
-  #zefirok-maltipoo-runner .rating-v6-podium-card[data-place="2"] .rating-v6-podium-place-art{width:56px!important;height:56px!important}
-  #zefirok-maltipoo-runner .rating-v6-podium-card[data-place="3"] .rating-v6-podium-place-art{width:58px!important;height:58px!important}
+  #zefirok-maltipoo-runner .rating-v6-podium-card[data-place="1"] .rating-v6-podium-place-art{width:54px!important;height:54px!important}
+  #zefirok-maltipoo-runner .rating-v6-podium-card[data-place="2"] .rating-v6-podium-place-art{width:50px!important;height:50px!important}
+  #zefirok-maltipoo-runner .rating-v6-podium-card[data-place="3"] .rating-v6-podium-place-art{width:54px!important;height:54px!important}
 }
 @media(prefers-reduced-motion:reduce){
   #zefirok-maltipoo-runner .rating-v6-podium-card[data-place="1"]::before,
