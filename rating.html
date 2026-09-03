@@ -8814,6 +8814,116 @@ html > body { padding: 0 !important; }
 .rating-pass-info-actions button:active{transform:scale(.99)}
 @media(max-width:720px){.rating-pass-info-card{grid-template-columns:1fr;padding:16px 16px 18px;border-radius:28px;gap:10px}.rating-pass-info-hero{min-height:160px;padding:18px 14px 8px}.rating-pass-info-star{width:min(142px,46vw)}.rating-pass-info-body{padding-right:0;gap:9px}.rating-pass-info-features{grid-template-columns:1fr;gap:7px}.rating-pass-info-actions{grid-template-columns:1fr}.rating-pass-info-actions .rating-pass-info-open{order:-1}}
 @media(max-width:420px){.rating-pass-info{padding-inline:10px}.rating-pass-info-card{padding:14px 12px 16px;border-radius:24px}.rating-pass-info-kicker{font-size:8.5px;padding:4px 8px}.rating-pass-info-heading h2{font-size:29px}.rating-pass-info-subtitle{font-size:14px}.rating-pass-info-card p{font-size:11px}.rating-pass-info-feature{grid-template-columns:44px minmax(0,1fr);gap:9px;padding:9px 10px}.rating-pass-info-feature-icon{width:44px;height:44px;border-radius:14px;font-size:17px}.rating-pass-info-feature-copy strong{font-size:12px}.rating-pass-info-feature-copy span{font-size:10px}.rating-pass-info-actions button{min-height:48px;font-size:12.5px}}
+/* Premium tariff identity: keeps Elite / Elite+ unmistakable without inventing another tier name. */
+.rating-pass-info-nameplate{
+  position:relative;
+  isolation:isolate;
+  justify-self:start;
+  display:inline-grid;
+  gap:3px;
+  width:max-content;
+  max-width:100%;
+  min-width:min(250px,100%);
+  padding:10px 15px 9px;
+  overflow:hidden;
+  border:1.5px solid rgba(221,164,73,.72);
+  border-radius:18px;
+  background:linear-gradient(135deg,#fffaf2 0%,#ffeaf2 58%,#fff6df 100%);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.98),0 8px 20px rgba(163,74,105,.12)
+}
+.rating-pass-info-nameplate::before{
+  content:"";
+  position:absolute;
+  z-index:-1;
+  width:92px;
+  height:92px;
+  right:-32px;
+  top:-47px;
+  border-radius:50%;
+  background:radial-gradient(circle,rgba(255,218,231,.78),rgba(255,218,231,0) 70%);
+  pointer-events:none
+}
+.rating-pass-info-heading .rating-pass-info-nameplate h2{
+  display:flex;
+  align-items:baseline;
+  width:max-content;
+  max-width:100%;
+  margin:0;
+  color:#873556;
+  font-size:clamp(32px,5.2vw,46px);
+  font-weight:1000;
+  line-height:.92;
+  letter-spacing:-.04em;
+  text-shadow:0 1px 0 rgba(255,255,255,.92)
+}
+.rating-pass-info-tier-label{
+  display:block;
+  color:#a55773;
+  font-size:9px;
+  font-weight:1000;
+  line-height:1.15;
+  letter-spacing:.11em;
+  text-transform:uppercase
+}
+.rating-pass-info[data-tier="elite_plus"] .rating-pass-info-nameplate{
+  min-width:min(282px,100%);
+  padding:11px 16px 10px;
+  border:2px solid transparent;
+  background:
+    linear-gradient(138deg,#fffaf0 0%,#fff0c9 48%,#ffe8f1 100%) padding-box,
+    linear-gradient(112deg,#d84d86 0%,#efbd45 29%,#f8da75 52%,#de5b8d 100%) border-box;
+  box-shadow:0 0 0 3px rgba(226,173,63,.12),0 10px 25px rgba(178,112,29,.16),inset 0 1px 0 rgba(255,255,255,.96)
+}
+.rating-pass-info[data-tier="elite_plus"] .rating-pass-info-nameplate::before{
+  width:112px;
+  height:112px;
+  right:-28px;
+  top:-57px;
+  background:radial-gradient(circle,rgba(255,213,92,.50),rgba(255,213,92,0) 70%)
+}
+.rating-pass-info[data-tier="elite_plus"] .rating-pass-info-heading .rating-pass-info-nameplate h2{
+  color:#78364f;
+  font-size:clamp(34px,5.5vw,49px)
+}
+.rating-pass-info-plus-mark{
+  display:inline-block;
+  margin-left:2px;
+  color:#cf8a15;
+  font-size:1.16em;
+  line-height:.76;
+  font-weight:1000;
+  transform:translateY(-1px);
+  text-shadow:0 1px 0 #fff7d6,0 0 12px rgba(221,157,37,.28)
+}
+.rating-pass-info[data-tier="elite_plus"] .rating-pass-info-tier-label{color:#986516}
+.rating-pass-info-lineage{
+  justify-self:start;
+  display:inline-flex;
+  align-items:center;
+  gap:5px;
+  width:max-content;
+  max-width:100%;
+  min-height:24px;
+  padding:5px 10px;
+  border:1px solid rgba(222,173,72,.45);
+  border-radius:999px;
+  background:rgba(255,248,221,.92);
+  color:#85591e;
+  font-size:9px;
+  font-weight:950;
+  line-height:1.2;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.9)
+}
+.rating-pass-info-lineage::before{content:"✓";color:#bf7c12;font-weight:1000}
+.rating-pass-info-lineage[hidden]{display:none!important}
+@media(max-width:420px){
+  .rating-pass-info-nameplate{min-width:min(235px,100%);padding:9px 13px 8px;border-radius:16px}
+  .rating-pass-info-heading .rating-pass-info-nameplate h2{font-size:31px}
+  .rating-pass-info[data-tier="elite_plus"] .rating-pass-info-nameplate{min-width:min(260px,100%);padding:10px 14px 9px}
+  .rating-pass-info[data-tier="elite_plus"] .rating-pass-info-heading .rating-pass-info-nameplate h2{font-size:33px}
+  .rating-pass-info-tier-label{font-size:8px}
+  .rating-pass-info-lineage{font-size:8.5px;padding:5px 9px}
+}
 @media(prefers-reduced-motion:reduce){.rating-pass-info-actions button{transition:none!important}}
 #zefirok-maltipoo-runner .leaderboard-reward-line[data-rating-case-info-type]{cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation;transition:transform .12s ease,filter .12s ease}
 #zefirok-maltipoo-runner .leaderboard-reward-line[data-rating-case-info-type]:active{transform:scale(.975);filter:brightness(.98)}
@@ -9528,8 +9638,12 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
     <div class="rating-pass-info-body">
       <span class="rating-pass-info-kicker" data-rating-pass-info-kicker>Активен в этом сезоне</span>
       <div class="rating-pass-info-heading">
-        <h2 id="rating-pass-info-title" data-rating-pass-info-title>Элитный</h2>
+        <div class="rating-pass-info-nameplate">
+          <h2 id="rating-pass-info-title" data-rating-pass-info-title>Элитный</h2>
+          <span class="rating-pass-info-tier-label" data-rating-pass-info-tier-label>Премиальный тариф</span>
+        </div>
         <span class="rating-pass-info-subtitle" data-rating-pass-info-subtitle>Премиальный статус сезона</span>
+        <span class="rating-pass-info-lineage" data-rating-pass-info-lineage hidden>Включает все преимущества Элитного</span>
       </div>
       <p data-rating-pass-info-copy>Этот значок показывает, что у игрока открыт премиальный тариф сезонного пропуска.</p>
       <div class="rating-pass-info-divider" aria-hidden="true"><span>♥</span></div>
@@ -9670,7 +9784,9 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
   const passInfoStar = document.querySelector(".rating-pass-info-star");
   const passInfoKicker = document.querySelector("[data-rating-pass-info-kicker]");
   const passInfoTitle = document.querySelector("[data-rating-pass-info-title]");
+  const passInfoTierLabel = document.querySelector("[data-rating-pass-info-tier-label]");
   const passInfoSubtitle = document.querySelector("[data-rating-pass-info-subtitle]");
+  const passInfoLineage = document.querySelector("[data-rating-pass-info-lineage]");
   const passInfoCopy = document.querySelector("[data-rating-pass-info-copy]");
   const passInfoFeatures = document.querySelector("[data-rating-pass-info-features]");
   const passInfoBenefit = document.querySelector("[data-rating-pass-info-benefit]");
@@ -10075,7 +10191,9 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
       badgeSrc: "/assets/ui/icon_player_elit.png",
       kicker: "Активен в этом сезоне",
       title: "Элитный",
+      tierLabel: "Премиальный тариф",
       subtitle: "Премиальный статус сезона",
+      lineage: "",
       copy: "У игрока активен тариф «Элитный» в текущем сезоне.",
       benefitTitle: "Бонусы тарифа",
       benefitCopy: "Премиальная линия, задания и сезонный статус.",
@@ -10092,7 +10210,9 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
       badgeSrc: "/assets/ui/icon_player_elit+.png",
       kicker: "Активен в этом сезоне",
       title: "Элитный+",
+      tierLabel: "Максимальный тариф сезона",
       subtitle: "Максимальный статус сезона",
+      lineage: "Включает все преимущества Элитного",
       copy: "У игрока активен максимальный тариф «Элитный+».",
       benefitTitle: "Все бонусы уже включены",
       benefitCopy: "Все бонусы «Элитного» плюс усиленная прокачка и сезонные награды.",
@@ -10115,8 +10235,19 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
     const meta = PASS_INFO_META[tier] || PASS_INFO_META.elite;
     if (passInfoStar) passInfoStar.innerHTML = `<img src="${meta.badgeSrc}" alt="">`;
     if (passInfoKicker) passInfoKicker.textContent = meta.kicker;
-    if (passInfoTitle) passInfoTitle.textContent = meta.title;
+    if (passInfoTitle) {
+      passInfoTitle.innerHTML = tier === "elite_plus"
+        ? 'Элитный<span class="rating-pass-info-plus-mark" aria-hidden="true">+</span>'
+        : escapeHtml(meta.title);
+      passInfoTitle.setAttribute("aria-label", meta.title);
+    }
+    if (passInfoTierLabel) passInfoTierLabel.textContent = meta.tierLabel || "";
     if (passInfoSubtitle) passInfoSubtitle.textContent = meta.subtitle;
+    if (passInfoLineage) {
+      const lineage = String(meta.lineage || "").trim();
+      passInfoLineage.textContent = lineage;
+      passInfoLineage.hidden = !lineage;
+    }
     if (passInfoCopy) passInfoCopy.textContent = meta.copy;
     if (passInfoFeatures) passInfoFeatures.innerHTML = Array.isArray(meta.features) ? meta.features.map((item) => passInfoFeatureMarkup(item)).join("") : "";
     if (passInfoBenefitTitle) passInfoBenefitTitle.textContent = meta.benefitTitle;
