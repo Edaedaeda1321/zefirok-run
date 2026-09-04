@@ -12299,56 +12299,20 @@ async function getTelegramBotHealth(env) {
   }
 }
 
+const TELEGRAM_WEBHOOK_HEALTH_STATE_KEY="telegram:webhook:health:v1";
+async function cacheTelegramWebhookHealth(env,payload){try{await setSystemState(env,TELEGRAM_WEBHOOK_HEALTH_STATE_KEY,JSON.stringify({...payload,checkedAt:Math.floor(Date.now()/1000)}));}catch(error){console.warn("Telegram webhook health cache failed",String(error?.message||error));}}
 async function ensureTelegramWebhookHealth(env) {
   if (!env?.TELEGRAM_BOT_TOKEN) return { skipped: true, reason: "missing_bot_token" };
-  const nowMs = Date.now();
-  const expectedUrl = expectedTelegramWebhookUrl(env);
-  let info;
-  try {
-    info = await telegramApi(env, "getWebhookInfo", {});
-  } catch (error) {
-    if (isTransientTelegramApiError(error)) {
-      // A temporary Telegram 5xx/timeout must not turn the whole five-minute
-      // server-health job red and must not trigger a blind setWebhook loop.
-      console.warn("Telegram getWebhookInfo temporarily unavailable", String(error?.message || error));
-      return {
-        repaired: false,
-        transient: true,
-        degraded: true,
-        expectedUrl,
-        error: String(error?.message || error).slice(0, 300)
-      };
-    }
+  const nowMs = Date.now(),expectedUrl = expectedTelegramWebhookUrl(env);let info;
+  try { info = await telegramApi(env, "getWebhookInfo", {}); }
+  catch (error) {
+    if (isTransientTelegramApiError(error)) {const result={repaired:false,transient:true,degraded:true,ok:false,expectedUrl,error:String(error?.message||error).slice(0,300)};console.warn("Telegram getWebhookInfo temporarily unavailable",result.error);await cacheTelegramWebhookHealth(env,result);return result;}
     throw error;
   }
-
-  const currentUrl = String(info?.url || "");
-  const lastErrorDate = Math.max(0, Number(info?.last_error_date || 0));
-  const lastErrorMessage = String(info?.last_error_message || "").slice(0, 500);
-  const pendingUpdates = Math.max(0, Number(info?.pending_update_count || 0));
-  const allowedUpdates = telegramWebhookAllowedUpdates(info);
-  const missingRequiredUpdates = telegramWebhookMissingRequiredUpdates(info);
-
-  // Queue length and a historical Telegram delivery error are diagnostics, not
-  // reasons to reset a healthy webhook. Repeated setWebhook calls can make a
-  // temporary Telegram problem worse and are unnecessary while updates drain.
-  const needsRepair = !currentUrl || currentUrl !== expectedUrl || missingRequiredUpdates;
-  if (!needsRepair || nowMs < telegramWebhookRepairCooldownUntil) {
-    return {
-      repaired: false, currentUrl, expectedUrl, pendingUpdates, allowedUpdates,
-      missingRequiredUpdates, lastErrorDate, lastErrorMessage
-    };
-  }
-
-  telegramWebhookRepairCooldownUntil = nowMs + 5 * 60 * 1000;
-  const webhookSecret = await resolvedTelegramWebhookSecret(env);
-  const result = await telegramApi(env, "setWebhook", {
-    url: expectedUrl,
-    secret_token: webhookSecret,
-    allowed_updates: ["message", "callback_query"],
-    drop_pending_updates: false
-  });
-  return { repaired: true, result, expectedUrl, allowedUpdates: ["message", "callback_query"] };
+  const currentUrl=String(info?.url||""),lastErrorDate=Math.max(0,Number(info?.last_error_date||0)),lastErrorMessage=String(info?.last_error_message||"").slice(0,500),pendingUpdates=Math.max(0,Number(info?.pending_update_count||0)),allowedUpdates=telegramWebhookAllowedUpdates(info),missingRequiredUpdates=telegramWebhookMissingRequiredUpdates(info),needsRepair=!currentUrl||currentUrl!==expectedUrl||missingRequiredUpdates;
+  const snapshot={repaired:false,ok:currentUrl===expectedUrl&&!missingRequiredUpdates&&!lastErrorMessage,currentUrl,expectedUrl,pendingUpdates,allowedUpdates,missingRequiredUpdates,lastErrorDate,lastErrorMessage};
+  if(!needsRepair||nowMs<telegramWebhookRepairCooldownUntil){await cacheTelegramWebhookHealth(env,snapshot);return snapshot;}
+  telegramWebhookRepairCooldownUntil=nowMs+5*60*1000;const webhookSecret=await resolvedTelegramWebhookSecret(env);const result=await telegramApi(env,"setWebhook",{url:expectedUrl,secret_token:webhookSecret,allowed_updates:["message","callback_query"],drop_pending_updates:false});const repaired={...snapshot,repaired:true,ok:true,result,currentUrl:expectedUrl,allowedUpdates:["message","callback_query"],missingRequiredUpdates:false,lastErrorMessage:""};await cacheTelegramWebhookHealth(env,repaired);return repaired;
 }
 
 async function setupWebhook(request, env) {
@@ -15141,29 +15105,10 @@ async function setTeamPermission(chatId, requester, telegramId, permission, enab
 
 async function logStaffAction(env, requester, access, action, targetTelegramId = null, targetType = null, oldValue = null, newValue = null, details = null) {
   try {
-    const now = Math.floor(Date.now() / 1000);
-    const role = access?.owner ? "owner" : normalizeTeamRole(access?.role);
-    await env.DB.prepare(
-      `INSERT INTO staff_action_log (
-         actor_telegram_id, actor_name, actor_role, action,
-         target_telegram_id, target_type, old_value, new_value,
-         details_json, created_at, success
-       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)`
-    ).bind(
-      String(requester?.id || ""),
-      telegramDisplayName(requester),
-      role,
-      String(action || "unknown"),
-      targetTelegramId == null ? null : String(targetTelegramId),
-      targetType == null ? null : String(targetType),
-      oldValue == null ? null : Math.floor(Number(oldValue) || 0),
-      newValue == null ? null : Math.floor(Number(newValue) || 0),
-      details == null ? null : JSON.stringify(details).slice(0, 2000),
-      now
-    ).run();
-  } catch (error) {
-    console.error("staff audit log failed", error);
-  }
+    const now = Math.floor(Date.now() / 1000);const role = access?.owner ? "owner" : normalizeTeamRole(access?.role);
+    await env.DB.prepare(`INSERT INTO staff_action_log (actor_telegram_id, actor_name, actor_role, action,target_telegram_id, target_type, old_value, new_value,details_json, created_at, success) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)`).bind(String(requester?.id || ""),telegramDisplayName(requester),role,String(action || "unknown"),targetTelegramId == null ? null : String(targetTelegramId),targetType == null ? null : String(targetType),oldValue == null ? null : Math.floor(Number(oldValue) || 0),newValue == null ? null : Math.floor(Number(newValue) || 0),details == null ? null : JSON.stringify(details).slice(0, 2000),now).run();
+  } catch (error) { console.error("staff audit log failed", error); }
+  try { ownerV85CacheInvalidate("owner:bootstrap"); } catch {}
 }
 
 function staffRoleTitle(access) {
@@ -34348,7 +34293,7 @@ ${escapeHtml(r.details)}
 
 ${lines.join("\n\n")||"🟢 Значимых отклонений не обнаружено."}`,{inline_keyboard:[[{text:"🔄 Проверить",callback_data:"v77_alerts"}],[{text:"⬅️ Центр",callback_data:"v77_home"}]]});}
 
-async function processV77Cron(env){await ensureV77Schema(env);await processV77NotificationQueue(env,40);const now=Math.floor(Date.now()/1000);const state=await getSystemState(env,"v77:alerts:last");if(!state||now-Number(state.value||0)>=3600){await scanV77SmartAlerts(env);await setSystemState(env,"v77:alerts:last",String(now));}await env.DB.prepare(`DELETE FROM player_notification_log WHERE sent_at<?`).bind(now-30*V67_DAY).run();}
+async function processV77Cron(env){await ensureV77Schema(env);await processV77NotificationQueue(env,40);const now=Math.floor(Date.now()/1000);try{await env.DB.prepare(`UPDATE dangerous_action_approvals SET status='expired',updated_at=? WHERE status='pending' AND expires_at<=?`).bind(now,now).run();}catch(error){console.error('dangerous approval expiry cleanup failed',error);}const state=await getSystemState(env,"v77:alerts:last");if(!state||now-Number(state.value||0)>=3600){await scanV77SmartAlerts(env);await setSystemState(env,"v77:alerts:last",String(now));}await env.DB.prepare(`DELETE FROM player_notification_log WHERE sent_at<?`).bind(now-30*V67_DAY).run();}
 
 async function handleV77Callback(query,env){const data=String(query.data||"");const chatId=query.message?.chat?.id;if(!chatId)return false;
   if(data==="v77_home"){await answerCallback(env,query.id,"Центр обновлён.");await showV77OperationsHub(chatId,query.from,env);return true;}
@@ -35232,7 +35177,6 @@ async function ownerPanelEconomyFlowWindow(env, since) {
 }
 
 async function ownerPanelV8AnalyticsFresh(env, ctx) {
-  await Promise.all([ensureOperationsSecuritySchema(env), ensureV67Schema(env), ensureLiveOpsAdminSchema(env), ensureSeasonPassSchema(env), ensureAuthoritativeEconomySchema(env), ensureSafeControlCenterSchema(env), ensureReferralSchema(env), ensureRetentionOpsV14Schema(env), ensureRetentionPlatformV2Schema(env)]);
   const now = Math.floor(Date.now() / 1000);
   const day = moscowDayStartUnix();
   const week = now - 7 * 86400;
@@ -35476,40 +35420,12 @@ async function ownerPanelV8CancelEvent(env, ctx) {
 }
 
 async function ownerPanelV8Releases(env, ctx) {
-  await Promise.all([ensureV67Schema(env),ensureSafeControlCenterSchema(env)]);const plans=(await env.DB.prepare(`SELECT * FROM release_plans ORDER BY created_at DESC LIMIT 30`).all()).results||[];const rows=[];
-  for(const plan of plans){const steps=(await env.DB.prepare(`SELECT * FROM release_steps WHERE release_id=? ORDER BY step_order`).bind(plan.release_id).all()).results||[];rows.push({id:String(plan.release_id),title:String(plan.title||""),startsAt:Number(plan.starts_at||0),status:String(plan.status||""),currentStep:Number(plan.current_step||0),lastError:String(plan.last_error||""),createdAt:Number(plan.created_at||0),completedAt:Number(plan.completed_at||0),steps:steps.map(s=>({order:Number(s.step_order),title:String(s.title||""),action:String(s.action_type||""),offset:Number(s.offset_seconds||0),status:String(s.status||""),error:String(s.error_text||"")}))});}
-  const [news,rating,pass,drafts]=await Promise.all([
-    env.DB.prepare(`SELECT created_at FROM bot_news ORDER BY created_at DESC LIMIT 1`).first().catch(()=>null),
-    env.DB.prepare(`SELECT COUNT(*) AS count FROM leaderboard_seasons WHERE status IN ('active','scheduled')`).first(),
-    env.DB.prepare(`SELECT COUNT(*) AS count FROM season_pass_seasons WHERE ends_at>?`).bind(Math.floor(Date.now()/1000)).first(),
-    env.DB.prepare(`SELECT COUNT(*) AS count FROM liveops_drafts WHERE status='draft'`).first()
-  ]);
-  let webhook={ok:false,detail:"Telegram Bot API \u043d\u0435 \u043d\u0430\u0441\u0442\u0440\u043e\u0435\u043d"};
-  if(env.TELEGRAM_BOT_TOKEN){
-    try{
-      const info=await telegramApi(env,"getWebhookInfo",{});
-      const expected=expectedTelegramWebhookUrl(env);
-      const actual=String(info?.url||"");
-      const missingUpdates=telegramWebhookMissingRequiredUpdates(info);
-      const lastError=String(info?.last_error_message||"").trim();
-      webhook={
-        ok:actual===expected&&!missingUpdates&&!lastError,
-        detail:actual!==expected?"URL webhook \u043d\u0435 \u0441\u043e\u0432\u043f\u0430\u0434\u0430\u0435\u0442":missingUpdates?"Webhook \u043d\u0435 \u043f\u0440\u0438\u043d\u0438\u043c\u0430\u0435\u0442 message/callback_query":lastError?lastError.slice(0,180):`\u041e\u0447\u0435\u0440\u0435\u0434\u044c Telegram: ${Math.max(0,Number(info?.pending_update_count||0))}`
-      };
-    }catch(error){
-      webhook={ok:false,detail:isTransientTelegramApiError(error)?"Telegram API \u0432\u0440\u0435\u043c\u0435\u043d\u043d\u043e \u043d\u0435 \u043e\u0442\u0432\u0435\u0442\u0438\u043b":String(error?.message||error).slice(0,180)};
-    }
-  }
-  return {ok:true,releases:rows,checklist:[
-    {key:"worker",title:"Worker \u043e\u0442\u0432\u0435\u0447\u0430\u0435\u0442",ok:true,detail:WORKER_BUILD},
-    {key:"news",title:"\u041d\u043e\u0432\u043e\u0441\u0442\u0438 \u043f\u043e\u0434\u0433\u043e\u0442\u043e\u0432\u043b\u0435\u043d\u044b",ok:Boolean(news)},
-    {key:"season",title:"\u0421\u0435\u0437\u043e\u043d \u043f\u0440\u043e\u043f\u0443\u0441\u043a\u0430 \u043d\u0430\u0441\u0442\u0440\u043e\u0435\u043d",ok:Number(pass?.count||0)>0},
-    {key:"rating",title:"\u0420\u0435\u0439\u0442\u0438\u043d\u0433 \u043d\u0430\u0441\u0442\u0440\u043e\u0435\u043d",ok:Number(rating?.count||0)>0},
-    {key:"faq",title:"FAQ \u0432\u0441\u0442\u0440\u043e\u0435\u043d",ok:typeof botFaqText==="function"},
-    {key:"drafts",title:"\u0427\u0435\u0440\u043d\u043e\u0432\u0438\u043a\u0438 \u043f\u0440\u043e\u0432\u0435\u0440\u0435\u043d\u044b",ok:Number(drafts?.count||0)===0,detail:Number(drafts?.count||0)?`${Number(drafts.count)} \u0447\u0435\u0440\u043d\u043e\u0432\u0438\u043a\u043e\u0432 \u0436\u0434\u0443\u0442 \u043f\u0443\u0431\u043b\u0438\u043a\u0430\u0446\u0438\u0438`:"\u041d\u0435\u0442 \u043e\u0436\u0438\u0434\u0430\u044e\u0449\u0438\u0445 \u0447\u0435\u0440\u043d\u043e\u0432\u0438\u043a\u043e\u0432"},
-    {key:"bot",title:"Bot API \u043d\u0430\u0441\u0442\u0440\u043e\u0435\u043d",ok:Boolean(env.TELEGRAM_BOT_TOKEN)},
-    {key:"webhook",title:"Telegram webhook",ok:webhook.ok,detail:webhook.detail}
-  ]};
+  const plans=(await env.DB.prepare(`SELECT * FROM release_plans ORDER BY created_at DESC LIMIT 30`).all()).results||[],ids=plans.map(plan=>String(plan.release_id||'')).filter(Boolean);let stepRows=[];
+  if(ids.length){const placeholders=ids.map(()=>'?').join(',');stepRows=(await env.DB.prepare(`SELECT * FROM release_steps WHERE release_id IN (${placeholders}) ORDER BY release_id,step_order`).bind(...ids).all()).results||[];}
+  const stepsByRelease=new Map();for(const step of stepRows){const id=String(step.release_id||''),list=stepsByRelease.get(id)||[];list.push(step);stepsByRelease.set(id,list);}const rows=plans.map(plan=>{const steps=stepsByRelease.get(String(plan.release_id||''))||[];return{id:String(plan.release_id),title:String(plan.title||""),startsAt:Number(plan.starts_at||0),status:String(plan.status||""),currentStep:Number(plan.current_step||0),lastError:String(plan.last_error||""),createdAt:Number(plan.created_at||0),completedAt:Number(plan.completed_at||0),steps:steps.map(s=>({order:Number(s.step_order),title:String(s.title||""),action:String(s.action_type||""),offset:Number(s.offset_seconds||0),status:String(s.status||""),error:String(s.error_text||"")}))};});
+  const [news,rating,pass,drafts,webhookState]=await Promise.all([env.DB.prepare(`SELECT created_at FROM bot_news ORDER BY created_at DESC LIMIT 1`).first().catch(()=>null),env.DB.prepare(`SELECT COUNT(*) AS count FROM leaderboard_seasons WHERE status IN ('active','scheduled')`).first(),env.DB.prepare(`SELECT COUNT(*) AS count FROM season_pass_seasons WHERE ends_at>?`).bind(Math.floor(Date.now()/1000)).first(),env.DB.prepare(`SELECT COUNT(*) AS count FROM liveops_drafts WHERE status='draft'`).first(),getSystemState(env,TELEGRAM_WEBHOOK_HEALTH_STATE_KEY).catch(()=>null)]);
+  let webhook={ok:false,detail:"Telegram Bot API не настроен"};if(env.TELEGRAM_BOT_TOKEN){const cached=webhookState?.value?safeJson(webhookState.value,null):null;if(cached){const age=Math.max(0,Math.floor(Date.now()/1000)-Number(cached.checkedAt||0));webhook={ok:Boolean(cached.ok),detail:cached.error?String(cached.error).slice(0,180):cached.lastErrorMessage?String(cached.lastErrorMessage).slice(0,180):cached.missingRequiredUpdates?"Webhook не принимает message/callback_query":cached.currentUrl&&cached.expectedUrl&&cached.currentUrl!==cached.expectedUrl?"URL webhook не совпадает":`Последняя cron-проверка ${age<120?'недавно':`${Math.floor(age/60)} мин. назад`} · очередь ${Math.max(0,Number(cached.pendingUpdates||0))}`};}else webhook={ok:false,detail:"Cron ещё не сохранил проверку webhook"};}
+  return {ok:true,releases:rows,checklist:[{key:"worker",title:"Worker отвечает",ok:true,detail:WORKER_BUILD},{key:"news",title:"Новости подготовлены",ok:Boolean(news)},{key:"season",title:"Сезон пропуска настроен",ok:Number(pass?.count||0)>0},{key:"rating",title:"Рейтинг настроен",ok:Number(rating?.count||0)>0},{key:"faq",title:"FAQ встроен",ok:typeof botFaqText==="function"},{key:"drafts",title:"Черновики проверены",ok:Number(drafts?.count||0)===0,detail:Number(drafts?.count||0)?`${Number(drafts.count)} черновиков ждут публикации`:"Нет ожидающих черновиков"},{key:"bot",title:"Bot API настроен",ok:Boolean(env.TELEGRAM_BOT_TOKEN)},{key:"webhook",title:"Telegram webhook",ok:webhook.ok,detail:webhook.detail}]};
 }
 
 async function ownerPanelV8CreateRelease(env, ctx) {
@@ -35549,7 +35465,7 @@ async function ownerPanelV8UndoRedeem(env, ctx) {
 async function ownerPanelV8CaseSimulate(env, ctx) {const caseType=normalizeCaseType(ctx.body?.caseType||"legendary");if(!caseType)throw new ApiError(400,"Неизвестный кейс.");const rawSamples=Math.floor(Number(ctx.body?.samples));if(!Number.isFinite(rawSamples)||rawSamples<1||rawSamples>100000)throw new ApiError(400,"Количество открытий должно быть от 1 до 100 000.");const result=await runCaseSimulation(env,caseType,rawSamples);return {ok:true,result};}
 
 async function ownerPanelV8Safety(env, ctx) {
-  await Promise.all([ensureOperationsSecuritySchema(env),ensureSafeControlCenterSchema(env),ensureV67Schema(env)]);const now=Math.floor(Date.now()/1000);await env.DB.prepare(`UPDATE dangerous_action_approvals SET status='expired',updated_at=? WHERE status='pending' AND expires_at<=?`).bind(now,now).run();const [snapshots,drafts,approvals,history,performance,cron]=await Promise.all([env.DB.prepare(`SELECT snapshot_id,snapshot_type,title,created_by,created_by_name,created_at,restored_at,restored_by,restore_status FROM config_snapshots ORDER BY created_at DESC LIMIT 40`).all(),env.DB.prepare(`SELECT id,entity_type,entity_id,title,base_json,draft_json,status,validation_json,created_by_name,created_at,updated_at,error_text FROM liveops_drafts ORDER BY updated_at DESC LIMIT 50`).all(),env.DB.prepare(`SELECT * FROM dangerous_action_approvals ORDER BY created_at DESC LIMIT 40`).all(),env.DB.prepare(`SELECT * FROM admin_setting_history ORDER BY created_at DESC,id DESC LIMIT 60`).all(),env.DB.prepare(`SELECT area,COUNT(*) AS samples,ROUND(AVG(duration_ms),1) AS avg_ms,MAX(duration_ms) AS max_ms,SUM(CASE WHEN success=0 THEN 1 ELSE 0 END) AS errors FROM admin_performance_samples WHERE created_at>=? GROUP BY area ORDER BY avg_ms DESC LIMIT 30`).bind(now-24*3600).all(),env.DB.prepare(`SELECT job_key,enabled,priority,interval_seconds,last_success_at,next_run_at,last_status,last_duration_ms,last_error FROM server_cron_jobs ORDER BY priority,job_key LIMIT 50`).all()]);return {ok:true,snapshots:(snapshots.results||[]).map(r=>({id:String(r.snapshot_id),type:String(r.snapshot_type||""),title:String(r.title||""),createdBy:String(r.created_by_name||r.created_by||""),createdAt:Number(r.created_at||0),restoredAt:Number(r.restored_at||0),restoreStatus:String(r.restore_status||"")})),drafts:(drafts.results||[]).map(r=>({id:Number(r.id),entityType:String(r.entity_type||""),entityId:String(r.entity_id||""),title:String(r.title||""),base:ownerV8SafeJson(r.base_json,{}),draft:ownerV8SafeJson(r.draft_json,{}),status:String(r.status||""),validation:ownerV8SafeJson(r.validation_json,{}),createdBy:String(r.created_by_name||""),createdAt:Number(r.created_at||0),updatedAt:Number(r.updated_at||0),error:String(r.error_text||"")})),approvals:(approvals.results||[]).map(r=>({id:Number(r.id),type:String(r.action_type||""),title:String(r.title||""),requestedBy:String(r.requested_by_name||r.requested_by||""),status:String(r.status||""),expiresAt:Number(r.expires_at||0),createdAt:Number(r.created_at||0),error:String(r.error_text||"")})),history:(history.results||[]).map(r=>({id:Number(r.id),group:String(r.setting_group||""),key:String(r.setting_key||""),action:String(r.action||""),old:ownerV8SafeJson(r.old_json,{}),next:ownerV8SafeJson(r.new_json,{}),actor:String(r.actor_name||r.actor_telegram_id||""),createdAt:Number(r.created_at||0)})),performance:(performance.results||[]).map(r=>({area:String(r.area||""),samples:Number(r.samples||0),avgMs:Number(r.avg_ms||0),maxMs:Number(r.max_ms||0),errors:Number(r.errors||0)})),cron:(cron.results||[]).map(r=>({key:String(r.job_key||""),title:String(r.job_key||""),enabled:Boolean(r.enabled),priority:Number(r.priority||0),interval:Number(r.interval_seconds||0),lastRunAt:Number(r.last_success_at||0),nextRunAt:Number(r.next_run_at||0),lastStatus:String(r.last_status||""),duration:Number(r.last_duration_ms||0),error:String(r.last_error||"")}))};
+  const now=Math.floor(Date.now()/1000);const [snapshots,drafts,approvals,history,performance,cron]=await Promise.all([env.DB.prepare(`SELECT snapshot_id,snapshot_type,title,created_by,created_by_name,created_at,restored_at,restored_by,restore_status FROM config_snapshots ORDER BY created_at DESC LIMIT 40`).all(),env.DB.prepare(`SELECT id,entity_type,entity_id,title,base_json,draft_json,status,validation_json,created_by_name,created_at,updated_at,error_text FROM liveops_drafts ORDER BY updated_at DESC LIMIT 50`).all(),env.DB.prepare(`SELECT * FROM dangerous_action_approvals ORDER BY created_at DESC LIMIT 40`).all(),env.DB.prepare(`SELECT * FROM admin_setting_history ORDER BY created_at DESC,id DESC LIMIT 60`).all(),env.DB.prepare(`SELECT area,COUNT(*) AS samples,ROUND(AVG(duration_ms),1) AS avg_ms,MAX(duration_ms) AS max_ms,SUM(CASE WHEN success=0 THEN 1 ELSE 0 END) AS errors FROM admin_performance_samples WHERE created_at>=? GROUP BY area ORDER BY avg_ms DESC LIMIT 30`).bind(now-24*3600).all(),env.DB.prepare(`SELECT job_key,enabled,priority,interval_seconds,last_success_at,next_run_at,last_status,last_duration_ms,last_error FROM server_cron_jobs ORDER BY priority,job_key LIMIT 50`).all()]);return {ok:true,snapshots:(snapshots.results||[]).map(r=>({id:String(r.snapshot_id),type:String(r.snapshot_type||""),title:String(r.title||""),createdBy:String(r.created_by_name||r.created_by||""),createdAt:Number(r.created_at||0),restoredAt:Number(r.restored_at||0),restoreStatus:String(r.restore_status||"")})),drafts:(drafts.results||[]).map(r=>({id:Number(r.id),entityType:String(r.entity_type||""),entityId:String(r.entity_id||""),title:String(r.title||""),base:ownerV8SafeJson(r.base_json,{}),draft:ownerV8SafeJson(r.draft_json,{}),status:String(r.status||""),validation:ownerV8SafeJson(r.validation_json,{}),createdBy:String(r.created_by_name||""),createdAt:Number(r.created_at||0),updatedAt:Number(r.updated_at||0),error:String(r.error_text||"")})),approvals:(approvals.results||[]).map(r=>({id:Number(r.id),type:String(r.action_type||""),title:String(r.title||""),requestedBy:String(r.requested_by_name||r.requested_by||""),status:String(r.status||'')==='pending'&&Number(r.expires_at||0)<=now?'expired':String(r.status||""),expiresAt:Number(r.expires_at||0),createdAt:Number(r.created_at||0),error:String(r.error_text||"")})),history:(history.results||[]).map(r=>({id:Number(r.id),group:String(r.setting_group||""),key:String(r.setting_key||""),action:String(r.action||""),old:ownerV8SafeJson(r.old_json,{}),next:ownerV8SafeJson(r.new_json,{}),actor:String(r.actor_name||r.actor_telegram_id||""),createdAt:Number(r.created_at||0)})),performance:(performance.results||[]).map(r=>({area:String(r.area||""),samples:Number(r.samples||0),avgMs:Number(r.avg_ms||0),maxMs:Number(r.max_ms||0),errors:Number(r.errors||0)})),cron:(cron.results||[]).map(r=>({key:String(r.job_key||""),title:String(r.job_key||""),enabled:Boolean(r.enabled),priority:Number(r.priority||0),interval:Number(r.interval_seconds||0),lastRunAt:Number(r.last_success_at||0),nextRunAt:Number(r.next_run_at||0),lastStatus:String(r.last_status||""),duration:Number(r.last_duration_ms||0),error:String(r.last_error||"")}))};
 }
 
 async function ownerPanelV8CreateSnapshot(env, ctx) {const title=String(ctx.body?.title||"").trim().slice(0,180)||`Control Center v8 · ${formatUtcDate(Math.floor(Date.now()/1000))}`;const snapshotId=await createConfigSnapshot(env,"manual",title,ctx.user);await logStaffAction(env,ctx.user,ctx.access,"snapshot_create",null,"snapshot",null,null,{snapshotId,title,source:"owner_v8"});return {ok:true,snapshotId};}
@@ -36240,7 +36156,7 @@ async function ownerLegalPlayerSnapshot(env, telegramId) {
 }
 
 async function ownerPanelV85Player360(env,ctx){
-  await Promise.all([ensureControlCenterV85Schema(env),ensurePlayerMailV3Schema(env),ensureSeasonPassSchema(env)]);const telegramId=String(ctx.body?.telegramId||"").trim();if(!/^\d{4,20}$/.test(telegramId))throw new ApiError(400,"Некорректный Telegram ID.");
+  const telegramId=String(ctx.body?.telegramId||"").trim();if(!/^\d{4,20}$/.test(telegramId))throw new ApiError(400,"Некорректный Telegram ID.");
   const exists=await env.DB.prepare(`SELECT telegram_id FROM admin_profile_state WHERE telegram_id=? LIMIT 1`).bind(telegramId).first();if(!exists)throw new ApiError(404,"Игрок не найден.");
   const now=Math.floor(Date.now()/1000),week=now-7*86400;
   const [runStats,cases,purchases,promos,physical,rewardQueue,campaigns,notifications,tickets,fraud,notes,timeline,moderation,moderationHistory,legal,gifts,grantedCases,seasonalCases] = await Promise.all([
@@ -36588,10 +36504,8 @@ async function ownerPanelV85CompensationSend(env,ctx){
 
 async function ownerV85MonitorConfig(env){const state=await getSystemState(env,V85_MONITOR_STATE_KEY);const raw=state?ownerV8SafeJson(state.value,{}):{};if(raw.rewardStale&&!raw.rewardStaleMinutes)raw.rewardStaleMinutes=Math.max(5,Number(raw.rewardStale)||15);return {...V85_MONITOR_DEFAULTS,...raw};}
 async function ownerPanelV85Monitoring(env,ctx){
-  await ensureControlCenterV85Schema(env);
   return ownerV85Cached("monitoring",10000,async()=>{
     const now=Math.floor(Date.now()/1000),since=now-24*3600,config=await ownerV85MonitorConfig(env);
-    try{await scanV77SmartAlerts(env);}catch(error){console.error("Monitoring Smart Alerts refresh failed",error);}
     const [rewards,playerNotifications,staffNotifications,cron,perf,alerts,hourly]=await Promise.all([
       env.DB.prepare(`SELECT
         SUM(CASE WHEN status='pending' THEN 1 ELSE 0 END) AS pending,
@@ -42691,24 +42605,10 @@ function ownerPanelRatingSeasonView(row, gameSeasonMap=new Map()) {
 }
 
 async function ownerPanelRating(env, ctx) {
-  await Promise.all([reconcileLeaderboardSeasonTimeline(env),ensureSeasonPassSchema(env)]);
-  let seasonsResult=await env.DB.prepare(`SELECT * FROM leaderboard_seasons ORDER BY CASE status WHEN 'active' THEN 0 WHEN 'scheduled' THEN 1 WHEN 'ended' THEN 2 ELSE 3 END, starts_at DESC LIMIT 30`).all();
-  let rows=seasonsResult.results||[];
-  let current=rows.find((row)=>String(row.status)==="active")||rows.find((row)=>String(row.status)==="scheduled")||null;
-  if(!current){await ensureSeason(env);seasonsResult=await env.DB.prepare(`SELECT * FROM leaderboard_seasons ORDER BY CASE status WHEN 'active' THEN 0 WHEN 'scheduled' THEN 1 WHEN 'ended' THEN 2 ELSE 3 END, starts_at DESC LIMIT 30`).all();rows=seasonsResult.results||[];current=rows.find((row)=>String(row.status)==="active")||rows.find((row)=>String(row.status)==="scheduled")||rows[0]||null;}
-  const gameSeasonResult=await env.DB.prepare(`SELECT season_id,title,starts_at,ends_at,manual_status FROM season_pass_seasons ORDER BY starts_at DESC,season_id ASC LIMIT 100`).all();
-  const gameSeasonRows=gameSeasonResult.results||[];
-  if(await ownerPanelReconcileRatingGameSeasonLinks(env,rows,gameSeasonRows)){seasonsResult=await env.DB.prepare(`SELECT * FROM leaderboard_seasons ORDER BY CASE status WHEN 'active' THEN 0 WHEN 'scheduled' THEN 1 WHEN 'ended' THEN 2 ELSE 3 END, starts_at DESC LIMIT 30`).all();rows=seasonsResult.results||[];current=rows.find((row)=>String(row.status)==="active")||rows.find((row)=>String(row.status)==="scheduled")||rows[0]||null;}
-  const gameSeasonMap=new Map(gameSeasonRows.map((row)=>[String(row.season_id||""),row]));
-  const topResult=current&&String(current.status)==="active"?await env.DB.prepare(`SELECT telegram_id,display_name,username,photo_url,best_score,level,achieved_at FROM leaderboard_entries WHERE season_id=? AND hidden=0 ORDER BY best_score DESC,achieved_at ASC,telegram_id ASC LIMIT 20`).bind(String(current.id)).all():{results:[]};
-  return {
-    ok:true,
-    seasons:rows.map((row)=>ownerPanelRatingSeasonView(row,gameSeasonMap)),
-    active:ownerPanelRatingSeasonView(current,gameSeasonMap),
-    gameSeasons:gameSeasonRows.map((row)=>ownerPanelGameSeasonView(row)),
-    top:(topResult.results||[]).map((row,index)=>({place:index+1,telegramId:String(row.telegram_id),name:String(row.display_name||row.username||row.telegram_id),username:String(row.username||""),photoUrl:String(row.photo_url||""),score:Number(row.best_score||0),level:Number(row.level||1)})),
-    banners:{current:seasonVisualsView(current?.visuals_json).rating.heroImage||SEASON_VISUAL_RATING_HERO_FALLBACK,allTime:"/assets/rating/v8/all-time-rating.png"}
-  };
+  const now=Math.floor(Date.now()/1000),[seasonsResult,gameSeasonResult]=await Promise.all([env.DB.prepare(`SELECT * FROM leaderboard_seasons ORDER BY starts_at DESC,created_at DESC LIMIT 30`).all(),env.DB.prepare(`SELECT season_id,title,starts_at,ends_at,manual_status FROM season_pass_seasons ORDER BY starts_at DESC,season_id ASC LIMIT 100`).all()]);const gameSeasonRows=gameSeasonResult.results||[];
+  const rank={active:0,scheduled:1,ended:2,cancelled:3};const rows=(seasonsResult.results||[]).map(row=>{const projected={...row,status:leaderboardSeasonStatusAt(row,now)};if(!String(projected.game_season_id||'').trim()){const target=leaderboardGameSeasonCandidate(projected,gameSeasonRows);if(target?.season_id){projected.game_season_id=String(target.season_id);projected.rating_kind=String(projected.rating_kind||'primary')||'primary';}}return projected;}).sort((a,b)=>(rank[String(a.status)]??9)-(rank[String(b.status)]??9)||Number(b.starts_at||0)-Number(a.starts_at||0));
+  const current=rows.find(row=>String(row.status)==='active')||rows.find(row=>String(row.status)==='scheduled')||rows[0]||null,gameSeasonMap=new Map(gameSeasonRows.map(row=>[String(row.season_id||''),row]));const topResult=current&&String(current.status)==='active'?await env.DB.prepare(`SELECT telegram_id,display_name,username,photo_url,best_score,level,achieved_at FROM leaderboard_entries WHERE season_id=? AND hidden=0 ORDER BY best_score DESC,achieved_at ASC,telegram_id ASC LIMIT 20`).bind(String(current.id)).all():{results:[]};
+  return {ok:true,seasons:rows.map(row=>ownerPanelRatingSeasonView(row,gameSeasonMap)),active:ownerPanelRatingSeasonView(current,gameSeasonMap),gameSeasons:gameSeasonRows.map(row=>ownerPanelGameSeasonView(row)),top:(topResult.results||[]).map((row,index)=>({place:index+1,telegramId:String(row.telegram_id),name:String(row.display_name||row.username||row.telegram_id),username:String(row.username||''),photoUrl:String(row.photo_url||''),score:Number(row.best_score||0),level:Number(row.level||1)})),banners:{current:seasonVisualsView(current?.visuals_json).rating.heroImage||SEASON_VISUAL_RATING_HERO_FALLBACK,allTime:'/assets/rating/v8/all-time-rating.png'}};
 }
 
 async function ownerPanelSaveRatingVisuals(env, ctx) {
@@ -43282,57 +43182,13 @@ async function ownerPanelLiveContentBatch(env,ctx){
 }
 
 async function ownerPanelSeasonPass(env, ctx) {
-  await ensureSeasonPassSchema(env);
-  await ensureSeasonPassCaseSpecialItemsSchema(env);
-  await ensureSeason3DraftSeasonalCase(env);
-  const requested = String(ctx.body?.seasonId || "").trim();
-  const selected = requested ? await loadSeasonPassSeasonById(env, requested) : await loadSeasonPassSeason(env);
-  if (!selected) throw new ApiError(404, "Сезонный пропуск не найден.");
-  const [seasonsResult, rewardsResult, tasksResult, stats, tariffPurchases, liveops, teaserRow, teaserStats, caseDefinitionsResult, caseItemsResult, caseSpecialItemsResult, caseResourceItemsResult, storyEventsResult, storyStatsResult] = await Promise.all([
-    env.DB.prepare(`SELECT * FROM season_pass_seasons ORDER BY starts_at DESC,updated_at DESC LIMIT 30`).all(),
-    env.DB.prepare(`SELECT level,lane,reward_type,amount,item_id,title,image_url,enabled FROM season_pass_rewards WHERE season_id=? ORDER BY level,lane`).bind(selected.id).all(),
-    env.DB.prepare(`SELECT task_id,period,premium,metric,target,xp_reward,title,description,enabled,sort_order FROM season_pass_tasks WHERE season_id=? ORDER BY sort_order,task_id`).bind(selected.id).all(),
-    env.DB.prepare(`SELECT COUNT(*) AS players,SUM(CASE WHEN premium_tier='elite' THEN 1 ELSE 0 END) AS elite,SUM(CASE WHEN premium_tier='elite_plus' THEN 1 ELSE 0 END) AS elite_plus,MAX(xp) AS max_xp FROM season_pass_players WHERE season_id=?`).bind(selected.id).first(),
-    env.DB.prepare(`SELECT COUNT(*) AS count FROM season_pass_purchases WHERE season_id=? AND status='delivered'`).bind(selected.id).first(),
-    readLiveOpsConfig(env).catch(()=>({content:{}})),
-    env.DB.prepare(`SELECT * FROM season_pass_teasers WHERE season_id=? LIMIT 1`).bind(selected.id).first(),
-    env.DB.prepare(`SELECT COUNT(*) AS unlocked,SUM(CASE WHEN notified_at>0 THEN 1 ELSE 0 END) AS notified,SUM(CASE WHEN opened_at>0 THEN 1 ELSE 0 END) AS opened FROM season_pass_teaser_deliveries WHERE season_id=?`).bind(selected.id).first(),
-    env.DB.prepare(`SELECT * FROM season_pass_case_definitions ORDER BY release_at DESC,updated_at DESC`).all(),
-    env.DB.prepare(`SELECT * FROM season_pass_case_items ORDER BY case_id,reward_kind,item_key`).all(),
-    env.DB.prepare(`SELECT * FROM season_pass_case_special_items ORDER BY case_id,reward_kind,item_key`).all(),
-    env.DB.prepare(`SELECT * FROM season_pass_case_resource_items ORDER BY case_id,reward_kind,item_key`).all(),
-    env.DB.prepare(`SELECT * FROM season_pass_story_events WHERE season_id=? ORDER BY unlock_level,sort_order,created_at,event_id`).bind(selected.id).all(),
-    env.DB.prepare(`SELECT event_id,SUM(CASE WHEN seen_at>0 THEN 1 ELSE 0 END) AS seen,SUM(CASE WHEN completed_at>0 THEN 1 ELSE 0 END) AS completed,SUM(CASE WHEN notified_at>0 THEN 1 ELSE 0 END) AS notified FROM season_pass_story_progress WHERE season_id=? GROUP BY event_id`).bind(selected.id).all()
-  ]);
-  const nowMs = Date.now();const seasonRows=seasonsResult.results||[];
-  const seasonMap=new Map(seasonRows.map(row=>[String(row.season_id),seasonPassSeasonFromRow(row,configuredSeasonPassState(env,nowMs),nowMs)]));
-  const caseItemsById=new Map();for(const row of [...(caseItemsResult.results||[]),...(caseSpecialItemsResult.results||[]),...(caseResourceItemsResult.results||[])]){const id=String(row.case_id),kind=String(row.reward_kind),itemId=String(row.item_id);const list=caseItemsById.get(id)||[];list.push({key:String(row.item_key),kind,itemId,amount:Math.max(1,Number(row.amount||1)),weight:Number(row.weight||1),rarity:String(row.rarity||''),title:String(row.title||''),imageUrl:SEASON_PASS_COSMETIC_KINDS.includes(kind)?liveOpsCanonicalContentImage(kind,itemId,row.image_url):String(row.image_url||''),enabled:Number(row.enabled||0)===1,resource:SEASON_PASS_SEASONAL_CASE_RESOURCE_KINDS.includes(kind)});caseItemsById.set(id,list);}
-  const seasonalCases=(caseDefinitionsResult.results||[]).map(row=>{
-    const view=ownerPanelSeasonalCaseView(row,seasonMap);const items=(caseItemsById.get(view.caseId)||[]).slice();const known=new Set(items.map(item=>`${item.kind}:${item.itemId}`));
-    for(const [kind,catalog] of Object.entries(liveops?.content||{})){for(const [itemId,item] of Object.entries(catalog||{})){const seasonalRoute=liveContentRoute(item,"seasonal_case",view.caseId);if(item?.enabled!==true||!seasonalRoute||!view.seasonId||String(item.seasonId||"")!==String(view.seasonId))continue;const key=`${kind}:${itemId}`;if(known.has(key))continue;items.push({key:`live:${key}`,kind,itemId,weight:Math.max(.01,Number(seasonalRoute.weight)||1),rarity:String(item.rarity||""),title:String(item.title||itemId),imageUrl:String(item.imageUrl||""),enabled:true,liveContent:true});known.add(key);}}
-    view.items=items;return view;
-  });
-  const selectedSeasonalCase=seasonalCases.find(item=>item.seasonId===selected.id)||null;
-  const futureReleaseRules=await readLiveContentReleaseRules(env).catch(()=>new Map());
-  const storyStatsMap=new Map((storyStatsResult.results||[]).map(row=>[String(row.event_id),{seen:Number(row.seen||0),completed:Number(row.completed||0),notified:Number(row.notified||0)}]));
-  const storyEvents=(storyEventsResult.results||[]).map(row=>({...seasonPassStoryEventView(row),reward:seasonPassStoryRewardConfig(row),stats:storyStatsMap.get(String(row.event_id))||{seen:0,completed:0,notified:0}}));
-  const lastReserved=Math.max(Math.floor(nowMs/1000)+3600,...seasonRows.map(row=>Math.max(Number(row.ends_at||0),Number(row.claim_grace_ends_at||0))));
-  const suggestedStart=lastReserved+60,suggestedEnd=suggestedStart+30*24*3600;
-  return {
-    ok: true,
-    selected,
-    seasons: seasonRows.map((row) => seasonPassSeasonFromRow(row, configuredSeasonPassState(env, nowMs), nowMs)),
-    rewards: (rewardsResult.results || []).map(ownerPanelSeasonPassRewardView),
-    tasks: (tasksResult.results || []).map((row) => ({ id:String(row.task_id),period:String(row.period),premium:Number(row.premium||0)===1,metric:String(row.metric),target:Number(row.target||0),xp:Number(row.xp_reward||0),title:String(row.title||""),description:String(row.description||""),enabled:Number(row.enabled||0)===1 })),
-    catalogs: ownerPanelSeasonPassCosmeticCatalogs(liveops,futureReleaseRules,seasonMap),
-    teaser:{seasonId:selected.id,targetSeasonId:String(teaserRow?.target_season_id||''),enabled:Number(teaserRow?.enabled||0)===1,unlockLevel:Number(teaserRow?.unlock_level||50),envelopeTitle:String(teaserRow?.envelope_title||'Вам письмо'),title:String(teaserRow?.title||''),previewText:String(teaserRow?.preview_text||''),bodyText:String(teaserRow?.body_text||''),imageUrl:String(teaserRow?.image_url||''),pushText:String(teaserRow?.push_text||''),stats:{unlocked:Number(teaserStats?.unlocked||0),notified:Number(teaserStats?.notified||0),opened:Number(teaserStats?.opened||0)}},
-    storyEvents,
-    seasonalCase:selectedSeasonalCase,seasonalCases,
-    createSuggestion:{startsAt:suggestedStart,endsAt:suggestedEnd},
-    progression:seasonPassProgressionView(),
-    tariffPurchases:Number(tariffPurchases?.count||0),
-    stats: { players:Number(stats?.players||0),elite:Number(stats?.elite||0),elitePlus:Number(stats?.elite_plus||0),maxXp:Number(stats?.max_xp||0) }
-  };
+  const requested=String(ctx.body?.seasonId||'').trim(),nowMs=Date.now(),fallback=configuredSeasonPassState(env,nowMs);const selectedRow=requested?await env.DB.prepare(`SELECT * FROM season_pass_seasons WHERE season_id=? LIMIT 1`).bind(requested).first():await selectSeasonPassSeasonRow(env,nowMs);const selected=selectedRow?seasonPassSeasonFromRow(selectedRow,fallback,nowMs):null;if(!selected)throw new ApiError(404,'Сезонный пропуск не найден.');
+  const caseIdsSql=`SELECT case_id FROM season_pass_case_definitions WHERE season_id=?`;
+  const [seasonsResult,rewardsResult,tasksResult,stats,tariffPurchases,liveops,teaserRow,teaserStats,caseDefinitionsResult,caseItemsResult,caseSpecialItemsResult,caseResourceItemsResult,storyEventsResult,storyStatsResult]=await Promise.all([env.DB.prepare(`SELECT * FROM season_pass_seasons ORDER BY starts_at DESC,updated_at DESC LIMIT 30`).all(),env.DB.prepare(`SELECT level,lane,reward_type,amount,item_id,title,image_url,enabled FROM season_pass_rewards WHERE season_id=? ORDER BY level,lane`).bind(selected.id).all(),env.DB.prepare(`SELECT task_id,period,premium,metric,target,xp_reward,title,description,enabled,sort_order FROM season_pass_tasks WHERE season_id=? ORDER BY sort_order,task_id`).bind(selected.id).all(),env.DB.prepare(`SELECT COUNT(*) AS players,SUM(CASE WHEN premium_tier='elite' THEN 1 ELSE 0 END) AS elite,SUM(CASE WHEN premium_tier='elite_plus' THEN 1 ELSE 0 END) AS elite_plus,MAX(xp) AS max_xp FROM season_pass_players WHERE season_id=?`).bind(selected.id).first(),env.DB.prepare(`SELECT COUNT(*) AS count FROM season_pass_purchases WHERE season_id=? AND status='delivered'`).bind(selected.id).first(),readLiveOpsConfig(env).catch(()=>({content:{}})),env.DB.prepare(`SELECT * FROM season_pass_teasers WHERE season_id=? LIMIT 1`).bind(selected.id).first(),env.DB.prepare(`SELECT COUNT(*) AS unlocked,SUM(CASE WHEN notified_at>0 THEN 1 ELSE 0 END) AS notified,SUM(CASE WHEN opened_at>0 THEN 1 ELSE 0 END) AS opened FROM season_pass_teaser_deliveries WHERE season_id=?`).bind(selected.id).first(),env.DB.prepare(`SELECT * FROM season_pass_case_definitions ORDER BY release_at DESC,updated_at DESC`).all(),env.DB.prepare(`SELECT * FROM season_pass_case_items WHERE case_id IN (${caseIdsSql}) ORDER BY case_id,reward_kind,item_key`).bind(selected.id).all(),env.DB.prepare(`SELECT * FROM season_pass_case_special_items WHERE case_id IN (${caseIdsSql}) ORDER BY case_id,reward_kind,item_key`).bind(selected.id).all(),env.DB.prepare(`SELECT * FROM season_pass_case_resource_items WHERE case_id IN (${caseIdsSql}) ORDER BY case_id,reward_kind,item_key`).bind(selected.id).all(),env.DB.prepare(`SELECT * FROM season_pass_story_events WHERE season_id=? ORDER BY unlock_level,sort_order,created_at,event_id`).bind(selected.id).all(),env.DB.prepare(`SELECT event_id,SUM(CASE WHEN seen_at>0 THEN 1 ELSE 0 END) AS seen,SUM(CASE WHEN completed_at>0 THEN 1 ELSE 0 END) AS completed,SUM(CASE WHEN notified_at>0 THEN 1 ELSE 0 END) AS notified FROM season_pass_story_progress WHERE season_id=? GROUP BY event_id`).bind(selected.id).all()]);
+  const seasonRows=seasonsResult.results||[],seasonMap=new Map(seasonRows.map(row=>[String(row.season_id),seasonPassSeasonFromRow(row,configuredSeasonPassState(env,nowMs),nowMs)])),caseItemsById=new Map();for(const row of [...(caseItemsResult.results||[]),...(caseSpecialItemsResult.results||[]),...(caseResourceItemsResult.results||[])]){const id=String(row.case_id),kind=String(row.reward_kind),itemId=String(row.item_id),list=caseItemsById.get(id)||[];list.push({key:String(row.item_key),kind,itemId,amount:Math.max(1,Number(row.amount||1)),weight:Number(row.weight||1),rarity:String(row.rarity||''),title:String(row.title||''),imageUrl:SEASON_PASS_COSMETIC_KINDS.includes(kind)?liveOpsCanonicalContentImage(kind,itemId,row.image_url):String(row.image_url||''),enabled:Number(row.enabled||0)===1,resource:SEASON_PASS_SEASONAL_CASE_RESOURCE_KINDS.includes(kind)});caseItemsById.set(id,list);}
+  const seasonalCases=(caseDefinitionsResult.results||[]).map(row=>{const view=ownerPanelSeasonalCaseView(row,seasonMap),isSelected=String(view.seasonId||'')===String(selected.id);view.itemsLoaded=isSelected;if(!isSelected){view.items=[];return view;}const items=(caseItemsById.get(view.caseId)||[]).slice(),known=new Set(items.map(item=>`${item.kind}:${item.itemId}`));for(const [kind,catalog] of Object.entries(liveops?.content||{})){for(const [itemId,item] of Object.entries(catalog||{})){const seasonalRoute=liveContentRoute(item,'seasonal_case',view.caseId);if(item?.enabled!==true||!seasonalRoute||!view.seasonId||String(item.seasonId||'')!==String(view.seasonId))continue;const key=`${kind}:${itemId}`;if(known.has(key))continue;items.push({key:`live:${key}`,kind,itemId,weight:Math.max(.01,Number(seasonalRoute.weight)||1),rarity:String(item.rarity||''),title:String(item.title||itemId),imageUrl:String(item.imageUrl||''),enabled:true,liveContent:true});known.add(key);}}view.items=items;return view;});
+  const selectedSeasonalCase=seasonalCases.find(item=>item.seasonId===selected.id)||null,futureReleaseRules=await readLiveContentReleaseRules(env).catch(()=>new Map()),storyStatsMap=new Map((storyStatsResult.results||[]).map(row=>[String(row.event_id),{seen:Number(row.seen||0),completed:Number(row.completed||0),notified:Number(row.notified||0)}])),storyEvents=(storyEventsResult.results||[]).map(row=>({...seasonPassStoryEventView(row),reward:seasonPassStoryRewardConfig(row),stats:storyStatsMap.get(String(row.event_id))||{seen:0,completed:0,notified:0}})),lastReserved=Math.max(Math.floor(nowMs/1000)+3600,...seasonRows.map(row=>Math.max(Number(row.ends_at||0),Number(row.claim_grace_ends_at||0)))),suggestedStart=lastReserved+60,suggestedEnd=suggestedStart+30*24*3600;
+  return {ok:true,selected,seasons:seasonRows.map(row=>seasonPassSeasonFromRow(row,configuredSeasonPassState(env,nowMs),nowMs)),rewards:(rewardsResult.results||[]).map(ownerPanelSeasonPassRewardView),tasks:(tasksResult.results||[]).map(row=>({id:String(row.task_id),period:String(row.period),premium:Number(row.premium||0)===1,metric:String(row.metric),target:Number(row.target||0),xp:Number(row.xp_reward||0),title:String(row.title||''),description:String(row.description||''),enabled:Number(row.enabled||0)===1})),catalogs:ownerPanelSeasonPassCosmeticCatalogs(liveops,futureReleaseRules,seasonMap),teaser:{seasonId:selected.id,targetSeasonId:String(teaserRow?.target_season_id||''),enabled:Number(teaserRow?.enabled||0)===1,unlockLevel:Number(teaserRow?.unlock_level||50),envelopeTitle:String(teaserRow?.envelope_title||'Вам письмо'),title:String(teaserRow?.title||''),previewText:String(teaserRow?.preview_text||''),bodyText:String(teaserRow?.body_text||''),imageUrl:String(teaserRow?.image_url||''),pushText:String(teaserRow?.push_text||''),stats:{unlocked:Number(teaserStats?.unlocked||0),notified:Number(teaserStats?.notified||0),opened:Number(teaserStats?.opened||0)}},storyEvents,seasonalCase:selectedSeasonalCase,seasonalCases,createSuggestion:{startsAt:suggestedStart,endsAt:suggestedEnd},progression:seasonPassProgressionView(),tariffPurchases:Number(tariffPurchases?.count||0),stats:{players:Number(stats?.players||0),elite:Number(stats?.elite||0),elitePlus:Number(stats?.elite_plus||0),maxXp:Number(stats?.max_xp||0)}};
 }
 
 function ownerPanelSeasonPassRewardPresentation(typeValue, amountValue, itemValue) {
