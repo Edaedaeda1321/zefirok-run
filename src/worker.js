@@ -42151,11 +42151,10 @@ async function ownerPanelPlayers(env, ctx) {
 async function ownerPanelPlayer(env, ctx) {
   const telegramId = String(ctx.body?.telegramId || "").trim();
   if (!/^\d{4,20}$/.test(telegramId)) throw new ApiError(400, "Некорректный Telegram ID игрока.");
-  await ensureAchievementConfigSchema(env);
   const profile = await env.DB.prepare(`SELECT * FROM admin_profile_state WHERE telegram_id=? LIMIT 1`).bind(telegramId).first();
   if (!profile) throw new ApiError(404, "Профиль игрока не найден.");
-  const season = await ensureSeason(env);
-  const seasonPass = await loadSeasonPassSeason(env);
+  const season = await selectLeaderboardSeasonForState(env);
+  const seasonPass = await loadSeasonPassSeasonForAccess(env);
   const dailyConfigPromise = loadDailyLoyaltyConfig(env, { allowDisabled:true }).catch(() => null);
   const dailyStatePromise = (async () => {
     const config = await dailyConfigPromise;
@@ -42175,7 +42174,7 @@ async function ownerPanelPlayer(env, ctx) {
     env.DB.prepare(`SELECT display_name,username,last_started_at,active FROM bot_subscribers WHERE telegram_id=? LIMIT 1`).bind(telegramId).first().catch(() => null),
     env.DB.prepare(`SELECT * FROM case_player_state WHERE telegram_id=? LIMIT 1`).bind(telegramId).first(),
     env.DB.prepare(`SELECT case_type,COUNT(*) AS count FROM granted_cases WHERE telegram_id=? AND status='pending' GROUP BY case_type`).bind(telegramId).all(),
-    ensureSeasonPassPlayer(env,seasonPass,telegramId).catch(() => null),
+    env.DB.prepare(`SELECT xp,premium_tier,elite_plus_bonus_granted,revision FROM season_pass_players WHERE season_id=? AND telegram_id=? LIMIT 1`).bind(String(seasonPass?.id||''),telegramId).first().catch(() => null),
     env.DB.prepare(`SELECT role,active FROM staff_users WHERE telegram_id=? LIMIT 1`).bind(telegramId).first().catch(() => null),
     env.DB.prepare(`SELECT run_id,season_id,score,duration_ms,accepted,rejection_reason,created_at FROM leaderboard_runs WHERE telegram_id=? ORDER BY created_at DESC LIMIT 10`).bind(telegramId).all().catch(() => ({results:[]})),
     env.DB.prepare(`SELECT id,action,target_telegram_id,target_type,actor_name,actor_telegram_id,actor_role,old_value,new_value,created_at,details_json FROM staff_action_log WHERE target_telegram_id=? ORDER BY created_at DESC,id DESC LIMIT 12`).bind(telegramId).all().catch(() => ({results:[]})),
