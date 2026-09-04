@@ -51,7 +51,7 @@
   window.zefirokImageSrc=value=>bad(value)?FALLBACK:String(value).trim();
 })();
 </script>
-<style>:root{color-scheme:light dark;background:light-dark(rgb(255 255 255), rgb(24 24 24));--zefirok-app-height:100dvh}html,body{margin:0;width:100%;height:100%;min-height:0;overflow:hidden;overscroll-behavior:none}body{box-sizing:border-box;padding:0;background:inherit}iframe{display:none;height:var(--zefirok-app-height,100dvh);border:0}body>iframe:not(.zefirok-season-pass-frame):not(.zefirok-rating-frame):not(.zefirok-referrals-frame):not(.zefirok-album-frame){width:calc(100% - 32px);max-width:736px;margin:0 auto}iframe.is-ready{display:block}.zefirok-maintenance-gate{width:100%;min-height:var(--zefirok-app-height,100dvh);display:grid;background:#fff5f5;place-items:center;padding:max(24px,var(--zefirok-content-safe-top,0px)) max(24px,var(--zefirok-content-safe-right,0px)) max(24px,var(--zefirok-content-safe-bottom,0px)) max(24px,var(--zefirok-content-safe-left,0px));box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#4e3a42}.zefirok-maintenance-card{width:min(430px,100%);box-sizing:border-box;padding:28px;border:1px solid #efd0d9;border-radius:28px;background:#fff;box-shadow:0 18px 50px rgba(91,54,68,.13);text-align:center}.zefirok-maintenance-icon{font-size:54px}.zefirok-maintenance-card h1{font-size:25px;margin:12px 0}.zefirok-maintenance-card p{font-size:16px;line-height:1.5;color:#786870;margin:0}.zefirok-maintenance-card button{margin-top:18px;padding:12px 18px;border:0;border-radius:14px;background:#e56f9b;color:#fff;font-weight:800;font-size:15px}
+<style>:root{color-scheme:light dark;background:light-dark(rgb(255 255 255), rgb(24 24 24));--zefirok-app-height:100dvh}html,body{margin:0;width:100%;height:100%;min-height:0;overflow:hidden;overscroll-behavior:none}body{box-sizing:border-box;padding:0;background:inherit}iframe{display:none;height:var(--zefirok-app-height,100dvh);border:0}body>iframe:not(.zefirok-season-pass-frame):not(.zefirok-rating-frame):not(.zefirok-referrals-frame):not(.zefirok-album-frame){width:calc(100% - 32px);max-width:736px;margin:0 auto}iframe.is-ready{display:block}.zefirok-maintenance-gate{width:100%;min-height:var(--zefirok-app-height,100dvh);display:grid;background:#fff5f5;place-items:center;padding:max(24px,var(--zefirok-content-safe-top,0px)) max(24px,var(--zefirok-content-safe-right,0px)) max(24px,var(--zefirok-content-safe-bottom,0px)) max(24px,var(--zefirok-content-safe-left,0px));box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#4e3a42}.zefirok-maintenance-card{width:min(430px,100%);box-sizing:border-box;padding:28px;border:1px solid #efd0d9;border-radius:28px;background:#fff;box-shadow:0 18px 50px rgba(91,54,68,.13);text-align:center}.zefirok-maintenance-icon{width:88px;height:88px;margin:0 auto;display:grid;place-items:center}.zefirok-maintenance-icon img{display:block;width:100%;height:100%;object-fit:contain}.zefirok-maintenance-card h1{font-size:25px;margin:10px 0 12px}.zefirok-maintenance-card p{font-size:16px;line-height:1.5;color:#786870;margin:0}.zefirok-maintenance-card button{margin-top:18px;padding:12px 18px;border:0;border-radius:14px;background:#e56f9b;color:#fff;font-weight:800;font-size:15px}
 .zefirok-season-pass-layer{position:fixed;inset:0;width:100%;height:var(--zefirok-app-height,100dvh);z-index:2147483000;background:#fff5f4;display:block;overflow:hidden}
 .zefirok-season-pass-layer[hidden]{display:none!important}
 .zefirok-season-pass-frame{display:block!important;width:100%!important;max-width:none!important;height:var(--zefirok-app-height,100dvh)!important;margin:0!important;border:0!important;background:#fff5f4}
@@ -81,7 +81,7 @@ body.zefirok-season-pass-open>iframe:not(.zefirok-season-pass-frame){visibility:
 .zefirok-rating-status{position:absolute;inset:0;z-index:2;display:grid;place-items:center;box-sizing:border-box;padding:max(26px,var(--zefirok-content-safe-top,0px)) max(22px,var(--zefirok-content-safe-right,0px)) max(26px,var(--zefirok-content-safe-bottom,0px)) max(22px,var(--zefirok-content-safe-left,0px));background:#fff5f4;color:#6c4654;text-align:center}
 .zefirok-rating-layer[data-state="ready"] .zefirok-rating-status{display:none}
 .zefirok-rating-status-card{width:min(390px,100%);box-sizing:border-box;padding:28px 24px;border:1px solid #efcbd7;border-radius:26px;background:#fffdfc;box-shadow:0 18px 52px rgba(102,55,72,.12)}
-.zefirok-rating-status-icon{display:block;font-size:42px;line-height:1;margin-bottom:13px}
+.zefirok-rating-status-icon{width:68px;height:68px;margin:0 auto 13px;display:grid;place-items:center}.zefirok-rating-status-icon img{display:block;width:100%;height:100%;object-fit:contain}
 .zefirok-rating-status-title{display:block;font-size:21px;line-height:1.25;font-weight:900;color:#71384f}
 .zefirok-rating-status-copy{display:block;margin-top:10px;font-size:15px;line-height:1.48;color:#856a74}
 .zefirok-rating-status-spinner{width:34px;height:34px;margin:20px auto 0;border:4px solid #f5dbe4;border-top-color:#d95f90;border-radius:50%;animation:zefirok-rating-spin .8s linear infinite}
@@ -689,7 +689,12 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
     card.className = "zefirok-maintenance-card";
     const icon = document.createElement("div");
     icon.className = "zefirok-maintenance-icon";
-    icon.textContent = String(options.icon || "🍬");
+    const iconImage = document.createElement("img");
+    iconImage.src = String(options.iconSrc || "/assets/ui/icon_play_start_button.png");
+    iconImage.alt = "";
+    iconImage.setAttribute("aria-hidden", "true");
+    iconImage.decoding = "async";
+    icon.append(iconImage);
     const title = document.createElement("h1");
     title.textContent = String(options.title || "Загрузка игры");
     const text = document.createElement("p");
@@ -750,7 +755,7 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
     window.__zefirokMaintenanceCheckActive = true;
     const gameFrame = frame();
     if (gameFrame) gameFrame.classList.remove("is-ready");
-    showMaintenanceGate("Проверяем доступ и загружаем данные…", { title: "Загрузка игры", icon: "🍬" });
+    showMaintenanceGate("Проверяем доступ и загружаем данные…", { title: "Загрузка игры", iconSrc: "/assets/ui/icon_play_start_button.png" });
     try {
       const initData = String(window.Telegram?.WebApp?.initData || "");
       const response = await hostFetchWithTimeout(ACCESS_BOOTSTRAP_PATH, {
@@ -770,7 +775,7 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
       if (explicitlyClosed) {
         showMaintenanceGate(
           maintenance?.error || maintenance?.message || "Игра временно закрыта для игроков.",
-          { title: "Технические работы", icon: "🛠" }
+          { title: "Технические работы", iconSrc: "/assets/ui/icon_maintenance_tools.png" }
         );
         return;
       }
@@ -857,7 +862,7 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
     const mode=testProjectBootstrapPayload?.draftLayer?.active ? "DRAFT" : "PROD";
     const seasonTitle=String(testProjectBootstrapPayload?.snapshot?.season?.title || testProjectBootstrapPayload?.snapshot?.season?.id || "").trim();
     const virtual=testProjectBootstrapPayload?.state||{},clone=virtual?.cloneSource?.telegramId?"КЛОН":"ИЗОЛИРОВАН";
-    badge.innerHTML=`<button type="button" data-tp-back>← TP</button><span>🧪 TP 5.5 · ${clone} · ${mode} · ${String(virtual.name||"Тестовый игрок")} · ⭐${Number(virtual.points||0).toLocaleString("ru-RU")}${seasonTitle?` · ${seasonTitle}`:""}</span>`;
+    badge.innerHTML=`<button type="button" data-tp-back>← TP</button><span>TP 5.5 · ${clone} · ${mode} · ${String(virtual.name||"Тестовый игрок")} · ${Number(virtual.points||0).toLocaleString("ru-RU")} очков${seasonTitle?` · ${seasonTitle}`:""}</span>`;
     Object.assign(badge.style,{position:"fixed",left:"max(8px,var(--zefirok-content-safe-left,0px))",bottom:"max(8px,var(--zefirok-content-safe-bottom,0px))",zIndex:"2147483600",display:"flex",gap:"6px",alignItems:"center",fontFamily:"-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif",fontSize:"10px",fontWeight:"900",pointerEvents:"auto"});
     const span=badge.querySelector("span");Object.assign(span.style,{padding:"7px 9px",borderRadius:"999px",background:mode==="DRAFT"?"#7b4517":"#271d3e",color:mode==="DRAFT"?"#ffe1ad":"#eadfff",border:"1px solid rgba(255,255,255,.22)",boxShadow:"0 8px 24px rgba(0,0,0,.22)"});
     const button=badge.querySelector("button");Object.assign(button.style,{border:"1px solid rgba(255,255,255,.22)",background:"#17131f",color:"#fff",borderRadius:"999px",padding:"7px 9px",font:"inherit"});button.addEventListener("click",()=>{location.href="/test-project.html?v=tp-5.5&view=game"});
@@ -868,7 +873,7 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
     if (window.__zefirokTestProjectCheckActive) return;
     window.__zefirokTestProjectCheckActive = true;
     const gameFrame = frame(); if (gameFrame) gameFrame.classList.remove("is-ready");
-    showMaintenanceGate("Проверяем owner-сессию и загружаем изолированного виртуального игрока…", { title:"Test Project 5.4", icon:"🧪" });
+    showMaintenanceGate("Проверяем owner-сессию и загружаем изолированного виртуального игрока…", { title:"Test Project 5.4", iconSrc:"/assets/ui/icon_setting_FAQ.png" });
     try {
       await testProjectOwnerRequest("/api/owner/auth");
       testProjectBootstrapPayload = await testProjectOwnerRequest("/api/owner/test-project/bootstrap");
@@ -877,7 +882,7 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
       activateGameFrame(); renderTestProjectBadge();
     } catch (error) {
       console.error("Test Project boot failed", error);
-      showMaintenanceGate(error?.message || "Не удалось открыть Test Project.", { title:"Test Project недоступен", icon:"⚠️", retry:true });
+      showMaintenanceGate(error?.message || "Не удалось открыть Test Project.", { title:"Test Project недоступен", iconSrc:"/assets/ui/error404-no-icon.png", retry:true });
     } finally { window.__zefirokTestProjectCheckActive = false; }
   }
 
@@ -1409,12 +1414,13 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
     const title = layer.querySelector("[data-rating-status-title]");
     const message = layer.querySelector("[data-rating-status-copy]");
     const icon = layer.querySelector("[data-rating-status-icon]");
+    const iconImage = icon?.querySelector("img");
     if (state === "error") {
       if (title) title.textContent = "Рейтинг не загрузился";
-      if (icon) icon.textContent = "⚠️";
+      if (iconImage) iconImage.src = "/assets/ui/error404-no-icon.png";
     } else {
       if (title) title.textContent = "Открываем рейтинг";
-      if (icon) icon.textContent = "🏆";
+      if (iconImage) iconImage.src = "/assets/ui/icon_reiting.png";
     }
     if (message) message.textContent = copy || (state === "error"
       ? "Проверьте соединение и повторите попытку."
@@ -1480,7 +1486,7 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
     status.className = "zefirok-rating-status";
     status.setAttribute("role", "status");
     status.setAttribute("aria-live", "polite");
-    status.innerHTML = '<div class="zefirok-rating-status-card"><span class="zefirok-rating-status-icon" data-rating-status-icon>🏆</span><strong class="zefirok-rating-status-title" data-rating-status-title>Открываем рейтинг</strong><span class="zefirok-rating-status-copy" data-rating-status-copy>Загружаем результаты игроков…</span><div class="zefirok-rating-status-spinner" aria-hidden="true"></div><button class="zefirok-rating-retry" type="button" data-rating-retry>Повторить</button></div>';
+    status.innerHTML = '<div class="zefirok-rating-status-card"><span class="zefirok-rating-status-icon" data-rating-status-icon aria-hidden="true"><img src="/assets/ui/icon_reiting.png" alt="" decoding="async"></span><strong class="zefirok-rating-status-title" data-rating-status-title>Открываем рейтинг</strong><span class="zefirok-rating-status-copy" data-rating-status-copy>Загружаем результаты игроков…</span><div class="zefirok-rating-status-spinner" aria-hidden="true"></div><button class="zefirok-rating-retry" type="button" data-rating-retry>Повторить</button></div>';
 
     const rating = document.createElement("iframe");
     rating.className = "zefirok-rating-frame";
@@ -1940,7 +1946,7 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
     removeGamePollOverlay();
     const overlay = gamePollElement("div", "zefirok-game-poll-overlay");
     const card = gamePollElement("div", "zefirok-game-poll-card");
-    const badge = gamePollElement("div", "zefirok-game-poll-badge", "🗳 Опрос игроков");
+    const badge = gamePollElement("div", "zefirok-game-poll-badge", "Опрос игроков");
     const title = gamePollElement("h2", "", poll.question);
     card.append(badge, title);
     if (poll.description) card.append(gamePollElement("p", "zefirok-game-poll-description", poll.description));
@@ -8148,6 +8154,7 @@ html&gt;body{padding:
 @media(prefers-reduced-motion:reduce){#zefirok-maltipoo-runner .player-mail-layer,#zefirok-maltipoo-runner .player-mail-dialog,#zefirok-maltipoo-runner .player-mail-loading::before{animation:none!important;transition:none!important}}
 #zefirok-maltipoo-runner .profile-hero{position:relative}
 #zefirok-maltipoo-runner .profile-mail-shortcut{position:absolute;right:10px;top:10px;z-index:6;display:grid;place-items:center;width:42px;height:42px;border:1px solid rgba(224,145,176,.42);border-radius:14px;background:linear-gradient(145deg,#fff,#ffe9f1);color:#a94b70;font-size:21px;box-shadow:0 6px 15px rgba(144,66,96,.12)}
+#zefirok-maltipoo-runner .profile-mail-shortcut&gt;img{display:block;width:27px;height:27px;object-fit:contain}
 #zefirok-maltipoo-runner .profile-mail-shortcut&gt;span{position:absolute;right:-5px;top:-6px;display:inline-flex;align-items:center;justify-content:center;min-width:19px;height:19px;padding:0 4px;border:2px solid #fff;border-radius:999px;background:#e65e91;color:#fff;font-size:8px;font-weight:950;box-sizing:border-box}
 #zefirok-maltipoo-runner .profile-mail-shortcut&gt;span[hidden]{display:none!important}
 #zefirok-maltipoo-runner .profile-identity{padding-right:42px}
@@ -11479,7 +11486,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 &lt;section class=&quot;screen&quot; data-screen=&quot;profile&quot; hidden=&quot;&quot;&gt;
 &lt;div class=&quot;profile-shell&quot;&gt;
   &lt;div class=&quot;profile-hero&quot;&gt;
-    &lt;button class=&quot;profile-mail-shortcut&quot; data-profile-mail-open type=&quot;button&quot; aria-label=&quot;Открыть Почту&quot; title=&quot;Почта Зеффи&quot;&gt;✉&lt;span data-profile-mail-badge hidden&gt;0&lt;/span&gt;&lt;/button&gt;
+    &lt;button class=&quot;profile-mail-shortcut&quot; data-profile-mail-open type=&quot;button&quot; aria-label=&quot;Открыть Почту&quot; title=&quot;Почта Зеффи&quot;&gt;&lt;img src=&quot;/assets/ui/icon_message_season.png&quot; alt=&quot;&quot; loading=&quot;lazy&quot; decoding=&quot;async&quot;&gt;&lt;span data-profile-mail-badge hidden&gt;0&lt;/span&gt;&lt;/button&gt;
     &lt;div class=&quot;profile-avatar-wrap&quot;&gt;
       &lt;img alt=&quot;Аватар игрока&quot; class=&quot;profile-avatar is-fallback&quot; data-profile-avatar referrerpolicy=&quot;no-referrer&quot;/&gt;
     &lt;/div&gt;
@@ -12338,7 +12345,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 🎟 СКОРО — БАТЛ-ПАСС
 • Мы продолжаем готовить батл-пасс. Он появится совсем скоро — о запуске и наградах расскажем отдельной новостью.
 
-🛠 ИСПРАВЛЕНИЕ ОШИБОК И ДОРАБОТКА ФУНКЦИОНАЛА
+ИСПРАВЛЕНИЕ ОШИБОК И ДОРАБОТКА ФУНКЦИОНАЛА
 • Исправили множество небольших ошибок и доработали стабильность игры, переходы между разделами, отображение данных и работу игровых функций.
 • Продолжаем улучшать игру по вашим отзывам — и это только часть обновления!
 
@@ -19725,7 +19732,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       function renderPlayerMailLoadError(item,error) {
         if (!playerMailContentEl) return;
         const title = String(item?.title || &quot;Почта Зеффи&quot;);
-        playerMailContentEl.innerHTML = `&lt;div class=&quot;player-mail-head&quot;&gt;&lt;div class=&quot;player-mail-symbol&quot; aria-hidden=&quot;true&quot;&gt;💌&lt;/div&gt;&lt;div class=&quot;player-mail-head-copy&quot;&gt;&lt;span class=&quot;player-mail-kicker&quot;&gt;Почта Зеффи&lt;/span&gt;&lt;h2 id=&quot;player-mail-title&quot;&gt;${escapePurchaseText(title)}&lt;/h2&gt;&lt;/div&gt;&lt;/div&gt;&lt;div class=&quot;player-mail-message&quot;&gt;&lt;p class=&quot;player-mail-body&quot;&gt;${escapePurchaseText(error?.message || &quot;Не удалось открыть письмо. Обновите почту и попробуйте ещё раз.&quot;)}&lt;/p&gt;&lt;/div&gt;`;
+        playerMailContentEl.innerHTML = `&lt;div class=&quot;player-mail-head&quot;&gt;&lt;div class=&quot;player-mail-symbol&quot; aria-hidden=&quot;true&quot;&gt;&lt;img src=&quot;/assets/ui/icon_message_season.png&quot; alt=&quot;&quot; loading=&quot;lazy&quot; decoding=&quot;async&quot;&gt;&lt;/div&gt;&lt;div class=&quot;player-mail-head-copy&quot;&gt;&lt;span class=&quot;player-mail-kicker&quot;&gt;Почта Зеффи&lt;/span&gt;&lt;h2 id=&quot;player-mail-title&quot;&gt;${escapePurchaseText(title)}&lt;/h2&gt;&lt;/div&gt;&lt;/div&gt;&lt;div class=&quot;player-mail-message&quot;&gt;&lt;p class=&quot;player-mail-body&quot;&gt;${escapePurchaseText(error?.message || &quot;Не удалось открыть письмо. Обновите почту и попробуйте ещё раз.&quot;)}&lt;/p&gt;&lt;/div&gt;`;
       }
 
       async function openPlayerMailLetter(mailId) {
@@ -19735,7 +19742,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         lockPlayerMailPageScroll();
         playerMailLayerEl.hidden=false;
         playerMailActiveLetter=null;
-        if(playerMailContentEl)playerMailContentEl.innerHTML=`&lt;div class=&quot;player-mail-head&quot;&gt;&lt;div class=&quot;player-mail-symbol&quot; aria-hidden=&quot;true&quot;&gt;💌&lt;/div&gt;&lt;div class=&quot;player-mail-head-copy&quot;&gt;&lt;span class=&quot;player-mail-kicker&quot;&gt;Почта Зеффи&lt;/span&gt;&lt;h2 id=&quot;player-mail-title&quot;&gt;${escapePurchaseText(item.title)}&lt;/h2&gt;&lt;/div&gt;&lt;/div&gt;&lt;div class=&quot;player-mail-loading&quot;&gt;Загружаем письмо…&lt;/div&gt;`;
+        if(playerMailContentEl)playerMailContentEl.innerHTML=`&lt;div class=&quot;player-mail-head&quot;&gt;&lt;div class=&quot;player-mail-symbol&quot; aria-hidden=&quot;true&quot;&gt;&lt;img src=&quot;/assets/ui/icon_message_season.png&quot; alt=&quot;&quot; loading=&quot;lazy&quot; decoding=&quot;async&quot;&gt;&lt;/div&gt;&lt;div class=&quot;player-mail-head-copy&quot;&gt;&lt;span class=&quot;player-mail-kicker&quot;&gt;Почта Зеффи&lt;/span&gt;&lt;h2 id=&quot;player-mail-title&quot;&gt;${escapePurchaseText(item.title)}&lt;/h2&gt;&lt;/div&gt;&lt;/div&gt;&lt;div class=&quot;player-mail-loading&quot;&gt;Загружаем письмо…&lt;/div&gt;`;
         hapticImpact(&quot;light&quot;,25);
         try{
           const response=await gameFetchWithTimeout(PLAYER_GIFTS_OPEN_PATH,{method:&quot;POST&quot;,headers:{&quot;Content-Type&quot;:&quot;application/json&quot;},body:JSON.stringify({initData:String(telegramProfile.initData),mailId:String(item.id)}),cache:&quot;no-store&quot;,credentials:&quot;same-origin&quot;},7000);
@@ -19989,7 +19996,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           void gameFetchWithTimeout(PLAYER_SUPPORT_READ_PATH, { method:&quot;POST&quot;, headers:{&quot;Content-Type&quot;:&quot;application/json&quot;}, body:JSON.stringify({initData:String(telegramProfile.initData),ticketId:ticket.id}), cache:&quot;no-store&quot;, credentials:&quot;same-origin&quot; }, 5000).catch(() =&gt; {});
         }
         const messages = (ticket.messages || []).map((message) =&gt; `&lt;div class=&quot;support-message is-${escapePurchaseText(message.authorKind || &quot;system&quot;)}&quot;&gt;&lt;small&gt;${message.authorKind === &quot;staff&quot; ? &quot;Поддержка&quot; : message.authorKind === &quot;player&quot; ? &quot;Вы&quot; : &quot;Система&quot;} · ${escapePurchaseText(supportDate(message.createdAt,true))}&lt;/small&gt;${escapePurchaseText(message.text || &quot;&quot;)}&lt;/div&gt;`).join(&quot;&quot;);
-        const attachments = (ticket.attachments || []).map((attachment) =&gt; `&lt;div class=&quot;support-attachment-note&quot;&gt;📷 ${escapePurchaseText(attachment.fileName || &quot;Скриншот&quot;)} · ${attachment.status === &quot;uploaded&quot; ? &quot;прикреплён&quot; : attachment.status === &quot;failed&quot; ? &quot;не удалось загрузить&quot; : &quot;загружается&quot;}&lt;/div&gt;`).join(&quot;&quot;);
+        const attachments = (ticket.attachments || []).map((attachment) =&gt; `&lt;div class=&quot;support-attachment-note&quot;&gt;${escapePurchaseText(attachment.fileName || &quot;Скриншот&quot;)} · ${attachment.status === &quot;uploaded&quot; ? &quot;прикреплён&quot; : attachment.status === &quot;failed&quot; ? &quot;не удалось загрузить&quot; : &quot;загружается&quot;}&lt;/div&gt;`).join(&quot;&quot;);
         const canReply = [&quot;new&quot;,&quot;working&quot;].includes(ticket.status);
         supportContentEl.innerHTML = `&lt;div class=&quot;support-ticket-detail-head&quot;&gt;&lt;span class=&quot;support-ticket-card-head&quot;&gt;&lt;strong&gt;${escapePurchaseText(ticket.subject)}&lt;/strong&gt;&lt;span class=&quot;support-ticket-status${supportStatusClass(ticket.status)}&quot;&gt;${escapePurchaseText(ticket.statusLabel)}&lt;/span&gt;&lt;/span&gt;&lt;span&gt;${escapePurchaseText(ticket.categoryLabel)} · создано ${escapePurchaseText(supportDate(ticket.createdAt,true))}&lt;/span&gt;&lt;/div&gt;${attachments}&lt;div class=&quot;support-thread&quot;&gt;${messages || `&lt;div class=&quot;support-empty&quot;&gt;Сообщений пока нет.&lt;/div&gt;`}&lt;/div&gt;${canReply ? `&lt;form class=&quot;support-form&quot; data-support-reply-form data-ticket-id=&quot;${ticket.id}&quot; data-request-id=&quot;${supportRequestId(&quot;reply&quot;)}&quot; style=&quot;margin-top:13px&quot;&gt;&lt;div class=&quot;support-field&quot;&gt;&lt;label&gt;Дополнить обращение&lt;/label&gt;&lt;textarea name=&quot;message&quot; maxlength=&quot;4000&quot; placeholder=&quot;Напишите дополнительную информацию или ответ поддержке.&quot;&gt;&lt;/textarea&gt;&lt;/div&gt;&lt;div class=&quot;support-error&quot; data-support-error&gt;&lt;/div&gt;&lt;div class=&quot;support-row-actions&quot;&gt;&lt;button class=&quot;support-secondary&quot; data-support-back type=&quot;button&quot;&gt;К обращениям&lt;/button&gt;&lt;button class=&quot;support-primary&quot; type=&quot;submit&quot;&gt;Отправить&lt;/button&gt;&lt;/div&gt;&lt;/form&gt;` : `&lt;div class=&quot;support-intro&quot; style=&quot;margin-top:13px&quot;&gt;&lt;strong&gt;Обращение закрыто&lt;/strong&gt;&lt;span&gt;Если вопрос остался, создайте новое обращение — история этого тикета сохранится.&lt;/span&gt;&lt;div class=&quot;support-row-actions&quot;&gt;&lt;button class=&quot;support-secondary&quot; data-support-back type=&quot;button&quot;&gt;К обращениям&lt;/button&gt;&lt;button class=&quot;support-primary&quot; data-support-new type=&quot;button&quot;&gt;Новое обращение&lt;/button&gt;&lt;/div&gt;&lt;/div&gt;`}`;
       }
@@ -21265,14 +21272,14 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         flashOfferBadge.textContent = `🔥 ${offer.badgeText || &quot;АКЦИЯ&quot;}${Number(offer.discountPercent || 0) &gt; 0 ? ` · −${offer.discountPercent}%` : &quot;&quot;}`;
         flashOfferTitle.textContent = offer.title || &quot;Специальное предложение&quot;;
         const passUpgradeNote = offer.passUpgrade ? &quot;Цена уже учитывает ваш активный «Элитный».&quot; : &quot;&quot;;
-        const ownerPreviewNote = offer.previewOnly ? `👑 Предпросмотр владельца: ${offer.previewReason || &quot;этому аккаунту акция недоступна&quot;}` : &quot;&quot;;
+        const ownerPreviewNote = offer.previewOnly ? `Предпросмотр владельца: ${offer.previewReason || &quot;этому аккаунту акция недоступна&quot;}` : &quot;&quot;;
         flashOfferSubtitle.textContent = [offer.subtitle || &quot;&quot;, passUpgradeNote, ownerPreviewNote].filter(Boolean).join(&quot; · &quot;);
         flashOfferRewards.innerHTML = (offer.rewards || []).map((reward) =&gt; { const embeddedAmount = [&quot;points&quot;,&quot;treats&quot;,&quot;coffee&quot;,&quot;case&quot;,&quot;product&quot;,&quot;season_pass_xp&quot;,&quot;season_pass_levels&quot;,&quot;booster_points_runs&quot;,&quot;booster_treats_runs&quot;,&quot;booster_coffee_runs&quot;].includes(String(reward.kind || &quot;&quot;)); return `&lt;span class=&quot;flash-offer-reward&quot;&gt;&lt;img src=&quot;${flashOfferEscape(reward.imageUrl || &quot;&quot;)}&quot; alt=&quot;&quot;&gt;&lt;span&gt;${flashOfferEscape(reward.title || &quot;Награда&quot;)}${Number(reward.amount || 1) &gt; 1 &amp;&amp; !embeddedAmount &amp;&amp; !String(reward.title || &quot;&quot;).startsWith(String(reward.amount)) ? ` × ${formatter.format(reward.amount)}` : &quot;&quot;}&lt;/span&gt;&lt;/span&gt;`; }).join(&quot;&quot;);
         const oldCostText = flashOfferCostText(offer.original), newCostText = flashOfferCostText(offer.price);
         flashOfferOld.innerHTML = Number(offer.discountPercent || 0) &gt; 0 ? flashOfferCostHtml(offer.original) : &quot;&quot;;
         flashOfferNew.innerHTML = flashOfferCostHtml(offer.price);
         const limit = Number(offer.purchaseLimit || 0), count = Number(offer.purchaseCount || 0);
-        flashOfferLimit.textContent = offer.previewOnly ? `👑 Безопасный предпросмотр · ${offer.previewReason || &quot;покупка недоступна этому аккаунту&quot;}` : (limit &gt; 0 ? `Можно купить ${limit} раз · осталось ${Math.max(0, limit - count)}` : &quot;Количество покупок не ограничено&quot;);
+        flashOfferLimit.textContent = offer.previewOnly ? `Безопасный предпросмотр · ${offer.previewReason || &quot;покупка недоступна этому аккаунту&quot;}` : (limit &gt; 0 ? `Можно купить ${limit} раз · осталось ${Math.max(0, limit - count)}` : &quot;Количество покупок не ограничено&quot;);
         flashOfferBuy.innerHTML = offer.previewOnly ? `&lt;span&gt;Предпросмотр&lt;/span&gt;${flashOfferCostHtml(offer.price)}` : `&lt;span&gt;Купить&lt;/span&gt;${flashOfferCostHtml(offer.price)}`;
         flashOfferBuy.setAttribute(&quot;aria-label&quot;, offer.previewOnly ? &quot;Предпросмотр акции владельцем&quot; : `Купить · ${newCostText}`);
         flashOfferBuy.disabled = Boolean(offer.previewOnly);
