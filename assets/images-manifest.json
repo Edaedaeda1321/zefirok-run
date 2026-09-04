@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "catalogHash": "5c4f11aea0ef2a8c",
-  "count": 456,
+  "catalogHash": "f158ddafd961caa0",
+  "count": 457,
   "images": [
     {
       "fileName": "achievements/background_achivment_panel.png",
@@ -3442,6 +3442,14 @@
       "path": "/assets/ui/icon_game_button.png",
       "size": 1378970,
       "modified": 1787859539000
+    },
+    {
+      "fileName": "ui/icon_maintenance_tools.png",
+      "label": "Icon maintenance tools",
+      "folder": "ui",
+      "path": "/assets/ui/icon_maintenance_tools.png",
+      "size": 1013161,
+      "modified": 1788557139000
     },
     {
       "fileName": "ui/icon_message_season.png",

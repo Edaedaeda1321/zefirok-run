@@ -42062,10 +42062,56 @@ async function ownerPanelPlayers(env, ctx) {
   };
 }
 
+async function ownerPanelPlayerSummary(env, telegramId) {
+  const [profile, allTime, subscriber, caseRow, staffMember] = await Promise.all([
+    env.DB.prepare(`SELECT telegram_id,wallet,best_score,treats,coffee,profile_xp,pending_wallet,pending_treats,pending_coffee,updated_at FROM admin_profile_state WHERE telegram_id=? LIMIT 1`).bind(telegramId).first(),
+    env.DB.prepare(`SELECT display_name,username,photo_url,best_score FROM leaderboard_all_time WHERE telegram_id=? LIMIT 1`).bind(telegramId).first().catch(() => null),
+    env.DB.prepare(`SELECT display_name,username FROM bot_subscribers WHERE telegram_id=? LIMIT 1`).bind(telegramId).first().catch(() => null),
+    env.DB.prepare(`SELECT active_avatar_id FROM case_player_state WHERE telegram_id=? LIMIT 1`).bind(telegramId).first().catch(() => null),
+    env.DB.prepare(`SELECT role,active FROM staff_users WHERE telegram_id=? LIMIT 1`).bind(telegramId).first().catch(() => null)
+  ]);
+  if (!profile) throw new ApiError(404, "Профиль игрока не найден.");
+  const activeAvatarId = normalizeCaseCosmeticId("avatar", caseRow?.active_avatar_id || "");
+  const gameAvatarUrl = activeAvatarId ? String(LIVEOPS_CONTENT_IMAGES.avatar?.[activeAvatarId] || "") : "";
+  const photoUrl = String(allTime?.photo_url || "");
+  const projectRole = isBotOwnerTelegramId(telegramId, env) ? "owner" : String(staffMember?.role || "");
+  return {
+    ok: true,
+    mode: "summary",
+    player: {
+      telegramId,
+      detailsLoaded: false,
+      summaryLoaded: true,
+      name: String(allTime?.display_name || subscriber?.display_name || allTime?.username || subscriber?.username || `Telegram ${telegramId}`),
+      username: String(allTime?.username || subscriber?.username || ""),
+      photoUrl,
+      activeAvatarId,
+      gameAvatarUrl,
+      avatarUrl: gameAvatarUrl || photoUrl,
+      projectRole,
+      projectRoleActive: projectRole === "owner" ? true : Number(staffMember?.active || 0) === 1,
+      balances: {
+        points: Number(profile.wallet || 0),
+        treats: Number(profile.treats || 0),
+        coffee: Number(profile.coffee || 0),
+        pendingPoints: Number(profile.pending_wallet || 0),
+        pendingTreats: Number(profile.pending_treats || 0),
+        pendingCoffee: Number(profile.pending_coffee || 0)
+      },
+      profileXp: Number(profile.profile_xp || 0),
+      personalRecord: Number(profile.best_score || 0),
+      allTimeScore: Number(allTime?.best_score || 0),
+      updatedAt: Number(profile.updated_at || 0)
+    }
+  };
+}
+
 async function ownerPanelPlayer(env, ctx) {
   const telegramId = String(ctx.body?.telegramId || "").trim();
   if (!/^\d{4,20}$/.test(telegramId)) throw new ApiError(400, "Некорректный Telegram ID игрока.");
-  const coreOnly = String(ctx.body?.mode || "full").trim().toLowerCase() === "core";
+  const mode = String(ctx.body?.mode || "full").trim().toLowerCase();
+  if (mode === "summary") return ownerPanelPlayerSummary(env, telegramId);
+  const coreOnly = mode === "core";
   const [profile, season, seasonPass] = await Promise.all([
     env.DB.prepare(coreOnly
       ? `SELECT telegram_id,wallet,best_score,treats,coffee,profile_xp,pending_wallet,pending_treats,pending_coffee,updated_at FROM admin_profile_state WHERE telegram_id=? LIMIT 1`
