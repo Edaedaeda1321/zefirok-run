@@ -42151,11 +42151,16 @@ async function ownerPanelPlayers(env, ctx) {
 async function ownerPanelPlayer(env, ctx) {
   const telegramId = String(ctx.body?.telegramId || "").trim();
   if (!/^\d{4,20}$/.test(telegramId)) throw new ApiError(400, "Некорректный Telegram ID игрока.");
-  const profile = await env.DB.prepare(`SELECT * FROM admin_profile_state WHERE telegram_id=? LIMIT 1`).bind(telegramId).first();
+  const coreOnly = String(ctx.body?.mode || "full").trim().toLowerCase() === "core";
+  const [profile, season, seasonPass] = await Promise.all([
+    env.DB.prepare(coreOnly
+      ? `SELECT telegram_id,wallet,best_score,treats,coffee,profile_xp,pending_wallet,pending_treats,pending_coffee,updated_at FROM admin_profile_state WHERE telegram_id=? LIMIT 1`
+      : `SELECT * FROM admin_profile_state WHERE telegram_id=? LIMIT 1`).bind(telegramId).first(),
+    selectLeaderboardSeasonForState(env),
+    loadSeasonPassSeasonForAccess(env)
+  ]);
   if (!profile) throw new ApiError(404, "Профиль игрока не найден.");
-  const season = await selectLeaderboardSeasonForState(env);
-  const seasonPass = await loadSeasonPassSeasonForAccess(env);
-  const dailyConfigPromise = loadDailyLoyaltyConfig(env, { allowDisabled:true }).catch(() => null);
+  const dailyConfigPromise = coreOnly ? Promise.resolve(null) : loadDailyLoyaltyConfig(env, { allowDisabled:true }).catch(() => null);
   const dailyStatePromise = (async () => {
     const config = await dailyConfigPromise;
     if (!config?.season?.id) return null;
@@ -42172,13 +42177,13 @@ async function ownerPanelPlayer(env, ctx) {
     env.DB.prepare(`SELECT * FROM leaderboard_all_time WHERE telegram_id=? LIMIT 1`).bind(telegramId).first(),
     env.DB.prepare(`SELECT * FROM leaderboard_entries WHERE season_id=? AND telegram_id=? LIMIT 1`).bind(String(season.id), telegramId).first(),
     env.DB.prepare(`SELECT display_name,username,last_started_at,active FROM bot_subscribers WHERE telegram_id=? LIMIT 1`).bind(telegramId).first().catch(() => null),
-    env.DB.prepare(`SELECT * FROM case_player_state WHERE telegram_id=? LIMIT 1`).bind(telegramId).first(),
+    env.DB.prepare(coreOnly ? `SELECT active_avatar_id,owned_avatars_json FROM case_player_state WHERE telegram_id=? LIMIT 1` : `SELECT * FROM case_player_state WHERE telegram_id=? LIMIT 1`).bind(telegramId).first(),
     env.DB.prepare(`SELECT case_type,COUNT(*) AS count FROM granted_cases WHERE telegram_id=? AND status='pending' GROUP BY case_type`).bind(telegramId).all(),
     env.DB.prepare(`SELECT xp,premium_tier,elite_plus_bonus_granted,revision FROM season_pass_players WHERE season_id=? AND telegram_id=? LIMIT 1`).bind(String(seasonPass?.id||''),telegramId).first().catch(() => null),
     env.DB.prepare(`SELECT role,active FROM staff_users WHERE telegram_id=? LIMIT 1`).bind(telegramId).first().catch(() => null),
-    env.DB.prepare(`SELECT run_id,season_id,score,duration_ms,accepted,rejection_reason,created_at FROM leaderboard_runs WHERE telegram_id=? ORDER BY created_at DESC LIMIT 10`).bind(telegramId).all().catch(() => ({results:[]})),
-    env.DB.prepare(`SELECT id,action,target_telegram_id,target_type,actor_name,actor_telegram_id,actor_role,old_value,new_value,created_at,details_json FROM staff_action_log WHERE target_telegram_id=? ORDER BY created_at DESC,id DESC LIMIT 12`).bind(telegramId).all().catch(() => ({results:[]})),
-    env.DB.prepare(`SELECT style_id FROM achievement_showcase_style_ownership WHERE telegram_id=? ORDER BY unlocked_at,style_id`).bind(telegramId).all().catch(() => ({results:[]})),
+    coreOnly ? Promise.resolve({results:[]}) : env.DB.prepare(`SELECT run_id,season_id,score,duration_ms,accepted,rejection_reason,created_at FROM leaderboard_runs WHERE telegram_id=? ORDER BY created_at DESC LIMIT 10`).bind(telegramId).all().catch(() => ({results:[]})),
+    coreOnly ? Promise.resolve({results:[]}) : env.DB.prepare(`SELECT id,action,target_telegram_id,target_type,actor_name,actor_telegram_id,actor_role,old_value,new_value,created_at,details_json FROM staff_action_log WHERE target_telegram_id=? ORDER BY created_at DESC,id DESC LIMIT 12`).bind(telegramId).all().catch(() => ({results:[]})),
+    coreOnly ? Promise.resolve({results:[]}) : env.DB.prepare(`SELECT style_id FROM achievement_showcase_style_ownership WHERE telegram_id=? ORDER BY unlocked_at,style_id`).bind(telegramId).all().catch(() => ({results:[]})),
     dailyStatePromise
   ]);
   const identity = seasonal || allTime || subscriber || {};
@@ -42191,7 +42196,7 @@ async function ownerPanelPlayer(env, ctx) {
   for (const row of caseCounts.results || []) if (row.case_type in pendingCases) pendingCases[row.case_type] = Number(row.count || 0);
   const passXp = Math.max(0, Number(passPlayer?.xp || 0));
   const ownedShowcaseStyles = new Set((showcaseOwnership?.results || []).map((row) => String(row.style_id || "")).filter(Boolean));
-  const showcaseStyles = ACHIEVEMENT_SHOWCASE_STYLES
+  const showcaseStyles = coreOnly ? [] : ACHIEVEMENT_SHOWCASE_STYLES
     .filter((style) => style?.rewardable === true)
     .map((style) => ({
       id:String(style.id || ""),
@@ -42206,6 +42211,7 @@ async function ownerPanelPlayer(env, ctx) {
     ok: true,
     player: {
       telegramId,
+      detailsLoaded: !coreOnly,
       name: String(identity.display_name || subscriber?.display_name || `Telegram ${telegramId}`),
       username: String(identity.username || subscriber?.username || ""),
       photoUrl,
@@ -42225,7 +42231,7 @@ async function ownerPanelPlayer(env, ctx) {
       currentSeasonTitle: String(season.title || ""),
       pendingCases,
       showcaseStyles,
-      cosmetics: {
+      cosmetics: coreOnly ? null : {
         activeAvatarId: String(caseState.activeAvatarId || ""),
         activeFrameId: String(caseState.activeFrameId || ""),
         activeTrailId: String(caseState.activeTrailId || ""),
