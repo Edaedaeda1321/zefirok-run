@@ -761,7 +761,7 @@ const LEGAL_DOCUMENTS = Object.freeze({
 });
 const LEGAL_BUILTIN_HASHES = Object.freeze({"agreement":{"version":"2026-08-13.1","sha256Ru":"7b9dad94ff4319c98b5fd01ade558ed3e409db705a8417551f89eb0dc4792c46","sha256En":"3f93d567fefd8e936a7ac8f63a9a5ceefc6bd6ecfcdfaad2e3733cf6e34d02d0","sha256Bundle":"93f28cca0556b480ee44a73ef775187a397dfc61bd4efda1171526a84fa69e84"},"privacy":{"version":"2026-08-13.2","sha256Ru":"687bba9ab60ee35124a17806ba7904870b1a3e09d23610430d45b92cd4719433","sha256En":"e0531d156e2ad0210b16349094499f7560cfca6167d911306926ed8e6ff45cbd","sha256Bundle":"435dd20f418603b3329dd1ab17a5e5ee619eee5341f425a547114fd235d4eee3"},"consent":{"version":"2026-08-13.1","sha256Ru":"10bcaf97ef31fad736f5e4f987ffad94c30c964e759b72c9a49c97738ede48d7","sha256En":"64383734cc3469028242d0c90867ccc42c7605269b187a94056fc963460ddb41","sha256Bundle":"11ebecc6978dac4f887b2ed4316f12f9ebafd4c41d5eeafed331ee12ae2948e0"}});
 
-const WORKER_BUILD = "1.2.0";
+const WORKER_BUILD = "1.2.1";
 const V07944_RELEASE_CANDIDATE_AUDIT = Object.freeze({ reset: true, claims: true, purchases: true, xp: true, concurrency: true });
 
 // =============================================================
@@ -1162,10 +1162,10 @@ const REWARD_LIMIT_RESET_AT_SECONDS = 1784805300; // 23.07.2026 11:15 UTC
 // НАСТРОЙКИ ВЕРСИИ И РАЗДЕЛА «ОБНОВЛЕНИЕ» В БОТЕ.
 // Схема версии: первая цифра — год игры, вторая — сезонное обновление, третья — исправление.
 // Примеры: 1.0.1 — фикс, 1.2.0 — сезонное обновление, 2.0.0 — второй год игры.
-const GAME_VERSION = "1.2.0";
-const GAME_UPDATE_DATE = "27 августа 2026";
-const GAME_UPDATE_TITLE = "Сладкий Забег 1.2.0 — большое обновление уже в игре";
-const GAME_UPDATE_TYPE = "Большое обновление интерфейса и игровых разделов";
+const GAME_VERSION = "1.2.1";
+const GAME_UPDATE_DATE = "8 сентября 2026";
+const GAME_UPDATE_TITLE = "Сладкий Забег 1.2.1 — кафе закрывается… но это только начало";
+const GAME_UPDATE_TYPE = "Предсезонное обновление";
 
 // Что произошло с прогрессом в этом релизе:
 // "reset" — крупное обновление с обнулением прогресса;
@@ -1174,15 +1174,11 @@ const GAME_UPDATE_PROGRESS_MODE = "keep";
 const GAME_UPDATE_RESET_REASON = "Прогресс сохраняется. Обновление не сбрасывает валюты, XP, покупки, рейтинг за всё время или коллекцию.";
 
 const GAME_UPDATE_NOTES = Object.freeze([
-  "Полностью обновлён интерфейс: навигация и ключевые экраны стали понятнее и удобнее.",
-  "Профиль переработан: прогресс, оформление, достижения, коллекции и быстрые переходы собраны в одном месте.",
-  "Добавлены «Достижения» с наградами, очками престижа и витриной, а также «Альбом Зеффи» с тематическими коллекциями.",
-  "Обновлены магазин и «Мои покупки»: товары, кейсы, усилители, покупки и «Почта Зеффи» отображаются понятнее.",
-  "Обновлён рейтинг: сезонный прогресс, позиции, рекорды и награды стали нагляднее.",
-  "Добавлена реферальная система «Друзья кафе»: приглашения, совместные цели и награды за игру с друзьями.",
-  "Добавлены ежедневные награды, серия входов и бонусы для возвращающихся игроков.",
-  "Батл-пасс уже готовится и появится совсем скоро.",
-  "Исправлены ошибки и доработан функционал: стабильность, переходы между разделами и отображение данных.",
+  "Кафе перешло в финальную атмосферу первого сезона — в забеге появился новый вечерний фон.",
+  "Сезон I подходит к концу: в кафе остаются последние гости перед закрытием этой главы.",
+  "Сезон II — «Ночь сладких чудес» стартует 13 сентября 2026 года.",
+  "В новом сезоне вас ждут новые награды, задания, активности и сюрпризы во время забегов.",
+  "Прогресс, покупки, коллекция и рекорды сохраняются.",
 ]);
 
 
@@ -1239,45 +1235,26 @@ const DEFAULT_SEASON_RESET_PLAN = Object.freeze({
 });
 
 // Встроенная релизная новость. BOT_NEWS_IMAGE_URL в Cloudflare может переопределить картинку.
-const DEFAULT_BOT_NEWS_IMAGE_URL = `${DEFAULT_GAME_URL.replace(/\/$/, "")}/assets/news/update_v_1_2_0.jpeg?v=1.2.0`;
-const BOT_NEWS_TITLE = "Сладкий Забег 1.2.0 — большое обновление уже в игре";
-const BOT_NEWS_TEXT = `Версия 1.2.0 уже доступна! Это одно из самых крупных обновлений «Сладкого Забега»: мы полностью обновили интерфейс и переработали основные разделы игры. Весь ваш прогресс, покупки, коллекция и рейтинг сохраняются.
+const DEFAULT_BOT_NEWS_IMAGE_URL = `${DEFAULT_GAME_URL.replace(/\/$/, "")}/assets/optimized/v0.79.5/background_season2.webp?v=1.2.1`;
+const BOT_NEWS_TITLE = "Кафе закрывается… но это только начало 🍰✨";
+const BOT_NEWS_TEXT = `Сезон I подходит к концу. В кафе остаются последние гости, вечер становится тише, а Зеффи готовится закрыть двери этой главы.
 
-✨ ОБНОВЛЁННЫЙ ИНТЕРФЕЙС
-• Полностью обновили главные экраны, навигацию, карточки и окна — теперь нужные разделы проще находить, а важная информация стала заметнее.
-• Профиль, магазин, рейтинг и другие игровые экраны получили более цельный и удобный интерфейс.
+Но прощаться ненадолго: уже 13 сентября стартует Сезон II — «Ночь сладких чудес».
 
-👤 ПРОФИЛЬ, ДОСТИЖЕНИЯ И АЛЬБОМ
-• Профиль стал полноценным центром аккаунта: уровень, XP, рекорд, оформление и быстрые переходы в ключевые разделы собраны в одном месте.
-• Добавлены «Достижения» с наградами, очками престижа, сериями достижений и собственной витриной. До трёх выполненных достижений можно показать в профиле и рейтинге.
-• «Альбом Зеффи» собирает тематические коллекции, истории и секретные находки, за завершение которых можно получать награды.
+Мы подготовили для вас много нового:
 
-🛍 МАГАЗИН И «МОИ ПОКУПКИ»
-• Магазин заметно обновлён: карточки товаров, кейсов и рекомендаций стали понятнее, а покупки — удобнее.
-• «Мои покупки» теперь работают как единый склад: покупки, усилители, постоянные кейсы и «Почта Зеффи» находятся в одном разделе.
-• В «Почте Зеффи» сохраняются письма, подарки, компенсации и награды от команды.
+🌙 новая история и атмосфера;
+🎁 новые сезонные награды;
+🎟 обновлённый сезонный пропуск;
+✅ новые задания и активности;
+✨ новые сюрпризы во время забегов;
+❤️ ещё больше поводов возвращаться в игру каждый день.
 
-🏆 РЕЙТИНГ
-• Обновили интерфейс рейтинга: сезонный прогресс, позиции игроков, рекорды и награды стали нагляднее.
-• Достижения из витрины профиля теперь помогают сделать карточку игрока более личной.
+До старта нового сезона ещё есть немного времени — проведите последние дни в кафе вместе с Зеффи.
 
-🤝 ДРУЗЬЯ КАФЕ
-• Добавлена реферальная система: приглашайте друзей по персональной ссылке, играйте вместе и открывайте совместные награды.
-• Карточки друзей показывают прогресс и ближайшие цели, а за активность открываются дополнительные подарки.
-
-🎁 ЕЖЕДНЕВНЫЕ НАГРАДЫ
-• Появилась серия ежедневных входов с гарантированными наградами и усиленным седьмым днём.
-• Для возвращающихся игроков предусмотрены дополнительные бонусы, чтобы снова включиться в забег было приятнее.
-
-🎟 СКОРО — БАТЛ-ПАСС
-• Мы продолжаем готовить батл-пасс. Он появится совсем скоро — о запуске и наградах расскажем отдельной новостью.
-
-🛠 ИСПРАВЛЕНИЕ ОШИБОК И ДОРАБОТКА ФУНКЦИОНАЛА
-• Исправили множество небольших ошибок и доработали стабильность игры, переходы между разделами, отображение данных и работу игровых функций.
-• Продолжаем улучшать игру по вашим отзывам — и это только часть обновления!
-
-Спасибо, что остаетесь с нами ❤️`;
-const BOT_NEWS_PUBLISHED_AT = 1787817240;
+Спасибо, что были с нами в Сезоне I.
+Увидимся 13 сентября в «Ночи сладких чудес»!`;
+const BOT_NEWS_PUBLISHED_AT = 1788816540;
 // =============================================================
 
 const PLAYER_BOT_COMMANDS = Object.freeze([
@@ -2121,7 +2098,7 @@ export default {
         await ensureRuntimeCompatibilitySchema(env);
         await ensureDailyLoyaltySchema(env);
         await ensureRelease106PlayerFix(env);
-        await ensureRelease120News(env);
+        await ensureRelease121News(env);
         await processServerCron(env, controller);
       } catch (error) {
         console.error("Server Cron dispatcher failed", error);
@@ -6797,7 +6774,7 @@ async function ensureGameNewsReadSchema(env) {
 }
 
 async function getGameNewsForPlayer(env, telegramId) {
-  await ensureRelease120News(env);
+  await ensureRelease121News(env);
   await ensureGameNewsReadSchema(env);
   const id = String(telegramId || "").trim();
   if (!id) return null;
@@ -9577,30 +9554,30 @@ async function ensureRelease106PlayerFix(env) {
   return release106PlayerFixPromise;
 }
 
-const RELEASE_120_NEWS_KEY = "release-1.2.0-news-v1";
-let release120NewsReady = false;
-let release120NewsPromise = null;
+const RELEASE_121_NEWS_KEY = "release-1.2.1-news-v1";
+let release121NewsReady = false;
+let release121NewsPromise = null;
 
-async function ensureRelease120News(env) {
-  if (release120NewsReady) return;
-  if (release120NewsPromise) return release120NewsPromise;
-  release120NewsPromise = (async () => {
+async function ensureRelease121News(env) {
+  if (release121NewsReady) return;
+  if (release121NewsPromise) return release121NewsPromise;
+  release121NewsPromise = (async () => {
     requireDatabase(env);
-    const state = await getSystemState(env, RELEASE_120_NEWS_KEY);
-    if (state?.value === "done") { release120NewsReady = true; return; }
+    const state = await getSystemState(env, RELEASE_121_NEWS_KEY);
+    if (state?.value === "done") { release121NewsReady = true; return; }
     const now = Math.floor(Date.now() / 1000);
     await env.DB.batch([
       env.DB.prepare(`UPDATE bot_news SET status='archived' WHERE status='published' AND published_at<?`).bind(BOT_NEWS_PUBLISHED_AT),
       env.DB.prepare(`INSERT INTO bot_news(title,body,image_url,status,created_at,published_at,created_by,created_by_name)
         SELECT ?,?,?,'published',?,?,?,'Система релиза'
         WHERE NOT EXISTS(SELECT 1 FROM bot_news WHERE title=? AND published_at=? LIMIT 1)`)
-        .bind(BOT_NEWS_TITLE,BOT_NEWS_TEXT,DEFAULT_BOT_NEWS_IMAGE_URL,BOT_NEWS_PUBLISHED_AT,BOT_NEWS_PUBLISHED_AT,'release:1.2.0',BOT_NEWS_TITLE,BOT_NEWS_PUBLISHED_AT),
+        .bind(BOT_NEWS_TITLE,BOT_NEWS_TEXT,DEFAULT_BOT_NEWS_IMAGE_URL,BOT_NEWS_PUBLISHED_AT,BOT_NEWS_PUBLISHED_AT,'release:1.2.1',BOT_NEWS_TITLE,BOT_NEWS_PUBLISHED_AT),
       env.DB.prepare(`INSERT INTO bot_system_state(state_key,state_value,updated_at) VALUES(?, 'done', ?)
-        ON CONFLICT(state_key) DO UPDATE SET state_value='done',updated_at=excluded.updated_at`).bind(RELEASE_120_NEWS_KEY,now)
+        ON CONFLICT(state_key) DO UPDATE SET state_value='done',updated_at=excluded.updated_at`).bind(RELEASE_121_NEWS_KEY,now)
     ]);
-    release120NewsReady = true;
-  })().finally(() => { release120NewsPromise = null; });
-  return release120NewsPromise;
+    release121NewsReady = true;
+  })().finally(() => { release121NewsPromise = null; });
+  return release121NewsPromise;
 }
 
 async function createGrantedCases(env, telegramId, caseTypeValue, quantityValue, grantedBy, reasonValue) {
@@ -16188,7 +16165,7 @@ async function publishBotNews(chatId, requester, rawPayload, env) {
 }
 
 async function latestBotNews(env) {
-  await ensureRelease120News(env);
+  await ensureRelease121News(env);
   return env.DB.prepare(
     `SELECT title, body, image_url, published_at FROM bot_news
      WHERE status = 'published' ORDER BY published_at DESC, id DESC LIMIT 1`
@@ -44043,7 +44020,7 @@ async function ownerPanelNews(env, ctx) {
   const published=rows.find((row)=>String(row.status||"")==="published")||null;
   return {ok:true,
     channelHelp:{bot:"Публикация сохраняет пост в разделе «Новости» бота и запускает массовую доставку активным подписчикам через безопасную очередь/Cron.",game:"Та же опубликованная новость автоматически становится текущей новостью внутри игры. Непрочитавшие игроки увидят индикатор «Новая новость» при входе; отметка прочтения хранится на сервере."},
-    gameNews:published?{id:Number(published.id||0),title:String(published.title||""),body:String(published.body||""),imageUrl:String(published.image_url||""),version:GAME_VERSION,source:"Control Center · уведомление внутри игры",publishedAt:Number(published.published_at||0)}:{title:BOT_NEWS_TITLE,body:BOT_NEWS_TEXT,imageUrl:`${base}/assets/news/update_v_1_2_0.jpeg?v=1.2.0`,version:GAME_VERSION,source:"встроенное релизное окно"},
+    gameNews:published?{id:Number(published.id||0),title:String(published.title||""),body:String(published.body||""),imageUrl:String(published.image_url||""),version:GAME_VERSION,source:"Control Center · уведомление внутри игры",publishedAt:Number(published.published_at||0)}:{title:BOT_NEWS_TITLE,body:BOT_NEWS_TEXT,imageUrl:`${base}/assets/optimized/v0.79.5/background_season2.webp?v=1.2.1`,version:GAME_VERSION,source:"встроенное релизное окно"},
     news:rows.map(row=>({id:Number(row.id||0),title:String(row.title||""),body:String(row.body||""),imageUrl:String(row.image_url||""),status:String(row.status||""),publishedAt:Number(row.published_at||0),createdByName:String(row.created_by_name||""),delivery:ownerPanelNewsBroadcastState(row)})),
     assetCatalog:{source:assetCatalog.source,catalogHash:assetCatalog.catalogHash||"",count:assetCatalog.count},
     presets:[...mediaPresets,...assetCatalog.presets]

@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "catalogHash": "f158ddafd961caa0",
-  "count": 457,
+  "catalogHash": "49758e45474081a7",
+  "count": 459,
   "images": [
     {
       "fileName": "achievements/background_achivment_panel.png",
@@ -3484,6 +3484,14 @@
       "modified": 1787698023000
     },
     {
+      "fileName": "ui/icon_oprosnik.png",
+      "label": "Icon oprosnik",
+      "folder": "ui",
+      "path": "/assets/ui/icon_oprosnik.png",
+      "size": 210274,
+      "modified": 1788801530000
+    },
+    {
       "fileName": "ui/icon_pause_button.png",
       "label": "Icon pause button",
       "folder": "ui",
@@ -3554,6 +3562,14 @@
       "path": "/assets/ui/icon_sepport.png",
       "size": 197716,
       "modified": 1787698022000
+    },
+    {
+      "fileName": "ui/icon_series_protection.png",
+      "label": "Icon series protection",
+      "folder": "ui",
+      "path": "/assets/ui/icon_series_protection.png",
+      "size": 158450,
+      "modified": 1788801530000
     },
     {
       "fileName": "ui/icon_setting_FAQ.png",
