@@ -1235,7 +1235,7 @@ const DEFAULT_SEASON_RESET_PLAN = Object.freeze({
 });
 
 // Встроенная релизная новость. BOT_NEWS_IMAGE_URL в Cloudflare может переопределить картинку.
-const DEFAULT_BOT_NEWS_IMAGE_URL = `${DEFAULT_GAME_URL.replace(/\/$/, "")}/assets/optimized/v0.79.5/background_season2.webp?v=1.2.1`;
+const DEFAULT_BOT_NEWS_IMAGE_URL = `${DEFAULT_GAME_URL.replace(/\/$/, "")}/assets/news/news_post_final_season1.png?v=bedb6870bd5d`;
 const BOT_NEWS_TITLE = "Кафе закрывается… но это только начало 🍰✨";
 const BOT_NEWS_TEXT = `Сезон I подходит к концу. В кафе остаются последние гости, вечер становится тише, а Зеффи готовится закрыть двери этой главы.
 
@@ -9554,7 +9554,7 @@ async function ensureRelease106PlayerFix(env) {
   return release106PlayerFixPromise;
 }
 
-const RELEASE_121_NEWS_KEY = "release-1.2.1-news-v1";
+const RELEASE_121_NEWS_KEY = "release-1.2.1-news-image-v2";
 let release121NewsReady = false;
 let release121NewsPromise = null;
 
@@ -9572,6 +9572,8 @@ async function ensureRelease121News(env) {
         SELECT ?,?,?,'published',?,?,?,'Система релиза'
         WHERE NOT EXISTS(SELECT 1 FROM bot_news WHERE title=? AND published_at=? LIMIT 1)`)
         .bind(BOT_NEWS_TITLE,BOT_NEWS_TEXT,DEFAULT_BOT_NEWS_IMAGE_URL,BOT_NEWS_PUBLISHED_AT,BOT_NEWS_PUBLISHED_AT,'release:1.2.1',BOT_NEWS_TITLE,BOT_NEWS_PUBLISHED_AT),
+      env.DB.prepare(`UPDATE bot_news SET image_url=? WHERE created_by='release:1.2.1' AND published_at=?`)
+        .bind(DEFAULT_BOT_NEWS_IMAGE_URL,BOT_NEWS_PUBLISHED_AT),
       env.DB.prepare(`INSERT INTO bot_system_state(state_key,state_value,updated_at) VALUES(?, 'done', ?)
         ON CONFLICT(state_key) DO UPDATE SET state_value='done',updated_at=excluded.updated_at`).bind(RELEASE_121_NEWS_KEY,now)
     ]);
@@ -43965,7 +43967,7 @@ async function ownerPanelDeleteSeasonPassSeason(env, ctx) {
 function ownerPanelNewsFallbackPresets(base) {
   return [
     {label:"Кейсы 5.0.1",url:`${base}/assets/news/cases-5.0.1.png`,path:"/assets/news/cases-5.0.1.png",group:"Новости"},
-    {label:"Обновление 1.2.0",url:`${base}/assets/news/update_v_1_2_0.jpeg?v=1.2.0`,path:"/assets/news/update_v_1_2_0.jpeg",group:"Новости"},{label:"Релиз игры",url:`${base}/assets/news/relise_game_news.png`,path:"/assets/news/relise_game_news.png",group:"Новости"}
+    {label:"Обновление 1.2.1",url:`${base}/assets/news/news_post_final_season1.png?v=bedb6870bd5d`,path:"/assets/news/news_post_final_season1.png",group:"Новости"},{label:"Релиз игры",url:`${base}/assets/news/relise_game_news.png`,path:"/assets/news/relise_game_news.png",group:"Новости"}
   ];
 }
 
@@ -44020,7 +44022,7 @@ async function ownerPanelNews(env, ctx) {
   const published=rows.find((row)=>String(row.status||"")==="published")||null;
   return {ok:true,
     channelHelp:{bot:"Публикация сохраняет пост в разделе «Новости» бота и запускает массовую доставку активным подписчикам через безопасную очередь/Cron.",game:"Та же опубликованная новость автоматически становится текущей новостью внутри игры. Непрочитавшие игроки увидят индикатор «Новая новость» при входе; отметка прочтения хранится на сервере."},
-    gameNews:published?{id:Number(published.id||0),title:String(published.title||""),body:String(published.body||""),imageUrl:String(published.image_url||""),version:GAME_VERSION,source:"Control Center · уведомление внутри игры",publishedAt:Number(published.published_at||0)}:{title:BOT_NEWS_TITLE,body:BOT_NEWS_TEXT,imageUrl:`${base}/assets/optimized/v0.79.5/background_season2.webp?v=1.2.1`,version:GAME_VERSION,source:"встроенное релизное окно"},
+    gameNews:published?{id:Number(published.id||0),title:String(published.title||""),body:String(published.body||""),imageUrl:String(published.image_url||""),version:GAME_VERSION,source:"Control Center · уведомление внутри игры",publishedAt:Number(published.published_at||0)}:{title:BOT_NEWS_TITLE,body:BOT_NEWS_TEXT,imageUrl:`${base}/assets/news/news_post_final_season1.png?v=bedb6870bd5d`,version:GAME_VERSION,source:"встроенное релизное окно"},
     news:rows.map(row=>({id:Number(row.id||0),title:String(row.title||""),body:String(row.body||""),imageUrl:String(row.image_url||""),status:String(row.status||""),publishedAt:Number(row.published_at||0),createdByName:String(row.created_by_name||""),delivery:ownerPanelNewsBroadcastState(row)})),
     assetCatalog:{source:assetCatalog.source,catalogHash:assetCatalog.catalogHash||"",count:assetCatalog.count},
     presets:[...mediaPresets,...assetCatalog.presets]

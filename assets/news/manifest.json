@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "catalogHash": "7377ce118e0dcff8",
-  "count": 9,
+  "catalogHash": "f6df356e8242d62b",
+  "count": 10,
   "images": [
     {
       "fileName": "cases-5.0.1.png",
@@ -30,6 +30,13 @@
       "path": "/assets/news/news.png",
       "hash": "e1edaa98719f",
       "size": 2287236
+    },
+    {
+      "fileName": "news_post_final_season1.png",
+      "label": "News post final season1",
+      "path": "/assets/news/news_post_final_season1.png",
+      "hash": "bedb6870bd5d",
+      "size": 3381958
     },
     {
       "fileName": "relise_clear_progress_news.png",
