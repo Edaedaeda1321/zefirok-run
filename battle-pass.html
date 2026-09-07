@@ -4728,7 +4728,7 @@ img[src$="/xp.webp"]{
     render();
     if (received) {
       closeRewardPreview({animated:false});
-      openRewardSummary([{premium:received.lane==="premium",icon:"",image:received.imageUrl||"",name:received.title||"Награда",description:"Начислено на аккаунт",level:received.level,source:`Уровень ${received.level} · ${received.lane==="premium"?"Премиум":"Бесплатно"}`,rewardType:received.rewardType||"",amount:Number(received.amount||0),itemId:received.itemId||""}]);
+      openRewardSummary([{premium:received.lane==="premium",icon:"",image:received.imageUrl||"",name:received.title||"Награда",description:"Начислено на аккаунт",level:received.level,source:`Уровень ${received.level} · ${received.lane==="premium"?"Премиум":"Бесплатно"}`,rewardType:received.rewardType||"",amount:Number(received.amount||0),itemId:received.itemId||"",streakProtection:received.streakProtection||null}]);
     } else {
       const next = rewardPreviewState(context.id);
       if (next?.claimed) openRewardPreview(context.id);
@@ -6017,7 +6017,7 @@ img[src$="/xp.webp"]{
       applyServerPass(data);
       render();
       scrollToLevel(currentLevel());
-      const received = Array.isArray(data.received) ? data.received.map(item=>({premium:true,icon:"",image:item.imageUrl||"",name:item.title||"Награда",description:"Бонус тарифа",level:"—",source:tier==="elite_plus"?"Элитный+":"Элитный",rewardType:item.rewardType||"",amount:Number(item.amount||0),itemId:item.itemId||""})) : [];
+      const received = Array.isArray(data.received) ? data.received.map(item=>({premium:true,icon:"",image:item.imageUrl||"",name:item.title||"Награда",description:"Бонус тарифа",level:"—",source:tier==="elite_plus"?"Элитный+":"Элитный",rewardType:item.rewardType||"",amount:Number(item.amount||0),itemId:item.itemId||"",streakProtection:item.streakProtection||null})) : [];
       passNotifyHaptic(data.repeated ? "warning" : "success");
       showToast(data.repeated ? "Тариф уже активирован" : (tier === "elite_plus" ? "Тариф «Элитный+» активирован" : "Тариф «Элитный» активирован"));
       if(!data.repeated){
@@ -6062,11 +6062,19 @@ img[src$="/xp.webp"]{
   }
 
   function openRewardSummary(items) {
-    const valid=(Array.isArray(items)?items:[]).filter(Boolean);
-    if (!valid.length) return;
-    const uniqueLevels=new Set(valid.map(item=>String(item?.level??"")).filter(value=>/^\d+$/.test(value)));
-    el("rewardSummaryTitle").textContent="Вот это улов!";
-    el("rewardSummarySubtitle").textContent=`Получено ${valid.length.toLocaleString("ru-RU")} ${valid.length%10===1&&valid.length%100!==11?"награда":valid.length%10>=2&&valid.length%10<=4&&(valid.length%100<10||valid.length%100>=20)?"награды":"наград"}${uniqueLevels.size>1?` · уровней: ${uniqueLevels.size}`:""}`;
+    const original=(Array.isArray(items)?items:[]).filter(Boolean);
+    if (!original.length) return;
+    const overflowRows=original.map(item=>item?.streakProtection).filter(value=>Number(value?.overflowAmount||0)>0);
+    const overflow=overflowRows.length?{
+      overflowAmount:overflowRows.reduce((sum,value)=>sum+Math.max(0,Number(value?.overflowAmount||0)),0),
+      compensationAmount:overflowRows.reduce((sum,value)=>sum+Math.max(0,Number(value?.compensationAmount||0)),0),
+      compensationType:String(overflowRows[0]?.compensationType||overflowRows[0]?.compensationKind||'points')
+    }:null;
+    const compensationKind=String(overflow?.compensationType||'points');
+    const valid=overflow?[...original,{premium:true,icon:'',image:'/assets/ui/icon_series_protection.png',name:'Запас защиты заполнен',source:`${Number(overflow.overflowAmount||0)} лишн. → компенсация ${Number(overflow.compensationAmount||0).toLocaleString('ru-RU')} ${compensationKind==='zefir'?'зефира':compensationKind==='coffee'?'кофе':'очков'}`,rewardType:'streak_protection_overflow',amount:1,itemId:'',overflowNotice:true}]:original;
+    const uniqueLevels=new Set(original.map(item=>String(item?.level??"")).filter(value=>/^\d+$/.test(value)));
+    el("rewardSummaryTitle").textContent=overflow?"Защита серии получена":"Вот это улов!";
+    el("rewardSummarySubtitle").textContent=overflow?`Запас защиты достиг лимита. Лишняя защита автоматически превращена в компенсацию.`:`Получено ${original.length.toLocaleString("ru-RU")} ${original.length%10===1&&original.length%100!==11?"награда":original.length%10>=2&&original.length%10<=4&&(original.length%100<10||original.length%100>=20)?"награды":"наград"}${uniqueLevels.size>1?` · уровней: ${uniqueLevels.size}`:""}`;
 
     const resources={zefir:0,coffee:0,points:0};
     for(const item of valid){const kind=rewardSummaryKind(item);if(kind in resources)resources[kind]+=rewardSummaryAmount(item);}
@@ -6208,7 +6216,7 @@ img[src$="/xp.webp"]{
       rewardButton.textContent = "Получаем…";
       void claim(rewardButton.dataset.claim).then((received)=>{
         render();
-        if (received) openRewardSummary([{premium:received.lane==="premium",icon:"",image:received.imageUrl||"",name:received.title||"Награда",description:"Начислено на аккаунт",level:received.level,source:`Уровень ${received.level} · ${received.lane==="premium"?"Премиум":"Бесплатно"}`,rewardType:received.rewardType||"",amount:Number(received.amount||0),itemId:received.itemId||""}]);
+        if (received) openRewardSummary([{premium:received.lane==="premium",icon:"",image:received.imageUrl||"",name:received.title||"Награда",description:"Начислено на аккаунт",level:received.level,source:`Уровень ${received.level} · ${received.lane==="premium"?"Премиум":"Бесплатно"}`,rewardType:received.rewardType||"",amount:Number(received.amount||0),itemId:received.itemId||"",streakProtection:received.streakProtection||null}]);
       });
       return;
     }
@@ -6375,7 +6383,7 @@ img[src$="/xp.webp"]{
     const button=el("claimAll");const oldText=button.textContent;button.disabled=true;button.textContent="Получаем награды…";
     void seasonPassApi(CLAIM_ALL_PATH).then((data)=>{
       applyServerPass(data); render(); notifyAccountChanged();
-      const received = Array.isArray(data.received) ? data.received.map(item=>({premium:item.lane==="premium",icon:"",image:item.imageUrl||"",name:item.title||"Награда",description:"Начислено на аккаунт",level:item.level,source:`Уровень ${item.level} · ${item.lane==="premium"?"Премиум":"Бесплатно"}`,rewardType:item.rewardType||"",amount:Number(item.amount||0),itemId:item.itemId||""})) : [];
+      const received = Array.isArray(data.received) ? data.received.map(item=>({premium:item.lane==="premium",icon:"",image:item.imageUrl||"",name:item.title||"Награда",description:"Начислено на аккаунт",level:item.level,source:`Уровень ${item.level} · ${item.lane==="premium"?"Премиум":"Бесплатно"}`,rewardType:item.rewardType||"",amount:Number(item.amount||0),itemId:item.itemId||"",streakProtection:item.streakProtection||null})) : [];
       const failedCount = Array.isArray(data?.failedRewards) ? data.failedRewards.length : 0;
       if (received.length) {
         passNotifyHaptic(failedCount?"warning":"success");

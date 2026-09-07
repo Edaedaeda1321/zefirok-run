@@ -1946,9 +1946,14 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
     removeGamePollOverlay();
     const overlay = gamePollElement("div", "zefirok-game-poll-overlay");
     const card = gamePollElement("div", "zefirok-game-poll-card");
+    const pollHead = gamePollElement("div", "zefirok-game-poll-head");
+    const pollIcon = gamePollElement("img", "zefirok-game-poll-icon");
+    pollIcon.src = "/assets/ui/icon_oprosnik.png";
+    pollIcon.alt = "";
+    const pollHeadCopy = gamePollElement("div", "zefirok-game-poll-head-copy");
     const badge = gamePollElement("div", "zefirok-game-poll-badge", "Опрос игроков");
     const title = gamePollElement("h2", "", poll.question);
-    card.append(badge, title);
+    pollHeadCopy.append(badge,title);pollHead.append(pollIcon,pollHeadCopy);card.append(pollHead);
     if (poll.description) card.append(gamePollElement("p", "zefirok-game-poll-description", poll.description));
     if (poll.rewardText && poll.rewardText !== "без награды") card.append(gamePollElement("div", "zefirok-game-poll-reward", `🎁 Награда: ${poll.rewardText}`));
     const answerType = String(poll.answerType || "choice");
@@ -2043,7 +2048,7 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
   }
 
   const pollStyle = document.createElement("style");
-  pollStyle.textContent = `.zefirok-game-poll-overlay{position:fixed;inset:0;z-index:999999;display:grid;place-items:center;padding:18px;background:rgba(77,44,35,.52);backdrop-filter:blur(6px);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}.zefirok-game-poll-card{width:min(420px,calc(100vw - 36px));max-height:calc(100vh - 52px);overflow:auto;box-sizing:border-box;padding:22px;border-radius:24px;background:#fff8f2;color:#4e342e;box-shadow:0 24px 70px rgba(66,35,28,.3)}.zefirok-game-poll-badge{display:inline-flex;padding:7px 11px;border-radius:999px;background:#ffe1ea;color:#a43f66;font-size:12px;font-weight:800}.zefirok-game-poll-card h2{margin:14px 0 8px;font-size:22px;line-height:1.18}.zefirok-game-poll-description{margin:0 0 12px;color:#80665e}.zefirok-game-poll-reward{margin:12px 0;padding:10px 12px;border-radius:14px;background:#fff0c9;font-weight:750}.zefirok-game-poll-options{display:grid;gap:9px;margin-top:14px}.zefirok-game-poll-option{width:100%;padding:12px 14px;border:2px solid #ead9d1;border-radius:15px;background:#fff;color:#513831;text-align:left;font-size:15px;font-weight:700}.zefirok-game-poll-option.is-selected{border-color:#e56f9b;background:#ffe4ee;color:#8d3155}.zefirok-game-poll-comment-label{display:grid;gap:7px;margin-top:14px;color:#6f5149;font-size:13px;font-weight:800}.zefirok-game-poll-comment{width:100%;min-height:112px;resize:vertical;box-sizing:border-box;padding:12px 14px;border:2px solid #ead9d1;border-radius:15px;background:#fff;color:#513831;font:500 15px/1.35 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;outline:none}.zefirok-game-poll-comment:focus{border-color:#e56f9b}.zefirok-game-poll-status{min-height:20px;margin:12px 2px 0;color:#8c6b61;font-size:13px}.zefirok-game-poll-results{display:grid;gap:5px;margin:14px 0;padding:12px;border-radius:14px;background:#f6ebe5;font-size:13px}.zefirok-game-poll-actions{display:grid;grid-template-columns:1fr 1.4fr;gap:10px;margin-top:12px}.zefirok-game-poll-actions button,.zefirok-game-poll-card>button{padding:12px;border:0;border-radius:14px;font-size:14px;font-weight:800}.zefirok-game-poll-later{background:#eee2dc;color:#70574f}.zefirok-game-poll-submit{background:linear-gradient(135deg,#ed77a2,#d85e8c);color:#fff}`;
+  pollStyle.textContent = `.zefirok-game-poll-overlay{position:fixed;inset:0;z-index:999999;display:grid;place-items:center;padding:18px;background:rgba(77,44,35,.52);backdrop-filter:blur(6px);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}.zefirok-game-poll-card{width:min(420px,calc(100vw - 36px));max-height:calc(100vh - 52px);overflow:auto;box-sizing:border-box;padding:22px;border-radius:24px;background:#fff8f2;color:#4e342e;box-shadow:0 24px 70px rgba(66,35,28,.3)}.zefirok-game-poll-head{display:grid;grid-template-columns:72px minmax(0,1fr);gap:12px;align-items:center}.zefirok-game-poll-icon{width:72px;height:72px;object-fit:contain;filter:drop-shadow(0 5px 9px rgba(150,75,90,.13))}.zefirok-game-poll-head-copy{min-width:0}.zefirok-game-poll-badge{display:inline-flex;padding:7px 11px;border-radius:999px;background:#ffe1ea;color:#a43f66;font-size:12px;font-weight:800}.zefirok-game-poll-card h2{margin:7px 0 8px;font-size:22px;line-height:1.18}.zefirok-game-poll-description{margin:0 0 12px;color:#80665e}.zefirok-game-poll-reward{margin:12px 0;padding:10px 12px;border-radius:14px;background:#fff0c9;font-weight:750}.zefirok-game-poll-options{display:grid;gap:9px;margin-top:14px}.zefirok-game-poll-option{width:100%;padding:12px 14px;border:2px solid #ead9d1;border-radius:15px;background:#fff;color:#513831;text-align:left;font-size:15px;font-weight:700}.zefirok-game-poll-option.is-selected{border-color:#e56f9b;background:#ffe4ee;color:#8d3155}.zefirok-game-poll-comment-label{display:grid;gap:7px;margin-top:14px;color:#6f5149;font-size:13px;font-weight:800}.zefirok-game-poll-comment{width:100%;min-height:112px;resize:vertical;box-sizing:border-box;padding:12px 14px;border:2px solid #ead9d1;border-radius:15px;background:#fff;color:#513831;font:500 15px/1.35 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;outline:none}.zefirok-game-poll-comment:focus{border-color:#e56f9b}.zefirok-game-poll-status{min-height:20px;margin:12px 2px 0;color:#8c6b61;font-size:13px}.zefirok-game-poll-results{display:grid;gap:5px;margin:14px 0;padding:12px;border-radius:14px;background:#f6ebe5;font-size:13px}.zefirok-game-poll-actions{display:grid;grid-template-columns:1fr 1.4fr;gap:10px;margin-top:12px}.zefirok-game-poll-actions button,.zefirok-game-poll-card>button{padding:12px;border:0;border-radius:14px;font-size:14px;font-weight:800}.zefirok-game-poll-later{background:#eee2dc;color:#70574f}.zefirok-game-poll-submit{background:linear-gradient(135deg,#ed77a2,#d85e8c);color:#fff}`;
   document.head.append(pollStyle);
   window.addEventListener("load", () => window.setTimeout(checkGamePollAfterOpen, 1600), { once: true });
 
@@ -13275,6 +13280,9 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         runTreats: 0,
         coffee: 0,
         runCoffee: 0,
+        runCaseDrop: null,
+        runCaseDropSpawned: false,
+        runCaseDropCaught: false,
         wallet: 0,
         inventory: {},
         redemptionCodes: [],
@@ -14235,11 +14243,13 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           open: &quot;/assets/cases/alex/alex_case_open.png&quot;
         })
       });
-      for (const caseImages of Object.values(CASE_IMAGE_CATALOG)) {
+      const RUN_CASE_DROP_IMAGES = {};
+      for (const [caseType,caseImages] of Object.entries(CASE_IMAGE_CATALOG)) {
         for (const src of Object.values(caseImages)) {
           const preload = new Image();
           preload.decoding = &quot;async&quot;;
           preload.src = src;
+          if(src===caseImages.closed&amp;&amp;caseType!==&quot;alex&quot;) RUN_CASE_DROP_IMAGES[caseType]=preload;
         }
       }
       assetSources.caseSmallClosed = CASE_IMAGE_CATALOG.small.closed;
@@ -14908,6 +14918,9 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         state.runTreats = 0;
         state.coffee = 0;
         state.runCoffee = 0;
+        state.runCaseDrop = null;
+        state.runCaseDropSpawned = false;
+        state.runCaseDropCaught = false;
         state.wallet = 0;
         state.inventory = {};
         state.redemptionCodes = [];
@@ -15777,6 +15790,9 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         state.score = 0;
         state.runTreats = 0;
         state.runCoffee = 0;
+        state.runCaseDrop = null;
+        state.runCaseDropSpawned = false;
+        state.runCaseDropCaught = false;
         state.speed = runtimeGameplayConfig.startSpeed;
         state.renderSpeed = state.speed;
         state.visualDistance = 0;
@@ -16355,6 +16371,8 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           state.spawn = nextObstacleDelay();
         }
 
+        if(state.runCaseDrop&amp;&amp;!state.runCaseDropSpawned&amp;&amp;!state.runCaseDropCaught&amp;&amp;state.time*1000&gt;=Number(state.runCaseDrop.spawnAfterMs||0)) spawnReservedCaseDrop();
+
         state.treatSpawn -= dt;
         if (state.treatSpawn &lt;= 0) {
           spawnPickup();
@@ -16392,17 +16410,25 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
             item.x + 2, item.y + 2, item.size - 4, item.size - 4
           )) {
             item.got = true;
-            if (item.kind === &quot;coffee&quot;) {
-              state.runCoffee += 1;
+            if(item.kind===&quot;case_drop&quot;){
+              state.runCaseDropCaught=true;
               playGameSound(&quot;collectCoffee&quot;);
-              hapticImpact(&quot;medium&quot;, 120);
+              hapticImpact(&quot;heavy&quot;,180);
+              puff(item.x+item.size/2,item.y+item.size/2,18);
+              void sendAuthoritativeRunCheckpoint(true);
             } else {
-              state.runTreats += 1;
-              playGameSound(&quot;collectMarshmallow&quot;);
-              hapticImpact(&quot;light&quot;, 120);
+              if (item.kind === &quot;coffee&quot;) {
+                state.runCoffee += 1;
+                playGameSound(&quot;collectCoffee&quot;);
+                hapticImpact(&quot;medium&quot;, 120);
+              } else {
+                state.runTreats += 1;
+                playGameSound(&quot;collectMarshmallow&quot;);
+                hapticImpact(&quot;light&quot;, 120);
+              }
+              state.score += 35;
+              puff(item.x + item.size / 2, item.y + item.size / 2, 10);
             }
-            state.score += 35;
-            puff(item.x + item.size / 2, item.y + item.size / 2, 10);
           }
         }
       }
@@ -18971,6 +18997,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         const resourceKind = kind === &quot;zefir&quot; ? &quot;treats&quot; : kind;
         if ([&quot;points&quot;,&quot;treats&quot;,&quot;coffee&quot;].includes(resourceKind)) return caseResourceImage(resourceKind);
         if (kind === &quot;booster&quot;) return CASE_BOOSTER_CATALOG[id]?.src || &quot;/assets/ui/icon_busters.png&quot;;
+        if (kind === &quot;streak_protection&quot;) return &quot;/assets/ui/icon_series_protection.png&quot;;
         if (kind === &quot;avatar&quot; || kind === &quot;frame&quot; || kind === &quot;trail&quot; || kind === &quot;skin&quot;) {
           const catalog = kind === &quot;skin&quot; ? CASE_SKIN_CATALOG : kind === &quot;avatar&quot; ? CASE_AVATAR_CATALOG : kind === &quot;frame&quot; ? CASE_FRAME_CATALOG : CASE_TRAIL_CATALOG;
           const item = caseLiveOpsItem(kind, id, catalog?.[id] || {});
@@ -19001,6 +19028,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 
       let playerGiftInboxExpanded = false;
       let playerGiftClaimBusy = false;
+      let playerGiftLastProtectionOverflow = null;
 
       function playerMailAttentionCount() {
         const items = Array.isArray(state.playerGifts) ? state.playerGifts : [];
@@ -19108,6 +19136,31 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         try { window.parent.postMessage({ type:&quot;zefirok-account-mutated&quot;, reason:&quot;gift&quot; }, &quot;*&quot;); } catch {}
       }
 
+      function playerGiftProtectionCompensationLabel(info) {
+        const rows=Array.isArray(info?.compensations)?info.compensations:[];
+        const labels=rows.filter((entry)=&gt;Number(entry?.amount||0)&gt;0).map((entry)=&gt;{
+          const amount=Math.max(0,Number(entry.amount||0));
+          const kind=String(entry.type||&quot;points&quot;);
+          return `+${formatter.format(amount)} ${kind===&quot;zefir&quot;?&quot;зефира&quot;:kind===&quot;coffee&quot;?&quot;кофе&quot;:&quot;очков&quot;}`;
+        });
+        if(labels.length)return labels.join(&quot; · &quot;);
+        const amount=Math.max(0,Number(info?.compensationAmount||0)),kind=String(info?.compensationType||&quot;points&quot;);
+        return `+${formatter.format(amount)} ${kind===&quot;zefir&quot;?&quot;зефира&quot;:kind===&quot;coffee&quot;?&quot;кофе&quot;:&quot;очков&quot;}`;
+      }
+
+      function renderPlayerMailProtectionOverflow(info) {
+        if(!playerMailContentEl)return false;
+        const overflow=Math.max(0,Number(info?.overflowAmount||0));
+        if(!overflow)return false;
+        const balance=Math.max(0,Number(info?.balance||0)),max=Math.max(0,Number(info?.max||0));
+        const granted=Math.max(0,Number(info?.granted||0));
+        const compensation=playerGiftProtectionCompensationLabel(info);
+        playerMailActiveLetter=null;
+        playerMailContentEl.innerHTML=`&lt;div class=&quot;player-mail-head&quot;&gt;&lt;div class=&quot;player-mail-symbol&quot; aria-hidden=&quot;true&quot;&gt;&lt;img src=&quot;/assets/ui/icon_series_protection.png&quot; alt=&quot;&quot; loading=&quot;lazy&quot; decoding=&quot;async&quot;&gt;&lt;/div&gt;&lt;div class=&quot;player-mail-head-copy&quot;&gt;&lt;span class=&quot;player-mail-kicker&quot;&gt;Защита серии&lt;/span&gt;&lt;h2 id=&quot;player-mail-title&quot;&gt;Запас защиты заполнен&lt;/h2&gt;&lt;/div&gt;&lt;/div&gt;&lt;div class=&quot;player-mail-message&quot;&gt;&lt;p class=&quot;player-mail-body&quot;&gt;${max&gt;0?`У вас максимальный запас: ${formatter.format(balance)} / ${formatter.format(max)}. `:&quot;&quot;}Защита сверх лимита не пропала — сервер автоматически преобразовал лишнее количество (${formatter.format(overflow)} шт.) в компенсацию.&lt;/p&gt;&lt;/div&gt;&lt;section class=&quot;player-mail-reward-card&quot;&gt;&lt;div class=&quot;player-mail-reward-title&quot;&gt;Результат выдачи&lt;/div&gt;&lt;div class=&quot;player-mail-rewards&quot;&gt;${granted&gt;0?`&lt;span class=&quot;player-gift-reward player-mail-reward&quot;&gt;&lt;img src=&quot;/assets/ui/icon_series_protection.png&quot; alt=&quot;&quot;&gt;&lt;span&gt;+${formatter.format(granted)} в запас&lt;/span&gt;&lt;/span&gt;`:&quot;&quot;}&lt;span class=&quot;player-gift-reward player-mail-reward&quot;&gt;&lt;img src=&quot;/assets/ui/icone_reward.png&quot; alt=&quot;&quot;&gt;&lt;span&gt;${escapePurchaseText(compensation)} компенсации&lt;/span&gt;&lt;/span&gt;&lt;/div&gt;&lt;/section&gt;&lt;button class=&quot;player-mail-primary&quot; data-protection-overflow-close type=&quot;button&quot;&gt;Понятно&lt;/button&gt;`;
+        playerMailContentEl.querySelector(&quot;[data-protection-overflow-close]&quot;)?.addEventListener(&quot;click&quot;,()=&gt;closePlayerMail());
+        return true;
+      }
+
       async function claimPlayerGiftClient(giftId, button) {
         const id = String(giftId || &quot;&quot;);
         if (!id || !telegramProfile?.initData || button?.disabled || playerGiftClaimBusy) return false;
@@ -19131,8 +19184,10 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           claimFinished = true;
           window.clearTimeout(watchdog);
           if (data.state) applyPlayerGiftPayload(data.state); else if (data.gifts) applyPlayerGiftPayload(data.gifts); else await loadPlayerGiftInbox(true);
+          playerGiftLastProtectionOverflow=data?.streakProtectionOverflow&amp;&amp;Number(data.streakProtectionOverflow.overflowAmount||0)&gt;0?data.streakProtectionOverflow:null;
           refreshPlayerGiftAccountViews();
-          showProfileToast(&quot;🎁 Подарок получен&quot;, &quot;success&quot;);
+          if(playerGiftLastProtectionOverflow)showProfileToast(`🛡 Лишняя защита преобразована в компенсацию: ${playerGiftProtectionCompensationLabel(playerGiftLastProtectionOverflow)}`, &quot;success&quot;, 4600);
+          else showProfileToast(&quot;🎁 Подарок получен&quot;, &quot;success&quot;);
           hapticNotify(&quot;success&quot;);
           return true;
         } catch (error) {
@@ -19143,6 +19198,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           // offering a second claim. This also repairs older stuck inbox rows.
           const status = await settlePlayerGiftUi(id, error?.timeout || error?.code === &quot;REQUEST_TIMEOUT&quot; ? 4 : 2).catch(() =&gt; &quot;&quot;);
           if (status === &quot;claimed&quot;) {
+            playerGiftLastProtectionOverflow=null;
             refreshPlayerGiftAccountViews();
             showProfileToast(&quot;🎁 Подарок получен&quot;, &quot;success&quot;);
             hapticNotify(&quot;success&quot;);
@@ -19168,6 +19224,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         if(kind===&quot;zefir&quot;||kind===&quot;treats&quot;)return `${formatter.format(amount)} зефира`;
         if(kind===&quot;coffee&quot;)return `${formatter.format(amount)} кофе`;
         if(kind===&quot;case&quot;)return `${formatter.format(amount)} × ${caseTitle(String(reward?.id||&quot;small&quot;))}`;
+        if(kind===&quot;streak_protection&quot;)return amount===1?&quot;Защита серии&quot;:`Защита серии ×${formatter.format(amount)}`;
         return fallback;
       }
 
@@ -19723,7 +19780,9 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         if (action) action.addEventListener(&quot;click&quot;, async () =&gt; {
           const ok = await claimPlayerGiftClient(item.id, action);
           if (ok) {
-            closePlayerMail();
+            const overflowNotice=playerGiftLastProtectionOverflow;
+            playerGiftLastProtectionOverflow=null;
+            if(!renderPlayerMailProtectionOverflow(overflowNotice))closePlayerMail();
             renderPlayerGiftInbox();
           }
         });
@@ -22206,7 +22265,11 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           .then((data) =&gt; {
             if (authoritativeRunSessionId !== id) return false;
             const runBoosters = normalizeRunCaseBoosters(data?.runSession?.boosters);
+            const serverCaseDrop=data?.runSession?.caseDrop&amp;&amp;typeof data.runSession.caseDrop===&quot;object&quot;?{type:String(data.runSession.caseDrop.type||&quot;small&quot;),spawnAfterMs:Math.max(0,Number(data.runSession.caseDrop.spawnAfterMs||0))}:null;
             if (String(state.caseRunId || &quot;&quot;) === id) {
+              state.runCaseDrop=serverCaseDrop;
+              state.runCaseDropSpawned=false;
+              state.runCaseDropCaught=false;
               antiCheatWithTrustedChange(&quot;run-booster-snapshot&quot;, () =&gt; {
                 state.runCaseBoosters = runBoosters;
                 const active = normalizeActiveCaseBoosters(state.activeCaseBoosters, state.activeCaseBooster);
@@ -22239,7 +22302,8 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           runTreats: Math.max(0, Math.floor(Number(state.runTreats || 0))),
           runCoffee: Math.max(0, Math.floor(Number(state.runCoffee || 0))),
           shieldUsed: Boolean(state.runShieldUsed),
-          secondChanceUsed: Boolean(state.runSecondChanceUsed)
+          secondChanceUsed: Boolean(state.runSecondChanceUsed),
+          caseDropCaught: Boolean(state.runCaseDropCaught)
         };
       }
 
@@ -22278,6 +22342,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
             runCoffee: snapshot.runCoffee,
             shieldUsed: snapshot.shieldUsed,
             secondChanceUsed: snapshot.secondChanceUsed,
+            caseDropCaught: snapshot.caseDropCaught,
             gameVersion: GAME_VERSION
           });
           if (authoritativeRunCheckpointRunId === runId) {
@@ -22380,6 +22445,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
             runCoffee: Math.max(0, Math.floor(Number(runMetrics?.coffee || 0))),
             shieldUsed: Boolean(state.runShieldUsed),
             secondChanceUsed: Boolean(state.runSecondChanceUsed),
+            caseDropCaught: Boolean(state.runCaseDropCaught),
             newRecord: Boolean(runMetrics?.newRecord),
             profileXpLocalAwarded: Math.max(0, Math.floor(Number(runMetrics?.profileXpAwarded || 0))),
             profileXpReconciled: true,
@@ -22409,6 +22475,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           const loaded = await leaderboardApiRequest(LEADERBOARD_API_SUBMIT_PATH, { initData, ...run });
           const fastSettlementApplied = applyFastRunSettlementPayload(loaded);
           if (!fastSettlementApplied &amp;&amp; loaded?.caseState) applyServerCasePayload(loaded);
+          if(loaded?.runSettlement?.caseDrop?.granted){const t=String(loaded.runSettlement.caseDrop.type||&quot;small&quot;);const title=t===&quot;legendary&quot;?&quot;Легендарный&quot;:t===&quot;mythic&quot;?&quot;Мифический&quot;:t===&quot;gold&quot;?&quot;Золотой&quot;:t===&quot;sweet&quot;?&quot;Серебряный&quot;:&quot;Обычный&quot;;showProfileToast(`🎁 ${title} кейс пойман!`,&quot;success&quot;,3800);}
           antiCheatWithTrustedChange(&quot;run-server-settlement&quot;, () =&gt; {
             state.pendingBoosterRuns = normalizePendingBoosterRuns(state.pendingBoosterRuns).filter((id) =&gt; id !== String(run.runId));
             saveProgress();
@@ -23509,6 +23576,20 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         });
       }
 
+      function spawnReservedCaseDrop() {
+        if(!state.runCaseDrop||state.runCaseDropSpawned||state.runCaseDropCaught)return;
+        const caseType=String(state.runCaseDrop.type||&quot;small&quot;);
+        if(!RUN_CASE_DROP_IMAGES[caseType])return;
+        state.runCaseDropSpawned=true;
+        const size=caseType===&quot;mythic&quot;||caseType===&quot;legendary&quot;?56:52;
+        const laneTop=Math.max(38,ground.y-126);
+        const laneBottom=Math.max(laneTop+16,ground.y-88);
+        const startX=canvasViewWidth+58;
+        const startFloat=Math.random()*Math.PI*2;
+        state.pickups.push({kind:&quot;case_drop&quot;,caseType,x:startX,previousX:startX,y:laneTop+Math.random()*(laneBottom-laneTop),size,float:startFloat,previousFloat:startFloat,got:false});
+        if(caseType===&quot;gold&quot;||caseType===&quot;mythic&quot;||caseType===&quot;legendary&quot;) hapticImpact(&quot;medium&quot;,120);
+      }
+
       function spawnPickup() {
         const kind = Math.random() &lt; 0.5 ? &quot;treat&quot; : &quot;coffee&quot;;
         const size = kind === &quot;coffee&quot; ? 38 : 38;
@@ -24176,6 +24257,15 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         const renderX = simulationRenderHorizontal(item.previousX, item.x, -Number(state.renderSpeed || state.speed || 0));
         const renderFloat = simulationRenderValue(item.previousFloat, item.float);
         const y = item.y + Math.sin(renderFloat) * 5;
+        if(item.kind===&quot;case_drop&quot;){
+          const caseType=String(item.caseType||&quot;small&quot;),img=RUN_CASE_DROP_IMAGES[caseType];
+          ctx.save();
+          const glow=caseType===&quot;legendary&quot;?&quot;#ffd75c&quot;:caseType===&quot;mythic&quot;?&quot;#f77aff&quot;:caseType===&quot;gold&quot;?&quot;#ffc94f&quot;:caseType===&quot;sweet&quot;?&quot;#eaf4ff&quot;:&quot;#ffd3ae&quot;;
+          ctx.shadowColor=glow;ctx.shadowBlur=caseType===&quot;mythic&quot;||caseType===&quot;legendary&quot;?22:caseType===&quot;gold&quot;?16:9;
+          if(img&amp;&amp;img.complete&amp;&amp;img.naturalWidth){ctx.translate(renderX+item.size/2,y+item.size/2);ctx.rotate(Math.sin(renderFloat)*.07);ctx.drawImage(img,-item.size/2,-item.size/2,item.size,item.size);}
+          else{ctx.fillStyle=glow;ctx.beginPath();ctx.arc(renderX+item.size/2,y+item.size/2,item.size*.35,0,Math.PI*2);ctx.fill();}
+          ctx.restore();return;
+        }
         const assetName = item.kind === &quot;coffee&quot; ? &quot;coffeePickup&quot; : &quot;marshmallow&quot;;
         ctx.save();
         if (isReady(&quot;itemShadow&quot;)) drawAsset(&quot;itemShadow&quot;, renderX + 3, y + item.size - 2, item.size - 6, 9, 0.34);
@@ -26175,8 +26265,8 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 .zdl-streak-progress i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#e76e9c,#efb14c);transition:width .25s ease}
 .zdl-streak-goal span{color:#9b7885;font-size:7.5px;font-weight:800;white-space:nowrap}
 
-.zdl-insurance{display:grid;grid-template-columns:32px minmax(0,1fr) auto;gap:9px;align-items:center;margin-top:9px;padding:9px 11px;border:1px solid #c9dfd6;border-radius:15px;background:#f2faf6}
-.zdl-insurance-icon{width:32px;height:32px;display:grid;place-items:center;border-radius:11px;background:linear-gradient(145deg,#dff3e9,#c9e9db);color:#43745f;font-size:14px;font-weight:950}
+.zdl-insurance{display:grid;grid-template-columns:38px minmax(0,1fr) auto;gap:9px;align-items:center;margin-top:9px;padding:9px 11px;border:1px solid #c9dfd6;border-radius:15px;background:#f2faf6}
+.zdl-insurance-icon{width:38px;height:38px;display:grid;place-items:center;border:1px solid #bfe0d1;border-radius:12px;background:linear-gradient(145deg,#ecfaf4,#d9f1e7);overflow:hidden}.zdl-insurance-icon img{width:34px;height:34px;object-fit:contain}.zdl-insurance-status{display:inline-flex;margin-top:4px;padding:3px 6px;border-radius:999px;background:#e6f5ee;color:#4b7966;font-size:6.5px;font-weight:950;letter-spacing:.04em}.zdl-insurance.is-full .zdl-insurance-status{background:#fff0c7;color:#986d24}.zdl-insurance.is-empty .zdl-insurance-status{background:#f6e9ed;color:#946779}.zdl-protection-overflow{display:grid;grid-template-columns:28px minmax(0,1fr);gap:8px;align-items:center;margin-top:7px;padding:8px 10px;border:1px solid #edcf91;border-radius:13px;background:#fff6d9;color:#8c6325}.zdl-protection-overflow b{display:block;font-size:8px}.zdl-protection-overflow span{display:block;margin-top:2px;font-size:7px;line-height:1.3}
 .zdl-insurance b{display:block;font-size:10px;color:#4a705f}
 .zdl-insurance small{display:block;margin-top:2px;font-size:7.5px;line-height:1.32;color:#7b9589}
 .zdl-insurance strong{min-width:48px;text-align:center;padding:7px 8px;border:1px solid #b9d6c9;border-radius:12px;background:#fff;color:#356a55;font-size:12px}
@@ -26331,7 +26421,13 @@ function render(){
   const streakLadder=streakWindow.map(x=>{const threshold=Number(x.streakThreshold||0),isClaimed=claimedStreak.has(threshold),isNext=nextStreak&&Number(nextStreak.streakThreshold||0)===threshold;return `<div class="zdl-milestone ${isClaimed?'streak-claimed':''} ${isNext?'streak-next':''}"><b>${threshold} дней подряд</b><strong>${rewardVisual(x,'zdl-reward-icon')}<span>${esc(rewardText(x))}</span></strong></div>`;}).join('');
   const streakGoalThreshold=Number(nextStreak?.streakThreshold||0),streakRemaining=streakGoalThreshold>0?Math.max(0,streakGoalThreshold-streak):0,streakProgress=streakGoalThreshold>0?Math.min(100,Math.max(0,streak/streakGoalThreshold*100)):100;
   const streakGoalText=streakGoalThreshold>0?`До ${streakGoalThreshold} дней — ${streakRemaining} ${plural(streakRemaining)}`:'Все бонусы серии открыты';
-  const insuranceMarkup=insurance.enabled?`<div class="zdl-insurance"><span class="zdl-insurance-icon" aria-hidden="true">✓</span><div><b>Защита серии</b><small>${Number(insurance.balance||0)>0?'Если пропустите день, сервер автоматически сохранит серию.':`Следующая защита выдаётся каждые ${Number(insurance.earnEveryDays||7)} дней серии.`}</small></div><strong>${Number(insurance.balance||0)} / ${Number(insurance.max||0)}</strong></div>`:'';
+  const protectionBalance=Math.max(0,Number(insurance.balance||0)),protectionMax=Math.max(0,Number(insurance.max||0)),protectionFull=protectionMax>0&&protectionBalance>=protectionMax;
+  const protectionStatus=protectionFull?'ЗАПАС ПОЛОН':protectionBalance>0?'ГОТОВА К ЗАЩИТЕ':'НЕТ ЗАЩИТЫ';
+  const protectionCopy=protectionBalance>0?'Автоматически спасает серию при пропуске дня.':'Получайте защиты в Сезонном пропуске и событиях.';
+  const overflow=model.protectionOverflow||null;
+  const overflowName=overflow?.compensationKind==='zefir'?'зефира':overflow?.compensationKind==='coffee'?'кофе':'очков';
+  const overflowMarkup=overflow&&Number(overflow.overflowAmount||0)>0?`<div class="zdl-protection-overflow"><img src="/assets/ui/icon_series_protection.png" alt="" style="width:28px;height:28px;object-fit:contain"><div><b>Лишняя защита конвертирована</b><span>+${formatter.format(Number(overflow.compensationAmount||0))} ${overflowName} · запас был заполнен</span></div></div>`:'';
+  const insuranceMarkup=insurance.enabled?`<div class="zdl-insurance ${protectionFull?'is-full':protectionBalance===0?'is-empty':''}"><span class="zdl-insurance-icon" aria-hidden="true"><img src="/assets/ui/icon_series_protection.png" alt=""></span><div><b>Защита серии</b><small>${protectionCopy}</small><span class="zdl-insurance-status">${protectionStatus}</span></div><strong>${protectionBalance} / ${protectionMax}</strong></div>${overflowMarkup}`:'';
   const milestoneMarkup=milestoneLadder?`<div class="zdl-streak-bonuses-title"><b>Большие этапы карточки</b><span>${nextMilestone?`Следующий: ${Number(nextMilestone.dayIndex||0)} день`:'Все текущие получены'}</span></div><div class="zdl-ladder">${milestoneLadder}</div>`:'';
   const streakMarkup=streakLadder?`<div class="zdl-streak-bonuses-title"><b>Бонусы непрерывной серии</b><span>${nextStreak?`Следующий: ${Number(nextStreak.streakThreshold||0)} дней`:'Все текущие получены'}</span></div><div class="zdl-ladder">${streakLadder}</div>`:'';
   const stateText=lastError?esc(lastError):(st.todayCompleted?'Сегодняшняя награда уже получена. Возвращайтесь завтра за следующей отметкой.':'Сегодняшняя награда доступна.');

@@ -1079,13 +1079,21 @@ function seasonPassShowcaseStyleRewardDefinition(value) {
   return {publicType:"showcase_style",storedType:"points",styleId:String(style.id),itemId:String(style.id),storedItemId:`${SEASON_PASS_SHOWCASE_STYLE_PREFIX}${style.id}`,title:String(style.title||style.id),imageUrl:String(style.imageUrl||""),hidden:Boolean(style.hidden),seasonLabel:String(style.seasonLabel||""),rarity:String(style.rarity||"seasonal")};
 }
 
+function seasonPassStreakProtectionRewardDefinition(value){
+  const itemId=String(value?.item_id ?? value?.itemId ?? '').trim();
+  const publicType=String(value?.rewardType ?? value?.reward_type ?? '').trim();
+  if(itemId!=='streak_protection'&&publicType!=='streak_protection')return null;
+  return {publicType:'streak_protection',storedType:'points',itemId:'streak_protection',title:'Защита серии',imageUrl:'/assets/ui/icon_series_protection.png'};
+}
+
 function seasonPassPublicRewardType(row) {
-  return seasonPassSeasonalCaseRewardDefinition(row)?.publicType || seasonPassShowcaseStyleRewardDefinition(row)?.publicType || seasonPassCosmeticRewardDefinition(row)?.publicType || seasonPassBoostRewardDefinition(row)?.publicType || String(row?.reward_type ?? row?.rewardType ?? "");
+  return seasonPassSeasonalCaseRewardDefinition(row)?.publicType || seasonPassStreakProtectionRewardDefinition(row)?.publicType || seasonPassShowcaseStyleRewardDefinition(row)?.publicType || seasonPassCosmeticRewardDefinition(row)?.publicType || seasonPassBoostRewardDefinition(row)?.publicType || String(row?.reward_type ?? row?.rewardType ?? "");
 }
 
 function seasonPassPublicRewardItemId(row) {
   const seasonalCase=seasonPassSeasonalCaseRewardDefinition(row);
   if(seasonalCase) return seasonalCase.caseId;
+  if(seasonPassStreakProtectionRewardDefinition(row))return '';
   const showcaseStyle=seasonPassShowcaseStyleRewardDefinition(row);
   if(showcaseStyle)return showcaseStyle.styleId;
   const cosmetic=seasonPassCosmeticRewardDefinition(row);
@@ -2146,7 +2154,7 @@ const DAILY_LOYALTY_CONFIG_TTL_MS = 15_000;
 const DAILY_LOYALTY_MAX_MILESTONES = 96;
 const DAILY_LOYALTY_REWARD_WEEKS = 6;
 const DAILY_LOYALTY_ECONOMY_CONFIRMATION = 'ПОДТВЕРЖДАЮ ЭКОНОМИКУ';
-const DAILY_LOYALTY_REWARD_TYPES = new Set(["points", "zefir", "coffee", "profile_xp", "season_xp", "case", "seasonal_case", "booster_points", "booster_treats", "booster_coffee", "avatar", "frame", "trail", "skin", "music"]);
+const DAILY_LOYALTY_REWARD_TYPES = new Set(["points", "zefir", "coffee", "profile_xp", "season_xp", "case", "seasonal_case", "booster_points", "booster_treats", "booster_coffee", "streak_protection", "avatar", "frame", "trail", "skin", "music"]);
 let dailyLoyaltySchemaReady = false;
 let dailyLoyaltySchemaPromise = null;
 let dailyLoyaltyConfigMemory = { value: null, expiresAt: 0, promise: null, generation: 0 };
@@ -2166,7 +2174,7 @@ async function ensureDailyLoyaltySchema(env) {
     // Hot path: migrations create and seed these tables before code is released.
     // A fresh Worker isolate therefore pays only one tiny probe instead of a DDL batch.
     try {
-      const probe = await env.DB.prepare(`SELECT s.id FROM daily_loyalty_seasons s JOIN daily_loyalty_settings ds ON ds.season_id=s.id WHERE EXISTS(SELECT 1 FROM daily_loyalty_progressive_rewards wr WHERE wr.season_id=s.id AND wr.week_number=1 AND wr.cycle_day=1) AND EXISTS(SELECT 1 FROM daily_loyalty_comeback_tiers ct WHERE ct.season_id=s.id) AND EXISTS(SELECT 1 FROM daily_loyalty_economy_guard eg WHERE eg.season_id=s.id) AND EXISTS(SELECT 1 FROM sqlite_master WHERE type='table' AND name='player_game_presence') AND EXISTS(SELECT 1 FROM sqlite_master WHERE type='table' AND name='daily_loyalty_return_tests') LIMIT 1`).first();
+      const probe = await env.DB.prepare(`SELECT s.id FROM daily_loyalty_seasons s JOIN daily_loyalty_settings ds ON ds.season_id=s.id WHERE EXISTS(SELECT 1 FROM daily_loyalty_progressive_rewards wr WHERE wr.season_id=s.id AND wr.week_number=1 AND wr.cycle_day=1) AND EXISTS(SELECT 1 FROM daily_loyalty_comeback_tiers ct WHERE ct.season_id=s.id) AND EXISTS(SELECT 1 FROM daily_loyalty_economy_guard eg WHERE eg.season_id=s.id) AND EXISTS(SELECT 1 FROM sqlite_master WHERE type='table' AND name='player_game_presence') AND EXISTS(SELECT 1 FROM sqlite_master WHERE type='table' AND name='daily_loyalty_return_tests') AND EXISTS(SELECT 1 FROM sqlite_master WHERE type='table' AND name='daily_loyalty_protection_settings') AND EXISTS(SELECT 1 FROM sqlite_master WHERE type='table' AND name='daily_loyalty_protection_grants') LIMIT 1`).first();
       if (probe?.id) return;
     } catch (error) {
       // Compatibility fallback below repairs an environment where the migration was missed.
@@ -2209,7 +2217,7 @@ async function ensureDailyLoyaltySchema(env) {
       env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_daily_loyalty_claims_request ON daily_loyalty_claims(source_request_id,status)`),
       env.DB.prepare(`CREATE TABLE IF NOT EXISTS daily_loyalty_settings (
         season_id TEXT PRIMARY KEY,insurance_enabled INTEGER NOT NULL DEFAULT 1,insurance_every_days INTEGER NOT NULL DEFAULT 7,
-        insurance_max INTEGER NOT NULL DEFAULT 2,streak_rewards_enabled INTEGER NOT NULL DEFAULT 1,updated_at INTEGER NOT NULL
+        insurance_max INTEGER NOT NULL DEFAULT 3,streak_rewards_enabled INTEGER NOT NULL DEFAULT 1,updated_at INTEGER NOT NULL
       )`),
       env.DB.prepare(`CREATE TABLE IF NOT EXISTS daily_loyalty_insurance (
         telegram_id TEXT NOT NULL,season_id TEXT NOT NULL,balance INTEGER NOT NULL DEFAULT 0,earned_count INTEGER NOT NULL DEFAULT 0,
@@ -2217,6 +2225,17 @@ async function ensureDailyLoyaltySchema(env) {
         PRIMARY KEY(telegram_id,season_id)
       )`),
       env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_daily_loyalty_insurance_season ON daily_loyalty_insurance(season_id,balance,updated_at DESC)`),
+      env.DB.prepare(`CREATE TABLE IF NOT EXISTS daily_loyalty_protection_settings (
+        season_id TEXT PRIMARY KEY,max_balance INTEGER NOT NULL DEFAULT 3,overflow_reward_type TEXT NOT NULL DEFAULT 'points',
+        overflow_reward_amount INTEGER NOT NULL DEFAULT 1500,updated_at INTEGER NOT NULL
+      )`),
+      env.DB.prepare(`CREATE TABLE IF NOT EXISTS daily_loyalty_protection_grants (
+        source_key TEXT PRIMARY KEY,telegram_id TEXT NOT NULL,season_id TEXT NOT NULL,source_type TEXT NOT NULL DEFAULT '',
+        requested INTEGER NOT NULL,granted INTEGER NOT NULL DEFAULT 0,overflow INTEGER NOT NULL DEFAULT 0,
+        compensation_type TEXT NOT NULL DEFAULT 'points',compensation_per_item INTEGER NOT NULL DEFAULT 1500,compensation_total INTEGER NOT NULL DEFAULT 0,
+        status TEXT NOT NULL DEFAULT 'pending',created_at INTEGER NOT NULL,applied_at INTEGER NOT NULL DEFAULT 0
+      )`),
+      env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_daily_loyalty_protection_grants_player ON daily_loyalty_protection_grants(telegram_id,season_id,created_at DESC)`),
       env.DB.prepare(`CREATE TABLE IF NOT EXISTS daily_loyalty_insurance_events (
         id INTEGER PRIMARY KEY AUTOINCREMENT,telegram_id TEXT NOT NULL,season_id TEXT NOT NULL,day_key TEXT NOT NULL,event_type TEXT NOT NULL,
         amount INTEGER NOT NULL DEFAULT 1,streak INTEGER NOT NULL DEFAULT 0,request_id TEXT NOT NULL DEFAULT '',event_key TEXT NOT NULL UNIQUE,created_at INTEGER NOT NULL
@@ -2292,7 +2311,9 @@ async function ensureDailyLoyaltySchema(env) {
       env.DB.prepare(`INSERT OR IGNORE INTO daily_loyalty_seasons(id,title,enabled,timezone_offset_minutes,starts_at,ends_at,revision,created_at,updated_at,updated_by)
         VALUES('daily-main','Кофейная карточка Зеффи',1,180,0,0,1,?,?,?)`).bind(now, now, 'runtime-daily-loyalty'),
       env.DB.prepare(`INSERT OR IGNORE INTO daily_loyalty_settings(season_id,insurance_enabled,insurance_every_days,insurance_max,streak_rewards_enabled,updated_at)
-        VALUES('daily-main',1,7,2,1,?)`).bind(now),
+        VALUES('daily-main',1,7,3,1,?)`).bind(now),
+      env.DB.prepare(`INSERT OR IGNORE INTO daily_loyalty_protection_settings(season_id,max_balance,overflow_reward_type,overflow_reward_amount,updated_at)
+        VALUES('daily-main',3,'points',1500,?)`).bind(now),
       env.DB.prepare(`INSERT OR IGNORE INTO daily_loyalty_economy_guard(season_id,audience_size,hard_points_per_claim,hard_zefir_per_claim,hard_coffee_per_claim,hard_cases_per_claim,require_confirmation,updated_at)
         VALUES('daily-main',10000,250000,5000,5000,5,1,?)`).bind(now),
       env.DB.prepare(`INSERT OR IGNORE INTO daily_loyalty_comeback_tiers(season_id,tier_days,enabled,title,points_threshold,zefir_threshold,coffee_threshold,fallback_reward_json,low_points_reward_json,low_zefir_reward_json,low_coffee_reward_json,sort_order,created_at,updated_at) VALUES
@@ -2357,7 +2378,7 @@ function dailyLoyaltyStreakPlan(row, currentDayKey, insuranceRow = null, setting
   const stored = Math.max(0, Number(row?.streak || 0));
   const last = String(row?.last_active_day_key || '');
   const balance = Math.max(0, Number(insuranceRow?.balance || 0));
-  const insuranceEnabled = settings?.insuranceEnabled !== false && Number(settings?.insuranceMax ?? 2) > 0;
+  const insuranceEnabled = settings?.insuranceEnabled !== false && Number(settings?.insuranceMax ?? 3) > 0;
   if (!stored || !last) return { effectiveStreak:0,nextStreak:1,missingDays:0,insuranceUse:0,protected:false,diff:0 };
   const diff = dailyLoyaltyDayOrdinal(currentDayKey) - dailyLoyaltyDayOrdinal(last);
   if (diff <= 0) return { effectiveStreak:stored,nextStreak:stored,missingDays:0,insuranceUse:0,protected:false,diff };
@@ -2402,6 +2423,7 @@ function dailyLoyaltyRewardImage(typeValue, itemIdValue = '') {
   if (type === 'booster_points') return SEASON_PASS_BOOST_REWARDS.booster_points.imageUrl;
   if (type === 'booster_treats') return SEASON_PASS_BOOST_REWARDS.booster_treats.imageUrl;
   if (type === 'booster_coffee') return SEASON_PASS_BOOST_REWARDS.booster_coffee.imageUrl;
+  if (type === 'streak_protection') return '/assets/ui/icon_series_protection.png';
   if (SEASON_PASS_COSMETIC_KINDS.includes(type)) return seasonPassCosmeticImage(type, itemId);
   return ownerPanelRewardAsset(type === 'zefir' ? 'zefir' : type, itemId);
 }
@@ -2416,6 +2438,7 @@ function dailyLoyaltyRewardTitle(typeValue, itemIdValue = '', amountValue = 1) {
   if (type === 'season_xp') return `+${amount.toLocaleString('ru-RU')} XP сезонного пропуска`;
   if (type === 'case') { const title=LEVEL_CASE_CONFIG[normalizeCaseType(itemId)]?.title || 'Кейс'; return amount === 1 ? title : `${title} ×${amount}`; }
   if (type === 'seasonal_case') return amount === 1 ? 'Сезонный кейс' : `Сезонный кейс ×${amount}`;
+  if (type === 'streak_protection') return amount === 1 ? 'Защита серии' : `Защита серии ×${amount}`;
   const booster=({booster_points:'×2 очки',booster_treats:'×2 зефир',booster_coffee:'×2 кофе'})[type];
   if (booster) { const word=amount%10===1&&amount%100!==11?'забег':amount%10>=2&&amount%10<=4&&(amount%100<10||amount%100>=20)?'забега':'забегов'; return `${booster} · ${amount} ${word}`; }
   const cosmetic=dailyLoyaltyCosmeticDefinition(type,itemId);
@@ -2433,7 +2456,8 @@ function dailyLoyaltyOwnerRewardCatalog() {
     {kind:'seasonal_case',id:'',group:'Кейсы',title:'Сезонный кейс активного сезона',imageUrl:dailyLoyaltyRewardImage('seasonal_case'),amountMode:'amount',min:1,max:20,defaultAmount:1},
     {kind:'booster_points',id:'',group:'Усилители',title:'×2 очки · количество забегов',imageUrl:dailyLoyaltyRewardImage('booster_points'),amountMode:'amount',min:1,max:20,defaultAmount:2},
     {kind:'booster_treats',id:'',group:'Усилители',title:'×2 зефир · количество забегов',imageUrl:dailyLoyaltyRewardImage('booster_treats'),amountMode:'amount',min:1,max:20,defaultAmount:2},
-    {kind:'booster_coffee',id:'',group:'Усилители',title:'×2 кофе · количество забегов',imageUrl:dailyLoyaltyRewardImage('booster_coffee'),amountMode:'amount',min:1,max:20,defaultAmount:2}
+    {kind:'booster_coffee',id:'',group:'Усилители',title:'×2 кофе · количество забегов',imageUrl:dailyLoyaltyRewardImage('booster_coffee'),amountMode:'amount',min:1,max:20,defaultAmount:2},
+    {kind:'streak_protection',id:'',group:'Daily',title:'Защита серии',imageUrl:dailyLoyaltyRewardImage('streak_protection'),amountMode:'amount',min:1,max:30,defaultAmount:1}
   ];
   for (const [kind,group,prefix] of [['avatar','Аватарки','Аватарка'],['frame','Рамки','Рамка'],['trail','Следы','След'],['skin','Скины','Скин'],['music','Музыка','Музыка']]) {
     for (const [id,item] of Object.entries(seasonPassAnyCosmeticCatalog(kind) || {})) {
@@ -2450,7 +2474,7 @@ function dailyLoyaltyMilestoneFromRow(row) {
   const rewardType = String(row?.reward_type || '').trim();
   const isCase = rewardType === 'case' || rewardType === 'seasonal_case';
   const fixed = SEASON_PASS_COSMETIC_KINDS.includes(rewardType);
-  const amount = fixed ? 1 : isCase || rewardType.startsWith('booster_') ? Math.max(1, Math.min(20, Math.floor(Number(row?.amount) || 1))) : Math.max(1, Math.min(1_000_000_000, Math.floor(Number(row?.amount) || 1)));
+  const amount = fixed ? 1 : rewardType === 'streak_protection' ? Math.max(1,Math.min(30,Math.floor(Number(row?.amount)||1))) : isCase || rewardType.startsWith('booster_') ? Math.max(1, Math.min(20, Math.floor(Number(row?.amount) || 1))) : Math.max(1, Math.min(1_000_000_000, Math.floor(Number(row?.amount) || 1)));
   const itemId = String(row?.item_id || '').slice(0, 80);
   return {
     dayIndex: Math.max(1, Math.floor(Number(row?.day_index) || 1)),
@@ -2599,9 +2623,10 @@ function dailyLoyaltyRewardFromJson(value,fallbackLabel='Награда') {
   let amount=Math.floor(Number(raw.amount||1));
   let itemId=String(raw.itemId||raw.item_id||'').trim().slice(0,80);
   if(SEASON_PASS_COSMETIC_KINDS.includes(type))amount=1;
+  else if(type==='streak_protection')amount=Math.max(1,Math.min(30,Number.isFinite(amount)?amount:1));
   else if(type==='case'||type==='seasonal_case'||type.startsWith('booster_'))amount=Math.max(1,Math.min(20,Number.isFinite(amount)?amount:1));
   else amount=Math.max(1,Math.min(1_000_000_000,Number.isFinite(amount)?amount:1));
-  if(type==='seasonal_case'||type.startsWith('booster_')||['points','zefir','coffee','profile_xp','season_xp'].includes(type))itemId='';
+  if(type==='seasonal_case'||type==='streak_protection'||type.startsWith('booster_')||['points','zefir','coffee','profile_xp','season_xp'].includes(type))itemId='';
   const label=String(raw.label||fallbackLabel||dailyLoyaltyRewardTitle(type,itemId,amount)).trim().slice(0,120)||dailyLoyaltyRewardTitle(type,itemId,amount);
   return {label,imageUrl:dailyLoyaltyRewardImage(type,itemId),reward:{type,amount,itemId}};
 }
@@ -2671,9 +2696,10 @@ async function loadDailyLoyaltyConfig(env, options = {}) {
       ORDER BY updated_at DESC LIMIT 1`).bind(now, now).first();
     if (!season) season = await env.DB.prepare(`SELECT * FROM daily_loyalty_seasons ORDER BY updated_at DESC LIMIT 1`).first();
     if (!season) throw new ApiError(503, 'Ежедневная активность ещё не настроена.');
-    const [milestoneRows,settingsRows,streakRows,weeklyRows,comebackRows,economyGuardRows] = await env.DB.batch([
+    const [milestoneRows,settingsRows,protectionSettingsRows,streakRows,weeklyRows,comebackRows,economyGuardRows] = await env.DB.batch([
       env.DB.prepare(`SELECT day_index,icon,label,reward_type,amount,item_id,sort_order FROM daily_loyalty_milestones WHERE season_id=? ORDER BY day_index ASC`).bind(String(season.id)),
       env.DB.prepare(`SELECT insurance_enabled,insurance_every_days,insurance_max,streak_rewards_enabled,updated_at FROM daily_loyalty_settings WHERE season_id=? LIMIT 1`).bind(String(season.id)),
+      env.DB.prepare(`SELECT max_balance,overflow_reward_type,overflow_reward_amount,updated_at FROM daily_loyalty_protection_settings WHERE season_id=? LIMIT 1`).bind(String(season.id)),
       env.DB.prepare(`SELECT streak_threshold,label,reward_type,amount,item_id,sort_order FROM daily_loyalty_streak_milestones WHERE season_id=? ORDER BY streak_threshold ASC`).bind(String(season.id)),
       env.DB.prepare(`SELECT week_number,cycle_day,label,reward_type,amount,item_id,sort_order FROM daily_loyalty_progressive_rewards WHERE season_id=? ORDER BY week_number ASC,cycle_day ASC`).bind(String(season.id)),
       env.DB.prepare(`SELECT tier_days,enabled,title,points_threshold,zefir_threshold,coffee_threshold,fallback_reward_json,low_points_reward_json,low_zefir_reward_json,low_coffee_reward_json,sort_order FROM daily_loyalty_comeback_tiers WHERE season_id=? ORDER BY tier_days ASC`).bind(String(season.id)),
@@ -2681,6 +2707,7 @@ async function loadDailyLoyaltyConfig(env, options = {}) {
     ]);
     const milestones = (milestoneRows.results || []).map(dailyLoyaltyMilestoneFromRow).filter((item) => DAILY_LOYALTY_REWARD_TYPES.has(item.reward.type));
     const settingRow = settingsRows.results?.[0] || {};
+    const protectionSettingRow = protectionSettingsRows.results?.[0] || {};
     const streakMilestones = (streakRows.results || []).map(dailyLoyaltyStreakMilestoneFromRow).filter((item) => DAILY_LOYALTY_REWARD_TYPES.has(item.reward.type));
     const storedWeeklyRewards = (weeklyRows.results || []).map(dailyLoyaltyWeeklyRewardFromRow).filter((item) => DAILY_LOYALTY_REWARD_TYPES.has(item.reward.type));
     const storedWeeklyByKey = new Map(storedWeeklyRewards.map((item)=>[`${Number(item.weekNumber)}:${Number(item.cycleDay)}`,item]));
@@ -2698,7 +2725,9 @@ async function loadDailyLoyaltyConfig(env, options = {}) {
       settings: {
         insuranceEnabled: Number(settingRow.insurance_enabled ?? 1) === 1,
         insuranceEveryDays: Math.max(2, Math.min(3650, Number(settingRow.insurance_every_days || 7))),
-        insuranceMax: Math.max(0, Math.min(30, Number(settingRow.insurance_max ?? 2))),
+        insuranceMax: Math.max(0, Math.min(30, Number(protectionSettingRow.max_balance ?? settingRow.insurance_max ?? 3))),
+        insuranceOverflowRewardType: ['points','zefir','coffee'].includes(String(protectionSettingRow.overflow_reward_type||'')) ? String(protectionSettingRow.overflow_reward_type) : 'points',
+        insuranceOverflowRewardAmount: Math.max(1, Math.min(1000000000, Number(protectionSettingRow.overflow_reward_amount || 1500))),
         streakRewardsEnabled: Number(settingRow.streak_rewards_enabled ?? 1) === 1
       },
       milestones,
@@ -2773,7 +2802,8 @@ function dailyLoyaltyModel(config, bundle, currentDayKey) {
       enabled: Boolean(config.settings?.insuranceEnabled),
       balance: Math.max(0, Number(insuranceRow.balance || 0)),
       max: Math.max(0, Number(config.settings?.insuranceMax || 0)),
-      earnEveryDays: Math.max(2, Number(config.settings?.insuranceEveryDays || 7)),
+      overflowRewardType: String(config.settings?.insuranceOverflowRewardType || 'points'),
+      overflowRewardAmount: Math.max(1, Number(config.settings?.insuranceOverflowRewardAmount || 1500)),
       earnedCount: Math.max(0, Number(insuranceRow.earned_count || 0)),
       usedCount: Math.max(0, Number(insuranceRow.used_count || 0))
     },
@@ -2797,6 +2827,53 @@ function dailyLoyaltyModel(config, bundle, currentDayKey) {
       nextStreakMilestone
     }
   };
+}
+
+function streakProtectionSettingsView(config = {}) {
+  const settings=config?.settings||config||{};
+  const max=Math.max(0,Math.min(30,Math.floor(Number(settings.insuranceMax??3)||0)));
+  const overflowRewardType=['points','zefir','coffee'].includes(String(settings.insuranceOverflowRewardType||''))?String(settings.insuranceOverflowRewardType):'points';
+  const overflowRewardAmount=Math.max(1,Math.min(1000000000,Math.floor(Number(settings.insuranceOverflowRewardAmount||1500)||1500)));
+  return {max,overflowRewardType,overflowRewardAmount};
+}
+
+function appendStreakProtectionGrantStatements(statements,env,options={}){
+  const telegramId=String(options.telegramId||'');
+  const seasonId=String(options.seasonId||'daily-main');
+  const amount=Math.max(1,Math.min(30,Math.floor(Number(options.amount)||1)));
+  const sourceKey=String(options.sourceKey||`protection:${telegramId}:${Date.now()}`).slice(0,220);
+  const sourceType=String(options.sourceType||'reward').slice(0,80);
+  const now=Math.max(1,Math.floor(Number(options.now)||Date.now()/1000));
+  const settings=streakProtectionSettingsView(options.settings||{});
+  const gateSql=String(options.gateSql||'1=1');
+  const gateBinds=Array.isArray(options.gateBinds)?options.gateBinds:[];
+  const compField=settings.overflowRewardType==='points'?'pending_wallet':settings.overflowRewardType==='zefir'?'pending_treats':'pending_coffee';
+  statements.push(env.DB.prepare(`INSERT OR IGNORE INTO daily_loyalty_insurance(telegram_id,season_id,balance,earned_count,used_count,last_award_streak,updated_at)
+    SELECT ?,?,0,0,0,0,? WHERE ${gateSql}`).bind(telegramId,seasonId,now,...gateBinds));
+  statements.push(env.DB.prepare(`INSERT OR IGNORE INTO daily_loyalty_protection_grants(source_key,telegram_id,season_id,source_type,requested,granted,overflow,compensation_type,compensation_per_item,compensation_total,status,created_at,applied_at)
+    SELECT ?,?,?,?, ?,MIN(?,MAX(0,?-i.balance)),MAX(0,?-MIN(?,MAX(0,?-i.balance))),?,?,MAX(0,?-MIN(?,MAX(0,?-i.balance)))*?,'pending',?,0
+    FROM daily_loyalty_insurance i WHERE i.telegram_id=? AND i.season_id=? AND ${gateSql}`).bind(
+      sourceKey,telegramId,seasonId,sourceType,amount,amount,settings.max,amount,amount,settings.max,
+      settings.overflowRewardType,settings.overflowRewardAmount,amount,amount,settings.max,settings.overflowRewardAmount,now,
+      telegramId,seasonId,...gateBinds
+    ));
+  statements.push(env.DB.prepare(`UPDATE daily_loyalty_insurance SET
+      balance=MIN(30,balance+COALESCE((SELECT granted FROM daily_loyalty_protection_grants WHERE source_key=? AND status='pending'),0)),
+      earned_count=earned_count+COALESCE((SELECT granted FROM daily_loyalty_protection_grants WHERE source_key=? AND status='pending'),0),updated_at=?
+    WHERE telegram_id=? AND season_id=? AND EXISTS(SELECT 1 FROM daily_loyalty_protection_grants WHERE source_key=? AND status='pending')`).bind(sourceKey,sourceKey,now,telegramId,seasonId,sourceKey));
+  statements.push(env.DB.prepare(`INSERT OR IGNORE INTO daily_loyalty_insurance_events(telegram_id,season_id,day_key,event_type,amount,streak,request_id,event_key,created_at)
+    SELECT ?,?,'','earned',granted,0,?,?,? FROM daily_loyalty_protection_grants WHERE source_key=? AND status='pending' AND granted>0`).bind(telegramId,seasonId,sourceKey,`protection:${sourceKey}`.slice(0,220),now,sourceKey));
+  statements.push(env.DB.prepare(`UPDATE admin_profile_state SET ${compField}=MIN(999999999,${compField}+COALESCE((SELECT compensation_total FROM daily_loyalty_protection_grants WHERE source_key=? AND status='pending'),0)),revision=revision+1,updated_at=?,updated_by=?
+    WHERE telegram_id=? AND EXISTS(SELECT 1 FROM daily_loyalty_protection_grants WHERE source_key=? AND status='pending' AND compensation_total>0)`).bind(sourceKey,now,`streak-protection:${sourceType}`,telegramId,sourceKey));
+  statements.push(env.DB.prepare(`UPDATE daily_loyalty_protection_grants SET status='applied',applied_at=? WHERE source_key=? AND status='pending'`).bind(now,sourceKey));
+  return sourceKey;
+}
+
+async function readStreakProtectionGrantResult(env,sourceKey){
+  if(!sourceKey)return null;
+  const row=await env.DB.prepare(`SELECT requested,granted,overflow,compensation_type,compensation_per_item,compensation_total,status FROM daily_loyalty_protection_grants WHERE source_key=? LIMIT 1`).bind(String(sourceKey)).first();
+  if(!row)return null;
+  return {requested:Math.max(0,Number(row.requested||0)),granted:Math.max(0,Number(row.granted||0)),overflowAmount:Math.max(0,Number(row.overflow||0)),compensationType:String(row.compensation_type||'points'),compensationPerItem:Math.max(0,Number(row.compensation_per_item||0)),compensationAmount:Math.max(0,Number(row.compensation_total||0)),applied:String(row.status||'')==='applied'};
 }
 
 async function prepareDailyLoyaltySeasonReward(env, milestone) {
@@ -2891,6 +2968,11 @@ function appendDailyLoyaltyRewardDeliveryStatements(statements, env, options) {
     statements.push(env.DB.prepare(`UPDATE admin_profile_state SET ${field}=MIN(999999999,${field}+?),revision=revision+1,updated_at=?,updated_by=? WHERE telegram_id=? AND ${gateSql}`).bind(
       reward.amount,now,marker,telegramId,...gateBinds
     ));
+  } else if (reward.type === 'streak_protection') {
+    appendStreakProtectionGrantStatements(statements,env,{
+      telegramId,seasonId,amount:reward.amount,sourceKey:`daily-protection:${seasonId}:${claimKind}:${claimKey}:${telegramId}`,
+      sourceType:`daily_${claimKind}`,now,settings:options.settings||{},gateSql,gateBinds
+    });
   } else if (reward.type === 'case') {
     const caseType = normalizeCaseType(reward.itemId);
     const amount = Math.max(1,Math.min(20,Number(reward.amount)||1));
@@ -3015,7 +3097,7 @@ async function grantStandaloneDailyComeback(env,telegramId,config,currentDayKey,
     Math.max(0,Number(balances.points||0)),Math.max(0,Number(balances.zefir||0)),Math.max(0,Number(balances.coffee||0)),
     reward.type,reward.amount,reward.itemId,item.label,rewardJson,String(requestId),now,now
   )];
-  appendDailyLoyaltyRewardDeliveryStatements(statements,env,{claimKind:'comeback',telegramId,seasonId:config.season.id,claimKey:currentDayKey,requestId,item,seasonReward:resolved.seasonReward,now});
+  appendDailyLoyaltyRewardDeliveryStatements(statements,env,{claimKind:'comeback',telegramId,seasonId:config.season.id,claimKey:currentDayKey,requestId,item,seasonReward:resolved.seasonReward,now,settings:config.settings});
   await env.DB.batch(statements);
   const delivered=await env.DB.prepare(`SELECT missed_days,tier_days,selection_reason,reward_type,amount,item_id,label,status FROM daily_loyalty_comeback_claims
     WHERE telegram_id=? AND season_id=? AND return_day_key=? LIMIT 1`).bind(String(telegramId),String(config.season.id),String(currentDayKey)).first();
@@ -3111,7 +3193,7 @@ async function claimDailyLoyalty(request, env, executionCtx = null) {
     const streakSeasonReward = streakResolved.seasonReward;
 
     const resolvedItems = [weeklyReward,milestone,streakMilestone,comebackReward].filter(Boolean);
-    if (!authoritativeProfile && resolvedItems.some((item)=>['points','zefir','coffee','profile_xp'].includes(String(item.reward?.type||'')))) {
+    if (!authoritativeProfile && resolvedItems.some((item)=>['points','zefir','coffee','profile_xp','streak_protection'].includes(String(item.reward?.type||'')))) {
       // Fold queued/override mutations once before all immediate credits in this claim.
       authoritativeProfile=await ensureAuthoritativeProfileRow(env, telegramId, 'daily-loyalty');
     }
@@ -3122,10 +3204,7 @@ async function claimDailyLoyalty(request, env, executionCtx = null) {
 
     const now = Math.floor(Date.now() / 1000);
     const insuranceEnabled = Boolean(config.settings?.insuranceEnabled) && Number(config.settings?.insuranceMax||0) > 0;
-    const insuranceMax = Math.max(0,Math.min(30,Number(config.settings?.insuranceMax||0)));
-    const insuranceEvery = Math.max(2,Math.min(3650,Number(config.settings?.insuranceEveryDays||7)));
     const insuranceUse = insuranceEnabled ? Math.max(0,Number(streakPlan.insuranceUse||0)) : 0;
-    const shouldEarnInsurance = insuranceEnabled && streakPlan.nextStreak >= insuranceEvery && streakPlan.nextStreak % insuranceEvery === 0 && Number(before.insurance?.last_award_streak||0) < streakPlan.nextStreak;
 
     const statements = [
       env.DB.prepare(`INSERT OR IGNORE INTO daily_loyalty_activity(telegram_id,season_id,day_key,request_id,applied,progress_day,streak,created_at,updated_at)
@@ -3159,20 +3238,6 @@ async function claimDailyLoyalty(request, env, executionCtx = null) {
         ));
     }
 
-    if (shouldEarnInsurance) {
-      statements.push(env.DB.prepare(`UPDATE daily_loyalty_insurance SET balance=balance+1,earned_count=earned_count+1,last_award_streak=?,updated_at=?
-        WHERE telegram_id=? AND season_id=? AND balance<? AND last_award_streak<? AND EXISTS(SELECT 1 FROM daily_loyalty_activity WHERE telegram_id=? AND season_id=? AND day_key=? AND request_id=? AND applied=0)`).bind(
-          streakPlan.nextStreak,now,telegramId,config.season.id,insuranceMax,streakPlan.nextStreak,
-          telegramId,config.season.id,currentDayKey,requestId
-        ));
-      const eventKey=`${config.season.id}:${telegramId}:insurance-earn:${streakPlan.nextStreak}`.slice(0,240);
-      statements.push(env.DB.prepare(`INSERT OR IGNORE INTO daily_loyalty_insurance_events(telegram_id,season_id,day_key,event_type,amount,streak,request_id,event_key,created_at)
-        SELECT ?,?,?,'earned',1,?,?,?,? FROM daily_loyalty_insurance i
-        WHERE i.telegram_id=? AND i.season_id=? AND i.last_award_streak=? AND EXISTS(SELECT 1 FROM daily_loyalty_activity WHERE telegram_id=? AND season_id=? AND day_key=? AND request_id=? AND applied=0)`).bind(
-          telegramId,config.season.id,currentDayKey,streakPlan.nextStreak,requestId,eventKey,now,
-          telegramId,config.season.id,streakPlan.nextStreak,telegramId,config.season.id,currentDayKey,requestId
-        ));
-    }
 
     if (comebackReward && comebackTier && comebackSelection) {
       const reward=comebackReward.reward;
@@ -3187,7 +3252,7 @@ async function claimDailyLoyalty(request, env, executionCtx = null) {
           reward.type,reward.amount,reward.itemId,comebackReward.label,rewardJson,requestId,now,now,
           telegramId,config.season.id,currentDayKey,requestId
         ));
-      appendDailyLoyaltyRewardDeliveryStatements(statements,env,{claimKind:'comeback',telegramId,seasonId:config.season.id,claimKey:currentDayKey,requestId,item:comebackReward,seasonReward:comebackSeasonReward,now});
+      appendDailyLoyaltyRewardDeliveryStatements(statements,env,{claimKind:'comeback',telegramId,seasonId:config.season.id,claimKey:currentDayKey,requestId,item:comebackReward,seasonReward:comebackSeasonReward,now,settings:config.settings});
     }
 
     if (weeklyReward) {
@@ -3201,7 +3266,7 @@ async function claimDailyLoyalty(request, env, executionCtx = null) {
           telegramId,config.season.id,nextProgressDay,cycleDay,cycleNumber,reward.type,reward.amount,reward.itemId,weeklyReward.label,rewardJson,
           requestId,now,now,telegramId,config.season.id,currentDayKey,requestId,nextProgressDay
         ));
-      appendDailyLoyaltyRewardDeliveryStatements(statements,env,{claimKind:'weekly',telegramId,seasonId:config.season.id,claimKey:nextProgressDay,requestId,item:weeklyReward,seasonReward:weeklySeasonReward,now});
+      appendDailyLoyaltyRewardDeliveryStatements(statements,env,{claimKind:'weekly',telegramId,seasonId:config.season.id,claimKey:nextProgressDay,requestId,item:weeklyReward,seasonReward:weeklySeasonReward,now,settings:config.settings});
     }
 
     if (milestone) {
@@ -3215,7 +3280,7 @@ async function claimDailyLoyalty(request, env, executionCtx = null) {
           telegramId,config.season.id,milestone.dayIndex,reward.type,reward.amount,reward.itemId,milestone.label,'',rewardJson,
           requestId,now,now,telegramId,config.season.id,currentDayKey,requestId,milestone.dayIndex
         ));
-      appendDailyLoyaltyRewardDeliveryStatements(statements,env,{claimKind:'progress',telegramId,seasonId:config.season.id,claimKey:milestone.dayIndex,requestId,item:milestone,seasonReward,now});
+      appendDailyLoyaltyRewardDeliveryStatements(statements,env,{claimKind:'progress',telegramId,seasonId:config.season.id,claimKey:milestone.dayIndex,requestId,item:milestone,seasonReward,now,settings:config.settings});
     }
 
     if (streakMilestone) {
@@ -3230,7 +3295,7 @@ async function claimDailyLoyalty(request, env, executionCtx = null) {
           telegramId,config.season.id,threshold,reward.type,reward.amount,reward.itemId,streakMilestone.label,rewardJson,
           requestId,now,now,telegramId,config.season.id,currentDayKey,requestId,threshold
         ));
-      appendDailyLoyaltyRewardDeliveryStatements(statements,env,{claimKind:'streak',telegramId,seasonId:config.season.id,claimKey:threshold,requestId,item:streakMilestone,seasonReward:streakSeasonReward,now});
+      appendDailyLoyaltyRewardDeliveryStatements(statements,env,{claimKind:'streak',telegramId,seasonId:config.season.id,claimKey:threshold,requestId,item:streakMilestone,seasonReward:streakSeasonReward,now,settings:config.settings});
     }
 
     statements.push(env.DB.prepare(`UPDATE daily_loyalty_activity SET applied=1,
@@ -3245,6 +3310,10 @@ async function claimDailyLoyalty(request, env, executionCtx = null) {
     const inserted=Number(results?.[0]?.meta?.changes||0)>0;
     const after=await readDailyLoyaltyBundle(env,telegramId,config.season.id);
     model=dailyLoyaltyModel(config,after,currentDayKey);
+    if(inserted){
+      const overflowRow=await env.DB.prepare(`SELECT COALESCE(SUM(overflow),0) AS overflow,COALESCE(SUM(compensation_total),0) AS total,MAX(compensation_type) AS kind FROM daily_loyalty_protection_grants WHERE telegram_id=? AND season_id=? AND created_at=? AND overflow>0`).bind(telegramId,config.season.id,now).first().catch(()=>null);
+      if(Number(overflowRow?.overflow||0)>0)model.protectionOverflow={overflowAmount:Number(overflowRow.overflow||0),compensationAmount:Number(overflowRow.total||0),compensationKind:String(overflowRow.kind||'points')};
+    }
     if(!inserted&&!model.state.todayCompleted)throw new ApiError(409,'Запрос отметки уже использован. Нажмите ещё раз.');
 
     const mapReward=(row,source)=>({
@@ -3288,7 +3357,8 @@ async function claimDailyLoyalty(request, env, executionCtx = null) {
         recordPlayerTimeline(env,telegramId,'daily_loyalty_checkin',`ежедневная отметка · день ${model.state.progressDays} · серия ${model.state.streak}`,{
           seasonId:config.season.id,serverDayKey:currentDayKey,progressDays:model.state.progressDays,streak:model.state.streak,
           insuranceEvent,grantedRewards,comebackEvent
-        },`daily_${config.season.id}_${telegramId}_${currentDayKey}`,auth.user,now)
+        },`daily_${config.season.id}_${telegramId}_${currentDayKey}`,auth.user,now),
+        prepareSeasonPassLoginTaskNotifications(env,telegramId)
       ]));
     }
     return jsonResponse({...model,repeated:!inserted,grantedRewards,insuranceEvent,comebackEvent});
@@ -3318,6 +3388,9 @@ function normalizeDailyLoyaltyMilestones(input) {
     } else if (rewardType === 'seasonal_case') {
       itemId = '';
       if (!Number.isFinite(amount) || amount < 1 || amount > 20) throw new ApiError(400, `Количество сезонных кейсов на дне ${dayIndex} должно быть от 1 до 20.`);
+    } else if (rewardType === 'streak_protection') {
+      itemId = '';
+      if (!Number.isFinite(amount) || amount < 1 || amount > 30) throw new ApiError(400, `Количество защит серии на дне ${dayIndex} должно быть от 1 до 30.`);
     } else if (['booster_points','booster_treats','booster_coffee'].includes(rewardType)) {
       itemId = '';
       if (!Number.isFinite(amount) || amount < 1 || amount > 20) throw new ApiError(400, `Количество усилителей на дне ${dayIndex} должно быть от 1 до 20.`);
@@ -3443,13 +3516,14 @@ async function ownerPanelDailyLoyalty(env, ctx) {
   const config = await loadDailyLoyaltyConfig(env, { allowDisabled:true });
   await readLiveContentReleaseRules(env).catch(()=>null);
   const currentDayKey = dailyLoyaltyDayKey(Date.now(), config.season.timezoneOffsetMinutes);
-  const [players,today,longest,analytics] = await Promise.all([
+  const [players,today,longest,analytics,caseDrop] = await Promise.all([
     env.DB.prepare(`SELECT COUNT(*) AS count FROM daily_loyalty_players WHERE season_id=?`).bind(config.season.id).first(),
     env.DB.prepare(`SELECT COUNT(*) AS count FROM daily_loyalty_activity WHERE season_id=? AND day_key=? AND applied=1`).bind(config.season.id,currentDayKey).first(),
     env.DB.prepare(`SELECT COALESCE(MAX(best_streak),0) AS value FROM daily_loyalty_players WHERE season_id=?`).bind(config.season.id).first(),
-    dailyLoyaltyRetentionAnalytics(env,config,currentDayKey)
+    dailyLoyaltyRetentionAnalytics(env,config,currentDayKey),
+    loadRunCaseDropConfig(env)
   ]);
-  return { ok:true, daily:{ ...config, rewardCatalog:dailyLoyaltyOwnerRewardCatalog(), serverDayKey:currentDayKey, analytics, economyPreview:dailyLoyaltyEconomyPreview(config,config.economyGuard), stats:{ players:Number(players?.count||0), today:Number(today?.count||0), bestStreak:Number(longest?.value||0) } } };
+  return { ok:true, daily:{ ...config, caseDrop, rewardCatalog:dailyLoyaltyOwnerRewardCatalog(), serverDayKey:currentDayKey, analytics, economyPreview:dailyLoyaltyEconomyPreview(config,config.economyGuard), stats:{ players:Number(players?.count||0), today:Number(today?.count||0), bestStreak:Number(longest?.value||0) } } };
 }
 
 async function ownerPanelDailyLoyaltySave(env, ctx) {
@@ -3465,8 +3539,19 @@ async function ownerPanelDailyLoyaltySave(env, ctx) {
   const timezoneOffsetMinutes = Math.max(-720, Math.min(840, Math.floor(Number(body.timezoneOffsetMinutes ?? current.season.timezoneOffsetMinutes ?? 180) || 0)));
   const settingsBody=body.settings&&typeof body.settings==='object'?body.settings:{};
   const insuranceEnabled=settingsBody.insuranceEnabled===undefined?Boolean(current.settings?.insuranceEnabled):Boolean(settingsBody.insuranceEnabled);
-  const insuranceEveryDays=Math.max(2,Math.min(3650,Math.floor(Number(settingsBody.insuranceEveryDays ?? current.settings?.insuranceEveryDays ?? 7)||7)));
-  const insuranceMax=Math.max(0,Math.min(30,Math.floor(Number(settingsBody.insuranceMax ?? current.settings?.insuranceMax ?? 2)||0)));
+  const insuranceEveryDays=Math.max(2,Math.min(3650,Math.floor(Number(current.settings?.insuranceEveryDays ?? 7)||7))); // legacy column; automatic earning is retired
+  const insuranceMax=Math.max(0,Math.min(30,Math.floor(Number(settingsBody.insuranceMax ?? current.settings?.insuranceMax ?? 3)||0)));
+  const insuranceOverflowRewardType=['points','zefir','coffee'].includes(String(settingsBody.insuranceOverflowRewardType||''))?String(settingsBody.insuranceOverflowRewardType):String(current.settings?.insuranceOverflowRewardType||'points');
+  const insuranceOverflowRewardAmount=Math.max(1,Math.min(1000000000,Math.floor(Number(settingsBody.insuranceOverflowRewardAmount ?? current.settings?.insuranceOverflowRewardAmount ?? 1500)||1500)));
+  const caseDropBody=body.caseDrop&&typeof body.caseDrop==='object'?body.caseDrop:{};
+  const currentCaseDrop=await loadRunCaseDropConfig(env,{force:true});
+  const caseDropEnabled=caseDropBody.enabled===undefined?Boolean(currentCaseDrop.enabled):Boolean(caseDropBody.enabled);
+  const caseDropChanceBps=Math.max(0,Math.min(10000,Math.round(Number(caseDropBody.chanceBps ?? currentCaseDrop.chanceBps ?? 700)||0)));
+  const caseDropWeights={small:Math.max(0,Math.min(1000000,Math.floor(Number(caseDropBody.weights?.small ?? currentCaseDrop.weights?.small ?? 7000)||0))),sweet:Math.max(0,Math.min(1000000,Math.floor(Number(caseDropBody.weights?.sweet ?? currentCaseDrop.weights?.sweet ?? 2200)||0))),gold:Math.max(0,Math.min(1000000,Math.floor(Number(caseDropBody.weights?.gold ?? currentCaseDrop.weights?.gold ?? 600)||0))),mythic:Math.max(0,Math.min(1000000,Math.floor(Number(caseDropBody.weights?.mythic ?? currentCaseDrop.weights?.mythic ?? 200)||0))),legendary:Math.max(0,Math.min(1000000,Math.floor(Number(caseDropBody.weights?.legendary ?? currentCaseDrop.weights?.legendary ?? 0)||0)))};
+  const caseDropSpawnMinMs=Math.max(1000,Math.min(300000,Math.floor(Number(caseDropBody.spawnMinMs ?? currentCaseDrop.spawnMinMs ?? 10000)||10000)));
+  const caseDropSpawnMaxMs=Math.max(1000,Math.min(300000,Math.floor(Number(caseDropBody.spawnMaxMs ?? currentCaseDrop.spawnMaxMs ?? 35000)||35000)));
+  if(caseDropSpawnMaxMs<caseDropSpawnMinMs)throw new ApiError(400,'Case Drop: максимальное время появления не может быть меньше минимального.');
+  if(caseDropEnabled&&Object.values(caseDropWeights).reduce((a,b)=>a+b,0)<=0)throw new ApiError(400,'Case Drop: задайте ненулевой вес хотя бы одному кейсу.');
   const streakRewardsEnabled=settingsBody.streakRewardsEnabled===undefined?Boolean(current.settings?.streakRewardsEnabled):Boolean(settingsBody.streakRewardsEnabled);
   await readLiveContentReleaseRules(env).catch(()=>null);
   const milestones = normalizeDailyLoyaltyMilestones(body.milestones || []);
@@ -3479,6 +3564,8 @@ async function ownerPanelDailyLoyaltySave(env, ctx) {
   if(economyPreview.requiresConfirmation&&String(body.economyConfirmation||'').trim()!==DAILY_LOYALTY_ECONOMY_CONFIRMATION)throw new ApiError(409,`Экономический предохранитель: найдена слишком крупная разовая награда. Для осознанного сохранения введите «${DAILY_LOYALTY_ECONOMY_CONFIRMATION}».`);
   const now = Math.floor(Date.now() / 1000);
   const seasonId = String(current.season.id || 'daily-main');
+  const maxExistingProtection=await env.DB.prepare(`SELECT COALESCE(MAX(balance),0) AS value FROM daily_loyalty_insurance WHERE season_id=?`).bind(seasonId).first();
+  if(insuranceMax<Number(maxExistingProtection?.value||0))throw new ApiError(409,`Нельзя уменьшить лимит ниже текущего запаса игроков (${Number(maxExistingProtection?.value||0)}). Сначала израсходуйте/скорректируйте запас.`);
   const statements = [
     env.DB.prepare(`UPDATE daily_loyalty_seasons SET title=?,enabled=?,timezone_offset_minutes=?,revision=revision+1,updated_at=?,updated_by=? WHERE id=?`).bind(
       title, enabled, timezoneOffsetMinutes, now, String(ctx.user.id), seasonId
@@ -3487,7 +3574,10 @@ async function ownerPanelDailyLoyaltySave(env, ctx) {
       ON CONFLICT(season_id) DO UPDATE SET insurance_enabled=excluded.insurance_enabled,insurance_every_days=excluded.insurance_every_days,insurance_max=excluded.insurance_max,streak_rewards_enabled=excluded.streak_rewards_enabled,updated_at=excluded.updated_at`).bind(
         seasonId,insuranceEnabled?1:0,insuranceEveryDays,insuranceMax,streakRewardsEnabled?1:0,now
       ),
-    env.DB.prepare(`UPDATE daily_loyalty_insurance SET balance=MIN(balance,?),updated_at=? WHERE season_id=?`).bind(insuranceMax,now,seasonId),
+    env.DB.prepare(`INSERT INTO daily_loyalty_protection_settings(season_id,max_balance,overflow_reward_type,overflow_reward_amount,updated_at) VALUES(?,?,?,?,?)
+      ON CONFLICT(season_id) DO UPDATE SET max_balance=excluded.max_balance,overflow_reward_type=excluded.overflow_reward_type,overflow_reward_amount=excluded.overflow_reward_amount,updated_at=excluded.updated_at`).bind(seasonId,insuranceMax,insuranceOverflowRewardType,insuranceOverflowRewardAmount,now),
+    env.DB.prepare(`INSERT INTO game_case_drop_settings(config_id,enabled,chance_bps,weight_small,weight_sweet,weight_gold,weight_mythic,weight_legendary,spawn_min_ms,spawn_max_ms,updated_at) VALUES('main',?,?,?,?,?,?,?,?,?,?)
+      ON CONFLICT(config_id) DO UPDATE SET enabled=excluded.enabled,chance_bps=excluded.chance_bps,weight_small=excluded.weight_small,weight_sweet=excluded.weight_sweet,weight_gold=excluded.weight_gold,weight_mythic=excluded.weight_mythic,weight_legendary=excluded.weight_legendary,spawn_min_ms=excluded.spawn_min_ms,spawn_max_ms=excluded.spawn_max_ms,updated_at=excluded.updated_at`).bind(caseDropEnabled?1:0,caseDropChanceBps,caseDropWeights.small,caseDropWeights.sweet,caseDropWeights.gold,caseDropWeights.mythic,caseDropWeights.legendary,caseDropSpawnMinMs,caseDropSpawnMaxMs,now),
     env.DB.prepare(`DELETE FROM daily_loyalty_milestones WHERE season_id=?`).bind(seasonId),
     env.DB.prepare(`DELETE FROM daily_loyalty_progressive_rewards WHERE season_id=?`).bind(seasonId),
     env.DB.prepare(`DELETE FROM daily_loyalty_streak_milestones WHERE season_id=?`).bind(seasonId),
@@ -3508,10 +3598,11 @@ async function ownerPanelDailyLoyaltySave(env, ctx) {
       JSON.stringify(tier.rewards.fallback),JSON.stringify(tier.rewards.lowPoints),JSON.stringify(tier.rewards.lowZefir),JSON.stringify(tier.rewards.lowCoffee),tier.tierDays,now,now));
   await env.DB.batch(statements);
   invalidateDailyLoyaltyConfig();
+  invalidateRunCaseDropConfig();
   try {
     await logStaffAction(env, ctx.user, ctx.access, 'owner_panel_daily_loyalty_save', null, 'daily_loyalty', null, null, {
       seasonId,title,enabled:Boolean(enabled),timezoneOffsetMinutes,
-      settings:{insuranceEnabled,insuranceEveryDays,insuranceMax,streakRewardsEnabled},milestones,weeklyRewards,streakMilestones,comebackTiers,economyPreview
+      settings:{insuranceEnabled,insuranceMax,insuranceOverflowRewardType,insuranceOverflowRewardAmount,streakRewardsEnabled},caseDrop:{enabled:caseDropEnabled,chanceBps:caseDropChanceBps,weights:caseDropWeights,spawnMinMs:caseDropSpawnMinMs,spawnMaxMs:caseDropSpawnMaxMs},milestones,weeklyRewards,streakMilestones,comebackTiers,economyPreview
     });
   } catch (error) { console.error('daily loyalty config audit failed', error); }
   return ownerPanelDailyLoyalty(env, ctx);
@@ -4084,7 +4175,7 @@ async function ensurePlayerGiftInboxSchema(env) {
 }
 
 function normalizePlayerGiftRewards(input) {
-  const allowed = new Set(["points", "zefir", "coffee", "case", "avatar", "frame", "trail", "skin", "showcase_style", "booster", "season_pass_xp", "season_pass_tier", "season_pass_xp_grant"]);
+  const allowed = new Set(["points", "zefir", "coffee", "case", "avatar", "frame", "trail", "skin", "showcase_style", "booster", "streak_protection", "season_pass_xp", "season_pass_tier", "season_pass_xp_grant"]);
   const merged = new Map();
   for (const raw of Array.isArray(input) ? input : []) {
     if (!raw || typeof raw !== "object") continue;
@@ -4135,10 +4226,10 @@ function normalizePlayerGiftRewards(input) {
     if (["case", "avatar", "frame", "trail", "skin", "showcase_style"].includes(kind) && !id) continue;
     const amount = ["avatar", "frame", "trail", "skin", "showcase_style"].includes(kind)
       ? 1
-      : Math.max(1, Math.min(5000000, Math.floor(Number(raw.amount || 1))));
+      : kind === 'streak_protection' ? Math.max(1,Math.min(30,Math.floor(Number(raw.amount||1)))) : Math.max(1, Math.min(5000000, Math.floor(Number(raw.amount || 1))));
     const key = `${kind}:${id}`;
     const current = merged.get(key);
-    if (current && !["avatar", "frame", "trail", "skin", "showcase_style"].includes(kind)) current.amount = Math.min(5000000, current.amount + amount);
+    if (current && !["avatar", "frame", "trail", "skin", "showcase_style"].includes(kind)) current.amount = Math.min(kind === "streak_protection" ? 30 : 5000000, current.amount + amount);
     else if (!current) merged.set(key, { kind, id, amount });
   }
   return [...merged.values()].slice(0, 30);
@@ -4491,6 +4582,46 @@ async function processPlayerMailV3RewardQueue(env, telegramId, mailId) {
   return {delivered,failed};
 }
 
+async function playerMailV3StreakProtectionOverflow(env, telegramId, mailId) {
+  try {
+    const row = await env.DB.prepare(`SELECT
+        COALESCE(SUM(g.requested),0) AS requested,
+        COALESCE(SUM(g.granted),0) AS granted,
+        COALESCE(SUM(g.overflow),0) AS overflow,
+        COALESCE(SUM(CASE WHEN g.compensation_type='points' THEN g.compensation_total ELSE 0 END),0) AS points_compensation,
+        COALESCE(SUM(CASE WHEN g.compensation_type='zefir' THEN g.compensation_total ELSE 0 END),0) AS zefir_compensation,
+        COALESCE(SUM(CASE WHEN g.compensation_type='coffee' THEN g.compensation_total ELSE 0 END),0) AS coffee_compensation,
+        COALESCE(MAX(i.balance),0) AS balance,
+        COALESCE(MAX(ps.max_balance),3) AS max_balance
+      FROM reward_delivery_queue q
+      JOIN daily_loyalty_protection_grants g ON g.source_key=('queue-protection:' || q.id)
+      LEFT JOIN daily_loyalty_insurance i ON i.telegram_id=q.telegram_id AND i.season_id=g.season_id
+      LEFT JOIN daily_loyalty_protection_settings ps ON ps.season_id=g.season_id
+      WHERE q.telegram_id=? AND q.source_type='player_mail_v3' AND q.source_id GLOB ? AND q.reward_kind='streak_protection' AND q.status='delivered'`)
+      .bind(String(telegramId),`${String(mailId)}_*`).first();
+    const overflowAmount=Math.max(0,Number(row?.overflow||0));
+    if(!overflowAmount)return null;
+    const compensations=[
+      {type:'points',amount:Math.max(0,Number(row?.points_compensation||0))},
+      {type:'zefir',amount:Math.max(0,Number(row?.zefir_compensation||0))},
+      {type:'coffee',amount:Math.max(0,Number(row?.coffee_compensation||0))}
+    ].filter((entry)=>entry.amount>0);
+    return {
+      requested:Math.max(0,Number(row?.requested||0)),
+      granted:Math.max(0,Number(row?.granted||0)),
+      overflowAmount,
+      balance:Math.max(0,Number(row?.balance||0)),
+      max:Math.max(0,Number(row?.max_balance??3)),
+      compensations,
+      compensationType:compensations.length===1?compensations[0].type:'mixed',
+      compensationAmount:compensations.reduce((sum,entry)=>sum+entry.amount,0)
+    };
+  } catch(error) {
+    console.warn('player mail streak protection overflow summary failed',error);
+    return null;
+  }
+}
+
 async function claimPlayerMailV3(request, env, ctx) {
   try {
     const body=await readJson(request);requireBotToken(env);const auth=await validateTelegramInitData(String(body.initData||""),env);const telegramId=String(auth.user.id);
@@ -4505,7 +4636,7 @@ async function claimPlayerMailV3(request, env, ctx) {
       if(repairedBeforeClaim>0){await ensurePlayerAccountRevisionAvailable(env);await bumpPlayerAccountRevisionStatement(env,telegramId,now).run();row=await env.DB.prepare(`SELECT * FROM player_mail_v3 WHERE telegram_id=? AND mail_id=? AND (expires_at=0 OR expires_at>?) LIMIT 1`).bind(telegramId,mailId,now).first();}
     }
     if(String(row?.reward_state)==="none")throw new ApiError(409,"В этом письме нет награды.");
-    if(String(row.reward_state)==="claimed"){const state=await playerMailV3Snapshot(env,telegramId);return jsonResponse({ok:true,repeated:true,state,gifts:state});}
+    if(String(row.reward_state)==="claimed"){const state=await playerMailV3Snapshot(env,telegramId);const streakProtectionOverflow=await playerMailV3StreakProtectionOverflow(env,telegramId,mailId);return jsonResponse({ok:true,repeated:true,state,gifts:state,...(streakProtectionOverflow?{streakProtectionOverflow}:{})});}
     const lock=await env.DB.prepare(`UPDATE player_mail_v3 SET reward_state='claiming',read_at=CASE WHEN read_at=0 THEN ? ELSE read_at END,updated_at=? WHERE telegram_id=? AND mail_id=? AND reward_state='available'`).bind(now,now,telegramId,mailId).run();
     if(Number(lock?.meta?.changes||0)<1)throw new ApiError(409,"Награда уже обрабатывается. Попробуйте ещё раз через несколько секунд.");
     await ensurePlayerAccountRevisionAvailable(env);await bumpPlayerAccountRevisionStatement(env,telegramId,now).run();
@@ -4531,11 +4662,11 @@ async function claimPlayerMailV3(request, env, ctx) {
     try{await recordPlayerTimeline(env,telegramId,"mail_claim",`получил вложение письма «${String(row.title||"Почта Зеффи")}»`,{mailId,rewards,reason:row.reason},`mail_${mailId}`,null);}catch{}
     const rewardKinds=new Set(rewards.map((reward)=>String(reward?.kind||"").toLowerCase()));
     const caseRefreshRequired=[...rewardKinds].some((kind)=>["case","seasonal_case","avatar","frame","trail","skin","music","season_pass_tier"].includes(kind));
-    const profileRefreshRequired=[...rewardKinds].some((kind)=>["points","zefir","coffee","avatar","frame","trail","skin","music","season_pass_tier","season_pass_xp_grant"].includes(kind));
+    const profileRefreshRequired=[...rewardKinds].some((kind)=>["points","zefir","coffee","streak_protection","avatar","frame","trail","skin","music","season_pass_tier","season_pass_xp_grant"].includes(kind));
     const seasonPassRefreshRequired=[...rewardKinds].some((kind)=>["season_pass_tier","season_pass_xp_grant"].includes(kind));
     scheduleRunSettlementBackground(ctx,ensureAuthoritativeProfileRow(env,telegramId,`mail-v3-post-claim:${mailId}`),"mail v3 post-claim profile fold failed");
     scheduleRunSettlementBackground(ctx,reconcileDeliveredSeasonPassCasesForPlayer(env,telegramId),"mail v3 post-claim case reconcile failed");
-    const state=await playerMailV3Snapshot(env,telegramId);return jsonResponse({ok:true,state,gifts:state,deliveryCommitted:true,caseRefreshRequired,profileRefreshRequired,seasonPassRefreshRequired});
+    const streakProtectionOverflow=await playerMailV3StreakProtectionOverflow(env,telegramId,mailId);const state=await playerMailV3Snapshot(env,telegramId);return jsonResponse({ok:true,state,gifts:state,deliveryCommitted:true,caseRefreshRequired,profileRefreshRequired,seasonPassRefreshRequired,...(streakProtectionOverflow?{streakProtectionOverflow}:{})});
   } catch(error) {
     if(error instanceof ApiError)return jsonResponse({ok:false,error:error.message},error.status);
     console.error("claimPlayerMailV3 failed",error);return jsonResponse({ok:false,error:"Не удалось получить вложение письма."},500);
@@ -7264,6 +7395,71 @@ async function releaseShopStock(env, consumptionId) {
 // truth for wallet, profile XP, skin ownership or competitive run metrics.
 // =============================================================
 let authoritativeEconomySchemaPromise = null;
+const RUN_CASE_DROP_CONFIG_TTL_MS = 30_000;
+let runCaseDropSchemaPromise = null;
+let runCaseDropConfigMemory = { value:null, expiresAt:0, promise:null };
+
+function invalidateRunCaseDropConfig(){
+  runCaseDropConfigMemory={ value:null, expiresAt:0, promise:null };
+}
+
+async function ensureRunCaseDropSchema(env){
+  requireDatabase(env);
+  if(!runCaseDropSchemaPromise){
+    runCaseDropSchemaPromise=(async()=>{
+      await env.DB.batch([
+        env.DB.prepare(`CREATE TABLE IF NOT EXISTS game_case_drop_settings (
+          config_id TEXT PRIMARY KEY, enabled INTEGER NOT NULL DEFAULT 0 CHECK(enabled IN (0,1)),
+          chance_bps INTEGER NOT NULL DEFAULT 700 CHECK(chance_bps BETWEEN 0 AND 10000),
+          weight_small INTEGER NOT NULL DEFAULT 7000 CHECK(weight_small BETWEEN 0 AND 1000000),
+          weight_sweet INTEGER NOT NULL DEFAULT 2200 CHECK(weight_sweet BETWEEN 0 AND 1000000),
+          weight_gold INTEGER NOT NULL DEFAULT 600 CHECK(weight_gold BETWEEN 0 AND 1000000),
+          weight_mythic INTEGER NOT NULL DEFAULT 200 CHECK(weight_mythic BETWEEN 0 AND 1000000),
+          weight_legendary INTEGER NOT NULL DEFAULT 0 CHECK(weight_legendary BETWEEN 0 AND 1000000),
+          spawn_min_ms INTEGER NOT NULL DEFAULT 10000 CHECK(spawn_min_ms BETWEEN 1000 AND 300000),
+          spawn_max_ms INTEGER NOT NULL DEFAULT 35000 CHECK(spawn_max_ms BETWEEN 1000 AND 300000), updated_at INTEGER NOT NULL)`),
+        env.DB.prepare(`CREATE TABLE IF NOT EXISTS game_run_case_drops (
+          run_id TEXT PRIMARY KEY, telegram_id TEXT NOT NULL, case_type TEXT NOT NULL CHECK(case_type IN ('small','sweet','gold','mythic','legendary')),
+          spawn_after_ms INTEGER NOT NULL CHECK(spawn_after_ms BETWEEN 1000 AND 300000), caught INTEGER NOT NULL DEFAULT 0 CHECK(caught IN (0,1)),
+          granted INTEGER NOT NULL DEFAULT 0 CHECK(granted IN (0,1)), created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL)`),
+        env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_game_run_case_drops_player ON game_run_case_drops(telegram_id,created_at DESC)`),
+        env.DB.prepare(`INSERT OR IGNORE INTO game_case_drop_settings(config_id,enabled,chance_bps,weight_small,weight_sweet,weight_gold,weight_mythic,weight_legendary,spawn_min_ms,spawn_max_ms,updated_at) VALUES('main',0,700,7000,2200,600,200,0,10000,35000,unixepoch())`)
+      ]);
+    })().catch(e=>{runCaseDropSchemaPromise=null;throw e;});
+  }
+  return runCaseDropSchemaPromise;
+}
+
+function runCaseDropConfigView(row){
+  return {
+    enabled:Number(row?.enabled||0)===1, chanceBps:Math.max(0,Math.min(10000,Number(row?.chance_bps ?? 700))),
+    weights:{small:Math.max(0,Number(row?.weight_small||0)),sweet:Math.max(0,Number(row?.weight_sweet||0)),gold:Math.max(0,Number(row?.weight_gold||0)),mythic:Math.max(0,Number(row?.weight_mythic||0)),legendary:Math.max(0,Number(row?.weight_legendary||0))},
+    spawnMinMs:Math.max(1000,Number(row?.spawn_min_ms||10000)),spawnMaxMs:Math.max(1000,Number(row?.spawn_max_ms||35000))
+  };
+}
+
+async function loadRunCaseDropConfig(env,{force=false}={}){
+  const now=Date.now();
+  if(!force&&runCaseDropConfigMemory.value&&runCaseDropConfigMemory.expiresAt>now)return runCaseDropConfigMemory.value;
+  if(!force&&runCaseDropConfigMemory.promise)return runCaseDropConfigMemory.promise;
+  const promise=(async()=>{
+    await ensureRunCaseDropSchema(env);
+    const row=await env.DB.prepare(`SELECT * FROM game_case_drop_settings WHERE config_id='main' LIMIT 1`).first();
+    const value=runCaseDropConfigView(row);
+    runCaseDropConfigMemory.value=value;runCaseDropConfigMemory.expiresAt=Date.now()+RUN_CASE_DROP_CONFIG_TTL_MS;return value;
+  })().finally(()=>{runCaseDropConfigMemory.promise=null;});
+  runCaseDropConfigMemory.promise=promise;return promise;
+}
+
+function rollRunCaseDrop(config){
+  if(!config?.enabled||Math.random()*10000>=Number(config.chanceBps||0))return null;
+  const weights=config.weights||{}, entries=['small','sweet','gold','mythic','legendary'].map(k=>[k,Math.max(0,Number(weights[k]||0))]);
+  const total=entries.reduce((n,e)=>n+e[1],0);if(total<=0)return null;
+  let roll=Math.random()*total, type='small';
+  for(const [key,w] of entries){if(roll<w){type=key;break;}roll-=w;}
+  const min=Math.max(1000,Number(config.spawnMinMs||10000)), max=Math.max(min,Number(config.spawnMaxMs||35000));
+  return {type,spawnAfterMs:Math.round(min+Math.random()*(max-min))};
+}
 const AUTHORITATIVE_RUN_SESSION_MAX_MS = 2 * 60 * 60 * 1000;
 const AUTHORITATIVE_RUN_CLOCK_GRACE_MS = 7000;
 // A run must prove its progress continuously while the game is actually
@@ -7410,6 +7606,7 @@ async function ensureAuthoritativeEconomySchema(env) {
       await addRuntimeColumnIfMissing(env, 'player_economy_run_ledger', 'new_record', 'INTEGER NOT NULL DEFAULT 0');
       await addRuntimeColumnIfMissing(env, 'player_economy_run_ledger', 'accepted_rating', 'INTEGER NOT NULL DEFAULT 0');
       await addRuntimeColumnIfMissing(env, 'player_economy_run_ledger', 'season_id', "TEXT NOT NULL DEFAULT ''");
+      await ensureRunCaseDropSchema(env);
     })().catch((error) => {
       authoritativeEconomySchemaPromise = null;
       throw error;
@@ -7730,7 +7927,7 @@ async function attestAuthoritativeRunProgress(env, session, rawMetrics, options 
 function isAuthoritativeRunSchemaMissingError(error) {
   const text = String(error?.message || error || '').toLowerCase();
   return (
-    (text.includes('no such table') && (text.includes('game_run_sessions') || text.includes('game_run_live_proofs'))) ||
+    (text.includes('no such table') && (text.includes('game_run_sessions') || text.includes('game_run_live_proofs') || text.includes('game_run_case_drops') || text.includes('game_case_drop_settings'))) ||
     (text.includes('no such column') && (
       text.includes('anchor_duration_ms') || text.includes('anchor_server_at_ms') ||
       text.includes('booster_points') || text.includes('booster_treats') || text.includes('booster_coffee') ||
@@ -7763,11 +7960,17 @@ async function checkpointAuthoritativeRunSession(request, env) {
         await env.DB.prepare(`UPDATE game_run_sessions SET shield_used=MAX(shield_used,?),second_chance_used=MAX(second_chance_used,?),updated_at=? WHERE run_id=? AND telegram_id=? AND status='started'`)
           .bind(shieldUsed?1:0,secondChanceUsed?1:0,Math.floor(checkpoint.attestedAtMs/1000),runId,telegramId).run();
       }
+      const submittedCaseDropCaught=Boolean(body.caseDropCaught||body.case_drop_caught);
+      if(submittedCaseDropCaught){
+        await env.DB.prepare(`UPDATE game_run_case_drops SET caught=1,updated_at=? WHERE run_id=? AND telegram_id=? AND caught=0 AND spawn_after_ms<=?`)
+          .bind(Math.floor(checkpoint.attestedAtMs/1000),runId,telegramId,checkpoint.durationMs).run();
+      }
       return jsonResponse({ ok: true, checkpoint: {
         runId, seq: checkpoint.proofSeq, durationMs: checkpoint.durationMs, score: checkpoint.score,
         runTreats: checkpoint.runTreats, runCoffee: checkpoint.runCoffee,
         shieldUsed:Boolean(shieldUsed || Number(session.shield_used||0)),
         secondChanceUsed:Boolean(secondChanceUsed || Number(session.second_chance_used||0)),
+        caseDropCaught:submittedCaseDropCaught,
         serverTime: checkpoint.attestedAtMs
       }});
     };
@@ -7806,7 +8009,9 @@ async function startAuthoritativeRunSession(request, env) {
       const nowMs = requestReceivedAtMs;
       const now = Math.floor(nowMs / 1000);
       const expiresAtMs = nowMs + AUTHORITATIVE_RUN_SESSION_MAX_MS;
-      // One D1 round trip only. The batch is atomic: it conditionally retires the
+      const caseDropConfig=await loadRunCaseDropConfig(env);
+      const reservedCaseDrop=rollRunCaseDrop(caseDropConfig);
+      // One D1 round trip only after the cached LiveOps config read. The batch is atomic: it conditionally retires the
       // previous active session, creates/reuses this run, creates its proof row,
       // and returns the authoritative session state in the same transaction.
       const result = await env.DB.batch([
@@ -7855,15 +8060,20 @@ async function startAuthoritativeRunSession(request, env) {
              SELECT 1 FROM game_run_sessions WHERE run_id=? AND telegram_id=? AND started_at_ms=? AND (booster_shield=1 OR booster_second_chance=1 OR booster_pause=1)
            )`
         ).bind(runId,telegramId,nowMs,runId,telegramId,nowMs,runId,telegramId,nowMs,now,telegramId,runId,telegramId,nowMs),
+        env.DB.prepare(`INSERT OR IGNORE INTO game_run_case_drops(run_id,telegram_id,case_type,spawn_after_ms,caught,granted,created_at,updated_at)
+          SELECT run_id,telegram_id,?,?,0,0,created_at,updated_at FROM game_run_sessions
+          WHERE run_id=? AND telegram_id=? AND started_at_ms=? AND status='started' AND ?<>''`).bind(
+            String(reservedCaseDrop?.type||''),Math.max(1000,Number(reservedCaseDrop?.spawnAfterMs||1000)),runId,telegramId,nowMs,String(reservedCaseDrop?.type||'')
+          ),
         env.DB.prepare(
-          `SELECT run_id,telegram_id,started_at_ms,expires_at_ms,status,
-                  booster_points,booster_treats,booster_coffee,booster_shield,booster_second_chance,booster_pause,
-                  shield_used,second_chance_used
-           FROM game_run_sessions WHERE run_id=? LIMIT 1`
+          `SELECT s.run_id,s.telegram_id,s.started_at_ms,s.expires_at_ms,s.status,
+                  s.booster_points,s.booster_treats,s.booster_coffee,s.booster_shield,s.booster_second_chance,s.booster_pause,
+                  s.shield_used,s.second_chance_used,d.case_type AS case_drop_type,d.spawn_after_ms AS case_drop_spawn_after_ms,d.caught AS case_drop_caught
+           FROM game_run_sessions s LEFT JOIN game_run_case_drops d ON d.run_id=s.run_id WHERE s.run_id=? LIMIT 1`
         ).bind(runId)
       ]);
 
-      const session = result?.[4]?.results?.[0] || null;
+      const session = result?.[5]?.results?.[0] || null;
       if (!session) throw new ApiError(409, 'Защищённая сессия забега не создана. Начните новый забег.');
       if (String(session.telegram_id || '') !== telegramId) throw new ApiError(409, 'Этот идентификатор забега уже используется.');
       if (String(session.status || '') !== 'started') throw new ApiError(409, 'Эта сессия забега уже завершена или заменена новым забегом.');
@@ -7882,7 +8092,8 @@ async function startAuthoritativeRunSession(request, env) {
             shield:Number(session.booster_shield||0)===1,
             second_chance:Number(session.booster_second_chance||0)===1,
             pause:Number(session.booster_pause||0)===1
-          }
+          },
+          caseDrop:session.case_drop_type?{type:String(session.case_drop_type),spawnAfterMs:Number(session.case_drop_spawn_after_ms||0),caught:Number(session.case_drop_caught||0)===1}:null
         },
         repeated
       });
@@ -11327,9 +11538,10 @@ async function prepareFastSeasonPassRunContext(env, telegramId, input, runCreate
 async function buildFastRepeatedRunResponse(env, executionCtx, context) {
   const { ledger, telegramId, runId, submittedMetrics, season, minSeconds, minScore, ratingEntryEnabled, auth } = context;
   const profilePromise = ensureAuthoritativeProfileRow(env, telegramId, `run:${runId}:fast-repeat`);
-  const [profileRow, repeatCaseEnsured] = await Promise.all([
+  const [profileRow, repeatCaseEnsured, repeatRunCaseDrop] = await Promise.all([
     profilePromise,
-    ensureCasePlayerState(env, telegramId, {}, { profilePromise })
+    ensureCasePlayerState(env, telegramId, {}, { profilePromise }),
+    env.DB.prepare(`SELECT d.case_type,d.spawn_after_ms,d.caught,d.granted,CASE WHEN g.id IS NULL THEN 0 ELSE 1 END AS grant_exists FROM game_run_case_drops d LEFT JOIN granted_cases g ON g.id=? WHERE d.run_id=? AND d.telegram_id=? LIMIT 1`).bind(`run_case_drop_${runId}`.slice(0,180),runId,telegramId).first().catch(()=>null)
   ]);
   const repeatCaseState = repeatCaseEnsured.state;
   const acceptedToRating = Number(ledger?.accepted_rating || 0) === 1;
@@ -11387,7 +11599,8 @@ async function buildFastRepeatedRunResponse(env, executionCtx, context) {
         runsLeft: safeAdminNumber(repeatCaseState.activeBooster?.runsLeft)
       },
       skinId: String(ledger?.skin_id || "default"),
-      seasonId: String(ledger?.season_id || season.id || "")
+      seasonId: String(ledger?.season_id || season.id || ""),
+      caseDrop:repeatRunCaseDrop?{type:String(repeatRunCaseDrop.case_type||''),caught:Number(repeatRunCaseDrop.caught||0)===1,granted:Number(repeatRunCaseDrop.granted||0)===1||Number(repeatRunCaseDrop.grant_exists||0)===1}:null
     }
   };
 }
@@ -11576,7 +11789,7 @@ async function submitLeaderboardRun(request, env, executionCtx = null) {
     const qualifies = rewardEligible && metrics.score >= minScore;
     const acceptedToRating = ratingEntryEnabled && String(season.status || "") === "active" && qualifies;
     const profileBeforePromise = ensureAuthoritativeProfileRow(env, telegramId, `run:${runId}:prepare`);
-    const [ensured, profileBefore, consumed, fastSeasonPass, testerRow, liveOpsRunEvent, runAchievementContext] = await Promise.all([
+    const [ensured, profileBefore, consumed, fastSeasonPass, testerRow, liveOpsRunEvent, runAchievementContext, reservedCaseDrop] = await Promise.all([
       ensureCasePlayerState(env, telegramId, {}, { profilePromise: profileBeforePromise }),
       profileBeforePromise,
       env.DB.prepare(`SELECT booster_type,booster_types_json,telegram_id FROM case_booster_run_consumptions WHERE run_id=? LIMIT 1`).bind(runId).first(),
@@ -11586,7 +11799,8 @@ async function submitLeaderboardRun(request, env, executionCtx = null) {
       }, runActivityCreatedAt) : Promise.resolve(null),
       acceptedToRating ? getTesterAccountSafe(telegramId, env) : Promise.resolve(null),
       activeRunLiveOpsEvent(env).catch(()=>({active:false,multipliers:{pointsMultiplier:1,treatsMultiplier:1,coffeeMultiplier:1}})),
-      rewardEligible ? prepareRunAchievementUnlockContext(env,telegramId,minSeconds*1000) : Promise.resolve(null)
+      rewardEligible ? prepareRunAchievementUnlockContext(env,telegramId,minSeconds*1000) : Promise.resolve(null),
+      env.DB.prepare(`SELECT * FROM game_run_case_drops WHERE run_id=? AND telegram_id=? LIMIT 1`).bind(runId,telegramId).first().catch(()=>null)
     ]);
     if (consumed && String(consumed.telegram_id || "") !== telegramId) throw new ApiError(409, "Этот идентификатор забега уже использован.");
 
@@ -11625,6 +11839,10 @@ async function submitLeaderboardRun(request, env, executionCtx = null) {
     const photoUrl = String(auth.user.photo_url || "").slice(0, 500);
     const ratingHidden = Number(testerRow?.exclude_from_rating || 0) === 1 ? 1 : 0;
     const rejectionReason = acceptedToRating ? "" : (!qualifies ? "below_minimum" : (!ratingEntryEnabled ? "rating_disabled" : `season_${String(season.status || "inactive")}`));
+    const submittedCaseDropCaught=Boolean(body.caseDropCaught||body.case_drop_caught);
+    const caseDropCaught=Boolean(reservedCaseDrop && (Number(reservedCaseDrop.caught||0)===1 || (submittedCaseDropCaught && metrics.durationMs>=Number(reservedCaseDrop.spawn_after_ms||0))));
+    const caseDropType=String(reservedCaseDrop?.case_type||'');
+    const caseDropGrantId=`run_case_drop_${runId}`.slice(0,180);
 
     if (!boosterAlreadyConsumed && rewardEligible) {
       for (const type of appliedBoosterTypes) {
@@ -11658,7 +11876,12 @@ async function submitLeaderboardRun(request, env, executionCtx = null) {
       env.DB.prepare(
         `INSERT INTO leaderboard_runs(run_id,season_id,telegram_id,score,duration_ms,run_treats,run_coffee,accepted,rejection_reason,created_at)
          VALUES(?,?,?,?,?,?,?,?,?,?)`
-      ).bind(runId, String(season.id || ""), telegramId, metrics.score, metrics.durationMs, metrics.runTreats, metrics.runCoffee, acceptedToRating ? 1 : 0, rejectionReason, now)
+      ).bind(runId, String(season.id || ""), telegramId, metrics.score, metrics.durationMs, metrics.runTreats, metrics.runCoffee, acceptedToRating ? 1 : 0, rejectionReason, now),
+      env.DB.prepare(`UPDATE game_run_case_drops SET caught=MAX(caught,?),updated_at=? WHERE run_id=? AND telegram_id=?`).bind(caseDropCaught?1:0,now,runId,telegramId),
+      env.DB.prepare(`INSERT OR IGNORE INTO granted_cases(id,telegram_id,case_type,status,granted_by,reason,created_at)
+        SELECT ?,d.telegram_id,d.case_type,'pending','run-case-drop','Редкий кейс, пойманный во время забега',? FROM game_run_case_drops d
+        WHERE d.run_id=? AND d.telegram_id=? AND ?=1`).bind(caseDropGrantId,now,runId,telegramId,caseDropCaught?1:0),
+      env.DB.prepare(`UPDATE game_run_case_drops SET granted=CASE WHEN EXISTS(SELECT 1 FROM granted_cases WHERE id=?) THEN 1 ELSE granted END,updated_at=? WHERE run_id=? AND telegram_id=?`).bind(caseDropGrantId,now,runId,telegramId)
     ];
     if (!boosterAlreadyConsumed && rewardEligible) {
       statements.push(
@@ -11757,7 +11980,7 @@ async function submitLeaderboardRun(request, env, executionCtx = null) {
       {
         runId, score: metrics.score, durationMs: metrics.durationMs, runTreats: metrics.runTreats, runCoffee: metrics.runCoffee,
         credited: { points: economyPoints, treats: economyTreats, coffee: economyCoffee }, profileXpAwarded,
-        boosterType: appliedBoosterType, boosterTypes: appliedBoosterTypes, runBoosterTypes: sessionBoosterTypes, skinId, newRecord, accepted: acceptedToRating, excludedFromRating: Boolean(ratingHidden)
+        boosterType: appliedBoosterType, boosterTypes: appliedBoosterTypes, runBoosterTypes: sessionBoosterTypes, skinId, newRecord, accepted: acceptedToRating, excludedFromRating: Boolean(ratingHidden), caseDrop:caseDropType?{type:caseDropType,caught:caseDropCaught}:null
       },
       `run_${runId}`, auth.user, now
     ), "authoritative run timeline failed");
@@ -11802,6 +12025,7 @@ async function submitLeaderboardRun(request, env, executionCtx = null) {
         activeBoosters: caseNormalizeActiveBoosters(caseState.activeBoosters, caseState.activeBooster?.type, caseState.activeBooster?.runsLeft),
         activeBooster: { type: String(caseState.activeBooster?.type || ""), runsLeft: safeAdminNumber(caseState.activeBooster?.runsLeft) },
         skinId, seasonId: String(season.id || ""),
+        caseDrop:caseDropType?{type:caseDropType,caught:caseDropCaught,granted:caseDropCaught}:null,
         liveOpsEvent:liveOpsRunEvent?.active?{id:liveOpsRunEvent.id,title:liveOpsRunEvent.title,endsAt:liveOpsRunEvent.endsAt,multipliers:liveOpsRunEvent.multipliers}:null
       }
     });
@@ -22160,6 +22384,7 @@ function campaignRewardTitle(kind, rewardId = "", amount = 1) {
   if (kind === "points") return `${amount.toLocaleString("ru-RU")} очков`;
   if (kind === "zefir") return `${amount.toLocaleString("ru-RU")} зефира`;
   if (kind === "coffee") return `${amount.toLocaleString("ru-RU")} кофе`;
+  if (kind === "streak_protection") return `${amount.toLocaleString("ru-RU")} × Защита серии`;
   if (kind === "case") return `${amount} × ${LEVEL_CASE_CONFIG[rewardId]?.title || rewardId}`;
   return `${amount} × ${kind}`;
 }
@@ -22335,6 +22560,13 @@ async function processCampaignRecipient(env, campaign, telegramId) {
     const result = await env.DB.prepare(`UPDATE admin_profile_state SET ${field} = ${field} + ?, revision = revision + 1, updated_at = ?, updated_by = ? WHERE telegram_id = ?`)
       .bind(amount, Math.floor(Date.now() / 1000), `campaign:${campaign.campaign_id}`, telegramId).run();
     if (Number(result.meta?.changes || 0) < 1) throw new Error("Профиль игрока не найден");
+  } else if (rewardKind === "streak_protection") {
+    await ensureDailyLoyaltySchema(env);
+    await ensureAuthoritativeProfileRow(env,telegramId,`campaign-protection:${campaignId}`);
+    const protectionConfig=await loadDailyLoyaltyConfig(env,{allowDisabled:true});
+    const sourceKey=`campaign-protection:${campaignId}:${telegramId}`.slice(0,190),statements=[];
+    appendStreakProtectionGrantStatements(statements,env,{telegramId,seasonId:String(protectionConfig.season?.id||'daily-main'),amount,sourceType:'campaign',sourceKey,settings:protectionConfig.settings||{},now:Math.floor(Date.now()/1000)});
+    await env.DB.batch(statements);
   } else if (rewardKind === "case") {
     await createGrantedCases(env, telegramId, campaign.reward_id, amount, `campaign:${campaign.campaign_id}`, campaign.reason);
   } else if (rewardKind !== "none") {
@@ -23335,6 +23567,7 @@ function safeRewardDescription(reward) {
     const amount = Math.max(1, Number(reward.amount || 1));
     return booster ? `${amount.toLocaleString("ru-RU")} × ${booster.title}` : `${amount.toLocaleString("ru-RU")} × усилитель`;
   }
+  if (reward.kind === "streak_protection") return `${Math.max(1,Number(reward.amount||1)).toLocaleString("ru-RU")} × Защита серии`;
   if (reward.kind === "case") return `${reward.amount} × ${LEVEL_CASE_CONFIG[reward.id]?.title || reward.id}`;
   if (reward.kind === "seasonal_case") return `${reward.amount} × сезонный кейс`;
   if (String(reward.kind||"")==="showcase_style") { const style=achievementShowcaseStyleDefinition(reward.id,{fallback:false}); return style?`Витрина «${style.title}»`:"Витрина достижений"; }
@@ -23905,7 +24138,7 @@ async function deliverQueuedReward(env, row, leaseToken) {
   // the profile bootstrap for case-only gifts removes a costly DB fold from the
   // player's synchronous claim path without changing the economic transaction.
   const rewardKind = String(row.reward_kind || "");
-  if (["points", "zefir", "coffee"].includes(rewardKind)) {
+  if (["points", "zefir", "coffee", "streak_protection"].includes(rewardKind)) {
     await ensureAuthoritativeProfileRow(env, telegramId, `queue-profile:${queueId}`);
   }
 
@@ -23950,6 +24183,13 @@ async function deliverQueuedReward(env, row, leaseToken) {
     } else {
       seasonPassDelivery = { kind:rewardKind, season, player };
     }
+  }
+  let streakProtectionDelivery=null;
+  if(rewardKind==='streak_protection'){
+    if(amount>30)throw new Error('Количество защит серии превышает безопасный лимит');
+    await ensureDailyLoyaltySchema(env);
+    const protectionConfig=await loadDailyLoyaltyConfig(env,{allowDisabled:true});
+    streakProtectionDelivery={config:protectionConfig,sourceKey:`queue-protection:${queueId}`.slice(0,190)};
   }
   let runBoosterReward = null;
   if (rewardKind === "booster") {
@@ -24017,7 +24257,7 @@ async function deliverQueuedReward(env, row, leaseToken) {
     row.__seasonalCase={definition,caseItems};
   } else if (row.reward_kind === "physical_restore") {
     throw new Error("Требуется ручная проверка и восстановление физического кода");
-  } else if (!["points", "zefir", "coffee", "case", "booster", "season_pass_tier", "season_pass_xp_grant", "showcase_style"].includes(row.reward_kind)) {
+  } else if (!["points", "zefir", "coffee", "case", "booster", "streak_protection", "season_pass_tier", "season_pass_xp_grant", "showcase_style"].includes(row.reward_kind)) {
     throw new Error("Неизвестный тип награды");
   }
 
@@ -24038,6 +24278,8 @@ async function deliverQueuedReward(env, row, leaseToken) {
          SELECT 1 FROM reward_delivery_effects WHERE queue_id=? AND apply_token=?
        )`
     ).bind(amount, now, `queue:${queueId}`, telegramId, queueId, token));
+  } else if(row.reward_kind==='streak_protection'){
+    appendStreakProtectionGrantStatements(statements,env,{telegramId,seasonId:String(streakProtectionDelivery?.config?.season?.id||'daily-main'),amount,sourceType:String(row.source_type||'queue'),sourceKey:streakProtectionDelivery.sourceKey,settings:streakProtectionDelivery?.config?.settings||{},now,gateSql:`EXISTS(SELECT 1 FROM reward_delivery_effects WHERE queue_id=? AND apply_token=?)`,gateBinds:[queueId,token]});
   } else if (row.reward_kind === "case") {
     const caseType = normalizeCaseType(row.reward_id);
     if (!caseType) throw new Error("Неизвестный тип кейса");
@@ -28457,7 +28699,7 @@ async function ensureSeasonPassSchema(env) {
         season_id TEXT NOT NULL, task_id TEXT NOT NULL,
         period TEXT NOT NULL CHECK(period IN ('daily','weekly')),
         premium INTEGER NOT NULL DEFAULT 0 CHECK(premium IN (0,1)),
-        metric TEXT NOT NULL CHECK(metric IN ('runs','treats','coffee','score','cases_opened')),
+        metric TEXT NOT NULL CHECK(metric IN ('runs','treats','coffee','score','cases_opened','login_days')),
         target INTEGER NOT NULL CHECK(target > 0), xp_reward INTEGER NOT NULL CHECK(xp_reward > 0),
         title TEXT NOT NULL, description TEXT NOT NULL DEFAULT '', enabled INTEGER NOT NULL DEFAULT 1 CHECK(enabled IN (0,1)),
         sort_order INTEGER NOT NULL DEFAULT 0, updated_at INTEGER NOT NULL, updated_by TEXT NOT NULL DEFAULT '',
@@ -28733,6 +28975,7 @@ function seasonPassRewardImage(rowOrType, imageUrlValue = '', itemIdValue = '') 
   const row = rowOrType && typeof rowOrType === 'object' ? rowOrType : null;
   const rewardType = String(row ? (seasonPassPublicRewardType(row) || row.reward_type || '') : (rowOrType || '')).toLowerCase();
   const itemId = String(row ? (seasonPassPublicRewardItemId(row) || row.item_id || '') : (itemIdValue || ''));
+  if(rewardType==='streak_protection')return '/assets/ui/icon_series_protection.png';
   const resourceAsset = seasonPassResourceRewardAsset(rewardType);
   if (resourceAsset) return resourceAsset;
   if (rewardType === 'case') {
@@ -29394,7 +29637,7 @@ async function prepareSeasonPassTaskProgressEvent(env,telegramId,contributionInp
   for(const task of definitions.results||[]){
     const period=String(task.period)==='weekly'?'weekly':'daily';const metrics=progress[period];
     if(eventAt<metrics.bounds.startAt||eventAt>=metrics.bounds.endAt)continue;
-    const metric=['runs','score','treats','coffee','cases_opened'].includes(String(task.metric))?String(task.metric):'runs';
+    const metric=['runs','score','treats','coffee','cases_opened','login_days'].includes(String(task.metric))?String(task.metric):'runs';
     const before=Math.max(0,Number(metrics[metric]||0)),after=before+Math.max(0,Number(contribution[metric]||0)),target=Math.max(1,Number(task.target||1));
     const periodKey=String(metrics.bounds.key||'');const locked=Number(task.premium||0)===1&&!premium;
     if(!fresh||locked||claimSet.has(`${String(task.task_id)}:${periodKey}`)||before>=target||after<target)continue;
@@ -29460,6 +29703,21 @@ async function deliverSeasonPassTaskNotificationsForRows(env,telegramId,season,t
   }
 }
 
+async function seasonPassLoginDayProgressPair(env,season,telegramId){
+  const daily=seasonPassMoscowPeriod('daily'),weekly=seasonPassMoscowPeriod('weekly');
+  const seasonStart=Math.floor(Date.parse(String(season?.startsAt||''))/1000);
+  const seasonEnd=Math.floor(Date.parse(String(season?.endsAt||''))/1000);
+  const clamp=(bounds)=>{const startAt=Number.isFinite(seasonStart)?Math.max(bounds.startAt,seasonStart):bounds.startAt;const endAt=Number.isFinite(seasonEnd)?Math.max(startAt,Math.min(bounds.endAt,seasonEnd)):bounds.endAt;return {...bounds,startAt,endAt};};
+  const d=clamp(daily),w=clamp(weekly),id=String(telegramId||'').trim();
+  const row=await env.DB.prepare(`SELECT
+    COUNT(DISTINCT CASE WHEN created_at>=? AND created_at<? THEN day_key END) AS daily_value,
+    COUNT(DISTINCT CASE WHEN created_at>=? AND created_at<? THEN day_key END) AS weekly_value
+    FROM daily_loyalty_activity WHERE telegram_id=? AND applied=1 AND created_at>=? AND created_at<?`).bind(
+      d.startAt,d.endAt,w.startAt,w.endAt,id,Math.min(d.startAt,w.startAt),Math.max(d.endAt,w.endAt)
+    ).first();
+  return {daily:{value:Math.max(0,Number(row?.daily_value||0)),bounds:d},weekly:{value:Math.max(0,Number(row?.weekly_value||0)),bounds:w}};
+}
+
 async function buildSeasonPassTasksPayload(env,season,telegramId,premiumTier){
   const dailyKey=seasonPassMoscowPeriod('daily').key,weeklyKey=seasonPassMoscowPeriod('weekly').key;
   const [definitions,metricsPair,claimResult] = await Promise.all([
@@ -29468,19 +29726,40 @@ async function buildSeasonPassTasksPayload(env,season,telegramId,premiumTier){
     env.DB.prepare(`SELECT task_id,period_key,status,xp_awarded FROM season_pass_task_claims WHERE season_id=? AND telegram_id=? AND status='delivered' AND period_key IN (?,?)`).bind(season.id,String(telegramId),dailyKey,weeklyKey).all()
   ]);
   const daily=metricsPair.daily,weekly=metricsPair.weekly;
+  const definitionsRows=definitions.results||[];
+  const loginPair=definitionsRows.some(row=>String(row.metric)==='login_days')?await seasonPassLoginDayProgressPair(env,season,telegramId):null;
   const claimRows = claimResult.results || [];
   const claims = new Map(claimRows.map(row=>[`${String(row.task_id)}:${String(row.period_key)}`,row]));
   const premium = String(premiumTier||'none') !== 'none';
-  const tasks = (definitions.results||[]).map(row=>{
+  const tasks = definitionsRows.map(row=>{
     const period = String(row.period)==='weekly'?'weekly':'daily';
     const metrics = period==='weekly'?weekly:daily;
     const metric = String(row.metric||'runs');
-    const progress = Math.max(0,Number(metrics[metric]||0));
+    const progress = metric==='login_days'?Math.max(0,Number(loginPair?.[period]?.value||0)):Math.max(0,Number(metrics[metric]||0));
     const target = Math.max(1,Number(row.target)||1);
     const claim = claims.get(`${String(row.task_id)}:${metrics.bounds.key}`);
     return {id:String(row.task_id),period,premium:Number(row.premium||0)===1,metric,target,xp:Math.max(1,Number(row.xp_reward)||1),title:String(row.title||''),description:String(row.description||''),progress:Math.min(progress,target),rawProgress:progress,complete:progress>=target,claimed:Boolean(claim),locked:Number(row.premium||0)===1&&!premium,periodKey:metrics.bounds.key,resetAt:metrics.bounds.resetAt};
   });
   return {tasks,periods:{daily:{key:daily.bounds.key,resetAt:daily.bounds.resetAt},weekly:{key:weekly.bounds.key,resetAt:weekly.bounds.resetAt}},claimableCount:tasks.filter(t=>t.complete&&!t.claimed&&!t.locked).length};
+}
+
+async function prepareSeasonPassLoginTaskNotifications(env,telegramId){
+  try{
+    await ensureSeasonPassSchema(env);
+    const id=String(telegramId||'').trim();if(!id)return null;
+    const [flag,forcedClosure,season]=await Promise.all([getFeatureFlag(env,'battle_pass'),getSeasonPassForcedClosure(env),loadSeasonPassSeason(env)]);
+    if(forcedClosure||!season||season.status!=='active'||!seasonPassCapabilities(season).canClaimTasks)return null;
+    const mode=String(flag?.mode||'all');if(mode!=='all'){const access=await battlePassAudienceAccess(env,id,flag);if(!access.allowed)return null;}
+    const player=await ensureSeasonPassPlayer(env,season,id);
+    const payload=await buildSeasonPassTasksPayload(env,season,id,player?.premium_tier||'none');
+    const ready=payload.tasks.filter(task=>task.metric==='login_days'&&task.complete&&!task.claimed&&!task.locked);
+    if(!ready.length)return null;
+    const now=Math.floor(Date.now()/1000);const multiplier=seasonPassTaskXpMultiplierForPlayer(season,player);
+    const rows=ready.map(task=>({task_id:task.id,period_key:task.periodKey,task_title:task.title,xp_reward:Math.max(1,Number(task.xp||1))*multiplier}));
+    const statements=rows.map(row=>env.DB.prepare(`INSERT OR IGNORE INTO season_pass_task_notifications(season_id,telegram_id,task_id,period_key,task_title,xp_reward,completed_at,bot_notified_at,game_read_at) VALUES(?,?,?,?,?,?,?,0,0)`).bind(String(season.id),id,row.task_id,row.period_key,row.task_title,row.xp_reward,now));
+    if(statements.length)await env.DB.batch(statements);
+    return await deliverSeasonPassTaskNotificationsForRows(env,id,season,rows);
+  }catch(error){console.error('prepareSeasonPassLoginTaskNotifications failed',error);return null;}
 }
 
 function configuredSeasonPassTasksUrl(env){
@@ -30428,6 +30707,7 @@ async function grantSeasonPassReward(env,ctx,reward,executionCtx=null){
   let cosmeticReward=seasonPassCosmeticRewardDefinition(reward);
   if(cosmeticReward?.future){await readLiveContentReleaseRules(env,true);cosmeticReward=seasonPassCosmeticRewardDefinition(reward);}
   const boostReward=seasonPassBoostRewardDefinition(reward);
+  const streakProtectionReward=seasonPassStreakProtectionRewardDefinition(reward);
   if(showcaseStyleReward)await ensureAchievementConfigSchema(env);
   if(cosmeticReward?.future&&!cosmeticReward?.released) throw new ApiError(409,'Эта награда относится к скрытому контенту и пока не разрешена для этого слота Season Pass.');
   const now=Math.floor(Date.now()/1000);const level=Number(reward.level);const lane=String(reward.lane);const key=[ctx.season.id,ctx.telegramId,level,lane];
@@ -30435,6 +30715,12 @@ async function grantSeasonPassReward(env,ctx,reward,executionCtx=null){
   if(cosmeticReward || (boostReward&&CASE_BOOSTER_TYPES.includes(boostReward.kind))){
     caseEnsured=await ensureCasePlayerState(env,ctx.telegramId,{});
     if(cosmeticReward)seasonPassApplyCosmeticToState(caseEnsured.state,cosmeticReward);
+  }
+  let protectionConfig=null,protectionSourceKey='';
+  if(streakProtectionReward){
+    await ensureDailyLoyaltySchema(env);await ensureAuthoritativeProfileRow(env,ctx.telegramId,`season-pass-protection:${ctx.season.id}`);
+    protectionConfig=await loadDailyLoyaltyConfig(env,{allowDisabled:true});
+    protectionSourceKey=`season-pass-protection:${ctx.season.id}:${ctx.telegramId}:${level}:${lane}`.slice(0,190);
   }
   const statements=[
     env.DB.prepare(`INSERT OR IGNORE INTO season_pass_claims(season_id,telegram_id,level,lane,status,reward_json,claimed_at) VALUES(?,?,?,?,'pending',?,?)`).bind(...key,JSON.stringify(reward),now),
@@ -30458,6 +30744,8 @@ async function grantSeasonPassReward(env,ctx,reward,executionCtx=null){
     const jsonPath=`$.${boostReward.kind}`;
     const amount=Math.max(1,Number(reward.amount)||1);
     statements.push(env.DB.prepare(`UPDATE case_player_state SET boosters_extra_json=json_set(CASE WHEN json_valid(boosters_extra_json) THEN boosters_extra_json ELSE '{}' END,'${jsonPath}',MIN(999,MAX(0,CAST(COALESCE(json_extract(CASE WHEN json_valid(boosters_extra_json) THEN boosters_extra_json ELSE '{}' END,'${jsonPath}'),0) AS INTEGER))+?)),revision=revision+1,updated_at=? WHERE telegram_id=? AND EXISTS(SELECT 1 FROM season_pass_claims WHERE season_id=? AND telegram_id=? AND level=? AND lane=? AND status='pending')`).bind(amount,now,ctx.telegramId,...key));
+  }else if(streakProtectionReward){
+    appendStreakProtectionGrantStatements(statements,env,{telegramId:ctx.telegramId,seasonId:String(protectionConfig?.season?.id||'daily-main'),amount:Math.max(1,Math.min(30,Number(reward.amount)||1)),sourceType:'season_pass',sourceKey:protectionSourceKey,settings:protectionConfig?.settings||{},now,gateSql:`EXISTS(SELECT 1 FROM season_pass_claims WHERE season_id=? AND telegram_id=? AND level=? AND lane=? AND status='pending')`,gateBinds:key});
   }else if(['points','treats','coffee'].includes(String(reward.reward_type))){
     const field=reward.reward_type==='points'?'pending_wallet':reward.reward_type==='treats'?'pending_treats':'pending_coffee';
     statements.push(env.DB.prepare(`UPDATE admin_profile_state SET ${field}=${field}+?,revision=revision+1,updated_at=?,updated_by=? WHERE telegram_id=? AND EXISTS(SELECT 1 FROM season_pass_claims WHERE season_id=? AND telegram_id=? AND level=? AND lane=? AND status='pending')`).bind(Math.max(0,Number(reward.amount)||0),now,`season-pass:${ctx.season.id}`,ctx.telegramId,...key));
@@ -30484,7 +30772,8 @@ async function grantSeasonPassReward(env,ctx,reward,executionCtx=null){
   const batch=await env.DB.batch(statements);
   const finalized=Number(batch?.[batch.length-1]?.meta?.changes||0)>0;
   if(finalized)seasonPassBackgroundWork(executionCtx,recordPlayerTimeline(env,ctx.telegramId,'season_pass_reward',`получил награду сезонного пропуска «${String(reward.title||'Награда')}»`,{seasonId:ctx.season.id,level,lane,rewardType:seasonPassPublicRewardType(reward),amount:reward.amount,itemId:seasonPassPublicRewardItemId(reward)},`season_pass_${ctx.season.id}_${level}_${lane}`,ctx.auth.user,now),'season pass reward timeline failed');
-  return {repeated:!finalized,reward,entitlementsAdded};
+  const streakProtection=streakProtectionReward?await readStreakProtectionGrantResult(env,protectionSourceKey):null;
+  return {repeated:!finalized,reward,entitlementsAdded,streakProtection};
 }
 
 async function claimSeasonPassReward(request,env,executionCtx=null){
@@ -30500,7 +30789,7 @@ async function claimSeasonPassReward(request,env,executionCtx=null){
     return jsonResponse(seasonPassRewardMutationEnvelope(ctx,{
       claimedAdded:[id],
       entitlementsAdded:result.entitlementsAdded,
-      received:[{level,lane,title:reward.title,rewardType:seasonPassPublicRewardType(reward),amount:reward.amount,itemId:seasonPassPublicRewardItemId(reward),imageUrl:seasonPassRewardImage(reward)}],
+      received:[{level,lane,title:reward.title,rewardType:seasonPassPublicRewardType(reward),amount:reward.amount,itemId:seasonPassPublicRewardItemId(reward),imageUrl:seasonPassRewardImage(reward),...(result.streakProtection?{streakProtection:result.streakProtection}:{})}],
       ...(seasonalCases?{seasonalCases}:{}),
       repeated:result.repeated
     }));
@@ -30560,7 +30849,7 @@ async function claimAllSeasonPassRewards(request,env,executionCtx=null){
       claimedAdded.push(`${levelValue}:${lane}`);
       for(const item of entry.result?.entitlementsAdded||[])entitlements.add(String(item));
       if(entry.result?.repeated)continue;
-      received.push({level:levelValue,lane,title:String(reward.title||'Награда'),rewardType:seasonPassPublicRewardType(reward),amount:Number(reward.amount),itemId:seasonPassPublicRewardItemId(reward),imageUrl:seasonPassRewardImage(reward)});
+      received.push({level:levelValue,lane,title:String(reward.title||'Награда'),rewardType:seasonPassPublicRewardType(reward),amount:Number(reward.amount),itemId:seasonPassPublicRewardItemId(reward),imageUrl:seasonPassRewardImage(reward),...(entry.result?.streakProtection?{streakProtection:entry.result.streakProtection}:{})});
     }
 
     if(received.length)seasonPassBackgroundWork(executionCtx,recordPlayerTimeline(env,ctx.telegramId,'season_pass_reward_bulk',`получил ${received.length} наград сезонного пропуска`,{seasonId:ctx.season.id,count:received.length,failed:failedRewards.length},`season_pass_bulk_${ctx.season.id}_${now}`,ctx.auth.user,now),'season pass bulk timeline failed');
@@ -30578,6 +30867,10 @@ async function seasonPassTaskProgressForClaim(env,season,telegramId,row){
   const startAt=Number.isFinite(seasonStart)?Math.max(bounds.startAt,seasonStart):bounds.startAt;
   const endAt=Number.isFinite(seasonEnd)?Math.max(startAt,Math.min(bounds.endAt,seasonEnd)):bounds.endAt;
   const id=String(telegramId),seasonId=String(season?.id||DEFAULT_SEASON_PASS_ID);
+  if(metric==='login_days'){
+    const aggregate=await env.DB.prepare(`SELECT COUNT(DISTINCT day_key) AS value FROM daily_loyalty_activity WHERE telegram_id=? AND applied=1 AND created_at>=? AND created_at<?`).bind(id,startAt,endAt).first();
+    return {value:Number(aggregate?.value||0),periodKey:bounds.key,resetAt:bounds.resetAt};
+  }
   if(metric==='cases_opened'){
     const [levelCases,grantedCases,seasonalCases]=await Promise.all([
       env.DB.prepare(`SELECT COUNT(*) AS value FROM level_case_openings WHERE telegram_id=? AND opened_at>=? AND opened_at<?`).bind(id,startAt,endAt).first(),
@@ -31454,16 +31747,16 @@ async function setSeasonPassTaskCreateChoice(query,field,value,env){
     await updateStaffWorkflow(query.from.id,{step:'lane',data:{...data,period:value}},env);await answerCallback(env,query.id,'Период выбран.');await sendTelegramMessage(env,chatId,'Для какой линии доступно задание?',{inline_keyboard:[[{text:'🆓 Бесплатная',callback_data:'sp_tc_lane:free'},{text:'⭐ Только Элитная',callback_data:'sp_tc_lane:premium'}],[{text:'❌ Отмена',callback_data:'sp_workflow_cancel'}]]});return;
   }
   if(field==='lane'&&['free','premium'].includes(value)){
-    await updateStaffWorkflow(query.from.id,{step:'metric',data:{...data,premium:value==='premium'}},env);await answerCallback(env,query.id,'Линия выбрана.');await sendTelegramMessage(env,chatId,'Что должен сделать игрок?',{inline_keyboard:[[{text:'🏃 Завершить забеги',callback_data:'sp_tc_metric:runs'}],[{text:'🍥 Собрать зефир',callback_data:'sp_tc_metric:treats'},{text:'☕ Собрать кофе',callback_data:'sp_tc_metric:coffee'}],[{text:'⭐ Набрать очки',callback_data:'sp_tc_metric:score'},{text:'📦 Открыть кейсы',callback_data:'sp_tc_metric:cases_opened'}],[{text:'❌ Отмена',callback_data:'sp_workflow_cancel'}]]});return;
+    await updateStaffWorkflow(query.from.id,{step:'metric',data:{...data,premium:value==='premium'}},env);await answerCallback(env,query.id,'Линия выбрана.');await sendTelegramMessage(env,chatId,'Что должен сделать игрок?',{inline_keyboard:[[{text:'🏃 Завершить забеги',callback_data:'sp_tc_metric:runs'}],[{text:'🍥 Собрать зефир',callback_data:'sp_tc_metric:treats'},{text:'☕ Собрать кофе',callback_data:'sp_tc_metric:coffee'}],[{text:'⭐ Набрать очки',callback_data:'sp_tc_metric:score'},{text:'📦 Открыть кейсы',callback_data:'sp_tc_metric:cases_opened'}],[{text:'📅 Зайти в игру',callback_data:'sp_tc_metric:login_days'}],[{text:'❌ Отмена',callback_data:'sp_workflow_cancel'}]]});return;
   }
-  if(field==='metric'&&['runs','treats','coffee','score','cases_opened'].includes(value)){
+  if(field==='metric'&&['runs','treats','coffee','score','cases_opened','login_days'].includes(value)){
     await updateStaffWorkflow(query.from.id,{step:'target',data:{...data,metric:value}},env);await answerCallback(env,query.id,'Условие выбрано.');await sendTelegramMessage(env,chatId,'Введите числом цель задания. Например: <code>10</code>.',seasonPassWorkflowCancelKeyboard());return;
   }
   await answerCallback(env,query.id,'Некорректный выбор.',true);
 }
 
 async function showSeasonPassTaskCreateConfirmation(chatId,user,env){
-  const workflow=await getStaffWorkflow(user.id,env);if(!workflow||workflow.flow_type!=='season_pass_task_create'||workflow.step!=='confirm')return;const d=workflow.data||{};const metricLabel={runs:'завершённые забеги',treats:'собранный зефир',coffee:'собранный кофе',score:'набранные очки',cases_opened:'открытые кейсы'}[d.metric]||d.metric;
+  const workflow=await getStaffWorkflow(user.id,env);if(!workflow||workflow.flow_type!=='season_pass_task_create'||workflow.step!=='confirm')return;const d=workflow.data||{};const metricLabel={runs:'завершённые забеги',treats:'собранный зефир',coffee:'собранный кофе',score:'набранные очки',cases_opened:'открытые кейсы',login_days:'дни входа'}[d.metric]||d.metric;
   await sendTelegramMessage(env,chatId,`<b>Проверьте задание</b>\n\nНазвание: <b>${escapeHtml(d.title)}</b>\nПериод: <b>${d.period==='weekly'?'еженедельное':'ежедневное'}</b>\nЛиния: <b>${d.premium?'только Элитная':'бесплатная'}</b>\nУсловие: <b>${escapeHtml(metricLabel)}</b>\nЦель: <b>${Number(d.target||0).toLocaleString('ru-RU')}</b>\nНаграда: <b>${Number(d.xp||0).toLocaleString('ru-RU')} XP</b>\nОписание: ${d.description?escapeHtml(d.description):'—'}`,{inline_keyboard:[[{text:'✅ Создать задание',callback_data:'sp_tc_save'}],[{text:'❌ Отмена',callback_data:'sp_workflow_cancel'}]]});
 }
 
@@ -31936,7 +32229,7 @@ async function handleOperationsSecurityCallback(query,env,runtime={}){
   if(data==="sp_task_new"){await startSeasonPassTaskCreate(query,env);return true;}
   const spTcPeriod=data.match(/^sp_tc_period:(daily|weekly)$/);if(spTcPeriod){await setSeasonPassTaskCreateChoice(query,'period',spTcPeriod[1],env);return true;}
   const spTcLane=data.match(/^sp_tc_lane:(free|premium)$/);if(spTcLane){await setSeasonPassTaskCreateChoice(query,'lane',spTcLane[1],env);return true;}
-  const spTcMetric=data.match(/^sp_tc_metric:(runs|treats|coffee|score|cases_opened)$/);if(spTcMetric){await setSeasonPassTaskCreateChoice(query,'metric',spTcMetric[1],env);return true;}
+  const spTcMetric=data.match(/^sp_tc_metric:(runs|treats|coffee|score|cases_opened|login_days)$/);if(spTcMetric){await setSeasonPassTaskCreateChoice(query,'metric',spTcMetric[1],env);return true;}
   if(data==="sp_tc_save"){await finalizeSeasonPassTaskCreate(query,env);return true;}
   const spTaskEdit=data.match(/^sp_task_edit:([A-Za-z0-9_-]{2,80}):(\d{1,3})$/);if(spTaskEdit){await answerCallback(env,query.id,"Открываю задание.");await showSeasonPassTaskEditor(chatId,query.from,spTaskEdit[1],Number(spTaskEdit[2]),env);return true;}
   const spTaskTarget=data.match(/^sp_task_target:([A-Za-z0-9_-]{2,80}):(dec|inc):(\d{1,3})$/);if(spTaskTarget){await updateSeasonPassTaskValue(query,spTaskTarget[1],'target',spTaskTarget[2],Number(spTaskTarget[3]),env);return true;}
@@ -34927,6 +35220,7 @@ function ownerPanelRewardAsset(kind, itemId = "") {
   if (normalized === "treats" || normalized === "zefir") return seasonPassResourceRewardAsset(normalized);
   if (normalized === "coffee") return "/assets/optimized/v0.79.5/iconCoffee.png";
   if (normalized === "profile_xp" || normalized === "season_xp" || normalized === "xp") return "/assets/season-pass/xp.png";
+  if (normalized === "streak_protection") return "/assets/ui/icon_series_protection.png";
   if (SEASON_PASS_COSMETIC_KINDS.includes(normalized)) return seasonPassCosmeticImage(normalized,itemId);
   const encodedCosmetic=seasonPassCosmeticRewardDefinition({item_id:itemId});
   if (encodedCosmetic?.imageUrl) return encodedCosmetic.imageUrl;
@@ -37280,7 +37574,7 @@ async function normalizeValidateFlashOfferPayload(env,payload={}){
 async function normalizeValidateSeasonPassTaskPayload(env,payload={}){
   await ensureSeasonPassSchema(env);const seasonId=String(payload?.seasonId||"").trim();const season=await loadSeasonPassSeasonById(env,seasonId);if(!season)throw new ApiError(404,"Сезонный пропуск не найден.");
   const taskId=String(payload?.taskId||"").trim().slice(0,160),period=String(payload?.period||"");if(!["daily","weekly"].includes(period))throw new ApiError(400,"Период задания должен быть daily или weekly.");
-  const metric=String(payload?.metric||"");if(!["runs","treats","coffee","score","cases_opened"].includes(metric))throw new ApiError(400,"Неизвестный тип задания.");
+  const metric=String(payload?.metric||"");if(!["runs","treats","coffee","score","cases_opened","login_days"].includes(metric))throw new ApiError(400,"Неизвестный тип задания.");
   const target=ownerPanelInteger(payload?.target,1,10000000),xp=ownerPanelInteger(payload?.xp,1,10000000);if(target==null||xp==null)throw new ApiError(400,"Цель и XP должны быть целыми положительными числами.");
   const title=String(payload?.title||"").replace(/\s+/g," ").trim().slice(0,120),description=String(payload?.description||"").trim().slice(0,500);if(title.length<3)throw new ApiError(400,"Название задания слишком короткое.");
   return {seasonId,taskId,title,period,metric,target,xp,premium:Boolean(payload?.premium),description,enabled:payload?.enabled!==false,season};
@@ -42508,8 +42802,8 @@ function ownerPanelDirectGrantUi(htmlValue) {
     );
   }
   const script = `<script id="zefirok-owner-reward-grant-ui-v2">(()=>{
-    const options=[['booster:points','⚡ ×2 очки · 2 забега'],['booster:treats','⚡ ×2 зефир · 2 забега'],['booster:coffee','⚡ ×2 кофе · 2 забега'],['booster:shield','🛡 Щит Зеффи · 1 забег'],['booster:second_chance','💗 Второй шанс · 1 забег'],['booster:pause','⏸ Пауза Зеффи · 1 забег'],['season_pass:elite','🎟 Пропуск · Элит'],['season_pass:elite_plus','✨ Пропуск · Элит+'],['season_pass_xp','⚡ EXP пропуска (+ к текущему)']];
-    const enhance=()=>{const select=document.getElementById('playerGrantKind');if(!select)return;for(const [value,label] of options){if(!Array.from(select.options||[]).some(option=>option.value===value)){const option=document.createElement('option');option.value=value;option.textContent=label;select.appendChild(option);}}const card=select.closest('.card');const description=card?.querySelector('.section-head p');if(description)description.textContent='Начисляется напрямую на аккаунт, без Почты Зеффи. Компенсации работают отдельно через письма.';const amount=document.getElementById('playerGrantAmount');const amountLabel=amount?.closest('.field')?.querySelector('label');if(amountLabel)amountLabel.textContent='Количество / EXP';const sync=()=>{if(!amount)return;const isTier=select.value==='season_pass:elite'||select.value==='season_pass:elite_plus';const isShowcase=String(select.value||'').startsWith('showcase_style:');const fixed=isTier||isShowcase;amount.disabled=fixed;if(fixed)amount.value='1';};if(select.dataset.directGrantUiV2!=='1'){select.dataset.directGrantUiV2='1';select.addEventListener('change',sync);}sync();};
+    const options=[['streak_protection','🛡 Защита серии'],['booster:points','⚡ ×2 очки · 2 забега'],['booster:treats','⚡ ×2 зефир · 2 забега'],['booster:coffee','⚡ ×2 кофе · 2 забега'],['booster:shield','🛡 Щит Зеффи · 1 забег'],['booster:second_chance','💗 Второй шанс · 1 забег'],['booster:pause','⏸ Пауза Зеффи · 1 забег'],['season_pass:elite','🎟 Пропуск · Элит'],['season_pass:elite_plus','✨ Пропуск · Элит+'],['season_pass_xp','⚡ EXP пропуска (+ к текущему)']];
+    const enhance=()=>{const select=document.getElementById('playerGrantKind');if(!select)return;for(const [value,label] of options){if(!Array.from(select.options||[]).some(option=>option.value===value)){const option=document.createElement('option');option.value=value;option.textContent=label;select.appendChild(option);}}const card=select.closest('.card');const description=card?.querySelector('.section-head p');if(description)description.textContent='Начисляется напрямую на аккаунт, без Почты Зеффи. Компенсации работают отдельно через письма.';const amount=document.getElementById('playerGrantAmount');const amountLabel=amount?.closest('.field')?.querySelector('label');if(amountLabel)amountLabel.textContent='Количество / EXP';const sync=()=>{if(!amount)return;const isTier=select.value==='season_pass:elite'||select.value==='season_pass:elite_plus';const isShowcase=String(select.value||'').startsWith('showcase_style:');const isProtection=select.value==='streak_protection';const fixed=isTier||isShowcase;amount.disabled=fixed;if(fixed)amount.value='1';if(isProtection)amount.max='30';else amount.removeAttribute('max');};if(select.dataset.directGrantUiV2!=='1'){select.dataset.directGrantUiV2='1';select.addEventListener('change',sync);}sync();};
     const start=()=>{enhance();new MutationObserver(enhance).observe(document.body,{childList:true,subtree:true});};if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
   })();</script>`;
   const closeIndex = html.lastIndexOf("</body>");
@@ -42535,6 +42829,16 @@ async function ownerPanelGrantDirectReward(env, ctx, telegramId, kind, itemId, a
       bumpPlayerAccountRevisionStatement(env, telegramId, now)
     ]);
     if (Number(results?.[0]?.meta?.changes || 0) < 1) throw new ApiError(404, "Профиль игрока не найден.");
+  } else if(kind==='streak_protection'){
+    await ensureDailyLoyaltySchema(env);await ensureAuthoritativeProfileRow(env,telegramId,`owner-protection:${sourceId}`);
+    const protectionConfig=await loadDailyLoyaltyConfig(env,{allowDisabled:true}),statements=[];
+    appendStreakProtectionGrantStatements(statements,env,{telegramId,seasonId:String(protectionConfig.season?.id||'daily-main'),amount,sourceType:'owner_direct',sourceKey:`owner-protection:${sourceId}`.slice(0,190),settings:protectionConfig.settings||{},now});
+    statements.push(bumpPlayerAccountRevisionStatement(env,telegramId,now));await env.DB.batch(statements);
+    const protectionResult=await readStreakProtectionGrantResult(env,`owner-protection:${sourceId}`.slice(0,190));
+    const description=safeRewardDescription({kind,id:itemId,amount});
+    const details={kind,itemId,amount,reason,sourceId,direct:true,streakProtection:protectionResult};
+    await logStaffAction(env,ctx.user,ctx.access,'owner_panel_grant',telegramId,'direct_reward',null,amount,details);
+    return {ok:true,grantType:'direct',sourceId,direct:true,streakProtection:protectionResult,message:protectionResult?.overflowAmount>0?`Начислено ${protectionResult.granted} защит; ${protectionResult.overflowAmount} сверх лимита конвертировано в компенсацию.`:`Начислено напрямую: ${description}.`};
   } else if (kind === "case") {
     await createGrantedCases(env, telegramId, itemId, amount, `owner-direct:${ctx.user.id}`, reason);
   } else if (kind === "booster") {
@@ -42613,10 +42917,10 @@ async function ownerPanelGrantPlayer(env, ctx) {
   }
 
   const kind = rawKind === "treats" ? "zefir" : rawKind;
-  if (!["points", "zefir", "coffee", "case", "skin", "booster", "showcase_style"].includes(kind)) throw new ApiError(400, "Неизвестный тип награды.");
+  if (!["points", "zefir", "coffee", "case", "skin", "booster", "showcase_style", "streak_protection"].includes(kind)) throw new ApiError(400, "Неизвестный тип награды.");
   const singleItemReward = kind === "skin" || kind === "showcase_style";
   const cosmeticSkin = kind === "skin";
-  const amount = singleItemReward ? 1 : ownerPanelInteger(ctx.body?.amount, 1, kind === "case" ? 20 : kind === "booster" ? 999 : 10000000);
+  const amount = singleItemReward ? 1 : ownerPanelInteger(ctx.body?.amount, 1, kind === 'streak_protection' ? 30 : kind === "case" ? 20 : kind === "booster" ? 999 : 10000000);
   if (amount == null) throw new ApiError(400, "Некорректное количество награды.");
   let itemId = "";
   if (kind === "case") {
@@ -43253,6 +43557,10 @@ function ownerPanelSeasonPassRewardPresentation(typeValue, amountValue, itemValu
     const amount=boost.kind==='xp'?1:ownerPanelInteger(amountValue,1,50);
     if(amount==null)throw new ApiError(400,"Количество усилителей должно быть от 1 до 50.");
     return { rewardType:boost.storedType,publicRewardType:boost.publicType,amount,itemId:boost.itemId,title:boost.kind==='xp'?boost.title:(amount===1?boost.title:`${boost.title} · ${amount} шт.`),imageUrl:boost.imageUrl };
+  }
+  if(type==='streak_protection'){
+    const amount=ownerPanelInteger(amountValue,1,30);if(amount==null)throw new ApiError(400,'Количество защит серии должно быть от 1 до 30.');
+    return {rewardType:'points',publicRewardType:'streak_protection',amount,itemId:'streak_protection',publicItemId:'',title:amount===1?'Защита серии':`Защита серии ×${amount}`,imageUrl:'/assets/ui/icon_series_protection.png'};
   }
   if (type === "case") {
     const itemId = normalizeCaseType(itemValue);
