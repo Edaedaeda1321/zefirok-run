@@ -1945,93 +1945,181 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
   function showGamePoll(poll) {
     removeGamePollOverlay();
     const overlay = gamePollElement("div", "zefirok-game-poll-overlay");
-    const card = gamePollElement("div", "zefirok-game-poll-card");
+    overlay.setAttribute("role", "presentation");
+    const card = gamePollElement("section", "zefirok-game-poll-card");
+    card.setAttribute("role", "dialog");
+    card.setAttribute("aria-modal", "true");
+    card.setAttribute("aria-labelledby", "zefirok-game-poll-title");
+
+    const top = gamePollElement("div", "zefirok-game-poll-top");
     const pollHead = gamePollElement("div", "zefirok-game-poll-head");
+    const pollIconWrap = gamePollElement("div", "zefirok-game-poll-icon-wrap");
     const pollIcon = gamePollElement("img", "zefirok-game-poll-icon");
     pollIcon.src = "/assets/ui/icon_oprosnik.png";
     pollIcon.alt = "";
+    pollIconWrap.append(pollIcon);
     const pollHeadCopy = gamePollElement("div", "zefirok-game-poll-head-copy");
-    const badge = gamePollElement("div", "zefirok-game-poll-badge", "Опрос игроков");
+    const eyebrow = gamePollElement("div", "zefirok-game-poll-eyebrow", "Нам важно твоё мнение");
+    const micro = gamePollElement("div", "zefirok-game-poll-micro", "Быстрый опрос · около 30 секунд");
+    pollHeadCopy.append(eyebrow, micro);
+    pollHead.append(pollIconWrap, pollHeadCopy);
+    top.append(pollHead);
+
+    const deadlineMs = Math.max(0, Number(poll.endsAt || 0));
+    if (deadlineMs) {
+      const deadline = gamePollElement("div", "zefirok-game-poll-deadline");
+      const date = new Date(deadlineMs);
+      deadline.textContent = `До ${date.toLocaleDateString("ru-RU", { day:"numeric", month:"short" })}`;
+      top.append(deadline);
+    }
+    card.append(top);
+
+    const body = gamePollElement("div", "zefirok-game-poll-body");
     const title = gamePollElement("h2", "", poll.question);
-    pollHeadCopy.append(badge,title);pollHead.append(pollIcon,pollHeadCopy);card.append(pollHead);
-    if (poll.description) card.append(gamePollElement("p", "zefirok-game-poll-description", poll.description));
-    if (poll.rewardText && poll.rewardText !== "без награды") card.append(gamePollElement("div", "zefirok-game-poll-reward", `🎁 Награда: ${poll.rewardText}`));
+    title.id = "zefirok-game-poll-title";
+    body.append(title);
+    if (poll.description) body.append(gamePollElement("p", "zefirok-game-poll-description", poll.description));
+    if (poll.rewardText && poll.rewardText !== "без награды") {
+      const reward = gamePollElement("div", "zefirok-game-poll-reward");
+      reward.append(gamePollElement("span", "zefirok-game-poll-reward-icon", "🎁"));
+      const rewardCopy = gamePollElement("span", "");
+      rewardCopy.innerHTML = `<small>Награда за участие</small><b></b>`;
+      rewardCopy.querySelector("b").textContent = poll.rewardText;
+      reward.append(rewardCopy);
+      body.append(reward);
+    }
+
     const answerType = String(poll.answerType || "choice");
     const commentMode = answerType === "text" ? "required" : String(poll.commentMode || "none");
     const form = gamePollElement("div", "zefirok-game-poll-options");
     const selected = new Set();
+    const status = gamePollElement("div", "zefirok-game-poll-status");
+    let commentInput = null;
+    let commentCount = null;
+    let submit = null;
+
+    const selectionInstruction = () => answerType === "text"
+      ? `Напиши от ${Number(poll.commentMin || 10)} до ${Number(poll.commentMax || 1000)} символов.`
+      : poll.responseMode === "multiple"
+        ? `Можно выбрать до ${Number(poll.maxChoices || 1)} вариантов.`
+        : "Выбери один вариант.";
+
+    const updateFormState = () => {
+      const comment = String(commentInput?.value || "").trim();
+      const minComment = Math.max(1, Number(poll.commentMin || 10));
+      const choiceReady = answerType === "text" || selected.size > 0;
+      const commentReady = !commentInput || commentMode === "optional" ? (!comment.length || comment.length >= minComment) : comment.length >= minComment;
+      if (submit) submit.disabled = !(choiceReady && commentReady);
+      if (commentCount && commentInput) commentCount.textContent = `${commentInput.value.length}/${commentInput.maxLength}`;
+      if (answerType !== "text" && poll.responseMode === "multiple" && selected.size) status.textContent = `Выбрано ${selected.size} из ${Number(poll.maxChoices || 1)}.`;
+      else status.textContent = selectionInstruction();
+    };
+
     if (answerType !== "text") {
-      for (const option of poll.options || []) {
-        const button = gamePollElement("button", "zefirok-game-poll-option", option.text);
+      const optionsLabel = gamePollElement("div", "zefirok-game-poll-section-label", poll.responseMode === "multiple" ? "Выбери варианты" : "Выбери вариант");
+      body.append(optionsLabel);
+      for (const [index, option] of (poll.options || []).entries()) {
+        const button = gamePollElement("button", "zefirok-game-poll-option");
         button.type = "button";
+        button.setAttribute("aria-pressed", "false");
+        const marker = gamePollElement("span", "zefirok-game-poll-option-marker", poll.responseMode === "multiple" ? "✓" : String(index + 1));
+        const copy = gamePollElement("span", "zefirok-game-poll-option-copy", option.text);
+        button.append(marker, copy);
         button.addEventListener("click", () => {
           if (poll.responseMode === "single") {
             selected.clear();
-            for (const item of form.querySelectorAll("button")) item.classList.remove("is-selected");
+            for (const item of form.querySelectorAll("button")) { item.classList.remove("is-selected"); item.setAttribute("aria-pressed", "false"); }
             selected.add(option.id);
             button.classList.add("is-selected");
+            button.setAttribute("aria-pressed", "true");
           } else if (selected.has(option.id)) {
             selected.delete(option.id);
             button.classList.remove("is-selected");
+            button.setAttribute("aria-pressed", "false");
           } else if (selected.size < Number(poll.maxChoices || 1)) {
             selected.add(option.id);
             button.classList.add("is-selected");
+            button.setAttribute("aria-pressed", "true");
           }
+          updateFormState();
         });
         form.append(button);
       }
-      card.append(form);
+      body.append(form);
     }
-    let commentInput = null;
+
     if (answerType === "text" || commentMode !== "none") {
-      const label = gamePollElement("label", "zefirok-game-poll-comment-label", answerType === "text" ? (poll.commentPrompt || "Напишите свой ответ сообщением.") : (commentMode === "required" ? "Обязательный комментарий" : "Комментарий — необязательно"));
+      const commentBlock = gamePollElement("div", "zefirok-game-poll-comment-block");
+      const commentHead = gamePollElement("div", "zefirok-game-poll-comment-head");
+      commentHead.append(gamePollElement("strong", "", answerType === "text" ? (poll.commentPrompt || "Расскажи, что думаешь") : (commentMode === "required" ? "Комментарий" : "Хочешь добавить комментарий?")));
+      commentCount = gamePollElement("span", "zefirok-game-poll-comment-count", "0");
+      commentHead.append(commentCount);
       commentInput = gamePollElement("textarea", "zefirok-game-poll-comment");
-      commentInput.rows = 5;
+      commentInput.rows = answerType === "text" ? 5 : 4;
       commentInput.maxLength = Math.max(10, Number(poll.commentMax || 1000));
-      commentInput.placeholder = answerType === "text" ? "Напишите, что вам понравилось и что стоит улучшить…" : "Расскажите подробнее о своём выборе…";
-      label.append(commentInput);
-      card.append(label);
+      commentInput.placeholder = answerType === "text" ? "Напиши здесь свой ответ…" : "Можно пояснить выбор — это поможет нам лучше понять мнение.";
+      commentInput.addEventListener("input", updateFormState);
+      commentBlock.append(commentHead, commentInput);
+      if (commentMode === "optional") commentBlock.append(gamePollElement("small", "zefirok-game-poll-comment-note", "Необязательно"));
+      body.append(commentBlock);
     }
-    const instruction = answerType === "text"
-      ? `Напишите от ${Number(poll.commentMin || 10)} до ${Number(poll.commentMax || 1000)} символов.`
-      : poll.responseMode === "multiple" ? `Можно выбрать до ${poll.maxChoices} вариантов.` : "Выберите один вариант.";
-    const status = gamePollElement("div", "zefirok-game-poll-status", instruction);
-    card.append(status);
+
+    status.textContent = selectionInstruction();
+    body.append(status);
     const actions = gamePollElement("div", "zefirok-game-poll-actions");
-    const later = gamePollElement("button", "zefirok-game-poll-later", "Позже");
+    const later = gamePollElement("button", "zefirok-game-poll-later", "Ответить позже");
     later.type = "button";
     later.addEventListener("click", async () => {
       later.disabled = true;
       try { await gamePollApi(GAME_POLL_SNOOZE_PATH, { pollId: poll.id }); } catch (error) {}
       removeGamePollOverlay();
     });
-    const submit = gamePollElement("button", "zefirok-game-poll-submit", "Отправить ответ");
+    submit = gamePollElement("button", "zefirok-game-poll-submit", "Отправить мнение");
     submit.type = "button";
+    submit.disabled = true;
     submit.addEventListener("click", async () => {
       const comment = String(commentInput?.value || "").trim();
       const minComment = Math.max(1, Number(poll.commentMin || 10));
-      if (answerType !== "text" && !selected.size) { status.textContent = "Сначала выберите вариант ответа."; return; }
-      if ((answerType === "text" || commentMode === "required") && comment.length < minComment) { status.textContent = `Напишите ответ длиной не менее ${minComment} символов.`; commentInput?.focus(); return; }
-      if (commentMode === "optional" && comment.length > 0 && comment.length < minComment) { status.textContent = `Комментарий должен содержать не менее ${minComment} символов или быть пустым.`; commentInput?.focus(); return; }
+      if (answerType !== "text" && !selected.size) { status.textContent = "Сначала выбери вариант ответа."; return; }
+      if ((answerType === "text" || commentMode === "required") && comment.length < minComment) { status.textContent = `Нужно минимум ${minComment} символов.`; commentInput?.focus(); return; }
+      if (commentMode === "optional" && comment.length > 0 && comment.length < minComment) { status.textContent = `Комментарий — минимум ${minComment} символов или оставь поле пустым.`; commentInput?.focus(); return; }
       submit.disabled = true; later.disabled = true; status.textContent = "Сохраняем ответ…";
       try {
         const result = await gamePollApi(GAME_POLL_VOTE_PATH, { pollId: poll.id, optionIds: [...selected], comment });
-        status.textContent = result?.already ? "Ваш ответ уже был сохранён." : `Спасибо! Ответ принят.${result?.rewardQueued ? ` Награда «${result.rewardText}» отправлена в профиль.` : ""}`;
-        form.remove(); commentInput?.closest("label")?.remove(); actions.remove();
+        body.replaceChildren();
+        const success = gamePollElement("div", "zefirok-game-poll-success");
+        success.append(gamePollElement("div", "zefirok-game-poll-success-icon", "💗"));
+        success.append(gamePollElement("h2", "", result?.already ? "Ответ уже сохранён" : "Спасибо за мнение!"));
+        success.append(gamePollElement("p", "", result?.already ? "Мы уже получили твой ответ на этот опрос." : "Твой ответ поможет сделать «Сладкий Забег» лучше."));
+        if (result?.rewardQueued) success.append(gamePollElement("div", "zefirok-game-poll-success-reward", `🎁 ${result.rewardText} отправлено в профиль`));
+        body.append(success);
         if (result?.results?.options?.length) {
           const resultBox = gamePollElement("div", "zefirok-game-poll-results");
-          resultBox.append(gamePollElement("strong", "", `Результаты · ответов: ${Number(result.results.total || 0)}`));
-          for (const item of result.results.options) resultBox.append(gamePollElement("div", "", `${item.option_text}: ${item.votes} · ${item.percent}%`));
-          card.append(resultBox);
+          const resultHead = gamePollElement("div", "zefirok-game-poll-results-head");
+          resultHead.append(gamePollElement("strong", "", "Что ответили игроки"), gamePollElement("span", "", `${Number(result.results.total || 0)} ответов`));
+          resultBox.append(resultHead);
+          for (const item of result.results.options) {
+            const row = gamePollElement("div", "zefirok-game-poll-result-row");
+            const copy = gamePollElement("div", "zefirok-game-poll-result-copy");
+            copy.append(gamePollElement("span", "", item.option_text), gamePollElement("b", "", `${item.percent}%`));
+            const track = gamePollElement("div", "zefirok-game-poll-result-track");
+            const fill = gamePollElement("i", "zefirok-game-poll-result-fill");
+            fill.style.width = `${Math.max(0, Math.min(100, Number(item.percent || 0)))}%`;
+            track.append(fill); row.append(copy, track); resultBox.append(row);
+          }
+          body.append(resultBox);
         }
-        const close = gamePollElement("button", "zefirok-game-poll-submit", "Продолжить игру");
-        close.type = "button"; close.addEventListener("click", removeGamePollOverlay); card.append(close);
+        const close = gamePollElement("button", "zefirok-game-poll-submit zefirok-game-poll-continue", "Продолжить игру");
+        close.type = "button"; close.addEventListener("click", removeGamePollOverlay); body.append(close);
       } catch (error) {
         status.textContent = String(error?.message || "Не удалось сохранить ответ."); submit.disabled = false; later.disabled = false;
       }
     });
-    actions.append(later, submit); card.append(actions); overlay.append(card); document.body.append(overlay); gamePollOverlay = overlay;
+    actions.append(later, submit); body.append(actions); card.append(body); overlay.append(card); document.body.append(overlay); gamePollOverlay = overlay;
+    updateFormState();
+    window.requestAnimationFrame(() => card.querySelector("button,textarea")?.focus({ preventScroll:true }));
   }
+
 
 
   async function checkGamePollAfterOpen() {
@@ -2048,7 +2136,8 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
   }
 
   const pollStyle = document.createElement("style");
-  pollStyle.textContent = `.zefirok-game-poll-overlay{position:fixed;inset:0;z-index:999999;display:grid;place-items:center;padding:18px;background:rgba(77,44,35,.52);backdrop-filter:blur(6px);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}.zefirok-game-poll-card{width:min(420px,calc(100vw - 36px));max-height:calc(100vh - 52px);overflow:auto;box-sizing:border-box;padding:22px;border-radius:24px;background:#fff8f2;color:#4e342e;box-shadow:0 24px 70px rgba(66,35,28,.3)}.zefirok-game-poll-head{display:grid;grid-template-columns:72px minmax(0,1fr);gap:12px;align-items:center}.zefirok-game-poll-icon{width:72px;height:72px;object-fit:contain;filter:drop-shadow(0 5px 9px rgba(150,75,90,.13))}.zefirok-game-poll-head-copy{min-width:0}.zefirok-game-poll-badge{display:inline-flex;padding:7px 11px;border-radius:999px;background:#ffe1ea;color:#a43f66;font-size:12px;font-weight:800}.zefirok-game-poll-card h2{margin:7px 0 8px;font-size:22px;line-height:1.18}.zefirok-game-poll-description{margin:0 0 12px;color:#80665e}.zefirok-game-poll-reward{margin:12px 0;padding:10px 12px;border-radius:14px;background:#fff0c9;font-weight:750}.zefirok-game-poll-options{display:grid;gap:9px;margin-top:14px}.zefirok-game-poll-option{width:100%;padding:12px 14px;border:2px solid #ead9d1;border-radius:15px;background:#fff;color:#513831;text-align:left;font-size:15px;font-weight:700}.zefirok-game-poll-option.is-selected{border-color:#e56f9b;background:#ffe4ee;color:#8d3155}.zefirok-game-poll-comment-label{display:grid;gap:7px;margin-top:14px;color:#6f5149;font-size:13px;font-weight:800}.zefirok-game-poll-comment{width:100%;min-height:112px;resize:vertical;box-sizing:border-box;padding:12px 14px;border:2px solid #ead9d1;border-radius:15px;background:#fff;color:#513831;font:500 15px/1.35 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;outline:none}.zefirok-game-poll-comment:focus{border-color:#e56f9b}.zefirok-game-poll-status{min-height:20px;margin:12px 2px 0;color:#8c6b61;font-size:13px}.zefirok-game-poll-results{display:grid;gap:5px;margin:14px 0;padding:12px;border-radius:14px;background:#f6ebe5;font-size:13px}.zefirok-game-poll-actions{display:grid;grid-template-columns:1fr 1.4fr;gap:10px;margin-top:12px}.zefirok-game-poll-actions button,.zefirok-game-poll-card>button{padding:12px;border:0;border-radius:14px;font-size:14px;font-weight:800}.zefirok-game-poll-later{background:#eee2dc;color:#70574f}.zefirok-game-poll-submit{background:linear-gradient(135deg,#ed77a2,#d85e8c);color:#fff}`;
+  pollStyle.textContent = `.zefirok-game-poll-overlay{position:fixed;inset:0;z-index:999999;display:grid;place-items:center;padding:max(18px,env(safe-area-inset-top)) 16px max(18px,env(safe-area-inset-bottom));box-sizing:border-box;background:rgba(55,29,42,.55);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}.zefirok-game-poll-card{width:min(430px,100%);max-height:min(780px,calc(100dvh - 36px));overflow:auto;overscroll-behavior:contain;box-sizing:border-box;border:1px solid rgba(235,190,207,.88);border-radius:30px;background:linear-gradient(180deg,#fffaf7 0%,#fff6f9 52%,#fffdf9 100%);color:#563642;box-shadow:0 30px 90px rgba(57,30,42,.34),inset 0 1px 0 rgba(255,255,255,.95);scrollbar-width:thin;outline:none}.zefirok-game-poll-top{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:17px 18px 13px;border-bottom:1px solid rgba(232,194,207,.55);background:linear-gradient(135deg,rgba(255,232,241,.88),rgba(255,249,237,.9));border-radius:29px 29px 0 0}.zefirok-game-poll-head{display:grid;grid-template-columns:56px minmax(0,1fr);gap:11px;align-items:center;min-width:0}.zefirok-game-poll-icon-wrap{width:56px;height:56px;display:grid;place-items:center;border-radius:19px;background:linear-gradient(145deg,#fff,#ffe2ec);box-shadow:0 8px 20px rgba(170,80,116,.12),inset 0 0 0 1px rgba(224,153,180,.24)}.zefirok-game-poll-icon{width:48px;height:48px;object-fit:contain;filter:drop-shadow(0 5px 9px rgba(150,75,90,.12))}.zefirok-game-poll-head-copy{min-width:0}.zefirok-game-poll-eyebrow{font-size:13px;line-height:1.25;font-weight:950;color:#8d3859}.zefirok-game-poll-micro{margin-top:4px;color:#9b7886;font-size:10px;line-height:1.25;font-weight:700}.zefirok-game-poll-deadline{flex:0 0 auto;padding:7px 9px;border-radius:999px;background:#fff;color:#98516a;border:1px solid #f0cfda;font-size:9px;font-weight:900}.zefirok-game-poll-body{padding:18px}.zefirok-game-poll-card h2{margin:0;font-size:22px;line-height:1.18;letter-spacing:-.02em;color:#60384a}.zefirok-game-poll-description{margin:8px 0 0;color:#866b75;font-size:13px;line-height:1.48}.zefirok-game-poll-reward{display:grid;grid-template-columns:38px minmax(0,1fr);gap:10px;align-items:center;margin:14px 0 2px;padding:10px 12px;border:1px solid #efd49d;border-radius:16px;background:linear-gradient(135deg,#fff7d9,#fff1d3);color:#775329}.zefirok-game-poll-reward-icon{width:38px;height:38px;display:grid;place-items:center;border-radius:12px;background:rgba(255,255,255,.72);font-size:19px}.zefirok-game-poll-reward span:last-child{display:grid;gap:2px}.zefirok-game-poll-reward small{font-size:9px;color:#a17b45;font-weight:800}.zefirok-game-poll-reward b{font-size:12px;color:#704d24}.zefirok-game-poll-section-label{margin-top:17px;color:#765261;font-size:10px;font-weight:950;text-transform:uppercase;letter-spacing:.055em}.zefirok-game-poll-options{display:grid;gap:8px;margin-top:8px}.zefirok-game-poll-option{width:100%;min-height:54px;display:grid;grid-template-columns:34px minmax(0,1fr);align-items:center;gap:10px;padding:9px 11px;border:1.5px solid #ead4dc;border-radius:17px;background:rgba(255,255,255,.88);color:#5f414c;text-align:left;font:800 14px/1.3 inherit;transition:transform .12s ease,border-color .12s ease,background .12s ease,box-shadow .12s ease}.zefirok-game-poll-option:active{transform:scale(.992)}.zefirok-game-poll-option-marker{width:32px;height:32px;display:grid;place-items:center;border-radius:11px;background:#fff1f5;color:#aa5d79;font-size:11px;font-weight:950;box-shadow:inset 0 0 0 1px rgba(220,150,176,.18)}.zefirok-game-poll-option.is-selected{border-color:#dd7098;background:linear-gradient(145deg,#fff7fa,#ffe7ef);color:#833552;box-shadow:0 6px 18px rgba(186,75,117,.09)}.zefirok-game-poll-option.is-selected .zefirok-game-poll-option-marker{background:#df6b96;color:#fff;box-shadow:none}.zefirok-game-poll-comment-block{position:relative;display:grid;gap:7px;margin-top:15px}.zefirok-game-poll-comment-head{display:flex;align-items:center;justify-content:space-between;gap:10px;color:#765261}.zefirok-game-poll-comment-head strong{font-size:11px}.zefirok-game-poll-comment-count{font-size:9px;color:#a28590;font-weight:800}.zefirok-game-poll-comment{width:100%;min-height:100px;resize:vertical;box-sizing:border-box;padding:12px 13px;border:1.5px solid #ead4dc;border-radius:16px;background:#fff;color:#5b3c47;font:500 14px/1.42 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;outline:none;transition:border-color .12s ease,box-shadow .12s ease}.zefirok-game-poll-comment:focus{border-color:#dc7098;box-shadow:0 0 0 3px rgba(220,112,152,.1)}.zefirok-game-poll-comment-note{position:absolute;right:10px;bottom:8px;color:#aa8b96;font-size:8px;font-weight:800;pointer-events:none}.zefirok-game-poll-status{min-height:18px;margin:9px 2px 0;color:#967581;font-size:10px;line-height:1.4}.zefirok-game-poll-actions{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.35fr);gap:8px;margin-top:14px}.zefirok-game-poll-actions button,.zefirok-game-poll-continue{min-height:47px;padding:11px 13px;border:0;border-radius:15px;font:900 12px/1.2 inherit}.zefirok-game-poll-later{background:#f2e8ec;color:#846774}.zefirok-game-poll-submit{border:0;background:linear-gradient(135deg,#e579a2,#d45c89);color:#fff;box-shadow:0 9px 20px rgba(195,72,117,.2);transition:opacity .12s ease,transform .12s ease}.zefirok-game-poll-submit:active:not(:disabled){transform:translateY(1px)}.zefirok-game-poll-submit:disabled{opacity:.45;box-shadow:none}.zefirok-game-poll-success{display:grid;justify-items:center;text-align:center;padding:8px 8px 3px}.zefirok-game-poll-success-icon{width:68px;height:68px;display:grid;place-items:center;margin-bottom:11px;border-radius:24px;background:linear-gradient(145deg,#ffe6ef,#fff4d9);font-size:31px;box-shadow:0 10px 24px rgba(182,80,116,.1)}.zefirok-game-poll-success h2{font-size:23px}.zefirok-game-poll-success p{max-width:300px;margin:8px 0 0;color:#8a6e79;font-size:12px;line-height:1.45}.zefirok-game-poll-success-reward{margin-top:13px;padding:9px 11px;border-radius:13px;background:#fff3d6;color:#7c592c;font-size:10px;font-weight:900}.zefirok-game-poll-results{display:grid;gap:10px;margin-top:17px;padding:13px;border:1px solid #eddbe2;border-radius:17px;background:rgba(255,255,255,.72)}.zefirok-game-poll-results-head{display:flex;align-items:center;justify-content:space-between;gap:8px}.zefirok-game-poll-results-head strong{font-size:11px;color:#744657}.zefirok-game-poll-results-head span{font-size:9px;color:#a1838e}.zefirok-game-poll-result-row{display:grid;gap:5px}.zefirok-game-poll-result-copy{display:flex;align-items:center;justify-content:space-between;gap:10px;color:#705361;font-size:10px}.zefirok-game-poll-result-copy b{color:#a53d65}.zefirok-game-poll-result-track{height:7px;overflow:hidden;border-radius:999px;background:#f1e4e9}.zefirok-game-poll-result-fill{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,#e2749c,#d9a449)}.zefirok-game-poll-continue{width:100%;margin-top:14px}@media(max-width:380px){.zefirok-game-poll-card{border-radius:25px}.zefirok-game-poll-top{padding:14px;border-radius:24px 24px 0 0}.zefirok-game-poll-head{grid-template-columns:48px minmax(0,1fr)}.zefirok-game-poll-icon-wrap{width:48px;height:48px;border-radius:16px}.zefirok-game-poll-icon{width:42px;height:42px}.zefirok-game-poll-body{padding:15px}.zefirok-game-poll-card h2{font-size:20px}.zefirok-game-poll-actions{grid-template-columns:1fr}.zefirok-game-poll-later{order:2}}`;
+
   document.head.append(pollStyle);
   window.addEventListener("load", () => window.setTimeout(checkGamePollAfterOpen, 1600), { once: true });
 

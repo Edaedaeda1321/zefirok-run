@@ -22830,51 +22830,171 @@ async function showEconomyDashboard(chatId, user, env) {
   );
 }
 
+const PLAYER_SEGMENT_GROUPS = Object.freeze({
+  overview: Object.freeze({ order:0, title:"Основное", icon:"👥", description:"Базовые аудитории для массовых действий" }),
+  lifecycle: Object.freeze({ order:10, title:"Жизненный цикл", icon:"🌱", description:"Новые, вернувшиеся и давно не игравшие игроки" }),
+  activity: Object.freeze({ order:20, title:"Активность", icon:"🔥", description:"Игровая активность и позиции в рейтинге" }),
+  season: Object.freeze({ order:30, title:"Сезон и пропуск", icon:"🌙", description:"Участие в сезоне и тарифы сезонного пропуска" }),
+  economy: Object.freeze({ order:40, title:"Покупки и вовлечение", icon:"🛍", description:"Покупки, промокоды и вовлечённость" }),
+  collection: Object.freeze({ order:50, title:"Коллекции и награды", icon:"🎁", description:"Особые кейсы и физические награды" }),
+  internal: Object.freeze({ order:60, title:"Служебные", icon:"🧪", description:"Тестеры и команда проекта" }),
+  moderation: Object.freeze({ order:90, title:"Модерация", icon:"🛡", description:"Служебные категории модерации" }),
+  custom: Object.freeze({ order:100, title:"Собственные аудитории", icon:"✨", description:"Аудитории, созданные вручную в Control Center" })
+});
+
 const PLAYER_SEGMENTS = Object.freeze({
   new_today: "Новые сегодня",
-  active_today: "Активны сегодня",
-  returning_today: "Вернулись сегодня",
-  active_7d: "Активны 7 дней",
-  inactive_7d: "Неактивны 7 дней",
+  new_7d: "Новые за 7 дней",
+  not_started: "Ещё не завершили первый забег",
+  returning_today: "Вернулись после 7+ дней",
+  inactive_3d: "Не играли 3 дня",
+  inactive_7d: "Не играли 7 дней",
+  inactive_14d: "Не играли 14 дней",
+  inactive_30d: "Не играли 30 дней",
+  active_today: "Играли сегодня",
+  active_3d: "Играли за 3 дня",
+  active_7d: "Играли за 7 дней",
+  active_30d: "Играли за 30 дней",
   top_10: "Топ-10 рейтинга",
+  top_100: "Топ-100 рейтинга",
+  season: "Участники рейтингового сезона",
+  pass_players: "Участники сезонного пропуска",
   elite: "Elite",
   elite_plus: "Elite+",
-  no_purchases: "Без покупок",
-  high_play_no_purchase: "Много играют без покупок",
+  premium_any: "Elite или Elite+",
+  pass_complete: "Завершили 50 уровней пропуска",
+  buyers: "Покупали кейсы или скины",
+  no_purchases: "Без покупок кейсов и скинов",
+  high_play_no_purchase: "10+ забегов · без покупок",
   promo_redeemers: "Использовали промокод",
-  pass_complete: "Завершили пропуск",
   legendary_openers: "Открывали Легендарный кейс",
   physical_winners: "Получали физическую награду",
+  testers: "Тестеры",
+  staff: "Сотрудники",
   banned: "Заблокированные"
 });
+
+const PLAYER_SEGMENT_META = Object.freeze({
+  all:{group:"overview",description:"Все игровые профили, доступные Control Center."},
+  new_today:{group:"lifecycle",description:"Зарегистрировались сегодня."},
+  new_7d:{group:"lifecycle",description:"Зарегистрировались за последние 7 дней."},
+  not_started:{group:"lifecycle",description:"Есть профиль, но ещё нет ни одного зачтённого забега."},
+  returning_today:{group:"lifecycle",description:"Сегодня снова играют после перерыва не менее 7 дней."},
+  inactive_3d:{group:"lifecycle",description:"Аккаунт старше 3 дней и нет зачтённых забегов за последние 3 дня."},
+  inactive_7d:{group:"lifecycle",description:"Аккаунт старше 7 дней и нет зачтённых забегов за последние 7 дней."},
+  inactive_14d:{group:"lifecycle",description:"Аккаунт старше 14 дней и нет зачтённых забегов за последние 14 дней."},
+  inactive_30d:{group:"lifecycle",description:"Аккаунт старше 30 дней и нет зачтённых забегов за последние 30 дней."},
+  active_today:{group:"activity",description:"Есть зачтённый забег сегодня."},
+  active_3d:{group:"activity",description:"Есть зачтённый забег за последние 3 дня."},
+  active_7d:{group:"activity",description:"Есть зачтённый забег за последние 7 дней."},
+  active_30d:{group:"activity",description:"Есть зачтённый забег за последние 30 дней."},
+  top_10:{group:"activity",description:"Текущий топ-10 общего рейтинга."},
+  top_100:{group:"activity",description:"Текущий топ-100 общего рейтинга."},
+  season:{group:"season",description:"Есть запись в активном рейтинговом сезоне."},
+  pass_players:{group:"season",description:"Есть прогресс в текущем сезонном пропуске."},
+  elite:{group:"season",description:"Активирован тариф Elite текущего пропуска."},
+  elite_plus:{group:"season",description:"Активирован тариф Elite+ текущего пропуска."},
+  premium_any:{group:"season",description:"Активирован Elite или Elite+ текущего пропуска."},
+  pass_complete:{group:"season",description:"Набрано достаточно XP для 50 уровня пропуска."},
+  buyers:{group:"economy",description:"Есть зафиксированная покупка кейса или скина."},
+  no_purchases:{group:"economy",description:"Нет зафиксированных покупок кейсов и скинов."},
+  high_play_no_purchase:{group:"economy",description:"10+ зачтённых забегов за 7 дней и без покупок."},
+  promo_redeemers:{group:"economy",description:"Успешно использовали хотя бы один промокод."},
+  legendary_openers:{group:"collection",description:"Хотя бы раз открывали Легендарный кейс."},
+  physical_winners:{group:"collection",description:"Получали код физической награды."},
+  testers:{group:"internal",description:"Аккаунты, добавленные в список тестеров."},
+  staff:{group:"internal",description:"Активные сотрудники и владелец проекта."},
+  banned:{group:"moderation",description:"Игроки с активной блокировкой."}
+});
+
+function playerSegmentMeta(key, builtin = true) {
+  const value = PLAYER_SEGMENT_META[String(key)] || {};
+  const group = builtin ? String(value.group || "activity") : "custom";
+  const groupMeta = PLAYER_SEGMENT_GROUPS[group] || PLAYER_SEGMENT_GROUPS.custom;
+  return { group, groupTitle:groupMeta.title, groupIcon:groupMeta.icon, groupDescription:String(groupMeta.description||""), groupOrder:Number(groupMeta.order||100), description:String(value.description||"") };
+}
+
 
 async function segmentPlayerIds(env, key, limit = 10000) {
   const now = Math.floor(Date.now() / 1000);
   const day = moscowDayStartUnix();
   const max = Math.max(1, Math.min(10000, Number(limit) || 10000));
+  const segment = String(key || "").trim();
   let sql = "";
   let binds = [];
-  if (key === "new_today") { sql = `SELECT telegram_id FROM admin_profile_state WHERE created_at >= ? ORDER BY created_at DESC LIMIT ?`; binds = [day, max]; }
-  else if (key === "active_today") { sql = `SELECT telegram_id,MAX(created_at) AS last_at FROM leaderboard_runs WHERE accepted=1 AND created_at>=? GROUP BY telegram_id ORDER BY last_at DESC LIMIT ?`; binds = [day, max]; }
-  else if (key === "returning_today") { sql = `SELECT DISTINCT r.telegram_id FROM leaderboard_runs r JOIN admin_profile_state p ON p.telegram_id=r.telegram_id WHERE r.accepted=1 AND r.created_at>=? AND p.created_at<? ORDER BY r.created_at DESC LIMIT ?`; binds = [day, day, max]; }
-  else if (key === "active_7d") { sql = `SELECT telegram_id,MAX(created_at) AS last_at FROM leaderboard_runs WHERE accepted=1 AND created_at>=? GROUP BY telegram_id ORDER BY last_at DESC LIMIT ?`; binds = [now - 7 * 86400, max]; }
-  else if (key === "inactive_7d") { sql = `SELECT telegram_id FROM admin_profile_state WHERE updated_at <= ? ORDER BY updated_at ASC LIMIT ?`; binds = [now - 7 * 86400, max]; }
-  else if (key === "top_10") { sql = `SELECT telegram_id FROM leaderboard_all_time WHERE hidden = 0 ORDER BY best_score DESC, achieved_at ASC LIMIT 10`; }
-  else if (key === "elite") { sql = `SELECT telegram_id FROM season_pass_players WHERE premium_tier='elite' AND season_id=(SELECT season_id FROM season_pass_seasons WHERE starts_at<=? AND ends_at>? ORDER BY starts_at DESC LIMIT 1) ORDER BY updated_at DESC LIMIT ?`; binds = [now, now, max]; }
-  else if (key === "elite_plus") { sql = `SELECT telegram_id FROM season_pass_players WHERE premium_tier='elite_plus' AND season_id=(SELECT season_id FROM season_pass_seasons WHERE starts_at<=? AND ends_at>? ORDER BY starts_at DESC LIMIT 1) ORDER BY updated_at DESC LIMIT ?`; binds = [now, now, max]; }
-  else if (key === "legendary_openers") { sql = `SELECT DISTINCT telegram_id FROM granted_cases WHERE case_type = 'legendary' AND status = 'opened' ORDER BY opened_at DESC LIMIT ?`; binds = [max]; }
-  else if (key === "physical_winners") { sql = `SELECT DISTINCT owner_telegram_id AS telegram_id FROM reward_codes WHERE owner_telegram_id <> '' ORDER BY created_at DESC LIMIT ?`; binds = [max]; }
-  else if (key === "no_purchases") { sql = `SELECT p.telegram_id FROM admin_profile_state p WHERE NOT EXISTS (SELECT 1 FROM granted_cases g WHERE g.telegram_id = p.telegram_id AND g.granted_by = 'shop') AND NOT EXISTS (SELECT 1 FROM shop_stock_consumptions s WHERE s.telegram_id = p.telegram_id AND s.category = 'skins') ORDER BY p.created_at DESC LIMIT ?`; binds = [max]; }
-  else if (key === "high_play_no_purchase") { sql = `SELECT r.telegram_id FROM leaderboard_runs r WHERE r.accepted=1 AND r.created_at>=? AND NOT EXISTS (SELECT 1 FROM granted_cases g WHERE g.telegram_id=r.telegram_id AND g.granted_by='shop') AND NOT EXISTS (SELECT 1 FROM shop_stock_consumptions s WHERE s.telegram_id=r.telegram_id AND s.category='skins') GROUP BY r.telegram_id HAVING COUNT(*)>=10 ORDER BY COUNT(*) DESC LIMIT ?`; binds = [now - 7 * 86400, max]; }
-  else if (key === "promo_redeemers") { sql = `SELECT telegram_id,MAX(created_at) AS last_at FROM promo_redemptions WHERE status IN ('queued','delivered') GROUP BY telegram_id ORDER BY last_at DESC LIMIT ?`; binds = [max]; }
-  else if (key === "pass_complete") { sql = `SELECT telegram_id FROM season_pass_players WHERE xp>=? ORDER BY updated_at DESC LIMIT ?`; binds = [seasonPassXpForLevel(50), max]; }
-  else if (key === "banned") { sql = `SELECT telegram_id FROM player_admin_controls WHERE blocked = 1 ORDER BY updated_at DESC LIMIT ?`; binds = [max]; }
-  else return ownerV85CustomSegmentPlayerIds(env, key, max);
+  if (segment === "all") { sql = `SELECT telegram_id FROM admin_profile_state ORDER BY updated_at DESC LIMIT ?`; binds=[max]; }
+  else if (segment === "new_today") { sql = `SELECT telegram_id FROM admin_profile_state WHERE created_at >= ? ORDER BY created_at DESC LIMIT ?`; binds = [day, max]; }
+  else if (segment === "new_7d") { sql = `SELECT telegram_id FROM admin_profile_state WHERE created_at >= ? ORDER BY created_at DESC LIMIT ?`; binds = [now - 7 * 86400, max]; }
+  else if (segment === "not_started") { sql = `SELECT p.telegram_id FROM admin_profile_state p WHERE NOT EXISTS(SELECT 1 FROM leaderboard_runs r WHERE r.telegram_id=p.telegram_id AND r.accepted=1) ORDER BY p.created_at DESC LIMIT ?`; binds=[max]; }
+  else if (segment === "active_today") { sql = `SELECT telegram_id,MAX(created_at) AS last_at FROM leaderboard_runs WHERE accepted=1 AND created_at>=? GROUP BY telegram_id ORDER BY last_at DESC LIMIT ?`; binds = [day, max]; }
+  else if (["active_3d","active_7d","active_30d"].includes(segment)) { const days=Number(segment.match(/(\d+)/)?.[1]||7); sql = `SELECT telegram_id,MAX(created_at) AS last_at FROM leaderboard_runs WHERE accepted=1 AND created_at>=? GROUP BY telegram_id ORDER BY last_at DESC LIMIT ?`; binds = [now - days * 86400, max]; }
+  else if (segment === "returning_today") { sql = `SELECT DISTINCT r.telegram_id FROM leaderboard_runs r JOIN admin_profile_state p ON p.telegram_id=r.telegram_id WHERE r.accepted=1 AND r.created_at>=? AND p.created_at<=? AND EXISTS(SELECT 1 FROM leaderboard_runs old WHERE old.telegram_id=r.telegram_id AND old.accepted=1 AND old.created_at<?) AND NOT EXISTS(SELECT 1 FROM leaderboard_runs prev WHERE prev.telegram_id=r.telegram_id AND prev.accepted=1 AND prev.created_at>=? AND prev.created_at<?) ORDER BY r.created_at DESC LIMIT ?`; binds = [day, day-7*86400, day-7*86400, day-7*86400, day, max]; }
+  else if (["inactive_3d","inactive_7d","inactive_14d","inactive_30d"].includes(segment)) { const days=Number(segment.match(/(\d+)/)?.[1]||7),cutoff=now-days*86400; sql = `SELECT p.telegram_id FROM admin_profile_state p WHERE p.created_at<=? AND NOT EXISTS(SELECT 1 FROM leaderboard_runs r WHERE r.telegram_id=p.telegram_id AND r.accepted=1 AND r.created_at>=?) ORDER BY p.updated_at ASC LIMIT ?`; binds = [cutoff, cutoff, max]; }
+  else if (segment === "top_10") { sql = `SELECT telegram_id FROM leaderboard_all_time WHERE hidden = 0 ORDER BY best_score DESC, achieved_at ASC LIMIT 10`; }
+  else if (segment === "top_100") { sql = `SELECT telegram_id FROM leaderboard_all_time WHERE hidden = 0 ORDER BY best_score DESC, achieved_at ASC LIMIT 100`; }
+  else if (segment === "season") { sql = `SELECT DISTINCT e.telegram_id FROM leaderboard_entries e JOIN leaderboard_seasons s ON s.id=e.season_id WHERE s.status='active' ORDER BY e.updated_at DESC LIMIT ?`; binds=[max]; }
+  else if (segment === "pass_players") { sql = `SELECT telegram_id FROM season_pass_players WHERE season_id=(SELECT season_id FROM season_pass_seasons WHERE starts_at<=? AND ends_at>? ORDER BY starts_at DESC LIMIT 1) ORDER BY updated_at DESC LIMIT ?`; binds=[now,now,max]; }
+  else if (segment === "elite" || segment === "elite_plus") { sql = `SELECT telegram_id FROM season_pass_players WHERE premium_tier=? AND season_id=(SELECT season_id FROM season_pass_seasons WHERE starts_at<=? AND ends_at>? ORDER BY starts_at DESC LIMIT 1) ORDER BY updated_at DESC LIMIT ?`; binds = [segment, now, now, max]; }
+  else if (segment === "premium_any") { sql = `SELECT telegram_id FROM season_pass_players WHERE premium_tier IN ('elite','elite_plus') AND season_id=(SELECT season_id FROM season_pass_seasons WHERE starts_at<=? AND ends_at>? ORDER BY starts_at DESC LIMIT 1) ORDER BY updated_at DESC LIMIT ?`; binds=[now,now,max]; }
+  else if (segment === "legendary_openers") { sql = `SELECT DISTINCT telegram_id FROM granted_cases WHERE case_type = 'legendary' AND status = 'opened' ORDER BY opened_at DESC LIMIT ?`; binds = [max]; }
+  else if (segment === "physical_winners") { sql = `SELECT DISTINCT owner_telegram_id AS telegram_id FROM reward_codes WHERE owner_telegram_id <> '' ORDER BY created_at DESC LIMIT ?`; binds = [max]; }
+  else if (segment === "buyers") { sql = `SELECT p.telegram_id FROM admin_profile_state p WHERE EXISTS (SELECT 1 FROM granted_cases g WHERE g.telegram_id=p.telegram_id AND g.granted_by='shop') OR EXISTS (SELECT 1 FROM shop_stock_consumptions sc WHERE sc.telegram_id=p.telegram_id AND sc.category='skins') ORDER BY p.updated_at DESC LIMIT ?`; binds=[max]; }
+  else if (segment === "no_purchases") { sql = `SELECT p.telegram_id FROM admin_profile_state p WHERE NOT EXISTS (SELECT 1 FROM granted_cases g WHERE g.telegram_id = p.telegram_id AND g.granted_by = 'shop') AND NOT EXISTS (SELECT 1 FROM shop_stock_consumptions s WHERE s.telegram_id = p.telegram_id AND s.category = 'skins') ORDER BY p.created_at DESC LIMIT ?`; binds = [max]; }
+  else if (segment === "high_play_no_purchase") { sql = `SELECT r.telegram_id FROM leaderboard_runs r WHERE r.accepted=1 AND r.created_at>=? AND NOT EXISTS (SELECT 1 FROM granted_cases g WHERE g.telegram_id=r.telegram_id AND g.granted_by='shop') AND NOT EXISTS (SELECT 1 FROM shop_stock_consumptions s WHERE s.telegram_id=r.telegram_id AND s.category='skins') GROUP BY r.telegram_id HAVING COUNT(*)>=10 ORDER BY COUNT(*) DESC LIMIT ?`; binds = [now - 7 * 86400, max]; }
+  else if (segment === "promo_redeemers") { sql = `SELECT telegram_id,MAX(created_at) AS last_at FROM promo_redemptions WHERE status IN ('queued','delivered') GROUP BY telegram_id ORDER BY last_at DESC LIMIT ?`; binds = [max]; }
+  else if (segment === "pass_complete") { sql = `SELECT telegram_id FROM season_pass_players WHERE xp>=? AND season_id=(SELECT season_id FROM season_pass_seasons WHERE starts_at<=? AND ends_at>? ORDER BY starts_at DESC LIMIT 1) ORDER BY updated_at DESC LIMIT ?`; binds = [seasonPassXpForLevel(50), now, now, max]; }
+  else if (segment === "testers") { sql = `SELECT telegram_id FROM tester_accounts ORDER BY telegram_id LIMIT ?`; binds=[max]; }
+  else if (segment === "staff") { sql = `SELECT telegram_id FROM staff_users WHERE active=1 ORDER BY telegram_id LIMIT ?`; binds=[max]; }
+  else if (segment === "banned") { sql = `SELECT telegram_id FROM player_admin_controls WHERE blocked = 1 ORDER BY updated_at DESC LIMIT ?`; binds = [max]; }
+  else return ownerV85CustomSegmentPlayerIds(env, segment, max);
   let statement = env.DB.prepare(sql);
   if (binds.length) statement = statement.bind(...binds);
   const result = await statement.all();
-  return [...new Set((result.results || []).map((row) => String(row.telegram_id || "")).filter(Boolean))];
+  const ids=[...new Set((result.results || []).map((row) => String(row.telegram_id || "")).filter(Boolean))];
+  if(segment==="staff") for(const ownerId of botAdminTelegramIds(env)) if(ownerId&&!ids.includes(String(ownerId)))ids.push(String(ownerId));
+  return ids.slice(0,max);
 }
+
+async function segmentPlayerAllowed(env, key, telegramId) {
+  const segment=String(key||"").trim();
+  const id=String(telegramId||"").trim();
+  if(!id)return false;
+  if(segment==="all")return true;
+  if(!PLAYER_SEGMENTS[segment]){
+    const row=await ownerV85SavedSegment(env,segment);if(!row)return false;
+    const query=ownerV85CustomSegmentSql(ownerV8SafeJson(row.rules_json,{}),false);
+    const sql=String(query.sql).replace(/\s+ORDER BY p\.updated_at DESC\s*$/i,"")+` AND p.telegram_id=? LIMIT 1`;
+    const found=await env.DB.prepare(sql).bind(...query.binds,id).first();
+    return Boolean(found?.telegram_id);
+  }
+  const now=Math.floor(Date.now()/1000),day=moscowDayStartUnix();
+  let sql="",binds=[];
+  if(segment==="new_today"){sql=`SELECT 1 AS ok FROM admin_profile_state WHERE telegram_id=? AND created_at>=? LIMIT 1`;binds=[id,day];}
+  else if(segment==="new_7d"){sql=`SELECT 1 AS ok FROM admin_profile_state WHERE telegram_id=? AND created_at>=? LIMIT 1`;binds=[id,now-7*86400];}
+  else if(segment==="not_started"){sql=`SELECT 1 AS ok FROM admin_profile_state p WHERE p.telegram_id=? AND NOT EXISTS(SELECT 1 FROM leaderboard_runs r WHERE r.telegram_id=p.telegram_id AND r.accepted=1) LIMIT 1`;binds=[id];}
+  else if(segment==="active_today"){sql=`SELECT 1 AS ok FROM leaderboard_runs WHERE telegram_id=? AND accepted=1 AND created_at>=? LIMIT 1`;binds=[id,day];}
+  else if(["active_3d","active_7d","active_30d"].includes(segment)){const days=Number(segment.match(/(\d+)/)?.[1]||7);sql=`SELECT 1 AS ok FROM leaderboard_runs WHERE telegram_id=? AND accepted=1 AND created_at>=? LIMIT 1`;binds=[id,now-days*86400];}
+  else if(segment==="returning_today"){sql=`SELECT 1 AS ok FROM leaderboard_runs r JOIN admin_profile_state p ON p.telegram_id=r.telegram_id WHERE r.telegram_id=? AND r.accepted=1 AND r.created_at>=? AND p.created_at<=? AND EXISTS(SELECT 1 FROM leaderboard_runs old WHERE old.telegram_id=r.telegram_id AND old.accepted=1 AND old.created_at<?) AND NOT EXISTS(SELECT 1 FROM leaderboard_runs prev WHERE prev.telegram_id=r.telegram_id AND prev.accepted=1 AND prev.created_at>=? AND prev.created_at<?) LIMIT 1`;binds=[id,day,day-7*86400,day-7*86400,day-7*86400,day];}
+  else if(["inactive_3d","inactive_7d","inactive_14d","inactive_30d"].includes(segment)){const days=Number(segment.match(/(\d+)/)?.[1]||7),cutoff=now-days*86400;sql=`SELECT 1 AS ok FROM admin_profile_state p WHERE p.telegram_id=? AND p.created_at<=? AND NOT EXISTS(SELECT 1 FROM leaderboard_runs r WHERE r.telegram_id=p.telegram_id AND r.accepted=1 AND r.created_at>=?) LIMIT 1`;binds=[id,cutoff,cutoff];}
+  else if(segment==="top_10"||segment==="top_100"){const limit=segment==="top_10"?10:100;sql=`SELECT 1 AS ok FROM (SELECT telegram_id FROM leaderboard_all_time WHERE hidden=0 ORDER BY best_score DESC,achieved_at ASC LIMIT ${limit}) x WHERE telegram_id=? LIMIT 1`;binds=[id];}
+  else if(segment==="season"){sql=`SELECT 1 AS ok FROM leaderboard_entries e JOIN leaderboard_seasons s ON s.id=e.season_id WHERE e.telegram_id=? AND s.status='active' LIMIT 1`;binds=[id];}
+  else if(segment==="pass_players"){sql=`SELECT 1 AS ok FROM season_pass_players WHERE telegram_id=? AND season_id=(SELECT season_id FROM season_pass_seasons WHERE starts_at<=? AND ends_at>? ORDER BY starts_at DESC LIMIT 1) LIMIT 1`;binds=[id,now,now];}
+  else if(segment==="elite"||segment==="elite_plus"){sql=`SELECT 1 AS ok FROM season_pass_players WHERE telegram_id=? AND premium_tier=? AND season_id=(SELECT season_id FROM season_pass_seasons WHERE starts_at<=? AND ends_at>? ORDER BY starts_at DESC LIMIT 1) LIMIT 1`;binds=[id,segment,now,now];}
+  else if(segment==="premium_any"){sql=`SELECT 1 AS ok FROM season_pass_players WHERE telegram_id=? AND premium_tier IN ('elite','elite_plus') AND season_id=(SELECT season_id FROM season_pass_seasons WHERE starts_at<=? AND ends_at>? ORDER BY starts_at DESC LIMIT 1) LIMIT 1`;binds=[id,now,now];}
+  else if(segment==="pass_complete"){sql=`SELECT 1 AS ok FROM season_pass_players WHERE telegram_id=? AND xp>=? AND season_id=(SELECT season_id FROM season_pass_seasons WHERE starts_at<=? AND ends_at>? ORDER BY starts_at DESC LIMIT 1) LIMIT 1`;binds=[id,seasonPassXpForLevel(50),now,now];}
+  else if(segment==="buyers"){sql=`SELECT 1 AS ok FROM admin_profile_state p WHERE p.telegram_id=? AND (EXISTS(SELECT 1 FROM granted_cases g WHERE g.telegram_id=p.telegram_id AND g.granted_by='shop') OR EXISTS(SELECT 1 FROM shop_stock_consumptions sc WHERE sc.telegram_id=p.telegram_id AND sc.category='skins')) LIMIT 1`;binds=[id];}
+  else if(segment==="no_purchases"){sql=`SELECT 1 AS ok FROM admin_profile_state p WHERE p.telegram_id=? AND NOT EXISTS(SELECT 1 FROM granted_cases g WHERE g.telegram_id=p.telegram_id AND g.granted_by='shop') AND NOT EXISTS(SELECT 1 FROM shop_stock_consumptions sc WHERE sc.telegram_id=p.telegram_id AND sc.category='skins') LIMIT 1`;binds=[id];}
+  else if(segment==="high_play_no_purchase"){sql=`SELECT 1 AS ok FROM leaderboard_runs r WHERE r.telegram_id=? AND r.accepted=1 AND r.created_at>=? AND NOT EXISTS(SELECT 1 FROM granted_cases g WHERE g.telegram_id=r.telegram_id AND g.granted_by='shop') AND NOT EXISTS(SELECT 1 FROM shop_stock_consumptions sc WHERE sc.telegram_id=r.telegram_id AND sc.category='skins') GROUP BY r.telegram_id HAVING COUNT(*)>=10 LIMIT 1`;binds=[id,now-7*86400];}
+  else if(segment==="promo_redeemers"){sql=`SELECT 1 AS ok FROM promo_redemptions WHERE telegram_id=? AND status IN ('queued','delivered') LIMIT 1`;binds=[id];}
+  else if(segment==="legendary_openers"){sql=`SELECT 1 AS ok FROM granted_cases WHERE telegram_id=? AND case_type='legendary' AND status='opened' LIMIT 1`;binds=[id];}
+  else if(segment==="physical_winners"){sql=`SELECT 1 AS ok FROM reward_codes WHERE owner_telegram_id=? LIMIT 1`;binds=[id];}
+  else if(segment==="testers"){sql=`SELECT 1 AS ok FROM tester_accounts WHERE telegram_id=? LIMIT 1`;binds=[id];}
+  else if(segment==="staff"){if(isBotAdminTelegramId(id,env))return true;sql=`SELECT 1 AS ok FROM staff_users WHERE telegram_id=? AND active=1 LIMIT 1`;binds=[id];}
+  else if(segment==="banned"){sql=`SELECT 1 AS ok FROM player_admin_controls WHERE telegram_id=? AND blocked=1 LIMIT 1`;binds=[id];}
+  else return false;
+  let stmt=env.DB.prepare(sql);if(binds.length)stmt=stmt.bind(...binds);const row=await stmt.first();return Boolean(row?.ok);
+}
+
 
 async function showSegmentsDashboard(chatId, user, env) {
   const access = await requireSecurityPermission(chatId, user, "viewEconomy", env);
@@ -32916,7 +33036,7 @@ async function ensureV74PollSchema(env) {
         comment_mode TEXT NOT NULL DEFAULT 'none', comment_min_length INTEGER NOT NULL DEFAULT 10,
         comment_max_length INTEGER NOT NULL DEFAULT 1000,
         comment_prompt TEXT NOT NULL DEFAULT 'Напишите свой ответ сообщением.',
-        audience_type TEXT NOT NULL DEFAULT 'all', delivery_mode TEXT NOT NULL DEFAULT 'bot',
+        audience_type TEXT NOT NULL DEFAULT 'all', audience_segment_key TEXT NOT NULL DEFAULT '', delivery_mode TEXT NOT NULL DEFAULT 'bot',
         min_accepted_runs INTEGER NOT NULL DEFAULT 0,
         results_mode TEXT NOT NULL DEFAULT 'after_vote',
         allow_change INTEGER NOT NULL DEFAULT 0, show_in_tasks INTEGER NOT NULL DEFAULT 0,
@@ -32967,6 +33087,14 @@ async function ensureV74PollSchema(env) {
           if (!String(error?.message || error).toLowerCase().includes("duplicate column")) throw error;
         }
       }
+      if (!pollColumns.has("audience_segment_key")) {
+        try {
+          await env.DB.prepare(`ALTER TABLE player_polls ADD COLUMN audience_segment_key TEXT NOT NULL DEFAULT ''`).run();
+        } catch (error) {
+          if (!String(error?.message || error).toLowerCase().includes("duplicate column")) throw error;
+        }
+      }
+      await env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_player_polls_audience_segment ON player_polls(audience_segment_key,status,updated_at)`).run();
     })().catch((error) => { v74PollSchemaPromise = null; throw error; });
   }
   await v74PollSchemaPromise;
@@ -32983,8 +33111,34 @@ function v74PollDeliveryLabel(mode) {
   return ({ bot:"в боте", game:"после открытия игры", both:"в боте и после открытия игры" })[String(mode)] || String(mode || "бот");
 }
 function v74PollAudienceLabel(type) {
-  return ({ all:"все игроки", active_7d:"активные за 7 дней", testers:"тестеры", season:"участники сезона", staff:"сотрудники" })[String(type)] || String(type || "все");
+  const key=String(type||"all");
+  if(key==="all")return "все игроки";
+  if(PLAYER_SEGMENTS[key])return PLAYER_SEGMENTS[key];
+  return ({ active_7d:"активные за 7 дней", testers:"тестеры", season:"участники сезона", staff:"сотрудники" })[key] || key;
 }
+function v80PollAudienceSegmentKey(poll){return String(poll?.audience_segment_key||"").trim()||String(poll?.audience_type||"all");}
+async function v80PollAudienceTitle(env,key){
+  const value=String(key||"all");
+  if(value==="all")return "Все игроки";
+  const activeTitle=await ownerV85SegmentTitle(env,value);
+  if(activeTitle)return activeTitle;
+  // Keep a readable title in poll history even after a custom audience is disabled.
+  try{
+    await ensureControlCenterV85Schema(env);
+    const stored=await env.DB.prepare(`SELECT title FROM saved_player_segments WHERE segment_key=? LIMIT 1`).bind(value).first();
+    if(stored?.title)return String(stored.title);
+  }catch(error){console.error("poll audience title lookup failed",error);}
+  return v74PollAudienceLabel(value);
+}
+async function v80PollAudienceCatalog(env,withCounts=true){
+  const rows=await ownerV85SegmentCatalog(env,withCounts);
+  const allMeta=playerSegmentMeta("all",true);
+  const allRow={key:"all",title:"Все игроки",builtin:true,count:withCounts?await ownerV85BuiltInSegmentCount(env,"all"):0,...allMeta};
+  return [allRow,...rows]
+    .filter((row)=>String(row.key)!=="banned")
+    .sort((a,b)=>Number(a.groupOrder||100)-Number(b.groupOrder||100)||String(a.title).localeCompare(String(b.title),"ru"));
+}
+
 function v74PollResultsLabel(type) {
   return ({ after_vote:"после ответа", after_end:"после завершения", hidden:"не показывать" })[String(type)] || String(type || "после ответа");
 }
@@ -33016,6 +33170,9 @@ function v74PollId() {
 }
 
 async function v74PollAudienceAllowed(env, poll, telegramId) {
+  const segmentKey=String(poll?.audience_segment_key||"").trim();
+  if(segmentKey)return segmentPlayerAllowed(env,segmentKey,telegramId);
+  // Legacy polls keep their historical semantics so an old active poll never changes audience after deploy.
   const type = String(poll.audience_type || "all");
   const id = String(telegramId);
   const now = Math.floor(Date.now()/1000);
@@ -33038,6 +33195,7 @@ async function v74PollAudienceAllowed(env, poll, telegramId) {
   }
   return false;
 }
+
 
 async function v74ActivePollsForPlayer(env, telegramId, delivery = "bot") {
   await ensureV74PollSchema(env);
@@ -33267,7 +33425,7 @@ async function handleV74PollCallback(query,env,runtime={}) {
   const answerType=data.match(/^v75_poll_answer:(choice|text|choice_comment)$/);if(answerType){await selectV75PollAnswerType(query,answerType[1],env);return true;}
   const mode=data.match(/^v74_poll_mode:(single|multiple)$/);if(mode){await selectV74PollMode(query,mode[1],env);return true;}
   const commentMode=data.match(/^v75_poll_comment:(optional|required)$/);if(commentMode){await selectV75PollCommentMode(query,commentMode[1],env);return true;}
-  const audience=data.match(/^v74_poll_audience:(all|active_7d|testers|season|staff)$/);if(audience){await selectV74PollAudience(query,audience[1],env);return true;}
+  const audience=data.match(/^v74_poll_audience:([A-Za-z0-9_-]{1,44})$/);if(audience){await selectV74PollAudience(query,audience[1],env);return true;}
   const delivery=data.match(/^v74_poll_delivery:(bot|game|both)$/);if(delivery){await selectV74PollDelivery(query,delivery[1],env);return true;}
   const runTrigger=data.match(/^v79_poll_runs:(0|1|2|3|5|10)$/);if(runTrigger){await selectV79PollRunTrigger(query,Number(runTrigger[1]),env);return true;}
   if(data==="v79_poll_runs_custom"){await startV79PollCustomRunTrigger(query,env);return true;}
@@ -33349,12 +33507,21 @@ async function selectV75PollCommentMode(query,commentMode,env){
   const next={...workflow.data,commentMode,commentMin:10,commentMax:1000,commentPrompt:"Напишите свой ответ сообщением."};await answerCallback(env,query.id,"Комментарий настроен.");await showV75PollAudienceStep(query,next,env);
 }
 async function showV75PollAudienceStep(query,next,env){
-  const chatId=query.message?.chat?.id;await setStaffWorkflow(query.from.id,chatId,"poll_create","audience",next,env);await sendTelegramMessage(env,chatId,`<b>🗳 Новый опрос · 6/10</b>\n\nКому показать опрос?`,{inline_keyboard:[[{text:"👥 Всем игрокам",callback_data:"v74_poll_audience:all"}],[{text:"🔥 Активным за 7 дней",callback_data:"v74_poll_audience:active_7d"}],[{text:"🧪 Тестерам",callback_data:"v74_poll_audience:testers"}],[{text:"🏆 Участникам сезона",callback_data:"v74_poll_audience:season"}],[{text:"🛡 Сотрудникам",callback_data:"v74_poll_audience:staff"}],[{text:"❌ Отменить",callback_data:"v74_poll_cancel"}]]});
+  const chatId=query.message?.chat?.id;
+  await setStaffWorkflow(query.from.id,chatId,"poll_create","audience",next,env);
+  const audiences=await v80PollAudienceCatalog(env,false);
+  const buttons=audiences.map(row=>({text:`${row.groupIcon||"👥"} ${String(row.title||row.key).slice(0,29)}`,callback_data:`v74_poll_audience:${row.key}`}));
+  const keyboard=[];for(let i=0;i<buttons.length;i+=2)keyboard.push(buttons.slice(i,i+2));keyboard.push([{text:"❌ Отменить",callback_data:"v74_poll_cancel"}]);
+  await sendTelegramMessage(env,chatId,`<b>🗳 Новый опрос · 6/10</b>\n\nКому показать опрос?\n\nАудитории синхронизированы с <b>Control Center → Категории игроков</b>.`,{inline_keyboard:keyboard});
 }
-async function selectV74PollAudience(query,audience,env){const chatId=query.message?.chat?.id;const workflow=await getStaffWorkflow(query.from.id,env);if(!workflow||workflow.flow_type!=="poll_create"||workflow.step!=="audience"){await answerCallback(env,query.id,"Мастер устарел.",true);return;}const next={...workflow.data,audience};await setStaffWorkflow(query.from.id,chatId,"poll_create","delivery",next,env);await answerCallback(env,query.id,"Выберите способ отправки.");await sendTelegramMessage(env,chatId,`<b>🗳 Новый опрос · 7/10</b>\n\nГде игрок увидит опрос?`,{inline_keyboard:[[{text:"🤖 В боте",callback_data:"v74_poll_delivery:bot"}],[{text:"🎮 После открытия игры",callback_data:"v74_poll_delivery:game"}],[{text:"🤖 + 🎮 В обоих местах",callback_data:"v74_poll_delivery:both"}],[{text:"❌ Отменить",callback_data:"v74_poll_cancel"}]]});}
-async function showV79PollDurationStep(actorId,chatId,next,env){await setStaffWorkflow(actorId,chatId,"poll_create","duration",next,env);await sendTelegramMessage(env,chatId,`<b>🗳 Новый опрос · 9/10</b>
+async function selectV74PollAudience(query,audience,env){
+  const chatId=query.message?.chat?.id,workflow=await getStaffWorkflow(query.from.id,env);
+  if(!workflow||workflow.flow_type!=="poll_create"||workflow.step!=="audience"){await answerCallback(env,query.id,"Мастер устарел.",true);return;}
+  const key=String(audience||"all");
+  if(key==="banned"||(key!=="all"&&!PLAYER_SEGMENTS[key]&&!(await ownerV85SavedSegment(env,key)))){await answerCallback(env,query.id,"Аудитория больше недоступна.",true);return;}
+  const next={...workflow.data,audience:key};await setStaffWorkflow(query.from.id,chatId,"poll_create","delivery",next,env);await answerCallback(env,query.id,"Выберите способ отправки.");await sendTelegramMessage(env,chatId,`<b>🗳 Новый опрос · 7/10</b>\n\nГде игрок увидит опрос?`,{inline_keyboard:[[{text:"🤖 В боте",callback_data:"v74_poll_delivery:bot"}],[{text:"🎮 После открытия игры",callback_data:"v74_poll_delivery:game"}],[{text:"🤖 + 🎮 В обоих местах",callback_data:"v74_poll_delivery:both"}],[{text:"❌ Отменить",callback_data:"v74_poll_cancel"}]]});
+}
 
-Сколько времени принимать ответы?`,{inline_keyboard:[[{text:"1 день",callback_data:"v74_poll_duration:86400"},{text:"3 дня",callback_data:"v74_poll_duration:259200"}],[{text:"7 дней",callback_data:"v74_poll_duration:604800"},{text:"Без срока",callback_data:"v74_poll_duration:0"}],[{text:"❌ Отменить",callback_data:"v74_poll_cancel"}]]});}
 async function selectV74PollDelivery(query,delivery,env){const chatId=query.message?.chat?.id;const workflow=await getStaffWorkflow(query.from.id,env);if(!workflow||workflow.flow_type!=="poll_create"||workflow.step!=="delivery"){await answerCallback(env,query.id,"Мастер устарел.",true);return;}const next={...workflow.data,delivery};if(delivery==="bot"){await answerCallback(env,query.id,"Опрос будет отправлен в боте.");await showV79PollDurationStep(query.from.id,chatId,{...next,minAcceptedRuns:0},env);return;}await setStaffWorkflow(query.from.id,chatId,"poll_create","min_runs",next,env);await answerCallback(env,query.id,"Настройте момент показа.");await sendTelegramMessage(env,chatId,`<b>🗳 Новый опрос · 8/10</b>
 
 После какого количества зачтённых забегов показать опрос в игре?
@@ -33364,8 +33531,53 @@ async function selectV79PollRunTrigger(query,minAcceptedRuns,env){const chatId=q
 async function startV79PollCustomRunTrigger(query,env){const chatId=query.message?.chat?.id;const workflow=await getStaffWorkflow(query.from.id,env);if(!workflow||workflow.flow_type!=="poll_create"||workflow.step!=="min_runs"){await answerCallback(env,query.id,"Мастер устарел.",true);return;}await updateStaffWorkflow(query.from.id,{step:"min_runs_input",data:workflow.data},env);await answerCallback(env,query.id,"Введите количество.");await sendTelegramMessage(env,chatId,"Введите количество зачтённых забегов от <b>1</b> до <b>1000</b>, после которого показать опрос.");}
 async function selectV74PollDuration(query,duration,env){const chatId=query.message?.chat?.id;const workflow=await getStaffWorkflow(query.from.id,env);if(!workflow||workflow.flow_type!=="poll_create"||workflow.step!=="duration"){await answerCallback(env,query.id,"Мастер устарел.",true);return;}const next={...workflow.data,duration};await setStaffWorkflow(query.from.id,chatId,"poll_create","results",next,env);await answerCallback(env,query.id,"Настройте результаты.");await sendTelegramMessage(env,chatId,`<b>Показывать результаты игрокам?</b>`,{inline_keyboard:[[{text:"📊 После ответа",callback_data:"v74_poll_results:after_vote"}],[{text:"⏳ После завершения",callback_data:"v74_poll_results:after_end"}],[{text:"🙈 Не показывать",callback_data:"v74_poll_results:hidden"}],[{text:"❌ Отменить",callback_data:"v74_poll_cancel"}]]});}
 async function selectV74PollResults(query,resultsMode,env){const chatId=query.message?.chat?.id;const workflow=await getStaffWorkflow(query.from.id,env);if(!workflow||workflow.flow_type!=="poll_create"||workflow.step!=="results"){await answerCallback(env,query.id,"Мастер устарел.",true);return;}const next={...workflow.data,resultsMode};await setStaffWorkflow(query.from.id,chatId,"poll_create","reward",next,env);await answerCallback(env,query.id,"Выберите награду.");await sendTelegramMessage(env,chatId,`<b>🗳 Новый опрос · 10/10</b>\n\nНаграда за участие необязательна. Она выдаётся только после сохранения полного ответа и обязательного комментария.`,{inline_keyboard:[[{text:"Без награды",callback_data:"v74_poll_reward:none"}],[{text:"📦 Обычный",callback_data:"v74_poll_reward:case_small"},{text:"🥈 Серебряный",callback_data:"v74_poll_reward:case_sweet"}],[{text:"🥇 Золотой",callback_data:"v74_poll_reward:case_gold"},{text:"🔮 Мифический",callback_data:"v74_poll_reward:case_mythic"},{text:"💎 Легендарный",callback_data:"v74_poll_reward:case_legendary"}],[{text:"⭐ 500",callback_data:"v74_poll_reward:points_500"},{text:"⭐ 1 000",callback_data:"v74_poll_reward:points_1000"}],[{text:"☕ 50",callback_data:"v74_poll_reward:coffee_50"},{text:"🍥 100",callback_data:"v74_poll_reward:treats_100"}],[{text:"❌ Отменить",callback_data:"v74_poll_cancel"}]]});}
-async function selectV74PollReward(query,key,env){const chatId=query.message?.chat?.id;const workflow=await getStaffWorkflow(query.from.id,env);if(!workflow||workflow.flow_type!=="poll_create"||workflow.step!=="reward"){await answerCallback(env,query.id,"Мастер устарел.",true);return;}const reward=V74_POLL_REWARD_PRESETS[key];if(!reward){await answerCallback(env,query.id,"Награда не найдена.",true);return;}const next={...workflow.data,reward};await setStaffWorkflow(query.from.id,chatId,"poll_create","confirm",next,env);await answerCallback(env,query.id,"Проверьте опрос.");await sendTelegramMessage(env,chatId,`<b>✅ Проверьте опрос</b>\n\nВопрос: <b>${escapeHtml(next.question)}</b>\nТип ответа: <b>${escapeHtml(v75PollAnswerTypeLabel(next.answerType))}</b>\n${next.options?.length?`Варианты: <b>${next.options.length}</b>\n`:""}${next.answerType!=="text"?`Выбор: <b>${next.responseMode==="multiple"?`до ${next.maxChoices} вариантов`:"один вариант"}</b>\n`:""}Комментарий: <b>${escapeHtml(v75PollCommentModeLabel(next.answerType==="text"?"required":next.commentMode))}</b>\nАудитория: <b>${escapeHtml(v74PollAudienceLabel(next.audience))}</b>\nОтправка: <b>${escapeHtml(v74PollDeliveryLabel(next.delivery))}</b>\n${["game","both"].includes(String(next.delivery))?`Показ в игре: <b>${Number(next.minAcceptedRuns||0)>0?`после ${Number(next.minAcceptedRuns)} зачтённых забегов`:"сразу"}</b>\n`:""}Срок: <b>${next.duration?`${Math.round(next.duration/V67_DAY)} дн.`:"без срока"}</b>\nРезультаты: <b>${escapeHtml(v74PollResultsLabel(next.resultsMode))}</b>\nНаграда: <b>${escapeHtml(v74PollRewardText(next.reward))}</b>\n\nОпрос сохранится черновиком.`,{inline_keyboard:[[{text:"✅ Сохранить черновик",callback_data:"v74_poll_save"}],[{text:"❌ Отменить",callback_data:"v74_poll_cancel"}]]});}
-async function saveV74PollDraft(query,env){const chatId=query.message?.chat?.id;const workflow=await getStaffWorkflow(query.from.id,env);const access=await getTeamAccess(query.from,env);if(!workflow||workflow.flow_type!=="poll_create"||workflow.step!=="confirm"||!access.authorized||!v74PollAccess(access)){await answerCallback(env,query.id,"Черновик не найден.",true);return;}await ensureV74PollSchema(env);const d=workflow.data;const pollId=v74PollId();const now=Math.floor(Date.now()/1000);const reward=d.reward||V74_POLL_REWARD_PRESETS.none;await env.DB.prepare(`INSERT INTO player_polls(poll_id,question,description,status,response_mode,max_choices,audience_type,delivery_mode,results_mode,allow_change,show_in_tasks,duration_seconds,starts_at,ends_at,reward_kind,reward_id,reward_amount,created_by,created_by_name,report_chat_id,bot_queue_prepared,created_at,updated_at,published_at,ended_at) VALUES(?,?,?,'draft',?,?,?,?,?,0,0,?,0,0,?,?,?,?,?,?,0,?,?,0,0)`).bind(pollId,String(d.question).slice(0,300),"",d.responseMode||"single",Number(d.maxChoices||1),d.audience,d.delivery,d.resultsMode,Number(d.duration||0),reward.kind,String(reward.id||""),Number(reward.amount||0),String(query.from.id),telegramDisplayName(query.from),String(chatId),now,now).run();await env.DB.prepare(`UPDATE player_polls SET answer_type=?,comment_mode=?,comment_min_length=?,comment_max_length=?,comment_prompt=?,min_accepted_runs=? WHERE poll_id=?`).bind(String(d.answerType||"choice"),String(d.answerType==="text"?"required":d.commentMode||"none"),Number(d.commentMin||10),Number(d.commentMax||1000),String(d.commentPrompt||"Напишите свой ответ сообщением.").slice(0,300),Math.max(0,Math.min(1000,Number(d.minAcceptedRuns||0))),pollId).run();if(Array.isArray(d.options)&&d.options.length)await env.DB.batch(d.options.map((option,index)=>env.DB.prepare(`INSERT INTO player_poll_options(option_id,poll_id,option_order,option_text) VALUES(?,?,?,?)`).bind(`${pollId}o${index+1}`,pollId,index+1,String(option).slice(0,100))));await logStaffAction(env,query.from,access,"poll_create",null,"poll",null,null,{pollId,question:d.question,delivery:d.delivery,audience:d.audience,answerType:d.answerType,commentMode:d.commentMode,minAcceptedRuns:Number(d.minAcceptedRuns||0)});await clearStaffWorkflow(query.from.id,env);await answerCallback(env,query.id,"Опрос сохранён.");await showV74PollAdminDetails(chatId,query.from,env,pollId);}
+async function selectV74PollReward(query,key,env){
+  const chatId=query.message?.chat?.id;
+  const workflow=await getStaffWorkflow(query.from.id,env);
+  if(!workflow||workflow.flow_type!=="poll_create"||workflow.step!=="reward"){
+    await answerCallback(env,query.id,"Мастер устарел.",true);
+    return;
+  }
+  const reward=V74_POLL_REWARD_PRESETS[key];
+  if(!reward){await answerCallback(env,query.id,"Награда не найдена.",true);return;}
+  const next={...workflow.data,reward};
+  const audienceTitle=await v80PollAudienceTitle(env,next.audience)||v74PollAudienceLabel(next.audience);
+  await setStaffWorkflow(query.from.id,chatId,"poll_create","confirm",next,env);
+  await answerCallback(env,query.id,"Проверьте опрос.");
+  await sendTelegramMessage(env,chatId,`<b>✅ Проверьте опрос</b>\n\nВопрос: <b>${escapeHtml(next.question)}</b>\nТип ответа: <b>${escapeHtml(v75PollAnswerTypeLabel(next.answerType))}</b>\n${next.options?.length?`Варианты: <b>${next.options.length}</b>\n`:""}${next.answerType!=="text"?`Выбор: <b>${next.responseMode==="multiple"?`до ${next.maxChoices} вариантов`:"один вариант"}</b>\n`:""}Комментарий: <b>${escapeHtml(v75PollCommentModeLabel(next.answerType==="text"?"required":next.commentMode))}</b>\nАудитория: <b>${escapeHtml(audienceTitle)}</b>\nОтправка: <b>${escapeHtml(v74PollDeliveryLabel(next.delivery))}</b>\n${["game","both"].includes(String(next.delivery))?`Показ в игре: <b>${Number(next.minAcceptedRuns||0)>0?`после ${Number(next.minAcceptedRuns)} зачтённых забегов`:"сразу"}</b>\n`:""}Срок: <b>${next.duration?`${Math.round(next.duration/V67_DAY)} дн.`:"без срока"}</b>\nРезультаты: <b>${escapeHtml(v74PollResultsLabel(next.resultsMode))}</b>\nНаграда: <b>${escapeHtml(v74PollRewardText(next.reward))}</b>\n\nОпрос сохранится черновиком.`,{inline_keyboard:[[{text:"✅ Сохранить черновик",callback_data:"v74_poll_save"}],[{text:"❌ Отменить",callback_data:"v74_poll_cancel"}]]});
+}
+async function saveV74PollDraft(query,env){
+  const chatId=query.message?.chat?.id;
+  const workflow=await getStaffWorkflow(query.from.id,env);
+  const access=await getTeamAccess(query.from,env);
+  if(!workflow||workflow.flow_type!=="poll_create"||workflow.step!=="confirm"||!access.authorized||!v74PollAccess(access)){
+    await answerCallback(env,query.id,"Черновик не найден.",true);
+    return;
+  }
+  await ensureV74PollSchema(env);
+  const d=workflow.data;
+  const pollId=v74PollId();
+  const now=Math.floor(Date.now()/1000);
+  const reward=d.reward||V74_POLL_REWARD_PRESETS.none;
+  const audienceSegmentKey=String(d.audience||"all").trim()||"all";
+  const legacyAudience=["all","active_7d","testers","season","staff"].includes(audienceSegmentKey)?audienceSegmentKey:"all";
+  const customAudienceRow=audienceSegmentKey==="all"||PLAYER_SEGMENTS[audienceSegmentKey]?null:await ownerV85SavedSegment(env,audienceSegmentKey);
+  const audienceExists=audienceSegmentKey==="all"||Boolean(PLAYER_SEGMENTS[audienceSegmentKey])||Boolean(customAudienceRow);
+  const audienceTitle=audienceSegmentKey==="all"?"Все игроки":PLAYER_SEGMENTS[audienceSegmentKey]||String(customAudienceRow?.title||"");
+  if(!audienceExists||!audienceTitle||audienceSegmentKey==="banned"){
+    await answerCallback(env,query.id,"Эта аудитория больше недоступна. Выберите её заново.",true);
+    return;
+  }
+  await env.DB.prepare(`INSERT INTO player_polls(poll_id,question,description,status,response_mode,max_choices,audience_type,audience_segment_key,delivery_mode,results_mode,allow_change,show_in_tasks,duration_seconds,starts_at,ends_at,reward_kind,reward_id,reward_amount,created_by,created_by_name,report_chat_id,bot_queue_prepared,created_at,updated_at,published_at,ended_at) VALUES(?,?,?,'draft',?,?,?,?,?,?,0,0,?,0,0,?,?,?,?,?,?,0,?,?,0,0)`).bind(
+    pollId,String(d.question).slice(0,300),"",d.responseMode||"single",Number(d.maxChoices||1),legacyAudience,audienceSegmentKey,d.delivery,d.resultsMode,Number(d.duration||0),reward.kind,String(reward.id||""),Number(reward.amount||0),String(query.from.id),telegramDisplayName(query.from),String(chatId),now,now
+  ).run();
+  await env.DB.prepare(`UPDATE player_polls SET answer_type=?,comment_mode=?,comment_min_length=?,comment_max_length=?,comment_prompt=?,min_accepted_runs=? WHERE poll_id=?`).bind(String(d.answerType||"choice"),String(d.answerType==="text"?"required":d.commentMode||"none"),Number(d.commentMin||10),Number(d.commentMax||1000),String(d.commentPrompt||"Напишите свой ответ сообщением.").slice(0,300),Math.max(0,Math.min(1000,Number(d.minAcceptedRuns||0))),pollId).run();
+  if(Array.isArray(d.options)&&d.options.length)await env.DB.batch(d.options.map((option,index)=>env.DB.prepare(`INSERT INTO player_poll_options(option_id,poll_id,option_order,option_text) VALUES(?,?,?,?)`).bind(`${pollId}o${index+1}`,pollId,index+1,String(option).slice(0,100))));
+  await logStaffAction(env,query.from,access,"poll_create",null,"poll",null,null,{pollId,question:d.question,delivery:d.delivery,audience:audienceSegmentKey,audienceTitle,answerType:d.answerType,commentMode:d.commentMode,minAcceptedRuns:Number(d.minAcceptedRuns||0)});
+  await clearStaffWorkflow(query.from.id,env);
+  await answerCallback(env,query.id,"Опрос сохранён.");
+  await showV74PollAdminDetails(chatId,query.from,env,pollId);
+}
 
 
 
@@ -33418,7 +33630,7 @@ async function showV75PollAdminComments(chatId,user,env,pollId,page=0){
   await sendTelegramMessage(env,chatId,`<b>💬 Комментарии к опросу</b>\n${escapeHtml(String(poll.question||"")).slice(0,500)}\n\n${body}\n\nСтраница: <b>${safePage+1}</b>`,{inline_keyboard:keyboard});
 }
 
-async function showV74PollAdminDetails(chatId,user,env,pollId){const access=await getTeamAccess(user,env);if(!access.authorized||!v74PollAccess(access))return;await ensureV74PollSchema(env);const row=await env.DB.prepare(`SELECT p.*,(SELECT COUNT(*) FROM player_poll_responses r WHERE r.poll_id=p.poll_id) AS responses,(SELECT COUNT(*) FROM player_poll_responses r WHERE r.poll_id=p.poll_id AND TRIM(r.comment_text)<>'') AS comments FROM player_polls p WHERE poll_id=? LIMIT 1`).bind(String(pollId)).first();if(!row)return sendTelegramMessage(env,chatId,"Опрос не найден.");const options=await v74PollOptions(env,pollId);const keyboard=[];if(row.status==="draft")keyboard.push([{text:"🚀 Опубликовать",callback_data:`v74_poll_publish:${pollId}`}]);if(row.status==="active")keyboard.push([{text:"⏹ Завершить",callback_data:`v74_poll_end:${pollId}`}]);keyboard.push([{text:"📊 Результаты",callback_data:`v74_poll_results_view:${pollId}`}]);if(String(row.answer_type||"choice")==="text"||String(row.comment_mode||"none")!=="none"||Number(row.comments||0)>0)keyboard.push([{text:`💬 Комментарии · ${Number(row.comments||0)}`,callback_data:`v75_poll_comments:${pollId}:0`}]);keyboard.push([{text:"📄 Дублировать",callback_data:`v74_poll_duplicate:${pollId}`}],[{text:"⬅️ Опросы",callback_data:"v74_polls_admin"}]);const optionText=options.length?`\n<b>Варианты</b>\n${options.map((item)=>`${item.option_order}. ${escapeHtml(item.option_text)}`).join("\n")}`:"";await sendTelegramMessage(env,chatId,`<b>🗳 ${escapeHtml(row.question)}</b>\n\nСтатус: <b>${escapeHtml(v74PollStatusLabel(row.status))}</b>\nОтветов: <b>${Number(row.responses||0)}</b>\nКомментариев: <b>${Number(row.comments||0)}</b>\nТип ответа: <b>${escapeHtml(v75PollAnswerTypeLabel(row.answer_type))}</b>\n${String(row.answer_type||"choice")!=="text"?`Выбор: <b>${row.response_mode==="multiple"?`несколько, до ${row.max_choices}`:"один вариант"}</b>\n`:""}Комментарий: <b>${escapeHtml(v75PollCommentModeLabel(String(row.answer_type||"choice")==="text"?"required":row.comment_mode))}</b>\nАудитория: <b>${escapeHtml(v74PollAudienceLabel(row.audience_type))}</b>\nОтправка: <b>${escapeHtml(v74PollDeliveryLabel(row.delivery_mode))}</b>\n${["game","both"].includes(String(row.delivery_mode))?`Показ в игре: <b>${Number(row.min_accepted_runs||0)>0?`после ${Number(row.min_accepted_runs)} зачтённых забегов`:"сразу"}</b>\n`:""}Результаты игрокам: <b>${escapeHtml(v74PollResultsLabel(row.results_mode))}</b>\nНаграда: <b>${escapeHtml(v74PollRewardText(v74PollReward(row)))}</b>\n${row.ends_at?`Завершение: <b>${escapeHtml(formatUtcDate(row.ends_at))}</b>\n`:""}${optionText}`,{inline_keyboard:keyboard});}
+async function showV74PollAdminDetails(chatId,user,env,pollId){const access=await getTeamAccess(user,env);if(!access.authorized||!v74PollAccess(access))return;await ensureV74PollSchema(env);const row=await env.DB.prepare(`SELECT p.*,(SELECT COUNT(*) FROM player_poll_responses r WHERE r.poll_id=p.poll_id) AS responses,(SELECT COUNT(*) FROM player_poll_responses r WHERE r.poll_id=p.poll_id AND TRIM(r.comment_text)<>'') AS comments FROM player_polls p WHERE poll_id=? LIMIT 1`).bind(String(pollId)).first();if(!row)return sendTelegramMessage(env,chatId,"Опрос не найден.");const options=await v74PollOptions(env,pollId);const audienceTitle=await v80PollAudienceTitle(env,v80PollAudienceSegmentKey(row))||v74PollAudienceLabel(v80PollAudienceSegmentKey(row));const keyboard=[];if(row.status==="draft")keyboard.push([{text:"🚀 Опубликовать",callback_data:`v74_poll_publish:${pollId}`}]);if(row.status==="active")keyboard.push([{text:"⏹ Завершить",callback_data:`v74_poll_end:${pollId}`}]);keyboard.push([{text:"📊 Результаты",callback_data:`v74_poll_results_view:${pollId}`}]);if(String(row.answer_type||"choice")==="text"||String(row.comment_mode||"none")!=="none"||Number(row.comments||0)>0)keyboard.push([{text:`💬 Комментарии · ${Number(row.comments||0)}`,callback_data:`v75_poll_comments:${pollId}:0`}]);keyboard.push([{text:"📄 Дублировать",callback_data:`v74_poll_duplicate:${pollId}`}],[{text:"⬅️ Опросы",callback_data:"v74_polls_admin"}]);const optionText=options.length?`\n<b>Варианты</b>\n${options.map((item)=>`${item.option_order}. ${escapeHtml(item.option_text)}`).join("\n")}`:"";await sendTelegramMessage(env,chatId,`<b>🗳 ${escapeHtml(row.question)}</b>\n\nСтатус: <b>${escapeHtml(v74PollStatusLabel(row.status))}</b>\nОтветов: <b>${Number(row.responses||0)}</b>\nКомментариев: <b>${Number(row.comments||0)}</b>\nТип ответа: <b>${escapeHtml(v75PollAnswerTypeLabel(row.answer_type))}</b>\n${String(row.answer_type||"choice")!=="text"?`Выбор: <b>${row.response_mode==="multiple"?`несколько, до ${row.max_choices}`:"один вариант"}</b>\n`:""}Комментарий: <b>${escapeHtml(v75PollCommentModeLabel(String(row.answer_type||"choice")==="text"?"required":row.comment_mode))}</b>\nАудитория: <b>${escapeHtml(audienceTitle)}</b>\nОтправка: <b>${escapeHtml(v74PollDeliveryLabel(row.delivery_mode))}</b>\n${["game","both"].includes(String(row.delivery_mode))?`Показ в игре: <b>${Number(row.min_accepted_runs||0)>0?`после ${Number(row.min_accepted_runs)} зачтённых забегов`:"сразу"}</b>\n`:""}Результаты игрокам: <b>${escapeHtml(v74PollResultsLabel(row.results_mode))}</b>\nНаграда: <b>${escapeHtml(v74PollRewardText(v74PollReward(row)))}</b>\n${row.ends_at?`Завершение: <b>${escapeHtml(formatUtcDate(row.ends_at))}</b>\n`:""}${optionText}`,{inline_keyboard:keyboard});}
 async function publishV74Poll(query,pollId,env,runtime={}){
   const chatId=query.message?.chat?.id;const access=await getTeamAccess(query.from,env);if(!access.authorized||!v74PollAccess(access)){await answerCallback(env,query.id,"Недостаточно прав.",true);return;}
   await ensureV74PollSchema(env);const old=await env.DB.prepare(`SELECT * FROM player_polls WHERE poll_id=? LIMIT 1`).bind(pollId).first();if(!old||old.status!=="draft"){await answerCallback(env,query.id,"Черновик не найден.",true);return;}
@@ -33491,14 +33703,14 @@ async function duplicateV74Poll(query,pollId,env){
     newPollId,copiedQuestion,String(source.description||"").slice(0,1000),"draft",
     String(source.answer_type||"choice"),String(source.response_mode||"single"),Math.max(1,Number(source.max_choices||1)),
     String(source.comment_mode||"none"),Math.max(1,Number(source.comment_min_length||10)),Math.max(1,Number(source.comment_max_length||1000)),String(source.comment_prompt||"Напишите свой ответ сообщением.").slice(0,300),
-    String(source.audience_type||"all"),String(source.delivery_mode||"bot"),Math.max(0,Math.min(1000,Number(source.min_accepted_runs||0))),String(source.results_mode||"after_vote"),Number(source.allow_change||0),Number(source.show_in_tasks||0),
+    String(source.audience_type||"all"),String(source.audience_segment_key||""),String(source.delivery_mode||"bot"),Math.max(0,Math.min(1000,Number(source.min_accepted_runs||0))),String(source.results_mode||"after_vote"),Number(source.allow_change||0),Number(source.show_in_tasks||0),
     Math.max(0,Number(source.duration_seconds||0)),0,0,String(source.reward_kind||"none"),String(source.reward_id||""),Math.max(0,Number(source.reward_amount||0)),
     String(query.from.id),telegramDisplayName(query.from),String(chatId||source.report_chat_id||""),0,now,now,0,0
   ];
   await env.DB.prepare(`INSERT INTO player_polls(
     poll_id,question,description,status,answer_type,response_mode,max_choices,
     comment_mode,comment_min_length,comment_max_length,comment_prompt,
-    audience_type,delivery_mode,min_accepted_runs,results_mode,allow_change,show_in_tasks,
+    audience_type,audience_segment_key,delivery_mode,min_accepted_runs,results_mode,allow_change,show_in_tasks,
     duration_seconds,starts_at,ends_at,reward_kind,reward_id,reward_amount,
     created_by,created_by_name,report_chat_id,bot_queue_prepared,created_at,updated_at,published_at,ended_at
   ) VALUES(${values.map(()=>"?").join(",")})`).bind(...values).run();
@@ -33531,6 +33743,15 @@ async function showV74PollAdminResults(chatId,user,env,pollId){
 
 async function v74PollRecipientRows(env,poll){
   await ensureV74PollSchema(env);
+  const segmentKey=String(poll?.audience_segment_key||"").trim();
+  if(segmentKey){
+    if(segmentKey==="all")return (await env.DB.prepare(`SELECT DISTINCT telegram_id,chat_id FROM bot_subscribers WHERE active=1 AND TRIM(COALESCE(chat_id,''))<>''`).all()).results||[];
+    const ids=await segmentPlayerIds(env,segmentKey,10000);if(!ids.length)return [];
+    const rows=[];
+    for(let i=0;i<ids.length;i+=90){const part=ids.slice(i,i+90),marks=part.map(()=>"?").join(",");const result=await env.DB.prepare(`SELECT DISTINCT telegram_id,chat_id FROM bot_subscribers WHERE active=1 AND TRIM(COALESCE(chat_id,''))<>'' AND telegram_id IN (${marks})`).bind(...part).all();rows.push(...(result.results||[]));}
+    return rows;
+  }
+  // Legacy audience rows keep their original SQL semantics.
   const audience=String(poll?.audience_type||"all");
   const now=Math.floor(Date.now()/1000);
   let sql=`SELECT DISTINCT b.telegram_id,b.chat_id FROM bot_subscribers b WHERE b.active=1 AND TRIM(COALESCE(b.chat_id,''))<>''`;
@@ -33545,18 +33766,13 @@ async function v74PollRecipientRows(env,poll){
   }else if(audience==="staff"){
     sql=`SELECT DISTINCT b.telegram_id,b.chat_id FROM bot_subscribers b JOIN staff_users s ON s.telegram_id=b.telegram_id WHERE b.active=1 AND TRIM(COALESCE(b.chat_id,''))<>'' AND s.active=1`;
   }
-  let query=env.DB.prepare(sql);
-  if(bindings.length)query=query.bind(...bindings);
-  const rows=(await query.all()).results||[];
+  let query=env.DB.prepare(sql);if(bindings.length)query=query.bind(...bindings);const rows=(await query.all()).results||[];
   if(audience!=="staff")return rows;
   const byId=new Map(rows.map((row)=>[String(row.telegram_id),row]));
-  for(const ownerId of botAdminTelegramIds(env)){
-    if(byId.has(String(ownerId)))continue;
-    const owner=await env.DB.prepare(`SELECT telegram_id,chat_id FROM bot_subscribers WHERE telegram_id=? AND active=1 AND TRIM(COALESCE(chat_id,''))<>'' LIMIT 1`).bind(String(ownerId)).first();
-    if(owner)byId.set(String(owner.telegram_id),owner);
-  }
+  for(const ownerId of botAdminTelegramIds(env)){if(byId.has(String(ownerId)))continue;const owner=await env.DB.prepare(`SELECT telegram_id,chat_id FROM bot_subscribers WHERE telegram_id=? AND active=1 AND TRIM(COALESCE(chat_id,''))<>'' LIMIT 1`).bind(String(ownerId)).first();if(owner)byId.set(String(owner.telegram_id),owner);}
   return [...byId.values()];
 }
+
 
 async function prepareV74PollBotQueue(env,pollId){await ensureV74PollSchema(env);const poll=await env.DB.prepare(`SELECT * FROM player_polls WHERE poll_id=? LIMIT 1`).bind(pollId).first();if(!poll||poll.status!=="active"||!["bot","both"].includes(String(poll.delivery_mode)))return 0;if(Number(poll.bot_queue_prepared))return 0;const rows=await v74PollRecipientRows(env,poll);const now=Math.floor(Date.now()/1000);for(let i=0;i<rows.length;i+=100){await env.DB.batch(rows.slice(i,i+100).map((row)=>env.DB.prepare(`INSERT OR IGNORE INTO player_poll_bot_deliveries(poll_id,telegram_id,chat_id,status,attempts,last_error,available_at,delivered_at,updated_at) VALUES(?,?,?,'pending',0,'',?,0,?)`).bind(pollId,String(row.telegram_id),String(row.chat_id),now,now)));}await env.DB.prepare(`UPDATE player_polls SET bot_queue_prepared=1,updated_at=? WHERE poll_id=?`).bind(now,pollId).run();return rows.length;}
 async function processV74PollBotDeliveries(env,limit=25){await ensureV74PollSchema(env);const now=Math.floor(Date.now()/1000);const rows=(await env.DB.prepare(`SELECT d.*,p.question,p.ends_at,p.status FROM player_poll_bot_deliveries d JOIN player_polls p ON p.poll_id=d.poll_id WHERE d.status IN ('pending','failed') AND d.available_at<=? AND d.attempts<4 AND p.status='active' ORDER BY d.updated_at ASC LIMIT ?`).bind(now,Math.max(1,Math.min(50,Number(limit)||25))).all()).results||[];for(const row of rows){try{const notification=await v77DeliverPlayerNotification(env,row.telegram_id,row.chat_id,"poll",`<b>🗳 Новый опрос</b>
@@ -36134,7 +36350,7 @@ async function ownerPanelV8Campaigns(env, ctx) {
 
 async function ownerPanelV8CreateCampaign(env, ctx) {
   await Promise.all([ensureLiveOpsAdminSchema(env),ensureControlCenterV85Schema(env)]);
-  const segmentKey=String(ctx.body?.segmentKey||"").trim();const segmentTitle=await ownerV85SegmentTitle(env,segmentKey);if(!segmentTitle)throw new ApiError(400,"Неизвестный сегмент игроков.");
+  const segmentKey=String(ctx.body?.segmentKey||"").trim();const segmentTitle=await ownerV85SegmentTitle(env,segmentKey);if(!segmentTitle)throw new ApiError(400,"Неизвестная аудитория игроков.");
   const title=String(ctx.body?.title||"").trim().replace(/\s+/g," ").slice(0,180),message=String(ctx.body?.message||"").trim().slice(0,PLAYER_MAIL_V3_BODY_LIMIT);if(title.length<3)throw new ApiError(400,"Укажите название кампании.");if(!message)throw new ApiError(400,"Сообщение кампании не может быть пустым.");
   const rewardKind=String(ctx.body?.rewardKind||"none").trim();if(!["none","points","zefir","coffee","case"].includes(rewardKind))throw new ApiError(400,"Неизвестный тип награды.");let rewardId="",amount=1;if(rewardKind==="case"){rewardId=normalizeCaseType(ctx.body?.rewardId||"small");if(!rewardId)throw new ApiError(400,"Неизвестный кейс.");amount=ownerPanelInteger(ctx.body?.amount,1,10)||1;}else if(rewardKind!=="none")amount=ownerPanelInteger(ctx.body?.amount,1,rewardKind==="points"?1000000:5000)||1;
   const reason=String(ctx.body?.reason||title).trim().slice(0,500)||title,preview=playerMailV3PreviewText(ctx.body?.preview,ctx.body?.message||title),scheduledAt=Math.max(0,Math.floor(Number(ctx.body?.scheduledAt||0))),now=Math.floor(Date.now()/1000);if(scheduledAt&&scheduledAt>now+180*86400)throw new ApiError(400,"Кампанию нельзя планировать дальше чем на 180 дней.");const imageUrl=ownerV8AssetPath(ctx.body?.imageUrl||"");if(String(ctx.body?.imageUrl||"").trim()&&!imageUrl)throw new ApiError(400,"Картинка должна быть HTTPS, /assets/... или /media/...");const buttonText=String(ctx.body?.buttonText||"").trim().slice(0,60),rawButtonUrl=String(ctx.body?.buttonUrl||"").trim();if(rawButtonUrl&&!/^https:\/\//i.test(rawButtonUrl)&&!rawButtonUrl.startsWith("/"))throw new ApiError(400,"Ссылка кнопки должна быть HTTPS или внутренним путём /...");const inboxEnabled=ctx.body?.inboxEnabled!==false&&Number(ctx.body?.inboxEnabled)!==0;
@@ -36640,24 +36856,37 @@ function ownerV85CustomSegmentSql(rules, countOnly = false) {
 
 async function ownerV85BuiltInSegmentCount(env, key) {
   const now=Math.floor(Date.now()/1000),day=moscowDayStartUnix();
+  const segment=String(key||"");
   let sql="",binds=[];
-  if(key==="new_today"){sql=`SELECT COUNT(*) AS count FROM admin_profile_state WHERE created_at>=?`;binds=[day];}
-  else if(key==="active_today"){sql=`SELECT COUNT(DISTINCT telegram_id) AS count FROM leaderboard_runs WHERE accepted=1 AND created_at>=?`;binds=[day];}
-  else if(key==="returning_today"){sql=`SELECT COUNT(DISTINCT r.telegram_id) AS count FROM leaderboard_runs r JOIN admin_profile_state p ON p.telegram_id=r.telegram_id WHERE r.accepted=1 AND r.created_at>=? AND p.created_at<?`;binds=[day,day];}
-  else if(key==="active_7d"){sql=`SELECT COUNT(DISTINCT telegram_id) AS count FROM leaderboard_runs WHERE accepted=1 AND created_at>=?`;binds=[now-7*86400];}
-  else if(key==="inactive_7d"){sql=`SELECT COUNT(*) AS count FROM admin_profile_state WHERE updated_at<=?`;binds=[now-7*86400];}
-  else if(key==="top_10"){sql=`SELECT COUNT(*) AS count FROM (SELECT telegram_id FROM leaderboard_all_time WHERE hidden=0 ORDER BY best_score DESC,achieved_at ASC LIMIT 10)`;}
-  else if(key==="elite"||key==="elite_plus"){sql=`SELECT COUNT(*) AS count FROM season_pass_players WHERE premium_tier=? AND season_id=(SELECT season_id FROM season_pass_seasons WHERE starts_at<=? AND ends_at>? ORDER BY starts_at DESC LIMIT 1)`;binds=[key,now,now];}
-  else if(key==="legendary_openers"){sql=`SELECT COUNT(DISTINCT telegram_id) AS count FROM granted_cases WHERE case_type='legendary' AND status='opened'`;}
-  else if(key==="physical_winners"){sql=`SELECT COUNT(DISTINCT owner_telegram_id) AS count FROM reward_codes WHERE owner_telegram_id<>''`;}
-  else if(key==="no_purchases"){sql=`SELECT COUNT(*) AS count FROM admin_profile_state p WHERE NOT EXISTS(SELECT 1 FROM granted_cases g WHERE g.telegram_id=p.telegram_id AND g.granted_by='shop') AND NOT EXISTS(SELECT 1 FROM shop_stock_consumptions sc WHERE sc.telegram_id=p.telegram_id AND sc.category='skins')`;}
-  else if(key==="high_play_no_purchase"){sql=`SELECT COUNT(*) AS count FROM (SELECT r.telegram_id FROM leaderboard_runs r WHERE r.accepted=1 AND r.created_at>=? AND NOT EXISTS(SELECT 1 FROM granted_cases g WHERE g.telegram_id=r.telegram_id AND g.granted_by='shop') AND NOT EXISTS(SELECT 1 FROM shop_stock_consumptions sc WHERE sc.telegram_id=r.telegram_id AND sc.category='skins') GROUP BY r.telegram_id HAVING COUNT(*)>=10)`;binds=[now-7*86400];}
-  else if(key==="promo_redeemers"){sql=`SELECT COUNT(DISTINCT telegram_id) AS count FROM promo_redemptions WHERE status IN ('queued','delivered')`;}
-  else if(key==="pass_complete"){sql=`SELECT COUNT(DISTINCT telegram_id) AS count FROM season_pass_players WHERE xp>=?`;binds=[seasonPassXpForLevel(50)];}
-  else if(key==="banned"){sql=`SELECT COUNT(*) AS count FROM player_admin_controls WHERE blocked=1`;}
+  if(segment==="all"){sql=`SELECT COUNT(*) AS count FROM admin_profile_state`;}
+  else if(segment==="new_today"){sql=`SELECT COUNT(*) AS count FROM admin_profile_state WHERE created_at>=?`;binds=[day];}
+  else if(segment==="new_7d"){sql=`SELECT COUNT(*) AS count FROM admin_profile_state WHERE created_at>=?`;binds=[now-7*86400];}
+  else if(segment==="not_started"){sql=`SELECT COUNT(*) AS count FROM admin_profile_state p WHERE NOT EXISTS(SELECT 1 FROM leaderboard_runs r WHERE r.telegram_id=p.telegram_id AND r.accepted=1)`;}
+  else if(segment==="active_today"){sql=`SELECT COUNT(DISTINCT telegram_id) AS count FROM leaderboard_runs WHERE accepted=1 AND created_at>=?`;binds=[day];}
+  else if(["active_3d","active_7d","active_30d"].includes(segment)){const days=Number(segment.match(/(\d+)/)?.[1]||7);sql=`SELECT COUNT(DISTINCT telegram_id) AS count FROM leaderboard_runs WHERE accepted=1 AND created_at>=?`;binds=[now-days*86400];}
+  else if(segment==="returning_today"){sql=`SELECT COUNT(DISTINCT r.telegram_id) AS count FROM leaderboard_runs r JOIN admin_profile_state p ON p.telegram_id=r.telegram_id WHERE r.accepted=1 AND r.created_at>=? AND p.created_at<=? AND EXISTS(SELECT 1 FROM leaderboard_runs old WHERE old.telegram_id=r.telegram_id AND old.accepted=1 AND old.created_at<?) AND NOT EXISTS(SELECT 1 FROM leaderboard_runs prev WHERE prev.telegram_id=r.telegram_id AND prev.accepted=1 AND prev.created_at>=? AND prev.created_at<?)`;binds=[day,day-7*86400,day-7*86400,day-7*86400,day];}
+  else if(["inactive_3d","inactive_7d","inactive_14d","inactive_30d"].includes(segment)){const days=Number(segment.match(/(\d+)/)?.[1]||7),cutoff=now-days*86400;sql=`SELECT COUNT(*) AS count FROM admin_profile_state p WHERE p.created_at<=? AND NOT EXISTS(SELECT 1 FROM leaderboard_runs r WHERE r.telegram_id=p.telegram_id AND r.accepted=1 AND r.created_at>=?)`;binds=[cutoff,cutoff];}
+  else if(segment==="top_10"||segment==="top_100"){const limit=segment==="top_10"?10:100;sql=`SELECT COUNT(*) AS count FROM (SELECT telegram_id FROM leaderboard_all_time WHERE hidden=0 ORDER BY best_score DESC,achieved_at ASC LIMIT ${limit})`;}
+  else if(segment==="season"){sql=`SELECT COUNT(DISTINCT e.telegram_id) AS count FROM leaderboard_entries e JOIN leaderboard_seasons s ON s.id=e.season_id WHERE s.status='active'`;}
+  else if(segment==="pass_players"){sql=`SELECT COUNT(DISTINCT telegram_id) AS count FROM season_pass_players WHERE season_id=(SELECT season_id FROM season_pass_seasons WHERE starts_at<=? AND ends_at>? ORDER BY starts_at DESC LIMIT 1)`;binds=[now,now];}
+  else if(segment==="elite"||segment==="elite_plus"){sql=`SELECT COUNT(*) AS count FROM season_pass_players WHERE premium_tier=? AND season_id=(SELECT season_id FROM season_pass_seasons WHERE starts_at<=? AND ends_at>? ORDER BY starts_at DESC LIMIT 1)`;binds=[segment,now,now];}
+  else if(segment==="premium_any"){sql=`SELECT COUNT(*) AS count FROM season_pass_players WHERE premium_tier IN ('elite','elite_plus') AND season_id=(SELECT season_id FROM season_pass_seasons WHERE starts_at<=? AND ends_at>? ORDER BY starts_at DESC LIMIT 1)`;binds=[now,now];}
+  else if(segment==="legendary_openers"){sql=`SELECT COUNT(DISTINCT telegram_id) AS count FROM granted_cases WHERE case_type='legendary' AND status='opened'`;}
+  else if(segment==="physical_winners"){sql=`SELECT COUNT(DISTINCT owner_telegram_id) AS count FROM reward_codes WHERE owner_telegram_id<>''`;}
+  else if(segment==="buyers"){sql=`SELECT COUNT(*) AS count FROM admin_profile_state p WHERE EXISTS(SELECT 1 FROM granted_cases g WHERE g.telegram_id=p.telegram_id AND g.granted_by='shop') OR EXISTS(SELECT 1 FROM shop_stock_consumptions sc WHERE sc.telegram_id=p.telegram_id AND sc.category='skins')`;}
+  else if(segment==="no_purchases"){sql=`SELECT COUNT(*) AS count FROM admin_profile_state p WHERE NOT EXISTS(SELECT 1 FROM granted_cases g WHERE g.telegram_id=p.telegram_id AND g.granted_by='shop') AND NOT EXISTS(SELECT 1 FROM shop_stock_consumptions sc WHERE sc.telegram_id=p.telegram_id AND sc.category='skins')`;}
+  else if(segment==="high_play_no_purchase"){sql=`SELECT COUNT(*) AS count FROM (SELECT r.telegram_id FROM leaderboard_runs r WHERE r.accepted=1 AND r.created_at>=? AND NOT EXISTS(SELECT 1 FROM granted_cases g WHERE g.telegram_id=r.telegram_id AND g.granted_by='shop') AND NOT EXISTS(SELECT 1 FROM shop_stock_consumptions sc WHERE sc.telegram_id=r.telegram_id AND sc.category='skins') GROUP BY r.telegram_id HAVING COUNT(*)>=10)`;binds=[now-7*86400];}
+  else if(segment==="promo_redeemers"){sql=`SELECT COUNT(DISTINCT telegram_id) AS count FROM promo_redemptions WHERE status IN ('queued','delivered')`;}
+  else if(segment==="pass_complete"){sql=`SELECT COUNT(DISTINCT telegram_id) AS count FROM season_pass_players WHERE xp>=? AND season_id=(SELECT season_id FROM season_pass_seasons WHERE starts_at<=? AND ends_at>? ORDER BY starts_at DESC LIMIT 1)`;binds=[seasonPassXpForLevel(50),now,now];}
+  else if(segment==="testers"){sql=`SELECT COUNT(*) AS count FROM tester_accounts`;}
+  else if(segment==="staff"){sql=`SELECT COUNT(*) AS count FROM staff_users WHERE active=1`;}
+  else if(segment==="banned"){sql=`SELECT COUNT(*) AS count FROM player_admin_controls WHERE blocked=1`;}
   else return 0;
-  let stmt=env.DB.prepare(sql);if(binds.length)stmt=stmt.bind(...binds);const row=await stmt.first();return Number(row?.count||0);
+  let stmt=env.DB.prepare(sql);if(binds.length)stmt=stmt.bind(...binds);const row=await stmt.first();let count=Number(row?.count||0);
+  if(segment==="staff")for(const ownerId of botAdminTelegramIds(env)){const exists=await env.DB.prepare(`SELECT 1 AS ok FROM staff_users WHERE telegram_id=? AND active=1 LIMIT 1`).bind(String(ownerId)).first();if(!exists?.ok)count++;}
+  return count;
 }
+
 
 async function ownerV85SavedSegment(env, key) {
   await ensureControlCenterV85Schema(env);
@@ -36676,31 +36905,52 @@ async function ownerV85SegmentTitle(env,key) {
 }
 async function ownerV85SegmentCatalog(env, withCounts = true) {
   await ensureControlCenterV85Schema(env);
-  const builtins = Object.entries(PLAYER_SEGMENTS).map(([key,title])=>({key,title,builtin:true,count:0}));
+  const builtins = Object.entries(PLAYER_SEGMENTS).map(([key,title])=>({key,title,builtin:true,count:0,...playerSegmentMeta(key,true)}));
   if (withCounts) await Promise.all(builtins.map(async(row)=>{row.count=await ownerV85BuiltInSegmentCount(env,row.key);}));
   const customRows=(await env.DB.prepare(`SELECT * FROM saved_player_segments WHERE enabled=1 ORDER BY updated_at DESC,title LIMIT 100`).all()).results||[];
-  const custom=customRows.map((row)=>({key:String(row.segment_key),title:String(row.title),description:String(row.description||""),rules:ownerV8SafeJson(row.rules_json,{}),builtin:false,updatedAt:Number(row.updated_at||0),count:0}));
+  const custom=customRows.map((row)=>({key:String(row.segment_key),title:String(row.title),description:String(row.description||""),rules:ownerV8SafeJson(row.rules_json,{}),builtin:false,updatedAt:Number(row.updated_at||0),count:0,...playerSegmentMeta(row.segment_key,false)}));
   if(withCounts) await Promise.all(custom.map(async(item)=>{const q=ownerV85CustomSegmentSql(item.rules,true);const c=await env.DB.prepare(q.sql).bind(...q.binds).first();item.count=Number(c?.count||0);}));
   return [...builtins,...custom];
 }
 
 async function ownerPanelV85SegmentSave(env,ctx) {
   await ensureControlCenterV85Schema(env);
-  const title=String(ctx.body?.title||"").trim().replace(/\s+/g," ").slice(0,100); if(title.length<2)throw new ApiError(400,"Укажите название сегмента.");
+  const title=String(ctx.body?.title||"").trim().replace(/\s+/g," ").slice(0,100); if(title.length<2)throw new ApiError(400,"Укажите название аудитории.");
   const description=String(ctx.body?.description||"").trim().slice(0,300); const rules=ownerV85NormalizeSegmentRules(ctx.body?.rules||{});
   if(!Object.values(rules).some((v)=>v&&v!=="any"&&v!==0))throw new ApiError(400,"Добавьте хотя бы одно условие сегмента.");
-  let key=String(ctx.body?.segmentKey||"").trim(); if(key&&PLAYER_SEGMENTS[key])throw new ApiError(409,"Системный сегмент нельзя перезаписать.");
+  let key=String(ctx.body?.segmentKey||"").trim(); if(key&&(key==="all"||PLAYER_SEGMENTS[key]))throw new ApiError(409,"Системную категорию нельзя перезаписать.");
   const now=Math.floor(Date.now()/1000); if(!key)key=`custom_${Date.now().toString(36)}_${Math.random().toString(36).slice(2,7)}`;
   const before=await env.DB.prepare(`SELECT * FROM saved_player_segments WHERE segment_key=? LIMIT 1`).bind(key).first();
+  if(before){
+    const previousRules=ownerV85NormalizeSegmentRules(ownerV8SafeJson(before.rules_json,{}));
+    if(JSON.stringify(previousRules)!==JSON.stringify(rules)){
+      try {
+        const poll=await env.DB.prepare(`SELECT poll_id,question,status FROM player_polls WHERE audience_segment_key=? AND status IN ('scheduled','active') ORDER BY updated_at DESC LIMIT 1`).bind(key).first();
+        if(poll)throw new ApiError(409,`Правила аудитории используются опросом «${String(poll.question||poll.poll_id).slice(0,80)}». Сначала завершите или отмените опрос.`);
+      } catch(error) {
+        if(error instanceof ApiError)throw error;
+        const message=String(error?.message||error).toLowerCase();
+        if(!message.includes("no such column: audience_segment_key")&&!message.includes("no such table: player_polls"))throw error;
+      }
+    }
+  }
   await env.DB.prepare(`INSERT INTO saved_player_segments(segment_key,title,description,rules_json,enabled,created_by,created_by_name,created_at,updated_at,updated_by) VALUES(?,?,?,?,1,?,?,?,?,?) ON CONFLICT(segment_key) DO UPDATE SET title=excluded.title,description=excluded.description,rules_json=excluded.rules_json,enabled=1,updated_at=excluded.updated_at,updated_by=excluded.updated_by`).bind(key,title,description,JSON.stringify(rules),String(ctx.user.id),telegramDisplayName(ctx.user),before?.created_at||now,now,String(ctx.user.id)).run();
-  ownerV85CacheInvalidate("segments");
+  ownerV85CacheInvalidate("segments"); ownerV85CacheInvalidate("polls:audience-catalog");
   await logStaffAction(env,ctx.user,ctx.access,before?"owner_panel_segment_update":"owner_panel_segment_create",null,"segment",null,null,{segmentKey:key,title,rules});
   return {ok:true,segmentKey:key,title,rules};
 }
 async function ownerPanelV85SegmentDelete(env,ctx) {
-  await ensureControlCenterV85Schema(env); const key=String(ctx.body?.segmentKey||"").trim(); if(PLAYER_SEGMENTS[key])throw new ApiError(409,"Системный сегмент удалить нельзя.");
-  const row=await env.DB.prepare(`SELECT * FROM saved_player_segments WHERE segment_key=? LIMIT 1`).bind(key).first(); if(!row)throw new ApiError(404,"Сегмент не найден.");
-  await env.DB.prepare(`UPDATE saved_player_segments SET enabled=0,updated_at=?,updated_by=? WHERE segment_key=?`).bind(Math.floor(Date.now()/1000),String(ctx.user.id),key).run(); ownerV85CacheInvalidate("segments");
+  await ensureControlCenterV85Schema(env); const key=String(ctx.body?.segmentKey||"").trim(); if(key==="all"||PLAYER_SEGMENTS[key])throw new ApiError(409,"Системную категорию удалить нельзя.");
+  const row=await env.DB.prepare(`SELECT * FROM saved_player_segments WHERE segment_key=? LIMIT 1`).bind(key).first(); if(!row)throw new ApiError(404,"Аудитория не найдена.");
+  try {
+    const poll=await env.DB.prepare(`SELECT poll_id,question,status FROM player_polls WHERE audience_segment_key=? AND status IN ('draft','scheduled','active') ORDER BY updated_at DESC LIMIT 1`).bind(key).first();
+    if(poll)throw new ApiError(409,`Категория используется опросом «${String(poll.question||poll.poll_id).slice(0,80)}». Сначала завершите, отмените или удалите этот опрос.`);
+  } catch(error) {
+    if(error instanceof ApiError)throw error;
+    const message=String(error?.message||error).toLowerCase();
+    if(!message.includes("no such column: audience_segment_key")&&!message.includes("no such table: player_polls"))throw error;
+  }
+  await env.DB.prepare(`UPDATE saved_player_segments SET enabled=0,updated_at=?,updated_by=? WHERE segment_key=?`).bind(Math.floor(Date.now()/1000),String(ctx.user.id),key).run(); ownerV85CacheInvalidate("segments"); ownerV85CacheInvalidate("polls:audience-catalog");
   await logStaffAction(env,ctx.user,ctx.access,"owner_panel_segment_delete",null,"segment",1,0,{segmentKey:key,title:String(row.title||key)}); return {ok:true};
 }
 async function ownerPanelV85SegmentPreview(env,ctx) {
@@ -36718,10 +36968,10 @@ async function ownerPanelV85SegmentPreview(env,ctx) {
     const sample=await env.DB.prepare(`${sampleQuery.sql} LIMIT 30`).bind(...sampleQuery.binds).all();
     sampleIds=(sample.results||[]).map(r=>String(r.telegram_id||"")).filter(Boolean);
   }else{
-    title=await ownerV85SegmentTitle(env,key); if(!title)throw new ApiError(404,"Сегмент не найден.");
+    title=await ownerV85SegmentTitle(env,key); if(!title)throw new ApiError(404,"Аудитория не найдена.");
     if(PLAYER_SEGMENTS[key]){count=await ownerV85BuiltInSegmentCount(env,key);sampleIds=(await segmentPlayerIds(env,key,30)).slice(0,30);}
     else{
-      const row=await ownerV85SavedSegment(env,key);if(!row)throw new ApiError(404,"Сегмент не найден.");
+      const row=await ownerV85SavedSegment(env,key);if(!row)throw new ApiError(404,"Аудитория не найдена.");
       const rules=ownerV8SafeJson(row.rules_json,{}),countQuery=ownerV85CustomSegmentSql(rules,true),sampleQuery=ownerV85CustomSegmentSql(rules,false);
       const [countRow,sample]=await Promise.all([env.DB.prepare(countQuery.sql).bind(...countQuery.binds).first(),env.DB.prepare(`${sampleQuery.sql} LIMIT 30`).bind(...sampleQuery.binds).all()]);
       count=Number(countRow?.count||0);sampleIds=(sample.results||[]).map(r=>String(r.telegram_id||"")).filter(Boolean);
@@ -37722,35 +37972,9 @@ function flashOfferRowView(row, extra = {}) {
   };
 }
 async function flashOfferMatchesSegment(env, telegramId, segmentKey) {
-  const id = String(telegramId || "");
-  const key = String(segmentKey || "all");
-  if (!key || key === "all") return true;
-  const now = Math.floor(Date.now()/1000), day = moscowDayStartUnix();
-  let sql = "", binds = [];
-  if (key === "new_today") { sql=`SELECT 1 AS ok FROM admin_profile_state WHERE telegram_id=? AND created_at>=? LIMIT 1`; binds=[id,day]; }
-  else if (key === "active_today") { sql=`SELECT 1 AS ok FROM leaderboard_runs WHERE telegram_id=? AND accepted=1 AND created_at>=? LIMIT 1`; binds=[id,day]; }
-  else if (key === "returning_today") { sql=`SELECT 1 AS ok FROM admin_profile_state p WHERE p.telegram_id=? AND p.created_at<? AND EXISTS(SELECT 1 FROM leaderboard_runs r WHERE r.telegram_id=p.telegram_id AND r.accepted=1 AND r.created_at>=?) LIMIT 1`; binds=[id,day,day]; }
-  else if (key === "active_7d") { sql=`SELECT 1 AS ok FROM leaderboard_runs WHERE telegram_id=? AND accepted=1 AND created_at>=? LIMIT 1`; binds=[id,now-7*86400]; }
-  else if (key === "inactive_7d") { sql=`SELECT 1 AS ok FROM admin_profile_state WHERE telegram_id=? AND updated_at<=? LIMIT 1`; binds=[id,now-7*86400]; }
-  else if (key === "top_10") { sql=`SELECT 1 AS ok FROM (SELECT telegram_id FROM leaderboard_all_time WHERE hidden=0 ORDER BY best_score DESC,achieved_at ASC LIMIT 10) WHERE telegram_id=? LIMIT 1`; binds=[id]; }
-  else if (key === "elite" || key === "elite_plus") { sql=`SELECT 1 AS ok FROM season_pass_players WHERE telegram_id=? AND premium_tier=? AND season_id=(SELECT season_id FROM season_pass_seasons WHERE starts_at<=? AND ends_at>? ORDER BY starts_at DESC LIMIT 1) LIMIT 1`; binds=[id,key,now,now]; }
-  else if (key === "legendary_openers") { sql=`SELECT 1 AS ok FROM granted_cases WHERE telegram_id=? AND case_type='legendary' AND status='opened' LIMIT 1`; binds=[id]; }
-  else if (key === "physical_winners") { sql=`SELECT 1 AS ok FROM reward_codes WHERE owner_telegram_id=? LIMIT 1`; binds=[id]; }
-  else if (key === "no_purchases") { sql=`SELECT 1 AS ok FROM admin_profile_state p WHERE p.telegram_id=? AND NOT EXISTS(SELECT 1 FROM granted_cases g WHERE g.telegram_id=p.telegram_id AND g.granted_by='shop') AND NOT EXISTS(SELECT 1 FROM shop_stock_consumptions sc WHERE sc.telegram_id=p.telegram_id AND sc.category='skins') LIMIT 1`; binds=[id]; }
-  else if (key === "high_play_no_purchase") { sql=`SELECT 1 AS ok FROM admin_profile_state p WHERE p.telegram_id=? AND (SELECT COUNT(*) FROM leaderboard_runs r WHERE r.telegram_id=p.telegram_id AND r.accepted=1 AND r.created_at>=?)>=10 AND NOT EXISTS(SELECT 1 FROM granted_cases g WHERE g.telegram_id=p.telegram_id AND g.granted_by='shop') AND NOT EXISTS(SELECT 1 FROM shop_stock_consumptions sc WHERE sc.telegram_id=p.telegram_id AND sc.category='skins') LIMIT 1`; binds=[id,now-7*86400]; }
-  else if (key === "promo_redeemers") { sql=`SELECT 1 AS ok FROM promo_redemptions WHERE telegram_id=? AND status IN ('queued','delivered') LIMIT 1`; binds=[id]; }
-  else if (key === "pass_complete") { sql=`SELECT 1 AS ok FROM season_pass_players WHERE telegram_id=? AND xp>=? LIMIT 1`; binds=[id,seasonPassXpForLevel(50)]; }
-  else if (key === "banned") { sql=`SELECT 1 AS ok FROM player_admin_controls WHERE telegram_id=? AND blocked=1 LIMIT 1`; binds=[id]; }
-  else {
-    const saved = await ownerV85SavedSegment(env,key);
-    if (!saved) return false;
-    const q = ownerV85CustomSegmentSql(ownerV8SafeJson(saved.rules_json,{}),false);
-    const scopedSql = q.sql.replace("WHERE 1=1", "WHERE p.telegram_id=? AND 1=1");
-    const row = await env.DB.prepare(`${scopedSql} LIMIT 1`).bind(id,...q.binds).first();
-    return Boolean(row?.telegram_id);
-  }
-  const row = await env.DB.prepare(sql).bind(...binds).first();
-  return Boolean(row?.ok);
+  const id=String(telegramId||"").trim();
+  if(!id)return false;
+  return segmentPlayerAllowed(env,String(segmentKey||"all"),id);
 }
 async function flashOfferEligibilityContext(env, telegramId, row, cache = {}) {
   if (!(await flashOfferMatchesSegment(env,telegramId,row.segment_key))) return {eligible:false,reason:"Аккаунт не входит в сегмент этой акции."};
@@ -44872,21 +45096,29 @@ function ownerPanelPollRewardView(row) {
   return {...reward,title:v74PollRewardText(reward),imageUrl:reward.kind==='none'?'':ownerPanelRewardAsset(reward.kind,reward.id)};
 }
 
-function ownerPanelPollView(row) {
+function ownerPanelPollView(row, audienceTitles = null) {
+  const audience=v80PollAudienceSegmentKey(row);
+  const audienceLabel=audienceTitles?.get?.(audience)||v74PollAudienceLabel(audience);
   return {
-    id:String(row.poll_id||''),question:String(row.question||''),description:String(row.description||''),status:String(row.status||'draft'),statusLabel:v74PollStatusLabel(row.status),answerType:String(row.answer_type||'choice'),answerTypeLabel:v75PollAnswerTypeLabel(row.answer_type),responseMode:String(row.response_mode||'single'),maxChoices:Number(row.max_choices||1),commentMode:String(row.comment_mode||'none'),commentModeLabel:v75PollCommentModeLabel(String(row.answer_type||'choice')==='text'?'required':row.comment_mode),commentMin:Number(row.comment_min_length||10),commentMax:Number(row.comment_max_length||1000),commentPrompt:String(row.comment_prompt||''),audience:String(row.audience_type||'all'),audienceLabel:v74PollAudienceLabel(row.audience_type),delivery:String(row.delivery_mode||'bot'),deliveryLabel:v74PollDeliveryLabel(row.delivery_mode),minAcceptedRuns:Number(row.min_accepted_runs||0),resultsMode:String(row.results_mode||'after_vote'),resultsLabel:v74PollResultsLabel(row.results_mode),allowChange:Number(row.allow_change||0)===1,showInTasks:Number(row.show_in_tasks||0)===1,durationSeconds:Number(row.duration_seconds||0),startsAt:Number(row.starts_at||0),endsAt:Number(row.ends_at||0),createdAt:Number(row.created_at||0),publishedAt:Number(row.published_at||0),endedAt:Number(row.ended_at||0),responses:Number(row.responses||0),comments:Number(row.comments||0),reward:ownerPanelPollRewardView(row)
+    id:String(row.poll_id||''),question:String(row.question||''),description:String(row.description||''),status:String(row.status||'draft'),statusLabel:v74PollStatusLabel(row.status),answerType:String(row.answer_type||'choice'),answerTypeLabel:v75PollAnswerTypeLabel(row.answer_type),responseMode:String(row.response_mode||'single'),maxChoices:Number(row.max_choices||1),commentMode:String(row.comment_mode||'none'),commentModeLabel:v75PollCommentModeLabel(String(row.answer_type||'choice')==='text'?'required':row.comment_mode),commentMin:Number(row.comment_min_length||10),commentMax:Number(row.comment_max_length||1000),commentPrompt:String(row.comment_prompt||''),audience,audienceType:String(row.audience_type||'all'),audienceLabel,delivery:String(row.delivery_mode||'bot'),deliveryLabel:v74PollDeliveryLabel(row.delivery_mode),minAcceptedRuns:Number(row.min_accepted_runs||0),resultsMode:String(row.results_mode||'after_vote'),resultsLabel:v74PollResultsLabel(row.results_mode),allowChange:Number(row.allow_change||0)===1,showInTasks:Number(row.show_in_tasks||0)===1,durationSeconds:Number(row.duration_seconds||0),startsAt:Number(row.starts_at||0),endsAt:Number(row.ends_at||0),createdAt:Number(row.created_at||0),publishedAt:Number(row.published_at||0),endedAt:Number(row.ended_at||0),responses:Number(row.responses||0),comments:Number(row.comments||0),reward:ownerPanelPollRewardView(row)
   };
 }
+
 
 async function ownerPanelPolls(env, ctx) {
   await ensureV74PollSchema(env);
   const now=Math.floor(Date.now()/1000);
   await env.DB.prepare(`UPDATE player_polls SET status='ended',ended_at=?,updated_at=? WHERE status='active' AND ends_at>0 AND ends_at<=?`).bind(now,now,now).run();
-  const rows=(await env.DB.prepare(`SELECT p.*,(SELECT COUNT(*) FROM player_poll_responses r WHERE r.poll_id=p.poll_id) AS responses,(SELECT COUNT(*) FROM player_poll_responses r WHERE r.poll_id=p.poll_id AND TRIM(COALESCE(r.comment_text,''))<>'') AS comments FROM player_polls p ORDER BY CASE p.status WHEN 'active' THEN 0 WHEN 'draft' THEN 1 WHEN 'scheduled' THEN 2 ELSE 3 END,p.updated_at DESC,p.created_at DESC LIMIT 60`).all()).results||[];
-  const stats={draft:0,active:0,scheduled:0,ended:0,cancelled:0};
+  const [pollResult,audiences]=await Promise.all([
+    env.DB.prepare(`SELECT p.*,(SELECT COUNT(*) FROM player_poll_responses r WHERE r.poll_id=p.poll_id) AS responses,(SELECT COUNT(*) FROM player_poll_responses r WHERE r.poll_id=p.poll_id AND TRIM(COALESCE(r.comment_text,''))<>'') AS comments FROM player_polls p ORDER BY CASE p.status WHEN 'active' THEN 0 WHEN 'draft' THEN 1 WHEN 'scheduled' THEN 2 ELSE 3 END,p.updated_at DESC,p.created_at DESC LIMIT 60`).all(),
+    ownerV85Cached("polls:audience-catalog",20000,()=>v80PollAudienceCatalog(env,true))
+  ]);
+  const rows=pollResult.results||[],stats={draft:0,active:0,scheduled:0,ended:0,cancelled:0};
   for(const row of rows)stats[String(row.status||'')] = (stats[String(row.status||'')]||0)+1;
-  return {ok:true,stats,polls:rows.map(ownerPanelPollView),rewardPresets:Object.entries(V74_POLL_REWARD_PRESETS).map(([key,reward])=>({key,...reward,title:v74PollRewardText(reward),imageUrl:reward.kind==='none'?'':ownerPanelRewardAsset(reward.kind,reward.id)}))};
+  const audienceTitles=new Map(audiences.map(row=>[String(row.key),String(row.title)]));
+  return {ok:true,stats,polls:rows.map(row=>ownerPanelPollView(row,audienceTitles)),audiences:audiences.map(row=>({key:String(row.key),title:String(row.title),description:String(row.description||''),group:String(row.group||'custom'),groupTitle:String(row.groupTitle||'Аудитория'),groupIcon:String(row.groupIcon||'👥'),groupOrder:Number(row.groupOrder||100),builtin:row.builtin!==false,count:Number(row.count||0)})),rewardPresets:Object.entries(V74_POLL_REWARD_PRESETS).map(([key,reward])=>({key,...reward,title:v74PollRewardText(reward),imageUrl:reward.kind==='none'?'':ownerPanelRewardAsset(reward.kind,reward.id)}))};
 }
+
 
 async function ownerPanelPollDetails(env, ctx) {
   await ensureV74PollSchema(env);
@@ -44899,7 +45131,8 @@ async function ownerPanelPollDetails(env, ctx) {
     env.DB.prepare(`SELECT r.telegram_id,r.source,r.submitted_at,r.comment_text,b.display_name,b.username,GROUP_CONCAT(o.option_text,' · ') AS choices FROM player_poll_responses r LEFT JOIN bot_subscribers b ON b.telegram_id=r.telegram_id LEFT JOIN player_poll_votes v ON v.poll_id=r.poll_id AND v.telegram_id=r.telegram_id LEFT JOIN player_poll_options o ON o.poll_id=v.poll_id AND o.option_id=v.option_id WHERE r.poll_id=? GROUP BY r.poll_id,r.telegram_id ORDER BY r.submitted_at DESC LIMIT 50`).bind(pollId).all(),
     env.DB.prepare(`SELECT status,COUNT(*) AS count FROM player_poll_bot_deliveries WHERE poll_id=? GROUP BY status`).bind(pollId).all()
   ]);
-  return {ok:true,poll:ownerPanelPollView(row),options:(options||[]).map(x=>({id:String(x.option_id),order:Number(x.option_order),text:String(x.option_text)})),result,comments:(comments.results||[]).map(x=>({telegramId:String(x.telegram_id),name:String(x.display_name||x.username||x.telegram_id),username:String(x.username||''),source:String(x.source||''),submittedAt:Number(x.submitted_at||0),comment:String(x.comment_text||''),choices:String(x.choices||'')})),deliveries:Object.fromEntries((deliveries.results||[]).map(x=>[String(x.status),Number(x.count||0)]))};
+  const audienceKey=v80PollAudienceSegmentKey(row),audienceTitle=await v80PollAudienceTitle(env,audienceKey),audienceTitles=new Map([[audienceKey,audienceTitle]]);
+  return {ok:true,poll:ownerPanelPollView(row,audienceTitles),options:(options||[]).map(x=>({id:String(x.option_id),order:Number(x.option_order),text:String(x.option_text)})),result,comments:(comments.results||[]).map(x=>({telegramId:String(x.telegram_id),name:String(x.display_name||x.username||x.telegram_id),username:String(x.username||''),source:String(x.source||''),submittedAt:Number(x.submitted_at||0),comment:String(x.comment_text||''),choices:String(x.choices||'')})),deliveries:Object.fromEntries((deliveries.results||[]).map(x=>[String(x.status),Number(x.count||0)]))};
 }
 
 async function ownerPanelCreatePoll(env, ctx) {
@@ -44913,16 +45146,19 @@ async function ownerPanelCreatePoll(env, ctx) {
   const responseMode=answerType==='text'?'single':(String(ctx.body?.responseMode)==='multiple'?'multiple':'single');
   const maxChoices=responseMode==='multiple'?Math.max(1,Math.min(options.length,Number(ctx.body?.maxChoices)||2)):1;
   const commentMode=answerType==='text'?'required':(['none','optional','required'].includes(String(ctx.body?.commentMode))?String(ctx.body.commentMode):(answerType==='choice_comment'?'optional':'none'));
-  const audience=['all','active_7d','testers','season','staff'].includes(String(ctx.body?.audience))?String(ctx.body.audience):'all';
+  const audienceSegmentKey=String(ctx.body?.audienceSegmentKey||ctx.body?.audience||'all').trim()||'all';
+  if(audienceSegmentKey!=='all'&&!PLAYER_SEGMENTS[audienceSegmentKey]&&!(await ownerV85SavedSegment(env,audienceSegmentKey)))throw new ApiError(400,'Выбранная аудитория игроков не найдена.');
+  if(audienceSegmentKey==='banned')throw new ApiError(400,'Заблокированным игрокам нельзя публиковать опросы.');
+  const audience=['all','active_7d','testers','season','staff'].includes(audienceSegmentKey)?audienceSegmentKey:'all';
   const delivery=['bot','game','both'].includes(String(ctx.body?.delivery))?String(ctx.body.delivery):'bot';
   const resultsMode=['after_vote','after_end','hidden'].includes(String(ctx.body?.resultsMode))?String(ctx.body.resultsMode):'after_vote';
   const durationSeconds=ownerPanelInteger(ctx.body?.durationSeconds??0,0,90*V67_DAY);if(durationSeconds==null)throw new ApiError(400,'Некорректный срок опроса.');
   const minAcceptedRuns=ownerPanelInteger(ctx.body?.minAcceptedRuns??0,0,1000);if(minAcceptedRuns==null)throw new ApiError(400,'Некорректное число забегов.');
   const rewardKey=String(ctx.body?.rewardKey||'none');const reward=V74_POLL_REWARD_PRESETS[rewardKey]||V74_POLL_REWARD_PRESETS.none;
   const pollId=v74PollId(),now=Math.floor(Date.now()/1000);
-  await env.DB.prepare(`INSERT INTO player_polls(poll_id,question,description,status,answer_type,response_mode,max_choices,comment_mode,comment_min_length,comment_max_length,comment_prompt,audience_type,delivery_mode,min_accepted_runs,results_mode,allow_change,show_in_tasks,duration_seconds,starts_at,ends_at,reward_kind,reward_id,reward_amount,created_by,created_by_name,report_chat_id,bot_queue_prepared,created_at,updated_at,published_at,ended_at) VALUES(?,?,?,'draft',?,?,?,?,10,1000,?,?,?,?,?,?,?,?,0,0,?,?,?,?,?, '',0,?,?,0,0)`).bind(pollId,question,description,answerType,responseMode,maxChoices,commentMode,String(ctx.body?.commentPrompt||'Напишите свой ответ сообщением.').trim().slice(0,300)||'Напишите свой ответ сообщением.',audience,delivery,minAcceptedRuns,resultsMode,ctx.body?.allowChange?1:0,ctx.body?.showInTasks?1:0,durationSeconds,reward.kind,String(reward.id||''),Number(reward.amount||0),String(ctx.user.id),telegramDisplayName(ctx.user),now,now).run();
+  await env.DB.prepare(`INSERT INTO player_polls(poll_id,question,description,status,answer_type,response_mode,max_choices,comment_mode,comment_min_length,comment_max_length,comment_prompt,audience_type,audience_segment_key,delivery_mode,min_accepted_runs,results_mode,allow_change,show_in_tasks,duration_seconds,starts_at,ends_at,reward_kind,reward_id,reward_amount,created_by,created_by_name,report_chat_id,bot_queue_prepared,created_at,updated_at,published_at,ended_at) VALUES(?,?,?,'draft',?,?,?,?,10,1000,?,?,?,?,?,?,?,?,?,0,0,?,?,?,?,?, '',0,?,?,0,0)`).bind(pollId,question,description,answerType,responseMode,maxChoices,commentMode,String(ctx.body?.commentPrompt||'Напишите свой ответ сообщением.').trim().slice(0,300)||'Напишите свой ответ сообщением.',audience,audienceSegmentKey,delivery,minAcceptedRuns,resultsMode,ctx.body?.allowChange?1:0,ctx.body?.showInTasks?1:0,durationSeconds,reward.kind,String(reward.id||''),Number(reward.amount||0),String(ctx.user.id),telegramDisplayName(ctx.user),now,now).run();
   if(options.length)await env.DB.batch(options.map((text,index)=>env.DB.prepare(`INSERT INTO player_poll_options(option_id,poll_id,option_order,option_text) VALUES(?,?,?,?)`).bind(`${pollId}o${index+1}`,pollId,index+1,text)));
-  await logStaffAction(env,ctx.user,ctx.access,'owner_panel_poll_create',null,'poll',null,null,{pollId,question,answerType,audience,delivery,resultsMode,rewardKey,options:options.length,durationSeconds});
+  await logStaffAction(env,ctx.user,ctx.access,'owner_panel_poll_create',null,'poll',null,null,{pollId,question,answerType,audience:audienceSegmentKey,delivery,resultsMode,rewardKey,options:options.length,durationSeconds});
   return {ok:true,pollId};
 }
 
