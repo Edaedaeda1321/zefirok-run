@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "catalogHash": "f6df356e8242d62b",
+  "catalogHash": "74f0d4fa50db19a4",
   "count": 10,
   "images": [
     {
@@ -25,18 +25,18 @@
       "size": 2385433
     },
     {
-      "fileName": "news.png",
-      "label": "News",
-      "path": "/assets/news/news.png",
-      "hash": "e1edaa98719f",
-      "size": 2287236
-    },
-    {
       "fileName": "news_post_final_season1.png",
       "label": "News post final season1",
       "path": "/assets/news/news_post_final_season1.png",
       "hash": "bedb6870bd5d",
       "size": 3381958
+    },
+    {
+      "fileName": "news.png",
+      "label": "News",
+      "path": "/assets/news/news.png",
+      "hash": "e1edaa98719f",
+      "size": 2287236
     },
     {
       "fileName": "relise_clear_progress_news.png",

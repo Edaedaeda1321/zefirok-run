@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "catalogHash": "49758e45474081a7",
-  "count": 459,
+  "catalogHash": "eb86230d859be8a6",
+  "count": 460,
   "images": [
     {
       "fileName": "achievements/background_achivment_panel.png",
@@ -1306,6 +1306,14 @@
       "path": "/assets/news/img_bugs.png",
       "size": 2385433,
       "modified": 1786610412445
+    },
+    {
+      "fileName": "news/news_post_final_season1.png",
+      "label": "News post final season1",
+      "folder": "news",
+      "path": "/assets/news/news_post_final_season1.png",
+      "size": 3381958,
+      "modified": 1788811586000
     },
     {
       "fileName": "news/news.png",
