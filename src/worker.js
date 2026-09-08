@@ -1259,19 +1259,23 @@ const BOT_NEWS_PUBLISHED_AT = 1788816540;
 
 const PLAYER_BOT_COMMANDS = Object.freeze([
   { command: "start", description: "Открыть главное меню" },
-  { command: "game", description: "Как запустить игру" },
-  { command: "rating", description: "Рейтинг сезона" },
-  { command: "tasks", description: "Задания и награды" },
-  { command: "polls", description: "Опросы игроков" },
+  { command: "game", description: "Запустить игру" },
+  { command: "season_info", description: "Сезон, пропуск и рейтинг" },
+  { command: "tasks", description: "Сезонные и событийные задания" },
+  { command: "rating", description: "Рейтинг текущего сезона" },
+  { command: "story", description: "Сюжет и главы сезонов" },
+  { command: "friends", description: "Друзья кафе и совместные награды" },
+  { command: "collections", description: "Достижения и Альбом Зеффи" },
+  { command: "events_info", description: "Новости, опросы и события" },
   { command: "news", description: "Новости игры" },
+  { command: "polls", description: "Опросы игроков" },
   { command: "promo", description: "Активировать промокод" },
-  { command: "rewards", description: "Как получить награду" },
-  { command: "story", description: "Сюжет игры" },
-  { command: "faq", description: "Частые вопросы" },
+  { command: "rewards", description: "Покупки, физические награды и коды" },
+  { command: "faq", description: "FAQ по игровым системам" },
+  { command: "support", description: "Поддержка и мои обращения" },
+  { command: "update", description: "Что нового в текущей версии" },
   { command: "legal", description: "Документы и конфиденциальность" },
-  { command: "update", description: "Обновление и версия игры" },
-  { command: "support", description: "Поддержка и обратная связь" },
-  { command: "help", description: "Как проверить код" },
+  { command: "help", description: "Центр помощи" },
   { command: "whoami", description: "Показать мой Telegram ID" }
 ]);
 
@@ -13252,6 +13256,26 @@ Telegram ID можно найти командой <code>/players</code>.`);
     return;
   }
 
+  if (/^\/season_info(?:@\w+)?$/i.test(text)) {
+    await showBotSeasonHub(chatId, user, env);
+    return;
+  }
+
+  if (/^\/friends(?:@\w+)?$/i.test(text)) {
+    await sendTelegramMessage(env, chatId, botFriendsText(), friendsMenuMarkup(env));
+    return;
+  }
+
+  if (/^\/collections(?:@\w+)?$/i.test(text)) {
+    await sendTelegramMessage(env, chatId, botCollectionsText(), collectionsMenuMarkup(env));
+    return;
+  }
+
+  if (/^\/events_info(?:@\w+)?$/i.test(text)) {
+    await sendTelegramMessage(env, chatId, botEventsText(), eventsMenuMarkup(env));
+    return;
+  }
+
   if (/^\/story(?:@\w+)?$/i.test(text)) {
     await sendTelegramMessage(env, chatId, botStoryText(), storyMenuMarkup(env));
     return;
@@ -13263,7 +13287,7 @@ Telegram ID можно найти командой <code>/players</code>.`);
   }
 
   if (/^\/rewards(?:@\w+)?$/i.test(text)) {
-    await sendTelegramMessage(env, chatId, botRewardsText(), sectionMenuMarkup(env));
+    await showBotRewards(chatId, user, env);
     return;
   }
 
@@ -13273,7 +13297,7 @@ Telegram ID можно найти командой <code>/players</code>.`);
   }
 
   if (/^\/tasks(?:@\w+)?$/i.test(text)) {
-    await showPlayerTasks(chatId, user, env);
+    await showPlayerTasksHub(chatId, user, env);
     return;
   }
 
@@ -13303,7 +13327,7 @@ Telegram ID можно найти командой <code>/players</code>.`);
   }
 
   if (/^\/help(?:@\w+)?$/i.test(text)) {
-    await sendTelegramMessage(env, chatId, botHelpText(), sectionMenuMarkup(env));
+    await sendTelegramMessage(env, chatId, botHelpText(), helpMenuMarkup(env));
     return;
   }
 
@@ -13348,6 +13372,22 @@ function configuredGameUrl(env) {
   return DEFAULT_GAME_URL;
 }
 
+function configuredGamePageUrl(env, pathname, params = {}) {
+  try {
+    const url = new URL(configuredGameUrl(env));
+    url.pathname = String(pathname || "/").startsWith("/") ? String(pathname || "/") : `/${String(pathname || "")}`;
+    url.search = "";
+    url.hash = "";
+    for (const [key, value] of Object.entries(params || {})) {
+      if (value != null && String(value) !== "") url.searchParams.set(String(key), String(value));
+    }
+    return url.toString();
+  } catch {
+    const suffix = String(pathname || "/").startsWith("/") ? String(pathname || "/") : `/${String(pathname || "")}`;
+    return `${DEFAULT_GAME_URL.replace(/\/$/, "")}${suffix}`;
+  }
+}
+
 function configuredLegalUrl(env, documentKey = "hub", language = "ru") {
   try {
     const url = new URL(configuredGameUrl(env));
@@ -13387,11 +13427,114 @@ function configuredOwnerPanelUrl(env) {
 }
 
 function botMainMenuText() {
-  return `<b>Зефирок — помощник кафе</b>\n\nТекущая версия игры: <b>${escapeHtml(GAME_VERSION)}</b>\n\nЗапускайте игру только системной кнопкой <b>«ИГРАТЬ»</b> в профиле бота — так Telegram передаст данные игрока для рейтинга и сохранений.\n\nЗдесь можно посмотреть задания, опросы и награды, сезонный рейтинг и новости, узнать историю Зефи, прочитать ответы на частые вопросы и проверить код награды.\n\nЧтобы проверить подарок, просто отправьте код из раздела «Мои покупки» одним сообщением.`;
+  return `<b>Зефирок — помощник кафе</b>
+
+Текущая версия игры: <b>${escapeHtml(GAME_VERSION)}</b>
+
+Бот собран вокруг тех же систем, что и сама игра: сезон, задания, рейтинг, друзья, коллекции, новости, покупки и поддержка.
+
+Запускайте Mini App кнопкой <b>«🎮 Играть»</b> ниже или системной кнопкой <b>«ИГРАТЬ»</b> в профиле бота — так Telegram корректно передаст данные аккаунта.
+
+Для проверки физического кода просто отправьте его боту одним сообщением.`;
 }
 
 function botGameText() {
-  return `<b>Сладкий забег</b>\n\nДля запуска используйте системную кнопку <b>«ИГРАТЬ»</b> в профиле бота. Обычная ссылка не используется, потому что через неё Telegram может не передать данные игрока для рейтинга.`;
+  return `<b>🎮 Сладкий Забег</b>
+
+Открывайте игру через Telegram Web App: так сервер получает данные вашего аккаунта и корректно связывает забеги с прогрессом, рейтингом, сезонным пропуском, друзьями и наградами.
+
+Основной прогресс хранится на сервере и остаётся на том же Telegram-аккаунте.`;
+}
+
+const BOT_SEASON_2_START_AT_MS = Date.parse("2026-09-13T00:00:00+03:00");
+
+async function showBotSeasonHub(chatId, user, env) {
+  const now = Math.floor(Date.now() / 1000);
+  let rating = null;
+  let pass = null;
+  try { rating = await ensureSeason(env, now); } catch (error) { console.error("bot season rating read failed", error); }
+  try { pass = await loadSeasonPassSeason(env, now * 1000); } catch (error) { console.error("bot season pass read failed", error); }
+
+  const ratingLine = rating
+    ? `🏆 Рейтинг: <b>${escapeHtml(String(rating.title || "Текущий сезон"))}</b> · ${escapeHtml(seasonStatusLabel(rating.status))}${Number(rating.ends_at || 0) > now ? ` · до ${escapeHtml(formatUtcDate(Number(rating.ends_at)))}` : ""}`
+    : "🏆 Рейтинг: данные временно недоступны.";
+  const passEnd = pass ? Math.floor(Date.parse(String(pass.endsAt || "")) / 1000) : 0;
+  const passLine = pass
+    ? `🎟 Пропуск: <b>${escapeHtml(String(pass.title || "Сезонный пропуск"))}</b> · ${escapeHtml(seasonPassStatusLabel(pass))}${Number.isFinite(passEnd) && passEnd > now ? ` · до ${escapeHtml(formatUtcDate(passEnd))}` : ""}`
+    : "🎟 Пропуск: данные временно недоступны.";
+  const teaser = Date.now() < BOT_SEASON_2_START_AT_MS
+    ? `
+
+🌙 Следующая глава — <b>Сезон II: «Ночь сладких чудес»</b>. Старт <b>13 сентября 2026</b>.`
+    : "";
+
+  await sendTelegramMessage(env, chatId, `<b>🌙 Сезонный центр</b>
+
+${ratingLine}
+${passLine}${teaser}
+
+Здесь собраны сезонный пропуск, рейтинг, задания и сюжет. Бот показывает актуальные даты и состояние текущего сезона.`, seasonMenuMarkup(env));
+}
+
+function seasonMenuMarkup(env) {
+  return { inline_keyboard: [
+    [{ text: "🎟 Сезонный пропуск", web_app: { url: configuredGameOpenUrl(env, "season-pass") } }, { text: "🏆 Рейтинг", web_app: { url: configuredGameOpenUrl(env, "rating") } }],
+    [{ text: "📋 Все задания", callback_data: "menu:tasks" }, { text: "📖 Сюжет", callback_data: "menu:story" }],
+    [{ text: "← Главное меню", callback_data: "menu:home" }]
+  ] };
+}
+
+function botFriendsText() {
+  return `<b>👥 Друзья кафе</b>
+
+Здесь находятся приглашения, друзья, подарки и совместные активности. Бот показывает актуальный прогресс и доступные награды из игры.
+
+Откройте раздел друзей, чтобы увидеть актуальное состояние вашего кафе.`;
+}
+
+function friendsMenuMarkup(env) {
+  return { inline_keyboard: [
+    [{ text: "👥 Открыть «Друзья кафе»", web_app: { url: configuredGamePageUrl(env, "/referrals.html") } }],
+    [{ text: "🏅 Достижения", web_app: { url: configuredGamePageUrl(env, "/achievements.html") } }, { text: "📔 Альбом Зеффи", web_app: { url: configuredGamePageUrl(env, "/album.html") } }],
+    [{ text: "← Главное меню", callback_data: "menu:home" }]
+  ] };
+}
+
+function botCollectionsText() {
+  return `<b>🏅 Друзья и коллекции</b>
+
+В этом центре собраны три связанные системы:
+
+👥 <b>Друзья кафе</b> — приглашения, подарки и совместные цели.
+🏅 <b>Достижения</b> — прогресс, престиж, награды и витрина профиля.
+📔 <b>Альбом Зеффи</b> — тематические коллекции, истории и награды за завершение.
+
+Все разделы синхронизированы с текущим состоянием аккаунта.`;
+}
+
+function collectionsMenuMarkup(env) {
+  return { inline_keyboard: [
+    [{ text: "👥 Друзья кафе", web_app: { url: configuredGamePageUrl(env, "/referrals.html") } }],
+    [{ text: "🏅 Достижения", web_app: { url: configuredGamePageUrl(env, "/achievements.html") } }, { text: "📔 Альбом Зеффи", web_app: { url: configuredGamePageUrl(env, "/album.html") } }],
+    [{ text: "❓ FAQ по коллекциям", callback_data: "faq:collection" }],
+    [{ text: "← Главное меню", callback_data: "menu:home" }]
+  ] };
+}
+
+function botEventsText() {
+  return `<b>📰 События и новости</b>
+
+Здесь собраны живые разделы бота: новости игры, опросы игроков и информация о текущем обновлении.
+
+Контент этих разделов обновляется отдельно от клиента игры, поэтому здесь всегда стоит смотреть последнюю опубликованную информацию.`;
+}
+
+function eventsMenuMarkup(env) {
+  return { inline_keyboard: [
+    [{ text: "📰 Новости", callback_data: "menu:news" }, { text: "🗳 Опросы", callback_data: "menu:polls" }],
+    [{ text: `🆕 Что нового · ${GAME_VERSION}`, callback_data: "menu:update" }],
+    [{ text: "← Главное меню", callback_data: "menu:home" }]
+  ] };
 }
 
 function botLegalText() {
@@ -13408,28 +13551,62 @@ function legalMenuMarkup(env) {
 }
 
 function botStoryText() {
-  return `<b>📖 Сюжет «Сладкого забега»</b>\n\nЗефи — маленький мальтипу и главный помощник уютного кафе. Каждый сезон продолжает его историю и открывает новую главу жизни кафе.\n\nВыберите сезон ниже, чтобы прочитать его часть сюжета.`;
+  const beforeSeason2 = Date.now() < BOT_SEASON_2_START_AT_MS;
+  const intro = beforeSeason2
+    ? `Первый сезон подходит к финалу: двери кафе скоро закроются для последних гостей, а впереди уже готовится новая глава.
+
+🌙 <b>Сезон II: «Ночь сладких чудес»</b> начнётся 13 сентября 2026.`
+    : `Первая глава завершена, а история продолжается в <b>Сезоне II: «Ночь сладких чудес»</b>. Новые сюжетные части открываются вместе с сезонным прогрессом и событиями.`;
+  return `<b>📖 Сюжет «Сладкого Забега»</b>
+
+Каждый сезон продолжает историю Зеффи и кафе. ${intro}
+
+Выберите главу ниже.`;
 }
 
 function botStorySeasonText(season) {
-  const key=String(season||"1");
-  if(key==="1")return `<b>🌸 Сезон 1: Открытие кафе</b>\n\nУ кафе «Зефирок» начинается первый настоящий сезон.\n\nЗефи готовится принять гостей, но впереди ещё много работы: нужно собрать зефир, приготовить кофе и показать всему городу, какое это уютное место.\n\nУстанавливай рекорды, поднимайся в рейтинге и помоги кафе провести своё большое открытие.`;
+  const key = String(season || "1");
+  if (key === "1") return `<b>🌸 Сезон I: Открытие кафе · Финал</b>
+
+Первая глава подходит к концу. Кафе приняло своих гостей, Зеффи прошёл вместе с игроками первый большой сезон, а теперь в зале остаются последние посетители перед закрытием.
+
+Это не конец истории: огни постепенно гаснут только для того, чтобы совсем скоро зажглись снова — уже в другой атмосфере.
+
+Спасибо, что были частью открытия кафе.`;
+  if (key === "2") {
+    const beforeStart = Date.now() < BOT_SEASON_2_START_AT_MS;
+    return beforeStart
+      ? `<b>🌙 Сезон II: Ночь сладких чудес</b>
+
+Новая глава уже близко. После закрытия кафе привычный мир Зеффи изменится, а ночь принесёт новые истории, награды, задания и сюрпризы.
+
+<b>Старт — 13 сентября 2026.</b>
+
+До запуска мы не раскрываем сюжетные детали — первая часть истории откроется вместе с новым сезоном.`
+      : `<b>🌙 Сезон II: Ночь сладких чудес</b>
+
+Вторая глава истории уже началась. Открывайте сезонный пропуск и сюжетные события в игре — новые части истории появляются по мере сезонного прогресса и опубликованных событий.`;
+  }
   return botStoryText();
 }
 
 function storyMenuMarkup(env) {
-  return {inline_keyboard:[
-    [{text:"🌸 Сезон 1 · Открытие кафе",callback_data:"story:1"}],
-    [{text:"🛟 Поддержка",callback_data:"menu:support"}],
-    [{text:"← Главное меню",callback_data:"menu:home"}]
-  ]};
+  const beforeSeason2 = Date.now() < BOT_SEASON_2_START_AT_MS;
+  return { inline_keyboard: [
+    [{ text: "🌸 Сезон I · Открытие кафе · Финал", callback_data: "story:1" }],
+    [{ text: beforeSeason2 ? "🌙 Сезон II · Ночь сладких чудес · скоро" : "🌙 Сезон II · Ночь сладких чудес", callback_data: "story:2" }],
+    [{ text: "🎟 Открыть сезонный пропуск", web_app: { url: configuredGameOpenUrl(env, "season-pass") } }],
+    [{ text: "🛟 Поддержка", callback_data: "menu:support" }],
+    [{ text: "← Главное меню", callback_data: "menu:home" }]
+  ] };
 }
 
 function storySeasonMenuMarkup(env) {
-  return {inline_keyboard:[
-    [{text:"← Все сезоны",callback_data:"menu:story"}],
-    [{text:"🏠 Главное меню",callback_data:"menu:home"}]
-  ]};
+  return { inline_keyboard: [
+    [{ text: "← Все главы", callback_data: "menu:story" }],
+    [{ text: "🎟 Сезонный пропуск", web_app: { url: configuredGameOpenUrl(env, "season-pass") } }],
+    [{ text: "🏠 Главное меню", callback_data: "menu:home" }]
+  ] };
 }
 
 function botFaqText() {
@@ -13479,10 +13656,62 @@ function faqSectionMenuMarkup(env) {
   ] };
 }
 
-function botRewardsText() {
-  return `<b>Как получить награду</b>\n\n1. Соберите валюту в игре.\n2. Купите подарок во вкладке «Магазин».\n3. Откройте «Мои покупки» и нажмите на код, чтобы скопировать его.\n4. Покажите код сотруднику кафе или отправьте его в этот бот.\n5. После выдачи сотрудник спишет код, и повторно использовать его будет нельзя.\n\nКод действует 24 часа. Лимит — не больше двух наград за 24 часа.`;
+function botRuntimeDurationLabel(secondsValue) {
+  const seconds = Math.max(0, Math.floor(Number(secondsValue) || 0));
+  if (!seconds) return "не ограничено";
+  if (seconds % 86400 === 0) {
+    const days = seconds / 86400;
+    return `${days.toLocaleString("ru-RU")} ${days === 1 ? "день" : days >= 2 && days <= 4 ? "дня" : "дней"}`;
+  }
+  if (seconds % 3600 === 0) return `${(seconds / 3600).toLocaleString("ru-RU")} ч`;
+  if (seconds % 60 === 0) return `${(seconds / 60).toLocaleString("ru-RU")} мин`;
+  return `${seconds.toLocaleString("ru-RU")} сек`;
 }
 
+function botRewardsText() {
+  return `<b>🎁 Покупки, физические награды и коды</b>
+
+1. Купленные игровые предметы и кейсы появляются в аккаунте и разделе <b>«Мои покупки»</b>.
+2. Для физической награды игра создаёт одноразовый код с серверным сроком действия.
+3. Чтобы <b>проверить</b> код, отправьте его этому боту одним сообщением.
+4. Чтобы <b>получить</b> физический подарок, покажите действующий код сотруднику кафе.
+5. После подтверждённой выдачи код становится использованным и повторно не принимается.
+
+Срок действия и лимит физических наград могут меняться. Ниже бот показывает действующие условия именно сейчас.`;
+}
+
+function rewardsMenuMarkup(env) {
+  return { inline_keyboard: [
+    [{ text: "🎮 Открыть игру", web_app: { url: configuredGameUrl(env) } }],
+    [{ text: "🎟 Ввести промокод", callback_data: "menu:promo" }, { text: "❓ FAQ по наградам", callback_data: "faq:rewards" }],
+    [{ text: "🛟 Поддержка", callback_data: "menu:support" }],
+    [{ text: "← Главное меню", callback_data: "menu:home" }]
+  ] };
+}
+
+async function showBotRewards(chatId, user, env) {
+  let runtime = "";
+  try {
+    const now = Math.floor(Date.now() / 1000);
+    const ttl = positiveInt(env.REWARD_TTL_SECONDS, DEFAULT_REWARD_TTL_SECONDS);
+    const status = await getRewardLimitStatus(env, String(user?.id || ""), now);
+    const remaining = Math.max(0, Number(status.limit || 0) - Number(status.used || 0));
+    runtime = `
+
+<b>Текущие условия</b>
+• Срок нового физического кода: <b>${escapeHtml(botRuntimeDurationLabel(ttl))}</b>
+• Лимит: <b>${Number(status.limit || 0).toLocaleString("ru-RU")}</b> за период <b>${escapeHtml(botRuntimeDurationLabel(status.windowSeconds))}</b>
+• Использовано вами за текущий период: <b>${Number(status.used || 0).toLocaleString("ru-RU")} / ${Number(status.limit || 0).toLocaleString("ru-RU")}</b>
+• Доступно сейчас: <b>${remaining.toLocaleString("ru-RU")}</b>${status.reached && Number(status.nextAvailableAt || 0) > 0 ? `
+• Следующий слот: <b>${escapeHtml(formatUtcDate(Math.floor(Number(status.nextAvailableAt) / 1000)))}</b>` : ""}`;
+  } catch (error) {
+    console.error("bot rewards runtime status failed", error);
+    runtime = `
+
+<i>Текущие условия временно не удалось загрузить. При покупке игра всё равно применит актуальные ограничения.</i>`;
+  }
+  await sendTelegramMessage(env, chatId, `${botRewardsText()}${runtime}`, rewardsMenuMarkup(env));
+}
 
 async function sendBotRating(env, chatId, user) {
   try {
@@ -13557,7 +13786,25 @@ function botUpdateText() {
 }
 
 function botHelpText() {
-  return `<b>Проверка кода</b>\n\nОтправьте код из игры одним сообщением, например:\n<code>CP-ABCD-EFGH</code>\n\nБот покажет, действителен ли код, истёк ли его срок или подарок уже был выдан.`;
+  return `<b>🧭 Центр помощи</b>
+
+Выберите, что нужно:
+
+❓ <b>FAQ</b> — правила игры, ежедневной активности, сезона, рейтинга, наград, коллекций и друзей.
+🛟 <b>Поддержка</b> — создать обращение, приложить скриншот и продолжить переписку.
+🎁 <b>Покупки и коды</b> — правила физических наград и проверка текущего лимита.
+📄 <b>Документы</b> — соглашение и конфиденциальность.
+
+Если нужно проверить физический код, просто отправьте его боту одним сообщением.`;
+}
+
+function helpMenuMarkup(env) {
+  return { inline_keyboard: [
+    [{ text: "❓ Открыть FAQ", callback_data: "menu:faq" }, { text: "🛟 Поддержка", callback_data: "menu:support" }],
+    [{ text: "🎁 Покупки и коды", callback_data: "menu:rewards" }],
+    [{ text: "📄 Документы", callback_data: "menu:legal" }],
+    [{ text: "← Главное меню", callback_data: "menu:home" }]
+  ] };
 }
 
 function botSupportText(user = null) {
@@ -13571,17 +13818,13 @@ function supportMenuMarkup(env) {
 function mainMenuMarkup(env, supportUnread = 0) {
   return {
     inline_keyboard: [
-      [
-        { text: "📖 Сюжет", callback_data: "menu:story" },
-        { text: "❓ FAQ", callback_data: "menu:faq" }
-      ],
-      [{ text: "📋 Задания", callback_data: "menu:tasks" }, { text: "🗳 Опросы", callback_data: "menu:polls" }],
-      [{ text: "🏆 Рейтинг", callback_data: "menu:rating" }, { text: "📰 Новости", callback_data: "menu:news" }],
-      [{ text: `🆕 Обновление · ${GAME_VERSION}`, callback_data: "menu:update" }],
-      [{ text: "🎟 Ввести промокод", callback_data: "menu:promo" }],
-      [{ text: "🎁 Как получить награду", callback_data: "menu:rewards" }],
-      [{ text: "📄 Документы и конфиденциальность", callback_data: "menu:legal" }],
-      [{ text: `🛟 Поддержка игры${Number(supportUnread||0)>0?` · ${Number(supportUnread||0)}`:''}`, callback_data: "menu:support" }]
+      [{ text: "🎮 Играть", web_app: { url: configuredGameUrl(env) } }, { text: "🌙 Сезон", callback_data: "menu:season" }],
+      [{ text: "📋 Задания", callback_data: "menu:tasks" }, { text: "🏆 Рейтинг", callback_data: "menu:rating" }],
+      [{ text: "👥 Друзья и коллекции", callback_data: "menu:collections" }, { text: "📖 Сюжет", callback_data: "menu:story" }],
+      [{ text: "📰 События и новости", callback_data: "menu:events" }],
+      [{ text: "🎁 Покупки и коды", callback_data: "menu:rewards" }, { text: "🎟 Промокод", callback_data: "menu:promo" }],
+      [{ text: "❓ FAQ", callback_data: "menu:faq" }, { text: `🛟 Поддержка${Number(supportUnread || 0) > 0 ? ` · ${Number(supportUnread || 0)}` : ""}`, callback_data: "menu:support" }],
+      [{ text: `🆕 Что нового · ${GAME_VERSION}`, callback_data: "menu:update" }, { text: "📄 Документы", callback_data: "menu:legal" }]
     ]
   };
 }
@@ -13589,6 +13832,8 @@ function mainMenuMarkup(env, supportUnread = 0) {
 function gameButtonMarkup(env) {
   return {
     inline_keyboard: [
+      [{ text: "🎮 Открыть игру", web_app: { url: configuredGameUrl(env) } }],
+      [{ text: "🌙 Сезон", callback_data: "menu:season" }, { text: "📋 Задания", callback_data: "menu:tasks" }],
       [{ text: "← Главное меню", callback_data: "menu:home" }]
     ]
   };
@@ -13604,8 +13849,15 @@ function sectionMenuMarkup(env) {
 }
 
 async function handleMenuCallback(query, env) {
-  const storyMatch=String(query.data||"").match(/^story:(1)$/);
-  if(storyMatch){const message=query.message;if(!message?.chat?.id){await answerCallback(env,query.id,"Откройте сюжет командой /story.");return true;}await answerCallback(env,query.id,"Открываю сезон");await sendTelegramMessage(env,message.chat.id,botStorySeasonText(storyMatch[1]),storySeasonMenuMarkup(env));return true;}
+  const storyMatch = String(query.data || "").match(/^story:(1|2)$/);
+  if (storyMatch) {
+    const message = query.message;
+    if (!message?.chat?.id) { await answerCallback(env, query.id, "Откройте сюжет командой /story."); return true; }
+    await answerCallback(env, query.id, "Открываю главу");
+    await sendTelegramMessage(env, message.chat.id, botStorySeasonText(storyMatch[1]), storySeasonMenuMarkup(env));
+    return true;
+  }
+
   const faqMatch = String(query.data || "").match(/^faq:(game|daily|pass|rating|rewards|collection|friends|problems|support|updates)$/);
   if (faqMatch) {
     const message = query.message;
@@ -13614,7 +13866,8 @@ async function handleMenuCallback(query, env) {
     await sendTelegramMessage(env, message.chat.id, botFaqSectionText(faqMatch[1]), faqSectionMenuMarkup(env));
     return true;
   }
-  const match = String(query.data || "").match(/^menu:(home|story|faq|rewards|rating|tasks|polls|news|update|support|promo|legal)$/);
+
+  const match = String(query.data || "").match(/^menu:(home|season|story|collections|friends|events|help|faq|rewards|rating|tasks|polls|news|update|support|promo|legal)$/);
   if (!match) return false;
   const message = query.message;
   if (!message?.chat?.id) {
@@ -13623,6 +13876,42 @@ async function handleMenuCallback(query, env) {
   }
 
   const section = match[1];
+  if (section === "home") {
+    const supportMenuState = await botMainMenuSupportState(env, query.from);
+    await answerCallback(env, query.id, "Главное меню");
+    await sendTelegramMessage(env, message.chat.id, supportMenuState.text, mainMenuMarkup(env, supportMenuState.unreadCount));
+    return true;
+  }
+  if (section === "season") {
+    await answerCallback(env, query.id, "Сезонный центр открыт");
+    await showBotSeasonHub(message.chat.id, query.from, env);
+    return true;
+  }
+  if (section === "collections") {
+    await answerCallback(env, query.id, "Друзья и коллекции открыты");
+    await sendTelegramMessage(env, message.chat.id, botCollectionsText(), collectionsMenuMarkup(env));
+    return true;
+  }
+  if (section === "friends") {
+    await answerCallback(env, query.id, "Друзья кафе открыты");
+    await sendTelegramMessage(env, message.chat.id, botFriendsText(), friendsMenuMarkup(env));
+    return true;
+  }
+  if (section === "events") {
+    await answerCallback(env, query.id, "События открыты");
+    await sendTelegramMessage(env, message.chat.id, botEventsText(), eventsMenuMarkup(env));
+    return true;
+  }
+  if (section === "help") {
+    await answerCallback(env, query.id, "Центр помощи открыт");
+    await sendTelegramMessage(env, message.chat.id, botHelpText(), helpMenuMarkup(env));
+    return true;
+  }
+  if (section === "rewards") {
+    await answerCallback(env, query.id, "Покупки и коды открыты");
+    await showBotRewards(message.chat.id, query.from, env);
+    return true;
+  }
   if (section === "rating") {
     await answerCallback(env, query.id, "Рейтинг открыт");
     await sendBotRating(env, message.chat.id, query.from);
@@ -13635,7 +13924,7 @@ async function handleMenuCallback(query, env) {
   }
   if (section === "tasks") {
     await answerCallback(env, query.id, "Задания открыты");
-    await showPlayerTasks(message.chat.id, query.from, env);
+    await showPlayerTasksHub(message.chat.id, query.from, env);
     return true;
   }
   if (section === "polls") {
@@ -13658,30 +13947,10 @@ async function handleMenuCallback(query, env) {
     await showBotSupportHome(message.chat.id, query.from, env);
     return true;
   }
-  if (section === "home") {
-    const supportMenuState = await botMainMenuSupportState(env, query.from);
-    await answerCallback(env, query.id, "Главное меню");
-    await sendTelegramMessage(env, message.chat.id, supportMenuState.text, mainMenuMarkup(env, supportMenuState.unreadCount));
-    return true;
-  }
-  const text = section === "story"
-    ? botStoryText()
-    : section === "faq"
-      ? botFaqText()
-      : section === "rewards"
-        ? botRewardsText()
-        : section === "update"
-          ? botUpdateText()
-          : botMainMenuText();
-  const replyMarkup = section === "home"
-    ? mainMenuMarkup(env)
-    : section === "faq"
-        ? faqMenuMarkup(env)
-        : section === "story"
-          ? storyMenuMarkup(env)
-          : sectionMenuMarkup(env);
 
-  await answerCallback(env, query.id, section === "home" ? "Главное меню" : "Раздел открыт");
+  const text = section === "story" ? botStoryText() : section === "faq" ? botFaqText() : botUpdateText();
+  const replyMarkup = section === "faq" ? faqMenuMarkup(env) : section === "story" ? storyMenuMarkup(env) : sectionMenuMarkup(env);
+  await answerCallback(env, query.id, "Раздел открыт");
   await sendTelegramMessage(env, message.chat.id, text, replyMarkup);
   return true;
 }
@@ -13801,12 +14070,111 @@ function v71TaskProgressText(row, progress) {
   return `${Math.min(progress.value, progress.target).toLocaleString("ru-RU")} / ${progress.target.toLocaleString("ru-RU")}`;
 }
 
+async function showPlayerTasksHub(chatId, user, env) {
+  await sendTelegramMessage(env, chatId, `<b>📋 Задания</b>
+
+Теперь в боте разделены два типа заданий:
+
+🎟 <b>Сезонные</b> — ежедневные и недельные цели сезонного пропуска. Прогресс и доступность берутся из текущего сезона.
+
+✨ <b>Событийные</b> — временные, ежедневные и цепочные задания, которые публикуются отдельно через игровые события.
+
+Прогресс и получение наград синхронизируются с игрой.`, { inline_keyboard: [
+    [{ text: "🎟 Сезонные задания", callback_data: "tasks_season" }],
+    [{ text: "✨ Событийные задания", callback_data: "tasks_events" }],
+    [{ text: "🎟 Открыть сезонный пропуск", web_app: { url: configuredSeasonPassTasksUrl(env) } }],
+    [{ text: "← Главное меню", callback_data: "menu:home" }]
+  ] });
+}
+
+function botSeasonTaskStatus(task) {
+  if (task.claimed) return "✅ Получено";
+  if (task.locked) return "🔒 Нужен премиум";
+  if (task.complete) return "🎁 Можно забрать";
+  return "⏳ В процессе";
+}
+
+async function showPlayerSeasonTasks(chatId, user, env) {
+  try {
+    await ensureSeasonPassSchema(env);
+    const telegramId = String(user?.id || "");
+    const [flag, forcedClosure, season] = await Promise.all([
+      getFeatureFlag(env, "battle_pass"),
+      getSeasonPassForcedClosure(env),
+      loadSeasonPassSeason(env)
+    ]);
+    if (forcedClosure || !season) {
+      await sendTelegramMessage(env, chatId, `<b>🎟 Сезонные задания</b>
+
+Сезонный пропуск сейчас недоступен. Когда новый сезон будет открыт, ежедневные и недельные задания появятся здесь автоматически.`, { inline_keyboard: [[{ text: "✨ Событийные задания", callback_data: "tasks_events" }], [{ text: "⬅️ Все задания", callback_data: "tasks_hub" }], [{ text: "🏠 Главное меню", callback_data: "menu:home" }]] });
+      return;
+    }
+    const mode = String(flag?.mode || "all");
+    if (mode !== "all") {
+      const access = await battlePassAudienceAccess(env, telegramId, flag);
+      if (!access.allowed) {
+        await sendTelegramMessage(env, chatId, `<b>🎟 Сезонные задания</b>
+
+Сезонный пропуск пока недоступен для этого аккаунта.`, { inline_keyboard: [[{ text: "⬅️ Все задания", callback_data: "tasks_hub" }], [{ text: "🏠 Главное меню", callback_data: "menu:home" }]] });
+        return;
+      }
+    }
+    const capabilities = seasonPassCapabilities(season);
+    if (season.status !== "active" || !capabilities.canClaimTasks) {
+      const statusText = season.status === "scheduled" ? "Сезон ещё не начался." : "Получение сезонных заданий сейчас закрыто.";
+      await sendTelegramMessage(env, chatId, `<b>🎟 ${escapeHtml(String(season.title || "Сезонный пропуск"))}</b>
+
+${statusText}
+
+Откройте пропуск, чтобы увидеть актуальные даты и состояние сезона.`, { inline_keyboard: [[{ text: "🎟 Открыть пропуск", web_app: { url: configuredSeasonPassTasksUrl(env) } }], [{ text: "✨ Событийные задания", callback_data: "tasks_events" }], [{ text: "⬅️ Все задания", callback_data: "tasks_hub" }]] });
+      return;
+    }
+    const player = await env.DB.prepare(`SELECT * FROM season_pass_players WHERE season_id=? AND telegram_id=? LIMIT 1`).bind(String(season.id), telegramId).first();
+    const payload = await buildSeasonPassTasksPayload(env, season, telegramId, player?.premium_tier || "none");
+    let xpMultiplier = 1;
+    if (player) {
+      try {
+        xpMultiplier = await seasonPassHasXpX2(env, season.id, telegramId, player) ? 2 : seasonPassTaskXpMultiplierForPlayer(season, player);
+      } catch { xpMultiplier = seasonPassTaskXpMultiplierForPlayer(season, player); }
+    }
+    const priority = (task) => task.complete && !task.claimed && !task.locked ? 0 : !task.claimed && !task.locked ? 1 : task.locked ? 2 : 3;
+    const periodRank = (task) => task.period === "daily" ? 0 : 1;
+    const ordered = [...payload.tasks].sort((a, b) => priority(a) - priority(b) || periodRank(a) - periodRank(b) || String(a.title).localeCompare(String(b.title), "ru"));
+    const visible = ordered.slice(0, 10);
+    const lines = visible.map((task) => {
+      const period = task.period === "weekly" ? "Недельное" : "Ежедневное";
+      const progress = `${Math.min(Number(task.progress || 0), Number(task.target || 1)).toLocaleString("ru-RU")} / ${Number(task.target || 1).toLocaleString("ru-RU")}`;
+      const xp = Math.max(1, Number(task.xp || 1)) * Math.max(1, Number(xpMultiplier || 1));
+      return `${botSeasonTaskStatus(task)} <b>${escapeHtml(task.title)}</b>
+${period}${task.premium ? " · Элит" : ""} · ${escapeHtml(progress)} · <b>+${xp.toLocaleString("ru-RU")} XP</b>`;
+    });
+    const hidden = Math.max(0, payload.tasks.length - visible.length);
+    const claimable = Number(payload.claimableCount || 0);
+    await sendTelegramMessage(env, chatId, `<b>🎟 ${escapeHtml(String(season.title || "Сезонный пропуск"))} · задания</b>
+
+${lines.join("\n\n") || "Активных сезонных заданий сейчас нет."}${hidden ? `
+
+<i>Ещё ${hidden.toLocaleString("ru-RU")} заданий доступны внутри сезонного пропуска.</i>` : ""}
+
+Готово к получению: <b>${claimable.toLocaleString("ru-RU")}</b>. Награды за сезонные задания забираются в самом пропуске, чтобы статус и XP синхронизировались с игрой.`, { inline_keyboard: [
+      [{ text: claimable > 0 ? `🎁 Забрать в пропуске · ${claimable}` : "🎟 Открыть все задания", web_app: { url: configuredSeasonPassTasksUrl(env) } }],
+      [{ text: "✨ Событийные задания", callback_data: "tasks_events" }],
+      [{ text: "⬅️ Все задания", callback_data: "tasks_hub" }, { text: "🏠 Главное меню", callback_data: "menu:home" }]
+    ] });
+  } catch (error) {
+    console.error("showPlayerSeasonTasks failed", error);
+    await sendTelegramMessage(env, chatId, `<b>🎟 Сезонные задания</b>
+
+Не удалось загрузить сезонные задания. Попробуйте ещё раз или откройте сезонный пропуск.`, { inline_keyboard: [[{ text: "🔄 Обновить", callback_data: "tasks_season" }], [{ text: "🎟 Открыть пропуск", web_app: { url: configuredSeasonPassTasksUrl(env) } }], [{ text: "⬅️ Все задания", callback_data: "tasks_hub" }]] });
+  }
+}
+
 async function showPlayerTasks(chatId, user, env, requestedPage = 0) {
   await ensureV67Schema(env);
   const now = Math.floor(Date.now() / 1000);
   const profile = await env.DB.prepare(`SELECT telegram_id FROM admin_profile_state WHERE telegram_id=? LIMIT 1`).bind(String(user.id)).first();
   if (!profile) {
-    await sendTelegramMessage(env, chatId, `<b>📋 Задания</b>\n\nСначала один раз откройте игру, чтобы создать игровой профиль. После этого задания и прогресс появятся здесь.`, sectionMenuMarkup(env));
+    await sendTelegramMessage(env, chatId, `<b>✨ Событийные задания</b>\n\nСначала один раз откройте игру, чтобы создать игровой профиль. После этого задания и прогресс появятся здесь.`, { inline_keyboard: [[{ text: "⬅️ Все задания", callback_data: "tasks_hub" }], [{ text: "🏠 Главное меню", callback_data: "menu:home" }]] });
     return;
   }
   const allRows = (await env.DB.prepare(`SELECT * FROM automation_chains WHERE enabled=1 AND COALESCE(show_as_task,0)=1 AND action_type='reward' AND (task_starts_at=0 OR task_starts_at<=?) AND (task_ends_at=0 OR task_ends_at>?) ORDER BY task_sort ASC, updated_at DESC LIMIT 80`).bind(now,now).all()).results || [];
@@ -13814,7 +14182,7 @@ async function showPlayerTasks(chatId, user, env, requestedPage = 0) {
   await ensureV77Schema(env);
   const seriesCount = await env.DB.prepare(`SELECT COUNT(*) AS count FROM task_series WHERE enabled=1 AND (starts_at=0 OR starts_at<=?) AND (ends_at=0 OR ends_at>?)`).bind(now,now).first();
   if (!rows.length && !Number(seriesCount?.count || 0)) {
-    await sendTelegramMessage(env, chatId, `<b>📋 Задания</b>\n\nСейчас активных заданий нет. Новые задания появятся здесь после публикации администратором.`, { inline_keyboard: [[{ text: "🔄 Обновить", callback_data: "tasks_refresh" }], [{ text: "← Главное меню", callback_data: "menu:home" }]] });
+    await sendTelegramMessage(env, chatId, `<b>✨ Событийные задания</b>\n\nСейчас активных событийных заданий нет. Новые задания появятся здесь после публикации.`, { inline_keyboard: [[{ text: "🔄 Обновить", callback_data: "tasks_refresh" }], [{ text: "🎟 Сезонные задания", callback_data: "tasks_season" }], [{ text: "⬅️ Все задания", callback_data: "tasks_hub" }], [{ text: "🏠 Главное меню", callback_data: "menu:home" }]] });
     return;
   }
   const pageSize = 6;
@@ -13847,9 +14215,10 @@ async function showPlayerTasks(chatId, user, env, requestedPage = 0) {
     if (page + 1 < pageCount) nav.push({ text: "Вперёд →", callback_data: `tasks_page:${page + 1}` });
     buttons.push(nav);
   }
-  buttons.push([{ text: "🔄 Обновить", callback_data: `tasks_refresh:${page}` }, { text: "← Главное меню", callback_data: "menu:home" }]);
+  buttons.push([{ text: "🔄 Обновить", callback_data: `tasks_refresh:${page}` }, { text: "🎟 Сезонные", callback_data: "tasks_season" }]);
+  buttons.push([{ text: "⬅️ Все задания", callback_data: "tasks_hub" }, { text: "🏠 Главное меню", callback_data: "menu:home" }]);
   const pageLabel = pageCount > 1 ? ` · страница ${page + 1}/${pageCount}` : "";
-  await sendTelegramMessage(env, chatId, `<b>📋 Задания${pageLabel}</b>\n\n${lines.join("\n\n") || "Нет доступных заданий."}\n\nПрогресс обновляется по данным сервера.`, { inline_keyboard: buttons });
+  await sendTelegramMessage(env, chatId, `<b>✨ Событийные задания${pageLabel}</b>\n\n${lines.join("\n\n") || "Нет доступных заданий."}\n\nПрогресс обновляется по данным сервера.`, { inline_keyboard: buttons });
 }
 
 async function claimPlayerTask(query, chainKey, env, requestedPage = 0) {
@@ -13909,6 +14278,21 @@ async function handlePlayerTaskCallback(query, env) {
   const data = String(query.data || "");
   const chatId = query.message?.chat?.id;
   if (!chatId) return false;
+  if (data === "tasks_hub") {
+    await answerCallback(env, query.id, "Все задания");
+    await showPlayerTasksHub(chatId, query.from, env);
+    return true;
+  }
+  if (data === "tasks_season") {
+    await answerCallback(env, query.id, "Сезонные задания");
+    await showPlayerSeasonTasks(chatId, query.from, env);
+    return true;
+  }
+  if (data === "tasks_events") {
+    await answerCallback(env, query.id, "Событийные задания");
+    await showPlayerTasks(chatId, query.from, env, 0);
+    return true;
+  }
   const refresh = data.match(/^tasks_refresh(?::(\d{1,2}))?$/);
   if (refresh) {
     await answerCallback(env, query.id, "Задания обновлены.");
@@ -29760,10 +30144,12 @@ function configuredSeasonPassTasksUrl(env){
   try{
     const url=new URL(configuredGameUrl(env));
     url.pathname='/battle-pass.html';
-    url.search='?v=1.2.0&view=tasks';
+    url.search='';
+    url.searchParams.set('v',GAME_VERSION);
+    url.searchParams.set('view','tasks');
     url.hash='';
     return url.toString();
-  }catch{return `${DEFAULT_GAME_URL.replace(/\/$/,'')}/battle-pass.html?v=1.2.0&view=tasks`;}
+  }catch{return `${DEFAULT_GAME_URL.replace(/\/$/,'')}/battle-pass.html?v=${encodeURIComponent(GAME_VERSION)}&view=tasks`;}
 }
 
 function seasonPassTaskNoticePublic(rows,season){
