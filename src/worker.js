@@ -686,6 +686,39 @@ const SUPPORT_TICKET_FEEDBACK_SCHEMA_SQL = `CREATE TABLE IF NOT EXISTS support_t
   UNIQUE(ticket_id, close_token)
 )`;
 
+
+const SUPPORT_TICKET_WORKFLOW_SCHEMA_SQL = `CREATE TABLE IF NOT EXISTS support_ticket_workflow (
+  ticket_id INTEGER PRIMARY KEY,
+  workflow_state TEXT NOT NULL DEFAULT 'new' CHECK(workflow_state IN ('new','working','waiting_player','player_replied','known_issue','waiting_fix','resolved','rejected')),
+  known_issue_id INTEGER NOT NULL DEFAULT 0,
+  last_transition_at INTEGER NOT NULL DEFAULT 0,
+  updated_at INTEGER NOT NULL,
+  updated_by TEXT NOT NULL DEFAULT ''
+)`;
+
+const SUPPORT_KNOWN_ISSUES_SCHEMA_SQL = `CREATE TABLE IF NOT EXISTS support_known_issues (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  title TEXT NOT NULL,
+  description TEXT NOT NULL DEFAULT '',
+  category TEXT NOT NULL DEFAULT 'other',
+  severity TEXT NOT NULL DEFAULT 'normal' CHECK(severity IN ('normal','important','critical')),
+  status TEXT NOT NULL DEFAULT 'investigating' CHECK(status IN ('investigating','monitoring','resolved')),
+  public INTEGER NOT NULL DEFAULT 1 CHECK(public IN (0,1)),
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL,
+  resolved_at INTEGER NOT NULL DEFAULT 0,
+  created_by TEXT NOT NULL DEFAULT '',
+  updated_by TEXT NOT NULL DEFAULT ''
+)`;
+
+const SUPPORT_KNOWN_ISSUE_IMPACTS_SCHEMA_SQL = `CREATE TABLE IF NOT EXISTS support_known_issue_impacts (
+  issue_id INTEGER NOT NULL,
+  player_telegram_id TEXT NOT NULL,
+  ticket_id INTEGER NOT NULL DEFAULT 0,
+  created_at INTEGER NOT NULL,
+  PRIMARY KEY(issue_id, player_telegram_id)
+)`;
+
 const PLAYER_ADMIN_CONTROLS_SCHEMA_SQL = `CREATE TABLE IF NOT EXISTS player_admin_controls (
   telegram_id TEXT PRIMARY KEY,
   custom_name TEXT NOT NULL DEFAULT '',
@@ -1876,6 +1909,9 @@ export default {
       }
       if (url.pathname === "/api/support/read" && request.method === "POST") {
         return await markPlayerSupportTicketRead(request, env);
+      }
+      if (url.pathname === "/api/support/known-issue/impact" && request.method === "POST") {
+        return await markPlayerSupportKnownIssueImpact(request, env);
       }
 
       if (url.pathname === "/api/newcomer/claim" && request.method === "POST") {
@@ -17616,6 +17652,9 @@ async function ensurePlayerSupportSchema(env) {
         env.DB.prepare(SUPPORT_INTERNAL_NOTES_SCHEMA_SQL),
         env.DB.prepare(SUPPORT_REPLY_TEMPLATES_SCHEMA_SQL),
         env.DB.prepare(SUPPORT_TICKET_FEEDBACK_SCHEMA_SQL),
+        env.DB.prepare(SUPPORT_TICKET_WORKFLOW_SCHEMA_SQL),
+        env.DB.prepare(SUPPORT_KNOWN_ISSUES_SCHEMA_SQL),
+        env.DB.prepare(SUPPORT_KNOWN_ISSUE_IMPACTS_SCHEMA_SQL),
         env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_support_tickets_status_updated ON support_tickets(status, updated_at DESC)`),
         env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_support_tickets_creator ON support_tickets(created_by, created_at DESC)`),
         env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_support_tickets_player ON support_tickets(player_telegram_id, created_at DESC)`),
@@ -17628,7 +17667,12 @@ async function ensurePlayerSupportSchema(env) {
         env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_support_ticket_tags_tag ON support_ticket_tags(tag, ticket_id)`),
         env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_support_internal_notes_ticket ON support_internal_notes(ticket_id, created_at DESC, id DESC)`),
         env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_support_reply_templates_active ON support_reply_templates(active, sort_order, title)`),
-        env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_support_ticket_feedback_ticket ON support_ticket_feedback(ticket_id, created_at DESC, id DESC)`)
+        env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_support_ticket_feedback_ticket ON support_ticket_feedback(ticket_id, created_at DESC, id DESC)`),
+        env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_support_ticket_workflow_state_updated ON support_ticket_workflow(workflow_state, updated_at DESC)`),
+        env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_support_ticket_workflow_issue ON support_ticket_workflow(known_issue_id, workflow_state, updated_at DESC)`),
+        env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_support_known_issues_public_status ON support_known_issues(public, status, severity, updated_at DESC)`),
+        env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_support_known_issue_impacts_issue ON support_known_issue_impacts(issue_id, created_at DESC)`),
+        env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_support_known_issue_impacts_player ON support_known_issue_impacts(player_telegram_id, created_at DESC)`)
       ]);
       await env.DB.prepare(`INSERT OR IGNORE INTO support_ticket_meta(ticket_id,source,subject,request_id,client_json,player_last_read_at,staff_last_read_at,last_player_message_at,last_staff_message_at,created_at,updated_at)
         SELECT id,'staff','',NULL,'{}',0,0,0,created_at,created_at,updated_at FROM support_tickets`).run();
@@ -17639,7 +17683,9 @@ async function ensurePlayerSupportSchema(env) {
       await env.DB.prepare(`INSERT OR IGNORE INTO support_ticket_channels(ticket_id,channel,created_at,updated_at)
         SELECT ticket_id,CASE WHEN source='staff' THEN 'staff' ELSE 'game' END,created_at,updated_at FROM support_ticket_meta`).run();
       await env.DB.prepare(`INSERT OR IGNORE INTO support_ticket_operations(ticket_id,priority,priority_source,created_at,updated_at,updated_by)
-        SELECT id,CASE WHEN category IN ('purchase','reward','account','reward_missing','code_problem','item_missing','balance_problem') THEN 'important' ELSE 'normal' END,'auto',created_at,updated_at,'schema-backfill' FROM support_tickets`).run();
+        SELECT id,CASE WHEN category IN ('purchase','reward','account','reward_missing','code_problem','item_missing','balance_problem','rating_problem','pass_problem') THEN 'important' ELSE 'normal' END,'auto',created_at,updated_at,'schema-backfill' FROM support_tickets`).run();
+      await env.DB.prepare(`INSERT OR IGNORE INTO support_ticket_workflow(ticket_id,workflow_state,known_issue_id,last_transition_at,updated_at,updated_by)
+        SELECT id,CASE status WHEN 'working' THEN 'working' WHEN 'resolved' THEN 'resolved' WHEN 'rejected' THEN 'rejected' ELSE 'new' END,0,updated_at,updated_at,'schema-backfill' FROM support_tickets`).run();
       await env.DB.prepare(`INSERT OR IGNORE INTO support_ticket_tags(ticket_id,tag,created_at,created_by)
         SELECT id,CASE category WHEN 'bug' THEN 'bug' WHEN 'purchase' THEN 'purchase' WHEN 'reward' THEN 'reward' WHEN 'account' THEN 'account' WHEN 'suggestion' THEN 'idea' WHEN 'feedback' THEN 'feedback' WHEN 'reward_missing' THEN 'reward' WHEN 'code_problem' THEN 'code' WHEN 'item_missing' THEN 'reward' WHEN 'balance_problem' THEN 'account' WHEN 'rating_problem' THEN 'rating' ELSE 'other' END,created_at,'schema-backfill' FROM support_tickets`).run();
       const supportTemplateNow = Math.floor(Date.now()/1000);
@@ -19122,26 +19168,39 @@ async function showAdvancedAuditLog(chatId, user, rawFilter, env) {
 }
 const SUPPORT_TICKET_CATEGORIES = Object.freeze({
   bug: "Ошибка в игре",
-  purchase: "Покупка",
+  purchase: "Проблема с покупкой",
   reward: "Награда",
-  account: "Аккаунт",
+  account: "Аккаунт и прогресс",
   suggestion: "Предложение",
   feedback: "Отзыв",
-  reward_missing: "Не начислилась награда",
+  reward_missing: "Не получил награду",
   code_problem: "Не работает код",
-  item_missing: "Пропал предмет",
+  item_missing: "Пропал предмет / кейс",
   balance_problem: "Неправильный баланс",
-  rating_problem: "Проблема с рейтингом",
+  rating_problem: "Забег или рейтинг",
+  pass_problem: "Сезонный пропуск",
   other: "Другое"
 });
-const PLAYER_SUPPORT_CATEGORIES = Object.freeze(["bug","purchase","reward","account","suggestion","other"]);
-const STAFF_SUPPORT_CATEGORIES = Object.freeze(["reward_missing","code_problem","item_missing","balance_problem","rating_problem","other"]);
+const PLAYER_SUPPORT_CATEGORIES = Object.freeze(["reward_missing","purchase","item_missing","rating_problem","pass_problem","account","bug","suggestion","other"]);
+const STAFF_SUPPORT_CATEGORIES = Object.freeze(["reward_missing","code_problem","item_missing","balance_problem","rating_problem","pass_problem","other"]);
 const SUPPORT_MAX_OPEN_TICKETS = 3;
 const SUPPORT_MAX_DAILY_TICKETS = 6;
 const SUPPORT_MAX_MESSAGE_LENGTH = 4000;
 const SUPPORT_MAX_ATTACHMENT_BYTES = 2 * 1024 * 1024;
 const SUPPORT_ALLOWED_IMAGE_TYPES = new Set(["image/jpeg","image/png","image/webp"]);
 const SUPPORT_PRIORITY_LABELS = Object.freeze({ normal: "Обычный", important: "Важный", critical: "Критический" });
+const SUPPORT_WORKFLOW_LABELS = Object.freeze({
+  new: "получено",
+  working: "в работе",
+  waiting_player: "нужен ответ игрока",
+  player_replied: "игрок ответил",
+  known_issue: "известная проблема",
+  waiting_fix: "ждём исправления",
+  resolved: "решено",
+  rejected: "закрыто"
+});
+const SUPPORT_WORKFLOW_STATES = new Set(Object.keys(SUPPORT_WORKFLOW_LABELS));
+const SUPPORT_KNOWN_ISSUE_STATUS_LABELS = Object.freeze({ investigating:"разбираемся", monitoring:"наблюдаем", resolved:"исправлено" });
 const SUPPORT_TAG_LABELS = Object.freeze({
   bug: "Ошибка",
   purchase: "Покупка",
@@ -19161,7 +19220,7 @@ const SUPPORT_TAG_LABELS = Object.freeze({
 });
 
 function supportAutoPriority(category) {
-  return new Set(["purchase","reward","account","reward_missing","code_problem","item_missing","balance_problem"]).has(String(category || "")) ? "important" : "normal";
+  return new Set(["purchase","reward","account","reward_missing","code_problem","item_missing","balance_problem","rating_problem","pass_problem"]).has(String(category || "")) ? "important" : "normal";
 }
 
 function supportAutoTags(category, area = "") {
@@ -19169,10 +19228,36 @@ function supportAutoTags(category, area = "") {
     bug: "bug", purchase: "purchase", reward: "reward", account: "account",
     suggestion: "idea", feedback: "feedback", reward_missing: "reward",
     code_problem: "code", item_missing: "reward", balance_problem: "account",
-    rating_problem: "rating", other: "other"
+    rating_problem: "rating", pass_problem: "pass", other: "other"
   })[String(category || "")] || "other";
   const areaTag = ({ shop: "shop", pass: "pass", cases: "cases", rating: "rating", bot: "bot" })[String(area || "")] || "";
   return [...new Set([categoryTag, areaTag].filter((tag) => Object.prototype.hasOwnProperty.call(SUPPORT_TAG_LABELS, tag)))];
+}
+
+function supportWorkflowLabel(state) {
+  return SUPPORT_WORKFLOW_LABELS[String(state || "")] || SUPPORT_WORKFLOW_LABELS.new;
+}
+
+function supportWorkflowFromCanonical(status) {
+  return ({ working:"working", resolved:"resolved", rejected:"rejected" })[String(status || "")] || "new";
+}
+
+async function setSupportTicketWorkflow(env, ticketId, workflowState, options = {}) {
+  const id = Number(ticketId || 0);
+  if (!id) return;
+  const state = SUPPORT_WORKFLOW_STATES.has(String(workflowState || "")) ? String(workflowState) : "new";
+  const now = Math.floor(Number(options.now || Date.now()/1000));
+  const issueProvided = Object.prototype.hasOwnProperty.call(options || {}, "knownIssueId");
+  let knownIssueId = Math.max(0, Math.floor(Number(options.knownIssueId || 0)));
+  if (!issueProvided) {
+    const current = await env.DB.prepare(`SELECT known_issue_id FROM support_ticket_workflow WHERE ticket_id=? LIMIT 1`).bind(id).first().catch(()=>null);
+    knownIssueId = Math.max(0, Math.floor(Number(current?.known_issue_id || 0)));
+  }
+  const actor = String(options.actor || "system").slice(0,96);
+  await env.DB.prepare(`INSERT INTO support_ticket_workflow(ticket_id,workflow_state,known_issue_id,last_transition_at,updated_at,updated_by)
+    VALUES(?,?,?,?,?,?)
+    ON CONFLICT(ticket_id) DO UPDATE SET workflow_state=excluded.workflow_state,known_issue_id=excluded.known_issue_id,last_transition_at=excluded.last_transition_at,updated_at=excluded.updated_at,updated_by=excluded.updated_by`)
+    .bind(id,state,knownIssueId,now,now,actor).run();
 }
 
 function supportNormalizeTags(values) {
@@ -19261,6 +19346,9 @@ async function supportPlayerDiagnostics(request, env, auth, clientInput = {}) {
 function supportTicketPublicView(row, messages = [], attachments = []) {
   const lastStaff = Number(row?.last_staff_message_at || 0);
   const playerRead = Number(row?.player_last_read_at || 0);
+  const workflowState = SUPPORT_WORKFLOW_STATES.has(String(row?.workflow_state || ""))
+    ? String(row.workflow_state)
+    : supportWorkflowFromCanonical(row?.status);
   return {
     id: Number(row?.id || row?.ticket_id || 0),
     subject: String(row?.subject || row?.description || "Обращение").slice(0,120),
@@ -19269,6 +19357,9 @@ function supportTicketPublicView(row, messages = [], attachments = []) {
     channel: String(row?.channel || (row?.source === "staff" ? "staff" : "game")),
     status: String(row?.status || "new"),
     statusLabel: ticketStatusLabel(row?.status),
+    workflowState,
+    workflowLabel: supportWorkflowLabel(workflowState),
+    knownIssueId: Math.max(0, Number(row?.known_issue_id || 0)),
     assignedToName: String(row?.assigned_to_name || ""),
     createdAt: Number(row?.created_at || 0),
     updatedAt: Number(row?.updated_at || 0),
@@ -19292,14 +19383,46 @@ function supportTicketPublicView(row, messages = [], attachments = []) {
   };
 }
 
+async function playerSupportKnownIssues(env, telegramId) {
+  const rows = (await env.DB.prepare(`SELECT i.id,i.title,i.description,i.category,i.severity,i.status,i.updated_at,
+      (SELECT COUNT(*) FROM support_known_issue_impacts x WHERE x.issue_id=i.id) AS impact_count,
+      EXISTS(SELECT 1 FROM support_known_issue_impacts x WHERE x.issue_id=i.id AND x.player_telegram_id=?) AS affected
+    FROM support_known_issues i
+    WHERE i.public=1 AND i.status IN ('investigating','monitoring')
+    ORDER BY CASE i.severity WHEN 'critical' THEN 0 WHEN 'important' THEN 1 ELSE 2 END,i.updated_at DESC,i.id DESC
+    LIMIT 12`).bind(String(telegramId)).all()).results || [];
+  return rows.map((row) => ({
+    id: Number(row.id || 0),
+    title: String(row.title || "Известная проблема").slice(0,120),
+    description: String(row.description || "").slice(0,700),
+    category: String(row.category || "other"),
+    categoryLabel: String(SUPPORT_TICKET_CATEGORIES[row.category] || row.category || "Другое"),
+    severity: String(row.severity || "normal"),
+    status: String(row.status || "investigating"),
+    statusLabel: String(SUPPORT_KNOWN_ISSUE_STATUS_LABELS[row.status] || row.status || "разбираемся"),
+    affectedCount: Math.max(0, Number(row.impact_count || 0)),
+    affected: Boolean(row.affected),
+    updatedAt: Number(row.updated_at || 0)
+  }));
+}
+
 async function playerSupportStateData(env, telegramId) {
   await ensurePlayerSupportSchema(env);
-  const ticketRows = (await env.DB.prepare(`SELECT t.*,m.subject,m.player_last_read_at,m.last_staff_message_at,m.source,COALESCE(c.channel,'game') AS channel
-    FROM support_tickets t JOIN support_ticket_meta m ON m.ticket_id=t.id LEFT JOIN support_ticket_channels c ON c.ticket_id=t.id
-    WHERE t.player_telegram_id=? AND m.source='player'
-    ORDER BY t.updated_at DESC,t.id DESC LIMIT 20`).bind(String(telegramId)).all()).results || [];
+  const id = String(telegramId);
+  const [ticketResult, knownIssues] = await Promise.all([
+    env.DB.prepare(`SELECT t.*,m.subject,m.player_last_read_at,m.last_staff_message_at,m.source,COALESCE(c.channel,'game') AS channel,
+      COALESCE(w.workflow_state,CASE t.status WHEN 'working' THEN 'working' WHEN 'resolved' THEN 'resolved' WHEN 'rejected' THEN 'rejected' ELSE 'new' END) AS workflow_state,
+      COALESCE(w.known_issue_id,0) AS known_issue_id
+      FROM support_tickets t JOIN support_ticket_meta m ON m.ticket_id=t.id
+      LEFT JOIN support_ticket_channels c ON c.ticket_id=t.id
+      LEFT JOIN support_ticket_workflow w ON w.ticket_id=t.id
+      WHERE t.player_telegram_id=? AND m.source='player'
+      ORDER BY t.updated_at DESC,t.id DESC LIMIT 20`).bind(id).all(),
+    playerSupportKnownIssues(env,id)
+  ]);
+  const ticketRows = ticketResult.results || [];
   const ids = ticketRows.map((row) => Number(row.id || 0)).filter(Boolean);
-  if (!ids.length) return { tickets: [], openCount: 0, unreadCount: 0 };
+  if (!ids.length) return { tickets: [], openCount: 0, unreadCount: 0, knownIssues };
   const placeholders = ids.map(() => "?").join(",");
   const [messagesResult, attachmentsResult] = await Promise.all([
     env.DB.prepare(`SELECT id,ticket_id,author_kind,author_name,message_text,created_at FROM support_messages WHERE ticket_id IN (${placeholders}) ORDER BY created_at ASC,id ASC`).bind(...ids).all(),
@@ -19309,7 +19432,7 @@ async function playerSupportStateData(env, telegramId) {
   for (const item of messagesResult.results || []) { const key=Number(item.ticket_id); if(!messageMap.has(key)) messageMap.set(key,[]); messageMap.get(key).push(item); }
   for (const item of attachmentsResult.results || []) { const key=Number(item.ticket_id); if(!attachmentMap.has(key)) attachmentMap.set(key,[]); attachmentMap.get(key).push(item); }
   const tickets = ticketRows.map((row) => supportTicketPublicView(row, messageMap.get(Number(row.id)) || [], attachmentMap.get(Number(row.id)) || []));
-  return { tickets, openCount: tickets.filter((item) => ["new","working"].includes(item.status)).length, unreadCount: tickets.filter((item) => item.unread).length };
+  return { tickets, openCount: tickets.filter((item) => !["resolved","rejected"].includes(item.status)).length, unreadCount: tickets.filter((item) => item.unread).length, knownIssues };
 }
 
 async function getPlayerSupportState(request, env) {
@@ -19321,6 +19444,30 @@ async function getPlayerSupportState(request, env) {
     if (error instanceof ApiError) return jsonResponse({ ok:false,error:error.message }, error.status);
     console.error("player support state failed", error);
     return jsonResponse({ ok:false,error:"Не удалось загрузить обращения." }, 500);
+  }
+}
+
+async function markPlayerSupportKnownIssueImpact(request, env) {
+  try {
+    await ensurePlayerSupportSchema(env);
+    const body = await readJson(request);
+    const auth = await validateTelegramInitData(String(body.initData || ""), env);
+    const telegramId = String(auth.user.id);
+    const issueId = Math.max(0, Math.floor(Number(body.issueId || 0)));
+    if (!issueId) throw new ApiError(400,"Некорректная проблема.");
+    const issue = await env.DB.prepare(`SELECT id,title,status,public FROM support_known_issues WHERE id=? LIMIT 1`).bind(issueId).first();
+    if (!issue || Number(issue.public || 0) !== 1 || !["investigating","monitoring"].includes(String(issue.status || ""))) throw new ApiError(404,"Эта проблема уже не активна.");
+    const now = Math.floor(Date.now()/1000);
+    const insert = await env.DB.prepare(`INSERT OR IGNORE INTO support_known_issue_impacts(issue_id,player_telegram_id,ticket_id,created_at) VALUES(?,?,0,?)`).bind(issueId,telegramId,now).run();
+    const repeated = Number(insert.meta?.changes || 0) === 0;
+    if (!repeated) {
+      try { await recordPlayerTimeline(env,telegramId,"support",`подтвердил известную проблему #${issueId}`,{issueId,title:String(issue.title||"")},`support_issue_${issueId}`,auth.user,now); } catch (error) { console.error("support issue timeline failed",error); }
+    }
+    return jsonResponse({ok:true,issueId,repeated,...(await playerSupportStateData(env,telegramId))});
+  } catch (error) {
+    if (error instanceof ApiError) return jsonResponse({ok:false,error:error.message},error.status);
+    console.error("support known issue impact failed",error);
+    return jsonResponse({ok:false,error:"Не удалось отметить проблему."},500);
   }
 }
 
@@ -19360,6 +19507,8 @@ async function createPlayerSupportTicket(request, env, executionCtx) {
       };
     }
     const diagnostics = await supportPlayerDiagnostics(request,env,auth,form.get("clientJson") || "{}");
+    const context = supportSafeClientJson(form.get("contextJson") || "{}");
+    diagnostics.context = context;
     const now = Math.floor(Date.now()/1000), playerName = telegramDisplayName(auth.user);
     const insert = await env.DB.prepare(`INSERT INTO support_tickets(created_by,created_by_name,player_telegram_id,player_name,category,description,status,assigned_to,assigned_to_name,resolution,created_at,updated_at,closed_at)
       VALUES(?,?,?,?,?,?,'new','','','',?,?,0)`).bind(telegramId,playerName,telegramId,playerName,category,message,now,now).run();
@@ -19372,7 +19521,8 @@ async function createPlayerSupportTicket(request, env, executionCtx) {
     await env.DB.prepare(`INSERT INTO support_ticket_meta(ticket_id,source,subject,request_id,client_json,player_last_read_at,staff_last_read_at,last_player_message_at,last_staff_message_at,created_at,updated_at)
       VALUES(?,'player',?,?,?,?,0,?,0,?,?)`).bind(ticketId,subject,requestId,JSON.stringify(diagnostics),now,now,now,now).run();
     await env.DB.prepare(`INSERT OR REPLACE INTO support_ticket_channels(ticket_id,channel,created_at,updated_at) VALUES(?,'game',?,?)`).bind(ticketId,now,now).run();
-    await ensureSupportOperationsForTicket(env,ticketId,category,"","game",now);
+    await setSupportTicketWorkflow(env,ticketId,"new",{now,actor:"game"});
+    await ensureSupportOperationsForTicket(env,ticketId,category,String(context.area || ""),"game",now);
     let attachmentId = 0;
     if (hasFile) {
       const attachment = await env.DB.prepare(`INSERT INTO support_attachments(ticket_id,message_id,uploader_kind,mime_type,file_name,size_bytes,telegram_file_id,telegram_file_unique_id,telegram_message_id,status,error_text,created_at,updated_at)
@@ -19410,7 +19560,8 @@ async function replyPlayerSupportTicket(request, env, executionCtx) {
       await env.DB.batch([
         env.DB.prepare(`INSERT INTO support_messages(ticket_id,author_kind,author_telegram_id,author_name,message_text,request_id,client_json,created_at,telegram_delivered_at,telegram_error) VALUES(?,'player',?,?,?,?,?,?,0,'')`).bind(ticketId,telegramId,name,message,requestId,JSON.stringify(client),now),
         env.DB.prepare(`UPDATE support_tickets SET updated_at=? WHERE id=?`).bind(now,ticketId),
-        env.DB.prepare(`UPDATE support_ticket_meta SET last_player_message_at=?,updated_at=? WHERE ticket_id=?`).bind(now,now,ticketId)
+        env.DB.prepare(`UPDATE support_ticket_meta SET last_player_message_at=?,updated_at=? WHERE ticket_id=?`).bind(now,now,ticketId),
+        env.DB.prepare(`INSERT INTO support_ticket_workflow(ticket_id,workflow_state,known_issue_id,last_transition_at,updated_at,updated_by) VALUES(?,'player_replied',0,?,?,?) ON CONFLICT(ticket_id) DO UPDATE SET workflow_state='player_replied',last_transition_at=excluded.last_transition_at,updated_at=excluded.updated_at,updated_by=excluded.updated_by`).bind(ticketId,now,now,telegramId)
       ]);
       const task=(async()=>{
         await notifySubscribedStaff(env,"new_tickets",`💬 <b>Ответ игрока в обращении #${ticketId}</b>
@@ -19677,6 +19828,7 @@ async function createBotPlayerSupportTicket(env, user, chatId, data, runtime = {
     env.DB.prepare(`INSERT INTO support_ticket_meta(ticket_id,source,subject,request_id,client_json,player_last_read_at,staff_last_read_at,last_player_message_at,last_staff_message_at,created_at,updated_at) VALUES(?,'player',?,?,?,?,0,?,0,?,?)`).bind(ticketId, subject, requestId, JSON.stringify(diagnostics), now, now, now, now),
     env.DB.prepare(`INSERT OR REPLACE INTO support_ticket_channels(ticket_id,channel,created_at,updated_at) VALUES(?,'bot',?,?)`).bind(ticketId, now, now)
   ]);
+  await setSupportTicketWorkflow(env,ticketId,"new",{now,actor:"bot"});
   await ensureSupportOperationsForTicket(env,ticketId,category,String(data.area || ""),"bot",now);
   const photo = data.photo && data.photo.fileId ? data.photo : null;
   if (photo) {
@@ -19714,6 +19866,7 @@ async function botSupportAppendReply(env, user, ticketId, text, messageId, runti
       await processPendingLeaderboardStaffNotifications(env,20).catch((error)=>console.error("bot support reply notification failed",error));
     })();
     if (!runWorkerBackground(runtime, task, "bot support reply background")) void task.catch(() => {});
+    await setSupportTicketWorkflow(env,Number(ticketId),"player_replied",{now,actor:telegramId});
   }
   return { ticketId: Number(ticketId), repeated: Boolean(existing) };
 }
@@ -19729,6 +19882,7 @@ async function resolveBotPlayerSupportTicket(env, user, ticketId, runtime = {}) 
     env.DB.prepare(`INSERT OR IGNORE INTO support_messages(ticket_id,author_kind,author_telegram_id,author_name,message_text,request_id,client_json,created_at,telegram_delivered_at,telegram_error) VALUES(?,'system','','',?,?,'{}',?,0,'')`).bind(id,"\u0418\u0433\u0440\u043e\u043a \u043e\u0442\u043c\u0435\u0442\u0438\u043b \u0432\u043e\u043f\u0440\u043e\u0441 \u0440\u0435\u0448\u0451\u043d\u043d\u044b\u043c.",req,now),
     env.DB.prepare(`UPDATE support_ticket_meta SET player_last_read_at=?,updated_at=? WHERE ticket_id=?`).bind(now,now,id)
   ]);
+  await setSupportTicketWorkflow(env,id,"resolved",{now,actor:telegramId});
   const task = notifySubscribedStaff(env,"new_tickets",`\u2705 <b>\u0418\u0433\u0440\u043e\u043a \u043e\u0442\u043c\u0435\u0442\u0438\u043b \u043e\u0431\u0440\u0430\u0449\u0435\u043d\u0438\u0435 #${id} \u0440\u0435\u0448\u0451\u043d\u043d\u044b\u043c</b>\n\n<code>${escapeHtml(telegramId)}</code>`);
   if (!runWorkerBackground(runtime, task, "bot support resolved notification")) void task.catch(() => {});
   return { ticketId:id,repeated:false };
@@ -19755,6 +19909,7 @@ async function recordPlayerSupportFeedback(env, user, ticketId, closeToken, rati
     ]);
     const inserted=Number(results?.[0]?.meta?.changes||0)>0;
     if(!inserted)return {ticketId:id,rating:value,repeated:true,reopened:String(row.status)==='resolved'};
+    await setSupportTicketWorkflow(env,id,"player_replied",{now,actor:telegramId});
     const task=(async()=>{await notifySubscribedStaff(env,'new_tickets',`👎 <b>Игроку не помог ответ по обращению #${id}</b>
 
 Игрок: <code>${escapeHtml(telegramId)}</code>
@@ -19946,6 +20101,7 @@ async function handleTicketWorkflowMessage(message, workflow, env) {
       env.DB.prepare(`INSERT OR IGNORE INTO support_messages(ticket_id,author_kind,author_telegram_id,author_name,message_text,request_id,client_json,created_at,telegram_delivered_at,telegram_error) VALUES(?,'staff',?,?,?,'legacy-initial','{}',?,0,'')`).bind(ticketId,String(user.id),telegramDisplayName(user),description,now),
       env.DB.prepare(`INSERT OR REPLACE INTO support_ticket_channels(ticket_id,channel,created_at,updated_at) VALUES(?,'staff',?,?)`).bind(ticketId,now,now)
     ]);
+    await setSupportTicketWorkflow(env,ticketId,"new",{now,actor:String(user.id||"staff")});
     await ensureSupportOperationsForTicket(env,ticketId,String(data.category || "other"),"","staff",now);
     await clearStaffWorkflow(user.id, env);
     await logStaffAction(env, user, access, "ticket_create", String(data.targetId || ""), "ticket", null, ticketId, {
@@ -42827,6 +42983,7 @@ async function handleOwnerPanelApi(request, env, path, executionCtx = null) {
     if (path === "/api/owner/control/ticket/update") return jsonResponse(await ownerPanelTicketUpdate(env, ctx));
     if (path === "/api/owner/control/ticket/operations") return jsonResponse(await ownerPanelTicketOperationsUpdate(env, ctx));
     if (path === "/api/owner/control/ticket/note") return jsonResponse(await ownerPanelTicketNoteAdd(env, ctx));
+    if (path === "/api/owner/control/support-issue/save") return jsonResponse(await ownerPanelSupportKnownIssueSave(env, ctx));
     if (path === "/api/owner/control/support-template/save") return jsonResponse(await ownerPanelSupportTemplateSave(env, ctx));
     if (path === "/api/owner/control/support-template/delete") return jsonResponse(await ownerPanelSupportTemplateDelete(env, ctx));
     if (path === "/api/owner/rating") return jsonResponse(await ownerPanelRating(env, ctx));
@@ -45211,7 +45368,7 @@ async function ownerPanelControl(env, ctx) {
     try{await ensureOperationalProblemsFresh(env,{checkWebhook:false});}catch(error){console.error('owner control refresh failed',error);}
   }
   const now=Math.floor(Date.now()/1000),day=moscowDayStartUnix(),week=now-7*86400;
-  const [issues,totals,allTimeRuns,dayRuns,weekRuns,casesDay,grantsDay,physicalPending,topWallet,queue,queueItems,blocked,tickets,supportTemplates]=await Promise.all([
+  const [issues,totals,allTimeRuns,dayRuns,weekRuns,casesDay,grantsDay,physicalPending,topWallet,queue,queueItems,blocked,tickets,supportTemplates,knownIssues]=await Promise.all([
     env.DB.prepare(`SELECT * FROM admin_operational_issues ORDER BY CASE WHEN status='resolved' THEN 2 ELSE 1 END,CASE severity WHEN 'critical' THEN 1 WHEN 'high' THEN 2 WHEN 'warning' THEN 3 ELSE 4 END,updated_at DESC LIMIT 40`).all(),
     env.DB.prepare(`SELECT COUNT(*) AS players,SUM(wallet) AS wallet,SUM(treats) AS treats,SUM(coffee) AS coffee,SUM(pending_wallet) AS pending_wallet,SUM(pending_treats) AS pending_treats,SUM(pending_coffee) AS pending_coffee FROM admin_profile_state`).first(),
     env.DB.prepare(`SELECT COUNT(*) AS total,SUM(CASE WHEN accepted=1 THEN 1 ELSE 0 END) AS accepted,COALESCE(SUM(CASE WHEN accepted=1 THEN score ELSE 0 END),0) AS score FROM leaderboard_runs`).first(),
@@ -45228,14 +45385,24 @@ async function ownerPanelControl(env, ctx) {
       COALESCE(m.source,'staff') AS source,COALESCE(m.subject,'') AS subject,COALESCE(m.last_player_message_at,0) AS last_player_message_at,COALESCE(m.last_staff_message_at,0) AS last_staff_message_at,COALESCE(m.staff_last_read_at,0) AS staff_last_read_at,
       COALESCE(c.channel,CASE WHEN COALESCE(m.source,'staff')='staff' THEN 'staff' ELSE 'game' END) AS channel,
       COALESCE(o.priority,'normal') AS priority,COALESCE(o.priority_source,'auto') AS priority_source,
+      COALESCE(w.workflow_state,CASE t.status WHEN 'working' THEN 'working' WHEN 'resolved' THEN 'resolved' WHEN 'rejected' THEN 'rejected' ELSE 'new' END) AS workflow_state,
+      COALESCE(w.known_issue_id,0) AS known_issue_id,COALESCE(ki.title,'') AS known_issue_title,
       COALESCE((SELECT GROUP_CONCAT(tag,'|') FROM support_ticket_tags st WHERE st.ticket_id=t.id),'') AS tags_text,
       COALESCE((SELECT rating FROM support_ticket_feedback sf WHERE sf.ticket_id=t.id ORDER BY sf.id DESC LIMIT 1),'') AS feedback_rating,
       EXISTS(SELECT 1 FROM support_attachments a WHERE a.ticket_id=t.id) AS has_attachment
       FROM support_tickets t LEFT JOIN support_ticket_meta m ON m.ticket_id=t.id LEFT JOIN support_ticket_channels c ON c.ticket_id=t.id LEFT JOIN support_ticket_operations o ON o.ticket_id=t.id
-      ORDER BY CASE COALESCE(o.priority,'normal') WHEN 'critical' THEN 0 WHEN 'important' THEN 1 ELSE 2 END,CASE t.status WHEN 'new' THEN 0 WHEN 'working' THEN 1 WHEN 'resolved' THEN 2 ELSE 3 END,t.updated_at DESC LIMIT 60`).all(),
-    env.DB.prepare(`SELECT id,template_key,title,body,sort_order FROM support_reply_templates WHERE active=1 ORDER BY sort_order ASC,title ASC LIMIT 50`).all()
+      LEFT JOIN support_ticket_workflow w ON w.ticket_id=t.id LEFT JOIN support_known_issues ki ON ki.id=w.known_issue_id
+      ORDER BY CASE COALESCE(o.priority,'normal') WHEN 'critical' THEN 0 WHEN 'important' THEN 1 ELSE 2 END,
+        CASE COALESCE(w.workflow_state,'new') WHEN 'player_replied' THEN 0 WHEN 'new' THEN 1 WHEN 'working' THEN 2 WHEN 'waiting_player' THEN 3 WHEN 'known_issue' THEN 4 WHEN 'waiting_fix' THEN 5 WHEN 'resolved' THEN 6 ELSE 7 END,
+        t.updated_at DESC LIMIT 80`).all(),
+    env.DB.prepare(`SELECT id,template_key,title,body,sort_order FROM support_reply_templates WHERE active=1 ORDER BY sort_order ASC,title ASC LIMIT 50`).all(),
+    env.DB.prepare(`SELECT i.id,i.title,i.description,i.category,i.severity,i.status,i.public,i.created_at,i.updated_at,i.resolved_at,
+      (SELECT COUNT(*) FROM support_known_issue_impacts x WHERE x.issue_id=i.id) AS affected_count,
+      (SELECT COUNT(*) FROM support_ticket_workflow w WHERE w.known_issue_id=i.id) AS linked_tickets
+      FROM support_known_issues i
+      ORDER BY CASE i.status WHEN 'investigating' THEN 0 WHEN 'monitoring' THEN 1 ELSE 2 END,CASE i.severity WHEN 'critical' THEN 0 WHEN 'important' THEN 1 ELSE 2 END,i.updated_at DESC LIMIT 50`).all()
   ]);
-  return {ok:true,serverTime:new Date(now*1000).toISOString(),issues:(issues.results||[]).map(r=>({id:Number(r.id),title:String(r.title||''),severity:String(r.severity||'warning'),status:String(r.status||'open'),sourceType:String(r.source_type||''),sourceId:String(r.source_id||''),assignedToName:String(r.assigned_to_name||''),firstSeenAt:Number(r.first_seen_at||0),lastSeenAt:Number(r.last_seen_at||0),snoozedUntil:Number(r.snoozed_until||0),details:safeJson(r.details_json,{})})),economy:{players:Number(totals?.players||0),points:Number(totals?.wallet||0),treats:Number(totals?.treats||0),coffee:Number(totals?.coffee||0),allTimeRuns:Number(allTimeRuns?.total||0),allTimeAcceptedRuns:Number(allTimeRuns?.accepted||0),allTimeRunScore:Number(allTimeRuns?.score||0),pendingPoints:Number(totals?.pending_wallet||0),pendingTreats:Number(totals?.pending_treats||0),pendingCoffee:Number(totals?.pending_coffee||0),runsToday:Number(dayRuns?.total||0),acceptedRunsToday:Number(dayRuns?.accepted||0),runs7d:Number(weekRuns?.total||0),score7d:Number(weekRuns?.score||0),casesToday:Number(casesDay?.total||0),manualGrantsToday:Number(grantsDay?.count||0),activePhysicalCodes:Number(physicalPending?.count||0),queue:{pending:Number(queue?.pending||0),failed:Number(queue?.failed||0),delivered:Number(queue?.delivered||0)},queueItems:(queueItems.results||[]).map(r=>({id:Number(r.id||0),telegramId:String(r.telegram_id||''),name:String(r.name||r.telegram_id||''),username:String(r.username||''),sourceType:String(r.source_type||''),sourceId:String(r.source_id||''),rewardKind:String(r.reward_kind||''),rewardId:String(r.reward_id||''),amount:Number(r.amount||0),reason:String(r.reason||''),status:String(r.status||''),attempts:Number(r.attempts||0),lastError:String(r.last_error||''),createdAt:Number(r.created_at||0),updatedAt:Number(r.updated_at||0),description:safeRewardDescription({kind:r.reward_kind,id:r.reward_id,amount:r.amount})})),topWallet:(topWallet.results||[]).map(r=>({telegramId:String(r.telegram_id),name:String(r.name||r.telegram_id),username:String(r.username||''),points:Number(r.wallet||0),treats:Number(r.treats||0),coffee:Number(r.coffee||0)}))},moderation:{blocked:(blocked.results||[]).map(r=>({telegramId:String(r.telegram_id),name:String(r.name||r.telegram_id),username:String(r.username||''),reason:String(r.block_reason||''),blockType:String(r.block_type||'permanent'),blockedUntil:Number(r.blocked_until||0),updatedAt:Number(r.updated_at||0)}))},tickets:(tickets.results||[]).map(r=>({id:Number(r.id),createdBy:String(r.created_by||''),createdByName:String(r.created_by_name||''),playerTelegramId:String(r.player_telegram_id||''),playerName:String(r.player_name||''),category:String(r.category||''),categoryLabel:String(SUPPORT_TICKET_CATEGORIES[r.category]||r.category||''),description:String(r.description||''),subject:String(r.subject||''),source:String(r.source||'staff'),channel:String(r.channel||(String(r.source||'staff')==='staff'?'staff':'game')),priority:String(r.priority||'normal'),priorityLabel:String(SUPPORT_PRIORITY_LABELS[r.priority]||SUPPORT_PRIORITY_LABELS.normal),prioritySource:String(r.priority_source||'auto'),tags:String(r.tags_text||'').split('|').map(x=>String(x||'').trim()).filter(Boolean),feedbackRating:String(r.feedback_rating||''),hasAttachment:Boolean(r.has_attachment),unreadForStaff:Number(r.last_player_message_at||0)>Number(r.staff_last_read_at||0),status:String(r.status||'new'),statusLabel:ticketStatusLabel(r.status),assignedTo:String(r.assigned_to||''),assignedToName:String(r.assigned_to_name||''),resolution:String(r.resolution||''),createdAt:Number(r.created_at||0),updatedAt:Number(r.updated_at||0),closedAt:Number(r.closed_at||0)})),supportTemplates:(supportTemplates.results||[]).map(r=>({id:Number(r.id||0),key:String(r.template_key||''),title:String(r.title||''),body:String(r.body||''),sortOrder:Number(r.sort_order||0)})),supportTagLabels:SUPPORT_TAG_LABELS,supportPriorityLabels:SUPPORT_PRIORITY_LABELS};
+  return {ok:true,serverTime:new Date(now*1000).toISOString(),issues:(issues.results||[]).map(r=>({id:Number(r.id),title:String(r.title||''),severity:String(r.severity||'warning'),status:String(r.status||'open'),sourceType:String(r.source_type||''),sourceId:String(r.source_id||''),assignedToName:String(r.assigned_to_name||''),firstSeenAt:Number(r.first_seen_at||0),lastSeenAt:Number(r.last_seen_at||0),snoozedUntil:Number(r.snoozed_until||0),details:safeJson(r.details_json,{})})),economy:{players:Number(totals?.players||0),points:Number(totals?.wallet||0),treats:Number(totals?.treats||0),coffee:Number(totals?.coffee||0),allTimeRuns:Number(allTimeRuns?.total||0),allTimeAcceptedRuns:Number(allTimeRuns?.accepted||0),allTimeRunScore:Number(allTimeRuns?.score||0),pendingPoints:Number(totals?.pending_wallet||0),pendingTreats:Number(totals?.pending_treats||0),pendingCoffee:Number(totals?.pending_coffee||0),runsToday:Number(dayRuns?.total||0),acceptedRunsToday:Number(dayRuns?.accepted||0),runs7d:Number(weekRuns?.total||0),score7d:Number(weekRuns?.score||0),casesToday:Number(casesDay?.total||0),manualGrantsToday:Number(grantsDay?.count||0),activePhysicalCodes:Number(physicalPending?.count||0),queue:{pending:Number(queue?.pending||0),failed:Number(queue?.failed||0),delivered:Number(queue?.delivered||0)},queueItems:(queueItems.results||[]).map(r=>({id:Number(r.id||0),telegramId:String(r.telegram_id||''),name:String(r.name||r.telegram_id||''),username:String(r.username||''),sourceType:String(r.source_type||''),sourceId:String(r.source_id||''),rewardKind:String(r.reward_kind||''),rewardId:String(r.reward_id||''),amount:Number(r.amount||0),reason:String(r.reason||''),status:String(r.status||''),attempts:Number(r.attempts||0),lastError:String(r.last_error||''),createdAt:Number(r.created_at||0),updatedAt:Number(r.updated_at||0),description:safeRewardDescription({kind:r.reward_kind,id:r.reward_id,amount:r.amount})})),topWallet:(topWallet.results||[]).map(r=>({telegramId:String(r.telegram_id),name:String(r.name||r.telegram_id),username:String(r.username||''),points:Number(r.wallet||0),treats:Number(r.treats||0),coffee:Number(r.coffee||0)}))},moderation:{blocked:(blocked.results||[]).map(r=>({telegramId:String(r.telegram_id),name:String(r.name||r.telegram_id),username:String(r.username||''),reason:String(r.block_reason||''),blockType:String(r.block_type||'permanent'),blockedUntil:Number(r.blocked_until||0),updatedAt:Number(r.updated_at||0)}))},tickets:(tickets.results||[]).map(r=>({id:Number(r.id),createdBy:String(r.created_by||''),createdByName:String(r.created_by_name||''),playerTelegramId:String(r.player_telegram_id||''),playerName:String(r.player_name||''),category:String(r.category||''),categoryLabel:String(SUPPORT_TICKET_CATEGORIES[r.category]||r.category||''),description:String(r.description||''),subject:String(r.subject||''),source:String(r.source||'staff'),channel:String(r.channel||(String(r.source||'staff')==='staff'?'staff':'game')),priority:String(r.priority||'normal'),priorityLabel:String(SUPPORT_PRIORITY_LABELS[r.priority]||SUPPORT_PRIORITY_LABELS.normal),prioritySource:String(r.priority_source||'auto'),workflowState:String(r.workflow_state||supportWorkflowFromCanonical(r.status)),workflowLabel:supportWorkflowLabel(r.workflow_state||supportWorkflowFromCanonical(r.status)),knownIssueId:Number(r.known_issue_id||0),knownIssueTitle:String(r.known_issue_title||''),tags:String(r.tags_text||'').split('|').map(x=>String(x||'').trim()).filter(Boolean),feedbackRating:String(r.feedback_rating||''),hasAttachment:Boolean(r.has_attachment),unreadForStaff:Number(r.last_player_message_at||0)>Number(r.staff_last_read_at||0),status:String(r.status||'new'),statusLabel:ticketStatusLabel(r.status),assignedTo:String(r.assigned_to||''),assignedToName:String(r.assigned_to_name||''),resolution:String(r.resolution||''),createdAt:Number(r.created_at||0),updatedAt:Number(r.updated_at||0),closedAt:Number(r.closed_at||0)})),supportTemplates:(supportTemplates.results||[]).map(r=>({id:Number(r.id||0),key:String(r.template_key||''),title:String(r.title||''),body:String(r.body||''),sortOrder:Number(r.sort_order||0)})),knownIssues:(knownIssues.results||[]).map(r=>({id:Number(r.id||0),title:String(r.title||''),description:String(r.description||''),category:String(r.category||'other'),categoryLabel:String(SUPPORT_TICKET_CATEGORIES[r.category]||r.category||'Другое'),severity:String(r.severity||'normal'),status:String(r.status||'investigating'),statusLabel:String(SUPPORT_KNOWN_ISSUE_STATUS_LABELS[r.status]||r.status||''),public:Boolean(r.public),affectedCount:Number(r.affected_count||0),linkedTickets:Number(r.linked_tickets||0),createdAt:Number(r.created_at||0),updatedAt:Number(r.updated_at||0),resolvedAt:Number(r.resolved_at||0)})),supportTagLabels:SUPPORT_TAG_LABELS,supportPriorityLabels:SUPPORT_PRIORITY_LABELS,supportWorkflowLabels:SUPPORT_WORKFLOW_LABELS};
 }
 
 async function ownerPanelUpdateRewardQueue(env, ctx) {
@@ -45306,18 +45473,41 @@ async function ownerPanelModerationUnblock(env, ctx) {
   return {ok:true,telegramId:targetId,name:await playerDisplayNameById(targetId,env)};
 }
 
+async function ownerSupportPlayer360Summary(env, telegramId) {
+  const id = String(telegramId || "");
+  if (!id) return null;
+  const [identityResult, profileResult, runResult, passResult, rewardsResult] = await Promise.allSettled([
+    env.DB.prepare(`SELECT telegram_id,username,display_name,active,updated_at FROM bot_subscribers WHERE telegram_id=? LIMIT 1`).bind(id).first(),
+    env.DB.prepare(`SELECT wallet,best_score,treats,coffee,profile_xp,revision,updated_at FROM admin_profile_state WHERE telegram_id=? LIMIT 1`).bind(id).first(),
+    env.DB.prepare(`SELECT run_id,score,duration_ms,accepted,rejection_reason,created_at FROM leaderboard_runs WHERE telegram_id=? ORDER BY created_at DESC LIMIT 1`).bind(id).first(),
+    env.DB.prepare(`SELECT season_id,xp,premium_tier,revision,updated_at FROM season_pass_players WHERE telegram_id=? ORDER BY updated_at DESC LIMIT 1`).bind(id).first(),
+    env.DB.prepare(`SELECT id,source_type,source_id,reward_kind,reward_id,amount,reason,status,created_at,updated_at FROM reward_delivery_queue WHERE telegram_id=? ORDER BY created_at DESC,id DESC LIMIT 6`).bind(id).all()
+  ]);
+  const value = (result) => result.status === "fulfilled" ? result.value : null;
+  const rewardRows = rewardsResult.status === "fulfilled" ? (rewardsResult.value?.results || []) : [];
+  return {
+    telegramId:id,
+    identity:value(identityResult),
+    profile:value(profileResult),
+    lastRun:value(runResult),
+    seasonPass:value(passResult),
+    rewards:rewardRows.map((row)=>({id:Number(row.id||0),sourceType:String(row.source_type||""),sourceId:String(row.source_id||""),kind:String(row.reward_kind||""),rewardId:String(row.reward_id||""),amount:Number(row.amount||0),reason:String(row.reason||""),status:String(row.status||""),createdAt:Number(row.created_at||0),updatedAt:Number(row.updated_at||0)}))
+  };
+}
+
 async function ownerPanelTicketDetail(env,ctx){
   await ensurePlayerSupportSchema(env);const ticketId=ownerPanelInteger(ctx.body?.ticketId,1,999999999);if(ticketId==null)throw new ApiError(400,'Некорректный номер обращения.');
-  const row=await env.DB.prepare(`SELECT t.*,COALESCE(m.source,'staff') AS source,COALESCE(m.subject,'') AS subject,COALESCE(m.client_json,'{}') AS client_json,COALESCE(m.last_player_message_at,0) AS last_player_message_at,COALESCE(m.last_staff_message_at,0) AS last_staff_message_at,COALESCE(c.channel,CASE WHEN COALESCE(m.source,'staff')='staff' THEN 'staff' ELSE 'game' END) AS channel,COALESCE(o.priority,'normal') AS priority,COALESCE(o.priority_source,'auto') AS priority_source FROM support_tickets t LEFT JOIN support_ticket_meta m ON m.ticket_id=t.id LEFT JOIN support_ticket_channels c ON c.ticket_id=t.id LEFT JOIN support_ticket_operations o ON o.ticket_id=t.id WHERE t.id=? LIMIT 1`).bind(ticketId).first();if(!row)throw new ApiError(404,'Обращение не найдено.');
-  const [messages,attachments,notes,tags,feedback]=await Promise.all([
+  const row=await env.DB.prepare(`SELECT t.*,COALESCE(m.source,'staff') AS source,COALESCE(m.subject,'') AS subject,COALESCE(m.client_json,'{}') AS client_json,COALESCE(m.last_player_message_at,0) AS last_player_message_at,COALESCE(m.last_staff_message_at,0) AS last_staff_message_at,COALESCE(c.channel,CASE WHEN COALESCE(m.source,'staff')='staff' THEN 'staff' ELSE 'game' END) AS channel,COALESCE(o.priority,'normal') AS priority,COALESCE(o.priority_source,'auto') AS priority_source,COALESCE(w.workflow_state,CASE t.status WHEN 'working' THEN 'working' WHEN 'resolved' THEN 'resolved' WHEN 'rejected' THEN 'rejected' ELSE 'new' END) AS workflow_state,COALESCE(w.known_issue_id,0) AS known_issue_id,COALESCE(ki.title,'') AS known_issue_title FROM support_tickets t LEFT JOIN support_ticket_meta m ON m.ticket_id=t.id LEFT JOIN support_ticket_channels c ON c.ticket_id=t.id LEFT JOIN support_ticket_operations o ON o.ticket_id=t.id LEFT JOIN support_ticket_workflow w ON w.ticket_id=t.id LEFT JOIN support_known_issues ki ON ki.id=w.known_issue_id WHERE t.id=? LIMIT 1`).bind(ticketId).first();if(!row)throw new ApiError(404,'Обращение не найдено.');
+  const [messages,attachments,notes,tags,feedback,player360]=await Promise.all([
     env.DB.prepare(`SELECT id,author_kind,author_telegram_id,author_name,message_text,created_at,telegram_delivered_at,telegram_error FROM support_messages WHERE ticket_id=? ORDER BY created_at ASC,id ASC`).bind(ticketId).all(),
     env.DB.prepare(`SELECT id,message_id,uploader_kind,mime_type,file_name,size_bytes,status,error_text,created_at FROM support_attachments WHERE ticket_id=? ORDER BY created_at ASC,id ASC`).bind(ticketId).all(),
     env.DB.prepare(`SELECT id,note_text,created_by,created_by_name,created_at FROM support_internal_notes WHERE ticket_id=? ORDER BY created_at DESC,id DESC LIMIT 50`).bind(ticketId).all(),
     env.DB.prepare(`SELECT tag,created_at,created_by FROM support_ticket_tags WHERE ticket_id=? ORDER BY tag ASC`).bind(ticketId).all(),
-    env.DB.prepare(`SELECT id,close_token,rating,source,player_telegram_id,created_at FROM support_ticket_feedback WHERE ticket_id=? ORDER BY created_at DESC,id DESC LIMIT 20`).bind(ticketId).all()
+    env.DB.prepare(`SELECT id,close_token,rating,source,player_telegram_id,created_at FROM support_ticket_feedback WHERE ticket_id=? ORDER BY created_at DESC,id DESC LIMIT 20`).bind(ticketId).all(),
+    ownerSupportPlayer360Summary(env,String(row.player_telegram_id||''))
   ]);const now=Math.floor(Date.now()/1000);await env.DB.prepare(`UPDATE support_ticket_meta SET staff_last_read_at=?,updated_at=MAX(updated_at,?) WHERE ticket_id=?`).bind(now,now,ticketId).run().catch(()=>{});
   const feedbackRows=(feedback.results||[]).map(f=>({id:Number(f.id||0),closeToken:String(f.close_token||''),rating:String(f.rating||''),source:String(f.source||''),playerTelegramId:String(f.player_telegram_id||''),createdAt:Number(f.created_at||0)}));
-  return {ok:true,ticket:{id:ticketId,subject:String(row.subject||row.description||''),source:String(row.source||'staff'),channel:String(row.channel||(String(row.source||'staff')==='staff'?'staff':'game')),category:String(row.category||''),categoryLabel:String(SUPPORT_TICKET_CATEGORIES[row.category]||row.category||''),status:String(row.status||'new'),statusLabel:ticketStatusLabel(row.status),priority:String(row.priority||'normal'),priorityLabel:String(SUPPORT_PRIORITY_LABELS[row.priority]||SUPPORT_PRIORITY_LABELS.normal),prioritySource:String(row.priority_source||'auto'),tags:(tags.results||[]).map(x=>String(x.tag||'')).filter(Boolean),feedbackRating:String(feedbackRows[0]?.rating||''),playerTelegramId:String(row.player_telegram_id||''),playerName:String(row.player_name||''),assignedToName:String(row.assigned_to_name||''),resolution:String(row.resolution||''),createdAt:Number(row.created_at||0),updatedAt:Number(row.updated_at||0),closedAt:Number(row.closed_at||0),client:safeJson(row.client_json,{})},messages:(messages.results||[]).map(m=>({id:Number(m.id),authorKind:String(m.author_kind||''),authorTelegramId:String(m.author_telegram_id||''),authorName:String(m.author_name||''),text:String(m.message_text||''),createdAt:Number(m.created_at||0),telegramDeliveredAt:Number(m.telegram_delivered_at||0),telegramError:String(m.telegram_error||'')})),attachments:(attachments.results||[]).map(a=>({id:Number(a.id),messageId:Number(a.message_id||0),uploaderKind:String(a.uploader_kind||''),mimeType:String(a.mime_type||''),fileName:String(a.file_name||''),sizeBytes:Number(a.size_bytes||0),status:String(a.status||''),error:String(a.error_text||''),createdAt:Number(a.created_at||0)})),internalNotes:(notes.results||[]).map(n=>({id:Number(n.id||0),text:String(n.note_text||''),createdBy:String(n.created_by||''),createdByName:String(n.created_by_name||n.created_by||''),createdAt:Number(n.created_at||0)})),feedback:feedbackRows};
+  return {ok:true,ticket:{id:ticketId,subject:String(row.subject||row.description||''),source:String(row.source||'staff'),channel:String(row.channel||(String(row.source||'staff')==='staff'?'staff':'game')),category:String(row.category||''),categoryLabel:String(SUPPORT_TICKET_CATEGORIES[row.category]||row.category||''),status:String(row.status||'new'),statusLabel:ticketStatusLabel(row.status),workflowState:String(row.workflow_state||supportWorkflowFromCanonical(row.status)),workflowLabel:supportWorkflowLabel(row.workflow_state||supportWorkflowFromCanonical(row.status)),knownIssueId:Number(row.known_issue_id||0),knownIssueTitle:String(row.known_issue_title||''),priority:String(row.priority||'normal'),priorityLabel:String(SUPPORT_PRIORITY_LABELS[row.priority]||SUPPORT_PRIORITY_LABELS.normal),prioritySource:String(row.priority_source||'auto'),tags:(tags.results||[]).map(x=>String(x.tag||'')).filter(Boolean),feedbackRating:String(feedbackRows[0]?.rating||''),playerTelegramId:String(row.player_telegram_id||''),playerName:String(row.player_name||''),assignedToName:String(row.assigned_to_name||''),resolution:String(row.resolution||''),createdAt:Number(row.created_at||0),updatedAt:Number(row.updated_at||0),closedAt:Number(row.closed_at||0),client:safeJson(row.client_json,{})},player360,messages:(messages.results||[]).map(m=>({id:Number(m.id),authorKind:String(m.author_kind||''),authorTelegramId:String(m.author_telegram_id||''),authorName:String(m.author_name||''),text:String(m.message_text||''),createdAt:Number(m.created_at||0),telegramDeliveredAt:Number(m.telegram_delivered_at||0),telegramError:String(m.telegram_error||'')})),attachments:(attachments.results||[]).map(a=>({id:Number(a.id),messageId:Number(a.message_id||0),uploaderKind:String(a.uploader_kind||''),mimeType:String(a.mime_type||''),fileName:String(a.file_name||''),sizeBytes:Number(a.size_bytes||0),status:String(a.status||''),error:String(a.error_text||''),createdAt:Number(a.created_at||0)})),internalNotes:(notes.results||[]).map(n=>({id:Number(n.id||0),text:String(n.note_text||''),createdBy:String(n.created_by||''),createdByName:String(n.created_by_name||n.created_by||''),createdAt:Number(n.created_at||0)})),feedback:feedbackRows};
 }
 
 async function deliverSupportReplyToPlayer(env,{ticketId,messageId,telegramId,text,status,statusLabel,closedAt=0}){
@@ -45325,7 +45515,7 @@ async function deliverSupportReplyToPlayer(env,{ticketId,messageId,telegramId,te
 }
 async function ownerPanelTicketReply(env,ctx){
   await ensurePlayerSupportSchema(env);const ticketId=ownerPanelInteger(ctx.body?.ticketId,1,999999999);if(ticketId==null)throw new ApiError(400,'Некорректный номер обращения.');const text=String(ctx.body?.message||'').trim().slice(0,3000);if(text.length<1)throw new ApiError(400,'Введите ответ игроку.');
-  const row=await env.DB.prepare(`SELECT t.*,COALESCE(m.source,'staff') AS source FROM support_tickets t LEFT JOIN support_ticket_meta m ON m.ticket_id=t.id WHERE t.id=? LIMIT 1`).bind(ticketId).first();if(!row)throw new ApiError(404,'Обращение не найдено.');if(String(row.source||'staff')!=='player')throw new ApiError(409,'Это служебное обращение. Для него доступно изменение статуса без сообщения игроку.');if(!String(row.player_telegram_id||''))throw new ApiError(409,'У обращения нет привязанного игрока.');
+  const row=await env.DB.prepare(`SELECT t.*,COALESCE(m.source,'staff') AS source,COALESCE(w.known_issue_id,0) AS known_issue_id FROM support_tickets t LEFT JOIN support_ticket_meta m ON m.ticket_id=t.id LEFT JOIN support_ticket_workflow w ON w.ticket_id=t.id WHERE t.id=? LIMIT 1`).bind(ticketId).first();if(!row)throw new ApiError(404,'Обращение не найдено.');if(String(row.source||'staff')!=='player')throw new ApiError(409,'Это служебное обращение. Для него доступно изменение статуса без сообщения игроку.');if(!String(row.player_telegram_id||''))throw new ApiError(409,'У обращения нет привязанного игрока.');
   const now=Math.floor(Date.now()/1000),actor=telegramDisplayName(ctx.user),requestId=supportRequestId(ctx.body?.requestId,'staffreply'),resolveAfter=ctx.body?.resolveAfter===true;
   const existing=await env.DB.prepare(`SELECT id FROM support_messages WHERE ticket_id=? AND request_id=? LIMIT 1`).bind(ticketId,requestId).first();
   let messageId=Number(existing?.id||0),repeated=Boolean(messageId);
@@ -45333,6 +45523,7 @@ async function ownerPanelTicketReply(env,ctx){
   const nextStatus=resolveAfter?'resolved':(String(row.status||'new')==='new'?'working':String(row.status||'working'));
   const closedAt=resolveAfter?now:Number(row.closed_at||0),resolution=resolveAfter?text:String(row.resolution||'');
   await env.DB.batch([env.DB.prepare(`UPDATE support_tickets SET status=?,assigned_to=?,assigned_to_name=?,resolution=?,updated_at=?,closed_at=? WHERE id=?`).bind(nextStatus,String(ctx.user.id),actor,resolution,now,closedAt,ticketId),env.DB.prepare(`UPDATE support_ticket_meta SET last_staff_message_at=MAX(last_staff_message_at,?),staff_last_read_at=?,updated_at=? WHERE ticket_id=?`).bind(now,now,now,ticketId)]);
+  await setSupportTicketWorkflow(env,ticketId,resolveAfter?'resolved':'working',{now,knownIssueId:Number(row.known_issue_id||0),actor:String(ctx.user.id)});
   if(!repeated){await logStaffAction(env,ctx.user,ctx.access,'owner_panel_ticket_reply',String(row.player_telegram_id||''),'ticket',null,ticketId,{ticketId,source:'owner_panel',resolveAfter,status:nextStatus});const task=deliverSupportReplyToPlayer(env,{ticketId,messageId,telegramId:String(row.player_telegram_id),text,status:nextStatus,statusLabel:ticketStatusLabel(nextStatus),closedAt});if(ctx.executionCtx?.waitUntil)ctx.executionCtx.waitUntil(task);else void task;}
   return {ok:true,ticketId,messageId,status:nextStatus,repeated};
 }
@@ -45346,10 +45537,11 @@ async function ownerPanelTicketUpdate(env, ctx) {
   await ensurePlayerSupportSchema(env);
   const ticketId=ownerPanelInteger(ctx.body?.ticketId,1,999999999);if(ticketId==null)throw new ApiError(400,'Некорректный номер обращения.');
   const status=String(ctx.body?.status||'');if(!['new','working','resolved','rejected'].includes(status))throw new ApiError(400,'Некорректный статус обращения.');
-  const row=await env.DB.prepare(`SELECT t.*,COALESCE(m.source,'staff') AS source FROM support_tickets t LEFT JOIN support_ticket_meta m ON m.ticket_id=t.id WHERE t.id=? LIMIT 1`).bind(ticketId).first();if(!row)throw new ApiError(404,'Обращение не найдено.');
+  const row=await env.DB.prepare(`SELECT t.*,COALESCE(m.source,'staff') AS source,COALESCE(w.known_issue_id,0) AS known_issue_id FROM support_tickets t LEFT JOIN support_ticket_meta m ON m.ticket_id=t.id LEFT JOIN support_ticket_workflow w ON w.ticket_id=t.id WHERE t.id=? LIMIT 1`).bind(ticketId).first();if(!row)throw new ApiError(404,'Обращение не найдено.');
   const resolution=String(ctx.body?.resolution||'').trim().slice(0,1500),now=Math.floor(Date.now()/1000),actor=telegramDisplayName(ctx.user);
   const assignee=status==='new'?'':String(ctx.user.id),assigneeName=status==='new'?'':actor,closed=['resolved','rejected'].includes(status)?now:0;
   await env.DB.prepare(`UPDATE support_tickets SET status=?,assigned_to=?,assigned_to_name=?,resolution=?,updated_at=?,closed_at=? WHERE id=?`).bind(status,assignee,assigneeName,resolution,now,closed,ticketId).run();
+  await setSupportTicketWorkflow(env,ticketId,supportWorkflowFromCanonical(status),{now,knownIssueId:Number(row.known_issue_id||0),actor:String(ctx.user.id)});
   const isPlayerTicket=String(row.source||'staff')==='player';
   let resolutionMessageId=0;if(isPlayerTicket&&resolution&&String(row.player_telegram_id||'')){const req=`status_${ticketId}_${status}_${now}`;const ins=await env.DB.prepare(`INSERT OR IGNORE INTO support_messages(ticket_id,author_kind,author_telegram_id,author_name,message_text,request_id,client_json,created_at,telegram_delivered_at,telegram_error) VALUES(?,'staff',?,?,?,?,?, ?,0,'')`).bind(ticketId,String(ctx.user.id),actor,resolution,req,'{}',now).run();resolutionMessageId=Number(ins.meta?.last_row_id||0);await env.DB.prepare(`UPDATE support_ticket_meta SET last_staff_message_at=?,staff_last_read_at=?,updated_at=? WHERE ticket_id=?`).bind(now,now,now,ticketId).run().catch(()=>{});}
   await logStaffAction(env,ctx.user,ctx.access,'ticket_status',String(row.player_telegram_id||''),'ticket',null,ticketId,{ticketId,oldStatus:String(row.status),newStatus:status,resolution,source:'owner_panel'});
@@ -45362,15 +45554,33 @@ async function ownerPanelTicketOperationsUpdate(env,ctx){
   await ensurePlayerSupportSchema(env);
   const ticketId=ownerPanelInteger(ctx.body?.ticketId,1,999999999);if(ticketId==null)throw new ApiError(400,'Некорректный номер обращения.');
   const priority=String(ctx.body?.priority||'normal');if(!Object.prototype.hasOwnProperty.call(SUPPORT_PRIORITY_LABELS,priority))throw new ApiError(400,'Некорректный приоритет.');
-  const tags=supportNormalizeTags(ctx.body?.tags);const row=await env.DB.prepare(`SELECT id,player_telegram_id FROM support_tickets WHERE id=? LIMIT 1`).bind(ticketId).first();if(!row)throw new ApiError(404,'Обращение не найдено.');
-  const now=Math.floor(Date.now()/1000),actor=telegramDisplayName(ctx.user),actorId=String(ctx.user.id);const statements=[
+  const tags=supportNormalizeTags(ctx.body?.tags);
+  const row=await env.DB.prepare(`SELECT t.id,t.player_telegram_id,t.status,t.assigned_to,t.assigned_to_name,COALESCE(w.workflow_state,CASE t.status WHEN 'working' THEN 'working' WHEN 'resolved' THEN 'resolved' WHEN 'rejected' THEN 'rejected' ELSE 'new' END) AS workflow_state,COALESCE(w.known_issue_id,0) AS known_issue_id FROM support_tickets t LEFT JOIN support_ticket_workflow w ON w.ticket_id=t.id WHERE t.id=? LIMIT 1`).bind(ticketId).first();
+  if(!row)throw new ApiError(404,'Обращение не найдено.');
+  const requestedWorkflow=String(ctx.body?.workflowState||'').trim();
+  const workflowState=requestedWorkflow?(SUPPORT_WORKFLOW_STATES.has(requestedWorkflow)?requestedWorkflow:(()=>{throw new ApiError(400,'Некорректный этап обращения.');})()):String(row.workflow_state||supportWorkflowFromCanonical(row.status));
+  const issueProvided=Object.prototype.hasOwnProperty.call(ctx.body||{},'knownIssueId');
+  let knownIssueId=issueProvided?Math.max(0,Math.floor(Number(ctx.body?.knownIssueId||0))):Math.max(0,Number(row.known_issue_id||0));
+  if(['known_issue','waiting_fix'].includes(workflowState)&&!knownIssueId)throw new ApiError(400,'Для этого этапа выберите известную проблему.');
+  if(knownIssueId){const issue=await env.DB.prepare(`SELECT id,status FROM support_known_issues WHERE id=? LIMIT 1`).bind(knownIssueId).first();if(!issue)throw new ApiError(404,'Известная проблема не найдена.');}
+  const now=Math.floor(Date.now()/1000),actor=telegramDisplayName(ctx.user),actorId=String(ctx.user.id);
+  const statements=[
     env.DB.prepare(`INSERT INTO support_ticket_operations(ticket_id,priority,priority_source,created_at,updated_at,updated_by) VALUES(?,?,'manual',?,?,?) ON CONFLICT(ticket_id) DO UPDATE SET priority=excluded.priority,priority_source='manual',updated_at=excluded.updated_at,updated_by=excluded.updated_by`).bind(ticketId,priority,now,now,actorId),
-    env.DB.prepare(`DELETE FROM support_ticket_tags WHERE ticket_id=?`).bind(ticketId)
+    env.DB.prepare(`DELETE FROM support_ticket_tags WHERE ticket_id=?`).bind(ticketId),
+    env.DB.prepare(`INSERT INTO support_ticket_workflow(ticket_id,workflow_state,known_issue_id,last_transition_at,updated_at,updated_by) VALUES(?,?,?,?,?,?) ON CONFLICT(ticket_id) DO UPDATE SET workflow_state=excluded.workflow_state,known_issue_id=excluded.known_issue_id,last_transition_at=CASE WHEN support_ticket_workflow.workflow_state<>excluded.workflow_state OR support_ticket_workflow.known_issue_id<>excluded.known_issue_id THEN excluded.last_transition_at ELSE support_ticket_workflow.last_transition_at END,updated_at=excluded.updated_at,updated_by=excluded.updated_by`).bind(ticketId,workflowState,knownIssueId,now,now,actorId)
   ];
   for(const tag of tags)statements.push(env.DB.prepare(`INSERT INTO support_ticket_tags(ticket_id,tag,created_at,created_by) VALUES(?,?,?,?)`).bind(ticketId,tag,now,actorId));
+  if(knownIssueId&&String(row.player_telegram_id||''))statements.push(env.DB.prepare(`INSERT INTO support_known_issue_impacts(issue_id,player_telegram_id,ticket_id,created_at) VALUES(?,?,?,?) ON CONFLICT(issue_id,player_telegram_id) DO UPDATE SET ticket_id=CASE WHEN excluded.ticket_id>0 THEN excluded.ticket_id ELSE support_known_issue_impacts.ticket_id END`).bind(knownIssueId,String(row.player_telegram_id),ticketId,now));
+  if(requestedWorkflow){
+    const canonicalStatus=workflowState==='resolved'?'resolved':workflowState==='rejected'?'rejected':workflowState==='new'?'new':'working';
+    const closedAt=['resolved','rejected'].includes(canonicalStatus)?now:0;
+    const assignedTo=canonicalStatus==='new'?'':(String(row.assigned_to||'')||actorId);
+    const assignedName=canonicalStatus==='new'?'':(String(row.assigned_to_name||'')||actor);
+    statements.push(env.DB.prepare(`UPDATE support_tickets SET status=?,assigned_to=?,assigned_to_name=?,updated_at=?,closed_at=? WHERE id=?`).bind(canonicalStatus,assignedTo,assignedName,now,closedAt,ticketId));
+  }
   await env.DB.batch(statements);
-  await logStaffAction(env,ctx.user,ctx.access,'owner_panel_ticket_operations',String(row.player_telegram_id||''),'ticket',null,ticketId,{ticketId,priority,tags,actor});
-  return {ok:true,ticketId,priority,priorityLabel:SUPPORT_PRIORITY_LABELS[priority],tags};
+  await logStaffAction(env,ctx.user,ctx.access,'owner_panel_ticket_operations',String(row.player_telegram_id||''),'ticket',null,ticketId,{ticketId,priority,tags,workflowState,knownIssueId,actor});
+  return {ok:true,ticketId,priority,priorityLabel:SUPPORT_PRIORITY_LABELS[priority],tags,workflowState,workflowLabel:supportWorkflowLabel(workflowState),knownIssueId};
 }
 
 async function ownerPanelTicketNoteAdd(env,ctx){
@@ -45381,6 +45591,35 @@ async function ownerPanelTicketNoteAdd(env,ctx){
   const now=Math.floor(Date.now()/1000),actor=telegramDisplayName(ctx.user);const ins=await env.DB.prepare(`INSERT INTO support_internal_notes(ticket_id,note_text,created_by,created_by_name,created_at) VALUES(?,?,?,?,?)`).bind(ticketId,text,String(ctx.user.id),actor,now).run();
   await logStaffAction(env,ctx.user,ctx.access,'owner_panel_ticket_note',String(row.player_telegram_id||''),'ticket',null,ticketId,{ticketId,note:text.slice(0,300)});
   return {ok:true,ticketId,note:{id:Number(ins.meta?.last_row_id||0),text,createdBy:String(ctx.user.id),createdByName:actor,createdAt:now}};
+}
+
+async function ownerPanelSupportKnownIssueSave(env,ctx){
+  await ensurePlayerSupportSchema(env);
+  const id=ownerPanelInteger(ctx.body?.id??0,0,999999999);if(id==null)throw new ApiError(400,'Некорректная известная проблема.');
+  const title=String(ctx.body?.title||'').trim().replace(/\s+/g,' ').slice(0,120);
+  const description=String(ctx.body?.description||'').trim().slice(0,1200);
+  const category=String(ctx.body?.category||'other').trim();
+  const severity=String(ctx.body?.severity||'normal').trim();
+  const status=String(ctx.body?.status||'investigating').trim();
+  const isPublic=ctx.body?.public!==false;
+  if(title.length<3)throw new ApiError(400,'Введите название проблемы.');
+  if(!Object.prototype.hasOwnProperty.call(SUPPORT_TICKET_CATEGORIES,category))throw new ApiError(400,'Некорректная категория.');
+  if(!Object.prototype.hasOwnProperty.call(SUPPORT_PRIORITY_LABELS,severity))throw new ApiError(400,'Некорректная важность.');
+  if(!Object.prototype.hasOwnProperty.call(SUPPORT_KNOWN_ISSUE_STATUS_LABELS,status))throw new ApiError(400,'Некорректный статус проблемы.');
+  const now=Math.floor(Date.now()/1000),actorId=String(ctx.user.id),actor=telegramDisplayName(ctx.user);
+  let issueId=Number(id||0),previous=null;
+  if(issueId){
+    previous=await env.DB.prepare(`SELECT * FROM support_known_issues WHERE id=? LIMIT 1`).bind(issueId).first();if(!previous)throw new ApiError(404,'Известная проблема не найдена.');
+    await env.DB.prepare(`UPDATE support_known_issues SET title=?,description=?,category=?,severity=?,status=?,public=?,updated_at=?,resolved_at=?,updated_by=? WHERE id=?`).bind(title,description,category,severity,status,isPublic?1:0,now,status==='resolved'?now:0,actorId,issueId).run();
+  }else{
+    const ins=await env.DB.prepare(`INSERT INTO support_known_issues(title,description,category,severity,status,public,created_at,updated_at,resolved_at,created_by,updated_by) VALUES(?,?,?,?,?,?,?,?,?,?,?)`).bind(title,description,category,severity,status,isPublic?1:0,now,now,status==='resolved'?now:0,actorId,actorId).run();
+    issueId=Number(ins.meta?.last_row_id||0);
+  }
+  if(status==='resolved'&&String(previous?.status||'')!=='resolved'){
+    await env.DB.prepare(`UPDATE support_ticket_workflow SET workflow_state='working',last_transition_at=?,updated_at=?,updated_by=? WHERE known_issue_id=? AND workflow_state IN ('known_issue','waiting_fix')`).bind(now,now,actorId,issueId).run();
+  }
+  await logStaffAction(env,ctx.user,ctx.access,'owner_panel_support_known_issue_save',null,'support_issue',previous?.id||null,issueId,{issueId,title,category,severity,status,public:isPublic,actor});
+  return {ok:true,issue:{id:issueId,title,description,category,categoryLabel:SUPPORT_TICKET_CATEGORIES[category]||category,severity,status,statusLabel:SUPPORT_KNOWN_ISSUE_STATUS_LABELS[status]||status,public:isPublic,updatedAt:now}};
 }
 
 async function ownerPanelSupportTemplateSave(env,ctx){

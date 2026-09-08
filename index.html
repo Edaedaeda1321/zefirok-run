@@ -6857,6 +6857,42 @@ html&gt;body{padding:
   #zefirok-maltipoo-runner .support-ticket-detail-head span { color:#927782; font-size:10px; }
   #zefirok-maltipoo-runner .support-attachment-note { margin-top:8px; padding:9px 10px; border-radius:13px; background:#fff8e9; color:#8a6a37; font-size:10px; font-weight:800; }
   #zefirok-maltipoo-runner .support-row-actions { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:11px; }
+  #zefirok-maltipoo-runner .support-hero {
+    position:relative; overflow:hidden; display:grid; gap:8px; padding:16px;
+    border:1px solid rgba(233,190,207,.88); border-radius:21px;
+    background:radial-gradient(circle at 90% 0%,rgba(255,217,231,.95),transparent 42%),linear-gradient(145deg,#fffdfb,#fff0f6);
+    box-shadow:0 10px 28px rgba(118,66,86,.08);
+  }
+  #zefirok-maltipoo-runner .support-hero::after { content:"♡"; position:absolute; right:15px; top:7px; color:rgba(205,91,134,.16); font-size:56px; font-weight:900; transform:rotate(8deg); }
+  #zefirok-maltipoo-runner .support-hero-kicker { width:fit-content; padding:5px 8px; border-radius:999px; background:#fff; color:#b45b7c; font-size:9px; font-weight:950; letter-spacing:.04em; text-transform:uppercase; }
+  #zefirok-maltipoo-runner .support-hero strong { position:relative; z-index:1; color:#6c3b4e; font-size:17px; line-height:1.25; }
+  #zefirok-maltipoo-runner .support-hero p { position:relative; z-index:1; margin:0; color:#846a75; font-size:11px; line-height:1.48; }
+  #zefirok-maltipoo-runner .support-known-list { display:grid; gap:8px; }
+  #zefirok-maltipoo-runner .support-known-card { display:grid; gap:7px; padding:12px; border:1px solid rgba(231,194,207,.85); border-radius:17px; background:#fff; }
+  #zefirok-maltipoo-runner .support-known-card.is-critical { border-color:rgba(211,91,106,.38); background:linear-gradient(145deg,#fff8f8,#fff); }
+  #zefirok-maltipoo-runner .support-known-head { display:flex; justify-content:space-between; gap:9px; align-items:flex-start; }
+  #zefirok-maltipoo-runner .support-known-card strong { color:#704353; font-size:12px; line-height:1.35; }
+  #zefirok-maltipoo-runner .support-known-card p { margin:0; color:#8d737e; font-size:10px; line-height:1.45; }
+  #zefirok-maltipoo-runner .support-known-meta { color:#9b7d88; font-size:9px; font-weight:800; }
+  #zefirok-maltipoo-runner .support-known-action { min-height:38px; padding:7px 10px; border:1px solid rgba(223,163,185,.75); border-radius:12px; background:#fff8fb; color:#9e4d6e; font-size:10px; font-weight:950; }
+  #zefirok-maltipoo-runner .support-known-action:disabled { color:#6e8e78; border-color:#cfe3d7; background:#f2fbf5; opacity:1; }
+  #zefirok-maltipoo-runner .support-category-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  #zefirok-maltipoo-runner .support-category-card { min-height:91px; display:grid; align-content:start; gap:5px; padding:11px; border:1px solid rgba(228,190,205,.84); border-radius:16px; background:#fff; text-align:left; color:#7c5967; }
+  #zefirok-maltipoo-runner .support-category-card:active { transform:scale(.99); }
+  #zefirok-maltipoo-runner .support-category-card .support-category-icon { font-size:22px; line-height:1; }
+  #zefirok-maltipoo-runner .support-category-card strong { color:#713f52; font-size:11px; line-height:1.25; }
+  #zefirok-maltipoo-runner .support-category-card span:last-child { color:#9b818b; font-size:9px; line-height:1.35; }
+  #zefirok-maltipoo-runner .support-category-selected { display:flex; align-items:center; gap:10px; padding:11px; border:1px solid rgba(226,177,197,.8); border-radius:16px; background:#fff7fa; }
+  #zefirok-maltipoo-runner .support-category-selected b { display:block; color:#704253; font-size:12px; }
+  #zefirok-maltipoo-runner .support-category-selected span { color:#987a86; font-size:9px; line-height:1.35; }
+  #zefirok-maltipoo-runner .support-context-box { display:grid; gap:9px; padding:11px; border:1px solid rgba(231,201,210,.86); border-radius:16px; background:rgba(255,255,255,.68); }
+  #zefirok-maltipoo-runner .support-context-box > strong { color:#79505f; font-size:11px; }
+  #zefirok-maltipoo-runner .support-ticket-status.is-waiting_player { background:#eef3ff; color:#5871a7; }
+  #zefirok-maltipoo-runner .support-ticket-status.is-player_replied { background:#fff0d8; color:#9b651d; }
+  #zefirok-maltipoo-runner .support-ticket-status.is-known_issue,
+  #zefirok-maltipoo-runner .support-ticket-status.is-waiting_fix { background:#f1eaff; color:#7958a9; }
+  #zefirok-maltipoo-runner .support-ticket-status.is-resolved { background:#e9f7ef; color:#4c8a69; }
+  #zefirok-maltipoo-runner .support-ticket-status.is-rejected { background:#eee9e7; color:#786b66; }
   @media (max-width: 380px) {
     #zefirok-maltipoo-runner .support-dialog { border-radius:23px; }
     #zefirok-maltipoo-runner .support-content { padding:11px; }
@@ -12272,7 +12308,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       const supportTitleEl = root.querySelector(&quot;[data-support-title]&quot;);
       const supportSubtitleEl = root.querySelector(&quot;[data-support-subtitle]&quot;);
       const supportCloseButton = root.querySelector(&quot;[data-support-close]&quot;);
-      let playerSupportState = { tickets: [], openCount: 0, unreadCount: 0 };
+      let playerSupportState = { tickets: [], knownIssues: [], openCount: 0, unreadCount: 0 };
       let playerSupportStateLoading = false;
       let playerSupportStateLoadedAt = 0;
       let playerSupportSelectedTicketId = 0;
@@ -14210,6 +14246,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       const PLAYER_SUPPORT_CREATE_PATH = &quot;/api/support/create&quot;;
       const PLAYER_SUPPORT_REPLY_PATH = &quot;/api/support/reply&quot;;
       const PLAYER_SUPPORT_READ_PATH = &quot;/api/support/read&quot;;
+      const PLAYER_SUPPORT_KNOWN_ISSUE_PATH = &quot;/api/support/known-issue/impact&quot;;
       const GAME_NEWS_READ_API_PATH = &quot;/api/news/read&quot;;
       const SEASON_PASS_TASK_NOTICE_PENDING_PATH = &quot;/api/battle-pass/task-notices/pending&quot;;
       const SEASON_PASS_TASK_NOTICE_READ_PATH = &quot;/api/battle-pass/task-notices/read&quot;;
@@ -19923,9 +19960,65 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         };
       }
 
-      function supportStatusClass(status) {
-        const value = String(status || &quot;new&quot;);
-        return [&quot;working&quot;,&quot;resolved&quot;,&quot;rejected&quot;].includes(value) ? ` is-${value}` : &quot;&quot;;
+      const PLAYER_SUPPORT_SCENARIOS = Object.freeze({
+        reward_missing:{icon:&quot;🎁&quot;,title:&quot;Не получил награду&quot;,copy:&quot;Вход, пропуск, кейс, рейтинг или промокод&quot;,area:&quot;&quot;,fields:[
+          {key:&quot;rewardSource&quot;,label:&quot;Откуда должна была прийти награда?&quot;,type:&quot;select&quot;,options:[[&quot;daily&quot;,&quot;Ежедневная активность&quot;],[&quot;pass&quot;,&quot;Сезонный пропуск&quot;],[&quot;case&quot;,&quot;Кейс&quot;],[&quot;rating&quot;,&quot;Рейтинг&quot;],[&quot;promo&quot;,&quot;Промокод / код&quot;],[&quot;other&quot;,&quot;Другое&quot;]]},
+          {key:&quot;when&quot;,label:&quot;Когда это произошло?&quot;,placeholder:&quot;Например: сегодня около 14:30&quot;}
+        ]},
+        purchase:{icon:&quot;💳&quot;,title:&quot;Проблема с покупкой&quot;,copy:&quot;Списание, предмет или покупка не появилась&quot;,area:&quot;shop&quot;,fields:[
+          {key:&quot;item&quot;,label:&quot;Что покупали?&quot;,placeholder:&quot;Название предмета или набора&quot;},
+          {key:&quot;charged&quot;,label:&quot;Ресурсы списались?&quot;,type:&quot;select&quot;,options:[[&quot;yes&quot;,&quot;Да&quot;],[&quot;no&quot;,&quot;Нет&quot;],[&quot;unknown&quot;,&quot;Не уверен&quot;]]}
+        ]},
+        item_missing:{icon:&quot;📦&quot;,title:&quot;Пропал предмет / кейс&quot;,copy:&quot;Предмет был в аккаунте, но сейчас его нет&quot;,area:&quot;cases&quot;,fields:[
+          {key:&quot;item&quot;,label:&quot;Что пропало?&quot;,placeholder:&quot;Кейс, скин, рамка, аватар и т. п.&quot;},
+          {key:&quot;lastSeen&quot;,label:&quot;Когда видели последний раз?&quot;,placeholder:&quot;Примерное время или дата&quot;}
+        ]},
+        rating_problem:{icon:&quot;🏆&quot;,title:&quot;Забег или рейтинг&quot;,copy:&quot;Результат не засчитался или отображается неверно&quot;,area:&quot;rating&quot;,fields:[
+          {key:&quot;problemType&quot;,label:&quot;Что произошло?&quot;,type:&quot;select&quot;,options:[[&quot;run_missing&quot;,&quot;Забег не появился&quot;],[&quot;score_wrong&quot;,&quot;Неверный результат&quot;],[&quot;rank_wrong&quot;,&quot;Неверное место&quot;],[&quot;reward&quot;,&quot;Проблема с наградой рейтинга&quot;],[&quot;other&quot;,&quot;Другое&quot;]]},
+          {key:&quot;runScore&quot;,label:&quot;Примерный результат&quot;,placeholder:&quot;Если помните — очки / рекорд&quot;}
+        ]},
+        pass_problem:{icon:&quot;🎟&quot;,title:&quot;Сезонный пропуск&quot;,copy:&quot;Уровни, XP, задания, Elite или награды&quot;,area:&quot;pass&quot;,fields:[
+          {key:&quot;passIssue&quot;,label:&quot;С чем проблема?&quot;,type:&quot;select&quot;,options:[[&quot;xp&quot;,&quot;XP / уровень&quot;],[&quot;task&quot;,&quot;Задание&quot;],[&quot;reward&quot;,&quot;Награда&quot;],[&quot;elite&quot;,&quot;Elite / Elite+&quot;],[&quot;other&quot;,&quot;Другое&quot;]]},
+          {key:&quot;passLevel&quot;,label:&quot;Уровень пропуска&quot;,placeholder:&quot;Если знаете&quot;}
+        ]},
+        account:{icon:&quot;👤&quot;,title:&quot;Аккаунт и прогресс&quot;,copy:&quot;Вход, баланс, сохранение или прогресс&quot;,area:&quot;&quot;,fields:[
+          {key:&quot;accountIssue&quot;,label:&quot;Что изменилось?&quot;,placeholder:&quot;Например: пропал прогресс или неверный баланс&quot;}
+        ]},
+        bug:{icon:&quot;🐞&quot;,title:&quot;Ошибка в игре&quot;,copy:&quot;Вылет, зависание, интерфейс, звук или другая ошибка&quot;,area:&quot;&quot;,fields:[
+          {key:&quot;area&quot;,label:&quot;Где произошла ошибка?&quot;,type:&quot;select&quot;,options:[[&quot;run&quot;,&quot;Забег&quot;],[&quot;shop&quot;,&quot;Магазин&quot;],[&quot;pass&quot;,&quot;Сезонный пропуск&quot;],[&quot;cases&quot;,&quot;Кейсы&quot;],[&quot;rating&quot;,&quot;Рейтинг&quot;],[&quot;bot&quot;,&quot;Бот&quot;],[&quot;ui&quot;,&quot;Интерфейс&quot;],[&quot;other&quot;,&quot;Другое&quot;]]},
+          {key:&quot;steps&quot;,label:&quot;Как повторить?&quot;,placeholder:&quot;Что вы делали перед ошибкой?&quot;}
+        ]},
+        suggestion:{icon:&quot;💡&quot;,title:&quot;Идея или предложение&quot;,copy:&quot;Расскажите, что можно сделать удобнее или интереснее&quot;,area:&quot;&quot;,fields:[
+          {key:&quot;ideaArea&quot;,label:&quot;К чему относится идея?&quot;,placeholder:&quot;Забег, магазин, сезон, друзья и т. п.&quot;}
+        ]},
+        other:{icon:&quot;💬&quot;,title:&quot;Другое&quot;,copy:&quot;Если подходящей категории нет&quot;,area:&quot;&quot;,fields:[]}
+      });
+
+      function supportScenarioFieldHtml(field) {
+        const key = escapePurchaseText(field.key || &quot;detail&quot;);
+        const label = escapePurchaseText(field.label || &quot;Уточнение&quot;);
+        if (field.type === &quot;select&quot;) {
+          const options = (field.options || []).map(([value,text]) =&gt; `&lt;option value=&quot;${escapePurchaseText(value)}&quot;&gt;${escapePurchaseText(text)}&lt;/option&gt;`).join(&quot;&quot;);
+          return `&lt;div class=&quot;support-field&quot;&gt;&lt;label&gt;${label}&lt;/label&gt;&lt;select data-support-context=&quot;${key}&quot;&gt;${options}&lt;/select&gt;&lt;/div&gt;`;
+        }
+        return `&lt;div class=&quot;support-field&quot;&gt;&lt;label&gt;${label}&lt;/label&gt;&lt;input data-support-context=&quot;${key}&quot; maxlength=&quot;220&quot; autocomplete=&quot;off&quot; placeholder=&quot;${escapePurchaseText(field.placeholder || &quot;&quot;)}&quot;&gt;&lt;/div&gt;`;
+      }
+
+      function supportContextFromForm(form) {
+        const out = {};
+        form?.querySelectorAll?.(&quot;[data-support-context]&quot;).forEach((field) =&gt; {
+          const key = String(field.dataset.supportContext || &quot;&quot;).trim();
+          const value = String(field.value || &quot;&quot;).trim();
+          if (key &amp;&amp; value) out[key] = value;
+        });
+        const scenario = PLAYER_SUPPORT_SCENARIOS[String(form?.elements?.category?.value || &quot;other&quot;)] || PLAYER_SUPPORT_SCENARIOS.other;
+        if (scenario.area &amp;&amp; !out.area) out.area = scenario.area;
+        return out;
+      }
+
+      function supportStatusClass(status, workflowState = &quot;&quot;) {
+        const value = String(workflowState || status || &quot;new&quot;);
+        return [&quot;working&quot;,&quot;waiting_player&quot;,&quot;player_replied&quot;,&quot;known_issue&quot;,&quot;waiting_fix&quot;,&quot;resolved&quot;,&quot;rejected&quot;].includes(value) ? ` is-${value}` : &quot;&quot;;
       }
 
       function supportDate(value, withTime = false) {
@@ -19947,13 +20040,20 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           categoryLabel: String(ticket?.categoryLabel || &quot;Другое&quot;),
           status: String(ticket?.status || &quot;new&quot;),
           statusLabel: String(ticket?.statusLabel || &quot;новое&quot;),
+          workflowState: String(ticket?.workflowState || ticket?.status || &quot;new&quot;),
+          workflowLabel: String(ticket?.workflowLabel || ticket?.statusLabel || &quot;получено&quot;),
+          knownIssueId: Math.max(0,Math.floor(Number(ticket?.knownIssueId || 0))),
           unread: Boolean(ticket?.unread),
           messages: Array.isArray(ticket?.messages) ? ticket.messages : [],
           attachments: Array.isArray(ticket?.attachments) ? ticket.attachments : []
         })).filter((ticket) =&gt; ticket.id &gt; 0) : [];
+        const knownIssues = Array.isArray(data?.knownIssues) ? data.knownIssues.map((item) =&gt; ({
+          ...item,id:Math.max(0,Math.floor(Number(item?.id||0))),title:String(item?.title||&quot;Известная проблема&quot;),description:String(item?.description||&quot;&quot;),severity:String(item?.severity||&quot;normal&quot;),status:String(item?.status||&quot;investigating&quot;),statusLabel:String(item?.statusLabel||&quot;разбираемся&quot;),affected:Boolean(item?.affected),affectedCount:Math.max(0,Math.floor(Number(item?.affectedCount||0))),updatedAt:Number(item?.updatedAt||0)
+        })).filter((item)=&gt;item.id&gt;0) : [];
         return {
           tickets,
-          openCount: Math.max(0, Math.floor(Number(data?.openCount ?? tickets.filter((ticket) =&gt; [&quot;new&quot;,&quot;working&quot;].includes(ticket.status)).length))),
+          knownIssues,
+          openCount: Math.max(0, Math.floor(Number(data?.openCount ?? tickets.filter((ticket) =&gt; ![&quot;resolved&quot;,&quot;rejected&quot;].includes(ticket.status)).length))),
           unreadCount: Math.max(0, Math.floor(Number(data?.unreadCount ?? tickets.filter((ticket) =&gt; ticket.unread).length)))
         };
       }
@@ -20024,25 +20124,53 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         if (!supportContentEl) return;
         playerSupportSelectedTicketId = 0;
         playerSupportView = &quot;hub&quot;;
-        if (supportTitleEl) supportTitleEl.textContent = &quot;Поддержка&quot;;
-        if (supportSubtitleEl) supportSubtitleEl.textContent = &quot;Ваши обращения и ответы команды&quot;;
+        if (supportTitleEl) supportTitleEl.textContent = &quot;Центр помощи&quot;;
+        if (supportSubtitleEl) supportSubtitleEl.textContent = &quot;Проблемы, обращения и ответы команды&quot;;
         if (!telegramProfile?.initData) {
           supportContentEl.innerHTML = `&lt;div class=&quot;support-empty&quot;&gt;Откройте игру через Telegram-бота, чтобы отправлять обращения и получать ответы поддержки.&lt;/div&gt;`;
           return;
         }
         const tickets = Array.isArray(playerSupportState.tickets) ? playerSupportState.tickets : [];
-        const cards = tickets.map((ticket) =&gt; `&lt;button class=&quot;support-ticket-card${ticket.unread ? &quot; is-unread&quot; : &quot;&quot;}&quot; data-support-ticket=&quot;${ticket.id}&quot; type=&quot;button&quot;&gt;&lt;span class=&quot;support-ticket-card-head&quot;&gt;&lt;span&gt;&lt;strong&gt;${escapePurchaseText(ticket.subject)}&lt;/strong&gt;&lt;small&gt;${escapePurchaseText(ticket.categoryLabel)} · ${escapePurchaseText(supportDate(ticket.updatedAt || ticket.createdAt, true))}&lt;/small&gt;&lt;/span&gt;&lt;span class=&quot;support-ticket-status${supportStatusClass(ticket.status)}&quot;&gt;${escapePurchaseText(ticket.statusLabel)}&lt;/span&gt;&lt;/span&gt;${ticket.unread ? `&lt;span class=&quot;support-unread-pill&quot;&gt;● Новый ответ поддержки&lt;/span&gt;` : &quot;&quot;}&lt;/button&gt;`).join(&quot;&quot;);
-        supportContentEl.innerHTML = `&lt;div class=&quot;support-intro&quot;&gt;&lt;strong&gt;🛟 Мы на связи&lt;/strong&gt;&lt;span&gt;Опишите проблему или вопрос. Информация об аккаунте, версии игры и устройстве прикрепится автоматически. Ответ появится здесь и придёт от Telegram-бота.&lt;/span&gt;&lt;button class=&quot;support-primary&quot; data-support-new type=&quot;button&quot;&gt;Новое обращение&lt;/button&gt;&lt;/div&gt;&lt;div class=&quot;support-section-title&quot;&gt;Мои обращения${tickets.length ? ` · ${formatter.format(tickets.length)}` : &quot;&quot;}&lt;/div&gt;&lt;div class=&quot;support-ticket-list&quot;&gt;${cards || `&lt;div class=&quot;support-empty&quot;&gt;Обращений пока нет. Если что-то не работает или есть идея — напишите нам.&lt;/div&gt;`}&lt;/div&gt;`;
+        const knownIssues = Array.isArray(playerSupportState.knownIssues) ? playerSupportState.knownIssues : [];
+        const knownCards = knownIssues.map((issue) =&gt; `&lt;div class=&quot;support-known-card${issue.severity === &quot;critical&quot; ? &quot; is-critical&quot; : &quot;&quot;}&quot;&gt;&lt;div class=&quot;support-known-head&quot;&gt;&lt;strong&gt;${escapePurchaseText(issue.title)}&lt;/strong&gt;&lt;span class=&quot;support-ticket-status is-${issue.severity === &quot;critical&quot; ? &quot;rejected&quot; : &quot;known_issue&quot;}&quot;&gt;${escapePurchaseText(issue.statusLabel)}&lt;/span&gt;&lt;/div&gt;${issue.description ? `&lt;p&gt;${escapePurchaseText(issue.description)}&lt;/p&gt;` : &quot;&quot;}&lt;span class=&quot;support-known-meta&quot;&gt;${issue.affectedCount ? `Уже подтвердили: ${formatter.format(issue.affectedCount)} · ` : &quot;&quot;}обновлено ${escapePurchaseText(supportDate(issue.updatedAt,true))}&lt;/span&gt;&lt;button class=&quot;support-known-action&quot; data-support-known-impact=&quot;${issue.id}&quot; type=&quot;button&quot; ${issue.affected ? &quot;disabled&quot; : &quot;&quot;}&gt;${issue.affected ? &quot;✓ Мы уже учли вас&quot; : &quot;У меня такая же проблема&quot;}&lt;/button&gt;&lt;/div&gt;`).join(&quot;&quot;);
+        const cards = tickets.map((ticket) =&gt; `&lt;button class=&quot;support-ticket-card${ticket.unread ? &quot; is-unread&quot; : &quot;&quot;}&quot; data-support-ticket=&quot;${ticket.id}&quot; type=&quot;button&quot;&gt;&lt;span class=&quot;support-ticket-card-head&quot;&gt;&lt;span&gt;&lt;strong&gt;${escapePurchaseText(ticket.subject)}&lt;/strong&gt;&lt;small&gt;${escapePurchaseText(ticket.categoryLabel)} · ${escapePurchaseText(supportDate(ticket.updatedAt || ticket.createdAt, true))}&lt;/small&gt;&lt;/span&gt;&lt;span class=&quot;support-ticket-status${supportStatusClass(ticket.status,ticket.workflowState)}&quot;&gt;${escapePurchaseText(ticket.workflowLabel || ticket.statusLabel)}&lt;/span&gt;&lt;/span&gt;${ticket.unread ? `&lt;span class=&quot;support-unread-pill&quot;&gt;● Новый ответ поддержки&lt;/span&gt;` : &quot;&quot;}&lt;/button&gt;`).join(&quot;&quot;);
+        supportContentEl.innerHTML = `&lt;div class=&quot;support-hero&quot;&gt;&lt;span class=&quot;support-hero-kicker&quot;&gt;Support Center&lt;/span&gt;&lt;strong&gt;Чем можем помочь?&lt;/strong&gt;&lt;p&gt;Выберите понятный сценарий — нужные данные об аккаунте, версии игры и последней активности мы приложим автоматически.&lt;/p&gt;&lt;button class=&quot;support-primary&quot; data-support-new type=&quot;button&quot;&gt;Создать обращение&lt;/button&gt;&lt;/div&gt;${knownIssues.length ? `&lt;div class=&quot;support-section-title&quot;&gt;⚠️ Известные проблемы · ${formatter.format(knownIssues.length)}&lt;/div&gt;&lt;div class=&quot;support-known-list&quot;&gt;${knownCards}&lt;/div&gt;` : &quot;&quot;}&lt;div class=&quot;support-section-title&quot;&gt;Мои обращения${tickets.length ? ` · ${formatter.format(tickets.length)}` : &quot;&quot;}&lt;/div&gt;&lt;div class=&quot;support-ticket-list&quot;&gt;${cards || `&lt;div class=&quot;support-empty&quot;&gt;Обращений пока нет. Если что-то не работает или есть идея — напишите нам.&lt;/div&gt;`}&lt;/div&gt;`;
       }
 
-      function renderPlayerSupportNew() {
+      function renderPlayerSupportNew(selectedCategory = &quot;&quot;) {
         if (!supportContentEl) return;
         playerSupportSelectedTicketId = 0;
         playerSupportView = &quot;new&quot;;
-        if (supportTitleEl) supportTitleEl.textContent = &quot;Новое обращение&quot;;
-        if (supportSubtitleEl) supportSubtitleEl.textContent = &quot;Ответ придёт в игру и от Telegram-бота&quot;;
+        if (supportTitleEl) supportTitleEl.textContent = selectedCategory ? &quot;Новое обращение&quot; : &quot;Что случилось?&quot;;
+        if (supportSubtitleEl) supportSubtitleEl.textContent = selectedCategory ? &quot;Пара уточнений помогут решить вопрос быстрее&quot; : &quot;Выберите подходящую тему&quot;;
+        if (!selectedCategory || !PLAYER_SUPPORT_SCENARIOS[selectedCategory]) {
+          const categories = Object.entries(PLAYER_SUPPORT_SCENARIOS).map(([key,item]) =&gt; `&lt;button class=&quot;support-category-card&quot; data-support-category=&quot;${escapePurchaseText(key)}&quot; type=&quot;button&quot;&gt;&lt;span class=&quot;support-category-icon&quot;&gt;${item.icon}&lt;/span&gt;&lt;strong&gt;${escapePurchaseText(item.title)}&lt;/strong&gt;&lt;span&gt;${escapePurchaseText(item.copy)}&lt;/span&gt;&lt;/button&gt;`).join(&quot;&quot;);
+          supportContentEl.innerHTML = `&lt;div class=&quot;support-hero&quot;&gt;&lt;span class=&quot;support-hero-kicker&quot;&gt;1 из 2&lt;/span&gt;&lt;strong&gt;Выберите тему обращения&lt;/strong&gt;&lt;p&gt;Так поддержка сразу получит правильный контекст и не будет переспрашивать базовые данные.&lt;/p&gt;&lt;/div&gt;&lt;div class=&quot;support-category-grid&quot; style=&quot;margin-top:10px&quot;&gt;${categories}&lt;/div&gt;&lt;div class=&quot;support-row-actions&quot;&gt;&lt;button class=&quot;support-secondary&quot; data-support-back type=&quot;button&quot;&gt;К центру помощи&lt;/button&gt;&lt;/div&gt;`;
+          return;
+        }
+        const scenario = PLAYER_SUPPORT_SCENARIOS[selectedCategory];
         const requestId = supportRequestId(&quot;ticket&quot;);
-        supportContentEl.innerHTML = `&lt;form class=&quot;support-form&quot; data-support-form data-request-id=&quot;${requestId}&quot;&gt;&lt;div class=&quot;support-field&quot;&gt;&lt;label&gt;Категория&lt;/label&gt;&lt;select name=&quot;category&quot; required&gt;&lt;option value=&quot;bug&quot;&gt;Ошибка в игре&lt;/option&gt;&lt;option value=&quot;purchase&quot;&gt;Покупка&lt;/option&gt;&lt;option value=&quot;reward&quot;&gt;Награда&lt;/option&gt;&lt;option value=&quot;account&quot;&gt;Аккаунт&lt;/option&gt;&lt;option value=&quot;suggestion&quot;&gt;Предложение&lt;/option&gt;&lt;option value=&quot;other&quot;&gt;Другое&lt;/option&gt;&lt;/select&gt;&lt;/div&gt;&lt;div class=&quot;support-field&quot;&gt;&lt;label&gt;Тема&lt;/label&gt;&lt;input name=&quot;subject&quot; maxlength=&quot;120&quot; autocomplete=&quot;off&quot; placeholder=&quot;Коротко: что случилось?&quot; required&gt;&lt;/div&gt;&lt;div class=&quot;support-field&quot;&gt;&lt;label&gt;Сообщение&lt;/label&gt;&lt;textarea name=&quot;message&quot; maxlength=&quot;4000&quot; placeholder=&quot;Опишите, что произошло, что ожидали увидеть и как повторить проблему.&quot; required&gt;&lt;/textarea&gt;&lt;/div&gt;&lt;div class=&quot;support-photo-box&quot;&gt;&lt;div class=&quot;support-field&quot;&gt;&lt;label&gt;Скриншот — необязательно&lt;/label&gt;&lt;input name=&quot;photo&quot; type=&quot;file&quot; accept=&quot;image/*&quot;&gt;&lt;/div&gt;&lt;span class=&quot;support-hint&quot; data-support-photo-hint&gt;Фото будет уменьшено до безопасного размера и переупаковано в JPEG — метаданные исходного файла не отправляются.&lt;/span&gt;&lt;/div&gt;&lt;span class=&quot;support-hint&quot;&gt;Диагностика устройства и игрового профиля прикрепится автоматически. Секреты Telegram и античит-данные не отправляются.&lt;/span&gt;&lt;div class=&quot;support-error&quot; data-support-error&gt;&lt;/div&gt;&lt;div class=&quot;support-row-actions&quot;&gt;&lt;button class=&quot;support-secondary&quot; data-support-back type=&quot;button&quot;&gt;Назад&lt;/button&gt;&lt;button class=&quot;support-primary&quot; type=&quot;submit&quot;&gt;Отправить&lt;/button&gt;&lt;/div&gt;&lt;/form&gt;`;
+        const fields = (scenario.fields || []).map(supportScenarioFieldHtml).join(&quot;&quot;);
+        supportContentEl.innerHTML = `&lt;form class=&quot;support-form&quot; data-support-form data-request-id=&quot;${requestId}&quot;&gt;&lt;input type=&quot;hidden&quot; name=&quot;category&quot; value=&quot;${escapePurchaseText(selectedCategory)}&quot;&gt;&lt;div class=&quot;support-category-selected&quot;&gt;&lt;span class=&quot;support-category-icon&quot; style=&quot;font-size:24px&quot;&gt;${scenario.icon}&lt;/span&gt;&lt;span&gt;&lt;b&gt;${escapePurchaseText(scenario.title)}&lt;/b&gt;&lt;span&gt;${escapePurchaseText(scenario.copy)}&lt;/span&gt;&lt;/span&gt;&lt;/div&gt;${fields ? `&lt;div class=&quot;support-context-box&quot;&gt;&lt;strong&gt;Чтобы быстрее разобраться&lt;/strong&gt;${fields}&lt;/div&gt;` : &quot;&quot;}&lt;div class=&quot;support-field&quot;&gt;&lt;label&gt;Коротко опишите проблему&lt;/label&gt;&lt;input name=&quot;subject&quot; maxlength=&quot;120&quot; autocomplete=&quot;off&quot; placeholder=&quot;Например: не пришла награда после 20 уровня&quot; required&gt;&lt;/div&gt;&lt;div class=&quot;support-field&quot;&gt;&lt;label&gt;Что произошло?&lt;/label&gt;&lt;textarea name=&quot;message&quot; maxlength=&quot;4000&quot; placeholder=&quot;Опишите, что произошло, что ожидали увидеть и что видите сейчас.&quot; required&gt;&lt;/textarea&gt;&lt;/div&gt;&lt;div class=&quot;support-photo-box&quot;&gt;&lt;div class=&quot;support-field&quot;&gt;&lt;label&gt;Скриншот — необязательно&lt;/label&gt;&lt;input name=&quot;photo&quot; type=&quot;file&quot; accept=&quot;image/*&quot;&gt;&lt;/div&gt;&lt;span class=&quot;support-hint&quot; data-support-photo-hint&gt;Фото будет уменьшено до безопасного размера и переупаковано в JPEG — метаданные исходного файла не отправляются.&lt;/span&gt;&lt;/div&gt;&lt;span class=&quot;support-hint&quot;&gt;Диагностика устройства, игрового профиля, последнего забега и сезонного пропуска прикрепится автоматически. Секреты Telegram и античит-данные не отправляются.&lt;/span&gt;&lt;div class=&quot;support-error&quot; data-support-error&gt;&lt;/div&gt;&lt;div class=&quot;support-row-actions&quot;&gt;&lt;button class=&quot;support-secondary&quot; data-support-change-category type=&quot;button&quot;&gt;Сменить тему&lt;/button&gt;&lt;button class=&quot;support-primary&quot; type=&quot;submit&quot;&gt;Отправить&lt;/button&gt;&lt;/div&gt;&lt;/form&gt;`;
+      }
+
+      async function markSupportKnownIssueImpact(issueId, button) {
+        if (!telegramProfile?.initData || !issueId) return;
+        const old = button?.textContent || &quot;У меня такая же проблема&quot;;
+        if (button) { button.disabled = true; button.textContent = &quot;Сохраняем…&quot;; }
+        try {
+          const response = await gameFetchWithTimeout(PLAYER_SUPPORT_KNOWN_ISSUE_PATH,{method:&quot;POST&quot;,headers:{&quot;Content-Type&quot;:&quot;application/json&quot;},body:JSON.stringify({initData:String(telegramProfile.initData),issueId:Number(issueId)}),cache:&quot;no-store&quot;,credentials:&quot;same-origin&quot;},5500);
+          const data = await response.json().catch(()=&gt;null);
+          if(!response.ok||!data?.ok)throw new Error(data?.error||&quot;Не удалось отметить проблему.&quot;);
+          applyPlayerSupportState(data);
+          renderPlayerSupportHub();
+          showProfileToast(data.repeated ? &quot;Мы уже учли вас в этой проблеме&quot; : &quot;Спасибо — мы учли, что проблема затронула вас&quot;, &quot;success&quot;, 3000);
+          hapticNotify(&quot;success&quot;);
+        } catch (error) {
+          if (button?.isConnected) { button.disabled = false; button.textContent = old; }
+          showProfileToast(error?.message || &quot;Не удалось отметить проблему&quot;, &quot;error&quot;, 3000);
+          hapticNotify(&quot;error&quot;);
+        }
       }
 
       async function supportImageFromFile(file) {
@@ -20093,6 +20221,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           body.append(&quot;message&quot;, String(form.elements.message?.value || &quot;&quot;));
           body.append(&quot;requestId&quot;, String(form.dataset.requestId || supportRequestId(&quot;ticket&quot;)));
           body.append(&quot;clientJson&quot;, JSON.stringify(supportClientSnapshot()));
+          body.append(&quot;contextJson&quot;, JSON.stringify(supportContextFromForm(form)));
           if (photo) body.append(&quot;photo&quot;, photo, photo.name);
           const response = await gameFetchWithTimeout(PLAYER_SUPPORT_CREATE_PATH, { method:&quot;POST&quot;, body, cache:&quot;no-store&quot;, credentials:&quot;same-origin&quot; }, 9000);
           const data = await response.json().catch(() =&gt; null);
@@ -20129,7 +20258,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         const messages = (ticket.messages || []).map((message) =&gt; `&lt;div class=&quot;support-message is-${escapePurchaseText(message.authorKind || &quot;system&quot;)}&quot;&gt;&lt;small&gt;${message.authorKind === &quot;staff&quot; ? &quot;Поддержка&quot; : message.authorKind === &quot;player&quot; ? &quot;Вы&quot; : &quot;Система&quot;} · ${escapePurchaseText(supportDate(message.createdAt,true))}&lt;/small&gt;${escapePurchaseText(message.text || &quot;&quot;)}&lt;/div&gt;`).join(&quot;&quot;);
         const attachments = (ticket.attachments || []).map((attachment) =&gt; `&lt;div class=&quot;support-attachment-note&quot;&gt;${escapePurchaseText(attachment.fileName || &quot;Скриншот&quot;)} · ${attachment.status === &quot;uploaded&quot; ? &quot;прикреплён&quot; : attachment.status === &quot;failed&quot; ? &quot;не удалось загрузить&quot; : &quot;загружается&quot;}&lt;/div&gt;`).join(&quot;&quot;);
         const canReply = [&quot;new&quot;,&quot;working&quot;].includes(ticket.status);
-        supportContentEl.innerHTML = `&lt;div class=&quot;support-ticket-detail-head&quot;&gt;&lt;span class=&quot;support-ticket-card-head&quot;&gt;&lt;strong&gt;${escapePurchaseText(ticket.subject)}&lt;/strong&gt;&lt;span class=&quot;support-ticket-status${supportStatusClass(ticket.status)}&quot;&gt;${escapePurchaseText(ticket.statusLabel)}&lt;/span&gt;&lt;/span&gt;&lt;span&gt;${escapePurchaseText(ticket.categoryLabel)} · создано ${escapePurchaseText(supportDate(ticket.createdAt,true))}&lt;/span&gt;&lt;/div&gt;${attachments}&lt;div class=&quot;support-thread&quot;&gt;${messages || `&lt;div class=&quot;support-empty&quot;&gt;Сообщений пока нет.&lt;/div&gt;`}&lt;/div&gt;${canReply ? `&lt;form class=&quot;support-form&quot; data-support-reply-form data-ticket-id=&quot;${ticket.id}&quot; data-request-id=&quot;${supportRequestId(&quot;reply&quot;)}&quot; style=&quot;margin-top:13px&quot;&gt;&lt;div class=&quot;support-field&quot;&gt;&lt;label&gt;Дополнить обращение&lt;/label&gt;&lt;textarea name=&quot;message&quot; maxlength=&quot;4000&quot; placeholder=&quot;Напишите дополнительную информацию или ответ поддержке.&quot;&gt;&lt;/textarea&gt;&lt;/div&gt;&lt;div class=&quot;support-error&quot; data-support-error&gt;&lt;/div&gt;&lt;div class=&quot;support-row-actions&quot;&gt;&lt;button class=&quot;support-secondary&quot; data-support-back type=&quot;button&quot;&gt;К обращениям&lt;/button&gt;&lt;button class=&quot;support-primary&quot; type=&quot;submit&quot;&gt;Отправить&lt;/button&gt;&lt;/div&gt;&lt;/form&gt;` : `&lt;div class=&quot;support-intro&quot; style=&quot;margin-top:13px&quot;&gt;&lt;strong&gt;Обращение закрыто&lt;/strong&gt;&lt;span&gt;Если вопрос остался, создайте новое обращение — история этого тикета сохранится.&lt;/span&gt;&lt;div class=&quot;support-row-actions&quot;&gt;&lt;button class=&quot;support-secondary&quot; data-support-back type=&quot;button&quot;&gt;К обращениям&lt;/button&gt;&lt;button class=&quot;support-primary&quot; data-support-new type=&quot;button&quot;&gt;Новое обращение&lt;/button&gt;&lt;/div&gt;&lt;/div&gt;`}`;
+        supportContentEl.innerHTML = `&lt;div class=&quot;support-ticket-detail-head&quot;&gt;&lt;span class=&quot;support-ticket-card-head&quot;&gt;&lt;strong&gt;${escapePurchaseText(ticket.subject)}&lt;/strong&gt;&lt;span class=&quot;support-ticket-status${supportStatusClass(ticket.status,ticket.workflowState)}&quot;&gt;${escapePurchaseText(ticket.workflowLabel || ticket.statusLabel)}&lt;/span&gt;&lt;/span&gt;&lt;span&gt;${escapePurchaseText(ticket.categoryLabel)} · создано ${escapePurchaseText(supportDate(ticket.createdAt,true))}&lt;/span&gt;&lt;/div&gt;${attachments}&lt;div class=&quot;support-thread&quot;&gt;${messages || `&lt;div class=&quot;support-empty&quot;&gt;Сообщений пока нет.&lt;/div&gt;`}&lt;/div&gt;${canReply ? `&lt;form class=&quot;support-form&quot; data-support-reply-form data-ticket-id=&quot;${ticket.id}&quot; data-request-id=&quot;${supportRequestId(&quot;reply&quot;)}&quot; style=&quot;margin-top:13px&quot;&gt;&lt;div class=&quot;support-field&quot;&gt;&lt;label&gt;Дополнить обращение&lt;/label&gt;&lt;textarea name=&quot;message&quot; maxlength=&quot;4000&quot; placeholder=&quot;Напишите дополнительную информацию или ответ поддержке.&quot;&gt;&lt;/textarea&gt;&lt;/div&gt;&lt;div class=&quot;support-error&quot; data-support-error&gt;&lt;/div&gt;&lt;div class=&quot;support-row-actions&quot;&gt;&lt;button class=&quot;support-secondary&quot; data-support-back type=&quot;button&quot;&gt;К обращениям&lt;/button&gt;&lt;button class=&quot;support-primary&quot; type=&quot;submit&quot;&gt;Отправить&lt;/button&gt;&lt;/div&gt;&lt;/form&gt;` : `&lt;div class=&quot;support-intro&quot; style=&quot;margin-top:13px&quot;&gt;&lt;strong&gt;Обращение закрыто&lt;/strong&gt;&lt;span&gt;Если вопрос остался, создайте новое обращение — история этого тикета сохранится.&lt;/span&gt;&lt;div class=&quot;support-row-actions&quot;&gt;&lt;button class=&quot;support-secondary&quot; data-support-back type=&quot;button&quot;&gt;К обращениям&lt;/button&gt;&lt;button class=&quot;support-primary&quot; data-support-new type=&quot;button&quot;&gt;Новое обращение&lt;/button&gt;&lt;/div&gt;&lt;/div&gt;`}`;
       }
 
       async function submitPlayerSupportReply(form) {
@@ -24611,6 +24740,11 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         if (target === supportLayer) return;
         if (target?.closest(&quot;[data-support-close]&quot;)) { closeSupportLayer(); return; }
         if (target?.closest(&quot;[data-support-new]&quot;)) { renderPlayerSupportNew(); return; }
+        const categoryButton = target?.closest(&quot;[data-support-category]&quot;);
+        if (categoryButton) { renderPlayerSupportNew(String(categoryButton.dataset.supportCategory || &quot;&quot;)); return; }
+        if (target?.closest(&quot;[data-support-change-category]&quot;)) { renderPlayerSupportNew(); return; }
+        const knownButton = target?.closest(&quot;[data-support-known-impact]&quot;);
+        if (knownButton) { void markSupportKnownIssueImpact(Number(knownButton.dataset.supportKnownImpact || 0), knownButton); return; }
         if (target?.closest(&quot;[data-support-back]&quot;)) { renderPlayerSupportHub(); return; }
         const ticketButton = target?.closest(&quot;[data-support-ticket]&quot;);
         if (ticketButton) { openPlayerSupportTicket(ticketButton.dataset.supportTicket); return; }
