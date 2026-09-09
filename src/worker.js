@@ -6216,7 +6216,8 @@ function achievementShowcaseStyleId(value) {
 }
 
 function achievementShowcaseStylePublic(definition,unlocked=false,selected=false){
-  return {id:String(definition.id),title:String(definition.title),description:String(definition.description||""),unlockType:String(definition.unlockType||"default"),unlockText:String(definition.unlockText||""),unlocked:Boolean(unlocked),selected:Boolean(selected),category:String(definition.category||"base"),layout:String(definition.layout||"standard"),rarity:String(definition.rarity||"common"),rewardable:Boolean(definition.rewardable),manualOnly:Boolean(definition.manualOnly),hidden:Boolean(definition.hidden),seasonLabel:String(definition.seasonLabel||""),storyTitle:String(definition.storyTitle||""),storyText:String(definition.storyText||""),obtainText:String(definition.obtainText||""),imageUrl:String(definition.imageUrl||""),minPoints:Math.max(0,Number(definition.minPoints)||0)};
+  const unlockType=String(definition.unlockType||"default");
+  return {id:String(definition.id),title:String(definition.title),description:String(definition.description||""),unlockType,unlockText:String(definition.unlockText||""),unlocked:Boolean(unlocked),selected:Boolean(selected),category:String(definition.category||"base"),layout:String(definition.layout||"standard"),rarity:String(definition.rarity||"common"),rewardable:Boolean(definition.rewardable),manualOnly:Boolean(definition.manualOnly),hidden:Boolean(definition.hidden),seasonLabel:String(definition.seasonLabel||""),storyTitle:String(definition.storyTitle||""),storyText:String(definition.storyText||""),obtainText:String(definition.obtainText||""),imageUrl:String(definition.imageUrl||""),minPoints:unlockType==="rank"?Math.max(0,Number(definition.minPoints)||0):null};
 }
 
 function achievementShowcaseStyleState(rank = {}, series = [], selectedStyleId = "default", ownedStyleIds = []) {

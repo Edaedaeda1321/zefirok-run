@@ -278,7 +278,7 @@
     loadError=''; renderAll();
   }
 
-  function pointStyleRequirement(style){const id=String(style?.id||'');if(Number.isFinite(Number(style?.minPoints)))return Math.max(0,Number(style.minPoints));return STYLE_POINT_REQUIREMENTS[id]??null;}
+  function pointStyleRequirement(style){const id=String(style?.id||''),unlockType=String(style?.unlockType||'');if(unlockType&&unlockType!=='rank')return null;if(Number.isFinite(Number(style?.minPoints)))return Math.max(0,Number(style.minPoints));return STYLE_POINT_REQUIREMENTS[id]??null;}
   function pointStyleCandidates(){return SHOWCASE_STYLES.map(s=>({style:s,need:pointStyleRequirement(s)})).filter(x=>x.need!=null&&x.need>0).sort((a,b)=>a.need-b.need);}
   function nextPointStyle(points){return pointStyleCandidates().find(x=>points<x.need)||null;}
 
@@ -309,7 +309,7 @@
     return {...style,id:String(canonical?.id||styleId||fallback.id),layout:String(canonical?.layout||style?.layout||fallback.layout),imageUrl:String(canonical?.imageUrl||style?.imageUrl||fallback.imageUrl)};
   }
   function showcaseStyleStateText(style,points){const selected=String(style?.id||'')===SHOWCASE_STYLE_ID,unlocked=style?.unlocked===true,need=pointStyleRequirement(style),special=String(style?.category||'')==='special';if(selected)return 'Используется';if(unlocked)return special?'Получено':'Открыто';if(need!=null)return `${points.toLocaleString('ru-RU')} / ${need.toLocaleString('ru-RU')}`;return special?'Не получено':'Закрыто';}
-  function showcaseStyleDescription(style,points){const unlocked=style?.unlocked===true,need=pointStyleRequirement(style);if(!unlocked&&need!=null)return `Набери ${need.toLocaleString('ru-RU')} очков достижений — очки не списываются.`;return String(style?.description||style?.unlockText||'Оформление витрины');}
+  function showcaseStyleDescription(style,points){const unlocked=style?.unlocked===true,need=pointStyleRequirement(style),special=String(style?.category||'')==='special';if(!unlocked&&special)return String(style?.unlockText||style?.obtainText||style?.description||'Особое оформление');if(!unlocked&&need!=null)return `Набери ${need.toLocaleString('ru-RU')} очков достижений — очки не списываются.`;return String(style?.description||style?.unlockText||'Оформление витрины');}
   function showcaseStyleCategory(style){const category=String(style?.category||'base');return category==='seasonal'?'Сезонная':category==='special'?'Особая':'Базовая';}
   function renderStylePicker(){
     const points=Math.max(0,safeNumber(SUMMARY.achievementPoints)),list=$('[data-style-list]');if(!list)return;
