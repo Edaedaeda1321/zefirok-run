@@ -9057,6 +9057,119 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       pointer-events: none;
     }
 
+
+    #zefirok-maltipoo-runner .overlay.is-pause-modal,
+    #zefirok-maltipoo-runner .overlay.is-run-results-modal {
+      z-index: 9;
+      pointer-events: auto;
+      padding: 8px;
+      background: rgba(74, 48, 54, 0.28);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      overscroll-behavior: contain;
+    }
+
+    #zefirok-maltipoo-runner .run-pause-card,
+    #zefirok-maltipoo-runner .run-results-card {
+      width: min(calc(100% - 4px), 324px);
+      max-height: calc(100% - 4px);
+      overflow-y: auto;
+      scrollbar-width: none;
+      border: 1px solid rgba(229, 184, 201, .82);
+      border-radius: 22px;
+      background: linear-gradient(160deg, rgba(255,255,255,.985), rgba(255,244,249,.985));
+      box-shadow: 0 20px 52px rgba(82, 48, 58, .24);
+      color: #684152;
+      box-sizing: border-box;
+      touch-action: manipulation;
+    }
+
+    #zefirok-maltipoo-runner .run-pause-card::-webkit-scrollbar,
+    #zefirok-maltipoo-runner .run-results-card::-webkit-scrollbar { display:none; }
+
+    #zefirok-maltipoo-runner .run-pause-card.is-alex,
+    #zefirok-maltipoo-runner .run-results-card.is-alex {
+      border-color: rgba(183, 151, 76, .72);
+      background: radial-gradient(circle at 88% 0%, rgba(232, 241, 193, .86), transparent 34%), linear-gradient(155deg, #fffdf7, #fff7df 56%, #f4f8df);
+      box-shadow: 0 20px 54px rgba(108, 86, 38, .25);
+    }
+
+    #zefirok-maltipoo-runner .run-pause-card { padding: 11px; }
+    #zefirok-maltipoo-runner .run-pause-head,
+    #zefirok-maltipoo-runner .run-results-head { display:flex; align-items:center; gap:10px; min-width:0; }
+    #zefirok-maltipoo-runner .run-character-portrait {
+      width: 62px; height:62px; flex:0 0 62px; display:grid; place-items:center;
+      border-radius:18px; background:rgba(255,255,255,.78); border:1px solid rgba(231,196,207,.78);
+      overflow:visible; box-shadow:0 8px 18px rgba(111,66,82,.10);
+    }
+    #zefirok-maltipoo-runner .is-alex .run-character-portrait { border-color:rgba(187,154,77,.52); background:rgba(255,252,235,.86); }
+    #zefirok-maltipoo-runner .run-character-portrait img { width:68px; height:68px; object-fit:contain; display:block; filter:drop-shadow(0 5px 8px rgba(97,62,70,.12)); }
+    #zefirok-maltipoo-runner .run-pause-copy,
+    #zefirok-maltipoo-runner .run-results-copy { min-width:0; flex:1; }
+    #zefirok-maltipoo-runner .run-overlay-kicker { display:flex; flex-wrap:wrap; gap:5px; align-items:center; margin-bottom:2px; }
+    #zefirok-maltipoo-runner .run-overlay-chip { display:inline-flex; align-items:center; min-height:20px; padding:3px 7px; border-radius:999px; background:#fff0f6; color:#a65373; font-size:8px; font-weight:950; letter-spacing:.02em; }
+    #zefirok-maltipoo-runner .run-overlay-chip.is-premium { background:linear-gradient(135deg,#fff0bd,#eef7cb); color:#786126; border:1px solid rgba(180,148,66,.26); }
+    #zefirok-maltipoo-runner .run-pause-copy strong,
+    #zefirok-maltipoo-runner .run-results-copy strong { display:block; font-size:17px; line-height:1.05; color:#603648; }
+    #zefirok-maltipoo-runner .is-alex .run-pause-copy strong,
+    #zefirok-maltipoo-runner .is-alex .run-results-copy strong { color:#655323; }
+    #zefirok-maltipoo-runner .run-pause-copy p,
+    #zefirok-maltipoo-runner .run-results-copy p { margin:4px 0 0; color:#8c707b; font-size:9.5px; line-height:1.28; font-weight:700; }
+    #zefirok-maltipoo-runner .is-alex .run-pause-copy p,
+    #zefirok-maltipoo-runner .is-alex .run-results-copy p { color:#84734b; }
+
+    #zefirok-maltipoo-runner .run-pause-stats { display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-top:9px; }
+    #zefirok-maltipoo-runner .run-pause-stat { display:grid; gap:1px; padding:7px 9px; border-radius:13px; background:rgba(255,255,255,.78); border:1px solid rgba(229,199,209,.68); }
+    #zefirok-maltipoo-runner .run-pause-stat span { color:#9a7e89; font-size:8px; font-weight:850; }
+    #zefirok-maltipoo-runner .run-pause-stat b { color:#674153; font-size:13px; line-height:1.1; font-variant-numeric:tabular-nums; }
+    #zefirok-maltipoo-runner .run-booster-strip { display:flex; gap:5px; align-items:center; overflow-x:auto; margin-top:7px; padding-bottom:1px; scrollbar-width:none; }
+    #zefirok-maltipoo-runner .run-booster-strip::-webkit-scrollbar { display:none; }
+    #zefirok-maltipoo-runner .run-booster-chip { display:flex; align-items:center; gap:4px; flex:0 0 auto; padding:4px 7px; border-radius:999px; background:#fff8fb; border:1px solid rgba(226,191,204,.65); color:#8c6171; font-size:8px; font-weight:900; }
+    #zefirok-maltipoo-runner .run-booster-chip img { width:17px; height:17px; object-fit:contain; }
+    #zefirok-maltipoo-runner .run-pause-actions { display:grid; gap:6px; margin-top:8px; }
+    #zefirok-maltipoo-runner .run-overlay-primary,
+    #zefirok-maltipoo-runner .run-overlay-secondary,
+    #zefirok-maltipoo-runner .run-overlay-quiet { min-height:38px; border-radius:13px; font:inherit; font-size:10px; font-weight:950; touch-action:manipulation; }
+    #zefirok-maltipoo-runner .run-overlay-primary { border:1px solid rgba(211,89,134,.62); background:linear-gradient(135deg,#ef78a5,#d95388); color:#fff; box-shadow:0 8px 18px rgba(180,74,116,.17); }
+    #zefirok-maltipoo-runner .is-alex .run-overlay-primary { border-color:rgba(154,126,56,.7); background:linear-gradient(135deg,#c8a84e,#8ca74a); box-shadow:0 8px 18px rgba(106,92,38,.19); }
+    #zefirok-maltipoo-runner .run-pause-settings { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+    #zefirok-maltipoo-runner .run-overlay-secondary { border:1px solid rgba(224,190,202,.82); background:#fff; color:#86576a; box-shadow:none; }
+    #zefirok-maltipoo-runner .run-overlay-quiet { min-height:30px; border:0; background:transparent; color:#9a7e89; text-decoration:underline; text-decoration-color:rgba(154,126,137,.36); }
+    #zefirok-maltipoo-runner .run-pause-confirm { display:none; gap:6px; padding:8px; border-radius:13px; background:#fff6e8; border:1px solid rgba(218,177,106,.42); color:#886636; font-size:8.5px; line-height:1.3; text-align:center; }
+    #zefirok-maltipoo-runner .run-pause-confirm.is-visible { display:grid; }
+    #zefirok-maltipoo-runner .run-pause-confirm-actions { display:grid; grid-template-columns:1fr 1fr; gap:5px; }
+
+    #zefirok-maltipoo-runner .run-results-card { padding:9px 10px 10px; }
+    #zefirok-maltipoo-runner .run-results-card .run-character-portrait { width:54px; height:54px; flex-basis:54px; border-radius:16px; }
+    #zefirok-maltipoo-runner .run-results-card .run-character-portrait img { width:60px; height:60px; }
+    #zefirok-maltipoo-runner .run-results-score { margin-top:6px; text-align:center; }
+    #zefirok-maltipoo-runner .run-results-score b { display:block; color:#593244; font-size:29px; line-height:.95; font-weight:1000; letter-spacing:-.035em; font-variant-numeric:tabular-nums; }
+    #zefirok-maltipoo-runner .is-alex .run-results-score b { color:#66521d; }
+    #zefirok-maltipoo-runner .run-results-score span { color:#a17f8c; font-size:8px; font-weight:950; letter-spacing:.12em; }
+    #zefirok-maltipoo-runner .run-record-line { margin:5px auto 0; width:fit-content; max-width:100%; padding:4px 8px; border-radius:999px; background:#fff0f6; color:#a04f70; font-size:8.5px; font-weight:950; text-align:center; }
+    #zefirok-maltipoo-runner .run-record-line.is-record { background:linear-gradient(135deg,#fff1bd,#fff8df); color:#8f691e; }
+    #zefirok-maltipoo-runner .run-results-metrics { display:grid; grid-template-columns:repeat(3,1fr); gap:5px; margin-top:6px; }
+    #zefirok-maltipoo-runner .run-result-metric { padding:5px 4px; border-radius:11px; background:rgba(255,255,255,.76); border:1px solid rgba(230,201,211,.65); text-align:center; }
+    #zefirok-maltipoo-runner .run-result-metric span { display:block; font-size:7.5px; color:#9b7e89; font-weight:850; }
+    #zefirok-maltipoo-runner .run-result-metric b { display:block; margin-top:1px; font-size:10px; color:#6f4757; font-variant-numeric:tabular-nums; }
+    #zefirok-maltipoo-runner .run-credit-line { display:flex; justify-content:center; flex-wrap:wrap; gap:4px 8px; margin-top:6px; padding:6px 7px; border-radius:12px; background:#f7fbef; border:1px solid rgba(155,185,98,.28); color:#657640; font-size:8px; font-weight:950; }
+    #zefirok-maltipoo-runner .run-skin-bonus { margin-top:5px; padding:5px 7px; border-radius:11px; background:#fff5fa; color:#9b5671; text-align:center; font-size:8px; font-weight:900; }
+    #zefirok-maltipoo-runner .run-skin-bonus.is-alex { background:linear-gradient(135deg,#fff2c6,#eef7cf); color:#786125; }
+    #zefirok-maltipoo-runner .run-results-events { display:grid; gap:4px; margin-top:6px; }
+    #zefirok-maltipoo-runner .run-result-event { display:flex; align-items:center; gap:7px; min-width:0; padding:5px 7px; border-radius:11px; background:rgba(255,255,255,.78); border:1px solid rgba(230,202,211,.62); }
+    #zefirok-maltipoo-runner .run-result-event i { width:22px; height:22px; display:grid; place-items:center; flex:0 0 22px; border-radius:8px; background:#fff2f7; font-style:normal; font-size:13px; }
+    #zefirok-maltipoo-runner .run-result-event span { min-width:0; display:grid; gap:1px; }
+    #zefirok-maltipoo-runner .run-result-event strong { color:#704657; font-size:8.5px; line-height:1.15; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    #zefirok-maltipoo-runner .run-result-event small { color:#9b818b; font-size:7px; line-height:1.15; }
+    #zefirok-maltipoo-runner .run-results-state { display:flex; align-items:center; justify-content:center; gap:6px; margin-top:7px; color:#907581; font-size:8.5px; font-weight:900; text-align:center; }
+    #zefirok-maltipoo-runner .run-results-spinner { width:12px; height:12px; border:2px solid rgba(210,132,161,.24); border-top-color:#d45e8a; border-radius:50%; animation:run-results-spin .8s linear infinite; }
+    @keyframes run-results-spin { to { transform:rotate(360deg); } }
+    #zefirok-maltipoo-runner .run-results-actions { display:grid; grid-template-columns:1.35fr .85fr; gap:6px; margin-top:7px; }
+    #zefirok-maltipoo-runner .run-results-actions.is-sync-error { grid-template-columns:1.25fr .75fr; }
+    #zefirok-maltipoo-runner .run-results-actions button { min-height:36px; }
+    #zefirok-maltipoo-runner .run-results-card.is-pending .run-results-actions { display:none; }
+    #zefirok-maltipoo-runner .run-results-sync-error { margin-top:6px; padding:6px 8px; border-radius:11px; background:#fff5e8; border:1px solid rgba(220,180,111,.4); color:#8b6936; font-size:8px; line-height:1.25; font-weight:800; text-align:center; }
+
     #zefirok-maltipoo-runner .overlay.is-second-chance-modal {
       z-index: 8;
       display: grid;
@@ -12839,28 +12952,28 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       }
       const SKIN_CATALOG = {
         default: {
-          id: &quot;default&quot;, title: &quot;Стандартный&quot;, image: &quot;/assets/skins/shop/default.png&quot;, background: &quot;/assets/skins/shop/backgrounds/standart_background_shop.png&quot;,
+          id: &quot;default&quot;, characterId: &quot;zeffi&quot;, title: &quot;Стандартный&quot;, image: &quot;/assets/skins/shop/default.png&quot;, background: &quot;/assets/skins/shop/backgrounds/standart_background_shop.png&quot;,
           points: 0, treats: 0, coffee: 0,
           bonus: Object.freeze({ points: 0, treats: 0, coffee: 0 }),
           bonusLabel: &quot;Без бонуса&quot;,
           description: &quot;Классический образ Зефи. Доступен каждому игроку.&quot;
         },
         barista: {
-          id: &quot;barista&quot;, title: &quot;Бариста&quot;, image: &quot;/assets/skins/shop/barista.png&quot;, background: &quot;/assets/skins/shop/backgrounds/rare_background_shop.png&quot;,
+          id: &quot;barista&quot;, characterId: &quot;zeffi&quot;, title: &quot;Бариста&quot;, image: &quot;/assets/skins/shop/barista.png&quot;, background: &quot;/assets/skins/shop/backgrounds/rare_background_shop.png&quot;,
           points: 100000, treats: 0, coffee: 400,
           bonus: Object.freeze({ points: 0, treats: 0, coffee: 5 }),
           bonusLabel: &quot;+5 кофе за полноценный забег&quot;,
           description: &quot;Начисляет 5 кофе после забега от 12 секунд и 150 очков.&quot;
         },
         strawberry: {
-          id: &quot;strawberry&quot;, title: &quot;Клубничка&quot;, image: &quot;/assets/skins/shop/strawberry.png&quot;, background: &quot;/assets/skins/shop/backgrounds/rare_background_shop.png&quot;,
+          id: &quot;strawberry&quot;, characterId: &quot;zeffi&quot;, title: &quot;Клубничка&quot;, image: &quot;/assets/skins/shop/strawberry.png&quot;, background: &quot;/assets/skins/shop/backgrounds/rare_background_shop.png&quot;,
           points: 180000, treats: 400, coffee: 0,
           bonus: Object.freeze({ points: 0, treats: 5, coffee: 0 }),
           bonusLabel: &quot;+5 зефира за полноценный забег&quot;,
           description: &quot;Начисляет 5 зефира после забега от 12 секунд и 150 очков.&quot;
         },
         bee: {
-          id: &quot;bee&quot;, title: &quot;Пчёлка&quot;, image: &quot;/assets/skins/shop/bee.png&quot;, background: &quot;/assets/skins/shop/backgrounds/superrare_background_shop.png&quot;,
+          id: &quot;bee&quot;, characterId: &quot;zeffi&quot;, title: &quot;Пчёлка&quot;, image: &quot;/assets/skins/shop/bee.png&quot;, background: &quot;/assets/skins/shop/backgrounds/superrare_background_shop.png&quot;,
           points: 350000, treats: 650, coffee: 0,
           bonus: Object.freeze({ points: 0, treats: 8, coffee: 0 }),
           bonusCase: Object.freeze({ caseType: &quot;small&quot;, title: &quot;Обычный кейс&quot; }),
@@ -12868,7 +12981,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           description: &quot;Начисляет 8 зефира после забега от 12 секунд и 150 очков. При покупке — Обычный кейс.&quot;
         },
         sailor: {
-          id: &quot;sailor&quot;, title: &quot;Морячок&quot;, image: &quot;/assets/skins/shop/sailor.png&quot;, background: &quot;/assets/skins/shop/backgrounds/epick_background_shop.png&quot;,
+          id: &quot;sailor&quot;, characterId: &quot;zeffi&quot;, title: &quot;Морячок&quot;, image: &quot;/assets/skins/shop/sailor.png&quot;, background: &quot;/assets/skins/shop/backgrounds/epick_background_shop.png&quot;,
           points: 650000, treats: 0, coffee: 650,
           bonus: Object.freeze({ points: 0, treats: 0, coffee: 8 }),
           bonusCase: Object.freeze({ caseType: &quot;sweet&quot;, title: &quot;Серебряный кейс&quot; }),
@@ -12876,7 +12989,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           description: &quot;Начисляет 8 кофе после забега от 12 секунд и 150 очков. При покупке — Серебряный кейс.&quot;
         },
         princess: {
-          id: &quot;princess&quot;, title: &quot;Принцесса&quot;, image: &quot;/assets/skins/shop/princess.png&quot;, background: &quot;/assets/skins/shop/backgrounds/mifik_background_shop.png&quot;,
+          id: &quot;princess&quot;, characterId: &quot;zeffi&quot;, title: &quot;Принцесса&quot;, image: &quot;/assets/skins/shop/princess.png&quot;, background: &quot;/assets/skins/shop/backgrounds/mifik_background_shop.png&quot;,
           points: 1300000, treats: 850, coffee: 850,
           bonus: Object.freeze({ points: 120, treats: 10, coffee: 10 }),
           bonusCase: Object.freeze({ caseType: &quot;gold&quot;, title: &quot;Золотой кейс&quot; }),
@@ -12884,7 +12997,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           description: &quot;Бонус за каждый полноценный забег. При покупке — Золотой кейс.&quot;
         },
         angel: {
-          id: &quot;angel&quot;, title: &quot;Ангелок&quot;, image: &quot;/assets/skins/shop/angel.png&quot;, background: &quot;/assets/skins/shop/backgrounds/legendary_background_shop.png&quot;,
+          id: &quot;angel&quot;, characterId: &quot;zeffi&quot;, title: &quot;Ангелок&quot;, image: &quot;/assets/skins/shop/angel.png&quot;, background: &quot;/assets/skins/shop/backgrounds/legendary_background_shop.png&quot;,
           points: 2400000, treats: 1000, coffee: 1000,
           bonus: Object.freeze({ points: 200, treats: 12, coffee: 12 }),
           bonusCase: Object.freeze({ caseType: &quot;legendary&quot;, title: &quot;Легендарный кейс&quot; }),
@@ -12892,7 +13005,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           description: &quot;Максимальный бонус за полноценный забег. При покупке — Легендарный кейс.&quot;
         },
         alex: {
-          id: &quot;alex&quot;, title: &quot;Алекс&quot;, image: &quot;/assets/skins/shop/alex.png&quot;, background: &quot;/assets/skins/shop/backgrounds/legendary_background_shop.png&quot;,
+          id: &quot;alex&quot;, characterId: &quot;alex&quot;, title: &quot;Алекс&quot;, image: &quot;/assets/skins/shop/alex.png&quot;, background: &quot;/assets/skins/shop/backgrounds/legendary_background_shop.png&quot;,
           isNew: true,
           points: 3000000, treats: 1500, coffee: 1500,
           bonus: Object.freeze({ points: 600, treats: 15, coffee: 15 }),
@@ -12936,6 +13049,79 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       }
       function currentDogRunPortraitSrc() {
         return dogSkinRunPortraits[currentDogSkin.id] || defaultDogRunPortraitSrc();
+      }
+
+      const RUN_CHARACTER_PROFILES = Object.freeze({
+        zeffi: Object.freeze({
+          id: &quot;zeffi&quot;, name: &quot;\u0417\u0435\u0444\u0444\u0438&quot;, premium: false,
+          pause: Object.freeze([
+            &quot;\u0417\u0435\u0444\u0444\u0438 \u043d\u0435\u043c\u043d\u043e\u0433\u043e \u043f\u0435\u0440\u0435\u0434\u043e\u0445\u043d\u0451\u0442 \u2615&quot;,
+            &quot;\u0417\u0435\u0444\u0444\u0438 \u043d\u0430\u0431\u0438\u0440\u0430\u0435\u0442\u0441\u044f \u0441\u0438\u043b \u043f\u0435\u0440\u0435\u0434 \u0441\u043b\u0435\u0434\u0443\u044e\u0449\u0438\u043c \u0440\u044b\u0432\u043a\u043e\u043c.&quot;,
+            &quot;\u041c\u0430\u043b\u0435\u043d\u044c\u043a\u0430\u044f \u043f\u0435\u0440\u0435\u0434\u044b\u0448\u043a\u0430 \u2014 \u0438 \u0441\u043d\u043e\u0432\u0430 \u0432 \u0437\u0430\u0431\u0435\u0433!&quot;
+          ]),
+          finish: Object.freeze([
+            &quot;\u0417\u0435\u0444\u0444\u0438 \u0433\u043e\u0442\u043e\u0432\u0430 \u043f\u043e\u043f\u0440\u043e\u0431\u043e\u0432\u0430\u0442\u044c \u0435\u0449\u0451 \u0440\u0430\u0437!&quot;,
+            &quot;\u0415\u0449\u0451 \u043e\u0434\u0438\u043d \u0437\u0430\u0431\u0435\u0433? \u0417\u0435\u0444\u0444\u0438 \u0443\u0436\u0435 \u0433\u043e\u0442\u043e\u0432\u0430.&quot;,
+            &quot;\u0412 \u043a\u0430\u0444\u0435 \u0435\u0449\u0451 \u043c\u043d\u043e\u0433\u043e \u0441\u043b\u0430\u0434\u043a\u0438\u0445 \u0434\u043e\u0440\u043e\u0433 \u0432\u043f\u0435\u0440\u0435\u0434\u0438 \u2728&quot;
+          ]),
+          record: Object.freeze([
+            &quot;\u0417\u0435\u0444\u0444\u0438 \u0441\u0435\u0433\u043e\u0434\u043d\u044f \u043d\u0435\u0443\u0434\u0435\u0440\u0436\u0438\u043c\u0430! \u2728&quot;,
+            &quot;\u0412\u043e\u0442 \u044d\u0442\u043e \u0441\u043a\u043e\u0440\u043e\u0441\u0442\u044c! \u0417\u0435\u0444\u0444\u0438 \u043f\u043e\u0431\u0438\u043b\u0430 \u0441\u0432\u043e\u0439 \u0440\u0435\u043a\u043e\u0440\u0434.&quot;,
+            &quot;\u041d\u043e\u0432\u0430\u044f \u0437\u0430\u043f\u0438\u0441\u044c \u0434\u043b\u044f \u0441\u0442\u0435\u043d\u044b \u0440\u0435\u043a\u043e\u0440\u0434\u043e\u0432 \u0417\u0435\u0444\u0444\u0438!&quot;
+          ])
+        }),
+        alex: Object.freeze({
+          id: &quot;alex&quot;, name: &quot;\u0410\u043b\u0435\u043a\u0441&quot;, premium: true,
+          pause: Object.freeze([
+            &quot;\u0410\u043b\u0435\u043a\u0441 \u043d\u0435\u043c\u043d\u043e\u0433\u043e \u043f\u0435\u0440\u0435\u0434\u043e\u0445\u043d\u0451\u0442 \ud83d\udc3e&quot;,
+            &quot;\u0410\u043b\u0435\u043a\u0441 \u043f\u0435\u0440\u0435\u0432\u043e\u0434\u0438\u0442 \u0434\u0443\u0445 \u2014 \u0438 \u0441\u043d\u043e\u0432\u0430 \u0432 \u043f\u0443\u0442\u044c.&quot;,
+            &quot;\u0414\u0430\u0436\u0435 \u0410\u043b\u0435\u043a\u0441\u0443 \u0438\u043d\u043e\u0433\u0434\u0430 \u043d\u0443\u0436\u043d\u0430 \u043c\u0438\u043d\u0443\u0442\u043a\u0430 \u043e\u0442\u0434\u044b\u0445\u0430.&quot;
+          ]),
+          finish: Object.freeze([
+            &quot;\u0410\u043b\u0435\u043a\u0441 \u0443\u0436\u0435 \u0433\u043e\u0442\u043e\u0432 \u043a \u0441\u043b\u0435\u0434\u0443\u044e\u0449\u0435\u043c\u0443 \u0437\u0430\u0431\u0435\u0433\u0443!&quot;,
+            &quot;\u0410\u043b\u0435\u043a\u0441 \u044f\u0432\u043d\u043e \u043d\u0435 \u0441\u043e\u0431\u0438\u0440\u0430\u0435\u0442\u0441\u044f \u043e\u0441\u0442\u0430\u043d\u0430\u0432\u043b\u0438\u0432\u0430\u0442\u044c\u0441\u044f \ud83d\udc3e&quot;,
+            &quot;\u0414\u043e\u0440\u043e\u0433\u0430 \u0435\u0449\u0451 \u043d\u0435 \u0437\u0430\u043a\u043e\u043d\u0447\u0438\u043b\u0430\u0441\u044c. \u0410\u043b\u0435\u043a\u0441 \u0433\u043e\u0442\u043e\u0432 \u043f\u0440\u043e\u0434\u043e\u043b\u0436\u0430\u0442\u044c.&quot;
+          ]),
+          record: Object.freeze([
+            &quot;\u041f\u043e\u0445\u043e\u0436\u0435, \u0410\u043b\u0435\u043a\u0441 \u0440\u0435\u0448\u0438\u043b \u043f\u043e\u043a\u0430\u0437\u0430\u0442\u044c, \u043a\u0442\u043e \u0437\u0434\u0435\u0441\u044c \u0441\u0430\u043c\u044b\u0439 \u0431\u044b\u0441\u0442\u0440\u044b\u0439 \ud83d\udc3e&quot;,
+            &quot;\u041d\u043e\u0432\u044b\u0439 \u0440\u0435\u043a\u043e\u0440\u0434. \u0410\u043b\u0435\u043a\u0441 \u0438 \u043d\u0435 \u0434\u0443\u043c\u0430\u043b \u0441\u0431\u0430\u0432\u043b\u044f\u0442\u044c \u0442\u0435\u043c\u043f.&quot;,
+            &quot;\u0417\u043e\u043b\u043e\u0442\u0430\u044f \u043b\u0430\u043f\u0430 \u0434\u043b\u044f \u043d\u043e\u0432\u043e\u0433\u043e \u0440\u0435\u043a\u043e\u0440\u0434\u0430 \u0410\u043b\u0435\u043a\u0441\u0430 \ud83d\udc3e&quot;
+          ])
+        })
+      });
+      function normalizeRunSkinId(value) {
+        const id = String(value || &quot;default&quot;).trim();
+        return Object.prototype.hasOwnProperty.call(SKIN_CATALOG, id) ? id : &quot;default&quot;;
+      }
+      function runSkinIdForDisplay() {
+        const snapshot = normalizeRunSkinId(state?.runSkinId || &quot;default&quot;);
+        return state?.running || state?.paused ? snapshot : normalizeRunSkinId(currentDogSkin.id);
+      }
+      function characterIdForSkin(skinId) {
+        const skin = SKIN_CATALOG[normalizeRunSkinId(skinId)];
+        const characterId = String(skin?.characterId || &quot;zeffi&quot;).trim();
+        return Object.prototype.hasOwnProperty.call(RUN_CHARACTER_PROFILES, characterId) ? characterId : &quot;zeffi&quot;;
+      }
+      function runCharacterProfile(skinId = runSkinIdForDisplay()) { return RUN_CHARACTER_PROFILES[characterIdForSkin(skinId)] || RUN_CHARACTER_PROFILES.zeffi; }
+      function runPhraseIndex(kind, count, seed = state?.caseRunId || &quot;run&quot;) {
+        if (!count) return 0;
+        const value = `${String(seed || &quot;run&quot;)}:${String(kind || &quot;line&quot;)}`;
+        let hash = 2166136261;
+        for (let i = 0; i &lt; value.length; i += 1) { hash ^= value.charCodeAt(i); hash = Math.imul(hash, 16777619); }
+        return (hash &gt;&gt;&gt; 0) % count;
+      }
+      function runCharacterPhrase(kind, skinId = runSkinIdForDisplay(), seed = state?.caseRunId || &quot;run&quot;) {
+        const profile = runCharacterProfile(skinId);
+        const pool = Array.isArray(profile?.[kind]) ? profile[kind] : [];
+        return pool.length ? pool[runPhraseIndex(kind, pool.length, seed)] : &quot;&quot;;
+      }
+      function runDogRunPortraitSrc(skinId = runSkinIdForDisplay()) { return dogSkinRunPortraits[normalizeRunSkinId(skinId)] || defaultDogRunPortraitSrc(); }
+      function runDogPortraitMarkup(skinId = runSkinIdForDisplay()) {
+        const src = runDogRunPortraitSrc(skinId);
+        return src ? `&lt;img data-run-dog-portrait src=&quot;${src}&quot; alt=&quot;&quot; loading=&quot;eager&quot; fetchpriority=&quot;high&quot; decoding=&quot;async&quot;&gt;` : &quot;&quot;;
+      }
+      function runUiEscape(value) {
+        return String(value ?? &quot;&quot;).replace(/&amp;/g, &quot;&amp;amp;&quot;).replace(/&lt;/g, &quot;&amp;lt;&quot;).replace(/&gt;/g, &quot;&amp;gt;&quot;).replace(/&quot;/g, &quot;&amp;quot;&quot;).replace(/&#x27;/g, &quot;&amp;#39;&quot;);
       }
       const skinPortraitPreloadCache = new Map();
       function ensureSkinPortraitImage(src = currentDogRunPortraitSrc()) {
@@ -13391,6 +13577,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         runCaseDrop: null,
         runCaseDropSpawned: false,
         runCaseDropCaught: false,
+        runSkinId: &quot;default&quot;,
         wallet: 0,
         inventory: {},
         redemptionCodes: [],
@@ -15883,6 +16070,9 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         state.runPauseUsed = false;
         state.collisionGraceUntil = 0;
         state.caseRunId = makeCaseRunId();
+        state.runSkinId = normalizeRunSkinId(currentDogSkin.id);
+        ensureGameplayDogSprites(state.runSkinId);
+        ensureSkinPortraitImage(runDogRunPortraitSrc(state.runSkinId));
         const protectedRunId = String(state.caseRunId || &quot;&quot;);
         authoritativeRunCheckpointRunId = protectedRunId;
         authoritativeRunCheckpointLastDurationMs = 0;
@@ -15918,7 +16108,8 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         dog.vy = 0;
         dog.grounded = true;
         syncSimulationRenderHistory();
-        overlay.classList.remove(&quot;is-finish-modal&quot;, &quot;is-second-chance-modal&quot;);
+        overlay.onclick = null;
+        overlay.classList.remove(&quot;is-finish-modal&quot;, &quot;is-second-chance-modal&quot;, &quot;is-pause-modal&quot;, &quot;is-run-results-modal&quot;);
         overlay.style.display = &quot;none&quot;;
         statusEl.textContent = &quot;проверка&quot;;
         if (!preservePauseVisual) setPauseButtonVisual(false);
@@ -15958,11 +16149,13 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         zeffiPauseCountdownActive = true;
         zeffiPauseCountdownRunId = runId;
         renderActiveRunBooster();
+        const character = runCharacterProfile();
+        const runPortrait = runDogPortraitMarkup();
         let seconds = 3;
         const renderCountdown = () =&gt; {
-          overlay.classList.remove(&quot;is-finish-modal&quot;);
+          overlay.classList.remove(&quot;is-finish-modal&quot;, &quot;is-pause-modal&quot;, &quot;is-run-results-modal&quot;);
           overlay.classList.add(&quot;is-second-chance-modal&quot;);
-          overlay.innerHTML = `&lt;div class=&quot;modal second-chance-modal&quot; role=&quot;dialog&quot; aria-modal=&quot;true&quot; aria-label=&quot;Пауза Зеффи&quot;&gt;&lt;div class=&quot;second-chance-art&quot;&gt;&lt;img src=&quot;${CASE_BOOSTER_CATALOG.pause.src}&quot; alt=&quot;&quot; decoding=&quot;async&quot;&gt;&lt;/div&gt;&lt;strong&gt;Пауза Зеффи&lt;/strong&gt;&lt;div class=&quot;rule&quot;&gt;&lt;/div&gt;&lt;span&gt;Подготовься — продолжаем через &lt;b&gt;${seconds}&lt;/b&gt; сек.&lt;/span&gt;&lt;/div&gt;`;
+          overlay.innerHTML = `&lt;div class=&quot;modal second-chance-modal&quot; role=&quot;dialog&quot; aria-modal=&quot;true&quot; aria-label=&quot;${character.name} возвращается&quot;&gt;&lt;div class=&quot;second-chance-art&quot;&gt;${runPortrait}&lt;/div&gt;&lt;strong&gt;${character.name} возвращается&lt;/strong&gt;&lt;div class=&quot;rule&quot;&gt;&lt;/div&gt;&lt;span&gt;Подготовься — продолжаем через &lt;b&gt;${seconds}&lt;/b&gt; сек.&lt;/span&gt;&lt;/div&gt;`;
           overlay.style.display = &quot;grid&quot;;
         };
         const tick = () =&gt; {
@@ -15989,7 +16182,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       }
 
       function jump() {
-        if (overlay?.classList.contains(&quot;is-second-chance-modal&quot;)) return;
+        if (overlay?.classList.contains(&quot;is-second-chance-modal&quot;) || overlay?.classList.contains(&quot;is-pause-modal&quot;) || overlay?.classList.contains(&quot;is-run-results-modal&quot;)) return;
         if (state.running &amp;&amp; state.caseRunId &amp;&amp; authoritativeRunSessionReadyId !== String(state.caseRunId)) {
           hapticImpact(&quot;light&quot;, 50);
           return;
@@ -16013,7 +16206,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       }
 
       function togglePause(preserveButtonVisual = false) {
-        if (overlay?.classList.contains(&quot;is-second-chance-modal&quot;)) return;
+        if (overlay?.classList.contains(&quot;is-second-chance-modal&quot;) || overlay?.classList.contains(&quot;is-run-results-modal&quot;)) return;
         if (state.over) return;
         if (!state.running &amp;&amp; !state.paused) {
           reset(false, preserveButtonVisual);
@@ -16036,7 +16229,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         flushDeferredAntiCheatGuard();
         statusEl.textContent = &quot;пауза&quot;;
         playGameSound(&quot;pause&quot;);
-        showModal(&quot;Пауза&quot;, &quot;Тапни по витрине или нажми «Продолжить», чтобы вернуться в забег.&quot;);
+        showPauseModal(&quot;manual&quot;);
       }
 
       function resume(preserveButtonVisual = false, skipZeffiPause = false) {
@@ -16056,7 +16249,8 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         renderExtrapolationSeconds = 0;
         state.renderSpeed = Number(state.speed || 0);
         syncSimulationRenderHistory();
-        overlay.classList.remove(&quot;is-finish-modal&quot;, &quot;is-second-chance-modal&quot;);
+        overlay.onclick = null;
+        overlay.classList.remove(&quot;is-finish-modal&quot;, &quot;is-second-chance-modal&quot;, &quot;is-pause-modal&quot;, &quot;is-run-results-modal&quot;);
         overlay.style.display = &quot;none&quot;;
         statusEl.textContent = &quot;бежим&quot;;
         if (!preserveButtonVisual) setPauseButtonVisual(false);
@@ -16079,7 +16273,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         flushDeferredAntiCheatGuard();
         statusEl.textContent = &quot;пауза&quot;;
         setPauseButtonVisual(false);
-        showModal(&quot;Пауза&quot;, &quot;Игра была поставлена на паузу, пока приложение находилось в фоне. Тапни по витрине или нажми «Продолжить».&quot;);
+        showPauseModal(&quot;hidden&quot;);
         clientPerformance.visibilityPauses += 1;
       }
 
@@ -16094,10 +16288,165 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         clientPerformanceLastFrameDurationMs = 0;
           if (visibilityPauseActive &amp;&amp; state.paused &amp;&amp; !state.over) {
             state.last = performance.now();
-            showModal(&quot;Пауза&quot;, &quot;Игра была поставлена на паузу, пока приложение находилось в фоне. Тапни по витрине или нажми «Продолжить».&quot;);
+            showPauseModal(&quot;hidden&quot;);
           }
         }
         syncBackgroundMusic();
+      }
+
+
+      function runBoosterDisplayTitle(type, skinId = runSkinIdForDisplay()) {
+        const item = CASE_BOOSTER_CATALOG[type];
+        const character = runCharacterProfile(skinId);
+        if (type === &quot;shield&quot;) return `Щит ${character.name}`;
+        if (type === &quot;pause&quot;) return `Пауза ${character.name}`;
+        return String(item?.title || type || &quot;Усилитель&quot;);
+      }
+      function pauseBoosterMarkup() {
+        const active = normalizeRunCaseBoosters(state.runCaseBoosters);
+        const items = CASE_BOOSTER_TYPES.filter((type) =&gt; active[type] &amp;&amp; CASE_BOOSTER_CATALOG[type]).map((type) =&gt; {
+          const item = CASE_BOOSTER_CATALOG[type];
+          return `&lt;span class=&quot;run-booster-chip&quot;&gt;&lt;img src=&quot;${item.src}&quot; alt=&quot;&quot;&gt;&lt;span&gt;${runUiEscape(runBoosterDisplayTitle(type))}&lt;/span&gt;&lt;/span&gt;`;
+        });
+        return items.length ? `&lt;div class=&quot;run-booster-strip&quot; aria-label=&quot;Активные усилители&quot;&gt;${items.join(&quot;&quot;)}&lt;/div&gt;` : &quot;&quot;;
+      }
+
+      function showPauseModal(reason = &quot;manual&quot;) {
+        if (!state.paused || state.over) return;
+        const skinId = runSkinIdForDisplay();
+        const character = runCharacterProfile(skinId);
+        const premiumChip = character.premium ? `&lt;span class=&quot;run-overlay-chip is-premium&quot;&gt;\ud83d\udc3e \u041e\u0441\u043e\u0431\u044b\u0439 \u043f\u0435\u0440\u0441\u043e\u043d\u0430\u0436 \u00b7 ${character.name}&lt;/span&gt;` : `&lt;span class=&quot;run-overlay-chip&quot;&gt;\u0422\u0435\u043a\u0443\u0449\u0438\u0439 \u0437\u0430\u0431\u0435\u0433&lt;/span&gt;`;
+        const phrase = reason === &quot;hidden&quot;
+          ? `${character.name} \u0436\u0434\u0451\u0442 \u2014 \u0438\u0433\u0440\u0430 \u0431\u044b\u043b\u0430 \u043f\u043e\u0441\u0442\u0430\u0432\u043b\u0435\u043d\u0430 \u043d\u0430 \u043f\u0430\u0443\u0437\u0443, \u043f\u043e\u043a\u0430 \u043f\u0440\u0438\u043b\u043e\u0436\u0435\u043d\u0438\u0435 \u0431\u044b\u043b\u043e \u0432 \u0444\u043e\u043d\u0435.`
+          : runCharacterPhrase(&quot;pause&quot;, skinId);
+        overlay.classList.remove(&quot;is-finish-modal&quot;, &quot;is-second-chance-modal&quot;, &quot;is-run-results-modal&quot;);
+        overlay.classList.add(&quot;is-pause-modal&quot;);
+        overlay.innerHTML = `&lt;section class=&quot;run-pause-card${character.premium ? &quot; is-alex&quot; : &quot;&quot;}&quot; role=&quot;dialog&quot; aria-modal=&quot;true&quot; aria-label=&quot;\u041f\u0430\u0443\u0437\u0430&quot;&gt;
+          &lt;div class=&quot;run-pause-head&quot;&gt;&lt;div class=&quot;run-character-portrait&quot;&gt;${runDogPortraitMarkup(skinId)}&lt;/div&gt;&lt;div class=&quot;run-pause-copy&quot;&gt;&lt;div class=&quot;run-overlay-kicker&quot;&gt;${premiumChip}&lt;/div&gt;&lt;strong&gt;\u041f\u0430\u0443\u0437\u0430&lt;/strong&gt;&lt;p&gt;${runUiEscape(phrase)}&lt;/p&gt;&lt;/div&gt;&lt;/div&gt;
+          &lt;div class=&quot;run-pause-stats&quot;&gt;&lt;span class=&quot;run-pause-stat&quot;&gt;&lt;span&gt;\u0422\u0435\u043a\u0443\u0449\u0438\u0439 \u0440\u0435\u0437\u0443\u043b\u044c\u0442\u0430\u0442&lt;/span&gt;&lt;b&gt;${formatter.format(Math.max(0, Math.floor(state.score || 0)))}&lt;/b&gt;&lt;/span&gt;&lt;span class=&quot;run-pause-stat&quot;&gt;&lt;span&gt;\u041b\u0438\u0447\u043d\u044b\u0439 \u0440\u0435\u043a\u043e\u0440\u0434&lt;/span&gt;&lt;b&gt;${formatter.format(Math.max(0, Math.floor(state.best || 0)))}&lt;/b&gt;&lt;/span&gt;&lt;/div&gt;
+          ${pauseBoosterMarkup()}
+          &lt;div class=&quot;run-pause-actions&quot;&gt;&lt;button type=&quot;button&quot; class=&quot;run-overlay-primary&quot; data-run-pause-continue&gt;\u25b6 \u041f\u0440\u043e\u0434\u043e\u043b\u0436\u0438\u0442\u044c&lt;/button&gt;&lt;div class=&quot;run-pause-settings&quot;&gt;&lt;button type=&quot;button&quot; class=&quot;run-overlay-secondary&quot; data-run-pause-sound&gt;&lt;/button&gt;&lt;button type=&quot;button&quot; class=&quot;run-overlay-secondary&quot; data-run-pause-music&gt;&lt;/button&gt;&lt;/div&gt;&lt;button type=&quot;button&quot; class=&quot;run-overlay-quiet&quot; data-run-pause-finish&gt;\ud83c\udfe0 \u0417\u0430\u0432\u0435\u0440\u0448\u0438\u0442\u044c \u0437\u0430\u0431\u0435\u0433&lt;/button&gt;&lt;/div&gt;
+          &lt;div class=&quot;run-pause-confirm&quot; data-run-pause-confirm&gt;&lt;strong&gt;\u0417\u0430\u0432\u0435\u0440\u0448\u0438\u0442\u044c \u0442\u0435\u043a\u0443\u0449\u0438\u0439 \u0437\u0430\u0431\u0435\u0433?&lt;/strong&gt;&lt;span&gt;\u0422\u0435\u043a\u0443\u0449\u0438\u0439 \u0440\u0435\u0437\u0443\u043b\u044c\u0442\u0430\u0442 \u0431\u0443\u0434\u0435\u0442 \u043e\u0442\u043f\u0440\u0430\u0432\u043b\u0435\u043d \u043d\u0430 \u0441\u0435\u0440\u0432\u0435\u0440 \u043f\u043e \u043e\u0431\u044b\u0447\u043d\u044b\u043c \u043f\u0440\u0430\u0432\u0438\u043b\u0430\u043c.&lt;/span&gt;&lt;div class=&quot;run-pause-confirm-actions&quot;&gt;&lt;button type=&quot;button&quot; class=&quot;run-overlay-secondary&quot; data-run-pause-cancel&gt;\u041e\u0441\u0442\u0430\u0442\u044c\u0441\u044f&lt;/button&gt;&lt;button type=&quot;button&quot; class=&quot;run-overlay-primary&quot; data-run-pause-confirm-finish&gt;\u0417\u0430\u0432\u0435\u0440\u0448\u0438\u0442\u044c&lt;/button&gt;&lt;/div&gt;&lt;/div&gt;
+        &lt;/section&gt;`;
+        overlay.style.display = &quot;grid&quot;;
+        const card = overlay.querySelector(&quot;.run-pause-card&quot;);
+        const soundButton = overlay.querySelector(&quot;[data-run-pause-sound]&quot;);
+        const musicButton = overlay.querySelector(&quot;[data-run-pause-music]&quot;);
+        const updateSettings = () =&gt; {
+          if (soundButton) soundButton.textContent = `\ud83d\udd0a \u0417\u0432\u0443\u043a: ${state.soundEnabled !== false ? &quot;\u0432\u043a\u043b&quot; : &quot;\u0432\u044b\u043a\u043b&quot;}`;
+          if (musicButton) musicButton.textContent = `\ud83c\udfb5 \u041c\u0443\u0437\u044b\u043a\u0430: ${state.musicEnabled !== false ? &quot;\u0432\u043a\u043b&quot; : &quot;\u0432\u044b\u043a\u043b&quot;}`;
+        };
+        updateSettings();
+        card?.addEventListener(&quot;pointerdown&quot;, (event) =&gt; event.stopPropagation());
+        card?.addEventListener(&quot;click&quot;, (event) =&gt; event.stopPropagation());
+        overlay.onclick = (event) =&gt; { event.stopPropagation(); if (event.target === overlay &amp;&amp; state.paused &amp;&amp; !state.over) resume(); };
+        overlay.querySelector(&quot;[data-run-pause-continue]&quot;)?.addEventListener(&quot;click&quot;, (event) =&gt; { event.stopPropagation(); resume(); }, { once:true });
+        soundButton?.addEventListener(&quot;click&quot;, (event) =&gt; { event.stopPropagation(); toggleProfileSounds(); updateSettings(); });
+        musicButton?.addEventListener(&quot;click&quot;, (event) =&gt; { event.stopPropagation(); toggleProfileMusic(); updateSettings(); });
+        const confirm = overlay.querySelector(&quot;[data-run-pause-confirm]&quot;);
+        overlay.querySelector(&quot;[data-run-pause-finish]&quot;)?.addEventListener(&quot;click&quot;, (event) =&gt; { event.stopPropagation(); confirm?.classList.add(&quot;is-visible&quot;); });
+        overlay.querySelector(&quot;[data-run-pause-cancel]&quot;)?.addEventListener(&quot;click&quot;, (event) =&gt; { event.stopPropagation(); confirm?.classList.remove(&quot;is-visible&quot;); });
+        overlay.querySelector(&quot;[data-run-pause-confirm-finish]&quot;)?.addEventListener(&quot;click&quot;, (event) =&gt; { event.stopPropagation(); state.paused = false; overlay.onclick = null; endGame(); }, { once:true });
+      }
+
+      function runResultDurationLabel(durationMs) {
+        const totalSeconds = Math.max(0, Math.floor(Number(durationMs || 0) / 1000));
+        const minutes = Math.floor(totalSeconds / 60);
+        const seconds = String(totalSeconds % 60).padStart(2, &quot;0&quot;);
+        return `${minutes}:${seconds}`;
+      }
+      function runResultCaseTitle(type) {
+        const key = String(type || &quot;small&quot;);
+        return key === &quot;legendary&quot; ? &quot;\u041b\u0435\u0433\u0435\u043d\u0434\u0430\u0440\u043d\u044b\u0439 \u043a\u0435\u0439\u0441&quot; : key === &quot;mythic&quot; ? &quot;\u041c\u0438\u0444\u0438\u0447\u0435\u0441\u043a\u0438\u0439 \u043a\u0435\u0439\u0441&quot; : key === &quot;gold&quot; ? &quot;\u0417\u043e\u043b\u043e\u0442\u043e\u0439 \u043a\u0435\u0439\u0441&quot; : key === &quot;sweet&quot; ? &quot;\u0421\u0435\u0440\u0435\u0431\u0440\u044f\u043d\u044b\u0439 \u043a\u0435\u0439\u0441&quot; : &quot;\u041e\u0431\u044b\u0447\u043d\u044b\u0439 \u043a\u0435\u0439\u0441&quot;;
+      }
+      function runResultsFrame(context, bodyMarkup, className = &quot;&quot;) {
+        const skinId = normalizeRunSkinId(context?.skinId || state.runSkinId);
+        const character = runCharacterProfile(skinId);
+        overlay.classList.remove(&quot;is-finish-modal&quot;, &quot;is-second-chance-modal&quot;, &quot;is-pause-modal&quot;);
+        overlay.classList.add(&quot;is-run-results-modal&quot;);
+        overlay.onclick = (event) =&gt; event.stopPropagation();
+        overlay.innerHTML = `&lt;section class=&quot;run-results-card${character.premium ? &quot; is-alex&quot; : &quot;&quot;}${className ? ` ${className}` : &quot;&quot;}&quot; role=&quot;dialog&quot; aria-modal=&quot;true&quot; aria-label=&quot;\u0420\u0435\u0437\u0443\u043b\u044c\u0442\u0430\u0442 \u0437\u0430\u0431\u0435\u0433\u0430&quot;&gt;${bodyMarkup}&lt;/section&gt;`;
+        overlay.style.display = &quot;grid&quot;;
+        const card = overlay.querySelector(&quot;.run-results-card&quot;);
+        card?.addEventListener(&quot;pointerdown&quot;, (event) =&gt; event.stopPropagation());
+        card?.addEventListener(&quot;click&quot;, (event) =&gt; event.stopPropagation());
+        return { card, character, skinId };
+      }
+      function runResultsHeader(context, title, phrase, kicker = &quot;\u0420\u0435\u0437\u0443\u043b\u044c\u0442\u0430\u0442 \u0437\u0430\u0431\u0435\u0433\u0430&quot;) {
+        const skinId = normalizeRunSkinId(context?.skinId || state.runSkinId);
+        const character = runCharacterProfile(skinId);
+        const chip = character.premium ? `&lt;span class=&quot;run-overlay-chip is-premium&quot;&gt;\ud83d\udc3e \u041e\u0441\u043e\u0431\u044b\u0439 \u043f\u0435\u0440\u0441\u043e\u043d\u0430\u0436 \u00b7 ${character.name}&lt;/span&gt;` : `&lt;span class=&quot;run-overlay-chip&quot;&gt;${runUiEscape(kicker)}&lt;/span&gt;`;
+        return `&lt;div class=&quot;run-results-head&quot;&gt;&lt;div class=&quot;run-character-portrait&quot;&gt;${runDogPortraitMarkup(skinId)}&lt;/div&gt;&lt;div class=&quot;run-results-copy&quot;&gt;&lt;div class=&quot;run-overlay-kicker&quot;&gt;${chip}&lt;/div&gt;&lt;strong&gt;${runUiEscape(title)}&lt;/strong&gt;&lt;p&gt;${runUiEscape(phrase)}&lt;/p&gt;&lt;/div&gt;&lt;/div&gt;`;
+      }
+      function showRunResultsPending(context) {
+        const character = runCharacterProfile(context.skinId);
+        const body = `${runResultsHeader(context, &quot;\u0421\u043e\u0445\u0440\u0430\u043d\u044f\u0435\u043c \u0437\u0430\u0431\u0435\u0433\u2026&quot;, `${character.name} \u0443\u0436\u0435 \u0444\u0438\u043d\u0438\u0448\u0438\u0440\u043e\u0432\u0430\u043b${character.id === &quot;alex&quot; ? &quot;&quot; : &quot;\u0430&quot;}. \u041f\u0440\u043e\u0432\u0435\u0440\u044f\u0435\u043c \u0440\u0435\u0437\u0443\u043b\u044c\u0442\u0430\u0442 \u043d\u0430 \u0441\u0435\u0440\u0432\u0435\u0440\u0435.`)}&lt;div class=&quot;run-results-score&quot;&gt;&lt;b&gt;${formatter.format(context.score)}&lt;/b&gt;&lt;span&gt;\u041e\u0427\u041a\u0410&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;run-results-metrics&quot;&gt;&lt;span class=&quot;run-result-metric&quot;&gt;&lt;span&gt;\ud83c\udf6c \u0417\u0435\u0444\u0438\u0440&lt;/span&gt;&lt;b&gt;${formatter.format(context.treats)}&lt;/b&gt;&lt;/span&gt;&lt;span class=&quot;run-result-metric&quot;&gt;&lt;span&gt;\u2615 \u041a\u043e\u0444\u0435&lt;/span&gt;&lt;b&gt;${formatter.format(context.coffee)}&lt;/b&gt;&lt;/span&gt;&lt;span class=&quot;run-result-metric&quot;&gt;&lt;span&gt;\u23f1 \u0412\u0440\u0435\u043c\u044f&lt;/span&gt;&lt;b&gt;${runResultDurationLabel(context.durationMs)}&lt;/b&gt;&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;run-results-state&quot;&gt;&lt;i class=&quot;run-results-spinner&quot;&gt;&lt;/i&gt;&lt;span&gt;\u0421\u043e\u0445\u0440\u0430\u043d\u044f\u0435\u043c \u0440\u0435\u0437\u0443\u043b\u044c\u0442\u0430\u0442 \u0438 \u043d\u0430\u0433\u0440\u0430\u0434\u044b\u2026&lt;/span&gt;&lt;/div&gt;`;
+        runResultsFrame(context, body, &quot;is-pending&quot;);
+      }
+      function runResultsEventMarkup(icon, title, text) { return `&lt;div class=&quot;run-result-event&quot;&gt;&lt;i&gt;${icon}&lt;/i&gt;&lt;span&gt;&lt;strong&gt;${runUiEscape(title)}&lt;/strong&gt;&lt;small&gt;${runUiEscape(text)}&lt;/small&gt;&lt;/span&gt;&lt;/div&gt;`; }
+      function runResultsEvents(payload) {
+        const settlement = payload?.runSettlement || {};
+        const events = [];
+        if (settlement?.caseDrop?.granted) events.push(runResultsEventMarkup(&quot;\ud83c\udf81&quot;, &quot;\u041a\u0435\u0439\u0441 \u043f\u043e\u0439\u043c\u0430\u043d!&quot;, `${runResultCaseTitle(settlement.caseDrop.type)} \u0434\u043e\u0431\u0430\u0432\u043b\u0435\u043d \u0432 \u043f\u0440\u043e\u0444\u0438\u043b\u044c`));
+        const achievement = Array.isArray(payload?.achievementUnlocks) ? payload.achievementUnlocks[0] : null;
+        if (achievement) events.push(runResultsEventMarkup(String(achievement.icon || &quot;\ud83c\udfc5&quot;), &quot;\u041d\u043e\u0432\u043e\u0435 \u0434\u043e\u0441\u0442\u0438\u0436\u0435\u043d\u0438\u0435&quot;, String(achievement.title || &quot;\u0414\u043e\u0441\u0442\u0438\u0436\u0435\u043d\u0438\u0435 \u043e\u0442\u043a\u0440\u044b\u0442\u043e&quot;)));
+        const task = Array.isArray(payload?.seasonPassAward?.taskNotice?.tasks) ? payload.seasonPassAward.taskNotice.tasks[0] : null;
+        if (task) events.push(runResultsEventMarkup(&quot;\ud83d\udccb&quot;, &quot;\u0417\u0430\u0434\u0430\u043d\u0438\u0435 \u0432\u044b\u043f\u043e\u043b\u043d\u0435\u043d\u043e&quot;, String(task.title || &quot;\u0421\u0435\u0437\u043e\u043d\u043d\u043e\u0435 \u0437\u0430\u0434\u0430\u043d\u0438\u0435&quot;)));
+        const seasonXp = Math.max(0, Number(payload?.seasonPassAward?.xpAwarded || 0));
+        if (seasonXp &gt; 0) events.push(runResultsEventMarkup(&quot;\ud83c\udf9f&quot;, `+${formatter.format(seasonXp)} XP \u0441\u0435\u0437\u043e\u043d\u0430`, &quot;\u041f\u0440\u043e\u0433\u0440\u0435\u0441\u0441 \u0441\u0435\u0437\u043e\u043d\u043d\u043e\u0433\u043e \u043f\u0440\u043e\u043f\u0443\u0441\u043a\u0430 \u043e\u0431\u043d\u043e\u0432\u043b\u0451\u043d&quot;));
+        if (settlement.acceptedToRating) events.push(runResultsEventMarkup(&quot;\ud83c\udfc6&quot;, &quot;\u0420\u0435\u0437\u0443\u043b\u044c\u0442\u0430\u0442 \u0432 \u0440\u0435\u0439\u0442\u0438\u043d\u0433\u0435&quot;, &quot;\u0421\u0435\u0440\u0432\u0435\u0440 \u043f\u0440\u0438\u043d\u044f\u043b \u0437\u0430\u0431\u0435\u0433&quot;));
+        return events.slice(0, 3);
+      }
+      function bindRunResultsActions(context) {
+        overlay.querySelector(&quot;[data-run-results-again]&quot;)?.addEventListener(&quot;click&quot;, (event) =&gt; { event.stopPropagation(); overlay.onclick = null; reset(); }, { once:true });
+        overlay.querySelector(&quot;[data-run-results-cafe]&quot;)?.addEventListener(&quot;click&quot;, (event) =&gt; { event.stopPropagation(); overlay.onclick = null; overlay.classList.remove(&quot;is-run-results-modal&quot;); overlay.style.display = &quot;none&quot;; }, { once:true });
+      }
+      function renderRunResultsSettled(payload, context) {
+        const settlement = payload?.runSettlement || {};
+        const skinId = normalizeRunSkinId(settlement.skinId || context.skinId);
+        context.skinId = skinId;
+        state.runSkinId = skinId;
+        const character = runCharacterProfile(skinId);
+        const score = Math.max(0, Number(settlement?.raw?.score ?? context.score));
+        const previousBest = Math.max(0, Number(settlement.previousBest ?? context.previousBest));
+        const newRecord = Boolean(settlement.newRecord);
+        const phrase = runCharacterPhrase(newRecord ? &quot;record&quot; : &quot;finish&quot;, skinId, context.runId);
+        const delta = newRecord ? Math.max(0, score - previousBest) : 0;
+        const near = !newRecord &amp;&amp; previousBest &gt; score ? previousBest - score : 0;
+        const nearLimit = Math.max(250, Math.floor(previousBest * .08));
+        const recordLine = newRecord
+          ? `&lt;div class=&quot;run-record-line is-record&quot;&gt;\ud83c\udfc6 \u041d\u043e\u0432\u044b\u0439 \u0440\u0435\u043a\u043e\u0440\u0434${delta ? ` \u00b7 +${formatter.format(delta)}` : &quot;&quot;}&lt;/div&gt;`
+          : near &gt; 0 &amp;&amp; near &lt;= nearLimit
+            ? `&lt;div class=&quot;run-record-line&quot;&gt;\u0414\u043e \u0440\u0435\u043a\u043e\u0440\u0434\u0430 \u2014 ${formatter.format(near)} \u043e\u0447\u043a\u043e\u0432&lt;/div&gt;`
+            : `&lt;div class=&quot;run-record-line&quot;&gt;\u0420\u0435\u043a\u043e\u0440\u0434: ${formatter.format(Math.max(previousBest, score))}&lt;/div&gt;`;
+        const credited = settlement.credited || {};
+        const bonus = settlement.skinBonus || {};
+        const bonusParts = [];
+        if (Number(bonus.points || 0) &gt; 0) bonusParts.push(`+${formatter.format(Number(bonus.points))} \u043e\u0447\u043a\u043e\u0432`);
+        if (Number(bonus.treats || 0) &gt; 0) bonusParts.push(`+${formatter.format(Number(bonus.treats))} \u0437\u0435\u0444\u0438\u0440\u0430`);
+        if (Number(bonus.coffee || 0) &gt; 0) bonusParts.push(`+${formatter.format(Number(bonus.coffee))} \u043a\u043e\u0444\u0435`);
+        const skinTitle = SKIN_CATALOG[skinId]?.title || character.name;
+        const bonusMarkup = bonusParts.length ? `&lt;div class=&quot;run-skin-bonus${character.premium ? &quot; is-alex&quot; : &quot;&quot;}&quot;&gt;${character.premium ? &quot;\ud83d\udc3e &quot; : &quot;&quot;}\u0411\u043e\u043d\u0443\u0441 \u00ab${runUiEscape(skinTitle)}\u00bb: ${runUiEscape(bonusParts.join(&quot; \u00b7 &quot;))}&lt;/div&gt;` : &quot;&quot;;
+        const events = runResultsEvents(payload);
+        const body = `${runResultsHeader(context, newRecord ? &quot;\ud83c\udfc6 \u041d\u043e\u0432\u044b\u0439 \u0440\u0435\u043a\u043e\u0440\u0434!&quot; : &quot;\u0417\u0430\u0431\u0435\u0433 \u0437\u0430\u0432\u0435\u0440\u0448\u0451\u043d!&quot;, phrase)}&lt;div class=&quot;run-results-score&quot;&gt;&lt;b&gt;${formatter.format(score)}&lt;/b&gt;&lt;span&gt;\u041e\u0427\u041a\u0410&lt;/span&gt;&lt;/div&gt;${recordLine}&lt;div class=&quot;run-results-metrics&quot;&gt;&lt;span class=&quot;run-result-metric&quot;&gt;&lt;span&gt;\ud83c\udf6c \u0417\u0435\u0444\u0438\u0440&lt;/span&gt;&lt;b&gt;${formatter.format(Math.max(0, Number(settlement?.raw?.treats ?? context.treats)))}&lt;/b&gt;&lt;/span&gt;&lt;span class=&quot;run-result-metric&quot;&gt;&lt;span&gt;\u2615 \u041a\u043e\u0444\u0435&lt;/span&gt;&lt;b&gt;${formatter.format(Math.max(0, Number(settlement?.raw?.coffee ?? context.coffee)))}&lt;/b&gt;&lt;/span&gt;&lt;span class=&quot;run-result-metric&quot;&gt;&lt;span&gt;\u23f1 \u0412\u0440\u0435\u043c\u044f&lt;/span&gt;&lt;b&gt;${runResultDurationLabel(settlement?.raw?.durationMs ?? context.durationMs)}&lt;/b&gt;&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;run-credit-line&quot;&gt;&lt;span&gt;+${formatter.format(Math.max(0, Number(credited.points || 0)))} \u043e\u0447\u043a\u043e\u0432&lt;/span&gt;&lt;span&gt;+${formatter.format(Math.max(0, Number(credited.treats || 0)))} \u0437\u0435\u0444\u0438\u0440\u0430&lt;/span&gt;&lt;span&gt;+${formatter.format(Math.max(0, Number(credited.coffee || 0)))} \u043a\u043e\u0444\u0435&lt;/span&gt;${Number(settlement.profileXpAwarded || 0) &gt; 0 ? `&lt;span&gt;+${formatter.format(Number(settlement.profileXpAwarded))} XP&lt;/span&gt;` : &quot;&quot;}&lt;/div&gt;${bonusMarkup}${events.length ? `&lt;div class=&quot;run-results-events&quot;&gt;${events.join(&quot;&quot;)}&lt;/div&gt;` : &quot;&quot;}&lt;div class=&quot;run-results-state&quot;&gt;\u0420\u0435\u0437\u0443\u043b\u044c\u0442\u0430\u0442 \u0441\u043e\u0445\u0440\u0430\u043d\u0451\u043d \u2713&lt;/div&gt;&lt;div class=&quot;run-results-actions&quot;&gt;&lt;button type=&quot;button&quot; class=&quot;run-overlay-primary&quot; data-run-results-again&gt;\u25b6 \u0415\u0449\u0451 \u0440\u0430\u0437&lt;/button&gt;&lt;button type=&quot;button&quot; class=&quot;run-overlay-secondary&quot; data-run-results-cafe&gt;\ud83c\udfe0 \u0412 \u043a\u0430\u0444\u0435&lt;/button&gt;&lt;/div&gt;`;
+        runResultsFrame(context, body);
+        bindRunResultsActions(context);
+      }
+      function renderRunResultsSyncError(context, error = null) {
+        const character = runCharacterProfile(context.skinId);
+        const message = String(error?.message || &quot;\u0421\u0432\u044f\u0437\u044c \u0441 \u0441\u0435\u0440\u0432\u0435\u0440\u043e\u043c \u043f\u0440\u0435\u0440\u0432\u0430\u043b\u0430\u0441\u044c.&quot;);
+        const body = `${runResultsHeader(context, &quot;\u0417\u0430\u0431\u0435\u0433 \u0436\u0434\u0451\u0442 \u0441\u0438\u043d\u0445\u0440\u043e\u043d\u0438\u0437\u0430\u0446\u0438\u0438&quot;, `${character.name} \u0444\u0438\u043d\u0438\u0448\u0438\u0440\u043e\u0432\u0430\u043b${character.id === &quot;alex&quot; ? &quot;&quot; : &quot;\u0430&quot;}. \u041c\u044b \u043d\u0435 \u043f\u043e\u043a\u0430\u0436\u0435\u043c \u043d\u0430\u0433\u0440\u0430\u0434\u044b, \u043f\u043e\u043a\u0430 \u0441\u0435\u0440\u0432\u0435\u0440 \u0438\u0445 \u043d\u0435 \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0434\u0438\u0442.`)}&lt;div class=&quot;run-results-score&quot;&gt;&lt;b&gt;${formatter.format(context.score)}&lt;/b&gt;&lt;span&gt;\u041e\u0427\u041a\u0410&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;run-results-sync-error&quot;&gt;${runUiEscape(message)}&lt;br&gt;\u0420\u0435\u0437\u0443\u043b\u044c\u0442\u0430\u0442 \u0441\u043e\u0445\u0440\u0430\u043d\u0451\u043d \u043b\u043e\u043a\u0430\u043b\u044c\u043d\u043e \u0438 \u0435\u0433\u043e \u043c\u043e\u0436\u043d\u043e \u043e\u0442\u043f\u0440\u0430\u0432\u0438\u0442\u044c \u043f\u043e\u0432\u0442\u043e\u0440\u043d\u043e.&lt;/div&gt;&lt;div class=&quot;run-results-actions is-sync-error&quot;&gt;&lt;button type=&quot;button&quot; class=&quot;run-overlay-primary&quot; data-run-results-retry&gt;\u21bb \u041f\u043e\u0432\u0442\u043e\u0440\u0438\u0442\u044c \u0441\u043e\u0445\u0440\u0430\u043d\u0435\u043d\u0438\u0435&lt;/button&gt;&lt;button type=&quot;button&quot; class=&quot;run-overlay-secondary&quot; data-run-results-cafe&gt;\ud83c\udfe0 \u0412 \u043a\u0430\u0444\u0435&lt;/button&gt;&lt;/div&gt;`;
+        runResultsFrame(context, body);
+        overlay.querySelector(&quot;[data-run-results-cafe]&quot;)?.addEventListener(&quot;click&quot;, (event) =&gt; { event.stopPropagation(); overlay.onclick = null; overlay.classList.remove(&quot;is-run-results-modal&quot;); overlay.style.display = &quot;none&quot;; }, { once:true });
+        overlay.querySelector(&quot;[data-run-results-retry]&quot;)?.addEventListener(&quot;click&quot;, async (event) =&gt; {
+          event.stopPropagation();
+          showRunResultsPending(context);
+          const settled = await retryPendingLeaderboardRun({ silent:true, onSettled:(payload, retryError) =&gt; {
+            if (payload?.runSettlement?.accepted) renderRunResultsSettled(payload, context);
+            else renderRunResultsSyncError(context, retryError);
+          }});
+          if (!settled &amp;&amp; !leaderboardRunSubmitInFlightRunId &amp;&amp; overlay.classList.contains(&quot;is-run-results-modal&quot;) &amp;&amp; overlay.querySelector(&quot;.is-pending&quot;)) renderRunResultsSyncError(context, new Error(&quot;\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u043f\u043e\u0432\u0442\u043e\u0440\u0438\u0442\u044c \u0441\u043e\u0445\u0440\u0430\u043d\u0435\u043d\u0438\u0435.&quot;));
+        }, { once:true });
       }
 
       function endGame() {
@@ -16106,7 +16455,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           cancelZeffiPauseCountdown();
           visibilityPauseActive = false;
           clientPerformanceLastFrameAt = 0;
-        clientPerformanceLastFrameDurationMs = 0;
+          clientPerformanceLastFrameDurationMs = 0;
           state.running = false;
           cancelGameLoop();
           state.over = true;
@@ -16114,56 +16463,51 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           const earned = Math.floor(state.score);
           const earnedTreats = state.runTreats;
           const earnedCoffee = state.runCoffee;
-          const credited = skinRunRewards(earned, earnedTreats, earnedCoffee, state.time);
+          const runSkinId = normalizeRunSkinId(state.runSkinId || currentDogSkin.id);
+          const credited = skinRunRewards(earned, earnedTreats, earnedCoffee, state.time, runSkinId);
           const previousBest = Number(state.best || 0);
           const previousLevel = profileLevelState(state.profileXp).level;
           const isNewRecord = state.score &gt; previousBest &amp;&amp; earned &gt; 0;
+          const resultContext = { runId:String(state.caseRunId || &quot;&quot;), skinId:runSkinId, previousBest:Math.floor(previousBest), score:earned, treats:earnedTreats, coffee:earnedCoffee, durationMs:Math.max(0,Math.floor(Number(state.time || 0) * 1000)) };
           hapticImpact(&quot;heavy&quot;);
-          if (isNewRecord) window.setTimeout(() =&gt; hapticNotify(&quot;success&quot;), 160);
           state.best = Math.max(state.best, state.score);
           state.wallet += credited.points;
           state.treats += credited.treats;
           state.coffee += credited.coffee;
-          const boosterRunSummary = consumeLocalCaseBoosterRun(credited, state.caseRunId);
+          consumeLocalCaseBoosterRun(credited, state.caseRunId);
           state.completedRuns = sanitizeGameNumber(Number(state.completedRuns || 0) + 1);
           const runXpEarned = profileRunQualifiesForXp(state.time, earned) ? profileRunXpReward() : 0;
           if (runXpEarned &gt; 0) state.profileXp = sanitizeGameNumber(Number(state.profileXp || 0) + runXpEarned);
           const currentLevelAfterRun = profileLevelState(state.profileXp).level;
           const reachedNewLevel = currentLevelAfterRun &gt; previousLevel;
-          const unlockedLevelCase = reachedNewLevel
-            ? LEVEL_CASE_SCHEDULE.find(entry =&gt; entry.level === currentLevelAfterRun &amp;&amp; !normalizeCaseNumberList(state.caseOpenedLevels).includes(entry.level))
-            : null;
           playGameSound(&quot;hitPouf&quot;);
           playGameSound(&quot;gameOver&quot;, 170);
-          if (isNewRecord) playGameSound(&quot;newRecord&quot;, 410);
-          if (reachedNewLevel) playGameSound(&quot;levelUp&quot;, isNewRecord ? 720 : 430);
           state.runTreats = 0;
           state.runCoffee = 0;
-          statusEl.textContent = &quot;финиш&quot;;
+          statusEl.textContent = &quot;\u0444\u0438\u043d\u0438\u0448&quot;;
           setPauseButtonVisual(false);
           setStartButtonVisual(&quot;restart&quot;, false);
           updateHud();
           saveProgress();
-          void submitLeaderboardRun(earned, state.time, null, { treats: earnedTreats, coffee: earnedCoffee, newRecord: isNewRecord, profileXpAwarded: runXpEarned });
-          if (reachedNewLevel) void loadCaseState(true);
-          const finishLines = [
-            `+${credited.points} очков · +${credited.treats} зефира · +${credited.coffee} кофе`,
-            runXpEarned &gt; 0 ? `+${runXpEarned} XP профиля` : &quot;XP профиля не начислен&quot;,
-            caseBoosterRunText(credited, boosterRunSummary),
-            skinRunBonusText(credited),
-            unlockedLevelCase ? `Открыт ${unlockedLevelCase.title} — забери его в профиле` : &quot;&quot;,
-            `Рекорд: ${Math.floor(state.best)}`
-          ].filter(Boolean);
-          showModal(
-            `Забег окончен: ${Math.floor(state.score)}`,
-            finishLines.join(&quot;&lt;br&gt;&quot;)
-          );
+          showRunResultsPending(resultContext);
+          void submitLeaderboardRun(earned, state.time, null, { treats: earnedTreats, coffee: earnedCoffee, newRecord: isNewRecord, profileXpAwarded: runXpEarned }, {
+            silent:true,
+            onSettled:(payload, error) =&gt; {
+              if (String(resultContext.runId || &quot;&quot;) !== String(state.caseRunId || &quot;&quot;)) return;
+              if (payload?.runSettlement?.accepted) {
+                if (payload.runSettlement.newRecord) { window.setTimeout(() =&gt; hapticNotify(&quot;success&quot;), 80); playGameSound(&quot;newRecord&quot;, 80); }
+                renderRunResultsSettled(payload, resultContext);
+              } else renderRunResultsSyncError(resultContext, error);
+            }
+          });
+          if (reachedNewLevel) { playGameSound(&quot;levelUp&quot;, 430); void loadCaseState(true); }
         });
       }
 
       function showModal(title, text) {
         const finishModal = String(title || &quot;&quot;).startsWith(&quot;Забег окончен&quot;);
-        overlay.classList.remove(&quot;is-second-chance-modal&quot;);
+        overlay.onclick = null;
+        overlay.classList.remove(&quot;is-second-chance-modal&quot;, &quot;is-pause-modal&quot;, &quot;is-run-results-modal&quot;);
         overlay.classList.toggle(&quot;is-finish-modal&quot;, finishModal);
         const modalCopy = String(text || &quot;&quot;);
         overlay.innerHTML = `&lt;div class=&quot;modal&quot;&gt;&lt;div class=&quot;badge&quot;&gt;${currentDogPortraitMarkup()}&lt;/div&gt;&lt;strong&gt;${title}&lt;/strong&gt;&lt;div class=&quot;rule&quot;&gt;&lt;/div&gt;&lt;span&gt;${modalCopy}&lt;/span&gt;&lt;/div&gt;`;
@@ -16185,7 +16529,8 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         flushDeferredAntiCheatGuard();
         statusEl.textContent = &quot;второй шанс&quot;;
         setPauseButtonVisual(false);
-        overlay.classList.remove(&quot;is-finish-modal&quot;);
+        overlay.onclick = null;
+        overlay.classList.remove(&quot;is-finish-modal&quot;, &quot;is-pause-modal&quot;, &quot;is-run-results-modal&quot;);
         overlay.classList.add(&quot;is-second-chance-modal&quot;);
         overlay.innerHTML = `&lt;div class=&quot;modal second-chance-modal second-chance-choice-modal&quot; role=&quot;dialog&quot; aria-modal=&quot;true&quot; aria-label=&quot;Второй шанс&quot;&gt;&lt;div class=&quot;second-chance-art&quot;&gt;&lt;img src=&quot;${CASE_BOOSTER_CATALOG.second_chance.src}&quot; alt=&quot;&quot; decoding=&quot;async&quot;&gt;&lt;/div&gt;&lt;strong&gt;Второй шанс&lt;/strong&gt;&lt;div class=&quot;rule&quot;&gt;&lt;/div&gt;&lt;span&gt;Продолжить этот же забег? Уже заработанные очки, зефир и кофе сохранятся и не будут выданы повторно.&lt;/span&gt;&lt;div class=&quot;second-chance-actions&quot;&gt;&lt;button type=&quot;button&quot; data-second-chance-continue&gt;Продолжить&lt;/button&gt;&lt;button type=&quot;button&quot; class=&quot;is-secondary&quot; data-second-chance-finish&gt;Завершить забег&lt;/button&gt;&lt;/div&gt;&lt;/div&gt;`;
         overlay.style.display = &quot;grid&quot;;
@@ -16219,7 +16564,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           puff(dog.x + dog.w * .62, dog.y + dog.h * .55, 11);
           playGameSound(&quot;hitPouf&quot;);
           hapticImpact(&quot;heavy&quot;);
-          showProfileToast(&quot;Щит Зеффи поглотил столкновение.&quot;, &quot;success&quot;, 1800);
+          showProfileToast(`Щит ${runCharacterProfile().name} поглотил столкновение.`, &quot;success&quot;, 1800);
           renderActiveRunBooster();
           void sendAuthoritativeRunCheckpoint(true);
           return false;
@@ -20498,8 +20843,8 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         return parts.join(&quot;&quot;);
       }
 
-      function activeSkinConfig() {
-        return SKIN_CATALOG[currentDogSkin.id] || SKIN_CATALOG.default;
+      function activeSkinConfig(skinId = currentDogSkin.id) {
+        return SKIN_CATALOG[normalizeRunSkinId(skinId)] || SKIN_CATALOG.default;
       }
 
       function skinHasGameplayBonus(skin) {
@@ -20507,8 +20852,8 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         return Number(bonus.points || 0) &gt; 0 || Number(bonus.treats || 0) &gt; 0 || Number(bonus.coffee || 0) &gt; 0;
       }
 
-      function skinRunRewards(points, treats, coffee, durationSeconds = 0) {
-        const skin = activeSkinConfig();
+      function skinRunRewards(points, treats, coffee, durationSeconds = 0, skinId = runSkinIdForDisplay()) {
+        const skin = activeSkinConfig(skinId);
         const bonus = skin.bonus || SKIN_CATALOG.default.bonus;
         const rawPoints = Math.max(0, Math.floor(Number(points) || 0));
         const rawTreats = Math.max(0, Math.floor(Number(treats) || 0));
@@ -22466,8 +22811,12 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           .then((data) =&gt; {
             if (authoritativeRunSessionId !== id) return false;
             const runBoosters = normalizeRunCaseBoosters(data?.runSession?.boosters);
+            const serverRunSkinId = normalizeRunSkinId(data?.runSession?.skinId || state.runSkinId);
             const serverCaseDrop=data?.runSession?.caseDrop&amp;&amp;typeof data.runSession.caseDrop===&quot;object&quot;?{type:String(data.runSession.caseDrop.type||&quot;small&quot;),spawnAfterMs:Math.max(0,Number(data.runSession.caseDrop.spawnAfterMs||0))}:null;
             if (String(state.caseRunId || &quot;&quot;) === id) {
+              state.runSkinId=serverRunSkinId;
+              ensureGameplayDogSprites(serverRunSkinId);
+              ensureSkinPortraitImage(runDogRunPortraitSrc(serverRunSkinId));
               state.runCaseDrop=serverCaseDrop;
               state.runCaseDropSpawned=false;
               state.runCaseDropCaught=false;
@@ -22627,6 +22976,11 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         return true;
       }
 
+      function notifyRunSettlementCallback(options, payload, error, run) {
+        if (typeof options?.onSettled !== &quot;function&quot;) return;
+        try { options.onSettled(payload || null, error || null, run || null); } catch (callbackError) { console.warn(&quot;Run settlement callback failed&quot;, callbackError); }
+      }
+
       async function submitLeaderboardRun(scoreValue, durationSeconds, existingRun = null, runMetrics = null, options = {}) {
         const silent = Boolean(options?.silent);
         const score = Math.max(0, Math.floor(Number(scoreValue || 0)));
@@ -22635,11 +22989,14 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         if (!run) {
           const currentRunId = String(state.caseRunId || &quot;&quot;);
           if (!/^[A-Za-z0-9_-]{12,96}$/.test(currentRunId)) {
-            showProfileToast(&quot;Защищённая сессия забега не найдена. Начните новый забег.&quot;, &quot;warning&quot;, 4200);
+            const error = new Error(&quot;Защищённая сессия забега не найдена. Начните новый забег.&quot;);
+            if (!silent) showProfileToast(error.message, &quot;warning&quot;, 4200);
+            notifyRunSettlementCallback(options, null, error, null);
             return false;
           }
           run = {
             runId: currentRunId,
+            skinId: normalizeRunSkinId(state.runSkinId || currentDogSkin.id),
             score,
             durationMs,
             runTreats: Math.max(0, Math.floor(Number(runMetrics?.treats || 0))),
@@ -22657,7 +23014,9 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         savePendingLeaderboardRun(run);
         const initData = String(telegramProfile?.initData || &quot;&quot;);
         if (!initData) {
-          if (!silent) showProfileToast(&quot;Забег сохранён. Откройте игру через Telegram, чтобы сервер подтвердил результат.&quot;, &quot;warning&quot;, 5200);
+          const error = new Error(&quot;Забег сохранён. Откройте игру через Telegram, чтобы сервер подтвердил результат.&quot;);
+          if (!silent) showProfileToast(error.message, &quot;warning&quot;, 5200);
+          notifyRunSettlementCallback(options, null, error, run);
           return false;
         }
         if (leaderboardRunSubmitInFlightRunId === String(run.runId)) return false;
@@ -22668,7 +23027,9 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
             : await startAuthoritativeRunSession(run.runId);
           if (!sessionReady) {
             leaderboardRunSubmitInFlightRunId = &quot;&quot;;
-            showProfileToast(&quot;Не удалось подтвердить начало забега. Результат сохранён для повторной синхронизации.&quot;, &quot;warning&quot;, 4600);
+            const error = new Error(&quot;Не удалось подтвердить начало забега. Результат сохранён для повторной синхронизации.&quot;);
+            if (!silent) showProfileToast(error.message, &quot;warning&quot;, 4600);
+            notifyRunSettlementCallback(options, null, error, run);
             return false;
           }
         }
@@ -22676,7 +23037,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           const loaded = await leaderboardApiRequest(LEADERBOARD_API_SUBMIT_PATH, { initData, ...run });
           const fastSettlementApplied = applyFastRunSettlementPayload(loaded);
           if (!fastSettlementApplied &amp;&amp; loaded?.caseState) applyServerCasePayload(loaded);
-          if(loaded?.runSettlement?.caseDrop?.granted){const t=String(loaded.runSettlement.caseDrop.type||&quot;small&quot;);const title=t===&quot;legendary&quot;?&quot;Легендарный&quot;:t===&quot;mythic&quot;?&quot;Мифический&quot;:t===&quot;gold&quot;?&quot;Золотой&quot;:t===&quot;sweet&quot;?&quot;Серебряный&quot;:&quot;Обычный&quot;;showProfileToast(`🎁 ${title} кейс пойман!`,&quot;success&quot;,3800);}
+          if(!silent&amp;&amp;loaded?.runSettlement?.caseDrop?.granted){const t=String(loaded.runSettlement.caseDrop.type||&quot;small&quot;);const title=t===&quot;legendary&quot;?&quot;Легендарный&quot;:t===&quot;mythic&quot;?&quot;Мифический&quot;:t===&quot;gold&quot;?&quot;Золотой&quot;:t===&quot;sweet&quot;?&quot;Серебряный&quot;:&quot;Обычный&quot;;showProfileToast(`🎁 ${title} кейс пойман!`,&quot;success&quot;,3800);}
           antiCheatWithTrustedChange(&quot;run-server-settlement&quot;, () =&gt; {
             state.pendingBoosterRuns = normalizePendingBoosterRuns(state.pendingBoosterRuns).filter((id) =&gt; id !== String(run.runId));
             saveProgress();
@@ -22718,6 +23079,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
             if (achievementUnlocks.length) window.dispatchEvent(new CustomEvent(&quot;zefirok-achievements-unlocked&quot;, { detail: { items: achievementUnlocks, runId: String(run.runId || &quot;&quot;) } }));
           } catch (error) {}
           try { window.parent.postMessage({ type: &quot;zefirok-run-completed&quot;, accepted: Boolean(loaded?.runSettlement?.acceptedToRating), runId: String(run.runId || &quot;&quot;) }, &quot;*&quot;); } catch (error) {}
+          notifyRunSettlementCallback(options, loaded, null, run);
           return true;
         } catch (error) {
           const errorMessage = String(error?.message || &quot;&quot;);
@@ -22726,6 +23088,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           console.warn(&quot;Authoritative run submit failed&quot;, error);
           if (!silent) showProfileToast(errorMessage || &quot;Результат сохранён и будет отправлен позже.&quot;, &quot;warning&quot;, 4200);
           window.setTimeout(() =&gt; void syncPlayerProfileFromServer(), 250);
+          notifyRunSettlementCallback(options, null, error, run);
           return false;
         } finally {
           if (leaderboardRunSubmitInFlightRunId === String(run.runId)) leaderboardRunSubmitInFlightRunId = &quot;&quot;;
@@ -22737,7 +23100,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         const run = loadPendingLeaderboardRun();
         if (!run || !telegramProfile?.initData) return false;
         if (leaderboardRunSubmitInFlightRunId === String(run.runId)) return false;
-        return submitLeaderboardRun(Number(run.score || 0), Number(run.durationMs || 0) / 1000, run, null, { silent: options?.silent !== false });
+        return submitLeaderboardRun(Number(run.score || 0), Number(run.durationMs || 0) / 1000, run, null, { silent: options?.silent !== false, onSettled: options?.onSettled });
       }
 
       window.__ZEFIROK_SETTLE_PENDING_RUN__ = async function settlePendingRunBeforeNavigation(options = {}) {
@@ -24239,7 +24602,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         const renderedDogY = simulationRenderValue(dog.previousY, dog.y);
         const y = renderedDogY + DOG_VISUAL_GROUND_OFFSET - bounce;
         const physicalAirHeight = dog.grounded ? 0 : Math.max(0, (ground.y - dog.h) - renderedDogY);
-        const alexJumpProgress = currentDogSkin.id === &quot;alex&quot; &amp;&amp; !dog.grounded
+        const alexJumpProgress = runSkinIdForDisplay() === &quot;alex&quot; &amp;&amp; !dog.grounded
           ? Math.max(0, Math.min(1, physicalAirHeight / ALEX_JUMP_VISUAL_EFFECT_HEIGHT))
           : 0;
         const alexJumpEase = alexJumpProgress * alexJumpProgress * (3 - 2 * alexJumpProgress);
@@ -24257,8 +24620,8 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         const runClock = renderedRunClock;
         const currentIndex = Math.floor(runClock) % RUN_FRAME_SEQUENCE.length;
         const currentSprite = runningOnGround
-          ? resolvedGameplayDogSpriteEntry(currentDogSkin.id, RUN_FRAME_SEQUENCE[currentIndex])
-          : resolvedGameplayDogSpriteEntry();
+          ? resolvedGameplayDogSpriteEntry(runSkinIdForDisplay(), RUN_FRAME_SEQUENCE[currentIndex])
+          : resolvedGameplayDogSpriteEntry(runSkinIdForDisplay());
         if (currentSprite?.img) {
           const renderW = dog.w * dogSpriteScale;
           const renderH = dog.h * dogSpriteScale;
@@ -24272,8 +24635,8 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           ctx.restore();
         } else {
           const fallbackState = dog.grounded ? &quot;stand&quot; : &quot;jump&quot;;
-          const fallbackSprite = resolvedGameplayDogSpriteEntry(currentDogSkin.id, fallbackState);
-          const portraitImage = ensureSkinPortraitImage(currentDogRunPortraitSrc()) || ensureSkinPortraitImage(defaultDogRunPortraitSrc());
+          const fallbackSprite = resolvedGameplayDogSpriteEntry(runSkinIdForDisplay(), fallbackState);
+          const portraitImage = ensureSkinPortraitImage(runDogRunPortraitSrc(runSkinIdForDisplay())) || ensureSkinPortraitImage(defaultDogRunPortraitSrc());
           const fallbackImage = fallbackSprite?.img || (portraitImage?.complete &amp;&amp; portraitImage.naturalWidth &gt; 0 ? portraitImage : null);
           if (fallbackImage) drawContain(fallbackImage, x, y, dog.w, dog.h, 1, &quot;bottom&quot;);
           else drawMaltipoo(x, y, dog.w / 105);
