@@ -1819,7 +1819,7 @@ export default {
         return await selectReferralNetworkReward(request, env);
       }
       if (url.pathname === "/api/battle-pass/run" && request.method === "POST") {
-        return await submitSeasonPassRun(request, env);
+        return await withPlayerApiPerformance(env, ctx, "battle_pass_run", () => submitSeasonPassRun(request, env), request);
       }
       if (url.pathname === "/api/battle-pass/state" && request.method === "POST") {
         return await getSeasonPassState(request, env);
@@ -1828,13 +1828,13 @@ export default {
         return await getSeasonPassProfileBonus(request, env);
       }
       if (url.pathname === "/api/battle-pass/tier-activation/claim" && request.method === "POST") {
-        return await claimSeasonPassTierActivationNotice(request, env);
+        return await withPlayerApiPerformance(env, ctx, "battle_pass_tier_activation_claim", () => claimSeasonPassTierActivationNotice(request, env), request);
       }
       if (url.pathname === "/api/battle-pass/claim" && request.method === "POST") {
-        return await claimSeasonPassReward(request, env, ctx);
+        return await withPlayerApiPerformance(env, ctx, "battle_pass_claim", () => claimSeasonPassReward(request, env, ctx), request);
       }
       if (url.pathname === "/api/battle-pass/claim-all" && request.method === "POST") {
-        return await claimAllSeasonPassRewards(request, env, ctx);
+        return await withPlayerApiPerformance(env, ctx, "battle_pass_claim_all", () => claimAllSeasonPassRewards(request, env, ctx), request);
       }
       if (url.pathname === "/api/battle-pass/purchase-tier" && request.method === "POST") {
         return await purchaseSeasonPassTier(request, env);
@@ -1843,13 +1843,13 @@ export default {
         return await purchaseSeasonPassLevel(request, env);
       }
       if (url.pathname === "/api/battle-pass/tasks/claim" && request.method === "POST") {
-        return await claimSeasonPassTask(request, env, ctx);
+        return await withPlayerApiPerformance(env, ctx, "battle_pass_task_claim", () => claimSeasonPassTask(request, env, ctx), request);
       }
       if (url.pathname === "/api/battle-pass/tasks/claim-all" && request.method === "POST") {
-        return await claimAllSeasonPassTasks(request, env, ctx);
+        return await withPlayerApiPerformance(env, ctx, "battle_pass_task_claim_all", () => claimAllSeasonPassTasks(request, env, ctx), request);
       }
       if (url.pathname === "/api/battle-pass/overflow/claim" && request.method === "POST") {
-        return await claimSeasonPassOverflow(request, env);
+        return await withPlayerApiPerformance(env, ctx, "battle_pass_overflow_claim", () => claimSeasonPassOverflow(request, env), request);
       }
       if (url.pathname === "/api/battle-pass/task-notices/pending" && request.method === "POST") {
         return await getSeasonPassTaskNotices(request, env);
@@ -1876,7 +1876,7 @@ export default {
         return await openSeasonPassStoryTest(request, env);
       }
       if (url.pathname === "/api/battle-pass/seasonal-case/open" && request.method === "POST") {
-        return await withPlayerApiPerformance(env, ctx, "season_case_open", () => openSeasonPassSeasonalCase(request, env, ctx));
+        return await withPlayerApiPerformance(env, ctx, "season_case_open", () => openSeasonPassSeasonalCase(request, env, ctx), request);
       }
 
       if (url.pathname === "/api/mail/state" && request.method === "POST") {
@@ -1886,10 +1886,10 @@ export default {
         return await openPlayerMailV3(request, env);
       }
       if (url.pathname === "/api/mail/claim" && request.method === "POST") {
-        return await withPlayerApiPerformance(env, ctx, "mail_claim", () => claimPlayerMailV3(request, env, ctx));
+        return await withPlayerApiPerformance(env, ctx, "mail_claim", () => claimPlayerMailV3(request, env, ctx), request);
       }
       if (url.pathname === "/api/mail/claim-all" && request.method === "POST") {
-        return await withPlayerApiPerformance(env, ctx, "mail_claim_all", () => claimAllPlayerMailV3(request, env, ctx));
+        return await withPlayerApiPerformance(env, ctx, "mail_claim_all", () => claimAllPlayerMailV3(request, env, ctx), request);
       }
 
       if (url.pathname === "/api/gifts/state" && request.method === "POST") {
@@ -2078,11 +2078,11 @@ export default {
       if (url.pathname === "/api/runs/start" && request.method === "POST") {
         const legalGate = await enforceLegalAcceptanceForRequest(request, env);
         if (legalGate) return legalGate;
-        return await withPlayerApiPerformance(env, ctx, "run_start", () => startAuthoritativeRunSession(request, env));
+        return await withPlayerApiPerformance(env, ctx, "run_start", () => startAuthoritativeRunSession(request, env), request);
       }
 
       if (url.pathname === "/api/runs/checkpoint" && request.method === "POST") {
-        return await withPlayerApiPerformance(env, ctx, "run_checkpoint", () => checkpointAuthoritativeRunSession(request, env));
+        return await withPlayerApiPerformance(env, ctx, "run_checkpoint", () => checkpointAuthoritativeRunSession(request, env), request);
       }
 
       if (url.pathname === "/api/leaderboard/submit" && request.method === "POST") {
@@ -2092,7 +2092,7 @@ export default {
         // path, so it must stay available even when the public rating UI is
         // disabled by a feature flag. submitLeaderboardRun decides separately
         // whether the validated run may enter the rating.
-        return await withPlayerApiPerformance(env, ctx, "run_submit", () => submitLeaderboardRun(request, env, ctx));
+        return await withPlayerApiPerformance(env, ctx, "run_submit", () => submitLeaderboardRun(request, env, ctx), request);
       }
 
       if (url.pathname === "/api/leaderboard/claim" && request.method === "POST") {
@@ -17168,21 +17168,113 @@ function appendServerTiming(headers, metric) {
   const current = String(headers.get("Server-Timing") || "").trim();
   headers.set("Server-Timing", current ? `${current}, ${metric}` : metric);
 }
-async function withPlayerApiPerformance(env, ctx, area, handler) {
+function playerApiFailureTraceId() {
+  try { return String(crypto.randomUUID()).replaceAll("-", "").slice(0, 12); } catch {}
+  return `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 9)}`.slice(0, 12);
+}
+function playerApiFailurePath(request, area = "") {
+  try { return String(new URL(request?.url || "").pathname || "").slice(0, 64); } catch {}
+  return String(area || "").slice(0, 64);
+}
+async function playerApiRequestHint(requestCopy) {
+  const fallback = { telegramId: "", username: "" };
+  if (!requestCopy) return fallback;
+  try {
+    const type = String(requestCopy.headers?.get?.("content-type") || "").toLowerCase();
+    if (!type.includes("application/json")) return fallback;
+    const body = await requestCopy.json();
+    const initData = String(body?.initData || body?.init_data || "");
+    let telegramId = String(body?.telegramId || body?.telegram_id || "").trim();
+    let username = "";
+    if (initData) {
+      const params = new URLSearchParams(initData);
+      let user = null;
+      try { user = JSON.parse(params.get("user") || "null"); } catch {}
+      const parsedId = String(user?.id || "").trim();
+      if (/^\d{4,20}$/.test(parsedId)) telegramId = parsedId;
+      const parsedUsername = String(user?.username || "").trim();
+      if (/^[A-Za-z0-9_]{1,32}$/.test(parsedUsername)) username = parsedUsername;
+    }
+    if (!/^\d{4,20}$/.test(telegramId)) telegramId = "";
+    return { telegramId, username };
+  } catch {
+    return fallback;
+  }
+}
+async function playerApiResponseFailure(response) {
+  let code = "";
+  let reason = "";
+  try {
+    const type = String(response?.headers?.get?.("content-type") || "").toLowerCase();
+    if (type.includes("application/json")) {
+      const payload = await response.clone().json();
+      code = String(payload?.code || payload?.errorCode || payload?.reasonCode || "").trim().slice(0, 30);
+      reason = String(payload?.error || payload?.message || payload?.details?.error || payload?.details?.message || "").trim();
+    } else {
+      reason = String(await response.clone().text()).trim();
+    }
+  } catch {}
+  return { code, reason: (reason || String(response?.statusText || "") || `HTTP ${Number(response?.status || 0)}`).replace(/\s+/g, " ").slice(0, 80) };
+}
+function playerApiFailureSampleText({ status = 0, telegramId = "", username = "", path = "", code = "", reason = "", traceId = "" } = {}) {
+  return JSON.stringify({
+    s: Math.max(0, Math.floor(Number(status) || 0)),
+    p: String(telegramId || "").slice(0, 20),
+    u: String(username || "").slice(0, 32),
+    e: String(path || "").slice(0, 64),
+    c: String(code || "").slice(0, 30),
+    r: String(reason || "").replace(/\s+/g, " ").slice(0, 80),
+    x: String(traceId || "").slice(0, 12)
+  });
+}
+function logPlayerApiFailure(meta) {
+  const payload = {
+    area: String(meta?.area || ""),
+    endpoint: String(meta?.path || ""),
+    status: Math.max(0, Math.floor(Number(meta?.status) || 0)),
+    telegramId: String(meta?.telegramId || ""),
+    username: String(meta?.username || ""),
+    code: String(meta?.code || ""),
+    reason: String(meta?.reason || "").slice(0, 180),
+    traceId: String(meta?.traceId || "")
+  };
+  const line = JSON.stringify(payload);
+  if (payload.status >= 500 || payload.status === 0) console.error("Player API failure", line);
+  else console.warn("Player API rejected", line);
+}
+async function withPlayerApiPerformance(env, ctx, area, handler, request = null) {
   const startedAt = Date.now();
   let success = false;
   let errorText = "";
+  let requestCopy = null;
+  const path = playerApiFailurePath(request, area);
+  if (request?.clone) { try { requestCopy = request.clone(); } catch {} }
   try {
     const response = await handler();
-    success = Boolean(response && response.status < 500);
+    success = !(response instanceof Response) || response.status < 400;
     const durationMs = Math.max(0, Date.now() - startedAt);
     if (!(response instanceof Response)) return response;
     const headers = new Headers(response.headers);
     appendServerTiming(headers, `app;dur=${durationMs}`);
     headers.set("X-Zefirok-Server-Ms", String(durationMs));
+    if (!success) {
+      const [hint, failure] = await Promise.all([playerApiRequestHint(requestCopy), playerApiResponseFailure(response)]);
+      const traceId = playerApiFailureTraceId();
+      const meta = { area, path, status: response.status, telegramId: hint.telegramId, username: hint.username, code: failure.code, reason: failure.reason, traceId };
+      errorText = playerApiFailureSampleText(meta);
+      headers.set("X-Zefirok-Trace-Id", traceId);
+      logPlayerApiFailure(meta);
+    } else if (requestCopy?.body?.cancel) {
+      try { await requestCopy.body.cancel(); } catch {}
+    }
     return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
   } catch (error) {
-    errorText = String(error?.message || error);
+    const status = Math.max(0, Math.floor(Number(error?.status) || 0));
+    const hint = await playerApiRequestHint(requestCopy);
+    const traceId = playerApiFailureTraceId();
+    const meta = { area, path, status, telegramId: hint.telegramId, username: hint.username, code: String(error?.code || "").slice(0, 30), reason: String(error?.message || error), traceId };
+    errorText = playerApiFailureSampleText(meta);
+    logPlayerApiFailure(meta);
     throw error;
   } finally {
     const durationMs = Math.max(0, Date.now() - startedAt);
@@ -37965,7 +38057,7 @@ async function ownerV85MonitorConfig(env){const state=await getSystemState(env,V
 async function ownerPanelV85Monitoring(env,ctx){
   return ownerV85Cached("monitoring",10000,async()=>{
     const now=Math.floor(Date.now()/1000),since=now-24*3600,config=await ownerV85MonitorConfig(env);
-    const [rewards,playerNotifications,staffNotifications,cron,perf,alerts,hourly]=await Promise.all([
+    const [rewards,playerNotifications,staffNotifications,cron,perf,playerApiFailures,alerts,hourly]=await Promise.all([
       env.DB.prepare(`SELECT
         SUM(CASE WHEN status='pending' THEN 1 ELSE 0 END) AS pending,
         SUM(CASE WHEN status='delivering' THEN 1 ELSE 0 END) AS active,
@@ -37992,6 +38084,7 @@ async function ownerPanelV85Monitoring(env,ctx){
         FROM leaderboard_staff_notifications WHERE status IN ('pending','failed')`).bind(since,since,now,now).first(),
       env.DB.prepare(`SELECT * FROM server_cron_jobs ORDER BY priority,job_key`).all(),
       env.DB.prepare(`SELECT area,COUNT(*) AS samples,ROUND(AVG(duration_ms),1) AS avg_ms,MAX(duration_ms) AS max_ms,SUM(CASE WHEN success=0 THEN 1 ELSE 0 END) AS errors FROM admin_performance_samples WHERE created_at>=? GROUP BY area ORDER BY avg_ms DESC LIMIT 30`).bind(since).all(),
+      env.DB.prepare(`SELECT id,area,duration_ms,error_text,created_at,COUNT(*) OVER() AS total FROM admin_performance_samples WHERE created_at>=? AND success=0 AND area LIKE 'player:%' ORDER BY created_at DESC,id DESC LIMIT 20`).bind(since).all(),
       env.DB.prepare(`SELECT * FROM smart_alert_events WHERE status='open' ORDER BY CASE severity WHEN 'critical' THEN 0 ELSE 1 END,last_seen_at DESC LIMIT 40`).all(),
       env.DB.prepare(`SELECT * FROM server_analytics_hourly WHERE bucket_at>=? ORDER BY bucket_at ASC LIMIT 48`).bind(now-48*3600).all()
     ]);
@@ -38020,7 +38113,12 @@ async function ownerPanelV85Monitoring(env,ctx){
     if(cronFailures24>=Number(config.cronFailures||1))reasons.push({level:'warning',text:`ошибок Cron за 24ч: ${cronFailures24}`});
     if(slowAreas>0){const labels=slowAreaRows.slice(0,2).map(r=>`${String(r.area)} ${Math.round(Number(r.avg_ms||0))} мс`);reasons.push({level:'warning',text:`медленно: ${labels.join(', ')}${slowAreas>2?` и ещё ${slowAreas-2}`:''}`});}
     const critical=reasons.some(r=>r.level==='critical'),warning=reasons.some(r=>r.level==='warning');
-    return {ok:true,generatedAt:now,status:critical?'critical':warning?'warning':'healthy',healthReasons:reasons,config,queues:{rewards:rQ,playerNotifications:pQ,staffNotifications:sQ,notifications:notificationSummary},cron:cronRows,cronFailures24,performance:(perf.results||[]).map(r=>({area:String(r.area),samples:Number(r.samples||0),avgMs:Number(r.avg_ms||0),maxMs:Number(r.max_ms||0),errors:Number(r.errors||0)})),alerts:(alerts.results||[]).map(r=>({key:String(r.alert_key),type:String(r.alert_type||""),severity:String(r.severity||""),title:String(r.title||""),details:String(r.details||""),firstSeenAt:Number(r.first_seen_at||0),lastSeenAt:Number(r.last_seen_at||0)})),hourly:(hourly.results||[]).map(r=>({at:Number(r.bucket_at||0),active:Number(r.active_players||0),runs:Number(r.runs_total||0),rewardErrors:Number(r.rewards_failed||0),staffErrors:Number(r.staff_notifications_failed||0),playerErrors:Number(r.player_notifications_failed||0),cronFailures:Number(r.cron_failures||0),cronMs:Number(r.cron_duration_ms||0)}))};
+    const playerApiFailureRows=(playerApiFailures.results||[]).map(row=>{
+      const raw=String(row.error_text||'');let meta={};try{meta=JSON.parse(raw)||{};}catch{}
+      return {id:Number(row.id||0),area:String(row.area||'').replace(/^player:/,''),durationMs:Number(row.duration_ms||0),status:Number(meta.s||0),telegramId:String(meta.p||''),username:String(meta.u||''),endpoint:String(meta.e||''),code:String(meta.c||''),reason:String(meta.r||raw||''),traceId:String(meta.x||''),createdAt:Number(row.created_at||0)};
+    });
+    const playerApiFailureCount=Number(playerApiFailures.results?.[0]?.total||0);
+    return {ok:true,generatedAt:now,status:critical?'critical':warning?'warning':'healthy',healthReasons:reasons,config,queues:{rewards:rQ,playerNotifications:pQ,staffNotifications:sQ,notifications:notificationSummary},cron:cronRows,cronFailures24,performance:(perf.results||[]).map(r=>({area:String(r.area),samples:Number(r.samples||0),avgMs:Number(r.avg_ms||0),maxMs:Number(r.max_ms||0),errors:Number(r.errors||0)})),playerApiFailureCount,playerApiFailures:playerApiFailureRows,alerts:(alerts.results||[]).map(r=>({key:String(r.alert_key),type:String(r.alert_type||""),severity:String(r.severity||""),title:String(r.title||""),details:String(r.details||""),firstSeenAt:Number(r.first_seen_at||0),lastSeenAt:Number(r.last_seen_at||0)})),hourly:(hourly.results||[]).map(r=>({at:Number(r.bucket_at||0),active:Number(r.active_players||0),runs:Number(r.runs_total||0),rewardErrors:Number(r.rewards_failed||0),staffErrors:Number(r.staff_notifications_failed||0),playerErrors:Number(r.player_notifications_failed||0),cronFailures:Number(r.cron_failures||0),cronMs:Number(r.cron_duration_ms||0)}))};
   });
 }
 async function ownerPanelV85MonitoringConfig(env,ctx){await ensureControlCenterV85Schema(env);const c={rewardFailed:ownerPanelInteger(ctx.body?.rewardFailed,1,1000)||1,rewardStaleMinutes:ownerPanelInteger(ctx.body?.rewardStaleMinutes,5,1440)||15,notificationFailed:ownerPanelInteger(ctx.body?.notificationFailed,1,1000)||3,cronFailures:ownerPanelInteger(ctx.body?.cronFailures,1,100)||1,cronStaleMinutes:ownerPanelInteger(ctx.body?.cronStaleMinutes,5,1440)||20,slowMs:ownerPanelInteger(ctx.body?.slowMs,100,60000)||1200};await setSystemState(env,V85_MONITOR_STATE_KEY,JSON.stringify(c));ownerV85CacheInvalidate("monitoring");await logStaffAction(env,ctx.user,ctx.access,"owner_panel_monitor_config",null,"system",null,null,c);return {ok:true,config:c};}
