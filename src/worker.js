@@ -1615,7 +1615,7 @@ export default {
       if (url.pathname === "/api/battle-pass/access" && request.method === "POST") {
         const legalGate = await enforceLegalAcceptanceForRequest(request, env);
         if (legalGate) return legalGate;
-        return await getBattlePassAccess(request, env);
+        return await withPlayerApiPerformance(env, ctx, "battle_pass_access", () => getBattlePassAccess(request, env), request);
       }
       // Telegram service routes must stay independent from D1 schema checks.
       // Otherwise a temporary or unrelated database migration error makes the
@@ -1777,6 +1777,9 @@ export default {
       }
       if (url.pathname.startsWith("/api/owner/") && request.method === "POST") {
         return await handleOwnerPanelApi(request, env, url.pathname, ctx);
+      }
+      if (url.pathname === "/api/diagnostics/network" && request.method === "POST") {
+        return await ingestPlayerNetworkDiagnostics(request, env, ctx);
       }
       const maintenanceResponse = await enforceMaintenanceForRequest(request, url, env);
       if (maintenanceResponse) return maintenanceResponse;
@@ -17242,6 +17245,86 @@ function logPlayerApiFailure(meta) {
   if (payload.status >= 500 || payload.status === 0) console.error("Player API failure", line);
   else console.warn("Player API rejected", line);
 }
+const PLAYER_NETWORK_DIAGNOSTIC_CODES = new Set(["NETWORK_TIMEOUT","NETWORK_OFFLINE","NETWORK_FETCH_FAILED","NETWORK_ABORTED","NETWORK_SLOW"]);
+function playerNetworkDiagnosticNumber(value, max = 60000) {
+  const number = Number(value || 0);
+  return Number.isFinite(number) ? Math.max(0, Math.min(max, number)) : 0;
+}
+function playerNetworkDiagnosticSampleText({ telegramId = "", username = "", endpoint = "", code = "", reason = "", traceId = "", online = true, effectiveType = "", rtt = 0, downlink = 0, serverMs = 0, networkMs = 0, timeoutMs = 0, count = 1 } = {}) {
+  return JSON.stringify({
+    s: 0,
+    p: String(telegramId || "").slice(0, 20),
+    u: String(username || "").slice(0, 32),
+    e: String(endpoint || "").slice(0, 64),
+    c: String(code || "").slice(0, 30),
+    r: String(reason || "").replace(/\s+/g, " ").slice(0, 80),
+    x: String(traceId || "").slice(0, 12),
+    o: online ? 1 : 0,
+    n: String(effectiveType || "").slice(0, 8),
+    q: Math.max(1, Math.min(99, Math.floor(Number(count) || 1))),
+    rt: Math.round(playerNetworkDiagnosticNumber(rtt, 60000)),
+    dl: Math.round(playerNetworkDiagnosticNumber(downlink, 10000) * 10) / 10,
+    sm: Math.round(playerNetworkDiagnosticNumber(serverMs)),
+    nm: Math.round(playerNetworkDiagnosticNumber(networkMs)),
+    tm: Math.round(playerNetworkDiagnosticNumber(timeoutMs))
+  });
+}
+async function recordPlayerNetworkDiagnosticSample(env, durationMs, errorText, createdAt = 0) {
+  try {
+    const now = Math.floor(Date.now() / 1000);
+    const timestamp = Math.max(now - 7 * 86400, Math.min(now + 60, Math.floor(Number(createdAt || now))));
+    await env.DB.prepare(`INSERT INTO admin_performance_samples(area,duration_ms,success,error_text,created_at) VALUES(?,?,?,?,?)`)
+      .bind(v67PerformanceArea("player:network"), Math.max(0, Math.round(Number(durationMs) || 0)), 0, String(errorText || "").slice(0, 500), timestamp).run();
+  } catch (error) {
+    console.warn("Network diagnostic sample write failed", String(error?.message || error));
+  }
+}
+async function ingestPlayerNetworkDiagnostics(request, env, ctx) {
+  let body;
+  try { body = await readJson(request); }
+  catch (error) { return jsonResponse({ ok: false, code: "BAD_REQUEST", error: "Некорректные данные диагностики." }, 400); }
+  let auth;
+  try { auth = await validateTelegramInitDataSignature(String(body?.initData || body?.init_data || ""), env); }
+  catch (error) {
+    if (error instanceof ApiError) return jsonResponse({ ok: false, code: "AUTH_FAILED", error: error.message }, error.status);
+    throw error;
+  }
+  const telegramId = String(auth?.user?.id || "").trim();
+  const username = /^[A-Za-z0-9_]{1,32}$/.test(String(auth?.user?.username || "")) ? String(auth.user.username) : "";
+  const source = Array.isArray(body?.events) ? body.events.slice(0, 10) : [];
+  const tasks = [];
+  let accepted = 0;
+  for (const item of source) {
+    const code = String(item?.code || "").toUpperCase().trim();
+    if (!PLAYER_NETWORK_DIAGNOSTIC_CODES.has(code)) continue;
+    let endpoint = String(item?.endpoint || "").trim();
+    if (!/^\/api\/[A-Za-z0-9_./-]{1,74}$/.test(endpoint) || endpoint === "/api/diagnostics/network") continue;
+    const durationMs = Math.round(playerNetworkDiagnosticNumber(item?.durationMs));
+    const timeoutMs = Math.round(playerNetworkDiagnosticNumber(item?.timeoutMs));
+    const serverMs = Math.round(playerNetworkDiagnosticNumber(item?.serverMs));
+    const networkMs = Math.round(playerNetworkDiagnosticNumber(item?.networkMs));
+    const effectiveType = /^(slow-2g|2g|3g|4g)$/.test(String(item?.effectiveType || "")) ? String(item.effectiveType) : "";
+    const traceId = String(item?.id || playerApiFailureTraceId()).replace(/[^A-Za-z0-9_-]/g, "").slice(0, 12) || playerApiFailureTraceId();
+    const online = item?.online !== false;
+    const count = Math.max(1, Math.min(99, Math.floor(Number(item?.count || 1))));
+    const reason = String(item?.reason || "Сетевой запрос не завершён").replace(/\s+/g, " ").slice(0, 80);
+    const sampleText = playerNetworkDiagnosticSampleText({
+      telegramId, username, endpoint, code, reason, traceId, online, effectiveType,
+      rtt: item?.rtt, downlink: item?.downlink, serverMs, networkMs, timeoutMs, count
+    });
+    const eventAtMs = Number(item?.at || 0);
+    const eventAt = Number.isFinite(eventAtMs) && eventAtMs > 0 ? Math.floor(eventAtMs / 1000) : Math.floor(Date.now() / 1000);
+    tasks.push(recordPlayerNetworkDiagnosticSample(env, durationMs, sampleText, eventAt));
+    console.warn("Player network issue", JSON.stringify({ endpoint, telegramId, username, code, durationMs, timeoutMs, serverMs, networkMs, online, effectiveType, rtt: Math.round(playerNetworkDiagnosticNumber(item?.rtt, 60000)), downlink: Math.round(playerNetworkDiagnosticNumber(item?.downlink, 10000) * 10) / 10, count, traceId }));
+    accepted += 1;
+  }
+  if (tasks.length) {
+    const write = Promise.all(tasks).catch(() => {});
+    if (ctx?.waitUntil) ctx.waitUntil(write); else await write;
+  }
+  return jsonResponse({ ok: true, accepted });
+}
+
 async function withPlayerApiPerformance(env, ctx, area, handler, request = null) {
   const startedAt = Date.now();
   let success = false;
@@ -38115,7 +38198,7 @@ async function ownerPanelV85Monitoring(env,ctx){
     const critical=reasons.some(r=>r.level==='critical'),warning=reasons.some(r=>r.level==='warning');
     const playerApiFailureRows=(playerApiFailures.results||[]).map(row=>{
       const raw=String(row.error_text||'');let meta={};try{meta=JSON.parse(raw)||{};}catch{}
-      return {id:Number(row.id||0),area:String(row.area||'').replace(/^player:/,''),durationMs:Number(row.duration_ms||0),status:Number(meta.s||0),telegramId:String(meta.p||''),username:String(meta.u||''),endpoint:String(meta.e||''),code:String(meta.c||''),reason:String(meta.r||raw||''),traceId:String(meta.x||''),createdAt:Number(row.created_at||0)};
+      return {id:Number(row.id||0),area:String(row.area||'').replace(/^player:/,''),durationMs:Number(row.duration_ms||0),status:Number(meta.s||0),telegramId:String(meta.p||''),username:String(meta.u||''),endpoint:String(meta.e||''),code:String(meta.c||''),reason:String(meta.r||raw||''),traceId:String(meta.x||''),online:meta.o!==0,effectiveType:String(meta.n||''),count:Math.max(1,Number(meta.q||1)),rtt:Number(meta.rt||0),downlink:Number(meta.dl||0),serverMs:Number(meta.sm||0),networkMs:Number(meta.nm||0),timeoutMs:Number(meta.tm||0),createdAt:Number(row.created_at||0)};
     });
     const playerApiFailureCount=Number(playerApiFailures.results?.[0]?.total||0);
     return {ok:true,generatedAt:now,status:critical?'critical':warning?'warning':'healthy',healthReasons:reasons,config,queues:{rewards:rQ,playerNotifications:pQ,staffNotifications:sQ,notifications:notificationSummary},cron:cronRows,cronFailures24,performance:(perf.results||[]).map(r=>({area:String(r.area),samples:Number(r.samples||0),avgMs:Number(r.avg_ms||0),maxMs:Number(r.max_ms||0),errors:Number(r.errors||0)})),playerApiFailureCount,playerApiFailures:playerApiFailureRows,alerts:(alerts.results||[]).map(r=>({key:String(r.alert_key),type:String(r.alert_type||""),severity:String(r.severity||""),title:String(r.title||""),details:String(r.details||""),firstSeenAt:Number(r.first_seen_at||0),lastSeenAt:Number(r.last_seen_at||0)})),hourly:(hourly.results||[]).map(r=>({at:Number(r.bucket_at||0),active:Number(r.active_players||0),runs:Number(r.runs_total||0),rewardErrors:Number(r.rewards_failed||0),staffErrors:Number(r.staff_notifications_failed||0),playerErrors:Number(r.player_notifications_failed||0),cronFailures:Number(r.cron_failures||0),cronMs:Number(r.cron_duration_ms||0)}))};

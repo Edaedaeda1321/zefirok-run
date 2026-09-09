@@ -4105,14 +4105,57 @@ img[src$="/xp.webp"]{
   let serverLoading = false;
   let hostTelegramInitData = "";
 
+  function reportSeasonPassNetworkDiagnostic(path, code, reason, durationMs = 0, timeoutMs = 0, serverMs = 0) {
+    if (TEST_PROJECT_MODE || !window.parent || window.parent === window) return;
+    let endpoint = "";
+    try {
+      const url = new URL(String(path || ""), location.origin);
+      if (url.origin === location.origin && url.pathname.startsWith("/api/") && url.pathname !== "/api/diagnostics/network") endpoint = url.pathname.slice(0, 80);
+    } catch {}
+    if (!endpoint) return;
+    const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection || null;
+    try {
+      window.parent.postMessage({
+        type: "zefirok-network-diagnostic",
+        diagnostic: {
+          endpoint,
+          code: String(code || "NETWORK_FETCH_FAILED").slice(0, 30),
+          reason: String(reason || "Battle Pass: сетевой запрос не завершён").replace(/\s+/g, " ").slice(0, 90),
+          durationMs: Math.max(0, Math.min(60000, Math.round(Number(durationMs || 0)))),
+          timeoutMs: Math.max(0, Math.min(60000, Math.round(Number(timeoutMs || 0)))),
+          serverMs: Math.max(0, Math.min(60000, Math.round(Number(serverMs || 0)))),
+          online: navigator.onLine !== false,
+          effectiveType: String(connection?.effectiveType || "").slice(0, 12),
+          rtt: Math.max(0, Math.min(60000, Math.round(Number(connection?.rtt || 0)))),
+          downlink: Math.max(0, Math.min(10000, Number(connection?.downlink || 0)))
+        }
+      }, "*");
+    } catch {}
+  }
+
+  function reportSeasonPassSlowNetwork(path, response, durationMs, timeoutMs = 0) {
+    if (!response?.ok) return;
+    const serverMs = Math.max(0, Number(response.headers?.get?.("X-Zefirok-Server-Ms") || 0));
+    const networkMs = serverMs > 0 ? Math.max(0, Number(durationMs || 0) - serverMs) : 0;
+    if (serverMs > 0 && Number(durationMs || 0) >= 2500 && networkMs >= 1500 && networkMs >= serverMs * 1.35) {
+      reportSeasonPassNetworkDiagnostic(path, "NETWORK_SLOW", "Battle Pass: сервер ответил быстро, задержка возникла по сети", durationMs, timeoutMs, serverMs);
+    }
+  }
+
   async function seasonPassApi(path,payload={},timeoutMs=7000) {
     const initData = await waitForTelegramInitData();
     if (!initData) throw new Error("Telegram не передал данные входа.");
     const controller = new AbortController();
-    const timer = setTimeout(()=>controller.abort(),Math.max(1000,Number(timeoutMs||7000)));
+    const deadlineMs = Math.max(1000,Number(timeoutMs||7000));
+    const startedAt = performance.now();
+    let deadlineReached = false;
+    let response = null;
+    const timer = setTimeout(()=>{ deadlineReached = true; controller.abort(); },deadlineMs);
     try {
-      const response = await fetch(path,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({initData,...payload}),cache:"no-store",credentials:"same-origin",signal:controller.signal});
+      response = await fetch(path,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({initData,...payload}),cache:"no-store",credentials:"same-origin",signal:controller.signal});
       const data = await response.json().catch((error)=>{if(error?.name === "AbortError") throw error;return {};});
+      const durationMs = Math.max(0,performance.now()-startedAt);
+      reportSeasonPassSlowNetwork(path,response,durationMs,deadlineMs);
       if (!response.ok || data?.ok === false) {
         const apiError = new Error(data?.error || "Сервер сезонного пропуска временно недоступен.");
         apiError.status = response.status;
@@ -4121,10 +4164,26 @@ img[src$="/xp.webp"]{
       }
       return data;
     } catch (error) {
+      const durationMs = Math.max(0,performance.now()-startedAt);
+      const isHttpError = Number(error?.status || 0) > 0;
+      if (!isHttpError) {
+        const offline = navigator.onLine === false;
+        const aborted = error?.name === "AbortError";
+        const code = offline ? "NETWORK_OFFLINE" : deadlineReached ? "NETWORK_TIMEOUT" : aborted ? "NETWORK_ABORTED" : "NETWORK_FETCH_FAILED";
+        const reason = offline
+          ? "Battle Pass: устройство потеряло соединение с интернетом"
+          : deadlineReached
+            ? `Battle Pass: запрос не завершился за ${Math.round(deadlineMs/1000)} сек.`
+            : aborted
+              ? "Battle Pass: сетевой запрос был прерван"
+              : `Battle Pass: ${String(error?.message || "не удалось выполнить сетевой запрос").slice(0,70)}`;
+        const serverMs = Math.max(0,Number(response?.headers?.get?.("X-Zefirok-Server-Ms") || 0));
+        reportSeasonPassNetworkDiagnostic(path,code,reason,durationMs,deadlineMs,serverMs);
+      }
       if (error?.name === "AbortError") {
-        const timeoutError = new Error("Сервер отвечает слишком долго. Повторите действие.");
-        timeoutError.code = "REQUEST_TIMEOUT";
-        timeoutError.timeout = true;
+        const timeoutError = new Error(deadlineReached ? "Сервер отвечает слишком долго. Повторите действие." : "Запрос был прерван. Повторите действие.");
+        timeoutError.code = deadlineReached ? "REQUEST_TIMEOUT" : "REQUEST_ABORTED";
+        timeoutError.timeout = deadlineReached;
         throw timeoutError;
       }
       throw error;
@@ -4439,9 +4498,13 @@ img[src$="/xp.webp"]{
     if (!initData) return {allowed:false,kind:"auth",error:"Telegram не передал данные входа. Закройте страницу и снова откройте сезонный пропуск из профиля."};
 
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 7000);
+    const deadlineMs = 7000;
+    const startedAt = performance.now();
+    let deadlineReached = false;
+    let response = null;
+    const timer = setTimeout(() => { deadlineReached = true; controller.abort(); }, deadlineMs);
     try {
-      const response = await fetch(ACCESS_PATH,{
+      response = await fetch(ACCESS_PATH,{
         method:"POST",
         headers:{"Content-Type":"application/json"},
         body:JSON.stringify({initData,includeState:true}),
@@ -4450,6 +4513,7 @@ img[src$="/xp.webp"]{
         signal:controller.signal
       });
       const data = await response.json().catch((error)=>{if(error?.name === "AbortError") throw error;return {};});
+      reportSeasonPassSlowNetwork(ACCESS_PATH,response,Math.max(0,performance.now()-startedAt),deadlineMs);
       return {
         allowed:response.ok && data?.allowed === true,
         kind:response.status === 403 ? "hidden" : response.ok ? "ok" : "server",
@@ -4460,7 +4524,19 @@ img[src$="/xp.webp"]{
         state:data?.state && typeof data.state === "object" ? data.state : null
       };
     } catch (error) {
-      const timedOut = error?.name === "AbortError";
+      const durationMs = Math.max(0,performance.now()-startedAt);
+      const timedOut = error?.name === "AbortError" && deadlineReached;
+      const offline = navigator.onLine === false;
+      const aborted = error?.name === "AbortError";
+      const code = offline ? "NETWORK_OFFLINE" : timedOut ? "NETWORK_TIMEOUT" : aborted ? "NETWORK_ABORTED" : "NETWORK_FETCH_FAILED";
+      const reason = offline
+        ? "Battle Pass: устройство потеряло соединение с интернетом"
+        : timedOut
+          ? "Battle Pass: проверка доступа зависла по сети"
+          : aborted
+            ? "Battle Pass: проверка доступа была прервана"
+            : `Battle Pass: ${String(error?.message || "не удалось связаться с сервером").slice(0,70)}`;
+      reportSeasonPassNetworkDiagnostic(ACCESS_PATH,code,reason,durationMs,deadlineMs,Math.max(0,Number(response?.headers?.get?.("X-Zefirok-Server-Ms") || 0)));
       return {
         allowed:false,
         kind:timedOut ? "timeout" : "network",

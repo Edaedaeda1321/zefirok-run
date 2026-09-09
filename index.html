@@ -1117,6 +1117,11 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
     return seasonPassLayer?.querySelector?.(".zefirok-season-pass-frame") || null;
   }
 
+  function forwardSeasonPassNetworkDiagnostic(diagnostic) {
+    if (TEST_PROJECT_MODE || !diagnostic || typeof diagnostic !== "object") return;
+    try { frame()?.contentWindow?.postMessage?.({ type:"zefirok-network-diagnostic", diagnostic }, "*"); } catch {}
+  }
+
   function requestSeasonPassStateRefresh() {
     const passFrame = seasonPassFrame();
     if (!passFrame?.isConnected) return false;
@@ -1719,7 +1724,9 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
       return;
     }
     if (fromSeasonPass) {
-      if (message.type === "zefirok-close-season-pass") closeSeasonPassOverlay();
+      if (message.type === "zefirok-network-diagnostic") {
+        forwardSeasonPassNetworkDiagnostic(message.diagnostic);
+      } else if (message.type === "zefirok-close-season-pass") closeSeasonPassOverlay();
       else if (message.type === "zefirok-season-pass-account-updated") {
         const target = gameFrame?.contentWindow;
         try { target?.postMessage?.({ type: "zefirok-season-pass-account-updated" }, "*"); } catch {}
@@ -14763,6 +14770,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       // СЕРВЕРНЫЙ СЕЗОННЫЙ РЕЙТИНГ.
       const LEADERBOARD_API_STATE_PATH = &quot;/api/leaderboard/state&quot;;
       const LEADERBOARD_API_SUBMIT_PATH = &quot;/api/leaderboard/submit&quot;;
+      const NETWORK_DIAGNOSTIC_PATH = &quot;/api/diagnostics/network&quot;;
       const RUN_SESSION_START_PATH = &quot;/api/runs/start&quot;;
       const RUN_SESSION_CHECKPOINT_PATH = &quot;/api/runs/checkpoint&quot;;
       const RUN_SESSION_CHECKPOINT_INTERVAL_MS = 2000;
@@ -17988,6 +17996,18 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       window.addEventListener(&quot;message&quot;, (event) =&gt; {
         const message = event.data;
         if (!message || typeof message !== &quot;object&quot;) return;
+        if (message.type === &quot;zefirok-network-diagnostic&quot;) {
+          const diagnostic = message.diagnostic &amp;&amp; typeof message.diagnostic === &quot;object&quot; ? message.diagnostic : {};
+          queuePlayerNetworkDiagnostic(
+            diagnostic.endpoint,
+            diagnostic.code,
+            diagnostic.reason,
+            diagnostic.durationMs,
+            diagnostic.timeoutMs,
+            diagnostic.serverMs
+          );
+          return;
+        }
         if (message.type === &quot;zefirok-host-viewport-changed&quot;) {
           const viewport = message.payload &amp;&amp; typeof message.payload === &quot;object&quot; ? message.payload : {};
           const safe = viewport.contentSafeArea &amp;&amp; typeof viewport.contentSafeArea === &quot;object&quot; ? viewport.contentSafeArea : {};
@@ -18684,20 +18704,166 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         };
       }
 
+      const PLAYER_NETWORK_DIAGNOSTIC_STORAGE_KEY = &quot;zefirok:network-diagnostics:v1&quot;;
+      const PLAYER_NETWORK_DIAGNOSTIC_MAX = 16;
+      let playerNetworkDiagnosticQueue = null;
+      let playerNetworkDiagnosticFlushPromise = null;
+      let playerNetworkDiagnosticLastFlushAt = 0;
+
+      function playerNetworkDiagnosticEvents() {
+        if (Array.isArray(playerNetworkDiagnosticQueue)) return playerNetworkDiagnosticQueue;
+        try {
+          const parsed = JSON.parse(window.localStorage.getItem(PLAYER_NETWORK_DIAGNOSTIC_STORAGE_KEY) || &quot;[]&quot;);
+          playerNetworkDiagnosticQueue = Array.isArray(parsed) ? parsed.slice(-PLAYER_NETWORK_DIAGNOSTIC_MAX) : [];
+        } catch (error) { playerNetworkDiagnosticQueue = []; }
+        return playerNetworkDiagnosticQueue;
+      }
+
+      function savePlayerNetworkDiagnosticEvents() {
+        const queue = playerNetworkDiagnosticEvents().slice(-PLAYER_NETWORK_DIAGNOSTIC_MAX);
+        playerNetworkDiagnosticQueue = queue;
+        try {
+          if (queue.length) window.localStorage.setItem(PLAYER_NETWORK_DIAGNOSTIC_STORAGE_KEY, JSON.stringify(queue));
+          else window.localStorage.removeItem(PLAYER_NETWORK_DIAGNOSTIC_STORAGE_KEY);
+        } catch (error) {}
+      }
+
+      function playerNetworkEndpoint(path) {
+        try {
+          const url = new URL(String(path || &quot;&quot;), window.location.origin);
+          return url.origin === window.location.origin &amp;&amp; url.pathname.startsWith(&quot;/api/&quot;) ? url.pathname.slice(0, 80) : &quot;&quot;;
+        } catch (error) { return &quot;&quot;; }
+      }
+
+      function playerNetworkConnectionSnapshot() {
+        const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection || null;
+        return {
+          online: navigator.onLine !== false,
+          effectiveType: String(connection?.effectiveType || &quot;&quot;).slice(0, 12),
+          rtt: Math.max(0, Math.min(60000, Math.round(Number(connection?.rtt || 0)))),
+          downlink: Math.max(0, Math.min(10000, Number(connection?.downlink || 0))),
+          saveData: Boolean(connection?.saveData)
+        };
+      }
+
+      function queuePlayerNetworkDiagnostic(path, code, reason, durationMs, timeoutMs, serverMs = 0) {
+        if (TEST_PROJECT_MODE) return;
+        const endpoint = playerNetworkEndpoint(path);
+        if (!endpoint || endpoint === NETWORK_DIAGNOSTIC_PATH) return;
+        const now = Date.now();
+        const network = playerNetworkConnectionSnapshot();
+        const queue = playerNetworkDiagnosticEvents();
+        const normalizedCode = String(code || &quot;NETWORK_FETCH_FAILED&quot;).slice(0, 30);
+        const previous = [...queue].reverse().find((item) =&gt; item?.endpoint === endpoint &amp;&amp; item?.code === normalizedCode &amp;&amp; now - Number(item?.at || 0) &lt; 60000);
+        const totalMs = Math.max(0, Math.min(60000, Math.round(Number(durationMs || 0))));
+        const serverDuration = Math.max(0, Math.min(60000, Math.round(Number(serverMs || 0))));
+        const event = previous || {
+          id: `${now.toString(36)}_${Math.random().toString(36).slice(2, 8)}`,
+          endpoint,
+          code: normalizedCode,
+          reason: &quot;&quot;,
+          at: now,
+          durationMs: 0,
+          timeoutMs: 0,
+          serverMs: 0,
+          networkMs: 0,
+          online: true,
+          effectiveType: &quot;&quot;,
+          rtt: 0,
+          downlink: 0,
+          saveData: false,
+          count: 0
+        };
+        event.reason = String(reason || &quot;Сетевой запрос не завершён&quot;).replace(/\s+/g, &quot; &quot;).slice(0, 90);
+        event.at = now;
+        event.durationMs = Math.max(Number(event.durationMs || 0), totalMs);
+        event.timeoutMs = Math.max(0, Math.min(60000, Math.round(Number(timeoutMs || 0))));
+        event.serverMs = Math.max(Number(event.serverMs || 0), serverDuration);
+        event.networkMs = Math.max(Number(event.networkMs || 0), serverDuration &gt; 0 ? Math.max(0, totalMs - serverDuration) : 0);
+        event.online = network.online;
+        event.effectiveType = network.effectiveType;
+        event.rtt = network.rtt;
+        event.downlink = network.downlink;
+        event.saveData = network.saveData;
+        event.count = Math.min(99, Math.max(1, Number(event.count || 0) + 1));
+        if (!previous) queue.push(event);
+        while (queue.length &gt; PLAYER_NETWORK_DIAGNOSTIC_MAX) queue.shift();
+        savePlayerNetworkDiagnosticEvents();
+      }
+
+      async function flushPlayerNetworkDiagnostics(force = false) {
+        const queue = playerNetworkDiagnosticEvents();
+        const initData = String(telegramProfile?.initData || &quot;&quot;);
+        if (!queue.length || !initData || navigator.onLine === false) return false;
+        if (playerNetworkDiagnosticFlushPromise) return playerNetworkDiagnosticFlushPromise;
+        const now = Date.now();
+        if (!force &amp;&amp; now - playerNetworkDiagnosticLastFlushAt &lt; 10000) return false;
+        playerNetworkDiagnosticLastFlushAt = now;
+        const batch = queue.slice(0, 10).map((item) =&gt; ({ ...item }));
+        const sentIds = new Set(batch.map((item) =&gt; String(item.id || &quot;&quot;)));
+        playerNetworkDiagnosticFlushPromise = (async () =&gt; {
+          const controller = new AbortController();
+          const timer = window.setTimeout(() =&gt; controller.abort(), 4500);
+          try {
+            const response = await fetch(NETWORK_DIAGNOSTIC_PATH, {
+              method: &quot;POST&quot;,
+              headers: { &quot;Content-Type&quot;: &quot;application/json&quot; },
+              body: JSON.stringify({ initData, events: batch }),
+              cache: &quot;no-store&quot;,
+              credentials: &quot;same-origin&quot;,
+              keepalive: true,
+              signal: controller.signal
+            });
+            const data = await response.json().catch(() =&gt; null);
+            if (!response.ok || data?.ok === false) return false;
+            playerNetworkDiagnosticQueue = playerNetworkDiagnosticEvents().filter((item) =&gt; !sentIds.has(String(item?.id || &quot;&quot;)));
+            savePlayerNetworkDiagnosticEvents();
+            if (playerNetworkDiagnosticQueue.length) window.setTimeout(() =&gt; void flushPlayerNetworkDiagnostics(true), 250);
+            return true;
+          } catch (error) { return false; }
+          finally { window.clearTimeout(timer); playerNetworkDiagnosticFlushPromise = null; }
+        })();
+        return playerNetworkDiagnosticFlushPromise;
+      }
+
+      window.addEventListener(&quot;online&quot;, () =&gt; window.setTimeout(() =&gt; void flushPlayerNetworkDiagnostics(true), 700), { passive: true });
+
       async function gameFetchWithTimeout(path, init = {}, timeoutMs = 6500) {
         const controller = new AbortController();
-        const timeout = window.setTimeout(() =&gt; controller.abort(), Math.max(1000, Number(timeoutMs || 6500)));
+        const deadlineMs = Math.max(1000, Number(timeoutMs || 6500));
+        const startedAt = performance.now();
+        let deadlineReached = false;
+        const timeout = window.setTimeout(() =&gt; { deadlineReached = true; controller.abort(); }, deadlineMs);
         try {
           const response = await fetch(path, { ...init, signal: controller.signal });
           // Keep the same deadline until the complete response body has arrived.
           // Receiving HTTP headers alone is not a completed game request.
           await response.clone().arrayBuffer();
+          const durationMs = Math.max(0, performance.now() - startedAt);
+          const serverMs = Math.max(0, Number(response.headers.get(&quot;X-Zefirok-Server-Ms&quot;) || 0));
+          const estimatedNetworkMs = serverMs &gt; 0 ? Math.max(0, durationMs - serverMs) : 0;
+          if (response.ok &amp;&amp; serverMs &gt; 0 &amp;&amp; durationMs &gt;= 2500 &amp;&amp; estimatedNetworkMs &gt;= 1500) {
+            queuePlayerNetworkDiagnostic(path, &quot;NETWORK_SLOW&quot;, &quot;Сервер ответил быстрее, чем запрос дошёл до клиента&quot;, durationMs, deadlineMs, serverMs);
+          }
+          void flushPlayerNetworkDiagnostics();
           return response;
         } catch (error) {
-          if (error?.name === &quot;AbortError&quot;) {
-            const timeoutError = new Error(&quot;Сервер отвечает слишком долго. Повторите действие.&quot;);
-            timeoutError.code = &quot;REQUEST_TIMEOUT&quot;;
-            timeoutError.timeout = true;
+          const durationMs = Math.max(0, performance.now() - startedAt);
+          const offline = navigator.onLine === false;
+          const aborted = error?.name === &quot;AbortError&quot;;
+          const code = offline ? &quot;NETWORK_OFFLINE&quot; : (deadlineReached ? &quot;NETWORK_TIMEOUT&quot; : (aborted ? &quot;NETWORK_ABORTED&quot; : &quot;NETWORK_FETCH_FAILED&quot;));
+          const reason = offline
+            ? &quot;Устройство потеряло соединение с интернетом&quot;
+            : deadlineReached
+              ? `Запрос не завершился за ${Math.round(deadlineMs / 1000)} сек.`
+              : aborted
+                ? &quot;Сетевой запрос был прерван&quot;
+                : String(error?.message || &quot;Не удалось выполнить сетевой запрос&quot;);
+          queuePlayerNetworkDiagnostic(path, code, reason, durationMs, deadlineMs, 0);
+          if (aborted) {
+            const timeoutError = new Error(deadlineReached ? &quot;Сервер отвечает слишком долго. Повторите действие.&quot; : &quot;Запрос был прерван. Повторите действие.&quot;);
+            timeoutError.code = deadlineReached ? &quot;REQUEST_TIMEOUT&quot; : &quot;REQUEST_ABORTED&quot;;
+            timeoutError.timeout = deadlineReached;
             throw timeoutError;
           }
           throw error;
@@ -18705,6 +18871,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           window.clearTimeout(timeout);
         }
       }
+
 
       async function caseApiRequest(path, payload = {}, timeoutMs = 6500) {
         const initData = String(telegramProfile?.initData || &quot;&quot;);
