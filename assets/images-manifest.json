@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "catalogHash": "eb86230d859be8a6",
-  "count": 460,
+  "catalogHash": "eae8232203d7264d",
+  "count": 464,
   "images": [
     {
       "fileName": "achievements/background_achivment_panel.png",
@@ -3444,6 +3444,14 @@
       "modified": 1788291147000
     },
     {
+      "fileName": "ui/icon_end_zabeg.png",
+      "label": "Icon end zabeg",
+      "folder": "ui",
+      "path": "/assets/ui/icon_end_zabeg.png",
+      "size": 1442764,
+      "modified": 1788956267000
+    },
+    {
       "fileName": "ui/icon_game_button.png",
       "label": "Icon game button",
       "folder": "ui",
@@ -3466,6 +3474,14 @@
       "path": "/assets/ui/icon_message_season.png",
       "size": 1993531,
       "modified": 1787932183000
+    },
+    {
+      "fileName": "ui/icon_music.png",
+      "label": "Icon music",
+      "folder": "ui",
+      "path": "/assets/ui/icon_music.png",
+      "size": 893230,
+      "modified": 1788956267000
     },
     {
       "fileName": "ui/icon_my_buy_button.png",
@@ -3612,12 +3628,28 @@
       "modified": 1787869777000
     },
     {
+      "fileName": "ui/icon_sound.png",
+      "label": "Icon sound",
+      "folder": "ui",
+      "path": "/assets/ui/icon_sound.png",
+      "size": 867146,
+      "modified": 1788956267000
+    },
+    {
       "fileName": "ui/icon_sushet_season.png",
       "label": "Icon sushet season",
       "folder": "ui",
       "path": "/assets/ui/icon_sushet_season.png",
       "size": 1912140,
       "modified": 1787932183000
+    },
+    {
+      "fileName": "ui/icon_timer.png",
+      "label": "Icon timer",
+      "folder": "ui",
+      "path": "/assets/ui/icon_timer.png",
+      "size": 985896,
+      "modified": 1788956267000
     },
     {
       "fileName": "ui/icon_zanovo_button.png",
