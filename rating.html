@@ -10352,7 +10352,21 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
     const entries = Array.isArray(data?.nearby) ? data.nearby : [];
     if (!data?.me || !entries.length) return "";
     const myId = String(telegramProfile?.id || data?.me?.telegramId || "");
-    const markup = entries.map((entry) => {
+    const meEntry = entries.find((entry) => String(entry?.telegramId || "") === myId);
+    const myPlace = Math.max(0, Number(meEntry?.place || data?.me?.place || 0));
+    const visibleEntries = entries.length <= 4 ? entries : entries
+      .map((entry, index) => ({ entry, index, place: Math.max(0, Number(entry?.place || 0)) }))
+      .sort((a, b) => {
+        if (myPlace > 0) {
+          const distance = Math.abs(a.place - myPlace) - Math.abs(b.place - myPlace);
+          if (distance) return distance;
+        }
+        return a.index - b.index;
+      })
+      .slice(0, 4)
+      .map((item) => item.entry)
+      .sort((a, b) => Number(a?.place || 0) - Number(b?.place || 0));
+    const markup = visibleEntries.map((entry) => {
       const isMe = String(entry?.telegramId || "") === myId;
       const playerId = escapeHtml(entry?.telegramId || "");
       const level = Math.max(1, Math.floor(Number(entry?.level || 1)));

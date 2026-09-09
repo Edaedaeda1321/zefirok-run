@@ -6972,7 +6972,7 @@ html&gt;body{padding:
   #zefirok-maltipoo-runner .support-layer {
     position: fixed; inset: 0; z-index: 1120; display: grid; place-items: center;
     padding: max(14px, env(safe-area-inset-top)) 14px max(14px, env(safe-area-inset-bottom));
-    background: rgba(49,35,42,.52); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    background: rgba(49,35,42,.52); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); overscroll-behavior: none;
   }
   #zefirok-maltipoo-runner .support-dialog {
     width: min(100%, 410px); max-height: calc(100dvh - 28px); overflow: hidden;
@@ -11893,7 +11893,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 #zefirok-maltipoo-runner .case-recent-section{display:grid;gap:8px;margin-top:8px;padding-top:10px;border-top:1px solid rgba(224,151,179,.24)}
 #zefirok-maltipoo-runner .case-recent-list{display:grid;gap:7px}
 #zefirok-maltipoo-runner .case-recent-card{display:grid;grid-template-columns:48px minmax(0,1fr);gap:9px;align-items:center;padding:9px;border:1px solid rgba(229,184,201,.55);border-radius:14px;background:rgba(255,255,255,.76)}
-#zefirok-maltipoo-runner .case-recent-case{display:grid;place-items:center;width:48px;height:48px}.case-recent-case .case-chest{transform:scale(.46);margin:0}
+#zefirok-maltipoo-runner .case-recent-case{display:grid;place-items:center;width:48px;height:48px;overflow:hidden}.case-recent-case .case-chest{transform:scale(.46);margin:0}#zefirok-maltipoo-runner .case-recent-case .case-chest-image{display:block!important;width:42px!important;height:42px!important;max-width:42px!important;max-height:42px!important;margin:0!important;object-fit:contain!important;filter:drop-shadow(0 3px 5px rgba(93,55,39,.10))}
 #zefirok-maltipoo-runner .case-recent-copy{display:grid;gap:4px;min-width:0}.case-recent-copy&gt;span{display:flex;align-items:center;justify-content:space-between;gap:7px}.case-recent-copy strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#714b5d;font-size:10px}.case-recent-copy time{flex:0 0 auto;color:#a0808d;font-size:7.5px;font-weight:850}.case-recent-rewards{display:flex;gap:5px;overflow-x:auto;scrollbar-width:none}.case-recent-reward{display:inline-flex;align-items:center;gap:4px;min-height:27px;padding:4px 7px;border-radius:9px;background:#fff4f8;color:#7a5261;font-size:8px;font-weight:900;white-space:nowrap}.case-recent-reward img{width:21px;height:21px;object-fit:contain}
 #zefirok-maltipoo-runner .release-news-cta{width:100%;min-height:44px;margin:8px 0;border:0;border-radius:14px;background:linear-gradient(145deg,#ed8fb0,#d65a88);color:#fff;font-size:12px;font-weight:950;box-shadow:0 8px 17px rgba(190,72,115,.17)}
 #zefirok-maltipoo-runner .release-news-cta[hidden]{display:none!important}
@@ -12701,6 +12701,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       const supportTitleEl = root.querySelector(&quot;[data-support-title]&quot;);
       const supportSubtitleEl = root.querySelector(&quot;[data-support-subtitle]&quot;);
       const supportCloseButton = root.querySelector(&quot;[data-support-close]&quot;);
+      let supportLayerScrollLock = null;
       let playerSupportState = { tickets: [], knownIssues: [], openCount: 0, unreadCount: 0 };
       let playerSupportStateLoading = false;
       let playerSupportStateLoadedAt = 0;
@@ -21021,8 +21022,51 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         } finally { playerSupportStateLoading = false; }
       }
 
+      function setSupportLayerScrollLocked(locked) {
+        const htmlEl = document.documentElement;
+        const body = document.body;
+        if (!htmlEl || !body) return;
+        if (locked) {
+          if (supportLayerScrollLock) return;
+          const y = Math.max(0, Number(window.scrollY || htmlEl.scrollTop || body.scrollTop || 0));
+          supportLayerScrollLock = {
+            y,
+            position: body.style.position,
+            top: body.style.top,
+            left: body.style.left,
+            right: body.style.right,
+            width: body.style.width,
+            overflow: body.style.overflow,
+            htmlOverflow: htmlEl.style.overflow,
+            rootOverflow: root.style.overflow
+          };
+          body.style.position = &quot;fixed&quot;;
+          body.style.top = `-${y}px`;
+          body.style.left = &quot;0&quot;;
+          body.style.right = &quot;0&quot;;
+          body.style.width = &quot;100%&quot;;
+          body.style.overflow = &quot;hidden&quot;;
+          htmlEl.style.overflow = &quot;hidden&quot;;
+          root.style.overflow = &quot;hidden&quot;;
+          return;
+        }
+        const saved = supportLayerScrollLock;
+        if (!saved) return;
+        supportLayerScrollLock = null;
+        body.style.position = saved.position;
+        body.style.top = saved.top;
+        body.style.left = saved.left;
+        body.style.right = saved.right;
+        body.style.width = saved.width;
+        body.style.overflow = saved.overflow;
+        htmlEl.style.overflow = saved.htmlOverflow;
+        root.style.overflow = saved.rootOverflow;
+        try { window.scrollTo(0, saved.y || 0); } catch (error) {}
+      }
+
       function openSupportLayer() {
         if (!supportLayer) return;
+        setSupportLayerScrollLocked(true);
         supportLayer.hidden = false;
         supportLayer.setAttribute(&quot;aria-hidden&quot;, &quot;false&quot;);
         playerSupportSelectedTicketId = 0;
@@ -21037,6 +21081,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         supportLayer.setAttribute(&quot;aria-hidden&quot;, &quot;true&quot;);
         playerSupportSelectedTicketId = 0;
         playerSupportView = &quot;hub&quot;;
+        setSupportLayerScrollLocked(false);
       }
 
       function renderPlayerSupportHub() {
@@ -27390,12 +27435,12 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 &lt;/script&gt;
 
 &lt;style id=&quot;zefirok-game-expanded-v1&quot;&gt;
-#zefirok-maltipoo-runner .game-expand-toggle{position:absolute;top:10px;right:10px;z-index:14;width:42px;height:42px;display:grid;place-items:center;padding:0;border:1px solid rgba(225,189,200,.78);border-radius:14px;background:rgba(255,252,250,.9);color:#9b5870;box-shadow:0 7px 18px rgba(82,60,45,.13);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+#zefirok-maltipoo-runner .game-expand-toggle{position:absolute;top:8px;right:8px;z-index:14;width:34px;height:34px;display:grid;place-items:center;padding:0;border:1px solid rgba(225,189,200,.78);border-radius:11px;background:rgba(255,252,250,.9);color:#9b5870;box-shadow:0 6px 15px rgba(82,60,45,.12);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 #zefirok-maltipoo-runner .game-expand-toggle:active{transform:scale(.94)}
 #zefirok-maltipoo-runner .game-expand-toggle:focus-visible{outline:2px solid rgba(220,91,139,.58);outline-offset:2px}
-#zefirok-maltipoo-runner .game-expand-icon{width:22px;height:22px;display:block;fill:none;stroke:currentColor;stroke-width:2.15;stroke-linecap:round;stroke-linejoin:round}
+#zefirok-maltipoo-runner .game-expand-icon{width:18px;height:18px;display:block;fill:none;stroke:currentColor;stroke-width:2.15;stroke-linecap:round;stroke-linejoin:round}
 #zefirok-maltipoo-runner .game-expand-icon--collapse{display:none}
-#zefirok-maltipoo-runner .stage-status{right:62px}
+#zefirok-maltipoo-runner .stage-status{right:50px}
 html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh);padding:0!important;overflow:hidden!important;overscroll-behavior:none!important;background:#fff9f4!important;touch-action:none!important}
 #zefirok-maltipoo-runner.is-game-expanded{height:var(--zefirok-visible-height,100dvh);overflow:hidden!important;touch-action:none!important}
 #zefirok-maltipoo-runner.is-game-expanded .phone{position:fixed!important;z-index:50;top:0!important;left:50%!important;right:auto!important;transform:translateX(-50%)!important;width:min(430px,calc(100% - max(5px,var(--zefirok-content-safe-left,0px)) - max(5px,var(--zefirok-content-safe-right,0px))))!important;max-width:none!important;height:var(--zefirok-visible-height,100dvh)!important;min-height:0!important;margin:0!important;padding:max(10px,var(--zefirok-content-safe-top,0px)) 14px max(10px,var(--zefirok-content-safe-bottom,0px))!important;border:1px solid transparent!important;border-radius:0!important;background:radial-gradient(circle at 18% 0%,rgba(243,142,170,.13),transparent 30%),linear-gradient(180deg,#fffaf7,#fff)!important;box-shadow:none!important;overflow:hidden!important;display:flex!important;flex-direction:column!important}
@@ -27409,7 +27454,7 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
 #zefirok-maltipoo-runner.is-game-expanded .liveops-run-banner{flex:0 0 auto;margin:0!important;padding:7px 9px!important;border-radius:13px!important}
 #zefirok-maltipoo-runner.is-game-expanded .stage{flex:1 1 auto!important;width:100%;height:auto!important;min-height:220px;border-radius:20px;box-shadow:inset 0 -40px 90px rgba(166,119,88,.10),0 8px 24px rgba(82,60,45,.10)}
 #zefirok-maltipoo-runner.is-game-expanded .stage-status{display:none!important}
-#zefirok-maltipoo-runner.is-game-expanded .game-expand-toggle{top:10px;left:10px;right:auto;border-radius:50%;background:rgba(255,252,250,.93)}
+#zefirok-maltipoo-runner.is-game-expanded .game-expand-toggle{top:10px;left:10px;right:auto;width:40px;height:40px;border-radius:12px;background:rgba(255,252,250,.93)}#zefirok-maltipoo-runner.is-game-expanded .game-expand-icon{width:20px;height:20px}
 #zefirok-maltipoo-runner.is-game-expanded .game-expand-icon--expand{display:none}
 #zefirok-maltipoo-runner.is-game-expanded .game-expand-icon--collapse{display:block}
 #zefirok-maltipoo-runner.is-game-expanded .actions.game-actions-v2{flex:0 0 auto;width:100%;max-width:402px;margin:0 auto!important;padding:0!important}
