@@ -31730,13 +31730,13 @@ function seasonPassTierActivationBenefits(season,newTier,payload={}) {
   if(newTier==='elite') return [
     {key:'premium_rewards',title:'Премиальная линия из 50 наград',imageUrl:'/assets/season-pass/season.png?v=07939'},
     {key:'premium_tasks',title:'Премиальные задания',imageUrl:'/assets/season-pass/quest.png?v=07939'},
-    {key:'rating_badge',title:'Значок «Элитный» в рейтинге',imageUrl:'/assets/ui/icon_player_elit.png',symbol:''},
+    {key:'rating_badge',title:'Значок «Элитный» в рейтинге',imageUrl:'/assets/ui/icon_player_elit.webp',symbol:''},
     {key:'legendary_case',title:'Легендарный кейс на 50 уровне',imageUrl:'/assets/cases/legendary_closed.png'}
   ];
   const settings=seasonPassPublicTierSettings(season)?.elitePlus||{};
   const benefits=[
     {key:'elite_all',title:'Все преимущества «Элитного»',imageUrl:'/assets/season-pass/elite.png?v=07939'},
-    {key:'rating_badge',title:'Значок «Элитный+» в рейтинге',imageUrl:'/assets/ui/icon_player_elit+.png',symbol:''}
+    {key:'rating_badge',title:'Значок «Элитный+» в рейтинге',imageUrl:'/assets/ui/icon_player_elit+.webp',symbol:''}
   ];
   if(settings.xpBoost!==false){
     benefits.push({key:'season_xp_x2',title:'×2 XP сезона',imageUrl:'/assets/season-pass/xp_x2.png?v=07939'});

@@ -10173,7 +10173,7 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
     const tier = normalizedPassTier(entry?.seasonPassTier);
     if (tier === "none") return "";
     const label = tier === "elite_plus" ? "Элитный+ сезонный пропуск" : "Элитный сезонный пропуск";
-    const badgeSrc = tier === "elite_plus" ? "/assets/ui/icon_player_elit+.png" : "/assets/ui/icon_player_elit.png";
+    const badgeSrc = tier === "elite_plus" ? "/assets/ui/icon_player_elit+.webp" : "/assets/ui/icon_player_elit.webp";
     return `<span class="leaderboard-pass-star" data-pass-tier-badge="${tier}" role="button" tabindex="0" aria-label="${label}" title="${label}"><img src="${badgeSrc}" alt="" aria-hidden="true" loading="lazy" decoding="async"></span>`;
   }
 
@@ -10209,7 +10209,7 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
 
   const PASS_INFO_META = {
     elite: {
-      badgeSrc: "/assets/ui/icon_player_elit.png",
+      badgeSrc: "/assets/ui/icon_player_elit.webp",
       kicker: "Активен в этом сезоне",
       title: "Элитный",
       tierLabel: "Премиальный тариф",
@@ -10223,12 +10223,12 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
       features: [
         { iconSrc: "/assets/season-pass/season.png?v=07939", title: "Премиальная линия", text: "50 наград премиальной линии." },
         { iconSrc: "/assets/season-pass/quest.png?v=07939", title: "Премиальные задания", text: "Ежедневные и недельные задания." },
-        { iconSrc: "/assets/ui/icon_player_elit.png", title: "Значок «Элитный»", text: "Рядом с именем в рейтинге." },
+        { iconSrc: "/assets/ui/icon_player_elit.webp", title: "Значок «Элитный»", text: "Рядом с именем в рейтинге." },
         { iconSrc: "/assets/cases/legendary_closed.png", title: "Легендарный кейс", text: "На 50 уровне пропуска." }
       ]
     },
     elite_plus: {
-      badgeSrc: "/assets/ui/icon_player_elit+.png",
+      badgeSrc: "/assets/ui/icon_player_elit+.webp",
       kicker: "Активен в этом сезоне",
       title: "Элитный+",
       tierLabel: "Максимальный тариф сезона",
