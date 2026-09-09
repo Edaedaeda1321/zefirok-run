@@ -9154,6 +9154,18 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
 #zefirok-maltipoo-runner .rating-v6-row-score{color:#b94773;font-size:13px;font-weight:950;font-variant-numeric:tabular-nums;white-space:nowrap}
 #zefirok-maltipoo-runner .rating-v6-row-chevron{color:#c66a8c;font-size:18px;font-weight:900;line-height:1}
 #zefirok-maltipoo-runner .rating-v6-earned-reward{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;padding:13px 14px;border:1px solid rgba(226,189,104,.68);border-radius:21px;background:linear-gradient(180deg,#fffaf0,#fff1d4)}.rating-v6-earned-reward>div:first-child{display:grid;gap:2px}.rating-v6-earned-reward>div:first-child small{color:#a0782d;font-size:8px;font-weight:900;text-transform:uppercase}.rating-v6-earned-reward>div:first-child strong{color:#795420;font-size:15px;font-weight:950}.rating-v6-earned-reward-visual .leaderboard-reward-line{border:0!important;padding:0!important;background:none!important}.rating-v6-earned-reward .leaderboard-claim{grid-column:1/-1;justify-self:stretch}
+#zefirok-maltipoo-runner .rating-v6-me-progress{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:6px;padding-top:2px}
+#zefirok-maltipoo-runner .rating-v6-progress-chip{display:inline-flex;align-items:center;min-height:25px;padding:5px 9px;border-radius:999px;background:#fff;color:#875a6b;font-size:8.5px;font-weight:900;box-shadow:inset 0 0 0 1px rgba(225,185,199,.62)}
+#zefirok-maltipoo-runner .rating-v6-progress-chip.is-up{background:#eef9ed;color:#4d8051;box-shadow:inset 0 0 0 1px rgba(130,188,135,.38)}
+#zefirok-maltipoo-runner .rating-v6-progress-chip.is-down{background:#fff4ee;color:#a96b4e;box-shadow:inset 0 0 0 1px rgba(221,165,136,.38)}
+#zefirok-maltipoo-runner .rating-v6-nearby,#zefirok-maltipoo-runner .rating-v6-history{display:grid;gap:9px;padding:13px 8px 2px}
+#zefirok-maltipoo-runner .rating-v6-nearby-list{display:grid;gap:6px}
+#zefirok-maltipoo-runner .rating-v6-nearby-row{display:grid;grid-template-columns:30px 40px minmax(0,1fr) auto;gap:8px;align-items:center;min-height:58px;padding:8px 10px;border:1px solid rgba(228,190,202,.76);border-radius:18px;background:linear-gradient(180deg,#fffdfd,#fff6f8);cursor:pointer}
+#zefirok-maltipoo-runner .rating-v6-nearby-row.is-me{border-color:rgba(207,82,130,.60);background:linear-gradient(180deg,#fff3f8,#ffe6ef);box-shadow:0 6px 16px rgba(185,75,116,.10)}
+#zefirok-maltipoo-runner .rating-v6-nearby-place{color:#bd4e79;font-size:13px;font-weight:950;text-align:center}.rating-v6-nearby-row .leaderboard-avatar-frame.is-compact{width:40px!important;height:40px!important}.rating-v6-nearby-copy{display:grid;gap:2px;min-width:0}.rating-v6-nearby-copy strong{display:flex;gap:5px;align-items:center;min-width:0;overflow:hidden;color:#69334a;font-size:10.5px;font-weight:950;white-space:nowrap}.rating-v6-nearby-copy .leaderboard-name-text{overflow:hidden;text-overflow:ellipsis}.rating-v6-nearby-copy small{color:#9b7d88;font-size:7px;font-weight:850}.rating-v6-you-inline{display:inline-flex;align-items:center;margin-left:3px;padding:2px 5px;border-radius:999px;background:rgba(255,255,255,.72);border:1px solid rgba(186,118,147,.22);color:#9e4b71;font-size:7px;font-style:normal;font-weight:950;line-height:1}.rating-v6-nearby-score{color:#b94773;font-size:12px;font-weight:950;white-space:nowrap}
+#zefirok-maltipoo-runner .rating-v6-history-grid{display:grid;gap:7px}
+#zefirok-maltipoo-runner .rating-v6-history-card{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;padding:11px 12px;border:1px solid rgba(229,193,204,.72);border-radius:18px;background:linear-gradient(180deg,#fffdfc,#fff6f3)}
+#zefirok-maltipoo-runner .rating-v6-history-copy{display:grid;gap:3px;min-width:0}.rating-v6-history-copy small{color:#ad6a83;font-size:7.5px;font-weight:900;text-transform:uppercase}.rating-v6-history-copy strong{overflow:hidden;text-overflow:ellipsis;color:#6d334a;font-size:12px;font-weight:950;white-space:nowrap}.rating-v6-history-stats{display:flex;flex-wrap:wrap;gap:7px;color:#8f707a;font-size:8px;font-weight:850}.rating-v6-history-stats b{color:#c24e7a}.rating-v6-history-reward{display:grid;justify-items:end;gap:2px;max-width:108px}.rating-v6-history-reward>small{color:#a17b2f;font-size:7px;font-weight:900;text-transform:uppercase}.rating-v6-history-reward .leaderboard-reward-line{border:0!important;padding:0!important;background:none!important;transform:scale(.78);transform-origin:right center}.rating-v6-history-reward .leaderboard-reward-amount{font-size:8px!important}
 
 @media(max-width:390px){#zefirok-maltipoo-runner .rating-v6-content{padding-inline:10px!important}#zefirok-maltipoo-runner .rating-v6-hero{grid-template-columns:minmax(0,1fr) 108px;padding:15px;min-height:168px}.rating-v6-hero-copy h2{font-size:25px!important}.rating-v6-hero-reward{padding:8px!important}.rating-v6-me-stat{grid-template-columns:26px minmax(0,1fr);padding:4px 6px}.rating-v6-me-stat-icon{width:26px!important;height:26px!important}.rating-v6-me-stat-icon img{width:22px!important;height:22px!important}.rating-v6-me-stat-copy strong{font-size:16px!important}.rating-v6-podium{gap:5px!important}.rating-v6-podium-card{min-height:164px!important;padding-inline:5px!important}.rating-v6-podium-card.is-first{min-height:183px!important}.rating-v6-podium-card .leaderboard-avatar-frame{width:62px!important;height:62px!important}.rating-v6-podium-card.is-first .leaderboard-avatar-frame{width:73px!important;height:73px!important}.rating-v6-row{grid-template-columns:24px 39px minmax(0,1fr) auto 10px!important;gap:6px!important;padding-inline:8px!important}.rating-v6-row.has-trophy{grid-template-columns:24px 39px minmax(0,1fr) 28px auto 10px!important}.rating-v6-row-avatar .leaderboard-avatar-frame.is-compact{width:39px!important;height:39px!important}.rating-v6-row-score{font-size:12px!important}.rating-v6-section-title>span{display:none!important}}
 @media(prefers-reduced-motion:reduce){#zefirok-maltipoo-runner .rating-v6-tabs button,#zefirok-maltipoo-runner .rating-v6-row,#zefirok-maltipoo-runner .rating-v6-podium-card{transition:none!important}}
@@ -10084,15 +10096,28 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
       return `<section class="rating-v6-me-card is-empty"><div class="rating-v6-me-empty-icon" aria-hidden="true"><img src="${escapeHtml(RATING_TAB_ICON)}" alt=""></div><div><small>Твоя позиция</small><strong>Пока нет места в рейтинге</strong><p>Заверши зачтённый забег от ${PROFILE_MIN_SECONDS} секунд и ${PROFILE_MIN_SCORE} очков.</p></div></section>`;
     }
     const place = Math.max(0, Number(data.me.place || 0));
-    const gap = Math.max(0, Number(data.gapToFirst || 0));
+    const nextPlace = Math.max(0, Number(data.nextPlace || (place > 1 ? place - 1 : 0)));
+    const gapToNext = Math.max(0, Number(data.gapToNext || 0));
+    const placeDelta = Number(data.placeDelta || 0);
+    const placesAway = Math.max(0, Number(data?.rewardZone?.placesAway ?? (place > 1 ? place - 1 : 0)));
     const placeValue = place > 0 ? `#${place}` : "—";
-    const gapValue = place === 1 ? "Лидер" : formatter.format(gap);
+    const nextLabel = place === 1 ? "Статус" : (nextPlace > 0 ? `До #${nextPlace}` : "До следующего");
+    const nextValue = place === 1 ? "Лидер" : formatter.format(gapToNext);
+    const deltaChip = placeDelta > 0
+      ? `<span class="rating-v6-progress-chip is-up">▲ +${formatter.format(placeDelta)} ${placeDelta === 1 ? "место" : "мест"} с прошлого просмотра</span>`
+      : placeDelta < 0
+        ? `<span class="rating-v6-progress-chip is-down">▼ ${formatter.format(Math.abs(placeDelta))} ${Math.abs(placeDelta) === 1 ? "место" : "мест"} с прошлого просмотра</span>`
+        : `<span class="rating-v6-progress-chip">Позиция без изменений</span>`;
+    const rewardChip = mode === "season" && place > 0
+      ? (place === 1 ? `<span class="rating-v6-progress-chip is-up">Ты в реальной зоне награды #1</span>` : `<span class="rating-v6-progress-chip">До награды за #1: ${formatter.format(placesAway)} ${placesAway === 1 ? "место" : "мест"}</span>`)
+      : "";
     return `<section class="rating-v6-me-card">
       <div class="rating-v6-me-grid">
         ${summaryMetric(RATING_TAB_ICON, "Твоя позиция", placeValue, "is-place")}
         ${summaryMetric(BEST_SCORE_ICON, "Твои очки", formatter.format(data.me.score || 0), "is-score")}
-        ${summaryMetric(ACHIEVEMENT_POINTS_ICON, place === 1 ? "Статус" : "До первого места", gapValue, "is-gap")}
+        ${summaryMetric(ACHIEVEMENT_POINTS_ICON, nextLabel, nextValue, "is-gap")}
       </div>
+      <div class="rating-v6-me-progress">${deltaChip}${rewardChip}</div>
       ${summaryTrophiesMarkup(data.me)}
     </section>`;
   }
@@ -10323,6 +10348,38 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
     }).join("");
   }
 
+  function nearbyBlock(data) {
+    const entries = Array.isArray(data?.nearby) ? data.nearby : [];
+    if (!data?.me || !entries.length) return "";
+    const myId = String(telegramProfile?.id || data?.me?.telegramId || "");
+    const markup = entries.map((entry) => {
+      const isMe = String(entry?.telegramId || "") === myId;
+      const playerId = escapeHtml(entry?.telegramId || "");
+      const level = Math.max(1, Math.floor(Number(entry?.level || 1)));
+      return `<div class="rating-v6-nearby-row${isMe ? " is-me" : ""}" data-player-profile-id="${playerId}" role="button" tabindex="0" aria-label="${escapeHtml(`Открыть мини-профиль: ${entry?.name || "Игрок"}`)}">
+        <span class="rating-v6-nearby-place">#${Math.max(1, Number(entry?.place || 0))}</span>
+        <span>${avatarMarkup(entry, true, false)}</span>
+        <span class="rating-v6-nearby-copy"><strong>${playerNameMarkup(entry)}${isMe ? '<em class="rating-v6-you-inline">Ты</em>' : ""}</strong><small>Ур. ${level}</small></span>
+        <span class="rating-v6-nearby-score">${formatter.format(entry?.score || 0)}</span>
+      </div>`;
+    }).join("");
+    return `<section class="rating-v6-nearby"><div class="rating-v6-section-title"><div><small>Твоя борьба</small><strong>Рядом с тобой</strong></div><span>Ещё один забег может изменить позицию</span></div><div class="rating-v6-nearby-list">${markup}</div></section>`;
+  }
+
+  function historyBlock(data) {
+    if (mode !== "season") return "";
+    const history = Array.isArray(data?.history) ? data.history : [];
+    if (!history.length) return "";
+    const bestPlace = history.reduce((best, item) => { const place = Number(item?.place || 0); return place > 0 && (!best || place < best) ? place : best; }, 0);
+    const bestScore = history.reduce((best, item) => Math.max(best, Number(item?.score || 0)), 0);
+    const cards = history.map((item) => {
+      const reward = item?.reward;
+      return `<article class="rating-v6-history-card"><div class="rating-v6-history-copy"><small>${escapeHtml(item?.label || item?.seasonLabel || "Прошлый сезон")}</small><strong>${escapeHtml(item?.title || item?.seasonTitle || "Сезон")}</strong><span class="rating-v6-history-stats"><span>Место <b>${Number(item?.place || 0) > 0 ? `#${Number(item.place)}` : "—"}</b></span><span>Результат <b>${formatter.format(item?.score || 0)}</b></span></span></div>${reward ? `<div class="rating-v6-history-reward"><small>Получено</small>${rewardMarkup(reward)}</div>` : ""}</article>`;
+    }).join("");
+    const summary = bestPlace || bestScore ? `Лучшее: ${bestPlace ? `#${bestPlace}` : "—"} · ${formatter.format(bestScore)} очков` : "Результаты завершённых сезонов";
+    return `<section class="rating-v6-history"><div class="rating-v6-section-title"><div><small>Архив</small><strong>История сезонов</strong></div><span>${escapeHtml(summary)}</span></div><div class="rating-v6-history-grid">${cards}</div></section>`;
+  }
+
   function syncBanner() {
     const src = mode === "all_time" ? "/assets/rating/v8/all-time-rating.png?v=20260810" : "/assets/rating/v8/season-1-cafe-opening.png?v=20260810";
     if (banner?.getAttribute("src") !== src) banner?.setAttribute("src", src);
@@ -10345,6 +10402,13 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
       top: data.top,
       me: data.me,
       gapToFirst: data.gapToFirst,
+      gapToNext: data.gapToNext,
+      nextPlace: data.nextPlace,
+      placeDelta: data.placeDelta,
+      previousPlace: data.previousPlace,
+      rewardZone: data.rewardZone,
+      nearby: data.nearby,
+      history: data.history,
       reward: data.reward,
       nextSeason: data.nextSeason
     });
@@ -10441,7 +10505,7 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
       ? `<section class="rating-v6-leaders"><div class="rating-v6-section-title"><div><small>${mode === "all_time" ? "Зал славы" : "Лидеры сезона"}</small><strong>Top 3</strong></div></div><div class="rating-v6-podium">${podium(top[1], 2)}${podium(top[0], 1)}${podium(top[2], 3)}</div></section><section class="rating-v6-ranking-list"><div class="rating-v6-section-title"><div><small>Рейтинг</small><strong>Игроки</strong></div><span>Нажми на игрока, чтобы открыть профиль</span></div><div class="rating-v6-list">${rows(top)}</div></section>`
       : '<div class="leaderboard-empty">Пока нет результатов. Станьте первым!</div>';
 
-    dynamic.innerHTML = `${seasonHeader(season, timing, mode)}${tabs()}${summaryCard(data)}${topBlock}${rewardBlock}`;
+    dynamic.innerHTML = `${seasonHeader(season, timing, mode)}${tabs()}${summaryCard(data)}${nearbyBlock(data)}${topBlock}${historyBlock(data)}${rewardBlock}`;
   }
 
   function stripTelegramPhotos(data) {
@@ -10456,6 +10520,7 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
       return clean;
     };
     if (Array.isArray(data.top)) data.top = data.top.map(sanitizeEntry);
+    if (Array.isArray(data.nearby)) data.nearby = data.nearby.map(sanitizeEntry);
     if (data.me) data.me = sanitizeEntry(data.me);
     return data;
   }

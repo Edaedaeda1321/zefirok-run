@@ -1888,6 +1888,9 @@ export default {
       if (url.pathname === "/api/mail/claim" && request.method === "POST") {
         return await withPlayerApiPerformance(env, ctx, "mail_claim", () => claimPlayerMailV3(request, env, ctx));
       }
+      if (url.pathname === "/api/mail/claim-all" && request.method === "POST") {
+        return await withPlayerApiPerformance(env, ctx, "mail_claim_all", () => claimAllPlayerMailV3(request, env, ctx));
+      }
 
       if (url.pathname === "/api/gifts/state" && request.method === "POST") {
         return await getPlayerGiftInbox(request, env);
@@ -2773,17 +2776,35 @@ async function loadDailyLoyaltyConfig(env, options = {}) {
 async function readDailyLoyaltyBundle(env, telegramId, seasonId) {
   const id = String(telegramId);
   const sid = String(seasonId);
-  const [playerResult, claimsResult, insuranceResult, streakClaimsResult] = await env.DB.batch([
+  const [playerResult, claimsResult, insuranceResult, streakClaimsResult, recentResult] = await env.DB.batch([
     env.DB.prepare(`SELECT progress_days,streak,best_streak,last_active_day_key,updated_at FROM daily_loyalty_players WHERE telegram_id=? AND season_id=? LIMIT 1`).bind(id, sid),
     env.DB.prepare(`SELECT day_index,reward_type,amount,item_id,label,icon,status,source_request_id,created_at,delivered_at FROM daily_loyalty_claims WHERE telegram_id=? AND season_id=? AND status='delivered' ORDER BY day_index ASC`).bind(id, sid),
     env.DB.prepare(`SELECT balance,earned_count,used_count,last_award_streak,updated_at FROM daily_loyalty_insurance WHERE telegram_id=? AND season_id=? LIMIT 1`).bind(id, sid),
-    env.DB.prepare(`SELECT streak_threshold,reward_type,amount,item_id,label,status,source_request_id,created_at,delivered_at FROM daily_loyalty_streak_claims WHERE telegram_id=? AND season_id=? AND status='delivered' ORDER BY streak_threshold ASC`).bind(id, sid)
+    env.DB.prepare(`SELECT streak_threshold,reward_type,amount,item_id,label,status,source_request_id,created_at,delivered_at FROM daily_loyalty_streak_claims WHERE telegram_id=? AND season_id=? AND status='delivered' ORDER BY streak_threshold ASC`).bind(id, sid),
+    env.DB.prepare(`SELECT * FROM (
+      SELECT 'daily' AS source,day_index AS source_value,reward_type,amount,item_id,label,reward_json,created_at,delivered_at FROM daily_loyalty_claims WHERE telegram_id=? AND season_id=? AND status='delivered'
+      UNION ALL
+      SELECT 'weekly' AS source,progress_day AS source_value,reward_type,amount,item_id,label,reward_json,created_at,delivered_at FROM daily_loyalty_weekly_claims WHERE telegram_id=? AND season_id=? AND status='delivered'
+      UNION ALL
+      SELECT 'streak' AS source,streak_threshold AS source_value,reward_type,amount,item_id,label,reward_json,created_at,delivered_at FROM daily_loyalty_streak_claims WHERE telegram_id=? AND season_id=? AND status='delivered'
+      UNION ALL
+      SELECT 'comeback' AS source,tier_days AS source_value,reward_type,amount,item_id,label,reward_json,created_at,delivered_at FROM daily_loyalty_comeback_claims WHERE telegram_id=? AND season_id=? AND status='delivered'
+    ) ORDER BY CASE WHEN delivered_at>0 THEN delivered_at ELSE created_at END DESC,created_at DESC LIMIT 8`)
+      .bind(id,sid,id,sid,id,sid,id,sid)
   ]);
+  const recentRewards=(recentResult.results||[]).map((row)=>{
+    const fallback={label:String(row.label||dailyLoyaltyRewardTitle(row.reward_type,row.item_id,row.amount)),imageUrl:dailyLoyaltyRewardImage(row.reward_type,row.item_id),reward:{type:String(row.reward_type||''),amount:Math.max(1,Number(row.amount||1)),itemId:String(row.item_id||'')}};
+    const reward=dailyLoyaltyRewardFromJson(row.reward_json,row.label)||fallback;
+    const source=String(row.source||'daily'),sourceValue=Math.max(0,Number(row.source_value||0));
+    const sourceLabel=source==='streak'?`Серия · ${sourceValue} дней`:source==='comeback'?`Возвращение · ${sourceValue}+ дней`:source==='weekly'?`Ежедневная карточка · день ${sourceValue}`:`Ежедневная награда · день ${sourceValue}`;
+    return {...reward,source,sourceLabel,receivedAt:Math.max(0,Number(row.delivered_at||row.created_at||0))};
+  });
   return {
     player: playerResult.results?.[0] || null,
     claims: claimsResult.results || [],
     insurance: insuranceResult.results?.[0] || null,
-    streakClaims: streakClaimsResult.results || []
+    streakClaims: streakClaimsResult.results || [],
+    recentRewards
   };
 }
 
@@ -2816,6 +2837,7 @@ function dailyLoyaltyModel(config, bundle, currentDayKey) {
     milestones: config.milestones,
     weeklyRewards,
     streakRewards: visibleStreakRewards,
+    recentRewards: Array.isArray(bundle?.recentRewards) ? bundle.recentRewards : [],
     insurance: {
       enabled: Boolean(config.settings?.insuranceEnabled),
       balance: Math.max(0, Number(insuranceRow.balance || 0)),
@@ -4312,7 +4334,10 @@ async function ensurePlayerMailV3Schema(env) {
         PRIMARY KEY(mail_id, telegram_id, reward_index)
       )`),
       env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_player_mail_rewards_v3_player ON player_mail_rewards_v3(telegram_id,mail_id,reward_index)`)
-    ]).catch((error) => {
+    ]).then(async () => {
+      await addRuntimeColumnIfMissing(env, 'player_mail_v3', 'cta_label', "TEXT NOT NULL DEFAULT ''");
+      await addRuntimeColumnIfMissing(env, 'player_mail_v3', 'cta_url', "TEXT NOT NULL DEFAULT ''");
+    }).catch((error) => {
       playerMailV3SchemaPromise = null;
       throw error;
     });
@@ -4332,6 +4357,13 @@ function playerMailV3ImageUrl(value) {
     const parsed = new URL(raw);
     if (parsed.protocol === "https:" && parsed.hostname) return parsed.toString().slice(0,1000);
   } catch {}
+  return "";
+}
+
+function playerMailV3CtaUrl(value) {
+  const raw=String(value||"").trim().slice(0,1000);
+  if(!raw)return "";
+  try{const parsed=new URL(raw);if(parsed.protocol==="https:"&&parsed.hostname)return parsed.toString().slice(0,1000);}catch{}
   return "";
 }
 
@@ -4467,14 +4499,18 @@ async function createPlayerMailV3(env, telegramId, spec = {}) {
   const requestedCreatedAt = Math.floor(Number(spec.createdAt || 0));
   const createdAt = requestedCreatedAt > 0 ? requestedCreatedAt : now;
   const expiresAt = Math.max(0,Math.floor(Number(spec.expiresAt || 0)));
+  const ctaLabel = String(spec.ctaLabel || "").replace(/\s+/g," ").trim().slice(0,60);
+  const rawCtaUrl = String(spec.ctaUrl || "").trim();
+  const ctaUrl = playerMailV3CtaUrl(rawCtaUrl);
+  if (rawCtaUrl && !ctaUrl) throw new Error("Некорректная CTA-ссылка письма: используйте HTTPS");
   const rewardState = rewards.length ? "available" : "none";
   if (!title) throw new Error("У письма отсутствует заголовок");
   if (!body && !imageUrl && !rewards.length) throw new Error("Пустое письмо нельзя отправить");
 
   const statements = [
-    env.DB.prepare(`INSERT OR IGNORE INTO player_mail_v3(mail_id,telegram_id,source_type,source_id,mail_kind,title,preview_text,body_text,image_url,reason,reward_state,read_at,claimed_at,created_at,updated_at,expires_at)
-      VALUES(?,?,?,?,?,?,?,?,?,?,?,0,0,?,?,?)`)
-      .bind(mailId,id,sourceType,sourceId,mailKind,title,preview,body,imageUrl,reason,rewardState,createdAt,now,expiresAt)
+    env.DB.prepare(`INSERT OR IGNORE INTO player_mail_v3(mail_id,telegram_id,source_type,source_id,mail_kind,title,preview_text,body_text,image_url,reason,reward_state,read_at,claimed_at,created_at,updated_at,expires_at,cta_label,cta_url)
+      VALUES(?,?,?,?,?,?,?,?,?,?,?,0,0,?,?,?,?,?)`)
+      .bind(mailId,id,sourceType,sourceId,mailKind,title,preview,body,imageUrl,reason,rewardState,createdAt,now,expiresAt,ctaLabel,ctaUrl)
   ];
   rewards.forEach((reward,index)=>{
     statements.push(env.DB.prepare(`INSERT OR IGNORE INTO player_mail_rewards_v3(mail_id,telegram_id,reward_index,reward_kind,reward_id,amount,reward_json,created_at) VALUES(?,?,?,?,?,?,?,?)`)
@@ -4484,13 +4520,14 @@ async function createPlayerMailV3(env, telegramId, spec = {}) {
   const created = Number(results?.[0]?.meta?.changes || 0) > 0;
   const attachmentChanges = results.slice(1).reduce((sum,result)=>sum+Number(result?.meta?.changes||0),0);
 
-  const stored = await env.DB.prepare(`SELECT mail_id,source_type,source_id,mail_kind,title,preview_text,body_text,image_url,reason,reward_state FROM player_mail_v3 WHERE mail_id=? AND telegram_id=? LIMIT 1`).bind(mailId,id).first();
+  const stored = await env.DB.prepare(`SELECT mail_id,source_type,source_id,mail_kind,title,preview_text,body_text,image_url,reason,reward_state,cta_label,cta_url FROM player_mail_v3 WHERE mail_id=? AND telegram_id=? LIMIT 1`).bind(mailId,id).first();
   if (!stored?.mail_id) throw new Error("Письмо V3 не зафиксировано в D1");
   const storedRewardRows = await env.DB.prepare(`SELECT reward_kind,reward_id,amount,reward_json FROM player_mail_rewards_v3 WHERE mail_id=? AND telegram_id=? ORDER BY reward_index`).bind(mailId,id).all();
   const storedRewards = playerMailV3RewardsFromRows(storedRewardRows.results || []);
   if (String(stored.source_type||"") !== sourceType || String(stored.source_id||"") !== sourceId || String(stored.mail_kind||"") !== mailKind
       || String(stored.title||"") !== title || String(stored.preview_text||"") !== preview || String(stored.body_text||"") !== body
       || String(stored.image_url||"") !== imageUrl || String(stored.reason||"") !== reason
+      || String(stored.cta_label||"") !== ctaLabel || String(stored.cta_url||"") !== ctaUrl
       || JSON.stringify(storedRewards) !== JSON.stringify(rewards)) {
     throw new Error("Конфликт идентификатора письма V3: под этим ID уже хранится другое письмо");
   }
@@ -4498,7 +4535,7 @@ async function createPlayerMailV3(env, telegramId, spec = {}) {
     await ensurePlayerAccountRevisionAvailable(env);
     await bumpPlayerAccountRevisionStatement(env,id,now).run();
   }
-  return { mailId, created, rewards, rewardState:String(stored.reward_state || rewardState), title, preview, imageUrl };
+  return { mailId, created, rewards, rewardState:String(stored.reward_state || rewardState), title, preview, imageUrl, ctaLabel, ctaUrl };
 }
 
 async function maintainPlayerMailV3State(env, telegramId) {
@@ -4516,18 +4553,23 @@ async function playerMailV3StatePayload(env, telegramId) {
   await ensurePlayerMailV3Schema(env);
   const id=String(telegramId||"").trim(),now=Math.floor(Date.now()/1000);
   const [rows,counts]=await Promise.all([
-    env.DB.prepare(`SELECT mail_id,mail_kind,title,preview_text,image_url,reward_state,read_at,claimed_at,created_at,expires_at,
-        (SELECT COUNT(*) FROM player_mail_rewards_v3 r WHERE r.telegram_id=player_mail_v3.telegram_id AND r.mail_id=player_mail_v3.mail_id) AS reward_count
+    env.DB.prepare(`SELECT mail_id,mail_kind,title,preview_text,image_url,reward_state,read_at,claimed_at,created_at,expires_at,cta_label,cta_url,
+        (SELECT COUNT(*) FROM player_mail_rewards_v3 r WHERE r.telegram_id=player_mail_v3.telegram_id AND r.mail_id=player_mail_v3.mail_id) AS reward_count,
+        (SELECT reward_json FROM player_mail_rewards_v3 r WHERE r.telegram_id=player_mail_v3.telegram_id AND r.mail_id=player_mail_v3.mail_id ORDER BY reward_index LIMIT 1) AS primary_reward_json
       FROM player_mail_v3 WHERE telegram_id=? AND source_type<>'season_pass_task' AND mail_kind<>'season_pass_task' AND (expires_at=0 OR expires_at>?)
       ORDER BY CASE WHEN read_at=0 THEN 0 ELSE 1 END,created_at DESC LIMIT ?`).bind(id,now,PLAYER_MAIL_V3_LIST_LIMIT).all(),
     env.DB.prepare(`SELECT SUM(CASE WHEN read_at=0 THEN 1 ELSE 0 END) AS unread_count,SUM(CASE WHEN reward_state IN ('available','claiming') THEN 1 ELSE 0 END) AS pending_count
       FROM player_mail_v3 WHERE telegram_id=? AND source_type<>'season_pass_task' AND mail_kind<>'season_pass_task' AND (expires_at=0 OR expires_at>?)`).bind(id,now).first()
   ]);
-  const items=(rows.results||[]).map((row)=>({
-    id:String(row.mail_id||""),kind:String(row.mail_kind||"message"),title:String(row.title||"Письмо от Зеффи"),preview:String(row.preview_text||""),
-    imageUrl:String(row.image_url||""),status:playerMailV3LegacyStatus(row.reward_state),rewardState:String(row.reward_state||"none"),createdAt:Number(row.created_at||0),
-    claimedAt:Number(row.claimed_at||0),readAt:Number(row.read_at||0),unread:Number(row.read_at||0)<=0,hasRewards:Number(row.reward_count||0)>0||String(row.reward_state||"none")!=="none",rewards:[]
-  }));
+  const items=(rows.results||[]).map((row)=>{
+    let primaryReward=null;try{primaryReward=playerGiftRewardView(JSON.parse(String(row.primary_reward_json||"null")));}catch{}
+    return {
+      id:String(row.mail_id||""),kind:String(row.mail_kind||"message"),title:String(row.title||"Письмо от Зеффи"),preview:String(row.preview_text||""),
+      imageUrl:String(row.image_url||""),status:playerMailV3LegacyStatus(row.reward_state),rewardState:String(row.reward_state||"none"),createdAt:Number(row.created_at||0),
+      claimedAt:Number(row.claimed_at||0),readAt:Number(row.read_at||0),unread:Number(row.read_at||0)<=0,hasRewards:Number(row.reward_count||0)>0||String(row.reward_state||"none")!=="none",
+      expiresAt:Number(row.expires_at||0),ctaLabel:String(row.cta_label||""),ctaUrl:String(row.cta_url||""),primaryReward,rewards:primaryReward?[primaryReward]:[]
+    };
+  });
   return {ok:true,mailVersion:3,pendingCount:Math.max(0,Number(counts?.pending_count||0)),unreadCount:Math.max(0,Number(counts?.unread_count||0)),items};
 }
 
@@ -4552,7 +4594,8 @@ async function playerMailV3LetterPayload(env, telegramId, mailId) {
     id:String(row.mail_id||""),kind:String(row.mail_kind||"message"),title:String(row.title||"Письмо от Зеффи"),preview:String(row.preview_text||""),
     message:String(row.body_text||""),body:String(row.body_text||""),reason:String(row.reason||""),imageUrl:String(row.image_url||""),
     status:playerMailV3LegacyStatus(row.reward_state),rewardState:String(row.reward_state||"none"),createdAt:Number(row.created_at||0),claimedAt:Number(row.claimed_at||0),
-    readAt:Number(row.read_at||0),unread:Number(row.read_at||0)<=0,hasRewards:rewards.length>0,rewards,expiresAt:Number(row.expires_at||0)
+    readAt:Number(row.read_at||0),unread:Number(row.read_at||0)<=0,hasRewards:rewards.length>0,rewards,expiresAt:Number(row.expires_at||0),
+    ctaLabel:String(row.cta_label||""),ctaUrl:String(row.cta_url||"")
   };
 }
 
@@ -4640,9 +4683,12 @@ async function playerMailV3StreakProtectionOverflow(env, telegramId, mailId) {
   }
 }
 
-async function claimPlayerMailV3(request, env, ctx) {
+async function claimPlayerMailV3(request, env, ctx, preauthorizedTelegramId = "", options = {}) {
   try {
-    const body=await readJson(request);requireBotToken(env);const auth=await validateTelegramInitData(String(body.initData||""),env);const telegramId=String(auth.user.id);
+    const body=await readJson(request);requireBotToken(env);
+    const telegramId=preauthorizedTelegramId
+      ? String(preauthorizedTelegramId)
+      : String((await validateTelegramInitData(String(body.initData||""),env)).user.id);
     const mailId=String(body.mailId||body.giftId||"").trim();if(!/^[A-Za-z0-9:_-]{4,120}$/.test(mailId))throw new ApiError(400,"Некорректное письмо.");
     await ensurePlayerMailV3Schema(env);const now=Math.floor(Date.now()/1000);
     await env.DB.prepare(`UPDATE player_mail_v3 SET reward_state='available',updated_at=? WHERE telegram_id=? AND mail_id=? AND reward_state='claiming' AND updated_at<?`).bind(now,telegramId,mailId,now-PLAYER_MAIL_V3_CLAIM_STALE_SECONDS).run();
@@ -4654,7 +4700,7 @@ async function claimPlayerMailV3(request, env, ctx) {
       if(repairedBeforeClaim>0){await ensurePlayerAccountRevisionAvailable(env);await bumpPlayerAccountRevisionStatement(env,telegramId,now).run();row=await env.DB.prepare(`SELECT * FROM player_mail_v3 WHERE telegram_id=? AND mail_id=? AND (expires_at=0 OR expires_at>?) LIMIT 1`).bind(telegramId,mailId,now).first();}
     }
     if(String(row?.reward_state)==="none")throw new ApiError(409,"В этом письме нет награды.");
-    if(String(row.reward_state)==="claimed"){const state=await playerMailV3Snapshot(env,telegramId);const streakProtectionOverflow=await playerMailV3StreakProtectionOverflow(env,telegramId,mailId);return jsonResponse({ok:true,repeated:true,state,gifts:state,...(streakProtectionOverflow?{streakProtectionOverflow}:{})});}
+    if(String(row.reward_state)==="claimed"){const streakProtectionOverflow=await playerMailV3StreakProtectionOverflow(env,telegramId,mailId);if(options?.suppressState===true)return jsonResponse({ok:true,repeated:true,...(streakProtectionOverflow?{streakProtectionOverflow}:{})});const state=await playerMailV3Snapshot(env,telegramId);return jsonResponse({ok:true,repeated:true,state,gifts:state,...(streakProtectionOverflow?{streakProtectionOverflow}:{})});}
     const lock=await env.DB.prepare(`UPDATE player_mail_v3 SET reward_state='claiming',read_at=CASE WHEN read_at=0 THEN ? ELSE read_at END,updated_at=? WHERE telegram_id=? AND mail_id=? AND reward_state='available'`).bind(now,now,telegramId,mailId).run();
     if(Number(lock?.meta?.changes||0)<1)throw new ApiError(409,"Награда уже обрабатывается. Попробуйте ещё раз через несколько секунд.");
     await ensurePlayerAccountRevisionAvailable(env);await bumpPlayerAccountRevisionStatement(env,telegramId,now).run();
@@ -4667,7 +4713,9 @@ async function claimPlayerMailV3(request, env, ctx) {
       try{
         const taskResult=await claimSeasonPassTaskGiftReward(env,telegramId,seasonTaskRewards[0],ctx);const claimedAt=Math.floor(Date.now()/1000);
         await env.DB.prepare(`UPDATE player_mail_v3 SET reward_state='claimed',claimed_at=CASE WHEN claimed_at>0 THEN claimed_at ELSE ? END,read_at=CASE WHEN read_at=0 THEN ? ELSE read_at END,updated_at=? WHERE telegram_id=? AND mail_id=? AND reward_state IN ('claiming','available')`).bind(claimedAt,claimedAt,claimedAt,telegramId,mailId).run();
-        await bumpPlayerAccountRevisionStatement(env,telegramId,claimedAt).run();const state=await playerMailV3Snapshot(env,telegramId);
+        await bumpPlayerAccountRevisionStatement(env,telegramId,claimedAt).run();
+        if(options?.suppressState===true)return jsonResponse({ok:true,deliveryCommitted:true,seasonPassRefreshRequired:true,repeated:Boolean(taskResult?.repeated),receivedSeasonPassXp:Math.max(0,Number(taskResult?.xp||0))});
+        const state=await playerMailV3Snapshot(env,telegramId);
         return jsonResponse({ok:true,state,gifts:state,deliveryCommitted:true,seasonPassRefreshRequired:true,repeated:Boolean(taskResult?.repeated),receivedSeasonPassXp:Math.max(0,Number(taskResult?.xp||0))});
       }catch(taskError){const resetAt=Math.floor(Date.now()/1000);await env.DB.prepare(`UPDATE player_mail_v3 SET reward_state='available',updated_at=? WHERE telegram_id=? AND mail_id=? AND reward_state='claiming'`).bind(resetAt,telegramId,mailId).run().catch(()=>null);throw taskError;}
     }
@@ -4684,10 +4732,48 @@ async function claimPlayerMailV3(request, env, ctx) {
     const seasonPassRefreshRequired=[...rewardKinds].some((kind)=>["season_pass_tier","season_pass_xp_grant"].includes(kind));
     scheduleRunSettlementBackground(ctx,ensureAuthoritativeProfileRow(env,telegramId,`mail-v3-post-claim:${mailId}`),"mail v3 post-claim profile fold failed");
     scheduleRunSettlementBackground(ctx,reconcileDeliveredSeasonPassCasesForPlayer(env,telegramId),"mail v3 post-claim case reconcile failed");
-    const streakProtectionOverflow=await playerMailV3StreakProtectionOverflow(env,telegramId,mailId);const state=await playerMailV3Snapshot(env,telegramId);return jsonResponse({ok:true,state,gifts:state,deliveryCommitted:true,caseRefreshRequired,profileRefreshRequired,seasonPassRefreshRequired,...(streakProtectionOverflow?{streakProtectionOverflow}:{})});
+    const streakProtectionOverflow=await playerMailV3StreakProtectionOverflow(env,telegramId,mailId);if(options?.suppressState===true)return jsonResponse({ok:true,deliveryCommitted:true,caseRefreshRequired,profileRefreshRequired,seasonPassRefreshRequired,...(streakProtectionOverflow?{streakProtectionOverflow}:{})});const state=await playerMailV3Snapshot(env,telegramId);return jsonResponse({ok:true,state,gifts:state,deliveryCommitted:true,caseRefreshRequired,profileRefreshRequired,seasonPassRefreshRequired,...(streakProtectionOverflow?{streakProtectionOverflow}:{})});
   } catch(error) {
     if(error instanceof ApiError)return jsonResponse({ok:false,error:error.message},error.status);
     console.error("claimPlayerMailV3 failed",error);return jsonResponse({ok:false,error:"Не удалось получить вложение письма."},500);
+  }
+}
+
+async function claimAllPlayerMailV3(request, env, ctx) {
+  try {
+    const body=await readJson(request);requireBotToken(env);
+    const auth=await validateTelegramInitData(String(body.initData||""),env);
+    const telegramId=String(auth.user.id);
+    await ensurePlayerMailV3Schema(env);
+    const now=Math.floor(Date.now()/1000);
+    await maintainPlayerMailV3State(env,telegramId);
+    const pending=await env.DB.prepare(`SELECT mail_id FROM player_mail_v3
+      WHERE telegram_id=? AND source_type<>'season_pass_task' AND mail_kind<>'season_pass_task'
+        AND reward_state IN ('available','claiming') AND (expires_at=0 OR expires_at>?)
+      ORDER BY created_at ASC LIMIT ?`).bind(telegramId,now,PLAYER_MAIL_V3_LIST_LIMIT).all();
+    const mailIds=(pending.results||[]).map((row)=>String(row.mail_id||"")).filter(Boolean);
+    let claimedCount=0,repeatedCount=0,caseRefreshRequired=false,profileRefreshRequired=false,seasonPassRefreshRequired=false;
+    const failures=[],overflows=[];
+    for(const mailId of mailIds){
+      const internalRequest=new Request("https://internal.invalid/api/mail/claim",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({mailId})});
+      const response=await claimPlayerMailV3(internalRequest,env,ctx,telegramId,{suppressState:true});
+      const result=await response.json().catch(()=>null);
+      if(response.ok&&result?.ok){
+        if(result.repeated)repeatedCount+=1;else claimedCount+=1;
+        caseRefreshRequired=caseRefreshRequired||result.caseRefreshRequired===true;
+        profileRefreshRequired=profileRefreshRequired||result.profileRefreshRequired===true;
+        seasonPassRefreshRequired=seasonPassRefreshRequired||result.seasonPassRefreshRequired===true;
+        if(result.streakProtectionOverflow)overflows.push({mailId,...result.streakProtectionOverflow});
+      }else{
+        failures.push({mailId,error:String(result?.error||`HTTP ${response.status}`).slice(0,220)});
+      }
+    }
+    const state=await playerMailV3Snapshot(env,telegramId);
+    return jsonResponse({ok:true,state,gifts:state,claimedCount,repeatedCount,failedCount:failures.length,failures,
+      deliveryCommitted:claimedCount>0,caseRefreshRequired,profileRefreshRequired,seasonPassRefreshRequired,streakProtectionOverflows:overflows});
+  }catch(error){
+    if(error instanceof ApiError)return jsonResponse({ok:false,error:error.message},error.status);
+    console.error("claimAllPlayerMailV3 failed",error);return jsonResponse({ok:false,error:"Не удалось получить все вложения писем."},500);
   }
 }
 
@@ -6796,72 +6882,100 @@ async function getGameStartupPackage(request, env, ctx = null) {
   }
 }
 
+const GAME_NEWS_TYPES = Object.freeze(new Set(["update","season","event","important","maintenance","gift"]));
+const GAME_NEWS_CTA_ACTIONS = Object.freeze(new Set(["","battle_pass","rating","cases","play"]));
 let gameNewsReadSchemaReady = false;
 let gameNewsReadSchemaPromise = null;
+
+function normalizeGameNewsType(value){const type=String(value||"update").trim().toLowerCase();return GAME_NEWS_TYPES.has(type)?type:"update";}
+function normalizeGameNewsCtaAction(value){const action=String(value||"").trim().toLowerCase();return GAME_NEWS_CTA_ACTIONS.has(action)?action:"";}
+function gameNewsDefaultCtaLabel(action){return ({battle_pass:"Открыть Battle Pass",rating:"Открыть рейтинг",cases:"Посмотреть кейсы",play:"Играть"})[String(action||"")]||"";}
 
 async function ensureGameNewsReadSchema(env) {
   requireDatabase(env);
   if (gameNewsReadSchemaReady) return;
   if (gameNewsReadSchemaPromise) return gameNewsReadSchemaPromise;
   gameNewsReadSchemaPromise = (async () => {
-    await env.DB.prepare(`CREATE TABLE IF NOT EXISTS player_news_reads (
-      telegram_id TEXT PRIMARY KEY,
-      last_news_id INTEGER NOT NULL DEFAULT 0,
-      read_at INTEGER NOT NULL DEFAULT 0
-    )`).run();
+    await env.DB.batch([
+      env.DB.prepare(`CREATE TABLE IF NOT EXISTS player_news_reads (
+        telegram_id TEXT PRIMARY KEY,
+        last_news_id INTEGER NOT NULL DEFAULT 0,
+        read_at INTEGER NOT NULL DEFAULT 0
+      )`),
+      env.DB.prepare(`CREATE TABLE IF NOT EXISTS player_news_read_events (
+        telegram_id TEXT NOT NULL,
+        news_id INTEGER NOT NULL,
+        read_at INTEGER NOT NULL DEFAULT 0,
+        PRIMARY KEY(telegram_id,news_id)
+      )`),
+      env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_player_news_read_events_player ON player_news_read_events(telegram_id,read_at DESC)`)
+    ]);
+    await addRuntimeColumnIfMissing(env,'bot_news','news_type',"TEXT NOT NULL DEFAULT 'update'");
+    await addRuntimeColumnIfMissing(env,'bot_news','audience_segment_key',"TEXT NOT NULL DEFAULT 'all'");
+    await addRuntimeColumnIfMissing(env,'bot_news','expires_at','INTEGER NOT NULL DEFAULT 0');
+    await addRuntimeColumnIfMissing(env,'bot_news','pinned','INTEGER NOT NULL DEFAULT 0');
+    await addRuntimeColumnIfMissing(env,'bot_news','cta_action',"TEXT NOT NULL DEFAULT ''");
+    await addRuntimeColumnIfMissing(env,'bot_news','cta_label',"TEXT NOT NULL DEFAULT ''");
     gameNewsReadSchemaReady = true;
   })().finally(() => { gameNewsReadSchemaPromise = null; });
   return gameNewsReadSchemaPromise;
 }
 
-async function getGameNewsForPlayer(env, telegramId) {
+async function eligibleGameNewsRowForPlayer(env, telegramId) {
   await ensureRelease121News(env);
   await ensureGameNewsReadSchema(env);
-  const id = String(telegramId || "").trim();
-  if (!id) return null;
-  const row = await env.DB.prepare(`
-    SELECT n.id,n.title,n.body,n.image_url,n.published_at,COALESCE(r.last_news_id,0) AS last_news_id
-    FROM bot_news n
-    LEFT JOIN player_news_reads r ON r.telegram_id=?
-    WHERE n.status='published'
-    ORDER BY n.published_at DESC,n.id DESC
-    LIMIT 1
-  `).bind(id).first();
-  if (!row) return null;
-  const newsId = Math.max(0, Number(row.id || 0));
+  const id=String(telegramId||"").trim();if(!id)return null;
+  const now=Math.floor(Date.now()/1000);
+  const rows=(await env.DB.prepare(`SELECT id,title,body,image_url,published_at,news_type,audience_segment_key,expires_at,pinned,cta_action,cta_label
+    FROM bot_news WHERE status='published' AND (expires_at=0 OR expires_at>?)
+    ORDER BY pinned DESC,published_at DESC,id DESC LIMIT 30`).bind(now).all()).results||[];
+  for(const row of rows){
+    const segment=String(row.audience_segment_key||"all").trim()||"all";
+    if(segment==="all" || await segmentPlayerAllowed(env,segment,id))return row;
+  }
+  return null;
+}
+
+function gameNewsRowToClient(row, unread = false){
+  if(!row)return null;
+  const action=normalizeGameNewsCtaAction(row.cta_action);
+  const ctaLabel=action?(String(row.cta_label||"").trim().slice(0,60)||gameNewsDefaultCtaLabel(action)):"";
   return {
-    id: newsId,
-    title: String(row.title || ""),
-    body: String(row.body || ""),
-    imageUrl: String(row.image_url || ""),
-    publishedAt: Number(row.published_at || 0),
-    unread: newsId > Math.max(0, Number(row.last_news_id || 0))
+    id:Math.max(0,Number(row.id||0)),title:String(row.title||""),body:String(row.body||""),imageUrl:String(row.image_url||""),publishedAt:Number(row.published_at||0),
+    type:normalizeGameNewsType(row.news_type),audienceSegmentKey:String(row.audience_segment_key||"all")||"all",expiresAt:Number(row.expires_at||0),pinned:Number(row.pinned||0)===1,
+    ctaAction:action,ctaLabel,unread:Boolean(unread)
   };
+}
+
+async function getGameNewsForPlayer(env, telegramId) {
+  const id=String(telegramId||"").trim();if(!id)return null;
+  const row=await eligibleGameNewsRowForPlayer(env,id);if(!row)return null;
+  const newsId=Math.max(0,Number(row.id||0));
+  const [event,legacy]=await Promise.all([
+    env.DB.prepare(`SELECT read_at FROM player_news_read_events WHERE telegram_id=? AND news_id=? LIMIT 1`).bind(id,newsId).first(),
+    env.DB.prepare(`SELECT last_news_id FROM player_news_reads WHERE telegram_id=? LIMIT 1`).bind(id).first()
+  ]);
+  const unread=!event?.read_at && newsId>Math.max(0,Number(legacy?.last_news_id||0));
+  return gameNewsRowToClient(row,unread);
 }
 
 async function markGameNewsRead(request, env) {
   try {
-    requireDatabase(env);
-    requireBotToken(env);
-    const body = await readJson(request);
-    const auth = await validateTelegramInitData(String(body.initData || ""), env);
-    const newsId = Math.max(0, Math.floor(Number(body.newsId) || 0));
-    if (!newsId) throw new ApiError(400, "Некорректная новость.");
-    const exists = await env.DB.prepare(`SELECT id FROM bot_news WHERE id=? LIMIT 1`).bind(newsId).first();
-    if (!exists) throw new ApiError(404, "Новость не найдена.");
+    requireDatabase(env);requireBotToken(env);
+    const body=await readJson(request);const auth=await validateTelegramInitData(String(body.initData||""),env);
+    const telegramId=String(auth.user.id),newsId=Math.max(0,Math.floor(Number(body.newsId)||0));
+    if(!newsId)throw new ApiError(400,"Некорректная новость.");
     await ensureGameNewsReadSchema(env);
-    const now = Math.floor(Date.now() / 1000);
-    await env.DB.prepare(`
-      INSERT INTO player_news_reads(telegram_id,last_news_id,read_at) VALUES(?,?,?)
-      ON CONFLICT(telegram_id) DO UPDATE SET
-        last_news_id=MAX(player_news_reads.last_news_id,excluded.last_news_id),
-        read_at=excluded.read_at
-    `).bind(String(auth.user.id), newsId, now).run();
-    return jsonResponse({ ok:true, newsId, readAt:now });
-  } catch (error) {
-    if (error instanceof ApiError) return jsonResponse({ ok:false, error:error.message }, error.status);
-    console.error("markGameNewsRead failed", error);
-    return jsonResponse({ ok:false, error:"Не удалось отметить новость прочитанной." }, 500);
+    const exists=await env.DB.prepare(`SELECT id FROM bot_news WHERE id=? LIMIT 1`).bind(newsId).first();if(!exists)throw new ApiError(404,"Новость не найдена.");
+    const now=Math.floor(Date.now()/1000);
+    await env.DB.batch([
+      env.DB.prepare(`INSERT INTO player_news_read_events(telegram_id,news_id,read_at) VALUES(?,?,?) ON CONFLICT(telegram_id,news_id) DO UPDATE SET read_at=excluded.read_at`).bind(telegramId,newsId,now),
+      env.DB.prepare(`INSERT INTO player_news_reads(telegram_id,last_news_id,read_at) VALUES(?,?,?) ON CONFLICT(telegram_id) DO UPDATE SET last_news_id=MAX(player_news_reads.last_news_id,excluded.last_news_id),read_at=excluded.read_at`).bind(telegramId,newsId,now)
+    ]);
+    return jsonResponse({ok:true,newsId,readAt:now});
+  }catch(error){
+    if(error instanceof ApiError)return jsonResponse({ok:false,error:error.message},error.status);
+    console.error("markGameNewsRead failed",error);return jsonResponse({ok:false,error:"Не удалось отметить новость прочитанной."},500);
   }
 }
 
@@ -10074,6 +10188,20 @@ function normalizeCurrentActiveSkin(value, ownedSkins = []) {
   return Array.isArray(ownedSkins) && ownedSkins.includes(id) && known ? id : "default";
 }
 
+async function recentCaseOpeningsForPlayer(env, telegramId, limit = 8) {
+  const max=Math.max(1,Math.min(20,Math.floor(Number(limit)||8)));
+  const result=await env.DB.prepare(`SELECT * FROM (
+    SELECT 'level' AS source,CAST(level AS TEXT) AS source_id,case_type,rewards_json,opened_at FROM level_case_openings WHERE telegram_id=?
+    UNION ALL
+    SELECT 'granted' AS source,id AS source_id,case_type,rewards_json,opened_at FROM granted_cases WHERE telegram_id=? AND status='opened'
+  ) WHERE opened_at>0 ORDER BY opened_at DESC LIMIT ?`).bind(String(telegramId),String(telegramId),max).all();
+  return (result.results||[]).map((row)=>{
+    let rewards=[];try{const parsed=JSON.parse(String(row.rewards_json||"[]"));if(Array.isArray(parsed))rewards=parsed;}catch{}
+    const caseType=normalizeCaseType(row.case_type)||"small";
+    return {source:String(row.source||""),sourceId:String(row.source_id||""),caseType,title:String(LEVEL_CASE_CONFIG[caseType]?.title||"Кейс"),openedAt:Number(row.opened_at||0)*1000,rewards};
+  });
+}
+
 async function buildCasePayload(env, telegramId, currentProfile, extra = {}, options = {}) {
   if (!options.skipRewardQueue) {
     try { await processPlayerRewardDeliveryQueue(env, telegramId, 10); }
@@ -10111,6 +10239,7 @@ async function buildCasePayload(env, telegramId, currentProfile, extra = {}, opt
     if (type) giftedCases[type] = safeAdminNumber(row.count);
   }
   const playerLevel = caseProfileLevel(safeAdminNumber(ensured.profile?.profile_xp));
+  const recentOpenings = await recentCaseOpeningsForPlayer(env,telegramId,8);
   const alexCollectionGrant = await env.DB.prepare(`SELECT id FROM granted_cases WHERE id=? AND telegram_id=? LIMIT 1`).bind(alexCaseCollectionGrantId(telegramId),String(telegramId)).first().catch(()=>null);
   const alexCollection = { ...alexCaseCollectionStatus(ensured.state), rewardCaseType:"gold", rewardTitle:"Золотой кейс", rewardClaimed:Boolean(alexCollectionGrant?.id) };
   const eligibleCases = Object.entries(LEVEL_CASE_SCHEDULE)
@@ -10133,6 +10262,7 @@ async function buildCasePayload(env, telegramId, currentProfile, extra = {}, opt
     openedLevels,
     openedCases,
     giftedCases,
+    recentOpenings,
     caseState: {
       ...ensured.state,
       mythicGuaranteedEvery: Math.max(0, Math.min(50, Number(liveops?.cases?.mythic?.guaranteeCount ?? 25))),
@@ -12309,6 +12439,49 @@ async function leaderboardSeasonPassTierMap(env, telegramIds, now = Math.floor(D
   return result;
 }
 
+let leaderboardPlayerViewSchemaReady=false;
+let leaderboardPlayerViewSchemaPromise=null;
+async function ensureLeaderboardPlayerViewSchema(env){
+  if(leaderboardPlayerViewSchemaReady)return;
+  if(leaderboardPlayerViewSchemaPromise)return leaderboardPlayerViewSchemaPromise;
+  leaderboardPlayerViewSchemaPromise=env.DB.batch([
+    env.DB.prepare(`CREATE TABLE IF NOT EXISTS leaderboard_player_views(telegram_id TEXT NOT NULL,season_id TEXT NOT NULL,mode TEXT NOT NULL DEFAULT 'season',last_place INTEGER NOT NULL DEFAULT 0,last_score INTEGER NOT NULL DEFAULT 0,viewed_at INTEGER NOT NULL DEFAULT 0,PRIMARY KEY(telegram_id,season_id,mode))`),
+    env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_leaderboard_player_views_player ON leaderboard_player_views(telegram_id,viewed_at DESC)`)
+  ]).then(()=>{leaderboardPlayerViewSchemaReady=true;}).finally(()=>{leaderboardPlayerViewSchemaPromise=null;});
+  return leaderboardPlayerViewSchemaPromise;
+}
+
+async function leaderboardNearbyRows(env,season,telegramId,mode,myEntry){
+  if(!myEntry?.place)return [];
+  const table=mode==="all_time"?"leaderboard_all_time":"leaderboard_entries",offset=Math.max(0,Number(myEntry.place||1)-3),limit=5;
+  const sql=mode==="all_time"
+    ? `SELECT telegram_id,display_name,username,photo_url,best_score,level,achieved_at,case_avatar_id,case_frame_id FROM ${table} WHERE hidden=0 ORDER BY best_score DESC,achieved_at ASC,telegram_id ASC LIMIT ? OFFSET ?`
+    : `SELECT telegram_id,display_name,username,photo_url,best_score,level,achieved_at,case_avatar_id,case_frame_id FROM ${table} WHERE season_id=? AND hidden=0 ORDER BY best_score DESC,achieved_at ASC,telegram_id ASC LIMIT ? OFFSET ?`;
+  const rows=mode==="all_time"?(await env.DB.prepare(sql).bind(limit,offset).all()).results||[]:(await env.DB.prepare(sql).bind(String(season.id),limit,offset).all()).results||[];
+  return rows.map((row,index)=>leaderboardRowToClient(row,offset+index+1));
+}
+
+async function leaderboardViewDelta(env,telegramId,seasonId,mode,myEntry){
+  if(!myEntry?.place)return {placeDelta:0,previousPlace:0};
+  await ensureLeaderboardPlayerViewSchema(env);const id=String(telegramId),sid=String(seasonId),now=Math.floor(Date.now()/1000);
+  const previous=await env.DB.prepare(`SELECT last_place,last_score,viewed_at FROM leaderboard_player_views WHERE telegram_id=? AND season_id=? AND mode=? LIMIT 1`).bind(id,sid,String(mode)).first();
+  await env.DB.prepare(`INSERT INTO leaderboard_player_views(telegram_id,season_id,mode,last_place,last_score,viewed_at) VALUES(?,?,?,?,?,?) ON CONFLICT(telegram_id,season_id,mode) DO UPDATE SET last_place=excluded.last_place,last_score=excluded.last_score,viewed_at=excluded.viewed_at`).bind(id,sid,String(mode),Number(myEntry.place||0),Number(myEntry.score||0),now).run();
+  const previousPlace=Math.max(0,Number(previous?.last_place||0));return {previousPlace,placeDelta:previousPlace>0?previousPlace-Number(myEntry.place||0):0};
+}
+
+async function leaderboardHistoryForPlayer(env,telegramId,currentSeasonId){
+  const id=String(telegramId||"").trim();if(!id)return [];
+  const now=Math.floor(Date.now()/1000);
+  const rows=(await env.DB.prepare(`SELECT s.*,e.best_score,e.achieved_at FROM leaderboard_entries e JOIN leaderboard_seasons s ON s.id=e.season_id WHERE e.telegram_id=? AND e.hidden=0 AND s.id<>? AND (s.finalized_at IS NOT NULL OR s.status='ended' OR s.ends_at<=?) ORDER BY s.ends_at DESC,s.created_at DESC LIMIT 6`).bind(id,String(currentSeasonId||""),now).all()).results||[];
+  const history=[];
+  for(const row of rows){
+    const rank=await env.DB.prepare(`SELECT COUNT(*)+1 AS place FROM leaderboard_entries WHERE season_id=? AND hidden=0 AND (best_score>? OR (best_score=? AND achieved_at<?) OR (best_score=? AND achieved_at=? AND telegram_id<?))`).bind(String(row.id),Number(row.best_score||0),Number(row.best_score||0),Number(row.achieved_at||0),Number(row.best_score||0),Number(row.achieved_at||0),id).first();
+    const reward=await env.DB.prepare(`SELECT * FROM leaderboard_rewards WHERE season_id=? AND telegram_id=? ORDER BY place ASC,created_at DESC LIMIT 1`).bind(String(row.id),id).first();
+    history.push({seasonId:String(row.id||""),title:String(row.title||"Сезон"),startsAt:Number(row.starts_at||0)*1000,endsAt:Number(row.ends_at||0)*1000,place:Math.max(1,Number(rank?.place||1)),score:Math.max(0,Number(row.best_score||0)),reward:reward?rewardToClient(reward,seasonRewardClientConfig(row,env)):null});
+  }
+  return history;
+}
+
 async function buildLeaderboardPayload(env, season, telegramId, mode = "season") {
   const topLimit = Math.min(100, positiveInt(env.LEADERBOARD_TOP_LIMIT, DEFAULT_LEADERBOARD_TOP_LIMIT));
   const table = mode === "all_time" ? "leaderboard_all_time" : "leaderboard_entries";
@@ -12347,19 +12520,26 @@ async function buildLeaderboardPayload(env, season, telegramId, mode = "season")
   if (me && !Number(me.hidden || 0)) {
     const rankQuery = mode === "all_time"
       ? `SELECT COUNT(*) + 1 AS place FROM leaderboard_all_time
-         WHERE hidden = 0 AND (best_score > ? OR (best_score = ? AND achieved_at < ?))`
+         WHERE hidden = 0 AND (best_score > ? OR (best_score = ? AND achieved_at < ?) OR (best_score = ? AND achieved_at = ? AND telegram_id < ?))`
       : `SELECT COUNT(*) + 1 AS place FROM leaderboard_entries
-         WHERE season_id = ? AND hidden = 0 AND (best_score > ? OR (best_score = ? AND achieved_at < ?))`;
+         WHERE season_id = ? AND hidden = 0 AND (best_score > ? OR (best_score = ? AND achieved_at < ?) OR (best_score = ? AND achieved_at = ? AND telegram_id < ?))`;
     const rank = mode === "all_time"
-      ? await env.DB.prepare(rankQuery).bind(me.best_score, me.best_score, me.achieved_at).first()
-      : await env.DB.prepare(rankQuery).bind(season.id, me.best_score, me.best_score, me.achieved_at).first();
+      ? await env.DB.prepare(rankQuery).bind(me.best_score, me.best_score, me.achieved_at, me.best_score, me.achieved_at, String(me.telegram_id)).first()
+      : await env.DB.prepare(rankQuery).bind(season.id, me.best_score, me.best_score, me.achieved_at, me.best_score, me.achieved_at, String(me.telegram_id)).first();
     myEntry = leaderboardRowToClient(me, Number(rank?.place || 0));
   }
 
-  const leaderboardPlayerIds=[...top.map((entry)=>entry.telegramId),String(telegramId)];
+  const [nearby,viewDelta,history]=await Promise.all([
+    leaderboardNearbyRows(env,season,telegramId,mode,myEntry),
+    leaderboardViewDelta(env,telegramId,mode==="all_time"?"all_time":season.id,mode,myEntry),
+    mode==="season"?leaderboardHistoryForPlayer(env,telegramId,season.id):Promise.resolve([])
+  ]);
+  const leaderboardPlayerIds=[...top.map((entry)=>entry.telegramId),...nearby.map((entry)=>entry.telegramId),String(telegramId)];
   const [passTierMap,achievementShowcaseMap]=await Promise.all([leaderboardSeasonPassTierMap(env,leaderboardPlayerIds),achievementPublicShowcaseMap(env,leaderboardPlayerIds)]);
-  for (const entry of top) {entry.seasonPassTier = passTierMap.get(String(entry.telegramId || "")) || "none";entry.showcase=achievementShowcaseMap.get(String(entry.telegramId||""))||[];}
+  for (const entry of [...top,...nearby]) {entry.seasonPassTier = passTierMap.get(String(entry.telegramId || "")) || "none";entry.showcase=achievementShowcaseMap.get(String(entry.telegramId||""))||[];}
   if (myEntry) {myEntry.seasonPassTier = passTierMap.get(String(myEntry.telegramId || "")) || "none";myEntry.showcase=achievementShowcaseMap.get(String(myEntry.telegramId||""))||[];}
+  const playerAbove=myEntry?nearby.find((entry)=>Number(entry.place)===Number(myEntry.place)-1):null;
+  const gapToNext=myEntry&&playerAbove?Math.max(1,Number(playerAbove.score||0)-Number(myEntry.score||0)+1):0;
 
   const firstScore = top.length ? top[0].score : 0;
   const rewardConfig = configuredSeason(env);
@@ -12403,6 +12583,13 @@ async function buildLeaderboardPayload(env, season, telegramId, mode = "season")
     me: myEntry,
     firstScore,
     gapToFirst: myEntry ? Math.max(0, firstScore - myEntry.score) : firstScore,
+    gapToNext,
+    nextPlace: playerAbove ? Number(playerAbove.place||0) : 0,
+    nearby,
+    placeDelta:Number(viewDelta?.placeDelta||0),
+    previousPlace:Number(viewDelta?.previousPlace||0),
+    rewardZone:myEntry?{maxPlace:1,placesAway:Math.max(0,Number(myEntry.place||0)-1)}:null,
+    history,
     reward: reward ? rewardToClient(reward, {
       ...rewardConfig,
       rewardType: seasonReward.type,
@@ -13939,13 +14126,16 @@ async function sendBotRating(env, chatId, user) {
 
 async function sendBotNews(env, chatId) {
   let news = null;
-  try { news = await latestBotNews(env); } catch (error) { console.error("Latest bot news failed", error); }
+  try { news = await latestBotNews(env, chatId); } catch (error) { console.error("Latest bot news failed", error); }
   const useBuiltInRelease = !news || Number(news.published_at || 0) < BOT_NEWS_PUBLISHED_AT;
   const title = String(useBuiltInRelease ? BOT_NEWS_TITLE : news.title);
   const body = String(useBuiltInRelease ? BOT_NEWS_TEXT : news.body);
+  const newsCtaAction=useBuiltInRelease?"":normalizeGameNewsCtaAction(news?.cta_action);
+  const newsCtaLabel=newsCtaAction?(String(news?.cta_label||"").trim().slice(0,60)||gameNewsDefaultCtaLabel(newsCtaAction)):"";
+  const newsCta=newsCtaAction&&newsCtaLabel?`\n\n<a href="${escapeHtml(configuredGameUrl(env))}">${escapeHtml(newsCtaLabel)}</a>`:"";
   const text = `<b>📰 ${escapeHtml(title)}</b>
 
-${escapeHtml(body)}
+${escapeHtml(body)}${newsCta}
 
 Версия: <b>${escapeHtml(GAME_VERSION)}</b>`;
   const imageUrl = String(useBuiltInRelease ? DEFAULT_BOT_NEWS_IMAGE_URL : (news.image_url || env.BOT_NEWS_IMAGE_URL || DEFAULT_BOT_NEWS_IMAGE_URL)).trim();
@@ -16766,21 +16956,22 @@ async function publishBotNews(chatId, requester, rawPayload, env) {
     return;
   }
   const now = Math.floor(Date.now() / 1000);
-  await env.DB.prepare(`UPDATE bot_news SET status = 'archived' WHERE status = 'published'`).run();
+  await ensureGameNewsReadSchema(env);
+  await env.DB.prepare(`UPDATE bot_news SET status='archived' WHERE status='published' AND COALESCE(audience_segment_key,'all')='all'`).run();
   await env.DB.prepare(
-    `INSERT INTO bot_news (title, body, image_url, status, created_at, published_at, created_by, created_by_name)
-     VALUES (?, ?, ?, 'published', ?, ?, ?, ?)`
+    `INSERT INTO bot_news (title, body, image_url, status, created_at, published_at, created_by, created_by_name,news_type,audience_segment_key)
+     VALUES (?, ?, ?, 'published', ?, ?, ?, ?,'update','all')`
   ).bind(title, body, imageUrl || null, now, now, String(requester.id), telegramDisplayName(requester)).run();
   await logStaffAction(env, requester, access, "publish_news", null, "news", null, null, { title });
   await sendTelegramMessage(env, chatId, `Новость опубликована. Она уже доступна в разделе «Новости».\n\n<b>${escapeHtml(title)}</b>\n${escapeHtml(body)}`);
 }
 
-async function latestBotNews(env) {
-  await ensureRelease121News(env);
-  return env.DB.prepare(
-    `SELECT title, body, image_url, published_at FROM bot_news
-     WHERE status = 'published' ORDER BY published_at DESC, id DESC LIMIT 1`
-  ).first();
+async function latestBotNews(env, telegramId = "") {
+  await ensureRelease121News(env);await ensureGameNewsReadSchema(env);
+  const id=String(telegramId||"").trim();
+  if(id)return eligibleGameNewsRowForPlayer(env,id);
+  const now=Math.floor(Date.now()/1000);
+  return env.DB.prepare(`SELECT title,body,image_url,published_at,news_type,audience_segment_key,expires_at,pinned,cta_action,cta_label FROM bot_news WHERE status='published' AND (expires_at=0 OR expires_at>?) ORDER BY pinned DESC,published_at DESC,id DESC LIMIT 1`).bind(now).first();
 }
 
 function botAdminTelegramIds(env) {
@@ -23366,6 +23557,8 @@ async function processCampaignRecipient(env, campaign, telegramId) {
       reason,
       preview:String(campaign.inbox_preview||""),
       imageUrl:String(campaign.image_url||""),
+      ctaLabel:String(campaign.button_text||"").trim().slice(0,60),
+      ctaUrl:campaignAbsoluteUrl(env,campaign.button_url||""),
       rewards
     });
     if (silentTelegram) return {delivered:false,telegramStatus:"skipped",error:"Telegram пропущен: тихая кампания"};
@@ -41007,7 +41200,7 @@ const TEST_PROJECT_SANDBOX_API_PATHS = Object.freeze([
   "/api/runs/start","/api/runs/checkpoint","/api/leaderboard/state","/api/leaderboard/player-profile","/api/leaderboard/submit","/api/leaderboard/claim",
   "/api/cases/state","/api/cases/open","/api/cases/open-granted","/api/cases/purchase","/api/cases/activate","/api/cases/equip","/api/cases/consume-run",
   "/api/skins/purchase","/api/skins/bonus-case","/api/live-content/shop/buy","/api/rewards/create","/api/rewards/mine",
-  "/api/mail/state","/api/mail/open","/api/mail/claim","/api/gifts/state","/api/gifts/read","/api/gifts/claim","/api/friends/coop/state","/api/friends/coop/claim","/api/newcomer/claim","/api/support/state","/api/support/create","/api/support/reply","/api/support/read","/api/news/read",
+  "/api/mail/state","/api/mail/open","/api/mail/claim","/api/mail/claim-all","/api/gifts/state","/api/gifts/read","/api/gifts/claim","/api/friends/coop/state","/api/friends/coop/claim","/api/newcomer/claim","/api/support/state","/api/support/create","/api/support/reply","/api/support/read","/api/news/read",
   "/api/polls/game/next","/api/polls/game/vote","/api/polls/game/snooze",
   "/api/shop/offers","/api/shop/offers/event","/api/shop/offers/purchase",
   "/api/battle-pass/access","/api/battle-pass/state","/api/battle-pass/run","/api/battle-pass/profile-bonus","/api/battle-pass/tier-activation/claim","/api/battle-pass/task-notices/pending","/api/battle-pass/task-notices/read",
@@ -41376,6 +41569,7 @@ async function testProjectSandboxGameData(env, ctx) {
   if(path==="/api/mail/state")return response({ok:true,mailVersion:3,pendingCount:0,unreadCount:0,items:[]});
   if(path==="/api/mail/open")throw new ApiError(404,"Писем Test Project пока нет.");
   if(path==="/api/mail/claim")throw new ApiError(404,"Вложения Production-почты в Test Project не выдаются.");
+  if(path==="/api/mail/claim-all")throw new ApiError(404,"Вложения Production-почты в Test Project не выдаются.");
   if(path==="/api/gifts/state")return response({ok:true,pendingCount:0,unreadCount:0,items:[]});
   if(path==="/api/gifts/read")return response({ok:true,pendingCount:0,unreadCount:0,items:[]});
   if(path==="/api/gifts/claim")throw new ApiError(404,"Production-подарки в Test Project не выдаются.");
@@ -44977,25 +45171,36 @@ function ownerPanelNewsBroadcastState(row) {
   return {broadcastId,status:String(row?.broadcast_status||row?.status||"pending"),total,sent,failed,pending:Math.max(0,total-sent-failed),updatedAt:Number(row?.broadcast_updated_at??row?.updated_at??0),completedAt:Number(row?.broadcast_completed_at??row?.completed_at??0)};
 }
 
+function ownerPanelNewsTypeLabel(value){return ({update:"Обновление",season:"Сезон",event:"Событие",important:"Важно",maintenance:"Техработы",gift:"Подарок"})[normalizeGameNewsType(value)]||"Обновление";}
+
+async function ownerPanelNewsAudienceCatalog(env){
+  const items=await ownerV85SegmentCatalog(env,false);
+  return [{key:"all",title:"Все игроки",builtin:true},...items.filter((item)=>String(item.key||"")!=="all").map((item)=>({key:String(item.key),title:String(item.title||item.key),builtin:item.builtin!==false}))];
+}
+
 async function ownerPanelNews(env, ctx) {
-  await ensureBotBroadcastSchema(env);
+  await ensureBotBroadcastSchema(env);await ensureGameNewsReadSchema(env);
   const result=await env.DB.prepare(`SELECT n.id,n.title,n.body,n.image_url,n.status,n.created_at,n.published_at,n.created_by,n.created_by_name,
+      n.news_type,n.audience_segment_key,n.expires_at,n.pinned,n.cta_action,n.cta_label,
       b.broadcast_id,b.status AS broadcast_status,b.total_count AS broadcast_total_count,b.sent_count AS broadcast_sent_count,
       b.failed_count AS broadcast_failed_count,b.updated_at AS broadcast_updated_at,b.completed_at AS broadcast_completed_at
     FROM bot_news n LEFT JOIN bot_broadcasts b ON b.broadcast_id=('news_' || n.id)
-    ORDER BY n.published_at DESC,n.id DESC LIMIT 20`).all().catch(()=>({results:[]}));
+    ORDER BY n.pinned DESC,n.published_at DESC,n.id DESC LIMIT 30`).all().catch(()=>({results:[]}));
   const base=`${configuredGameUrl(env).replace(/\/$/,"")}`;
-  const assetCatalog=await ownerPanelNewsAssetCatalog(env,base);
-  const mediaItems=await ownerPanelV9MediaListData(env,40).catch(()=>[]);
+  const [assetCatalog,mediaItems,audiences]=await Promise.all([ownerPanelNewsAssetCatalog(env,base),ownerPanelV9MediaListData(env,40).catch(()=>[]),ownerPanelNewsAudienceCatalog(env)]);
+  const audienceTitles=new Map(audiences.map((item)=>[String(item.key),String(item.title)]));
   const mediaPresets=mediaItems.map(item=>({label:item.fileName,url:`${base}${item.url}`,path:item.url,group:"Медиатека",fileName:item.fileName}));
-  const rows=result.results||[];
-  const published=rows.find((row)=>String(row.status||"")==="published")||null;
+  const rows=result.results||[];const published=rows.find((row)=>String(row.status||"")==="published")||null;
+  const toNews=(row)=>({id:Number(row.id||0),title:String(row.title||""),body:String(row.body||""),imageUrl:String(row.image_url||""),status:String(row.status||""),publishedAt:Number(row.published_at||0),createdByName:String(row.created_by_name||""),
+    type:normalizeGameNewsType(row.news_type),typeLabel:ownerPanelNewsTypeLabel(row.news_type),audienceSegmentKey:String(row.audience_segment_key||"all")||"all",audienceTitle:audienceTitles.get(String(row.audience_segment_key||"all"))||String(row.audience_segment_key||"all"),expiresAt:Number(row.expires_at||0),pinned:Number(row.pinned||0)===1,
+    ctaAction:normalizeGameNewsCtaAction(row.cta_action),ctaLabel:String(row.cta_label||"")||gameNewsDefaultCtaLabel(row.cta_action),delivery:ownerPanelNewsBroadcastState(row)});
+  const news=rows.map(toNews);
   return {ok:true,
-    channelHelp:{bot:"Публикация сохраняет пост в разделе «Новости» бота и запускает массовую доставку активным подписчикам через безопасную очередь/Cron.",game:"Та же опубликованная новость автоматически становится текущей новостью внутри игры. Непрочитавшие игроки увидят индикатор «Новая новость» при входе; отметка прочтения хранится на сервере."},
-    gameNews:published?{id:Number(published.id||0),title:String(published.title||""),body:String(published.body||""),imageUrl:String(published.image_url||""),version:GAME_VERSION,source:"Control Center · уведомление внутри игры",publishedAt:Number(published.published_at||0)}:{title:BOT_NEWS_TITLE,body:BOT_NEWS_TEXT,imageUrl:`${base}/assets/news/news_post_final_season1.png?v=bedb6870bd5d`,version:GAME_VERSION,source:"встроенное релизное окно"},
-    news:rows.map(row=>({id:Number(row.id||0),title:String(row.title||""),body:String(row.body||""),imageUrl:String(row.image_url||""),status:String(row.status||""),publishedAt:Number(row.published_at||0),createdByName:String(row.created_by_name||""),delivery:ownerPanelNewsBroadcastState(row)})),
-    assetCatalog:{source:assetCatalog.source,catalogHash:assetCatalog.catalogHash||"",count:assetCatalog.count},
-    presets:[...mediaPresets,...assetCatalog.presets]
+    channelHelp:{bot:"Публикация сохраняет пост в разделе «Новости» бота и запускает доставку только подходящей аудитории через безопасную очередь/Cron.",game:"Игра выбирает актуальную опубликованную новость по аудитории игрока, сроку показа и закреплению. Прочтение хранится отдельно для каждой новости."},
+    gameNews:published?{...toNews(published),version:GAME_VERSION,source:"Control Center · таргетированная новость"}:{title:BOT_NEWS_TITLE,body:BOT_NEWS_TEXT,imageUrl:`${base}/assets/news/news_post_final_season1.png?v=bedb6870bd5d`,version:GAME_VERSION,source:"встроенное релизное окно"},
+    news,newsTypes:[...GAME_NEWS_TYPES].map((key)=>({key,title:ownerPanelNewsTypeLabel(key)})),audiences,
+    ctaActions:[{key:"",title:"Без кнопки"},{key:"battle_pass",title:"Открыть Battle Pass"},{key:"rating",title:"Открыть рейтинг"},{key:"cases",title:"Посмотреть кейсы"},{key:"play",title:"Играть"}],
+    assetCatalog:{source:assetCatalog.source,catalogHash:assetCatalog.catalogHash||"",count:assetCatalog.count},presets:[...mediaPresets,...assetCatalog.presets]
   };
 }
 
@@ -45004,66 +45209,73 @@ function ownerPanelNormalizeNewsImage(env, value) {
   try{const base=new URL(configuredGameUrl(env));const url=new URL(raw,base);if(url.protocol!=="https:")throw new Error("protocol");return url.toString();}catch{throw new ApiError(400,"Картинка должна быть HTTPS-ссылкой, /assets/... или /media/...");}
 }
 
-function ownerPanelNewsBroadcastMessage(title,body){
-  return `<b>📰 ${escapeHtml(String(title||""))}</b>\n\n${escapeHtml(String(body||""))}\n\nВерсия: <b>${escapeHtml(GAME_VERSION)}</b>`;
+function ownerPanelNewsBroadcastMessage(env,news){
+  const action=normalizeGameNewsCtaAction(news?.ctaAction),label=String(news?.ctaLabel||"").trim().slice(0,60)||gameNewsDefaultCtaLabel(action);
+  const cta=action&&label?`\n\n<a href="${escapeHtml(configuredGameUrl(env))}">${escapeHtml(label)}</a>`:"";
+  return `<b>📰 ${escapeHtml(String(news?.title||""))}</b>\n\n${escapeHtml(String(news?.body||""))}${cta}\n\nВерсия: <b>${escapeHtml(GAME_VERSION)}</b>`;
 }
 
-async function ownerPanelCancelOlderNewsBroadcasts(env, keepBroadcastId, now=Math.floor(Date.now()/1000)) {
-  await ensureBotBroadcastSchema(env);
-  const rows=(await env.DB.prepare(`SELECT broadcast_id FROM bot_broadcasts WHERE broadcast_id LIKE 'news_%' AND broadcast_id<>? AND status IN ('pending','running')`).bind(String(keepBroadcastId)).all()).results||[];
-  if(!rows.length)return 0;
-  for(const row of rows){
-    const id=String(row.broadcast_id||"");if(!id)continue;
-    await env.DB.batch([
-      env.DB.prepare(`UPDATE bot_broadcast_deliveries SET status='failed',attempts=CASE WHEN attempts<1 THEN 1 ELSE attempts END,error_text='Остановлено новой публикацией новости',attempted_at=? WHERE broadcast_id=? AND status='pending'`).bind(now,id),
-      env.DB.prepare(`UPDATE bot_broadcasts SET status='failed',lease_token='',lease_until=0,updated_at=? WHERE broadcast_id=? AND status IN ('pending','running')`).bind(now,id)
-    ]);
+async function ownerPanelNewsTargetedSubscribers(env,audienceSegmentKey){
+  const segment=String(audienceSegmentKey||"all")||"all";
+  if(segment==="all")return null;
+  const playerIds=await segmentPlayerIds(env,segment,10000);if(!playerIds.length)return [];
+  const rows=[];
+  for(let offset=0;offset<playerIds.length;offset+=80){
+    const chunk=playerIds.slice(offset,offset+80),placeholders=chunk.map(()=>'?').join(',');
+    const result=await env.DB.prepare(`SELECT id,telegram_id FROM bot_subscribers WHERE active=1 AND telegram_id IN (${placeholders})`).bind(...chunk).all();
+    rows.push(...(result.results||[]));
   }
-  return rows.length;
+  return rows;
 }
 
 async function ownerPanelQueueNewsBroadcast(env, news, ctx) {
-  await ensureBotBroadcastSchema(env);
+  await ensureBotBroadcastSchema(env);await ensureGameNewsReadSchema(env);
   const newsId=Math.max(0,Number(news?.id||0));if(!newsId)throw new ApiError(500,"Не удалось определить ID опубликованной новости.");
   const broadcastId=`news_${newsId}`;
   const existing=await env.DB.prepare(`SELECT broadcast_id,status,total_count,sent_count,failed_count,updated_at,completed_at FROM bot_broadcasts WHERE broadcast_id=? LIMIT 1`).bind(broadcastId).first();
   if(existing)return ownerPanelNewsBroadcastState(existing);
-  const totalRow=await env.DB.prepare(`SELECT COUNT(*) AS total FROM bot_subscribers WHERE active=1`).first();
-  const total=Math.max(0,Number(totalRow?.total||0));
+  const audienceSegmentKey=String(news?.audienceSegmentKey||"all")||"all";
+  const targeted=await ownerPanelNewsTargetedSubscribers(env,audienceSegmentKey);
+  const total=targeted===null?Math.max(0,Number((await env.DB.prepare(`SELECT COUNT(*) AS total FROM bot_subscribers WHERE active=1`).first())?.total||0)):targeted.length;
   if(total<1)return {broadcastId:"",status:"no_recipients",total:0,sent:0,failed:0,pending:0,updatedAt:Math.floor(Date.now()/1000),completedAt:0};
-  const now=Math.floor(Date.now()/1000);
-  await ownerPanelCancelOlderNewsBroadcasts(env,broadcastId,now);
-  const messageText=ownerPanelNewsBroadcastMessage(news.title,news.body);
-  await env.DB.batch([
-    env.DB.prepare(`INSERT INTO bot_broadcasts (broadcast_id,message_text,created_by,report_chat_id,created_at,status,total_count,sent_count,failed_count,updated_at,completed_at,completion_notified,image_url,message_format,lease_token,lease_until) VALUES (?,?,?,?,?,'pending',?,0,0,?,0,0,?,'html','',0)`).bind(broadcastId,messageText,String(ctx.user.id),String(ctx.user.id),now,total,now,String(news.imageUrl||"")),
-    env.DB.prepare(`INSERT INTO bot_broadcast_deliveries (broadcast_id,subscriber_id,telegram_id,status,attempts,error_text,attempted_at) SELECT ?,id,telegram_id,'pending',0,'',0 FROM bot_subscribers WHERE active=1`).bind(broadcastId)
-  ]);
-  const task=processBotBroadcastJob(env,broadcastId).catch((error)=>console.error("Initial news broadcast batch failed",error));
-  if(ctx.executionCtx?.waitUntil)ctx.executionCtx.waitUntil(task);
+  const now=Math.floor(Date.now()/1000),messageText=ownerPanelNewsBroadcastMessage(env,news);
+  await env.DB.prepare(`INSERT INTO bot_broadcasts (broadcast_id,message_text,created_by,report_chat_id,created_at,status,total_count,sent_count,failed_count,updated_at,completed_at,completion_notified,image_url,message_format,lease_token,lease_until) VALUES (?,?,?,?,?,'pending',?,0,0,?,0,0,?,'html','',0)`).bind(broadcastId,messageText,String(ctx.user.id),String(ctx.user.id),now,total,now,String(news.imageUrl||"")).run();
+  if(targeted===null){
+    await env.DB.prepare(`INSERT INTO bot_broadcast_deliveries (broadcast_id,subscriber_id,telegram_id,status,attempts,error_text,attempted_at) SELECT ?,id,telegram_id,'pending',0,'',0 FROM bot_subscribers WHERE active=1`).bind(broadcastId).run();
+  }else{
+    for(let offset=0;offset<targeted.length;offset+=80){
+      const chunk=targeted.slice(offset,offset+80),ids=chunk.map((row)=>Number(row.id)).filter((id)=>id>0),placeholders=ids.map(()=>'?').join(',');if(!ids.length)continue;
+      await env.DB.prepare(`INSERT INTO bot_broadcast_deliveries (broadcast_id,subscriber_id,telegram_id,status,attempts,error_text,attempted_at) SELECT ?,id,telegram_id,'pending',0,'',0 FROM bot_subscribers WHERE id IN (${placeholders})`).bind(broadcastId,...ids).run();
+    }
+  }
+  const task=processBotBroadcastJob(env,broadcastId).catch((error)=>console.error("Initial news broadcast batch failed",error));if(ctx.executionCtx?.waitUntil)ctx.executionCtx.waitUntil(task);
   return {broadcastId,status:"pending",total,sent:0,failed:0,pending:total,updatedAt:now,completedAt:0};
 }
 
 async function ownerPanelPublishNews(env, ctx) {
-  const title=String(ctx.body?.title||"").trim().slice(0,120);const body=String(ctx.body?.body||"").trim().slice(0,3000);const imageUrl=ownerPanelNormalizeNewsImage(env,ctx.body?.imageUrl);
-  if(!title||!body)throw new ApiError(400,"Заполните заголовок и текст новости.");const now=Math.floor(Date.now()/1000);
-  const insert=await env.DB.prepare(`INSERT INTO bot_news(title,body,image_url,status,created_at,published_at,created_by,created_by_name) VALUES(?,?,?,'published',?,?,?,?)`).bind(title,body,imageUrl||null,now,now,String(ctx.user.id),telegramDisplayName(ctx.user)).run();
-  let newsId=Number(insert.meta?.last_row_id||0);
-  if(!newsId){const row=await env.DB.prepare(`SELECT id FROM bot_news WHERE status='published' AND created_by=? AND published_at=? ORDER BY id DESC LIMIT 1`).bind(String(ctx.user.id),now).first();newsId=Number(row?.id||0);}
-  if(!newsId)throw new ApiError(500,"Новость сохранена, но не удалось определить её ID для рассылки.");
-  await env.DB.prepare(`UPDATE bot_news SET status='archived' WHERE status='published' AND id<>?`).bind(newsId).run();
-  const broadcast=await ownerPanelQueueNewsBroadcast(env,{id:newsId,title,body,imageUrl},ctx);
-  await logStaffAction(env,ctx.user,ctx.access,"owner_panel_publish_news",null,"news",null,null,{newsId,title,imageUrl,broadcastId:broadcast?.broadcastId||"",recipients:Number(broadcast?.total||0)});
-  return {ok:true,id:newsId,title,body,imageUrl,publishedAt:now,broadcast};
+  await ensureGameNewsReadSchema(env);
+  const title=String(ctx.body?.title||"").trim().slice(0,120),body=String(ctx.body?.body||"").trim().slice(0,3000),imageUrl=ownerPanelNormalizeNewsImage(env,ctx.body?.imageUrl);
+  if(!title||!body)throw new ApiError(400,"Заполните заголовок и текст новости.");
+  const newsType=normalizeGameNewsType(ctx.body?.type),audienceSegmentKey=String(ctx.body?.audienceSegmentKey||"all").trim()||"all";
+  const audiences=await ownerPanelNewsAudienceCatalog(env);if(!audiences.some((item)=>String(item.key)===audienceSegmentKey))throw new ApiError(400,"Выбранная аудитория больше не существует.");
+  const expiresAt=Math.max(0,Math.floor(Number(ctx.body?.expiresAt)||0)),now=Math.floor(Date.now()/1000);if(expiresAt>0&&expiresAt<=now)throw new ApiError(400,"Срок показа новости должен быть в будущем.");
+  const pinned=ctx.body?.pinned===true||Number(ctx.body?.pinned||0)===1?1:0,ctaAction=normalizeGameNewsCtaAction(ctx.body?.ctaAction),ctaLabel=ctaAction?(String(ctx.body?.ctaLabel||"").trim().slice(0,60)||gameNewsDefaultCtaLabel(ctaAction)):"";
+  const insert=await env.DB.prepare(`INSERT INTO bot_news(title,body,image_url,status,created_at,published_at,created_by,created_by_name,news_type,audience_segment_key,expires_at,pinned,cta_action,cta_label) VALUES(?,?,?,'published',?,?,?,?,?,?,?,?,?,?)`).bind(title,body,imageUrl||null,now,now,String(ctx.user.id),telegramDisplayName(ctx.user),newsType,audienceSegmentKey,expiresAt,pinned,ctaAction,ctaLabel).run();
+  let newsId=Number(insert.meta?.last_row_id||0);if(!newsId){const row=await env.DB.prepare(`SELECT id FROM bot_news WHERE status='published' AND created_by=? AND published_at=? ORDER BY id DESC LIMIT 1`).bind(String(ctx.user.id),now).first();newsId=Number(row?.id||0);}if(!newsId)throw new ApiError(500,"Новость сохранена, но не удалось определить её ID для рассылки.");
+  await env.DB.prepare(`UPDATE bot_news SET status='archived' WHERE status='published' AND id<>? AND COALESCE(audience_segment_key,'all')=?`).bind(newsId,audienceSegmentKey).run();
+  const news={id:newsId,title,body,imageUrl,type:newsType,audienceSegmentKey,expiresAt,pinned:Boolean(pinned),ctaAction,ctaLabel};const broadcast=await ownerPanelQueueNewsBroadcast(env,news,ctx);
+  await logStaffAction(env,ctx.user,ctx.access,"owner_panel_publish_news",null,"news",null,null,{newsId,title,newsType,audienceSegmentKey,expiresAt,pinned:Boolean(pinned),ctaAction,broadcastId:broadcast?.broadcastId||"",recipients:Number(broadcast?.total||0)});
+  return {ok:true,...news,publishedAt:now,broadcast};
 }
 
 async function ownerPanelBroadcastNews(env,ctx){
-  const requestedId=Math.max(0,Math.floor(Number(ctx.body?.id)||0));
+  await ensureGameNewsReadSchema(env);const requestedId=Math.max(0,Math.floor(Number(ctx.body?.id)||0));
   const row=requestedId
-    ? await env.DB.prepare(`SELECT id,title,body,image_url,status,published_at FROM bot_news WHERE id=? AND status='published' LIMIT 1`).bind(requestedId).first()
-    : await env.DB.prepare(`SELECT id,title,body,image_url,status,published_at FROM bot_news WHERE status='published' ORDER BY published_at DESC,id DESC LIMIT 1`).first();
+    ? await env.DB.prepare(`SELECT id,title,body,image_url,status,published_at,audience_segment_key,cta_action,cta_label FROM bot_news WHERE id=? AND status='published' LIMIT 1`).bind(requestedId).first()
+    : await env.DB.prepare(`SELECT id,title,body,image_url,status,published_at,audience_segment_key,cta_action,cta_label FROM bot_news WHERE status='published' ORDER BY pinned DESC,published_at DESC,id DESC LIMIT 1`).first();
   if(!row)throw new ApiError(404,"Текущая опубликованная новость не найдена.");
-  const broadcast=await ownerPanelQueueNewsBroadcast(env,{id:Number(row.id),title:String(row.title||""),body:String(row.body||""),imageUrl:String(row.image_url||"")},ctx);
-  await logStaffAction(env,ctx.user,ctx.access,"owner_panel_news_broadcast",null,"news",null,null,{newsId:Number(row.id),title:String(row.title||""),broadcastId:broadcast?.broadcastId||"",recipients:Number(broadcast?.total||0)});
+  const news={id:Number(row.id),title:String(row.title||""),body:String(row.body||""),imageUrl:String(row.image_url||""),audienceSegmentKey:String(row.audience_segment_key||"all"),ctaAction:normalizeGameNewsCtaAction(row.cta_action),ctaLabel:String(row.cta_label||"")};
+  const broadcast=await ownerPanelQueueNewsBroadcast(env,news,ctx);await logStaffAction(env,ctx.user,ctx.access,"owner_panel_news_broadcast",null,"news",null,null,{newsId:Number(row.id),title:String(row.title||""),audienceSegmentKey:news.audienceSegmentKey,broadcastId:broadcast?.broadcastId||"",recipients:Number(broadcast?.total||0)});
   return {ok:true,id:Number(row.id),broadcast};
 }
 

@@ -11875,6 +11875,27 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 &lt;/div&gt;
 &lt;/div&gt;
 &lt;/section&gt;
+&lt;style id=&quot;zefirok-fresh-systems-polish-20260909&quot;&gt;
+#zefirok-maltipoo-runner .player-mail-tools{display:flex;align-items:center;gap:7px;padding:9px 11px 0;overflow-x:auto;scrollbar-width:none}
+#zefirok-maltipoo-runner .player-mail-tools::-webkit-scrollbar{display:none}
+#zefirok-maltipoo-runner .player-mail-filter{flex:0 0 auto;min-height:32px;padding:6px 10px;border:1px solid rgba(222,139,170,.34);border-radius:999px;background:#fff;color:#8d5e70;font-size:9px;font-weight:950}
+#zefirok-maltipoo-runner .player-mail-filter[aria-pressed=&quot;true&quot;]{border-color:#dd6b94;background:linear-gradient(145deg,#f598bb,#de678f);color:#fff;box-shadow:0 6px 14px rgba(211,91,135,.18)}
+#zefirok-maltipoo-runner .player-mail-claim-all{flex:0 0 auto;min-height:32px;margin-left:auto;padding:6px 11px;border:0;border-radius:999px;background:linear-gradient(145deg,#e9b552,#d99228);color:#fff;font-size:9px;font-weight:950;box-shadow:0 6px 14px rgba(170,111,29,.16)}
+#zefirok-maltipoo-runner .player-mail-claim-all:disabled{opacity:.55}
+#zefirok-maltipoo-runner .player-mail-expiry{display:inline-flex!important;width:max-content;max-width:100%;padding:3px 6px;border-radius:999px;background:#fff8e9;color:#9a6d31!important;font-weight:900!important}
+#zefirok-maltipoo-runner .player-mail-expiry.is-urgent{background:#fff0ed;color:#c75c52!important}
+#zefirok-maltipoo-runner .player-mail-kind-label{color:#b85a80;font-weight:900}
+#zefirok-maltipoo-runner .player-mail-cta{width:100%;min-height:42px;margin-top:8px;border:1px solid rgba(218,117,156,.38);border-radius:14px;background:#fff;color:#b54f77;font-size:11px;font-weight:950}
+#zefirok-maltipoo-runner .case-recent-section{display:grid;gap:8px;margin-top:8px;padding-top:10px;border-top:1px solid rgba(224,151,179,.24)}
+#zefirok-maltipoo-runner .case-recent-list{display:grid;gap:7px}
+#zefirok-maltipoo-runner .case-recent-card{display:grid;grid-template-columns:48px minmax(0,1fr);gap:9px;align-items:center;padding:9px;border:1px solid rgba(229,184,201,.55);border-radius:14px;background:rgba(255,255,255,.76)}
+#zefirok-maltipoo-runner .case-recent-case{display:grid;place-items:center;width:48px;height:48px}.case-recent-case .case-chest{transform:scale(.46);margin:0}
+#zefirok-maltipoo-runner .case-recent-copy{display:grid;gap:4px;min-width:0}.case-recent-copy&gt;span{display:flex;align-items:center;justify-content:space-between;gap:7px}.case-recent-copy strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#714b5d;font-size:10px}.case-recent-copy time{flex:0 0 auto;color:#a0808d;font-size:7.5px;font-weight:850}.case-recent-rewards{display:flex;gap:5px;overflow-x:auto;scrollbar-width:none}.case-recent-reward{display:inline-flex;align-items:center;gap:4px;min-height:27px;padding:4px 7px;border-radius:9px;background:#fff4f8;color:#7a5261;font-size:8px;font-weight:900;white-space:nowrap}.case-recent-reward img{width:21px;height:21px;object-fit:contain}
+#zefirok-maltipoo-runner .release-news-cta{width:100%;min-height:44px;margin:8px 0;border:0;border-radius:14px;background:linear-gradient(145deg,#ed8fb0,#d65a88);color:#fff;font-size:12px;font-weight:950;box-shadow:0 8px 17px rgba(190,72,115,.17)}
+#zefirok-maltipoo-runner .release-news-cta[hidden]{display:none!important}
+@media(max-width:390px){#zefirok-maltipoo-runner .player-mail-tools{padding-inline:9px}.player-mail-claim-all{margin-left:0!important}}
+&lt;/style&gt;
+
 &lt;section class=&quot;screen&quot; data-screen=&quot;warehouse&quot; hidden=&quot;&quot;&gt;
 &lt;div class=&quot;warehouse-shell&quot;&gt;
   &lt;div class=&quot;warehouse-head&quot;&gt;
@@ -11924,6 +11945,10 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         &lt;button class=&quot;case-stock-sort&quot; data-case-stock-sort type=&quot;button&quot; aria-pressed=&quot;true&quot;&gt;Редкость ↓&lt;/button&gt;
       &lt;/div&gt;
       &lt;div class=&quot;case-gifted-list&quot; data-case-gifted-list&gt;&lt;/div&gt;
+      &lt;div class=&quot;case-recent-section&quot; data-case-recent-section hidden&gt;
+        &lt;div class=&quot;case-subsection-title&quot;&gt;&lt;strong&gt;Последние открытия&lt;/strong&gt;&lt;span&gt;Личная история: какой кейс открыт и что выпало.&lt;/span&gt;&lt;/div&gt;
+        &lt;div class=&quot;case-recent-list&quot; data-case-recent-list&gt;&lt;/div&gt;
+      &lt;/div&gt;
     &lt;/div&gt;
   &lt;/div&gt;
 
@@ -11933,6 +11958,12 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       &lt;div class=&quot;player-gift-inbox-head&quot;&gt;
         &lt;span class=&quot;player-gift-inbox-summary-copy&quot;&gt;&lt;strong&gt;Почта Зеффи&lt;/strong&gt;&lt;span&gt;Письма, подарки, компенсации и новости от команды&lt;/span&gt;&lt;/span&gt;
         &lt;span class=&quot;player-gift-inbox-meta&quot; data-player-gift-inbox-meta&gt;Нет новых&lt;/span&gt;
+      &lt;/div&gt;
+      &lt;div class=&quot;player-mail-tools&quot; aria-label=&quot;Фильтры почты&quot;&gt;
+        &lt;button class=&quot;player-mail-filter&quot; data-player-mail-filter=&quot;all&quot; aria-pressed=&quot;true&quot; type=&quot;button&quot;&gt;Все&lt;/button&gt;
+        &lt;button class=&quot;player-mail-filter&quot; data-player-mail-filter=&quot;rewards&quot; aria-pressed=&quot;false&quot; type=&quot;button&quot;&gt;Награды&lt;/button&gt;
+        &lt;button class=&quot;player-mail-filter&quot; data-player-mail-filter=&quot;new&quot; aria-pressed=&quot;false&quot; type=&quot;button&quot;&gt;Новые&lt;/button&gt;
+        &lt;button class=&quot;player-mail-claim-all&quot; data-player-mail-claim-all type=&quot;button&quot; hidden&gt;Забрать всё&lt;/button&gt;
       &lt;/div&gt;
       &lt;div class=&quot;player-gift-inbox-list&quot; data-player-gift-inbox-list&gt;&lt;/div&gt;
       &lt;button class=&quot;player-gift-inbox-more&quot; data-player-gift-inbox-more type=&quot;button&quot; hidden aria-expanded=&quot;false&quot;&gt;Показать ещё&lt;/button&gt;
@@ -12286,6 +12317,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       &lt;button class=&quot;release-history-back&quot; data-release-history-back type=&quot;button&quot;&gt;Назад к текущему обновлению&lt;/button&gt;
     &lt;/div&gt;
     &lt;button class=&quot;release-history-button&quot; data-release-history-open type=&quot;button&quot; hidden&gt;Все обновления&lt;/button&gt;
+    &lt;button class=&quot;release-news-cta&quot; data-release-news-cta type=&quot;button&quot; hidden&gt;Перейти&lt;/button&gt;
     &lt;button class=&quot;release-button&quot; data-release-close type=&quot;button&quot;&gt;Продолжить&lt;/button&gt;
     &lt;div class=&quot;season-task-actions&quot; data-season-task-actions hidden&gt;
       &lt;button class=&quot;season-task-stay&quot; data-season-task-stay type=&quot;button&quot;&gt;Остаться в игре&lt;/button&gt;
@@ -12632,6 +12664,8 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       const playerGiftInboxMetaEl = root.querySelector(&quot;[data-player-gift-inbox-meta]&quot;);
       const playerGiftInboxListEl = root.querySelector(&quot;[data-player-gift-inbox-list]&quot;);
       const playerGiftInboxMoreEl = root.querySelector(&quot;[data-player-gift-inbox-more]&quot;);
+      const playerMailFilterButtons = [...root.querySelectorAll(&quot;[data-player-mail-filter]&quot;)];
+      const playerMailClaimAllButton = root.querySelector(&quot;[data-player-mail-claim-all]&quot;);
       const playerMailLayerEl = root.querySelector(&quot;[data-player-mail-layer]&quot;);
       const playerMailContentEl = root.querySelector(&quot;[data-player-mail-content]&quot;);
       const playerMailDialogEl = root.querySelector(&quot;.player-mail-dialog&quot;);
@@ -12672,6 +12706,8 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       let friendCoopLoadedAt = 0;
       const caseGiftedWrapEl = root.querySelector(&quot;[data-case-gifted-wrap]&quot;);
       const caseGiftedListEl = root.querySelector(&quot;[data-case-gifted-list]&quot;);
+      const caseRecentSectionEl = root.querySelector(&quot;[data-case-recent-section]&quot;);
+      const caseRecentListEl = root.querySelector(&quot;[data-case-recent-list]&quot;);
       const caseStockFilterButtons = [...root.querySelectorAll(&quot;[data-case-stock-filter]&quot;)];
       const caseStockSortButton = root.querySelector(&quot;[data-case-stock-sort]&quot;);
       const caseStockNewCountEl = root.querySelector(&quot;[data-case-stock-new-count]&quot;);
@@ -12773,6 +12809,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       const releaseHistoryListEl = root.querySelector(&quot;[data-release-history-list]&quot;);
       const releaseHistoryOpenButton = root.querySelector(&quot;[data-release-history-open]&quot;);
       const releaseHistoryBackButton = root.querySelector(&quot;[data-release-history-back]&quot;);
+      const releaseNewsCtaButton = root.querySelector(&quot;[data-release-news-cta]&quot;);
       const releaseCloseButton = root.querySelector(&quot;[data-release-close]&quot;);
       const gameNewsButton = root.querySelector(&quot;[data-game-news-button]&quot;);
       const gameNewsButtonTitleEl = root.querySelector(&quot;[data-game-news-button-title]&quot;);
@@ -13869,6 +13906,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         ownedSkins: [&quot;default&quot;],
         caseOpenedLevels: [],
         caseGiftedCases: { small: 0, sweet: 0, gold: 0, mythic: 0, legendary: 0, alex: 0 },
+        caseRecentOpenings: [],
         caseAlexCollectionRewardClaimed: false,
         playerGifts: [],
         playerGiftPendingCount: 0,
@@ -14697,6 +14735,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       const PLAYER_GIFTS_STATE_PATH = &quot;/api/mail/state&quot;;
       const PLAYER_GIFTS_OPEN_PATH = &quot;/api/mail/open&quot;;
       const PLAYER_GIFTS_CLAIM_PATH = &quot;/api/mail/claim&quot;;
+      const PLAYER_GIFTS_CLAIM_ALL_PATH = &quot;/api/mail/claim-all&quot;;
       const PLAYER_SUPPORT_STATE_PATH = &quot;/api/support/state&quot;;
       const PLAYER_SUPPORT_CREATE_PATH = &quot;/api/support/create&quot;;
       const PLAYER_SUPPORT_REPLY_PATH = &quot;/api/support/reply&quot;;
@@ -15520,6 +15559,11 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           body: String(payload.body || &quot;&quot;).trim().slice(0, 4000),
           imageUrl: String(payload.imageUrl || &quot;&quot;).trim(),
           publishedAt: Math.max(0, Number(payload.publishedAt || 0)),
+          type: String(payload.type || &quot;update&quot;).trim().toLowerCase(),
+          expiresAt: Math.max(0, Number(payload.expiresAt || 0)),
+          pinned: payload.pinned === true,
+          ctaAction: String(payload.ctaAction || &quot;&quot;).trim().toLowerCase(),
+          ctaLabel: String(payload.ctaLabel || &quot;&quot;).trim().slice(0, 80),
           unread: payload.unread === true &amp;&amp; !sessionReadNewsIds.has(id)
         };
       }
@@ -15754,6 +15798,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         if (releaseCenterSummaryEl) releaseCenterSummaryEl.hidden = true;
         if (releaseHistoryViewEl) releaseHistoryViewEl.hidden = true;
         if (releaseHistoryOpenButton) releaseHistoryOpenButton.hidden = true;
+        if (releaseNewsCtaButton) { releaseNewsCtaButton.hidden = true; releaseNewsCtaButton.removeAttribute(&quot;data-news-cta-action&quot;); }
         if (releaseDetailsPanelEl) releaseDetailsPanelEl.hidden = true;
         if (releaseDetailsButton) releaseDetailsButton.textContent = &quot;Подробнее об обновлении&quot;;
         if (releaseKickerEl) releaseKickerEl.hidden = false;
@@ -15835,6 +15880,21 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         if (releaseCloseButton) releaseCloseButton.textContent = UPDATE_NOTICE_BUTTON;
       }
 
+      function gameNewsTypeLabel(type) {
+        const labels = { update:&quot;Обновление&quot;, season:&quot;Сезон&quot;, event:&quot;Событие&quot;, important:&quot;Важно&quot;, maintenance:&quot;Техработы&quot;, gift:&quot;Подарок&quot; };
+        return labels[String(type || &quot;&quot;).toLowerCase()] || &quot;Новости&quot;;
+      }
+
+      function runGameNewsCta(action) {
+        const value = String(action || &quot;&quot;).toLowerCase();
+        if (!value) return;
+        closeReleaseNotice();
+        if (value === &quot;rating&quot;) { requestOpenLeaderboard(); return; }
+        if (value === &quot;battle_pass&quot;) { root.querySelector(&quot;.profile-v2-quick[data-battle-pass-open]&quot;)?.click(); return; }
+        if (value === &quot;cases&quot;) { switchScreen(&quot;warehouse&quot;); switchStockHubView(&quot;cases&quot;, true); return; }
+        if (value === &quot;play&quot;) switchScreen(&quot;game&quot;);
+      }
+
       function openActiveGameNews() {
         const news = activeGameNews;
         if (!news) return;
@@ -15851,10 +15911,16 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           releaseImageEl.src = news.imageUrl;
           releaseImageEl.alt = news.title || &quot;Новость Сладкого Забега&quot;;
         }
-        if (releaseKickerEl) releaseKickerEl.textContent = &quot;Новости&quot;;
+        if (releaseKickerEl) releaseKickerEl.textContent = `${news.pinned ? &quot;Закреплено · &quot; : &quot;&quot;}${gameNewsTypeLabel(news.type)}`;
         if (releaseTitleEl) releaseTitleEl.textContent = news.title || &quot;Новость Сладкого Забега&quot;;
         if (releaseCopyEl) releaseCopyEl.innerHTML = escapeReleaseText(news.body || &quot;&quot;).replace(/\n/g, &quot;&lt;br&gt;&quot;);
         if (releaseVersionEl) releaseVersionEl.textContent = gameNewsPublishedLabel(news);
+        if (releaseNewsCtaButton) {
+          const action = String(news.ctaAction || &quot;&quot;);
+          releaseNewsCtaButton.hidden = !action;
+          releaseNewsCtaButton.textContent = news.ctaLabel || (action === &quot;battle_pass&quot; ? &quot;Перейти в Battle Pass&quot; : action === &quot;rating&quot; ? &quot;Открыть рейтинг&quot; : action === &quot;cases&quot; ? &quot;Посмотреть кейсы&quot; : &quot;Играть&quot;);
+          if (action) releaseNewsCtaButton.dataset.newsCtaAction = action;
+        }
         if (releaseCloseButton) releaseCloseButton.textContent = &quot;Прочитано&quot;;
         releaseLayer.hidden = false;
         releaseLayer.setAttribute(&quot;aria-hidden&quot;, &quot;false&quot;);
@@ -18614,6 +18680,14 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         if (alexCollectionPayload &amp;&amp; typeof alexCollectionPayload === &quot;object&quot;) {
           state.caseAlexCollectionRewardClaimed = Boolean(alexCollectionPayload.rewardClaimed);
         }
+        if (Array.isArray(data?.recentOpenings)) state.caseRecentOpenings = data.recentOpenings.slice(0, 8);
+        if (data?.opened &amp;&amp; Array.isArray(data.opened.rewards)) {
+          const opened = data.opened;
+          const recentEntry = { source:&quot;live&quot;, sourceId:String(opened.grantId || opened.id || opened.requestId || opened.level || `${Date.now()}`), caseType:String(opened.caseType || &quot;small&quot;), title:caseTitle(String(opened.caseType || &quot;small&quot;)), openedAt:Number(opened.openedAt || Date.now()), rewards:opened.rewards };
+          const previous = Array.isArray(state.caseRecentOpenings) ? state.caseRecentOpenings : [];
+          const key = `${recentEntry.caseType}:${recentEntry.sourceId}`;
+          state.caseRecentOpenings = [recentEntry, ...previous.filter((entry)=&gt;`${String(entry?.caseType||&quot;&quot;)}:${String(entry?.sourceId||&quot;&quot;)}` !== key)].slice(0,8);
+        }
         if (!data?.caseState) return;
         antiCheatWithTrustedChange(&quot;case-server-sync&quot;, () =&gt; {
           const server = data.caseState;
@@ -19796,7 +19870,8 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           return {
             id:String(item?.id||&quot;&quot;),kind:String(item?.kind||&quot;gift&quot;),title:String(item?.title||&quot;Письмо&quot;),
             message:String(item?.message||&quot;&quot;),reason:String(item?.reason||&quot;&quot;),preview:String(item?.preview||item?.message||item?.reason||&quot;Откройте письмо, чтобы узнать подробности.&quot;),
-            imageUrl:String(item?.imageUrl||&quot;&quot;),status:String(item?.status||&quot;pending&quot;),createdAt:Number(item?.createdAt||0),claimedAt:Number(item?.claimedAt||0),
+            imageUrl:String(item?.imageUrl||&quot;&quot;),status:String(item?.status||&quot;pending&quot;),createdAt:Number(item?.createdAt||0),claimedAt:Number(item?.claimedAt||0),expiresAt:Number(item?.expiresAt||0),
+            ctaLabel:String(item?.ctaLabel||&quot;&quot;),ctaUrl:String(item?.ctaUrl||&quot;&quot;),
             readAt,unread:item?.unread===true||readAt&lt;=0,hasRewards:item?.hasRewards===true||rewards.length&gt;0,rewards
           };
         }).filter((item)=&gt;item.id) : [];
@@ -19856,7 +19931,9 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       }
 
       let playerGiftInboxExpanded = false;
+      let playerGiftInboxFilter = &quot;all&quot;;
       let playerGiftClaimBusy = false;
+      let playerGiftClaimAllBusy = false;
       let playerGiftLastProtectionOverflow = null;
 
       function playerMailAttentionCount() {
@@ -19870,9 +19947,48 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         return `&lt;img src=&quot;/assets/ui/icone_reward.png&quot; alt=&quot;&quot; loading=&quot;lazy&quot; decoding=&quot;async&quot;&gt;`;
       }
 
+      function playerMailKindLabel(kind) {
+        const value=String(kind||&quot;&quot;).toLowerCase();
+        if(value.includes(&quot;compensation&quot;))return &quot;Компенсация&quot;;
+        if(value.includes(&quot;reward&quot;)||value===&quot;gift&quot;)return &quot;Награда&quot;;
+        if(value.includes(&quot;support&quot;))return &quot;Поддержка&quot;;
+        if(value.includes(&quot;automation&quot;)||value.includes(&quot;campaign&quot;)||value.includes(&quot;system&quot;))return &quot;Системное&quot;;
+        return &quot;Письмо&quot;;
+      }
+
+      function playerMailExpiryMeta(expiresAt) {
+        const seconds=Math.max(0,Number(expiresAt||0));
+        if(!seconds)return {text:&quot;&quot;,urgent:false,expired:false};
+        const remaining=seconds*1000-Date.now();
+        if(remaining&lt;=0)return {text:&quot;Срок истёк&quot;,urgent:true,expired:true};
+        const hours=Math.max(1,Math.ceil(remaining/3600000));
+        if(hours&lt;24)return {text:`Осталось ${formatter.format(hours)} ч`,urgent:hours&lt;=6,expired:false};
+        const days=Math.ceil(hours/24);
+        return {text:`Истекает через ${formatter.format(days)} ${days===1?&quot;день&quot;:days&gt;=2&amp;&amp;days&lt;=4?&quot;дня&quot;:&quot;дней&quot;}`,urgent:days&lt;=1,expired:false};
+      }
+
+      function syncPlayerMailFilterButtons(allItems) {
+        const items=Array.isArray(allItems)?allItems:[];
+        const counts={all:items.length,rewards:items.filter((item)=&gt;item?.hasRewards).length,new:items.filter((item)=&gt;item?.unread).length};
+        for(const button of playerMailFilterButtons){
+          const key=String(button.dataset.playerMailFilter||&quot;all&quot;);
+          button.setAttribute(&quot;aria-pressed&quot;,String(key===playerGiftInboxFilter));
+          const title=key===&quot;rewards&quot;?&quot;Награды&quot;:key===&quot;new&quot;?&quot;Новые&quot;:&quot;Все&quot;;
+          button.textContent=`${title} · ${formatter.format(counts[key]||0)}`;
+        }
+      }
+
       function renderPlayerGiftInbox() {
         if (!playerGiftInboxListEl) return;
-        const items = [...(Array.isArray(state.playerGifts)?state.playerGifts:[])].sort((a,b)=&gt;(Number(Boolean(b?.unread))-Number(Boolean(a?.unread)))||(Number(b?.createdAt||0)-Number(a?.createdAt||0)));
+        const allItems = [...(Array.isArray(state.playerGifts)?state.playerGifts:[])].sort((a,b)=&gt;(Number(Boolean(b?.unread))-Number(Boolean(a?.unread)))||(Number(b?.createdAt||0)-Number(a?.createdAt||0)));
+        syncPlayerMailFilterButtons(allItems);
+        const items=allItems.filter((item)=&gt;playerGiftInboxFilter===&quot;rewards&quot;?item?.hasRewards:playerGiftInboxFilter===&quot;new&quot;?item?.unread:true);
+        const pendingItems=allItems.filter((item)=&gt;item?.hasRewards&amp;&amp;item.status!==&quot;claimed&quot;&amp;&amp;!playerMailExpiryMeta(item.expiresAt).expired);
+        if(playerMailClaimAllButton){
+          playerMailClaimAllButton.hidden=pendingItems.length===0;
+          playerMailClaimAllButton.disabled=playerGiftClaimAllBusy||playerGiftClaimBusy;
+          playerMailClaimAllButton.textContent=playerGiftClaimAllBusy?&quot;Получаем…&quot;:`Забрать всё · ${formatter.format(pendingItems.length)}`;
+        }
         const shouldCollapse = items.length &gt; 5;
         if (!shouldCollapse) playerGiftInboxExpanded = false;
         const visibleItems = shouldCollapse &amp;&amp; !playerGiftInboxExpanded ? items.slice(0,5) : items;
@@ -19885,15 +20001,18 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           const hiddenCount=Math.max(0,items.length-5);playerGiftInboxMoreEl.hidden=!shouldCollapse;playerGiftInboxMoreEl.textContent=playerGiftInboxExpanded?&quot;Свернуть&quot;:`Показать ещё ${formatter.format(hiddenCount)}`;playerGiftInboxMoreEl.setAttribute(&quot;aria-expanded&quot;,playerGiftInboxExpanded?&quot;true&quot;:&quot;false&quot;);
         }
         if (!items.length) {
-          setStableMarkup(playerGiftInboxListEl,`&lt;div class=&quot;player-gift-empty&quot;&gt;Пока писем нет. Новые подарки, компенсации и новости появятся здесь.&lt;/div&gt;`,&quot;mail-inbox-empty&quot;);return;
+          const empty=playerGiftInboxFilter===&quot;new&quot;?&quot;Новых писем нет.&quot;:playerGiftInboxFilter===&quot;rewards&quot;?&quot;Писем с наградами пока нет.&quot;:&quot;Пока писем нет. Новые подарки, компенсации и новости появятся здесь.&quot;;
+          setStableMarkup(playerGiftInboxListEl,`&lt;div class=&quot;player-gift-empty&quot;&gt;${empty}&lt;/div&gt;`,`mail-inbox-empty:${playerGiftInboxFilter}`);return;
         }
         const markup=visibleItems.map((item)=&gt;{
           const claimed=item.status===&quot;claimed&quot;,when=playerGiftDate(item.createdAt),preview=String(item.preview||item.message||item.reason||&quot;Откройте письмо, чтобы узнать подробности.&quot;).replace(/\s+/g,&quot; &quot;).trim();
           const status=claimed?&quot;✓ Получено&quot;:item.status===&quot;claiming&quot;?&quot;Получаем…&quot;:item.hasRewards?&quot;Есть награда&quot;:&quot;Письмо&quot;;
-          return `&lt;article class=&quot;player-gift-card player-mail-card${item.unread?&quot; is-unread&quot;:&quot;&quot;}${claimed?&quot; is-claimed&quot;:&quot;&quot;}&quot;&gt;&lt;span class=&quot;player-mail-unread-dot&quot; ${item.unread?&quot;&quot;:&quot;hidden&quot;} aria-hidden=&quot;true&quot;&gt;&lt;/span&gt;&lt;div class=&quot;player-mail-card-icon&quot; aria-hidden=&quot;true&quot;&gt;${playerMailKindIcon(item)}&lt;/div&gt;&lt;div class=&quot;player-mail-card-copy&quot;&gt;&lt;strong&gt;${escapePurchaseText(item.title)}&lt;/strong&gt;&lt;span&gt;${escapePurchaseText(preview)}&lt;/span&gt;&lt;small&gt;${escapePurchaseText(when||&quot;Сегодня&quot;)} · ${escapePurchaseText(status)}&lt;/small&gt;&lt;/div&gt;&lt;button class=&quot;player-mail-open&quot; data-player-mail-open=&quot;${escapePurchaseText(item.id)}&quot; type=&quot;button&quot;&gt;Открыть письмо&lt;/button&gt;&lt;/article&gt;`;
+          const expiry=playerMailExpiryMeta(item.expiresAt);
+          const expiryMarkup=expiry.text?`&lt;small class=&quot;player-mail-expiry${expiry.urgent?&quot; is-urgent&quot;:&quot;&quot;}&quot;&gt;${escapePurchaseText(expiry.text)}&lt;/small&gt;`:&quot;&quot;;
+          return `&lt;article class=&quot;player-gift-card player-mail-card${item.unread?&quot; is-unread&quot;:&quot;&quot;}${claimed?&quot; is-claimed&quot;:&quot;&quot;}&quot;&gt;&lt;span class=&quot;player-mail-unread-dot&quot; ${item.unread?&quot;&quot;:&quot;hidden&quot;} aria-hidden=&quot;true&quot;&gt;&lt;/span&gt;&lt;div class=&quot;player-mail-card-icon&quot; aria-hidden=&quot;true&quot;&gt;${playerMailKindIcon(item)}&lt;/div&gt;&lt;div class=&quot;player-mail-card-copy&quot;&gt;&lt;strong&gt;${escapePurchaseText(item.title)}&lt;/strong&gt;&lt;span&gt;${escapePurchaseText(preview)}&lt;/span&gt;&lt;small&gt;&lt;span class=&quot;player-mail-kind-label&quot;&gt;${escapePurchaseText(playerMailKindLabel(item.kind))}&lt;/span&gt; · ${escapePurchaseText(when||&quot;Сегодня&quot;)} · ${escapePurchaseText(status)}&lt;/small&gt;${expiryMarkup}&lt;/div&gt;&lt;button class=&quot;player-mail-open&quot; data-player-mail-open=&quot;${escapePurchaseText(item.id)}&quot; type=&quot;button&quot;&gt;Открыть&lt;/button&gt;&lt;/article&gt;`;
         }).join(&quot;&quot;);
         const viewKey=shouldCollapse?(playerGiftInboxExpanded?&quot;all&quot;:&quot;preview5&quot;):&quot;all&quot;;
-        setStableMarkup(playerGiftInboxListEl,markup,`mail-inbox:${viewKey}:${visibleItems.map((item)=&gt;`${item.id}:${item.status}:${item.unread?1:0}`).join(&quot;|&quot;)}`);
+        setStableMarkup(playerGiftInboxListEl,markup,`mail-inbox:${playerGiftInboxFilter}:${viewKey}:${visibleItems.map((item)=&gt;`${item.id}:${item.status}:${item.unread?1:0}:${item.expiresAt||0}`).join(&quot;|&quot;)}`);
       }
 
       function applyPlayerGiftPayload(data) {
@@ -20046,6 +20165,28 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         }
       }
 
+
+      async function claimAllPlayerGiftsClient(button = playerMailClaimAllButton) {
+        if(!telegramProfile?.initData||playerGiftClaimAllBusy||playerGiftClaimBusy)return false;
+        playerGiftClaimAllBusy=true;renderPlayerGiftInbox();
+        try{
+          const response=await gameFetchWithTimeout(PLAYER_GIFTS_CLAIM_ALL_PATH,{method:&quot;POST&quot;,headers:{&quot;Content-Type&quot;:&quot;application/json&quot;},body:JSON.stringify({initData:String(telegramProfile.initData)}),cache:&quot;no-store&quot;,credentials:&quot;same-origin&quot;},12000);
+          const data=await response.json().catch(()=&gt;null);
+          if(!response.ok||!data?.ok)throw new Error(data?.error||&quot;Не удалось получить все награды.&quot;);
+          if(data.state)applyPlayerGiftPayload(data.state);else if(data.gifts)applyPlayerGiftPayload(data.gifts);else await loadPlayerGiftInbox(true);
+          const claimed=Math.max(0,Number(data.claimedCount||0)+Number(data.repeatedCount||0));
+          refreshPlayerGiftAccountViews();
+          if(Array.isArray(data.streakProtectionOverflows)&amp;&amp;data.streakProtectionOverflows.length){
+            const overflow=data.streakProtectionOverflows[0];
+            showProfileToast(`🛡 Лишняя защита преобразована: ${playerGiftProtectionCompensationLabel(overflow)}`,&quot;success&quot;,4600);
+          }else showProfileToast(claimed?`🎁 Получено наград: ${formatter.format(claimed)}`:&quot;Все доступные награды уже получены&quot;,&quot;success&quot;,3400);
+          if(Number(data.failedCount||0)&gt;0)showProfileToast(`Часть писем не удалось обработать: ${formatter.format(data.failedCount)}`,&quot;warning&quot;,4200);
+          hapticNotify(&quot;success&quot;);return true;
+        }catch(error){
+          await loadPlayerGiftInbox(true).catch(()=&gt;{});
+          showProfileToast(error?.message||&quot;Не удалось получить все награды.&quot;,&quot;warning&quot;);hapticNotify(&quot;error&quot;);return false;
+        }finally{playerGiftClaimAllBusy=false;renderPlayerGiftInbox();}
+      }
 
       function clientRewardShortLabel(reward, fallback = &quot;Награда&quot;) {
         const kind=String(reward?.kind||&quot;&quot;);const amount=Math.max(1,Math.floor(Number(reward?.amount||1)));
@@ -20601,10 +20742,20 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           ? &quot;&quot;
           : `&lt;div class=&quot;player-mail-symbol&quot; aria-hidden=&quot;true&quot;&gt;${playerMailKindIcon({...item,hasRewards})}&lt;/div&gt;`;
         const body = item.message || item.body || item.reason || &quot;Для вас новое письмо от команды «Сладкого Забега».&quot;;
+        const expiry = playerMailExpiryMeta(item.expiresAt);
+        const expiryMarkup = expiry.text ? `&lt;div class=&quot;player-mail-note player-mail-expiry${expiry.urgent ? &quot; is-urgent&quot; : &quot;&quot;}&quot;&gt;${escapePurchaseText(expiry.text)}&lt;/div&gt;` : &quot;&quot;;
+        const ctaLabel = String(item.ctaLabel || &quot;&quot;).trim();
+        const ctaUrl = String(item.ctaUrl || &quot;&quot;).trim();
+        const ctaButton = ctaLabel &amp;&amp; /^https:\/\//i.test(ctaUrl) ? `&lt;button class=&quot;player-mail-cta&quot; data-player-mail-cta type=&quot;button&quot;&gt;${escapePurchaseText(ctaLabel)}&lt;/button&gt;` : &quot;&quot;;
         const claimButton = hasRewards &amp;&amp; !claimed
           ? `&lt;button class=&quot;player-mail-primary&quot; data-player-mail-action type=&quot;button&quot; ${claiming ? &quot;disabled&quot; : &quot;&quot;}&gt;${claiming ? &quot;Получаем…&quot; : &quot;Получить награду&quot;}&lt;/button&gt;`
           : &quot;&quot;;
-        playerMailContentEl.innerHTML = `${banner}&lt;div class=&quot;player-mail-head${item.imageUrl ? &quot; player-mail-head--banner&quot; : &quot;&quot;}&quot;&gt;${headVisual}&lt;div class=&quot;player-mail-head-copy&quot;&gt;&lt;span class=&quot;player-mail-kicker&quot;&gt;${hasRewards ? &quot;Письмо с наградой&quot; : &quot;Почта Зеффи&quot;}&lt;/span&gt;&lt;h2 id=&quot;player-mail-title&quot;&gt;${escapePurchaseText(item.title)}&lt;/h2&gt;&lt;/div&gt;&lt;/div&gt;&lt;div class=&quot;player-mail-message&quot;&gt;&lt;p class=&quot;player-mail-body&quot;&gt;${escapePurchaseText(body)}&lt;/p&gt;&lt;/div&gt;${item.reason &amp;&amp; (item.message || item.body) ? `&lt;p class=&quot;player-mail-note&quot;&gt;&lt;strong&gt;Причина:&lt;/strong&gt; ${escapePurchaseText(item.reason)}&lt;/p&gt;` : &quot;&quot;}${hasRewards ? `&lt;section class=&quot;player-mail-reward-card&quot;&gt;&lt;div class=&quot;player-mail-reward-title&quot;&gt;Вложение&lt;/div&gt;&lt;div class=&quot;player-gift-rewards player-mail-rewards&quot;&gt;${rewards}&lt;/div&gt;&lt;/section&gt;` : &quot;&quot;}${claimed ? `&lt;div class=&quot;player-mail-claimed&quot;&gt;✓ Награда уже получена&lt;/div&gt;` : &quot;&quot;}${claimButton}`;
+        playerMailContentEl.innerHTML = `${banner}&lt;div class=&quot;player-mail-head${item.imageUrl ? &quot; player-mail-head--banner&quot; : &quot;&quot;}&quot;&gt;${headVisual}&lt;div class=&quot;player-mail-head-copy&quot;&gt;&lt;span class=&quot;player-mail-kicker&quot;&gt;${hasRewards ? &quot;Письмо с наградой&quot; : &quot;Почта Зеффи&quot;}&lt;/span&gt;&lt;h2 id=&quot;player-mail-title&quot;&gt;${escapePurchaseText(item.title)}&lt;/h2&gt;&lt;/div&gt;&lt;/div&gt;&lt;div class=&quot;player-mail-message&quot;&gt;&lt;p class=&quot;player-mail-body&quot;&gt;${escapePurchaseText(body)}&lt;/p&gt;&lt;/div&gt;${item.reason &amp;&amp; (item.message || item.body) ? `&lt;p class=&quot;player-mail-note&quot;&gt;&lt;strong&gt;Причина:&lt;/strong&gt; ${escapePurchaseText(item.reason)}&lt;/p&gt;` : &quot;&quot;}${hasRewards ? `&lt;section class=&quot;player-mail-reward-card&quot;&gt;&lt;div class=&quot;player-mail-reward-title&quot;&gt;Вложение&lt;/div&gt;&lt;div class=&quot;player-gift-rewards player-mail-rewards&quot;&gt;${rewards}&lt;/div&gt;&lt;/section&gt;` : &quot;&quot;}${expiryMarkup}${claimed ? `&lt;div class=&quot;player-mail-claimed&quot;&gt;✓ Награда уже получена&lt;/div&gt;` : &quot;&quot;}${claimButton}${ctaButton}`;
+        const cta = playerMailContentEl.querySelector(&quot;[data-player-mail-cta]&quot;);
+        if (cta) cta.addEventListener(&quot;click&quot;, () =&gt; {
+          hapticImpact(&quot;light&quot;,25);
+          try { if (window.Telegram?.WebApp?.openLink) window.Telegram.WebApp.openLink(ctaUrl); else window.open(ctaUrl,&quot;_blank&quot;,&quot;noopener,noreferrer&quot;); } catch { window.open(ctaUrl,&quot;_blank&quot;,&quot;noopener,noreferrer&quot;); }
+        });
         const action = playerMailContentEl.querySelector(&quot;[data-player-mail-action]&quot;);
         if (action) action.addEventListener(&quot;click&quot;, async () =&gt; {
           const ok = await claimPlayerGiftClient(item.id, action);
@@ -21062,6 +21213,24 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         }
       }
 
+      function caseRecentDate(value) {
+        const timestamp=Number(value||0);if(!timestamp)return &quot;&quot;;
+        try{return new Date(timestamp).toLocaleString(&quot;ru-RU&quot;,{day:&quot;2-digit&quot;,month:&quot;2-digit&quot;,hour:&quot;2-digit&quot;,minute:&quot;2-digit&quot;});}catch{return &quot;&quot;;}
+      }
+
+      function renderCaseRecentOpenings() {
+        if(!caseRecentListEl||!caseRecentSectionEl)return;
+        const rows=Array.isArray(state.caseRecentOpenings)?state.caseRecentOpenings.slice(0,8):[];
+        caseRecentSectionEl.hidden=rows.length===0;
+        if(!rows.length){caseRecentListEl.innerHTML=&quot;&quot;;return;}
+        const markup=rows.map((entry)=&gt;{
+          const type=String(entry?.caseType||&quot;small&quot;),rewards=Array.isArray(entry?.rewards)?entry.rewards:[];
+          const rewardMarkup=rewards.slice(0,4).map((reward)=&gt;`&lt;span class=&quot;case-recent-reward&quot;&gt;${giftRewardVisualMarkup(reward)}&lt;span&gt;${escapePurchaseText(reward?.label||clientRewardShortLabel(reward,&quot;Награда&quot;))}&lt;/span&gt;&lt;/span&gt;`).join(&quot;&quot;);
+          return `&lt;article class=&quot;case-recent-card&quot;&gt;&lt;span class=&quot;case-recent-case&quot; aria-hidden=&quot;true&quot;&gt;${caseImageMarkup(type,false)}&lt;/span&gt;&lt;span class=&quot;case-recent-copy&quot;&gt;&lt;span&gt;&lt;strong&gt;${escapePurchaseText(entry?.title||caseTitle(type))}&lt;/strong&gt;&lt;time&gt;${escapePurchaseText(caseRecentDate(entry?.openedAt))}&lt;/time&gt;&lt;/span&gt;&lt;span class=&quot;case-recent-rewards&quot;&gt;${rewardMarkup||`&lt;span class=&quot;case-recent-reward&quot;&gt;Награда получена&lt;/span&gt;`}&lt;/span&gt;&lt;/span&gt;&lt;/article&gt;`;
+        }).join(&quot;&quot;);
+        setStableMarkup(caseRecentListEl,markup,`case-recent:${rows.map((entry)=&gt;`${entry?.sourceId||&quot;&quot;}:${entry?.openedAt||0}`).join(&quot;|&quot;)}`);
+      }
+
       function renderCaseHub() {
         renderPlayerGiftInbox();
         const gifted = normalizeGiftedCases(state.caseGiftedCases);
@@ -21110,6 +21279,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           const giftedMarkup = cards || `&lt;div class=&quot;case-empty-warehouse&quot;&gt;&lt;strong&gt;${caseStockFilter === &quot;all&quot; ? &quot;Склад пока пуст&quot; : &quot;Ничего не найдено&quot;}&lt;/strong&gt;&lt;span&gt;${emptyText}&lt;/span&gt;&lt;/div&gt;`;
           setStableMarkup(caseGiftedListEl, giftedMarkup, `gifted:${caseStockFilter}:${caseStockSortMode}:${entries.map((entry)=&gt;`${entry.key}:${entry.count}:${caseStockSeenState.unseen[entry.key]?1:0}`).join(&quot;|&quot;)}`);
         }
+        renderCaseRecentOpenings();
         const active = normalizeActiveCaseBoosters(state.activeCaseBoosters, state.activeCaseBooster);
         const activeTypes = activeCaseBoosterTypes(active);
         const ownedSpecials = normalizeCaseSpecials(state.caseOwnedSpecials).filter((id) =&gt; id !== &quot;season_xp_x2&quot;);
@@ -25466,6 +25636,13 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         }
         if(type===&quot;liveops&quot;)switchScreen(&quot;game&quot;);
       });
+      for (const button of playerMailFilterButtons) button.addEventListener(&quot;click&quot;, () =&gt; {
+        playerGiftInboxFilter = [&quot;all&quot;,&quot;rewards&quot;,&quot;new&quot;].includes(String(button.dataset.playerMailFilter||&quot;&quot;)) ? String(button.dataset.playerMailFilter) : &quot;all&quot;;
+        playerGiftInboxExpanded = false;
+        renderPlayerGiftInbox();
+        hapticSelection(25);
+      });
+      if (playerMailClaimAllButton) playerMailClaimAllButton.addEventListener(&quot;click&quot;, () =&gt; void claimAllPlayerGiftsClient(playerMailClaimAllButton));
       if (playerGiftInboxMoreEl) playerGiftInboxMoreEl.addEventListener(&quot;click&quot;, () =&gt; {
         playerGiftInboxExpanded = !playerGiftInboxExpanded;
         renderPlayerGiftInbox();
@@ -25557,6 +25734,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       if (seasonTaskStayButton) seasonTaskStayButton.addEventListener(&quot;click&quot;, () =&gt; finishSeasonTaskNotice(false));
       if (seasonTaskClaimButton) seasonTaskClaimButton.addEventListener(&quot;click&quot;, () =&gt; finishSeasonTaskNotice(true));
       if (releaseHistoryOpenButton) releaseHistoryOpenButton.addEventListener(&quot;click&quot;, openReleaseHistory);
+      if (releaseNewsCtaButton) releaseNewsCtaButton.addEventListener(&quot;click&quot;, () =&gt; runGameNewsCta(releaseNewsCtaButton.dataset.newsCtaAction || &quot;&quot;));
       if (releaseHistoryBackButton) releaseHistoryBackButton.addEventListener(&quot;click&quot;, applyBuiltInReleaseContent);
       if (releaseDetailsButton) releaseDetailsButton.addEventListener(&quot;click&quot;, toggleReleaseDetails);
       if (releaseCloseButton) {
@@ -27217,6 +27395,8 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 .zdl-insurance b{display:block;font-size:10px;color:#4a705f}
 .zdl-insurance small{display:block;margin-top:2px;font-size:7.5px;line-height:1.32;color:#7b9589}
 .zdl-insurance strong{min-width:48px;text-align:center;padding:7px 8px;border:1px solid #b9d6c9;border-radius:12px;background:#fff;color:#356a55;font-size:12px}
+.zdl-saved{display:grid;grid-template-columns:38px minmax(0,1fr);gap:9px;align-items:center;margin-top:8px;padding:10px 11px;border:1px solid #edcd78;border-radius:15px;background:linear-gradient(145deg,#fff9df,#fff2c2);color:#76511c}.zdl-saved img{width:36px;height:36px;object-fit:contain}.zdl-saved b{display:block;font-size:10px}.zdl-saved span{display:block;margin-top:2px;font-size:7.5px;line-height:1.35;color:#8a6b39}
+.zdl-history{margin-top:10px;padding:11px;border:1px solid #efd9e1;border-radius:18px;background:rgba(255,252,253,.78)}.zdl-history-head{display:flex;align-items:end;justify-content:space-between;gap:8px;margin-bottom:7px}.zdl-history-head b{font-size:10px}.zdl-history-head span{font-size:7px;color:#9b7885}.zdl-history-list{display:grid;gap:6px}.zdl-history-row{display:grid;grid-template-columns:34px minmax(0,1fr) auto;gap:8px;align-items:center;padding:7px;border-radius:12px;background:#fff;border:1px solid #f2e1e7}.zdl-history-row img,.zdl-history-row .zdl-reward-token{width:32px;height:32px;object-fit:contain}.zdl-history-row strong{display:block;font-size:8.5px}.zdl-history-row small{display:block;margin-top:2px;font-size:6.6px;color:#9a7b87}.zdl-history-row time{font-size:6.3px;color:#a1848f;white-space:nowrap}
 
 .zdl-week{margin-top:10px;padding:11px;border:1px solid #efd9e1;border-radius:19px;background:rgba(255,252,253,.78)}
 .zdl-progress-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
@@ -27287,7 +27467,7 @@ const API='/api/daily-loyalty/claim';
 const CACHE_MS=60000;
 const TIMEOUT_MS=4500;
 const formatter=new Intl.NumberFormat('ru-RU');
-let model=null,busy=false,lastSuccessAt=0,lastError='',dismissedForSession=false,autoClaimStarted=false,watchedFrame=null,frameObserver=null,lastComeback=null,showComebackScreen=false;
+let model=null,busy=false,lastSuccessAt=0,lastError='',dismissedForSession=false,autoClaimStarted=false,watchedFrame=null,frameObserver=null,lastComeback=null,showComebackScreen=false,lastInsuranceEvent=null;
 const esc=(s)=>String(s??'').replace(/[&<>"']/g,(c)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function gameFrame(){return document.querySelector('body > iframe[title="Сладкий Забег"]')||document.querySelector('body > iframe:not(.zefirok-season-pass-frame):not(.zefirok-rating-frame):not(.zefirok-referrals-frame):not(.zefirok-album-frame)');}
 function requestId(){try{return 'daily-'+crypto.randomUUID()}catch{return 'daily-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,10)}}
@@ -27307,6 +27487,7 @@ function rewardAsset(type){
 function rewardToken(item){const type=rewardType(item);return ({case:'Кейс',seasonal_case:'Кейс',frame:'Рамка',trail:'След',music:'Музыка',avatar:'Аватар',skin:'Скин',booster_points:'×2',booster_treats:'×2',booster_coffee:'×2'})[type]||'Награда';}
 function rewardVisual(item,className='zdl-reward-icon'){const src=String(item?.imageUrl||'').trim()||rewardAsset(rewardType(item));return src?`<img class="${className}" src="${esc(src)}" alt="">`:`<span class="zdl-reward-token">${esc(rewardToken(item))}</span>`;}
 function rewardText(item){const type=rewardType(item);const amount=rewardAmount(item);const label=String(item?.label||'Награда').trim();if(type==='points'&&amount>0)return `${formatter.format(amount)} очков`;if((type==='zefir'||type==='treats')&&amount>0)return `${formatter.format(amount)} зефира`;if(type==='coffee'&&amount>0)return `${formatter.format(amount)} кофе`;if(type==='profile_xp'&&amount>0)return `+${formatter.format(amount)} XP профиля`;if(type==='season_xp'&&amount>0)return `+${formatter.format(amount)} XP сезонного пропуска`;return label||'Награда';}
+function rewardDate(ts){const ms=Number(ts||0)*1000;if(!ms)return '';try{return new Date(ms).toLocaleDateString('ru-RU',{day:'2-digit',month:'short'});}catch{return ''}}
 function bindGameFrameObserver(){const frame=gameFrame();if(!frame||frame===watchedFrame)return;if(frameObserver)frameObserver.disconnect();watchedFrame=frame;frameObserver=new MutationObserver(syncVisibility);frameObserver.observe(frame,{attributes:true,attributeFilter:['class','data-activated']});}
 function ensureUi(){
   if(document.getElementById('zdlLayer'))return;
@@ -27331,6 +27512,7 @@ function resetForNewServerDay(){
   autoClaimStarted=false;
   dismissedForSession=false;
   showComebackScreen=false;
+  lastInsuranceEvent=null;
   return true;
 }
 function syncVisibility(){bindGameFrameObserver();resetForNewServerDay();if(!dismissedForSession&&!autoClaimStarted&&frameReady()&&!hasBlockingOverlay())claim(false);}
@@ -27377,11 +27559,14 @@ function render(){
   const insuranceMarkup=insurance.enabled?`<div class="zdl-insurance ${protectionFull?'is-full':protectionBalance===0?'is-empty':''}"><span class="zdl-insurance-icon" aria-hidden="true"><img src="/assets/ui/icon_series_protection.png" alt=""></span><div><b>Защита серии</b><small>${protectionCopy}</small><span class="zdl-insurance-status">${protectionStatus}</span></div><strong>${protectionBalance} / ${protectionMax}</strong></div>${overflowMarkup}`:'';
   const milestoneMarkup=milestoneLadder?`<div class="zdl-streak-bonuses-title"><b>Большие этапы карточки</b><span>${nextMilestone?`Следующий: ${Number(nextMilestone.dayIndex||0)} день`:'Все текущие получены'}</span></div><div class="zdl-ladder">${milestoneLadder}</div>`:'';
   const streakMarkup=streakLadder?`<div class="zdl-streak-bonuses-title"><b>Бонусы непрерывной серии</b><span>${nextStreak?`Следующий: ${Number(nextStreak.streakThreshold||0)} дней`:'Все текущие получены'}</span></div><div class="zdl-ladder">${streakLadder}</div>`:'';
+  const savedMarkup=Number(lastInsuranceEvent?.used||0)>0?`<div class="zdl-saved"><img src="/assets/ui/icon_series_protection.png" alt=""><div><b>Серия спасена!</b><span>Пропуск дня закрыт автоматически. Осталось защит: ${protectionBalance} из ${protectionMax}.</span></div></div>`:'';
+  const recentRewards=Array.isArray(model?.recentRewards)?model.recentRewards:[];
+  const recentMarkup=recentRewards.length?`<div class="zdl-history"><div class="zdl-history-head"><b>Последние награды</b><span>История с сервера</span></div><div class="zdl-history-list">${recentRewards.slice(0,5).map(item=>`<div class="zdl-history-row">${rewardVisual(item,'zdl-reward-icon')}<div><strong>${esc(rewardText(item))}</strong><small>${esc(item.sourceLabel||'Daily Loyalty')}</small></div><time>${esc(rewardDate(item.receivedAt))}</time></div>`).join('')}</div></div>`:'';
   const stateText=lastError?esc(lastError):(st.todayCompleted?'Сегодняшняя награда уже получена. Возвращайтесь завтра за следующей отметкой.':'Сегодняшняя награда доступна.');
   const headerTitle=model.season?.title||'Ежедневная награда';
   const headerCopy='Заходите каждый день — серия растёт, а награды становятся ценнее.';
   const weekCopy=Number(block.index||1)>maxRewardWeek?`Максимальный уровень · неделя ${maxRewardWeek}+`:`Уровень наград ${currentRewardWeek} из ${maxRewardWeek} · Д7 усилен`;
-  body.innerHTML=`<div class="zdl-head"><div class="zdl-icon"><img class="zdl-reward-icon" src="/assets/ui/icone_return_player.png" alt=""></div><div><h2>${esc(headerTitle)}</h2><p>${esc(headerCopy)}</p></div><button class="zdl-close" data-zdl-close type="button">×</button></div><div class="zdl-streak" data-fire-tier="${fireTier}"><div class="zdl-flame-wrap"><span class="zdl-fire-effect" aria-hidden="true"></span><span class="zdl-fire-side" aria-hidden="true"></span><div class="zdl-flame" aria-label="Текущая серия ${streak} ${plural(streak)}">${streak}</div></div><div class="zdl-streak-copy"><b>${streak?`${plural(streak)} подряд`:'Серия начнётся сегодня'}</b><div class="zdl-best">Лучшая серия:<strong>${bestStreak} ${plural(bestStreak)}</strong></div><div class="zdl-streak-goal"><div class="zdl-streak-progress"><i style="width:${streakProgress}%"></i></div><span>${streakGoalText}</span></div></div></div>${insuranceMarkup}<div class="zdl-week"><div class="zdl-progress-head"><div><b>Неделя ${Number(block.index||1)}</b><span>${weekCopy}</span></div><strong>${Number(block.filled||0)} / 7</strong></div><div class="zdl-stamps">${slots}</div><div class="zdl-progress"><i style="width:${Math.min(100,Math.max(0,Number(block.filled||0)/7*100))}%"></i></div><div class="zdl-next"><div class="zdl-next-visual">${next?rewardVisual(next,'zdl-reward-icon'):`<span class="zdl-reward-token">Д${nextCycleDay}</span>`}</div><div class="zdl-next-copy"><small class="zdl-next-kicker">Следующая награда</small><b>${next?`Неделя ${nextProgressWeek} · день ${nextCycleDay}${nextCycleDay===7?' · финал':''}`:'Следующая ежедневная награда'}</b><span>${esc(next?rewardText(next):'Награда будет определена сервером.')}${nextProgressWeek>maxRewardWeek?' · максимальный уровень':''}</span></div></div></div>${milestoneMarkup}${streakMarkup}<div class="zdl-state ${lastError?'error':'ok'}">${stateText}</div>${lastError?'<div class="zdl-actions"><button class="zdl-btn" data-zdl-retry type="button">Повторить</button><button class="zdl-btn secondary" data-zdl-close type="button">Закрыть</button></div>':''}`;
+  body.innerHTML=`<div class="zdl-head"><div class="zdl-icon"><img class="zdl-reward-icon" src="/assets/ui/icone_return_player.png" alt=""></div><div><h2>${esc(headerTitle)}</h2><p>${esc(headerCopy)}</p></div><button class="zdl-close" data-zdl-close type="button">×</button></div><div class="zdl-streak" data-fire-tier="${fireTier}"><div class="zdl-flame-wrap"><span class="zdl-fire-effect" aria-hidden="true"></span><span class="zdl-fire-side" aria-hidden="true"></span><div class="zdl-flame" aria-label="Текущая серия ${streak} ${plural(streak)}">${streak}</div></div><div class="zdl-streak-copy"><b>${streak?`${plural(streak)} подряд`:'Серия начнётся сегодня'}</b><div class="zdl-best">Лучшая серия:<strong>${bestStreak} ${plural(bestStreak)}</strong></div><div class="zdl-streak-goal"><div class="zdl-streak-progress"><i style="width:${streakProgress}%"></i></div><span>${streakGoalText}</span></div></div></div>${insuranceMarkup}${savedMarkup}<div class="zdl-week"><div class="zdl-progress-head"><div><b>Неделя ${Number(block.index||1)}</b><span>${weekCopy}</span></div><strong>${Number(block.filled||0)} / 7</strong></div><div class="zdl-stamps">${slots}</div><div class="zdl-progress"><i style="width:${Math.min(100,Math.max(0,Number(block.filled||0)/7*100))}%"></i></div><div class="zdl-next"><div class="zdl-next-visual">${next?rewardVisual(next,'zdl-reward-icon'):`<span class="zdl-reward-token">Д${nextCycleDay}</span>`}</div><div class="zdl-next-copy"><small class="zdl-next-kicker">${st.todayCompleted?'Завтра получишь':'Следующая награда'}</small><b>${next?`Неделя ${nextProgressWeek} · день ${nextCycleDay}${nextCycleDay===7?' · финал':''}`:'Следующая ежедневная награда'}</b><span>${esc(next?rewardText(next):'Награда будет определена сервером.')}${nextProgressWeek>maxRewardWeek?' · максимальный уровень':''}</span></div></div></div>${milestoneMarkup}${streakMarkup}${recentMarkup}<div class="zdl-state ${lastError?'error':'ok'}">${stateText}</div>${lastError?'<div class="zdl-actions"><button class="zdl-btn" data-zdl-retry type="button">Повторить</button><button class="zdl-btn secondary" data-zdl-close type="button">Закрыть</button></div>':''}`;
   bindBody();
 }
 function bindBody(){const body=document.getElementById('zdlBody');if(!body)return;body.querySelectorAll('[data-zdl-close]').forEach(btn=>btn.addEventListener('click',closeLayer));body.querySelector('[data-zdl-retry]')?.addEventListener('click',()=>claim(true));body.querySelector('[data-zdl-comeback-next]')?.addEventListener('click',()=>{showComebackScreen=false;safeRender();});}
@@ -27403,7 +27588,7 @@ async function claim(force=false){
     const response=await fetch(API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({initData,requestId:requestId()}),cache:'no-store',credentials:'same-origin',signal:controller.signal});
     const data=await response.json().catch(()=>({}));
     if(!response.ok||data?.ok===false)throw new Error(data?.error||`Ошибка ${response.status}`);
-    model=data;lastComeback=data.comebackEvent||null;showComebackScreen=Boolean(lastComeback?.reward);lastSuccessAt=Date.now();lastError='';
+    model=data;lastComeback=data.comebackEvent||null;lastInsuranceEvent=data.insuranceEvent||null;showComebackScreen=Boolean(lastComeback?.reward);lastSuccessAt=Date.now();lastError='';
     const repeated=Boolean(data.repeated);
     const rewards=Array.isArray(data.grantedRewards)?data.grantedRewards:[],notice=[];
     shouldShowLayer=!repeated||Boolean(lastComeback?.reward);
