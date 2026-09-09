@@ -1596,6 +1596,77 @@ async function ensureRuntimeCompatibilitySchema(env) {
 }
 
 
+const ZEFIROK_ASSET_VERSIONED_PATH_RE = /\/assets\/optimized\/v[^/]+\//i;
+const ZEFIROK_LEGACY_RASTER_RE = /\.(?:png|jpe?g)$/i;
+const ZEFIROK_STATIC_ASSET_RE = /\.(?:webp|png|jpe?g|gif|avif|svg|ico|woff2?|ttf|otf|css|js|json)$/i;
+
+function zefirokWebpFallbackPath(pathname) {
+  const clean = String(pathname || '');
+  return ZEFIROK_LEGACY_RASTER_RE.test(clean) ? clean.replace(ZEFIROK_LEGACY_RASTER_RE, '.webp') : '';
+}
+
+function zefirokStaticAssetCacheControl(url) {
+  const pathname = String(url?.pathname || '');
+  if (/\/(?:manifest|images-manifest)\.json$/i.test(pathname)) return 'no-cache, must-revalidate';
+  const explicitlyVersioned = Boolean(url?.searchParams?.get('v')) || ZEFIROK_ASSET_VERSIONED_PATH_RE.test(pathname);
+  return explicitlyVersioned
+    ? 'public, max-age=31536000, immutable'
+    : 'public, max-age=3600, stale-while-revalidate=86400';
+}
+
+async function serveZefirokStaticAsset(request, env) {
+  if (!env?.ASSETS?.fetch) return new Response('Not found', { status: 404 });
+  const url = new URL(request.url);
+  const webpPath = zefirokWebpFallbackPath(url.pathname);
+  const acceptsWebp = /(?:^|[,;\s])image\/webp(?:[,;\s]|$)/i.test(String(request.headers.get('Accept') || ''));
+  let response = null;
+  let servedWebpPath = '';
+
+  if (webpPath && acceptsWebp && (request.method === 'GET' || request.method === 'HEAD')) {
+    const preferredUrl = new URL(request.url);
+    preferredUrl.pathname = webpPath;
+    const preferred = await env.ASSETS.fetch(new Request(preferredUrl.toString(), request));
+    if (preferred.ok) {
+      response = preferred;
+      servedWebpPath = webpPath;
+    } else {
+      try { await preferred.body?.cancel?.(); } catch {}
+    }
+  }
+
+  if (!response) response = await env.ASSETS.fetch(request);
+
+  if (response.status === 404 && webpPath && !servedWebpPath && (request.method === 'GET' || request.method === 'HEAD')) {
+    try { await response.body?.cancel?.(); } catch {}
+    const fallbackUrl = new URL(request.url);
+    fallbackUrl.pathname = webpPath;
+    const candidate = await env.ASSETS.fetch(new Request(fallbackUrl.toString(), request));
+    if (candidate.ok) {
+      response = candidate;
+      servedWebpPath = webpPath;
+    } else {
+      try { await candidate.body?.cancel?.(); } catch {}
+    }
+  }
+
+  if (!response.ok) return response;
+  const headers = new Headers(response.headers);
+  if (url.pathname.startsWith('/assets/')) {
+    headers.set('Cache-Control', zefirokStaticAssetCacheControl(url));
+    headers.set('X-Content-Type-Options', 'nosniff');
+    if (webpPath) {
+      const vary = String(headers.get('Vary') || '').split(',').map(value => value.trim()).filter(Boolean);
+      if (!vary.some(value => value.toLowerCase() === 'accept')) vary.push('Accept');
+      headers.set('Vary', vary.join(', '));
+    }
+    if (servedWebpPath) {
+      headers.set('X-Zefirok-Asset-Format', 'webp');
+      headers.set('Content-Location', servedWebpPath);
+    }
+  }
+  return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
+}
+
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
@@ -1606,6 +1677,17 @@ export default {
 
     if (request.method === "OPTIONS" && url.pathname.startsWith("/api/")) {
       return new Response(null, { status: 204, headers: apiHeaders() });
+    }
+
+    if (url.pathname === "/asset-cache-sw.js" && (request.method === "GET" || request.method === "HEAD")) {
+      if (!env.ASSETS) return new Response("Not found", { status: 404 });
+      const asset = await env.ASSETS.fetch(request);
+      const headers = new Headers(asset.headers);
+      headers.set("Cache-Control", "no-store, no-cache, must-revalidate");
+      headers.set("Pragma", "no-cache");
+      headers.set("Service-Worker-Allowed", "/");
+      headers.set("X-Content-Type-Options", "nosniff");
+      return new Response(asset.body, { status: asset.status, statusText: asset.statusText, headers });
     }
 
     try {
@@ -2123,7 +2205,12 @@ export default {
       return jsonResponse({ ok: false, error: "Временная ошибка сервиса. Попробуйте ещё раз." }, 500);
     }
 
-    if (env.ASSETS) return env.ASSETS.fetch(request);
+    if (env.ASSETS) {
+      if ((request.method === "GET" || request.method === "HEAD") && url.pathname.startsWith("/assets/") && ZEFIROK_STATIC_ASSET_RE.test(url.pathname)) {
+        return await serveZefirokStaticAsset(request, env);
+      }
+      return env.ASSETS.fetch(request);
+    }
     return new Response("Not found", { status: 404 });
   },
 
@@ -44549,8 +44636,17 @@ async function seasonPassReadinessImageManifest(env){
     const manifest=await response.json();
     const rows=Array.isArray(manifest?.images)?manifest.images:[];
     const paths=new Set();
-    for(const row of rows){const path=seasonPassReadinessAssetPath(row?.path);if(path)paths.add(path);}
-    return {available:true,paths,count:paths.size,catalogHash:String(manifest?.catalogHash||'').slice(0,32),error:''};
+    for(const row of rows){
+      const path=seasonPassReadinessAssetPath(row?.path);
+      if(!path)continue;
+      paths.add(path);
+      if(/\.webp$/i.test(path)){
+        paths.add(path.replace(/\.webp$/i,'.png'));
+        paths.add(path.replace(/\.webp$/i,'.jpg'));
+        paths.add(path.replace(/\.webp$/i,'.jpeg'));
+      }
+    }
+    return {available:true,paths,count:rows.length,catalogHash:String(manifest?.catalogHash||'').slice(0,32),error:''};
   }catch(error){
     return {available:false,paths:new Set(),count:0,catalogHash:'',error:String(error?.message||error).slice(0,180)};
   }

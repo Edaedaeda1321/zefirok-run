@@ -5,7 +5,7 @@
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover" name="viewport"/>
 <meta content="no-referrer" name="referrer"/>
-<meta content="default-src 'none'; script-src 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com https://telegram.org; style-src 'unsafe-inline' blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; img-src 'self' blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; font-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; media-src 'self' blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; worker-src blob:; connect-src 'self' blob: data:; frame-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'" http-equiv="Content-Security-Policy"/>
+<meta content="default-src 'none'; script-src 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com https://telegram.org; style-src 'unsafe-inline' blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; img-src 'self' blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; font-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; media-src 'self' blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; worker-src 'self' blob:; connect-src 'self' blob: data:; frame-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'" http-equiv="Content-Security-Policy"/>
 <title>Сладкий Забег</title>
 <script data-zefirok-image-fallback>
 (()=>{
@@ -104,6 +104,65 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
   const TEST_PROJECT_MODE = TEST_PROJECT_QUERY.get("test_project") === "1";
   const TEST_PROJECT_DEVICE_LAB = TEST_PROJECT_MODE && TEST_PROJECT_QUERY.get("device_lab") === "1";
   const TEST_PROJECT_OWNER_SESSION_KEY = "zefirok-owner-session-v1";
+  const STATIC_ASSET_CACHE_BUILD = "20260910-1";
+  const STATIC_ASSET_WARM_URLS = Object.freeze([
+    "/assets/optimized/v0.79.5/iconScore.webp?v=0.79.5",
+    "/assets/optimized/v0.79.5/iconRecord.webp?v=0.79.5",
+    "/assets/optimized/v0.79.5/iconCoffee.webp?v=0.79.5",
+    "/assets/optimized/v0.79.5/shopMarshmallowAssortment.webp?v=0.79.5",
+    "/assets/optimized/v0.79.5/pillowObstacle.webp?v=0.79.5",
+    "/assets/optimized/v0.79.5/vaseObstacle.webp?v=0.79.5",
+    "/assets/optimized/v0.79.5/coffeePickup.webp?v=0.79.5",
+    "/assets/optimized/v0.79.5/skinDefaultPortrait.webp?v=0.79.5",
+    "/assets/optimized/v0.79.5/background_season2.webp?v=1.2.1",
+    "/assets/ui/icon_game_button.webp",
+    "/assets/ui/icon_profile_button.webp",
+    "/assets/ui/icon_shop_buttom.webp",
+    "/assets/ui/icone_cases.webp",
+    "/assets/ui/icon_battlepass.webp",
+    "/assets/ui/icon_reiting.webp",
+    "/assets/skins/gameplay/default/stand.webp",
+    "/assets/skins/gameplay/default/run1.webp",
+    "/assets/skins/gameplay/default/run2.webp",
+    "/assets/skins/gameplay/default/run3.webp",
+    "/assets/skins/gameplay/default/run4.webp",
+    "/assets/skins/gameplay/default/jump.webp"
+  ]);
+
+  function warmStaticAssetsWithoutWorker(urls = STATIC_ASSET_WARM_URLS) {
+    const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection || null;
+    const limit = connection?.saveData ? 8 : urls.length;
+    for (const src of urls.slice(0, limit)) {
+      try {
+        const image = new Image();
+        image.decoding = "async";
+        image.loading = "eager";
+        image.src = src;
+      } catch {}
+    }
+  }
+
+  function installStaticAssetCache() {
+    if (TEST_PROJECT_MODE || !("serviceWorker" in navigator) || !/^https?:$/i.test(location.protocol)) return;
+    const start = async () => {
+      try {
+        const registration = await navigator.serviceWorker.register(`/asset-cache-sw.js?v=${encodeURIComponent(STATIC_ASSET_CACHE_BUILD)}`, { scope: "/", updateViaCache: "none" });
+        const ready = await navigator.serviceWorker.ready;
+        const target = navigator.serviceWorker.controller || ready?.active || registration?.active || registration?.waiting || registration?.installing;
+        try { target?.postMessage?.({ type: "zefirok-warm-assets", urls: STATIC_ASSET_WARM_URLS }); } catch {}
+      } catch (error) {
+        console.warn("Static asset cache unavailable", String(error?.message || error));
+        warmStaticAssetsWithoutWorker();
+      }
+    };
+    const schedule = () => {
+      if (typeof requestIdleCallback === "function") requestIdleCallback(() => void start(), { timeout: 1600 });
+      else setTimeout(() => void start(), 700);
+    };
+    if (document.readyState === "complete") schedule();
+    else window.addEventListener("load", schedule, { once: true });
+  }
+  installStaticAssetCache();
   const TEST_PROJECT_BRIDGE_JS = "(()=>{\n  let active=new URLSearchParams(location.search).get(\"test_project\")===\"1\";\n  if(!active&&window.parent&&window.parent!==window){try{active=new URLSearchParams(window.parent.location.search).get(\"test_project\")===\"1\"}catch{}}\n  if(!active)return;\n  if(window.__ZEFIROK_TP_BRIDGE_INSTALLED_V55__===true)return;\n  window.__ZEFIROK_TP_BRIDGE_INSTALLED_V55__=true;\n  const nativeFetch=window.fetch.bind(window),PROXY=\"/api/owner/test-project/game\",STORAGE_PREFIX=\"zefirok-tp5.5:\",TP_INIT_DATA=\"tp-sandbox-5.5\";\n  const baseUrl=(()=>{const direct=String(document.baseURI||\"\");if(/^https?:/i.test(direct))return direct;try{if(window.parent&&window.parent!==window&&/^https?:/i.test(String(window.parent.location.href||\"\")))return String(window.parent.location.href)}catch{}return String(location.href||direct)})();\n  const sandboxOrigin=(()=>{try{return new URL(baseUrl).origin}catch{return location.origin}})(),proxyUrl=(()=>{try{return new URL(PROXY,baseUrl).toString()}catch{return PROXY}})();\n  const blocked=(message,status=403)=>new Response(JSON.stringify({ok:false,testProject:true,isolated:true,productionWrites:false,error:message}),{status,headers:{\"Content-Type\":\"application/json\",\"Cache-Control\":\"no-store\",\"X-Test-Project\":\"5.5\"}});\n  const isSameOriginApi=(value)=>{try{const parsed=new URL(String(value||\"\"),baseUrl);return parsed.origin===sandboxOrigin&&parsed.pathname.startsWith(\"/api/\")}catch{return false}};\n  try{\n    const local=window.localStorage,session=window.sessionStorage,proto=Object.getPrototypeOf(local),nativeGet=proto.getItem,nativeSet=proto.setItem,nativeRemove=proto.removeItem,nativeClear=proto.clear,nativeKey=proto.key;\n    const scopedKey=(store,key)=>`${STORAGE_PREFIX}${store===session?\"session\":\"local\"}:${String(key)}`,prefixFor=(store)=>`${STORAGE_PREFIX}${store===session?\"session\":\"local\"}:`;\n    proto.getItem=function(key){return this===local||this===session?nativeGet.call(this,scopedKey(this,key)):nativeGet.call(this,key)};\n    proto.setItem=function(key,value){return this===local||this===session?nativeSet.call(this,scopedKey(this,key),value):nativeSet.call(this,key,value)};\n    proto.removeItem=function(key){return this===local||this===session?nativeRemove.call(this,scopedKey(this,key)):nativeRemove.call(this,key)};\n    proto.clear=function(){if(this!==local&&this!==session)return nativeClear.call(this);const prefix=prefixFor(this),remove=[];for(let i=0;i<this.length;i+=1){const key=nativeKey.call(this,i);if(String(key||\"\").startsWith(prefix))remove.push(key)}for(const key of remove)nativeRemove.call(this,key)};\n    proto.key=function(index){if(this!==local&&this!==session)return nativeKey.call(this,index);const prefix=prefixFor(this),keys=[];for(let i=0;i<this.length;i+=1){const key=nativeKey.call(this,i);if(String(key||\"\").startsWith(prefix))keys.push(String(key).slice(prefix.length))}return keys[Math.max(0,Number(index)||0)]??null};\n  }catch(error){console.warn(\"TP 5.5 storage isolation fallback\",error)}\n  let seededFromParent=false;\n  try{const raw=String(window.parent?.__ZEFIROK_TP_INITIAL_PROGRESS__||\"\");if(raw){JSON.parse(raw);localStorage.setItem(\"zefirok-runner-progress-v2\",raw);sessionStorage.removeItem(\"zefirok-runner-progress-v2\");seededFromParent=true}}catch(error){console.warn(\"TP 5.5 initial progress seed failed\",error)}\n  const fakeUser={id:\"tp-player\",first_name:\"Тестовый игрок\",last_name:\"\",username:\"test_project\",language_code:\"ru\",is_premium:false};\n  const maskTelegram=()=>{try{const webApp=window.Telegram?.WebApp;if(!webApp)return;try{Object.defineProperty(webApp,\"initData\",{configurable:true,get:()=>TP_INIT_DATA})}catch{}try{Object.defineProperty(webApp,\"initDataUnsafe\",{configurable:true,get:()=>({user:fakeUser,query_id:\"tp-sandbox\",auth_date:0,hash:\"tp-sandbox\"})})}catch{}try{Object.defineProperty(webApp,\"CloudStorage\",{configurable:true,value:null})}catch{}}catch{}};\n  maskTelegram();window.setTimeout(maskTelegram,0);window.setTimeout(maskTelegram,250);document.addEventListener(\"DOMContentLoaded\",maskTelegram,{once:true});\n  async function bodyValue(body){if(body==null)return {};if(typeof body===\"string\"){try{return JSON.parse(body)}catch{return {raw:body.slice(0,12000)}}}if(body instanceof URLSearchParams)return Object.fromEntries(body.entries());if(typeof FormData!==\"undefined\"&&body instanceof FormData){const out={};for(const [key,value] of body.entries()){if(typeof value===\"string\")out[key]=value;else out[key]={name:String(value?.name||\"file\"),type:String(value?.type||\"\"),size:Number(value?.size||0),testProjectFileBlocked:true};}return out;}if(typeof body===\"object\")return body;return {}};\n  const ownerSession=()=>{try{return String(window.parent?.__ZEFIROK_TP_OWNER_SESSION__||\"\")}catch{return \"\"}};\n  window.__TEST_PROJECT_SANDBOX__={active:true,version:\"5.5\",storagePrefix:STORAGE_PREFIX,localStorageIsolated:true,sessionStorageIsolated:true,telegramMasked:true,failClosed:true,seededFromParent};\n  window.fetch=async(input,init={})=>{\n    const original=input instanceof Request?input.url:String(input||\"\");let url;try{url=new URL(original,baseUrl)}catch{return String(original).startsWith(\"/api/\")?blocked(\"Test Project заблокировал нераспознанный API-запрос.\",418):nativeFetch(input,init)}\n    if(url.origin!==sandboxOrigin||!url.pathname.startsWith(\"/api/\"))return nativeFetch(input,init);\n    if(url.pathname.startsWith(\"/api/owner/\"))return blocked(\"Игровой клиент Test Project не может обращаться к owner API напрямую.\",403);\n    const session=ownerSession();if(!session)return blocked(\"Test Project: owner-session не передана sandbox proxy.\",401);\n    const sourceRequest=input instanceof Request?input:null,method=String(init.method||sourceRequest?.method||\"GET\").toUpperCase();let requestBody=init.body;if(requestBody==null&&sourceRequest&&method!==\"GET\"&&method!==\"HEAD\"){try{requestBody=await sourceRequest.clone().text()}catch{requestBody=null}}\n    const payload=await bodyValue(requestBody);if(payload&&typeof payload===\"object\")payload.initData=TP_INIT_DATA;\n    const controllerSignal=init.signal||sourceRequest?.signal;\n    const proxyResponse=await nativeFetch(proxyUrl,{method:\"POST\",headers:{\"Content-Type\":\"application/json\",\"X-Test-Project-Proxy\":\"5.5\"},body:JSON.stringify({initData:\"\",ownerSession:session,path:url.pathname,method,query:Object.fromEntries(url.searchParams.entries()),payload}),cache:\"no-store\",credentials:\"same-origin\",signal:controllerSignal});\n    const envelope=await proxyResponse.json().catch(()=>({ok:false,error:\"Test Project proxy вернул некорректный ответ.\"}));\n    if(!proxyResponse.ok||!envelope?.ok||!(\"data\" in envelope))return new Response(JSON.stringify(envelope||{ok:false,error:\"Test Project proxy error\"}),{status:proxyResponse.status||500,headers:{\"Content-Type\":\"application/json\",\"Cache-Control\":\"no-store\",\"X-Test-Project\":\"5.5\"}});\n    return new Response(JSON.stringify(envelope.data),{status:Number(envelope.proxyStatus||200),headers:{\"Content-Type\":\"application/json\",\"Cache-Control\":\"no-store\",\"X-Test-Project\":\"5.5\"}});\n  };\n  try{const Xhr=window.XMLHttpRequest,nativeOpen=Xhr?.prototype?.open;if(nativeOpen)Xhr.prototype.open=function(method,url,...rest){if(isSameOriginApi(url))throw new Error(\"Test Project: XMLHttpRequest к /api/* заблокирован. Используйте sandbox fetch proxy.\");return nativeOpen.call(this,method,url,...rest)}}catch{}\n  try{const nativeBeacon=navigator.sendBeacon?.bind(navigator);if(nativeBeacon)navigator.sendBeacon=(url,data)=>isSameOriginApi(url)?false:nativeBeacon(url,data)}catch{}\n})();";
   const TEST_PROJECT_HOST_STORAGE_PREFIX = "zefirok-tp5.5-host:";
   const tpHostStorageKey = (key) => TEST_PROJECT_MODE ? `${TEST_PROJECT_HOST_STORAGE_PREFIX}${String(key)}` : String(key);

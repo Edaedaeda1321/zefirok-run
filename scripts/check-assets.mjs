@@ -204,6 +204,7 @@ if (newsManifestOnly) {
 }
 
 const requiredNew = [
+  'asset-cache-sw.js',
   'assets/vendor/floating-ui/floating-ui.core.umd.min.js',
   'assets/vendor/floating-ui/floating-ui.dom.umd.min.js',
   'assets/cases/legendary_closed.png',
@@ -245,6 +246,19 @@ async function exactPathExists(relativePath) {
   }
 }
 
+function webpFallbackPath(relativePath) {
+  return /\.(?:png|jpe?g)$/i.test(relativePath)
+    ? relativePath.replace(/\.(?:png|jpe?g)$/i, '.webp')
+    : '';
+}
+
+async function resolvedAssetPath(relativePath) {
+  if (await exactPathExists(relativePath)) return relativePath;
+  const fallback = webpFallbackPath(relativePath);
+  if (fallback && await exactPathExists(fallback)) return fallback;
+  return '';
+}
+
 async function validateContent(relativePath) {
   const file = path.join(root, relativePath);
   const data = await readFile(file);
@@ -282,11 +296,12 @@ if (!newOnly) {
 const missing = [];
 const invalid = [];
 for (const relativePath of [...paths].sort()) {
-  if (!(await exactPathExists(relativePath))) {
+  const resolved = await resolvedAssetPath(relativePath);
+  if (!resolved) {
     missing.push(relativePath);
     continue;
   }
-  if (!(await validateContent(relativePath))) invalid.push(relativePath);
+  if (!(await validateContent(resolved))) invalid.push(`${relativePath}${resolved !== relativePath ? ` -> ${resolved}` : ''}`);
 }
 
 if (missing.length) {
