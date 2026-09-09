@@ -9158,11 +9158,7 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
 #zefirok-maltipoo-runner .rating-v6-progress-chip{display:inline-flex;align-items:center;min-height:25px;padding:5px 9px;border-radius:999px;background:#fff;color:#875a6b;font-size:8.5px;font-weight:900;box-shadow:inset 0 0 0 1px rgba(225,185,199,.62)}
 #zefirok-maltipoo-runner .rating-v6-progress-chip.is-up{background:#eef9ed;color:#4d8051;box-shadow:inset 0 0 0 1px rgba(130,188,135,.38)}
 #zefirok-maltipoo-runner .rating-v6-progress-chip.is-down{background:#fff4ee;color:#a96b4e;box-shadow:inset 0 0 0 1px rgba(221,165,136,.38)}
-#zefirok-maltipoo-runner .rating-v6-nearby,#zefirok-maltipoo-runner .rating-v6-history{display:grid;gap:9px;padding:13px 8px 2px}
-#zefirok-maltipoo-runner .rating-v6-nearby-list{display:grid;gap:6px}
-#zefirok-maltipoo-runner .rating-v6-nearby-row{display:grid;grid-template-columns:30px 40px minmax(0,1fr) auto;gap:8px;align-items:center;min-height:58px;padding:8px 10px;border:1px solid rgba(228,190,202,.76);border-radius:18px;background:linear-gradient(180deg,#fffdfd,#fff6f8);cursor:pointer}
-#zefirok-maltipoo-runner .rating-v6-nearby-row.is-me{border-color:rgba(207,82,130,.60);background:linear-gradient(180deg,#fff3f8,#ffe6ef);box-shadow:0 6px 16px rgba(185,75,116,.10)}
-#zefirok-maltipoo-runner .rating-v6-nearby-place{color:#bd4e79;font-size:13px;font-weight:950;text-align:center}.rating-v6-nearby-row .leaderboard-avatar-frame.is-compact{width:40px!important;height:40px!important}.rating-v6-nearby-copy{display:grid;gap:2px;min-width:0}.rating-v6-nearby-copy strong{display:flex;gap:5px;align-items:center;min-width:0;overflow:hidden;color:#69334a;font-size:10.5px;font-weight:950;white-space:nowrap}.rating-v6-nearby-copy .leaderboard-name-text{overflow:hidden;text-overflow:ellipsis}.rating-v6-nearby-copy small{color:#9b7d88;font-size:7px;font-weight:850}.rating-v6-you-inline{display:inline-flex;align-items:center;margin-left:3px;padding:2px 5px;border-radius:999px;background:rgba(255,255,255,.72);border:1px solid rgba(186,118,147,.22);color:#9e4b71;font-size:7px;font-style:normal;font-weight:950;line-height:1}.rating-v6-nearby-score{color:#b94773;font-size:12px;font-weight:950;white-space:nowrap}
+#zefirok-maltipoo-runner .rating-v6-history{display:grid;gap:9px;padding:13px 8px 2px}
 #zefirok-maltipoo-runner .rating-v6-history-grid{display:grid;gap:7px}
 #zefirok-maltipoo-runner .rating-v6-history-card{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;padding:11px 12px;border:1px solid rgba(229,193,204,.72);border-radius:18px;background:linear-gradient(180deg,#fffdfc,#fff6f3)}
 #zefirok-maltipoo-runner .rating-v6-history-copy{display:grid;gap:3px;min-width:0}.rating-v6-history-copy small{color:#ad6a83;font-size:7.5px;font-weight:900;text-transform:uppercase}.rating-v6-history-copy strong{overflow:hidden;text-overflow:ellipsis;color:#6d334a;font-size:12px;font-weight:950;white-space:nowrap}.rating-v6-history-stats{display:flex;flex-wrap:wrap;gap:7px;color:#8f707a;font-size:8px;font-weight:850}.rating-v6-history-stats b{color:#c24e7a}.rating-v6-history-reward{display:grid;justify-items:end;gap:2px;max-width:108px}.rating-v6-history-reward>small{color:#a17b2f;font-size:7px;font-weight:900;text-transform:uppercase}.rating-v6-history-reward .leaderboard-reward-line{border:0!important;padding:0!important;background:none!important;transform:scale(.78);transform-origin:right center}.rating-v6-history-reward .leaderboard-reward-amount{font-size:8px!important}
@@ -10348,38 +10344,6 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
     }).join("");
   }
 
-  function nearbyBlock(data) {
-    const entries = Array.isArray(data?.nearby) ? data.nearby : [];
-    if (!data?.me || !entries.length) return "";
-    const myId = String(telegramProfile?.id || data?.me?.telegramId || "");
-    const meEntry = entries.find((entry) => String(entry?.telegramId || "") === myId);
-    const myPlace = Math.max(0, Number(meEntry?.place || data?.me?.place || 0));
-    const visibleEntries = entries.length <= 4 ? entries : entries
-      .map((entry, index) => ({ entry, index, place: Math.max(0, Number(entry?.place || 0)) }))
-      .sort((a, b) => {
-        if (myPlace > 0) {
-          const distance = Math.abs(a.place - myPlace) - Math.abs(b.place - myPlace);
-          if (distance) return distance;
-        }
-        return a.index - b.index;
-      })
-      .slice(0, 4)
-      .map((item) => item.entry)
-      .sort((a, b) => Number(a?.place || 0) - Number(b?.place || 0));
-    const markup = visibleEntries.map((entry) => {
-      const isMe = String(entry?.telegramId || "") === myId;
-      const playerId = escapeHtml(entry?.telegramId || "");
-      const level = Math.max(1, Math.floor(Number(entry?.level || 1)));
-      return `<div class="rating-v6-nearby-row${isMe ? " is-me" : ""}" data-player-profile-id="${playerId}" role="button" tabindex="0" aria-label="${escapeHtml(`Открыть мини-профиль: ${entry?.name || "Игрок"}`)}">
-        <span class="rating-v6-nearby-place">#${Math.max(1, Number(entry?.place || 0))}</span>
-        <span>${avatarMarkup(entry, true, false)}</span>
-        <span class="rating-v6-nearby-copy"><strong>${playerNameMarkup(entry)}${isMe ? '<em class="rating-v6-you-inline">Ты</em>' : ""}</strong><small>Ур. ${level}</small></span>
-        <span class="rating-v6-nearby-score">${formatter.format(entry?.score || 0)}</span>
-      </div>`;
-    }).join("");
-    return `<section class="rating-v6-nearby"><div class="rating-v6-section-title"><div><small>Твоя борьба</small><strong>Рядом с тобой</strong></div><span>Ещё один забег может изменить позицию</span></div><div class="rating-v6-nearby-list">${markup}</div></section>`;
-  }
-
   function historyBlock(data) {
     if (mode !== "season") return "";
     const history = Array.isArray(data?.history) ? data.history : [];
@@ -10421,7 +10385,6 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
       placeDelta: data.placeDelta,
       previousPlace: data.previousPlace,
       rewardZone: data.rewardZone,
-      nearby: data.nearby,
       history: data.history,
       reward: data.reward,
       nextSeason: data.nextSeason
@@ -10519,7 +10482,7 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
       ? `<section class="rating-v6-leaders"><div class="rating-v6-section-title"><div><small>${mode === "all_time" ? "Зал славы" : "Лидеры сезона"}</small><strong>Top 3</strong></div></div><div class="rating-v6-podium">${podium(top[1], 2)}${podium(top[0], 1)}${podium(top[2], 3)}</div></section><section class="rating-v6-ranking-list"><div class="rating-v6-section-title"><div><small>Рейтинг</small><strong>Игроки</strong></div><span>Нажми на игрока, чтобы открыть профиль</span></div><div class="rating-v6-list">${rows(top)}</div></section>`
       : '<div class="leaderboard-empty">Пока нет результатов. Станьте первым!</div>';
 
-    dynamic.innerHTML = `${seasonHeader(season, timing, mode)}${tabs()}${summaryCard(data)}${nearbyBlock(data)}${topBlock}${historyBlock(data)}${rewardBlock}`;
+    dynamic.innerHTML = `${seasonHeader(season, timing, mode)}${tabs()}${summaryCard(data)}${topBlock}${historyBlock(data)}${rewardBlock}`;
   }
 
   function stripTelegramPhotos(data) {
