@@ -6649,6 +6649,166 @@ html&gt;body{padding:
     text-shadow: 0 1px 2px rgba(156, 57, 93, .22);
   }
   #zefirok-maltipoo-runner .release-button:active { transform: translateY(1px) scale(.986); }
+  #zefirok-maltipoo-runner .release-center-summary[hidden],
+  #zefirok-maltipoo-runner .release-history-view[hidden],
+  #zefirok-maltipoo-runner .release-history-button[hidden],
+  #zefirok-maltipoo-runner .release-center-details[hidden] { display: none !important; }
+  #zefirok-maltipoo-runner .release-dialog.is-release-center {
+    width: min(100%, 408px);
+    padding: 16px 16px 17px;
+  }
+  #zefirok-maltipoo-runner .release-dialog.is-release-center .release-image-wrap {
+    width: min(42%, 148px);
+    aspect-ratio: 941 / 1672;
+    max-height: 244px;
+    margin: 0 auto 12px;
+    padding: 5px;
+    border-radius: 18px;
+  }
+  #zefirok-maltipoo-runner .release-dialog.is-release-center .release-image {
+    border-radius: 13px;
+    object-fit: contain;
+    object-position: center;
+  }
+  #zefirok-maltipoo-runner .release-dialog.is-release-center .release-kicker {
+    display: flex;
+    width: max-content;
+    max-width: 100%;
+    margin: 0 auto;
+    box-sizing: border-box;
+  }
+  #zefirok-maltipoo-runner .release-dialog.is-release-center h2 {
+    margin: 11px 4px 7px;
+    text-align: center;
+    font-size: clamp(22px, 6.5vw, 29px);
+  }
+  #zefirok-maltipoo-runner .release-dialog.is-release-center .release-version {
+    margin: 0 0 11px;
+    text-align: center;
+  }
+  #zefirok-maltipoo-runner .release-center-summary {
+    display: grid;
+    gap: 10px;
+    text-align: left;
+  }
+  #zefirok-maltipoo-runner .release-center-season-status {
+    justify-self: center;
+    display: inline-flex;
+    min-height: 30px;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 11px;
+    border: 1px solid rgba(220, 164, 64, .38);
+    border-radius: 999px;
+    background: linear-gradient(135deg, rgba(255,247,216,.96), rgba(255,236,229,.96));
+    color: #8c6530;
+    font-size: 11px;
+    font-weight: 900;
+  }
+  #zefirok-maltipoo-runner .release-center-intro {
+    margin: 0;
+    padding: 11px 12px;
+    border: 1px solid rgba(233, 205, 195, .82);
+    border-radius: 16px;
+    background: rgba(255,255,255,.76);
+    color: #765f68;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.45;
+  }
+  #zefirok-maltipoo-runner .release-center-section-title {
+    margin: 2px 2px 0;
+    color: #815164;
+    font-size: 10px;
+    font-weight: 950;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+  }
+  #zefirok-maltipoo-runner .release-center-highlights { display: grid; gap: 7px; }
+  #zefirok-maltipoo-runner .release-center-highlight {
+    display: grid;
+    grid-template-columns: 42px minmax(0, 1fr);
+    gap: 10px;
+    align-items: center;
+    padding: 9px 10px;
+    border: 1px solid rgba(232, 202, 210, .82);
+    border-radius: 15px;
+    background: rgba(255,255,255,.82);
+  }
+  #zefirok-maltipoo-runner .release-center-highlight-icon {
+    width: 42px;
+    height: 42px;
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+    border-radius: 13px;
+    background: linear-gradient(145deg, #fff7fa, #fff2dc);
+  }
+  #zefirok-maltipoo-runner .release-center-highlight-icon img { width: 34px; height: 34px; display: block; object-fit: contain; }
+  #zefirok-maltipoo-runner .release-center-highlight-copy { min-width: 0; display: grid; gap: 2px; }
+  #zefirok-maltipoo-runner .release-center-highlight-copy strong { color: #6e4053; font-size: 12px; line-height: 1.2; }
+  #zefirok-maltipoo-runner .release-center-highlight-copy span { color: #8b737c; font-size: 10px; line-height: 1.35; font-weight: 650; }
+  #zefirok-maltipoo-runner .release-center-details-button,
+  #zefirok-maltipoo-runner .release-history-button,
+  #zefirok-maltipoo-runner .release-history-back {
+    width: 100%;
+    min-height: 42px;
+    border: 1px solid rgba(229, 196, 207, .92);
+    border-radius: 14px;
+    padding: 9px 12px;
+    background: rgba(255,255,255,.84);
+    color: #8b5368;
+    font-size: 12px;
+    font-weight: 900;
+  }
+  #zefirok-maltipoo-runner .release-center-details {
+    padding: 11px 12px;
+    border: 1px solid rgba(232, 204, 194, .82);
+    border-radius: 15px;
+    background: rgba(255,250,246,.9);
+    color: #7e6870;
+    font-size: 11px;
+    line-height: 1.5;
+  }
+  #zefirok-maltipoo-runner .release-history-button { margin: 10px 0 8px; }
+  #zefirok-maltipoo-runner .release-dialog.is-release-center .release-button { margin-top: 0; }
+  #zefirok-maltipoo-runner .release-dialog.is-release-history .release-image-wrap,
+  #zefirok-maltipoo-runner .release-dialog.is-release-history .release-kicker,
+  #zefirok-maltipoo-runner .release-dialog.is-release-history h2,
+  #zefirok-maltipoo-runner .release-dialog.is-release-history .release-copy,
+  #zefirok-maltipoo-runner .release-dialog.is-release-history .release-version,
+  #zefirok-maltipoo-runner .release-dialog.is-release-history .release-center-summary,
+  #zefirok-maltipoo-runner .release-dialog.is-release-history .release-history-button { display: none !important; }
+  #zefirok-maltipoo-runner .release-history-view { display: grid; gap: 11px; text-align: left; }
+  #zefirok-maltipoo-runner .release-history-head { display: grid; gap: 4px; text-align: center; padding: 2px 4px 5px; }
+  #zefirok-maltipoo-runner .release-history-head strong { color: #65384b; font-size: 24px; line-height: 1.08; }
+  #zefirok-maltipoo-runner .release-history-head span { color: #947985; font-size: 11px; line-height: 1.4; font-weight: 700; }
+  #zefirok-maltipoo-runner .release-history-list { display: grid; gap: 9px; }
+  #zefirok-maltipoo-runner .release-history-card {
+    display: grid;
+    gap: 8px;
+    padding: 12px;
+    border: 1px solid rgba(231, 198, 207, .86);
+    border-radius: 18px;
+    background: rgba(255,255,255,.82);
+  }
+  #zefirok-maltipoo-runner .release-history-card.is-current { border-color: rgba(222, 105, 149, .46); background: linear-gradient(145deg, #fff8fb, #fff8ed); }
+  #zefirok-maltipoo-runner .release-history-meta { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  #zefirok-maltipoo-runner .release-history-version { display: inline-flex; align-items: center; gap: 6px; color: #a34064; font-size: 12px; font-weight: 950; }
+  #zefirok-maltipoo-runner .release-history-current { padding: 4px 7px; border-radius: 999px; background: #ffe3ed; color: #a14366; font-size: 8px; font-weight: 950; text-transform: uppercase; letter-spacing: .05em; }
+  #zefirok-maltipoo-runner .release-history-date { color: #a08790; font-size: 9px; font-weight: 750; }
+  #zefirok-maltipoo-runner .release-history-card h3 { margin: 0; color: #65404e; font-size: 15px; line-height: 1.25; }
+  #zefirok-maltipoo-runner .release-history-card p { margin: 0; color: #89717a; font-size: 10px; line-height: 1.42; font-weight: 650; }
+  #zefirok-maltipoo-runner .release-history-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  #zefirok-maltipoo-runner .release-history-chip { display: inline-flex; align-items: center; gap: 5px; padding: 5px 7px; border-radius: 10px; background: #fff5f8; color: #85596a; font-size: 9px; font-weight: 850; }
+  #zefirok-maltipoo-runner .release-history-chip img { width: 18px; height: 18px; object-fit: contain; display: block; }
+  #zefirok-maltipoo-runner .release-history-back { margin-top: 1px; }
+  @media (max-height: 720px) {
+    #zefirok-maltipoo-runner .release-dialog.is-release-center .release-image-wrap { width: min(31%, 112px); max-height: 198px; margin-bottom: 8px; }
+    #zefirok-maltipoo-runner .release-center-highlight { padding: 7px 9px; }
+    #zefirok-maltipoo-runner .release-center-highlight-icon { width: 36px; height: 36px; }
+    #zefirok-maltipoo-runner .release-center-highlight-icon img { width: 29px; height: 29px; }
+  }
   #zefirok-maltipoo-runner .game-news-button[hidden] { display: none !important; }
   #zefirok-maltipoo-runner .game-news-button {
     position: fixed;
@@ -12112,6 +12272,20 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
     &lt;h2 id=&quot;release-dialog-title&quot; data-release-title&gt;Обновление&lt;/h2&gt;
     &lt;p class=&quot;release-copy&quot; data-release-copy&gt;&lt;/p&gt;
     &lt;div class=&quot;release-version&quot; data-release-version&gt;&lt;/div&gt;
+    &lt;div class=&quot;release-center-summary&quot; data-release-center-summary hidden&gt;
+      &lt;div class=&quot;release-center-season-status&quot; data-release-season-status&gt;&lt;/div&gt;
+      &lt;p class=&quot;release-center-intro&quot; data-release-center-intro&gt;&lt;/p&gt;
+      &lt;div class=&quot;release-center-section-title&quot;&gt;Главное в обновлении&lt;/div&gt;
+      &lt;div class=&quot;release-center-highlights&quot; data-release-center-highlights&gt;&lt;/div&gt;
+      &lt;button class=&quot;release-center-details-button&quot; data-release-details type=&quot;button&quot;&gt;Подробнее об обновлении&lt;/button&gt;
+      &lt;div class=&quot;release-center-details&quot; data-release-details-panel hidden&gt;&lt;/div&gt;
+    &lt;/div&gt;
+    &lt;div class=&quot;release-history-view&quot; data-release-history-view hidden&gt;
+      &lt;div class=&quot;release-history-head&quot;&gt;&lt;strong&gt;Все обновления&lt;/strong&gt;&lt;span&gt;Короткая история крупных изменений «Сладкого Забега».&lt;/span&gt;&lt;/div&gt;
+      &lt;div class=&quot;release-history-list&quot; data-release-history-list&gt;&lt;/div&gt;
+      &lt;button class=&quot;release-history-back&quot; data-release-history-back type=&quot;button&quot;&gt;Назад к текущему обновлению&lt;/button&gt;
+    &lt;/div&gt;
+    &lt;button class=&quot;release-history-button&quot; data-release-history-open type=&quot;button&quot; hidden&gt;Все обновления&lt;/button&gt;
     &lt;button class=&quot;release-button&quot; data-release-close type=&quot;button&quot;&gt;Продолжить&lt;/button&gt;
     &lt;div class=&quot;season-task-actions&quot; data-season-task-actions hidden&gt;
       &lt;button class=&quot;season-task-stay&quot; data-season-task-stay type=&quot;button&quot;&gt;Остаться в игре&lt;/button&gt;
@@ -12589,6 +12763,16 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       const releaseTitleEl = root.querySelector(&quot;[data-release-title]&quot;);
       const releaseCopyEl = root.querySelector(&quot;[data-release-copy]&quot;);
       const releaseVersionEl = root.querySelector(&quot;[data-release-version]&quot;);
+      const releaseCenterSummaryEl = root.querySelector(&quot;[data-release-center-summary]&quot;);
+      const releaseSeasonStatusEl = root.querySelector(&quot;[data-release-season-status]&quot;);
+      const releaseCenterIntroEl = root.querySelector(&quot;[data-release-center-intro]&quot;);
+      const releaseCenterHighlightsEl = root.querySelector(&quot;[data-release-center-highlights]&quot;);
+      const releaseDetailsButton = root.querySelector(&quot;[data-release-details]&quot;);
+      const releaseDetailsPanelEl = root.querySelector(&quot;[data-release-details-panel]&quot;);
+      const releaseHistoryViewEl = root.querySelector(&quot;[data-release-history-view]&quot;);
+      const releaseHistoryListEl = root.querySelector(&quot;[data-release-history-list]&quot;);
+      const releaseHistoryOpenButton = root.querySelector(&quot;[data-release-history-open]&quot;);
+      const releaseHistoryBackButton = root.querySelector(&quot;[data-release-history-back]&quot;);
       const releaseCloseButton = root.querySelector(&quot;[data-release-close]&quot;);
       const gameNewsButton = root.querySelector(&quot;[data-game-news-button]&quot;);
       const gameNewsButtonTitleEl = root.querySelector(&quot;[data-game-news-button-title]&quot;);
@@ -12619,27 +12803,46 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       // Версия: год игры.сезонное обновление.исправление.
       const GAME_VERSION = &quot;1.2.1&quot;;
       const ECONOMY_RESET_KEY = &quot;economy-reset-0.1.1-beta-purchase-limit-fix-2026-07-23&quot;;
-      const UPDATE_NOTICE_KEY = &quot;release-1-2-1-2026-09-08&quot;;
+      const UPDATE_NOTICE_KEY = &quot;release-1-2-1-release-center-2-2026-09-09&quot;;
       const UPDATE_NOTICE_ENABLED = true;
-      const UPDATE_NOTICE_TITLE = &quot;Кафе закрывается… но это только начало 🍰✨&quot;;
-      const UPDATE_NOTICE_TEXT = `Сезон I подходит к концу. В кафе остаются последние гости, вечер становится тише, а Зеффи готовится закрыть двери этой главы.
+      const UPDATE_NOTICE_TITLE = &quot;Кафе закрывается… но это только начало&quot;;
+      const UPDATE_NOTICE_TEXT = `Сезон I подходит к концу. В кафе остаются последние гости, а Зеффи готовится закрыть двери этой главы.
 
-Но прощаться ненадолго: уже 13 сентября стартует Сезон II — «Ночь сладких чудес».
+Уже 13 сентября стартует Сезон II — «Ночь сладких чудес». В этой версии мы подготовили игру к новой главе, обновили обратную связь и поддержку, а также переработали паузу и экран результатов забега.
 
-Мы подготовили для вас много нового:
-
-🌙 новая история и атмосфера;
-🎁 новые сезонные награды;
-🎟 обновлённый сезонный пропуск;
-✅ новые задания и активности;
-✨ новые сюрпризы во время забегов;
-❤️ ещё больше поводов возвращаться в игру каждый день.
-
-До старта нового сезона ещё есть немного времени — проведите последние дни в кафе вместе с Зеффи.
-
-Спасибо, что были с нами в Сезоне I.
-Увидимся 13 сентября в «Ночи сладких чудес»!`;
+Обычный прогресс профиля, коллекции и покупки при смене сезона сохраняются. Спасибо, что были с нами в Сезоне I.`;
       const UPDATE_NOTICE_BUTTON = &quot;Продолжить&quot;;
+      const RELEASE_CENTER_SEASON_2_START_MS = Date.parse(&quot;2026-09-13T00:00:00+03:00&quot;);
+      const RELEASE_CENTER_RELEASES = Object.freeze([
+        Object.freeze({
+          version: &quot;1.2.1&quot;,
+          current: true,
+          type: &quot;Предсезонное обновление&quot;,
+          date: &quot;8 сентября 2026&quot;,
+          title: &quot;Подготовка к «Ночи сладких чудес»&quot;,
+          summary: &quot;Финал Сезона I, подготовка к Сезону II и обновление ключевых игровых сервисов.&quot;,
+          highlights: Object.freeze([
+            Object.freeze({ icon: &quot;/assets/ui/icon_battlepass.png&quot;, title: &quot;Сезон II&quot;, text: &quot;Подготовка к «Ночи сладких чудес» и новой сезонной главе.&quot; }),
+            Object.freeze({ icon: &quot;/assets/ui/icon_oprosnik.png&quot;, title: &quot;Опросы&quot;, text: &quot;Новый удобный формат опросов с наградами за участие.&quot; }),
+            Object.freeze({ icon: &quot;/assets/ui/icon_sepport.png&quot;, title: &quot;Центр помощи&quot;, text: &quot;Обновлённая поддержка с понятными сценариями обращений.&quot; }),
+            Object.freeze({ icon: &quot;/assets/ui/icon_zanovo_button.png&quot;, title: &quot;Забеги&quot;, text: &quot;Новые экраны паузы и результатов с прогрессом и наградами.&quot; })
+          ])
+        }),
+        Object.freeze({
+          version: &quot;1.2.0&quot;,
+          current: false,
+          type: &quot;Большое обновление интерфейса&quot;,
+          date: &quot;Предыдущее крупное обновление&quot;,
+          title: &quot;Новый интерфейс «Сладкого Забега»&quot;,
+          summary: &quot;Переработали основные экраны и сделали прогресс игрока заметнее и удобнее.&quot;,
+          highlights: Object.freeze([
+            Object.freeze({ icon: &quot;/assets/ui/icon_game_button.png&quot;, title: &quot;Новый интерфейс&quot;, text: &quot;Навигация, магазин, профиль и «Мои покупки».&quot; }),
+            Object.freeze({ icon: &quot;/assets/ui/icon_score_acivment.png&quot;, title: &quot;Достижения&quot;, text: &quot;Трофеи, очки достижений и витрина профиля.&quot; }),
+            Object.freeze({ icon: &quot;/assets/ui/icon_albom.png&quot;, title: &quot;Альбом&quot;, text: &quot;Коллекции, прогресс и награды за их завершение.&quot; }),
+            Object.freeze({ icon: &quot;/assets/ui/icon_reiting.png&quot;, title: &quot;Рейтинг&quot;, text: &quot;Обновлённая подача сезонного и личного результата.&quot; })
+          ])
+        })
+      ]);
       const CASE_TUTORIAL_KEY = &quot;cases-tutorial-3-2026-08-27&quot;;
       const RATING_TUTORIAL_KEY = &quot;rating-tutorial-2-2026-08-27&quot;;
 
@@ -15499,6 +15702,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 
       function openSeasonTaskNotice() {
         const notice = activeSeasonTaskNotice;if (!notice?.tasks?.length || !releaseLayer) return;
+        resetReleaseCenterExtras();
         if (tutorialLayer &amp;&amp; !tutorialLayer.hidden) closeTutorial(false);
         if (purchaseLayer &amp;&amp; !purchaseLayer.hidden) closePurchaseLayer();
         if (caseLayer &amp;&amp; !caseLayer.hidden) closeCaseLayer();
@@ -15529,8 +15733,75 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         } else if (pendingReleaseNotice &amp;&amp; UPDATE_NOTICE_ENABLED) scheduleReleaseNotice(260);
       }
 
+      function releaseCenterSeasonStatusText() {
+        const remaining = RELEASE_CENTER_SEASON_2_START_MS - Date.now();
+        if (!Number.isFinite(remaining) || remaining &lt;= 0) return &quot;Сезон II уже начался&quot;;
+        const days = Math.max(1, Math.ceil(remaining / 86400000));
+        return `До Сезона II · ${days} дн.`;
+      }
+
+      function releaseCenterHighlightMarkup(item, compact = false) {
+        const icon = escapeReleaseText(item?.icon || &quot;/assets/ui/error404-no-icon.png&quot;);
+        const title = escapeReleaseText(item?.title || &quot;Обновление&quot;);
+        const text = escapeReleaseText(item?.text || &quot;&quot;);
+        if (compact) return `&lt;span class=&quot;release-history-chip&quot;&gt;&lt;img src=&quot;${icon}&quot; alt=&quot;&quot; aria-hidden=&quot;true&quot; decoding=&quot;async&quot; loading=&quot;lazy&quot;&gt;&lt;span&gt;${title}&lt;/span&gt;&lt;/span&gt;`;
+        return `&lt;div class=&quot;release-center-highlight&quot;&gt;&lt;span class=&quot;release-center-highlight-icon&quot; aria-hidden=&quot;true&quot;&gt;&lt;img src=&quot;${icon}&quot; alt=&quot;&quot; decoding=&quot;async&quot; loading=&quot;lazy&quot;&gt;&lt;/span&gt;&lt;span class=&quot;release-center-highlight-copy&quot;&gt;&lt;strong&gt;${title}&lt;/strong&gt;&lt;span&gt;${text}&lt;/span&gt;&lt;/span&gt;&lt;/div&gt;`;
+      }
+
+      function resetReleaseCenterExtras() {
+        const dialog = releaseLayer?.querySelector(&quot;.release-dialog&quot;);
+        dialog?.classList.remove(&quot;is-release-center&quot;, &quot;is-release-history&quot;);
+        if (releaseCenterSummaryEl) releaseCenterSummaryEl.hidden = true;
+        if (releaseHistoryViewEl) releaseHistoryViewEl.hidden = true;
+        if (releaseHistoryOpenButton) releaseHistoryOpenButton.hidden = true;
+        if (releaseDetailsPanelEl) releaseDetailsPanelEl.hidden = true;
+        if (releaseDetailsButton) releaseDetailsButton.textContent = &quot;Подробнее об обновлении&quot;;
+        if (releaseKickerEl) releaseKickerEl.hidden = false;
+        if (releaseTitleEl) releaseTitleEl.hidden = false;
+        if (releaseCopyEl) releaseCopyEl.hidden = false;
+        if (releaseVersionEl) releaseVersionEl.hidden = false;
+      }
+
+      function renderReleaseHistory() {
+        if (!releaseHistoryListEl) return;
+        releaseHistoryListEl.innerHTML = RELEASE_CENTER_RELEASES.map((release) =&gt; {
+          const chips = (Array.isArray(release.highlights) ? release.highlights : []).slice(0, 4).map((item) =&gt; releaseCenterHighlightMarkup(item, true)).join(&quot;&quot;);
+          return `&lt;article class=&quot;release-history-card${release.current ? &quot; is-current&quot; : &quot;&quot;}&quot;&gt;&lt;div class=&quot;release-history-meta&quot;&gt;&lt;span class=&quot;release-history-version&quot;&gt;Версия ${escapeReleaseText(release.version)}${release.current ? ` &lt;span class=&quot;release-history-current&quot;&gt;Текущая&lt;/span&gt;` : &quot;&quot;}&lt;/span&gt;&lt;span class=&quot;release-history-date&quot;&gt;${escapeReleaseText(release.date || release.type || &quot;&quot;)}&lt;/span&gt;&lt;/div&gt;&lt;h3&gt;${escapeReleaseText(release.title || release.type || `Версия ${release.version}`)}&lt;/h3&gt;&lt;p&gt;${escapeReleaseText(release.summary || &quot;&quot;)}&lt;/p&gt;&lt;div class=&quot;release-history-chips&quot;&gt;${chips}&lt;/div&gt;&lt;/article&gt;`;
+        }).join(&quot;&quot;);
+      }
+
+      function openReleaseHistory() {
+        if (!releaseLayer || releaseNoticeMode !== &quot;update&quot;) return;
+        renderReleaseHistory();
+        const dialog = releaseLayer.querySelector(&quot;.release-dialog&quot;);
+        dialog?.classList.add(&quot;is-release-center&quot;, &quot;is-release-history&quot;);
+        if (releaseHistoryViewEl) releaseHistoryViewEl.hidden = false;
+        if (releaseCenterSummaryEl) releaseCenterSummaryEl.hidden = true;
+        if (releaseHistoryOpenButton) releaseHistoryOpenButton.hidden = true;
+        if (releaseImageWrapEl) releaseImageWrapEl.hidden = true;
+        if (releaseKickerEl) releaseKickerEl.hidden = true;
+        if (releaseTitleEl) releaseTitleEl.hidden = true;
+        if (releaseCopyEl) releaseCopyEl.hidden = true;
+        if (releaseVersionEl) releaseVersionEl.hidden = true;
+        if (releaseCloseButton) releaseCloseButton.textContent = UPDATE_NOTICE_BUTTON;
+        releaseLayer.scrollTop = 0;
+        if (dialog) dialog.scrollTop = 0;
+        hapticSelection(45);
+      }
+
+      function toggleReleaseDetails() {
+        if (!releaseDetailsPanelEl || !releaseDetailsButton) return;
+        const willOpen = releaseDetailsPanelEl.hidden;
+        releaseDetailsPanelEl.hidden = !willOpen;
+        releaseDetailsButton.textContent = willOpen ? &quot;Скрыть подробности&quot; : &quot;Подробнее об обновлении&quot;;
+        if (willOpen) hapticSelection(35);
+      }
+
       function applyBuiltInReleaseContent() {
         releaseNoticeMode = &quot;update&quot;;
+        resetReleaseCenterExtras();
+        const dialog = releaseLayer?.querySelector(&quot;.release-dialog&quot;);
+        dialog?.classList.add(&quot;is-release-center&quot;);
         if (releaseCloseButton) releaseCloseButton.hidden = false;
         if (seasonTaskActionsEl) seasonTaskActionsEl.hidden = true;
         if (releaseImageWrapEl) releaseImageWrapEl.hidden = false;
@@ -15538,20 +15809,36 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           releaseImageEl.src = builtInReleaseImageSrc;
           releaseImageEl.alt = builtInReleaseImageAlt;
         }
-        if (releaseKickerEl) releaseKickerEl.textContent = &quot;Новое обновление&quot;;
+        const currentRelease = RELEASE_CENTER_RELEASES.find((item) =&gt; item.current) || RELEASE_CENTER_RELEASES[0];
+        if (releaseKickerEl) releaseKickerEl.textContent = &quot;Что нового&quot;;
         if (releaseTitleEl) releaseTitleEl.textContent = UPDATE_NOTICE_TITLE;
-        if (releaseCopyEl) releaseCopyEl.innerHTML = escapeReleaseText(UPDATE_NOTICE_TEXT).replace(/\n/g, &quot;&lt;br&gt;&quot;);
+        if (releaseCopyEl) {
+          releaseCopyEl.hidden = true;
+          releaseCopyEl.innerHTML = &quot;&quot;;
+        }
         if (releaseVersionEl) {
           releaseVersionEl.textContent = pendingReleaseWasEconomyReset
             ? `Версия ${GAME_VERSION} · прогрессия сброшена`
-            : `Версия ${GAME_VERSION}`;
+            : `Версия ${GAME_VERSION} · ${currentRelease?.type || &quot;Обновление&quot;}`;
         }
+        if (releaseCenterSummaryEl) releaseCenterSummaryEl.hidden = false;
+        if (releaseSeasonStatusEl) releaseSeasonStatusEl.textContent = releaseCenterSeasonStatusText();
+        if (releaseCenterIntroEl) releaseCenterIntroEl.textContent = currentRelease?.summary || &quot;В игре появились новые возможности и улучшения.&quot;;
+        if (releaseCenterHighlightsEl) releaseCenterHighlightsEl.innerHTML = (currentRelease?.highlights || []).map((item) =&gt; releaseCenterHighlightMarkup(item)).join(&quot;&quot;);
+        if (releaseDetailsPanelEl) {
+          releaseDetailsPanelEl.hidden = true;
+          releaseDetailsPanelEl.innerHTML = escapeReleaseText(UPDATE_NOTICE_TEXT).replace(/\n/g, &quot;&lt;br&gt;&quot;);
+        }
+        if (releaseDetailsButton) releaseDetailsButton.textContent = &quot;Подробнее об обновлении&quot;;
+        if (releaseHistoryOpenButton) releaseHistoryOpenButton.hidden = false;
+        if (releaseHistoryViewEl) releaseHistoryViewEl.hidden = true;
         if (releaseCloseButton) releaseCloseButton.textContent = UPDATE_NOTICE_BUTTON;
       }
 
       function openActiveGameNews() {
         const news = activeGameNews;
         if (!news) return;
+        resetReleaseCenterExtras();
         if (tutorialLayer &amp;&amp; !tutorialLayer.hidden) closeTutorial(false);
         if (purchaseLayer &amp;&amp; !purchaseLayer.hidden) closePurchaseLayer();
         if (caseLayer &amp;&amp; !caseLayer.hidden) closeCaseLayer();
@@ -25269,6 +25556,9 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       if (seasonTaskButton) seasonTaskButton.addEventListener(&quot;click&quot;, openSeasonTaskNotice);
       if (seasonTaskStayButton) seasonTaskStayButton.addEventListener(&quot;click&quot;, () =&gt; finishSeasonTaskNotice(false));
       if (seasonTaskClaimButton) seasonTaskClaimButton.addEventListener(&quot;click&quot;, () =&gt; finishSeasonTaskNotice(true));
+      if (releaseHistoryOpenButton) releaseHistoryOpenButton.addEventListener(&quot;click&quot;, openReleaseHistory);
+      if (releaseHistoryBackButton) releaseHistoryBackButton.addEventListener(&quot;click&quot;, applyBuiltInReleaseContent);
+      if (releaseDetailsButton) releaseDetailsButton.addEventListener(&quot;click&quot;, toggleReleaseDetails);
       if (releaseCloseButton) {
         releaseCloseButton.addEventListener(&quot;click&quot;, closeReleaseNotice);
       }
