@@ -11532,6 +11532,10 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
   &lt;div class=&quot;liveops-run-banner-copy&quot;&gt;&lt;strong data-liveops-run-title&gt;LiveOps&lt;/strong&gt;&lt;span data-liveops-run-meta&gt;&lt;/span&gt;&lt;/div&gt;
 &lt;/div&gt;
 &lt;div class=&quot;stage&quot; data-stage=&quot;&quot;&gt;
+&lt;button aria-label=&quot;Развернуть игру на весь экран&quot; aria-pressed=&quot;false&quot; class=&quot;game-expand-toggle&quot; data-game-expand-toggle title=&quot;На весь экран&quot; type=&quot;button&quot;&gt;
+&lt;svg aria-hidden=&quot;true&quot; class=&quot;game-expand-icon game-expand-icon--expand&quot; viewBox=&quot;0 0 24 24&quot;&gt;&lt;path d=&quot;M8 3H3v5M16 3h5v5M8 21H3v-5M16 21h5v-5&quot;/&gt;&lt;/svg&gt;
+&lt;svg aria-hidden=&quot;true&quot; class=&quot;game-expand-icon game-expand-icon--collapse&quot; viewBox=&quot;0 0 24 24&quot;&gt;&lt;path d=&quot;M9 3v6H3M15 3v6h6M9 21v-6H3M15 21v-6h6&quot;/&gt;&lt;/svg&gt;
+&lt;/button&gt;
 &lt;canvas aria-label=&quot;Мальтипу бежит по витрине кафе, собирает зефир и кофе, перепрыгивает препятствия&quot;&gt;&lt;/canvas&gt;
 &lt;div aria-hidden=&quot;true&quot; class=&quot;stage-status&quot;&gt;
 &lt;span&gt;тап = прыжок&lt;/span&gt;
@@ -12377,6 +12381,9 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       const hapticNotify = (type = &quot;success&quot;) =&gt; requestHaptic(&quot;notification&quot;, type, 0);
       const hapticSelection = (minInterval = 35) =&gt; requestHaptic(&quot;selection&quot;, &quot;&quot;, minInterval);
       const stage = root.querySelector(&quot;[data-stage]&quot;);
+      const gameExpandToggle = root.querySelector(&quot;[data-game-expand-toggle]&quot;);
+      let gameExpanded = false;
+      let gameExpandedScrollY = 0;
       const canvas = root.querySelector(&quot;canvas&quot;);
       const ctx = canvas.getContext(&quot;2d&quot;, { desynchronized: true }) || canvas.getContext(&quot;2d&quot;);
       const scoreEl = root.querySelector(&quot;[data-score]&quot;);
@@ -16442,6 +16449,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           &amp;&amp; Math.abs(canvasViewHeight - rectHeight) &lt; 1.5
           &amp;&amp; Math.abs(canvasPixelRatio - scale) &lt; 0.001;
         if (sameGeometry) return;
+        const previousGroundY = Number(ground.y || 0);
         canvasViewWidth = rectWidth;
         canvasViewHeight = rectHeight;
         canvasPixelRatio = scale;
@@ -16454,12 +16462,24 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         try { ctx.imageSmoothingQuality = &quot;medium&quot;; } catch (error) {}
         dog.x = Math.max(34, canvasViewWidth * 0.105);
         ground.y = canvasViewHeight - Math.max(52, canvasViewHeight * 0.15);
-        dog.y = Math.min(dog.y || 0, ground.y - dog.h);
-        invalidateGameRenderCaches();
-        if (!state.running) {
-          dog.y = ground.y - dog.h;
-          draw();
+        const groundDelta = previousGroundY &gt; 0 ? ground.y - previousGroundY : 0;
+        if (Math.abs(groundDelta) &gt; 0.01) {
+          dog.y = Number(dog.y || 0) + groundDelta;
+          dog.previousY = Number.isFinite(Number(dog.previousY)) ? Number(dog.previousY) + groundDelta : dog.y;
+          for (const item of state.obstacles) item.y = Number(item.y || 0) + groundDelta;
+          for (const item of state.pickups) item.y = Number(item.y || 0) + groundDelta;
+          for (const crumb of state.crumbs) {
+            crumb.y = Number(crumb.y || 0) + groundDelta;
+            crumb.previousY = Number.isFinite(Number(crumb.previousY)) ? Number(crumb.previousY) + groundDelta : crumb.y;
+          }
         }
+        invalidateGameRenderCaches();
+        const idleRun = !state.running &amp;&amp; !state.paused &amp;&amp; !state.over;
+        if (idleRun) {
+          dog.y = ground.y - dog.h;
+          dog.previousY = dog.y;
+        }
+        if (!state.running) draw();
         fitNumericUI();
       }
 
@@ -16469,6 +16489,34 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           resizeFrameId = 0;
           resize();
         });
+      }
+
+      function setGameExpanded(expanded, options = {}) {
+        const next = Boolean(expanded);
+        if (next === gameExpanded) return;
+        const silent = options.silent === true;
+        const restoreScroll = options.restoreScroll !== false;
+        if (next) gameExpandedScrollY = Math.max(0, Number(window.scrollY || window.pageYOffset || 0));
+        gameExpanded = next;
+        root.classList.toggle(&quot;is-game-expanded&quot;, next);
+        document.body.classList.toggle(&quot;zefirok-game-expanded&quot;, next);
+        if (gameExpandToggle) {
+          gameExpandToggle.setAttribute(&quot;aria-pressed&quot;, String(next));
+          gameExpandToggle.setAttribute(&quot;aria-label&quot;, next ? &quot;Свернуть игру&quot; : &quot;Развернуть игру на весь экран&quot;);
+          gameExpandToggle.title = next ? &quot;Свернуть игру&quot; : &quot;На весь экран&quot;;
+        }
+        if (!silent) hapticSelection(0);
+        invalidateGameRenderCaches();
+        scheduleResize();
+        window.requestAnimationFrame(() =&gt; window.requestAnimationFrame(scheduleResize));
+        window.setTimeout(scheduleResize, 80);
+        window.setTimeout(scheduleResize, 220);
+        if (!next &amp;&amp; restoreScroll) {
+          const restoreY = gameExpandedScrollY;
+          window.requestAnimationFrame(() =&gt; {
+            try { window.scrollTo(0, restoreY); } catch (error) {}
+          });
+        }
       }
 
       function reset(preserveButtonVisual = false, preservePauseVisual = false) {
@@ -21878,6 +21926,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       }
 
       function switchScreen(name) {
+        if (name !== &quot;game&quot; &amp;&amp; gameExpanded) setGameExpanded(false, { silent: true, restoreScroll: false });
         const enteringFlashOfferShop = name === &quot;shop&quot; &amp;&amp; flashOfferLastScreen !== &quot;shop&quot;;
         flashOfferLastScreen = name;
         for (const button of tabButtons) button.setAttribute(&quot;aria-selected&quot;, String(button.dataset.tab === name));
@@ -26014,6 +26063,11 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         if (purchaseLayer &amp;&amp; !purchaseLayer.hidden) {
           event.preventDefault();
           closePurchaseLayer();
+          return;
+        }
+        if (gameExpanded) {
+          event.preventDefault();
+          setGameExpanded(false);
         }
       });
 
@@ -26071,9 +26125,16 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           renderSkinsShop();
         }
       });
+      gameExpandToggle?.addEventListener(&quot;pointerdown&quot;, (event) =&gt; event.stopPropagation());
+      gameExpandToggle?.addEventListener(&quot;click&quot;, (event) =&gt; {
+        event.preventDefault();
+        event.stopPropagation();
+        setGameExpanded(!gameExpanded);
+      });
       stage.addEventListener(&quot;pointerdown&quot;, jump);
       root.addEventListener(&quot;keydown&quot;, (event) =&gt; {
         const keyTarget = event.target instanceof Element ? event.target : null;
+        if (keyTarget?.closest(&quot;[data-game-expand-toggle]&quot;)) return;
         if (keyTarget?.closest(&quot;input, textarea, select, [contenteditable=&#x27;true&#x27;], [contenteditable=&#x27;&#x27;]&quot;)) return;
         if ((supportLayer &amp;&amp; !supportLayer.hidden) || (purchaseLayer &amp;&amp; !purchaseLayer.hidden) || (tutorialLayer &amp;&amp; !tutorialLayer.hidden) || (releaseLayer &amp;&amp; !releaseLayer.hidden) || (caseLayer &amp;&amp; !caseLayer.hidden)) return;
         if (event.code === &quot;Space&quot; || event.code === &quot;Enter&quot;) {
@@ -27328,6 +27389,34 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 })();
 &lt;/script&gt;
 
+&lt;style id=&quot;zefirok-game-expanded-v1&quot;&gt;
+#zefirok-maltipoo-runner .game-expand-toggle{position:absolute;top:10px;right:10px;z-index:14;width:42px;height:42px;display:grid;place-items:center;padding:0;border:1px solid rgba(225,189,200,.78);border-radius:14px;background:rgba(255,252,250,.9);color:#9b5870;box-shadow:0 7px 18px rgba(82,60,45,.13);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+#zefirok-maltipoo-runner .game-expand-toggle:active{transform:scale(.94)}
+#zefirok-maltipoo-runner .game-expand-toggle:focus-visible{outline:2px solid rgba(220,91,139,.58);outline-offset:2px}
+#zefirok-maltipoo-runner .game-expand-icon{width:22px;height:22px;display:block;fill:none;stroke:currentColor;stroke-width:2.15;stroke-linecap:round;stroke-linejoin:round}
+#zefirok-maltipoo-runner .game-expand-icon--collapse{display:none}
+#zefirok-maltipoo-runner .stage-status{right:62px}
+html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh);padding:0!important;overflow:hidden!important;overscroll-behavior:none!important;background:#fff9f4!important;touch-action:none!important}
+#zefirok-maltipoo-runner.is-game-expanded{height:var(--zefirok-visible-height,100dvh);overflow:hidden!important;touch-action:none!important}
+#zefirok-maltipoo-runner.is-game-expanded .phone{position:fixed!important;z-index:50;top:0!important;left:50%!important;right:auto!important;transform:translateX(-50%)!important;width:min(430px,calc(100% - max(5px,var(--zefirok-content-safe-left,0px)) - max(5px,var(--zefirok-content-safe-right,0px))))!important;max-width:none!important;height:var(--zefirok-visible-height,100dvh)!important;min-height:0!important;margin:0!important;padding:max(10px,var(--zefirok-content-safe-top,0px)) 14px max(10px,var(--zefirok-content-safe-bottom,0px))!important;border:1px solid transparent!important;border-radius:0!important;background:radial-gradient(circle at 18% 0%,rgba(243,142,170,.13),transparent 30%),linear-gradient(180deg,#fffaf7,#fff)!important;box-shadow:none!important;overflow:hidden!important;display:flex!important;flex-direction:column!important}
+#zefirok-maltipoo-runner.is-game-expanded .brand,#zefirok-maltipoo-runner.is-game-expanded .tabs{display:none!important}
+#zefirok-maltipoo-runner.is-game-expanded [data-screen=&quot;game&quot;]:not([hidden]){display:flex!important;flex:1 1 auto!important;flex-direction:column!important;gap:8px!important;width:100%;height:100%;min-height:0}
+#zefirok-maltipoo-runner.is-game-expanded .hud{grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin:0!important;flex:0 0 auto}
+#zefirok-maltipoo-runner.is-game-expanded .stat{min-height:42px;grid-template-columns:24px minmax(0,1fr);gap:4px;align-items:center;justify-items:stretch;padding:6px 7px;border-radius:14px;box-shadow:0 5px 14px rgba(82,60,45,.08)}
+#zefirok-maltipoo-runner.is-game-expanded .stat-icon{width:24px;height:24px}
+#zefirok-maltipoo-runner.is-game-expanded .stat span{display:none}
+#zefirok-maltipoo-runner.is-game-expanded .stat strong{align-self:center;font-size:clamp(13px,4vw,17px);line-height:1;text-align:right}
+#zefirok-maltipoo-runner.is-game-expanded .liveops-run-banner{flex:0 0 auto;margin:0!important;padding:7px 9px!important;border-radius:13px!important}
+#zefirok-maltipoo-runner.is-game-expanded .stage{flex:1 1 auto!important;width:100%;height:auto!important;min-height:220px;border-radius:20px;box-shadow:inset 0 -40px 90px rgba(166,119,88,.10),0 8px 24px rgba(82,60,45,.10)}
+#zefirok-maltipoo-runner.is-game-expanded .stage-status{display:none!important}
+#zefirok-maltipoo-runner.is-game-expanded .game-expand-toggle{top:10px;left:10px;right:auto;border-radius:50%;background:rgba(255,252,250,.93)}
+#zefirok-maltipoo-runner.is-game-expanded .game-expand-icon--expand{display:none}
+#zefirok-maltipoo-runner.is-game-expanded .game-expand-icon--collapse{display:block}
+#zefirok-maltipoo-runner.is-game-expanded .actions.game-actions-v2{flex:0 0 auto;width:100%;max-width:402px;margin:0 auto!important;padding:0!important}
+#zefirok-maltipoo-runner.is-game-expanded [data-screen=&quot;game&quot;] &gt; .hint{display:none!important}
+@media(max-width:390px){#zefirok-maltipoo-runner.is-game-expanded .phone{padding-left:10px!important;padding-right:10px!important}#zefirok-maltipoo-runner.is-game-expanded .hud{gap:4px}#zefirok-maltipoo-runner.is-game-expanded .stat{min-height:39px;padding:5px 6px;grid-template-columns:22px minmax(0,1fr)}#zefirok-maltipoo-runner.is-game-expanded .stat-icon{width:22px;height:22px}#zefirok-maltipoo-runner.is-game-expanded .game-expand-toggle{width:40px;height:40px}}
+@media(max-height:620px){#zefirok-maltipoo-runner.is-game-expanded .phone{padding-top:max(6px,var(--zefirok-content-safe-top,0px))!important;padding-bottom:max(6px,var(--zefirok-content-safe-bottom,0px))!important}#zefirok-maltipoo-runner.is-game-expanded [data-screen=&quot;game&quot;]{gap:5px!important}#zefirok-maltipoo-runner.is-game-expanded .stat{min-height:36px;padding-block:4px}#zefirok-maltipoo-runner.is-game-expanded .stage{min-height:180px}#zefirok-maltipoo-runner.is-game-expanded .game-action{min-height:48px!important}}
+&lt;/style&gt;
 &lt;/body&gt;
 &lt;/html&gt;" title="Сладкий Забег"></iframe>
 <script id="zefirok-v07934-season-pass-overlay-audit" type="application/json">{"version":"0.79.34","scope":"outer-app-return-recovery","samePageOverlay":true,"mainGamePreserved":true,"restores":["telegram_profile","rating","balances","cases","notifications","feature_flags"]}</script>
