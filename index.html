@@ -9083,6 +9083,12 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       box-sizing: border-box;
       touch-action: manipulation;
     }
+    #zefirok-maltipoo-runner .run-results-card {
+      max-height: calc(100% - 2px);
+      scroll-padding-bottom: 56px;
+      overscroll-behavior: contain;
+      touch-action: pan-y;
+    }
 
     #zefirok-maltipoo-runner .run-pause-card::-webkit-scrollbar,
     #zefirok-maltipoo-runner .run-results-card::-webkit-scrollbar { display:none; }
@@ -9107,8 +9113,16 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
     #zefirok-maltipoo-runner .run-pause-copy,
     #zefirok-maltipoo-runner .run-results-copy { min-width:0; flex:1; }
     #zefirok-maltipoo-runner .run-overlay-kicker { display:flex; flex-wrap:wrap; gap:5px; align-items:center; margin-bottom:2px; }
-    #zefirok-maltipoo-runner .run-overlay-chip { display:inline-flex; align-items:center; min-height:20px; padding:3px 7px; border-radius:999px; background:#fff0f6; color:#a65373; font-size:8px; font-weight:950; letter-spacing:.02em; }
+    #zefirok-maltipoo-runner .run-overlay-chip { display:inline-flex; align-items:center; gap:3px; min-height:20px; padding:3px 7px; border-radius:999px; background:#fff0f6; color:#a65373; font-size:8px; font-weight:950; letter-spacing:.02em; }
     #zefirok-maltipoo-runner .run-overlay-chip.is-premium { background:linear-gradient(135deg,#fff0bd,#eef7cb); color:#786126; border:1px solid rgba(180,148,66,.26); }
+    #zefirok-maltipoo-runner .run-result-inline-icon { width:15px; height:15px; display:inline-block; object-fit:contain; vertical-align:middle; flex:0 0 auto; }
+    #zefirok-maltipoo-runner .run-result-inline-icon.is-chip { width:14px; height:14px; }
+    #zefirok-maltipoo-runner .run-result-inline-icon.is-metric { width:15px; height:15px; }
+    #zefirok-maltipoo-runner .run-result-inline-icon.is-record { width:15px; height:15px; margin-right:3px; }
+    #zefirok-maltipoo-runner .run-result-inline-icon.is-event { width:20px; height:20px; display:block; }
+    #zefirok-maltipoo-runner .run-result-inline-icon.is-state { width:16px; height:16px; }
+    #zefirok-maltipoo-runner .run-result-inline-icon.is-button { width:22px; height:22px; }
+    #zefirok-maltipoo-runner .run-result-inline-icon.is-bonus { width:15px; height:15px; margin-right:2px; }
     #zefirok-maltipoo-runner .run-pause-copy strong,
     #zefirok-maltipoo-runner .run-results-copy strong { display:block; font-size:17px; line-height:1.05; color:#603648; }
     #zefirok-maltipoo-runner .is-alex .run-pause-copy strong,
@@ -9146,27 +9160,28 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
     #zefirok-maltipoo-runner .run-results-score b { display:block; color:#593244; font-size:29px; line-height:.95; font-weight:1000; letter-spacing:-.035em; font-variant-numeric:tabular-nums; }
     #zefirok-maltipoo-runner .is-alex .run-results-score b { color:#66521d; }
     #zefirok-maltipoo-runner .run-results-score span { color:#a17f8c; font-size:8px; font-weight:950; letter-spacing:.12em; }
-    #zefirok-maltipoo-runner .run-record-line { margin:5px auto 0; width:fit-content; max-width:100%; padding:4px 8px; border-radius:999px; background:#fff0f6; color:#a04f70; font-size:8.5px; font-weight:950; text-align:center; }
+    #zefirok-maltipoo-runner .run-record-line { margin:5px auto 0; width:fit-content; max-width:100%; display:flex; align-items:center; justify-content:center; padding:4px 8px; border-radius:999px; background:#fff0f6; color:#a04f70; font-size:8.5px; font-weight:950; text-align:center; }
     #zefirok-maltipoo-runner .run-record-line.is-record { background:linear-gradient(135deg,#fff1bd,#fff8df); color:#8f691e; }
     #zefirok-maltipoo-runner .run-results-metrics { display:grid; grid-template-columns:repeat(3,1fr); gap:5px; margin-top:6px; }
     #zefirok-maltipoo-runner .run-result-metric { padding:5px 4px; border-radius:11px; background:rgba(255,255,255,.76); border:1px solid rgba(230,201,211,.65); text-align:center; }
-    #zefirok-maltipoo-runner .run-result-metric span { display:block; font-size:7.5px; color:#9b7e89; font-weight:850; }
+    #zefirok-maltipoo-runner .run-result-metric span { display:flex; align-items:center; justify-content:center; gap:2px; font-size:7.5px; color:#9b7e89; font-weight:850; }
     #zefirok-maltipoo-runner .run-result-metric b { display:block; margin-top:1px; font-size:10px; color:#6f4757; font-variant-numeric:tabular-nums; }
     #zefirok-maltipoo-runner .run-credit-line { display:flex; justify-content:center; flex-wrap:wrap; gap:4px 8px; margin-top:6px; padding:6px 7px; border-radius:12px; background:#f7fbef; border:1px solid rgba(155,185,98,.28); color:#657640; font-size:8px; font-weight:950; }
     #zefirok-maltipoo-runner .run-skin-bonus { margin-top:5px; padding:5px 7px; border-radius:11px; background:#fff5fa; color:#9b5671; text-align:center; font-size:8px; font-weight:900; }
     #zefirok-maltipoo-runner .run-skin-bonus.is-alex { background:linear-gradient(135deg,#fff2c6,#eef7cf); color:#786125; }
     #zefirok-maltipoo-runner .run-results-events { display:grid; gap:4px; margin-top:6px; }
     #zefirok-maltipoo-runner .run-result-event { display:flex; align-items:center; gap:7px; min-width:0; padding:5px 7px; border-radius:11px; background:rgba(255,255,255,.78); border:1px solid rgba(230,202,211,.62); }
-    #zefirok-maltipoo-runner .run-result-event i { width:22px; height:22px; display:grid; place-items:center; flex:0 0 22px; border-radius:8px; background:#fff2f7; font-style:normal; font-size:13px; }
+    #zefirok-maltipoo-runner .run-result-event i { width:22px; height:22px; display:grid; place-items:center; flex:0 0 22px; border-radius:8px; background:#fff2f7; font-style:normal; }
     #zefirok-maltipoo-runner .run-result-event span { min-width:0; display:grid; gap:1px; }
     #zefirok-maltipoo-runner .run-result-event strong { color:#704657; font-size:8.5px; line-height:1.15; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     #zefirok-maltipoo-runner .run-result-event small { color:#9b818b; font-size:7px; line-height:1.15; }
     #zefirok-maltipoo-runner .run-results-state { display:flex; align-items:center; justify-content:center; gap:6px; margin-top:7px; color:#907581; font-size:8.5px; font-weight:900; text-align:center; }
     #zefirok-maltipoo-runner .run-results-spinner { width:12px; height:12px; border:2px solid rgba(210,132,161,.24); border-top-color:#d45e8a; border-radius:50%; animation:run-results-spin .8s linear infinite; }
     @keyframes run-results-spin { to { transform:rotate(360deg); } }
-    #zefirok-maltipoo-runner .run-results-actions { display:grid; grid-template-columns:1.35fr .85fr; gap:6px; margin-top:7px; }
+    #zefirok-maltipoo-runner .run-results-actions { position:sticky; bottom:-2px; z-index:3; display:grid; grid-template-columns:1.35fr .85fr; gap:6px; margin:7px -3px -3px; padding:7px 3px 3px; background:linear-gradient(180deg,rgba(255,252,253,0),rgba(255,252,253,.98) 34%); }
+    #zefirok-maltipoo-runner .is-alex .run-results-actions { background:linear-gradient(180deg,rgba(255,252,239,0),rgba(255,252,239,.98) 34%); }
     #zefirok-maltipoo-runner .run-results-actions.is-sync-error { grid-template-columns:1.25fr .75fr; }
-    #zefirok-maltipoo-runner .run-results-actions button { min-height:36px; }
+    #zefirok-maltipoo-runner .run-results-actions button { min-height:36px; display:flex; align-items:center; justify-content:center; gap:5px; padding-inline:8px; }
     #zefirok-maltipoo-runner .run-results-card.is-pending .run-results-actions { display:none; }
     #zefirok-maltipoo-runner .run-results-sync-error { margin-top:6px; padding:6px 8px; border-radius:11px; background:#fff5e8; border:1px solid rgba(220,180,111,.4); color:#8b6936; font-size:8px; line-height:1.25; font-weight:800; text-align:center; }
 
@@ -12208,10 +12223,13 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       function flashPauseButtonAndToggle() {
         clearTimeout(pauseVisualTimer);
         setPauseButtonVisual(true);
-        togglePause(true);
-        pauseVisualTimer = window.setTimeout(() =&gt; {
-          setPauseButtonVisual(false);
-        }, 100);
+        try {
+          togglePause(true);
+        } finally {
+          pauseVisualTimer = window.setTimeout(() =&gt; {
+            setPauseButtonVisual(false);
+          }, 100);
+        }
       }
 
       const overlay = root.querySelector(&quot;[data-overlay]&quot;);
@@ -16304,7 +16322,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       }
       function pauseBoosterMarkup() {
         const active = normalizeRunCaseBoosters(state.runCaseBoosters);
-        const items = CASE_BOOSTER_TYPES.filter((type) =&gt; active[type] &amp;&amp; CASE_BOOSTER_CATALOG[type]).map((type) =&gt; {
+        const items = Object.keys(CASE_BOOSTER_CATALOG).filter((type) =&gt; active[type] &amp;&amp; CASE_BOOSTER_CATALOG[type]).map((type) =&gt; {
           const item = CASE_BOOSTER_CATALOG[type];
           return `&lt;span class=&quot;run-booster-chip&quot;&gt;&lt;img src=&quot;${item.src}&quot; alt=&quot;&quot;&gt;&lt;span&gt;${runUiEscape(runBoosterDisplayTitle(type))}&lt;/span&gt;&lt;/span&gt;`;
         });
@@ -16359,6 +16377,27 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         const key = String(type || &quot;small&quot;);
         return key === &quot;legendary&quot; ? &quot;\u041b\u0435\u0433\u0435\u043d\u0434\u0430\u0440\u043d\u044b\u0439 \u043a\u0435\u0439\u0441&quot; : key === &quot;mythic&quot; ? &quot;\u041c\u0438\u0444\u0438\u0447\u0435\u0441\u043a\u0438\u0439 \u043a\u0435\u0439\u0441&quot; : key === &quot;gold&quot; ? &quot;\u0417\u043e\u043b\u043e\u0442\u043e\u0439 \u043a\u0435\u0439\u0441&quot; : key === &quot;sweet&quot; ? &quot;\u0421\u0435\u0440\u0435\u0431\u0440\u044f\u043d\u044b\u0439 \u043a\u0435\u0439\u0441&quot; : &quot;\u041e\u0431\u044b\u0447\u043d\u044b\u0439 \u043a\u0435\u0439\u0441&quot;;
       }
+      const RUN_RESULT_ICONS = Object.freeze({
+        zefir: assetSources.iconTreatPanel || &quot;/assets/ui/error404-no-icon.png&quot;,
+        coffee: assetSources.iconCoffee || &quot;/assets/optimized/v0.79.5/iconCoffee.png?v=0.79.5&quot;,
+        time: assetSources.iconScore || &quot;/assets/optimized/v0.79.5/iconScore.png?v=0.79.5&quot;,
+        record: assetSources.iconRecord || &quot;/assets/optimized/v0.79.5/iconRecord.png?v=0.79.5&quot;,
+        caseDrop: &quot;/assets/ui/icone_cases.png&quot;,
+        achievement: &quot;/assets/ui/icon_score_acivment.png&quot;,
+        task: &quot;/assets/ui/icon_battlepass.png&quot;,
+        season: &quot;/assets/ui/icon_battlepass.png&quot;,
+        rating: &quot;/assets/ui/icon_reiting.png&quot;,
+        saved: &quot;/assets/ui/icon_done_buy.png&quot;,
+        replay: &quot;/assets/ui/icon_zanovo_button.png&quot;,
+        cafe: &quot;/assets/ui/icon_game_button.png&quot;,
+        character: &quot;/assets/ui/icon_skins_buttom.png&quot;
+      });
+      function runResultIconMarkup(src, className = &quot;&quot;) {
+        const iconSrc = runUiEscape(String(src || &quot;&quot;));
+        const iconClass = className ? ` ${runUiEscape(className)}` : &quot;&quot;;
+        return iconSrc ? `&lt;img class=&quot;run-result-inline-icon${iconClass}&quot; src=&quot;${iconSrc}&quot; alt=&quot;&quot; aria-hidden=&quot;true&quot; decoding=&quot;async&quot;&gt;` : &quot;&quot;;
+      }
+
       function runResultsFrame(context, bodyMarkup, className = &quot;&quot;) {
         const skinId = normalizeRunSkinId(context?.skinId || state.runSkinId);
         const character = runCharacterProfile(skinId);
@@ -16375,26 +16414,26 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       function runResultsHeader(context, title, phrase, kicker = &quot;\u0420\u0435\u0437\u0443\u043b\u044c\u0442\u0430\u0442 \u0437\u0430\u0431\u0435\u0433\u0430&quot;) {
         const skinId = normalizeRunSkinId(context?.skinId || state.runSkinId);
         const character = runCharacterProfile(skinId);
-        const chip = character.premium ? `&lt;span class=&quot;run-overlay-chip is-premium&quot;&gt;\ud83d\udc3e \u041e\u0441\u043e\u0431\u044b\u0439 \u043f\u0435\u0440\u0441\u043e\u043d\u0430\u0436 \u00b7 ${character.name}&lt;/span&gt;` : `&lt;span class=&quot;run-overlay-chip&quot;&gt;${runUiEscape(kicker)}&lt;/span&gt;`;
+        const chip = character.premium ? `&lt;span class=&quot;run-overlay-chip is-premium&quot;&gt;${runResultIconMarkup(RUN_RESULT_ICONS.character, &quot;is-chip&quot;)}\u041e\u0441\u043e\u0431\u044b\u0439 \u043f\u0435\u0440\u0441\u043e\u043d\u0430\u0436 \u00b7 ${character.name}&lt;/span&gt;` : `&lt;span class=&quot;run-overlay-chip&quot;&gt;${runUiEscape(kicker)}&lt;/span&gt;`;
         return `&lt;div class=&quot;run-results-head&quot;&gt;&lt;div class=&quot;run-character-portrait&quot;&gt;${runDogPortraitMarkup(skinId)}&lt;/div&gt;&lt;div class=&quot;run-results-copy&quot;&gt;&lt;div class=&quot;run-overlay-kicker&quot;&gt;${chip}&lt;/div&gt;&lt;strong&gt;${runUiEscape(title)}&lt;/strong&gt;&lt;p&gt;${runUiEscape(phrase)}&lt;/p&gt;&lt;/div&gt;&lt;/div&gt;`;
       }
       function showRunResultsPending(context) {
         const character = runCharacterProfile(context.skinId);
-        const body = `${runResultsHeader(context, &quot;\u0421\u043e\u0445\u0440\u0430\u043d\u044f\u0435\u043c \u0437\u0430\u0431\u0435\u0433\u2026&quot;, `${character.name} \u0443\u0436\u0435 \u0444\u0438\u043d\u0438\u0448\u0438\u0440\u043e\u0432\u0430\u043b${character.id === &quot;alex&quot; ? &quot;&quot; : &quot;\u0430&quot;}. \u041f\u0440\u043e\u0432\u0435\u0440\u044f\u0435\u043c \u0440\u0435\u0437\u0443\u043b\u044c\u0442\u0430\u0442 \u043d\u0430 \u0441\u0435\u0440\u0432\u0435\u0440\u0435.`)}&lt;div class=&quot;run-results-score&quot;&gt;&lt;b&gt;${formatter.format(context.score)}&lt;/b&gt;&lt;span&gt;\u041e\u0427\u041a\u0410&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;run-results-metrics&quot;&gt;&lt;span class=&quot;run-result-metric&quot;&gt;&lt;span&gt;\ud83c\udf6c \u0417\u0435\u0444\u0438\u0440&lt;/span&gt;&lt;b&gt;${formatter.format(context.treats)}&lt;/b&gt;&lt;/span&gt;&lt;span class=&quot;run-result-metric&quot;&gt;&lt;span&gt;\u2615 \u041a\u043e\u0444\u0435&lt;/span&gt;&lt;b&gt;${formatter.format(context.coffee)}&lt;/b&gt;&lt;/span&gt;&lt;span class=&quot;run-result-metric&quot;&gt;&lt;span&gt;\u23f1 \u0412\u0440\u0435\u043c\u044f&lt;/span&gt;&lt;b&gt;${runResultDurationLabel(context.durationMs)}&lt;/b&gt;&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;run-results-state&quot;&gt;&lt;i class=&quot;run-results-spinner&quot;&gt;&lt;/i&gt;&lt;span&gt;\u0421\u043e\u0445\u0440\u0430\u043d\u044f\u0435\u043c \u0440\u0435\u0437\u0443\u043b\u044c\u0442\u0430\u0442 \u0438 \u043d\u0430\u0433\u0440\u0430\u0434\u044b\u2026&lt;/span&gt;&lt;/div&gt;`;
+        const body = `${runResultsHeader(context, &quot;\u0421\u043e\u0445\u0440\u0430\u043d\u044f\u0435\u043c \u0437\u0430\u0431\u0435\u0433\u2026&quot;, `${character.name} \u0443\u0436\u0435 \u0444\u0438\u043d\u0438\u0448\u0438\u0440\u043e\u0432\u0430\u043b${character.id === &quot;alex&quot; ? &quot;&quot; : &quot;\u0430&quot;}. \u041f\u0440\u043e\u0432\u0435\u0440\u044f\u0435\u043c \u0440\u0435\u0437\u0443\u043b\u044c\u0442\u0430\u0442 \u043d\u0430 \u0441\u0435\u0440\u0432\u0435\u0440\u0435.`)}&lt;div class=&quot;run-results-score&quot;&gt;&lt;b&gt;${formatter.format(context.score)}&lt;/b&gt;&lt;span&gt;\u041e\u0427\u041a\u0410&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;run-results-metrics&quot;&gt;&lt;span class=&quot;run-result-metric&quot;&gt;&lt;span&gt;${runResultIconMarkup(RUN_RESULT_ICONS.zefir, &quot;is-metric&quot;)}\u0417\u0435\u0444\u0438\u0440&lt;/span&gt;&lt;b&gt;${formatter.format(context.treats)}&lt;/b&gt;&lt;/span&gt;&lt;span class=&quot;run-result-metric&quot;&gt;&lt;span&gt;${runResultIconMarkup(RUN_RESULT_ICONS.coffee, &quot;is-metric&quot;)}\u041a\u043e\u0444\u0435&lt;/span&gt;&lt;b&gt;${formatter.format(context.coffee)}&lt;/b&gt;&lt;/span&gt;&lt;span class=&quot;run-result-metric&quot;&gt;&lt;span&gt;${runResultIconMarkup(RUN_RESULT_ICONS.time, &quot;is-metric&quot;)}\u0412\u0440\u0435\u043c\u044f&lt;/span&gt;&lt;b&gt;${runResultDurationLabel(context.durationMs)}&lt;/b&gt;&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;run-results-state&quot;&gt;&lt;i class=&quot;run-results-spinner&quot;&gt;&lt;/i&gt;&lt;span&gt;\u0421\u043e\u0445\u0440\u0430\u043d\u044f\u0435\u043c \u0440\u0435\u0437\u0443\u043b\u044c\u0442\u0430\u0442 \u0438 \u043d\u0430\u0433\u0440\u0430\u0434\u044b\u2026&lt;/span&gt;&lt;/div&gt;`;
         runResultsFrame(context, body, &quot;is-pending&quot;);
       }
-      function runResultsEventMarkup(icon, title, text) { return `&lt;div class=&quot;run-result-event&quot;&gt;&lt;i&gt;${icon}&lt;/i&gt;&lt;span&gt;&lt;strong&gt;${runUiEscape(title)}&lt;/strong&gt;&lt;small&gt;${runUiEscape(text)}&lt;/small&gt;&lt;/span&gt;&lt;/div&gt;`; }
+      function runResultsEventMarkup(iconSrc, title, text) { return `&lt;div class=&quot;run-result-event&quot;&gt;&lt;i&gt;${runResultIconMarkup(iconSrc, &quot;is-event&quot;)}&lt;/i&gt;&lt;span&gt;&lt;strong&gt;${runUiEscape(title)}&lt;/strong&gt;&lt;small&gt;${runUiEscape(text)}&lt;/small&gt;&lt;/span&gt;&lt;/div&gt;`; }
       function runResultsEvents(payload) {
         const settlement = payload?.runSettlement || {};
         const events = [];
-        if (settlement?.caseDrop?.granted) events.push(runResultsEventMarkup(&quot;\ud83c\udf81&quot;, &quot;\u041a\u0435\u0439\u0441 \u043f\u043e\u0439\u043c\u0430\u043d!&quot;, `${runResultCaseTitle(settlement.caseDrop.type)} \u0434\u043e\u0431\u0430\u0432\u043b\u0435\u043d \u0432 \u043f\u0440\u043e\u0444\u0438\u043b\u044c`));
+        if (settlement?.caseDrop?.granted) events.push(runResultsEventMarkup(RUN_RESULT_ICONS.caseDrop, &quot;\u041a\u0435\u0439\u0441 \u043f\u043e\u0439\u043c\u0430\u043d!&quot;, `${runResultCaseTitle(settlement.caseDrop.type)} \u0434\u043e\u0431\u0430\u0432\u043b\u0435\u043d \u0432 \u043f\u0440\u043e\u0444\u0438\u043b\u044c`));
         const achievement = Array.isArray(payload?.achievementUnlocks) ? payload.achievementUnlocks[0] : null;
-        if (achievement) events.push(runResultsEventMarkup(String(achievement.icon || &quot;\ud83c\udfc5&quot;), &quot;\u041d\u043e\u0432\u043e\u0435 \u0434\u043e\u0441\u0442\u0438\u0436\u0435\u043d\u0438\u0435&quot;, String(achievement.title || &quot;\u0414\u043e\u0441\u0442\u0438\u0436\u0435\u043d\u0438\u0435 \u043e\u0442\u043a\u0440\u044b\u0442\u043e&quot;)));
+        if (achievement) events.push(runResultsEventMarkup(RUN_RESULT_ICONS.achievement, &quot;\u041d\u043e\u0432\u043e\u0435 \u0434\u043e\u0441\u0442\u0438\u0436\u0435\u043d\u0438\u0435&quot;, String(achievement.title || &quot;\u0414\u043e\u0441\u0442\u0438\u0436\u0435\u043d\u0438\u0435 \u043e\u0442\u043a\u0440\u044b\u0442\u043e&quot;)));
         const task = Array.isArray(payload?.seasonPassAward?.taskNotice?.tasks) ? payload.seasonPassAward.taskNotice.tasks[0] : null;
-        if (task) events.push(runResultsEventMarkup(&quot;\ud83d\udccb&quot;, &quot;\u0417\u0430\u0434\u0430\u043d\u0438\u0435 \u0432\u044b\u043f\u043e\u043b\u043d\u0435\u043d\u043e&quot;, String(task.title || &quot;\u0421\u0435\u0437\u043e\u043d\u043d\u043e\u0435 \u0437\u0430\u0434\u0430\u043d\u0438\u0435&quot;)));
+        if (task) events.push(runResultsEventMarkup(RUN_RESULT_ICONS.task, &quot;\u0417\u0430\u0434\u0430\u043d\u0438\u0435 \u0432\u044b\u043f\u043e\u043b\u043d\u0435\u043d\u043e&quot;, String(task.title || &quot;\u0421\u0435\u0437\u043e\u043d\u043d\u043e\u0435 \u0437\u0430\u0434\u0430\u043d\u0438\u0435&quot;)));
         const seasonXp = Math.max(0, Number(payload?.seasonPassAward?.xpAwarded || 0));
-        if (seasonXp &gt; 0) events.push(runResultsEventMarkup(&quot;\ud83c\udf9f&quot;, `+${formatter.format(seasonXp)} XP \u0441\u0435\u0437\u043e\u043d\u0430`, &quot;\u041f\u0440\u043e\u0433\u0440\u0435\u0441\u0441 \u0441\u0435\u0437\u043e\u043d\u043d\u043e\u0433\u043e \u043f\u0440\u043e\u043f\u0443\u0441\u043a\u0430 \u043e\u0431\u043d\u043e\u0432\u043b\u0451\u043d&quot;));
-        if (settlement.acceptedToRating) events.push(runResultsEventMarkup(&quot;\ud83c\udfc6&quot;, &quot;\u0420\u0435\u0437\u0443\u043b\u044c\u0442\u0430\u0442 \u0432 \u0440\u0435\u0439\u0442\u0438\u043d\u0433\u0435&quot;, &quot;\u0421\u0435\u0440\u0432\u0435\u0440 \u043f\u0440\u0438\u043d\u044f\u043b \u0437\u0430\u0431\u0435\u0433&quot;));
+        if (seasonXp &gt; 0) events.push(runResultsEventMarkup(RUN_RESULT_ICONS.season, `+${formatter.format(seasonXp)} XP \u0441\u0435\u0437\u043e\u043d\u0430`, &quot;\u041f\u0440\u043e\u0433\u0440\u0435\u0441\u0441 \u0441\u0435\u0437\u043e\u043d\u043d\u043e\u0433\u043e \u043f\u0440\u043e\u043f\u0443\u0441\u043a\u0430 \u043e\u0431\u043d\u043e\u0432\u043b\u0451\u043d&quot;));
+        if (settlement.acceptedToRating) events.push(runResultsEventMarkup(RUN_RESULT_ICONS.rating, &quot;\u0420\u0435\u0437\u0443\u043b\u044c\u0442\u0430\u0442 \u0432 \u0440\u0435\u0439\u0442\u0438\u043d\u0433\u0435&quot;, &quot;\u0421\u0435\u0440\u0432\u0435\u0440 \u043f\u0440\u0438\u043d\u044f\u043b \u0437\u0430\u0431\u0435\u0433&quot;));
         return events.slice(0, 3);
       }
       function bindRunResultsActions(context) {
@@ -16415,7 +16454,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         const near = !newRecord &amp;&amp; previousBest &gt; score ? previousBest - score : 0;
         const nearLimit = Math.max(250, Math.floor(previousBest * .08));
         const recordLine = newRecord
-          ? `&lt;div class=&quot;run-record-line is-record&quot;&gt;\ud83c\udfc6 \u041d\u043e\u0432\u044b\u0439 \u0440\u0435\u043a\u043e\u0440\u0434${delta ? ` \u00b7 +${formatter.format(delta)}` : &quot;&quot;}&lt;/div&gt;`
+          ? `&lt;div class=&quot;run-record-line is-record&quot;&gt;${runResultIconMarkup(RUN_RESULT_ICONS.record, &quot;is-record&quot;)}\u041d\u043e\u0432\u044b\u0439 \u0440\u0435\u043a\u043e\u0440\u0434${delta ? ` \u00b7 +${formatter.format(delta)}` : &quot;&quot;}&lt;/div&gt;`
           : near &gt; 0 &amp;&amp; near &lt;= nearLimit
             ? `&lt;div class=&quot;run-record-line&quot;&gt;\u0414\u043e \u0440\u0435\u043a\u043e\u0440\u0434\u0430 \u2014 ${formatter.format(near)} \u043e\u0447\u043a\u043e\u0432&lt;/div&gt;`
             : `&lt;div class=&quot;run-record-line&quot;&gt;\u0420\u0435\u043a\u043e\u0440\u0434: ${formatter.format(Math.max(previousBest, score))}&lt;/div&gt;`;
@@ -16426,16 +16465,16 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         if (Number(bonus.treats || 0) &gt; 0) bonusParts.push(`+${formatter.format(Number(bonus.treats))} \u0437\u0435\u0444\u0438\u0440\u0430`);
         if (Number(bonus.coffee || 0) &gt; 0) bonusParts.push(`+${formatter.format(Number(bonus.coffee))} \u043a\u043e\u0444\u0435`);
         const skinTitle = SKIN_CATALOG[skinId]?.title || character.name;
-        const bonusMarkup = bonusParts.length ? `&lt;div class=&quot;run-skin-bonus${character.premium ? &quot; is-alex&quot; : &quot;&quot;}&quot;&gt;${character.premium ? &quot;\ud83d\udc3e &quot; : &quot;&quot;}\u0411\u043e\u043d\u0443\u0441 \u00ab${runUiEscape(skinTitle)}\u00bb: ${runUiEscape(bonusParts.join(&quot; \u00b7 &quot;))}&lt;/div&gt;` : &quot;&quot;;
+        const bonusMarkup = bonusParts.length ? `&lt;div class=&quot;run-skin-bonus${character.premium ? &quot; is-alex&quot; : &quot;&quot;}&quot;&gt;${character.premium ? `${runResultIconMarkup(RUN_RESULT_ICONS.character, &quot;is-bonus&quot;)} ` : &quot;&quot;}\u0411\u043e\u043d\u0443\u0441 \u00ab${runUiEscape(skinTitle)}\u00bb: ${runUiEscape(bonusParts.join(&quot; \u00b7 &quot;))}&lt;/div&gt;` : &quot;&quot;;
         const events = runResultsEvents(payload);
-        const body = `${runResultsHeader(context, newRecord ? &quot;\ud83c\udfc6 \u041d\u043e\u0432\u044b\u0439 \u0440\u0435\u043a\u043e\u0440\u0434!&quot; : &quot;\u0417\u0430\u0431\u0435\u0433 \u0437\u0430\u0432\u0435\u0440\u0448\u0451\u043d!&quot;, phrase)}&lt;div class=&quot;run-results-score&quot;&gt;&lt;b&gt;${formatter.format(score)}&lt;/b&gt;&lt;span&gt;\u041e\u0427\u041a\u0410&lt;/span&gt;&lt;/div&gt;${recordLine}&lt;div class=&quot;run-results-metrics&quot;&gt;&lt;span class=&quot;run-result-metric&quot;&gt;&lt;span&gt;\ud83c\udf6c \u0417\u0435\u0444\u0438\u0440&lt;/span&gt;&lt;b&gt;${formatter.format(Math.max(0, Number(settlement?.raw?.treats ?? context.treats)))}&lt;/b&gt;&lt;/span&gt;&lt;span class=&quot;run-result-metric&quot;&gt;&lt;span&gt;\u2615 \u041a\u043e\u0444\u0435&lt;/span&gt;&lt;b&gt;${formatter.format(Math.max(0, Number(settlement?.raw?.coffee ?? context.coffee)))}&lt;/b&gt;&lt;/span&gt;&lt;span class=&quot;run-result-metric&quot;&gt;&lt;span&gt;\u23f1 \u0412\u0440\u0435\u043c\u044f&lt;/span&gt;&lt;b&gt;${runResultDurationLabel(settlement?.raw?.durationMs ?? context.durationMs)}&lt;/b&gt;&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;run-credit-line&quot;&gt;&lt;span&gt;+${formatter.format(Math.max(0, Number(credited.points || 0)))} \u043e\u0447\u043a\u043e\u0432&lt;/span&gt;&lt;span&gt;+${formatter.format(Math.max(0, Number(credited.treats || 0)))} \u0437\u0435\u0444\u0438\u0440\u0430&lt;/span&gt;&lt;span&gt;+${formatter.format(Math.max(0, Number(credited.coffee || 0)))} \u043a\u043e\u0444\u0435&lt;/span&gt;${Number(settlement.profileXpAwarded || 0) &gt; 0 ? `&lt;span&gt;+${formatter.format(Number(settlement.profileXpAwarded))} XP&lt;/span&gt;` : &quot;&quot;}&lt;/div&gt;${bonusMarkup}${events.length ? `&lt;div class=&quot;run-results-events&quot;&gt;${events.join(&quot;&quot;)}&lt;/div&gt;` : &quot;&quot;}&lt;div class=&quot;run-results-state&quot;&gt;\u0420\u0435\u0437\u0443\u043b\u044c\u0442\u0430\u0442 \u0441\u043e\u0445\u0440\u0430\u043d\u0451\u043d \u2713&lt;/div&gt;&lt;div class=&quot;run-results-actions&quot;&gt;&lt;button type=&quot;button&quot; class=&quot;run-overlay-primary&quot; data-run-results-again&gt;\u25b6 \u0415\u0449\u0451 \u0440\u0430\u0437&lt;/button&gt;&lt;button type=&quot;button&quot; class=&quot;run-overlay-secondary&quot; data-run-results-cafe&gt;\ud83c\udfe0 \u0412 \u043a\u0430\u0444\u0435&lt;/button&gt;&lt;/div&gt;`;
+        const body = `${runResultsHeader(context, newRecord ? &quot;\u041d\u043e\u0432\u044b\u0439 \u0440\u0435\u043a\u043e\u0440\u0434!&quot; : &quot;\u0417\u0430\u0431\u0435\u0433 \u0437\u0430\u0432\u0435\u0440\u0448\u0451\u043d!&quot;, phrase)}&lt;div class=&quot;run-results-score&quot;&gt;&lt;b&gt;${formatter.format(score)}&lt;/b&gt;&lt;span&gt;\u041e\u0427\u041a\u0410&lt;/span&gt;&lt;/div&gt;${recordLine}&lt;div class=&quot;run-results-metrics&quot;&gt;&lt;span class=&quot;run-result-metric&quot;&gt;&lt;span&gt;${runResultIconMarkup(RUN_RESULT_ICONS.zefir, &quot;is-metric&quot;)}\u0417\u0435\u0444\u0438\u0440&lt;/span&gt;&lt;b&gt;${formatter.format(Math.max(0, Number(settlement?.raw?.treats ?? context.treats)))}&lt;/b&gt;&lt;/span&gt;&lt;span class=&quot;run-result-metric&quot;&gt;&lt;span&gt;${runResultIconMarkup(RUN_RESULT_ICONS.coffee, &quot;is-metric&quot;)}\u041a\u043e\u0444\u0435&lt;/span&gt;&lt;b&gt;${formatter.format(Math.max(0, Number(settlement?.raw?.coffee ?? context.coffee)))}&lt;/b&gt;&lt;/span&gt;&lt;span class=&quot;run-result-metric&quot;&gt;&lt;span&gt;${runResultIconMarkup(RUN_RESULT_ICONS.time, &quot;is-metric&quot;)}\u0412\u0440\u0435\u043c\u044f&lt;/span&gt;&lt;b&gt;${runResultDurationLabel(settlement?.raw?.durationMs ?? context.durationMs)}&lt;/b&gt;&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;run-credit-line&quot;&gt;&lt;span&gt;+${formatter.format(Math.max(0, Number(credited.points || 0)))} \u043e\u0447\u043a\u043e\u0432&lt;/span&gt;&lt;span&gt;+${formatter.format(Math.max(0, Number(credited.treats || 0)))} \u0437\u0435\u0444\u0438\u0440\u0430&lt;/span&gt;&lt;span&gt;+${formatter.format(Math.max(0, Number(credited.coffee || 0)))} \u043a\u043e\u0444\u0435&lt;/span&gt;${Number(settlement.profileXpAwarded || 0) &gt; 0 ? `&lt;span&gt;+${formatter.format(Number(settlement.profileXpAwarded))} XP&lt;/span&gt;` : &quot;&quot;}&lt;/div&gt;${bonusMarkup}${events.length ? `&lt;div class=&quot;run-results-events&quot;&gt;${events.join(&quot;&quot;)}&lt;/div&gt;` : &quot;&quot;}&lt;div class=&quot;run-results-state&quot;&gt;${runResultIconMarkup(RUN_RESULT_ICONS.saved, &quot;is-state&quot;)}&lt;span&gt;\u0420\u0435\u0437\u0443\u043b\u044c\u0442\u0430\u0442 \u0441\u043e\u0445\u0440\u0430\u043d\u0451\u043d&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;run-results-actions&quot;&gt;&lt;button type=&quot;button&quot; class=&quot;run-overlay-primary&quot; data-run-results-again&gt;${runResultIconMarkup(RUN_RESULT_ICONS.replay, &quot;is-button&quot;)}&lt;span&gt;\u0415\u0449\u0451 \u0440\u0430\u0437&lt;/span&gt;&lt;/button&gt;&lt;button type=&quot;button&quot; class=&quot;run-overlay-secondary&quot; data-run-results-cafe&gt;${runResultIconMarkup(RUN_RESULT_ICONS.cafe, &quot;is-button&quot;)}&lt;span&gt;\u0412 \u043a\u0430\u0444\u0435&lt;/span&gt;&lt;/button&gt;&lt;/div&gt;`;
         runResultsFrame(context, body);
         bindRunResultsActions(context);
       }
       function renderRunResultsSyncError(context, error = null) {
         const character = runCharacterProfile(context.skinId);
         const message = String(error?.message || &quot;\u0421\u0432\u044f\u0437\u044c \u0441 \u0441\u0435\u0440\u0432\u0435\u0440\u043e\u043c \u043f\u0440\u0435\u0440\u0432\u0430\u043b\u0430\u0441\u044c.&quot;);
-        const body = `${runResultsHeader(context, &quot;\u0417\u0430\u0431\u0435\u0433 \u0436\u0434\u0451\u0442 \u0441\u0438\u043d\u0445\u0440\u043e\u043d\u0438\u0437\u0430\u0446\u0438\u0438&quot;, `${character.name} \u0444\u0438\u043d\u0438\u0448\u0438\u0440\u043e\u0432\u0430\u043b${character.id === &quot;alex&quot; ? &quot;&quot; : &quot;\u0430&quot;}. \u041c\u044b \u043d\u0435 \u043f\u043e\u043a\u0430\u0436\u0435\u043c \u043d\u0430\u0433\u0440\u0430\u0434\u044b, \u043f\u043e\u043a\u0430 \u0441\u0435\u0440\u0432\u0435\u0440 \u0438\u0445 \u043d\u0435 \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0434\u0438\u0442.`)}&lt;div class=&quot;run-results-score&quot;&gt;&lt;b&gt;${formatter.format(context.score)}&lt;/b&gt;&lt;span&gt;\u041e\u0427\u041a\u0410&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;run-results-sync-error&quot;&gt;${runUiEscape(message)}&lt;br&gt;\u0420\u0435\u0437\u0443\u043b\u044c\u0442\u0430\u0442 \u0441\u043e\u0445\u0440\u0430\u043d\u0451\u043d \u043b\u043e\u043a\u0430\u043b\u044c\u043d\u043e \u0438 \u0435\u0433\u043e \u043c\u043e\u0436\u043d\u043e \u043e\u0442\u043f\u0440\u0430\u0432\u0438\u0442\u044c \u043f\u043e\u0432\u0442\u043e\u0440\u043d\u043e.&lt;/div&gt;&lt;div class=&quot;run-results-actions is-sync-error&quot;&gt;&lt;button type=&quot;button&quot; class=&quot;run-overlay-primary&quot; data-run-results-retry&gt;\u21bb \u041f\u043e\u0432\u0442\u043e\u0440\u0438\u0442\u044c \u0441\u043e\u0445\u0440\u0430\u043d\u0435\u043d\u0438\u0435&lt;/button&gt;&lt;button type=&quot;button&quot; class=&quot;run-overlay-secondary&quot; data-run-results-cafe&gt;\ud83c\udfe0 \u0412 \u043a\u0430\u0444\u0435&lt;/button&gt;&lt;/div&gt;`;
+        const body = `${runResultsHeader(context, &quot;\u0417\u0430\u0431\u0435\u0433 \u0436\u0434\u0451\u0442 \u0441\u0438\u043d\u0445\u0440\u043e\u043d\u0438\u0437\u0430\u0446\u0438\u0438&quot;, `${character.name} \u0444\u0438\u043d\u0438\u0448\u0438\u0440\u043e\u0432\u0430\u043b${character.id === &quot;alex&quot; ? &quot;&quot; : &quot;\u0430&quot;}. \u041c\u044b \u043d\u0435 \u043f\u043e\u043a\u0430\u0436\u0435\u043c \u043d\u0430\u0433\u0440\u0430\u0434\u044b, \u043f\u043e\u043a\u0430 \u0441\u0435\u0440\u0432\u0435\u0440 \u0438\u0445 \u043d\u0435 \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0434\u0438\u0442.`)}&lt;div class=&quot;run-results-score&quot;&gt;&lt;b&gt;${formatter.format(context.score)}&lt;/b&gt;&lt;span&gt;\u041e\u0427\u041a\u0410&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;run-results-sync-error&quot;&gt;${runUiEscape(message)}&lt;br&gt;\u0420\u0435\u0437\u0443\u043b\u044c\u0442\u0430\u0442 \u0441\u043e\u0445\u0440\u0430\u043d\u0451\u043d \u043b\u043e\u043a\u0430\u043b\u044c\u043d\u043e \u0438 \u0435\u0433\u043e \u043c\u043e\u0436\u043d\u043e \u043e\u0442\u043f\u0440\u0430\u0432\u0438\u0442\u044c \u043f\u043e\u0432\u0442\u043e\u0440\u043d\u043e.&lt;/div&gt;&lt;div class=&quot;run-results-actions is-sync-error&quot;&gt;&lt;button type=&quot;button&quot; class=&quot;run-overlay-primary&quot; data-run-results-retry&gt;${runResultIconMarkup(RUN_RESULT_ICONS.replay, &quot;is-button&quot;)}&lt;span&gt;\u041f\u043e\u0432\u0442\u043e\u0440\u0438\u0442\u044c \u0441\u043e\u0445\u0440\u0430\u043d\u0435\u043d\u0438\u0435&lt;/span&gt;&lt;/button&gt;&lt;button type=&quot;button&quot; class=&quot;run-overlay-secondary&quot; data-run-results-cafe&gt;${runResultIconMarkup(RUN_RESULT_ICONS.cafe, &quot;is-button&quot;)}&lt;span&gt;\u0412 \u043a\u0430\u0444\u0435&lt;/span&gt;&lt;/button&gt;&lt;/div&gt;`;
         runResultsFrame(context, body);
         overlay.querySelector(&quot;[data-run-results-cafe]&quot;)?.addEventListener(&quot;click&quot;, (event) =&gt; { event.stopPropagation(); overlay.onclick = null; overlay.classList.remove(&quot;is-run-results-modal&quot;); overlay.style.display = &quot;none&quot;; }, { once:true });
         overlay.querySelector(&quot;[data-run-results-retry]&quot;)?.addEventListener(&quot;click&quot;, async (event) =&gt; {
