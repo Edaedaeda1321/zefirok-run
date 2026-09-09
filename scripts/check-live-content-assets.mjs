@@ -27,6 +27,12 @@ function cleanAssetPath(raw) {
   return value.slice(1);
 }
 
+function webpFallbackPath(relativePath) {
+  return /\.(?:png|jpe?g)$/i.test(relativePath)
+    ? relativePath.replace(/\.(?:png|jpe?g)$/i, '.webp')
+    : '';
+}
+
 const required = new Set();
 for (const [start, end] of blockSpecs) {
   const block = sourceBlock(start, end);
@@ -68,10 +74,26 @@ async function exactFile(relativePath) {
 
 const missing = [];
 const unicodeMismatches = [];
+const webpFallbacks = [];
 for (const relativePath of [...required].sort()) {
   const result = await exactFile(relativePath);
+  if (result.kind === 'ok') continue;
+
+  const fallbackPath = webpFallbackPath(relativePath);
+  if (fallbackPath) {
+    const fallbackResult = await exactFile(fallbackPath);
+    if (fallbackResult.kind === 'ok') {
+      webpFallbacks.push({ requested: relativePath, resolved: fallbackPath });
+      continue;
+    }
+    if (fallbackResult.kind === 'unicode-mismatch') {
+      unicodeMismatches.push({ relativePath: fallbackPath, requestedPath: relativePath, ...fallbackResult });
+      continue;
+    }
+  }
+
   if (result.kind === 'unicode-mismatch') unicodeMismatches.push({ relativePath, ...result });
-  else if (result.kind !== 'ok') missing.push(relativePath);
+  else missing.push(relativePath);
 }
 
 if (missing.length || unicodeMismatches.length) {
@@ -86,8 +108,9 @@ if (missing.length || unicodeMismatches.length) {
       console.error('    The visually identical filename on disk uses different Unicode bytes. Rename deploy-addressed assets to ASCII-safe names.');
     }
   }
-  console.error(`\nLive Content asset check failed: ${missing.length} missing, ${unicodeMismatches.length} Unicode mismatch(es), ${required.size} required.`);
+  console.error(`\nLive Content asset check failed: ${missing.length} missing, ${unicodeMismatches.length} Unicode mismatch(es), ${required.size} required, ${webpFallbacks.length} resolved via WebP.`);
   process.exitCode = 1;
 } else {
-  console.log(`Live Content asset check passed: ${required.size} file(s).`);
+  const suffix = webpFallbacks.length ? ` (${webpFallbacks.length} resolved via WebP fallback)` : '';
+  console.log(`Live Content asset check passed: ${required.size} file(s)${suffix}.`);
 }
