@@ -1,4 +1,4 @@
-const SYSTEM_IMAGE_FALLBACK = "/assets/ui/error404-no-icon.png";
+const SYSTEM_IMAGE_FALLBACK = "/assets/ui/error404-no-icon.webp";
 
 const PRODUCTS = Object.freeze({
   zefir: { id: "zefir", title: "Фирменный зефир", prefix: "ZF" },
@@ -191,13 +191,13 @@ const CASE_SKINS = Object.freeze({
 
 const CASE_MUSIC_TRACKS = Object.freeze({
   cafe_run: Object.freeze({ id: "cafe_run", title: "Зефирное кафе", rarity: "common", weight: 0, defaultOwned: true, src: "/assets/sounds/marshmallow_cafe_run_main.ogg" }),
-  legendary_cafe_run: Object.freeze({ id: "legendary_cafe_run", title: "Легендарный забег", rarity: "legendary", weight: 1, legendaryOnly: true, isNew: true, src: "/assets/sounds/marshmallow_cafe_run_legendary.ogg", imageUrl: "/assets/sounds/covers/music_legendary_cafe_run.png" }),
-  legendary_marshmallow_dash_1: Object.freeze({ id: "legendary_marshmallow_dash_1", title: "Зефирный рывок I", rarity: "legendary", weight: 1, legendaryOnly: true, isNew: true, src: "/assets/sounds/marshmallow_dash_1.ogg", imageUrl: "/assets/sounds/covers/music_marshmallow_dash_1.png" }),
-  legendary_marshmallow_dash_2: Object.freeze({ id: "legendary_marshmallow_dash_2", title: "Зефирный рывок II", rarity: "legendary", weight: 1, legendaryOnly: true, isNew: true, src: "/assets/sounds/marshmallow_dash_2.ogg", imageUrl: "/assets/sounds/covers/music_marshmallow_dash_2.png" }),
-  legendary_marshmallow_cafe_dash_1: Object.freeze({ id: "legendary_marshmallow_cafe_dash_1", title: "Кафейный рывок I", rarity: "legendary", weight: 1, legendaryOnly: true, isNew: true, src: "/assets/sounds/marshmallow_cafe_dash_1.ogg?v=0.79.8", imageUrl: "/assets/sounds/covers/music_cafe_dash_1.png" }),
-  legendary_marshmallow_cafe_dash_2: Object.freeze({ id: "legendary_marshmallow_cafe_dash_2", title: "Кафейный рывок II", rarity: "legendary", weight: 1, legendaryOnly: true, isNew: true, src: "/assets/sounds/marshmallow_cafe_dash_2.ogg?v=0.79.8", imageUrl: "/assets/sounds/covers/music_cafe_dash_2.png" }),
-  legendary_marshmallow_dash_3: Object.freeze({ id: "legendary_marshmallow_dash_3", title: "Зефирный рывок III", rarity: "legendary", weight: 1, legendaryOnly: true, isNew: true, src: "/assets/sounds/marshmallow_dash_3.ogg?v=0.79.8", imageUrl: "/assets/sounds/covers/music_marshmallow_dash_3.png" }),
-  legendary_marshmallow_dash_4: Object.freeze({ id: "legendary_marshmallow_dash_4", title: "Зефирный рывок IV", rarity: "legendary", weight: 1, legendaryOnly: true, isNew: true, src: "/assets/sounds/marshmallow_dash_4.ogg?v=0.79.8", imageUrl: "/assets/sounds/covers/music_marshmallow_dash_4.png" })
+  legendary_cafe_run: Object.freeze({ id: "legendary_cafe_run", title: "Легендарный забег", rarity: "legendary", weight: 1, legendaryOnly: true, isNew: true, src: "/assets/sounds/marshmallow_cafe_run_legendary.ogg", imageUrl: "/assets/sounds/covers/music_legendary_cafe_run.webp" }),
+  legendary_marshmallow_dash_1: Object.freeze({ id: "legendary_marshmallow_dash_1", title: "Зефирный рывок I", rarity: "legendary", weight: 1, legendaryOnly: true, isNew: true, src: "/assets/sounds/marshmallow_dash_1.ogg", imageUrl: "/assets/sounds/covers/music_marshmallow_dash_1.webp" }),
+  legendary_marshmallow_dash_2: Object.freeze({ id: "legendary_marshmallow_dash_2", title: "Зефирный рывок II", rarity: "legendary", weight: 1, legendaryOnly: true, isNew: true, src: "/assets/sounds/marshmallow_dash_2.ogg", imageUrl: "/assets/sounds/covers/music_marshmallow_dash_2.webp" }),
+  legendary_marshmallow_cafe_dash_1: Object.freeze({ id: "legendary_marshmallow_cafe_dash_1", title: "Кафейный рывок I", rarity: "legendary", weight: 1, legendaryOnly: true, isNew: true, src: "/assets/sounds/marshmallow_cafe_dash_1.ogg?v=0.79.8", imageUrl: "/assets/sounds/covers/music_cafe_dash_1.webp" }),
+  legendary_marshmallow_cafe_dash_2: Object.freeze({ id: "legendary_marshmallow_cafe_dash_2", title: "Кафейный рывок II", rarity: "legendary", weight: 1, legendaryOnly: true, isNew: true, src: "/assets/sounds/marshmallow_cafe_dash_2.ogg?v=0.79.8", imageUrl: "/assets/sounds/covers/music_cafe_dash_2.webp" }),
+  legendary_marshmallow_dash_3: Object.freeze({ id: "legendary_marshmallow_dash_3", title: "Зефирный рывок III", rarity: "legendary", weight: 1, legendaryOnly: true, isNew: true, src: "/assets/sounds/marshmallow_dash_3.ogg?v=0.79.8", imageUrl: "/assets/sounds/covers/music_marshmallow_dash_3.webp" }),
+  legendary_marshmallow_dash_4: Object.freeze({ id: "legendary_marshmallow_dash_4", title: "Зефирный рывок IV", rarity: "legendary", weight: 1, legendaryOnly: true, isNew: true, src: "/assets/sounds/marshmallow_dash_4.ogg?v=0.79.8", imageUrl: "/assets/sounds/covers/music_marshmallow_dash_4.webp" })
 });
 
 // Скрытый сезонный каталог нескольких сезонов. Часть исторических itemId имеет
@@ -206,64 +206,64 @@ const CASE_MUSIC_TRACKS = Object.freeze({
 // и seasonKey являются источником истины для сезона; публикацией управляет Live Content Manager.
 const FUTURE_SEASON_CONTENT = Object.freeze({
   avatar: Object.freeze({
-    season3_avatar_elite: Object.freeze({ id:"season3_avatar_elite", seasonKey:"season2", title:"Лунная принцесса", rarity:"mythic", imageUrl:"/assets/cases/avatars/avatrs_season2Elit.png" }),
-    season3_avatar_epic: Object.freeze({ id:"season3_avatar_epic", seasonKey:"season2", title:"Вечерняя бариста", rarity:"epic", imageUrl:"/assets/cases/avatars/avatrs_season2Epik.png" }),
-    season3_avatar_epic_2: Object.freeze({ id:"season3_avatar_epic_2", seasonKey:"season2", title:"Бариста на прогулке", rarity:"epic", imageUrl:"/assets/cases/avatars/avatrs_season2Epik2.png" }),
-    season3_avatar_mythic: Object.freeze({ id:"season3_avatar_mythic", seasonKey:"season2", title:"Кофе под луной", rarity:"mythic", imageUrl:"/assets/cases/avatars/avatrs_season2Mifik.png" }),
-    season3_avatar_elite_plus: Object.freeze({ id:"season3_avatar_elite_plus", seasonKey:"season2", title:"Ночная королева", rarity:"legendary", imageUrl:"/assets/rating/frames/profile/Elit+avatrs_season2.png" }),
-    season3_avatar_standard_1: Object.freeze({ id:"season3_avatar_standard_1", title:"Прогулка в саду", rarity:"common", imageUrl:"/assets/cases/avatars/season3_avatar_standard_1.png" }),
-    season3_avatar_standard_2: Object.freeze({ id:"season3_avatar_standard_2", title:"У канала", rarity:"common", imageUrl:"/assets/cases/avatars/season3_avatar_standard_2.png" }),
-    season3_avatar_standard_3: Object.freeze({ id:"season3_avatar_standard_3", title:"Ягодный пикник", rarity:"common", imageUrl:"/assets/cases/avatars/season3_avatar_standard_3.png" }),
-    season3_avatar_epic_new_1: Object.freeze({ id:"season3_avatar_epic_new_1", title:"Цветочная корона", rarity:"epic", imageUrl:"/assets/cases/avatars/season3_avatar_epic_new_1.png" }),
-    season3_avatar_epic_new_2: Object.freeze({ id:"season3_avatar_epic_new_2", title:"Бариста в саду", rarity:"epic", imageUrl:"/assets/cases/avatars/season3_avatar_epic_new_2.png" }),
-    season3_avatar_epic_new_3: Object.freeze({ id:"season3_avatar_epic_new_3", title:"Розовая лапка", rarity:"epic", imageUrl:"/assets/cases/avatars/season3_avatar_epic_new_3.png" }),
-    season3_avatar_mythic_new_1: Object.freeze({ id:"season3_avatar_mythic_new_1", title:"Хрустальная фея", rarity:"mythic", imageUrl:"/assets/cases/avatars/season3_avatar_mythic_new_1.png" }),
-    season3_avatar_mythic_new_2: Object.freeze({ id:"season3_avatar_mythic_new_2", title:"Хрустальное сияние", rarity:"mythic", imageUrl:"/assets/cases/avatars/season3_avatar_mythic_new_2.png" }),
-    season3_avatar_legendary_new_1: Object.freeze({ id:"season3_avatar_legendary_new_1", title:"Золотая корона", rarity:"legendary", imageUrl:"/assets/cases/avatars/season3_avatar_legendary_new_1.png" }),
-    season3_avatar_legendary_new_2: Object.freeze({ id:"season3_avatar_legendary_new_2", title:"Золотое сердце", rarity:"legendary", imageUrl:"/assets/cases/avatars/season3_avatar_legendary_new_2.png" })
+    season3_avatar_elite: Object.freeze({ id:"season3_avatar_elite", seasonKey:"season2", title:"Лунная принцесса", rarity:"mythic", imageUrl:"/assets/cases/avatars/avatrs_season2Elit.webp" }),
+    season3_avatar_epic: Object.freeze({ id:"season3_avatar_epic", seasonKey:"season2", title:"Вечерняя бариста", rarity:"epic", imageUrl:"/assets/cases/avatars/avatrs_season2Epik.webp" }),
+    season3_avatar_epic_2: Object.freeze({ id:"season3_avatar_epic_2", seasonKey:"season2", title:"Бариста на прогулке", rarity:"epic", imageUrl:"/assets/cases/avatars/avatrs_season2Epik2.webp" }),
+    season3_avatar_mythic: Object.freeze({ id:"season3_avatar_mythic", seasonKey:"season2", title:"Кофе под луной", rarity:"mythic", imageUrl:"/assets/cases/avatars/avatrs_season2Mifik.webp" }),
+    season3_avatar_elite_plus: Object.freeze({ id:"season3_avatar_elite_plus", seasonKey:"season2", title:"Ночная королева", rarity:"legendary", imageUrl:"/assets/rating/frames/profile/Elit+avatrs_season2.webp" }),
+    season3_avatar_standard_1: Object.freeze({ id:"season3_avatar_standard_1", title:"Прогулка в саду", rarity:"common", imageUrl:"/assets/cases/avatars/season3_avatar_standard_1.webp" }),
+    season3_avatar_standard_2: Object.freeze({ id:"season3_avatar_standard_2", title:"У канала", rarity:"common", imageUrl:"/assets/cases/avatars/season3_avatar_standard_2.webp" }),
+    season3_avatar_standard_3: Object.freeze({ id:"season3_avatar_standard_3", title:"Ягодный пикник", rarity:"common", imageUrl:"/assets/cases/avatars/season3_avatar_standard_3.webp" }),
+    season3_avatar_epic_new_1: Object.freeze({ id:"season3_avatar_epic_new_1", title:"Цветочная корона", rarity:"epic", imageUrl:"/assets/cases/avatars/season3_avatar_epic_new_1.webp" }),
+    season3_avatar_epic_new_2: Object.freeze({ id:"season3_avatar_epic_new_2", title:"Бариста в саду", rarity:"epic", imageUrl:"/assets/cases/avatars/season3_avatar_epic_new_2.webp" }),
+    season3_avatar_epic_new_3: Object.freeze({ id:"season3_avatar_epic_new_3", title:"Розовая лапка", rarity:"epic", imageUrl:"/assets/cases/avatars/season3_avatar_epic_new_3.webp" }),
+    season3_avatar_mythic_new_1: Object.freeze({ id:"season3_avatar_mythic_new_1", title:"Хрустальная фея", rarity:"mythic", imageUrl:"/assets/cases/avatars/season3_avatar_mythic_new_1.webp" }),
+    season3_avatar_mythic_new_2: Object.freeze({ id:"season3_avatar_mythic_new_2", title:"Хрустальное сияние", rarity:"mythic", imageUrl:"/assets/cases/avatars/season3_avatar_mythic_new_2.webp" }),
+    season3_avatar_legendary_new_1: Object.freeze({ id:"season3_avatar_legendary_new_1", title:"Золотая корона", rarity:"legendary", imageUrl:"/assets/cases/avatars/season3_avatar_legendary_new_1.webp" }),
+    season3_avatar_legendary_new_2: Object.freeze({ id:"season3_avatar_legendary_new_2", title:"Золотое сердце", rarity:"legendary", imageUrl:"/assets/cases/avatars/season3_avatar_legendary_new_2.webp" })
   }),
   frame: Object.freeze({
-    season3_frame_elite_plus: Object.freeze({ id:"season3_frame_elite_plus", seasonKey:"season2", title:"Ночная Королева", rarity:"legendary", imageUrl:"/assets/rating/frames/profile/Elit+ramka_season2_5.png" }),
-    season3_frame_elite_1: Object.freeze({ id:"season3_frame_elite_1", seasonKey:"season2", title:"Ночная принцесса", rarity:"legendary", imageUrl:"/assets/rating/frames/profile/Elitramka_season2_1.png" }),
-    season3_frame_elite_4: Object.freeze({ id:"season3_frame_elite_4", seasonKey:"season2", title:"Премиальные сладости", rarity:"legendary", imageUrl:"/assets/rating/frames/profile/Elitramka_season2_4.png" }),
-    season3_frame_epic: Object.freeze({ id:"season3_frame_epic", seasonKey:"season2", title:"Ночная смена", rarity:"epic", imageUrl:"/assets/rating/frames/profile/epickramka_season2_2.png" }),
-    season3_frame_mythic: Object.freeze({ id:"season3_frame_mythic", seasonKey:"season2", title:"Ночные сладости", rarity:"mythic", imageUrl:"/assets/rating/frames/profile/mifikramka_season2_3.png" }),
-    season3_frame_standard_new_1: Object.freeze({ id:"season3_frame_standard_new_1", title:"Розовый сад", rarity:"common", imageUrl:"/assets/rating/frames/profile/ramka_s3_standart1.png" }),
-    season3_frame_standard_new_2: Object.freeze({ id:"season3_frame_standard_new_2", title:"Садовый бант", rarity:"common", imageUrl:"/assets/rating/frames/profile/ramka_s3_standart2.png" }),
-    season3_frame_standard_new_3: Object.freeze({ id:"season3_frame_standard_new_3", title:"Лунный пруд", rarity:"common", imageUrl:"/assets/rating/frames/profile/ramka_s3_standart3.png" }),
-    season3_frame_epic_new_1: Object.freeze({ id:"season3_frame_epic_new_1", title:"Сакура и фонари", rarity:"epic", imageUrl:"/assets/rating/frames/profile/ramka_s3_epick1.png" }),
-    season3_frame_epic_new_2: Object.freeze({ id:"season3_frame_epic_new_2", title:"Ночной павильон", rarity:"epic", imageUrl:"/assets/rating/frames/profile/ramka_s3_epick2.png" }),
-    season3_frame_epic_new_3: Object.freeze({ id:"season3_frame_epic_new_3", title:"Сердце сада", rarity:"epic", imageUrl:"/assets/rating/frames/profile/ramka_s3_epick3.png" }),
-    season3_frame_mythic_new_1: Object.freeze({ id:"season3_frame_mythic_new_1", title:"Лотосовый сад", rarity:"mythic", imageUrl:"/assets/rating/frames/profile/ramka_s3_mifik1.png" }),
-    season3_frame_mythic_new_2: Object.freeze({ id:"season3_frame_mythic_new_2", title:"Королевская сакура", rarity:"mythic", imageUrl:"/assets/rating/frames/profile/ramka_s3_mifik2.png" }),
-    season3_frame_legendary_new_1: Object.freeze({ id:"season3_frame_legendary_new_1", title:"Золотой сад", rarity:"legendary", imageUrl:"/assets/rating/frames/profile/ramka_s3_legendary1.png" }),
-    season3_frame_legendary_new_2: Object.freeze({ id:"season3_frame_legendary_new_2", title:"Королевский сад", rarity:"legendary", imageUrl:"/assets/rating/frames/profile/ramka_s3_legendary2.png" })
+    season3_frame_elite_plus: Object.freeze({ id:"season3_frame_elite_plus", seasonKey:"season2", title:"Ночная Королева", rarity:"legendary", imageUrl:"/assets/rating/frames/profile/Elit+ramka_season2_5.webp" }),
+    season3_frame_elite_1: Object.freeze({ id:"season3_frame_elite_1", seasonKey:"season2", title:"Ночная принцесса", rarity:"legendary", imageUrl:"/assets/rating/frames/profile/Elitramka_season2_1.webp" }),
+    season3_frame_elite_4: Object.freeze({ id:"season3_frame_elite_4", seasonKey:"season2", title:"Премиальные сладости", rarity:"legendary", imageUrl:"/assets/rating/frames/profile/Elitramka_season2_4.webp" }),
+    season3_frame_epic: Object.freeze({ id:"season3_frame_epic", seasonKey:"season2", title:"Ночная смена", rarity:"epic", imageUrl:"/assets/rating/frames/profile/epickramka_season2_2.webp" }),
+    season3_frame_mythic: Object.freeze({ id:"season3_frame_mythic", seasonKey:"season2", title:"Ночные сладости", rarity:"mythic", imageUrl:"/assets/rating/frames/profile/mifikramka_season2_3.webp" }),
+    season3_frame_standard_new_1: Object.freeze({ id:"season3_frame_standard_new_1", title:"Розовый сад", rarity:"common", imageUrl:"/assets/rating/frames/profile/ramka_s3_standart1.webp" }),
+    season3_frame_standard_new_2: Object.freeze({ id:"season3_frame_standard_new_2", title:"Садовый бант", rarity:"common", imageUrl:"/assets/rating/frames/profile/ramka_s3_standart2.webp" }),
+    season3_frame_standard_new_3: Object.freeze({ id:"season3_frame_standard_new_3", title:"Лунный пруд", rarity:"common", imageUrl:"/assets/rating/frames/profile/ramka_s3_standart3.webp" }),
+    season3_frame_epic_new_1: Object.freeze({ id:"season3_frame_epic_new_1", title:"Сакура и фонари", rarity:"epic", imageUrl:"/assets/rating/frames/profile/ramka_s3_epick1.webp" }),
+    season3_frame_epic_new_2: Object.freeze({ id:"season3_frame_epic_new_2", title:"Ночной павильон", rarity:"epic", imageUrl:"/assets/rating/frames/profile/ramka_s3_epick2.webp" }),
+    season3_frame_epic_new_3: Object.freeze({ id:"season3_frame_epic_new_3", title:"Сердце сада", rarity:"epic", imageUrl:"/assets/rating/frames/profile/ramka_s3_epick3.webp" }),
+    season3_frame_mythic_new_1: Object.freeze({ id:"season3_frame_mythic_new_1", title:"Лотосовый сад", rarity:"mythic", imageUrl:"/assets/rating/frames/profile/ramka_s3_mifik1.webp" }),
+    season3_frame_mythic_new_2: Object.freeze({ id:"season3_frame_mythic_new_2", title:"Королевская сакура", rarity:"mythic", imageUrl:"/assets/rating/frames/profile/ramka_s3_mifik2.webp" }),
+    season3_frame_legendary_new_1: Object.freeze({ id:"season3_frame_legendary_new_1", title:"Золотой сад", rarity:"legendary", imageUrl:"/assets/rating/frames/profile/ramka_s3_legendary1.webp" }),
+    season3_frame_legendary_new_2: Object.freeze({ id:"season3_frame_legendary_new_2", title:"Королевский сад", rarity:"legendary", imageUrl:"/assets/rating/frames/profile/ramka_s3_legendary2.webp" })
   }),
   trail: Object.freeze({
-    season3_trail_epic: Object.freeze({ id:"season3_trail_epic", seasonKey:"season2", title:"Ночной Волшебный след", rarity:"epic", imageUrl:"/assets/cases/trails/Epik_sled_season2.png" }),
-    season3_trail_epic_2: Object.freeze({ id:"season3_trail_epic_2", seasonKey:"season2", title:"Ночной кофейный след", rarity:"epic", imageUrl:"/assets/cases/trails/Epik_sled_season2_2.png" }),
-    season3_trail_legendary_plus: Object.freeze({ id:"season3_trail_legendary_plus", seasonKey:"season2", title:"Ночная королева", rarity:"legendary", imageUrl:"/assets/cases/trails/legendary+_sled_season_2.png" }),
-    season3_trail_legendary: Object.freeze({ id:"season3_trail_legendary", seasonKey:"season2", title:"Воздушные сны", rarity:"legendary", imageUrl:"/assets/cases/trails/Legendary_sled_season2.png" }),
-    season3_trail_mythic: Object.freeze({ id:"season3_trail_mythic", seasonKey:"season2", title:"Ночная принцесса", rarity:"mythic", imageUrl:"/assets/cases/trails/mifik_sled_season2.png" }),
-    season3_trail_standard_new_1: Object.freeze({ id:"season3_trail_standard_new_1", title:"Цветочная лапка", rarity:"common", imageUrl:"/assets/cases/trails/sled_s3_standart1.png" }),
-    season3_trail_standard_new_2: Object.freeze({ id:"season3_trail_standard_new_2", title:"Зелёный сад", rarity:"common", imageUrl:"/assets/cases/trails/sled_s3_standart2.png" }),
-    season3_trail_standard_new_3: Object.freeze({ id:"season3_trail_standard_new_3", title:"Золотая лапка", rarity:"common", imageUrl:"/assets/cases/trails/sled_s3_standart3.png" }),
-    season3_trail_epic_new_1: Object.freeze({ id:"season3_trail_epic_new_1", title:"Розовый след", rarity:"epic", imageUrl:"/assets/cases/trails/sled_s3_epick1.png" }),
-    season3_trail_epic_new_2: Object.freeze({ id:"season3_trail_epic_new_2", title:"Лунная роса", rarity:"epic", imageUrl:"/assets/cases/trails/sled_s3_epick2.png" }),
-    season3_trail_epic_new_3: Object.freeze({ id:"season3_trail_epic_new_3", title:"Садовый след", rarity:"epic", imageUrl:"/assets/cases/trails/sled_s3_epick3.png" }),
-    season3_trail_mythic_new_1: Object.freeze({ id:"season3_trail_mythic_new_1", title:"Изумрудная лапка", rarity:"mythic", imageUrl:"/assets/cases/trails/sled_s3_mifik1.png" }),
-    season3_trail_mythic_new_2: Object.freeze({ id:"season3_trail_mythic_new_2", title:"Хрустальная лапка", rarity:"mythic", imageUrl:"/assets/cases/trails/sled_s3_mifik2.png" }),
-    season3_trail_legendary_new_1: Object.freeze({ id:"season3_trail_legendary_new_1", title:"Королевская лапка", rarity:"legendary", imageUrl:"/assets/cases/trails/sled_s3_legendary1.png" })
+    season3_trail_epic: Object.freeze({ id:"season3_trail_epic", seasonKey:"season2", title:"Ночной Волшебный след", rarity:"epic", imageUrl:"/assets/cases/trails/Epik_sled_season2.webp" }),
+    season3_trail_epic_2: Object.freeze({ id:"season3_trail_epic_2", seasonKey:"season2", title:"Ночной кофейный след", rarity:"epic", imageUrl:"/assets/cases/trails/Epik_sled_season2_2.webp" }),
+    season3_trail_legendary_plus: Object.freeze({ id:"season3_trail_legendary_plus", seasonKey:"season2", title:"Ночная королева", rarity:"legendary", imageUrl:"/assets/cases/trails/legendary+_sled_season_2.webp" }),
+    season3_trail_legendary: Object.freeze({ id:"season3_trail_legendary", seasonKey:"season2", title:"Воздушные сны", rarity:"legendary", imageUrl:"/assets/cases/trails/Legendary_sled_season2.webp" }),
+    season3_trail_mythic: Object.freeze({ id:"season3_trail_mythic", seasonKey:"season2", title:"Ночная принцесса", rarity:"mythic", imageUrl:"/assets/cases/trails/mifik_sled_season2.webp" }),
+    season3_trail_standard_new_1: Object.freeze({ id:"season3_trail_standard_new_1", title:"Цветочная лапка", rarity:"common", imageUrl:"/assets/cases/trails/sled_s3_standart1.webp" }),
+    season3_trail_standard_new_2: Object.freeze({ id:"season3_trail_standard_new_2", title:"Зелёный сад", rarity:"common", imageUrl:"/assets/cases/trails/sled_s3_standart2.webp" }),
+    season3_trail_standard_new_3: Object.freeze({ id:"season3_trail_standard_new_3", title:"Золотая лапка", rarity:"common", imageUrl:"/assets/cases/trails/sled_s3_standart3.webp" }),
+    season3_trail_epic_new_1: Object.freeze({ id:"season3_trail_epic_new_1", title:"Розовый след", rarity:"epic", imageUrl:"/assets/cases/trails/sled_s3_epick1.webp" }),
+    season3_trail_epic_new_2: Object.freeze({ id:"season3_trail_epic_new_2", title:"Лунная роса", rarity:"epic", imageUrl:"/assets/cases/trails/sled_s3_epick2.webp" }),
+    season3_trail_epic_new_3: Object.freeze({ id:"season3_trail_epic_new_3", title:"Садовый след", rarity:"epic", imageUrl:"/assets/cases/trails/sled_s3_epick3.webp" }),
+    season3_trail_mythic_new_1: Object.freeze({ id:"season3_trail_mythic_new_1", title:"Изумрудная лапка", rarity:"mythic", imageUrl:"/assets/cases/trails/sled_s3_mifik1.webp" }),
+    season3_trail_mythic_new_2: Object.freeze({ id:"season3_trail_mythic_new_2", title:"Хрустальная лапка", rarity:"mythic", imageUrl:"/assets/cases/trails/sled_s3_mifik2.webp" }),
+    season3_trail_legendary_new_1: Object.freeze({ id:"season3_trail_legendary_new_1", title:"Королевская лапка", rarity:"legendary", imageUrl:"/assets/cases/trails/sled_s3_legendary1.webp" })
   }),
   skin: Object.freeze({}),
   music: Object.freeze({
-    season3_music_moon_cafe_epic: Object.freeze({ id:"season3_music_moon_cafe_epic", seasonKey:"season2", title:"Лунное зефирное кафе", rarity:"epic", imageUrl:"/assets/sounds/covers/season3_lunar_music.png", audioUrl:"/assets/sounds/moon_marshmallow_cafe_epic.mp3" }),
-    season3_music_moon_cafe_epic_2: Object.freeze({ id:"season3_music_moon_cafe_epic_2", seasonKey:"season2", title:"Лунное зефирное кафе II", rarity:"epic", imageUrl:"/assets/sounds/covers/season3_lunar_music.png", audioUrl:"/assets/sounds/moon_marshmallow_cafe_2_epic.mp3" }),
-    season3_music_lunar_run_legendary: Object.freeze({ id:"season3_music_lunar_run_legendary", seasonKey:"season2", title:"Лунный забег", rarity:"legendary", imageUrl:"/assets/sounds/covers/season3_lunar_music.png", audioUrl:"/assets/sounds/new_song_season2(Legendary).mp3" }),
-    season3_music_lunar_run_mythic: Object.freeze({ id:"season3_music_lunar_run_mythic", seasonKey:"season2", title:"Лунный забег II", rarity:"mythic", imageUrl:"/assets/sounds/covers/season3_lunar_music.png", audioUrl:"/assets/sounds/new_song_season2_2(Mifik).mp3" }),
-    season3_music_puppy_parade_epic: Object.freeze({ id:"season3_music_puppy_parade_epic", title:"Belkino Puppy Parade", rarity:"epic", imageUrl:"/assets/sounds/covers/img_sound_s3.png", audioUrl:"/assets/sounds/season3/belkino_puppy_parade.mp3" }),
-    season3_music_puppy_trails_mythic: Object.freeze({ id:"season3_music_puppy_trails_mythic", title:"Belkino Puppy Trails I", rarity:"mythic", imageUrl:"/assets/sounds/covers/img_sound_s3.png", audioUrl:"/assets/sounds/season3/belkino_puppy_trails_1.mp3" }),
-    season3_music_puppy_trails_legendary: Object.freeze({ id:"season3_music_puppy_trails_legendary", title:"Belkino Puppy Trails II", rarity:"legendary", imageUrl:"/assets/sounds/covers/img_sound_s3.png", audioUrl:"/assets/sounds/season3/belkino_puppy_trails_2.mp3" })
+    season3_music_moon_cafe_epic: Object.freeze({ id:"season3_music_moon_cafe_epic", seasonKey:"season2", title:"Лунное зефирное кафе", rarity:"epic", imageUrl:"/assets/sounds/covers/season3_lunar_music.webp", audioUrl:"/assets/sounds/moon_marshmallow_cafe_epic.mp3" }),
+    season3_music_moon_cafe_epic_2: Object.freeze({ id:"season3_music_moon_cafe_epic_2", seasonKey:"season2", title:"Лунное зефирное кафе II", rarity:"epic", imageUrl:"/assets/sounds/covers/season3_lunar_music.webp", audioUrl:"/assets/sounds/moon_marshmallow_cafe_2_epic.mp3" }),
+    season3_music_lunar_run_legendary: Object.freeze({ id:"season3_music_lunar_run_legendary", seasonKey:"season2", title:"Лунный забег", rarity:"legendary", imageUrl:"/assets/sounds/covers/season3_lunar_music.webp", audioUrl:"/assets/sounds/new_song_season2(Legendary).mp3" }),
+    season3_music_lunar_run_mythic: Object.freeze({ id:"season3_music_lunar_run_mythic", seasonKey:"season2", title:"Лунный забег II", rarity:"mythic", imageUrl:"/assets/sounds/covers/season3_lunar_music.webp", audioUrl:"/assets/sounds/new_song_season2_2(Mifik).mp3" }),
+    season3_music_puppy_parade_epic: Object.freeze({ id:"season3_music_puppy_parade_epic", title:"Belkino Puppy Parade", rarity:"epic", imageUrl:"/assets/sounds/covers/img_sound_s3.webp", audioUrl:"/assets/sounds/season3/belkino_puppy_parade.mp3" }),
+    season3_music_puppy_trails_mythic: Object.freeze({ id:"season3_music_puppy_trails_mythic", title:"Belkino Puppy Trails I", rarity:"mythic", imageUrl:"/assets/sounds/covers/img_sound_s3.webp", audioUrl:"/assets/sounds/season3/belkino_puppy_trails_1.mp3" }),
+    season3_music_puppy_trails_legendary: Object.freeze({ id:"season3_music_puppy_trails_legendary", title:"Belkino Puppy Trails II", rarity:"legendary", imageUrl:"/assets/sounds/covers/img_sound_s3.webp", audioUrl:"/assets/sounds/season3/belkino_puppy_trails_2.mp3" })
   })
 });
 
@@ -283,8 +283,8 @@ const SEASON3_DRAFT_CASE_PRESET = Object.freeze({
   targetTitle: FUTURE_SEASON_CONTENT_LABEL,
   title: "Сезонный кейс · Тайны Белкино",
   description: "Косметика, музыка и ресурсы сезона «Тайны Белкино».",
-  closedImageUrl: "/assets/cases/seasonal/season_case_s3_closed.png",
-  openImageUrl: "/assets/cases/seasonal/season_case_s3_open.png",
+  closedImageUrl: "/assets/cases/seasonal/season_case_s3_closed.webp",
+  openImageUrl: "/assets/cases/seasonal/season_case_s3_open.webp",
   slots: 1,
   duplicatePoints: 5000
 });
@@ -345,7 +345,7 @@ function season2StoryPresetEvents(){
       title:"ГЛАВА I — «После закрытия»",
       pushText:"После закрытия «Зефирка» выглядит иначе. Открылась первая глава ночной истории.",
       pages:[
-        {title:"После закрытия",bodyText:"Зеффи оказывается в ночной версии знакомой «Зефирки».\n\nНо сначала всё выглядит скорее удивительно, чем волшебно.\n\nЗа окном ночь. Луна освещает кафе.",imageUrl:asset("season2_pick.png"),buttonText:"Далее",musicId:""},
+        {title:"После закрытия",bodyText:"Зеффи оказывается в ночной версии знакомой «Зефирки».\n\nНо сначала всё выглядит скорее удивительно, чем волшебно.\n\nЗа окном ночь. Луна освещает кафе.",imageUrl:asset("season2_pick.webp"),buttonText:"Далее",musicId:""},
         {title:"Необычный свет",bodyText:"Некоторые зефирки начинают слегка светиться.",imageUrl:"",buttonText:"Далее",musicId:""},
         {title:"Кафе живёт своей жизнью",bodyText:"Кофейная машина сама готовит чашку кофе.\n\nПо полу появляются маленькие золотые звёздочки.",imageUrl:"",buttonText:"Далее",musicId:""},
         {title:"Путь света",bodyText:"Зеффи замечает, что с каждой собранной зефиркой вокруг становится немного больше света.",imageUrl:"",buttonText:"Завершить главу",musicId:""}
@@ -356,7 +356,7 @@ function season2StoryPresetEvents(){
       title:"ГЛАВА II — «Когда кафе засыпает»",
       pushText:"Ночная «Зефирка» меняется всё сильнее. Открылась новая глава истории.",
       pages:[
-        {title:"Когда кафе засыпает",bodyText:"Чем больше Зеффи бегает, тем сильнее меняется «Зефирка».\n\nНочь уже не просто меняет освещение.",imageUrl:asset("Season2_Pick2.png"),buttonText:"Далее",musicId:""},
+        {title:"Когда кафе засыпает",bodyText:"Чем больше Зеффи бегает, тем сильнее меняется «Зефирка».\n\nНочь уже не просто меняет освещение.",imageUrl:asset("Season2_Pick2.webp"),buttonText:"Далее",musicId:""},
         {title:"Другая сторона кафе",bodyText:"Она словно открывает другую сторону кафе, которую невозможно увидеть днём.",imageUrl:"",buttonText:"Далее",musicId:""},
         {title:"Ночные чудеса",bodyText:"Появляются парящие золотые звёздочки, лунные гирлянды, мерцающие витрины и маленькие светящиеся подарки.",imageUrl:"",buttonText:"Далее",musicId:""},
         {title:"Лунное кафе",bodyText:"В окне появляется отражение огромного месяца. Появляются необычные ночные десерты.\n\nДаже музыка становится более сказочной.",imageUrl:"",buttonText:"Далее",musicId:""},
@@ -368,7 +368,7 @@ function season2StoryPresetEvents(){
       title:"ГЛАВА III — «Тайна лунной зефирки»",
       pushText:"Зеффи нашёл источник необычного света. Продолжение ночной истории уже доступно.",
       pages:[
-        {title:"Тайна лунной зефирки",bodyText:"Зеффи наконец находит источник необычного света.\n\nНа самой дальней полке кафе стоит маленькая коробочка, которую раньше он никогда не видел.",imageUrl:asset("Season2_Pick3.png"),buttonText:"Далее",musicId:""},
+        {title:"Тайна лунной зефирки",bodyText:"Зеффи наконец находит источник необычного света.\n\nНа самой дальней полке кафе стоит маленькая коробочка, которую раньше он никогда не видел.",imageUrl:asset("Season2_Pick3.webp"),buttonText:"Далее",musicId:""},
         {title:"Маленькая коробочка",bodyText:"Она украшена луной и золотыми звёздами.",imageUrl:"",buttonText:"Далее",musicId:""},
         {title:"Первая лунная зефирка",bodyText:"Внутри лежит первая лунная зефирка.\n\nТа самая, с которой всё началось.",imageUrl:"",buttonText:"Далее",musicId:""},
         {title:"Новая записка",bodyText:"Под ней новая записка:\n\n«Некоторые чудеса появляются только для тех, кто продолжает идти вперёд.»",imageUrl:"",buttonText:"Далее",musicId:""},
@@ -380,7 +380,7 @@ function season2StoryPresetEvents(){
       title:"ГЛАВА IV — «Последняя ночь»",
       pushText:"До рассвета остаётся всё меньше времени. Открылась предпоследняя глава истории.",
       pages:[
-        {title:"Последняя ночь",bodyText:"До рассвета остаётся всё меньше времени.\n\nВ кафе начинают постепенно гаснуть звёзды.",imageUrl:asset("Season2_Pick4.png"),buttonText:"Далее",musicId:""},
+        {title:"Последняя ночь",bodyText:"До рассвета остаётся всё меньше времени.\n\nВ кафе начинают постепенно гаснуть звёзды.",imageUrl:asset("Season2_Pick4.webp"),buttonText:"Далее",musicId:""},
         {title:"Перед рассветом",bodyText:"Луна опускается ниже.\n\nЗолотые фонарики один за другим становятся тусклее.",imageUrl:"",buttonText:"Далее",musicId:""},
         {title:"Волшебная ночь заканчивается",bodyText:"Зеффи понимает:\n\nволшебная ночь скоро закончится.",imageUrl:"",buttonText:"Далее",musicId:""},
         {title:"Последние забеги",bodyText:"Он совершает последние забеги, собирает лунные зефирки и кофе и пытается увидеть как можно больше, пока ночная «Зефирка» ещё существует.\n\nНо вместо грусти появляется ощущение, что впереди будет что-то ещё.",imageUrl:"",buttonText:"Далее",musicId:""},
@@ -392,7 +392,7 @@ function season2StoryPresetEvents(){
       title:"⭐ ФИНАЛ СЕЗОНА",
       pushText:"Рассвет уже близко. Финал ночной истории сезона открыт.",
       pages:[
-        {title:"Финал сезона",bodyText:"Зеффи возвращается к стойке.\n\nЗа окном уже начинается рассвет. Огромная луна становится почти прозрачной. Звёзды исчезают.",imageUrl:asset("end_pick.png"),buttonText:"Далее",musicId:""},
+        {title:"Финал сезона",bodyText:"Зеффи возвращается к стойке.\n\nЗа окном уже начинается рассвет. Огромная луна становится почти прозрачной. Звёзды исчезают.",imageUrl:asset("end_pick.webp"),buttonText:"Далее",musicId:""},
         {title:"Утро возвращается",bodyText:"Кафе постепенно возвращается к привычному розово-кремовому виду.\n\nЛунные украшения пропадают. Обычный утренний свет снова заполняет помещение.\n\nКажется, что всё закончилось.",imageUrl:"",buttonText:"Далее",musicId:""},
         {title:"У двери",bodyText:"Зеффи смотрит на место, где впервые лежала лунная зефирка.\n\nТам ничего нет.\n\nОн уже собирается уходить… но замечает возле двери конверт.",imageUrl:"",buttonText:"Далее",musicId:""},
         {title:"Конверт для Зеффи",bodyText:"На этот раз он совсем другой.\n\nНе лунный. Светлый, тёплый, украшенный маленьким зелёным листочком.\n\nНа конверте написано: «Зеффи».",imageUrl:"",buttonText:"Открыть письмо",musicId:""},
@@ -823,7 +823,7 @@ const DEFAULT_SEASON_PASS_ELITE_PLUS_BENEFITS = Object.freeze({
   ])
 });
 const SEASON_PASS_MAX_LEVEL = 50;
-const SEASON_PASS_TREATS_CURRENCY_IMAGE = "/assets/season-pass/zefir_currency.png";
+const SEASON_PASS_TREATS_CURRENCY_IMAGE = "/assets/season-pass/zefir_currency.webp";
 // Balance v4: smooth 50-level curve used by the approved 1.0.9 Season Pass
 // recalculation. Raw player XP is the source of truth and must never be reduced
 // merely because the progression curve changes. Full level 50 = 74 700 XP.
@@ -855,13 +855,13 @@ const LEGACY_SEASON_PASS_LEVEL_START_XP_V1 = Object.freeze((() => {
 })());
 const SEASON_PASS_SPECIAL_XP_X2 = "season_xp_x2";
 const SEASON_PASS_BOOST_REWARDS = Object.freeze({
-  booster_points: Object.freeze({ itemId:"season_booster_points", storedType:"points", kind:"points", title:"×2 очки · 2 забега", imageUrl:"/assets/cases/boosters/1F00010C-F984-4A41-B8B6-8E5CD7DF637A.PNG" }),
-  booster_treats: Object.freeze({ itemId:"season_booster_treats", storedType:"points", kind:"treats", title:"×2 зефир · 2 забега", imageUrl:"/assets/cases/boosters/80C21DC3-04A8-46F7-B8E4-9AC8FE13CCEB.PNG" }),
-  booster_coffee: Object.freeze({ itemId:"season_booster_coffee", storedType:"points", kind:"coffee", title:"×2 кофе · 2 забега", imageUrl:"/assets/cases/boosters/11FDBEBF-D838-4DA5-AA57-9DE0E4BA26AE.PNG" }),
-  booster_shield: Object.freeze({ itemId:"season_booster_shield", storedType:"points", kind:"shield", title:"Щит Зеффи · 1 забег", imageUrl:"/assets/cases/boosters/icon_buster_shit_zeffi.png" }),
-  booster_second_chance: Object.freeze({ itemId:"season_booster_second_chance", storedType:"points", kind:"second_chance", title:"Второй шанс · 1 забег", imageUrl:"/assets/cases/boosters/icon_2shans.png" }),
-  booster_pause: Object.freeze({ itemId:"season_booster_pause", storedType:"points", kind:"pause", title:"Пауза Зеффи · 1 забег", imageUrl:"/assets/cases/boosters/icon_pause_zeffi.png" }),
-  booster_xp: Object.freeze({ itemId:SEASON_PASS_SPECIAL_XP_X2, storedType:"points", kind:"xp", title:"×2 XP сезонного пропуска", imageUrl:"/assets/season-pass/xp_x2.png" })
+  booster_points: Object.freeze({ itemId:"season_booster_points", storedType:"points", kind:"points", title:"×2 очки · 2 забега", imageUrl:"/assets/cases/boosters/1F00010C-F984-4A41-B8B6-8E5CD7DF637A.webp" }),
+  booster_treats: Object.freeze({ itemId:"season_booster_treats", storedType:"points", kind:"treats", title:"×2 зефир · 2 забега", imageUrl:"/assets/cases/boosters/80C21DC3-04A8-46F7-B8E4-9AC8FE13CCEB.webp" }),
+  booster_coffee: Object.freeze({ itemId:"season_booster_coffee", storedType:"points", kind:"coffee", title:"×2 кофе · 2 забега", imageUrl:"/assets/cases/boosters/11FDBEBF-D838-4DA5-AA57-9DE0E4BA26AE.webp" }),
+  booster_shield: Object.freeze({ itemId:"season_booster_shield", storedType:"points", kind:"shield", title:"Щит Зеффи · 1 забег", imageUrl:"/assets/cases/boosters/icon_buster_shit_zeffi.webp" }),
+  booster_second_chance: Object.freeze({ itemId:"season_booster_second_chance", storedType:"points", kind:"second_chance", title:"Второй шанс · 1 забег", imageUrl:"/assets/cases/boosters/icon_2shans.webp" }),
+  booster_pause: Object.freeze({ itemId:"season_booster_pause", storedType:"points", kind:"pause", title:"Пауза Зеффи · 1 забег", imageUrl:"/assets/cases/boosters/icon_pause_zeffi.webp" }),
+  booster_xp: Object.freeze({ itemId:SEASON_PASS_SPECIAL_XP_X2, storedType:"points", kind:"xp", title:"×2 XP сезонного пропуска", imageUrl:"/assets/season-pass/xp_x2.webp" })
 });
 
 function runBoosterDefinition(rawId) {
@@ -889,7 +889,7 @@ function seasonPassProgressionView() {
     overflowAvailableToAll:true,
     existingXpPolicy:'keep_raw_xp_never_reduce',
     balanceVersion:'v4-release',
-    overflowReward:{type:"case",itemId:"gold",title:"Золотой кейс",imageUrl:"/assets/cases/gold_closed.png"}
+    overflowReward:{type:"case",itemId:"gold",title:"Золотой кейс",imageUrl:"/assets/cases/gold_closed.webp"}
   };
 }
 
@@ -905,7 +905,7 @@ function seasonPassOverflowView(xpValue, claimedValue = 0) {
     xp:overflowXp,
     xpWithin:overflowXp % SEASON_PASS_OVERFLOW_LEVEL_XP,
     earned,claimed,available:Math.max(0,earned-claimed),
-    reward:{type:"case",itemId:"gold",title:"Золотой кейс",imageUrl:"/assets/cases/gold_closed.png"}
+    reward:{type:"case",itemId:"gold",title:"Золотой кейс",imageUrl:"/assets/cases/gold_closed.webp"}
   };
 }
 
@@ -1043,7 +1043,7 @@ function seasonPassElitePlusBenefitsView(rawValue, options = {}) {
     const future = Boolean(futureSeasonContentItem(kind,itemId));
     const released = !future || liveContentRouteAllowedCached(kind,itemId,"manual");
     if (publicView && future && !released) {
-      return { kind:"secret", itemId:"", title:"Секретная награда сезона", imageUrl:"/assets/season-pass/season.png?v=07939", future:true, released:false };
+      return { kind:"secret", itemId:"", title:"Секретная награда сезона", imageUrl:"/assets/season-pass/season.webp?v=07939", future:true, released:false };
     }
     return {
       kind, itemId,
@@ -1116,7 +1116,7 @@ function seasonPassStreakProtectionRewardDefinition(value){
   const itemId=String(value?.item_id ?? value?.itemId ?? '').trim();
   const publicType=String(value?.rewardType ?? value?.reward_type ?? '').trim();
   if(itemId!=='streak_protection'&&publicType!=='streak_protection')return null;
-  return {publicType:'streak_protection',storedType:'points',itemId:'streak_protection',title:'Защита серии',imageUrl:'/assets/ui/icon_series_protection.png'};
+  return {publicType:'streak_protection',storedType:'points',itemId:'streak_protection',title:'Защита серии',imageUrl:'/assets/ui/icon_series_protection.webp'};
 }
 
 function seasonPassPublicRewardType(row) {
@@ -1229,16 +1229,16 @@ const DEFAULT_SEASON_REWARD_TITLE = "Легендарный кейс";
 const DEFAULT_SEASON_REWARD_IMAGE_URL = ""; // Пусто = стандартная картинка по типу награды
 const DEFAULT_SEASON_REWARD_ITEM_ID = "legendary";
 const LEADERBOARD_REWARD_ASSETS = Object.freeze({
-  coffee: "/assets/rating/frames/coffee.png",
-  points: "/assets/shop/currency_star_256x256.png",
-  treats: "/assets/shop/dessert_marshmallow_256x256.png",
+  coffee: "/assets/rating/frames/coffee.webp",
+  points: "/assets/shop/currency_star_256x256.webp",
+  treats: "/assets/shop/dessert_marshmallow_256x256.webp",
   case: Object.freeze({
-    small: "/assets/cases/standart_closed.png",
-    sweet: "/assets/cases/Bronze_close.png",
-    gold: "/assets/cases/gold_closed.png",
-    mythic: "/assets/cases/Mifik_case_closed.png",
-    legendary: "/assets/cases/legendary_closed.png",
-    alex: "/assets/cases/alex/alex_case_close.png"
+    small: "/assets/cases/standart_closed.webp",
+    sweet: "/assets/cases/Bronze_close.webp",
+    gold: "/assets/cases/gold_closed.webp",
+    mythic: "/assets/cases/Mifik_case_closed.webp",
+    legendary: "/assets/cases/legendary_closed.webp",
+    alex: "/assets/cases/alex/alex_case_close.webp"
   })
 });
 const DEFAULT_SEASON_REWARD_CLAIM_DAYS = 30;
@@ -1268,7 +1268,7 @@ const DEFAULT_SEASON_RESET_PLAN = Object.freeze({
 });
 
 // Встроенная релизная новость. BOT_NEWS_IMAGE_URL в Cloudflare может переопределить картинку.
-const DEFAULT_BOT_NEWS_IMAGE_URL = `${DEFAULT_GAME_URL.replace(/\/$/, "")}/assets/news/news_post_final_season1.png?v=bedb6870bd5d`;
+const DEFAULT_BOT_NEWS_IMAGE_URL = `${DEFAULT_GAME_URL.replace(/\/$/, "")}/assets/news/news_post_final_season1.webp?v=bedb6870bd5d`;
 const BOT_NEWS_TITLE = "Кафе закрывается… но это только начало 🍰✨";
 const BOT_NEWS_TEXT = `Сезон I подходит к концу. В кафе остаются последние гости, вечер становится тише, а Зеффи готовится закрыть двери этой главы.
 
@@ -2529,12 +2529,12 @@ function dailyLoyaltyCosmeticDefinition(kindValue, itemIdValue, options = {}) {
 function dailyLoyaltyRewardImage(typeValue, itemIdValue = '') {
   const type = String(typeValue || '').trim().toLowerCase();
   const itemId = String(itemIdValue || '').trim();
-  if (type === 'profile_xp' || type === 'season_xp') return '/assets/season-pass/xp.png?v=07939';
+  if (type === 'profile_xp' || type === 'season_xp') return '/assets/season-pass/xp.webp?v=07939';
   if (type === 'seasonal_case') return SYSTEM_IMAGE_FALLBACK;
   if (type === 'booster_points') return SEASON_PASS_BOOST_REWARDS.booster_points.imageUrl;
   if (type === 'booster_treats') return SEASON_PASS_BOOST_REWARDS.booster_treats.imageUrl;
   if (type === 'booster_coffee') return SEASON_PASS_BOOST_REWARDS.booster_coffee.imageUrl;
-  if (type === 'streak_protection') return '/assets/ui/icon_series_protection.png';
+  if (type === 'streak_protection') return '/assets/ui/icon_series_protection.webp';
   if (SEASON_PASS_COSMETIC_KINDS.includes(type)) return seasonPassCosmeticImage(type, itemId);
   return ownerPanelRewardAsset(type === 'zefir' ? 'zefir' : type, itemId);
 }
@@ -5899,40 +5899,40 @@ const ACHIEVEMENTS_V2 = Object.freeze([
 // Conditions keep progressing server-side even while an achievement is waiting for art.
 // The player catalog/showcase only publishes achievements that have a ready badge image.
 const ACHIEVEMENT_ART_BY_ID = Object.freeze({
-  "first-run":"/assets/achievements/badges/first-run.png",
-  "runs-10":"/assets/achievements/badges/runs-10.png",
-  "runs-100":"/assets/achievements/badges/runs-100.png",
-  "runs-250":"/assets/achievements/badges/runs-250.png",
-  "runs-500":"/assets/achievements/badges/runs-500.png",
-  "runs-1000":"/assets/achievements/badges/runs-1000.png",
-  "total-score-5000":"/assets/achievements/badges/total-score-5000.png",
-  "best-score-1000":"/assets/achievements/badges/best-score-1000.png",
-  "best-score-2500":"/assets/achievements/badges/best-score-2500.png",
-  "best-score-5000":"/assets/achievements/badges/best-score-5000.png",
-  "best-score-10000":"/assets/achievements/badges/best-score-10000.png",
-  "run-zefir-25":"/assets/achievements/badges/run-zefir-25.png",
-  "run-coffee-25":"/assets/achievements/badges/run-coffee-25.png",
-  "level-5":"/assets/achievements/badges/level-5.png",
-  "level-10":"/assets/achievements/badges/level-10.png",
-  "level-25":"/assets/achievements/badges/level-25.png",
-  "level-50":"/assets/achievements/badges/level-50.png",
-  "avatar-1":"/assets/achievements/badges/avatar-1.png",
-  "frame-1":"/assets/achievements/badges/frame-1.png",
-  "trail-1":"/assets/achievements/badges/trail-1.png",
-  "music-2":"/assets/achievements/badges/music-2.png",
-  "case-open-1":"/assets/achievements/badges/case-open-1.png",
-  "case-open-10":"/assets/achievements/badges/case-open-10.png",
-  "album-milestone-1":"/assets/achievements/badges/album-milestone-1.png",
-  "album-complete-1":"/assets/achievements/badges/album-complete-1.png",
-  "season-reward-1":"/assets/achievements/badges/season-reward-1.png",
-  "season-reward-10":"/assets/achievements/badges/season-reward-10.png",
-  "referral-1":"/assets/achievements/badges/referral-1.png",
-  "referral-5":"/assets/achievements/badges/referral-5.png"
+  "first-run":"/assets/achievements/badges/first-run.webp",
+  "runs-10":"/assets/achievements/badges/runs-10.webp",
+  "runs-100":"/assets/achievements/badges/runs-100.webp",
+  "runs-250":"/assets/achievements/badges/runs-250.webp",
+  "runs-500":"/assets/achievements/badges/runs-500.webp",
+  "runs-1000":"/assets/achievements/badges/runs-1000.webp",
+  "total-score-5000":"/assets/achievements/badges/total-score-5000.webp",
+  "best-score-1000":"/assets/achievements/badges/best-score-1000.webp",
+  "best-score-2500":"/assets/achievements/badges/best-score-2500.webp",
+  "best-score-5000":"/assets/achievements/badges/best-score-5000.webp",
+  "best-score-10000":"/assets/achievements/badges/best-score-10000.webp",
+  "run-zefir-25":"/assets/achievements/badges/run-zefir-25.webp",
+  "run-coffee-25":"/assets/achievements/badges/run-coffee-25.webp",
+  "level-5":"/assets/achievements/badges/level-5.webp",
+  "level-10":"/assets/achievements/badges/level-10.webp",
+  "level-25":"/assets/achievements/badges/level-25.webp",
+  "level-50":"/assets/achievements/badges/level-50.webp",
+  "avatar-1":"/assets/achievements/badges/avatar-1.webp",
+  "frame-1":"/assets/achievements/badges/frame-1.webp",
+  "trail-1":"/assets/achievements/badges/trail-1.webp",
+  "music-2":"/assets/achievements/badges/music-2.webp",
+  "case-open-1":"/assets/achievements/badges/case-open-1.webp",
+  "case-open-10":"/assets/achievements/badges/case-open-10.webp",
+  "album-milestone-1":"/assets/achievements/badges/album-milestone-1.webp",
+  "album-complete-1":"/assets/achievements/badges/album-complete-1.webp",
+  "season-reward-1":"/assets/achievements/badges/season-reward-1.webp",
+  "season-reward-10":"/assets/achievements/badges/season-reward-10.webp",
+  "referral-1":"/assets/achievements/badges/referral-1.webp",
+  "referral-5":"/assets/achievements/badges/referral-5.webp"
 });
-const ACHIEVEMENT_SECRET_ART_URL = "/assets/achievements/badges/secret-locked.png";
+const ACHIEVEMENT_SECRET_ART_URL = "/assets/achievements/badges/secret-locked.webp";
 const ACHIEVEMENT_BELKINO_ART = Object.freeze({
-  joined:"/assets/achievements/badges/season-belkino-joined.png",
-  complete:"/assets/achievements/badges/season-belkino-complete.png"
+  joined:"/assets/achievements/badges/season-belkino-joined.webp",
+  complete:"/assets/achievements/badges/season-belkino-complete.webp"
 });
 
 function achievementSeasonTitleKey(value) {
@@ -5980,19 +5980,19 @@ const ACHIEVEMENT_SERIES = Object.freeze([
   Object.freeze({id:"season-path",title:"Сезонный путь",category:"seasons",icon:"🎟️",memberIds:Object.freeze(["season-reward-1","season-reward-10"])})
 ]);
 const ACHIEVEMENT_SHOWCASE_STYLES = Object.freeze([
-  Object.freeze({id:"default",title:"Стандартная",description:"Базовая кремово-золотая витрина. Доступна каждому игроку.",unlockType:"default",unlockText:"Доступна всем",category:"base",layout:"standard",rarity:"common",rewardable:false,hidden:false,imageUrl:"/assets/achievements/showcases/Standart_vitrina.png"}),
-  Object.freeze({id:"gold",title:"Золотая",description:"Статусная золотая витрина за постоянный престиж достижений.",unlockType:"rank",minPoints:300,unlockText:"Открывается с ранга «Ветеран»",category:"base",layout:"gold",rarity:"legendary",rewardable:false,hidden:false,imageUrl:"/assets/achievements/showcases/gold_vitrina.png"}),
-  Object.freeze({id:"season_1_cafe",title:"Открытие кафе",description:"Коллекционная витрина первого сезона. После получения навсегда остаётся на аккаунте.",unlockType:"ownership",unlockText:"Архивная сезонная награда. Получается только из назначенной награды сезона.",category:"seasonal",layout:"season1",rarity:"legendary",rewardable:true,hidden:false,seasonLabel:"Сезон 1 · Открытие кафе",imageUrl:"/assets/achievements/showcases/vitrina_s1.png"}),
-  Object.freeze({id:"season_2_night",title:"Ночь сладких чудес",description:"Скрытая коллекционная витрина сезона «Ночь сладких чудес». После получения навсегда остаётся на аккаунте.",unlockType:"ownership",unlockText:"Скрытая витрина. Появится в коллекции после получения.",category:"seasonal",layout:"season2",rarity:"legendary",rewardable:true,hidden:true,seasonLabel:"Сезон 2 · Ночь сладких чудес",imageUrl:"/assets/achievements/showcases/vitrina_s2.png"}),
-  Object.freeze({id:"season_3_belkino",title:"Тайны Белкино",description:"Скрытая коллекционная витрина третьего сезона «Тайны Белкино». После получения навсегда остаётся на аккаунте.",unlockType:"ownership",unlockText:"Скрытая витрина сезона 3. Появится в коллекции после получения.",category:"seasonal",layout:"season3",rarity:"legendary",rewardable:true,hidden:true,seasonLabel:"Сезон 3 · Тайны Белкино",imageUrl:"/assets/achievements/showcases/vitrina_s3.png"}),
-  Object.freeze({id:"special_origins",title:"У истоков",description:"Памятная витрина первых исследователей «Сладкого Забега» — тех, кто вошёл в игру ещё до официального старта и помог Зеффи сделать первые шаги.",unlockType:"ownership",unlockText:"Эту витрину получили только участники BETA-тестирования проекта.",category:"special",layout:"special_origins",rarity:"legendary",rewardable:true,manualOnly:true,hidden:false,seasonLabel:"Особая · BETA-тест",storyTitle:"Для тех, кто был в самом начале",storyText:"До сезонов, рекордов и большого кафе была первая тестовая версия. Эта витрина хранит память об игроках, которые первыми отправились в забег, проверяли механики, находили ошибки и помогали проекту становиться лучше.",obtainText:"Памятная награда участникам BETA-тестирования «Сладкого Забега». Обычным способом получить её нельзя.",imageUrl:"/assets/achievements/showcases/vitrina_At_the_origins.png"}),
-  Object.freeze({id:"special_creator",title:"Создатель Зефирка",description:"Особая витрина команды проекта — знак тех, чьими руками создавался и развивался «Сладкий Забег».",unlockType:"ownership",unlockText:"Выдаётся командой проекта людям, которые непосредственно участвовали в создании игры.",category:"special",layout:"special_creator",rarity:"legendary",rewardable:true,manualOnly:true,hidden:false,seasonLabel:"Особая · Команда проекта",storyTitle:"Часть истории создания",storyText:"Каждый забег, экран и маленькая деталь игры появились благодаря людям, которые создавали проект и помогали ему расти. Эта витрина отмечает тех, чей труд стал частью самого «Сладкого Забега».",obtainText:"Выдаётся вручную участникам команды и людям, внесшим непосредственный вклад в создание и развитие проекта.",imageUrl:"/assets/achievements/showcases/vitrina_creator_zeffirok.png"}),
-  Object.freeze({id:"special_cafe_legend",title:"Легенда кафе",description:"Редкая почётная витрина за исключительный вклад в жизнь кафе и развитие «Сладкого Забега».",unlockType:"ownership",unlockText:"Выдаётся вручную командой проекта за особые заслуги.",category:"special",layout:"special_legend",rarity:"legendary",rewardable:true,manualOnly:true,hidden:false,seasonLabel:"Особая · Легенда кафе",storyTitle:"Имя, которое остаётся в истории",storyText:"Это не сезонная и не покупная награда. «Легенда кафе» отмечает игроков и друзей проекта, чей особый вклад стал заметной частью истории «Сладкого Забега».",obtainText:"Выдаётся вручную командой проекта за особые заслуги. Получить её через магазин, кейсы или сезонный пропуск нельзя.",imageUrl:"/assets/achievements/showcases/vitrina_Legenda_cafe.png"})
+  Object.freeze({id:"default",title:"Стандартная",description:"Базовая кремово-золотая витрина. Доступна каждому игроку.",unlockType:"default",unlockText:"Доступна всем",category:"base",layout:"standard",rarity:"common",rewardable:false,hidden:false,imageUrl:"/assets/achievements/showcases/Standart_vitrina.webp"}),
+  Object.freeze({id:"gold",title:"Золотая",description:"Статусная золотая витрина за постоянный престиж достижений.",unlockType:"rank",minPoints:300,unlockText:"Открывается с ранга «Ветеран»",category:"base",layout:"gold",rarity:"legendary",rewardable:false,hidden:false,imageUrl:"/assets/achievements/showcases/gold_vitrina.webp"}),
+  Object.freeze({id:"season_1_cafe",title:"Открытие кафе",description:"Коллекционная витрина первого сезона. После получения навсегда остаётся на аккаунте.",unlockType:"ownership",unlockText:"Архивная сезонная награда. Получается только из назначенной награды сезона.",category:"seasonal",layout:"season1",rarity:"legendary",rewardable:true,hidden:false,seasonLabel:"Сезон 1 · Открытие кафе",imageUrl:"/assets/achievements/showcases/vitrina_s1.webp"}),
+  Object.freeze({id:"season_2_night",title:"Ночь сладких чудес",description:"Скрытая коллекционная витрина сезона «Ночь сладких чудес». После получения навсегда остаётся на аккаунте.",unlockType:"ownership",unlockText:"Скрытая витрина. Появится в коллекции после получения.",category:"seasonal",layout:"season2",rarity:"legendary",rewardable:true,hidden:true,seasonLabel:"Сезон 2 · Ночь сладких чудес",imageUrl:"/assets/achievements/showcases/vitrina_s2.webp"}),
+  Object.freeze({id:"season_3_belkino",title:"Тайны Белкино",description:"Скрытая коллекционная витрина третьего сезона «Тайны Белкино». После получения навсегда остаётся на аккаунте.",unlockType:"ownership",unlockText:"Скрытая витрина сезона 3. Появится в коллекции после получения.",category:"seasonal",layout:"season3",rarity:"legendary",rewardable:true,hidden:true,seasonLabel:"Сезон 3 · Тайны Белкино",imageUrl:"/assets/achievements/showcases/vitrina_s3.webp"}),
+  Object.freeze({id:"special_origins",title:"У истоков",description:"Памятная витрина первых исследователей «Сладкого Забега» — тех, кто вошёл в игру ещё до официального старта и помог Зеффи сделать первые шаги.",unlockType:"ownership",unlockText:"Эту витрину получили только участники BETA-тестирования проекта.",category:"special",layout:"special_origins",rarity:"legendary",rewardable:true,manualOnly:true,hidden:false,seasonLabel:"Особая · BETA-тест",storyTitle:"Для тех, кто был в самом начале",storyText:"До сезонов, рекордов и большого кафе была первая тестовая версия. Эта витрина хранит память об игроках, которые первыми отправились в забег, проверяли механики, находили ошибки и помогали проекту становиться лучше.",obtainText:"Памятная награда участникам BETA-тестирования «Сладкого Забега». Обычным способом получить её нельзя.",imageUrl:"/assets/achievements/showcases/vitrina_At_the_origins.webp"}),
+  Object.freeze({id:"special_creator",title:"Создатель Зефирка",description:"Особая витрина команды проекта — знак тех, чьими руками создавался и развивался «Сладкий Забег».",unlockType:"ownership",unlockText:"Выдаётся командой проекта людям, которые непосредственно участвовали в создании игры.",category:"special",layout:"special_creator",rarity:"legendary",rewardable:true,manualOnly:true,hidden:false,seasonLabel:"Особая · Команда проекта",storyTitle:"Часть истории создания",storyText:"Каждый забег, экран и маленькая деталь игры появились благодаря людям, которые создавали проект и помогали ему расти. Эта витрина отмечает тех, чей труд стал частью самого «Сладкого Забега».",obtainText:"Выдаётся вручную участникам команды и людям, внесшим непосредственный вклад в создание и развитие проекта.",imageUrl:"/assets/achievements/showcases/vitrina_creator_zeffirok.webp"}),
+  Object.freeze({id:"special_cafe_legend",title:"Легенда кафе",description:"Редкая почётная витрина за исключительный вклад в жизнь кафе и развитие «Сладкого Забега».",unlockType:"ownership",unlockText:"Выдаётся вручную командой проекта за особые заслуги.",category:"special",layout:"special_legend",rarity:"legendary",rewardable:true,manualOnly:true,hidden:false,seasonLabel:"Особая · Легенда кафе",storyTitle:"Имя, которое остаётся в истории",storyText:"Это не сезонная и не покупная награда. «Легенда кафе» отмечает игроков и друзей проекта, чей особый вклад стал заметной частью истории «Сладкого Забега».",obtainText:"Выдаётся вручную командой проекта за особые заслуги. Получить её через магазин, кейсы или сезонный пропуск нельзя.",imageUrl:"/assets/achievements/showcases/vitrina_Legenda_cafe.webp"})
 ]);
 const ACHIEVEMENT_SHOWCASE_STYLE_IDS = Object.freeze(ACHIEVEMENT_SHOWCASE_STYLES.map((item)=>String(item.id)));
 const ACHIEVEMENT_SECRET_TITLE = "Секретное достижение";
 const ACHIEVEMENT_SECRET_DESCRIPTION = "Условие скрыто. Достижение раскроется после выполнения.";
-const ACHIEVEMENT_POINTS_ICON_URL = "/assets/ui/icon_score_acivment.png";
+const ACHIEVEMENT_POINTS_ICON_URL = "/assets/ui/icon_score_acivment.webp";
 const ACHIEVEMENT_POINTS_META = Object.freeze({
   id:"achievementPoints",
   label:"Очки достижений",
@@ -22419,73 +22419,73 @@ const LIVEOPS_CASE_DEFAULTS = Object.freeze({
 
 const LIVEOPS_CONTENT_IMAGES = Object.freeze({
   avatar: Object.freeze({
-    royal: "/assets/cases/avatars/AE100D7E-3441-428C-B67F-C7A46B23F712.PNG",
-    legendary_avatar_1: "/assets/cases/avatars/legendary_avatarka_1.png",
-    legendary_avatar_2: "/assets/cases/avatars/legendary_avatarka_2.png",
-    legendary_avatar_3: "/assets/cases/avatars/legendary_avatarka_3.png",
-    legendary_avatar_4: "/assets/cases/avatars/legendary_avatarka_4.png",
-    legendary_avatar_5: "/assets/cases/avatars/legendary_avatarka_5.png",
-    champion: "/assets/cases/avatars/E8A3AFDB-BCAC-4623-BB8B-C7C429799061.PNG",
-    winter_cocoa: "/assets/cases/avatars/9FEC3750-A0ED-4053-8D12-EABF7798D914.PNG",
-    birthday_gift: "/assets/cases/avatars/64D37092-96E1-48BC-9BC5-BCBE99E15E02.PNG",
-    sweet_dreams: "/assets/cases/avatars/478DBDFA-BE30-4EF5-904E-59F205056E62.PNG",
-    strawberry_cake: "/assets/cases/avatars/1454DD0F-5B8E-4931-99CD-E249D9066526.PNG",
-    coffee_barista: "/assets/cases/avatars/42185960-59F9-4C06-8665-94B0A7621034.PNG",
-    marshmallow_cloud: "/assets/cases/avatars/A34D0D9F-4BF6-4618-8E2B-3D4833CED067.PNG",
-    pink_hearts: "/assets/cases/avatars/E74178F8-3156-4301-8559-D818D85404DA.PNG",
-    sakura: "/assets/cases/avatars/F1680265-2EC6-4028-9FED-E26997442675.PNG",
-    alex_avatar_1: "/assets/cases/avatars/alex_avatar_1.png",
-    alex_avatar_2: "/assets/cases/avatars/alex_avatar_2.png",
-    achievement_avatar_score: "/assets/cases/avatars/achievements/achievement_score.png",
-    achievement_avatar_coffee: "/assets/cases/avatars/achievements/achievement_coffee.png",
-    achievement_avatar_zefir: "/assets/cases/avatars/achievements/achievement_zefir.png",
-    achievement_avatar_runs: "/assets/cases/avatars/achievements/achievement_runs.png",
-    achievement_avatar_records: "/assets/cases/avatars/achievements/achievement_records.png",
-    achievement_avatar_paws: "/assets/cases/avatars/achievements/achievement_paws.png",
-    achievement_avatar_case: "/assets/cases/avatars/achievements/achievement_case.png",
-    achievement_avatar_music: "/assets/cases/avatars/achievements/achievement_music.png",
-    achievement_avatar_friend: "/assets/cases/avatars/achievements/achievement_friend.png",
-    achievement_avatar_albums: "/assets/cases/avatars/achievements/achievement_albums.png"
+    royal: "/assets/cases/avatars/AE100D7E-3441-428C-B67F-C7A46B23F712.webp",
+    legendary_avatar_1: "/assets/cases/avatars/legendary_avatarka_1.webp",
+    legendary_avatar_2: "/assets/cases/avatars/legendary_avatarka_2.webp",
+    legendary_avatar_3: "/assets/cases/avatars/legendary_avatarka_3.webp",
+    legendary_avatar_4: "/assets/cases/avatars/legendary_avatarka_4.webp",
+    legendary_avatar_5: "/assets/cases/avatars/legendary_avatarka_5.webp",
+    champion: "/assets/cases/avatars/E8A3AFDB-BCAC-4623-BB8B-C7C429799061.webp",
+    winter_cocoa: "/assets/cases/avatars/9FEC3750-A0ED-4053-8D12-EABF7798D914.webp",
+    birthday_gift: "/assets/cases/avatars/64D37092-96E1-48BC-9BC5-BCBE99E15E02.webp",
+    sweet_dreams: "/assets/cases/avatars/478DBDFA-BE30-4EF5-904E-59F205056E62.webp",
+    strawberry_cake: "/assets/cases/avatars/1454DD0F-5B8E-4931-99CD-E249D9066526.webp",
+    coffee_barista: "/assets/cases/avatars/42185960-59F9-4C06-8665-94B0A7621034.webp",
+    marshmallow_cloud: "/assets/cases/avatars/A34D0D9F-4BF6-4618-8E2B-3D4833CED067.webp",
+    pink_hearts: "/assets/cases/avatars/E74178F8-3156-4301-8559-D818D85404DA.webp",
+    sakura: "/assets/cases/avatars/F1680265-2EC6-4028-9FED-E26997442675.webp",
+    alex_avatar_1: "/assets/cases/avatars/alex_avatar_1.webp",
+    alex_avatar_2: "/assets/cases/avatars/alex_avatar_2.webp",
+    achievement_avatar_score: "/assets/cases/avatars/achievements/achievement_score.webp",
+    achievement_avatar_coffee: "/assets/cases/avatars/achievements/achievement_coffee.webp",
+    achievement_avatar_zefir: "/assets/cases/avatars/achievements/achievement_zefir.webp",
+    achievement_avatar_runs: "/assets/cases/avatars/achievements/achievement_runs.webp",
+    achievement_avatar_records: "/assets/cases/avatars/achievements/achievement_records.webp",
+    achievement_avatar_paws: "/assets/cases/avatars/achievements/achievement_paws.webp",
+    achievement_avatar_case: "/assets/cases/avatars/achievements/achievement_case.webp",
+    achievement_avatar_music: "/assets/cases/avatars/achievements/achievement_music.webp",
+    achievement_avatar_friend: "/assets/cases/avatars/achievements/achievement_friend.webp",
+    achievement_avatar_albums: "/assets/cases/avatars/achievements/achievement_albums.webp"
   }),
   frame: Object.freeze({
-    heart: "/assets/rating/frames/profile/ramka_profile_sedce.png",
-    marshmallow: "/assets/rating/frames/profile/ramka_profile_zefir.png",
-    coffee: "/assets/rating/frames/profile/ramka_profile_coffie.png",
-    strawberry: "/assets/rating/frames/profile/ramka_profile_klybnika.png",
-    winter: "/assets/rating/frames/profile/ramka_profile_zima.png",
-    sleep: "/assets/rating/frames/profile/ramka_profile_sleep.png",
-    lovers: "/assets/rating/frames/profile/ramka_profile_lovers.png",
-    elite: "/assets/rating/frames/profile/ramka_profile_elita.png",
-    princess: "/assets/rating/frames/profile/ramka_profile_princess.png",
-    legendary_frame_1: "/assets/rating/frames/profile/legendary_ramka_1.png",
-    legendary_frame_2: "/assets/rating/frames/profile/legendary_ramka_2.png",
-    legendary_frame_3: "/assets/rating/frames/profile/legendary_ramka_3.png",
-    legendary_frame_4: "/assets/rating/frames/profile/legendary_ramka_4.png",
-    legendary_frame_5: "/assets/rating/frames/profile/legendary_ramka_5.png",
-    alex_frame_1: "/assets/rating/frames/profile/ramka_alex_1.png",
-    alex_frame_2: "/assets/rating/frames/profile/ramka_alex_2.png"
+    heart: "/assets/rating/frames/profile/ramka_profile_sedce.webp",
+    marshmallow: "/assets/rating/frames/profile/ramka_profile_zefir.webp",
+    coffee: "/assets/rating/frames/profile/ramka_profile_coffie.webp",
+    strawberry: "/assets/rating/frames/profile/ramka_profile_klybnika.webp",
+    winter: "/assets/rating/frames/profile/ramka_profile_zima.webp",
+    sleep: "/assets/rating/frames/profile/ramka_profile_sleep.webp",
+    lovers: "/assets/rating/frames/profile/ramka_profile_lovers.webp",
+    elite: "/assets/rating/frames/profile/ramka_profile_elita.webp",
+    princess: "/assets/rating/frames/profile/ramka_profile_princess.webp",
+    legendary_frame_1: "/assets/rating/frames/profile/legendary_ramka_1.webp",
+    legendary_frame_2: "/assets/rating/frames/profile/legendary_ramka_2.webp",
+    legendary_frame_3: "/assets/rating/frames/profile/legendary_ramka_3.webp",
+    legendary_frame_4: "/assets/rating/frames/profile/legendary_ramka_4.webp",
+    legendary_frame_5: "/assets/rating/frames/profile/legendary_ramka_5.webp",
+    alex_frame_1: "/assets/rating/frames/profile/ramka_alex_1.webp",
+    alex_frame_2: "/assets/rating/frames/profile/ramka_alex_2.webp"
   }),
   trail: Object.freeze({
-    marshmallow: "/assets/cases/trails/BBFD9E7E-393D-4B0A-B990-CC93BFCFB505.PNG",
-    coffee: "/assets/cases/trails/244230CD-1043-4087-A5AC-E5BEBF949C22.PNG",
-    marshmallow_splash: "/assets/cases/trails/7F194357-28F3-4CC0-BD09-D4937777E361.PNG",
-    strawberry: "/assets/cases/trails/6A8C47A2-F099-40A9-8270-A676725538D8.PNG",
-    gold: "/assets/cases/trails/1C180321-0C98-48DD-9B43-0F6E5D3B61EA.PNG",
-    legendary_trail_1: "/assets/cases/trails/legendary_trail_1_season2.png",
-    legendary_trail_2: "/assets/cases/trails/legendary_trail_2_season2.png",
-    legendary_trail_3: "/assets/cases/trails/legendary_trail_3_season2.png",
-    legendary_trail_4: "/assets/cases/trails/legendary_trail_4_season2.png",
-    legendary_trail_5: "/assets/cases/trails/legendary_trail_5_season2.png?v=45",
-    alex_trail: "/assets/cases/trails/sled_alex_collectia.png"
+    marshmallow: "/assets/cases/trails/BBFD9E7E-393D-4B0A-B990-CC93BFCFB505.webp",
+    coffee: "/assets/cases/trails/244230CD-1043-4087-A5AC-E5BEBF949C22.webp",
+    marshmallow_splash: "/assets/cases/trails/7F194357-28F3-4CC0-BD09-D4937777E361.webp",
+    strawberry: "/assets/cases/trails/6A8C47A2-F099-40A9-8270-A676725538D8.webp",
+    gold: "/assets/cases/trails/1C180321-0C98-48DD-9B43-0F6E5D3B61EA.webp",
+    legendary_trail_1: "/assets/cases/trails/legendary_trail_1_season2.webp",
+    legendary_trail_2: "/assets/cases/trails/legendary_trail_2_season2.webp",
+    legendary_trail_3: "/assets/cases/trails/legendary_trail_3_season2.webp",
+    legendary_trail_4: "/assets/cases/trails/legendary_trail_4_season2.webp",
+    legendary_trail_5: "/assets/cases/trails/legendary_trail_5_season2.webp?v=45",
+    alex_trail: "/assets/cases/trails/sled_alex_collectia.webp"
   }),
   skin: Object.freeze({
-    barista: "/assets/skins/avatars/barista.png",
-    strawberry: "/assets/skins/avatars/strawberry.png",
-    bee: "/assets/skins/avatars/bee.png",
-    sailor: "/assets/skins/avatars/sailor.png",
-    princess: "/assets/skins/avatars/princess.png",
-    angel: "/assets/skins/avatars/angel.png",
-    alex: "/assets/skins/avatars/alex.png"
+    barista: "/assets/skins/avatars/barista.webp",
+    strawberry: "/assets/skins/avatars/strawberry.webp",
+    bee: "/assets/skins/avatars/bee.webp",
+    sailor: "/assets/skins/avatars/sailor.webp",
+    princess: "/assets/skins/avatars/princess.webp",
+    angel: "/assets/skins/avatars/angel.webp",
+    alex: "/assets/skins/avatars/alex.webp"
   })
 });
 
@@ -30228,29 +30228,29 @@ function defaultSeasonPassReward(levelValue,laneValue) {
   const level = Math.max(1,Math.min(SEASON_PASS_MAX_LEVEL,Math.floor(Number(levelValue)||1)));
   const lane = laneValue === 'premium' ? 'premium' : 'free';
   const tier = Math.floor((level - 1) / 10);
-  const makeCase = (itemId,title) => ({rewardType:'case',amount:1,itemId,title,imageUrl:({small:'/assets/cases/standart_closed.png',sweet:'/assets/cases/Bronze_close.png',gold:'/assets/cases/gold_closed.png',mythic:'/assets/cases/Mifik_case_closed.png',legendary:'/assets/cases/legendary_closed.png',alex:'/assets/cases/alex/alex_case_close.png'})[itemId]});
+  const makeCase = (itemId,title) => ({rewardType:'case',amount:1,itemId,title,imageUrl:({small:'/assets/cases/standart_closed.webp',sweet:'/assets/cases/Bronze_close.webp',gold:'/assets/cases/gold_closed.webp',mythic:'/assets/cases/Mifik_case_closed.webp',legendary:'/assets/cases/legendary_closed.webp',alex:'/assets/cases/alex/alex_case_close.webp'})[itemId]});
   if (lane === 'premium') {
     if (level === 50) return makeCase('legendary','Легендарный кейс');
     if (level % 10 === 0) return makeCase('gold','Золотой кейс');
     if (level % 5 === 0) return makeCase('sweet','Серебряный кейс');
     if (level % 4 === 0) return makeCase('small','Обычный кейс');
     if (level % 3 === 1) return {rewardType:'treats',amount:80+tier*15,itemId:'',title:`${80+tier*15} зефира`,imageUrl:SEASON_PASS_TREATS_CURRENCY_IMAGE};
-    if (level % 3 === 2) return {rewardType:'coffee',amount:25+tier*5,itemId:'',title:`${25+tier*5} кофе`,imageUrl:'/assets/optimized/v0.79.5/iconCoffee.png'};
-    return {rewardType:'points',amount:2000+tier*500,itemId:'',title:`${2000+tier*500} очков`,imageUrl:'/assets/optimized/v0.79.5/iconScore.png'};
+    if (level % 3 === 2) return {rewardType:'coffee',amount:25+tier*5,itemId:'',title:`${25+tier*5} кофе`,imageUrl:'/assets/optimized/v0.79.5/iconCoffee.webp'};
+    return {rewardType:'points',amount:2000+tier*500,itemId:'',title:`${2000+tier*500} очков`,imageUrl:'/assets/optimized/v0.79.5/iconScore.webp'};
   }
   if (level === 50) return makeCase('gold','Золотой кейс');
   if ([40,45,48].includes(level)) return makeCase('sweet','Серебряный кейс');
   if (level % 5 === 0) return makeCase('small','Обычный кейс');
   if (level % 3 === 1) return {rewardType:'treats',amount:35+tier*8,itemId:'',title:`${35+tier*8} зефира`,imageUrl:SEASON_PASS_TREATS_CURRENCY_IMAGE};
-  if (level % 3 === 2) return {rewardType:'coffee',amount:10+tier*4,itemId:'',title:`${10+tier*4} кофе`,imageUrl:'/assets/optimized/v0.79.5/iconCoffee.png'};
-  return {rewardType:'points',amount:700+tier*300,itemId:'',title:`${700+tier*300} очков`,imageUrl:'/assets/optimized/v0.79.5/iconScore.png'};
+  if (level % 3 === 2) return {rewardType:'coffee',amount:10+tier*4,itemId:'',title:`${10+tier*4} кофе`,imageUrl:'/assets/optimized/v0.79.5/iconCoffee.webp'};
+  return {rewardType:'points',amount:700+tier*300,itemId:'',title:`${700+tier*300} очков`,imageUrl:'/assets/optimized/v0.79.5/iconScore.webp'};
 }
 
 function seasonPassResourceRewardAsset(kindValue) {
   const normalized = String(kindValue || '').toLowerCase();
-  if (normalized === 'points') return '/assets/optimized/v0.79.5/iconScore.png';
+  if (normalized === 'points') return '/assets/optimized/v0.79.5/iconScore.webp';
   if (normalized === 'treats' || normalized === 'zefir') return SEASON_PASS_TREATS_CURRENCY_IMAGE;
-  if (normalized === 'coffee') return '/assets/optimized/v0.79.5/iconCoffee.png';
+  if (normalized === 'coffee') return '/assets/optimized/v0.79.5/iconCoffee.webp';
   return '';
 }
 
@@ -30258,11 +30258,11 @@ function seasonPassRewardImage(rowOrType, imageUrlValue = '', itemIdValue = '') 
   const row = rowOrType && typeof rowOrType === 'object' ? rowOrType : null;
   const rewardType = String(row ? (seasonPassPublicRewardType(row) || row.reward_type || '') : (rowOrType || '')).toLowerCase();
   const itemId = String(row ? (seasonPassPublicRewardItemId(row) || row.item_id || '') : (itemIdValue || ''));
-  if(rewardType==='streak_protection')return '/assets/ui/icon_series_protection.png';
+  if(rewardType==='streak_protection')return '/assets/ui/icon_series_protection.webp';
   const resourceAsset = seasonPassResourceRewardAsset(rewardType);
   if (resourceAsset) return resourceAsset;
   if (rewardType === 'case') {
-    return String(imageUrlValue || row?.image_url || ({small:'/assets/cases/standart_closed.png',sweet:'/assets/cases/Bronze_close.png',gold:'/assets/cases/gold_closed.png',mythic:'/assets/cases/Mifik_case_closed.png',legendary:'/assets/cases/legendary_closed.png',alex:'/assets/cases/alex/alex_case_close.png'})[normalizeCaseType(itemId) || 'small'] || '/assets/cases/standart_closed.png');
+    return String(imageUrlValue || row?.image_url || ({small:'/assets/cases/standart_closed.webp',sweet:'/assets/cases/Bronze_close.webp',gold:'/assets/cases/gold_closed.webp',mythic:'/assets/cases/Mifik_case_closed.webp',legendary:'/assets/cases/legendary_closed.webp',alex:'/assets/cases/alex/alex_case_close.webp'})[normalizeCaseType(itemId) || 'small'] || '/assets/cases/standart_closed.webp');
   }
   const showcaseStyle = row ? seasonPassShowcaseStyleRewardDefinition(row) : null;
   if(showcaseStyle?.imageUrl)return showcaseStyle.imageUrl;
@@ -31156,7 +31156,7 @@ async function seasonPassFinaleForPlayer(env,season,telegramId,player,summaryVal
 function seasonPassPlayerRewardView(row){
   const cosmetic=seasonPassCosmeticRewardDefinition(row);
   if(cosmetic?.future&&!cosmetic?.released){
-    return {level:Number(row.level),lane:String(row.lane),rewardType:"hidden_future",amount:0,itemId:"",title:"Секретная награда",imageUrl:"/assets/season-pass/season.png?v=07939",enabled:false,hiddenFuture:true};
+    return {level:Number(row.level),lane:String(row.lane),rewardType:"hidden_future",amount:0,itemId:"",title:"Секретная награда",imageUrl:"/assets/season-pass/season.webp?v=07939",enabled:false,hiddenFuture:true};
   }
   return {level:Number(row.level),lane:String(row.lane),rewardType:seasonPassPublicRewardType(row),amount:Number(row.amount),itemId:seasonPassPublicRewardItemId(row),title:String(row.title||''),imageUrl:seasonPassRewardImage(row),enabled:Number(row.enabled||0)===1};
 }
@@ -31394,7 +31394,7 @@ function seasonPassStoryRewardView(row){
   if(SEASON_PASS_COSMETIC_KINDS.includes(reward.kind)){
     const item=seasonPassAnyCosmeticCatalog(reward.kind)?.[reward.itemId]||null;if(!item)return null;
     const future=Boolean(futureSeasonContentItem(reward.kind,reward.itemId));
-    if(future&&!liveContentRouteAllowedCached(reward.kind,reward.itemId,'story'))return {kind:'secret',itemId:'',amount:1,title:'Секретная награда сезона',imageUrl:'/assets/season-pass/season.png?v=07939',future:true};
+    if(future&&!liveContentRouteAllowedCached(reward.kind,reward.itemId,'story'))return {kind:'secret',itemId:'',amount:1,title:'Секретная награда сезона',imageUrl:'/assets/season-pass/season.webp?v=07939',future:true};
     return {...reward,title:reward.title||String(item.title||reward.itemId),imageUrl:reward.imageUrl||seasonPassCosmeticImage(reward.kind,reward.itemId)};
   }
   return reward;
@@ -31728,22 +31728,22 @@ function seasonPassTierActivationSourceKey(value) {
 
 function seasonPassTierActivationBenefits(season,newTier,payload={}) {
   if(newTier==='elite') return [
-    {key:'premium_rewards',title:'Премиальная линия из 50 наград',imageUrl:'/assets/season-pass/season.png?v=07939'},
-    {key:'premium_tasks',title:'Премиальные задания',imageUrl:'/assets/season-pass/quest.png?v=07939'},
+    {key:'premium_rewards',title:'Премиальная линия из 50 наград',imageUrl:'/assets/season-pass/season.webp?v=07939'},
+    {key:'premium_tasks',title:'Премиальные задания',imageUrl:'/assets/season-pass/quest.webp?v=07939'},
     {key:'rating_badge',title:'Значок «Элитный» в рейтинге',imageUrl:'/assets/ui/icon_player_elit.webp',symbol:''},
-    {key:'legendary_case',title:'Легендарный кейс на 50 уровне',imageUrl:'/assets/cases/legendary_closed.png'}
+    {key:'legendary_case',title:'Легендарный кейс на 50 уровне',imageUrl:'/assets/cases/legendary_closed.webp'}
   ];
   const settings=seasonPassPublicTierSettings(season)?.elitePlus||{};
   const benefits=[
-    {key:'elite_all',title:'Все преимущества «Элитного»',imageUrl:'/assets/season-pass/elite.png?v=07939'},
+    {key:'elite_all',title:'Все преимущества «Элитного»',imageUrl:'/assets/season-pass/elite.webp?v=07939'},
     {key:'rating_badge',title:'Значок «Элитный+» в рейтинге',imageUrl:'/assets/ui/icon_player_elit+.webp',symbol:''}
   ];
   if(settings.xpBoost!==false){
-    benefits.push({key:'season_xp_x2',title:'×2 XP сезона',imageUrl:'/assets/season-pass/xp_x2.png?v=07939'});
-    benefits.push({key:'profile_xp_x2',title:'×2 XP профиля',imageUrl:'/assets/season-pass/xp_x2.png?v=07939'});
+    benefits.push({key:'season_xp_x2',title:'×2 XP сезона',imageUrl:'/assets/season-pass/xp_x2.webp?v=07939'});
+    benefits.push({key:'profile_xp_x2',title:'×2 XP профиля',imageUrl:'/assets/season-pass/xp_x2.webp?v=07939'});
   }
   const bonusLevels=Math.max(0,Number(payload.bonusLevels??settings.bonusLevels)||0);
-  if(bonusLevels>0)benefits.push({key:'bonus_levels',title:`+${bonusLevels} уровней пропуска`,imageUrl:'/assets/season-pass/levels_5.png?v=07939'});
+  if(bonusLevels>0)benefits.push({key:'bonus_levels',title:`+${bonusLevels} уровней пропуска`,imageUrl:'/assets/season-pass/levels_5.webp?v=07939'});
   for(const cosmetic of Array.isArray(settings.cosmetics)?settings.cosmetics:[]){
     if(!cosmetic||cosmetic.kind==='secret')continue;
     benefits.push({key:`cosmetic_${String(cosmetic.kind||'item')}`,title:String(cosmetic.title||'Эксклюзивная награда'),imageUrl:String(cosmetic.imageUrl||SYSTEM_IMAGE_FALLBACK)});
@@ -31860,7 +31860,7 @@ function seasonPassPublicTierSettings(season) {
       bonusLevels:Math.max(0,Number(source.bonusLevels)||0),
       case:source.case ? {...source.case} : null,
       cosmetics:(Array.isArray(source.cosmetics)?source.cosmetics:[]).map((item)=>item?.future&&!item?.released
-        ? {kind:"secret",itemId:"",title:"Секретная награда сезона",imageUrl:"/assets/season-pass/season.png?v=07939",future:true,released:false}
+        ? {kind:"secret",itemId:"",title:"Секретная награда сезона",imageUrl:"/assets/season-pass/season.webp?v=07939",future:true,released:false}
         : {...item})
     }
   };
@@ -32344,7 +32344,7 @@ async function claimSeasonPassOverflow(request,env){
     for(let offset=1;offset<=take;offset+=1){
       const index=overflow.claimed+offset;
       const level=SEASON_PASS_MAX_LEVEL+index;
-      const reward={level,lane:'overflow',rewardType:'case',amount:1,itemId:'gold',title:`Золотой кейс · 50+${index}`,imageUrl:'/assets/cases/gold_closed.png'};
+      const reward={level,lane:'overflow',rewardType:'case',amount:1,itemId:'gold',title:`Золотой кейс · 50+${index}`,imageUrl:'/assets/cases/gold_closed.webp'};
       const grantId=`sp_overflow_${ctx.season.id}_${ctx.telegramId}_${index}`.replace(/[^A-Za-z0-9_-]/g,'_').slice(0,120);
       const reserved=await env.DB.prepare(`INSERT OR IGNORE INTO season_pass_claims(season_id,telegram_id,level,lane,status,reward_json,claimed_at,delivered_at,error_text) VALUES(?,?,?,'overflow','pending',?,?,0,'')`).bind(ctx.season.id,ctx.telegramId,level,JSON.stringify(reward),now).run();
       if(Number(reserved?.meta?.changes||0)<1){
@@ -32374,7 +32374,7 @@ async function claimSeasonPassOverflow(request,env){
     }
     try{await recordPlayerTimeline(env,ctx.telegramId,'season_pass_overflow',`получил ${deliveredCount} бонусн${deliveredCount===1?'ый':'ых'} золот${deliveredCount===1?'ой кейс':'ых кейса'} после 50 уровня`,{seasonId:ctx.season.id,count:deliveredCount,levels:received.map(item=>item.level)},`season_pass_overflow_${ctx.season.id}_${ctx.telegramId}_${received[0]?.level}_${received[received.length-1]?.level}`,ctx.auth.user,now);}catch(error){console.error('season pass overflow timeline failed',error);}
     const payload=await buildSeasonPassMutationPayload(env,ctx.season,ctx.telegramId,{includeClaims:true});
-    return jsonResponse({...payload,overflowReceived:deliveredCount,received:[{level:'50+',lane:'overflow',rewardType:'case',amount:deliveredCount,itemId:'gold',title:deliveredCount===1?'Золотой кейс':`Золотой кейс ×${deliveredCount}`,imageUrl:'/assets/cases/gold_closed.png'}]});
+    return jsonResponse({...payload,overflowReceived:deliveredCount,received:[{level:'50+',lane:'overflow',rewardType:'case',amount:deliveredCount,itemId:'gold',title:deliveredCount===1?'Золотой кейс':`Золотой кейс ×${deliveredCount}`,imageUrl:'/assets/cases/gold_closed.webp'}]});
   }catch(error){if(error instanceof ApiError)return jsonResponse({ok:false,error:error.message},error.status);console.error('claimSeasonPassOverflow failed',error);return jsonResponse({ok:false,error:'Не удалось получить бонусный золотой кейс.'},500);}
 }
 
@@ -32489,8 +32489,8 @@ async function elitePlusBenefitPlan(env,ctx,player,now,options={}){
   }
   statements.push(caseStateUpdateStatement(env,ctx.telegramId,state,now));
   const received=[];
-  if(benefits.xpBoost)received.push({title:'×2 XP сезонного пропуска',itemId:SEASON_PASS_SPECIAL_XP_X2,imageUrl:'/assets/season-pass/xp_x2.png'});
-  if(grantedBonusLevels>0)received.push({title:`+${grantedBonusLevels} уровней`,itemId:`levels_${grantedBonusLevels}`,imageUrl:'/assets/season-pass/levels_5.png'});
+  if(benefits.xpBoost)received.push({title:'×2 XP сезонного пропуска',itemId:SEASON_PASS_SPECIAL_XP_X2,imageUrl:'/assets/season-pass/xp_x2.webp'});
+  if(grantedBonusLevels>0)received.push({title:`+${grantedBonusLevels} уровней`,itemId:`levels_${grantedBonusLevels}`,imageUrl:'/assets/season-pass/levels_5.webp'});
   for(const cosmetic of cosmetics)received.push({title:String(cosmetic.title||'Эксклюзивная награда'),itemId:String(cosmetic.itemId),imageUrl:String(cosmetic.imageUrl||SYSTEM_IMAGE_FALLBACK)});
   if(caseCount>0)received.push({title:`${String(benefits.case?.title||'Кейс')}${caseCount>1?` ×${caseCount}`:''}`,itemId:`${caseType}_case`,imageUrl:String(benefits.case?.imageUrl||ownerPanelCaseAsset(caseType))});
   return {statements,received,activation:{fromLevel:currentLevel,toLevel:targetLevel,bonusLevels:grantedBonusLevels,caseCount,caseType}};
@@ -33123,8 +33123,8 @@ async function showSeasonPassRewardTypePicker(chatId,user,env,level,lane){
 }
 async function setSeasonPassRewardFromCallback(query,level,lane,type,value,env){
   const chatId=query.message?.chat?.id;const access=await requireAnySecurityPermission(chatId,query.from,['manageSeasons','manageMaintenance'],env);if(!access)return;const season=await resolveSeasonPassAdminSeason(env,query.from);const now=Math.floor(Date.now()/1000);let reward;
-  if(type==='case'){const item=normalizeCaseType(value)||'small';const names={small:'Обычный кейс',sweet:'Серебряный кейс',gold:'Золотой кейс',mythic:'Мифический кейс',legendary:'Легендарный кейс',alex:'Кейс Алекса'};const images={small:'/assets/cases/standart_closed.png',sweet:'/assets/cases/Bronze_close.png',gold:'/assets/cases/gold_closed.png',mythic:'/assets/cases/Mifik_case_closed.png',legendary:'/assets/cases/legendary_closed.png',alex:'/assets/cases/alex/alex_case_close.png'};reward={amount:1,itemId:item,title:names[item],imageUrl:images[item]};}
-  else{const amount=Math.max(0,Number(value)||0);const map={points:['очков','/assets/optimized/v0.79.5/iconScore.png'],treats:['зефира',SEASON_PASS_TREATS_CURRENCY_IMAGE],coffee:['кофе','/assets/optimized/v0.79.5/iconCoffee.png']};reward={amount,itemId:'',title:`${amount.toLocaleString('ru-RU')} ${map[type][0]}`,imageUrl:map[type][1]};}
+  if(type==='case'){const item=normalizeCaseType(value)||'small';const names={small:'Обычный кейс',sweet:'Серебряный кейс',gold:'Золотой кейс',mythic:'Мифический кейс',legendary:'Легендарный кейс',alex:'Кейс Алекса'};const images={small:'/assets/cases/standart_closed.webp',sweet:'/assets/cases/Bronze_close.webp',gold:'/assets/cases/gold_closed.webp',mythic:'/assets/cases/Mifik_case_closed.webp',legendary:'/assets/cases/legendary_closed.webp',alex:'/assets/cases/alex/alex_case_close.webp'};reward={amount:1,itemId:item,title:names[item],imageUrl:images[item]};}
+  else{const amount=Math.max(0,Number(value)||0);const map={points:['очков','/assets/optimized/v0.79.5/iconScore.webp'],treats:['зефира',SEASON_PASS_TREATS_CURRENCY_IMAGE],coffee:['кофе','/assets/optimized/v0.79.5/iconCoffee.webp']};reward={amount,itemId:'',title:`${amount.toLocaleString('ru-RU')} ${map[type][0]}`,imageUrl:map[type][1]};}
   await env.DB.prepare(`UPDATE season_pass_rewards SET reward_type=?,amount=?,item_id=?,title=?,image_url=?,updated_at=?,updated_by=? WHERE season_id=? AND level=? AND lane=?`).bind(type,reward.amount,reward.itemId,reward.title,reward.imageUrl,now,String(query.from.id),season.id,level,lane).run();await answerCallback(env,query.id,'Награда уровня изменена.');await showSeasonPassLevelCard(chatId,query.from,env,level);
 }
 
@@ -33155,7 +33155,7 @@ async function showSeasonPassForceCloseConfirmation(query,env,seasonId=''){
 
 После подтверждения выдача наград закроется <b>сразу, без трёхдневного окна</b>. XP, уровни, задания, покупки «Элитного» и «Элитного+» и покупки уровней этого сезона будут удалены.
 
-До старта следующего сезона никто, включая владельца, не сможет открыть пропуск или получить тестовые награды. Игрокам будет показана <b>zaglyshka_season.png</b>, подпись «Не скучай, новый сезон уже скоро» и таймер.
+До старта следующего сезона никто, включая владельца, не сможет открыть пропуск или получить тестовые награды. Игрокам будет показана <b>zaglyshka_season.webp</b>, подпись «Не скучай, новый сезон уже скоро» и таймер.
 
 Уже начисленные на аккаунт кейсы, валюта и постоянная косметика не отзываются. Действие нельзя отменить.`,{inline_keyboard:[[{text:'❌ Отмена',callback_data:'sp_admin'}],[{text:'🔒 Да, закрыть немедленно',callback_data:`sp_force_close_execute:${season.id}`}]]});
 }
@@ -36597,23 +36597,23 @@ async function handleV78Callback(query, env) {
 // Staff roles (including "administrator") are never accepted by these endpoints.
 function ownerPanelCaseAsset(caseType) {
   return ({
-    small: "/assets/cases/standart_closed.png",
-    sweet: "/assets/cases/Bronze_close.png",
-    gold: "/assets/cases/gold_closed.png",
-    mythic: "/assets/cases/Mifik_case_closed.png",
-    legendary: "/assets/cases/legendary_closed.png",
-    alex: "/assets/cases/alex/alex_case_close.png"
+    small: "/assets/cases/standart_closed.webp",
+    sweet: "/assets/cases/Bronze_close.webp",
+    gold: "/assets/cases/gold_closed.webp",
+    mythic: "/assets/cases/Mifik_case_closed.webp",
+    legendary: "/assets/cases/legendary_closed.webp",
+    alex: "/assets/cases/alex/alex_case_close.webp"
   })[String(caseType || "")] || SYSTEM_IMAGE_FALLBACK;
 }
 
 function ownerPanelRewardAsset(kind, itemId = "") {
   const normalized = String(kind || "");
   if (normalized === "case") return ownerPanelCaseAsset(normalizeCaseType(itemId) || "small");
-  if (normalized === "points") return "/assets/optimized/v0.79.5/iconScore.png";
+  if (normalized === "points") return "/assets/optimized/v0.79.5/iconScore.webp";
   if (normalized === "treats" || normalized === "zefir") return seasonPassResourceRewardAsset(normalized);
-  if (normalized === "coffee") return "/assets/optimized/v0.79.5/iconCoffee.png";
-  if (normalized === "profile_xp" || normalized === "season_xp" || normalized === "xp") return "/assets/season-pass/xp.png";
-  if (normalized === "streak_protection") return "/assets/ui/icon_series_protection.png";
+  if (normalized === "coffee") return "/assets/optimized/v0.79.5/iconCoffee.webp";
+  if (normalized === "profile_xp" || normalized === "season_xp" || normalized === "xp") return "/assets/season-pass/xp.webp";
+  if (normalized === "streak_protection") return "/assets/ui/icon_series_protection.webp";
   if (SEASON_PASS_COSMETIC_KINDS.includes(normalized)) return seasonPassCosmeticImage(normalized,itemId);
   const encodedCosmetic=seasonPassCosmeticRewardDefinition({item_id:itemId});
   if (encodedCosmetic?.imageUrl) return encodedCosmetic.imageUrl;
@@ -38549,8 +38549,8 @@ function flashOfferRewardImage(reward) {
   if (flashOfferCosmeticDefinition(reward.kind,reward.id)) return ownerPanelRewardAsset(reward.kind,reward.id);
   const runBooster=flashOfferRunBoosterDefinition(reward.kind);
   if(runBooster)return ownerPanelRewardAsset(runBooster.baseKind,"");
-  if (reward.kind === "season_pass") return String(reward.id) === "elite_plus" ? "/assets/season-pass/elite_plus.png?v=07939" : "/assets/season-pass/elite.png?v=07939";
-  if (reward.kind === "season_pass_xp" || reward.kind === "season_pass_levels") return "/assets/season-pass/xp.png?v=07939";
+  if (reward.kind === "season_pass") return String(reward.id) === "elite_plus" ? "/assets/season-pass/elite_plus.webp?v=07939" : "/assets/season-pass/elite.webp?v=07939";
+  if (reward.kind === "season_pass_xp" || reward.kind === "season_pass_levels") return "/assets/season-pass/xp.webp?v=07939";
   return ownerPanelRewardAsset(reward.kind, reward.id || "");
 }
 function flashOfferAutoImage(rewards) {
@@ -40076,7 +40076,7 @@ function testProjectSeasonPassProgressionView() {
     overflowAvailableToAll:true,
     existingXpPolicy:'keep_raw_xp_never_reduce',
     balanceVersion:'v4-test-1.0.9',
-    overflowReward:{type:'case',itemId:'gold',title:'Золотой кейс',imageUrl:'/assets/cases/gold_closed.png'}
+    overflowReward:{type:'case',itemId:'gold',title:'Золотой кейс',imageUrl:'/assets/cases/gold_closed.webp'}
   };
 }
 
@@ -40092,7 +40092,7 @@ function testProjectSeasonPassOverflowView(xpValue, claimedValue = 0) {
     xp:overflowXp,
     xpWithin:overflowXp % TEST_PROJECT_SEASON_PASS_OVERFLOW_LEVEL_XP_V4,
     earned,claimed,available:Math.max(0,earned-claimed),
-    reward:{type:'case',itemId:'gold',title:'Золотой кейс',imageUrl:'/assets/cases/gold_closed.png'}
+    reward:{type:'case',itemId:'gold',title:'Золотой кейс',imageUrl:'/assets/cases/gold_closed.webp'}
   };
 }
 
@@ -41607,7 +41607,7 @@ function testProjectSandboxOfferList(state,snapshot) {
 function testProjectSandboxPollDefinition() {
   return {
     id:"tp-poll-3",question:"Как работает Test Project 5.4?",description:"Этот опрос существует только внутри песочницы. Ответ не попадёт в Production.",
-    rewardText:"100 тестовых очков",reward:{kind:"points",id:"",amount:100,text:"100 тестовых очков",imageUrl:"/assets/optimized/v0.79.5/iconScore.png"},answerType:"choice",responseMode:"single",commentMode:"optional",commentMin:3,commentMax:400,maxChoices:1,
+    rewardText:"100 тестовых очков",reward:{kind:"points",id:"",amount:100,text:"100 тестовых очков",imageUrl:"/assets/optimized/v0.79.5/iconScore.webp"},answerType:"choice",responseMode:"single",commentMode:"optional",commentMin:3,commentMax:400,maxChoices:1,
     options:[{id:"useful",text:"Полезно"},{id:"needs_work",text:"Нужно доработать"},{id:"found_bug",text:"Нашёл баг"}]
   };
 }
@@ -41886,7 +41886,7 @@ async function testProjectSandboxGameData(env, ctx) {
     const level=Math.floor(Number(payload?.level)||0),lane=String(payload?.lane||payload?.type||"free")==="premium"?"premium":"free",mutation=await ownerPanelTestProjectAction(env,{...ctx,body:{action:"pass_claim_reward",level,lane}});await reload();const reward=mutation?.result?.reward;return response({...testProjectSandboxPassPayload(state,snapshot),claimedAdded:[`${level}:${lane}`],received:reward?[testProjectSandboxPassReceived({...reward,level,lane})]:[],repeated:false});
   }
   if(path==="/api/battle-pass/claim-all"){const mutation=await ownerPanelTestProjectAction(env,{...ctx,body:{action:"pass_claim_all"}});await reload();const received=(mutation?.result?.received||[]).map(testProjectSandboxPassReceived);return response({...testProjectSandboxPassPayload(state,snapshot),received,failedRewards:[],partial:false,repeated:received.length===0});}
-  if(path==="/api/battle-pass/overflow/claim"){const mutation=await ownerPanelTestProjectAction(env,{...ctx,body:{action:"pass_overflow_claim"}});await reload();const count=Math.max(0,Number(mutation?.result?.count||0)),received=Array.from({length:count},(_,index)=>({level:51+index,lane:"overflow",title:"Золотой кейс",rewardType:"case",amount:1,itemId:"gold",imageUrl:"/assets/cases/gold_closed.png"}));return response({...testProjectSandboxPassPayload(state,snapshot),received,repeated:received.length===0});}
+  if(path==="/api/battle-pass/overflow/claim"){const mutation=await ownerPanelTestProjectAction(env,{...ctx,body:{action:"pass_overflow_claim"}});await reload();const count=Math.max(0,Number(mutation?.result?.count||0)),received=Array.from({length:count},(_,index)=>({level:51+index,lane:"overflow",title:"Золотой кейс",rewardType:"case",amount:1,itemId:"gold",imageUrl:"/assets/cases/gold_closed.webp"}));return response({...testProjectSandboxPassPayload(state,snapshot),received,repeated:received.length===0});}
   if(path==="/api/battle-pass/tasks/claim-all"){
     const beforeLab=testProjectPassLabView(state,snapshot,nowMs),ready=(beforeLab.tasks||[]).filter((task)=>task.complete&&!task.claimed&&!task.locked);let totalXp=0;
     for(const period of ["daily","weekly"]){try{const mutation=await ownerPanelTestProjectAction(env,{...ctx,body:{action:"pass_tasks_claim",period}});totalXp+=Math.max(0,Number(mutation?.result?.awarded||0));}catch(error){if(!(error instanceof ApiError)||error.status<400||error.status>=500)throw error;}}
@@ -43246,13 +43246,13 @@ async function albumCatalogSnapshot(env) {
 
 function albumRewardView(reward,catalogMap=new Map()){
   const kind=String(reward?.kind||""),id=String(reward?.id||""),amount=Math.max(1,Math.floor(Number(reward?.amount||1)));
-  if(kind==="points")return {kind,id:"",amount,title:`${amount.toLocaleString("ru-RU")} очков`,imageUrl:"/assets/optimized/v0.79.5/iconScore.png?v=0.79.5"};
-  if(kind==="zefir")return {kind,id:"",amount,title:`${amount.toLocaleString("ru-RU")} зефира`,imageUrl:"/assets/season-pass/zefir_currency.png"};
-  if(kind==="coffee")return {kind,id:"",amount,title:`${amount.toLocaleString("ru-RU")} кофе`,imageUrl:"/assets/optimized/v0.79.5/iconCoffee.png?v=0.79.5"};
+  if(kind==="points")return {kind,id:"",amount,title:`${amount.toLocaleString("ru-RU")} очков`,imageUrl:"/assets/optimized/v0.79.5/iconScore.webp?v=0.79.5"};
+  if(kind==="zefir")return {kind,id:"",amount,title:`${amount.toLocaleString("ru-RU")} зефира`,imageUrl:"/assets/season-pass/zefir_currency.webp"};
+  if(kind==="coffee")return {kind,id:"",amount,title:`${amount.toLocaleString("ru-RU")} кофе`,imageUrl:"/assets/optimized/v0.79.5/iconCoffee.webp?v=0.79.5"};
   if(kind==="case"){const c=LEVEL_CASE_CONFIG[normalizeCaseType(id)||""];return {kind,id,amount,title:`${c?.title||"Кейс"}${amount>1?` ×${amount}`:""}`,imageUrl:ownerPanelCaseAsset(normalizeCaseType(id)||"small")};}
-  if(kind==="seasonal_case")return {kind,id,amount,title:`Сезонный кейс${amount>1?` ×${amount}`:""}`,imageUrl:"/assets/season-pass/season.png?v=07939"};
+  if(kind==="seasonal_case")return {kind,id,amount,title:`Сезонный кейс${amount>1?` ×${amount}`:""}`,imageUrl:"/assets/season-pass/season.webp?v=07939"};
   if(ALBUM_ITEM_KINDS.includes(kind)){const item=catalogMap.get(albumItemKey(kind,id));return {kind,id,amount,title:`${String(item?.title||id)}${amount>1?` ×${amount}`:""}`,imageUrl:String(item?.imageUrl||seasonPassCosmeticImage(kind,id))};}
-  return {kind,id,amount,title:safeRewardDescription({kind,id,amount}),imageUrl:"/assets/season-pass/season.png?v=07939"};
+  return {kind,id,amount,title:safeRewardDescription({kind,id,amount}),imageUrl:"/assets/season-pass/season.webp?v=07939"};
 }
 
 async function albumPlayerState(env,telegramId){
@@ -43343,7 +43343,7 @@ async function ownerPanelAlbums(env,ctx){
   for(const row of claimStatsRes.results||[]){const key=`${row.collection_id}:${row.milestone_id}`;if(!stats.has(key))stats.set(key,{pending:0,delivered:0,failed:0});stats.get(key)[String(row.status)||"pending"]=Number(row.count||0);}
   for(const row of milestonesRes.results||[]){const id=String(row.collection_id);if(!milestonesBy.has(id))milestonesBy.set(id,[]);milestonesBy.get(id).push({milestoneId:String(row.milestone_id),thresholdPercent:Number(row.threshold_percent||0),title:String(row.title||""),rewards:safeJson(row.rewards_json,[]),enabled:Number(row.enabled||0)===1,sortOrder:Number(row.sort_order||0),claimStats:stats.get(`${id}:${row.milestone_id}`)||{pending:0,delivered:0,failed:0}});}
   const collections=(collectionsRes.results||[]).map((row)=>{const items=itemsBy.get(String(row.collection_id))||[],milestones=milestonesBy.get(String(row.collection_id))||[];return {collectionId:String(row.collection_id),title:String(row.title||""),subtitle:String(row.subtitle||""),coverUrl:String(row.cover_url||""),backgroundUrl:String(row.background_url||""),accentColor:albumAccentColor(row.accent_color),status:String(row.status||"draft"),sortOrder:Number(row.sort_order||0),revision:Number(row.revision||1),createdAt:Number(row.created_at||0),updatedAt:Number(row.updated_at||0),publishedAt:Number(row.published_at||0),requiredCount:items.filter((x)=>x.required).length,bonusCount:items.filter((x)=>!x.required).length,items,milestones};});
-  return {ok:true,collections,catalog:Array.from(catalog.values()).sort((a,b)=>ALBUM_ITEM_KINDS.indexOf(a.kind)-ALBUM_ITEM_KINDS.indexOf(b.kind)||String(a.title).localeCompare(String(b.title),"ru")),kindLabels:ALBUM_KIND_LABELS,seasonalCases:(seasonalRes.results||[]).map((r)=>({id:String(r.case_id),title:String(r.title||r.case_id),imageUrl:String(r.image_url||"/assets/season-pass/season.png?v=07939"),enabled:Number(r.enabled||0)===1,released:Number(r.release_at||0)<=Math.floor(Date.now()/1000)}))};
+  return {ok:true,collections,catalog:Array.from(catalog.values()).sort((a,b)=>ALBUM_ITEM_KINDS.indexOf(a.kind)-ALBUM_ITEM_KINDS.indexOf(b.kind)||String(a.title).localeCompare(String(b.title),"ru")),kindLabels:ALBUM_KIND_LABELS,seasonalCases:(seasonalRes.results||[]).map((r)=>({id:String(r.case_id),title:String(r.title||r.case_id),imageUrl:String(r.image_url||"/assets/season-pass/season.webp?v=07939"),enabled:Number(r.enabled||0)===1,released:Number(r.release_at||0)<=Math.floor(Date.now()/1000)}))};
 }
 
 async function ownerPanelAlbumSave(env,ctx){
@@ -44369,7 +44369,7 @@ async function ownerPanelRating(env, ctx) {
   const now=Math.floor(Date.now()/1000),[seasonsResult,gameSeasonResult]=await Promise.all([env.DB.prepare(`SELECT * FROM leaderboard_seasons ORDER BY starts_at DESC,created_at DESC LIMIT 30`).all(),env.DB.prepare(`SELECT season_id,title,starts_at,ends_at,manual_status FROM season_pass_seasons ORDER BY starts_at DESC,season_id ASC LIMIT 100`).all()]);const gameSeasonRows=gameSeasonResult.results||[];
   const rank={active:0,scheduled:1,ended:2,cancelled:3};const rows=(seasonsResult.results||[]).map(row=>{const projected={...row,status:leaderboardSeasonStatusAt(row,now)};if(!String(projected.game_season_id||'').trim()){const target=leaderboardGameSeasonCandidate(projected,gameSeasonRows);if(target?.season_id){projected.game_season_id=String(target.season_id);projected.rating_kind=String(projected.rating_kind||'primary')||'primary';}}return projected;}).sort((a,b)=>(rank[String(a.status)]??9)-(rank[String(b.status)]??9)||Number(b.starts_at||0)-Number(a.starts_at||0));
   const current=rows.find(row=>String(row.status)==='active')||rows.find(row=>String(row.status)==='scheduled')||rows[0]||null,gameSeasonMap=new Map(gameSeasonRows.map(row=>[String(row.season_id||''),row]));const topResult=current&&String(current.status)==='active'?await env.DB.prepare(`SELECT telegram_id,display_name,username,photo_url,best_score,level,achieved_at FROM leaderboard_entries WHERE season_id=? AND hidden=0 ORDER BY best_score DESC,achieved_at ASC,telegram_id ASC LIMIT 20`).bind(String(current.id)).all():{results:[]};
-  return {ok:true,seasons:rows.map(row=>ownerPanelRatingSeasonView(row,gameSeasonMap)),active:ownerPanelRatingSeasonView(current,gameSeasonMap),gameSeasons:gameSeasonRows.map(row=>ownerPanelGameSeasonView(row)),top:(topResult.results||[]).map((row,index)=>({place:index+1,telegramId:String(row.telegram_id),name:String(row.display_name||row.username||row.telegram_id),username:String(row.username||''),photoUrl:String(row.photo_url||''),score:Number(row.best_score||0),level:Number(row.level||1)})),banners:{current:seasonVisualsView(current?.visuals_json).rating.heroImage||SEASON_VISUAL_RATING_HERO_FALLBACK,allTime:'/assets/rating/v8/all-time-rating.png'}};
+  return {ok:true,seasons:rows.map(row=>ownerPanelRatingSeasonView(row,gameSeasonMap)),active:ownerPanelRatingSeasonView(current,gameSeasonMap),gameSeasons:gameSeasonRows.map(row=>ownerPanelGameSeasonView(row)),top:(topResult.results||[]).map((row,index)=>({place:index+1,telegramId:String(row.telegram_id),name:String(row.display_name||row.username||row.telegram_id),username:String(row.username||''),photoUrl:String(row.photo_url||''),score:Number(row.best_score||0),level:Number(row.level||1)})),banners:{current:seasonVisualsView(current?.visuals_json).rating.heroImage||SEASON_VISUAL_RATING_HERO_FALLBACK,allTime:'/assets/rating/v8/all-time-rating.webp'}};
 }
 
 async function ownerPanelSaveRatingVisuals(env, ctx) {
@@ -44546,8 +44546,8 @@ function ownerPanelSeasonalCaseView(row,seasonMap=new Map()){
   return {caseId:String(row.case_id),seasonId:String(row.season_id),seasonTitle:String(ownerSeason?.title||''),title:String(row.title||'Сезонный кейс'),description:String(row.description||''),imageUrl:String(row.closed_image_url||''),openImageUrl:String(row.open_image_url||''),slots:Number(row.slots||1),duplicatePoints:Number(row.duplicate_points||0),groupChances:seasonPassSeasonalCaseGroupChances(row.reward_groups_json),enabled:Number(row.enabled||0)===1,releaseAt:Number(row.release_at||0),status:seasonPassSeasonalCaseStatus(row,ownerSeason),items:[]};
 }
 
-const SEASON_VISUAL_RATING_HERO_FALLBACK='/assets/rating/v8/season-1-cafe-opening.png';
-const SEASON_VISUAL_BATTLE_PASS_HERO_FALLBACK='/assets/season-pass/season_pass1.png';
+const SEASON_VISUAL_RATING_HERO_FALLBACK='/assets/rating/v8/season-1-cafe-opening.webp';
+const SEASON_VISUAL_BATTLE_PASS_HERO_FALLBACK='/assets/season-pass/season_pass1.webp';
 function seasonVisualsObject(raw){
   if(raw&&typeof raw==='object'&&!Array.isArray(raw))return {...raw};
   try{const parsed=JSON.parse(String(raw||'{}'));return parsed&&typeof parsed==='object'&&!Array.isArray(parsed)?parsed:{};}catch{return {};}
@@ -44980,7 +44980,7 @@ function ownerPanelSeasonPassRewardPresentation(typeValue, amountValue, itemValu
   }
   if(type==='streak_protection'){
     const amount=ownerPanelInteger(amountValue,1,30);if(amount==null)throw new ApiError(400,'Количество защит серии должно быть от 1 до 30.');
-    return {rewardType:'points',publicRewardType:'streak_protection',amount,itemId:'streak_protection',publicItemId:'',title:amount===1?'Защита серии':`Защита серии ×${amount}`,imageUrl:'/assets/ui/icon_series_protection.png'};
+    return {rewardType:'points',publicRewardType:'streak_protection',amount,itemId:'streak_protection',publicItemId:'',title:amount===1?'Защита серии':`Защита серии ×${amount}`,imageUrl:'/assets/ui/icon_series_protection.webp'};
   }
   if (type === "case") {
     const itemId = normalizeCaseType(itemValue);
@@ -45407,8 +45407,8 @@ async function ownerPanelDeleteSeasonPassSeason(env, ctx) {
 
 function ownerPanelNewsFallbackPresets(base) {
   return [
-    {label:"Кейсы 5.0.1",url:`${base}/assets/news/cases-5.0.1.png`,path:"/assets/news/cases-5.0.1.png",group:"Новости"},
-    {label:"Обновление 1.2.1",url:`${base}/assets/news/news_post_final_season1.png?v=bedb6870bd5d`,path:"/assets/news/news_post_final_season1.png",group:"Новости"},{label:"Релиз игры",url:`${base}/assets/news/relise_game_news.png`,path:"/assets/news/relise_game_news.png",group:"Новости"}
+    {label:"Кейсы 5.0.1",url:`${base}/assets/news/cases-5.0.1.webp`,path:"/assets/news/cases-5.0.1.webp",group:"Новости"},
+    {label:"Обновление 1.2.1",url:`${base}/assets/news/news_post_final_season1.webp?v=bedb6870bd5d`,path:"/assets/news/news_post_final_season1.webp",group:"Новости"},{label:"Релиз игры",url:`${base}/assets/news/relise_game_news.webp`,path:"/assets/news/relise_game_news.webp",group:"Новости"}
   ];
 }
 
@@ -45474,7 +45474,7 @@ async function ownerPanelNews(env, ctx) {
   const news=rows.map(toNews);
   return {ok:true,
     channelHelp:{bot:"Публикация сохраняет пост в разделе «Новости» бота и запускает доставку только подходящей аудитории через безопасную очередь/Cron.",game:"Игра выбирает актуальную опубликованную новость по аудитории игрока, сроку показа и закреплению. Прочтение хранится отдельно для каждой новости."},
-    gameNews:published?{...toNews(published),version:GAME_VERSION,source:"Control Center · таргетированная новость"}:{title:BOT_NEWS_TITLE,body:BOT_NEWS_TEXT,imageUrl:`${base}/assets/news/news_post_final_season1.png?v=bedb6870bd5d`,version:GAME_VERSION,source:"встроенное релизное окно"},
+    gameNews:published?{...toNews(published),version:GAME_VERSION,source:"Control Center · таргетированная новость"}:{title:BOT_NEWS_TITLE,body:BOT_NEWS_TEXT,imageUrl:`${base}/assets/news/news_post_final_season1.webp?v=bedb6870bd5d`,version:GAME_VERSION,source:"встроенное релизное окно"},
     news,newsTypes:[...GAME_NEWS_TYPES].map((key)=>({key,title:ownerPanelNewsTypeLabel(key)})),audiences,
     ctaActions:[{key:"",title:"Без кнопки"},{key:"battle_pass",title:"Открыть Battle Pass"},{key:"rating",title:"Открыть рейтинг"},{key:"cases",title:"Посмотреть кейсы"},{key:"play",title:"Играть"}],
     assetCatalog:{source:assetCatalog.source,catalogHash:assetCatalog.catalogHash||"",count:assetCatalog.count},presets:[...mediaPresets,...assetCatalog.presets]
@@ -45698,12 +45698,12 @@ async function ownerPanelTogglePromocode(env, ctx) {
 function ownerPanelShopProductAsset(productId) {
   const id=String(productId||"");
   if(id.startsWith("case-"))return ownerPanelCaseAsset(id.slice(5));
-  if(id==="zefir")return "/assets/optimized/v0.79.5/shopMarshmallowAssortment.png?v=0.79.5";
+  if(id==="zefir")return "/assets/optimized/v0.79.5/shopMarshmallowAssortment.webp?v=0.79.5";
   if(id==="americano")return "/assets/optimized/v0.79.5/shopAmericano.webp?v=1.0.0";
   if(id==="cappuccino")return "/assets/optimized/v0.79.5/shopCappuccino.webp?v=1.0.0";
   return SYSTEM_IMAGE_FALLBACK;
 }
-function ownerPanelSkinAsset(skinId){return skinId==="default"?"/assets/optimized/v0.79.5/skinDefaultAvatar.png?v=0.79.5":`/assets/skins/avatars/${String(skinId)}.png`;}
+function ownerPanelSkinAsset(skinId){return skinId==="default"?"/assets/optimized/v0.79.5/skinDefaultAvatar.webp?v=0.79.5":`/assets/skins/avatars/${String(skinId)}.webp`;}
 
 async function ownerPanelShop(env, ctx) {
   await ensureShopAssortmentSchema(env);await ensureShopFeaturedSchema(env);await ensureSkinPriceSchema(env);await ensureShopStockSchema(env);const [assortment,featured,skins,stockRows]=await Promise.all([readShopAssortment(env),readShopFeaturedConfig(env),readSkinPrices(env),readShopStockRows(env)]);
