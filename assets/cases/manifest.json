@@ -1,807 +1,807 @@
 {
   "version": 1,
-  "catalogHash": "5b4868a4bac3e986",
+  "catalogHash": "f23af0c1fdd99a6f",
   "count": 100,
   "images": [
     {
-      "fileName": "398D69BA-8943-4846-94B3-FC5CB717A67F.PNG",
+      "fileName": "398D69BA-8943-4846-94B3-FC5CB717A67F.webp",
       "label": "398D69BA 8943 4846 94B3 FC5CB717A67F",
       "folder": "root",
-      "path": "/assets/cases/398D69BA-8943-4846-94B3-FC5CB717A67F.PNG",
-      "hash": "3bb8f68c6608",
-      "size": 2141297
+      "path": "/assets/cases/398D69BA-8943-4846-94B3-FC5CB717A67F.webp",
+      "hash": "2b9ecc4670c7",
+      "size": 72414
     },
     {
-      "fileName": "4271C4F1-CD5F-4C4B-A5BD-FE577585AFFF.PNG",
+      "fileName": "4271C4F1-CD5F-4C4B-A5BD-FE577585AFFF.webp",
       "label": "4271C4F1 CD5F 4C4B A5BD FE577585AFFF",
       "folder": "root",
-      "path": "/assets/cases/4271C4F1-CD5F-4C4B-A5BD-FE577585AFFF.PNG",
-      "hash": "fdf8c2e4af22",
-      "size": 2239543
+      "path": "/assets/cases/4271C4F1-CD5F-4C4B-A5BD-FE577585AFFF.webp",
+      "hash": "f00d76bd9f35",
+      "size": 84794
     },
     {
-      "fileName": "5B2F53B6-5728-40CA-866E-74EECA3238FD.PNG",
+      "fileName": "5B2F53B6-5728-40CA-866E-74EECA3238FD.webp",
       "label": "5B2F53B6 5728 40CA 866E 74EECA3238FD",
       "folder": "root",
-      "path": "/assets/cases/5B2F53B6-5728-40CA-866E-74EECA3238FD.PNG",
-      "hash": "e709f4066f57",
-      "size": 2499127
+      "path": "/assets/cases/5B2F53B6-5728-40CA-866E-74EECA3238FD.webp",
+      "hash": "1b7fe2ac3397",
+      "size": 145332
     },
     {
-      "fileName": "84571D50-75DA-4C22-B35A-FAF921094BEF.PNG",
+      "fileName": "84571D50-75DA-4C22-B35A-FAF921094BEF.webp",
       "label": "84571D50 75DA 4C22 B35A FAF921094BEF",
       "folder": "root",
-      "path": "/assets/cases/84571D50-75DA-4C22-B35A-FAF921094BEF.PNG",
-      "hash": "b608d090c0fa",
-      "size": 2257193
+      "path": "/assets/cases/84571D50-75DA-4C22-B35A-FAF921094BEF.webp",
+      "hash": "93cb59a606cb",
+      "size": 133598
     },
     {
-      "fileName": "988D058E-EA15-43EB-8564-AA297CF745B4.PNG",
+      "fileName": "988D058E-EA15-43EB-8564-AA297CF745B4.webp",
       "label": "988D058E EA15 43EB 8564 AA297CF745B4",
       "folder": "root",
-      "path": "/assets/cases/988D058E-EA15-43EB-8564-AA297CF745B4.PNG",
-      "hash": "39719d446b03",
-      "size": 2453433
+      "path": "/assets/cases/988D058E-EA15-43EB-8564-AA297CF745B4.webp",
+      "hash": "a439e8de8e79",
+      "size": 123174
     },
     {
-      "fileName": "alex/alex_case_close.png",
+      "fileName": "alex/alex_case_close.webp",
       "label": "Alex case close",
       "folder": "alex",
-      "path": "/assets/cases/alex/alex_case_close.png",
-      "hash": "4dd372ee5bf0",
-      "size": 2746624
+      "path": "/assets/cases/alex/alex_case_close.webp",
+      "hash": "f30970bc800b",
+      "size": 358064
     },
     {
-      "fileName": "alex/alex_case_open.png",
+      "fileName": "alex/alex_case_open.webp",
       "label": "Alex case open",
       "folder": "alex",
-      "path": "/assets/cases/alex/alex_case_open.png",
-      "hash": "d45622878e0b",
-      "size": 2927214
+      "path": "/assets/cases/alex/alex_case_open.webp",
+      "hash": "eed5e4272b8e",
+      "size": 414078
     },
     {
-      "fileName": "avatars/1454DD0F-5B8E-4931-99CD-E249D9066526.PNG",
+      "fileName": "avatars/1454DD0F-5B8E-4931-99CD-E249D9066526.webp",
       "label": "1454DD0F 5B8E 4931 99CD E249D9066526",
       "folder": "avatars",
-      "path": "/assets/cases/avatars/1454DD0F-5B8E-4931-99CD-E249D9066526.PNG",
-      "hash": "02821afabd0e",
-      "size": 2857592
+      "path": "/assets/cases/avatars/1454DD0F-5B8E-4931-99CD-E249D9066526.webp",
+      "hash": "b2a89783e6ae",
+      "size": 163398
     },
     {
-      "fileName": "avatars/42185960-59F9-4C06-8665-94B0A7621034.PNG",
+      "fileName": "avatars/42185960-59F9-4C06-8665-94B0A7621034.webp",
       "label": "42185960 59F9 4C06 8665 94B0A7621034",
       "folder": "avatars",
-      "path": "/assets/cases/avatars/42185960-59F9-4C06-8665-94B0A7621034.PNG",
-      "hash": "ac8f39900352",
-      "size": 3013166
+      "path": "/assets/cases/avatars/42185960-59F9-4C06-8665-94B0A7621034.webp",
+      "hash": "abd500a92219",
+      "size": 172110
     },
     {
-      "fileName": "avatars/478DBDFA-BE30-4EF5-904E-59F205056E62.PNG",
+      "fileName": "avatars/478DBDFA-BE30-4EF5-904E-59F205056E62.webp",
       "label": "478DBDFA BE30 4EF5 904E 59F205056E62",
       "folder": "avatars",
-      "path": "/assets/cases/avatars/478DBDFA-BE30-4EF5-904E-59F205056E62.PNG",
-      "hash": "c1d2687a6706",
-      "size": 2878756
+      "path": "/assets/cases/avatars/478DBDFA-BE30-4EF5-904E-59F205056E62.webp",
+      "hash": "02a483e0e87f",
+      "size": 144374
     },
     {
-      "fileName": "avatars/64D37092-96E1-48BC-9BC5-BCBE99E15E02.PNG",
+      "fileName": "avatars/64D37092-96E1-48BC-9BC5-BCBE99E15E02.webp",
       "label": "64D37092 96E1 48BC 9BC5 BCBE99E15E02",
       "folder": "avatars",
-      "path": "/assets/cases/avatars/64D37092-96E1-48BC-9BC5-BCBE99E15E02.PNG",
-      "hash": "03a1c7c50c64",
-      "size": 2856911
+      "path": "/assets/cases/avatars/64D37092-96E1-48BC-9BC5-BCBE99E15E02.webp",
+      "hash": "7882dd39da59",
+      "size": 159830
     },
     {
-      "fileName": "avatars/9FEC3750-A0ED-4053-8D12-EABF7798D914.PNG",
+      "fileName": "avatars/9FEC3750-A0ED-4053-8D12-EABF7798D914.webp",
       "label": "9FEC3750 A0ED 4053 8D12 EABF7798D914",
       "folder": "avatars",
-      "path": "/assets/cases/avatars/9FEC3750-A0ED-4053-8D12-EABF7798D914.PNG",
-      "hash": "49f34b4f680a",
-      "size": 2760110
+      "path": "/assets/cases/avatars/9FEC3750-A0ED-4053-8D12-EABF7798D914.webp",
+      "hash": "0f9d5d44d159",
+      "size": 133400
     },
     {
-      "fileName": "avatars/A34D0D9F-4BF6-4618-8E2B-3D4833CED067.PNG",
+      "fileName": "avatars/A34D0D9F-4BF6-4618-8E2B-3D4833CED067.webp",
       "label": "A34D0D9F 4BF6 4618 8E2B 3D4833CED067",
       "folder": "avatars",
-      "path": "/assets/cases/avatars/A34D0D9F-4BF6-4618-8E2B-3D4833CED067.PNG",
-      "hash": "4c6bf6dd2260",
-      "size": 2650309
+      "path": "/assets/cases/avatars/A34D0D9F-4BF6-4618-8E2B-3D4833CED067.webp",
+      "hash": "15098adb6703",
+      "size": 129396
     },
     {
-      "fileName": "avatars/achievements/achievement_albums.png",
+      "fileName": "avatars/achievements/achievement_albums.webp",
       "label": "Achievement albums",
       "folder": "avatars/achievements",
-      "path": "/assets/cases/avatars/achievements/achievement_albums.png",
-      "hash": "6060f9c194cc",
-      "size": 1999969
+      "path": "/assets/cases/avatars/achievements/achievement_albums.webp",
+      "hash": "99f16ebb3210",
+      "size": 151056
     },
     {
-      "fileName": "avatars/achievements/achievement_case.png",
+      "fileName": "avatars/achievements/achievement_case.webp",
       "label": "Achievement case",
       "folder": "avatars/achievements",
-      "path": "/assets/cases/avatars/achievements/achievement_case.png",
-      "hash": "1961eb876119",
-      "size": 1914491
+      "path": "/assets/cases/avatars/achievements/achievement_case.webp",
+      "hash": "51a880a26e43",
+      "size": 140658
     },
     {
-      "fileName": "avatars/achievements/achievement_coffee.png",
+      "fileName": "avatars/achievements/achievement_coffee.webp",
       "label": "Achievement coffee",
       "folder": "avatars/achievements",
-      "path": "/assets/cases/avatars/achievements/achievement_coffee.png",
-      "hash": "b80c236d01f4",
-      "size": 1912549
+      "path": "/assets/cases/avatars/achievements/achievement_coffee.webp",
+      "hash": "76be13800680",
+      "size": 144216
     },
     {
-      "fileName": "avatars/achievements/achievement_friend.png",
+      "fileName": "avatars/achievements/achievement_friend.webp",
       "label": "Achievement friend",
       "folder": "avatars/achievements",
-      "path": "/assets/cases/avatars/achievements/achievement_friend.png",
-      "hash": "ab6d1c96f408",
-      "size": 1944327
+      "path": "/assets/cases/avatars/achievements/achievement_friend.webp",
+      "hash": "75fe6bb38fc9",
+      "size": 153332
     },
     {
-      "fileName": "avatars/achievements/achievement_music.png",
+      "fileName": "avatars/achievements/achievement_music.webp",
       "label": "Achievement music",
       "folder": "avatars/achievements",
-      "path": "/assets/cases/avatars/achievements/achievement_music.png",
-      "hash": "3bbb0a1650e6",
-      "size": 1992832
+      "path": "/assets/cases/avatars/achievements/achievement_music.webp",
+      "hash": "b2e14c919148",
+      "size": 163420
     },
     {
-      "fileName": "avatars/achievements/achievement_paws.png",
+      "fileName": "avatars/achievements/achievement_paws.webp",
       "label": "Achievement paws",
       "folder": "avatars/achievements",
-      "path": "/assets/cases/avatars/achievements/achievement_paws.png",
-      "hash": "59676cbfff66",
-      "size": 1923191
+      "path": "/assets/cases/avatars/achievements/achievement_paws.webp",
+      "hash": "c04d2cdc3162",
+      "size": 143786
     },
     {
-      "fileName": "avatars/achievements/achievement_records.png",
+      "fileName": "avatars/achievements/achievement_records.webp",
       "label": "Achievement records",
       "folder": "avatars/achievements",
-      "path": "/assets/cases/avatars/achievements/achievement_records.png",
-      "hash": "e59263a3f70f",
-      "size": 2046209
+      "path": "/assets/cases/avatars/achievements/achievement_records.webp",
+      "hash": "55f97569c629",
+      "size": 178568
     },
     {
-      "fileName": "avatars/achievements/achievement_runs.png",
+      "fileName": "avatars/achievements/achievement_runs.webp",
       "label": "Achievement runs",
       "folder": "avatars/achievements",
-      "path": "/assets/cases/avatars/achievements/achievement_runs.png",
-      "hash": "6d45e0dfe143",
-      "size": 1985517
+      "path": "/assets/cases/avatars/achievements/achievement_runs.webp",
+      "hash": "a0304ba87462",
+      "size": 151206
     },
     {
-      "fileName": "avatars/achievements/achievement_score.png",
+      "fileName": "avatars/achievements/achievement_score.webp",
       "label": "Achievement score",
       "folder": "avatars/achievements",
-      "path": "/assets/cases/avatars/achievements/achievement_score.png",
-      "hash": "566e98d85156",
-      "size": 1806806
+      "path": "/assets/cases/avatars/achievements/achievement_score.webp",
+      "hash": "69e0decf9f44",
+      "size": 129606
     },
     {
-      "fileName": "avatars/achievements/achievement_zefir.png",
+      "fileName": "avatars/achievements/achievement_zefir.webp",
       "label": "Achievement zefir",
       "folder": "avatars/achievements",
-      "path": "/assets/cases/avatars/achievements/achievement_zefir.png",
-      "hash": "b7c09b42eb69",
-      "size": 1966365
+      "path": "/assets/cases/avatars/achievements/achievement_zefir.webp",
+      "hash": "70bf00b0e09f",
+      "size": 151834
     },
     {
-      "fileName": "avatars/AE100D7E-3441-428C-B67F-C7A46B23F712.PNG",
+      "fileName": "avatars/AE100D7E-3441-428C-B67F-C7A46B23F712.webp",
       "label": "AE100D7E 3441 428C B67F C7A46B23F712",
       "folder": "avatars",
-      "path": "/assets/cases/avatars/AE100D7E-3441-428C-B67F-C7A46B23F712.PNG",
-      "hash": "11421f7b88f5",
-      "size": 2826717
+      "path": "/assets/cases/avatars/AE100D7E-3441-428C-B67F-C7A46B23F712.webp",
+      "hash": "97793fd9f70d",
+      "size": 177940
     },
     {
-      "fileName": "avatars/alex_avatar_1.png",
+      "fileName": "avatars/alex_avatar_1.webp",
       "label": "Alex avatar 1",
       "folder": "avatars",
-      "path": "/assets/cases/avatars/alex_avatar_1.png",
-      "hash": "b9e54324d2ca",
-      "size": 2616692
+      "path": "/assets/cases/avatars/alex_avatar_1.webp",
+      "hash": "4561d71ef8a3",
+      "size": 375026
     },
     {
-      "fileName": "avatars/alex_avatar_2.png",
+      "fileName": "avatars/alex_avatar_2.webp",
       "label": "Alex avatar 2",
       "folder": "avatars",
-      "path": "/assets/cases/avatars/alex_avatar_2.png",
-      "hash": "523346409c5a",
-      "size": 2496056
+      "path": "/assets/cases/avatars/alex_avatar_2.webp",
+      "hash": "c7b93b65f235",
+      "size": 343486
     },
     {
-      "fileName": "avatars/avatrs_season2Elit.png",
+      "fileName": "avatars/avatrs_season2Elit.webp",
       "label": "Avatrs season2Elit",
       "folder": "avatars",
-      "path": "/assets/cases/avatars/avatrs_season2Elit.png",
-      "hash": "5407db9a79ec",
-      "size": 2584574
+      "path": "/assets/cases/avatars/avatrs_season2Elit.webp",
+      "hash": "0a689505acd3",
+      "size": 348204
     },
     {
-      "fileName": "avatars/avatrs_season2Epik.png",
+      "fileName": "avatars/avatrs_season2Epik.webp",
       "label": "Avatrs season2Epik",
       "folder": "avatars",
-      "path": "/assets/cases/avatars/avatrs_season2Epik.png",
-      "hash": "38a7fd1cf4a2",
-      "size": 2314937
+      "path": "/assets/cases/avatars/avatrs_season2Epik.webp",
+      "hash": "2a1903d40e12",
+      "size": 272308
     },
     {
-      "fileName": "avatars/avatrs_season2Epik2.png",
+      "fileName": "avatars/avatrs_season2Epik2.webp",
       "label": "Avatrs season2Epik2",
       "folder": "avatars",
-      "path": "/assets/cases/avatars/avatrs_season2Epik2.png",
-      "hash": "431e441044ca",
-      "size": 2183720
+      "path": "/assets/cases/avatars/avatrs_season2Epik2.webp",
+      "hash": "f70ace1270d1",
+      "size": 246752
     },
     {
-      "fileName": "avatars/avatrs_season2Mifik.png",
+      "fileName": "avatars/avatrs_season2Mifik.webp",
       "label": "Avatrs season2Mifik",
       "folder": "avatars",
-      "path": "/assets/cases/avatars/avatrs_season2Mifik.png",
-      "hash": "788c2fb1705e",
-      "size": 2561068
+      "path": "/assets/cases/avatars/avatrs_season2Mifik.webp",
+      "hash": "d3100fb79fa4",
+      "size": 377398
     },
     {
-      "fileName": "avatars/E74178F8-3156-4301-8559-D818D85404DA.PNG",
+      "fileName": "avatars/E74178F8-3156-4301-8559-D818D85404DA.webp",
       "label": "E74178F8 3156 4301 8559 D818D85404DA",
       "folder": "avatars",
-      "path": "/assets/cases/avatars/E74178F8-3156-4301-8559-D818D85404DA.PNG",
-      "hash": "f82824ef27a9",
-      "size": 2637988
+      "path": "/assets/cases/avatars/E74178F8-3156-4301-8559-D818D85404DA.webp",
+      "hash": "0bb62812af40",
+      "size": 134282
     },
     {
-      "fileName": "avatars/E8A3AFDB-BCAC-4623-BB8B-C7C429799061.PNG",
+      "fileName": "avatars/E8A3AFDB-BCAC-4623-BB8B-C7C429799061.webp",
       "label": "E8A3AFDB BCAC 4623 BB8B C7C429799061",
       "folder": "avatars",
-      "path": "/assets/cases/avatars/E8A3AFDB-BCAC-4623-BB8B-C7C429799061.PNG",
-      "hash": "59a48b7ffebc",
-      "size": 3006075
+      "path": "/assets/cases/avatars/E8A3AFDB-BCAC-4623-BB8B-C7C429799061.webp",
+      "hash": "9ee541e090ea",
+      "size": 203932
     },
     {
-      "fileName": "avatars/F1680265-2EC6-4028-9FED-E26997442675.PNG",
+      "fileName": "avatars/F1680265-2EC6-4028-9FED-E26997442675.webp",
       "label": "F1680265 2EC6 4028 9FED E26997442675",
       "folder": "avatars",
-      "path": "/assets/cases/avatars/F1680265-2EC6-4028-9FED-E26997442675.PNG",
-      "hash": "4407ca716fcc",
-      "size": 2763333
+      "path": "/assets/cases/avatars/F1680265-2EC6-4028-9FED-E26997442675.webp",
+      "hash": "4c18a3c97d15",
+      "size": 149810
     },
     {
-      "fileName": "avatars/legendary_avatarka_1.png",
+      "fileName": "avatars/legendary_avatarka_1.webp",
       "label": "Legendary avatarka 1",
       "folder": "avatars",
-      "path": "/assets/cases/avatars/legendary_avatarka_1.png",
-      "hash": "14d167a941f4",
-      "size": 1482151
+      "path": "/assets/cases/avatars/legendary_avatarka_1.webp",
+      "hash": "2ec2097a49c2",
+      "size": 284004
     },
     {
-      "fileName": "avatars/legendary_avatarka_2.png",
+      "fileName": "avatars/legendary_avatarka_2.webp",
       "label": "Legendary avatarka 2",
       "folder": "avatars",
-      "path": "/assets/cases/avatars/legendary_avatarka_2.png",
-      "hash": "00478dc80a94",
-      "size": 1494833
+      "path": "/assets/cases/avatars/legendary_avatarka_2.webp",
+      "hash": "1d7a6ea1c36d",
+      "size": 292380
     },
     {
-      "fileName": "avatars/legendary_avatarka_3.png",
+      "fileName": "avatars/legendary_avatarka_3.webp",
       "label": "Legendary avatarka 3",
       "folder": "avatars",
-      "path": "/assets/cases/avatars/legendary_avatarka_3.png",
-      "hash": "d0de73d79018",
-      "size": 1567763
+      "path": "/assets/cases/avatars/legendary_avatarka_3.webp",
+      "hash": "9f7e01e164ae",
+      "size": 319254
     },
     {
-      "fileName": "avatars/legendary_avatarka_4.png",
+      "fileName": "avatars/legendary_avatarka_4.webp",
       "label": "Legendary avatarka 4",
       "folder": "avatars",
-      "path": "/assets/cases/avatars/legendary_avatarka_4.png",
-      "hash": "febece6af7c1",
-      "size": 1678346
+      "path": "/assets/cases/avatars/legendary_avatarka_4.webp",
+      "hash": "4c8cb4c84b05",
+      "size": 318904
     },
     {
-      "fileName": "avatars/legendary_avatarka_5.png",
+      "fileName": "avatars/legendary_avatarka_5.webp",
       "label": "Legendary avatarka 5",
       "folder": "avatars",
-      "path": "/assets/cases/avatars/legendary_avatarka_5.png",
-      "hash": "6a942a755999",
-      "size": 1562218
+      "path": "/assets/cases/avatars/legendary_avatarka_5.webp",
+      "hash": "c68c6ead3448",
+      "size": 338722
     },
     {
-      "fileName": "avatars/season3_avatar_epic_new_1.png",
+      "fileName": "avatars/season3_avatar_epic_new_1.webp",
       "label": "Season3 avatar epic new 1",
       "folder": "avatars",
-      "path": "/assets/cases/avatars/season3_avatar_epic_new_1.png",
-      "hash": "8dba57918682",
-      "size": 2418561
+      "path": "/assets/cases/avatars/season3_avatar_epic_new_1.webp",
+      "hash": "805340c00f69",
+      "size": 264562
     },
     {
-      "fileName": "avatars/season3_avatar_epic_new_2.png",
+      "fileName": "avatars/season3_avatar_epic_new_2.webp",
       "label": "Season3 avatar epic new 2",
       "folder": "avatars",
-      "path": "/assets/cases/avatars/season3_avatar_epic_new_2.png",
-      "hash": "218dc883ef9c",
-      "size": 2314388
+      "path": "/assets/cases/avatars/season3_avatar_epic_new_2.webp",
+      "hash": "e74b7a532364",
+      "size": 247006
     },
     {
-      "fileName": "avatars/season3_avatar_epic_new_3.png",
+      "fileName": "avatars/season3_avatar_epic_new_3.webp",
       "label": "Season3 avatar epic new 3",
       "folder": "avatars",
-      "path": "/assets/cases/avatars/season3_avatar_epic_new_3.png",
-      "hash": "8946d59c2298",
-      "size": 2015022
+      "path": "/assets/cases/avatars/season3_avatar_epic_new_3.webp",
+      "hash": "d043f17f01e8",
+      "size": 208036
     },
     {
-      "fileName": "avatars/season3_avatar_legendary_new_1.png",
+      "fileName": "avatars/season3_avatar_legendary_new_1.webp",
       "label": "Season3 avatar legendary new 1",
       "folder": "avatars",
-      "path": "/assets/cases/avatars/season3_avatar_legendary_new_1.png",
-      "hash": "4184f7631e1f",
-      "size": 2752622
+      "path": "/assets/cases/avatars/season3_avatar_legendary_new_1.webp",
+      "hash": "161dd58e8ba4",
+      "size": 369324
     },
     {
-      "fileName": "avatars/season3_avatar_legendary_new_2.png",
+      "fileName": "avatars/season3_avatar_legendary_new_2.webp",
       "label": "Season3 avatar legendary new 2",
       "folder": "avatars",
-      "path": "/assets/cases/avatars/season3_avatar_legendary_new_2.png",
-      "hash": "9e0810d1bf43",
-      "size": 2567343
+      "path": "/assets/cases/avatars/season3_avatar_legendary_new_2.webp",
+      "hash": "5f5fc44c307e",
+      "size": 309578
     },
     {
-      "fileName": "avatars/season3_avatar_mythic_new_1.png",
+      "fileName": "avatars/season3_avatar_mythic_new_1.webp",
       "label": "Season3 avatar mythic new 1",
       "folder": "avatars",
-      "path": "/assets/cases/avatars/season3_avatar_mythic_new_1.png",
-      "hash": "d719bb85d3b4",
-      "size": 2378822
+      "path": "/assets/cases/avatars/season3_avatar_mythic_new_1.webp",
+      "hash": "ec9cf3946887",
+      "size": 285412
     },
     {
-      "fileName": "avatars/season3_avatar_mythic_new_2.png",
+      "fileName": "avatars/season3_avatar_mythic_new_2.webp",
       "label": "Season3 avatar mythic new 2",
       "folder": "avatars",
-      "path": "/assets/cases/avatars/season3_avatar_mythic_new_2.png",
-      "hash": "a5e97553b565",
-      "size": 2582223
+      "path": "/assets/cases/avatars/season3_avatar_mythic_new_2.webp",
+      "hash": "373904ae09e1",
+      "size": 311096
     },
     {
-      "fileName": "avatars/season3_avatar_standard_1.png",
+      "fileName": "avatars/season3_avatar_standard_1.webp",
       "label": "Season3 avatar standard 1",
       "folder": "avatars",
-      "path": "/assets/cases/avatars/season3_avatar_standard_1.png",
-      "hash": "f5cbb57cd40f",
-      "size": 2032507
+      "path": "/assets/cases/avatars/season3_avatar_standard_1.webp",
+      "hash": "48e23368743d",
+      "size": 163716
     },
     {
-      "fileName": "avatars/season3_avatar_standard_2.png",
+      "fileName": "avatars/season3_avatar_standard_2.webp",
       "label": "Season3 avatar standard 2",
       "folder": "avatars",
-      "path": "/assets/cases/avatars/season3_avatar_standard_2.png",
-      "hash": "9777a5cdc937",
-      "size": 2122304
+      "path": "/assets/cases/avatars/season3_avatar_standard_2.webp",
+      "hash": "8ee875d5c54d",
+      "size": 178154
     },
     {
-      "fileName": "avatars/season3_avatar_standard_3.png",
+      "fileName": "avatars/season3_avatar_standard_3.webp",
       "label": "Season3 avatar standard 3",
       "folder": "avatars",
-      "path": "/assets/cases/avatars/season3_avatar_standard_3.png",
-      "hash": "fa2950207a11",
-      "size": 2194392
+      "path": "/assets/cases/avatars/season3_avatar_standard_3.webp",
+      "hash": "c828a6c23e10",
+      "size": 206212
     },
     {
-      "fileName": "boosters/11FDBEBF-D838-4DA5-AA57-9DE0E4BA26AE.PNG",
+      "fileName": "boosters/11FDBEBF-D838-4DA5-AA57-9DE0E4BA26AE.webp",
       "label": "11FDBEBF D838 4DA5 AA57 9DE0E4BA26AE",
       "folder": "boosters",
-      "path": "/assets/cases/boosters/11FDBEBF-D838-4DA5-AA57-9DE0E4BA26AE.PNG",
-      "hash": "05fecb31bf4d",
-      "size": 1182324
+      "path": "/assets/cases/boosters/11FDBEBF-D838-4DA5-AA57-9DE0E4BA26AE.webp",
+      "hash": "d2fcb72ed947",
+      "size": 127568
     },
     {
-      "fileName": "boosters/1F00010C-F984-4A41-B8B6-8E5CD7DF637A.PNG",
+      "fileName": "boosters/1F00010C-F984-4A41-B8B6-8E5CD7DF637A.webp",
       "label": "1F00010C F984 4A41 B8B6 8E5CD7DF637A",
       "folder": "boosters",
-      "path": "/assets/cases/boosters/1F00010C-F984-4A41-B8B6-8E5CD7DF637A.PNG",
-      "hash": "40f8e26a5051",
-      "size": 1057070
+      "path": "/assets/cases/boosters/1F00010C-F984-4A41-B8B6-8E5CD7DF637A.webp",
+      "hash": "4f536617458f",
+      "size": 120418
     },
     {
-      "fileName": "boosters/80C21DC3-04A8-46F7-B8E4-9AC8FE13CCEB.PNG",
+      "fileName": "boosters/80C21DC3-04A8-46F7-B8E4-9AC8FE13CCEB.webp",
       "label": "80C21DC3 04A8 46F7 B8E4 9AC8FE13CCEB",
       "folder": "boosters",
-      "path": "/assets/cases/boosters/80C21DC3-04A8-46F7-B8E4-9AC8FE13CCEB.PNG",
-      "hash": "c312a097210e",
-      "size": 973982
+      "path": "/assets/cases/boosters/80C21DC3-04A8-46F7-B8E4-9AC8FE13CCEB.webp",
+      "hash": "78f3c1ebbdc7",
+      "size": 93926
     },
     {
-      "fileName": "boosters/icon_2shans.png",
+      "fileName": "boosters/icon_2shans.webp",
       "label": "Icon 2shans",
       "folder": "boosters",
-      "path": "/assets/cases/boosters/icon_2shans.png",
-      "hash": "e978b952f04a",
-      "size": 1686254
+      "path": "/assets/cases/boosters/icon_2shans.webp",
+      "hash": "d1ca1cd9bd1c",
+      "size": 224534
     },
     {
-      "fileName": "boosters/icon_buster_shit_zeffi.png",
+      "fileName": "boosters/icon_buster_shit_zeffi.webp",
       "label": "Icon buster shit zeffi",
       "folder": "boosters",
-      "path": "/assets/cases/boosters/icon_buster_shit_zeffi.png",
-      "hash": "ef80f172c59f",
-      "size": 1529910
+      "path": "/assets/cases/boosters/icon_buster_shit_zeffi.webp",
+      "hash": "f91d1ff08446",
+      "size": 200076
     },
     {
-      "fileName": "boosters/icon_pause_zeffi.png",
+      "fileName": "boosters/icon_pause_zeffi.webp",
       "label": "Icon pause zeffi",
       "folder": "boosters",
-      "path": "/assets/cases/boosters/icon_pause_zeffi.png",
-      "hash": "ef53e42a82d3",
-      "size": 2233235
+      "path": "/assets/cases/boosters/icon_pause_zeffi.webp",
+      "hash": "3392b6f94d15",
+      "size": 312890
     },
     {
-      "fileName": "Bronze_close.png",
+      "fileName": "Bronze_close.webp",
       "label": "Bronze close",
       "folder": "root",
-      "path": "/assets/cases/Bronze_close.png",
-      "hash": "55ba9071169d",
-      "size": 1342480
+      "path": "/assets/cases/Bronze_close.webp",
+      "hash": "d08b1983cc28",
+      "size": 144144
     },
     {
-      "fileName": "Bronze_open.png",
+      "fileName": "Bronze_open.webp",
       "label": "Bronze open",
       "folder": "root",
-      "path": "/assets/cases/Bronze_open.png",
-      "hash": "dd0fc9764782",
-      "size": 1286753
+      "path": "/assets/cases/Bronze_open.webp",
+      "hash": "e210565b2cbf",
+      "size": 130554
     },
     {
-      "fileName": "effects/effect_epick.png",
+      "fileName": "effects/effect_epick.webp",
       "label": "Effect epick",
       "folder": "effects",
-      "path": "/assets/cases/effects/effect_epick.png",
-      "hash": "769fb0ae289f",
-      "size": 1608106
+      "path": "/assets/cases/effects/effect_epick.webp",
+      "hash": "804313de099b",
+      "size": 157226
     },
     {
-      "fileName": "effects/effect_mifick.png",
+      "fileName": "effects/effect_mifick.webp",
       "label": "Effect mifick",
       "folder": "effects",
-      "path": "/assets/cases/effects/effect_mifick.png",
-      "hash": "283d86ff8a06",
-      "size": 2192532
+      "path": "/assets/cases/effects/effect_mifick.webp",
+      "hash": "5e632856c9e9",
+      "size": 478790
     },
     {
-      "fileName": "effects/effect_rar.png",
+      "fileName": "effects/effect_rar.webp",
       "label": "Effect rar",
       "folder": "effects",
-      "path": "/assets/cases/effects/effect_rar.png",
-      "hash": "f37bfa5bfb46",
-      "size": 1524111
+      "path": "/assets/cases/effects/effect_rar.webp",
+      "hash": "5d0bd9ff4192",
+      "size": 426812
     },
     {
-      "fileName": "effects/effect_standart.png",
+      "fileName": "effects/effect_standart.webp",
       "label": "Effect standart",
       "folder": "effects",
-      "path": "/assets/cases/effects/effect_standart.png",
-      "hash": "77a27ded5087",
-      "size": 1770350
+      "path": "/assets/cases/effects/effect_standart.webp",
+      "hash": "aed88080864f",
+      "size": 482364
     },
     {
-      "fileName": "effects/effect_super_rar.png",
+      "fileName": "effects/effect_super_rar.webp",
       "label": "Effect super rar",
       "folder": "effects",
-      "path": "/assets/cases/effects/effect_super_rar.png",
-      "hash": "022f81d66399",
-      "size": 1937779
+      "path": "/assets/cases/effects/effect_super_rar.webp",
+      "hash": "c3f865cff793",
+      "size": 484772
     },
     {
-      "fileName": "effects/legendary_effect.png",
+      "fileName": "effects/legendary_effect.webp",
       "label": "Legendary effect",
       "folder": "effects",
-      "path": "/assets/cases/effects/legendary_effect.png",
-      "hash": "20c4c3b23336",
-      "size": 2309366
+      "path": "/assets/cases/effects/legendary_effect.webp",
+      "hash": "6c170f364700",
+      "size": 411396
     },
     {
-      "fileName": "F41C3D35-4820-401C-BE45-375EB8897837.PNG",
+      "fileName": "F41C3D35-4820-401C-BE45-375EB8897837.webp",
       "label": "F41C3D35 4820 401C BE45 375EB8897837",
       "folder": "root",
-      "path": "/assets/cases/F41C3D35-4820-401C-BE45-375EB8897837.PNG",
-      "hash": "8033bad60777",
-      "size": 2433179
+      "path": "/assets/cases/F41C3D35-4820-401C-BE45-375EB8897837.webp",
+      "hash": "dd82336788ba",
+      "size": 116878
     },
     {
-      "fileName": "gold_closed.png",
+      "fileName": "gold_closed.webp",
       "label": "Gold closed",
       "folder": "root",
-      "path": "/assets/cases/gold_closed.png",
-      "hash": "a67943ebb1b3",
-      "size": 1312414
+      "path": "/assets/cases/gold_closed.webp",
+      "hash": "84a93c66404c",
+      "size": 151460
     },
     {
-      "fileName": "gold_open.png",
+      "fileName": "gold_open.webp",
       "label": "Gold open",
       "folder": "root",
-      "path": "/assets/cases/gold_open.png",
-      "hash": "a1b75c6f8102",
-      "size": 1290127
+      "path": "/assets/cases/gold_open.webp",
+      "hash": "cd10c630ef10",
+      "size": 151352
     },
     {
-      "fileName": "legendary_closed.png",
+      "fileName": "legendary_closed.webp",
       "label": "Legendary closed",
       "folder": "root",
-      "path": "/assets/cases/legendary_closed.png",
-      "hash": "9df7344aadb9",
-      "size": 1781746
+      "path": "/assets/cases/legendary_closed.webp",
+      "hash": "4f18ef798c37",
+      "size": 395652
     },
     {
-      "fileName": "legendary_open.png",
+      "fileName": "legendary_open.webp",
       "label": "Legendary open",
       "folder": "root",
-      "path": "/assets/cases/legendary_open.png",
-      "hash": "dd29abe4a922",
-      "size": 1624787
+      "path": "/assets/cases/legendary_open.webp",
+      "hash": "842a1ed8adff",
+      "size": 347076
     },
     {
-      "fileName": "Mifik_case_closed.png",
+      "fileName": "Mifik_case_closed.webp",
       "label": "Mifik case closed",
       "folder": "root",
-      "path": "/assets/cases/Mifik_case_closed.png",
-      "hash": "2b2691b20364",
-      "size": 1949670
+      "path": "/assets/cases/Mifik_case_closed.webp",
+      "hash": "e8a8bbe02f9b",
+      "size": 313964
     },
     {
-      "fileName": "Mifik_case_open.png",
+      "fileName": "Mifik_case_open.webp",
       "label": "Mifik case open",
       "folder": "root",
-      "path": "/assets/cases/Mifik_case_open.png",
-      "hash": "0dbaf4eb1ff4",
-      "size": 2180460
+      "path": "/assets/cases/Mifik_case_open.webp",
+      "hash": "f24b813eb954",
+      "size": 359702
     },
     {
-      "fileName": "seasonal/season_2_closed.png",
+      "fileName": "seasonal/season_2_closed.webp",
       "label": "Season 2 closed",
       "folder": "seasonal",
-      "path": "/assets/cases/seasonal/season_2_closed.png",
-      "hash": "02320390b099",
-      "size": 1703679
+      "path": "/assets/cases/seasonal/season_2_closed.webp",
+      "hash": "50c079e95238",
+      "size": 203792
     },
     {
-      "fileName": "seasonal/season_2_open.png",
+      "fileName": "seasonal/season_2_open.webp",
       "label": "Season 2 open",
       "folder": "seasonal",
-      "path": "/assets/cases/seasonal/season_2_open.png",
-      "hash": "a65bc5496c76",
-      "size": 1877132
+      "path": "/assets/cases/seasonal/season_2_open.webp",
+      "hash": "ac09a71e97bd",
+      "size": 269664
     },
     {
-      "fileName": "seasonal/season_case_s3_closed.png",
+      "fileName": "seasonal/season_case_s3_closed.webp",
       "label": "Season case s3 closed",
       "folder": "seasonal",
-      "path": "/assets/cases/seasonal/season_case_s3_closed.png",
-      "hash": "26a468587594",
-      "size": 1844003
+      "path": "/assets/cases/seasonal/season_case_s3_closed.webp",
+      "hash": "d3bcd44044dc",
+      "size": 260054
     },
     {
-      "fileName": "seasonal/season_case_s3_open.png",
+      "fileName": "seasonal/season_case_s3_open.webp",
       "label": "Season case s3 open",
       "folder": "seasonal",
-      "path": "/assets/cases/seasonal/season_case_s3_open.png",
-      "hash": "b91166a7c9c1",
-      "size": 2046991
+      "path": "/assets/cases/seasonal/season_case_s3_open.webp",
+      "hash": "e56820315472",
+      "size": 316764
     },
     {
-      "fileName": "standart_closed.png",
+      "fileName": "standart_closed.webp",
       "label": "Standart closed",
       "folder": "root",
-      "path": "/assets/cases/standart_closed.png",
-      "hash": "b94044934e2b",
-      "size": 760468
+      "path": "/assets/cases/standart_closed.webp",
+      "hash": "d05fd1d9d8f8",
+      "size": 74302
     },
     {
-      "fileName": "Standart_open.png",
+      "fileName": "Standart_open.webp",
       "label": "Standart open",
       "folder": "root",
-      "path": "/assets/cases/Standart_open.png",
-      "hash": "f46d763324c3",
-      "size": 846588
+      "path": "/assets/cases/Standart_open.webp",
+      "hash": "1c59d41cf373",
+      "size": 70536
     },
     {
-      "fileName": "trails/1C180321-0C98-48DD-9B43-0F6E5D3B61EA.PNG",
+      "fileName": "trails/1C180321-0C98-48DD-9B43-0F6E5D3B61EA.webp",
       "label": "1C180321 0C98 48DD 9B43 0F6E5D3B61EA",
       "folder": "trails",
-      "path": "/assets/cases/trails/1C180321-0C98-48DD-9B43-0F6E5D3B61EA.PNG",
-      "hash": "c9598cc77eb2",
-      "size": 289270
+      "path": "/assets/cases/trails/1C180321-0C98-48DD-9B43-0F6E5D3B61EA.webp",
+      "hash": "4e899e9a6b9d",
+      "size": 45714
     },
     {
-      "fileName": "trails/244230CD-1043-4087-A5AC-E5BEBF949C22.PNG",
+      "fileName": "trails/244230CD-1043-4087-A5AC-E5BEBF949C22.webp",
       "label": "244230CD 1043 4087 A5AC E5BEBF949C22",
       "folder": "trails",
-      "path": "/assets/cases/trails/244230CD-1043-4087-A5AC-E5BEBF949C22.PNG",
-      "hash": "5851efde347f",
-      "size": 263831
+      "path": "/assets/cases/trails/244230CD-1043-4087-A5AC-E5BEBF949C22.webp",
+      "hash": "4e33dc3d4f27",
+      "size": 36392
     },
     {
-      "fileName": "trails/6A8C47A2-F099-40A9-8270-A676725538D8.PNG",
+      "fileName": "trails/6A8C47A2-F099-40A9-8270-A676725538D8.webp",
       "label": "6A8C47A2 F099 40A9 8270 A676725538D8",
       "folder": "trails",
-      "path": "/assets/cases/trails/6A8C47A2-F099-40A9-8270-A676725538D8.PNG",
-      "hash": "054fc8b50f10",
-      "size": 279869
+      "path": "/assets/cases/trails/6A8C47A2-F099-40A9-8270-A676725538D8.webp",
+      "hash": "6956e6bf6416",
+      "size": 43618
     },
     {
-      "fileName": "trails/7F194357-28F3-4CC0-BD09-D4937777E361.PNG",
+      "fileName": "trails/7F194357-28F3-4CC0-BD09-D4937777E361.webp",
       "label": "7F194357 28F3 4CC0 BD09 D4937777E361",
       "folder": "trails",
-      "path": "/assets/cases/trails/7F194357-28F3-4CC0-BD09-D4937777E361.PNG",
-      "hash": "b0d15a12fd19",
-      "size": 190488
+      "path": "/assets/cases/trails/7F194357-28F3-4CC0-BD09-D4937777E361.webp",
+      "hash": "959b18b86730",
+      "size": 25962
     },
     {
-      "fileName": "trails/BBFD9E7E-393D-4B0A-B990-CC93BFCFB505.PNG",
+      "fileName": "trails/BBFD9E7E-393D-4B0A-B990-CC93BFCFB505.webp",
       "label": "BBFD9E7E 393D 4B0A B990 CC93BFCFB505",
       "folder": "trails",
-      "path": "/assets/cases/trails/BBFD9E7E-393D-4B0A-B990-CC93BFCFB505.PNG",
-      "hash": "dbb9721663ff",
-      "size": 213508
+      "path": "/assets/cases/trails/BBFD9E7E-393D-4B0A-B990-CC93BFCFB505.webp",
+      "hash": "358e2fd8eee4",
+      "size": 45076
     },
     {
-      "fileName": "trails/Epik_sled_season2_2.png",
+      "fileName": "trails/Epik_sled_season2_2.webp",
       "label": "Epik sled season2 2",
       "folder": "trails",
-      "path": "/assets/cases/trails/Epik_sled_season2_2.png",
-      "hash": "8f67d33dfd5c",
-      "size": 1037357
+      "path": "/assets/cases/trails/Epik_sled_season2_2.webp",
+      "hash": "a6544a2be1c1",
+      "size": 285452
     },
     {
-      "fileName": "trails/Epik_sled_season2.png",
+      "fileName": "trails/Epik_sled_season2.webp",
       "label": "Epik sled season2",
       "folder": "trails",
-      "path": "/assets/cases/trails/Epik_sled_season2.png",
-      "hash": "5f08170f4ca2",
-      "size": 1509334
+      "path": "/assets/cases/trails/Epik_sled_season2.webp",
+      "hash": "b8ae5753621a",
+      "size": 220790
     },
     {
-      "fileName": "trails/Legendary_sled_season2.png",
+      "fileName": "trails/Legendary_sled_season2.webp",
       "label": "Legendary sled season2",
       "folder": "trails",
-      "path": "/assets/cases/trails/Legendary_sled_season2.png",
-      "hash": "8dd7f7e9083a",
-      "size": 929088
+      "path": "/assets/cases/trails/Legendary_sled_season2.webp",
+      "hash": "597d8394698d",
+      "size": 242832
     },
     {
-      "fileName": "trails/legendary_trail_1_season2.png",
+      "fileName": "trails/legendary_trail_1_season2.webp",
       "label": "Legendary trail 1 season2",
       "folder": "trails",
-      "path": "/assets/cases/trails/legendary_trail_1_season2.png",
-      "hash": "32b29a823ce9",
-      "size": 543793
+      "path": "/assets/cases/trails/legendary_trail_1_season2.webp",
+      "hash": "93637bf53747",
+      "size": 178808
     },
     {
-      "fileName": "trails/legendary_trail_2_season2.png",
+      "fileName": "trails/legendary_trail_2_season2.webp",
       "label": "Legendary trail 2 season2",
       "folder": "trails",
-      "path": "/assets/cases/trails/legendary_trail_2_season2.png",
-      "hash": "ccb519442054",
-      "size": 751697
+      "path": "/assets/cases/trails/legendary_trail_2_season2.webp",
+      "hash": "16b07cf995a4",
+      "size": 187868
     },
     {
-      "fileName": "trails/legendary_trail_3_season2.png",
+      "fileName": "trails/legendary_trail_3_season2.webp",
       "label": "Legendary trail 3 season2",
       "folder": "trails",
-      "path": "/assets/cases/trails/legendary_trail_3_season2.png",
-      "hash": "a7e4b5da6297",
-      "size": 878675
+      "path": "/assets/cases/trails/legendary_trail_3_season2.webp",
+      "hash": "a2a3a3ca89cb",
+      "size": 251552
     },
     {
-      "fileName": "trails/legendary_trail_4_season2.png",
+      "fileName": "trails/legendary_trail_4_season2.webp",
       "label": "Legendary trail 4 season2",
       "folder": "trails",
-      "path": "/assets/cases/trails/legendary_trail_4_season2.png",
-      "hash": "6d4e4a640aac",
-      "size": 656476
+      "path": "/assets/cases/trails/legendary_trail_4_season2.webp",
+      "hash": "b66aaa69c5ec",
+      "size": 202048
     },
     {
-      "fileName": "trails/legendary_trail_5_season2.png",
+      "fileName": "trails/legendary_trail_5_season2.webp",
       "label": "Legendary trail 5 season2",
       "folder": "trails",
-      "path": "/assets/cases/trails/legendary_trail_5_season2.png",
-      "hash": "5223ac377e84",
-      "size": 2386211
+      "path": "/assets/cases/trails/legendary_trail_5_season2.webp",
+      "hash": "90d453b0c580",
+      "size": 229726
     },
     {
-      "fileName": "trails/legendary+_sled_season_2.png",
+      "fileName": "trails/legendary+_sled_season_2.webp",
       "label": "Legendary+ sled season 2",
       "folder": "trails",
-      "path": "/assets/cases/trails/legendary%2B_sled_season_2.png",
-      "hash": "43c1e0118da9",
-      "size": 1850613
+      "path": "/assets/cases/trails/legendary%2B_sled_season_2.webp",
+      "hash": "176f1fe81c12",
+      "size": 286812
     },
     {
-      "fileName": "trails/mifik_sled_season2.png",
+      "fileName": "trails/mifik_sled_season2.webp",
       "label": "Mifik sled season2",
       "folder": "trails",
-      "path": "/assets/cases/trails/mifik_sled_season2.png",
-      "hash": "bb03256dcdbc",
-      "size": 1761299
+      "path": "/assets/cases/trails/mifik_sled_season2.webp",
+      "hash": "e873276bf565",
+      "size": 276320
     },
     {
-      "fileName": "trails/sled_alex_collectia.png",
+      "fileName": "trails/sled_alex_collectia.webp",
       "label": "Sled alex collectia",
       "folder": "trails",
-      "path": "/assets/cases/trails/sled_alex_collectia.png",
-      "hash": "88aa4dd4f732",
-      "size": 1031878
+      "path": "/assets/cases/trails/sled_alex_collectia.webp",
+      "hash": "2b6bf1adc6d6",
+      "size": 234696
     },
     {
-      "fileName": "trails/sled_s3_epick1.png",
+      "fileName": "trails/sled_s3_epick1.webp",
       "label": "Sled s3 epick1",
       "folder": "trails",
-      "path": "/assets/cases/trails/sled_s3_epick1.png",
-      "hash": "59a3867fcc4f",
-      "size": 1176551
+      "path": "/assets/cases/trails/sled_s3_epick1.webp",
+      "hash": "091fa26b2cf6",
+      "size": 329922
     },
     {
-      "fileName": "trails/sled_s3_epick2.png",
+      "fileName": "trails/sled_s3_epick2.webp",
       "label": "Sled s3 epick2",
       "folder": "trails",
-      "path": "/assets/cases/trails/sled_s3_epick2.png",
-      "hash": "87a472125f43",
-      "size": 1343110
+      "path": "/assets/cases/trails/sled_s3_epick2.webp",
+      "hash": "fdc246cc667a",
+      "size": 357046
     },
     {
-      "fileName": "trails/sled_s3_epick3.png",
+      "fileName": "trails/sled_s3_epick3.webp",
       "label": "Sled s3 epick3",
       "folder": "trails",
-      "path": "/assets/cases/trails/sled_s3_epick3.png",
-      "hash": "6c9f6c590491",
-      "size": 1340807
+      "path": "/assets/cases/trails/sled_s3_epick3.webp",
+      "hash": "df3b53475ef8",
+      "size": 373602
     },
     {
-      "fileName": "trails/sled_s3_legendary1.png",
+      "fileName": "trails/sled_s3_legendary1.webp",
       "label": "Sled s3 legendary1",
       "folder": "trails",
-      "path": "/assets/cases/trails/sled_s3_legendary1.png",
-      "hash": "0e8db2cfcc19",
-      "size": 1597888
+      "path": "/assets/cases/trails/sled_s3_legendary1.webp",
+      "hash": "4beb5cb6c765",
+      "size": 443410
     },
     {
-      "fileName": "trails/sled_s3_mifik1.png",
+      "fileName": "trails/sled_s3_mifik1.webp",
       "label": "Sled s3 mifik1",
       "folder": "trails",
-      "path": "/assets/cases/trails/sled_s3_mifik1.png",
-      "hash": "2d776d89805f",
-      "size": 1570268
+      "path": "/assets/cases/trails/sled_s3_mifik1.webp",
+      "hash": "40628553565c",
+      "size": 453986
     },
     {
-      "fileName": "trails/sled_s3_mifik2.png",
+      "fileName": "trails/sled_s3_mifik2.webp",
       "label": "Sled s3 mifik2",
       "folder": "trails",
-      "path": "/assets/cases/trails/sled_s3_mifik2.png",
-      "hash": "2236975bbf6e",
-      "size": 1514224
+      "path": "/assets/cases/trails/sled_s3_mifik2.webp",
+      "hash": "33e05d6b8370",
+      "size": 437988
     },
     {
-      "fileName": "trails/sled_s3_standart1.png",
+      "fileName": "trails/sled_s3_standart1.webp",
       "label": "Sled s3 standart1",
       "folder": "trails",
-      "path": "/assets/cases/trails/sled_s3_standart1.png",
-      "hash": "625cd72271e5",
-      "size": 827402
+      "path": "/assets/cases/trails/sled_s3_standart1.webp",
+      "hash": "a494fdd75906",
+      "size": 231384
     },
     {
-      "fileName": "trails/sled_s3_standart2.png",
+      "fileName": "trails/sled_s3_standart2.webp",
       "label": "Sled s3 standart2",
       "folder": "trails",
-      "path": "/assets/cases/trails/sled_s3_standart2.png",
-      "hash": "9450ce823255",
-      "size": 893649
+      "path": "/assets/cases/trails/sled_s3_standart2.webp",
+      "hash": "db4ad0d69118",
+      "size": 255780
     },
     {
-      "fileName": "trails/sled_s3_standart3.png",
+      "fileName": "trails/sled_s3_standart3.webp",
       "label": "Sled s3 standart3",
       "folder": "trails",
-      "path": "/assets/cases/trails/sled_s3_standart3.png",
-      "hash": "298cacfafd26",
-      "size": 786545
+      "path": "/assets/cases/trails/sled_s3_standart3.webp",
+      "hash": "e691f43b9c99",
+      "size": 223334
     }
   ]
 }

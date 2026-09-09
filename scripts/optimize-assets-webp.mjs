@@ -17,6 +17,7 @@ const assetsRoot = path.join(root, "assets");
 const quality = Math.max(70, Math.min(96, Number(valueArg("--quality", "88")) || 88));
 const concurrency = Math.max(1, Math.min(8, Number(valueArg("--concurrency", "4")) || 4));
 const sourceExtensions = new Set([".png", ".jpg", ".jpeg"]);
+
 async function listSources(directory, prefix = "") {
   const entries = await readdir(directory, { withFileTypes: true });
   entries.sort((a, b) => a.name.localeCompare(b.name, "ru"));
@@ -76,9 +77,7 @@ async function encodeWebp(source, output) {
   }
   const magick = await getImagemagickCommand();
   if (magick) {
-    const args = magick === "magick"
-      ? [source, "-quality", String(quality), "-define", "webp:method=6", output]
-      : [source, "-quality", String(quality), "-define", "webp:method=6", output];
+    const args = [source, "-quality", String(quality), "-define", "webp:method=6", output];
     await execFile(magick, args);
     return magick;
   }
@@ -133,7 +132,11 @@ async function processOne(item) {
   const temp = output.replace(/\.webp$/i, `.zefirok-tmp-${process.pid}.webp`);
   await mkdir(path.dirname(output), { recursive: true });
   try {
-    encoderName = encoderName || await encodeWebp(item.absolute, temp);
+    // IMPORTANT: encode every file. Do not use `encoderName || await encodeWebp(...)` here:
+    // once encoderName becomes truthy, short-circuit evaluation would skip the encoder entirely.
+    const usedEncoder = await encodeWebp(item.absolute, temp);
+    if (!encoderName) encoderName = usedEncoder;
+
     if (!(await validWebp(temp))) throw new Error("encoder создал некорректный WebP");
     const tempInfo = await stat(temp);
     let chosenBytes = tempInfo.size;
@@ -152,8 +155,9 @@ async function processOne(item) {
     console.log(`${marker} ${item.relative} -> ${outputRelative} | ${human(sourceInfo.size)} -> ${human(chosenBytes)} (${saving.toFixed(1)}%)${useExisting ? " existing" : ""}`);
 
     if (apply) {
-      if (useExisting) await rm(temp, { force: true });
-      else {
+      if (useExisting) {
+        await rm(temp, { force: true });
+      } else {
         await rm(output, { force: true });
         await rename(temp, output);
       }
