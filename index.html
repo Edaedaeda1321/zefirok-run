@@ -15148,6 +15148,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       let caseStateLastSyncAt = 0;
       const CASE_STATE_CLIENT_CACHE_MS = 8000;
       let caseRouletteBusy = false;
+      let caseOpeningRetryContext = null;
       // =============================================================
       // НАСТРОЙКИ ПРОФИЛЯ, XP И УРОВНЕЙ.
       // Эти значения можно менять самостоятельно прямо в коде.
@@ -18941,7 +18942,15 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           cache: &quot;no-store&quot;, credentials: &quot;same-origin&quot;
         }, Math.max(1000, Number(timeoutMs || 6500)));
         const data = await response.json().catch(() =&gt; null);
-        if (!response.ok || !data?.ok) throw Object.assign(new Error(data?.error || &quot;Сервис кейсов временно недоступен.&quot;), { status: response.status });
+        if (!response.ok || !data?.ok) {
+          const apiError = Object.assign(new Error(data?.error || &quot;Сервис кейсов временно недоступен.&quot;), {
+            status: response.status,
+            payload: data,
+            maintenance: Boolean(data?.maintenance),
+            maintenanceMode: String(data?.mode || &quot;&quot;)
+          });
+          throw apiError;
+        }
         return data;
       }
 
@@ -19096,8 +19105,10 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       async function openLevelCaseClient(level, button) {
         const normalizedLevel = Math.floor(Number(level || 0));
         const levelCase = LEVEL_CASE_SCHEDULE.find((entry) =&gt; entry.level === normalizedLevel);
+        const retryType = String(levelCase?.caseType || &quot;small&quot;);
+        caseOpeningRetryContext = { kind: &quot;level&quot;, level: normalizedLevel, caseType: retryType };
         if (button) { button.disabled = true; button.textContent = &quot;Открываем…&quot;; }
-        if (levelCase) showCaseOpeningPreview(levelCase.caseType);
+        if (levelCase) showCaseOpeningPreview(retryType);
         try {
           const data = await caseApiRequest(CASE_API_OPEN_PATH, { level: normalizedLevel }, CASE_OPEN_REQUEST_TIMEOUT_MS);
           const rewards = Array.isArray(data.opened?.rewards) ? data.opened.rewards : [];
@@ -19107,18 +19118,22 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           hapticNotify(&quot;success&quot;);
         } catch (error) {
           caseRouletteBusy = false;
-          hideCaseLayerShell();
-          // The request may time out after the server has already committed the
-          // opening. Re-read authoritative state before deciding whether this is
-          // an error. The level itself is the idempotency key for this case.
+          if (isCasesTemporarilyUnavailableError(error)) {
+            hapticNotify(&quot;error&quot;);
+            showCasesUnavailableState(retryType, error);
+            if (button?.isConnected) { button.disabled = false; button.textContent = &quot;Открыть&quot;; }
+            return;
+          }
+          // A level is the server-side idempotency key. If the response was lost,
+          // refresh authoritative state before offering the same opening again.
           await loadCaseState(true, true);
           const recoveredOpen = normalizeCaseNumberList(state.caseOpenedLevels).includes(normalizedLevel);
           if (recoveredOpen) {
             hapticNotify(&quot;success&quot;);
-            showProfileToast(&quot;Кейс уже открыт · награды зачислены&quot;, &quot;success&quot;);
+            showCaseRecoveredState(retryType);
           } else {
             hapticNotify(&quot;error&quot;);
-            showProfileToast(error?.message || &quot;Не удалось открыть кейс.&quot;, &quot;warning&quot;);
+            showCaseOpenErrorState(retryType, error, true);
             if (button?.isConnected) { button.disabled = false; button.textContent = &quot;Открыть&quot;; }
           }
         } finally { renderCaseHub(); }
@@ -19127,23 +19142,115 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       function showCaseOpeningPreview(caseType) {
         if (!caseLayer || !caseContentEl) return;
         const type = Object.prototype.hasOwnProperty.call(CASE_IMAGE_CATALOG, String(caseType || &quot;&quot;)) ? String(caseType) : &quot;small&quot;;
-        const title = type === &quot;legendary&quot; ? &quot;Легендарный кейс&quot; : type === &quot;mythic&quot; ? &quot;Мифический кейс&quot; : type === &quot;gold&quot; ? &quot;Золотой кейс&quot; : type === &quot;sweet&quot; ? &quot;Серебряный кейс&quot; : &quot;Обычный кейс&quot;;
+        const title = type === &quot;legendary&quot; ? &quot;Легендарный кейс&quot; : type === &quot;mythic&quot; ? &quot;Мифический кейс&quot; : type === &quot;gold&quot; ? &quot;Золотой кейс&quot; : type === &quot;sweet&quot; ? &quot;Серебряный кейс&quot; : type === &quot;alex&quot; ? &quot;Кейс Алекса&quot; : &quot;Обычный кейс&quot;;
         const pool = caseRoulettePool(type);
-        const sequence = Array.from({ length: 28 }, (_, index) =&gt; pool[(index * 5 + Math.floor(index / 4)) % Math.max(1, pool.length)]).filter(Boolean);
-        const cards = sequence.map((view) =&gt; caseRouletteCard(view, false)).join(&quot;&quot;);
+        const safePool = pool.length ? pool : [
+          { src: caseResourceImage(&quot;points&quot;), title: &quot;Очки&quot;, badge: &quot;&quot;, kind: &quot;resource&quot; },
+          { src: caseResourceImage(&quot;treats&quot;), title: &quot;Зефир&quot;, badge: &quot;&quot;, kind: &quot;resource&quot; },
+          { src: caseResourceImage(&quot;coffee&quot;), title: &quot;Кофе&quot;, badge: &quot;&quot;, kind: &quot;resource&quot; }
+        ];
+        const sequence = Array.from({ length: 22 }, (_, index) =&gt; safePool[(index * 5 + Math.floor(index / 4)) % safePool.length]).filter(Boolean);
+        const cards = sequence.map((view) =&gt; caseRouletteCard(view, false, true)).join(&quot;&quot;);
         caseRouletteBusy = true;
-        caseContentEl.innerHTML = `&lt;div class=&quot;case-result-head is-opening&quot;&gt;${caseImageMarkup(type, true, &quot;case-chest-image--roulette&quot;)}&lt;h2 id=&quot;case-dialog-title&quot;&gt;Открываем ${escapePurchaseText(title)}&lt;/h2&gt;&lt;p&gt;Рулетка уже запущена · сервер подтверждает награду…&lt;/p&gt;&lt;/div&gt;&lt;div class=&quot;case-roulette-list&quot;&gt;&lt;div class=&quot;case-roulette-row is-spinning&quot; data-case-preflight-row&gt;&lt;div class=&quot;case-roulette-window&quot;&gt;&lt;div class=&quot;case-roulette-pointer&quot; aria-hidden=&quot;true&quot;&gt;&lt;/div&gt;&lt;div class=&quot;case-roulette-track&quot; data-case-preflight-track&gt;${cards}&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;&lt;button class=&quot;case-result-done&quot; type=&quot;button&quot; disabled&gt;Подождите…&lt;/button&gt;`;
+        caseLayer.classList.remove(&quot;is-info-view&quot;);
+        caseLayer.classList.add(&quot;is-opening-busy&quot;);
+        caseContentEl.innerHTML = `&lt;div class=&quot;case-opening-screen&quot;&gt;
+          &lt;div class=&quot;case-opening-kicker&quot;&gt;&lt;i aria-hidden=&quot;true&quot;&gt;✦&lt;/i&gt;&lt;span&gt;ОТКРЫТИЕ КЕЙСА&lt;/span&gt;&lt;/div&gt;
+          &lt;div class=&quot;case-result-head is-opening is-preflight&quot;&gt;
+            ${caseImageMarkup(type, false, &quot;case-chest-image--roulette&quot;)}
+            &lt;h2 id=&quot;case-dialog-title&quot;&gt;Открываем ${escapePurchaseText(title)}&lt;/h2&gt;
+            &lt;p&gt;Определяем твою награду…&lt;/p&gt;
+          &lt;/div&gt;
+          &lt;div class=&quot;case-opening-roulette-label&quot;&gt;&lt;span&gt;Возможные награды&lt;/span&gt;&lt;small&gt;Результат определяет сервер&lt;/small&gt;&lt;/div&gt;
+          &lt;div class=&quot;case-roulette-list is-preflight&quot;&gt;&lt;div class=&quot;case-roulette-row is-spinning&quot; data-case-preflight-row&gt;&lt;div class=&quot;case-roulette-window&quot;&gt;&lt;div class=&quot;case-roulette-pointer&quot; aria-hidden=&quot;true&quot;&gt;&lt;/div&gt;&lt;div class=&quot;case-roulette-track&quot; data-case-preflight-track&gt;${cards}&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;
+          &lt;div class=&quot;case-opening-safe-note&quot;&gt;&lt;span class=&quot;case-safe-icon&quot; aria-hidden=&quot;true&quot;&gt;&lt;/span&gt;&lt;span&gt;&lt;strong&gt;Награда защищена&lt;/strong&gt;&lt;small&gt;Если связь прервётся, мы продолжим эту же попытку.&lt;/small&gt;&lt;/span&gt;&lt;/div&gt;
+        &lt;/div&gt;`;
         openCaseLayerShell();
         const track = caseContentEl.querySelector(&quot;[data-case-preflight-track]&quot;);
         if (track &amp;&amp; typeof track.animate === &quot;function&quot;) {
           track.animate(
-            [{ transform: &quot;translate3d(0,0,0)&quot; }, { transform: &quot;translate3d(-810px,0,0)&quot; }],
-            { duration: 1450, iterations: Infinity, easing: &quot;linear&quot; }
+            [{ transform: &quot;translate3d(0,0,0)&quot; }, { transform: &quot;translate3d(-846px,0,0)&quot; }],
+            { duration: 1500, iterations: Infinity, easing: &quot;linear&quot; }
           );
         } else if (track) {
-          track.style.transition = &quot;transform 1.45s linear&quot;;
-          window.requestAnimationFrame(() =&gt; { track.style.transform = &quot;translate3d(-810px,0,0)&quot;; } );
+          track.style.transition = &quot;transform 1.5s linear&quot;;
+          window.requestAnimationFrame(() =&gt; { track.style.transform = &quot;translate3d(-846px,0,0)&quot;; } );
         }
+      }
+
+      function isCasesTemporarilyUnavailableError(error) {
+        const payload = error?.payload &amp;&amp; typeof error.payload === &quot;object&quot; ? error.payload : {};
+        const mode = String(error?.maintenanceMode || payload?.mode || &quot;&quot;).toLowerCase();
+        if (Boolean(error?.maintenance || payload?.maintenance) &amp;&amp; mode === &quot;cases&quot;) return true;
+        const message = String(error?.message || payload?.error || &quot;&quot;);
+        return /\u0424\u0443\u043d\u043a\u0446\u0438\u044f \u00ab\u041a\u0435\u0439\u0441\u044b\u00bb \u0432\u0440\u0435\u043c\u0435\u043d\u043d\u043e \u043d\u0435\u0434\u043e\u0441\u0442\u0443\u043f\u043d\u0430|\u041a\u0435\u0439\u0441\u044b \u0432\u0440\u0435\u043c\u0435\u043d\u043d\u043e \u043e\u0442\u043a\u043b\u044e\u0447\u0435\u043d\u044b|\u042d\u0442\u043e\u0442 \u043a\u0435\u0439\u0441 \u0432\u0440\u0435\u043c\u0435\u043d\u043d\u043e \u043e\u0442\u043a\u043b\u044e\u0447\u0451\u043d \u0430\u0434\u043c\u0438\u043d\u0438\u0441\u0442\u0440\u0430\u0442\u043e\u0440\u043e\u043c/i.test(message);
+      }
+
+      function showCasesUnavailableState(caseType, error = null) {
+        if (!caseLayer || !caseContentEl) return;
+        const type = Object.prototype.hasOwnProperty.call(CASE_IMAGE_CATALOG, String(caseType || &quot;&quot;)) ? String(caseType) : &quot;small&quot;;
+        caseRouletteBusy = false;
+        caseLayer.classList.remove(&quot;is-info-view&quot;, &quot;is-opening-busy&quot;);
+        caseContentEl.innerHTML = `&lt;div class=&quot;case-status-screen is-disabled&quot;&gt;
+          &lt;div class=&quot;case-state-pill&quot;&gt;&lt;i aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;&lt;span&gt;Временно отключено&lt;/span&gt;&lt;/div&gt;
+          &lt;div class=&quot;case-state-art&quot;&gt;${caseImageMarkup(type, false, &quot;case-state-chest&quot;)}&lt;span class=&quot;case-state-lock&quot; aria-hidden=&quot;true&quot;&gt;&lt;/span&gt;&lt;/div&gt;
+          &lt;h2 id=&quot;case-dialog-title&quot;&gt;Открытие кейсов временно недоступно&lt;/h2&gt;
+          &lt;p&gt;Мы временно приостановили открытие кейсов. Попробуй ещё раз через несколько минут.&lt;/p&gt;
+          &lt;div class=&quot;case-state-safe&quot;&gt;&lt;span class=&quot;case-safe-icon&quot; aria-hidden=&quot;true&quot;&gt;&lt;/span&gt;&lt;span&gt;&lt;strong&gt;Всё сохранено&lt;/strong&gt;&lt;small&gt;Твои кейсы и прогресс никуда не пропадут. Пока открытие отключено, кейс не спишется.&lt;/small&gt;&lt;/span&gt;&lt;/div&gt;
+          &lt;div class=&quot;case-state-actions&quot;&gt;
+            ${caseOpeningRetryContext ? `&lt;button class=&quot;case-state-primary&quot; data-case-retry-opening type=&quot;button&quot;&gt;Попробовать открыть снова&lt;/button&gt;` : &quot;&quot;}
+            &lt;button class=&quot;case-state-secondary&quot; data-case-close type=&quot;button&quot;&gt;Понятно&lt;/button&gt;
+          &lt;/div&gt;
+        &lt;/div&gt;`;
+        openCaseLayerShell();
+      }
+
+      function showCaseOpenErrorState(caseType, error = null, retryable = true) {
+        if (!caseLayer || !caseContentEl) return;
+        const type = Object.prototype.hasOwnProperty.call(CASE_IMAGE_CATALOG, String(caseType || &quot;&quot;)) ? String(caseType) : &quot;small&quot;;
+        const detail = String(error?.message || &quot;Не удалось получить ответ от сервера.&quot;);
+        caseRouletteBusy = false;
+        caseLayer.classList.remove(&quot;is-info-view&quot;, &quot;is-opening-busy&quot;);
+        caseContentEl.innerHTML = `&lt;div class=&quot;case-status-screen is-error&quot;&gt;
+          &lt;div class=&quot;case-state-pill&quot;&gt;&lt;i aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;&lt;span&gt;Проблема с соединением&lt;/span&gt;&lt;/div&gt;
+          &lt;div class=&quot;case-state-art&quot;&gt;${caseImageMarkup(type, false, &quot;case-state-chest&quot;)}&lt;span class=&quot;case-state-alert&quot; aria-hidden=&quot;true&quot;&gt;!&lt;/span&gt;&lt;/div&gt;
+          &lt;h2 id=&quot;case-dialog-title&quot;&gt;Не удалось завершить открытие&lt;/h2&gt;
+          &lt;p&gt;${escapePurchaseText(detail)}&lt;/p&gt;
+          &lt;div class=&quot;case-state-safe&quot;&gt;&lt;span class=&quot;case-safe-icon&quot; aria-hidden=&quot;true&quot;&gt;&lt;/span&gt;&lt;span&gt;&lt;strong&gt;Награда не потеряется&lt;/strong&gt;&lt;small&gt;${retryable ? &quot;Повтор продолжит эту же попытку. Второй кейс не откроется.&quot; : &quot;Если сервер успел начислить награду, она уже зачислена на аккаунт.&quot;}&lt;/small&gt;&lt;/span&gt;&lt;/div&gt;
+          &lt;div class=&quot;case-state-actions&quot;&gt;
+            ${retryable &amp;&amp; caseOpeningRetryContext ? `&lt;button class=&quot;case-state-primary&quot; data-case-retry-opening type=&quot;button&quot;&gt;Повторить&lt;/button&gt;` : &quot;&quot;}
+            &lt;button class=&quot;case-state-secondary&quot; data-case-close type=&quot;button&quot;&gt;${retryable ? &quot;Закрыть&quot; : &quot;Понятно&quot;}&lt;/button&gt;
+          &lt;/div&gt;
+        &lt;/div&gt;`;
+        openCaseLayerShell();
+      }
+
+      function showCaseRecoveredState(caseType) {
+        if (!caseLayer || !caseContentEl) return;
+        const type = Object.prototype.hasOwnProperty.call(CASE_IMAGE_CATALOG, String(caseType || &quot;&quot;)) ? String(caseType) : &quot;small&quot;;
+        caseRouletteBusy = false;
+        caseOpeningRetryContext = null;
+        caseLayer.classList.remove(&quot;is-info-view&quot;, &quot;is-opening-busy&quot;);
+        caseContentEl.innerHTML = `&lt;div class=&quot;case-status-screen is-success&quot;&gt;
+          &lt;div class=&quot;case-state-pill&quot;&gt;&lt;i aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;&lt;span&gt;Готово&lt;/span&gt;&lt;/div&gt;
+          &lt;div class=&quot;case-state-art is-opened&quot;&gt;${caseImageMarkup(type, true, &quot;case-state-chest&quot;)}&lt;span class=&quot;case-state-check&quot; aria-hidden=&quot;true&quot;&gt;✓&lt;/span&gt;&lt;/div&gt;
+          &lt;h2 id=&quot;case-dialog-title&quot;&gt;Открытие завершено&lt;/h2&gt;
+          &lt;p&gt;Сервер уже успел открыть кейс, пока мы ждали ответ.&lt;/p&gt;
+          &lt;div class=&quot;case-state-safe&quot;&gt;&lt;span class=&quot;case-safe-icon&quot; aria-hidden=&quot;true&quot;&gt;&lt;/span&gt;&lt;span&gt;&lt;strong&gt;Награда уже на аккаунте&lt;/strong&gt;&lt;small&gt;Последнее открытие доступно в истории кейсов.&lt;/small&gt;&lt;/span&gt;&lt;/div&gt;
+          &lt;div class=&quot;case-state-actions is-single&quot;&gt;&lt;button class=&quot;case-state-primary&quot; data-case-close type=&quot;button&quot;&gt;Продолжить&lt;/button&gt;&lt;/div&gt;
+        &lt;/div&gt;`;
+        openCaseLayerShell();
+      }
+
+      function retryCaseOpeningFromModal(button = null) {
+        const retry = caseOpeningRetryContext &amp;&amp; typeof caseOpeningRetryContext === &quot;object&quot; ? { ...caseOpeningRetryContext } : null;
+        if (!retry || caseRouletteBusy) return;
+        if (button) { button.disabled = true; button.textContent = &quot;Проверяем…&quot;; }
+        if (retry.kind === &quot;gifted&quot;) {
+          void openGiftedCaseClient(retry.caseType, null);
+          return;
+        }
+        if (retry.kind === &quot;level&quot;) void openLevelCaseClient(retry.level, null);
       }
 
       const grantedCasePendingRequests = new Map();
@@ -19178,7 +19285,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
             return data;
           } catch (error) {
             lastError = error;
-            if (!isGrantedCaseRetryableError(error)) throw error;
+            if (isCasesTemporarilyUnavailableError(error) || !isGrantedCaseRetryableError(error)) throw error;
           }
         }
         const timeoutError = lastError || new Error(&quot;Сервер всё ещё завершает открытие. Награда не потеряется — повторная проверка продолжит эту же операцию.&quot;);
@@ -19189,6 +19296,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 
       async function openGiftedCaseClient(caseType, button) {
         const type = String(caseType || &quot;small&quot;);
+        caseOpeningRetryContext = { kind: &quot;gifted&quot;, caseType: type };
         if (button) { button.disabled = true; button.textContent = grantedCasePendingRequests.has(type) ? &quot;Проверяем…&quot; : &quot;Открываем…&quot;; }
         const requestId = grantedCasePendingRequests.get(type) || grantedCaseRequestId(type);
         grantedCasePendingRequests.set(type, requestId);
@@ -19200,7 +19308,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
             data = await caseApiRequest(CASE_API_OPEN_GRANTED_PATH, { caseType: type, requestId }, GRANTED_CASE_OPEN_REQUEST_TIMEOUT_MS);
           } catch (error) {
             const status = Number(error?.status || 0);
-            if (error?.timeout || status &gt;= 500 || !status) data = await waitForGrantedCaseResult(type, requestId, deadline, error);
+            if (!isCasesTemporarilyUnavailableError(error) &amp;&amp; (error?.timeout || status &gt;= 500 || !status)) data = await waitForGrantedCaseResult(type, requestId, deadline, error);
             else throw error;
           }
           if (data?.pending) data = await waitForGrantedCaseResult(type, requestId, deadline);
@@ -19213,15 +19321,12 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         } catch (error) {
           caseRouletteBusy = false;
           hapticNotify(&quot;error&quot;);
-          const retryable = isGrantedCaseRetryableError(error);
-          if (!retryable &amp;&amp; grantedCasePendingRequests.get(type) === requestId) grantedCasePendingRequests.delete(type);
-          if (caseContentEl &amp;&amp; !caseLayer?.hidden) {
-            const waitingButton = caseContentEl.querySelector(&quot;.case-result-done&quot;);
-            if (waitingButton) { waitingButton.disabled = false; waitingButton.textContent = &quot;Закрыть и обновить&quot;; waitingButton.setAttribute(&quot;data-case-close&quot;, &quot;&quot;); }
-            const copy = caseContentEl.querySelector(&quot;.case-result-head p&quot;);
-            if (copy) copy.textContent = retryable ? &quot;Ответ не получен вовремя. Награда не потеряется: следующая попытка проверит эту же операцию, а не откроет новый кейс.&quot; : (error?.message || &quot;Не удалось завершить открытие.&quot;);
-          }
-          showProfileToast(retryable ? &quot;Открытие ещё проверяется. Можно закрыть окно и повторить проверку.&quot; : (error?.message || &quot;Не удалось открыть подарочный кейс.&quot;), &quot;warning&quot;);
+          const unavailable = isCasesTemporarilyUnavailableError(error);
+          const retryable = unavailable || isGrantedCaseRetryableError(error);
+          if (unavailable &amp;&amp; grantedCasePendingRequests.get(type) === requestId) grantedCasePendingRequests.delete(type);
+          else if (!retryable &amp;&amp; grantedCasePendingRequests.get(type) === requestId) grantedCasePendingRequests.delete(type);
+          if (unavailable) showCasesUnavailableState(type, error);
+          else showCaseOpenErrorState(type, error, retryable);
           void loadCaseState(true, true).then(() =&gt; renderCaseHub()).catch(() =&gt; {});
           if (button?.isConnected) { button.disabled = false; button.textContent = grantedCasePendingRequests.has(type) ? &quot;Проверить открытие&quot; : &quot;Открыть&quot;; }
         } finally { renderCaseHub(); }
@@ -19545,10 +19650,10 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         ];
       }
 
-      function caseRewardArtMarkup(view, extraClass = &quot;&quot;) {
+      function caseRewardArtMarkup(view, extraClass = &quot;&quot;, eager = false) {
         const className = [&quot;case-reward-art&quot;, view?.kind ? `is-${view.kind}` : &quot;is-generic&quot;, extraClass].filter(Boolean).join(&quot; &quot;);
         const badge = view?.badge ? `&lt;em&gt;${escapePurchaseText(view.badge)}&lt;/em&gt;` : &quot;&quot;;
-        return `&lt;span class=&quot;${escapePurchaseText(className)}&quot;&gt;&lt;img src=&quot;${escapePurchaseText(view?.src || caseFirstAsset(&quot;shopSparkles&quot;, &quot;shopHeart&quot;))}&quot; alt=&quot;&quot; loading=&quot;lazy&quot; decoding=&quot;async&quot; fetchpriority=&quot;low&quot;&gt;${badge}&lt;/span&gt;`;
+        return `&lt;span class=&quot;${escapePurchaseText(className)}&quot;&gt;&lt;img src=&quot;${escapePurchaseText(view?.src || caseFirstAsset(&quot;shopSparkles&quot;, &quot;shopHeart&quot;))}&quot; alt=&quot;&quot; loading=&quot;${eager ? &quot;eager&quot; : &quot;lazy&quot;}&quot; decoding=&quot;async&quot; fetchpriority=&quot;${eager ? &quot;auto&quot; : &quot;low&quot;}&quot;&gt;${badge}&lt;/span&gt;`;
       }
 
       function caseChanceLabel(value) {
@@ -19966,8 +20071,8 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         return `&lt;span class=&quot;case-final-reward-visual is-${escapePurchaseText(rarityClass)}&quot;&gt;&lt;img class=&quot;case-final-reward-effect&quot; src=&quot;${escapePurchaseText(effectSrc)}&quot; alt=&quot;&quot; aria-hidden=&quot;true&quot;&gt;${caseRewardArtMarkup(view, &quot;case-reward-art--result&quot;)}&lt;/span&gt;`;
       }
 
-      function caseRouletteCard(view, final = false) {
-        return `&lt;div class=&quot;case-roulette-card${final ? &quot; is-final&quot; : &quot;&quot;}&quot;&gt;${caseRewardArtMarkup(view)}&lt;span&gt;${escapePurchaseText(view.title)}&lt;/span&gt;&lt;/div&gt;`;
+      function caseRouletteCard(view, final = false, eager = false) {
+        return `&lt;div class=&quot;case-roulette-card${final ? &quot; is-final&quot; : &quot;&quot;}&quot;&gt;${caseRewardArtMarkup(view, &quot;&quot;, eager)}&lt;span&gt;${escapePurchaseText(view.title)}&lt;/span&gt;&lt;/div&gt;`;
       }
 
       function remainingSameCaseCount(caseType) {
@@ -20009,20 +20114,24 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
             if (index === winningIndex) return target;
             return pool[(rewardIndex * 4 + index * 5 + Math.floor(index / 3)) % pool.length];
           });
-          return `&lt;div class=&quot;case-roulette-row&quot; data-case-roulette-row=&quot;${rewardIndex}&quot;&gt;&lt;div class=&quot;case-roulette-window&quot;&gt;&lt;div class=&quot;case-roulette-pointer&quot; aria-hidden=&quot;true&quot;&gt;&lt;/div&gt;&lt;div class=&quot;case-roulette-track&quot;&gt;${sequence.map((view,index)=&gt;caseRouletteCard(view,index===winningIndex)).join(&quot;&quot;)}&lt;/div&gt;&lt;/div&gt;&lt;div class=&quot;case-roulette-reward&quot; hidden&gt;${caseFinalRewardMarkup(target)}&lt;span&gt;&lt;strong&gt;${escapePurchaseText(target.title)}&lt;/strong&gt;&lt;small&gt;${escapePurchaseText(target.detail)}&lt;/small&gt;&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;`;
+          return `&lt;div class=&quot;case-roulette-row&quot; data-case-roulette-row=&quot;${rewardIndex}&quot;&gt;&lt;div class=&quot;case-roulette-window&quot;&gt;&lt;div class=&quot;case-roulette-pointer&quot; aria-hidden=&quot;true&quot;&gt;&lt;/div&gt;&lt;div class=&quot;case-roulette-track&quot;&gt;${sequence.map((view,index)=&gt;caseRouletteCard(view,index===winningIndex,index&lt;=winningIndex+1)).join(&quot;&quot;)}&lt;/div&gt;&lt;/div&gt;&lt;div class=&quot;case-roulette-reward&quot; hidden&gt;${caseFinalRewardMarkup(target)}&lt;span&gt;&lt;strong&gt;${escapePurchaseText(target.title)}&lt;/strong&gt;&lt;small&gt;${escapePurchaseText(target.detail)}&lt;/small&gt;&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;`;
         }).join(&quot;&quot;);
         caseRouletteBusy = true;
+        caseLayer.classList.add(&quot;is-opening-busy&quot;);
         const alexCollection = opened.alexCollection &amp;&amp; typeof opened.alexCollection === &quot;object&quot; ? opened.alexCollection : null;
         const collectionBanner = isAlexCase &amp;&amp; alexCollection
           ? `&lt;div class=&quot;alex-case-result-collection${opened.alexCollectionRewardGranted ? &quot; is-complete&quot; : &quot;&quot;}&quot;&gt;&lt;span&gt;&lt;strong&gt;Коллекция Алекса · ${Number(alexCollection.count || 0)}/4&lt;/strong&gt;&lt;small&gt;${opened.alexCollectionRewardGranted ? &quot;4/4! Золотой кейс добавлен на склад.&quot; : &quot;Собирай Алекс · След · Рамку · Аватар&quot;}&lt;/small&gt;&lt;/span&gt;${opened.alexCollectionRewardGranted ? caseImageMarkup(&quot;gold&quot;, false, &quot;alex-case-result-gold&quot;) : &quot;&quot;}&lt;/div&gt;`
           : &quot;&quot;;
-        caseContentEl.innerHTML = `&lt;div class=&quot;case-result-head is-opening${isAlexCase ? &quot; is-alex&quot; : &quot;&quot;}&quot;&gt;${caseImageMarkup(opened.caseType || &quot;small&quot;, !isAlexCase, &quot;case-chest-image--roulette&quot;)}&lt;h2 id=&quot;case-dialog-title&quot;&gt;Открываем ${escapePurchaseText(opened.title || &quot;кейс&quot;)}&lt;/h2&gt;&lt;p&gt;${isAlexCase ? &quot;Лапки, изумруды и немного удачи…&quot; : &quot;Рулетка выбирает награду…&quot;}&lt;/p&gt;&lt;/div&gt;&lt;div class=&quot;case-roulette-list&quot;&gt;${rows}&lt;/div&gt;${collectionBanner}&lt;div class=&quot;case-result-actions is-single-action&quot;&gt;&lt;button class=&quot;case-result-done&quot; data-case-close type=&quot;button&quot; disabled&gt;Забрать&lt;/button&gt;&lt;button class=&quot;case-open-again&quot; data-case-open-again=&quot;${escapePurchaseText(opened.caseType || &quot;small&quot;)}&quot; type=&quot;button&quot; hidden disabled&gt;Открыть ещё&lt;/button&gt;&lt;/div&gt;`;
+        caseOpeningRetryContext = null;
+        caseContentEl.innerHTML = `&lt;div class=&quot;case-result-screen&quot;&gt;&lt;div class=&quot;case-opening-kicker&quot; data-case-result-kicker&gt;&lt;i aria-hidden=&quot;true&quot;&gt;✦&lt;/i&gt;&lt;span&gt;ОТКРЫТИЕ КЕЙСА&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;case-result-head is-opening${isAlexCase ? &quot; is-alex&quot; : &quot;&quot;}&quot;&gt;${caseImageMarkup(opened.caseType || &quot;small&quot;, !isAlexCase, &quot;case-chest-image--roulette&quot;)}&lt;h2 id=&quot;case-dialog-title&quot;&gt;Открываем ${escapePurchaseText(opened.title || &quot;кейс&quot;)}&lt;/h2&gt;&lt;p&gt;${isAlexCase ? &quot;Лапки, изумруды и немного удачи…&quot; : &quot;Рулетка выбирает награду…&quot;}&lt;/p&gt;&lt;/div&gt;&lt;div class=&quot;case-roulette-list&quot;&gt;${rows}&lt;/div&gt;${collectionBanner}&lt;div class=&quot;case-result-actions is-single-action&quot;&gt;&lt;button class=&quot;case-result-done&quot; data-case-close type=&quot;button&quot; disabled&gt;Продолжить&lt;/button&gt;&lt;button class=&quot;case-open-again&quot; data-case-open-again=&quot;${escapePurchaseText(opened.caseType || &quot;small&quot;)}&quot; type=&quot;button&quot; hidden disabled&gt;Открыть ещё&lt;/button&gt;&lt;/div&gt;&lt;/div&gt;`;
         openCaseLayerShell();
         const rowsEls = [...caseContentEl.querySelectorAll(&quot;[data-case-roulette-row]&quot;)];
         const doneButton = caseContentEl.querySelector(&quot;.case-result-done&quot;);
         const openAgainButton = caseContentEl.querySelector(&quot;[data-case-open-again]&quot;);
         const actionsEl = caseContentEl.querySelector(&quot;.case-result-actions&quot;);
         const head = caseContentEl.querySelector(&quot;.case-result-head&quot;);
+        const resultScreen = caseContentEl.querySelector(&quot;.case-result-screen&quot;);
+        const resultKicker = caseContentEl.querySelector(&quot;[data-case-result-kicker]&quot;);
 
         const syncCaseResultActions = (remaining) =&gt; {
           const hasOpenAgain = Boolean(openAgainButton &amp;&amp; remaining &gt; 0);
@@ -20042,6 +20151,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           if (rewardEl) rewardEl.hidden = false;
           if (index === rowsEls.length - 1) {
             caseRouletteBusy = false;
+            caseLayer.classList.remove(&quot;is-opening-busy&quot;);
             if (doneButton) doneButton.disabled = false;
             const remaining = remainingSameCaseCount(opened.caseType || &quot;small&quot;);
             syncCaseResultActions(remaining);
@@ -20053,8 +20163,10 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
               }
               const title = head.querySelector(&quot;h2&quot;);
               const copy = head.querySelector(&quot;p&quot;);
-              if (title) title.textContent = opened.title || &quot;Кейс открыт&quot;;
-              if (copy) copy.textContent = &quot;Награда уже начислена&quot;;
+              if (title) title.textContent = rewards.length &gt; 1 ? &quot;Твои награды!&quot; : &quot;Твоя награда!&quot;;
+              if (copy) copy.textContent = &quot;Уже зачислена на аккаунт&quot;;
+              if (resultKicker) resultKicker.querySelector(&quot;span&quot;).textContent = &quot;НАГРАДА ПОЛУЧЕНА&quot;;
+              if (resultScreen) resultScreen.classList.add(&quot;is-revealed&quot;);
             }
           }
         };
@@ -20106,6 +20218,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         });
         if (!rowsEls.length) {
           caseRouletteBusy = false;
+          caseLayer.classList.remove(&quot;is-opening-busy&quot;);
           if (doneButton) doneButton.disabled = false;
           const remaining = remainingSameCaseCount(opened.caseType || &quot;small&quot;);
           syncCaseResultActions(remaining);
@@ -20115,6 +20228,8 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       function closeCaseLayer() {
         if (!caseLayer || caseRouletteBusy) return;
         hideCaseLayerShell();
+        caseLayer.classList.remove(&quot;is-opening-busy&quot;);
+        caseOpeningRetryContext = null;
       }
 
       let lastCaseGiftedMarkup = null;
@@ -26031,6 +26146,13 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           });
           return;
         }
+        const retryOpening = target?.closest(&quot;[data-case-retry-opening]&quot;);
+        if (retryOpening &amp;&amp; !retryOpening.disabled) {
+          event.preventDefault();
+          event.stopPropagation();
+          retryCaseOpeningFromModal(retryOpening);
+          return;
+        }
         const openAgain = target?.closest(&quot;[data-case-open-again]&quot;);
         if (openAgain &amp;&amp; !openAgain.disabled) {
           event.preventDefault();
@@ -27688,6 +27810,94 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
 @media(max-width:390px){#zefirok-maltipoo-runner.is-game-expanded .phone{padding-left:10px!important;padding-right:10px!important}#zefirok-maltipoo-runner.is-game-expanded .hud{gap:4px}#zefirok-maltipoo-runner.is-game-expanded .stat{min-height:39px;padding:5px 6px;grid-template-columns:22px minmax(0,1fr)}#zefirok-maltipoo-runner.is-game-expanded .stat-icon{width:22px;height:22px}#zefirok-maltipoo-runner.is-game-expanded .game-expand-toggle{width:40px;height:40px}}
 @media(max-height:620px){#zefirok-maltipoo-runner.is-game-expanded .phone{padding-top:max(6px,var(--zefirok-content-safe-top,0px))!important;padding-bottom:max(6px,var(--zefirok-content-safe-bottom,0px))!important}#zefirok-maltipoo-runner.is-game-expanded [data-screen=&quot;game&quot;]{gap:5px!important}#zefirok-maltipoo-runner.is-game-expanded .stat{min-height:36px;padding-block:4px}#zefirok-maltipoo-runner.is-game-expanded .stage{min-height:180px}#zefirok-maltipoo-runner.is-game-expanded .game-action{min-height:48px!important}}
 &lt;/style&gt;
+
+&lt;style id=&quot;zefirok-case-opening-redesign-v1&quot;&gt;
+#zefirok-maltipoo-runner .case-opening-screen,#zefirok-maltipoo-runner .case-result-screen,#zefirok-maltipoo-runner .case-status-screen{position:relative;display:grid;justify-items:stretch;gap:0;padding:1px 0 0}
+#zefirok-maltipoo-runner .case-layer.is-opening-busy .case-dialog-close{opacity:.38;pointer-events:none;transform:none!important;box-shadow:none}
+#zefirok-maltipoo-runner .case-opening-kicker,#zefirok-maltipoo-runner .case-state-pill{justify-self:center;display:inline-flex;align-items:center;gap:6px;min-height:25px;padding:5px 9px;border:1px solid rgba(226,174,195,.58);border-radius:999px;background:linear-gradient(180deg,rgba(255,255,255,.96),rgba(255,239,246,.94));color:#b8557b;box-shadow:0 4px 12px rgba(118,65,84,.07);font-size:8px;font-weight:950;letter-spacing:.09em;text-transform:uppercase}
+#zefirok-maltipoo-runner .case-opening-kicker i{display:grid;place-items:center;width:15px;height:15px;border-radius:50%;background:linear-gradient(145deg,#f4b43f,#ed739d);color:#fff;font-style:normal;font-size:8px;box-shadow:0 2px 5px rgba(190,99,66,.18)}
+#zefirok-maltipoo-runner .case-opening-screen .case-result-head,#zefirok-maltipoo-runner .case-result-screen .case-result-head{gap:5px;margin:7px 0 9px}
+#zefirok-maltipoo-runner .case-opening-screen .case-result-head.is-preflight .case-chest-visual{width:118px!important;height:118px!important;margin:-4px auto -2px!important}
+#zefirok-maltipoo-runner .case-opening-screen .case-result-head h2,#zefirok-maltipoo-runner .case-result-screen .case-result-head h2{max-width:310px;font-size:21px;line-height:1.08;color:#603b2e;text-wrap:balance}
+#zefirok-maltipoo-runner .case-opening-screen .case-result-head p,#zefirok-maltipoo-runner .case-result-screen .case-result-head p{font-size:10.5px;line-height:1.4;color:#96705f}
+#zefirok-maltipoo-runner .case-opening-roulette-label{display:flex;align-items:end;justify-content:space-between;gap:10px;margin:1px 3px 7px;text-align:left}
+#zefirok-maltipoo-runner .case-opening-roulette-label span{color:#71485a;font-size:9px;font-weight:950;letter-spacing:.04em;text-transform:uppercase}
+#zefirok-maltipoo-runner .case-opening-roulette-label small{color:#a68591;font-size:7.5px;font-weight:800;white-space:nowrap}
+#zefirok-maltipoo-runner .case-opening-screen .case-roulette-list.is-preflight{margin:0}
+#zefirok-maltipoo-runner .case-opening-screen .case-roulette-window{height:94px;border-radius:18px;background:linear-gradient(180deg,#fffdfb,#fff7f2);box-shadow:inset 0 0 0 1px rgba(220,155,180,.34),0 9px 20px rgba(93,55,39,.08)}
+#zefirok-maltipoo-runner .case-opening-screen .case-roulette-track{top:9px;gap:8px}
+#zefirok-maltipoo-runner .case-opening-screen .case-roulette-card{width:86px;height:76px;flex-basis:86px;padding:5px;border:1px solid rgba(235,210,201,.68);border-radius:15px;background:linear-gradient(180deg,#fff,#fffaf7);box-shadow:0 5px 13px rgba(90,52,36,.075);gap:4px}
+#zefirok-maltipoo-runner .case-opening-screen .case-roulette-card .case-reward-art{width:43px;height:43px;flex-basis:43px}
+#zefirok-maltipoo-runner .case-opening-screen .case-roulette-card span:last-child{max-width:76px;color:#72495b;font-size:9px;font-weight:900}
+#zefirok-maltipoo-runner .case-opening-screen .case-roulette-pointer{width:3px;background:linear-gradient(transparent,#dc5c8a 14%,#dc5c8a 86%,transparent);box-shadow:0 0 10px rgba(220,92,138,.28)}
+#zefirok-maltipoo-runner .case-opening-screen .case-roulette-pointer::before,#zefirok-maltipoo-runner .case-opening-screen .case-roulette-pointer::after{border-left-width:8px;border-right-width:8px}
+#zefirok-maltipoo-runner .case-opening-safe-note,#zefirok-maltipoo-runner .case-state-safe{display:grid;grid-template-columns:31px minmax(0,1fr);align-items:center;gap:9px;margin-top:11px;padding:9px 11px;border:1px solid rgba(226,191,138,.38);border-radius:15px;background:linear-gradient(135deg,#fff9e7,#fffdf8);text-align:left;color:#76533e}
+#zefirok-maltipoo-runner .case-opening-safe-note&gt;span:last-child,#zefirok-maltipoo-runner .case-state-safe&gt;span:last-child{display:grid;gap:2px}
+#zefirok-maltipoo-runner .case-opening-safe-note strong,#zefirok-maltipoo-runner .case-state-safe strong{font-size:10px;font-weight:950;color:#704936}
+#zefirok-maltipoo-runner .case-opening-safe-note small,#zefirok-maltipoo-runner .case-state-safe small{font-size:8px;line-height:1.4;font-weight:750;color:#987762}
+#zefirok-maltipoo-runner .case-safe-icon{position:relative;display:grid;width:29px;height:29px;border-radius:10px;background:linear-gradient(145deg,#fff2b9,#f6d777);box-shadow:inset 0 0 0 1px rgba(196,146,48,.16)}
+#zefirok-maltipoo-runner .case-safe-icon::before{content:&quot;&quot;;position:absolute;left:9px;top:7px;width:9px;height:12px;border:2px solid #a87822;border-top:0;border-radius:2px 2px 5px 5px;transform:rotate(45deg);border-left:0}
+#zefirok-maltipoo-runner .case-safe-icon::after{content:&quot;&quot;;position:absolute;left:8px;top:13px;width:6px;height:2px;border-radius:2px;background:#a87822;transform:rotate(45deg)}
+#zefirok-maltipoo-runner .case-result-screen{isolation:isolate}
+#zefirok-maltipoo-runner .case-result-screen::before,#zefirok-maltipoo-runner .case-result-screen::after{content:&quot;&quot;;position:absolute;z-index:-1;left:50%;top:62px;width:230px;height:150px;transform:translateX(-50%) scale(.82);pointer-events:none;opacity:0;background:radial-gradient(circle at 14% 33%,rgba(245,183,69,.85) 0 2px,transparent 3px),radial-gradient(circle at 82% 22%,rgba(231,103,148,.74) 0 2px,transparent 3px),radial-gradient(circle at 67% 72%,rgba(244,202,91,.7) 0 2px,transparent 3px),radial-gradient(circle at 27% 80%,rgba(233,124,163,.68) 0 2px,transparent 3px)}
+#zefirok-maltipoo-runner .case-result-screen::after{transform:translateX(-50%) rotate(19deg) scale(.82)}
+#zefirok-maltipoo-runner .case-result-screen.is-revealed::before{animation:case-reveal-sparkles .7s ease-out both}
+#zefirok-maltipoo-runner .case-result-screen.is-revealed::after{animation:case-reveal-sparkles .78s .06s ease-out both}
+#zefirok-maltipoo-runner .case-result-screen.is-revealed .case-opening-kicker{border-color:rgba(230,180,75,.48);background:linear-gradient(180deg,#fff9d8,#fff1bc);color:#976a22}
+#zefirok-maltipoo-runner .case-result-screen .case-roulette-reward{min-height:69px;padding:9px 11px;border:1px solid rgba(229,184,201,.48);border-radius:16px;background:linear-gradient(135deg,#fff,#fff7fa);box-shadow:0 8px 18px rgba(110,55,77,.07)}
+#zefirok-maltipoo-runner .case-result-screen .case-roulette-reward .case-reward-art--result{width:54px;height:54px;flex-basis:54px}
+#zefirok-maltipoo-runner .case-result-actions{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;margin-top:13px}
+#zefirok-maltipoo-runner .case-result-actions.is-single-action{grid-template-columns:1fr}
+#zefirok-maltipoo-runner .case-result-done,#zefirok-maltipoo-runner .case-open-again{width:100%;min-height:46px;margin:0!important;border-radius:15px;padding:11px 14px;font:950 11px/1.1 inherit}
+#zefirok-maltipoo-runner .case-result-done{border:0;background:linear-gradient(135deg,#ef7da5,#d95385);color:#fff;box-shadow:0 8px 18px rgba(202,72,118,.2)}
+#zefirok-maltipoo-runner .case-open-again{border:1px solid rgba(223,171,190,.72);background:#fff;color:#a94f72;box-shadow:none}
+#zefirok-maltipoo-runner .case-result-done:disabled{opacity:.46;box-shadow:none}
+#zefirok-maltipoo-runner .case-status-screen{justify-items:center;padding:5px 3px 2px;text-align:center}
+#zefirok-maltipoo-runner .case-status-screen .case-state-pill{margin-bottom:9px}
+#zefirok-maltipoo-runner .case-state-pill i{width:7px;height:7px;border-radius:50%;background:#df668e;box-shadow:0 0 0 4px rgba(223,102,142,.11)}
+#zefirok-maltipoo-runner .case-status-screen.is-error .case-state-pill{border-color:rgba(225,164,134,.5);background:linear-gradient(180deg,#fff8f1,#ffede1);color:#ac6546}
+#zefirok-maltipoo-runner .case-status-screen.is-error .case-state-pill i{background:#df7f55;box-shadow:0 0 0 4px rgba(223,127,85,.1)}
+#zefirok-maltipoo-runner .case-status-screen.is-success .case-state-pill{border-color:rgba(185,181,89,.48);background:linear-gradient(180deg,#fbffef,#f2f6d8);color:#778434}
+#zefirok-maltipoo-runner .case-status-screen.is-success .case-state-pill i{background:#95a543;box-shadow:0 0 0 4px rgba(149,165,67,.1)}
+#zefirok-maltipoo-runner .case-state-art{position:relative;display:grid;place-items:center;width:132px;height:124px;margin:-1px auto 3px}
+#zefirok-maltipoo-runner .case-state-art::before{content:&quot;&quot;;position:absolute;inset:7px;border-radius:50%;background:radial-gradient(circle,rgba(255,251,231,.96),rgba(251,228,237,.4) 56%,transparent 72%);filter:blur(2px)}
+#zefirok-maltipoo-runner .case-state-art .case-state-chest{position:relative;z-index:1;width:112px!important;height:112px!important;margin:0!important;object-fit:contain;filter:drop-shadow(0 9px 13px rgba(93,55,39,.15))!important}
+#zefirok-maltipoo-runner .case-status-screen.is-disabled .case-state-art .case-state-chest{filter:grayscale(.16) saturate(.83) drop-shadow(0 9px 13px rgba(93,55,39,.13))!important;opacity:.9}
+#zefirok-maltipoo-runner .case-state-lock,#zefirok-maltipoo-runner .case-state-alert,#zefirok-maltipoo-runner .case-state-check{position:absolute;z-index:3;right:8px;bottom:8px;display:grid;place-items:center;width:37px;height:37px;border:3px solid #fff;border-radius:13px;box-shadow:0 7px 14px rgba(103,54,72,.16)}
+#zefirok-maltipoo-runner .case-state-lock{background:linear-gradient(145deg,#f390b1,#d85384)}
+#zefirok-maltipoo-runner .case-state-lock::before{content:&quot;&quot;;position:absolute;left:11px;top:7px;width:11px;height:10px;border:3px solid #fff;border-bottom:0;border-radius:8px 8px 0 0}
+#zefirok-maltipoo-runner .case-state-lock::after{content:&quot;&quot;;position:absolute;left:8px;top:16px;width:17px;height:13px;border-radius:4px;background:#fff}
+#zefirok-maltipoo-runner .case-state-alert{background:linear-gradient(145deg,#f5a068,#dc6d4f);color:#fff;font-size:22px;font-weight:950}
+#zefirok-maltipoo-runner .case-state-check{background:linear-gradient(145deg,#b8c85d,#819839);color:#fff;font-size:17px;font-weight:950}
+#zefirok-maltipoo-runner .case-status-screen h2{max-width:315px;margin:2px auto 7px;color:#603b2e;font-size:22px;line-height:1.08;text-wrap:balance}
+#zefirok-maltipoo-runner .case-status-screen&gt;p{max-width:320px;margin:0 auto;color:#94705e;font-size:10.5px;line-height:1.48;font-weight:720}
+#zefirok-maltipoo-runner .case-status-screen .case-state-safe{width:100%;box-sizing:border-box;margin-top:13px}
+#zefirok-maltipoo-runner .case-status-screen.is-disabled .case-state-safe{border-color:rgba(225,174,194,.38);background:linear-gradient(135deg,#fff6f9,#fffdfb)}
+#zefirok-maltipoo-runner .case-state-actions{width:100%;display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,.75fr);gap:8px;margin-top:12px}
+#zefirok-maltipoo-runner .case-state-actions.is-single{grid-template-columns:1fr}
+#zefirok-maltipoo-runner .case-state-primary,#zefirok-maltipoo-runner .case-state-secondary{min-height:46px;border-radius:15px;padding:10px 12px;font:950 10.5px/1.2 inherit}
+#zefirok-maltipoo-runner .case-state-primary{border:0;background:linear-gradient(135deg,#ef7da5,#d95385);color:#fff;box-shadow:0 8px 18px rgba(202,72,118,.19)}
+#zefirok-maltipoo-runner .case-state-secondary{border:1px solid rgba(222,181,196,.72);background:#fffaf8;color:#a35b75}
+#zefirok-maltipoo-runner .case-state-primary:disabled{opacity:.48;box-shadow:none}
+@keyframes case-reveal-sparkles{0%{opacity:0;transform:translateX(-50%) scale(.72)}35%{opacity:1}100%{opacity:0;transform:translateX(-50%) scale(1.14)}}
+@media(max-width:390px){
+#zefirok-maltipoo-runner .case-opening-screen .case-result-head.is-preflight .case-chest-visual{width:108px!important;height:108px!important}
+#zefirok-maltipoo-runner .case-opening-screen .case-result-head h2,#zefirok-maltipoo-runner .case-result-screen .case-result-head h2,#zefirok-maltipoo-runner .case-status-screen h2{font-size:19px}
+#zefirok-maltipoo-runner .case-opening-roulette-label small{display:none}
+#zefirok-maltipoo-runner .case-state-actions{grid-template-columns:1fr}
+#zefirok-maltipoo-runner .case-state-art{width:120px;height:112px}
+#zefirok-maltipoo-runner .case-state-art .case-state-chest{width:102px!important;height:102px!important}
+}
+@media(max-height:720px){
+#zefirok-maltipoo-runner .case-opening-screen .case-result-head.is-preflight .case-chest-visual{width:100px!important;height:100px!important}
+#zefirok-maltipoo-runner .case-opening-screen .case-result-head{margin:4px 0 7px}
+#zefirok-maltipoo-runner .case-opening-screen .case-roulette-window{height:88px}
+#zefirok-maltipoo-runner .case-opening-screen .case-roulette-card{height:70px}
+#zefirok-maltipoo-runner .case-state-art{height:108px}
+#zefirok-maltipoo-runner .case-state-art .case-state-chest{width:98px!important;height:98px!important}
+}
+&lt;/style&gt;
+
 &lt;/body&gt;
 &lt;/html&gt;" title="Сладкий Забег"></iframe>
 <script id="zefirok-v07934-season-pass-overlay-audit" type="application/json">{"version":"0.79.34","scope":"outer-app-return-recovery","samePageOverlay":true,"mainGamePreserved":true,"restores":["telegram_profile","rating","balances","cases","notifications","feature_flags"]}</script>
