@@ -9625,6 +9625,119 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
 }
 </style>
 
+<style id="zefirok-guides-20260910">
+/* Scoped tutorial UI: no gameplay, shop, reward or other modal selectors. */
+:is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer)[hidden]{display:none!important}
+:is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer){position:fixed!important;inset:0!important;z-index:2147483300!important;display:flex!important;align-items:flex-end;justify-content:center;box-sizing:border-box;padding:max(12px,env(safe-area-inset-top),var(--tg-content-safe-top,0px),var(--safe-top,0px)) max(9px,env(safe-area-inset-right)) max(9px,env(safe-area-inset-bottom)) max(9px,env(safe-area-inset-left));background:rgba(56,34,46,.40);overscroll-behavior:contain;text-align:left;color:#573e49;font-family:'Sofia Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;line-height:1.4}
+:is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer) *{box-sizing:border-box}
+:is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer) [hidden]{display:none!important}
+:is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer) .zgt-dialog{position:relative;width:min(490px,100%);height:min(680px,100%);max-height:100%;margin:0!important;padding:0!important;overflow:hidden;border-radius:29px 29px 23px 23px;border:1px solid rgba(239,211,220,.9);background:#fffaf6;box-shadow:0 22px 70px rgba(68,36,49,.2);display:flex;flex-direction:column;font-family:inherit;color:inherit;isolation:isolate}
+:is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer) .zgt-mount{display:flex;flex-direction:column;min-height:0;height:100%;width:100%;overflow:hidden}
+:is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer) button{font-family:inherit;font-size:13px;font-weight:750;line-height:1.3;text-transform:none;letter-spacing:normal;box-shadow:none;cursor:pointer;touch-action:manipulation;color:#815267;min-width:0}
+:is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer) button:focus-visible{outline:3px solid #ad3f6d!important;outline-offset:2px}
+:is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer) button:disabled{opacity:.42;cursor:default;transform:none}
+:is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer) .zgt-header{flex:none;padding:0 18px 2px;background:#fffaf6;user-select:none;-webkit-user-select:none}
+:is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer) .zgt-grip{display:flex;align-items:center;justify-content:center;height:25px;min-height:25px;width:86px;margin:0 auto;padding:0;border:0;background:transparent;border-radius:10px;touch-action:none;cursor:grab}
+:is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer) .zgt-grip span{display:block;width:38px;height:4px;background:#d8bcc8;border-radius:8px;transition:background .15s,width .15s}
+:is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer) .zgt-grip.zgt-armed span{width:52px;background:#c25b83}
+:is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer) .zgt-top{display:flex;gap:8px;align-items:center;min-height:43px}
+:is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer) .zgt-mode{display:flex;align-items:center;gap:9px;min-width:0;flex:1;font-size:12px;font-weight:750;color:#886879;line-height:1.25}
+:is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer) .zgt-mode>img{display:block;object-fit:contain;width:28px;height:28px;flex:none}
+:is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer) .zgt-topics{padding:7px 9px;min-height:36px;border:1px solid #ead5dd;border-radius:11px;background:#fff;font-size:11px;flex:none}
+:is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer) .zgt-close{width:38px;height:38px;min-height:38px;flex:none;padding:0;border:1px solid #eadce0;background:#fff;border-radius:13px;font-size:24px;font-weight:400;display:grid;place-items:center}
+:is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer) .zgt-segments{display:flex;gap:5px;margin:5px 0 0;width:100%}
+:is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer) .zgt-segment{flex:1;min-height:27px;padding:10px 0;border:0;background:none;border-radius:4px}
+:is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer) .zgt-segment>span{display:block;height:4px;width:100%;border-radius:5px;background:#eadce1}
+:is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer) .zgt-segment[aria-current=step]>span{background:#d76893}
+:is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer) .zgt-segment.zgt-past>span{background:#eab58d}
+:is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer) .zgt-body{flex:1;min-height:0;padding:7px 20px 16px;overflow-y:auto;overflow-x:hidden;overflow-anchor:none;overscroll-behavior-y:contain;-webkit-overflow-scrolling:touch;scrollbar-width:thin;touch-action:pan-y}
+:is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer) h2{font-family:inherit;font-size:26px!important;line-height:1.12!important;letter-spacing:-.6px!important;color:#593b4a;font-weight:820;margin:17px 0 0!important;text-align:left}
+:is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer) .zgt-description{font-family:inherit;font-size:14px!important;line-height:1.53!important;color:#806675;margin:12px 0 0!important;font-weight:480;text-align:left}
+:is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer) .zgt-note{display:flex;align-items:flex-start;gap:9px;margin-top:16px;padding:12px;border-radius:16px;background:#fff0df;border:1px solid #f1dfc9;color:#876b4f}
+:is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer) .zgt-note>span{display:grid;place-items:center;flex:none;width:18px;height:18px;margin-top:1px;border:1px solid #c4a278;border-radius:50%;font-size:12px;font-weight:700;line-height:1}
+:is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer) .zgt-note p{font-family:inherit;margin:0!important;font-size:12px!important;line-height:1.5!important;font-weight:480;text-align:left;color:inherit}
+:is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer) .zgt-footer{flex:none;display:grid;grid-template-columns:minmax(0,.68fr) minmax(0,1.32fr);gap:9px;padding:13px 20px 17px;background:#fffaf6;border-top:1px solid #eedfe2}
+:is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer) .zgt-footer:has(.zgt-prev[hidden]){grid-template-columns:1fr}
+:is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer) .zgt-prev,:is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer) .zgt-next{min-height:48px;padding:12px 10px;border:1px solid #e8cbd6;border-radius:15px;background:#fff;color:#a15376;font-size:14px;font-weight:750}
+:is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer) .zgt-next{background:linear-gradient(180deg,#e787ab,#d35c89);border-color:#d0678f;color:#fff}
+:is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer) .zgt-scene{position:relative;border-radius:22px;padding:13px;min-height:180px;background:radial-gradient(ellipse at 90% 0%,#fff3d9,transparent 70%),linear-gradient(140deg,#fbeaf0,#fff7e9);border:1px solid #edddd8;overflow:hidden;user-select:none;-webkit-user-select:none;touch-action:pan-y;animation:zgt-reveal .28s ease-out both}
+:is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer) .zgt-scene-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:13px}
+:is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer) .zgt-scene-heading>strong{font-size:11px;line-height:1.35;color:#93737b;font-weight:680;max-width:72%}
+:is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer) .zgt-scene-heading>span{display:block;white-space:nowrap;font-size:9px;letter-spacing:.65px;text-transform:uppercase;color:#a87c51;background:rgba(255,255,255,.6);padding:3px 6px;border-radius:6px}
+:is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer) .zgt-cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;align-items:stretch}
+:is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer) .zgt-cards:has(>.zgt-mini-card:last-child:nth-child(2)){grid-template-columns:repeat(2,minmax(0,1fr))}
+:is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer) .zgt-cards.zgt-four{grid-template-columns:repeat(2,minmax(0,1fr))}
+:is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer) .zgt-mini-card{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;min-width:0;padding:10px 5px 9px;border-radius:16px;background:rgba(255,255,255,.82);border:1px solid rgba(234,215,216,.7);text-align:center}
+:is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer) .zgt-mini-card>img{width:49px;height:50px;object-fit:contain;display:block;margin-bottom:8px;filter:drop-shadow(0 3px 5px rgba(104,59,71,.08))}
+:is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer) .zgt-mini-card>strong{font-size:12px;color:#694553;line-height:1.3;font-weight:750;overflow-wrap:anywhere}
+:is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer) .zgt-mini-card>small{display:block;font-size:10px;line-height:1.35;color:#9d7c87;margin-top:5px;overflow-wrap:anywhere}
+:is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer) .zgt-four .zgt-mini-card{display:grid;grid-template-columns:34px 1fr;text-align:left;gap:2px 8px;padding:9px}
+:is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer) .zgt-four .zgt-mini-card>img{width:33px;height:40px;grid-row:1/3;margin:0}
+:is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer) .zgt-four .zgt-mini-card>small{margin:0}
+:is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer) .zgt-symbol{font-size:31px;color:#d49b63;padding:6px 0}
+:is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer) .zgt-route{display:grid;gap:7px}
+:is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer) .zgt-route-row{display:flex;align-items:center;gap:11px;padding:8px 11px;background:rgba(255,255,255,.83);border-radius:13px;border:1px solid #f0e2df;min-height:44px}
+:is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer) .zgt-route-number{display:grid;place-items:center;width:26px;height:26px;border-radius:9px;background:#f8e7ef;color:#b06182;font-size:11px;font-weight:800;flex:none}
+:is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer) .zgt-route-row>span:nth-child(2){flex:1;min-width:0}
+:is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer) .zgt-route-row strong{font-size:12px;font-weight:750;display:block;line-height:1.3}
+:is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer) .zgt-route-row small{font-size:10px;color:#927782;display:block;line-height:1.3;margin-top:2px}
+:is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer) .zgt-check{color:#6b9571;font-size:17px}
+:is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer) .zgt-week-art{height:77px;display:grid;place-items:center;margin:4px auto 12px}
+:is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer) .zgt-week-art>img{height:77px;width:85px;object-fit:contain}
+:is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer) .zgt-week{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px}
+:is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer) .zgt-week>span{display:grid;text-align:center;place-items:center;padding:8px 2px;border:1px solid #efdde2;background:#fff9fb;border-radius:10px;color:#986377;font-size:12px;font-weight:750}
+:is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer) .zgt-week>span>small{display:block;font-size:11px;color:#bf91a2;margin-top:4px}
+:is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer) .zgt-week .zgt-final-day{background:#ffebc2;border-color:#ebcc99;color:#a97c30}
+:is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer) .zgt-profile-preview{display:grid;grid-template-columns:90px 1fr;gap:18px;align-items:center;padding:13px;border-radius:18px;background:rgba(255,255,255,.83)}
+:is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer) .zgt-profile-preview>img{height:90px;width:90px;object-fit:contain}
+:is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer) .zgt-profile-preview>div{display:grid;gap:9px}
+:is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer) .zgt-profile-preview strong{display:block;font-size:12px;font-weight:750}
+:is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer) .zgt-profile-preview small{display:block;font-size:10px;color:#937580;line-height:1.3}
+:is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer) .zgt-progress-preview{padding:10px 12px 11px;border-radius:18px;background:rgba(255,255,255,.83);text-align:left;overflow:hidden}
+:is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer) .zgt-progress-preview>img{float:right;width:57px;height:57px;object-fit:contain;margin-left:12px}
+:is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer) .zgt-progress-preview>strong{display:block;font-size:16px;padding-top:5px}
+:is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer) .zgt-progress-preview>span:not(.zgt-track){font-size:11px;color:#957484;display:block;margin-top:3px}
+:is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer) .zgt-track{display:block;height:7px;border-radius:10px;background:#f1e2e9;overflow:hidden;margin-top:12px;clear:both}
+:is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer) .zgt-track>i{display:block;width:var(--zgt-progress,65%);height:100%;background:linear-gradient(90deg,#e88eae,#d8ad69);border-radius:inherit;transform-origin:left;animation:zgt-progress .9s .12s ease both}
+:is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer) .zgt-progress-stages{display:flex;justify-content:space-between;gap:12px;margin-top:12px}
+:is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer) .zgt-progress-stages b{display:block;font-size:12px}
+:is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer) .zgt-progress-stages small{display:block;font-size:10px;color:#917985}
+:is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer) .zgt-pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+:is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer) .zgt-pair-person{padding:11px;border-radius:16px;background:rgba(255,255,255,.83);text-align:center}
+:is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer) .zgt-pair-person>img{width:45px;height:45px;object-fit:contain;margin:0 auto 5px}
+:is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer) .zgt-pair-person>strong{display:block;font-size:13px}
+:is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer) .zgt-pair-person>small{font-size:10px;line-height:1.3;display:block;margin-top:7px;color:#927784}
+:is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer) .zgt-demo-tabs{display:flex;gap:4px;padding:4px;border-radius:12px;background:#f2e4e8}
+:is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer) .zgt-demo-tabs>span{flex:1;text-align:center;padding:8px 2px;font-size:11px;color:#a88191;border-radius:9px}
+:is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer) .zgt-demo-tabs .zgt-selected{background:#fff;color:#ad5178;font-weight:750}
+:is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer) .zgt-tab-preview{display:flex;gap:12px;align-items:center;background:rgba(255,255,255,.8);border-radius:14px;padding:13px;margin-top:11px}
+:is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer) .zgt-tab-preview>img{width:52px;height:52px;object-fit:contain}
+:is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer) .zgt-tab-preview strong{font-size:13px;display:block}
+:is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer) .zgt-tab-preview small{font-size:11px;color:#927681;display:block;margin-top:3px}
+:is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer) .zgt-jump-ground{height:150px;position:relative;border-bottom:2px solid #e6c8ae}
+:is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer) .zgt-jump-dog{position:absolute;left:16%;bottom:14px;animation:zgt-jump 1.6s .25s ease-in-out both}
+:is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer) .zgt-jump-dog>img{height:96px;width:93px;object-fit:contain}
+:is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer) .zgt-jump-obstacle{position:absolute;right:16%;bottom:0}
+:is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer) .zgt-jump-obstacle>img{height:61px;width:65px;object-fit:contain}
+:is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer) .zgt-tap-label{position:absolute;bottom:4px;left:8px;font-size:10px;color:#b17892}
+:is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer) .zgt-topic-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:18px}
+:is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer) .zgt-topic{display:flex;align-items:flex-start;gap:10px;min-height:96px;padding:13px 10px;border-radius:17px;background:#fff;border:1px solid #eddae0;text-align:left}
+:is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer) .zgt-topic>img{width:32px;height:36px;object-fit:contain;flex:none}
+:is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer) .zgt-topic>span{min-width:0}
+:is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer) .zgt-topic strong{font-size:13px;line-height:1.25;display:block;color:#694553}
+:is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer) .zgt-topic small{font-size:10px;color:#967581;line-height:1.4;display:block;margin-top:5px}
+:is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer) .zgt-sr{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}
+:is(#zefirok-maltipoo-runner .zgt-launch,.zgt-launch){display:inline-grid;place-items:center;width:38px;height:38px;min-width:38px;min-height:38px;border-radius:13px;border:1px solid #edccd8;background:#fff8fc;color:#af587c;font:800 19px/1 -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;cursor:pointer;touch-action:manipulation;flex:none;margin:0 0 0 6px;vertical-align:middle}
+:is(#zefirok-maltipoo-runner .zgt-launch,.zgt-launch):focus-visible{outline:3px solid #ad3f6d;outline-offset:3px}
+@keyframes zgt-reveal{from{opacity:.6;transform:translateY(5px)}to{opacity:1;transform:none}}
+@keyframes zgt-progress{from{transform:scaleX(.1)}to{transform:scaleX(1)}}
+@keyframes zgt-jump{0%,100%{transform:translateY(0)}45%,55%{transform:translateY(-38px)}}
+@media(min-width:640px){:is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer){align-items:center;padding:24px}:is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer) .zgt-dialog{height:min(660px,100%);border-radius:28px}}
+@media(max-width:360px){:is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer) .zgt-header{padding-left:14px;padding-right:14px}:is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer) .zgt-body{padding-left:14px;padding-right:14px}:is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer) .zgt-footer{padding-left:14px;padding-right:14px}:is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer) h2{font-size:23px!important}:is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer) .zgt-mode{font-size:11px;gap:5px}:is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer) .zgt-mode>img{width:23px;height:23px}:is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer) .zgt-topic{flex-direction:column;gap:7px}:is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer) .zgt-profile-preview{grid-template-columns:67px 1fr;gap:9px}:is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer) .zgt-profile-preview>img{width:67px;height:70px}}
+@media(prefers-reduced-motion:reduce){:is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer) *{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+
+.zgt-rating-help-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:0 4px 10px;color:#94667a;font:700 12px/1.3 -apple-system,BlinkMacSystemFont,sans-serif}.topbar>.zgt-launch{justify-self:end;margin-left:auto}
+</style>
 </head>
 <body>
 <div id="zefirok-maltipoo-runner">
@@ -9632,6 +9745,7 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
     <div aria-labelledby="leaderboard-dialog-title" aria-modal="true" class="leaderboard-dialog leaderboard-v4-dialog" role="dialog">
       <h1 id="leaderboard-dialog-title" class="rating-v6-sr-only">Рейтинг игроков</h1>
       <div class="leaderboard-content rating-v6-content" data-leaderboard-content>
+        <div class="zgt-rating-help-row"><span>Рейтинг игроков</span><button type="button" class="zgt-launch" data-zgt-help aria-label="Как работает этот раздел">?</button></div>
         <div class="leaderboard-dynamic rating-v6-dynamic" data-leaderboard-dynamic aria-live="polite" aria-busy="true"><div class="leaderboard-empty">Загружаем рейтинг…</div></div>
       </div>
     </div>
@@ -9911,6 +10025,7 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
   }
 
   function closeRating() {
+    if (window.ZefirokPageGuide?.closeIfOpen()) return;
     ratingSelectHaptic();
     if (postToHost({ type: "zefirok-close-rating" })) return;
     try {
@@ -11154,6 +11269,241 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
   }, 1000);
 
   setInterval(() => refreshWhenVisible(false), CACHE_TTL_MS);
+})();
+</script>
+
+<script id="zefirok-context-guide-20260910">
+(()=>{
+"use strict";
+// UI-only tutorial deck. No network calls, rewards, economy or save-state writes.
+function createTutorialDeck(layer, mount, options, words) {
+  let data = null, gesture = null, timer = 0, frame = 0, serial = 0, closing = false, suppressUntil = 0;
+  const uid = 'zgt-title-' + Math.random().toString(36).slice(2, 9);
+  const esc = value => String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+  const active = () => !layer.hidden && (!options.isActive || options.isActive());
+  const reduced = () => window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches === true;
+  const safeImage = src => {
+    const value = String(src || '');
+    return /^(?:\/(?!\/)|data:image\/(?:png|webp|jpeg|gif);base64,)/i.test(value) ? value : '';
+  };
+  const image = (src, cls = '') => { const url = safeImage(src); return url ? `<img class="${cls}" src="${esc(url)}" alt="" decoding="async" loading="lazy" draggable="false">` : ''; };
+  const iconFallback = '<span class="zgt-symbol" aria-hidden="true">&#10022;</span>';
+  const count = () => Array.isArray(data?.steps) ? data.steps.length : 0;
+  mount.innerHTML = `<div class="zgt-header" data-zgt-header><button class="zgt-grip" data-zgt-grip type="button" aria-label="${esc(words.close)}" title="${esc(words.pull)}"><span></span></button><div class="zgt-top"><span class="zgt-mode" data-zgt-mode></span><button class="zgt-topics" data-zgt-menu type="button">${esc(words.topics)}</button><button class="zgt-close" data-zgt-close type="button" aria-label="${esc(words.close)}">&#215;</button></div><div class="zgt-segments" data-zgt-segments role="group" aria-label="${esc(words.steps)}"></div></div><div class="zgt-body" data-zgt-body tabindex="-1"></div><div class="zgt-footer"><button class="zgt-prev" data-zgt-prev type="button">${esc(words.back)}</button><button class="zgt-next" data-zgt-next type="button">${esc(words.next)}</button></div>`;
+  const panel = mount.closest('[role="dialog"]') || mount;
+  panel.setAttribute('aria-labelledby', uid);
+  const mode = mount.querySelector('[data-zgt-mode]'), segments = mount.querySelector('[data-zgt-segments]');
+  const body = mount.querySelector('[data-zgt-body]'), prev = mount.querySelector('[data-zgt-prev]'), next = mount.querySelector('[data-zgt-next]');
+  const menu = mount.querySelector('[data-zgt-menu]'), grip = mount.querySelector('[data-zgt-grip]');
+  function resetMotion() {
+    ++serial; clearTimeout(timer); timer = 0; cancelAnimationFrame(frame); frame = 0;
+    const previous = gesture; gesture = null; closing = false;
+    if(previous?.kind === 'pointer') try { panel.releasePointerCapture(previous.id); } catch {}
+    panel.style.transform = ''; panel.style.transition = ''; panel.style.willChange = '';
+    body.style.transform = ''; body.style.transition = ''; body.style.willChange = '';
+    layer.style.backgroundColor = ''; layer.style.transition = '';
+    panel.classList.remove('zgt-dragging'); grip.classList.remove('zgt-armed');
+  }
+  const miniBar = v => `<span class="zgt-track"><i style="--zgt-progress:${Math.max(0,Math.min(100,Number(v)||0))}%"></i></span>`;
+  function sceneHtml(scene, fallback) {
+    const s = scene || {}, rows = Array.isArray(s.items) ? s.items : [], assets = data.assets || {};
+    const tag = `<div class="zgt-scene-heading"><strong>${esc(s.title || '')}</strong><span>${esc(words.example)}</span></div>`;
+    let inner = '';
+    if(s.kind === 'jump') {
+      inner = `<div class="zgt-jump-ground"><span class="zgt-jump-dog">${image(assets[s.imageKey] || fallback)}</span><span class="zgt-jump-obstacle">${image(assets[s.obstacleKey] || fallback)}</span><span class="zgt-tap-label">${esc(words.tap)}</span></div>`;
+    } else if(s.kind === 'week') {
+      inner = `<div class="zgt-week-art">${image(s.image || fallback)}</div><div class="zgt-week">${rows.map((r,i)=>`<span class="${i === rows.length-1?'zgt-final-day':''}">${i+1}<small>${i===rows.length-1?'&#10022;':'&#10003;'}</small></span>`).join('')}</div>`;
+    } else if(s.kind === 'route' || s.kind === 'states') {
+      inner = `<div class="zgt-route">${rows.map((r,i)=>`<div class="zgt-route-row"><span class="zgt-route-number">${i+1}</span><span><strong>${esc(r.title)}</strong><small>${esc(r.subtitle)}</small></span>${i===rows.length-1?'<span class="zgt-check" aria-hidden="true">&#10003;</span>':''}</div>`).join('')}</div>`;
+    } else if(s.kind === 'pair') {
+      inner = `<div class="zgt-pair">${rows.map(r=>`<div class="zgt-pair-person">${image(s.image || fallback)}<strong>${esc(r.title)}</strong>${miniBar(r.value)}<small>${esc(r.subtitle)}</small></div>`).join('')}</div>`;
+    } else if(s.kind === 'profile') {
+      inner = `<div class="zgt-profile-preview">${image(s.image || fallback)}<div>${rows.map(r=>`<div><strong>${esc(r.title)}</strong><small>${esc(r.subtitle)}</small></div>`).join('')}</div></div>`;
+    } else if(s.kind === 'progress') {
+      inner = `<div class="zgt-progress-preview">${image(s.image || fallback)}<strong>${esc(rows[0]?.title)}</strong><span>${esc(rows[0]?.subtitle)}</span>${miniBar(rows[0]?.value ?? 60)}<div class="zgt-progress-stages">${rows.slice(1).map(r=>`<span><b>${esc(r.title)}</b><small>${esc(r.subtitle)}</small></span>`).join('')}</div></div>`;
+    } else if(s.kind === 'tabs') {
+      inner = `<div class="zgt-demo-tabs">${rows.map((r,i)=>`<span class="${i===0?'zgt-selected':''}">${esc(r.title)}</span>`).join('')}</div><div class="zgt-tab-preview">${(s.rows || []).map(r=>`${image(r.image || fallback)}<div><strong>${esc(r.title)}</strong><small>${esc(r.subtitle)}</small></div>`).join('')}</div>`;
+    } else {
+      inner = `<div class="zgt-cards ${rows.length===4?'zgt-four':''}">${rows.map(r=>`<div class="zgt-mini-card">${image(r.image || s.image || fallback) || iconFallback}<strong>${esc(r.title)}</strong><small>${esc(r.subtitle)}</small></div>`).join('')}</div>`;
+    }
+    return `<div class="zgt-scene zgt-scene-${esc(s.kind||'cards')}" data-zgt-scene aria-label="${esc(words.example)}: ${esc(s.title)}">${tag}${inner}</div>`;
+  }
+  function render(value) {
+    const segmentHadFocus = segments.contains(document.activeElement);
+    resetMotion(); data = value;
+    const list = Array.isArray(data.steps) ? data.steps : [];
+    data.index = Math.max(0, Math.min(list.length - 1, Number(data.index) || 0));
+    mode.innerHTML = `${image(data.icon)}<span>${esc(data.title)}</span>`;
+    menu.hidden = !data.topics?.length || data.directory === true;
+    segments.hidden = data.directory === true;
+    prev.hidden = data.directory === true;
+    prev.disabled = data.index === 0;
+    if(data.directory) {
+      body.innerHTML = `<h2 id="${uid}">${esc(words.directory)}</h2><p class="zgt-description">${esc(words.directoryCopy)}</p><div class="zgt-topic-grid">${(data.topics || []).map(t=>`<button class="zgt-topic" data-zgt-topic="${esc(t.id)}" type="button">${image(t.icon)}<span><strong>${esc(t.title)}</strong><small>${esc(t.summary)}</small></span></button>`).join('')}</div>`;
+      segments.replaceChildren(); next.textContent = words.close;
+    } else {
+      const step = list[data.index]; if(!step) { body.textContent = words.empty; return; }
+      segments.innerHTML = list.map((s,i)=>`<button class="zgt-segment ${i<data.index?'zgt-past':''}" data-zgt-step="${i}" type="button" aria-label="${esc(words.step)} ${i+1}: ${esc(s.title)}" ${i===data.index?'aria-current="step"':''}><span></span></button>`).join('');
+      body.innerHTML = `${sceneHtml(step.scene,data.icon)}<h2 id="${uid}" tabindex="-1">${esc(step.title)}</h2><p class="zgt-description">${esc(typeof step.text === 'function' ? step.text() : step.text)}</p>${step.tip?`<div class="zgt-note"><span aria-hidden="true">i</span><p>${esc(typeof step.tip === 'function' ? step.tip() : step.tip)}</p></div>`:''}<span class="zgt-sr" aria-live="polite">${esc(words.step)} ${data.index+1} ${esc(words.of)} ${list.length}</span>`;
+      next.textContent = data.index === list.length - 1 ? (data.finishLabel || words.done) : words.next;
+    }
+    body.scrollTop = 0;
+    if(segmentHadFocus && active() && !data.directory) segments.querySelector('[aria-current=step]')?.focus({preventScroll:true});
+  }
+  function navigate(index) {
+    if(!active() || closing || data?.directory || !Number.isInteger(index) || index < 0 || index >= count() || index === data.index) return;
+    options.onStep(index);
+  }
+  function onClick(event) {
+    if(!active()) return;
+    if(performance.now() < suppressUntil) { event.preventDefault(); event.stopImmediatePropagation(); return; }
+    const target = event.target instanceof Element ? event.target : null;
+    if(!target) return;
+    const close = target.closest('[data-zgt-close]'), handle = target.closest('[data-zgt-grip]');
+    const topic = target.closest('[data-zgt-topic]'), step = target.closest('[data-zgt-step]');
+    if(close || (handle && event.detail === 0) || target === layer) { options.onDismiss(); event.stopPropagation(); return; }
+    if(target.closest('[data-zgt-menu]')) { options.onTopic?.('topics'); event.stopPropagation(); return; }
+    if(topic) { options.onTopic?.(topic.dataset.zgtTopic); event.stopPropagation(); return; }
+    if(step) { navigate(Number(step.dataset.zgtStep)); event.stopPropagation(); return; }
+    if(target.closest('[data-zgt-prev]')) { navigate(data.index-1); event.stopPropagation(); return; }
+    if(target.closest('[data-zgt-next]')) {
+      if(data?.directory) options.onDismiss();
+      else if(data.index >= count()-1) options.onFinish();
+      else navigate(data.index+1);
+      event.stopPropagation();
+    }
+  }
+  layer.addEventListener('click',onClick,true);
+  document.addEventListener('keydown',event=>{
+    if(!active()) return;
+    if(event.key === 'Escape') { event.preventDefault(); event.stopImmediatePropagation(); options.onDismiss(); return; }
+    const target = event.target instanceof Element ? event.target : null;
+    if((event.key==='ArrowRight'||event.key==='ArrowLeft') && !target?.matches('input,textarea,select') && !data.directory) {
+      event.preventDefault(); event.stopImmediatePropagation(); navigate(data.index+(event.key==='ArrowRight'?1:-1)); return;
+    }
+    if(event.key !== 'Tab') return;
+    const nodes = [...mount.querySelectorAll('button:not(:disabled),[tabindex="0"]')].filter(el=>!el.hidden && el.getClientRects().length);
+    const first = nodes[0], last = nodes[nodes.length-1];
+    if(!first) return;
+    if(event.shiftKey && (document.activeElement === first || !mount.contains(document.activeElement))) { event.preventDefault(); last.focus(); }
+    else if(!event.shiftKey && (document.activeElement === last || !mount.contains(document.activeElement))) { event.preventDefault(); first.focus(); }
+  },true);
+  const touchFor = (list,id) => Array.from(list||[]).find(t=>t.identifier===id);
+  const interactive = target => target instanceof Element && !target.closest('[data-zgt-grip]') && !!target.closest('button,a,input,textarea,select,summary,[contenteditable="true"]');
+  function begin(kind,id,x,y,target) {
+    if(!active() || closing || gesture || interactive(target)) return false;
+    const header = target instanceof Element && !!target.closest('[data-zgt-header]');
+    const scene = target instanceof Element && !!target.closest('[data-zgt-scene]');
+    if(!header && !scene && (body.scrollTop||0)>1) return false;
+    resetMotion();
+    gesture = {kind,id,x,y,header,scene,axis:null,dx:0,dy:0,lastY:y,lastAt:performance.now(),velocity:0,height:panel.offsetHeight};
+    return true;
+  }
+  function move(x,y,event) {
+    const g = gesture; if(!g || !active() || closing) return;
+    const dx=x-g.x, dy=y-g.y;
+    if(!g.axis) {
+      if(g.scene && Math.abs(dx)>6 && Math.abs(dx)>Math.abs(dy)*1.25) g.axis='x';
+      else if(dy>0 && Math.abs(dx)<=Math.max(4,dy*.7) && (g.header || (body.scrollTop||0)<=1)) {
+        if(!event.cancelable) { resetMotion(); return; }
+        event.preventDefault(); if(dy<3) return; g.axis='y';
+      } else { if(Math.max(Math.abs(dx),Math.abs(dy))>=9) resetMotion(); return; }
+      panel.classList.add('zgt-dragging');
+    }
+    if(!event.cancelable) { resetMotion(); return; }
+    event.preventDefault();
+    const now=performance.now(); g.velocity=(y-g.lastY)/Math.max(1,now-g.lastAt); g.lastAt=now; g.lastY=y;
+    g.dx=dx; g.dy=Math.max(0,dy);
+    if(!frame) frame=requestAnimationFrame(()=>{
+      frame=0; if(gesture!==g || !active()) return;
+      if(g.axis==='x') { body.style.willChange='transform'; body.style.transform=`translate3d(${Math.max(-60,Math.min(60,g.dx*.2))}px,0,0)`; }
+      else {
+        panel.style.willChange='transform';panel.style.transform=`translate3d(0,${Math.min(g.height*.95,g.dy)}px,0)`;
+        layer.style.backgroundColor=`rgba(56,34,46,${Math.max(.06,.40*(1-g.dy/Math.max(1,g.height))).toFixed(3)})`;
+        grip.classList.toggle('zgt-armed',g.dy>=Math.max(90,Math.min(180,g.height*.28)));
+      }
+    });
+  }
+  function finish(cancelled=false) {
+    const g=gesture; if(!g) return;
+    gesture=null; cancelAnimationFrame(frame); frame=0;
+    if(g.kind==='pointer') try { panel.releasePointerCapture(g.id); } catch {}
+    if(!g.axis) { resetMotion(); return; }
+    suppressUntil=performance.now()+420;
+    const velocity=performance.now()-g.lastAt<100?g.velocity:0;
+    const limit=Math.max(90,Math.min(180,g.height*.28));
+    const close=!cancelled && active() && g.axis==='y' && (g.dy>=limit || (g.dy>=55&&velocity>.85));
+    const horizontal=!cancelled && g.axis==='x' && Math.abs(g.dx)>=55;
+    if(horizontal) {
+      const destination=data.index+(g.dx<0?1:-1); resetMotion(); navigate(destination); return;
+    }
+    closing=close; const token=++serial;
+    const duration=reduced()?0:close?230:210;
+    panel.style.transition=`transform ${duration}ms cubic-bezier(.22,.8,.25,1)`;
+    body.style.transition=`transform ${duration}ms ease`;
+    layer.style.transition=`background-color ${duration}ms ease`;
+    panel.style.transform=close?`translate3d(0,${Math.max(g.height+40,window.innerHeight)}px,0)`:'translate3d(0,0,0)';
+    body.style.transform='translate3d(0,0,0)';layer.style.backgroundColor=close?'rgba(56,34,46,0)':'';
+    const done=()=>{if(token!==serial)return;const commit=close&&active();resetMotion();if(commit)options.onDismiss();};
+    if(!duration) done(); else timer=setTimeout(done,duration+30);
+  }
+  panel.addEventListener('pointerdown',event=>{
+    if(event.pointerType==='touch'||event.button!==0||event.isPrimary===false) return;
+    const target=event.target instanceof Element?event.target:null;
+    if(!target?.closest('[data-zgt-header],[data-zgt-scene]'))return;
+    if(begin('pointer',event.pointerId,event.clientX,event.clientY,target)){event.preventDefault();try{panel.setPointerCapture(event.pointerId);}catch{}}
+  });
+  panel.addEventListener('pointermove',e=>{if(gesture?.kind==='pointer'&&gesture.id===e.pointerId)move(e.clientX,e.clientY,e);});
+  panel.addEventListener('pointerup',e=>{if(gesture?.kind==='pointer'&&gesture.id===e.pointerId)finish();});
+  for(const name of ['pointercancel','lostpointercapture']) panel.addEventListener(name,e=>{if(gesture?.kind==='pointer'&&gesture.id===e.pointerId)finish(true);});
+  panel.addEventListener('touchstart',e=>{if(e.touches.length!==1){finish(true);return;}const t=e.touches[0];begin('touch',t.identifier,t.clientX,t.clientY,e.target);},{passive:true});
+  panel.addEventListener('touchmove',e=>{if(gesture?.kind!=='touch')return;if(e.touches.length!==1){finish(true);return;}const t=touchFor(e.touches,gesture.id);if(t)move(t.clientX,t.clientY,e);},{passive:false});
+  panel.addEventListener('touchend',e=>{if(gesture?.kind!=='touch'||!touchFor(e.changedTouches,gesture.id))return;if(gesture.axis&&e.cancelable)e.preventDefault();finish();},{passive:false});
+  panel.addEventListener('touchcancel',()=>finish(true),{passive:true});
+  window.addEventListener('blur',()=>{if(gesture)finish(true);});
+  document.addEventListener('visibilitychange',()=>{if(document.hidden){if(gesture)finish(true);if(closing)resetMotion();}});
+  return {render,resetMotion,focus:()=>{body.scrollTop=0;next.focus({preventScroll:true});},get index(){return data?.index||0;},get directory(){return !!data?.directory;}};
+}
+
+const ZGT_WORDS={"close":"Закрыть обучение","pull":"Потяни вниз, чтобы закрыть","topics":"Темы","steps":"Шаги обучения","back":"Назад","next":"Дальше","example":"Пример","tap":"Тап по игровому полю","step":"Шаг","of":"из","done":"Понятно","directory":"Гиды по игре","directoryCopy":"Выбери нужную тему. Все примеры учебные: они не запускают покупки и не выдают награды.","empty":"Сейчас этот гид недоступен. Закрой окно и открой его снова.","allGuides":"Все игровые гиды","helpLabel":"Как работает этот раздел","finishMain":"В игру","finishStock":"Открыть склад","finishRating":"Открыть рейтинг","finishFriends":"Открыть подарки","profileXpText":"За зачтённый забег — +{run} XP, за подходящую успешную покупку — +{purchase} XP. Нажми на уровень или звание, чтобы открыть лестницу уровней и награды."};
+const ZGT_PAGE_TOPIC={"id":"rating","title":"Рейтинг игроков","summary":"Рекорды, мини-профили и итоги","icon":"/assets/ui/icon_reiting.webp","steps":[{"title":"В рейтинг идут зачтённые результаты","text":"Играй из своего Telegram-аккаунта и заверши полноценный забег. Сервер проверяет длительность, результат и данные попытки перед обновлением рейтинга.","tip":"Бонус к кошельку не подменяет рекорд. Короткая незачтённая попытка не обязана менять место.","scene":{"kind":"route","title":"От забега к месту","items":[{"title":"Завершить","subtitle":"Реальный забег"},{"title":"Проверка","subtitle":"Подтверждение сервера"},{"title":"Рекорд","subtitle":"Лучший зачтённый результат"}]}},{"title":"Сезон и всё время — разные таблицы","text":"В «Сезоне» сравниваются результаты текущего сезона. «Всё время» показывает лучший сохранённый рекорд игрока за все сезоны, а не сумму всех очков.","tip":"Верхняя карточка показывает действующий сезон и его сроки. Новый забег улучшает запись, только если его результат лучше.","scene":{"kind":"cards","title":"Два режима","items":[{"title":"Сезон","subtitle":"Рекорд в текущем сезоне","image":"/assets/ui/icon_battlepass.webp"},{"title":"Всё время","subtitle":"Личный рекорд за всё время","image":"/assets/ui/icon_reiting.webp"}]}},{"title":"На игрока можно нажать","text":"Открой строку игрока или карточку лидера: появится мини-профиль со статистикой, витриной и сравнением доступных показателей.","tip":"Потяни мини-профиль вниз, чтобы закрыть. Просмотр чужой карточки не меняет твой аккаунт.","scene":{"kind":"profile","title":"Мини-профиль","items":[{"title":"Рекорд","subtitle":"Лучший результат"},{"title":"Статистика","subtitle":"Сравнение показателей"},{"title":"Трофеи","subtitle":"Витрина игрока"}],"image":"/assets/ui/icon_reiting.webp"}},{"title":"Награда зависит от итогов сезона","text":"Предпросмотр показывает награду, а получить её можно только после того, как сервер закрепит за тобой право по итогам сезона. Тогда появится действие получения.","tip":"Текущее первое место ещё не гарантирует победу. После сбоя проверь статус той же награды.","scene":{"kind":"states","title":"Итоги и получение","items":[{"title":"Сезон идёт","subtitle":"Места ещё меняются"},{"title":"Итоги","subtitle":"Право назначено"},{"title":"Получение","subtitle":"После подтверждения"}]}}]};
+const ZGT_HOST_BACK=["zefirok-rating-back"];
+// Standalone page adapter. Reads only its local guide catalogue, not player data.
+const guideLayer = document.createElement('div');
+guideLayer.className = 'zgt-layer'; guideLayer.hidden = true;
+guideLayer.setAttribute('aria-hidden','true');
+guideLayer.innerHTML = '<section class="zgt-dialog" role="dialog" aria-modal="true"><div class="zgt-mount"></div></section>';
+document.body.appendChild(guideLayer);
+let guideIndex = 0, guideLock = null, guideReturnFocus = null;
+const pageGuide = createTutorialDeck(guideLayer, guideLayer.querySelector('.zgt-mount'), {
+  onStep: value => {guideIndex=value; renderPageGuide();},
+  onDismiss: closePageGuide, onFinish: closePageGuide
+}, ZGT_WORDS);
+function renderPageGuide() {pageGuide.render({...ZGT_PAGE_TOPIC,index:guideIndex,finishLabel:ZGT_WORDS.done});}
+function openPageGuide() {
+  if(!guideLayer.hidden) return;
+  guideReturnFocus=document.activeElement;guideIndex=0;
+  const body=document.body, root=document.documentElement;
+  guideLock={y:window.scrollY,rootOverflow:root.style.overflow,bodyStyle:{position:body.style.position,top:body.style.top,left:body.style.left,right:body.style.right,width:body.style.width,overflow:body.style.overflow},inert:[]};
+  for(const el of Array.from(body.children)) if(el!==guideLayer && !el.matches('script,style,link')) {guideLock.inert.push([el,el.hasAttribute('inert')]);el.setAttribute('inert','');}
+  body.style.position='fixed';body.style.top=`-${guideLock.y}px`;body.style.left='0';body.style.right='0';body.style.width='100%';body.style.overflow='hidden';root.style.overflow='hidden';
+  renderPageGuide();guideLayer.hidden=false;guideLayer.setAttribute('aria-hidden','false');pageGuide.focus();
+}
+function closePageGuide() {
+  if(guideLayer.hidden) return false;
+  pageGuide.resetMotion();guideLayer.hidden=true;guideLayer.setAttribute('aria-hidden','true');
+  const lock=guideLock;guideLock=null;
+  if(lock){Object.assign(document.body.style,lock.bodyStyle);document.documentElement.style.overflow=lock.rootOverflow;for(const [el,wasInert] of lock.inert)if(!wasInert)el.removeAttribute('inert');window.scrollTo(0,lock.y);}
+  if(guideReturnFocus?.isConnected)guideReturnFocus.focus?.({preventScroll:true});
+  return true;
+}
+window.ZefirokPageGuide={open:openPageGuide,closeIfOpen:closePageGuide,isOpen:()=>!guideLayer.hidden};
+document.addEventListener('click',event=>{const t=event.target instanceof Element?event.target.closest('[data-zgt-help]'):null;if(!t)return;event.preventDefault();event.stopPropagation();openPageGuide();},true);
+window.addEventListener('message',event=>{
+  if(event.source!==window.parent && event.source!==window)return;
+  if(!guideLayer.hidden && ZGT_HOST_BACK.includes(String(event.data?.type||''))){event.stopImmediatePropagation();closePageGuide();}
+},true);
+
 })();
 </script>
 </body>
