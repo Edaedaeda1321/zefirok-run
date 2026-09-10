@@ -1240,14 +1240,17 @@ body.zefirok-run-expanded>iframe[data-run-expanded="true"]{width:100%!important;
     scheduleTelegramViewportSync();
   }
 
-  function refreshMainGameAfterSeasonPass() {
+  function refreshMainGameAfterSeasonPass(returnScreen = "profile") {
     const gameFrame = frame();
     const target = gameFrame?.contentWindow;
     if (!target) return;
     activateGameFrame();
     gameFrame.classList.add("is-ready");
-    const refresh = () => {
-      try { target.postMessage({ type: "zefirok-open-screen", screen: "profile" }, "*"); } catch {}
+    const screen = returnScreen === "game" ? "game" : "profile";
+    const refresh = (restoreScreen = true) => {
+      if (restoreScreen) {
+        try { target.postMessage({ type: "zefirok-open-screen", screen }, "*"); } catch {}
+      }
       try { target.postMessage({ type: "zefirok-season-pass-account-updated" }, "*"); } catch {}
       try { target.postMessage({ type: "zefirok-achievements-account-updated" }, "*"); } catch {}
       try { sendTelegramProfile(target); } catch {}
@@ -1259,7 +1262,9 @@ body.zefirok-run-expanded>iframe[data-run-expanded="true"]{width:100%!important;
     };
     refresh();
     window.requestAnimationFrame(() => window.requestAnimationFrame(restoreLayout));
-    window.setTimeout(refresh, 260);
+    // Keep the existing account refresh, but do not pull the player away from a
+    // screen they opened immediately after returning to the game.
+    window.setTimeout(() => refresh(screen !== "game"), 260);
     window.setTimeout(restoreLayout, 140);
     window.setTimeout(restoreLayout, 480);
     window.setTimeout(restoreLayout, 920);
@@ -1290,6 +1295,13 @@ body.zefirok-run-expanded>iframe[data-run-expanded="true"]{width:100%!important;
     return referralsLayer?.querySelector?.(".zefirok-referrals-frame") || null;
   }
 
+  function handleReferralsBackButton() {
+    const current = referralsFrame();
+    if (!current || current.dataset.backReady !== "true") { closeReferralsOverlay(); return; }
+    try { current.contentWindow.postMessage({ type: "zefirok-referrals-back" }, "*"); }
+    catch { closeReferralsOverlay(); }
+  }
+
   function openReferralsOverlay(initData = "") {
     if (referralsLayer?.isConnected) return;
     const layer = document.createElement("div");
@@ -1302,8 +1314,8 @@ body.zefirok-run-expanded>iframe[data-run-expanded="true"]{width:100%!important;
     referralFrame.allow = "clipboard-write";
     referralFrame.referrerPolicy = "same-origin";
     referralFrame.src = initData
-      ? `/referrals.html?v=1.2.0#tgInitData=${encodeURIComponent(initData)}`
-      : `/referrals.html?v=1.2.0`;
+      ? `/referrals.html?v=20260910-nav-v1#tgInitData=${encodeURIComponent(initData)}`
+      : `/referrals.html?v=20260910-nav-v1`;
     layer.append(referralFrame);
     referralFrame.addEventListener("load", () => {
       const snapshot = syncTelegramViewport();
@@ -1318,7 +1330,8 @@ body.zefirok-run-expanded>iframe[data-run-expanded="true"]{width:100%!important;
       webApp?.disableVerticalSwipes?.();
       webApp?.enableClosingConfirmation?.();
       webApp?.BackButton?.offClick?.(closeReferralsOverlay);
-      webApp?.BackButton?.onClick?.(closeReferralsOverlay);
+      webApp?.BackButton?.offClick?.(handleReferralsBackButton);
+      webApp?.BackButton?.onClick?.(handleReferralsBackButton);
       webApp?.BackButton?.show?.();
     } catch {}
     requestTelegramFullscreen();
@@ -1327,18 +1340,20 @@ body.zefirok-run-expanded>iframe[data-run-expanded="true"]{width:100%!important;
 
   function closeReferralsOverlay() {
     const layer = referralsLayer;
+    if (!layer?.isConnected) return;
     referralsLayer = null;
     if (layer?.isConnected) layer.remove();
     document.body.classList.remove("zefirok-referrals-open");
     try {
       const webApp = window.Telegram?.WebApp;
       webApp?.BackButton?.offClick?.(closeReferralsOverlay);
+      webApp?.BackButton?.offClick?.(handleReferralsBackButton);
       webApp?.BackButton?.hide?.();
       webApp?.disableClosingConfirmation?.();
     } catch {}
     requestTelegramFullscreen();
     scheduleTelegramViewportSync();
-    refreshMainGameAfterSeasonPass();
+    refreshMainGameAfterSeasonPass("game");
   }
 
   let achievementsLayer = null;
@@ -1348,9 +1363,9 @@ body.zefirok-run-expanded>iframe[data-run-expanded="true"]{width:100%!important;
   }
 
   function handleAchievementsBackButton() {
-    const target = achievementsFrame()?.contentWindow;
-    if (!target) { closeAchievementsOverlay(); return; }
-    try { target.postMessage({ type: "zefirok-achievements-back" }, "*"); }
+    const current = achievementsFrame();
+    if (!current || current.dataset.backReady !== "true") { closeAchievementsOverlay(); return; }
+    try { current.contentWindow.postMessage({ type: "zefirok-achievements-back" }, "*"); }
     catch { closeAchievementsOverlay(); }
   }
 
@@ -1365,7 +1380,7 @@ body.zefirok-run-expanded>iframe[data-run-expanded="true"]{width:100%!important;
     frame.title = "Достижения";
     frame.referrerPolicy = "same-origin";
     const achievementsView = view === "showcase" ? "showcase" : "goals";
-    frame.src = `/achievements.html?v=20260910-achievements-v2&view=${achievementsView}${initData ? `#tgInitData=${encodeURIComponent(initData)}` : ""}`;
+    frame.src = `/achievements.html?v=20260910-nav-v1&view=${achievementsView}${initData ? `#tgInitData=${encodeURIComponent(initData)}` : ""}`;
     layer.append(frame);
     frame.addEventListener("load", () => {
       const snapshot = syncTelegramViewport();
@@ -1389,6 +1404,7 @@ body.zefirok-run-expanded>iframe[data-run-expanded="true"]{width:100%!important;
 
   function closeAchievementsOverlay() {
     const layer = achievementsLayer;
+    if (!layer?.isConnected) return;
     achievementsLayer = null;
     if (layer?.isConnected) layer.remove();
     document.body.classList.remove("zefirok-achievements-open");
@@ -1400,7 +1416,7 @@ body.zefirok-run-expanded>iframe[data-run-expanded="true"]{width:100%!important;
     } catch {}
     requestTelegramFullscreen();
     scheduleTelegramViewportSync();
-    refreshMainGameAfterSeasonPass();
+    refreshMainGameAfterSeasonPass("game");
   }
 
   let albumLayer = null;
@@ -1762,15 +1778,17 @@ body.zefirok-run-expanded>iframe[data-run-expanded="true"]{width:100%!important;
     const passFrame = seasonPassFrame();
     const currentRatingFrame = ratingFrame();
     const currentReferralsFrame = referralsFrame();
+    const currentAchievementsFrame = achievementsFrame();
     const currentAlbumFrame = albumFrame();
     const currentLegalFrame = legalDocumentFrame();
     const fromGame = Boolean(gameFrame && event.source === gameFrame.contentWindow);
     const fromSeasonPass = Boolean(passFrame && event.source === passFrame.contentWindow);
     const fromRating = Boolean(currentRatingFrame && event.source === currentRatingFrame.contentWindow);
     const fromReferrals = Boolean(currentReferralsFrame && event.source === currentReferralsFrame.contentWindow);
+    const fromAchievements = Boolean(currentAchievementsFrame && event.source === currentAchievementsFrame.contentWindow);
     const fromAlbum = Boolean(currentAlbumFrame && event.source === currentAlbumFrame.contentWindow);
     const fromLegal = Boolean(currentLegalFrame && event.source === currentLegalFrame.contentWindow);
-    if (!fromGame && !fromSeasonPass && !fromRating && !fromReferrals && !fromAlbum && !fromLegal) return;
+    if (!fromGame && !fromSeasonPass && !fromRating && !fromReferrals && !fromAchievements && !fromAlbum && !fromLegal) return;
     const message = event.data;
     if (!message || typeof message !== "object") return;
     if (fromLegal) {
@@ -1785,10 +1803,11 @@ body.zefirok-run-expanded>iframe[data-run-expanded="true"]{width:100%!important;
       return;
     }
     if (message.type === "zefirok-haptic") {
-      if (fromGame && (seasonPassLayer?.isConnected || ratingLayer?.isConnected || referralsLayer?.isConnected || albumLayer?.isConnected)) return;
+      if (fromGame && (seasonPassLayer?.isConnected || ratingLayer?.isConnected || referralsLayer?.isConnected || achievementsLayer?.isConnected || albumLayer?.isConnected)) return;
       if (fromSeasonPass && !seasonPassLayer?.isConnected) return;
       if (fromRating && !ratingLayer?.isConnected) return;
       if (fromReferrals && !referralsLayer?.isConnected) return;
+      if (fromAchievements && !achievementsLayer?.isConnected) return;
       if (fromAlbum && !albumLayer?.isConnected) return;
       performTelegramHaptic(message);
       return;
@@ -1816,8 +1835,23 @@ body.zefirok-run-expanded>iframe[data-run-expanded="true"]{width:100%!important;
       }
       return;
     }
+    // Accept navigation only from the currently mounted section iframe. A
+    // stale/foreign window must never be able to close or navigate the game.
+    if (fromAchievements) {
+      if (message.type === "zefirok-achievements-ready") currentAchievementsFrame.dataset.backReady = "true";
+      else if (message.type === "zefirok-close-achievements") closeAchievementsOverlay();
+      else if (message.type === "zefirok-achievements-account-updated") {
+        try { gameFrame?.contentWindow?.postMessage?.({ type: "zefirok-achievements-account-updated" }, "*"); } catch {}
+        syncHostAccountRevision("achievements");
+      } else if (message.type === "zefirok-request-fullscreen") {
+        requestTelegramFullscreen();
+        scheduleTelegramViewportSync();
+      }
+      return;
+    }
     if (fromReferrals) {
-      if (message.type === "zefirok-close-referrals") closeReferralsOverlay();
+      if (message.type === "zefirok-referrals-ready") currentReferralsFrame.dataset.backReady = "true";
+      else if (message.type === "zefirok-close-referrals") closeReferralsOverlay();
       else if (message.type === "zefirok-referrals-account-updated") {
         try { gameFrame?.contentWindow?.postMessage?.({ type: "zefirok-referrals-account-updated" }, "*"); } catch {}
         syncHostAccountRevision("referrals");
@@ -28217,6 +28251,13 @@ function createTutorialDeck(layer, mount, options, words) {
   window.addEventListener(&quot;message&quot;, (event) =&gt; {
     const message = event.data;
     if (!message || message.type !== &quot;zefirok-open-screen&quot;) return;
+    if (message.screen === &quot;game&quot;) {
+      if (event.source !== window.parent) return;
+      const gameTab = document.querySelector(&#x27;[data-tab=&quot;game&quot;]&#x27;);
+      const gameScreen = document.querySelector(&#x27;[data-screen=&quot;game&quot;]&#x27;);
+      if (!(gameTab?.getAttribute(&quot;aria-selected&quot;) === &quot;true&quot; &amp;&amp; gameScreen &amp;&amp; !gameScreen.hidden) &amp;&amp; gameTab) gameTab.click();
+      return;
+    }
     if (message.screen === &quot;profile&quot;) {
       const profileTab = document.querySelector(&#x27;[data-tab=&quot;profile&quot;]&#x27;);
       const profileScreen = document.querySelector(&#x27;[data-screen=&quot;profile&quot;]&#x27;);

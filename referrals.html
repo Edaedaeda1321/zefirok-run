@@ -74,10 +74,9 @@
     .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
     .app{width:min(620px,100%);margin:auto;padding:0 max(16px,env(safe-area-inset-right)) max(28px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left))}
     .shell-header{position:sticky;top:0;z-index:12;padding:calc(8px + max(env(safe-area-inset-top),var(--tg-content-safe-top))) 0 12px;background:var(--bg)}
-    .topbar{display:grid;grid-template-columns:36px minmax(0,1fr) 38px 38px;gap:6px;align-items:center;margin-bottom:14px}
+    .topbar{display:grid;grid-template-columns:minmax(0,1fr) 38px 38px;gap:6px;align-items:center;margin-bottom:14px}
     .topbar h1{font-size:21px;font-weight:850;letter-spacing:-.65px;line-height:1.1}
     .icon-btn{width:38px;height:40px;display:grid;place-items:center;border:1px solid var(--line);background:var(--paper);border-radius:14px}
-    .back-btn{width:34px;border:0;background:transparent;justify-self:start}
     .helpbtn{font-size:19px;font-weight:800;color:#aa5779}
     .tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;border:1px solid #f0e0e3;border-radius:18px;padding:4px;background:#f4e9e8}
     .tab{display:flex;gap:6px;justify-content:center;align-items:center;min-height:44px;border:0;border-radius:13px;background:transparent;font-size:13px;font-weight:760;color:#8a6b77;white-space:nowrap}
@@ -404,7 +403,7 @@
   <main class="app">
     <div class="shell-header">
       <header class="topbar">
-        <button type="button" class="icon-btn back-btn" data-page-back aria-label="Назад в игру"><svg class="icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m14 5-7 7 7 7"/></svg></button>
+        
         <h1>Друзья кафе</h1>
         <button type="button" class="icon-btn" data-sheet="settings" aria-label="Настройки друзей"><svg class="icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="3" fill="currentColor" stroke="none"/><circle cx="15" cy="17" r="3" fill="currentColor" stroke="none"/></svg></button>
         <button type="button" class="icon-btn helpbtn" data-sheet="help" aria-label="Как работают Друзья кафе">?</button>
@@ -1431,13 +1430,14 @@ function createTutorialDeck(layer, mount, options, words) {
     if(choiceLayer&&!choiceLayer.hidden){closeChoice();return;}
     if(tutorialLayer&&!tutorialLayer.hidden){closeTutorial(true);return;}
     if(sheetLayer&&!sheetLayer.hidden){closeSheet();return;}
-    try{window.parent.postMessage({type:'zefirok-close-referrals'},'*');if(window.parent!==window)return;}catch{}
-    history.length>1?history.back():location.assign('/?screen=profile');
+    if(window.parent!==window){window.parent.postMessage({type:'zefirok-close-referrals'},'*');return;}
+    const home=new URL('/',location.href);home.searchParams.set('screen','game');
+    if(new URLSearchParams(location.search).get('test_project')==='1')home.searchParams.set('test_project','1');
+    location.assign(home.href);
   }
   document.addEventListener('click',event=>{
     const target=event.target instanceof Element?event.target:null;if(!target)return;
     if(target.closest('button:disabled'))return;
-    if(target.closest('[data-page-back]')){close();return;}
     if(target.closest('[data-sheet-close]')||target===sheetLayer){closeSheet();return;}
     if(target.closest('[data-tutorial-open]')){closeSheet(false);openTutorial(false);return;}
     if(target.closest('[data-tutorial-close]')){closeTutorial(true);return;}
@@ -1484,11 +1484,14 @@ function createTutorialDeck(layer, mount, options, words) {
   });
   try{
     webApp?.ready?.();webApp?.expand?.();webApp?.disableVerticalSwipes?.();
-    webApp?.BackButton?.onClick?.(close);webApp?.BackButton?.show?.();syncTelegramContentSafeTop();
+    if(window.parent===window){webApp?.BackButton?.onClick?.(close);webApp?.BackButton?.show?.();}
+    syncTelegramContentSafeTop();
     for(const name of ['viewportChanged','safeAreaChanged','contentSafeAreaChanged'])try{webApp?.onEvent?.(name,syncTelegramContentSafeTop);}catch{}
   }catch{}
   window.addEventListener('message',event=>{
-    if(event.source!==window.parent||event.data?.type!=='zefirok-host-viewport-changed')return;
+    if(event.source!==window.parent)return;
+    if(event.data?.type==='zefirok-referrals-back'){close();return;}
+    if(event.data?.type!=='zefirok-host-viewport-changed')return;
     try{
       const payload=event.data.payload||{};
       document.documentElement.style.setProperty('--app-height',`${n(payload.height)}px`);
@@ -1520,6 +1523,8 @@ function createTutorialDeck(layer, mount, options, words) {
   const allowNewModalTap=()=>{modalSwipeClickUntil=0;};
   document.addEventListener('pointerdown',allowNewModalTap,true);
   document.addEventListener('touchstart',allowNewModalTap,{capture:true,passive:true});
+  // Ready means back handling is installed, not that network data has loaded.
+  if(window.parent!==window)window.parent.postMessage({type:'zefirok-referrals-ready'},'*');
   load();
 
 })();
