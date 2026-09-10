@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "catalogHash": "e21f19a7df4dc4e8",
-  "count": 451,
+  "catalogHash": "889f689107339e96",
+  "count": 453,
   "images": [
     {
       "fileName": "achievements/background_achivment_panel.webp",
@@ -3356,6 +3356,14 @@
       "modified": 1788993615788
     },
     {
+      "fileName": "ui/icon_goal.webp",
+      "label": "Icon goal",
+      "folder": "ui",
+      "path": "/assets/ui/icon_goal.webp",
+      "size": 161530,
+      "modified": 1789051694064
+    },
+    {
       "fileName": "ui/icon_maintenance_tools.webp",
       "label": "Icon maintenance tools",
       "folder": "ui",
@@ -3546,6 +3554,14 @@
       "path": "/assets/ui/icon_timer.webp",
       "size": 139508,
       "modified": 1788993628892
+    },
+    {
+      "fileName": "ui/icon_vitrina.webp",
+      "label": "Icon vitrina",
+      "folder": "ui",
+      "path": "/assets/ui/icon_vitrina.webp",
+      "size": 59774,
+      "modified": 1789051693748
     },
     {
       "fileName": "ui/icon_zanovo_button.webp",
