@@ -52,79 +52,274 @@
 </script>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
-    :root{--bg:#fff7f1;--card:#fff;--ink:#583947;--muted:#90737d;--pink:#dd6d98;--pink2:#ef9ab8;--cream:#fff0cf;--gold:#d69a37;--line:rgba(151,96,112,.16);--ok:#62a978;--shadow:0 16px 40px rgba(112,72,82,.11);--tg-content-safe-top:0px;font-family:"Sofia Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#583947;background:#fff7f1}
-    *{box-sizing:border-box;-webkit-user-select:none;user-select:none}input,textarea,[contenteditable="true"]{-webkit-user-select:text;user-select:text}html,body{margin:0;min-height:100%;background:var(--bg);color:var(--ink);overscroll-behavior-y:none}body{padding:0 0 max(30px,env(safe-area-inset-bottom));-webkit-tap-highlight-color:transparent}.app{width:min(680px,100%);margin:0 auto;padding:calc(12px + max(env(safe-area-inset-top),var(--tg-content-safe-top))) 14px 28px}.topbar{position:sticky;top:max(env(safe-area-inset-top),var(--tg-content-safe-top));z-index:10;display:grid;grid-template-columns:44px 1fr 44px;align-items:center;gap:8px;padding:8px 0 12px;background:linear-gradient(180deg,var(--bg) 76%,rgba(255,247,241,0))}.helpbtn{grid-column:3;width:42px;height:42px;border:1px solid var(--line);border-radius:15px;background:rgba(255,255,255,.9);box-shadow:0 6px 16px rgba(112,72,82,.08);font-size:18px;color:#9b5871;font-weight:1000}.topbar h1{grid-column:2;margin:0;text-align:center;font-size:18px;font-weight:950}.hero{position:relative;overflow:hidden;padding:22px;border:1px solid rgba(217,119,148,.2);border-radius:28px;background:linear-gradient(145deg,#ffeaf0 0%,#fff8de 86%);box-shadow:var(--shadow)}.hero::after{content:"";position:absolute;inset:0;background-image:linear-gradient(90deg, rgba(255,239,244,.96) 0%, rgba(255,245,236,.92) 44%, rgba(255,248,224,.78) 72%, rgba(255,248,224,.62) 100%), url("/assets/ui/background_referals.webp");background-repeat:no-repeat,no-repeat;background-position:left top, right center;background-size:100% 100%, cover;pointer-events:none}.kicker{position:relative;z-index:1;font-size:10px;font-weight:950;letter-spacing:.12em;color:#c25d84;text-transform:uppercase}.hero h2{position:relative;z-index:1;max-width:450px;margin:6px 0 5px;font-size:27px;line-height:1.05;font-weight:1000}.hero p{position:relative;z-index:1;max-width:440px;margin:0;color:var(--muted);font-size:13px;font-weight:700;line-height:1.45}.hero-stats{position:relative;z-index:1;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin-top:17px}.stat{padding:12px;border-radius:17px;background:rgba(255,255,255,.72);border:1px solid rgba(255,255,255,.9)}.stat small{display:block;color:var(--muted);font-size:9px;font-weight:850;text-transform:uppercase;letter-spacing:.05em}.stat strong{display:block;margin-top:3px;font-size:21px;font-weight:1000}.invite{position:relative;z-index:1;display:grid;gap:9px;margin-top:14px}.primary,.secondary,.claim{border:0;border-radius:17px;min-height:50px;padding:0 16px;font:950 14px/1 inherit;cursor:pointer}.primary{background:linear-gradient(180deg,#ed8db1,#d9618f);color:white;box-shadow:0 10px 20px rgba(198,75,119,.22)}.secondary{background:white;color:#8c5368;border:1px solid rgba(207,105,139,.22)}button:disabled{opacity:.55;cursor:wait}.invite-code{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 12px;border-radius:14px;background:rgba(255,255,255,.68);color:#8d6976;font-size:11px;font-weight:800}.invite-code-label{display:grid;gap:2px;min-width:64px}.invite-code-label small{font-size:7px;line-height:1.15;color:#b08b98;font-weight:800}.invite-code code{font:950 13px/1 ui-monospace,SFMono-Regular,Menlo,monospace;color:#a95375;letter-spacing:.07em}.boost-banner{margin-top:12px;padding:13px 14px;border:1px solid rgba(222,164,55,.32);border-radius:18px;background:linear-gradient(135deg,#fff7cf,#ffe6ef);box-shadow:0 8px 20px rgba(123,85,56,.08);display:flex;align-items:center;gap:11px}.boost-banner b{display:grid;place-items:center;width:44px;height:44px;flex:0 0 44px;border-radius:14px;background:#fff;color:#c37825;font-size:18px}.boost-banner strong{display:block;font-size:12px;font-weight:1000}.boost-banner span{display:block;margin-top:3px;color:var(--muted);font-size:9px;font-weight:800;line-height:1.35}.section{margin-top:18px}.head{display:flex;align-items:end;justify-content:space-between;gap:12px;margin:0 3px 10px}.head div{min-width:0}.head h3{margin:0;font-size:17px;font-weight:1000}.head p{margin:3px 0 0;color:var(--muted);font-size:10px;font-weight:700;line-height:1.4}.badge{flex:0 0 auto;padding:6px 9px;border-radius:999px;background:#ffe8f0;color:#bd5a80;font-size:10px;font-weight:950}.network{display:grid;grid-auto-flow:column;grid-auto-columns:178px;gap:11px;overflow-x:auto;padding:3px 2px 10px;scroll-snap-type:x mandatory}.network::-webkit-scrollbar{display:none}.network-card{position:relative;scroll-snap-align:start;min-height:210px;padding:14px;border:1px solid var(--line);border-radius:22px;background:var(--card);box-shadow:0 10px 24px rgba(112,72,82,.08);display:flex;flex-direction:column}.network-card.done{background:linear-gradient(145deg,#f0fff3,#fff);border-color:rgba(91,160,110,.28)}.network-card.next{background:linear-gradient(145deg,#fff6d8,#fff);border-color:rgba(210,154,54,.35)}.network-card.featured{min-height:232px;border-color:rgba(213,151,48,.46);background:linear-gradient(145deg,#fff8d9,#fff2f7);box-shadow:0 12px 30px rgba(181,121,49,.14)}.network-special{align-self:flex-start;margin:0 0 8px;padding:5px 8px;border-radius:999px;background:#fff4c7;color:#a76d18;font-size:7px;font-weight:950;letter-spacing:.03em;line-height:1;white-space:nowrap}.network-special.choice{background:#ffe8f0;color:#b65078}.network-top{display:flex;align-items:center;justify-content:space-between;gap:8px}.network-num{display:grid;place-items:center;min-width:36px;height:36px;padding:0 9px;border-radius:12px;background:#fff0f5;color:#ba557c;font-size:14px;font-weight:1000}.network-card.done .network-num{background:#e8f8ec;color:#4b9360}.network-state{font-size:9px;font-weight:950;color:#bb6483}.network-card.done .network-state{color:#4b9360}.network-reward-art{height:92px;margin:9px 0 6px;display:grid;place-items:center}.network-reward-art img{max-width:106px;max-height:88px;object-fit:contain;filter:drop-shadow(0 7px 10px rgba(107,68,75,.10))}.network-card strong{display:block;margin-top:auto;font-size:12px;font-weight:1000;line-height:1.18}.network-card span.reward-label{display:block;margin-top:5px;color:var(--muted);font-size:9px;font-weight:800;line-height:1.3}.reward-list,.friend-list{display:grid;gap:10px}.reward{display:grid;grid-template-columns:52px minmax(0,1fr) auto;align-items:center;gap:11px;padding:12px;border:1px solid var(--line);border-radius:19px;background:#fff;box-shadow:0 8px 22px rgba(112,72,82,.07)}.reward-icon{width:52px;height:52px;display:grid;place-items:center;border-radius:14px;background:#fff8e9;overflow:hidden}.reward-icon img{width:46px;height:46px;object-fit:contain}.reward-copy{min-width:0}.reward-copy strong{display:block;font-size:12px;font-weight:950}.reward-copy span{display:block;margin-top:3px;color:var(--muted);font-size:9px;font-weight:750;line-height:1.35}.claim{min-height:38px;border-radius:13px;background:#e6759f;color:#fff;padding:0 12px;font-size:10px}.claim-all{min-height:38px;padding:0 12px;border:1px solid rgba(205,103,139,.22);border-radius:13px;background:#fff;color:#a65373;font-size:10px;font-weight:950}.friend{overflow:hidden;border:1px solid var(--line);border-radius:22px;background:#fff;box-shadow:0 9px 24px rgba(112,72,82,.07)}.friend-main{display:grid;grid-template-columns:44px minmax(0,1fr) auto;align-items:center;gap:10px;padding:13px}.avatar{width:44px;height:44px;display:grid;place-items:center;border-radius:15px;background:linear-gradient(145deg,#ffe7ef,#fff4d7);font-size:21px;font-weight:950;color:#a44e70}.friend-name strong{display:block;font-size:13px;font-weight:1000}.friend-name span{display:block;margin-top:3px;color:var(--muted);font-size:9px;font-weight:800}.friend-status{padding:6px 8px;border-radius:999px;background:#fff0f5;color:#b65a7c;font-size:9px;font-weight:950}.friend-status.active{background:#eaf8ee;color:#47885a}.friend-return{margin:0 12px 10px;padding:9px 11px;border-radius:14px;background:linear-gradient(135deg,#fff4d8,#fff0f5);border:1px solid rgba(211,154,55,.24);font-size:9px;font-weight:850;color:#805d43;line-height:1.4}.friend-return strong{color:#a55772}.milestones{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;padding:0 12px 13px}.milestone{position:relative;padding:10px;border-radius:14px;background:#faf6f5;border:1px solid rgba(141,101,112,.09);min-height:68px}.milestone.done{background:#f1fbf3}.milestone i{position:absolute;right:8px;top:8px;font-style:normal;font-size:11px}.milestone strong{display:block;padding-right:18px;font-size:10px;font-weight:950}.milestone span{display:block;margin-top:4px;color:var(--muted);font-size:8px;font-weight:700;line-height:1.3}.inviter{display:flex;align-items:center;gap:10px;padding:13px;border-radius:18px;background:#fff;border:1px solid var(--line)}.inviter .avatar{width:38px;height:38px}.empty{padding:18px;border:1px dashed rgba(182,98,127,.28);border-radius:18px;text-align:center;background:rgba(255,255,255,.56);color:var(--muted);font-size:11px;font-weight:750;line-height:1.5}.notice{margin-top:12px;padding:11px 13px;border-radius:15px;background:#fff4d9;color:#82643b;font-size:10px;font-weight:750;line-height:1.45}.toast{position:fixed;left:50%;bottom:max(18px,env(safe-area-inset-bottom));z-index:50;transform:translate(-50%,16px);width:min(360px,calc(100% - 28px));padding:12px 14px;border-radius:15px;background:#5f4350;color:#fff;font-size:11px;font-weight:850;text-align:center;opacity:0;pointer-events:none;transition:.2s}.toast.show{opacity:1;transform:translate(-50%,0)}.loading{display:grid;place-items:center;min-height:58vh;color:var(--muted);font-size:12px;font-weight:850}.spinner{width:30px;height:30px;margin:0 auto 12px;border:3px solid #f3d8e2;border-top-color:#d86290;border-radius:50%;animation:spin .8s linear infinite}.tutorial[hidden]{display:none}.tutorial{position:fixed;inset:0;z-index:80;background:rgba(69,42,53,.45);backdrop-filter:blur(8px);display:grid;align-items:end;padding:max(14px,env(safe-area-inset-top)) 14px max(14px,env(safe-area-inset-bottom))}.tutorial-card{width:min(520px,100%);max-height:min(720px,88vh);overflow:auto;margin:0 auto;padding:18px;border-radius:27px;background:#fffaf6;border:1px solid rgba(202,113,142,.22);box-shadow:0 24px 70px rgba(73,39,51,.26)}.tutorial-progress{font-size:9px;font-weight:950;letter-spacing:.08em;text-transform:uppercase;color:#c45e84}.tutorial-visual{height:150px;display:grid;place-items:center;margin:8px 0 4px;border-radius:20px;background:linear-gradient(145deg,#ffedf3,#fff8dc);overflow:hidden}.tutorial-visual img{max-width:145px;max-height:135px;object-fit:contain}.tutorial-visual .mini-path{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:center;padding:12px}.tutorial-visual .mini-path span{padding:10px 12px;border-radius:13px;background:#fff;color:#704657;font-size:10px;font-weight:950;box-shadow:0 5px 13px rgba(100,62,75,.08)}.tutorial-card h2{margin:8px 0 6px;font-size:20px;line-height:1.1}.tutorial-card p{margin:0;color:var(--muted);font-size:11px;font-weight:750;line-height:1.55}.tutorial-note{margin-top:10px;padding:10px 12px;border-radius:14px;background:#fff1d8;color:#7c6139;font-size:9px;font-weight:800;line-height:1.45}.tutorial-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px}.tutorial-actions button{min-height:44px;border-radius:14px;border:1px solid rgba(204,105,130,.2);font:950 11px/1 inherit}.tutorial-prev{background:#fff;color:#966176}.tutorial-next{background:linear-gradient(180deg,#ed8db1,#d9618f);color:#fff}.tutorial-actions button:disabled{opacity:.4}.tutorial-close{float:right;border:0;background:transparent;color:#9e6c7e;font-size:11px;font-weight:900;padding:2px 0 6px}.tutorial-dots{display:flex;gap:5px;justify-content:center;margin-top:12px}.tutorial-dot{width:6px;height:6px;border-radius:999px;background:#ead4dc}.tutorial-dot.active{width:18px;background:#df719b}@keyframes spin{to{transform:rotate(360deg)}}@media(max-width:360px){.app{padding-left:10px;padding-right:10px}.hero{padding:18px}.hero h2{font-size:24px}.milestones{grid-template-columns:1fr}.reward{grid-template-columns:46px minmax(0,1fr)}.reward .claim{grid-column:1/-1}.hero-stats{grid-template-columns:1fr 1fr}.network{grid-auto-columns:164px}.network-card{min-height:198px}.network-reward-art{height:82px}}
 
-    .feed-details{overflow:hidden;border:1px solid var(--line);border-radius:22px;background:rgba(255,255,255,.72);box-shadow:0 9px 24px rgba(112,72,82,.055)}.feed-summary{list-style:none;display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:12px;padding:14px 15px;cursor:pointer;-webkit-tap-highlight-color:transparent}.feed-summary::-webkit-details-marker{display:none}.feed-summary::marker{content:""}.feed-summary-copy{min-width:0}.feed-summary-copy h3{margin:0;font-size:17px;font-weight:1000}.feed-summary-copy p{margin:3px 0 0;color:var(--muted);font-size:10px;font-weight:700;line-height:1.4}.feed-summary-side{display:flex;align-items:center;gap:9px}.feed-chevron{width:10px;height:10px;flex:0 0 10px;border-right:2px solid #b56582;border-bottom:2px solid #b56582;transform:rotate(45deg);transition:transform .18s ease}.feed-details[open] .feed-chevron{transform:rotate(225deg)}.feed-details[open] .feed-summary{border-bottom:1px solid rgba(151,96,112,.10)}.feed-details-body{padding:0 12px 12px}.feed-details-body>.empty{margin-top:12px}.feed-list{display:grid;gap:8px;padding-top:12px}.feed-item{display:grid;grid-template-columns:40px minmax(0,1fr) auto;gap:10px;align-items:center;padding:11px 12px;border:1px solid var(--line);border-radius:17px;background:#fff;box-shadow:0 7px 18px rgba(112,72,82,.06)}.feed-icon{width:40px;height:40px;display:grid;place-items:center;border-radius:13px;background:linear-gradient(145deg,#fff0f5,#fff6dd);overflow:hidden}.feed-icon img{width:34px;height:34px;object-fit:contain;filter:drop-shadow(0 4px 7px rgba(111,65,78,.10))}.feed-copy{min-width:0}.feed-copy strong{display:block;font-size:11px;font-weight:950;line-height:1.25}.feed-copy span{display:block;margin-top:3px;color:var(--muted);font-size:8.5px;font-weight:750;line-height:1.35}.feed-date{font-size:8px;font-weight:850;color:#b18c99;white-space:nowrap}.weekly-card{padding:14px;border-radius:21px;background:linear-gradient(145deg,#fffaf0,#fff0f5);border:1px solid rgba(213,156,61,.24);box-shadow:0 9px 22px rgba(112,72,82,.06)}.weekly-title{display:flex;align-items:center;justify-content:space-between;gap:8px}.weekly-title strong{font-size:12px;font-weight:1000}.weekly-title span{font-size:9px;color:#a3692a;font-weight:950}.weekly-copy{margin-top:5px;color:var(--muted);font-size:9px;font-weight:750;line-height:1.4}.weekly-pair{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:11px}.weekly-person{padding:9px;border-radius:14px;background:rgba(255,255,255,.78);border:1px solid rgba(255,255,255,.92)}.weekly-person b{display:block;font-size:9px}.weekly-person span{display:block;margin-top:3px;font-size:8px;color:var(--muted);font-weight:800}.weekly-track{height:6px;margin-top:7px;border-radius:999px;background:#f0dfe5;overflow:hidden}.weekly-fill{height:100%;border-radius:inherit;background:linear-gradient(90deg,#e779a1,#e0b04b)}.weekly-rewards{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:8.5px;color:#815d6c;font-weight:850}.weekly-rewards img{width:28px;height:28px;object-fit:contain}.friend-weekly{margin:0 12px 10px;padding:10px;border-radius:15px;background:#fff8e9;border:1px solid rgba(219,171,79,.2)}.friend-weekly.done{background:#effaf2;border-color:rgba(91,160,110,.22)}.friend-weekly.locked{opacity:.68}.friend-weekly-head{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:9px;font-weight:950}.friend-weekly-copy{margin-top:4px;color:var(--muted);font-size:8px;font-weight:750;line-height:1.35}.friend-actions{display:flex;gap:8px;padding:0 12px 11px}.friend-gift-btn{flex:1;min-height:40px;border:1px solid rgba(205,103,139,.22);border-radius:13px;background:#fff0f5;color:#a65373;font-size:9px;font-weight:950;display:flex;align-items:center;justify-content:center;gap:7px}.friend-gift-btn img{width:25px;height:25px;object-fit:contain}.choice-preview{display:flex;align-items:center;justify-content:center;gap:3px;height:92px;margin:9px 0 6px}.choice-preview img{width:58px;height:58px;object-fit:contain;margin:0 -7px;filter:drop-shadow(0 5px 8px rgba(95,62,73,.1))}.network-choice-btn{margin-top:8px;min-height:34px;border:0;border-radius:11px;background:linear-gradient(180deg,#e1b14d,#c9912d);color:#fff;font-size:9px;font-weight:950}.choice-callout{padding:14px;border:1px solid rgba(210,153,52,.32);border-radius:21px;background:linear-gradient(145deg,#fff8d7,#fff0f5);box-shadow:0 10px 24px rgba(145,93,54,.09)}.choice-callout strong{display:block;font-size:13px;font-weight:1000}.choice-callout span{display:block;margin-top:4px;color:var(--muted);font-size:9px;font-weight:750;line-height:1.4}.choice-callout button{width:100%;min-height:43px;margin-top:10px;border:0;border-radius:13px;background:linear-gradient(180deg,#e5b34e,#c98d2a);color:#fff;font-size:10px;font-weight:950}.choice-overlay[hidden]{display:none}.choice-overlay{position:fixed;inset:0;z-index:90;background:rgba(66,39,50,.46);backdrop-filter:blur(8px);display:grid;align-items:end;padding:max(14px,env(safe-area-inset-top)) 14px max(14px,env(safe-area-inset-bottom))}.choice-sheet{width:min(520px,100%);margin:0 auto;padding:18px;border-radius:27px;background:#fffaf6;border:1px solid rgba(202,113,142,.22);box-shadow:0 24px 70px rgba(73,39,51,.26)}.choice-sheet h2{margin:2px 0 5px;font-size:20px}.choice-sheet>p{margin:0;color:var(--muted);font-size:10px;font-weight:750;line-height:1.45}.choice-options{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:14px}.choice-option{min-width:0;border:1px solid rgba(211,165,76,.25);border-radius:17px;background:#fff;padding:10px 6px;text-align:center;color:var(--ink)}.choice-option img{width:66px;height:66px;max-width:100%;object-fit:contain}.choice-option strong{display:block;margin-top:5px;font-size:8.5px;line-height:1.25}.choice-close{width:100%;min-height:42px;margin-top:10px;border:1px solid var(--line);border-radius:13px;background:#fff;color:#906073;font-size:10px;font-weight:950}.notification-card{margin-top:12px;padding:12px 13px;border:1px solid rgba(202,113,142,.2);border-radius:18px;background:rgba(255,255,255,.72);display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center}.notification-card strong{display:block;font-size:11px;font-weight:1000}.notification-card span{display:block;margin-top:3px;color:var(--muted);font-size:8.5px;font-weight:750;line-height:1.35}.notification-toggle{min-height:35px;border:1px solid rgba(205,103,139,.24);border-radius:12px;background:#fff;color:#a65373;padding:0 11px;font-size:8.5px;font-weight:950}.notification-toggle.on{background:#eaf8ee;border-color:rgba(75,145,95,.24);color:#438356}.friend-next{margin:0 12px 10px;padding:10px 11px;border-radius:15px;background:linear-gradient(145deg,#fff4f8,#fff9e9);border:1px solid rgba(208,119,149,.14)}.friend-next-head{display:flex;align-items:center;justify-content:space-between;gap:8px}.friend-next-head strong{font-size:9px;font-weight:950}.friend-next-head span{font-size:8px;color:#b15d7b;font-weight:950}.milestone-progress-head{display:flex;align-items:center;justify-content:space-between;gap:6px;margin-top:7px;color:#a06a7d;font-size:7.5px;font-weight:900}.milestone-track{height:5px;margin-top:4px;border-radius:999px;background:#eadfe3;overflow:hidden}.milestone-fill{height:100%;border-radius:inherit;background:linear-gradient(90deg,#e97ca4,#e7b453)}.friend-weekly-bars{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:7px}.friend-weekly-bars .weekly-track{margin-top:0;height:5px}.network-share-btn{margin-top:7px;min-height:31px;border:1px solid rgba(205,103,139,.2);border-radius:10px;background:#fff;color:#a65373;font-size:8px;font-weight:950}.celebration-overlay[hidden]{display:none}.celebration-overlay{position:fixed;inset:0;z-index:100;background:rgba(66,39,50,.5);backdrop-filter:blur(9px);display:grid;align-items:center;padding:max(18px,env(safe-area-inset-top)) 16px max(18px,env(safe-area-inset-bottom))}.celebration-card{position:relative;width:min(430px,100%);margin:auto;padding:24px 18px 18px;border-radius:30px;background:linear-gradient(155deg,#fff7fb,#fff8db);border:1px solid rgba(222,158,68,.3);box-shadow:0 28px 80px rgba(67,36,48,.28);text-align:center;overflow:hidden}.celebration-card:before{content:"";position:absolute;inset:0;background:url("/assets/ui/background_referals.webp") center/cover no-repeat;opacity:.16;pointer-events:none}.celebration-card>*{position:relative;z-index:1}.celebration-kicker{font-size:8px;font-weight:950;letter-spacing:.1em;text-transform:uppercase;color:#c16085}.celebration-art{height:150px;display:grid;place-items:center;margin:4px 0}.celebration-art img{max-width:150px;max-height:140px;object-fit:contain;filter:drop-shadow(0 10px 18px rgba(98,59,69,.14))}.celebration-card h2{margin:0;font-size:22px;line-height:1.08}.celebration-card p{margin:7px auto 0;max-width:330px;color:var(--muted);font-size:10px;font-weight:750;line-height:1.45}.celebration-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:16px}.celebration-actions button{min-height:43px;border-radius:14px;font-size:10px;font-weight:950}.celebration-done{border:0;background:linear-gradient(180deg,#ed8db1,#d9618f);color:#fff}.celebration-share{border:1px solid rgba(205,103,139,.22);background:#fff;color:#a65373}.celebration-actions.single{grid-template-columns:1fr}.tutorial{touch-action:none}.tutorial-card{overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y}.modal-scroll-locked{overscroll-behavior:none!important}
+    :root {
+      --bg:#fff8f2;--paper:#fffdfb;--ink:#503443;--muted:#886c77;--pink:#d45987;
+      --pink-soft:#fce9ef;--line:#efdee1;--gold:#b77b2e;--green:#487f60;
+      --shadow:0 8px 26px rgba(98,56,67,.045);--tg-content-safe-top:0px;
+      font-family:"Sofia Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+      color:var(--ink);background:var(--bg);color-scheme:light;
+    }
+    *{box-sizing:border-box}
+    [hidden]{display:none!important}
+    html,body{margin:0;min-height:100%;background:var(--bg);color:var(--ink);overscroll-behavior-y:none}
+    body{-webkit-tap-highlight-color:transparent}
+    button,input{font:inherit}button{cursor:pointer;color:inherit}button:disabled{cursor:default;opacity:.55}
+    button{touch-action:manipulation}
+    button:focus-visible,input:focus-visible,summary:focus-visible,[tabindex]:focus-visible{outline:3px solid #ae4872;outline-offset:3px}
+    button:disabled:focus-visible{outline-offset:1px}
+    img{display:block;max-width:100%;object-fit:contain}
+    h1,h2,h3,p{margin:0}
+    button svg{flex-shrink:0}.icon{width:20px;height:20px;display:inline-block;vertical-align:middle;flex:none}
+    .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+    .app{width:min(620px,100%);margin:auto;padding:0 max(16px,env(safe-area-inset-right)) max(28px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left))}
+    .shell-header{position:sticky;top:0;z-index:12;padding:calc(8px + max(env(safe-area-inset-top),var(--tg-content-safe-top))) 0 12px;background:var(--bg)}
+    .topbar{display:grid;grid-template-columns:36px minmax(0,1fr) 38px 38px;gap:6px;align-items:center;margin-bottom:14px}
+    .topbar h1{font-size:21px;font-weight:850;letter-spacing:-.65px;line-height:1.1}
+    .icon-btn{width:38px;height:40px;display:grid;place-items:center;border:1px solid var(--line);background:var(--paper);border-radius:14px}
+    .back-btn{width:34px;border:0;background:transparent;justify-self:start}
+    .helpbtn{font-size:19px;font-weight:800;color:#aa5779}
+    .tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;border:1px solid #f0e0e3;border-radius:18px;padding:4px;background:#f4e9e8}
+    .tab{display:flex;gap:6px;justify-content:center;align-items:center;min-height:44px;border:0;border-radius:13px;background:transparent;font-size:13px;font-weight:760;color:#8a6b77;white-space:nowrap}
+    .tab .icon{width:17px;height:17px}
+    .tab[aria-selected="true"]{color:#a9436b;background:var(--paper);box-shadow:0 3px 8px rgba(92,56,69,.08)}
+    .tab-count{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 4px;border-radius:6px;background:#d15c88;color:white;font-size:10px;line-height:1}
+    .tab-count.neutral{background:#e5d7dc;color:#735360}
+    .view{padding-top:2px}
+    .view>*,.sheet-content>*{min-width:0}
+    .view> * + *{margin-top:16px}
+    .cafe-card{position:relative;overflow:hidden;min-height:149px;padding:20px;border:1px solid #efd7db;border-radius:25px;background:linear-gradient(110deg,rgba(255,241,243,.92),rgba(255,247,229,.40)),url("/assets/ui/background_referals.webp") center/cover}
+    .eyebrow{display:block;font-size:10px;font-weight:850;line-height:1.3;letter-spacing:1.65px;text-transform:uppercase;color:#ad5b79}
+    .cafe-card h2{font-size:25px;line-height:1.08;letter-spacing:-.8px;font-weight:850;margin-top:7px;max-width:70%}
+    .cafe-card p{font-size:12px;line-height:1.45;color:#795d68;margin-top:7px;max-width:67%}
+    .cafe-art{position:absolute;right:10px;top:8px;width:108px;height:108px;pointer-events:none;filter:drop-shadow(0 6px 10px rgba(132,77,68,.10))}
+    .cafe-card.new h2{max-width:68%}
+    .cafe-bottom{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:16px;position:relative}
+    .avatars{display:flex;align-items:center;min-width:0;padding-left:0}
+    .avatar-mini{position:relative;display:grid;place-items:center;width:34px;height:34px;flex:0 0 34px;border:2px solid #fffaf6;border-radius:50%;background:#e9d7dc;color:#704254;font-size:11px;font-weight:850;margin-left:-6px;padding:0}
+    .avatar-mini:first-child{margin-left:0}.avatar-mini:nth-child(2n){background:#f7dfb2;color:#80643d}.avatar-mini:nth-child(3n){background:#dcebe1;color:#537961}
+    .avatar-mini.more{background:#fff;color:#916273}.avatar-mini.add{border:1px dashed #cf98ac;background:rgba(255,255,255,.7);color:#b5597e;margin-left:4px}
+    .avatar-mini .icon{width:15px;height:15px}
+    .btn,.primary,.secondary,.claim,.claim-all{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:44px;border-radius:14px;padding:10px 15px;border:1px solid transparent;background:#d65e8c;color:white;font-weight:760;font-size:13px;line-height:1.25;text-align:center;text-decoration:none}
+    .primary{background:linear-gradient(180deg,#e783a7,#d45987);box-shadow:0 6px 14px rgba(195,78,123,.14)}
+    .secondary,.claim-all{border-color:#eacbd5;background:#fffdfb;color:#ab4d73;box-shadow:none}
+    .btn.small{min-height:38px;padding:8px 12px;font-size:12px;border-radius:12px}
+    .btn.full{display:flex;width:100%}
+    .text-btn{display:inline-flex;gap:4px;align-items:center;justify-content:center;min-height:36px;border:0;background:transparent;color:#ab4c73;font-size:12px;font-weight:760;padding:4px 0;text-align:right;line-height:1.35}
+    .text-btn .icon{width:15px;height:15px}
+    .section-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}
+    .section-head h2,.section-head h3{font-size:18px;font-weight:830;letter-spacing:-.35px}
+    .section-note{color:var(--muted);font-size:12px;line-height:1.45;margin-top:5px}
+    .count-label{font-size:12px;font-weight:650;color:var(--muted)}
+    .ready-card{display:flex;align-items:center;gap:12px;background:linear-gradient(110deg,#fce6ef,#fff7ed);border:1px solid #ebc5d5;border-radius:21px;padding:14px 15px;width:100%;text-align:left;box-shadow:var(--shadow)}
+    .ready-art{width:48px;height:51px;flex:none;filter:drop-shadow(0 3px 5px rgba(149,83,102,.10))}
+    .ready-copy{flex:1;min-width:0}.ready-copy strong{display:block;font-size:16px;letter-spacing:-.3px}.ready-copy span{display:block;font-size:11px;line-height:1.4;color:#946378;margin-top:4px}
+    .round-arrow{display:grid;place-items:center;width:29px;height:29px;flex:none;border-radius:50%;background:#fff9fc;color:#b34f79}
+    .weekly-card{position:relative;overflow:hidden;padding:18px;border-radius:24px;border:1px solid #efd9c2;background:radial-gradient(ellipse at 100% 0%,#fff0d5,transparent 60%),var(--paper);box-shadow:var(--shadow)}
+    .weekly-card.complete{border-color:#d4e6d7;background:radial-gradient(ellipse at 100% 0%,#eef8e9,transparent 62%),var(--paper)}
+    .weekly-card.locked{background:#faf5f2;border-color:var(--line)}
+    .weekly-header{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:9px}
+    .weekly-header .eyebrow{color:#a4733f;font-size:9px;letter-spacing:1.35px}
+    .date-chip{font-size:10px;font-weight:750;white-space:nowrap;color:#987344;background:#fbedd8;border-radius:7px;padding:5px 7px;line-height:1.1}
+    .date-chip.done{color:#4d805e;background:#e7f3e9}
+    .weekly-prize{display:grid;grid-template-columns:minmax(0,1fr) 82px;align-items:center;gap:10px;min-height:80px}
+    .weekly-prize h3{font-size:21px;line-height:1.18;letter-spacing:-.6px;font-weight:850}
+    .weekly-prize p{font-size:12px;color:#8f7264;line-height:1.4;margin-top:6px}
+    .weekly-prize img{height:85px;width:78px;filter:drop-shadow(0 8px 8px rgba(146,99,47,.09))}
+    .weekly-pair{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:13px}
+    .weekly-person{min-width:0}
+    .weekly-person-label{display:flex;align-items:center;gap:5px;justify-content:space-between;font-size:12px;font-weight:780}
+    .weekly-person-label .person-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+    .weekly-person-label .person-score{white-space:nowrap;font-size:11px;color:#aa5f80;flex:none}
+    .weekly-person.done .person-score{color:var(--green)}
+    .progress-track{height:6px;border-radius:8px;background:#f0e3e7;overflow:hidden;margin-top:8px}
+    .progress-fill{height:100%;border-radius:inherit;background:linear-gradient(90deg,#e688ab,#d9ad62)}
+    .weekly-person.done .progress-fill{background:#77a889}
+    .weekly-person small{font-size:10px;line-height:1.2;display:block;margin-top:5px;color:#987c86}
+    .weekly-status{margin-top:13px;font-size:12px;line-height:1.45;color:#85664d}
+    .weekly-status.success{color:#477659}
+    .weekly-footer{display:flex;justify-content:space-between;align-items:center;gap:8px;border-top:1px solid rgba(181,137,102,.12);margin-top:12px;padding-top:7px}
+    .weekly-footer .text-btn{font-size:11px}
+    .weekly-footer-note{font-size:10px;color:var(--muted);line-height:1.3}
+    .next-card{display:block;width:100%;padding:17px;text-align:left;border:1px solid var(--line);border-radius:22px;background:var(--paper);box-shadow:var(--shadow)}
+    .next-top{display:flex;align-items:center;justify-content:space-between;gap:8px;color:var(--muted);font-size:11px;font-weight:750}
+    .next-main{display:grid;grid-template-columns:49px minmax(0,1fr) 18px;align-items:center;gap:12px;margin-top:11px}
+    .next-art{width:49px;height:53px}
+    .next-main strong{display:block;font-size:14px;font-weight:800;line-height:1.3}
+    .next-main small{display:block;font-size:11px;color:var(--muted);line-height:1.4;margin-top:4px}
+    .next-bottom{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:10px;color:var(--muted);margin-top:7px}
+    .feed-preview{padding:0 3px}
+    .feed-row{display:grid;grid-template-columns:30px minmax(0,1fr) auto;gap:10px;align-items:start;padding:11px 0;border-bottom:1px solid #f1e4e5}
+    .feed-row:last-child{border:0}.feed-icon{width:30px;height:32px}
+    .feed-copy{min-width:0}.feed-copy strong{font-size:12px;font-weight:720;line-height:1.35;display:block;overflow-wrap:anywhere}.feed-copy span{font-size:11px;color:var(--muted);line-height:1.4;display:block;margin-top:4px;overflow-wrap:anywhere}.feed-date{font-size:9px;color:#977d87;white-space:nowrap;padding-top:3px}
+    .boost-banner{display:flex;gap:10px;align-items:center;padding:12px 14px;border:1px solid #edd6b2;border-radius:17px;background:#fff0d1}
+    .boost-banner b{font-size:21px;color:#a67429}.boost-banner strong{font-size:12px;display:block}.boost-banner span{font-size:10px;line-height:1.4;display:block;margin-top:3px;color:#926d4a}
+    .notice,.inline-status{padding:12px 14px;border-radius:16px;background:#f9ede1;color:#886746;font-size:12px;line-height:1.5}
+    .inline-status{background:#f8edf1;color:#8f5f75}
+    .intro-inline{padding:12px 14px;border-radius:15px;border:1px dashed #dfbdc8;font-size:12px;line-height:1.45;color:#82606d}
+    .intro-inline strong{display:block;margin-bottom:4px;color:#654452}
+    .friend-toolbar{display:flex;gap:8px;align-items:center;justify-content:space-between}
+    .friend-toolbar h2{font-size:20px;letter-spacing:-.5px}.friend-toolbar p{font-size:12px;color:var(--muted);margin-top:5px}
+    .gift-send-card{display:grid;grid-template-columns:51px minmax(0,1fr);gap:13px;padding:16px;border-radius:22px;background:linear-gradient(135deg,#fff0f4,#fff8ed);border:1px solid #efd1dd}
+    .gift-send-card>img{width:51px;height:60px;align-self:center}
+    .gift-send-card strong{display:block;font-size:14px;line-height:1.3}.gift-send-card p{font-size:11px;line-height:1.45;color:#92717e;margin:5px 0 9px}
+    .gift-send-card .btn{min-height:38px;font-size:12px}
+    .friends-search{display:flex;align-items:center;gap:9px;padding:0 13px;border:1px solid var(--line);border-radius:14px;background:#fff;min-height:44px}
+    .friends-search .icon{width:17px;height:17px;color:var(--muted)}
+    .friends-search input{border:0;background:transparent;width:100%;min-width:0;font-size:16px;color:var(--ink);outline:none;padding:10px 0}
+    .filters{display:flex;gap:6px;overflow-x:auto;padding:2px 1px 6px;margin-top:10px;scrollbar-width:none}
+    .filter{flex-shrink:0;padding:9px 11px;min-height:38px;border:1px solid var(--line);border-radius:12px;font-size:11px;font-weight:730;background:transparent;color:var(--muted)}
+    .filter[aria-pressed="true"]{color:#a7436d;background:#fce8ef;border-color:#e7bece}
+    .friend-list{display:grid;gap:10px}
+    .friend-card{padding:15px;border:1px solid var(--line);border-radius:21px;background:var(--paper);box-shadow:var(--shadow)}
+    .friend-open{display:flex;align-items:center;gap:10px;width:100%;padding:0;background:none;border:0;text-align:left;min-height:44px}
+    .avatar{display:grid;place-items:center;flex-shrink:0;width:43px;height:43px;border-radius:15px;background:linear-gradient(140deg,#f7dce6,#f9e8ce);font-size:16px;color:#a25374;font-weight:800}
+    .avatar.inviter{background:linear-gradient(140deg,#e0ecdf,#f9ebd8);color:#6c8461}
+    .friend-copy{min-width:0;flex:1}.friend-copy strong{display:block;font-size:14px;line-height:1.3;overflow-wrap:anywhere}
+    .friend-copy span{display:block;font-size:11px;color:var(--muted);margin-top:3px;overflow-wrap:anywhere}
+    .friend-open>.icon{color:#b999a6;width:18px;height:18px}
+    .friend-next{margin-top:11px;border-top:1px solid #f4e9e9;padding-top:10px}
+    .friend-next-head{display:flex;justify-content:space-between;gap:12px;align-items:center;font-size:11px;color:var(--muted)}
+    .friend-next-head strong{font-size:11px;font-weight:720;color:#73505f}
+    .friend-next-head span{flex:none;font-size:10px}
+    .friend-detail-link{display:flex;gap:8px;align-items:center;justify-content:space-between;margin-top:9px}
+    .friend-tag{display:inline-flex;align-items:center;font-size:9px;line-height:1.3;font-weight:700;border-radius:6px;background:#f6eef1;color:#967383;padding:4px 6px}
+    .friend-tag.active{background:#ecf5ee;color:#537d61}
+    .friend-detail-link .text-btn{font-size:11px;min-height:28px}
+    .friend-return{font-size:11px;line-height:1.45;padding:11px 12px;background:#fff1d8;border-radius:14px;margin:12px 0}
+    .empty-state{text-align:center;padding:24px 20px;border:1px solid var(--line);border-radius:24px;background:var(--paper)}
+    .empty-state>img{width:92px;height:92px;margin:0 auto 13px}
+    .empty-state h3{font-size:20px;letter-spacing:-.5px}.empty-state p{font-size:13px;line-height:1.5;color:var(--muted);margin:9px auto 16px;max-width:320px}
+    .empty{font-size:12px;line-height:1.5;text-align:center;padding:20px;color:var(--muted);border:1px dashed #dfcad2;border-radius:17px}
+    .rewards-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+    .rewards-head h2{font-size:21px;letter-spacing:-.6px}.rewards-head p{font-size:12px;line-height:1.4;color:var(--muted);margin-top:5px}
+    .rewards-head .btn{flex:none;font-size:12px}
+    .reward-list{display:grid;gap:10px}
+    .reward{display:grid;grid-template-columns:48px minmax(0,1fr) auto;align-items:center;gap:10px;border:1px solid var(--line);border-radius:19px;padding:13px;background:var(--paper)}
+    .reward-icon{width:48px;height:53px}.reward-icon img{width:48px;height:53px}
+    .reward-copy{min-width:0}.reward-copy strong{font-size:13px;line-height:1.35;display:block;overflow-wrap:anywhere;font-weight:780}
+    .reward-copy span{font-size:10px;line-height:1.45;color:var(--muted);display:block;margin-top:4px;overflow-wrap:anywhere}
+    .claim{min-height:40px;padding:8px 10px;font-size:11px;border-radius:12px}
+    .reward.processing{border-color:#edd9b8;background:#fffaf0}.reward.processing .reward-copy span{color:#947045}
+    .received-label{font-size:10px;font-weight:700;color:#5d8367;text-align:right;max-width:76px}
+    .choice-callout{padding:17px;border:1px solid #e9cc9e;border-radius:22px;background:linear-gradient(130deg,#fff1d3,#fff3f7)}
+    .choice-callout strong{font-size:16px;display:block;font-weight:800}.choice-callout p{font-size:12px;line-height:1.45;color:#8a6b5e;margin-top:5px}
+    .choice-mini-art{display:flex;gap:8px;align-items:center;padding:12px 0}.choice-mini-art img{width:49px;height:54px}
+    .choice-callout .btn{width:100%}
+    .utility-row{display:flex;gap:11px;align-items:center;justify-content:space-between;min-height:59px;padding:13px 15px;border:1px solid var(--line);border-radius:17px;background:var(--paper);width:100%;text-align:left}
+    .utility-row>.icon{color:#b56483}.utility-row>span{flex:1;font-size:13px;font-weight:740}.utility-row small{display:block;font-size:10px;color:var(--muted);font-weight:500;line-height:1.35;margin-top:4px}
+    .utility-row>.icon:last-child{width:17px;height:17px;color:#b592a0}
+    .gift-links{display:grid;gap:9px}
+    .network-summary{padding:16px;background:#fff0e1;border-radius:19px}
+    .network-summary h3{font-size:19px}.network-summary p{font-size:12px;color:#8b6a5b;line-height:1.5;margin-top:5px}
+    .network-list{display:grid;gap:11px;margin-top:16px}
+    .network-item{position:relative;display:grid;grid-template-columns:36px minmax(0,1fr);gap:12px;padding:14px;border:1px solid var(--line);border-radius:19px;background:#fff}
+    .network-item.next{border-color:#e9c693;background:#fffaf0}.network-item.achieved{border-color:#dce7dc}
+    .network-step{display:grid;place-items:center;width:35px;height:35px;border:1px solid #f1dae4;background:#fceaf1;border-radius:12px;font-size:14px;font-weight:850;color:#ae5379}
+    .network-item.achieved .network-step{color:#548361;background:#eaf3ea;border-color:#dce7dc}
+    .network-copy>strong{display:block;font-size:14px;line-height:1.35;font-weight:780}
+    .network-copy>small{display:block;font-size:10px;color:var(--muted);line-height:1.4;margin-top:4px}
+    .network-reward{display:flex;align-items:center;gap:9px;font-size:12px;line-height:1.4;margin-top:10px}
+    .network-reward img{width:42px;height:46px;flex:none}
+    .network-actions{display:flex;gap:9px;flex-wrap:wrap;align-items:center;margin-top:10px}
+    .network-actions .text-btn{font-size:11px}
+    .sheet-overlay,.tutorial,.choice-overlay,.celebration-overlay{position:fixed;inset:0;z-index:30;display:flex;align-items:flex-end;justify-content:center;background:rgba(67,43,54,.38);padding:max(14px,env(safe-area-inset-top),var(--tg-content-safe-top)) 9px max(8px,env(safe-area-inset-bottom));overscroll-behavior:contain}
+    .sheet,.tutorial-card,.choice-sheet,.celebration-card{position:relative;width:min(520px,100%);max-height:100%;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;background:var(--bg);border:1px solid #efdce3;border-radius:29px 29px 22px 22px;box-shadow:0 24px 70px rgba(66,36,48,.20);scrollbar-width:thin}
+    .sheet-handle{width:35px;height:4px;background:#dcc6cf;border-radius:3px;margin:9px auto 0}
+    .sheet-header{position:sticky;top:0;z-index:2;display:flex;justify-content:space-between;align-items:center;gap:15px;padding:14px 18px 12px;background:var(--bg);border-bottom:1px solid #efe1e4}
+    .sheet-header h2{font-size:21px;letter-spacing:-.6px;line-height:1.15}.sheet-header .icon-btn{flex:none;width:36px;height:36px;background:#fff}
+    .sheet-content{padding:18px}.sheet-content> * + *{margin-top:16px}
+    .sheet-lead{color:var(--muted);font-size:13px;line-height:1.55}
+    .sheet-reward-art{height:95px;display:flex;justify-content:center;margin-bottom:13px}
+    .invite-sheet-art{width:102px;height:106px;margin:0 auto 12px}
+    .invite-head{text-align:center}.invite-head h3{font-size:23px;font-weight:850;letter-spacing:-.7px}.invite-head p{font-size:13px;line-height:1.5;color:var(--muted);margin-top:8px}
+    .invite-actions{display:grid;gap:9px}
+    .invite-code{font-size:11px;color:var(--muted);display:flex;gap:10px;justify-content:center;align-items:center}
+    .invite-code code{font-size:13px;font-weight:800;color:#ad5676;letter-spacing:1px}
+    .copy-fallback{display:grid;gap:7px;font-size:11px;color:var(--muted)}
+    .copy-fallback input{width:100%;font-size:16px;padding:10px;border:1px solid var(--line);border-radius:10px;background:white;color:var(--ink)}
+    .setting-card{border:1px solid var(--line);border-radius:20px;background:var(--paper);padding:16px}
+    .setting-card strong{font-size:14px;line-height:1.35;display:block}.setting-card p{font-size:12px;color:var(--muted);line-height:1.5;margin:7px 0 14px}
+    .notification-toggle{width:100%;min-height:44px;padding:10px;border:1px solid #e3c5d1;border-radius:13px;background:#fceaf0;color:#a44b71;font-size:12px;font-weight:760}
+    .notification-toggle.on{color:#508064;background:#eef7f0;border-color:#cce1d2}
+    .faq-list{display:grid;gap:9px}
+    .faq-list details{border:1px solid var(--line);border-radius:15px;background:var(--paper);overflow:hidden}
+    .faq-list summary{cursor:pointer;padding:14px 15px;font-size:13px;font-weight:740;line-height:1.4}
+    .faq-list details>p{font-size:12px;color:var(--muted);line-height:1.6;padding:0 15px 15px}
+    .friend-profile-head{display:flex;gap:13px;align-items:center}.friend-profile-head .avatar{width:60px;height:60px;font-size:21px;border-radius:20px}
+    .friend-profile-head strong{font-size:20px;line-height:1.25;overflow-wrap:anywhere;display:block}.friend-profile-head small{display:block;font-size:12px;color:var(--muted);margin-top:4px;overflow-wrap:anywhere}
+    .detail-milestones{display:grid;gap:10px}
+    .detail-milestone{padding:14px;border:1px solid var(--line);border-radius:17px;background:var(--paper)}
+    .detail-milestone.done{border-color:#d6e6d9;background:#f6faf4}
+    .detail-milestone h3{font-size:14px;display:flex;justify-content:space-between;gap:10px;align-items:center}
+    .detail-milestone h3 .icon{color:#649571;width:18px;height:18px}
+    .detail-milestone p{font-size:11px;line-height:1.5;color:var(--muted);margin-top:6px}
+    .detail-rewards{display:grid;gap:5px;margin-top:9px}
+    .detail-rewards span{font-size:11px;line-height:1.5;color:#936679}
+    .choice-sheet,.celebration-card,.tutorial-card{padding:23px 20px}
+    .choice-sheet h2,.celebration-card h2,.tutorial-card h2{font-size:24px;letter-spacing:-.7px;line-height:1.17}
+    .choice-sheet>p,.celebration-card>p,.tutorial-card p{font-size:13px;line-height:1.55;color:var(--muted);margin-top:9px}
+    .choice-options{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:19px 0}
+    .choice-option{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;padding:13px 8px;min-width:0;border:1px solid #e6c3a5;border-radius:17px;background:#fffaf1;color:var(--ink);min-height:136px}
+    .choice-option img{width:59px;height:67px}.choice-option strong{font-size:11px;line-height:1.4;overflow-wrap:anywhere}
+    .choice-close,.celebration-done,.celebration-share,.tutorial-close,.tutorial-prev,.tutorial-next{min-height:44px;font-family:inherit;font-weight:760;font-size:13px;line-height:1.2;border:1px solid #e8ccd7;border-radius:14px;padding:11px 13px;background:#fff;color:#a65176}
+    .choice-close{width:100%}
+    .celebration-card{text-align:center}.celebration-kicker{font-size:10px;font-weight:800;color:#b97539;text-transform:uppercase;letter-spacing:1.7px}
+    .celebration-art{display:grid;place-items:center;height:140px;margin:12px 0}.celebration-art img{max-width:123px;max-height:140px;filter:drop-shadow(0 8px 13px rgba(142,91,73,.12))}
+    .celebration-actions{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:20px}.celebration-actions.single{grid-template-columns:1fr}
+    .celebration-done,.tutorial-next{background:#d65f8c;border-color:#d65f8c;color:#fff}
+    .tutorial-close{display:block;margin:0 0 16px auto;min-height:36px;font-size:11px}
+    .tutorial-headline{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:13px}
+    .tutorial-mode{display:flex;gap:7px;align-items:center;font-size:10px;font-weight:750;color:var(--muted)}.tutorial-mode img{width:24px;height:24px}
+    .tutorial-progress{font-size:10px;color:#9c7745;background:#fff0d6;padding:5px 8px;border-radius:7px}
+    .tutorial-visual{display:grid;place-items:center;min-height:120px;border:1px solid #f0e0d2;border-radius:19px;background:linear-gradient(130deg,#ffeff4,#fff6df);margin-bottom:17px;padding:13px}
+    .tutorial-visual>img{max-width:112px;max-height:123px}
+    .mini-path{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:8px;text-align:center;font-size:12px;line-height:1.4}
+    .mini-path>span{padding:9px;background:#fffaf8;border-radius:12px}
+    .tutorial-note{padding:12px;background:#fff1df;border-radius:13px;color:#927045;font-size:12px;line-height:1.5;margin-top:13px}
+    .tutorial-dots{display:flex;gap:5px;justify-content:center;margin:18px 0}
+    .tutorial-dot{width:6px;height:6px;border-radius:5px;background:#e1cbd4}.tutorial-dot.active{width:21px;background:#d76c95}
+    .tutorial-actions{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+    .toast{position:fixed;left:50%;bottom:max(22px,env(safe-area-inset-bottom));z-index:60;transform:translate(-50%,12px);width:min(400px,calc(100% - 32px));padding:13px 16px;border-radius:16px;background:#5d3e4d;color:white;font-size:12px;line-height:1.45;text-align:center;opacity:0;pointer-events:none;transition:opacity .16s,transform .16s}
+    .toast.show{opacity:1;transform:translate(-50%,0)}
+    .loading{display:grid;place-items:center;min-height:50vh;font-size:13px;color:var(--muted);text-align:center}
+    .spinner{width:28px;height:28px;margin:0 auto 13px;border:3px solid #eed7e0;border-top-color:#cf628e;border-radius:50%;animation:spin .8s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    @media(min-width:640px){.app{padding-left:24px;padding-right:24px}.cafe-card{min-height:162px}.cafe-art{right:32px;width:122px;height:122px}.weekly-prize{grid-template-columns:minmax(0,1fr) 108px}.weekly-prize img{height:102px;width:94px}.sheet-overlay,.tutorial,.choice-overlay,.celebration-overlay{align-items:center;padding:24px}.sheet,.tutorial-card,.choice-sheet,.celebration-card{max-height:90dvh;border-radius:27px}}
+    @media(max-width:360px){.app{padding-left:12px;padding-right:12px}.topbar h1{font-size:18px;letter-spacing:-.5px}.tab{font-size:12px;gap:4px}.tab .icon{width:15px;height:15px}.tab-count{min-width:16px;font-size:9px}.cafe-card{padding:16px}.cafe-card h2{font-size:22px}.cafe-art{width:88px;height:88px;right:8px}.weekly-card{padding:15px}.weekly-prize h3{font-size:19px}.weekly-prize{grid-template-columns:1fr 64px}.weekly-prize img{width:64px;height:76px}.reward{grid-template-columns:39px minmax(0,1fr) auto;gap:8px;padding:11px}.reward-icon,.reward-icon img{width:39px;height:46px}.claim{font-size:10px;padding:8px}.choice-options{grid-template-columns:1fr}.choice-option{flex-direction:row;justify-content:start;min-height:80px;gap:15px;padding:12px}.choice-option strong{font-size:13px;text-align:left}.choice-option img{width:52px;height:55px}.sheet-content{padding:15px}}
+    @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.001ms!important;animation-iteration-count:1!important;transition:none!important}}
 
-
-    /* tutorial-refresh-2026-08-27 */
-    .tutorial{
-      align-items:end;
-      padding:max(14px,env(safe-area-inset-top)) 10px max(10px,env(safe-area-inset-bottom));
-      background:rgba(58,34,44,.40);
-      backdrop-filter:blur(12px) saturate(1.08);
-      -webkit-backdrop-filter:blur(12px) saturate(1.08)
-    }
-    .tutorial-card{
-      position:relative;
-      width:min(440px,100%);
-      max-height:min(88dvh,760px);
-      padding:14px 14px 16px;
-      border:1px solid rgba(222,172,188,.42);
-      border-radius:32px 32px 24px 24px;
-      background:radial-gradient(circle at 92% 2%,rgba(255,225,177,.48),transparent 28%),radial-gradient(circle at 8% 0%,rgba(255,210,229,.70),transparent 34%),linear-gradient(165deg,#fffdf9 0%,#fff7f3 58%,#fff1f6 100%);
-      box-shadow:0 26px 72px rgba(75,39,52,.30),inset 0 1px 0 rgba(255,255,255,.98);
-      scrollbar-width:none
-    }
-    .tutorial-card::-webkit-scrollbar{display:none}
-    .tutorial-card::before{content:"";display:block;width:42px;height:4px;margin:0 auto 9px;border-radius:999px;background:rgba(176,123,141,.24)}
-    .tutorial-close{
-      position:absolute;
-      top:18px;
-      right:17px;
-      float:none;
-      min-height:30px;
-      padding:0 10px;
-      border:1px solid rgba(217,174,188,.28);
-      border-radius:999px;
-      background:rgba(255,255,255,.74);
-      color:#98727f;
-      font-size:11px;
-      font-weight:900;
-      backdrop-filter:blur(8px);
-      -webkit-backdrop-filter:blur(8px)
-    }
-    .tutorial-headline{position:relative;display:flex;align-items:center;gap:8px;min-height:30px;padding-right:66px;margin-bottom:9px}
-    .tutorial-mode{min-width:0;max-width:calc(50% - 38px);display:inline-flex;align-items:center;gap:7px;color:#8e566b;font-size:9px;font-weight:950;letter-spacing:.075em;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-    .tutorial-mode img{width:27px;height:27px;flex:0 0 27px;object-fit:contain;filter:drop-shadow(0 4px 7px rgba(111,65,78,.11))}
-    .tutorial-progress{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);flex:0 0 auto;min-height:26px;display:grid;place-items:center;margin:0;padding:5px 9px;border:1px solid rgba(214,156,74,.30);border-radius:999px;background:rgba(255,246,216,.80);color:#9c6c2a;font-size:9px;letter-spacing:.04em;text-transform:none;white-space:nowrap}
-    .tutorial-visual{height:auto;min-height:158px;margin:0 0 12px;padding:13px;border:1px solid rgba(224,187,173,.68);border-radius:25px;background:radial-gradient(circle at 84% 10%,rgba(255,227,176,.44),transparent 31%),radial-gradient(circle at 15% 3%,rgba(255,213,230,.55),transparent 35%),rgba(255,255,255,.72);box-shadow:inset 0 1px 0 rgba(255,255,255,.90)}
-    .tutorial-visual img{max-width:148px;max-height:138px;filter:drop-shadow(0 9px 15px rgba(104,61,75,.10))}
-    .tutorial-visual .mini-path{width:100%;gap:7px;padding:7px}
-    .tutorial-visual .mini-path>span{min-height:43px;display:grid;place-items:center;padding:8px 10px;border:1px solid rgba(221,185,172,.58);border-radius:14px;background:linear-gradient(160deg,rgba(255,255,255,.94),rgba(255,248,243,.80));color:#704657;font-size:9px;line-height:1.22;text-align:center;box-shadow:0 7px 17px rgba(100,61,73,.055),inset 0 1px 0 rgba(255,255,255,.96)}
-    .tutorial-visual .mini-path>b{color:#ca8f3e;font-size:12px}
-    .tutorial-card h2{margin:0 2px 7px;color:#5f3d49;font-size:clamp(22px,6vw,27px);line-height:1.08;letter-spacing:-.018em;text-align:left}
-    .tutorial-card p{margin:0 2px;color:#806f76;font-size:13px;font-weight:720;line-height:1.5;text-align:left}
-    .tutorial-note{position:relative;margin-top:11px;padding:10px 11px 10px 34px;border:1px solid rgba(218,164,78,.30);border-radius:16px;background:linear-gradient(145deg,rgba(255,248,220,.92),rgba(255,235,242,.78));color:#7d5c55;font-size:11px;font-weight:800;line-height:1.43;text-align:left}
-    .tutorial-note::before{content:"✦";position:absolute;left:11px;top:10px;color:#cf9737;font-size:15px}
-    .tutorial-dots{margin:13px 0 11px;gap:5px}
-    .tutorial-dot{width:7px;height:7px;background:#e6d5da;transition:width .18s ease,background .18s ease}
-    .tutorial-dot.active{width:22px;background:linear-gradient(90deg,#e97da6,#d5a13f)}
-    .tutorial-actions{grid-template-columns:minmax(0,.72fr) minmax(0,1.28fr);gap:8px;margin-top:0}
-    .tutorial-actions button{min-height:48px;border-radius:15px;font-size:12px;box-shadow:none}
-    .tutorial-prev{background:rgba(255,255,255,.86);color:#966176;border-color:rgba(205,103,139,.18)!important}
-    .tutorial-next{border-color:rgba(205,91,132,.35)!important;background:linear-gradient(180deg,#ec8caf,#d95e8c);box-shadow:0 9px 19px rgba(195,77,119,.18)!important}
-    @media(min-width:640px){.tutorial{align-items:center;padding:18px}.tutorial-card{border-radius:32px}}
-    @media(max-width:370px){.tutorial-card{padding:12px 11px 13px;border-radius:28px 28px 22px 22px}.tutorial-headline{padding-right:58px}.tutorial-mode{max-width:calc(50% - 34px);font-size:8px}.tutorial-visual{min-height:146px;padding:10px}.tutorial-visual .mini-path{gap:5px}.tutorial-visual .mini-path>span{padding:7px 8px;font-size:8px}.tutorial-card p{font-size:12px}}
   </style>
 </head>
 <body>
+
   <main class="app">
-    <header class="topbar"><span></span><h1>Друзья кафе</h1><button class="helpbtn" data-tutorial-open type="button" aria-label="Как работают Друзья кафе">?</button></header>
-    <div data-root><div class="loading"><div><div class="spinner"></div>Загружаем друзей и награды…</div></div></div>
+    <div class="shell-header">
+      <header class="topbar">
+        <button type="button" class="icon-btn back-btn" data-page-back aria-label="Назад в игру"><svg class="icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m14 5-7 7 7 7"/></svg></button>
+        <h1>Друзья кафе</h1>
+        <button type="button" class="icon-btn" data-sheet="settings" aria-label="Настройки друзей"><svg class="icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="3" fill="currentColor" stroke="none"/><circle cx="15" cy="17" r="3" fill="currentColor" stroke="none"/></svg></button>
+        <button type="button" class="icon-btn helpbtn" data-sheet="help" aria-label="Как работают Друзья кафе">?</button>
+      </header>
+      <nav class="tabs" role="tablist" aria-label="Разделы друзей кафе">
+        <button type="button" class="tab" id="ref-tab-overview" role="tab" data-tab="overview" aria-selected="true" aria-controls="ref-panel"><svg class="icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1Z"/><path d="M9 21v-8h6v8"/></svg><span>Обзор</span></button>
+        <button type="button" class="tab" id="ref-tab-friends" role="tab" data-tab="friends" aria-selected="false" aria-controls="ref-panel" tabindex="-1"><svg class="icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3"/><path d="M3 21v-3a6 6 0 0 1 12 0v3M16 5a3 3 0 0 1 0 6m2 3a5 5 0 0 1 3 5v2"/></svg><span>Друзья</span><span class="tab-count neutral" data-tab-count hidden></span></button>
+        <button type="button" class="tab" id="ref-tab-gifts" role="tab" data-tab="gifts" aria-selected="false" aria-controls="ref-panel" tabindex="-1"><svg class="icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9h18v4H3zM5 13v8h14v-8M12 9v12"/><path d="M12 9H8a3 3 0 1 1 3-3l1 3Zm0 0h4a3 3 0 1 0-3-3l-1 3Z"/></svg><span>Подарки</span><span class="tab-count" data-tab-count hidden></span></button>
+      </nav>
+    </div>
+    <section data-root id="ref-panel" role="tabpanel" aria-labelledby="ref-tab-overview" tabindex="-1">
+      <div class="loading"><div><div class="spinner"></div>Загружаем друзей и подарки…</div></div>
+    </section>
   </main>
-  <div class="toast" data-toast></div>
+  <div class="sheet-overlay" data-sheet-layer hidden aria-hidden="true">
+    <section class="sheet" role="dialog" aria-modal="true" aria-labelledby="ref-sheet-title">
+      <div class="sheet-handle" aria-hidden="true"></div>
+      <header class="sheet-header"><h2 id="ref-sheet-title" data-sheet-title></h2><button type="button" class="icon-btn" data-sheet-close aria-label="Закрыть"><svg class="icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button></header>
+      <div class="sheet-content" data-sheet-body></div>
+    </section>
+  </div>
+
+  <div class="toast" data-toast role="status" aria-live="polite" aria-atomic="true"></div>
   <div class="tutorial" data-tutorial hidden aria-hidden="true"><div class="tutorial-card" role="dialog" aria-modal="true" aria-labelledby="ref-tutorial-title"><button class="tutorial-close" data-tutorial-close type="button">Закрыть</button><div data-tutorial-body></div></div></div>
   <div class="choice-overlay" data-choice hidden aria-hidden="true"><div class="choice-sheet" role="dialog" aria-modal="true" aria-labelledby="ref-choice-title"><h2 id="ref-choice-title">Выбери большую награду</h2><p data-choice-copy>Выбери один подарок. После подтверждения изменить выбор нельзя.</p><div class="choice-options" data-choice-options></div><button class="choice-close" data-choice-close type="button">Закрыть</button></div></div>
   <div class="celebration-overlay" data-celebration hidden aria-hidden="true"><div class="celebration-card" role="dialog" aria-modal="true" aria-labelledby="ref-celebration-title"><div class="celebration-kicker">Друзья кафе · подарок</div><div class="celebration-art" data-celebration-art></div><h2 id="ref-celebration-title" data-celebration-title>Подарок получен!</h2><p data-celebration-text></p><div class="celebration-actions" data-celebration-actions><button class="celebration-share" data-celebration-share type="button">Поделиться</button><button class="celebration-done" data-celebration-close type="button">Готово</button></div></div></div>
@@ -189,8 +384,8 @@
   const feedIcon = (type) => FEED_IMAGES[String(type||'')] || REWARD_IMAGES.fallback;
   const feedIconMarkup = (type) => `<img src="${esc(feedIcon(type))}" alt="" loading="lazy" decoding="async">`;
   const timeLeft = (unix) => { const sec=Math.max(0,Number(unix||0)-Math.floor(Date.now()/1000));if(!sec)return '';const hours=Math.ceil(sec/3600);if(hours<24)return `${hours} ч.`;return `${Math.ceil(hours/24)} дн.`; };
-  function lockPageScroll(){if(scrollLocked)return;scrollLocked=true;lockedScrollY=window.scrollY||document.documentElement.scrollTop||0;document.documentElement.classList.add('modal-scroll-locked');document.documentElement.style.overflow='hidden';document.body.style.position='fixed';document.body.style.top=`-${lockedScrollY}px`;document.body.style.left='0';document.body.style.right='0';document.body.style.width='100%';document.body.style.overflow='hidden';}
-  function unlockPageScroll(){if(!scrollLocked)return;scrollLocked=false;document.documentElement.classList.remove('modal-scroll-locked');document.documentElement.style.overflow='';document.body.style.position='';document.body.style.top='';document.body.style.left='';document.body.style.right='';document.body.style.width='';document.body.style.overflow='';window.scrollTo(0,lockedScrollY);}
+  function lockPageScroll(){if(scrollLocked)return;scrollLocked=true;document.querySelector('main')?.setAttribute('inert','');lockedScrollY=window.scrollY||document.documentElement.scrollTop||0;document.documentElement.classList.add('modal-scroll-locked');document.documentElement.style.overflow='hidden';document.body.style.position='fixed';document.body.style.top=`-${lockedScrollY}px`;document.body.style.left='0';document.body.style.right='0';document.body.style.width='100%';document.body.style.overflow='hidden';}
+  function unlockPageScroll(){if(!scrollLocked||activeModal())return;document.querySelector('main')?.removeAttribute('inert');scrollLocked=false;document.documentElement.classList.remove('modal-scroll-locked');document.documentElement.style.overflow='';document.body.style.position='';document.body.style.top='';document.body.style.left='';document.body.style.right='';document.body.style.width='';document.body.style.overflow='';window.scrollTo(0,lockedScrollY);}
 
   function readInitData(){
     let value='';try{value=String(webApp?.initData||'');}catch{}
@@ -205,19 +400,372 @@
     try{
       const response=await fetch(path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({initData,...body}),cache:'no-store',signal:controller.signal});
       let data=null;try{data=await response.json();}catch(error){if(error?.name==='AbortError')throw error;}
-      if(!response.ok||!data?.ok)throw new Error(data?.error||`Ошибка ${response.status}`);
+      if(!response.ok||!data?.ok)throw Object.assign(new Error(data?.error||`Ошибка ${response.status}`),{status:response.status});
       return data;
     }catch(error){if(error?.name==='AbortError'){const timeout=new Error('Сервер отвечает слишком долго. Проверяем состояние…');timeout.timeout=true;throw timeout;}throw error;}finally{clearTimeout(timer);}
   }
 
   function inviteLink(){return state?.self?.code?`https://t.me/${BOT_USERNAME}?startapp=ref_${encodeURIComponent(state.self.code)}`:'';}
 
-  function renderNetwork(){
-    const items=state?.networkMilestones||[];if(!items.length)return '<div class="empty">Лестница наград пока не настроена.</div>';
-    const active=Number(state.activeFriends||0);let nextMarked=false;
-    return `<div class="network">${items.map(item=>{const threshold=Number(item.threshold);const next=!item.achieved&&!nextMarked&&threshold>active;if(next)nextMarked=true;const choice=item.choice?.enabled?item.choice:null;const waiting=Boolean(choice?.pending),selected=Boolean(choice?.selected),done=item.achieved&&(!choice||selected);const art=choice?(selected&&choice.selectedReward?`<div class="network-reward-art">${rewardImageMarkup(choice.selectedReward)}</div>`:`<div class="choice-preview">${(choice.options||[]).map(r=>rewardImageMarkup(r)).join('')}</div>`):`<div class="network-reward-art">${rewardImageMarkup(item.reward)}</div>`;const label=choice?(selected?choice.selectedRewardLabel:`Выбор из ${(choice.options||[]).length} наград`):item.rewardLabel;const specialLabel=threshold===3?'Командный подарок':threshold===20?'Большой выбор':'';const specialClass=threshold===20?' choice':'';return `<div class="network-card ${done?'done':next?'next':''} ${specialLabel?'featured':''}">${specialLabel?`<div class="network-special${specialClass}">${esc(specialLabel)}</div>`:''}<div class="network-top"><div class="network-num">${done?'✓':esc(item.threshold)}</div><span class="network-state">${waiting?'Выбери':done?'Получено':next?'Следующая':'Цель'}</span></div>${art}<strong>${esc(item.title)}</strong><span class="reward-label">${esc(label)}</span>${waiting?`<button class="network-choice-btn" data-choice-open="${esc(item.threshold)}">Выбрать подарок</button>`:''}${item.achieved&&threshold>=10?`<button class="network-share-btn" data-share-milestone="${esc(item.threshold)}">Поделиться вехой</button>`:''}</div>`;}).join('')}</div>`;
-  }
 
+  // View state is local to this page. Eligibility and rewards always come from /api/referrals/state.
+  const ui = { tab:'overview', filter:'all', query:'', sheet:null };
+  let actionKey = '';
+  let refreshEpoch = 0;
+  let modalReturnFocus = null;
+  let sheetScroll = 0;
+  const sheetLayer = document.querySelector('[data-sheet-layer]');
+  const sheetBody = document.querySelector('[data-sheet-body]');
+  const sheetTitle = document.querySelector('[data-sheet-title]');
+  const tabLabels = {overview:'Обзор',friends:'Друзья',gifts:'Подарки'};
+  const n = (value, fallback=0) => Number.isFinite(Number(value)) ? Number(value) : fallback;
+  const whole = value => Math.max(0,Math.floor(n(value)));
+  const plural = (count,one,few,many) => {const v=Math.abs(whole(count))%100;return v>10&&v<20?many:v%10===1?one:v%10>=2&&v%10<=4?few:many;};
+  const num = value => new Intl.NumberFormat('ru-RU').format(whole(value));
+  const friendRows = () => Array.isArray(state?.friends)?state.friends:[];
+  const rewardRows = () => Array.isArray(state?.rewards)?state.rewards:[];
+  const readyRows = () => rewardRows().filter(row=>['pending','failed'].includes(String(row.status)));
+  const processingRows = () => rewardRows().filter(row=>row.status==='processing');
+  const choices = () => Array.isArray(state?.pendingChoices)?state.pendingChoices:(state?.networkMilestones||[]).filter(item=>item.choice?.pending);
+  const actionCount = () => readyRows().length+choices().length;
+  const programOff = () => state?.program?.enabled===false;
+  const canInvite = () => !programOff()&&Boolean(state?.self?.code);
+  const canGift = friend => Boolean(!programOff()&&state?.friendGift?.enabled&&state.friendGift.available&&friend?.status==='active'&&friend.canReceiveGift!==false);
+  const nextFriendStage = friend => (friend?.milestones||[]).find(m=>!m.achieved&&m.triggerType!=='season_tier')||(friend?.milestones||[]).find(m=>!m.achieved);
+  function icon(name){
+    const paths={
+      overview:'<path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1Z"/><path d="M9 21v-8h6v8"/>',
+      friends:'<circle cx="9" cy="8" r="3"/><path d="M3 21v-3a6 6 0 0 1 12 0v3M16 5a3 3 0 0 1 0 6m2 3a5 5 0 0 1 3 5v2"/>',
+      gifts:'<path d="M3 9h18v4H3zM5 13v8h14v-8M12 9v12"/><path d="M12 9H8a3 3 0 1 1 3-3l1 3Zm0 0h4a3 3 0 1 0-3-3l-1 3Z"/>',
+      arrow:'<path d="m9 5 7 7-7 7"/>',
+      back:'<path d="m14 5-7 7 7 7"/>',
+      close:'<path d="m6 6 12 12M18 6 6 18"/>',
+      plus:'<path d="M12 5v14M5 12h14"/>',
+      check:'<path d="m5 12 4 4L19 6"/>',
+      search:'<circle cx="10" cy="10" r="6"/><path d="m15 15 6 6"/>',
+      settings:'<path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="3" fill="currentColor" stroke="none"/><circle cx="15" cy="17" r="3" fill="currentColor" stroke="none"/>',
+      history:'<path d="M3 11a9 9 0 1 1 3 8M3 4v7h7M12 7v5l3 2"/>',
+      steps:'<path d="M4 21v-6h5V9h5V3h6M3 21h18"/>',
+      bell:'<path d="M5 17h14l-2-3V9A5 5 0 0 0 7 9v5l-2 3ZM10 21h4"/>',
+      refresh:'<path d="M20 7a8 8 0 0 0-14-2L3 9m0-6v6h6M4 17a8 8 0 0 0 14 2l3-4m0 6v-6h-6"/>',
+      copy:'<rect x="8" y="8" width="12" height="13" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/>',
+      share:'<path d="M12 16V3m-5 5 5-5 5 5M5 12v8a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-8"/>'
+    };
+    return `<svg class="icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[name]||paths.arrow}</svg>`;
+  }
+  const art = (src,cls='') => `<img class="${cls}" src="${esc(src)}" alt="" decoding="async" loading="lazy">`;
+  const button = (text,attrs='',cls='secondary') => `<button type="button" class="btn ${cls}" ${attrs}>${text}</button>`;
+  const utility = (name,text,desc,attrs) => `<button type="button" class="utility-row" ${attrs}>${icon(name)}<span>${esc(text)}${desc?`<small>${esc(desc)}</small>`:''}</span>${icon('arrow')}</button>`;
+  function rewardTitle(reward,label='Подарок'){
+    const amount=whole(reward?.amount),type=String(reward?.id||'');
+    const titles={
+      small:['обычный кейс','обычных кейса','обычных кейсов'],
+      sweet:['серебряный кейс','серебряных кейса','серебряных кейсов'],
+      gold:['золотой кейс','золотых кейса','золотых кейсов'],
+      mythic:['мифический кейс','мифических кейса','мифических кейсов'],
+      legendary:['легендарный кейс','легендарных кейса','легендарных кейсов']
+    };
+    return reward?.kind==='case'&&titles[type]&&amount?`${num(amount)} ${plural(amount,...titles[type])}`:String(label||'Подарок');
+  }
+  function progress(value,target,label,extra=''){
+    const max=Math.max(1,n(target,1)),current=Math.min(max,Math.max(0,n(value)));
+    return `<div class="progress-track ${extra}" role="progressbar" aria-label="${esc(label)}" aria-valuemin="0" aria-valuemax="${max}" aria-valuenow="${current}"><div class="progress-fill" style="width:${Math.round(current/max*100)}%"></div></div>`;
+  }
+  function emptyCard(title,copy,action='',image=FEED_IMAGES.join){
+    return `<div class="empty-state">${art(image)}<h3>${esc(title)}</h3><p>${esc(copy)}</p>${action}</div>`;
+  }
+  function renderCafe(){
+    const friends=friendRows(),inviter=state?.inviter;
+    const people=[...(inviter?[{...inviter,isInviter:true}]:[]),...friends];
+    const total=whole(state.totalInvited),active=whole(state.activeFriends),newcomer=!people.length;
+    const avatars=people.slice(0,3).map(friend=>`<button type="button" class="avatar-mini" ${friend.isInviter?'data-inviter-open':`data-friend-open="${esc(friend.telegramId)}"`} aria-label="${esc(`Открыть: ${friend.displayName}`)}">${esc(initials(friend.displayName))}</button>`).join('');
+    return `<section class="cafe-card ${newcomer?'new':''}">
+      <span class="eyebrow">Вместе веселее</span>
+      <h2>${newcomer?'Место для своих':'Твоя компания'}</h2>
+      <p>${newcomer?'Пригласи друга. Играйте и получайте подарки вместе.':total?`Приглашено: ${num(total)} · активных: ${num(active)}`:inviter?`В кафе с тобой — ${esc(inviter.displayName)}.`:'Собирай свою компанию.'}</p>
+      ${art('/assets/ui/icon_referals.webp','cafe-art')}
+      <div class="cafe-bottom"><div class="avatars">${avatars}${people.length>3?`<button type="button" class="avatar-mini more" data-tab="friends" aria-label="Все друзья">+${num(people.length-3)}</button>`:''}<button type="button" class="avatar-mini add" data-sheet="invite" aria-label="Пригласить друга" ${canInvite()?'':'disabled'}>${icon('plus')}</button></div>${button(`${icon('plus')} Пригласить`,'data-sheet="invite" '+(canInvite()?'':'disabled'),'primary small')}</div>
+    </section>`;
+  }
+  function renderReadyCallout(){
+    const count=actionCount(),pending=choices().length;
+    if(count)return `<button class="ready-card" type="button" data-tab="gifts">
+      ${art('/assets/ui/icone_reward.webp','ready-art')}
+      <span class="ready-copy"><strong>${num(count)} ${plural(count,'подарок ждёт','подарка ждут','подарков ждут')} тебя</strong><span>${pending?'Есть награда на выбор. Реши, что забрать.':'Новые награды уже можно забрать.'}</span></span>
+      <span class="round-arrow">${icon('arrow')}</span></button>`;
+    if(processingRows().length)return utility('refresh','Проверяем выдачу','Посмотреть состояние подарков','data-tab="gifts"');
+    return '';
+  }
+  function weeklyView(){
+    const own=state?.weeklyProgram,inviter=state?.inviter;
+    const active=friendRows().filter(f=>f.status==='active'&&f.weekly?.enabled);
+    if(inviter?.weekly?.enabled&&!own?.completed&&!active.length)
+      return {w:inviter.weekly,friend:inviter,role:'invitee',count:1};
+    if(!own?.enabled)return null;
+    const partner=own.completed?friendRows().find(f=>String(f.telegramId)===String(own.partnerId)):active.slice().sort((a,b)=>n(b.weekly?.friendRuns)-n(a.weekly?.friendRuns))[0];
+    return {w:{...own,friendRuns:n(partner?.weekly?.friendRuns)},friend:partner,role:'referrer',count:active.length};
+  }
+  function weeklyRewards(view){
+    const w=view.w,invitee=view.role==='invitee';
+    return {
+      me:invitee?w.inviteeReward:w.referrerReward,
+      them:invitee?w.referrerReward:w.inviteeReward,
+      meLabel:invitee?w.inviteeRewardLabel:w.referrerRewardLabel,
+      themLabel:invitee?w.referrerRewardLabel:w.inviteeRewardLabel
+    };
+  }
+  function weeklyStatus(view){
+    const {w,friend,role}=view,target=Math.max(1,whole(w.target)||3),my=whole(w.myRuns),other=whole(w.friendRuns);
+    const related=rewardRows().filter(row=>String(row.sourceKey).startsWith(`weekly:${w.weekKey}:`)&&row.role===role);
+    const delivered=related.length>0&&related.every(row=>row.status==='delivered');
+    if(w.locked)return {text:'Пригласивший уже открыл коробку с другим другом. Новый шанс — на следующей неделе.',label:'На следующей неделе'};
+    if(w.completed)return {text:delivered?'Подарок получен. В понедельник начнётся новая неделя.':'Условия выполнены. Проверь свою награду во вкладке «Подарки».',label:delivered?'Получено':'Условия выполнены',success:true};
+    if(!friend)return {text:friendRows().length?'Другу нужно пройти стартовый этап, чтобы участвовать в подарке недели.':'Пригласи друга и активируйте дружбу, чтобы открыть общий подарок.',label:'Нужен активный друг'};
+    if(my>=target&&other>=target)return {text:'Забеги выполнены. Обнови состояние, чтобы проверить итог недели.',label:'Проверяем итог'};
+    if(my>=target)return {text:`Твоя часть готова. Другу осталось ${target-other} ${plural(target-other,'забег','забега','забегов')}.`,label:'Твоя часть готова'};
+    return {text:`Тебе осталось ${target-my} ${plural(target-my,'забег','забега','забегов')} для общего подарка.`,label:'Играйте вместе'};
+  }
+  function weeklyPerson(name,value,target,caption){
+    const score=Math.min(target,whole(value)),done=score>=target;
+    return `<div class="weekly-person ${done?'done':''}"><div class="weekly-person-label"><span class="person-name">${esc(name)}</span><span class="person-score">${score}/${target}${done?' ✓':''}</span></div>${progress(score,target,`Забеги: ${name}`)}<small>${esc(caption)}</small></div>`;
+  }
+  function renderWeekly(view=weeklyView(),detail=false){
+    if(!view?.w?.enabled)return '';
+    const {w,friend,role,count}=view,target=Math.max(1,whole(w.target)||3);
+    const rewards=weeklyRewards(view),same=JSON.stringify(rewards.me)===JSON.stringify(rewards.them);
+    const status=weeklyStatus(view),own=role==='referrer',otherName=friend?.displayName||'Друг';
+    const allRuns=whole(w.myRuns)>=target&&whole(w.friendRuns)>=target&&!w.completed&&!w.locked&&friend;
+    return `<section class="weekly-card ${w.completed?'complete':''} ${w.locked?'locked':''}">
+      <div class="weekly-header"><span class="eyebrow">${own?'Подарок недели':'С пригласившим другом'}</span><span class="date-chip ${w.completed?'done':''}">${w.completed?'Условия выполнены':w.endsAt?`до ${esc(fmtDate(w.endsAt))}`:'Эта неделя'}</span></div>
+      <div class="weekly-prize"><div><h3>${esc(rewardTitle(rewards.me,rewards.meLabel))}</h3><p>${same?'Тебе и другу — каждому':`Другу: ${esc(rewardTitle(rewards.them,rewards.themLabel))}`}</p></div>${rewardImageMarkup(rewards.me)}</div>
+      <div class="weekly-pair">${weeklyPerson('Ты',w.myRuns,target,'зачтённые забеги')}${(!friend&&w.completed?`<div class="weekly-person done"><div class="weekly-person-label"><span class="person-name">Друг</span><span class="person-score">Готово ✓</span></div>${progress(1,1,'Условие друга выполнено')}<small>подтверждено сервером</small></div>`:weeklyPerson(otherName,w.friendRuns,target,!friend?'нужна активная дружба':!w.completed&&own&&count>1?'ближе всех к подарку':'зачтённые забеги'))}</div>
+      <p class="weekly-status ${status.success?'success':''}">${esc(status.text)}</p>
+      <div class="weekly-footer"><span class="weekly-footer-note">${own?'Одна коробка за неделю':'Вместе с тем, кто тебя пригласил'}</span>${button(`Условия ${icon('arrow')}`,`data-sheet="weekly" data-weekly-role="${role}"`,'text-btn')}</div>
+      ${w.completed&&!detail?button('К подаркам','data-tab="gifts"','secondary full'):allRuns?button(`${icon('refresh')} Обновить`,'data-refresh','secondary full'):''}
+    </section>`;
+  }
+  function renderNextGoal(){
+    const next=state?.nextNetworkMilestone;
+    if(!next){
+      if(!(state?.networkMilestones||[]).length)return '';
+      return utility('steps','Награды за друзей','Посмотреть все этапы своей компании','data-sheet="network"');
+    }
+    const reward=next.choice?.enabled?next.choice.options?.[0]:next.reward;
+    const amount=whole(next.remaining);
+    return `<button class="next-card" type="button" data-sheet="network">
+      <span class="next-top"><span>Следующий подарок за друзей</span>${icon('arrow')}</span>
+      <span class="next-main">${rewardImageMarkup(reward,'next-art')}<span><strong>${next.choice?.enabled?'Большой подарок на выбор':esc(rewardTitle(reward,next.rewardLabel))}</strong><small>${amount?`Ещё ${num(amount)} ${plural(amount,'активный друг','активных друга','активных друзей')}`:'Проверь результат этапа'}</small></span><span></span></span>
+      ${progress(state.activeFriends,next.threshold,'Активные друзья для следующего подарка')}
+      <span class="next-bottom"><span>${num(state.activeFriends)} из ${num(next.threshold)} активных друзей</span><span>Все этапы</span></span>
+    </button>`;
+  }
+  function renderFeedRows(limit=null){
+    const rows=Array.isArray(state?.feed)?state.feed:[];
+    const items=limit===null?rows:rows.slice(0,limit);
+    if(!items.length)return '<div class="empty">Здесь появятся события: новые друзья, их этапы и общие подарки.</div>';
+    return items.map(item=>`<div class="feed-row"><div class="feed-icon">${feedIconMarkup(item.type)}</div><div class="feed-copy"><strong>${esc(item.title)}</strong>${item.text?`<span>${esc(item.text)}</span>`:''}</div><span class="feed-date">${esc(fmtDate(item.at))}</span></div>`).join('');
+  }
+  function renderOverview(){
+    const parts=[renderReadyCallout(),renderCafe()];
+    if(programOff())parts.push('<div class="notice">Приглашения и совместные активности временно выключены. Уже открытые награды остаются в «Подарках».</div>');
+    const boost=state?.program?.boost;
+    if(boost?.active)parts.push(`<div class="boost-banner"><b>×${num(boost.multiplier||2)}</b><div><strong>${esc(boost.title||'Больше подарков вместе')}</strong><span>Бонус к новым наградам${boost.endsAt?` · до ${esc(fmtDate(boost.endsAt))}`:''}. Уже открытые награды не меняются.</span></div></div>`);
+    const weekly=weeklyView();
+    if(weekly&&(friendRows().length||state?.inviter))parts.push(renderWeekly(weekly));
+    if(state?.inviter&&!state.inviter.weekly?.enabled&&!friendRows().length)parts.push(`<div class="intro-inline"><strong>${esc(state.inviter.displayName)} пригласил тебя</strong>${state.inviter.status==='active'?'Дружба активирована. Новые подарки появятся здесь.':'Пройди стартовый этап, чтобы активировать совместные подарки.'}${button('Подробнее','data-inviter-open','text-btn')}</div>`);
+    parts.push(renderNextGoal());
+    if((state.feed||[]).length)parts.push(`<section class="feed-preview"><div class="section-head"><h2>В вашей компании</h2>${button(`Все события ${icon('arrow')}`,'data-sheet="feed"','text-btn')}</div>${renderFeedRows(2)}</section>`);
+    return parts.filter(Boolean).join('');
+  }
+  function renderGiftCard(){
+    const gift=state?.friendGift;if(!gift?.enabled)return '';
+    const eligible=friendRows().filter(f=>canGift(f)),active=friendRows().some(f=>f.status==='active');
+    const waiting=!gift.available,expired=waiting&&gift.nextGiftAt&&n(gift.nextGiftAt)<=Date.now()/1000;
+    let copy='',action='';
+    if(!active){copy='Подарок станет доступен для отправки, когда приглашённый друг активирует дружбу.';action=button('Как активировать дружбу','data-sheet="help"','text-btn');}
+    else if(waiting){copy=expired?'Время ожидания закончилось. Проверь доступность на сервере.':`Следующий подарок ${gift.nextGiftAt?`через ${timeLeft(gift.nextGiftAt)||'несколько минут'}`:'пока недоступен'}. Перерыв общий для всех друзей.`;action=expired?button('Проверить доступность','data-refresh','secondary'):'';}
+    else if(!eligible.length){copy='Сейчас нет друзей, которым можно отправить подарок.';}
+    else{copy=`${rewardTitle(gift.reward,gift.rewardLabel)} · не списывается из твоего баланса`;action=button('Выбрать получателя','data-sheet="gift"','primary');}
+    return `<section class="gift-send-card">${rewardImageMarkup(gift.reward)}<div><strong>${waiting?'Подарок другу на паузе':'Пора порадовать друга'}</strong><p>${esc(copy)}</p>${action}</div></section>`;
+  }
+  function renderFriendCard(friend,isInviter=false){
+    const next=isInviter?null:nextFriendStage(friend),p=next?.progress||{};
+    const data=isInviter?'data-inviter-open':`data-friend-open="${esc(friend.telegramId)}"`;
+    return `<article class="friend-card">
+      <button class="friend-open" type="button" ${data}><span class="avatar ${isInviter?'inviter':''}">${esc(initials(friend.displayName))}</span><span class="friend-copy"><strong>${esc(friend.displayName)}</strong><span>${isInviter?'Пригласил тебя':`Уровень ${num(friend.profileLevel)}`}${friend.username?` · @${esc(friend.username)}`:''}</span></span>${icon('arrow')}</button>
+      ${next?`<div class="friend-next"><div class="friend-next-head"><strong>${esc(next.title)}</strong><span>${esc(p.label||'В процессе')}</span></div>${progress(p.percent,100,'Прогресс следующего этапа')}</div>`:''}
+      <div class="friend-detail-link"><span class="friend-tag ${friend.status==='active'?'active':''}">${friend.status==='active'?'Дружба активирована':friend.status==='blocked'?'Связь недоступна':'Проходит стартовый этап'}</span>${button('Подробнее',data,'text-btn')}</div>
+    </article>`;
+  }
+  function filteredFriends(){
+    const query=ui.query.trim().toLocaleLowerCase('ru-RU');
+    return friendRows().filter(friend=>{
+      if(ui.filter==='active'&&friend.status!=='active')return false;
+      if(ui.filter==='invited'&&friend.status!=='invited')return false;
+      return !query||`${friend.displayName||''} ${friend.username||''}`.toLocaleLowerCase('ru-RU').includes(query);
+    });
+  }
+  function renderFriendsList(){
+    const rows=filteredFriends();
+    return rows.length?rows.map(f=>renderFriendCard(f)).join(''):'<div class="empty">По этому запросу друзей нет. Попробуй другое имя или фильтр.</div>';
+  }
+  function renderFriends(){
+    const friends=friendRows(),inviter=state?.inviter;
+    if(friends.length<6){ui.query='';ui.filter='all';}
+    return `<div class="friend-toolbar"><div><h2>Твоя компания</h2><p>${num(state.totalInvited)} ${plural(state.totalInvited,'приглашённый друг','приглашённых друга','приглашённых друзей')}</p></div>${button(`${icon('plus')} Пригласить`,'data-sheet="invite" '+(canInvite()?'':'disabled'),'secondary small')}</div>
+      ${renderGiftCard()}
+      ${inviter?`<section><div class="section-head"><h3>Тебя пригласил</h3></div>${renderFriendCard(inviter,true)}</section>`:''}
+      ${friends.length?`<section><div class="section-head"><h3>Приглашённые друзья</h3><span class="count-label">Активных: ${num(state.activeFriends)}</span></div>
+      ${friends.length>=6?`<label class="friends-search">${icon('search')}<span class="sr-only">Поиск по имени или username</span><input type="search" data-friends-search value="${esc(ui.query)}" placeholder="Найти друга" autocomplete="off"></label>
+      <div class="filters" aria-label="Фильтр друзей">${[['all','Все'],['active','Активировали дружбу'],['invited','Осваиваются']].map(([key,text])=>`<button type="button" class="filter" data-filter="${key}" aria-pressed="${ui.filter===key}">${text}</button>`).join('')}</div>`:''}
+      <div class="friend-list" data-friends-list>${renderFriendsList()}</div></section>`:emptyCard('Здесь будут твои друзья',inviter?'Ты уже в компании пригласившего друга. Позови новых игроков, чтобы собрать свою.':'Отправь ссылку новому игроку. После запуска игры по ней он появится здесь.',button('Пригласить друга','data-sheet="invite" '+(canInvite()?'':'disabled'),'primary'))}`;
+  }
+  function rewardCard(row,history=false){
+    const processing=row.status==='processing',failed=row.status==='failed';
+    return `<article class="reward ${processing?'processing':''}"><div class="reward-icon">${rewardImageMarkup(row.reward)}</div><div class="reward-copy"><strong>${esc(rewardTitle(row.reward,row.rewardLabel))}</strong><span>${esc(rewardContext(row))}${history&&row.deliveredAt?` · ${esc(fmtDate(row.deliveredAt))}`:''}${failed?' · получение можно повторить':processing?' · сервер подтверждает выдачу':''}</span></div>${history?'<span class="received-label">Получено ✓</span>':`<button type="button" class="claim" data-claim="${esc(row.id)}" ${processing||busy?'disabled':''}>${actionKey===`claim:${row.id}`?'Получаем…':processing?'Проверяем…':'Забрать'}</button>`}</article>`;
+  }
+  function renderPendingChoices(){
+    return choices().map(item=>`<section class="choice-callout"><span class="eyebrow">Большой подарок</span><strong style="margin-top:7px">${esc(item.title)}</strong><p>Выбери один из ${(item.choice?.options||[]).length} подарков. Выбор нельзя изменить.</p><div class="choice-mini-art">${(item.choice?.options||[]).map(r=>rewardImageMarkup(r)).join('')}</div>${button('Выбрать награду',`data-choice-open="${whole(item.threshold)}" ${busy?'disabled':''}`,'primary')}</section>`).join('');
+  }
+  function renderGifts(){
+    const ready=readyRows(),processing=processingRows(),selection=choices();
+    return `<div class="rewards-head"><div><h2>Твои подарки</h2><p>${ready.length?`${num(ready.length)} ${plural(ready.length,'награда готова','награды готовы','наград готовы')} к получению`:selection.length?'Тебя ждёт большой выбор':processing.length?'Проверяем состояние выдачи':'Всё полученное — в истории'}</p></div>${ready.length>1?button(actionKey==='claim-all'?'Получаем…':'Забрать все',`data-claim-all ${busy?'disabled':''}`,'primary'):''}</div>
+      ${renderPendingChoices()}
+      ${ready.length?`<div class="reward-list">${ready.map(row=>rewardCard(row)).join('')}</div>`:''}
+      ${processing.length?`<section><div class="section-head"><h3>Проверяем выдачу</h3>${button(`${icon('refresh')} Обновить`,'data-refresh '+(busy?'disabled':''),'text-btn')}</div><div class="reward-list">${processing.map(row=>rewardCard(row)).join('')}</div><p class="section-note">Не запускай повторное получение. Обновление проверит ту же награду.</p></section>`:''}
+      ${!ready.length&&!processing.length&&!selection.length?emptyCard(rewardRows().some(row=>row.status==='delivered')?'Все подарки забраны':'Подарки ещё впереди','Играйте вместе и проходите новые этапы. Следующая награда появится здесь.',button('Посмотреть цели','data-tab="overview"','secondary'),'/assets/ui/icone_reward.webp'):''}
+      <div class="gift-links">${utility('steps','Награды за друзей','Ближайшая цель и все большие этапы','data-sheet="network"')}${utility('history','Полученные подарки','История наград, включая автоматический XP','data-sheet="history"')}</div>`;
+  }
+  function renderNetwork(){
+    const items=state?.networkMilestones||[];
+    return `<div class="network-summary"><h3>${num(state.activeFriends)} ${plural(state.activeFriends,'активный друг','активных друга','активных друзей')}</h3><p>Друг засчитывается после стартового этапа. Каждая цель открывает награду один раз.</p></div><div class="network-list">${items.map(item=>{
+      const row=rewardRows().find(r=>r.sourceType==='network'&&String(r.sourceKey)===`threshold:${item.threshold}`);
+      const choice=item.choice?.enabled?item.choice:null;
+      const reward=choice?.selected?choice.selectedReward:item.reward;
+      const label=choice?.selected?choice.selectedRewardLabel:item.rewardLabel;
+      const next=n(state?.nextNetworkMilestone?.threshold)===n(item.threshold);
+      const status=choice?.pending?'Нужно выбрать подарок':row?.status==='delivered'?'Награда получена':row?.status==='processing'?'Проверяем выдачу':row&&['pending','failed'].includes(row.status)?'Можно забрать':choice?.selected?'Награда выбрана':item.achieved?'Этап выполнен':next?'Ближайшая цель':'Следующий этап';
+      return `<article class="network-item ${next?'next':''} ${item.achieved?'achieved':''}"><div class="network-step">${item.achieved?'✓':num(item.threshold)}</div><div class="network-copy"><strong>${esc(item.title)}</strong><small>${esc(status)}</small>${choice&&!choice.selected?`<div class="choice-mini-art">${(choice.options||[]).map(r=>rewardImageMarkup(r)).join('')}</div><small>Один подарок на выбор</small>`:`<div class="network-reward">${rewardImageMarkup(reward)}<span>${esc(rewardTitle(reward,label))}</span></div>`}
+      <div class="network-actions">${choice?.pending?button('Выбрать',`data-choice-open="${whole(item.threshold)}" ${busy?'disabled':''}`,'primary small'):row&&row.status!=='delivered'?button('К подаркам','data-tab="gifts"','secondary small'):''}${item.achieved&&n(item.threshold)>=10?button('Поделиться',`data-share-milestone="${whole(item.threshold)}"`,'text-btn'):''}</div></div></article>`;
+    }).join('')||'<div class="empty">Большие этапы пока не настроены.</div>'}</div>`;
+  }
+  function renderFriendDetails(friend,isInviter=false){
+    if(!friend)return '<div class="empty">Друг не найден в текущем состоянии. Обнови страницу друзей.</div>';
+    const weekly=friend.weekly;
+    return `<div class="friend-profile-head"><span class="avatar ${isInviter?'inviter':''}">${esc(initials(friend.displayName))}</span><div><strong>${esc(friend.displayName)}</strong><small>${isInviter?'Пригласил тебя':`Уровень ${num(friend.profileLevel)}`}${friend.username?` · @${esc(friend.username)}`:''}</small><small>${friend.status==='active'?'Дружба активирована':friend.status==='blocked'?'Связь недоступна':'Проходит стартовый этап'}</small></div></div>
+      ${friend.returnEvent?.rewarded?`<div class="friend-return">Друг вернулся после перерыва. Открыт дополнительный совместный подарок${friend.returnEvent.rewardedAt?` · ${esc(fmtDate(friend.returnEvent.rewardedAt))}`:''}.</div>`:''}
+      ${weekly?.enabled?renderWeekly({w:weekly,friend,role:isInviter?'invitee':'referrer',count:1},true):''}
+      ${!isInviter&&canGift(friend)?button(`${icon('gifts')} Отправить бесплатный подарок`, `data-gift="${esc(friend.telegramId)}" ${busy?'disabled':''}`,'primary full'):''}
+      ${isInviter?`<div class="notice">${friend.status==='active'?'Совместные награды активированы. Подарки за твои этапы появляются во вкладке «Подарки».':'Заверши стартовый этап после запуска по приглашению. Это активирует совместные награды.'}</div>${button('Условия дружбы','data-sheet="help"','secondary full')}`:
+      `<section><div class="section-head"><h3>Ваш совместный путь</h3></div><div class="detail-milestones">${(friend.milestones||[]).map(m=>`<article class="detail-milestone ${m.achieved?'done':''}"><h3>${esc(m.title)}${m.achieved?icon('check'):''}</h3><p>${m.achieved?`Этап выполнен${m.achievedAt?` · ${esc(fmtDate(m.achievedAt))}`:''}`:esc(m.description||m.progress?.label||'В процессе')}</p>${!m.achieved?progress(m.progress?.percent,100,`Этап: ${m.title}`):''}${!m.achieved&&m.progress?.label?`<p>${esc(m.progress.label)}</p>`:''}<div class="detail-rewards"><span>Тебе: ${esc(m.inviterRewardLabel||'—')}</span>${m.inviteeReward?.kind&&m.inviteeReward.kind!=='none'?`<span>Другу: ${esc(m.inviteeRewardLabel||'—')}</span>`:''}</div>${m.triggerType==='season_tier'?'<p>XP пропуска начисляется автоматически в сезоне покупки.</p>':''}</article>`).join('')||'<div class="empty">Этапы пока не настроены.</div>'}</div></section>`}`;
+  }
+  function renderWeeklyHelp(role='referrer'){
+    const isInvitee=role==='invitee',w=isInvitee?state?.inviter?.weekly:state?.weeklyProgram;
+    if(!w?.enabled)return '<div class="empty">Недельный подарок сейчас недоступен.</div>';
+    const target=Math.max(1,whole(w.target)||3),rewards=weeklyRewards({w,role});
+    return `<p class="sheet-lead">За неделю каждый из вас должен завершить ${target} ${plural(target,'зачтённый забег','зачтённых забега','зачтённых забегов')}. Сервер сам проверит результат.</p>
+    <div class="setting-card"><strong>Тебе: ${esc(rewardTitle(rewards.me,rewards.meLabel))}</strong><p style="margin-bottom:0">Другу: ${esc(rewardTitle(rewards.them,rewards.themLabel))}</p></div>
+    <div class="notice">${isInvitee?'У пригласившего — одна коробка за неделю. Она открывается с первым активным другом, с которым выполнены условия.':'У тебя как пригласившего — одна коробка за неделю. Она открывается с первым активным другом, с которым выполнены условия. До этого в обзоре показан лучший прогресс, а не закреплённый напарник.'}</div>
+    <p class="sheet-lead">Считаются только подтверждённые забеги этой недели. Выполненное условие открывает подарок, а получение награды происходит отдельно во вкладке «Подарки».${w.endsAt?` Текущая неделя — до ${esc(fmtDate(w.endsAt))}.`:''}</p>
+    ${button('К подаркам','data-tab="gifts"','primary full')}`;
+  }
+  function renderHelp(){
+    const p=state?.program||{},gift=state?.friendGift||{},weekly=state?.weeklyProgram||{},starter=(state?.milestoneRules||[]).find(m=>m.key==='starter');
+    const questions=[
+      ['Как пригласить друга?',`Нажми «Пригласить» и отправь персональную ссылку. Код уже встроен в неё — вводить его вручную не нужно. Засчитывается новый игрок: привязка доступна в течение ${whole(p.bindWindowHours||24)} ч. после появления аккаунта. ${whole(p.bindMaxRuns)===0?'До привязки у него не должно быть зачтённых забегов.':`До привязки допустимо не более ${whole(p.bindMaxRuns)} зачтённых забегов.`} Старый аккаунт нельзя привязать задним числом.`],
+      ['Что значит «дружба активирована»?',`Приглашённый друг завершил стартовый этап${starter?.triggerType==='accepted_runs'?` — ${whole(starter.triggerValue)||3} подтверждённых забега`:''}. Это статус участия в совместных наградах, а не отметка «онлайн». Условия и прогресс определяет сервер.`],
+      ['За что приходят подарки?','За этапы приглашённого друга и количество активных друзей. Когда награда открыта, она появляется во вкладке «Подарки». Её можно получить один раз. Большой подарок с выбором не входит в «Забрать все»: вариант выбираешь ты.'],
+      ['Как работает подарок недели?',weekly.enabled?`Ты и любой активный приглашённый друг делаете по ${whole(weekly.target)||3} зачтённых забега за неделю. У пригласившего одна коробка в неделю, с первым подходящим другом. Связь с тем, кто пригласил тебя, учитывается отдельно. Выполненные условия открывают награду, но не означают, что она уже получена.`:'Сейчас недельные подарки выключены.'],
+      ['Как отправить бесплатный подарок?',gift.enabled?`Во вкладке «Друзья» выбери получателя среди своих активных приглашённых друзей. Подарок «${gift.rewardLabel||'награда'}» не списывается из твоего баланса. После отправки действует общий для всех друзей перерыв ${whole(gift.cooldownHours)||72} ч. Доступность подтверждает сервер.`:'Бесплатные подарки друзьям сейчас выключены.'],
+      ['Что дают Элитный и Элитный+?','Покупка пропуска уже привязанным другом может принести пригласившему XP пропуска в сезоне покупки. XP начисляется автоматически и виден в истории. Покупка до привязки задним числом не засчитывается.'],
+      ['Что делать, если подарок обрабатывается?','Не открывай новую попытку. Нажми «Обновить» в подарках: мы проверим ту же награду на сервере. В историю попадают только подтверждённые выдачи.']
+    ];
+    if(p.returnProgram?.enabled)questions.push(['А если друг вернулся?',`После ${whole(p.returnProgram.afterDays)||14} дней без зачтённых забегов возвращение активного друга может открыть отдельный совместный подарок. Сервер засчитает его после подтверждённого забега, один раз на друга.`]);
+    if(p.boost?.enabled)questions.push(['Как работает бонус события?',`Во время события новые награды могут увеличиваться. Размер и период показывает баннер события. Уже открытые награды не пересчитываются.`]);
+    return `<p class="sheet-lead">Три вкладки: обзор ближайших целей, твоя компания и всё, что можно забрать.</p><div class="faq-list">${questions.map(([q,a])=>`<details><summary>${esc(q)}</summary><p>${esc(a)}</p></details>`).join('')}</div>${button('Короткий гид по странице','data-tutorial-open','secondary full')}`;
+  }
+  function sheetContent(){
+    const s=ui.sheet||{};
+    if(s.type==='friend')return renderFriendDetails(friendRows().find(f=>String(f.telegramId)===s.id));
+    if(s.type==='inviter')return renderFriendDetails(state?.inviter,true);
+    if(s.type==='feed')return `<p class="sheet-lead">Последние события вашей компании.</p><div>${renderFeedRows()}</div>`;
+    if(s.type==='network')return renderNetwork();
+    if(s.type==='history'){
+      const rows=rewardRows().filter(row=>row.status==='delivered');
+      return `<p class="sheet-lead">Последние награды, выдачу которых подтвердил сервер. XP пропуска тоже может начисляться автоматически.</p>${rows.length?`<div class="reward-list">${rows.map(row=>rewardCard(row,true)).join('')}</div>`:emptyCard('История ещё впереди','Здесь появятся подарки после подтверждённого получения.','','/assets/ui/icone_reward.webp')}`;
+    }
+    if(s.type==='weekly')return renderWeeklyHelp(s.role);
+    if(s.type==='help')return renderHelp();
+    if(s.type==='settings'){
+      const notify=state?.notifications||{};
+      return `<div class="setting-card"><strong>Telegram-уведомления друзей</strong><p>${notify.available?`Только важные события. Не больше ${whole(notify.dailyCap)||2} сообщений в день. Ты можешь отключить их в любой момент.`:'Уведомления сейчас недоступны в настройках игры.'}</p>${notify.available?`<button class="notification-toggle ${notify.enabled?'on':''}" data-notification-toggle type="button" role="switch" aria-checked="${Boolean(notify.enabled)}" ${busy?'disabled':''}>${actionKey==='notifications'?'Сохраняем…':notify.enabled?'Включены · нажми, чтобы выключить':'Выключены · нажми, чтобы включить'}</button>`:''}</div>${utility('refresh','Обновить данные','Проверить друзей, прогресс и награды','data-refresh '+(busy?'disabled':''))}${utility('friends','Как всё работает','Правила и ответы на вопросы','data-sheet="help"')}`;
+    }
+    if(s.type==='invite'){
+      return `<div class="invite-head">${art('/assets/ui/icon_referals.webp','invite-sheet-art')}<h3>В кафе есть место для друга</h3><p>Отправь ссылку новому игроку. Играйте, проходите этапы и открывайте совместные подарки.</p></div>
+      ${programOff()?'<div class="notice">Приглашения временно выключены.</div>':''}
+      <div class="invite-actions">${button(`${icon('share')} Отправить приглашение`,'data-invite '+(canInvite()?'':'disabled'),'primary full')}${button(`${icon('copy')} Копировать ссылку`,'data-copy '+(canInvite()?'':'disabled'),'secondary full')}</div>
+      <div class="invite-code">Твой код <code>${esc(state?.self?.code||'—')}</code></div><p class="sheet-lead" style="text-align:center;font-size:11px">Код уже в ссылке. Другу не нужно вводить его вручную.</p>
+      <label class="copy-fallback" data-copy-fallback hidden>Скопируй ссылку вручную<input readonly data-invite-link value="${esc(inviteLink())}" aria-label="Персональная ссылка приглашения"></label>
+      ${utility('friends','Кто засчитывается?','Приглашение работает для новых игроков','data-sheet="help"')}`;
+    }
+    if(s.type==='gift'){
+      const gift=state?.friendGift||{},eligible=friendRows().filter(f=>canGift(f));
+      if(!gift.enabled||!gift.available||!eligible.length)return `${renderGiftCard()||'<div class="empty">Подарок сейчас недоступен.</div>'}`;
+      return `<p class="sheet-lead">Один бесплатный подарок одному другу. Следующий — через ${whole(gift.cooldownHours)||72} ч. Ничего не спишется из твоего баланса.</p><div class="setting-card"><div class="network-reward" style="margin-top:0">${rewardImageMarkup(gift.reward)}<strong>${esc(rewardTitle(gift.reward,gift.rewardLabel))}</strong></div></div><div class="friend-list">${eligible.map(friend=>`<article class="friend-card"><div class="friend-open"><span class="avatar">${esc(initials(friend.displayName))}</span><span class="friend-copy"><strong>${esc(friend.displayName)}</strong><span>Дружба активирована</span></span>${button(actionKey===`gift:${friend.telegramId}`?'Отправляем…':'Подарить',`data-gift="${esc(friend.telegramId)}" ${busy?'disabled':''}`,'primary small')}</div></article>`).join('')}</div>`;
+    }
+    return '';
+  }
+  function updateTabs(){
+    document.querySelectorAll('[role="tab"][data-tab]').forEach(tab=>{
+      const key=tab.dataset.tab;
+      tab.setAttribute('aria-selected',String(ui.tab===key));tab.tabIndex=ui.tab===key?0:-1;
+      const badge=tab.querySelector('[data-tab-count]'),count=key==='gifts'?actionCount():key==='friends'?whole(state?.totalInvited)+(state?.inviter?1:0):0;
+      if(badge){badge.textContent=count>99?'99+':String(count);badge.hidden=count===0;}
+      tab.setAttribute('aria-label',`${tabLabels[key]}${count?` (${count})`:''}`);
+    });
+    root.setAttribute('aria-labelledby',`ref-tab-${ui.tab}`);
+  }
+  function renderSheet(){
+    if(!ui.sheet||!sheetLayer)return;
+    const titles={friend:'Карточка друга',inviter:'Тебя пригласил',feed:'События компании',network:'Награды за друзей',history:'Полученные подарки',weekly:'Подарок недели',help:'Как всё работает',settings:'Настройки',invite:'Пригласить друга',gift:'Кому отправить подарок?'};
+    const scroll=sheetLayer.querySelector('.sheet').scrollTop;
+    sheetTitle.textContent=titles[ui.sheet.type]||'Друзья кафе';
+    sheetBody.innerHTML=sheetContent();
+    sheetLayer.querySelector('.sheet').scrollTop=scroll;
+  }
+  function render(){
+    if(!state)return;
+    updateTabs();
+    root.innerHTML=`<div class="view">${ui.tab==='friends'?renderFriends():ui.tab==='gifts'?renderGifts():renderOverview()}</div>`;
+    root.setAttribute('aria-busy',String(busy));
+    document.querySelectorAll('[data-refresh]').forEach(el=>{el.disabled=busy;});
+    renderSheet();
+  }
+  function switchTab(key,focus=true){
+    if(!Object.prototype.hasOwnProperty.call(tabLabels,key)||!state)return;
+    closeSheet(false);
+    ui.tab=key;render();window.scrollTo({top:0,behavior:'auto'});
+    if(focus)document.getElementById(`ref-tab-${key}`)?.focus({preventScroll:true});
+    haptic();
+  }
+  function openSheet(type,extra={}){
+    if(!state)return;
+    if(!ui.sheet){modalReturnFocus=document.activeElement;sheetScroll=0;}
+    ui.sheet={type,...extra};
+    renderSheet();lockPageScroll();sheetLayer.hidden=false;sheetLayer.setAttribute('aria-hidden','false');
+    sheetLayer.querySelector('.sheet').scrollTop=0;
+    sheetLayer.querySelector('[data-sheet-close]')?.focus({preventScroll:true});haptic();
+  }
+  function closeSheet(restoreFocus=true){
+    if(!sheetLayer||sheetLayer.hidden)return;
+    sheetLayer.hidden=true;sheetLayer.setAttribute('aria-hidden','true');ui.sheet=null;
+    sheetBody.replaceChildren();unlockPageScroll();
+    if(restoreFocus){if(modalReturnFocus?.isConnected&&!modalReturnFocus.disabled)modalReturnFocus.focus({preventScroll:true});else document.getElementById(`ref-tab-${ui.tab}`)?.focus({preventScroll:true});}
+    modalReturnFocus=null;
+  }
+  function activeModal(){
+    return [celebrationLayer,choiceLayer,tutorialLayer,sheetLayer].find(layer=>layer&&!layer.hidden)||null;
+  }
   function rewardContext(row){
     const sourceKey=String(row?.sourceKey||'');
     if(sourceKey.startsWith('friend_gift:'))return 'Бесплатный подарок от пригласившего друга';
@@ -233,167 +781,257 @@
     return friend?`${friend.displayName} · ${stage}`:`Друг · ${stage}`;
   }
 
-  function renderRewards(){
-    const rows=(state?.rewards||[]).filter(r=>r.status!=='delivered');
-    if(!rows.length)return '<div class="empty">Новых подарков пока нет. Когда друг достигнет следующего этапа, награда появится здесь.</div>';
-    return `<div class="reward-list">${rows.map(row=>`<div class="reward"><div class="reward-icon">${rewardImageMarkup(row.reward)}</div><div class="reward-copy"><strong>${esc(row.rewardLabel)}</strong><span>${esc(rewardContext(row))}${row.status==='failed'?' · можно повторить получение':row.status==='processing'?' · сервер подтверждает выдачу':''}</span></div><button class="claim" data-claim="${esc(row.id)}" ${row.status==='processing'?'disabled':''}>${row.status==='processing'?'Проверяем…':'Забрать'}</button></div>`).join('')}</div>`;
-  }
-
-  function renderRewardHistory(){
-    const rows=(state?.rewards||[]).filter(r=>r.status==='delivered').slice(0,6);
-    if(!rows.length)return '';
-    return `<section class="section"><div class="head"><div><h3>Последние награды</h3><p>Здесь виден и XP, который начисляется автоматически за Элитный / Элитный+ друга.</p></div></div><div class="reward-list">${rows.map(row=>`<div class="reward"><div class="reward-icon">${rewardImageMarkup(row.reward)}</div><div class="reward-copy"><strong>${esc(row.rewardLabel)}</strong><span>${esc(rewardContext(row))}${row.deliveredAt?` · ${fmtDate(row.deliveredAt)}`:''}</span></div><span class="friend-status active">Получено</span></div>`).join('')}</div></section>`;
-  }
-
-  function renderNotificationCard(){
-    const n=state?.notifications;if(!n?.available)return '';
-    return `<div class="notification-card"><div><strong>Telegram-уведомления друзей</strong><span>${n.enabled?`Включены · не больше ${esc(n.dailyCap||2)} важных сообщений в день.`:'Выключены. Включи, если хочешь узнавать о подарках и важных этапах, даже когда игра закрыта.'}</span></div><button class="notification-toggle ${n.enabled?'on':''}" data-notification-toggle type="button">${n.enabled?'Включены':'Включить'}</button></div>`;
-  }
-
-  function renderFeed(){
-    const rows=state?.feed||[];if(!rows.length)return '<div class="empty">Лента оживёт, когда друзья начнут присоединяться, проходить этапы и обмениваться подарками.</div>';
-    return `<div class="feed-list">${rows.slice(0,12).map(item=>`<div class="feed-item"><div class="feed-icon">${feedIconMarkup(item.type)}</div><div class="feed-copy"><strong>${esc(item.title)}</strong><span>${esc(item.text||'')}</span></div><span class="feed-date">${fmtDate(item.at)}</span></div>`).join('')}</div>`;
-  }
-
-  function renderWeeklySection(){
-    const w=state?.weeklyProgram;if(!w?.enabled)return '<div class="empty">Совместный недельный подарок сейчас выключен.</div>';
-    const partner=(state?.friends||[]).find(friend=>String(friend.telegramId)===String(w.partnerId||''));
-    const activeFriends=(state?.friends||[]).filter(friend=>friend.status==='active');
-    const best=activeFriends.slice().sort((a,b)=>Number(b.weekly?.friendRuns||0)-Number(a.weekly?.friendRuns||0))[0];
-    const target=Math.max(1,Number(w.target||3)),friendRuns=w.completed?Number(partner?.weekly?.friendRuns||target):Number(best?.weekly?.friendRuns||0),friendName=w.completed?(partner?.displayName||'друг'):(best?.displayName||'активный друг');
-    return `<div class="weekly-card"><div class="weekly-title"><strong>Недельная коробка</strong><span>${w.completed?'Открыта ✓':`до ${fmtDate(w.endsAt)}`}</span></div><div class="weekly-copy">${w.completed?`Вы открыли подарок вместе с ${esc(friendName)}. Новый прогресс начнётся в следующий понедельник.`:`Сделай ${target} подтверждённых забега за неделю. Когда любой активный друг тоже сделает ${target}, коробка откроется вам обоим. За неделю у пригласившего открывается только одна коробка.`}</div><div class="weekly-pair"><div class="weekly-person"><b>Ты · ${Math.min(target,Number(w.myRuns||0))}/${target}</b><span>подтверждённых забегов</span><div class="weekly-track"><div class="weekly-fill" style="width:${Math.min(100,Math.round(Number(w.myRuns||0)/target*100))}%"></div></div></div><div class="weekly-person"><b>${esc(friendName)} · ${Math.min(target,friendRuns)}/${target}</b><span>${activeFriends.length?'лучший прогресс друга':'нужен активный друг'}</span><div class="weekly-track"><div class="weekly-fill" style="width:${Math.min(100,Math.round(friendRuns/target*100))}%"></div></div></div></div><div class="weekly-rewards">${rewardImageMarkup(w.referrerReward)}<span>Тебе: ${esc(w.referrerRewardLabel)}</span>${rewardImageMarkup(w.inviteeReward)}<span>Другу: ${esc(w.inviteeRewardLabel)}</span></div></div>`;
-  }
-
-  function renderPendingChoices(){
-    const rows=state?.pendingChoices||[];if(!rows.length)return '';
-    const first=rows[0];return `<section class="section"><div class="choice-callout"><strong>👑 Большая награда готова</strong><span>Ты достиг вехи «${esc(first.title)}». Выбери один из ${(first.choice?.options||[]).length} подарков — после подтверждения изменить выбор нельзя.${rows.length>1?` Ещё выборов: ${rows.length-1}.`:''}</span><button type="button" data-choice-open="${esc(first.threshold)}">Выбрать награду</button></div></section>`;
-  }
-
-  function inviterWeeklyMarkup(){const w=state?.inviter?.weekly;if(!w?.enabled)return '';const target=Math.max(1,Number(w.target||3));return `<div class="friend-weekly ${w.completed?'done':w.locked?'locked':''}" style="margin:10px 0 0"><div class="friend-weekly-head"><span>🤝 Недельный подарок</span><span>${w.completed?'Готов ✓':w.locked?'Уже открыт':'Эта неделя'}</span></div><div class="friend-weekly-copy">${w.completed?`Вы оба выполнили ${target} забега — награды уже открыты.`:w.locked?'Пригласивший уже открыл недельную коробку с другим активным другом. Новый шанс — на следующей неделе.':`Ты ${Math.min(target,Number(w.myRuns||0))}/${target} · ${esc(state.inviter.displayName)} ${Math.min(target,Number(w.friendRuns||0))}/${target}.`}</div></div>`;}
-
-  function renderFriends(){
-    const friends=state?.friends||[];if(!friends.length)return '<div class="empty">Пока здесь никого нет. Отправь приглашение другу — его прогресс появится после первого запуска игры по твоей ссылке.</div>';
-    const gift=state?.friendGift||{};const giftWait=gift.available?'':timeLeft(gift.nextGiftAt);
-    return `<div class="friend-list">${friends.map(friend=>{const w=friend.weekly||{},target=Math.max(1,Number(w.target||3)),milestones=friend.milestones||[],next=milestones.find(m=>!m.achieved&&m.triggerType!=='season_tier')||milestones.find(m=>!m.achieved),nextProgress=next?.progress||{},nextPercent=Math.max(0,Math.min(100,Number(nextProgress.percent||0)));return `<article class="friend"><div class="friend-main"><div class="avatar">${esc(initials(friend.displayName))}</div><div class="friend-name"><strong>${esc(friend.displayName)}</strong><span>Уровень ${esc(friend.profileLevel)}${friend.username?` · @${esc(friend.username)}`:''}</span></div><span class="friend-status ${friend.status==='active'?'active':''}">${friend.status==='active'?'Активный':'Осваивается'}</span></div>${next?`<div class="friend-next"><div class="friend-next-head"><strong>Следующий этап · ${esc(next.title)}</strong><span>${esc(nextProgress.label||'В процессе')}</span></div><div class="milestone-track"><div class="milestone-fill" style="width:${nextPercent}%"></div></div></div>`:'<div class="friend-next"><div class="friend-next-head"><strong>Все основные этапы пройдены</strong><span>✓</span></div></div>'}${friend.returnEvent?.rewarded?`<div class="friend-return"><strong>☕ Друг вернулся</strong> · после долгого перерыва открыт дополнительный совместный подарок${friend.returnEvent.rewardedAt?` · ${fmtDate(friend.returnEvent.rewardedAt)}`:''}</div>`:''}${w.enabled?`<div class="friend-weekly ${w.completed?'done':w.locked?'locked':''}"><div class="friend-weekly-head"><span>🤝 Недельный подарок</span><span>${w.completed?'Открыт ✓':w.locked?'Неделя закрыта':`${Math.min(target,Number(w.myRuns||0))}/${target} · ${Math.min(target,Number(w.friendRuns||0))}/${target}`}</span></div><div class="friend-weekly-copy">${w.completed?'Вы оба выполнили недельную активность.':w.locked?'На этой неделе коробка уже открыта с другим другом.':`Ты: ${Number(w.myRuns||0)}/${target} забегов · ${esc(friend.displayName)}: ${Number(w.friendRuns||0)}/${target}.`}</div>${!w.completed&&!w.locked?`<div class="friend-weekly-bars"><div class="weekly-track"><div class="weekly-fill" style="width:${Math.min(100,Math.round(Number(w.myRuns||0)/target*100))}%"></div></div><div class="weekly-track"><div class="weekly-fill" style="width:${Math.min(100,Math.round(Number(w.friendRuns||0)/target*100))}%"></div></div></div>`:''}</div>`:''}${friend.status==='active'&&gift.enabled?`<div class="friend-actions"><button class="friend-gift-btn" data-gift="${esc(friend.telegramId)}" ${gift.available?'':'disabled'}>${rewardImageMarkup(gift.reward)}<span>${gift.available?`Подарить · ${esc(gift.rewardLabel)}`:`Следующий подарок через ${esc(giftWait||'позже')}`}</span></button></div>`:''}<div class="milestones">${milestones.map(m=>{const progress=m.progress||{},percent=Math.max(0,Math.min(100,Number(progress.percent||0)));return `<div class="milestone ${m.achieved?'done':''}"><i>${m.achieved?'✓':'○'}</i><strong>${esc(m.title)}</strong><span>${m.achieved?`Выполнено${m.achievedAt?` · ${fmtDate(m.achievedAt)}`:''}`:`${esc(m.description||'')} · Тебе: ${esc(m.inviterRewardLabel)}${m.inviteeReward?.kind&&m.inviteeReward.kind!=='none'?` · Другу: ${esc(m.inviteeRewardLabel)}`:''}`}</span>${!m.achieved?`<div class="milestone-progress-head"><b>${esc(progress.label||'В процессе')}</b><span>${percent}%</span></div><div class="milestone-track"><div class="milestone-fill" style="width:${percent}%"></div></div>`:''}</div>`;}).join('')}</div></article>`;}).join('')}</div>`;
-  }
 
   function tutorialSteps(){
-    const hours=Math.max(1,Number(state?.program?.bindWindowHours||24));
-    const maxRuns=Math.max(0,Number(state?.program?.bindMaxRuns||0));
-    const starter=(state?.milestoneRules||state?.friends?.[0]?.milestones||[]).find(m=>m.key==='starter');
-    const starterRuns=Math.max(1,Number(starter?.triggerValue||3));
-    const gift=state?.friendGift||{};
-    const giftCooldown=Math.max(1,Number(gift.cooldownHours||72));
-    const weekly=state?.weeklyProgram||{};
-    const weeklyTarget=Math.max(1,Number(weekly.target||3));
-    const notifications=state?.notifications||{};
-    const dailyCap=Math.max(1,Number(notifications.dailyCap||2));
-    const boost=state?.program?.boost||{};
-    const returnProgram=state?.program?.returnProgram||{};
-    const choiceMilestones=(state?.networkMilestones||[]).filter(item=>item?.choice?.enabled);
-    const choiceThresholds=choiceMilestones.map(item=>Number(item.threshold)).filter(Boolean).join(' / ');
-    const steps=[
-      {title:'«Друзья кафе» — социальный центр',text:'Здесь собраны «Лента друзей», недельная коробка, большие вехи «Моего кафе», готовые подарки и карточки приглашённых друзей с их актуальным прогрессом.',note:'Награды открываются за реальную активность уже привязанного друга, а не просто за отправленную ссылку. Все условия и выдачу подтверждает сервер.',visual:'<img src="/assets/ui/icon_referals.webp" alt="">'},
-      {title:'Приглашение и твой личный код',text:`Нажми «Пригласить друга» или «Копировать ссылку». Код ${String(state?.self?.code||'').trim()||'приглашения'} — твой уникальный идентификатор: игра сама добавляет его в Telegram-ссылку как startapp=ref_КОД.`,note:'Другу нигде не нужно вводить код вручную. Он просто открывает твою персональную ссылку и запускает игру в Telegram.',visual:`<div class="mini-path"><span>Твой код<br><b>${esc(state?.self?.code||'КОД')}</b></span><b>→</b><span>Ссылка Telegram</span><b>→</b><span>Первый запуск</span></div>`},
-      {title:'Кого система засчитает',text:`Рефералом становится новый игрок, который открыл игру по твоей ссылке в течение ${hours} ч. после появления аккаунта.${maxRuns===0?' До привязки у него не должно быть ни одного зачтённого забега.':` До привязки допускается не больше ${maxRuns} зачтённых забегов.`}`,note:'Старый аккаунт нельзя привязать задним числом. Самоприглашение, повторная привязка и связь одного игрока с несколькими пригласившими блокируются сервером.',visual:'<div class="mini-path"><span>Новый игрок</span><b>+</b><span>Твоя ссылка</span><b>→</b><span>Привязан ✓</span></div>'},
-      {title:'Как друг становится активным',text:`После привязки друг проходит стартовый этап — сейчас это ${starterRuns} подтверждённых сервером забега. Потом идут уровни профиля 5, 10 и 20. На карточке друга видно точный прогресс и ближайшую следующую цель.`,note:'Активность до привязки и незачтённые попытки в реферальный прогресс не входят.',visual:`<div class="mini-path"><span>${starterRuns} забега</span><b>›</b><span>5 уровень</span><b>›</b><span>10</span><b>›</b><span>20</span></div>`},
-      {title:'Элитный и Элитный+',text:'Если уже привязанный друг активирует Элитный или Элитный+ сезонный пропуск, пригласивший получает дополнительный XP сезонного пропуска в том сезоне, где произошла покупка.',note:'Покупка до реферальной привязки не засчитывается задним числом. XP сезонного пропуска начисляется сервером автоматически.',visual:'<div class="mini-path"><span>Элитный</span><b>→</b><span>+ XP</span><span>Элитный+</span><b>→</b><span>+ XP</span></div>'},
-      {title:'Лента друзей и уведомления',text:`Лента показывает важные события вашей компании: кто присоединился, стал активным, достиг этапа, вернулся или открыл совместный подарок. ${notifications.available?'Telegram-уведомления о важных событиях можно включить отдельно.':'Telegram-уведомления для рефералов сейчас отключены в настройках игры.'}`,note:notifications.available?`Уведомления добровольные и выключены у игрока по умолчанию. После включения сервер отправляет не больше ${dailyCap} важных сообщений в день.`:'Когда уведомления будут доступны, включать их или нет всё равно решает сам игрок.',visual:'<div class="mini-path"><span>Лента</span><b>+</b><span>Этапы</span><b>→</b><span>Telegram 🔔</span></div>'}
+    return [
+      {title:'Всё важное — в обзоре',text:'Здесь видно, какие подарки ждут тебя и что осталось сделать для ближайшей награды.',note:'Подарок недели открывается за совместные забеги, а большие этапы — за число активных приглашённых друзей.',visual:'<img src="/assets/ui/icon_referals.webp" alt="">'},
+      {title:'Друзья — отдельно, детали — по нажатию',text:'Во вкладке «Друзья» виден ближайший этап каждого человека. Нажми на карточку, чтобы открыть весь совместный путь.',note:'Бесплатный подарок отправляется одному активному приглашённому другу. После отправки действует общий перерыв.',visual:'<div class="mini-path"><span>Друзья</span><b>→</b><span>Карточка друга</span><b>→</b><span>Общий прогресс</span></div>'},
+      {title:'Все награды — в «Подарках»',text:'Забирай готовые награды по одной или вместе. Подарок с выбором остаётся отдельным: вариант выбираешь ты.',note:'«Проверяем выдачу» не значит «Получено». История показывает только подтверждённые сервером награды.',visual:'<img src="/assets/ui/icone_reward.webp" alt="">'}
     ];
-
-    if(gift.enabled){
-      steps.push({title:'Бесплатный подарок другу',text:`Активному приглашённому другу можно бесплатно отправить системный подарок «${String(gift.rewardLabel||'подарок')}». Он не списывается из твоего баланса. После отправки действует общий перерыв ${giftCooldown} ч.`,note:'Подарок можно отправлять только своему активному приглашённому другу. Сервер не позволит отправить второй подарок до окончания общего перерыва.',visual:'<div class="mini-path"><span>Активный друг</span><b>→</b><span>🎁 бесплатно</span><b>→</b><span>Перерыв</span></div>'});
-    }
-
-    if(weekly.enabled){
-      steps.push({title:'Совместный недельный подарок',text:`За одну неделю ты и активный друг должны сделать минимум по ${weeklyTarget} подтверждённых забега. Прогресс каждого показывается отдельно. Когда условие выполнено, сервер открывает награду обоим.`,note:`У пригласившего одна недельная коробка на неделю — её открывает первый друг, с которым выполнено условие. Тебе: ${String(weekly.referrerRewardLabel||'награда')}; другу: ${String(weekly.inviteeRewardLabel||'награда')}.`,visual:`<div class="mini-path"><span>Ты ${weeklyTarget}/${weeklyTarget}</span><b>+</b><span>Друг ${weeklyTarget}/${weeklyTarget}</span><b>→</b><span>🎁 обоим</span></div>`});
-    }
-
-    if(boost.enabled||returnProgram.enabled){
-      const pieces=[];
-      if(boost.enabled)pieces.push(`Временные события могут усиливать новые реферальные награды в ×${Math.max(2,Number(boost.multiplier||2))}${boost.active?' — такое событие активно прямо сейчас':''}.`);
-      if(returnProgram.enabled)pieces.push(`Если активный друг не играл ${Math.max(3,Number(returnProgram.afterDays||14))} дней и затем снова завершил подтверждённый забег, может открыться отдельный совместный подарок.`);
-      const eventVisual=boost.enabled&&returnProgram.enabled?'<div class="mini-path"><span>×N событие</span><b>+</b><span>Друг вернулся</span><b>→</b><span>🎁</span></div>':boost.enabled?'<div class="mini-path"><span>×N событие</span><b>→</b><span>Больше наград 🎁</span></div>':'<div class="mini-path"><span>Долгий перерыв</span><b>→</b><span>Друг вернулся</span><b>→</b><span>🎁</span></div>';
-      steps.push({title:'События и возвращение друзей',text:pieces.join(' '),note:`${boost.enabled?'Множитель применяется только к новым наградам, открытым в период события. ':''}${returnProgram.enabled?'Награда за возвращение выдаётся один раз на каждого активного друга.':''}`.trim(),visual:eventVisual});
-    }
-
-    steps.push({title:'«Моё кафе» — большие вехи',text:`Каждый активный друг двигает общую лестницу 1 / 3 / 5 / 10 / 20 / 50. На плитке сразу показано, какая награда ждёт на конкретной цели.${choiceMilestones.length?` На крупных вехах ${choiceThresholds||'10 / 20 / 50'} может открываться выбор из нескольких больших наград.`:''}`,note:choiceMilestones.length?'Если появился большой выбор, можно получить только один вариант. После подтверждения изменить решение нельзя.':'Награда за каждую общую веху выдаётся сервером только один раз.',visual:choiceMilestones.length?`<div class="mini-path"><span>${esc(choiceThresholds||'Большая веха')}</span><b>→</b><span>🎁</span><span>🎁</span><span>🎁</span><b>→</b><span>выбери 1</span></div>`:'<div class="mini-path"><span>1</span><span>3</span><span>5</span><span>10</span><span>20</span><span>50</span></div>'});
-
-    steps.push({title:'Готовые подарки и получение',text:'Все ожидающие награды собраны в блоке «Готовые подарки». Нажми «Забрать» или «Забрать все»: во время подтверждения кнопка показывает состояние сервера, а после выдачи подарок уходит в историю.',note:'Совместные и большие награды могут открывать отдельный экран получения. На крупных вехах можно поделиться достижением, а этот гид всегда доступен по кнопке «?».',visual:'<div class="mini-path"><span>Готовый подарок</span><b>→</b><span>Забрать</span><b>→</b><span>✨ Получено</span></div>'});
-    return steps;
   }
-
   function renderTutorial(){
     if(!tutorialLayer||!tutorialBody)return;const steps=tutorialSteps();tutorialStep=Math.max(0,Math.min(steps.length-1,tutorialStep));const step=steps[tutorialStep];tutorialBody.innerHTML=`<div class="tutorial-headline"><span class="tutorial-mode"><img src="/assets/ui/icon_referals.webp" alt="">Друзья кафе · гид</span><div class="tutorial-progress">Шаг ${tutorialStep+1} из ${steps.length}</div></div><div class="tutorial-visual">${step.visual}</div><h2 id="ref-tutorial-title">${esc(step.title)}</h2><p>${esc(step.text)}</p><div class="tutorial-note">${esc(step.note)}</div><div class="tutorial-dots">${steps.map((_,i)=>`<span class="tutorial-dot ${i===tutorialStep?'active':''}"></span>`).join('')}</div><div class="tutorial-actions"><button class="tutorial-prev" data-tutorial-prev type="button" ${tutorialStep===0?'disabled':''}>Назад</button><button class="tutorial-next" data-tutorial-next type="button">${tutorialStep===steps.length-1?'Готово':'Дальше'}</button></div>`;
   }
   function markTutorialSeen(){try{localStorage.setItem(TUTORIAL_KEY,'1');}catch{}try{sessionStorage.setItem(TUTORIAL_KEY,'1');}catch{}try{document.cookie=`${TUTORIAL_KEY}=1; Max-Age=31536000; Path=/; SameSite=Lax`;}catch{}}
   function tutorialWasSeen(){try{if(localStorage.getItem(TUTORIAL_KEY)==='1')return true;}catch{}try{if(sessionStorage.getItem(TUTORIAL_KEY)==='1')return true;}catch{}try{if(document.cookie.split(';').some(row=>row.trim()===`${TUTORIAL_KEY}=1`))return true;}catch{}return false;}
-  function openTutorial(automatic=false){if(!tutorialLayer||!state)return;if(choiceLayer&&!choiceLayer.hidden)closeChoice();if(automatic)markTutorialSeen();tutorialStep=0;renderTutorial();lockPageScroll();tutorialLayer.hidden=false;tutorialLayer.setAttribute('aria-hidden','false');if(!automatic)haptic();}
-  function closeTutorial(markSeen=true){if(!tutorialLayer)return;tutorialLayer.hidden=true;tutorialLayer.setAttribute('aria-hidden','true');unlockPageScroll();if(markSeen)markTutorialSeen();}
-  function maybeOpenTutorial(){if(tutorialWasSeen())return;setTimeout(()=>{if(!tutorialWasSeen())openTutorial(true);},220);}
+  function openTutorial(automatic=false){if(!tutorialLayer||!state)return;if(choiceLayer&&!choiceLayer.hidden)closeChoice();if(automatic)markTutorialSeen();tutorialStep=0;renderTutorial();lockPageScroll();tutorialLayer.hidden=false;tutorialLayer.setAttribute('aria-hidden','false');tutorialLayer.querySelector('[data-tutorial-close]')?.focus({preventScroll:true});if(!automatic)haptic();}
+  function closeTutorial(markSeen=true){if(!tutorialLayer)return;tutorialLayer.hidden=true;tutorialLayer.setAttribute('aria-hidden','true');unlockPageScroll();if(markSeen)markTutorialSeen();document.getElementById(`ref-tab-${ui.tab}`)?.focus({preventScroll:true});}
 
-  function openChoice(threshold){const item=(state?.networkMilestones||[]).find(row=>Number(row.threshold)===Number(threshold));if(!item?.choice?.pending||!choiceLayer||!choiceOptionsEl)return;activeChoiceThreshold=Number(item.threshold);choiceOptionsEl.innerHTML=(item.choice.options||[]).map((reward,index)=>`<button class="choice-option" type="button" data-choice-select="${index}">${rewardImageMarkup(reward)}<strong>${esc(item.choice.optionLabels?.[index]||'Награда')}</strong></button>`).join('');document.querySelector('[data-choice-copy]').textContent=`Веха «${item.title}». Выбери один подарок из ${item.choice.options.length}. После подтверждения изменить выбор нельзя.`;lockPageScroll();choiceLayer.hidden=false;choiceLayer.setAttribute('aria-hidden','false');haptic();}
-  function closeChoice(){if(!choiceLayer)return;choiceLayer.hidden=true;choiceLayer.setAttribute('aria-hidden','true');activeChoiceThreshold=0;unlockPageScroll();}
+  function openChoice(threshold){const item=(state?.networkMilestones||[]).find(row=>Number(row.threshold)===Number(threshold));if(!item?.choice?.pending||!choiceLayer||!choiceOptionsEl)return;activeChoiceThreshold=Number(item.threshold);choiceOptionsEl.innerHTML=(item.choice.options||[]).map((reward,index)=>`<button class="choice-option" type="button" data-choice-select="${index}">${rewardImageMarkup(reward)}<strong>${esc(item.choice.optionLabels?.[index]||'Награда')}</strong></button>`).join('');document.querySelector('[data-choice-copy]').textContent=`Веха «${item.title}». Выбери один подарок из ${item.choice.options.length}. После подтверждения изменить выбор нельзя.`;lockPageScroll();choiceLayer.hidden=false;choiceLayer.setAttribute('aria-hidden','false');choiceLayer.querySelector('[data-choice-close]')?.focus({preventScroll:true});haptic();}
+  function closeChoice(){if(!choiceLayer)return;choiceLayer.hidden=true;choiceLayer.setAttribute('aria-hidden','true');activeChoiceThreshold=0;unlockPageScroll();document.getElementById(`ref-tab-${ui.tab}`)?.focus({preventScroll:true});}
 
-  function openCelebration({title='Подарок получен!',text='',reward=null,threshold=0}={}){if(!celebrationLayer)return;celebrationThreshold=Math.max(0,Number(threshold||0));if(celebrationArt)celebrationArt.innerHTML=reward?rewardImageMarkup(reward):rewardImageMarkup({kind:'none'});if(celebrationTitle)celebrationTitle.textContent=String(title||'Подарок получен!');if(celebrationText)celebrationText.textContent=String(text||'');if(celebrationActions)celebrationActions.classList.toggle('single',!celebrationThreshold);const shareButton=celebrationLayer.querySelector('[data-celebration-share]');if(shareButton)shareButton.hidden=!celebrationThreshold;lockPageScroll();celebrationLayer.hidden=false;celebrationLayer.setAttribute('aria-hidden','false');haptic('medium');}
-  function closeCelebration(){if(!celebrationLayer)return;celebrationLayer.hidden=true;celebrationLayer.setAttribute('aria-hidden','true');celebrationThreshold=0;unlockPageScroll();}
-  async function shareMilestone(thresholdValue){const threshold=Math.max(1,Number(thresholdValue||0)),link=inviteLink();const text=`Моё кафе в «Сладком Забеге» уже собрало ${threshold} активных друзей 💗 Заходи к нам!`;haptic();try{if(navigator.share){await navigator.share({title:'Друзья кафе · Сладкий Забег',text,url:link||undefined});return;}}catch(error){if(error?.name==='AbortError')return;}const share=`https://t.me/share/url?url=${encodeURIComponent(link||location.href)}&text=${encodeURIComponent(text)}`;try{webApp?.openTelegramLink?.(share);return;}catch{}try{await navigator.clipboard.writeText(`${text}${link?`
-${link}`:''}`);showToast('Текст достижения скопирован');}catch{location.href=share;}}
-  async function toggleNotifications(){const n=state?.notifications;if(!n?.available||busy)return;busy=true;const button=document.querySelector('[data-notification-toggle]');if(button)button.disabled=true;try{const data=await api('/api/referrals/notifications/save',{enabled:!n.enabled});state.notifications=data.notifications;render();haptic('medium');showToast(state.notifications.enabled?'Уведомления друзей включены':'Уведомления друзей выключены');}catch(error){showToast(error.message||'Не удалось изменить уведомления');if(button)button.disabled=false;}finally{busy=false;}}
-  async function selectChoice(index){if(busy||!activeChoiceThreshold)return;const item=(state?.networkMilestones||[]).find(row=>Number(row.threshold)===Number(activeChoiceThreshold));const label=item?.choice?.optionLabels?.[index]||'эту награду';if(!confirm(`Выбрать «${label}»?\n\nПосле подтверждения изменить выбор нельзя.`))return;busy=true;choiceOptionsEl?.querySelectorAll('button').forEach(button=>button.disabled=true);try{const data=await api('/api/referrals/choice/select',{threshold:activeChoiceThreshold,index});state=data.state;closeChoice();haptic('medium');showToast(`Выбрано: ${data.selected?.selectedRewardLabel||label}`);render();try{window.parent.postMessage({type:'zefirok-referrals-account-updated'},'*');}catch{}}catch(error){showToast(error.message||'Не удалось выбрать награду');choiceOptionsEl?.querySelectorAll('button').forEach(button=>button.disabled=false);}finally{busy=false;}}
+  function openCelebration({title='Подарок получен!',text='',reward=null,threshold=0}={}){if(!celebrationLayer)return;closeSheet(false);celebrationThreshold=Math.max(0,Number(threshold||0));if(celebrationArt)celebrationArt.innerHTML=reward?rewardImageMarkup(reward):rewardImageMarkup({kind:'none'});if(celebrationTitle)celebrationTitle.textContent=String(title||'Подарок получен!');if(celebrationText)celebrationText.textContent=String(text||'');if(celebrationActions)celebrationActions.classList.toggle('single',!celebrationThreshold);const shareButton=celebrationLayer.querySelector('[data-celebration-share]');if(shareButton)shareButton.hidden=!celebrationThreshold;lockPageScroll();celebrationLayer.hidden=false;celebrationLayer.setAttribute('aria-hidden','false');celebrationLayer.querySelector('[data-celebration-close]')?.focus({preventScroll:true});haptic('medium');}
+  function closeCelebration(){if(!celebrationLayer)return;celebrationLayer.hidden=true;celebrationLayer.setAttribute('aria-hidden','true');celebrationThreshold=0;unlockPageScroll();document.getElementById(`ref-tab-${ui.tab}`)?.focus({preventScroll:true});}
 
-  function render(){
-    if(!state)return;
-    const next=state.nextNetworkMilestone;
-    const programOff=state.program?.enabled===false;
-    const readyRewardCount=(state.rewards||[]).filter(row=>['pending','failed'].includes(String(row.status))).length;
-    root.innerHTML=`
-      <section class="hero">
-        <div class="kicker">Сладкий Забег · вместе веселее</div>
-        <h2>Собирай друзей в кафе</h2>
-        <p>Друг играет и развивается — вы получаете совместные подарки. Отправляй друзьям бесплатные подарки, открывайте недельную коробку и следи за событиями в общей ленте.</p>
-        <div class="hero-stats"><div class="stat"><small>Активные друзья</small><strong>${esc(state.activeFriends||0)}</strong></div><div class="stat"><small>${next?'До следующего подарка':'Лестница пройдена'}</small><strong>${next?`${esc(next.remaining)} друг${Number(next.remaining)===1?'':'а'}`:'✓'}</strong></div></div>
-        <div class="invite"><button class="primary" data-invite ${programOff?'disabled':''}>${programOff?'Приглашения временно выключены':'Пригласить друга'}</button><div class="invite-code"><span class="invite-code-label">Твой код<small>встроен в ссылку</small></span><code>${esc(state.self?.code||'—')}</code><button class="secondary" style="min-height:32px;padding:0 10px;font-size:8.5px" data-copy>Копировать ссылку</button></div></div>
-      </section>
-      ${state.program?.boost?.active?`<div class="boost-banner"><b>×${esc(state.program.boost.multiplier||2)}</b><div><strong>${esc(state.program.boost.title||'Реферальный праздник')}</strong><span>Все новые реферальные награды, открытые сейчас, умножаются сервером${state.program.boost.endsAt?` · до ${fmtDate(state.program.boost.endsAt)}`:''}.</span></div></div>`:''}
-      ${renderNotificationCard()}
-      ${state.inviter?`<section class="section"><div class="head"><div><h3>Кто пригласил тебя</h3><p>Ваш совместный путь уже связан сервером.</p></div></div><div class="inviter"><div class="avatar">${esc(initials(state.inviter.displayName))}</div><div class="friend-name"><strong>${esc(state.inviter.displayName)}</strong><span>${state.inviter.status==='active'?'Вы уже активировали совместные награды':'Заверши стартовый этап, чтобы активировать дружбу'}</span>${inviterWeeklyMarkup()}</div></div></section>`:''}
-      <section class="section"><details class="feed-details"><summary class="feed-summary"><div class="feed-summary-copy"><h3>Лента друзей</h3><p>Что происходит у твоей компании прямо сейчас.</p></div><div class="feed-summary-side"><span class="badge">${esc((state.feed||[]).length)} событий</span><span class="feed-chevron" aria-hidden="true"></span></div></summary><div class="feed-details-body">${renderFeed()}</div></details></section>
-      <section class="section"><div class="head"><div><h3>Недельный подарок</h3><p>Одна общая коробка за активность тебя и друга.</p></div></div>${renderWeeklySection()}</section>
-      <section class="section"><div class="head"><div><h3>Моё кафе</h3><p>Большие подарки за количество активных друзей.</p></div><span class="badge">${esc(state.activeFriends||0)} активных</span></div>${renderNetwork()}</section>
-      ${renderPendingChoices()}
-      <section class="section"><div class="head"><div><h3>Готовые подарки</h3><p>Каждая награда выдаётся сервером только один раз.</p></div>${readyRewardCount>1?'<button class="claim-all" data-claim-all>Забрать все</button>':''}</div>${renderRewards()}</section>
-      ${renderRewardHistory()}
-      <section class="section"><div class="head"><div><h3>Твои друзья</h3><p>Следи за этапами, недельным прогрессом и отправляй бесплатный подарок.</p></div><span class="badge">${esc(state.totalInvited||0)} всего</span></div>${renderFriends()}</section>
-      <div class="notice">Друг считается активным после стартового этапа. Привязка работает только для нового игрока, который впервые запустил игру по твоему Telegram-приглашению; один аккаунт нельзя привязать к нескольким пригласившим.${state.program?.returnProgram?.enabled?` Если активный друг вернётся после ${esc(state.program.returnProgram.afterDays||14)} дней без зачтённых забегов, сервер один раз откроет дополнительный совместный подарок.`:''}</div>`;
+  // Keep the existing routes, request bodies, and server-authoritative claim flow.
+  function notifyAccount(){try{window.parent.postMessage({type:'zefirok-referrals-account-updated'},'*');}catch{}}
+  function applyState(payload){
+    const fresh=payload?.state||payload;
+    if(!fresh?.self||!Array.isArray(fresh.rewards))throw new Error('Сервер не вернул актуальное состояние друзей.');
+    state=fresh;render();
   }
-
-  async function load(){
-    initData=readInitData();if(!initData){root.innerHTML='<div class="empty" style="margin-top:30px">Открой «Сладкий Забег» внутри Telegram, чтобы загрузить реферальную систему.</div>';return;}
-    try{state=await api('/api/referrals/state');render();maybeOpenTutorial();}catch(error){root.innerHTML=`<div class="empty" style="margin-top:30px">${esc(error.message||'Не удалось загрузить страницу.')}<br><br><button class="secondary" data-retry>Повторить</button></div>`;}
+  function beginAction(key){
+    if(busy)return false;
+    busy=true;actionKey=key;refreshEpoch+=1;render();return true;
   }
-
-  async function shareInvite(){
-    const link=inviteLink();if(!link)return;haptic();
-    const text='Заходи в «Сладкий Забег» — будем получать совместные подарки в «Друзьях кафе» ☕🎁';
+  function finishAction(){busy=false;actionKey='';render();}
+  async function refreshState(){
+    const fresh=await api('/api/referrals/state',{},10000);applyState(fresh);return state;
+  }
+  async function refreshNow(){
+    if(!beginAction('refresh'))return;
+    try{await refreshState();notifyAccount();showToast('Друзья и подарки обновлены');}
+    catch(error){showToast(error.message||'Не удалось обновить данные. Попробуй позже.');}
+    finally{finishAction();}
+  }
+  async function reconcileAfterError(error){
+    if(error?.status&&error.status<500&&![409,429].includes(error.status)&&!error.timeout)return false;
+    try{await refreshState();notifyAccount();return true;}catch{return false;}
+  }
+  function scheduleRecoveryCheck(){
+    const epoch=refreshEpoch;
+    window.setTimeout(async()=>{
+      if(busy||epoch!==refreshEpoch||document.hidden)return;
+      if(!beginAction('refresh'))return;
+      try{await refreshState();notifyAccount();}catch{}finally{finishAction();}
+    },3200);
+  }
+  function celebrateReward(before,reward){
+    const key=String(before?.sourceKey||''),network=before?.sourceType==='network';
+    const social=key.startsWith('weekly:')||key.startsWith('friend_gift:')||key.startsWith('return:')||network;
+    if(!social){haptic('medium');showToast('Подарок получен');return;}
+    const threshold=network?whole(key.split(':')[1]):0;
+    openCelebration({
+      title:key.startsWith('weekly:')?'Совместный подарок получен!':key.startsWith('friend_gift:')?'Подарок от друга получен!':network?'Большая награда получена!':'Совместный подарок получен!',
+      text:`${rewardTitle(reward||before?.reward,before?.rewardLabel)} — добавлено в твой аккаунт.`,
+      reward:reward||before?.reward,threshold
+    });
+  }
+  async function claim(id){
+    const before=rewardRows().find(row=>String(row.id)===String(id));
+    if(!before||!['pending','failed'].includes(before.status)||!beginAction(`claim:${id}`))return;
     try{
-      if(navigator.share){await navigator.share({title:'Сладкий Забег',text,url:link});return;}
-    }catch(error){if(error?.name==='AbortError')return;}
-    const share=`https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(text)}`;
-    try{webApp?.openTelegramLink?.(share);return;}catch{}
-    try{await navigator.clipboard.writeText(link);showToast('Ссылка скопирована');}catch{location.href=share;}
+      const data=await api('/api/referrals/claim',{rewardId:id});
+      applyState(data);notifyAccount();
+      if(data.delivered===true||rewardRows().some(row=>row.id===id&&row.status==='delivered'))celebrateReward(before,data.reward);
+      else showToast('Сервер ещё подтверждает выдачу. Обнови состояние подарка.');
+    }catch(error){
+      const synced=await reconcileAfterError(error);
+      if(synced&&rewardRows().some(row=>String(row.id)===String(id)&&row.status==='delivered'))celebrateReward(before,before.reward);
+      else{
+        showToast(synced?'Состояние проверено. Подтверждённого получения пока нет.':error.message||'Не удалось проверить выдачу. Обнови состояние перед повтором.');
+        if(error?.timeout||!error?.status||error.status>=500)scheduleRecoveryCheck();
+      }
+    }finally{finishAction();}
   }
-
-  async function copyInvite(){const link=inviteLink();if(!link)return;try{await navigator.clipboard.writeText(link);haptic();showToast('Ссылка приглашения скопирована');}catch{showToast(`Код: ${state.self?.code||''}`);}}
-  async function sendGift(recipientId){if(busy)return;const friend=(state?.friends||[]).find(item=>String(item.telegramId)===String(recipientId));if(!friend)return;const gift=state?.friendGift||{};if(!gift.available){showToast(gift.nextGiftAt?`Следующий подарок через ${timeLeft(gift.nextGiftAt)}`:'Подарок сейчас недоступен');return;}if(!confirm(`Отправить ${friend.displayName} бесплатный подарок?\n\n${gift.rewardLabel}\nПосле отправки начнётся перерыв ${gift.cooldownHours} ч.`))return;busy=true;document.querySelectorAll('[data-gift]').forEach(button=>button.disabled=true);try{const data=await api('/api/referrals/gift/send',{recipientTelegramId:recipientId});state=data.state;haptic('medium');showToast(`Подарок отправлен · ${data.gift?.rewardLabel||gift.rewardLabel}`);render();}catch(error){showToast(error.message||'Не удалось отправить подарок');document.querySelectorAll('[data-gift]').forEach(button=>button.disabled=false);}finally{busy=false;}}
-  async function claim(id){if(busy)return;const before=(state?.rewards||[]).find(row=>String(row.id)===String(id));busy=true;const button=[...document.querySelectorAll('[data-claim]')].find(node=>node.dataset.claim===String(id));if(button)button.disabled=true;try{const data=await api('/api/referrals/claim',{rewardId:id});state=data.state;render();try{window.parent.postMessage({type:'zefirok-referrals-account-updated'},'*');}catch{}const key=String(before?.sourceKey||''),social=key.startsWith('weekly:')||key.startsWith('friend_gift:')||key.startsWith('return:')||before?.sourceType==='network';if(social){const threshold=before?.sourceType==='network'?Math.max(0,Number(key.split(':')[1]||0)):0;openCelebration({title:key.startsWith('weekly:')?'Совместный подарок получен!':key.startsWith('friend_gift:')?'Подарок от друга получен!':before?.sourceType==='network'?'Большая награда получена!':'Совместный подарок получен!',text:`${before?.rewardLabel||'Награда'} добавлена в твой аккаунт.`,reward:data.reward||before?.reward,threshold});}else{haptic('medium');showToast('Подарок получен 🎁');}}catch(error){if(error?.timeout){const refresh=async()=>{const check=await api('/api/referrals/state',{},7000);state=check.state||check;render();try{window.parent.postMessage({type:'zefirok-referrals-account-updated'},'*');}catch{}};try{await refresh();showToast('Состояние награды обновлено');setTimeout(()=>{void refresh().catch(()=>{});},3200);}catch{showToast('Сервер отвечает долго. Награда не потеряна — повторите через несколько секунд.');if(button)button.disabled=false;}}else{showToast(error.message||'Не удалось получить подарок');if(button)button.disabled=false;}}finally{busy=false;}}
-  async function claimAll(){if(busy)return;busy=true;document.querySelector('[data-claim-all]')?.setAttribute('disabled','');try{const data=await api('/api/referrals/claim-all');state=data.state;haptic('medium');showToast(data.delivered?`Получено наград: ${data.delivered}`:'Новых наград нет');render();try{window.parent.postMessage({type:'zefirok-referrals-account-updated'},'*');}catch{}}catch(error){if(error?.timeout){const refresh=async()=>{const check=await api('/api/referrals/state',{},7000);state=check.state||check;render();try{window.parent.postMessage({type:'zefirok-referrals-account-updated'},'*');}catch{}};try{await refresh();showToast('Состояние наград обновлено');setTimeout(()=>{void refresh().catch(()=>{});},3200);}catch{showToast('Сервер отвечает долго. Награды не потеряны — повторите позже.');}}else showToast(error.message||'Не удалось получить награды');}finally{busy=false;}}
-
-  document.addEventListener('click',(event)=>{if(event.target.closest('[data-tutorial-open]')){openTutorial(false);return;}if(event.target.closest('[data-tutorial-close]')){closeTutorial(true);return;}if(event.target.closest('[data-tutorial-prev]')){tutorialStep=Math.max(0,tutorialStep-1);renderTutorial();haptic();return;}if(event.target.closest('[data-tutorial-next]')){const steps=tutorialSteps();if(tutorialStep>=steps.length-1){closeTutorial(true);haptic('medium');}else{tutorialStep+=1;renderTutorial();haptic();}return;}if(event.target.closest('[data-celebration-close]')){closeCelebration();return;}if(event.target.closest('[data-celebration-share]')){shareMilestone(celebrationThreshold);return;}if(event.target.closest('[data-notification-toggle]')){toggleNotifications();return;}const shareMilestoneButton=event.target.closest('[data-share-milestone]');if(shareMilestoneButton){shareMilestone(shareMilestoneButton.dataset.shareMilestone);return;}if(event.target.closest('[data-choice-close]')){closeChoice();return;}const choiceOpen=event.target.closest('[data-choice-open]');if(choiceOpen){openChoice(choiceOpen.dataset.choiceOpen);return;}const choiceSelect=event.target.closest('[data-choice-select]');if(choiceSelect){selectChoice(Number(choiceSelect.dataset.choiceSelect));return;}const giftButton=event.target.closest('[data-gift]');if(giftButton){sendGift(giftButton.dataset.gift);return;}const invite=event.target.closest('[data-invite]');if(invite){shareInvite();return;}const copy=event.target.closest('[data-copy]');if(copy){copyInvite();return;}const claimButton=event.target.closest('[data-claim]');if(claimButton){claim(claimButton.dataset.claim);return;}if(event.target.closest('[data-claim-all]')){claimAll();return;}if(event.target.closest('[data-retry]')){root.innerHTML='<div class="loading"><div><div class="spinner"></div>Загружаем…</div></div>';load();return;}});
-  const close=()=>{if(celebrationLayer&&!celebrationLayer.hidden){closeCelebration();return;}if(tutorialLayer&&!tutorialLayer.hidden){closeTutorial(true);return;}if(choiceLayer&&!choiceLayer.hidden){closeChoice();return;}try{window.parent.postMessage({type:'zefirok-close-referrals'},'*');if(window.parent!==window)return;}catch{}history.length>1?history.back():location.assign('/?screen=profile');};
-  try{webApp?.ready?.();webApp?.expand?.();webApp?.disableVerticalSwipes?.();webApp?.BackButton?.onClick?.(close);webApp?.BackButton?.show?.();syncTelegramContentSafeTop();for(const eventName of ['viewportChanged','safeAreaChanged','contentSafeAreaChanged']){try{webApp?.onEvent?.(eventName,syncTelegramContentSafeTop);}catch{}}}catch{}
-  window.addEventListener('message',(event)=>{if(event.data?.type==='zefirok-host-viewport-changed'){try{const payload=event.data.payload||{};document.documentElement.style.setProperty('--app-height',`${Number(payload.height||0)}px`);const contentTop=Math.max(0,Number(payload?.contentSafeArea?.top||0));const safeTop=Math.max(0,Number(payload?.safeArea?.top||0));if(contentTop||safeTop)setTelegramContentSafeTop(contentTop||safeTop,contentTop?'content':'safe');}catch{}}});
+  async function claimAll(){
+    const ids=readyRows().map(row=>String(row.id));
+    if(!ids.length||!beginAction('claim-all'))return;
+    try{
+      const data=await api('/api/referrals/claim-all');applyState(data);notifyAccount();haptic('medium');
+      showToast(n(data.delivered)>0?`Получено наград: ${num(data.delivered)}${readyRows().length?' · ещё есть подарки':''}`:processingRows().length?'Выдача ещё подтверждается. Обнови состояние.':'Новых подтверждённых выдач нет');
+    }catch(error){
+      const synced=await reconcileAfterError(error);
+      const delivered=synced?rewardRows().filter(row=>ids.includes(String(row.id))&&row.status==='delivered').length:0;
+      showToast(delivered?`Подтверждено получение наград: ${delivered}`:synced?'Состояние наград обновлено. Проверь оставшиеся подарки.':error.message||'Не удалось проверить награды. Обнови состояние.');
+      if(error?.timeout||!error?.status||error.status>=500)scheduleRecoveryCheck();
+    }finally{finishAction();}
+  }
+  async function sendGift(recipientId){
+    if(busy)return;
+    const friend=friendRows().find(item=>String(item.telegramId)===String(recipientId));
+    const gift=state?.friendGift||{};
+    if(!canGift(friend)){showToast('Сейчас этому другу нельзя отправить подарок. Обнови состояние.');return;}
+    if(!confirm(`Отправить ${friend.displayName} бесплатный подарок?\n\n${gift.rewardLabel}\nИз твоего баланса ничего не спишется. Общий перерыв после отправки: ${gift.cooldownHours} ч.`))return;
+    if(!beginAction(`gift:${recipientId}`))return;
+    try{
+      const data=await api('/api/referrals/gift/send',{recipientTelegramId:recipientId});
+      applyState(data);closeSheet();haptic('medium');showToast(`Подарок отправлен · ${data.gift?.rewardLabel||gift.rewardLabel}`);
+    }catch(error){
+      const synced=await reconcileAfterError(error);
+      showToast(synced?'Состояние подарка обновлено. Проверь доступность отправки.':error.message||'Не удалось проверить отправку. Обнови данные перед повтором.');
+    }finally{finishAction();}
+  }
+  async function toggleNotifications(){
+    const notifications=state?.notifications;
+    if(!notifications?.available||!beginAction('notifications'))return;
+    try{
+      const data=await api('/api/referrals/notifications/save',{enabled:!notifications.enabled});
+      state.notifications=data.notifications;haptic('medium');
+      showToast(state.notifications.enabled?'Уведомления друзей включены':'Уведомления друзей выключены');
+    }catch(error){await reconcileAfterError(error);showToast(error.message||'Не удалось изменить уведомления');}
+    finally{finishAction();}
+  }
+  async function selectChoice(index){
+    if(busy||!activeChoiceThreshold)return;
+    const threshold=activeChoiceThreshold;
+    const item=(state?.networkMilestones||[]).find(row=>n(row.threshold)===n(threshold));
+    if(!item?.choice?.pending||!Number.isInteger(index)||!item.choice.options?.[index])return;
+    const label=item.choice.optionLabels?.[index]||'эту награду';
+    if(!confirm(`Выбрать «${label}»?\n\nМожно получить только один вариант. После подтверждения изменить выбор нельзя.`))return;
+    if(!beginAction('choice'))return;
+    choiceOptionsEl?.querySelectorAll('button').forEach(el=>el.disabled=true);
+    try{
+      const data=await api('/api/referrals/choice/select',{threshold,index});
+      applyState(data);closeChoice();ui.tab='gifts';notifyAccount();haptic('medium');
+      showToast(`Выбрано: ${data.selected?.selectedRewardLabel||label}. Теперь забери подарок.`);
+    }catch(error){
+      const synced=await reconcileAfterError(error);
+      const selected=(state?.networkMilestones||[]).find(row=>n(row.threshold)===n(threshold))?.choice?.selected;
+      if(synced&&selected){closeChoice();ui.tab='gifts';showToast('Выбор подтверждён. Подарок ждёт получения.');}
+      else showToast(error.message||'Не удалось проверить выбор. Обнови состояние.');
+    }finally{finishAction();choiceOptionsEl?.querySelectorAll('button').forEach(el=>el.disabled=false);}
+  }
+  async function load(){
+    initData=readInitData();
+    if(!initData){root.innerHTML='<div class="empty" style="margin-top:25px">Открой «Сладкий Забег» внутри Telegram, чтобы увидеть друзей и подарки.</div>';return;}
+    try{applyState(await api('/api/referrals/state'));}
+    catch(error){root.innerHTML=`<div class="empty" style="margin-top:25px">${esc(error.message||'Не удалось загрузить друзей.')}<br><br>${button('Повторить','data-retry','secondary')}</div>`;}
+  }
+  async function shareInvite(){
+    const link=inviteLink();if(!canInvite()||!link)return;haptic();
+    const text='Заходи в «Сладкий Забег» — будем получать совместные подарки в «Друзьях кафе» ☕🎁';
+    try{if(navigator.share){await navigator.share({title:'Сладкий Забег',text,url:link});return;}}
+    catch(error){if(error?.name==='AbortError')return;}
+    const share=`https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(text)}`;
+    try{if(typeof webApp?.openTelegramLink==='function'){webApp.openTelegramLink(share);return;}}catch{}
+    await copyInvite();
+  }
+  async function copyInvite(){
+    const link=inviteLink();if(!canInvite()||!link)return;
+    try{await navigator.clipboard.writeText(link);haptic();showToast('Ссылка приглашения скопирована');}
+    catch{
+      if(ui.sheet?.type!=='invite')openSheet('invite');
+      const fallback=document.querySelector('[data-copy-fallback]');
+      if(fallback)fallback.hidden=false;
+      const input=document.querySelector('[data-invite-link]');input?.focus();input?.select();
+      showToast('Удерживай выделенную ссылку и выбери «Копировать».');
+    }
+  }
+  async function shareMilestone(thresholdValue){
+    const threshold=whole(thresholdValue),milestone=(state?.networkMilestones||[]).find(item=>whole(item.threshold)===threshold);
+    if(!threshold||!milestone?.achieved)return;
+    const link=inviteLink(),text=`Моё кафе в «Сладком Забеге» уже собрало ${threshold} активных друзей 💗 Заходи к нам!`;haptic();
+    try{if(navigator.share){await navigator.share({title:'Друзья кафе · Сладкий Забег',text,url:link||undefined});return;}}
+    catch(error){if(error?.name==='AbortError')return;}
+    const share=`https://t.me/share/url?url=${encodeURIComponent(link||location.href)}&text=${encodeURIComponent(text)}`;
+    try{if(typeof webApp?.openTelegramLink==='function'){webApp.openTelegramLink(share);return;}}catch{}
+    try{await navigator.clipboard.writeText(`${text}\n${link}`);showToast('Приглашение скопировано');}catch{showToast('Не удалось поделиться. Попробуй из Telegram.');}
+  }
+  function close(){
+    if(celebrationLayer&&!celebrationLayer.hidden){closeCelebration();return;}
+    if(choiceLayer&&!choiceLayer.hidden){closeChoice();return;}
+    if(tutorialLayer&&!tutorialLayer.hidden){closeTutorial(true);return;}
+    if(sheetLayer&&!sheetLayer.hidden){closeSheet();return;}
+    try{window.parent.postMessage({type:'zefirok-close-referrals'},'*');if(window.parent!==window)return;}catch{}
+    history.length>1?history.back():location.assign('/?screen=profile');
+  }
+  document.addEventListener('click',event=>{
+    const target=event.target instanceof Element?event.target:null;if(!target)return;
+    if(target.closest('button:disabled'))return;
+    if(target.closest('[data-page-back]')){close();return;}
+    if(target.closest('[data-sheet-close]')||target===sheetLayer){closeSheet();return;}
+    if(target.closest('[data-tutorial-open]')){closeSheet(false);openTutorial(false);return;}
+    if(target.closest('[data-tutorial-close]')){closeTutorial(true);return;}
+    if(target.closest('[data-tutorial-prev]')){tutorialStep=Math.max(0,tutorialStep-1);renderTutorial();haptic();return;}
+    if(target.closest('[data-tutorial-next]')){if(tutorialStep>=tutorialSteps().length-1)closeTutorial(true);else{tutorialStep+=1;renderTutorial();haptic();}return;}
+    if(target.closest('[data-celebration-close]')){closeCelebration();return;}
+    if(target.closest('[data-celebration-share]')){shareMilestone(celebrationThreshold);return;}
+    if(target.closest('[data-choice-close]')){closeChoice();return;}
+    const tab=target.closest('[data-tab]');if(tab){switchTab(tab.dataset.tab);return;}
+    const friend=target.closest('[data-friend-open]');if(friend){openSheet('friend',{id:String(friend.dataset.friendOpen)});return;}
+    if(target.closest('[data-inviter-open]')){openSheet('inviter');return;}
+    const sheet=target.closest('[data-sheet]');if(sheet){openSheet(sheet.dataset.sheet,{role:sheet.dataset.weeklyRole||'referrer'});return;}
+    const filter=target.closest('[data-filter]');if(filter){ui.filter=filter.dataset.filter;render();document.querySelector(`[data-filter="${ui.filter}"]`)?.focus({preventScroll:true});return;}
+    if(target.closest('[data-refresh]')){refreshNow();return;}
+    if(target.closest('[data-notification-toggle]')){toggleNotifications();return;}
+    const share=target.closest('[data-share-milestone]');if(share){shareMilestone(share.dataset.shareMilestone);return;}
+    const choice=target.closest('[data-choice-open]');if(choice){closeSheet(false);openChoice(choice.dataset.choiceOpen);return;}
+    const select=target.closest('[data-choice-select]');if(select){selectChoice(Number(select.dataset.choiceSelect));return;}
+    const gift=target.closest('[data-gift]');if(gift){sendGift(gift.dataset.gift);return;}
+    if(target.closest('[data-invite]')){shareInvite();return;}
+    if(target.closest('[data-copy]')){copyInvite();return;}
+    const reward=target.closest('[data-claim]');if(reward){claim(reward.dataset.claim);return;}
+    if(target.closest('[data-claim-all]')){claimAll();return;}
+    if(target.closest('[data-retry]')){root.innerHTML='<div class="loading"><div><div class="spinner"></div>Загружаем друзей…</div></div>';load();}
+  });
+  document.addEventListener('input',event=>{
+    if(!event.target.matches('[data-friends-search]'))return;
+    ui.query=String(event.target.value||'');
+    const list=document.querySelector('[data-friends-list]');if(list)list.innerHTML=renderFriendsList();
+  });
+  document.addEventListener('keydown',event=>{
+    const modal=activeModal();
+    if(event.key==='Escape'&&modal){event.preventDefault();close();return;}
+    if(event.key==='Tab'&&modal){
+      const nodes=[...modal.querySelectorAll('button:not(:disabled),input:not(:disabled),summary,[tabindex="0"]')].filter(node=>node.getClientRects().length);
+      if(!nodes.length){event.preventDefault();return;}
+      const first=nodes[0],last=nodes[nodes.length-1];
+      if(event.shiftKey&&(document.activeElement===first||!modal.contains(document.activeElement))){event.preventDefault();last.focus();}
+      else if(!event.shiftKey&&(document.activeElement===last||!modal.contains(document.activeElement))){event.preventDefault();first.focus();}
+    }
+    if(event.target.matches('[role="tab"][data-tab]')&&['ArrowLeft','ArrowRight','Home','End'].includes(event.key)){
+      const keys=Object.keys(tabLabels),index=keys.indexOf(ui.tab);
+      const next=event.key==='Home'?0:event.key==='End'?keys.length-1:(index+(event.key==='ArrowLeft'?-1:1)+keys.length)%keys.length;
+      event.preventDefault();switchTab(keys[next]);
+    }
+  });
+  try{
+    webApp?.ready?.();webApp?.expand?.();webApp?.disableVerticalSwipes?.();
+    webApp?.BackButton?.onClick?.(close);webApp?.BackButton?.show?.();syncTelegramContentSafeTop();
+    for(const name of ['viewportChanged','safeAreaChanged','contentSafeAreaChanged'])try{webApp?.onEvent?.(name,syncTelegramContentSafeTop);}catch{}
+  }catch{}
+  window.addEventListener('message',event=>{
+    if(event.source!==window.parent||event.data?.type!=='zefirok-host-viewport-changed')return;
+    try{
+      const payload=event.data.payload||{};
+      document.documentElement.style.setProperty('--app-height',`${n(payload.height)}px`);
+      const contentTop=Math.max(0,n(payload?.contentSafeArea?.top)),safeTop=Math.max(0,n(payload?.safeArea?.top));
+      if(contentTop||safeTop)setTelegramContentSafeTop(contentTop||safeTop,contentTop?'content':'safe');
+    }catch{}
+  });
   load();
+
 })();
 </script>
 </body>
