@@ -3510,6 +3510,110 @@ img[src$="/xp.webp"]{
 
 .zgt-rating-help-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:0 4px 10px;color:#94667a;font:700 12px/1.3 -apple-system,BlinkMacSystemFont,sans-serif}.topbar>.zgt-launch{justify-self:end;margin-left:auto}
 </style>
+<style id="season-tasks-ui-20260911">
+/* Task UI is scoped: reward track, tariffs and other season windows are unchanged. */
+#tasksView .task-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:2px 0 16px}
+#tasksView .section-title-art{display:flex;align-items:center;gap:11px;min-width:0}
+#tasksView .section-title-art img{width:40px;height:44px;object-fit:contain}
+#tasksView .section-title-art strong{display:block;font-size:20px;line-height:1.2;color:#5e3d4a}
+#tasksView .section-title-art small{display:block;margin-top:4px;font-size:12px;line-height:1.4;color:#947481;font-weight:500}
+#tasksView .task-help,#taskInfoOverlay .task-info-close{display:grid;place-items:center;flex:none;width:40px;height:40px;border:1px solid #e7ccd7;border-radius:14px;background:#fffcfa;color:#ad597d;font-family:inherit;font-size:21px;font-weight:750;line-height:1}
+#tasksView .task-overview{padding:16px;border:1px solid #e7d7da;border-radius:22px;background:linear-gradient(120deg,#fffaf1,#fff6f7);margin-bottom:14px}
+#tasksView .task-overview.has-ready{border-color:#eab2ca;background:linear-gradient(125deg,#ffedf4,#fff5df)}
+#tasksView .task-overview-top{display:flex;align-items:flex-start;justify-content:space-between;gap:14px}
+#tasksView .task-overview-top strong{display:block;font-size:19px;color:#683f51;line-height:1.3}
+#tasksView .task-overview-top p{font-size:12px;line-height:1.45;color:#987483;margin:6px 0 0}
+#tasksView .task-total{flex:none;font-size:11px;color:#98737f;text-align:right;padding-top:3px;line-height:1.45}
+#tasksView .claim-all-tasks{width:100%;min-height:47px;padding:10px 13px;border-radius:15px;margin:13px 0 0;box-shadow:none;background:linear-gradient(180deg,#e582a9,#cd5c87);font-size:13px;font-weight:750}
+#tasksView .claim-all-tasks>span{gap:8px;display:flex;align-items:center;min-width:0}
+#tasksView .claim-all-task-art{width:28px;height:28px;object-fit:contain}
+#tasksView .claim-all-tasks b{font-size:12px;padding:4px 7px;background:#ffffff25}
+#tasksView .claim-all-tasks:disabled{opacity:.64;color:white}
+#tasksView .task-toolbar{display:flex;gap:6px;margin:0 0 11px;padding:4px;background:#f2e8eb;border-radius:16px}
+#tasksView .task-filter{flex:1;min-width:0;min-height:44px;padding:8px 5px;border:0;border-radius:12px;background:transparent;font-size:12px;font-weight:700;color:#9a7d87;box-shadow:none}
+#tasksView .task-filter.active{background:#fffdfa;color:#aa4874;box-shadow:0 2px 6px #75465a0c}
+#tasksView .task-summary{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:0 0 18px}
+#tasksView .summary-card{padding:10px 11px;background:#fffdfa;border:1px solid #eddde1;border-radius:15px;box-shadow:none}
+#tasksView .summary-card strong{display:block;font-size:11px;color:#735561;font-weight:700}
+#tasksView .summary-card span{display:block;font-size:11px;line-height:1.45;margin-top:4px;color:#977c86;font-weight:500}
+#tasksView .task-list{display:block}
+#tasksView .task-group{margin:18px 0 0}
+#tasksView .task-group-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 2px 10px}
+#tasksView .task-group-head h3{margin:0;font-size:14px;color:#765563;line-height:1.4}
+#tasksView .task-group-head>span{font-size:11px;color:#957380}
+#tasksView .task-cards{display:grid;gap:10px}
+#tasksView .task-card{padding:14px;max-height:none;border:1px solid #ecdbe1;border-radius:21px;background:#fffdfb;box-shadow:none;animation:none;opacity:1;transition:none;overflow:hidden}
+#tasksView .task-card:before,#tasksView .task-card:after{display:none}
+#tasksView .task-card.ready{border-color:#e7b1c7;background:linear-gradient(120deg,#fffafd,#fff9f0)}
+#tasksView .task-card.locked{background:#f8f3f5;border-color:#e7dce1;opacity:1}
+#tasksView .task-card.claimed{padding:11px 13px;background:#fffbf9;opacity:1;border-color:#ece0e2}
+#tasksView .task-card h3,#tasksView .task-card.complete h3{margin:0;font-size:15px;line-height:1.35;color:#65414f;text-decoration:none;overflow-wrap:anywhere}
+#tasksView .task-card p,#tasksView .task-card.complete p{font-size:12px;font-weight:500;color:#92727f;text-decoration:none}
+#tasksView .task-card-title{width:100%;display:flex;align-items:center;gap:10px;text-align:left;padding:0;border:0;background:transparent;min-height:46px;color:inherit}
+#tasksView .task-card-title>img{width:38px;height:42px;object-fit:contain;flex:none}
+#tasksView .task-card.locked .task-card-title>img{filter:grayscale(1);opacity:.65}
+#tasksView .task-title-copy{flex:1;min-width:0}
+#tasksView .task-period{display:block;font-size:10px;font-weight:600;color:#a17b8b;line-height:1.4;margin-bottom:4px}
+#tasksView .task-xp{font-size:13px;color:#a27338;font-weight:800;white-space:nowrap;flex:none;line-height:1.35;text-align:right}
+#tasksView .task-xp small{display:block;font-size:9px;font-weight:600;color:#a38767}
+#tasksView .task-card.claimed .task-card-title>img{width:30px;height:34px}
+#tasksView .task-card.claimed h3{font-size:13px}
+#tasksView .task-card .task-description{margin:9px 0 0;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.45}
+#tasksView .task-progress{height:6px;margin:11px 0 0;background:#eee1e6}
+#tasksView .task-progress i{background:linear-gradient(90deg,#e88cab,#d9a349)}
+#tasksView .task-bottom{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:10px;min-height:24px}
+#tasksView .task-bottom span{font-size:11px;font-weight:600;color:#977986;line-height:1.4}
+#tasksView .task-bottom .task-ready-state{color:#65826a}
+#tasksView .task-action{min-height:43px;padding:9px 13px;font-family:inherit;font-size:12px;font-weight:750;line-height:1.3;border-radius:13px;max-width:100%;border:1px solid #d77499}
+#tasksView .task-action.primary{color:#fff;background:linear-gradient(180deg,#e688ad,#cd5c87)}
+#tasksView .task-action:disabled{color:white;opacity:.6}
+#tasksView .task-done{display:inline-flex;align-items:center;gap:4px;font-size:11px;line-height:1.4;color:#67816c;flex:none}
+#tasksView .task-received-toggle{width:100%;display:flex;align-items:center;justify-content:space-between;padding:13px 3px;border:0;background:transparent;color:#967682;font-size:13px;font-weight:700;min-height:47px;margin-top:12px;text-align:left}
+#tasksView .task-received-toggle span:last-child{font-size:18px;font-weight:400}
+#tasksView .task-note{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 1px;color:#9a7c87;font-size:11px;line-height:1.5}
+#tasksView .task-note button{flex:none;min-height:40px;background:none;border:0;padding:5px;color:#ac557b;font-size:12px;font-weight:700}
+#tasksView .task-sync{padding:13px 14px;border:1px solid #e3bdcd;background:#fff4f7;border-radius:17px;margin:0 0 13px;color:#9a5673;font-size:12px;line-height:1.5}
+#tasksView .task-sync p{margin:0}
+#tasksView .task-sync button{border:0;background:#fff;border-radius:11px;padding:9px 12px;color:#a34e73;min-height:42px;margin-top:9px;font-weight:700}
+#tasksView .task-empty{padding:22px 16px;border:1px dashed #e3ced8;border-radius:20px;text-align:center;color:#947483;font-size:13px;line-height:1.5;margin-top:16px}
+#tasksView .task-empty strong{display:block;margin-bottom:5px;color:#6c4d5b;font-size:15px}
+#tasksView button:focus-visible,#taskInfoOverlay button:focus-visible,#taskInfoBody:focus-visible{outline:3px solid #ac4d78;outline-offset:2px}
+#taskInfoOverlay[hidden],#tasksView [hidden]{display:none!important}
+#taskInfoOverlay{position:fixed;inset:0;z-index:215;display:flex;align-items:flex-end;justify-content:center;background:rgba(65,41,53,.40);padding:max(12px,env(safe-area-inset-top),var(--zefirok-content-safe-top,0px),var(--zefirok-native-controls-top,0px)) max(9px,env(safe-area-inset-right),var(--zefirok-content-safe-right,0px)) max(9px,env(safe-area-inset-bottom),var(--zefirok-content-safe-bottom,0px)) max(9px,env(safe-area-inset-left),var(--zefirok-content-safe-left,0px));overscroll-behavior:contain}
+#taskInfoOverlay *{box-sizing:border-box}
+#taskInfoPanel{display:flex;flex-direction:column;width:min(510px,100%);max-height:100%;overflow:hidden;border:1px solid #e9d3de;border-radius:28px 28px 22px 22px;background:#fff8f2;box-shadow:0 24px 70px #48223826;color:#62404f}
+#taskInfoOverlay .task-info-header{flex:none;padding:0 18px 14px;touch-action:none;user-select:none}
+#taskInfoOverlay .task-info-grip{display:flex;align-items:center;justify-content:center;width:86px;height:27px;border:0;background:transparent;padding:0;margin:0 auto;touch-action:none}
+#taskInfoOverlay .task-info-grip span{display:block;width:37px;height:4px;border-radius:8px;background:#d7c0cb}
+#taskInfoOverlay .task-info-heading{display:flex;gap:12px;align-items:center}
+#taskInfoTitle{flex:1;margin:0;font-size:21px;font-weight:800;line-height:1.25;letter-spacing:-.3px}
+#taskInfoOverlay .task-info-close{font-size:24px;font-weight:400}
+#taskInfoBody{min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y;padding:0 18px 19px;overflow-anchor:none}
+#taskInfoBody>*+*{margin-top:14px}
+#taskInfoOverlay .task-detail-hero{padding:18px;border-radius:21px;border:1px solid #efdcd6;background:linear-gradient(135deg,#ffedf4,#fff5dc);text-align:center}
+#taskInfoOverlay .task-detail-hero img{display:block;width:76px;height:79px;object-fit:contain;margin:0 auto 12px}
+#taskInfoOverlay .task-detail-hero small{display:block;color:#ae7c8e;font-size:11px;margin:0 0 8px}
+#taskInfoOverlay .task-detail-hero h3{margin:0;font-size:22px;line-height:1.25;overflow-wrap:anywhere}
+#taskInfoOverlay .task-detail-hero strong{display:block;color:#a17436;font-size:18px;margin-top:11px}
+#taskInfoOverlay .task-detail-hero.locked img{filter:grayscale(1)}
+#taskInfoOverlay .task-detail-block{padding:14px;border:1px solid #eddee0;border-radius:17px;background:#fffdfb}
+#taskInfoOverlay .task-detail-block h3{font-size:14px;margin:0 0 7px;color:#704957}
+#taskInfoOverlay .task-detail-block p{font-size:13px;line-height:1.55;color:#947380;margin:0;overflow-wrap:anywhere;font-weight:500}
+#taskInfoOverlay .task-detail-block .task-progress{height:6px;margin:12px 0 8px}
+#taskInfoOverlay .task-detail-progress-copy{display:flex;justify-content:space-between;gap:10px;color:#967885;font-size:11px}
+#taskInfoOverlay .task-detail-status{font-size:12px;line-height:1.5;padding:11px 13px;border-radius:13px;background:#f2e7ec;color:#957483}
+#taskInfoOverlay .task-detail-status.ready,#taskInfoOverlay .task-detail-status.claimed{color:#62806a;background:#ecf4ec}
+#taskInfoOverlay .task-detail-error{padding:11px 13px;border-radius:13px;background:#fff0f3;color:#a65577;font-size:12px;line-height:1.5}
+#taskInfoFooter{display:flex;gap:9px;flex:none;padding:13px 18px 17px;background:#fff8f2;border-top:1px solid #eedfe1}
+#taskInfoFooter button{flex:1;min-height:47px;border-radius:15px;border:1px solid #e6c7d5;padding:11px 12px;background:#fffdfb;color:#a34f74;font-size:14px;font-weight:750;line-height:1.3}
+#taskInfoFooter button.primary{background:linear-gradient(180deg,#e68aad,#ce5c88);border-color:#d7779d;color:white}
+#taskInfoFooter button:disabled{opacity:.6}
+@media(max-width:360px){#tasksView .task-card{padding:12px}#tasksView .task-card-title{gap:8px}#tasksView .task-card-title>img{width:31px;height:36px}#tasksView .task-card h3{font-size:14px}#tasksView .task-xp{font-size:12px}#tasksView .task-filter{font-size:11px}#tasksView .task-overview{padding:13px}#tasksView .task-overview-top strong{font-size:17px}#tasksView .task-total{font-size:10px}#taskInfoBody{padding:0 14px 16px}#taskInfoOverlay .task-info-header{padding-left:14px;padding-right:14px}#taskInfoFooter{padding-left:14px;padding-right:14px}}
+@media(min-width:640px){#taskInfoOverlay{align-items:center;padding:max(24px,env(safe-area-inset-top),var(--zefirok-content-safe-top,0px),var(--zefirok-native-controls-top,0px)) max(24px,env(safe-area-inset-right),var(--zefirok-content-safe-right,0px)) max(24px,env(safe-area-inset-bottom),var(--zefirok-content-safe-bottom,0px)) max(24px,env(safe-area-inset-left),var(--zefirok-content-safe-left,0px))}}
+
+#tasksView .task-info-chevron{flex:none;font-size:20px;line-height:1;color:#bd94a5;font-weight:400}
+
+</style>
 </head>
 <body>
 <section class="access-gate" id="accessGate">
@@ -3638,26 +3742,22 @@ img[src$="/xp.webp"]{
         <button class="claim-all" id="claimAll" type="button">Получить все доступные награды</button>
       </section>
 
-      <section class="view" data-view="tasks" id="tasksView" hidden>
-        <div class="section-head"><div class="section-title-art"><img src="/assets/season-pass/quest.webp?v=07939" alt=""><div><strong>Задания сезона</strong><br><span>Обычные и премиальные</span></div></div><span id="taskClaimedCount">0 выполнено</span></div>
+<section class="view" data-view="tasks" id="tasksView" hidden>
+        <div class="task-heading"><div class="section-title-art"><img src="/assets/season-pass/quest.webp?v=07939" alt=""><div><strong>Задания сезона</strong><small>Новые цели и XP для пропуска</small></div></div><button class="task-help" type="button" data-task-rules aria-label="Как работают задания">?</button></div>
         <div id="activeTasksContent">
-          <div class="task-toolbar">
-            <button class="task-filter active" data-task-filter="all" type="button">Все</button>
-            <button class="task-filter" data-task-filter="daily" type="button">Ежедневные</button>
-            <button class="task-filter" data-task-filter="weekly" type="button">Недельные</button>
+          <div class="task-overview" id="taskOverview"><div class="task-overview-top"><div><strong id="taskOverviewTitle">Твои цели на сезон</strong><p id="taskOverviewCopy">Выполняй задания и продвигайся по дорожке наград.</p></div><span class="task-total" id="taskClaimedCount"></span></div>
+            <button class="claim-all-tasks" id="claimAllTasks" type="button" disabled hidden><span><img class="claim-all-task-art" src="/assets/season-pass/xp.webp?v=07939" alt=""><span id="claimAllTasksLabel">Забрать весь XP</span></span><b id="claimAllTasksValue">0 XP</b></button>
           </div>
-          <div class="task-summary">
-            <div class="summary-card"><strong>Ежедневные</strong><span id="dailyTaskReset">Обновление по Москве</span></div>
-            <div class="summary-card"><strong>Недельные</strong><span id="weeklyTaskReset">Обновление по Москве</span></div>
+          <div class="task-sync" id="taskSync" role="status" hidden><p id="taskSyncText"></p><button id="taskSyncButton" type="button" data-task-command="refresh">Проверить состояние</button></div>
+          <div class="task-toolbar" role="group" aria-label="Период заданий">
+            <button class="task-filter active" data-task-filter="all" aria-pressed="true" type="button">Все</button>
+            <button class="task-filter" data-task-filter="daily" aria-pressed="false" type="button">Ежедневные</button>
+            <button class="task-filter" data-task-filter="weekly" aria-pressed="false" type="button">Недельные</button>
           </div>
-          <button class="claim-all-tasks" id="claimAllTasks" type="button" disabled>
-            <span><img class="claim-all-task-art" src="/assets/season-pass/xp.webp?v=07939" alt="">Забрать весь XP</span>
-            <b id="claimAllTasksValue">0 XP</b>
-          </button>
+          <div class="task-summary"><div class="summary-card"><strong>Ежедневные</strong><span id="dailyTaskReset">Уточняем сроки…</span></div><div class="summary-card"><strong>Недельные</strong><span id="weeklyTaskReset">Уточняем сроки…</span></div></div>
           <div class="task-list" id="taskList"></div>
-          <div class="notice">Прогресс заданий считается сервером по завершённым забегам, собранным наградам и открытым кейсам. Ежедневные и недельные задания обновляются по московскому времени.</div>
-        </div>
-        <div class="tasks-closed-state" id="tasksClosedState" hidden>
+          <div class="task-note"><span>Учитываются подтверждённые игровые действия.</span><button type="button" data-task-rules>О заданиях</button></div>
+        </div>        <div class="tasks-closed-state" id="tasksClosedState" hidden>
           <img src="/assets/season-pass/quest.webp?v=07939" alt="">
           <strong>Сезон завершён — задания отключены</strong>
           <p>Новые задания больше не засчитываются, и получить за них XP нельзя. До конца окна получения можно забрать только уже открытые награды во вкладке «Сезон».</p>
@@ -3669,6 +3769,10 @@ img[src$="/xp.webp"]{
   </section>
 </main>
 </div>
+
+<section id="taskInfoOverlay" hidden role="dialog" aria-modal="true" aria-labelledby="taskInfoTitle">
+  <div id="taskInfoPanel"><header id="taskInfoHeader" class="task-info-header"><button id="taskInfoGrip" class="task-info-grip" type="button" aria-label="Закрыть" title="Потяни вниз, чтобы закрыть"><span></span></button><div class="task-info-heading"><h2 id="taskInfoTitle"></h2><button class="task-info-close" id="taskInfoClose" type="button" data-task-command="close" aria-label="Закрыть">&#215;</button></div></header><div id="taskInfoBody" tabindex="-1"></div><footer id="taskInfoFooter"></footer></div>
+</section>
 
 <section class="season-letter-overlay" id="seasonLetterOverlay" hidden aria-modal="true" role="dialog" aria-labelledby="seasonLetterTitle"><div class="season-letter-sheet"><img class="season-letter-art" id="seasonLetterArt" hidden alt=""><div class="season-letter-envelope" id="seasonLetterEnvelope"><img src="/assets/ui/icon_message_season.webp" alt=""></div><h2 id="seasonLetterTitle">Вам письмо</h2><p class="letter-preview" id="seasonLetterPreview"></p><span class="season-letter-target" id="seasonLetterTarget"></span><div class="season-letter-body" id="seasonLetterBody" hidden></div><div class="season-letter-actions"><button class="secondary" id="seasonLetterClose" type="button">Закрыть</button><button class="primary" id="seasonLetterReveal" type="button">Открыть письмо</button></div></div></section>
 <section class="season-story-overlay" id="seasonStoryOverlay" hidden aria-modal="true" role="dialog" aria-labelledby="seasonStoryTitle"><div class="season-story-sheet"><img class="season-story-art" id="seasonStoryArt" hidden alt=""><span class="season-story-kicker">История сезона</span><h2 id="seasonStoryTitle">Сюжет</h2><div class="season-story-meta" id="seasonStoryMeta"></div><div class="season-story-body" id="seasonStoryBody"></div><div class="season-story-reward" id="seasonStoryReward" hidden><img id="seasonStoryRewardImage" src="/assets/season-pass/season.webp" alt=""><div><b id="seasonStoryRewardTitle">Награда за завершение</b><span>Будет выдана один раз после последней страницы.</span></div></div><div class="season-story-footer"><button class="secondary" id="seasonStoryBack" type="button">Назад</button><button class="secondary" id="seasonStoryClose" type="button">Закрыть</button><button class="primary" id="seasonStoryComplete" type="button">Продолжить</button></div></div></section>
@@ -4052,6 +4156,7 @@ img[src$="/xp.webp"]{
         return;
       }
       if (message.type === "zefirok-host-season-pass-refresh") {
+        if (TASK_UI.busy) { TASK_UI.refreshAfterBusy = true; return; }
         void loadServerPass().then(async()=>{render();await maybeShowTierActivationNotice(serverPass?.tierActivationNotice).catch(()=>false);}).catch(()=>{});
         return;
       }
@@ -4354,6 +4459,9 @@ img[src$="/xp.webp"]{
 
   function applyServerPass(data) {
     if (!data || typeof data !== "object") return;
+    if (data.season?.id && String(data.season.id) === String(serverPass?.season?.id) &&
+        Number.isFinite(Number(data.player?.revision)) && Number.isFinite(Number(serverPass?.player?.revision)) &&
+        Number(data.player.revision) < Number(serverPass.player.revision)) return;
     syncPassCountdownClock(data);
     const previous = serverPass && typeof serverPass === "object" ? serverPass : {};
     serverPass = {
@@ -5102,7 +5210,7 @@ img[src$="/xp.webp"]{
   function taskLocked(task) { return serverPass ? Boolean(task.locked) : Boolean(task.premium && !pass.premium); }
   function claimableTasks() {
     if (serverPass?.season?.capabilities?.canClaimTasks === false) return [];
-    return activeTasks().filter(task=>taskComplete(task) && !taskClaimed(task) && !taskLocked(task));
+    return Array.isArray(serverPass?.tasks) ? serverPass.tasks.filter(task=>taskState(task) === "ready") : [];
   }
 
   function claimableRewardCount() {
@@ -5129,15 +5237,15 @@ img[src$="/xp.webp"]{
   }
 
   function timeUntilLabel(isoValue) {
-    const target = Date.parse(String(isoValue || ""));
-    if (!Number.isFinite(target)) return "Обновление по Москве";
-    const seconds = Math.max(0,Math.ceil((target-Date.now())/1000));
-    const days = Math.floor(seconds/86400);
-    const hours = Math.floor((seconds%86400)/3600);
-    const minutes = Math.floor((seconds%3600)/60);
-    if (days > 0) return `Обновятся через ${days} дн. ${hours} ч.`;
-    if (hours > 0) return `Обновятся через ${hours} ч. ${minutes} мин.`;
-    return `Обновятся через ${Math.max(1,minutes)} мин.`;
+    const reset=passTimestampMs(isoValue),end=passTimestampMs(serverPass?.season?.endsAt);
+    const endsFirst=Number.isFinite(end)&&Number.isFinite(reset)&&end<reset;
+    const target=endsFirst?end:reset;
+    if (!Number.isFinite(target)) return "Уточняем сроки";
+    const left=target-passCountdownNow();
+    if(left<=0)return "Период завершён";
+    const seconds=Math.max(1,Math.floor(left/1000)),days=Math.floor(seconds/86400),hours=Math.floor(seconds%86400/3600),minutes=Math.floor(seconds%3600/60);
+    const time=days?`${days} дн. ${hours} ч.`:hours?`${hours} ч. ${minutes} мин.`:minutes?`${minutes} мин.`:"меньше минуты";
+    return `${endsFirst?"До конца сезона:":"Обновятся через"} ${time}`;
   }
 
   function updateSeasonBadges() {
@@ -5273,104 +5381,239 @@ img[src$="/xp.webp"]{
     return bestLevel;
   }
 
+// Presentation state only. Task eligibility, XP and period keys come from the server.
+  const TASK_UI = {
+    busy:false, uncertain:false, message:'', completedOpen:false, detail:null,
+    returnFocus:null, scrollLock:null, expiredSignature:'', inflightKeys:new Set()
+  };
+  const taskEsc = value => String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+  const taskNum = value => Math.max(0,Number(value)||0).toLocaleString('ru-RU');
+  const taskKey = task => [String(serverPass?.season?.id||''),String(task?.id||''),String(task?.periodKey||'')].join('|');
+  const taskPeriodLabel = task => task.period === 'weekly' ? 'Недельное' : 'Ежедневное';
+  function taskDeadline(task) {
+    const reset=passTimestampMs(task?.resetAt||serverPass?.taskPeriods?.[task?.period]?.resetAt);
+    const end=passTimestampMs(serverPass?.season?.endsAt);
+    const dates=[reset,end].filter(value=>Number.isFinite(value)&&value>0);
+    return dates.length ? Math.min(...dates) : NaN;
+  }
+  function taskPeriodExpired(task) {
+    const deadline=taskDeadline(task);
+    return !!serverPass && Number.isFinite(deadline) && deadline<=passCountdownNow();
+  }
+  function taskState(task) {
+    if(taskClaimed(task))return 'claimed';
+    if(TASK_UI.inflightKeys.has(taskKey(task)))return 'checking';
+    if(taskPeriodExpired(task))return 'expired';
+    if(serverPass?.season?.status==='ended')return 'ended';
+    if(serverPass?.season?.capabilities?.canClaimTasks===false || serverPass?.season?.status==='upcoming')return 'unavailable';
+    if(taskLocked(task))return 'locked';
+    return taskComplete(task) ? 'ready' : 'progress';
+  }
+  function taskStateLabel(state) {
+    return ({claimed:'XP получен',checking:'Проверяем получение…',expired:'Период завершён',ended:'Сезон завершён',unavailable:'Сейчас недоступно',locked:'Нужен Элитный',ready:'Условие выполнено',progress:'В процессе'})[state]||'В процессе';
+  }
+  function taskIcon(task) {
+    const known={runs:'/assets/ui/icon_game_button.webp',score:REWARD_ASSETS.points,treats:'/assets/season-pass/zefir_currency.webp',coffee:REWARD_ASSETS.coffee,cases_opened:REWARD_ASSETS.standardCase,login_days:'/assets/ui/icone_return_player.webp'};
+    return known[String(task?.metric||'')] || seasonPassLiveOpsVisual('tasks.sectionIcon',PASS_LIVEOPS_VISUAL_FALLBACKS.taskSectionIcon);
+  }
+  function taskPeriodText(task) {
+    return taskPeriodLabel(task)+(task.premium?' · Элитный':'');
+  }
+  function taskProgressMarkup(task) {
+    const current=taskProgress(task),target=Math.max(1,Number(task.target)||1),pct=Math.min(100,current/target*100);
+    return `<div class="task-progress" role="progressbar" aria-label="Прогресс задания" aria-valuemin="0" aria-valuemax="${target}" aria-valuenow="${current}"><i style="width:${pct}%"></i></div>`;
+  }
   function taskMarkup(task) {
-    const progress = taskProgress(task);
-    const complete = taskComplete(task);
-    const claimed = taskClaimed(task);
-    const locked = taskLocked(task);
-    const seasonActive = serverPass ? serverPass?.season?.capabilities?.canClaimTasks !== false : true;
-    const ready = complete && !claimed && !locked && seasonActive;
-    const percent = Math.min(100,Math.round(progress/task.target*100));
-    let action = serverPass ? "Выполняется в игре" : "Добавить прогресс";
-    if (!seasonActive) action = "Сезон завершён";
-    else if (locked) action = "Нужен Элитный";
-    else if (claimed) action = "XP получен";
-    else if (complete) action = `Забрать ${taskXpDisplay(task)} XP`;
-
-    if (claimed) {
-      return `<article class="task-card ${task.premium?"premium":""} complete claimed" data-task-card="${task.id}">
-        <div class="task-top">
-          <div class="task-badges">
-            <span class="task-badge ${task.period==="weekly"?"weekly":""}">${task.period==="daily"?"ЕЖЕДНЕВНОЕ":"НЕДЕЛЬНОЕ"}</span>
-            ${task.premium?'<span class="task-badge premium">ПРЕМИУМ</span>':'<span class="task-badge">ОБЫЧНОЕ</span>'}
-            <span class="task-badge done">XP ПОЛУЧЕН</span>
-          </div>
-          <span class="task-xp">+${taskXpDisplay(task)} XP</span>
-        </div>
-        <h3>${task.title}</h3>
-      </article>`;
-    }
-
-    return `<article class="task-card ${task.premium?"premium":""} ${locked?"locked":""} ${complete?"complete":""} ${ready?"ready":""}" data-task-card="${task.id}">
-      <div class="task-top">
-        <div class="task-badges">
-          <span class="task-badge ${task.period==="weekly"?"weekly":""}">${task.period==="daily"?"ЕЖЕДНЕВНОЕ":"НЕДЕЛЬНОЕ"}</span>
-          ${task.premium?'<span class="task-badge premium">ПРЕМИУМ</span>':'<span class="task-badge">ОБЫЧНОЕ</span>'}
-          ${complete?'<span class="task-badge done">ВЫПОЛНЕНО</span>':""}
-        </div>
-        <span class="task-xp">+${taskXpDisplay(task)} XP</span>
-      </div>
-      <h3>${task.title}</h3>
-      <p>${task.description}</p>
-      <div class="task-progress"><i style="width:${percent}%"></i></div>
-      <div class="task-bottom">
-        <span>${progress.toLocaleString("ru-RU")} / ${task.target.toLocaleString("ru-RU")}</span>
-        <button class="task-action ${ready?"primary":""}" data-task-action="${task.id}" ${locked||(!ready&&serverPass)||!seasonActive?"disabled":""} type="button">${action}</button>
-      </div>
+    const state=taskState(task),claimed=state==='claimed',ready=state==='ready';
+    const title=String(task.title||'Задание сезона'),id=taskEsc(task.id);
+    const disabled=TASK_UI.busy||TASK_UI.uncertain;
+    const progress=taskProgress(task),target=Math.max(1,Number(task.target)||1);
+    const xp=claimed ? '<span class="task-done">✓ XP получен</span>' : `<span class="task-xp">+${taskNum(taskXpDisplay(task))}<small>XP сезона</small></span>`;
+    const description=String(task.description||'').trim();
+    return `<article class="task-card ${state}${claimed?' complete':''}" data-task-card="${id}" data-task-state="${state}">
+      <button class="task-card-title" type="button" data-task-info="${id}" aria-label="${taskEsc(title)}. Подробнее"><img src="${taskEsc(taskIcon(task))}" alt="" loading="lazy" decoding="async"><span class="task-title-copy"><span class="task-period">${taskEsc(taskPeriodText(task))}</span><h3>${taskEsc(title)}</h3></span>${xp}<span class="task-info-chevron" aria-hidden="true">&#8250;</span></button>
+      ${!claimed&&description&&description!==title?`<p class="task-description">${taskEsc(description)}</p>`:''}
+      ${state==='progress'?taskProgressMarkup(task):''}
+      ${!claimed?`<div class="task-bottom"><span class="${ready?'task-ready-state':''}">${state==='progress'?`${taskNum(progress)} / ${taskNum(target)}`:taskEsc(taskStateLabel(state))}</span>${ready?`<button class="task-action primary" type="button" data-task-action="${id}" ${disabled?'disabled':''}>Забрать XP</button>`:''}</div>`:''}
     </article>`;
   }
-
-  function renderTasks() {
-    const seasonEnded = String(serverPass?.season?.status || "active") === "ended";
-    const activeContent = el("activeTasksContent");
-    const closedState = el("tasksClosedState");
-    if (activeContent) activeContent.hidden = seasonEnded;
-    if (closedState) closedState.hidden = !seasonEnded;
-
-    if (seasonEnded) {
-      el("taskList").innerHTML = "";
-      el("taskClaimedCount").textContent = "Задания отключены";
-      el("claimAllTasks").disabled = true;
-      el("claimAllTasksValue").textContent = "0 XP";
-      const deadline = el("tasksClosedDeadline");
-      const claimWindowOpen = Boolean(serverPass?.season?.claimWindowOpen);
-      const graceEndsAt = Date.parse(String(serverPass?.season?.claimGraceEndsAt || ""));
-      if (deadline) {
-        if (claimWindowOpen && Number.isFinite(graceEndsAt)) {
-          const formatted = new Intl.DateTimeFormat("ru-RU",{day:"numeric",month:"long",hour:"2-digit",minute:"2-digit",timeZone:"Europe/Moscow"}).format(new Date(graceEndsAt));
-          deadline.textContent = `Открытые награды можно забрать до ${formatted} МСК`;
-        } else if (claimWindowOpen) {
-          deadline.textContent = "Окно получения наград ещё открыто";
-        } else {
-          deadline.textContent = "Окно получения наград завершено";
-        }
-      }
-      updateSeasonBadges();
-      return;
-    }
-
-    const list = activeTasks();
-    const visible = list
-      .filter(task=>activeTaskFilter==="all" || task.period===activeTaskFilter)
-      .map((task,index)=>({task,index}))
-      .sort((a,b)=>{
-        const rank = task=>taskClaimed(task) ? 2 : taskComplete(task) ? 1 : 0;
-        return rank(a.task)-rank(b.task) || a.index-b.index;
-      })
-      .map(entry=>entry.task);
-    const readyTasks = claimableTasks();
-    const readyXp = readyTasks.reduce((sum,task)=>sum+taskXpDisplay(task),0);
-    el("taskList").innerHTML = visible.map(taskMarkup).join("");
-    el("taskClaimedCount").textContent = `${list.filter(task=>taskComplete(task)).length} выполнено`;
-    const canClaimTasks = serverPass ? serverPass?.season?.capabilities?.canClaimTasks !== false : true;
-    el("claimAllTasks").disabled = !canClaimTasks || readyTasks.length === 0;
-    el("claimAllTasksValue").textContent = readyTasks.length ? `+${readyXp.toLocaleString("ru-RU")} XP` : "0 XP";
-    document.querySelectorAll("[data-task-filter]").forEach(button=>{
-      button.classList.toggle("active",button.dataset.taskFilter===activeTaskFilter);
-    });
-    updateSeasonBadges();
+  function renderTaskList() {
+    const list=(Array.isArray(serverPass?.tasks)?serverPass.tasks:[]).filter(task=>activeTaskFilter==='all'||task.period===activeTaskFilter);
+    if(!list.length)return '<div class="task-empty"><strong>Пока нет заданий</strong>В этом периоде нет доступных заданий. Посмотри другие периоды или вернись позже.</div>';
+    const groups=[['ready','Можно забрать'],['checking','Проверяем получение'],['progress','В процессе'],['locked','Задания Элитного'],['expired','Нужно обновление'],['unavailable','Пока недоступно'],['ended','Сезон завершён']];
+    let out=groups.map(([key,label])=>{
+      const rows=list.filter(task=>taskState(task)===key);
+      return rows.length?`<section class="task-group" data-task-group="${key}"><div class="task-group-head"><h3>${label}</h3><span>${rows.length}</span></div><div class="task-cards">${rows.map(taskMarkup).join('')}</div></section>`:'';
+    }).join('');
+    const claimed=list.filter(task=>taskClaimed(task));
+    if(claimed.length)out+=`<button class="task-received-toggle" type="button" data-task-received aria-expanded="${TASK_UI.completedOpen}" aria-controls="taskReceivedList"><span>XP получен · ${claimed.length}</span><span aria-hidden="true">${TASK_UI.completedOpen?'−':'+'}</span></button><div class="task-cards" id="taskReceivedList" ${TASK_UI.completedOpen?'':'hidden'}>${claimed.map(taskMarkup).join('')}</div>`;
+    if(claimed.length===list.length)out='<div class="task-empty"><strong>Все задания этого периода закрыты</strong>Полученный XP уже учтён. Новые цели появятся после обновления периода.</div>'+out;
+    return out;
   }
-
+  function taskFocusToken() {
+    const node=document.activeElement;
+    if(!(node instanceof HTMLElement))return null;
+    for(const attr of ['data-task-info','data-task-action','data-task-filter','data-task-received','data-task-command'])if(node.hasAttribute(attr))return {attr,value:node.getAttribute(attr)};
+    return node.id?{id:node.id}:null;
+  }
+  function restoreTaskFocus(token,scope=document) {
+    if(!token)return;
+    const node=token.id?document.getElementById(token.id):Array.from(scope.querySelectorAll(`[${token.attr}]`)).find(node=>node.getAttribute(token.attr)===token.value);
+    if(node&&!node.disabled&&node.getClientRects().length)node.focus({preventScroll:true});
+  }
+  function renderTasks() {
+    const focus=taskFocusToken();
+    const ended=String(serverPass?.season?.status||'active')==='ended';
+    el('activeTasksContent').hidden=ended;el('tasksClosedState').hidden=!ended;
+    const list=Array.isArray(serverPass?.tasks)?serverPass.tasks:[],ready=claimableTasks(),xp=ready.reduce((sum,task)=>sum+taskXpDisplay(task),0);
+    el('taskClaimedCount').textContent=ended?'':`Получено: ${list.filter(taskClaimed).length} / ${list.length}`;
+    el('taskOverview').classList.toggle('has-ready',ready.length>0);
+    el('taskOverviewTitle').textContent=ready.length?`Готово: ${taskNum(xp)} XP`:'Твои цели на сезон';
+    el('taskOverviewCopy').textContent=ready.length?`За ${ready.length} ${pluralRu(ready.length,['готовое задание','готовых задания','готовых заданий'])} · все периоды`:'Выполняй задания и продвигайся по дорожке наград.';
+    const bulk=el('claimAllTasks');bulk.hidden=!ready.length&&!TASK_UI.busy;bulk.disabled=TASK_UI.busy||TASK_UI.uncertain||!ready.length||ended;
+    el('claimAllTasksLabel').textContent=TASK_UI.busy?'Проверяем получение…':'Забрать весь XP';
+    el('claimAllTasksValue').textContent=TASK_UI.busy?'…':`+${taskNum(xp)} XP`;
+    el('taskList').innerHTML=ended||!Array.isArray(serverPass?.tasks)?'':renderTaskList();
+    const expired=list.some(task=>!taskClaimed(task)&&taskPeriodExpired(task));
+    const message=TASK_UI.message||(!Array.isArray(serverPass?.tasks)?'Не удалось загрузить задания. Проверь состояние, когда восстановится связь.':expired?'Период заданий закончился. Проверь актуальные цели перед получением XP.':serverPass?.season?.capabilities?.canClaimTasks===false&&!ended?'Сейчас доступен только просмотр. Получение XP за задания отключено.':'');
+    el('taskSync').hidden=!message||ended;el('taskSyncText').textContent=message;
+    el('taskSyncButton').disabled=TASK_UI.busy;
+    if(ended){
+      const end=Date.parse(String(serverPass?.season?.claimGraceEndsAt||'')),open=!!serverPass?.season?.claimWindowOpen;
+      el('tasksClosedDeadline').textContent=open&&Number.isFinite(end)?`Открытые награды можно забрать до ${new Intl.DateTimeFormat('ru-RU',{day:'numeric',month:'long',hour:'2-digit',minute:'2-digit',timeZone:'Europe/Moscow'}).format(end)} МСК`:open?'Окно получения наград ещё открыто':'Окно получения наград завершено';
+    }
+    document.querySelectorAll('[data-task-filter]').forEach(button=>{const selected=button.dataset.taskFilter===activeTaskFilter;button.classList.toggle('active',selected);button.setAttribute('aria-pressed',String(selected));});
+    TASK_UI.expiredSignature=taskExpirySignature();
+    updateSeasonBadges();
+    if(!el('taskInfoOverlay').hidden)renderTaskInfo();
+    restoreTaskFocus(focus);
+  }
+  function taskExpirySignature(){return activeTasks().filter(task=>taskPeriodExpired(task)).map(task=>taskKey(task)).join(';');}
+  function updateTaskTimes(){
+    // Ticks only update labels. A newly expired period triggers one presentation refresh, never a claim.
+    if(taskExpirySignature()!==TASK_UI.expiredSignature){renderTasks();return;}
+    const node=el('taskInfoReset');
+    if(node&&TASK_UI.detail?.type==='task'){
+      const task=activeTasks().find(t=>String(t.id)===TASK_UI.detail.id&&String(t.periodKey||'')===TASK_UI.detail.periodKey);
+      if(task)node.textContent=taskTimeText(task);
+    }
+  }
+  function taskTimeText(task){
+    const deadline=taskDeadline(task);if(!Number.isFinite(deadline))return 'Срок указан в текущем периоде заданий.';
+    const left=deadline-passCountdownNow();
+    return left<=0?'Срок задания закончился. Обнови список.':`До окончания: ${formatPassRemaining(left)}`;
+  }
+  function renderTaskInfo(){
+    if(el('taskInfoOverlay').hidden||!TASK_UI.detail)return;
+    const detail=TASK_UI.detail,body=el('taskInfoBody'),scroll=body.scrollTop,focus=taskFocusToken();
+    let content='',actions='';
+    el('taskInfoTitle').textContent=detail.type==='rules'?'О заданиях':'Задание сезона';
+    if(detail.type==='rules'){
+      content='<div class="task-detail-block"><h3>Выполни условие — получи XP</h3><p>Прогресс учитывается по игровым действиям. Готовые задания находятся вверху списка. После получения XP открытые награды дорожки сезона забираются отдельно.</p></div><div class="task-detail-block"><h3>Ежедневные и недельные</h3><p>Каждый период имеет свой прогресс. Сроки обновления указаны рядом с фильтрами; они отсчитываются по времени сервера. «Забрать весь XP» получает все готовые задания обоих периодов, независимо от выбранного фильтра.</p></div><div class="task-detail-block"><h3>Элитный и бонус XP</h3><p>Задания с отметкой «Элитный» требуют подходящего тарифа. Доступность и размер XP определяет сервер. Сезонный множитель и догоняющий бонус не складываются между собой.</p></div><div class="task-detail-block"><h3>Если связь прервалась</h3><p>Сначала проверь состояние. Проверка не запускает повторное получение. Отметка «XP получен» появляется только после подтверждения сервера.</p></div>';
+      actions='<button type="button" data-task-command="close">Понятно</button>';
+    }else{
+      const task=activeTasks().find(t=>String(t.id)===detail.id&&String(t.periodKey||'')===detail.periodKey);
+      if(!task || detail.seasonId!==String(serverPass?.season?.id||'')){
+        content='<div class="task-detail-block"><h3>Задания обновились</h3><p>Эта карточка относится к предыдущему набору. Вернись к списку актуальных заданий.</p></div>';
+        actions='<button type="button" data-task-command="close">К заданиям</button>';
+      }else{
+        const state=taskState(task),claimed=state==='claimed';
+        content=`<div class="task-detail-hero ${state==='locked'?'locked':''}"><img src="${taskEsc(taskIcon(task))}" alt=""><small>${taskEsc(taskPeriodText(task))}</small><h3>${taskEsc(task.title||'Задание сезона')}</h3>${claimed?'':`<strong>+${taskNum(taskXpDisplay(task))} XP сезона</strong>`}</div><div class="task-detail-status ${state}">${taskEsc(taskStateLabel(state))}</div><div class="task-detail-block"><h3>Условие</h3><p>${taskEsc(task.description||task.title||'Выполни условие задания в игре.')}</p>${!claimed?taskProgressMarkup(task):''}<div class="task-detail-progress-copy"><span>${taskNum(taskProgress(task))} / ${taskNum(Math.max(1,Number(task.target)||1))}</span><span>${claimed?'Подтверждено сервером':'Учтённый прогресс'}</span></div></div>`;
+        if(!claimed)content+=`<div class="task-detail-block"><h3>Срок и награда</h3><p id="taskInfoReset">${taskEsc(taskTimeText(task))}</p><p style="margin-top:7px">XP продвигает сезонный пропуск, а не уровень профиля. Размер при получении подтвердит сервер.</p></div>`;
+        if(state==='locked')content+='<div class="task-detail-block"><h3>Задание Элитного</h3><p>Для получения нужен подходящий платный тариф. Просмотр его условий ничего не покупает.</p></div>';
+        if(TASK_UI.message)content+=`<div class="task-detail-error" role="status">${taskEsc(TASK_UI.message)}</div>`;
+        if(TASK_UI.uncertain||state==='expired'||state==='checking')actions=`<button type="button" data-task-command="refresh" ${TASK_UI.busy?'disabled':''}>${TASK_UI.busy?'Проверяем…':'Проверить состояние'}</button>`;
+        else if(state==='ready')actions=`<button type="button" class="primary" data-task-action="${taskEsc(task.id)}" ${TASK_UI.busy?'disabled':''}>Забрать ${taskNum(taskXpDisplay(task))} XP</button>`;
+        else if(state==='locked')actions='<button type="button" data-task-command="tariffs">Посмотреть тарифы</button>';
+        else actions='<button type="button" data-task-command="close">К заданиям</button>';
+      }
+    }
+    body.innerHTML=content;el('taskInfoFooter').innerHTML=actions;body.scrollTop=scroll;restoreTaskFocus(focus);
+  }
+  function openTaskInfo(id=''){
+    if(window.ZefirokPageGuide?.isOpen())return;
+    const task=id?activeTasks().find(t=>String(t.id)===String(id)):null;if(id&&!task)return;
+    TASK_UI.detail=task?{type:'task',id:String(task.id),periodKey:String(task.periodKey||''),seasonId:String(serverPass?.season?.id||'')}:{type:'rules'};
+    if(el('taskInfoOverlay').hidden){
+      TASK_UI.returnFocus=taskFocusToken();
+      const app=el('appScroll');TASK_UI.scrollLock={overflow:app.style.overflow,inert:app.hasAttribute('inert')};app.style.overflow='hidden';app.setAttribute('inert','');
+    }
+    el('taskInfoOverlay').hidden=false;resetTaskInfoMotion();renderTaskInfo();el('taskInfoBody').scrollTop=0;el('taskInfoClose').focus({preventScroll:true});passSelectHaptic();
+  }
+  function closeTaskInfo(){
+    if(el('taskInfoOverlay').hidden)return;
+    resetTaskInfoMotion();el('taskInfoOverlay').hidden=true;TASK_UI.detail=null;
+    const app=el('appScroll');if(TASK_UI.scrollLock){app.style.overflow=TASK_UI.scrollLock.overflow;if(!TASK_UI.scrollLock.inert)app.removeAttribute('inert');TASK_UI.scrollLock=null;}
+    restoreTaskFocus(TASK_UI.returnFocus);TASK_UI.returnFocus=null;
+  }
+  function checkedTaskState(data){
+    if(!data?.season?.id||!Array.isArray(data.tasks)||!data.player||!Number.isFinite(Number(data.player.xp)))throw new Error('Ответ с заданиями неполный. Попробуй проверить состояние ещё раз.');
+    return data;
+  }
+  async function readTaskState(){
+    const data=checkedTaskState(await seasonPassApi(STATE_PATH));
+    if(String(data.season.id)===String(serverPass?.season?.id)&&Number(data.player.revision)<Number(serverPass?.player?.revision))throw new Error('Stale task state');
+    applyServerPass(data);TASK_UI.uncertain=false;TASK_UI.inflightKeys.clear();return data;
+  }
+  async function refreshTasksFromServer(){
+    if(TASK_UI.busy)return;TASK_UI.busy=true;TASK_UI.message='Проверяем актуальное состояние…';renderTasks();
+    try{await readTaskState();TASK_UI.message='';showToast('Задания обновлены');}
+    catch(error){TASK_UI.message='Не удалось проверить задания. Повтори проверку, когда связь восстановится.';}
+    finally{TASK_UI.busy=false;render();if(TASK_UI.refreshAfterBusy){TASK_UI.refreshAfterBusy=false;void refreshTasksFromServer();}}
+  }
+  function applyTaskClaimReply(data,requested,seasonId,all){
+    if(data?.ok!==true||!data?.player||!Number.isFinite(Number(data.player.xp))||!data?.season?.id||String(data.season.id)!==seasonId||String(serverPass?.season?.id)!==seasonId)throw new Error('Нужно проверить итог получения.');
+    const updates=all?(Array.isArray(data.taskUpdates)?data.taskUpdates:[]):data.taskUpdate?[data.taskUpdate]:[];
+    if(!updates.length&&!data.stale)throw new Error('Ответ не содержит подтверждения задания.');
+    if(updates.some(update=>!update?.id||!update?.periodKey||update.claimed!==true))throw new Error('Ответ с получением неполный.');
+    // Full sandbox replies already carry the updated tasks. Production replies carry only deltas.
+    applyServerPass(data);
+    for(const update of updates){
+      const target=serverPass.tasks?.find(task=>String(task.id)===String(update.id)&&String(task.periodKey||'')===String(update.periodKey));
+      if(target)Object.assign(target,update);
+    }
+    pass.claimedTasks=(serverPass.tasks||[]).filter(taskClaimed).map(task=>String(task.id));
+    serverPass.taskClaimableCount=activeTasks().filter(task=>taskComplete(task)&&!taskClaimed(task)&&!taskLocked(task)).length;
+    savePass();
+    if(!all&&!requested.every(task=>updates.some(update=>String(update.id)===String(task.id)&&String(update.periodKey)===String(task.periodKey))))throw new Error('Период задания изменился.');
+    return updates;
+  }
+  async function claimTasks(taskId=null){
+    if(TASK_UI.busy||TASK_UI.uncertain)return;
+    const all=taskId===null,requested=claimableTasks().filter(task=>all||String(task.id)===String(taskId));
+    if(!requested.length){renderTasks();return;}
+    // One lock shared by single, detail and bulk claim controls, including after re-rendering.
+    TASK_UI.busy=true;TASK_UI.message='';requested.forEach(task=>TASK_UI.inflightKeys.add(taskKey(task)));
+    const seasonId=String(serverPass?.season?.id||'');passImpactHaptic('medium');renderTasks();
+    if(!serverPass){TASK_UI.inflightKeys.clear();TASK_UI.busy=false;collectTaskRewards(requested);return;}
+    try{
+      const data=await seasonPassApi(all?CLAIM_ALL_TASKS_PATH:CLAIM_TASK_PATH,all?{}:{taskId:String(requested[0].id)});
+      const updates=applyTaskClaimReply(data,requested,seasonId,all);
+      if(data.stale){
+        await readTaskState();
+        if(String(serverPass?.season?.id)===seasonId)updates.push(...requested.filter(task=>activeTasks().some(fresh=>String(fresh.id)===String(task.id)&&String(fresh.periodKey||'')===String(task.periodKey||'')&&taskClaimed(fresh))));
+      }
+      notifyTasksClaimed(updates);
+      const amount=Number(all?data.totalXp:data.receivedTask?.xp);
+      passNotifyHaptic(data.repeated||!Number.isFinite(amount)||amount<=0?'warning':'success');
+      showToast(data.repeated||amount===0?'XP уже был получен':Number.isFinite(amount)&&amount>0?`Получено ${taskNum(amount)} XP`:'Получение подтверждено');
+    }catch(error){
+      TASK_UI.message='Проверяем результат получения…';renderTasks();
+      try{
+        await readTaskState();
+        const confirmed=requested.filter(task=>String(serverPass?.season?.id)===seasonId&&activeTasks().some(fresh=>String(fresh.id)===String(task.id)&&String(fresh.periodKey||'')===String(task.periodKey||'')&&taskClaimed(fresh)));
+        if(confirmed.length){notifyTasksClaimed(confirmed);showToast('Получение XP подтверждено');}
+        else{TASK_UI.message='Состояние обновлено. Проверь текущие задания и сроки перед новой попыткой.';showToast('Состояние заданий проверено');}
+        if(confirmed.length===requested.length)TASK_UI.message='';
+      }catch{
+        TASK_UI.uncertain=true;TASK_UI.message='Связь прервалась. Сначала проверь состояние — XP мог уже начислиться. Повторное получение автоматически не запускается.';
+        passNotifyHaptic('error');
+      }
+    }finally{
+      TASK_UI.busy=false;if(!TASK_UI.uncertain)TASK_UI.inflightKeys.clear();render();
+      if(TASK_UI.refreshAfterBusy){TASK_UI.refreshAfterBusy=false;void refreshTasksFromServer();}
+    }
+  }
   function animateCollectedTaskCard(card,index=0) {
     return new Promise(resolve=>{
       if (!card) {
@@ -6481,43 +6724,7 @@ img[src$="/xp.webp"]{
     }
 
     const taskButton = event.target.closest("[data-task-action]");
-    if (taskButton) {
-      passImpactHaptic("medium");
-      const task = activeTasks().find(item=>item.id===taskButton.dataset.taskAction);
-      if (!task || taskClaimed(task) || taskLocked(task) || !taskComplete(task)) return;
-      const card = taskButton.closest(".task-card");
-      if (card?.classList.contains("collecting")) return;
-      taskButton.disabled = true;
-      if (serverPass) {
-        const previousLabel = taskButton.textContent;
-        taskButton.textContent = "Получаем…";
-        void seasonPassApi(CLAIM_TASK_PATH,{taskId:task.id}).then(async data=>{
-          applyServerPass(data);
-          const update = data?.taskUpdate && typeof data.taskUpdate === "object" ? data.taskUpdate : null;
-          if (update && Array.isArray(serverPass?.tasks)) {
-            const target = serverPass.tasks.find(item=>String(item?.id)===String(update.id) && (!update.periodKey || String(item?.periodKey||"")===String(update.periodKey)));
-            if (target) Object.assign(target,update,{claimed:true});
-            if (!pass.claimedTasks.includes(String(update.id))) pass.claimedTasks.push(String(update.id));
-            if (Number.isFinite(Number(data?.taskClaimableDelta))) serverPass.taskClaimableCount = Math.max(0,Number(serverPass.taskClaimableCount||0)+Number(data.taskClaimableDelta));
-            savePass();
-          }
-          notifyTasksClaimed(update ? [update] : [{id:task.id,periodKey:task.periodKey}]);
-          passNotifyHaptic(data?.repeated?"warning":"success");
-          showToast(data?.repeated?"XP уже был получен":`Получено ${Number(data?.receivedTask?.xp||task.xp).toLocaleString("ru-RU")} XP`);
-          const animation=animateCollectedTaskCard(card,0);
-          void animation.finally(()=>render());
-        }).catch(async error=>{
-          passNotifyHaptic("error");
-          showToast(error.message||"Не удалось получить XP");
-          // If the server reports an unexpected stale state, refresh only then;
-          // the normal successful claim path avoids a full pass reload.
-          try { await loadServerPass(); } catch {}
-          renderTasks();
-        }).finally(()=>{
-          if (taskButton?.isConnected) taskButton.textContent = previousLabel;
-        });
-      } else collectTaskRewards([task]);
-    }
+    if (taskButton && !taskButton.disabled) void claimTasks(taskButton.dataset.taskAction);
   });
 
   el("rewardTrack").addEventListener("keydown",event=>{
@@ -6584,29 +6791,7 @@ img[src$="/xp.webp"]{
   el("buyElite").addEventListener("click",()=>openPurchaseConfirm("elite"));
   el("buyElitePlus").addEventListener("click",()=>openPurchaseConfirm("elite_plus"));
 
-  el("claimAllTasks").addEventListener("click",()=>{
-    passImpactHaptic("medium");
-    if (!serverPass) { collectTaskRewards(claimableTasks()); return; }
-    const ready = claimableTasks();if(!ready.length)return showToast("Нет готовых заданий");const button=el("claimAllTasks");const oldHtml=button.innerHTML;button.disabled=true;button.innerHTML='<span>Получаем XP…</span><b>Подождите</b>';
-    const cards=[...document.querySelectorAll("[data-task-card]")].filter(card=>ready.some(task=>task.id===card.dataset.taskCard));
-    void seasonPassApi(CLAIM_ALL_TASKS_PATH).then(async data=>{
-      applyServerPass(data);
-      const updates=Array.isArray(data?.taskUpdates)?data.taskUpdates:[];
-      if(updates.length&&Array.isArray(serverPass?.tasks)){
-        for(const update of updates){
-          const target=serverPass.tasks.find(item=>String(item?.id)===String(update?.id)&&(!update?.periodKey||String(item?.periodKey||"")===String(update.periodKey)));
-          if(target)Object.assign(target,update,{claimed:true});
-          if(update?.id&&!pass.claimedTasks.includes(String(update.id)))pass.claimedTasks.push(String(update.id));
-        }
-        if(Number.isFinite(Number(data?.taskClaimableDelta)))serverPass.taskClaimableCount=Math.max(0,Number(serverPass.taskClaimableCount||0)+Number(data.taskClaimableDelta));
-        savePass();
-      }
-      if(data?.stale){try{await loadServerPass();}catch{}}
-      notifyTasksClaimed(updates.length ? updates : ready);
-      passNotifyHaptic(data.totalXp>0?"success":"warning");showToast(data.totalXp>0?`Получено ${Number(data.totalXp||0).toLocaleString("ru-RU")} XP`:"XP уже был получен");
-      const animation=Promise.all(cards.map((card,index)=>animateCollectedTaskCard(card,index)));void animation.finally(()=>render());
-    }).catch(error=>{passNotifyHaptic("error");showToast(error.message||"Не удалось получить XP");}).finally(()=>{button.innerHTML=oldHtml;renderTasks();});
-  });
+  el("claimAllTasks").addEventListener("click",()=>{ void claimTasks(); });
 
   el("claimAll").addEventListener("click",()=>{
     passImpactHaptic("medium");
@@ -6675,6 +6860,83 @@ img[src$="/xp.webp"]{
     else if (!el("rewardSummary").hidden) closeRewardSummary();
   });
 
+let taskInfoMotion = null;
+  function resetTaskInfoMotion(){taskInfoMotion?.reset();}
+  function installTaskInfoMotion(){
+    const overlay=el('taskInfoOverlay'),panel=el('taskInfoPanel'),body=el('taskInfoBody'),header=el('taskInfoHeader'),grip=el('taskInfoGrip');
+    let gesture=null,timer=0,frame=0,serial=0,settling=false,suppressUntil=0;
+    const visible=()=>!overlay.hidden&&!window.ZefirokPageGuide?.isOpen();
+    function reset(){
+      ++serial;clearTimeout(timer);cancelAnimationFrame(frame);timer=frame=0;settling=false;
+      const g=gesture;gesture=null;if(g?.pointer)try{panel.releasePointerCapture(g.id);}catch{}
+      panel.style.transform='';panel.style.transition='';panel.style.willChange='';overlay.style.backgroundColor='';overlay.style.transition='';
+    }
+    function start(id,x,y,target,pointer=false){
+      if(!visible()||settling||gesture||!(target instanceof Element))return false;
+      if(target.closest('button,a,input,select,textarea')&&!grip.contains(target))return false;
+      const inHeader=header.contains(target);if(!inHeader&&(!body.contains(target)||body.scrollTop>2))return false;
+      reset();gesture={id,x,y,lastY:y,lastAt:performance.now(),delta:0,velocity:0,drag:false,inHeader,pointer,height:panel.offsetHeight};return true;
+    }
+    function move(x,y,event){
+      const g=gesture;if(!g||!visible()||settling)return;const dy=y-g.y,dx=x-g.x;
+      if(!g.drag){
+        if(dy<=0||Math.abs(dx)>Math.max(5,dy*.8)||(!g.inHeader&&body.scrollTop>2)){if(Math.max(Math.abs(dx),Math.abs(dy))>8)reset();return;}
+        if(!event.cancelable){reset();return;}event.preventDefault();if(dy<3)return;g.drag=true;panel.style.willChange='transform';
+      }
+      if(event.cancelable)event.preventDefault();const now=performance.now();g.velocity=(y-g.lastY)/Math.max(1,now-g.lastAt);g.lastAt=now;g.lastY=y;g.delta=Math.max(0,dy);
+      if(!frame)frame=requestAnimationFrame(()=>{frame=0;if(gesture!==g)return;panel.style.transform=`translate3d(0,${Math.min(g.height*.9,g.delta*.98)}px,0)`;overlay.style.backgroundColor=`rgba(65,41,53,${.4*(1-Math.min(.8,g.delta/g.height))})`;});
+    }
+    function finish(cancelled=false){
+      const g=gesture;if(!g)return;gesture=null;cancelAnimationFrame(frame);frame=0;
+      if(g.pointer)try{panel.releasePointerCapture(g.id);}catch{}
+      if(!g.drag){reset();return;}suppressUntil=performance.now()+450;
+      const threshold=Math.max(95,Math.min(260,g.height*.36)),velocity=performance.now()-g.lastAt<100?Math.max(0,g.velocity):0;
+      const dismiss=!cancelled&&(g.delta>=threshold||(g.delta>threshold*.6&&velocity>1));
+      const duration=window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches?0:230,token=++serial;settling=true;
+      panel.style.transition=`transform ${duration}ms cubic-bezier(.2,.8,.3,1)`;overlay.style.transition=`background-color ${duration}ms ease`;
+      panel.style.transform=dismiss?`translate3d(0,${window.innerHeight+g.height}px,0)`:'translate3d(0,0,0)';overlay.style.backgroundColor=dismiss?'rgba(65,41,53,0)':'';
+      const done=()=>{if(serial!==token)return;reset();if(dismiss&&visible())closeTaskInfo();};if(duration)timer=setTimeout(done,duration+24);else done();
+    }
+    panel.addEventListener('touchstart',e=>{if(e.touches.length!==1){finish(true);return;}const p=e.touches[0];start(p.identifier,p.clientX,p.clientY,e.target);},{passive:true});
+    panel.addEventListener('touchmove',e=>{if(!gesture||gesture.pointer)return;if(e.touches.length!==1){finish(true);return;}const p=Array.from(e.touches).find(p=>p.identifier===gesture.id);if(p)move(p.clientX,p.clientY,e);},{passive:false});
+    panel.addEventListener('touchend',e=>{if(gesture&&!gesture.pointer&&Array.from(e.changedTouches).some(p=>p.identifier===gesture.id))finish();},{passive:true});
+    panel.addEventListener('touchcancel',()=>finish(true),{passive:true});
+    header.addEventListener('pointerdown',e=>{if(e.pointerType==='touch'||e.button!==0||e.isPrimary===false)return;if(start(e.pointerId,e.clientX,e.clientY,e.target,true)){e.preventDefault();try{panel.setPointerCapture(e.pointerId);}catch{}}});
+    panel.addEventListener('pointermove',e=>{if(gesture?.pointer&&e.pointerId===gesture.id)move(e.clientX,e.clientY,e);});
+    panel.addEventListener('pointerup',e=>{if(gesture?.pointer&&e.pointerId===gesture.id)finish();});
+    for(const name of ['pointercancel','lostpointercapture'])panel.addEventListener(name,e=>{if(gesture?.pointer&&e.pointerId===gesture.id)finish(true);});
+    overlay.addEventListener('click',e=>{if(performance.now()<suppressUntil){e.preventDefault();e.stopImmediatePropagation();}},true);
+    grip.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();if(e.detail===0)closeTaskInfo();});
+    window.addEventListener('blur',()=>{if(gesture)finish(true);});document.addEventListener('visibilitychange',()=>{if(document.hidden&&gesture)finish(true);});
+    return {reset};
+  }
+  taskInfoMotion=installTaskInfoMotion();
+  document.addEventListener('click',event=>{
+    const target=event.target instanceof Element?event.target:null;if(!target||target.closest('button:disabled'))return;
+    const info=target.closest('[data-task-info]');if(info){openTaskInfo(info.dataset.taskInfo);return;}
+    if(target.closest('[data-task-rules]')){openTaskInfo();return;}
+    if(target.closest('[data-task-received]')){TASK_UI.completedOpen=!TASK_UI.completedOpen;renderTasks();return;}
+    const command=target.closest('[data-task-command]')?.dataset.taskCommand;
+    if(command==='close'){closeTaskInfo();return;}
+    if(command==='refresh'){void refreshTasksFromServer();return;}
+    if(command==='tariffs'){closeTaskInfo();openTariffSheet();return;}
+    if(event.target===el('taskInfoOverlay'))closeTaskInfo();
+  });
+  document.addEventListener('keydown',event=>{
+    if(el('taskInfoOverlay').hidden||window.ZefirokPageGuide?.isOpen())return;
+    if(event.key==='Escape'){event.preventDefault();event.stopImmediatePropagation();closeTaskInfo();return;}
+    if(event.key==='Tab'){
+      const nodes=[...el('taskInfoPanel').querySelectorAll('button:not(:disabled),[tabindex="0"]')].filter(node=>node.getClientRects().length);
+      const first=nodes[0],last=nodes[nodes.length-1];
+      if(event.shiftKey&&(document.activeElement===first||!el('taskInfoPanel').contains(document.activeElement))){event.preventDefault();last?.focus();}
+      else if(!event.shiftKey&&(document.activeElement===last||!el('taskInfoPanel').contains(document.activeElement))){event.preventDefault();first?.focus();}
+    }
+  },true);
+  window.addEventListener('message',event=>{
+    if(event.source!==window.parent||event.data?.type!=='zefirok-season-pass-back')return;
+    if(window.ZefirokPageGuide?.isOpen())return;
+    if(!el('taskInfoOverlay').hidden){event.stopImmediatePropagation();closeTaskInfo();}
+  },true);
   let returningToGame = false;
   function restoreTelegramNavigation() {
     try {
@@ -6686,6 +6948,7 @@ img[src$="/xp.webp"]{
   }
   function returnToGame() {
     if (window.ZefirokPageGuide?.closeIfOpen()) return;
+    if (!el('taskInfoOverlay').hidden) { closeTaskInfo(); return; }
     if (returningToGame) return;
     passSelectHaptic();
     returningToGame = true;
@@ -6758,8 +7021,8 @@ img[src$="/xp.webp"]{
   el("accessRetry").addEventListener("click",()=>{ passImpactHaptic("light"); void boot(); });
   window.setInterval(()=>{ if (serverPass) updateSeasonBadges(); },30000);
   // One lightweight local ticker; no state fetch and no full page re-render.
-  window.setInterval(()=>{if(serverPass&&!document.hidden)updatePassCountdown();},1000);
-  document.addEventListener("visibilitychange",()=>{if(!document.hidden)updatePassCountdown();});
+  window.setInterval(()=>{if(serverPass&&!document.hidden){updatePassCountdown();updateTaskTimes();}},1000);
+  document.addEventListener("visibilitychange",()=>{if(!document.hidden){updatePassCountdown();updateSeasonBadges();updateTaskTimes();}});
   window.addEventListener("focus",updatePassCountdown);
   window.addEventListener("pageshow",updatePassCountdown);
   window.addEventListener("pageshow",(event)=>{
@@ -7554,7 +7817,7 @@ function createTutorialDeck(layer, mount, options, words) {
 }
 
 const ZGT_WORDS={"close":"Закрыть обучение","pull":"Потяни вниз, чтобы закрыть","topics":"Темы","steps":"Шаги обучения","back":"Назад","next":"Дальше","example":"Пример","tap":"Тап по игровому полю","step":"Шаг","of":"из","done":"Понятно","directory":"Гиды по игре","directoryCopy":"Выбери нужную тему. Все примеры учебные: они не запускают покупки и не выдают награды.","empty":"Сейчас этот гид недоступен. Закрой окно и открой его снова.","allGuides":"Все игровые гиды","helpLabel":"Как работает этот раздел","finishMain":"В игру","finishStock":"Открыть склад","finishRating":"Открыть рейтинг","finishFriends":"Открыть подарки","profileXpText":"За зачтённый забег — +{run} XP, за подходящую успешную покупку — +{purchase} XP. Нажми на уровень или звание, чтобы открыть лестницу уровней и награды."};
-const ZGT_PAGE_TOPIC={"id":"season","title":"Сезонный пропуск","summary":"Задания, тарифы, история и 50+","icon":"/assets/ui/icon_battlepass.webp","steps":[{"title":"У сезона свой прогресс","text":"В пропуске есть дорожка наград и задания. XP сезона открывает уровни, но не заменяет XP профиля. Сроки и доступность текущего сезона указаны на его странице.","tip":"Достигнутый уровень и полученная награда — разные состояния. Проверь доступные кнопки получения на дорожке.","scene":{"kind":"progress","title":"Дорожка сезона","items":[{"title":"XP сезона","subtitle":"Открывает уровни","value":58},{"title":"Уровень","subtitle":"Доступ к награде"},{"title":"Получение","subtitle":"Подтверждённая выдача"}]}},{"title":"Выполнил задание — забери его XP","text":"Ежедневные и недельные задания показывают условие и прогресс. После выполнения получи XP задания: это двигает дорожку сезонного пропуска.","tip":"Открытые награды дорожки забираются отдельно. Статусы заданий и наград подтверждает сервер.","scene":{"kind":"route","title":"Два отдельных действия","items":[{"title":"Задание","subtitle":"Выполнить условие"},{"title":"Забрать XP","subtitle":"Продвинуть уровень"},{"title":"Награда уровня","subtitle":"Получить отдельно"}]}},{"title":"Тариф открывает свою дорожку","text":"«Элитный» и «Элитный+» дают сезонные права и бонусы, указанные в карточках тарифов. «Элитный+» также включает сезонный ×2 XP.","tip":"Перед покупкой изучи актуальную цену, срок и состав. Просмотр обучения и карточки тарифа ничего не покупает.","scene":{"kind":"cards","title":"Дорожки пропуска","items":[{"title":"Бесплатная","subtitle":"Базовые награды","image":"/assets/ui/icon_battlepass.webp"},{"title":"Элитный","subtitle":"Дополнительные права","image":"/assets/ui/icon_o_profile.webp"},{"title":"Элитный+","subtitle":"Включая ×2 XP","image":"/assets/season-pass/xp_x2.webp"}]}},{"title":"Кейсы и сюжет находятся в сезоне","text":"Тематические кейсы открываются в сезонном разделе кейсов. Главы истории и письма становятся доступны по правилам текущего сезона; прочитанное можно посмотреть в доступном архиве.","tip":"Сезонный кейс и кейс на общем складе — разные запасы. Шансы и набор наград проверяй для нужного кейса.","scene":{"kind":"cards","title":"Сезонные разделы","items":[{"title":"Кейсы","subtitle":"Тематический запас","image":"/assets/ui/icone_cases.webp"},{"title":"Сюжет","subtitle":"Главы приключения","image":"/assets/ui/icon_albom.webp"},{"title":"Письмо","subtitle":"Новости сезона","image":"/assets/ui/icone_reward.webp"}]}},{"title":"Максимальный уровень — не всегда финал","text":"После открытия последнего уровня нужно заполнить его шкалу XP, чтобы завершить финал. Дальнейшие награды 50+ доступны по правилам бесконечной дорожки.","tip":"Догоняющий бонус действует только при выполнении его условий и не складывается с ×2 от «Элитного+». Смотри активную подсказку сезона.","scene":{"kind":"route","title":"От уровня к финалу","items":[{"title":"Последний уровень","subtitle":"Открыт"},{"title":"Заполнить шкалу","subtitle":"Завершить финал"},{"title":"50+","subtitle":"Дальнейшая дорожка"}]}}]};
+const ZGT_PAGE_TOPIC={"id":"season","title":"Сезонный пропуск","summary":"Задания, тарифы, история и 50+","icon":"/assets/ui/icon_battlepass.webp","steps":[{"title":"У сезона свой прогресс","text":"В пропуске есть дорожка наград и задания. XP сезона открывает уровни, но не заменяет XP профиля. Сроки и доступность текущего сезона указаны на его странице.","tip":"Достигнутый уровень и полученная награда — разные состояния. Проверь доступные кнопки получения на дорожке.","scene":{"kind":"progress","title":"Дорожка сезона","items":[{"title":"XP сезона","subtitle":"Открывает уровни","value":58},{"title":"Уровень","subtitle":"Доступ к награде"},{"title":"Получение","subtitle":"Подтверждённая выдача"}]}},{"title":"Выполнил задание — забери его XP","text":"Готовые задания показаны первыми. Нажми на название для подробностей или забери XP. Кнопка «Забрать весь XP» охватывает оба периода. Полученные задания свёрнуты внизу списка.","tip":"Открытые награды дорожки забираются отдельно. Статусы заданий и наград подтверждает сервер.","scene":{"kind":"route","title":"Два отдельных действия","items":[{"title":"Задание","subtitle":"Выполнить условие"},{"title":"Забрать XP","subtitle":"Продвинуть уровень"},{"title":"Награда уровня","subtitle":"Получить отдельно"}]}},{"title":"Тариф открывает свою дорожку","text":"«Элитный» и «Элитный+» дают сезонные права и бонусы, указанные в карточках тарифов. «Элитный+» также включает сезонный ×2 XP.","tip":"Перед покупкой изучи актуальную цену, срок и состав. Просмотр обучения и карточки тарифа ничего не покупает.","scene":{"kind":"cards","title":"Дорожки пропуска","items":[{"title":"Бесплатная","subtitle":"Базовые награды","image":"/assets/ui/icon_battlepass.webp"},{"title":"Элитный","subtitle":"Дополнительные права","image":"/assets/ui/icon_o_profile.webp"},{"title":"Элитный+","subtitle":"Включая ×2 XP","image":"/assets/season-pass/xp_x2.webp"}]}},{"title":"Кейсы и сюжет находятся в сезоне","text":"Тематические кейсы открываются в сезонном разделе кейсов. Главы истории и письма становятся доступны по правилам текущего сезона; прочитанное можно посмотреть в доступном архиве.","tip":"Сезонный кейс и кейс на общем складе — разные запасы. Шансы и набор наград проверяй для нужного кейса.","scene":{"kind":"cards","title":"Сезонные разделы","items":[{"title":"Кейсы","subtitle":"Тематический запас","image":"/assets/ui/icone_cases.webp"},{"title":"Сюжет","subtitle":"Главы приключения","image":"/assets/ui/icon_albom.webp"},{"title":"Письмо","subtitle":"Новости сезона","image":"/assets/ui/icone_reward.webp"}]}},{"title":"Максимальный уровень — не всегда финал","text":"После открытия последнего уровня нужно заполнить его шкалу XP, чтобы завершить финал. Дальнейшие награды 50+ доступны по правилам бесконечной дорожки.","tip":"Догоняющий бонус действует только при выполнении его условий и не складывается с ×2 от «Элитного+». Смотри активную подсказку сезона.","scene":{"kind":"route","title":"От уровня к финалу","items":[{"title":"Последний уровень","subtitle":"Открыт"},{"title":"Заполнить шкалу","subtitle":"Завершить финал"},{"title":"50+","subtitle":"Дальнейшая дорожка"}]}}]};
 const ZGT_HOST_BACK=["zefirok-season-pass-back"];
 // Standalone page adapter. Reads only its local guide catalogue, not player data.
 const guideLayer = document.createElement('div');
