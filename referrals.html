@@ -225,7 +225,14 @@
     .network-actions .text-btn{font-size:11px}
     .sheet-overlay,.tutorial,.choice-overlay,.celebration-overlay{position:fixed;inset:0;z-index:30;display:flex;align-items:flex-end;justify-content:center;background:rgba(67,43,54,.38);padding:max(14px,env(safe-area-inset-top),var(--tg-content-safe-top)) 9px max(8px,env(safe-area-inset-bottom));overscroll-behavior:contain}
     .sheet,.tutorial-card,.choice-sheet,.celebration-card{position:relative;width:min(520px,100%);max-height:100%;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;background:var(--bg);border:1px solid #efdce3;border-radius:29px 29px 22px 22px;box-shadow:0 24px 70px rgba(66,36,48,.20);scrollbar-width:thin}
-    .sheet-handle{width:35px;height:4px;background:#dcc6cf;border-radius:3px;margin:9px auto 0}
+    .sheet-handle{position:relative;display:block;width:min(420px,calc(100% - 32px));height:44px;margin:0 auto -9px;padding:0;border:0;border-radius:16px;background:transparent;appearance:none;-webkit-appearance:none;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none}
+    .sheet-handle::before{content:"";position:absolute;top:13px;left:50%;width:35px;height:4px;transform:translateX(-50%);border-radius:3px;background:#dcc6cf;transition:width .16s ease,background .16s ease}
+    .sheet-handle:active::before,.sheet-handle.is-dragging::before{width:44px;background:#c193a6}
+    .sheet-handle.is-armed::before{width:49px;background:var(--pink)}
+    .sheet-header{touch-action:none;user-select:none;-webkit-user-select:none}
+    .sheet-swipe-dragging{overflow-y:hidden!important;user-select:none;-webkit-user-select:none;cursor:grabbing}
+    .sheet-swipe-dragging img{-webkit-user-drag:none}
+    .choice-sheet>.sheet-handle,.celebration-card>.sheet-handle,.tutorial-card>.sheet-handle{margin:-16px auto 5px}
     .sheet-header{position:sticky;top:0;z-index:2;display:flex;justify-content:space-between;align-items:center;gap:15px;padding:14px 18px 12px;background:var(--bg);border-bottom:1px solid #efe1e4}
     .sheet-header h2{font-size:21px;letter-spacing:-.6px;line-height:1.15}.sheet-header .icon-btn{flex:none;width:36px;height:36px;background:#fff}
     .sheet-content{padding:18px}.sheet-content> * + *{margin-top:16px}
@@ -313,16 +320,16 @@
   </main>
   <div class="sheet-overlay" data-sheet-layer hidden aria-hidden="true">
     <section class="sheet" role="dialog" aria-modal="true" aria-labelledby="ref-sheet-title">
-      <div class="sheet-handle" aria-hidden="true"></div>
+      <button class="sheet-handle" type="button" data-sheet-drag aria-label="Закрыть окно" title="Потяните вниз, чтобы закрыть"></button>
       <header class="sheet-header"><h2 id="ref-sheet-title" data-sheet-title></h2><button type="button" class="icon-btn" data-sheet-close aria-label="Закрыть"><svg class="icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button></header>
       <div class="sheet-content" data-sheet-body></div>
     </section>
   </div>
 
   <div class="toast" data-toast role="status" aria-live="polite" aria-atomic="true"></div>
-  <div class="tutorial" data-tutorial hidden aria-hidden="true"><div class="tutorial-card" role="dialog" aria-modal="true" aria-labelledby="ref-tutorial-title"><button class="tutorial-close" data-tutorial-close type="button">Закрыть</button><div data-tutorial-body></div></div></div>
-  <div class="choice-overlay" data-choice hidden aria-hidden="true"><div class="choice-sheet" role="dialog" aria-modal="true" aria-labelledby="ref-choice-title"><h2 id="ref-choice-title">Выбери большую награду</h2><p data-choice-copy>Выбери один подарок. После подтверждения изменить выбор нельзя.</p><div class="choice-options" data-choice-options></div><button class="choice-close" data-choice-close type="button">Закрыть</button></div></div>
-  <div class="celebration-overlay" data-celebration hidden aria-hidden="true"><div class="celebration-card" role="dialog" aria-modal="true" aria-labelledby="ref-celebration-title"><div class="celebration-kicker">Друзья кафе · подарок</div><div class="celebration-art" data-celebration-art></div><h2 id="ref-celebration-title" data-celebration-title>Подарок получен!</h2><p data-celebration-text></p><div class="celebration-actions" data-celebration-actions><button class="celebration-share" data-celebration-share type="button">Поделиться</button><button class="celebration-done" data-celebration-close type="button">Готово</button></div></div></div>
+  <div class="tutorial" data-tutorial hidden aria-hidden="true"><div class="tutorial-card" role="dialog" aria-modal="true" aria-labelledby="ref-tutorial-title"><button class="sheet-handle" type="button" data-sheet-drag aria-label="Закрыть окно" title="Потяните вниз, чтобы закрыть"></button><button class="tutorial-close" data-tutorial-close type="button">Закрыть</button><div data-tutorial-body></div></div></div>
+  <div class="choice-overlay" data-choice hidden aria-hidden="true"><div class="choice-sheet" role="dialog" aria-modal="true" aria-labelledby="ref-choice-title"><button class="sheet-handle" type="button" data-sheet-drag aria-label="Закрыть окно" title="Потяните вниз, чтобы закрыть"></button><h2 id="ref-choice-title">Выбери большую награду</h2><p data-choice-copy>Выбери один подарок. После подтверждения изменить выбор нельзя.</p><div class="choice-options" data-choice-options></div><button class="choice-close" data-choice-close type="button">Закрыть</button></div></div>
+  <div class="celebration-overlay" data-celebration hidden aria-hidden="true"><div class="celebration-card" role="dialog" aria-modal="true" aria-labelledby="ref-celebration-title"><button class="sheet-handle" type="button" data-sheet-drag aria-label="Закрыть окно" title="Потяните вниз, чтобы закрыть"></button><div class="celebration-kicker">Друзья кафе · подарок</div><div class="celebration-art" data-celebration-art></div><h2 id="ref-celebration-title" data-celebration-title>Подарок получен!</h2><p data-celebration-text></p><div class="celebration-actions" data-celebration-actions><button class="celebration-share" data-celebration-share type="button">Поделиться</button><button class="celebration-done" data-celebration-close type="button">Готово</button></div></div></div>
 <script>
 (() => {
   const BOT_USERNAME = "zefirok_obn_bot";
@@ -417,6 +424,8 @@
   const sheetLayer = document.querySelector('[data-sheet-layer]');
   const sheetBody = document.querySelector('[data-sheet-body]');
   const sheetTitle = document.querySelector('[data-sheet-title]');
+  const modalSwipeControllers = new Map();
+  let modalSwipeClickUntil = 0;
   const tabLabels = {overview:'Обзор',friends:'Друзья',gifts:'Подарки'};
   const n = (value, fallback=0) => Number.isFinite(Number(value)) ? Number(value) : fallback;
   const whole = value => Math.max(0,Math.floor(n(value)));
@@ -750,6 +759,7 @@
   }
   function openSheet(type,extra={}){
     if(!state)return;
+    resetModalSwipe(sheetLayer);
     if(!ui.sheet){modalReturnFocus=document.activeElement;sheetScroll=0;}
     ui.sheet={type,...extra};
     renderSheet();lockPageScroll();sheetLayer.hidden=false;sheetLayer.setAttribute('aria-hidden','false');
@@ -757,6 +767,7 @@
     sheetLayer.querySelector('[data-sheet-close]')?.focus({preventScroll:true});haptic();
   }
   function closeSheet(restoreFocus=true){
+    resetModalSwipe(sheetLayer);
     if(!sheetLayer||sheetLayer.hidden)return;
     sheetLayer.hidden=true;sheetLayer.setAttribute('aria-hidden','true');ui.sheet=null;
     sheetBody.replaceChildren();unlockPageScroll();
@@ -766,6 +777,173 @@
   function activeModal(){
     return [celebrationLayer,choiceLayer,tutorialLayer,sheetLayer].find(layer=>layer&&!layer.hidden)||null;
   }
+  function resetModalSwipe(layer){modalSwipeControllers.get(layer)?.reset();}
+
+  // Same interaction as rating mini-profiles: drag the grip/header at any scroll
+  // position, or pull non-interactive content down only when it starts at the top.
+  // This controller changes presentation only; dismiss uses the existing lifecycle.
+  function bindModalSwipe(layer,selector,dismiss){
+    const panel=layer?.querySelector(selector),handle=panel?.querySelector('[data-sheet-drag]');
+    if(!panel||!handle)return null;
+    const easing='cubic-bezier(.32,.72,0,1)';
+    let gesture=null,frame=0,timer=0,serial=0,closing=false,animations=[];
+    const visible=()=>!layer.hidden&&activeModal()===layer;
+    const transform=y=>`translate3d(0,${Math.round(y)}px,0)`;
+    const backdrop=progress=>`rgba(67,43,54,${(.38*(1-progress)).toFixed(4)})`;
+    const progress=(offset,height)=>Math.min(.46,Math.max(0,offset/Math.max(180,height)*1.22));
+    // Unlike the rating profile, some of these sheets are very short.
+    const threshold=height=>Math.max(100,Math.min(330,height*.50));
+    const touchById=(list,id)=>Array.from(list||[]).find(touch=>touch.identifier===id);
+    const dragArea=target=>target instanceof Element&&!!target.closest('[data-sheet-drag],.sheet-header');
+    const interactive=target=>target instanceof Element&&!target.closest('[data-sheet-drag]')&&!!target.closest('button,a,input,textarea,select,summary,[role="button"],[contenteditable]:not([contenteditable="false"])');
+    function nestedScroller(target){
+      for(let node=target instanceof Element?target:null;node&&node!==panel;node=node.parentElement){
+        const css=getComputedStyle(node);
+        if(/auto|scroll/.test(css.overflowY)&&node.scrollHeight>node.clientHeight+2)return true;
+        if(/auto|scroll/.test(css.overflowX)&&node.scrollWidth>node.clientWidth+2)return true;
+      }
+      return false;
+    }
+    function stopMotion(){
+      ++serial;clearTimeout(timer);timer=0;
+      cancelAnimationFrame(frame);frame=0;
+      for(const animation of animations)try{animation.cancel();}catch{}
+      animations=[];
+    }
+    function releaseGesture(){
+      const previous=gesture;gesture=null;
+      if(previous?.kind==='pointer')try{panel.releasePointerCapture(previous.id);}catch{}
+      panel.classList.remove('sheet-swipe-dragging');
+      handle.classList.remove('is-dragging','is-armed');
+    }
+    function reset(){
+      stopMotion();releaseGesture();closing=false;
+      layer.classList.remove('sheet-swipe-closing');
+      panel.style.transform='';panel.style.transition='';panel.style.willChange='';
+      layer.style.backgroundColor='';layer.style.transition='';layer.style.willChange='';
+    }
+    function paint(offset,height){
+      panel.style.transform=transform(offset);
+      layer.style.backgroundColor=backdrop(progress(offset,height));
+    }
+    function animateRelease(offset,height,shouldClose,velocity=0){
+      stopMotion();closing=shouldClose;
+      if(shouldClose)layer.classList.add('sheet-swipe-closing');
+      const token=serial;
+      const reduced=window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches===true;
+      const duration=reduced?0:shouldClose?Math.round(Math.max(260,360-Math.min(70,velocity*50))):290;
+      const end=shouldClose?Math.max(height+44,layer.clientHeight-panel.offsetTop+44,offset+height*.82):0;
+      const from=transform(offset),to=transform(end),shade=backdrop(progress(offset,height)),endShade=backdrop(shouldClose?1:0);
+      const done=()=>{
+        if(token!==serial)return;
+        const canDismiss=shouldClose&&visible();
+        reset();
+        if(canDismiss)dismiss();
+      };
+      if(!duration){done();return;}
+      panel.style.willChange='transform';layer.style.willChange='background-color';
+      paint(offset,height);
+      if(typeof panel.animate==='function'&&typeof layer.animate==='function'){
+        try{
+          animations.push(panel.animate([{transform:from},{transform:to}],{duration,easing,fill:'forwards'}));
+          animations.push(layer.animate([{backgroundColor:shade},{backgroundColor:endShade}],{duration,easing,fill:'forwards'}));
+        }catch{
+          for(const animation of animations)try{animation.cancel();}catch{}
+          animations=[];
+        }
+      }
+      if(!animations.length){
+        // CSS fallback for WebViews without Web Animations.
+        panel.style.transition=`transform ${duration}ms ${easing}`;
+        layer.style.transition=`background-color ${duration}ms ${easing}`;
+        void panel.offsetHeight;
+        panel.style.transform=to;layer.style.backgroundColor=endShade;
+      }
+      timer=setTimeout(done,duration+34);
+    }
+    function begin(kind,id,x,y,target){
+      if(!visible()||closing||gesture||interactive(target))return false;
+      const fromHeader=dragArea(target);
+      if(!fromHeader&&((panel.scrollTop||0)>2||nestedScroller(target)))return false;
+      reset();
+      gesture={kind,id,x,y,lastY:y,lastAt:performance.now(),velocity:0,delta:0,offset:0,height:Math.max(180,panel.offsetHeight),fromHeader,dragging:false,armed:false};
+      return true;
+    }
+    function move(x,y,event){
+      const g=gesture;if(!g||!visible()||closing)return;
+      const dy=y-g.y,dx=x-g.x;
+      if(!g.dragging){
+        const downward=dy>0&&Math.abs(dx)<=Math.max(5,dy*.9);
+        if(!downward||(!g.fromHeader&&(panel.scrollTop||0)>2)){
+          if(Math.max(Math.abs(dx),Math.abs(dy))>=9)releaseGesture();
+          return;
+        }
+        // Prevent the first downward move, before iOS starts rubber-band scrolling.
+        if(!event.cancelable){releaseGesture();return;}
+        event.preventDefault();
+        if(dy<3)return;
+        g.dragging=true;
+        panel.classList.add('sheet-swipe-dragging');handle.classList.add('is-dragging');
+        panel.style.transition='none';layer.style.transition='none';
+        panel.style.willChange='transform';layer.style.willChange='background-color';
+      }
+      if(event.cancelable)event.preventDefault();
+      const now=performance.now();
+      g.velocity=(y-g.lastY)/Math.max(1,now-g.lastAt);g.lastAt=now;g.lastY=y;
+      g.delta=Math.max(0,dy);g.offset=Math.min(g.height*.90,g.delta*.98);
+      const limit=threshold(g.height);
+      if(!g.armed&&g.delta>=limit){g.armed=true;handle.classList.add('is-armed');haptic('light');}
+      else if(g.armed&&g.delta<limit*.88){g.armed=false;handle.classList.remove('is-armed');}
+      if(!frame)frame=requestAnimationFrame(()=>{frame=0;if(gesture===g&&visible())paint(g.offset,g.height);});
+    }
+    function finish(cancelled=false){
+      const g=gesture;if(!g)return;
+      cancelAnimationFrame(frame);frame=0;
+      releaseGesture();
+      if(!g.dragging)return;
+      modalSwipeClickUntil=performance.now()+450;
+      const limit=threshold(g.height);
+      // A held finger is not a flick. Cancel/lost capture never commits a close.
+      const velocity=performance.now()-g.lastAt<100?Math.max(0,g.velocity):0;
+      const shouldClose=!cancelled&&visible()&&(g.delta>=limit||(g.delta>=Math.max(60,limit*.55)&&velocity>1.0));
+      animateRelease(g.offset,g.height,shouldClose,velocity);
+    }
+    panel.addEventListener('pointerdown',event=>{
+      // Touch has its own non-passive path so content keeps native scrolling.
+      if(event.pointerType==='touch'||event.button!==0||event.isPrimary===false||!dragArea(event.target))return;
+      if(begin('pointer',event.pointerId,event.clientX,event.clientY,event.target)){
+        event.preventDefault();try{panel.setPointerCapture(event.pointerId);}catch{}
+      }
+    });
+    panel.addEventListener('pointermove',event=>{if(gesture?.kind==='pointer'&&gesture.id===event.pointerId)move(event.clientX,event.clientY,event);});
+    panel.addEventListener('pointerup',event=>{if(gesture?.kind==='pointer'&&gesture.id===event.pointerId)finish();});
+    for(const name of ['pointercancel','lostpointercapture'])panel.addEventListener(name,event=>{if(gesture?.kind==='pointer'&&gesture.id===event.pointerId)finish(true);});
+    panel.addEventListener('touchstart',event=>{
+      if(event.touches.length!==1){finish(true);return;}
+      const touch=event.touches[0];
+      begin('touch',touch.identifier,touch.clientX,touch.clientY,event.target);
+    },{passive:true});
+    panel.addEventListener('touchmove',event=>{
+      if(gesture?.kind!=='touch')return;
+      if(event.touches.length!==1){finish(true);return;}
+      const touch=touchById(event.touches,gesture.id);
+      if(touch)move(touch.clientX,touch.clientY,event);
+    },{passive:false});
+    panel.addEventListener('touchend',event=>{
+      if(gesture?.kind!=='touch'||!touchById(event.changedTouches,gesture.id))return;
+      if(gesture.dragging&&event.cancelable)event.preventDefault();
+      finish();
+    },{passive:false});
+    panel.addEventListener('touchcancel',()=>{if(gesture?.kind==='touch')finish(true);},{passive:true});
+    // A tap/tiny touch movement on the grip is not a close gesture.
+    // Keep keyboard and assistive-technology activation as an accessible alternative.
+    handle.addEventListener('click',event=>{event.preventDefault();event.stopPropagation();if(event.detail===0&&visible()&&!closing)dismiss();});
+    panel.addEventListener('dragstart',event=>{if(gesture)event.preventDefault();});
+    window.addEventListener('blur',()=>{if(gesture)finish(true);});
+    document.addEventListener('visibilitychange',()=>{if(document.hidden&&gesture)finish(true);});
+    return {reset};
+  }
+
   function rewardContext(row){
     const sourceKey=String(row?.sourceKey||'');
     if(sourceKey.startsWith('friend_gift:'))return 'Бесплатный подарок от пригласившего друга';
@@ -794,14 +972,14 @@
   }
   function markTutorialSeen(){try{localStorage.setItem(TUTORIAL_KEY,'1');}catch{}try{sessionStorage.setItem(TUTORIAL_KEY,'1');}catch{}try{document.cookie=`${TUTORIAL_KEY}=1; Max-Age=31536000; Path=/; SameSite=Lax`;}catch{}}
   function tutorialWasSeen(){try{if(localStorage.getItem(TUTORIAL_KEY)==='1')return true;}catch{}try{if(sessionStorage.getItem(TUTORIAL_KEY)==='1')return true;}catch{}try{if(document.cookie.split(';').some(row=>row.trim()===`${TUTORIAL_KEY}=1`))return true;}catch{}return false;}
-  function openTutorial(automatic=false){if(!tutorialLayer||!state)return;if(choiceLayer&&!choiceLayer.hidden)closeChoice();if(automatic)markTutorialSeen();tutorialStep=0;renderTutorial();lockPageScroll();tutorialLayer.hidden=false;tutorialLayer.setAttribute('aria-hidden','false');tutorialLayer.querySelector('[data-tutorial-close]')?.focus({preventScroll:true});if(!automatic)haptic();}
-  function closeTutorial(markSeen=true){if(!tutorialLayer)return;tutorialLayer.hidden=true;tutorialLayer.setAttribute('aria-hidden','true');unlockPageScroll();if(markSeen)markTutorialSeen();document.getElementById(`ref-tab-${ui.tab}`)?.focus({preventScroll:true});}
+  function openTutorial(automatic=false){if(!tutorialLayer||!state)return;resetModalSwipe(tutorialLayer);if(choiceLayer&&!choiceLayer.hidden)closeChoice();if(automatic)markTutorialSeen();tutorialStep=0;renderTutorial();lockPageScroll();tutorialLayer.hidden=false;tutorialLayer.setAttribute('aria-hidden','false');tutorialLayer.querySelector('[data-tutorial-close]')?.focus({preventScroll:true});if(!automatic)haptic();}
+  function closeTutorial(markSeen=true){if(!tutorialLayer)return;resetModalSwipe(tutorialLayer);tutorialLayer.hidden=true;tutorialLayer.setAttribute('aria-hidden','true');unlockPageScroll();if(markSeen)markTutorialSeen();document.getElementById(`ref-tab-${ui.tab}`)?.focus({preventScroll:true});}
 
-  function openChoice(threshold){const item=(state?.networkMilestones||[]).find(row=>Number(row.threshold)===Number(threshold));if(!item?.choice?.pending||!choiceLayer||!choiceOptionsEl)return;activeChoiceThreshold=Number(item.threshold);choiceOptionsEl.innerHTML=(item.choice.options||[]).map((reward,index)=>`<button class="choice-option" type="button" data-choice-select="${index}">${rewardImageMarkup(reward)}<strong>${esc(item.choice.optionLabels?.[index]||'Награда')}</strong></button>`).join('');document.querySelector('[data-choice-copy]').textContent=`Веха «${item.title}». Выбери один подарок из ${item.choice.options.length}. После подтверждения изменить выбор нельзя.`;lockPageScroll();choiceLayer.hidden=false;choiceLayer.setAttribute('aria-hidden','false');choiceLayer.querySelector('[data-choice-close]')?.focus({preventScroll:true});haptic();}
-  function closeChoice(){if(!choiceLayer)return;choiceLayer.hidden=true;choiceLayer.setAttribute('aria-hidden','true');activeChoiceThreshold=0;unlockPageScroll();document.getElementById(`ref-tab-${ui.tab}`)?.focus({preventScroll:true});}
+  function openChoice(threshold){const item=(state?.networkMilestones||[]).find(row=>Number(row.threshold)===Number(threshold));if(!item?.choice?.pending||!choiceLayer||!choiceOptionsEl)return;resetModalSwipe(choiceLayer);activeChoiceThreshold=Number(item.threshold);choiceOptionsEl.innerHTML=(item.choice.options||[]).map((reward,index)=>`<button class="choice-option" type="button" data-choice-select="${index}">${rewardImageMarkup(reward)}<strong>${esc(item.choice.optionLabels?.[index]||'Награда')}</strong></button>`).join('');document.querySelector('[data-choice-copy]').textContent=`Веха «${item.title}». Выбери один подарок из ${item.choice.options.length}. После подтверждения изменить выбор нельзя.`;lockPageScroll();choiceLayer.hidden=false;choiceLayer.setAttribute('aria-hidden','false');choiceLayer.querySelector('[data-choice-close]')?.focus({preventScroll:true});haptic();}
+  function closeChoice(){if(!choiceLayer)return;resetModalSwipe(choiceLayer);choiceLayer.hidden=true;choiceLayer.setAttribute('aria-hidden','true');activeChoiceThreshold=0;unlockPageScroll();document.getElementById(`ref-tab-${ui.tab}`)?.focus({preventScroll:true});}
 
-  function openCelebration({title='Подарок получен!',text='',reward=null,threshold=0}={}){if(!celebrationLayer)return;closeSheet(false);celebrationThreshold=Math.max(0,Number(threshold||0));if(celebrationArt)celebrationArt.innerHTML=reward?rewardImageMarkup(reward):rewardImageMarkup({kind:'none'});if(celebrationTitle)celebrationTitle.textContent=String(title||'Подарок получен!');if(celebrationText)celebrationText.textContent=String(text||'');if(celebrationActions)celebrationActions.classList.toggle('single',!celebrationThreshold);const shareButton=celebrationLayer.querySelector('[data-celebration-share]');if(shareButton)shareButton.hidden=!celebrationThreshold;lockPageScroll();celebrationLayer.hidden=false;celebrationLayer.setAttribute('aria-hidden','false');celebrationLayer.querySelector('[data-celebration-close]')?.focus({preventScroll:true});haptic('medium');}
-  function closeCelebration(){if(!celebrationLayer)return;celebrationLayer.hidden=true;celebrationLayer.setAttribute('aria-hidden','true');celebrationThreshold=0;unlockPageScroll();document.getElementById(`ref-tab-${ui.tab}`)?.focus({preventScroll:true});}
+  function openCelebration({title='Подарок получен!',text='',reward=null,threshold=0}={}){if(!celebrationLayer)return;resetModalSwipe(celebrationLayer);closeSheet(false);celebrationThreshold=Math.max(0,Number(threshold||0));if(celebrationArt)celebrationArt.innerHTML=reward?rewardImageMarkup(reward):rewardImageMarkup({kind:'none'});if(celebrationTitle)celebrationTitle.textContent=String(title||'Подарок получен!');if(celebrationText)celebrationText.textContent=String(text||'');if(celebrationActions)celebrationActions.classList.toggle('single',!celebrationThreshold);const shareButton=celebrationLayer.querySelector('[data-celebration-share]');if(shareButton)shareButton.hidden=!celebrationThreshold;lockPageScroll();celebrationLayer.hidden=false;celebrationLayer.setAttribute('aria-hidden','false');celebrationLayer.querySelector('[data-celebration-close]')?.focus({preventScroll:true});haptic('medium');}
+  function closeCelebration(){if(!celebrationLayer)return;resetModalSwipe(celebrationLayer);celebrationLayer.hidden=true;celebrationLayer.setAttribute('aria-hidden','true');celebrationThreshold=0;unlockPageScroll();document.getElementById(`ref-tab-${ui.tab}`)?.focus({preventScroll:true});}
 
   // Keep the existing routes, request bodies, and server-authoritative claim flow.
   function notifyAccount(){try{window.parent.postMessage({type:'zefirok-referrals-account-updated'},'*');}catch{}}
@@ -1030,6 +1208,25 @@
       if(contentTop||safeTop)setTelegramContentSafeTop(contentTop||safeTop,contentTop?'content':'safe');
     }catch{}
   });
+  // Bind once to the persistent shells, never to re-rendered reward/friend rows.
+  for(const [layer,selector,dismiss] of [
+    [sheetLayer,'.sheet',()=>closeSheet()],
+    [tutorialLayer,'.tutorial-card',()=>closeTutorial(true)],
+    [choiceLayer,'.choice-sheet',()=>closeChoice()],
+    [celebrationLayer,'.celebration-card',()=>closeCelebration()]
+  ]){
+    const controller=bindModalSwipe(layer,selector,dismiss);
+    if(controller)modalSwipeControllers.set(layer,controller);
+  }
+  document.addEventListener('click',event=>{
+    // A drag must never turn into a click on a reward or on the page underneath.
+    if((event.detail!==0&&performance.now()<modalSwipeClickUntil)||activeModal()?.classList.contains('sheet-swipe-closing')){
+      event.preventDefault();event.stopImmediatePropagation();
+    }
+  },true);
+  const allowNewModalTap=()=>{modalSwipeClickUntil=0;};
+  document.addEventListener('pointerdown',allowNewModalTap,true);
+  document.addEventListener('touchstart',allowNewModalTap,{capture:true,passive:true});
   load();
 
 })();
