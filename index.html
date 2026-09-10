@@ -15139,16 +15139,16 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         mythic: &quot;/assets/cases/effects/effect_mifick.webp&quot;,
         legendary: &quot;/assets/cases/effects/legendary_effect.webp&quot;
       });
-      for (const src of Object.values(CASE_REWARD_EFFECTS)) {
-        const image = new Image();
-        image.decoding = &quot;async&quot;;
-        image.src = src;
-      }
       let caseStateLoading = false;
       let caseStateLastSyncAt = 0;
       const CASE_STATE_CLIENT_CACHE_MS = 8000;
       let caseRouletteBusy = false;
       let caseOpeningRetryContext = null;
+      let caseExperienceSequenceId = 0;
+      let caseExperienceTimers = [];
+      let caseExperiencePendingOpened = null;
+      let caseExperienceCanSkipAt = 0;
+      let caseExperienceRevealStarted = false;
       // =============================================================
       // НАСТРОЙКИ ПРОФИЛЯ, XP И УРОВНЕЙ.
       // Эти значения можно менять самостоятельно прямо в коде.
@@ -19105,77 +19105,350 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       async function openLevelCaseClient(level, button) {
         const normalizedLevel = Math.floor(Number(level || 0));
         const levelCase = LEVEL_CASE_SCHEDULE.find((entry) =&gt; entry.level === normalizedLevel);
-        const retryType = String(levelCase?.caseType || &quot;small&quot;);
-        caseOpeningRetryContext = { kind: &quot;level&quot;, level: normalizedLevel, caseType: retryType };
+        const retryType = caseExperienceNormalizeType(levelCase?.caseType || &quot;small&quot;);
+        caseOpeningRetryContext = {
+          kind: &quot;level&quot;,
+          level: normalizedLevel,
+          caseType: retryType,
+          startedAt: Date.now(),
+          baselineRecentKeys: [...caseExperienceRecentKeys()]
+        };
         if (button) { button.disabled = true; button.textContent = &quot;Открываем…&quot;; }
-        if (levelCase) showCaseOpeningPreview(retryType);
+        showCaseOpeningPreview(retryType);
         try {
           const data = await caseApiRequest(CASE_API_OPEN_PATH, { level: normalizedLevel }, CASE_OPEN_REQUEST_TIMEOUT_MS);
           const rewards = Array.isArray(data.opened?.rewards) ? data.opened.rewards : [];
           applyServerCasePayload(data, rewards);
           showCaseResult(data.opened);
-          playGameSound(&quot;purchaseReward&quot;);
-          hapticNotify(&quot;success&quot;);
         } catch (error) {
           caseRouletteBusy = false;
+          console.warn(&quot;Case opening request failed&quot;, { kind:&quot;level&quot;, level:normalizedLevel, status:Number(error?.status||0), code:String(error?.code||&quot;&quot;) });
           if (isCasesTemporarilyUnavailableError(error)) {
             hapticNotify(&quot;error&quot;);
             showCasesUnavailableState(retryType, error);
             if (button?.isConnected) { button.disabled = false; button.textContent = &quot;Открыть&quot;; }
             return;
           }
-          // A level is the server-side idempotency key. If the response was lost,
-          // refresh authoritative state before offering the same opening again.
-          await loadCaseState(true, true);
-          const recoveredOpen = normalizeCaseNumberList(state.caseOpenedLevels).includes(normalizedLevel);
-          if (recoveredOpen) {
-            hapticNotify(&quot;success&quot;);
-            showCaseRecoveredState(retryType);
+          showCaseRecoveryCheckingState(retryType, &quot;Проверяем, успел ли сервер завершить открытие…&quot;);
+          const synced = await loadCaseState(true, true);
+          const recovered = synced ? caseExperienceFindRecoveredOpening(caseOpeningRetryContext) : null;
+          if (recovered) {
+            showCaseResult(recovered, { recovered:true });
           } else {
-            hapticNotify(&quot;error&quot;);
-            showCaseOpenErrorState(retryType, error, true);
-            if (button?.isConnected) { button.disabled = false; button.textContent = &quot;Открыть&quot;; }
+            const openedOnServer = normalizeCaseNumberList(state.caseOpenedLevels).includes(normalizedLevel);
+            if (openedOnServer) {
+              showCaseRecoveryPendingState(retryType, &quot;Кейс уже открыт. Получаем точную награду с сервера…&quot;);
+            } else {
+              hapticNotify(&quot;error&quot;);
+              showCaseOpenErrorState(retryType, error, true);
+              if (button?.isConnected) { button.disabled = false; button.textContent = &quot;Открыть&quot;; }
+            }
           }
         } finally { renderCaseHub(); }
       }
 
-      function showCaseOpeningPreview(caseType) {
-        if (!caseLayer || !caseContentEl) return;
-        const type = Object.prototype.hasOwnProperty.call(CASE_IMAGE_CATALOG, String(caseType || &quot;&quot;)) ? String(caseType) : &quot;small&quot;;
-        const title = type === &quot;legendary&quot; ? &quot;Легендарный кейс&quot; : type === &quot;mythic&quot; ? &quot;Мифический кейс&quot; : type === &quot;gold&quot; ? &quot;Золотой кейс&quot; : type === &quot;sweet&quot; ? &quot;Серебряный кейс&quot; : type === &quot;alex&quot; ? &quot;Кейс Алекса&quot; : &quot;Обычный кейс&quot;;
-        const pool = caseRoulettePool(type);
-        const safePool = pool.length ? pool : [
-          { src: caseResourceImage(&quot;points&quot;), title: &quot;Очки&quot;, badge: &quot;&quot;, kind: &quot;resource&quot; },
-          { src: caseResourceImage(&quot;treats&quot;), title: &quot;Зефир&quot;, badge: &quot;&quot;, kind: &quot;resource&quot; },
-          { src: caseResourceImage(&quot;coffee&quot;), title: &quot;Кофе&quot;, badge: &quot;&quot;, kind: &quot;resource&quot; }
-        ];
-        const sequence = Array.from({ length: 22 }, (_, index) =&gt; safePool[(index * 5 + Math.floor(index / 4)) % safePool.length]).filter(Boolean);
-        const cards = sequence.map((view) =&gt; caseRouletteCard(view, false, true)).join(&quot;&quot;);
-        caseRouletteBusy = true;
-        caseLayer.classList.remove(&quot;is-info-view&quot;);
-        caseLayer.classList.add(&quot;is-opening-busy&quot;);
-        caseContentEl.innerHTML = `&lt;div class=&quot;case-opening-screen&quot;&gt;
-          &lt;div class=&quot;case-opening-kicker&quot;&gt;&lt;i aria-hidden=&quot;true&quot;&gt;✦&lt;/i&gt;&lt;span&gt;ОТКРЫТИЕ КЕЙСА&lt;/span&gt;&lt;/div&gt;
-          &lt;div class=&quot;case-result-head is-opening is-preflight&quot;&gt;
-            ${caseImageMarkup(type, false, &quot;case-chest-image--roulette&quot;)}
-            &lt;h2 id=&quot;case-dialog-title&quot;&gt;Открываем ${escapePurchaseText(title)}&lt;/h2&gt;
-            &lt;p&gt;Определяем твою награду…&lt;/p&gt;
-          &lt;/div&gt;
-          &lt;div class=&quot;case-opening-roulette-label&quot;&gt;&lt;span&gt;Возможные награды&lt;/span&gt;&lt;small&gt;Результат определяет сервер&lt;/small&gt;&lt;/div&gt;
-          &lt;div class=&quot;case-roulette-list is-preflight&quot;&gt;&lt;div class=&quot;case-roulette-row is-spinning&quot; data-case-preflight-row&gt;&lt;div class=&quot;case-roulette-window&quot;&gt;&lt;div class=&quot;case-roulette-pointer&quot; aria-hidden=&quot;true&quot;&gt;&lt;/div&gt;&lt;div class=&quot;case-roulette-track&quot; data-case-preflight-track&gt;${cards}&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;
-          &lt;div class=&quot;case-opening-safe-note&quot;&gt;&lt;span class=&quot;case-safe-icon&quot; aria-hidden=&quot;true&quot;&gt;&lt;/span&gt;&lt;span&gt;&lt;strong&gt;Награда защищена&lt;/strong&gt;&lt;small&gt;Если связь прервётся, мы продолжим эту же попытку.&lt;/small&gt;&lt;/span&gt;&lt;/div&gt;
+      function caseExperienceNormalizeType(caseType) {
+        const type = String(caseType || &quot;small&quot;);
+        return Object.prototype.hasOwnProperty.call(CASE_IMAGE_CATALOG, type) ? type : &quot;small&quot;;
+      }
+
+      function caseExperienceCaseTitle(caseType) {
+        const type = caseExperienceNormalizeType(caseType);
+        return ({
+          small:&quot;Обычный кейс&quot;,
+          sweet:&quot;Серебряный кейс&quot;,
+          gold:&quot;Золотой кейс&quot;,
+          mythic:&quot;Мифический кейс&quot;,
+          legendary:&quot;Легендарный кейс&quot;,
+          alex:&quot;Кейс Алекса&quot;
+        })[type] || &quot;Кейс&quot;;
+      }
+
+      function caseExperienceTheme(caseType) {
+        const type = caseExperienceNormalizeType(caseType);
+        const themes = {
+          small: { duration:1500, impactAt:880, impact:&quot;light&quot;, kicker:&quot;ОБЫЧНЫЙ КЕЙС&quot;, copy:&quot;Небольшая удача уже внутри&quot; },
+          sweet: { duration:1850, impactAt:1080, impact:&quot;light&quot;, kicker:&quot;СЕРЕБРЯНЫЙ КЕЙС&quot;, copy:&quot;Серебряное сияние становится ярче&quot; },
+          gold: { duration:2250, impactAt:1320, impact:&quot;medium&quot;, kicker:&quot;ЗОЛОТОЙ КЕЙС&quot;, copy:&quot;Золотая печать раскрывается&quot; },
+          mythic: { duration:2700, impactAt:1660, impact:&quot;medium&quot;, kicker:&quot;МИФИЧЕСКИЙ КЕЙС&quot;, copy:&quot;Магия собирается вокруг кейса&quot; },
+          legendary: { duration:3150, impactAt:1980, impact:&quot;heavy&quot;, kicker:&quot;ЛЕГЕНДАРНЫЙ КЕЙС&quot;, copy:&quot;Редкий момент. Не спеши&quot; },
+          alex: { duration:2350, impactAt:1420, impact:&quot;medium&quot;, kicker:&quot;КЕЙС АЛЕКСА&quot;, copy:&quot;Кажется, внутри кто-то шевелится…&quot; }
+        };
+        return themes[type] || themes.small;
+      }
+
+      function caseExperienceClearTimers() {
+        for (const timer of caseExperienceTimers) window.clearTimeout(timer);
+        caseExperienceTimers = [];
+      }
+
+      function caseExperienceSchedule(callback, delay, sequenceId = caseExperienceSequenceId) {
+        const timer = window.setTimeout(() =&gt; {
+          caseExperienceTimers = caseExperienceTimers.filter((id) =&gt; id !== timer);
+          if (sequenceId !== caseExperienceSequenceId) return;
+          try { callback(); }
+          catch (error) {
+            console.error(&quot;Case Experience scheduled step failed&quot;, error);
+            if (caseExperiencePendingOpened) caseExperienceRenderFallbackReward(caseExperiencePendingOpened, error);
+          }
+        }, Math.max(0, Number(delay || 0)));
+        caseExperienceTimers.push(timer);
+        return timer;
+      }
+
+      function caseExperienceRecentKey(entry) {
+        return `${String(entry?.source || &quot;&quot;)}:${String(entry?.sourceId || &quot;&quot;)}:${String(entry?.caseType || &quot;&quot;)}`;
+      }
+
+      function caseExperienceRecentKeys() {
+        return new Set((Array.isArray(state.caseRecentOpenings) ? state.caseRecentOpenings : []).map(caseExperienceRecentKey));
+      }
+
+      function caseExperienceOpenedFromRecent(entry, context = null) {
+        if (!entry || !Array.isArray(entry.rewards) || !entry.rewards.length) return null;
+        const type = caseExperienceNormalizeType(entry.caseType || context?.caseType || &quot;small&quot;);
+        return {
+          source: String(entry.source || &quot;recovered&quot;),
+          sourceId: String(entry.sourceId || &quot;&quot;),
+          grantId: String(entry.source || &quot;&quot;) === &quot;granted&quot; ? String(entry.sourceId || &quot;&quot;) : &quot;&quot;,
+          level: context?.kind === &quot;level&quot; ? Math.floor(Number(context.level || entry.sourceId || 0)) : 0,
+          caseType: type,
+          title: entry.title || caseExperienceCaseTitle(type),
+          openedAt: Number(entry.openedAt || Date.now()),
+          rewards: entry.rewards,
+          recovered: true
+        };
+      }
+
+      function caseExperienceFindRecoveredOpening(context = caseOpeningRetryContext) {
+        if (!context || typeof context !== &quot;object&quot;) return null;
+        const rows = Array.isArray(state.caseRecentOpenings) ? state.caseRecentOpenings : [];
+        const type = caseExperienceNormalizeType(context.caseType || &quot;small&quot;);
+        if (context.kind === &quot;level&quot;) {
+          const level = String(Math.floor(Number(context.level || 0)));
+          const exact = rows.find((entry) =&gt; String(entry?.source || &quot;&quot;) === &quot;level&quot; &amp;&amp; String(entry?.sourceId || &quot;&quot;) === level);
+          return caseExperienceOpenedFromRecent(exact, context);
+        }
+        const baseline = new Set(Array.isArray(context.baselineRecentKeys) ? context.baselineRecentKeys : []);
+        const startedAt = Math.max(0, Number(context.startedAt || 0));
+        const candidate = rows.find((entry) =&gt; {
+          if (caseExperienceNormalizeType(entry?.caseType || &quot;small&quot;) !== type) return false;
+          if (String(entry?.source || &quot;&quot;) !== &quot;granted&quot;) return false;
+          if (baseline.has(caseExperienceRecentKey(entry))) return false;
+          const openedAt = Math.max(0, Number(entry?.openedAt || 0));
+          return !startedAt || !openedAt || openedAt &gt;= startedAt - 6000;
+        });
+        return caseExperienceOpenedFromRecent(candidate, context);
+      }
+
+      function caseExperienceRawRewardText(reward) {
+        const item = reward &amp;&amp; typeof reward === &quot;object&quot; ? reward : {};
+        const kind = String(item.kind || item.rewardType || &quot;&quot;);
+        const amount = Math.max(0, Number(item.amount || 0));
+        if (kind === &quot;points&quot;) return amount ? `${formatter.format(amount)} очков` : &quot;Очки&quot;;
+        if (kind === &quot;treats&quot;) return amount ? `${formatter.format(amount)} зефира` : &quot;Зефир&quot;;
+        if (kind === &quot;coffee&quot;) return amount ? `${formatter.format(amount)} кофе` : &quot;Кофе&quot;;
+        if (kind === &quot;booster&quot;) return CASE_BOOSTER_CATALOG[String(item.boosterType || &quot;&quot;)]?.title || &quot;Усилитель ×2&quot;;
+        if (kind === &quot;skin&quot;) return CASE_SKIN_CATALOG[String(item.id || &quot;&quot;)]?.title || item.title || &quot;Новый скин&quot;;
+        if (kind === &quot;avatar&quot;) return CASE_AVATAR_CATALOG[String(item.id || &quot;&quot;)]?.title || item.title || &quot;Новая аватарка&quot;;
+        if (kind === &quot;frame&quot;) return CASE_FRAME_CATALOG[String(item.id || &quot;&quot;)]?.title || item.title || &quot;Новая рамка&quot;;
+        if (kind === &quot;trail&quot;) return CASE_TRAIL_CATALOG[String(item.id || &quot;&quot;)]?.title || item.title || &quot;Новый след&quot;;
+        if (kind === &quot;music&quot;) return MUSIC_TRACK_CATALOG[String(item.id || &quot;&quot;)]?.title || item.title || &quot;Новая мелодия&quot;;
+        if (kind === &quot;physical&quot;) return item.productName || &quot;Физическая награда&quot;;
+        return item.title || &quot;Награда&quot;;
+      }
+
+      function caseExperienceRewardEmoji(reward) {
+        const kind = String(reward?.kind || reward?.rewardType || &quot;&quot;);
+        return ({points:&quot;★&quot;,treats:&quot;♡&quot;,coffee:&quot;☕&quot;,booster:&quot;⚡&quot;,skin:&quot;🐾&quot;,avatar:&quot;◉&quot;,frame:&quot;◇&quot;,trail:&quot;✦&quot;,music:&quot;♫&quot;,physical:&quot;🎁&quot;})[kind] || &quot;✦&quot;;
+      }
+
+      function caseExperienceRewardTier(reward, view) {
+        const tier = String(view?.rarityClass || &quot;common&quot;).toLowerCase();
+        if ([&quot;common&quot;,&quot;rare&quot;,&quot;superrare&quot;,&quot;epic&quot;,&quot;mythic&quot;,&quot;legendary&quot;].includes(tier)) return tier;
+        if (String(reward?.kind || &quot;&quot;) === &quot;physical&quot;) return &quot;legendary&quot;;
+        return &quot;common&quot;;
+      }
+
+      function caseExperienceRewardKicker(reward, view) {
+        if (reward?.duplicate) return &quot;КОМПЕНСАЦИЯ&quot;;
+        if (reward?.guaranteed) return &quot;ГАРАНТИРОВАННАЯ НАГРАДА&quot;;
+        if ([&quot;skin&quot;,&quot;avatar&quot;,&quot;frame&quot;,&quot;trail&quot;,&quot;music&quot;,&quot;physical&quot;].includes(String(reward?.kind || &quot;&quot;))) return &quot;НОВАЯ НАГРАДА&quot;;
+        if ([&quot;epic&quot;,&quot;mythic&quot;,&quot;legendary&quot;].includes(String(view?.rarityClass || &quot;&quot;))) return &quot;РЕДКАЯ НАГРАДА&quot;;
+        return &quot;НАГРАДА ПОЛУЧЕНА&quot;;
+      }
+
+      function caseExperienceRewardVisualMarkup(reward, view) {
+        const kind = String(reward?.kind || view?.kind || &quot;generic&quot;);
+        const src = escapePurchaseText(view?.src || caseFirstAsset(&quot;shopSparkles&quot;, &quot;shopHeart&quot;));
+        const img = `&lt;img src=&quot;${src}&quot; alt=&quot;&quot; decoding=&quot;async&quot; fetchpriority=&quot;high&quot;&gt;`;
+        if (kind === &quot;frame&quot;) {
+          return `&lt;div class=&quot;case-xp-reward-visual is-frame&quot;&gt;&lt;span class=&quot;case-xp-visual-aura&quot;&gt;&lt;/span&gt;&lt;div class=&quot;case-xp-frame-preview&quot;&gt;&lt;span class=&quot;case-xp-frame-avatar&quot; aria-hidden=&quot;true&quot;&gt;🐾&lt;/span&gt;${img}&lt;/div&gt;&lt;/div&gt;`;
+        }
+        if (kind === &quot;avatar&quot;) {
+          return `&lt;div class=&quot;case-xp-reward-visual is-avatar&quot;&gt;&lt;span class=&quot;case-xp-visual-aura&quot;&gt;&lt;/span&gt;&lt;div class=&quot;case-xp-avatar-preview&quot;&gt;${img}&lt;/div&gt;&lt;/div&gt;`;
+        }
+        if (kind === &quot;trail&quot;) {
+          return `&lt;div class=&quot;case-xp-reward-visual is-trail&quot;&gt;&lt;span class=&quot;case-xp-visual-aura&quot;&gt;&lt;/span&gt;&lt;div class=&quot;case-xp-trail-track&quot;&gt;&lt;span class=&quot;case-xp-trail-runner&quot; aria-hidden=&quot;true&quot;&gt;🐾&lt;/span&gt;${img}&lt;/div&gt;&lt;/div&gt;`;
+        }
+        if (kind === &quot;music&quot;) {
+          return `&lt;div class=&quot;case-xp-reward-visual is-music&quot;&gt;&lt;span class=&quot;case-xp-visual-aura&quot;&gt;&lt;/span&gt;&lt;div class=&quot;case-xp-music-cover&quot;&gt;${img}&lt;span class=&quot;case-xp-music-disc&quot; aria-hidden=&quot;true&quot;&gt;&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;case-xp-wave&quot; aria-hidden=&quot;true&quot;&gt;&lt;i&gt;&lt;/i&gt;&lt;i&gt;&lt;/i&gt;&lt;i&gt;&lt;/i&gt;&lt;i&gt;&lt;/i&gt;&lt;i&gt;&lt;/i&gt;&lt;i&gt;&lt;/i&gt;&lt;/div&gt;&lt;/div&gt;`;
+        }
+        if (kind === &quot;booster&quot;) {
+          return `&lt;div class=&quot;case-xp-reward-visual is-booster&quot;&gt;&lt;span class=&quot;case-xp-visual-aura&quot;&gt;&lt;/span&gt;&lt;span class=&quot;case-xp-bolt b1&quot; aria-hidden=&quot;true&quot;&gt;⚡&lt;/span&gt;&lt;span class=&quot;case-xp-bolt b2&quot; aria-hidden=&quot;true&quot;&gt;⚡&lt;/span&gt;${img}&lt;/div&gt;`;
+        }
+        if (kind === &quot;skin&quot;) {
+          return `&lt;div class=&quot;case-xp-reward-visual is-skin&quot;&gt;&lt;span class=&quot;case-xp-visual-aura&quot;&gt;&lt;/span&gt;&lt;span class=&quot;case-xp-spotlight&quot; aria-hidden=&quot;true&quot;&gt;&lt;/span&gt;${img}&lt;/div&gt;`;
+        }
+        if (kind === &quot;physical&quot;) {
+          return `&lt;div class=&quot;case-xp-reward-visual is-physical&quot;&gt;&lt;span class=&quot;case-xp-visual-aura&quot;&gt;&lt;/span&gt;&lt;span class=&quot;case-xp-gift-ring&quot; aria-hidden=&quot;true&quot;&gt;&lt;/span&gt;${img}&lt;/div&gt;`;
+        }
+        return `&lt;div class=&quot;case-xp-reward-visual is-resource case-xp-resource-${escapePurchaseText(kind)}&quot;&gt;&lt;span class=&quot;case-xp-visual-aura&quot;&gt;&lt;/span&gt;&lt;span class=&quot;case-xp-orbit o1&quot; aria-hidden=&quot;true&quot;&gt;${caseExperienceRewardEmoji(reward)}&lt;/span&gt;&lt;span class=&quot;case-xp-orbit o2&quot; aria-hidden=&quot;true&quot;&gt;${caseExperienceRewardEmoji(reward)}&lt;/span&gt;&lt;span class=&quot;case-xp-orbit o3&quot; aria-hidden=&quot;true&quot;&gt;${caseExperienceRewardEmoji(reward)}&lt;/span&gt;${img}&lt;/div&gt;`;
+      }
+
+      function caseExperienceAlexCollectionMarkup(opened) {
+        const collection = opened?.alexCollection &amp;&amp; typeof opened.alexCollection === &quot;object&quot; ? opened.alexCollection : null;
+        if (caseExperienceNormalizeType(opened?.caseType || &quot;&quot;) !== &quot;alex&quot; || !collection) return &quot;&quot;;
+        const complete = Boolean(opened?.alexCollectionRewardGranted);
+        return `&lt;div class=&quot;case-xp-alex-collection${complete ? &quot; is-complete&quot; : &quot;&quot;}&quot;&gt;&lt;span&gt;&lt;strong&gt;Коллекция Алекса · ${Math.max(0, Number(collection.count || 0))}/4&lt;/strong&gt;&lt;small&gt;${complete ? &quot;Коллекция собрана — Золотой кейс добавлен на склад.&quot; : &quot;Собирай Алекса, след, рамку и аватар.&quot;}&lt;/small&gt;&lt;/span&gt;${complete ? caseImageMarkup(&quot;gold&quot;, false, &quot;case-xp-alex-gold&quot;) : &quot;&quot;}&lt;/div&gt;`;
+      }
+
+      function caseExperienceRenderFallbackReward(opened, error = null) {
+        caseExperienceClearTimers();
+        caseExperienceSequenceId += 1;
+        caseExperiencePendingOpened = null;
+        caseExperienceRevealStarted = true;
+        caseRouletteBusy = false;
+        caseOpeningRetryContext = null;
+        caseLayer?.classList.remove(&quot;is-info-view&quot;, &quot;is-opening-busy&quot;);
+        caseLayer?.classList.add(&quot;case-xp-active&quot;);
+        const reward = Array.isArray(opened?.rewards) ? opened.rewards[0] : null;
+        const title = caseExperienceRawRewardText(reward);
+        console.error(&quot;Case Experience fallback renderer used&quot;, error || &quot;unknown renderer failure&quot;);
+        if (!caseContentEl) return;
+        caseContentEl.innerHTML = `&lt;div class=&quot;case-xp-shell case-xp-fallback&quot; data-case-theme=&quot;${escapePurchaseText(caseExperienceNormalizeType(opened?.caseType || &quot;small&quot;))}&quot;&gt;
+          &lt;div class=&quot;case-xp-result-kicker&quot;&gt;&lt;i aria-hidden=&quot;true&quot;&gt;✓&lt;/i&gt;&lt;span&gt;НАГРАДА ПОЛУЧЕНА&lt;/span&gt;&lt;/div&gt;
+          &lt;div class=&quot;case-xp-fallback-icon&quot; aria-hidden=&quot;true&quot;&gt;${caseExperienceRewardEmoji(reward)}&lt;/div&gt;
+          &lt;h2 id=&quot;case-dialog-title&quot;&gt;${escapePurchaseText(title)}&lt;/h2&gt;
+          &lt;p&gt;Награда уже зачислена на аккаунт.&lt;/p&gt;
+          &lt;button class=&quot;case-xp-primary&quot; data-case-close type=&quot;button&quot;&gt;Продолжить&lt;/button&gt;
         &lt;/div&gt;`;
         openCaseLayerShell();
-        const track = caseContentEl.querySelector(&quot;[data-case-preflight-track]&quot;);
-        if (track &amp;&amp; typeof track.animate === &quot;function&quot;) {
-          track.animate(
-            [{ transform: &quot;translate3d(0,0,0)&quot; }, { transform: &quot;translate3d(-846px,0,0)&quot; }],
-            { duration: 1500, iterations: Infinity, easing: &quot;linear&quot; }
-          );
-        } else if (track) {
-          track.style.transition = &quot;transform 1.5s linear&quot;;
-          window.requestAnimationFrame(() =&gt; { track.style.transform = &quot;translate3d(-846px,0,0)&quot;; } );
+      }
+
+      function caseExperienceRevealReward(opened) {
+        if (!caseLayer || !caseContentEl || !opened || caseExperienceRevealStarted) return;
+        caseExperienceRevealStarted = true;
+        caseExperienceClearTimers();
+        try {
+          const type = caseExperienceNormalizeType(opened.caseType || &quot;small&quot;);
+          const reward = Array.isArray(opened.rewards) ? opened.rewards[0] : null;
+          if (!reward) throw new Error(&quot;Server returned an opened case without reward data&quot;);
+          const view = caseRewardView(reward);
+          const tier = caseExperienceRewardTier(reward, view);
+          const kind = String(reward.kind || view.kind || &quot;generic&quot;);
+          const remaining = remainingSameCaseCount(type);
+          const collectionMarkup = caseExperienceAlexCollectionMarkup(opened);
+          caseRouletteBusy = false;
+          caseOpeningRetryContext = null;
+          caseExperiencePendingOpened = null;
+          caseLayer.classList.remove(&quot;is-info-view&quot;, &quot;is-opening-busy&quot;);
+          caseLayer.classList.add(&quot;case-xp-active&quot;);
+          caseContentEl.innerHTML = `&lt;div class=&quot;case-xp-shell case-xp-reveal&quot; data-case-theme=&quot;${escapePurchaseText(type)}&quot; data-reward-kind=&quot;${escapePurchaseText(kind)}&quot; data-reward-tier=&quot;${escapePurchaseText(tier)}&quot;&gt;
+            &lt;div class=&quot;case-xp-reward-bg&quot; aria-hidden=&quot;true&quot;&gt;&lt;i&gt;&lt;/i&gt;&lt;i&gt;&lt;/i&gt;&lt;i&gt;&lt;/i&gt;&lt;i&gt;&lt;/i&gt;&lt;i&gt;&lt;/i&gt;&lt;i&gt;&lt;/i&gt;&lt;/div&gt;
+            &lt;div class=&quot;case-xp-result-kicker&quot;&gt;&lt;i aria-hidden=&quot;true&quot;&gt;✦&lt;/i&gt;&lt;span&gt;${escapePurchaseText(caseExperienceRewardKicker(reward, view))}&lt;/span&gt;&lt;/div&gt;
+            ${caseExperienceRewardVisualMarkup(reward, view)}
+            &lt;div class=&quot;case-xp-reward-copy&quot;&gt;
+              ${view?.badge ? `&lt;span class=&quot;case-xp-rarity-badge&quot;&gt;${escapePurchaseText(view.badge)}&lt;/span&gt;` : &quot;&quot;}
+              &lt;h2 id=&quot;case-dialog-title&quot;&gt;${escapePurchaseText(view?.title || caseExperienceRawRewardText(reward))}&lt;/h2&gt;
+              &lt;p&gt;${escapePurchaseText(view?.detail || &quot;Уже зачислено на аккаунт&quot;)}&lt;/p&gt;
+              &lt;span class=&quot;case-xp-credited&quot;&gt;&lt;i aria-hidden=&quot;true&quot;&gt;✓&lt;/i&gt; Уже зачислено&lt;/span&gt;
+            &lt;/div&gt;
+            ${collectionMarkup}
+            &lt;div class=&quot;case-xp-result-actions${remaining &gt; 0 ? &quot;&quot; : &quot; is-single&quot;}&quot;&gt;
+              &lt;button class=&quot;case-xp-primary&quot; data-case-close type=&quot;button&quot;&gt;Продолжить&lt;/button&gt;
+              ${remaining &gt; 0 ? `&lt;button class=&quot;case-xp-secondary&quot; data-case-open-again=&quot;${escapePurchaseText(type)}&quot; type=&quot;button&quot;&gt;${remaining &gt; 1 ? `Открыть ещё · ${remaining}` : &quot;Открыть ещё&quot;}&lt;/button&gt;` : &quot;&quot;}
+            &lt;/div&gt;
+          &lt;/div&gt;`;
+          openCaseLayerShell();
+          window.requestAnimationFrame(() =&gt; caseContentEl.querySelector(&quot;.case-xp-reveal&quot;)?.classList.add(&quot;is-visible&quot;));
+          playGameSound(&quot;purchaseReward&quot;);
+          hapticNotify(&quot;success&quot;);
+        } catch (error) {
+          caseExperienceRenderFallbackReward(opened, error);
         }
+      }
+
+      function caseExperienceStartOpening(opened, options = {}) {
+        if (!caseLayer || !caseContentEl || !opened) return;
+        caseExperienceClearTimers();
+        const sequenceId = ++caseExperienceSequenceId;
+        const type = caseExperienceNormalizeType(opened.caseType || &quot;small&quot;);
+        const theme = caseExperienceTheme(type);
+        const reducedMotion = Boolean(window.matchMedia?.(&quot;(prefers-reduced-motion: reduce)&quot;)?.matches);
+        const duration = reducedMotion ? 420 : theme.duration;
+        caseExperiencePendingOpened = opened;
+        caseExperienceRevealStarted = false;
+        caseExperienceCanSkipAt = Date.now() + (reducedMotion ? 0 : 450);
+        caseRouletteBusy = true;
+        caseOpeningRetryContext = null;
+        caseLayer.classList.remove(&quot;is-info-view&quot;);
+        caseLayer.classList.add(&quot;case-xp-active&quot;, &quot;is-opening-busy&quot;);
+        caseContentEl.innerHTML = `&lt;div class=&quot;case-xp-shell case-xp-opening&quot; data-case-theme=&quot;${escapePurchaseText(type)}&quot; style=&quot;--case-xp-duration:${duration}ms&quot;&gt;
+          &lt;div class=&quot;case-xp-opening-heading&quot;&gt;&lt;small&gt;${escapePurchaseText(theme.kicker)}&lt;/small&gt;&lt;h2 id=&quot;case-dialog-title&quot;&gt;${escapePurchaseText(caseExperienceCaseTitle(type))}&lt;/h2&gt;&lt;p&gt;${escapePurchaseText(theme.copy)}&lt;/p&gt;&lt;/div&gt;
+          &lt;button class=&quot;case-xp-case-stage&quot; data-case-skip-experience type=&quot;button&quot; aria-label=&quot;Ускорить открытие&quot;&gt;
+            &lt;span class=&quot;case-xp-stage-vignette&quot; aria-hidden=&quot;true&quot;&gt;&lt;/span&gt;
+            &lt;span class=&quot;case-xp-rays&quot; aria-hidden=&quot;true&quot;&gt;&lt;/span&gt;
+            &lt;span class=&quot;case-xp-particles&quot; aria-hidden=&quot;true&quot;&gt;&lt;i&gt;&lt;/i&gt;&lt;i&gt;&lt;/i&gt;&lt;i&gt;&lt;/i&gt;&lt;i&gt;&lt;/i&gt;&lt;i&gt;&lt;/i&gt;&lt;i&gt;&lt;/i&gt;&lt;i&gt;&lt;/i&gt;&lt;i&gt;&lt;/i&gt;&lt;/span&gt;
+            &lt;span class=&quot;case-xp-case-stack&quot;&gt;
+              &lt;img class=&quot;case-xp-case-img case-xp-case-closed&quot; src=&quot;${escapePurchaseText(caseImageSource(type, false))}&quot; alt=&quot;&quot; decoding=&quot;async&quot; fetchpriority=&quot;high&quot;&gt;
+              &lt;img class=&quot;case-xp-case-img case-xp-case-open&quot; src=&quot;${escapePurchaseText(caseImageSource(type, true))}&quot; alt=&quot;&quot; decoding=&quot;async&quot; fetchpriority=&quot;high&quot;&gt;
+            &lt;/span&gt;
+            &lt;span class=&quot;case-xp-flash&quot; aria-hidden=&quot;true&quot;&gt;&lt;/span&gt;
+          &lt;/button&gt;
+          &lt;div class=&quot;case-xp-opening-progress&quot;&gt;&lt;i&gt;&lt;/i&gt;&lt;/div&gt;
+          &lt;small class=&quot;case-xp-skip-note&quot;&gt;${reducedMotion ? &quot;&quot; : &quot;Коснись кейса, чтобы ускорить&quot;}&lt;/small&gt;
+        &lt;/div&gt;`;
+        openCaseLayerShell();
+        window.requestAnimationFrame(() =&gt; {
+          if (sequenceId !== caseExperienceSequenceId) return;
+          caseContentEl.querySelector(&quot;.case-xp-opening&quot;)?.classList.add(&quot;is-animating&quot;);
+        });
+        if (!reducedMotion) caseExperienceSchedule(() =&gt; hapticImpact(theme.impact, 90), theme.impactAt, sequenceId);
+        caseExperienceSchedule(() =&gt; caseExperienceRevealReward(opened), duration, sequenceId);
+      }
+
+      function caseExperienceSkipOpening() {
+        if (!caseExperiencePendingOpened || caseExperienceRevealStarted || Date.now() &lt; caseExperienceCanSkipAt) return;
+        const shell = caseContentEl?.querySelector(&quot;.case-xp-opening&quot;);
+        if (!shell) return;
+        shell.classList.add(&quot;is-skipping&quot;);
+        hapticImpact(&quot;light&quot;, 40);
+        caseExperienceClearTimers();
+        caseExperienceSchedule(() =&gt; caseExperienceRevealReward(caseExperiencePendingOpened), 150, caseExperienceSequenceId);
+      }
+
+      function showCaseOpeningPreview(caseType) {
+        if (!caseLayer || !caseContentEl) return;
+        caseExperienceClearTimers();
+        caseExperiencePendingOpened = null;
+        caseExperienceRevealStarted = false;
+        const type = caseExperienceNormalizeType(caseType);
+        caseRouletteBusy = true;
+        caseLayer.classList.remove(&quot;is-info-view&quot;);
+        caseLayer.classList.add(&quot;case-xp-active&quot;, &quot;is-opening-busy&quot;);
+        caseContentEl.innerHTML = `&lt;div class=&quot;case-xp-shell case-xp-preparing&quot; data-case-theme=&quot;${escapePurchaseText(type)}&quot;&gt;
+          &lt;div class=&quot;case-xp-result-kicker&quot;&gt;&lt;i aria-hidden=&quot;true&quot;&gt;✦&lt;/i&gt;&lt;span&gt;ПОДГОТОВКА&lt;/span&gt;&lt;/div&gt;
+          &lt;div class=&quot;case-xp-preparing-art&quot;&gt;
+            &lt;span class=&quot;case-xp-preparing-glow&quot; aria-hidden=&quot;true&quot;&gt;&lt;/span&gt;
+            ${caseImageMarkup(type, false, &quot;case-xp-preparing-case&quot;)}
+          &lt;/div&gt;
+          &lt;h2 id=&quot;case-dialog-title&quot;&gt;Готовим ${escapePurchaseText(caseExperienceCaseTitle(type))}&lt;/h2&gt;
+          &lt;p&gt;Ещё мгновение — и узнаем, что внутри.&lt;/p&gt;
+          &lt;div class=&quot;case-xp-preparing-bar&quot; aria-hidden=&quot;true&quot;&gt;&lt;i&gt;&lt;/i&gt;&lt;/div&gt;
+          &lt;small class=&quot;case-xp-preparing-note&quot;&gt;&lt;i aria-hidden=&quot;true&quot;&gt;&lt;/i&gt; Сначала фиксируем результат, чтобы награда не потерялась&lt;/small&gt;
+        &lt;/div&gt;`;
+        openCaseLayerShell();
       }
 
       function isCasesTemporarilyUnavailableError(error) {
@@ -19188,18 +19461,61 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 
       function showCasesUnavailableState(caseType, error = null) {
         if (!caseLayer || !caseContentEl) return;
-        const type = Object.prototype.hasOwnProperty.call(CASE_IMAGE_CATALOG, String(caseType || &quot;&quot;)) ? String(caseType) : &quot;small&quot;;
+        caseExperienceClearTimers();
+        caseExperiencePendingOpened = null;
+        caseExperienceRevealStarted = false;
+        const type = caseExperienceNormalizeType(caseType);
         caseRouletteBusy = false;
         caseLayer.classList.remove(&quot;is-info-view&quot;, &quot;is-opening-busy&quot;);
-        caseContentEl.innerHTML = `&lt;div class=&quot;case-status-screen is-disabled&quot;&gt;
-          &lt;div class=&quot;case-state-pill&quot;&gt;&lt;i aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;&lt;span&gt;Временно отключено&lt;/span&gt;&lt;/div&gt;
-          &lt;div class=&quot;case-state-art&quot;&gt;${caseImageMarkup(type, false, &quot;case-state-chest&quot;)}&lt;span class=&quot;case-state-lock&quot; aria-hidden=&quot;true&quot;&gt;&lt;/span&gt;&lt;/div&gt;
+        caseLayer.classList.add(&quot;case-xp-active&quot;);
+        caseContentEl.innerHTML = `&lt;div class=&quot;case-xp-shell case-xp-status is-disabled&quot; data-case-theme=&quot;${escapePurchaseText(type)}&quot;&gt;
+          &lt;div class=&quot;case-xp-status-mark is-lock&quot; aria-hidden=&quot;true&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/div&gt;
+          &lt;div class=&quot;case-xp-status-case&quot;&gt;${caseImageMarkup(type, false, &quot;case-xp-status-case-img&quot;)}&lt;/div&gt;
+          &lt;span class=&quot;case-xp-status-pill&quot;&gt;Временно отключено&lt;/span&gt;
           &lt;h2 id=&quot;case-dialog-title&quot;&gt;Открытие кейсов временно недоступно&lt;/h2&gt;
-          &lt;p&gt;Мы временно приостановили открытие кейсов. Попробуй ещё раз через несколько минут.&lt;/p&gt;
-          &lt;div class=&quot;case-state-safe&quot;&gt;&lt;span class=&quot;case-safe-icon&quot; aria-hidden=&quot;true&quot;&gt;&lt;/span&gt;&lt;span&gt;&lt;strong&gt;Всё сохранено&lt;/strong&gt;&lt;small&gt;Твои кейсы и прогресс никуда не пропадут. Пока открытие отключено, кейс не спишется.&lt;/small&gt;&lt;/span&gt;&lt;/div&gt;
-          &lt;div class=&quot;case-state-actions&quot;&gt;
-            ${caseOpeningRetryContext ? `&lt;button class=&quot;case-state-primary&quot; data-case-retry-opening type=&quot;button&quot;&gt;Попробовать открыть снова&lt;/button&gt;` : &quot;&quot;}
-            &lt;button class=&quot;case-state-secondary&quot; data-case-close type=&quot;button&quot;&gt;Понятно&lt;/button&gt;
+          &lt;p&gt;Мы проводим небольшие технические работы. Твои кейсы полностью сохранены.&lt;/p&gt;
+          &lt;div class=&quot;case-xp-status-note&quot;&gt;&lt;strong&gt;Ничего не потеряется&lt;/strong&gt;&lt;small&gt;Когда открытие снова включат в Control Center, эти же кейсы будут ждать тебя здесь.&lt;/small&gt;&lt;/div&gt;
+          &lt;div class=&quot;case-xp-status-actions&quot;&gt;
+            ${caseOpeningRetryContext ? `&lt;button class=&quot;case-xp-primary&quot; data-case-retry-opening type=&quot;button&quot;&gt;Проверить снова&lt;/button&gt;` : &quot;&quot;}
+            &lt;button class=&quot;case-xp-secondary&quot; data-case-close type=&quot;button&quot;&gt;Понятно&lt;/button&gt;
+          &lt;/div&gt;
+        &lt;/div&gt;`;
+        openCaseLayerShell();
+      }
+
+      function showCaseRecoveryCheckingState(caseType, message = &quot;Проверяем результат открытия…&quot;) {
+        if (!caseLayer || !caseContentEl) return;
+        const type = caseExperienceNormalizeType(caseType);
+        caseRouletteBusy = true;
+        caseLayer.classList.remove(&quot;is-info-view&quot;);
+        caseLayer.classList.add(&quot;case-xp-active&quot;, &quot;is-opening-busy&quot;);
+        caseContentEl.innerHTML = `&lt;div class=&quot;case-xp-shell case-xp-status is-checking&quot; data-case-theme=&quot;${escapePurchaseText(type)}&quot;&gt;
+          &lt;div class=&quot;case-xp-network-mark is-checking&quot; aria-hidden=&quot;true&quot;&gt;&lt;i&gt;&lt;/i&gt;&lt;i&gt;&lt;/i&gt;&lt;i&gt;&lt;/i&gt;&lt;/div&gt;
+          &lt;div class=&quot;case-xp-status-case&quot;&gt;${caseImageMarkup(type, false, &quot;case-xp-status-case-img&quot;)}&lt;/div&gt;
+          &lt;span class=&quot;case-xp-status-pill&quot;&gt;Проверяем сервер&lt;/span&gt;
+          &lt;h2 id=&quot;case-dialog-title&quot;&gt;Не закрываем открытие&lt;/h2&gt;
+          &lt;p&gt;${escapePurchaseText(message)}&lt;/p&gt;
+          &lt;div class=&quot;case-xp-preparing-bar&quot; aria-hidden=&quot;true&quot;&gt;&lt;i&gt;&lt;/i&gt;&lt;/div&gt;
+        &lt;/div&gt;`;
+        openCaseLayerShell();
+      }
+
+      function showCaseRecoveryPendingState(caseType, message = &quot;Сервер уже зафиксировал открытие. Получаем точную награду…&quot;) {
+        if (!caseLayer || !caseContentEl) return;
+        const type = caseExperienceNormalizeType(caseType);
+        caseRouletteBusy = false;
+        caseLayer.classList.remove(&quot;is-info-view&quot;, &quot;is-opening-busy&quot;);
+        caseLayer.classList.add(&quot;case-xp-active&quot;);
+        caseContentEl.innerHTML = `&lt;div class=&quot;case-xp-shell case-xp-status is-network&quot; data-case-theme=&quot;${escapePurchaseText(type)}&quot;&gt;
+          &lt;div class=&quot;case-xp-network-mark&quot; aria-hidden=&quot;true&quot;&gt;&lt;i&gt;&lt;/i&gt;&lt;i&gt;&lt;/i&gt;&lt;i&gt;&lt;/i&gt;&lt;/div&gt;
+          &lt;div class=&quot;case-xp-status-case&quot;&gt;${caseImageMarkup(type, true, &quot;case-xp-status-case-img&quot;)}&lt;/div&gt;
+          &lt;span class=&quot;case-xp-status-pill&quot;&gt;Результат сохранён&lt;/span&gt;
+          &lt;h2 id=&quot;case-dialog-title&quot;&gt;Кейс уже открыт&lt;/h2&gt;
+          &lt;p&gt;${escapePurchaseText(message)}&lt;/p&gt;
+          &lt;div class=&quot;case-xp-status-note&quot;&gt;&lt;strong&gt;Второй кейс не откроется&lt;/strong&gt;&lt;small&gt;Сначала получим точный результат этой же операции.&lt;/small&gt;&lt;/div&gt;
+          &lt;div class=&quot;case-xp-status-actions&quot;&gt;
+            ${caseOpeningRetryContext ? `&lt;button class=&quot;case-xp-primary&quot; data-case-retry-opening type=&quot;button&quot;&gt;Проверить результат&lt;/button&gt;` : &quot;&quot;}
+            &lt;button class=&quot;case-xp-secondary&quot; data-case-close type=&quot;button&quot;&gt;Закрыть&lt;/button&gt;
           &lt;/div&gt;
         &lt;/div&gt;`;
         openCaseLayerShell();
@@ -19207,50 +19523,60 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 
       function showCaseOpenErrorState(caseType, error = null, retryable = true) {
         if (!caseLayer || !caseContentEl) return;
-        const type = Object.prototype.hasOwnProperty.call(CASE_IMAGE_CATALOG, String(caseType || &quot;&quot;)) ? String(caseType) : &quot;small&quot;;
-        const detail = String(error?.message || &quot;Не удалось получить ответ от сервера.&quot;);
+        caseExperienceClearTimers();
+        caseExperiencePendingOpened = null;
+        caseExperienceRevealStarted = false;
+        const type = caseExperienceNormalizeType(caseType);
         caseRouletteBusy = false;
         caseLayer.classList.remove(&quot;is-info-view&quot;, &quot;is-opening-busy&quot;);
-        caseContentEl.innerHTML = `&lt;div class=&quot;case-status-screen is-error&quot;&gt;
-          &lt;div class=&quot;case-state-pill&quot;&gt;&lt;i aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;&lt;span&gt;Проблема с соединением&lt;/span&gt;&lt;/div&gt;
-          &lt;div class=&quot;case-state-art&quot;&gt;${caseImageMarkup(type, false, &quot;case-state-chest&quot;)}&lt;span class=&quot;case-state-alert&quot; aria-hidden=&quot;true&quot;&gt;!&lt;/span&gt;&lt;/div&gt;
-          &lt;h2 id=&quot;case-dialog-title&quot;&gt;Не удалось завершить открытие&lt;/h2&gt;
-          &lt;p&gt;${escapePurchaseText(detail)}&lt;/p&gt;
-          &lt;div class=&quot;case-state-safe&quot;&gt;&lt;span class=&quot;case-safe-icon&quot; aria-hidden=&quot;true&quot;&gt;&lt;/span&gt;&lt;span&gt;&lt;strong&gt;Награда не потеряется&lt;/strong&gt;&lt;small&gt;${retryable ? &quot;Повтор продолжит эту же попытку. Второй кейс не откроется.&quot; : &quot;Если сервер успел начислить награду, она уже зачислена на аккаунт.&quot;}&lt;/small&gt;&lt;/span&gt;&lt;/div&gt;
-          &lt;div class=&quot;case-state-actions&quot;&gt;
-            ${retryable &amp;&amp; caseOpeningRetryContext ? `&lt;button class=&quot;case-state-primary&quot; data-case-retry-opening type=&quot;button&quot;&gt;Повторить&lt;/button&gt;` : &quot;&quot;}
-            &lt;button class=&quot;case-state-secondary&quot; data-case-close type=&quot;button&quot;&gt;${retryable ? &quot;Закрыть&quot; : &quot;Понятно&quot;}&lt;/button&gt;
+        caseLayer.classList.add(&quot;case-xp-active&quot;);
+        const offline = navigator.onLine === false;
+        caseContentEl.innerHTML = `&lt;div class=&quot;case-xp-shell case-xp-status is-network&quot; data-case-theme=&quot;${escapePurchaseText(type)}&quot;&gt;
+          &lt;div class=&quot;case-xp-network-mark&quot; aria-hidden=&quot;true&quot;&gt;&lt;i&gt;&lt;/i&gt;&lt;i&gt;&lt;/i&gt;&lt;i&gt;&lt;/i&gt;&lt;/div&gt;
+          &lt;div class=&quot;case-xp-status-case&quot;&gt;${caseImageMarkup(type, false, &quot;case-xp-status-case-img&quot;)}&lt;/div&gt;
+          &lt;span class=&quot;case-xp-status-pill&quot;&gt;${offline ? &quot;Нет соединения&quot; : &quot;Связь прервалась&quot;}&lt;/span&gt;
+          &lt;h2 id=&quot;case-dialog-title&quot;&gt;Не удалось проверить открытие&lt;/h2&gt;
+          &lt;p&gt;${offline ? &quot;Подключись к интернету — после этого мы проверим эту же попытку.&quot; : &quot;Сначала проверим, успел ли сервер завершить именно это открытие.&quot;}&lt;/p&gt;
+          &lt;div class=&quot;case-xp-status-note&quot;&gt;&lt;strong&gt;Не открываем второй кейс&lt;/strong&gt;&lt;small&gt;${retryable ? &quot;Повторная проверка продолжит эту же операцию.&quot; : &quot;Если сервер уже выдал награду, мы покажем её после синхронизации.&quot;}&lt;/small&gt;&lt;/div&gt;
+          &lt;div class=&quot;case-xp-status-actions&quot;&gt;
+            ${retryable &amp;&amp; caseOpeningRetryContext ? `&lt;button class=&quot;case-xp-primary&quot; data-case-retry-opening type=&quot;button&quot;&gt;${caseOpeningRetryContext.kind === &quot;gifted&quot; ? &quot;Продолжить проверку&quot; : &quot;Проверить результат&quot;}&lt;/button&gt;` : &quot;&quot;}
+            &lt;button class=&quot;case-xp-secondary&quot; data-case-close type=&quot;button&quot;&gt;Закрыть&lt;/button&gt;
           &lt;/div&gt;
         &lt;/div&gt;`;
         openCaseLayerShell();
       }
 
       function showCaseRecoveredState(caseType) {
-        if (!caseLayer || !caseContentEl) return;
-        const type = Object.prototype.hasOwnProperty.call(CASE_IMAGE_CATALOG, String(caseType || &quot;&quot;)) ? String(caseType) : &quot;small&quot;;
-        caseRouletteBusy = false;
-        caseOpeningRetryContext = null;
-        caseLayer.classList.remove(&quot;is-info-view&quot;, &quot;is-opening-busy&quot;);
-        caseContentEl.innerHTML = `&lt;div class=&quot;case-status-screen is-success&quot;&gt;
-          &lt;div class=&quot;case-state-pill&quot;&gt;&lt;i aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;&lt;span&gt;Готово&lt;/span&gt;&lt;/div&gt;
-          &lt;div class=&quot;case-state-art is-opened&quot;&gt;${caseImageMarkup(type, true, &quot;case-state-chest&quot;)}&lt;span class=&quot;case-state-check&quot; aria-hidden=&quot;true&quot;&gt;✓&lt;/span&gt;&lt;/div&gt;
-          &lt;h2 id=&quot;case-dialog-title&quot;&gt;Открытие завершено&lt;/h2&gt;
-          &lt;p&gt;Сервер уже успел открыть кейс, пока мы ждали ответ.&lt;/p&gt;
-          &lt;div class=&quot;case-state-safe&quot;&gt;&lt;span class=&quot;case-safe-icon&quot; aria-hidden=&quot;true&quot;&gt;&lt;/span&gt;&lt;span&gt;&lt;strong&gt;Награда уже на аккаунте&lt;/strong&gt;&lt;small&gt;Последнее открытие доступно в истории кейсов.&lt;/small&gt;&lt;/span&gt;&lt;/div&gt;
-          &lt;div class=&quot;case-state-actions is-single&quot;&gt;&lt;button class=&quot;case-state-primary&quot; data-case-close type=&quot;button&quot;&gt;Продолжить&lt;/button&gt;&lt;/div&gt;
-        &lt;/div&gt;`;
-        openCaseLayerShell();
+        showCaseRecoveryPendingState(caseType, &quot;Сервер подтвердил открытие. Получаем точный состав награды…&quot;);
       }
 
-      function retryCaseOpeningFromModal(button = null) {
+      async function retryCaseOpeningFromModal(button = null) {
         const retry = caseOpeningRetryContext &amp;&amp; typeof caseOpeningRetryContext === &quot;object&quot; ? { ...caseOpeningRetryContext } : null;
         if (!retry || caseRouletteBusy) return;
         if (button) { button.disabled = true; button.textContent = &quot;Проверяем…&quot;; }
-        if (retry.kind === &quot;gifted&quot;) {
-          void openGiftedCaseClient(retry.caseType, null);
+        showCaseRecoveryCheckingState(retry.caseType, &quot;Сверяем это открытие с сервером…&quot;);
+        const synced = await loadCaseState(true, true);
+        const recovered = synced ? caseExperienceFindRecoveredOpening(retry) : null;
+        if (recovered) {
+          showCaseResult(recovered, { recovered:true });
           return;
         }
-        if (retry.kind === &quot;level&quot;) void openLevelCaseClient(retry.level, null);
+        if (retry.kind === &quot;level&quot;) {
+          const alreadyOpened = normalizeCaseNumberList(state.caseOpenedLevels).includes(Math.floor(Number(retry.level || 0)));
+          if (alreadyOpened) {
+            caseOpeningRetryContext = retry;
+            showCaseRecoveryPendingState(retry.caseType);
+            return;
+          }
+          caseOpeningRetryContext = retry;
+          void openLevelCaseClient(retry.level, null);
+          return;
+        }
+        if (retry.kind === &quot;gifted&quot;) {
+          if (retry.requestId) grantedCasePendingRequests.set(retry.caseType, retry.requestId);
+          caseOpeningRetryContext = retry;
+          void openGiftedCaseClient(retry.caseType, null);
+        }
       }
 
       const grantedCasePendingRequests = new Map();
@@ -19295,11 +19621,19 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       }
 
       async function openGiftedCaseClient(caseType, button) {
-        const type = String(caseType || &quot;small&quot;);
-        caseOpeningRetryContext = { kind: &quot;gifted&quot;, caseType: type };
-        if (button) { button.disabled = true; button.textContent = grantedCasePendingRequests.has(type) ? &quot;Проверяем…&quot; : &quot;Открываем…&quot;; }
-        const requestId = grantedCasePendingRequests.get(type) || grantedCaseRequestId(type);
+        const type = caseExperienceNormalizeType(caseType);
+        const matchingRetryContext = caseOpeningRetryContext?.kind === &quot;gifted&quot; &amp;&amp; caseExperienceNormalizeType(caseOpeningRetryContext?.caseType || &quot;&quot;) === type ? caseOpeningRetryContext : null;
+        const requestId = grantedCasePendingRequests.get(type) || matchingRetryContext?.requestId || grantedCaseRequestId(type);
         grantedCasePendingRequests.set(type, requestId);
+        const previousContext = matchingRetryContext?.requestId === requestId ? matchingRetryContext : null;
+        caseOpeningRetryContext = {
+          kind: &quot;gifted&quot;,
+          caseType: type,
+          requestId,
+          startedAt: Number(previousContext?.startedAt || Date.now()),
+          baselineRecentKeys: Array.isArray(previousContext?.baselineRecentKeys) ? previousContext.baselineRecentKeys : [...caseExperienceRecentKeys()]
+        };
+        if (button) { button.disabled = true; button.textContent = previousContext ? &quot;Проверяем…&quot; : &quot;Открываем…&quot;; }
         const deadline = Date.now() + GRANTED_CASE_OPEN_UI_DEADLINE_MS;
         showCaseOpeningPreview(type);
         try {
@@ -19316,18 +19650,28 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           const rewards = Array.isArray(data.opened?.rewards) ? data.opened.rewards : [];
           applyServerCasePayload(data, rewards);
           showCaseResult(data.opened);
-          playGameSound(&quot;purchaseReward&quot;);
-          hapticNotify(&quot;success&quot;);
         } catch (error) {
           caseRouletteBusy = false;
-          hapticNotify(&quot;error&quot;);
+          console.warn(&quot;Case opening request failed&quot;, { kind:&quot;gifted&quot;, caseType:type, requestId, status:Number(error?.status||0), code:String(error?.code||&quot;&quot;) });
           const unavailable = isCasesTemporarilyUnavailableError(error);
           const retryable = unavailable || isGrantedCaseRetryableError(error);
-          if (unavailable &amp;&amp; grantedCasePendingRequests.get(type) === requestId) grantedCasePendingRequests.delete(type);
-          else if (!retryable &amp;&amp; grantedCasePendingRequests.get(type) === requestId) grantedCasePendingRequests.delete(type);
-          if (unavailable) showCasesUnavailableState(type, error);
-          else showCaseOpenErrorState(type, error, retryable);
-          void loadCaseState(true, true).then(() =&gt; renderCaseHub()).catch(() =&gt; {});
+          if (unavailable) {
+            if (grantedCasePendingRequests.get(type) === requestId) grantedCasePendingRequests.delete(type);
+            hapticNotify(&quot;error&quot;);
+            showCasesUnavailableState(type, error);
+          } else {
+            showCaseRecoveryCheckingState(type, &quot;Проверяем, успел ли сервер завершить эту попытку…&quot;);
+            const synced = await loadCaseState(true, true);
+            const recovered = synced ? caseExperienceFindRecoveredOpening(caseOpeningRetryContext) : null;
+            if (recovered) {
+              grantedCasePendingRequests.delete(type);
+              showCaseResult(recovered, { recovered:true });
+            } else {
+              if (!retryable &amp;&amp; grantedCasePendingRequests.get(type) === requestId) grantedCasePendingRequests.delete(type);
+              hapticNotify(&quot;error&quot;);
+              showCaseOpenErrorState(type, error, retryable);
+            }
+          }
           if (button?.isConnected) { button.disabled = false; button.textContent = grantedCasePendingRequests.has(type) ? &quot;Проверить открытие&quot; : &quot;Открыть&quot;; }
         } finally { renderCaseHub(); }
       }
@@ -20100,135 +20444,24 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         closeCaseLayer();
       }
 
-      function showCaseResult(opened) {
+      function showCaseResult(opened, options = {}) {
         if (!caseLayer || !caseContentEl || !opened) return;
-        caseLayer.classList.remove(&quot;is-info-view&quot;);
-        const isAlexCase = String(opened.caseType || &quot;&quot;) === &quot;alex&quot;;
-        const rewards = Array.isArray(opened.rewards) ? opened.rewards.slice(0, 1) : [];
-        const winningIndex = 28;
-        const sequenceLength = 40;
-        const rows = rewards.map((reward, rewardIndex) =&gt; {
-          const target = caseRewardView(reward);
-          const pool = caseRoulettePool(opened.caseType || &quot;small&quot;);
-          const sequence = Array.from({ length: sequenceLength }, (_, index) =&gt; {
-            if (index === winningIndex) return target;
-            return pool[(rewardIndex * 4 + index * 5 + Math.floor(index / 3)) % pool.length];
-          });
-          return `&lt;div class=&quot;case-roulette-row&quot; data-case-roulette-row=&quot;${rewardIndex}&quot;&gt;&lt;div class=&quot;case-roulette-window&quot;&gt;&lt;div class=&quot;case-roulette-pointer&quot; aria-hidden=&quot;true&quot;&gt;&lt;/div&gt;&lt;div class=&quot;case-roulette-track&quot;&gt;${sequence.map((view,index)=&gt;caseRouletteCard(view,index===winningIndex,index&lt;=winningIndex+1)).join(&quot;&quot;)}&lt;/div&gt;&lt;/div&gt;&lt;div class=&quot;case-roulette-reward&quot; hidden&gt;${caseFinalRewardMarkup(target)}&lt;span&gt;&lt;strong&gt;${escapePurchaseText(target.title)}&lt;/strong&gt;&lt;small&gt;${escapePurchaseText(target.detail)}&lt;/small&gt;&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;`;
-        }).join(&quot;&quot;);
-        caseRouletteBusy = true;
-        caseLayer.classList.add(&quot;is-opening-busy&quot;);
-        const alexCollection = opened.alexCollection &amp;&amp; typeof opened.alexCollection === &quot;object&quot; ? opened.alexCollection : null;
-        const collectionBanner = isAlexCase &amp;&amp; alexCollection
-          ? `&lt;div class=&quot;alex-case-result-collection${opened.alexCollectionRewardGranted ? &quot; is-complete&quot; : &quot;&quot;}&quot;&gt;&lt;span&gt;&lt;strong&gt;Коллекция Алекса · ${Number(alexCollection.count || 0)}/4&lt;/strong&gt;&lt;small&gt;${opened.alexCollectionRewardGranted ? &quot;4/4! Золотой кейс добавлен на склад.&quot; : &quot;Собирай Алекс · След · Рамку · Аватар&quot;}&lt;/small&gt;&lt;/span&gt;${opened.alexCollectionRewardGranted ? caseImageMarkup(&quot;gold&quot;, false, &quot;alex-case-result-gold&quot;) : &quot;&quot;}&lt;/div&gt;`
-          : &quot;&quot;;
-        caseOpeningRetryContext = null;
-        caseContentEl.innerHTML = `&lt;div class=&quot;case-result-screen&quot;&gt;&lt;div class=&quot;case-opening-kicker&quot; data-case-result-kicker&gt;&lt;i aria-hidden=&quot;true&quot;&gt;✦&lt;/i&gt;&lt;span&gt;ОТКРЫТИЕ КЕЙСА&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;case-result-head is-opening${isAlexCase ? &quot; is-alex&quot; : &quot;&quot;}&quot;&gt;${caseImageMarkup(opened.caseType || &quot;small&quot;, !isAlexCase, &quot;case-chest-image--roulette&quot;)}&lt;h2 id=&quot;case-dialog-title&quot;&gt;Открываем ${escapePurchaseText(opened.title || &quot;кейс&quot;)}&lt;/h2&gt;&lt;p&gt;${isAlexCase ? &quot;Лапки, изумруды и немного удачи…&quot; : &quot;Рулетка выбирает награду…&quot;}&lt;/p&gt;&lt;/div&gt;&lt;div class=&quot;case-roulette-list&quot;&gt;${rows}&lt;/div&gt;${collectionBanner}&lt;div class=&quot;case-result-actions is-single-action&quot;&gt;&lt;button class=&quot;case-result-done&quot; data-case-close type=&quot;button&quot; disabled&gt;Продолжить&lt;/button&gt;&lt;button class=&quot;case-open-again&quot; data-case-open-again=&quot;${escapePurchaseText(opened.caseType || &quot;small&quot;)}&quot; type=&quot;button&quot; hidden disabled&gt;Открыть ещё&lt;/button&gt;&lt;/div&gt;&lt;/div&gt;`;
-        openCaseLayerShell();
-        const rowsEls = [...caseContentEl.querySelectorAll(&quot;[data-case-roulette-row]&quot;)];
-        const doneButton = caseContentEl.querySelector(&quot;.case-result-done&quot;);
-        const openAgainButton = caseContentEl.querySelector(&quot;[data-case-open-again]&quot;);
-        const actionsEl = caseContentEl.querySelector(&quot;.case-result-actions&quot;);
-        const head = caseContentEl.querySelector(&quot;.case-result-head&quot;);
-        const resultScreen = caseContentEl.querySelector(&quot;.case-result-screen&quot;);
-        const resultKicker = caseContentEl.querySelector(&quot;[data-case-result-kicker]&quot;);
-
-        const syncCaseResultActions = (remaining) =&gt; {
-          const hasOpenAgain = Boolean(openAgainButton &amp;&amp; remaining &gt; 0);
-          if (actionsEl) actionsEl.classList.toggle(&quot;is-single-action&quot;, !hasOpenAgain);
-          if (!openAgainButton) return;
-          openAgainButton.hidden = !hasOpenAgain;
-          openAgainButton.disabled = !hasOpenAgain;
-          if (hasOpenAgain) openAgainButton.textContent = remaining &gt; 1 ? `Открыть ещё · ${remaining}` : &quot;Открыть ещё&quot;;
-        };
-
-        const settleRow = (row, index) =&gt; {
-          if (row.dataset.rouletteSettled === &quot;1&quot;) return;
-          row.dataset.rouletteSettled = &quot;1&quot;;
-          row.classList.remove(&quot;is-spinning&quot;, &quot;is-slowing&quot;);
-          row.classList.add(&quot;is-settled&quot;);
-          const rewardEl = row.querySelector(&quot;.case-roulette-reward&quot;);
-          if (rewardEl) rewardEl.hidden = false;
-          if (index === rowsEls.length - 1) {
-            caseRouletteBusy = false;
-            caseLayer.classList.remove(&quot;is-opening-busy&quot;);
-            if (doneButton) doneButton.disabled = false;
-            const remaining = remainingSameCaseCount(opened.caseType || &quot;small&quot;);
-            syncCaseResultActions(remaining);
-            if (head) {
-              head.classList.remove(&quot;is-opening&quot;);
-              if (isAlexCase) {
-                const chest = head.querySelector(&quot;.case-chest-image--roulette&quot;);
-                if (chest) { chest.src = caseImageSource(&quot;alex&quot;, true); chest.classList.add(&quot;is-alex-opened&quot;); }
-              }
-              const title = head.querySelector(&quot;h2&quot;);
-              const copy = head.querySelector(&quot;p&quot;);
-              if (title) title.textContent = rewards.length &gt; 1 ? &quot;Твои награды!&quot; : &quot;Твоя награда!&quot;;
-              if (copy) copy.textContent = &quot;Уже зачислена на аккаунт&quot;;
-              if (resultKicker) resultKicker.querySelector(&quot;span&quot;).textContent = &quot;НАГРАДА ПОЛУЧЕНА&quot;;
-              if (resultScreen) resultScreen.classList.add(&quot;is-revealed&quot;);
-            }
-          }
-        };
-
-        rowsEls.forEach((row, index) =&gt; {
-          const track = row.querySelector(&quot;.case-roulette-track&quot;);
-          const finalCard = track?.querySelector(&quot;.case-roulette-card.is-final&quot;);
-          const windowEl = row.querySelector(&quot;.case-roulette-window&quot;);
-          if (!track || !finalCard || !windowEl) return;
-          const delay = 60 + index * 80;
-          window.setTimeout(() =&gt; {
-            const targetX = Math.max(0, finalCard.offsetLeft - (windowEl.clientWidth - finalCard.offsetWidth) / 2);
-            const duration = 900 + index * 60;
-            row.classList.add(&quot;is-spinning&quot;);
-            const slowTimer = window.setTimeout(() =&gt; row.classList.add(&quot;is-slowing&quot;), Math.round(duration * .66));
-
-            if (typeof track.animate === &quot;function&quot;) {
-              const animation = track.animate(
-                [
-                  { transform: &quot;translate3d(0,0,0)&quot;, offset: 0 },
-                  { transform: `translate3d(${-targetX * .78}px,0,0)`, offset: .50 },
-                  { transform: `translate3d(${-targetX * .95}px,0,0)`, offset: .80 },
-                  { transform: `translate3d(${-targetX}px,0,0)`, offset: 1 }
-                ],
-                { duration, easing: &quot;cubic-bezier(.08,.70,.10,1)&quot;, fill: &quot;forwards&quot; }
-              );
-              animation.finished.then(() =&gt; {
-                window.clearTimeout(slowTimer);
-                settleRow(row, index);
-              }).catch(() =&gt; {
-                window.clearTimeout(slowTimer);
-                settleRow(row, index);
-              });
-              window.setTimeout(() =&gt; {
-                window.clearTimeout(slowTimer);
-                settleRow(row, index);
-              }, duration + 240);
-            } else {
-              track.style.transition = `transform ${duration}ms cubic-bezier(.08,.70,.10,1)`;
-              window.requestAnimationFrame(() =&gt; {
-                track.style.transform = `translate3d(${-targetX}px,0,0)`;
-              });
-              window.setTimeout(() =&gt; {
-                window.clearTimeout(slowTimer);
-                settleRow(row, index);
-              }, duration + 80);
-            }
-          }, delay);
-        });
-        if (!rowsEls.length) {
-          caseRouletteBusy = false;
-          caseLayer.classList.remove(&quot;is-opening-busy&quot;);
-          if (doneButton) doneButton.disabled = false;
-          const remaining = remainingSameCaseCount(opened.caseType || &quot;small&quot;);
-          syncCaseResultActions(remaining);
+        try {
+          caseExperienceStartOpening(opened, options);
+        } catch (error) {
+          console.error(&quot;Case Experience could not start&quot;, error);
+          caseExperienceRenderFallbackReward(opened, error);
         }
       }
 
       function closeCaseLayer() {
         if (!caseLayer || caseRouletteBusy) return;
+        caseExperienceClearTimers();
+        caseExperienceSequenceId += 1;
+        caseExperiencePendingOpened = null;
+        caseExperienceRevealStarted = false;
         hideCaseLayerShell();
-        caseLayer.classList.remove(&quot;is-opening-busy&quot;);
+        caseLayer.classList.remove(&quot;is-opening-busy&quot;, &quot;case-xp-active&quot;);
         caseOpeningRetryContext = null;
       }
 
@@ -26146,6 +26379,13 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           });
           return;
         }
+        const skipExperience = target?.closest(&quot;[data-case-skip-experience]&quot;);
+        if (skipExperience) {
+          event.preventDefault();
+          event.stopPropagation();
+          caseExperienceSkipOpening();
+          return;
+        }
         const retryOpening = target?.closest(&quot;[data-case-retry-opening]&quot;);
         if (retryOpening &amp;&amp; !retryOpening.disabled) {
           event.preventDefault();
@@ -27898,6 +28138,122 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
 }
 &lt;/style&gt;
 
+
+&lt;style id=&quot;zefirok-case-experience-v2&quot;&gt;
+#zefirok-maltipoo-runner .case-layer.case-xp-active{background:rgba(48,27,30,.58);backdrop-filter:blur(13px);-webkit-backdrop-filter:blur(13px);padding:14px}
+#zefirok-maltipoo-runner .case-layer.case-xp-active .case-dialog{width:min(400px,100%);max-height:min(760px,94vh);padding:0;border:1px solid rgba(255,255,255,.72);border-radius:30px;overflow-x:hidden;overflow-y:auto;background:linear-gradient(180deg,#fffdf9 0%,#fff8f4 54%,#fff 100%);box-shadow:0 30px 88px rgba(49,24,26,.36),inset 0 1px 0 #fff;text-align:center}
+#zefirok-maltipoo-runner .case-layer.case-xp-active .case-dialog-close{z-index:20;right:13px;top:13px;width:36px;height:36px;min-height:36px;border:1px solid rgba(118,72,69,.12);border-radius:12px;background:rgba(255,255,255,.86);box-shadow:0 6px 20px rgba(72,43,42,.09);color:#704a46;font-size:22px;line-height:1}
+#zefirok-maltipoo-runner .case-layer.case-xp-active.is-opening-busy .case-dialog-close{opacity:.28;pointer-events:none}
+#zefirok-maltipoo-runner .case-xp-shell{--case-accent:#d99075;--case-accent-2:#f4c5b1;--case-deep:#70443a;--reward-accent:#d6a453;position:relative;isolation:isolate;display:flex;flex-direction:column;align-items:center;min-height:570px;padding:28px 22px 22px;overflow:hidden;color:#553b38}
+#zefirok-maltipoo-runner .case-xp-shell[data-case-theme=&quot;small&quot;]{--case-accent:#cd8b71;--case-accent-2:#f2cbbb;--case-deep:#70473d}
+#zefirok-maltipoo-runner .case-xp-shell[data-case-theme=&quot;sweet&quot;]{--case-accent:#c99a95;--case-accent-2:#f4d8d9;--case-deep:#76515a}
+#zefirok-maltipoo-runner .case-xp-shell[data-case-theme=&quot;gold&quot;]{--case-accent:#d8a72f;--case-accent-2:#ffe6a2;--case-deep:#76561b}
+#zefirok-maltipoo-runner .case-xp-shell[data-case-theme=&quot;mythic&quot;]{--case-accent:#9f62c8;--case-accent-2:#e6c6fb;--case-deep:#573477}
+#zefirok-maltipoo-runner .case-xp-shell[data-case-theme=&quot;legendary&quot;]{--case-accent:#d19828;--case-accent-2:#ffe8a8;--case-deep:#5f4316}
+#zefirok-maltipoo-runner .case-xp-shell[data-case-theme=&quot;alex&quot;]{--case-accent:#4c9e92;--case-accent-2:#c9eee6;--case-deep:#315c59}
+#zefirok-maltipoo-runner .case-xp-result-kicker{position:relative;z-index:4;display:inline-flex;align-items:center;gap:7px;min-height:29px;padding:6px 11px;border:1px solid color-mix(in srgb,var(--case-accent) 28%,transparent);border-radius:999px;background:color-mix(in srgb,var(--case-accent-2) 34%,#fff);box-shadow:0 5px 16px rgba(86,50,44,.07);font-size:10px;font-weight:900;letter-spacing:.09em;color:var(--case-deep)}
+#zefirok-maltipoo-runner .case-xp-result-kicker i{font-style:normal;color:var(--case-accent);font-size:13px}
+#zefirok-maltipoo-runner .case-xp-preparing{justify-content:center;padding-top:34px}
+#zefirok-maltipoo-runner .case-xp-preparing-art{position:relative;display:grid;place-items:center;width:230px;height:230px;margin:12px 0 -4px}
+#zefirok-maltipoo-runner .case-xp-preparing-glow{position:absolute;width:160px;height:160px;border-radius:50%;background:radial-gradient(circle,color-mix(in srgb,var(--case-accent) 30%,transparent),transparent 67%);filter:blur(2px);animation:caseXpPrepareGlow 1.55s ease-in-out infinite}
+#zefirok-maltipoo-runner .case-xp-preparing-case{position:relative!important;width:180px!important;height:180px!important;max-width:180px!important;max-height:180px!important;object-fit:contain!important;margin:0!important;filter:drop-shadow(0 20px 19px rgba(75,44,40,.18));animation:caseXpPrepareCase 1.8s ease-in-out infinite}
+#zefirok-maltipoo-runner .case-xp-preparing h2,#zefirok-maltipoo-runner .case-xp-status h2,#zefirok-maltipoo-runner .case-xp-fallback h2{position:relative;z-index:3;margin:7px 0 7px;font-size:24px;line-height:1.08;letter-spacing:-.025em;color:#4e3532}
+#zefirok-maltipoo-runner .case-xp-preparing p,#zefirok-maltipoo-runner .case-xp-status p,#zefirok-maltipoo-runner .case-xp-fallback p{position:relative;z-index:3;max-width:310px;margin:0;color:#8f7771;font-size:13px;line-height:1.45}
+#zefirok-maltipoo-runner .case-xp-preparing-bar{position:relative;z-index:3;width:min(250px,82%);height:6px;margin:22px auto 13px;border-radius:999px;overflow:hidden;background:#f2e8e3;box-shadow:inset 0 1px 3px rgba(86,54,48,.07)}
+#zefirok-maltipoo-runner .case-xp-preparing-bar i{display:block;width:44%;height:100%;border-radius:inherit;background:linear-gradient(90deg,transparent,var(--case-accent),var(--case-accent-2),transparent);animation:caseXpLoading 1.1s ease-in-out infinite}
+#zefirok-maltipoo-runner .case-xp-preparing-note{position:relative;z-index:3;display:inline-flex;align-items:center;gap:7px;max-width:290px;color:#a18a83;font-size:10px;line-height:1.35}
+#zefirok-maltipoo-runner .case-xp-preparing-note i{width:7px;height:7px;border-radius:50%;background:#70b788;box-shadow:0 0 0 4px rgba(112,183,136,.12);flex:0 0 auto}
+#zefirok-maltipoo-runner .case-xp-opening{min-height:590px;padding-top:31px;background:radial-gradient(circle at 50% 43%,color-mix(in srgb,var(--case-accent-2) 23%,transparent),transparent 44%),linear-gradient(180deg,#fffdfb 0%,#fff8f4 100%)}
+#zefirok-maltipoo-runner .case-xp-opening-heading{position:relative;z-index:4;min-height:93px}
+#zefirok-maltipoo-runner .case-xp-opening-heading small{display:block;margin-bottom:4px;color:var(--case-accent);font-size:10px;font-weight:950;letter-spacing:.11em}
+#zefirok-maltipoo-runner .case-xp-opening-heading h2{margin:0;color:#4f3532;font-size:25px;letter-spacing:-.03em}
+#zefirok-maltipoo-runner .case-xp-opening-heading p{margin:6px 0 0;color:#9a7e76;font-size:12px}
+#zefirok-maltipoo-runner .case-xp-case-stage{position:relative;z-index:2;display:grid;place-items:center;width:100%;height:350px;min-height:350px;margin:-8px 0 -3px;padding:0;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;overflow:visible;appearance:none;-webkit-appearance:none}
+#zefirok-maltipoo-runner .case-xp-case-stage:active{transform:none!important}
+#zefirok-maltipoo-runner .case-xp-stage-vignette{position:absolute;width:260px;height:260px;border-radius:50%;background:radial-gradient(circle,color-mix(in srgb,var(--case-accent-2) 40%,#fff) 0%,color-mix(in srgb,var(--case-accent) 10%,transparent) 48%,transparent 72%);filter:blur(3px);opacity:.74}
+#zefirok-maltipoo-runner .case-xp-rays{position:absolute;width:310px;height:310px;border-radius:50%;opacity:.16;background:repeating-conic-gradient(from 0deg,var(--case-accent) 0deg 5deg,transparent 5deg 20deg);mask-image:radial-gradient(circle,transparent 0 23%,#000 27% 64%,transparent 70%);-webkit-mask-image:radial-gradient(circle,transparent 0 23%,#000 27% 64%,transparent 70%)}
+#zefirok-maltipoo-runner .case-xp-particles{position:absolute;inset:30px 35px;pointer-events:none}
+#zefirok-maltipoo-runner .case-xp-particles i{position:absolute;width:7px;height:7px;border-radius:2px;background:var(--case-accent);box-shadow:0 0 12px color-mix(in srgb,var(--case-accent) 70%,transparent);opacity:0}
+#zefirok-maltipoo-runner .case-xp-particles i:nth-child(1){left:13%;top:48%}.case-xp-particles i:nth-child(2){left:24%;top:20%}.case-xp-particles i:nth-child(3){left:35%;top:72%}.case-xp-particles i:nth-child(4){left:47%;top:11%}.case-xp-particles i:nth-child(5){left:62%;top:76%}.case-xp-particles i:nth-child(6){left:72%;top:22%}.case-xp-particles i:nth-child(7){left:84%;top:54%}.case-xp-particles i:nth-child(8){left:56%;top:34%}
+#zefirok-maltipoo-runner .case-xp-case-stack{position:relative;display:grid;place-items:center;width:250px;height:250px;transform-origin:50% 64%;filter:drop-shadow(0 24px 22px rgba(71,39,34,.22))}
+#zefirok-maltipoo-runner .case-xp-case-img{position:absolute!important;inset:0!important;width:250px!important;height:250px!important;max-width:250px!important;max-height:250px!important;margin:0!important;object-fit:contain!important;user-select:none;-webkit-user-drag:none;will-change:transform,opacity,filter}
+#zefirok-maltipoo-runner .case-xp-case-open{opacity:0;transform:scale(.96)}
+#zefirok-maltipoo-runner .case-xp-flash{position:absolute;width:270px;height:270px;border-radius:50%;background:radial-gradient(circle,#fff 0 7%,color-mix(in srgb,var(--case-accent-2) 90%,#fff) 18%,color-mix(in srgb,var(--case-accent) 58%,transparent) 42%,transparent 68%);filter:blur(1px);opacity:0;transform:scale(.32);pointer-events:none}
+#zefirok-maltipoo-runner .case-xp-opening-progress{position:relative;z-index:4;width:112px;height:3px;overflow:hidden;border-radius:999px;background:#eee1dc}
+#zefirok-maltipoo-runner .case-xp-opening-progress i{display:block;width:100%;height:100%;border-radius:inherit;background:var(--case-accent);transform-origin:left center;transform:scaleX(0)}
+#zefirok-maltipoo-runner .case-xp-skip-note{position:relative;z-index:4;min-height:14px;margin-top:8px;color:#b29a92;font-size:9px;letter-spacing:.025em}
+#zefirok-maltipoo-runner .case-xp-opening.is-animating .case-xp-opening-progress i{animation:caseXpProgress var(--case-xp-duration) linear forwards}
+#zefirok-maltipoo-runner .case-xp-opening.is-animating .case-xp-case-closed{animation:caseXpClosed var(--case-xp-duration) cubic-bezier(.22,.75,.22,1) forwards}
+#zefirok-maltipoo-runner .case-xp-opening.is-animating .case-xp-case-open{animation:caseXpOpen var(--case-xp-duration) cubic-bezier(.18,.86,.25,1) forwards}
+#zefirok-maltipoo-runner .case-xp-opening.is-animating .case-xp-flash{animation:caseXpFlash var(--case-xp-duration) ease-out forwards}
+#zefirok-maltipoo-runner .case-xp-opening.is-animating .case-xp-rays{animation:caseXpRays var(--case-xp-duration) linear forwards}
+#zefirok-maltipoo-runner .case-xp-opening.is-animating .case-xp-particles i{animation:caseXpParticle var(--case-xp-duration) ease-out forwards}
+#zefirok-maltipoo-runner .case-xp-opening[data-case-theme=&quot;small&quot;].is-animating .case-xp-case-stack{animation:caseXpSmall var(--case-xp-duration) ease-in-out forwards}
+#zefirok-maltipoo-runner .case-xp-opening[data-case-theme=&quot;sweet&quot;].is-animating .case-xp-case-stack{animation:caseXpSweet var(--case-xp-duration) ease-in-out forwards}
+#zefirok-maltipoo-runner .case-xp-opening[data-case-theme=&quot;gold&quot;].is-animating .case-xp-case-stack{animation:caseXpGold var(--case-xp-duration) cubic-bezier(.2,.72,.16,1) forwards}
+#zefirok-maltipoo-runner .case-xp-opening[data-case-theme=&quot;mythic&quot;].is-animating .case-xp-case-stack{animation:caseXpMythic var(--case-xp-duration) ease-in-out forwards}
+#zefirok-maltipoo-runner .case-xp-opening[data-case-theme=&quot;legendary&quot;].is-animating .case-xp-case-stack{animation:caseXpLegendary var(--case-xp-duration) cubic-bezier(.12,.7,.12,1) forwards}
+#zefirok-maltipoo-runner .case-xp-opening[data-case-theme=&quot;alex&quot;].is-animating .case-xp-case-stack{animation:caseXpAlex var(--case-xp-duration) ease-in-out forwards}
+#zefirok-maltipoo-runner .case-xp-opening[data-case-theme=&quot;mythic&quot;] .case-xp-particles i,#zefirok-maltipoo-runner .case-xp-opening[data-case-theme=&quot;legendary&quot;] .case-xp-particles i,#zefirok-maltipoo-runner .case-xp-opening[data-case-theme=&quot;alex&quot;] .case-xp-particles i{width:9px;height:9px;border-radius:50%}
+#zefirok-maltipoo-runner .case-xp-opening[data-case-theme=&quot;alex&quot;] .case-xp-particles i{width:auto;height:auto;background:transparent;box-shadow:none;font-style:normal}#zefirok-maltipoo-runner .case-xp-opening[data-case-theme=&quot;alex&quot;] .case-xp-particles i:before{content:&quot;🐾&quot;;font-size:13px;filter:drop-shadow(0 0 5px rgba(76,158,146,.24))}
+#zefirok-maltipoo-runner .case-xp-opening[data-case-theme=&quot;legendary&quot;] .case-xp-rays{opacity:.27;width:340px;height:340px}
+#zefirok-maltipoo-runner .case-xp-opening.is-skipping .case-xp-case-stack{transform:scale(1.08)!important;filter:drop-shadow(0 20px 28px color-mix(in srgb,var(--case-accent) 38%,transparent))!important;transition:.14s ease}
+#zefirok-maltipoo-runner .case-xp-opening.is-skipping .case-xp-flash{opacity:1;transform:scale(1.25);transition:.14s ease}
+#zefirok-maltipoo-runner .case-xp-reveal{justify-content:flex-start;min-height:610px;padding-top:30px;background:radial-gradient(circle at 50% 41%,color-mix(in srgb,var(--reward-accent) 17%,transparent),transparent 44%),linear-gradient(180deg,#fffdfa,#fff8f5 64%,#fff);opacity:0;transform:translateY(8px);transition:opacity .28s ease,transform .34s cubic-bezier(.2,.8,.2,1)}
+#zefirok-maltipoo-runner .case-xp-reveal.is-visible{opacity:1;transform:none}
+#zefirok-maltipoo-runner .case-xp-reveal[data-reward-tier=&quot;rare&quot;]{--reward-accent:#74aab5}.case-xp-reveal[data-reward-tier=&quot;superrare&quot;]{--reward-accent:#c46bb0}.case-xp-reveal[data-reward-tier=&quot;epic&quot;]{--reward-accent:#9a61cb}.case-xp-reveal[data-reward-tier=&quot;mythic&quot;]{--reward-accent:#d25aae}.case-xp-reveal[data-reward-tier=&quot;legendary&quot;]{--reward-accent:#d8a22f}
+#zefirok-maltipoo-runner .case-xp-reward-bg{position:absolute;inset:0;z-index:-1;overflow:hidden;pointer-events:none}
+#zefirok-maltipoo-runner .case-xp-reward-bg:before{content:&quot;&quot;;position:absolute;left:50%;top:220px;width:330px;height:330px;border-radius:50%;transform:translate(-50%,-50%);background:repeating-conic-gradient(from -12deg,color-mix(in srgb,var(--reward-accent) 18%,transparent) 0 6deg,transparent 6deg 22deg);mask-image:radial-gradient(circle,transparent 0 27%,#000 30% 65%,transparent 71%);-webkit-mask-image:radial-gradient(circle,transparent 0 27%,#000 30% 65%,transparent 71%);animation:caseXpRewardRays 16s linear infinite}
+#zefirok-maltipoo-runner .case-xp-reward-bg i{position:absolute;width:7px;height:7px;border-radius:50%;background:var(--reward-accent);opacity:.25;animation:caseXpRewardFloat 2.6s ease-in-out infinite}.case-xp-reward-bg i:nth-child(1){left:16%;top:25%}.case-xp-reward-bg i:nth-child(2){left:78%;top:29%;animation-delay:.35s}.case-xp-reward-bg i:nth-child(3){left:23%;top:47%;animation-delay:.7s}.case-xp-reward-bg i:nth-child(4){left:82%;top:49%;animation-delay:1.05s}.case-xp-reward-bg i:nth-child(5){left:34%;top:15%;animation-delay:1.4s}.case-xp-reward-bg i:nth-child(6){left:68%;top:17%;animation-delay:1.75s}
+#zefirok-maltipoo-runner .case-xp-reward-visual{position:relative;z-index:2;display:grid;place-items:center;width:255px;height:255px;margin:4px auto -8px}
+#zefirok-maltipoo-runner .case-xp-visual-aura{position:absolute;width:190px;height:190px;border-radius:50%;background:radial-gradient(circle,color-mix(in srgb,var(--reward-accent) 30%,#fff) 0%,color-mix(in srgb,var(--reward-accent) 13%,transparent) 42%,transparent 72%);filter:blur(2px);animation:caseXpRewardAura 1.9s ease-in-out infinite}
+#zefirok-maltipoo-runner .case-xp-reward-visual&gt;img{position:relative;z-index:2;display:block;width:176px;height:176px;object-fit:contain;filter:drop-shadow(0 17px 15px rgba(69,38,37,.15));animation:caseXpRewardPop .48s cubic-bezier(.17,.85,.28,1.18) both}
+#zefirok-maltipoo-runner .case-xp-reward-visual.is-skin&gt;img{width:198px;height:205px}.case-xp-reward-visual.is-physical&gt;img{width:184px;height:184px}
+#zefirok-maltipoo-runner .case-xp-spotlight{position:absolute;bottom:24px;width:170px;height:48px;border-radius:50%;background:radial-gradient(ellipse,color-mix(in srgb,var(--reward-accent) 25%,#fff),transparent 70%);transform:perspective(120px) rotateX(62deg)}
+#zefirok-maltipoo-runner .case-xp-orbit{position:absolute;z-index:3;font-size:18px;color:var(--reward-accent);filter:drop-shadow(0 2px 4px rgba(0,0,0,.08));animation:caseXpOrbit 2.7s ease-in-out infinite}.case-xp-orbit.o1{left:35px;top:66px}.case-xp-orbit.o2{right:37px;top:98px;animation-delay:.7s}.case-xp-orbit.o3{left:62px;bottom:40px;animation-delay:1.4s}
+#zefirok-maltipoo-runner .case-xp-frame-preview{position:relative;display:grid;place-items:center;width:205px;height:205px}.case-xp-frame-preview&gt;img{position:absolute;inset:0;width:205px;height:205px;object-fit:contain;z-index:3;filter:drop-shadow(0 13px 14px rgba(67,37,36,.12));animation:caseXpRewardPop .48s cubic-bezier(.17,.85,.28,1.18) both}.case-xp-frame-avatar{display:grid;place-items:center;width:115px;height:115px;border-radius:50%;background:linear-gradient(145deg,#fff,#f6ddd5);box-shadow:inset 0 0 0 5px rgba(255,255,255,.76),0 9px 25px rgba(76,43,42,.11);font-size:42px}
+#zefirok-maltipoo-runner .case-xp-avatar-preview{position:relative;z-index:3;width:172px;height:172px;padding:8px;border-radius:50%;background:#fff;box-shadow:0 16px 35px rgba(74,41,42,.14),0 0 0 2px color-mix(in srgb,var(--reward-accent) 35%,transparent)}.case-xp-avatar-preview img{width:100%;height:100%;border-radius:50%;object-fit:cover}
+#zefirok-maltipoo-runner .case-xp-trail-track{position:relative;z-index:3;width:225px;height:120px;border-bottom:2px dashed color-mix(in srgb,var(--reward-accent) 30%,transparent);overflow:visible}.case-xp-trail-track img{position:absolute;left:50%;bottom:3px;width:200px;height:86px;transform:translateX(-50%);object-fit:contain;filter:drop-shadow(0 9px 11px rgba(69,38,37,.11))}.case-xp-trail-runner{position:absolute;z-index:4;left:12px;bottom:45px;font-size:27px;animation:caseXpTrailRunner 2.1s ease-in-out infinite}
+#zefirok-maltipoo-runner .case-xp-music-cover{position:relative;z-index:3;width:158px;height:158px}.case-xp-music-cover img{position:absolute;z-index:2;inset:0;width:158px;height:158px;border-radius:26px;object-fit:cover;box-shadow:0 16px 30px rgba(58,34,35,.18)}.case-xp-music-disc{position:absolute;z-index:1;right:-37px;top:17px;width:126px;height:126px;border-radius:50%;background:repeating-radial-gradient(circle,#59454a 0 5px,#34282c 6px 8px);box-shadow:0 9px 24px rgba(44,30,31,.22);animation:caseXpDisc 5s linear infinite}.case-xp-music-disc:after{content:&quot;&quot;;position:absolute;inset:45px;border-radius:50%;background:var(--reward-accent)}
+#zefirok-maltipoo-runner .case-xp-wave{position:absolute;z-index:5;bottom:25px;display:flex;align-items:end;gap:4px;height:34px}.case-xp-wave i{display:block;width:4px;height:10px;border-radius:999px;background:var(--reward-accent);animation:caseXpWave .9s ease-in-out infinite}.case-xp-wave i:nth-child(2){animation-delay:.13s}.case-xp-wave i:nth-child(3){animation-delay:.26s}.case-xp-wave i:nth-child(4){animation-delay:.39s}.case-xp-wave i:nth-child(5){animation-delay:.52s}.case-xp-wave i:nth-child(6){animation-delay:.65s}
+#zefirok-maltipoo-runner .case-xp-bolt{position:absolute;z-index:4;color:var(--reward-accent);font-size:30px;filter:drop-shadow(0 0 9px color-mix(in srgb,var(--reward-accent) 55%,transparent));animation:caseXpBolt 1.4s ease-in-out infinite}.case-xp-bolt.b1{left:35px;top:64px;transform:rotate(-18deg)}.case-xp-bolt.b2{right:32px;bottom:57px;transform:rotate(16deg);animation-delay:.6s}
+#zefirok-maltipoo-runner .case-xp-gift-ring{position:absolute;width:200px;height:200px;border:2px dashed color-mix(in srgb,var(--reward-accent) 35%,transparent);border-radius:50%;animation:caseXpRewardRays 9s linear infinite}
+#zefirok-maltipoo-runner .case-xp-reward-copy{position:relative;z-index:3;display:flex;flex-direction:column;align-items:center;min-height:126px}.case-xp-rarity-badge{display:inline-flex;align-items:center;min-height:25px;padding:5px 10px;border-radius:999px;background:color-mix(in srgb,var(--reward-accent) 13%,#fff);border:1px solid color-mix(in srgb,var(--reward-accent) 28%,transparent);color:color-mix(in srgb,var(--reward-accent) 76%,#55403d);font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.055em}.case-xp-reward-copy h2{margin:7px 0 4px;max-width:315px;color:#4a3331;font-size:27px;line-height:1.08;letter-spacing:-.032em}.case-xp-reward-copy p{margin:0;max-width:310px;color:#8e7670;font-size:12px;line-height:1.4}.case-xp-credited{display:inline-flex;align-items:center;gap:6px;margin-top:9px;color:#6f9b7d;font-size:10px;font-weight:850}.case-xp-credited i{display:grid;place-items:center;width:17px;height:17px;border-radius:50%;background:#e9f6ed;color:#55916a;font-size:10px;font-style:normal}
+#zefirok-maltipoo-runner .case-xp-result-actions,#zefirok-maltipoo-runner .case-xp-status-actions{position:relative;z-index:4;display:grid;grid-template-columns:1fr 1fr;gap:9px;width:100%;margin-top:auto;padding-top:14px}.case-xp-result-actions.is-single{grid-template-columns:1fr}.case-xp-primary,.case-xp-secondary{min-height:48px!important;padding:10px 14px!important;border-radius:15px!important;font-size:12px!important;font-weight:900!important;letter-spacing:.01em!important}.case-xp-primary{border:0!important;background:linear-gradient(135deg,#df9a7b,#c97867)!important;color:#fff!important;box-shadow:0 11px 24px rgba(184,104,84,.22)!important}.case-xp-secondary{border:1px solid #eadbd4!important;background:#fff!important;color:#74544d!important;box-shadow:0 8px 18px rgba(89,52,48,.06)!important}
+#zefirok-maltipoo-runner .case-xp-alex-collection{position:relative;z-index:3;display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;margin-top:5px;padding:10px 12px;border:1px solid rgba(76,158,146,.18);border-radius:14px;background:rgba(234,248,244,.72);text-align:left}.case-xp-alex-collection span{display:flex;flex-direction:column;gap:2px}.case-xp-alex-collection strong{font-size:10px;color:#426d67}.case-xp-alex-collection small{font-size:9px;color:#7e9d98}.case-xp-alex-collection.is-complete{border-color:rgba(216,167,47,.28);background:#fff7dc}.case-xp-alex-gold{width:48px!important;height:48px!important;margin:0!important;object-fit:contain!important}
+#zefirok-maltipoo-runner .case-xp-status{justify-content:flex-start;min-height:590px;padding-top:35px}.case-xp-status-mark,.case-xp-network-mark{position:relative;z-index:4;display:grid;place-items:center;width:55px;height:55px;margin-bottom:-5px}.case-xp-status-mark.is-lock:before{content:&quot;&quot;;position:absolute;width:37px;height:30px;bottom:4px;border-radius:10px;background:#f1b876;box-shadow:0 8px 22px rgba(164,101,58,.18)}.case-xp-status-mark.is-lock:after{content:&quot;&quot;;position:absolute;top:4px;width:24px;height:25px;border:5px solid #d89b5c;border-bottom:0;border-radius:16px 16px 0 0}.case-xp-status-mark.is-lock span{position:absolute;z-index:2;bottom:13px;width:6px;height:9px;border-radius:4px;background:#fff8eb}
+#zefirok-maltipoo-runner .case-xp-network-mark{height:45px}.case-xp-network-mark i{position:absolute;bottom:6px;width:9px;height:9px;border-radius:50%;background:#b8897d}.case-xp-network-mark i:nth-child(2),.case-xp-network-mark i:nth-child(3){bottom:12px;width:32px;height:20px;border:3px solid #b8897d;border-color:#b8897d transparent transparent transparent;border-radius:50%;background:none}.case-xp-network-mark i:nth-child(3){bottom:20px;width:49px;height:30px;opacity:.56}.case-xp-network-mark.is-checking{animation:caseXpNetworkPulse 1.1s ease-in-out infinite}
+#zefirok-maltipoo-runner .case-xp-status-case{position:relative;display:grid;place-items:center;width:190px;height:190px;margin:1px auto -6px}.case-xp-status-case:before{content:&quot;&quot;;position:absolute;width:145px;height:145px;border-radius:50%;background:radial-gradient(circle,color-mix(in srgb,var(--case-accent) 16%,#fff),transparent 68%)}.case-xp-status-case-img{position:relative!important;width:155px!important;height:155px!important;max-width:155px!important;max-height:155px!important;margin:0!important;object-fit:contain!important;filter:grayscale(.08) drop-shadow(0 15px 16px rgba(70,42,39,.13))}.case-xp-status-pill{position:relative;z-index:4;display:inline-flex;padding:5px 9px;margin:4px 0 4px;border-radius:999px;background:#f7ece7;color:#a06f63;font-size:9px;font-weight:900;letter-spacing:.05em;text-transform:uppercase}.case-xp-status-note{position:relative;z-index:3;display:flex;flex-direction:column;gap:2px;width:100%;margin-top:17px;padding:11px 13px;border:1px solid #eee2dc;border-radius:14px;background:rgba(255,255,255,.76);text-align:left}.case-xp-status-note strong{color:#6e514b;font-size:10px}.case-xp-status-note small{color:#9b837d;font-size:9px;line-height:1.4}.case-xp-status-actions{margin-top:auto}.case-xp-status-actions{grid-template-columns:repeat(auto-fit,minmax(140px,1fr))}
+#zefirok-maltipoo-runner .case-xp-fallback{justify-content:center}.case-xp-fallback-icon{display:grid;place-items:center;width:150px;height:150px;margin:21px 0 10px;border-radius:50%;background:radial-gradient(circle,#fff,#f7e7df);box-shadow:0 18px 40px rgba(78,46,43,.10);font-size:58px}.case-xp-fallback .case-xp-primary{width:100%;margin-top:28px}
+@keyframes caseXpPrepareGlow{0%,100%{transform:scale(.92);opacity:.45}50%{transform:scale(1.08);opacity:.9}}
+@keyframes caseXpPrepareCase{0%,100%{transform:translateY(2px) scale(.99)}50%{transform:translateY(-5px) scale(1.015)}}
+@keyframes caseXpLoading{0%{transform:translateX(-120%)}100%{transform:translateX(300%)}}
+@keyframes caseXpProgress{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+@keyframes caseXpClosed{0%,59%{opacity:1;filter:brightness(1)}66%{opacity:1;filter:brightness(1.25)}70%,100%{opacity:0;transform:scale(1.055)}}
+@keyframes caseXpOpen{0%,63%{opacity:0;transform:scale(.91)}70%{opacity:1;transform:scale(1.08);filter:brightness(1.35)}82%,100%{opacity:1;transform:scale(1);filter:brightness(1)}}
+@keyframes caseXpFlash{0%,57%{opacity:0;transform:scale(.28)}67%{opacity:.94;transform:scale(1.12)}78%,100%{opacity:0;transform:scale(1.55)}}
+@keyframes caseXpRays{0%{transform:rotate(0) scale(.76);opacity:.05}62%{opacity:.18}78%{transform:rotate(120deg) scale(1.07);opacity:.34}100%{transform:rotate(175deg) scale(1.12);opacity:.14}}
+@keyframes caseXpParticle{0%,42%{opacity:0;transform:translateY(10px) scale(.4)}61%{opacity:.9}100%{opacity:0;transform:translateY(-62px) scale(1.15) rotate(90deg)}}
+@keyframes caseXpSmall{0%,20%{transform:translateY(0) rotate(0)}35%{transform:translateY(-10px) rotate(-2deg)}47%{transform:translateY(3px) rotate(2deg)}58%{transform:translateY(-5px) rotate(-2deg)}68%{transform:translateY(0) scale(1.07)}100%{transform:scale(1)}}
+@keyframes caseXpSweet{0%,18%{transform:translateY(0) rotate(0)}31%{transform:translateY(-6px) rotate(-3deg)}43%{transform:translateY(-9px) rotate(3deg)}54%{transform:translateY(-6px) rotate(-2deg)}67%{transform:scale(1.075)}100%{transform:scale(1)}}
+@keyframes caseXpGold{0%,24%{transform:scale(.96)}40%{transform:scale(1.01)}54%{transform:scale(.985)}68%{transform:scale(1.11)}77%{transform:scale(.98)}100%{transform:scale(1)}}
+@keyframes caseXpMythic{0%{transform:translateY(8px) scale(.95)}28%{transform:translateY(-12px) rotate(-2deg)}48%{transform:translateY(-17px) rotate(2deg)}62%{transform:translateY(-9px) scale(1.02)}70%{transform:translateY(-4px) scale(1.12)}100%{transform:translateY(0) scale(1)}}
+@keyframes caseXpLegendary{0%{transform:scale(.82);filter:brightness(.82)}38%{transform:scale(.96);filter:brightness(.94)}58%{transform:scale(1.02);filter:brightness(1.05)}69%{transform:scale(1.16);filter:brightness(1.25)}80%{transform:scale(1.02)}100%{transform:scale(1)}}
+@keyframes caseXpAlex{0%,18%{transform:translateY(3px) rotate(0)}30%{transform:translateY(-3px) rotate(-5deg)}39%{transform:translateY(-5px) rotate(5deg)}48%{transform:translateY(-4px) rotate(-4deg)}58%{transform:translateY(-7px) rotate(3deg)}69%{transform:scale(1.1) rotate(0)}100%{transform:scale(1)}}
+@keyframes caseXpRewardRays{to{transform:translate(-50%,-50%) rotate(360deg)}}
+@keyframes caseXpRewardFloat{0%,100%{transform:translateY(0) scale(.8);opacity:.18}50%{transform:translateY(-10px) scale(1.12);opacity:.48}}
+@keyframes caseXpRewardAura{0%,100%{transform:scale(.92);opacity:.62}50%{transform:scale(1.07);opacity:1}}
+@keyframes caseXpRewardPop{0%{opacity:0;transform:translateY(14px) scale(.76)}100%{opacity:1;transform:none}}
+@keyframes caseXpOrbit{0%,100%{transform:translateY(3px) scale(.8);opacity:.45}50%{transform:translateY(-9px) scale(1.12);opacity:.9}}
+@keyframes caseXpTrailRunner{0%{transform:translateX(0) translateY(0)}48%{transform:translateX(155px) translateY(-4px)}100%{transform:translateX(155px) translateY(-4px);opacity:.2}}
+@keyframes caseXpDisc{to{transform:rotate(360deg)}}
+@keyframes caseXpWave{0%,100%{height:9px}50%{height:29px}}
+@keyframes caseXpBolt{0%,100%{opacity:.28;scale:.8}50%{opacity:1;scale:1.12}}
+@keyframes caseXpNetworkPulse{0%,100%{opacity:.5;transform:scale(.94)}50%{opacity:1;transform:scale(1.04)}}
+@media(max-height:690px){#zefirok-maltipoo-runner .case-layer.case-xp-active .case-dialog{max-height:95vh}.case-xp-shell{min-height:520px;padding-top:22px}.case-xp-opening{min-height:530px}.case-xp-case-stage{height:300px;min-height:300px}.case-xp-case-stack,.case-xp-case-img{width:215px!important;height:215px!important;max-width:215px!important;max-height:215px!important}.case-xp-reveal{min-height:545px}.case-xp-reward-visual{width:220px;height:215px}.case-xp-reward-visual&gt;img{width:155px;height:155px}.case-xp-status{min-height:525px}.case-xp-status-case{height:158px}}
+@media(max-width:360px){#zefirok-maltipoo-runner .case-xp-shell{padding-left:16px;padding-right:16px}.case-xp-reward-copy h2{font-size:24px}.case-xp-result-actions,.case-xp-status-actions{grid-template-columns:1fr}.case-xp-reveal{min-height:580px}}
+@media(prefers-reduced-motion:reduce){#zefirok-maltipoo-runner .case-xp-shell *,#zefirok-maltipoo-runner .case-xp-shell *:before,#zefirok-maltipoo-runner .case-xp-shell *:after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}.case-xp-skip-note{display:none!important}}
+&lt;/style&gt;
 &lt;/body&gt;
 &lt;/html&gt;" title="Сладкий Забег"></iframe>
 <script id="zefirok-v07934-season-pass-overlay-audit" type="application/json">{"version":"0.79.34","scope":"outer-app-return-recovery","samePageOverlay":true,"mainGamePreserved":true,"restores":["telegram_profile","rating","balances","cases","notifications","feature_flags"]}</script>
