@@ -19102,6 +19102,13 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         }
       }
 
+      async function loadCaseStateForOpeningRecovery() {
+        // The fast warehouse payload intentionally omits recentOpenings.
+        // Opening recovery needs the full payload so a committed case can be
+        // matched to its exact server-authoritative reward instead of looking lost.
+        return loadCaseState(true, false);
+      }
+
       async function openLevelCaseClient(level, button) {
         const normalizedLevel = Math.floor(Number(level || 0));
         const levelCase = LEVEL_CASE_SCHEDULE.find((entry) =&gt; entry.level === normalizedLevel);
@@ -19130,7 +19137,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
             return;
           }
           showCaseRecoveryCheckingState(retryType, &quot;Проверяем, успел ли сервер завершить открытие…&quot;);
-          const synced = await loadCaseState(true, true);
+          const synced = await loadCaseStateForOpeningRecovery();
           const recovered = synced ? caseExperienceFindRecoveredOpening(caseOpeningRetryContext) : null;
           if (recovered) {
             showCaseResult(recovered, { recovered:true });
@@ -19555,7 +19562,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         if (!retry || caseRouletteBusy) return;
         if (button) { button.disabled = true; button.textContent = &quot;Проверяем…&quot;; }
         showCaseRecoveryCheckingState(retry.caseType, &quot;Сверяем это открытие с сервером…&quot;);
-        const synced = await loadCaseState(true, true);
+        const synced = await loadCaseStateForOpeningRecovery();
         const recovered = synced ? caseExperienceFindRecoveredOpening(retry) : null;
         if (recovered) {
           showCaseResult(recovered, { recovered:true });
@@ -19661,7 +19668,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
             showCasesUnavailableState(type, error);
           } else {
             showCaseRecoveryCheckingState(type, &quot;Проверяем, успел ли сервер завершить эту попытку…&quot;);
-            const synced = await loadCaseState(true, true);
+            const synced = await loadCaseStateForOpeningRecovery();
             const recovered = synced ? caseExperienceFindRecoveredOpening(caseOpeningRetryContext) : null;
             if (recovered) {
               grantedCasePendingRequests.delete(type);
