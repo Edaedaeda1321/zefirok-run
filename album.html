@@ -420,8 +420,9 @@ function sourceHints(a,i){
  if(secret(i))return [];
  const explicit=String(i.obtainText||i.sourceText||'').trim();
  if(explicit)return [{text:explicit}];
- const found=[];
- // Only use sources explicitly present in the current public album response.
+ const found=(Array.isArray(i.sources)?i.sources:[]).filter(source=>source&&typeof source.text==='string'&&source.text.trim()).map(source=>({text:source.text,state:String(source.note||'')}));
+ // Source descriptors come from current public catalogs on the server; never
+ // derive acquisition from item names/rarity or expose a hidden item's source.
  for(const c of data.collections)for(const m of milestones(c))if((m.rewards||[]).some(r=>r.kind===i.kind&&String(r.id||'')===String(i.itemId||''))){
   found.push({cid:c.collectionId,text:`Этап «${m.title||fmt(m.thresholdPercent)+'%'}» в альбоме «${c.title}».`,state:done(m)?'Этот этап уже получен.':m.eligible?'Проверь статус награды этапа.':'Собери обязательные предметы этого альбома.'});
  }
@@ -431,7 +432,7 @@ function itemContent(entry){
  const a=collection(entry.cid),i=items(a).find(i=>String(i.slotKey)===entry.slot);
  if(!a||!i)return {title:'Предмет коллекции',content:empty('Данные изменились','Закрой окно и выбери предмет снова.')};
  const hidden=secret(i),hints=sourceHints(a,i);
- const source=hidden?'Название и способ получения откроются после находки.':hints.length?'':'Точный источник получения в данных Альбома пока не указан. Не все предметы доступны в магазине или кейсах.';
+ const source=hidden?'Название и способ получения откроются после находки.':hints.length?'':i.sourcesComplete===false?'Не удалось обновить способы получения. Обнови Альбом после восстановления связи.':'Для этого предмета сейчас нет указанного публичного способа получения. Он может быть недоступен в текущем сезоне.';
  return {title:hidden?'Секретный предмет':'Предмет коллекции',content:
  `<section class="az-item-detail ${hidden?'secret':''}">${hidden?'<span class="az-secret-mark" aria-hidden="true">?</span>':image(i.imageUrl)}<h3>${esc(itemTitle(i))}</h3><div class="az-tags">${badge(KIND[i.kind]||'Предмет')}${hidden?'':badge(RARITIES[i.rarity]||'Особый')}${badge(i.owned?'Собрано':hidden?'Секрет':'Не получено',i.owned?'green':'gray')}</div></section>
  <section class="az-block"><h3>${i.required?'Обязательный предмет':'Бонусный предмет'}</h3><p>${i.required?'Участвует в прогрессе коллекции и открытии её этапов.':'Дополняет коллекцию, но не требуется для наград за процент сборки.'}</p></section>

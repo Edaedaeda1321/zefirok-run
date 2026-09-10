@@ -1216,8 +1216,8 @@ body.zefirok-run-expanded>iframe[data-run-expanded="true"]{width:100%!important;
     const passOffer = normalizedOfferTier ? `&offer=${encodeURIComponent(normalizedOfferTier)}` : "";
     const passTest = TEST_PROJECT_MODE ? "&test_project=1" : "";
     passFrame.src = initData
-      ? `/battle-pass.html?v=1.2.0${passView}${passOffer}${passTest}#tgInitData=${encodeURIComponent(initData)}`
-      : `/battle-pass.html?v=1.2.0${passView}${passOffer}${passTest}`;
+      ? `/battle-pass.html?v=1.2.0-bugs7${passView}${passOffer}${passTest}#tgInitData=${encodeURIComponent(initData)}`
+      : `/battle-pass.html?v=1.2.0-bugs7${passView}${passOffer}${passTest}`;
     layer.append(passFrame);
     passFrame.addEventListener("load", () => {
       const snapshot = syncTelegramViewport();
@@ -1442,7 +1442,7 @@ body.zefirok-run-expanded>iframe[data-run-expanded="true"]{width:100%!important;
     album.className = "zefirok-album-frame";
     album.title = "Альбом Зеффи";
     album.referrerPolicy = "same-origin";
-    album.src = initData ? `/album.html?v=1.2.0-album5#tgInitData=${encodeURIComponent(initData)}` : `/album.html?v=1.2.0-album5`;
+    album.src = initData ? `/album.html?v=1.2.0-album6-sources#tgInitData=${encodeURIComponent(initData)}` : `/album.html?v=1.2.0-album6-sources`;
     layer.append(album);
     album.addEventListener("load", () => {
       const snapshot = syncTelegramViewport();
@@ -3237,6 +3237,14 @@ html&gt;body{padding:
       cursor: grab;
     }
 
+    #zefirok-maltipoo-runner .purchase-dialog[data-purchase-swipe] {animation-fill-mode:backwards!important}
+    #zefirok-maltipoo-runner .purchase-layer .purchase-dialog button.purchase-sheet-handle {
+      display:flex;align-items:center;justify-content:center;width:90px;height:28px;min-height:28px;
+      margin:0 auto 8px;padding:0;border:0;background:transparent;box-shadow:none;touch-action:none;
+    }
+    #zefirok-maltipoo-runner .purchase-sheet-handle&gt;span {display:block;width:42px;height:5px;border-radius:99px;background:#d8bdc8}
+    #zefirok-maltipoo-runner .purchase-sheet-handle.is-armed&gt;span {background:#be6186;width:52px}
+    #zefirok-maltipoo-runner .purchase-dialog [data-service-drag]{touch-action:none}
     #zefirok-maltipoo-runner .purchase-sheet-handle:active {
       cursor: grabbing;
     }
@@ -4862,6 +4870,15 @@ html&gt;body{padding:
   
   
 }
+
+#zefirok-maltipoo-runner .simple-sheet-grip{position:relative;z-index:3;display:flex;align-items:center;justify-content:center;width:90px;height:28px;min-height:28px;flex:none;padding:0;margin:0 auto 6px;border:0;background:transparent;box-shadow:none;touch-action:none;cursor:grab}
+#zefirok-maltipoo-runner .simple-sheet-grip&gt;span{display:block;width:40px;height:4px;border-radius:8px;background:#d8bec8}
+#zefirok-maltipoo-runner .simple-sheet-grip.is-armed&gt;span{width:50px;background:#bd6388}
+#zefirok-maltipoo-runner .case-layer:is(.is-case-catalog,.is-opening-busy) .case-generic-grip{display:none!important}
+#zefirok-maltipoo-runner [data-simple-swipe] [data-service-drag]{touch-action:none}
+#zefirok-maltipoo-runner .support-dialog[data-simple-swipe]{grid-template-rows:auto auto minmax(0,1fr)}
+#zefirok-maltipoo-runner .support-dialog&gt;.simple-sheet-grip{margin-bottom:0}
+
 &lt;/style&gt;
 
 &lt;style id=&quot;final-equal-main-tabs-fix&quot;&gt;
@@ -8806,6 +8823,8 @@ html&gt;body{padding:
 #zefirok-maltipoo-runner .profile-avatar-wrap.case-frame-legendary_frame_3::after{background-image:url(&quot;/assets/rating/frames/profile/legendary_ramka_3.webp&quot;)}
 #zefirok-maltipoo-runner .profile-avatar-wrap.case-frame-legendary_frame_4::after{background-image:url(&quot;/assets/rating/frames/profile/legendary_ramka_4.webp&quot;)}
 #zefirok-maltipoo-runner .profile-avatar-wrap.case-frame-legendary_frame_5::after{background-image:url(&quot;/assets/rating/frames/profile/legendary_ramka_5.webp&quot;)}
+#zefirok-maltipoo-runner .profile-avatar-wrap.case-frame-alex_frame_1::after{background-image:url(&quot;/assets/rating/frames/profile/ramka_alex_1.webp&quot;)}
+#zefirok-maltipoo-runner .profile-avatar-wrap.case-frame-alex_frame_2::after{background-image:url(&quot;/assets/rating/frames/profile/ramka_alex_2.webp&quot;)}
 #zefirok-maltipoo-runner .case-frame-preview{width:52px!important;height:52px!important;border:0!important;background:transparent!important;box-shadow:none!important;overflow:visible!important}
 #zefirok-maltipoo-runner .case-frame-preview&gt;img{width:58px!important;height:58px!important;object-fit:contain!important;border-radius:0!important}
 #zefirok-maltipoo-runner .case-rarity{display:block;margin-top:-2px;font-size:8px;font-weight:950;line-height:1.1}
@@ -12527,6 +12546,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 
 &lt;div aria-hidden=&quot;true&quot; class=&quot;case-layer&quot; data-case-layer hidden&gt;
   &lt;div aria-labelledby=&quot;case-dialog-title&quot; aria-modal=&quot;true&quot; class=&quot;case-dialog&quot; role=&quot;dialog&quot;&gt;
+    &lt;button type=&quot;button&quot; class=&quot;simple-sheet-grip case-generic-grip&quot; data-service-grip data-service-drag aria-label=&quot;Закрыть окно&quot; title=&quot;Потяни вниз, чтобы закрыть&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/button&gt;
     &lt;button aria-label=&quot;Закрыть&quot; class=&quot;case-dialog-close&quot; data-case-close type=&quot;button&quot;&gt;×&lt;/button&gt;
     &lt;div data-case-content&gt;&lt;/div&gt;
   &lt;/div&gt;
@@ -12848,10 +12868,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       const purchaseLayer = root.querySelector(&quot;[data-purchase-layer]&quot;);
       const purchaseContent = root.querySelector(&quot;[data-purchase-content]&quot;);
       let purchaseLayerScrollLock = null;
-      let purchaseSheetDragPointerId = null;
-      let purchaseSheetDragStartY = 0;
-      let purchaseSheetDragDistance = 0;
-      let purchaseSheetDragStartedAt = 0;
+      let purchaseSheetMotion = null;
       function setPurchaseLayerScrollLocked(locked) {
         const html = document.documentElement;
         const body = document.body;
@@ -13682,6 +13699,7 @@ function installProgressInfo(){
         setCaseLayerScrollLocked(true);
         caseLayer.hidden = false;
         caseLayer.setAttribute(&quot;aria-hidden&quot;, &quot;false&quot;);
+        caseContentEl?.querySelectorAll(&#x27;h2,.case-info-hero-head&#x27;).forEach(node=&gt;node.setAttribute(&#x27;data-service-drag&#x27;,&#x27;&#x27;));
       }
       function hideCaseLayerShell() {
         if (!caseLayer) return;
@@ -15957,7 +15975,7 @@ function installProgressInfo(){
           const label = stockUiCleanLabel(node.textContent).replace(/\s+/g, &quot;&quot;).toLowerCase();
           const def = defs.find((entry) =&gt; label.startsWith(entry.key));
           if (!def) continue;
-          const card = node.closest?.(&quot;.case-booster-card,.case-info-simple-reward&quot;);
+          const card = node.closest?.(&quot;.case-booster-card,.case-info-simple-reward,.zci-resource,.zci-item,.zci-detail,.zpi-layer,.zgt-layer,.player-mail-reward,.case-xp-reveal&quot;);
           if (card?.querySelector(&quot;img&quot;)) continue;
           stockUiEnsureImage(node, def.src, &quot;booster-inline-art&quot;);
         }
@@ -15971,6 +15989,11 @@ function installProgressInfo(){
         legendary: &quot;/assets/cases/effects/legendary_effect.webp&quot;
       });
       let caseStateLoading = false;
+      let caseStateLoadPromise = null;
+      let caseStateLoadIsFast = false;
+      let caseFullStateLastSyncAt = 0;
+      const caseLevelOpeningResults = new Map();
+      let levelCaseOpeningRequestBusy = false;
       let caseStateLastSyncAt = 0;
       const CASE_STATE_CLIENT_CACHE_MS = 8000;
       let caseRouletteBusy = false;
@@ -18867,6 +18890,7 @@ function createTutorialDeck(layer, mount, options, words) {
           return;
         }
         if (message.type === &quot;zefirok-telegram-profile-data&quot;) {
+          if (String(telegramProfile?.id || &quot;&quot;) !== String(message.payload?.id || &quot;&quot;)) {caseLevelOpeningResults.clear();caseFullStateLastSyncAt=0;}
           telegramProfile = message.payload &amp;&amp; typeof message.payload === &quot;object&quot;
             ? message.payload
             : { available: false };
@@ -19687,6 +19711,18 @@ function createTutorialDeck(layer, mount, options, words) {
 
       function applyServerCasePayload(data, openedRewards = null) {
         if (data &amp;&amp; typeof data === &quot;object&quot;) caseStateLastSyncAt = Date.now();
+        if (Array.isArray(data?.openedCases)) {
+          caseLevelOpeningResults.clear();
+          for (const entry of data.openedCases) {
+            const level = Math.floor(Number(entry?.level || 0));
+            if (level &gt; 0 &amp;&amp; Array.isArray(entry?.rewards) &amp;&amp; entry.rewards.length) caseLevelOpeningResults.set(level, { ...entry, source:&quot;level&quot;, sourceId:String(level) });
+          }
+          caseFullStateLastSyncAt = Date.now();
+        }
+        if (Number(data?.opened?.level) &gt; 0 &amp;&amp; Array.isArray(data.opened.rewards) &amp;&amp; data.opened.rewards.length) {
+          const level = Math.floor(Number(data.opened.level));
+          caseLevelOpeningResults.set(level, { ...data.opened, source:&quot;level&quot;, sourceId:String(level) });
+        }
         const hasAuthoritativeTaskNotice = Object.prototype.hasOwnProperty.call(data || {}, &quot;seasonPassTaskNotice&quot;);
         if (data?.seasonPassTaskNotice) applySeasonTaskNotice(data.seasonPassTaskNotice);
         if (!hasAuthoritativeTaskNotice &amp;&amp; (data?.opened || (Array.isArray(openedRewards) &amp;&amp; openedRewards.length))) window.setTimeout(() =&gt; void refreshSeasonTaskNotice(true), 180);
@@ -19805,84 +19841,97 @@ function createTutorialDeck(layer, mount, options, words) {
 
       async function loadCaseState(force = false, fast = false) {
         if (!telegramProfile?.initData) return false;
-        const now = Date.now();
-        // A fast warehouse refresh is intentionally authoritative: when the player
-        // opens the Cases/Boosters section we must not reuse a startup snapshot that
-        // may already be stale because a gift or queued case was just delivered.
-        if (!force &amp;&amp; !fast &amp;&amp; caseStateLastSyncAt &gt; 0 &amp;&amp; now - caseStateLastSyncAt &lt; CASE_STATE_CLIENT_CACHE_MS) {
-          if (caseSyncStatusEl) caseSyncStatusEl.textContent = &quot;Показаны актуальные награды&quot;;
-          return true;
+        // Join an in-flight read. A full recovery cannot be satisfied by the
+        // lighter warehouse response, so upgrade it once after that read ends.
+        if (caseStateLoadPromise) {
+          const pending = caseStateLoadPromise, wasFast = caseStateLoadIsFast;
+          const result = await pending;
+          if (fast || !wasFast) return result;
+          return loadCaseState(force, false);
         }
-        if (caseStateLoading) return false;
+        if (!force &amp;&amp; !fast &amp;&amp; caseFullStateLastSyncAt &gt; 0 &amp;&amp; Date.now() - caseFullStateLastSyncAt &lt; CASE_STATE_CLIENT_CACHE_MS) return true;
         caseStateLoading = true;
+        caseStateLoadIsFast = Boolean(fast);
         if (caseSyncStatusEl) caseSyncStatusEl.textContent = fast ? &quot;Показываем сохранённые награды · проверяем обновления…&quot; : &quot;Проверяем награды…&quot;;
         if (caseRefreshButton) caseRefreshButton.disabled = true;
-        try {
-          const data = await caseApiRequest(CASE_API_STATE_PATH, { force: Boolean(force), fast: Boolean(fast) }, 6500);
-          applyServerCasePayload(data);
-          if (data?.gifts) applyPlayerGiftPayload(data.gifts);
-          if (caseSyncStatusEl) caseSyncStatusEl.textContent = &quot;Награды синхронизированы&quot;;
-          return true;
-        } catch (error) {
-          if (caseSyncStatusEl) caseSyncStatusEl.textContent = fast ? &quot;Показаны сохранённые награды · сервер обновит позже&quot; : (error?.message || &quot;Не удалось обновить награды&quot;);
-          renderCaseHub();
-          return false;
-        } finally {
-          caseStateLoading = false;
-          if (caseRefreshButton) caseRefreshButton.disabled = false;
+        const pending = (async () =&gt; {
+          try {
+            const data = await caseApiRequest(CASE_API_STATE_PATH, { force:Boolean(force), fast:Boolean(fast) }, 6500);
+            if (!data?.caseState || (!fast &amp;&amp; !Array.isArray(data.openedCases))) throw new Error(&quot;Сервер вернул неполное состояние кейсов.&quot;);
+            applyServerCasePayload(data);
+            if (data?.gifts) applyPlayerGiftPayload(data.gifts);
+            if (caseSyncStatusEl) caseSyncStatusEl.textContent = &quot;Награды синхронизированы&quot;;
+            return true;
+          } catch (error) {
+            if (caseSyncStatusEl) caseSyncStatusEl.textContent = fast ? &quot;Показаны сохранённые награды · сервер обновит позже&quot; : (error?.message || &quot;Не удалось обновить награды&quot;);
+            renderCaseHub();
+            return false;
+          }
+        })();
+        caseStateLoadPromise = pending;
+        try { return await pending; }
+        finally {
+          if (caseStateLoadPromise === pending) {
+            caseStateLoadPromise = null; caseStateLoading = false;
+            if (caseRefreshButton) caseRefreshButton.disabled = false;
+          }
         }
       }
 
       async function loadCaseStateForOpeningRecovery() {
-        // The fast warehouse payload intentionally omits recentOpenings.
-        // Opening recovery needs the full payload so a committed case can be
-        // matched to its exact server-authoritative reward instead of looking lost.
         return loadCaseState(true, false);
       }
 
+      function presentConfirmedLevelCase(data, level, recovered = false) {
+        const opened = data?.opened;
+        if (!opened || Number(opened.level) !== level || !Array.isArray(opened.rewards) || !opened.rewards.length) {
+          throw Object.assign(new Error(&quot;Сервер пока не вернул результат этого кейса.&quot;), {code:&quot;CASE_RESULT_MISSING&quot;});
+        }
+        // A UI refresh failure is not a failed opening. Retain the confirmed
+        // result and show it rather than inventing a network error or rerolling.
+        caseLevelOpeningResults.set(level, { ...opened, source:&quot;level&quot;, sourceId:String(level) });
+        try { applyServerCasePayload(data, opened.rewards); }
+        catch (error) {
+          console.error(&quot;Case state presentation failed&quot;, {kind:&quot;level&quot;,level,stage:&quot;apply-confirmed-state&quot;,message:String(error?.message||error)});
+          if (caseSyncStatusEl) caseSyncStatusEl.textContent = &quot;Кейс открыт. Обнови склад, чтобы проверить отображение баланса.&quot;;
+        }
+        showCaseResult(opened, {recovered: recovered || data.repeated === true});
+      }
+
       async function openLevelCaseClient(level, button) {
+        if (levelCaseOpeningRequestBusy || caseRouletteBusy) return;
         const normalizedLevel = Math.floor(Number(level || 0));
-        const levelCase = LEVEL_CASE_SCHEDULE.find((entry) =&gt; entry.level === normalizedLevel);
-        const retryType = caseExperienceNormalizeType(levelCase?.caseType || &quot;small&quot;);
-        caseOpeningRetryContext = {
-          kind: &quot;level&quot;,
-          level: normalizedLevel,
-          caseType: retryType,
-          startedAt: Date.now(),
-          baselineRecentKeys: [...caseExperienceRecentKeys()]
-        };
-        if (button) { button.disabled = true; button.textContent = &quot;Открываем…&quot;; }
+        const levelCase = LEVEL_CASE_SCHEDULE.find(entry =&gt; entry.level === normalizedLevel);
+        if (!levelCase) return;
+        const retryType = caseExperienceNormalizeType(levelCase.caseType);
+        const context = {kind:&quot;level&quot;,level:normalizedLevel,caseType:retryType,startedAt:Date.now()};
+        caseOpeningRetryContext = context;
+        levelCaseOpeningRequestBusy = true;
+        if (button) {button.disabled=true;button.textContent=&quot;Открываем…&quot;;}
         showCaseOpeningPreview(retryType);
         try {
-          const data = await caseApiRequest(CASE_API_OPEN_PATH, { level: normalizedLevel }, CASE_OPEN_REQUEST_TIMEOUT_MS);
-          const rewards = Array.isArray(data.opened?.rewards) ? data.opened.rewards : [];
-          applyServerCasePayload(data, rewards);
-          showCaseResult(data.opened);
+          const data = await caseApiRequest(CASE_API_OPEN_PATH, {level:normalizedLevel}, CASE_OPEN_REQUEST_TIMEOUT_MS);
+          presentConfirmedLevelCase(data, normalizedLevel);
         } catch (error) {
           caseRouletteBusy = false;
-          console.warn(&quot;Case opening request failed&quot;, { kind:&quot;level&quot;, level:normalizedLevel, status:Number(error?.status||0), code:String(error?.code||&quot;&quot;) });
+          console.warn(&quot;Case opening failed before confirmation&quot;, {kind:&quot;level&quot;,level:normalizedLevel,status:Number(error?.status||0),code:String(error?.code||&quot;&quot;)});
           if (isCasesTemporarilyUnavailableError(error)) {
-            hapticNotify(&quot;error&quot;);
-            showCasesUnavailableState(retryType, error);
-            if (button?.isConnected) { button.disabled = false; button.textContent = &quot;Открыть&quot;; }
-            return;
-          }
-          showCaseRecoveryCheckingState(retryType, &quot;Проверяем, успел ли сервер завершить открытие…&quot;);
-          const synced = await loadCaseStateForOpeningRecovery();
-          const recovered = synced ? caseExperienceFindRecoveredOpening(caseOpeningRetryContext) : null;
-          if (recovered) {
-            showCaseResult(recovered, { recovered:true });
+            showCasesUnavailableState(retryType,error);
           } else {
-            const openedOnServer = normalizeCaseNumberList(state.caseOpenedLevels).includes(normalizedLevel);
-            if (openedOnServer) {
-              showCaseRecoveryPendingState(retryType, &quot;Кейс уже открыт. Получаем точную награду с сервера…&quot;);
+            showCaseRecoveryCheckingState(retryType,&quot;Проверяем результат кейса за этот уровень…&quot;);
+            const synced=await loadCaseStateForOpeningRecovery();
+            const recovered=synced?caseExperienceFindRecoveredOpening(context):null;
+            if (recovered) showCaseResult(recovered,{recovered:true});
+            else if (normalizeCaseNumberList(state.caseOpenedLevels).includes(normalizedLevel)) {
+              caseOpeningRetryContext=context;
+              showCaseRecoveryPendingState(retryType,&quot;Кейс уже открыт. Проверка вернёт его сохранённую награду.&quot;);
             } else {
-              hapticNotify(&quot;error&quot;);
-              showCaseOpenErrorState(retryType, error, true);
-              if (button?.isConnected) { button.disabled = false; button.textContent = &quot;Открыть&quot;; }
+              caseOpeningRetryContext=context;
+              showCaseOpenErrorState(retryType,error,true);
             }
           }
-        } finally { renderCaseHub(); }
+          if (button?.isConnected) {button.disabled=false;button.textContent=&quot;Открыть&quot;;}
+        } finally {levelCaseOpeningRequestBusy=false;renderCaseHub();}
       }
 
       function caseExperienceNormalizeType(caseType) {
@@ -19964,7 +20013,7 @@ function createTutorialDeck(layer, mount, options, words) {
         const type = caseExperienceNormalizeType(context.caseType || &quot;small&quot;);
         if (context.kind === &quot;level&quot;) {
           const level = String(Math.floor(Number(context.level || 0)));
-          const exact = rows.find((entry) =&gt; String(entry?.source || &quot;&quot;) === &quot;level&quot; &amp;&amp; String(entry?.sourceId || &quot;&quot;) === level);
+          const exact = caseLevelOpeningResults.get(Number(level)) || rows.find((entry) =&gt; String(entry?.source || &quot;&quot;) === &quot;level&quot; &amp;&amp; String(entry?.sourceId || &quot;&quot;) === level);
           return caseExperienceOpenedFromRecent(exact, context);
         }
         const baseline = new Set(Array.isArray(context.baselineRecentKeys) ? context.baselineRecentKeys : []);
@@ -20300,13 +20349,8 @@ function createTutorialDeck(layer, mount, options, words) {
           return;
         }
         if (retry.kind === &quot;level&quot;) {
-          const alreadyOpened = normalizeCaseNumberList(state.caseOpenedLevels).includes(Math.floor(Number(retry.level || 0)));
-          if (alreadyOpened) {
-            caseOpeningRetryContext = retry;
-            showCaseRecoveryPendingState(retry.caseType);
-            return;
-          }
           caseOpeningRetryContext = retry;
+          caseRouletteBusy = false;
           void openLevelCaseClient(retry.level, null);
           return;
         }
@@ -21011,7 +21055,7 @@ function createTutorialDeck(layer, mount, options, words) {
         let gesture=null, frame=0, timer=0, serial=0, closing=false, suppressUntil=0;
         const active=()=&gt;Boolean(!layer.hidden &amp;&amp; options.active());
         const scroll=()=&gt;options.scroll();
-        const grip=()=&gt;panel.querySelector(&#x27;[data-service-grip]&#x27;);
+        const grip=()=&gt;[...panel.querySelectorAll(&#x27;[data-service-grip]&#x27;)].find(node=&gt;node.getClientRects().length);
         const point=(list,id)=&gt;Array.from(list||[]).find(t=&gt;t.identifier===id);
         const interactive=t=&gt;t instanceof Element&amp;&amp;!t.closest(&#x27;[data-service-grip]&#x27;)&amp;&amp;!!t.closest(&#x27;button,a,input,select,textarea,summary,[contenteditable=true]&#x27;);
         const limit=h=&gt;Math.max(100,Math.min(330,h*.5));
@@ -21075,6 +21119,7 @@ function createTutorialDeck(layer, mount, options, words) {
         }
         function finish(cancelled=false){
           const g=gesture;if(!g)return;
+          if(!active()){reset();return;}
           cancelAnimationFrame(frame);frame=0;release();
           if(!g.dragging)return;
           suppressUntil=performance.now()+450;
@@ -25631,71 +25676,28 @@ function createTutorialDeck(layer, mount, options, words) {
         return purchaseLayer?.querySelector(&quot;.purchase-dialog&quot;) || null;
       }
 
-      function resetPurchaseSheetDrag(animate = true) {
-        purchaseSheetDragPointerId = null;
-        purchaseSheetDragStartY = 0;
-        purchaseSheetDragDistance = 0;
-        purchaseSheetDragStartedAt = 0;
-        const dialog = purchaseSheetDialogElement();
-        if (!dialog) return;
-        dialog.classList.remove(&quot;is-purchase-sheet-dragging&quot;);
-        if (animate) {
-          dialog.style.transition = &quot;transform .18s cubic-bezier(.2,.82,.2,1), opacity .18s ease&quot;;
-          dialog.style.transform = &quot;translate3d(0, 0, 0)&quot;;
-          dialog.style.opacity = &quot;1&quot;;
-          window.setTimeout(() =&gt; {
-            if (!purchaseSheetDragPointerId &amp;&amp; dialog.isConnected) dialog.style.transition = &quot;&quot;;
-          }, 190);
-          return;
-        }
-        dialog.style.transition = &quot;&quot;;
-        dialog.style.transform = &quot;&quot;;
-        dialog.style.opacity = &quot;&quot;;
-      }
+      function resetPurchaseSheetDrag() { purchaseSheetMotion?.reset(); }
 
       function installPurchaseSheetSwipe() {
-        if (!purchaseLayer || purchaseLayer.dataset.purchaseMode !== &quot;confirm&quot;) return;
-        const dialog = purchaseSheetDialogElement();
-        const handle = purchaseContent?.querySelector(&quot;.purchase-sheet-handle&quot;);
-        if (!dialog || !handle) return;
-        handle.addEventListener(&quot;pointerdown&quot;, (event) =&gt; {
-          if (purchaseLayer.hidden || purchaseOperationBusy || purchaseSheetDragPointerId !== null) return;
-          purchaseSheetDragPointerId = event.pointerId;
-          purchaseSheetDragStartY = Number(event.clientY || 0);
-          purchaseSheetDragDistance = 0;
-          purchaseSheetDragStartedAt = performance.now();
-          dialog.classList.add(&quot;is-purchase-sheet-dragging&quot;);
-          try { handle.setPointerCapture(event.pointerId); } catch {}
-          event.preventDefault();
+        const dialog=purchaseSheetDialogElement();
+        if(!dialog||!purchaseContent)return;
+        let handle=purchaseContent.querySelector(&#x27;.purchase-sheet-handle&#x27;);
+        if(!handle || handle.tagName!==&#x27;BUTTON&#x27;) {
+          const button=document.createElement(&#x27;button&#x27;);
+          button.type=&#x27;button&#x27;;button.className=&#x27;purchase-sheet-handle&#x27;;
+          button.innerHTML=&#x27;&lt;span&gt;&lt;/span&gt;&#x27;;button.setAttribute(&#x27;aria-label&#x27;,&#x27;Закрыть окно&#x27;);
+          if(handle)handle.replaceWith(button);else purchaseContent.prepend(button);
+          handle=button;
+        }
+        handle.dataset.serviceGrip=&#x27;&#x27;;handle.dataset.serviceDrag=&#x27;&#x27;;
+        for(const head of purchaseContent.querySelectorAll(&#x27;.purchase-sheet-head,.purchase-head,.purchase-title,h2&#x27;))head.dataset.serviceDrag=&#x27;&#x27;;
+        dialog.dataset.purchaseSwipe=&#x27;1&#x27;;
+        if(purchaseSheetMotion)return;
+        purchaseSheetMotion=createServiceSheetMotion(purchaseLayer,dialog,{
+          active:()=&gt;!purchaseOperationBusy &amp;&amp; (!caseLayer || caseLayer.hidden) &amp;&amp; (!tutorialLayer || tutorialLayer.hidden),
+          scroll:()=&gt;dialog,
+          dismiss:()=&gt;closePurchaseLayer(),back:()=&gt;closePurchaseLayer()
         });
-        handle.addEventListener(&quot;pointermove&quot;, (event) =&gt; {
-          if (event.pointerId !== purchaseSheetDragPointerId) return;
-          const distance = Math.max(0, Number(event.clientY || 0) - purchaseSheetDragStartY);
-          purchaseSheetDragDistance = Math.min(distance, Math.max(220, window.innerHeight * .5));
-          dialog.style.transform = `translate3d(0, ${purchaseSheetDragDistance}px, 0)`;
-          dialog.style.opacity = String(Math.max(.58, 1 - purchaseSheetDragDistance / 520));
-          event.preventDefault();
-        });
-        const finishDrag = (event, cancelled = false) =&gt; {
-          if (event.pointerId !== purchaseSheetDragPointerId) return;
-          try { handle.releasePointerCapture(event.pointerId); } catch {}
-          const elapsed = Math.max(1, performance.now() - purchaseSheetDragStartedAt);
-          const velocity = purchaseSheetDragDistance / elapsed;
-          const threshold = Math.max(78, Math.min(118, window.innerHeight * .115));
-          const shouldClose = !cancelled &amp;&amp; !purchaseOperationBusy &amp;&amp; (purchaseSheetDragDistance &gt;= threshold || (purchaseSheetDragDistance &gt;= 46 &amp;&amp; velocity &gt; .62));
-          purchaseSheetDragPointerId = null;
-          dialog.classList.remove(&quot;is-purchase-sheet-dragging&quot;);
-          if (shouldClose) {
-            dialog.style.transition = &quot;transform .16s ease-in, opacity .16s ease-in&quot;;
-            dialog.style.transform = `translate3d(0, ${Math.max(window.innerHeight * .62, 420)}px, 0)`;
-            dialog.style.opacity = &quot;0&quot;;
-            window.setTimeout(() =&gt; closePurchaseLayer(), 145);
-            return;
-          }
-          resetPurchaseSheetDrag(true);
-        };
-        handle.addEventListener(&quot;pointerup&quot;, (event) =&gt; finishDrag(event, false));
-        handle.addEventListener(&quot;pointercancel&quot;, (event) =&gt; finishDrag(event, true));
       }
 
       function openPurchaseLayer(markup, focusSelector, mode = &quot;&quot;) {
@@ -27353,15 +27355,29 @@ function createTutorialDeck(layer, mount, options, words) {
 
       installMyStyle();
       installProgressInfo();
+      function installSimpleSheetMotion(layer,panelSelector,scrollSelector,dismiss,isBusy=()=&gt;false){
+        const panel=layer?.querySelector(panelSelector);if(!panel)return;
+        const handle=document.createElement(&#x27;button&#x27;);handle.type=&#x27;button&#x27;;handle.className=&#x27;simple-sheet-grip&#x27;;
+        handle.setAttribute(&#x27;data-service-grip&#x27;,&#x27;&#x27;);handle.setAttribute(&#x27;data-service-drag&#x27;,&#x27;&#x27;);handle.setAttribute(&#x27;aria-label&#x27;,&#x27;Закрыть окно&#x27;);handle.title=&#x27;Потяни вниз, чтобы закрыть&#x27;;handle.innerHTML=&#x27;&lt;span&gt;&lt;/span&gt;&#x27;;panel.prepend(handle);
+        panel.querySelectorAll(&#x27;h2,.support-head,.flash-offer-time,.release-kicker&#x27;).forEach(node=&gt;node.setAttribute(&#x27;data-service-drag&#x27;,&#x27;&#x27;));
+        panel.dataset.simpleSwipe=&#x27;1&#x27;;
+        const motion=createServiceSheetMotion(layer,panel,{active:()=&gt;!isBusy()&amp;&amp;(!tutorialLayer||tutorialLayer.hidden)&amp;&amp;
+          (!caseLayer||caseLayer.hidden)&amp;&amp;(!purchaseLayer||purchaseLayer.hidden),scroll:()=&gt;scrollSelector?panel.querySelector(scrollSelector):panel,dismiss,back:dismiss});
+        new MutationObserver(()=&gt;motion.reset()).observe(layer,{attributes:true,attributeFilter:[&#x27;hidden&#x27;]});
+      }
+      installSimpleSheetMotion(supportLayer,&#x27;.support-dialog&#x27;,&#x27;.support-content&#x27;,closeSupportLayer,()=&gt;!!supportContentEl?.querySelector(&#x27;button[type=&quot;submit&quot;]:disabled&#x27;));
+      installSimpleSheetMotion(releaseLayer,&#x27;.release-dialog&#x27;,&#x27;&#x27;,closeReleaseNotice);
+      installSimpleSheetMotion(flashOfferLayer,&#x27;.flash-offer-dialog&#x27;,&#x27;&#x27;,()=&gt;closeFlashOffer(&#x27;dismiss&#x27;),()=&gt;flashOfferPurchaseBusy);
       profileControlMotion=createServiceSheetMotion(profileControlLayer,profileControlLayer.querySelector(&#x27;.zps-panel&#x27;),{
         active:()=&gt;!profileControlLayer.hidden,
         scroll:()=&gt;profileControlLayer.querySelector(&#x27;.zps-scroll&#x27;),
         dismiss:()=&gt;closeProfileControl(),back:()=&gt;closeProfileControl()
       });
       caseCatalogMotion=createServiceSheetMotion(caseLayer,caseLayer.querySelector(&#x27;.case-dialog&#x27;),{
-        active:()=&gt;Boolean(caseCatalogState&amp;&amp;caseLayer.classList.contains(&#x27;is-case-catalog&#x27;)&amp;&amp;!caseRouletteBusy),
-        scroll:()=&gt;caseContentEl.querySelector(&#x27;.zci-scroll&#x27;),
-        dismiss:()=&gt;closeCaseLayer(),back:()=&gt;caseCatalogBack()
+        active:()=&gt;!caseLayer.hidden&amp;&amp;!caseRouletteBusy&amp;&amp;!levelCaseOpeningRequestBusy&amp;&amp;(!tutorialLayer||tutorialLayer.hidden),
+        scroll:()=&gt;caseLayer.classList.contains(&#x27;is-case-catalog&#x27;)?caseContentEl.querySelector(&#x27;.zci-scroll&#x27;):
+          (caseLayer.querySelector(&#x27;.case-dialog&#x27;).scrollHeight&gt;caseLayer.querySelector(&#x27;.case-dialog&#x27;).clientHeight+2?caseLayer.querySelector(&#x27;.case-dialog&#x27;):caseContentEl),
+        dismiss:()=&gt;closeCaseLayer(),back:()=&gt;caseCatalogState?caseCatalogBack():closeCaseLayer()
       });
       root.addEventListener(&#x27;click&#x27;,event=&gt;{
         const t=event.target instanceof Element?event.target:null;if(!t)return;
@@ -28863,9 +28879,9 @@ function createTutorialDeck(layer, mount, options, words) {
 #zefirok-maltipoo-runner .profile-v2-quick-icon{display:grid;place-items:center;width:42px;height:42px;border-radius:14px;background:linear-gradient(145deg,#fff0f5,#fff4dc);font-size:19px;line-height:1;box-shadow:inset 0 0 0 1px rgba(226,185,199,.18)}
 #zefirok-maltipoo-runner .profile-v2-quick-icon img{display:block;width:38px;height:38px;object-fit:contain}
 #zefirok-maltipoo-runner .profile-v2-quick-copy{display:grid;gap:6px;min-width:0}
-#zefirok-maltipoo-runner .profile-v2-quick-head{display:flex;align-items:center;justify-content:space-between;gap:6px;min-width:0}
-#zefirok-maltipoo-runner .profile-v2-quick-copy strong{display:block;min-width:0;color:#674452;font-size:11px;font-weight:950;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-#zefirok-maltipoo-runner .profile-v2-quick-copy small{display:block;min-width:0;margin:0;color:#9b7986;font-size:7.7px;font-weight:800;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#zefirok-maltipoo-runner .profile-v2-quick-head{display:flex;flex-direction:column;align-items:flex-start;gap:5px;min-width:0}
+#zefirok-maltipoo-runner .profile-v2-quick-copy strong{display:block;min-width:0;color:#674452;font-size:12px;font-weight:950;line-height:1.25;white-space:normal;overflow:visible;overflow-wrap:normal}
+#zefirok-maltipoo-runner .profile-v2-quick-copy small{display:block;min-width:0;margin:0;color:#9b7986;font-size:9px;font-weight:700;line-height:1.35;white-space:normal;overflow-wrap:break-word}
 #zefirok-maltipoo-runner .profile-v2-quick-status{display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;max-width:78px;min-height:21px;padding:4px 7px;border:1px solid rgba(222,167,187,.48);border-radius:999px;background:linear-gradient(180deg,#fff7fa,#ffeaf2);color:#a55171;font-size:7px;font-weight:950;line-height:1;white-space:nowrap;box-shadow:inset 0 1px 0 rgba(255,255,255,.9)}
 #zefirok-maltipoo-runner .profile-v2-quick-status.is-rating[data-tier=&quot;1&quot;]{border-color:rgba(218,165,45,.62);background:linear-gradient(180deg,#fff9dc,#ffe99d);color:#8a5d12}
 #zefirok-maltipoo-runner .profile-v2-quick-status.is-rating[data-tier=&quot;2&quot;]{border-color:rgba(166,174,190,.56);background:linear-gradient(180deg,#f8f9fc,#e6e9f0);color:#626b7a}
@@ -28950,8 +28966,8 @@ function createTutorialDeck(layer, mount, options, words) {
   #zefirok-maltipoo-runner .profile-v2-quick-icon{width:36px;height:36px;border-radius:12px;font-size:17px}
   #zefirok-maltipoo-runner .profile-v2-quick-icon img{width:32px;height:32px}
   #zefirok-maltipoo-runner .profile-v2-quick-copy{gap:5px}
-  #zefirok-maltipoo-runner .profile-v2-quick-status{max-width:64px;min-height:19px;padding:4px 6px;font-size:6.6px}
-  #zefirok-maltipoo-runner .profile-v2-quick-copy small{font-size:7.2px}
+  #zefirok-maltipoo-runner .profile-v2-quick-status{max-width:100%;min-height:19px;padding:4px 6px;font-size:8px;white-space:normal;overflow-wrap:anywhere}
+  #zefirok-maltipoo-runner .profile-v2-quick-copy small{font-size:9px}
   #zefirok-maltipoo-runner .profile-v2-spotlight-card{grid-template-columns:38px minmax(0,1fr) auto;gap:7px;padding:10px}
   #zefirok-maltipoo-runner .profile-v2-spotlight-icon{width:38px;height:38px;border-radius:12px;font-size:19px}
   #zefirok-maltipoo-runner .profile-v2-spotlight-cta{min-width:52px;padding:7px 8px}

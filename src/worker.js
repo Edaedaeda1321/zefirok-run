@@ -10961,6 +10961,30 @@ async function getLevelCaseState(request, env, internal = null, ctx = null) {
   }
 }
 
+// A level is the natural idempotency key: (telegram_id, level) is unique.
+// Replays return only the persisted reward and current account state. No roll,
+// reward statement, task increment, analytics or stock reservation runs here.
+async function readLevelCaseOpening(env, telegramId, level) {
+  return env.DB.prepare(`SELECT level,case_type,rewards_json,opened_at FROM level_case_openings
+    WHERE telegram_id=? AND level=? LIMIT 1`).bind(String(telegramId),level).first();
+}
+async function replayLevelCaseOpening(env, telegramId, row, liveops) {
+  const rewards=safeJson(row?.rewards_json,[]);
+  if(!row || !Array.isArray(rewards) || !rewards.length) {
+    throw new ApiError(409,"Открытие сохранено, но его награду не удалось прочитать. Обратитесь в поддержку: повторного начисления не будет.");
+  }
+  const [fresh,inventory]=await Promise.all([
+    ensureCasePlayerState(env,String(telegramId),{}),
+    readFastCaseInventory(env,String(telegramId))
+  ]);
+  const level=Number(row.level),caseType=normalizeCaseType(row.case_type)||"small";
+  return jsonResponse({...buildFastCaseOpenPayload({
+    state:fresh.state,liveops,profile:authoritativeProfileView(fresh.profile),inventory,
+    opened:{level,caseType,title:LEVEL_CASE_CONFIG[caseType]?.title||"Кейс",rewards,openedAt:Number(row.opened_at||0)*1000,replayed:true},
+    caseDelta:{openedLevel:level}
+  }),repeated:true});
+}
+
 async function openLevelCase(request, env, ctx = null) {
   try {
     requireDatabase(env);
@@ -10973,18 +10997,16 @@ async function openLevelCase(request, env, ctx = null) {
     const caseType = LEVEL_CASE_SCHEDULE[requestedLevel];
     if (!caseType) throw new ApiError(400, "На этом уровне кейс не выдаётся.");
     const now = Math.floor(Date.now() / 1000);
-    const [ensured, liveops, taskEvent] = await Promise.all([
-      ensureCasePlayerState(env, telegramId, {}),
-      readLiveOpsConfig(env),
-      prepareSeasonPassTaskProgressEvent(env, telegramId, { cases_opened:1 }, now).catch((error) => { console.error("level case task progress prepare failed", error); return null; })
+    const [ensured, liveops, existing] = await Promise.all([
+      ensureCasePlayerState(env, telegramId, {}), readLiveOpsConfig(env),
+      readLevelCaseOpening(env,telegramId,requestedLevel)
     ]);
+    if(existing)return await replayLevelCaseOpening(env,telegramId,existing,liveops);
     if (liveOpsCaseConfig(liveops, caseType)?.enabled === false) throw new ApiError(409, "Этот кейс временно отключён администратором.");
     const playerLevel = caseProfileLevel(safeAdminNumber(ensured.profile?.profile_xp));
     if (playerLevel < requestedLevel) throw new ApiError(403, `Кейс откроется на ${requestedLevel} уровне.`);
-    const existing = await env.DB.prepare(
-      `SELECT level FROM level_case_openings WHERE telegram_id = ? AND level = ? LIMIT 1`
-    ).bind(telegramId, requestedLevel).first();
-    if (existing) throw new ApiError(409, "Этот кейс уже открыт.");
+    const taskEvent = await prepareSeasonPassTaskProgressEvent(env, telegramId, {cases_opened:1}, now)
+      .catch(error => {console.error("level case task progress prepare failed",error);return null;});
 
     const rolled = rollLevelCase(caseType, ensured.state, ensured.state.ownedSkins, liveops);
     await assertRolledLiveContentCaseRoutes(env,rolled,"case",caseType);
@@ -11022,7 +11044,8 @@ async function openLevelCase(request, env, ctx = null) {
     } catch (error) {
       await releaseCasePhysicalStock(env, physicalRewards.stockConsumptionIds);
       if (String(error?.message || error).toLowerCase().includes("unique")) {
-        throw new ApiError(409, "Этот кейс уже открыт.");
+        const persisted=await readLevelCaseOpening(env,telegramId,requestedLevel);
+        if(persisted)return await replayLevelCaseOpening(env,telegramId,persisted,liveops);
       }
       throw error;
     }
@@ -11030,6 +11053,7 @@ async function openLevelCase(request, env, ctx = null) {
       level: requestedLevel,
       caseType,
       title: LEVEL_CASE_CONFIG[caseType]?.title || "Кейс",
+      openedAt: now * 1000,
       rewards: rolled.rewards
     };
     const finalProfile = await ensureAuthoritativeProfileRow(env, telegramId, `case:${requestedLevel}:response`);
@@ -31819,6 +31843,15 @@ async function claimSeasonPassTierActivationNotice(request,env) {
   }catch(error){if(error instanceof ApiError)return jsonResponse({ok:false,error:error.message},error.status);console.error('claimSeasonPassTierActivationNotice failed',error);return jsonResponse({ok:false,error:'Не удалось открыть уведомление активации.'},500);}
 }
 
+// Display metadata only. Entitlements and claim windows still use the season's gates.
+async function seasonPassNextPublicSchedule(env,season,nowMs=Date.now()) {
+  const now=Math.floor(nowMs/1000);
+  const row=await env.DB.prepare(`SELECT season_id,title,starts_at,ends_at FROM season_pass_seasons
+    WHERE season_id<>? AND starts_at>? AND COALESCE(manual_status,'') NOT IN ('ended','paused')
+    ORDER BY starts_at ASC,season_id ASC LIMIT 1`).bind(String(season?.id||""),now).first();
+  return row ? {id:String(row.season_id),title:String(row.title||"Новый сезон"),startsAt:Number(row.starts_at)*1000,endsAt:Number(row.ends_at)*1000} : null;
+}
+
 async function buildSeasonPassPayload(env,season,telegramId,player=null){
   const current=player||await ensureSeasonPassPlayer(env,season,telegramId);
   const [rewardsResult,claimsResult,entitlementsResult,profileRow,tasksPayload,summary]=await Promise.all([
@@ -31833,13 +31866,13 @@ async function buildSeasonPassPayload(env,season,telegramId,player=null){
   const deliveredClaims=claimsResult.results||[];
   const overflowClaimed=deliveredClaims.filter(row=>String(row.lane)==='overflow').length;
   const overflow=seasonPassOverflowView(xp,overflowClaimed);
-  const [letter,seasonalCases,story,tierActivationNotice]=await Promise.all([seasonPassTeaserForPlayer(env,season,telegramId,current),seasonPassSeasonalCaseInventory(env,telegramId),seasonPassStoryForPlayer(env,season,telegramId,current),pendingSeasonPassTierActivationNotice(env,telegramId,season)]);
+  const [letter,seasonalCases,story,tierActivationNotice,nextSeason]=await Promise.all([seasonPassTeaserForPlayer(env,season,telegramId,current),seasonPassSeasonalCaseInventory(env,telegramId),seasonPassStoryForPlayer(env,season,telegramId,current),pendingSeasonPassTierActivationNotice(env,telegramId,season),seasonPassNextPublicSchedule(env,season).catch(error=>{console.error("next season schedule unavailable",error);return null;})]);
   const catchUp=seasonPassCatchUpView(season,current);
   const finale=await seasonPassFinaleForPlayer(env,season,telegramId,current,summary,story,letter);
   const availablePoints=(profileRow?.wallet_override==null?Number(profileRow?.wallet||0):Number(profileRow?.wallet_override||0))+Number(profileRow?.pending_wallet||0);
   const availableTreats=(profileRow?.treats_override==null?Number(profileRow?.treats||0):Number(profileRow?.treats_override||0))+Number(profileRow?.pending_treats||0);
   const availableCoffee=(profileRow?.coffee_override==null?Number(profileRow?.coffee||0):Number(profileRow?.coffee_override||0))+Number(profileRow?.pending_coffee||0);
-  return {ok:true,season:{...season,progression:seasonPassProgressionView(),tierSettings:seasonPassPublicTierSettings(season),capabilities:seasonPassCapabilities(season)},player:seasonPassPlayerView(current),overflow,catchUp,finale,letter,seasonalCases,story,tierActivationNotice,
+  return {ok:true,serverTime:new Date().toISOString(),nextSeason,season:{...season,progression:seasonPassProgressionView(),tierSettings:seasonPassPublicTierSettings(season),capabilities:seasonPassCapabilities(season)},player:seasonPassPlayerView(current),overflow,catchUp,finale,letter,seasonalCases,story,tierActivationNotice,
     rewards:(rewardsResult.results||[]).map(seasonPassPlayerRewardView),
     claimed:deliveredClaims.filter(row=>String(row.lane)==='free'||String(row.lane)==='premium').map(row=>`${Number(row.level)}:${String(row.lane)}`),entitlements:(entitlementsResult.results||[]).map(row=>String(row.item_id)).filter(item=>!item.startsWith('__system:')),tasks:tasksPayload.tasks,taskPeriods:tasksPayload.periods,taskClaimableCount:seasonPassCapabilities(season).canClaimTasks?tasksPayload.claimableCount:0,summary,
     balance:{points:availablePoints,treats:availableTreats,coffee:availableCoffee}};
@@ -43317,15 +43350,128 @@ async function reconcileAlbumMilestoneClaims(env, telegramId, claims) {
   return claims;
 }
 
+// Public acquisition metadata, shared by Album items. Never used for granting.
+// One cache per database; no per-item requests and no player-specific data in it.
+const albumAcquisitionCache = new WeakMap();
+function albumCaseAcquisitionSources(liveops) {
+  const result=new Map();
+  const add=(kind,id,type,guaranteeOnly=false)=>{
+    const key=albumItemKey(kind,id),rows=result.get(key)||[];
+    if(!rows.some(r=>r.id===type))rows.push({type:"case",id:type,availability:"conditional",
+      text:`${LEVEL_CASE_CONFIG[type]?.title||"Кейс"} — ${guaranteeOnly?"награда гарантированного открытия":"может выпасть при открытии"}.`});
+    result.set(key,rows);
+  };
+  const bases={avatar:CASE_AVATARS,frame:CASE_FRAMES,trail:CASE_TRAILS,skin:CASE_SKINS,music:CASE_MUSIC_TRACKS};
+  for(const type of Object.keys(LEVEL_CASE_CONFIG)){
+    const config=liveOpsCaseConfig(liveops,type);if(config?.enabled===false)continue;
+    if(type==="alex"){
+      for(const [kind,ids] of Object.entries({skin:["alex"],frame:["alex_frame_1","alex_frame_2"],avatar:["alex_avatar_1","alex_avatar_2"],trail:["alex_trail"]}))
+        if(Number(config?.chances?.[kind])>0)for(const id of ids)add(kind,id,type);
+      continue;
+    }
+    const chances=config?.chances||LIVEOPS_CASE_DEFAULTS[type]?.chances||{};
+    for(const [kind,base] of Object.entries(bases))for(const [id,item] of Object.entries(runtimeCaseCatalog(kind,base,liveops,type))){
+      // Match the existing pickers exactly: direct/legendary selection uses
+      // the legacy weight-or-1 fallback; rarity buckets require positive weight.
+      const positiveWeight=Number(item.weight)>0;
+      const direct=Number(chances[kind])>0&&(kind==="skin"||(!item.alexOnly&&(type==="legendary"||!item.legendaryOnly)));
+      const bucket={epic:"epicCosmetic",mythic:"mythicCosmetic",legendary:"legendaryCosmetic"}[item.rarity];
+      const rarity=Boolean(positiveWeight&&bucket&&Number(chances[bucket])>0&&!item.legendaryOnly);
+      const guarantee=Number(config.guaranteeCount??(type==="legendary"?50:type==="mythic"?25:0))>0&&
+        (type==="legendary"?!item.alexOnly&&caseRarityAtLeast("epic")(item):type==="mythic"&&positiveWeight&&!item.legendaryOnly&&["mythic","legendary"].includes(item.rarity));
+      if(direct||rarity||guarantee)add(kind,id,type,!direct&&!rarity);
+    }
+  }
+  return result;
+}
+async function albumAcquisitionSources(env) {
+  const cached=albumAcquisitionCache.get(env.DB),now=Date.now();
+  if(cached?.promise)return cached.promise;
+  if(cached?.value&&cached.expires>now)return cached.value;
+  const entry={promise:null,value:null,expires:0};
+  const read=async()=>{
+    let complete=true;
+    const optional=async(label,fn,fallback)=>{try{return await fn();}catch(error){complete=false;console.error("album source metadata unavailable",label,error?.message||error);return fallback;}};
+    const [liveops,rules,seasons,passRows,caseRows,storyRows,achievements]=await Promise.all([
+      optional("cases",()=>readLiveOpsConfig(env),null),
+      optional("release rules",()=>readLiveContentReleaseRules(env),new Map()),
+      optional("seasons",async()=>(await env.DB.prepare(`SELECT season_id,title,starts_at,ends_at,claim_grace_ends_at,manual_status,elite_plus_benefits_json FROM season_pass_seasons ORDER BY starts_at DESC`).all()).results||[],[]),
+      optional("pass rewards",async()=>(await env.DB.prepare(`SELECT season_id,level,lane,item_id,reward_type,enabled FROM season_pass_rewards WHERE enabled=1 ORDER BY season_id,level,lane`).all()).results||[],[]),
+      optional("seasonal cases",async()=>(await env.DB.prepare(`SELECT d.case_id,d.season_id,d.title,d.enabled AS case_enabled,d.release_at,d.reward_groups_json,i.reward_kind,i.item_id,i.weight,i.enabled FROM season_pass_case_definitions d LEFT JOIN season_pass_case_items i ON i.case_id=d.case_id ORDER BY d.case_id,i.item_key`).all()).results||[],[]),
+      optional("story",async()=>(await env.DB.prepare(`SELECT season_id,event_id,title,enabled,unlock_level,unlock_at,reward_json FROM season_pass_story_events WHERE enabled=1 ORDER BY season_id,unlock_level,sort_order`).all()).results||[],[]),
+      optional("achievements",()=>achievementConfiguredDefinitions(env),[])
+    ]);
+    const map=liveops?albumCaseAcquisitionSources(liveops):new Map();
+    const add=(kind,id,source)=>{
+      if(!ALBUM_ITEM_KINDS.includes(kind)||!id)return;
+      const future=futureSeasonContentItem(kind,id),rule=rules.get(liveContentReleaseKey(kind,id));
+      if(future&&!rule?.released)return;
+      const key=albumItemKey(kind,id),rows=map.get(key)||[];
+      if(!rows.some(r=>r.type===source.type&&r.id===source.id))rows.push(source);
+      map.set(key,rows);
+    };
+    const seasonMap=new Map(seasons.map(row=>[String(row.season_id),row]));
+    const seasonStatus=row=>!row?"unknown":Number(row.starts_at)*1000>now?"upcoming":
+      row.manual_status==="paused"?"paused":row.manual_status==="ended"||Number(row.ends_at)*1000<=now?"historical":"active";
+    const routeOK=(kind,id,type,target="")=>!futureSeasonContentItem(kind,id)||Boolean(rules.get(liveContentReleaseKey(kind,id))?.released&&liveContentRoute(rules.get(liveContentReleaseKey(kind,id)),type,target));
+    add("skin","default",{type:"default",id:"default",availability:"active",text:"Базовый персонаж — доступен с начала игры."});
+    add("music","cafe_run",{type:"default",id:"default",availability:"active",text:"Базовая музыка — доступна с начала игры."});
+    for(const id of Object.keys(SKINS))if(id!=="default")add("skin",id,{type:"shop",id,availability:"conditional",text:"Магазин → Скины. Цена и наличие указаны в карточке персонажа."});
+    for(const rule of rules.values()){
+      if(!rule.released)continue;
+      if(liveContentRoute(rule,"shop"))add(rule.kind,rule.itemId,{type:"shop",id:rule.itemId,availability:"conditional",text:"Магазин — отдельная покупка предмета. Проверь актуальную цену и наличие."});
+      if(liveContentRoute(rule,"manual"))add(rule.kind,rule.itemId,{type:"manual",id:rule.itemId,availability:"conditional",text:"Выдаётся командой проекта в рамках специальных наград. Свободная покупка этим способом не предусмотрена."});
+    }
+    for(const row of passRows){
+      const def=seasonPassCosmeticRewardDefinition(row),season=seasonMap.get(String(row.season_id)),status=seasonStatus(season);
+      // An unannounced future reward must not leak through the Album.
+      if(!def||def.released===false||!season||status==="upcoming")continue;
+      add(def.kind,def.itemId,{type:"season_pass",id:`${row.season_id}:${row.level}:${row.lane}`,availability:status,
+        text:`${season.title||"Сезонный пропуск"} — ${Number(row.level)} уровень, ${row.lane==="premium"?"дорожка Элитного":"бесплатная дорожка"}.`,
+        note:status==="historical"?"Сезон завершён. Получение ранее открытой награды возможно только пока действует окно получения.":status==="paused"?"Сезон приостановлен.":"Нужный уровень и право на дорожку проверяются в пропуске."});
+    }
+    for(const season of seasons){
+      const status=seasonStatus(season);if(status==="upcoming")continue;
+      const benefits=seasonPassElitePlusBenefitsConfig(season.elite_plus_benefits_json);
+      for(const item of benefits.cosmetics)if(routeOK(item.kind,item.itemId,"manual"))add(item.kind,item.itemId,{type:"elite_plus",id:String(season.season_id),availability:status,
+        text:`${season.title||"Сезонный пропуск"} — бонус активации тарифа «Элитный+».`,note:status==="historical"?"Тариф завершённого сезона больше не продаётся.":"Проверь состав и доступность тарифа перед покупкой."});
+    }
+    const caseDefs=new Map(caseRows.map(row=>[String(row.case_id),row]));
+    const addSeasonal=(kind,id,row)=>{
+      const season=seasonMap.get(String(row.season_id));
+      if(!season||Number(row.case_enabled)!==1||Number(row.release_at||0)*1000>now||seasonStatus(season)==="upcoming"||!routeOK(kind,id,"seasonal_case",String(row.case_id)))return;
+      const groups=seasonPassSeasonalCaseGroupChances(row.reward_groups_json);
+      if(groups&&groups.cosmetic<=0)return;
+      add(kind,id,{type:"seasonal_case",id:String(row.case_id),availability:"conditional",text:`${row.title||"Сезонный кейс"} (${season.title||"сезон"}) — может выпасть при открытии.`,note:"Сезон → Кейсы. Для открытия нужен кейс этого типа; предмет не гарантирован."});
+    };
+    for(const row of caseRows)if(Number(row.enabled)===1&&Number(row.weight)>0)addSeasonal(String(row.reward_kind),String(row.item_id),row);
+    for(const rule of rules.values())if(rule.released)for(const [caseId,row] of caseDefs)if(String(row.season_id)===String(rule.seasonId)&&liveContentRoute(rule,"seasonal_case",caseId))addSeasonal(rule.kind,rule.itemId,row);
+    for(const row of storyRows){
+      const season=seasonMap.get(String(row.season_id)),reward=seasonPassStoryRewardConfig(row),status=seasonStatus(season);
+      if(!season||status==="upcoming"||Number(row.unlock_at||0)*1000>now||!reward||!routeOK(reward.kind,reward.itemId,"story"))continue;
+      add(reward.kind,reward.itemId,{type:"story",id:String(row.event_id),availability:status,
+        text:`${season.title||"Сезонный пропуск"} — сюжетная глава на ${Number(row.unlock_level||1)} уровне.`,
+        note:"Награда за завершение главы. Доступность главы проверяется в текущем сезоне."});
+    }
+    for(const a of achievements){
+      if(a.enabled!==true||a.visible!==true||!a.catalogVisible||a.secret)continue;
+      const r=a.reward||{};add(String(r.kind),String(r.id||r.itemId||""),{type:"achievement",id:String(a.id),availability:a.availability?.status==="expired"?"historical":"conditional",text:`Достижение «${a.title}» — дополнительная награда.`,note:a.availability?.status==="expired"?"Период выполнения достижения завершён.":"Условия и получение — в разделе «Достижения»."});
+    }
+    return {map,complete};
+  };
+  entry.promise=read().then(value=>{entry.value=value;entry.expires=Date.now()+(value.complete?15000:0);return value;}).finally(()=>{entry.promise=null;});
+  albumAcquisitionCache.set(env.DB,entry);return entry.promise;
+}
+
 async function albumPlayerState(env,telegramId){
   await ensureAlbumSchema(env);await ensureCasePlayerState(env,String(telegramId),{});
-  const [collectionsRes,itemsRes,milestonesRes,claimsRes,caseState,catalog]=await Promise.all([
+  const [collectionsRes,itemsRes,milestonesRes,claimsRes,caseState,catalog,acquisition]=await Promise.all([
     env.DB.prepare(`SELECT * FROM album_collections WHERE status='published' ORDER BY sort_order ASC,published_at ASC,collection_id ASC`).all(),
     env.DB.prepare(`SELECT i.* FROM album_collection_items i JOIN album_collections c ON c.collection_id=i.collection_id WHERE c.status='published' ORDER BY i.collection_id,i.sort_order,i.item_kind,i.item_id`).all(),
     env.DB.prepare(`SELECT m.* FROM album_milestones m JOIN album_collections c ON c.collection_id=m.collection_id WHERE c.status='published' AND m.enabled=1 ORDER BY m.collection_id,m.threshold_percent,m.sort_order,m.milestone_id`).all(),
     env.DB.prepare(`SELECT * FROM album_milestone_claims WHERE telegram_id=?`).bind(String(telegramId)).all(),
     env.DB.prepare(`SELECT owned_avatars_json,owned_frames_json,owned_trails_json,owned_skins_json,owned_music_json FROM case_player_state WHERE telegram_id=? LIMIT 1`).bind(String(telegramId)).first(),
-    albumCatalogSnapshot(env)
+    albumCatalogSnapshot(env),albumAcquisitionSources(env)
   ]);
   const owned={
     avatar:albumOwnedSet(caseState?.owned_avatars_json),frame:albumOwnedSet(caseState?.owned_frames_json),trail:albumOwnedSet(caseState?.owned_trails_json),
@@ -43345,7 +43491,7 @@ async function albumPlayerState(env,telegramId){
       if(required){requiredTotal+=1;if(isOwned)ownedRequired+=1;}if(isOwned)ownedTotal+=1;
       const hidden=(!isOwned&&(Number(item.secret||0)===1||meta.future&&!meta.released));
       if(hidden)return {slotKey:`${collectionId}:${index}`,kind,owned:false,required,secret:true,sortOrder:Number(item.sort_order||0)};
-      return {slotKey:`${collectionId}:${index}`,kind,itemId,owned:isOwned,required,secret:Number(item.secret||0)===1,sortOrder:Number(item.sort_order||0),title:String(meta.title||itemId),rarity:String(meta.rarity||"common"),imageUrl:String(meta.imageUrl||""),available:Boolean(meta.enabled&&meta.released),future:Boolean(meta.future),released:Boolean(meta.released)};
+      return {slotKey:`${collectionId}:${index}`,kind,itemId,owned:isOwned,required,secret:Number(item.secret||0)===1,sortOrder:Number(item.sort_order||0),title:String(meta.title||itemId),rarity:String(meta.rarity||"common"),imageUrl:String(meta.imageUrl||""),available:Boolean(meta.enabled&&meta.released),future:Boolean(meta.future),released:Boolean(meta.released),sources:meta.released?(acquisition.map.get(albumItemKey(kind,itemId))||[]):[],sourcesComplete:acquisition.complete};
     });
     const progressPercent=requiredTotal>0?Math.min(100,Math.floor((ownedRequired*100)/requiredTotal)):0;
     const milestones=(milestonesByCollection.get(collectionId)||[]).map((m)=>{const claim=claimMap.get(`${collectionId}:${String(m.milestone_id)}`);const rewards=(safeJson(claim?.rewards_json??m.rewards_json,[])||[]).map((r)=>albumRewardView(r,catalog));const delivered=String(claim?.status||"")==="delivered";return {milestoneId:String(m.milestone_id),thresholdPercent:Number(m.threshold_percent||0),title:String(m.title||`${m.threshold_percent}% коллекции`),rewards,eligible:progressPercent>=Number(m.threshold_percent||0),status:delivered?"claimed":claim?String(claim.status||"pending"):progressPercent>=Number(m.threshold_percent||0)?"ready":"locked"};});
