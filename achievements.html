@@ -53,76 +53,48 @@
   <script>
     try { if (window.parent && window.parent !== window) document.documentElement.classList.add('is-embedded'); } catch {}
   </script>
-  <style>
-    :root{
-      color-scheme:light;
-      --bg:#fff7f4;--surface:#fffdfa;--surface2:#fff7f8;--line:#efcfda;--line2:#f2dde4;
-      --text:#593844;--ink:#30333d;--muted:#947782;--pink:#e85a92;--pink2:#cf4779;--pink-soft:#ffe8f1;
-      --gold:#e5a52d;--gold2:#c98716;--gold-soft:#fff4cc;--green:#4ca663;--shadow:0 16px 42px rgba(104,65,81,.09);
-      --safe-top:max(env(safe-area-inset-top,0px),18px);--safe-right:max(env(safe-area-inset-right,0px),16px);
-      --safe-bottom:max(env(safe-area-inset-bottom,0px),20px);--safe-left:max(env(safe-area-inset-left,0px),16px);
-      --content-max:430px;--embedded-top-clearance:72px;
-    }
-    *{box-sizing:border-box} html{width:100%;overflow-x:hidden;background:var(--bg)}
-    html,body{margin:0;min-height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--text)}
-    body{width:100%;padding:var(--safe-top) var(--safe-right) var(--safe-bottom) var(--safe-left);overflow-x:hidden;background:radial-gradient(circle at 88% -2%,rgba(255,219,232,.78),transparent 31%),linear-gradient(180deg,#fffaf8,#fff5f3 70%,#fff9f5)}
-    html.is-embedded body{padding-top:calc(var(--safe-top) + var(--embedded-top-clearance))}
-    button{font:inherit;-webkit-tap-highlight-color:transparent}.page{width:100%;max-width:var(--content-max);margin:0 auto;display:grid;gap:12px;padding-bottom:6px}.page>*{min-width:0}
+<style>
+.showcase-frame{--slot-top:15.5%;--slot-right:5%;--slot-bottom:16%;--slot-left:5%;--slot-gap:3.2%;--slot-foot:10px;--slot-lift:0px;position:relative;width:100%;isolation:isolate;filter:drop-shadow(0 9px 15px rgba(129,79,28,.10))}
+.showcase-frame[data-layout="gold"]{--slot-top:21.5%;--slot-right:5.5%;--slot-bottom:17%;--slot-left:5.5%;--slot-gap:3.4%;--slot-foot:11px;--slot-lift:-1px}
+.showcase-frame[data-layout="season1"]{--slot-top:42.2%;--slot-right:5.6%;--slot-bottom:14.5%;--slot-left:5.6%;--slot-gap:3.3%;--slot-foot:14px;--slot-lift:-1px}
+.showcase-frame[data-layout="season2"]{--slot-top:38.4%;--slot-right:6.1%;--slot-bottom:20.2%;--slot-left:6.1%;--slot-gap:3.4%;--slot-foot:14px;--slot-lift:-1px}
+.showcase-frame[data-layout="season3"]{--slot-top:42.2%;--slot-right:5.6%;--slot-bottom:14.5%;--slot-left:5.6%;--slot-gap:3.3%;--slot-foot:14px;--slot-lift:-2px}
+.showcase-frame[data-layout="special_origins"]{--slot-top:38.4%;--slot-right:7.1%;--slot-bottom:18.2%;--slot-left:7.1%;--slot-gap:3.6%;--slot-foot:16px;--slot-lift:-3px}
+.showcase-frame[data-layout="special_creator"]{--slot-top:39.1%;--slot-right:6.3%;--slot-bottom:18.6%;--slot-left:6.3%;--slot-gap:3.5%;--slot-foot:14px;--slot-lift:-2px}
+.showcase-frame[data-layout="special_legend"]{--slot-top:42.2%;--slot-right:6.6%;--slot-bottom:17.8%;--slot-left:6.6%;--slot-gap:3.5%;--slot-foot:14px;--slot-lift:-2px}
+.showcase-frame-art{display:block;width:100%;height:auto;pointer-events:none;user-select:none;-webkit-user-drag:none}
+.showcase-frame-slots{position:absolute;z-index:2;top:var(--slot-top);right:var(--slot-right);bottom:var(--slot-bottom);left:var(--slot-left);display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--slot-gap);min-width:0}
+.slot{position:relative;top:var(--slot-lift);min-width:0;min-height:0;padding:2px 3px var(--slot-foot);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;text-align:center;overflow:hidden}
+.slot{gap:1px}
+:root{color-scheme:light;--bg:#fff8f2;--paper:#fffdfb;--text:#573c49;--muted:#8b717d;--line:#eddce1;--pink:#cd5c88;--safe-top:max(env(safe-area-inset-top,0px),14px);--safe-right:max(env(safe-area-inset-right,0px),16px);--safe-bottom:max(env(safe-area-inset-bottom,0px),20px);--safe-left:max(env(safe-area-inset-left,0px),16px);--ach-top:var(--safe-top)}
+*{box-sizing:border-box}[hidden]{display:none!important}html{background:var(--bg);overscroll-behavior-y:none}body{margin:0;color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:radial-gradient(ellipse at 80% 0,#fff0f0,transparent 500px),var(--bg);padding:var(--ach-top) var(--safe-right) var(--safe-bottom) var(--safe-left);overscroll-behavior-y:none}html.is-embedded{--ach-top:calc(var(--safe-top) + 72px)}
+button,input,select{font:inherit;color:inherit}button{-webkit-tap-highlight-color:transparent;cursor:pointer;touch-action:manipulation}button:disabled{opacity:.5;cursor:default}button:focus-visible,select:focus-visible,[tabindex]:focus-visible{outline:3px solid #a4426b;outline-offset:3px}img{max-width:100%;object-fit:contain;display:block}h1,h2,h3,p{margin:0}button svg{pointer-events:none}.ic{width:20px;height:20px;flex:none;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}.page{max-width:560px;margin:auto;min-width:0}.topbar{display:flex;gap:12px;align-items:center;margin:8px 0 20px}.topbar h1{font-size:23px;letter-spacing:-.7px;line-height:1.2;flex:1}.icon-btn{width:40px;height:40px;display:grid;place-items:center;border:1px solid var(--line);border-radius:14px;background:var(--paper);flex:none}.topbar .back-btn{background:none;border:0;width:28px}.topbar .zgt-launch{color:#ad597b;font-size:21px;font-weight:800}
+.prestige{display:block;width:100%;text-align:left;padding:16px 17px;background:radial-gradient(ellipse at top right,#ffedbc,transparent 85%),linear-gradient(115deg,#fffdf4,#fff3ea);border:1px solid #ecd4aa;border-radius:23px;margin-bottom:16px}.prestige-top{display:flex;align-items:center;gap:12px}.prestige-icon{width:46px;height:50px;flex:none}.prestige-copy{min-width:0;flex:1}.eyebrow{display:block;font-size:10px;font-weight:800;letter-spacing:1.1px;text-transform:uppercase;color:#a77c52;line-height:1.4}.prestige-title{display:block;font-size:19px;font-weight:800;letter-spacing:-.4px;margin-top:3px;color:#6d4924}.prestige-title b{font-variant-numeric:tabular-nums}.prestige-next{display:flex;gap:10px;justify-content:space-between;margin-top:15px;font-size:12px;line-height:1.4;color:#876548}.prestige-next strong{color:#916022;white-space:nowrap}.bar{display:block;height:6px;background:#eee0dd;overflow:hidden;border-radius:8px;margin-top:8px}.bar i{display:block;height:100%;width:var(--value,0%);border-radius:inherit;background:linear-gradient(90deg,#e981a9,#d5a144)}.prestige .bar{background:#efdfc6}.prestige-footer{display:flex;align-items:center;justify-content:space-between;margin-top:7px;font-size:10px;color:#a17d56}.prestige-footer .ic{width:12px;height:12px}
+.ach-nav{position:sticky;top:var(--ach-top);z-index:10;display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:5px;border:1px solid #eddee0;background:#f3e8e8;border-radius:18px;margin:0 0 19px;box-shadow:0 -12px 0 0 var(--bg)}.ach-tab{display:flex;align-items:center;justify-content:center;gap:8px;border:0;background:none;color:#937583;min-height:45px;border-radius:13px;font-size:13px;font-weight:750}.ach-tab .ic{width:18px;height:18px}.ach-tab[aria-selected=true]{background:var(--paper);color:#a8446f;box-shadow:0 2px 7px #75465a12}
+.section{margin:0 0 22px}.section-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 1px 11px}.section-head h2{font-size:18px;letter-spacing:-.35px}.subtle{color:var(--muted);font-size:12px;line-height:1.5}.count{font-size:11px;color:#927581;background:#f6eaf0;padding:5px 8px;border-radius:8px;white-space:nowrap}.text-btn{border:0;background:none;min-height:36px;color:#ad5278;font-size:12px;font-weight:750;padding:6px 0;display:inline-flex;gap:5px;align-items:center}.text-btn .ic{width:14px;height:14px}
+.ready-callout{width:100%;display:flex;align-items:center;gap:12px;padding:15px;border:1px solid #e8bdd0;border-radius:20px;background:linear-gradient(110deg,#fce6f0,#fff7ec);text-align:left;margin-bottom:20px}.ready-callout>img{width:42px;height:49px;flex:none}.ready-callout>span{flex:1;min-width:0}.ready-callout strong{display:block;font-size:15px;line-height:1.35}.ready-callout small{display:block;margin-top:4px;color:#9a6a80;font-size:11px;line-height:1.4}.mini-list,.catalog-list{display:grid;gap:9px}.ach-row{position:relative;display:grid;grid-template-columns:56px minmax(0,1fr) 14px;gap:12px;align-items:center;width:100%;padding:13px;text-align:left;border:1px solid var(--line);border-radius:20px;background:var(--paper)}.ach-row .ic{width:14px;height:14px;color:#b895a4}.trophy-art{display:grid;place-items:center;width:56px;height:62px;flex:none}.trophy-art img{width:100%;height:100%;filter:drop-shadow(0 3px 5px #88535f12)}.row-copy{min-width:0}.row-top{display:flex;gap:7px;align-items:start;justify-content:space-between}.row-title{font-size:14px;line-height:1.35;letter-spacing:-.15px;overflow-wrap:anywhere}.point-chip{flex:none;font-size:10px;font-weight:750;color:#aa7b38;border-radius:7px;padding:3px 5px;background:#fff3d9}.row-description{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;font-size:11px;line-height:1.45;color:var(--muted);margin-top:5px}.row-bottom{display:flex;gap:10px;justify-content:space-between;font-size:10px;color:#9c7f8a;margin-top:7px;line-height:1.35}.row-bottom .green{color:#5b8767}.row-bottom .rose{color:#bb5781;font-weight:750}.row-bottom .amber{color:#9f752f}.ach-row.is-secret{background:#faf6f7}.ach-row.is-archived .trophy-art{opacity:.6}.series-link,.utility-link{width:100%;display:flex;gap:12px;align-items:center;text-align:left;padding:13px 14px;border:1px solid var(--line);border-radius:17px;background:var(--paper);margin-top:10px}.utility-link>span,.series-link>span{flex:1;min-width:0}.utility-link strong,.series-link strong{display:block;font-size:13px}.utility-link small,.series-link small{display:block;margin-top:4px;color:var(--muted);font-size:11px;line-height:1.4}.utility-link img,.series-link img{width:32px;height:36px}.utility-link>.ic,.series-link>.ic{width:16px;color:#ae7189}
+.catalog-controls{margin-bottom:12px;display:flex;flex-wrap:wrap;gap:10px;align-items:center}.status-filters{display:flex;gap:5px;flex:1}.status-filter{border:1px solid var(--line);background:transparent;border-radius:12px;min-height:39px;padding:8px 10px;font-size:11px;font-weight:700;white-space:nowrap}.status-filter[aria-pressed=true]{background:#f7e1eb;border-color:#e4b9cb;color:#a3456b}.category{display:flex;align-items:center;gap:7px;font-size:11px;color:var(--muted);width:100%}.category select{flex:1;min-width:0;height:39px;border:1px solid var(--line);border-radius:11px;background:var(--paper);padding:6px 9px;color:var(--text);font-size:12px}.catalog-list .ach-row{box-shadow:none}.empty{padding:24px 18px;border:1px dashed #e3cbd5;border-radius:19px;color:var(--muted);text-align:center;font-size:13px;line-height:1.55;background:#ffffff60}.empty strong{display:block;color:var(--text);font-size:16px;margin-bottom:7px}.empty .btn{margin-top:15px}.info{margin:12px 0 18px;padding:12px 14px;border-radius:13px;background:#fff0df;color:#856441;font-size:12px;line-height:1.5}.info.error{background:#fff0f3;color:#ab4766}.toast{position:fixed;z-index:2147483320;bottom:max(20px,env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);width:min(420px,calc(100% - 36px));padding:13px 16px;border-radius:16px;color:white;background:#694855;font-size:12px;text-align:center;pointer-events:none;line-height:1.4}.btn{display:inline-flex;gap:7px;align-items:center;justify-content:center;border:1px solid #e8c7d3;border-radius:14px;min-height:46px;padding:11px 13px;font-size:13px;font-weight:750;line-height:1.3;background:var(--paper);color:#a85075}.btn.primary{background:linear-gradient(180deg,#e689ad,#ce5a87);border-color:#d67196;color:white}.btn.full{width:100%}.btn.danger{color:#b34a66;background:#fff4f5}.btn .ic{width:17px;height:17px}
+.showcase{padding:16px;border:1px solid #ebd6bb;border-radius:24px;background:radial-gradient(ellipse at 100% 0,#fff1d4,transparent 75%),#fffdf9}.showcase-head{display:flex;align-items:start;justify-content:space-between;gap:10px}.showcase-head h2{font-size:19px;letter-spacing:-.4px}.showcase-head p{margin-top:5px;font-size:12px;line-height:1.45;color:var(--muted)}.showcase-frame{margin:14px 0 12px}.showcase-actions{display:grid;grid-template-columns:1.15fr 1fr;gap:8px}.showcase-caption{text-align:center;color:#9b7d87;font-size:11px;margin:11px 0 0;line-height:1.4}.slot{border:0;background:transparent;font-family:inherit;color:#775044;cursor:pointer}.slot strong{font-size:clamp(7px,2vw,11px);line-height:1.1;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}.slot small{font-size:7px;line-height:1.2;color:#9a745e}.slot .slot-art{width:clamp(31px,11vw,61px);height:clamp(32px,11vw,62px);display:grid;place-items:center;flex-shrink:1;min-height:0}.slot .slot-art img{height:100%;width:100%}.slot-empty{font-size:9px;color:#a68a6c}.slot .plus{font-size:26px;font-weight:400;color:#bfa37d}.slot.preview{pointer-events:none}.showcase-frame.empty-frame .slot{cursor:default}
+.ach-layer{position:fixed;inset:0;z-index:2147483200;display:flex;align-items:flex-end;justify-content:center;background:rgba(65,41,53,.38);padding:max(10px,var(--ach-top)) max(9px,env(safe-area-inset-right)) max(9px,env(safe-area-inset-bottom)) max(9px,env(safe-area-inset-left));overscroll-behavior:contain}.ach-sheet{position:relative;display:flex;flex-direction:column;width:min(520px,100%);max-height:100%;border:1px solid #ecd5df;border-radius:29px 29px 23px 23px;background:var(--bg);box-shadow:0 25px 70px #48223826;overflow:hidden}.sheet-header{flex:none;padding:0 18px 13px;background:var(--bg);user-select:none;-webkit-user-select:none;touch-action:none}.sheet-grip{display:flex;justify-content:center;align-items:center;height:25px;width:84px;padding:0;margin:auto;border:0;background:transparent;touch-action:none}.sheet-grip span{display:block;width:37px;height:4px;border-radius:8px;background:#d9c3cd}.sheet-grip.armed span{background:#c26489;width:48px}.sheet-heading{display:flex;gap:10px;align-items:center;min-height:40px}.sheet-heading h2{flex:1;min-width:0;font-size:21px;letter-spacing:-.6px;line-height:1.2;overflow-wrap:anywhere}.sheet-heading .icon-btn{width:36px;height:36px;border-radius:13px}.ach-sheet-body{min-height:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:5px 18px 20px;scrollbar-width:thin;touch-action:pan-y;overflow-anchor:none}.ach-sheet-body>*+*{margin-top:15px}.sheet-footer{flex:none;display:flex;gap:8px;padding:13px 18px 17px;border-top:1px solid var(--line);background:var(--bg)}.sheet-footer>.btn{flex:1}.sheet-error{padding:10px 13px;background:#fff0f3;color:#a54464;font-size:12px;line-height:1.45;border-radius:12px;margin:0 18px 10px}.sheet-lead{font-size:13px;line-height:1.55;color:var(--muted)}.detail-hero{display:flex;flex-direction:column;align-items:center;padding:20px 12px 16px;background:radial-gradient(ellipse at center,#ffedcdaa,#fff4f8);border:1px solid #edddd5;border-radius:22px;text-align:center}.detail-hero .trophy-art{width:124px;height:130px}.detail-hero h3{font-size:21px;line-height:1.25;margin-top:10px;letter-spacing:-.4px}.detail-tags{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin-top:10px}.tag{font-size:10px;padding:5px 8px;border-radius:8px;background:#f5e5ed;color:#a7617e;line-height:1.35}.tag.green{color:#608569;background:#edf6ee}.tag.gold{color:#a27833;background:#fff0cd}.detail-block{border:1px solid var(--line);border-radius:18px;background:var(--paper);padding:15px}.detail-block h3{font-size:14px;margin-bottom:7px}.detail-block p{font-size:12px;line-height:1.55;color:var(--muted)}.detail-block .bar{margin-top:12px}.detail-reward{display:flex;gap:11px;align-items:center}.detail-reward img{width:46px;height:52px}.detail-reward strong{display:block;font-size:14px}.detail-reward small{display:block;font-size:11px;color:var(--muted);margin-top:4px}.rank-row{display:flex;align-items:center;gap:11px;padding:13px;border:1px solid var(--line);border-radius:15px;background:var(--paper)}.rank-row.current{border-color:#dfbd78;background:#fff4d9}.rank-row>span{flex:1;min-width:0}.rank-row strong{display:block;font-size:13px}.rank-row small{display:block;font-size:11px;color:var(--muted);margin-top:3px}.rank-marker{width:27px;height:27px;display:grid;place-items:center;border-radius:9px;background:#f5e5e9;color:#a76d84;font-size:12px}.rank-list{display:grid;gap:8px}.series-preview{display:flex;gap:7px;margin-top:10px}.series-preview img{width:42px;height:45px;object-fit:contain}.series-preview>span{display:grid;place-items:center;background:#fbf4f3;border:1px solid var(--line);border-radius:13px;width:51px;height:52px}.series-preview .unearned{opacity:.52}.series-title{display:flex;align-items:center;justify-content:space-between;gap:12px}.series-title h3{font-size:15px}
+.editor-slots{display:grid;gap:10px}.editor-slot{padding:12px;border:1px solid var(--line);border-radius:17px;background:var(--paper)}.editor-slot-head{display:flex;align-items:center;gap:10px}.editor-slot-head>.trophy-art{width:40px;height:44px;flex:0 0 40px;overflow:hidden}.editor-slot-head>span:not(.trophy-art){flex:1;min-width:0}.editor-slot-head strong{display:block;font-size:13px;line-height:1.35}.editor-slot-head small{display:block;font-size:10px;color:var(--muted);margin-bottom:3px}.editor-actions{display:flex;align-items:center;gap:6px;margin-top:9px}.editor-actions .btn{min-height:38px;font-size:11px;padding:7px 10px}.editor-actions .icon-btn{width:38px;height:38px}.editor-actions .push{margin-left:auto}.editor-draft-note{font-size:11px;color:#9b715c;line-height:1.45}.style-filters{display:flex;flex-wrap:wrap;gap:6px}.style-filter{border:1px solid var(--line);border-radius:11px;background:var(--paper);padding:8px 9px;min-height:37px;font-size:11px}.style-filter[aria-pressed=true]{background:#f4e0e9;color:#ad5275;border-color:#dfb9ca}.style-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.style-card{min-width:0;text-align:left;padding:10px;border:1px solid var(--line);border-radius:19px;background:var(--paper);display:flex;flex-direction:column;gap:7px}.style-card .showcase-frame{margin:2px 0;pointer-events:none}.style-card .slot strong,.style-card .slot small{display:none}.style-card .slot .slot-art{width:70%;height:75%}.style-card strong{font-size:12px;line-height:1.35}.style-card small{font-size:10px;line-height:1.4;color:var(--muted)}.style-card.selected{border-color:#dab971;background:#fff6df}.style-status{font-size:10px;color:#a16981;margin-top:auto}.style-preview-label{text-align:center;font-size:10px;letter-spacing:.9px;text-transform:uppercase;color:#b18252;margin-bottom:7px}.ach-skeleton{height:90px;border:1px solid var(--line);border-radius:20px;background:linear-gradient(100deg,#fff7f5,#fffdf9);margin:10px 0}.loading-copy{text-align:center;color:var(--muted);font-size:13px;padding:20px}.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+@media(min-width:640px){.ach-layer{align-items:center;padding:24px}.ach-sheet{max-height:90dvh}.ach-nav{top:10px}.showcase{padding:22px}.slot strong{font-size:12px}.slot small{font-size:9px}.slot .slot-art{width:72px;height:72px}}
+@media(max-width:360px){body{--safe-right:max(12px,env(safe-area-inset-right));--safe-left:max(12px,env(safe-area-inset-left))}.topbar h1{font-size:21px}.prestige{padding:13px}.prestige-title{font-size:17px}.prestige-icon{width:36px;height:41px}.prestige-next{font-size:11px}.ach-row{grid-template-columns:45px minmax(0,1fr) 12px;gap:9px;padding:11px}.trophy-art{width:45px;height:51px}.row-title{font-size:13px}.showcase{padding:12px}.showcase-actions{grid-template-columns:1fr}.ach-sheet-body{padding:4px 14px 18px}.sheet-header{padding-left:14px;padding-right:14px}.sheet-footer{padding-left:14px;padding-right:14px}.sheet-heading h2{font-size:19px}.detail-hero .trophy-art{height:110px;width:105px}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
 
-    .topbar{display:grid;grid-template-columns:48px minmax(0,1fr) 48px;align-items:center;gap:10px;padding:2px 0 4px}
-    .topbar-copy{text-align:center;min-width:0}.topbar-copy strong{display:block;color:#4e343c;font-size:20px;font-weight:950;line-height:1.1}.topbar-copy span{display:block;margin-top:3px;color:#ba7188;font-size:10px;font-weight:850}.topbar-spacer{width:48px}
+.rank-row>.tag{flex:none}
 
-    .hero{position:relative;overflow:hidden;padding:17px;border:1px solid var(--line);border-radius:27px;background-color:#fffaf8;background-image:url('/assets/achievements/background_achivment_panel.webp');background-size:cover;background-position:center;box-shadow:var(--shadow)}
-    .hero::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(255,250,248,.96) 0%,rgba(255,250,248,.82) 54%,rgba(255,250,248,.28) 100%);pointer-events:none}.hero>*{position:relative;z-index:1}
-    .hero-kicker{display:inline-flex;align-items:center;gap:7px;padding:7px 10px;border-radius:999px;background:rgba(255,242,213,.94);color:#91621d;font-size:9px;font-weight:950}.hero-kicker img{width:17px;height:17px;object-fit:contain}
-    .hero h1{margin:10px 0 5px;color:#60384a;font-size:25px;line-height:1.06;font-weight:950}.hero p{margin:0;max-width:305px;color:#8f6d7a;font-size:11px;line-height:1.5;font-weight:700}
+/* A discoverable, deliberately neutral placeholder; it never requests trophy art. */
+.ach-row.is-secret{background:#f5f5f7;border-color:#dfdfe5}
+.ach-row.is-secret .row-title{color:#74747f}.ach-row.is-secret .row-description,.ach-row.is-secret .row-bottom{color:#797984}
+.is-secret-art .secret-mark{display:grid;place-items:center;width:85%;height:85%;border:1px solid #d8d8e0;border-radius:16px;background:#e8e8ed;color:#898995;font-size:30px;font-weight:800;line-height:1;box-shadow:inset 0 1px 0 #fff9}
+.detail-hero.is-secret{background:linear-gradient(150deg,#f5f5f7,#ebebef);border-color:#dedee4;color:#74747f}
+.detail-hero.is-secret h3{color:#74747f}.detail-hero.is-secret .tag{color:#787884;background:#e5e5eb}
+.detail-hero .is-secret-art .secret-mark{font-size:62px;border-radius:29px}
+.series-trophy{display:grid;place-items:center;width:42px;height:45px}
+.series-preview>.is-secret-preview{opacity:1;background:#f3f3f5;border-color:#dedee4}
+.series-trophy.is-secret-art .secret-mark{font-size:24px;border-radius:11px}
 
-    .prestige{position:relative;overflow:hidden;padding:14px;border:1px solid rgba(222,171,54,.62);border-radius:25px;background:radial-gradient(circle at 92% 0,rgba(255,229,130,.72),transparent 32%),linear-gradient(145deg,#fffdf2,#fff0cf 66%,#ffe7ee);box-shadow:0 13px 31px rgba(164,111,23,.10);display:grid;gap:12px}
-    .prestige-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}.prestige-title{display:flex;align-items:center;gap:9px;min-width:0}.prestige-title img{width:39px;height:39px;object-fit:contain;filter:drop-shadow(0 6px 10px rgba(183,119,27,.17))}.prestige-title div{display:grid;gap:2px}.prestige-title small{color:#a17948;font-size:8px;font-weight:900;text-transform:uppercase;letter-spacing:.06em}.prestige-title strong{color:#704817;font-size:16px;font-weight:950}
-    .prestige-rank{flex:0 0 auto;padding:7px 10px;border:1px solid rgba(201,137,25,.38);border-radius:999px;background:rgba(255,255,255,.62);color:#855a19;font-size:9px;font-weight:950}
-    .prestige-balance{display:flex;align-items:flex-end;justify-content:space-between;gap:10px}.prestige-points{display:flex;align-items:center;gap:7px;color:#6b4315}.prestige-points b{font-size:32px;line-height:.9;font-weight:950;letter-spacing:-1px}.prestige-points span{max-width:88px;color:#9b7140;font-size:8px;font-weight:850;line-height:1.25}.prestige-permanent{padding:6px 9px;border-radius:999px;background:#fff8e3;color:#a07127;font-size:8px;font-weight:900;white-space:nowrap}
-    .prestige-goal{padding:10px;border:1px solid rgba(225,190,120,.52);border-radius:17px;background:rgba(255,255,255,.62);display:grid;gap:7px}.prestige-goal-head{display:flex;align-items:center;justify-content:space-between;gap:8px}.prestige-goal-head strong{color:#784d1b;font-size:10px;font-weight:950}.prestige-goal-head span{color:#a0794c;font-size:8px;font-weight:850;text-align:right}.prestige-track{height:9px;overflow:hidden;border-radius:999px;background:#eedfcf}.prestige-track i{display:block;height:100%;width:0;border-radius:inherit;background:linear-gradient(90deg,#f08ab2,#db5489 53%,#e8aa31);transition:width .28s ease}.prestige-goal-foot{display:flex;justify-content:space-between;gap:8px;color:#a27c54;font-size:8px;font-weight:800}
-
-    .quick{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}.quick-card{padding:10px 8px;border:1px solid var(--line2);border-radius:18px;background:rgba(255,255,255,.83);display:grid;gap:3px;text-align:center;box-shadow:0 7px 18px rgba(100,63,78,.045)}.quick-card span{color:#a0818c;font-size:7px;font-weight:850}.quick-card strong{color:#67414f;font-size:14px;font-weight:950}.quick-card.is-gold{background:linear-gradient(145deg,#fffaf0,#fff0cc);border-color:rgba(225,181,81,.5)}.quick-card.is-pink{background:linear-gradient(145deg,#fff9fb,#ffeaf2)}
-
-    .showcase{position:relative;overflow:hidden;padding:13px;border:1px solid rgba(224,183,101,.6);border-radius:27px;background:linear-gradient(145deg,#fffdf8,#fff4ed);box-shadow:0 14px 34px rgba(135,86,38,.08);display:grid;gap:11px;transition:.25s}
-    .showcase::before{content:"";position:absolute;right:-80px;top:-100px;width:220px;height:220px;border-radius:50%;background:radial-gradient(circle,rgba(255,229,142,.35),transparent 68%);pointer-events:none}.showcase>*{position:relative;z-index:1}
-    .showcase[data-style="gold"]{border-color:rgba(211,150,30,.8);background:radial-gradient(circle at 88% 0,rgba(255,230,124,.7),transparent 36%),linear-gradient(145deg,#fffbea,#ffe7a5)}
-    .showcase[data-style^="season_"]{border-color:rgba(199,126,181,.68);background:radial-gradient(circle at 8% 0,rgba(218,236,255,.8),transparent 34%),radial-gradient(circle at 92% 0,rgba(255,208,231,.78),transparent 35%),linear-gradient(145deg,#fff9fc,#f4ebff)}
-    .showcase[data-style^="special_"]{border-color:rgba(220,168,74,.72);background:radial-gradient(circle at 50% -8%,rgba(255,226,135,.46),transparent 38%),linear-gradient(145deg,#fffdf8,#fff0ea)}
-    .showcase-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}.showcase-head div{min-width:0;display:grid;gap:3px}.showcase-head small{color:#b17287;font-size:8px;font-weight:950;text-transform:uppercase;letter-spacing:.05em}.showcase-head strong{color:#603b49;font-size:18px;font-weight:950}.showcase-head span{color:#987884;font-size:9px;font-weight:720;line-height:1.4}.showcase-count{flex:0 0 auto;padding:7px 9px;border:1px solid rgba(221,166,59,.42);border-radius:999px;background:#fff8dc;color:#93621b!important;font-size:9px!important;font-weight:950!important;line-height:1!important}
-    /* Each showcase illustration has its own trophy-window geometry. Keep the
-       same calibration in rating.html and the main profile renderer. Footroom
-       reserves the pedestal/control zone, so trophy art stays in the same spot
-       whether edit arrows are present or not. */
-    .showcase-frame{--slot-top:15.5%;--slot-right:5%;--slot-bottom:16%;--slot-left:5%;--slot-gap:3.2%;--slot-foot:10px;--slot-lift:0px;position:relative;width:100%;isolation:isolate;filter:drop-shadow(0 9px 15px rgba(129,79,28,.10))}
-    .showcase-frame[data-layout="gold"]{--slot-top:21.5%;--slot-right:5.5%;--slot-bottom:17%;--slot-left:5.5%;--slot-gap:3.4%;--slot-foot:11px;--slot-lift:-1px}
-    .showcase-frame[data-layout="season1"]{--slot-top:42.2%;--slot-right:5.6%;--slot-bottom:14.5%;--slot-left:5.6%;--slot-gap:3.3%;--slot-foot:14px;--slot-lift:-1px}
-    .showcase-frame[data-layout="season2"]{--slot-top:38.4%;--slot-right:6.1%;--slot-bottom:20.2%;--slot-left:6.1%;--slot-gap:3.4%;--slot-foot:14px;--slot-lift:-1px}
-    .showcase-frame[data-layout="season3"]{--slot-top:42.2%;--slot-right:5.6%;--slot-bottom:14.5%;--slot-left:5.6%;--slot-gap:3.3%;--slot-foot:14px;--slot-lift:-2px}
-    .showcase-frame[data-layout="special_origins"]{--slot-top:38.4%;--slot-right:7.1%;--slot-bottom:18.2%;--slot-left:7.1%;--slot-gap:3.6%;--slot-foot:16px;--slot-lift:-3px}
-    .showcase-frame[data-layout="special_creator"]{--slot-top:39.1%;--slot-right:6.3%;--slot-bottom:18.6%;--slot-left:6.3%;--slot-gap:3.5%;--slot-foot:14px;--slot-lift:-2px}
-    .showcase-frame[data-layout="special_legend"]{--slot-top:42.2%;--slot-right:6.6%;--slot-bottom:17.8%;--slot-left:6.6%;--slot-gap:3.5%;--slot-foot:14px;--slot-lift:-2px}
-    .showcase-frame-art{display:block;width:100%;height:auto;pointer-events:none;user-select:none;-webkit-user-drag:none}
-    .showcase-frame-slots{position:absolute;z-index:2;top:var(--slot-top);right:var(--slot-right);bottom:var(--slot-bottom);left:var(--slot-left);display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--slot-gap);min-width:0}
-    .slot{position:relative;top:var(--slot-lift);min-width:0;min-height:0;padding:2px 3px var(--slot-foot);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;text-align:center;overflow:hidden}.slot.is-filled{background:transparent}.slot-index{position:absolute;left:3px;top:3px;display:grid;place-items:center;width:16px;height:16px;border:1px solid rgba(216,164,73,.34);border-radius:7px;background:rgba(255,255,255,.84);color:#a77329;font-size:6px;font-weight:950;box-shadow:0 2px 6px rgba(101,68,42,.06)}
-    .slot-art{width:50px;height:50px;flex:0 0 auto;display:grid;place-items:center;font-size:23px}.slot-art img{width:50px;height:50px;object-fit:contain;display:block;filter:drop-shadow(0 3px 6px rgba(107,60,78,.14))}.slot strong{width:100%;color:#69434f;font-size:7.2px;font-weight:950;line-height:1.14;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;text-shadow:0 1px rgba(255,255,255,.75)}.slot small{max-width:100%;color:#9a7580;font-size:5.8px;font-weight:850;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.slot-empty{max-width:72px;color:#a48b91;font-size:6.5px;font-weight:850;line-height:1.25;text-shadow:0 1px rgba(255,255,255,.8)}.slot-actions{position:absolute;left:50%;bottom:2px;display:flex;align-items:center;justify-content:center;gap:2px;margin:0;transform:translateX(-50%)}.slot-actions button{appearance:none;width:22px;height:19px;padding:0;border:1px solid rgba(219,179,107,.48);border-radius:7px;background:rgba(255,255,255,.88);color:#9c6c2d;font-size:8px;font-weight:950;cursor:pointer;box-shadow:0 2px 5px rgba(113,70,37,.05)}.slot-actions button:disabled{opacity:.28}.slot-actions .remove{color:#b85b78}
-    .style-zone{display:grid;gap:6px;padding-top:1px}.style-current{appearance:none;width:100%;min-height:70px;padding:8px 9px;border:1px solid #ead5dc;border-radius:18px;background:rgba(255,255,255,.84);color:var(--text);display:grid;grid-template-columns:78px minmax(0,1fr) auto;align-items:center;gap:9px;text-align:left;cursor:pointer}.style-current-preview{width:78px;height:50px;display:grid;place-items:center;overflow:hidden;border-radius:12px;background:linear-gradient(145deg,#fffaf7,#fff0e6)}.style-current-preview img{display:block;width:100%;height:100%;object-fit:contain}.style-current-copy{min-width:0;display:grid;gap:2px}.style-current-copy small{color:#b17287;font-size:7px;font-weight:950;text-transform:uppercase;letter-spacing:.04em}.style-current-copy strong{color:#673e4c;font-size:11px;font-weight:950;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.style-current-copy span{color:#9b7c86;font-size:7px;font-weight:760;line-height:1.3}.style-current-action{display:grid;justify-items:end;gap:3px;color:#a7647c;font-size:7px;font-weight:950}.style-current-action b{font-size:18px;line-height:1}.style-permanent-note{padding:0 4px;color:#a2828c;font-size:7px;font-weight:760;line-height:1.4}
-    .style-overlay{position:fixed;inset:0;z-index:40;display:flex;align-items:flex-end;justify-content:center;background:rgba(65,37,47,.43);backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px);padding-top:max(20px,var(--safe-top));overscroll-behavior:none}.style-overlay[hidden]{display:none!important}.style-sheet{width:min(430px,100%);max-height:min(82dvh,720px);overflow:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y;padding:10px 14px calc(18px + var(--safe-bottom));border-radius:27px 27px 0 0;background:linear-gradient(180deg,#fffdfb,#fff6f4);box-shadow:0 -18px 54px rgba(73,35,49,.24);transform:translate3d(0,0,0);transition:transform .24s cubic-bezier(.22,.8,.25,1);will-change:transform}.style-sheet.is-dragging{transition:none}.style-sheet-handle{width:54px;height:5px;margin:0 auto 10px;border-radius:999px;background:#ddc8c0}.style-sheet-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}.style-sheet-title{display:grid;gap:3px}.style-sheet-title strong{font-size:17px;font-weight:950;color:#5e3947}.style-sheet-title span{font-size:8px;font-weight:760;color:#9b7c86;line-height:1.4}.style-close{appearance:none;width:38px;height:38px;border:1px solid #ebd5dd;border-radius:13px;background:#fff;color:#9a536e;font-size:20px;font-weight:800}.style-tabs{display:flex;gap:5px;overflow:auto;margin:11px 0 9px;padding-bottom:1px;scrollbar-width:none}.style-tabs::-webkit-scrollbar{display:none}.style-tab{appearance:none;flex:0 0 auto;padding:7px 10px;border:1px solid #edd7df;border-radius:999px;background:#fff;color:#967783;font-size:7px;font-weight:950}.style-tab.is-active{border-color:#e981a8;background:#eb6c9c;color:#fff}.style-picker-hint{min-height:16px;margin-bottom:7px;color:#a27f8a;font-size:7px;font-weight:780;line-height:1.35}.style-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.style-card{appearance:none;min-width:0;padding:8px;border:1px solid var(--line2);border-radius:17px;background:#fff;color:var(--text);display:grid;gap:6px;text-align:left;cursor:pointer}.style-card.is-selected{border-color:#e5a932;background:linear-gradient(145deg,#fffdf3,#fff0c9);box-shadow:0 7px 17px rgba(161,102,24,.10)}.style-card.is-locked{filter:saturate(.72);background:#fcf9fa}.style-card.is-locked[data-style-category="special"]{border-color:#ddd7da;background:#f5f3f4;filter:none}.style-card.is-locked[data-style-category="special"] .style-card-preview{background:#eeebec}.style-card.is-locked[data-style-category="special"] .style-card-preview img{filter:grayscale(1) saturate(.1);opacity:.42}.style-card.is-locked[data-style-category="special"] .style-card-copy strong,.style-card.is-locked[data-style-category="special"] .style-card-copy span,.style-card.is-locked[data-style-category="special"] .style-category{color:#92898c}.style-card-preview{position:relative;height:88px;display:grid;place-items:center;overflow:hidden;border-radius:13px;background:linear-gradient(145deg,#fffaf7,#fff0ea)}.style-card-preview img{width:100%;height:100%;object-fit:contain;display:block}.style-lock{position:absolute;right:6px;top:6px;display:grid;place-items:center;width:24px;height:24px;border-radius:9px;background:rgba(255,255,255,.92);font-size:12px;box-shadow:0 3px 8px rgba(75,41,53,.09)}.style-card-copy{min-width:0;display:grid;gap:3px}.style-card-copy strong{font-size:9px;font-weight:950;color:#69414f;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.style-card-copy span{min-height:20px;color:#957781;font-size:6.5px;font-weight:730;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}.style-card-foot{display:flex;align-items:center;justify-content:space-between;gap:5px}.style-category{color:#b27187;font-size:6px;font-weight:900;text-transform:uppercase}.style-state{max-width:88px;padding:5px 7px;border-radius:999px;background:#f7eff2;color:#a1818b;font-size:6px;font-weight:950;text-align:center;white-space:nowrap}.style-card.is-selected .style-state{background:#e6aa31;color:#fff}.style-card.is-locked .style-state{background:#eee8e8;color:#96878c}
-    .style-info-overlay{position:fixed;inset:0;z-index:52;display:flex;align-items:flex-end;justify-content:center;padding-top:max(20px,var(--safe-top));background:rgba(60,35,44,.38);backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px);overscroll-behavior:none}.style-info-overlay[hidden]{display:none!important}.style-info-sheet{width:min(430px,100%);max-height:min(84dvh,730px);overflow:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y;padding:10px 14px calc(18px + var(--safe-bottom));border-radius:27px 27px 0 0;background:linear-gradient(180deg,#fffdfa,#fff5f3);box-shadow:0 -18px 54px rgba(73,35,49,.28);transform:translate3d(0,0,0);transition:transform .24s cubic-bezier(.22,.8,.25,1)}.style-info-sheet.is-dragging{transition:none}.style-info-handle{width:54px;height:5px;margin:0 auto 10px;border-radius:999px;background:#ddc8c0}.style-info-head{display:flex;align-items:center;justify-content:space-between;gap:10px}.style-info-kicker{display:inline-flex;align-items:center;min-height:27px;padding:6px 9px;border:1px solid rgba(223,176,81,.45);border-radius:999px;background:#fff6d8;color:#99671d;font-size:7px;font-weight:950;text-transform:uppercase;letter-spacing:.04em}.style-info-preview{position:relative;margin-top:10px;padding:9px;border:1px solid #edd8dd;border-radius:20px;background:linear-gradient(145deg,#fffaf7,#fff0ea)}.style-info-preview img{display:block;width:100%;height:auto;max-height:210px;object-fit:contain}.style-info-preview[data-locked="true"] img{filter:grayscale(1) saturate(.12);opacity:.46}.style-info-preview-lock{position:absolute;right:14px;top:14px;display:grid;place-items:center;width:34px;height:34px;border-radius:12px;background:rgba(255,255,255,.94);font-size:16px;box-shadow:0 5px 14px rgba(77,46,56,.12)}.style-info-preview-lock[hidden]{display:none!important}.style-info-title-row{display:flex;align-items:flex-start;justify-content:space-between;gap:9px;margin-top:11px}.style-info-title{min-width:0;display:grid;gap:3px}.style-info-title strong{color:#603a48;font-size:20px;font-weight:950;line-height:1.08}.style-info-title span{color:#a06f80;font-size:8px;font-weight:850}.style-info-status{flex:0 0 auto;padding:6px 9px;border-radius:999px;background:#f0e9eb;color:#8f8186;font-size:7px;font-weight:950}.style-info-status.is-owned{background:#e7f5e9;color:#438452}.style-info-status.is-selected{background:#fff0bd;color:#936319}.style-info-description{margin:9px 0 0;color:#846872;font-size:9px;font-weight:760;line-height:1.48}.style-info-block{display:grid;gap:4px;margin-top:9px;padding:10px 11px;border:1px solid #eddae0;border-radius:17px;background:rgba(255,255,255,.78)}.style-info-block small{color:#bc6583;font-size:7px;font-weight:950;text-transform:uppercase;letter-spacing:.04em}.style-info-block strong{color:#6b414f;font-size:11px;font-weight:950}.style-info-block p{margin:0;color:#927581;font-size:8px;font-weight:750;line-height:1.48}.style-info-action{appearance:none;width:100%;min-height:45px;margin-top:11px;border:0;border-radius:15px;background:linear-gradient(135deg,#ed6c9d,#d95085);color:#fff;font-size:10px;font-weight:950;box-shadow:0 8px 17px rgba(210,70,124,.18)}.style-info-action:disabled{background:#eee8ea;color:#9e9095;box-shadow:none}
-
-
-    .section{padding:13px;border:1px solid var(--line2);border-radius:24px;background:rgba(255,255,255,.8);box-shadow:0 10px 26px rgba(101,64,78,.05);display:grid;gap:9px}.section[hidden]{display:none!important}.section-head{display:flex;align-items:flex-end;justify-content:space-between;gap:10px}.section-head div{min-width:0;display:grid;gap:2px}.section-head strong{color:#603c49;font-size:14px;font-weight:950}.section-head span{color:#9b7b87;font-size:8px;font-weight:750;line-height:1.35}.section-head b{color:#bb597e;font-size:9px;font-weight:950}
-    .recent-list,.near-list,.series-list{display:grid;gap:7px}.mini-ach{display:grid;grid-template-columns:48px minmax(0,1fr) auto;align-items:center;gap:9px;padding:8px;border:1px solid #f0dce3;border-radius:16px;background:#fff}.mini-ach-art{width:48px;height:48px;display:grid;place-items:center;font-size:22px}.mini-ach-art img{width:48px;height:48px;object-fit:contain}.mini-ach-copy{min-width:0;display:grid;gap:3px}.mini-ach-copy strong{font-size:9px;font-weight:950;color:#68414f}.mini-ach-copy span{font-size:7px;font-weight:760;color:#9d7e88;line-height:1.3}.mini-ach-points{padding:5px 7px;border-radius:999px;background:#fff3d4;color:#966219;font-size:7px;font-weight:950;white-space:nowrap}.mini-progress{height:5px;border-radius:999px;background:#efe5e7;overflow:hidden}.mini-progress i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#eb7eaa,#d95789)}
-    .series-item{padding:9px;border:1px solid #efdae2;border-radius:16px;background:#fff;display:grid;gap:6px}.series-row{display:flex;align-items:center;justify-content:space-between;gap:8px}.series-row strong{font-size:9px;font-weight:950}.series-status{padding:5px 7px;border-radius:999px;background:#f4edf0;color:#a0848e;font-size:7px;font-weight:900}.series-status.is-complete{background:#e7f6e9;color:#3e8d51}.series-members{display:flex;gap:4px;overflow:hidden}.series-member{width:31px;height:31px;border:1px solid #efd9e1;border-radius:10px;background:#fff8fa;display:grid;place-items:center;overflow:hidden;opacity:.55}.series-member.is-earned{opacity:1;border-color:#e5b957;background:#fff7d8}.series-member img{width:28px;height:28px;object-fit:contain}
-
-    .catalog{padding:13px;border:1px solid var(--line2);border-radius:25px;background:rgba(255,255,255,.82);box-shadow:0 10px 26px rgba(100,63,77,.05);display:grid;gap:10px}.catalog-head{display:flex;align-items:flex-end;justify-content:space-between;gap:8px}.catalog-head div{display:grid;gap:2px}.catalog-head strong{font-size:16px;font-weight:950;color:#573743}.catalog-head span{font-size:8px;font-weight:750;color:#9a7a86}.catalog-count{padding:7px 9px;border-radius:999px;background:#fff0f5;color:#b94e76;font-size:9px;font-weight:950}.filters{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none}.filters::-webkit-scrollbar{display:none}.filter{appearance:none;flex:0 0 auto;padding:8px 11px;border:1px solid #efd8e0;border-radius:999px;background:#fff;color:#8c707a;font-size:8px;font-weight:900;cursor:pointer}.filter[aria-selected="true"]{border-color:#e77fa7;background:#f46096;color:#fff;box-shadow:0 5px 13px rgba(202,70,122,.14)}
-    .achievement-list{display:grid;gap:8px}.achievement{display:grid;grid-template-columns:68px minmax(0,1fr);gap:10px;align-items:center;padding:10px;border:1px solid #f0dde4;border-radius:20px;background:#fff}.achievement.is-earned{border-color:rgba(225,175,72,.62);background:linear-gradient(145deg,#fffdf5,#fff1cf)}.achievement.is-secret{border-style:dashed;background:linear-gradient(145deg,#fffafd,#f8f2fb)}.achievement.is-expired:not(.is-earned){opacity:.7}.ach-art{width:68px;height:68px;display:grid;place-items:center;font-size:27px}.ach-art img{width:68px;height:68px;object-fit:contain;filter:drop-shadow(0 6px 10px rgba(120,77,94,.09))}.ach-copy{min-width:0;display:grid;gap:5px}.ach-title{display:flex;align-items:flex-start;justify-content:space-between;gap:6px}.ach-title strong{min-width:0;font-size:11px;font-weight:950;color:#623d4b;line-height:1.22}.state{flex:0 0 auto;padding:4px 6px;border-radius:999px;background:#f2ecef;color:#9b828b;font-size:7px;font-weight:950}.state.earned{background:#e9f7e8;color:#478b54}.state.claim{background:#ffe9f1;color:#bc4c78}.meta{display:flex;align-items:center;gap:4px;flex-wrap:wrap}.pill{display:inline-flex;align-items:center;gap:3px;padding:4px 6px;border-radius:999px;background:#f7f0f3;color:#967881;font-size:7px;font-weight:900}.pill.points{background:#fff1c8;color:#936017}.pill img{width:12px;height:12px;object-fit:contain}.description{color:#927680;font-size:8px;font-weight:700;line-height:1.4}.progress{display:grid;gap:3px}.progress-track{height:5px;overflow:hidden;border-radius:999px;background:#f1e5e9}.progress-track i{display:block;height:100%;background:linear-gradient(90deg,#ed80aa,#d95789);border-radius:inherit}.progress-copy{display:flex;justify-content:space-between;gap:6px;color:#a0848d;font-size:7px;font-weight:800}.reward{display:flex;align-items:center;gap:5px;color:#966a2a;font-size:7px;font-weight:900}.reward img{width:18px;height:18px;object-fit:contain}.actions{display:flex;align-items:center;gap:5px;flex-wrap:wrap}.action{appearance:none;min-height:31px;padding:0 10px;border:1px solid #e6cdda;border-radius:11px;background:#fff;color:#9c6076;font-size:8px;font-weight:950;cursor:pointer}.action.primary{border:0;background:linear-gradient(180deg,#ee78a6,#d84b82);color:#fff}.action.gold{border-color:#e2bd6f;background:#fff5d7;color:#8c5b16}.action.selected{border-color:#dfa52e;background:#ffe8a3;color:#80520d}.action:disabled{opacity:.47;cursor:default}
-    .empty{display:grid;justify-items:center;gap:7px;padding:22px 14px;border:1px dashed #e7bfd0;border-radius:19px;background:#fff9fb;text-align:center}.empty b{font-size:13px}.empty span{color:#9a7d87;font-size:8px;line-height:1.4}
-    .info{padding:11px 12px;border:1px solid rgba(222,177,78,.45);border-radius:18px;background:linear-gradient(145deg,#fffaf0,#fff1dc);color:#8b6943;font-size:8px;font-weight:760;line-height:1.45}.info strong{color:#795018}.info.is-error{border-color:#e8b8c7;background:#fff2f5;color:#a44d69}
-
-    @media(max-width:370px){:root{--safe-left:max(env(safe-area-inset-left,0px),12px);--safe-right:max(env(safe-area-inset-right,0px),12px);--embedded-top-clearance:68px}.hero{padding:14px}.prestige{padding:12px}.prestige-points b{font-size:28px}.showcase{padding:10px}.slot{gap:1px}.slot-art,.slot-art img{width:43px;height:43px}.slot strong{font-size:6.6px}.slot small{font-size:5.3px}.slot-actions button{width:20px;height:18px}.style-current{grid-template-columns:70px minmax(0,1fr) auto;padding:7px}.style-current-preview{width:70px;height:46px}.style-card-preview{height:79px}.achievement{grid-template-columns:62px minmax(0,1fr);gap:8px}.ach-art,.ach-art img{width:62px;height:62px}}
-  </style>
+</style>
 <style id="zefirok-guides-20260910">
 /* Scoped tutorial UI: no gameplay, shop, reward or other modal selectors. */
 :is(#zefirok-maltipoo-runner .zgt-layer,.zgt-layer)[hidden]{display:none!important}
@@ -238,173 +210,39 @@
 </style>
 </head>
 <body>
-  <main class="page">
-    <header class="topbar">
-      <div class="topbar-spacer" aria-hidden="true"></div>
-      <div class="topbar-copy"><strong>Достижения</strong><span>Трофеи и престиж аккаунта</span></div>
-      <button type="button" class="zgt-launch" data-zgt-help aria-label="Как работает этот раздел">?</button>
-    </header>
-
-    <section class="hero">
-      <span class="hero-kicker"><img src="/assets/ui/icon_score_acivment.webp" alt=""> СИСТЕМА ПРЕСТИЖА</span>
-      <h1>Твои достижения<br>теперь имеют вес</h1>
-      <p>Выполняй цели, собирай очки достижений и навсегда открывай статусное оформление своей витрины.</p>
-    </section>
-
-    <section class="prestige" aria-label="Престиж достижений">
-      <div class="prestige-head">
-        <div class="prestige-title"><img src="/assets/ui/icon_score_acivment.webp" alt=""><div><small>Очки достижений</small><strong>Престиж аккаунта</strong></div></div>
-        <span class="prestige-rank" data-prestige-rank>Новичок</span>
-      </div>
-      <div class="prestige-balance">
-        <div class="prestige-points"><b data-prestige-points>0</b><span>накоплено за всё время</span></div>
-        <span class="prestige-permanent">Не расходуются</span>
-      </div>
-      <div class="prestige-goal">
-        <div class="prestige-goal-head"><strong data-prestige-goal-title>Следующая награда престижа</strong><span data-prestige-goal-value>Загрузка…</span></div>
-        <div class="prestige-track"><i data-prestige-goal-bar></i></div>
-        <div class="prestige-goal-foot"><span data-prestige-goal-left>0 очков</span><span data-prestige-goal-right>Навсегда</span></div>
-      </div>
-    </section>
-
-    <section class="quick" aria-label="Сводка">
-      <div class="quick-card is-pink"><span>Каталог</span><strong data-summary-earned>0 / 0</strong></div>
-      <div class="quick-card is-gold"><span>В витрине</span><strong data-summary-showcase>0 / 3</strong></div>
-      <div class="quick-card"><span>Серии</span><strong data-summary-series>0 / 0</strong></div>
-    </section>
-
-    <section class="showcase" data-showcase data-style="default">
-      <div class="showcase-head"><div><small>Главная награда престижа</small><strong>Моя витрина</strong><span>Выбери до трёх любимых трофеев. Они видны в профиле и рейтинге.</span></div><span class="showcase-count" data-showcase-count>0 / 3</span></div>
-      <div class="showcase-frame" data-showcase-frame data-layout="standard">
-        <img class="showcase-frame-art" data-showcase-frame-art src="/assets/achievements/showcases/Standart_vitrina.webp" alt="Стандартная витрина">
-        <div class="showcase-frame-slots" data-showcase-slots></div>
-      </div>
-      <div class="style-zone">
-        <button class="style-current" type="button" data-open-style-picker>
-          <span class="style-current-preview"><img data-style-current-image src="/assets/achievements/showcases/Standart_vitrina.webp" alt=""></span>
-          <span class="style-current-copy"><small>Оформление витрины</small><strong data-style-current-title>Стандартная</strong><span data-style-current-caption>Выбрать из коллекции</span></span>
-          <span class="style-current-action"><span>Коллекция</span><b>›</b></span>
-        </button>
-        <span class="style-permanent-note">Полученные сезонные витрины остаются на аккаунте навсегда, даже после окончания сезона.</span>
-      </div>
-    </section>
-
-    <section class="section" data-recent hidden><div class="section-head"><div><strong>Недавно получено</strong><span>Последние трофеи аккаунта</span></div></div><div class="recent-list" data-recent-list></div></section>
-    <section class="section" data-near hidden><div class="section-head"><div><strong>Почти готово</strong><span>Цели, до которых осталось совсем немного</span></div></div><div class="near-list" data-near-list></div></section>
-    <section class="section" data-series hidden><div class="section-head"><div><strong>Серии достижений</strong><span>Закрывай тематические цепочки целиком</span></div><b data-series-count></b></div><div class="series-list" data-series-list></div></section>
-
-    <section class="catalog">
-      <div class="catalog-head"><div><strong>Каталог достижений</strong><span data-catalog-subtitle>Все опубликованные цели</span></div><span class="catalog-count" data-catalog-count>0</span></div>
-      <div class="filters" data-filters role="tablist"></div>
-      <div class="achievement-list" data-achievement-list></div>
-    </section>
-
-    <div class="info" data-info><strong>Очки достижений</strong> — постоянный престиж. Они не тратятся: чем больше очков ты заработал, тем выше ранг и тем больше статусного оформления открывается навсегда.</div>
-  </main>
-
-  <div class="style-overlay" data-style-overlay hidden>
-    <section class="style-sheet" role="dialog" aria-modal="true" aria-label="Коллекция витрин" data-style-sheet>
-      <div class="style-sheet-handle" aria-hidden="true"></div>
-      <div class="style-sheet-head"><div class="style-sheet-title"><strong>Коллекция витрин</strong><span>Открывай оформления навсегда и меняй их в любое время.</span></div><button class="style-close" type="button" data-style-close aria-label="Закрыть">×</button></div>
-      <div class="style-tabs" data-style-tabs role="tablist">
-        <button class="style-tab is-active" type="button" data-style-filter="all">Все</button>
-        <button class="style-tab" type="button" data-style-filter="base">Базовые</button>
-        <button class="style-tab" type="button" data-style-filter="seasonal">Сезонные</button>
-        <button class="style-tab" type="button" data-style-filter="special">Особые</button>
-      </div>
-      <div class="style-picker-hint" data-style-picker-hint>Особые витрины видны всегда. Нажми на закрытую витрину, чтобы узнать её историю и условие получения.</div>
-      <div class="style-list" data-style-list></div>
-    </section>
-  </div>
-
-  <div class="style-info-overlay" data-style-info-overlay hidden>
-    <section class="style-info-sheet" role="dialog" aria-modal="true" aria-label="Особая витрина" data-style-info-sheet>
-      <div class="style-info-handle" aria-hidden="true"></div>
-      <div class="style-info-head"><span class="style-info-kicker" data-style-info-kicker>Особая витрина</span><button class="style-close" type="button" data-style-info-close aria-label="Закрыть">×</button></div>
-      <div class="style-info-preview" data-style-info-preview><img data-style-info-image alt=""><span class="style-info-preview-lock" data-style-info-lock>🔒</span></div>
-      <div class="style-info-title-row"><div class="style-info-title"><strong data-style-info-title>Особая витрина</strong><span data-style-info-label></span></div><span class="style-info-status" data-style-info-status>Не получено</span></div>
-      <p class="style-info-description" data-style-info-description></p>
-      <div class="style-info-block"><small>История</small><strong data-style-info-story-title></strong><p data-style-info-story></p></div>
-      <div class="style-info-block"><small>Как получить</small><p data-style-info-obtain></p></div>
-      <button class="style-info-action" type="button" data-style-info-action disabled>Пока не получено</button>
-    </section>
-  </div>
-
+<main class="page">
+ <header class="topbar"><button class="icon-btn back-btn" type="button" data-action="page-back" aria-label="Назад в игру"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="m14 5-7 7 7 7"/></svg></button><h1>Достижения</h1><button class="icon-btn zgt-launch" type="button" data-zgt-help aria-label="Как получить">?</button></header>
+ <button class="prestige" type="button" data-ach-prestige data-action="ranks" aria-label="Престиж аккаунта" disabled></button>
+ <nav class="ach-nav" role="tablist" aria-label="Достижения"><button class="ach-tab" type="button" id="ach-tab-goals" data-ach-tab="goals" data-action="tab" data-value="goals" aria-controls="ach-root" role="tab" aria-selected="true"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/></svg>Цели</button><button class="ach-tab" type="button" id="ach-tab-showcase" data-ach-tab="showcase" data-action="tab" data-value="showcase" aria-controls="ach-root" role="tab" aria-selected="false" tabindex="-1"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 20h18M5 20V8h14v12M8 8V4h8v4"/></svg>Моя витрина</button></nav>
+ <div class="info error" data-ach-notice role="status" hidden></div>
+ <div id="ach-root" data-ach-root role="tabpanel" aria-labelledby="ach-tab-goals"></div>
+</main>
+<div class="ach-layer" data-ach-layer hidden aria-hidden="true">
+ <section class="ach-sheet" data-ach-sheet role="dialog" aria-modal="true" aria-labelledby="ach-sheet-title">
+  <header class="sheet-header" data-ach-header><button class="sheet-grip" type="button" data-ach-grip aria-label="Закрыть" title="Потяни вниз, чтобы закрыть"><span></span></button><div class="sheet-heading"><button class="icon-btn" type="button" data-ach-sheet-back data-action="sheet-back" aria-label="Назад"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="m14 5-7 7 7 7"/></svg></button><h2 id="ach-sheet-title" data-ach-title></h2><button class="icon-btn" type="button" data-action="close-sheet" aria-label="Закрыть"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div></header>
+  <div class="ach-sheet-body" data-ach-body tabindex="-1"></div>
+  <div class="sheet-error" data-ach-error role="status" hidden></div>
+  <footer class="sheet-footer" data-ach-footer hidden></footer>
+ </section>
+</div><div class="toast" data-ach-toast role="status" hidden></div>
 <script>
 (() => {
-  'use strict';
-  const $ = (s, root=document) => root.querySelector(s);
-  const safeNumber = (v) => Number.isFinite(Number(v)) ? Number(v) : 0;
-  const esc = (v) => String(v ?? '').replace(/[&<>'"]/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
-  const clamp = (n,a,b) => Math.max(a,Math.min(b,n));
-  const POINT_ICON_FALLBACK = '/assets/ui/icon_score_acivment.webp';
-  const STYLE_POINT_REQUIREMENTS = Object.freeze({ default:0, gold:300 });
-  const CATEGORY_LABELS = Object.freeze({
+'use strict';
+const t={"title":"Достижения","goals":"Цели","showcase":"Моя витрина","prestige":"Престиж аккаунта","points":"очков","prestigePoints":"очков престижа","ranks":"Все ранги","nextRank":"Следующий ранг:","more":"ещё","maxRank":"Высший ранг достигнут","keepCollecting":"Продолжай собирать трофеи","loading":"Загружаем достижения…","loadingShort":"Загрузка…","readyTitle":"Есть награды за достижения","readySubtitle":"Посмотреть и забрать","rewards":"Награды","near":"Ближайшие цели","catalog":"Все достижения","all":"Все","progress":"В процессе","earned":"Открытые","unlocked":"Открыто","obtained":"Получено","category":"Категория","allCategories":"Все категории","series":"Серии достижений","seriesCopy":"Тематические цепочки трофеев","completed":"Завершено","secret":"Секрет","secretTitle":"Секретное достижение","secretCopy":"Секретные условия","archived":"Архивное","archivedCopy":"Срок получения этого трофея завершён.","condition":"Как получить","prize":"Дополнительная награда","claim":"Забрать награду","claiming":"Получаем…","pending":"Проверяем выдачу","refresh":"Обновить","check":"Проверить состояние","pendingCopy":"Ожидаем подтверждение. Обновление проверит эту же награду.","failed":"Можно повторить получение","noPrize":"Отдельного приза нет. Это трофей и престиж аккаунта.","prestigeCopy":"Очки достижений не тратятся. Они повышают ранг и открывают только те оформления, у которых указано это условие.","currentRank":"Твой ранг","earnedOn":"Открыто","nextStyle":"Следующее оформление","edit":"Изменить трофеи","style":"Оформление","styles":"Коллекция витрин","showcaseCopy":"Так тебя видят в профиле и рейтинге.","showcaseAdd":"На витрину","inShowcase":"В витрине","emptySlot":"Свободное место","slot":"Место","choose":"Выбрать","chooseTrophy":"Выбери трофей","replace":"Заменить","replaceWhich":"Какой трофей заменить?","remove":"Убрать","left":"Раньше","right":"Позже","save":"Сохранить","saving":"Сохраняем…","saved":"Витрина обновлена","cancel":"Отмена","back":"Назад","close":"Закрыть","toGame":"Назад в игру","pull":"Потяни вниз, чтобы закрыть","draftCopy":"Предпросмотр. Изменения появятся в профиле после сохранения.","discardTitle":"Не сохранять изменения?","discardCopy":"Витрина останется прежней. Сами трофеи никуда не исчезнут.","discard":"Не сохранять","continue":"Продолжить","preview":"Предпросмотр","using":"Используется","available":"Доступно","locked":"Пока закрыто","useStyle":"Использовать","story":"История","base":"Базовые","seasonal":"Сезонные","special":"Особые","standard":"Стандартная","recent":"Недавно открыто","recentCopy":"Последние трофеи твоей коллекции","emptyTitle":"Пока пусто","emptyCopy":"Попробуй другой фильтр или открой все цели.","noTrophies":"Сначала открой трофей","noTrophiesCopy":"Выполни условие достижения во вкладке «Цели». Полученные трофеи можно поставить на витрину.","noneEligible":"Все подходящие трофеи уже выбраны.","noneRewards":"Неполученных наград нет.","retry":"Повторить","errorTitle":"Не удалось загрузить","requestError":"Сервер не подтвердил операцию.","invalidState":"Получен неполный ответ. Обнови состояние.","uncertain":"Не удалось проверить результат. Перед повтором обнови данные.","staleDraft":"Состав витрины изменился. Открой редактор заново.","refreshDone":"Состояние обновлено","claimDone":"Награда получена","telegramRequired":"Открой достижения из Telegram Mini App.","permanent":"Полученные оформления остаются на аккаунте.","unavailable":"Сейчас недоступно","chooseGoals":"Посмотреть цели","rankProgress":"в текущем ранге","rankUnavailable":"Ранг временно недоступен","viewSeries":"Посмотреть серию","secretHint":"Секретные условия. Название и описание откроются после выполнения.","secretGuide":"Секретные трофеи видны серыми карточками с «?». Название и условия откроются после выполнения."};
+const $=(s,r=document)=>r.querySelector(s);
+const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const number=v=>Number.isFinite(Number(v))?Number(v):0;
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const fmt=new Intl.NumberFormat('ru-RU');
+const num=v=>fmt.format(Math.max(0,number(v)));
+const POINT_ICON='/assets/ui/icon_score_acivment.webp';
+const REWARD_ICON='/assets/ui/icone_reward.webp';
+const CATEGORY_LABELS={
     all:'Все', runs:'Забеги', run:'Забеги', score:'Счёт', resources:'Ресурсы', economy:'Ресурсы',
     collections:'Коллекция', collection:'Коллекция', cosmetics:'Коллекция', cases:'Кейсы',
     friends:'Друзья', social:'Друзья', seasons:'Сезоны', season:'Сезоны', profile:'Профиль', misc:'Другое'
-  });
-
-  let ACHIEVEMENTS=[]; let SUMMARY={}; let SHOWCASE_IDS=[]; let SHOWCASE_LIMIT=3; let SHOWCASE_STYLE_ID='default'; let SHOWCASE_STYLES=[]; let SERIES=[]; let NEAR=[]; let POINT_ICON=POINT_ICON_FALLBACK; let activeCategory='all'; let styleFilter='all'; let saving=false; let claiming=new Set(); let loadError=''; let systemMessage='';
-  let styleSheetDrag=null; let stylePickerScrollLock=null; let stylePickerClosing=false; let styleInfoDrag=null; let styleInfoClosing=false;
-
-  function resolveTelegramWebApp(){ try{return window.Telegram?.WebApp || (window.parent&&window.parent!==window?window.parent.Telegram?.WebApp:null) || null;}catch{return window.Telegram?.WebApp||null;} }
-  function currentInitData(){ return String(resolveTelegramWebApp()?.initData || ''); }
-  function testProjectActive(){ try{if(new URLSearchParams(location.search).get('test_project')==='1')return true;if(window.parent&&window.parent!==window)return new URLSearchParams(window.parent.location.search).get('test_project')==='1';}catch{}return false; }
-  function makeRequestId(){ try{return crypto.randomUUID();}catch{return `achievement_${Date.now()}_${Math.random().toString(36).slice(2,10)}`;} }
-
-  async function api(path,payload={}){
-    const headers={'Content-Type':'application/json'}; const initData=currentInitData();
-    if(!initData&&!testProjectActive())throw new Error('Открой достижения из Telegram Mini App.');
-    const requestPayload={...payload,initData};
-    if(testProjectActive()){
-      const response=await fetch('/api/owner/test-project/game',{method:'POST',headers,cache:'no-store',credentials:'same-origin',body:JSON.stringify({initData,ownerSession:localStorage.getItem('zefirok-owner-session-v1')||'',path,method:'POST',query:{},payload:requestPayload})});
-      const envelope=await response.json().catch(()=>({}));
-      if(!response.ok||envelope?.ok===false)throw new Error(envelope?.error||'Не удалось выполнить запрос достижений.');
-      return envelope?.data||envelope;
-    }
-    const response=await fetch(path,{method:'POST',headers,cache:'no-store',credentials:'same-origin',body:JSON.stringify(requestPayload)});
-    const data=await response.json().catch(()=>({})); if(!response.ok||data?.ok===false)throw new Error(data?.error||'Не удалось выполнить запрос достижений.'); return data;
-  }
-
-  function catalog(){return ACHIEVEMENTS.filter(i=>i?.catalogVisible===true);}
-  function art(item, cls='ach-art'){
-    const url=String(item?.artUrl||item?.imageUrl||'').trim();
-    const src=url||POINT_ICON_FALLBACK;
-    return `<span class="${cls}"><img src="${esc(src)}" alt="" loading="lazy" decoding="async"></span>`;
-  }
-  function pointsInline(value){return `<span class="pill points"><img src="${esc(POINT_ICON)}" alt="">+${Math.max(0,safeNumber(value)).toLocaleString('ru-RU')}</span>`;}
-  function rarityLabel(item){return String(item?.rarityLabel||({common:'Обычное',rare:'Редкое',superrare:'Сверхредкое',epic:'Эпическое',mythic:'Мифическое',legendary:'Легендарное',legacy:'Legacy'}[String(item?.rarity||'common')]||'Обычное'));}
-  function categoryLabel(id, items=[]){const known=CATEGORY_LABELS[id];if(known)return known;const found=items.find(i=>String(i?.category||'')===id&&i?.categoryLabel);return String(found?.categoryLabel||id||'Другое').replace(/^./,c=>c.toUpperCase());}
-
-  function applyState(state){
-    ACHIEVEMENTS=Array.isArray(state?.achievements)?state.achievements:[];
-    SUMMARY=state?.summary&&typeof state.summary==='object'?state.summary:{};
-    const showcase=state?.showcase&&typeof state.showcase==='object'?state.showcase:{};
-    SHOWCASE_LIMIT=clamp(Math.floor(safeNumber(showcase.limit)||3),1,3);
-    const ids=Array.isArray(showcase.ids)?showcase.ids:ACHIEVEMENTS.filter(i=>i?.inShowcase).sort((a,b)=>safeNumber(a?.showcaseSlot)-safeNumber(b?.showcaseSlot)).map(i=>i.id);
-    SHOWCASE_IDS=[...new Set(ids.map(String).filter(Boolean))].slice(0,SHOWCASE_LIMIT);
-    SHOWCASE_STYLES=Array.isArray(showcase.styles)&&showcase.styles.length?showcase.styles:[{id:'default',title:'Классическая',description:'Базовая витрина',unlocked:true,selected:true,unlockText:'Доступна всем'}];
-    const requested=String(showcase.selectedStyleId||'default'); SHOWCASE_STYLE_ID=SHOWCASE_STYLES.some(s=>String(s?.id)===requested)?requested:'default';
-    SERIES=Array.isArray(state?.series)?state.series:[]; NEAR=Array.isArray(state?.nearCompletion)?state.nearCompletion:[];
-    POINT_ICON=String(state?.meta?.achievementPoints?.iconUrl||POINT_ICON_FALLBACK);
-    loadError=''; renderAll();
-  }
-
-  function pointStyleRequirement(style){const id=String(style?.id||''),unlockType=String(style?.unlockType||'');if(unlockType&&unlockType!=='rank')return null;if(Number.isFinite(Number(style?.minPoints)))return Math.max(0,Number(style.minPoints));return STYLE_POINT_REQUIREMENTS[id]??null;}
-  function pointStyleCandidates(){return SHOWCASE_STYLES.map(s=>({style:s,need:pointStyleRequirement(s)})).filter(x=>x.need!=null&&x.need>0).sort((a,b)=>a.need-b.need);}
-  function nextPointStyle(points){return pointStyleCandidates().find(x=>points<x.need)||null;}
-
-  function renderPrestige(){
-    const points=Math.max(0,safeNumber(SUMMARY.achievementPoints)); const rank=SUMMARY?.rank&&typeof SUMMARY.rank==='object'?SUMMARY.rank:{title:'Новичок',nextTitle:'Искатель',pointsToNext:50};
-    $('[data-prestige-points]').textContent=points.toLocaleString('ru-RU'); $('[data-prestige-rank]').textContent=String(rank.title||'Новичок');
-    const nextStyle=nextPointStyle(points); const title=$('[data-prestige-goal-title]'),value=$('[data-prestige-goal-value]'),bar=$('[data-prestige-goal-bar]'),left=$('[data-prestige-goal-left]'),right=$('[data-prestige-goal-right]');
-    if(nextStyle){const need=nextStyle.need,remain=Math.max(0,need-points),pct=clamp(points/Math.max(1,need)*100,0,100);title.textContent=`Следующее оформление: ${nextStyle.style.title||'витрина'}`;value.textContent=`ещё ${remain.toLocaleString('ru-RU')}`;bar.style.width=`${pct}%`;left.textContent=`${points.toLocaleString('ru-RU')} / ${need.toLocaleString('ru-RU')} очков`;right.textContent='Откроется навсегда';}
-    else if(rank?.nextTitle){title.textContent=`Следующий ранг: ${rank.nextTitle}`;value.textContent=`ещё ${Math.max(0,safeNumber(rank.pointsToNext)).toLocaleString('ru-RU')}`;bar.style.width=`${clamp(safeNumber(SUMMARY.completionPercent),5,100)}%`;left.textContent=`${points.toLocaleString('ru-RU')} очков престижа`;right.textContent='Очки не списываются';}
-    else{title.textContent='Максимальный текущий престиж';value.textContent='Все цели открыты';bar.style.width='100%';left.textContent=`${points.toLocaleString('ru-RU')} очков`;right.textContent='Продолжай коллекцию';}
-  }
-
-  const SHOWCASE_PRESENTATION_FALLBACKS=Object.freeze({
+  };
+const SHOWCASE_PRESENTATION_FALLBACKS={
     default:{id:'default',layout:'standard',imageUrl:'/assets/achievements/showcases/Standart_vitrina.webp'},
     gold:{id:'gold',layout:'gold',imageUrl:'/assets/achievements/showcases/gold_vitrina.webp'},
     seasonal:{id:'season_1_cafe',layout:'season1',imageUrl:'/assets/achievements/showcases/vitrina_s1.webp'},
@@ -414,97 +252,362 @@
     special_origins:{id:'special_origins',layout:'special_origins',imageUrl:'/assets/achievements/showcases/vitrina_At_the_origins.webp'},
     special_creator:{id:'special_creator',layout:'special_creator',imageUrl:'/assets/achievements/showcases/vitrina_creator_zeffirok.webp'},
     special_cafe_legend:{id:'special_cafe_legend',layout:'special_legend',imageUrl:'/assets/achievements/showcases/vitrina_Legenda_cafe.webp'}
-  });
-  function itemById(id){return ACHIEVEMENTS.find(i=>String(i?.id||'')===String(id||''))||null;}
-  function showcaseStyleById(id){
-    const requested=String(id||'default'),style=SHOWCASE_STYLES.find(s=>String(s?.id||'')===requested)||SHOWCASE_STYLES[0]||{id:'default',title:'Стандартная',description:'Базовая витрина',unlocked:true,category:'base'};
-    const styleId=String(style?.id||requested||'default'),canonical=SHOWCASE_PRESENTATION_FALLBACKS[styleId]||SHOWCASE_PRESENTATION_FALLBACKS[requested]||null,fallback=canonical||SHOWCASE_PRESENTATION_FALLBACKS.default;
-    return {...style,id:String(canonical?.id||styleId||fallback.id),layout:String(canonical?.layout||style?.layout||fallback.layout),imageUrl:String(canonical?.imageUrl||style?.imageUrl||fallback.imageUrl)};
-  }
-  function showcaseStyleStateText(style,points){const selected=String(style?.id||'')===SHOWCASE_STYLE_ID,unlocked=style?.unlocked===true,need=pointStyleRequirement(style),special=String(style?.category||'')==='special';if(selected)return 'Используется';if(unlocked)return special?'Получено':'Открыто';if(need!=null)return `${points.toLocaleString('ru-RU')} / ${need.toLocaleString('ru-RU')}`;return special?'Не получено':'Закрыто';}
-  function showcaseStyleDescription(style,points){const unlocked=style?.unlocked===true,need=pointStyleRequirement(style),special=String(style?.category||'')==='special';if(!unlocked&&special)return String(style?.unlockText||style?.obtainText||style?.description||'Особое оформление');if(!unlocked&&need!=null)return `Набери ${need.toLocaleString('ru-RU')} очков достижений — очки не списываются.`;return String(style?.description||style?.unlockText||'Оформление витрины');}
-  function showcaseStyleCategory(style){const category=String(style?.category||'base');return category==='seasonal'?'Сезонная':category==='special'?'Особая':'Базовая';}
-  function renderStylePicker(){
-    const points=Math.max(0,safeNumber(SUMMARY.achievementPoints)),list=$('[data-style-list]');if(!list)return;
-    document.querySelectorAll('[data-style-filter]').forEach(b=>b.classList.toggle('is-active',String(b.dataset.styleFilter||'all')===styleFilter));
-    const visible=SHOWCASE_STYLES.filter(style=>styleFilter==='all'||String(style?.category||'base')===styleFilter);
-    list.innerHTML=visible.length?visible.map(style=>{const id=String(style?.id||'default'),selected=id===SHOWCASE_STYLE_ID,unlocked=style?.unlocked===true,state=showcaseStyleStateText(style,points),desc=showcaseStyleDescription(style,points),image=String(style?.imageUrl||'');return `<button class="style-card${selected?' is-selected':''}${unlocked?'':' is-locked'}" type="button" data-style="${esc(id)}" data-style-category="${esc(String(style?.category||'base'))}" ${saving?'disabled':''}><span class="style-card-preview">${image?`<img src="${esc(image)}" alt="">`:''}${unlocked?'':'<span class="style-lock">🔒</span>'}</span><span class="style-card-copy"><strong>${esc(style?.title||'Оформление')}</strong><span>${esc(desc)}</span></span><span class="style-card-foot"><span class="style-category">${esc(style?.seasonLabel||showcaseStyleCategory(style))}</span><span class="style-state">${esc(state)}</span></span></button>`;}).join(''):'<div class="empty" style="grid-column:1/-1"><b>Пока пусто</b><span>В этой категории ещё нет доступных оформлений.</span></div>';
-  }
-  function renderShowcase(){
-    const root=$('[data-showcase]'),style=showcaseStyleById(SHOWCASE_STYLE_ID),frame=$('[data-showcase-frame]'),frameArt=$('[data-showcase-frame-art]');root.dataset.style=String(style?.id||'default');frame.dataset.layout=String(style?.layout||'standard');frameArt.src=String(style?.imageUrl||'/assets/ui/error404-no-icon.webp');frameArt.alt=`${String(style?.title||'Стандартная')} витрина`;$('[data-showcase-count]').textContent=`${SHOWCASE_IDS.length} / ${SHOWCASE_LIMIT}`;
-    const slots=Array.from({length:SHOWCASE_LIMIT},(_,index)=>{const id=SHOWCASE_IDS[index]||'',item=id?itemById(id):null;if(!item)return `<div class="slot"><span class="slot-index">${index+1}</span><span class="slot-art">＋</span><span class="slot-empty">Свободное место</span></div>`;const rarity=String(item?.rarity||'common');return `<div class="slot is-filled" data-rarity="${esc(rarity)}"><span class="slot-index">${index+1}</span>${art(item,'slot-art')}<strong>${esc(item?.title||'Достижение')}</strong><small>${esc(rarityLabel(item))}</small><span class="slot-actions"><button type="button" data-move="left" data-id="${esc(id)}" ${index===0||saving?'disabled':''}>←</button><button class="remove" type="button" data-remove="${esc(id)}" ${saving?'disabled':''}>×</button><button type="button" data-move="right" data-id="${esc(id)}" ${index>=SHOWCASE_IDS.length-1||saving?'disabled':''}>→</button></span></div>`;});
-    $('[data-showcase-slots]').innerHTML=slots.join('');$('[data-style-current-title]').textContent=String(style?.title||'Стандартная');$('[data-style-current-caption]').textContent=style?.unlocked===true?(String(style?.seasonLabel||'Открыто навсегда')):String(style?.unlockText||'Пока закрыто');$('[data-style-current-image]').src=String(style?.imageUrl||'/assets/ui/error404-no-icon.webp');renderStylePicker();
-  }
-  function lockStylePickerBackground(){
-    if(stylePickerScrollLock)return;
-    const root=document.documentElement,body=document.body,y=Math.max(0,window.scrollY||root.scrollTop||body.scrollTop||0);
-    stylePickerScrollLock={y,rootOverflow:root.style.overflow,bodyOverflow:body.style.overflow,bodyPosition:body.style.position,bodyTop:body.style.top,bodyLeft:body.style.left,bodyRight:body.style.right,bodyWidth:body.style.width};
-    root.style.overflow='hidden';body.style.overflow='hidden';body.style.position='fixed';body.style.top=`-${y}px`;body.style.left='0';body.style.right='0';body.style.width='100%';
-  }
-  function unlockStylePickerBackground(){
-    const lock=stylePickerScrollLock;if(!lock)return;stylePickerScrollLock=null;const root=document.documentElement,body=document.body;
-    root.style.overflow=lock.rootOverflow;body.style.overflow=lock.bodyOverflow;body.style.position=lock.bodyPosition;body.style.top=lock.bodyTop;body.style.left=lock.bodyLeft;body.style.right=lock.bodyRight;body.style.width=lock.bodyWidth;
-    requestAnimationFrame(()=>window.scrollTo(0,lock.y));
-  }
-  function openStylePicker(){styleFilter='all';renderStylePicker();const overlay=$('[data-style-overlay]'),sheet=$('[data-style-sheet]');if(!overlay||!sheet)return;stylePickerClosing=false;styleSheetDrag=null;sheet.classList.remove('is-dragging');sheet.style.transform='translate3d(0,0,0)';sheet.scrollTop=0;lockStylePickerBackground();overlay.hidden=false;}
-  function finishStylePickerClose(){const overlay=$('[data-style-overlay]'),sheet=$('[data-style-sheet]');if(overlay)overlay.hidden=true;if(sheet){sheet.classList.remove('is-dragging');sheet.style.transform='translate3d(0,0,0)';}stylePickerClosing=false;unlockStylePickerBackground();const hint=$('[data-style-picker-hint]');if(hint)hint.textContent='Особые витрины видны всегда. Нажми на закрытую витрину, чтобы узнать её историю и условие получения.';}
-  function closeStylePicker(options={}){const overlay=$('[data-style-overlay]'),sheet=$('[data-style-sheet]');if(!overlay||overlay.hidden||!sheet||stylePickerClosing)return;styleSheetDrag=null;sheet.classList.remove('is-dragging');const animated=options?.animated!==false;if(!animated){finishStylePickerClose();return;}stylePickerClosing=true;sheet.style.transform=`translate3d(0,${Math.max(sheet.offsetHeight,window.innerHeight)}px,0)`;setTimeout(finishStylePickerClose,240);}
-  function installStylePickerSwipe(){
-    const overlay=$('[data-style-overlay]'),sheet=$('[data-style-sheet]');if(!overlay||!sheet||sheet.dataset.swipeReady==='1')return;sheet.dataset.swipeReady='1';
-    sheet.addEventListener('touchstart',event=>{if(overlay.hidden||stylePickerClosing)return;const touch=event.touches?.[0];if(!touch||sheet.scrollTop>0){styleSheetDrag=null;return;}styleSheetDrag={startY:touch.clientY,lastY:touch.clientY,startTime:performance.now(),dragging:false};},{passive:true});
-    sheet.addEventListener('touchmove',event=>{const drag=styleSheetDrag,touch=event.touches?.[0];if(!drag||!touch)return;const dy=touch.clientY-drag.startY;drag.lastY=touch.clientY;if(dy<=0||sheet.scrollTop>0)return;if(dy>8){drag.dragging=true;event.preventDefault();}if(!drag.dragging)return;sheet.classList.add('is-dragging');sheet.style.transform=`translate3d(0,${Math.max(0,dy*.92)}px,0)`;},{passive:false});
-    const finish=()=>{const drag=styleSheetDrag;styleSheetDrag=null;if(!drag)return;const dy=Math.max(0,drag.lastY-drag.startY),elapsed=Math.max(1,performance.now()-drag.startTime),velocity=dy/elapsed;sheet.classList.remove('is-dragging');if(drag.dragging&&(dy>Math.min(140,sheet.offsetHeight*.2)||velocity>.75))closeStylePicker({animated:true});else sheet.style.transform='translate3d(0,0,0)';};
-    sheet.addEventListener('touchend',finish,{passive:true});sheet.addEventListener('touchcancel',finish,{passive:true});
-  }
-
-
-  function renderSummary(){const published=catalog(),earned=Number.isFinite(Number(SUMMARY.catalogEarned))?Number(SUMMARY.catalogEarned):published.filter(i=>i?.earned).length,total=Number.isFinite(Number(SUMMARY.catalogTotal))?Number(SUMMARY.catalogTotal):published.length,doneSeries=SERIES.filter(s=>s?.completed===true).length;$('[data-summary-earned]').textContent=`${earned} / ${total}`;$('[data-summary-showcase]').textContent=`${SHOWCASE_IDS.length} / ${SHOWCASE_LIMIT}`;$('[data-summary-series]').textContent=`${doneSeries} / ${SERIES.length}`;renderPrestige();}
-
-  function renderRecent(){const section=$('[data-recent]'),list=$('[data-recent-list]');const items=catalog().filter(i=>i?.earned===true&&!i?.secretLocked).sort((a,b)=>safeNumber(b?.unlockedAt)-safeNumber(a?.unlockedAt)).slice(0,3);section.hidden=!items.length;if(!items.length){list.innerHTML='';return;}list.innerHTML=items.map(i=>`<div class="mini-ach">${art(i,'mini-ach-art')}<span class="mini-ach-copy"><strong>${esc(i.title||'Достижение')}</strong><span>${esc(rarityLabel(i))} · получено</span></span><span class="mini-ach-points">+${Math.max(0,safeNumber(i.achievementPoints))}</span></div>`).join('');}
-  function renderNear(){const section=$('[data-near]'),list=$('[data-near-list]');const items=NEAR.slice(0,3);section.hidden=!items.length;if(!items.length){list.innerHTML='';return;}list.innerHTML=items.map(e=>{const i=itemById(e?.id)||e,current=Math.max(0,safeNumber(e.current)),target=Math.max(1,safeNumber(e.target)),pct=clamp(safeNumber(e.progressPercent)||(current/target*100),0,100);return `<div class="mini-ach">${art(i,'mini-ach-art')}<span class="mini-ach-copy"><strong>${esc(i.title||'Достижение')}</strong><span>${current.toLocaleString('ru-RU')} / ${target.toLocaleString('ru-RU')}</span><span class="mini-progress"><i style="width:${pct}%"></i></span></span><span class="mini-ach-points">${Math.round(pct)}%</span></div>`;}).join('');}
-  function renderSeries(){const section=$('[data-series]'),list=$('[data-series-list]');section.hidden=!SERIES.length;$('[data-series-count]').textContent=SERIES.length?`${SERIES.filter(s=>s?.completed).length}/${SERIES.length}`:'';if(!SERIES.length){list.innerHTML='';return;}list.innerHTML=SERIES.map(s=>{const earned=Math.max(0,safeNumber(s.earned)),total=Math.max(0,safeNumber(s.total)),completed=s?.completed===true;const members=Array.isArray(s?.members)?s.members:[];return `<div class="series-item"><div class="series-row"><strong>${esc(s?.title||'Серия')}</strong><span class="series-status${completed?' is-complete':''}">${completed?'✓ Завершена':`${earned} / ${total}`}</span></div><div class="series-members">${members.map(m=>`<span class="series-member${m?.earned?' is-earned':''}">${m?.artUrl?`<img src="${esc(m.artUrl)}" alt="">`:esc(m?.icon||'🏅')}</span>`).join('')}</div></div>`;}).join('');}
-
-  function stateFor(item){if(item?.claimable===true)return ['Забрать','claim'];if(item?.earned===true)return ['Получено','earned'];if(item?.legacyExpired===true)return ['Legacy',''];if(item?.secretLocked===true)return ['Секрет',''];return ['В процессе',''];}
-  function rewardMarkup(item){const reward=item?.reward&&typeof item.reward==='object'?item.reward:null;if(!reward&&(item?.hasReward!==true))return '';const label=String(reward?.label||reward?.title||item?.rewardLabel||'Награда');const img=String(reward?.imageUrl||reward?.artUrl||item?.rewardImageUrl||'/assets/ui/error404-no-icon.webp');return `<span class="reward">${img?`<img src="${esc(img)}" alt="">`:''}<span>${esc(label)}</span></span>`;}
-  function achievementCard(item){const id=String(item?.id||''),target=Math.max(0,safeNumber(item?.target)),current=Math.max(0,safeNumber(item?.current)),pct=target>0?clamp(current/target*100,0,100):(item?.earned?100:0),[state,stateClass]=stateFor(item),inShowcase=SHOWCASE_IDS.includes(id),eligible=item?.earned===true&&item?.showcaseEligible!==false,limit=!inShowcase&&SHOWCASE_IDS.length>=SHOWCASE_LIMIT,busy=claiming.has(id);const claim=item?.claimable===true?`<button class="action primary" type="button" data-claim="${esc(id)}" ${busy?'disabled':''}>${busy?'Получаем…':'Забрать награду'}</button>`:'';const showcase=eligible?`<button class="action gold${inShowcase?' selected':''}" type="button" data-toggle-showcase="${esc(id)}" ${saving||limit?'disabled':''}>${inShowcase?`★ В витрине #${SHOWCASE_IDS.indexOf(id)+1}`:'На витрину'}</button>`:'';return `<article class="achievement${item?.earned?' is-earned':''}${item?.secretLocked?' is-secret':''}${item?.legacyExpired?' is-expired':''}">${art(item)}<div class="ach-copy"><div class="ach-title"><strong>${esc(item?.title||'Достижение')}</strong><span class="state ${stateClass}">${esc(state)}</span></div><div class="meta"><span class="pill">${esc(rarityLabel(item))}</span>${pointsInline(item?.achievementPoints)}</div><div class="description">${esc(item?.description||'')}</div>${target>0&&!item?.earned?`<div class="progress"><div class="progress-track"><i style="width:${pct}%"></i></div><div class="progress-copy"><span>${current.toLocaleString('ru-RU')} / ${target.toLocaleString('ru-RU')}</span><span>${Math.round(pct)}%</span></div></div>`:''}${rewardMarkup(item)}${claim||showcase?`<div class="actions">${claim}${showcase}</div>`:''}</div></article>`;}
-
-  function renderFilters(){const items=catalog(),ids=['all',...new Set(items.map(i=>String(i?.category||'misc')).filter(Boolean))];if(!ids.includes(activeCategory))activeCategory='all';$('[data-filters]').innerHTML=ids.map(id=>`<button class="filter" role="tab" type="button" data-category="${esc(id)}" aria-selected="${id===activeCategory?'true':'false'}">${esc(categoryLabel(id,items))}</button>`).join('');}
-  function renderCatalog(){const all=catalog(),items=activeCategory==='all'?all:all.filter(i=>String(i?.category||'misc')===activeCategory);$('[data-catalog-count]').textContent=String(items.length);$('[data-catalog-subtitle]').textContent=activeCategory==='all'?'Все опубликованные цели':categoryLabel(activeCategory,all);const list=$('[data-achievement-list]');if(loadError){list.innerHTML=`<div class="empty"><b>Не удалось загрузить достижения</b><span>${esc(loadError)}</span><button class="action primary" type="button" data-retry>Повторить</button></div>`;return;}if(!items.length){list.innerHTML='<div class="empty"><b>Здесь пока пусто</b><span>В этой категории ещё нет опубликованных достижений.</span></div>';return;}list.innerHTML=items.map(achievementCard).join('');}
-  function renderInfo(){const el=$('[data-info]');el.classList.toggle('is-error',Boolean(loadError));if(loadError){el.innerHTML=`<strong>Ошибка загрузки.</strong> ${esc(loadError)}`;return;}if(systemMessage){el.textContent=systemMessage;return;}el.innerHTML='<strong>Очки достижений</strong> — постоянный престиж. Они не тратятся: чем больше очков ты заработал, тем выше ранг и тем больше статусного оформления открывается навсегда.';}
-  function renderAll(){renderSummary();renderShowcase();renderRecent();renderNear();renderSeries();renderFilters();renderCatalog();renderInfo();}
-
-  async function load(){loadError='';try{const data=await api('/api/achievements');applyState(data);}catch(e){loadError=String(e?.message||e||'Ошибка загрузки');renderCatalog();renderInfo();}}
-  async function saveShowcase(ids,message){if(saving)return false;saving=true;systemMessage='';renderShowcase();renderCatalog();try{const data=await api('/api/achievements/showcase',{ids});applyState(data?.state||data);systemMessage=message||'Витрина обновлена.';renderInfo();try{window.parent?.postMessage?.({type:'zefirok-achievements-account-updated'},'*');}catch{}return true;}catch(e){systemMessage=String(e?.message||e);renderInfo();return false;}finally{saving=false;renderShowcase();renderCatalog();}}
-  function finishStyleInfoClose(){const overlay=$('[data-style-info-overlay]'),sheet=$('[data-style-info-sheet]');if(overlay)overlay.hidden=true;if(sheet){sheet.classList.remove('is-dragging');sheet.style.transform='translate3d(0,0,0)';}styleInfoDrag=null;styleInfoClosing=false;}
-  function closeStyleInfo(options={}){const overlay=$('[data-style-info-overlay]'),sheet=$('[data-style-info-sheet]');if(!overlay||overlay.hidden||!sheet||styleInfoClosing)return;styleInfoDrag=null;sheet.classList.remove('is-dragging');if(options?.animated===false){finishStyleInfoClose();return;}styleInfoClosing=true;sheet.style.transform=`translate3d(0,${Math.max(sheet.offsetHeight,window.innerHeight)}px,0)`;setTimeout(finishStyleInfoClose,240);}
-  function openStyleInfo(style){if(!style)return;const overlay=$('[data-style-info-overlay]'),sheet=$('[data-style-info-sheet]');if(!overlay||!sheet)return;styleInfoClosing=false;styleInfoDrag=null;sheet.classList.remove('is-dragging');sheet.style.transform='translate3d(0,0,0)';sheet.scrollTop=0;const unlocked=style?.unlocked===true,selected=String(style?.id||'')===SHOWCASE_STYLE_ID;const preview=$('[data-style-info-preview]'),image=$('[data-style-info-image]'),lock=$('[data-style-info-lock]'),status=$('[data-style-info-status]'),action=$('[data-style-info-action]');preview.dataset.locked=unlocked?'false':'true';image.src=String(style?.imageUrl||'/assets/ui/error404-no-icon.webp');image.alt=String(style?.title||'Особая витрина');lock.hidden=unlocked;$('[data-style-info-title]').textContent=String(style?.title||'Особая витрина');$('[data-style-info-label]').textContent=String(style?.seasonLabel||'Особая витрина');$('[data-style-info-description]').textContent=String(style?.description||'');$('[data-style-info-story-title]').textContent=String(style?.storyTitle||'Особая история');$('[data-style-info-story]').textContent=String(style?.storyText||style?.description||'');$('[data-style-info-obtain]').textContent=String(style?.obtainText||style?.unlockText||'Выдаётся командой проекта.');status.className=`style-info-status${selected?' is-selected':unlocked?' is-owned':''}`;status.textContent=selected?'Используется':unlocked?'Получено':'Не получено';action.dataset.styleInfoUse=String(style?.id||'');action.disabled=!unlocked||selected;action.textContent=selected?'Используется':unlocked?'Использовать витрину':'Пока не получено';overlay.hidden=false;}
-  function installStyleInfoSwipe(){const overlay=$('[data-style-info-overlay]'),sheet=$('[data-style-info-sheet]');if(!overlay||!sheet||sheet.dataset.swipeReady==='1')return;sheet.dataset.swipeReady='1';const start=(y)=>{if(styleInfoClosing||sheet.scrollTop>1)return;styleInfoDrag={startY:y,lastY:y,startTime:performance.now(),dragging:false};};const move=(y,event)=>{const drag=styleInfoDrag;if(!drag)return;drag.lastY=y;const dy=Math.max(0,y-drag.startY);if(dy<=0)return;if(!drag.dragging&&dy<7)return;drag.dragging=true;sheet.classList.add('is-dragging');sheet.style.transform=`translate3d(0,${dy}px,0)`;event?.preventDefault?.();};const finish=()=>{const drag=styleInfoDrag;styleInfoDrag=null;if(!drag)return;const dy=Math.max(0,drag.lastY-drag.startY),elapsed=Math.max(1,performance.now()-drag.startTime),velocity=dy/elapsed;sheet.classList.remove('is-dragging');if(drag.dragging&&(dy>Math.min(140,sheet.offsetHeight*.2)||velocity>.75))closeStyleInfo({animated:true});else sheet.style.transform='translate3d(0,0,0)';};sheet.addEventListener('touchstart',e=>{if(e.touches?.length===1)start(e.touches[0].clientY);},{passive:true});sheet.addEventListener('touchmove',e=>{if(e.touches?.length===1)move(e.touches[0].clientY,e);},{passive:false});sheet.addEventListener('touchend',finish,{passive:true});sheet.addEventListener('touchcancel',finish,{passive:true});sheet.addEventListener('pointerdown',e=>{if(e.pointerType==='touch')return;start(e.clientY);});sheet.addEventListener('pointermove',e=>{if(e.pointerType==='touch')return;move(e.clientY,e);});sheet.addEventListener('pointerup',e=>{if(e.pointerType!=='touch')finish();});sheet.addEventListener('pointercancel',e=>{if(e.pointerType!=='touch')finish();});}
-
-  async function saveStyle(id){if(saving||id===SHOWCASE_STYLE_ID){if(id===SHOWCASE_STYLE_ID)closeStylePicker();return;}const style=SHOWCASE_STYLES.find(s=>String(s?.id||'')===id);if(!style||style?.unlocked!==true){const message=String(style?.unlockText||'Это оформление пока закрыто.');systemMessage=message;const hint=$('[data-style-picker-hint]');if(hint)hint.textContent=message;renderInfo();return;}saving=true;renderShowcase();try{const data=await api('/api/achievements/showcase',{ids:SHOWCASE_IDS,styleId:id});applyState(data?.state||data);systemMessage=`Оформление «${style.title||'витрины'}» выбрано.`;renderInfo();closeStylePicker();try{window.parent?.postMessage?.({type:'zefirok-achievements-account-updated'},'*');}catch{}}catch(e){systemMessage=String(e?.message||e);const hint=$('[data-style-picker-hint]');if(hint)hint.textContent=systemMessage;renderInfo();}finally{saving=false;renderShowcase();}}
-  async function claim(id){if(!id||claiming.has(id))return;claiming.add(id);renderCatalog();try{const data=await api('/api/achievements/claim',{achievementId:id,requestId:makeRequestId()});applyState(data?.state||data);systemMessage='Награда за достижение получена.';renderInfo();try{window.parent?.postMessage?.({type:'zefirok-achievements-account-updated'},'*');}catch{}}catch(e){systemMessage=String(e?.message||e);renderInfo();}finally{claiming.delete(id);renderCatalog();}}
-
-  function closeAchievements(){if(window.ZefirokPageGuide?.closeIfOpen())return;if(window.parent&&window.parent!==window){try{window.parent.postMessage({type:'zefirok-close-achievements'},'*');}catch{}return;}try{history.back();}catch{location.href='/';}}
-  $('[data-filters]').addEventListener('click',e=>{const b=e.target?.closest?.('[data-category]');if(!b)return;activeCategory=String(b.dataset.category||'all');renderFilters();renderCatalog();});
-  $('[data-achievement-list]').addEventListener('click',e=>{const retry=e.target?.closest?.('[data-retry]');if(retry){void load();return;}const claimBtn=e.target?.closest?.('[data-claim]');if(claimBtn){void claim(String(claimBtn.dataset.claim||''));return;}const showcaseBtn=e.target?.closest?.('[data-toggle-showcase]');if(showcaseBtn){const id=String(showcaseBtn.dataset.toggleShowcase||'');if(!id)return;const exists=SHOWCASE_IDS.includes(id);const next=exists?SHOWCASE_IDS.filter(x=>x!==id):[...SHOWCASE_IDS,id].slice(0,SHOWCASE_LIMIT);void saveShowcase(next,exists?'Трофей убран из витрины.':'Трофей добавлен в витрину.');}});
-  $('[data-showcase-slots]').addEventListener('click',e=>{const rem=e.target?.closest?.('[data-remove]');if(rem){const id=String(rem.dataset.remove||'');void saveShowcase(SHOWCASE_IDS.filter(x=>x!==id),'Трофей убран из витрины.');return;}const move=e.target?.closest?.('[data-move]');if(!move)return;const id=String(move.dataset.id||''),dir=String(move.dataset.move||''),idx=SHOWCASE_IDS.indexOf(id);if(idx<0)return;const nextIdx=dir==='left'?idx-1:idx+1;if(nextIdx<0||nextIdx>=SHOWCASE_IDS.length)return;const next=[...SHOWCASE_IDS];[next[idx],next[nextIdx]]=[next[nextIdx],next[idx]];void saveShowcase(next,'Порядок витрины обновлён.');});
-  installStylePickerSwipe();
-  installStyleInfoSwipe();
-  $('[data-open-style-picker]').addEventListener('click',openStylePicker);
-  $('[data-style-close]').addEventListener('click',()=>closeStylePicker({animated:true}));
-  $('[data-style-tabs]').addEventListener('click',e=>{const b=e.target?.closest?.('[data-style-filter]');if(!b)return;styleFilter=String(b.dataset.styleFilter||'all');renderStylePicker();});
-  $('[data-style-list]').addEventListener('click',e=>{const b=e.target?.closest?.('[data-style]');if(!b)return;const id=String(b.dataset.style||''),style=SHOWCASE_STYLES.find(item=>String(item?.id||'')===id);if(String(style?.category||'')==='special'){openStyleInfo(style);return;}void saveStyle(id);});
-  $('[data-style-info-close]').addEventListener('click',()=>closeStyleInfo({animated:true}));
-  $('[data-style-info-action]').addEventListener('click',e=>{const id=String(e.currentTarget?.dataset?.styleInfoUse||'');const style=SHOWCASE_STYLES.find(item=>String(item?.id||'')===id);if(!style||style?.unlocked!==true||id===SHOWCASE_STYLE_ID)return;closeStyleInfo({animated:false});void saveStyle(id);});
-  $('[data-style-info-overlay]').addEventListener('click',e=>{if(e.target===e.currentTarget)closeStyleInfo({animated:true});});
-  $('[data-style-overlay]').addEventListener('click',e=>{if(e.target===e.currentTarget)closeStylePicker({animated:true});});
-  document.addEventListener('keydown',e=>{if(e.key!=='Escape')return;const info=$('[data-style-info-overlay]');if(info&&!info.hidden){closeStyleInfo({animated:true});return;}const picker=$('[data-style-overlay]');if(picker&&!picker.hidden)closeStylePicker({animated:true});});
-
-  window.addEventListener('message',event=>{if(event?.data?.type==='zefirok-achievements-back')closeAchievements();const payload=event?.data?.payload;if(event?.data?.type==='zefirok-host-viewport-changed'&&payload&&typeof payload==='object'){const root=document.documentElement;if(payload.safeTop!=null)root.style.setProperty('--safe-top',`max(env(safe-area-inset-top,0px), ${Number(payload.safeTop)||0}px)`);if(payload.safeRight!=null)root.style.setProperty('--safe-right',`max(env(safe-area-inset-right,0px), ${Number(payload.safeRight)||0}px)`);if(payload.safeBottom!=null)root.style.setProperty('--safe-bottom',`max(env(safe-area-inset-bottom,0px), ${Number(payload.safeBottom)||0}px)`);if(payload.safeLeft!=null)root.style.setProperty('--safe-left',`max(env(safe-area-inset-left,0px), ${Number(payload.safeLeft)||0}px)`);}});
-  try{const wa=resolveTelegramWebApp();wa?.ready?.();wa?.expand?.();wa?.disableVerticalSwipes?.();}catch{}
-  void load();
+  };
+const icons={back:'<path d="m14 5-7 7 7 7"/>',arrow:'<path d="m9 5 7 7-7 7"/>',close:'<path d="m6 6 12 12M18 6 6 18"/>',goals:'<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/><path d="m15 9 6-6M17 3h4v4"/>',showcase:'<path d="M3 19h18M5 19V8h14v11M8 8V4h8v4M9 13h6"/>',check:'<path d="m5 12 4 4L19 6"/>',refresh:'<path d="M20 8a8 8 0 1 0 0 9M20 3v5h-5"/>',lock:'<rect x="5" y="10" width="14" height="11" rx="3"/><path d="M8 10V6a4 4 0 0 1 8 0v4"/>'};
+const icon=name=>`<svg class="ic" viewBox="0 0 24 24" aria-hidden="true">${icons[name]||icons.arrow}</svg>`;
+const safeImage=value=>{const v=String(value||'').trim();return /^(?:\/(?!\/)|https:\/\/)/i.test(v)?v:POINT_ICON;};
+const image=(url,cls='')=>`<img class="${cls}" src="${esc(safeImage(url))}" alt="" loading="lazy" decoding="async" draggable="false">`;
+const button=(label,action,value='',classes='btn',disabled=false)=>`<button type="button" class="${classes}" data-action="${esc(action)}" data-value="${esc(value)}" data-focus-key="${esc(action+':'+value)}" ${disabled?'disabled':''}>${label}</button>`;
+const bar=(value,label='')=>`<span class="bar" role="progressbar" aria-label="${esc(label)}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${clamp(number(value),0,100)}"><i style="--value:${clamp(number(value),0,100)}%"></i></span>`;
+const empty=(title,copy,action='')=>`<div class="empty"><strong>${esc(title)}</strong>${esc(copy)}${action}</div>`;
+const date=v=>{const d=new Date(number(v)*1000);return v&&Number.isFinite(d.getTime())?d.toLocaleDateString('ru-RU',{day:'numeric',month:'short',year:'numeric'}):'';};
+const root=$('[data-ach-root]'),page=$('main'),layer=$('[data-ach-layer]'),panel=$('[data-ach-sheet]'),body=$('[data-ach-body]'),footer=$('[data-ach-footer]'),sheetTitle=$('[data-ach-title]'),sheetError=$('[data-ach-error]');
+let ACHIEVEMENTS=[],SUMMARY={},META={},SHOWCASE_IDS=[],SHOWCASE_LIMIT=3,SHOWCASE_STYLE_ID='default',SHOWCASE_STYLES=[],SERIES=[],NEAR=[];
+const ui={tab:new URLSearchParams(location.search).get('view')==='showcase'?'showcase':'goals',status:'all',category:'all',styleCategory:'all',loaded:false,loading:true,busy:'',error:'',message:'',sheet:[],editor:null,uncertain:false};
+let scrollLock=null,returnFocus=null,toastTimer=0;
+const claimRequests=new Map(),uncertainClaims=new Set();
+// Secret contents stay hidden until the server confirms ownership. The placeholder
+// is a local glyph, never the real artwork (including alt text / failed-image URLs).
+const isSecretLocked=i=>i?.earned!==true&&(i?.secretLocked===true||i?.secret===true);
+const catalogue=()=>ACHIEVEMENTS.filter(i=>i?.catalogVisible===true);
+const itemById=id=>catalogue().find(i=>String(i.id)===String(id))||null;
+const eligible=i=>i?.earned===true&&i?.showcaseEligible!==false&&!isSecretLocked(i);
+const eligibleItems=()=>catalogue().filter(eligible);
+const readyItems=()=>catalogue().filter(i=>i.claimable===true&&!isSecretLocked(i));
+const pending=i=>i?.claimStatus==='pending'||uncertainClaims.has(String(i?.id));
+const pendingItems=()=>catalogue().filter(i=>!isSecretLocked(i)&&pending(i));
+const visibleItem=i=>isSecretLocked(i)?{...i,title:t.secretTitle,description:t.secretCopy,artUrl:META.secretArtUrl||POINT_ICON,current:0,target:0,achievementPoints:0,reward:null,hasReward:false}:i;
+const titleOf=i=>visibleItem(i)?.title||t.title;
+const art=(i,cls='trophy-art')=>isSecretLocked(i)?`<span class="${cls} is-secret-art"><span class="secret-mark" aria-hidden="true">?</span></span>`:`<span class="${cls}">${image(visibleItem(i)?.artUrl||i?.imageUrl||POINT_ICON)}</span>`;
+const percent=i=>number(i.target)>0?clamp(number(i.current)/number(i.target)*100,0,100):0;
+const categoryLabel=id=>CATEGORY_LABELS[id]||catalogue().find(i=>i.category===id)?.categoryLabel||id;
+const rarity=i=>String(i?.rarityLabel||'');
+function resolveTelegramWebApp(){try{return window.Telegram?.WebApp||(window.parent!==window?window.parent.Telegram?.WebApp:null)||null;}catch{return window.Telegram?.WebApp||null;}}
+function currentInitData(){return String(resolveTelegramWebApp()?.initData||'');}
+function testProjectActive(){try{if(new URLSearchParams(location.search).get('test_project')==='1')return true;if(window.parent!==window)return new URLSearchParams(window.parent.location.search).get('test_project')==='1';}catch{}return false;}
+function makeRequestId(){try{return crypto.randomUUID();}catch{return `achievement_${Date.now()}_${Math.random().toString(36).slice(2,10)}`;}}
+async function api(path,payload={}){
+ const initData=currentInitData();if(!initData&&!testProjectActive())throw new Error(t.telegramRequired);
+ const requestPayload={...payload,initData},test=testProjectActive(),controller=new AbortController(),timer=setTimeout(()=>controller.abort(),15000);
+ try{
+  const response=await fetch(test?'/api/owner/test-project/game':path,{method:'POST',headers:{'Content-Type':'application/json'},cache:'no-store',credentials:'same-origin',signal:controller.signal,body:JSON.stringify(test?{initData,ownerSession:localStorage.getItem('zefirok-owner-session-v1')||'',path,method:'POST',query:{},payload:requestPayload}:requestPayload)});
+  const envelope=await response.json();
+  if(!response.ok||envelope?.ok===false)throw Object.assign(new Error(envelope?.error||t.requestError),{status:response.status});
+  const data=test?(envelope?.data||envelope):envelope;
+  if(data?.ok===false)throw new Error(data.error||t.requestError);
+  return data;
+ }finally{clearTimeout(timer);}
+}
+function applyState(payload){
+ const data=payload?.state||payload;
+ if(!data||!Array.isArray(data.achievements)||!data.summary||!data.showcase)throw new Error(t.invalidState);
+ ACHIEVEMENTS=data.achievements;SUMMARY=data.summary;META=data.meta||{};
+ const showcase=data.showcase;SHOWCASE_LIMIT=clamp(Math.floor(number(showcase.limit)||3),1,3);
+ const ids=Array.isArray(showcase.ids)?showcase.ids:ACHIEVEMENTS.filter(i=>i.inShowcase).sort((a,b)=>number(a.showcaseSlot)-number(b.showcaseSlot)).map(i=>i.id);
+ SHOWCASE_IDS=[...new Set(ids.map(String))].filter(id=>eligible(itemById(id))).slice(0,SHOWCASE_LIMIT);
+ SHOWCASE_STYLES=Array.isArray(showcase.styles)&&showcase.styles.length?showcase.styles:[{id:'default',title:t.standard,unlocked:true,category:'base'}];
+ SHOWCASE_STYLE_ID=SHOWCASE_STYLES.some(s=>s.id===showcase.selectedStyleId)?showcase.selectedStyleId:'default';
+ SERIES=Array.isArray(data.series)?data.series:[];NEAR=Array.isArray(data.nearCompletion)?data.nearCompletion:[];
+ ui.loaded=true;ui.loading=false;ui.error='';ui.uncertain=false;
+ for(const i of catalogue())if(i.claimed===true||i.claimStatus==='claimed')claimRequests.delete(String(i.id));
+ renderAll();
+}
+function notify(){try{if(window.parent!==window)window.parent.postMessage({type:'zefirok-achievements-account-updated'},'*');}catch{}}
+function toast(text){const el=$('[data-ach-toast]');clearTimeout(toastTimer);el.textContent=text;el.hidden=false;toastTimer=setTimeout(()=>el.hidden=true,3200);}
+function rankView(){
+ const r=SUMMARY.rank||{},points=Math.max(0,number(SUMMARY.achievementPoints));
+ const provided=r.progressPercent!=null&&Number.isFinite(Number(r.progressPercent));
+ const min=number(r.minPoints),max=number(r.nextMinPoints),known=Boolean(r.id&&r.title);
+ return {r,points,known,progress:!known?0:provided?clamp(number(r.progressPercent),0,100):max>min?clamp((points-min)/(max-min)*100,0,100):r.nextTitle?0:100};
+}
+function renderPrestige(){
+ const el=$('[data-ach-prestige]');el.disabled=!ui.loaded;
+ if(!ui.loaded){el.innerHTML=`<span class="eyebrow">${esc(t.prestige)}</span><span class="prestige-title">${esc(t.loadingShort)}</span>`;return;}
+ const {r,points,progress,known}=rankView();
+ el.innerHTML=`<span class="prestige-top">${image(META.achievementPoints?.iconUrl||POINT_ICON,'prestige-icon')}<span class="prestige-copy"><span class="eyebrow">${esc(t.prestige)}</span><span class="prestige-title">${esc(r.title||t.prestige)} <span aria-hidden="true">\u00b7</span> <b>${num(points)}</b></span></span>${icon('arrow')}</span><span class="prestige-next"><span>${r.nextTitle?`${esc(t.nextRank)} \u00ab${esc(r.nextTitle)}\u00bb`:esc(known?t.maxRank:t.rankUnavailable)}</span>${r.nextTitle?`<strong>${esc(t.more)} ${num(r.pointsToNext)}</strong>`:''}</span>${bar(progress,t.prestige)}<span class="prestige-footer"><span>${r.nextTitle&&number(r.nextMinPoints)>0?`${num(Math.max(0,points-number(r.minPoints)))} / ${num(number(r.nextMinPoints)-number(r.minPoints))} ${esc(t.rankProgress)}`:esc(t.keepCollecting)}</span><span>${esc(t.ranks)} ${icon('arrow')}</span></span>`;
+}
+function rowState(i){
+ if(isSecretLocked(i))return [t.secret,''];if(pending(i))return [t.pending,'amber'];if(i.claimable)return [t.readySubtitle,'rose'];
+ if(i.earned)return [SHOWCASE_IDS.includes(String(i.id))?t.inShowcase:t.unlocked,'green'];if(i.legacyExpired)return [t.archived,''];return [t.progress,''];
+}
+function achievementRow(raw,opts={}){
+ const i=visibleItem(raw),[label,tone]=rowState(raw),showProgress=!isSecretLocked(raw)&&!raw.earned&&!raw.legacyExpired&&number(i.target)>0;
+ const action=opts.action||'detail',value=opts.value??String(i.id);
+ return `<button type="button" class="ach-row ${isSecretLocked(raw)?'is-secret':''} ${raw.legacyExpired?'is-archived':''}" data-action="${action}" data-value="${esc(value)}" data-focus-key="${esc(action+':'+value)}" ${opts.disabled?'disabled':''}>${art(raw)}<span class="row-copy"><span class="row-top"><strong class="row-title">${esc(titleOf(raw))}</strong>${!isSecretLocked(raw)?`<span class="point-chip">+${num(i.achievementPoints)}</span>`:''}</span><span class="row-description">${esc(isSecretLocked(raw)?t.secretCopy:i.description||'')}</span>${showProgress?bar(percent(i),titleOf(raw)):''}<span class="row-bottom"><span class="${tone}">${esc(opts.caption||label)}</span><span>${showProgress?`${num(i.current)} / ${num(i.target)}`:isSecretLocked(raw)?'':esc(rarity(raw))}</span></span></span>${icon('arrow')}</button>`;
+}
+function utility(label,copy,action,value='',img=POINT_ICON){return button(`${image(img)}<span><strong>${esc(label)}</strong>${copy?`<small>${esc(copy)}</small>`:''}</span>${icon('arrow')}`,action,value,'utility-link');}
+function renderGoals(){
+ const ready=readyItems().filter(i=>!pending(i)),waiting=pendingItems();
+ const near=NEAR.map(n=>itemById(n.id)).filter(i=>i&&!i.earned&&!isSecretLocked(i)&&!i.legacyExpired&&number(i.target)>0&&['always','active',''].includes(String(i.availabilityStatus||''))).slice(0,3);
+ let head=ready.length?button(`${image(REWARD_ICON)}<span><strong>${esc(t.readyTitle)}</strong><small>${ready.length} \u00b7 ${esc(t.readySubtitle)}</small></span>${icon('arrow')}`,'rewards','','ready-callout'):'';
+ if(waiting.length)head+=utility(t.pending,`${waiting.length} \u00b7 ${t.check}`,'rewards','',REWARD_ICON);
+ if(near.length)head+=`<section class="section"><div class="section-head"><h2>${esc(t.near)}</h2><span class="count">${near.length}</span></div><div class="mini-list">${near.map(i=>achievementRow(i)).join('')}</div></section>`;
+ if(SERIES.length)head+=utility(t.series,`${SERIES.filter(s=>s.completed===true).length} / ${SERIES.length} \u00b7 ${t.seriesCopy}`,'series');
+ const items=catalogue(),categories=['all',...new Set(items.map(i=>String(i.category||'misc')))];
+ if(!categories.includes(ui.category))ui.category='all';
+ const filtered=items.filter(i=>(ui.category==='all'||i.category===ui.category)&&(ui.status==='all'||ui.status==='earned'&&i.earned||ui.status==='progress'&&!i.earned&&!i.legacyExpired));
+ const done=Number.isFinite(Number(SUMMARY.catalogEarned))?number(SUMMARY.catalogEarned):items.filter(i=>i.earned).length,total=Number.isFinite(Number(SUMMARY.catalogTotal))?number(SUMMARY.catalogTotal):items.length;
+ return head+`<section class="section"><div class="section-head"><h2>${esc(t.catalog)}</h2><span class="count">${num(done)} / ${num(total)}</span></div><div class="catalog-controls"><div class="status-filters" role="group" aria-label="${esc(t.catalog)}">${['all','progress','earned'].map(s=>`<button class="status-filter" type="button" data-action="filter" data-value="${s}" data-focus-key="filter:${s}" aria-pressed="${ui.status===s}">${esc(t[s])}</button>`).join('')}</div><label class="category">${esc(t.category)}<select data-category-select data-focus-key="category">${categories.map(c=>`<option value="${esc(c)}" ${ui.category===c?'selected':''}>${esc(c==='all'?t.allCategories:categoryLabel(c))}</option>`).join('')}</select></label></div><div class="catalog-list">${filtered.length?filtered.map(i=>achievementRow(i)).join(''):empty(t.emptyTitle,t.emptyCopy,button(esc(t.all),'reset-filters'))}</div></section>`;
+}
+function styleById(id){
+ const item=SHOWCASE_STYLES.find(s=>String(s.id)===String(id))||SHOWCASE_STYLES[0]||{id:'default',title:t.standard};
+ const fallback=SHOWCASE_PRESENTATION_FALLBACKS[String(item.id)]||SHOWCASE_PRESENTATION_FALLBACKS.default;
+ return {...fallback,...item,layout:item.layout||fallback.layout,imageUrl:item.imageUrl||fallback.imageUrl};
+}
+function showcaseMarkup(ids,styleId,preview=false){
+ const s=styleById(styleId);
+ return `<div class="showcase-frame" data-layout="${esc(s.layout)}">${image(s.imageUrl,'showcase-frame-art')}<div class="showcase-frame-slots">${Array.from({length:SHOWCASE_LIMIT},(_,index)=>{const i=itemById(ids[index]);const content=i?`${art(i,'slot-art')}<strong>${esc(titleOf(i))}</strong>`:`<span class="plus" aria-hidden="true">+</span><span class="slot-empty">${esc(t.emptySlot)}</span>`;return preview?`<div class="slot preview">${content}</div>`:`<button class="slot" type="button" data-action="${i?'detail':'edit'}" data-value="${esc(i?.id||'')}" aria-label="${esc(i?titleOf(i):t.chooseTrophy)}">${content}</button>`;}).join('')}</div></div>`;
+}
+function renderShowcase(){
+ const s=styleById(SHOWCASE_STYLE_ID),owned=eligibleItems();
+ return `<section class="showcase"><div class="showcase-head"><div><h2>${esc(s.title||t.showcase)}</h2><p>${esc(t.showcaseCopy)}</p></div><span class="count">${SHOWCASE_IDS.length} / ${SHOWCASE_LIMIT}</span></div>${showcaseMarkup(SHOWCASE_IDS,SHOWCASE_STYLE_ID)}<div class="showcase-actions">${button(esc(t.edit),'edit','','btn primary',!owned.length||!!ui.busy)}${button(esc(t.style),'styles','','btn',!!ui.busy)}</div><p class="showcase-caption">${esc(t.permanent)}</p></section>${!owned.length?empty(t.noTrophies,t.noTrophiesCopy,button(esc(t.chooseGoals),'tab','goals')):''}${catalogue().some(i=>i.earned&&!isSecretLocked(i))?utility(t.recent,t.recentCopy,'recent'):''}`;
+}
+function focusToken(){return document.activeElement?.getAttribute?.('data-focus-key')||'';}
+function restoreFocus(key,scope=document){if(!key)return;Array.from(scope.querySelectorAll('[data-focus-key]')).find(el=>el.dataset.focusKey===key&&!el.disabled)?.focus({preventScroll:true});}
+function renderPage(){
+ const focus=page.contains(document.activeElement)?focusToken():'';
+ renderPrestige();
+ for(const b of document.querySelectorAll('[data-ach-tab]')){const selected=b.dataset.achTab===ui.tab;b.setAttribute('aria-selected',String(selected));b.tabIndex=selected?0:-1;}
+ root.setAttribute('aria-labelledby',`ach-tab-${ui.tab}`);root.setAttribute('aria-busy',String(ui.loading||!!ui.busy));
+ root.innerHTML=ui.loading&&!ui.loaded?`<p class="loading-copy">${esc(t.loading)}</p><div class="ach-skeleton"></div><div class="ach-skeleton"></div>`:!ui.loaded?empty(t.errorTitle,ui.error,button(esc(t.retry),'refresh')):ui.tab==='showcase'?renderShowcase():renderGoals();
+ const notice=$('[data-ach-notice]');notice.hidden=!ui.error;notice.textContent=ui.error;notice.classList.toggle('error',!!ui.error);
+ restoreFocus(focus,page);
+}
+function renderAll(){renderPage();if(ui.sheet.length)renderSheet();}
+function switchTab(tab,focus=true){
+ if(!['goals','showcase'].includes(tab))return;ui.tab=tab;renderPage();window.scrollTo({top:0,behavior:'auto'});if(focus)$(`[data-ach-tab="${tab}"]`).focus({preventScroll:true});
+}
+const top=()=>ui.sheet[ui.sheet.length-1]||null;
+function dirty(){return !!ui.editor&&JSON.stringify(ui.editor.ids)!==JSON.stringify(ui.editor.baseIds);}
+function lockPage(){
+ if(scrollLock)return;
+ const html=document.documentElement,b=document.body;
+ scrollLock={y:window.scrollY,overflow:html.style.overflow,position:b.style.position,top:b.style.top,left:b.style.left,right:b.style.right,width:b.style.width,bodyOverflow:b.style.overflow,inert:page.hasAttribute('inert')};
+ page.setAttribute('inert','');html.style.overflow='hidden';Object.assign(b.style,{position:'fixed',top:`-${scrollLock.y}px`,left:'0',right:'0',width:'100%',overflow:'hidden'});
+}
+function unlockPage(){
+ if(!scrollLock)return;const s=scrollLock;scrollLock=null;document.documentElement.style.overflow=s.overflow;
+ Object.assign(document.body.style,{position:s.position,top:s.top,left:s.left,right:s.right,width:s.width,overflow:s.bodyOverflow});if(!s.inert)page.removeAttribute('inert');window.scrollTo(0,s.y);
+}
+function focusSheetControl(){const back=$('[data-ach-sheet-back]');(back.hidden?panel.querySelector('[data-action="close-sheet"]'):back)?.focus({preventScroll:true});}
+function openSheet(type,data={},replace=false){
+ motion.reset();if(top())top().scroll=body.scrollTop;
+ if(!ui.sheet.length){returnFocus=document.activeElement;lockPage();}
+ const entry={type,...data,scroll:0};if(replace&&ui.sheet.length)ui.sheet[ui.sheet.length-1]=entry;else ui.sheet.push(entry);
+ layer.hidden=false;layer.setAttribute('aria-hidden','false');ui.message='';renderSheet();focusSheetControl();
+}
+function finishClose(){motion.reset();ui.sheet=[];ui.editor=null;ui.message='';layer.hidden=true;layer.setAttribute('aria-hidden','true');unlockPage();if(returnFocus?.isConnected&&!returnFocus.disabled)returnFocus.focus?.({preventScroll:true});else $(`[data-ach-tab="${ui.tab}"]`).focus({preventScroll:true});returnFocus=null;}
+function requestClose(all=true){
+ if(!top())return;
+ if(ui.busy==='showcase'&&ui.editor){finishClose();toast(t.saving);return;}
+ if(top().type==='discard'){ui.sheet.pop();if(top())top().rendered=false;renderSheet();return;}
+ const leavesEditor=all||ui.sheet.length===1||top().type==='editor';
+ if(dirty()&&leavesEditor){openSheet('discard');return;}
+ if(all||ui.sheet.length===1){finishClose();return;}
+ motion.reset();ui.sheet.pop();if(top())top().rendered=false;ui.message='';renderSheet();focusSheetControl();
+}
+function detailContent(id){
+ const raw=itemById(id);if(!raw)return {title:t.title,content:empty(t.unavailable,'')};
+ const i=visibleItem(raw),secret=isSecretLocked(raw);
+ let content=`<div class="detail-hero ${secret?'is-secret':''}">${art(raw)}<h3>${esc(titleOf(raw))}</h3><div class="detail-tags">${secret?`<span class="tag">${esc(t.secret)}</span>`:`<span class="tag">${esc(rarity(raw))}</span><span class="tag gold">+${num(i.achievementPoints)} ${esc(t.prestigePoints)}</span>${raw.earned?`<span class="tag green">${esc(t.unlocked)}</span>`:''}`}</div></div><div class="detail-block"><h3>${esc(secret?t.secret:raw.legacyExpired?t.archived:t.condition)}</h3><p>${esc(secret?t.secretHint:raw.legacyExpired?t.archivedCopy:i.description||'')}</p>${!secret&&!raw.earned&&!raw.legacyExpired&&number(i.target)>0?`${bar(percent(i),t.progress)}<div class="row-bottom"><span>${num(i.current)} / ${num(i.target)}</span><span>${Math.floor(percent(i))}%</span></div>`:''}${raw.earned&&i.unlockedAt?`<p style="margin-top:9px">${esc(t.earnedOn)} ${esc(date(i.unlockedAt))}</p>`:''}</div>`;
+ let actions='';
+ if(!secret){
+  const hasPrize=i.hasReward===true,rr=i.reward||{};
+  content+=hasPrize?`<div class="detail-block"><h3>${esc(t.prize)}</h3><div class="detail-reward">${image(rr.imageUrl||rr.artUrl||i.rewardImageUrl||REWARD_ICON)}<span><strong>${esc(rr.label||rr.title||i.rewardLabel||t.rewards)}</strong><small>${esc(raw.claimed?t.obtained:pending(raw)?t.pending:raw.claimStatus==='failed'?t.failed:raw.claimable?t.readySubtitle:t.progress)}</small></span></div>${pending(raw)?`<p style="margin-top:10px">${esc(t.pendingCopy)}</p>`:''}</div>`:`<p class="sheet-lead">${esc(t.noPrize)}</p>`;
+  if(pending(raw))actions+=button(esc(ui.busy?t.loadingShort:t.check),'refresh','','btn primary',!!ui.busy);
+  else if(raw.claimable)actions+=button(esc(ui.busy===`claim:${id}`?t.claiming:t.claim),'claim',id,'btn primary',!!ui.busy||ui.uncertain);
+  if(eligible(raw))actions+=button(esc(SHOWCASE_IDS.includes(String(id))?t.edit:t.showcaseAdd),'add-trophy',id,'btn',!!ui.busy||ui.uncertain);
+ }
+ return {title:t.title,content,actions};
+}
+function renderRanks(){
+ const {r,points,progress,known}=rankView(),ranks=Array.isArray(META.rankLevels)?META.rankLevels:[];
+ const next=SHOWCASE_STYLES.filter(s=>s.unlocked!==true&&s.unlockType==='rank'&&number(s.minPoints)>points).sort((a,b)=>number(a.minPoints)-number(b.minPoints))[0];
+ return `<p class="sheet-lead">${esc(t.prestigeCopy)}</p><div class="detail-block"><h3>${esc(r.title||t.prestige)} \u00b7 ${num(points)}</h3>${bar(progress,t.prestige)}<div class="row-bottom">${r.nextTitle?`${esc(t.nextRank)} ${esc(r.nextTitle)}: ${esc(t.more)} ${num(r.pointsToNext)}`:esc(known?t.maxRank:t.rankUnavailable)}</div></div><div class="rank-list">${ranks.map(rank=>`<div class="rank-row ${r.id===rank.id?'current':''}"><b class="rank-marker">${points>=number(rank.minPoints)?'\u2713':icon('lock')}</b><span><strong>${esc(rank.title)}</strong><small>${num(rank.minPoints)} ${esc(t.points)}</small></span>${r.id===rank.id?`<span class="tag gold">${esc(t.currentRank)}</span>`:''}</div>`).join('')}</div>${next?utility(t.nextStyle,`${next.title} \u00b7 ${num(next.minPoints)} ${t.points}`,'style',next.id):''}`;
+}
+function seriesMembers(series){return (series?.members||[]).map(m=>itemById(m.id)).filter(Boolean);}
+function renderSeriesList(){return SERIES.length?SERIES.map(s=>`<div class="detail-block"><div class="series-title"><h3>${esc(s.title)}</h3><span class="tag ${s.completed?'green':''}">${s.completed?esc(t.completed):`${num(s.earned)} / ${num(s.total)}`}</span></div><div class="series-preview">${seriesMembers(s).map(i=>`<span class="${isSecretLocked(i)?'is-secret-preview':i.earned?'':'unearned'}">${art(i,'series-trophy')}</span>`).join('')}</div>${button(esc(t.viewSeries),'series-detail',s.id,'text-btn')}</div>`).join(''):empty(t.emptyTitle,'');}
+function startEditor(targetId=''){
+ if(ui.busy||!ui.loaded||ui.uncertain)return;
+ if(!eligibleItems().length){toast(t.noTrophies);return;}
+ ui.editor={ids:[...SHOWCASE_IDS],baseIds:[...SHOWCASE_IDS],baseStyle:SHOWCASE_STYLE_ID};
+ if(!ui.sheet.length){openSheet('editor');}else openSheet('editor');
+ if(targetId&&!SHOWCASE_IDS.includes(targetId)&&eligible(itemById(targetId))){
+  if(ui.editor.ids.length<SHOWCASE_LIMIT){ui.editor.ids.push(targetId);renderSheet();}
+  else openSheet('replace',{targetId});
+ }
+}
+function editorContent(){
+ if(!ui.editor)return empty(t.unavailable,'');
+ const ids=ui.editor.ids;
+ return `<p class="editor-draft-note">${esc(t.draftCopy)}</p>${showcaseMarkup(ids,SHOWCASE_STYLE_ID,true)}<div class="editor-slots">${Array.from({length:SHOWCASE_LIMIT},(_,slot)=>{const i=itemById(ids[slot]);return `<div class="editor-slot"><div class="editor-slot-head">${i?art(i):`<b class="rank-marker">${slot+1}</b>`}<span><small>${esc(t.slot)} ${slot+1}</small><strong>${esc(i?titleOf(i):t.emptySlot)}</strong></span></div><div class="editor-actions">${button(esc(i?t.replace:t.choose),'choose-slot',String(slot),'btn',!!ui.busy)}${i?`${button(esc(t.remove),'remove-slot',String(slot),'btn',!!ui.busy)}${button(icon('back'),'move-left',String(slot),'icon-btn push',slot===0||!!ui.busy)}${button(icon('arrow'),'move-right',String(slot),'icon-btn',slot>=ids.length-1||!!ui.busy)}`:''}</div></div>`;}).join('')}</div>`;
+}
+function stylesContent(){
+ const styles=SHOWCASE_STYLES.filter(s=>ui.styleCategory==='all'||(s.category||'base')===ui.styleCategory);
+ return `<p class="sheet-lead">${esc(t.permanent)}</p><div class="style-filters" role="group">${['all','base','seasonal','special'].map(key=>`<button class="style-filter" type="button" data-action="style-filter" data-value="${key}" aria-pressed="${ui.styleCategory===key}">${esc(t[key])}</button>`).join('')}</div><div class="style-grid">${styles.map(s=>button(`${showcaseMarkup(SHOWCASE_IDS,s.id,true)}<strong>${esc(s.title)}</strong><small>${esc(s.seasonLabel||t[s.category]||t.style)}</small><span class="style-status">${esc(s.id===SHOWCASE_STYLE_ID?t.using:s.unlocked?t.available:t.locked)}</span>`,'style',s.id,`style-card ${s.id===SHOWCASE_STYLE_ID?'selected':''}`)).join('')}</div>${styles.length?'':empty(t.emptyTitle,'')}`;
+}
+function styleContent(id){
+ const s=SHOWCASE_STYLES.find(s=>String(s.id)===String(id));if(!s)return {title:t.style,content:empty(t.unavailable,'')};
+ const state=s.id===SHOWCASE_STYLE_ID?t.using:s.unlocked===true?t.available:t.locked;
+ const obtain=s.obtainText||s.unlockText||(s.unlockType==='rank'?`${num(s.minPoints)} ${t.prestigePoints}`:t.unavailable);
+ return {title:t.style,content:`<p class="style-preview-label">${esc(t.preview)}</p>${showcaseMarkup(SHOWCASE_IDS,s.id,true)}<h3>${esc(s.title)}</h3><span class="tag ${s.unlocked?'green':''}">${esc(state)}</span><p class="sheet-lead">${esc(s.description||'')}</p>${s.storyText?`<div class="detail-block"><h3>${esc(s.storyTitle||t.story)}</h3><p>${esc(s.storyText)}</p></div>`:''}<div class="detail-block"><h3>${esc(t.condition)}</h3><p>${esc(obtain)}</p></div>`,actions:button(esc(ui.busy==='showcase'?t.saving:state===t.using?t.using:s.unlocked?t.useStyle:t.locked),'use-style',s.id,'btn primary',!!ui.busy||ui.uncertain||s.unlocked!==true||s.id===SHOWCASE_STYLE_ID)};
+}
+function renderSheet(){
+ const entry=top();if(!entry)return;
+ const focus=panel.contains(document.activeElement)?focusToken():'',scroll=body.scrollTop;
+ let spec={title:'',content:'',actions:''};
+ switch(entry.type){
+  case 'detail':spec=detailContent(entry.id);break;
+  case 'ranks':spec={title:t.ranks,content:renderRanks()};break;
+  case 'series':spec={title:t.series,content:renderSeriesList()};break;
+  case 'series-detail':{const s=SERIES.find(s=>String(s.id)===String(entry.id));spec={title:s?.title||t.series,content:`<p class="sheet-lead">${esc(t.seriesCopy)}</p><div class="catalog-list">${seriesMembers(s).map(i=>achievementRow(i)).join('')}</div>`};break;}
+  case 'rewards':{const items=[...readyItems(),...pendingItems()].filter((i,j,a)=>a.findIndex(x=>x.id===i.id)===j);spec={title:t.rewards,content:items.length?`<div class="catalog-list">${items.map(i=>achievementRow(i)).join('')}</div>`:empty(t.obtained,t.noneRewards),actions:pendingItems().length?button(esc(t.check),'refresh','','btn',!!ui.busy):''};break;}
+  case 'recent':spec={title:t.recent,content:`<div class="catalog-list">${catalogue().filter(i=>i.earned&&!isSecretLocked(i)).sort((a,b)=>number(b.unlockedAt)-number(a.unlockedAt)).slice(0,12).map(i=>achievementRow(i)).join('')}</div>`};break;
+  case 'editor':spec={title:t.edit,content:editorContent(),actions:button(esc(t.cancel),'close-sheet','','btn',!!ui.busy)+button(esc(ui.busy==='showcase'?t.saving:t.save),'save-editor','','btn primary',!dirty()||!!ui.busy||ui.uncertain)};break;
+  case 'pick':{const ids=ui.editor?.ids||[],items=eligibleItems().filter(i=>!ids.includes(String(i.id)));spec={title:t.chooseTrophy,content:items.length?`<div class="catalog-list">${items.map(i=>achievementRow(i,{action:'pick-trophy',caption:t.choose})).join('')}</div>`:empty(t.emptyTitle,t.noneEligible)};break;}
+  case 'replace':spec={title:t.replaceWhich,content:`<p class="sheet-lead">${esc(titleOf(itemById(entry.targetId)))}</p><div class="catalog-list">${(ui.editor?.ids||[]).map((id,slot)=>achievementRow(itemById(id),{action:'replace-slot',value:String(slot),caption:t.replace})).join('')}</div>`};break;
+  case 'styles':spec={title:t.styles,content:stylesContent()};break;
+  case 'style':spec=styleContent(entry.id);break;
+  case 'discard':spec={title:t.discardTitle,content:`<p class="sheet-lead">${esc(t.discardCopy)}</p>`,actions:button(esc(t.continue),'sheet-back')+button(esc(t.discard),'discard','','btn danger')};break;
+ }
+ sheetTitle.textContent=spec.title;body.innerHTML=spec.content;footer.innerHTML=spec.actions||'';footer.hidden=!spec.actions;
+ $('[data-ach-sheet-back]').hidden=ui.sheet.length<=1;
+ sheetError.innerHTML=esc(ui.message)+(ui.uncertain?button(esc(t.check),'refresh','','text-btn',!!ui.busy):'');sheetError.hidden=!ui.message;
+ body.scrollTop=entry.rendered?scroll:entry.scroll||0;entry.rendered=true;
+ panel.querySelectorAll('[data-action="move-left"]').forEach(b=>b.setAttribute('aria-label',t.left));
+ panel.querySelectorAll('[data-action="move-right"]').forEach(b=>b.setAttribute('aria-label',t.right));
+ restoreFocus(focus,panel);
+}
+async function refreshState(){
+ if(ui.busy)return false;const wasLoaded=ui.loaded;ui.busy='refresh';ui.message='';if(!ui.loaded)ui.loading=true;renderAll();
+ try{applyState(await api('/api/achievements'));uncertainClaims.clear();ui.uncertain=false;if(wasLoaded){notify();toast(t.refreshDone);}return true;}
+ catch(error){ui.error=String(error.message||t.requestError);ui.message=ui.error;return false;}
+ finally{ui.loading=false;ui.busy='';renderAll();}
+}
+async function reconcile(){try{applyState(await api('/api/achievements'));notify();return true;}catch{return false;}}
+async function saveShowcase(ids,styleId,editor=null){
+ if(ui.busy||ui.uncertain)return;
+ const normalized=[...new Set(ids.map(String))];if(normalized.length!==ids.length||normalized.length>SHOWCASE_LIMIT||normalized.some(id=>!eligible(itemById(id)))){ui.message=t.staleDraft;renderSheet();return;}
+ const s=SHOWCASE_STYLES.find(s=>s.id===styleId);if(!s||s.unlocked!==true)return;
+ const sheetEntry=top();ui.busy='showcase';ui.message='';renderAll();
+ const matches=()=>JSON.stringify(SHOWCASE_IDS)===JSON.stringify(normalized)&&SHOWCASE_STYLE_ID===styleId;
+ const succeed=()=>{if(editor&&ui.editor===editor){editor.ids=[...SHOWCASE_IDS];editor.baseIds=[...SHOWCASE_IDS];editor.baseStyle=SHOWCASE_STYLE_ID;}if(top()===sheetEntry)finishClose();toast(t.saved);notify();};
+ try{applyState(await api('/api/achievements/showcase',{ids:normalized,styleId}));if(matches())succeed();else ui.message=t.requestError;}
+ catch(error){const synced=await reconcile();if(synced&&matches())succeed();else{ui.uncertain=!synced;ui.message=synced?String(error.message||t.requestError):t.uncertain;toast(ui.message);}}
+ finally{ui.busy='';renderAll();}
+}
+async function claim(id){
+ const i=itemById(id);if(ui.busy||ui.uncertain||!i||i.claimable!==true||pending(i))return;
+ if(!claimRequests.has(id))claimRequests.set(id,makeRequestId());
+ ui.busy=`claim:${id}`;ui.message='';renderAll();
+ try{
+  const data=await api('/api/achievements/claim',{achievementId:id,requestId:claimRequests.get(id)});applyState(data);uncertainClaims.delete(id);notify();
+  const fresh=itemById(id);const delivered=fresh?.claimed===true||fresh?.claimStatus==='claimed';
+  if(delivered){claimRequests.delete(id);toast(t.claimDone);}else{ui.message=t.pendingCopy;toast(t.pending);}
+ }catch(error){
+  const synced=await reconcile();const fresh=itemById(id);
+  if(synced&&(fresh?.claimed||fresh?.claimStatus==='claimed')){claimRequests.delete(id);uncertainClaims.delete(id);toast(t.claimDone);}
+  else{if(!synced)uncertainClaims.add(id);ui.message=synced?String(error.message||t.requestError):t.uncertain;toast(ui.message);}
+ }finally{ui.busy='';renderAll();}
+}
+function saveEditor(){
+ const edit=ui.editor;if(!edit||!dirty())return;
+ if(JSON.stringify(edit.baseIds)!==JSON.stringify(SHOWCASE_IDS)||edit.baseStyle!==SHOWCASE_STYLE_ID){ui.message=t.staleDraft;renderSheet();return;}
+ void saveShowcase([...edit.ids],SHOWCASE_STYLE_ID,edit);
+}
+function handleAction(action,value){
+ switch(action){
+  case 'tab':switchTab(value);break;
+  case 'filter':ui.status=value;renderPage();break;
+  case 'reset-filters':ui.status='all';ui.category='all';renderPage();break;
+  case 'ranks':case 'series':case 'recent':case 'rewards':openSheet(action);break;
+  case 'detail':case 'series-detail':openSheet(action,{id:value});break;
+  case 'edit':startEditor();break;
+  case 'add-trophy':startEditor(value);break;
+  case 'styles':ui.styleCategory='all';openSheet('styles');break;
+  case 'style':openSheet('style',{id:value});break;
+  case 'style-filter':ui.styleCategory=value;renderSheet();break;
+  case 'choose-slot':if(ui.editor&&!ui.busy)openSheet('pick',{slot:clamp(number(value),0,SHOWCASE_LIMIT-1)});break;
+  case 'pick-trophy':{if(!ui.editor||ui.busy||!eligible(itemById(value))||ui.editor.ids.includes(value)||top()?.type!=='pick')return;ui.editor.ids[Math.min(top().slot,ui.editor.ids.length)]=value;requestClose(false);break;}
+  case 'replace-slot':{if(!ui.editor||ui.busy||top()?.type!=='replace')return;const next=top().targetId;if(eligible(itemById(next))&&!ui.editor.ids.includes(next))ui.editor.ids[clamp(number(value),0,ui.editor.ids.length-1)]=next;requestClose(false);break;}
+  case 'remove-slot':if(ui.editor&&!ui.busy){ui.editor.ids.splice(number(value),1);renderSheet();}break;
+  case 'move-left':case 'move-right':{if(!ui.editor||ui.busy)return;const a=number(value),b=a+(action==='move-left'?-1:1);if(b<0||b>=ui.editor.ids.length)return;[ui.editor.ids[a],ui.editor.ids[b]]=[ui.editor.ids[b],ui.editor.ids[a]];renderSheet();break;}
+  case 'save-editor':saveEditor();break;
+  case 'use-style':void saveShowcase([...SHOWCASE_IDS],value);break;
+  case 'claim':void claim(value);break;
+  case 'refresh':void refreshState();break;
+  case 'sheet-back':requestClose(false);break;
+  case 'close-sheet':requestClose(true);break;
+  case 'discard':finishClose();break;
+  case 'page-back':closeAchievements();break;
+ }
+}
+// Single sheet lifecycle for all information and editing panels. No data writes here.
+function installSheetSwipe(){
+ let g=null,timer=0,frame=0,serial=0,closing=false,suppressUntil=0;
+ const grip=$('[data-ach-grip]'),header=$('[data-ach-header]');
+ const active=()=>!layer.hidden&&!window.ZefirokPageGuide?.isOpen();
+ const limit=h=>Math.max(100,Math.min(300,h*.42));
+ function reset(){++serial;clearTimeout(timer);cancelAnimationFrame(frame);timer=frame=0;const old=g;g=null;closing=false;if(old?.pointer)try{panel.releasePointerCapture(old.id);}catch{}panel.style.transform='';panel.style.transition='';panel.style.willChange='';body.style.overflowY='';layer.style.backgroundColor='';layer.style.transition='';grip.classList.remove('armed');}
+ function start(id,x,y,target,pointer=false){
+  if(!active()||closing||g||!(target instanceof Element))return false;
+  if(target.closest('button,a,input,select,textarea,[contenteditable]')&&!target.closest('[data-ach-grip]'))return false;
+  const inHeader=header.contains(target);if(!inHeader&&(body.scrollTop>2||!body.contains(target)))return false;
+  reset();g={id,x,y,lastY:y,lastAt:performance.now(),dy:0,velocity:0,drag:false,header:inHeader,pointer,height:panel.offsetHeight};return true;
+ }
+ function move(x,y,e){
+  if(!g||!active()||closing)return;const dx=x-g.x,dy=y-g.y;
+  if(!g.drag){if(dy<=0||Math.abs(dx)>Math.max(5,dy*.8)||(!g.header&&body.scrollTop>2)){if(Math.max(Math.abs(dx),Math.abs(dy))>8)reset();return;}if(!e.cancelable){reset();return;}e.preventDefault();if(dy<3)return;g.drag=true;body.style.overflowY='hidden';panel.style.willChange='transform';}
+  if(e.cancelable)e.preventDefault();const now=performance.now();g.velocity=(y-g.lastY)/Math.max(1,now-g.lastAt);g.lastY=y;g.lastAt=now;g.dy=Math.max(0,dy);grip.classList.toggle('armed',g.dy>=limit(g.height));
+  if(!frame)frame=requestAnimationFrame(()=>{frame=0;if(!g)return;panel.style.transform=`translate3d(0,${Math.min(g.height*.92,g.dy*.98)}px,0)`;layer.style.backgroundColor=`rgba(65,41,53,${.38*(1-Math.min(.8,g.dy/g.height))})`;});
+ }
+ function finish(cancelled=false){
+  if(!g)return;const old=g;g=null;cancelAnimationFrame(frame);frame=0;if(old.pointer)try{panel.releasePointerCapture(old.id);}catch{}
+  if(!old.drag){reset();return;}suppressUntil=performance.now()+450;
+  const velocity=performance.now()-old.lastAt<100?Math.max(0,old.velocity):0,threshold=limit(old.height);
+  const dismiss=!cancelled&&(old.dy>=threshold||(old.dy>threshold*.55&&velocity>1));
+  closing=dismiss;grip.classList.remove('armed');const token=++serial,duration=matchMedia('(prefers-reduced-motion: reduce)').matches?0:240;
+  panel.style.transition=`transform ${duration}ms cubic-bezier(.2,.8,.3,1)`;layer.style.transition=`background-color ${duration}ms ease`;
+  panel.style.transform=dismiss?`translate3d(0,${Math.max(window.innerHeight,old.height+50)}px,0)`:'translate3d(0,0,0)';layer.style.backgroundColor=dismiss?'rgba(65,41,53,0)':'';
+  const done=()=>{if(serial!==token)return;reset();if(dismiss&&active())requestClose(true);};if(duration)timer=setTimeout(done,duration+24);else done();
+ }
+ panel.addEventListener('touchstart',e=>{if(e.touches.length!==1){finish(true);return;}const p=e.touches[0];start(p.identifier,p.clientX,p.clientY,e.target);},{passive:true});
+ panel.addEventListener('touchmove',e=>{if(!g||g.pointer)return;if(e.touches.length!==1){finish(true);return;}const p=Array.from(e.touches).find(p=>p.identifier===g.id);if(p)move(p.clientX,p.clientY,e);},{passive:false});
+ panel.addEventListener('touchend',e=>{if(g&&!g.pointer&&Array.from(e.changedTouches).some(p=>p.identifier===g.id))finish();},{passive:true});
+ panel.addEventListener('touchcancel',()=>finish(true),{passive:true});
+ header.addEventListener('pointerdown',e=>{if(e.pointerType==='touch'||e.button!==0||e.isPrimary===false)return;if(start(e.pointerId,e.clientX,e.clientY,e.target,true)){e.preventDefault();try{panel.setPointerCapture(e.pointerId);}catch{}}});
+ panel.addEventListener('pointermove',e=>{if(g?.pointer&&g.id===e.pointerId)move(e.clientX,e.clientY,e);});panel.addEventListener('pointerup',e=>{if(g?.pointer&&g.id===e.pointerId)finish();});
+ for(const name of ['pointercancel','lostpointercapture'])panel.addEventListener(name,e=>{if(g?.pointer&&g.id===e.pointerId)finish(true);});
+ layer.addEventListener('click',e=>{if(performance.now()<suppressUntil){e.preventDefault();e.stopImmediatePropagation();}},true);
+ grip.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();if(e.detail===0)requestClose(true);});
+ window.addEventListener('blur',()=>{if(g)finish(true);});document.addEventListener('visibilitychange',()=>{if(document.hidden&&g)finish(true);});
+ return {reset};
+}
+const motion=installSheetSwipe();
+function closeAchievements(){if(window.ZefirokPageGuide?.closeIfOpen())return;if(top()){requestClose(false);return;}if(window.parent!==window){window.parent.postMessage({type:'zefirok-close-achievements'},'*');return;}if(history.length>1)history.back();else location.assign('/');}
+function syncSafeArea(payload=null){
+ const wa=resolveTelegramWebApp(),safe=payload?.safeArea||wa?.safeAreaInset||{},content=payload?.contentSafeArea||wa?.contentSafeAreaInset||{};
+ const topInset=Math.max(0,number(payload?.safeTop),number(safe.top)),contentTop=Math.max(0,number(content.top));
+ if(topInset||contentTop)document.documentElement.style.setProperty('--ach-top',`${Math.max(topInset,contentTop)+12}px`);
+ for(const [name,side] of [['Right','right'],['Bottom','bottom'],['Left','left']]){const v=Math.max(number(payload?.['safe'+name]),number(safe[side]),number(content[side]));if(v)document.documentElement.style.setProperty('--safe-'+side,`max(env(safe-area-inset-${side},0px),${v+8}px)`);}
+}
+document.addEventListener('click',e=>{if(window.ZefirokPageGuide?.isOpen())return;const b=e.target instanceof Element?e.target.closest('[data-action]'):null;if(b&&!b.disabled){handleAction(b.dataset.action,b.dataset.value||'');return;}if(e.target===layer)requestClose(true);});
+document.addEventListener('change',e=>{if(e.target.matches('[data-category-select]')){ui.category=e.target.value;renderPage();}});
+document.addEventListener('keydown',e=>{
+ if(window.ZefirokPageGuide?.isOpen())return;
+ if(e.key==='Escape'&&top()){e.preventDefault();requestClose(false);return;}
+ if(e.key==='Tab'&&top()){
+  const focusables=Array.from(panel.querySelectorAll('button:not(:disabled),select,input,[tabindex="0"]')).filter(el=>el.getClientRects().length);const first=focusables[0],last=focusables[focusables.length-1];
+  if(!first){e.preventDefault();return;}if(e.shiftKey&&(document.activeElement===first||!panel.contains(document.activeElement))){e.preventDefault();last.focus();}else if(!e.shiftKey&&(document.activeElement===last||!panel.contains(document.activeElement))){e.preventDefault();first.focus();}
+ }
+ if(e.target.matches('[data-ach-tab]')&&['ArrowLeft','ArrowRight','Home','End'].includes(e.key)){e.preventDefault();switchTab(e.key==='Home'?'goals':e.key==='End'?'showcase':ui.tab==='goals'?'showcase':'goals');}
+});
+window.addEventListener('message',e=>{if(e.source!==window.parent&&e.source!==window)return;if(e.data?.type==='zefirok-achievements-back')closeAchievements();if(e.data?.type==='zefirok-host-viewport-changed')syncSafeArea(e.data.payload);});
+try{const wa=resolveTelegramWebApp();wa?.ready?.();wa?.expand?.();wa?.disableVerticalSwipes?.();if(window.parent===window){wa?.BackButton?.onClick?.(closeAchievements);wa?.BackButton?.show?.();}for(const ev of ['viewportChanged','safeAreaChanged','contentSafeAreaChanged'])wa?.onEvent?.(ev,()=>syncSafeArea());}catch{}
+syncSafeArea();renderPage();void refreshState();
 })();
-</script>
 
+</script>
 <script id="zefirok-context-guide-20260910">
 (()=>{
 "use strict";
@@ -699,7 +802,7 @@ function createTutorialDeck(layer, mount, options, words) {
 }
 
 const ZGT_WORDS={"close":"Закрыть обучение","pull":"Потяни вниз, чтобы закрыть","topics":"Темы","steps":"Шаги обучения","back":"Назад","next":"Дальше","example":"Пример","tap":"Тап по игровому полю","step":"Шаг","of":"из","done":"Понятно","directory":"Гиды по игре","directoryCopy":"Выбери нужную тему. Все примеры учебные: они не запускают покупки и не выдают награды.","empty":"Сейчас этот гид недоступен. Закрой окно и открой его снова.","allGuides":"Все игровые гиды","helpLabel":"Как работает этот раздел","finishMain":"В игру","finishStock":"Открыть склад","finishRating":"Открыть рейтинг","finishFriends":"Открыть подарки","profileXpText":"За зачтённый забег — +{run} XP, за подходящую успешную покупку — +{purchase} XP. Нажми на уровень или звание, чтобы открыть лестницу уровней и награды."};
-const ZGT_PAGE_TOPIC={"id":"achievements","title":"Достижения","summary":"Условия, награды и витрина","icon":"/assets/ui/icon_score_acivment.webp","steps":[{"title":"Следи за ближайшими целями","text":"В каталоге видны категории, серии и прогресс достижений. Открывай обычные, редкие и секретные трофеи, выполняя их игровые условия.","tip":"Секретные условия могут быть скрыты до открытия. Само посещение каталога не засчитывает выполнение.","scene":{"kind":"progress","title":"Путь к достижению","items":[{"title":"Условие","subtitle":"Игровое действие","value":70},{"title":"Прогресс","subtitle":"Подтверждённый учёт"},{"title":"Трофей","subtitle":"После выполнения"}]}},{"title":"Престиж и приз — не одно и то же","text":"Очки достижений показывают постоянный престиж аккаунта. У некоторых достижений дополнительно есть награда с отдельным действием получения.","tip":"Престиж не тратится. Дополнительный приз считается полученным только после подтверждения выдачи.","scene":{"kind":"cards","title":"Что даёт достижение","items":[{"title":"Престиж","subtitle":"Постоянный прогресс","image":"/assets/ui/icon_score_acivment.webp"},{"title":"Награда","subtitle":"Если предусмотрена","image":"/assets/ui/icone_reward.webp"}]}},{"title":"Выбери трофеи для витрины","text":"Добавляй полученные достижения в «Мою витрину», меняй их порядок и убирай лишние. Выбранные трофеи показываются в профиле и рейтинге.","tip":"Лимит виден рядом с витриной. Удаление трофея с витрины не удаляет само достижение.","scene":{"kind":"cards","title":"Пример витрины","items":[{"title":"Трофей 1","subtitle":"Выбранный"},{"title":"Трофей 2","subtitle":"Выбранный"},{"title":"Место 3","subtitle":"Свободное"}],"image":"/assets/ui/icon_score_acivment.webp"}},{"title":"Оформление открывается по условиям","text":"В подборе оформления смотри доступные, сезонные и особые витрины. Карточка закрытого оформления объясняет, как его получить.","tip":"Нельзя выбрать закрытый стиль только через предпросмотр. Условия подтверждаются сервером.","scene":{"kind":"states","title":"Статусы оформления","items":[{"title":"Закрыто","subtitle":"Условия ещё впереди"},{"title":"Открыто","subtitle":"Можно выбрать"},{"title":"Выбрано","subtitle":"Видно в профиле"}]}}]};
+const ZGT_PAGE_TOPIC={"id":"achievements","title":"Достижения","summary":"Цели, престиж и моя витрина","icon":"/assets/ui/icon_score_acivment.webp","steps":[{"title":"Цели и витрина — отдельно","text":"Во вкладке «Цели» сначала видны доступные награды и ближайшие достижения. Фильтры помогают найти нужное; нажатие открывает условие и приз.","tip":"Секретные трофеи видны серыми карточками с «?». Название и условия откроются после выполнения.","scene":{"kind":"tabs","title":"Достижения","items":[{"title":"Цели"},{"title":"Моя витрина"}],"rows":[{"title":"Ближайшие цели","subtitle":"Как получить","image":"/assets/ui/icon_score_acivment.webp"}]}},{"title":"Престиж и приз — не одно и то же","text":"Очки достижений показывают постоянный престиж аккаунта. У некоторых достижений дополнительно есть награда с отдельным действием получения.","tip":"Очки достижений не тратятся. Они повышают ранг и открывают только те оформления, у которых указано это условие.","scene":{"kind":"cards","title":"Что даёт достижение","items":[{"title":"Престиж","subtitle":"Постоянный прогресс","image":"/assets/ui/icon_score_acivment.webp"},{"title":"Награда","subtitle":"Если предусмотрена","image":"/assets/ui/icone_reward.webp"}]}},{"title":"Изменить трофеи","text":"В «Моей витрине» нажми «Изменить трофеи». Выбирай, заменяй и меняй порядок полученных трофеев. Затем нажми «Сохранить».","tip":"Предпросмотр. Изменения появятся в профиле после сохранения.","scene":{"kind":"cards","title":"Пример витрины","items":[{"title":"Трофей 1","subtitle":"Выбранный"},{"title":"Трофей 2","subtitle":"Выбранный"},{"title":"Место 3","subtitle":"Свободное"}],"image":"/assets/ui/icon_score_acivment.webp"}},{"title":"Оформление открывается по условиям","text":"Открой «Оформление»: предпросмотр покажет витрину с твоими трофеями. У закрытой витрины есть условие получения. Доступную можно применить кнопкой «Использовать».","tip":"Нельзя выбрать закрытый стиль только через предпросмотр. Условия подтверждаются сервером.","scene":{"kind":"states","title":"Статусы оформления","items":[{"title":"Закрыто","subtitle":"Условия ещё впереди"},{"title":"Открыто","subtitle":"Можно выбрать"},{"title":"Выбрано","subtitle":"Видно в профиле"}]}}]};
 const ZGT_HOST_BACK=["zefirok-achievements-back"];
 // Standalone page adapter. Reads only its local guide catalogue, not player data.
 const guideLayer = document.createElement('div');

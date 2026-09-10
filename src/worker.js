@@ -5955,6 +5955,15 @@ function achievementCatalogPublished(definition = {}, artReady = false) {
   return true;
 }
 
+// Secret is a presentation rule, not an absent card. Respect the enabled flag and
+// the artwork/release gate; CC visibility still hides ordinary achievements.
+function achievementVisibleToPlayer(definition) {
+  return Boolean(definition && definition.enabled !== false && (
+    definition.visible !== false ||
+    (definition.secret === true && definition.catalogVisible === true)
+  ));
+}
+
 const ACHIEVEMENT_LEGACY_REWARD_KINDS = Object.freeze(["points", "zefir", "coffee"]);
 const ACHIEVEMENT_REWARD_MODES = Object.freeze(["default", "none", "avatar"]);
 const ACHIEVEMENT_RARITIES = Object.freeze(["common", "rare", "epic", "legendary", "legacy"]);
@@ -5991,7 +6000,7 @@ const ACHIEVEMENT_SHOWCASE_STYLES = Object.freeze([
 ]);
 const ACHIEVEMENT_SHOWCASE_STYLE_IDS = Object.freeze(ACHIEVEMENT_SHOWCASE_STYLES.map((item)=>String(item.id)));
 const ACHIEVEMENT_SECRET_TITLE = "Секретное достижение";
-const ACHIEVEMENT_SECRET_DESCRIPTION = "Условие скрыто. Достижение раскроется после выполнения.";
+const ACHIEVEMENT_SECRET_DESCRIPTION = "Секретные условия. Название и описание откроются после выполнения.";
 const ACHIEVEMENT_POINTS_ICON_URL = "/assets/ui/icon_score_acivment.webp";
 const ACHIEVEMENT_POINTS_META = Object.freeze({
   id:"achievementPoints",
@@ -6454,7 +6463,7 @@ async function prepareRunAchievementUnlockContext(env, telegramId, minRunMs) {
       env.DB.prepare(`SELECT achievement_id FROM achievement_unlocks WHERE telegram_id=? UNION SELECT achievement_id FROM achievement_claims WHERE telegram_id=?`).bind(playerId,playerId).all()
     ]);
     return {
-      definitions:(definitions||[]).filter((definition)=>definition?.enabled!==false&&definition?.visible!==false&&definition?.catalogVisible===true&&ACHIEVEMENT_RUN_SOURCES.has(String(definition?.source||""))),
+      definitions:(definitions||[]).filter((definition)=>achievementVisibleToPlayer(definition)&&definition?.catalogVisible===true&&ACHIEVEMENT_RUN_SOURCES.has(String(definition?.source||""))),
       earnedIds:new Set((earnedResult?.results||[]).map((row)=>String(row?.achievement_id||"")).filter(Boolean)),
       runs:{
         runs:achievementV2Count(runsRow?.count),
@@ -6575,7 +6584,7 @@ function achievementsV2FromStats(raw = {}, claimRows = [], definitions = ACHIEVE
   const now=Math.max(1,Math.floor(Number(options?.now)||Date.now()/1000));
   const populationStats=options?.populationStats||{},populationTotal=Math.max(0,Number(populationStats?.totalPlayers)||0),populationCounts=populationStats?.counts instanceof Map?populationStats.counts:new Map(Object.entries(populationStats?.counts||{}));
   const claims = achievementClaimRowsMap(claimRows),unlocks=achievementUnlockRowsMap(unlockRows);
-  const activeDefinitions = (Array.isArray(definitions) ? definitions : []).filter((definition) => definition?.enabled !== false && definition?.visible !== false && !(Math.max(0,Number(definition?.availableFrom)||0)>now&&!unlocks.has(String(definition?.id||""))));
+  const activeDefinitions = (Array.isArray(definitions) ? definitions : []).filter((definition) => achievementVisibleToPlayer(definition) && !(Math.max(0,Number(definition?.availableFrom)||0)>now&&!unlocks.has(String(definition?.id||""))));
   const selectedOrder = [...new Set((Array.isArray(showcaseIds) ? showcaseIds : []).map((id)=>String(id||"").trim()).filter(Boolean))].slice(0, ACHIEVEMENT_SHOWCASE_LIMIT);
   const selectedSlots = new Map(selectedOrder.map((id,index)=>[id,index+1]));
   const achievements = activeDefinitions.map((definition) => {
@@ -6670,7 +6679,7 @@ async function achievementShowcasePreviewForPlayer(env, telegramId, options = {}
     env.DB.prepare(`SELECT achievement_id FROM achievement_unlocks WHERE telegram_id=? UNION SELECT achievement_id FROM achievement_claims WHERE telegram_id=?`).bind(playerId,playerId).all()
   ]);
   const now=Math.floor(Date.now()/1000),earnedIds=new Set((earnedResult.results||[]).map((row)=>String(row?.achievement_id||"")).filter(Boolean));
-  const published=(definitions||[]).filter((definition)=>definition?.enabled!==false&&definition?.visible!==false&&definition?.catalogVisible===true);
+  const published=(definitions||[]).filter((definition)=>achievementVisibleToPlayer(definition)&&definition?.catalogVisible===true);
   const definitionMap=new Map(published.map((definition)=>[String(definition.id||""),definition]));
   const ordered=(showcaseResult.results||[]).sort((a,b)=>Number(a.slot||0)-Number(b.slot||0));
   const items=ordered.map((row)=>{const definition=definitionMap.get(String(row?.achievement_id||""));return definition?achievementPublicShowcaseItem(definition,Number(row?.slot||0)):null;}).filter(Boolean).slice(0,ACHIEVEMENT_SHOWCASE_LIMIT);
@@ -6732,7 +6741,7 @@ async function claimAchievementV2(request, env) {
     requireDatabase(env); requireBotToken(env);
     const body=await readJson(request),auth=await validateTelegramInitData(String(body.initData||body.init_data||""),env),telegramId=String(auth.user.id);
     const achievementId=String(body.achievementId||body.achievement_id||body.id||"").trim().slice(0,80),requestId=String(body.requestId||body.request_id||"").trim().slice(0,120);
-    const definitions=await achievementConfiguredDefinitions(env),definition=definitions.find((item)=>item.id===achievementId&&item.enabled!==false&&item.visible!==false);
+    const definitions=await achievementConfiguredDefinitions(env),definition=definitions.find((item)=>item.id===achievementId&&achievementVisibleToPlayer(item));
     if(!definition)throw new ApiError(404,"Достижение не найдено или временно скрыто.");
     const beforeState=await achievementPlayerState(env,telegramId),beforeAchievement=beforeState.achievements.find((item)=>item.id===achievementId);
     if(!beforeAchievement?.earned)throw new ApiError(409,"Сначала выполни условие достижения.");
@@ -6780,7 +6789,7 @@ async function achievementPublicShowcaseMap(env, telegramIds = []) {
   if(!ids.length)return result;
   try{
     await ensureAchievementConfigSchema(env);
-    const definitions=await achievementConfiguredDefinitions(env),definitionMap=new Map(definitions.filter((item)=>item.enabled!==false&&item.visible!==false&&item.catalogVisible===true).map((item)=>[item.id,item]));
+    const definitions=await achievementConfiguredDefinitions(env),definitionMap=new Map(definitions.filter((item)=>achievementVisibleToPlayer(item)&&item.catalogVisible===true).map((item)=>[item.id,item]));
     for(let offset=0;offset<ids.length;offset+=80){const chunk=ids.slice(offset,offset+80),placeholders=chunk.map(()=>"?").join(",");const rows=(await env.DB.prepare(`SELECT telegram_id,slot,achievement_id FROM achievement_showcase WHERE telegram_id IN (${placeholders}) ORDER BY telegram_id,slot`).bind(...chunk).all()).results||[];for(const row of rows){const telegramId=String(row.telegram_id||""),definition=definitionMap.get(String(row.achievement_id||""));if(!definition)continue;if(!result.has(telegramId))result.set(telegramId,[]);const list=result.get(telegramId);if(list.length<ACHIEVEMENT_SHOWCASE_LIMIT)list.push(achievementPublicShowcaseItem(definition,Number(row.slot||0)));}}
   }catch(error){if(!isMissingRuntimeDatabaseSchemaError(error))console.error("achievement public showcase lookup failed",error);}
   return result;
