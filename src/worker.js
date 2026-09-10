@@ -43265,6 +43265,58 @@ function albumRewardView(reward,catalogMap=new Map()){
   return {kind,id,amount,title:safeRewardDescription({kind,id,amount}),imageUrl:"/assets/season-pass/season.webp?v=07939"};
 }
 
+
+// Reconcile delivery state without enqueueing, retrying or granting any reward.
+// Most Album reads have no unfinished claims and do not query the queue at all.
+async function reconcileAlbumMilestoneClaims(env, telegramId, claims) {
+  const unfinished = claims.filter(c => ["pending","failed"].includes(String(c.status || "")));
+  if (!unfinished.length) return claims;
+  const records = unfinished.map(claim => {
+    const snapshot = safeJson(claim.rewards_json, []);
+    const rewards = Array.isArray(snapshot) ? snapshot.slice(0, 3) : [];
+    const expected = rewards.map((r, i) => ({
+      sourceId: `${claim.collection_id}:${claim.milestone_id}:${i + 1}`.slice(0, 180),
+      kind: String(r.kind || ""),
+      id: ["points","zefir","coffee"].includes(String(r.kind)) ? "" : String(r.kind) === "case" ? String(normalizeCaseType(r.id) || "") : String(r.id || r.itemId || ""),
+      amount: Math.max(1, Math.floor(Number(r.amount) || 1))
+    }));
+    return {claim, expected};
+  }).filter(r => r.expected.length);
+  const sourceIds = [...new Set(records.flatMap(r => r.expected.map(e => e.sourceId)))];
+  const queue = [];
+  try {
+    for (let offset = 0; offset < sourceIds.length; offset += 75) {
+      const ids = sourceIds.slice(offset, offset + 75);
+      const rows = await env.DB.prepare(`SELECT source_id,reward_kind,reward_id,amount,status,attempts,delivered_at,claimed_at FROM reward_delivery_queue
+        WHERE telegram_id=? AND source_type='album_milestone' AND source_id IN (${ids.map(() => "?").join(",")})`).bind(String(telegramId), ...ids).all();
+      queue.push(...(rows.results || []));
+    }
+  } catch (error) {
+    if (isMissingRuntimeDatabaseSchemaError(error)) return claims;
+    throw error;
+  }
+  const now = Math.floor(Date.now() / 1000);
+  for (const {claim, expected} of records) {
+    const rows = expected.map(e => queue.find(q =>
+      String(q.source_id) === e.sourceId && String(q.reward_kind) === e.kind &&
+      String(q.reward_id || "") === e.id && Number(q.amount) === e.amount));
+    const delivered = rows.every(q => q && ["delivered","claimed"].includes(String(q.status)));
+    const failed = rows.some(q => q && (String(q.status) === "cancelled" || (String(q.status) === "failed" && Number(q.attempts) >= 5)));
+    const next = delivered ? "delivered" : failed ? "failed" : "pending";
+    if (String(claim.status) === next) continue;
+    const deliveredAt = delivered ? (Math.max(...rows.map(q => Math.max(Number(q?.delivered_at || 0), Number(q?.claimed_at || 0)))) || now) : 0;
+    const updated = await env.DB.prepare(`UPDATE album_milestone_claims SET status=?,
+      delivered_at=CASE WHEN ?='delivered' AND delivered_at=0 THEN ? ELSE delivered_at END,updated_at=?
+      WHERE telegram_id=? AND collection_id=? AND milestone_id=? AND status=? AND updated_at=?`)
+      .bind(next,next,deliveredAt,now,String(telegramId),String(claim.collection_id),String(claim.milestone_id),String(claim.status),Number(claim.updated_at || 0)).run();
+    if (Number(updated.meta?.changes || 0) > 0) {
+      claim.status = next; claim.updated_at = now;
+      if (delivered && !Number(claim.delivered_at)) claim.delivered_at = deliveredAt;
+    }
+  }
+  return claims;
+}
+
 async function albumPlayerState(env,telegramId){
   await ensureAlbumSchema(env);await ensureCasePlayerState(env,String(telegramId),{});
   const [collectionsRes,itemsRes,milestonesRes,claimsRes,caseState,catalog]=await Promise.all([
@@ -43282,7 +43334,7 @@ async function albumPlayerState(env,telegramId){
   const itemsByCollection=new Map(),milestonesByCollection=new Map(),claimMap=new Map();
   for(const row of itemsRes.results||[]){const id=String(row.collection_id);if(!itemsByCollection.has(id))itemsByCollection.set(id,[]);itemsByCollection.get(id).push(row);}
   for(const row of milestonesRes.results||[]){const id=String(row.collection_id);if(!milestonesByCollection.has(id))milestonesByCollection.set(id,[]);milestonesByCollection.get(id).push(row);}
-  for(const row of claimsRes.results||[])claimMap.set(`${String(row.collection_id)}:${String(row.milestone_id)}`,row);
+  for(const row of await reconcileAlbumMilestoneClaims(env,String(telegramId),claimsRes.results||[]))claimMap.set(`${String(row.collection_id)}:${String(row.milestone_id)}`,row);
   let allRequired=0,allOwnedRequired=0,totalOwnedSlots=0,totalSlots=0,completedCollections=0;
   const collections=[];
   for(const row of collectionsRes.results||[]){
@@ -43296,7 +43348,7 @@ async function albumPlayerState(env,telegramId){
       return {slotKey:`${collectionId}:${index}`,kind,itemId,owned:isOwned,required,secret:Number(item.secret||0)===1,sortOrder:Number(item.sort_order||0),title:String(meta.title||itemId),rarity:String(meta.rarity||"common"),imageUrl:String(meta.imageUrl||""),available:Boolean(meta.enabled&&meta.released),future:Boolean(meta.future),released:Boolean(meta.released)};
     });
     const progressPercent=requiredTotal>0?Math.min(100,Math.floor((ownedRequired*100)/requiredTotal)):0;
-    const milestones=(milestonesByCollection.get(collectionId)||[]).map((m)=>{const claim=claimMap.get(`${collectionId}:${String(m.milestone_id)}`);const rewards=(safeJson(m.rewards_json,[])||[]).map((r)=>albumRewardView(r,catalog));const delivered=String(claim?.status||"")==="delivered";return {milestoneId:String(m.milestone_id),thresholdPercent:Number(m.threshold_percent||0),title:String(m.title||`${m.threshold_percent}% коллекции`),rewards,eligible:progressPercent>=Number(m.threshold_percent||0),status:delivered?"claimed":claim?String(claim.status||"pending"):progressPercent>=Number(m.threshold_percent||0)?"ready":"locked"};});
+    const milestones=(milestonesByCollection.get(collectionId)||[]).map((m)=>{const claim=claimMap.get(`${collectionId}:${String(m.milestone_id)}`);const rewards=(safeJson(claim?.rewards_json??m.rewards_json,[])||[]).map((r)=>albumRewardView(r,catalog));const delivered=String(claim?.status||"")==="delivered";return {milestoneId:String(m.milestone_id),thresholdPercent:Number(m.threshold_percent||0),title:String(m.title||`${m.threshold_percent}% коллекции`),rewards,eligible:progressPercent>=Number(m.threshold_percent||0),status:delivered?"claimed":claim?String(claim.status||"pending"):progressPercent>=Number(m.threshold_percent||0)?"ready":"locked"};});
     const complete=requiredTotal>0&&ownedRequired>=requiredTotal;if(complete)completedCollections+=1;
     allRequired+=requiredTotal;allOwnedRequired+=ownedRequired;totalOwnedSlots+=ownedTotal;totalSlots+=sourceItems.length;
     collections.push({collectionId,title:String(row.title||collectionId),subtitle:String(row.subtitle||""),coverUrl:String(row.cover_url||""),backgroundUrl:String(row.background_url||""),accentColor:albumAccentColor(row.accent_color),sortOrder:Number(row.sort_order||0),revision:Number(row.revision||1),requiredTotal,ownedRequired,totalItems:sourceItems.length,ownedTotal,progressPercent,complete,items,milestones});
@@ -43324,7 +43376,7 @@ async function claimAlbumMilestone(request,env){
     if(!collectionId||!milestoneId)throw new ApiError(400,"Награда Альбома не выбрана.");await ensureAlbumSchema(env);
     const state=await albumPlayerState(env,telegramId),collection=state.collections.find((x)=>x.collectionId===collectionId),milestone=collection?.milestones?.find((x)=>x.milestoneId===milestoneId);
     if(!collection||!milestone)throw new ApiError(404,"Награда Альбома не найдена.");if(!milestone.eligible)throw new ApiError(409,"Сначала соберите нужную часть коллекции.");
-    const row=await env.DB.prepare(`SELECT rewards_json,threshold_percent,status FROM album_milestones WHERE collection_id=? AND milestone_id=? AND enabled=1 LIMIT 1`).bind(collectionId,milestoneId).first();if(!row)throw new ApiError(404,"Награда Альбома отключена.");
+    const row=await env.DB.prepare(`SELECT rewards_json,threshold_percent FROM album_milestones WHERE collection_id=? AND milestone_id=? AND enabled=1 LIMIT 1`).bind(collectionId,milestoneId).first();if(!row)throw new ApiError(404,"Награда Альбома отключена.");
     const snapshot=(safeJson(row.rewards_json,[])||[]).slice(0,3);if(!snapshot.length)throw new ApiError(409,"У этой отметки Альбома пока нет награды.");const now=Math.floor(Date.now()/1000);
     await env.DB.prepare(`INSERT OR IGNORE INTO album_milestone_claims(telegram_id,collection_id,milestone_id,threshold_percent,rewards_json,queue_ids_json,status,request_id,created_at,delivered_at,updated_at) VALUES(?,?,?,?,?,'[]','pending',?,?,0,?)`).bind(telegramId,collectionId,milestoneId,Number(row.threshold_percent||0),JSON.stringify(snapshot),requestId,now,now).run();
     let claim=await env.DB.prepare(`SELECT * FROM album_milestone_claims WHERE telegram_id=? AND collection_id=? AND milestone_id=? LIMIT 1`).bind(telegramId,collectionId,milestoneId).first();

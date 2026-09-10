@@ -53,7 +53,34 @@
 </script>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
-:root{--bg:#fff7f4;--card:#fff;--ink:#5c3948;--muted:#987986;--line:#efd6de;--pink:#d96f9b;--gold:#d8a13a;--app-h:100dvh;--safe-top:0px;--safe-bottom:0px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;color:var(--ink);background:var(--bg)}*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--ink)}button{font:inherit;color:inherit}.app{height:var(--app-h);display:flex;flex-direction:column;overflow:hidden}.top{flex:0 0 auto;padding:calc(10px + var(--safe-top)) 12px 10px;background:rgba(255,249,247,.94);backdrop-filter:blur(16px);border-bottom:1px solid rgba(228,194,205,.55);z-index:20}.bar{display:grid;grid-template-columns:minmax(0,1fr) 44px;align-items:center;gap:8px}.reload{width:42px;height:42px;border:1px solid var(--line);border-radius:15px;background:#fff;font-size:18px;font-weight:900}.bar h1{margin:0;padding-left:44px;text-align:center;font-size:17px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.main{flex:1;min-height:0;overflow:auto;-webkit-overflow-scrolling:touch;padding:13px 13px calc(26px + var(--safe-bottom))} .hero{position:relative;overflow:hidden;padding:20px;border:1px solid #f0ccd7;border-radius:28px;background:#fff7f4 url("/assets/ui/icon_background_albom.webp") center/cover no-repeat;box-shadow:0 16px 36px rgba(103,57,74,.10)}.hero:before{content:"";position:absolute;inset:0;background:linear-gradient(110deg,rgba(255,255,255,.16),rgba(255,255,255,.04));pointer-events:none}.hero>*{position:relative;z-index:1}.hero small{display:inline-flex;padding:5px 8px;border-radius:999px;background:rgba(255,255,255,.72);font-size:8px;font-weight:950;color:#ad5778;letter-spacing:.08em;text-transform:uppercase}.hero h2{margin:9px 0 5px;font-size:27px;line-height:1.05}.hero p{margin:0;max-width:420px;font-size:11px;line-height:1.5;color:var(--muted);font-weight:700}.summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin-top:14px}.metric{padding:10px;border:1px solid rgba(226,184,197,.62);border-radius:16px;background:rgba(255,255,255,.72)}.metric b{display:block;font-size:17px}.metric span{display:block;margin-top:3px;font-size:7px;color:var(--muted);font-weight:800}.section-head{display:flex;align-items:end;justify-content:space-between;gap:10px;margin:18px 3px 9px}.section-head h3{margin:0;font-size:16px}.section-head p{margin:3px 0 0;color:var(--muted);font-size:9px;line-height:1.4} .albums{display:grid;gap:11px}.album-card{position:relative;overflow:hidden;display:grid;grid-template-columns:minmax(0,1fr) 104px;gap:13px;min-height:166px;padding:17px;border:1px solid var(--line);border-radius:25px;background:#fff;box-shadow:0 12px 28px rgba(97,58,71,.08);cursor:pointer}.album-cover{position:absolute;inset:0;background:linear-gradient(110deg,rgba(255,255,255,.98) 4%,rgba(255,255,255,.86) 64%,rgba(255,255,255,.62)),linear-gradient(145deg,#ffe8f0,#fff2c8);background-position:center;background-size:cover}.album-body{position:relative;z-index:2;min-width:0;display:flex;flex-direction:column}.album-body h4{margin:0;font-size:19px;line-height:1.08}.album-body p{margin:5px 0 13px;color:var(--muted);font-size:9px;line-height:1.4}.progress-line{display:flex;align-items:center;gap:9px;margin-top:auto}.track{height:8px;flex:1;overflow:hidden;border-radius:999px;background:rgba(132,92,108,.12)}.track i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,var(--accent,#d96f9b),#e0ae42)}.progress-line b{font-size:11px}.album-foot{position:relative;z-index:2;display:flex;align-items:center;justify-content:flex-start;gap:8px;margin-top:12px}.album-side{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px}.album-art-shell{width:94px;height:94px;display:grid;place-items:center;overflow:hidden;padding:5px;border:2px solid rgba(226,188,199,.82);border-radius:22px;background:rgba(255,255,255,.92);box-shadow:0 8px 18px rgba(90,50,64,.09)}.album-art{width:80px;height:80px;object-fit:contain;display:block;border-radius:18px;filter:drop-shadow(0 5px 9px rgba(72,39,49,.10))}.pill{display:inline-flex;align-items:center;justify-content:center;padding:6px 9px;border:1px solid #edcfda;border-radius:999px;background:#fff8fb;font-size:8px;font-weight:950;color:#96526c}.pill.done{border-color:#d8a63c;background:#fff4c7;color:#7f5710;box-shadow:0 3px 9px rgba(185,126,25,.13)}.open{width:94px;border:0;border-radius:13px;padding:9px 9px;background:linear-gradient(135deg,#dd739c,#c94e7c);color:#fff;font-size:9px;font-weight:950;box-shadow:0 7px 15px rgba(201,78,124,.18)} .detail{display:none}.detail.active{display:block}.landing.hidden{display:none}.detail-hero{position:relative;overflow:hidden;display:grid;grid-template-columns:minmax(0,1fr) 112px;gap:14px;align-items:center;padding:18px;border:1px solid #efd1db;border-radius:28px;background:linear-gradient(145deg,#ffeaf1,#fff4d4);background-size:cover;background-position:center;box-shadow:0 14px 32px rgba(96,58,71,.09)}.detail-hero:before{content:"";position:absolute;inset:0;background:linear-gradient(95deg,rgba(255,255,255,.96),rgba(255,255,255,.82) 67%,rgba(255,255,255,.62))}.detail-main{position:relative;z-index:2;min-width:0}.detail-cover-shell{position:relative;z-index:2;width:108px;height:108px;display:grid;place-items:center;overflow:hidden;padding:5px;border:2px solid rgba(225,186,198,.82);border-radius:24px;background:rgba(255,255,255,.92);box-shadow:0 9px 20px rgba(86,48,61,.10)}.detail-cover{width:94px;height:94px;object-fit:contain;display:block;border-radius:20px;filter:drop-shadow(0 5px 9px rgba(72,39,49,.10))}.detail-hero h2{margin:9px 0 5px;font-size:23px;line-height:1.08}.detail-hero p{margin:0;color:var(--muted);font-size:10px;line-height:1.45}.big-progress{margin-top:18px}.big-progress strong{display:flex;justify-content:space-between;gap:10px;font-size:10px}.big-progress .track{margin-top:7px;height:9px}.milestones{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(178px,78%);gap:9px;overflow-x:auto;padding:2px 1px 8px;scroll-snap-type:x mandatory}.milestones::-webkit-scrollbar{display:none}.milestone{scroll-snap-align:start;padding:12px;border:1px solid var(--line);border-radius:20px;background:#fff;min-height:150px}.milestone.ready{border-color:#e0ba55;background:linear-gradient(145deg,#fff9df,#fff)}.milestone.claimed{border-color:#badfcf;background:#f4fcf8}.milestone-top{display:flex;align-items:center;justify-content:space-between;gap:8px}.milestone-top b{font-size:15px;color:#a05c74}.milestone-top span{font-size:8px;font-weight:900;color:var(--muted)}.milestone h4{margin:8px 0 7px;font-size:11px}.reward{display:flex;align-items:center;gap:7px;padding:8px;border-radius:14px;background:#fff6dc}.reward img{width:34px;height:34px;object-fit:contain}.reward b{font-size:9px;line-height:1.25}.claim{width:100%;margin-top:8px;border:0;border-radius:12px;padding:9px;background:#d85f8c;color:#fff;font-size:9px;font-weight:950}.claim:disabled{opacity:.55}.filters{display:flex;gap:6px;overflow:auto;padding:2px 1px 8px}.filters::-webkit-scrollbar{display:none}.filters button{flex:0 0 auto;border:1px solid var(--line);border-radius:999px;background:#fff;padding:7px 10px;font-size:8px;font-weight:900}.filters button.active{border-color:transparent;background:#df739d;color:#fff}.items{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.item{position:relative;min-width:0;padding:8px;border:1px solid var(--line);border-radius:18px;background:#fff;text-align:center}.item.owned{border-color:#e0bb5a;background:linear-gradient(145deg,#fff9e6,#fff)}.item.secret{background:linear-gradient(145deg,#f6f0f2,#fff)}.item-art{height:82px;display:grid;place-items:center;border-radius:14px;background:#fff8f6;overflow:hidden}.item-art img{max-width:72px;max-height:72px;object-fit:contain}.secret-mark{font-size:31px;font-weight:1000;color:#c7aeb8}.item b{display:block;margin-top:7px;font-size:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.item span{display:block;margin-top:3px;color:var(--muted);font-size:7px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.req{position:absolute;right:5px;top:5px;z-index:2;padding:3px 5px;border-radius:999px;background:#fff1c1;color:#956718;font-size:6px;font-weight:950} .check{position:absolute;left:7px;top:7px;z-index:3;width:25px;height:25px;display:block;border:2px solid #fff5cc;border-radius:50%;background:linear-gradient(145deg,#ffd969,#e3a126);box-shadow:0 0 0 1px #c88b18,0 5px 11px rgba(176,112,10,.30)}.check::before{content:"";position:absolute;left:50%;top:50%;width:6px;height:10px;border-right:3px solid #fff;border-bottom:3px solid #fff;transform:translate(-50%,-58%) rotate(45deg);transform-origin:center;filter:drop-shadow(0 1px 1px rgba(112,69,5,.18))} .empty,.error{padding:22px 14px;border:1px dashed #e2bdca;border-radius:20px;background:rgba(255,255,255,.65);text-align:center;color:var(--muted);font-size:10px;line-height:1.5}.error{border-style:solid;border-color:#efc1ca;background:#fff1f3;color:#a34456}.toast{position:fixed;left:50%;bottom:max(18px,var(--safe-bottom));z-index:80;width:min(380px,calc(100% - 26px));padding:11px 13px;border-radius:14px;background:#49313a;color:#fff;text-align:center;font-size:10px;font-weight:850;opacity:0;pointer-events:none;transform:translate(-50%,15px);transition:.2s}.toast.show{opacity:1;transform:translate(-50%,0)}.loading{min-height:60vh;display:grid;place-items:center;color:var(--muted);font-size:11px;font-weight:850}.spinner{width:31px;height:31px;margin:0 auto 9px;border:3px solid #f0d7df;border-top-color:#d96f9b;border-radius:50%;animation:spin .8s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}@media(max-width:360px){.items{grid-template-columns:repeat(2,minmax(0,1fr))}.summary{grid-template-columns:repeat(2,minmax(0,1fr))}.album-card{grid-template-columns:minmax(0,1fr) 88px;gap:10px;padding:14px}.album-art-shell,.open{width:82px}.album-art-shell{height:82px;border-radius:19px;padding:4px}.album-art{width:70px;height:70px;border-radius:16px}.album-body h4{font-size:17px}.detail-hero{grid-template-columns:minmax(0,1fr) 92px;gap:10px;padding:15px}.detail-cover-shell{width:88px;height:88px;border-radius:20px;padding:4px}.detail-cover{width:76px;height:76px;border-radius:18px}.detail-hero h2{font-size:20px}}
+
+:root{color-scheme:light;--bg:#fff8f3;--paper:#fffdfb;--ink:#593d4b;--muted:#8c717e;--line:#eddae1;--pink:#ce6089;--gold:#bb8741;--app-h:100dvh;--safe-top:0px;--safe-bottom:0px;--safe-left:0px;--safe-right:0px}
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}button,input,select{font:inherit;color:inherit}button{-webkit-tap-highlight-color:transparent;cursor:pointer;touch-action:manipulation}button:disabled{opacity:.55;cursor:default}[hidden]{display:none!important}button:focus-visible,select:focus-visible,[tabindex]:focus-visible{outline:3px solid #a94471;outline-offset:3px}h1,h2,h3,p{margin:0}img{display:block;object-fit:contain;max-width:100%}.az-icon{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none;pointer-events:none}.az-app{height:var(--app-h);display:flex;flex-direction:column;overflow:hidden}
+.az-top{flex:none;padding:max(12px,var(--safe-top),env(safe-area-inset-top)) max(16px,var(--safe-right),env(safe-area-inset-right)) 10px max(16px,var(--safe-left),env(safe-area-inset-left));background:var(--bg);z-index:5}
+.az-top-inner{max-width:560px;margin:auto;display:flex;gap:10px;align-items:center}.az-title{flex:1;min-width:0}.az-title h1{font-size:23px;line-height:1.16;letter-spacing:-.6px;overflow-wrap:anywhere}.az-title p{font-size:11px;color:var(--muted);margin-top:4px;line-height:1.4}
+.az-icon-button{display:grid;place-items:center;width:40px;height:40px;border:1px solid var(--line);border-radius:14px;background:var(--paper);flex:none}.az-top .zgt-launch{width:40px;height:40px;min-width:40px;min-height:40px;margin:0}
+.az-main{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior-y:contain;-webkit-overflow-scrolling:touch;scrollbar-width:thin;padding:9px max(16px,var(--safe-right),env(safe-area-inset-right)) max(26px,var(--safe-bottom),env(safe-area-inset-bottom)) max(16px,var(--safe-left),env(safe-area-inset-left))}
+.az-page{max-width:560px;margin:auto;min-width:0}.az-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}
+.az-intro{display:flex;align-items:center;gap:14px;padding:17px;border:1px solid #ebd4c1;border-radius:23px;background:radial-gradient(ellipse at top right,#ffedc3,transparent 76%),linear-gradient(120deg,#fffdf6,#fff0f4);margin-bottom:18px}.az-intro>img{width:61px;height:66px;flex:none}.az-intro strong{display:block;font-size:18px;line-height:1.3}.az-intro p{font-size:12px;color:var(--muted);line-height:1.5;margin-top:5px}.az-intro-meta{display:flex;gap:8px;flex-wrap:wrap;font-size:11px;color:#966b49;margin-top:8px}
+.az-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:20px 0 11px}.az-heading h2{font-size:19px;line-height:1.2;letter-spacing:-.3px}.az-heading small{font-size:11px;color:var(--muted)}.az-count{padding:5px 9px;border-radius:9px;background:#f6e9ee;color:#997784;font-size:11px}
+.az-callout{display:flex;align-items:center;gap:12px;text-align:left;width:100%;padding:14px;border:1px solid #e8bccf;border-radius:20px;background:linear-gradient(120deg,#fde8f2,#fff7ec);margin-bottom:15px}.az-callout>img{width:44px;height:49px;flex:none}.az-callout>span{flex:1;min-width:0}.az-callout strong{font-size:14px;line-height:1.35;display:block}.az-callout small{font-size:11px;line-height:1.4;display:block;color:#926c7c;margin-top:4px}
+.az-collections{display:grid;gap:12px}.az-collection{position:relative;width:100%;padding:16px;text-align:left;border:1px solid var(--line);border-radius:23px;background:var(--paper);overflow:hidden;isolation:isolate}.az-card-bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.085;z-index:-1;pointer-events:none}.az-collection-head{display:flex;align-items:center;gap:13px}.az-cover{width:82px;height:86px;flex:none;border-radius:18px;background:#fff9f3;padding:6px;border:1px solid #efdfd7;box-shadow:0 4px 12px #7850680b}.az-collection-copy{flex:1;min-width:0}.az-collection h3{font-size:19px;line-height:1.2;letter-spacing:-.3px;overflow-wrap:anywhere}.az-collection-copy>p{font-size:12px;color:var(--muted);line-height:1.45;margin-top:5px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}.az-collection-meta{margin-top:13px}.az-progress-label{display:flex;gap:8px;justify-content:space-between;font-size:11px;line-height:1.5;color:#977989}.az-progress-label b{font-weight:750;color:#72505e}.az-track{height:7px;display:block;border-radius:7px;background:#efdee4;overflow:hidden;margin-top:7px}.az-track>i{display:block;height:100%;width:var(--progress,0%);background:linear-gradient(90deg,var(--az-accent,#e17a9f),#ddab4f);border-radius:inherit}.az-collection-footer{display:flex;justify-content:space-between;align-items:center;gap:9px;margin-top:11px;font-size:11px;color:#997147;line-height:1.4}.az-collection-footer>.az-icon{width:15px;height:15px;color:#b26484}
+.az-badge{display:inline-flex;gap:5px;align-items:center;border-radius:8px;padding:4px 7px;background:#f7e9ef;color:#9f617d;font-size:10px;font-weight:720;line-height:1.4}.az-badge.green{background:#ebf5ef;color:#4f7e60}.az-badge.gold{background:#fff1cc;color:#94692f}.az-badge.gray{background:#ede8eb;color:#76646f}.az-badge .az-icon{width:13px;height:13px}
+.az-detail-hero{position:relative;padding:17px;border-radius:23px;border:1px solid #ecd5ca;overflow:hidden;isolation:isolate;background:linear-gradient(120deg,#fff8f3,#fff0ed);margin-bottom:16px}.az-detail-head{display:flex;align-items:center;gap:13px}.az-detail-head>div{flex:1;min-width:0}.az-detail-head h2{font-size:23px;line-height:1.13;letter-spacing:-.6px;overflow-wrap:anywhere}.az-detail-head p{font-size:12px;line-height:1.5;color:var(--muted);margin-top:6px}.az-detail-head .az-cover{width:74px;height:81px}.az-detail-hero .az-progress-label{margin-top:16px}.az-detail-foot{font-size:10px;line-height:1.5;color:var(--muted);margin-top:9px}
+.az-milestone{padding:16px;border:1px solid #ecd7ac;border-radius:21px;background:linear-gradient(125deg,#fff8e6,#fffbf6);min-width:0}.az-milestone.is-pending{background:#fff9ed}.az-milestone.is-claimed{background:#f5fbf7;border-color:#d1e3d7}.az-milestone.is-failed{background:#fff2f5;border-color:#e5b9c7}.az-milestone-header{display:flex;align-items:center;justify-content:space-between;gap:9px;font-size:10px;text-transform:uppercase;letter-spacing:.7px;color:#9c7245;line-height:1.4;margin-bottom:10px}.az-milestone h3{font-size:16px;line-height:1.3;margin-bottom:10px;overflow-wrap:anywhere}.az-rewards{display:grid;gap:8px}.az-reward{display:flex;align-items:center;gap:11px;min-width:0}.az-reward img{width:43px;height:48px;flex:none}.az-reward strong{font-size:14px;line-height:1.4;overflow-wrap:anywhere}.az-milestone>p{font-size:12px;line-height:1.5;color:var(--muted);margin-top:11px}.az-milestone-actions{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-top:12px}
+.az-button{min-height:44px;padding:11px 14px;border:1px solid #e7c8d5;border-radius:14px;background:var(--paper);color:#ac5278;font-size:13px;font-weight:730;line-height:1.3;display:inline-flex;justify-content:center;align-items:center;gap:7px}.az-button.primary{background:linear-gradient(#e389ad,#d15e8b);color:#fff;border-color:#d6799b}.az-button.full{width:100%}.az-text{min-height:36px;padding:7px 0;border:0;background:none;color:#ab557a;font-size:12px;font-weight:730;display:inline-flex;align-items:center;gap:5px;line-height:1.4}.az-text .az-icon{width:14px;height:14px}.az-milestone-actions>.az-text{margin-left:auto}
+.az-filters{display:flex;gap:5px;margin:12px 0 10px}.az-filter{flex:1;min-width:0;border:1px solid var(--line);border-radius:12px;background:var(--paper);padding:10px 5px;min-height:42px;font-size:12px;line-height:1.3;white-space:nowrap}.az-filter[aria-pressed=true]{background:#f8e3ed;color:#a64471;border-color:#e3b6ca;font-weight:730}.az-filter>small{font-size:10px;color:#9b7b8b;margin-left:4px}.az-kind{display:flex;align-items:center;gap:9px;font-size:11px;color:var(--muted);margin-bottom:10px}.az-kind select{flex:1;min-width:0;min-height:39px;border:1px solid var(--line);border-radius:11px;padding:7px 9px;background:var(--paper);font-size:12px;color:var(--ink)}.az-required-filter{display:flex;gap:7px;align-items:center;font-size:12px;color:#8b6b7a;min-height:35px;margin:0 0 10px}.az-required-filter input{accent-color:#ce6089;width:17px;height:17px}.az-items{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}.az-item{display:flex;flex-direction:column;min-width:0;width:100%;padding:9px;border:1px solid var(--line);border-radius:18px;background:var(--paper);text-align:left;gap:6px}.az-item-art{position:relative;width:100%;height:94px;display:grid;place-items:center;border-radius:13px;background:#fbf3f3;overflow:hidden}.az-item-art>img{width:84%;height:82%;object-fit:contain}.az-item.missing .az-item-art>img{filter:saturate(.4);opacity:.7}.az-item.secret{background:#f7f3f5;border-color:#e6dce2}.az-item.secret .az-item-art{background:#eee8ed}.az-secret-mark{font-size:39px;font-weight:800;color:#a897a4}.az-item.owned{border-color:#dfc887;background:linear-gradient(135deg,#fffaf0,#fffdfb)}.az-item-title{font-size:12px;line-height:1.35;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:32px}.az-item-meta{font-size:10px;line-height:1.35;color:#8c7080}.az-item-status{display:flex;align-items:center;gap:4px;font-size:10px;font-weight:720;color:#936c81;margin-top:auto}.az-item-status .az-icon{width:13px;height:13px}.az-item.owned .az-item-status{color:#568163}.az-required{position:absolute;top:5px;right:5px;padding:3px 5px;border-radius:6px;background:#fff0c9;color:#8c632f;font-size:8px;font-weight:750;line-height:1.3}.az-empty{padding:25px 17px;border:1px dashed #e2c8d3;border-radius:20px;background:#fffdfb;color:var(--muted);font-size:13px;line-height:1.55;text-align:center}.az-empty img{width:68px;height:73px;margin:0 auto 12px}.az-empty strong{display:block;font-size:18px;color:var(--ink);margin-bottom:7px}.az-empty .az-button{margin-top:15px}.az-items>.az-empty{grid-column:1/-1}.az-error{padding:12px 14px;border:1px solid #e9c5d0;border-radius:14px;background:#fff1f4;color:#a14969;font-size:12px;line-height:1.5;margin-bottom:14px}.az-error .az-text{color:#a14969}.az-all-rewards{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;padding:12px 14px;min-height:46px;border-radius:15px;border:1px solid var(--line);background:var(--paper);text-align:left;font-size:12px;color:#9d5978;margin:12px 0 18px}
+.az-toast{position:fixed;left:50%;bottom:max(20px,var(--safe-bottom));z-index:2147483310;transform:translate(-50%,10px);width:min(410px,calc(100% - 32px));padding:13px 16px;border-radius:15px;background:#684752;color:white;font-size:12px;line-height:1.4;text-align:center;opacity:0;pointer-events:none;transition:opacity .18s,transform .18s}.az-toast.show{opacity:1;transform:translate(-50%,0)}.az-loading{min-height:40vh;display:grid;place-items:center;color:var(--muted);font-size:13px;text-align:center}.az-spinner{width:29px;height:29px;border:3px solid #efdce3;border-top-color:#ce6089;border-radius:50%;animation:az-spin 1s linear infinite;margin:0 auto 12px}@keyframes az-spin{to{transform:rotate(360deg)}}
+.az-layer{position:fixed;inset:0;z-index:2147483200;display:flex;align-items:flex-end;justify-content:center;padding:max(10px,var(--safe-top),env(safe-area-inset-top)) max(9px,var(--safe-right),env(safe-area-inset-right)) max(9px,var(--safe-bottom),env(safe-area-inset-bottom)) max(9px,var(--safe-left),env(safe-area-inset-left));background:rgba(65,41,53,.38);overscroll-behavior:contain}.az-sheet{position:relative;display:flex;flex-direction:column;width:min(520px,100%);max-height:100%;border:1px solid #ecd5df;border-radius:29px 29px 23px 23px;background:var(--bg);box-shadow:0 25px 70px #48223826;overflow:hidden}
+.az-sheet-header{flex:none;padding:0 18px 12px;user-select:none;-webkit-user-select:none;touch-action:none}.az-grip{height:25px;width:84px;display:flex;align-items:center;justify-content:center;margin:auto;padding:0;border:0;background:none;touch-action:none}.az-grip span{width:37px;height:4px;border-radius:8px;background:#d9c3cd;display:block}.az-grip.armed span{background:#c26489;width:48px}.az-sheet-heading{display:flex;gap:10px;align-items:center;min-height:40px}.az-sheet-heading h2{font-size:21px;line-height:1.2;letter-spacing:-.5px;flex:1;min-width:0;overflow-wrap:anywhere}.az-sheet-heading .az-icon-button{width:36px;height:36px}
+.az-sheet-body{min-height:0;overflow-y:auto;overflow-x:hidden;padding:5px 18px 20px;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;scrollbar-width:thin;overflow-anchor:none;touch-action:pan-y}.az-sheet-body>*+*{margin-top:14px}.az-sheet-footer{flex:none;display:flex;gap:8px;padding:12px 18px 16px;border-top:1px solid var(--line)}.az-sheet-footer>.az-button{flex:1}.az-sheet-lead{font-size:13px;line-height:1.55;color:var(--muted)}
+.az-item-detail{border:1px solid #ead9df;border-radius:22px;background:radial-gradient(ellipse at top,#fff0d5,#fff5f7);padding:22px 15px 17px;text-align:center}.az-item-detail>img{width:146px;height:151px;margin:0 auto 13px;filter:drop-shadow(0 5px 10px #84646515)}.az-item-detail.secret{background:#f0ebef}.az-item-detail>.az-secret-mark{display:block;font-size:70px;margin:15px auto 24px}.az-item-detail h3{font-size:21px;line-height:1.25;letter-spacing:-.4px;overflow-wrap:anywhere}.az-tags{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin-top:11px}.az-block{padding:15px;border:1px solid var(--line);border-radius:18px;background:var(--paper)}.az-block h3{font-size:14px;line-height:1.4;margin-bottom:7px}.az-block p{font-size:12px;line-height:1.55;color:var(--muted)}.az-block p+p{margin-top:8px}.az-block .az-text{text-align:left;justify-content:flex-start}.az-sheet-list{display:grid;gap:12px}
+@media(max-width:370px){.az-title h1{font-size:20px}.az-top,.az-main{padding-left:max(12px,var(--safe-left));padding-right:max(12px,var(--safe-right))}.az-items{grid-template-columns:repeat(2,minmax(0,1fr))}.az-item-art{height:106px}.az-cover{width:66px;height:73px}.az-collection{padding:13px}.az-collection h3{font-size:17px}.az-filter{font-size:11px;padding-left:3px;padding-right:3px}.az-filter>small{font-size:9px;margin-left:3px}.az-sheet-header{padding-left:14px;padding-right:14px}.az-sheet-body{padding-left:14px;padding-right:14px}.az-sheet-footer{padding-left:14px;padding-right:14px}.az-detail-head h2{font-size:21px}.az-detail-head .az-cover{width:63px;height:70px}}
+@media(min-width:640px){.az-layer{align-items:center;padding:24px}.az-sheet{max-height:90dvh;border-radius:27px}.az-title h1{font-size:25px}.az-item-art{height:118px}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+
+.az-next-footer{display:flex;align-items:center;justify-content:space-between;gap:9px;margin-top:8px}.az-next-footer>p{font-size:11px;line-height:1.4;color:var(--muted)}.az-next-footer>.az-text{white-space:nowrap;font-size:11px}.az-detail-head p{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+
 </style>
 <style id="zefirok-guides-20260910">
 /* Scoped tutorial UI: no gameplay, shop, reward or other modal selectors. */
@@ -170,31 +197,469 @@
 </style>
 </head>
 <body>
-<div class="app"><header class="top"><div class="bar"><h1 id="pageTitle">Альбом Зеффи</h1><button type="button" class="zgt-launch" data-zgt-help aria-label="Как работает этот раздел">?</button><button class="reload" id="reload" type="button" aria-label="Обновить">↻</button></div></header><main class="main" id="main"><div class="loading"><div><div class="spinner"></div>Открываем Альбом…</div></div></main></div><div class="toast" id="toast"></div>
+
+<div class="az-app" id="albumApp">
+ <header class="az-top"><div class="az-top-inner">
+  <button class="az-icon-button" id="pageBack" data-az-action="back" type="button" aria-label="Назад" hidden><svg class="az-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m14 5-7 7 7 7"/></svg></button>
+  <div class="az-title"><h1 id="pageTitle">Альбом Зеффи</h1><p id="pageSubtitle">Коллекции, истории и награды</p></div>
+  <button type="button" class="zgt-launch" data-zgt-help aria-label="Как работает Альбом">?</button>
+  <button class="az-icon-button" id="reload" data-az-action="refresh" type="button" aria-label="Обновить Альбом"><svg class="az-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5M6.1 7a7 7 0 0 1 11.6-2L20 8M4 16l2.3 3A7 7 0 0 0 18 17"/></svg></button>
+ </div></header>
+ <main class="az-main" id="main"><div class="az-page"><div class="az-loading"><div><div class="az-spinner"></div>Открываем Альбом…</div></div></div></main>
+</div>
+<div class="az-layer" id="albumLayer" hidden aria-hidden="true">
+ <section class="az-sheet" id="albumSheet" role="dialog" aria-modal="true" aria-labelledby="albumSheetTitle">
+  <header class="az-sheet-header" id="albumSheetHeader">
+   <button class="az-grip" id="albumGrip" type="button" aria-label="Закрыть окно" title="Потяни вниз, чтобы закрыть"><span></span></button>
+   <div class="az-sheet-heading"><button class="az-icon-button" id="sheetBack" type="button" data-az-action="sheet-back" aria-label="Назад" hidden><svg class="az-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m14 5-7 7 7 7"/></svg></button><h2 id="albumSheetTitle"></h2><button class="az-icon-button" type="button" data-az-action="close-sheet" aria-label="Закрыть"><svg class="az-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div>
+  </header>
+  <div class="az-sheet-body" id="albumSheetBody" tabindex="-1"></div>
+  <footer class="az-sheet-footer" id="albumSheetFooter" hidden></footer>
+ </section>
+</div>
+<div class="az-toast" id="toast" role="status" aria-live="polite"></div>
+
 <script>
-(()=>{'use strict';
-const tg=window.Telegram?.WebApp,$=id=>document.getElementById(id),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));let data=null,currentId='',filter='all',busy=false,toastTimer=0;
-try{tg?.ready?.();tg?.expand?.();tg?.disableVerticalSwipes?.();}catch{}try{window.parent.postMessage({type:'zefirok-request-fullscreen'},'*');}catch{}
-function haptic(kind='light'){try{kind==='success'?tg?.HapticFeedback?.notificationOccurred?.('success'):tg?.HapticFeedback?.impactOccurred?.(kind);}catch{}}
-function toast(text,error=false){const el=$('toast');el.textContent=text;el.style.background=error?'#9f4354':'#49313a';el.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('show'),2600);}
-function initData(){let value='';try{value=String(tg?.initData||'');}catch{}if(value)return value;try{const h=new URLSearchParams(location.hash.replace(/^#/,''));return String(h.get('tgInitData')||'');}catch{return '';}}
-async function api(path,payload={}){const id=initData();if(!id)throw new Error('Telegram не передал данные входа. Откройте Альбом из игры.');const r=await fetch(path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({initData:id,...payload}),cache:'no-store',credentials:'same-origin'});const d=await r.json().catch(()=>({}));if(!r.ok||d?.ok===false)throw new Error(d?.error||`Ошибка ${r.status}`);return d;}
-function plural(n,one,few,many){const x=Math.abs(n)%100,y=x%10;return x>10&&x<20?many:y===1?one:y>=2&&y<=4?few:many;}
-function kindLabel(k){return ({avatar:'Аватарка',frame:'Рамка',trail:'След',skin:'Скин',music:'Музыка'})[k]||k;}
-function renderLanding(){currentId='';filter='all';$('pageTitle').textContent='Альбом Зеффи';const s=data?.summary||{},collections=data?.collections||[];$('main').innerHTML=`<div class="landing"><section class="hero"><small>Коллекции и воспоминания</small><h2>Альбом Зеффи</h2><p>Собирайте аватарки, рамки, следы, скины и музыку из приключений Зеффи. Каждый альбом — отдельная история.</p><div class="summary"><div class="metric"><b>${s.ownedRequired||0}/${s.requiredTotal||0}</b><span>обязательных предметов</span></div><div class="metric"><b>${s.progressPercent||0}%</b><span>общий прогресс</span></div><div class="metric"><b>${s.completedCollections||0}/${s.collections||0}</b><span>альбомов собрано</span></div></div></section><div class="section-head"><div><h3>Мои альбомы</h3><p>${collections.length?`${collections.length} ${plural(collections.length,'история','истории','историй')}`:'Опубликованных альбомов пока нет'}</p></div></div><div class="albums">${collections.length?collections.map(albumCard).join(''):'<div class="empty">Здесь появятся тематические коллекции после публикации в Control Center.</div>'}</div></div>`;document.querySelectorAll('[data-open-album]').forEach(b=>b.onclick=()=>openAlbum(b.dataset.openAlbum));}
-function albumCard(a){const accent=esc(a.accentColor||'#d96f9b'),bg=a.backgroundUrl?`url(&quot;${esc(a.backgroundUrl)}&quot;)`:'';return `<article class="album-card" data-open-album="${esc(a.collectionId)}" style="--accent:${accent}"><div class="album-cover" style="${bg?`background-image:linear-gradient(110deg,rgba(255,255,255,.98) 4%,rgba(255,255,255,.88) 64%,rgba(255,255,255,.68)),${bg}`:''}"></div><div class="album-body"><h4>${esc(a.title)}</h4><p>${esc(a.subtitle||'Коллекция Зеффи')}</p><div class="progress-line"><div class="track"><i style="width:${Math.max(0,Math.min(100,a.progressPercent||0))}%"></i></div><b>${a.progressPercent||0}%</b></div><div class="album-foot"><span class="pill ${a.complete?'done':''}">${a.complete?'✓ СОБРАНО':`${a.ownedRequired}/${a.requiredTotal}`}</span></div></div><div class="album-side"><div class="album-art-shell"><img class="album-art" loading="lazy" src="${esc(a.coverUrl||'/assets/ui/error404-no-icon.webp')}" alt=""></div><button class="open" type="button">Открыть</button></div></article>`;}
-function openAlbum(id){const a=data?.collections?.find(x=>x.collectionId===id);if(!a)return;currentId=id;filter='all';$('pageTitle').textContent=a.title;renderDetail(a);try{$('main').scrollTo({top:0,behavior:'instant'});}catch{$('main').scrollTop=0;}haptic();}
-function rewardHtml(r){return `<div class="reward"><img loading="lazy" src="${esc(r.imageUrl||'/assets/ui/error404-no-icon.webp')}" alt=""><b>${esc(r.title||'Награда')}</b></div>`;}
-function milestoneHtml(m){const state=m.status||'locked',button=state==='claimed'?'<button class="claim" disabled>Получено</button>':state==='pending'?'<button class="claim" disabled>Получаем…</button>':state==='failed'?'<button class="claim" disabled>Ошибка доставки</button>':m.eligible?`<button class="claim" data-claim="${esc(m.milestoneId)}">Забрать</button>`:'<button class="claim" disabled>Закрыто</button>';return `<article class="milestone ${state==='claimed'?'claimed':m.eligible?'ready':''}"><div class="milestone-top"><b>${m.thresholdPercent}%</b><span>${state==='claimed'?'✓ Получено':state==='failed'?'Нужна проверка':m.eligible?'Доступно':'Ещё не открыто'}</span></div><h4>${esc(m.title||`${m.thresholdPercent}% коллекции`)}</h4>${(m.rewards||[]).map(rewardHtml).join('')}${button}</article>`;}
-function renderDetail(a){const bg=a.backgroundUrl?`background-image:linear-gradient(95deg,rgba(255,255,255,.96),rgba(255,255,255,.84) 68%,rgba(255,255,255,.66)),url(&quot;${esc(a.backgroundUrl)}&quot;);`:'';$('main').innerHTML=`<div class="detail active" style="--accent:${esc(a.accentColor||'#d96f9b')}"><section class="detail-hero" style="${bg}"><div class="detail-main"><span class="pill ${a.complete?'done':''}">${a.complete?'✓ КОЛЛЕКЦИЯ СОБРАНА':'АЛЬБОМ ЗЕФФИ'}</span><h2>${esc(a.title)}</h2><p>${esc(a.subtitle||'Соберите все обязательные воспоминания этой истории.')}</p><div class="big-progress"><strong><span>${a.ownedRequired} из ${a.requiredTotal}</span><span>${a.progressPercent}%</span></strong><div class="track"><i style="width:${a.progressPercent}%"></i></div></div></div>${a.coverUrl?`<div class="detail-cover-shell"><img class="detail-cover" src="${esc(a.coverUrl)}" alt=""></div>`:'<div class="detail-cover-shell" aria-hidden="true"></div>'}</section>${a.milestones?.length?`<div class="section-head"><div><h3>Награды за коллекцию</h3><p>Этапы выдаются один раз</p></div></div><div class="milestones">${a.milestones.map(milestoneHtml).join('')}</div>`:''}<div class="section-head"><div><h3>Страницы коллекции</h3><p>${a.ownedTotal} из ${a.totalItems} предметов найдено</p></div></div><div class="filters">${[['all','Все'],['avatar','Аватарки'],['frame','Рамки'],['trail','Следы'],['skin','Скины'],['music','Музыка']].map(([k,t])=>`<button type="button" data-filter="${k}" class="${filter===k?'active':''}">${t}</button>`).join('')}</div><div class="items" id="items"></div></div>`;renderItems(a);document.querySelectorAll('[data-filter]').forEach(b=>b.onclick=()=>{filter=b.dataset.filter;document.querySelectorAll('[data-filter]').forEach(x=>x.classList.toggle('active',x===b));renderItems(a);});document.querySelectorAll('[data-claim]').forEach(b=>b.onclick=()=>claim(a,b.dataset.claim,b));}
-function renderItems(a){const items=(a.items||[]).filter(x=>filter==='all'||x.kind===filter);$('items').innerHTML=items.length?items.map(item=>{if(item.secret&&!item.owned)return `<article class="item secret">${item.required?'<span class="req">нужно</span>':''}<div class="item-art"><div class="secret-mark">?</div></div><b>???</b><span>${esc(kindLabel(item.kind))} · секрет</span></article>`;return `<article class="item ${item.owned?'owned':''}">${item.required?'<span class="req">нужно</span>':''}${item.owned?'<span class="check" aria-label="Собрано"></span>':''}<div class="item-art"><img loading="lazy" src="${esc(item.imageUrl||'/assets/ui/error404-no-icon.webp')}" alt=""></div><b>${esc(item.title||item.itemId||'Предмет')}</b><span>${esc(kindLabel(item.kind))} · ${esc(item.rarity||'common')}${item.required?'':' · бонус'}</span></article>`;}).join(''):'<div class="empty" style="grid-column:1/-1">В этой категории предметов нет.</div>';}
-async function refreshClaimState(collectionId,milestoneId,attempt=0){if(attempt>2)return;window.setTimeout(async()=>{try{const fresh=await api('/api/album/state');data=fresh;const a=fresh.collections?.find(x=>x.collectionId===collectionId),m=a?.milestones?.find(x=>x.milestoneId===milestoneId);if(currentId===collectionId&&a)renderDetail(a);if(m?.status==='pending')refreshClaimState(collectionId,milestoneId,attempt+1);else if(m?.status==='claimed'){toast('Награда получена');try{window.parent.postMessage({type:'zefirok-album-account-updated',revision:Number(fresh.accountRevision||0)},'*');}catch{}}else if(m?.status==='failed')toast('Доставка награды остановлена. Нужна проверка в Control Center.',true);}catch{}},1200+attempt*900);}
-async function claim(a,milestoneId,button){if(busy)return;busy=true;button.disabled=true;button.textContent='Получаем…';try{const requestId=`album-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,9)}`,result=await api('/api/album/claim',{collectionId:a.collectionId,milestoneId,requestId});data=result.state||await api('/api/album/state');const updated=data.collections.find(x=>x.collectionId===a.collectionId),updatedMilestone=updated?.milestones?.find(x=>x.milestoneId===milestoneId);renderDetail(updated||a);if(updatedMilestone?.status==='failed')toast('Доставка награды остановлена. Нужна проверка в Control Center.',true);else if(updatedMilestone?.status==='pending'){toast('Награда в доставке…');refreshClaimState(a.collectionId,milestoneId);}else{haptic('success');toast('Награда получена');}try{window.parent.postMessage({type:'zefirok-album-account-updated',revision:Number(data.accountRevision||0)},'*');}catch{}}catch(e){toast(e.message,true);button.disabled=false;button.textContent='Забрать';}finally{busy=false;}}
-async function load(){if(busy)return;busy=true;try{data=await api('/api/album/state');if(currentId&&data.collections?.some(x=>x.collectionId===currentId))openAlbum(currentId);else renderLanding();}catch(e){$('main').innerHTML=`<div class="error"><b>Не удалось открыть Альбом</b><br><br>${esc(e.message)}</div>`;}finally{busy=false;}}
-function close(){try{window.parent.postMessage({type:'zefirok-close-album'},'*');}catch{history.back();}}
-function handleHostBack(){if(window.ZefirokPageGuide?.closeIfOpen())return;if(currentId){renderLanding();try{$('main').scrollTo({top:0,behavior:'instant'});}catch{$('main').scrollTop=0;}haptic();return;}close();}
-$('reload').onclick=()=>load();window.addEventListener('message',e=>{const m=e.data;if(!m||typeof m!=='object')return;if(m.type==='zefirok-album-back'){handleHostBack();return;}if(m.type==='zefirok-host-viewport-changed'){const p=m.payload||{};if(Number(p.height)>0)document.documentElement.style.setProperty('--app-h',`${Number(p.height)}px`);const safe=p.contentSafeArea||{};document.documentElement.style.setProperty('--safe-top',`${Number(safe.top||0)}px`);document.documentElement.style.setProperty('--safe-bottom',`${Number(safe.bottom||0)}px`);}});load();
+
+(() => {
+'use strict';
+const $=id=>document.getElementById(id);
+const esc=value=>String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+const num=value=>Number.isFinite(Number(value))?Number(value):0;
+const whole=value=>Math.max(0,Math.floor(num(value)));
+const fmt=value=>whole(value).toLocaleString('ru-RU');
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,num(v)));
+const embedded=window.parent!==window;
+function webApp(){try{return window.Telegram?.WebApp|| (embedded?window.parent.Telegram?.WebApp:null)||null;}catch{return window.Telegram?.WebApp||null;}}
+const ICON='/assets/ui/icon_albom.webp', GIFT='/assets/ui/icone_reward.webp', FALLBACK='/assets/ui/error404-no-icon.webp';
+const KINDS={avatar:'Аватарки',frame:'Рамки',trail:'Следы',skin:'Скины',music:'Музыка'};
+const accent=value=>/^#[0-9a-f]{6}$/i.test(String(value||''))?String(value):'#e17a9f';
+const KIND={avatar:'Аватарка',frame:'Рамка',trail:'След',skin:'Скин',music:'Музыка'};
+const RARITIES={common:'Обычный',rare:'Редкий',superrare:'Сверхредкий',epic:'Эпический',mythic:'Мифический',legendary:'Легендарный',legacy:'Архивный'};
+let data=null,currentId='',busy='',error='',toastTimer=0,closed=false,pollTimer=0,pollAttempt=0,pollOnVisible=false,returnFocus=null,wasAppInert=false;
+const filters=new Map(),requestIds=new Map(),uncertain=new Set(),sheetStack=[];
+const main=$('main'),layer=$('albumLayer'),panel=$('albumSheet'),sheetBody=$('albumSheetBody'),app=$('albumApp');
+const top=()=>sheetStack[sheetStack.length-1];
+const collection=id=>(data?.collections||[]).find(a=>String(a.collectionId)===String(id));
+const current=()=>collection(currentId);
+const milestones=a=>Array.isArray(a?.milestones)?a.milestones:[];
+const items=a=>Array.isArray(a?.items)?a.items:[];
+const key=(cid,mid)=>JSON.stringify([String(cid),String(mid)]);
+const milestone=(cid,mid)=>milestones(collection(cid)).find(m=>String(m.milestoneId)===String(mid));
+const secret=i=>i?.owned!==true&&(i?.secret===true||!i?.itemId);
+const itemTitle=i=>secret(i)?'Секретный предмет':String(i?.title||'Предмет коллекции');
+const status=m=>String(m?.status||'locked');
+const canClaim=m=>m?.eligible===true&&(status(m)==='ready');
+const awaiting=m=>['pending','processing','delivering'].includes(status(m));
+const done=m=>status(m)==='claimed';
+const plural=(v,one,few,many)=>{const x=whole(v)%100,y=x%10;return x>10&&x<20?many:y===1?one:y>=2&&y<=4?few:many;};
+function icon(name){
+ const paths={arrow:'<path d="m9 5 7 7-7 7"/>',check:'<path d="m5 12 4 4L19 6"/>',lock:'<rect x="5" y="10" width="14" height="11" rx="3"/><path d="M8 10V7a4 4 0 0 1 8 0v3m-4 5v2"/>',refresh:'<path d="M20 7v5h-5M4 17v-5h5M6 7a7 7 0 0 1 12-2l2 3M4 16l2 3a7 7 0 0 0 12-2"/>',back:'<path d="m14 5-7 7 7 7"/>'};
+ return `<svg class="az-icon" viewBox="0 0 24 24" aria-hidden="true">${paths[name]||paths.arrow}</svg>`;
+}
+function asset(value){
+ const s=String(value||'').trim();
+ if(/[\u0000-\u001f<>"'`\\]/.test(s))return FALLBACK;
+ if(/^\/(?:assets|media)\//.test(s)||/^https:\/\//i.test(s))return s;
+ return FALLBACK;
+}
+const image=(src,cls='')=>`<img class="${cls}" src="${esc(asset(src))}" alt="" loading="lazy" decoding="async" draggable="false">`;
+const button=(label,action,value='',cid='',cls='az-button',disabled=false)=>`<button class="${cls}" type="button" data-az-action="${esc(action)}" data-value="${esc(value)}" data-collection="${esc(cid)}" ${disabled?'disabled':''}>${label}</button>`;
+const badge=(text,tone='')=>`<span class="az-badge ${tone}">${esc(text)}</span>`;
+const progress=(value,label)=>`<span class="az-track" role="progressbar" aria-label="${esc(label)}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${clamp(value,0,100)}"><i style="--progress:${clamp(value,0,100)}%"></i></span>`;
+function haptic(type='light'){try{const h=webApp()?.HapticFeedback;type==='success'?h?.notificationOccurred?.('success'):h?.impactOccurred?.(type);}catch{}}
+function toast(text){if(closed)return;const el=$('toast');clearTimeout(toastTimer);el.textContent=text;el.classList.add('show');toastTimer=setTimeout(()=>el.classList.remove('show'),3200);}
+function initData(){
+ try{const v=String(webApp()?.initData||'');if(v)return v;}catch{}
+ try{const v=new URLSearchParams(location.hash.slice(1)).get('tgInitData');if(v)return v;}catch{}
+ return '';
+}
+function testProject(){
+ try{return new URLSearchParams(location.search).get('test_project')==='1'||(embedded&&new URLSearchParams(window.parent.location.search).get('test_project')==='1');}catch{return false;}
+}
+async function api(path,payload={}){
+ const id=initData(),test=testProject();
+ if(!id&&!test)throw new Error('Открой Альбом из игры в Telegram.');
+ const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),12000);
+ try{
+  let body={initData:id,...payload};
+  if(test){let session='';try{session=localStorage.getItem('zefirok-owner-session-v1')||'';}catch{}body={initData:id,ownerSession:session,path,method:'POST',query:{},payload:body};}
+  const r=await fetch(test?'/api/owner/test-project/game':path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),cache:'no-store',credentials:'same-origin',signal:controller.signal});
+  const envelope=await r.json();
+  if(test&&envelope?.proxyNetworkError)throw new Error(envelope.error||'Сервер временно недоступен.');
+  if(!r.ok||envelope?.ok===false)throw Object.assign(new Error(envelope?.error||'Не удалось обновить Альбом.'),{status:r.status});
+  const d=test?(envelope?.data||envelope):envelope;
+  if(!d||d.ok===false)throw new Error(d?.error||'Не удалось обновить Альбом.');
+  return d;
+ }catch(e){if(e?.name==='AbortError')throw new Error('Сервер отвечает дольше обычного. Проверь состояние ещё раз.');throw e;}finally{clearTimeout(timer);}
+}
+function applyState(result){
+ const next=result?.state||result;
+ if(!next||!Array.isArray(next.collections)||!next.summary)throw new Error('Пришли неполные данные Альбома. Повтори проверку.');
+ if(data&&num(next.accountRevision)<num(data.accountRevision))throw new Error('Пришли устаревшие данные Альбома. Повтори проверку.');
+ data=next;error='';
+ for(const a of data.collections)for(const m of milestones(a))if(done(m)){requestIds.delete(key(a.collectionId,m.milestoneId));uncertain.delete(key(a.collectionId,m.milestoneId));}
+ if(currentId&&!current()){currentId='';sheetStack.length=0;closeSheet();}
+ render();
+}
+function notify(){if(embedded)try{window.parent.postMessage({type:'zefirok-album-account-updated',revision:num(data?.accountRevision)},'*');}catch{}}
+function filterState(id=currentId){if(!filters.has(id))filters.set(id,{ownership:'all',kind:'all',required:false,scroll:0});return filters.get(id);}
+function nextMilestone(a){
+ const ms=milestones(a).slice().sort((a,b)=>num(a.thresholdPercent)-num(b.thresholdPercent));
+ return ms.find(canClaim)||ms.find(m=>awaiting(m)||uncertain.has(key(a.collectionId,m.milestoneId)))||ms.find(m=>status(m)==='failed')||ms.find(m=>!done(m))||null;
+}
+function missingTo(a,m){
+ if(!a||!m||whole(a.requiredTotal)===0)return null;
+ // Display-only arithmetic; the server's eligible/status fields alone enable a claim.
+ return Math.max(0,Math.ceil(whole(a.requiredTotal)*clamp(m.thresholdPercent,0,100)/100)-whole(a.ownedRequired));
+}
+function milestoneCopy(a,m){
+ if(!m)return milestones(a).length?'Все награды получены':a.complete?'Коллекция собрана':'Собери обязательные предметы';
+ if(uncertain.has(key(a.collectionId,m.milestoneId)))return 'Нужно проверить получение';
+ if(done(m))return 'Награда получена';
+ if(awaiting(m))return 'Награда в доставке';
+ if(status(m)==='failed')return 'Нужна проверка доставки';
+ if(canClaim(m))return 'Награда доступна';
+ const remaining=missingTo(a,m);
+ return remaining===null?'Условия этапа уточняются':remaining>0?`До награды — ${fmt(remaining)} ${plural(remaining,'предмет','предмета','предметов')}`:'Обнови состояние награды';
+}
+function empty(title,text,action=''){
+ return `<div class="az-empty">${image(ICON)}<strong>${esc(title)}</strong><p>${esc(text)}</p>${action}</div>`;
+}
+function collectionCard(a){
+ const next=nextMilestone(a);
+ return `<button type="button" class="az-collection" style="--az-accent:${esc(accent(a.accentColor))}" data-az-action="open" data-value="${esc(a.collectionId)}">
+ ${a.backgroundUrl?image(a.backgroundUrl,'az-card-bg'):''}
+ <span class="az-collection-head">${image(a.coverUrl||ICON,'az-cover')}<span class="az-collection-copy"><h3>${esc(a.title||'Коллекция')}</h3><p>${esc(a.subtitle||'История в твоей коллекции')}</p></span></span>
+ <span class="az-collection-meta"><span class="az-progress-label"><span>Обязательные предметы</span><b>${fmt(a.ownedRequired)} / ${fmt(a.requiredTotal)}</b></span>${progress(a.progressPercent,`Прогресс коллекции ${a.title}`)}</span>
+ <span class="az-collection-footer"><span>${canClaim(next)?badge('Можно забрать','gold'):esc(milestoneCopy(a,next))}</span>${icon('arrow')}</span></button>`;
+}
+function attentionRows(){return (data?.collections||[]).flatMap(a=>milestones(a).filter(m=>canClaim(m)||awaiting(m)||status(m)==='failed'||uncertain.has(key(a.collectionId,m.milestoneId))).map(m=>({a,m})));}
+function landing(){
+ const s=data.summary,rows=attentionRows(),ready=rows.filter(x=>canClaim(x.m)&&!uncertain.has(key(x.a.collectionId,x.m.milestoneId)));
+ const callout=rows.length?button(`${image(GIFT)}<span><strong>${ready.length?`${fmt(ready.length)} ${plural(ready.length,'награда ждёт','награды ждут','наград ждут')} тебя`:'Проверяем награды коллекций'}</strong><small>${ready.length?'Посмотреть и получить награды этапов':'Открыть состояние доставки'}</small></span>${icon('arrow')}`,'ready','','','az-callout'):'';
+ return `${callout}<section class="az-intro">${image(ICON)}<div><strong>Твоя коллекция историй</strong><p>Находи недостающие предметы и открывай награды.</p><div class="az-intro-meta"><span>${fmt(s.completedCollections)} / ${fmt(s.collections)} альбомов собрано</span><span>·</span><span>${fmt(s.ownedRequired)} / ${fmt(s.requiredTotal)} обязательных предметов</span></div></div></section>
+ <div class="az-heading"><h2>Мои альбомы</h2><span class="az-count">${fmt(data.collections.length)}</span></div>
+ <div class="az-collections">${data.collections.length?data.collections.map(collectionCard).join(''):empty('Новые истории ещё впереди','Здесь появятся доступные коллекции. Уже полученные предметы остаются на аккаунте.')}</div>`;
+}
+function rewardsHtml(m){return `<div class="az-rewards">${(Array.isArray(m?.rewards)?m.rewards:[]).map(r=>`<div class="az-reward">${image(r.imageUrl||GIFT)}<strong>${esc(r.title||'Награда')}</strong></div>`).join('')}</div>`;}
+function milestoneAction(a,m){
+ const k=key(a.collectionId,m.milestoneId);
+ if(busy===k)return button('Получаем…','claim',m.milestoneId,a.collectionId,'az-button primary',true);
+ if(uncertain.has(k))return button('Проверить состояние','refresh','','','az-button',!!busy);
+ if(done(m))return badge('Получено','green');
+ if(awaiting(m)||status(m)==='failed')return button('Проверить состояние','refresh','','','az-button',!!busy);
+ if(canClaim(m))return button(esc(busy===k?'Получаем…':'Забрать награду'),'claim',m.milestoneId,a.collectionId,'az-button primary',!!busy);
+ return '';
+}
+
+function milestoneCard(a,m,featured=false){
+ const st=status(m),unsure=uncertain.has(key(a.collectionId,m.milestoneId));
+ const copy=busy===key(a.collectionId,m.milestoneId)?'Подтверждаем получение награды…':unsure?'Ответ не подтверждён. Проверим эту же награду, без новой выдачи.':awaiting(m)?'Сервер доставляет награду. Она появится после подтверждения.':st==='failed'?'Доставка остановлена. Проверь состояние; если оно не изменится, обратись в поддержку игры.':done(m)?'Этот этап уже получен. Повторное открытие ничего не начисляет.':canClaim(m)?'Условие выполнено. Награду можно забрать.':milestoneCopy(a,m);
+ const all=featured?button(`Все награды ${icon('arrow')}`,'milestones','',a.collectionId,'az-text'):'';
+ const compact=featured&&!canClaim(m)&&!awaiting(m)&&!unsure&&st==='locked';
+ return `<section class="az-milestone is-${esc(st)}" data-milestone="${esc(m.milestoneId)}" aria-label="${esc(m.title||'Награда этапа')}"><div class="az-milestone-header"><span>${featured?'Ближайшая награда':`Этап · ${fmt(m.thresholdPercent)}%`}</span>${badge(unsure?'Проверяем':done(m)?'Получено':awaiting(m)?'В доставке':st==='failed'?'Нужна проверка':`${fmt(m.thresholdPercent)}%`,done(m)?'green':'gold')}</div>
+ ${featured?'':`<h3>${esc(m.title||`${fmt(m.thresholdPercent)}% коллекции`)}</h3>`}${rewardsHtml(m)}
+ ${compact?`<div class="az-next-footer"><p>${esc(copy)}</p>${all}</div>`:`<p>${esc(copy)}</p><div class="az-milestone-actions">${milestoneAction(a,m)}${all}</div>`}</section>`;
+}
+
+function detail(a){
+ const next=nextMilestone(a),fs=filterState(),all=items(a),kinds=[...new Set(all.map(i=>i.kind))].filter(k=>KINDS[k]);
+ if(fs.kind!=='all'&&!kinds.includes(fs.kind))fs.kind='all';
+ const notOwned=all.filter(i=>!i.owned).length;
+ return `<section class="az-detail-hero" style="--az-accent:${esc(accent(a.accentColor))}">${a.backgroundUrl?image(a.backgroundUrl,'az-card-bg'):''}<div class="az-detail-head"><div><h2>${esc(a.title)}</h2><p>${esc(a.subtitle||'Собирай предметы этой истории.')}</p></div>${image(a.coverUrl||ICON,'az-cover')}</div>
+ <div class="az-progress-label"><span>Обязательные предметы</span><b>${fmt(a.ownedRequired)} / ${fmt(a.requiredTotal)}</b></div>${progress(a.progressPercent,'Прогресс обязательных предметов')}
+ <p class="az-detail-foot">${a.complete?'Обязательная коллекция собрана. Бонусные предметы можно собирать дальше.':'Прогресс этапов — только по обязательным предметам.'}</p></section>
+ ${next?milestoneCard(a,next,true):milestones(a).length?button(`<span>Награды коллекции · всё получено</span>${icon('arrow')}`,'milestones','',a.collectionId,'az-all-rewards'):''}
+ <section><div class="az-heading"><h2>Предметы коллекции</h2><span class="az-count">${fmt(a.ownedTotal)} / ${fmt(a.totalItems)}</span></div>
+ <div class="az-filters" role="group" aria-label="Фильтр по владению">${[['all','Все',all.length],['missing','Не хватает',notOwned],['owned','Собрано',all.length-notOwned]].map(([v,label,count])=>`<button class="az-filter" type="button" data-az-action="ownership" data-value="${v}" aria-pressed="${fs.ownership===v}">${label}<small>${fmt(count)}</small></button>`).join('')}</div>
+ <label class="az-kind"><span>Тип</span><select id="albumKind" aria-label="Тип предмета"><option value="all">Все предметы</option>${kinds.map(k=>`<option value="${esc(k)}" ${k===fs.kind?'selected':''}>${KINDS[k]}</option>`).join('')}</select></label>
+ <label class="az-required-filter"><input id="albumRequired" type="checkbox" ${fs.required?'checked':''}>Только обязательные</label>
+ <div class="az-items" id="items">${itemsHtml(a)}</div></section>`;
+}
+function itemsHtml(a){
+ const fs=filterState(a.collectionId);
+ const rows=items(a).filter(i=>(fs.ownership==='all'||(fs.ownership==='owned'?i.owned===true:i.owned!==true))&&(fs.kind==='all'||fs.kind===i.kind)&&(!fs.required||i.required===true));
+ return rows.length?rows.map(i=>{
+  const hidden=secret(i);
+  return `<button class="az-item ${hidden?'secret':i.owned?'owned':'missing'}" data-az-action="item" data-value="${esc(i.slotKey)}" data-collection="${esc(a.collectionId)}" type="button">
+   <span class="az-item-art">${hidden?'<span class="az-secret-mark" aria-hidden="true">?</span>':image(i.imageUrl)}${i.required?'<span class="az-required">Нужно</span>':''}</span>
+   <strong class="az-item-title">${esc(itemTitle(i))}</strong>
+   <span class="az-item-meta">${esc(KIND[i.kind]||'Предмет')}${hidden?'':` · ${esc(RARITIES[i.rarity]||'Особый')}`}</span>
+   <span class="az-item-status">${icon(i.owned?'check':'lock')}${hidden?'Секрет':i.owned?'Собрано':'Не получено'}</span></button>`;
+ }).join(''):empty('Таких предметов нет',fs.ownership==='missing'?'В выбранной категории всё собрано. Попробуй другие фильтры.':'Выбери другую категорию или сбрось фильтры.',button('Показать все','reset-filters','','','az-button'));
+}
+function focusKey(el){return el?.dataset?.azAction?{action:el.dataset.azAction,value:el.dataset.value||'',cid:el.dataset.collection||''}:null;}
+function restoreFocus(k,scope){
+ if(!k)return;
+ const el=[...scope.querySelectorAll('[data-az-action]')].find(e=>e.dataset.azAction===k.action&&(e.dataset.value||'')===k.value&&(e.dataset.collection||'')===k.cid&&!e.disabled);
+ el?.focus({preventScroll:true});
+}
+function render(){
+ if(closed)return;
+ const y=main.scrollTop,f=focusKey(document.activeElement),focusId=document.activeElement?.id;
+ $('reload').disabled=!!busy;
+ if(!data){
+  $('pageTitle').textContent='Альбом Зеффи';
+  main.innerHTML=`<div class="az-page">${error?empty('Не удалось открыть Альбом',error,button('Повторить','refresh','','','az-button primary',!!busy)):'<div class="az-loading"><div><div class="az-spinner"></div>Открываем Альбом…</div></div>'}</div>`;
+ }else{
+  const a=current();
+  $('pageTitle').textContent='Альбом Зеффи';$('pageSubtitle').textContent=a?'Предметы и награды коллекции':'Коллекции, истории и награды';
+  main.innerHTML=`<div class="az-page">${error?`<div class="az-error" role="status">${esc(error)} ${button('Проверить','refresh','','','az-text',!!busy)}</div>`:''}${a?detail(a):landing()}</div>`;
+ }
+ main.scrollTop=y;restoreFocus(f,main);if(['albumKind','albumRequired'].includes(focusId))$(focusId)?.focus({preventScroll:true});
+ renderSheet();
+}
+function openAlbum(id){
+ if(!collection(id))return;
+ if(currentId)filterState().scroll=main.scrollTop;else filterState('').scroll=main.scrollTop;
+ currentId=String(id);closeSheet();render();main.scrollTop=filterState().scroll;haptic();
+}
+function backToCollections(){filterState().scroll=main.scrollTop;currentId='';render();main.scrollTop=filterState('').scroll;}
+function sourceHints(a,i){
+ if(secret(i))return [];
+ const explicit=String(i.obtainText||i.sourceText||'').trim();
+ if(explicit)return [{text:explicit}];
+ const found=[];
+ // Only use sources explicitly present in the current public album response.
+ for(const c of data.collections)for(const m of milestones(c))if((m.rewards||[]).some(r=>r.kind===i.kind&&String(r.id||'')===String(i.itemId||''))){
+  found.push({cid:c.collectionId,text:`Этап «${m.title||fmt(m.thresholdPercent)+'%'}» в альбоме «${c.title}».`,state:done(m)?'Этот этап уже получен.':m.eligible?'Проверь статус награды этапа.':'Собери обязательные предметы этого альбома.'});
+ }
+ return found;
+}
+function itemContent(entry){
+ const a=collection(entry.cid),i=items(a).find(i=>String(i.slotKey)===entry.slot);
+ if(!a||!i)return {title:'Предмет коллекции',content:empty('Данные изменились','Закрой окно и выбери предмет снова.')};
+ const hidden=secret(i),hints=sourceHints(a,i);
+ const source=hidden?'Название и способ получения откроются после находки.':hints.length?'':'Точный источник получения в данных Альбома пока не указан. Не все предметы доступны в магазине или кейсах.';
+ return {title:hidden?'Секретный предмет':'Предмет коллекции',content:
+ `<section class="az-item-detail ${hidden?'secret':''}">${hidden?'<span class="az-secret-mark" aria-hidden="true">?</span>':image(i.imageUrl)}<h3>${esc(itemTitle(i))}</h3><div class="az-tags">${badge(KIND[i.kind]||'Предмет')}${hidden?'':badge(RARITIES[i.rarity]||'Особый')}${badge(i.owned?'Собрано':hidden?'Секрет':'Не получено',i.owned?'green':'gray')}</div></section>
+ <section class="az-block"><h3>${i.required?'Обязательный предмет':'Бонусный предмет'}</h3><p>${i.required?'Участвует в прогрессе коллекции и открытии её этапов.':'Дополняет коллекцию, но не требуется для наград за процент сборки.'}</p></section>
+ <section class="az-block"><h3>${hidden?'Секретные условия':'Где получить'}</h3>${source?`<p>${esc(source)}</p>`:''}${hints.map(h=>`<p>${esc(h.text)} ${esc(h.state||'')}</p>${h.cid?button('Открыть альбом','source',h.cid,'','az-text'):''}`).join('')}${!hidden&&i.owned?'<p>Предмет уже есть на аккаунте. Этот просмотр не меняет выбранное оформление.</p>':''}</section>`};
+}
+function renderSheet(){
+ const entry=top();if(!entry){layer.hidden=true;layer.setAttribute('aria-hidden','true');return;}
+ const y=sheetBody.scrollTop,f=focusKey(document.activeElement);
+ let title='',content='',actions='';
+ if(entry.type==='item'){const spec=itemContent(entry);title=spec.title;content=spec.content;}
+ else if(entry.type==='milestones'){
+  const a=collection(entry.cid);title='Награды коллекции';
+  content=a?`<p class="az-sheet-lead">${esc(a.title)}. Каждый этап выдаётся один раз. Процент считается по обязательным предметам.</p><div class="az-sheet-list">${milestones(a).slice().sort((x,y)=>num(x.thresholdPercent)-num(y.thresholdPercent)).map(m=>milestoneCard(a,m)).join('')}</div>`:empty('Коллекция недоступна','Она могла измениться. Вернись к списку альбомов.');
+ }else if(entry.type==='ready'){
+  title='Награды альбомов';const rows=attentionRows();
+  content=rows.length?`<div class="az-sheet-list">${rows.map(({a,m})=>`<div><p class="az-sheet-lead" style="margin-bottom:8px">${esc(a.title)}</p>${milestoneCard(a,m)}</div>`).join('')}</div>`:empty('Все награды проверены','Неполученных доступных наград сейчас нет.');
+ }
+ $('albumSheetTitle').textContent=title;sheetBody.innerHTML=(error?`<div class="az-error" role="status">${esc(error)}</div>`:'')+content;
+ $('albumSheetFooter').innerHTML=actions;$('albumSheetFooter').hidden=!actions;$('sheetBack').hidden=sheetStack.length<2;
+ sheetBody.scrollTop=entry.rendered?y:entry.scroll||0;entry.rendered=true;restoreFocus(f,panel);
+}
+function openSheet(type,extra={}){
+ if(!data)return;
+ motion.reset();
+ if(!top()){returnFocus=document.activeElement;wasAppInert=app.hasAttribute('inert');app.setAttribute('inert','');}
+ else top().scroll=sheetBody.scrollTop;
+ sheetStack.push({type,...extra,rendered:false});renderSheet();layer.hidden=false;layer.setAttribute('aria-hidden','false');
+ panel.querySelector('[data-az-action="close-sheet"]').focus({preventScroll:true});haptic();
+}
+function closeSheet(all=true){
+ motion.reset();
+ if(!all&&sheetStack.length>1){sheetStack.pop();top().rendered=false;renderSheet();panel.querySelector('[data-az-action="close-sheet"]').focus({preventScroll:true});return;}
+ sheetStack.length=0;layer.hidden=true;layer.setAttribute('aria-hidden','true');
+ if(!wasAppInert)app.removeAttribute('inert');
+ if(returnFocus?.isConnected)returnFocus.focus({preventScroll:true});returnFocus=null;wasAppInert=false;
+}
+function actionablePending(){return (data?.collections||[]).some(a=>milestones(a).some(awaiting));}
+function schedulePoll(reset=false){
+ if(reset){pollAttempt=0;clearTimeout(pollTimer);pollTimer=0;}
+ if(closed||!actionablePending()||pollAttempt>=3||pollTimer)return;
+ if(document.hidden){pollOnVisible=true;return;}
+ pollTimer=setTimeout(()=>{pollTimer=0;if(busy){schedulePoll();return;}++pollAttempt;void refresh(false);},[1200,2400,4000][pollAttempt]);
+}
+async function refresh(manual=true){
+ if(busy||closed)return false;
+ busy='refresh';if(manual){error='';clearTimeout(pollTimer);pollTimer=0;}render();
+ try{
+  const before=data?.accountRevision;
+  applyState(await api('/api/album/state'));if(closed)return false;
+  for(const k of [...uncertain]){const [cid,mid]=JSON.parse(k);const m=milestone(cid,mid);if(m)uncertain.delete(k);}
+  if(before!=null&&num(data.accountRevision)!==num(before))notify();
+  if(manual&&before!=null)toast('Альбом обновлён');
+  return true;
+ }catch(e){if(!closed){error=String(e.message||'Не удалось обновить Альбом.');}return false;}
+ finally{busy='';if(!closed){render();schedulePoll(manual);}}
+}
+async function claim(cid,mid){
+ const m=milestone(cid,mid),k=key(cid,mid);
+ if(busy||closed||!canClaim(m)||uncertain.has(k))return;
+ clearTimeout(pollTimer);pollTimer=0;
+ if(!requestIds.has(k))requestIds.set(k,globalThis.crypto?.randomUUID?.()||`album-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`);
+ busy=k;error='';uncertain.add(k);render();
+ try{
+  const response=await api('/api/album/claim',{collectionId:cid,milestoneId:mid,requestId:requestIds.get(k)});
+  if(closed)return;
+  applyState(response.state?response:await api('/api/album/state'));uncertain.delete(k);notify();
+  const fresh=milestone(cid,mid);
+  if(done(fresh)){toast('Награда получена');haptic('success');}
+  else if(awaiting(fresh))toast('Награда в доставке. Ожидаем подтверждение.');
+  else if(status(fresh)==='failed')toast('Доставка остановлена. Проверь состояние награды.');
+  else{uncertain.add(k);error='Сервер ещё не подтвердил получение. Проверь состояние.';}
+ }catch(e){
+  if(closed)return;
+  try{
+   applyState(await api('/api/album/state'));if(closed)return;
+   const fresh=milestone(cid,mid);if(fresh)uncertain.delete(k);notify();
+   if(done(fresh))toast('Получение подтверждено');
+   else{error=awaiting(fresh)?'Награда ещё доставляется. Повторная выдача не нужна.':'Получение пока не подтверждено. Состояние обновлено.';}
+  }catch{error='Не удалось проверить получение. Сначала обнови состояние этой награды.';}
+ }finally{
+  busy='';if(!closed){render();schedulePoll(true);}
+ }
+}
+function handleBack(){
+ if(window.ZefirokPageGuide?.closeIfOpen())return;
+ if(top()){closeSheet(false);return;}
+ if(currentId){backToCollections();return;}
+ closePage();
+}
+function closePage(){
+ clearTimeout(pollTimer);closed=true;motion.reset();
+ if(embedded){try{window.parent.postMessage({type:'zefirok-close-album'},'*');return;}catch{}}
+ cleanupBack();location.assign('/');
+}
+function action(name,value,cid){
+ switch(name){
+ case 'open':openAlbum(value);break;
+ case 'source':closeSheet();openAlbum(value);break;
+ case 'back':handleBack();break;
+ case 'ownership':if(current()){filterState().ownership=['all','missing','owned'].includes(value)?value:'all';render();}break;
+ case 'reset-filters':if(current()){Object.assign(filterState(),{ownership:'all',kind:'all',required:false});render();}break;
+ case 'item':if(current()||collection(cid))openSheet('item',{cid:cid||currentId,slot:value});break;
+ case 'milestones':openSheet('milestones',{cid:cid||currentId});break;
+ case 'ready':openSheet('ready');break;
+ case 'close-sheet':closeSheet();break;
+ case 'sheet-back':closeSheet(false);break;
+ case 'refresh':void refresh(true);break;
+ case 'claim':void claim(cid,value);break;
+ }
+}
+function syncViewport(payload=null){
+ const wa=webApp(),s=payload?.safeArea||wa?.safeAreaInset||{},c=payload?.contentSafeArea||wa?.contentSafeAreaInset||{};
+ const root=document.documentElement.style;
+ for(const side of ['top','right','bottom','left'])root.setProperty('--safe-'+side,`${Math.max(0,num(s[side]),num(c[side]))}px`);
+ const h=num(payload?.height)||num(wa?.viewportHeight)||window.innerHeight;
+ if(h>0)root.setProperty('--app-h',`${h}px`);
+ root.setProperty('--tg-content-safe-top',`${Math.max(0,num(s.top),num(c.top))}px`);
+}
+
+// Presentation-only drag. A cancelled gesture never dismisses or starts a request.
+function installSwipe(){
+ const grip=$('albumGrip'),header=$('albumSheetHeader');
+ let g=null,frame=0,timer=0,serial=0,closing=false,suppressUntil=0;
+ const active=()=>!layer.hidden&&!window.ZefirokPageGuide?.isOpen();
+ const threshold=h=>Math.max(95,Math.min(290,h*.42));
+ function reset(){
+  ++serial;clearTimeout(timer);cancelAnimationFrame(frame);frame=timer=0;
+  const old=g;g=null;closing=false;
+  if(old?.pointer)try{panel.releasePointerCapture(old.id);}catch{}
+  panel.style.transform='';panel.style.transition='';panel.style.willChange='';
+  layer.style.backgroundColor='';layer.style.transition='';sheetBody.style.overflowY='';
+  grip.classList.remove('armed');
+ }
+ function begin(id,x,y,target,pointer=false){
+  if(!active()||closing||g||!(target instanceof Element))return false;
+  if(target.closest('button,a,input,select,textarea,summary,[contenteditable]')&&!target.closest('#albumGrip'))return false;
+  const inHeader=header.contains(target);
+  if(!inHeader&&(!sheetBody.contains(target)||sheetBody.scrollTop>2))return false;
+  reset();g={id,x,y,lastY:y,lastAt:performance.now(),dy:0,velocity:0,drag:false,inHeader,pointer,height:panel.offsetHeight};
+  return true;
+ }
+ function move(x,y,e){
+  if(!g||!active()||closing)return;
+  const dx=x-g.x,dy=y-g.y;
+  if(!g.drag){
+   if(dy<=0||Math.abs(dx)>Math.max(5,dy*.85)||(!g.inHeader&&sheetBody.scrollTop>2)){
+    if(Math.max(Math.abs(dx),Math.abs(dy))>8)reset();return;
+   }
+   if(!e.cancelable){reset();return;}
+   e.preventDefault();if(dy<3)return;g.drag=true;sheetBody.style.overflowY='hidden';panel.style.willChange='transform';
+  }
+  if(e.cancelable)e.preventDefault();
+  const now=performance.now();g.velocity=(y-g.lastY)/Math.max(1,now-g.lastAt);g.lastY=y;g.lastAt=now;g.dy=Math.max(0,dy);
+  grip.classList.toggle('armed',g.dy>=threshold(g.height));
+  if(!frame)frame=requestAnimationFrame(()=>{frame=0;if(!g)return;panel.style.transform=`translate3d(0,${Math.min(g.height*.92,g.dy*.98)}px,0)`;layer.style.backgroundColor=`rgba(65,41,53,${.38*(1-Math.min(.8,g.dy/g.height))})`;});
+ }
+ function finish(cancelled=false){
+  if(!g)return;const old=g;g=null;cancelAnimationFrame(frame);frame=0;
+  if(old.pointer)try{panel.releasePointerCapture(old.id);}catch{}
+  if(!old.drag){reset();return;}
+  suppressUntil=performance.now()+450;
+  const velocity=performance.now()-old.lastAt<100?Math.max(0,old.velocity):0,limit=threshold(old.height);
+  const dismiss=!cancelled&&(old.dy>=limit||(old.dy>Math.max(60,limit*.55)&&velocity>1));
+  closing=dismiss;grip.classList.remove('armed');const token=++serial;
+  const duration=matchMedia('(prefers-reduced-motion: reduce)').matches?0:240;
+  panel.style.transition=`transform ${duration}ms cubic-bezier(.2,.8,.3,1)`;layer.style.transition=`background-color ${duration}ms ease`;
+  panel.style.transform=dismiss?`translate3d(0,${Math.max(window.innerHeight,old.height+50)}px,0)`:'translate3d(0,0,0)';
+  layer.style.backgroundColor=dismiss?'rgba(65,41,53,0)':'';
+  const done=()=>{if(serial!==token)return;reset();if(dismiss&&active())closeSheet();};
+  if(duration)timer=setTimeout(done,duration+24);else done();
+ }
+ panel.addEventListener('touchstart',e=>{if(e.touches.length!==1){finish(true);return;}const t=e.touches[0];begin(t.identifier,t.clientX,t.clientY,e.target);},{passive:true});
+ panel.addEventListener('touchmove',e=>{if(!g||g.pointer)return;if(e.touches.length!==1){finish(true);return;}const t=Array.from(e.touches).find(t=>t.identifier===g.id);if(t)move(t.clientX,t.clientY,e);},{passive:false});
+ panel.addEventListener('touchend',e=>{if(g&&!g.pointer&&Array.from(e.changedTouches).some(t=>t.identifier===g.id))finish();},{passive:true});
+ panel.addEventListener('touchcancel',()=>finish(true),{passive:true});
+ header.addEventListener('pointerdown',e=>{if(e.pointerType==='touch'||e.button!==0||e.isPrimary===false)return;if(begin(e.pointerId,e.clientX,e.clientY,e.target,true)){e.preventDefault();try{panel.setPointerCapture(e.pointerId);}catch{}}});
+ panel.addEventListener('pointermove',e=>{if(g?.pointer&&g.id===e.pointerId)move(e.clientX,e.clientY,e);});
+ panel.addEventListener('pointerup',e=>{if(g?.pointer&&g.id===e.pointerId)finish();});
+ for(const type of ['pointercancel','lostpointercapture'])panel.addEventListener(type,e=>{if(g?.pointer&&g.id===e.pointerId)finish(true);});
+ layer.addEventListener('click',e=>{if(performance.now()<suppressUntil){e.preventDefault();e.stopImmediatePropagation();}},true);
+ grip.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();if(e.detail===0)closeSheet();});
+ window.addEventListener('blur',()=>{if(g)finish(true);});
+ document.addEventListener('visibilitychange',()=>{if(document.hidden){if(g)finish(true);if(closing)reset();}});
+ return {reset};
+}
+
+const motion=installSwipe();
+document.addEventListener('click',e=>{
+ if(window.ZefirokPageGuide?.isOpen())return;
+ const b=e.target instanceof Element?e.target.closest('[data-az-action]'):null;
+ if(b&&!b.disabled){action(b.dataset.azAction,b.dataset.value||'',b.dataset.collection||'');return;}
+ if(e.target===layer)closeSheet();
+});
+document.addEventListener('change',e=>{
+ if(e.target.id==='albumKind'&&current()){filterState().kind=e.target.value;render();}
+ if(e.target.id==='albumRequired'&&current()){filterState().required=e.target.checked;render();}
+});
+document.addEventListener('keydown',e=>{
+ if(window.ZefirokPageGuide?.isOpen())return;
+ if(e.key==='Escape'){e.preventDefault();handleBack();return;}
+ if(e.key==='Tab'&&top()){
+  const nodes=[...panel.querySelectorAll('button:not(:disabled),select,input,[tabindex="0"]')].filter(x=>x.getClientRects().length);
+  if(!nodes.length)return;
+  if(e.shiftKey&&(document.activeElement===nodes[0]||!panel.contains(document.activeElement))){e.preventDefault();nodes[nodes.length-1].focus();}
+  else if(!e.shiftKey&&(document.activeElement===nodes[nodes.length-1]||!panel.contains(document.activeElement))){e.preventDefault();nodes[0].focus();}
+ }
+});
+window.addEventListener('message',e=>{
+ if(e.source!==window.parent)return;
+ const m=e.data;if(!m||typeof m!=='object')return;
+ if(m.type==='zefirok-album-back')handleBack();
+ if(m.type==='zefirok-host-viewport-changed')syncViewport(m.payload||{});
+});
+let boundBack=null;
+function cleanupBack(){try{if(boundBack)boundBack.offClick(handleBack);}catch{}boundBack=null;}
+try{
+ const tg=webApp();tg?.ready?.();
+ if(!embedded){tg?.expand?.();tg?.disableVerticalSwipes?.();if(initData()&&tg?.BackButton){boundBack=tg.BackButton;boundBack.onClick(handleBack);boundBack.show();}}
+ if(embedded)window.parent.postMessage({type:'zefirok-request-fullscreen'},'*');
+ if(!embedded&&!boundBack)$('pageBack').hidden=false;
+ if(!embedded)for(const name of ['viewportChanged','safeAreaChanged','contentSafeAreaChanged'])tg?.onEvent?.(name,()=>syncViewport());
+}catch{}
+window.addEventListener('pagehide',()=>{closed=true;clearTimeout(pollTimer);clearTimeout(toastTimer);cleanupBack();});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&pollOnVisible&&!closed){pollOnVisible=false;schedulePoll();}});
+window.addEventListener('resize',()=>{if(!embedded)syncViewport();});
+syncViewport();void refresh(false);
 })();
+
 </script>
 
 <script id="zefirok-context-guide-20260910">
@@ -391,7 +856,7 @@ function createTutorialDeck(layer, mount, options, words) {
 }
 
 const ZGT_WORDS={"close":"Закрыть обучение","pull":"Потяни вниз, чтобы закрыть","topics":"Темы","steps":"Шаги обучения","back":"Назад","next":"Дальше","example":"Пример","tap":"Тап по игровому полю","step":"Шаг","of":"из","done":"Понятно","directory":"Гиды по игре","directoryCopy":"Выбери нужную тему. Все примеры учебные: они не запускают покупки и не выдают награды.","empty":"Сейчас этот гид недоступен. Закрой окно и открой его снова.","allGuides":"Все игровые гиды","helpLabel":"Как работает этот раздел","finishMain":"В игру","finishStock":"Открыть склад","finishRating":"Открыть рейтинг","finishFriends":"Открыть подарки","profileXpText":"За зачтённый забег — +{run} XP, за подходящую успешную покупку — +{purchase} XP. Нажми на уровень или звание, чтобы открыть лестницу уровней и награды."};
-const ZGT_PAGE_TOPIC={"id":"album","title":"Альбом Зеффи","summary":"Коллекции, обязательные предметы и этапы","icon":"/assets/ui/icon_albom.webp","steps":[{"title":"Каждый альбом — отдельная коллекция","text":"Открой обложку, чтобы увидеть предметы, прогресс и награды её этапов. В коллекции могут входить аватарки, рамки, следы, скины и музыка.","tip":"Показываются опубликованные коллекции. Пустой список не означает потерю твоих предметов.","scene":{"kind":"cards","title":"Истории в коллекциях","items":[{"title":"Обложка","subtitle":"Открыть историю","image":"/assets/ui/icon_albom.webp"},{"title":"Предметы","subtitle":"Посмотреть состав","image":"/assets/ui/icon_o_profile.webp"},{"title":"Этапы","subtitle":"Награды коллекции","image":"/assets/ui/icone_reward.webp"}]}},{"title":"Отличай обязательное от бонусного","text":"Предметы с отметкой «нужно» участвуют в обязательном прогрессе. Бонусные предметы дополняют коллекцию, а секретные могут быть скрыты до получения.","tip":"Фильтры меняют только список. Они не удаляют предметы и не пересчитывают владение на клиенте.","scene":{"kind":"cards","title":"Пример состава","items":[{"title":"Нужно","subtitle":"Обязательный предмет"},{"title":"Бонус","subtitle":"Дополнительный"},{"title":"???","subtitle":"Секретный"}]}},{"title":"За этапом следует выдача награды","text":"Когда условия этапа выполнены, используй его кнопку получения. Дождись смены статуса: доставка и уже полученная награда — разные состояния.","tip":"При ошибке доставки не создавай новые заявки наугад. Сверь состояние; при остановленной доставке обратись в поддержку.","scene":{"kind":"states","title":"Этап коллекции","items":[{"title":"Доступно","subtitle":"Можно запросить"},{"title":"В доставке","subtitle":"Ожидаем итог"},{"title":"Получено","subtitle":"Этап завершён"}]}}]};
+const ZGT_PAGE_TOPIC={"id":"album","title":"Альбом Зеффи","summary":"Недостающие предметы, коллекции и награды","icon":"/assets/ui/icon_albom.webp","steps":[{"title":"Следующая награда — рядом с коллекцией","text":"В списке альбомов видны обязательный прогресс и ближайший этап. Открой коллекцию, чтобы посмотреть недостающие предметы и награды.","tip":"«Коллекция собрана» и «Награда получена» — разные состояния. Бонусные предметы не увеличивают процент обязательной сборки.","scene":{"kind":"route","title":"Путь коллекционера","items":[{"title":"Альбом","subtitle":"Выбрать историю"},{"title":"Предметы","subtitle":"Найти недостающее"},{"title":"Этап","subtitle":"Проверить награду"}]}},{"title":"Покажи только то, чего не хватает","text":"Переключай «Все», «Не хватает» и «Собрано». Тип предмета и фильтр «Только обязательные» помогают найти ближайшую цель. Нажми на предмет, чтобы рассмотреть его.","tip":"Фильтры меняют только список. Секретный предмет остаётся под вопросительным знаком до получения.","scene":{"kind":"tabs","title":"Предметы коллекции","items":[{"title":"Все"},{"title":"Не хватает"},{"title":"Собрано"}],"rows":[{"title":"Только обязательные","subtitle":"Участвуют в прогрессе этапов","image":"/assets/ui/icon_albom.webp"}]}},{"title":"Где получить — без случайных обещаний","text":"В подробностях видны владение, редкость и роль предмета в альбоме. Источник получения показывается только тогда, когда он указан в доступных данных.","tip":"Предпросмотр не выдаёт предмет и не меняет оформление. Если точный источник не указан, Альбом сообщает об этом.","scene":{"kind":"cards","title":"Подробности предмета","items":[{"title":"Владение","subtitle":"Есть или не получено"},{"title":"Условие","subtitle":"Нужно или бонус"},{"title":"Источник","subtitle":"Если известен"}],"image":"/assets/ui/icon_albom.webp"}},{"title":"Получи подтверждённую награду этапа","text":"Ближайшая награда показана внутри коллекции, а полная дорожка — в «Все награды». После получения дождись статуса «Получено».","tip":"«В доставке» — это ещё не итог. После обрыва связи сначала проверь состояние этой же награды. При остановленной доставке обратись в поддержку.","scene":{"kind":"states","title":"Одна выдача на этап","items":[{"title":"Доступно","subtitle":"Можно забрать"},{"title":"В доставке","subtitle":"Проверяем итог"},{"title":"Получено","subtitle":"Есть подтверждение"}]}}]};
 const ZGT_HOST_BACK=["zefirok-album-back"];
 // Standalone page adapter. Reads only its local guide catalogue, not player data.
 const guideLayer = document.createElement('div');
