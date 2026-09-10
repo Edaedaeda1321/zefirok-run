@@ -275,18 +275,65 @@
     .celebration-art{display:grid;place-items:center;height:140px;margin:12px 0}.celebration-art img{max-width:123px;max-height:140px;filter:drop-shadow(0 8px 13px rgba(142,91,73,.12))}
     .celebration-actions{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:20px}.celebration-actions.single{grid-template-columns:1fr}
     .celebration-done,.tutorial-next{background:#d65f8c;border-color:#d65f8c;color:#fff}
-    .tutorial-close{display:block;margin:0 0 16px auto;min-height:36px;font-size:11px}
-    .tutorial-headline{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:13px}
-    .tutorial-mode{display:flex;gap:7px;align-items:center;font-size:10px;font-weight:750;color:var(--muted)}.tutorial-mode img{width:24px;height:24px}
-    .tutorial-progress{font-size:10px;color:#9c7745;background:#fff0d6;padding:5px 8px;border-radius:7px}
-    .tutorial-visual{display:grid;place-items:center;min-height:120px;border:1px solid #f0e0d2;border-radius:19px;background:linear-gradient(130deg,#ffeff4,#fff6df);margin-bottom:17px;padding:13px}
-    .tutorial-visual>img{max-width:112px;max-height:123px}
-    .mini-path{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:8px;text-align:center;font-size:12px;line-height:1.4}
-    .mini-path>span{padding:9px;background:#fffaf8;border-radius:12px}
-    .tutorial-note{padding:12px;background:#fff1df;border-radius:13px;color:#927045;font-size:12px;line-height:1.5;margin-top:13px}
-    .tutorial-dots{display:flex;gap:5px;justify-content:center;margin:18px 0}
-    .tutorial-dot{width:6px;height:6px;border-radius:5px;background:#e1cbd4}.tutorial-dot.active{width:21px;background:#d76c95}
+    .tutorial-card{padding:0;background:linear-gradient(180deg,#fffdfc 0%,#fff7f3 100%);overflow:hidden}
+    .tutorial-card>.sheet-handle{margin:12px auto 4px}
+    .tutorial-shell{padding:0 18px 20px}
+    .tutorial-topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-bottom:10px}
+    .tutorial-kicker{display:flex;align-items:center;gap:8px;min-width:0;font-size:11px;font-weight:800;color:#7c5b6b;letter-spacing:.2px}.tutorial-kicker img{width:27px;height:27px;flex:none}
+    .tutorial-progress{flex:none;font-size:10px;color:#9c7745;background:#fff0d6;padding:6px 9px;border-radius:999px}
+    .tutorial-close{display:block;margin:0;min-height:36px;font-size:11px;padding:8px 12px;border-radius:12px}
+    .tutorial-rail{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:14px}
+    .tutorial-jump{display:flex;flex-direction:column;align-items:flex-start;gap:3px;min-height:58px;padding:10px 11px;border:1px solid #ecd8e1;border-radius:16px;background:#fff;color:#8c6779;text-align:left;transition:border-color .16s,box-shadow .16s,transform .16s}
+    .tutorial-jump-step{font-size:10px;font-weight:700;opacity:.78}
+    .tutorial-jump-label{font-size:13px;font-weight:800;line-height:1.2;color:#6c4b5a}
+    .tutorial-jump.active{border-color:#e8a9c1;background:linear-gradient(180deg,#fff7fb 0%,#fff4ef 100%);box-shadow:0 10px 24px rgba(214,95,140,.12);transform:translateY(-1px)}
+    .tutorial-visual{position:relative;display:block;min-height:236px;border:1px solid #f0e0d2;border-radius:24px;background:linear-gradient(145deg,#fff3f7 0%,#fff4e4 100%);margin-bottom:15px;padding:14px;overflow:hidden}
+    .tutorial-visual::before,.tutorial-visual::after{content:"";position:absolute;border-radius:999px;pointer-events:none}
+    .tutorial-visual::before{width:148px;height:148px;right:-26px;top:-34px;background:radial-gradient(circle at center,rgba(255,255,255,.92) 0%,rgba(255,255,255,0) 68%)}
+    .tutorial-visual::after{width:110px;height:110px;left:-22px;bottom:-26px;background:radial-gradient(circle at center,rgba(250,200,216,.45) 0%,rgba(250,200,216,0) 72%)}
+    .tutorial-window{position:relative;z-index:1;display:grid;gap:10px}
+    .tutorial-window-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
+    .tutorial-window-title{font-size:14px;font-weight:900;color:#6b4b58}
+    .tutorial-window-badge{display:inline-flex;align-items:center;justify-content:center;min-height:28px;padding:5px 10px;border-radius:999px;background:#fff7db;color:#9b7642;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.7px}
+    .tutorial-pill-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+    .tutorial-pill{display:flex;flex-direction:column;gap:3px;padding:11px 12px;border-radius:18px;background:rgba(255,255,255,.92);border:1px solid rgba(235,209,219,.92);box-shadow:0 7px 20px rgba(120,78,92,.06)}
+    .tutorial-pill strong{font-size:17px;line-height:1;color:#5f4250}.tutorial-pill span{font-size:11px;line-height:1.4;color:#8f7180}
+    .tutorial-pill.accent{background:linear-gradient(180deg,#fff0f6 0%,#fff 100%);border-color:#ecbfd0}.tutorial-pill.soft{background:linear-gradient(180deg,#fff9f0 0%,#fff 100%)}
+    .tutorial-demo-card,.tutorial-friend-demo,.tutorial-reward-demo,.tutorial-inline-tip{position:relative;border-radius:20px;border:1px solid rgba(232,210,220,.96);background:rgba(255,255,255,.94);box-shadow:0 10px 24px rgba(120,78,92,.07)}
+    .tutorial-demo-card{padding:12px 13px;display:grid;gap:9px}
+    .tutorial-demo-card.emphasis{background:linear-gradient(180deg,#fff8fb 0%,#fffdfc 100%);border-color:#ebb8cb}
+    .tutorial-demo-head{display:flex;align-items:center;justify-content:space-between;gap:8px}.tutorial-demo-head strong{font-size:13px;color:#604150}.tutorial-demo-head span{font-size:10px;color:#9a7a49;background:#fff6de;border-radius:999px;padding:4px 8px}
+    .tutorial-demo-copy{font-size:11px;line-height:1.45;color:#8b6d7c}
+    .tutorial-pair-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+    .tutorial-pair-item{display:grid;gap:6px;padding:9px;border-radius:16px;background:#fffdfc;border:1px solid #f0e1e7}.tutorial-pair-item b{font-size:12px;color:#5f4250}.tutorial-pair-item small{font-size:10px;line-height:1.35;color:#8b6d7b}
+    .tutorial-mini-progress{display:block;width:100%;height:8px;border-radius:999px;background:#f2e4ea;overflow:hidden}.tutorial-mini-progress>span{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#f081a7 0%,#d79a46 100%)}
+    .tutorial-friend-stack{display:grid;gap:8px}
+    .tutorial-friend-demo{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:10px;padding:11px 12px}
+    .tutorial-friend-demo.featured{border-color:#e8a9c1;background:linear-gradient(180deg,#fff9fc 0%,#fff 100%)}
+    .tutorial-avatar{width:38px;height:38px;border-radius:14px;display:grid;place-items:center;background:#f4dce4;color:#764f60;font-weight:900;font-size:14px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.04)}
+    .tutorial-friend-copy{display:grid;gap:2px;min-width:0}.tutorial-friend-copy strong{font-size:13px;color:#5f4250;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.tutorial-friend-copy small{font-size:10px;line-height:1.35;color:#8e6f7e}
+    .tutorial-friend-state{display:inline-flex;align-items:center;justify-content:center;min-height:28px;padding:5px 8px;border-radius:999px;background:#f6edf1;color:#9a6e82;font-size:10px;font-weight:800;text-align:center}
+    .tutorial-friend-state.active{background:#eef8f0;color:#5b8b66}.tutorial-friend-state.action{background:#fff0f6;color:#c05684}
+    .tutorial-inline-tip{display:flex;gap:8px;align-items:flex-start;padding:11px 12px;font-size:11px;line-height:1.45;color:#8b6d7b}.tutorial-inline-tip .icon{width:15px;height:15px;flex:none;margin-top:1px;color:#d16b95}
+    .tutorial-reward-stack{display:grid;gap:8px}
+    .tutorial-reward-demo{display:grid;grid-template-columns:50px minmax(0,1fr) auto;align-items:center;gap:10px;padding:11px 12px}
+    .tutorial-reward-art{width:50px;height:58px;object-fit:contain;filter:drop-shadow(0 6px 10px rgba(168,104,81,.14))}
+    .tutorial-reward-copy{display:grid;gap:3px;min-width:0}.tutorial-reward-copy strong{font-size:13px;color:#5f4250}.tutorial-reward-copy span{font-size:10px;line-height:1.4;color:#8d7080}
+    .tutorial-state{display:inline-flex;align-items:center;justify-content:center;min-width:72px;min-height:30px;padding:6px 10px;border-radius:999px;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.55px}
+    .tutorial-state.ready{background:#fff0f6;color:#c25784}.tutorial-state.wait{background:#f7efe3;color:#9d7541}.tutorial-state.done{background:#eef8f0;color:#5a8b66}
+    .tutorial-copy{display:grid;gap:10px}
+    .tutorial-eyebrow{font-size:10px;font-weight:900;color:#bf648e;text-transform:uppercase;letter-spacing:1.4px}
+    .tutorial-copy h2{font-size:24px;letter-spacing:-.7px;line-height:1.14;color:#5d3f4d}
+    .tutorial-copy p{font-size:13px;line-height:1.55;color:#806575;margin:0}
+    .tutorial-highlights{display:grid;gap:8px}
+    .tutorial-highlight{display:flex;align-items:flex-start;gap:8px;padding:11px 12px;border-radius:16px;background:#fff;border:1px solid #efe1e7;font-size:12px;line-height:1.45;color:#785f6f}
+    .tutorial-highlight::before{content:"";width:8px;height:8px;border-radius:999px;background:linear-gradient(180deg,#f088ab 0%,#d99b4d 100%);flex:none;margin-top:4px}
+    .tutorial-note{display:grid;gap:5px;padding:12px;background:#fff5e7;border:1px solid #f0dfc7;border-radius:16px;color:#8f7248;font-size:12px;line-height:1.5}.tutorial-note strong{font-size:10px;letter-spacing:1.2px;text-transform:uppercase;color:#b07f3f}
+    .tutorial-dots{display:flex;gap:6px;justify-content:center;margin:18px 0 16px}
+    .tutorial-dot{width:7px;height:7px;border-radius:999px;background:#e6cfda}.tutorial-dot.active{width:24px;background:#d76c95}
     .tutorial-actions{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+    @media(max-width:360px){.tutorial-shell{padding:0 14px 16px}.tutorial-rail{grid-template-columns:1fr;gap:6px}.tutorial-pill-row,.tutorial-pair-grid{grid-template-columns:1fr}.tutorial-visual{min-height:0}.tutorial-reward-demo,.tutorial-friend-demo{grid-template-columns:auto minmax(0,1fr)}.tutorial-reward-demo .tutorial-state,.tutorial-friend-demo .tutorial-friend-state{grid-column:1/-1;justify-self:start}}
+
     .toast{position:fixed;left:50%;bottom:max(22px,env(safe-area-inset-bottom));z-index:60;transform:translate(-50%,12px);width:min(400px,calc(100% - 32px));padding:13px 16px;border-radius:16px;background:#5d3e4d;color:white;font-size:12px;line-height:1.45;text-align:center;opacity:0;pointer-events:none;transition:opacity .16s,transform .16s}
     .toast.show{opacity:1;transform:translate(-50%,0)}
     .loading{display:grid;place-items:center;min-height:50vh;font-size:13px;color:var(--muted);text-align:center}
@@ -327,7 +374,7 @@
   </div>
 
   <div class="toast" data-toast role="status" aria-live="polite" aria-atomic="true"></div>
-  <div class="tutorial" data-tutorial hidden aria-hidden="true"><div class="tutorial-card" role="dialog" aria-modal="true" aria-labelledby="ref-tutorial-title"><button class="sheet-handle" type="button" data-sheet-drag aria-label="Закрыть окно" title="Потяните вниз, чтобы закрыть"></button><button class="tutorial-close" data-tutorial-close type="button">Закрыть</button><div data-tutorial-body></div></div></div>
+  <div class="tutorial" data-tutorial hidden aria-hidden="true"><div class="tutorial-card" role="dialog" aria-modal="true" aria-labelledby="ref-tutorial-title"><button class="sheet-handle" type="button" data-sheet-drag aria-label="Закрыть окно" title="Потяните вниз, чтобы закрыть"></button><button class="tutorial-close" data-tutorial-close type="button">Пропустить</button><div data-tutorial-body></div></div></div>
   <div class="choice-overlay" data-choice hidden aria-hidden="true"><div class="choice-sheet" role="dialog" aria-modal="true" aria-labelledby="ref-choice-title"><button class="sheet-handle" type="button" data-sheet-drag aria-label="Закрыть окно" title="Потяните вниз, чтобы закрыть"></button><h2 id="ref-choice-title">Выбери большую награду</h2><p data-choice-copy>Выбери один подарок. После подтверждения изменить выбор нельзя.</p><div class="choice-options" data-choice-options></div><button class="choice-close" data-choice-close type="button">Закрыть</button></div></div>
   <div class="celebration-overlay" data-celebration hidden aria-hidden="true"><div class="celebration-card" role="dialog" aria-modal="true" aria-labelledby="ref-celebration-title"><button class="sheet-handle" type="button" data-sheet-drag aria-label="Закрыть окно" title="Потяните вниз, чтобы закрыть"></button><div class="celebration-kicker">Друзья кафе · подарок</div><div class="celebration-art" data-celebration-art></div><h2 id="ref-celebration-title" data-celebration-title>Подарок получен!</h2><p data-celebration-text></p><div class="celebration-actions" data-celebration-actions><button class="celebration-share" data-celebration-share type="button">Поделиться</button><button class="celebration-done" data-celebration-close type="button">Готово</button></div></div></div>
 <script>
@@ -351,7 +398,7 @@
   let initData = "";
   let busy = false;
   let tutorialStep = 0;
-  const TUTORIAL_KEY = "zefirok-referrals-tutorial-v5-2026-08-27";
+  const TUTORIAL_KEY = "zefirok-referrals-tutorial-v6-2026-09-10";
   const tutorialLayer = document.querySelector("[data-tutorial]");
   const tutorialBody = document.querySelector("[data-tutorial-body]");
   const choiceLayer = document.querySelector("[data-choice]");
@@ -960,15 +1007,48 @@
   }
 
 
+  function tutorialPill(value,label,tone=''){
+    return `<div class="tutorial-pill ${tone}"><strong>${esc(value)}</strong><span>${esc(label)}</span></div>`;
+  }
+  function tutorialMiniProgress(value,total){
+    const max=Math.max(1,whole(total)||1),score=Math.max(0,Math.min(max,whole(value))),percent=Math.round(score/max*100);
+    return `<span class="tutorial-mini-progress" aria-hidden="true"><span style="width:${percent}%"></span></span>`;
+  }
+  function tutorialSceneOverview(){
+    const weekly=weeklyView(),target=Math.max(1,whole(weekly?.w?.target)||3),myRuns=whole(weekly?.w?.myRuns),friendRuns=whole(weekly?.w?.friendRuns),friendName=weekly?.friend?.displayName||'Друг';
+    const next=state?.nextNetworkMilestone,nextThreshold=Math.max(1,whole(next?.threshold)||Math.max(1,whole(state?.activeFriends)||1));
+    const readyTotal=actionCount();
+    const nextCopy=next?whole(next.remaining)?`Ещё ${num(next.remaining)} ${plural(next.remaining,'друг','друга','друзей')} до следующего этапа.`:'Новая награда уже близко — проверь её после обновления.':'За число активных друзей открываются большие дополнительные награды.';
+    return `<div class="tutorial-visual"><div class="tutorial-window"><div class="tutorial-window-head"><span class="tutorial-window-title">Обзор страницы</span><span class="tutorial-window-badge">Сначала сюда</span></div><div class="tutorial-pill-row">${tutorialPill(num(readyTotal),readyTotal?plural(readyTotal,'подарок ждёт','подарка ждут','подарков ждут'):'пока без выдачи',readyTotal?'accent':'')}${tutorialPill(num(state?.activeFriends),plural(state?.activeFriends,'активный друг','активных друга','активных друзей'),'soft')}</div><div class="tutorial-demo-card emphasis"><div class="tutorial-demo-head"><strong>Подарок недели</strong><span>${weekly?.w?.completed?'Условия выполнены':'Общая цель'}</span></div><div class="tutorial-pair-grid"><div class="tutorial-pair-item"><b>Ты</b>${tutorialMiniProgress(myRuns,target)}<small>${num(myRuns)}/${num(target)} забегов</small></div><div class="tutorial-pair-item"><b>${esc(friendName)}</b>${tutorialMiniProgress(friendRuns,target)}<small>${num(friendRuns)}/${num(target)} забегов</small></div></div></div><div class="tutorial-demo-card"><div class="tutorial-demo-head"><strong>${next?'Следующий подарок':'Большие этапы'}</strong><span>${next?`${num(state?.activeFriends)} / ${num(nextThreshold)}`:'Компания'}</span></div><p class="tutorial-demo-copy">${nextCopy}</p>${tutorialMiniProgress(state?.activeFriends,nextThreshold)}</div></div></div>`;
+  }
+  function tutorialSceneFriends(){
+    const friends=friendRows().slice(0,3);
+    const sample=friends.length?friends:[{displayName:'Денис',status:'active',profileLevel:7,milestones:[{title:'5 уровень',progress:{percent:72,label:'Почти готово'}}]},{displayName:'Новый друг',status:'invited',profileLevel:1,milestones:[{title:'Стартовый этап',progress:{percent:38,label:'Осваивается'}}]}];
+    return `<div class="tutorial-visual"><div class="tutorial-window"><div class="tutorial-window-head"><span class="tutorial-window-title">Вкладка «Друзья»</span><span class="tutorial-window-badge">Твоя компания</span></div><div class="tutorial-friend-stack">${sample.map((friend,index)=>{const next=nextFriendStage(friend),status=friend.status==='active'?'Дружба активирована':'Стартовый этап';const subtitle=index===0?'Нажми, чтобы открыть весь путь друга':next?.title?`${next.title} · ${next.progress?.label||'в процессе'}`:`Уровень ${num(friend.profileLevel||1)}`;return `<div class="tutorial-friend-demo ${index===0?'featured':''}"><span class="tutorial-avatar">${esc(initials(friend.displayName||'Друг'))}</span><span class="tutorial-friend-copy"><strong>${esc(friend.displayName||'Друг')}</strong><small>${esc(subtitle)}</small></span><span class="tutorial-friend-state ${friend.status==='active'?'active':index===0?'action':''}">${index===0?'Открыть':status}</span>${next?`<div style="grid-column:2 / -1">${tutorialMiniProgress(next.progress?.percent,100)}</div>`:''}</div>`;}).join('')}</div><div class="tutorial-inline-tip">${icon('gift')}<span>Бесплатный подарок можно отправить одному активному другу. Полный прогресс и детали наград открываются по нажатию на карточку.</span></div></div></div>`;
+  }
+  function tutorialSceneGifts(){
+    const selection=choices()[0]||null,ready=readyRows()[0]||null,processing=processingRows()[0]||null;
+    const previewReward=selection?.choice?.options?.[0]||ready?.reward||processing?.reward||null;
+    const previewMarkup=previewReward?rewardImageMarkup(previewReward,'tutorial-reward-art'):art('/assets/ui/icone_reward.webp','tutorial-reward-art');
+    const previewTitle=selection?.title||(ready?rewardTitle(ready.reward,ready.rewardLabel):'Готовые подарки');
+    const previewText=selection?'Сначала выбери один вариант, затем забери награду.':ready?'Подтверждённую сервером награду можно забрать сразу.':'Когда подарок подтвердится, он появится здесь.';
+    const processingTitle=processing?rewardTitle(processing.reward,processing.rewardLabel):'Проверяем выдачу';
+    const processingText=processing?'Ожидаем подтверждение сервера. Повторное получение не запускаем.':'Если после списания возник сбой, обновление проверит именно эту операцию.';
+    return `<div class="tutorial-visual"><div class="tutorial-window"><div class="tutorial-window-head"><span class="tutorial-window-title">Вкладка «Подарки»</span><span class="tutorial-window-badge">Всё ценное здесь</span></div><div class="tutorial-reward-stack"><div class="tutorial-reward-demo">${previewMarkup}<span class="tutorial-reward-copy"><strong>${esc(previewTitle)}</strong><span>${esc(previewText)}</span></span><span class="tutorial-state ready">${selection?'Выбор':ready?'Забрать':'Ждём'}</span></div><div class="tutorial-reward-demo">${processing?rewardImageMarkup(processing.reward,'tutorial-reward-art'):art('/assets/ui/icone_reward.webp','tutorial-reward-art')}<span class="tutorial-reward-copy"><strong>${esc(processingTitle)}</strong><span>${esc(processingText)}</span></span><span class="tutorial-state wait">Проверяем</span></div></div><div class="tutorial-inline-tip">${icon('refresh')}<span>Статус «Проверяем» не открывает второй кейс. Он продолжает проверять ту же награду и ждёт подтверждение сервера.</span></div></div></div>`;
+  }
   function tutorialSteps(){
     return [
-      {title:'Всё важное — в обзоре',text:'Здесь видно, какие подарки ждут тебя и что осталось сделать для ближайшей награды.',note:'Подарок недели открывается за совместные забеги, а большие этапы — за число активных приглашённых друзей.',visual:'<img src="/assets/ui/icon_referals.webp" alt="">'},
-      {title:'Друзья — отдельно, детали — по нажатию',text:'Во вкладке «Друзья» виден ближайший этап каждого человека. Нажми на карточку, чтобы открыть весь совместный путь.',note:'Бесплатный подарок отправляется одному активному приглашённому другу. После отправки действует общий перерыв.',visual:'<div class="mini-path"><span>Друзья</span><b>→</b><span>Карточка друга</span><b>→</b><span>Общий прогресс</span></div>'},
-      {title:'Все награды — в «Подарках»',text:'Забирай готовые награды по одной или вместе. Подарок с выбором остаётся отдельным: вариант выбираешь ты.',note:'«Проверяем выдачу» не значит «Получено». История показывает только подтверждённые сервером награды.',visual:'<img src="/assets/ui/icone_reward.webp" alt="">'}
+      {key:'overview',short:'Обзор',eyebrow:'Шаг 1 · старт',title:'Начинай с обзора',text:'Здесь собраны ближайшие цели: готовые награды, подарок недели и следующая большая веха по друзьям.',highlights:['Сверху сразу видно, есть ли что-то к получению.','Недельный подарок показывает ваш совместный прогресс с другом.'],note:'Одна общая недельная коробка открывается только после подтверждённых забегов у тебя и у друга.',visual:tutorialSceneOverview(),actionLabel:'Дальше'},
+      {key:'friends',short:'Друзья',eyebrow:'Шаг 2 · компания',title:'Друзья вынесены в отдельную вкладку',text:'У каждого друга теперь своя карточка. Открывай её по нажатию и смотри этапы, прогресс и совместные награды без длинного списка на главной.',highlights:['Статус дружбы виден сразу на карточке.','Детали и полный путь открываются внутри карточки друга.'],note:'Бесплатный подарок отправляется только активному другу. После отправки действует общий перерыв для следующего подарка.',visual:tutorialSceneFriends(),actionLabel:'Дальше'},
+      {key:'gifts',short:'Подарки',eyebrow:'Шаг 3 · награды',title:'Все награды живут во вкладке «Подарки»',text:'Готовые награды, награды с выбором и статус проверки выдачи теперь собраны отдельно, чтобы их было проще читать и забирать.',highlights:['Можно получать награды по одной или сразу все готовые.','Большой подарок с выбором сначала просит выбрать вариант.'],note:'Если видно «Проверяем», не запускай повторное получение. Страница продолжит проверять ту же операцию и покажет подтверждённый итог.',visual:tutorialSceneGifts(),actionLabel:'Открыть подарки',finishTab:'gifts'}
     ];
   }
   function renderTutorial(){
-    if(!tutorialLayer||!tutorialBody)return;const steps=tutorialSteps();tutorialStep=Math.max(0,Math.min(steps.length-1,tutorialStep));const step=steps[tutorialStep];tutorialBody.innerHTML=`<div class="tutorial-headline"><span class="tutorial-mode"><img src="/assets/ui/icon_referals.webp" alt="">Друзья кафе · гид</span><div class="tutorial-progress">Шаг ${tutorialStep+1} из ${steps.length}</div></div><div class="tutorial-visual">${step.visual}</div><h2 id="ref-tutorial-title">${esc(step.title)}</h2><p>${esc(step.text)}</p><div class="tutorial-note">${esc(step.note)}</div><div class="tutorial-dots">${steps.map((_,i)=>`<span class="tutorial-dot ${i===tutorialStep?'active':''}"></span>`).join('')}</div><div class="tutorial-actions"><button class="tutorial-prev" data-tutorial-prev type="button" ${tutorialStep===0?'disabled':''}>Назад</button><button class="tutorial-next" data-tutorial-next type="button">${tutorialStep===steps.length-1?'Готово':'Дальше'}</button></div>`;
+    if(!tutorialLayer||!tutorialBody)return;
+    const steps=tutorialSteps();
+    tutorialStep=Math.max(0,Math.min(steps.length-1,tutorialStep));
+    const step=steps[tutorialStep];
+    tutorialBody.innerHTML=`<div class="tutorial-shell"><div class="tutorial-topbar"><span class="tutorial-kicker"><img src="/assets/ui/icon_referals.webp" alt="">Друзья кафе · новый гид</span><div class="tutorial-progress">${tutorialStep+1} / ${steps.length}</div></div><div class="tutorial-rail" role="tablist" aria-label="Шаги обучения">${steps.map((item,i)=>`<button class="tutorial-jump ${i===tutorialStep?'active':''}" type="button" data-tutorial-jump="${i}" aria-current="${i===tutorialStep?'step':'false'}"><span class="tutorial-jump-step">Шаг ${i+1}</span><span class="tutorial-jump-label">${esc(item.short||item.title)}</span></button>`).join('')}</div>${step.visual}<div class="tutorial-copy"><span class="tutorial-eyebrow">${esc(step.eyebrow||'')}</span><h2 id="ref-tutorial-title">${esc(step.title)}</h2><p>${esc(step.text)}</p><div class="tutorial-highlights">${(step.highlights||[]).map(item=>`<div class="tutorial-highlight">${esc(item)}</div>`).join('')}</div><div class="tutorial-note"><strong>Важно</strong><span>${esc(step.note)}</span></div></div><div class="tutorial-dots">${steps.map((_,i)=>`<span class="tutorial-dot ${i===tutorialStep?'active':''}"></span>`).join('')}</div><div class="tutorial-actions"><button class="tutorial-prev" data-tutorial-prev type="button" ${tutorialStep===0?'disabled':''}>Назад</button><button class="tutorial-next" data-tutorial-next type="button">${esc(step.actionLabel|| (tutorialStep===steps.length-1?'Готово':'Дальше'))}</button></div></div>`;
   }
   function markTutorialSeen(){try{localStorage.setItem(TUTORIAL_KEY,'1');}catch{}try{sessionStorage.setItem(TUTORIAL_KEY,'1');}catch{}try{document.cookie=`${TUTORIAL_KEY}=1; Max-Age=31536000; Path=/; SameSite=Lax`;}catch{}}
   function tutorialWasSeen(){try{if(localStorage.getItem(TUTORIAL_KEY)==='1')return true;}catch{}try{if(sessionStorage.getItem(TUTORIAL_KEY)==='1')return true;}catch{}try{if(document.cookie.split(';').some(row=>row.trim()===`${TUTORIAL_KEY}=1`))return true;}catch{}return false;}
@@ -1151,8 +1231,9 @@
     if(target.closest('[data-sheet-close]')||target===sheetLayer){closeSheet();return;}
     if(target.closest('[data-tutorial-open]')){closeSheet(false);openTutorial(false);return;}
     if(target.closest('[data-tutorial-close]')){closeTutorial(true);return;}
+    const tutorialJump=target.closest('[data-tutorial-jump]');if(tutorialJump){const next=Math.max(0,Math.min(tutorialSteps().length-1,whole(tutorialJump.dataset.tutorialJump)));if(next!==tutorialStep){tutorialStep=next;renderTutorial();haptic();}return;}
     if(target.closest('[data-tutorial-prev]')){tutorialStep=Math.max(0,tutorialStep-1);renderTutorial();haptic();return;}
-    if(target.closest('[data-tutorial-next]')){if(tutorialStep>=tutorialSteps().length-1)closeTutorial(true);else{tutorialStep+=1;renderTutorial();haptic();}return;}
+    if(target.closest('[data-tutorial-next]')){const steps=tutorialSteps(),step=steps[tutorialStep];if(tutorialStep>=steps.length-1){closeTutorial(true);if(step?.finishTab)switchTab(step.finishTab,false);}else{tutorialStep+=1;renderTutorial();haptic();}return;}
     if(target.closest('[data-celebration-close]')){closeCelebration();return;}
     if(target.closest('[data-celebration-share]')){shareMilestone(celebrationThreshold);return;}
     if(target.closest('[data-choice-close]')){closeChoice();return;}
