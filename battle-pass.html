@@ -3573,7 +3573,7 @@ img[src$="/xp.webp"]{
         </div>
         <div class="hero-progress-side">
           <span>До конца сезона</span>
-          <b id="seasonDaysText">14 дней</b>
+          <b id="seasonDaysText">—</b>
         </div>
         <button class="hero-tier-button is-none" id="heroTierButton" type="button">Тарифы</button>
         <button class="buy-level buy-level--legacy" id="buyLevel" type="button" hidden><img src="/assets/optimized/v0.79.5/iconScore.webp" alt="">Купить уровень · 0</button>
@@ -4354,6 +4354,7 @@ img[src$="/xp.webp"]{
 
   function applyServerPass(data) {
     if (!data || typeof data !== "object") return;
+    syncPassCountdownClock(data);
     const previous = serverPass && typeof serverPass === "object" ? serverPass : {};
     serverPass = {
       ...previous,
@@ -4741,16 +4742,45 @@ img[src$="/xp.webp"]{
     return forms[2];
   }
 
+
+  // Display-only server clock. Partial state responses must not re-anchor from a
+  // previously merged timestamp. Entitlements/season gates stay server-authoritative.
+  let passCountdownClock = null;
+  function passTimestampMs(value) {
+    if (value == null || value === "") return NaN;
+    if (typeof value === "number" || /^\d+(?:\.\d+)?$/.test(String(value))) {
+      const n = Number(value);
+      return Number.isFinite(n) && n > 0 ? (n < 1e12 ? n * 1000 : n) : NaN;
+    }
+    return Date.parse(String(value));
+  }
+  function syncPassCountdownClock(data) {
+    const ms = passTimestampMs(data?.season?.serverTime ?? data?.serverTime);
+    if (Number.isFinite(ms)) passCountdownClock = {ms, at:Date.now()};
+  }
+  function passCountdownNow() {
+    return passCountdownClock ? passCountdownClock.ms + (Date.now() - passCountdownClock.at) : Date.now();
+  }
+  function formatPassRemaining(ms) {
+    if (!Number.isFinite(ms)) return "—";
+    if (ms <= 0) return "Сезон завершён";
+    const seconds=Math.max(1,Math.floor(ms/1000));
+    const days=Math.floor(seconds/86400),hours=Math.floor(seconds%86400/3600);
+    const minutes=Math.floor(seconds%3600/60),secs=seconds%60;
+    if(days)return `${days} дн. ${hours} ч.`;
+    if(hours)return `${hours} ч. ${minutes} мин.`;
+    if(minutes)return `${minutes} мин. ${secs} сек.`;
+    return `${secs} сек.`;
+  }
   function seasonDaysLabel() {
-    const status = String(serverPass?.season?.status || "active");
-    if (status === "ended") return "Сезон завершён";
-    const rawEnd = serverPass?.season?.endsAt || '2026-09-10T23:59:59+03:00';
-    const end = new Date(rawEnd);
-    if (!Number.isFinite(end.getTime())) return "—";
-    const ms = Math.max(0, end.getTime() - Date.now());
-    const days = Math.ceil(ms / 86400000);
-    if (days <= 0) return "Сегодня";
-    return `${days} ${pluralRu(days,["день","дня","дней"])}`;
+    if (!serverPass?.season) return "—";
+    if (serverPass.season.status === "ended") return "Сезон завершён";
+    return formatPassRemaining(passTimestampMs(serverPass.season.endsAt) - passCountdownNow());
+  }
+  function updatePassCountdown() {
+    const node=el("seasonDaysText");
+    if(node){const label=seasonDaysLabel();if(node.textContent!==label)node.textContent=label;}
+    if(serverPass)renderCatchUpCard();
   }
 
   function heroTierButtonState() {
@@ -5606,7 +5636,17 @@ img[src$="/xp.webp"]{
   async function openSeasonalCase(caseId,button){const key=String(caseId||"");if(!key)return;const continuing=seasonalCasePendingRequests.has(key);const requestId=seasonalCasePendingRequests.get(key)||(()=>{try{return `spcase_${crypto.randomUUID().replace(/-/g,"")}`.slice(0,96);}catch{return `spcase_${Date.now().toString(36)}_${Math.random().toString(36).slice(2,14)}`.slice(0,96);}})();seasonalCasePendingRequests.set(key,requestId);const deadline=Date.now()+SEASONAL_CASE_OPEN_UI_DEADLINE_MS;if(button){button.disabled=true;button.textContent=continuing?"Проверяем…":"Открываем…";}try{let data=null,lastError=null;while(Date.now()<deadline){const remaining=deadline-Date.now();if(remaining<=0)break;try{data=await seasonPassApi(SEASONAL_CASE_OPEN_PATH,{caseId:key,requestId},Math.max(1000,Math.min(SEASONAL_CASE_OPEN_REQUEST_TIMEOUT_MS,remaining)));if(!data?.pending)break;}catch(error){lastError=error;if(!isSeasonalCaseRetryableError(error)){seasonalCasePendingRequests.delete(key);throw error;}}if(button)button.textContent="Проверяем…";const remainingAfterRequest=deadline-Date.now();if(remainingAfterRequest<=0)break;const sleepMs=Math.max(250,Math.min(1000,Number(data?.retryAfterMs||800),remainingAfterRequest));await new Promise(resolve=>setTimeout(resolve,sleepMs));}if(!data||data.pending){const pendingError=lastError||new Error("Открытие ещё проверяется. Повторная попытка продолжит эту же операцию.");pendingError.pending=true;throw pendingError;}seasonalCasePendingRequests.delete(key);if(Array.isArray(data?.seasonalCases))serverPass={...(serverPass||{}),seasonalCases:data.seasonalCases};renderSeasonalCases();notifyAccountChanged();const rewards=Array.isArray(data?.case?.rewards)?data.case.rewards.map(item=>({premium:false,icon:"",image:item.imageUrl||data?.case?.imageUrl||"",name:item.title||(item.kind==="points"?`${Number(item.amount||0).toLocaleString("ru-RU")} очков`:"Сезонная награда"),source:data?.case?.title||"Сезонный кейс",rewardType:item.kind||item.rewardType||"",amount:Number(item.amount||0),itemId:item.itemId||item.id||""})):[];passNotifyHaptic("success");if(rewards.length)openRewardSummary(rewards);else showToast("Сезонный кейс открыт");}catch(error){passNotifyHaptic("error");const retryable=isSeasonalCaseRetryableError(error);if(!retryable&&seasonalCasePendingRequests.get(key)===requestId)seasonalCasePendingRequests.delete(key);showToast(retryable?"Сервер отвечает дольше обычного. Нажмите «Проверить открытие» — новый кейс не будет списан.":(error.message||"Не удалось открыть сезонный кейс"));if(retryable)void loadServerPass().then(()=>renderSeasonalCases()).catch(()=>{});}finally{if(button?.isConnected){button.disabled=false;button.textContent=seasonalCasePendingRequests.has(key)?"Проверить открытие":"Открыть кейс";}renderSeasonalCases();}}
 
   function catchUpData(){return serverPass?.catchUp&&typeof serverPass.catchUp==="object"?serverPass.catchUp:null;}
-  function renderCatchUpCard(){const data=catchUpData(),card=el("catchUpCard");if(!card)return;const active=Boolean(data?.active);card.hidden=!active;if(!active)return;const days=Math.max(1,Number(data.daysLeft)||1),limit=Math.max(2,Number(data.eligibleBelowLevel)||35),mult=Math.max(2,Number(data.multiplier)||2);el("catchUpMultiplier").textContent=`×${mult} XP`;el("catchUpCopy").textContent=`Ещё ${days} дн. · пока уровень ниже ${limit}, XP за забеги и задания умножается на ${mult}. С Элитным+ бонус не складывается.`;}
+  function renderCatchUpCard(){
+    const data=catchUpData(),card=el("catchUpCard");if(!card)return;
+    const active=Boolean(data?.active);card.hidden=!active;if(!active)return;
+    const limit=Math.max(2,Number(data.eligibleBelowLevel)||35),mult=Math.max(2,Number(data.multiplier)||2);
+    const ms=passTimestampMs(data.endsAt||serverPass?.season?.endsAt)-passCountdownNow();
+    const time=Number.isFinite(ms)&&ms>0?`Ещё ${formatPassRemaining(ms)} · `:Number.isFinite(ms)?'Время бонуса истекло. Обнови состояние сезона. ':'';
+    const copy=Number.isFinite(ms)&&ms<=0?time:`${time}пока уровень ниже ${limit}, XP за забеги и задания умножается на ${mult}. С Элитным+ бонус не складывается.`;
+    const badge=el("catchUpMultiplier"),text=el("catchUpCopy");
+    if(badge.textContent!==`×${mult} XP`)badge.textContent=`×${mult} XP`;
+    if(text.textContent!==copy)text.textContent=copy;
+  }
 
   function finaleData(){return serverPass?.finale&&typeof serverPass.finale==="object"?serverPass.finale:null;}
   function finaleSeenKey(){return `${TEST_PROJECT_MODE?"zefirok-test-project-season-finale-seen":"zefirok-season-finale-seen"}:${String(serverPass?.season?.id||"season")}`;}
@@ -6717,6 +6757,11 @@ img[src$="/xp.webp"]{
 
   el("accessRetry").addEventListener("click",()=>{ passImpactHaptic("light"); void boot(); });
   window.setInterval(()=>{ if (serverPass) updateSeasonBadges(); },30000);
+  // One lightweight local ticker; no state fetch and no full page re-render.
+  window.setInterval(()=>{if(serverPass&&!document.hidden)updatePassCountdown();},1000);
+  document.addEventListener("visibilitychange",()=>{if(!document.hidden)updatePassCountdown();});
+  window.addEventListener("focus",updatePassCountdown);
+  window.addEventListener("pageshow",updatePassCountdown);
   window.addEventListener("pageshow",(event)=>{
     if (event.persisted && !el("accessGate").hidden) void boot();
   });
@@ -7549,5 +7594,9 @@ window.addEventListener('message',event=>{
 
 })();
 </script>
+<style id="pass-countdown-layout-20260910">
+.hero-progress-side #seasonDaysText{white-space:normal!important;overflow-wrap:normal!important;font-variant-numeric:tabular-nums;line-height:1.25!important;font-size:14px!important}
+@media(max-width:370px){.hero-progress-side #seasonDaysText{font-size:12px!important}}
+</style>
 </body>
 </html>
