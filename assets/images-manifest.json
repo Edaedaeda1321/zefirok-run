@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "catalogHash": "d2a7cab2ddb797a3",
-  "count": 454,
+  "catalogHash": "1ca1e6aea88e583b",
+  "count": 455,
   "images": [
     {
       "fileName": "achievements/background_achivment_panel.webp",
@@ -3324,12 +3324,12 @@
       "modified": 1788993614447
     },
     {
-      "fileName": "ui/icon_closed.png",
+      "fileName": "ui/icon_closed.webp",
       "label": "Icon closed",
       "folder": "ui",
-      "path": "/assets/ui/icon_closed.png",
-      "size": 1008553,
-      "modified": 1789141000000
+      "path": "/assets/ui/icon_closed.webp",
+      "size": 127434,
+      "modified": 1789152977002
     },
     {
       "fileName": "ui/icon_documents.webp",
@@ -3570,6 +3570,14 @@
       "path": "/assets/ui/icon_vitrina.webp",
       "size": 59774,
       "modified": 1789051693748
+    },
+    {
+      "fileName": "ui/icon_warning.webp",
+      "label": "Icon warning",
+      "folder": "ui",
+      "path": "/assets/ui/icon_warning.webp",
+      "size": 89322,
+      "modified": 1789152976673
     },
     {
       "fileName": "ui/icon_zanovo_button.webp",
